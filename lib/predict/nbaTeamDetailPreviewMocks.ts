@@ -238,6 +238,30 @@ export type NbaTeamOpponentAllowedMetric = {
   hintEn: string;
 };
 
+export type NbaApronStatus =
+  | "under_cap"
+  | "over_cap"
+  | "tax_payer"
+  | "first_apron"
+  | "second_apron";
+
+export type NbaTeamFuturePayrollYear = {
+  seasonKey: string;
+  seasonYear: number;
+  salaryCap: number;
+  taxLine: number;
+  firstApron: number;
+  secondApron: number;
+  committedSalary: number;
+  capSpace: number;
+  taxSpace: number;
+  firstApronSpace: number;
+  secondApronSpace: number;
+  apronStatus: NbaApronStatus;
+  playerCount: number;
+  lines: NbaTeamPayrollLine[];
+};
+
 export type NbaTeamPayroll = {
   /** 総年俸 */
   totalSalary: number;
@@ -247,14 +271,28 @@ export type NbaTeamPayroll = {
   salaryCap: number;
   /** ラグジュアリータックスライン */
   taxLine: number;
+  /** 1st エプロン */
+  firstApron?: number;
+  /** 2nd エプロン */
+  secondApron?: number;
+  /** エプロン超過ステータス */
+  apronStatus?: NbaApronStatus;
   /** キャップ余裕（マイナス=オーバー） */
   capSpace: number;
+  /** タックスラインまでの余裕（マイナス=超過） */
+  taxSpace?: number;
+  /** 1st エプロンまでの余裕（マイナス=超過） */
+  firstApronSpace?: number;
+  /** 2nd エプロンまでの余裕（マイナス=超過） */
+  secondApronSpace?: number;
   /** タックス概算（非課税なら 0） */
   taxBill: number;
   /** 保証額合計 */
   guaranteed: number;
   /** 選手別内訳（年俸降順） */
   lines: NbaTeamPayrollLine[];
+  /** 将来シーズン別ペイロール */
+  futureYears?: NbaTeamFuturePayrollYear[];
 };
 
 export type NbaTeamPayrollLine = {
@@ -264,6 +302,10 @@ export type NbaTeamPayrollLine = {
   salary: number;
   /** 総年俸に占める割合 0–1 */
   share: number;
+  /** 2-Way 契約フラグ（サラリーキャップ非算入） */
+  isTwoWay?: boolean;
+  /** Player Option (PO) / Team Option (TO) などのオプション種別 */
+  option?: "PO" | "TO" | "MO" | null;
 };
 
 function leagueRanksForMetric(
@@ -541,12 +583,19 @@ function emptyPayroll(): NbaTeamPayroll {
   return {
     totalSalary: 0,
     leagueRank: 30,
-    salaryCap: 166_000_000,
-    taxLine: 203_000_000,
-    capSpace: 0,
+    salaryCap: 154_647_000,
+    taxLine: 187_895_000,
+    firstApron: 195_945_000,
+    secondApron: 207_824_000,
+    apronStatus: "under_cap",
+    capSpace: 154_647_000,
+    taxSpace: 187_895_000,
+    firstApronSpace: 195_945_000,
+    secondApronSpace: 207_824_000,
     taxBill: 0,
     guaranteed: 0,
     lines: [],
+    futureYears: [],
   };
 }
 
@@ -777,6 +826,8 @@ export type NbaTeamPayrollSlice = {
   salary: number;
   share: number;
   color: string;
+  isTwoWay?: boolean;
+  option?: "PO" | "TO" | "MO" | null;
 };
 
 /**
@@ -793,18 +844,23 @@ export function payrollDisplaySlices(
       ? accent
       : PAYROLL_SEG_FALLBACK[(i - 1) % PAYROLL_SEG_FALLBACK.length]!;
 
-  if (topN == null || topN >= lines.length) {
-    return lines.map((l, i) => ({
+  // 契約がある選手（給与 > 0）または 2-Way 選手のみをペイロール内訳に表示
+  const activeLines = lines.filter((l) => l.salary > 0 || l.isTwoWay === true);
+
+  if (topN == null || topN >= activeLines.length) {
+    return activeLines.map((l, i) => ({
       key: l.playerId,
       label: l.name,
       salary: l.salary,
       share: l.share,
       color: colorAt(i),
+      isTwoWay: l.isTwoWay === true,
+      option: l.option ?? null,
     }));
   }
 
-  const top = lines.slice(0, topN);
-  const rest = lines.slice(topN);
+  const top = activeLines.slice(0, topN);
+  const rest = activeLines.slice(topN);
   const otherSalary = rest.reduce((s, l) => s + l.salary, 0);
   const otherShare = rest.reduce((s, l) => s + l.share, 0);
   const slices: NbaTeamPayrollSlice[] = top.map((l, i) => ({
@@ -813,6 +869,8 @@ export function payrollDisplaySlices(
     salary: l.salary,
     share: l.share,
     color: colorAt(i),
+    isTwoWay: l.isTwoWay === true,
+    option: l.option ?? null,
   }));
   if (otherSalary > 0) {
     slices.push({

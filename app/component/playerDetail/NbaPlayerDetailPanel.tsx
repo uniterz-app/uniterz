@@ -34,6 +34,7 @@ import {
   isPlayerDetailRankShown,
   isPlayerDetailSalaryRankShown,
 } from "@/lib/predict/nbaPlayerDetailHowTheyPlay";
+import { nbaTwoWaySalaryForSeason } from "@/lib/nba/teamPayroll/mapBdlToTeamPayroll";
 import { CyberNoDataLabel } from "@/app/component/common/CyberNoDataLabel";
 import {
   SHOT_ZONE_BASKET,
@@ -1105,6 +1106,23 @@ export default function NbaPlayerDetailPanel({
     leaders,
   });
   const currentSalary = detail.contract?.seasons[0] ?? null;
+  const isTwoWay =
+    detail.contract?.contractType?.toLowerCase().includes("two-way") ||
+    detail.contract?.contractType?.toLowerCase().includes("2-way") ||
+    detail.position?.toLowerCase().includes("two-way") ||
+    detail.position?.toLowerCase().includes("2-way") ||
+    Boolean(
+      detail.contract?.notes?.some(
+        (n) =>
+          n.toLowerCase().includes("two-way") || n.toLowerCase().includes("2-way")
+      )
+    );
+  const isContractExpired =
+    !detail.contract ||
+    detail.contract.contractStatus?.toLowerCase().includes("expired") ||
+    detail.contract.yearsRemaining <= 0 ||
+    detail.contract.seasons.length === 0 ||
+    (detail.contract.seasons.every((s) => s.baseSalary <= 0) && !isTwoWay);
   const fullName = formatNbaPlayerDisplayName(
     detail.firstName,
     detail.lastName,
@@ -1335,25 +1353,32 @@ export default function NbaPlayerDetailPanel({
         className="h-px"
         style={{ backgroundColor: hexToRgba(uiAccent, 0.2) }}
       />
-      <PlayerVenueSplitsSection
-        splits={detail.venueSplits}
-        accent={uiAccent}
-        isJa={isJa}
-      />
-      <div
-        className="h-px"
-        style={{ backgroundColor: hexToRgba(uiAccent, 0.2) }}
-      />
-      <PlayerVsOpponentSection
-        samples={detail.vsOpponentSamples}
-        accent={uiAccent}
-        isJa={isJa}
-      />
-      <div
-        className="h-px"
-        style={{ backgroundColor: hexToRgba(uiAccent, 0.2) }}
-      />
-      <SeasonHistoryTable
+      {(detail.venueSplits?.length ?? 0) > 0 ? (
+        <>
+          <PlayerVenueSplitsSection
+            splits={detail.venueSplits}
+            accent={uiAccent}
+            isJa={isJa}
+          />
+          <div
+            className="h-px"
+            style={{ backgroundColor: hexToRgba(uiAccent, 0.2) }}
+          />
+        </>
+      ) : null}
+      {(detail.vsOpponentSamples?.length ?? 0) > 0 ? (
+        <>
+          <PlayerVsOpponentSection
+            samples={detail.vsOpponentSamples}
+            accent={uiAccent}
+            isJa={isJa}
+          />
+          <div
+            className="h-px"
+            style={{ backgroundColor: hexToRgba(uiAccent, 0.2) }}
+          />
+        </>
+      ) : null}      <SeasonHistoryTable
         regular={detail.careerSeasons.regular}
         playoffs={detail.careerSeasons.playoffs}
         accent={uiAccent}
@@ -1375,7 +1400,7 @@ export default function NbaPlayerDetailPanel({
       />
       <section className="space-y-3">
         <h2 className={SECTION_HEADING_CLASS}>CONTRACT</h2>
-        {detail.contract && currentSalary ? (
+        {detail.contract && !isContractExpired && currentSalary ? (
             <div
               className="space-y-2 border bg-black/45 p-3.5"
               style={{ borderColor: hexToRgba(uiAccent, 0.3) }}
@@ -1385,8 +1410,19 @@ export default function NbaPlayerDetailPanel({
                   <p className={`${nameOxanium.className} text-[9px] font-bold uppercase tracking-[0.14em] text-white/40`}>
                     {isJa ? "今季年俸" : "THIS SEASON"}
                   </p>
-                  <p className={`${nameOxanium.className} text-[26px] font-extrabold`}>
-                    {formatSalaryUsd(currentSalary.baseSalary)}
+                  <p className={`${nameOxanium.className} flex items-center gap-1.5 text-[26px] font-extrabold`}>
+                    {currentSalary.baseSalary > 0 ? (
+                      formatSalaryUsd(currentSalary.baseSalary)
+                    ) : isTwoWay ? (
+                      <>
+                        <span className="text-[11px] font-extrabold px-1.5 py-0.5 rounded-[2px] bg-white/10 text-white/70">
+                          TW
+                        </span>
+                        {formatSalaryUsd(nbaTwoWaySalaryForSeason(CURRENT_NBA_SEASON_KEY))}
+                      </>
+                    ) : (
+                      "—"
+                    )}
                   </p>
                 </div>
                 {isPlayerDetailSalaryRankShown(currentSalary.salaryRank) ? (
@@ -1443,7 +1479,11 @@ export default function NbaPlayerDetailPanel({
                     <span
                       className={`${nameOxanium.className} flex-1 text-[14px] font-extrabold tabular-nums text-white/90`}
                     >
-                      {formatSalaryUsd(s.baseSalary)}
+                      {s.baseSalary > 0
+                        ? formatSalaryUsd(s.baseSalary)
+                        : isTwoWay
+                        ? "TW"
+                        : "—"}
                     </span>
                     {s.option ? (
                       <span
@@ -1467,6 +1507,27 @@ export default function NbaPlayerDetailPanel({
                 </p>
               ) : null}
             </div>
+        ) : detail.contract?.contractStatus?.toLowerCase().includes("expired") || (!detail.contract && !currentSalary) ? (
+          <div
+            className="space-y-2 border bg-black/45 p-3.5"
+            style={{ borderColor: hexToRgba(uiAccent, 0.3) }}
+          >
+            <div className="flex items-end justify-between">
+              <div>
+                <p className={`${nameOxanium.className} text-[9px] font-bold uppercase tracking-[0.14em] text-white/40`}>
+                  {isJa ? "契約ステータス" : "CONTRACT STATUS"}
+                </p>
+                <p className={`${nameOxanium.className} text-[20px] font-extrabold text-white/80`}>
+                  {isJa ? "契約満了 (FREE AGENT)" : "FREE AGENT / EXPIRED"}
+                </p>
+              </div>
+            </div>
+            <p className={`${nameOxanium.className} text-[11px] font-bold uppercase tracking-wide text-white/60`}>
+              {detail.contract?.contractType || "Free Agent"}
+              {detail.contract?.freeAgencyYear ? ` · FA ${detail.contract.freeAgencyYear}` : ""}
+              {detail.contract?.freeAgencyType ? ` ${detail.contract.freeAgencyType}` : ""}
+            </p>
+          </div>
         ) : (
           <PlayerDetailSectionNoData accent={uiAccent} />
         )}

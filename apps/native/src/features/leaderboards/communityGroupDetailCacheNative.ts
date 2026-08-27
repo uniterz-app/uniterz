@@ -69,22 +69,20 @@ export async function fetchCommunityGroupDetail(
     if (!h) return null;
 
     try {
-      const [sRes, lRes] = await Promise.all([
-        fetch(communityApiUrl(`/api/communities/${groupId}/summary`), {
-          headers: { Authorization: h },
-        }),
-        fetch(communityApiUrl(`/api/communities/${groupId}/leaderboard`), {
-          headers: { Authorization: h },
-        }),
-      ]);
-      const sJson = await sRes.json().catch(() => ({}));
+      // Web 同様、leaderboard が group を同梱するので 1 往復
+      const lRes = await fetch(
+        communityApiUrl(`/api/communities/${groupId}/leaderboard`),
+        { headers: { Authorization: h } }
+      );
       const lJson = await lRes.json().catch(() => ({}));
-      if (!sRes.ok || !sJson?.ok || !sJson.group) return null;
+      if (!lRes.ok || !lJson?.ok || !lJson.group) return null;
 
+      const summary = lJson.group as CommunityGroupSummary;
       const entry: CommunityGroupDetailCacheEntry = {
-        summary: sJson.group as CommunityGroupSummary,
-        rows: lRes.ok && lJson?.ok ? (lJson.rows ?? []) : [],
-        metric: (sJson.group as CommunityGroupSummary).rankingMetric,
+        summary,
+        rows: lJson.rows ?? [],
+        metric: (lJson.rankingMetric as CommunityGroupSummary["rankingMetric"]) ??
+          summary.rankingMetric,
         fetchedAt: Date.now(),
       };
       prefetchCommunityHeaderImageNative(entry.summary.headerImageUrl);

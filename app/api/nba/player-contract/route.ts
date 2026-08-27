@@ -45,10 +45,7 @@ export async function GET(req: Request) {
   } catch (e) {
     console.error("[api/nba/player-contract]", e);
     return NextResponse.json(
-      {
-        ok: false,
-        error: e instanceof Error ? e.message : "player-contract failed",
-      },
+      { ok: false, error: "internal" },
       { status: 500 }
     );
   }

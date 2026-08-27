@@ -144,6 +144,8 @@ export type NbaPlayerContractSummary = {
   /** 残契約の保証額合計（概算） */
   remainingGuaranteed: number;
   notes: string[];
+  draftRound?: number | null;
+  draftYear?: number | null;
   /** 残シーズン（昇順） */
   seasons: NbaPlayerContractSeason[];
 };

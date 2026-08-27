@@ -205,9 +205,9 @@ export async function GET(req: Request) {
       { headers: { "Cache-Control": cacheControl } }
     );
   } catch (e: unknown) {
-    const err = e as { message?: string };
+    console.error("[api/period-ranking/bulk]", e);
     return NextResponse.json(
-      { ok: false, error: err?.message ?? "period ranking failed" },
+      { ok: false, error: "internal" },
       { status: 500 }
     );
   }

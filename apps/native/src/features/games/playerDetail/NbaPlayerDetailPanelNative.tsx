@@ -42,6 +42,8 @@ import {
   isPlayerDetailRankShown,
   isPlayerDetailSalaryRankShown,
 } from "../../../../../../lib/predict/nbaPlayerDetailHowTheyPlay";
+import { nbaTwoWaySalaryForSeason } from "../../../../../../lib/nba/teamPayroll/mapBdlToTeamPayroll";
+import { CURRENT_NBA_SEASON_KEY } from "../../../../../../lib/rankings/nbaSeason";
 import { rankingFlagImageUri } from "../../rankings/rankingFlagUri";
 import {
   SHOT_ZONE_BASKET,
@@ -78,7 +80,6 @@ import { useLeagueTeamStatsBundle } from "../../../../../../lib/nba/useLeagueTea
 import { usePlayerStatLeadersBundle } from "../../../../../../lib/nba/usePlayerStatLeadersBundle";
 import { useNbaPlayerDetailLiveOverlay } from "../../../../../../lib/nba/playerDetail/useNbaPlayerDetailLiveOverlay";
 import { formatNbaPlayerDisplayName } from "@/lib/nba/formatNbaPlayerListName";
-import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
 import { nbaSeasonStatsReady } from "@/lib/predict/nbaSeasonStatsReady";
 import { getUniterzApiBaseUrl } from "../submitPredictionApi";
 
@@ -1307,6 +1308,23 @@ export default function NbaPlayerDetailPanelNative({
   });
   const bottomPad = Math.max(12, insets.bottom);
   const currentSalary = detail.contract?.seasons[0] ?? null;
+  const isTwoWay =
+    detail.contract?.contractType?.toLowerCase().includes("two-way") ||
+    detail.contract?.contractType?.toLowerCase().includes("2-way") ||
+    detail.position?.toLowerCase().includes("two-way") ||
+    detail.position?.toLowerCase().includes("2-way") ||
+    Boolean(
+      detail.contract?.notes?.some(
+        (n) =>
+          n.toLowerCase().includes("two-way") || n.toLowerCase().includes("2-way")
+      )
+    );
+  const isContractExpired =
+    !detail.contract ||
+    detail.contract.contractStatus?.toLowerCase().includes("expired") ||
+    detail.contract.yearsRemaining <= 0 ||
+    detail.contract.seasons.length === 0 ||
+    (detail.contract.seasons.every((s) => s.baseSalary <= 0) && !isTwoWay);
   const accent = getTeamUiAccentColor("nba", detail.teamId);
   const dividerColor = hexToRgba(accent, 0.22);
   const frameColor = hexToRgba(accent, 0.35);
@@ -1359,19 +1377,27 @@ export default function NbaPlayerDetailPanelNative({
           detail={detail}
         />
 
-        <View style={[styles.divider, { backgroundColor: dividerColor }]} />
-        <PlayerVenueSplitsSectionNative
-          splits={detail.venueSplits}
-          accent={accent}
-          isJa={isJa}
-        />
+        {(detail.venueSplits?.length ?? 0) > 0 ? (
+          <>
+            <View style={[styles.divider, { backgroundColor: dividerColor }]} />
+            <PlayerVenueSplitsSectionNative
+              splits={detail.venueSplits}
+              accent={accent}
+              isJa={isJa}
+            />
+          </>
+        ) : null}
 
-        <View style={[styles.divider, { backgroundColor: dividerColor }]} />
-        <PlayerVsOpponentSectionNative
-          samples={detail.vsOpponentSamples}
-          accent={accent}
-          isJa={isJa}
-        />
+        {(detail.vsOpponentSamples?.length ?? 0) > 0 ? (
+          <>
+            <View style={[styles.divider, { backgroundColor: dividerColor }]} />
+            <PlayerVsOpponentSectionNative
+              samples={detail.vsOpponentSamples}
+              accent={accent}
+              isJa={isJa}
+            />
+          </>
+        ) : null}
 
         <View style={[styles.divider, { backgroundColor: dividerColor }]} />
         <SeasonHistorySection
@@ -1393,7 +1419,7 @@ export default function NbaPlayerDetailPanelNative({
           </Text>
           <View style={styles.advTitleLine} />
         </View>
-        {detail.contract && currentSalary ? (
+        {detail.contract && !isContractExpired && currentSalary ? (
             <View
               style={[styles.contractCard, { borderColor: frameColor }]}
             >
@@ -1402,9 +1428,34 @@ export default function NbaPlayerDetailPanelNative({
                   <Text style={styles.contractLabel}>
                     {isJa ? "今季年俸" : "THIS SEASON"}
                   </Text>
-                  <Text style={styles.contractSalary}>
-                    {formatSalaryUsd(currentSalary.baseSalary)}
-                  </Text>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                    {currentSalary.baseSalary > 0 ? (
+                      <Text style={styles.contractSalary}>
+                        {formatSalaryUsd(currentSalary.baseSalary)}
+                      </Text>
+                    ) : isTwoWay ? (
+                      <>
+                        <Text
+                          style={{
+                            fontSize: 10,
+                            fontWeight: "800",
+                            color: "rgba(255,255,255,0.7)",
+                            backgroundColor: "rgba(255,255,255,0.1)",
+                            paddingHorizontal: 4,
+                            paddingVertical: 1,
+                            borderRadius: 2,
+                          }}
+                        >
+                          TW
+                        </Text>
+                        <Text style={styles.contractSalary}>
+                          {formatSalaryUsd(nbaTwoWaySalaryForSeason(CURRENT_NBA_SEASON_KEY))}
+                        </Text>
+                      </>
+                    ) : (
+                      <Text style={styles.contractSalary}>—</Text>
+                    )}
+                  </View>
                 </View>
                 {isPlayerDetailSalaryRankShown(currentSalary.salaryRank) ? (
                   <View style={styles.contractRankBlock}>
@@ -1461,7 +1512,11 @@ export default function NbaPlayerDetailPanelNative({
                       {formatContractSeasonLabel(s.season)}
                     </Text>
                     <Text style={styles.contractSeasonSalary}>
-                      {formatSalaryUsd(s.baseSalary)}
+                      {s.baseSalary > 0
+                        ? formatSalaryUsd(s.baseSalary)
+                        : isTwoWay
+                        ? "TW"
+                        : "—"}
                     </Text>
                     {s.option ? (
                       <Text
@@ -1483,6 +1538,28 @@ export default function NbaPlayerDetailPanelNative({
                 </Text>
               ) : null}
             </View>
+        ) : detail.contract?.contractStatus?.toLowerCase().includes("expired") || (!detail.contract && !currentSalary) ? (
+          <View
+            style={[styles.contractCard, { borderColor: frameColor }]}
+          >
+            <View style={styles.contractTop}>
+              <View style={styles.contractSalaryBlock}>
+                <Text style={styles.contractLabel}>
+                  {isJa ? "契約ステータス" : "CONTRACT STATUS"}
+                </Text>
+                <Text style={[styles.contractSalary, { fontSize: 18, color: "rgba(255,255,255,0.85)" }]}>
+                  {isJa ? "契約満了 (FREE AGENT)" : "FREE AGENT / EXPIRED"}
+                </Text>
+              </View>
+            </View>
+            <View style={styles.contractMetaRow}>
+              <Text style={styles.contractMeta}>
+                {detail.contract?.contractType || "Free Agent"}
+                {detail.contract?.freeAgencyYear ? ` · FA ${detail.contract.freeAgencyYear}` : ""}
+                {detail.contract?.freeAgencyType ? ` ${detail.contract.freeAgencyType}` : ""}
+              </Text>
+            </View>
+          </View>
         ) : (
           <PlayerDetailSectionNoDataNative accent={accent} />
         )}

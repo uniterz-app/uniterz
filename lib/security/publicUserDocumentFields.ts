@@ -1,14 +1,13 @@
 /**
  * `users/{uid}` ルート文書の公開可否棚卸し。
  *
- * Firestore ルールは現状 `allow read: if true`（ドキュメント全体が読める）。
- * 書き込みは本人 + 許可キーのみ。課金シークレットは `secure/` へ寄せ中。
+ * Firestore はフィールド単位の read 制限ができない。
+ * 公開ルートには PUBLIC / PRODUCT / OPERATIONAL だけを残し、
+ * sensitive は `secure/`（本人 read・Admin write）と
+ * `private/`（本人 read/write）へ移す。
  *
- * 本番前の方針:
- * - PUBLIC_PROFILE: プロフィール表示に必要なもの（公開のまま可）
- * - PRODUCT_VISIBLE: プロダクト上わざと見せる（残高など）— 公開のまま可だが意図を明示
- * - SENSITIVE_ON_ROOT: ルートに残っているが公開読みは望ましくない → `secure/` へ移行継続
- * - NEVER_CLIENT_WRITE: クライアント書き込み禁止（ルールで既に禁止）
+ * 移行: `scripts/scrub-user-root-sensitive.ts`
+ * 公開プロフィール解決: `pickClientSafeUserFields`（`fetchUserDocByRouteKey`）
  */
 
 /** 公開プロフィールとして意図して読まれてよい */
@@ -50,8 +49,24 @@ export const PRODUCT_VISIBLE_USER_FIELDS = [
 ] as const;
 
 /**
- * ルートに残っているが公開読みは縮小したい。
- * Admin / Functions のみが本来必要。移行先は `users/{uid}/secure/*`。
+ * ルートに残す運用フィールド。
+ * `expireProUsers` が複合クエリするため当面ルートに置く。
+ * 公開されても課金シークレットではないが、解約予約が他人に見える。
+ */
+export const OPERATIONAL_USER_ROOT_FIELDS = [
+  "cancelAtPeriodEnd",
+  "planStartDate",
+] as const;
+
+/**
+ * ルートから消す / 移行済み。
+ * - billing* / stripe* / tokens → secure/billing
+ * - inviteCode → secure/referral
+ * - notificationPrefs → private/notificationPrefs
+ * - email は削除のみ
+ *
+ * まだルートに残るが次フェーズで寄せる:
+ * - referredByUid / referral*（投稿・settle がルート参照）
  */
 export const SENSITIVE_USER_ROOT_FIELDS = [
   "email",
@@ -61,13 +76,25 @@ export const SENSITIVE_USER_ROOT_FIELDS = [
   "appleOriginalTransactionId",
   "billingProvider",
   "nextPlanType",
-  "cancelAtPeriodEnd",
   "inviteCode",
   "referredByUid",
   "referralInviteCode",
   "referralBoundAt",
   "referralStats",
   "referralSettledAt",
+  "notificationPrefs",
+] as const;
+
+/** scrub スクリプトがルートから delete するキー（移行先あり） */
+export const SCRUBBABLE_USER_ROOT_FIELDS = [
+  "email",
+  "stripeCustomerId",
+  "stripeSubscriptionId",
+  "googlePurchaseToken",
+  "appleOriginalTransactionId",
+  "billingProvider",
+  "nextPlanType",
+  "inviteCode",
   "notificationPrefs",
 ] as const;
 

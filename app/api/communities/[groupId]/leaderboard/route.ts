@@ -22,6 +22,7 @@ import {
   readLeaderboardSnapshot,
   writeLeaderboardSnapshot,
 } from "@/lib/communities/leaderboardSnapshot";
+import { buildCommunityGroupSummaryPayload } from "@/lib/communities/buildCommunityGroupSummaryPayload";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -62,6 +63,7 @@ export async function GET(req: Request, ctx: Ctx) {
     const { groupId } = await ctx.params;
     const groupSnap = await assertMember(adminDb, groupId, uid);
     const d = groupSnap.data()!;
+    const group = buildCommunityGroupSummaryPayload(groupId, d, uid);
     const rankingMetric = parseCommunityMetric(d.rankingMetric);
     const periodType = parseCommunityPeriod(d.periodType);
     const rankingLeague = parseCommunityLeague(d.rankingLeague);
@@ -92,6 +94,7 @@ export async function GET(req: Request, ctx: Ctx) {
         snapshot.rows.find((x) => x.uid === uid) ?? null;
       const payload = {
         ok: true as const,
+        group,
         rankingMetric,
         periodType,
         rankingLeague,
@@ -140,7 +143,7 @@ export async function GET(req: Request, ctx: Ctx) {
 
     const cached = getCachedLeaderboardResponse(cacheParams);
     if (cached) {
-      return NextResponse.json(cached);
+      return NextResponse.json({ ...cached, group });
     }
 
     const rows = await buildMemberLeaderboard(
@@ -175,6 +178,7 @@ export async function GET(req: Request, ctx: Ctx) {
 
     const payload = {
       ok: true,
+      group,
       rankingMetric,
       periodType,
       rankingLeague,
@@ -213,6 +217,6 @@ export async function GET(req: Request, ctx: Ctx) {
     if (status === 403)
       return NextResponse.json({ ok: false, error: msg }, { status: 403 });
     console.error("[communities/leaderboard]", e);
-    return NextResponse.json({ ok: false, error: msg }, { status: 500 });
+    return NextResponse.json({ ok: false, error: "internal" }, { status: 500 });
   }
 }

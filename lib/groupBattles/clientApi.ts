@@ -10,6 +10,13 @@ import type {
   GroupBattlePastSquadItem,
   GroupBattlePeriod,
 } from "./types";
+import {
+  groupBattleBootstrapCacheKey,
+  invalidateGroupBattleBootstrapCache,
+  loadGroupBattleBootstrapCache,
+} from "./bootstrapFetchCache";
+
+export { invalidateGroupBattleBootstrapCache };
 
 async function authHeaders(): Promise<HeadersInit> {
   // クライアント側で Firebase Auth から取得する想定。呼び出し側で上書き可。
@@ -102,47 +109,56 @@ export async function fetchGroupBattleBootstrap(
     battleId?: string | null;
   }
 ) {
-  const q = new URLSearchParams();
-  if (opts?.period) q.set("period", opts.period);
-  if (opts?.label) q.set("label", opts.label);
-  if (opts?.weekIndex) q.set("week", String(opts.weekIndex));
-  if (opts?.battleId) q.set("battleId", opts.battleId);
-  const res = await fetch(
-    `/api/group-battles/bootstrap${q.toString() ? `?${q}` : ""}`,
-    {
-      headers: withAuth(await authHeaders(), opts),
-      cache: "no-store",
-    }
-  );
-  if (!res.ok) return null;
-  const json = await res.json();
-  if (!json?.ok) return null;
-  return json as CurrentGroupBattlePayload & {
-    rankings: Omit<GroupBattleRankingsPayload, "ok"> | null;
-    openSquads: Array<{
-      id: string;
-      name: string;
-      memberCount: number;
-      openSlots: number;
-      status: string;
-      memberUids: string[];
-    }>;
-    pastSquads: GroupBattlePastSquadItem[];
-    invites: Array<{
-      id: string;
-      squadId: string;
-      squadName: string;
-      fromUid: string;
-      fromDisplayName: string;
-      status: string;
-      source: string;
-      createdAtMs: number;
-    }>;
-    joinRequests: {
-      incoming: GroupBattleJoinRequestApiItem[];
-      outgoing: GroupBattleJoinRequestApiItem[];
+  const cacheKey = groupBattleBootstrapCacheKey({
+    battleId: opts?.battleId,
+    period: opts?.period,
+    label: opts?.label,
+    weekIndex: opts?.weekIndex,
+  });
+
+  return loadGroupBattleBootstrapCache(cacheKey, async () => {
+    const q = new URLSearchParams();
+    if (opts?.period) q.set("period", opts.period);
+    if (opts?.label) q.set("label", opts.label);
+    if (opts?.weekIndex) q.set("week", String(opts.weekIndex));
+    if (opts?.battleId) q.set("battleId", opts.battleId);
+    const res = await fetch(
+      `/api/group-battles/bootstrap${q.toString() ? `?${q}` : ""}`,
+      {
+        headers: withAuth(await authHeaders(), opts),
+        cache: "no-store",
+      }
+    );
+    if (!res.ok) return null;
+    const json = await res.json();
+    if (!json?.ok) return null;
+    return json as CurrentGroupBattlePayload & {
+      rankings: Omit<GroupBattleRankingsPayload, "ok"> | null;
+      openSquads: Array<{
+        id: string;
+        name: string;
+        memberCount: number;
+        openSlots: number;
+        status: string;
+        memberUids: string[];
+      }>;
+      pastSquads: GroupBattlePastSquadItem[];
+      invites: Array<{
+        id: string;
+        squadId: string;
+        squadName: string;
+        fromUid: string;
+        fromDisplayName: string;
+        status: string;
+        source: string;
+        createdAtMs: number;
+      }>;
+      joinRequests: {
+        incoming: GroupBattleJoinRequestApiItem[];
+        outgoing: GroupBattleJoinRequestApiItem[];
+      };
     };
-  };
+  });
 }
 
 export async function fetchGroupBattleRankings(
@@ -365,6 +381,7 @@ export async function joinGroupBattleByInviteCode(
       status: res.status,
     };
   }
+  invalidateGroupBattleBootstrapCache();
   return json as { ok: true; squadId: string };
 }
 
@@ -416,6 +433,7 @@ export async function createGroupBattleSquad(
       status: res.status,
     };
   }
+  invalidateGroupBattleBootstrapCache();
   return json as { ok: true; squadId: string; inviteCode: string };
 }
 
@@ -576,6 +594,7 @@ export async function leaveGroupBattleSquad(
       status: res.status,
     };
   }
+  invalidateGroupBattleBootstrapCache();
   return json as { ok: true };
 }
 
@@ -599,5 +618,6 @@ export async function dissolveGroupBattleSquad(
       status: res.status,
     };
   }
+  invalidateGroupBattleBootstrapCache();
   return json as { ok: true };
 }

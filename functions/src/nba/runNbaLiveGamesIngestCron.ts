@@ -1,12 +1,17 @@
 /**
- * 毎分 — NBA ライブ試合スコア / liveStats を Next admin API 経由で同期。
+ * NBA ライブ試合スコア / liveStats を Next admin API 経由で同期。
+ *
+ * オフシーズン: `functions/src/index.ts` から export しない（現在停止中）。
+ * シーズン中: export を戻してデプロイ。スケジュールは毎分だが、
+ * Firestore にライブ枠の試合があるときだけ Next（→ BDL）を叩く。
  *
  * env:
- *   NEXT_NBA_LIVE_GAMES_INGEST_URL  … 例 https://xxx.vercel.app/api/admin/nba-live-games-ingest
+ *   NEXT_NBA_LIVE_GAMES_INGEST_URL  … 例 https://www.uniterz.app/api/admin/nba-live-games-ingest
  *   INTERNAL_JOB_SECRET
  */
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import { defineSecret } from "firebase-functions/params";
+import { shouldRunNbaLiveGamesIngest } from "./shouldRunNbaLiveGamesIngest";
 
 const INTERNAL_JOB_SECRET = defineSecret("INTERNAL_JOB_SECRET");
 
@@ -20,6 +25,14 @@ export const runNbaLiveGamesIngestCron = onSchedule(
     secrets: [INTERNAL_JOB_SECRET],
   },
   async () => {
+    const needsSync = await shouldRunNbaLiveGamesIngest();
+    if (!needsSync) {
+      console.log(
+        "[runNbaLiveGamesIngestCron] skip: no NBA games in live window"
+      );
+      return;
+    }
+
     const url = process.env.NEXT_NBA_LIVE_GAMES_INGEST_URL?.trim();
     const secret = INTERNAL_JOB_SECRET.value()?.trim();
     if (!url || !secret) {

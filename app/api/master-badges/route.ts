@@ -24,8 +24,7 @@ export async function GET() {
       headers: { "Cache-Control": masterBadgesCacheControl() },
     });
   } catch (e: unknown) {
-    const msg = e instanceof Error ? e.message : "error";
     console.error("[api/master-badges]", e);
-    return NextResponse.json({ ok: false, error: msg }, { status: 500 });
+    return NextResponse.json({ ok: false, error: "internal" }, { status: 500 });
   }
 }

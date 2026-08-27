@@ -47,7 +47,7 @@ export async function bdlNbaGetJson<T>(
   }
 
   let lastStatus = 0;
-  for (let attempt = 0; attempt < 5; attempt++) {
+  for (let attempt = 0; attempt < 6; attempt++) {
     const res = await fetch(url.toString(), {
       method: "GET",
       headers: {
@@ -58,7 +58,13 @@ export async function bdlNbaGetJson<T>(
     });
     lastStatus = res.status;
     if (res.status === 429) {
-      await sleep(400 * (attempt + 1));
+      const retryAfterHeader = res.headers.get("retry-after");
+      const retryAfterSec = retryAfterHeader ? parseFloat(retryAfterHeader) : null;
+      const waitMs =
+        retryAfterSec && Number.isFinite(retryAfterSec) && retryAfterSec > 0
+          ? Math.ceil(retryAfterSec * 1000)
+          : Math.min(10000, 1000 * Math.pow(1.8, attempt) + Math.random() * 500);
+      await sleep(waitMs);
       continue;
     }
     if (!res.ok) {

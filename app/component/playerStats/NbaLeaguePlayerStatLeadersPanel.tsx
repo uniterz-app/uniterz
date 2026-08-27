@@ -16,6 +16,7 @@ import {
   coerceModeForPhase,
   modeTabLabel,
   modesForPhase,
+  NBA_LEAGUE_STATS_PHASES,
   phaseTabLabel,
   resolvePlayerStatLeaderRows,
   type NbaLeagueStatsMode,
@@ -153,26 +154,19 @@ export default function NbaLeaguePlayerStatLeadersPanel({
         </p>
                 <div className="space-y-1.5">
           <CyberSlantedTabBar fill>
-            <CyberSlantedTab
-              label={phaseTabLabel("season")}
-              active={phase === "season"}
-              onClick={() => {
-                setPhase("season");
-                setMode(coerceModeForPhase("season", mode));
-              }}
-              compact
-              fontWeight={700}
-            />
-            <CyberSlantedTab
-              label={phaseTabLabel("playoffs")}
-              active={phase === "playoffs"}
-              onClick={() => {
-                setPhase("playoffs");
-                setMode(coerceModeForPhase("playoffs", mode));
-              }}
-              compact
-              fontWeight={700}
-            />
+            {NBA_LEAGUE_STATS_PHASES.map((p) => (
+              <CyberSlantedTab
+                key={p}
+                label={phaseTabLabel(p)}
+                active={phase === p}
+                onClick={() => {
+                  setPhase(p);
+                  setMode(coerceModeForPhase(p, mode));
+                }}
+                compact
+                fontWeight={700}
+              />
+            ))}
           </CyberSlantedTabBar>
           <CyberSlantedTabBar fill>
             {modeOptions.map((m) => (

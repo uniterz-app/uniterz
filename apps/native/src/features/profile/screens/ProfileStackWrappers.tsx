@@ -30,6 +30,7 @@ import MatchCardDesignPreviewScreenNative from "../../games/MatchCardDesignPrevi
 import LpRankingPreviewScreenNative from "../../rankings/LpRankingPreviewScreenNative";
 import RankingListDesignPreviewScreenNative from "../../rankings/RankingListDesignPreviewScreenNative";
 import ProLeagueGatePreviewScreenNative from "../../rankings/ProLeagueGatePreviewScreenNative";
+import InjuryDesignPreviewScreenNative from "../../games/predict/InjuryDesignPreviewScreenNative";
 import type { ProfileStackParamList } from "../../../navigation/types";
 
 const apiBase = process.env.EXPO_PUBLIC_UNITERZ_API_BASE_URL ?? null;
@@ -401,5 +402,11 @@ export function ProLeagueGatePreviewScreenWrapper() {
       language={language === "ja" ? "ja" : "en"}
       onClose={() => navigation.goBack()}
     />
+  );
+}
+
+export function InjuryDesignPreviewScreenWrapper() {
+  return (
+    <InjuryDesignPreviewScreenNative />
   );
 }

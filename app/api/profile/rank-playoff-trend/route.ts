@@ -63,9 +63,9 @@ export async function GET(req: Request) {
       points,
     });
   } catch (e: unknown) {
-    const message = e instanceof Error ? e.message : "unexpected error";
+    console.error("[api/profile/rank-playoff-trend]", e);
     return NextResponse.json(
-      { ok: false, error: message },
+      { ok: false, error: "internal" },
       { status: 500 }
     );
   }

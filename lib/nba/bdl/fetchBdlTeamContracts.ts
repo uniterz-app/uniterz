@@ -8,6 +8,10 @@ import {
   appTeamIdFromBdlTeamId,
   rememberBdlTeamId,
 } from "@/lib/nba/bdl/bdlNbaTeamIdMap";
+import {
+  forEachWithConcurrency,
+  NBA_INGEST_CONCURRENCY,
+} from "@/lib/async/forEachWithConcurrency";
 
 export type BdlTeamContractRow = {
   id?: number;
@@ -18,6 +22,12 @@ export type BdlTeamContractRow = {
   total_cash?: number | null;
   base_salary?: number | null;
   rank?: number | null;
+  contract_type?: string | null;
+  signed_using?: string | null;
+  contract_status?: string | null;
+  contract_notes?: unknown;
+  option?: string | null;
+  option_type?: string | null;
   player?: {
     id?: number;
     first_name?: string;
@@ -31,10 +41,6 @@ export type BdlTeamContractRow = {
     full_name?: string;
   } | null;
 };
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((r) => setTimeout(r, ms));
-}
 
 export async function fetchBdlContractsForTeam(
   bdlTeamId: number,
@@ -53,16 +59,23 @@ export async function fetchBdlContractsForTeam(
   return rows;
 }
 
-/** 全 NBA チームの契約を seasonYear で取得 */
+/**
+ * 全 NBA チームの契約を seasonYear で取得。
+ *
+ * 30 クラブを直列 + sleep だと 1 年分で十数秒かかり、契約 ingest は
+ * 複数年ぶん繰り返すためタイムアウトしていた。ワーカープールで詰める。
+ */
 export async function fetchBdlAllTeamContracts(
   seasonYear: number
 ): Promise<Map<string, BdlTeamContractRow[]>> {
   const byApp = new Map<string, BdlTeamContractRow[]>();
   const entries = Object.entries(BDL_TEAM_ID_BY_APP_ID);
-  for (let i = 0; i < entries.length; i += 1) {
-    const [appId, bdlId] = entries[i]!;
-    byApp.set(appId, await fetchBdlContractsForTeam(bdlId, seasonYear));
-    if (i < entries.length - 1) await sleep(80);
-  }
+  await forEachWithConcurrency(
+    entries,
+    NBA_INGEST_CONCURRENCY,
+    async ([appId, bdlId]) => {
+      byApp.set(appId, await fetchBdlContractsForTeam(bdlId, seasonYear));
+    }
+  );
   return byApp;
 }

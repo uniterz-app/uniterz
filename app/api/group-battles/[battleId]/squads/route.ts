@@ -21,6 +21,7 @@ import {
 } from "@/lib/groupBattles/server/firestore";
 import { squadInviteCodeWriteFields } from "@/lib/groupBattles/server/inviteCodeWrite";
 import { jsonErr, jsonOk, mapAuthError } from "@/lib/groupBattles/server/http";
+import { consumeRateLimit, RATE_LIMIT_RULES } from "@/lib/security/rateLimit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -43,6 +44,16 @@ export async function POST(req: Request, ctx: Ctx) {
     if (!name) return jsonErr("invalid_name", 400);
     const acceptRules = Boolean(body?.acceptRules);
     if (!acceptRules) return jsonErr("rules_required", 400);
+
+    // 作成→解散の繰り返しで空スクワッドを量産されないようにする
+    const limit = await consumeRateLimit(
+      adminDb,
+      RATE_LIMIT_RULES.squadCreate,
+      uid
+    );
+    if (!limit.allowed) {
+      return jsonErr("rate_limited", 429, { retryAfterSec: limit.retryAfterSec });
+    }
 
     let invitePlain = "";
     let hash = "";

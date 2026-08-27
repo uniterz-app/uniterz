@@ -40,6 +40,8 @@ export type NbaRosterPlayer = {
   draftYear?: number | null;
   draftRound?: number | null;
   draftNumber?: number | null;
+  /** 2-Way 契約フラグ */
+  isTwoWay?: boolean;
 };
 
 export type NbaRosterTeamBlock = {
@@ -64,6 +66,18 @@ export function playerCardName(player: {
 }): string {
   const first = player.firstName?.trim() ?? "";
   const last = player.lastName?.trim() ?? "";
+  const upperFirst = first.toUpperCase();
+  const upperLast = last.toUpperCase();
+
+  // Shai Gilgeous-Alexander → SGA
+  if (
+    (upperFirst === "SHAI" && upperLast.includes("GILGEOUS-ALEXANDER")) ||
+    upperLast === "GILGEOUS-ALEXANDER" ||
+    (upperFirst === "SHAI" && upperLast === "ALEXANDER")
+  ) {
+    return "SGA";
+  }
+
   if (first && last) {
     return `${first.charAt(0).toUpperCase()}.${last.toUpperCase()}`;
   }

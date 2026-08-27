@@ -3,7 +3,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { auth, db } from "@/lib/firebase";
-import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { doc } from "firebase/firestore";
 import { withTimeout } from "@/lib/async/withTimeout";
 import { getUserDocDataCached } from "@/lib/user/userDocCache";
 
@@ -77,23 +77,15 @@ export function useProfilePlan({ targetUid, profilePlan }: Params) {
               : undefined;
           const cancelAtPeriodEnd = data.cancelAtPeriodEnd === true;
 
+          // 表示だけ free に倒す。Firestore の書き換えはしない
+          // （users の plan / proUntil はルールでクライアント書き込み禁止。
+          //  実際のダウングレードは Functions の expireProUsers が行う）
           if (
             nextPlan === "pro" &&
             cancelAtPeriodEnd &&
             typeof proUntilMs === "number" &&
             Date.now() > proUntilMs
           ) {
-            await setDoc(
-              userDocRef,
-              {
-                plan: "free",
-                proUntil: null,
-                cancelAtPeriodEnd: false,
-                updatedAt: serverTimestamp(),
-              },
-              { merge: true }
-            );
-
             nextPlan = "free";
           }
         }

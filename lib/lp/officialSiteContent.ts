@@ -7,6 +7,7 @@
  * Pro 料金は iOS（App Store）の税込予定価格。地域・ストアで異なる場合がある。
  */
 
+import { INFO_EMAIL, SUPPORT_EMAIL } from "@/lib/contact/companyEmails";
 import {
   TOKUSHOHO_HEADING,
   TOKUSHOHO_LEAD,
@@ -24,7 +25,10 @@ export type OfficialAssetBrief = {
 
 export const officialSite = {
   productName: "Uniterz",
-  supportEmail: "support@uniterz.app",
+  /** LP・公式・取引先・スポンサー・一般窓口 */
+  infoEmail: INFO_EMAIL,
+  /** アプリユーザーサポート（不具合・返金・ログイン等） */
+  supportEmail: SUPPORT_EMAIL,
   termsHref: "/mobile/terms",
   privacyHref: "/mobile/privacy",
   tokushohoHref: "/lp-official/tokushoho",
@@ -547,7 +551,7 @@ export const officialFaq = {
 export const officialContact = {
   heading: "Contact",
   headingJa: "お問い合わせ",
-  lead: "サービスに関するお問い合わせは、下記メールまたはフォームから受け付けます。",
+  lead: `会社・提携・スポンサー等の一般窓口は ${INFO_EMAIL} です。アプリの不具合・アカウント・返金は ${SUPPORT_EMAIL} へお願いします。`,
 } as const;
 
 export const officialTokushoho = {

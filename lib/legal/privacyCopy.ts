@@ -6,6 +6,7 @@
  */
 import type { LegalSection } from "@/lib/legal/legalSection";
 import { REDEMPTION_PRIVACY_ADDITIONS } from "@/lib/legal/unitRedemptionLegalCopy";
+import { SUPPORT_EMAIL } from "@/lib/contact/companyEmails";
 
 export const PRIVACY_UPDATED_AT = "2026-08-18";
 
@@ -21,11 +22,11 @@ export const PRIVACY_SECTIONS: readonly LegalSection[] = [
     paragraphs: {
       ja: [
         "本ポリシーは、Uniterz（以下「本サービス」）の運営者（以下「当社」）が、本サービスにおいて取り扱う個人情報およびそれに準ずる情報について定めるものです。",
-        "法人名、所在地その他の事業者情報は、特定商取引法に基づく表記をご確認ください。お問い合わせは support@uniterz.app までお願いします。",
+        `法人名、所在地その他の事業者情報は、特定商取引法に基づく表記をご確認ください。お問い合わせは ${SUPPORT_EMAIL} までお願いします。`,
       ],
       en: [
         "This Policy explains how the operator of Uniterz (the \"Service\", \"we\") handles personal information and similar data.",
-        "Our legal name, address, and other operator details are published on the legally required notices page. Contact: support@uniterz.app.",
+        `Our legal name, address, and other operator details are published on the legally required notices page. Contact: ${SUPPORT_EMAIL}.`,
       ],
     },
   },
@@ -365,10 +366,10 @@ export const PRIVACY_SECTIONS: readonly LegalSection[] = [
     title: { ja: "開示、訂正、利用停止等", en: "Access, Correction, and Cessation" },
     paragraphs: {
       ja: [
-        "ユーザーは、自身の個人情報について、開示、訂正、追加、削除、利用停止等を求めることができます。表示名やプロフィールの一部は、アプリ内の設定から変更できます。その他の請求は support@uniterz.app までご連絡ください。本人確認のうえ、法令に従い対応します。",
+        `ユーザーは、自身の個人情報について、開示、訂正、追加、削除、利用停止等を求めることができます。表示名やプロフィールの一部は、アプリ内の設定から変更できます。その他の請求は ${SUPPORT_EMAIL} までご連絡ください。本人確認のうえ、法令に従い対応します。`,
       ],
       en: [
-        "You may request disclosure, correction, addition, deletion, or cessation of use of your personal information. Some profile fields can be changed in settings. For other requests, email support@uniterz.app. We will verify identity and respond as required by law.",
+        `You may request disclosure, correction, addition, deletion, or cessation of use of your personal information. Some profile fields can be changed in settings. For other requests, email ${SUPPORT_EMAIL}. We will verify identity and respond as required by law.`,
       ],
     },
   },
@@ -407,10 +408,10 @@ export const PRIVACY_SECTIONS: readonly LegalSection[] = [
     title: { ja: "お問い合わせ", en: "Contact" },
     paragraphs: {
       ja: [
-        "個人情報の取扱いに関するお問い合わせは、support@uniterz.app までご連絡ください。",
+        `個人情報の取扱いに関するお問い合わせは、${SUPPORT_EMAIL} までご連絡ください。`,
       ],
       en: [
-        "Questions about this Policy: support@uniterz.app.",
+        `Questions about this Policy: ${SUPPORT_EMAIL}.`,
       ],
     },
   },

@@ -105,46 +105,48 @@ function InjuryCard({
 }) {
   const tone = injuryStatusTone(row.status);
   const colors = TONE_COLORS[tone] ?? TONE_COLORS.neutral;
-  const statusText = injuryStatusLabel(row.status);
   const statusShort = injuryStatusShortLabel(row.status);
   const detail = injuryDetailLabel(row, language === "ja" ? "ja" : "en");
   const expected = (row.returnDate ?? "—").toUpperCase();
 
   const body = (
-    <View style={[styles.card, { borderColor: colors.border }]}>
-      <View style={styles.cardBody}>
-        <View style={{ flex: 1, minWidth: 0 }}>
-          <Text style={styles.playerName} numberOfLines={2}>
-            {playerCardName(row.player)}
+    <View
+      style={[
+        styles.card,
+        {
+          borderColor: colors.border,
+          backgroundColor: "rgba(8,10,14,0.92)",
+        },
+      ]}
+    >
+      <View style={styles.cardHeaderRow}>
+        <Text style={styles.playerName} numberOfLines={1}>
+          {playerCardName(row.player)}
+        </Text>
+        <View
+          style={[
+            styles.statusBadge,
+            {
+              borderColor: colors.accent,
+              backgroundColor: "rgba(255,255,255,0.06)",
+            },
+          ]}
+        >
+          <Text style={[styles.statusBadgeText, { color: colors.accent }]}>
+            {statusShort}
           </Text>
-          {detail ? (
-            <Text style={styles.detail} numberOfLines={2}>
-              {detail}
-            </Text>
-          ) : null}
-          <Text style={[styles.exp, { color: colors.accent }]} numberOfLines={1}>
-            EXP {expected}
-          </Text>
-        </View>
-        <View style={styles.statusCol}>
-          <View style={styles.statusDivider} />
-          <View
-            style={styles.statusInner}
-            accessibilityLabel={statusText}
-            accessibilityRole="text"
-          >
-            <StatusIcon tone={tone} color={colors.accent} />
-            <Text style={[styles.statusText, { color: colors.accent }]}>
-              {statusShort}
-            </Text>
-          </View>
         </View>
       </View>
-      {/* Web 右下アクセント三角（clip-path の代替） */}
-      <View
-        style={[styles.cardCornerAccent, { borderTopColor: colors.accent }]}
-        pointerEvents="none"
-      />
+
+      {detail ? (
+        <Text style={styles.detail} numberOfLines={1}>
+          {detail}
+        </Text>
+      ) : null}
+
+      <Text style={[styles.exp, { color: colors.accent }]} numberOfLines={1}>
+        ↳ {expected}
+      </Text>
     </View>
   );
 
@@ -231,7 +233,7 @@ const OXANIUM = "Oxanium_700Bold";
 
 const styles = StyleSheet.create({
   grid: { flexDirection: "row", gap: 8 },
-  column: { flex: 1, minWidth: 0, gap: 8 },
+  column: { flex: 1, minWidth: 0, gap: 6 },
   columnTitle: {
     fontFamily: MATCH_CARD_DISPLAY_FONT,
     fontSize: 15,
@@ -255,32 +257,20 @@ const styles = StyleSheet.create({
   },
   card: {
     borderWidth: 1,
-    backgroundColor: "rgba(8,10,14,0.92)",
-    overflow: "hidden",
-    position: "relative",
+    borderRadius: 2,
+    paddingHorizontal: 9,
+    paddingVertical: 8,
+    gap: 4,
   },
   cardPressed: {
     opacity: 0.9,
-    transform: [{ scale: 0.97 }],
+    transform: [{ scale: 0.98 }],
   },
-  cardBody: {
+  cardHeaderRow: {
     flexDirection: "row",
-    alignItems: "stretch",
-    gap: 6,
-    paddingHorizontal: 9,
-    paddingVertical: 10,
-    paddingRight: 6,
-  },
-  cardCornerAccent: {
-    position: "absolute",
-    right: 0,
-    bottom: 0,
-    width: 0,
-    height: 0,
-    borderStyle: "solid",
-    borderLeftWidth: 8,
-    borderTopWidth: 8,
-    borderLeftColor: "transparent",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 4,
   },
   playerName: {
     fontFamily: OXANIUM,
@@ -289,31 +279,32 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
     color: "#fff",
     textTransform: "uppercase",
-    lineHeight: 16,
+    flex: 1,
   },
-  detail: {
-    marginTop: 4,
-    fontSize: 11,
-    lineHeight: 15,
-    color: "rgba(255,255,255,0.55)",
+  statusBadge: {
+    borderWidth: 1,
+    borderRadius: 2,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
   },
-  exp: {
-    marginTop: 4,
+  statusBadgeText: {
     fontFamily: OXANIUM,
-    fontSize: 11,
+    fontSize: 9,
     fontWeight: "800",
-    letterSpacing: 0.4,
+    letterSpacing: 0.5,
     textTransform: "uppercase",
   },
-  statusCol: { flexDirection: "row", alignItems: "stretch", gap: 4 },
-  statusDivider: { width: 1, backgroundColor: "rgba(255,255,255,0.18)", marginVertical: 2 },
-  statusInner: { width: 44, alignItems: "center", justifyContent: "center", gap: 4 },
-  statusText: {
+  detail: {
+    fontSize: 11,
+    lineHeight: 15,
+    color: "rgba(255,255,255,0.65)",
+    fontWeight: "500",
+  },
+  exp: {
     fontFamily: OXANIUM,
     fontSize: 10,
     fontWeight: "800",
-    letterSpacing: 0.6,
-    textAlign: "center",
+    letterSpacing: 0.3,
     textTransform: "uppercase",
   },
 });

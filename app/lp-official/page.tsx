@@ -15,7 +15,7 @@ export default function OfficialLandingPage() {
     "@type": "Organization",
     name: officialSite.company.name,
     url: "https://uniterz.app",
-    email: officialSite.supportEmail,
+    email: officialSite.infoEmail,
     description:
       "スポーツ予想アプリケーション Uniterz の企画・開発・運営。現金を賭けるサービスではありません。",
     makesOffer: {

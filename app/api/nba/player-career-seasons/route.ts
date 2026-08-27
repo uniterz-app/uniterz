@@ -51,8 +51,7 @@ export async function GET(req: Request) {
     return NextResponse.json(
       {
         ok: false,
-        error:
-          e instanceof Error ? e.message : "player-career-seasons failed",
+        error: "internal",
       },
       { status: 500 }
     );

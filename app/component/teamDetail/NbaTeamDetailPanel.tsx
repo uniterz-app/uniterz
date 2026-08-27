@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { AnimatePresence, motion } from "framer-motion";
 import { Flame, Snowflake } from "lucide-react";
 import { nameOxanium, nameBebas } from "@/lib/fonts";
 import { matchCardTeamNameStyle } from "@/lib/games/teamDisplayTypography";
@@ -19,9 +20,20 @@ import {
   formatSalaryUsd,
 } from "@/lib/predict/nbaPlayerDetailPreviewMocks";
 import {
+  buildFuturePayrollYearsFromLines,
+  buildSynchronizedTeamPayrollLines,
+  nbaSalaryCapLinesForSeason,
+  nbaTwoWaySalaryForSeason,
+  resolveApronStatus,
+} from "@/lib/nba/teamPayroll/mapBdlToTeamPayroll";
+import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
+import type { NbaRosterTeamBlock } from "@/lib/predict/nbaRoster";
+import {
   formatStreakLabel,
   getNbaTeamDetailPreview,
   payrollDisplaySlices,
+  type NbaApronStatus,
+  type NbaTeamFuturePayrollYear,
   type NbaTeamHeadToHeadEntry,
   type NbaTeamInjuryEntry,
   type NbaTeamMetricWithRank,
@@ -31,6 +43,12 @@ import {
   type NbaTeamStreak,
   type NbaTeamUpcomingGame,
 } from "@/lib/predict/nbaTeamDetailPreviewMocks";
+import { getNbaTeamDraftCapital } from "@/lib/nba/draftPicks/nbaDraftCapitalData";
+import type {
+  NbaDraftPickEntry,
+  NbaDraftPickKind,
+  NbaTeamDraftCapital,
+} from "@/lib/nba/draftPicks/draftPicksTypes";
 import { useLeagueTeamStatsBundle } from "@/lib/nba/useLeagueTeamStatsBundle";
 import { useNbaTeamDetailLiveOverlay } from "@/lib/nba/teamDetail/useNbaTeamDetailLiveOverlay";
 import type { NbaLeagueTeamStatsBundle } from "@/lib/predict/nbaLeagueTeamStatsMocks";
@@ -970,142 +988,826 @@ function Upcoming({
   );
 }
 
+function ApronBadgeWeb({
+  status,
+  isJa,
+}: {
+  status: NbaApronStatus;
+  isJa: boolean;
+}) {
+  let label = "UNDER CAP";
+  let color = "#00F5FF";
+  let bg = "rgba(0,245,255,0.12)";
+  let border = "rgba(0,245,255,0.45)";
+
+  switch (status) {
+    case "under_cap":
+      label = isJa ? "CAP以下" : "UNDER CAP";
+      color = "#00F5FF";
+      bg = "rgba(0,245,255,0.12)";
+      border = "rgba(0,245,255,0.45)";
+      break;
+    case "over_cap":
+      label = isJa ? "CAP超過" : "OVER CAP";
+      color = "#D8D8D8";
+      bg = "rgba(255,255,255,0.08)";
+      border = "rgba(255,255,255,0.3)";
+      break;
+    case "tax_payer":
+      label = isJa ? "TAX超過" : "TAX PAYER";
+      color = "#FFD000";
+      bg = "rgba(255,208,0,0.14)";
+      border = "rgba(255,208,0,0.5)";
+      break;
+    case "first_apron":
+      label = isJa ? "1ST APRON超過" : "1ST APRON OVER";
+      color = "#FF8A00";
+      bg = "rgba(255,138,0,0.16)";
+      border = "rgba(255,138,0,0.55)";
+      break;
+    case "second_apron":
+      label = isJa ? "2ND APRON超過" : "2ND APRON OVER";
+      color = "#FF2D78";
+      bg = "rgba(255,45,120,0.18)";
+      border = "rgba(255,45,120,0.6)";
+      break;
+  }
+
+  return (
+    <span
+      className={`${nameOxanium.className} inline-flex items-center px-1.5 py-0.5 text-[8px] font-extrabold tracking-wider border rounded-[2px]`}
+      style={{
+        backgroundColor: bg,
+        borderColor: border,
+        color,
+        transform: "skewX(-8deg)",
+      }}
+    >
+      {label}
+    </span>
+  );
+}
+
 function PayrollCard({
   payroll,
+  rosterBlock,
   accent,
   isJa,
 }: {
   payroll: NbaTeamPayroll;
+  rosterBlock?: NbaRosterTeamBlock | null;
   accent: string;
   isJa: boolean;
 }) {
-  const overCap = payroll.capSpace < 0;
-  const slices = payrollDisplaySlices(payroll.lines, accent);
+  const [selectedSeasonIdx, setSelectedSeasonIdx] = useState(0);
+
+  const seasonKeys = ["2026-27", "2027-28", "2028-29", "2029-30", "2030-31"];
+
+  const seasonsList = seasonKeys.map((sKey, index) => {
+    const capInfo = nbaSalaryCapLinesForSeason(sKey);
+    // 将来年のBDLデータが payroll.futureYears にあればそれを参照
+    const futureYearData =
+      index > 0
+        ? (payroll.futureYears ?? []).find((fy) => fy.seasonKey === sKey)
+        : null;
+
+    const sourceLines = futureYearData ? futureYearData.lines : payroll.lines;
+    const linesRaw = buildSynchronizedTeamPayrollLines(
+      rosterBlock?.players,
+      sourceLines,
+      sKey
+    );
+    const totalSalary = linesRaw.reduce((s, l) => s + l.salary, 0);
+    const lines =
+      totalSalary > 0
+        ? linesRaw.map((l) => ({ ...l, share: l.salary / totalSalary }))
+        : linesRaw;
+
+    return {
+      key: sKey,
+      label: sKey,
+      isCurrent: index === 0,
+      totalSalary,
+      salaryCap: capInfo.salaryCap,
+      taxLine: capInfo.taxLine,
+      firstApron: capInfo.firstApron,
+      secondApron: capInfo.secondApron,
+      capSpace: capInfo.salaryCap - totalSalary,
+      taxSpace: capInfo.taxLine - totalSalary,
+      firstApronSpace: capInfo.firstApron - totalSalary,
+      secondApronSpace: capInfo.secondApron - totalSalary,
+      apronStatus: resolveApronStatus(totalSalary, capInfo),
+      taxBill: 0,
+      guaranteed: totalSalary,
+      lines,
+      leagueRank: index === 0 ? payroll.leagueRank : null,
+    };
+  });
+
+  const active = seasonsList[selectedSeasonIdx] ?? seasonsList[0];
+  const overCap = active.capSpace < 0;
+  const slices = payrollDisplaySlices(active.lines, accent);
+
   return (
     <section className="space-y-2.5">
       <SectionTitle title="PAYROLL" accent={accent} />
-      <div
-        className="space-y-2 border bg-black/45 p-3.5"
-        style={{ borderColor: hexToRgba(accent, 0.45) }}
-      >
-        <div className="flex items-end justify-between">
-          <div>
-            <p
-              className={`${nameOxanium.className} text-[9px] font-bold uppercase tracking-[0.14em] text-white/40`}
-              style={{ transform: "skewX(-8deg)" }}
-            >
-              {isJa ? "総年俸" : "Total"}
-            </p>
-            <p
-              className={`${nameOxanium.className} text-[26px] font-extrabold`}
-              style={{ transform: "skewX(-8deg)" }}
-            >
-              {formatSalaryUsd(payroll.totalSalary)}
-            </p>
-          </div>
-          <div className="text-right">
-            <p
-              className={`${nameOxanium.className} text-[9px] font-bold uppercase tracking-[0.14em] text-white/40`}
-              style={{ transform: "skewX(-8deg)" }}
-            >
-              Rank
-            </p>
-            <p
-              className={`${nameOxanium.className} text-[22px] font-extrabold`}
-              style={{ color: "#FFFFFF", transform: "skewX(-8deg)" }}
-            >
-              #{payroll.leagueRank}
-            </p>
-          </div>
-        </div>
-        <p className={`${nameOxanium.className} text-[11px] font-bold uppercase tracking-wide text-white/60`}>
-          CAP {formatSalaryUsd(payroll.salaryCap)} · TAX LINE{" "}
-          {formatSalaryUsd(payroll.taxLine)}
-        </p>
-        <p
-          className={`${nameOxanium.className} text-[12px] font-extrabold`}
-          style={{
-            color: overCap ? FORM_LOSS : BAR_OFFENSE,
-            transform: "skewX(-6deg)",
-          }}
-        >
-          {isJa ? "キャップ余裕" : "CAP SPACE"}{" "}
-          {overCap ? "" : "+"}
-          {formatSalaryUsd(payroll.capSpace)}
-          {payroll.taxBill > 0
-            ? `  ·  TAX ${formatSalaryUsd(payroll.taxBill)}`
-            : ""}
-        </p>
-        <p
-          className={`${nameOxanium.className} text-[12px] font-extrabold`}
-          style={{ color: "#FFFFFF", transform: "skewX(-6deg)" }}
-        >
-          {isJa ? "保証額" : "GUARANTEED"}{" "}
-          {formatSalaryUsd(payroll.guaranteed)}
-        </p>
 
-        <p
-          className={`${nameOxanium.className} pt-1 text-[9px] font-bold uppercase tracking-[0.12em] text-white/45`}
-          style={{ transform: "skewX(-6deg)" }}
+      {/* Year Selection Tabs */}
+      <div className="flex flex-wrap gap-1.5">
+        {seasonsList.map((s, idx) => {
+          const isSelected = idx === selectedSeasonIdx;
+          return (
+            <button
+              key={s.key}
+              type="button"
+              onClick={() => setSelectedSeasonIdx(idx)}
+              className={`${nameOxanium.className} px-2.5 py-1 text-[10px] font-bold tracking-wider border rounded-[2px] transition-colors`}
+              style={{
+                borderColor: isSelected ? accent : "rgba(255,255,255,0.12)",
+                backgroundColor: isSelected
+                  ? hexToRgba(accent, 0.18)
+                  : "rgba(8,8,12,0.4)",
+                color: isSelected ? accent : "rgba(255,255,255,0.6)",
+                transform: "skewX(-8deg)",
+              }}
+            >
+              {s.label}
+            </button>
+          );
+        })}
+      </div>
+
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={active.key}
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -4 }}
+          transition={{ duration: 0.18, ease: "easeOut" }}
+          className="space-y-2 border bg-black/45 p-3.5"
+          style={{ borderColor: hexToRgba(accent, 0.45) }}
         >
-          {isJa ? "選手内訳" : "By Player"}
-        </p>
-        <div className="overflow-hidden px-1.5">
-          <div
-            className="flex h-3.5 gap-px bg-white/[0.06]"
-            style={{ transform: "skewX(-14deg)" }}
-          >
-            {slices.map((s) => (
-              <div
-                key={s.key}
+          <div className="flex items-end justify-between">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <p
+                  className={`${nameOxanium.className} text-[9px] font-bold uppercase tracking-[0.14em] text-white/40`}
+                  style={{ transform: "skewX(-8deg)" }}
+                >
+                  {active.isCurrent
+                    ? isJa
+                      ? `総年俸 (${active.label})`
+                      : `TOTAL SALARY (${active.label})`
+                    : isJa
+                    ? `確定年俸 (${active.label})`
+                    : `COMMITTED (${active.label})`}
+                </p>
+                <ApronBadgeWeb status={active.apronStatus} isJa={isJa} />
+              </div>
+              <p
+                className={`${nameOxanium.className} text-[26px] font-extrabold text-white`}
+                style={{ transform: "skewX(-8deg)" }}
+              >
+                {formatSalaryUsd(active.totalSalary)}
+              </p>
+            </div>
+            {active.leagueRank != null && (
+              <div className="text-right">
+                <p
+                  className={`${nameOxanium.className} text-[9px] font-bold uppercase tracking-[0.14em] text-white/40`}
+                  style={{ transform: "skewX(-8deg)" }}
+                >
+                  Rank
+                </p>
+                <p
+                  className={`${nameOxanium.className} text-[22px] font-extrabold text-white`}
+                  style={{ transform: "skewX(-8deg)" }}
+                >
+                  #{active.leagueRank}
+                </p>
+              </div>
+            )}
+          </div>
+
+          <p className={`${nameOxanium.className} text-[11px] font-bold uppercase tracking-wide text-white/60`}>
+            CAP {formatSalaryUsd(active.salaryCap)} · TAX LINE{" "}
+            {formatSalaryUsd(active.taxLine)}
+          </p>
+
+          <p className={`${nameOxanium.className} text-[11px] font-bold uppercase tracking-wide`}>
+            <span className="text-orange-400">
+              1ST APRON {formatSalaryUsd(active.firstApron)}
+            </span>
+            <span className="text-white/45"> · </span>
+            <span className="text-pink-400">
+              2ND APRON {formatSalaryUsd(active.secondApron)}
+            </span>
+          </p>
+
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+            {active.firstApronSpace != null && (
+              <p
+                className={`${nameOxanium.className} text-[12px] font-extrabold`}
                 style={{
-                  flexGrow: Math.max(s.share, 0.02),
-                  flexBasis: 0,
-                  backgroundColor: s.color,
+                  color: active.firstApronSpace < 0 ? FORM_LOSS : BAR_OFFENSE,
+                  transform: "skewX(-6deg)",
                 }}
-              />
-            ))}
+              >
+                {isJa ? "1ST APRON余裕" : "1ST APRON SPACE"}:{" "}
+                {active.firstApronSpace >= 0 ? "+" : ""}
+                {formatSalaryUsd(active.firstApronSpace)}
+              </p>
+            )}
+            {active.secondApronSpace != null && (
+              <p
+                className={`${nameOxanium.className} text-[12px] font-extrabold`}
+                style={{
+                  color: active.secondApronSpace < 0 ? FORM_LOSS : BAR_OFFENSE,
+                  transform: "skewX(-6deg)",
+                }}
+              >
+                {isJa ? "2ND APRON余裕" : "2ND APRON SPACE"}:{" "}
+                {active.secondApronSpace >= 0 ? "+" : ""}
+                {formatSalaryUsd(active.secondApronSpace)}
+              </p>
+            )}
+          </div>
+
+          <p
+            className={`${nameOxanium.className} pt-1 text-[9px] font-bold uppercase tracking-[0.12em] text-white/45`}
+            style={{ transform: "skewX(-6deg)" }}
+          >
+            {isJa
+              ? `選手内訳 (${slices.length}名) · % はCAP比`
+              : `BY PLAYER (${slices.length}) · % OF CAP`}
+          </p>
+          <div className="overflow-hidden px-1.5">
+            <div
+              className="flex h-3.5 gap-px bg-white/[0.06]"
+              style={{ transform: "skewX(-14deg)" }}
+            >
+              {slices.map((s) => (
+                <div
+                  key={s.key}
+                  style={{
+                    flexGrow: Math.max(s.share, 0.02),
+                    flexBasis: 0,
+                    backgroundColor: s.color,
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+          <div className="space-y-2">
+            {slices.length === 0 ? (
+              <p className={`${nameOxanium.className} text-[12px] font-bold text-white/45`}>
+                {isJa ? "データがありません" : "No data yet"}
+              </p>
+            ) : (
+              slices.map((s) => {
+                const isTw = s.isTwoWay === true && active.key === CURRENT_NBA_SEASON_KEY;
+                const displaySalary = isTw
+                  ? nbaTwoWaySalaryForSeason(active.key)
+                  : s.salary;
+                const capPct =
+                  !isTw && s.salary > 0 && active.salaryCap > 0
+                    ? ((s.salary / active.salaryCap) * 100).toFixed(1)
+                    : null;
+                return (
+                  <div key={s.key} className="flex items-center gap-2.5 py-0.5">
+                    <span
+                      className="h-2.5 w-2.5 shrink-0 rounded-[1px]"
+                      style={{
+                        backgroundColor: s.color,
+                        transform: "skewX(-12deg)",
+                      }}
+                    />
+                    <div className="flex min-w-0 flex-1 items-center gap-1.5">
+                      <span
+                        className={`${nameOxanium.className} truncate text-[14px] font-extrabold text-white`}
+                        style={{ transform: "skewX(-8deg)" }}
+                      >
+                        {s.label}
+                      </span>
+                      {s.option && active.key !== CURRENT_NBA_SEASON_KEY ? (
+                        <span
+                          className={`${nameOxanium.className} shrink-0 text-[9px] font-extrabold px-1.5 py-0.5 rounded-[2px] tracking-wider`}
+                          style={{
+                            transform: "skewX(-8deg)",
+                            backgroundColor:
+                              s.option === "TO"
+                                ? "rgba(255,180,0,0.18)"
+                                : s.option === "PO"
+                                ? "rgba(0,245,255,0.18)"
+                                : "rgba(168,85,247,0.18)",
+                            color:
+                              s.option === "TO"
+                                ? "#FFB800"
+                                : s.option === "PO"
+                                ? "#00F5FF"
+                                : "#C084FC",
+                          }}
+                        >
+                          {s.option === "TO"
+                            ? "TEAM"
+                            : s.option === "PO"
+                            ? "PLAYER"
+                            : s.option === "MO"
+                            ? "MUTUAL"
+                            : s.option}
+                        </span>
+                      ) : null}
+                    </div>
+                    <span
+                      className={`${nameOxanium.className} flex items-center gap-1 text-[13px] font-bold tabular-nums text-white/75`}
+                      style={{ transform: "skewX(-8deg)" }}
+                    >
+                      {isTw ? (
+                        <span className="text-[9px] font-extrabold px-1 py-0.2 rounded-[2px] bg-white/10 text-white/60">
+                          TW
+                        </span>
+                      ) : null}
+                      {displaySalary > 0 ? formatSalaryUsd(displaySalary) : "—"}
+                    </span>
+                    <span
+                      className={`${nameOxanium.className} w-16 text-right text-[13px] font-extrabold tabular-nums text-white`}
+                      style={{ transform: "skewX(-8deg)" }}
+                    >
+                      {capPct !== null ? (
+                        <>
+                          {capPct}% <span className="text-[9px] text-white/45 font-bold">CAP</span>
+                        </>
+                      ) : (
+                        <span className="text-[10px] text-white/35 font-bold">—</span>
+                      )}
+                    </span>
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          {/* Option Badges & Contract Legend */}
+          <div className="border-t border-white/10 pt-2.5 mt-3 space-y-1.5">
+            <p
+              className={`${nameOxanium.className} text-[8px] font-bold uppercase tracking-[0.14em] text-white/40`}
+              style={{ transform: "skewX(-6deg)" }}
+            >
+              {isJa ? "契約オプション / 表記凡例" : "CONTRACT OPTIONS & LEGEND"}
+            </p>
+            <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-3">
+              <div className="flex items-center gap-1.5">
+                <span
+                  className={`${nameOxanium.className} shrink-0 text-[8px] font-extrabold px-1.5 py-0.5 rounded-[2px] tracking-wider`}
+                  style={{
+                    transform: "skewX(-8deg)",
+                    backgroundColor: "rgba(255,180,0,0.18)",
+                    color: "#FFB800",
+                  }}
+                >
+                  TEAM
+                </span>
+                <span className="text-[10px] text-white/55 font-medium leading-tight">
+                  {isJa ? "チームオプション（球団に行使権）" : "Team Option (Club decision)"}
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span
+                  className={`${nameOxanium.className} shrink-0 text-[8px] font-extrabold px-1.5 py-0.5 rounded-[2px] tracking-wider`}
+                  style={{
+                    transform: "skewX(-8deg)",
+                    backgroundColor: "rgba(0,245,255,0.18)",
+                    color: "#00F5FF",
+                  }}
+                >
+                  PLAYER
+                </span>
+                <span className="text-[10px] text-white/55 font-medium leading-tight">
+                  {isJa ? "プレイヤーオプション（選手に行使権）" : "Player Option (Player decision)"}
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span
+                  className={`${nameOxanium.className} shrink-0 text-[8px] font-extrabold px-1.5 py-0.5 rounded-[2px] tracking-wider`}
+                  style={{
+                    transform: "skewX(-8deg)",
+                    backgroundColor: "rgba(168,85,247,0.18)",
+                    color: "#C084FC",
+                  }}
+                >
+                  MUTUAL
+                </span>
+                <span className="text-[10px] text-white/55 font-medium leading-tight">
+                  {isJa ? "双方合意オプション（球団・選手両方）" : "Mutual Option (Both agree)"}
+                </span>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      </AnimatePresence>
+    </section>
+  );
+}
+
+function DraftPicksCard({
+  teamId,
+  accent,
+  isJa,
+}: {
+  teamId: string;
+  accent: string;
+  isJa: boolean;
+}) {
+  const draftCapital = useMemo(() => getNbaTeamDraftCapital(teamId), [teamId]);
+  const { summary } = draftCapital;
+
+  const [selectedPick, setSelectedPick] = useState<NbaDraftPickEntry | null>(null);
+
+  // 柔軟性バッジの色
+  const flexColor =
+    summary.flexibility === "VERY HIGH" || summary.flexibility === "HIGH"
+      ? "#00F5FF"
+      : summary.flexibility === "MEDIUM"
+      ? "#5CF0B5"
+      : "#FF2D78";
+
+  return (
+    <section className="space-y-3">
+      <SectionTitle
+        title={isJa ? "DRAFT ASSETS (ドラフト指名権・資産)" : "DRAFT ASSETS & CAPITAL"}
+        accent={accent}
+      />
+
+      {/* ① Summary (資産サマリー) */}
+      <div
+        className="border bg-black/60 p-3.5 space-y-3"
+        style={{ borderColor: hexToRgba(accent, 0.4) }}
+      >
+        <div className="flex items-center justify-between border-b border-white/[0.08] pb-2.5">
+          <div className="flex items-center gap-2">
+            <span
+              className={`${nameOxanium.className} text-[11px] font-bold uppercase tracking-wider text-white/50`}
+            >
+              {isJa ? "ドラフト資産サマリー (2027-2033)" : "ASSETS SUMMARY (7-YEAR HORIZON)"}
+            </span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] text-white/40">{isJa ? "柔軟性" : "FLEXIBILITY"}</span>
+            <span
+              className={`${nameOxanium.className} px-2 py-0.5 text-[10px] font-extrabold border rounded-[2px]`}
+              style={{
+                backgroundColor: hexToRgba(flexColor, 0.15),
+                borderColor: hexToRgba(flexColor, 0.6),
+                color: flexColor,
+                transform: "skewX(-6deg)",
+              }}
+            >
+              {isJa ? summary.flexibilityJa : summary.flexibility}
+            </span>
           </div>
         </div>
-        <div className="space-y-2.5">
-          {slices.length === 0 ? (
-            <p className={`${nameOxanium.className} text-[12px] font-bold text-white/45`}>
-              {isJa ? "データがありません" : "No data yet"}
+
+        {/* 4カードグリッド */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          {/* 1巡目 */}
+          <div className="bg-white/[0.03] border border-white/10 p-2.5 rounded-[2px] space-y-1">
+            <p className="text-[9px] font-bold uppercase text-[#00F5FF]/80 tracking-wider">
+              {isJa ? "1巡目指名権" : "1ST ROUND PICKS"}
             </p>
-          ) : (
-            slices.map((s) => (
-            <div key={s.key} className="flex items-center gap-2.5 py-0.5">
-              <span
-                className="h-2.5 w-2.5 shrink-0 rounded-[1px]"
-                style={{
-                  backgroundColor: s.color,
-                  transform: "skewX(-12deg)",
-                }}
-              />
-              <span
-                className={`${nameOxanium.className} min-w-0 flex-1 truncate text-[14px] font-extrabold text-white/90`}
-                style={{ transform: "skewX(-8deg)" }}
-              >
-                {s.label}
+            <div className="flex items-baseline gap-1">
+              <span className={`${nameOxanium.className} text-[20px] font-extrabold text-white`}>
+                {summary.total1st}
               </span>
-              <span
-                className={`${nameOxanium.className} text-[13px] font-bold tabular-nums text-white/70`}
-                style={{ transform: "skewX(-8deg)" }}
-              >
-                {formatSalaryUsd(s.salary)}
-              </span>
-              <span
-                className={`${nameOxanium.className} w-10 text-right text-[13px] font-extrabold tabular-nums`}
-                style={{ color: "#FFFFFF", transform: "skewX(-8deg)" }}
-              >
-                {Math.round(s.share * 100)}%
-              </span>
+              <span className="text-[11px] text-white/50">{isJa ? "本" : "picks"}</span>
             </div>
-            ))
-          )}
+            <p className="text-[9px] text-white/50">
+              {isJa ? (
+                <>
+                  確定 <strong className="text-white font-bold">{summary.guaranteed1st}</strong> / 条件付{" "}
+                  <strong className="text-[#FFB800] font-bold">{summary.conditional1st}</strong>
+                </>
+              ) : (
+                <>
+                  Guar <strong className="text-white font-bold">{summary.guaranteed1st}</strong> / Cond{" "}
+                  <strong className="text-[#FFB800] font-bold">{summary.conditional1st}</strong>
+                </>
+              )}
+            </p>
+          </div>
+
+          {/* 2巡目 */}
+          <div className="bg-white/[0.03] border border-white/10 p-2.5 rounded-[2px] space-y-1">
+            <p className="text-[9px] font-bold uppercase text-white/70 tracking-wider">
+              {isJa ? "2巡目指名権" : "2ND ROUND PICKS"}
+            </p>
+            <div className="flex items-baseline gap-1">
+              <span className={`${nameOxanium.className} text-[20px] font-extrabold text-white`}>
+                {summary.total2nd}
+              </span>
+              <span className="text-[11px] text-white/50">{isJa ? "本" : "picks"}</span>
+            </div>
+            <p className="text-[9px] text-white/50">
+              {isJa ? (
+                <>
+                  確定 <strong className="text-white font-bold">{summary.guaranteed2nd}</strong> / 条件付{" "}
+                  <strong className="text-[#FFB800] font-bold">{summary.conditional2nd}</strong>
+                </>
+              ) : (
+                <>
+                  Guar <strong className="text-white font-bold">{summary.guaranteed2nd}</strong> / Cond{" "}
+                  <strong className="text-[#FFB800] font-bold">{summary.conditional2nd}</strong>
+                </>
+              )}
+            </p>
+          </div>
+
+          {/* スワップ権 */}
+          <div className="bg-white/[0.03] border border-white/10 p-2.5 rounded-[2px] space-y-1">
+            <p className="text-[9px] font-bold uppercase text-[#FFB800]/80 tracking-wider">
+              {isJa ? "スワップ権利" : "SWAP RIGHTS"}
+            </p>
+            <div className="flex items-baseline gap-1">
+              <span className={`${nameOxanium.className} text-[20px] font-extrabold text-[#FFB800]`}>
+                {summary.swapRights}
+              </span>
+              <span className="text-[11px] text-white/50">{isJa ? "件" : "swaps"}</span>
+            </div>
+            <p className="text-[9px] text-white/40">{isJa ? "有利交換権" : "Favorable swap"}</p>
+          </div>
+
+          {/* 放出済み */}
+          <div className="bg-white/[0.03] border border-white/10 p-2.5 rounded-[2px] space-y-1">
+            <p className="text-[9px] font-bold uppercase text-[#FF2D78]/80 tracking-wider">
+              {isJa ? "放出済み指名権" : "OUTGOING PICKS"}
+            </p>
+            <div className="flex items-baseline gap-1">
+              <span className={`${nameOxanium.className} text-[20px] font-extrabold text-[#FF2D78]`}>
+                {summary.outgoingPicks}
+              </span>
+              <span className="text-[11px] text-white/50">{isJa ? "本" : "picks"}</span>
+            </div>
+            <p className="text-[9px] text-white/40">{isJa ? "トレード譲渡" : "Traded away"}</p>
+          </div>
         </div>
       </div>
+
+      {/* ② Year-by-Year Timeline (年別タイムライン) */}
+      <div
+        className="border bg-black/60 p-3.5 space-y-3"
+        style={{ borderColor: hexToRgba(accent, 0.4) }}
+      >
+        <div className="flex items-center justify-between pb-2 border-b border-white/[0.08]">
+          <span className={`${nameOxanium.className} text-[11px] font-bold uppercase tracking-wider text-white/50`}>
+            {isJa ? "年別タイムライン (タップで条件詳細)" : "FUTURE PICKS TIMELINE (TAP FOR DETAILS)"}
+          </span>
+          <div className="flex items-center gap-2 text-[8px] text-white/40">
+            <span className="inline-flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#00F5FF]" /> {isJa ? "自前" : "OWN"}
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#5CF0B5]" /> {isJa ? "取得" : "FROM"}
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#FFB800]" /> SWAP
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#B388FF]" /> {isJa ? "条件/保護" : "PROT"}
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#FF2D78]" /> {isJa ? "放出" : "OUT"}
+            </span>
+          </div>
+        </div>
+
+        <div className="divide-y divide-white/[0.06]">
+          {draftCapital.years.map((y) => {
+            return (
+              <div key={y.year} className="py-2.5 first:pt-0 last:pb-0 flex flex-col sm:flex-row sm:items-start gap-2.5">
+                {/* 年表示 */}
+                <div className="w-14 shrink-0 pt-1">
+                  <span
+                    className={`${nameOxanium.className} text-[16px] font-extrabold text-white flex items-center gap-1`}
+                    style={{ transform: "skewX(-6deg)" }}
+                  >
+                    {y.year}
+                  </span>
+                </div>
+
+                {/* 1st & 2nd Rounds */}
+                <div className="flex-1 space-y-2">
+                  {/* 1巡目 (1ST ROUND) */}
+                  <div className="flex items-start gap-2">
+                    <span
+                      className={`${nameOxanium.className} text-[10px] font-extrabold text-[#00F5FF] w-7 pt-1 shrink-0`}
+                    >
+                      1ST
+                    </span>
+                    <div className="flex flex-wrap gap-1.5 flex-1">
+                      {y.firstRound.length === 0 ? (
+                        <span className="text-[10px] text-white/25 italic py-0.5">
+                          {isJa ? "保有なし" : "None"}
+                        </span>
+                      ) : (
+                        y.firstRound.map((p) => {
+                          const badge = renderPickBadge(p, isJa, () => setSelectedPick(p));
+                          return badge;
+                        })
+                      )}
+                    </div>
+                  </div>
+
+                  {/* 2巡目 (2ND ROUND) */}
+                  <div className="flex items-start gap-2">
+                    <span
+                      className={`${nameOxanium.className} text-[10px] font-extrabold text-white/40 w-7 pt-1 shrink-0`}
+                    >
+                      2ND
+                    </span>
+                    <div className="flex flex-wrap gap-1.5 flex-1">
+                      {y.secondRound.length === 0 ? (
+                        <span className="text-[10px] text-white/25 italic py-0.5">
+                          {isJa ? "保有なし" : "None"}
+                        </span>
+                      ) : (
+                        y.secondRound.map((p) => {
+                          const badge = renderPickBadge(p, isJa, () => setSelectedPick(p));
+                          return badge;
+                        })
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ③ タップで開く詳細モーダル */}
+      {selectedPick && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+          onClick={() => setSelectedPick(null)}
+        >
+          <div
+            className="w-full max-w-md bg-[#0c0d14] border border-[#00F5FF]/50 p-5 space-y-4 shadow-[0_0_30px_rgba(0,245,255,0.2)] rounded-[2px]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-start justify-between border-b border-white/10 pb-3">
+              <div>
+                <p className={`${nameOxanium.className} text-[11px] font-bold text-[#00F5FF] uppercase tracking-wider`}>
+                  {selectedPick.year} NBA DRAFT • {selectedPick.round === 1 ? "1ST ROUND" : "2ND ROUND"}
+                </p>
+                <h3 className={`${nameOxanium.className} text-[18px] font-extrabold text-white mt-0.5`}>
+                  {isJa ? selectedPick.detailsJa ?? selectedPick.detailsEn : selectedPick.detailsEn ?? selectedPick.detailsJa}
+                </h3>
+              </div>
+              <button
+                type="button"
+                className="text-white/50 hover:text-white p-1 text-[16px] leading-none"
+                onClick={() => setSelectedPick(null)}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Badges / Meta */}
+            <div className="flex flex-wrap gap-2 text-[10px]">
+              {selectedPick.badgeType && (
+                <span className="px-2 py-0.5 font-bold uppercase rounded-[2px] bg-white/10 text-white border border-white/20">
+                  {selectedPick.badgeType === "own"
+                    ? isJa ? "自前指名権" : "OWN PICK"
+                    : selectedPick.badgeType === "from"
+                    ? isJa ? `獲得 (via ${selectedPick.fromTeamId ?? ""})` : `VIA ${selectedPick.fromTeamId ?? ""}`
+                    : selectedPick.badgeType === "swap"
+                    ? isJa ? `スワップ権 (${selectedPick.swapWithTeamId ?? ""})` : `SWAP (${selectedPick.swapWithTeamId ?? ""})`
+                    : selectedPick.badgeType === "prot"
+                    ? isJa ? "プロテクト付き" : "PROTECTED"
+                    : selectedPick.badgeType === "outgoing"
+                    ? isJa ? `放出済み (to ${selectedPick.toTeamId ?? ""})` : `OUTGOING (to ${selectedPick.toTeamId ?? ""})`
+                    : isJa ? "条件付き" : "CONDITIONAL"}
+                </span>
+              )}
+
+              {selectedPick.protection && (
+                <span className="px-2 py-0.5 font-bold text-[#FFB800] rounded-[2px] bg-[#FFB800]/10 border border-[#FFB800]/30">
+                  {selectedPick.protection}
+                </span>
+              )}
+            </div>
+
+            {/* Conditions List */}
+            <div className="space-y-2 bg-white/[0.02] border border-white/[0.06] p-3 rounded-[2px]">
+              <p className="text-[10px] font-bold uppercase text-white/40 tracking-wider">
+                {isJa ? "行使条件・保護ルール" : "CONDITIONS & CONVEYANCE"}
+              </p>
+              {selectedPick.conditionsJa && selectedPick.conditionsJa.length > 0 ? (
+                <ul className="space-y-1.5 text-[12px] text-white/80">
+                  {(isJa ? selectedPick.conditionsJa : selectedPick.conditionsEn ?? selectedPick.conditionsJa).map(
+                    (c, idx) => (
+                      <li key={idx} className="flex items-start gap-2">
+                        <span className="text-[#00F5FF] mt-0.5">•</span>
+                        <span>{c}</span>
+                      </li>
+                    )
+                  )}
+                </ul>
+              ) : (
+                <p className="text-[12px] text-white/70">
+                  {isJa
+                    ? selectedPick.detailsJa ?? "追加のプロテクション条件はありません（確定）"
+                    : selectedPick.detailsEn ?? "No additional protection conditions (guaranteed)."}
+                </p>
+              )}
+            </div>
+
+            {/* Close Button */}
+            <div className="pt-2">
+              <button
+                type="button"
+                className="w-full py-2 bg-white/10 hover:bg-white/20 text-white font-bold text-[12px] rounded-[2px] border border-white/20 transition-colors"
+                onClick={() => setSelectedPick(null)}
+              >
+                {isJa ? "閉じる" : "CLOSE"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
+  );
+}
+
+function renderPickBadge(
+  p: NbaDraftPickEntry,
+  isJa: boolean,
+  onClick: () => void
+) {
+  const badgeType = p.badgeType ?? "own";
+  const isOutgoing = p.kind === "outgoing" || p.isOutgoing || badgeType === "outgoing";
+  const isSwap = p.kind.startsWith("swap") || p.isSwap || badgeType === "swap";
+  const isProt = badgeType === "prot" || (p.protection && p.protection.toLowerCase() !== "unprotected");
+  const isFrom = badgeType === "from" || (!isSwap && !isProt && !isOutgoing && !!p.fromTeamId);
+
+  let bg = "rgba(0,245,255,0.08)";
+  let border = "rgba(0,245,255,0.35)";
+  let color = "#00F5FF";
+  let tagBg = "rgba(0,245,255,0.2)";
+  let tagText = isJa ? "自前" : "OWN";
+
+  if (isOutgoing) {
+    bg = "rgba(255,45,120,0.06)";
+    border = "rgba(255,45,120,0.3)";
+    color = "#FF2D78";
+    tagBg = "rgba(255,45,120,0.2)";
+    tagText = isJa ? "放出" : "OUT";
+  } else if (isSwap) {
+    bg = "rgba(255,184,0,0.08)";
+    border = "rgba(255,184,0,0.4)";
+    color = "#FFB800";
+    tagBg = "rgba(255,184,0,0.2)";
+    tagText = "SWAP";
+  } else if (isProt) {
+    bg = "rgba(179,136,255,0.08)";
+    border = "rgba(179,136,255,0.4)";
+    color = "#B388FF";
+    tagBg = "rgba(179,136,255,0.2)";
+    tagText = p.protectionTag ?? (isJa ? "プロテクト" : "PROT");
+  } else if (isFrom) {
+    bg = "rgba(92,240,181,0.08)";
+    border = "rgba(92,240,181,0.4)";
+    color = "#5CF0B5";
+    tagBg = "rgba(92,240,181,0.2)";
+    tagText = p.fromTeamId ? `FROM ${p.fromTeamId}` : isJa ? "取得" : "FROM";
+  }
+
+  const label = isJa
+    ? p.shortLabelJa ?? p.detailsJa ?? p.detailsEn
+    : p.shortLabelEn ?? p.detailsEn ?? p.detailsJa;
+
+  return (
+    <button
+      key={p.id}
+      type="button"
+      onClick={onClick}
+      className={`${nameOxanium.className} inline-flex items-center gap-1.5 px-2 py-1 text-[11px] font-bold border rounded-[2px] transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer`}
+      style={{
+        backgroundColor: bg,
+        borderColor: border,
+        color: color,
+        textDecoration: isOutgoing ? "line-through" : "none",
+        opacity: isOutgoing ? 0.65 : 1,
+      }}
+    >
+      <span
+        className="px-1 py-0.2 text-[8px] font-extrabold rounded-[1px] shrink-0"
+        style={{ backgroundColor: tagBg, color: color }}
+      >
+        {tagText}
+      </span>
+      <span className="truncate">{label}</span>
+    </button>
   );
 }
 
@@ -1331,7 +2033,19 @@ export default function NbaTeamDetailPanel({
         style={{ backgroundColor: hexToRgba(accent, 0.22) }}
       />
 
-      <PayrollCard payroll={detail.payroll} accent={accent} isJa={isJa} />
+      <PayrollCard
+        payroll={detail.payroll}
+        rosterBlock={detail.rosterBlock}
+        accent={accent}
+        isJa={isJa}
+      />
+
+      <div
+        className="h-px"
+        style={{ backgroundColor: hexToRgba(accent, 0.22) }}
+      />
+
+      <DraftPicksCard teamId={detail.teamId} accent={accent} isJa={isJa} />
 
       <div
         className="h-px"

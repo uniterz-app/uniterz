@@ -11,7 +11,6 @@ import {
   CyberSlantedTabBar,
 } from "@/app/component/rankings/CyberSlantedTab";
 import type { PredictProBrief } from "@/lib/predict/predictProBrief";
-import { proBriefForMatchup } from "@/lib/predict/nbaProBriefPreviewMocks";
 import type { NbaInjuryReport } from "@/lib/predict/nbaInjuryReport";
 import type { NbaTeamStatsBundle } from "@/lib/predict/nbaTeamStatsPreviewMocks";
 import type { NbaRosterReport } from "@/lib/predict/nbaRoster";
@@ -91,23 +90,43 @@ export default function NbaPredictToolsTabs({
     setTab((cur) => (cur === next ? null : next));
   };
 
-  const resolvedBrief = brief ?? proBriefForMatchup(homeTeamId, awayTeamId);
+  /**
+   * 一度開いたタブのデータは保持する（タブを閉じても再取得しない）。
+   * 初期表示は injuries なので、STATS / ROSTER は開くまで取りに行かない。
+   */
+  const [visited, setVisited] = useState<Set<NbaPredictToolsTab>>(
+    () => new Set(tab ? [tab] : [])
+  );
+  useEffect(() => {
+    if (!tab) return;
+    setVisited((cur) => (cur.has(tab) ? cur : new Set(cur).add(tab)));
+  }, [tab]);
+
+  /**
+   * モックへは落とさない。`nbaProBriefPreviewMocks` は特定カード（開幕の
+   * Celtics @ Pistons）だけ作り物の数字を返すため、本番で Pro に嘘の
+   * Insight を見せることになる。brief 未配線なら PendingPanel を出す。
+   */
+  const resolvedBrief = brief;
 
   const { report: liveInjury, loading: injuryLoading } =
     useNbaMatchupInjuryReport({
       homeTeamId,
       awayTeamId,
       override: injuryReport,
+      enabled: visited.has("injuries"),
     });
   const { stats: liveStats, loading: statsLoading } = useNbaMatchupTeamStats({
     homeTeamId,
     awayTeamId,
     override: teamStats,
+    enabled: visited.has("stats"),
   });
   const { roster: liveRoster, loading: rosterLoading } = useNbaMatchupRoster({
     homeTeamId,
     awayTeamId,
     override: roster,
+    enabled: visited.has("roster"),
   });
 
   const resolvedInjury = liveInjury;

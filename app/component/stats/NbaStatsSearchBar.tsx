@@ -23,8 +23,13 @@ export default function NbaStatsSearchBar({
 }: Props) {
   const isJa = language === "ja";
   const [query, setQuery] = useState("");
-  const { bundle: teamBundle } = useLeagueTeamStatsBundle();
-  const { bundle: playerBundle } = usePlayerStatLeadersBundle();
+  // 検索対象の kind 側だけ取得する。パネルが既に読んだ bundle は共有キャッシュから来る
+  const { bundle: teamBundle } = useLeagueTeamStatsBundle({
+    enabled: kind === "team",
+  });
+  const { bundle: playerBundle } = usePlayerStatLeadersBundle({
+    enabled: kind === "player",
+  });
   const hits = useMemo(
     () =>
       searchNbaStatsIndex(query, kind, 8, {

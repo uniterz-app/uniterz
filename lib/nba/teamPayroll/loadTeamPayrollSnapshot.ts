@@ -8,7 +8,14 @@ import type {
   NbaTeamPayrollsFirestoreDoc,
   NbaTeamPayrollsSnapshotSource,
 } from "./teamPayrollTypes";
+import {
+  buildFuturePayrollYearsFromLines,
+  nbaSalaryCapLinesForSeason,
+  resolveApronStatus,
+} from "./mapBdlToTeamPayroll";
 import type {
+  NbaApronStatus,
+  NbaTeamFuturePayrollYear,
   NbaTeamPayroll,
   NbaTeamPayrollLine,
 } from "@/lib/predict/nbaTeamDetailPreviewMocks";
@@ -36,17 +43,57 @@ function resolveLines(raw: unknown): NbaTeamPayrollLine[] {
     const name = String(row.name ?? "").trim();
     const salary = isFiniteNumber(row.salary) ? row.salary : 0;
     const share = isFiniteNumber(row.share) ? row.share : 0;
+    const isTwoWay = row.isTwoWay === true;
+    const optionRaw = String(row.option ?? "").trim().toUpperCase();
+    const option =
+      optionRaw === "PO" || optionRaw.includes("PLAYER")
+        ? ("PO" as const)
+        : optionRaw === "TO" || optionRaw.includes("TEAM") || optionRaw.includes("CLUB")
+        ? ("TO" as const)
+        : optionRaw === "MO" || optionRaw.includes("MUTUAL")
+        ? ("MO" as const)
+        : null;
     if (!playerId || !name) continue;
-    out.push({ playerId, name, salary, share });
+    out.push({ playerId, name, salary, share, isTwoWay, option });
   }
   return out;
+}
+
+function resolveFutureYears(raw: unknown): NbaTeamFuturePayrollYear[] | undefined {
+  if (!Array.isArray(raw) || raw.length === 0) return undefined;
+  const out: NbaTeamFuturePayrollYear[] = [];
+  for (const item of raw) {
+    if (!item || typeof item !== "object") continue;
+    const row = item as Record<string, unknown>;
+    const seasonKey = String(row.seasonKey ?? "").trim();
+    if (!seasonKey) continue;
+    const lines = resolveLines(row.lines);
+    out.push({
+      seasonKey,
+      seasonYear: isFiniteNumber(row.seasonYear) ? row.seasonYear : 0,
+      salaryCap: isFiniteNumber(row.salaryCap) ? row.salaryCap : 0,
+      taxLine: isFiniteNumber(row.taxLine) ? row.taxLine : 0,
+      firstApron: isFiniteNumber(row.firstApron) ? row.firstApron : 0,
+      secondApron: isFiniteNumber(row.secondApron) ? row.secondApron : 0,
+      committedSalary: isFiniteNumber(row.committedSalary) ? row.committedSalary : 0,
+      capSpace: isFiniteNumber(row.capSpace) ? row.capSpace : 0,
+      taxSpace: isFiniteNumber(row.taxSpace) ? row.taxSpace : 0,
+      firstApronSpace: isFiniteNumber(row.firstApronSpace) ? row.firstApronSpace : 0,
+      secondApronSpace: isFiniteNumber(row.secondApronSpace) ? row.secondApronSpace : 0,
+      apronStatus: (row.apronStatus as NbaApronStatus) ?? "under_cap",
+      playerCount: isFiniteNumber(row.playerCount) ? row.playerCount : lines.length,
+      lines,
+    });
+  }
+  return out.length > 0 ? out : undefined;
 }
 
 function resolvePayrollTeam(
   teamId: string,
   raw: unknown,
   fallbackCap: number,
-  fallbackTax: number
+  fallbackTax: number,
+  seasonKey: string = "2026-27"
 ): NbaTeamPayrollDocTeam | null {
   if (!raw || typeof raw !== "object") return null;
   const row = raw as Record<string, unknown>;
@@ -54,19 +101,51 @@ function resolvePayrollTeam(
   const totalSalary = isFiniteNumber(row.totalSalary)
     ? row.totalSalary
     : lines.reduce((s, l) => s + l.salary, 0);
-  const salaryCap = isFiniteNumber(row.salaryCap) ? row.salaryCap : fallbackCap;
-  const taxLine = isFiniteNumber(row.taxLine) ? row.taxLine : fallbackTax;
+  const capInfo = nbaSalaryCapLinesForSeason(seasonKey);
+  const salaryCap = isFiniteNumber(row.salaryCap) && row.salaryCap > 0 ? row.salaryCap : (fallbackCap > 0 ? fallbackCap : capInfo.salaryCap);
+  const taxLine = isFiniteNumber(row.taxLine) && row.taxLine > 0 ? row.taxLine : (fallbackTax > 0 ? fallbackTax : capInfo.taxLine);
+  const firstApron = isFiniteNumber(row.firstApron) && row.firstApron > 0 ? row.firstApron : capInfo.firstApron;
+  const secondApron = isFiniteNumber(row.secondApron) && row.secondApron > 0 ? row.secondApron : capInfo.secondApron;
+
+  const capSpace = isFiniteNumber(row.capSpace) ? row.capSpace : salaryCap - totalSalary;
+  const taxSpace = isFiniteNumber(row.taxSpace) ? row.taxSpace : taxLine - totalSalary;
+  const firstApronSpace = isFiniteNumber(row.firstApronSpace) ? row.firstApronSpace : firstApron - totalSalary;
+  const secondApronSpace = isFiniteNumber(row.secondApronSpace) ? row.secondApronSpace : secondApron - totalSalary;
+  const apronStatus = (row.apronStatus as NbaApronStatus) ?? resolveApronStatus(totalSalary, { salaryCap, taxLine, firstApron, secondApron });
+
+  const rawFutureYears = resolveFutureYears(row.futureYears);
+  const futureYears =
+    rawFutureYears && rawFutureYears.length > 0
+      ? rawFutureYears.map((fy) => {
+          const lines = fy.lines
+            .filter((l) => l.salary > 0)
+            .map((l) => ({ ...l, isTwoWay: false }));
+          return {
+            ...fy,
+            lines,
+            playerCount: lines.length,
+          };
+        })
+      : lines.length > 0
+      ? buildFuturePayrollYearsFromLines(seasonKey, lines)
+      : [];
+
   const payroll: NbaTeamPayroll = {
     totalSalary,
     leagueRank: isFiniteNumber(row.leagueRank) ? row.leagueRank : 30,
     salaryCap,
     taxLine,
-    capSpace: isFiniteNumber(row.capSpace)
-      ? row.capSpace
-      : salaryCap - totalSalary,
+    firstApron,
+    secondApron,
+    apronStatus,
+    capSpace,
+    taxSpace,
+    firstApronSpace,
+    secondApronSpace,
     taxBill: isFiniteNumber(row.taxBill) ? row.taxBill : 0,
     guaranteed: isFiniteNumber(row.guaranteed) ? row.guaranteed : totalSalary,
     lines,
+    futureYears,
   };
   return {
     teamId:
@@ -96,7 +175,7 @@ export function resolveTeamPayrollsFromFirestore(
   for (const [teamId, raw] of Object.entries(
     data.teams as Record<string, unknown>
   )) {
-    const team = resolvePayrollTeam(teamId, raw, salaryCap, taxLine);
+    const team = resolvePayrollTeam(teamId, raw, salaryCap, taxLine, seasonKey);
     if (!team) continue;
     teams[teamId] = team;
   }

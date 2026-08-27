@@ -129,6 +129,6 @@ export async function GET(req: Request) {
       return NextResponse.json({ ok: false, error: msg }, { status: 400 });
     }
     console.error("[api/games/window]", e);
-    return NextResponse.json({ ok: false, error: msg }, { status: 500 });
+    return NextResponse.json({ ok: false, error: "internal" }, { status: 500 });
   }
 }

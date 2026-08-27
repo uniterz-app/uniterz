@@ -44,7 +44,7 @@ export const BDL_TEAM_ID_BY_APP_ID: Readonly<Record<string, number>> = {
   "nba-spurs": 27,
   "nba-raptors": 28,
   "nba-jazz": 29,
-  "nba-wizards": 42,
+  "nba-wizards": 30,
 };
 
 export function appTeamIdFromBdlAbbreviation(

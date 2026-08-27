@@ -586,7 +586,8 @@ export const NBA_LEAGUE_TEAM_ADVANCED_METRIC_DEFS: readonly NbaLeagueTeamAdvance
       true,
       "pct",
       "restricted area の FG%。",
-      "Restricted-area FG%."
+      "Restricted-area FG%.",
+      false
     ),
     def(
       "corner3Pct",
@@ -596,7 +597,8 @@ export const NBA_LEAGUE_TEAM_ADVANCED_METRIC_DEFS: readonly NbaLeagueTeamAdvance
       true,
       "pct",
       "コーナー3の成功率。",
-      "Corner three percentage."
+      "Corner three percentage.",
+      false
     ),
     def(
       "fgPctAllowed",

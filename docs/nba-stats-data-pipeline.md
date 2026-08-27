@@ -58,32 +58,40 @@ curl -X POST .../api/admin/nba-player-shot-zones-ingest \
 | 何 | 時刻 | 入口 |
 |---|---|---|
 | daily | **毎日 18:00 JST**（Firebase `runNbaStatsDailyIngestCron`） | `POST /api/admin/nba-stats-daily-ingest` `{ "mode": "daily" }` |
-| heavy（任意） | 手動 / 別スケジュール | 同上 `{ "mode": "heavy" }` — プレイヤー試合ログ含む（重い） |
+| weekly | **毎週月曜 10:00 JST**（`runNbaStatsWeeklyIngestCron`） | `POST /api/admin/nba-stats-weekly-ingest` — ペイロール + 契約 |
+| heavy（任意） | 手動 / 別スケジュール | 日次 URL `{ "mode": "heavy" }` — プレイヤー試合ログ全ロスター |
 
-daily の中身（順）: rosters → games → league-stats → injuries → team-game-logs → player-shot-zones。
+daily の中身（順）: rosters → games → league-stats → injuries → team-game-logs → player-shot-zones → **player-game-logs-incremental**（直近 NY 日付の box 出場者のみ → Last 10 更新）。
 
 `league-stats`（チーム）は HOW THEY PLAY 用に base / advanced / opponent / scoring / hustle / tracking / clutch / playtype を取る。  
-チーム `shooting/by_zone` は BDL 不可のため、チーム詳細の SHOT 枠は置かない。
+チーム `shooting/by_zone` は BDL 不可のため、リーグ表の RIM/C3 チップは非表示。チーム詳細の SHOT 枠は置かない。
 
 **Last 10（追加 BDL なし）**
 
 - Team: `games` のスコアから W–L / PPG / PAPG / DIFF のみ。UI もその指標に限定。
-- Player: ingest 済み `nbaPlayerGameLogs` から box 指標を集計（league-stats / game-logs ingest 時）。Advanced は空。
+- Player: ingest 済み `nbaPlayerGameLogs` から box 指標を集計。daily の incremental で直近出場者を更新。全件は heavy。
 
 前期シーズンへの公開 API フォールバックはしない（今季空なら empty）。
 
-契約・キャリアはシーズン中ほぼ固定なので日次には入れない（変更時に手動 ingest）。
+キャリア seasons は重いので手動。契約・ペイロールは週次 cron。
+
+プレイヤー単位でループする ingest（game-logs / contracts / career-seasons）と
+チーム 30 件を回す BDL fetch は `lib/async/forEachWithConcurrency` のワーカープールで走る。
+直列 + `sleep` に戻さない（数百件でサーバーレスのタイムアウトに当たる）。
+並列度は `NBA_INGEST_CONCURRENCY`。career は 1 人あたり年数 × 2 本出るので別途 3。
 
 Functions 側 env:
 
-- `NEXT_NBA_STATS_DAILY_INGEST_URL` … 本番 Next の上記 URL
+- `NEXT_NBA_STATS_DAILY_INGEST_URL` … 本番 Next の日次 URL（**www** 付き）
+- `NEXT_NBA_STATS_WEEKLY_INGEST_URL` … 週次 URL
 - Secret `INTERNAL_JOB_SECRET` … Next と同じ値（ヘッダ `x-internal-job-secret`）
 
 ## ライブ試合（スコア + box）
 
 ```
 BDL /nba/v1/games?dates[]=… + /nba/v1/box_scores(/live)
-  → POST /api/admin/nba-live-games-ingest（60 秒 cron）
+  → POST /api/admin/nba-live-games-ingest
+     （シーズン中 cron: 毎分 tick → ライブ枠の試合があるときだけ実行）
   → games/{nba-bdl-*}.status / scores / liveStats
   → GET /api/games/live-stats（クライアントは 60 秒ポーリング）
 ```
@@ -91,12 +99,19 @@ BDL /nba/v1/games?dates[]=… + /nba/v1/box_scores(/live)
 | 何 | 入口 |
 |---|---|
 | 手動 / cron | `POST /api/admin/nba-live-games-ingest` |
-| Firebase | `runNbaLiveGamesIngestCron`（every 1 minutes, America/New_York） |
+| Firebase | `runNbaLiveGamesIngestCron` — **オフシーズン停止中**。再開後は毎分 tick だが **ライブ枠の試合があるときだけ** Next/BDL を叩く（`shouldRunNbaLiveGamesIngest`） |
+| 手動 | オフシーズンでも `POST` で試験可 |
 | env | `NEXT_NBA_LIVE_GAMES_INGEST_URL`（**www** 付き本番 URL）+ `INTERNAL_JOB_SECRET` |
 | URL 例 | `https://www.uniterz.app/api/admin/nba-live-games-ingest`（apex は 307） |
+
+ライブ枠: tip が now±（-4h 〜 +20min）かつ final でない、または `status === live`。試合のない日・全試合終了後は BDL を呼ばない。
 
 UI（Team / Box）は既存。`liveStats` が無い試合はパネル非表示のまま。
 
 ## 後回し
 
-- Cloud Functions の **Node.js 20 → 22（など最新 LTS）** 昇格。全関数に非推奨警告が出ている。`functions/package.json` の `engines.node` を上げてまとめて再デプロイ。期限目安: 2026-10 廃止前。
+- **ライブ cron 再開**（シーズン開始時）: `functions/src/index.ts` で `runNbaLiveGamesIngestCron` を再 export → デプロイ。URL は www 付き。試合がある時間帯だけ BDL が走る。
+- **プレイヤーキャリア seasons** の自動 ingest（重い）。週次はペイロール＋契約まで。キャリアは手動 / バッチ。
+- **予想の topScorerCandidates**: `games` に載っていればそれを使う。無いときは対戦2チームのロスター（`/api/nba/team-rosters`）から PPG 順にクライアントで組む。先頭5人＋展開で残り。モックには落とさない。
+- **Pro Insight（brief）**: 本番 brief が未配線のあいだは PendingPanel。`nbaProBriefPreviewMocks` は preview 画面専用。
+- ~~Cloud Functions Node 20 → 22~~ → `functions/package.json` を 22 に更新済み。再デプロイで反映。

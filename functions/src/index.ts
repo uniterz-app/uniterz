@@ -39,10 +39,17 @@ export {
   rebuildWeeklyReportsManualV2,
 } from "./reports/rebuildWeeklyReportsV2";
 
+// 旧 Pro Stats の `user_stats_v2_monthly` cron は **意図的に export しない**。
+// 月次は user_reports に一本化済み（docs/pro-subscription-plan.md「Pro Stats 廃止」）。
+// 唯一の読み手だった ProAnalysis はプロフィールから外れており、再 export すると
+// 全ユーザー走査の集計が無駄に毎月走る。ソースは参照整理まで orphan で残す。
+
 // NBA スタッツ日次 ingest（Next admin API 経由）
 export { runNbaStatsDailyIngestCron } from "./nba/runNbaStatsDailyIngestCron";
-// NBA ライブ試合スコア / box（60 秒）
-export { runNbaLiveGamesIngestCron } from "./nba/runNbaLiveGamesIngestCron";
+// NBA スタッツ週次（ペイロール + 契約）
+export { runNbaStatsWeeklyIngestCron } from "./nba/runNbaStatsWeeklyIngestCron";
+// NBA ライブ試合スコア / box（60 秒）— オフシーズンは停止。再開時に export を戻す
+// export { runNbaLiveGamesIngestCron } from "./nba/runNbaLiveGamesIngestCron";
 
 // ===============================
 // Global
@@ -97,7 +104,12 @@ export const buildCumulativeStatsCron = onSchedule(
  * ==========================================================================*/
 
 export const buildCumulativeRankingSnapshotCron = onSchedule(
-  { schedule: "0 16 * * *", timeZone: "Asia/Tokyo" },
+  {
+    schedule: "0 16 * * *",
+    timeZone: "Asia/Tokyo",
+    memory: "1GiB",
+    timeoutSeconds: 540,
+  },
   async () => {
     const hasGamesToday = await hasRankingAggregationScheduledJstToday();
 
@@ -209,14 +221,23 @@ export const notifyPregameAlertPushCron = onSchedule(
   }
 );
 
+/**
+ * サインアップ直後の初期化。
+ *
+ * merge 必須: クライアントが先に users/{uid} を作る経路（プロフィール設定）があり、
+ * 上書き set だと displayName / handle を消してしまう。
+ */
 export const onUserCreate = functions.auth.user().onCreate(async (user) => {
   const db = admin.firestore();
 
-  await db.collection("users").doc(user.uid).set({
-    plan: "free",
-    proUntil: null,
-    createdAt: FieldValue.serverTimestamp(),
-  });
+  await db.collection("users").doc(user.uid).set(
+    {
+      plan: "free",
+      proUntil: null,
+      createdAt: FieldValue.serverTimestamp(),
+    },
+    { merge: true }
+  );
 });
 
 

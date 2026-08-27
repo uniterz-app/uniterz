@@ -144,50 +144,30 @@ export async function fetchCommunityGroupDetail(
     };
 
     try {
-      const summaryPromise = fetch(`/api/communities/${groupId}/summary`, {
+      // leaderboard が group summary も返すので 1 往復・membership 1 回にまとめる
+      const lJson = await fetch(`/api/communities/${groupId}/leaderboard`, {
         headers,
-        cache: "no-store",
-      })
-        .then((res) => res.json().catch(() => ({})))
-        .then((sJson) => {
-          if (sJson?.ok && sJson.group) {
-            const summary = sJson.group as CommunityGroupSummary;
-            prefetchCommunityHeaderImage(summary.headerImageUrl);
-            emitPartial({ summary });
-          }
-          return sJson;
-        });
+        cache: "default",
+      }).then((res) => res.json().catch(() => ({})));
 
-      const leaderboardPromise = fetch(
-        `/api/communities/${groupId}/leaderboard`,
-        { headers, cache: "default" }
-      )
-        .then((res) => res.json().catch(() => ({})))
-        .then((lJson) => {
-          if (lJson?.ok) {
-            emitPartial({
-              rows: lJson.rows ?? [],
-              metric: lJson.rankingMetric as CommunityMetric | undefined,
-            });
-          }
-          return lJson;
-        });
+      if (!lJson?.ok || !lJson.group) return null;
 
-      const [sJson, lJson] = await Promise.all([
-        summaryPromise,
-        leaderboardPromise,
-      ]);
-      if (!sJson?.ok || !sJson.group) return null;
+      const summary = lJson.group as CommunityGroupSummary;
+      prefetchCommunityHeaderImage(summary.headerImageUrl);
+      emitPartial({
+        summary,
+        rows: lJson.rows ?? [],
+        metric: lJson.rankingMetric as CommunityMetric | undefined,
+      });
 
       const entry: CommunityGroupDetailCacheEntry = {
-        summary: sJson.group as CommunityGroupSummary,
-        rows: lJson?.ok ? (lJson.rows ?? []) : [],
+        summary,
+        rows: lJson.rows ?? [],
         metric:
-          (lJson?.rankingMetric as CommunityMetric | undefined) ??
-          (sJson.group as CommunityGroupSummary).rankingMetric,
+          (lJson.rankingMetric as CommunityMetric | undefined) ??
+          summary.rankingMetric,
         fetchedAt: Date.now(),
       };
-      prefetchCommunityHeaderImage(entry.summary.headerImageUrl);
       cache.set(groupId, entry);
       return entry;
     } finally {

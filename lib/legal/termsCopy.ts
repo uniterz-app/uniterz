@@ -5,6 +5,7 @@
  * 弁護士確認済み。
  */
 import type { LegalSection } from "@/lib/legal/legalSection";
+import { SUPPORT_EMAIL } from "@/lib/contact/companyEmails";
 import {
   REDEMPTION_TERMS_SECTION,
   UNIT_TERMS_SECTION,
@@ -366,10 +367,10 @@ export const TERMS_SECTIONS: readonly LegalSection[] = [
     title: { ja: "お問い合わせ", en: "Contact" },
     paragraphs: {
       ja: [
-        "本規約に関するお問い合わせは、support@uniterz.app までご連絡ください。",
+        `本規約に関するお問い合わせは、${SUPPORT_EMAIL} までご連絡ください。`,
       ],
       en: [
-        "Questions about these Terms: support@uniterz.app.",
+        `Questions about these Terms: ${SUPPORT_EMAIL}.`,
       ],
     },
   },

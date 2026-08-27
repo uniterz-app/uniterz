@@ -48,7 +48,7 @@ export async function GET(req: Request) {
       builtAtMs: bundle.builtAtMs,
     });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "ensure failed";
-    return NextResponse.json({ error: msg }, { status: 500 });
+    console.error("[api/profile/ensure-overview-charts]", e);
+    return NextResponse.json({ error: "internal" }, { status: 500 });
   }
 }

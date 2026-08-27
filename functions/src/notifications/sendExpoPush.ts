@@ -87,13 +87,29 @@ async function loadUserPushContexts(
   const chunkSize = 30;
   for (let i = 0; i < unique.length; i += chunkSize) {
     const chunk = unique.slice(i, i + chunkSize);
-    const refs = chunk.map((uid) => firestore.doc(`users/${uid}`));
-    const snaps = await firestore.getAll(...refs);
-    for (const snap of snaps) {
+    const userRefs = chunk.map((uid) => firestore.doc(`users/${uid}`));
+    const prefsRefs = chunk.map((uid) =>
+      firestore.doc(`users/${uid}/private/notificationPrefs`)
+    );
+    const [userSnaps, prefsSnaps] = await Promise.all([
+      firestore.getAll(...userRefs),
+      firestore.getAll(...prefsRefs),
+    ]);
+    const prefsByUid = new Map<string, unknown>();
+    for (let j = 0; j < chunk.length; j += 1) {
+      const uid = chunk[j]!;
+      const prefSnap = prefsSnaps[j];
+      if (prefSnap?.exists) {
+        prefsByUid.set(uid, prefSnap.data()?.prefs);
+      }
+    }
+    for (const snap of userSnaps) {
       const data = snap.data() as Record<string, unknown> | undefined;
+      const prefsRaw =
+        prefsByUid.get(snap.id) ?? data?.notificationPrefs;
       map.set(snap.id, {
         language: normalizePushLanguage(data?.language),
-        prefs: parsePushNotificationPrefs(data?.notificationPrefs),
+        prefs: parsePushNotificationPrefs(prefsRaw),
         isPro: userPlanIsPro(data),
       });
     }

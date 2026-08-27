@@ -48,7 +48,6 @@ import {
   normalizeNbaTopScorerPick,
   type NbaTopScorerPick,
 } from "@/lib/nba/topScorer";
-import { topScorerCandidatesForMatchup } from "@/lib/predict/nbaTopScorerPreviewMocks";
 import CountryFlag from "@/app/component/games/CountryFlag";
 import {
   normalizeWcGoalScorerPick,
@@ -667,17 +666,19 @@ export default function PredictionFormV2({
     return { home: h, away: a };
   }, [scoreHome, scoreAway]);
 
-  const nbaTopScorerCandidates = useMemo(() => {
-    const fromGame = normalizeNbaTopScorerCandidates(
-      game.topScorerCandidates ??
-        (game as { topScorerCandidates?: unknown }).topScorerCandidates
-    );
-    if (fromGame.length > 0) return fromGame;
-    return topScorerCandidatesForMatchup(
-      game.home?.teamId,
-      game.away?.teamId
-    );
-  }, [game]);
+  /**
+   * モックには落とさない。候補は実際に賭ける対象なので、作り物の選手を出すと
+   * ロスターに居ない選手を選べてしまい採点で絶対に当たらない。
+   * 未設定なら空 → ピッカーは「候補なし」を出す。
+   */
+  const nbaTopScorerCandidates = useMemo(
+    () =>
+      normalizeNbaTopScorerCandidates(
+        game.topScorerCandidates ??
+          (game as { topScorerCandidates?: unknown }).topScorerCandidates
+      ),
+    [game]
+  );
 
   const buildPredictionPayload = (
     h: number,

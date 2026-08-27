@@ -19,6 +19,10 @@ type RankedRow = {
 
 export type LeaderboardResponsePayload = {
   ok: true;
+  /** detail 1往復化用。プロセスキャッシュには載せるが、古いエントリには無い */
+  group?: ReturnType<
+    typeof import("./buildCommunityGroupSummaryPayload").buildCommunityGroupSummaryPayload
+  >;
   rankingMetric: CommunityMetric;
   periodType: CommunityPeriodType;
   rankingLeague: CommunityLeague;

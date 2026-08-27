@@ -14,6 +14,10 @@ import { mapBdlRowsToPlayerGameLogs } from "@/lib/nba/playerDetail/mapBdlToPlaye
 import { writePlayerGameLogsSnapshot } from "@/lib/nba/playerGameLogs/loadPlayerGameLogsSnapshot";
 import { rebuildPlayerLast10FromGameLogs } from "@/lib/nba/playerStatLeaders/loadPlayerStatLeadersSnapshot";
 import { listActiveRosterPlayerRefs } from "@/lib/nba/ingest/listActiveRosterPlayerRefs";
+import {
+  forEachWithConcurrency,
+  NBA_INGEST_CONCURRENCY,
+} from "@/lib/async/forEachWithConcurrency";
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
 
 export const NBA_PLAYER_GAME_LOGS_INGEST_READY = true;
@@ -34,10 +38,6 @@ export type NbaPlayerGameLogsIngestResult = {
   last10Merged: boolean;
   last10PlayerCount: number;
 };
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((r) => setTimeout(r, ms));
-}
 
 export async function ingestNbaPlayerGameLogsFromBdl(
   db: Firestore,
@@ -72,28 +72,31 @@ export async function ingestNbaPlayerGameLogsFromBdl(
   let skipped = 0;
   let failed = 0;
 
-  for (let i = 0; i < targets.length; i += 1) {
-    const target = targets[i]!;
-    try {
-      if (i === 0 || (i + 1) % 10 === 0 || i + 1 === targets.length) {
-        console.log(
-          `[nba-player-game-logs-ingest] ${i + 1}/${targets.length} player=${target.playerId} written=${written} skipped=${skipped} failed=${failed}`
-        );
-      }
-      const bdlId = Number.parseInt(target.playerId, 10);
-      if (!Number.isFinite(bdlId) || bdlId <= 0) {
-        skipped += 1;
-        continue;
-      }
-      const rows = await fetchBdlPlayerGameLogs({
-        bdlPlayerId: bdlId,
-        seasonYear,
-        seasonType: "regular",
-      });
-      const gameLogs = await mapBdlRowsToPlayerGameLogs(rows);
-      if (gameLogs.length === 0) {
-        skipped += 1;
-      } else {
+  await forEachWithConcurrency(
+    targets,
+    NBA_INGEST_CONCURRENCY,
+    async (target, i) => {
+      try {
+        if (i === 0 || (i + 1) % 25 === 0 || i + 1 === targets.length) {
+          console.log(
+            `[nba-player-game-logs-ingest] ${i + 1}/${targets.length} player=${target.playerId} written=${written} skipped=${skipped} failed=${failed}`
+          );
+        }
+        const bdlId = Number.parseInt(target.playerId, 10);
+        if (!Number.isFinite(bdlId) || bdlId <= 0) {
+          skipped += 1;
+          return;
+        }
+        const rows = await fetchBdlPlayerGameLogs({
+          bdlPlayerId: bdlId,
+          seasonYear,
+          seasonType: "regular",
+        });
+        const gameLogs = await mapBdlRowsToPlayerGameLogs(rows);
+        if (gameLogs.length === 0) {
+          skipped += 1;
+          return;
+        }
         await writePlayerGameLogsSnapshot(db, {
           seasonKey,
           playerId: target.playerId,
@@ -101,16 +104,15 @@ export async function ingestNbaPlayerGameLogsFromBdl(
           gameLogs,
         });
         written += 1;
+      } catch (e) {
+        failed += 1;
+        console.error(
+          `[nba-player-game-logs-ingest] player=${target.playerId}`,
+          e
+        );
       }
-    } catch (e) {
-      failed += 1;
-      console.error(
-        `[nba-player-game-logs-ingest] player=${target.playerId}`,
-        e
-      );
     }
-    if (i < targets.length - 1) await sleep(50);
-  }
+  );
 
   const last10 = await rebuildPlayerLast10FromGameLogs(
     db,

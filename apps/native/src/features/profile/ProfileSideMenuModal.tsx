@@ -86,6 +86,7 @@ type Props = {
     | "liveGameStatsPreview"
     | "leagueStatsPreview"
     | "proLeagueGatePreview"
+    | "injuryDesignPreview"
     | "adminFeatureInbox"
     | "adminContactInbox"
     | "adminRedemptions"
@@ -698,6 +699,14 @@ export default function ProfileSideMenuModal({
                           onPress={() => openUserPage("proLeagueGatePreview")}
                         >
                           PRO LEAGUE ゲート（Free）
+                        </SideMenuItemButtonNative>
+                        <SideMenuItemButtonNative
+                          icon="medical-bag"
+                          dense
+                          labelStyle={labelStyle}
+                          onPress={() => openUserPage("injuryDesignPreview")}
+                        >
+                          Injury UI デザイン案
                         </SideMenuItemButtonNative>
                       </View>
                     </>

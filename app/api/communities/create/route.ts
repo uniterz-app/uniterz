@@ -86,6 +86,13 @@ export async function POST(req: Request) {
         /** オーナー向け表示用（summary API で owner のみ返却） */
         inviteCode: invitePlain,
         memberCount: 1,
+        memberPreviews: [
+          {
+            uid,
+            photoURL: null,
+            role: "owner" as const,
+          },
+        ],
         headerImageUrl: headerImageUrl ?? null,
         headerImagePositionY: DEFAULT_HEADER_IMAGE_POSITION_Y,
         rankingMetric,
@@ -116,6 +123,13 @@ export async function POST(req: Request) {
         joinedAt: FieldValue.serverTimestamp(),
       });
       await batch.commit();
+
+      // オーナーの顔写真を cumulative_stats から埋める
+      void import("@/lib/communities/refreshGroupMemberPreviews")
+        .then(({ refreshGroupMemberPreviews }) =>
+          refreshGroupMemberPreviews(adminDb, groupRef.id, uid)
+        )
+        .catch(() => {});
 
       return NextResponse.json({
         ok: true,
@@ -153,6 +167,6 @@ export async function POST(req: Request) {
       );
     }
     console.error("[communities/create]", e);
-    return NextResponse.json({ ok: false, error: msg }, { status: 500 });
+    return NextResponse.json({ ok: false, error: "internal" }, { status: 500 });
   }
 }

@@ -44,6 +44,9 @@ env-paste-temp.txt
 *.tsbuildinfo
 next-env.d.ts
 
+# Cloud Functions のビルド成果物（firebase.json の predeploy が毎回生成する）
+/functions/lib/
+
 # firebase admin service account
 service-account.json
 serviceAccount.json

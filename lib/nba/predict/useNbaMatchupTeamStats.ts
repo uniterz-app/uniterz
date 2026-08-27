@@ -6,6 +6,12 @@ import { fetchLeagueTeamStats } from "@/lib/nba/leagueTeamStats/fetchLeagueTeamS
 import { fetchTeamGameLog } from "@/lib/nba/teamGameLog/fetchTeamGameLogClient";
 import { enrichLeagueTeamStatsBundle } from "@/lib/predict/nbaLeagueTeamStatsMocks";
 import { buildMatchupTeamStatsBundle } from "@/lib/nba/predict/buildMatchupTeamStatsBundle";
+import {
+  createSnapshotFetchCache,
+  nbaSnapshotCacheKey,
+  NBA_SNAPSHOT_CACHE_TTL_MS,
+} from "@/lib/nba/snapshotFetchCache";
+import type { NbaLeagueTeamStatsApiPayload } from "@/lib/nba/leagueTeamStats/leagueTeamStatsTypes";
 import type { NbaTeamStatsBundle } from "@/lib/predict/nbaTeamStatsPreviewMocks";
 import { emptyTeamStatsBundle } from "@/lib/predict/nbaTeamStatsPreviewMocks";
 import type { NbaTeamGameLogSlice } from "@/lib/nba/teamGameLog/teamGameLogTypes";
@@ -16,7 +22,14 @@ type Options = {
   apiBaseUrl?: string | null;
   season?: string;
   override?: NbaTeamStatsBundle | null;
+  /** false のときは取得しない（未選択タブの先読みを止める） */
+  enabled?: boolean;
 };
+
+/** 予想モーダルを開き直してもリーグ表を取り直さない */
+const leagueCache = createSnapshotFetchCache<NbaLeagueTeamStatsApiPayload>(
+  NBA_SNAPSHOT_CACHE_TTL_MS
+);
 
 /**
  * 予想 STATS: リーグ表の当該2チーム + 試合ログ（H/A・FORM）。
@@ -32,12 +45,13 @@ export function useNbaMatchupTeamStats(options: Options): {
   const season = (options.season ?? CURRENT_NBA_SEASON_KEY).trim();
   const override = options.override;
   const apiBaseUrl = options.apiBaseUrl;
+  const enabled = options.enabled ?? true;
 
   const [stats, setStats] = useState<NbaTeamStatsBundle | null>(
     override ?? null
   );
   const [loading, setLoading] = useState(
-    !override && !!homeTeamId && !!awayTeamId
+    enabled && !override && !!homeTeamId && !!awayTeamId
   );
   const [source, setSource] = useState<
     "override" | "firestore" | "empty" | "error"
@@ -50,6 +64,10 @@ export function useNbaMatchupTeamStats(options: Options): {
       setLoading(false);
       return;
     }
+    if (!enabled) {
+      setLoading(false);
+      return;
+    }
     if (!homeTeamId || !awayTeamId) {
       setStats(null);
       setSource("empty");
@@ -57,30 +75,23 @@ export function useNbaMatchupTeamStats(options: Options): {
       return;
     }
 
-    const ac = new AbortController();
+    let cancelled = false;
     setLoading(true);
 
     const wrapLog = (teamId: string): Promise<NbaTeamGameLogSlice | null> =>
-      fetchTeamGameLog({
-        teamId,
-        season,
-        apiBaseUrl,
-        signal: ac.signal,
-      })
+      fetchTeamGameLog({ teamId, season, apiBaseUrl })
         .then((p) => p.log)
         .catch(() => null);
 
     Promise.all([
-      fetchLeagueTeamStats({
-        season,
-        apiBaseUrl,
-        signal: ac.signal,
-      }),
+      leagueCache.load(nbaSnapshotCacheKey(apiBaseUrl, season), () =>
+        fetchLeagueTeamStats({ season, apiBaseUrl })
+      ),
       wrapLog(homeTeamId),
       wrapLog(awayTeamId),
     ])
       .then(([league, homeLog, awayLog]) => {
-        if (ac.signal.aborted) return;
+        if (cancelled) return;
         const bundle = enrichLeagueTeamStatsBundle(
           league.bundle,
           league.source
@@ -103,16 +114,18 @@ export function useNbaMatchupTeamStats(options: Options): {
         setSource(live ? "firestore" : "empty");
       })
       .catch(() => {
-        if (ac.signal.aborted) return;
+        if (cancelled) return;
         setStats(emptyTeamStatsBundle(homeTeamId, awayTeamId));
         setSource("error");
       })
       .finally(() => {
-        if (!ac.signal.aborted) setLoading(false);
+        if (!cancelled) setLoading(false);
       });
 
-    return () => ac.abort();
-  }, [homeTeamId, awayTeamId, season, apiBaseUrl, override]);
+    return () => {
+      cancelled = true;
+    };
+  }, [enabled, homeTeamId, awayTeamId, season, apiBaseUrl, override]);
 
   return { stats, loading, source };
 }

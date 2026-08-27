@@ -4,6 +4,11 @@ import { useCallback, useEffect, useState } from "react";
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
 import { enrichLeagueTeamStatsBundle } from "@/lib/predict/nbaLeagueTeamStatsMocks";
 import { fetchLeagueTeamStats } from "@/lib/nba/leagueTeamStats/fetchLeagueTeamStatsClient";
+import {
+  createSnapshotFetchCache,
+  nbaSnapshotCacheKey,
+  NBA_SNAPSHOT_CACHE_TTL_MS,
+} from "@/lib/nba/snapshotFetchCache";
 import type {
   NbaLeagueTeamStatsApiPayload,
   NbaLeagueTeamStatsSnapshotSource,
@@ -16,9 +21,19 @@ const EMPTY_BUNDLE: NbaLeagueTeamStatsBundle = {
   asOfLabel: "UNAVAILABLE",
 };
 
+/**
+ * STATS ハブでは検索バーと各パネルが同じ bundle を要求するため、
+ * season 単位で 1 リクエストに畳む。
+ */
+const cache = createSnapshotFetchCache<NbaLeagueTeamStatsApiPayload>(
+  NBA_SNAPSHOT_CACHE_TTL_MS
+);
+
 export type UseLeagueTeamStatsBundleOptions = {
   apiBaseUrl?: string | null;
   season?: string;
+  /** false のときは取得しない（未選択タブの先読みを止める） */
+  enabled?: boolean;
 };
 
 export type UseLeagueTeamStatsBundleState = {
@@ -30,64 +45,101 @@ export type UseLeagueTeamStatsBundleState = {
   reload: () => void;
 };
 
+type Resolved = {
+  bundle: NbaLeagueTeamStatsBundle;
+  source: NbaLeagueTeamStatsSnapshotSource;
+  updatedAt: string | null;
+};
+
+function resolvePayload(data: NbaLeagueTeamStatsApiPayload): Resolved {
+  return {
+    bundle: enrichLeagueTeamStatsBundle(data.bundle, data.source),
+    source: data.source,
+    updatedAt: data.updatedAt,
+  };
+}
+
+const EMPTY_RESOLVED: Resolved = {
+  bundle: EMPTY_BUNDLE,
+  source: "empty",
+  updatedAt: null,
+};
+
 export function useLeagueTeamStatsBundle(
   options: UseLeagueTeamStatsBundleOptions = {}
 ): UseLeagueTeamStatsBundleState {
   const season = options.season ?? CURRENT_NBA_SEASON_KEY;
-  const [bundle, setBundle] = useState<NbaLeagueTeamStatsBundle>(EMPTY_BUNDLE);
-  const [source, setSource] =
-    useState<NbaLeagueTeamStatsSnapshotSource>("empty");
-  const [updatedAt, setUpdatedAt] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const enabled = options.enabled ?? true;
+  const key = nbaSnapshotCacheKey(options.apiBaseUrl, season);
+
+  const cached = enabled ? cache.peek(key) : null;
+  const [resolved, setResolved] = useState<Resolved>(() =>
+    cached ? resolvePayload(cached) : EMPTY_RESOLVED
+  );
+  const [loading, setLoading] = useState(enabled && !cached);
   const [error, setError] = useState<string | null>(null);
   const [tick, setTick] = useState(0);
 
-  const reload = useCallback(() => setTick((t) => t + 1), []);
+  const reload = useCallback(() => {
+    cache.invalidate(key);
+    setTick((t) => t + 1);
+  }, [key]);
 
   useEffect(() => {
-    let cancelled = false;
-    const ac = new AbortController();
+    if (!enabled) {
+      setLoading(false);
+      return;
+    }
 
-    async function run() {
-      setLoading(true);
+    const hit = cache.peek(key);
+    if (hit) {
+      setResolved(resolvePayload(hit));
+      setLoading(false);
       setError(null);
-      try {
-        const data: NbaLeagueTeamStatsApiPayload = await fetchLeagueTeamStats({
+      return;
+    }
+
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+
+    cache
+      .load(key, () =>
+        fetchLeagueTeamStats({
           apiBaseUrl: options.apiBaseUrl,
           season,
-          signal: ac.signal,
-        });
+        })
+      )
+      .then(async (data) => {
         if (cancelled) return;
-        setBundle(enrichLeagueTeamStatsBundle(data.bundle, data.source));
-        setSource(data.source);
-        setUpdatedAt(data.updatedAt);
+        setResolved(resolvePayload(data));
         if (data.source === "empty") {
           const { trackAppEvent } = await import(
             "@/lib/observability/trackAppEvent"
           );
-          trackAppEvent({
-            name: "stats_empty",
-            props: { kind: "team", season },
-          });
+          trackAppEvent({ name: "stats_empty", props: { kind: "team", season } });
         }
-      } catch (e) {
-        if (cancelled || ac.signal.aborted) return;
-        const msg = e instanceof Error ? e.message : "load failed";
-        setError(msg);
-        setBundle(EMPTY_BUNDLE);
-        setSource("empty");
-        setUpdatedAt(null);
-      } finally {
+      })
+      .catch((e: unknown) => {
+        if (cancelled) return;
+        setError(e instanceof Error ? e.message : "load failed");
+        setResolved(EMPTY_RESOLVED);
+      })
+      .finally(() => {
         if (!cancelled) setLoading(false);
-      }
-    }
+      });
 
-    void run();
     return () => {
       cancelled = true;
-      ac.abort();
     };
-  }, [options.apiBaseUrl, season, tick]);
+  }, [enabled, key, options.apiBaseUrl, season, tick]);
 
-  return { bundle, source, updatedAt, loading, error, reload };
+  return {
+    bundle: resolved.bundle,
+    source: resolved.source,
+    updatedAt: resolved.updatedAt,
+    loading,
+    error,
+    reload,
+  };
 }

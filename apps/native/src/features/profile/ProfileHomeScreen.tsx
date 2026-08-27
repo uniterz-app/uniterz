@@ -24,15 +24,13 @@ import {
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { signOut, updateProfile } from "firebase/auth";
-import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
-import { auth, db, storage } from "../../lib/firebase";
+import { auth, storage } from "../../lib/firebase";
 import { colors, radius, spacing, typography } from "../../theme/tokens";
 import { useFirebaseUser } from "../../auth/FirebaseUserProvider";
 import { getUniterzApiBaseUrl } from "../games/submitPredictionApi";
 import { useNativeProfileStats, seedNativeProfileStatsFromUserDoc } from "./useNativeProfileStats";
 import {
-  invalidateProfileUserDocNative,
   loadProfileUserDocNative,
   peekProfileUserDocNative,
 } from "./profileUserDocCacheNative";
@@ -81,6 +79,7 @@ import {
   isProfileGamblingTermsError,
   profileGamblingTermsUserMessage,
 } from "../../../../../lib/profile/profileGamblingTerms";
+import { saveMeProfileNative } from "./saveMeProfileNative";
 import { COUNTRY_OPTIONS } from "../../../../../lib/rankings/country";
 import type { ProfileStatsStreakContext } from "../../../../../lib/profile/profileStreakScope";
 import { parseUserProfileViewCount, parseUserUnitBalance } from "../../../../../lib/profile/parseUserProfileFields";
@@ -911,7 +910,7 @@ export default function ProfileHomeScreen({
         setProfileLoading(false);
 
         const resolvedPlan = snapExists
-          ? await resolveAndExpireMyPlan(myUid, data)
+          ? resolveAndExpireMyPlan(myUid, data)
           : "free";
         if (!alive) return;
         setPlan(resolvedPlan);
@@ -1103,25 +1102,23 @@ export default function ProfileHomeScreen({
           photoURL: safePhoto || null,
         });
       }
-      await setDoc(
-        doc(db, "users", myUid),
-        {
-          displayName: safeName,
-          bio: safeBio,
-          photoURL: safePhoto || null,
-          language,
-          countryCode: countryCode.trim() || null,
-          updatedAt: serverTimestamp(),
-        },
-        { merge: true }
-      );
-      invalidateProfileUserDocNative(myUid);
+      await saveMeProfileNative({
+        displayName: safeName,
+        bio: safeBio,
+        photoURL: safePhoto,
+        language,
+        countryCode: countryCode.trim() || null,
+      });
       onSaved?.();
       setSettingsOpen(false);
       cyberAlert(t.savedTitle, t.savedBody);
     } catch (error: unknown) {
-      const msg = error instanceof Error ? error.message : t.saveErrorBody;
-      cyberAlert(t.saveErrorTitle, msg);
+      if (isProfileGamblingTermsError(error)) {
+        cyberAlert(t.invalidTitle, profileGamblingTermsUserMessage(language));
+      } else {
+        const msg = error instanceof Error ? error.message : t.saveErrorBody;
+        cyberAlert(t.saveErrorTitle, msg);
+      }
     } finally {
       setSaving(false);
     }
@@ -1749,6 +1746,8 @@ export default function ProfileHomeScreen({
           navigation.navigate("LeagueStatsPreview");
         else if (page === "proLeagueGatePreview" && __DEV__)
           navigation.navigate("ProLeagueGatePreview");
+        else if (page === "injuryDesignPreview" && __DEV__)
+          navigation.navigate("InjuryDesignPreview");
       }}
     />
     <ProfileBadgeDetailModal

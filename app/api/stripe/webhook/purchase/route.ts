@@ -93,13 +93,14 @@ export async function POST(req: Request) {
   await writeUserBillingSecure(db, uid, {
     stripeCustomerId: customerId,
     stripeSubscriptionId: sub.id,
+    billingProvider: "stripe",
+    nextPlanType: null,
   });
 
   await db.collection("users").doc(uid).set(
     {
       plan: "pro",
       planType,
-      nextPlanType: null,
       cancelAtPeriodEnd: false,
       ...(typeof periodEndSec === "number"
         ? { proUntil: Timestamp.fromMillis(periodEndSec * 1000) }

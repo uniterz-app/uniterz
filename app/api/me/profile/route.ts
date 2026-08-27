@@ -113,6 +113,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: msg }, { status: 401 });
     }
     console.error("POST /api/me/profile:", e);
-    return NextResponse.json({ error: msg }, { status: 500 });
+    return NextResponse.json({ error: "internal" }, { status: 500 });
   }
 }

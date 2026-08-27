@@ -1,6 +1,7 @@
 /** Team Detail 再構築 — 参考ダッシュボード UI をそのまま再現（微調整前提） */
-import { useMemo } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useMemo, useState } from "react";
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
@@ -12,6 +13,8 @@ import {
   formatStreakLabel,
   getNbaTeamDetailPreview,
   payrollDisplaySlices,
+  type NbaApronStatus,
+  type NbaTeamFuturePayrollYear,
   type NbaTeamHeadToHeadEntry,
   type NbaTeamInjuryEntry,
   type NbaTeamMetricWithRank,
@@ -30,10 +33,17 @@ import {
   formatAvailabilityStatus,
   formatSalaryUsd,
 } from "../../../../../../lib/predict/nbaPlayerDetailPreviewMocks";
-import { CyberSlantedSegBarNative } from "../../rankings/CyberSlantedSegBarNative";
+import type { NbaTeamPayrollLine } from "../../../../../../lib/predict/nbaTeamDetailPreviewMocks";
 import {
-  METRIC_FONT,
-} from "../../rankings/rankingsUiTheme";
+  buildFuturePayrollYearsFromLines,
+  buildSynchronizedTeamPayrollLines,
+  nbaSalaryCapLinesForSeason,
+  nbaTwoWaySalaryForSeason,
+  resolveApronStatus,
+} from "../../../../../../lib/nba/teamPayroll/mapBdlToTeamPayroll";
+import { CURRENT_NBA_SEASON_KEY } from "../../../../../../lib/rankings/nbaSeason";
+import { CyberSlantedSegBarNative } from "../../rankings/CyberSlantedSegBarNative";
+import { METRIC_FONT } from "../../rankings/rankingsUiTheme";
 import {
   MATCH_CARD_BRACKET_LETTER_SPACING_12,
   MATCH_CARD_BRACKET_TEXT,
@@ -45,6 +55,12 @@ import { useLeagueTeamStatsBundle } from "../../../../../../lib/nba/useLeagueTea
 import { useNbaTeamDetailLiveOverlay } from "../../../../../../lib/nba/teamDetail/useNbaTeamDetailLiveOverlay";
 import { playerCardName, type NbaRosterTeamBlock } from "../../../../../../lib/predict/nbaRoster";
 import { getUniterzApiBaseUrl } from "../submitPredictionApi";
+import { getNbaTeamDraftCapital } from "../../../../../../lib/nba/draftPicks/nbaDraftCapitalData";
+import type {
+  NbaDraftPickEntry,
+  NbaDraftPickKind,
+  NbaTeamDraftCapital,
+} from "../../../../../../lib/nba/draftPicks/draftPicksTypes";
 
 type Props = {
   language: "ja" | "en";
@@ -571,71 +587,247 @@ function SplitCard({
   );
 }
 
+function ApronBadge({
+  status,
+  isJa,
+}: {
+  status: NbaApronStatus;
+  isJa: boolean;
+}) {
+  let label = "UNDER CAP";
+  let color = "#00F5FF";
+  let bg = "rgba(0,245,255,0.12)";
+  let border = "rgba(0,245,255,0.45)";
+
+  switch (status) {
+    case "under_cap":
+      label = isJa ? "CAP以下" : "UNDER CAP";
+      color = "#00F5FF";
+      bg = "rgba(0,245,255,0.12)";
+      border = "rgba(0,245,255,0.45)";
+      break;
+    case "over_cap":
+      label = isJa ? "CAP超過" : "OVER CAP";
+      color = "#D8D8D8";
+      bg = "rgba(255,255,255,0.08)";
+      border = "rgba(255,255,255,0.3)";
+      break;
+    case "tax_payer":
+      label = isJa ? "TAX超過" : "TAX PAYER";
+      color = "#FFD000";
+      bg = "rgba(255,208,0,0.14)";
+      border = "rgba(255,208,0,0.5)";
+      break;
+    case "first_apron":
+      label = isJa ? "1ST APRON超過" : "1ST APRON";
+      color = "#FF8A00";
+      bg = "rgba(255,138,0,0.16)";
+      border = "rgba(255,138,0,0.55)";
+      break;
+    case "second_apron":
+      label = isJa ? "2ND APRON超過" : "2ND APRON";
+      color = "#FF2D78";
+      bg = "rgba(255,45,120,0.18)";
+      border = "rgba(255,45,120,0.6)";
+      break;
+  }
+
+  return (
+    <View style={[styles.apronBadge, { backgroundColor: bg, borderColor: border }]}>
+      <Text style={[styles.apronBadgeText, { color }]}>{label}</Text>
+    </View>
+  );
+}
+
 function PayrollSection({
   payroll,
+  rosterBlock,
   accent,
   isJa,
 }: {
   payroll: NbaTeamPayroll;
+  rosterBlock?: NbaRosterTeamBlock | null;
   accent: string;
   isJa: boolean;
 }) {
+  const [selectedSeasonIdx, setSelectedSeasonIdx] = useState(0);
   const frame = hexToRgba(accent, 0.45);
-  const overCap = payroll.capSpace < 0;
-  const slices = payrollDisplaySlices(payroll.lines, accent);
+
+  const seasonKeys = ["2026-27", "2027-28", "2028-29", "2029-30", "2030-31"];
+
+  const seasonsList = seasonKeys.map((sKey, index) => {
+    const capInfo = nbaSalaryCapLinesForSeason(sKey);
+    const futureYearData =
+      index > 0
+        ? (payroll.futureYears ?? []).find((fy) => fy.seasonKey === sKey)
+        : null;
+
+    const sourceLines = futureYearData ? futureYearData.lines : payroll.lines;
+    const linesRaw = buildSynchronizedTeamPayrollLines(
+      rosterBlock?.players,
+      sourceLines,
+      sKey
+    );
+    const totalSalary = linesRaw.reduce((s, l) => s + l.salary, 0);
+    const lines =
+      totalSalary > 0
+        ? linesRaw.map((l) => ({ ...l, share: l.salary / totalSalary }))
+        : linesRaw;
+
+    return {
+      key: sKey,
+      label: sKey,
+      isCurrent: index === 0,
+      totalSalary,
+      salaryCap: capInfo.salaryCap,
+      taxLine: capInfo.taxLine,
+      firstApron: capInfo.firstApron,
+      secondApron: capInfo.secondApron,
+      capSpace: capInfo.salaryCap - totalSalary,
+      taxSpace: capInfo.taxLine - totalSalary,
+      firstApronSpace: capInfo.firstApron - totalSalary,
+      secondApronSpace: capInfo.secondApron - totalSalary,
+      apronStatus: resolveApronStatus(totalSalary, capInfo),
+      taxBill: 0,
+      guaranteed: totalSalary,
+      lines,
+      leagueRank: index === 0 ? payroll.leagueRank : null,
+    };
+  });
+
+  const active = seasonsList[selectedSeasonIdx] ?? seasonsList[0];
+  const overCap = active.capSpace < 0;
+  const slices = payrollDisplaySlices(active.lines, accent);
 
   return (
     <View style={styles.payrollWrap}>
       <SectionHeader title="PAYROLL" accent={accent} />
-      <View style={[styles.payrollCard, { borderColor: frame }]}>
+
+      {/* Year Selection Tabs */}
+      <View style={styles.payrollYearTabsRow}>
+        {seasonsList.map((s, idx) => {
+          const isSelected = idx === selectedSeasonIdx;
+          return (
+            <Pressable
+              key={s.key}
+              onPress={() => setSelectedSeasonIdx(idx)}
+              style={[
+                styles.payrollYearTab,
+                isSelected && {
+                  borderColor: accent,
+                  backgroundColor: hexToRgba(accent, 0.18),
+                },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.payrollYearTabText,
+                  isSelected && { color: accent, fontWeight: "800" },
+                ]}
+              >
+                {s.label}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+
+      {/* Selected Season Detail Card with Animation */}
+      <Animated.View
+        key={active.key}
+        entering={FadeInDown.duration(200)}
+        style={[styles.payrollCard, { borderColor: frame }]}
+      >
         <View style={styles.payrollTop}>
           <View style={styles.payrollSalaryBlock}>
-            <Text style={styles.payrollLabel}>
-              {isJa ? "総年俸" : "TOTAL"}
-            </Text>
+            <View style={styles.payrollLabelWithBadge}>
+              <Text style={styles.payrollLabel}>
+                {active.isCurrent
+                  ? isJa
+                    ? `総年俸 (${active.label})`
+                    : `TOTAL SALARY (${active.label})`
+                  : isJa
+                  ? `確定年俸 (${active.label})`
+                  : `COMMITTED (${active.label})`}
+              </Text>
+              <ApronBadge status={active.apronStatus} isJa={isJa} />
+            </View>
             <Text style={styles.payrollSalary}>
-              {formatSalaryUsd(payroll.totalSalary)}
+              {formatSalaryUsd(active.totalSalary)}
             </Text>
           </View>
-          <View style={styles.payrollRankBlock}>
-            <Text style={styles.payrollLabel}>RANK</Text>
-            <Text style={[styles.payrollRank, { color: "#FFFFFF" }]}>
-              #{payroll.leagueRank}
-            </Text>
-          </View>
+          {active.leagueRank != null && (
+            <View style={styles.payrollRankBlock}>
+              <Text style={styles.payrollLabel}>RANK</Text>
+              <Text style={[styles.payrollRank, { color: "#FFFFFF" }]}>
+                #{active.leagueRank}
+              </Text>
+            </View>
+          )}
         </View>
+
         <View style={styles.payrollMetaRow}>
           <Text style={styles.payrollMeta}>
-            CAP {formatSalaryUsd(payroll.salaryCap)}
+            CAP {formatSalaryUsd(active.salaryCap)}
           </Text>
           <Text style={[styles.payrollMetaDot, { color: "rgba(255,255,255,0.45)" }]}>
             ·
           </Text>
           <Text style={styles.payrollMeta}>
-            TAX LINE {formatSalaryUsd(payroll.taxLine)}
+            TAX LINE {formatSalaryUsd(active.taxLine)}
           </Text>
         </View>
-        <Text
-          style={[
-            styles.payrollSpace,
-            { color: overCap ? FORM_LOSS : POSITIVE_TEAL },
-          ]}
-        >
-          {isJa ? "キャップ余裕" : "CAP SPACE"}{" "}
-          {overCap ? "" : "+"}
-          {formatSalaryUsd(payroll.capSpace)}
-          {payroll.taxBill > 0
-            ? `  ·  TAX ${formatSalaryUsd(payroll.taxBill)}`
-            : ""}
-        </Text>
-        <Text style={[styles.payrollGuaranteed, { color: "#FFFFFF" }]}>
-          {isJa ? "保証額" : "GUARANTEED"}{" "}
-          {formatSalaryUsd(payroll.guaranteed)}
-        </Text>
+
+        <View style={styles.payrollMetaRow}>
+          <Text style={[styles.payrollMeta, { color: "#FF8A00" }]}>
+            1ST APRON {formatSalaryUsd(active.firstApron)}
+          </Text>
+          <Text style={[styles.payrollMetaDot, { color: "rgba(255,255,255,0.45)" }]}>
+            ·
+          </Text>
+          <Text style={[styles.payrollMeta, { color: "#FF2D78" }]}>
+            2ND APRON {formatSalaryUsd(active.secondApron)}
+          </Text>
+        </View>
+
+        <View style={styles.payrollSpacesRow}>
+          {active.firstApronSpace != null && (
+            <Text
+              style={[
+                styles.payrollSpace,
+                {
+                  color:
+                    active.firstApronSpace < 0 ? FORM_LOSS : POSITIVE_TEAL,
+                },
+              ]}
+            >
+              {isJa ? "1ST APRON余裕" : "1ST APRON SPACE"}{" "}
+              {active.firstApronSpace >= 0 ? "+" : ""}
+              {formatSalaryUsd(active.firstApronSpace)}
+            </Text>
+          )}
+          {active.secondApronSpace != null && (
+            <Text
+              style={[
+                styles.payrollSpace,
+                {
+                  color:
+                    active.secondApronSpace < 0 ? FORM_LOSS : POSITIVE_TEAL,
+                },
+              ]}
+            >
+              {isJa ? "2ND APRON余裕" : "2ND APRON SPACE"}{" "}
+              {active.secondApronSpace >= 0 ? "+" : ""}
+              {formatSalaryUsd(active.secondApronSpace)}
+            </Text>
+          )}
+        </View>
 
         {/* Player composition stacked bar */}
         <Text style={styles.payrollBreakdownTitle}>
-          {isJa ? "選手内訳" : "BY PLAYER"}
+          {isJa
+            ? `選手内訳 (${slices.length}名) · % はCAP比`
+            : `BY PLAYER (${slices.length}) · % OF CAP`}
         </Text>
         <View style={styles.payrollStackWrap}>
           <View style={styles.payrollStack}>
@@ -659,26 +851,550 @@ function PayrollSection({
               {isJa ? "データがありません" : "No data yet"}
             </Text>
           ) : (
-            slices.map((s) => (
-            <View key={s.key} style={styles.payrollLineRow}>
-              <View
-                style={[styles.payrollSwatch, { backgroundColor: s.color }]}
-              />
-              <Text style={styles.payrollLineName} numberOfLines={1}>
-                {s.label}
-              </Text>
-              <Text style={styles.payrollLineSalary}>
-                {formatSalaryUsd(s.salary)}
-              </Text>
-              <Text style={[styles.payrollLineShare, { color: "#FFFFFF" }]}>
-                {Math.round(s.share * 100)}%
-              </Text>
-            </View>
-            ))
+          slices.map((s) => {
+            const isTw = s.isTwoWay === true && active.key === CURRENT_NBA_SEASON_KEY;
+            const displaySalary = isTw
+              ? nbaTwoWaySalaryForSeason(active.key)
+              : s.salary;
+            const capPct =
+              !isTw && s.salary > 0 && active.salaryCap > 0
+                ? ((s.salary / active.salaryCap) * 100).toFixed(1)
+                : null;
+            return (
+              <View key={s.key} style={styles.payrollLineRow}>
+                <View
+                  style={[styles.payrollSwatch, { backgroundColor: s.color }]}
+                />
+                <View style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 4 }}>
+                  <Text style={styles.payrollLineName} numberOfLines={1}>
+                    {s.label}
+                  </Text>
+                  {s.option && active.key !== CURRENT_NBA_SEASON_KEY ? (
+                    <Text
+                      style={{
+                        fontSize: 8,
+                        fontWeight: "800",
+                        color:
+                          s.option === "TO"
+                            ? "#FFB800"
+                            : s.option === "PO"
+                            ? "#00F5FF"
+                            : "#C084FC",
+                        backgroundColor:
+                          s.option === "TO"
+                            ? "rgba(255,180,0,0.18)"
+                            : s.option === "PO"
+                            ? "rgba(0,245,255,0.18)"
+                            : "rgba(168,85,247,0.18)",
+                        paddingHorizontal: 4,
+                        paddingVertical: 1,
+                        borderRadius: 2,
+                        overflow: "hidden",
+                      }}
+                    >
+                      {s.option === "TO"
+                        ? "TEAM"
+                        : s.option === "PO"
+                        ? "PLAYER"
+                        : s.option === "MO"
+                        ? "MUTUAL"
+                        : s.option}
+                    </Text>
+                  ) : null}
+                </View>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
+                  {isTw ? (
+                    <Text
+                      style={{
+                        fontSize: 9,
+                        fontWeight: "800",
+                        color: "rgba(255,255,255,0.6)",
+                        backgroundColor: "rgba(255,255,255,0.1)",
+                        paddingHorizontal: 3,
+                        paddingVertical: 1,
+                        borderRadius: 2,
+                      }}
+                    >
+                      TW
+                    </Text>
+                  ) : null}
+                  <Text style={styles.payrollLineSalary}>
+                    {displaySalary > 0 ? formatSalaryUsd(displaySalary) : "—"}
+                  </Text>
+                </View>
+                <View style={styles.payrollCapPctBlock}>
+                  {capPct !== null ? (
+                    <Text style={styles.payrollCapPct}>
+                      {capPct}% <Text style={styles.payrollCapPctSub}>CAP</Text>
+                    </Text>
+                  ) : (
+                    <Text style={[styles.payrollCapPctSub, { color: "rgba(255,255,255,0.35)" }]}>—</Text>
+                  )}
+                </View>
+              </View>
+            );
+          })
           )}
         </View>
-      </View>
+
+        {/* Option Badges & Contract Legend */}
+        <View style={styles.payrollLegendWrap}>
+          <Text style={styles.payrollLegendTitle}>
+            {isJa ? "契約オプション / 表記凡例" : "CONTRACT OPTIONS & LEGEND"}
+          </Text>
+          <View style={styles.payrollLegendList}>
+            <View style={styles.payrollLegendItem}>
+              <Text
+                style={[
+                  styles.payrollLegendBadge,
+                  {
+                    color: "#FFB800",
+                    backgroundColor: "rgba(255,180,0,0.18)",
+                  },
+                ]}
+              >
+                TEAM
+              </Text>
+              <Text style={styles.payrollLegendText}>
+                {isJa ? "チームオプション（球団に行使権）" : "Team Option (Club decision)"}
+              </Text>
+            </View>
+            <View style={styles.payrollLegendItem}>
+              <Text
+                style={[
+                  styles.payrollLegendBadge,
+                  {
+                    color: "#00F5FF",
+                    backgroundColor: "rgba(0,245,255,0.18)",
+                  },
+                ]}
+              >
+                PLAYER
+              </Text>
+              <Text style={styles.payrollLegendText}>
+                {isJa ? "プレイヤーオプション（選手に行使権）" : "Player Option (Player decision)"}
+              </Text>
+            </View>
+            <View style={styles.payrollLegendItem}>
+              <Text
+                style={[
+                  styles.payrollLegendBadge,
+                  {
+                    color: "#C084FC",
+                    backgroundColor: "rgba(168,85,247,0.18)",
+                  },
+                ]}
+              >
+                MUTUAL
+              </Text>
+              <Text style={styles.payrollLegendText}>
+                {isJa ? "双方合意オプション（球団・選手両方）" : "Mutual Option (Both agree)"}
+              </Text>
+            </View>
+          </View>
+        </View>
+      </Animated.View>
     </View>
+  );
+}
+
+function DraftPicksSection({
+  teamId,
+  accent,
+  isJa,
+}: {
+  teamId: string;
+  accent: string;
+  isJa: boolean;
+}) {
+  const draftCapital = useMemo(() => getNbaTeamDraftCapital(teamId), [teamId]);
+  const { summary } = draftCapital;
+  const frame = hexToRgba(accent, 0.45);
+
+  const [selectedPick, setSelectedPick] = useState<NbaDraftPickEntry | null>(null);
+
+  const flexColor =
+    summary.flexibility === "VERY HIGH" || summary.flexibility === "HIGH"
+      ? "#00F5FF"
+      : summary.flexibility === "MEDIUM"
+      ? "#5CF0B5"
+      : "#FF2D78";
+
+  return (
+    <View style={styles.payrollWrap}>
+      <SectionHeader
+        title={isJa ? "DRAFT ASSETS (ドラフト指名権・資産)" : "DRAFT ASSETS & CAPITAL"}
+        accent={accent}
+      />
+
+      {/* ① Summary (資産サマリー) */}
+      <View style={[styles.draftSummaryCardWrap, { borderColor: frame }]}>
+        {/* Header row with Flexibility */}
+        <View style={styles.draftSummaryHeaderRow}>
+          <Text style={styles.draftSummaryMainLabel}>
+            {isJa ? "ドラフト資産サマリー (2027-2033)" : "ASSETS SUMMARY (7-YEAR)"}
+          </Text>
+          <View style={styles.draftFlexibilityWrap}>
+            <Text style={styles.draftFlexibilityLabel}>{isJa ? "柔軟性" : "FLEX"}</Text>
+            <View
+              style={[
+                styles.draftFlexibilityBadge,
+                {
+                  backgroundColor: hexToRgba(flexColor, 0.15),
+                  borderColor: hexToRgba(flexColor, 0.6),
+                },
+              ]}
+            >
+              <Text style={[styles.draftFlexibilityText, { color: flexColor }]}>
+                {isJa ? summary.flexibilityJa : summary.flexibility}
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        {/* 4 Cards in 2x2 Grid */}
+        <View style={styles.draftSummaryGrid2x2}>
+          {/* 1st Round */}
+          <View style={styles.draftSummaryBox}>
+            <Text style={[styles.draftSummaryBoxLabel, { color: "#00F5FF" }]}>
+              {isJa ? "1巡目指名権" : "1ST ROUND"}
+            </Text>
+            <View style={styles.draftSummaryBoxValRow}>
+              <Text style={styles.draftSummaryBoxVal}>{summary.total1st}</Text>
+              <Text style={styles.draftSummaryBoxUnit}>{isJa ? "本" : "picks"}</Text>
+            </View>
+            <Text style={styles.draftSummaryBoxSub}>
+              {isJa ? "確定 " : "Guar "}
+              <Text style={styles.draftSummaryBoxSubBold}>{summary.guaranteed1st}</Text>
+              {isJa ? " / 条件付 " : " / Cond "}
+              <Text style={[styles.draftSummaryBoxSubBold, { color: "#FFB800" }]}>
+                {summary.conditional1st}
+              </Text>
+            </Text>
+          </View>
+
+          {/* 2nd Round */}
+          <View style={styles.draftSummaryBox}>
+            <Text style={styles.draftSummaryBoxLabel}>
+              {isJa ? "2巡目指名権" : "2ND ROUND"}
+            </Text>
+            <View style={styles.draftSummaryBoxValRow}>
+              <Text style={styles.draftSummaryBoxVal}>{summary.total2nd}</Text>
+              <Text style={styles.draftSummaryBoxUnit}>{isJa ? "本" : "picks"}</Text>
+            </View>
+            <Text style={styles.draftSummaryBoxSub}>
+              {isJa ? "確定 " : "Guar "}
+              <Text style={styles.draftSummaryBoxSubBold}>{summary.guaranteed2nd}</Text>
+              {isJa ? " / 条件付 " : " / Cond "}
+              <Text style={[styles.draftSummaryBoxSubBold, { color: "#FFB800" }]}>
+                {summary.conditional2nd}
+              </Text>
+            </Text>
+          </View>
+
+          {/* Swap Rights */}
+          <View style={styles.draftSummaryBox}>
+            <Text style={[styles.draftSummaryBoxLabel, { color: "#FFB800" }]}>
+              {isJa ? "スワップ権" : "SWAP RIGHTS"}
+            </Text>
+            <View style={styles.draftSummaryBoxValRow}>
+              <Text style={[styles.draftSummaryBoxVal, { color: "#FFB800" }]}>
+                {summary.swapRights}
+              </Text>
+              <Text style={styles.draftSummaryBoxUnit}>{isJa ? "件" : "swaps"}</Text>
+            </View>
+            <Text style={styles.draftSummaryBoxSub}>
+              {isJa ? "有利交換権利" : "Favorable swap"}
+            </Text>
+          </View>
+
+          {/* Outgoing */}
+          <View style={styles.draftSummaryBox}>
+            <Text style={[styles.draftSummaryBoxLabel, { color: "#FF2D78" }]}>
+              {isJa ? "放出済み" : "OUTGOING"}
+            </Text>
+            <View style={styles.draftSummaryBoxValRow}>
+              <Text style={[styles.draftSummaryBoxVal, { color: "#FF2D78" }]}>
+                {summary.outgoingPicks}
+              </Text>
+              <Text style={styles.draftSummaryBoxUnit}>{isJa ? "本" : "picks"}</Text>
+            </View>
+            <Text style={styles.draftSummaryBoxSub}>
+              {isJa ? "トレード譲渡" : "Traded away"}
+            </Text>
+          </View>
+        </View>
+      </View>
+
+      {/* ② Year-by-Year Timeline (年別タイムライン) */}
+      <View style={[styles.draftListCard, { borderColor: frame }]}>
+        <View style={styles.draftTimelineHeaderRow}>
+          <Text style={styles.draftTimelineHeaderTitle}>
+            {isJa ? "年別タイムライン (タップで条件詳細)" : "PICKS TIMELINE (TAP FOR DETAILS)"}
+          </Text>
+          <View style={styles.draftLegendRow}>
+            <View style={styles.draftLegendItem}>
+              <View style={[styles.draftLegendDot, { backgroundColor: "#00F5FF" }]} />
+              <Text style={styles.draftLegendText}>{isJa ? "自前" : "OWN"}</Text>
+            </View>
+            <View style={styles.draftLegendItem}>
+              <View style={[styles.draftLegendDot, { backgroundColor: "#5CF0B5" }]} />
+              <Text style={styles.draftLegendText}>{isJa ? "取得" : "FROM"}</Text>
+            </View>
+            <View style={styles.draftLegendItem}>
+              <View style={[styles.draftLegendDot, { backgroundColor: "#FFB800" }]} />
+              <Text style={styles.draftLegendText}>SWAP</Text>
+            </View>
+            <View style={styles.draftLegendItem}>
+              <View style={[styles.draftLegendDot, { backgroundColor: "#B388FF" }]} />
+              <Text style={styles.draftLegendText}>{isJa ? "保護" : "PROT"}</Text>
+            </View>
+            <View style={styles.draftLegendItem}>
+              <View style={[styles.draftLegendDot, { backgroundColor: "#FF2D78" }]} />
+              <Text style={styles.draftLegendText}>{isJa ? "放出" : "OUT"}</Text>
+            </View>
+          </View>
+        </View>
+
+        {draftCapital.years.map((y) => {
+          return (
+            <View key={y.year} style={styles.draftYearRow}>
+              {/* Year Column */}
+              <View style={styles.draftYearCol}>
+                <Text style={styles.draftYearText}>{y.year}</Text>
+              </View>
+
+              {/* Picks Column */}
+              <View style={styles.draftPicksCol}>
+                {/* 1st Round */}
+                <View style={styles.draftRoundGroup}>
+                  <Text style={styles.draftRoundLabel}>1ST</Text>
+                  <View style={styles.draftChipsWrap}>
+                    {y.firstRound.length === 0 ? (
+                      <View style={[styles.draftChip, styles.draftChipNone]}>
+                        <Text style={styles.draftChipTextNone}>
+                          {isJa ? "保有なし" : "None"}
+                        </Text>
+                      </View>
+                    ) : (
+                      y.firstRound.map((p) => {
+                        return renderNativePickChip(p, isJa, () => setSelectedPick(p));
+                      })
+                    )}
+                  </View>
+                </View>
+
+                {/* 2nd Round */}
+                <View style={styles.draftRoundGroup}>
+                  <Text style={[styles.draftRoundLabel, { color: "rgba(255,255,255,0.4)" }]}>
+                    2ND
+                  </Text>
+                  <View style={styles.draftChipsWrap}>
+                    {y.secondRound.length === 0 ? (
+                      <View style={[styles.draftChip, styles.draftChipNone]}>
+                        <Text style={styles.draftChipTextNone}>
+                          {isJa ? "保有なし" : "None"}
+                        </Text>
+                      </View>
+                    ) : (
+                      y.secondRound.map((p) => {
+                        return renderNativePickChip(p, isJa, () => setSelectedPick(p));
+                      })
+                    )}
+                  </View>
+                </View>
+              </View>
+            </View>
+          );
+        })}
+      </View>
+
+      {/* ③ タップで開く詳細モーダル */}
+      <Modal
+        visible={!!selectedPick}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setSelectedPick(null)}
+      >
+        <Pressable
+          style={styles.modalBackdrop}
+          onPress={() => setSelectedPick(null)}
+        >
+          <Pressable
+            style={styles.draftModalCard}
+            onPress={(e) => e.stopPropagation()}
+          >
+            {selectedPick && (
+              <>
+                {/* Modal Header */}
+                <View style={styles.draftModalHeader}>
+                  <View style={styles.draftModalHeaderTitles}>
+                    <Text style={styles.draftModalSubTitle}>
+                      {selectedPick.year} NBA DRAFT •{" "}
+                      {selectedPick.round === 1 ? "1ST ROUND" : "2ND ROUND"}
+                    </Text>
+                    <Text style={styles.draftModalMainTitle}>
+                      {isJa
+                        ? selectedPick.detailsJa ?? selectedPick.detailsEn
+                        : selectedPick.detailsEn ?? selectedPick.detailsJa}
+                    </Text>
+                  </View>
+                  <Pressable
+                    hitSlop={8}
+                    onPress={() => setSelectedPick(null)}
+                    style={styles.draftModalCloseBtn}
+                  >
+                    <Text style={styles.draftModalCloseText}>✕</Text>
+                  </Pressable>
+                </View>
+
+                {/* Badge tags */}
+                <View style={styles.draftModalTagRow}>
+                  {selectedPick.badgeType && (
+                    <View style={styles.draftModalTagBadge}>
+                      <Text style={styles.draftModalTagBadgeText}>
+                        {selectedPick.badgeType === "own"
+                          ? isJa ? "自前指名権" : "OWN PICK"
+                          : selectedPick.badgeType === "from"
+                          ? isJa ? `獲得 (via ${selectedPick.fromTeamId ?? ""})` : `VIA ${selectedPick.fromTeamId ?? ""}`
+                          : selectedPick.badgeType === "swap"
+                          ? isJa ? `スワップ権 (${selectedPick.swapWithTeamId ?? ""})` : `SWAP (${selectedPick.swapWithTeamId ?? ""})`
+                          : selectedPick.badgeType === "prot"
+                          ? isJa ? "プロテクト付き" : "PROTECTED"
+                          : selectedPick.badgeType === "outgoing"
+                          ? isJa ? `放出済み (to ${selectedPick.toTeamId ?? ""})` : `OUTGOING (to ${selectedPick.toTeamId ?? ""})`
+                          : isJa ? "条件付き" : "CONDITIONAL"}
+                      </Text>
+                    </View>
+                  )}
+                  {selectedPick.protection && (
+                    <View style={[styles.draftModalTagBadge, { backgroundColor: "rgba(255,184,0,0.15)", borderColor: "rgba(255,184,0,0.4)" }]}>
+                      <Text style={[styles.draftModalTagBadgeText, { color: "#FFB800" }]}>
+                        {selectedPick.protection}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+
+                {/* Conditions list */}
+                <View style={styles.draftModalBodyBox}>
+                  <Text style={styles.draftModalBodyLabel}>
+                    {isJa ? "行使条件・保護ルール" : "CONDITIONS & CONVEYANCE"}
+                  </Text>
+                  {selectedPick.conditionsJa && selectedPick.conditionsJa.length > 0 ? (
+                    (isJa ? selectedPick.conditionsJa : selectedPick.conditionsEn ?? selectedPick.conditionsJa).map(
+                      (c, idx) => (
+                        <View key={idx} style={styles.draftConditionItem}>
+                          <Text style={styles.draftConditionBullet}>•</Text>
+                          <Text style={styles.draftConditionText}>{c}</Text>
+                        </View>
+                      )
+                    )
+                  ) : (
+                    <Text style={styles.draftConditionText}>
+                      {isJa
+                        ? selectedPick.detailsJa ?? "追加のプロテクション条件はありません（確定）"
+                        : selectedPick.detailsEn ?? "No additional protection conditions (guaranteed)."}
+                    </Text>
+                  )}
+                </View>
+
+                {/* Close Button */}
+                <Pressable
+                  style={styles.draftModalActionBtn}
+                  onPress={() => setSelectedPick(null)}
+                >
+                  <Text style={styles.draftModalActionBtnText}>
+                    {isJa ? "閉じる" : "CLOSE"}
+                  </Text>
+                </Pressable>
+              </>
+            )}
+          </Pressable>
+        </Pressable>
+      </Modal>
+    </View>
+  );
+}
+
+function renderNativePickChip(
+  p: NbaDraftPickEntry,
+  isJa: boolean,
+  onPress: () => void
+) {
+  const badgeType = p.badgeType ?? "own";
+  const isOutgoing = p.kind === "outgoing" || p.isOutgoing || badgeType === "outgoing";
+  const isSwap = p.kind.startsWith("swap") || p.isSwap || badgeType === "swap";
+  const isProt = badgeType === "prot" || (p.protection && p.protection.toLowerCase() !== "unprotected");
+  const isFrom = badgeType === "from" || (!isSwap && !isProt && !isOutgoing && !!p.fromTeamId);
+
+  let bg = "rgba(0,245,255,0.08)";
+  let border = "rgba(0,245,255,0.35)";
+  let color = "#00F5FF";
+  let tagBg = "rgba(0,245,255,0.2)";
+  let tagText = isJa ? "自前" : "OWN";
+
+  if (isOutgoing) {
+    bg = "rgba(255,45,120,0.06)";
+    border = "rgba(255,45,120,0.3)";
+    color = "#FF2D78";
+    tagBg = "rgba(255,45,120,0.2)";
+    tagText = isJa ? "放出" : "OUT";
+  } else if (isSwap) {
+    bg = "rgba(255,184,0,0.08)";
+    border = "rgba(255,184,0,0.4)";
+    color = "#FFB800";
+    tagBg = "rgba(255,184,0,0.2)";
+    tagText = "SWAP";
+  } else if (isProt) {
+    bg = "rgba(179,136,255,0.08)";
+    border = "rgba(179,136,255,0.4)";
+    color = "#B388FF";
+    tagBg = "rgba(179,136,255,0.2)";
+    tagText = p.protectionTag ?? (isJa ? "プロテクト" : "PROT");
+  } else if (isFrom) {
+    bg = "rgba(92,240,181,0.08)";
+    border = "rgba(92,240,181,0.4)";
+    color = "#5CF0B5";
+    tagBg = "rgba(92,240,181,0.2)";
+    tagText = p.fromTeamId ? `FROM ${p.fromTeamId}` : isJa ? "取得" : "FROM";
+  }
+
+  const label = isJa
+    ? p.shortLabelJa ?? p.detailsJa ?? p.detailsEn
+    : p.shortLabelEn ?? p.detailsEn ?? p.detailsJa;
+
+  return (
+    <Pressable
+      key={p.id}
+      onPress={onPress}
+      style={[
+        styles.draftChip,
+        {
+          backgroundColor: bg,
+          borderColor: border,
+          opacity: isOutgoing ? 0.65 : 1,
+        },
+      ]}
+    >
+      <View style={[styles.draftKindTag, { backgroundColor: tagBg }]}>
+        <Text style={[styles.draftKindTagText, { color: color }]}>
+          {tagText}
+        </Text>
+      </View>
+      <Text
+        numberOfLines={1}
+        style={[
+          styles.draftChipText,
+          {
+            color: color,
+            textDecorationLine: isOutgoing ? "line-through" : "none",
+          },
+        ]}
+      >
+        {label}
+      </Text>
+    </Pressable>
   );
 }
 
@@ -918,6 +1634,15 @@ export default function NbaTeamDetailPanelNative({
 
         <PayrollSection
           payroll={detail.payroll}
+          rosterBlock={detail.rosterBlock}
+          accent={accent}
+          isJa={isJa}
+        />
+
+        <View style={[styles.divider, { backgroundColor: dividerColor }]} />
+
+        <DraftPicksSection
+          teamId={detail.teamId}
           accent={accent}
           isJa={isJa}
         />
@@ -1115,6 +1840,27 @@ const styles = StyleSheet.create({
   payrollWrap: {
     gap: 10,
   },
+  payrollYearTabsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+  },
+  payrollYearTab: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 2,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.12)",
+    backgroundColor: "rgba(8,8,12,0.4)",
+    transform: [{ skewX: "-8deg" }],
+  },
+  payrollYearTabText: {
+    fontFamily: METRIC_FONT,
+    color: "rgba(255,255,255,0.6)",
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 0.8,
+  },
   payrollCard: {
     borderWidth: 1,
     backgroundColor: "rgba(8,8,12,0.45)",
@@ -1127,8 +1873,27 @@ const styles = StyleSheet.create({
     alignItems: "flex-end",
     justifyContent: "space-between",
   },
-  payrollSalaryBlock: { gap: 2 },
+  payrollSalaryBlock: { gap: 2, flex: 1 },
   payrollRankBlock: { alignItems: "flex-end", gap: 2 },
+  payrollLabelWithBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    flexWrap: "wrap",
+  },
+  apronBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 2,
+    borderWidth: 1,
+    transform: [{ skewX: "-8deg" }],
+  },
+  apronBadgeText: {
+    fontFamily: METRIC_FONT,
+    fontSize: 8,
+    fontWeight: "800",
+    letterSpacing: 0.8,
+  },
   payrollLabel: {
     fontFamily: METRIC_FONT,
     color: "rgba(255,255,255,0.4)",
@@ -1167,6 +1932,12 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
   },
   payrollMetaDot: { fontSize: 11 },
+  payrollSpacesRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    gap: 12,
+  },
   payrollSpace: {
     fontFamily: METRIC_FONT,
     fontSize: 12,
@@ -1204,7 +1975,7 @@ const styles = StyleSheet.create({
     transform: [{ skewX: "-14deg" }],
   },
   payrollLines: {
-    gap: 10,
+    gap: 8,
     marginTop: 4,
   },
   payrollLineRow: {
@@ -1222,7 +1993,7 @@ const styles = StyleSheet.create({
   payrollLineName: {
     flex: 1,
     fontFamily: METRIC_FONT,
-    color: "rgba(255,255,255,0.9)",
+    color: "#FFFFFF",
     fontSize: 14,
     fontWeight: "800",
     letterSpacing: 0.3,
@@ -1230,20 +2001,424 @@ const styles = StyleSheet.create({
   },
   payrollLineSalary: {
     fontFamily: METRIC_FONT,
-    color: "rgba(255,255,255,0.7)",
+    color: "rgba(255,255,255,0.75)",
     fontSize: 13,
     fontWeight: "700",
     fontVariant: ["tabular-nums"],
     transform: [{ skewX: "-8deg" }],
   },
   payrollLineShare: {
-    width: 40,
+    width: 44,
     textAlign: "right",
     fontFamily: METRIC_FONT,
+    color: "#FFFFFF",
     fontSize: 13,
     fontWeight: "800",
     fontVariant: ["tabular-nums"],
     transform: [{ skewX: "-8deg" }],
+  },
+  payrollCapPctBlock: {
+    width: 62,
+    alignItems: "flex-end",
+  },
+  payrollCapPct: {
+    fontFamily: METRIC_FONT,
+    color: "#FFFFFF",
+    fontSize: 13,
+    fontWeight: "800",
+    fontVariant: ["tabular-nums"],
+    transform: [{ skewX: "-8deg" }],
+  },
+  payrollCapPctSub: {
+    fontSize: 9,
+    color: "rgba(255,255,255,0.45)",
+    fontWeight: "700",
+  },
+  payrollLegendWrap: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: "rgba(255,255,255,0.12)",
+    paddingTop: 10,
+    marginTop: 8,
+    gap: 6,
+  },
+  payrollLegendTitle: {
+    fontFamily: METRIC_FONT,
+    fontSize: 8,
+    fontWeight: "800",
+    color: "rgba(255,255,255,0.4)",
+    letterSpacing: 0.8,
+    textTransform: "uppercase",
+    transform: [{ skewX: "-6deg" }],
+  },
+  payrollLegendList: {
+    gap: 5,
+  },
+  payrollLegendItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  payrollLegendBadge: {
+    fontSize: 8,
+    fontWeight: "800",
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+    borderRadius: 2,
+    overflow: "hidden",
+  },
+  payrollLegendText: {
+    fontSize: 10,
+    color: "rgba(255,255,255,0.55)",
+    fontWeight: "500",
+    flex: 1,
+  },
+  draftSummaryCardWrap: {
+    borderWidth: 1,
+    backgroundColor: "rgba(8,8,12,0.6)",
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    gap: 10,
+  },
+  draftSummaryHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingBottom: 8,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(255,255,255,0.08)",
+  },
+  draftSummaryMainLabel: {
+    fontFamily: METRIC_FONT,
+    color: "rgba(255,255,255,0.5)",
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 0.8,
+    textTransform: "uppercase",
+  },
+  draftFlexibilityWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  draftFlexibilityLabel: {
+    fontFamily: METRIC_FONT,
+    color: "rgba(255,255,255,0.4)",
+    fontSize: 9,
+    fontWeight: "600",
+  },
+  draftFlexibilityBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderWidth: 1,
+    borderRadius: 2,
+    transform: [{ skewX: "-6deg" }],
+  },
+  draftFlexibilityText: {
+    fontFamily: METRIC_FONT,
+    fontSize: 9,
+    fontWeight: "800",
+  },
+  draftSummaryGrid2x2: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+  },
+  draftSummaryBox: {
+    width: "48.5%",
+    backgroundColor: "rgba(255,255,255,0.03)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.08)",
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+    borderRadius: 2,
+    gap: 3,
+  },
+  draftSummaryBoxLabel: {
+    fontFamily: METRIC_FONT,
+    color: "rgba(255,255,255,0.7)",
+    fontSize: 9,
+    fontWeight: "700",
+    letterSpacing: 0.6,
+    textTransform: "uppercase",
+  },
+  draftSummaryBoxValRow: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    gap: 3,
+  },
+  draftSummaryBoxVal: {
+    fontFamily: OXANIUM,
+    color: "#FFFFFF",
+    fontSize: 18,
+    fontWeight: "800",
+  },
+  draftSummaryBoxUnit: {
+    fontSize: 10,
+    fontWeight: "600",
+    color: "rgba(255,255,255,0.5)",
+  },
+  draftSummaryBoxSub: {
+    fontFamily: METRIC_FONT,
+    fontSize: 8.5,
+    color: "rgba(255,255,255,0.45)",
+  },
+  draftSummaryBoxSubBold: {
+    fontWeight: "800",
+    color: "#FFFFFF",
+  },
+  draftTimelineHeaderRow: {
+    flexDirection: "column",
+    gap: 6,
+    paddingBottom: 8,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(255,255,255,0.08)",
+  },
+  draftTimelineHeaderTitle: {
+    fontFamily: METRIC_FONT,
+    color: "rgba(255,255,255,0.5)",
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 0.8,
+    textTransform: "uppercase",
+  },
+  draftLegendRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  draftLegendItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+  },
+  draftLegendDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  draftLegendText: {
+    fontFamily: METRIC_FONT,
+    fontSize: 8,
+    color: "rgba(255,255,255,0.4)",
+    fontWeight: "700",
+  },
+  draftListCard: {
+    borderWidth: 1,
+    backgroundColor: "rgba(8,8,12,0.6)",
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    gap: 10,
+  },
+  draftYearRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+    paddingVertical: 8,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(255,255,255,0.06)",
+  },
+  draftYearCol: {
+    width: 44,
+    paddingTop: 2,
+  },
+  draftYearText: {
+    fontFamily: METRIC_FONT,
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "800",
+    transform: [{ skewX: "-6deg" }],
+  },
+  draftPicksCol: {
+    flex: 1,
+    gap: 6,
+  },
+  draftRoundGroup: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 6,
+  },
+  draftRoundLabel: {
+    fontFamily: METRIC_FONT,
+    color: "#00F5FF",
+    fontSize: 9,
+    fontWeight: "800",
+    width: 24,
+    paddingTop: 2,
+  },
+  draftChipsWrap: {
+    flex: 1,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 4,
+  },
+  draftChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 2,
+    borderWidth: 1,
+  },
+  draftKindTag: {
+    paddingHorizontal: 3,
+    paddingVertical: 1,
+    borderRadius: 1,
+  },
+  draftKindTagText: {
+    fontFamily: METRIC_FONT,
+    fontSize: 7.5,
+    fontWeight: "800",
+    letterSpacing: 0.5,
+  },
+  draftProtectionTag: {
+    backgroundColor: "rgba(255,255,255,0.08)",
+    paddingHorizontal: 3,
+    paddingVertical: 1,
+    borderRadius: 1,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(255,255,255,0.2)",
+  },
+  draftProtectionTagText: {
+    fontFamily: METRIC_FONT,
+    fontSize: 7.5,
+    fontWeight: "700",
+    color: "rgba(255,255,255,0.7)",
+  },
+  draftChipNone: {
+    backgroundColor: "rgba(255,255,255,0.03)",
+    borderColor: "rgba(255,255,255,0.1)",
+  },
+  draftChipText: {
+    fontFamily: METRIC_FONT,
+    fontSize: 10,
+    fontWeight: "700",
+    maxWidth: 160,
+  },
+  draftChipTextNone: {
+    fontFamily: METRIC_FONT,
+    fontSize: 9.5,
+    fontWeight: "600",
+    color: "rgba(255,255,255,0.3)",
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.8)",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 20,
+  },
+  draftModalCard: {
+    width: "100%",
+    maxWidth: 380,
+    backgroundColor: "#0C0D14",
+    borderWidth: 1,
+    borderColor: "rgba(0,245,255,0.5)",
+    padding: 18,
+    borderRadius: 2,
+    gap: 14,
+  },
+  draftModalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(255,255,255,0.1)",
+    paddingBottom: 10,
+  },
+  draftModalHeaderTitles: {
+    flex: 1,
+    gap: 2,
+  },
+  draftModalSubTitle: {
+    fontFamily: METRIC_FONT,
+    color: "#00F5FF",
+    fontSize: 9.5,
+    fontWeight: "800",
+    letterSpacing: 0.8,
+    textTransform: "uppercase",
+  },
+  draftModalMainTitle: {
+    fontFamily: METRIC_FONT,
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "800",
+  },
+  draftModalCloseBtn: {
+    padding: 4,
+  },
+  draftModalCloseText: {
+    color: "rgba(255,255,255,0.5)",
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  draftModalTagRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+  },
+  draftModalTagBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 2,
+    backgroundColor: "rgba(255,255,255,0.08)",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(255,255,255,0.2)",
+  },
+  draftModalTagBadgeText: {
+    fontFamily: METRIC_FONT,
+    color: "#FFFFFF",
+    fontSize: 9,
+    fontWeight: "700",
+    textTransform: "uppercase",
+  },
+  draftModalBodyBox: {
+    backgroundColor: "rgba(255,255,255,0.02)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.06)",
+    padding: 10,
+    borderRadius: 2,
+    gap: 8,
+  },
+  draftModalBodyLabel: {
+    fontFamily: METRIC_FONT,
+    color: "rgba(255,255,255,0.4)",
+    fontSize: 9,
+    fontWeight: "700",
+    letterSpacing: 0.6,
+    textTransform: "uppercase",
+  },
+  draftConditionItem: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 6,
+  },
+  draftConditionBullet: {
+    color: "#00F5FF",
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  draftConditionText: {
+    flex: 1,
+    color: "rgba(255,255,255,0.85)",
+    fontSize: 11.5,
+    lineHeight: 16,
+  },
+  draftModalActionBtn: {
+    backgroundColor: "rgba(255,255,255,0.08)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.2)",
+    paddingVertical: 10,
+    alignItems: "center",
+    borderRadius: 2,
+  },
+  draftModalActionBtnText: {
+    fontFamily: METRIC_FONT,
+    color: "#FFFFFF",
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 0.6,
   },
   sectionTitleInline: {
     fontFamily: METRIC_FONT,

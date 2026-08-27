@@ -216,6 +216,8 @@ export type ProfileStackParamList = {
   Landing: undefined;
   /** __DEV__ 通知動作確認 */
   NotificationDev: undefined;
+  /** __DEV__ Injury UI デザイン比較 */
+  InjuryDesignPreview: undefined;
 };
 
 export type AuthStackParamList = {

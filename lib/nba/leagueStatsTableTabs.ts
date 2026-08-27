@@ -7,7 +7,7 @@
  * - SEASON + PER GAME → season
  * - SEASON + LAST 10 → last10
  * - SEASON + TOTAL → season を出場数で積算（レート系はそのまま）
- * - PLAYOFFS → 未接続（空）
+ * - PLAYOFFS → 未接続のため UI では非表示（`NBA_LEAGUE_STATS_PHASES`）
  */
 
 import {
@@ -30,7 +30,8 @@ import {
 export type NbaLeagueStatsPhase = "season" | "playoffs";
 export type NbaLeagueStatsMode = "per_game" | "total" | "last10";
 
-export const NBA_LEAGUE_STATS_PHASES = ["season", "playoffs"] as const;
+/** playoffs スナップショットが来るまで season のみ */
+export const NBA_LEAGUE_STATS_PHASES = ["season"] as const satisfies readonly NbaLeagueStatsPhase[];
 
 export function phaseTabLabel(phase: NbaLeagueStatsPhase): string {
   return phase === "season" ? "SEASON" : "PLAYOFFS";

@@ -64,7 +64,6 @@ import {
   normalizeNbaTopScorerPick,
   type NbaTopScorerPick,
 } from "../../../../../lib/nba/topScorer";
-import { topScorerCandidatesForMatchup } from "../../../../../lib/predict/nbaTopScorerPreviewMocks";
 import type { PredictModalMergedFinalPreview } from "./buildPredictModalMergedFinal";
 import {
   PREDICT_MODAL_EXIT_COMPLETION_MS,
@@ -1087,15 +1086,13 @@ export default function PredictModal({
     isWcLeague && predictData?.gameId && hasWcMatchPreview(predictData.gameId)
   );
   const hideMarketTab = Boolean(overlayMarketBar);
-  /** 開始前のみ Insight / Injury / Stats / Roster */
+  /** 開始前のみ Insight / Injury / Stats / Roster（BDL 系。legacy teams/{id} は使わない） */
   const showNbaPredictTimingOverlay =
-    hideMarketTab &&
     predictData?.league === "nba" &&
     !isWcLeague &&
     gameStatus === "scheduled";
   /** ライブ／終了は試合スタッツ画面 */
   const showNbaLiveGameStats =
-    hideMarketTab &&
     predictData?.league === "nba" &&
     !isWcLeague &&
     (gameStatus === "live" || gameStatus === "final");
@@ -1107,22 +1104,14 @@ export default function PredictModal({
     showNbaLiveGameStats,
     { apiBaseUrl: getUniterzApiBaseUrl() }
   );
-  const nbaTopScorerCandidates = useMemo(() => {
-    const fromGame = normalizeNbaTopScorerCandidates(
-      predictData?.subjectGame?.topScorerCandidates
-    );
-    if (fromGame.length > 0) return fromGame;
-    return topScorerCandidatesForMatchup(
-      rawTeamIdFromGameSide(matchPreview?.homeSide) ??
-        rawTeamIdFromGameSide(predictData?.subjectGame?.home),
-      rawTeamIdFromGameSide(matchPreview?.awaySide) ??
-        rawTeamIdFromGameSide(predictData?.subjectGame?.away)
-    );
-  }, [
-    predictData?.subjectGame,
-    matchPreview?.homeSide,
-    matchPreview?.awaySide,
-  ]);
+  /** Web 同様モックには落とさない（実在しない選手を賭け対象にしない） */
+  const nbaTopScorerCandidates = useMemo(
+    () =>
+      normalizeNbaTopScorerCandidates(
+        predictData?.subjectGame?.topScorerCandidates
+      ),
+    [predictData?.subjectGame]
+  );
   const showWcOverlayTabs = isWcLeague && hideMarketTab;
   const overlayCenterMode = hideMarketTab;
   const showOverlayScheduleMeta =

@@ -14,6 +14,7 @@ import {
   parseCommunityPeriod,
 } from "@/lib/communities/types";
 import { readRankingTeamIds } from "@/lib/communities/rankingTeams";
+import { consumeRateLimit, RATE_LIMIT_RULES } from "@/lib/security/rateLimit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -27,6 +28,19 @@ export async function POST(req: Request) {
       return NextResponse.json(
         { ok: false, error: "invalid_code" },
         { status: 400 }
+      );
+    }
+
+    // 招待コードの総当たりで無関係なグループに入られないようにする
+    const limit = await consumeRateLimit(
+      adminDb,
+      RATE_LIMIT_RULES.inviteCodeLookup,
+      uid
+    );
+    if (!limit.allowed) {
+      return NextResponse.json(
+        { ok: false, error: "rate_limited" },
+        { status: 429, headers: { "Retry-After": String(limit.retryAfterSec) } }
       );
     }
 
@@ -128,6 +142,19 @@ export async function POST(req: Request) {
     });
     await batch.commit();
 
+    // 一覧カード用プレビューを非同期更新（失敗しても join 自体は成功）
+    void import("@/lib/communities/refreshGroupMemberPreviews")
+      .then(({ refreshGroupMemberPreviews }) =>
+        refreshGroupMemberPreviews(
+          adminDb,
+          gid,
+          String(gdata?.ownerUid ?? "")
+        )
+      )
+      .catch((err) =>
+        console.warn("[communities/join] memberPreviews refresh failed", err)
+      );
+
     return NextResponse.json({ ok: true, groupId: gid });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : "error";
@@ -138,6 +165,6 @@ export async function POST(req: Request) {
       );
     }
     console.error("[communities/join]", e);
-    return NextResponse.json({ ok: false, error: msg }, { status: 500 });
+    return NextResponse.json({ ok: false, error: "internal" }, { status: 500 });
   }
 }

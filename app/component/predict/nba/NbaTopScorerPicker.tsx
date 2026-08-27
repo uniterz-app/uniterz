@@ -6,6 +6,7 @@ import {
   type NbaTopScorerCandidate,
   type NbaTopScorerPick,
 } from "@/lib/nba/topScorer";
+import { useNbaTopScorerCandidates } from "@/lib/nba/useNbaTopScorerCandidates";
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
 import { nameBebas, nameOxanium, resultStatsMetricNumClass } from "@/lib/fonts";
@@ -17,19 +18,22 @@ import {
   injuryStatusTone,
   type NbaInjuryReport,
 } from "@/lib/predict/nbaInjuryReport";
-import { injuryReportForMatchup } from "@/lib/predict/nbaInjuryReportPreviewMocks";
+import { useNbaMatchupInjuryReport } from "@/lib/nba/predict/useNbaMatchupInjuryReport";
 
 type Props = {
   homeTeamId?: string | null;
   awayTeamId?: string | null;
   homeLabel: string;
   awayLabel: string;
-  candidates: NbaTopScorerCandidate[];
+  /** game に載っていれば優先。空なら対戦ロスターから PPG 順に組む */
+  candidates?: NbaTopScorerCandidate[];
   value: NbaTopScorerPick | null;
   onChange: (next: NbaTopScorerPick | null) => void;
   language: Language;
   isMobile?: boolean;
-  /** 本番データ。無いときはマッチアップ mock にフォールバック */
+  /** Native: getUniterzApiBaseUrl() */
+  apiBaseUrl?: string | null;
+  /** 渡されればそれを使う。無ければ injuries スナップショットを共有キャッシュから引く */
   injuryReport?: NbaInjuryReport | null;
 };
 
@@ -83,24 +87,37 @@ function isSamePick(
 export default function NbaTopScorerPicker({
   homeTeamId,
   awayTeamId,
-  candidates,
+  candidates: candidatesProp,
   value,
   onChange,
   language,
+  apiBaseUrl,
   injuryReport,
 }: Props) {
   const m = t(language).predict;
   const isJa = language === "ja";
+  const { candidates, loading: candidatesLoading } = useNbaTopScorerCandidates({
+    homeTeamId,
+    awayTeamId,
+    override: candidatesProp,
+    apiBaseUrl,
+  });
   const sorted = useMemo(
     () => sortNbaTopScorerCandidatesByPpg(candidates),
     [candidates]
   );
-  const injuryById = useMemo(() => {
-    const report =
-      injuryReport ??
-      injuryReportForMatchup(homeTeamId ?? undefined, awayTeamId ?? undefined);
-    return report ? injuryStatusByPlayerId(report) : {};
-  }, [injuryReport, homeTeamId, awayTeamId]);
+  // 予想ツールの INJURY タブと同じスナップショットキャッシュを共有するので追加リクエストにならない
+  const { report: liveInjury } = useNbaMatchupInjuryReport({
+    homeTeamId: homeTeamId ?? undefined,
+    awayTeamId: awayTeamId ?? undefined,
+    override: injuryReport,
+    apiBaseUrl,
+    enabled: sorted.length > 0,
+  });
+  const injuryById = useMemo(
+    () => (liveInjury ? injuryStatusByPlayerId(liveInjury) : {}),
+    [liveInjury]
+  );
   const restCount = Math.max(0, sorted.length - TOP_N);
   const selectedOutsideTop = useMemo(() => {
     if (!value) return false;
@@ -150,7 +167,11 @@ export default function NbaTopScorerPicker({
         ) : null}
       </div>
 
-      {sorted.length === 0 ? (
+      {candidatesLoading && sorted.length === 0 ? (
+        <p className="text-[11px] text-white/40">
+          {isJa ? "選手リストを読み込み中…" : "Loading players…"}
+        </p>
+      ) : sorted.length === 0 ? (
         <p className="text-[11px] text-white/40">{m.nbaTopScorerEmpty}</p>
       ) : (
         <div className="overflow-hidden rounded-[2px] border border-[rgba(0,245,255,0.12)] bg-[rgba(4,16,24,0.35)]">
@@ -224,8 +245,12 @@ export default function NbaTopScorerPicker({
             <button
               type="button"
               onClick={() => setExpanded((v) => !v)}
-              className={`${nameOxanium.className} flex w-full items-center justify-center border-t border-[rgba(0,245,255,0.12)] py-2.5 text-[10px] font-extrabold uppercase tracking-[0.12em] text-[#00F5FF] transition duration-100 hover:bg-white/[0.04] active:scale-[0.98] active:bg-[rgba(0,245,255,0.16)]`}
+              aria-expanded={expanded}
+              className={`${nameOxanium.className} flex w-full items-center justify-center gap-1.5 border-t border-[rgba(0,245,255,0.12)] py-2.5 text-[10px] font-extrabold uppercase tracking-[0.12em] text-[#00F5FF] transition duration-100 hover:bg-white/[0.04] active:scale-[0.98] active:bg-[rgba(0,245,255,0.16)]`}
             >
+              <span aria-hidden className="text-[11px] leading-none">
+                {expanded ? "▲" : "▼"}
+              </span>
               {expanded
                 ? m.nbaTopScorerLess
                 : m.nbaTopScorerMore.replace("{n}", String(restCount))}

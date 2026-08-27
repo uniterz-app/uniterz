@@ -14,6 +14,8 @@ type Options = {
   season?: string;
   /** prop で渡された場合は API をスキップ */
   override?: NbaRosterReport | null;
+  /** false のときは取得しない（未選択タブの先読みを止める） */
+  enabled?: boolean;
 };
 
 /**
@@ -30,11 +32,14 @@ export function useNbaMatchupRoster(options: Options): {
   const season = (options.season ?? CURRENT_NBA_SEASON_KEY).trim();
   const override = options.override;
   const apiBaseUrl = options.apiBaseUrl;
+  const enabled = options.enabled ?? true;
 
   const [roster, setRoster] = useState<NbaRosterReport | null>(
     override ?? null
   );
-  const [loading, setLoading] = useState(!override && !!homeTeamId && !!awayTeamId);
+  const [loading, setLoading] = useState(
+    enabled && !override && !!homeTeamId && !!awayTeamId
+  );
   const [source, setSource] = useState<
     "override" | "firestore" | "empty" | "error"
   >(override ? "override" : "empty");
@@ -43,6 +48,10 @@ export function useNbaMatchupRoster(options: Options): {
     if (override) {
       setRoster(override);
       setSource("override");
+      setLoading(false);
+      return;
+    }
+    if (!enabled) {
       setLoading(false);
       return;
     }
@@ -83,7 +92,7 @@ export function useNbaMatchupRoster(options: Options): {
       });
 
     return () => ac.abort();
-  }, [homeTeamId, awayTeamId, season, apiBaseUrl, override]);
+  }, [enabled, homeTeamId, awayTeamId, season, apiBaseUrl, override]);
 
   return { roster, loading, source };
 }

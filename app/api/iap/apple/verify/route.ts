@@ -43,6 +43,8 @@ export async function POST(req: NextRequest) {
     const db = getAdminDb();
     await writeUserBillingSecure(db, uid, {
       appleOriginalTransactionId: transactionId ?? null,
+      billingProvider: "apple",
+      nextPlanType: null,
     });
     await db.doc(`users/${uid}`).set(
       {
@@ -50,7 +52,6 @@ export async function POST(req: NextRequest) {
         planType,
         proUntil,
         cancelAtPeriodEnd: false,
-        billingProvider: "apple",
         updatedAt: new Date(),
       },
       { merge: true }

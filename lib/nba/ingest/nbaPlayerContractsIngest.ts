@@ -12,6 +12,10 @@ import { mapBdlToPlayerContractSummary } from "@/lib/nba/playerDetail/mapBdlToPl
 import { writePlayerContractSnapshot } from "@/lib/nba/playerContract/loadPlayerContractSnapshot";
 import { recomputePlayerSalaryRanks } from "@/lib/nba/playerContract/recomputePlayerSalaryRanks";
 import { listActiveRosterPlayerRefs } from "@/lib/nba/ingest/listActiveRosterPlayerRefs";
+import {
+  forEachWithConcurrency,
+  NBA_INGEST_CONCURRENCY,
+} from "@/lib/async/forEachWithConcurrency";
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
 
 export const NBA_PLAYER_CONTRACTS_INGEST_READY = true;
@@ -108,23 +112,27 @@ export async function ingestNbaPlayerContractsFromBdl(
   let skipped = 0;
   let failed = 0;
 
-  for (let i = 0; i < targets.length; i += 1) {
-    const target = targets[i]!;
-    try {
-      const bdlId = Number.parseInt(target.playerId, 10);
-      if (!Number.isFinite(bdlId) || bdlId <= 0) {
-        skipped += 1;
-        continue;
-      }
-      const seasonRows = seasonRowsByPlayer.get(target.playerId) ?? [];
-      const aggregates = await fetchBdlPlayerContractAggregates(bdlId);
-      const contract = mapBdlToPlayerContractSummary(seasonRows, aggregates, {
-        seasonKey,
-        fallbackTeamId: target.teamId || null,
-      });
-      if (!contract || contract.seasons.length === 0) {
-        skipped += 1;
-      } else {
+  await forEachWithConcurrency(
+    targets,
+    3,
+    async (target) => {
+      try {
+        const bdlId = Number.parseInt(target.playerId, 10);
+        if (!Number.isFinite(bdlId) || bdlId <= 0) {
+          skipped += 1;
+          return;
+        }
+        const seasonRows = seasonRowsByPlayer.get(target.playerId) ?? [];
+        const aggregates = await fetchBdlPlayerContractAggregates(bdlId);
+        await sleep(50);
+        const contract = mapBdlToPlayerContractSummary(seasonRows, aggregates, {
+          seasonKey,
+          fallbackTeamId: target.teamId || null,
+        });
+        if (!contract || contract.seasons.length === 0) {
+          skipped += 1;
+          return;
+        }
         await writePlayerContractSnapshot(db, {
           seasonKey,
           playerId: target.playerId,
@@ -132,16 +140,15 @@ export async function ingestNbaPlayerContractsFromBdl(
           contract,
         });
         written += 1;
+      } catch (e) {
+        failed += 1;
+        console.error(
+          `[nba-player-contracts-ingest] player=${target.playerId}`,
+          e
+        );
       }
-    } catch (e) {
-      failed += 1;
-      console.error(
-        `[nba-player-contracts-ingest] player=${target.playerId}`,
-        e
-      );
     }
-    if (i < targets.length - 1) await sleep(50);
-  }
+  );
 
   // 年俸リーグ順位の正 = 年俸ソート（BDL rank は使わない）
   console.log(

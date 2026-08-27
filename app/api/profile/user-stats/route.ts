@@ -40,6 +40,11 @@ import {
 } from "@/lib/rankings/server/loadMyRankMetricValueDeltas";
 import type { MyRankMetricValueDeltas } from "@/lib/rankings/myRankMetricValueDeltas";
 import { requireUidFromRequest } from "@/lib/communities/serverAuth";
+import {
+  consumeRateLimit,
+  RATE_LIMIT_RULES,
+  rateLimitSubjectFromRequest,
+} from "@/lib/security/rateLimit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -98,6 +103,20 @@ function parsePartsParam(raw: string | null): Set<StatsPart> | null {
 
 async function buildUserStatsResponse(req: Request) {
   const adminDb = getAdminDb();
+  const limit = await consumeRateLimit(
+    adminDb,
+    RATE_LIMIT_RULES.profilePublicRead,
+    rateLimitSubjectFromRequest(req)
+  );
+  if (!limit.allowed) {
+    return NextResponse.json(
+      { ok: false, error: "rate_limited" },
+      {
+        status: 429,
+        headers: { "Retry-After": String(limit.retryAfterSec) },
+      }
+    );
+  }
   const { searchParams } = new URL(req.url);
   const uidParam = searchParams.get("uid")?.trim() ?? "";
   const handleParam = searchParams.get("handle")?.trim() ?? "";
@@ -391,9 +410,9 @@ export async function GET(req: Request) {
   try {
     return await withFirestoreTransientRetry(() => buildUserStatsResponse(req));
   } catch (e: unknown) {
-    const message = e instanceof Error ? e.message : "unexpected error";
+    console.error("[api/profile/user-stats]", e);
     return NextResponse.json(
-      { ok: false, error: message },
+      { ok: false, error: "internal" },
       { status: 500 }
     );
   }

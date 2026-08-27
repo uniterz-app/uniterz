@@ -45,10 +45,7 @@ export async function GET(req: Request) {
   } catch (e) {
     console.error("[api/nba/player-shot-zones]", e);
     return NextResponse.json(
-      {
-        ok: false,
-        error: e instanceof Error ? e.message : "player-shot-zones failed",
-      },
+      { ok: false, error: "internal" },
       { status: 500 }
     );
   }

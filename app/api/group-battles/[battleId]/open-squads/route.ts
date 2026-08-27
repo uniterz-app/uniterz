@@ -19,7 +19,8 @@ type Ctx = { params: Promise<{ battleId: string }> };
 
 export async function GET(req: Request, ctx: Ctx) {
   try {
-    await requireUidFromRequest(req).catch(() => null);
+    // メンバーの uid / handle / plan を返すため認証必須（未ログインには出さない）
+    await requireUidFromRequest(req);
     const { battleId } = await ctx.params;
     const battle = await getBattle(adminDb, battleId);
     if (!battle) return jsonErr("not_found", 404);

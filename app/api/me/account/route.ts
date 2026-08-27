@@ -43,9 +43,13 @@ export async function DELETE(req: Request) {
       // サブコレ掃除失敗でも本体削除は続行
     }
 
-    // secure/billing も消去
+    // secure/* / private/* も消去
     try {
-      await userRef.collection("secure").doc("billing").delete();
+      await Promise.all([
+        userRef.collection("secure").doc("billing").delete(),
+        userRef.collection("secure").doc("referral").delete(),
+        userRef.collection("private").doc("notificationPrefs").delete(),
+      ]);
     } catch {
       // ignore
     }
@@ -59,6 +63,7 @@ export async function DELETE(req: Request) {
         avatarUrl: "",
         handle: `deleted_${uid.slice(0, 8)}`,
         email: FieldValue.delete(),
+        notificationPrefs: FieldValue.delete(),
         unitBalance: 0,
         unitReserved: 0,
         inviteCode: FieldValue.delete(),
@@ -117,6 +122,6 @@ export async function DELETE(req: Request) {
       return NextResponse.json({ error: msg }, { status: 401 });
     }
     console.error("DELETE /api/me/account:", e);
-    return NextResponse.json({ error: msg }, { status: 500 });
+    return NextResponse.json({ error: "internal" }, { status: 500 });
   }
 }

@@ -58,7 +58,8 @@ async function loadAveragesForSeasonYear(
 }
 
 /**
- * 今季に出場データが無ければ直前季の averages を使う（オフシーズン〜開幕前）。
+ * 2026-27（今季）のスタッツのみを厳密に使用する。
+ * 2026-27に出場データ/スタッツが無ければ昨季データへフォールバックせず 0 とする。
  */
 async function resolveRosterAverages(seasonKey: string): Promise<{
   averagesSeasonKey: string;
@@ -66,15 +67,6 @@ async function resolveRosterAverages(seasonKey: string): Promise<{
 }> {
   const year = bdlSeasonYearFromSeasonKey(seasonKey);
   const currentRows = await loadAveragesForSeasonYear(year);
-  if (playerAveragesRowsHavePlayed(currentRows)) {
-    return { averagesSeasonKey: seasonKey, rows: currentRows };
-  }
-  const prevKey = previousNbaSeasonKey(seasonKey);
-  const prevYear = bdlSeasonYearFromSeasonKey(prevKey);
-  const prevRows = await loadAveragesForSeasonYear(prevYear);
-  if (playerAveragesRowsHavePlayed(prevRows)) {
-    return { averagesSeasonKey: seasonKeyFromYear(prevYear), rows: prevRows };
-  }
   return { averagesSeasonKey: seasonKey, rows: currentRows };
 }
 

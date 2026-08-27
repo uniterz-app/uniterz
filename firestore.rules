@@ -89,8 +89,9 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      // 公開プロフィール（残高表示はプロダクト要件）。課金は secure/ へ。削除時は API でスクラブ。
-      // フィールド棚卸し: lib/security/publicUserDocumentFields.ts
+      // 公開プロフィール。ルートには PUBLIC / PRODUCT フィールドだけを置く。
+      // sensitive は secure/ / private/ へ。棚卸し: lib/security/publicUserDocumentFields.ts
+      // フィールド単位の read 制限はできないので、scrub 後のルートが安全である前提。
       allow read: if true;
 
       allow create: if request.auth != null
@@ -100,7 +101,7 @@ service cloud.firestore {
           'createdAt', 'updatedAt', 'counts',
           'handle', 'username', 'slug',
           'language', 'locale', 'timeZone', 'countryCode', 'preferredLeague',
-          'onboardingCompletedAt', 'notificationPrefs'
+          'onboardingCompletedAt'
         ])
         && !('plan' in request.resource.data)
         && !('planType' in request.resource.data)
@@ -129,10 +130,9 @@ service cloud.firestore {
         && !('referralStats' in request.resource.data)
         && !('referralSettledAt' in request.resource.data)
         && !('email' in request.resource.data)
+        && !('notificationPrefs' in request.resource.data)
         && (!('language' in request.resource.data)
             || isSupportedLanguage(request.resource.data.language))
-        && (!('notificationPrefs' in request.resource.data)
-            || isValidNotificationPrefs(request.resource.data.notificationPrefs))
         && (!('displayName' in request.resource.data)
             || (request.resource.data.displayName is string
                 && request.resource.data.displayName.size() <= 50
@@ -149,7 +149,7 @@ service cloud.firestore {
           'updatedAt',
           'handle', 'username', 'slug',
           'language', 'locale', 'timeZone', 'countryCode', 'preferredLeague',
-          'onboardingCompletedAt', 'notificationPrefs'
+          'onboardingCompletedAt'
         ])
         && (!('handle' in resource.data) || !('handle' in request.resource.data)
             || request.resource.data.handle == resource.data.handle)
@@ -169,16 +169,25 @@ service cloud.firestore {
             || request.resource.data.photoURL == null
             || request.resource.data.photoURL is string)
         && (!('language' in request.resource.data)
-            || isSupportedLanguage(request.resource.data.language))
-        && (!('notificationPrefs' in request.resource.data)
-            || isValidNotificationPrefs(request.resource.data.notificationPrefs));
+            || isSupportedLanguage(request.resource.data.language));
 
       allow delete: if request.auth != null && request.auth.uid == userId;
 
-      // 課金シークレット — 本人 read のみ、クライアント write 不可
+      // 課金・招待コード等 — 本人 read のみ、クライアント write 不可
       match /secure/{docId} {
         allow read: if request.auth != null && request.auth.uid == userId;
         allow create, update, delete: if false;
+      }
+
+      // 通知設定など — 本人のみ read/write（公開ルートから外した）
+      match /private/{docId} {
+        allow read: if request.auth != null && request.auth.uid == userId;
+        allow create, update: if request.auth != null
+          && request.auth.uid == userId
+          && (docId != 'notificationPrefs'
+              || (request.resource.data.keys().hasOnly(['prefs', 'updatedAt'])
+                  && isValidNotificationPrefs(request.resource.data.prefs)));
+        allow delete: if request.auth != null && request.auth.uid == userId;
       }
 
       // Unit 獲得演出キュー — Functions が書き、API(Admin) が既読。クライアント直書き不可
@@ -330,13 +339,24 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // docId は {uid}_{date}。他人のプロフィール日次チャートを描くため
+    // 認証済みなら他人の doc も読める。
+    //
+    // 縮小できない理由: NBA overview のチャートは前シーズン混入を避けるため
+    // Firestore を厳密に読む経路（apps/native profileApi.fetchNbaOverviewDailyTrendStrict、
+    // Web useUserStatsDailyTrend）に依存している。
+    // 自分の uid のみに絞るには先に /api/profile/user-stats?parts=trend を
+    // シーズン境界まで正確にする必要がある。
     match /user_stats_v2_daily/{docId} {
       allow read: if request.auth != null;
       allow write: if false;
     }
 
+    // 月次は本人のみ。クライアントの他人読みは廃止済み（表示は /api/profile/user-stats 経由）
     match /user_stats_v2_monthly/{docId} {
-      allow read: if request.auth != null;
+      allow read: if request.auth != null
+        && resource.data.uid is string
+        && resource.data.uid == request.auth.uid;
       allow write: if false;
     }
 
@@ -571,6 +591,11 @@ service cloud.firestore {
         && (!('uid' in request.resource.data)
           || request.resource.data.uid == request.auth.uid);
       allow read, update, delete: if false;
+    }
+
+    // レート制限カウンタ — Admin SDK 専用。expiresAt に TTL ポリシーを張る
+    match /rate_limits/{docId} {
+      allow read, write: if false;
     }
   }
 }

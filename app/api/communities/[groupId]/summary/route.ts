@@ -2,14 +2,7 @@ import { NextResponse } from "next/server";
 import { requireUidFromRequest } from "@/lib/communities/serverAuth";
 import { assertMember } from "@/lib/communities/groupAccess";
 import { adminDb } from "@/lib/firebaseAdmin";
-import {
-  parseCommunityLeague,
-  parseCommunityMetric,
-  parseCommunityPeriod,
-} from "@/lib/communities/types";
-import { readRankingTeamIds } from "@/lib/communities/rankingTeams";
-import { sanitizeHeaderImagePositionY } from "@/lib/communities/headerImagePosition";
-import { resolveRankingStartDateKey } from "@/lib/communities/rankingStartDate";
+import { buildCommunityGroupSummaryPayload } from "@/lib/communities/buildCommunityGroupSummaryPayload";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -25,31 +18,7 @@ export async function GET(req: Request, ctx: Ctx) {
 
     return NextResponse.json({
       ok: true,
-      group: {
-        id: groupId,
-        name: String(d.name ?? ""),
-        description:
-          typeof d.description === "string" && d.description.trim()
-            ? d.description.trim()
-            : null,
-        ownerUid: String(d.ownerUid ?? ""),
-        memberCount: Number(d.memberCount ?? 0),
-        headerImageUrl: (d.headerImageUrl as string) ?? null,
-        headerImagePositionY: sanitizeHeaderImagePositionY(d.headerImagePositionY),
-        rankingMetric: parseCommunityMetric(d.rankingMetric),
-        periodType: parseCommunityPeriod(d.periodType),
-        rankingLeague: parseCommunityLeague(d.rankingLeague),
-        rankingTeamIds: readRankingTeamIds(d),
-        archived: !!d.archivedAt,
-        isOwner: d.ownerUid === uid,
-        inviteCode:
-          d.ownerUid === uid &&
-          typeof d.inviteCode === "string" &&
-          d.inviteCode.trim()
-            ? d.inviteCode.trim()
-            : null,
-        rankingStartDateKey: resolveRankingStartDateKey(d),
-      },
+      group: buildCommunityGroupSummaryPayload(groupId, d, uid),
     });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : "error";
@@ -65,6 +34,6 @@ export async function GET(req: Request, ctx: Ctx) {
     if (status === 403)
       return NextResponse.json({ ok: false, error: msg }, { status: 403 });
     console.error("[communities/summary]", e);
-    return NextResponse.json({ ok: false, error: msg }, { status: 500 });
+    return NextResponse.json({ ok: false, error: "internal" }, { status: 500 });
   }
 }

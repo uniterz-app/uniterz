@@ -21,6 +21,7 @@ import {
   getPendingJoinRequestsTx,
 } from "@/lib/groupBattles/server/firestore";
 import { jsonErr, jsonOk, mapAuthError } from "@/lib/groupBattles/server/http";
+import { consumeRateLimit, RATE_LIMIT_RULES } from "@/lib/security/rateLimit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -42,6 +43,17 @@ export async function POST(req: Request, ctx: Ctx) {
     const body = await req.json().catch(() => ({}));
     const code = normalizeInviteCode(String(body?.inviteCode ?? ""));
     if (!code) return jsonErr("invalid_invite", 400);
+
+    // コードを総当たりされると他人のスクワッドに入れてしまうため上限を入れる
+    const limit = await consumeRateLimit(
+      adminDb,
+      RATE_LIMIT_RULES.inviteCodeLookup,
+      uid
+    );
+    if (!limit.allowed) {
+      return jsonErr("rate_limited", 429, { retryAfterSec: limit.retryAfterSec });
+    }
+
     const hash = hashInviteCode(code);
 
     const found = await squadsCol(adminDb, battleId)

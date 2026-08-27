@@ -15,11 +15,15 @@ import { fetchBdlPlayerSeasonGameMeta } from "@/lib/nba/bdl/fetchBdlPlayerSeason
 import { mapBdlCareerAverageToRow } from "@/lib/nba/playerDetail/mapBdlToPlayerCareerSeasons";
 import { writePlayerCareerSeasonsSnapshot } from "@/lib/nba/playerCareerSeasons/loadPlayerCareerSeasonsSnapshot";
 import { listActiveRosterPlayerRefs } from "@/lib/nba/ingest/listActiveRosterPlayerRefs";
+import { forEachWithConcurrency } from "@/lib/async/forEachWithConcurrency";
 import type { NbaPlayerCareerSeasonRow } from "@/lib/predict/nbaPlayerDetailPreviewMocks";
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
 import { TEAM_SHORT } from "@/lib/team-short";
 
 export const NBA_PLAYER_CAREER_SEASONS_INGEST_READY = true;
+
+/** 1 人あたり 年数 × 2 本の BDL 呼び出しが出るので他の ingest より低く保つ */
+const CAREER_PLAYER_CONCURRENCY = 3;
 
 export type NbaPlayerCareerSeasonsIngestInput = {
   seasonKey?: string;
@@ -126,48 +130,55 @@ export async function ingestNbaPlayerCareerSeasonsFromBdl(
   let skipped = 0;
   let failed = 0;
 
-  for (let i = 0; i < targets.length; i += 1) {
-    const target = targets[i]!;
-    try {
-      if (i === 0 || (i + 1) % 10 === 0 || i + 1 === targets.length) {
-        console.log(
-          `[nba-player-career-seasons-ingest] ${i + 1}/${targets.length} player=${target.playerId} written=${written} skipped=${skipped} failed=${failed}`
+  // プレイヤー 1 人で年数 × 2（regular/playoffs）分の BDL 呼び出しが走るため
+  // 外側の並列度は低めにする（同時 in-flight は概ね CAREER_PLAYER_CONCURRENCY × 2）
+  await forEachWithConcurrency(
+    targets,
+    CAREER_PLAYER_CONCURRENCY,
+    async (target, i) => {
+      try {
+        if (i === 0 || (i + 1) % 25 === 0 || i + 1 === targets.length) {
+          console.log(
+            `[nba-player-career-seasons-ingest] ${i + 1}/${targets.length} player=${target.playerId} written=${written} skipped=${skipped} failed=${failed}`
+          );
+        }
+        const bdlId = Number.parseInt(target.playerId, 10);
+        if (!Number.isFinite(bdlId) || bdlId <= 0) {
+          skipped += 1;
+          return;
+        }
+        const info = await fetchBdlPlayerBasicInfo(bdlId);
+        const startYear = Math.max(
+          2010,
+          Math.min(currentYear, info?.draftYear ?? currentYear - 12)
         );
-      }
-      const bdlId = Number.parseInt(target.playerId, 10);
-      if (!Number.isFinite(bdlId) || bdlId <= 0) {
-        skipped += 1;
-        continue;
-      }
-      const info = await fetchBdlPlayerBasicInfo(bdlId);
-      const startYear = Math.max(
-        2010,
-        Math.min(currentYear, info?.draftYear ?? currentYear - 12)
-      );
-      const years: number[] = [];
-      for (let y = startYear; y <= currentYear; y += 1) years.push(y);
-      const position =
-        target.position !== "—" ? target.position : info?.position || null;
-      const teamId = target.teamId || null;
+        const years: number[] = [];
+        for (let y = startYear; y <= currentYear; y += 1) years.push(y);
+        const position =
+          target.position !== "—" ? target.position : info?.position || null;
+        const teamId = target.teamId || null;
 
-      const regular = await buildBoard({
-        bdlId,
-        years,
-        seasonType: "regular",
-        teamId,
-        position,
-      });
-      const playoffs = await buildBoard({
-        bdlId,
-        years,
-        seasonType: "playoffs",
-        teamId,
-        position,
-      });
+        const [regular, playoffs] = await Promise.all([
+          buildBoard({
+            bdlId,
+            years,
+            seasonType: "regular",
+            teamId,
+            position,
+          }),
+          buildBoard({
+            bdlId,
+            years,
+            seasonType: "playoffs",
+            teamId,
+            position,
+          }),
+        ]);
 
-      if (regular.length === 0 && playoffs.length === 0) {
-        skipped += 1;
-      } else {
+        if (regular.length === 0 && playoffs.length === 0) {
+          skipped += 1;
+          return;
+        }
         await writePlayerCareerSeasonsSnapshot(db, {
           playerId: target.playerId,
           teamId,
@@ -176,16 +187,15 @@ export async function ingestNbaPlayerCareerSeasonsFromBdl(
           playoffs,
         });
         written += 1;
+      } catch (e) {
+        failed += 1;
+        console.error(
+          `[nba-player-career-seasons-ingest] player=${target.playerId}`,
+          e
+        );
       }
-    } catch (e) {
-      failed += 1;
-      console.error(
-        `[nba-player-career-seasons-ingest] player=${target.playerId}`,
-        e
-      );
     }
-    if (i < targets.length - 1) await sleep(40);
-  }
+  );
 
   return {
     ok: true,

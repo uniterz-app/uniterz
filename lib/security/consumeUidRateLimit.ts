@@ -1,16 +1,11 @@
 /**
- * UID 単位の簡易レート制限（Firestore transaction）。
- * お問い合わせと同型。予想投稿など書き込み API 向け。
+ * UID 単位・1 日あたりのレート制限。
+ *
+ * 実装は `lib/security/rateLimit.ts` に統合済み（窓幅を選べる汎用版）。
+ * ここは既存呼び出し（予想投稿など）のための薄いラッパー。
  */
 import type { Firestore } from "firebase-admin/firestore";
-import { FieldValue } from "firebase-admin/firestore";
-
-function dateKeyUtc(d: Date): string {
-  const y = d.getUTCFullYear();
-  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
-  const day = String(d.getUTCDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
+import { consumeRateLimit, DAY_MS } from "./rateLimit";
 
 export type UidActionRateLimitResult =
   | { ok: true }
@@ -18,7 +13,7 @@ export type UidActionRateLimitResult =
 
 /**
  * @param actionKey 例: `posts_v2`
- * @param limitPerDay UTC 日あたり上限
+ * @param limitPerDay 1 日あたり上限
  */
 export async function consumeUidActionRateLimit(
   db: Firestore,
@@ -26,42 +21,10 @@ export async function consumeUidActionRateLimit(
   actionKey: string,
   limitPerDay: number
 ): Promise<UidActionRateLimitResult> {
-  const dayKey = dateKeyUtc(new Date());
-  const rateRef = db
-    .collection("users")
-    .doc(uid)
-    .collection("secure")
-    .doc(`rate_${actionKey}_${dayKey}`);
-
-  try {
-    await db.runTransaction(async (tx) => {
-      const snap = await tx.get(rateRef);
-      const count = Math.max(0, Math.floor(Number(snap.data()?.count ?? 0)));
-      if (count >= limitPerDay) {
-        const err = new Error("rate_limited");
-        (err as { code?: string }).code = "rate_limited";
-        throw err;
-      }
-      tx.set(
-        rateRef,
-        {
-          count: count + 1,
-          actionKey,
-          dayKey,
-          updatedAt: FieldValue.serverTimestamp(),
-        },
-        { merge: true }
-      );
-    });
-    return { ok: true };
-  } catch (e: unknown) {
-    if (
-      e instanceof Error &&
-      (e.message === "rate_limited" ||
-        (e as { code?: string }).code === "rate_limited")
-    ) {
-      return { ok: false, error: "rate_limited" };
-    }
-    throw e;
-  }
+  const verdict = await consumeRateLimit(
+    db,
+    { scope: actionKey, limit: limitPerDay, windowMs: DAY_MS },
+    uid
+  );
+  return verdict.allowed ? { ok: true } : { ok: false, error: "rate_limited" };
 }

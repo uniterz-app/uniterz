@@ -2,8 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
-import { fetchTeamInjuries } from "@/lib/nba/teamInjuries/fetchTeamInjuriesClient";
+import { fetchTeamInjuriesSnapshot } from "@/lib/nba/teamInjuries/fetchTeamInjuriesClient";
 import { buildMatchupInjuryReport } from "@/lib/nba/predict/buildMatchupInjuryReport";
+import {
+  createSnapshotFetchCache,
+  nbaSnapshotCacheKey,
+  NBA_SNAPSHOT_CACHE_TTL_MS,
+} from "@/lib/nba/snapshotFetchCache";
+import type { NbaTeamInjuriesApiPayload } from "@/lib/nba/teamInjuries/teamInjuryTypes";
 import type { NbaInjuryReport } from "@/lib/predict/nbaInjuryReport";
 import { emptyInjuryReport } from "@/lib/predict/nbaInjuryReportPreviewMocks";
 
@@ -13,12 +19,23 @@ type Options = {
   apiBaseUrl?: string | null;
   season?: string;
   override?: NbaInjuryReport | null;
+  /** false のときは取得しない（未選択タブの先読みを止める） */
+  enabled?: boolean;
 };
 
 /**
- * 予想 INJURY: 対戦2チームの `/api/nba/team-injuries?team=` を合成。
+ * 予想 INJURY: 対戦2チーム分を合成。
+ *
+ * `?team=` を2本叩くとサーバーが同じ `nbaTeamInjuries/{season}` を2回読み、
+ * CDN のキャッシュキーもチーム毎に散る。リーグ全体スナップショットを
+ * 1 回取ってクライアントで切り出す（doc は元々 1 つ）。
+ *
  * モックには落とさない（未 ingest は空レポート）。
  */
+const cache = createSnapshotFetchCache<NbaTeamInjuriesApiPayload>(
+  NBA_SNAPSHOT_CACHE_TTL_MS
+);
+
 export function useNbaMatchupInjuryReport(options: Options): {
   report: NbaInjuryReport | null;
   loading: boolean;
@@ -29,12 +46,13 @@ export function useNbaMatchupInjuryReport(options: Options): {
   const season = (options.season ?? CURRENT_NBA_SEASON_KEY).trim();
   const override = options.override;
   const apiBaseUrl = options.apiBaseUrl;
+  const enabled = options.enabled ?? true;
 
   const [report, setReport] = useState<NbaInjuryReport | null>(
     override ?? null
   );
   const [loading, setLoading] = useState(
-    !override && !!homeTeamId && !!awayTeamId
+    enabled && !override && !!homeTeamId && !!awayTeamId
   );
   const [source, setSource] = useState<
     "override" | "firestore" | "empty" | "error"
@@ -47,6 +65,10 @@ export function useNbaMatchupInjuryReport(options: Options): {
       setLoading(false);
       return;
     }
+    if (!enabled) {
+      setLoading(false);
+      return;
+    }
     if (!homeTeamId || !awayTeamId) {
       setReport(null);
       setSource("empty");
@@ -54,50 +76,44 @@ export function useNbaMatchupInjuryReport(options: Options): {
       return;
     }
 
-    const ac = new AbortController();
+    let cancelled = false;
     setLoading(true);
 
-    Promise.all([
-      fetchTeamInjuries({
-        teamId: homeTeamId,
-        season,
-        apiBaseUrl,
-        signal: ac.signal,
-      }),
-      fetchTeamInjuries({
-        teamId: awayTeamId,
-        season,
-        apiBaseUrl,
-        signal: ac.signal,
-      }),
-    ])
-      .then(([home, away]) => {
-        if (ac.signal.aborted) return;
-        const built = buildMatchupInjuryReport({
-          homeTeamId,
-          awayTeamId,
-          homeEntries: home.injuries ?? [],
-          awayEntries: away.injuries ?? [],
-          asOfLabel: home.updatedAt || away.updatedAt || null,
-        });
-        setReport(built);
+    cache
+      .load(nbaSnapshotCacheKey(apiBaseUrl, season), () =>
+        fetchTeamInjuriesSnapshot({ season, apiBaseUrl })
+      )
+      .then((payload) => {
+        if (cancelled) return;
+        const homeEntries = payload.bundle.teams[homeTeamId] ?? [];
+        const awayEntries = payload.bundle.teams[awayTeamId] ?? [];
+        setReport(
+          buildMatchupInjuryReport({
+            homeTeamId,
+            awayTeamId,
+            homeEntries,
+            awayEntries,
+            asOfLabel: payload.updatedAt || null,
+          })
+        );
         const any =
-          (home.injuries?.length ?? 0) + (away.injuries?.length ?? 0) > 0 ||
-          home.source === "firestore" ||
-          away.source === "firestore";
+          homeEntries.length + awayEntries.length > 0 ||
+          payload.source === "firestore";
         setSource(any ? "firestore" : "empty");
       })
       .catch(() => {
-        if (ac.signal.aborted) return;
+        if (cancelled) return;
         setReport(emptyInjuryReport(homeTeamId, awayTeamId));
         setSource("error");
       })
       .finally(() => {
-        if (!ac.signal.aborted) setLoading(false);
+        if (!cancelled) setLoading(false);
       });
 
-    return () => ac.abort();
-  }, [homeTeamId, awayTeamId, season, apiBaseUrl, override]);
+    return () => {
+      cancelled = true;
+    };
+  }, [enabled, homeTeamId, awayTeamId, season, apiBaseUrl, override]);
 
   return { report, loading, source };
 }

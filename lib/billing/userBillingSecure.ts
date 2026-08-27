@@ -11,6 +11,8 @@ export type UserBillingSecureFields = {
   stripeSubscriptionId?: string | null;
   googlePurchaseToken?: string | null;
   appleOriginalTransactionId?: string | null;
+  billingProvider?: string | null;
+  nextPlanType?: string | null;
 };
 
 export function userBillingSecureRef(db: Firestore, uid: string) {
@@ -176,6 +178,14 @@ export async function writeUserBillingSecure(
     secureUpdate.appleOriginalTransactionId =
       fields.appleOriginalTransactionId ?? null;
     rootDelete.appleOriginalTransactionId = FieldValue.delete();
+  }
+  if ("billingProvider" in fields) {
+    secureUpdate.billingProvider = fields.billingProvider ?? null;
+    rootDelete.billingProvider = FieldValue.delete();
+  }
+  if ("nextPlanType" in fields) {
+    secureUpdate.nextPlanType = fields.nextPlanType ?? null;
+    rootDelete.nextPlanType = FieldValue.delete();
   }
 
   await userBillingSecureRef(db, uid).set(secureUpdate, { merge: true });

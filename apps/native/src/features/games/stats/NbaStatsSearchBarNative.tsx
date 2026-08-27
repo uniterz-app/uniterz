@@ -32,8 +32,15 @@ export default function NbaStatsSearchBarNative({
   const isJa = language === "ja";
   const [query, setQuery] = useState("");
   const apiBaseUrl = getUniterzApiBaseUrl();
-  const { bundle: teamBundle } = useLeagueTeamStatsBundle({ apiBaseUrl });
-  const { bundle: playerBundle } = usePlayerStatLeadersBundle({ apiBaseUrl });
+  // 検索対象の kind 側だけ取得する。パネルが既に読んだ bundle は共有キャッシュから来る
+  const { bundle: teamBundle } = useLeagueTeamStatsBundle({
+    apiBaseUrl,
+    enabled: kind === "team",
+  });
+  const { bundle: playerBundle } = usePlayerStatLeadersBundle({
+    apiBaseUrl,
+    enabled: kind === "player",
+  });
   const hits = useMemo(
     () =>
       searchNbaStatsIndex(query, kind, 8, {

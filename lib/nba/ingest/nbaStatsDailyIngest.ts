@@ -3,7 +3,8 @@
  * 公開 API は触らず、BDL → Firestore だけ回す。
  *
  * daily（既定）: 試合・リーグ表・injury・チームログ・ゾーン・ロスター
- * heavy: 上記 + プレイヤー試合ログ（全ロスターは重いので任意）
+ *   + 直近試合出場者のプレイヤー試合ログ（incremental → Last 10 更新）
+ * heavy: 上記 + プレイヤー試合ログ全ロスター（任意）
  */
 import type { Firestore } from "firebase-admin/firestore";
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
@@ -14,6 +15,7 @@ import { ingestNbaTeamGameLogsFromGames } from "@/lib/nba/ingest/nbaTeamGameLogs
 import { ingestNbaPlayerShotZonesFromBdl } from "@/lib/nba/ingest/nbaPlayerShotZonesIngest";
 import { ingestNbaTeamRostersFromBdl } from "@/lib/nba/ingest/nbaTeamRostersIngest";
 import { ingestNbaPlayerGameLogsFromBdl } from "@/lib/nba/ingest/nbaPlayerGameLogsIngest";
+import { listPlayerIdsFromRecentBoxScores } from "@/lib/nba/ingest/listPlayerIdsFromRecentBoxScores";
 
 export type NbaStatsDailyIngestMode = "daily" | "heavy";
 
@@ -66,7 +68,6 @@ export async function runNbaStatsDailyIngest(
   const startedAt = new Date().toISOString();
   const steps: NbaStatsDailyIngestStepResult[] = [];
 
-  // 1) 試合（チームログ・last10 の土台）
   steps.push(
     await runStep("team-rosters", () =>
       ingestNbaTeamRostersFromBdl(db, { seasonKey })
@@ -76,7 +77,6 @@ export async function runNbaStatsDailyIngest(
     await runStep("games", () =>
       ingestNbaGamesFromBdl(db, {
         seasonKey,
-        // 直後の team-game-logs ステップで再構築する
         rebuildTeamGameLogs: false,
       })
     )
@@ -115,6 +115,20 @@ export async function runNbaStatsDailyIngest(
               : undefined,
         })
       )
+    );
+  } else {
+    steps.push(
+      await runStep("player-game-logs-incremental", async () => {
+        const { dates, playerIds } = await listPlayerIdsFromRecentBoxScores();
+        if (playerIds.length === 0) {
+          return { ok: true, dates, playerIds: [], skipped: true };
+        }
+        const result = await ingestNbaPlayerGameLogsFromBdl(db, {
+          seasonKey,
+          playerIds,
+        });
+        return { ...result, dates, incremental: true };
+      })
     );
   }
 

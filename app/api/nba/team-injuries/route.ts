@@ -48,8 +48,7 @@ export async function GET(req: Request) {
       },
     });
   } catch (e: unknown) {
-    const msg = e instanceof Error ? e.message : "error";
     console.error("[api/nba/team-injuries]", e);
-    return NextResponse.json({ ok: false, error: msg }, { status: 500 });
+    return NextResponse.json({ ok: false, error: "internal" }, { status: 500 });
   }
 }

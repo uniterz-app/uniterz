@@ -4,6 +4,8 @@
  * 弁護士確認済み。
  */
 
+import { SUPPORT_EMAIL } from "@/lib/contact/companyEmails";
+
 export const TOKUSHOHO_UPDATED_AT = "2026-08-18";
 
 export const TOKUSHOHO_HEADING = "特定商取引法に基づく表記";
@@ -26,12 +28,11 @@ export const TOKUSHOHO_ROWS: readonly { label: string; value: string }[] = [
   },
   {
     label: "電話番号",
-    value:
-      "請求があった場合に遅滞なく開示します。お問い合わせはメール（support@uniterz.app）で受け付けます。",
+    value: `請求があった場合に遅滞なく開示します。お問い合わせはメール（${SUPPORT_EMAIL}）で受け付けます。`,
   },
   {
     label: "メールアドレス",
-    value: "support@uniterz.app",
+    value: SUPPORT_EMAIL,
   },
   {
     label: "販売する役務",

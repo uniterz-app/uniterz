@@ -4,6 +4,10 @@ import { NextResponse } from "next/server";
 import { requireUidFromRequest } from "@/lib/communities/serverAuth";
 import { getAdminDb } from "@/lib/firebaseAdmin";
 import { dateKeyJST } from "@/lib/rankings/rankSnapshotDate";
+import {
+  consumeRateLimit,
+  RATE_LIMIT_RULES,
+} from "@/lib/security/rateLimit";
 
 export const runtime = "nodejs";
 
@@ -63,6 +67,21 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const viewerUid = await requireUidFromRequest(req);
+    const db = getAdminDb();
+    const limit = await consumeRateLimit(
+      db,
+      RATE_LIMIT_RULES.profileView,
+      viewerUid
+    );
+    if (!limit.allowed) {
+      return NextResponse.json(
+        { error: "rate_limited" },
+        {
+          status: 429,
+          headers: { "Retry-After": String(limit.retryAfterSec) },
+        }
+      );
+    }
     const body = (await req.json().catch(() => null)) as {
       targetUid?: unknown;
     } | null;
@@ -75,7 +94,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ counted: false });
     }
 
-    const db = getAdminDb();
     const dateKey = dateKeyJST();
     const targetRef = db.collection("users").doc(targetUid);
     const eventRef = db

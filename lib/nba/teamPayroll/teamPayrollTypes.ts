@@ -22,6 +22,8 @@ export type NbaTeamPayrollsBundle = {
   seasonYear: number;
   salaryCap: number;
   taxLine: number;
+  firstApron?: number;
+  secondApron?: number;
   teams: Record<string, NbaTeamPayrollDocTeam>;
 };
 

@@ -20,6 +20,7 @@ import type {
   NbaTeamInjuryEntry,
   NbaTeamPayrollLine,
 } from "@/lib/predict/nbaTeamDetailPreviewMocks";
+import { nbaTwoWaySalaryForSeason } from "@/lib/nba/teamPayroll/mapBdlToTeamPayroll";
 import type { NbaTeamRosterDocTeam } from "@/lib/nba/teamRosters/teamRosterTypes";
 import { buildTeamHistoryFromCareerSeasons } from "@/lib/nba/playerDetail/buildTeamHistoryFromCareerSeasons";
 import { mergeCuratedPlayerAwards } from "@/lib/nba/playerAwards/nbaPlayerAwardSeasonWinners";
@@ -132,9 +133,12 @@ export function contractFromPayrollLine(
   teamId: string
 ): NbaPlayerContractSummary {
   const startYear = Number.parseInt(CURRENT_NBA_SEASON_KEY.slice(0, 4), 10);
-  const salary = Math.max(0, Math.round(line.salary || 0));
+  const isTwoWay = line.isTwoWay === true;
+  const salary = isTwoWay
+    ? nbaTwoWaySalaryForSeason(CURRENT_NBA_SEASON_KEY)
+    : Math.max(0, Math.round(line.salary || 0));
   return {
-    contractType: "—",
+    contractType: isTwoWay ? "Two-Way" : "—",
     contractStatus: "Active",
     contractYears: 1,
     yearsRemaining: 1,
@@ -143,12 +147,12 @@ export function contractFromPayrollLine(
     averageSalary: salary,
     totalValue: salary,
     remainingGuaranteed: salary,
-    notes: [],
+    notes: isTwoWay ? ["Two-Way Contract"] : [],
     seasons: [
       {
         season: startYear,
         baseSalary: salary,
-        capHit: salary,
+        capHit: isTwoWay ? 0 : salary,
         salaryRank: 0,
         teamId,
         teamAbbr: TEAM_SHORT[teamId] ?? "NBA",

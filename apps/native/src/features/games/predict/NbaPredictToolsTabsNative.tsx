@@ -14,7 +14,6 @@ import NbaInjuryReportPanelNative from "./NbaInjuryReportPanelNative";
 import NbaTeamStatsPanelNative from "./NbaTeamStatsPanelNative";
 import NbaRosterPanelNative from "./NbaRosterPanelNative";
 import type { PredictProBrief } from "../../../../../../lib/predict/predictProBrief";
-import { proBriefForMatchup } from "../../../../../../lib/predict/nbaProBriefPreviewMocks";
 import type { NbaInjuryReport } from "../../../../../../lib/predict/nbaInjuryReport";
 import type { NbaTeamStatsBundle } from "../../../../../../lib/predict/nbaTeamStatsPreviewMocks";
 import type { NbaRosterReport } from "../../../../../../lib/predict/nbaRoster";
@@ -82,7 +81,20 @@ export default function NbaPredictToolsTabsNative({
   };
   const apiBaseUrl = getUniterzApiBaseUrl();
 
-  const resolvedBrief = brief ?? proBriefForMatchup(homeTeamId, awayTeamId);
+  /**
+   * 一度開いたタブのデータは保持する（タブを閉じても再取得しない）。
+   * 初期表示は injuries なので、STATS / ROSTER は開くまで取りに行かない。
+   */
+  const [visited, setVisited] = useState<Set<NbaPredictToolsTab>>(
+    () => new Set(tab ? [tab] : [])
+  );
+  useEffect(() => {
+    if (!tab) return;
+    setVisited((cur) => (cur.has(tab) ? cur : new Set(cur).add(tab)));
+  }, [tab]);
+
+  /** Web 同様、モックへは落とさない（作り物の Insight を本番に出さない） */
+  const resolvedBrief = brief;
 
   const { report: liveInjury, loading: injuryLoading } =
     useNbaMatchupInjuryReport({
@@ -90,18 +102,21 @@ export default function NbaPredictToolsTabsNative({
       awayTeamId,
       override: injuryReport,
       apiBaseUrl,
+      enabled: visited.has("injuries"),
     });
   const { stats: liveStats, loading: statsLoading } = useNbaMatchupTeamStats({
     homeTeamId,
     awayTeamId,
     override: teamStats,
     apiBaseUrl,
+    enabled: visited.has("stats"),
   });
   const { roster: liveRoster, loading: rosterLoading } = useNbaMatchupRoster({
     homeTeamId,
     awayTeamId,
     override: roster,
     apiBaseUrl,
+    enabled: visited.has("roster"),
   });
 
   const resolvedInjury = liveInjury;

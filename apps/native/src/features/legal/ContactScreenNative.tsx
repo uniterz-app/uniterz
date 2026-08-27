@@ -12,6 +12,7 @@ import LegalPageLayoutNative from "./LegalPageLayoutNative";
 import { useFirebaseUser } from "../../auth/FirebaseUserProvider";
 import { useNativeUserLanguage } from "../../hooks/useNativeUserLanguage";
 import { db, storage } from "../../lib/firebase";
+import { SUPPORT_EMAIL } from "@/lib/contact/companyEmails";
 
 const API_BASE = process.env.EXPO_PUBLIC_UNITERZ_API_BASE_URL?.replace(/\/$/, "") ?? "";
 
@@ -62,7 +63,7 @@ export default function ContactScreenNative({
           : "不具合報告・ご要望・お問い合わせはこちらから送信できます。",
         intro: isFeature
           ? "送信いただいた要望は運営チームで確認し、今後の改善に活用します。"
-          : "support@uniterz.app へのメールでもお問い合わせいただけます。",
+          : `${SUPPORT_EMAIL} へのメールでもお問い合わせいただけます。`,
         types: { bug: "不具合", feature: "要望", report: "報告", other: "その他" },
         email: "メールアドレス（任意）",
         message: "メッセージ",
@@ -83,7 +84,7 @@ export default function ContactScreenNative({
           : "Report bugs, send feedback, or contact us here.",
         intro: isFeature
           ? "Your request will be reviewed by the team."
-          : "You can also email support@uniterz.app.",
+          : `You can also email ${SUPPORT_EMAIL}.`,
         types: { bug: "Bug", feature: "Feature", report: "Report", other: "Other" },
         email: "Email (optional)",
         message: "Message",
@@ -189,9 +190,7 @@ export default function ContactScreenNative({
     >
       <Text style={styles.intro}>{labels.intro}</Text>
       {!isFeature ? (
-        <Text style={styles.emailHint}>
-          support@uniterz.app
-        </Text>
+        <Text style={styles.emailHint}>{SUPPORT_EMAIL}</Text>
       ) : null}
 
       <View style={styles.formCard}>

@@ -13,6 +13,7 @@ import {
   peekUserDocMemoryEntry,
   setUserDocMemory,
 } from "../user/userDocMemoryCache";
+import { pickClientSafeUserFields } from "../security/publicUserDocumentFields";
 
 export function normalizeProfileRouteKey(raw: string): string {
   return raw.trim().replace(/^@+/u, "");
@@ -28,6 +29,14 @@ function uniqueKeys(values: string[]): string[] {
   return out;
 }
 
+/** 公開プロフィール経路では sensitive を落とす（SDK 直読みの緩和。ルール変更の前段） */
+function asPublicProfileDoc(
+  id: string,
+  data: Record<string, unknown>
+): { id: string; data: Record<string, unknown> } {
+  return { id, data: pickClientSafeUserFields(data) };
+}
+
 async function userDocByUid(
   db: Firestore,
   uid: string
@@ -37,7 +46,9 @@ async function userDocByUid(
 
   const mem = peekUserDocMemoryEntry(safeUid);
   if (mem) {
-    return mem.exists ? { id: safeUid, data: mem.data } : null;
+    return mem.exists
+      ? asPublicProfileDoc(safeUid, mem.data)
+      : null;
   }
 
   const snap = await getDoc(doc(db, "users", safeUid));
@@ -46,8 +57,9 @@ async function userDocByUid(
     return null;
   }
   const data = snap.data() as Record<string, unknown>;
+  // メモリにはフルを残す（本人経路が同じキャッシュを使うことがある）
   setUserDocMemory(safeUid, { exists: true, data });
-  return { id: snap.id, data };
+  return asPublicProfileDoc(snap.id, data);
 }
 
 async function userDocByField(
@@ -62,7 +74,7 @@ async function userDocByField(
   const d = snap.docs[0]!;
   const data = d.data() as Record<string, unknown>;
   setUserDocMemory(d.id, { exists: true, data });
-  return { id: d.id, data };
+  return asPublicProfileDoc(d.id, data);
 }
 
 /**

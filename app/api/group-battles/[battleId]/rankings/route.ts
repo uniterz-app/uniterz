@@ -15,16 +15,18 @@ export const dynamic = "force-dynamic";
 
 type Ctx = { params: Promise<{ battleId: string }> };
 
+/**
+ * 認証必須なので共有キャッシュには入れない（private）。
+ * 内容はユーザー非依存だが、CDN に PII 入りレスポンスを置かない。
+ */
 function rankingsCacheControl(status: "live" | "final" | null): string {
-  if (status === "final") {
-    return "public, s-maxage=300, stale-while-revalidate=600";
-  }
-  return "public, s-maxage=30, stale-while-revalidate=60";
+  if (status === "final") return "private, max-age=300";
+  return "private, max-age=30";
 }
 
 export async function GET(req: Request, ctx: Ctx) {
   try {
-    await requireUidFromRequest(req).catch(() => null);
+    await requireUidFromRequest(req);
     const { battleId } = await ctx.params;
     const battle = await getBattle(adminDb, battleId);
     if (!battle) return jsonErr("not_found", 404);

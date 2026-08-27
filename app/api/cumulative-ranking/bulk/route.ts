@@ -231,7 +231,7 @@ export async function GET(req: Request) {
       }
     );
   } catch (e: unknown) {
-    const message = e instanceof Error ? e.message : "unexpected error";
-    return NextResponse.json({ ok: false, error: message }, { status: 500 });
+    console.error("[api/cumulative-ranking/bulk]", e);
+    return NextResponse.json({ ok: false, error: "internal" }, { status: 500 });
   }
 }

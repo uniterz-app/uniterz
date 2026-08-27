@@ -6,6 +6,7 @@ import {
   type NbaTopScorerCandidate,
   type NbaTopScorerPick,
 } from "../../../../../../lib/nba/topScorer";
+import { useNbaTopScorerCandidates } from "../../../../../../lib/nba/useNbaTopScorerCandidates";
 import type { GamesLanguage } from "../gamesI18n";
 import { getGamesTexts } from "../gamesI18n";
 import {
@@ -24,7 +25,8 @@ import {
   injuryStatusTone,
   type NbaInjuryReport,
 } from "../../../../../../lib/predict/nbaInjuryReport";
-import { injuryReportForMatchup } from "../../../../../../lib/predict/nbaInjuryReportPreviewMocks";
+import { useNbaMatchupInjuryReport } from "../../../../../../lib/nba/predict/useNbaMatchupInjuryReport";
+import { getUniterzApiBaseUrl } from "../submitPredictionApi";
 
 const TOP_N = 5;
 const OXANIUM_800 = "Oxanium_800ExtraBold";
@@ -42,7 +44,8 @@ const INJURY_CHIP: Record<string, { border: string; bg: string; text: string }> 
 type Props = {
   homeTeamId?: string | null;
   awayTeamId?: string | null;
-  candidates: NbaTopScorerCandidate[];
+  /** game に載っていれば優先。空なら対戦ロスターから PPG 順に組む */
+  candidates?: NbaTopScorerCandidate[];
   value: NbaTopScorerPick | null;
   onChange: (next: NbaTopScorerPick | null) => void;
   language: GamesLanguage;
@@ -90,7 +93,7 @@ function isSamePick(
 export default function NbaTopScorerPickerNative({
   homeTeamId,
   awayTeamId,
-  candidates,
+  candidates: candidatesProp,
   value,
   onChange,
   language,
@@ -98,16 +101,29 @@ export default function NbaTopScorerPickerNative({
 }: Props) {
   const t = getGamesTexts(language);
   const isJa = language === "ja";
+  const apiBaseUrl = getUniterzApiBaseUrl();
+  const { candidates, loading: candidatesLoading } = useNbaTopScorerCandidates({
+    homeTeamId,
+    awayTeamId,
+    override: candidatesProp,
+    apiBaseUrl,
+  });
   const sorted = useMemo(
     () => sortNbaTopScorerCandidatesByPpg(candidates),
     [candidates]
   );
-  const injuryById = useMemo(() => {
-    const report =
-      injuryReport ??
-      injuryReportForMatchup(homeTeamId ?? undefined, awayTeamId ?? undefined);
-    return report ? injuryStatusByPlayerId(report) : {};
-  }, [injuryReport, homeTeamId, awayTeamId]);
+  // 予想ツールの INJURY タブと同じスナップショットキャッシュを共有するので追加リクエストにならない
+  const { report: liveInjury } = useNbaMatchupInjuryReport({
+    homeTeamId: homeTeamId ?? undefined,
+    awayTeamId: awayTeamId ?? undefined,
+    override: injuryReport,
+    apiBaseUrl,
+    enabled: sorted.length > 0,
+  });
+  const injuryById = useMemo(
+    () => (liveInjury ? injuryStatusByPlayerId(liveInjury) : {}),
+    [liveInjury]
+  );
   const restCount = Math.max(0, sorted.length - TOP_N);
   const selectedOutsideTop = useMemo(() => {
     if (!value) return false;
@@ -149,7 +165,11 @@ export default function NbaTopScorerPickerNative({
         ) : null}
       </View>
 
-      {sorted.length === 0 ? (
+      {candidatesLoading && sorted.length === 0 ? (
+        <Text style={styles.empty}>
+          {isJa ? "選手リストを読み込み中…" : "Loading players…"}
+        </Text>
+      ) : sorted.length === 0 ? (
         <Text style={styles.empty}>{t.nbaTopScorerEmpty}</Text>
       ) : (
         <View style={styles.table}>
@@ -215,12 +235,14 @@ export default function NbaTopScorerPickerNative({
             <Pressable
               onPress={() => setExpanded((v) => !v)}
               accessibilityRole="button"
+              accessibilityState={{ expanded }}
               style={({ pressed }) => [
                 styles.more,
                 pressed ? styles.rowPressed : null,
               ]}
             >
               <Text style={styles.moreText}>
+                {expanded ? "▲ " : "▼ "}
                 {expanded
                   ? t.nbaTopScorerLess
                   : t.nbaTopScorerMore.replace("{n}", String(restCount))}
