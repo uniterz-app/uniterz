@@ -45,6 +45,13 @@ export type NbaDraftPickEntry = {
   detailsJa?: string;
   /** 補足説明 (英) */
   detailsEn?: string;
+  /**
+   * 獲得・放出・スワップの取引経緯（詳細モーダル専用・短文）。
+   * 例: "2024年 Mikal Bridges のトレードで獲得"
+   * 一覧チップには出さない。自前（トレードなし）はフィールド無し → UI で「自前」と明示。
+   */
+  viaTradeJa?: string;
+  viaTradeEn?: string;
 };
 
 export type NbaDraftYearPicks = {

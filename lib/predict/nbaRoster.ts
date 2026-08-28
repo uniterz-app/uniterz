@@ -63,19 +63,29 @@ export type NbaRosterReport = {
 export function playerCardName(player: {
   firstName: string;
   lastName: string;
+  id?: number | string | null;
 }): string {
   const first = player.firstName?.trim() ?? "";
   const last = player.lastName?.trim() ?? "";
   const upperFirst = first.toUpperCase();
   const upperLast = last.toUpperCase();
+  const id = player.id != null ? String(player.id).trim() : "";
 
-  // Shai Gilgeous-Alexander → SGA
+  // 長い定番名のみ通称（SGA / NAW）。他は C.HOLMGREN 形式
+  if (id === "175") return "SGA";
+  if (id === "666400") return "NAW";
   if (
     (upperFirst === "SHAI" && upperLast.includes("GILGEOUS-ALEXANDER")) ||
     upperLast === "GILGEOUS-ALEXANDER" ||
     (upperFirst === "SHAI" && upperLast === "ALEXANDER")
   ) {
     return "SGA";
+  }
+  if (
+    (upperFirst === "NICKEIL" && upperLast.includes("ALEXANDER-WALKER")) ||
+    upperLast === "ALEXANDER-WALKER"
+  ) {
+    return "NAW";
   }
 
   if (first && last) {

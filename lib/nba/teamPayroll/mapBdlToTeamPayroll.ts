@@ -13,6 +13,20 @@ import type {
 } from "@/lib/predict/nbaTeamDetailPreviewMocks";
 import type { NbaTeamPayrollDocTeam } from "./teamPayrollTypes";
 import type { NbaRosterPlayer } from "@/lib/predict/nbaRoster";
+import { curatedOptionForPlayerSeason } from "./nbaCuratedPlayerOptions";
+
+function resolvePayrollLineOption(
+  playerId: string,
+  seasonYear: number,
+  playerOptionMap: Map<string, Map<number, "PO" | "TO" | "MO" | null>> | undefined,
+  lineOption: "PO" | "TO" | "MO" | null | undefined
+): "PO" | "TO" | "MO" | null {
+  const curated = curatedOptionForPlayerSeason(playerId, seasonYear);
+  if (curated) return curated;
+  const hasExplicit = playerOptionMap?.get(playerId)?.has(seasonYear);
+  if (hasExplicit) return playerOptionMap?.get(playerId)?.get(seasonYear) ?? null;
+  return lineOption ?? null;
+}
 
 export function nbaSalaryCapLinesForSeason(seasonKey: string): {
   salaryCap: number;
@@ -121,6 +135,56 @@ function money(n: unknown): number {
   return Number.isFinite(v) && v > 0 ? Math.round(v) : 0;
 }
 
+/**
+ * BDL でロスター用 ID と契約用 ID が食い違う選手。
+ * 例: Jaylin Williams — players `38017706` / contracts `1028257789`
+ */
+const PAYROLL_PLAYER_ID_ALIASES: ReadonlyArray<ReadonlySet<string>> = [
+  new Set(["38017706", "1028257789"]), // Jaylin Williams
+];
+
+function payrollPlayerIdsAlias(a: string, b: string): boolean {
+  if (!a || !b || a === b) return false;
+  return PAYROLL_PLAYER_ID_ALIASES.some((set) => set.has(a) && set.has(b));
+}
+
+/** 名前キーを A-Z のみに正規化 */
+function payrollNameKey(name: string): string {
+  return name.toUpperCase().replace(/[^A-Z]/g, "");
+}
+
+/**
+ * ペイロール行名とロスター名の完全一致のみ。
+ * 前方一致・部分一致・イニシャルのみ（JWILLIAMS 等）・年俸帯ヒューリスティックは使わない。
+ */
+function payrollNamesExactMatch(
+  lineName: string,
+  upperFirst: string,
+  upperLast: string,
+  displayName: string
+): boolean {
+  const lClean = payrollNameKey(lineName);
+  if (!lClean) return false;
+  const full = payrollNameKey(`${upperFirst}${upperLast}`);
+  const display = payrollNameKey(displayName);
+  if (full && lClean === full) return true;
+  if (display && lClean === display) return true;
+  return false;
+}
+
+/** 同選手の候補が複数あるとき、正の年俸・非 TW を優先 */
+function pickBestPayrollLine(
+  lines: NbaTeamPayrollLine[]
+): NbaTeamPayrollLine | undefined {
+  if (lines.length === 0) return undefined;
+  return lines.slice().sort((a, b) => {
+    const aTw = a.isTwoWay === true ? 1 : 0;
+    const bTw = b.isTwoWay === true ? 1 : 0;
+    if (aTw !== bTw) return aTw - bTw;
+    return b.salary - a.salary;
+  })[0];
+}
+
 function estimateTaxBill(totalSalary: number, taxLine: number): number {
   const overTax = Math.max(0, totalSalary - taxLine);
   if (overTax <= 0) return 0;
@@ -188,37 +252,11 @@ export function linesFromContractRows(
     let displayName = playerCardName({
       firstName: first || "Player",
       lastName: last || playerId,
+      id: playerId,
     });
 
     const upperFirst = first.toUpperCase();
     const upperLast = last.toUpperCase();
-    if (
-      (upperFirst === "SHAI" && upperLast.includes("GILGEOUS-ALEXANDER")) ||
-      upperLast === "GILGEOUS-ALEXANDER" ||
-      (upperFirst === "SHAI" && upperLast === "ALEXANDER")
-    ) {
-      displayName = "SGA";
-    } else if (upperLast === "WILLIAMS") {
-      if (upperFirst === "JALEN") {
-        displayName = "JALEN WILLIAMS";
-      } else if (upperFirst === "JAYLIN") {
-        displayName = "JAYLIN WILLIAMS";
-      } else if (upperFirst === "KENRICH") {
-        displayName = "KENRICH WILLIAMS";
-      } else if (upperFirst === "PATRICK") {
-        displayName = "PATRICK WILLIAMS";
-      } else if (upperFirst === "GRANT") {
-        displayName = "GRANT WILLIAMS";
-      } else if (upperFirst === "MARK") {
-        displayName = "MARK WILLIAMS";
-      } else if (upperFirst === "ZIAIRE") {
-        displayName = "ZIAIRE WILLIAMS";
-      }
-    } else if (upperLast === "BROWN" && upperFirst === "JAYLEN") {
-      displayName = "JAYLEN BROWN";
-    } else if (upperLast === "JOHNSON" && upperFirst === "JALEN") {
-      displayName = "JALEN JOHNSON";
-    }
 
     const optRaw =
       row.option ??
@@ -345,8 +383,8 @@ export function linesFromContractRows(
       }
     }
 
-    // NBA CBA規定: 1巡目ルーキースケール契約（4年契約）の3年目・4年目はチームオプション（TO）
-    // ※ルーキー契約期間中（ドラフト年+0〜3）のみ適用。延長契約（Extension）期間には適用しない
+    // NBA CBA規定: 1巡目ルーキースケールの3・4年目はチームオプション（TO）
+    // 基準は draft_year のみ。延長契約には適用しない
     if (!option) {
       const playerRecord = row.player as Record<string, unknown> | undefined;
       const draftRound = playerRecord?.draft_round as number | undefined;
@@ -355,27 +393,26 @@ export function linesFromContractRows(
       const contractTypeStr = String(row.contract_type ?? "").toLowerCase();
       const signedUsingStr = String(row.signed_using ?? "").toLowerCase();
       const isExtension = contractTypeStr.includes("extension");
-      // 2026年以降のドラフト1巡目ルーキー、または明示的に1巡目ルーキー契約と記載されている場合
       const isRookieScale =
         !isExtension &&
         draftRound === 1 &&
         (contractTypeStr === "rookie" ||
           signedUsingStr.includes("rookie-scale") ||
-          (typeof draftYear === "number" && draftYear >= 2025 && !contractTypeStr && !signedUsingStr) ||
           contractTypeStr.includes("rookie") ||
-          signedUsingStr.includes("rookie"));
+          signedUsingStr.includes("rookie") ||
+          (typeof draftYear === "number" &&
+            draftYear >= 2023 &&
+            !contractTypeStr &&
+            !signedUsingStr));
 
       if (
         isRookieScale &&
         typeof draftYear === "number" &&
         draftYear > 0 &&
         typeof season === "number" &&
-        season > 0
+        (season === draftYear + 2 || season === draftYear + 3)
       ) {
-        // ドラフトから3年目・4年目（例: 2026ドラフトなら2028, 2029。ドラフト4年を超えるシーズンには適用しない）
-        if (season === draftYear + 2 || season === draftYear + 3) {
-          option = "TO";
-        }
+        option = "TO";
       }
     }
 
@@ -420,124 +457,92 @@ export function buildSynchronizedTeamPayrollLines(
       const upperFirst = first.toUpperCase();
       const upperLast = last.toUpperCase();
 
-      let displayName = playerCardName({ firstName: first, lastName: last });
-      if (
-        (upperFirst === "SHAI" && upperLast.includes("GILGEOUS-ALEXANDER")) ||
-        upperLast === "GILGEOUS-ALEXANDER" ||
-        (upperFirst === "SHAI" && upperLast === "ALEXANDER")
-      ) {
-        displayName = "SGA";
-      } else if (upperLast === "WILLIAMS") {
-        if (upperFirst === "JALEN") displayName = "JALEN WILLIAMS";
-        else if (upperFirst === "JAYLIN") displayName = "JAYLIN WILLIAMS";
-        else if (upperFirst === "KENRICH") displayName = "KENRICH WILLIAMS";
-      }
+      let displayName = playerCardName({
+        firstName: first,
+        lastName: last,
+        id: pId,
+      });
 
       // 既存の payroll.lines (BDL正データ) から同選手を検索
-      // まず所属チームの契約行を最優先、次に全体から検索
-      const existingLine = (rawPayrollLines ?? []).find((l) => {
-        if (pId && l.playerId) {
-          return l.playerId === pId;
-        }
-        const lClean = l.name.toUpperCase().replace(/[^A-Z]/g, "");
-        const pClean = `${upperFirst}${upperLast}`.replace(/[^A-Z]/g, "");
-        if (lClean === pClean) return true;
-        
-        // Williams 姓の精密判定
-        if (upperLast === "WILLIAMS") {
-          if (upperFirst === "JALEN") {
-            return lClean.includes("JALEN") || (lClean === "JWILLIAMS" && l.salary >= 3_500_000);
-          }
-          if (upperFirst === "JAYLIN") {
-            return lClean.includes("JAYLIN") || (lClean === "JWILLIAMS" && l.salary < 3_500_000);
-          }
-          if (upperFirst === "KENRICH") {
-            return lClean.includes("KENRICH") || lClean.startsWith("KW");
-          }
-        }
-
-        // Mitchell 姓の精密判定（Davion Mitchell と Donovan Mitchell の混同防止）
-        if (upperLast === "MITCHELL") {
-          if (upperFirst === "DAVION") {
-            return l.playerId === "17553994" || lClean.includes("DAVION");
-          }
-          if (upperFirst === "DONOVAN") {
-            return l.playerId === "322" || lClean.includes("DONOVAN");
-          }
-        }
-
-        // Wiggins 姓の精密判定（Aaron Wiggins と Andrew Wiggins の混同防止）
-        if (upperLast === "WIGGINS") {
-          if (upperFirst === "AARON") {
-            return l.playerId === "17896078" || lClean.includes("AARON");
-          }
-          if (upperFirst === "ANDREW") {
-            return l.playerId === "475" || lClean.includes("ANDREW");
-          }
-        }
-
-        // Wagner 姓の精密判定（Moritz Wagner と Franz Wagner の混同防止）
-        if (upperLast === "WAGNER") {
-          if (upperFirst === "MORITZ" || upperFirst === "MO") {
-            return l.playerId === "462" || lClean.includes("MORITZ") || lClean.startsWith("MW");
-          }
-          if (upperFirst === "FRANZ") {
-            return l.playerId === "17896026" || lClean.includes("FRANZ") || lClean.startsWith("FW");
-          }
-        }
-
-        // Green 姓の精密判定（Jeff Green と Jalen Green の混同防止）
-        if (upperLast === "GREEN") {
-          if (upperFirst === "JEFF") {
-            return lClean === "JGREEN" && l.salary < 5_000_000;
-          }
-          if (upperFirst === "JALEN") {
-            return lClean === "JGREEN" && l.salary >= 30_000_000;
-          }
-        }
-
-        // Bogdanovic (HOU ミニマム $2.45M)
-        if (upperLast.includes("BOGDANOVIC") && upperFirst.startsWith("B")) {
-          return lClean.includes("BOGDANOVIC");
-        }
-
-        // Traore 姓（BKN Nolan / Armel のマッチング）
-        if (upperLast.includes("TRAOR") || lClean.includes("TRAOR")) {
-          return lClean.includes("TRAOR");
-        }
-
-        if (upperLast && lClean.includes(upperLast) && (lClean.startsWith(upperFirst.charAt(0)) || lClean.includes(upperFirst))) return true;
-        return false;
+      // 1) playerId / 別名一致を最優先
+      // 2) なければ名前の完全一致のみ（前方一致・部分一致・年俸ヒューリスティック禁止）
+      const idMatchedLines = (rawPayrollLines ?? []).filter((l) => {
+        if (!pId || !l.playerId) return false;
+        return l.playerId === pId || payrollPlayerIdsAlias(pId, l.playerId);
       });
+      const nameMatchedLines =
+        idMatchedLines.length > 0
+          ? []
+          : (rawPayrollLines ?? []).filter((l) => {
+              // 別選手の契約行（playerId 付き）には名前で食い込まない
+              if (
+                pId &&
+                l.playerId &&
+                l.playerId !== pId &&
+                !payrollPlayerIdsAlias(pId, l.playerId)
+              ) {
+                return false;
+              }
+              // 表示名（C.HOLMGREN）ではなく、フルネームキーで完全一致
+              return payrollNamesExactMatch(
+                l.name,
+                upperFirst,
+                upperLast,
+                `${upperFirst} ${upperLast}`
+              );
+            });
+      const existingLine = pickBestPayrollLine(
+        idMatchedLines.length > 0 ? idMatchedLines : nameMatchedLines
+      );
 
       let rawSalary = existingLine ? existingLine.salary : 0;
       const option = existingLine?.option ?? null;
+      let forcedStandardContract = false;
 
       // 特殊補正: Julian Phillips (56677857) と Oscar Tshiebwe (56677778) - 今季 (2026-27) のみ $2,537,526
       if (isCurrentSeason) {
         if (pId === "56677857" || (upperFirst === "JULIAN" && upperLast === "PHILLIPS")) {
           rawSalary = 2537526;
+          forcedStandardContract = true;
         }
         if (pId === "56677778" || (upperFirst === "OSCAR" && upperLast === "TSHIEBWE")) {
           rawSalary = 2537526;
+          forcedStandardContract = true;
         }
         // Bogdan Bogdanovic ロケッツ所属時はベテランミニマム $2,449,421
         if (pId === "53" || (upperFirst === "BOGDAN" && upperLast.includes("BOGDANOVIC"))) {
           rawSalary = 2449421;
+          forcedStandardContract = true;
+        }
+        // Jaylin Williams: ロスター ID と契約 ID が別。旧 ingest の偽 TW 行だけ残っている場合の補正
+        // BDL 2026-27 cap hit = $7,774,648（延長2年目）
+        if (
+          pId === "38017706" ||
+          pId === "1028257789" ||
+          (upperFirst === "JAYLIN" && upperLast === "WILLIAMS")
+        ) {
+          rawSalary = Math.max(rawSalary, 7_774_648);
+          forcedStandardContract = true;
         }
       }
 
       // 今季 (2026-27) のみ Two-Way 判定を適用。将来季は Two-Way 適用なし
+      // BDL の team contracts は標準契約のみ返すことが多い → ロスターにいて年俸 0 は TW
+      // （ID 完全一致・別名で標準契約が付く選手はここに落ちない）
       if (isCurrentSeason) {
-        const isTwoWay =
-          rawSalary <= 0 ||
+        const explicitTwoWay =
           (p.position ?? "").toLowerCase().includes("two-way") ||
           (p.position ?? "").toLowerCase().includes("2-way") ||
           (p.position ?? "").toLowerCase() === "tw" ||
           p.isTwoWay === true ||
           existingLine?.isTwoWay === true;
+        const isTwoWay =
+          !forcedStandardContract && (explicitTwoWay || rawSalary <= 0);
 
         const salary = isTwoWay ? 0 : rawSalary;
+        // 標準契約年俸なし & TW でもない → ペイロールに載せない（将来季用）
+        if (salary <= 0 && !isTwoWay) continue;
+
         const key = pId || displayName;
         lineMap.set(key, {
           playerId: pId,
@@ -565,19 +570,12 @@ export function buildSynchronizedTeamPayrollLines(
   } else {
     // ロスター情報がない場合のフォールバック（rawPayrollLines から生成）
     for (const l of rawPayrollLines ?? []) {
-      let displayName = l.name;
-      const clean = l.name.toUpperCase().replace(/[^A-Z]/g, "");
-      if (clean === "JWILLIAMS" || clean.startsWith("JWILLIAMS") || clean.includes("JALENWILLIAMS") || clean.includes("JAYLINWILLIAMS")) {
-        if (l.salary < 3_500_000 || clean.includes("JAYLIN")) {
-          displayName = "JAYLIN WILLIAMS";
-        } else {
-          displayName = "JALEN WILLIAMS";
-        }
-      }
+      const displayName = l.name;
 
       if (isCurrentSeason) {
-        const isTwoWay = l.isTwoWay === true || l.salary <= 0;
+        const isTwoWay = l.isTwoWay === true;
         const sal = isTwoWay ? 0 : (l.salary > 0 ? l.salary : 0);
+        if (sal <= 0 && !isTwoWay) continue;
 
         const key = l.playerId || displayName;
         const existing = lineMap.get(key);
@@ -774,10 +772,12 @@ export function buildTeamPayrollsBundleFromMultiYearContracts(
     const leagueRank = rankByTeam.get(teamId) ?? 30;
     const totalSalary = lines.reduce((s, l) => s + l.salary, 0);
     const finalizedLines = lines.map((l) => {
-      const hasExplicitOpt = playerOptionMap?.get(l.playerId)?.has(startYear);
-      const opt = hasExplicitOpt
-        ? (playerOptionMap?.get(l.playerId)?.get(startYear) ?? null)
-        : (l.option ?? null);
+      const opt = resolvePayrollLineOption(
+        l.playerId,
+        startYear,
+        playerOptionMap,
+        l.option
+      );
       return {
         ...l,
         share: totalSalary > 0 ? l.salary / totalSalary : 0,
@@ -818,10 +818,12 @@ export function buildTeamPayrollsBundleFromMultiYearContracts(
       const committedSalary = futureLinesWithSalary.reduce((s, l) => s + l.salary, 0);
       const futureLines = committedSalary > 0
         ? futureLinesWithSalary.map((l) => {
-            const hasExplicitOpt = playerOptionMap?.get(l.playerId)?.has(y);
-            const opt = hasExplicitOpt
-              ? (playerOptionMap?.get(l.playerId)?.get(y) ?? null)
-              : (l.option ?? null);
+            const opt = resolvePayrollLineOption(
+              l.playerId,
+              y,
+              playerOptionMap,
+              l.option
+            );
             return {
               ...l,
               share: l.salary / committedSalary,

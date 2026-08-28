@@ -56,6 +56,7 @@ import { useNbaTeamDetailLiveOverlay } from "../../../../../../lib/nba/teamDetai
 import { playerCardName, type NbaRosterTeamBlock } from "../../../../../../lib/predict/nbaRoster";
 import { getUniterzApiBaseUrl } from "../submitPredictionApi";
 import { getNbaTeamDraftCapital } from "../../../../../../lib/nba/draftPicks/nbaDraftCapitalData";
+import { resolveDraftPickOrigin } from "../../../../../../lib/nba/draftPicks/nbaDraftPickViaTrade";
 import type {
   NbaDraftPickEntry,
   NbaDraftPickKind,
@@ -1276,6 +1277,25 @@ function DraftPicksSection({
                   )}
                 </View>
 
+                {(() => {
+                  const origin = resolveDraftPickOrigin(selectedPick);
+                  const body = (isJa ? origin.textJa : origin.textEn).trim();
+                  return (
+                    <View style={styles.draftModalBodyBox}>
+                      <Text style={styles.draftModalBodyLabel}>
+                        {isJa ? origin.labelJa : origin.labelEn}
+                      </Text>
+                      <Text style={styles.draftOriginBodyText}>
+                        {body.length > 0
+                          ? body
+                          : isJa
+                            ? "経緯データなし"
+                            : "No origin on file"}
+                      </Text>
+                    </View>
+                  );
+                })()}
+
                 {/* Conditions list */}
                 <View style={styles.draftModalBodyBox}>
                   <Text style={styles.draftModalBodyLabel}>
@@ -2402,6 +2422,11 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 0.6,
     textTransform: "uppercase",
+  },
+  draftOriginBodyText: {
+    color: "rgba(255,255,255,0.85)",
+    fontSize: 12,
+    lineHeight: 17,
   },
   draftConditionItem: {
     flexDirection: "row",

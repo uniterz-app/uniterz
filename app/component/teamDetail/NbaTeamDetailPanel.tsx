@@ -44,6 +44,7 @@ import {
   type NbaTeamUpcomingGame,
 } from "@/lib/predict/nbaTeamDetailPreviewMocks";
 import { getNbaTeamDraftCapital } from "@/lib/nba/draftPicks/nbaDraftCapitalData";
+import { resolveDraftPickOrigin } from "@/lib/nba/draftPicks/nbaDraftPickViaTrade";
 import type {
   NbaDraftPickEntry,
   NbaDraftPickKind,
@@ -1696,6 +1697,25 @@ function DraftPicksCard({
                 </span>
               )}
             </div>
+
+            {(() => {
+              const origin = resolveDraftPickOrigin(selectedPick);
+              const body = (isJa ? origin.textJa : origin.textEn).trim();
+              return (
+                <div className="space-y-1.5 bg-white/[0.02] border border-white/[0.06] px-3 py-2.5 rounded-[2px]">
+                  <p className="text-[10px] font-bold uppercase text-white/40 tracking-wider">
+                    {isJa ? origin.labelJa : origin.labelEn}
+                  </p>
+                  <p className="text-[12px] leading-snug text-white/85">
+                    {body.length > 0
+                      ? body
+                      : isJa
+                        ? "経緯データなし"
+                        : "No origin on file"}
+                  </p>
+                </div>
+              );
+            })()}
 
             {/* Conditions List */}
             <div className="space-y-2 bg-white/[0.02] border border-white/[0.06] p-3 rounded-[2px]">

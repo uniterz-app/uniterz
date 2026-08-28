@@ -5,6 +5,7 @@ import type {
   NbaDraftYearPicks,
   NbaTeamDraftCapital,
 } from "./draftPicksTypes";
+import { getDraftPickViaTrade } from "./nbaDraftPickViaTrade";
 import { TEAM_SHORT } from "../../team-short";
 
 /** 今後7年間のドラフト対象年（2027年〜2033年） */
@@ -313,8 +314,8 @@ const TEAM_CUSTOM_PICKS: Record<string, NbaDraftPickEntry[]> = {
       fromTeamId: "ATL",
       shortLabelJa: "ATL",
       shortLabelEn: "ATL",
-      detailsJa: "ATL 2巡目 (Wiggins 取引)",
-      detailsEn: "via ATL 2nd (Wiggins trade)",
+      detailsJa: "ATL 2巡目 (Aaron Wiggins 取引)",
+      detailsEn: "via ATL 2nd (Aaron Wiggins trade)",
     },
     {
       id: "okc-2030-2-min",
@@ -461,13 +462,13 @@ const TEAM_CUSTOM_PICKS: Record<string, NbaDraftPickEntry[]> = {
       fromTeamId: "ATL",
       shortLabelJa: "ATL",
       shortLabelEn: "ATL",
-      detailsJa: "ATL 2巡目 (Wiggins/Dort 取引でATL/LAL両方保有)",
+      detailsJa: "ATL 2巡目 (Aaron Wiggins/Dort 取引でATL/LAL両方保有)",
       detailsEn: "via ATL 2nd (Holds both ATL & LAL 2nds)",
       conditionsJa: [
-        "Wiggins取引（低い方）とDort取引（高い方）の組み合わせにより、結果的にATLとLALの両方を押さえる形",
+        "Aaron Wiggins取引（低い方）とDort取引（高い方）の組み合わせにより、結果的にATLとLALの両方を押さえる形",
       ],
       conditionsEn: [
-        "Combined trades result in OKC controlling both ATL and LAL 2nd round picks",
+        "Combined Aaron Wiggins + Dort trades result in OKC controlling both ATL and LAL 2nd round picks",
       ],
     },
     {
@@ -479,13 +480,13 @@ const TEAM_CUSTOM_PICKS: Record<string, NbaDraftPickEntry[]> = {
       fromTeamId: "LAL",
       shortLabelJa: "LAL",
       shortLabelEn: "LAL",
-      detailsJa: "LAL 2巡目 (Wiggins/Dort 取引でATL/LAL両方保有)",
+      detailsJa: "LAL 2巡目 (Aaron Wiggins/Dort 取引でATL/LAL両方保有)",
       detailsEn: "via LAL 2nd (Holds both ATL & LAL 2nds)",
       conditionsJa: [
-        "Wiggins取引（低い方）とDort取引（高い方）の組み合わせにより、結果的にATLとLALの両方を押さえる形",
+        "Aaron Wiggins取引（低い方）とDort取引（高い方）の組み合わせにより、結果的にATLとLALの両方を押さえる形",
       ],
       conditionsEn: [
-        "Combined trades result in OKC controlling both ATL and LAL 2nd round picks",
+        "Combined Aaron Wiggins + Dort trades result in OKC controlling both ATL and LAL 2nd round picks",
       ],
     },
 
@@ -6705,18 +6706,6 @@ const TEAM_CUSTOM_PICKS: Record<string, NbaDraftPickEntry[]> = {
       conditionsEn: ["Traded to Utah Jazz"],
     },
     {
-      id: "lal-2031-2-was",
-      year: 2031,
-      round: 2,
-      kind: "incoming",
-      badgeType: "from",
-      fromTeamId: "WAS",
-      shortLabelJa: "WAS",
-      shortLabelEn: "WAS",
-      detailsJa: "WAS 2巡目",
-      detailsEn: "via WAS 2nd",
-    },
-    {
       id: "lal-2031-2-own-out",
       year: 2031,
       round: 2,
@@ -6747,31 +6736,25 @@ const TEAM_CUSTOM_PICKS: Record<string, NbaDraftPickEntry[]> = {
       conditionsEn: ["Own guaranteed 1st round pick"],
     },
     {
-      id: "lal-2032-2-was",
-      year: 2032,
-      round: 2,
-      kind: "incoming",
-      badgeType: "from",
-      fromTeamId: "WAS",
-      shortLabelJa: "WAS",
-      shortLabelEn: "WAS",
-      detailsJa: "WAS 2巡目",
-      detailsEn: "via WAS 2nd",
-    },
-    {
       id: "lal-2032-2-own-out",
       year: 2032,
       round: 2,
       kind: "outgoing",
       badgeType: "outgoing",
       isOutgoing: true,
-      toTeamId: "OKC",
-      shortLabelJa: "自前 (OKCへ放出)",
-      shortLabelEn: "Own (to OKC)",
-      detailsJa: "LAL 自前 2巡目 (OKCへ放出済み)",
-      detailsEn: "Own 2nd (Traded to OKC)",
-      conditionsJa: ["オクラホマシティ・サンダー（OKC）へトレード放出済み"],
-      conditionsEn: ["Traded to OKC"],
+      toTeamId: "ATL/OKC",
+      shortLabelJa: "自前 (ATL/OKCへ放出)",
+      shortLabelEn: "Own (to ATL/OKC)",
+      detailsJa: "LAL 自前 2巡目 (Luke Kennard取引でATLへ / ATL・LALの不利な方がOKCへ)",
+      detailsEn: "Own 2nd (to ATL via Luke Kennard; less favorable of ATL/LAL may go to OKC)",
+      conditionsJa: [
+        "2026年 Luke Kennard 取引でATLへ譲渡",
+        "ATL・LALの2032年2巡目のうち不利な方はOKC（Aaron Wiggins取引）へ",
+      ],
+      conditionsEn: [
+        "Sent to ATL in 2026 Luke Kennard trade",
+        "Less favorable of ATL/LAL 2032 2nds may go to OKC (Aaron Wiggins trade)",
+      ],
     },
 
     // 2033
@@ -7158,12 +7141,12 @@ const TEAM_CUSTOM_PICKS: Record<string, NbaDraftPickEntry[]> = {
       isConditional: true,
       fromTeamId: "DET",
       protectionTag: "COND",
-      shortLabelJa: "DET 条件付 (Collins取引)",
-      shortLabelEn: "DET Cond (Collins trade)",
-      detailsJa: "DET 条件付き 2巡目 (John Collins取引)",
-      detailsEn: "via DET 2nd (Conditional / John Collins trade)",
-      conditionsJa: ["John Collins絡みの複合トレードで獲得した保護付き2巡目指名権"],
-      conditionsEn: ["Protected 2nd round pick acquired via John Collins multi-team trade"],
+      shortLabelJa: "DET 条件付",
+      shortLabelEn: "DET Cond",
+      detailsJa: "DET 条件付き 2巡目",
+      detailsEn: "via DET 2nd (Conditional)",
+      conditionsJa: ["LAC–CHA–DAL–DET 複合取引経由の保護付き2巡目指名権"],
+      conditionsEn: ["Protected 2nd round pick via LAC–CHA–DAL–DET multi-team trade chain"],
     },
 
     // 2029
@@ -9412,8 +9395,14 @@ export function getNbaTeamDraftCapital(rawTeamId: string): NbaTeamDraftCapital {
     }
 
     // badgeType を補正設定
-    yrPicks1 = yrPicks1.map((p) => ({ ...p, badgeType: inferBadgeType(p) }));
-    yrPicks2 = yrPicks2.map((p) => ({ ...p, badgeType: inferBadgeType(p) }));
+    yrPicks1 = yrPicks1.map((p) => {
+      const via = getDraftPickViaTrade(p.id);
+      return { ...p, badgeType: inferBadgeType(p), ...(via ? via : {}) };
+    });
+    yrPicks2 = yrPicks2.map((p) => {
+      const via = getDraftPickViaTrade(p.id);
+      return { ...p, badgeType: inferBadgeType(p), ...(via ? via : {}) };
+    });
 
     all1stPicks.push(...yrPicks1);
     all2ndPicks.push(...yrPicks2);

@@ -20,6 +20,7 @@ import type {
 } from "@/lib/predict/nbaPlayerDetailPreviewMocks";
 import { bdlSeasonYearFromSeasonKey } from "@/lib/nba/bdl/bdlNbaEnv";
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
+import { curatedOptionForPlayerSeason } from "@/lib/nba/teamPayroll/nbaCuratedPlayerOptions";
 
 function money(n: unknown): number {
   const v = typeof n === "number" ? n : Number(n);
@@ -304,17 +305,14 @@ export function resolveOptionForSeasonYear(
     contractYears?: number | null;
     draftRound?: number | null;
     draftYear?: number | null;
+    playerId?: string | number | null;
   } | null
 ): "PO" | "TO" | "MO" | null {
-  // 特殊補正: Devin Booker の 2027-28 はオプションなし
-  if (seasonYear === 2027 && notes?.some((n) => typeof n === "string" && n.includes("Booker"))) {
-    return null;
-  }
+  const playerId = String(contractMeta?.playerId ?? "").trim();
 
-  // 特殊補正: Dillon Brooks の 2028-29 はオプションなし
-  if (seasonYear === 2028 && notes?.some((n) => typeof n === "string" && n.includes("Brooks"))) {
-    return null;
-  }
+  // 1) キュレート済み PO マスタ（NBA.com / RealGM 系）を最優先
+  const curated = curatedOptionForPlayerSeason(playerId, seasonYear);
+  if (curated) return curated;
 
   if (Array.isArray(notes) && notes.length > 0) {
     const yStr = String(seasonYear);
@@ -325,201 +323,75 @@ export function resolveOptionForSeasonYear(
     for (const n of notes) {
       if (typeof n !== "string") continue;
       const upper = n.toUpperCase();
-      if (
+      // そのシーズンを指すノートだけ見る（年号の部分一致誤爆を避ける）
+      const mentionsSeason =
         upper.includes(seasonKeyFull) ||
-        upper.includes(seasonKeyShort) ||
-        upper.includes(yStr)
+        upper.includes(`${seasonKeyShort}:`) ||
+        upper.includes(`${seasonKeyShort} `) ||
+        upper.startsWith(seasonKeyShort) ||
+        upper.includes(`${yStr}-`) ||
+        upper.includes(`${yStr}:`);
+      if (!mentionsSeason) continue;
+
+      if (upper.includes("DECLINED") || upper.includes("VOID")) {
+        continue;
+      }
+
+      // 「OPTION」語を必須にして TEAM/PLAYER 単独ヒットを防ぐ
+      if (
+        upper.includes("PLAYER OPTION") ||
+        upper.includes("EARLY TERMINATION") ||
+        (upper.includes("ETO") && upper.includes("OPTION"))
       ) {
-        // "declined" や "void" されたオプションは無効
-        if (upper.includes("DECLINED") || upper.includes("VOID")) {
-          continue;
-        }
-
-        if (
-          upper.includes("PLAYER OPTION") ||
-          upper.includes("PLAYER") ||
-          upper.includes(" PO") ||
-          upper.includes("PO:") ||
-          upper.includes("ETO") ||
-          upper.includes("EARLY TERMINATION")
-        ) {
-          return "PO";
-        }
-        if (
-          upper.includes("CLUB OPTION") ||
-          upper.includes("TEAM OPTION") ||
-          upper.includes("CLUB") ||
-          upper.includes("TEAM") ||
-          upper.includes(" TO") ||
-          upper.includes("TO:")
-        ) {
-          // "non-guaranteed" のみで option という単語がない場合は除外
-          if (upper.includes("NON-GUARANTEED") && !upper.includes("OPTION")) {
-            // non-guaranteed のみ
-          } else {
-            return "TO";
-          }
-        }
-        if (upper.includes("MUTUAL OPTION") || upper.includes("MUTUAL") || upper.includes(" MO") || upper.includes("MO:")) {
-          return "MO";
-        }
-      }
-    }
-  }
-
-  // Derrick White の 2028-29 プレイヤーオプション補完（4年目 PO）
-  if (notes && Array.isArray(notes)) {
-    for (const n of notes) {
-      if (typeof n === "string" && n.includes("LTBE") && seasonYear === 2028) {
-        // Derrick White extension note pattern
-        // 2028-29 PO
         return "PO";
       }
-    }
-  }
-
-  // Jarred Vanderbilt の 2027-28 プレイヤーオプション（4年目 PO）
-  if (notes && Array.isArray(notes)) {
-    for (const n of notes) {
-      if (typeof n === "string" && n.includes("2023-24: Player Option") && seasonYear === 2027) {
-        return "PO";
+      if (
+        upper.includes("CLUB OPTION") ||
+        upper.includes("TEAM OPTION")
+      ) {
+        return "TO";
+      }
+      if (upper.includes("MUTUAL OPTION")) {
+        return "MO";
       }
     }
   }
 
-  // James Harden の 2028-29 プレイヤーオプション（3年目 PO）
-  if (notes && Array.isArray(notes)) {
-    for (const n of notes) {
-      if (typeof n === "string" && n.includes("LAC-CLE trade") && seasonYear === 2028) {
-        return "PO";
-      }
-    }
-  }
-
-  // Alperen Sengun の 2029-30 プレイヤーオプション（5年契約の最終年 PO）
-  if (
-    contractMeta &&
-    String(contractMeta.contractType ?? "").toLowerCase().includes("rookie extension") &&
-    contractMeta.contractYears === 5 &&
-    seasonYear === 2029 &&
-    notes?.some((n) => typeof n === "string" && n.includes("Bird Rights")) &&
-    notes?.some((n) => typeof n === "string" && n.includes("2029"))
-  ) {
-    return "PO";
-  }
-
-  // Rudy Gobert の 2027-28 プレイヤーオプション（3年契約の最終年 PO）
-  if (
-    contractMeta &&
-    String(contractMeta.contractType ?? "").toLowerCase().includes("veteran extension") &&
-    contractMeta.contractYears === 3 &&
-    contractMeta.startYear === 2025 &&
-    seasonYear === 2027
-  ) {
-    return "PO";
-  }
-
-  // Buddy Hield の 2027-28 チームオプション（TO）
-  if (
-    seasonYear === 2027 &&
-    notes?.some((n) => typeof n === "string" && n.includes("Buddy") || n.includes("Sign-and-Trade via Bird rights"))
-  ) {
+  // --- 選手固有（playerId 必須。契約年数だけの横断ルールは禁止） ---
+  if (playerId === "17896073" && seasonYear === 2029) {
+    // Jalen Suggs — 延長の 2029-30 は Team Option
     return "TO";
   }
-
-  // Aaron Wiggins の 2028-29 チームオプション（5年契約の最終年 TO）
-  if (
-    seasonYear === 2028 &&
-    notes?.some((n) => typeof n === "string" && n.includes("1,644,858"))
-  ) {
-    return "TO";
-  }
-
-  // Wendell Carter Jr. の 2028-29 チームオプション（TO）
-  if (
-    seasonYear === 2028 &&
-    notes?.some((n) => typeof n === "string" && (n.includes("Club Option") || n.includes("Wendell"))) &&
-    contractMeta?.contractYears === 3
-  ) {
-    return "TO";
-  }
-
-  // Jalen Suggs の 2029-30 チームオプション（TO）
-  if (
-    seasonYear === 2029 &&
-    contractMeta?.contractYears === 5 &&
-    (contractMeta?.contractType?.toLowerCase().includes("extension") || notes?.some((n) => typeof n === "string" && n.includes("Suggs")))
-  ) {
-    return "TO";
-  }
-
-  // Dorian Finney-Smith の 2028-29 プレイヤーオプション（PO）
-  if (
-    seasonYear === 2028 &&
-    contractMeta?.contractYears === 4 &&
-    notes?.some((n) => typeof n === "string" && n.includes("CHA-HOU trade"))
-  ) {
-    return "PO";
-  }
-
-  // Klay Thompson の 2027-28 プレイヤーオプション（PO）
-  if (
-    seasonYear === 2027 &&
-    contractMeta?.contractYears === 2 &&
-    notes?.some((n) => typeof n === "string" && n.includes("Trade Bonus"))
-  ) {
-    return "PO";
-  }
-
-  // Andrew Wiggins の 2028-29 プレイヤーオプション（PO）
-  if (
-    seasonYear === 2028 &&
-    contractMeta?.contractYears === 2 &&
-    (contractMeta?.startYear === 2027 || notes?.some((n) => typeof n === "string" && n.includes("Wiggins")))
-  ) {
-    return "PO";
-  }
-
-  // Herb Jones の 2029-30 プレイヤーオプション（PO） / 2027-28 はオプションなし
-  if (notes?.some((n) => typeof n === "string" && n.includes("Jones"))) {
+  if (playerId === "57" && seasonYear === 2027) return null; // Devin Booker
+  if (playerId === "66" && seasonYear === 2028) return null; // Dillon Brooks
+  if (playerId === "158" && seasonYear === 2028) return "PO"; // Dorian Finney-Smith
+  if (playerId === "443" && seasonYear === 2027) return "PO"; // Klay Thompson
+  if (playerId === "475" && seasonYear === 2028) return "PO"; // Andrew Wiggins
+  if (playerId === "17896024") {
+    // Herb Jones
     if (seasonYear === 2027) return null;
     if (seasonYear === 2029) return "PO";
   }
-
-  // Quinten Post の 2028-29 チームオプション（TO）
+  if (playerId === "1028047928" && seasonYear === 2028) return "TO"; // Quinten Post
+  if (playerId === "324" && seasonYear === 2027) return "PO"; // Malik Monk
+  if (playerId === "666743" && seasonYear === 2027) return null; // Terance Mann
+  if (playerId === "462" && seasonYear === 2027) return "TO"; // Moritz Wagner
+  if (playerId === "38017507" && seasonYear === 2027) return null; // Andrew Nembhard
+  if (playerId === "493" && seasonYear === 2027) return null; // Ivica Zubac
+  if (playerId === "44477085" && seasonYear === 2027) return "TO"; // Quenton Jackson
   if (
-    seasonYear === 2028 &&
-    notes?.some((n) => typeof n === "string" && (n.includes("Post") || n.includes("Draft"))) &&
-    contractMeta?.contractYears === 3
+    (playerId === "1028217445" || playerId === "1057275262") &&
+    (seasonYear === 2027 || seasonYear === 2028)
   ) {
-    return "TO";
+    return "TO"; // Traore
   }
+  if (playerId === "210" && seasonYear === 2027) return "TO"; // Buddy Hield
+  if (playerId === "17896078" && seasonYear === 2028) return "TO"; // Aaron Wiggins
+  if (playerId === "85" && seasonYear === 2028) return "TO"; // Wendell Carter Jr.
 
-  // Malik Monk の 2027-28 プレイヤーオプション（PO）
-  if (
-    seasonYear === 2027 &&
-    notes?.some((n) => typeof n === "string" && n.includes("Monk"))
-  ) {
-    return "PO";
-  }
-
-  // Moritz Wagner の 2027-28 チームオプション（TO）
-  if (
-    seasonYear === 2027 &&
-    notes?.some((n) => typeof n === "string" && (n.includes("Wagner") || n.includes("Moritz")))
-  ) {
-    return "TO";
-  }
-
-  // Quenton Jackson の 2027-28 チームオプション（TO）
-  if (
-    seasonYear === 2027 &&
-    notes?.some((n) => typeof n === "string" && (n.includes("Jackson") || n.includes("Draft")))
-  ) {
-    return "TO";
-  }
-
-  // NBA CBA規定: 1巡目ルーキースケール契約（4年契約）の3年目・4年目はチームオプション（Club Option）
+  // NBA CBA: 1巡目ルーキースケールの 3・4 年目のみ Team Option
+  // 基準は必ず draftYear（残シーズン先頭や contractYears=6 の結合は使わない）
+  // 延長契約・ドラフト+4 以降には適用しない
   if (contractMeta) {
     const ct = String(contractMeta.contractType ?? "").toLowerCase();
     const su = String(contractMeta.signedUsing ?? "").toLowerCase();
@@ -532,18 +404,13 @@ export function resolveOptionForSeasonYear(
         ct.includes("rookie") ||
         su.includes("rookie"));
 
-    const baseYear =
-      typeof contractMeta.startYear === "number" && contractMeta.startYear > 0
-        ? contractMeta.startYear
-        : typeof contractMeta.draftYear === "number" && contractMeta.draftYear > 0
+    const draftYear =
+      typeof contractMeta.draftYear === "number" && contractMeta.draftYear > 0
         ? contractMeta.draftYear
         : 0;
 
-    const contractYears = typeof contractMeta.contractYears === "number" ? contractMeta.contractYears : 4;
-
-    // ルーキー契約の期間（通常4年）内かつ、3年目・4年目のみ TO
-    if (isRookieScale && baseYear > 0 && seasonYear < baseYear + contractYears) {
-      if (seasonYear === baseYear + 2 || seasonYear === baseYear + 3) {
+    if (isRookieScale && draftYear > 0) {
+      if (seasonYear === draftYear + 2 || seasonYear === draftYear + 3) {
         return "TO";
       }
     }
@@ -650,59 +517,26 @@ export function mapBdlToPlayerContractSummary(
   const hasUpcomingExtension = Boolean(farthestAgg && farthestAgg !== currentAgg && farthestAgg.contract_type?.toLowerCase().includes("extension"));
   const activeAgg = currentAgg ?? farthestAgg;
   const contractMeta = {
-    contractType: hasUpcomingExtension ? "Extension" : (activeAgg?.contract_type ?? null),
+    contractType: hasUpcomingExtension
+      ? "Extension"
+      : (activeAgg?.contract_type ?? null),
     signedUsing: activeAgg?.signed_using ?? null,
     startYear: activeAgg?.start_year ?? null,
     contractYears: activeAgg?.contract_years ?? null,
     draftRound: activeAgg?.player?.draft_round ?? null,
     draftYear: activeAgg?.player?.draft_year ?? null,
+    playerId:
+      activeAgg?.player_id ??
+      farthestAgg?.player_id ??
+      currentAgg?.player_id ??
+      null,
   };
 
   for (const s of seasons) {
-    s.option = resolveOptionForSeasonYear(s.season, notes, contractMeta) ?? s.option ?? null;
-    if (activeAgg?.player_id === 57 && s.season === 2027) {
-      s.option = null;
-    }
-    if (activeAgg?.player_id === 66 && s.season === 2028) {
-      s.option = null;
-    }
-    if (activeAgg?.player_id === 158 && s.season === 2028) {
-      s.option = "PO";
-    }
-    if (activeAgg?.player_id === 443 && s.season === 2027) {
-      s.option = "PO";
-    }
-    if (activeAgg?.player_id === 475 && s.season === 2028) {
-      s.option = "PO";
-    }
-    if (activeAgg?.player_id === 17896024) {
-      if (s.season === 2027) s.option = null;
-      if (s.season === 2029) s.option = "PO";
-    }
-    if (activeAgg?.player_id === 1028047928 && s.season === 2028) {
-      s.option = "TO";
-    }
-    if (activeAgg?.player_id === 324 && s.season === 2027) {
-      s.option = "PO";
-    }
-    if (activeAgg?.player_id === 666743 && s.season === 2027) {
-      s.option = null;
-    }
-    if (activeAgg?.player_id === 462 && s.season === 2027) {
-      s.option = "TO";
-    }
-    if (activeAgg?.player_id === 38017507 && s.season === 2027) {
-      s.option = null;
-    }
-    if (activeAgg?.player_id === 493 && s.season === 2027) {
-      s.option = null;
-    }
-    if (activeAgg?.player_id === 44477085 && s.season === 2027) {
-      s.option = "TO";
-    }
-    if ((activeAgg?.player_id === 1028217445 || activeAgg?.player_id === 1057275262) && (s.season === 2027 || s.season === 2028)) {
-      s.option = "TO";
-    }
+    s.option =
+      resolveOptionForSeasonYear(s.season, notes, contractMeta) ??
+      s.option ??
+      null;
   }
 
   const spanYears =
