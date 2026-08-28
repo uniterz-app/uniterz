@@ -180,8 +180,8 @@ export function generateMatchupInsight(
 }
 
 /**
- * T-3h パッチ: 既存 brief の MATCHUP 欠場折り込み・CONTEXT・SCHEDULE を
- * 最新 injury / priorGames で差し替え。phase / sampleNote は維持。
+ * T-1h: 既存 brief に最新 injury / priorGames を反映した完全版。
+ * phase / sampleNote は再計算結果を採用（試合数が変わらない限り同じ）。
  */
 export function patchMatchupInsightInjuriesAndSchedule(
   existing: PredictProBrief,

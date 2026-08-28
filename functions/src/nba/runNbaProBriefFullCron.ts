@@ -1,5 +1,6 @@
 /**
- * JST 毎時 — tip 1h 前の試合に Pro Insight へケガ情報を反映した完全版を書く。
+ * JST 毎日 19:00 — 翌日窓の Pro Insight 初版をフル生成。
+ * （日次スタッツ ingest 18:00 のあと。ケガ反映の完全版は tip 1h 前の patch cron）
  *
  * env（どちらか）:
  *   NEXT_NBA_PRO_BRIEF_INGEST_URL  … 例 https://www.uniterz.app/api/admin/nba-pro-brief-ingest
@@ -22,12 +23,12 @@ function resolveProBriefIngestUrl(): string | null {
   );
 }
 
-export const runNbaProBriefPatchCron = onSchedule(
+export const runNbaProBriefFullCron = onSchedule(
   {
-    schedule: "15 * * * *",
+    schedule: "0 19 * * *",
     timeZone: "Asia/Tokyo",
     region: "asia-northeast1",
-    timeoutSeconds: 300,
+    timeoutSeconds: 540,
     memory: "512MiB",
     secrets: [INTERNAL_JOB_SECRET],
   },
@@ -36,7 +37,7 @@ export const runNbaProBriefPatchCron = onSchedule(
     const secret = INTERNAL_JOB_SECRET.value()?.trim();
     if (!url || !secret) {
       console.warn(
-        "[runNbaProBriefPatchCron] skip: missing NEXT_NBA_PRO_BRIEF_INGEST_URL (or DAILY URL) or INTERNAL_JOB_SECRET"
+        "[runNbaProBriefFullCron] skip: missing NEXT_NBA_PRO_BRIEF_INGEST_URL (or DAILY URL) or INTERNAL_JOB_SECRET"
       );
       return;
     }
@@ -47,15 +48,15 @@ export const runNbaProBriefPatchCron = onSchedule(
         "content-type": "application/json",
         "x-internal-job-secret": secret,
       },
-      body: JSON.stringify({ mode: "patch" }),
+      body: JSON.stringify({ mode: "full", fullHorizonHours: 36 }),
     });
     const text = await res.text().catch(() => "");
     if (!res.ok) {
       console.error(
-        `[runNbaProBriefPatchCron] failed: ${res.status} ${text.slice(0, 800)}`
+        `[runNbaProBriefFullCron] failed: ${res.status} ${text.slice(0, 800)}`
       );
-      throw new Error(`nba-pro-brief-ingest patch HTTP ${res.status}`);
+      throw new Error(`nba-pro-brief-ingest full HTTP ${res.status}`);
     }
-    console.log(`[runNbaProBriefPatchCron] ok: ${text.slice(0, 1200)}`);
+    console.log(`[runNbaProBriefFullCron] ok: ${text.slice(0, 1200)}`);
   }
 );

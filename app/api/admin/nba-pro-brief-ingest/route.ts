@@ -21,8 +21,8 @@ import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
  *   gameIds?: string[]
  * }
  *
- * full … 翌日窓の試合をフル生成（前日バッチ）
- * patch … tip 3h 前の試合だけケガ・日程差し替え（T-3h）
+ * full … 翌日窓の試合をフル生成（前日 19:00）
+ * patch … tip 1h 前の試合にケガ情報を反映した完全版
  */
 export async function POST(req: Request) {
   try {

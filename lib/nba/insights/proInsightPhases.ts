@@ -26,10 +26,10 @@ export function proBriefSampleNote(gamesPlayed: number): {
   };
 }
 
-/** 試合開始何 ms 前から T-3h パッチ対象か */
-export const PRO_BRIEF_PATCH_BEFORE_TIP_MS = 3 * 60 * 60 * 1000;
+/** 試合開始何 ms 前からケガ反映パッチ対象か（T-1h） */
+export const PRO_BRIEF_PATCH_BEFORE_TIP_MS = 1 * 60 * 60 * 1000;
 
-/** パッチ窓: tip の 3h 前〜 tip（開始後は触らない） */
+/** パッチ窓: tip の 1h 前〜 tip（開始後は触らない） */
 export function isWithinProBriefPatchWindow(
   tipAtMs: number,
   nowMs: number = Date.now()

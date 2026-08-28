@@ -104,7 +104,7 @@ export default function NbaPredictToolsTabs({
   }, [tab]);
 
   /**
-   * モックへは落とさない。本番は games.proBrief（前日生成 / T-3h パッチ）。
+   * モックへは落とさない。本番は games.proBrief（前日 19:00 初版 / tip 1h 前ケガ反映）。
    * brief prop があれば優先（プレビュー用）。
    */
   const { brief: liveBrief, loading: briefLoading } = useNbaMatchupProBrief({

@@ -48,7 +48,9 @@ export {
 export { runNbaStatsDailyIngestCron } from "./nba/runNbaStatsDailyIngestCron";
 // NBA スタッツ週次（ペイロール + 契約）
 export { runNbaStatsWeeklyIngestCron } from "./nba/runNbaStatsWeeklyIngestCron";
-// Pro Insight T-3h パッチ（毎時）
+// Pro Insight 前日 19:00 フル生成
+export { runNbaProBriefFullCron } from "./nba/runNbaProBriefFullCron";
+// Pro Insight tip 1h 前ケガ反映（毎時）
 export { runNbaProBriefPatchCron } from "./nba/runNbaProBriefPatchCron";
 // NBA ライブ試合スコア / box（60 秒）— オフシーズンは停止。再開時に export を戻す
 // export { runNbaLiveGamesIngestCron } from "./nba/runNbaLiveGamesIngestCron";

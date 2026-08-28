@@ -171,15 +171,15 @@ npx tsx scripts/ingest-nba-team-ace-out-records.ts 2025-26 --force
 ### 生成・保存（全ユーザー共通スナップショット）
 
 ```
-前日フル生成 → games/{gameId}.proBrief
-T-3h（試合開始 3 時間前）→ ケガ・連戦・移動だけ差し替え
+前日 19:00 JST フル生成 → games/{gameId}.proBrief（初版）
+tip 1h 前 → ケガ情報を反映した完全版
 クライアント → Firestore / 公開 API を読むだけ（開くたびに再計算しない）
 ```
 
 | いつ | 何をする |
 |---|---|
-| **前日**（日次 ingest 後） | MATCHUP / SCHEDULE / CONTEXT をフル生成して保存 |
-| **T-3h** | injury 折り込み・CONTEXT 欠場・SCHEDULE だけパッチ |
+| **前日 19:00 JST** | MATCHUP / SCHEDULE / CONTEXT をフル生成して保存（初版） |
+| **tip 1h 前** | BDL から最新ケガを再取得し、injury を折り込んだ完全版を保存 |
 
 LLM なし。コスト ≈ $0（Cloud Functions / Next の CPU のみ）。
 

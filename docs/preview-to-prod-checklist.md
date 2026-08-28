@@ -345,7 +345,7 @@ Web / Native 同じルール。Settings モーダルは SafeArea 済みのため
   - Injury Report（日付フィード。Available は出さない）
   - Roster（チーム単位。Injury を overlay）
   - 2チーム STATS — `nbaLeagueTeamStats` から HOME/AWAY を切る（別モックをやめる）
-  - Pro Insight Brief — 仕様は [`docs/pro-insight-design.md`](pro-insight-design.md)。材料はリーグスナップショット、完成品は `games/{gameId}.proBrief`（前日生成、T-3h にケガ・移動だけ差し替え）
+  - Pro Insight Brief — 仕様は [`docs/pro-insight-design.md`](pro-insight-design.md)。材料はリーグスナップショット、完成品は `games/{gameId}.proBrief`（前日 19:00 初版、tip 1h 前にケガ反映の完全版）
 - [ ] **キャッシュ鮮度・障害時フォールバック** — CDN `s-maxage` の本番値、ingest 失敗時は直前スナップショットを出す（クライアントモックへ落とさない）
 - [ ] **アワード予想: 選手・コーチ名簿の取得**（サジェスト用）
 - [ ] **アワード予想: 他ユーザー選択の人気 Top 5 集計**（空入力時の初期候補）

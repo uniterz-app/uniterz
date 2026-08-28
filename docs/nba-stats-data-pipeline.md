@@ -91,8 +91,8 @@ Pro Insight:
 
 | 何 | 入口 |
 |---|---|
-| 前日フル | 日次 ingest 末尾 `pro-brief-full` / `POST /api/admin/nba-pro-brief-ingest` `{ "mode": "full" }` |
-| T-3h パッチ | Firebase `runNbaProBriefPatchCron`（毎時 :15 JST）`{ "mode": "patch" }` |
+| 前日 19:00 フル（初版） | Firebase `runNbaProBriefFullCron` → `POST /api/admin/nba-pro-brief-ingest` `{ "mode": "full" }` |
+| tip 1h 前（ケガ反映の完全版） | Firebase `runNbaProBriefPatchCron`（毎時 :15 JST）`{ "mode": "patch" }` |
 | 前季成績 | `nbaTeamSeasonRecords/{priorSeason}`（games から home/away・H2H・対.500・対カンファ上位6） |
 | 公開 | `GET /api/nba/matchup-insight?gameId=` → `games/{id}.proBrief` |
 | 保存 | `games/{id}.proBrief` |

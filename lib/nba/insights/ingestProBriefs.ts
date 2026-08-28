@@ -1,7 +1,7 @@
 /**
  * Pro Insight を games/{id}.proBrief に書き込む。
- * mode full: 対象窓の試合をフル生成
- * mode patch: tip まで 3h 以内の試合だけケガ・日程パッチ
+ * mode full: 対象窓の試合をフル生成（前日 19:00 JST）
+ * mode patch: tip まで 1h 以内の試合にケガ情報を反映
  */
 import { FieldValue, Timestamp, type Firestore } from "firebase-admin/firestore";
 import {
@@ -261,7 +261,22 @@ export async function ingestNbaProBriefs(
     );
   }
 
-  const injurySnap = await loadTeamInjuriesSnapshot(db, seasonKey);
+  let injurySnap = await loadTeamInjuriesSnapshot(db, seasonKey);
+  if (mode === "patch") {
+    // tip 1h 前: BDL から最新ケガを取り直してから完全版を書く
+    try {
+      const { ingestNbaTeamInjuriesFromBdl } = await import(
+        "@/lib/nba/ingest/nbaTeamInjuriesIngest"
+      );
+      await ingestNbaTeamInjuriesFromBdl(db, { seasonKey });
+      injurySnap = await loadTeamInjuriesSnapshot(db, seasonKey);
+    } catch (e) {
+      console.warn(
+        "[ingestNbaProBriefs] injury refresh before patch failed; using last snapshot",
+        e instanceof Error ? e.message : e
+      );
+    }
+  }
   const injuryTeams = injurySnap.bundle.teams;
 
   let games: Array<{ id: string; data: Record<string, unknown> }>;
@@ -273,10 +288,10 @@ export async function ingestNbaProBriefs(
       .filter((d) => d.exists)
       .map((d) => ({ id: d.id, data: d.data() as Record<string, unknown> }));
   } else if (mode === "patch") {
-    // tip まで最大 3h + 少し余裕
+    // tip まで最大 1h + 少し余裕（毎時 cron が窓を拾う）
     games = await loadUpcomingNbaGames(db, {
       fromMs: nowMs,
-      toMs: nowMs + 3.5 * 60 * 60 * 1000,
+      toMs: nowMs + 1.5 * 60 * 60 * 1000,
       limit: 40,
     });
   } else {
