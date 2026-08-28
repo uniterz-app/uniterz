@@ -57,6 +57,7 @@ import LiveGameStatsPanelNative from "./live/LiveGameStatsPanelNative";
 import LiveGameStatsPlaceholderNative from "./live/LiveGameStatsPlaceholderNative";
 import { useLiveGameStats } from "../../../../../lib/games/useLiveGameStats";
 import { getUniterzApiBaseUrl } from "./submitPredictionApi";
+import { useAppActiveNative } from "../../hooks/useAppActiveNative";
 import CountryFlagNative from "./CountryFlagNative";
 import NbaTopScorerPickerNative from "./predict/NbaTopScorerPickerNative";
 import {
@@ -1099,10 +1100,11 @@ export default function PredictModal({
   const liveStatsGameId = showNbaLiveGameStats
     ? predictData?.gameId ?? null
     : null;
+  const appActive = useAppActiveNative();
   const { report: liveStatsReport, loading: liveStatsLoading } = useLiveGameStats(
     liveStatsGameId,
     showNbaLiveGameStats,
-    { apiBaseUrl: getUniterzApiBaseUrl() }
+    { apiBaseUrl: getUniterzApiBaseUrl(), paused: !appActive }
   );
   /** Web 同様モックには落とさない（実在しない選手を賭け対象にしない） */
   const nbaTopScorerCandidates = useMemo(

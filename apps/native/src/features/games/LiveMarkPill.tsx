@@ -1,5 +1,6 @@
 /**
  * 試合ライブ中の「LIVE」ピル。赤く発光するパルス（reduce-motion 時は静止）。
+ * タブ裏・App 非アクティブではループを止める（見た目は最終フレーム維持）。
  */
 import { useEffect } from "react";
 import { Text, type StyleProp, type TextStyle, type ViewStyle } from "react-native";
@@ -14,6 +15,7 @@ import Animated, {
   withSequence,
   withTiming,
 } from "react-native-reanimated";
+import { useScreenActiveNative } from "../../hooks/useScreenActiveNative";
 
 type LiveMarkPillProps = {
   pillStyle: StyleProp<ViewStyle>;
@@ -24,10 +26,11 @@ const LIVE_MATCH_MARK_GLOW_HALF_MS = 925;
 
 export function LiveMarkPill({ pillStyle, textStyle }: LiveMarkPillProps) {
   const reduceMotion = useReducedMotion() ?? false;
+  const screenActive = useScreenActiveNative();
   const glow = useSharedValue(0);
 
   useEffect(() => {
-    if (reduceMotion) {
+    if (reduceMotion || !screenActive) {
       cancelAnimation(glow);
       glow.value = 0;
       return;
@@ -49,7 +52,7 @@ export function LiveMarkPill({ pillStyle, textStyle }: LiveMarkPillProps) {
       false
     );
     return () => cancelAnimation(glow);
-  }, [reduceMotion, glow]);
+  }, [reduceMotion, screenActive, glow]);
 
   const animatedStyle = useAnimatedStyle(() => {
     const t = glow.value;

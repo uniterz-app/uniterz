@@ -51,7 +51,7 @@ function resolveLineFrameLabels(
 
 type ScreenStyles = Record<string, ViewStyle | TextStyle | ImageStyle>;
 
-type GameCardListProps = {
+export type GameCardListProps = {
   games: Array<Record<string, unknown>>;
   /** false のときは日付切替などでカードの入場アニメを付けない（再マウント時のがたつき防止） */
   enteringAnimationEnabled?: boolean;
@@ -113,7 +113,7 @@ type GameCardListRowProps = GameCardListProps & {
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 /** 試合一覧行：Reanimated による depth reveal / bottom-up 入場 */
-const GameCardListRow = memo(function GameCardListRow(props: GameCardListRowProps) {
+export const GameCardListRow = memo(function GameCardListRow(props: GameCardListRowProps) {
   const {
     game,
     rowIndex,
@@ -644,6 +644,18 @@ const GameCardListRow = memo(function GameCardListRow(props: GameCardListRowProp
   );
 });
 
+export function GameCardListEmpty({ label }: { label: string }) {
+  return (
+    <View
+      accessibilityRole="text"
+      accessibilityLabel={label}
+      style={emptyStyles.wrap}
+    >
+      <Text style={emptyStyles.label}>NO DATA</Text>
+    </View>
+  );
+}
+
 export default function GameCardList(props: GameCardListProps) {
   const { games, t, styles, enteringAnimationEnabled = true, entranceVariant = "full" } = props;
   const tutorialPickupGameId = resolveTutorialPickupGameId(games);
@@ -651,15 +663,7 @@ export default function GameCardList(props: GameCardListProps) {
   return (
     <View style={styles.listArea}>
       <View style={styles.listContent}>
-        {games.length === 0 ? (
-          <View
-            accessibilityRole="text"
-            accessibilityLabel={t.noGames}
-            style={emptyStyles.wrap}
-          >
-            <Text style={emptyStyles.label}>NO DATA</Text>
-          </View>
-        ) : null}
+        {games.length === 0 ? <GameCardListEmpty label={t.noGames} /> : null}
         {games.map((game, idx) => {
           const rowKey = String(game.id ?? "") || `game-${idx}`;
           return (

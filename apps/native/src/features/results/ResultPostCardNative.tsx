@@ -25,7 +25,7 @@ import { isResultPostLiveGame, isResultPostMatchStarted } from "../../../../../l
 import { resolvePkScoreFromResultPost } from "../../../../../lib/games/pkScore";
 import { buildResultShareUrl, getShareAppOrigin } from "../../../../../lib/share/shareAppUrls";
 import { getTeamAlias, splitTeamNameByLeague } from "../../utils/teamName";
-import JerseyMarkAdaptive from "../games/JerseyMarkAdaptive";
+import DeferredJerseyMarkNative from "../games/DeferredJerseyMarkNative";
 import CountryFlagNative from "../games/CountryFlagNative";
 import {
   isWcKnockoutGame,
@@ -774,7 +774,7 @@ export default function ResultPostCardNative({
                     <View
                       style={{ transform: [{ scaleX: JERSEY_WIDTH_SCALE }] }}
                     >
-                      <JerseyMarkAdaptive
+                      <DeferredJerseyMarkNative
                         accent={homeJersey.primary}
                         accentEnd={homeJersey.secondary}
                         size={JERSEY_SIZE_RESULT}
@@ -826,7 +826,7 @@ export default function ResultPostCardNative({
                     <View
                       style={{ transform: [{ scaleX: JERSEY_WIDTH_SCALE }] }}
                     >
-                      <JerseyMarkAdaptive
+                      <DeferredJerseyMarkNative
                         accent={awayJersey.primary}
                         accentEnd={awayJersey.secondary}
                         size={JERSEY_SIZE_RESULT}

@@ -1,9 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement, type RefObject } from "react";
 import { cyberAlert } from "../../components/cyberAlert";
 import {
   Platform, Pressable, RefreshControl, SectionList, StyleSheet, Text, View, type ViewStyle,
+  type RefreshControlProps,
 } from "react-native";
-import { useNavigation, useFocusEffect, useRoute } from "@react-navigation/native";
+import { useNavigation, useFocusEffect, useRoute, useIsFocused } from "@react-navigation/native";
+import { useAppActiveNative } from "../../hooks/useAppActiveNative";
 import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RouteProp } from "@react-navigation/native";
@@ -23,7 +25,10 @@ import {
 } from "../profile/profileUserDocCacheNative";
 import { colors, spacing, typography } from "../../theme/tokens";
 import { getTeamAlias, splitTeamNameByLeague } from "../../utils/teamName";
-import JerseyMarkAdaptive from "../games/JerseyMarkAdaptive";
+import {
+  ScrollVisibilityProvider,
+  useScrollVisibilityOnScroll,
+} from "../games/ScrollVisibilityNative";
 import CountryFlagNative from "../games/CountryFlagNative";
 import { resolvePostListLeague, LEAGUES } from "../../../../../lib/leagues";
 import type { SectionList as SectionListType } from "react-native";
@@ -273,6 +278,9 @@ export default function ResultHomeScreen({
   bottomReserveY?: number;
 }) {
   const { fUser } = useFirebaseUser();
+  const isFocused = useIsFocused();
+  const appActive = useAppActiveNative();
+  const listTickActive = isFocused && appActive;
   const tabNavigation = useNavigation<BottomTabNavigationProp<MainTabParamList>>();
   const stackNavigation =
     useNavigation<NativeStackNavigationProp<ResultStackParamList>>();
@@ -330,9 +338,10 @@ export default function ResultHomeScreen({
 
   const [listNowTick, setListNowTick] = useState(() => Date.now());
   useEffect(() => {
+    if (!listTickActive) return;
     const id = setInterval(() => setListNowTick(Date.now()), 30_000);
     return () => clearInterval(id);
-  }, []);
+  }, [listTickActive]);
 
   const [detailPostId, setDetailPostId] = useState<string | null>(null);
   const [deleteConfirmPost, setDeleteConfirmPost] = useState<PostWithMillis | null>(null);
@@ -388,10 +397,10 @@ export default function ResultHomeScreen({
 
   /** 未精算カードがある間は定期再取得（Cloud Functions 精算完了を待つ） */
   useEffect(() => {
-    if (!hasPendingSettlement) return;
+    if (!hasPendingSettlement || !listTickActive) return;
     const id = setInterval(() => void refreshPostsRef.current(), 120_000);
     return () => clearInterval(id);
-  }, [hasPendingSettlement]);
+  }, [hasPendingSettlement, listTickActive]);
 
   const [resultFilters, setResultFilters] = useState<ResultFilterState>({
     ...DEFAULT_RESULT_LIST_FILTERS,
@@ -583,6 +592,7 @@ export default function ResultHomeScreen({
   );
 
   return (
+    <ScrollVisibilityProvider margin={360}>
     <View style={styles.resultScreenWrap}>
     <View style={styles.root}>
       {showInitialSpinner ? (
@@ -595,24 +605,16 @@ export default function ResultHomeScreen({
           {listEmpty}
         </View>
       ) : (
-        <SectionList<PostWithMillis, SectionT>
-          ref={resultListRef}
+        <ResultSectionListWithVisibility
+          listRef={resultListRef}
           style={styles.listScroll}
           sections={sections}
-          keyExtractor={(item) => item.id}
-          stickySectionHeadersEnabled={false}
-          initialNumToRender={4}
-          maxToRenderPerBatch={4}
-          windowSize={7}
-          removeClippedSubviews={Platform.OS === "android"}
           contentContainerStyle={listContentWithBottomPad}
           ListHeaderComponent={listHeader}
           ListEmptyComponent={listEmpty}
           scrollEnabled={tutorialListScrollEnabled}
-          bounces={tutorialListScrollEnabled}
-          scrollEventThrottle={16}
-          onScroll={(e) => {
-            resultScrollYRef.current = e.nativeEvent.contentOffset.y;
+          onScrollY={(y) => {
+            resultScrollYRef.current = y;
           }}
           ListFooterComponent={
             loading && sections.some((s) => s.data.length > 0) ? (
@@ -629,7 +631,6 @@ export default function ResultHomeScreen({
             />
           }
           onEndReached={() => loadMore()}
-          onEndReachedThreshold={0.4}
           renderSectionHeader={({ section }) => {
             const sid = `${section.dateLabel}:${section.baseFlatIndex}`;
             const isInitialHeader = initialSectionIdSet?.has(sid) ?? false;
@@ -675,7 +676,6 @@ export default function ResultHomeScreen({
               />
             );
           }}
-          SectionSeparatorComponent={null}
         />
       )}
     </View>
@@ -701,6 +701,75 @@ export default function ResultHomeScreen({
       />
     </View>
     </View>
+    </ScrollVisibilityProvider>
+  );
+}
+
+function ResultSectionListWithVisibility({
+  listRef,
+  style,
+  sections,
+  contentContainerStyle,
+  ListHeaderComponent,
+  ListEmptyComponent,
+  scrollEnabled,
+  onScrollY,
+  ListFooterComponent,
+  refreshControl,
+  onEndReached,
+  renderSectionHeader,
+  renderItem,
+}: {
+  listRef: RefObject<SectionListType<PostWithMillis, SectionT> | null>;
+  style: ViewStyle | ViewStyle[];
+  sections: SectionT[];
+  contentContainerStyle: object;
+  ListHeaderComponent: ReactElement | null;
+  ListEmptyComponent: ReactElement | null;
+  scrollEnabled: boolean;
+  onScrollY: (y: number) => void;
+  ListFooterComponent: ReactElement | null;
+  refreshControl: ReactElement<RefreshControlProps>;
+  onEndReached: () => void;
+  renderSectionHeader: (info: {
+    section: SectionT;
+  }) => ReactElement;
+  renderItem: (info: {
+    item: PostWithMillis;
+    index: number;
+    section: SectionT;
+  }) => ReactElement;
+}) {
+  const onVis = useScrollVisibilityOnScroll();
+  return (
+    <SectionList<PostWithMillis, SectionT>
+      ref={listRef}
+      style={style}
+      sections={sections}
+      keyExtractor={(item) => item.id}
+      stickySectionHeadersEnabled={false}
+      initialNumToRender={4}
+      maxToRenderPerBatch={4}
+      windowSize={7}
+      removeClippedSubviews={Platform.OS === "android"}
+      contentContainerStyle={contentContainerStyle}
+      ListHeaderComponent={ListHeaderComponent}
+      ListEmptyComponent={ListEmptyComponent}
+      scrollEnabled={scrollEnabled}
+      bounces={scrollEnabled}
+      scrollEventThrottle={16}
+      onScroll={(e) => {
+        onScrollY(e.nativeEvent.contentOffset.y);
+        onVis?.(e);
+      }}
+      ListFooterComponent={ListFooterComponent}
+      refreshControl={refreshControl}
+      onEndReached={onEndReached}
+      onEndReachedThreshold={0.4}
+      renderSectionHeader={renderSectionHeader}
+      renderItem={renderItem}
+      SectionSeparatorComponent={null}
+    />
   );
 }
 

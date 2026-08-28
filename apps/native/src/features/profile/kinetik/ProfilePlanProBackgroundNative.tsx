@@ -19,6 +19,7 @@ import Animated, {
   withRepeat,
   withTiming,
 } from "react-native-reanimated";
+import { useScreenActiveNative } from "../../../hooks/useScreenActiveNative";
 import {
   PROFILE_PLAN_PRO_BG_DEFAULT,
   PROFILE_PLAN_PRO_BG_DEPTH_TIMING,
@@ -1457,7 +1458,8 @@ export default function ProfilePlanProBackgroundNative({
   accentReady = true,
 }: Props) {
   const reduceMotion = useReducedMotion();
-  const shouldAnimate = animate && reduceMotion !== true;
+  const screenActive = useScreenActiveNative();
+  const shouldAnimate = animate && reduceMotion !== true && screenActive;
 
   if (width <= 0 || height <= 0) return null;
 

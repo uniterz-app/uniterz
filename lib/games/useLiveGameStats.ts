@@ -18,6 +18,11 @@ export type UseLiveGameStatsOptions = {
   loadGameDoc?: (
     gameId: string
   ) => Promise<Record<string, unknown> | null>;
+  /**
+   * true の間は次回ポーリングを止める（報告は保持）。
+   * タブ裏・AppState inactive 用。enabled を落とすと report がクリアされる。
+   */
+  paused?: boolean;
 };
 
 /**
@@ -34,12 +39,17 @@ export function useLiveGameStats(
   const [loading, setLoading] = useState(false);
   const reportRef = useRef<LiveGameStatsReport | null>(null);
   const apiBase = (options?.apiBaseUrl ?? "").replace(/\/+$/, "");
+  const paused = options?.paused === true;
   const loadGameDocRef = useRef(options?.loadGameDoc);
   loadGameDocRef.current = options?.loadGameDoc;
+  const pausedRef = useRef(paused);
+  pausedRef.current = paused;
+  const kickRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     reportRef.current = null;
     setReport(null);
+    kickRef.current = null;
 
     if (!gameId || !enabled) {
       setLoading(false);
@@ -49,6 +59,13 @@ export function useLiveGameStats(
     let alive = true;
     let timer: ReturnType<typeof setTimeout> | null = null;
     const abort = new AbortController();
+
+    const clearTimer = () => {
+      if (timer) {
+        clearTimeout(timer);
+        timer = null;
+      }
+    };
 
     const reportFromGameDoc = async (): Promise<LiveGameStatsReport | null> => {
       const loader = loadGameDocRef.current;
@@ -60,7 +77,20 @@ export function useLiveGameStats(
       return buildLiveGameStatsReport(gameId, game, live);
     };
 
+    const scheduleNext = () => {
+      clearTimer();
+      if (!alive) return;
+      if (reportRef.current?.phase === "final") return;
+      if (pausedRef.current) return;
+      timer = setTimeout(() => {
+        void fetchOnce();
+      }, LIVE_POLL_MS);
+    };
+
     const fetchOnce = async () => {
+      if (!alive) return;
+      if (pausedRef.current) return;
+
       let next: LiveGameStatsReport | null = null;
       try {
         if (apiBase) {
@@ -80,7 +110,6 @@ export function useLiveGameStats(
         }
       } catch (err) {
         if (err instanceof DOMException && err.name === "AbortError") return;
-        // API 失敗は Firestore フォールバックへ
       }
 
       if (!alive) return;
@@ -97,9 +126,14 @@ export function useLiveGameStats(
       reportRef.current = next;
       setReport(next);
       setLoading(false);
+      scheduleNext();
+    };
 
+    kickRef.current = () => {
+      if (!alive || pausedRef.current) return;
       if (reportRef.current?.phase === "final") return;
-      timer = setTimeout(fetchOnce, LIVE_POLL_MS);
+      clearTimer();
+      void fetchOnce();
     };
 
     setLoading(true);
@@ -108,9 +142,15 @@ export function useLiveGameStats(
     return () => {
       alive = false;
       abort.abort();
-      if (timer) clearTimeout(timer);
+      clearTimer();
+      kickRef.current = null;
     };
   }, [gameId, enabled, apiBase]);
+
+  useEffect(() => {
+    if (paused) return;
+    kickRef.current?.();
+  }, [paused]);
 
   return { report, loading };
 }

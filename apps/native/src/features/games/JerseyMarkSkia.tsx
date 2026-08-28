@@ -25,6 +25,11 @@ import {
   buildJerseyHalftoneDotList,
   jerseyStrokeWidthForSize,
 } from "./jerseyHalftoneModel";
+import {
+  getCachedJerseyPicture,
+  jerseyPictureCacheKey,
+  setCachedJerseyPicture,
+} from "./jerseyPictureCache";
 
 type JerseyMarkSkiaProps = {
   accent: string;
@@ -109,10 +114,14 @@ export default function JerseyMarkSkia({
   size = 56,
   density = "coarse",
 }: JerseyMarkSkiaProps) {
-  const picture = useMemo(
-    () => buildJerseyPicture(size, accent, accentEnd, density),
-    [size, accent, accentEnd, density]
-  );
+  const picture = useMemo(() => {
+    const key = jerseyPictureCacheKey(size, accent, accentEnd, density);
+    const hit = getCachedJerseyPicture(key);
+    if (hit) return hit;
+    const built = buildJerseyPicture(size, accent, accentEnd, density);
+    if (built) setCachedJerseyPicture(key, built);
+    return built;
+  }, [size, accent, accentEnd, density]);
   const glow = useMemo(
     () => accentRgbForJerseyGlow(accent, accentEnd),
     [accent, accentEnd]

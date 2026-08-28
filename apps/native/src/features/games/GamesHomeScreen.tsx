@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactElement, type RefObject } from "react";
 import { cyberAlert } from "../../components/cyberAlert";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect, useIsFocused, useNavigation } from "@react-navigation/native";
@@ -6,9 +6,10 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { GamesStackParamList } from "../../navigation/types";
 import { GestureDetector } from "react-native-gesture-handler";
 import {
-  Platform, Pressable, ScrollView, StyleSheet, Text, View,
+  Platform, Pressable, FlatList, StyleSheet, Text, View,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
+  type ListRenderItemInfo,
 } from "react-native";
 import { SkeletonScanNative } from "../../components/SkeletonScanNative";
 import Animated, { useReducedMotion } from "react-native-reanimated";
@@ -102,7 +103,16 @@ import {
   writePredictNextGameModalSkip,
 } from "./predictNextGameModalPrefs";
 import { scheduleAfterPredictModalDismissed } from "./scheduleAfterPredictModalDismissed";
-import GameCardList from "./GameCardList";
+import {
+  GameCardListEmpty,
+  GameCardListRow,
+  type GameCardListProps,
+} from "./GameCardList";
+import {
+  ScrollVisibilityProvider,
+  useScrollVisibilityOnScroll,
+} from "./ScrollVisibilityNative";
+import { resolveTutorialPickupGameId } from "../../../../../lib/tutorial/tutorialPickupGame";
 import TutorialLiveCoachNative from "../tutorial/TutorialLiveCoachNative";
 import TutorialWelcomeWorldCameraNative from "../tutorial/TutorialWelcomeWorldCameraNative";
 import TutorialLiveHostNative from "../tutorial/TutorialLiveHostNative";
@@ -210,7 +220,6 @@ import GamesDateNavigatorNative from "./GamesDateNavigatorNative";
 import { RankingsPageTitleCyberNative } from "../rankings/RankingsPageTitleCyberNative";
 import {
   gamesLeagueTitleEntering,
-  gamesScheduleShellDaySwitchEntering,
   gamesTopBarFilterEntering,
   useGamesListShellIntro,
 } from "./gamesPageMotion";
@@ -556,7 +565,7 @@ export default function GamesHomeScreen({
     marginMin: "",
     marginMax: "",
   });
-  const mainScrollRef = useRef<ScrollView | null>(null);
+  const mainScrollRef = useRef<FlatList<Record<string, unknown>> | null>(null);
   const mainScrollYRef = useRef(0);
   const didInitPreferredLeagueRef = useRef(false);
   /** preferredLeague（と表示名・言語）確定まで games フェッチを止める */
@@ -625,7 +634,7 @@ export default function GamesHomeScreen({
       scrollBy: (dy, animated) => {
         const y = Math.max(0, mainScrollYRef.current + dy);
         mainScrollYRef.current = y;
-        mainScrollRef.current?.scrollTo({ y, animated });
+        mainScrollRef.current?.scrollToOffset({ offset: y, animated });
       },
       getViewportInWindow: () =>
         new Promise((resolve) => {
@@ -634,7 +643,27 @@ export default function GamesHomeScreen({
             resolve(null);
             return;
           }
-          node.measureInWindow((_x, y, _w, h) => {
+          const measureTarget =
+            (
+              node as unknown as {
+                getNativeScrollRef?: () => View | null;
+                measureInWindow?: (
+                  cb: (x: number, y: number, w: number, h: number) => void
+                ) => void;
+              }
+            ).getNativeScrollRef?.() ?? node;
+          const measure = (
+            measureTarget as {
+              measureInWindow?: (
+                cb: (x: number, y: number, w: number, h: number) => void
+              ) => void;
+            }
+          ).measureInWindow;
+          if (!measure) {
+            resolve(null);
+            return;
+          }
+          measure.call(measureTarget, (_x: number, y: number, _w: number, h: number) => {
             resolve(h > 32 ? { y, height: h } : null);
           });
         }),
@@ -1513,7 +1542,7 @@ export default function GamesHomeScreen({
   }, [showInitialSkeleton]);
 
   useEffect(() => {
-    mainScrollRef.current?.scrollTo({ y: 0, animated: false });
+    mainScrollRef.current?.scrollToOffset({ offset: 0, animated: false });
   }, [selectedDate, selectedLeague, loading]);
 
   /**
@@ -2216,6 +2245,7 @@ export default function GamesHomeScreen({
   }
 
   return (
+    <ScrollVisibilityProvider margin={360}>
     <View style={styles.screenRoot}>
       <View style={screenShellStyle}>
       <TutorialWelcomeWorldCameraNative
@@ -2279,18 +2309,17 @@ export default function GamesHomeScreen({
       {brandShelfInCamera ? (
         <UniterzBrandShelfNative includeSafeAreaTop title="UNITERZ" />
       ) : null}
-      <ScrollView
-        ref={mainScrollRef}
+      <GestureDetector gesture={pageSwipeGesture}>
+      <GamesMainScrollNative
+        scrollRef={mainScrollRef}
         style={styles.mainScroll}
         contentContainerStyle={mainScrollContentStyle}
-        showsVerticalScrollIndicator={false}
-        contentInsetAdjustmentBehavior="never"
         scrollEnabled={!welcomeResting && tutorialUserScrollEnabled}
-        onScroll={(e: NativeSyntheticEvent<NativeScrollEvent>) => {
-          mainScrollYRef.current = e.nativeEvent.contentOffset.y;
+        onScrollY={(y) => {
+          mainScrollYRef.current = y;
         }}
-        scrollEventThrottle={16}
-      >
+        listHeader={
+          <>
       <View style={styles.gamesHeaderShell}>
         <View style={styles.gamesHeaderTitleRow}>
           <View style={styles.gamesHeaderSideLeft}>
@@ -2370,8 +2399,6 @@ export default function GamesHomeScreen({
       )}
       </View>
 
-      <GestureDetector gesture={pageSwipeGesture}>
-      <View>
       {showInitialSkeleton || predictionPaintPending ? (
         <View style={styles.skeletonList}>
           {SKELETON_ROWS.map((row) => (
@@ -2393,55 +2420,50 @@ export default function GamesHomeScreen({
           {t.fetchError}: {error}
         </Text>
       ) : null}
-
-      {!showInitialSkeleton && !predictionPaintPending && !error ? (
-        <Animated.View
-          key={`sched-${scheduleBlockKey}`}
-          entering={
-            webGamesMotion && richScheduleMotion
-              ? undefined
-              : webGamesMotion
-                ? gamesScheduleShellDaySwitchEntering()
-                : undefined
-          }
-        >
-          <GameCardList
-            games={filteredGames}
-            enteringAnimationEnabled={webGamesMotion}
-            entranceVariant={cardListEntranceVariant}
-            predictedGameIds={predictedGameIdsForList}
-            language={language}
-            t={t}
-            styles={{ ...styles, ...gameCardListStyles }}
-            openPredictModal={openPredictModal}
-            resolveGameTeamName={resolveGameTeamName}
-            toCompactTeamName={toCompactTeamName}
-            isSoccerLeague={isSoccerLeague}
-            resolveGameStatus={resolveGameStatus}
-            isGameStarted={isGameStarted}
-            resolveLeagueColor={resolveLeagueColor}
-            getGameCardCenterBlock={(game) => getGameCardCenterBlock(game, language)}
-            resolveSeriesLabel={resolveSeriesLabelForList}
-            resolveSeriesPair={resolveSeriesPairForList}
-            getTeamRecordLabel={formatSideRecord}
-            teamRecordById={teamRecordById}
-            resolveTeamJerseyPalette={resolveTeamJerseyPalette}
-            tutorialPulseFirstCard={tutorialPhase === "tapCard"}
-            tutorialPulseLabel={
-              tutorialPhase === "tapCard"
-                ? tutorialCopy.tutorial.pulseHint
-                : undefined
-            }
-            tutorialRegisterMatchCard={tutorialPhase === "tapCard"}
-            tutorialRegisterPickupLabel={tutorialPhase === "gamesPickup"}
-            shellVariant="lineFrame"
-            pickupMark="left"
-          />
-        </Animated.View>
-      ) : null}
-      </View>
+          </>
+        }
+        games={
+          !showInitialSkeleton && !predictionPaintPending && !error
+            ? filteredGames
+            : []
+        }
+        showGameCards={
+          !showInitialSkeleton && !predictionPaintPending && !error
+        }
+        cardListProps={{
+          games: filteredGames,
+          enteringAnimationEnabled: webGamesMotion,
+          entranceVariant: cardListEntranceVariant,
+          predictedGameIds: predictedGameIdsForList,
+          language,
+          t,
+          styles: { ...styles, ...gameCardListStyles },
+          openPredictModal,
+          resolveGameTeamName,
+          toCompactTeamName,
+          isSoccerLeague,
+          resolveGameStatus,
+          isGameStarted,
+          resolveLeagueColor,
+          getGameCardCenterBlock: (game) =>
+            getGameCardCenterBlock(game, language),
+          resolveSeriesLabel: resolveSeriesLabelForList,
+          resolveSeriesPair: resolveSeriesPairForList,
+          getTeamRecordLabel: formatSideRecord,
+          teamRecordById,
+          resolveTeamJerseyPalette,
+          tutorialPulseFirstCard: tutorialPhase === "tapCard",
+          tutorialPulseLabel:
+            tutorialPhase === "tapCard"
+              ? tutorialCopy.tutorial.pulseHint
+              : undefined,
+          tutorialRegisterMatchCard: tutorialPhase === "tapCard",
+          tutorialRegisterPickupLabel: tutorialPhase === "gamePickup",
+          shellVariant: "lineFrame",
+          pickupMark: "left",
+        }}
+      />
       </GestureDetector>
-      </ScrollView>
       </View>
       </TutorialWelcomeWorldCameraNative>
 
@@ -2697,6 +2719,85 @@ export default function GamesHomeScreen({
       />
       </View>
     </View>
+    </ScrollVisibilityProvider>
+  );
+}
+
+type GamesMainScrollNativeProps = {
+  scrollRef: RefObject<FlatList<Record<string, unknown>> | null>;
+  style: object;
+  contentContainerStyle: object;
+  scrollEnabled: boolean;
+  onScrollY: (y: number) => void;
+  listHeader: ReactElement;
+  games: Array<Record<string, unknown>>;
+  showGameCards: boolean;
+  cardListProps: GameCardListProps;
+};
+
+function GamesMainScrollNative({
+  scrollRef,
+  style,
+  contentContainerStyle,
+  scrollEnabled,
+  onScrollY,
+  listHeader,
+  games,
+  showGameCards,
+  cardListProps,
+}: GamesMainScrollNativeProps) {
+  const onVisScroll = useScrollVisibilityOnScroll();
+  const tutorialPickupGameId = resolveTutorialPickupGameId(games);
+  const listStyles = cardListProps.styles;
+
+  const renderItem = useCallback(
+    ({ item, index }: ListRenderItemInfo<Record<string, unknown>>) => (
+      <GameCardListRow
+        {...cardListProps}
+        enteringAnimationEnabled={cardListProps.enteringAnimationEnabled ?? true}
+        entranceVariant={cardListProps.entranceVariant ?? "full"}
+        game={item}
+        rowIndex={index}
+        tutorialPickupGameId={tutorialPickupGameId}
+      />
+    ),
+    [cardListProps, tutorialPickupGameId]
+  );
+
+  return (
+    <FlatList
+      ref={scrollRef}
+      style={style}
+      contentContainerStyle={[
+        contentContainerStyle,
+        showGameCards ? listStyles.listArea : null,
+        showGameCards ? listStyles.listContent : null,
+        // FlatList は ItemSeparator で行間を取る（gap と二重にしない）
+        showGameCards ? { gap: 0 } : null,
+      ]}
+      data={showGameCards ? games : []}
+      keyExtractor={(game, idx) => String(game.id ?? "") || `game-${idx}`}
+      ListHeaderComponent={listHeader}
+      ListEmptyComponent={
+        showGameCards && games.length === 0 ? (
+          <GameCardListEmpty label={cardListProps.t.noGames} />
+        ) : null
+      }
+      renderItem={renderItem}
+      showsVerticalScrollIndicator={false}
+      contentInsetAdjustmentBehavior="never"
+      scrollEnabled={scrollEnabled}
+      onScroll={(e: NativeSyntheticEvent<NativeScrollEvent>) => {
+        onScrollY(e.nativeEvent.contentOffset.y);
+        onVisScroll?.(e);
+      }}
+      scrollEventThrottle={16}
+      initialNumToRender={6}
+      maxToRenderPerBatch={5}
+      windowSize={7}
+      removeClippedSubviews={Platform.OS === "android"}
+      ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
+    />
   );
 }
 

@@ -1,6 +1,7 @@
 /**
  * Get Started 背景 — 黒地に、粒子の乗った一本のうねる帯。
  * 金銀枠とは別バリアント。塊（メタボール）は使わない。
+ * App が background / inactive のときは時刻を凍結して GPU 負荷を止める。
  */
 import { useMemo } from "react";
 import { StyleSheet, View, useWindowDimensions } from "react-native";
@@ -22,6 +23,7 @@ import {
   useReducedMotion,
 } from "react-native-reanimated";
 import { AUTH_LANDING } from "./authLandingPalette";
+import { useAppActiveNative } from "../../hooks/useAppActiveNative";
 
 const FROZEN_MS = 22000;
 const FOG_PEAK = AUTH_LANDING.fogPeak;
@@ -141,16 +143,43 @@ function WaveFallback({ width, height }: { width: number; height: number }) {
 export default function AuthLandingAmoebaFieldNative() {
   const { width, height } = useWindowDimensions();
   const reduceMotion = useReducedMotion();
+  const appActive = useAppActiveNative();
   const clock = useClock();
   const effect = useMemo(() => makeWaveEffect(), []);
+  const animate = !reduceMotion && appActive;
+
   const uniforms = useDerivedValue(() => ({
-    u_time: reduceMotion ? FROZEN_MS : clock.value,
+    u_time: animate ? clock.value : FROZEN_MS,
     u_res: [width, height],
     u_peak: FOG_PEAK,
   }));
 
   if (width <= 0 || height <= 0) {
     return <View pointerEvents="none" style={styles.root} />;
+  }
+
+  // 非アクティブ時は静的フォールバック（useClock 駆動の再描画を止める）
+  if (!animate) {
+    return (
+      <View pointerEvents="none" style={styles.root} collapsable={false}>
+        <Canvas style={{ width, height }} pointerEvents="none">
+          {effect ? (
+            <Fill>
+              <Shader
+                source={effect}
+                uniforms={{
+                  u_time: FROZEN_MS,
+                  u_res: [width, height],
+                  u_peak: FOG_PEAK,
+                }}
+              />
+            </Fill>
+          ) : (
+            <WaveFallback width={width} height={height} />
+          )}
+        </Canvas>
+      </View>
+    );
   }
 
   return (

@@ -11,6 +11,7 @@ import { db } from "../../lib/firebase";
 import { ResultCardDesignFaceNative } from "./ResultCardDesignPreviewScreenNative";
 import { useLiveGameStats } from "../../../../../lib/games/useLiveGameStats";
 import { getUniterzApiBaseUrl } from "../games/submitPredictionApi";
+import { useScreenActiveNative } from "../../hooks/useScreenActiveNative";
 import LiveGameStatsPanelNative from "../games/live/LiveGameStatsPanelNative";
 import LiveGameStatsPlaceholderNative from "../games/live/LiveGameStatsPlaceholderNative";
 import {
@@ -518,12 +519,14 @@ export default function ResultDetailBodyNative({
     String(view.card.league ?? "").toLowerCase() === "nba"
       ? view.card.gameId || null
       : null;
+  const screenActive = useScreenActiveNative();
   const { report: liveStatsReport, loading: liveStatsLoading } = useLiveGameStats(
     nbaGameId,
     Boolean(nbaGameId) && cardAndLiveStats,
     {
       apiBaseUrl: getUniterzApiBaseUrl(),
       loadGameDoc: loadGameDocForLiveStats,
+      paused: !screenActive,
     }
   );
   const cardTargetRef = useRef<View>(null);
