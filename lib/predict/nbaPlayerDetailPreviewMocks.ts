@@ -127,8 +127,8 @@ export type NbaPlayerContractSeason = {
   salaryRank: number;
   teamId: string;
   teamAbbr: string;
-  /** Player / Team option など */
-  option?: "PO" | "TO" | null;
+  /** Player / Team / Mutual option など */
+  option?: "PO" | "TO" | "MO" | null;
 };
 
 export type NbaPlayerContractSummary = {
