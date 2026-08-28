@@ -34,6 +34,8 @@ export type BdlTeamContractRow = {
     last_name?: string;
     position?: string | null;
     jersey_number?: string | null;
+    draft_round?: number | null;
+    draft_year?: number | null;
   } | null;
   team?: {
     id?: number;
