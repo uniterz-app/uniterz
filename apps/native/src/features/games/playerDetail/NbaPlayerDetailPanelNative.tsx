@@ -633,29 +633,36 @@ function PlayerVenueSplitsSectionNative({
       {splits.length === 0 ? (
         <PlayerDetailSectionNoDataNative accent={accent} />
       ) : (
-        <View style={[styles.splitTable, { borderColor: frame }]}>
-          <SplitTableRow
-            cols={["", "GP", "PTS", "REB", "AST", "+/-"]}
-            borderColor={line}
-            bottomBorder
-            header
-          />
-          {splits.map((row, i) => (
+        <>
+          <Text style={styles.splitHint}>
+            {isJa
+              ? "今季の出場試合からの平均"
+              : "Season average from games played"}
+          </Text>
+          <View style={[styles.splitTable, { borderColor: frame }]}>
             <SplitTableRow
-              key={row.venue}
-              cols={[
-                row.venue === "home" ? "HOME" : "AWAY",
-                String(row.games),
-                fmtSplitNumNative(row.pts),
-                fmtSplitNumNative(row.reb),
-                fmtSplitNumNative(row.ast),
-                `${row.plusMinus > 0 ? "+" : ""}${fmtSplitNumNative(row.plusMinus)}`,
-              ]}
+              cols={["", "GP", "PTS", "REB", "AST", "+/-"]}
               borderColor={line}
-              bottomBorder={i < splits.length - 1}
+              bottomBorder
+              header
             />
-          ))}
-        </View>
+            {splits.map((row, i) => (
+              <SplitTableRow
+                key={row.venue}
+                cols={[
+                  row.venue === "home" ? "HOME" : "AWAY",
+                  String(row.games),
+                  fmtSplitNumNative(row.pts),
+                  fmtSplitNumNative(row.reb),
+                  fmtSplitNumNative(row.ast),
+                  `${row.plusMinus > 0 ? "+" : ""}${fmtSplitNumNative(row.plusMinus)}`,
+                ]}
+                borderColor={line}
+                bottomBorder={i < splits.length - 1}
+              />
+            ))}
+          </View>
+        </>
       )}
     </View>
   );
@@ -688,8 +695,8 @@ function PlayerVsOpponentSectionNative({
         <>
           <Text style={styles.splitHint}>
             {isJa
-              ? "今季の対戦試合からの平均（プレビュー）"
-              : "Season average vs opponent (preview)"}
+              ? "今季の出場試合からの平均"
+              : "Season average from games played"}
           </Text>
           <View style={[styles.splitTable, { borderColor: frame }]}>
             <SplitTableRow

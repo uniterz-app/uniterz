@@ -811,6 +811,12 @@ function PlayerVenueSplitsSection({
       {splits.length === 0 ? (
         <PlayerDetailSectionNoData accent={accent} />
       ) : (
+      <>
+      <p className={`${nameOxanium.className} text-[10px] text-white/40`}>
+        {isJa
+          ? "今季の出場試合からの平均"
+          : "Season average from games played"}
+      </p>
       <div
         className="overflow-hidden border bg-black/50"
         style={{ borderColor: hexToRgba(accent, 0.4) }}
@@ -882,6 +888,7 @@ function PlayerVenueSplitsSection({
           </div>
         ))}
       </div>
+      </>
       )}
     </section>
   );
@@ -907,8 +914,8 @@ function PlayerVsOpponentSection({
         <>
       <p className={`${nameOxanium.className} text-[10px] text-white/40`}>
         {isJa
-          ? "今季の対戦試合からの平均（プレビュー）"
-          : "Season average vs opponent (preview)"}
+          ? "今季の出場試合からの平均"
+          : "Season average from games played"}
       </p>
       <div
         className="overflow-hidden border bg-black/50"

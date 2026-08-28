@@ -23,7 +23,35 @@ import type {
 import { nbaTwoWaySalaryForSeason } from "@/lib/nba/teamPayroll/mapBdlToTeamPayroll";
 import type { NbaTeamRosterDocTeam } from "@/lib/nba/teamRosters/teamRosterTypes";
 import { buildTeamHistoryFromCareerSeasons } from "@/lib/nba/playerDetail/buildTeamHistoryFromCareerSeasons";
+import { buildPlayerSplitsFromGameLogs } from "@/lib/nba/playerDetail/buildPlayerSplitsFromGameLogs";
 import { mergeCuratedPlayerAwards } from "@/lib/nba/playerAwards/nbaPlayerAwardSeasonWinners";
+import type { NbaPlayerSeasonMetricCell } from "@/lib/nba/playerSeasonMetrics/playerSeasonMetricsTypes";
+import type { NbaPlayerLeaderMetricId } from "@/lib/predict/nbaPlayerStatLeadersMocks";
+import {
+  formatPlayerLeaderValue,
+  isPlayerAdvancedLeaderMetric,
+} from "@/lib/predict/nbaPlayerStatLeadersMocks";
+
+/** 試合ログ表は直近だけ。Home/Away・vs Opp はフル配列から集計 */
+const GAME_LOG_UI_LIMIT = 20;
+
+const SEASON_TO_LEADER: Partial<
+  Record<NbaPlayerSeasonMetric["id"], NbaPlayerLeaderMetricId>
+> = {
+  pts: "pts",
+  reb: "reb",
+  ast: "ast",
+  stl: "stl",
+  blk: "blk",
+  tov: "tov",
+  min: "min",
+  fg_pct: "fg_pct",
+  fga: "fga",
+  fg3_pct: "fg3_pct",
+  fg3m: "fg3m",
+  fg3a: "fg3a",
+  ft_pct: "ft_pct",
+};
 
 export type PlayerRosterHit = {
   teamId: string;
@@ -210,7 +238,14 @@ export function applyPlayerGameLogsToPlayerDetail(
   gameLogs: NbaPlayerGameLog[] | null | undefined
 ): NbaPlayerDetailPreview {
   if (!gameLogs || gameLogs.length === 0) return detail;
-  return { ...detail, gameLogs };
+  const { venueSplits, vsOpponentSamples } =
+    buildPlayerSplitsFromGameLogs(gameLogs);
+  return {
+    ...detail,
+    gameLogs: gameLogs.slice(0, GAME_LOG_UI_LIMIT),
+    venueSplits,
+    vsOpponentSamples,
+  };
 }
 
 export function applyPlayerShotZonesToPlayerDetail(
@@ -219,6 +254,82 @@ export function applyPlayerShotZonesToPlayerDetail(
 ): NbaPlayerDetailPreview {
   if (!shotZones || shotZones.length === 0) return detail;
   return { ...detail, shotZones };
+}
+
+/** 選手単位メトリクス（全順位）で詳細の値・順位を上書き */
+export function applyPlayerSeasonMetricsToPlayerDetail(
+  detail: NbaPlayerDetailPreview,
+  metrics:
+    | Partial<Record<NbaPlayerLeaderMetricId, NbaPlayerSeasonMetricCell>>
+    | null
+    | undefined,
+  gamesPlayed?: number | null
+): NbaPlayerDetailPreview {
+  if (!metrics || Object.keys(metrics).length === 0) return detail;
+
+  const season = { ...detail.season };
+  if (gamesPlayed != null && gamesPlayed > 0) {
+    season.gamesPlayed = gamesPlayed;
+  }
+  const patch = (
+    key: keyof typeof season,
+    metric: NbaPlayerLeaderMetricId
+  ) => {
+    const cell = metrics[metric];
+    if (cell) (season as Record<string, number>)[key] = cell.value;
+  };
+  patch("pts", "pts");
+  patch("reb", "reb");
+  patch("ast", "ast");
+  patch("stl", "stl");
+  patch("blk", "blk");
+  patch("tov", "tov");
+  patch("min", "min");
+  patch("fgPct", "fg_pct");
+  patch("fg3Pct", "fg3_pct");
+  patch("ftPct", "ft_pct");
+  patch("fga", "fga");
+  patch("fg3m", "fg3m");
+  patch("fg3a", "fg3a");
+
+  const seasonMetrics = detail.seasonMetrics.map((m) => {
+    const leaderId = SEASON_TO_LEADER[m.id];
+    if (!leaderId) return m;
+    const cell = metrics[leaderId];
+    if (!cell) return m;
+    return {
+      ...m,
+      value: cell.value,
+      display: formatPlayerLeaderValue(leaderId, cell.value),
+      leagueRank: cell.rank,
+    };
+  });
+
+  const headlineMetrics = detail.headlineMetrics.map((m) => {
+    const hit = seasonMetrics.find((x) => x.id === m.id);
+    return hit ?? m;
+  });
+
+  const advancedMetrics = detail.advancedMetrics.map((m) => {
+    if (!isPlayerAdvancedLeaderMetric(m.id)) return m;
+    const cell = metrics[m.id];
+    if (!cell) return m;
+    return {
+      ...m,
+      value: cell.value,
+      display: formatPlayerLeaderValue(m.id, cell.value),
+      leagueRank: cell.rank,
+    };
+  });
+
+  return {
+    ...detail,
+    season,
+    seasonMetrics,
+    headlineMetrics,
+    advancedMetrics,
+    leaderMetrics: metrics,
+  };
 }
 
 export function availabilityFromInjury(

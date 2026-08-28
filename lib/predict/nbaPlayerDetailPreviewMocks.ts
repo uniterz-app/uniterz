@@ -7,6 +7,8 @@ import {
 import { lookupTeamDetailRosterPlayer } from "@/lib/predict/nbaTeamDetailPreviewMocks";
 import { nbaSeasonStatsReady } from "@/lib/predict/nbaSeasonStatsReady";
 import type { NbaRosterPlayer } from "@/lib/predict/nbaRoster";
+import type { NbaPlayerLeaderMetricId } from "@/lib/predict/nbaPlayerStatLeadersMocks";
+import type { NbaPlayerSeasonMetricCell } from "@/lib/nba/playerSeasonMetrics/playerSeasonMetricsTypes";
 
 /**
  * Player Detail 叩き台モック。
@@ -247,10 +249,17 @@ export type NbaPlayerDetailPreview = {
   birthDate: string | null;
   /** 所属履歴（古い順。現所属を含む） */
   teamHistory: NbaPlayerTeamStint[];
-  /** ホーム / アウェイ別（今季平均） */
+  /** ホーム / アウェイ別（今季出場試合の平均） */
   venueSplits: NbaPlayerVenueSplit[];
-  /** 対戦相手別サンプル（BDL game logs 相当・プレビュー） */
+  /** 対戦相手別（今季出場試合の平均） */
   vsOpponentSamples: NbaPlayerVsOpponentSample[];
+  /**
+   * 今季メトリクス（value + リーグ順位）。リーグ表 Top30 と別スナップショット。
+   * How They Play / 詳細順位の正。無いときは leaders Top30 にフォールバック。
+   */
+  leaderMetrics: Partial<
+    Record<NbaPlayerLeaderMetricId, NbaPlayerSeasonMetricCell>
+  >;
   asOfLabel: string;
 };
 
@@ -1720,6 +1729,7 @@ export function zeroPlayerDetailSeasonStats(
     availability: activeAvailability(),
     venueSplits: [],
     vsOpponentSamples: [],
+    leaderMetrics: {},
     asOfLabel: nbaSeasonStatsReady()
       ? detail.asOfLabel || "2026-27"
       : "PRESEASON · 2026-27",
@@ -1767,6 +1777,7 @@ function blankPlayerIdentity(playerId?: string): NbaPlayerDetailPreview {
     teamHistory: [],
     venueSplits: [],
     vsOpponentSamples: [],
+    leaderMetrics: {},
     asOfLabel: nbaSeasonStatsReady() ? "2026-27" : "PRESEASON · 2026-27",
   };
 }

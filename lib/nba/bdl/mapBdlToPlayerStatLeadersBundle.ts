@@ -38,6 +38,7 @@ import {
   NBA_PLAYER_ADVANCED_LEADER_METRICS,
   type NbaPlayerAdvancedLeaderMetric,
 } from "@/lib/predict/nbaPlayerStatLeadersAdvanced";
+import type { NbaPlayerSeasonMetricsWrite } from "@/lib/nba/playerSeasonMetrics/playerSeasonMetricsTypes";
 
 /** リーグ表チップ: 全選手から資格絞り → ソート後の上位 */
 const LEADER_BOARD_LIMIT = 30;
@@ -165,14 +166,45 @@ function rowOf(
   };
 }
 
-function sorted(
+type PlayerMetricsAccum = Map<
+  string,
+  {
+    teamId: string;
+    gamesPlayed: number;
+    metrics: Partial<
+      Record<NbaPlayerLeaderMetricId, { value: number; rank: number }>
+    >;
+  }
+>;
+
+/** 全出場選手に value+rank を書き、リーグ表用に Top N だけ返す */
+function commitBoard(
+  accum: PlayerMetricsAccum,
+  metric: NbaPlayerLeaderMetricId,
   rows: NbaPlayerStatLeaderRow[],
   higherIsBetter: boolean,
-  limit: number
+  limit: number = LEADER_BOARD_LIMIT
 ): NbaPlayerStatLeaderRow[] {
-  return [...rows]
-    .sort((a, b) => (higherIsBetter ? b.value - a.value : a.value - b.value))
-    .slice(0, limit);
+  const ordered = [...rows].sort((a, b) =>
+    higherIsBetter ? b.value - a.value : a.value - b.value
+  );
+  for (let i = 0; i < ordered.length; i += 1) {
+    const row = ordered[i]!;
+    let bag = accum.get(row.playerId);
+    if (!bag) {
+      bag = {
+        teamId: row.teamId,
+        gamesPlayed: row.gamesPlayed,
+        metrics: {},
+      };
+      accum.set(row.playerId, bag);
+    } else {
+      bag.teamId = row.teamId;
+      bag.gamesPlayed = Math.max(bag.gamesPlayed, row.gamesPlayed);
+    }
+    bag.metrics[metric] = { value: row.value, rank: i + 1 };
+  }
+  return ordered.slice(0, limit);
 }
 
 async function sleep(ms: number) {
@@ -191,11 +223,18 @@ async function averages(input: {
   }
 }
 
+export type BuildPlayerStatLeadersFromBdlResult = {
+  bundle: NbaPlayerStatLeadersBundle;
+  /** 詳細用。出場資格を満たした全選手の value+rank */
+  playerMetrics: NbaPlayerSeasonMetricsWrite[];
+};
+
 export async function buildPlayerStatLeadersBundleFromBdl(input: {
   seasonKey: string;
   seasonYear: number;
-}): Promise<NbaPlayerStatLeadersBundle> {
+}): Promise<BuildPlayerStatLeadersFromBdlResult> {
   const season = emptyBoard();
+  const playerMetricsAccum: PlayerMetricsAccum = new Map();
   const [teamMap, teamGamesByTeamId] = await Promise.all([
     fetchBdlActivePlayerTeamMap(),
     fetchTeamGamesByAppTeamId(input.seasonYear),
@@ -427,7 +466,13 @@ export async function buildPlayerStatLeadersBundleFromBdl(input: {
       const row = rowOf(p, v);
       if (row) rows.push(row);
     }
-    season[metric.id] = sorted(rows, metric.higherIsBetter, LEADER_BOARD_LIMIT);
+    season[metric.id] = commitBoard(
+      playerMetricsAccum,
+      metric.id,
+      rows,
+      metric.higherIsBetter,
+      LEADER_BOARD_LIMIT
+    );
   }
 
   {
@@ -448,7 +493,13 @@ export async function buildPlayerStatLeadersBundleFromBdl(input: {
       const row = rowOf(p, pct);
       if (row) rows.push(row);
     }
-    season.fg_pct = sorted(rows, true, LEADER_BOARD_LIMIT);
+    season.fg_pct = commitBoard(
+      playerMetricsAccum,
+      "fg_pct",
+      rows,
+      true,
+      LEADER_BOARD_LIMIT
+    );
   }
 
   {
@@ -468,7 +519,13 @@ export async function buildPlayerStatLeadersBundleFromBdl(input: {
       const row = rowOf(p, pct);
       if (row) rows.push(row);
     }
-    season.ft_pct = sorted(rows, true, LEADER_BOARD_LIMIT);
+    season.ft_pct = commitBoard(
+      playerMetricsAccum,
+      "ft_pct",
+      rows,
+      true,
+      LEADER_BOARD_LIMIT
+    );
   }
 
   {
@@ -488,7 +545,13 @@ export async function buildPlayerStatLeadersBundleFromBdl(input: {
       const row = rowOf(p, pct);
       if (row) rows.push(row);
     }
-    season.fg3_pct = sorted(rows, true, LEADER_BOARD_LIMIT);
+    season.fg3_pct = commitBoard(
+      playerMetricsAccum,
+      "fg3_pct",
+      rows,
+      true,
+      LEADER_BOARD_LIMIT
+    );
   }
 
   try {
@@ -513,7 +576,13 @@ export async function buildPlayerStatLeadersBundleFromBdl(input: {
       const row = rowOf(p, Number(r.value) || 0);
       if (row) rows.push(row);
     }
-    season.eff = sorted(rows, true, LEADER_BOARD_LIMIT);
+    season.eff = commitBoard(
+      playerMetricsAccum,
+      "eff",
+      rows,
+      true,
+      LEADER_BOARD_LIMIT
+    );
   } catch {
     season.eff = [];
   }
@@ -561,7 +630,13 @@ export async function buildPlayerStatLeadersBundleFromBdl(input: {
       const row = rowOf(p, v);
       if (row) rows.push(row);
     }
-    season[metric] = sorted(rows, higherIsBetter, limit);
+    season[metric] = commitBoard(
+      playerMetricsAccum,
+      metric,
+      rows,
+      higherIsBetter,
+      limit
+    );
   };
 
   fillAdv("ts_pct", true, (p) => rate(n(p.advanced, "ts_pct")), {
@@ -666,6 +741,7 @@ export async function buildPlayerStatLeadersBundleFromBdl(input: {
   const playtype = (
     ppp: NbaPlayerAdvancedLeaderMetric,
     pts: NbaPlayerAdvancedLeaderMetric,
+    freq: NbaPlayerAdvancedLeaderMetric,
     typeKey: string
   ) => {
     fillAdv(ppp, true, (p) => n(p.playtype[typeKey] ?? {}, "ppp"));
@@ -676,17 +752,28 @@ export async function buildPlayerStatLeadersBundleFromBdl(input: {
       if (points == null || !gp) return null;
       return points > 40 ? Math.round((points / gp) * 10) / 10 : points;
     });
+    fillAdv(freq, true, (p) =>
+      rate(
+        n(
+          p.playtype[typeKey] ?? {},
+          "freq",
+          "poss_pct",
+          "pct",
+          "frequency"
+        )
+      )
+    );
   };
-  playtype("iso_ppp", "iso_pts", "Isolation");
-  playtype("pnr_bh_ppp", "pnr_bh_pts", "PRBallHandler");
-  playtype("pnr_roll_ppp", "pnr_roll_pts", "PRRollman");
-  playtype("spotup_ppp", "spotup_pts", "Spotup");
-  playtype("trans_ppp", "trans_pts", "Transition");
-  playtype("cut_ppp", "cut_pts", "Cut");
-  playtype("post_ppp", "post_pts", "Postup");
-  playtype("handoff_ppp", "handoff_pts", "HandOff");
-  playtype("offscreen_ppp", "offscreen_pts", "OffScreen");
-  playtype("oreb_ppp", "oreb_pts", "OffRebound");
+  playtype("iso_ppp", "iso_pts", "iso_freq", "Isolation");
+  playtype("pnr_bh_ppp", "pnr_bh_pts", "pnr_bh_freq", "PRBallHandler");
+  playtype("pnr_roll_ppp", "pnr_roll_pts", "pnr_roll_freq", "PRRollman");
+  playtype("spotup_ppp", "spotup_pts", "spotup_freq", "Spotup");
+  playtype("trans_ppp", "trans_pts", "trans_freq", "Transition");
+  playtype("cut_ppp", "cut_pts", "cut_freq", "Cut");
+  playtype("post_ppp", "post_pts", "post_freq", "Postup");
+  playtype("handoff_ppp", "handoff_pts", "handoff_freq", "HandOff");
+  playtype("offscreen_ppp", "offscreen_pts", "offscreen_freq", "OffScreen");
+  playtype("oreb_ppp", "oreb_pts", "oreb_freq", "OffRebound");
 
   // PER: BDL に無いので box から近似 → リーグ平均 15 に正規化
   {
@@ -741,7 +828,13 @@ export async function buildPlayerStatLeadersBundleFromBdl(input: {
       const row = rowOf(p, Math.round(raw * scale * 10) / 10);
       if (row) rows.push(row);
     }
-    season.per = sorted(rows, true, LEADER_BOARD_LIMIT);
+    season.per = commitBoard(
+      playerMetricsAccum,
+      "per",
+      rows,
+      true,
+      LEADER_BOARD_LIMIT
+    );
   }
 
   fillAdv("clutch_pts", true, (p) => n(p.clutchBase, "pts"));
@@ -779,7 +872,13 @@ export async function buildPlayerStatLeadersBundleFromBdl(input: {
       const row = rowOf(p, pct);
       if (row) rows.push(row);
     }
-    season.restricted_fg_pct = sorted(rows, true, LEADER_BOARD_LIMIT);
+    season.restricted_fg_pct = commitBoard(
+      playerMetricsAccum,
+      "restricted_fg_pct",
+      rows,
+      true,
+      LEADER_BOARD_LIMIT
+    );
   }
   fillAdv("restricted_pts", true, (p) => {
     const fgm = n(
@@ -811,7 +910,13 @@ export async function buildPlayerStatLeadersBundleFromBdl(input: {
       const row = rowOf(p, pct);
       if (row) rows.push(row);
     }
-    season.corner3_pct = sorted(rows, true, LEADER_BOARD_LIMIT);
+    season.corner3_pct = commitBoard(
+      playerMetricsAccum,
+      "corner3_pct",
+      rows,
+      true,
+      LEADER_BOARD_LIMIT
+    );
   }
   fillAdv("corner3_pts", true, (p) => {
     const fgm = n(p.shootingZone, "corner_3_fgm", "corner3_fgm");
@@ -835,9 +940,22 @@ export async function buildPlayerStatLeadersBundleFromBdl(input: {
     rate(n(p.defLt6, "lt_06_pct", "lt_6_pct", "fg_pct", "d_fg_pct"))
   );
 
+  const playerMetrics: NbaPlayerSeasonMetricsWrite[] = [];
+  for (const [playerId, bag] of playerMetricsAccum) {
+    playerMetrics.push({
+      playerId,
+      teamId: bag.teamId,
+      gamesPlayed: bag.gamesPlayed,
+      metrics: bag.metrics,
+    });
+  }
+
   return {
-    season,
-    last10: emptyBoard(),
-    asOfLabel: `BDL · ${input.seasonKey} · NBA mins · season (last10 from game logs pending)`,
+    bundle: {
+      season,
+      last10: emptyBoard(),
+      asOfLabel: `BDL · ${input.seasonKey} · NBA mins · season (last10 from game logs pending)`,
+    },
+    playerMetrics,
   };
 }

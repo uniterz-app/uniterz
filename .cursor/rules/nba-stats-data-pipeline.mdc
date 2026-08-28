@@ -31,8 +31,10 @@ BDL（サーバーのみ）
 | ペイロール（チーム今季） | `nbaTeamPayrolls/{season}` | `nba-team-payroll-ingest` | `/api/nba/team-payroll` |
 | **契約（複数年）** | `nbaPlayerContracts/{season}/players/{playerId}` | `nba-player-contracts-ingest`（末尾で年俸ソート→`salaryRank`。BDL `rank` は使わない） | `/api/nba/player-contract` |
 | **キャリア Season/Playoffs** | `nbaPlayerCareerSeasons/{playerId}` | `nba-player-career-seasons-ingest` | `/api/nba/player-career-seasons` |
-| **試合ログ（直近 ~20）** | `nbaPlayerGameLogs/{season}/players/{playerId}` | `nba-player-game-logs-ingest` | `/api/nba/player-game-logs` |
+| **試合ログ（今季最大 82）** | `nbaPlayerGameLogs/{season}/players/{playerId}` | `nba-player-game-logs-ingest`（UI 表は直近 20、Home/Away・vs Opp はフル） | `/api/nba/player-game-logs` |
 | **ショットゾーン** | `nbaPlayerShotZones/{season}/players/{playerId}` | `nba-player-shot-zones-ingest`（リーグ by_zone 一括） | `/api/nba/player-shot-zones` |
+| **今季メトリクス（全順位）** | `nbaPlayerSeasonMetrics/{season}/players/{playerId}` | `nba-league-stats-ingest`（leaders と同梱。Top30 ボードとは別） | `/api/nba/player-detail`（個別 GET なし） |
+| **詳細寄せ** | （上の合成） | — | `/api/nba/player-detail`（roster+injury+contract+career+logs+zones+metrics） |
 | injury | `nbaTeamInjuries/{season}` | `nba-team-injuries-ingest` | `/api/nba/team-injuries` |
 | **チーム成績スプリット** | `nbaTeamSeasonRecords/{season}` | `scripts/ingest-nba-team-season-records.ts` / pro-brief 内 build | `/api/nba/team-season-records` |
 | **エース欠場時 W–L** | `nbaTeamAceOutRecords/{season}` | `nba-team-ace-out-ingest`（BDL leaders pts + season stats で所属チーム確定 × min>0） | `/api/nba/team-ace-out-records` |

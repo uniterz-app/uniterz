@@ -20,7 +20,9 @@ BDL（サーバーのみ）
 |---|---|---|---|
 | 複数年契約 | `POST /api/admin/nba-player-contracts-ingest`（末尾で年俸ソート→`salaryRank`。BDL `rank` 不使用） | `nbaPlayerContracts/{season}/players/{id}` | `/api/nba/player-contract` |
 | Season / Playoffs 成績 | `POST /api/admin/nba-player-career-seasons-ingest` | `nbaPlayerCareerSeasons/{id}` | `/api/nba/player-career-seasons` |
-| 試合ログ（直近 ~20） | `POST /api/admin/nba-player-game-logs-ingest` | `nbaPlayerGameLogs/{season}/players/{id}` | `/api/nba/player-game-logs` |
+| 試合ログ（今季最大 82・UI 表は直近 20） | `POST /api/admin/nba-player-game-logs-ingest` | `nbaPlayerGameLogs/{season}/players/{id}` | `/api/nba/player-game-logs` |
+| 今季メトリクス（全順位・playtype freq 含む） | `POST /api/admin/nba-league-stats-ingest`（同梱） | `nbaPlayerSeasonMetrics/{season}/players/{id}` | `/api/nba/player-detail` |
+| 詳細寄せ | — | （合成） | `/api/nba/player-detail` |
 | ショットゾーン | `POST /api/admin/nba-player-shot-zones-ingest`（リーグ by_zone 一括） | `nbaPlayerShotZones/{season}/players/{id}` | `/api/nba/player-shot-zones` |
 
 先に rosters ingest が必要（対象プレイヤー一覧の正）。

@@ -47,6 +47,16 @@ export type NbaPlayerAdvancedLeaderMetric =
   | "handoff_ppp"
   | "offscreen_ppp"
   | "oreb_ppp"
+  | "iso_freq"
+  | "pnr_bh_freq"
+  | "pnr_roll_freq"
+  | "spotup_freq"
+  | "trans_freq"
+  | "cut_freq"
+  | "post_freq"
+  | "handoff_freq"
+  | "offscreen_freq"
+  | "oreb_freq"
   | "iso_pts"
   | "pnr_bh_pts"
   | "pnr_roll_pts"
@@ -168,6 +178,16 @@ export const NBA_PLAYER_ADVANCED_LEADER_METRICS: readonly NbaPlayerAdvancedLeade
     def("handoff_ppp", "HND", "Handoff PPP", "playtype", true, "ppp", "ハンドオフの PPP。", "Handoff PPP.", false),
     def("offscreen_ppp", "OFFS", "Off-screen PPP", "playtype", true, "ppp", "オフスクリーンの PPP。", "Off-screen PPP.", false),
     def("oreb_ppp", "PUTB", "OREB putback PPP", "playtype", true, "ppp", "オフリブ・プットバックの PPP。", "Offensive rebound putback PPP.", false),
+    def("iso_freq", "ISO%", "Isolation freq", "playtype", true, "pct", "アイソレーションの使用率。", "Isolation possession frequency.", false),
+    def("pnr_bh_freq", "PnR-B%", "PnR handler freq", "playtype", true, "pct", "PnR ボールハンドラーの使用率。", "Pick-and-roll ball-handler frequency.", false),
+    def("pnr_roll_freq", "PnR-R%", "PnR roll freq", "playtype", true, "pct", "PnR ロールマンの使用率。", "Pick-and-roll roll man frequency.", false),
+    def("spotup_freq", "SPOT%", "Spot-up freq", "playtype", true, "pct", "スポットアップの使用率。", "Spot-up frequency.", false),
+    def("trans_freq", "TRAN%", "Transition freq", "playtype", true, "pct", "トランジションの使用率。", "Transition frequency.", false),
+    def("cut_freq", "CUT%", "Cut freq", "playtype", true, "pct", "カットの使用率。", "Cut frequency.", false),
+    def("post_freq", "POST%", "Post-up freq", "playtype", true, "pct", "ポストアップの使用率。", "Post-up frequency.", false),
+    def("handoff_freq", "HND%", "Handoff freq", "playtype", true, "pct", "ハンドオフの使用率。", "Handoff frequency.", false),
+    def("offscreen_freq", "OFFS%", "Off-screen freq", "playtype", true, "pct", "オフスクリーンの使用率。", "Off-screen frequency.", false),
+    def("oreb_freq", "PUTB%", "Putback freq", "playtype", true, "pct", "プットバックの使用率。", "Putback frequency.", false),
     def("iso_pts", "ISO", "Isolation PTS / G", "playtype", true, "perGame", "1試合あたりのアイソ得点。", "Isolation points per game."),
     def("pnr_bh_pts", "PnR-B", "PnR handler PTS / G", "playtype", true, "perGame", "1試合あたりの PnR ハンドラー得点。", "Pick-and-roll ball-handler points per game."),
     def("pnr_roll_pts", "PnR-R", "PnR roll PTS / G", "playtype", true, "perGame", "1試合あたりの PnR ロール得点。", "Pick-and-roll roll-man points per game."),
@@ -314,6 +334,20 @@ export function buildPlayerAdvancedMetricValue(
       return ppp(0.78 + rnd() * 0.42);
     case "oreb_ppp":
       return ppp(1.05 + rnd() * 0.35);
+    case "iso_freq":
+    case "pnr_bh_freq":
+    case "spotup_freq":
+      return pct(0.06 + rnd() * 0.22);
+    case "pnr_roll_freq":
+    case "trans_freq":
+    case "cut_freq":
+      return pct(0.04 + rnd() * 0.16);
+    case "post_freq":
+    case "handoff_freq":
+    case "offscreen_freq":
+      return pct(0.03 + rnd() * 0.14);
+    case "oreb_freq":
+      return pct(0.02 + rnd() * 0.1);
     case "iso_pts":
     case "pnr_bh_pts":
     case "spotup_pts":

@@ -3,6 +3,11 @@
  * Web DotJerseyCanvas / Native JerseyMark / DEV preview で共用。
  */
 
+import {
+  JERSEY_STRIPE_LIFT,
+  liftHexForJerseyDisplay,
+} from "./jerseyDisplayLift";
+
 export type JerseyStripeDot = {
   cx: number;
   cy: number;
@@ -62,6 +67,7 @@ function pushDotBand(
 
 /** D: 細いレーシング3本（ライン色 = secondary） */
 export function buildThinTripleStripeDots(secondary: string): JerseyStripeBand {
+  const fill = liftHexForJerseyDisplay(secondary, JERSEY_STRIPE_LIFT);
   const dots: JerseyStripeDot[] = [];
   for (const y of [41.6, 49.6, 57.6]) {
     pushDotBand(dots, {
@@ -70,7 +76,7 @@ export function buildThinTripleStripeDots(secondary: string): JerseyStripeBand {
       stepX: 3.6,
       stepY: 4,
       r: 1.15,
-      fill: secondary,
+      fill,
     });
   }
   return { rotateDeg: -32, cx: 44, cy: 52, dots };

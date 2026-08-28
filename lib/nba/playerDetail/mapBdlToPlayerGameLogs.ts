@@ -15,7 +15,8 @@ import {
 import { TEAM_SHORT } from "@/lib/team-short";
 import type { NbaPlayerGameLog } from "@/lib/predict/nbaPlayerDetailPreviewMocks";
 
-const GAME_LOG_LIMIT = 20;
+/** 今季フル（Home/Away・vs Opp の正）。UI 表示は apply 側で直近に絞る */
+const GAME_LOG_LIMIT = 82;
 
 function num(raw: unknown, fallback = 0): number {
   if (typeof raw === "number" && Number.isFinite(raw)) return raw;

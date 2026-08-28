@@ -656,7 +656,7 @@ function buildLeadersBundle(window: "season" | "last10") {
 
 let cached: NbaPlayerStatLeadersBundle | null = null;
 let cacheVer: string | null = null;
-const MOCK_CACHE_KEY = "v7-player-mid-scoring";
+const MOCK_CACHE_KEY = "v8-player-playtype-freq";
 
 export function getNbaPlayerStatLeadersMock(): NbaPlayerStatLeadersBundle {
   if (cached && cacheVer === MOCK_CACHE_KEY) return cached;

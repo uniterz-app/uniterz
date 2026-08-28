@@ -13,8 +13,8 @@ export const teamColorsNBA: TeamColorMap = {
   // BKN Nets
   "nba-nets":         { primary: "#000000", secondary: "#FFFFFF", textOnPrimary: "#fff" },
 
-  // CHA Hornets → Purple 地 + Teal 枠
-  "nba-hornets":      { primary: "#1D1160", secondary: "#00788C" },
+  // CHA Hornets → Teal 地 + Purple 枠
+  "nba-hornets":      { primary: "#00788C", secondary: "#1D1160" },
 
   // CHI Bulls → Black 地 + Red 枠
   "nba-bulls":        { primary: "#000000", secondary: "#E31837", textOnPrimary: "#fff" },
@@ -55,11 +55,11 @@ export const teamColorsNBA: TeamColorMap = {
   // DAL Mavericks → はっきりしたブルー + Silver 枠
   "nba-mavericks":    { primary: "#0084F0", secondary: "#B8C4CA" },
 
-  // DEN Nuggets → Powder Blue 地 + Sunshine Yellow 枠
-  "nba-nuggets":      { primary: "#418FDE", secondary: "#FEC524" },
+  // DEN Nuggets → Sunshine Yellow 地 + Navy 枠
+  "nba-nuggets":      { primary: "#FEC525", secondary: "#0D2440" },
 
-  // GSW Warriors → Gold 地 + Royal Blue ライン
-  "nba-warriors":     { primary: "#FFC72C", secondary: "#1D428A" },
+  // GSW Warriors → Gold 地 + White ライン
+  "nba-warriors":     { primary: "#FDB927", secondary: "#FFFFFF" },
 
   // HOU Rockets → Red 地 + Black ライン
   "nba-rockets":      { primary: "#F21C3A", secondary: "#000000" },
@@ -67,8 +67,8 @@ export const teamColorsNBA: TeamColorMap = {
   // LAC Clippers → Blue 地 + Red 枠（Pistons は赤地＋青枠）
   "nba-clippers":     { primary: "#1D428A", secondary: "#C8102E" },
 
-  // LAL Lakers → Gold 地 + Purple ライン
-  "nba-lakers":       { primary: "#FFC72C", secondary: "#552583" },
+  // LAL Lakers → Gold 地 + Black ライン
+  "nba-lakers":       { primary: "#FDB927", secondary: "#000000", textOnPrimary: "#000" },
 
   // MEM Grizzlies → Beale Blue 地 + Navy 枠（金枠だと Heat と並ぶと紛らわしい）
   "nba-grizzlies":    { primary: "#7190C4", secondary: "#12173F" },
@@ -84,7 +84,7 @@ export const teamColorsNBA: TeamColorMap = {
   "nba-pelicans":     { primary: "#C8102E", secondary: "#C5A017" },
 
   // OKC Thunder → Orange 地 + Blue ライン
-  "nba-thunder":      { primary: "#EF3B24", secondary: "#007AC1" },
+  "nba-thunder":      { primary: "#F05333", secondary: "#0A7EC2" },
 
   // PHX Suns
   "nba-suns":         { primary: "#1D1160", secondary: "#E56020" },

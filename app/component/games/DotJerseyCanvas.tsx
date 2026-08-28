@@ -3,6 +3,9 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { JERSEY_PATH_D } from "@/app/component/games/icons/Jersey";
 import {
+  blendAccentForJerseyDots,
+} from "@/lib/jersey/jerseyDisplayLift";
+import {
   buildThinTripleStripeDots,
   isBlackBodyPrimary,
   JERSEY_FRAME_WHITE,
@@ -74,52 +77,9 @@ function halftoneShade01(vbx: number, vby: number): number {
   const ny = vby / VIEWBOX_H - 0.42;
   const d = Math.hypot(nx * 1.15, ny);
   // 下限を上げて影ドットが潰れすぎないように（全体的にやや明るく）
-  let t = 0.58 + 0.42 * Math.max(0, Math.min(1, 1 - d * 1.55));
+  let t = 0.68 + 0.32 * Math.max(0, Math.min(1, 1 - d * 1.55));
   t += 0.07 * Math.sin(vbx * 0.35) * Math.cos(vby * 0.22);
-  return Math.max(0.34, Math.min(1, t));
-}
-
-type Rgb = { r: number; g: number; b: number };
-
-const DEFAULT_ACCENT_RGB: Rgb = { r: 34, g: 211, b: 238 };
-
-/** #rgb / #rrggbb を RGB に（不正時はシアン系） */
-function parseHexToRgb(accent: string): Rgb {
-  const hex = accent.trim().replace(/^#/, "");
-  let r = DEFAULT_ACCENT_RGB.r;
-  let g = DEFAULT_ACCENT_RGB.g;
-  let b = DEFAULT_ACCENT_RGB.b;
-  if (hex.length === 6) {
-    r = parseInt(hex.slice(0, 2), 16);
-    g = parseInt(hex.slice(2, 4), 16);
-    b = parseInt(hex.slice(4, 6), 16);
-    if ([r, g, b].some((n) => Number.isNaN(n))) return { ...DEFAULT_ACCENT_RGB };
-  } else if (hex.length === 3) {
-    r = parseInt(hex[0] + hex[0], 16);
-    g = parseInt(hex[1] + hex[1], 16);
-    b = parseInt(hex[2] + hex[2], 16);
-    if ([r, g, b].some((n) => Number.isNaN(n))) return { ...DEFAULT_ACCENT_RGB };
-  }
-  return { r, g, b };
-}
-
-function rgbToCss({ r, g, b }: Rgb): string {
-  return `rgb(${r},${g},${b})`;
-}
-
-/** 表示用にごく弱く白へ持ち上げ（沈み過ぎ防止） */
-function liftRgbForDisplay(c: Rgb, amount: number): Rgb {
-  const a = Math.max(0, Math.min(0.28, amount));
-  return {
-    r: Math.min(255, Math.round(c.r + (255 - c.r) * a)),
-    g: Math.min(255, Math.round(c.g + (255 - c.g) * a)),
-    b: Math.min(255, Math.round(c.b + (255 - c.b) * a)),
-  };
-}
-
-/** Canvas fillStyle 用。単色ドット時 */
-function blendAccentForDots(accent: string): string {
-  return rgbToCss(liftRgbForDisplay(parseHexToRgb(accent), 0.1));
+  return Math.max(0.5, Math.min(1, t));
 }
 
 function normalizeHexKey(s: string): string {
@@ -171,7 +131,7 @@ export default function DotJerseyCanvas({
 
   const resolvedDotColor = useMemo(() => {
     if (dotColor) return dotColor;
-    return blendAccentForDots(accent);
+    return blendAccentForJerseyDots(accent);
   }, [accent, dotColor]);
 
   const stripeBand = useMemo(
@@ -209,7 +169,7 @@ export default function DotJerseyCanvas({
       const step = Math.max(2.4, Math.min(3.6, cssW * 0.028));
       const rMin = step * 0.17;
       const rMax = step * 0.46;
-      const bodyFill = resolvedDotColor ?? blendAccentForDots(accent);
+      const bodyFill = resolvedDotColor ?? blendAccentForJerseyDots(accent);
 
       for (let gy = oy + step * 0.5; gy < oy + VIEWBOX_H * s; gy += step) {
         for (let gx = ox + step * 0.5; gx < ox + VIEWBOX_W * s; gx += step) {

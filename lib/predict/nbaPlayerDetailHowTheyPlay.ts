@@ -31,8 +31,11 @@ function emptyTeamBundle(): NbaLeagueTeamStatsBundle {
   return { season: [], last10: [], asOfLabel: "UNAVAILABLE" };
 }
 
-/** スタッツ詳細のリーグ順位は Top 30 だけ出す */
-export const PLAYER_DETAIL_RANK_MAX = 30;
+/**
+ * スタッツ詳細のリーグ順位は、選手メトリクスに載っているならそのまま出す。
+ * （以前は Top30 ボードのみだった）
+ */
+export const PLAYER_DETAIL_RANK_MAX = 999;
 
 export function isPlayerDetailRankShown(rank: number): boolean {
   return Number.isFinite(rank) && rank >= 1 && rank <= PLAYER_DETAIL_RANK_MAX;
@@ -192,12 +195,26 @@ function pct3(n: number) {
 /** リーダー表に居ない / ボード空 → 順位は出さない */
 const RANK_UNAVAILABLE = 999;
 
+import type { NbaPlayerSeasonMetricCell } from "@/lib/nba/playerSeasonMetrics/playerSeasonMetricsTypes";
+import type { NbaPlayerLeaderMetricId } from "@/lib/predict/nbaPlayerStatLeadersMocks";
+
 function cell(
   playerId: string,
   metric: NbaPlayerAdvancedLeaderMetric,
   leaders: NbaPlayerStatLeadersBundle,
+  seasonMetrics?: Partial<
+    Record<NbaPlayerLeaderMetricId, NbaPlayerSeasonMetricCell>
+  >,
   _preset?: { value: number; rank: number }
 ): PlayerHowCell {
+  const fromSnap = seasonMetrics?.[metric];
+  if (fromSnap) {
+    return {
+      value: fromSnap.value,
+      display: formatPlayerAdvancedLeaderValue(metric, fromSnap.value),
+      rank: fromSnap.rank,
+    };
+  }
   const rows = leaders.season[metric] ?? [];
   const idx = rows.findIndex((r) => r.playerId === playerId);
   if (idx >= 0) {
@@ -220,6 +237,9 @@ function rowFromMetric(
   playerId: string,
   metric: NbaPlayerAdvancedLeaderMetric,
   leaders: NbaPlayerStatLeadersBundle,
+  seasonMetrics?: Partial<
+    Record<NbaPlayerLeaderMetricId, NbaPlayerSeasonMetricCell>
+  >,
   preset?: { value: number; rank: number }
 ): PlayerHowRow {
   const def = playerAdvancedMetricDef(metric);
@@ -228,27 +248,63 @@ function rowFromMetric(
     short: def.short,
     hintJa: def.hintJa,
     hintEn: def.hintEn,
-    cell: cell(playerId, metric, leaders, preset),
+    cell: cell(playerId, metric, leaders, seasonMetrics, preset),
   };
 }
 
-function playtypeFreqs(_playerId: string): Record<string, PlayerHowCell> {
-  // 実データの playtype 頻度が来るまで 0（RNG モックは出さない）
-  const ids = [
-    "iso",
-    "pnrB",
-    "pnrR",
-    "spot",
-    "tran",
-    "cut",
-    "post",
-    "hnd",
-    "offs",
-    "putb",
-  ] as const;
+function playtypeFreqs(
+  playerId: string,
+  leaders: NbaPlayerStatLeadersBundle,
+  onCourtPoss: number,
+  seasonMetrics?: Partial<
+    Record<NbaPlayerLeaderMetricId, NbaPlayerSeasonMetricCell>
+  >
+): Record<string, PlayerHowCell> {
+  const rows: Array<{
+    id: string;
+    freq: NbaPlayerAdvancedLeaderMetric;
+    ppp: NbaPlayerAdvancedLeaderMetric;
+    pts: NbaPlayerAdvancedLeaderMetric;
+  }> = [
+    { id: "iso", freq: "iso_freq", ppp: "iso_ppp", pts: "iso_pts" },
+    { id: "pnrB", freq: "pnr_bh_freq", ppp: "pnr_bh_ppp", pts: "pnr_bh_pts" },
+    { id: "pnrR", freq: "pnr_roll_freq", ppp: "pnr_roll_ppp", pts: "pnr_roll_pts" },
+    { id: "spot", freq: "spotup_freq", ppp: "spotup_ppp", pts: "spotup_pts" },
+    { id: "tran", freq: "trans_freq", ppp: "trans_ppp", pts: "trans_pts" },
+    { id: "cut", freq: "cut_freq", ppp: "cut_ppp", pts: "cut_pts" },
+    { id: "post", freq: "post_freq", ppp: "post_ppp", pts: "post_pts" },
+    { id: "hnd", freq: "handoff_freq", ppp: "handoff_ppp", pts: "handoff_pts" },
+    { id: "offs", freq: "offscreen_freq", ppp: "offscreen_ppp", pts: "offscreen_pts" },
+    { id: "putb", freq: "oreb_freq", ppp: "oreb_ppp", pts: "oreb_pts" },
+  ];
   const out: Record<string, PlayerHowCell> = {};
-  for (const id of ids) {
-    out[id] = {
+  for (const row of rows) {
+    const fromLeader = cell(playerId, row.freq, leaders, seasonMetrics);
+    if (Number.isFinite(fromLeader.value)) {
+      out[row.id] = fromLeader;
+      continue;
+    }
+    // ingest 前でも PPP×PTS が載っていれば頻度を推定（バー用）
+    const ppp = cell(playerId, row.ppp, leaders, seasonMetrics);
+    const pts = cell(playerId, row.pts, leaders, seasonMetrics);
+    if (
+      Number.isFinite(ppp.value) &&
+      ppp.value > 0 &&
+      Number.isFinite(pts.value) &&
+      onCourtPoss > 0
+    ) {
+      const value = Math.max(
+        0,
+        Math.min(1, pts.value / (ppp.value * onCourtPoss))
+      );
+      out[row.id] = {
+        value,
+        display: `${(value * 100).toFixed(1)}%`,
+        rank: RANK_UNAVAILABLE,
+      };
+      continue;
+    }
+    out[row.id] = {
       value: 0,
       display: "—",
       rank: RANK_UNAVAILABLE,
@@ -286,12 +342,13 @@ export function getPlayerHowTheyPlay(
   const leaders = input.leaders ?? emptyLeadersBundle();
   const teamStats = input.teamStats ?? emptyTeamBundle();
   const detail = input.detail ?? getNbaPlayerDetailPreview(playerId);
+  const seasonMetrics = detail.leaderMetrics;
   const m = (
     metric: NbaPlayerAdvancedLeaderMetric,
     preset?: { value: number; rank: number }
-  ) => rowFromMetric(playerId, metric, leaders, preset);
+  ) => rowFromMetric(playerId, metric, leaders, seasonMetrics, preset);
   const c = (metric: NbaPlayerAdvancedLeaderMetric) =>
-    cell(playerId, metric, leaders);
+    cell(playerId, metric, leaders, seasonMetrics);
   const preset = (id: "per" | "ts_pct" | "usg") => {
     const hit = detail.advancedMetrics.find((x) => x.id === id);
     return hit ? { value: hit.value, rank: hit.leagueRank } : undefined;
@@ -339,10 +396,10 @@ export function getPlayerHowTheyPlay(
     scoringShare("fb", "FB", "ファストブレイク", "Fast break", "pct_pts_fb"),
   ];
 
-  const freq = playtypeFreqs(playerId);
   const teamPace =
     teamStats.season.find((t) => t.teamId === detail.teamId)?.pace ?? 100;
   const onCourtPoss = (detail.season.min / 48) * teamPace;
+  const freq = playtypeFreqs(playerId, leaders, onCourtPoss, seasonMetrics);
   const playtypeItem = (
     id: string,
     short: string,

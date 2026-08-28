@@ -31,6 +31,7 @@ import {
 import { buildLast10RowsFromGames } from "@/lib/nba/leagueTeamStats/buildLast10RowsFromGames";
 import { writeLeagueTeamStatsSnapshot } from "@/lib/nba/leagueTeamStats/loadLeagueTeamStatsSnapshot";
 import { writePlayerStatLeadersSnapshot } from "@/lib/nba/playerStatLeaders/loadPlayerStatLeadersSnapshot";
+import { writePlayerSeasonMetricsSnapshots } from "@/lib/nba/playerSeasonMetrics/loadPlayerSeasonMetricsSnapshot";
 import { loadNbaSeasonGameRows } from "@/lib/nba/ingest/nbaTeamGameLogsIngest";
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
 
@@ -48,6 +49,7 @@ export type NbaLeagueStatsIngestResult = {
   teamCount: number;
   playerLeaderStatTypes: number;
   playerLast10Players: number;
+  playerMetricsWritten: number;
 };
 
 function playerAveragesHavePlayed(rows: BdlPlayerSeasonAverageRow[]): boolean {
@@ -96,7 +98,7 @@ export async function ingestNbaLeagueStatsFromProvider(
   const seasonYear = bdlSeasonYearFromSeasonKey(seasonKey);
   const dataSeasonKey = seasonKey;
 
-  const [teamBundle, playerBundle] = await Promise.all([
+  const [teamBundle, playerBuilt] = await Promise.all([
     buildLeagueTeamStatsBundleFromBdl({
       seasonKey: dataSeasonKey,
       seasonYear,
@@ -106,6 +108,7 @@ export async function ingestNbaLeagueStatsFromProvider(
       seasonYear,
     }),
   ]);
+  const playerBundle = playerBuilt.bundle;
 
   const gameRows = await loadNbaSeasonGameRows(db, dataSeasonKey, 1500);
   teamBundle.last10 = buildLast10RowsFromGames(gameRows);
@@ -143,6 +146,11 @@ export async function ingestNbaLeagueStatsFromProvider(
     "firestore",
     ts
   );
+  const playerMetricsWritten = await writePlayerSeasonMetricsSnapshots(
+    db,
+    dataSeasonKey,
+    playerBuilt.playerMetrics
+  );
 
   return {
     ok: true,
@@ -152,5 +160,6 @@ export async function ingestNbaLeagueStatsFromProvider(
     teamCount: teamBundle.season.length,
     playerLeaderStatTypes: Object.keys(playerBundle.season).length,
     playerLast10Players: logPlayers.length,
+    playerMetricsWritten,
   };
 }
