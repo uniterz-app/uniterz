@@ -46,8 +46,9 @@ const COL = {
   team: 108,
   wl: 66,
   pct: 72,
-  strk: 56,
+  strk: 68,
   split: 62,
+  homeAway: 78,
 } as const;
 const TABLE_PAD_X = 8;
 const TABLE_W =
@@ -56,7 +57,8 @@ const TABLE_W =
   COL.wl +
   COL.pct +
   COL.strk +
-  COL.split * 3 +
+  COL.split +
+  COL.homeAway * 2 +
   TABLE_PAD_X * 2;
 
 function nick(row: NbaConferenceStandingsRow): string {
@@ -172,17 +174,17 @@ export default function NbaLeagueStandingsPanelNative({
               </MetricCol>
               <MetricCol width={COL.strk}>
                 <Text style={[styles.th, styles.thMetric]}>
-                  {isJa ? "連" : "STRK"}
+                  {isJa ? "連勝" : "STRK"}
                 </Text>
               </MetricCol>
               <MetricCol width={COL.split}>
                 <Text style={[styles.th, styles.thMetric]}>L10</Text>
               </MetricCol>
-              <MetricCol width={COL.split}>
-                <Text style={[styles.th, styles.thMetric]}>H</Text>
+              <MetricCol width={COL.homeAway}>
+                <Text style={[styles.th, styles.thMetric]}>HOME</Text>
               </MetricCol>
-              <MetricCol width={COL.split}>
-                <Text style={[styles.th, styles.thMetric]}>A</Text>
+              <MetricCol width={COL.homeAway}>
+                <Text style={[styles.th, styles.thMetric]}>AWAY</Text>
               </MetricCol>
             </View>
             {rows.map((row) => {
@@ -263,12 +265,12 @@ export default function NbaLeagueStandingsPanelNative({
                             {formatStandingsWl(row.last10)}
                           </Text>
                         </MetricCol>
-                        <MetricCol width={COL.split}>
+                        <MetricCol width={COL.homeAway}>
                           <Text style={styles.tdSplit}>
                             {formatStandingsWl(row.home)}
                           </Text>
                         </MetricCol>
-                        <MetricCol width={COL.split}>
+                        <MetricCol width={COL.homeAway}>
                           <Text style={styles.tdSplit}>
                             {formatStandingsWl(row.away)}
                           </Text>

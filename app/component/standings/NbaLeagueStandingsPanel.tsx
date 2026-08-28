@@ -33,8 +33,9 @@ const COL = {
   team: 108,
   wl: 66,
   pct: 72,
-  strk: 56,
+  strk: 68,
   split: 62,
+  homeAway: 78,
 } as const;
 
 const TABLE_PAD_X = 8;
@@ -44,7 +45,8 @@ const TABLE_MIN_W =
   COL.wl +
   COL.pct +
   COL.strk +
-  COL.split * 3 +
+  COL.split +
+  COL.homeAway * 2 +
   TABLE_PAD_X * 2;
 const stickyBg = "rgb(8, 20, 28)";
 const stickyHeadBg = "rgb(10, 28, 34)";
@@ -117,10 +119,10 @@ export default function NbaLeagueStandingsPanel({
     () => [
       { key: "wl", label: isJa ? "成績" : "W-L", w: COL.wl },
       { key: "pct", label: "W%", w: COL.pct, accent: true },
-      { key: "strk", label: isJa ? "連" : "STRK", w: COL.strk },
+      { key: "strk", label: isJa ? "連勝" : "STRK", w: COL.strk },
       { key: "l10", label: "L10", w: COL.split },
-      { key: "h", label: "H", w: COL.split },
-      { key: "a", label: "A", w: COL.split },
+      { key: "h", label: "HOME", w: COL.homeAway },
+      { key: "a", label: "AWAY", w: COL.homeAway },
     ],
     [isJa]
   );
@@ -274,13 +276,13 @@ export default function NbaLeagueStandingsPanel({
                     {formatStandingsWl(row.last10)}
                   </MetricCol>
                   <MetricCol
-                    width={COL.split}
+                    width={COL.homeAway}
                     className={`${nameOxanium.className} text-[15px] font-bold tabular-nums text-white/78`}
                   >
                     {formatStandingsWl(row.home)}
                   </MetricCol>
                   <MetricCol
-                    width={COL.split}
+                    width={COL.homeAway}
                     className={`${nameOxanium.className} text-[15px] font-bold tabular-nums text-white/78`}
                   >
                     {formatStandingsWl(row.away)}
