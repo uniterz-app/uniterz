@@ -31,6 +31,8 @@ import LpRankingPreviewScreenNative from "../../rankings/LpRankingPreviewScreenN
 import RankingListDesignPreviewScreenNative from "../../rankings/RankingListDesignPreviewScreenNative";
 import ProLeagueGatePreviewScreenNative from "../../rankings/ProLeagueGatePreviewScreenNative";
 import InjuryDesignPreviewScreenNative from "../../games/predict/InjuryDesignPreviewScreenNative";
+import TeamSeasonRecordsPreviewScreenNative from "../../games/predict/TeamSeasonRecordsPreviewScreenNative";
+import JerseyDiagonalDesignPreviewScreenNative from "../../games/predict/JerseyDiagonalDesignPreviewScreenNative";
 import type { ProfileStackParamList } from "../../../navigation/types";
 
 const apiBase = process.env.EXPO_PUBLIC_UNITERZ_API_BASE_URL ?? null;
@@ -409,4 +411,12 @@ export function InjuryDesignPreviewScreenWrapper() {
   return (
     <InjuryDesignPreviewScreenNative />
   );
+}
+
+export function TeamSeasonRecordsPreviewScreenWrapper() {
+  return <TeamSeasonRecordsPreviewScreenNative />;
+}
+
+export function JerseyDiagonalDesignPreviewScreenWrapper() {
+  return <JerseyDiagonalDesignPreviewScreenNative />;
 }

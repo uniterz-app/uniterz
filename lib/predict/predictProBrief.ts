@@ -25,9 +25,21 @@ export type ProBriefTeamCard = {
   context: ProBriefLineItem[];
 };
 
+/** シーズン進行に応じた生成モード（設計: docs/pro-insight-design.md） */
+export type ProBriefPhase = "opening" | "early" | "full";
+
 export type PredictProBrief = {
   home: ProBriefTeamCard;
   away: ProBriefTeamCard;
+  /** opening / early / full */
+  phase?: ProBriefPhase;
+  /** early のみ。カード全体に 1 回出すサンプル注記 */
+  sampleNoteJa?: string;
+  sampleNoteEn?: string;
+  /** 消化済み試合数（early の N） */
+  gamesPlayed?: number;
+  generatedAtMs?: number;
+  patchedAtMs?: number;
 };
 
 export function briefEdgeDetail(

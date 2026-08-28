@@ -93,7 +93,12 @@ function liftRgbForDisplay(c: Rgb, amount: number): Rgb {
 }
 
 function blendAccentForDots(accent: string): string {
-  return rgbToCss(liftRgbForDisplay(parseHexToRgb(accent), 0.1));
+  const rgb = parseHexToRgb(accent);
+  // ほぼ黒はリフトするとグレー化して「黒」に見えない
+  if (rgb.r <= 14 && rgb.g <= 14 && rgb.b <= 14) {
+    return rgbToCss(rgb);
+  }
+  return rgbToCss(liftRgbForDisplay(rgb, 0.1));
 }
 
 function normalizeHexKey(s: string): string {
@@ -122,26 +127,41 @@ export type JerseyHalftoneDot = {
   fill: string;
 };
 
+export type BuildJerseyHalftoneDotListOptions = {
+  /** true で擬似ライト（中央が明るい陰影）をオフ。DEV 比較用 */
+  disablePseudoLight?: boolean;
+  /**
+   * ドット間隔スケール。1 = 本番相当。
+   * 小さいほど細かい（例: 0.55）。DEV 比較用。
+   */
+  densityScale?: number;
+};
+
 /**
  * 正方形 `size` px のコントロール用に、viewBox 座標のドット配列を生成
  */
 export function buildJerseyHalftoneDotList(
   cssSize: number,
   accent: string,
-  accentEnd?: string
+  accentEnd?: string,
+  options?: BuildJerseyHalftoneDotListOptions
 ): JerseyHalftoneDot[] {
   const pad = 6;
   const cssW = cssSize;
   const cssH = cssSize;
   if (cssW < 2 || cssH < 2) return [];
 
+  const flat = options?.disablePseudoLight === true;
+  const density = Math.max(0.35, Math.min(1.6, options?.densityScale ?? 1));
   const s = Math.min(
     (cssW - pad * 2) / VIEWBOX_W,
     (cssH - pad * 2) / VIEWBOX_H
   );
-  const step = Math.max(2.4, Math.min(3.6, cssW * 0.028));
+  // 本番: clamp(cssW * 0.028, 2.4, 3.6)。densityScale で間隔を縮める
+  const step = Math.max(1.2, Math.min(3.6, cssW * 0.028 * density));
   const rMin = step * 0.17;
   const rMax = step * 0.46;
+  const flatR = ((rMin + rMax) * 0.5) / s;
   const gradientMode = useJerseyGradient(accent, accentEnd);
 
   const resolvedSingleDotColor = gradientMode
@@ -163,20 +183,27 @@ export function buildJerseyHalftoneDotList(
       const vby = (gy - oy) / s;
       if (vbx < 0 || vbx > VIEWBOX_W || vby < 0 || vby > VIEWBOX_H) continue;
 
-      const shade = halftoneShade01(vbx, vby);
-      const r = (rMin + shade * (rMax - rMin)) / s;
+      const shade = flat ? 0.72 : halftoneShade01(vbx, vby);
+      const r = flat ? flatR : (rMin + shade * (rMax - rMin)) / s;
 
       let fill: string;
       if (gradientRgb) {
         const tBase = 0.32 * (vbx / VIEWBOX_W) + 0.68 * (vby / VIEWBOX_H);
-        const t = Math.max(
-          0,
-          Math.min(1, tBase * 0.88 + (shade - 0.5) * 0.14)
+        const t = flat
+          ? Math.max(0, Math.min(1, tBase))
+          : Math.max(
+              0,
+              Math.min(1, tBase * 0.88 + (shade - 0.5) * 0.14)
+            );
+        const c = liftRgbForDisplay(
+          lerpRgb(gradientRgb.start, gradientRgb.end, t),
+          flat ? 0 : 0.09
         );
-        const c = liftRgbForDisplay(lerpRgb(gradientRgb.start, gradientRgb.end, t), 0.09);
         fill = rgbToCss(c);
       } else {
-        fill = resolvedSingleDotColor ?? blendAccentForDots(accent);
+        fill = flat
+          ? rgbToCss(parseHexToRgb(accent))
+          : (resolvedSingleDotColor ?? blendAccentForDots(accent));
       }
       dots.push({ cx: vbx, cy: vby, r, fill });
     }

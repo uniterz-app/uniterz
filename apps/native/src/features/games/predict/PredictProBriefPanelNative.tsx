@@ -381,6 +381,15 @@ export default function PredictProBriefPanelNative({
         </View>
       </View>
 
+      {!usePlaceholder &&
+      (safeBrief?.sampleNoteJa || safeBrief?.sampleNoteEn) ? (
+        <Text style={styles.sampleNote}>
+          {language === "ja"
+            ? safeBrief.sampleNoteJa
+            : safeBrief.sampleNoteEn ?? safeBrief.sampleNoteJa}
+        </Text>
+      ) : null}
+
       {locked ? (
         <View style={styles.lockedHost}>
           <View pointerEvents="none" style={styles.previewClip}>
@@ -460,6 +469,13 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
     borderBottomWidth: 1,
     borderBottomColor: "rgba(255,255,255,0.12)",
+  },
+  sampleNote: {
+    fontFamily: OXANIUM_700,
+    fontSize: 10,
+    lineHeight: 14,
+    color: "rgba(253, 230, 138, 0.75)",
+    marginBottom: 8,
   },
   titleSide: {
     flex: 1,

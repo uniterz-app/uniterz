@@ -20,6 +20,7 @@ import type { NbaRosterReport } from "../../../../../../lib/predict/nbaRoster";
 import { useNbaMatchupRoster } from "../../../../../../lib/nba/teamRosters/useNbaMatchupRoster";
 import { useNbaMatchupInjuryReport } from "../../../../../../lib/nba/predict/useNbaMatchupInjuryReport";
 import { useNbaMatchupTeamStats } from "../../../../../../lib/nba/predict/useNbaMatchupTeamStats";
+import { useNbaMatchupProBrief } from "../../../../../../lib/nba/predict/useNbaMatchupProBrief";
 import { injuryStatusByPlayerId } from "../../../../../../lib/predict/nbaInjuryReport";
 import type { GamesLanguage } from "../gamesI18n";
 import { getGamesTexts } from "../gamesI18n";
@@ -36,6 +37,8 @@ type Props = {
   awayTeamId?: string;
   homeTeamName: string;
   awayTeamName: string;
+  /** games/{id}.proBrief 取得用 */
+  gameId?: string | null;
   brief?: PredictProBrief | null;
   injuryReport?: NbaInjuryReport | null;
   teamStats?: NbaTeamStatsBundle | null;
@@ -66,6 +69,7 @@ export default function NbaPredictToolsTabsNative({
   awayTeamId,
   homeTeamName,
   awayTeamName,
+  gameId = null,
   brief = null,
   injuryReport = null,
   teamStats = null,
@@ -93,8 +97,13 @@ export default function NbaPredictToolsTabsNative({
     setVisited((cur) => (cur.has(tab) ? cur : new Set(cur).add(tab)));
   }, [tab]);
 
-  /** Web 同様、モックへは落とさない（作り物の Insight を本番に出さない） */
-  const resolvedBrief = brief;
+  const { brief: liveBrief, loading: briefLoading } = useNbaMatchupProBrief({
+    gameId,
+    override: brief,
+    apiBaseUrl,
+    enabled: visited.has("insight"),
+  });
+  const resolvedBrief = liveBrief;
 
   const { report: liveInjury, loading: injuryLoading } =
     useNbaMatchupInjuryReport({
@@ -182,7 +191,9 @@ export default function NbaPredictToolsTabsNative({
         {tab ? (
           <View style={styles.panel}>
             {tab === "insight" ? (
-              isPro && !resolvedBrief ? (
+              briefLoading ? (
+                <PendingPanel text={t.panelDataPending} />
+              ) : isPro && !resolvedBrief ? (
                 <PendingPanel text={t.panelDataPending} />
               ) : (
                 <PredictProBriefPanelNative

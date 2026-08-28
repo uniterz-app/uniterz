@@ -2,6 +2,11 @@ import { useId, useMemo } from "react";
 import { StyleSheet, View } from "react-native";
 import Svg, { Circle, ClipPath, Defs, Path, G } from "react-native-svg";
 import {
+  buildThinTripleStripeDots,
+  isBlackBodyPrimary,
+  JERSEY_FRAME_WHITE,
+} from "../../../../../lib/jersey/jerseyThinTripleStripes";
+import {
   JERSEY_PATH_D,
   VIEWBOX_H,
   VIEWBOX_W,
@@ -16,8 +21,9 @@ type JerseyMarkSvgProps = {
   size?: number;
 };
 
-/** Web DotJerseyCanvas：淡いシアン白の縁 */
-const JERSEY_STROKE_RGBA = "rgba(200,248,255,0.58)";
+function normalizeHexKey(s: string): string {
+  return s.trim().replace(/^#/, "").toLowerCase();
+}
 
 export default function JerseyMarkSvg({
   accent,
@@ -26,11 +32,24 @@ export default function JerseyMarkSvg({
 }: JerseyMarkSvgProps) {
   const id = useId();
   const clipId = `jclip-${id.replace(/:/g, "")}`;
+  const stripeMode =
+    !!accentEnd && normalizeHexKey(accent) !== normalizeHexKey(accentEnd);
+
   const dots = useMemo(
-    () => buildJerseyHalftoneDotList(size, accent, accentEnd),
-    [size, accent, accentEnd]
+    () =>
+      buildJerseyHalftoneDotList(
+        size,
+        accent,
+        stripeMode ? undefined : accentEnd
+      ),
+    [size, accent, accentEnd, stripeMode]
+  );
+  const stripe = useMemo(
+    () => (stripeMode && accentEnd ? buildThinTripleStripeDots(accentEnd) : null),
+    [stripeMode, accentEnd]
   );
   const strokeW = useMemo(() => jerseyStrokeWidthForSize(size), [size]);
+  const blackFrame = isBlackBodyPrimary(accent);
   const glow = useMemo(
     () => accentRgbForJerseyGlow(accent, accentEnd),
     [accent, accentEnd]
@@ -69,22 +88,41 @@ export default function JerseyMarkSvg({
               fill={dot.fill}
             />
           ))}
+          {stripe ? (
+            <G
+              origin={`${stripe.cx}, ${stripe.cy}`}
+              rotation={stripe.rotateDeg}
+            >
+              {stripe.dots.map((dot, index) => (
+                <Circle
+                  key={`s-${index}`}
+                  cx={dot.cx}
+                  cy={dot.cy}
+                  r={dot.r}
+                  fill={dot.fill}
+                  opacity={dot.opacity}
+                />
+              ))}
+            </G>
+          ) : null}
         </G>
-        <Path
-          d={JERSEY_PATH_D}
-          fill="none"
-          stroke={JERSEY_STROKE_RGBA}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={strokeW}
-        />
+        {blackFrame ? (
+          <Path
+            d={JERSEY_PATH_D}
+            fill="none"
+            stroke={JERSEY_FRAME_WHITE}
+            strokeOpacity={0.65}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={strokeW * 0.55}
+          />
+        ) : null}
       </Svg>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  // HalftoneJerseyMark の主色系ドロップシャドウに近づけた
   container: {
     alignItems: "center",
     justifyContent: "center",

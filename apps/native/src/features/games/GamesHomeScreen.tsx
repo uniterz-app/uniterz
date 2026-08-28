@@ -3208,7 +3208,7 @@ const styles = StyleSheet.create({
   teamBottomGroup: {
     alignItems: "center",
     gap: 0,
-    marginTop: 1,
+    marginTop: 2,
     marginBottom: 0,
   },
   teamBottomGroupWc: {
@@ -3218,9 +3218,9 @@ const styles = StyleSheet.create({
   },
   sideLabel: {
     color: "rgba(255,255,255,0.85)",
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: "700",
-    lineHeight: 14,
+    lineHeight: 15,
     letterSpacing: 0.96,
     includeFontPadding: false,
     textTransform: "uppercase",

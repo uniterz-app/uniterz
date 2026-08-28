@@ -1334,6 +1334,7 @@ export default function PredictModal({
                     <NbaPredictToolsTabsNative
                       language={language}
                       isPro={isProUser}
+                      gameId={predictData?.gameId ?? null}
                       homeTeamId={
                         rawTeamIdFromGameSide(matchPreview?.homeSide) ?? ""
                       }

@@ -34,6 +34,8 @@ BDL（サーバーのみ）
 | **試合ログ（直近 ~20）** | `nbaPlayerGameLogs/{season}/players/{playerId}` | `nba-player-game-logs-ingest` | `/api/nba/player-game-logs` |
 | **ショットゾーン** | `nbaPlayerShotZones/{season}/players/{playerId}` | `nba-player-shot-zones-ingest`（リーグ by_zone 一括） | `/api/nba/player-shot-zones` |
 | injury | `nbaTeamInjuries/{season}` | `nba-team-injuries-ingest` | `/api/nba/team-injuries` |
+| **チーム成績スプリット** | `nbaTeamSeasonRecords/{season}` | `scripts/ingest-nba-team-season-records.ts` / pro-brief 内 build | `/api/nba/team-season-records` |
+| **エース欠場時 W–L** | `nbaTeamAceOutRecords/{season}` | `nba-team-ace-out-ingest`（BDL leaders pts + season stats で所属チーム確定 × min>0） | `/api/nba/team-ace-out-records` |
 
 ## 運用順（プレイヤー詳細）
 

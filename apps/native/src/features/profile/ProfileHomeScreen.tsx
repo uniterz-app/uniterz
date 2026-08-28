@@ -1748,6 +1748,10 @@ export default function ProfileHomeScreen({
           navigation.navigate("ProLeagueGatePreview");
         else if (page === "injuryDesignPreview" && __DEV__)
           navigation.navigate("InjuryDesignPreview");
+        else if (page === "teamSeasonRecordsPreview" && __DEV__)
+          navigation.navigate("TeamSeasonRecordsPreview");
+        else if (page === "jerseyDiagonalDesignPreview" && __DEV__)
+          navigation.navigate("JerseyDiagonalDesignPreview");
       }}
     />
     <ProfileBadgeDetailModal

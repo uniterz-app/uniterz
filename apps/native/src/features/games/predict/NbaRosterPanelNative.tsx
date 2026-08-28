@@ -13,7 +13,7 @@ import {
   injuryStatusTone,
 } from "../../../../../../lib/predict/nbaInjuryReport";
 import {
-  getTeamJerseyPrimaryColor,
+  getTeamUiAccentColor,
 } from "../../../../../../lib/team-colors";
 import { nbaConferenceForTeam } from "../../../../../../lib/nba/nbaConferenceTeams";
 import { NBA_TEAM_NAME_BY_ID } from "../../../../../../lib/nba-team-names";
@@ -265,7 +265,7 @@ function TeamRosterCard({
   const isDetail = mode === "detail";
   const [open, setOpen] = useState(defaultOpen || isDetail);
   const [sort, setSort] = useState<SortState>(null);
-  const primary = getTeamJerseyPrimaryColor("nba", block.teamId);
+  const primary = getTeamUiAccentColor("nba", block.teamId);
   const players = useMemo(
     () => sortPlayersByCol(block.players, sort),
     [block.players, sort]

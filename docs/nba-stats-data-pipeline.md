@@ -84,7 +84,27 @@ Functions 側 env:
 
 - `NEXT_NBA_STATS_DAILY_INGEST_URL` … 本番 Next の日次 URL（**www** 付き）
 - `NEXT_NBA_STATS_WEEKLY_INGEST_URL` … 週次 URL
+- `NEXT_NBA_PRO_BRIEF_INGEST_URL` … Pro Insight ingest（任意。未設定なら DAILY URL のパスを置換）
 - Secret `INTERNAL_JOB_SECRET` … Next と同じ値（ヘッダ `x-internal-job-secret`）
+
+Pro Insight:
+
+| 何 | 入口 |
+|---|---|
+| 前日フル | 日次 ingest 末尾 `pro-brief-full` / `POST /api/admin/nba-pro-brief-ingest` `{ "mode": "full" }` |
+| T-3h パッチ | Firebase `runNbaProBriefPatchCron`（毎時 :15 JST）`{ "mode": "patch" }` |
+| 前季成績 | `nbaTeamSeasonRecords/{priorSeason}`（games から home/away・H2H・対.500・対カンファ上位6） |
+| 公開 | `GET /api/nba/matchup-insight?gameId=` → `games/{id}.proBrief` |
+| 保存 | `games/{id}.proBrief` |
+
+前季スプリット再構築: `{ "mode": "full", "rebuildPriorRecords": true }`  
+（今季 `2026-27` と前期 `2025-26` の両方を再集計。games が薄いときは **BDL `/nba/v1/games?seasons[]=`** から ingest）
+
+手動:
+```
+npx tsx scripts/ingest-nba-team-season-records.ts 2025-26 --force
+npx tsx scripts/ingest-nba-team-season-records.ts 2026-27 --force
+```
 
 ## ライブ試合（スコア + box）
 

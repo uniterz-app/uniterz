@@ -1,6 +1,21 @@
 import { useMemo } from "react";
 import { StyleSheet, View } from "react-native";
-import { Canvas, Circle, Group, Path, Skia } from "@shopify/react-native-skia";
+import {
+  Canvas,
+  ClipOp,
+  Group,
+  PaintStyle,
+  Picture,
+  Skia,
+  StrokeCap,
+  StrokeJoin,
+} from "@shopify/react-native-skia";
+import type { SkPicture } from "@shopify/react-native-skia";
+import {
+  buildThinTripleStripeDots,
+  isBlackBodyPrimary,
+  JERSEY_FRAME_WHITE,
+} from "../../../../../lib/jersey/jerseyThinTripleStripes";
 import {
   JERSEY_PATH_D,
   VIEWBOX_H,
@@ -10,37 +25,98 @@ import {
   jerseyStrokeWidthForSize,
 } from "./jerseyHalftoneModel";
 
-const JERSEY_STROKE = "rgba(200,248,255,0.58)";
-
 type JerseyMarkSkiaProps = {
   accent: string;
   accentEnd?: string;
   size?: number;
 };
 
+function normalizeHexKey(s: string): string {
+  return s.trim().replace(/^#/, "").toLowerCase();
+}
+
+function buildJerseyPicture(
+  size: number,
+  accent: string,
+  accentEnd: string | undefined
+): SkPicture | null {
+  const jerseyPath = Skia.Path.MakeFromSVGString(JERSEY_PATH_D);
+  if (!jerseyPath) return null;
+
+  const stripeMode =
+    !!accentEnd && normalizeHexKey(accent) !== normalizeHexKey(accentEnd);
+  const bodyDots = buildJerseyHalftoneDotList(
+    size,
+    accent,
+    stripeMode ? undefined : accentEnd
+  );
+  const stripe =
+    stripeMode && accentEnd ? buildThinTripleStripeDots(accentEnd) : null;
+  const blackFrame = isBlackBodyPrimary(accent);
+  const strokeW = jerseyStrokeWidthForSize(size);
+
+  const recorder = Skia.PictureRecorder();
+  const canvas = recorder.beginRecording(
+    Skia.XYWHRect(0, 0, VIEWBOX_W, VIEWBOX_H)
+  );
+  const paint = Skia.Paint();
+  paint.setAntiAlias(true);
+
+  canvas.save();
+  canvas.clipPath(jerseyPath, ClipOp.Intersect, true);
+
+  for (const dot of bodyDots) {
+    paint.setStyle(PaintStyle.Fill);
+    paint.setColor(Skia.Color(dot.fill));
+    paint.setAlphaf(1);
+    canvas.drawCircle(dot.cx, dot.cy, dot.r, paint);
+  }
+
+  if (stripe) {
+    canvas.save();
+    canvas.rotate(stripe.rotateDeg, stripe.cx, stripe.cy);
+    for (const dot of stripe.dots) {
+      paint.setColor(Skia.Color(dot.fill));
+      paint.setAlphaf(dot.opacity);
+      canvas.drawCircle(dot.cx, dot.cy, dot.r, paint);
+    }
+    canvas.restore();
+  }
+  canvas.restore();
+
+  if (blackFrame) {
+    paint.setStyle(PaintStyle.Stroke);
+    paint.setStrokeCap(StrokeCap.Round);
+    paint.setStrokeJoin(StrokeJoin.Round);
+    paint.setColor(Skia.Color(JERSEY_FRAME_WHITE));
+    paint.setAlphaf(0.65);
+    paint.setStrokeWidth(strokeW * 0.55);
+    canvas.drawPath(jerseyPath, paint);
+  }
+
+  return recorder.finishRecordingAsPicture();
+}
+
 export default function JerseyMarkSkia({
   accent,
   accentEnd,
   size = 56,
 }: JerseyMarkSkiaProps) {
-  const dots = useMemo(
-    () => buildJerseyHalftoneDotList(size, accent, accentEnd),
+  const picture = useMemo(
+    () => buildJerseyPicture(size, accent, accentEnd),
     [size, accent, accentEnd]
   );
-  const strokeW = useMemo(() => jerseyStrokeWidthForSize(size), [size]);
   const glow = useMemo(
     () => accentRgbForJerseyGlow(accent, accentEnd),
     [accent, accentEnd]
   );
   const glowColor = `rgb(${glow.r},${glow.g},${glow.b})`;
 
-  const jerseyPath = useMemo(() => Skia.Path.MakeFromSVGString(JERSEY_PATH_D), []);
-
   const scale = Math.min(size / VIEWBOX_W, size / VIEWBOX_H);
   const tx = (size - VIEWBOX_W * scale) / 2;
   const ty = (size - VIEWBOX_H * scale) / 2;
 
-  if (!jerseyPath) return null;
+  if (!picture) return null;
 
   return (
     <View
@@ -55,25 +131,7 @@ export default function JerseyMarkSkia({
     >
       <Canvas style={{ width: size, height: size }}>
         <Group transform={[{ translateX: tx }, { translateY: ty }, { scale }]}>
-          <Group clip={jerseyPath}>
-            {dots.map((dot, index) => (
-              <Circle
-                key={`d-${index}`}
-                cx={dot.cx}
-                cy={dot.cy}
-                r={dot.r}
-                color={dot.fill}
-              />
-            ))}
-          </Group>
-          <Path
-            path={jerseyPath}
-            style="stroke"
-            color={JERSEY_STROKE}
-            strokeWidth={strokeW}
-            strokeCap="round"
-            strokeJoin="round"
-          />
+          <Picture picture={picture} />
         </Group>
       </Canvas>
     </View>

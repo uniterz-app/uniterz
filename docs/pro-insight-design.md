@@ -1,7 +1,7 @@
 # Pro Insight 設計
 
-> **設計正** — 現行実装（モック）と差分があっても、本ドキュメントの方向で進める。  
-> 最終更新: 2026-08-20  
+> **設計正** — 現行実装と差分があっても、本ドキュメントの方向で進める。  
+> 最終更新: 2026-08-28  
 > 対象: NBA 予想オーバーレイの INSIGHT タブ  
 > UI: `PredictProBriefPanel` / `PredictProBriefPanelNative`  
 > 関連: [`preview-to-prod-checklist.md`](preview-to-prod-checklist.md) · [`pro-subscription-plan.md`](pro-subscription-plan.md)
@@ -33,11 +33,34 @@
 - Injury Impact という 4 つ目の枠
 - 短い移動の km（近所のロード）
 
-Pay-for-Insight。Pay to Win はしない。
+Pay-for-Insight。Pay to Win はしない。LLM は使わない（テンプレ穴埋めのみ・コスト ≈ $0）。
 
 ---
 
-## 3. MATCHUP（型 vs 型）
+## 3. シーズン進行フェーズ（スタッツの扱い）
+
+`gamesPlayed = wins + losses`（今夜より前に消化した試合数）。
+
+| フェーズ | 条件 | MATCHUP / CONTEXT の材料 |
+|---|---|---|
+| **opening** | `gamesPlayed === 0`（開幕戦） | **前季のみ**: 会場成績・H2H・上位対戦・前季型＋今夜の欠場 |
+| **early** | `1 ≤ gamesPlayed ≤ 4`（今夜が 2〜5 試合目） | **今季累計**（1..N）。順位も出してよい。**カード全体にサンプル注記必須** |
+| **full** | `gamesPlayed ≥ 5`（今夜が 6 試合目以降） | **今季スタッツ正式扱い**。注記なし |
+
+### early 注記（カード全体に 1 回）
+
+- ja: `※ 開幕{N}試合時点 · サンプル少 · 上振れの可能性あり`
+- en: `※ Through {N} games · small sample · may regress`
+
+`N = gamesPlayed`（消化済み試合数）。
+
+### 積み上げは early も full も同じ
+
+2 試合目→1 試合分、3 試合目→1〜2、… と累計。違うのは「正式シーズンとして断言してよいか」と注記の有無。
+
+---
+
+## 4. MATCHUP（型 vs 型）
 
 相手の数字とぶつかった行だけが目玉。片方の自慢は STATS に任せる。
 
@@ -50,16 +73,42 @@ Pay-for-Insight。Pay to Win はしない。
 
 ### 欠場の折り込み（全種類に共通）
 
-ペイント欠場は独立した種類ではない。ペイント / 3P / コーナー3 / リム / リバウンド / TO / FT / トランジション / プレイタイプのどれでも、その型のチーム数字を厚く担う選手が OUT / QUES なら **同じ 1 本に折り込む**。
-
-- 例: `ペイント #4 · ヨキッチ 38% · OUT`
-- 例: `3PA率 #3 · 選手 41% · OUT`
+ペイント / 3P / コーナー3 / リム / リバウンド / TO / FT / トランジション / プレイタイプのどれでも、その型を厚く担う選手が OUT / QUES なら **同じ 1 本に折り込む**。
 
 薄い関与の欠場は MATCHUP に足さない → CONTEXT のローテ。  
 Probable は型を消さない（「残る」まで）。  
 同じケガを CONTEXT に繰り返さない。
 
-### 種類
+### opening 専用の MATCHUP 候補
+
+前季 `games` 集計（`nbaTeamSeasonRecords/{priorSeason}`）が正:
+
+- 前季ホーム / アウェイ成績
+- 前季 H2H（シリーズ・この会場）
+- 前季カンファレンス上位6との会場成績（**試合時点の順位**）
+- 前季 勝率5割以上 / 未満相手（**試合時点の相手勝率**。最終勝率では遡及しない）
+- 前季の型ランク ＋ 今夜の欠場
+- **エース欠場時 W–L**（`nbaTeamAceOutRecords`）— 今夜 OUT の選手がその季のチーム最高 PPG なら、欠場試合のチーム成績を MATCHUP / CONTEXT に折り込む
+
+### エース欠場時 W–L（別 ingest）
+
+BDL に専用フィールドは無い。自前集計:
+
+1. エース = BDL leaders `pts` の PPG（所属は **season stats の出場チーム多数決**。leaders の `team_id` は現所属なので使わない）
+2. curated キー選手（`aceOutCuratedPlayers.ts`）を同チームに追加。`preferAsAce` は主エース表示を上書き
+3. BDL `/nba/v1/stats` でその選手がそのチームで出場した gameId（min>0）
+4. チームのレギュラー確定試合 − 出場 = 欠場試合 → **W–L + 平均得点 + 平均失点**
+5. Firestore `nbaTeamAceOutRecords/{season}` → 公開 API は読むだけ
+
+Insight 表示: `欠場時 {W}-{L} · {得点}-{失点}`（例: Jokic OUT · 前季欠場時 11-6 · 109.9-110.1）
+
+```
+npx tsx scripts/ingest-nba-team-ace-out-records.ts 2025-26 --force
+```
+
+今季（例: 2026-27）は開幕後に同じ指標を「今季」表記で使う。未開幕は集計しない。
+
+### early / full の種類
 
 同じ系統は 1 本まで（ペイントとリムはまとめる）。
 
@@ -76,13 +125,11 @@ Probable は型を消さない（「残る」まで）。
 | プレイタイプ | ISO / PnR / ポストの頻度×PPP vs 相手のその守備 | 依存度が高い型だけ |
 | Net / レーティング | NET / ORTG vs 相手 DRTG | 全体効率の差が明確 |
 
-欠場インパクトは上表の **すべての種類** に乗る。占有が厚い選手の OUT / QUES があれば、衝突差が小さくてもその種類を出す。
-
 ---
 
-## 4. SCHEDULE（負荷）
+## 5. SCHEDULE（負荷）
 
-カレンダーと会場。感想は書かない。差がある行だけ。プレシーズンは「プレ」。
+カレンダーと会場。感想は書かない。差がある行だけ。プレシーズンは「プレ」。全フェーズ共通。
 
 | 種類 | 出すとき | 例 |
 |---|---|---|
@@ -97,13 +144,13 @@ Probable は型を消さない（「残る」まで）。
 | 開幕・プレ | 開幕戦のみ | 開幕戦 · プレ最終から 4 日 |
 | ホーム | 移動なしのとき | ホーム · 移動なし |
 
-NYK→BKN や CHI→MIL のような短い移動は出さない。今夜の 1 本と 48 時間が同じ数字なら今夜だけ。km はアリーナ間の直線距離（飛行距離に近い）。実装: `lib/nba/nbaArenaTravel.ts`。
+短い移動は出さない。実装: `lib/nba/nbaArenaTravel.ts`。
 
 ---
 
-## 5. CONTEXT（今夜の状況）
+## 6. CONTEXT（今夜の状況）
 
-型の衝突ではないが、読みが変わるもの。MATCHUP に書いたケガは繰り返さない。数字か欠場が無い行は捨てる。
+型の衝突ではないが、読みが変わるもの。MATCHUP に書いたケガは繰り返さない。
 
 | 種類 | 出すとき | 例 |
 |---|---|---|
@@ -112,27 +159,38 @@ NYK→BKN や CHI→MIL のような短い移動は出さない。今夜の 1 �
 | 直近の傾き | シーズンと直近 10 で NET / ORTG が明確にズレ | 直近 10 · NET がシーズンより下落 |
 | 相手の強度 | 直近 3〜10 が格下続き、または強豪続き | 直近 3 · 相手は勝率 5 割未満 |
 | 対上位 | 勝率 5 割超や上位に偏った成績 | 格上に直近 1-4 |
-| ホーム / アウェイの偏り | 今の会場で極端 | 前季アウェイ強豪戦 25-16 |
+| ホーム / アウェイの偏り | 今の会場で極端 | 前季アウェイ強豪戦 25-16（opening） |
 | 複数欠場 | スターター 2 人以上 OUT（MATCHUP に無いとき） | スターター 2 人 OUT · 作成が分散 |
 
 ---
 
-## 6. 選び方
+## 7. 選び方・更新タイミング
 
 種類ごとに点数（衝突の大きさ **または** 欠場インパクト）を付け、各サイド上位 2 本。言い回しをランダムに回さない。同じ試合は同じ行。穴埋め（`{rank}` `{player}` `{km}`）。
 
-本番の更新: 前日に一度作り、試合 3 時間前にケガと連戦・移動だけ差し替える。
+### 生成・保存（全ユーザー共通スナップショット）
+
+```
+前日フル生成 → games/{gameId}.proBrief
+T-3h（試合開始 3 時間前）→ ケガ・連戦・移動だけ差し替え
+クライアント → Firestore / 公開 API を読むだけ（開くたびに再計算しない）
+```
+
+| いつ | 何をする |
+|---|---|
+| **前日**（日次 ingest 後） | MATCHUP / SCHEDULE / CONTEXT をフル生成して保存 |
+| **T-3h** | injury 折り込み・CONTEXT 欠場・SCHEDULE だけパッチ |
+
+LLM なし。コスト ≈ $0（Cloud Functions / Next の CPU のみ）。
 
 ---
 
-## 7. 実装メモ（今）
+## 8. 実装メモ
 
-- 画面はモック `nbaProBriefPreviewMocks` ＋移動 km 計算まで。全試合の自動生成・試合ドキュメント保存は未接続。
-- データの正は Firestore。BDL は ingest だけ（クライアントは叩かない）。
-  - 材料: リーグ表と同じスナップショット（`nbaLeagueTeamStats` / `nbaLeaguePlayerStats` 等）
-  - 完成品: `games/{gameId}.proBrief`（liveStats と同じ置き場）
-  - 前日生成、T-3h にケガ・日程だけ上書き
-- 移動の閾値: 今夜 800km、48h は 2 レグ以上かつ 2,000km（`NBA_TRAVEL_TONIGHT_MIN_KM` / `NBA_TRAVEL_WINDOW_MIN_KM`）。
-- Brief の型: `lib/predict/predictProBrief.ts`（推奨スコア欄は持たない）。
-- iOS / Web は同じ Firestore brief を読む。表示前に `sanitizeProBriefForDisplay`（禁止語・本数）を通す。
-- コスト目安: テンプレート生成は Cloud Functions ほぼ $0。BDL GOAT は ingest 用で約 $40/月。LLM は使わない。
+- 生成: `lib/nba/insights/*`
+- 完成品: `games/{gameId}.proBrief`（`liveStats` と同じ置き場）
+- 公開: `GET /api/nba/matchup-insight?gameId=`
+- 管理: `POST /api/admin/nba-pro-brief-ingest`（`mode: "full" | "patch"`）
+- 表示前: `sanitizeProBriefForDisplay`
+- Brief 型: `lib/predict/predictProBrief.ts`
+- iOS / Web は同じ Firestore brief を読む

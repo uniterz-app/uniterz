@@ -442,6 +442,20 @@ export default function PredictProBriefPanel({
         </div>
       </div>
 
+      {!usePlaceholder &&
+      (safeBrief?.sampleNoteJa || safeBrief?.sampleNoteEn) ? (
+        <p
+          className={[
+            nameOxanium.className,
+            "mb-2 text-[10px] font-semibold leading-snug text-amber-200/75",
+          ].join(" ")}
+        >
+          {language === "ja"
+            ? safeBrief.sampleNoteJa
+            : safeBrief.sampleNoteEn ?? safeBrief.sampleNoteJa}
+        </p>
+      ) : null}
+
       {locked ? (
         <div className="relative isolate min-h-[320px] overflow-hidden">
           <div

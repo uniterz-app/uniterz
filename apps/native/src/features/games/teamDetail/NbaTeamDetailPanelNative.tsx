@@ -1629,6 +1629,20 @@ export default function NbaTeamDetailPanelNative({
             accent={accent}
           />
         </View>
+        <View style={[styles.splitRow, { marginTop: 8 }]}>
+          <SplitCard
+            label="VS .500+"
+            wins={detail.strengthSplit.vsOver500.wins}
+            losses={detail.strengthSplit.vsOver500.losses}
+            accent={accent}
+          />
+          <SplitCard
+            label="VS SUB-.500"
+            wins={detail.strengthSplit.vsUnder500.wins}
+            losses={detail.strengthSplit.vsUnder500.losses}
+            accent={accent}
+          />
+        </View>
 
         <View style={[styles.divider, { backgroundColor: dividerColor }]} />
 

@@ -132,6 +132,16 @@ export async function runNbaStatsDailyIngest(
     );
   }
 
+  // 翌日分の Pro Insight フル生成（スタッツ・injury 更新後）
+  const { ingestNbaProBriefs } = await import(
+    "@/lib/nba/insights/ingestProBriefs"
+  );
+  steps.push(
+    await runStep("pro-brief-full", () =>
+      ingestNbaProBriefs(db, { seasonKey, mode: "full", fullHorizonHours: 36 })
+    )
+  );
+
   const finishedAt = new Date().toISOString();
   const ok = steps.every((s) => s.ok);
   return { ok, seasonKey, mode, startedAt, finishedAt, steps };

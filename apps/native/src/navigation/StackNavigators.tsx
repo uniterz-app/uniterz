@@ -587,6 +587,24 @@ function ProfileStackScreen() {
             }
           />
         ) : null}
+        {__DEV__ ? (
+          <ProfileStack.Screen
+            name="TeamSeasonRecordsPreview"
+            getComponent={() =>
+              require("../features/profile/screens/ProfileStackWrappers")
+                .TeamSeasonRecordsPreviewScreenWrapper
+            }
+          />
+        ) : null}
+        {__DEV__ ? (
+          <ProfileStack.Screen
+            name="JerseyDiagonalDesignPreview"
+            getComponent={() =>
+              require("../features/profile/screens/ProfileStackWrappers")
+                .JerseyDiagonalDesignPreviewScreenWrapper
+            }
+          />
+        ) : null}
         <ProfileStack.Screen
           name="ProSuccess"
           getComponent={() =>

@@ -2026,6 +2026,20 @@ export default function NbaTeamDetailPanel({
             accent={accent}
           />
         </div>
+        <div className="flex gap-2">
+          <SplitCard
+            label="VS .500+"
+            wins={detail.strengthSplit.vsOver500.wins}
+            losses={detail.strengthSplit.vsOver500.losses}
+            accent={accent}
+          />
+          <SplitCard
+            label="VS SUB-.500"
+            wins={detail.strengthSplit.vsUnder500.wins}
+            losses={detail.strengthSplit.vsUnder500.losses}
+            accent={accent}
+          />
+        </div>
       </section>
 
       <div

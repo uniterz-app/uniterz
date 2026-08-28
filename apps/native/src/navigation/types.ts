@@ -218,6 +218,8 @@ export type ProfileStackParamList = {
   NotificationDev: undefined;
   /** __DEV__ Injury UI デザイン比較 */
   InjuryDesignPreview: undefined;
+  TeamSeasonRecordsPreview: undefined;
+  JerseyDiagonalDesignPreview: undefined;
 };
 
 export type AuthStackParamList = {

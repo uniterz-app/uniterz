@@ -69,5 +69,11 @@ export function sanitizeProBriefForDisplay(
   return {
     home: clipCard(brief.home),
     away: clipCard(brief.away),
+    phase: brief.phase,
+    sampleNoteJa: brief.sampleNoteJa,
+    sampleNoteEn: brief.sampleNoteEn,
+    gamesPlayed: brief.gamesPlayed,
+    generatedAtMs: brief.generatedAtMs,
+    patchedAtMs: brief.patchedAtMs,
   };
 }

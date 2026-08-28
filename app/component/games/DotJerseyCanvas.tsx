@@ -2,6 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { JERSEY_PATH_D } from "@/app/component/games/icons/Jersey";
+import {
+  buildThinTripleStripeDots,
+  isBlackBodyPrimary,
+  JERSEY_FRAME_WHITE,
+} from "@/lib/jersey/jerseyThinTripleStripes";
 
 const VIEWBOX_W = 87.76;
 const VIEWBOX_H = 114.88;
@@ -102,15 +107,6 @@ function rgbToCss({ r, g, b }: Rgb): string {
   return `rgb(${r},${g},${b})`;
 }
 
-function lerpRgb(a: Rgb, b: Rgb, t: number): Rgb {
-  const u = Math.max(0, Math.min(1, t));
-  return {
-    r: Math.round(a.r + (b.r - a.r) * u),
-    g: Math.round(a.g + (b.g - a.g) * u),
-    b: Math.round(a.b + (b.b - a.b) * u),
-  };
-}
-
 /** 表示用にごく弱く白へ持ち上げ（沈み過ぎ防止） */
 function liftRgbForDisplay(c: Rgb, amount: number): Rgb {
   const a = Math.max(0, Math.min(0.28, amount));
@@ -170,21 +166,18 @@ export default function DotJerseyCanvas({
   const offscreenRef = useRef<HTMLCanvasElement | null>(null);
   const geomRef = useRef<{ s: number; ox: number; oy: number } | null>(null);
 
-  const gradientMode = useJerseyGradient(accent, accentEnd);
+  /** 副色あり → 地=primary・斜め3本=secondary（案 D）。なしは単色 */
+  const stripeMode = useJerseyGradient(accent, accentEnd);
 
   const resolvedDotColor = useMemo(() => {
-    if (gradientMode) return null;
     if (dotColor) return dotColor;
     return blendAccentForDots(accent);
-  }, [accent, dotColor, gradientMode]);
+  }, [accent, dotColor]);
 
-  const gradientRgb = useMemo(() => {
-    if (!gradientMode || !accentEnd) return null;
-    return {
-      start: parseHexToRgb(accent),
-      end: parseHexToRgb(accentEnd),
-    };
-  }, [accent, accentEnd, gradientMode]);
+  const stripeBand = useMemo(
+    () => (stripeMode && accentEnd ? buildThinTripleStripeDots(accentEnd) : null),
+    [stripeMode, accentEnd],
+  );
 
   /** 完成形のドット＋クリップ＋縁取りをオフスクリーンへ一度だけ描く */
   const buildOffscreen = useCallback(
@@ -216,6 +209,7 @@ export default function DotJerseyCanvas({
       const step = Math.max(2.4, Math.min(3.6, cssW * 0.028));
       const rMin = step * 0.17;
       const rMax = step * 0.46;
+      const bodyFill = resolvedDotColor ?? blendAccentForDots(accent);
 
       for (let gy = oy + step * 0.5; gy < oy + VIEWBOX_H * s; gy += step) {
         for (let gx = ox + step * 0.5; gx < ox + VIEWBOX_W * s; gx += step) {
@@ -225,26 +219,30 @@ export default function DotJerseyCanvas({
 
           const shade = halftoneShade01(vbx, vby);
           const r = rMin + shade * (rMax - rMin);
-          if (gradientRgb) {
-            // 肩〜裾方向の二色グラデ（ハーフトーン陰影をわずかに混ぜて立体感を維持）
-            const tBase =
-              0.32 * (vbx / VIEWBOX_W) + 0.68 * (vby / VIEWBOX_H);
-            const t = Math.max(
-              0,
-              Math.min(1, tBase * 0.88 + (shade - 0.5) * 0.14),
-            );
-            const c = liftRgbForDisplay(
-              lerpRgb(gradientRgb.start, gradientRgb.end, t),
-              0.09,
-            );
-            ctx.fillStyle = rgbToCss(c);
-          } else {
-            ctx.fillStyle = resolvedDotColor ?? blendAccentForDots(accent);
-          }
+          ctx.fillStyle = bodyFill;
           ctx.beginPath();
           ctx.arc(gx, gy, r, 0, Math.PI * 2);
           ctx.fill();
         }
+      }
+
+      // 斜めレーシング3本（viewBox 座標で回転）
+      if (stripeBand) {
+        ctx.save();
+        ctx.translate(ox, oy);
+        ctx.scale(s, s);
+        ctx.translate(stripeBand.cx, stripeBand.cy);
+        ctx.rotate((stripeBand.rotateDeg * Math.PI) / 180);
+        ctx.translate(-stripeBand.cx, -stripeBand.cy);
+        for (const dot of stripeBand.dots) {
+          ctx.globalAlpha = dot.opacity;
+          ctx.fillStyle = dot.fill;
+          ctx.beginPath();
+          ctx.arc(dot.cx, dot.cy, dot.r, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+        ctx.globalAlpha = 1;
       }
 
       const jerseyPath = getJerseyPath2d();
@@ -259,24 +257,26 @@ export default function DotJerseyCanvas({
         ctx.fill(jerseyPath);
         ctx.restore();
 
-        // SVG ユニフォームと同様のシルエット縁（白・細線）
-        ctx.save();
-        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-        ctx.translate(ox, oy);
-        ctx.scale(s, s);
-        ctx.globalCompositeOperation = "source-over";
-        /** 白＋シアンのハイライト縁 */
-        ctx.strokeStyle = "rgba(200,248,255,0.58)";
-        ctx.lineWidth = Math.max(1.1, 2.1 / (dpr * s));
-        ctx.lineJoin = "round";
-        ctx.lineCap = "round";
-        ctx.stroke(jerseyPath);
-        ctx.restore();
+        // 黒地だけ薄い白枠（シルエット補足）
+        if (isBlackBodyPrimary(accent)) {
+          ctx.save();
+          ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+          ctx.translate(ox, oy);
+          ctx.scale(s, s);
+          ctx.globalCompositeOperation = "source-over";
+          ctx.strokeStyle = JERSEY_FRAME_WHITE;
+          ctx.globalAlpha = 0.65;
+          ctx.lineWidth = Math.max(1.1, 2.1 / (dpr * s)) * 0.55;
+          ctx.lineJoin = "round";
+          ctx.lineCap = "round";
+          ctx.stroke(jerseyPath);
+          ctx.restore();
+        }
       }
 
       return off;
     },
-    [accent, resolvedDotColor, gradientRgb],
+    [accent, resolvedDotColor, stripeBand],
   );
 
   /**

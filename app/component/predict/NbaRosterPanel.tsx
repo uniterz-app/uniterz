@@ -21,6 +21,7 @@ import { TEAM_SHORT } from "@/lib/team-short";
 import {
   getTeamJerseyPrimaryColor,
   getTeamJerseySecondaryColor,
+  getTeamUiAccentColor,
 } from "@/lib/team-colors";
 import { nameBebas, nameOxanium, resultStatsMetricNumClass } from "@/lib/fonts";
 import { matchCardTeamNameStyle } from "@/lib/games/teamDisplayTypography";
@@ -343,9 +344,11 @@ function TeamRosterCard({
     : `REF: ${abbr}-24-${block.side === "home" ? "H" : "A"}`;
   const teamPrimary = getTeamJerseyPrimaryColor("nba", block.teamId);
   const jerseySecondary = getTeamJerseySecondaryColor("nba", block.teamId);
-  const border = hexToRgba(teamPrimary, 0.55);
-  const fill = hexToRgba(teamPrimary, 0.05);
-  const divider = hexToRgba(teamPrimary, 0.22);
+  /** 暗い背景上の文字・枠（Nets 黒など raw primary は潰れる） */
+  const uiAccent = getTeamUiAccentColor("nba", block.teamId);
+  const border = hexToRgba(uiAccent, 0.55);
+  const fill = hexToRgba(uiAccent, 0.05);
+  const divider = hexToRgba(uiAccent, 0.22);
   const expanded = isDetail ? true : open;
 
   const headerInner = (
@@ -365,8 +368,8 @@ function TeamRosterCard({
                 "rounded-[2px] border bg-transparent px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-[0.12em]",
               ].join(" ")}
               style={{
-                borderColor: teamPrimary,
-                color: teamPrimary,
+                borderColor: uiAccent,
+                color: uiAccent,
               }}
             >
               {sideLabel}
@@ -387,7 +390,7 @@ function TeamRosterCard({
             nameOxanium.className,
             "mt-1 text-[11px] font-bold uppercase tracking-[0.1em]",
           ].join(" ")}
-          style={{ color: hexToRgba(teamPrimary, 0.9) }}
+          style={{ color: hexToRgba(uiAccent, 0.9) }}
         >
           AVAILABILITY: {block.activeCount}/{block.rosterCount} ACTIVE
         </p>
@@ -402,13 +405,13 @@ function TeamRosterCard({
               nameOxanium.className,
               "text-[22px] font-black leading-none",
             ].join(" ")}
-            style={{ color: teamPrimary }}
+            style={{ color: uiAccent }}
           >
             #{block.seed}
           </p>
         </div>
       ) : null}
-      {!isDetail ? <Chevron open={open} accent={teamPrimary} /> : null}
+      {!isDetail ? <Chevron open={open} accent={uiAccent} /> : null}
     </>
   );
 
@@ -444,7 +447,7 @@ function TeamRosterCard({
           <div className="overflow-x-auto pl-1.5 pr-2.5 pb-1.5 pt-1">
             <div className="min-w-max">
               <div className="mb-0.5 flex items-center rounded-[2px] bg-white/[0.04] pr-1">
-                <IdentityCell accent={teamPrimary} header />
+                <IdentityCell accent={uiAccent} header />
                 <StatsCells header />
               </div>
 
@@ -454,7 +457,7 @@ function TeamRosterCard({
                 const identity = (
                   <IdentityCell
                     player={p}
-                    accent={teamPrimary}
+                    accent={uiAccent}
                     injuryStatus={injuryById[String(p.id)]}
                     dim={p.dimmed}
                   />
@@ -475,7 +478,7 @@ function TeamRosterCard({
                     >
                       <IdentityCell
                         player={p}
-                        accent={teamPrimary}
+                        accent={uiAccent}
                         injuryStatus={injuryById[String(p.id)]}
                         dim={p.dimmed}
                         interactive
@@ -496,14 +499,14 @@ function TeamRosterCard({
 
           <footer
             className="flex items-center justify-between gap-2 border-t px-2.5 py-1.5"
-            style={{ borderColor: hexToRgba(teamPrimary, 0.35) }}
+            style={{ borderColor: hexToRgba(uiAccent, 0.35) }}
           >
             <p
               className={[
                 nameOxanium.className,
                 "text-[7px] font-bold uppercase tracking-[0.14em]",
               ].join(" ")}
-              style={{ color: hexToRgba(teamPrimary, 0.85) }}
+              style={{ color: hexToRgba(uiAccent, 0.85) }}
             >
               {footerLeft}
             </p>

@@ -47,12 +47,15 @@ export const PAGE_REST_CARD_STAGGER_MS = 34;
 export const GAMES_CARD_LIST_STAGGER_MS = 50;
 export const GAMES_CARD_LIST_STAGGER_CAP_MS = 140;
 
-/** 日付切替：行スタッガー（Web `scheduleItem` daySwitch） */
-export const GAMES_DAY_SWITCH_ROW_STAGGER_MS = 38;
-export const GAMES_DAY_SWITCH_ROW_STAGGER_CAP_MS = 280;
-export const GAMES_DAY_SWITCH_ROW_OPACITY_MS = 520;
-export const GAMES_DAY_SWITCH_ROW_TRANSLATE_MS = 560;
-export const GAMES_DAY_SWITCH_ROW_FROM_Y = -11;
+/**
+ * 日付切替：行スタッガー（Web `scheduleItem` daySwitch）
+ * 以前 520/560ms + opacity 0 始まりだと、ジャージ再マウントと重なり「押してすぐ切り替わらない」感じになる。
+ */
+export const GAMES_DAY_SWITCH_ROW_STAGGER_MS = 28;
+export const GAMES_DAY_SWITCH_ROW_STAGGER_CAP_MS = 160;
+export const GAMES_DAY_SWITCH_ROW_OPACITY_MS = 240;
+export const GAMES_DAY_SWITCH_ROW_TRANSLATE_MS = 260;
+export const GAMES_DAY_SWITCH_ROW_FROM_Y = -6;
 
 /** 4 枚目以降（page モード） */
 export const GAMES_PAGE_REST_CARD_DURATION_MS = 240;

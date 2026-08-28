@@ -10,7 +10,7 @@ type JerseyProps = {
 let cachedSkiaComponent: ComponentType<JerseyProps> | null = null;
 let skiaLoadTried = false;
 let skiaRenderDisabled = false;
-const ENABLE_SKIA_RENDERER = false;
+const ENABLE_SKIA_RENDERER = true;
 
 function resolveSkiaComponent(): ComponentType<JerseyProps> | null {
   if (!ENABLE_SKIA_RENDERER) return null;

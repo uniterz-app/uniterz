@@ -20,6 +20,8 @@ import MatchCardListCtaNative, {
 import MatchCardEntryScanNative from "./MatchCardEntryScanNative";
 import {
   useGameCardListRowEntrance,
+  gameCardLineFrameDrawDelayMs,
+  gameCardShouldAnimateLineFrameDraw,
   type GameCardEntranceVariant,
 } from "./useGameCardListRowEntrance";
 import TutorialCardTapHintNative from "../tutorial/TutorialCardTapHintNative";
@@ -234,6 +236,19 @@ const GameCardListRow = memo(function GameCardListRow(props: GameCardListRowProp
     showPredictPrimaryGlow,
   });
 
+  /** Canvas 準備後に枠側で描く。親 strokeEnd だとジャージ計測遅れでパスアニメが消える */
+  const lineFrameAnimateDraw =
+    useLineFrame &&
+    gameCardShouldAnimateLineFrameDraw({
+      enteringAnimationEnabled,
+      reduceMotion,
+      entranceVariant,
+      rowIndex,
+    });
+  const lineFrameDrawDelayMs = lineFrameAnimateDraw
+    ? gameCardLineFrameDrawDelayMs(rowIndex, entranceVariant)
+    : 0;
+
   return (
     <AnimatedPressable
       collapsable={false}
@@ -274,7 +289,8 @@ const GameCardListRow = memo(function GameCardListRow(props: GameCardListRowProp
           topLabel={frameLabels.top || undefined}
           leftLabel={frameLabels.left}
           bottomLabel={ctaDisplayLabel}
-          strokeEnd={ent.frameStrokeEnd}
+          animateDraw={lineFrameAnimateDraw}
+          drawDelayMs={lineFrameDrawDelayMs}
           leftLabelTutorialTarget={
             registerPickupLabel ? "match-pickup-label" : null
           }

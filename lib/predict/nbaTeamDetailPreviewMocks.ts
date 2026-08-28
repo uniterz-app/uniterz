@@ -120,6 +120,11 @@ export type NbaTeamDetailPreview = {
     home: { wins: number; losses: number };
     away: { wins: number; losses: number };
   };
+  /** 相手の試合時点勝率による強弱スプリット（nbaTeamSeasonRecords） */
+  strengthSplit: {
+    vsOver500: { wins: number; losses: number };
+    vsUnder500: { wins: number; losses: number };
+  };
   /** 相手別 W-L（game log overlay） */
   headToHead: NbaTeamHeadToHeadEntry[];
   /** 予想入力ロスターと同じ形（ライブは overlay で上書き） */
@@ -567,6 +572,13 @@ function emptyHomeAwaySplit() {
   };
 }
 
+function emptyStrengthSplit() {
+  return {
+    vsOver500: { ...EMPTY_WL },
+    vsUnder500: { ...EMPTY_WL },
+  };
+}
+
 function emptyRosterBlock(teamId: string, teamName: string): NbaRosterTeamBlock {
   return {
     teamId,
@@ -669,6 +681,10 @@ function zeroTeamDetailSeasonStats(
       home: { ...emptyRecord },
       away: { ...emptyRecord },
     },
+    strengthSplit: {
+      vsOver500: { ...emptyRecord },
+      vsUnder500: { ...emptyRecord },
+    },
     headToHead: [],
     asOfLabel: "PRESEASON · 2026-27",
   };
@@ -708,6 +724,7 @@ function buildMinimalTeamDetailPreview(
     opponentStats: [],
     conferenceSplit: emptyConferenceSplit(),
     homeAwaySplit: emptyHomeAwaySplit(),
+    strengthSplit: emptyStrengthSplit(),
     headToHead: [],
     rosterBlock,
     payroll: emptyPayroll(),
@@ -792,6 +809,7 @@ export function getNbaTeamDetailPreview(
     opponentStats: buildOpponentStats(resolvedId, working),
     conferenceSplit: emptyConferenceSplit(),
     homeAwaySplit: emptyHomeAwaySplit(),
+    strengthSplit: emptyStrengthSplit(),
     headToHead: [],
     rosterBlock: emptyRosterBlock(resolvedId, teamName),
     payroll: emptyPayroll(),

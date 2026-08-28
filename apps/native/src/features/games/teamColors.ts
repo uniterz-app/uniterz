@@ -10,46 +10,70 @@ type SideLike = {
 } | null | undefined;
 
 const jerseyPrimaryOverridesNBA: Record<string, string> = {
-  "nba-76ers": "#003DA5",
-  "nba-magic": "#0075BD",
-  "nba-nuggets": "#FEC525",
-  "nba-pistons": "#ED174C",
-  "nba-hornets": "#1D8CAB",
-  "nba-knicks": "#F48328",
-  "nba-lakers": "#DFFE00",
-  "nba-suns": "#E66226",
+  "nba-hawks": "#E31837",
+  "nba-celtics": "#007A33",
+  "nba-nets": "#000000",
+  "nba-hornets": "#1D1160",
+  "nba-bulls": "#000000",
+  "nba-cavaliers": "#860038",
+  "nba-pistons": "#C8102E",
+  "nba-pacers": "#003DA5",
+  "nba-heat": "#C8102E",
+  "nba-bucks": "#00471B",
+  "nba-knicks": "#F58426",
+  "nba-magic": "#000000",
+  "nba-76ers": "#0B6BD8",
+  "nba-raptors": "#E31837",
+  "nba-wizards": "#002B5C",
+  "nba-mavericks": "#0084F0",
+  "nba-nuggets": "#418FDE",
+  "nba-warriors": "#FFC72C",
+  "nba-rockets": "#F21C3A",
+  "nba-clippers": "#1D428A",
+  "nba-lakers": "#FFC72C",
+  "nba-grizzlies": "#7190C4",
   "nba-timberwolves": "#0C2340",
-  "nba-warriors": "#DFFE00",
-  "nba-blazers": "#E13A3E",
-  "nba-cavaliers": "#6F212F",
-  "nba-celtics": "#BC9A5C",
-  "nba-hawks": "#CC092F",
-  "nba-raptors": "#BE0F34",
-  "nba-rockets": "#D31145",
+  "nba-pelicans": "#C8102E",
+  "nba-thunder": "#EF3B24",
+  "nba-suns": "#1D1160",
+  "nba-blazers": "#E31837",
+  "nba-kings": "#5A2D81",
   "nba-spurs": "#C4CED4",
-  "nba-thunder": "#F05133",
+  "nba-jazz": "#0077C0",
 };
 
-const jerseyGradientEndMatchesPrimaryNBA = new Set<string>([
-  "nba-76ers",
-  "nba-blazers",
-  "nba-cavaliers",
-  "nba-celtics",
-  "nba-hawks",
-  "nba-hornets",
-  "nba-knicks",
-  "nba-lakers",
-  "nba-magic",
-  "nba-nuggets",
-  "nba-pistons",
-  "nba-raptors",
-  "nba-rockets",
-  "nba-spurs",
-  "nba-suns",
-  "nba-thunder",
-  "nba-timberwolves",
-  "nba-warriors",
-]);
+const jerseySecondaryOverridesNBA: Record<string, string> = {
+  "nba-hawks": "#FDBB30",
+  "nba-celtics": "#FFFFFF",
+  "nba-nets": "#FFFFFF",
+  "nba-hornets": "#00788C",
+  "nba-bulls": "#E31837",
+  "nba-cavaliers": "#FDBB30",
+  "nba-pistons": "#1D42BA",
+  "nba-pacers": "#FDBB30",
+  "nba-heat": "#FFFFFF",
+  "nba-bucks": "#EEE1C6",
+  "nba-knicks": "#006BB6",
+  "nba-magic": "#0077C0",
+  "nba-76ers": "#FFFFFF",
+  "nba-raptors": "#000000",
+  "nba-wizards": "#E31837",
+  "nba-mavericks": "#B8C4CA",
+  "nba-nuggets": "#FEC524",
+  "nba-warriors": "#1D428A",
+  "nba-rockets": "#000000",
+  "nba-clippers": "#C8102E",
+  "nba-lakers": "#552583",
+  "nba-grizzlies": "#12173F",
+  "nba-timberwolves": "#78BE20",
+  "nba-pelicans": "#C5A017",
+  "nba-thunder": "#007AC1",
+  "nba-suns": "#E56020",
+  "nba-blazers": "#000000",
+  "nba-kings": "#C4CED4",
+  "nba-spurs": "#000000",
+  "nba-jazz": "#FFFFFF",
+};
 
 function normalizeLeague(raw: unknown): SupportedLeague {
   const v = String(raw ?? "").trim().toLowerCase();
@@ -144,8 +168,8 @@ export function resolveTeamJerseyPalette(
 
   let secondary: string | null = null;
   if (teamId) {
-    if (league === "nba" && jerseyGradientEndMatchesPrimaryNBA.has(teamId)) {
-      secondary = primary;
+    if (league === "nba" && jerseySecondaryOverridesNBA[teamId]) {
+      secondary = jerseySecondaryOverridesNBA[teamId];
     } else {
       secondary = getSecondaryByLeague(league, teamId);
     }

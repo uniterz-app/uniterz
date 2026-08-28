@@ -87,6 +87,8 @@ type Props = {
     | "leagueStatsPreview"
     | "proLeagueGatePreview"
     | "injuryDesignPreview"
+    | "teamSeasonRecordsPreview"
+    | "jerseyDiagonalDesignPreview"
     | "adminFeatureInbox"
     | "adminContactInbox"
     | "adminRedemptions"
@@ -267,6 +269,9 @@ export default function ProfileSideMenuModal({
       | "liveGameStatsPreview"
       | "leagueStatsPreview"
       | "proLeagueGatePreview"
+      | "injuryDesignPreview"
+      | "teamSeasonRecordsPreview"
+      | "jerseyDiagonalDesignPreview"
       | "adminFeatureInbox"
       | "adminContactInbox"
       | "adminRedemptions"
@@ -707,6 +712,26 @@ export default function ProfileSideMenuModal({
                           onPress={() => openUserPage("injuryDesignPreview")}
                         >
                           Injury UI デザイン案
+                        </SideMenuItemButtonNative>
+                        <SideMenuItemButtonNative
+                          icon="chart-box-outline"
+                          dense
+                          labelStyle={labelStyle}
+                          onPress={() =>
+                            openUserPage("teamSeasonRecordsPreview")
+                          }
+                        >
+                          前季成績スプリット（Insight）
+                        </SideMenuItemButtonNative>
+                        <SideMenuItemButtonNative
+                          icon="tshirt-crew-outline"
+                          dense
+                          labelStyle={labelStyle}
+                          onPress={() =>
+                            openUserPage("jerseyDiagonalDesignPreview")
+                          }
+                        >
+                          ジャージ斜めライン案
                         </SideMenuItemButtonNative>
                       </View>
                     </>

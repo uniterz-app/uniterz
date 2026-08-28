@@ -17,6 +17,7 @@ import type { NbaRosterReport } from "@/lib/predict/nbaRoster";
 import { useNbaMatchupRoster } from "@/lib/nba/teamRosters/useNbaMatchupRoster";
 import { useNbaMatchupInjuryReport } from "@/lib/nba/predict/useNbaMatchupInjuryReport";
 import { useNbaMatchupTeamStats } from "@/lib/nba/predict/useNbaMatchupTeamStats";
+import { useNbaMatchupProBrief } from "@/lib/nba/predict/useNbaMatchupProBrief";
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
 
@@ -103,11 +104,15 @@ export default function NbaPredictToolsTabs({
   }, [tab]);
 
   /**
-   * モックへは落とさない。`nbaProBriefPreviewMocks` は特定カード（開幕の
-   * Celtics @ Pistons）だけ作り物の数字を返すため、本番で Pro に嘘の
-   * Insight を見せることになる。brief 未配線なら PendingPanel を出す。
+   * モックへは落とさない。本番は games.proBrief（前日生成 / T-3h パッチ）。
+   * brief prop があれば優先（プレビュー用）。
    */
-  const resolvedBrief = brief;
+  const { brief: liveBrief, loading: briefLoading } = useNbaMatchupProBrief({
+    gameId: fromPredictGameId,
+    override: brief,
+    enabled: visited.has("insight"),
+  });
+  const resolvedBrief = liveBrief;
 
   const { report: liveInjury, loading: injuryLoading } =
     useNbaMatchupInjuryReport({
@@ -180,7 +185,9 @@ export default function NbaPredictToolsTabs({
       {tab ? (
         <div className="mt-1.5 min-h-30 px-0.5">
           {tab === "insight" ? (
-            isPro && !resolvedBrief ? (
+            briefLoading ? (
+              <PendingPanel text={m.panelDataPending} />
+            ) : isPro && !resolvedBrief ? (
               <PendingPanel text={m.panelDataPending} />
             ) : (
               <PredictProBriefPanel

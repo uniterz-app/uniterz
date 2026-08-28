@@ -3,7 +3,8 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
-import { OXANIUM_FONT } from "../../rankings/rankingsUiTheme";
+import { METRIC_FONT } from "../../rankings/rankingsUiTheme";
+const OXANIUM_FONT = METRIC_FONT;
 
 type InjuryStatus = "out" | "questionable" | "doubtful" | "day-to-day";
 

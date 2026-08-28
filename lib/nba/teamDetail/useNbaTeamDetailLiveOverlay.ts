@@ -7,6 +7,10 @@ import { buildMatchupRosterReport } from "@/lib/nba/teamRosters/buildMatchupRost
 import { fetchTeamPayroll } from "@/lib/nba/teamPayroll/fetchTeamPayrollClient";
 import { fetchTeamGameLog } from "@/lib/nba/teamGameLog/fetchTeamGameLogClient";
 import { fetchTeamInjuries } from "@/lib/nba/teamInjuries/fetchTeamInjuriesClient";
+import {
+  fetchTeamStrengthSplit,
+  type NbaTeamStrengthSplit,
+} from "@/lib/nba/insights/fetchTeamStrengthSplitClient";
 import type { NbaTeamGameLogSlice } from "@/lib/nba/teamGameLog/teamGameLogTypes";
 import type { NbaRosterTeamBlock } from "@/lib/predict/nbaRoster";
 import type {
@@ -29,6 +33,7 @@ export type NbaTeamDetailOverlayFailures = {
   payroll: boolean;
   gameLog: boolean;
   injuries: boolean;
+  strengthSplit: boolean;
 };
 
 function winPct(wins: number, losses: number): number {
@@ -43,6 +48,7 @@ function emptyFailures(): NbaTeamDetailOverlayFailures {
     payroll: false,
     gameLog: false,
     injuries: false,
+    strengthSplit: false,
   };
 }
 
@@ -50,6 +56,7 @@ function emptyFailures(): NbaTeamDetailOverlayFailures {
  * チーム詳細の ROSTER / PAYROLL / 試合ログ（form・splits）を Firestore 実データで上書き。
  * 未 ingest・開幕前は base の 0 / 空のまま（モックなし）。
  * W–L / H2H / form は試合ログを正（リーグ先進指標と混ぜない）。
+ * vs .500+ / sub-.500 は nbaTeamSeasonRecords を正。
  * roster / injuries は team スコープ API のみ叩く。
  */
 export function useNbaTeamDetailLiveOverlay(options: Options): {
@@ -69,6 +76,8 @@ export function useNbaTeamDetailLiveOverlay(options: Options): {
   const [payroll, setPayroll] = useState<NbaTeamPayroll | null>(null);
   const [gameLog, setGameLog] = useState<NbaTeamGameLogSlice | null>(null);
   const [injuries, setInjuries] = useState<NbaTeamInjuryEntry[] | null>(null);
+  const [strengthSplit, setStrengthSplit] =
+    useState<NbaTeamStrengthSplit | null>(null);
   const [failures, setFailures] =
     useState<NbaTeamDetailOverlayFailures>(emptyFailures);
   const [loading, setLoading] = useState(!!teamId);
@@ -79,6 +88,7 @@ export function useNbaTeamDetailLiveOverlay(options: Options): {
       setPayroll(null);
       setGameLog(null);
       setInjuries(null);
+      setStrengthSplit(null);
       setFailures(emptyFailures());
       setLoading(false);
       return;
@@ -137,18 +147,28 @@ export function useNbaTeamDetailLiveOverlay(options: Options): {
           signal: ac.signal,
         }).then((payload) => payload.injuries)
       ),
+      wrap(
+        fetchTeamStrengthSplit({
+          teamId,
+          season,
+          apiBaseUrl,
+          signal: ac.signal,
+        })
+      ),
     ])
-      .then(([roster, pay, log, inj]) => {
+      .then(([roster, pay, log, inj, strength]) => {
         if (ac.signal.aborted) return;
         setRosterBlock(roster.ok ? roster.value : null);
         setPayroll(pay.ok ? pay.value : null);
         setGameLog(log.ok ? log.value : null);
         setInjuries(inj.ok ? inj.value : null);
+        setStrengthSplit(strength.ok ? strength.value : null);
         setFailures({
           roster: !roster.ok,
           payroll: !pay.ok,
           gameLog: !log.ok,
           injuries: !inj.ok,
+          strengthSplit: !strength.ok,
         });
       })
       .finally(() => {
@@ -166,6 +186,7 @@ export function useNbaTeamDetailLiveOverlay(options: Options): {
       rosterBlock: rosterBlock ?? base.rosterBlock,
       payroll: payroll ?? base.payroll,
       ...(injuries != null ? { injuries } : null),
+      ...(strengthSplit != null ? { strengthSplit } : null),
       ...(fromGames && gameLog
         ? {
             recentGames: gameLog.recentGames,
@@ -186,13 +207,14 @@ export function useNbaTeamDetailLiveOverlay(options: Options): {
           }
         : null),
     };
-  }, [base, rosterBlock, payroll, gameLog, injuries]);
+  }, [base, rosterBlock, payroll, gameLog, injuries, strengthSplit]);
 
   const hasFetchError =
     failures.roster ||
     failures.payroll ||
     failures.gameLog ||
-    failures.injuries;
+    failures.injuries ||
+    failures.strengthSplit;
 
   return { detail, loading, failures, hasFetchError };
 }

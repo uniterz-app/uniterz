@@ -4,100 +4,100 @@ export type TeamColorMap = Record<string, TeamColor>;
 export const teamColorsNBA: TeamColorMap = {
   /* EAST */
 
-  // ATL Hawks
-  "nba-hawks":        { primary: "#CC092F", secondary: "#C1D32F" },
+  // ATL Hawks → 画面用の明るい赤 + Yellow
+  "nba-hawks":        { primary: "#E31837", secondary: "#FDBB30" },
 
-  // BOS Celtics
-  "nba-celtics":      { primary: "#BC9A5C", secondary: "#BA9653" },
+  // BOS Celtics → Green + White（ライン）
+  "nba-celtics":      { primary: "#007A33", secondary: "#FFFFFF" },
 
   // BKN Nets
   "nba-nets":         { primary: "#000000", secondary: "#FFFFFF", textOnPrimary: "#fff" },
 
-  // CHA Hornets
+  // CHA Hornets → Purple 地 + Teal 枠
   "nba-hornets":      { primary: "#1D1160", secondary: "#00788C" },
 
-  // CHI Bulls
-  "nba-bulls":        { primary: "#CE1141", secondary: "#000000" },
+  // CHI Bulls → Black 地 + Red 枠
+  "nba-bulls":        { primary: "#000000", secondary: "#E31837", textOnPrimary: "#fff" },
 
   // CLE Cavaliers
   "nba-cavaliers":    { primary: "#6F263D", secondary: "#FFB81C" },
 
-  // DET Pistons → 単色（公式レッド系 #ED174C）
-  "nba-pistons":      { primary: "#ED174C", secondary: "#ED174C", textOnPrimary: "#fff" },
+  // DET Pistons → Red + Blue
+  "nba-pistons":      { primary: "#C8102E", secondary: "#1D42BA" },
 
-  // IND Pacers → Gold 主導
-  "nba-pacers":       { primary: "#FDBB30", secondary: "#002D62" },
+  // IND Pacers → Navy 地 + Gold 枠
+  "nba-pacers":       { primary: "#003DA5", secondary: "#FDBB30" },
 
-  // MIA Heat
-  "nba-heat":         { primary: "#98002E", secondary: "#F9A01B" },
+  // MIA Heat → Red 地（Pelicans と同系）+ White ライン
+  "nba-heat":         { primary: "#C8102E", secondary: "#FFFFFF" },
 
   // MIL Bucks
   "nba-bucks":        { primary: "#00471B", secondary: "#EEE1C6" },
 
-  // NYK Knicks → Orange 主導
+  // NYK Knicks → Orange 地 + Blue ライン
   "nba-knicks":       { primary: "#F58426", secondary: "#006BB6" },
 
-  // ORL Magic → Black 主導
+  // ORL Magic → Black 地 + Blue ライン
   "nba-magic":        { primary: "#000000", secondary: "#0077C0", textOnPrimary: "#fff" },
 
-  // PHI 76ers
-  "nba-76ers":        { primary: "#003DA5", secondary: "#ED174C" },
+  // PHI 76ers → はっきりした Blue 地 + White ライン（紫寄りを避ける）
+  "nba-76ers":        { primary: "#0B6BD8", secondary: "#FFFFFF" },
 
   // TOR Raptors
-  "nba-raptors":      { primary: "#CE1141", secondary: "#000000" },
+  "nba-raptors":      { primary: "#E31837", secondary: "#000000" },
 
-  // WAS Wizards → Red 主導
-  "nba-wizards":      { primary: "#E31837", secondary: "#002B5C" },
+  // WAS Wizards → Navy 地 + Red ライン
+  "nba-wizards":      { primary: "#002B5C", secondary: "#E31837" },
 
   
   /* WEST */
 
-  // DAL Mavericks → Navy 主導
-  "nba-mavericks":    { primary: "#002B5C", secondary: "#00538C" },
+  // DAL Mavericks → はっきりしたブルー + Silver 枠
+  "nba-mavericks":    { primary: "#0084F0", secondary: "#B8C4CA" },
 
-  // DEN Nuggets → Gold 主導
-  "nba-nuggets":      { primary: "#FEC525", secondary: "#0E2240" },
+  // DEN Nuggets → Powder Blue 地 + Sunshine Yellow 枠
+  "nba-nuggets":      { primary: "#418FDE", secondary: "#FEC524" },
 
-  // GSW Warriors → Yellow 主導
+  // GSW Warriors → Gold 地 + Royal Blue ライン
   "nba-warriors":     { primary: "#FFC72C", secondary: "#1D428A" },
 
-  // HOU Rockets
-  "nba-rockets":      { primary: "#D31145", secondary: "#000000" },
+  // HOU Rockets → Red 地 + Black ライン
+  "nba-rockets":      { primary: "#F21C3A", secondary: "#000000" },
 
-  // LAC Clippers
-  "nba-clippers":     { primary: "#C8102E", secondary: "#1D428A" },
+  // LAC Clippers → Blue 地 + Red 枠（Pistons は赤地＋青枠）
+  "nba-clippers":     { primary: "#1D428A", secondary: "#C8102E" },
 
-  // LAL Lakers → primary #DFFE00 (neon yellow), secondary purple
-  "nba-lakers":       { primary: "#DFFE00", secondary: "#552583" },
+  // LAL Lakers → Gold 地 + Purple ライン
+  "nba-lakers":       { primary: "#FFC72C", secondary: "#552583" },
 
-  // MEM Grizzlies
-  "nba-grizzlies":    { primary: "#5D76A9", secondary: "#12173F" },
+  // MEM Grizzlies → Beale Blue 地 + Navy 枠（金枠だと Heat と並ぶと紛らわしい）
+  "nba-grizzlies":    { primary: "#7190C4", secondary: "#12173F" },
 
-  // MIN Timberwolves
+  // MIN Timberwolves → Navy + Lime
   "nba-timberwolves": {
     primary: "#0C2340",
-    secondary: "#0C2340",
+    secondary: "#78BE20",
     textOnPrimary: "#fff",
   },
 
-  // NOP Pelicans
-  "nba-pelicans":     { primary: "#0C2340", secondary: "#C8102E" },
+  // NOP Pelicans → Red 地 + Gold ライン
+  "nba-pelicans":     { primary: "#C8102E", secondary: "#C5A017" },
 
-  // OKC Thunder → Orange 主導
-  "nba-thunder":      { primary: "#F05133", secondary: "#007AC1" },
+  // OKC Thunder → Orange 地 + Blue ライン
+  "nba-thunder":      { primary: "#EF3B24", secondary: "#007AC1" },
 
   // PHX Suns
   "nba-suns":         { primary: "#1D1160", secondary: "#E56020" },
 
   // POR Trail Blazers
-  "nba-blazers":      { primary: "#E13A3E", secondary: "#000000" },
+  "nba-blazers":      { primary: "#E31837", secondary: "#000000" },
 
-  // SAC Kings
-  "nba-kings":        { primary: "#5A2D81", secondary: "#63727A" },
+  // SAC Kings → Purple + Silver
+  "nba-kings":        { primary: "#5A2D81", secondary: "#C4CED4" },
 
   // SAS Spurs
   "nba-spurs":        { primary: "#C4CED4", secondary: "#000000", textOnPrimary: "#000" },
 
-  // UTA Jazz
-  "nba-jazz":         { primary: "#002B5C", secondary: "#00471B" },
+  // UTA Jazz → Blue 地 + White ライン
+  "nba-jazz":         { primary: "#0077C0", secondary: "#FFFFFF" },
 };

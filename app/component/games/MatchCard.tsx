@@ -1712,7 +1712,7 @@ const card = (
         mobileDense ? "mb-0 -mt-3" : "mb-1",
         "text-center font-bold uppercase opacity-85",
         isMobile
-          ? "text-xs md:text-sm"
+          ? "text-[13px] leading-[15px] md:text-sm"
           : "text-sm md:text-base lg:text-lg",
       ].join(" ")}
       style={teamNameFont}
@@ -1748,11 +1748,13 @@ const card = (
     className={[
       "mc-name text-center leading-tight",
       wcListNameShellClass(league, isMobile, mobileDense),
-      mobileDense
-        ? "-mt-0.5"
-        : inPredictOverlay
-          ? "mt-0.5"
-          : "mt-1.5",
+      showListLineFrame
+        ? "mt-1"
+        : mobileDense
+          ? "-mt-0.5"
+          : inPredictOverlay
+            ? "mt-0.5"
+            : "mt-1.5",
     ].join(" ")}
   >
   {isMobile ? (
@@ -1977,7 +1979,7 @@ const card = (
         mobileDense ? "mb-0 -mt-3" : "mb-1",
         "text-center font-bold uppercase opacity-85",
         isMobile
-          ? "text-xs md:text-sm"
+          ? "text-[13px] leading-[15px] md:text-sm"
           : "text-sm md:text-base lg:text-lg",
       ].join(" ")}
       style={teamNameFont}
@@ -2014,11 +2016,13 @@ const card = (
     className={[
       "mc-name text-center leading-tight",
       wcListNameShellClass(league, isMobile, mobileDense),
-      mobileDense
-        ? "-mt-0.5"
-        : inPredictOverlay
-          ? "mt-0.5"
-          : "mt-1.5",
+      showListLineFrame
+        ? "mt-1"
+        : mobileDense
+          ? "-mt-0.5"
+          : inPredictOverlay
+            ? "mt-0.5"
+            : "mt-1.5",
     ].join(" ")}
   >
   {isMobile ? (
@@ -2374,6 +2378,15 @@ const card = (
         inPredictOverlay || attachOverlayMarketBar ? "predict-round" : undefined
       }
       leftLabelTutorialTarget={tutorialPickupLabelTarget}
+      animateDraw={Boolean(
+        showListLineFrame && showContentEntry && !reduceMotion
+      )}
+      drawDelaySec={
+        showListLineFrame && showContentEntry && entryTransition
+          ? entryTransition(ENTRY_GROUP_SHELL).delay
+          : 0
+      }
+      fadeContent={false}
     >
       {card}
     </MatchListLineFrame>
