@@ -213,6 +213,7 @@ export default function ResultCardDesignFace({
                 accentEnd={homeSecondary}
                 className="h-[42px] w-[42px] shrink-0"
                 glow="soft"
+                density="coarse"
               />
               <span className={styles.skewWrap}>
                 <span className={`${styles.teamNameSlant} ${nameBebas.className}`}>
@@ -251,6 +252,7 @@ export default function ResultCardDesignFace({
                 accentEnd={awaySecondary}
                 className="h-[42px] w-[42px] shrink-0"
                 glow="soft"
+                density="coarse"
               />
               <span className={styles.skewWrap}>
                 <span className={`${styles.teamNameSlant} ${nameBebas.className}`}>

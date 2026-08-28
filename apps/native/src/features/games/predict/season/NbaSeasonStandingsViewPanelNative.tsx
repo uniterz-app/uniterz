@@ -66,6 +66,7 @@ function TeamCell({
         accent={getTeamJerseyPrimaryColor("nba", teamId)}
         accentEnd={getTeamJerseySecondaryColor("nba", teamId)}
         size={24}
+        density="coarse"
       />
       <Text style={styles.viewTeam} numberOfLines={1}>
         {getNbaTeamNicknameById(teamId).toUpperCase()}

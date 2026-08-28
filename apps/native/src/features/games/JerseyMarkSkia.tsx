@@ -16,6 +16,7 @@ import {
   isBlackBodyPrimary,
   JERSEY_FRAME_WHITE,
 } from "../../../../../lib/jersey/jerseyThinTripleStripes";
+import type { JerseyDotDensity } from "../../../../../lib/jersey/jerseyDensity";
 import {
   JERSEY_PATH_D,
   VIEWBOX_H,
@@ -29,6 +30,7 @@ type JerseyMarkSkiaProps = {
   accent: string;
   accentEnd?: string;
   size?: number;
+  density?: JerseyDotDensity;
 };
 
 function normalizeHexKey(s: string): string {
@@ -38,7 +40,8 @@ function normalizeHexKey(s: string): string {
 function buildJerseyPicture(
   size: number,
   accent: string,
-  accentEnd: string | undefined
+  accentEnd: string | undefined,
+  density: JerseyDotDensity
 ): SkPicture | null {
   const jerseyPath = Skia.Path.MakeFromSVGString(JERSEY_PATH_D);
   if (!jerseyPath) return null;
@@ -48,10 +51,13 @@ function buildJerseyPicture(
   const bodyDots = buildJerseyHalftoneDotList(
     size,
     accent,
-    stripeMode ? undefined : accentEnd
+    stripeMode ? undefined : accentEnd,
+    { density }
   );
   const stripe =
-    stripeMode && accentEnd ? buildThinTripleStripeDots(accentEnd) : null;
+    stripeMode && accentEnd
+      ? buildThinTripleStripeDots(accentEnd, density)
+      : null;
   const blackFrame = isBlackBodyPrimary(accent);
   const strokeW = jerseyStrokeWidthForSize(size);
 
@@ -101,10 +107,11 @@ export default function JerseyMarkSkia({
   accent,
   accentEnd,
   size = 56,
+  density = "coarse",
 }: JerseyMarkSkiaProps) {
   const picture = useMemo(
-    () => buildJerseyPicture(size, accent, accentEnd),
-    [size, accent, accentEnd]
+    () => buildJerseyPicture(size, accent, accentEnd, density),
+    [size, accent, accentEnd, density]
   );
   const glow = useMemo(
     () => accentRgbForJerseyGlow(accent, accentEnd),

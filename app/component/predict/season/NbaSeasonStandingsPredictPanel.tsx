@@ -164,6 +164,7 @@ function RankRow({
             accentEnd={getTeamJerseySecondaryColor("nba", teamId)}
             className="h-7 w-7 shrink-0"
             glow="none"
+            density="coarse"
           />
           <span className="min-w-0 flex-1 truncate">
             <span
@@ -236,6 +237,7 @@ function TeamSlotTray({
                 accentEnd={getTeamJerseySecondaryColor("nba", teamId)}
                 className="h-8 w-8 shrink-0"
                 glow="none"
+                density="coarse"
               />
             </span>
             <span

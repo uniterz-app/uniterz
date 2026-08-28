@@ -6,6 +6,7 @@ import {
   isBlackBodyPrimary,
   JERSEY_FRAME_WHITE,
 } from "../../../../../lib/jersey/jerseyThinTripleStripes";
+import type { JerseyDotDensity } from "../../../../../lib/jersey/jerseyDensity";
 import {
   JERSEY_PATH_D,
   VIEWBOX_H,
@@ -19,6 +20,7 @@ type JerseyMarkSvgProps = {
   accent: string;
   accentEnd?: string;
   size?: number;
+  density?: JerseyDotDensity;
 };
 
 function normalizeHexKey(s: string): string {
@@ -29,6 +31,7 @@ export default function JerseyMarkSvg({
   accent,
   accentEnd,
   size = 56,
+  density = "coarse",
 }: JerseyMarkSvgProps) {
   const id = useId();
   const clipId = `jclip-${id.replace(/:/g, "")}`;
@@ -40,13 +43,17 @@ export default function JerseyMarkSvg({
       buildJerseyHalftoneDotList(
         size,
         accent,
-        stripeMode ? undefined : accentEnd
+        stripeMode ? undefined : accentEnd,
+        { density }
       ),
-    [size, accent, accentEnd, stripeMode]
+    [size, accent, accentEnd, stripeMode, density]
   );
   const stripe = useMemo(
-    () => (stripeMode && accentEnd ? buildThinTripleStripeDots(accentEnd) : null),
-    [stripeMode, accentEnd]
+    () =>
+      stripeMode && accentEnd
+        ? buildThinTripleStripeDots(accentEnd, density)
+        : null,
+    [stripeMode, accentEnd, density]
   );
   const strokeW = useMemo(() => jerseyStrokeWidthForSize(size), [size]);
   const blackFrame = isBlackBodyPrimary(accent);

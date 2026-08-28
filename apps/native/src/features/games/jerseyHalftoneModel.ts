@@ -10,6 +10,10 @@ import {
   parseJerseyHexToRgb,
   type JerseyRgb,
 } from "../../../../../lib/jersey/jerseyDisplayLift";
+import {
+  jerseyBodyStep,
+  type JerseyDotDensity,
+} from "../../../../../lib/jersey/jerseyDensity";
 
 export const JERSEY_PATH_D =
   "m22.75 0-4.04.87c.38 11.69 1.28 23.92.73 34.59-.58 11.33-2.59 21.12-9.56 26.67v52.75h68V62.13c-6.97-5.55-8.98-15.35-9.56-26.67-.55-10.67.35-22.9.73-34.59L65.01 0c-.32 5.52-1.54 11.51-4.21 16.56-3.14 5.94-8.78 10.82-16.91 10.82S30.12 22.5 26.98 16.56C24.31 11.5 23.09 5.52 22.77 0Zm5.29.83c.41 4.8 1.57 9.87 3.69 13.87 2.67 5.06 6.34 8.18 12.15 8.18s9.47-3.12 12.15-8.18c2.12-4 3.28-9.07 3.69-13.87-6.86 2.92-11.19 4.55-15.84 4.55S34.9 3.75 28.04.83M13.51 1.98l-4.18.9c.12 9.41 1.1 19.73.55 29.35C9.3 42.11 7.03 51.38 0 57.95v56.93h4.65V60.06l.99-.68c5.46-3.8 7.99-12.7 8.57-24.12.52-10.03-.29-21.78-.7-33.28m60.74 0c-.41 11.49-1.22 23.25-.7 33.28.58 11.42 3.11 20.33 8.57 24.12l.99.68v54.82h4.65V57.95c-7.03-6.58-9.3-15.85-9.88-25.72-.55-9.62.44-19.95.55-29.35z";
@@ -97,10 +101,12 @@ export type BuildJerseyHalftoneDotListOptions = {
   /** true で擬似ライト（中央が明るい陰影）をオフ。DEV 比較用 */
   disablePseudoLight?: boolean;
   /**
-   * ドット間隔スケール。1 = 本番相当。
-   * 小さいほど細かい（例: 0.55）。DEV 比較用。
+   * ドット間隔スケール。1 = fine。大きいほど粗い。
+   * density 指定時は無視。
    */
   densityScale?: number;
+  /** 一覧 coarse / 詳細 fine。未指定時は coarse */
+  density?: JerseyDotDensity;
 };
 
 /**
@@ -118,15 +124,20 @@ export function buildJerseyHalftoneDotList(
   if (cssW < 2 || cssH < 2) return [];
 
   const flat = options?.disablePseudoLight === true;
-  const density = Math.max(0.35, Math.min(1.6, options?.densityScale ?? 1));
+  const densityMode: JerseyDotDensity = options?.density ?? "coarse";
+  const density =
+    options?.densityScale ??
+    (densityMode === "coarse" ? 1.55 : 1);
   const s = Math.min(
     (cssW - pad * 2) / VIEWBOX_W,
     (cssH - pad * 2) / VIEWBOX_H
   );
-  // 本番: clamp(cssW * 0.028, 2.4, 3.6)。densityScale で間隔を縮める
-  const step = Math.max(1.2, Math.min(3.6, cssW * 0.028 * density));
-  const rMin = step * 0.17;
-  const rMax = step * 0.46;
+  const step =
+    options?.densityScale != null
+      ? Math.max(1.2, Math.min(3.6, cssW * 0.021 * density))
+      : jerseyBodyStep(cssW, densityMode);
+  const rMin = step * (densityMode === "coarse" ? 0.17 : 0.2);
+  const rMax = step * (densityMode === "coarse" ? 0.46 : 0.48);
   const flatR = ((rMin + rMax) * 0.5) / s;
   const gradientMode = useJerseyGradient(accent, accentEnd);
 

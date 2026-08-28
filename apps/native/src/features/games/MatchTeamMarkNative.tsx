@@ -1,4 +1,5 @@
 import { normalizeLeague } from "../../../../../lib/leagues";
+import type { JerseyDotDensity } from "../../../../../lib/jersey/jerseyDensity";
 import CountryFlagNative, { type CountryFlagVariant } from "./CountryFlagNative";
 import JerseyMarkAdaptive from "./JerseyMarkAdaptive";
 import { rawTeamIdFromGameSide } from "./resolveNativeSeriesStanding";
@@ -12,6 +13,8 @@ type MatchTeamMarkNativeProps = {
   /** ジャージ時のサイズ（国旗は variant で決まる） */
   jerseySize?: number;
   flagVariant?: CountryFlagVariant;
+  /** 試合一覧など多数並ぶ面は coarse（既定） */
+  density?: JerseyDotDensity;
 };
 
 /** リーグに応じてジャージまたは WC 国旗を表示（Web `MatchCard` 相当） */
@@ -21,6 +24,7 @@ export default function MatchTeamMarkNative({
   palette,
   jerseySize = 62,
   flagVariant = "card",
+  density = "coarse",
 }: MatchTeamMarkNativeProps) {
   if (normalizeLeague(leagueRaw) === "wc") {
     const teamId = rawTeamIdFromGameSide(side);
@@ -31,6 +35,7 @@ export default function MatchTeamMarkNative({
       accent={palette.primary}
       accentEnd={palette.secondary}
       size={jerseySize}
+      density={density}
     />
   );
 }

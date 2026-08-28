@@ -5,6 +5,7 @@ import { JERSEY_PATH_D } from "@/app/component/games/icons/Jersey";
 import {
   blendAccentForJerseyDots,
 } from "@/lib/jersey/jerseyDisplayLift";
+import { jerseyBodyStep, type JerseyDotDensity } from "@/lib/jersey/jerseyDensity";
 import {
   buildThinTripleStripeDots,
   isBlackBodyPrimary,
@@ -103,6 +104,8 @@ export type DotJerseyCanvasProps = {
   enableDotReveal?: boolean;
   /** ドット開幕のディレイ（ms）。一覧のスタッガーと揃える */
   dotRevealDelayMs?: number;
+  /** ドット密度。既定 coarse（一覧・詳細とも） */
+  density?: JerseyDotDensity;
 };
 
 /**
@@ -115,6 +118,7 @@ export default function DotJerseyCanvas({
   dotColor,
   enableDotReveal = false,
   dotRevealDelayMs = 0,
+  density = "coarse",
 }: DotJerseyCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const maskRef = useRef<MaskCache | null>(null);
@@ -135,8 +139,11 @@ export default function DotJerseyCanvas({
   }, [accent, dotColor]);
 
   const stripeBand = useMemo(
-    () => (stripeMode && accentEnd ? buildThinTripleStripeDots(accentEnd) : null),
-    [stripeMode, accentEnd],
+    () =>
+      stripeMode && accentEnd
+        ? buildThinTripleStripeDots(accentEnd, density)
+        : null,
+    [stripeMode, accentEnd, density],
   );
 
   /** 完成形のドット＋クリップ＋縁取りをオフスクリーンへ一度だけ描く */
@@ -166,9 +173,9 @@ export default function DotJerseyCanvas({
       const oy = (cssH - VIEWBOX_H * s) / 2;
       geomRef.current = { s, ox, oy };
 
-      const step = Math.max(2.4, Math.min(3.6, cssW * 0.028));
-      const rMin = step * 0.17;
-      const rMax = step * 0.46;
+      const step = jerseyBodyStep(cssW, density);
+      const rMin = step * (density === "coarse" ? 0.17 : 0.2);
+      const rMax = step * (density === "coarse" ? 0.46 : 0.48);
       const bodyFill = resolvedDotColor ?? blendAccentForJerseyDots(accent);
 
       for (let gy = oy + step * 0.5; gy < oy + VIEWBOX_H * s; gy += step) {
@@ -236,7 +243,7 @@ export default function DotJerseyCanvas({
 
       return off;
     },
-    [accent, resolvedDotColor, stripeBand],
+    [accent, resolvedDotColor, stripeBand, density],
   );
 
   /**

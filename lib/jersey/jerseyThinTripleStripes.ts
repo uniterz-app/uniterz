@@ -7,6 +7,7 @@ import {
   JERSEY_STRIPE_LIFT,
   liftHexForJerseyDisplay,
 } from "./jerseyDisplayLift";
+import type { JerseyDotDensity } from "./jerseyDensity";
 
 export type JerseyStripeDot = {
   cx: number;
@@ -66,16 +67,21 @@ function pushDotBand(
 }
 
 /** D: 細いレーシング3本（ライン色 = secondary） */
-export function buildThinTripleStripeDots(secondary: string): JerseyStripeBand {
+export function buildThinTripleStripeDots(
+  secondary: string,
+  density: JerseyDotDensity = "coarse"
+): JerseyStripeBand {
   const fill = liftHexForJerseyDisplay(secondary, JERSEY_STRIPE_LIFT);
   const dots: JerseyStripeDot[] = [];
+  const stepX = density === "coarse" ? 3.6 : 2.8;
+  const r = density === "coarse" ? 1.15 : 1.0;
   for (const y of [41.6, 49.6, 57.6]) {
     pushDotBand(dots, {
       y0: y,
       y1: y,
-      stepX: 3.6,
+      stepX,
       stepY: 4,
-      r: 1.15,
+      r,
       fill,
     });
   }

@@ -16,8 +16,8 @@ export const teamColorsNBA: TeamColorMap = {
   // CHA Hornets → Teal 地 + Purple 枠
   "nba-hornets":      { primary: "#00788C", secondary: "#1D1160" },
 
-  // CHI Bulls → Black 地 + Red 枠
-  "nba-bulls":        { primary: "#000000", secondary: "#E31837", textOnPrimary: "#fff" },
+  // CHI Bulls → Red 地 + Black 枠
+  "nba-bulls":        { primary: "#E31837", secondary: "#000000" },
 
   // CLE Cavaliers
   "nba-cavaliers":    { primary: "#6F263D", secondary: "#FFB81C" },
@@ -58,8 +58,8 @@ export const teamColorsNBA: TeamColorMap = {
   // DEN Nuggets → Sunshine Yellow 地 + Navy 枠
   "nba-nuggets":      { primary: "#FEC525", secondary: "#0D2440" },
 
-  // GSW Warriors → Gold 地 + White ライン
-  "nba-warriors":     { primary: "#FDB927", secondary: "#FFFFFF" },
+  // GSW Warriors → Gold 地 + Blue ライン
+  "nba-warriors":     { primary: "#FDB927", secondary: "#006BB6" },
 
   // HOU Rockets → Red 地 + Black ライン
   "nba-rockets":      { primary: "#F21C3A", secondary: "#000000" },

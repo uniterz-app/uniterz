@@ -1,10 +1,12 @@
 import { Component, type ComponentType, type ReactNode } from "react";
+import type { JerseyDotDensity } from "../../../../../lib/jersey/jerseyDensity";
 import JerseyMarkSvg from "./JerseyMarkSvg";
 
 type JerseyProps = {
   accent: string;
   accentEnd?: string;
   size?: number;
+  density?: JerseyDotDensity;
 };
 
 let cachedSkiaComponent: ComponentType<JerseyProps> | null = null;

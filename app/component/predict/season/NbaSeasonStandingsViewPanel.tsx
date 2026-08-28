@@ -78,6 +78,7 @@ function TeamCell({
         accentEnd={getTeamJerseySecondaryColor("nba", teamId)}
         className="h-6 w-6 shrink-0"
         glow="none"
+        density="coarse"
       />
       <p
         className={[

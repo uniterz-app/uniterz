@@ -1734,6 +1734,7 @@ const card = (
       className={teamMarkSizeJersey}
       enableDotReveal={jerseyDotRevealEnabled}
       dotRevealDelayMs={jerseyDotDelayMs}
+      density="coarse"
     />
   ) : (
     <Icon
@@ -2002,6 +2003,7 @@ const card = (
       className={teamMarkSizeJersey}
       enableDotReveal={jerseyDotRevealEnabled}
       dotRevealDelayMs={jerseyDotDelayMs}
+      density="coarse"
     />
   ) : (
     <Icon

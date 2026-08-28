@@ -778,6 +778,7 @@ export default function ResultPostCardNative({
                         accent={homeJersey.primary}
                         accentEnd={homeJersey.secondary}
                         size={JERSEY_SIZE_RESULT}
+                        density="coarse"
                       />
                     </View>
                   )}
@@ -829,6 +830,7 @@ export default function ResultPostCardNative({
                         accent={awayJersey.primary}
                         accentEnd={awayJersey.secondary}
                         size={JERSEY_SIZE_RESULT}
+                        density="coarse"
                       />
                     </View>
                   )}

@@ -787,6 +787,7 @@ function ResultCardPresentationImpl({
                         ? "jersey-icon h-[3.875rem] w-[3.875rem] shrink-0 md:h-20 md:w-20"
                         : "h-[4.5rem] w-[4.5rem] shrink-0"
                     }
+                    density="coarse"
                   />
                 ) : (
                   <Icon
@@ -858,6 +859,7 @@ function ResultCardPresentationImpl({
                   accent={homeJerseyColor}
                   accentEnd={homeJerseySecondaryColor}
                   className="h-20 w-20"
+                  density="coarse"
                 />
               ) : (
                 <Icon className="h-20 w-20" fill={homeColor} stroke="#fff" />
@@ -922,6 +924,7 @@ function ResultCardPresentationImpl({
                         ? "jersey-icon h-[3.875rem] w-[3.875rem] shrink-0 md:h-20 md:w-20"
                         : "h-[4.5rem] w-[4.5rem] shrink-0"
                     }
+                    density="coarse"
                   />
                 ) : (
                   <Icon
@@ -993,6 +996,7 @@ function ResultCardPresentationImpl({
                   accent={awayJerseyColor}
                   accentEnd={awayJerseySecondaryColor}
                   className="h-20 w-20"
+                  density="coarse"
                 />
               ) : (
                 <Icon className="h-20 w-20" fill={awayColor} stroke="#fff" />

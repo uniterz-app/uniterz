@@ -132,6 +132,7 @@ function RankRow({
             accent={getTeamJerseyPrimaryColor("nba", teamId)}
             accentEnd={getTeamJerseySecondaryColor("nba", teamId)}
             size={28}
+            density="coarse"
           />
           <View style={{ flex: 1, minWidth: 0 }}>
             <Text style={styles.rankTeamName} numberOfLines={1}>
@@ -176,6 +177,7 @@ function TeamSlotTray({
               accent={getTeamJerseyPrimaryColor("nba", teamId)}
               accentEnd={getTeamJerseySecondaryColor("nba", teamId)}
               size={32}
+              density="coarse"
             />
             <Text style={styles.trayAbbr}>{abbr(teamId)}</Text>
           </Pressable>
