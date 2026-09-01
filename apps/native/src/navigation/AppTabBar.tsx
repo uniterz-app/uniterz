@@ -30,6 +30,7 @@ import {
   subscribeTutorialWelcomeChromeHidden,
 } from "../../../../lib/tutorial/tutorialWelcomeChrome";
 import { TUTORIAL_WELCOME_CHROME_FADE_MS } from "../../../../lib/tutorial/tutorialMotion";
+import { resetGamesStackInBackgroundNative, openGamesTabHomeNative } from "./resetGamesTabHomeNative";
 
 /** Web NavBar `data-tutorial-target` 相当 */
 const TUTORIAL_TARGET_BY_ROUTE: Record<string, string> = {
@@ -164,6 +165,20 @@ export default function AppTabBar({ state, descriptors, navigation }: BottomTabB
                     canPreventDefault: true,
                   });
                     if (event.defaultPrevented) return;
+
+                  const activeTabName = state.routes[state.index]?.name;
+
+                  if (
+                    activeTabName === "GamesTab" &&
+                    route.name !== "GamesTab"
+                  ) {
+                    resetGamesStackInBackgroundNative(navigation);
+                  }
+
+                  if (route.name === "GamesTab") {
+                    openGamesTabHomeNative(navigation);
+                    return;
+                  }
 
                   if (route.name === "ProfileTab") {
                     navigation.navigate("ProfileTab", {

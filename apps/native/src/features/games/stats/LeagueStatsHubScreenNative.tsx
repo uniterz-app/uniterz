@@ -1,7 +1,7 @@
 /** STATS ハブ — 既定 Team Stats、タブで Player Stats 切替 */
 import { useState } from "react";
 import { StyleSheet, View } from "react-native";
-import MobilePageShell from "../../profile/mobileScreens/MobilePageShell";
+import GamesNbaSubpageShellNative from "../GamesNbaSubpageShellNative";
 import {
   CyberSlantedTabBarNative,
   CyberSlantedTabNative,
@@ -42,12 +42,13 @@ export default function LeagueStatsHubScreenNative({
         : "Stat leaderboards.";
 
   return (
-    <MobilePageShell
+    <GamesNbaSubpageShellNative
       title={title}
       eyebrow="STATS"
       subtitle={subtitle}
-      appBackground
-      onClose={onClose}
+      onBack={onClose}
+      scroll={false}
+      contentStyle={styles.shell}
     >
       <View style={styles.tabs}>
         <CyberSlantedTabBarNative fill>
@@ -92,11 +93,14 @@ export default function LeagueStatsHubScreenNative({
           />
         )}
       </View>
-    </MobilePageShell>
+    </GamesNbaSubpageShellNative>
   );
 }
 
 const styles = StyleSheet.create({
+  shell: {
+    flex: 1,
+  },
   tabs: {
     paddingHorizontal: 12,
     paddingTop: 4,

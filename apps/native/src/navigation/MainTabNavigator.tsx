@@ -41,6 +41,7 @@ import {
   LeaderboardsStackScreen,
   ProfileStackScreen,
 } from "./StackNavigators";
+import { resetGamesStackInBackgroundNative } from "./resetGamesTabHomeNative";
 import ProfileStatsPrefetchHost from "../features/profile/ProfileStatsPrefetchHost";
 import SquadBattleLaunchPromptHostNative from "../features/squads/SquadBattleLaunchPromptHostNative";
 
@@ -163,7 +164,15 @@ export default function MainTabNavigator() {
             }}
             initialRouteName="GamesTab"
           >
-            <Tab.Screen name="GamesTab" component={GamesStackScreen} />
+            <Tab.Screen
+              name="GamesTab"
+              component={GamesStackScreen}
+              listeners={({ navigation }) => ({
+                blur: () => {
+                  resetGamesStackInBackgroundNative(navigation);
+                },
+              })}
+            />
             <Tab.Screen name="ResultTab" component={ResultStackScreen} />
             <Tab.Screen name="RankingsTab" component={RankingsStackScreen} />
             <Tab.Screen name="LeaderboardsTab" component={LeaderboardsStackScreen} />

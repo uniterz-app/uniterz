@@ -9,7 +9,10 @@ export default function GamesNbaSubpageShellNative(
   props: ComponentProps<typeof CyberSubpageShellNative>
 ) {
   const titleInBrandShelf =
-    props.title === "AWARDS" || props.title === "STANDINGS";
+    props.title === "AWARDS" ||
+    props.title === "STANDINGS" ||
+    props.title === "TEAM STATS" ||
+    props.title === "PLAYER STATS";
   return (
     <CyberSubpageShellNative
       {...props}

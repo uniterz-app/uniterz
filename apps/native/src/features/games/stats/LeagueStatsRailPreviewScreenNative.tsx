@@ -1,7 +1,7 @@
 /** DEV — 本番と同じ左レール（プレビュー入口）。 */
 import { useState } from "react";
 import { StyleSheet, View } from "react-native";
-import MobilePageShell from "../../profile/mobileScreens/MobilePageShell";
+import GamesNbaSubpageShellNative from "../GamesNbaSubpageShellNative";
 import {
   CyberSlantedTabBarNative,
   CyberSlantedTabNative,
@@ -29,7 +29,7 @@ export default function LeagueStatsRailPreviewScreenNative({
   const [tab, setTab] = useState<TabId>("team");
 
   return (
-    <MobilePageShell
+    <GamesNbaSubpageShellNative
       title={tab === "team" ? "TEAM STATS" : "PLAYER STATS"}
       eyebrow="DEV"
       subtitle={
@@ -37,8 +37,9 @@ export default function LeagueStatsRailPreviewScreenNative({
           ? "左に指標レール。BASIC / 4FCT など親カテゴリつき。"
           : "Left metric rail with BASIC / 4FCT parents."
       }
-      appBackground
-      onClose={onClose}
+      onBack={onClose}
+      scroll={false}
+      contentStyle={styles.shell}
     >
       <View style={styles.tabs}>
         <CyberSlantedTabBarNative fill>
@@ -83,11 +84,14 @@ export default function LeagueStatsRailPreviewScreenNative({
           />
         )}
       </View>
-    </MobilePageShell>
+    </GamesNbaSubpageShellNative>
   );
 }
 
 const styles = StyleSheet.create({
+  shell: {
+    flex: 1,
+  },
   tabs: {
     paddingHorizontal: 12,
     paddingTop: 4,

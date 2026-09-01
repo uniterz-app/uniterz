@@ -2,7 +2,8 @@
  * Web `CyberSubpageShell` 相当。
  * 戻る（角切り）+ eyebrow + サイバー題名（中央）+ 説明は右上はてな（オーバーレイ）。
  */
-import { useLayoutEffect, useState, type ReactNode } from "react";
+import { useCallback, useState, type ReactNode } from "react";
+import { useFocusEffect } from "@react-navigation/native";
 import {
   Modal,
   Platform,
@@ -156,15 +157,19 @@ export function CyberSubpageHeaderNative({
   const motionOn = reduceMotion !== true;
   const hasRightCluster = Boolean(subtitle || headerTrailing);
 
-  useLayoutEffect(() => {
-    if (!hideShelf) return;
-    return acquireAppBrandShelfHidden();
-  }, [hideShelf]);
+  useFocusEffect(
+    useCallback(() => {
+      if (!hideShelf) return;
+      return acquireAppBrandShelfHidden();
+    }, [hideShelf])
+  );
 
-  useLayoutEffect(() => {
-    if (!titleInBrandShelf || !isHeaderWordmark(title)) return;
-    return acquireAppBrandWordmark(title);
-  }, [titleInBrandShelf, title]);
+  useFocusEffect(
+    useCallback(() => {
+      if (!titleInBrandShelf || !isHeaderWordmark(title)) return;
+      return acquireAppBrandWordmark(title);
+    }, [titleInBrandShelf, title])
+  );
 
   if (titleInBrandShelf) {
     if (!subtitle && !headerTrailing) return null;
