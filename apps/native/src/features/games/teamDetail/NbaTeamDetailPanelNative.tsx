@@ -33,6 +33,7 @@ import {
   formatAvailabilityStatus,
   formatSalaryUsd,
 } from "../../../../../../lib/predict/nbaPlayerDetailPreviewMocks";
+import { availabilityReasonDisplay } from "../../../../../../lib/nba/teamInjuries/injuryReasonDisplay";
 import type { NbaTeamPayrollLine } from "../../../../../../lib/predict/nbaTeamDetailPreviewMocks";
 import {
   buildFuturePayrollYearsFromLines,
@@ -53,6 +54,14 @@ import { NbaTeamRosterCardNative } from "../predict/NbaRosterPanelNative";
 import NbaTeamHowTheyPlayNative from "./NbaTeamHowTheyPlayNative";
 import { useLeagueTeamStatsBundle } from "../../../../../../lib/nba/useLeagueTeamStatsBundle";
 import { useNbaTeamDetailLiveOverlay } from "../../../../../../lib/nba/teamDetail/useNbaTeamDetailLiveOverlay";
+import { buildTeamDetailInsights } from "../../../../../../lib/nba/detailInsights/buildTeamDetailInsights";
+import {
+  DetailIdentityChipRowNative,
+  DetailInsightSummaryNative,
+} from "../detailInsights/DetailInsightBlocksNative";
+import { DetailTrendTableNative } from "../detailInsights/DetailTrendTableNative";
+import { DetailScheduleSectionNative } from "../detailInsights/DetailScheduleSectionNative";
+import type { DetailTrendDelta } from "../../../../../../lib/nba/detailInsights/detailInsightTypes";
 import { playerCardName, type NbaRosterTeamBlock } from "../../../../../../lib/predict/nbaRoster";
 import { getUniterzApiBaseUrl } from "../submitPredictionApi";
 import { getNbaTeamDraftCapital } from "../../../../../../lib/nba/draftPicks/nbaDraftCapitalData";
@@ -252,11 +261,13 @@ function RecentFormSection({
   streak,
   accent,
   isJa,
+  trends = [],
 }: {
   games: NbaTeamRecentGame[];
   streak: NbaTeamStreak;
   accent: string;
   isJa: boolean;
+  trends?: DetailTrendDelta[];
 }) {
   const results = games.slice(-10).map((g) => g.result);
   const wins = results.filter((r) => r === "W").length;
@@ -303,6 +314,7 @@ function RecentFormSection({
           </Text>
         </View>
       )}
+      <DetailTrendTableNative trends={trends} />
     </View>
   );
 }
@@ -423,12 +435,12 @@ function InjuriesSection({
                 <View style={styles.injuryTop}>
                   <Text style={styles.injuryName}>{inj.name}</Text>
                   <Text style={[styles.injuryStatus, { color: tone }]}>
-                    {formatAvailabilityStatus(inj.status)}
+                    {formatAvailabilityStatus(inj.status, isJa)}
                   </Text>
                 </View>
                 <View style={styles.injuryMeta}>
                   <Text style={styles.injuryReason} numberOfLines={1}>
-                    {inj.reason ?? "—"}
+                    {availabilityReasonDisplay(inj.reason, isJa) ?? "—"}
                   </Text>
                   {inj.returnEstimate ? (
                     <Text
@@ -496,62 +508,6 @@ function HeadToHeadSection({
   );
 }
 
-
-
-function UpcomingScheduleSection({
-  games,
-  accent,
-  isJa,
-}: {
-  games: NbaTeamUpcomingGame[];
-  accent: string;
-  isJa: boolean;
-}) {
-  const frame = hexToRgba(accent, 0.3);
-  const line = hexToRgba(accent, 0.12);
-  const emptyCopy = isJa ? "データがありません" : "No data yet";
-  return (
-    <View style={styles.schedSection}>
-      <SectionHeader title="UPCOMING" accent={accent} />
-      <View style={[styles.gameList, { borderColor: frame }]}>
-        {games.length === 0 ? (
-          <View style={styles.gameRow}>
-            <Text style={styles.injuryEmpty}>{emptyCopy}</Text>
-          </View>
-        ) : (
-          games.map((g, i) => (
-          <View
-            key={`${g.dateLabel}-${g.oppAbbr}-${i}`}
-            style={[
-              styles.gameRow,
-              i < games.length - 1
-                ? {
-                    borderBottomWidth: StyleSheet.hairlineWidth,
-                    borderBottomColor: line,
-                  }
-                : null,
-            ]}
-          >
-            <Text style={styles.gameDate}>{g.dateLabel}</Text>
-            <Text style={styles.gameVs} numberOfLines={1}>
-              {g.home ? "vs" : "@"} {g.oppAbbr}
-              {g.conferenceGame ? (
-                <Text style={[styles.confTag, { color: "rgba(255,255,255,0.55)" }]}>
-                  {" "}
-                  · CONF
-                </Text>
-              ) : null}
-            </Text>
-            <Text style={[styles.schedTip, { color: "rgba(255,255,255,0.85)" }]}>
-              {g.tipLabel}
-            </Text>
-          </View>
-          ))
-        )}
-      </View>
-    </View>
-  );
-}
 
 
 function winPctLabel(wins: number, losses: number): string {
@@ -1432,11 +1388,22 @@ export default function NbaTeamDetailPanelNative({
     () => getNbaTeamDetailPreview(teamId, bundle),
     [teamId, bundle]
   );
-  const { detail, hasFetchError } = useNbaTeamDetailLiveOverlay({
+  const { detail, aceOut, hasFetchError } = useNbaTeamDetailLiveOverlay({
     teamId: baseDetail.teamId,
     apiBaseUrl: getUniterzApiBaseUrl(),
     base: baseDetail,
   });
+  const teamInsights = useMemo(
+    () =>
+      buildTeamDetailInsights({
+        detail,
+        seasonRows: bundle.season,
+        seasonRow: bundle.season.find((r) => r.teamId === detail.teamId),
+        last10Row: bundle.last10.find((r) => r.teamId === detail.teamId),
+        aceOut,
+      }),
+    [detail, bundle.season, bundle.last10, aceOut]
+  );
   const jerseyPrimary = getTeamJerseyPrimaryColor("nba", detail.teamId);
   const jerseySecondary = getTeamJerseySecondaryColor("nba", detail.teamId);
   /** 枠・文字用（暗いチーム色も読める） */
@@ -1532,6 +1499,32 @@ export default function NbaTeamDetailPanelNative({
 
         <View style={[styles.divider, { backgroundColor: dividerColor }]} />
 
+        {teamInsights.summary ? (
+          <>
+            <DetailInsightSummaryNative
+              text={isJa ? teamInsights.summary.linesJa : teamInsights.summary.linesEn}
+            />
+            <View style={{ height: 10 }} />
+            <DetailIdentityChipRowNative
+              chips={teamInsights.identity}
+              accent={accent}
+              title="TEAM IDENTITY"
+              isJa={isJa}
+            />
+            <View style={[styles.divider, { backgroundColor: dividerColor }]} />
+          </>
+        ) : teamInsights.identity.length > 0 ? (
+          <>
+            <DetailIdentityChipRowNative
+              chips={teamInsights.identity}
+              accent={accent}
+              title="TEAM IDENTITY"
+              isJa={isJa}
+            />
+            <View style={[styles.divider, { backgroundColor: dividerColor }]} />
+          </>
+        ) : null}
+
         <InjuriesSection
           injuries={detail.injuries}
           accent={accent}
@@ -1589,6 +1582,7 @@ export default function NbaTeamDetailPanelNative({
             streak={detail.streak}
             accent={accent}
             isJa={isJa}
+            trends={teamInsights.trends}
           />
         </View>
 
@@ -1610,8 +1604,9 @@ export default function NbaTeamDetailPanelNative({
 
         <View style={[styles.divider, { backgroundColor: dividerColor }]} />
 
-        <UpcomingScheduleSection
-          games={detail.upcomingGames}
+        <DetailScheduleSectionNative
+          upcomingGames={detail.upcomingGames}
+          scheduleDifficulty={teamInsights.scheduleDifficulty}
           accent={accent}
           isJa={isJa}
         />
@@ -1696,7 +1691,7 @@ export default function NbaTeamDetailPanelNative({
         <Text
           style={[styles.footerAsOf, { color: "rgba(255,255,255,0.4)" }]}
         >
-          {detail.asOfLabel} · PREVIEW
+          {detail.asOfLabel}
         </Text>
       </View>
     </ScrollView>

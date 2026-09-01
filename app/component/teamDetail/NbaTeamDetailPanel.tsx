@@ -19,6 +19,7 @@ import {
   formatAvailabilityStatus,
   formatSalaryUsd,
 } from "@/lib/predict/nbaPlayerDetailPreviewMocks";
+import { availabilityReasonDisplay } from "@/lib/nba/teamInjuries/injuryReasonDisplay";
 import {
   buildFuturePayrollYearsFromLines,
   buildSynchronizedTeamPayrollLines,
@@ -52,6 +53,14 @@ import type {
 } from "@/lib/nba/draftPicks/draftPicksTypes";
 import { useLeagueTeamStatsBundle } from "@/lib/nba/useLeagueTeamStatsBundle";
 import { useNbaTeamDetailLiveOverlay } from "@/lib/nba/teamDetail/useNbaTeamDetailLiveOverlay";
+import { buildTeamDetailInsights } from "@/lib/nba/detailInsights/buildTeamDetailInsights";
+import {
+  DetailIdentityChipRow,
+  DetailInsightSummary,
+} from "@/app/component/detailInsights/DetailInsightBlocks";
+import { DetailTrendTable } from "@/app/component/detailInsights/DetailTrendTable";
+import { DetailScheduleSection } from "@/app/component/detailInsights/DetailScheduleSection";
+import type { DetailTrendDelta } from "@/lib/nba/detailInsights/detailInsightTypes";
 import type { NbaLeagueTeamStatsBundle } from "@/lib/predict/nbaLeagueTeamStatsMocks";
 import {
   TEAM_HOW_THEY_PLAY_TABS,
@@ -182,11 +191,13 @@ function RecentForm({
   streak,
   accent,
   isJa,
+  trends = [],
 }: {
   games: NbaTeamRecentGame[];
   streak: NbaTeamStreak;
   accent: string;
   isJa: boolean;
+  trends?: DetailTrendDelta[];
 }) {
   const results = games.slice(-10).map((g) => g.result);
   const wins = results.filter((r) => r === "W").length;
@@ -248,6 +259,7 @@ function RecentForm({
           </span>
         </div>
       )}
+      <DetailTrendTable trends={trends} />
     </div>
   );
 }
@@ -472,12 +484,12 @@ function Injuries({
                     {inj.name}
                   </span>
                   <span className={`${nameOxanium.className} text-[11px] font-extrabold tracking-wide`} style={{ color: tone, transform: "skewX(-8deg)" }}>
-                    {formatAvailabilityStatus(inj.status)}
+                    {formatAvailabilityStatus(inj.status, isJa)}
                   </span>
                 </div>
                 <div className="flex items-center justify-between gap-2">
                   <span className={`${nameOxanium.className} truncate text-[11px] text-white/55`}>
-                    {inj.reason ?? "—"}
+                    {availabilityReasonDisplay(inj.reason, isJa) ?? "—"}
                   </span>
                   {inj.returnEstimate ? (
                     <span className={`${nameOxanium.className} text-[10px] font-bold uppercase`} style={{ color: hexToRgba(tone, 0.85) }}>
@@ -932,58 +944,6 @@ function PerformanceMetrics({
             />
           </div>
         ) : null}
-      </div>
-    </section>
-  );
-}
-
-function Upcoming({
-  games,
-  accent,
-  isJa,
-}: {
-  games: NbaTeamUpcomingGame[];
-  accent: string;
-  isJa: boolean;
-}) {
-  const emptyCopy = isJa ? "データがありません" : "No data yet";
-  return (
-    <section className="space-y-2.5">
-      <SectionTitle title="UPCOMING" accent={accent} />
-      <div
-        className="overflow-hidden border bg-black/40"
-        style={{ borderColor: hexToRgba(accent, 0.3) }}
-      >
-        {games.length === 0 ? (
-          <div className={`${nameOxanium.className} px-3 py-2.5 text-[12px] font-bold text-white/45`}>
-            {emptyCopy}
-          </div>
-        ) : (
-          games.map((g, i) => (
-          <div
-            key={`${g.dateLabel}-${g.oppAbbr}-${i}`}
-            className="flex items-center gap-1.5 px-2.5 py-2.5"
-            style={
-              i < games.length - 1
-                ? { borderBottom: `1px solid ${hexToRgba(accent, 0.12)}` }
-                : undefined
-            }
-          >
-            <span className={`${nameOxanium.className} w-11 text-[13px] text-white/40`}>
-              {g.dateLabel}
-            </span>
-            <span className={`${nameOxanium.className} flex-1 truncate text-[14px] font-bold`}>
-              {g.home ? "vs" : "@"} {g.oppAbbr}
-            </span>
-            <span
-              className={`${nameOxanium.className} text-[14px] font-bold`}
-              style={{ color: "rgba(255,255,255,0.85)" }}
-            >
-              {g.tipLabel}
-            </span>
-          </div>
-          ))
-        )}
       </div>
     </section>
   );
@@ -1842,10 +1802,21 @@ export default function NbaTeamDetailPanel({
     () => getNbaTeamDetailPreview(teamId, bundle),
     [teamId, bundle]
   );
-  const { detail, hasFetchError } = useNbaTeamDetailLiveOverlay({
+  const { detail, aceOut, hasFetchError } = useNbaTeamDetailLiveOverlay({
     teamId: baseDetail.teamId,
     base: baseDetail,
   });
+  const teamInsights = useMemo(
+    () =>
+      buildTeamDetailInsights({
+        detail,
+        seasonRows: bundle.season,
+        seasonRow: bundle.season.find((r) => r.teamId === detail.teamId),
+        last10Row: bundle.last10.find((r) => r.teamId === detail.teamId),
+        aceOut,
+      }),
+    [detail, bundle.season, bundle.last10, aceOut]
+  );
   const jerseyPrimary = getTeamJerseyPrimaryColor("nba", detail.teamId);
   const secondary = getTeamJerseySecondaryColor("nba", detail.teamId);
   const accent = getTeamUiAccentColor("nba", detail.teamId);
@@ -1946,6 +1917,36 @@ export default function NbaTeamDetailPanel({
         style={{ backgroundColor: hexToRgba(accent, 0.22) }}
       />
 
+      {teamInsights.summary ? (
+        <>
+          <DetailInsightSummary
+            text={
+              isJa ? teamInsights.summary.linesJa : teamInsights.summary.linesEn
+            }
+          />
+          <DetailIdentityChipRow
+            chips={teamInsights.identity}
+            accent={accent}
+            title="TEAM IDENTITY"
+            isJa={isJa}
+          />
+        </>
+      ) : teamInsights.identity.length > 0 ? (
+        <DetailIdentityChipRow
+          chips={teamInsights.identity}
+          accent={accent}
+          title="TEAM IDENTITY"
+          isJa={isJa}
+        />
+      ) : null}
+
+      {teamInsights.summary || teamInsights.identity.length > 0 ? (
+        <div
+          className="h-px"
+          style={{ backgroundColor: hexToRgba(accent, 0.22) }}
+        />
+      ) : null}
+
       <Injuries injuries={detail.injuries} accent={accent} isJa={isJa} />
 
       <div
@@ -1957,11 +1958,6 @@ export default function NbaTeamDetailPanel({
         ortg={byId.get("ortg")}
         drtg={byId.get("drtg")}
         accent={accent}
-      />
-
-      <div
-        className="h-px"
-        style={{ backgroundColor: hexToRgba(accent, 0.22) }}
       />
 
       <HowTheyPlayBoard
@@ -1985,6 +1981,7 @@ export default function NbaTeamDetailPanel({
           streak={detail.streak}
           accent={accent}
           isJa={isJa}
+          trends={teamInsights.trends}
         />
       </div>
 
@@ -2007,7 +2004,12 @@ export default function NbaTeamDetailPanel({
         style={{ backgroundColor: hexToRgba(accent, 0.22) }}
       />
 
-      <Upcoming games={detail.upcomingGames} accent={accent} isJa={isJa} />
+      <DetailScheduleSection
+        upcomingGames={detail.upcomingGames}
+        scheduleDifficulty={teamInsights.scheduleDifficulty}
+        accent={accent}
+        isJa={isJa}
+      />
 
       <div
         className="h-px"
@@ -2107,7 +2109,7 @@ export default function NbaTeamDetailPanel({
         className={`${nameOxanium.className} text-center text-[9px] font-bold uppercase tracking-[0.14em]`}
         style={{ color: "rgba(255,255,255,0.4)" }}
       >
-        {detail.asOfLabel} · PREVIEW
+        {detail.asOfLabel}
       </p>
     </div>
   );

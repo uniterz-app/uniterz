@@ -30,6 +30,7 @@ import {
   type NbaPlayerVenueSplit,
   type NbaPlayerVsOpponentSample,
 } from "@/lib/predict/nbaPlayerDetailPreviewMocks";
+import { availabilityReasonDisplay } from "@/lib/nba/teamInjuries/injuryReasonDisplay";
 import {
   isPlayerDetailRankShown,
   isPlayerDetailSalaryRankShown,
@@ -62,6 +63,14 @@ import NbaPlayerHowTheyPlay from "@/app/component/playerDetail/NbaPlayerHowTheyP
 import { useLeagueTeamStatsBundle } from "@/lib/nba/useLeagueTeamStatsBundle";
 import { usePlayerStatLeadersBundle } from "@/lib/nba/usePlayerStatLeadersBundle";
 import { useNbaPlayerDetailLiveOverlay } from "@/lib/nba/playerDetail/useNbaPlayerDetailLiveOverlay";
+import { buildPlayerDetailInsights } from "@/lib/nba/detailInsights/buildPlayerDetailInsights";
+import {
+  DetailIdentityChipRow,
+  DetailInsightSummary,
+} from "@/app/component/detailInsights/DetailInsightBlocks";
+import { DetailUsageStrip } from "@/app/component/detailInsights/DetailUsageStrip";
+import { DetailRoleChangeSection } from "@/app/component/detailInsights/DetailRoleChangeSection";
+import { DetailConsistencySection } from "@/app/component/detailInsights/DetailConsistencySection";
 import { formatNbaPlayerDisplayName } from "@/lib/nba/formatNbaPlayerListName";
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
 import { nbaSeasonStatsReady } from "@/lib/predict/nbaSeasonStatsReady";
@@ -1112,6 +1121,10 @@ export default function NbaPlayerDetailPanel({
     base,
     leaders,
   });
+  const playerInsights = useMemo(
+    () => buildPlayerDetailInsights({ detail, rosterPlayer: null }),
+    [detail]
+  );
   const currentSalary = detail.contract?.seasons[0] ?? null;
   const isTwoWay =
     detail.contract?.contractType?.toLowerCase().includes("two-way") ||
@@ -1254,6 +1267,23 @@ export default function NbaPlayerDetailPanel({
         </div>
       </div>
 
+      {playerInsights.summary ? (
+        <DetailInsightSummary
+          text={
+            isJa ? playerInsights.summary.linesJa : playerInsights.summary.linesEn
+          }
+        />
+      ) : null}
+      {playerInsights.roles.length > 0 ? (
+        <DetailIdentityChipRow
+          chips={playerInsights.roles}
+          accent={uiAccent}
+          title="ROLE"
+          isJa={isJa}
+        />
+      ) : null}
+      <DetailUsageStrip cells={playerInsights.usageStrip} accent={uiAccent} />
+
       {detail.availability.status !== "active" ? (
         <div
           className="space-y-1 border px-3.5 py-2.5"
@@ -1273,7 +1303,7 @@ export default function NbaPlayerDetailPanel({
                 transform: "skewX(-8deg)",
               }}
             >
-              {formatAvailabilityStatus(detail.availability.status)}
+              {formatAvailabilityStatus(detail.availability.status, isJa)}
             </span>
             {detail.availability.returnEstimate ? (
               <span
@@ -1289,18 +1319,27 @@ export default function NbaPlayerDetailPanel({
               </span>
             ) : null}
           </div>
-          <p
-            className={`${nameOxanium.className} text-[12px] font-semibold text-white/70`}
-            style={{ transform: "skewX(-4deg)" }}
-          >
-            {detail.availability.reason ??
-              (isJa ? "詳細なし" : "No detail")}
-          </p>
+          {(() => {
+            const reasonText = availabilityReasonDisplay(
+              detail.availability.reason,
+              isJa
+            );
+            return reasonText ? (
+              <p
+                className={`${nameOxanium.className} text-[12px] font-semibold text-white/70`}
+                style={{ transform: "skewX(-4deg)" }}
+              >
+                {reasonText}
+              </p>
+            ) : null;
+          })()}
         </div>
       ) : null}
 
       <section className="space-y-3">
-        <h2 className={SECTION_HEADING_CLASS}>SEASON AVERAGES</h2>
+        <h2 className={SECTION_HEADING_CLASS}>
+          {isJa ? "シーズン平均" : "SEASON AVERAGES"}
+        </h2>
         {hasSeasonAverages ? (
           <div
             className="grid grid-cols-3 overflow-hidden border bg-black/50"
@@ -1347,6 +1386,16 @@ export default function NbaPlayerDetailPanel({
       <div
         className="h-px"
         style={{ backgroundColor: hexToRgba(uiAccent, 0.2) }}
+      />
+      <DetailRoleChangeSection
+        signals={playerInsights.roleChanges}
+        detailText={
+          isJa
+            ? playerInsights.roleChangeDetailJa
+            : playerInsights.roleChangeDetailEn
+        }
+        accent={uiAccent}
+        isJa={isJa}
       />
       <NbaPlayerHowTheyPlay
         playerId={detail.playerId}
@@ -1399,6 +1448,18 @@ export default function NbaPlayerDetailPanel({
         className="h-px"
         style={{ backgroundColor: hexToRgba(uiAccent, 0.2) }}
       />
+      {playerInsights.consistency ? (
+        <>
+          <DetailConsistencySection
+            data={playerInsights.consistency}
+            accent={uiAccent}
+          />
+          <div
+            className="h-px"
+            style={{ backgroundColor: hexToRgba(uiAccent, 0.2) }}
+          />
+        </>
+      ) : null}
       <GameLogs logs={detail.gameLogs} accent={uiAccent} />
 
       <div
@@ -1624,7 +1685,7 @@ export default function NbaPlayerDetailPanel({
       <p
         className={`${nameOxanium.className} text-center text-[9px] font-bold uppercase tracking-[0.14em] text-white/40`}
       >
-        {detail.asOfLabel} · Preview
+        {detail.asOfLabel}
       </p>
     </div>
   );

@@ -1,4 +1,4 @@
-/** Player Detail 叩き台プレビュー */
+/** Player Detail（Games スタック · STATS/チーム詳細/予想から） */
 import MobilePageShell from "../../profile/mobileScreens/MobilePageShell";
 import NbaPlayerDetailPanelNative from "./NbaPlayerDetailPanelNative";
 
@@ -17,11 +17,11 @@ export default function PlayerDetailPreviewScreenNative({
   return (
     <MobilePageShell
       title={isJa ? "Player Detail" : "Player Detail"}
-      eyebrow="PREVIEW"
+      eyebrow="STATS"
       subtitle={
         isJa
-          ? "叩き台 · シーズン / 試合ログ / 契約"
-          : "Draft · season / game logs / contract"
+          ? "シーズン · 試合ログ · 契約 · ショット"
+          : "Season · game logs · contract · shot chart"
       }
       appBackground
       edgeBack

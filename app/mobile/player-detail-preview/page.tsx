@@ -81,8 +81,8 @@ function PlayerDetailPreviewShell() {
   return (
     <MobilePageShell
       title="Player Detail"
-      eyebrow="PREVIEW"
-      subtitle="叩き台 · シーズン / 試合ログ / 契約"
+      eyebrow="STATS"
+      subtitle="Season · game logs · contract · shot chart"
       onClose={goBackFromPlayerDetail}
     >
       <Inner />
@@ -90,7 +90,7 @@ function PlayerDetailPreviewShell() {
   );
 }
 
-/** Player Detail 叩き台（モック） */
+/** Player Detail（`/mobile/player-detail-preview`） */
 export default function MobilePlayerDetailPreviewPage() {
   return (
     <Suspense fallback={null}>

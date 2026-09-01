@@ -50,7 +50,8 @@ function cyberScoreColor(rank: number): string {
   return "rgba(255,255,255,0.96)";
 }
 
-function scoreFontSize(rank: number): number {
+function scoreFontSize(rank: number, compact = false): number {
+  if (compact) return rank <= 3 ? 15 : 13;
   return rank <= 3 ? 23 : 19;
 }
 
@@ -64,15 +65,17 @@ function CyberRankingScoreNative({
   metric,
   counted,
   plainWhite = false,
+  compact = false,
 }: {
   rank: number;
   metric: MobileMetric;
   counted: number;
   /** My Rank Free — 順位色ではなく白 */
   plainWhite?: boolean;
+  compact?: boolean;
 }) {
   const color = plainWhite ? "rgba(255,255,255,0.96)" : cyberScoreColor(rank);
-  const fontSize = scoreFontSize(rank);
+  const fontSize = scoreFontSize(rank, compact);
   const displayValue =
     metric === "winRate" || metric === "streak" || metric === "goalScorerHits"
       ? String(Math.round(counted))
@@ -105,9 +108,11 @@ const AVATAR_GLOW_PULSE_MS = 2000;
 function RankFirstAvatarGlowNative({
   children,
   reduceMotion,
+  compact = false,
 }: {
   children: ReactNode;
   reduceMotion: boolean;
+  compact?: boolean;
 }) {
   const pulse = useSharedValue(reduceMotion ? 0.55 : 0);
 
@@ -140,7 +145,14 @@ function RankFirstAvatarGlowNative({
   }));
 
   return (
-    <Animated.View style={[styles.avatarSquare, styles.avatarFirstGlow, glowStyle]}>
+    <Animated.View
+      style={[
+        styles.avatarSquare,
+        compact ? styles.avatarSquareCompact : null,
+        styles.avatarFirstGlow,
+        glowStyle,
+      ]}
+    >
       <Animated.View pointerEvents="none" style={[styles.avatarFirstHalo, haloStyle]} />
       {children}
     </Animated.View>
@@ -211,6 +223,7 @@ export function CyberRankingListRowNative({
   rankDisplayValue,
   rankMuted = false,
   nameExtra = null,
+  compact = false,
 }: {
   rank: number;
   displayName: string;
@@ -251,16 +264,19 @@ export function CyberRankingListRowNative({
   rankMuted?: boolean;
   /** Web `nameExtra` — 指定時は isPro バッジの代わりにこれを出す */
   nameExtra?: ReactNode;
+  /** リザルト詳細の得点上位など — 行高を少し低く */
+  compact?: boolean;
 }) {
   const palette = cyberRankPalette(rank);
   const firstFrame = !bare && palette.firstPlaceFrame;
   const quietFrame = bare ? null : cyberRankQuietFrameColor(rank);
   const metricTag = cyberMetricTag(metric, language === "ja" ? "ja" : "en");
   const nameJa = hasJaScript(displayName);
-  const nameFontSize = rankingFontSizePx(15, displayName);
-  const tagFontSize = rankingFontSizePx(8, metricTag);
+  const nameFontSize = rankingFontSizePx(compact ? 13 : 15, displayName);
+  const tagFontSize = rankingFontSizePx(compact ? 7 : 8, metricTag);
   const dayDeltaText = formatListMetricDayDelta(metric, metricValueDelta);
-  const dayDeltaFontSize = rankingFontSizePx(10, dayDeltaText ?? "+0");
+  const dayDeltaFontSize = rankingFontSizePx(compact ? 9 : 10, dayDeltaText ?? "+0");
+  const avatarSize = compact ? 36 : 44;
   const { crownStyle } = useRankingsCrownEntrance(
     animateCrown && rank === 1,
     pageKey,
@@ -269,7 +285,13 @@ export function CyberRankingListRowNative({
   const elevateContent = Boolean(firstFrame || proSkinVariant);
 
   const body = (
-    <View style={[styles.article, bare ? styles.articleBare : null]}>
+    <View
+      style={[
+        styles.article,
+        compact ? styles.articleCompact : null,
+        bare ? styles.articleBare : null,
+      ]}
+    >
       {bare || proSkinVariant ? (
         proSkinVariant && !bare ? (
           <RankingListProSkinFxNative
@@ -300,11 +322,18 @@ export function CyberRankingListRowNative({
       <View
         style={[
           styles.rowInner,
-          firstFrame && styles.rowInnerFirst,
+          compact ? styles.rowInnerCompact : null,
+          firstFrame && (compact ? styles.rowInnerFirstCompact : styles.rowInnerFirst),
           elevateContent ? styles.contentAboveFx : null,
         ]}
       >
-        <View style={[styles.rankCol, rankOverline ? styles.rankColWithOverline : null]}>
+        <View
+          style={[
+            styles.rankCol,
+            compact ? styles.rankColCompact : null,
+            rankOverline ? styles.rankColWithOverline : null,
+          ]}
+        >
           {rankOverline ? (
             <Text style={styles.rankOverline} numberOfLines={1}>
               {rankOverline}
@@ -314,11 +343,12 @@ export function CyberRankingListRowNative({
             rank={rank}
             displayValue={rankDisplayValue}
             muted={rankMuted}
+            compact={compact}
           />
           <RankDeltaBadgeNative delta={rankDeltaPlaces} />
         </View>
 
-        <View style={styles.avatarCol}>
+        <View style={[styles.avatarCol, compact ? styles.avatarColCompact : null]}>
           {rank === 1 ? (
             <Animated.View
               style={[
@@ -327,20 +357,42 @@ export function CyberRankingListRowNative({
                 animateCrown ? crownStyle : null,
               ]}
             >
-              <MaterialCommunityIcons name="crown" size={14} color="#F4C542" />
-              <Text style={styles.plusLabel}>+++</Text>
+              <MaterialCommunityIcons
+                name="crown"
+                size={compact ? 12 : 14}
+                color="#F4C542"
+              />
+              <Text style={[styles.plusLabel, compact ? styles.plusLabelCompact : null]}>
+                +++
+              </Text>
             </Animated.View>
           ) : null}
           {firstFrame ? (
-            <RankFirstAvatarGlowNative reduceMotion={reduceMotion}>
+            <RankFirstAvatarGlowNative reduceMotion={reduceMotion} compact={compact}>
               <View style={styles.avatarCrop}>
-                <RankingsAvatarNative photoURL={photoURL} label={displayName} size={44} square />
+                <RankingsAvatarNative
+                  photoURL={photoURL}
+                  label={displayName}
+                  size={avatarSize}
+                  square
+                />
               </View>
             </RankFirstAvatarGlowNative>
           ) : (
-            <View style={[styles.avatarSquare, styles.avatarRestBorder]}>
+            <View
+              style={[
+                styles.avatarSquare,
+                compact ? styles.avatarSquareCompact : null,
+                styles.avatarRestBorder,
+              ]}
+            >
               <View style={styles.avatarCrop}>
-                <RankingsAvatarNative photoURL={photoURL} label={displayName} size={44} square />
+                <RankingsAvatarNative
+                  photoURL={photoURL}
+                  label={displayName}
+                  size={avatarSize}
+                  square
+                />
               </View>
             </View>
           )}
@@ -367,7 +419,7 @@ export function CyberRankingListRowNative({
               : (
                   <>
                     {isPro ? (
-                      <ProCyberBadgeNative compact={!bare} emphasized={bare} />
+                      <ProCyberBadgeNative compact emphasized={bare || compact} />
                     ) : null}
                   </>
                 )}
@@ -393,6 +445,7 @@ export function CyberRankingListRowNative({
               metric={metric}
               counted={counted}
               plainWhite={plainWhiteScore}
+              compact={compact}
             />
           )}
           <Text
@@ -436,6 +489,9 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     marginBottom: 3,
   },
+  articleCompact: {
+    minHeight: 56,
+  },
   articleBare: {
     marginBottom: 0,
     overflow: "visible",
@@ -461,10 +517,18 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     zIndex: 1,
   },
+  rowInnerCompact: {
+    gap: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+  },
   rowInnerFirst: {
     zIndex: 10,
     /** 王冠を absolute にした分の上余白 — 順位とアバター中心を揃えたまま確保 */
     paddingTop: 22,
+  },
+  rowInnerFirstCompact: {
+    paddingTop: 18,
   },
   rankCol: {
     width: 52,
@@ -472,6 +536,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 2,
+  },
+  rankColCompact: {
+    width: 42,
+    minHeight: 36,
   },
   rankColWithOverline: {
     height: undefined,
@@ -494,6 +562,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     position: "relative",
+  },
+  avatarColCompact: {
+    width: 36,
+    height: 36,
   },
   crownRow: {
     flexDirection: "row",
@@ -519,12 +591,19 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 6,
   },
+  plusLabelCompact: {
+    fontSize: 6,
+  },
   avatarSquare: {
     width: 44,
     height: 44,
     borderRadius: 4,
     borderWidth: 1,
     overflow: "visible",
+  },
+  avatarSquareCompact: {
+    width: 36,
+    height: 36,
   },
   avatarCrop: {
     width: "100%",

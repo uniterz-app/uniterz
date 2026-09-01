@@ -330,7 +330,7 @@ Web / Native 同じルール。Settings モーダルは SafeArea 済みのため
 |---|---|---|
 | リーグ Team Stats | `nbaLeagueTeamStats/{season}` → `GET /api/nba/league-team-stats` | seed / サーバーモック。ingest 未 |
 | リーグ Player Leaders | `nbaLeaguePlayerStats/{season}` → `GET /api/nba/league-player-stats` | 同上 |
-| チーム / プレイヤー詳細の順位 | 上のスナップショットから切る | 名簿・契約・ゲームログはまだ詳細モック |
+| チーム / プレイヤー詳細 | 上記 + overlay / 合成 API | **完了** — [`nba-team-detail-status.md`](nba-team-detail-status.md) · [`nba-player-detail-status.md`](nba-player-detail-status.md) |
 | 予想 Injury / Roster / 2チーム STATS / Insight | なし（クライアントモック or 準備中） | 未 |
 
 差し込み口: `lib/nba/ingest/nbaLeagueStatsIngest.ts`（`ingestNbaLeagueStatsFromProvider`）。seed は同じ writer（`writeLeagueTeamStatsSnapshot` / `writePlayerStatLeadersSnapshot`）。
@@ -340,7 +340,7 @@ Web / Native 同じルール。Settings モーダルは SafeArea 済みのため
 - [ ] **ingest 本体** — `ingestNbaLeagueStatsFromProvider` に BDL を繋ぎ、既存スナップショット doc を上書き（クライアントは触らない）
   - Team averages + Last 10 → `nbaLeagueTeamStats`
   - Player leaders（BDL `stat_type` + advanced）→ `nbaLeaguePlayerStats`
-- [ ] **詳細の残り** — リーグ表に無いもの（名簿・契約・ゲームログ / shot zones）を共有スナップショット or チーム/選手 doc で ingest。詳細画面はそれを切る（試合ごとに複製しない）
+- [x] **詳細** — チーム・プレイヤー詳細完了（2026-09-01 · status doc 参照）
 - [ ] **予想タブを同じパイプに載せる**
   - Injury Report（日付フィード。Available は出さない）
   - Roster（チーム単位。Injury を overlay）
@@ -390,6 +390,8 @@ Web / Native 同じルール。Settings モーダルは SafeArea 済みのため
 
 | 日付 | 内容 |
 |---|---|
+| 2026-09-01 | **プレイヤー詳細完了**: PREVIEW 除去 · `docs/nba-player-detail-status.md` |
+| 2026-09-01 | **チーム詳細状態 doc**: `docs/nba-team-detail-status.md` — Preview パネル API 接続済み・残ギャップ明文化。Gate B 表・詳細チェックリストを更新 |
 | 2026-08-20 | **スタッツ共有スナップショットの入れ物**: Player Leaders を Team Stats と同じ Firestore 1 doc + 公開 GET + CDN に。詳細の順位はリーグ表から切る。ingest はゲート B。チェックリスト §5 に契約後の残件をメモ |
 | 2026-08-15 | **次キューに追加**: 文字デザインの統一（§0.4 #17 / §0.7）· グループページ調整（#18）· チーム/プレイヤースタッツ調整（#19 / §0.8） |
 | 2026-08-15 | **グループページ UI をサイバー HUD に寄せる**（§0.4 #15 / §0.5）。機能変更なし。一覧・詳細・オーバーレイ + Native 追従 |

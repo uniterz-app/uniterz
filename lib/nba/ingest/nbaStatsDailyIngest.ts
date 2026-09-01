@@ -16,6 +16,7 @@ import { ingestNbaPlayerShotZonesFromBdl } from "@/lib/nba/ingest/nbaPlayerShotZ
 import { ingestNbaTeamRostersFromBdl } from "@/lib/nba/ingest/nbaTeamRostersIngest";
 import { ingestNbaPlayerGameLogsFromBdl } from "@/lib/nba/ingest/nbaPlayerGameLogsIngest";
 import { listPlayerIdsFromRecentBoxScores } from "@/lib/nba/ingest/listPlayerIdsFromRecentBoxScores";
+import { loadOrBuildTeamSeasonRecords } from "@/lib/nba/insights/loadPriorSeasonTeamRecords";
 
 export type NbaStatsDailyIngestMode = "daily" | "heavy";
 
@@ -94,6 +95,14 @@ export async function runNbaStatsDailyIngest(
   steps.push(
     await runStep("team-game-logs", () =>
       ingestNbaTeamGameLogsFromGames(db, { seasonKey })
+    )
+  );
+  steps.push(
+    await runStep("team-season-records", () =>
+      loadOrBuildTeamSeasonRecords(db, seasonKey, {
+        fetchFromBdlIfSparse: true,
+        seasonInProgress: seasonKey === CURRENT_NBA_SEASON_KEY,
+      })
     )
   );
   steps.push(

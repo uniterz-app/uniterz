@@ -11,13 +11,15 @@ import {
   fetchTeamStrengthSplit,
   type NbaTeamStrengthSplit,
 } from "@/lib/nba/insights/fetchTeamStrengthSplitClient";
-import type { NbaTeamGameLogSlice } from "@/lib/nba/teamGameLog/teamGameLogTypes";
-import type { NbaRosterTeamBlock } from "@/lib/predict/nbaRoster";
 import type {
   NbaTeamDetailPreview,
   NbaTeamInjuryEntry,
   NbaTeamPayroll,
 } from "@/lib/predict/nbaTeamDetailPreviewMocks";
+import type { NbaTeamGameLogSlice } from "@/lib/nba/teamGameLog/teamGameLogTypes";
+import type { NbaRosterTeamBlock } from "@/lib/predict/nbaRoster";
+import { fetchTeamAceOutRecord } from "@/lib/nba/detailInsights/fetchTeamAceOutClient";
+import type { NbaTeamAceOutRecord } from "@/lib/nba/insights/aceOutRecordTypes";
 
 type Options = {
   teamId?: string;
@@ -34,6 +36,7 @@ export type NbaTeamDetailOverlayFailures = {
   gameLog: boolean;
   injuries: boolean;
   strengthSplit: boolean;
+  aceOut: boolean;
 };
 
 function winPct(wins: number, losses: number): number {
@@ -49,6 +52,7 @@ function emptyFailures(): NbaTeamDetailOverlayFailures {
     gameLog: false,
     injuries: false,
     strengthSplit: false,
+    aceOut: false,
   };
 }
 
@@ -61,6 +65,7 @@ function emptyFailures(): NbaTeamDetailOverlayFailures {
  */
 export function useNbaTeamDetailLiveOverlay(options: Options): {
   detail: NbaTeamDetailPreview;
+  aceOut: NbaTeamAceOutRecord | null;
   loading: boolean;
   failures: NbaTeamDetailOverlayFailures;
   hasFetchError: boolean;
@@ -78,6 +83,7 @@ export function useNbaTeamDetailLiveOverlay(options: Options): {
   const [injuries, setInjuries] = useState<NbaTeamInjuryEntry[] | null>(null);
   const [strengthSplit, setStrengthSplit] =
     useState<NbaTeamStrengthSplit | null>(null);
+  const [aceOut, setAceOut] = useState<NbaTeamAceOutRecord | null>(null);
   const [failures, setFailures] =
     useState<NbaTeamDetailOverlayFailures>(emptyFailures);
   const [loading, setLoading] = useState(!!teamId);
@@ -89,6 +95,7 @@ export function useNbaTeamDetailLiveOverlay(options: Options): {
       setGameLog(null);
       setInjuries(null);
       setStrengthSplit(null);
+      setAceOut(null);
       setFailures(emptyFailures());
       setLoading(false);
       return;
@@ -155,20 +162,30 @@ export function useNbaTeamDetailLiveOverlay(options: Options): {
           signal: ac.signal,
         })
       ),
+      wrap(
+        fetchTeamAceOutRecord({
+          teamId,
+          season,
+          apiBaseUrl,
+          signal: ac.signal,
+        })
+      ),
     ])
-      .then(([roster, pay, log, inj, strength]) => {
+      .then(([roster, pay, log, inj, strength, ace]) => {
         if (ac.signal.aborted) return;
         setRosterBlock(roster.ok ? roster.value : null);
         setPayroll(pay.ok ? pay.value : null);
         setGameLog(log.ok ? log.value : null);
         setInjuries(inj.ok ? inj.value : null);
         setStrengthSplit(strength.ok ? strength.value : null);
+        setAceOut(ace.ok ? ace.value : null);
         setFailures({
           roster: !roster.ok,
           payroll: !pay.ok,
           gameLog: !log.ok,
           injuries: !inj.ok,
           strengthSplit: !strength.ok,
+          aceOut: !ace.ok,
         });
       })
       .finally(() => {
@@ -216,5 +233,5 @@ export function useNbaTeamDetailLiveOverlay(options: Options): {
     failures.injuries ||
     failures.strengthSplit;
 
-  return { detail, loading, failures, hasFetchError };
+  return { detail, aceOut, loading, failures, hasFetchError };
 }

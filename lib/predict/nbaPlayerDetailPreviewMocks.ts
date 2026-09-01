@@ -819,11 +819,12 @@ export function formatPhysique(height: string, weight: string): string {
 }
 
 export function formatAvailabilityStatus(
-  status: NbaPlayerAvailabilityStatus
+  status: NbaPlayerAvailabilityStatus,
+  isJa = false
 ): string {
-  if (status === "active") return "ACTIVE";
-  if (status === "out") return "OUT";
-  return "GAME-TIME DECISION";
+  if (status === "active") return isJa ? "出場" : "ACTIVE";
+  if (status === "out") return isJa ? "欠場" : "OUT";
+  return isJa ? "試合時判断" : "GAME-TIME DECISION";
 }
 
 export function availabilityStatusColor(

@@ -36,7 +36,7 @@ BDL（サーバーのみ）
 | **今季メトリクス（全順位）** | `nbaPlayerSeasonMetrics/{season}/players/{playerId}` | `nba-league-stats-ingest`（leaders と同梱。Top30 ボードとは別） | `/api/nba/player-detail`（個別 GET なし） |
 | **詳細寄せ** | （上の合成） | — | `/api/nba/player-detail`（roster+injury+contract+career+logs+zones+metrics） |
 | injury | `nbaTeamInjuries/{season}` | `nba-team-injuries-ingest` | `/api/nba/team-injuries` |
-| **チーム成績スプリット** | `nbaTeamSeasonRecords/{season}` | `scripts/ingest-nba-team-season-records.ts` / pro-brief 内 build | `/api/nba/team-season-records` |
+| **チーム成績スプリット** | `nbaTeamSeasonRecords/{season}` | 日次 `nba-stats-daily-ingest`（`team-season-records` ステップ）/ pro-brief 内 build | `/api/nba/team-season-records` |
 | **エース欠場時 W–L** | `nbaTeamAceOutRecords/{season}` | `nba-team-ace-out-ingest`（BDL leaders pts + season stats で所属チーム確定 × min>0） | `/api/nba/team-ace-out-records` |
 
 ## 運用順（プレイヤー詳細）
@@ -64,7 +64,7 @@ BDL（サーバーのみ）
 
 - Firebase cron `runNbaStatsDailyIngestCron` — **毎日 18:00 JST**
 - Next `POST /api/admin/nba-stats-daily-ingest`（`mode: "daily"`）
-- 中身: rosters → games → league-stats → injuries → team-game-logs → shot-zones → **player-game-logs-incremental**（直近 box 出場者）
+- 中身: rosters → games → league-stats → injuries → team-game-logs → **team-season-records** → shot-zones → **player-game-logs-incremental**（直近 box 出場者）
 - `mode: "heavy"` でプレイヤー試合ログ全件も（タイムアウト注意）。試合ログ書き込み後に leaders last10 を game logs から再集計（追加 BDL なし）
 - 週次 Firebase cron `runNbaStatsWeeklyIngestCron` — **月曜 10:00 JST** → `POST /api/admin/nba-stats-weekly-ingest`（payroll + contracts）。キャリアは手動
 - チーム league-stats は scoring / hustle / tracking / clutch / playtype 込み（HOW THEY PLAY）。team by_zone は BDL 不可 → リーグ表 RIM/C3 非表示・チーム詳細 SHOT 枠なし

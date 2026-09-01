@@ -295,6 +295,7 @@ function Top10Panel({
               countryCode={row.countryCode}
               language={ja ? "ja" : "en"}
               isPro={row.isPro}
+              compact
               hideListMeta
               animateCrown={row.rank === 1}
               reduceMotion={reduceMotion}

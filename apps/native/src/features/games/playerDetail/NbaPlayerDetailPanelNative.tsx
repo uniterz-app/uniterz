@@ -14,6 +14,7 @@ import Svg, {
   Text as SvgText,
 } from "react-native-svg";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { availabilityReasonDisplay } from "../../../../../../lib/nba/teamInjuries/injuryReasonDisplay";
 import {
   averageRecentGameLogs,
   formatFgLine,
@@ -79,6 +80,14 @@ import NbaPlayerHowTheyPlayNative from "./NbaPlayerHowTheyPlayNative";
 import { useLeagueTeamStatsBundle } from "../../../../../../lib/nba/useLeagueTeamStatsBundle";
 import { usePlayerStatLeadersBundle } from "../../../../../../lib/nba/usePlayerStatLeadersBundle";
 import { useNbaPlayerDetailLiveOverlay } from "../../../../../../lib/nba/playerDetail/useNbaPlayerDetailLiveOverlay";
+import { buildPlayerDetailInsights } from "../../../../../../lib/nba/detailInsights/buildPlayerDetailInsights";
+import {
+  DetailIdentityChipRowNative,
+  DetailInsightSummaryNative,
+} from "../detailInsights/DetailInsightBlocksNative";
+import { DetailUsageStripNative } from "../detailInsights/DetailUsageStripNative";
+import { DetailRoleChangeSectionNative } from "../detailInsights/DetailRoleChangeSectionNative";
+import { DetailConsistencySectionNative } from "../detailInsights/DetailConsistencySectionNative";
 import { formatNbaPlayerDisplayName } from "@/lib/nba/formatNbaPlayerListName";
 import { nbaSeasonStatsReady } from "@/lib/predict/nbaSeasonStatsReady";
 import { getUniterzApiBaseUrl } from "../submitPredictionApi";
@@ -731,10 +740,12 @@ function SeasonMetricsGrid({
   metrics,
   accent,
   gamesPlayed,
+  isJa,
 }: {
   metrics: NbaPlayerSeasonMetric[];
   accent: string;
   gamesPlayed: number;
+  isJa: boolean;
 }) {
   const shown = NBA_PLAYER_DETAIL_SEASON_SHOWN.map(
     (id) => metrics.find((m) => m.id === id)
@@ -746,7 +757,7 @@ function SeasonMetricsGrid({
     <View style={styles.advWrap}>
       <View style={styles.advTitleRow}>
         <Text style={styles.advTitle}>
-          SEASON AVERAGES
+          {isJa ? "シーズン平均" : "SEASON AVERAGES"}
         </Text>
         <View style={styles.advTitleLine} />
       </View>
@@ -1241,7 +1252,7 @@ function AvailabilityBanner({
 }) {
   if (availability.status === "active") return null;
   const tone = availabilityStatusColor(availability.status);
-  const status = formatAvailabilityStatus(availability.status);
+  const status = formatAvailabilityStatus(availability.status, isJa);
   return (
     <View style={[styles.availCard, { borderColor: hexToRgba(tone, 0.55) }]}>
       <View style={styles.availTop}>
@@ -1252,13 +1263,12 @@ function AvailabilityBanner({
           </Text>
         ) : null}
       </View>
-      {availability.reason ? (
-        <Text style={styles.availReason}>{availability.reason}</Text>
-      ) : (
-        <Text style={styles.availReason}>
-          {isJa ? "詳細なし" : "No detail"}
-        </Text>
-      )}
+      {(() => {
+        const reasonText = availabilityReasonDisplay(availability.reason, isJa);
+        return reasonText ? (
+          <Text style={styles.availReason}>{reasonText}</Text>
+        ) : null;
+      })()}
     </View>
   );
 }
@@ -1313,6 +1323,10 @@ export default function NbaPlayerDetailPanelNative({
     base,
     leaders,
   });
+  const playerInsights = useMemo(
+    () => buildPlayerDetailInsights({ detail, rosterPlayer: null }),
+    [detail]
+  );
   const bottomPad = Math.max(12, insets.bottom);
   const currentSalary = detail.contract?.seasons[0] ?? null;
   const isTwoWay =
@@ -1357,6 +1371,36 @@ export default function NbaPlayerDetailPanelNative({
 
         <View style={[styles.divider, { backgroundColor: dividerColor }]} />
 
+        {playerInsights.summary ? (
+          <>
+            <DetailInsightSummaryNative
+              text={
+                isJa
+                  ? playerInsights.summary.linesJa
+                  : playerInsights.summary.linesEn
+              }
+            />
+            <View style={{ height: 10 }} />
+          </>
+        ) : null}
+        {playerInsights.roles.length > 0 ? (
+          <>
+            <DetailIdentityChipRowNative
+              chips={playerInsights.roles}
+              accent={accent}
+              title="ROLE"
+              isJa={isJa}
+            />
+            <View style={{ height: 10 }} />
+          </>
+        ) : null}
+        <DetailUsageStripNative
+          cells={playerInsights.usageStrip}
+          accent={accent}
+        />
+
+        <View style={[styles.divider, { backgroundColor: dividerColor }]} />
+
         <AvailabilityBanner
           availability={detail.availability}
           isJa={isJa}
@@ -1366,6 +1410,7 @@ export default function NbaPlayerDetailPanelNative({
           metrics={detail.seasonMetrics}
           accent={accent}
           gamesPlayed={detail.season.gamesPlayed}
+          isJa={isJa}
         />
 
         <View
@@ -1374,6 +1419,25 @@ export default function NbaPlayerDetailPanelNative({
             { marginVertical: 12, backgroundColor: dividerColor },
           ]}
         />
+
+        <DetailRoleChangeSectionNative
+          signals={playerInsights.roleChanges}
+          detailText={
+            isJa
+              ? playerInsights.roleChangeDetailJa
+              : playerInsights.roleChangeDetailEn
+          }
+          accent={accent}
+          isJa={isJa}
+        />
+        {playerInsights.roleChanges.length > 0 ? (
+          <View
+            style={[
+              styles.divider,
+              { marginVertical: 12, backgroundColor: dividerColor },
+            ]}
+          />
+        ) : null}
 
         <NbaPlayerHowTheyPlayNative
           playerId={detail.playerId}
@@ -1417,6 +1481,15 @@ export default function NbaPlayerDetailPanelNative({
         <ShotZoneHeatmap zones={detail.shotZones} accent={accent} />
 
         <View style={[styles.divider, { backgroundColor: dividerColor }]} />
+        {playerInsights.consistency ? (
+          <>
+            <DetailConsistencySectionNative
+              data={playerInsights.consistency}
+              accent={accent}
+            />
+            <View style={[styles.divider, { backgroundColor: dividerColor }]} />
+          </>
+        ) : null}
         <GameLogsSection logs={detail.gameLogs} accent={accent} />
 
         <View style={[styles.divider, { backgroundColor: dividerColor }]} />
@@ -1623,7 +1696,7 @@ export default function NbaPlayerDetailPanelNative({
         <Text
           style={styles.footerAsOf}
         >
-          {detail.asOfLabel} · PREVIEW
+          {detail.asOfLabel}
         </Text>
       </View>
     </ScrollView>

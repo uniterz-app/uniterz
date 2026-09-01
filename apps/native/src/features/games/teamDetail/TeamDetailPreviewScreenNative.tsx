@@ -1,4 +1,4 @@
-/** Team Detail 再構築プレビュー */
+/** Team Detail（Games スタック · STATS/順位表/予想から） */
 import MobilePageShell from "../../profile/mobileScreens/MobilePageShell";
 import NbaTeamDetailPanelNative from "./NbaTeamDetailPanelNative";
 
@@ -19,11 +19,11 @@ export default function TeamDetailPreviewScreenNative({
   return (
     <MobilePageShell
       title={isJa ? "Team Detail" : "Team Detail"}
-      eyebrow="PREVIEW"
+      eyebrow="GAMES"
       subtitle={
         isJa
-          ? "再構築プレビュー · 指標リーグ順位つき"
-          : "Rebuild preview · metrics with league ranks"
+          ? "成績 · 指標 · ロスター · ペイロール"
+          : "Record · metrics · roster · payroll"
       }
       appBackground
       edgeBack
