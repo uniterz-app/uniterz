@@ -21,6 +21,7 @@ type Options = {
   override?: NbaInjuryReport | null;
   /** false のときは取得しない（未選択タブの先読みを止める） */
   enabled?: boolean;
+  language?: "ja" | "en";
 };
 
 /**
@@ -47,6 +48,7 @@ export function useNbaMatchupInjuryReport(options: Options): {
   const override = options.override;
   const apiBaseUrl = options.apiBaseUrl;
   const enabled = options.enabled ?? true;
+  const language = options.language ?? "en";
 
   const [report, setReport] = useState<NbaInjuryReport | null>(
     override ?? null
@@ -94,6 +96,7 @@ export function useNbaMatchupInjuryReport(options: Options): {
             homeEntries,
             awayEntries,
             asOfLabel: payload.updatedAt || null,
+            language,
           })
         );
         const any =
@@ -113,7 +116,7 @@ export function useNbaMatchupInjuryReport(options: Options): {
     return () => {
       cancelled = true;
     };
-  }, [enabled, homeTeamId, awayTeamId, season, apiBaseUrl, override]);
+  }, [enabled, homeTeamId, awayTeamId, season, apiBaseUrl, override, language]);
 
   return { report, loading, source };
 }

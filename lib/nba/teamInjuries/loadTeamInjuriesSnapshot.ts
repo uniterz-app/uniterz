@@ -9,6 +9,7 @@ import type {
   NbaTeamInjuryDocTeam,
 } from "./teamInjuryTypes";
 import type { NbaTeamInjuryEntry } from "@/lib/predict/nbaTeamDetailPreviewMocks";
+import { normalizeTeamInjurySnapshotStatus } from "./injuryStatusDisplay";
 
 export const NBA_TEAM_INJURIES_COLLECTION = "nbaTeamInjuries";
 
@@ -27,9 +28,8 @@ function resolveInjuryList(raw: unknown): NbaTeamInjuryEntry[] {
     const row = item as Record<string, unknown>;
     const playerId = String(row.playerId ?? "").trim();
     const name = String(row.name ?? "").trim();
-    const status = row.status;
-    if (!playerId || !name) continue;
-    if (status !== "out" && status !== "gtd") continue;
+    const status = normalizeTeamInjurySnapshotStatus(row.status);
+    if (!playerId || !name || !status) continue;
     out.push({
       playerId,
       name,

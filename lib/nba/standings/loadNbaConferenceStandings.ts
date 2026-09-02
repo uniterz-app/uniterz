@@ -6,6 +6,15 @@ import {
   EMPTY_NBA_CONFERENCE_STANDINGS,
   type NbaConferenceStandingsBoard,
 } from "@/lib/nba/nbaConferenceStandings";
+import { enrichConferenceStandingsFromTeamGameLogs } from "@/lib/nba/standings/enrichConferenceStandingsFromTeamGameLogs";
+import {
+  buildPreseasonConferenceStandingsBoard,
+  preseasonStandingsAsOfLabel,
+} from "@/lib/nba/standings/buildPreseasonConferenceStandingsBoard";
+import { loadTeamGameLogsSnapshot } from "@/lib/nba/teamGameLog/loadTeamGameLog";
+import { buildTeamGameLogsBundleFromGames } from "@/lib/nba/teamGameLog/buildTeamGameLogsBundleFromGames";
+import { loadNbaSeasonGameRows } from "@/lib/nba/ingest/nbaTeamGameLogsIngest";
+import { nbaSeasonStatsReady } from "@/lib/predict/nbaSeasonStatsReady";
 import type { NbaConferenceStandingsApiPayload } from "./nbaConferenceStandingsTypes";
 
 export const NBA_CONFERENCE_STANDINGS_COLLECTION = "nbaStandings";
@@ -63,20 +72,28 @@ function payloadFromDoc(
     typeof data.asOfLabel === "string" && data.asOfLabel.trim()
       ? data.asOfLabel.trim()
       : asOfLabel(seasonKey, updatedMs);
+  const sourceRaw = typeof data.source === "string" ? data.source : "firestore";
+  const source: NbaConferenceStandingsApiPayload["source"] =
+    sourceRaw === "bdl" ||
+    sourceRaw === "preseason" ||
+    sourceRaw === "teams_fallback" ||
+    sourceRaw === "firestore"
+      ? sourceRaw
+      : "firestore";
+
   return {
     ok: true,
     season: seasonKey,
     board,
     asOfLabel: asOf,
-    source: "firestore",
+    source,
     updatedAt: updatedMs != null ? new Date(updatedMs).toISOString() : null,
   };
 }
 
 /**
  * Firestore `nbaStandings/{season}` を読む。
- * ドキュメントが無いときだけ `teams` から組んで同じ場所に保存する（以後は読むだけ）。
- * プロバイダ ingest も `writeNbaConferenceStandingsSnapshot` でここを上書きする。
+ * 未 ingest 時: 開幕前の当季 → 30 チーム 0-0 スキャフォールド。それ以外 → teams フォールバック。
  */
 export async function loadNbaConferenceStandings(
   db: Firestore,
@@ -89,23 +106,51 @@ export async function loadNbaConferenceStandings(
     if (fromDoc) return fromDoc;
   }
 
-  const { teams } = await loadTeamsByLeague(db, "nba");
-  const board = buildNbaConferenceStandings(teams);
+  const usePreseasonScaffold =
+    seasonKey === CURRENT_NBA_SEASON_KEY && !nbaSeasonStatsReady();
+
+  let board: NbaConferenceStandingsBoard;
+  let source: NbaConferenceStandingsApiPayload["source"];
+  let label: string;
+
+  if (usePreseasonScaffold) {
+    board = buildPreseasonConferenceStandingsBoard(seasonKey);
+    source = "preseason";
+    label = preseasonStandingsAsOfLabel(seasonKey);
+  } else {
+    const { teams } = await loadTeamsByLeague(db, "nba");
+    board = buildNbaConferenceStandings(teams);
+    source = "teams_fallback";
+    let maxMs: number | null = null;
+    for (const row of teams) {
+      const ms = readUpdatedAtMs(row.updatedAt);
+      if (ms != null && (maxMs == null || ms > maxMs)) maxMs = ms;
+    }
+    label = asOfLabel(seasonKey, maxMs);
+  }
+
+  const gameLogSnap = await loadTeamGameLogsSnapshot(db, seasonKey);
+  let teamLogs = gameLogSnap.bundle.teams;
+  if (Object.keys(teamLogs).length === 0) {
+    const rows = await loadNbaSeasonGameRows(db, seasonKey, 1500);
+    if (rows.length > 0) {
+      teamLogs = buildTeamGameLogsBundleFromGames({ seasonKey, games: rows }).teams;
+    }
+  }
+  if (Object.keys(teamLogs).length > 0) {
+    board = enrichConferenceStandingsFromTeamGameLogs(board, teamLogs);
+  }
+
   const resolved =
     board.east.length || board.west.length ? board : EMPTY_NBA_CONFERENCE_STANDINGS;
-  let maxMs: number | null = null;
-  for (const row of teams) {
-    const ms = readUpdatedAtMs(row.updatedAt);
-    if (ms != null && (maxMs == null || ms > maxMs)) maxMs = ms;
-  }
-  const label = asOfLabel(seasonKey, maxMs);
 
   await writeNbaConferenceStandingsSnapshot(
     db,
     seasonKey,
     resolved,
     FieldValue.serverTimestamp(),
-    label
+    label,
+    source
   );
 
   return {
@@ -113,8 +158,8 @@ export async function loadNbaConferenceStandings(
     season: seasonKey,
     board: resolved,
     asOfLabel: label,
-    source: "firestore",
-    updatedAt: maxMs != null ? new Date(maxMs).toISOString() : null,
+    source,
+    updatedAt: null,
   };
 }
 
@@ -124,13 +169,14 @@ export async function writeNbaConferenceStandingsSnapshot(
   seasonKey: string,
   board: NbaConferenceStandingsBoard,
   serverTimestamp: unknown,
-  asOf?: string
+  asOf?: string,
+  source: NbaConferenceStandingsApiPayload["source"] = "firestore"
 ): Promise<void> {
   await db.collection(NBA_CONFERENCE_STANDINGS_COLLECTION).doc(seasonKey).set({
     season: seasonKey,
     board,
     asOfLabel: asOf ?? seasonKey,
-    source: "firestore",
+    source,
     updatedAt: serverTimestamp,
   });
 }

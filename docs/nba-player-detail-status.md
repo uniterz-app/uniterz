@@ -1,7 +1,7 @@
 # NBA プレイヤー詳細 — 状態（2026-09-01）
 
 > **結論:** **完了**。Native/Web パリティ · 合成 API 接続 · PREVIEW 表記除去。  
-> **次の NBA 本線:** injury · チームスタッツ周辺 polish。
+> **次の NBA 本線:** チームスタッツ周辺 polish（injury **完了** → [`nba-injury-status.md`](nba-injury-status.md)）。
 
 ---
 
@@ -31,7 +31,7 @@ useNbaPlayerDetailLiveOverlay()
 | セクション | スナップショット | 状態 |
 |---|---|---|
 | Hero / バイオ | team-rosters | ✅ 日次 |
-| Injury | team-injuries | ✅ 日次 |
+| Injury | team-injuries | ✅ 専用 cron（16/23/試合前） |
 | シーズン平均 + 順位 | seasonMetrics + leaders | ✅ 日次 |
 | HOW THEY PLAY | leaders + league-team-stats | ✅ |
 | Home/Away · Vs Opponent | player-game-logs | ✅ **空なら非表示** |

@@ -19,9 +19,7 @@ import { normalizeLeague } from "@/lib/leagues";
 import { getTeamAlias } from "@/lib/team-alias";
 import type { PredictionPostV2 } from "@/types/prediction-post-v2";
 
-import { db } from "@/lib/firebase";
-import { doc, getDoc } from "firebase/firestore";
-import { nbaRegularSeasonWinsLosses } from "@/lib/nbaRegularSeasonRecord";
+import { useTeamRecordLine } from "@/lib/hooks/useTeamRecordLine";
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
 import ResultGlassShell from "@/app/component/result/ResultGlassShell";
@@ -72,36 +70,6 @@ function fmtRecordWithRank(
   const record = `(${r.wins}-${r.losses})`;
   if (!r.rank) return record;
   return `${record} :${r.rank}${ordinal(r.rank)}`;
-}
-
-/** teams/{teamId} から wins/losses/rank を取る（MatchCard と同じ） */
-function useTeamRecord(teamId?: string) {
-  const [rec, setRec] = useState<{
-    wins: number;
-    losses: number;
-    rank?: number;
-  } | null>(null);
-
-  useEffect(() => {
-    if (!teamId) return;
-
-    const ref = doc(db, "teams", teamId);
-    getDoc(ref).then((snap) => {
-      if (!snap.exists()) return;
-      const d = snap.data() as any;
-      const isNba = String(d.league ?? "") === "nba";
-      const wl = isNba
-        ? nbaRegularSeasonWinsLosses(d)
-        : { wins: Number(d.wins ?? 0), losses: Number(d.losses ?? 0) };
-      setRec({
-        wins: wl.wins,
-        losses: wl.losses,
-        rank: typeof d.rank === "number" ? d.rank : undefined,
-      });
-    });
-  }, [teamId]);
-
-  return rec;
 }
 
 /** Mobile表示用チーム名 */
@@ -183,8 +151,8 @@ export default function MobileResultMatchHeader({
       })()
     : null;
 
-  const homeRecord = useTeamRecord(post.home?.teamId);
-  const awayRecord = useTeamRecord(post.away?.teamId);
+  const homeRecord = useTeamRecordLine(post.home?.teamId, post.league);
+  const awayRecord = useTeamRecordLine(post.away?.teamId, post.league);
 
   const {
     badge,

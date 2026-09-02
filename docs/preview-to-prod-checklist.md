@@ -289,7 +289,7 @@ Web / Native 同じルール。Settings モーダルは SafeArea 済みのため
 
 | 機能 | UI | 本番 `PredictionFormV2` | 実データ | 備考 |
 |---|---|---|---|---|
-| Injury Report | ✅ | ✅ タブ配線済み（NBA） | ❌（API 契約後） | データ null → 準備中表示。**モバイルはイニシャル四角非表示** |
+| Injury Report | ✅ | ✅ タブ配線済み（NBA） | ✅ Firestore | BDL ingest 接続済み。JA 理由は辞書要約。詳細: [`nba-injury-status.md`](nba-injury-status.md) |
 | Team Stats（SEASON / L10・順位セグ・L10 W/L） | ✅ | ✅ タブ配線済み（NBA） | ❌ | 同上 |
 | Roster | ✅ | ✅ タブ配線済み（NBA） | ❌ | 同上 |
 | Pro Insight（MATCHUP / SCHEDULE / CONTEXT） | ✅ | ✅ タブ配線済み（NBA・PRO バッジ） | ❌ | 設計正: [`docs/pro-insight-design.md`](pro-insight-design.md)。`PredictProBriefPanel`。非 Pro はロック。旧 `PredictProInfoPanel` は WC/他リーグのみ残存 |

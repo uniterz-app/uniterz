@@ -57,6 +57,7 @@
     "sync:pro-skin-milestone-catalog": "node scripts/sync-pro-skin-milestone-catalog.mjs"
   },
   "dependencies": {
+    "@apple/app-store-server-library": "^3.1.0",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
     "@react-three/drei": "^10.7.7",

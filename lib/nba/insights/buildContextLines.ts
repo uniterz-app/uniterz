@@ -5,6 +5,7 @@ import type { ProBriefLineItem } from "@/lib/predict/predictProBrief";
 import type { ProBriefPhase } from "@/lib/predict/predictProBrief";
 import type { NbaLeagueTeamStatRow } from "@/lib/predict/nbaLeagueTeamStatsMocks";
 import type { NbaTeamInjuryEntry } from "@/lib/predict/nbaTeamDetailPreviewMocks";
+import { isOutOrQuestionableInjury } from "@/lib/nba/teamInjuries/injuryStatusDisplay";
 import { findTeamRow } from "@/lib/nba/insights/rankTeamMetrics";
 import {
   formatWl,
@@ -50,12 +51,14 @@ export function buildContextLinesForTeam(input: {
     input.phase === "opening" ? "前季" : "今季";
 
   const unusedInjuries = input.injuries.filter((i) => {
-    if (i.status !== "out" && i.status !== "gtd") return false;
+    if (!isOutOrQuestionableInjury(i.status)) return false;
     const key = shortName(i).toLowerCase();
     return !input.injuryNamesUsedInMatchup.has(key);
   });
 
-  const outs = unusedInjuries.filter((i) => i.status === "out");
+  const outs = unusedInjuries.filter(
+    (i) => i.status === "out" || i.status === "doubtful"
+  );
   if (outs.length >= 2) {
     lines.push({
       textJa: `スターター ${outs.length}人 OUT · 作成が分散`,
@@ -67,7 +70,8 @@ export function buildContextLinesForTeam(input: {
       | undefined;
     if (pick) {
       const name = shortName(pick);
-      const st = pick.status === "out" ? "OUT" : "Questionable";
+      const st =
+        pick.status === "out" || pick.status === "doubtful" ? "OUT" : "Questionable";
       const hit = findAceOutForInjuryWithTeam(
         input.aceOutRecords,
         input.teamId,
@@ -96,7 +100,7 @@ export function buildContextLinesForTeam(input: {
   // MATCHUP にエース欠場を折り込んだ場合でも、欠場時成績だけは CONTEXT に出してよい
   if (lines.length < 2) {
     const matchupInjuries = input.injuries.filter((i) => {
-      if (i.status !== "out" && i.status !== "gtd") return false;
+      if (!isOutOrQuestionableInjury(i.status)) return false;
       return input.injuryNamesUsedInMatchup.has(shortName(i).toLowerCase());
     });
     for (const pick of matchupInjuries) {

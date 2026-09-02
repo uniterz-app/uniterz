@@ -23,6 +23,7 @@ import {
 } from "@/lib/nba/insights/aceOutInsight";
 import type { NbaLeagueTeamStatRow } from "@/lib/predict/nbaLeagueTeamStatsMocks";
 import type { NbaTeamInjuryEntry } from "@/lib/predict/nbaTeamDetailPreviewMocks";
+import { isOutOrQuestionableInjury } from "@/lib/nba/teamInjuries/injuryStatusDisplay";
 
 export type TeamIdentityInput = {
   teamId: string;
@@ -440,7 +441,7 @@ const CANDIDATES: CandidateEval[] = [
     tieBreak: 100,
     reserveSlot: true,
     evaluate: ({ teamId, injuries, aceOut }) => {
-      const outGtd = injuries.filter((i) => i.status === "out" || i.status === "gtd");
+      const outGtd = injuries.filter((i) => isOutOrQuestionableInjury(i.status));
       let hit = outGtd.length >= 2;
       if (!hit && aceOut) {
         for (const inj of outGtd) {

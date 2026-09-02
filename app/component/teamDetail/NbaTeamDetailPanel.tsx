@@ -15,11 +15,16 @@ import {
   getTeamUiAccentColor,
 } from "@/lib/team-colors";
 import {
-  availabilityStatusColor,
-  formatAvailabilityStatus,
   formatSalaryUsd,
 } from "@/lib/predict/nbaPlayerDetailPreviewMocks";
-import { availabilityReasonDisplay } from "@/lib/nba/teamInjuries/injuryReasonDisplay";
+import {
+  formatInjuryReturnEstimate,
+  injuryReasonLabel,
+} from "@/lib/nba/teamInjuries/injuryReasonDisplay";
+import {
+  formatTeamInjuryStatus,
+  teamInjuryStatusColor,
+} from "@/lib/nba/teamInjuries/injuryStatusDisplay";
 import {
   buildFuturePayrollYearsFromLines,
   buildSynchronizedTeamPayrollLines,
@@ -468,7 +473,12 @@ function Injuries({
           </div>
         ) : (
           injuries.map((inj, i) => {
-            const tone = availabilityStatusColor(inj.status);
+            const tone = teamInjuryStatusColor(inj.status);
+            const reasonLabel = injuryReasonLabel(inj.reason, isJa ? "ja" : "en");
+            const returnLabel = formatInjuryReturnEstimate(
+              inj.returnEstimate,
+              isJa ? "ja" : "en"
+            );
             return (
               <div
                 key={inj.playerId}
@@ -484,16 +494,16 @@ function Injuries({
                     {inj.name}
                   </span>
                   <span className={`${nameOxanium.className} text-[11px] font-extrabold tracking-wide`} style={{ color: tone, transform: "skewX(-8deg)" }}>
-                    {formatAvailabilityStatus(inj.status, isJa)}
+                    {formatTeamInjuryStatus(inj.status, isJa)}
                   </span>
                 </div>
                 <div className="flex items-center justify-between gap-2">
                   <span className={`${nameOxanium.className} truncate text-[11px] text-white/55`}>
-                    {availabilityReasonDisplay(inj.reason, isJa) ?? "—"}
+                    {reasonLabel}
                   </span>
-                  {inj.returnEstimate ? (
+                  {returnLabel ? (
                     <span className={`${nameOxanium.className} text-[10px] font-bold uppercase`} style={{ color: hexToRgba(tone, 0.85) }}>
-                      {inj.returnEstimate}
+                      {returnLabel}
                     </span>
                   ) : null}
                 </div>

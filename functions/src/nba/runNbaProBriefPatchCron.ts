@@ -1,5 +1,5 @@
 /**
- * JST 毎時 — tip 1h 前の試合に Pro Insight へケガ情報を反映した完全版を書く。
+ * JST 毎時 — tip 1h 前の試合に Pro Insight 完全版を書く（injury は専用 cron のスナップショットを読む）。
  *
  * env（どちらか）:
  *   NEXT_NBA_PRO_BRIEF_INGEST_URL  … 例 https://www.uniterz.app/api/admin/nba-pro-brief-ingest

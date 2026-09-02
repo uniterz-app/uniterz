@@ -29,11 +29,16 @@ import {
   teamStreakBadgeTheme,
 } from "../../../../../../lib/predict/nbaTeamDetailForm";
 import {
-  availabilityStatusColor,
-  formatAvailabilityStatus,
   formatSalaryUsd,
 } from "../../../../../../lib/predict/nbaPlayerDetailPreviewMocks";
-import { availabilityReasonDisplay } from "../../../../../../lib/nba/teamInjuries/injuryReasonDisplay";
+import {
+  formatInjuryReturnEstimate,
+  injuryReasonLabel,
+} from "../../../../../../lib/nba/teamInjuries/injuryReasonDisplay";
+import {
+  formatTeamInjuryStatus,
+  teamInjuryStatusColor,
+} from "../../../../../../lib/nba/teamInjuries/injuryStatusDisplay";
 import type { NbaTeamPayrollLine } from "../../../../../../lib/predict/nbaTeamDetailPreviewMocks";
 import {
   buildFuturePayrollYearsFromLines,
@@ -418,7 +423,12 @@ function InjuriesSection({
           </View>
         ) : (
           injuries.map((inj, i) => {
-            const tone = availabilityStatusColor(inj.status);
+            const tone = teamInjuryStatusColor(inj.status);
+            const reasonLabel = injuryReasonLabel(inj.reason, isJa ? "ja" : "en");
+            const returnLabel = formatInjuryReturnEstimate(
+              inj.returnEstimate,
+              isJa ? "ja" : "en"
+            );
             return (
               <View
                 key={inj.playerId}
@@ -435,21 +445,21 @@ function InjuriesSection({
                 <View style={styles.injuryTop}>
                   <Text style={styles.injuryName}>{inj.name}</Text>
                   <Text style={[styles.injuryStatus, { color: tone }]}>
-                    {formatAvailabilityStatus(inj.status, isJa)}
+                    {formatTeamInjuryStatus(inj.status, isJa)}
                   </Text>
                 </View>
                 <View style={styles.injuryMeta}>
                   <Text style={styles.injuryReason} numberOfLines={1}>
-                    {availabilityReasonDisplay(inj.reason, isJa) ?? "—"}
+                    {reasonLabel}
                   </Text>
-                  {inj.returnEstimate ? (
+                  {returnLabel ? (
                     <Text
                       style={[
                         styles.injuryReturn,
                         { color: hexToRgba(tone, 0.85) },
                       ]}
                     >
-                      {inj.returnEstimate.toUpperCase()}
+                      {returnLabel}
                     </Text>
                   ) : null}
                 </View>

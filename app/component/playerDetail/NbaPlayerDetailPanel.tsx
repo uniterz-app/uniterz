@@ -30,7 +30,10 @@ import {
   type NbaPlayerVenueSplit,
   type NbaPlayerVsOpponentSample,
 } from "@/lib/predict/nbaPlayerDetailPreviewMocks";
-import { availabilityReasonDisplay } from "@/lib/nba/teamInjuries/injuryReasonDisplay";
+import {
+  formatInjuryReturnEstimate,
+  injuryReasonLabel,
+} from "@/lib/nba/teamInjuries/injuryReasonDisplay";
 import {
   isPlayerDetailRankShown,
   isPlayerDetailSalaryRankShown,
@@ -1315,24 +1318,19 @@ export default function NbaPlayerDetailPanel({
                   ),
                 }}
               >
-                {detail.availability.returnEstimate}
+                {formatInjuryReturnEstimate(
+                  detail.availability.returnEstimate,
+                  isJa ? "ja" : "en"
+                )}
               </span>
             ) : null}
           </div>
-          {(() => {
-            const reasonText = availabilityReasonDisplay(
-              detail.availability.reason,
-              isJa
-            );
-            return reasonText ? (
-              <p
-                className={`${nameOxanium.className} text-[12px] font-semibold text-white/70`}
-                style={{ transform: "skewX(-4deg)" }}
-              >
-                {reasonText}
-              </p>
-            ) : null;
-          })()}
+          <p
+            className={`${nameOxanium.className} text-[12px] font-semibold text-white/70`}
+            style={{ transform: "skewX(-4deg)" }}
+          >
+            {injuryReasonLabel(detail.availability.reason, isJa ? "ja" : "en")}
+          </p>
         </div>
       ) : null}
 

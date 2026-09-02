@@ -15,6 +15,7 @@ import type {
   NbaPlayerSeasonMetric,
   NbaPlayerShotZone,
 } from "@/lib/predict/nbaPlayerDetailPreviewMocks";
+import { teamInjuryStatusToAvailability } from "@/lib/nba/teamInjuries/injuryStatusDisplay";
 import { metricsFromSeason } from "@/lib/predict/nbaPlayerDetailPreviewMocks";
 import type {
   NbaTeamInjuryEntry,
@@ -337,7 +338,7 @@ export function availabilityFromInjury(
 ): NbaPlayerAvailability {
   if (!entry) return { status: "active", reason: null, returnEstimate: null };
   return {
-    status: entry.status === "out" ? "out" : "gtd",
+    status: teamInjuryStatusToAvailability(entry.status),
     reason: entry.reason,
     returnEstimate: entry.returnEstimate,
   };

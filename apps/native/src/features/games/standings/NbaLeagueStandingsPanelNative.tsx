@@ -14,6 +14,7 @@ import { getTeamJerseyPrimaryColor } from "../../../../../../lib/team-colors";
 import { formatStreakLabel } from "../../../../../../lib/predict/nbaTeamDetailPreviewMocks";
 import { teamStreakBadgeTheme } from "../../../../../../lib/predict/nbaTeamDetailForm";
 import { useNbaConferenceStandings } from "../../../../../../lib/nba/useNbaConferenceStandings";
+import { nbaDailyStatsUpdateFootnote } from "../../../../../../lib/nba/nbaStatsUpdateSchedule";
 import {
   formatStandingsWl,
   formatStandingsWinPct,
@@ -116,6 +117,7 @@ export default function NbaLeagueStandingsPanelNative({
   const { board, asOfLabel, loading } = useNbaConferenceStandings({
     apiBaseUrl: getUniterzApiBaseUrl(),
   });
+  const updateFootnote = nbaDailyStatsUpdateFootnote(isJa ? "ja" : "en", asOfLabel);
   const [conference, setConference] = useState<NbaConferenceId>("east");
   const rows = conference === "east" ? board.east : board.west;
 
@@ -127,7 +129,7 @@ export default function NbaLeagueStandingsPanelNative({
         </View>
       ) : null}
       <View style={styles.top}>
-        <Text style={styles.asOf}>{asOfLabel}</Text>
+        <Text style={styles.asOf}>{updateFootnote}</Text>
         <CyberSlantedTabBarNative fill>
           <CyberSlantedTabNative
             label="EAST"

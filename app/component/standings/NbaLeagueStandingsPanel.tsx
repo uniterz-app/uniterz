@@ -11,6 +11,7 @@ import {
 } from "@/app/component/rankings/CyberSlantedTab";
 import { formatStreakLabel } from "@/lib/predict/nbaTeamDetailPreviewMocks";
 import { teamStreakBadgeTheme } from "@/lib/predict/nbaTeamDetailForm";
+import { nbaDailyStatsUpdateFootnote } from "@/lib/nba/nbaStatsUpdateSchedule";
 import { useNbaConferenceStandings } from "@/lib/nba/useNbaConferenceStandings";
 import {
   formatStandingsWl,
@@ -112,6 +113,7 @@ export default function NbaLeagueStandingsPanel({
 }: Props) {
   const isJa = language === "ja";
   const { board, asOfLabel, loading } = useNbaConferenceStandings();
+  const updateFootnote = nbaDailyStatsUpdateFootnote(isJa ? "ja" : "en", asOfLabel);
   const [conference, setConference] = useState<NbaConferenceId>("east");
   const rows = conference === "east" ? board.east : board.west;
 
@@ -138,7 +140,7 @@ export default function NbaLeagueStandingsPanel({
         <p
           className={`${nameOxanium.className} text-right text-[9px] font-bold uppercase tracking-[0.16em] text-[#00F5FF]/45`}
         >
-          {asOfLabel}
+          {updateFootnote}
         </p>
         <CyberSlantedTabBar fill aria-label="Conference">
           <CyberSlantedTab

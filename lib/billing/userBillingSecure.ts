@@ -27,6 +27,15 @@ export function stripeSubscriptionIndexRef(db: Firestore, subscriptionId: string
   return db.collection("stripeSubscriptionIndex").doc(subscriptionId);
 }
 
+export function appleOriginalTransactionIndexRef(
+  db: Firestore,
+  originalTransactionId: string
+) {
+  return db
+    .collection("appleOriginalTransactionIndex")
+    .doc(originalTransactionId);
+}
+
 const LEGACY_BILLING_ROOT_KEYS = [
   "stripeCustomerId",
   "stripeSubscriptionId",
@@ -111,6 +120,19 @@ export async function resolveUidByStripeCustomerId(
   return uid;
 }
 
+/** originalTransactionId → uid（Apple ASN / 復元） */
+export async function resolveUidByAppleOriginalTransactionId(
+  db: Firestore,
+  originalTransactionId: string
+): Promise<string | null> {
+  const id = String(originalTransactionId ?? "").trim();
+  if (!id) return null;
+  const idx = await appleOriginalTransactionIndexRef(db, id).get();
+  if (!idx.exists) return null;
+  const uid = String(idx.data()?.uid ?? "").trim();
+  return uid || null;
+}
+
 export async function resolveUidByStripeSubscriptionId(
   db: Firestore,
   subscriptionId: string
@@ -178,6 +200,13 @@ export async function writeUserBillingSecure(
     secureUpdate.appleOriginalTransactionId =
       fields.appleOriginalTransactionId ?? null;
     rootDelete.appleOriginalTransactionId = FieldValue.delete();
+    const oid = String(fields.appleOriginalTransactionId ?? "").trim();
+    if (oid) {
+      await appleOriginalTransactionIndexRef(db, oid).set(
+        { uid, updatedAt: FieldValue.serverTimestamp() },
+        { merge: true }
+      );
+    }
   }
   if ("billingProvider" in fields) {
     secureUpdate.billingProvider = fields.billingProvider ?? null;

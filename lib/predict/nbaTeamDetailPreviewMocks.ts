@@ -137,7 +137,13 @@ export type NbaTeamDetailPreview = {
 export type NbaTeamInjuryEntry = {
   playerId: string;
   name: string;
-  status: "out" | "gtd";
+  /** BDL 由来（Available 以外）。旧データは gtd → questionable として読む */
+  status:
+    | "out"
+    | "doubtful"
+    | "questionable"
+    | "probable"
+    | "day-to-day";
   reason: string | null;
   returnEstimate: string | null;
 };
@@ -739,8 +745,8 @@ function last10RowHasData(row: NbaLeagueTeamStatRow | undefined): boolean {
 
 /**
  * チーム詳細プレビュー。
- * ベースは 0 / 空。ROSTER / PAYROLL / 試合ログ・form・splits / injuries は live overlay
- *（Firestore → API）で上書き。
+ * ベースは 0 / 空。W–L / 順位は live overlay が BDL standings で上書き。
+ * ROSTER / PAYROLL / 試合ログ（form・H2H）/ injuries は各 API overlay。
  */
 export function getNbaTeamDetailPreview(
   teamId?: string,

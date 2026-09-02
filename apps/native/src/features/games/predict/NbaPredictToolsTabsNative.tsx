@@ -101,7 +101,7 @@ export default function NbaPredictToolsTabsNative({
     gameId,
     override: brief,
     apiBaseUrl,
-    enabled: visited.has("insight"),
+    enabled: visited.has("insight") && isPro,
   });
   const resolvedBrief = liveBrief;
 
@@ -112,6 +112,7 @@ export default function NbaPredictToolsTabsNative({
       override: injuryReport,
       apiBaseUrl,
       enabled: visited.has("injuries"),
+      language: language === "ja" ? "ja" : "en",
     });
   const { stats: liveStats, loading: statsLoading } = useNbaMatchupTeamStats({
     homeTeamId,

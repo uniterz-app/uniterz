@@ -2,8 +2,10 @@
 
 /**
  * 対戦カードの Pro Insight（games.proBrief）を公開 API から読む。
+ * Pro 限定 — Authorization 必須。
  */
 import { useEffect, useState } from "react";
+import { auth } from "@/lib/firebase";
 import type { PredictProBrief } from "@/lib/predict/predictProBrief";
 import { sanitizeProBriefForDisplay } from "@/lib/predict/validateProBrief";
 
@@ -40,9 +42,18 @@ export function useNbaMatchupProBrief(opts: {
     setLoading(true);
     (async () => {
       try {
+        const user = auth.currentUser;
+        if (!user) {
+          if (!cancelled) setBrief(null);
+          return;
+        }
+        const token = await user.getIdToken();
         const path = `/api/nba/matchup-insight?gameId=${encodeURIComponent(gameId)}`;
         const url = apiBase ? `${apiBase}${path}` : path;
-        const res = await fetch(url, { credentials: "same-origin" });
+        const res = await fetch(url, {
+          credentials: "same-origin",
+          headers: { Authorization: `Bearer ${token}` },
+        });
         if (!res.ok) {
           if (!cancelled) setBrief(null);
           return;

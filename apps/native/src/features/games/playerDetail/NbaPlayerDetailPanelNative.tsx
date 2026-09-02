@@ -14,7 +14,10 @@ import Svg, {
   Text as SvgText,
 } from "react-native-svg";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { availabilityReasonDisplay } from "../../../../../../lib/nba/teamInjuries/injuryReasonDisplay";
+import {
+  formatInjuryReturnEstimate,
+  injuryReasonLabel,
+} from "../../../../../../lib/nba/teamInjuries/injuryReasonDisplay";
 import {
   averageRecentGameLogs,
   formatFgLine,
@@ -1259,16 +1262,16 @@ function AvailabilityBanner({
         <Text style={[styles.availStatus, { color: tone }]}>{status}</Text>
         {availability.returnEstimate ? (
           <Text style={[styles.availReturn, { color: hexToRgba(tone, 0.85) }]}>
-            {availability.returnEstimate.toUpperCase()}
+            {formatInjuryReturnEstimate(
+              availability.returnEstimate,
+              isJa ? "ja" : "en"
+            )}
           </Text>
         ) : null}
       </View>
-      {(() => {
-        const reasonText = availabilityReasonDisplay(availability.reason, isJa);
-        return reasonText ? (
-          <Text style={styles.availReason}>{reasonText}</Text>
-        ) : null;
-      })()}
+      <Text style={styles.availReason}>
+        {injuryReasonLabel(availability.reason, isJa ? "ja" : "en")}
+      </Text>
     </View>
   );
 }

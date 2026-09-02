@@ -3,6 +3,10 @@
  */
 import { getNbaTeamNicknameById } from "@/lib/nba-team-names";
 import {
+  formatInjuryReturnEstimate,
+} from "@/lib/nba/teamInjuries/injuryReasonDisplay";
+import { teamInjuryStatusToPredictStatus } from "@/lib/nba/teamInjuries/injuryStatusDisplay";
+import {
   sortInjuryEntries,
   type NbaInjuryEntry,
   type NbaInjuryReport,
@@ -11,18 +15,12 @@ import {
 import type { NbaTeamInjuryEntry } from "@/lib/predict/nbaTeamDetailPreviewMocks";
 import { emptyInjuryReport } from "@/lib/predict/nbaInjuryReportPreviewMocks";
 
-function mapStatus(status: NbaTeamInjuryEntry["status"]): NbaInjuryStatus {
-  // スナップショットは out | gtd。UI トーンは Out / Questionable に寄せる。
-  return status === "out" ? "Out" : "Questionable";
-}
-
 function splitPlayerName(name: string): {
   firstName: string;
   lastName: string;
 } {
   const raw = name.trim();
   if (!raw || raw === "—") return { firstName: "—", lastName: "—" };
-  // playerCardName 形式: "S.CURRY"
   const m = raw.match(/^([A-Za-z])\.(.+)$/);
   if (m) {
     return { firstName: m[1]!.toUpperCase(), lastName: m[2]!.trim() };
@@ -38,7 +36,8 @@ function splitPlayerName(name: string): {
 }
 
 export function mapTeamInjuryEntryToPredict(
-  entry: NbaTeamInjuryEntry
+  entry: NbaTeamInjuryEntry,
+  language: "ja" | "en" = "en"
 ): NbaInjuryEntry {
   const { firstName, lastName } = splitPlayerName(entry.name);
   return {
@@ -47,8 +46,8 @@ export function mapTeamInjuryEntryToPredict(
       firstName: firstName || "—",
       lastName: lastName || "—",
     },
-    status: mapStatus(entry.status),
-    returnDate: entry.returnEstimate,
+    status: teamInjuryStatusToPredictStatus(entry.status) as NbaInjuryStatus,
+    returnDate: formatInjuryReturnEstimate(entry.returnEstimate, language),
     injuryDetail: entry.reason,
     description: entry.reason,
   };
@@ -60,18 +59,20 @@ export function buildMatchupInjuryReport(input: {
   homeEntries: NbaTeamInjuryEntry[];
   awayEntries: NbaTeamInjuryEntry[];
   asOfLabel?: string | null;
+  language?: "ja" | "en";
 }): NbaInjuryReport {
   const homeId = input.homeTeamId.trim();
   const awayId = input.awayTeamId.trim();
+  const language = input.language ?? "en";
   if (!homeId || !awayId) {
     return emptyInjuryReport(homeId || "home", awayId || "away");
   }
 
   const homeEntries = sortInjuryEntries(
-    input.homeEntries.map(mapTeamInjuryEntryToPredict)
+    input.homeEntries.map((e) => mapTeamInjuryEntryToPredict(e, language))
   );
   const awayEntries = sortInjuryEntries(
-    input.awayEntries.map(mapTeamInjuryEntryToPredict)
+    input.awayEntries.map((e) => mapTeamInjuryEntryToPredict(e, language))
   );
 
   return {

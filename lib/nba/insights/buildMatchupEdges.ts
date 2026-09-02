@@ -5,6 +5,7 @@ import type { ProBriefEdgeItem } from "@/lib/predict/predictProBrief";
 import type { ProBriefPhase } from "@/lib/predict/predictProBrief";
 import type { NbaLeagueTeamStatRow } from "@/lib/predict/nbaLeagueTeamStatsMocks";
 import type { NbaTeamInjuryEntry } from "@/lib/predict/nbaTeamDetailPreviewMocks";
+import { isOutOrQuestionableInjury } from "@/lib/nba/teamInjuries/injuryStatusDisplay";
 import {
   findTeamRow,
   rankTeamsByMetric,
@@ -44,11 +45,12 @@ function shortName(entry: NbaTeamInjuryEntry): string {
 }
 
 function outOrGtd(injuries: NbaTeamInjuryEntry[]): NbaTeamInjuryEntry[] {
-  return injuries.filter((i) => i.status === "out" || i.status === "gtd");
+  return injuries.filter((i) => isOutOrQuestionableInjury(i.status));
 }
 
 function statusWord(entry: NbaTeamInjuryEntry): string {
-  return entry.status === "out" ? "OUT" : "QUES";
+  if (entry.status === "out" || entry.status === "doubtful") return "OUT";
+  return "QUES";
 }
 
 /** 衝突: 自分の良い順位 + 相手の悪い順位 */

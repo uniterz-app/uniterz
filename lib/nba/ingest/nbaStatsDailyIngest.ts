@@ -2,7 +2,7 @@
  * NBA スタッツ日次 ingest オーケストレータ。
  * 公開 API は触らず、BDL → Firestore だけ回す。
  *
- * daily（既定）: 試合・リーグ表・injury・チームログ・ゾーン・ロスター
+ * daily（既定）: 試合・リーグ表・チームログ・ゾーン・ロスター
  *   + 直近試合出場者のプレイヤー試合ログ（incremental → Last 10 更新）
  * heavy: 上記 + プレイヤー試合ログ全ロスター（任意）
  */
@@ -10,8 +10,8 @@ import type { Firestore } from "firebase-admin/firestore";
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
 import { ingestNbaGamesFromBdl } from "@/lib/nba/ingest/nbaGamesIngest";
 import { ingestNbaLeagueStatsFromProvider } from "@/lib/nba/ingest/nbaLeagueStatsIngest";
-import { ingestNbaTeamInjuriesFromBdl } from "@/lib/nba/ingest/nbaTeamInjuriesIngest";
 import { ingestNbaTeamGameLogsFromGames } from "@/lib/nba/ingest/nbaTeamGameLogsIngest";
+import { ingestNbaStandingsFromBdl } from "@/lib/nba/ingest/nbaStandingsIngest";
 import { ingestNbaPlayerShotZonesFromBdl } from "@/lib/nba/ingest/nbaPlayerShotZonesIngest";
 import { ingestNbaTeamRostersFromBdl } from "@/lib/nba/ingest/nbaTeamRostersIngest";
 import { ingestNbaPlayerGameLogsFromBdl } from "@/lib/nba/ingest/nbaPlayerGameLogsIngest";
@@ -88,14 +88,12 @@ export async function runNbaStatsDailyIngest(
     )
   );
   steps.push(
-    await runStep("team-injuries", () =>
-      ingestNbaTeamInjuriesFromBdl(db, { seasonKey })
-    )
-  );
-  steps.push(
     await runStep("team-game-logs", () =>
       ingestNbaTeamGameLogsFromGames(db, { seasonKey })
     )
+  );
+  steps.push(
+    await runStep("standings", () => ingestNbaStandingsFromBdl(db, { seasonKey }))
   );
   steps.push(
     await runStep("team-season-records", () =>

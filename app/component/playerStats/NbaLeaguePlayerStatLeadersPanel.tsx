@@ -31,6 +31,7 @@ import {
 } from "@/lib/predict/nbaPlayerStatLeadersMocks";
 import { formatNbaPlayerListName } from "@/lib/nba/formatNbaPlayerListName";
 import { usePlayerStatLeadersBundle } from "@/lib/nba/usePlayerStatLeadersBundle";
+import { nbaDailyStatsUpdateFootnote } from "@/lib/nba/nbaStatsUpdateSchedule";
 
 type SortDir = "desc" | "asc";
 
@@ -97,6 +98,7 @@ export default function NbaLeaguePlayerStatLeadersPanel({
 }: Props) {
   const isJa = language === "ja";
   const { bundle, loading } = usePlayerStatLeadersBundle();
+  const updateFootnote = nbaDailyStatsUpdateFootnote(isJa ? "ja" : "en", bundle.asOfLabel);
   const [phase, setPhase] = useState<NbaLeagueStatsPhase>("season");
   const [mode, setMode] = useState<NbaLeagueStatsMode>("per_game");
   const groups = useMemo(() => leaguePlayerRailGroupsForMode(mode), [mode]);
@@ -150,7 +152,7 @@ export default function NbaLeaguePlayerStatLeadersPanel({
         <p
           className={`${nameOxanium.className} text-right text-[9px] font-bold uppercase tracking-[0.16em] text-[#00F5FF]/45`}
         >
-          {bundle.asOfLabel}
+          {updateFootnote}
         </p>
                 <div className="space-y-1.5">
           <CyberSlantedTabBar fill>

@@ -3,6 +3,7 @@ import { nbaRegularSeasonWinsLosses } from "../../../../../lib/nbaRegularSeasonR
 import { footballWinsLossesDraws } from "../../../../../lib/teamRecordDisplay";
 import { fetchTeamsByLeagueShared } from "../../../../../lib/games/fetchTeamsByLeagueShared";
 import { normalizeLeague } from "../../../../../lib/leagues";
+import { loadNbaStandingsTeamRecordsShared } from "../../../../../lib/nba/standings/loadNbaStandingsTeamRecordsShared";
 import { getUniterzApiBaseUrl } from "./submitPredictionApi";
 import type { TeamRecordSnapshot } from "./teamRecordDisplay";
 import type { NativeGameRow, SupportedLeague } from "./useTodayGames";
@@ -25,7 +26,8 @@ const leagueTeamsCache = new Map<
 const LEAGUE_TEAMS_TTL_MS = 5 * 60 * 1000;
 
 /**
- * モバイル `ScheduleList` の teamRecordMap 相当：共通 teams API から W/L/rank
+ * モバイル `ScheduleList` の teamRecordMap 相当。
+ * NBA は BDL standings（`/api/nba/standings`）、他リーグは `/api/teams`。
  */
 export function useTeamRecordMap(
   games: NativeGameRow[],
@@ -34,6 +36,7 @@ export function useTeamRecordMap(
   const [map, setMap] = useState<Record<string, TeamRecordSnapshot>>({});
   const teamIdsKey = uniqueTeamIdsFromGames(games).sort().join(",");
   const league = normalizeLeague(selectedLeague);
+  const isNba = league === "nba";
 
   useEffect(() => {
     let alive = true;
@@ -45,6 +48,15 @@ export function useTeamRecordMap(
 
     void (async () => {
       try {
+        if (isNba) {
+          const merged = await loadNbaStandingsTeamRecordsShared({
+            apiBaseUrl: getUniterzApiBaseUrl(),
+            teamIds,
+          });
+          if (alive) setMap(merged);
+          return;
+        }
+
         const now = Date.now();
         let byId = leagueTeamsCache.get(league)?.byId;
         const cached = leagueTeamsCache.get(league);
@@ -61,22 +73,14 @@ export function useTeamRecordMap(
         for (const id of teamIds) {
           const d = byId?.get(id);
           if (!d) continue;
-          const isNbaTeam = String(d.league ?? "") === "nba";
           const rank = typeof d.rank === "number" ? d.rank : undefined;
-          if (isNbaTeam) {
-            const wl = nbaRegularSeasonWinsLosses(
-              d as Parameters<typeof nbaRegularSeasonWinsLosses>[0]
-            );
-            merged[id] = { wins: wl.wins, losses: wl.losses, rank };
-          } else {
-            const wl = footballWinsLossesDraws(d);
-            merged[id] = {
-              wins: wl.wins,
-              losses: wl.losses,
-              draws: wl.draws,
-              rank,
-            };
-          }
+          const wl = footballWinsLossesDraws(d);
+          merged[id] = {
+            wins: wl.wins,
+            losses: wl.losses,
+            draws: wl.draws,
+            rank,
+          };
         }
         if (alive) setMap(merged);
       } catch {
@@ -87,7 +91,7 @@ export function useTeamRecordMap(
     return () => {
       alive = false;
     };
-  }, [teamIdsKey, league]);
+  }, [teamIdsKey, league, isNba]);
 
   return map;
 }

@@ -43,7 +43,7 @@ import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import { t } from "@/lib/i18n/t";
 import { CyberNoDataPage } from "@/app/component/common/CyberNoDataLabel";
-import { nbaRegularSeasonWinsLosses } from "@/lib/nbaRegularSeasonRecord";
+import { loadNbaStandingsTeamRecordsShared } from "@/lib/nba/standings/loadNbaStandingsTeamRecordsShared";
 import { footballWinsLossesDraws } from "@/lib/teamRecordDisplay";
 import { fetchWcTeamRecordMap } from "@/lib/legacyWcWebShims";
 import {
@@ -618,6 +618,22 @@ export default function ScheduleList({
           }
           writeTeamRecordCacheToSession(nextSessionCache);
           if (alive) setTeamRecordMap(merged);
+        } else if (leagueAnimKey === "nba") {
+          const nbaMap = await loadNbaStandingsTeamRecordsShared({
+            teamIds,
+          });
+          if (!alive) return;
+          merged = { ...immediateMap };
+          nextSessionCache = { ...sessionCache };
+          for (const teamId of teamIds) {
+            const value = nbaMap[teamId];
+            if (!value) continue;
+            memoryTeamRecordCache.set(teamRecordMemKey(teamId), value);
+            nextSessionCache[teamId] = value;
+            merged[teamId] = value;
+          }
+          writeTeamRecordCacheToSession(nextSessionCache);
+          if (alive) setTeamRecordMap(merged);
         } else if (missingTeamIds.length > 0) {
           const chunks: string[][] = [];
           for (let i = 0; i < missingTeamIds.length; i += 10) {
@@ -641,27 +657,14 @@ export default function ScheduleList({
             snap.docs.forEach((docSnap) => {
               const d = docSnap.data() as any;
               const teamId = docSnap.id;
-              const isNbaTeam = String(d.league ?? "") === "nba";
-              let value: TeamRecord;
-
-              if (isNbaTeam) {
-                const wl = nbaRegularSeasonWinsLosses(d);
-                value = {
-                  wins: wl.wins,
-                  losses: wl.losses,
-                  rank: typeof d.rank === "number" ? d.rank : undefined,
-                  lastGames: Array.isArray(d.lastGames) ? d.lastGames : [],
-                };
-              } else {
-                const wl = footballWinsLossesDraws(d);
-                value = {
-                  wins: wl.wins,
-                  losses: wl.losses,
-                  draws: wl.draws,
-                  rank: typeof d.rank === "number" ? d.rank : undefined,
-                  lastGames: Array.isArray(d.lastGames) ? d.lastGames : [],
-                };
-              }
+              const wl = footballWinsLossesDraws(d);
+              const value: TeamRecord = {
+                wins: wl.wins,
+                losses: wl.losses,
+                draws: wl.draws,
+                rank: typeof d.rank === "number" ? d.rank : undefined,
+                lastGames: Array.isArray(d.lastGames) ? d.lastGames : [],
+              };
 
               memoryTeamRecordCache.set(teamRecordMemKey(teamId), value);
               nextSessionCache[teamId] = value;

@@ -4,6 +4,7 @@ import type {
   TeamDetailSummary,
 } from "@/lib/nba/detailInsights/detailInsightTypes";
 import { teamFieldValue } from "@/lib/nba/detailInsights/leagueRankUtils";
+import { isOutOrQuestionableInjury } from "@/lib/nba/teamInjuries/injuryStatusDisplay";
 import {
   rankBucket,
   rankBucketLabelEn,
@@ -117,7 +118,7 @@ function buildTeamSummary(input: BuildTeamDetailInsightsInput): TeamDetailSummar
   if (odEn) en.push(odEn);
 
   const outGtd = detail.injuries.filter(
-    (i) => i.status === "out" || i.status === "gtd"
+    (i) => isOutOrQuestionableInjury(i.status)
   );
   let injuryLine = false;
 

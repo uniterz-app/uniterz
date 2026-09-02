@@ -29,6 +29,7 @@ import {
   isResultUpsetFrameBadge,
   isResultCyberClipFrameBadge,
 } from "@/lib/result/resultGlass";
+import { matchCardRecentFormDisplay } from "@/lib/nba/standings/buildNbaStandingsTeamRecordMap";
 import { formatTeamRecordWithRank } from "@/lib/teamRecordDisplay";
 import ResultHitCyberFrame from "@/app/component/result/ResultHitCyberFrame";
 import ResultPerfectCyberFrame from "@/app/component/result/ResultPerfectCyberFrame";
@@ -595,9 +596,19 @@ const normalizedLeague = normalizeLeague(league);
 
 // ▼ Firestore からチーム成績（wins/losses）を取得
 function toLast5WL(
-  lastGames: { at?: any; isWin?: boolean }[] | undefined,
+  record:
+    | {
+        lastGames?: { at?: any; isWin?: boolean }[];
+        recentForm?: ("W" | "L")[];
+      }
+    | null
+    | undefined,
   latestSide: "left" | "right"
 ): ("W" | "L")[] {
+  const fromStandings = matchCardRecentFormDisplay(record?.recentForm, latestSide);
+  if (fromStandings.length > 0) return fromStandings;
+
+  const lastGames = record?.lastGames;
   if (!Array.isArray(lastGames)) return [];
 
   const sorted = [...lastGames]
@@ -614,12 +625,12 @@ function toLast5WL(
 }
 
 const homeForm = useMemo(
-  () => toLast5WL(homeRecord?.lastGames, "right"),
+  () => toLast5WL(homeRecord, "right"),
   [homeRecord]
 );
 
 const awayForm = useMemo(
-  () => toLast5WL(awayRecord?.lastGames, "left"),
+  () => toLast5WL(awayRecord, "left"),
   [awayRecord]
 );
 const homeColor = useMemo(

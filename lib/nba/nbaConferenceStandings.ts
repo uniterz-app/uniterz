@@ -1,7 +1,7 @@
 /**
- * カンファレンス順位表 — Firestore `teams` が正。
- * Team Stats スナップショットや詳細プレビューのモックは使わない。
- * 並びは `updateTeamRankings` と同じ `compareNbaStandingsSortRows`。
+ * カンファレンス順位表 — 正は Firestore `nbaStandings/{season}`（BDL ingest）。
+ * 未 ingest 時のみ `teams` から組み立てるフォールバックあり。
+ * L10 / 連勝 / 直近フォームは ingest 時に `games` 由来の team game logs で付与。
  */
 import { NBA_TEAM_NAME_BY_ID } from "@/lib/nba-team-names";
 import {
@@ -27,6 +27,8 @@ export type NbaConferenceStandingsRow = {
   last10: NbaStandingsWl;
   home: NbaStandingsWl;
   away: NbaStandingsWl;
+  /** 試合カード直近フォーム（古→新、最大5）。ingest 時に game logs から付与 */
+  recentForm?: ("W" | "L")[];
 };
 
 export type NbaConferenceStandingsBoard = {
@@ -156,6 +158,14 @@ function recordFromTeamDoc(raw: unknown): {
     streak,
     standingsTiebreakOrder: tb ?? undefined,
   };
+}
+
+/** BDL standings ingest 用 — teams から L10 / 連勝だけ補完 */
+export function standingsEnrichmentFromTeamDoc(
+  raw: unknown
+): Pick<NbaConferenceStandingsRow, "last10" | "streak"> {
+  const rec = recordFromTeamDoc(raw);
+  return { last10: rec.last10, streak: rec.streak };
 }
 
 type DraftRow = Omit<NbaConferenceStandingsRow, "rank"> & {

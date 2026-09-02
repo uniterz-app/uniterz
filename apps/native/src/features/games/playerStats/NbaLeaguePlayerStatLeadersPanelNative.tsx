@@ -20,6 +20,7 @@ import {
 } from "@/lib/predict/nbaPlayerStatLeadersMocks";
 import { formatNbaPlayerListName } from "@/lib/nba/formatNbaPlayerListName";
 import { usePlayerStatLeadersBundle } from "../../../../../../lib/nba/usePlayerStatLeadersBundle";
+import { nbaDailyStatsUpdateFootnote } from "../../../../../../lib/nba/nbaStatsUpdateSchedule";
 import {
   coerceModeForPhase,
   modeTabLabel,
@@ -109,6 +110,7 @@ export default function NbaLeaguePlayerStatLeadersPanelNative({
   const { bundle, source, loading, error } = usePlayerStatLeadersBundle({
     apiBaseUrl: getUniterzApiBaseUrl(),
   });
+  const updateFootnote = nbaDailyStatsUpdateFootnote(isJa ? "ja" : "en", bundle.asOfLabel);
   const [phase, setPhase] = useState<NbaLeagueStatsPhase>("season");
   const [mode, setMode] = useState<NbaLeagueStatsMode>("per_game");
   const groups = useMemo(() => leaguePlayerRailGroupsForMode(mode), [mode]);
@@ -160,7 +162,7 @@ export default function NbaLeaguePlayerStatLeadersPanelNative({
       ) : null}
 
       <View style={styles.top}>
-        <Text style={styles.asOf}>{bundle.asOfLabel}</Text>
+        <Text style={styles.asOf}>{updateFootnote}</Text>
         {error ? (
           <Text style={styles.fetchWarn}>
             {isJa

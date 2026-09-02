@@ -16,12 +16,13 @@ Team Stats / Player Leaders のリーグ表は **左レール**:
 - 選択チップはシアン塗り + 黒横線。非選択は透明
 - MORE シートは採用しない
 
-## これから（2026-09-01 更新）
+## これから（2026-09-02 更新）
 
 1. **試合データ**（BDL → Firestore `games` → `/api/games/window`）— 運用中
 2. **チーム詳細** — **完了** → [`docs/nba-team-detail-status.md`](../../docs/nba-team-detail-status.md)
 3. **プレイヤー詳細** — **完了** → [`docs/nba-player-detail-status.md`](../../docs/nba-player-detail-status.md)
-4. そのあと **injury**（リーグ injury 周辺）、チームスタッツ周辺の polish
+4. **injury** — **完了** → [`docs/nba-injury-status.md`](../../docs/nba-injury-status.md)
+5. チームスタッツ周辺の polish
 
 （2026-08-23 版: 2=チーム詳細「これから」→ 2026-09-01 監査で接続済みと判明、残ギャップを doc 化）
 

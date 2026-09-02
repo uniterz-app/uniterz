@@ -1,7 +1,7 @@
 /**
  * Pro Insight を games/{id}.proBrief に書き込む。
  * mode full: 対象窓の試合をフル生成（前日 19:00 JST）
- * mode patch: tip まで 1h 以内の試合にケガ情報を反映
+ * mode patch: tip まで 1h 以内の試合に Firestore 上の最新 injury を反映
  */
 import { FieldValue, Timestamp, type Firestore } from "firebase-admin/firestore";
 import {
@@ -262,21 +262,6 @@ export async function ingestNbaProBriefs(
   }
 
   let injurySnap = await loadTeamInjuriesSnapshot(db, seasonKey);
-  if (mode === "patch") {
-    // tip 1h 前: BDL から最新ケガを取り直してから完全版を書く
-    try {
-      const { ingestNbaTeamInjuriesFromBdl } = await import(
-        "@/lib/nba/ingest/nbaTeamInjuriesIngest"
-      );
-      await ingestNbaTeamInjuriesFromBdl(db, { seasonKey });
-      injurySnap = await loadTeamInjuriesSnapshot(db, seasonKey);
-    } catch (e) {
-      console.warn(
-        "[ingestNbaProBriefs] injury refresh before patch failed; using last snapshot",
-        e instanceof Error ? e.message : e
-      );
-    }
-  }
   const injuryTeams = injurySnap.bundle.teams;
 
   let games: Array<{ id: string; data: Record<string, unknown> }>;

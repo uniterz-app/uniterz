@@ -8,6 +8,7 @@ import { matchCardTeamNameStyle } from "@/lib/games/teamDisplayTypography";
 import { getMobileTeamName } from "@/lib/team-name-split-mobile";
 import { getTeamPrimaryColor } from "@/lib/team-colors";
 import { useLeagueTeamStatsBundle } from "@/lib/nba/useLeagueTeamStatsBundle";
+import { nbaDailyStatsUpdateFootnote } from "@/lib/nba/nbaStatsUpdateSchedule";
 import {
   CyberSlantedTab,
   CyberSlantedTabBar,
@@ -274,6 +275,7 @@ export default function NbaLeagueTeamStatsPanel({
   const isJa = language === "ja";
   const reduceMotion = useReducedMotion();
   const { bundle, loading } = useLeagueTeamStatsBundle();
+  const updateFootnote = nbaDailyStatsUpdateFootnote(isJa ? "ja" : "en", bundle.asOfLabel);
   const [phase, setPhase] = useState<NbaLeagueStatsPhase>("season");
   const [mode, setMode] = useState<NbaLeagueStatsMode>("per_game");
   const groups = useMemo(() => leagueTeamRailGroupsForMode(mode), [mode]);
@@ -347,7 +349,7 @@ export default function NbaLeagueTeamStatsPanel({
             "text-right text-[9px] font-bold uppercase tracking-[0.16em] text-[#00F5FF]/45",
           ].join(" ")}
         >
-          {bundle.asOfLabel}
+          {updateFootnote}
         </p>
                 <div className="space-y-1.5">
           <CyberSlantedTabBar fill>

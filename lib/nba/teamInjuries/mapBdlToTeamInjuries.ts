@@ -5,26 +5,7 @@ import {
 import { playerCardName } from "@/lib/predict/nbaRoster";
 import type { NbaTeamInjuryEntry } from "@/lib/predict/nbaTeamDetailPreviewMocks";
 import type { NbaTeamInjuriesBundle } from "./teamInjuryTypes";
-
-function mapStatus(
-  raw: string | null | undefined
-): NbaTeamInjuryEntry["status"] | null {
-  const key = String(raw ?? "")
-    .trim()
-    .toLowerCase();
-  if (!key || key === "available" || key === "healthy") return null;
-  if (key === "out" || key === "doubtful") return "out";
-  if (
-    key === "questionable" ||
-    key === "probable" ||
-    key === "day-to-day" ||
-    key === "gtd"
-  ) {
-    return "gtd";
-  }
-  // BDL は "Questionable" 等。未知ステータスも GTD 扱いで落とさない
-  return "gtd";
-}
+import { mapBdlInjuryStatus } from "./injuryStatusDisplay";
 
 function playerName(row: BdlPlayerInjuryRow): string {
   const p = row.player;
@@ -40,7 +21,7 @@ function playerName(row: BdlPlayerInjuryRow): string {
 export function mapBdlRowToTeamInjury(
   row: BdlPlayerInjuryRow
 ): NbaTeamInjuryEntry | null {
-  const status = mapStatus(row.status);
+  const status = mapBdlInjuryStatus(row.status);
   if (!status) return null;
   const playerId = row.player?.id;
   if (playerId == null) return null;
@@ -61,6 +42,14 @@ export function mapBdlRowToTeamInjury(
   };
 }
 
+const STATUS_SORT: Record<NbaTeamInjuryEntry["status"], number> = {
+  out: 0,
+  doubtful: 1,
+  questionable: 2,
+  "day-to-day": 3,
+  probable: 4,
+};
+
 /** BDL player_injuries → teams[teamId][] bundle */
 export function buildTeamInjuriesBundleFromBdl(
   rows: BdlPlayerInjuryRow[],
@@ -80,7 +69,8 @@ export function buildTeamInjuriesBundleFromBdl(
 
   for (const list of Object.values(teams)) {
     list.sort((a, b) => {
-      if (a.status !== b.status) return a.status === "out" ? -1 : 1;
+      const byStatus = STATUS_SORT[a.status] - STATUS_SORT[b.status];
+      if (byStatus !== 0) return byStatus;
       return a.name.localeCompare(b.name);
     });
   }

@@ -8,6 +8,7 @@ import { useNativeUserLanguage } from "../../../hooks/useNativeUserLanguage";
 import MobileBadgesScreen from "../mobileScreens/MobileBadgesScreen";
 import MobileAnnouncementsScreen from "../mobileScreens/MobileAnnouncementsScreen";
 import MobilePlanStatusScreen from "../mobileScreens/MobilePlanStatusScreen";
+import MobileProSubscribeScreen from "../mobileScreens/MobileProSubscribeScreen";
 import ProSubscribePreviewNative from "../mobileScreens/ProSubscribePreviewNative";
 import SeasonPredictPreviewScreenNative from "../mobileScreens/SeasonPredictPreviewScreenNative";
 import MonthlyReportPreviewScreenNative from "../mobileScreens/MonthlyReportPreviewScreenNative";
@@ -91,10 +92,11 @@ export function ProSubscribeScreenWrapper() {
   const { fUser } = useFirebaseUser();
   const { language } = useNativeUserLanguage(fUser?.uid);
   return (
-    <ProSubscribePreviewNative
+    <MobileProSubscribeScreen
       language={language}
       onClose={() => navigation.goBack()}
-      onOpenSkin={() => navigation.navigate("ProSkin")}
+      onSuccess={() => navigation.navigate("ProSkin")}
+      onOpenPreview={() => navigation.navigate("ProSubscribePreview")}
     />
   );
 }

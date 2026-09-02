@@ -11,11 +11,16 @@ import {
   fetchTeamStrengthSplit,
   type NbaTeamStrengthSplit,
 } from "@/lib/nba/insights/fetchTeamStrengthSplitClient";
+import { fetchNbaConferenceStandings } from "@/lib/nba/standings/fetchNbaConferenceStandingsClient";
+import { findNbaConferenceStandingsRow } from "@/lib/nba/standings/findNbaConferenceStandingsRow";
+import { applyStandingsToTeamDetailPreview } from "@/lib/nba/teamDetail/applyStandingsToTeamDetailPreview";
+import { applyTeamGameLogToTeamDetailPreview } from "@/lib/nba/teamDetail/applyTeamGameLogToTeamDetailPreview";
 import type {
   NbaTeamDetailPreview,
   NbaTeamInjuryEntry,
   NbaTeamPayroll,
 } from "@/lib/predict/nbaTeamDetailPreviewMocks";
+import type { NbaConferenceStandingsRow } from "@/lib/nba/nbaConferenceStandings";
 import type { NbaTeamGameLogSlice } from "@/lib/nba/teamGameLog/teamGameLogTypes";
 import type { NbaRosterTeamBlock } from "@/lib/predict/nbaRoster";
 import { fetchTeamAceOutRecord } from "@/lib/nba/detailInsights/fetchTeamAceOutClient";
@@ -34,22 +39,18 @@ export type NbaTeamDetailOverlayFailures = {
   roster: boolean;
   payroll: boolean;
   gameLog: boolean;
+  standings: boolean;
   injuries: boolean;
   strengthSplit: boolean;
   aceOut: boolean;
 };
-
-function winPct(wins: number, losses: number): number {
-  const n = wins + losses;
-  if (n <= 0) return 0;
-  return wins / n;
-}
 
 function emptyFailures(): NbaTeamDetailOverlayFailures {
   return {
     roster: false,
     payroll: false,
     gameLog: false,
+    standings: false,
     injuries: false,
     strengthSplit: false,
     aceOut: false,
@@ -57,11 +58,14 @@ function emptyFailures(): NbaTeamDetailOverlayFailures {
 }
 
 /**
- * チーム詳細の ROSTER / PAYROLL / 試合ログ（form・splits）を Firestore 実データで上書き。
- * 未 ingest・開幕前は base の 0 / 空のまま（モックなし）。
- * W–L / H2H / form は試合ログを正（リーグ先進指標と混ぜない）。
- * vs .500+ / sub-.500 は nbaTeamSeasonRecords を正。
- * roster / injuries は team スコープ API のみ叩く。
+ * チーム詳細の live データを公開 API（Firestore スナップショット）で上書き。
+ *
+ * - **W–L / 順位 / HOME-AWAY / L10 / 連勝** → BDL standings（`/api/nba/standings`）
+ * - **直近試合・H2H・vs East/West** → team game logs（`games` 由来）
+ * - **指標** → league stats bundle（ベース）+ overlay は触らない
+ * - roster / payroll / injuries / strengthSplit / aceOut → 各 team API
+ *
+ * `teams` コレクションは読まない。
  */
 export function useNbaTeamDetailLiveOverlay(options: Options): {
   detail: NbaTeamDetailPreview;
@@ -80,6 +84,8 @@ export function useNbaTeamDetailLiveOverlay(options: Options): {
   );
   const [payroll, setPayroll] = useState<NbaTeamPayroll | null>(null);
   const [gameLog, setGameLog] = useState<NbaTeamGameLogSlice | null>(null);
+  const [standingsRow, setStandingsRow] =
+    useState<NbaConferenceStandingsRow | null>(null);
   const [injuries, setInjuries] = useState<NbaTeamInjuryEntry[] | null>(null);
   const [strengthSplit, setStrengthSplit] =
     useState<NbaTeamStrengthSplit | null>(null);
@@ -93,6 +99,7 @@ export function useNbaTeamDetailLiveOverlay(options: Options): {
       setRosterBlock(null);
       setPayroll(null);
       setGameLog(null);
+      setStandingsRow(null);
       setInjuries(null);
       setStrengthSplit(null);
       setAceOut(null);
@@ -147,6 +154,15 @@ export function useNbaTeamDetailLiveOverlay(options: Options): {
         }).then((payload) => payload.log)
       ),
       wrap(
+        fetchNbaConferenceStandings({
+          season,
+          apiBaseUrl,
+          signal: ac.signal,
+        }).then((payload) =>
+          findNbaConferenceStandingsRow(payload.board, teamId)
+        )
+      ),
+      wrap(
         fetchTeamInjuries({
           teamId,
           season,
@@ -171,11 +187,12 @@ export function useNbaTeamDetailLiveOverlay(options: Options): {
         })
       ),
     ])
-      .then(([roster, pay, log, inj, strength, ace]) => {
+      .then(([roster, pay, log, standings, inj, strength, ace]) => {
         if (ac.signal.aborted) return;
         setRosterBlock(roster.ok ? roster.value : null);
         setPayroll(pay.ok ? pay.value : null);
         setGameLog(log.ok ? log.value : null);
+        setStandingsRow(standings.ok ? standings.value : null);
         setInjuries(inj.ok ? inj.value : null);
         setStrengthSplit(strength.ok ? strength.value : null);
         setAceOut(ace.ok ? ace.value : null);
@@ -183,6 +200,7 @@ export function useNbaTeamDetailLiveOverlay(options: Options): {
           roster: !roster.ok,
           payroll: !pay.ok,
           gameLog: !log.ok,
+          standings: !standings.ok,
           injuries: !inj.ok,
           strengthSplit: !strength.ok,
           aceOut: !ace.ok,
@@ -196,40 +214,40 @@ export function useNbaTeamDetailLiveOverlay(options: Options): {
   }, [teamId, season, apiBaseUrl]);
 
   const detail = useMemo((): NbaTeamDetailPreview => {
-    const fromGames = gameLog != null;
-
-    return {
+    let next: NbaTeamDetailPreview = {
       ...base,
       rosterBlock: rosterBlock ?? base.rosterBlock,
       payroll: payroll ?? base.payroll,
       ...(injuries != null ? { injuries } : null),
       ...(strengthSplit != null ? { strengthSplit } : null),
-      ...(fromGames && gameLog
-        ? {
-            recentGames: gameLog.recentGames,
-            upcomingGames: gameLog.upcomingGames,
-            last10Record: gameLog.last10Record,
-            streak: gameLog.streak,
-            homeAwaySplit: gameLog.homeAwaySplit,
-            conferenceSplit: gameLog.conferenceSplit,
-            season: {
-              wins: gameLog.seasonRecord.wins,
-              losses: gameLog.seasonRecord.losses,
-              winPct: winPct(
-                gameLog.seasonRecord.wins,
-                gameLog.seasonRecord.losses
-              ),
-            },
-            headToHead: gameLog.headToHead,
-          }
-        : null),
     };
-  }, [base, rosterBlock, payroll, gameLog, injuries, strengthSplit]);
+
+    if (gameLog) {
+      next = applyTeamGameLogToTeamDetailPreview(next, gameLog, {
+        includeSeasonRecord: standingsRow == null,
+      });
+    }
+
+    if (standingsRow) {
+      next = applyStandingsToTeamDetailPreview(next, standingsRow);
+    }
+
+    return next;
+  }, [
+    base,
+    rosterBlock,
+    payroll,
+    gameLog,
+    standingsRow,
+    injuries,
+    strengthSplit,
+  ]);
 
   const hasFetchError =
     failures.roster ||
     failures.payroll ||
     failures.gameLog ||
+    failures.standings ||
     failures.injuries ||
     failures.strengthSplit;
 

@@ -46,11 +46,17 @@ export {
 
 // NBA スタッツ日次 ingest（Next admin API 経由）
 export { runNbaStatsDailyIngestCron } from "./nba/runNbaStatsDailyIngestCron";
+// NBA injury 専用 ingest（16:00 / 23:00 / 試合前窓）
+export {
+  runNbaInjuryBaseline16Cron,
+  runNbaInjuryBaseline23Cron,
+  runNbaInjuryPregameCron,
+} from "./nba/runNbaInjuryIngestCron";
 // NBA スタッツ週次（ペイロール + 契約）
 export { runNbaStatsWeeklyIngestCron } from "./nba/runNbaStatsWeeklyIngestCron";
 // Pro Insight 前日 19:00 フル生成
 export { runNbaProBriefFullCron } from "./nba/runNbaProBriefFullCron";
-// Pro Insight tip 1h 前ケガ反映（毎時）
+// Pro Insight tip 1h 前パッチ（injury は専用 cron が更新済みスナップショットを読む）
 export { runNbaProBriefPatchCron } from "./nba/runNbaProBriefPatchCron";
 // NBA ライブ試合スコア / box（60 秒）— オフシーズンは停止。再開時に export を戻す
 // export { runNbaLiveGamesIngestCron } from "./nba/runNbaLiveGamesIngestCron";

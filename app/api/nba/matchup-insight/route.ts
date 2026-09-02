@@ -1,17 +1,31 @@
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
-
 import { NextResponse } from "next/server";
 import { getAdminDb } from "@/lib/firebaseAdmin";
 import type { PredictProBrief } from "@/lib/predict/predictProBrief";
 import { sanitizeProBriefForDisplay } from "@/lib/predict/validateProBrief";
+import { requireUidFromRequest } from "@/lib/communities/serverAuth";
+import { assertProUser } from "@/lib/pro/assertProUser";
 
 /**
  * GET /api/nba/matchup-insight?gameId=
- * Firestore games/{id}.proBrief を読むだけ（ライブ生成しない）。
+ * Firestore games/{id}.proBrief — Pro 限定。
  */
 export async function GET(req: Request) {
   try {
+    let uid: string;
+    try {
+      uid = await requireUidFromRequest(req);
+    } catch {
+      return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
+    }
+
+    const isPro = await assertProUser(uid);
+    if (!isPro) {
+      return NextResponse.json(
+        { ok: false, error: "pro_required", locked: true },
+        { status: 403 }
+      );
+    }
+
     const { searchParams } = new URL(req.url);
     const gameId = (searchParams.get("gameId") ?? "").trim();
     if (!gameId) {
@@ -57,7 +71,7 @@ export async function GET(req: Request) {
       },
       {
         headers: {
-          "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",
+          "Cache-Control": "private, no-store",
         },
       }
     );
