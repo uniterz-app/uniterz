@@ -60,7 +60,7 @@ const RESULT_ICON_SIZE = 32;
 
 
 /** フルスクリーン DEV など、タブバーを出さないネスト画面 */
-const TAB_BAR_HIDDEN_ROUTES = new Set(["SplashLogoPreview"]);
+const TAB_BAR_HIDDEN_ROUTES = new Set<string>([]);
 
 function focusedLeafRouteName(
   state: BottomTabBarProps["state"]

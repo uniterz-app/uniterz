@@ -75,20 +75,8 @@ type Props = {
     | "restartTutorial"
     | "seasonPreview"
     | "squadBattlePreview"
-    | "futuristicBgPreview"
-    | "titleSkinPreview"
-    | "waveProSkinPreview"
-    | "uniterzLogoTypePreview"
-    | "uniterzLogo3dPreview"
-    | "uniterzProBadgePreview"
-    | "markedChipDesignPreview"
-    | "splashLogoPreview"
     | "liveGameStatsPreview"
     | "leagueStatsPreview"
-    | "proLeagueGatePreview"
-    | "injuryDesignPreview"
-    | "teamSeasonRecordsPreview"
-    | "jerseyDiagonalDesignPreview"
     | "adminFeatureInbox"
     | "adminContactInbox"
     | "adminRedemptions"
@@ -258,20 +246,8 @@ export default function ProfileSideMenuModal({
       | "restartTutorial"
       | "seasonPreview"
       | "squadBattlePreview"
-      | "futuristicBgPreview"
-      | "titleSkinPreview"
-      | "waveProSkinPreview"
-      | "uniterzLogoTypePreview"
-      | "uniterzLogo3dPreview"
-      | "uniterzProBadgePreview"
-      | "markedChipDesignPreview"
-      | "splashLogoPreview"
       | "liveGameStatsPreview"
       | "leagueStatsPreview"
-      | "proLeagueGatePreview"
-      | "injuryDesignPreview"
-      | "teamSeasonRecordsPreview"
-      | "jerseyDiagonalDesignPreview"
       | "adminFeatureInbox"
       | "adminContactInbox"
       | "adminRedemptions"
@@ -612,76 +588,6 @@ export default function ProfileSideMenuModal({
                           SQUAD BATTLE
                         </SideMenuItemButtonNative>
                         <SideMenuItemButtonNative
-                          icon="palette-outline"
-                          dense
-                          labelStyle={labelStyle}
-                          onPress={() => openUserPage("futuristicBgPreview")}
-                        >
-                          Futuristic BG プレビュー
-                        </SideMenuItemButtonNative>
-                        <SideMenuItemButtonNative
-                          icon="crown-outline"
-                          dense
-                          labelStyle={labelStyle}
-                          onPress={() => openUserPage("titleSkinPreview")}
-                        >
-                          称号スキン プレビュー
-                        </SideMenuItemButtonNative>
-                        <SideMenuItemButtonNative
-                          icon="palette-swatch-outline"
-                          dense
-                          labelStyle={labelStyle}
-                          onPress={() => openUserPage("waveProSkinPreview")}
-                        >
-                          Wave 13 スキンプレビュー
-                        </SideMenuItemButtonNative>
-                        <SideMenuItemButtonNative
-                          icon="format-font"
-                          dense
-                          labelStyle={labelStyle}
-                          onPress={() =>
-                            openUserPage("uniterzLogoTypePreview")
-                          }
-                        >
-                          UNITERZ Logo
-                        </SideMenuItemButtonNative>
-                        <SideMenuItemButtonNative
-                          icon="shield-star-outline"
-                          dense
-                          labelStyle={labelStyle}
-                          onPress={() =>
-                            openUserPage("uniterzProBadgePreview")
-                          }
-                        >
-                          UNITERZ PRO バッジ
-                        </SideMenuItemButtonNative>
-                        <SideMenuItemButtonNative
-                          icon="bookmark-check-outline"
-                          dense
-                          labelStyle={labelStyle}
-                          onPress={() =>
-                            openUserPage("markedChipDesignPreview")
-                          }
-                        >
-                          MARKED チップ
-                        </SideMenuItemButtonNative>
-                        <SideMenuItemButtonNative
-                          icon="cube-outline"
-                          dense
-                          labelStyle={labelStyle}
-                          onPress={() => openUserPage("uniterzLogo3dPreview")}
-                        >
-                          Logo 3D
-                        </SideMenuItemButtonNative>
-                        <SideMenuItemButtonNative
-                          icon="flash-outline"
-                          dense
-                          labelStyle={labelStyle}
-                          onPress={() => openUserPage("splashLogoPreview")}
-                        >
-                          スプラッシュ案
-                        </SideMenuItemButtonNative>
-                        <SideMenuItemButtonNative
                           icon="scoreboard-outline"
                           dense
                           labelStyle={labelStyle}
@@ -696,42 +602,6 @@ export default function ProfileSideMenuModal({
                           onPress={() => openUserPage("leagueStatsPreview")}
                         >
                           リーグスタッツ（左レール）
-                        </SideMenuItemButtonNative>
-                        <SideMenuItemButtonNative
-                          icon="shield-crown-outline"
-                          dense
-                          labelStyle={labelStyle}
-                          onPress={() => openUserPage("proLeagueGatePreview")}
-                        >
-                          PRO LEAGUE ゲート（Free）
-                        </SideMenuItemButtonNative>
-                        <SideMenuItemButtonNative
-                          icon="medical-bag"
-                          dense
-                          labelStyle={labelStyle}
-                          onPress={() => openUserPage("injuryDesignPreview")}
-                        >
-                          Injury UI デザイン案
-                        </SideMenuItemButtonNative>
-                        <SideMenuItemButtonNative
-                          icon="chart-box-outline"
-                          dense
-                          labelStyle={labelStyle}
-                          onPress={() =>
-                            openUserPage("teamSeasonRecordsPreview")
-                          }
-                        >
-                          前季成績スプリット（Insight）
-                        </SideMenuItemButtonNative>
-                        <SideMenuItemButtonNative
-                          icon="tshirt-crew-outline"
-                          dense
-                          labelStyle={labelStyle}
-                          onPress={() =>
-                            openUserPage("jerseyDiagonalDesignPreview")
-                          }
-                        >
-                          ジャージ斜めライン案
                         </SideMenuItemButtonNative>
                       </View>
                     </>

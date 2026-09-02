@@ -3,7 +3,6 @@
 /**
  * プロフィール復帰時の Pro Skin マイルストーン解放オーバーレイ。
  * 実際のスキン模様を1枚ヒーロー表示する。
- * デザイン確認: `/mobile/pro-skin-unlock-preview`
  */
 import { useState } from "react";
 import { createPortal } from "react-dom";

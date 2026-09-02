@@ -153,24 +153,6 @@ export type ProfileStackParamList = {
   SquadBattlePreview: undefined;
   /** __DEV__ 週間/月間レポート UI プレビュー（mock） */
   MonthlyReportPreview: { tab?: "weekly" | "monthly"; caseKey?: string } | undefined;
-  /** __DEV__ Pro futuristic 背景プレビュー */
-  FuturisticBgPreview: undefined;
-  /** __DEV__ 称号 Pro Skin（金冠 / 雷 / 星）プレビュー */
-  TitleSkinPreview: undefined;
-  /** __DEV__ Pro Skin Wave9 プレビュー */
-  WaveProSkinPreview: undefined;
-  /** __DEV__ UNITERZ ウェスタン調ロゴ文字 3案 */
-  UniterzLogoTypePreview: undefined;
-  /** __DEV__ Blender 平面ワードマーク 3D */
-  UniterzLogo3dPreview: undefined;
-  /** __DEV__ 課金 PRO タグ案 */
-  UniterzProBadgePreview: undefined;
-  /** __DEV__ プロフィール MARK / MARKED チップ案 */
-  MarkedChipDesignPreview: undefined;
-  /** __DEV__ リザルト詳細デザイン用プレビュー */
-  ResultDetailDesignPreview: undefined;
-  /** __DEV__ サイバーロゴスプラッシュ */
-  SplashLogoPreview: undefined;
   /** __DEV__ リーグ Team Stats（30 チーム表） */
   TeamStatsPreview: undefined;
   /** __DEV__ リーグ STATS ハブ（Team / Player、現行チップ型） */
@@ -183,14 +165,6 @@ export type ProfileStackParamList = {
   PlayerDetailPreview: { playerId?: string } | undefined;
   /** __DEV__ ライブ試合スタッツ（Team / Box Score） */
   LiveGameStatsPreview: undefined;
-  /** __DEV__ 試合一覧カード現行デザイン */
-  MatchCardDesignPreview: undefined;
-  /** __DEV__ LP 用ランキング画面（総合スコアモック） */
-  LpRankingPreview: undefined;
-  /** __DEV__ ランキングリスト見た目案 */
-  RankingListDesignPreview: undefined;
-  /** __DEV__ Free → PRO LEAGUE ゲート */
-  ProLeagueGatePreview: undefined;
   ProSuccess: { plan?: "weekly" | "monthly" | "season" } | undefined;
   PlanChange: undefined;
   PlanChangeComplete: undefined;
@@ -216,10 +190,6 @@ export type ProfileStackParamList = {
   Landing: undefined;
   /** __DEV__ 通知動作確認 */
   NotificationDev: undefined;
-  /** __DEV__ Injury UI デザイン比較 */
-  InjuryDesignPreview: undefined;
-  TeamSeasonRecordsPreview: undefined;
-  JerseyDiagonalDesignPreview: undefined;
 };
 
 export type AuthStackParamList = {

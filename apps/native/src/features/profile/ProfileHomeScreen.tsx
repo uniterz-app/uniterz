@@ -1721,37 +1721,14 @@ export default function ProfileHomeScreen({
             pulseTutorialRestartNative();
           })();
         }
-        else if (page === "seasonPreview" && __DEV__) navigation.navigate("SeasonPredictPreview");
+        else if (page === "seasonPreview" && __DEV__)
+          navigation.navigate("SeasonPredictPreview");
         else if (page === "squadBattlePreview" && __DEV__)
           navigation.navigate("SquadBattlePreview");
-        else if (page === "futuristicBgPreview" && __DEV__)
-          navigation.navigate("FuturisticBgPreview");
-        else if (page === "titleSkinPreview" && __DEV__)
-          navigation.navigate("TitleSkinPreview");
-        else if (page === "waveProSkinPreview" && __DEV__)
-          navigation.navigate("WaveProSkinPreview");
-        else if (page === "uniterzLogoTypePreview" && __DEV__)
-          navigation.navigate("UniterzLogoTypePreview");
-        else if (page === "uniterzLogo3dPreview" && __DEV__)
-          navigation.navigate("UniterzLogo3dPreview");
-        else if (page === "uniterzProBadgePreview" && __DEV__)
-          navigation.navigate("UniterzProBadgePreview");
-        else if (page === "markedChipDesignPreview" && __DEV__)
-          navigation.navigate("MarkedChipDesignPreview");
-        else if (page === "splashLogoPreview" && __DEV__)
-          navigation.navigate("SplashLogoPreview");
         else if (page === "liveGameStatsPreview" && __DEV__)
           navigation.navigate("LiveGameStatsPreview");
         else if (page === "leagueStatsPreview" && __DEV__)
           navigation.navigate("LeagueStatsPreview");
-        else if (page === "proLeagueGatePreview" && __DEV__)
-          navigation.navigate("ProLeagueGatePreview");
-        else if (page === "injuryDesignPreview" && __DEV__)
-          navigation.navigate("InjuryDesignPreview");
-        else if (page === "teamSeasonRecordsPreview" && __DEV__)
-          navigation.navigate("TeamSeasonRecordsPreview");
-        else if (page === "jerseyDiagonalDesignPreview" && __DEV__)
-          navigation.navigate("JerseyDiagonalDesignPreview");
       }}
     />
     <ProfileBadgeDetailModal

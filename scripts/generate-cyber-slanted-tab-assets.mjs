@@ -15,8 +15,6 @@ import sharp from "sharp";
 const ROOT = path.resolve(import.meta.dirname, "..");
 const OUT_DIRS = [
   path.join(ROOT, "apps/native/assets/cyber-slanted-tab"),
-  path.join(ROOT, "assets/cyber-slanted-tab"),
-  path.join(ROOT, "public/cyber-slanted-tab"),
 ];
 
 const CYAN = "#00F5FF";

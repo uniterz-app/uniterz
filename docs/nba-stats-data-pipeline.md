@@ -135,5 +135,5 @@ UI（Team / Box）は既存。`liveStats` が無い試合はパネル非表示�
 - **ライブ cron 再開**（シーズン開始時）: `functions/src/index.ts` で `runNbaLiveGamesIngestCron` を再 export → デプロイ。URL は www 付き。試合がある時間帯だけ BDL が走る。
 - **プレイヤーキャリア seasons** の自動 ingest（重い）。週次はペイロール＋契約まで。キャリアは手動 / バッチ。
 - **予想の topScorerCandidates**: `games` に載っていればそれを使う。無いときは対戦2チームのロスター（`/api/nba/team-rosters`）から PPG 順にクライアントで組む。先頭5人＋展開で残り。モックには落とさない。
-- **Pro Insight（brief）**: 本番 brief が未配線のあいだは PendingPanel。`nbaProBriefPreviewMocks` は preview 画面専用。
+- **Pro Insight（brief）**: 本番 brief が未配線のあいだは PendingPanel。
 - ~~Cloud Functions Node 20 → 22~~ → `functions/package.json` を 22 に更新済み。再デプロイで反映。

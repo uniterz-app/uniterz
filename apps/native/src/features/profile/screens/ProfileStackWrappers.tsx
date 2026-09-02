@@ -12,28 +12,12 @@ import MobileProSubscribeScreen from "../mobileScreens/MobileProSubscribeScreen"
 import ProSubscribePreviewNative from "../mobileScreens/ProSubscribePreviewNative";
 import SeasonPredictPreviewScreenNative from "../mobileScreens/SeasonPredictPreviewScreenNative";
 import MonthlyReportPreviewScreenNative from "../mobileScreens/MonthlyReportPreviewScreenNative";
-import FuturisticBgPreviewScreenNative from "../backgrounds/FuturisticBgPreviewScreenNative";
-import TitleSkinPreviewScreenNative from "../backgrounds/TitleSkinPreviewScreenNative";
-import WaveProSkinPreviewScreenNative from "../backgrounds/WaveProSkinPreviewScreenNative";
-import UniterzLogoTypePreviewScreenNative from "../mobileScreens/UniterzLogoTypePreviewScreenNative";
-import UniterzLogo3dPreviewScreenNative from "../mobileScreens/UniterzLogo3dPreviewScreenNative";
-import UniterzProBadgePreviewScreenNative from "../mobileScreens/UniterzProBadgePreviewScreenNative";
-import MarkedChipDesignPreviewScreenNative from "../mobileScreens/MarkedChipDesignPreviewScreenNative";
-import ResultDetailDesignPreviewScreenNative from "../../results/ResultDetailDesignPreviewScreenNative";
-import SplashLogoPreviewScreenNative from "../mobileScreens/SplashLogoPreviewScreenNative";
 import LeagueStatsRailPreviewScreenNative from "../../games/stats/LeagueStatsRailPreviewScreenNative";
 import TeamStatsPreviewScreenNative from "../../games/teamStats/TeamStatsPreviewScreenNative";
 import PlayerStatsPreviewScreenNative from "../../games/playerStats/PlayerStatsPreviewScreenNative";
 import PlayerDetailPreviewScreenNative from "../../games/playerDetail/PlayerDetailPreviewScreenNative";
 import TeamDetailPreviewScreenNative from "../../games/teamDetail/TeamDetailPreviewScreenNative";
 import LiveGameStatsPreviewScreenNative from "../../games/live/LiveGameStatsPreviewScreenNative";
-import MatchCardDesignPreviewScreenNative from "../../games/MatchCardDesignPreviewScreenNative";
-import LpRankingPreviewScreenNative from "../../rankings/LpRankingPreviewScreenNative";
-import RankingListDesignPreviewScreenNative from "../../rankings/RankingListDesignPreviewScreenNative";
-import ProLeagueGatePreviewScreenNative from "../../rankings/ProLeagueGatePreviewScreenNative";
-import InjuryDesignPreviewScreenNative from "../../games/predict/InjuryDesignPreviewScreenNative";
-import TeamSeasonRecordsPreviewScreenNative from "../../games/predict/TeamSeasonRecordsPreviewScreenNative";
-import JerseyDiagonalDesignPreviewScreenNative from "../../games/predict/JerseyDiagonalDesignPreviewScreenNative";
 import type { ProfileStackParamList } from "../../../navigation/types";
 
 const apiBase = process.env.EXPO_PUBLIC_UNITERZ_API_BASE_URL ?? null;
@@ -143,124 +127,6 @@ export function MonthlyReportPreviewScreenWrapper() {
   );
 }
 
-export function FuturisticBgPreviewScreenWrapper() {
-  const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
-  const { fUser } = useFirebaseUser();
-  const { language } = useNativeUserLanguage(fUser?.uid);
-  return (
-    <FuturisticBgPreviewScreenNative
-      language={language}
-      onClose={() => navigation.goBack()}
-    />
-  );
-}
-
-export function TitleSkinPreviewScreenWrapper() {
-  const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
-  const { fUser } = useFirebaseUser();
-  const { language } = useNativeUserLanguage(fUser?.uid);
-  return (
-    <TitleSkinPreviewScreenNative
-      language={language}
-      onClose={() => navigation.goBack()}
-    />
-  );
-}
-
-export function WaveProSkinPreviewScreenWrapper() {
-  const navigation =
-    useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
-  const { fUser } = useFirebaseUser();
-  const { language } = useNativeUserLanguage(fUser?.uid);
-  return (
-    <WaveProSkinPreviewScreenNative
-      language={language === "ja" ? "ja" : "en"}
-      onClose={() => navigation.goBack()}
-    />
-  );
-}
-
-export function UniterzLogoTypePreviewScreenWrapper() {
-  const navigation =
-    useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
-  const { fUser } = useFirebaseUser();
-  const { language } = useNativeUserLanguage(fUser?.uid);
-  return (
-    <UniterzLogoTypePreviewScreenNative
-      language={language === "ja" ? "ja" : "en"}
-      onClose={() => navigation.goBack()}
-    />
-  );
-}
-
-export function UniterzLogo3dPreviewScreenWrapper() {
-  const navigation =
-    useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
-  const { fUser } = useFirebaseUser();
-  const { language } = useNativeUserLanguage(fUser?.uid);
-  return (
-    <UniterzLogo3dPreviewScreenNative
-      language={language === "ja" ? "ja" : "en"}
-      onClose={() => navigation.goBack()}
-    />
-  );
-}
-
-export function UniterzProBadgePreviewScreenWrapper() {
-  const navigation =
-    useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
-  const { fUser } = useFirebaseUser();
-  const { language } = useNativeUserLanguage(fUser?.uid);
-  return (
-    <UniterzProBadgePreviewScreenNative
-      language={language === "ja" ? "ja" : "en"}
-      onClose={() => navigation.goBack()}
-    />
-  );
-}
-
-export function MarkedChipDesignPreviewScreenWrapper() {
-  const navigation =
-    useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
-  const { fUser } = useFirebaseUser();
-  const { language } = useNativeUserLanguage(fUser?.uid);
-  return (
-    <MarkedChipDesignPreviewScreenNative
-      language={language === "ja" ? "ja" : "en"}
-      onClose={() => navigation.goBack()}
-    />
-  );
-}
-
-export function ResultDetailDesignPreviewScreenWrapper() {
-  const navigation =
-    useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
-  const { fUser } = useFirebaseUser();
-  const { language } = useNativeUserLanguage(fUser?.uid);
-  return (
-    <ResultDetailDesignPreviewScreenNative
-      language={language === "ja" ? "ja" : "en"}
-      onClose={() => navigation.goBack()}
-      onOpenProfile={(handle) =>
-        navigation.push("PublicProfile", { handle, fromResultDetail: true })
-      }
-    />
-  );
-}
-
-export function SplashLogoPreviewScreenWrapper() {
-  const navigation =
-    useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
-  const { fUser } = useFirebaseUser();
-  const { language } = useNativeUserLanguage(fUser?.uid);
-  return (
-    <SplashLogoPreviewScreenNative
-      language={language === "ja" ? "ja" : "en"}
-      onClose={() => navigation.goBack()}
-    />
-  );
-}
-
 export function LeagueStatsPreviewScreenWrapper() {
   const navigation =
     useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
@@ -356,69 +222,4 @@ export function LiveGameStatsPreviewScreenWrapper() {
       onClose={() => navigation.goBack()}
     />
   );
-}
-
-export function MatchCardDesignPreviewScreenWrapper() {
-  const navigation =
-    useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
-  const { fUser } = useFirebaseUser();
-  const { language } = useNativeUserLanguage(fUser?.uid);
-  return (
-    <MatchCardDesignPreviewScreenNative
-      language={language === "ja" ? "ja" : "en"}
-      onClose={() => navigation.goBack()}
-    />
-  );
-}
-export function LpRankingPreviewScreenWrapper() {
-  const navigation =
-    useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
-  const { fUser } = useFirebaseUser();
-  const { language } = useNativeUserLanguage(fUser?.uid);
-  return (
-    <LpRankingPreviewScreenNative
-      language={language === "ja" ? "ja" : "en"}
-      onClose={() => navigation.goBack()}
-    />
-  );
-}
-
-export function RankingListDesignPreviewScreenWrapper() {
-  const navigation =
-    useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
-  const { fUser } = useFirebaseUser();
-  const { language } = useNativeUserLanguage(fUser?.uid);
-  return (
-    <RankingListDesignPreviewScreenNative
-      language={language === "ja" ? "ja" : "en"}
-      onClose={() => navigation.goBack()}
-    />
-  );
-}
-
-export function ProLeagueGatePreviewScreenWrapper() {
-  const navigation =
-    useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
-  const { fUser } = useFirebaseUser();
-  const { language } = useNativeUserLanguage(fUser?.uid);
-  return (
-    <ProLeagueGatePreviewScreenNative
-      language={language === "ja" ? "ja" : "en"}
-      onClose={() => navigation.goBack()}
-    />
-  );
-}
-
-export function InjuryDesignPreviewScreenWrapper() {
-  return (
-    <InjuryDesignPreviewScreenNative />
-  );
-}
-
-export function TeamSeasonRecordsPreviewScreenWrapper() {
-  return <TeamSeasonRecordsPreviewScreenNative />;
-}
-
-export function JerseyDiagonalDesignPreviewScreenWrapper() {
-  return <JerseyDiagonalDesignPreviewScreenNative />;
 }

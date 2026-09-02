@@ -32,7 +32,7 @@ const LINKS = [
   {
     href: "/mobile/live-game-stats-preview",
     title: "ライブ試合スタッツ",
-    note: "Team Stats + Box Score（mock）",
+    note: "Team Stats + Box Score",
   },
   {
     href: "/mobile/stats-preview",
@@ -40,49 +40,14 @@ const LINKS = [
     note: "Team / Player · タブ切替",
   },
   {
-    href: "/mobile/rank-gap-preview",
-    title: "Gap / Shadow",
-    note: "Rank Intel",
-  },
-  {
     href: "/mobile/pro-subscribe-preview",
     title: "Pro 課金導線",
     note: "3プラン → 成功画面",
   },
   {
-    href: "/mobile/settings-bg-preview",
-    title: "設定画面の背景色",
-    note: "SETTINGS 背景スウォッチ切替",
-  },
-  {
-    href: "/mobile/berserk-pro-skin-preview",
-    title: "Pro Skin · ベルセルク風",
-    note: "赤×黒ダーク案 3 つ",
-  },
-  {
-    href: "/mobile/cosmos-pro-skin-preview",
-    title: "Pro Skin · Design Lab",
-    note: "線画ラボ / メタリック",
-  },
-  {
-    href: "/mobile/wave-pro-skin-preview",
-    title: "Pro Skin · Wave 13",
-    note: "9テーマ SVG 線画プレビュー",
-  },
-  {
-    href: "/mobile/ranking-list-pro-skin-preview",
-    title: "Pro Skin · ランキング行",
-    note: "採用30種のリスト行デザイン一覧",
-  },
-  {
-    href: "/mobile/pro-skin-unlock-preview",
-    title: "Pro Skin 解放モーダル",
-    note: "マイルストーン達成通知",
-  },
-  {
     href: "/mobile/tutorial-preview",
     title: "初回チュートリアル",
-    note: "スライド / スポットライト / ハイブリッド比較",
+    note: "ハイブリッド練習ツアー",
   },
 ] as const;
 
@@ -97,13 +62,13 @@ export default function MobileSeasonPreviewHubPage() {
               "text-[10px] font-bold uppercase tracking-[0.2em] text-cyan-300/70",
             ].join(" ")}
           >
-            Mobile · Dev hub
+            Mobile · Feature preview hub
           </p>
-          <h1 className={[jp.className, "text-xl font-bold"].join(" ")}>
-            プレビュー一覧
+          <h1 className={`${jp.className} text-xl font-bold tracking-tight`}>
+            シーズン / 予想プレビュー
           </h1>
-          <p className="text-xs leading-relaxed text-white/45">
-            スマホ幅の mobile ルート。本番未接続の UI 確認用。
+          <p className="text-[13px] leading-relaxed text-white/55">
+            機能検証用。デザイン専用プレビューは削除済み。
           </p>
         </header>
 
@@ -112,18 +77,19 @@ export default function MobileSeasonPreviewHubPage() {
             <li key={item.href}>
               <Link
                 href={item.href}
-                className="block border border-cyan-300/20 bg-[rgba(6,10,16,0.92)] px-3 py-3 transition hover:border-cyan-300/40"
+                className="block rounded-lg border border-white/12 bg-white/[0.03] px-3.5 py-3 transition hover:border-cyan-300/35 hover:bg-white/[0.05]"
               >
+                <p className={`${jp.className} text-[15px] font-semibold text-white`}>
+                  {item.title}
+                </p>
                 <p
                   className={[
                     nameOxanium.className,
-                    "text-[12px] font-extrabold uppercase tracking-[0.08em] text-cyan-100",
+                    "mt-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-white/40",
                   ].join(" ")}
                 >
-                  {item.title}
+                  {item.note}
                 </p>
-                <p className="mt-0.5 text-[11px] text-white/40">{item.note}</p>
-                <p className="mt-1 text-[10px] text-white/25">{item.href}</p>
               </Link>
             </li>
           ))}
