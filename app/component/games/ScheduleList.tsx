@@ -87,7 +87,7 @@ type TeamRecord = {
 const TEAM_RECORD_CACHE_KEY = "schedule_team_record_cache_v5";
 const TEAM_RECORD_CACHE_TTL_MS = 1000 * 60 * 30;
 /** in-memory は teamId 単体だと古い勝敗が残るためバージョン付きキー */
-const TEAM_RECORD_MEM_VER = 4;
+const TEAM_RECORD_MEM_VER = 5;
 function teamRecordMemKey(teamId: string) {
   return `${teamId}:v${TEAM_RECORD_MEM_VER}`;
 }

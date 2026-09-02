@@ -25,18 +25,12 @@ export default function LeagueStatsRailPreviewScreenNative({
   onSelectTeam,
   onSelectPlayer,
 }: Props) {
-  const isJa = language === "ja";
   const [tab, setTab] = useState<TabId>("team");
 
   return (
     <GamesNbaSubpageShellNative
       title={tab === "team" ? "TEAM STATS" : "PLAYER STATS"}
       eyebrow="DEV"
-      subtitle={
-        isJa
-          ? "左に指標レール。BASIC / 4FCT など親カテゴリつき。"
-          : "Left metric rail with BASIC / 4FCT parents."
-      }
       onBack={onClose}
       scroll={false}
       contentStyle={styles.shell}

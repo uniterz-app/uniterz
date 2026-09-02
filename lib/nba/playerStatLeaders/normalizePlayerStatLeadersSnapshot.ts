@@ -7,6 +7,10 @@ import {
   type NbaPlayerStatLeadersBundle,
 } from "@/lib/predict/nbaPlayerStatLeadersMocks";
 import { NBA_PLAYER_ADVANCED_LEADER_METRICS } from "@/lib/predict/nbaPlayerStatLeadersAdvanced";
+import {
+  isNbaLeagueStatsPreseason,
+  preseasonLeagueStatsAsOfLabel,
+} from "@/lib/nba/leagueStatsPreseason";
 import type {
   NbaPlayerStatLeadersFirestoreDoc,
   NbaPlayerStatLeadersSnapshotSource,
@@ -209,11 +213,14 @@ export function resolvePlayerStatLeadersEmptyFallback(
   seasonKey: string
 ): ResolvedPlayerStatLeaders {
   const empty = emptyPlayerLeadersBoard();
+  const preseason = isNbaLeagueStatsPreseason(seasonKey);
   return {
     bundle: {
       season: empty,
       last10: emptyPlayerLeadersBoard(),
-      asOfLabel: `UNAVAILABLE · ${seasonKey}`,
+      asOfLabel: preseason
+        ? preseasonLeagueStatsAsOfLabel(seasonKey)
+        : `UNAVAILABLE · ${seasonKey}`,
     },
     source: "empty",
     updatedAt: null,

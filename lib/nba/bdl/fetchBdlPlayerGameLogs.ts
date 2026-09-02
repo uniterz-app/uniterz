@@ -13,6 +13,8 @@ export type BdlPlayerGameLogStatRow = {
   ftm?: number | null;
   fta?: number | null;
   reb?: number | null;
+  oreb?: number | null;
+  dreb?: number | null;
   ast?: number | null;
   stl?: number | null;
   blk?: number | null;

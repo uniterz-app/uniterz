@@ -69,6 +69,10 @@ export type NbaPlayerGameLog = {
   min: number;
   pts: number;
   reb: number;
+  /** BDL stats に oreb があるときのみ */
+  oreb?: number;
+  /** BDL stats に dreb があるときのみ */
+  dreb?: number;
   ast: number;
   stl: number;
   blk: number;

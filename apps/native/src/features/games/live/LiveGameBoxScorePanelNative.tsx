@@ -1,4 +1,4 @@
-/** Web `LiveGameBoxScorePanel` 相当 — チーム色グラデ枠 */
+/** Web `LiveGameBoxScorePanel` 相当 — チーム色グラデ枠 + BASIC/ADVANCED */
 import { useMemo, useState } from "react";
 import {
   Pressable,
@@ -15,27 +15,17 @@ import type {
   LiveGameStatsReport,
 } from "../../../../../../lib/games/liveGameStats";
 import {
+  liveGameBoxColumnValues,
+  liveGameBoxColumns,
+  liveGameBoxHasAdvancedData,
+  type LiveGameBoxScoreMode,
+} from "../../../../../../lib/games/liveGameBoxScoreColumns";
+import {
   getTeamJerseyPrimaryColor,
   getTeamJerseySecondaryColor,
 } from "../../../../../../lib/team-colors";
 import JerseyMarkSvg from "../JerseyMarkSvg";
 import { METRIC_FONT } from "../../rankings/rankingsUiTheme";
-
-const BOX_COLS = [
-  { key: "min", label: "MIN" },
-  { key: "pts", label: "PTS" },
-  { key: "reb", label: "REB" },
-  { key: "ast", label: "AST" },
-  { key: "stl", label: "STL" },
-  { key: "blk", label: "BLK" },
-  { key: "tov", label: "TO" },
-  { key: "fg", label: "FG" },
-  { key: "fg3", label: "3P" },
-  { key: "ft", label: "FT" },
-  { key: "pm", label: "+/-" },
-] as const;
-
-const EMPHASIS = new Set(["pts", "fg", "fg3"]);
 
 type Props = {
   report: LiveGameStatsReport;
@@ -66,29 +56,58 @@ function sortBoxPlayers(players: LiveGameBoxPlayer[]): LiveGameBoxPlayer[] {
   });
 }
 
-function boxValues(p: LiveGameBoxPlayer): string[] {
-  const pm = p.plusMinus;
-  return [
-    String(p.min),
-    String(p.pts),
-    String(p.reb),
-    String(p.ast),
-    String(p.stl),
-    String(p.blk),
-    String(p.tov),
-    p.fg,
-    p.fg3,
-    p.ft,
-    pm > 0 ? `+${pm}` : String(pm),
+function BoxScoreModeToggle({
+  mode,
+  onChange,
+  advancedAvailable,
+}: {
+  mode: LiveGameBoxScoreMode;
+  onChange: (mode: LiveGameBoxScoreMode) => void;
+  advancedAvailable: boolean;
+}) {
+  const tabs: { id: LiveGameBoxScoreMode; label: string }[] = [
+    { id: "basic", label: "BASIC" },
+    { id: "advanced", label: "ADVANCED" },
   ];
+  return (
+    <View style={styles.modeRow}>
+      {tabs.map((tab) => {
+        const active = mode === tab.id;
+        const disabled = tab.id === "advanced" && !advancedAvailable;
+        return (
+          <Pressable
+            key={tab.id}
+            disabled={disabled}
+            onPress={() => onChange(tab.id)}
+            style={[
+              styles.modeBtn,
+              active ? styles.modeBtnActive : styles.modeBtnIdle,
+              disabled ? styles.modeBtnDisabled : null,
+            ]}
+          >
+            <Text
+              style={[
+                styles.modeBtnText,
+                active ? styles.modeBtnTextActive : styles.modeBtnTextIdle,
+              ]}
+            >
+              {tab.label}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
 }
 
 function TeamBoxCard({
   block,
   defaultOpen,
+  mode,
 }: {
   block: LiveGameBoxTeam;
   defaultOpen: boolean;
+  mode: LiveGameBoxScoreMode;
 }) {
   const [open, setOpen] = useState(defaultOpen);
   const teamPrimary = getTeamJerseyPrimaryColor("nba", block.teamId);
@@ -97,6 +116,7 @@ function TeamBoxCard({
   const divider = hexToRgba(teamPrimary, 0.22);
   const sideLabel = block.side === "home" ? "HOME" : "AWAY";
   const players = useMemo(() => sortBoxPlayers(block.players), [block.players]);
+  const columns = liveGameBoxColumns(mode);
 
   return (
     <View style={[styles.card, { borderColor: border }]}>
@@ -145,14 +165,14 @@ function TeamBoxCard({
                 <Text style={styles.thPlayer}>Player</Text>
                 <Text style={styles.thPos}>Pos</Text>
               </View>
-              {BOX_COLS.map((c) => (
+              {columns.map((c) => (
                 <Text key={c.key} style={styles.thStat}>
                   {c.label}
                 </Text>
               ))}
             </View>
             {players.map((p) => {
-              const values = boxValues(p);
+              const values = liveGameBoxColumnValues(p, mode);
               return (
                 <View key={p.playerId} style={styles.tableRow}>
                   <View style={styles.identityCol}>
@@ -166,19 +186,21 @@ function TeamBoxCard({
                     </Text>
                     <Text style={styles.pos}>{p.position}</Text>
                   </View>
-                  {values.map((v, i) => (
-                    <Text
-                      key={BOX_COLS[i]!.key}
-                      style={[
-                        styles.stat,
-                        EMPHASIS.has(BOX_COLS[i]!.key)
-                          ? styles.statEmphasis
-                          : styles.statMuted,
-                      ]}
-                    >
-                      {v}
-                    </Text>
-                  ))}
+                  {values.map((v, i) => {
+                    const col = columns[i];
+                    if (!col) return null;
+                    return (
+                      <Text
+                        key={col.key}
+                        style={[
+                          styles.stat,
+                          col.emphasis ? styles.statEmphasis : styles.statMuted,
+                        ]}
+                      >
+                        {v}
+                      </Text>
+                    );
+                  })}
                 </View>
               );
             })}
@@ -190,16 +212,57 @@ function TeamBoxCard({
 }
 
 export default function LiveGameBoxScorePanelNative({ report }: Props) {
+  const allPlayers = useMemo(
+    () => [...report.box.home.players, ...report.box.away.players],
+    [report.box.home.players, report.box.away.players]
+  );
+  const advancedAvailable = liveGameBoxHasAdvancedData(allPlayers);
+  const [mode, setMode] = useState<LiveGameBoxScoreMode>("basic");
+
   return (
     <View style={styles.stack}>
-      <TeamBoxCard block={report.box.home} defaultOpen />
-      <TeamBoxCard block={report.box.away} defaultOpen={false} />
+      <BoxScoreModeToggle
+        mode={mode}
+        onChange={setMode}
+        advancedAvailable={advancedAvailable}
+      />
+      <TeamBoxCard block={report.box.home} defaultOpen mode={mode} />
+      <TeamBoxCard block={report.box.away} defaultOpen={false} mode={mode} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  stack: { gap: 12 },
+  stack: { gap: 10 },
+  modeRow: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: 6,
+  },
+  modeBtn: {
+    borderWidth: 1,
+    borderRadius: 2,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  modeBtnActive: {
+    borderColor: "#00F5FF",
+    backgroundColor: "#00F5FF",
+  },
+  modeBtnIdle: {
+    borderColor: "rgba(255,255,255,0.25)",
+    backgroundColor: "transparent",
+  },
+  modeBtnDisabled: { opacity: 0.35 },
+  modeBtnText: {
+    fontFamily: METRIC_FONT,
+    fontSize: 9,
+    fontWeight: "800",
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
+  },
+  modeBtnTextActive: { color: "#050508" },
+  modeBtnTextIdle: { color: "rgba(255,255,255,0.55)" },
   card: {
     overflow: "hidden",
     borderWidth: 1,

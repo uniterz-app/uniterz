@@ -32,6 +32,9 @@ import {
 import { formatNbaPlayerListName } from "@/lib/nba/formatNbaPlayerListName";
 import { usePlayerStatLeadersBundle } from "@/lib/nba/usePlayerStatLeadersBundle";
 import { nbaDailyStatsUpdateFootnote } from "@/lib/nba/nbaStatsUpdateSchedule";
+import { isNbaLeagueStatsPreseason } from "@/lib/nba/leagueStatsPreseason";
+import { leagueStatsTableEmptyCopy } from "@/lib/nba/leagueStatsEmptyState";
+import NbaLeagueStatsTableEmpty from "@/app/component/stats/NbaLeagueStatsTableEmpty";
 
 type SortDir = "desc" | "asc";
 
@@ -98,7 +101,10 @@ export default function NbaLeaguePlayerStatLeadersPanel({
 }: Props) {
   const isJa = language === "ja";
   const { bundle, loading } = usePlayerStatLeadersBundle();
-  const updateFootnote = nbaDailyStatsUpdateFootnote(isJa ? "ja" : "en", bundle.asOfLabel);
+  const isPreseason = isNbaLeagueStatsPreseason();
+  const updateFootnote = nbaDailyStatsUpdateFootnote(isJa ? "ja" : "en", bundle.asOfLabel, {
+    preseason: isPreseason,
+  });
   const [phase, setPhase] = useState<NbaLeagueStatsPhase>("season");
   const [mode, setMode] = useState<NbaLeagueStatsMode>("per_game");
   const groups = useMemo(() => leaguePlayerRailGroupsForMode(mode), [mode]);
@@ -140,6 +146,9 @@ export default function NbaLeaguePlayerStatLeadersPanel({
     });
     return sortDir === "asc" ? [...list].reverse() : list;
   }, [bundle, phase, mode, metric, sortDir]);
+
+  const emptyCopy = leagueStatsTableEmptyCopy(isJa ? "ja" : "en", mode);
+  const showEmptyTable = !loading && leaders.length === 0;
 
   return (
     <div
@@ -232,6 +241,9 @@ export default function NbaLeaguePlayerStatLeadersPanel({
             {isJa ? metricMeta.hintJa : metricMeta.hintEn}
           </p>
 
+          {showEmptyTable ? (
+            <NbaLeagueStatsTableEmpty copy={emptyCopy} />
+          ) : (
           <div className="overflow-hidden rounded-[2px] border border-[rgba(0,245,255,0.12)] bg-[rgba(4,16,24,0.35)]">
             <div
               className={`${nameOxanium.className} flex items-center border-b border-[rgba(0,245,255,0.12)] bg-[rgba(0,245,255,0.06)] px-2 py-2 text-[8px] font-bold uppercase tracking-[0.11em] text-white/42`}
@@ -318,6 +330,7 @@ export default function NbaLeaguePlayerStatLeadersPanel({
               );
             })}
           </div>
+          )}
         </div>
       </div>
     </div>

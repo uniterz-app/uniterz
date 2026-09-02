@@ -6,6 +6,10 @@ import {
   type NbaLeagueTeamStatsBundle,
 } from "@/lib/predict/nbaLeagueTeamStatsMocks";
 import { NBA_LEAGUE_TEAM_ADVANCED_METRIC_DEFS } from "@/lib/predict/nbaLeagueTeamStatsAdvanced";
+import {
+  isNbaLeagueStatsPreseason,
+  preseasonLeagueStatsAsOfLabel,
+} from "@/lib/nba/leagueStatsPreseason";
 import type {
   NbaLeagueTeamStatsFirestoreDoc,
   NbaLeagueTeamStatsSnapshotSource,
@@ -162,11 +166,14 @@ export function resolveLeagueTeamStatsMockFallback(): ResolvedLeagueTeamStats {
 export function resolveLeagueTeamStatsEmptyFallback(
   seasonKey: string
 ): ResolvedLeagueTeamStats {
+  const preseason = isNbaLeagueStatsPreseason(seasonKey);
   return {
     bundle: {
       season: [],
       last10: [],
-      asOfLabel: `UNAVAILABLE · ${seasonKey}`,
+      asOfLabel: preseason
+        ? preseasonLeagueStatsAsOfLabel(seasonKey)
+        : `UNAVAILABLE · ${seasonKey}`,
     },
     source: "empty",
     updatedAt: null,

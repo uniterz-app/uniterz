@@ -91,6 +91,9 @@ function mapPlayer(
     fg3: shoots(fg3m, fg3a),
     ft: shoots(ftm, fta),
     plusMinus: plusMinus(row.plus_minus),
+    oreb: n(row.oreb),
+    dreb: n(row.dreb),
+    pf: n(row.pf),
   };
 }
 

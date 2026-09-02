@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import HalftoneJerseyMark from "@/app/component/games/HalftoneJerseyMark";
 import {
   playerCardName,
@@ -12,6 +12,12 @@ import type {
   LiveGameStatsReport,
 } from "@/lib/games/liveGameStats";
 import {
+  liveGameBoxColumnValues,
+  liveGameBoxColumns,
+  liveGameBoxHasAdvancedData,
+  type LiveGameBoxScoreMode,
+} from "@/lib/games/liveGameBoxScoreColumns";
+import {
   getTeamJerseyPrimaryColor,
   getTeamJerseySecondaryColor,
 } from "@/lib/team-colors";
@@ -20,22 +26,6 @@ import { nameOxanium } from "@/lib/fonts";
 type Props = {
   report: LiveGameStatsReport;
 };
-
-const BOX_COLS = [
-  { key: "min", label: "MIN" },
-  { key: "pts", label: "PTS" },
-  { key: "reb", label: "REB" },
-  { key: "ast", label: "AST" },
-  { key: "stl", label: "STL" },
-  { key: "blk", label: "BLK" },
-  { key: "tov", label: "TO" },
-  { key: "fg", label: "FG" },
-  { key: "fg3", label: "3P" },
-  { key: "ft", label: "FT" },
-  { key: "pm", label: "+/-" },
-] as const;
-
-const EMPHASIS = new Set(["pts", "fg", "fg3"]);
 
 function hexToRgba(hex: string, alpha: number): string {
   const h = hex.replace("#", "");
@@ -60,23 +50,6 @@ function sortBoxPlayers(players: LiveGameBoxPlayer[]): LiveGameBoxPlayer[] {
     if (b.pts !== a.pts) return b.pts - a.pts;
     return b.min - a.min;
   });
-}
-
-function boxValues(p: LiveGameBoxPlayer): string[] {
-  const pm = p.plusMinus;
-  return [
-    String(p.min),
-    String(p.pts),
-    String(p.reb),
-    String(p.ast),
-    String(p.stl),
-    String(p.blk),
-    String(p.tov),
-    p.fg,
-    p.fg3,
-    p.ft,
-    pm > 0 ? `+${pm}` : String(pm),
-  ];
 }
 
 function IdentityCell({
@@ -154,9 +127,11 @@ function IdentityCell({
 }
 
 function StatsCells({
+  columns,
   values,
   header,
 }: {
+  columns: ReturnType<typeof liveGameBoxColumns>;
   values?: string[];
   header?: boolean;
 }) {
@@ -168,7 +143,7 @@ function StatsCells({
           "flex items-center gap-2 py-1.5 text-[11px] font-bold uppercase tracking-[0.12em] text-white/40",
         ].join(" ")}
       >
-        {BOX_COLS.map((c) => (
+        {columns.map((c) => (
           <span key={c.key} className="w-10 shrink-0 text-center">
             {c.label}
           </span>
@@ -179,19 +154,23 @@ function StatsCells({
 
   return (
     <div className="flex items-center gap-2 py-2">
-      {(values ?? []).map((v, i) => (
-        <p
-          key={BOX_COLS[i]!.key}
-          className={[
-            nameOxanium.className,
-            "w-10 shrink-0 text-center text-[14px] font-extrabold tabular-nums",
-            EMPHASIS.has(BOX_COLS[i]!.key) ? "text-white" : "text-white/78",
-          ].join(" ")}
-          style={{ transform: "skewX(-6deg)" }}
-        >
-          {v}
-        </p>
-      ))}
+      {(values ?? []).map((v, i) => {
+        const col = columns[i];
+        if (!col) return null;
+        return (
+          <p
+            key={col.key}
+            className={[
+              nameOxanium.className,
+              "w-10 shrink-0 text-center text-[14px] font-extrabold tabular-nums",
+              col.emphasis ? "text-white" : "text-white/78",
+            ].join(" ")}
+            style={{ transform: "skewX(-6deg)" }}
+          >
+            {v}
+          </p>
+        );
+      })}
     </div>
   );
 }
@@ -199,9 +178,11 @@ function StatsCells({
 function TeamBoxCard({
   block,
   defaultOpen,
+  mode,
 }: {
   block: LiveGameBoxTeam;
   defaultOpen: boolean;
+  mode: LiveGameBoxScoreMode;
 }) {
   const [open, setOpen] = useState(defaultOpen);
   const teamPrimary = getTeamJerseyPrimaryColor("nba", block.teamId);
@@ -210,6 +191,7 @@ function TeamBoxCard({
   const divider = hexToRgba(teamPrimary, 0.22);
   const sideLabel = block.side === "home" ? "HOME" : "AWAY";
   const players = sortBoxPlayers(block.players);
+  const columns = liveGameBoxColumns(mode);
 
   return (
     <section
@@ -277,7 +259,7 @@ function TeamBoxCard({
           <div className="min-w-max px-2 pb-2">
             <div className="flex items-center border-b border-white/[0.06]">
               <IdentityCell accent={teamPrimary} header />
-              <StatsCells header />
+              <StatsCells columns={columns} header />
             </div>
             {players.map((p) => (
               <div
@@ -285,7 +267,10 @@ function TeamBoxCard({
                 className="flex items-center border-b border-white/[0.06] last:border-b-0"
               >
                 <IdentityCell player={p} accent={teamPrimary} />
-                <StatsCells values={boxValues(p)} />
+                <StatsCells
+                  columns={columns}
+                  values={liveGameBoxColumnValues(p, mode)}
+                />
               </div>
             ))}
           </div>
@@ -295,11 +280,66 @@ function TeamBoxCard({
   );
 }
 
-export default function LiveGameBoxScorePanel({ report }: Props) {
+function BoxScoreModeToggle({
+  mode,
+  onChange,
+  advancedAvailable,
+}: {
+  mode: LiveGameBoxScoreMode;
+  onChange: (mode: LiveGameBoxScoreMode) => void;
+  advancedAvailable: boolean;
+}) {
+  const tabs: { id: LiveGameBoxScoreMode; label: string }[] = [
+    { id: "basic", label: "BASIC" },
+    { id: "advanced", label: "ADVANCED" },
+  ];
   return (
-    <div className="space-y-3">
-      <TeamBoxCard block={report.box.home} defaultOpen />
-      <TeamBoxCard block={report.box.away} defaultOpen={false} />
+    <div className="flex items-center justify-end gap-1.5">
+      {tabs.map((tab) => {
+        const active = mode === tab.id;
+        const disabled = tab.id === "advanced" && !advancedAvailable;
+        return (
+          <button
+            key={tab.id}
+            type="button"
+            disabled={disabled}
+            onClick={() => onChange(tab.id)}
+            className={[
+              nameOxanium.className,
+              "rounded-[2px] border px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-[0.14em] transition-colors",
+              active
+                ? "border-[#00F5FF] bg-[#00F5FF] text-[#050508]"
+                : "border-white/25 bg-transparent text-white/55",
+              disabled ? "cursor-not-allowed opacity-35" : "hover:border-white/45",
+            ].join(" ")}
+          >
+            {tab.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+export default function LiveGameBoxScorePanel({ report }: Props) {
+  const allPlayers = useMemo(
+    () => [...report.box.home.players, ...report.box.away.players],
+    [report.box.home.players, report.box.away.players]
+  );
+  const advancedAvailable = liveGameBoxHasAdvancedData(allPlayers);
+  const [mode, setMode] = useState<LiveGameBoxScoreMode>("basic");
+
+  return (
+    <div className="space-y-2.5">
+      <BoxScoreModeToggle
+        mode={mode}
+        onChange={setMode}
+        advancedAvailable={advancedAvailable}
+      />
+      <div className="space-y-3">
+        <TeamBoxCard block={report.box.home} defaultOpen mode={mode} />
+        <TeamBoxCard block={report.box.away} defaultOpen={false} mode={mode} />
+      </div>
     </div>
   );
 }

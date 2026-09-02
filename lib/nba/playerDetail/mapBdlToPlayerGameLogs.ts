@@ -135,6 +135,8 @@ export function mapBdlStatRowToPlayerGameLog(
     min: Math.round(mins * 10) / 10,
     pts: num(row.pts),
     reb: num(row.reb),
+    ...(row.oreb != null ? { oreb: num(row.oreb) } : {}),
+    ...(row.dreb != null ? { dreb: num(row.dreb) } : {}),
     ast: num(row.ast),
     stl: num(row.stl),
     blk: num(row.blk),

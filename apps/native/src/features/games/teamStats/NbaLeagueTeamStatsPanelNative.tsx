@@ -28,6 +28,12 @@ import {
 } from "../../../../../../lib/predict/nbaLeagueTeamStatsMocks";
 import { useLeagueTeamStatsBundle } from "../../../../../../lib/nba/useLeagueTeamStatsBundle";
 import { nbaDailyStatsUpdateFootnote } from "../../../../../../lib/nba/nbaStatsUpdateSchedule";
+import { isNbaLeagueStatsPreseason } from "../../../../../../lib/nba/leagueStatsPreseason";
+import {
+  leagueStatsTableEmptyCopy,
+  teamLast10HasPlayData,
+} from "../../../../../../lib/nba/leagueStatsEmptyState";
+import NbaLeagueStatsTableEmptyNative from "../stats/NbaLeagueStatsTableEmptyNative";
 import {
   coerceModeForPhase,
   modeTabLabel,
@@ -110,10 +116,13 @@ export default function NbaLeagueTeamStatsPanelNative({
   const { width: screenW } = useWindowDimensions();
   const railW = Math.round(screenW * 0.22);
   const { bottomContentReserveY } = useBottomTabBarInsets();
-  const { bundle, source, loading, error } = useLeagueTeamStatsBundle({
+  const { bundle, loading, error } = useLeagueTeamStatsBundle({
     apiBaseUrl: getUniterzApiBaseUrl(),
   });
-  const updateFootnote = nbaDailyStatsUpdateFootnote(isJa ? "ja" : "en", bundle.asOfLabel);
+  const isPreseason = isNbaLeagueStatsPreseason();
+  const updateFootnote = nbaDailyStatsUpdateFootnote(isJa ? "ja" : "en", bundle.asOfLabel, {
+    preseason: isPreseason,
+  });
   const [phase, setPhase] = useState<NbaLeagueStatsPhase>("season");
   const [mode, setMode] = useState<NbaLeagueStatsMode>("per_game");
   const groups = useMemo(() => leagueTeamRailGroupsForMode(mode), [mode]);
@@ -158,6 +167,13 @@ export default function NbaLeagueTeamStatsPanelNative({
     });
     return sortLeagueTeamRows(base, metric, sortDir);
   }, [bundle, phase, mode, metric, sortDir]);
+
+  const emptyCopy = leagueStatsTableEmptyCopy(isJa ? "ja" : "en", mode);
+  const showEmptyTable =
+    !loading &&
+    (mode === "last10"
+      ? !teamLast10HasPlayData(bundle.last10)
+      : rows.length === 0);
 
   return (
     <View style={styles.root}>
@@ -278,6 +294,9 @@ export default function NbaLeagueTeamStatsPanelNative({
             {isJa ? metricMeta.hintJa : metricMeta.hintEn}
           </Text>
 
+          {showEmptyTable ? (
+            <NbaLeagueStatsTableEmptyNative copy={emptyCopy} />
+          ) : (
           <ScrollView
             style={styles.tableScroll}
             contentContainerStyle={[
@@ -392,6 +411,7 @@ export default function NbaLeagueTeamStatsPanelNative({
               })}
             </View>
           </ScrollView>
+          )}
         </View>
       </View>
     </View>

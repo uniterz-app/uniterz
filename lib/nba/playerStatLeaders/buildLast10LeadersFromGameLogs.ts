@@ -2,8 +2,8 @@
  * Firestore `nbaPlayerGameLogs` → Player Leaders の last10 ボード。
  * BDL 追加呼び出しなし（ingest 済みログの集計のみ）。
  *
- * 出せる指標: box score 系（pts/reb/ast…・FG%/3P%/FT%・EFF）。
- * Advanced / oreb / dreb はログに無いので空のまま。
+ * 出せる指標: box score 系（pts/reb/ast…・FG%/3P%/FT%・EFF・OREB/DREB）。
+ * Advanced はログに無いので空のまま。
  */
 import type { Firestore } from "firebase-admin/firestore";
 import { nbaConferenceForTeam } from "@/lib/nba/nbaConferenceTeams";
@@ -69,6 +69,8 @@ type Agg = {
   gp: number;
   pts: number;
   reb: number;
+  oreb: number;
+  dreb: number;
   ast: number;
   stl: number;
   blk: number;
@@ -92,6 +94,8 @@ function aggregateLast10(
 
   let pts = 0;
   let reb = 0;
+  let oreb = 0;
+  let dreb = 0;
   let ast = 0;
   let stl = 0;
   let blk = 0;
@@ -105,9 +109,20 @@ function aggregateLast10(
   let fta = 0;
   let effSum = 0;
 
+  let hasOreb = false;
+  let hasDreb = false;
+
   for (const g of slice) {
     pts += g.pts;
     reb += g.reb;
+    if (typeof g.oreb === "number" && Number.isFinite(g.oreb)) {
+      oreb += g.oreb;
+      hasOreb = true;
+    }
+    if (typeof g.dreb === "number" && Number.isFinite(g.dreb)) {
+      dreb += g.dreb;
+      hasDreb = true;
+    }
     ast += g.ast;
     stl += g.stl;
     blk += g.blk;
@@ -132,6 +147,8 @@ function aggregateLast10(
     gp: slice.length,
     pts,
     reb,
+    oreb: hasOreb ? oreb : 0,
+    dreb: hasDreb ? dreb : 0,
     ast,
     stl,
     blk,
@@ -203,6 +220,8 @@ export function buildLast10LeadersFromGameLogs(
 
   perGame("pts", (a) => a.pts);
   perGame("reb", (a) => a.reb);
+  if (aggs.some((a) => a.oreb > 0)) perGame("oreb", (a) => a.oreb);
+  if (aggs.some((a) => a.dreb > 0)) perGame("dreb", (a) => a.dreb);
   perGame("ast", (a) => a.ast);
   perGame("stl", (a) => a.stl);
   perGame("blk", (a) => a.blk);
@@ -238,7 +257,7 @@ export function buildLast10LeadersFromGameLogs(
       .map((a) => toRow(a, round3(a.ftm / a.fta)))
   );
 
-  // oreb / dreb / advanced — ログに無いので空
+  // advanced — ログに無いので空
   return board;
 }
 

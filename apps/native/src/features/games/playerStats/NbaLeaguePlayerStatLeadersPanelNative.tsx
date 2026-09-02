@@ -21,6 +21,9 @@ import {
 import { formatNbaPlayerListName } from "@/lib/nba/formatNbaPlayerListName";
 import { usePlayerStatLeadersBundle } from "../../../../../../lib/nba/usePlayerStatLeadersBundle";
 import { nbaDailyStatsUpdateFootnote } from "../../../../../../lib/nba/nbaStatsUpdateSchedule";
+import { isNbaLeagueStatsPreseason } from "../../../../../../lib/nba/leagueStatsPreseason";
+import { leagueStatsTableEmptyCopy } from "../../../../../../lib/nba/leagueStatsEmptyState";
+import NbaLeagueStatsTableEmptyNative from "../stats/NbaLeagueStatsTableEmptyNative";
 import {
   coerceModeForPhase,
   modeTabLabel,
@@ -107,10 +110,13 @@ export default function NbaLeaguePlayerStatLeadersPanelNative({
   const { width: screenW } = useWindowDimensions();
   const railW = Math.round(screenW * 0.22);
   const { bottomContentReserveY } = useBottomTabBarInsets();
-  const { bundle, source, loading, error } = usePlayerStatLeadersBundle({
+  const { bundle, loading, error } = usePlayerStatLeadersBundle({
     apiBaseUrl: getUniterzApiBaseUrl(),
   });
-  const updateFootnote = nbaDailyStatsUpdateFootnote(isJa ? "ja" : "en", bundle.asOfLabel);
+  const isPreseason = isNbaLeagueStatsPreseason();
+  const updateFootnote = nbaDailyStatsUpdateFootnote(isJa ? "ja" : "en", bundle.asOfLabel, {
+    preseason: isPreseason,
+  });
   const [phase, setPhase] = useState<NbaLeagueStatsPhase>("season");
   const [mode, setMode] = useState<NbaLeagueStatsMode>("per_game");
   const groups = useMemo(() => leaguePlayerRailGroupsForMode(mode), [mode]);
@@ -152,6 +158,9 @@ export default function NbaLeaguePlayerStatLeadersPanelNative({
     });
     return sortDir === "asc" ? [...list].reverse() : list;
   }, [bundle, phase, mode, metric, sortDir]);
+
+  const emptyCopy = leagueStatsTableEmptyCopy(isJa ? "ja" : "en", mode);
+  const showEmptyTable = !loading && leaders.length === 0;
 
   return (
     <View style={styles.root}>
@@ -278,6 +287,9 @@ export default function NbaLeaguePlayerStatLeadersPanelNative({
             {isJa ? metricMeta.hintJa : metricMeta.hintEn}
           </Text>
 
+          {showEmptyTable ? (
+            <NbaLeagueStatsTableEmptyNative copy={emptyCopy} />
+          ) : (
           <ScrollView
             style={styles.tableScroll}
             contentContainerStyle={{ paddingBottom: bottomContentReserveY }}
@@ -369,6 +381,7 @@ export default function NbaLeaguePlayerStatLeadersPanelNative({
               })}
             </View>
           </ScrollView>
+          )}
         </View>
       </View>
     </View>

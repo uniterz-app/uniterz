@@ -20,11 +20,6 @@ export default function TeamStatsPreviewScreenNative({
     <MobilePageShell
       title={isJa ? "TEAM STATS" : "TEAM STATS"}
       eyebrow="STATS"
-      subtitle={
-        isJa
-          ? "共有 API から取得。"
-          : "Loaded via shared API."
-      }
       appBackground
       onClose={onClose}
     >

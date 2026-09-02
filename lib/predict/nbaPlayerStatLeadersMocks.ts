@@ -368,11 +368,13 @@ export function leaguePlayerRailGroups(): NbaPlayerRailGroup[] {
 }
 
 /**
- * Last 10 は試合ログ由来の box 指標のみ（advanced / OREB / DREB はログに無い）。
+ * Last 10 は試合ログ由来の box 指標（advanced は season のみ）。
  */
 const PLAYER_LAST10_METRIC_IDS = new Set<NbaPlayerLeaderMetricId>([
   "pts",
   "reb",
+  "oreb",
+  "dreb",
   "ast",
   "stl",
   "blk",

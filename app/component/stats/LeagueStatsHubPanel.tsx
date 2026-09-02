@@ -37,16 +37,7 @@ export default function LeagueStatsHubPanel({
 }: Props) {
   const router = useRouter();
   const [tab, setTab] = useState<TabId>(initialTab);
-  const isJa = language === "ja";
   const title = tab === "team" ? "TEAM STATS" : "PLAYER STATS";
-  const subtitle =
-    tab === "team"
-      ? isJa
-        ? "共有 API から取得。"
-        : "Loaded via shared API."
-      : isJa
-        ? "指標トップリーダー"
-        : "Stat leaderboards.";
 
   const body = (
     <div className="space-y-3 text-white">
@@ -125,7 +116,6 @@ export default function LeagueStatsHubPanel({
       <MobilePageShell
         title={title}
         eyebrow="STATS"
-        subtitle={subtitle}
         onClose={onClose ?? (() => router.back())}
       >
         {body}

@@ -20,6 +20,8 @@ import {
   nbaGameDocIdFromBdlId,
 } from "@/lib/nba/bdl/mapBdlGameToNbaGameDoc";
 import { normalizeLiveGameStatsDoc } from "@/lib/games/liveGameStats";
+import { fetchBdlGameAdvancedStats } from "@/lib/nba/bdl/fetchBdlGameAdvancedStats";
+import { mergeGameAdvancedIntoLiveStatsDoc } from "@/lib/nba/bdl/mergeGameAdvancedIntoLiveStats";
 
 export type IngestNbaLiveGamesResult = {
   ok: true;
@@ -133,6 +135,30 @@ export async function ingestNbaLiveGamesFromBdl(
       }),
       mapped
     );
+  }
+
+  const bdlGameIds = [
+    ...new Set(
+      mappedBoxes
+        .map((m) => m.bdlGameId)
+        .filter((id): id is number => id != null && Number.isFinite(id))
+    ),
+  ];
+  const advancedRows =
+    bdlGameIds.length > 0 ? await fetchBdlGameAdvancedStats(bdlGameIds) : [];
+  const advancedByGameId = new Map<number, typeof advancedRows>();
+  for (const row of advancedRows) {
+    const gid = row.game?.id;
+    if (gid == null || !Number.isFinite(gid)) continue;
+    const list = advancedByGameId.get(gid) ?? [];
+    list.push(row);
+    advancedByGameId.set(gid, list);
+  }
+  for (const mapped of mappedBoxes) {
+    if (mapped.bdlGameId == null) continue;
+    const rows = advancedByGameId.get(mapped.bdlGameId);
+    if (!rows?.length) continue;
+    mapped.liveStats = mergeGameAdvancedIntoLiveStatsDoc(mapped.liveStats, rows);
   }
 
   let gamesUpdated = 0;

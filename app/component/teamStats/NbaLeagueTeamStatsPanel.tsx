@@ -9,6 +9,9 @@ import { getMobileTeamName } from "@/lib/team-name-split-mobile";
 import { getTeamPrimaryColor } from "@/lib/team-colors";
 import { useLeagueTeamStatsBundle } from "@/lib/nba/useLeagueTeamStatsBundle";
 import { nbaDailyStatsUpdateFootnote } from "@/lib/nba/nbaStatsUpdateSchedule";
+import { isNbaLeagueStatsPreseason } from "@/lib/nba/leagueStatsPreseason";
+import { leagueStatsTableEmptyCopy, teamLast10HasPlayData } from "@/lib/nba/leagueStatsEmptyState";
+import NbaLeagueStatsTableEmpty from "@/app/component/stats/NbaLeagueStatsTableEmpty";
 import {
   CyberSlantedTab,
   CyberSlantedTabBar,
@@ -275,7 +278,10 @@ export default function NbaLeagueTeamStatsPanel({
   const isJa = language === "ja";
   const reduceMotion = useReducedMotion();
   const { bundle, loading } = useLeagueTeamStatsBundle();
-  const updateFootnote = nbaDailyStatsUpdateFootnote(isJa ? "ja" : "en", bundle.asOfLabel);
+  const isPreseason = isNbaLeagueStatsPreseason();
+  const updateFootnote = nbaDailyStatsUpdateFootnote(isJa ? "ja" : "en", bundle.asOfLabel, {
+    preseason: isPreseason,
+  });
   const [phase, setPhase] = useState<NbaLeagueStatsPhase>("season");
   const [mode, setMode] = useState<NbaLeagueStatsMode>("per_game");
   const groups = useMemo(() => leagueTeamRailGroupsForMode(mode), [mode]);
@@ -325,6 +331,13 @@ export default function NbaLeagueTeamStatsPanel({
   const pickedRows = picked
     .map((id) => rows.find((r) => r.teamId === id) ?? bundle.season.find((r) => r.teamId === id))
     .filter(Boolean) as NbaLeagueTeamStatRow[];
+
+  const emptyCopy = leagueStatsTableEmptyCopy(isJa ? "ja" : "en", mode);
+  const showEmptyTable =
+    !loading &&
+    (mode === "last10"
+      ? !teamLast10HasPlayData(bundle.last10)
+      : rows.length === 0);
 
   function togglePick(teamId: string) {
     setPicked((prev) => {
@@ -438,6 +451,9 @@ export default function NbaLeagueTeamStatsPanel({
             </p>
           )}
 
+          {showEmptyTable ? (
+            <NbaLeagueStatsTableEmpty copy={emptyCopy} />
+          ) : (
           <div className="overflow-hidden rounded-[2px] border border-[rgba(0,245,255,0.16)] bg-[rgba(4,16,24,0.35)]">
             <div
               className={[
@@ -592,6 +608,7 @@ export default function NbaLeagueTeamStatsPanel({
               })}
             </ul>
           </div>
+          )}
         </div>
       </div>
 

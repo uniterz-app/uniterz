@@ -20,11 +20,6 @@ export default function PlayerStatsPreviewScreenNative({
     <MobilePageShell
       title={isJa ? "PLAYER STATS" : "PLAYER STATS"}
       eyebrow="STATS"
-      subtitle={
-        isJa
-          ? "指標トップリーダー"
-          : "Stat leaderboards."
-      }
       appBackground
       onClose={onClose}
     >

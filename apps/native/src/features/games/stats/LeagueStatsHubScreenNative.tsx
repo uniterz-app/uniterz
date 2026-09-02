@@ -28,24 +28,13 @@ export default function LeagueStatsHubScreenNative({
   onSelectPlayer,
   initialTab = "team",
 }: Props) {
-  const isJa = language === "ja";
   const [tab, setTab] = useState<TabId>(initialTab);
-
   const title = tab === "team" ? "TEAM STATS" : "PLAYER STATS";
-  const subtitle =
-    tab === "team"
-      ? isJa
-        ? "共有 API から取得。"
-        : "Loaded via shared API."
-      : isJa
-        ? "指標トップリーダー"
-        : "Stat leaderboards.";
 
   return (
     <GamesNbaSubpageShellNative
       title={title}
       eyebrow="STATS"
-      subtitle={subtitle}
       onBack={onClose}
       scroll={false}
       contentStyle={styles.shell}
