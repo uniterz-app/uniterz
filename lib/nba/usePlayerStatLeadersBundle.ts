@@ -19,6 +19,7 @@ import type {
   NbaPlayerStatLeadersApiPayload,
   NbaPlayerStatLeadersSnapshotSource,
 } from "@/lib/nba/playerStatLeaders/playerStatLeadersTypes";
+import { trackAppEvent } from "@/lib/observability/trackAppEvent";
 
 function emptyPlayerLeadersBoard(): Record<
   NbaPlayerLeaderMetricId,
@@ -132,9 +133,6 @@ export function usePlayerStatLeadersBundle(
         if (cancelled) return;
         setResolved(resolvePayload(data));
         if (data.source === "empty") {
-          const { trackAppEvent } = await import(
-            "@/lib/observability/trackAppEvent"
-          );
           trackAppEvent({
             name: "stats_empty",
             props: { kind: "player", season },

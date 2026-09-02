@@ -14,6 +14,7 @@ import type {
   NbaLeagueTeamStatsSnapshotSource,
 } from "@/lib/nba/leagueTeamStats/leagueTeamStatsTypes";
 import type { NbaLeagueTeamStatsBundle } from "@/lib/predict/nbaLeagueTeamStatsMocks";
+import { trackAppEvent } from "@/lib/observability/trackAppEvent";
 
 const EMPTY_BUNDLE: NbaLeagueTeamStatsBundle = {
   season: [],
@@ -114,9 +115,6 @@ export function useLeagueTeamStatsBundle(
         if (cancelled) return;
         setResolved(resolvePayload(data));
         if (data.source === "empty") {
-          const { trackAppEvent } = await import(
-            "@/lib/observability/trackAppEvent"
-          );
           trackAppEvent({ name: "stats_empty", props: { kind: "team", season } });
         }
       })
