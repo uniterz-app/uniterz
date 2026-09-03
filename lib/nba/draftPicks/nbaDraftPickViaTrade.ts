@@ -643,8 +643,24 @@ export const NBA_DRAFT_PICK_VIA_TRADE: Record<string, DraftPickViaTrade> = {
     viaTradeEn: "Acquired via 2026 IND–LAC trade",
   },
   "lac-2029-1-own-swap-phi": {
-    viaTradeJa: "2023年 James Harden のトレードで取得",
-    viaTradeEn: "via 2023 James Harden trade",
+    viaTradeJa: "2026年9月 NBA処分により没収（Kawhi Leonard 調査）",
+    viaTradeEn: "Forfeited by NBA Sep 2026 (Kawhi Leonard investigation)",
+  },
+  "lac-2030-1-own": {
+    viaTradeJa: "2026年9月 NBA処分により没収（Kawhi Leonard 調査）",
+    viaTradeEn: "Forfeited by NBA Sep 2026 (Kawhi Leonard investigation)",
+  },
+  "lac-2031-1-own": {
+    viaTradeJa: "2026年9月 NBA処分により没収（Kawhi Leonard 調査）",
+    viaTradeEn: "Forfeited by NBA Sep 2026 (Kawhi Leonard investigation)",
+  },
+  "lac-2032-1-own": {
+    viaTradeJa: "2026年9月 NBA処分により没収（Kawhi Leonard 調査）",
+    viaTradeEn: "Forfeited by NBA Sep 2026 (Kawhi Leonard investigation)",
+  },
+  "lac-2033-1-own": {
+    viaTradeJa: "2026年9月 NBA処分により没収（Kawhi Leonard 調査）",
+    viaTradeEn: "Forfeited by NBA Sep 2026 (Kawhi Leonard investigation)",
   },
   "lac-2029-2-own-out": {
     viaTradeJa: "2023年 James Harden のトレードで放出",
@@ -1223,8 +1239,10 @@ export const NBA_DRAFT_PICK_VIA_TRADE: Record<string, DraftPickViaTrade> = {
     viaTradeEn: "Acquired via 2026 PHI–OKC trade",
   },
   "phi-2029-1-own-swap-lac": {
-    viaTradeJa: "2023年 James Harden のトレードで取得",
-    viaTradeEn: "via 2023 James Harden trade",
+    viaTradeJa:
+      "自前。旧LACスワップ権は2026年9月のLAC指名権没収により消滅（Harden取引由来）",
+    viaTradeEn:
+      "Own pick; former LAC swap voided after Sep 2026 LAC pick forfeiture (Harden trade origin)",
   },
   "phi-2030-2-own-out": {
     viaTradeJa: "2025年 PHI–DAL 取引で放出",
@@ -1610,10 +1628,20 @@ export function resolveDraftPickOrigin(pick: DraftPickOriginInput): DraftPickOri
     const isOut =
       pick.isOutgoing === true ||
       pick.kind === "outgoing" ||
-      /放出|Sent out/.test(blob);
+      pick.kind === "forfeited" ||
+      /放出|Sent out|没収|Forfeit/i.test(blob);
     const isSwap =
       pick.isSwap === true ||
-      /で取得|スワップ|swap/i.test(blob);
+      (/で取得|スワップ|swap/i.test(blob) && pick.kind !== "forfeited");
+    if (pick.kind === "forfeited" || /没収|Forfeit/i.test(blob)) {
+      return {
+        labelJa: "没収経緯",
+        labelEn: "FORFEITED",
+        textJa: viaJa ?? viaEn!,
+        textEn: viaEn ?? viaJa!,
+        isTradeRelated: false,
+      };
+    }
     if (isOut) {
       return {
         labelJa: "放出経緯",

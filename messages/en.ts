@@ -661,6 +661,7 @@ const en: Messages = {
     helpAndGuide: "Help & Guide",
     termsOfService: "Terms of Service",
     privacyPolicy: "Privacy Policy",
+    commercialLaw: "Specified Commercial Transactions Notice",
     communityGuidelines: "Community Guidelines",
     contact: "Contact",
     featureRequest: "Feature Request",

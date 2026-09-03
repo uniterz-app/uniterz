@@ -107,6 +107,20 @@ function padUiMembers(members: SquadMember[]): SquadMember[] {
   return filled;
 }
 
+/** 承認直後に MY SQUAD へ申請者を足す（空き枠を詰める） */
+export function appendMemberToSquadUi(
+  squad: Squad,
+  member: Omit<SquadMember, "empty">
+): Squad {
+  const active = squad.members.filter((m) => !m.empty);
+  if (active.some((m) => m.uid === member.uid)) return squad;
+  if (active.length >= SQUAD_BATTLE_MAX_MEMBERS) return squad;
+  return {
+    ...squad,
+    members: padUiMembers([...active, { ...member, empty: false }]),
+  };
+}
+
 function entryProfileToMember(
   p: GroupBattleEntryProfile,
   selfUid: string | null

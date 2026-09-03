@@ -195,6 +195,31 @@ export const buildCumulativeRankingSnapshotCron = onSchedule(
 );
 
 /* ============================================================================
+ * Group battle snapshots (23:30 JST) — 夜帯試合後の再集計 + フェーズ/Unit
+ * ==========================================================================*/
+
+export const rebuildGroupBattleSnapshotsEveningCron = onSchedule(
+  {
+    schedule: "30 23 * * *",
+    timeZone: "Asia/Tokyo",
+    memory: "512MiB",
+    timeoutSeconds: 300,
+  },
+  async () => {
+    try {
+      await advanceDueGroupBattlePhases();
+      await buildGroupBattlePeriodSnapshots();
+      await grantAllFinalGroupBattleUnits();
+    } catch (err) {
+      console.error(
+        "[rebuildGroupBattleSnapshotsEveningCron] failed",
+        err
+      );
+    }
+  }
+);
+
+/* ============================================================================
  * Game start push (10 min) — 15 分以内に開始する試合の予想者へ
  * ==========================================================================*/
 

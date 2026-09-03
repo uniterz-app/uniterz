@@ -654,6 +654,7 @@ const ar: Messages = {
     helpAndGuide: "المساعدة والدليل",
     termsOfService: "شروط الخدمة",
     privacyPolicy: "سياسة الخصوصية",
+    commercialLaw: "إشعار المعاملات التجارية المحددة",
     communityGuidelines: "إرشادات المجتمع",
     contact: "اتصل بنا",
     featureRequest: "طلب ميزة",

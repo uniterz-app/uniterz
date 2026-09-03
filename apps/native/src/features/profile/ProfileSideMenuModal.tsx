@@ -67,6 +67,7 @@ type Props = {
     | "terms"
     | "contact"
     | "privacy"
+    | "commercialLaw"
     | "password"
     | "notifications"
     | "featureRequest"
@@ -181,6 +182,7 @@ export default function ProfileSideMenuModal({
         terms: "利用規約",
         contact: "お問い合わせ",
         privacy: "プライバシーポリシー",
+        commercialLaw: "特定商取引法に基づく表記",
         password: "パスワード変更",
         notifications: "通知設定",
         featureRequest: "機能リクエスト",
@@ -210,6 +212,7 @@ export default function ProfileSideMenuModal({
         terms: "Terms of Service",
         contact: "Contact",
         privacy: "Privacy Policy",
+        commercialLaw: "Commercial Transactions Notice",
         password: "Change Password",
         notifications: "Notifications",
         featureRequest: "Feature Request",
@@ -238,6 +241,7 @@ export default function ProfileSideMenuModal({
       | "terms"
       | "contact"
       | "privacy"
+      | "commercialLaw"
       | "password"
       | "notifications"
       | "featureRequest"
@@ -470,6 +474,14 @@ export default function ProfileSideMenuModal({
                       onPress={() => openUserPage("privacy")}
                     >
                       {labels.privacy}
+                    </SideMenuItemButtonNative>
+                    <SideMenuItemButtonNative
+                      icon="scale-balance"
+                      dense
+                      labelStyle={labelStyle}
+                      onPress={() => openUserPage("commercialLaw")}
+                    >
+                      {labels.commercialLaw}
                     </SideMenuItemButtonNative>
                     <SideMenuItemButtonNative
                       icon="key-outline"

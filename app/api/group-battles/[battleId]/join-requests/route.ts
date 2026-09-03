@@ -70,6 +70,9 @@ export async function POST(req: Request, ctx: Ctx) {
     if (squad.memberCount >= GROUP_BATTLE_MAX_MEMBERS) {
       return jsonErr("squad_full", 409);
     }
+    if (squad.status !== "forming" && squad.status !== "entered") {
+      return jsonErr("squad_not_open", 409);
+    }
 
     const dup = await joinRequestsCol(adminDb, battleId)
       .where("applicantUid", "==", uid)

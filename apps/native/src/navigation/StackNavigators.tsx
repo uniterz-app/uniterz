@@ -512,6 +512,12 @@ function ProfileStackScreen() {
           }
         />
         <ProfileStack.Screen
+          name="CommercialLaw"
+          getComponent={() =>
+            require("../features/legal/CommercialLawScreenNative").default
+          }
+        />
+        <ProfileStack.Screen
           name="ElectronicNotice"
           getComponent={() =>
             require("../features/legal/ElectronicNoticeScreenNative").default

@@ -119,6 +119,14 @@ export async function fetchGroupBattleBootstrapNative(
         squadName: string;
         fromUid: string;
         fromDisplayName: string;
+        openSlots: number;
+        members: Array<{
+          uid: string;
+          displayName: string;
+          handle: string | null;
+          plan?: "free" | "pro";
+          photoURL?: string | null;
+        }>;
       }>;
       joinRequests: {
         incoming: GroupBattleJoinRequestApiItem[];
@@ -153,6 +161,7 @@ export async function fetchGroupBattleRankingsNative(
     label: string;
     snapshot: {
       status: "live" | "final";
+      builtAtMs?: number;
       rows: Array<{
         rank: number;
         squadId: string;
@@ -285,6 +294,14 @@ export async function fetchGroupBattleIncomingInvitesNative(
       status: string;
       source: string;
       createdAtMs: number;
+      openSlots: number;
+      members: Array<{
+        uid: string;
+        displayName: string;
+        handle: string | null;
+        plan?: "free" | "pro";
+        photoURL?: string | null;
+      }>;
     }>;
   };
 }
@@ -312,6 +329,7 @@ export async function acceptGroupBattleInviteNative(
       status: res.status,
     };
   }
+  invalidateGroupBattleBootstrapCache();
   return json as { ok: true; decision: "accepted" };
 }
 
@@ -365,7 +383,15 @@ export async function joinGroupBattleByInviteCodeNative(
       status: res.status,
     };
   }
-  return json as { ok: true; squadId: string };
+  invalidateGroupBattleBootstrapCache();
+  return json as {
+    ok: true;
+    squadId: string;
+    name: string;
+    memberUids: string[];
+    memberCount: number;
+    status: string;
+  };
 }
 
 export async function fetchGroupBattleOpenSquadsNative(
@@ -419,6 +445,7 @@ export async function createGroupBattleSquadNative(
       status: res.status,
     };
   }
+  invalidateGroupBattleBootstrapCache();
   return json as { ok: true; squadId: string; inviteCode: string };
 }
 
@@ -446,6 +473,7 @@ export async function applyToGroupBattleSquadNative(
       status: res.status,
     };
   }
+  invalidateGroupBattleBootstrapCache();
   return json as { ok: true; requestId: string };
 }
 
@@ -494,6 +522,7 @@ export async function resolveGroupBattleJoinRequestNative(
       status: res.status,
     };
   }
+  invalidateGroupBattleBootstrapCache();
   return json as { ok: true };
 }
 
@@ -568,6 +597,7 @@ export async function cancelGroupBattleJoinRequestNative(
       status: res.status,
     };
   }
+  invalidateGroupBattleBootstrapCache();
   return json as { ok: true };
 }
 
@@ -594,6 +624,7 @@ export async function leaveGroupBattleSquadNative(
       status: res.status,
     };
   }
+  invalidateGroupBattleBootstrapCache();
   return json as { ok: true };
 }
 
@@ -620,5 +651,6 @@ export async function dissolveGroupBattleSquadNative(
       status: res.status,
     };
   }
+  invalidateGroupBattleBootstrapCache();
   return json as { ok: true };
 }

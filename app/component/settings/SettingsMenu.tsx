@@ -11,6 +11,8 @@ import {
   HelpCircle,
   LogOut,
   FileText,
+  Shield,
+  Scale,
   Users,
   Mail,
   Award,
@@ -130,6 +132,8 @@ export default function SettingsMenu({
   );
   const helpPath = p("/web/help", "/mobile/help");
   const termsPath = p("/web/terms", "/mobile/terms");
+  const privacyPath = p("/web/privacy", "/mobile/privacy");
+  const lawPath = p("/web/law", "/mobile/law");
   const guidelinesPath = p(
     "/web/community-guidelines",
     "/mobile/community-guidelines"
@@ -432,6 +436,26 @@ export default function SettingsMenu({
             onClick={() => pushFromMenu(termsPath)}
           >
             <span className={cn(isEn && "uppercase")}>{m.settings.termsOfService}</span>
+          </SideMenuItemButton>
+
+          <SideMenuItemButton
+            dense
+            icon={Shield}
+            iconSize={15}
+            labelStyle={menuLabelFont}
+            onClick={() => pushFromMenu(privacyPath)}
+          >
+            <span className={cn(isEn && "uppercase")}>{m.settings.privacyPolicy}</span>
+          </SideMenuItemButton>
+
+          <SideMenuItemButton
+            dense
+            icon={Scale}
+            iconSize={15}
+            labelStyle={menuLabelFont}
+            onClick={() => pushFromMenu(lawPath)}
+          >
+            <span className={cn(isEn && "uppercase")}>{m.settings.commercialLaw}</span>
           </SideMenuItemButton>
 
           <SideMenuItemButton

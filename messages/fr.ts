@@ -656,6 +656,7 @@ const fr: Messages = {
     helpAndGuide: "Aide & Guide",
     termsOfService: "Conditions d'utilisation",
     privacyPolicy: "Politique de confidentialité",
+    commercialLaw: "Mentions légales (transactions commerciales)",
     communityGuidelines: "Règles de la communauté",
     contact: "Contact",
     featureRequest: "Demande de fonctionnalité",

@@ -123,9 +123,11 @@ import {
   mapCurrentMySquadToUiSquad,
   mapOpenSquadApiToListings,
   mapJoinRequestApiToUi,
+  appendMemberToSquadUi,
 } from "../../../../../lib/groupBattles/mapSnapshotRowsToSquads";
 import {
   SQUAD_BATTLE_MOCK_DEADLINE_LABEL,
+  SQUAD_BATTLE_INVITE_CODE_PLACEHOLDER,
   SQUAD_BATTLE_IDLE_PANEL,
   SQUAD_BATTLE_RULES_SECTION,
   SQUAD_BATTLE_RANK_SPECTATOR_HINT,
@@ -156,9 +158,14 @@ import {
   squadRankingList,
   squadScoreGaps,
   groupBattlePhaseToUiPhase,
+  canMutateSquadBattleJoinUi,
+  resolveSquadBattleWeekIndex,
+  squadBattleWeekChipOptions,
+  formatSquadBattleBoardBuiltAt,
   type SquadBattleUiPhase,
   type SquadBattleWeekIndex,
 } from "../../../../../lib/squads/squadBattleUiCopy";
+import { formatGroupBattleAvgPoints } from "../../../../../lib/groupBattles/score";
 
 /** GOLD LEGION アクセント（CyberSubpageShell / タブは共有シアンのまま） */
 const JOIN_BATTLE_AMBER = SQUAD_GOLD_NATIVE.acc;
@@ -316,19 +323,22 @@ function SquadEmptyHintNative({ children }: { children: ReactNode }) {
   );
 }
 
-/** 週間 W1〜W4 切替（CyberSlantedTab は使わない） */
+/** 週間チップ（weeklyLabels 本数に追従） */
 function SquadWeekChipsNative({
   weekIndex,
   onChange,
+  weeklyLabels,
 }: {
   weekIndex: SquadBattleWeekIndex;
   onChange: (w: SquadBattleWeekIndex) => void;
+  weeklyLabels: readonly string[];
 }) {
-  const active = SQUAD_BATTLE_WEEK_OPTIONS.find((w) => w.index === weekIndex);
+  const options = squadBattleWeekChipOptions(weeklyLabels);
+  const active = options.find((w) => w.index === weekIndex);
   return (
     <View style={styles.weekChipsWrap}>
       <View style={styles.weekChipsRow}>
-        {SQUAD_BATTLE_WEEK_OPTIONS.map((w) => {
+        {options.map((w) => {
           const on = w.index === weekIndex;
           return (
             <Pressable
@@ -567,7 +577,7 @@ function SquadAvgDayDeltaNative({ delta }: { delta?: number | null }) {
   return <Text style={styles.dayDelta}>{text}</Text>;
 }
 
-/** Web `SquadPtsWithDayDelta` 相当 — 数字の右に +N / pts を縦積み */
+/** Web `SquadPtsWithDayDelta` 相当 — 平均は小数1桁 */
 function SquadPtsWithDayDeltaNative({
   value,
   delta,
@@ -581,9 +591,17 @@ function SquadPtsWithDayDeltaNative({
   tone?: "default" | "accent" | "muted";
   color?: string;
 }) {
+  const glow =
+    tone === "muted" ? 0.35 : tone === "accent" ? 0.85 : 0.72;
   return (
     <View style={styles.ptsWithDeltaRow}>
-      <SquadPointsTextNative value={value} size={size} tone={tone} color={color} />
+      <CyberNumberNative
+        value={formatGroupBattleAvgPoints(value)}
+        size={size}
+        glowIntensity={glow}
+        format={false}
+        color={color}
+      />
       <View style={styles.ptsWithDeltaStack}>
         <SquadAvgDayDeltaNative delta={delta} />
         <Text style={styles.ptsWithDeltaSuffix}>pts</Text>
@@ -1355,7 +1373,7 @@ function JoinByInviteCodeModalNative({
             <TextInput
               value={code}
               onChangeText={(t) => setCode(t.slice(0, 24))}
-              placeholder={SQUAD_BATTLE_MOCK_INVITE_CODE}
+              placeholder={SQUAD_BATTLE_INVITE_CODE_PLACEHOLDER}
               placeholderTextColor="rgba(255,255,255,0.2)"
               autoFocus
               autoCapitalize="characters"
@@ -2152,7 +2170,7 @@ function IncomingInviteModalNative({
 }) {
   if (!invite) return null;
   const members = invite.members ?? [];
-  const deadline = invite.deadlineLabel ?? SQUAD_BATTLE_MOCK_DEADLINE_LABEL;
+  const deadline = invite.deadlineLabel?.trim() || null;
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onHold}>
       <Pressable style={styles.createModalBackdrop} onPress={onHold}>
@@ -2167,7 +2185,9 @@ function IncomingInviteModalNative({
                   {squadInviteIncomingTitle(invite.fromDisplayName)}
                 </Text>
                 <Text style={styles.applyConfirmCopy}>
-                  {SQUAD_INVITE_DEADLINE_PREFIX} {deadline}
+                  {deadline
+                    ? `${SQUAD_INVITE_DEADLINE_PREFIX} ${deadline}`
+                    : SQUAD_INVITE_DEADLINE_PREFIX}
                 </Text>
               </View>
               <Pressable
@@ -3126,12 +3146,13 @@ export default function SquadBattleScreenNative() {
   const [launchOpen, setLaunchOpen] = useState(false);
   const [rankPeriod, setRankPeriod] = useState<"weekly" | "monthly">("weekly");
   /** 週間の週インデックス（プレビュー） */
-  const [weekIndex, setWeekIndex] = useState<SquadBattleWeekIndex>(2);
+  const [weekIndex, setWeekIndex] = useState<SquadBattleWeekIndex>(1);
   /** 開催フェーズ（本番は大会 phase、プレビューはツール切替） */
   const [uiPhase, setUiPhase] = useState<SquadBattleUiPhase>(
     isPreviewMode ? "battle" : "idle"
   );
   const [boardStatus, setBoardStatus] = useState<"live" | "final">("live");
+  const [boardBuiltAtMs, setBoardBuiltAtMs] = useState<number | null>(null);
   /** スナップショット rows。null ならモック leaderboard */
   const [liveLeaderboard, setLiveLeaderboard] = useState<Squad[] | null>(null);
   const [detailSquad, setDetailSquad] = useState<Squad | null>(null);
@@ -3247,6 +3268,11 @@ export default function SquadBattleScreenNative() {
         setLiveBattleId(boot.battle.id);
         setLiveBattlePhase(boot.battle.phase);
         setLiveWeeklyLabels(boot.battle.weeklyLabels ?? []);
+        setWeekIndex(
+          resolveSquadBattleWeekIndex({
+            weeklyLabels: boot.battle.weeklyLabels ?? [],
+          })
+        );
         setLiveMonthlyLabel(boot.battle.monthlyRange?.label ?? null);
         setLiveRecruitEndAtMs(
           Number(boot.battle.recruitEndAtMs) > 0
@@ -3268,6 +3294,11 @@ export default function SquadBattleScreenNative() {
         const rankings = boot.rankings;
         if (rankings?.snapshot?.rows?.length) {
           setBoardStatus(rankings.snapshot.status);
+          setBoardBuiltAtMs(
+            Number(rankings.snapshot.builtAtMs) > 0
+              ? Number(rankings.snapshot.builtAtMs)
+              : null
+          );
           setLiveLeaderboard(
             mapGroupBattleSnapshotRowsToSquads(
               rankings.snapshot.rows,
@@ -3278,6 +3309,13 @@ export default function SquadBattleScreenNative() {
           setLiveLeaderboard(rankings?.snapshot ? [] : null);
           if (rankings?.snapshot) {
             setBoardStatus(rankings.snapshot.status);
+            setBoardBuiltAtMs(
+              Number(rankings.snapshot.builtAtMs) > 0
+                ? Number(rankings.snapshot.builtAtMs)
+                : null
+            );
+          } else {
+            setBoardBuiltAtMs(null);
           }
         }
         setLiveOpenSquads(
@@ -3285,12 +3323,24 @@ export default function SquadBattleScreenNative() {
         );
         if (boot.pastSquads) setLivePastSquads(boot.pastSquads);
         if (boot.invites) {
+          const deadlineLabel =
+            formatSquadBattleRecruitDeadlineLabel(
+              boot.battle?.recruitEndAtMs
+            ) ?? undefined;
           setLiveIncomingInvites(
             boot.invites.map((i) => ({
               id: i.id,
               squadId: i.squadId,
               squadName: i.squadName,
               fromDisplayName: i.fromDisplayName,
+              deadlineLabel,
+              members: i.members?.map((m) => ({
+                uid: m.uid,
+                displayName: m.displayName,
+                handle: m.handle,
+                plan: m.plan,
+                photoURL: m.photoURL,
+              })),
             }))
           );
         }
@@ -3335,6 +3385,11 @@ export default function SquadBattleScreenNative() {
         bootstrapPeriodKeyRef.current = periodKey;
         if (rankings?.snapshot?.rows?.length) {
           setBoardStatus(rankings.snapshot.status);
+          setBoardBuiltAtMs(
+            Number(rankings.snapshot.builtAtMs) > 0
+              ? Number(rankings.snapshot.builtAtMs)
+              : null
+          );
           setLiveLeaderboard(
             mapGroupBattleSnapshotRowsToSquads(
               rankings.snapshot.rows,
@@ -3343,7 +3398,16 @@ export default function SquadBattleScreenNative() {
           );
         } else {
           setLiveLeaderboard(rankings?.snapshot ? [] : null);
-          if (rankings?.snapshot) setBoardStatus(rankings.snapshot.status);
+          if (rankings?.snapshot) {
+            setBoardStatus(rankings.snapshot.status);
+            setBoardBuiltAtMs(
+              Number(rankings.snapshot.builtAtMs) > 0
+                ? Number(rankings.snapshot.builtAtMs)
+                : null
+            );
+          } else {
+            setBoardBuiltAtMs(null);
+          }
         }
       } catch {
         /* keep previous board */
@@ -3404,6 +3468,14 @@ export default function SquadBattleScreenNative() {
   }, [uiPhase, liveBattleId, isPreviewMode]);
 
   useEffect(() => {
+    const max = Math.min(
+      4,
+      Math.max(1, liveWeeklyLabels.length > 0 ? liveWeeklyLabels.length : 4)
+    ) as SquadBattleWeekIndex;
+    if (weekIndex > max) setWeekIndex(max);
+  }, [liveWeeklyLabels, weekIndex]);
+
+  useEffect(() => {
     if (isPreviewMode || launchAutoShownRef.current || !liveBattleId) return;
     let cancelled = false;
     void (async () => {
@@ -3435,6 +3507,8 @@ export default function SquadBattleScreenNative() {
     [isPreviewMode, previewState]
   );
   const useLiveFallbacks = liveBattleId != null || !isPreviewMode;
+  const joinActionsOpen =
+    isPreviewMode || canMutateSquadBattleJoinUi(liveBattlePhase);
   const leaderboard =
     liveLeaderboard ?? (useLiveFallbacks ? [] : mock.leaderboard);
   const openSquadsForUi =
@@ -3705,9 +3779,15 @@ export default function SquadBattleScreenNative() {
         setDismissedInviteIds((prev) => [...prev, invite.id]);
         setIncomingInviteModalId(null);
         setIncomingJoinConfirmInvite(null);
-        setJoinedInviteSquad(squadFromIncomingInvite(invite));
+        setLiveMySquadId(invite.squadId);
+        setLiveIsOwner(false);
+        setLiveFormingSquad(squadFromIncomingInvite(invite));
+        setJoinedInviteSquad(null);
         setPreviewState("recruiting");
         setCreatedSquadName(invite.squadName);
+        setExtraAppliedIds([]);
+        setDismissedRequestIds([]);
+        setLiveOutgoingRequests([]);
         setMainTab("join");
         flash(`参加: ${invite.squadName}`);
         return;
@@ -3834,6 +3914,23 @@ export default function SquadBattleScreenNative() {
         setPreviewState("recruiting");
         setLiveMySquadId(res.squadId);
         setLiveIsOwner(false);
+        setLiveFormingSquad(
+          mapCurrentMySquadToUiSquad(
+            {
+              id: res.squadId,
+              name: res.name || "SQUAD",
+              memberUids: res.memberUids ?? (liveSelfUid ? [liveSelfUid] : []),
+              memberCount: res.memberCount ?? 1,
+              status: res.status || "forming",
+            },
+            liveSelfUid
+          )
+        );
+        setExtraAppliedIds([]);
+        setDismissedRequestIds([]);
+        setLiveOutgoingRequests([]);
+        setJoinedInviteSquad(null);
+        setMainTab("join");
         flash("スクワッドに参加しました");
       } catch {
         flash("参加に失敗しました");
@@ -4004,6 +4101,28 @@ export default function SquadBattleScreenNative() {
         setLiveIncomingRequests((prev) =>
           (prev ?? []).filter((r) => r.id !== req.id)
         );
+        if (decision === "approve") {
+          const a = req.applicant;
+          setLiveFormingSquad((prev) =>
+            prev
+              ? appendMemberToSquadUi(prev, {
+                  uid: a.uid,
+                  handle: a.handle ?? "",
+                  displayName: a.displayName,
+                  points: a.points ?? 0,
+                  plan: a.plan,
+                  photoURL: a.photoURL,
+                  winRate: a.winRate,
+                  activeWinStreak: a.activeWinStreak,
+                  totalPosts: a.totalPosts,
+                  lastMonthRank: a.lastMonthRank,
+                  lastWeekRank: a.lastWeekRank,
+                  thisWeekRank: a.thisWeekRank,
+                  fromLive: true,
+                })
+              : prev
+          );
+        }
         setApproveConfirmRequest(null);
         setProfileRequest(null);
         flash(
@@ -4282,6 +4401,16 @@ export default function SquadBattleScreenNative() {
                     <Text style={styles.spectatorCtaText}>RANK を見る</Text>
                   </Pressable>
                 </View>
+              ) : !joinActionsOpen ? (
+                <View style={styles.battleSpectatorStack}>
+                  <SquadEmptyHintNative>
+                    {liveBattlePhase === "locking"
+                      ? "メンバー確定中です。募集は締め切られました。"
+                      : liveBattlePhase === "announced"
+                        ? "まもなく募集が始まります。開始までお待ちください。"
+                        : "いまは参加・作成できません。"}
+                  </SquadEmptyHintNative>
+                </View>
               ) : (
                 <NoneStateNative
                   openSquads={openSquadsForUi}
@@ -4317,17 +4446,17 @@ export default function SquadBattleScreenNative() {
                   phase={uiPhase}
                   isOwner={liveIsOwner || (isPreviewMode && Boolean(mySquad))}
                   onRenameSquad={
-                    uiPhase === "entry"
+                    joinActionsOpen
                       ? (n) => void handleRenameSquad(n)
                       : undefined
                   }
                   onLeaveSquad={
-                    uiPhase === "entry" && liveBattleId && !liveIsOwner
+                    joinActionsOpen && liveBattleId && !liveIsOwner
                       ? () => void handleLeaveSquad()
                       : undefined
                   }
                   onDissolveSquad={
-                    uiPhase === "entry" && liveBattleId && liveIsOwner
+                    joinActionsOpen && liveBattleId && liveIsOwner
                       ? () => void handleDissolveSquad()
                       : undefined
                   }
@@ -4349,7 +4478,7 @@ export default function SquadBattleScreenNative() {
                 ) : null}
                 {(liveIsOwner ||
                   (isPreviewMode && previewState === "recruiting")) &&
-                uiPhase === "entry" &&
+                joinActionsOpen &&
                 pastSquadsForUi.length > 0 ? (
                   <PastSquadsPanelNative
                     pastSquads={pastSquadsForUi}
@@ -4410,29 +4539,36 @@ export default function SquadBattleScreenNative() {
                     />
                   </CyberSlantedTabBarNative>
                 </View>
-                <View
-                  style={[
-                    styles.boardStatusPill,
-                    boardStatus === "final"
-                      ? styles.boardStatusFinal
-                      : styles.boardStatusLive,
-                  ]}
-                  accessibilityLabel={
-                    liveBattleId
-                      ? `大会 ${liveBattleId} ${boardStatus}`
-                      : `プレビュー ${boardStatus}`
-                  }
-                >
-                  <Text
+                <View style={styles.boardStatusCol}>
+                  <View
                     style={[
-                      styles.boardStatusText,
+                      styles.boardStatusPill,
                       boardStatus === "final"
-                        ? styles.boardStatusTextFinal
-                        : styles.boardStatusTextLive,
+                        ? styles.boardStatusFinal
+                        : styles.boardStatusLive,
                     ]}
+                    accessibilityLabel={
+                      liveBattleId
+                        ? `大会 ${liveBattleId} ${boardStatus}`
+                        : `プレビュー ${boardStatus}`
+                    }
                   >
-                    {boardStatus === "final" ? "FINAL" : "LIVE"}
-                  </Text>
+                    <Text
+                      style={[
+                        styles.boardStatusText,
+                        boardStatus === "final"
+                          ? styles.boardStatusTextFinal
+                          : styles.boardStatusTextLive,
+                      ]}
+                    >
+                      {boardStatus === "final" ? "FINAL" : "LIVE"}
+                    </Text>
+                  </View>
+                  {formatSquadBattleBoardBuiltAt(boardBuiltAtMs) ? (
+                    <Text style={styles.boardBuiltAtText}>
+                      更新 {formatSquadBattleBoardBuiltAt(boardBuiltAtMs)}
+                    </Text>
+                  ) : null}
                 </View>
               </View>
 
@@ -4440,6 +4576,7 @@ export default function SquadBattleScreenNative() {
                 <SquadWeekChipsNative
                   weekIndex={weekIndex}
                   onChange={setWeekIndex}
+                  weeklyLabels={liveWeeklyLabels}
                 />
               ) : (
                 <Text style={styles.monthPeriodHint}>
@@ -4807,7 +4944,7 @@ export default function SquadBattleScreenNative() {
         }}
         deadlineLabel={
           formatSquadBattleRecruitDeadlineLabel(liveRecruitEndAtMs) ??
-          SQUAD_BATTLE_MOCK_DEADLINE_LABEL
+          (isPreviewMode ? SQUAD_BATTLE_MOCK_DEADLINE_LABEL : null)
         }
       />
     </View>
@@ -5575,6 +5712,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     paddingHorizontal: 8,
     paddingVertical: 5,
+  },
+  boardStatusCol: {
+    alignItems: "flex-end",
+    gap: 2,
+  },
+  boardBuiltAtText: {
+    fontFamily: fonts.metric,
+    fontSize: 10,
+    color: "rgba(255,255,255,0.35)",
   },
   boardStatusLive: {
     borderColor: "rgba(251,191,36,0.45)",

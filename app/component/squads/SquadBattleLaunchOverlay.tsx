@@ -18,7 +18,6 @@ import {
   SQUAD_BATTLE_LAUNCH_LATER,
   SQUAD_BATTLE_LAUNCH_STORAGE_KEY,
   SQUAD_BATTLE_LAUNCH_TITLE,
-  SQUAD_BATTLE_MOCK_DEADLINE_LABEL,
   SQUAD_INVITE_DEADLINE_PREFIX,
 } from "@/lib/squads/squadBattleUiCopy";
 import { SQUAD_GOLD, SQUAD_GOLD_CHAMFER } from "@/lib/squads/squadBattleGoldTheme";
@@ -92,7 +91,7 @@ export default function SquadBattleLaunchOverlay({
 }: Props) {
   const [mounted, setMounted] = useState(false);
   const reduceMotion = useReducedMotion() === true;
-  const deadline = deadlineLabel?.trim() || SQUAD_BATTLE_MOCK_DEADLINE_LABEL;
+  const deadline = deadlineLabel?.trim() || null;
 
   useEffect(() => {
     setMounted(true);
@@ -202,7 +201,9 @@ export default function SquadBattleLaunchOverlay({
                 "mt-4 text-[11px] font-bold uppercase tracking-[0.12em] text-amber-100/70"
               )}
             >
-              {SQUAD_INVITE_DEADLINE_PREFIX} {deadline}
+              {deadline
+                ? `${SQUAD_INVITE_DEADLINE_PREFIX} ${deadline}`
+                : SQUAD_INVITE_DEADLINE_PREFIX}
             </p>
 
             <dl className="mt-4 flex flex-col border-t border-amber-400/20 pt-3">

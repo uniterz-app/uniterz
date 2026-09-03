@@ -653,6 +653,7 @@ const pt: Messages = {
     helpAndGuide: "Ajuda e guia",
     termsOfService: "Termos de Serviço",
     privacyPolicy: "Política de Privacidade",
+    commercialLaw: "Aviso de transações comerciais especificadas",
     communityGuidelines: "Diretrizes da Comunidade",
     contact: "Contato",
     featureRequest: "Solicitar recurso",

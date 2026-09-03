@@ -656,6 +656,7 @@ const es: Messages = {
     helpAndGuide: "Ayuda y guía",
     termsOfService: "Términos de servicio",
     privacyPolicy: "Política de privacidad",
+    commercialLaw: "Aviso de transacciones comerciales especificadas",
     communityGuidelines: "Normas de la comunidad",
     contact: "Contacto",
     featureRequest: "Solicitar función",

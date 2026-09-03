@@ -3,7 +3,11 @@
  */
 
 import type { Firestore } from "firebase-admin/firestore";
-import { GROUP_BATTLE_COLLECTION } from "@/lib/groupBattles/constants";
+import {
+  GROUP_BATTLE_COLLECTION,
+  groupBattleFinalToClosedAtMs,
+  groupBattleSettlingToFinalAtMs,
+} from "@/lib/groupBattles/constants";
 import { setGroupBattlePhase } from "@/lib/groupBattles/server/setPhase";
 import { parseBattleDoc } from "@/lib/groupBattles/server/firestore";
 
@@ -16,6 +20,8 @@ export type AdvanceDuePhasesResult = {
  * - announced → recruiting（recruitStart 到達）
  * - recruiting → battle（recruitEnd 到達、ロック込み）
  * - battle → settling（battleEnd 到達）
+ * - settling → final（battleEnd + 猶予日）
+ * - final → closed（final 後の余裕日）
  */
 export async function advanceDueGroupBattlePhases(
   db: Firestore,
@@ -77,6 +83,42 @@ export async function advanceDueGroupBattlePhases(
           advanced.push({
             battleId: battle.id,
             from: "battle",
+            to: res.phase,
+          });
+        } else {
+          errors.push({ battleId: battle.id, error: res.error });
+        }
+        continue;
+      }
+
+      if (
+        battle.phase === "settling" &&
+        battle.battleEndAtMs > 0 &&
+        nowMs >= groupBattleSettlingToFinalAtMs(battle.battleEndAtMs)
+      ) {
+        const res = await setGroupBattlePhase(db, battle.id, "final");
+        if (res.ok) {
+          advanced.push({
+            battleId: battle.id,
+            from: "settling",
+            to: res.phase,
+          });
+        } else {
+          errors.push({ battleId: battle.id, error: res.error });
+        }
+        continue;
+      }
+
+      if (
+        battle.phase === "final" &&
+        battle.battleEndAtMs > 0 &&
+        nowMs >= groupBattleFinalToClosedAtMs(battle.battleEndAtMs)
+      ) {
+        const res = await setGroupBattlePhase(db, battle.id, "closed");
+        if (res.ok) {
+          advanced.push({
+            battleId: battle.id,
+            from: "final",
             to: res.phase,
           });
         } else {

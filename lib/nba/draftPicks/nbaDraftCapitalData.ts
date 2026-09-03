@@ -4710,22 +4710,18 @@ const TEAM_CUSTOM_PICKS: Record<string, NbaDraftPickEntry[]> = {
       year: 2029,
       round: 1,
       kind: "own",
-      badgeType: "swap",
-      isSwap: true,
-      swapWithTeamId: "LAC",
-      protection: "LAC 4-30 Swap",
-      protectionTag: "SWAP LAC",
-      shortLabelJa: "自前 or LACスワップ権",
-      shortLabelEn: "Own or LAC Swap",
-      detailsJa: "自前 or LAC とのスワップ権 (LAC 4〜30位ならスワップ可能 / Harden 取引)",
-      detailsEn: "Own or Swap rights with LAC (Swappable if LAC 4-30 / Harden trade)",
+      badgeType: "own",
+      shortLabelJa: "自前",
+      shortLabelEn: "OWN",
+      detailsJa: "PHI 自前 1巡目 (LACスワップ権はLAC指名権没収により消滅)",
+      detailsEn: "PHI Own 1st (LAC swap voided after LAC pick forfeiture)",
       conditionsJa: [
         "PHI自前の確定1巡目",
-        "LACが4〜30位ならより上位の指名権とスワップ可能（1〜3位ならスワップ不可）",
+        "旧: LAC 4〜30位ならスワップ可能だったが、2026年9月のLAC 1巡目没収によりスワップ権は無効",
       ],
       conditionsEn: [
         "PHI Own guaranteed 1st",
-        "Right to swap with LAC if LAC is 4-30 (Top 3 protected for LAC)",
+        "Former swap right vs LAC (4-30) voided after NBA forfeited LAC's 2029 1st in Sep 2026",
       ],
     },
     {
@@ -7154,23 +7150,21 @@ const TEAM_CUSTOM_PICKS: Record<string, NbaDraftPickEntry[]> = {
       id: "lac-2029-1-own-swap-phi",
       year: 2029,
       round: 1,
-      kind: "own",
-      badgeType: "swap",
-      isSwap: true,
-      isConditional: true,
-      protection: "1-3 Protected to LAC (4-30 Swap with PHI)",
-      protectionTag: "1-3 PROT / PHI SWAP",
-      shortLabelJa: "自前 (1-3位保護 / 4-30位PHIスワップ)",
-      shortLabelEn: "Own (1-3 Prot / 4-30 PHI Swap)",
-      detailsJa: "自前 1巡目 (1〜3位ならLAC保持 / 4〜30位ならPHIスワップ対象)",
-      detailsEn: "LAC Own 1st (1-3 to LAC, 4-30 subject to swap with PHI)",
+      kind: "forfeited",
+      badgeType: "forfeited",
+      isOutgoing: true,
+      protectionTag: "FORFEIT",
+      shortLabelJa: "自前 (NBA没収)",
+      shortLabelEn: "Own (NBA Forfeit)",
+      detailsJa: "LAC 自前 1巡目 (NBAにより没収 · 2029)",
+      detailsEn: "LAC Own 1st (Forfeited by NBA · 2029)",
       conditionsJa: [
-        "1〜3位ならLACが保護（保持）",
-        "4〜30位ならフィラデルフィア・76ers（PHI）とのスワップ対象（Harden取引）",
+        "2026年9月 · Kawhi Leonard 関連のサラリーキャップ回避違反によりNBAが没収",
+        "旧: 1〜3位保護 / 4〜30位 PHI スワップ対象だったが、没収により無効",
       ],
       conditionsEn: [
-        "Protected 1-3 (retained by LAC)",
-        "4-30 subject to swap with Philadelphia 76ers (Harden trade)",
+        "Forfeited by NBA in Sep 2026 for salary-cap circumvention (Kawhi Leonard investigation)",
+        "Previously 1-3 protected / 4-30 PHI swap — voided by forfeiture",
       ],
     },
     {
@@ -7208,14 +7202,20 @@ const TEAM_CUSTOM_PICKS: Record<string, NbaDraftPickEntry[]> = {
       id: "lac-2030-1-own",
       year: 2030,
       round: 1,
-      kind: "own",
-      badgeType: "own",
-      shortLabelJa: "自前",
-      shortLabelEn: "OWN",
-      detailsJa: "LAC 自前 1巡目",
-      detailsEn: "LAC Own 1st",
-      conditionsJa: ["自前の確定1巡目指名権"],
-      conditionsEn: ["Own guaranteed 1st round pick"],
+      kind: "forfeited",
+      badgeType: "forfeited",
+      isOutgoing: true,
+      protectionTag: "FORFEIT",
+      shortLabelJa: "自前 (NBA没収)",
+      shortLabelEn: "Own (NBA Forfeit)",
+      detailsJa: "LAC 自前 1巡目 (NBAにより没収 · 2030)",
+      detailsEn: "LAC Own 1st (Forfeited by NBA · 2030)",
+      conditionsJa: [
+        "2026年9月 · Kawhi Leonard 関連のサラリーキャップ回避違反によりNBAが没収",
+      ],
+      conditionsEn: [
+        "Forfeited by NBA in Sep 2026 for salary-cap circumvention (Kawhi Leonard investigation)",
+      ],
     },
     {
       id: "lac-2030-2-lac-uta-less",
@@ -7254,14 +7254,20 @@ const TEAM_CUSTOM_PICKS: Record<string, NbaDraftPickEntry[]> = {
       id: "lac-2031-1-own",
       year: 2031,
       round: 1,
-      kind: "own",
-      badgeType: "own",
-      shortLabelJa: "自前",
-      shortLabelEn: "OWN",
-      detailsJa: "LAC 自前 1巡目",
-      detailsEn: "LAC Own 1st",
-      conditionsJa: ["自前の確定1巡目指名権"],
-      conditionsEn: ["Own guaranteed 1st round pick"],
+      kind: "forfeited",
+      badgeType: "forfeited",
+      isOutgoing: true,
+      protectionTag: "FORFEIT",
+      shortLabelJa: "自前 (NBA没収)",
+      shortLabelEn: "Own (NBA Forfeit)",
+      detailsJa: "LAC 自前 1巡目 (NBAにより没収 · 2031)",
+      detailsEn: "LAC Own 1st (Forfeited by NBA · 2031)",
+      conditionsJa: [
+        "2026年9月 · Kawhi Leonard 関連のサラリーキャップ回避違反によりNBAが没収",
+      ],
+      conditionsEn: [
+        "Forfeited by NBA in Sep 2026 for salary-cap circumvention (Kawhi Leonard investigation)",
+      ],
     },
     {
       id: "lac-2031-1-tor-pending",
@@ -7296,14 +7302,20 @@ const TEAM_CUSTOM_PICKS: Record<string, NbaDraftPickEntry[]> = {
       id: "lac-2032-1-own",
       year: 2032,
       round: 1,
-      kind: "own",
-      badgeType: "own",
-      shortLabelJa: "自前",
-      shortLabelEn: "OWN",
-      detailsJa: "LAC 自前 1巡目",
-      detailsEn: "LAC Own 1st",
-      conditionsJa: ["自前の確定1巡目指名権"],
-      conditionsEn: ["Own guaranteed 1st round pick"],
+      kind: "forfeited",
+      badgeType: "forfeited",
+      isOutgoing: true,
+      protectionTag: "FORFEIT",
+      shortLabelJa: "自前 (NBA没収)",
+      shortLabelEn: "Own (NBA Forfeit)",
+      detailsJa: "LAC 自前 1巡目 (NBAにより没収 · 2032)",
+      detailsEn: "LAC Own 1st (Forfeited by NBA · 2032)",
+      conditionsJa: [
+        "2026年9月 · Kawhi Leonard 関連のサラリーキャップ回避違反によりNBAが没収",
+      ],
+      conditionsEn: [
+        "Forfeited by NBA in Sep 2026 for salary-cap circumvention (Kawhi Leonard investigation)",
+      ],
     },
     {
       id: "lac-2032-2-own",
@@ -7322,14 +7334,20 @@ const TEAM_CUSTOM_PICKS: Record<string, NbaDraftPickEntry[]> = {
       id: "lac-2033-1-own",
       year: 2033,
       round: 1,
-      kind: "own",
-      badgeType: "own",
-      shortLabelJa: "自前",
-      shortLabelEn: "OWN",
-      detailsJa: "LAC 自前 1巡目",
-      detailsEn: "LAC Own 1st",
-      conditionsJa: ["自前の確定1巡目指名権"],
-      conditionsEn: ["Own guaranteed 1st round pick"],
+      kind: "forfeited",
+      badgeType: "forfeited",
+      isOutgoing: true,
+      protectionTag: "FORFEIT",
+      shortLabelJa: "自前 (NBA没収)",
+      shortLabelEn: "Own (NBA Forfeit)",
+      detailsJa: "LAC 自前 1巡目 (NBAにより没収 · 2033)",
+      detailsEn: "LAC Own 1st (Forfeited by NBA · 2033)",
+      conditionsJa: [
+        "2026年9月 · Kawhi Leonard 関連のサラリーキャップ回避違反によりNBAが没収",
+      ],
+      conditionsEn: [
+        "Forfeited by NBA in Sep 2026 for salary-cap circumvention (Kawhi Leonard investigation)",
+      ],
     },
     {
       id: "lac-2033-1-tor-pending",
@@ -9221,6 +9239,7 @@ const TEAM_CUSTOM_PICKS: Record<string, NbaDraftPickEntry[]> = {
 
 function inferBadgeType(p: NbaDraftPickEntry): NbaDraftPickBadgeType {
   if (p.badgeType) return p.badgeType;
+  if (p.kind === "forfeited") return "forfeited";
   if (p.kind === "outgoing") return "outgoing";
   if (p.kind === "swap_favorable" || p.kind === "swap_unfavorable" || p.isSwap) return "swap";
   if (p.protection && p.protection.toLowerCase() !== "unprotected") return "prot";
@@ -9241,6 +9260,10 @@ function computeAssetsSummary(
   let outgoingPicks = 0;
 
   for (const p of firstRoundPicks) {
+    if (p.kind === "forfeited" || p.badgeType === "forfeited") {
+      outgoingPicks += 1;
+      continue;
+    }
     if (p.kind === "outgoing" || p.isOutgoing) {
       outgoingPicks += 1;
       continue;
@@ -9268,6 +9291,10 @@ function computeAssetsSummary(
   }
 
   for (const p of secondRoundPicks) {
+    if (p.kind === "forfeited" || p.badgeType === "forfeited") {
+      outgoingPicks += 1;
+      continue;
+    }
     if (p.kind === "outgoing" || p.isOutgoing) {
       outgoingPicks += 1;
       continue;
@@ -9407,8 +9434,18 @@ export function getNbaTeamDraftCapital(rawTeamId: string): NbaTeamDraftCapital {
     all1stPicks.push(...yrPicks1);
     all2ndPicks.push(...yrPicks2);
 
-    const validFirst = yrPicks1.filter((p) => p.kind !== "outgoing" && !p.isOutgoing).length;
-    const validSecond = yrPicks2.filter((p) => p.kind !== "outgoing" && !p.isOutgoing).length;
+    const validFirst = yrPicks1.filter(
+      (p) =>
+        p.kind !== "outgoing" &&
+        p.kind !== "forfeited" &&
+        !p.isOutgoing
+    ).length;
+    const validSecond = yrPicks2.filter(
+      (p) =>
+        p.kind !== "outgoing" &&
+        p.kind !== "forfeited" &&
+        !p.isOutgoing
+    ).length;
 
     years.push({
       year: yr,

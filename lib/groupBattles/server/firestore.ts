@@ -344,7 +344,44 @@ export async function lockEligibleSquads(
     updatedAt: FieldValue.serverTimestamp(),
   });
   await batch.commit();
+  await cancelPendingJoinActivity(db, battleId);
   return { locked, rejected };
+}
+
+/** ロック後に残る pending 申請・招待を一括キャンセル */
+export async function cancelPendingJoinActivity(
+  db: Firestore,
+  battleId: string
+): Promise<{ requests: number; invites: number }> {
+  const [reqSnap, invSnap] = await Promise.all([
+    joinRequestsCol(db, battleId).where("status", "==", "pending").get(),
+    squadInvitesCol(db, battleId).where("status", "==", "pending").get(),
+  ]);
+
+  const CHUNK = 400;
+  let requests = 0;
+  let invites = 0;
+  type DocSnap = (typeof reqSnap.docs)[number];
+
+  const cancelDocs = async (docs: DocSnap[], kind: "requests" | "invites") => {
+    for (let i = 0; i < docs.length; i += CHUNK) {
+      const slice = docs.slice(i, i + CHUNK);
+      const b = db.batch();
+      for (const d of slice) {
+        b.update(d.ref, {
+          status: "cancelled",
+          resolvedAt: FieldValue.serverTimestamp(),
+        });
+      }
+      await b.commit();
+      if (kind === "requests") requests += slice.length;
+      else invites += slice.length;
+    }
+  };
+
+  await cancelDocs(reqSnap.docs, "requests");
+  await cancelDocs(invSnap.docs, "invites");
+  return { requests, invites };
 }
 
 export function parseSnapshotDoc(

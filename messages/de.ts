@@ -654,6 +654,7 @@ const de: Messages = {
     helpAndGuide: "Hilfe & Anleitung",
     termsOfService: "Nutzungsbedingungen",
     privacyPolicy: "Datenschutzrichtlinie",
+    commercialLaw: "Angaben nach dem Gesetz über den elektronischen Geschäftsverkehr",
     communityGuidelines: "Community-Richtlinien",
     contact: "Kontakt",
     featureRequest: "Funktionswunsch",

@@ -2,17 +2,19 @@ export type NbaDraftPickKind =
   | "own"
   | "incoming"
   | "outgoing"
+  | "forfeited"
   | "swap_favorable"
   | "swap_unfavorable"
   | "conditional";
 
 export type NbaDraftPickBadgeType =
-  | "own"          // 自前 (OWN)
-  | "from"         // 取得 (FROM <TEAM>)
-  | "swap"         // スワップ (SWAP)
-  | "prot"         // プロテクトあり (TOP5 PROT 等)
-  | "conditional"  // 条件付き (COND)
-  | "outgoing";    // 放出済み (OUT)
+    | "own"          // 自前 (OWN)
+    | "from"         // 取得 (FROM <TEAM>)
+    | "swap"         // スワップ (SWAP)
+    | "prot"         // プロテクトあり (TOP5 PROT 等)
+    | "conditional"  // 条件付き (COND)
+    | "outgoing"     // 放出済み (OUT)
+    | "forfeited";   // リーグ没収 (FORFEIT)
 
 export type NbaDraftPickEntry = {
   id: string;

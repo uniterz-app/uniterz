@@ -17,8 +17,12 @@ import {
   cancelPendingJoinRequestsTx,
   getPendingJoinRequestsTx,
 } from "@/lib/groupBattles/server/firestore";
-import { isInviteeEligible } from "@/lib/groupBattles/server/pastSquads";
+import {
+  isInviteeEligible,
+  loadUserMemberSummaries,
+} from "@/lib/groupBattles/server/pastSquads";
 import type {
+  GroupBattlePastMemberSummary,
   GroupBattleSquadInviteDoc,
   GroupBattleSquadInviteSource,
 } from "@/lib/groupBattles/types";
@@ -134,52 +138,73 @@ export async function createSquadInvitesBulk(params: {
   return { created, skipped };
 }
 
+export type IncomingPendingInviteItem = GroupBattleSquadInviteDoc & {
+  id: string;
+  squadName: string;
+  fromDisplayName: string;
+  members: GroupBattlePastMemberSummary[];
+  openSlots: number;
+};
+
 export async function listIncomingPendingInvites(
   db: Firestore,
   battleId: string,
   uid: string
-): Promise<
-  Array<
-    GroupBattleSquadInviteDoc & {
-      id: string;
-      squadName: string;
-      fromDisplayName: string;
-    }
-  >
-> {
+): Promise<IncomingPendingInviteItem[]> {
   const snap = await squadInvitesCol(db, battleId)
     .where("toUid", "==", uid)
     .where("status", "==", "pending")
     .get();
 
-  const items: Array<
-    GroupBattleSquadInviteDoc & {
-      id: string;
-      squadName: string;
-      fromDisplayName: string;
-    }
-  > = [];
+  if (snap.empty) return [];
 
-  for (const doc of snap.docs) {
-    const invite = parseSquadInvite(
-      doc.id,
-      doc.data() as Record<string, unknown>
-    );
-    const squadSnap = await squadsCol(db, battleId).doc(invite.squadId).get();
-    const squadName = squadSnap.exists
-      ? String((squadSnap.data() as { name?: string })?.name ?? "")
-      : "";
-    const fromSnap = await db.collection("users").doc(invite.fromUid).get();
-    const fromDisplayName =
-      fromSnap.exists &&
-      typeof (fromSnap.data() as { displayName?: string })?.displayName ===
-        "string"
-        ? String(
-            (fromSnap.data() as { displayName?: string }).displayName
-          ).trim() || "User"
-        : "User";
-    items.push({ ...invite, squadName, fromDisplayName });
-  }
+  const invites = snap.docs.map((doc) =>
+    parseSquadInvite(doc.id, doc.data() as Record<string, unknown>)
+  );
+
+  const squadIds = [...new Set(invites.map((i) => i.squadId).filter(Boolean))];
+  const squadSnaps = await Promise.all(
+    squadIds.map((id) => squadsCol(db, battleId).doc(id).get())
+  );
+  const squadById = new Map(
+    squadSnaps.map((s, i) => {
+      const id = squadIds[i]!;
+      if (!s.exists) {
+        return [id, null] as const;
+      }
+      return [
+        id,
+        parseSquadDoc(s.id, s.data() as Record<string, unknown>),
+      ] as const;
+    })
+  );
+
+  const allMemberUids = [
+    ...new Set(
+      [...squadById.values()].flatMap((s) => (s ? s.memberUids : []))
+    ),
+  ];
+  const fromUids = [...new Set(invites.map((i) => i.fromUid).filter(Boolean))];
+  const profileUids = [...new Set([...allMemberUids, ...fromUids])];
+  const summaries = await loadUserMemberSummaries(db, profileUids);
+  const summaryByUid = new Map(summaries.map((m) => [m.uid, m]));
+
+  const items: IncomingPendingInviteItem[] = invites.map((invite) => {
+    const squad = squadById.get(invite.squadId) ?? null;
+    const members = (squad?.memberUids ?? [])
+      .map((memberUid) => summaryByUid.get(memberUid))
+      .filter((m): m is GroupBattlePastMemberSummary => m != null);
+    const memberCount = squad?.memberCount ?? members.length;
+    const openSlots = Math.max(0, GROUP_BATTLE_MAX_MEMBERS - memberCount);
+    const fromSummary = summaryByUid.get(invite.fromUid);
+    return {
+      ...invite,
+      squadName: squad?.name ?? "",
+      fromDisplayName: fromSummary?.displayName ?? "User",
+      members,
+      openSlots,
+    };
+  });
 
   items.sort((a, b) => b.createdAtMs - a.createdAtMs);
   return items;

@@ -56,6 +56,10 @@ export async function resolveJoinRequest(
       return;
     }
 
+    if (squad.status !== "forming" && squad.status !== "entered") {
+      throw new Error("squad_not_open");
+    }
+
     const applicantUid = joinReq.applicantUid;
     const memRef = squadMembersCol(adminDb, battleId).doc(applicantUid);
     const memSnap = await tx.get(memRef);

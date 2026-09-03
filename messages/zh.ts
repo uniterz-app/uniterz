@@ -645,6 +645,7 @@ const zh: Messages = {
     helpAndGuide: "帮助 & 指南",
     termsOfService: "服务条款",
     privacyPolicy: "隐私政策",
+    commercialLaw: "特定商业交易法公示",
     communityGuidelines: "社区规范",
     contact: "联系我们",
     featureRequest: "功能建议",

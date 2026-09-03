@@ -38,6 +38,38 @@ export function groupBattlePhaseToUiPhase(
   }
 }
 
+/**
+ * JOIN の作成・申請・コード参加など mutate 可能か。
+ * サーバー `assertRecruitingOrThrow` と揃える（announced / locking は不可）。
+ */
+export function canMutateSquadBattleJoinUi(
+  phase: string | null | undefined
+): boolean {
+  return phase === "recruiting";
+}
+
+/**
+ * 週間チップの初期選択。
+ * 今日（JST）までに開始した最後の週。未開始なら W1。
+ */
+export function resolveSquadBattleWeekIndex(args: {
+  weeklyLabels: readonly string[];
+  nowMs?: number;
+}): SquadBattleWeekIndex {
+  const labels = args.weeklyLabels.filter(Boolean);
+  if (labels.length === 0) return 1;
+  const now = args.nowMs ?? Date.now();
+  const jst = new Date(now + 9 * 60 * 60 * 1000);
+  const today = `${jst.getUTCFullYear()}-${String(jst.getUTCMonth() + 1).padStart(2, "0")}-${String(jst.getUTCDate()).padStart(2, "0")}`;
+  let idx = 0;
+  for (let i = 0; i < labels.length; i += 1) {
+    if (labels[i]! <= today) idx = i;
+    else break;
+  }
+  const oneBased = Math.min(4, Math.max(1, idx + 1));
+  return oneBased as SquadBattleWeekIndex;
+}
+
 /** 週間ランキングの週インデックス（1〜4） */
 export type SquadBattleWeekIndex = 1 | 2 | 3 | 4;
 
@@ -51,6 +83,65 @@ export const SQUAD_BATTLE_WEEK_OPTIONS: readonly {
   { index: 3, label: "W3", periodLabel: "第3週 · 開催 15〜21日" },
   { index: 4, label: "W4", periodLabel: "第4週 · 開催 22〜28日" },
 ] as const;
+
+/** 大会の weeklyLabels 本数に合わせた週チップ（最大4） */
+export function squadBattleWeekChipOptions(
+  weeklyLabels: readonly string[]
+): Array<{
+  index: SquadBattleWeekIndex;
+  label: string;
+  periodLabel: string;
+}> {
+  const count = Math.min(
+    4,
+    Math.max(1, weeklyLabels.length > 0 ? weeklyLabels.length : 4)
+  );
+  return SQUAD_BATTLE_WEEK_OPTIONS.slice(0, count).map((w, i) => {
+    const monday = weeklyLabels[i];
+    return {
+      index: w.index,
+      label: w.label,
+      periodLabel: monday
+        ? `${w.label} · ${formatWeekChipRange(monday)}`
+        : w.periodLabel,
+    };
+  });
+}
+
+function formatWeekChipRange(mondayKey: string): string {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(mondayKey)) return mondayKey;
+  const [y, m, d] = mondayKey.split("-").map(Number);
+  const start = new Date(Date.UTC(y!, m! - 1, d!));
+  const end = new Date(Date.UTC(y!, m! - 1, d! + 6));
+  const fmt = (dt: Date) =>
+    `${dt.getUTCMonth() + 1}/${dt.getUTCDate()}`;
+  return `${fmt(start)}〜${fmt(end)}`;
+}
+
+/** LIVE / FINAL の短い説明 */
+export const SQUAD_BATTLE_BOARD_STATUS_HINT = {
+  live: "暫定順位。原則 16:00 / 23:30 JST 前後に更新。確定後に FINAL へ",
+  final: "最終確定済み。この順位で Unit を配布します",
+} as const;
+
+/** RANK ボードの最終集計時刻（JST） */
+export function formatSquadBattleBoardBuiltAt(
+  builtAtMs: number | null | undefined
+): string | null {
+  const ms = Number(builtAtMs);
+  if (!Number.isFinite(ms) || ms <= 0) return null;
+  try {
+    return new Date(ms).toLocaleString("ja-JP", {
+      timeZone: "Asia/Tokyo",
+      month: "numeric",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return null;
+  }
+}
 
 export const SQUAD_BATTLE_UI_PHASE_OPTIONS: readonly {
   id: SquadBattleUiPhase;
@@ -69,12 +160,6 @@ export const SQUAD_BATTLE_UI_PHASE_OPTIONS: readonly {
 export const SQUAD_BATTLE_INTRO_NOTICES: readonly string[] = [
   "対象は Pick Up 試合のみ。同点は同順位。不正は失格。配布は Free / Pro 共通。",
 ] as const;
-
-/** LIVE / FINAL の短い説明 */
-export const SQUAD_BATTLE_BOARD_STATUS_HINT = {
-  live: "暫定順位。集計と不正確認の完了後に FINAL へ切り替わります",
-  final: "最終確定済み。この順位で Unit を配布します",
-} as const;
 
 /** 休止パネル（JOIN / RANK）— フェーズバナーと二重に出さない。ルールはここに集約 */
 export const SQUAD_BATTLE_IDLE_PANEL = {
@@ -320,6 +405,9 @@ export function squadBattlePayoutTotalUnits(
 
 /** プレビュー既定の締切ラベル */
 export const SQUAD_BATTLE_MOCK_DEADLINE_LABEL = "8/10 23:59";
+
+/** 本番招待コード入力のプレースホルダ（実コードっぽい値は出さない） */
+export const SQUAD_BATTLE_INVITE_CODE_PLACEHOLDER = "XXXX-XXXX";
 
 export function squadInviteSendPrompt(
   displayName: string,

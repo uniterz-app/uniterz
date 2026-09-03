@@ -1120,6 +1120,10 @@ function DraftPicksSection({
               <View style={[styles.draftLegendDot, { backgroundColor: "#FF2D78" }]} />
               <Text style={styles.draftLegendText}>{isJa ? "放出" : "OUT"}</Text>
             </View>
+            <View style={styles.draftLegendItem}>
+              <View style={[styles.draftLegendDot, { backgroundColor: "#FF503C" }]} />
+              <Text style={styles.draftLegendText}>{isJa ? "没収" : "FORFEIT"}</Text>
+            </View>
           </View>
         </View>
 
@@ -1230,6 +1234,8 @@ function DraftPicksSection({
                           ? isJa ? "プロテクト付き" : "PROTECTED"
                           : selectedPick.badgeType === "outgoing"
                           ? isJa ? `放出済み (to ${selectedPick.toTeamId ?? ""})` : `OUTGOING (to ${selectedPick.toTeamId ?? ""})`
+                          : selectedPick.badgeType === "forfeited"
+                          ? isJa ? "NBA没収" : "NBA FORFEITED"
                           : isJa ? "条件付き" : "CONDITIONAL"}
                       </Text>
                     </View>
@@ -1309,10 +1315,14 @@ function renderNativePickChip(
   onPress: () => void
 ) {
   const badgeType = p.badgeType ?? "own";
-  const isOutgoing = p.kind === "outgoing" || p.isOutgoing || badgeType === "outgoing";
+  const isForfeited =
+    p.kind === "forfeited" || badgeType === "forfeited";
+  const isOutgoing =
+    !isForfeited &&
+    (p.kind === "outgoing" || p.isOutgoing || badgeType === "outgoing");
   const isSwap = p.kind.startsWith("swap") || p.isSwap || badgeType === "swap";
   const isProt = badgeType === "prot" || (p.protection && p.protection.toLowerCase() !== "unprotected");
-  const isFrom = badgeType === "from" || (!isSwap && !isProt && !isOutgoing && !!p.fromTeamId);
+  const isFrom = badgeType === "from" || (!isSwap && !isProt && !isOutgoing && !isForfeited && !!p.fromTeamId);
 
   let bg = "rgba(0,245,255,0.08)";
   let border = "rgba(0,245,255,0.35)";
@@ -1320,7 +1330,13 @@ function renderNativePickChip(
   let tagBg = "rgba(0,245,255,0.2)";
   let tagText = isJa ? "自前" : "OWN";
 
-  if (isOutgoing) {
+  if (isForfeited) {
+    bg = "rgba(255,80,60,0.08)";
+    border = "rgba(255,80,60,0.4)";
+    color = "#FF503C";
+    tagBg = "rgba(255,80,60,0.22)";
+    tagText = isJa ? "没収" : "FORFEIT";
+  } else if (isOutgoing) {
     bg = "rgba(255,45,120,0.06)";
     border = "rgba(255,45,120,0.3)";
     color = "#FF2D78";
@@ -1359,7 +1375,7 @@ function renderNativePickChip(
         {
           backgroundColor: bg,
           borderColor: border,
-          opacity: isOutgoing ? 0.65 : 1,
+          opacity: isOutgoing || isForfeited ? 0.65 : 1,
         },
       ]}
     >
@@ -1374,7 +1390,7 @@ function renderNativePickChip(
           styles.draftChipText,
           {
             color: color,
-            textDecorationLine: isOutgoing ? "line-through" : "none",
+            textDecorationLine: isOutgoing || isForfeited ? "line-through" : "none",
           },
         ]}
       >

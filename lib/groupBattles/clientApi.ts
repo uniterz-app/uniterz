@@ -81,6 +81,7 @@ type GroupBattleRankingsPayload = {
   label: string;
   snapshot: {
     status: "live" | "final";
+    builtAtMs?: number;
     rows: Array<{
       rank: number;
       squadId: string;
@@ -152,6 +153,14 @@ export async function fetchGroupBattleBootstrap(
         status: string;
         source: string;
         createdAtMs: number;
+        openSlots: number;
+        members: Array<{
+          uid: string;
+          displayName: string;
+          handle: string | null;
+          plan?: "free" | "pro";
+          photoURL?: string | null;
+        }>;
       }>;
       joinRequests: {
         incoming: GroupBattleJoinRequestApiItem[];
@@ -186,6 +195,7 @@ export async function fetchGroupBattleRankings(
     label: string;
     snapshot: {
       status: "live" | "final";
+      builtAtMs?: number;
       rows: Array<{
         rank: number;
         squadId: string;
@@ -310,6 +320,14 @@ export async function fetchGroupBattleIncomingInvites(
       status: string;
       source: string;
       createdAtMs: number;
+      openSlots: number;
+      members: Array<{
+        uid: string;
+        displayName: string;
+        handle: string | null;
+        plan?: "free" | "pro";
+        photoURL?: string | null;
+      }>;
     }>;
   };
 }
@@ -334,6 +352,7 @@ export async function acceptGroupBattleInvite(
       status: res.status,
     };
   }
+  invalidateGroupBattleBootstrapCache();
   return json as { ok: true; decision: "accepted" };
 }
 
@@ -382,7 +401,14 @@ export async function joinGroupBattleByInviteCode(
     };
   }
   invalidateGroupBattleBootstrapCache();
-  return json as { ok: true; squadId: string };
+  return json as {
+    ok: true;
+    squadId: string;
+    name: string;
+    memberUids: string[];
+    memberCount: number;
+    status: string;
+  };
 }
 
 export async function fetchGroupBattleOpenSquads(
@@ -458,6 +484,7 @@ export async function applyToGroupBattleSquad(
       status: res.status,
     };
   }
+  invalidateGroupBattleBootstrapCache();
   return json as { ok: true; requestId: string };
 }
 
@@ -503,6 +530,7 @@ export async function resolveGroupBattleJoinRequest(
       status: res.status,
     };
   }
+  invalidateGroupBattleBootstrapCache();
   return json as { ok: true };
 }
 
@@ -571,6 +599,7 @@ export async function cancelGroupBattleJoinRequest(
       status: res.status,
     };
   }
+  invalidateGroupBattleBootstrapCache();
   return json as { ok: true };
 }
 

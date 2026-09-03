@@ -14,6 +14,25 @@ export const GROUP_BATTLE_INVITE_MAX_PER_TARGET = 2;
 /** 期間終了後、final 化するまでの猶予日数（個人ランキングと揃える） */
 export const GROUP_BATTLE_FINALIZE_GRACE_DAYS = 2;
 
+/** final 到達後、closed にするまでの余裕日数（Unit 付与ジョブ用） */
+export const GROUP_BATTLE_CLOSE_AFTER_FINAL_DAYS = 1;
+
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+/** battleEnd から settling → final へ進める時刻 */
+export function groupBattleSettlingToFinalAtMs(battleEndAtMs: number): number {
+  return battleEndAtMs + GROUP_BATTLE_FINALIZE_GRACE_DAYS * MS_PER_DAY;
+}
+
+/** battleEnd から final → closed へ進める時刻 */
+export function groupBattleFinalToClosedAtMs(battleEndAtMs: number): number {
+  return (
+    battleEndAtMs +
+    (GROUP_BATTLE_FINALIZE_GRACE_DAYS + GROUP_BATTLE_CLOSE_AFTER_FINAL_DAYS) *
+      MS_PER_DAY
+  );
+}
+
 export const GROUP_BATTLE_TIE_RULE = "same_rank_same_unit" as const;
 
 export const GROUP_BATTLE_COLLECTION = "group_battles";

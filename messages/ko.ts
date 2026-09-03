@@ -645,6 +645,7 @@ const ko: Messages = {
     helpAndGuide: "도움말 & 가이드",
     termsOfService: "이용약관",
     privacyPolicy: "개인정보처리방침",
+    commercialLaw: "특정상거래법 고지",
     communityGuidelines: "커뮤니티 가이드라인",
     contact: "문의하기",
     featureRequest: "기능 요청",

@@ -11,7 +11,6 @@ import {
   SQUAD_BATTLE_LAUNCH_LEAD,
   SQUAD_BATTLE_LAUNCH_LATER,
   SQUAD_BATTLE_LAUNCH_TITLE,
-  SQUAD_BATTLE_MOCK_DEADLINE_LABEL,
   SQUAD_INVITE_DEADLINE_PREFIX,
 } from "../../../../../lib/squads/squadBattleUiCopy";
 import { SQUAD_GOLD_NATIVE } from "../../../../../lib/squads/squadBattleGoldTheme";
@@ -32,7 +31,7 @@ export default function SquadBattleLaunchOverlayNative({
   deadlineLabel,
   battleId,
 }: Props) {
-  const deadline = deadlineLabel?.trim() || SQUAD_BATTLE_MOCK_DEADLINE_LABEL;
+  const deadline = deadlineLabel?.trim() || null;
 
   async function dismiss() {
     await markSquadBattleLaunchSeenNative(battleId);
@@ -69,7 +68,9 @@ export default function SquadBattleLaunchOverlayNative({
             <Text style={styles.title}>{SQUAD_BATTLE_LAUNCH_TITLE}</Text>
             <Text style={styles.lead}>{SQUAD_BATTLE_LAUNCH_LEAD}</Text>
             <Text style={styles.deadline}>
-              {SQUAD_INVITE_DEADLINE_PREFIX} {deadline}
+              {deadline
+                ? `${SQUAD_INVITE_DEADLINE_PREFIX} ${deadline}`
+                : SQUAD_INVITE_DEADLINE_PREFIX}
             </Text>
             <View style={styles.facts}>
               {SQUAD_BATTLE_LAUNCH_FACTS.map((fact) => (

@@ -1658,6 +1658,7 @@ export default function ProfileHomeScreen({
         else if (page === "terms") navigation.navigate("Terms");
         else if (page === "contact") navigation.navigate("Contact");
         else if (page === "privacy") navigation.navigate("Privacy");
+        else if (page === "commercialLaw") navigation.navigate("CommercialLaw");
         else if (page === "password") navigation.navigate("ProfilePassword");
         else if (page === "notifications") navigation.navigate("NotificationSettings");
         else if (page === "featureRequest") navigation.navigate("FeatureRequest");

@@ -64,6 +64,10 @@ export async function POST(req: Request, ctx: Ctx) {
     const squadRef = found.docs[0]!.ref;
 
     let squadId = squadRef.id;
+    let squadName = "";
+    let memberUids: string[] = [];
+    let memberCount = 0;
+    let status = "forming";
     await adminDb.runTransaction(async (tx) => {
       const snap = await tx.get(squadRef);
       if (!snap.exists) throw new Error("squad_not_found");
@@ -73,6 +77,9 @@ export async function POST(req: Request, ctx: Ctx) {
       );
       squadId = squad.id;
       if (squad.inviteCodeHash !== hash) throw new Error("invalid_invite");
+      if (squad.status !== "forming" && squad.status !== "entered") {
+        throw new Error("squad_not_open");
+      }
       if (squad.memberCount >= GROUP_BATTLE_MAX_MEMBERS) {
         throw new Error("squad_full");
       }
@@ -88,12 +95,13 @@ export async function POST(req: Request, ctx: Ctx) {
         uid
       );
 
-      const memberUids = [...squad.memberUids, uid];
-      const memberCount = memberUids.length;
-      const status = deriveSquadStatusAfterMemberChange(
+      memberUids = [...squad.memberUids, uid];
+      memberCount = memberUids.length;
+      status = deriveSquadStatusAfterMemberChange(
         memberCount,
         Boolean(squad.rulesAcceptedAtMs)
       );
+      squadName = squad.name;
 
       tx.update(squadRef, {
         memberUids,
@@ -111,6 +119,10 @@ export async function POST(req: Request, ctx: Ctx) {
 
     return jsonOk({
       squadId,
+      name: squadName,
+      memberUids,
+      memberCount,
+      status,
       minMembers: GROUP_BATTLE_MIN_MEMBERS,
       maxMembers: GROUP_BATTLE_MAX_MEMBERS,
     });
@@ -120,7 +132,8 @@ export async function POST(req: Request, ctx: Ctx) {
       msg === "invalid_invite" ||
       msg === "squad_full" ||
       msg === "already_in_squad" ||
-      msg === "squad_not_found"
+      msg === "squad_not_found" ||
+      msg === "squad_not_open"
     ) {
       return jsonErr(
         msg,

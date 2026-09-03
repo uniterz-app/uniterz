@@ -1547,6 +1547,9 @@ function DraftPicksCard({
             <span className="inline-flex items-center gap-1">
               <span className="w-1.5 h-1.5 rounded-full bg-[#FF2D78]" /> {isJa ? "放出" : "OUT"}
             </span>
+            <span className="inline-flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#FF503C]" /> {isJa ? "没収" : "FORFEIT"}
+            </span>
           </div>
         </div>
 
@@ -1657,6 +1660,8 @@ function DraftPicksCard({
                     ? isJa ? "プロテクト付き" : "PROTECTED"
                     : selectedPick.badgeType === "outgoing"
                     ? isJa ? `放出済み (to ${selectedPick.toTeamId ?? ""})` : `OUTGOING (to ${selectedPick.toTeamId ?? ""})`
+                    : selectedPick.badgeType === "forfeited"
+                    ? isJa ? "NBA没収" : "NBA FORFEITED"
                     : isJa ? "条件付き" : "CONDITIONAL"}
                 </span>
               )}
@@ -1735,10 +1740,14 @@ function renderPickBadge(
   onClick: () => void
 ) {
   const badgeType = p.badgeType ?? "own";
-  const isOutgoing = p.kind === "outgoing" || p.isOutgoing || badgeType === "outgoing";
+  const isForfeited =
+    p.kind === "forfeited" || badgeType === "forfeited";
+  const isOutgoing =
+    !isForfeited &&
+    (p.kind === "outgoing" || p.isOutgoing || badgeType === "outgoing");
   const isSwap = p.kind.startsWith("swap") || p.isSwap || badgeType === "swap";
   const isProt = badgeType === "prot" || (p.protection && p.protection.toLowerCase() !== "unprotected");
-  const isFrom = badgeType === "from" || (!isSwap && !isProt && !isOutgoing && !!p.fromTeamId);
+  const isFrom = badgeType === "from" || (!isSwap && !isProt && !isOutgoing && !isForfeited && !!p.fromTeamId);
 
   let bg = "rgba(0,245,255,0.08)";
   let border = "rgba(0,245,255,0.35)";
@@ -1746,7 +1755,13 @@ function renderPickBadge(
   let tagBg = "rgba(0,245,255,0.2)";
   let tagText = isJa ? "自前" : "OWN";
 
-  if (isOutgoing) {
+  if (isForfeited) {
+    bg = "rgba(255,80,60,0.08)";
+    border = "rgba(255,80,60,0.4)";
+    color = "#FF503C";
+    tagBg = "rgba(255,80,60,0.22)";
+    tagText = isJa ? "没収" : "FORFEIT";
+  } else if (isOutgoing) {
     bg = "rgba(255,45,120,0.06)";
     border = "rgba(255,45,120,0.3)";
     color = "#FF2D78";
@@ -1786,8 +1801,8 @@ function renderPickBadge(
         backgroundColor: bg,
         borderColor: border,
         color: color,
-        textDecoration: isOutgoing ? "line-through" : "none",
-        opacity: isOutgoing ? 0.65 : 1,
+        textDecoration: isOutgoing || isForfeited ? "line-through" : "none",
+        opacity: isOutgoing || isForfeited ? 0.65 : 1,
       }}
     >
       <span

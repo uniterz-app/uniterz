@@ -14,6 +14,7 @@ const WEB_GUEST_LEGAL_PREFIXES = [
   "/web/help",
   "/web/privacy",
   "/web/terms",
+  "/web/law",
   "/web/contact",
   "/web/contacts",
 ] as const;
@@ -22,6 +23,7 @@ const MOBILE_GUEST_LEGAL_PREFIXES = [
   "/mobile/help",
   "/mobile/privacy",
   "/mobile/terms",
+  "/mobile/law",
   "/mobile/contact",
 ] as const;
 

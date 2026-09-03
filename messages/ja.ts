@@ -656,6 +656,7 @@ const ja = {
     helpAndGuide: "ヘルプ & ガイド",
     termsOfService: "利用規約",
     privacyPolicy: "プライバシーポリシー",
+    commercialLaw: "特定商取引法に基づく表記",
     communityGuidelines: "コミュニティガイドライン",
     contact: "お問い合わせ",
     featureRequest: "機能リクエスト",
