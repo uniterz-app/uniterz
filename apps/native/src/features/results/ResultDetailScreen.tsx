@@ -22,6 +22,7 @@ import type { NavigationProp, ParamListBase } from "@react-navigation/native";
 import { BlocksPulseLoader } from "../../components/BlocksPulseLoader";
 import { useFirebaseUser } from "../../auth/FirebaseUserProvider";
 import { navigateToPublicProfileNative } from "../../navigation/navigateToPublicProfileNative";
+import type { OpenPublicProfileWarm } from "../../navigation/navigateToPublicProfileNative";
 import { useBottomTabBarInsets } from "../../navigation/useBottomTabBarInsets";
 import ProfileBackEdgeHandleNative from "../profile/ProfileBackEdgeHandleNative";
 import {
@@ -66,7 +67,7 @@ export default function ResultDetailScreen({
   postId: string | null;
   language: "ja" | "en";
   onClose: () => void;
-  onOpenProfile?: (handle: string) => void;
+  onOpenProfile?: (handle: string, warm?: OpenPublicProfileWarm) => void;
   sections?: ResultDetailBodySections;
   embedInParent?: boolean;
 }) {
@@ -97,12 +98,13 @@ export default function ResultDetailScreen({
 
   const openProfile =
     onOpenProfile ??
-    ((handle: string) => {
+    ((handle: string, warm?: OpenPublicProfileWarm) => {
       const detailPostId = postId?.trim() ?? "";
       navigateToPublicProfileNative(navigation, {
         handle,
         fromResultDetail: true,
         ...(detailPostId ? { resultDetailPostId: detailPostId } : {}),
+        ...(warm ? { warm } : {}),
       });
     });
 

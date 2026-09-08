@@ -29,7 +29,6 @@ export const gameCardListStyles = StyleSheet.create({
   },
   listContent: {
     gap: 10,
-    paddingBottom: spacing.xl,
     paddingTop: 0,
     paddingHorizontal: 12,
   },

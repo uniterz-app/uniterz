@@ -47,7 +47,7 @@ const styles = StyleSheet.create({
     right: 0,
     top: "46%",
     zIndex: 20,
-    width: 19,
+    width: 22,
     paddingVertical: 7,
     alignItems: "center",
     gap: 2,

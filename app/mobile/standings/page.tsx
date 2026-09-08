@@ -11,7 +11,6 @@ export default function MobileStandingsPage() {
     <MobilePageShell
       eyebrow="GAMES"
       title="STANDINGS"
-      subtitle="イースト / ウエスト。成績・勝率・連勝敗・L10・HOME / AWAY。"
       onClose={() => router.back()}
     >
       <NbaLeagueStandingsPanel

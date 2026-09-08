@@ -4,7 +4,7 @@
  * 選手ピッカー仕様（確定）:
  * - 入力なし / フォーカス直後: 他ユーザーが多く選んでいる候補を最大 5 人（人気ピック）
  * - 入力あり: 前方一致サジェスト（N → NI → NIK …）。選手名簿は API 契約後に取得
- * - 採点は未定（ゲート D）
+ * - 採点: `seasonPredictScoring`（確定）
  */
 
 export type NbaAwardId =
@@ -181,8 +181,7 @@ export function popularAwardPicks(
   return out;
 }
 
-/** プレビュー用仮採点（ゲート D で確定） */
-export const SEASON_AWARDS_SCORE_PREVIEW = {
-  exact: 25,
-  maxTotal: 25 * NBA_SEASON_AWARD_DEFS.length,
-} as const;
+export {
+  SEASON_AWARDS_SCORE,
+  SEASON_AWARDS_SCORE_PREVIEW,
+} from "@/lib/predict/seasonPredictScoring";

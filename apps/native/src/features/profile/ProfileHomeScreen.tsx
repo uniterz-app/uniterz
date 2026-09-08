@@ -4,6 +4,7 @@ import {
   CommonActions,
   StackActions,
   useFocusEffect,
+  useIsFocused,
   useNavigation,
 } from "@react-navigation/native";
 import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
@@ -11,6 +12,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import {
   ActivityIndicator,
   Image,
+  InteractionManager,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -51,6 +53,11 @@ import ProfileMenuEdgeHandleNative from "./ProfileMenuEdgeHandleNative";
 import ProfileBackEdgeHandleNative from "./ProfileBackEdgeHandleNative";
 import ProfileBadgeDetailModal from "./ProfileBadgeDetailModal";
 import ProfileMarkListOverlayNative from "./ProfileMarkListOverlayNative";
+import type { MarkListRow } from "./ProfileMarkListOverlayNative";
+import {
+  consumeMarkListResume,
+  requestMarkListResume,
+} from "./markListResumeNative";
 import { useProfileMarksNative } from "./useProfileMarksNative";
 import { maxMarksForPlan } from "../../../../../lib/marks/markTypes";
 import { useNativeUserPlan } from "../../hooks/useNativeUserPlan";
@@ -195,9 +202,11 @@ export default function ProfileHomeScreen({
     isMarked,
     addMark,
     removeMark,
+    refresh: refreshMarks,
   } = useProfileMarksNative(myUid, maxMarks);
   const publicRouteKey = routeHandle?.trim() ?? "";
   const isPublicProfileView = publicRouteKey.length > 0;
+  const isFocused = useIsFocused();
   const profileByHandle = useNativeProfileByHandle(
     isPublicProfileView ? publicRouteKey : null
   );
@@ -210,6 +219,8 @@ export default function ProfileHomeScreen({
   const [settingsAnim, setSettingsAnim] = useState<"fade" | "none">("fade");
   const [menuOpen, setMenuOpen] = useState(false);
   const [markListOpen, setMarkListOpen] = useState(false);
+  /** チャート等の重いブロックは1フレ後。ヒーロー＋タブを先に出す */
+  const [heavyReady, setHeavyReady] = useState(false);
   const [welcomeFlyActive, setWelcomeFlyActive] = useState(
     () =>
       !isPublicProfileView &&
@@ -309,8 +320,10 @@ export default function ProfileHomeScreen({
 
   const returnToPreviousScreen = useCallback(() => {
     if (fromMarkList) {
+      // navigate(openMarkList) だとスタック再アニメ＋detach 再アタッチで重い。goBack + 再開フラグ。
+      requestMarkListResume();
       if (navigation.canGoBack()) {
-        navigation.navigate("ProfileHome", { openMarkList: true });
+        navigation.goBack();
         return;
       }
       tabNavigation.navigate("ProfileTab", {
@@ -603,6 +616,40 @@ export default function ProfileHomeScreen({
     setMarkListOpen(true);
     navigation.setParams({ openMarkList: undefined });
   }, [isPublicProfileView, navigation, openMarkListOnMount]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (isPublicProfileView) return;
+      if (!consumeMarkListResume()) return;
+      setMarkListOpen(true);
+    }, [isPublicProfileView])
+  );
+
+  useEffect(() => {
+    if (!markListOpen || isPublicProfileView) return;
+    if (markRows.length > 0 || marksLoading) return;
+    void refreshMarks();
+  }, [
+    isPublicProfileView,
+    markListOpen,
+    markRows.length,
+    marksLoading,
+    refreshMarks,
+  ]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const enable = () => {
+      if (!cancelled) setHeavyReady(true);
+    };
+    const task = InteractionManager.runAfterInteractions(enable);
+    const t = setTimeout(enable, 48);
+    return () => {
+      cancelled = true;
+      task.cancel();
+      clearTimeout(t);
+    };
+  }, []);
 
   const { unreadCount: menuUnreadCount, readIds: announcementReadIds } =
     useNativeAnnouncementsUnread(myUid, status === "ready" && !!myUid, {
@@ -1151,6 +1198,9 @@ export default function ProfileHomeScreen({
   }
 
   function renderOverview() {
+    if (!heavyReady) {
+      return <View style={{ height: 120 }} />;
+    }
     if (!apiConfigured) {
       return (
         <Text style={styles.warnText}>{t.apiMissing}</Text>
@@ -1251,83 +1301,63 @@ export default function ProfileHomeScreen({
     );
   }
 
-  return (
-    <View style={styles.screenRoot}>
-    <TutorialWelcomeWorldCameraNative
-      active={welcomeFlyActive}
-      flying={welcomeFlying}
-      onFlyComplete={goWelcomeFeaturesHorizon}
-      overlay={
-        welcomeFlyActive ? (
-          <TutorialLiveCoachNative
-            open
-            embedInCamera
-            autoWelcomeFly="features"
-            title={tutorialCopy.tutorial.practice.welcomeTitle}
-            body={tutorialCopy.tutorial.practice.welcomeBody}
-            skipLabel={tutorialCopy.tutorial.skip}
-            nextLabel={tutorialCopy.tutorial.practice.welcomeFullCta}
-            altNextLabel={tutorialCopy.tutorial.practice.welcomeFeaturesCta}
-            visual="welcome"
-            {...tutorialSkipConfirm}
-            onSkip={finishWelcomeSkip}
-            onWelcomeFlyStart={startWelcomeFly}
-            onNext={goWelcomeFeaturesHorizon}
-            onAltNext={goWelcomeFeaturesHorizon}
-          />
-        ) : null
-      }
-    >
+  const profileScroll = (
     <ScrollView
       style={styles.scroll}
       contentContainerStyle={[
         styles.scrollContent,
-        { paddingTop: topContentPadY, paddingBottom: spacing.lg + bottomReserveY + (tab === "report" ? 48 : 0) },
+        {
+          paddingTop: topContentPadY,
+          paddingBottom:
+            spacing.lg + bottomReserveY + (tab === "report" ? 48 : 0),
+        },
       ]}
       keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}
     >
       {isPublicProfileView || !profileLoading ? (
-      <ProfileKinetikHeroNative
-        displayName={displayName.trim() || handle.trim()}
-        handle={handle.trim()}
-        avatarUrl={
-          avatarUrl.trim() ||
-          (!isPublicProfileView ? fUser?.photoURL?.trim() : "") ||
-          ""
-        }
-        bio={bio}
-        countryCode={countryCode}
-        plan={currentIsProView ? "pro" : plan}
-        callerIsPro={profilePlanHook.isMyPro}
-        planProBgVariant={planProBgVariant}
-        language={language}
-        memberSinceMs={memberSinceMs}
-        summary={statsBundle.summary}
-        summaryRanks={statsBundle.summaryRanks}
-        profileStatsContext={profileStatsContext}
-        winStreak={currentStreak}
-        statsLoading={statsBundle.loading && !statsBundle.summary}
-        metricValueDeltas={statsBundle.metricValueDeltas}
-        isMe={isMe}
-        onOpenMenu={() => setMenuOpen(true)}
-        menuUnreadCount={menuUnreadCount}
-        badges={resolvedBadges}
-        onBadgePress={(badge) => {
-          setSelectedBadge(badge);
-          setBadgeModalOpen(true);
-        }}
-        targetUid={targetUid ?? null}
-        profileViewCount={profileViewCount}
-        unitBalance={unitBalance}
-        onOpenUnitLedger={
-          isMe ? () => navigation.navigate("UnitLedger") : undefined
-        }
-        markMode={isMe || (!!myUid && myUid === targetUid) ? "list" : "toggle"}
-        marked={targetMarked}
-        markCount={markCount}
-        onPressMark={myUid && !isMe ? onPressMark : undefined}
-      />
+        <ProfileKinetikHeroNative
+          displayName={displayName.trim() || handle.trim()}
+          handle={handle.trim()}
+          avatarUrl={
+            avatarUrl.trim() ||
+            (!isPublicProfileView ? fUser?.photoURL?.trim() : "") ||
+            ""
+          }
+          bio={bio}
+          countryCode={countryCode}
+          plan={currentIsProView ? "pro" : plan}
+          callerIsPro={profilePlanHook.isMyPro}
+          planProBgVariant={planProBgVariant}
+          language={language}
+          memberSinceMs={memberSinceMs}
+          summary={statsBundle.summary}
+          summaryRanks={statsBundle.summaryRanks}
+          profileStatsContext={profileStatsContext}
+          winStreak={currentStreak}
+          statsLoading={statsBundle.loading && !statsBundle.summary}
+          metricValueDeltas={statsBundle.metricValueDeltas}
+          isMe={isMe}
+          onOpenMenu={() => setMenuOpen(true)}
+          menuUnreadCount={menuUnreadCount}
+          badges={resolvedBadges}
+          onBadgePress={(badge) => {
+            setSelectedBadge(badge);
+            setBadgeModalOpen(true);
+          }}
+          targetUid={targetUid ?? null}
+          profileViewCount={profileViewCount}
+          unitBalance={unitBalance}
+          onOpenUnitLedger={
+            isMe ? () => navigation.navigate("UnitLedger") : undefined
+          }
+          markMode={
+            isMe || (!!myUid && myUid === targetUid) ? "list" : "toggle"
+          }
+          marked={targetMarked}
+          markCount={markCount}
+          onPressMark={myUid && !isMe ? onPressMark : undefined}
+        />
       ) : null}
 
       {renderTabs()}
@@ -1350,7 +1380,40 @@ export default function ProfileHomeScreen({
         <ProfileBracketTabNative uid={targetUid} language={language} />
       )}
     </ScrollView>
-    </TutorialWelcomeWorldCameraNative>
+  );
+
+  return (
+    <View style={styles.screenRoot}>
+    {/* チュートリアル飛行中だけカメラ。通常はラップ無しで初回描画を軽くする */}
+    {welcomeFlyActive ? (
+      <TutorialWelcomeWorldCameraNative
+        active={welcomeFlyActive}
+        flying={welcomeFlying}
+        onFlyComplete={goWelcomeFeaturesHorizon}
+        overlay={
+          <TutorialLiveCoachNative
+            open
+            embedInCamera
+            autoWelcomeFly="features"
+            title={tutorialCopy.tutorial.practice.welcomeTitle}
+            body={tutorialCopy.tutorial.practice.welcomeBody}
+            skipLabel={tutorialCopy.tutorial.skip}
+            nextLabel={tutorialCopy.tutorial.practice.welcomeFullCta}
+            altNextLabel={tutorialCopy.tutorial.practice.welcomeFeaturesCta}
+            visual="welcome"
+            {...tutorialSkipConfirm}
+            onSkip={finishWelcomeSkip}
+            onWelcomeFlyStart={startWelcomeFly}
+            onNext={goWelcomeFeaturesHorizon}
+            onAltNext={goWelcomeFeaturesHorizon}
+          />
+        }
+      >
+        {profileScroll}
+      </TutorialWelcomeWorldCameraNative>
+    ) : (
+      profileScroll
+    )}
 
     {isMe ? (
       <>
@@ -1749,12 +1812,22 @@ export default function ProfileHomeScreen({
       maxMarks={maxMarks}
       markedByCount={markedByCount}
       onClose={() => setMarkListOpen(false)}
-      onOpenProfile={(h) => {
-        setMarkListOpen(false);
+      onOpenProfile={(row: MarkListRow) => {
+        const handle = row.handle.trim();
+        if (!handle) return;
+        // Modal は animationType=none。push 後に即閉じて自プロフィールを見せない。
         navigateToPublicProfileNative(navigation, {
-          handle: h,
+          handle,
           fromMarkList: true,
+          warm: {
+            uid: row.targetUid,
+            handle,
+            displayName: row.displayName,
+            photoURL: row.photoURL,
+            plan: row.isPro ? "pro" : "free",
+          },
         });
+        setMarkListOpen(false);
       }}
       onUnmark={(uid) => {
         void removeMark(uid);
@@ -1780,7 +1853,7 @@ export default function ProfileHomeScreen({
         }}
       />
     ) : null}
-    {!isPublicProfileView ? (
+    {!isPublicProfileView && isFocused ? (
       <View style={styles.tutorialHostLayer} pointerEvents="box-none">
         <TutorialLiveHostNative
           page="profile"

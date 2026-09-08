@@ -1,7 +1,16 @@
 /**
  * 試合一覧の線枠シェル。塗りカードではなく、上下ラベルで途切れた直角ストローク。
+ * 入場描画中のみ Skia。完了後（または非アニメ）は View セグメントに差し替えて常駐 Canvas を外す。
  */
-import { type ReactNode, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import {
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   type LayoutChangeEvent,
   type StyleProp,
@@ -15,6 +24,7 @@ import Animated, {
   cancelAnimation,
   Extrapolation,
   interpolate,
+  runOnJS,
   type SharedValue,
   useAnimatedStyle,
   useSharedValue,
@@ -28,6 +38,7 @@ import {
 } from "./gamesCyberMotion";
 import { gamesCyberEaseBezier } from "./gamesPageMotion";
 import {
+  interruptedRectStrokeSegments,
   interruptedRoundedRectStrokeHalves,
   MATCH_LINE_FRAME_STROKE,
   MATCH_LINE_FRAME_TOP_GAP_START_INSET,
@@ -47,6 +58,7 @@ export {
 
 const RADIUS = 0;
 const STROKE = MATCH_LINE_FRAME_STROKE;
+const GLOW_STROKE = 5;
 const LABEL_GAP_PAD = 16;
 const MIN_TICK_GAP = 12;
 const CTA_WIDTH_PROBE = "REGULAR SEASON";
@@ -69,6 +81,7 @@ type Props = {
    * 0→1 で線枠をパスに沿って描く。未指定は最初から全線。
    * ラウンドラベル左右から同時に半周し、下の CTA で合わせる。
    * `animateDraw` 指定時は無視（計測後にこちらで描画する）。
+   * 外部制御中は Skia を維持（プレビュー用）。
    */
   strokeEnd?: SharedValue<number>;
   /** 左辺ラベルをチュートリアル測定対象にする */
@@ -116,6 +129,90 @@ function makeHalves(
   return { left, right };
 }
 
+function StaticLineFrameStroke({
+  width,
+  height,
+  topGap,
+  bottomGap,
+  leftGap,
+  topGapAlign,
+  color,
+  glow,
+}: {
+  width: number;
+  height: number;
+  topGap: number;
+  bottomGap: number;
+  leftGap: number;
+  topGapAlign: "center" | "start";
+  color: string;
+  glow: string;
+}) {
+  const glowSegs = useMemo(
+    () =>
+      interruptedRectStrokeSegments({
+        width,
+        height,
+        radius: RADIUS,
+        inset: STROKE / 2,
+        topGap,
+        bottomGap,
+        leftGap,
+        topGapAlign,
+        topGapStartInset: MATCH_LINE_FRAME_TOP_GAP_START_INSET,
+        strokeWidth: GLOW_STROKE,
+      }),
+    [width, height, topGap, bottomGap, leftGap, topGapAlign]
+  );
+  const strokeSegs = useMemo(
+    () =>
+      interruptedRectStrokeSegments({
+        width,
+        height,
+        radius: RADIUS,
+        inset: STROKE / 2,
+        topGap,
+        bottomGap,
+        leftGap,
+        topGapAlign,
+        topGapStartInset: MATCH_LINE_FRAME_TOP_GAP_START_INSET,
+        strokeWidth: STROKE,
+      }),
+    [width, height, topGap, bottomGap, leftGap, topGapAlign]
+  );
+  if (!strokeSegs) return null;
+  return (
+    <View pointerEvents="none" style={[styles.canvas, { width, height }]}>
+      {glowSegs?.map((seg, i) => (
+        <View
+          key={`g-${i}`}
+          style={{
+            position: "absolute",
+            left: seg.left,
+            top: seg.top,
+            width: seg.width,
+            height: seg.height,
+            backgroundColor: glow,
+          }}
+        />
+      ))}
+      {strokeSegs.map((seg, i) => (
+        <View
+          key={`s-${i}`}
+          style={{
+            position: "absolute",
+            left: seg.left,
+            top: seg.top,
+            width: seg.width,
+            height: seg.height,
+            backgroundColor: color,
+          }}
+        />
+      ))}
+    </View>
+  );
+}
+
 export default function MatchListLineFrameNative({
   children,
   topLabel,
@@ -140,8 +237,20 @@ export default function MatchListLineFrameNative({
   const [ctaFixedW, setCtaFixedW] = useState(0);
   const [bottomCtaH, setBottomCtaH] = useState(0);
   const [leftLabelH, setLeftLabelH] = useState(0);
+  /** 外部 strokeEnd 制御中は常に Skia。それ以外は描画完了後に View へ */
+  const keepSkiaForExternalStroke = strokeEnd != null && !animateDraw;
+  const [useSkiaStroke, setUseSkiaStroke] = useState(
+    () => animateDraw || keepSkiaForExternalStroke
+  );
+  const prevAnimateDrawRef = useRef(animateDraw);
+  const settledRef = useRef(!animateDraw && !keepSkiaForExternalStroke);
   const leftLabelMeasureRef = useRef<View>(null);
   const { color, glow } = paint ?? matchLineFramePaint({ pickup, predicted });
+
+  const settleToStatic = useCallback(() => {
+    settledRef.current = true;
+    setUseSkiaStroke(false);
+  }, []);
 
   useEffect(() => {
     if (!leftLabelTutorialTarget || !leftLabel) return;
@@ -180,10 +289,10 @@ export default function MatchListLineFrameNative({
 
   const skiaHalves = useMemo(
     () =>
-      size.w > 0 && size.h > 0
+      useSkiaStroke && size.w > 0 && size.h > 0
         ? makeHalves(size.w, size.h, topGap, bottomGap, leftGap, topLabelAlign)
         : null,
-    [size.w, size.h, topGap, bottomGap, leftGap, topLabelAlign]
+    [useSkiaStroke, size.w, size.h, topGap, bottomGap, leftGap, topLabelAlign]
   );
 
   function onLayout(e: LayoutChangeEvent) {
@@ -197,11 +306,8 @@ export default function MatchListLineFrameNative({
   const hasSize = size.w > 0 && size.h > 0;
   const labelReady = !topLabel || topLabelW > 0;
   const ctaReady = !showCta || ctaFixedW > 0;
-  const ready =
-    hasSize &&
-    skiaHalves != null &&
-    labelReady &&
-    (animateDraw ? ctaReady : true);
+  const geomReady = hasSize && labelReady && (animateDraw ? ctaReady : true);
+  const ready = geomReady && (useSkiaStroke ? skiaHalves != null : true);
 
   const fallbackStrokeEnd = useSharedValue(1);
   const localDrawEnd = useSharedValue(animateDraw ? 0 : 1);
@@ -212,19 +318,42 @@ export default function MatchListLineFrameNative({
     : (strokeEnd ?? fallbackStrokeEnd);
 
   useLayoutEffect(() => {
-    if (!animateDraw) {
+    const animateRising = animateDraw && !prevAnimateDrawRef.current;
+    prevAnimateDrawRef.current = animateDraw;
+
+    if (keepSkiaForExternalStroke) {
+      settledRef.current = false;
+      setUseSkiaStroke(true);
       localDrawEnd.value = 1;
       canvasReveal.value = 1;
       contentOpacity.value = 1;
       return;
     }
-    if (!ready) {
+    if (!animateDraw) {
+      settledRef.current = true;
+      setUseSkiaStroke(false);
+      localDrawEnd.value = 1;
+      canvasReveal.value = 1;
+      contentOpacity.value = 1;
+      return;
+    }
+    if (animateRising) {
+      settledRef.current = false;
+      setUseSkiaStroke(true);
+    }
+    /** 描画完了済みなら再起動しない */
+    if (settledRef.current && !animateRising) {
+      return;
+    }
+    if (!geomReady) {
+      setUseSkiaStroke(true);
       localDrawEnd.value = 0;
       canvasReveal.value = 0;
       if (fadeContent) contentOpacity.value = 0;
       return;
     }
     /** Skia の初回フレームは不透明黒になりやすい。隠してから枠を描く */
+    setUseSkiaStroke(true);
     localDrawEnd.value = 0;
     canvasReveal.value = 0;
     if (fadeContent) contentOpacity.value = 0;
@@ -235,10 +364,16 @@ export default function MatchListLineFrameNative({
         canvasReveal.value = 1;
         localDrawEnd.value = withDelay(
           delay,
-          withTiming(1, {
-            duration: GAMES_LINE_FRAME_DRAW_MS,
-            easing: gamesCyberEaseBezier,
-          })
+          withTiming(
+            1,
+            {
+              duration: GAMES_LINE_FRAME_DRAW_MS,
+              easing: gamesCyberEaseBezier,
+            },
+            (finished) => {
+              if (finished) runOnJS(settleToStatic)();
+            }
+          )
         );
         if (fadeContent) {
           contentOpacity.value = withDelay(
@@ -259,13 +394,16 @@ export default function MatchListLineFrameNative({
     return () => {
       cancelAnimationFrame(raf1);
       cancelAnimationFrame(raf2);
+      cancelAnimation(localDrawEnd);
       cancelAnimation(contentOpacity);
     };
   }, [
     animateDraw,
     fadeContent,
-    ready,
+    geomReady,
     drawDelayMs,
+    keepSkiaForExternalStroke,
+    settleToStatic,
     localDrawEnd,
     canvasReveal,
     contentOpacity,
@@ -303,8 +441,10 @@ export default function MatchListLineFrameNative({
     ),
   }));
 
+  const labelsSettled = !useSkiaStroke && !keepSkiaForExternalStroke;
+
   const strokePaths =
-    ready && skiaHalves ? (
+    useSkiaStroke && ready && skiaHalves ? (
       <Animated.View
         pointerEvents="none"
         style={[
@@ -322,48 +462,59 @@ export default function MatchListLineFrameNative({
             backgroundColor: "transparent",
           }}
         >
-        <Path
-          path={skiaHalves.right}
-          style="stroke"
-          strokeWidth={5}
-          color={glow}
-          strokeCap="round"
-          strokeJoin="miter"
-          start={0}
-          end={strokeProgress as unknown as number}
-        />
-        <Path
-          path={skiaHalves.left}
-          style="stroke"
-          strokeWidth={5}
-          color={glow}
-          strokeCap="round"
-          strokeJoin="miter"
-          start={0}
-          end={strokeProgress as unknown as number}
-        />
-        <Path
-          path={skiaHalves.right}
-          style="stroke"
-          strokeWidth={STROKE}
-          color={color}
-          strokeCap="round"
-          strokeJoin="miter"
-          start={0}
-          end={strokeProgress as unknown as number}
-        />
-        <Path
-          path={skiaHalves.left}
-          style="stroke"
-          strokeWidth={STROKE}
-          color={color}
-          strokeCap="round"
-          strokeJoin="miter"
-          start={0}
-          end={strokeProgress as unknown as number}
-        />
+          <Path
+            path={skiaHalves.right}
+            style="stroke"
+            strokeWidth={GLOW_STROKE}
+            color={glow}
+            strokeCap="round"
+            strokeJoin="miter"
+            start={0}
+            end={strokeProgress as unknown as number}
+          />
+          <Path
+            path={skiaHalves.left}
+            style="stroke"
+            strokeWidth={GLOW_STROKE}
+            color={glow}
+            strokeCap="round"
+            strokeJoin="miter"
+            start={0}
+            end={strokeProgress as unknown as number}
+          />
+          <Path
+            path={skiaHalves.right}
+            style="stroke"
+            strokeWidth={STROKE}
+            color={color}
+            strokeCap="round"
+            strokeJoin="miter"
+            start={0}
+            end={strokeProgress as unknown as number}
+          />
+          <Path
+            path={skiaHalves.left}
+            style="stroke"
+            strokeWidth={STROKE}
+            color={color}
+            strokeCap="round"
+            strokeJoin="miter"
+            start={0}
+            end={strokeProgress as unknown as number}
+          />
         </Canvas>
       </Animated.View>
+    ) : !useSkiaStroke && geomReady ? (
+      <StaticLineFrameStroke
+        width={size.w}
+        height={size.h}
+        topGap={topGap}
+        bottomGap={bottomGap}
+        leftGap={leftGap}
+        topGapAlign={topLabelAlign}
+        color={color}
+        glow={glow}
+      />
     ) : null;
 
   return (
@@ -400,7 +551,10 @@ export default function MatchListLineFrameNative({
       {leftLabel ? (
         <Animated.View
           pointerEvents="none"
-          style={[styles.leftLabelWrap, leftLabelAnim]}
+          style={[
+            styles.leftLabelWrap,
+            labelsSettled ? styles.labelVisible : leftLabelAnim,
+          ]}
         >
           <View
             ref={leftLabelMeasureRef}
@@ -437,7 +591,7 @@ export default function MatchListLineFrameNative({
           style={[
             styles.topLabelWrap,
             topLabelAlign === "start" ? styles.topLabelWrapStart : null,
-            topLabelAnim,
+            labelsSettled ? styles.labelVisible : topLabelAnim,
           ]}
         >
           <View
@@ -467,7 +621,7 @@ export default function MatchListLineFrameNative({
         pointerEvents="none"
         style={[
           styles.bottomCtaWrap,
-          ctaAnim,
+          labelsSettled ? styles.labelVisible : ctaAnim,
           bottomCtaH > 0
             ? { transform: [{ translateY: bottomCtaH / 2 - STROKE }] }
             : null,
@@ -521,6 +675,9 @@ const styles = StyleSheet.create({
   content: {
     position: "relative",
     zIndex: 1,
+  },
+  labelVisible: {
+    opacity: 1,
   },
   leftLabelWrap: {
     position: "absolute",

@@ -13,17 +13,11 @@ export default function StandingsScreenNative() {
   const { fUser } = useFirebaseUser();
   const { language } = useNativeUserLanguage(fUser?.uid);
   const lang = language === "ja" ? "ja" : "en";
-  const isJa = lang === "ja";
 
   return (
     <GamesNbaSubpageShellNative
       eyebrow="GAMES"
       title="STANDINGS"
-      subtitle={
-        isJa
-          ? "イースト / ウエスト。成績・勝率・連勝敗・L10・HOME / AWAY。"
-          : "East / West. Record, win%, streak, L10, home / away."
-      }
       onBack={() => navigation.goBack()}
     >
       <NbaLeagueStandingsPanelNative

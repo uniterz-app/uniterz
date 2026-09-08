@@ -3,6 +3,9 @@
  * 塗りはモバイル `RESULT_GLASS_FILL_MOBILE` に準拠。
  * 四隅すべて斜め切り（左上・右下の直角は出さない）。
  * 枠は外枠−内枠の塗りリング。Canvas は透明クリア。
+ *
+ * `strokeWidth === 0`（一覧カード）は塗りを LinearGradient のみにし、
+ * 常駐 Skia Canvas を載せずスクロール負荷を下げる。
  */
 import { type ReactNode, useMemo, useState } from "react";
 import {
@@ -59,7 +62,7 @@ type Props = {
   overflowVisible?: boolean;
   /** 入場時の枠線フェード */
   strokeOpacityStyle?: StyleProp<AnimatedStyle<ViewStyle>>;
-  /** 枠線幅 px（hit / 連勝 / upset / perfect は 3） */
+  /** 枠線幅 px（hit / 連勝 / upset / perfect は 3）。0 なら塗りは静的 Gradient のみ */
   strokeWidth?: number;
   /** 互換用（Web ガラス面に方眼はないため常に無視） */
   hideGrid?: boolean;
@@ -89,14 +92,20 @@ function makeBorderRingPath(
 
 function GlassFillFallback() {
   return (
-    <LinearGradient
-      pointerEvents="none"
-      colors={[...GLASS_FILL_MOBILE.colors]}
-      locations={[...GLASS_FILL_MOBILE.locations]}
-      start={{ x: 0.1, y: 0 }}
-      end={{ x: 0.9, y: 1 }}
-      style={StyleSheet.absoluteFillObject}
-    />
+    <>
+      <View
+        pointerEvents="none"
+        style={[StyleSheet.absoluteFillObject, { backgroundColor: GLASS_UNDERLAY }]}
+      />
+      <LinearGradient
+        pointerEvents="none"
+        colors={[...GLASS_FILL_MOBILE.colors]}
+        locations={[...GLASS_FILL_MOBILE.locations]}
+        start={{ x: 0.1, y: 0 }}
+        end={{ x: 0.9, y: 1 }}
+        style={StyleSheet.absoluteFillObject}
+      />
+    </>
   );
 }
 
@@ -120,10 +129,15 @@ export default function ResultGlassShellNative({
   hideGrid: _hideGrid = false,
 }: Props) {
   const [size, setSize] = useState({ w: 0, h: 0 });
+  /** 一覧は strokeWidth=0。塗りは静的 Gradient（Skia なし） */
+  const useStaticFill = strokeWidth <= 0;
 
   const skiaPath = useMemo(
-    () => (size.w > 0 && size.h > 0 ? makeSkiaPath(size.w, size.h) : null),
-    [size.w, size.h]
+    () =>
+      !useStaticFill && size.w > 0 && size.h > 0
+        ? makeSkiaPath(size.w, size.h)
+        : null,
+    [useStaticFill, size.w, size.h]
   );
 
   const borderRingPath = useMemo(
@@ -174,7 +188,7 @@ export default function ResultGlassShellNative({
           hasSize ? { width: size.w, height: size.h } : styles.shellMeasuring,
         ]}
       >
-        {hasSize && skiaPath ? (
+        {!useStaticFill && hasSize && skiaPath ? (
           <Canvas
             opaque={false}
             style={{

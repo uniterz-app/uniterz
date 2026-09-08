@@ -12,7 +12,6 @@ import {
   type NbaAwardCandidate,
   type NbaAwardId,
   type NbaSeasonAwardsPrediction,
-  SEASON_AWARDS_SCORE_PREVIEW,
 } from "@/lib/predict/nbaSeasonAwardsPredict";
 import {
   awardsPreviewCatalog,
@@ -221,9 +220,7 @@ export default function NbaSeasonAwardsPredictPanel({
           Season awards · {value.season}
         </h2>
         <p className="text-[11px] leading-relaxed text-white/45 md:max-w-3xl md:text-sm">
-          フォーカス直後は他ユーザー人気ピック約 5 人。入力すると N → NI → NIK
-          の前方一致。選手名簿は API 契約後に差し替え。採点は未定（仮 +
-          {SEASON_AWARDS_SCORE_PREVIEW.exact}pt）。
+          フォーカス直後は他ユーザー人気ピック約 5 人。入力すると名前の前方一致で候補が出ます。採点・Unit・提出期限は右上のはてなを参照。
         </p>
       </header>
 

@@ -165,16 +165,14 @@ function hexWithAlpha(hex: string, alphaHex: string): string {
   return `${n}${alphaHex}`;
 }
 
-/** 右辺 DETAIL タブ（背表紙タブ型・ニュートラル枠） */
+/** @deprecated DETAIL 背表紙タブは廃止。互換のため残す */
 export const RESULT_CARD_DETAIL_SPINE = {
-  width: 18,
-  height: 80,
-  top: 80,
+  width: 0,
+  height: 0,
+  top: 0,
 } as const;
 
-const DETAIL_SPINE = RESULT_CARD_DETAIL_SPINE;
-
-/** プレビュー用・直角長方形シェル（角切りなし）+ 任意で右辺 DETAIL */
+/** プレビュー用・直角長方形シェル（角切りなし）+ 任意で詳細ヒント › */
 function RectShell({
   badge,
   topLabel,
@@ -190,6 +188,7 @@ function RectShell({
   badge: OutcomeBadge;
   topLabel?: string;
   onOpenDetail?: () => void;
+  /** true: カード右下に ›（詳細へ） */
   showDetailTab?: boolean;
   /** 線枠グローは MatchListLineFrame。elevation は Skia を覆うので使わない */
   frameGlow?: boolean;
@@ -197,53 +196,40 @@ function RectShell({
   animateDraw?: boolean;
   drawDelayMs?: number;
   motion?: ResultFaceMatchEntranceStyles;
-  /** 親 Pressable の押下と連動させる DETAIL タブ見た目 */
+  /** 親 Pressable の押下と連動させる › ヒント見た目 */
   detailSpineStyle?: object;
   children: ReactNode;
 }) {
   const paint = RESULT_LINE_FRAME_PAINT[badge];
-  const stroke = RESULT_CYBER_FRAME_STROKE_WIDTH;
-  const detailTab = Boolean(showDetailTab);
+  const showHint = Boolean(showDetailTab);
   const inner = (
     <View style={styles.rectShell}>
-      <View style={styles.rectBody}>{children}</View>
+      <View style={styles.rectBody}>
+        {children}
+        {showHint ? (
+          <Animated.View
+            pointerEvents="none"
+            style={[styles.detailHint, detailSpineStyle]}
+            accessibilityElementsHidden
+            importantForAccessibility="no-hide-descendants"
+          >
+            <Text style={styles.detailHintLabel}>DETAIL</Text>
+            <Text style={styles.detailHintChevron}>›</Text>
+          </Animated.View>
+        ) : null}
+      </View>
     </View>
   );
   const shell = (
-    <>
-      <MatchListLineFrameNative
-        topLabel={topLabel}
-        paint={paint}
-        strokeEnd={strokeEnd}
-        animateDraw={animateDraw}
-        drawDelayMs={drawDelayMs}
-      >
-        {detailTab ? (
-          <Animated.View
-            pointerEvents="none"
-            style={[
-              styles.detailSpine,
-              {
-                borderWidth: stroke,
-                borderLeftWidth: 0,
-                borderColor: paint.color,
-              },
-              motion?.headerGroupStyle,
-              detailSpineStyle,
-            ]}
-          >
-            <View style={styles.detailSpineTextCol}>
-              {"DETAIL".split("").map((ch) => (
-                <Text key={ch} style={styles.detailSpineChar}>
-                  {ch}
-                </Text>
-              ))}
-            </View>
-          </Animated.View>
-        ) : null}
-        {inner}
-      </MatchListLineFrameNative>
-    </>
+    <MatchListLineFrameNative
+      topLabel={topLabel}
+      paint={paint}
+      strokeEnd={strokeEnd}
+      animateDraw={animateDraw}
+      drawDelayMs={drawDelayMs}
+    >
+      {inner}
+    </MatchListLineFrameNative>
   );
   if (!onOpenDetail) {
     return <View style={styles.rectShellWrap}>{shell}</View>;
@@ -256,7 +242,6 @@ function RectShell({
       onPress={onOpenDetail}
       style={({ pressed }) => [
         styles.rectShellWrap,
-        detailTab ? styles.rectShellWrapWithDetail : null,
         pressed ? styles.cardPressed : null,
       ]}
     >
@@ -1080,44 +1065,42 @@ const styles = StyleSheet.create({
     width: "100%",
     overflow: "visible",
   },
-  /** DETAIL タブのはみ出し分をヒット領域に含める */
-  rectShellWrapWithDetail: {
-    paddingRight: DETAIL_SPINE.width - 1,
-  },
   cardPressed: {
     opacity: 0.96,
     transform: [{ scale: 0.99 }],
   },
-  detailSpine: {
+  detailHint: {
     position: "absolute",
-    top: DETAIL_SPINE.top,
-    /** カード幅は変えず、タブだけ右に出す */
-    right: -(DETAIL_SPINE.width - 1),
-    zIndex: 24,
-    width: DETAIL_SPINE.width,
-    height: DETAIL_SPINE.height,
+    right: 8,
+    bottom: 6,
+    zIndex: 6,
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#070b12",
-    borderColor: "rgba(148,163,184,0.35)",
+    gap: 3,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderWidth: StyleSheet.hairlineWidth * 2,
+    borderColor: "rgba(0,245,255,0.55)",
+    backgroundColor: "rgba(0,245,255,0.08)",
   },
-  detailSpinePressed: { opacity: 0.85 },
-  detailSpineDisabled: { opacity: 0.45 },
-  detailSpineTextCol: {
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 1,
-  },
-  detailSpineChar: {
+  detailHintLabel: {
     fontFamily: MATCH_CARD_METRIC_FONT,
     fontSize: 8,
-    fontWeight: "700",
-    lineHeight: 9,
-    letterSpacing: 0,
-    textTransform: "uppercase",
+    fontWeight: "800",
+    lineHeight: 10,
+    letterSpacing: 1.1,
     includeFontPadding: false,
-    color: "rgba(226,232,240,0.72)",
-    textAlign: "center",
+    color: "rgba(0,245,255,0.88)",
+  },
+  detailHintChevron: {
+    fontFamily: MATCH_CARD_METRIC_FONT,
+    fontSize: 14,
+    fontWeight: "700",
+    lineHeight: 14,
+    letterSpacing: 0,
+    includeFontPadding: false,
+    color: "rgba(0,245,255,0.95)",
+    marginTop: -1,
   },
   rectShell: {
     width: "100%",

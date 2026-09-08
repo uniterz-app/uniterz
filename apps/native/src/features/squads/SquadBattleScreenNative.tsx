@@ -4253,7 +4253,16 @@ export default function SquadBattleScreenNative() {
   function openMemberProfile(profile: SquadApplicantProfile) {
     const key = profilePathKeyFromRow(profile);
     if (!key) return;
-    navigateToPublicProfileNative(navigation as never, { handle: key });
+    navigateToPublicProfileNative(navigation as never, {
+      handle: key,
+      warm: {
+        uid: profile.uid,
+        handle: profile.handle,
+        displayName: profile.displayName,
+        photoURL: profile.photoURL,
+        plan: profile.plan ?? "free",
+      },
+    });
   }
 
   /** RANK + 自スクワッド時: tabs=0 / period=1 / pinned=2 で sticky */

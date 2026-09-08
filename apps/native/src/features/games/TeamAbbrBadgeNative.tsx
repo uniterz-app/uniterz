@@ -14,9 +14,18 @@ type Props = {
   /** 略称（LAL）または teamId（nba-lakers） */
   abbr?: string | null;
   teamId?: string | null;
+  /** 同系色対決時など、塗りを上書き */
+  fillColor?: string | null;
+  /** `sm` = アワード市場など密な行向け */
+  size?: "md" | "sm";
 };
 
-export default function TeamAbbrBadgeNative({ abbr, teamId }: Props) {
+export default function TeamAbbrBadgeNative({
+  abbr,
+  teamId,
+  fillColor,
+  size = "md",
+}: Props) {
   const resolvedAbbr = (
     abbr?.trim() ||
     (teamId ? TEAM_SHORT[teamId] : null) ||
@@ -30,19 +39,37 @@ export default function TeamAbbrBadgeNative({ abbr, teamId }: Props) {
     teamId?.startsWith("nba-")
       ? teamId
       : nbaTeamIdFromBracketCode(resolvedAbbr);
-  const fill = id
-    ? softenTeamUiColor(getTeamJerseyPrimaryColor("nba", id))
-    : "#5B8CFF";
+  const fill = fillColor
+    ? softenTeamUiColor(fillColor)
+    : id
+      ? softenTeamUiColor(getTeamJerseyPrimaryColor("nba", id))
+      : "#5B8CFF";
   const ink = contrastingInkOnHex(fill);
+  const sm = size === "sm";
 
   return (
-    <View style={[styles.badgeSkew, { backgroundColor: fill }]}>
+    <View
+      style={[
+        sm ? styles.badgeSkewSm : styles.badgeSkew,
+        { backgroundColor: fill },
+      ]}
+    >
       <View style={styles.badgeScan} pointerEvents="none">
-        {Array.from({ length: 8 }, (_, i) => (
-          <View key={i} style={[styles.badgeScanLine, { top: 1 + i * 3 }]} />
+        {Array.from({ length: sm ? 6 : 8 }, (_, i) => (
+          <View
+            key={i}
+            style={[styles.badgeScanLine, { top: 1 + i * (sm ? 2.5 : 3) }]}
+          />
         ))}
       </View>
-      <Text style={[styles.badgeText, { color: ink }]}>{resolvedAbbr}</Text>
+      <Text
+        style={[
+          sm ? styles.badgeTextSm : styles.badgeText,
+          { color: ink },
+        ]}
+      >
+        {resolvedAbbr}
+      </Text>
     </View>
   );
 }
@@ -52,6 +79,15 @@ const styles = StyleSheet.create({
     minWidth: 38,
     height: 22,
     paddingHorizontal: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+    transform: [{ skewX: "-14deg" }],
+  },
+  badgeSkewSm: {
+    minWidth: 28,
+    height: 16,
+    paddingHorizontal: 5,
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
@@ -71,6 +107,13 @@ const styles = StyleSheet.create({
     fontFamily: OX,
     fontSize: 9,
     letterSpacing: 0.8,
+    textTransform: "uppercase",
+    transform: [{ skewX: "14deg" }],
+  },
+  badgeTextSm: {
+    fontFamily: OX,
+    fontSize: 7,
+    letterSpacing: 0.5,
     textTransform: "uppercase",
     transform: [{ skewX: "14deg" }],
   },

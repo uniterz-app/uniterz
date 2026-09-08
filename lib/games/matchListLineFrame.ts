@@ -228,6 +228,107 @@ export function interruptedRoundedRectStrokeHalves(opts: FrameStrokeOpts): {
   return { left: leftHalfD(g), right: rightHalfD(g) };
 }
 
+/** 直角線枠の静止セグメント（Skia 差し替え用）。r>0 は非対応 */
+export type InterruptedRectStrokeSegment = {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+};
+
+export function interruptedRectStrokeSegments(
+  opts: FrameStrokeOpts & { strokeWidth?: number }
+): InterruptedRectStrokeSegment[] | null {
+  const g = frameGeom(opts);
+  if (!g || g.r > 0) return null;
+  const sw = Math.max(0.5, opts.strokeWidth ?? MATCH_LINE_FRAME_STROKE);
+  const half = sw / 2;
+  const topY = g.top - half;
+  const bottomY = g.bottom - half;
+  const leftX = g.left - half;
+  const rightX = g.right - half;
+  const segments: InterruptedRectStrokeSegment[] = [];
+
+  const topLeftW = g.topGapLeft - g.left;
+  if (topLeftW > 0.5) {
+    segments.push({ left: leftX, top: topY, width: topLeftW + half, height: sw });
+  }
+  const topRightW = g.right - g.topGapRight;
+  if (topRightW > 0.5) {
+    segments.push({
+      left: g.topGapRight - half,
+      top: topY,
+      width: topRightW + half,
+      height: sw,
+    });
+  }
+
+  segments.push({
+    left: rightX,
+    top: topY,
+    width: sw,
+    height: g.bottom - g.top + sw,
+  });
+
+  if (g.botGap > 0) {
+    const botRightW = g.right - (g.cx + g.botHalf);
+    if (botRightW > 0.5) {
+      segments.push({
+        left: g.cx + g.botHalf - half,
+        top: bottomY,
+        width: botRightW + half,
+        height: sw,
+      });
+    }
+    const botLeftW = g.cx - g.botHalf - g.left;
+    if (botLeftW > 0.5) {
+      segments.push({
+        left: leftX,
+        top: bottomY,
+        width: botLeftW + half,
+        height: sw,
+      });
+    }
+  } else {
+    segments.push({
+      left: leftX,
+      top: bottomY,
+      width: g.right - g.left + sw,
+      height: sw,
+    });
+  }
+
+  if (g.leftGap > 0) {
+    const leftTopH = g.cy - g.leftHalf - g.top;
+    if (leftTopH > 0.5) {
+      segments.push({
+        left: leftX,
+        top: topY,
+        width: sw,
+        height: leftTopH + half,
+      });
+    }
+    const leftBotH = g.bottom - (g.cy + g.leftHalf);
+    if (leftBotH > 0.5) {
+      segments.push({
+        left: leftX,
+        top: g.cy + g.leftHalf - half,
+        width: sw,
+        height: leftBotH + half,
+      });
+    }
+  } else {
+    segments.push({
+      left: leftX,
+      top: topY,
+      width: sw,
+      height: g.bottom - g.top + sw,
+    });
+  }
+
+  return segments;
+}
+
 export function interruptedRoundedRectStrokeD(opts: FrameStrokeOpts): string {
   const halves = interruptedRoundedRectStrokeHalves(opts);
   if (!halves) return "";

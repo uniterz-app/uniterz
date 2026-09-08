@@ -25,7 +25,6 @@ import {
   type NbaConferenceStandingsPicks,
   type NbaSeasonStandingsPrediction,
   type NbaStandingsRank,
-  SEASON_STANDINGS_SCORE_PREVIEW,
 } from "../../../../../../../lib/predict/nbaSeasonStandingsPredict";
 import {
   MATCH_CARD_BRACKET_LETTER_SPACING_12,
@@ -299,9 +298,7 @@ export default function NbaSeasonStandingsPredictPanelNative({
       <View style={{ gap: 4, marginBottom: 12 }}>
         <Text style={styles.h2}>Season standings · {value.season}</Text>
         <Text style={styles.lead}>
-          1–6 ストレートイン / 7–10 プレーイン / 11–15 圏外。シーズン終了後に採点。 仮: 完全一致 +
-          {SEASON_STANDINGS_SCORE_PREVIEW.exact} · ±1 +{SEASON_STANDINGS_SCORE_PREVIEW.within1} · ±2 +
-          {SEASON_STANDINGS_SCORE_PREVIEW.within2}。
+          1–6 ストレートイン / 7–10 プレーイン / 11–15 圏外。採点・Unit・提出期限は右上のはてなを参照。
         </Text>
       </View>
 
@@ -375,6 +372,11 @@ const styles = StyleSheet.create({
     letterSpacing: 1.6,
     color: "#a5f3fc",
     textTransform: "uppercase",
+  },
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
   },
   lead: { fontSize: 11, lineHeight: 16, color: "rgba(255,255,255,0.45)" },
   zoneRow: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 6 },

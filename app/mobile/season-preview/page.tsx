@@ -25,6 +25,11 @@ const LINKS = [
     note: "順位表 + アワード出力",
   },
   {
+    href: "/mobile/season-market-preview",
+    title: "締切後マーケット",
+    note: "順位分布 + アワード Top5",
+  },
+  {
     href: "/mobile/predict-timing-preview",
     title: "予想オーバーレイ",
     note: "Insight / Injury / Stats / Roster",

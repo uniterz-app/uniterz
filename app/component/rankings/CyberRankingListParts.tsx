@@ -158,9 +158,13 @@ export function CyberRankingScore({
   const color = plainWhite ? "rgba(255,255,255,0.96)" : cyberScoreColor(rank);
   const mainSize =
     scoreLayout === "web"
-      ? rank <= 3
-        ? "text-[28px]"
-        : "text-[24px]"
+      ? compact
+        ? rank <= 3
+          ? "text-[20px]"
+          : "text-[17px]"
+        : rank <= 3
+          ? "text-[28px]"
+          : "text-[24px]"
       : compact
         ? rank <= 3
           ? "text-[15px]"
@@ -341,13 +345,15 @@ export function CyberRankingListRow({
   const quietFrame = bare ? null : cyberRankQuietFrameColor(rank);
   const nameJa = hasJaScript(displayName);
   const isWebScore = scoreLayout === "web" && !compact;
+  /** compact でも PTS 横並び（リザルト詳細など） */
+  const scoreBesideTag = scoreLayout === "web";
   const nameFontSize = rankingFontSizePx(
     isWebScore ? 20 : compact ? 13 : 15,
     displayName
   );
   const tagJa = hasJaScript(metricTag);
   const tagFontSize = rankingFontSizePx(
-    isWebScore ? 10 : compact ? 7 : 8,
+    isWebScore ? 10 : scoreBesideTag ? 9 : compact ? 7 : 8,
     metricTag
   );
   const dayDeltaText = formatListMetricDayDelta(metric, metricValueDelta);
@@ -359,7 +365,7 @@ export function CyberRankingListRow({
   const tagEl = (
     <span
       className={[
-        isWebScore ? "" : "mt-1",
+        scoreBesideTag ? "" : "mt-1",
         "font-bold tracking-[0.2em]",
         tagJa ? jp.className : nameOxanium.className,
         tagJa ? "" : "uppercase",
@@ -572,8 +578,14 @@ export function CyberRankingListRow({
         </div>
 
         <div className="flex shrink-0 flex-col items-end justify-center pl-1">
-          {isWebScore ? (
-            <div className="flex items-start gap-2.5">
+          {scoreBesideTag ? (
+            <div
+              className={
+                compact
+                  ? "flex items-baseline gap-1.5"
+                  : "flex items-start gap-2.5"
+              }
+            >
               {scoreSlot}
               <div className="flex flex-col items-end">
                 {tagEl}

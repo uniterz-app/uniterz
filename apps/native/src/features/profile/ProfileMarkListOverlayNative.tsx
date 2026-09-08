@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -10,12 +11,13 @@ import {
   View,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { BlurView } from "expo-blur";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MAX_MARKS_FREE, type UserMark } from "../../../../../lib/marks/markTypes";
 import { loadMarksWeeklyBoard, peekMarksWeeklyBoard } from "../../../../../lib/profile/fetchMarksWeeklyBoard";
 import { getUniterzApiBaseUrl } from "../games/submitPredictionApi";
-import MarkListFloorGridNative from "./MarkListFloorGridNative";
 import { peekProfileUserDocNative } from "./profileUserDocCacheNative";
+import ProfileBackEdgeHandleNative from "./ProfileBackEdgeHandleNative";
 import ProCyberBadgeNative from "./kinetik/ProCyberBadgeNative";
 import { CyberRankNumberNative } from "../rankings/CyberRankNumberNative";
 import { RankingsAvatarNative } from "../rankings/RankingsAvatarAndTabs";
@@ -35,6 +37,7 @@ import {
   CYBER_LIST_MAGENTA,
   cyberMetricTag,
 } from "../../../../../lib/rankings/cyberRankVisual";
+import { nativeBlurViewExtraProps } from "../../ui/nativeBlurProps";
 
 export type MarkListRow = UserMark & {
   weeklyRank: number | null;
@@ -76,7 +79,7 @@ type Props = {
   maxMarks?: number;
   markedByCount?: number;
   onClose: () => void;
-  onOpenProfile: (handle: string) => void;
+  onOpenProfile: (row: MarkListRow) => void;
   onUnmark: (targetUid: string) => void;
 };
 
@@ -134,13 +137,33 @@ export default function ProfileMarkListOverlayNative({
   return (
     <Modal
       visible={visible}
-      animationType="slide"
-      presentationStyle="pageSheet"
+      transparent
+      animationType="none"
+      statusBarTranslucent
+      {...(Platform.OS === "ios" ? ({ presentationStyle: "overFullScreen" } as const) : {})}
       onRequestClose={onClose}
     >
       <View style={styles.root}>
-        <MarkListFloorGridNative />
-        <View style={[styles.sheet, { paddingTop: Math.max(insets.top, 12) }]}>
+        <Pressable
+          style={styles.backdrop}
+          onPress={onClose}
+          accessibilityRole="button"
+          accessibilityLabel={isJa ? "戻る" : "Back"}
+        >
+          {(Platform.OS === "ios" || Platform.OS === "android") && (
+            <BlurView
+              intensity={Platform.OS === "ios" ? 48 : 36}
+              tint="dark"
+              {...nativeBlurViewExtraProps()}
+              style={StyleSheet.absoluteFillObject}
+            />
+          )}
+          <View style={styles.backdropDim} pointerEvents="none" />
+        </Pressable>
+        <View
+          style={[styles.sheet, { paddingTop: Math.max(insets.top, 12) }]}
+          pointerEvents="box-none"
+        >
         <View style={styles.header}>
           <View style={styles.headerText}>
             <Text style={styles.title}>MARK LIST</Text>
@@ -150,9 +173,6 @@ export default function ProfileMarkListOverlayNative({
                 : `Marked ${marks.length}/${maxMarks} · marked by ${markedByCount}`}
             </Text>
           </View>
-          <Pressable onPress={onClose} style={styles.closeBtn} hitSlop={8}>
-            <Text style={styles.closeText}>{isJa ? "閉じる" : "Close"}</Text>
-          </Pressable>
         </View>
 
         {loading ? (
@@ -203,8 +223,7 @@ export default function ProfileMarkListOverlayNative({
                   key={row.targetUid}
                   onPress={() => {
                     if (!handle) return;
-                    onClose();
-                    onOpenProfile(handle);
+                    onOpenProfile(row);
                   }}
                   style={({ pressed }) => [
                     styles.article,
@@ -295,6 +314,10 @@ export default function ProfileMarkListOverlayNative({
           </ScrollView>
         )}
         </View>
+        <ProfileBackEdgeHandleNative
+          onPress={onClose}
+          accessibilityLabel={isJa ? "戻る" : "Back"}
+        />
       </View>
     </Modal>
   );
@@ -303,7 +326,14 @@ export default function ProfileMarkListOverlayNative({
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: "#000000",
+    backgroundColor: "transparent",
+  },
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  backdropDim: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.62)",
   },
   sheet: {
     flex: 1,
@@ -329,15 +359,6 @@ const styles = StyleSheet.create({
     marginTop: 4,
     color: "rgba(255,255,255,0.5)",
     fontSize: 12,
-  },
-  closeBtn: {
-    paddingVertical: 4,
-    paddingHorizontal: 4,
-  },
-  closeText: {
-    color: "rgba(255,255,255,0.72)",
-    fontSize: 13,
-    fontWeight: "600",
   },
   center: {
     flex: 1,

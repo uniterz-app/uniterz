@@ -1,23 +1,35 @@
 "use client";
 
 /**
- * 本番: NBA シーズンアワード予想（提出 → Firestore 本人1通）
+ * 本番: NBA シーズンアワード予想
+ * 締切前: 提出 / 提出後ビュー
+ * 締切後: マーケット集計
  * `/mobile/season-awards`
  */
 import { useCallback, useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { onAuthStateChanged } from "firebase/auth";
 import GamesNbaSubpageShell from "@/app/component/games/GamesNbaSubpageShell";
 import NbaSeasonAwardsPredictPanel from "@/app/component/predict/season/NbaSeasonAwardsPredictPanel";
 import NbaSeasonAwardsViewPanel from "@/app/component/predict/season/NbaSeasonAwardsViewPanel";
+import NbaSeasonAwardsMarketPanel from "@/app/component/predict/season/NbaSeasonAwardsMarketPanel";
+import SeasonPredictRulesModal from "@/app/component/predict/season/SeasonPredictRulesModal";
 import CandleChartLoader from "@/app/component/common/CandleChartLoader";
 import {
   fetchMeSeasonAwards,
   saveMeSeasonAwards,
 } from "@/lib/api/fetchSeasonAwards";
 import { fetchMeSeasonStandings } from "@/lib/api/fetchSeasonStandings";
+import { fetchSeasonPredictMarket } from "@/lib/api/fetchSeasonPredictMarket";
 import { auth } from "@/lib/firebase";
 import { nameOxanium } from "@/lib/fonts";
+import {
+  isSeasonPredictSubmitOpen,
+  SEASON_PREDICT_SUBMIT_DEADLINE_LABEL_JA,
+  seasonPredictSubmitLockedMessage,
+} from "@/lib/predict/seasonPredictDeadline";
+import type { SeasonAwardsMarketSnapshot } from "@/lib/predict/seasonPredictMarket";
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
 import {
   emptySeasonAwardsPrediction,
@@ -26,20 +38,24 @@ import {
   type NbaSeasonAwardsPrediction,
 } from "@/lib/predict/nbaSeasonAwardsPredict";
 
-type Mode = "loading" | "edit" | "view";
+type Mode = "loading" | "edit" | "view" | "market" | "market_pending";
 
 export default function SeasonAwardsPage() {
   const router = useRouter();
   const season = CURRENT_NBA_SEASON_KEY;
+  const submitOpen = isSeasonPredictSubmitOpen();
   const [mode, setMode] = useState<Mode>("loading");
   const [value, setValue] = useState<NbaSeasonAwardsPrediction>(() =>
     emptySeasonAwardsPrediction(season)
   );
   const [candidates, setCandidates] = useState<NbaAwardCandidate[]>([]);
+  const [market, setMarket] = useState<SeasonAwardsMarketSnapshot | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [uid, setUid] = useState<string | null>(null);
   const [standingsNudgeOpen, setStandingsNudgeOpen] = useState(false);
+  const [rulesOpen, setRulesOpen] = useState(false);
+  const [rulesAutoShown, setRulesAutoShown] = useState(false);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (user) => {
@@ -56,6 +72,30 @@ export default function SeasonAwardsPage() {
     if (!uid) return;
     let cancelled = false;
     (async () => {
+      if (!submitOpen) {
+        try {
+          const data = await fetchSeasonPredictMarket({
+            season,
+            kind: "awards",
+          });
+          if (cancelled) return;
+          if (data.awards) {
+            setMarket(data.awards);
+            setMode("market");
+          } else {
+            setMarket(null);
+            setMode("market_pending");
+          }
+        } catch (e) {
+          console.error("fetchSeasonPredictMarket awards", e);
+          if (!cancelled) {
+            setError(e instanceof Error ? e.message : "market load failed");
+            setMode("market_pending");
+          }
+        }
+        return;
+      }
+
       try {
         const data = await fetchMeSeasonAwards(season);
         if (cancelled) return;
@@ -79,10 +119,20 @@ export default function SeasonAwardsPage() {
     return () => {
       cancelled = true;
     };
-  }, [uid, season]);
+  }, [uid, season, submitOpen]);
+
+  useEffect(() => {
+    if (mode !== "edit" || rulesAutoShown) return;
+    setRulesOpen(true);
+    setRulesAutoShown(true);
+  }, [mode, rulesAutoShown]);
 
   const handleSubmit = useCallback(async () => {
     if (submitting) return;
+    if (!submitOpen) {
+      setError(seasonPredictSubmitLockedMessage("ja"));
+      return;
+    }
     if (!isSeasonAwardsComplete(value)) {
       setError("7つのアワードすべて選んでから提出してください。");
       return;
@@ -111,49 +161,111 @@ export default function SeasonAwardsPage() {
     } finally {
       setSubmitting(false);
     }
-  }, [value, submitting, season]);
+  }, [value, submitting, season, submitOpen]);
 
   return (
     <GamesNbaSubpageShell
       eyebrow="NBA · SEASON"
-      title="AWARDS"
-      subtitle="MVP・DPOY など主要アワードを予想。候補は人気ピックから選び、名前検索でも絞り込めます。"
+      title={submitOpen ? "AWARDS" : "MARKET"}
+      subtitle={
+        submitOpen
+          ? "MVP・DPOY など主要アワードを予想。候補は人気ピックから選び、名前検索でも絞り込めます。"
+          : "締切後の提出集計。各アワードのシェア Top5 です。"
+      }
+      onHelpPress={() => setRulesOpen(true)}
     >
       {mode === "loading" ? (
         <div className="flex justify-center py-16">
           <CandleChartLoader />
         </div>
+      ) : mode === "market" && market ? (
+        <div className="space-y-3">
+          <p
+            className={[
+              nameOxanium.className,
+              "text-[10px] font-bold uppercase tracking-[0.12em] text-amber-200/70",
+            ].join(" ")}
+          >
+            Deadline passed · crowd market
+          </p>
+          <NbaSeasonAwardsMarketPanel market={market} />
+        </div>
+      ) : mode === "market_pending" ? (
+        <div className="space-y-3 py-8 text-center">
+          <p
+            className={[
+              nameOxanium.className,
+              "text-[12px] font-extrabold uppercase tracking-[0.14em] text-amber-200/80",
+            ].join(" ")}
+          >
+            Market pending
+          </p>
+          <p className="text-[13px] leading-relaxed text-white/50">
+            提出期限を過ぎました。集計が完了次第、ここにマーケットが表示されます。
+          </p>
+          {error ? (
+            <p className="text-[12px] text-[#FF8AB4]/85">{error}</p>
+          ) : null}
+        </div>
       ) : mode === "view" ? (
         <div className="space-y-3">
+          <p
+            className={[
+              nameOxanium.className,
+              "text-[10px] font-bold uppercase tracking-[0.12em] text-white/40",
+            ].join(" ")}
+          >
+            提出期限 · {SEASON_PREDICT_SUBMIT_DEADLINE_LABEL_JA}
+          </p>
           <NbaSeasonAwardsViewPanel
             prediction={value}
             catalog={candidates.length > 0 ? candidates : undefined}
           />
-          <button
-            type="button"
-            onClick={() => {
-              setError(null);
-              setMode("edit");
-            }}
-            className={[
-              nameOxanium.className,
-              "w-full border border-white/15 bg-white/[0.04] px-4 py-2.5 text-[11px] font-extrabold uppercase tracking-[0.14em] text-white/70 transition hover:bg-white/[0.08]",
-            ].join(" ")}
-          >
-            Edit & resubmit
-          </button>
+          {submitOpen ? (
+            <button
+              type="button"
+              onClick={() => {
+                setError(null);
+                setMode("edit");
+              }}
+              className={[
+                nameOxanium.className,
+                "w-full border border-white/15 bg-white/[0.04] px-4 py-2.5 text-[11px] font-extrabold uppercase tracking-[0.14em] text-white/70 transition hover:bg-white/[0.08]",
+              ].join(" ")}
+            >
+              Edit & resubmit
+            </button>
+          ) : (
+            <p className="text-[12px] text-white/45">
+              {seasonPredictSubmitLockedMessage("ja")}
+            </p>
+          )}
         </div>
       ) : (
         <div className="space-y-3">
+          <p
+            className={[
+              nameOxanium.className,
+              "text-[10px] font-bold uppercase tracking-[0.12em] text-white/40",
+            ].join(" ")}
+          >
+            提出期限 · {SEASON_PREDICT_SUBMIT_DEADLINE_LABEL_JA}
+          </p>
           {error ? (
             <p className="text-[12px] text-[#FF8AB4]/85">{error}</p>
           ) : null}
-          <NbaSeasonAwardsPredictPanel
-            value={value}
-            onChange={setValue}
-            onSubmit={() => void handleSubmit()}
-            submitDisabled={submitting}
-          />
+          {!submitOpen ? (
+            <p className="text-[12px] text-white/45">
+              {seasonPredictSubmitLockedMessage("ja")}
+            </p>
+          ) : (
+            <NbaSeasonAwardsPredictPanel
+              value={value}
+              onChange={setValue}
+              onSubmit={() => void handleSubmit()}
+              submitDisabled={submitting}
+            />
+          )}
           {submitting ? (
             <p
               className={[
@@ -216,6 +328,17 @@ export default function SeasonAwardsPage() {
           </div>
         </div>
       ) : null}
+
+      {typeof document !== "undefined"
+        ? createPortal(
+            <SeasonPredictRulesModal
+              open={rulesOpen}
+              kind="awards"
+              onClose={() => setRulesOpen(false)}
+            />,
+            document.body
+          )
+        : null}
     </GamesNbaSubpageShell>
   );
 }

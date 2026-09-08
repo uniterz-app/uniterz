@@ -92,7 +92,6 @@ import { shareResultCardNative } from "./shareResultCardNative";
 import { buildResultCardFaceModel } from "../../../../../lib/result/buildResultCardFace";
 import {
   ResultCardDesignFaceNative,
-  RESULT_CARD_DETAIL_SPINE,
 } from "./ResultCardDesignPreviewScreenNative";
 import { useResultFaceMatchEntrance } from "./useResultFaceMatchEntrance";
 
@@ -541,7 +540,12 @@ export default function ResultPostCardNative({
     drawDelayMs: listEnterIndex * RESULT_CARD_STAGGER_MS,
   });
   const detailSpinePressStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(entrance.pressed.value, [0, 1], [1, 0.85]),
+    opacity: interpolate(entrance.pressed.value, [0, 1], [0.88, 1]),
+    transform: [
+      {
+        translateX: interpolate(entrance.pressed.value, [0, 1], [0, 2]),
+      },
+    ],
   }));
 
   const frameStyle =
@@ -631,7 +635,6 @@ export default function ResultPostCardNative({
           accessibilityRole="button"
           accessibilityLabel={isEn ? "Open result detail" : "リザルト詳細を開く"}
           style={styles.resultCardPressable}
-          hitSlop={{ right: RESULT_CARD_DETAIL_SPINE.width - 1 }}
           onPressIn={() => {
             entrance.pressed.value = reduceMotionList
               ? 1
@@ -922,6 +925,8 @@ export default function ResultPostCardNative({
                 label={resultCopy.nbaTopScorerResultLabel}
                 info={nbaTopScorer}
                 compact
+                homeTeamId={home?.teamId}
+                awayTeamId={away?.teamId}
               />
             ) : null}
             {statRows.map((row, rowIndex) => {
@@ -962,10 +967,17 @@ export default function ResultPostCardNative({
           <ShareLinkCaptureFooterNative url={shareLinkUrl} visible={sharing} />
           </View>
         </Animated.View>
-        {!pauseListFx && badge === "hit" ? <ResultHitCyberFrameNative /> : null}
-        {!pauseListFx && badge === "perfect" ? <ResultPerfectCyberFrameNative /> : null}
+        {!pauseListFx && badge === "hit" ? (
+          <ResultHitCyberFrameNative effectsActive={!pauseListFx} />
+        ) : null}
+        {!pauseListFx && badge === "perfect" ? (
+          <ResultPerfectCyberFrameNative effectsActive={!pauseListFx} />
+        ) : null}
         {!pauseListFx && badge === "streak" ? (
-          <ResultStreakCyberFrameNative activeWinStreak={activeWinStreak} />
+          <ResultStreakCyberFrameNative
+            activeWinStreak={activeWinStreak}
+            effectsActive={!pauseListFx}
+          />
         ) : null}
       </ResultGlassShellNative>
       </MatchListLineFrameNative>

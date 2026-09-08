@@ -52,13 +52,6 @@ const BIAS_SEGS = 16;
 const BIAS_SEG_STAGGER_MS = 32;
 const RESULT_FACE_AFTER_FRAME_PAD_SEC = 0.08;
 
-/** Native `RESULT_CARD_DETAIL_SPINE` — 右辺 DETAIL タブ */
-const RESULT_CARD_DETAIL_SPINE = {
-  width: 18,
-  height: 80,
-  top: 80,
-} as const;
-
 type OutcomeBadge = keyof typeof OUTCOME_LABEL;
 
 function scoreRelText(kind: ResultScoreRelKind): string | null {
@@ -97,6 +90,7 @@ function ImpactTag({ label, color }: { label: string; color: string }) {
 type Props = {
   language?: Language;
   face: ResultCardFaceModel;
+  /** true: カード右下に ›（詳細へ） */
   showDetailTab?: boolean;
   animateDraw?: boolean;
   drawDelaySec?: number;
@@ -153,11 +147,7 @@ export default function ResultCardDesignFace({
   const scorerHit = face.topScorerHit === true;
 
   return (
-    <div
-      className={
-        showDetailTab ? `${styles.wrap} ${styles.wrapWithDetail}` : styles.wrap
-      }
-    >
+    <div className={styles.wrap}>
       <MatchListLineFrame
       topLabel={face.roundLabel}
       paint={paint}
@@ -167,30 +157,17 @@ export default function ResultCardDesignFace({
       onClick={onOpen}
       className={onOpen ? "cursor-pointer select-none" : undefined}
     >
-      {showDetailTab ? (
-        <div
-          className={styles.detailSpine}
-          style={{
-            top: RESULT_CARD_DETAIL_SPINE.top,
-            right: -(RESULT_CARD_DETAIL_SPINE.width - 1),
-            width: RESULT_CARD_DETAIL_SPINE.width,
-            height: RESULT_CARD_DETAIL_SPINE.height,
-            borderWidth: 1.5,
-            borderColor: paint.color,
-          }}
-          aria-hidden
-        >
-          <div className={`${styles.detailSpineTextCol} ${nameOxanium.className}`}>
-            {"DETAIL".split("").map((ch) => (
-              <span key={ch} className={styles.detailSpineChar}>
-                {ch}
-              </span>
-            ))}
-          </div>
-        </div>
-      ) : null}
-
       <div className={styles.body}>
+        {showDetailTab ? (
+          <span className={styles.detailHint} aria-hidden>
+            <span className={`${styles.detailHintLabel} ${nameOxanium.className}`}>
+              DETAIL
+            </span>
+            <span className={`${styles.detailHintChevron} ${nameOxanium.className}`}>
+              ›
+            </span>
+          </span>
+        ) : null}
         <div className={styles.pad}>
           <motion.div className={styles.topBar} {...groupMotion(headerDelay, 6)}>
             <div className={styles.topLeftSlot}>

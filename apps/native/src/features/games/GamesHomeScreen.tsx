@@ -67,6 +67,7 @@ import {
 } from "./applyNativeGamesFilter";
 import {
   resolveTeamJerseyPalette,
+  resolveMatchupUiAccents,
   resolveTeamPrimaryColor,
 } from "./teamColors";
 import PredictModal, {
@@ -1063,7 +1064,8 @@ export default function GamesHomeScreen({
   const mainScrollContentStyle = useMemo(
     () => [
       styles.mainScrollContent,
-      { paddingTop: topContentPadY, paddingBottom: spacing.sm + bottomReserveY },
+      /** listContent より後に当てる想定。ナビ絶対配置分 + 末尾カード余白 */
+      { paddingTop: topContentPadY, paddingBottom: spacing.xl + bottomReserveY },
     ],
     [bottomReserveY, topContentPadY]
   );
@@ -1526,7 +1528,8 @@ export default function GamesHomeScreen({
       filterKey: gamesFilterKey,
       isLoading: showInitialSkeleton,
     });
-  const cardListEntranceVariant = listShellIntro === "page" ? "full" : "light";
+  const cardListEntranceVariant: "full" | "light" =
+    listShellIntro === "page" ? "full" : "light";
   const webGamesMotion = !reduceMotion;
   /** ヘッダー・日付ストリップはリーグ切替時のみ再入場（Web は filter 変更で topBar を再アニメしない） */
   const headerMotionKey = selectedLeague;
@@ -1711,8 +1714,7 @@ export default function GamesHomeScreen({
     const homeName = resolveGameTeamName(g.home, g.homeTeamName, "HOME");
     const awayName = resolveGameTeamName(g.away, g.awayTeamName, "AWAY");
     const existingWinner = myPredictionByGameId[gameId]?.winner ?? null;
-    const homePalette = resolveTeamJerseyPalette(g.league, g.home, "#ff6b8a");
-    const awayPalette = resolveTeamJerseyPalette(g.league, g.away, "#5aa4ff");
+    const accents = resolveMatchupUiAccents(g.league, g.home, g.away);
     const marketBias = g.marketBias as { homePct?: number; awayPct?: number } | undefined;
     const nestedMarket = g.market as
       | { homePct?: number; awayPct?: number; homeRate?: number; awayRate?: number }
@@ -1723,8 +1725,8 @@ export default function GamesHomeScreen({
       status: resolveGameStatus(g),
       score: resolveGameScore(g),
       fallbackMarketBias: resolveMarketBiasFallback(marketBias, nestedMarket),
-      homeColor: homePalette.primary,
-      awayColor: awayPalette.primary,
+      homeColor: accents.homeAccent,
+      awayColor: accents.awayAccent,
       homeLabel: toCompactTeamName(g.league, homeName),
       awayLabel: toCompactTeamName(g.league, awayName),
       compact: selectedLeague === "wc",
@@ -2244,6 +2246,70 @@ export default function GamesHomeScreen({
     }
   }
 
+  const openPredictModalRef = useRef(openPredictModal);
+  openPredictModalRef.current = openPredictModal;
+  const openPredictModalStable = useCallback((game: Record<string, unknown>) => {
+    void openPredictModalRef.current(game);
+  }, []);
+  const getGameCardCenterBlockForList = useCallback(
+    (game: Record<string, unknown>) => getGameCardCenterBlock(game, language),
+    [language]
+  );
+  const cardListStyles = useMemo(
+    () => ({ ...styles, ...gameCardListStyles }),
+    []
+  );
+  const cardListProps: GameCardListProps = useMemo(
+    () => ({
+      games: filteredGames,
+      enteringAnimationEnabled: webGamesMotion,
+      entranceVariant: cardListEntranceVariant,
+      predictedGameIds: predictedGameIdsForList,
+      language,
+      t,
+      styles: cardListStyles,
+      openPredictModal: openPredictModalStable,
+      resolveGameTeamName,
+      toCompactTeamName,
+      isSoccerLeague,
+      resolveGameStatus,
+      isGameStarted,
+      resolveLeagueColor,
+      getGameCardCenterBlock: getGameCardCenterBlockForList,
+      resolveSeriesLabel: resolveSeriesLabelForList,
+      resolveSeriesPair: resolveSeriesPairForList,
+      getTeamRecordLabel: formatSideRecord,
+      teamRecordById,
+      resolveTeamJerseyPalette,
+      tutorialPulseFirstCard: tutorialPhase === "tapCard",
+      tutorialPulseLabel:
+        tutorialPhase === "tapCard"
+          ? tutorialCopy.tutorial.pulseHint
+          : undefined,
+      tutorialRegisterMatchCard: tutorialPhase === "tapCard",
+      tutorialRegisterPickupLabel: tutorialPhase === "gamePickup",
+      shellVariant: "lineFrame",
+      pickupMark: "left",
+    }),
+    [
+      filteredGames,
+      webGamesMotion,
+      cardListEntranceVariant,
+      predictedGameIdsForList,
+      language,
+      t,
+      cardListStyles,
+      openPredictModalStable,
+      getGameCardCenterBlockForList,
+      resolveSeriesLabelForList,
+      resolveSeriesPairForList,
+      formatSideRecord,
+      teamRecordById,
+      tutorialPhase,
+      tutorialCopy.tutorial.pulseHint,
+    ]
+  );
+
   return (
     <ScrollVisibilityProvider margin={360}>
     <View style={styles.screenRoot}>
@@ -2430,38 +2496,7 @@ export default function GamesHomeScreen({
         showGameCards={
           !showInitialSkeleton && !predictionPaintPending && !error
         }
-        cardListProps={{
-          games: filteredGames,
-          enteringAnimationEnabled: webGamesMotion,
-          entranceVariant: cardListEntranceVariant,
-          predictedGameIds: predictedGameIdsForList,
-          language,
-          t,
-          styles: { ...styles, ...gameCardListStyles },
-          openPredictModal,
-          resolveGameTeamName,
-          toCompactTeamName,
-          isSoccerLeague,
-          resolveGameStatus,
-          isGameStarted,
-          resolveLeagueColor,
-          getGameCardCenterBlock: (game) =>
-            getGameCardCenterBlock(game, language),
-          resolveSeriesLabel: resolveSeriesLabelForList,
-          resolveSeriesPair: resolveSeriesPairForList,
-          getTeamRecordLabel: formatSideRecord,
-          teamRecordById,
-          resolveTeamJerseyPalette,
-          tutorialPulseFirstCard: tutorialPhase === "tapCard",
-          tutorialPulseLabel:
-            tutorialPhase === "tapCard"
-              ? tutorialCopy.tutorial.pulseHint
-              : undefined,
-          tutorialRegisterMatchCard: tutorialPhase === "tapCard",
-          tutorialRegisterPickupLabel: tutorialPhase === "gamePickup",
-          shellVariant: "lineFrame",
-          pickupMark: "left",
-        }}
+        cardListProps={cardListProps}
       />
       </GestureDetector>
       </View>
@@ -2735,6 +2770,14 @@ type GamesMainScrollNativeProps = {
   cardListProps: GameCardListProps;
 };
 
+function GamesListItemSeparator() {
+  return <View style={gamesListSepStyles.sep} />;
+}
+
+const gamesListSepStyles = StyleSheet.create({
+  sep: { height: 10 },
+});
+
 function GamesMainScrollNative({
   scrollRef,
   style,
@@ -2769,11 +2812,12 @@ function GamesMainScrollNative({
       ref={scrollRef}
       style={style}
       contentContainerStyle={[
-        contentContainerStyle,
         showGameCards ? listStyles.listArea : null,
         showGameCards ? listStyles.listContent : null,
         // FlatList は ItemSeparator で行間を取る（gap と二重にしない）
         showGameCards ? { gap: 0 } : null,
+        // 最後に置く: listContent.paddingBottom がナビ余白を潰さないようにする
+        contentContainerStyle,
       ]}
       data={showGameCards ? games : []}
       keyExtractor={(game, idx) => String(game.id ?? "") || `game-${idx}`}
@@ -2795,8 +2839,9 @@ function GamesMainScrollNative({
       initialNumToRender={6}
       maxToRenderPerBatch={5}
       windowSize={7}
+      updateCellsBatchingPeriod={50}
       removeClippedSubviews={Platform.OS === "android"}
-      ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
+      ItemSeparatorComponent={GamesListItemSeparator}
     />
   );
 }
@@ -3188,7 +3233,6 @@ const styles = StyleSheet.create({
   },
   listContent: {
     gap: 10,
-    paddingBottom: spacing.xl,
     paddingTop: 0,
     paddingHorizontal: 12,
   },

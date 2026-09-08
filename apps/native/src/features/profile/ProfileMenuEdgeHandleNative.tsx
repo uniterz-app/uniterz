@@ -249,7 +249,7 @@ const styles = StyleSheet.create({
   handle: {
     position: "absolute",
     right: 0,
-    width: 19,
+    width: 22,
     paddingVertical: 9,
     alignItems: "center",
     gap: 3,
@@ -261,7 +261,7 @@ const styles = StyleSheet.create({
     overflow: "visible",
   },
   handleInline: {
-    width: 19,
+    width: 22,
     paddingVertical: 9,
     alignItems: "center",
     gap: 3,

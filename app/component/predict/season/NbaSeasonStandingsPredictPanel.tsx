@@ -21,7 +21,6 @@ import {
   type NbaConferenceStandingsPicks,
   type NbaSeasonStandingsPrediction,
   type NbaStandingsRank,
-  SEASON_STANDINGS_SCORE_PREVIEW,
 } from "@/lib/predict/nbaSeasonStandingsPredict";
 import { TEAM_SHORT } from "@/lib/team-short";
 import {
@@ -474,10 +473,7 @@ export default function NbaSeasonStandingsPredictPanel({
           Season standings · {value.season}
         </h2>
         <p className="text-[11px] leading-relaxed text-white/45 md:max-w-3xl md:text-sm">
-          1–6 ストレートイン / 7–10 プレーイン / 11–15 圏外。シーズン終了後に採点。
-          仮: 完全一致 +{SEASON_STANDINGS_SCORE_PREVIEW.exact} · ±1 +
-          {SEASON_STANDINGS_SCORE_PREVIEW.within1} · ±2 +
-          {SEASON_STANDINGS_SCORE_PREVIEW.within2}。
+          1–6 ストレートイン / 7–10 プレーイン / 11–15 圏外。採点・Unit・提出期限は右上のはてなを参照。
         </p>
       </header>
 

@@ -15,8 +15,8 @@ import { RankingsAvatarNative } from "../../rankings/RankingsAvatarAndTabs";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import ProCyberBadgeNative from "../kinetik/ProCyberBadgeNative";
-import { warmPublicProfileNative } from "../warmPublicProfileNative";
 import { profilePathKeyFromRow } from "../../../../../../lib/profile/profilePathKey";
+import { navigateToPublicProfileNative } from "../../../navigation/navigateToPublicProfileNative";
 import type { ProfileStackParamList } from "../../../navigation/types";
 import {
   BEBAS,
@@ -235,16 +235,16 @@ function openRivalProfile(
 ) {
   const handle = profilePathKeyFromRow(rival);
   if (!handle) return;
-  warmPublicProfileNative({
-    routeKey: handle,
-    uid: typeof rival.uid === "string" ? rival.uid : null,
-    displayName: rival.displayName,
-    photoURL: typeof rival.photoURL === "string" ? rival.photoURL : null,
-    plan: rival.plan === "pro" ? "pro" : "free",
-    skipStatsPrime: true,
+  navigateToPublicProfileNative(navigation, {
+    handle,
+    fromWeeklyReport: true,
+    warm: {
+      uid: typeof rival.uid === "string" ? rival.uid : null,
+      displayName: rival.displayName,
+      photoURL: typeof rival.photoURL === "string" ? rival.photoURL : null,
+      plan: rival.plan === "pro" ? "pro" : "free",
+    },
   });
-  // Profile スタック内から push（タブ切替用の reset は使わない → 戻れる）
-  navigation.push("PublicProfile", { handle, fromWeeklyReport: true });
 }
 
 function RivalRow({

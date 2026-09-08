@@ -6,49 +6,39 @@
   overflow: visible;
 }
 
-/* Native `rectShellWrapWithDetail` — タブのはみ出し分をヒット領域に含める */
-.wrapWithDetail {
-  padding-right: 17px;
-}
-
-.detailSpine {
-  position: absolute;
-  top: 80px;
-  right: -17px;
-  z-index: 24;
-  display: flex;
-  width: 18px;
-  height: 80px;
-  align-items: center;
-  justify-content: center;
-  /* はみ出し領域でもクリックを受け取り、親の onOpen へバブルさせる */
-  pointer-events: auto;
-  background: #070b12;
-  border-style: solid;
-  border-left-width: 0;
-}
-
-.detailSpineTextCol {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 1px;
-}
-
-.detailSpineChar {
-  font-size: 8px;
-  font-weight: 700;
-  line-height: 9px;
-  letter-spacing: 0;
-  text-align: center;
-  text-transform: uppercase;
-  color: rgba(226, 232, 240, 0.72);
-}
-
 .body {
   position: relative;
   z-index: 1;
+}
+
+.detailHint {
+  position: absolute;
+  right: 8px;
+  bottom: 6px;
+  z-index: 6;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  pointer-events: none;
+  padding: 3px 7px;
+  border: 1px solid rgba(0, 245, 255, 0.55);
+  background: rgba(0, 245, 255, 0.08);
+}
+
+.detailHintLabel {
+  font-size: 8px;
+  font-weight: 800;
+  line-height: 10px;
+  letter-spacing: 0.11em;
+  color: rgba(0, 245, 255, 0.88);
+}
+
+.detailHintChevron {
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 14px;
+  color: rgba(0, 245, 255, 0.95);
+  margin-top: -1px;
 }
 
 .pad {

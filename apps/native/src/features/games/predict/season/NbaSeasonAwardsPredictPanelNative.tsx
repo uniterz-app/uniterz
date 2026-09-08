@@ -11,7 +11,6 @@ import {
   type NbaAwardCandidate,
   type NbaAwardId,
   type NbaSeasonAwardsPrediction,
-  SEASON_AWARDS_SCORE_PREVIEW,
 } from "../../../../../../../lib/predict/nbaSeasonAwardsPredict";
 import {
   awardsPreviewCatalog,
@@ -154,8 +153,7 @@ export default function NbaSeasonAwardsPredictPanelNative({
       <View style={{ gap: 4, marginBottom: 12 }}>
         <Text style={styles.h2}>Season awards · {value.season}</Text>
         <Text style={styles.lead}>
-          フォーカス直後は他ユーザー人気ピック約 5 人。入力すると N → NI → NIK の前方一致。選手名簿は API
-          契約後に差し替え。採点は未定（仮 +{SEASON_AWARDS_SCORE_PREVIEW.exact}pt）。
+          フォーカス直後は他ユーザー人気ピック約 5 人。入力すると名前の前方一致で候補が出ます。採点・Unit・提出期限は右上のはてなを参照。
         </Text>
       </View>
 
@@ -224,6 +222,11 @@ const styles = StyleSheet.create({
     letterSpacing: 1.6,
     color: "rgba(253,230,138,0.9)",
     textTransform: "uppercase",
+  },
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
   },
   lead: { fontSize: 11, lineHeight: 16, color: "rgba(255,255,255,0.45)" },
   row: {

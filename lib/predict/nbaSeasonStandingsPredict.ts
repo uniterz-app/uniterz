@@ -4,7 +4,7 @@
  * ルール:
  * - East / West それぞれ 1〜15 位にチームを配置
  * - 同一カンファレンス内でチームは 1 回のみ
- * - シーズン終了後に公式順位と照合して点数化（採点ルールはプレビューで仮）
+ * - シーズン終了後に公式順位と照合して点数化（`seasonPredictScoring`）
  */
 
 import {
@@ -192,12 +192,7 @@ export function clearRank(
   return next;
 }
 
-/** プレビュー用・仮採点（本番確定前） */
-export const SEASON_STANDINGS_SCORE_PREVIEW = {
-  exact: 10,
-  within1: 4,
-  within2: 2,
-  playoffCutoffBonus: 3, // 1–8 帯の境界を正しく読んだ場合など（案）
-  maxPerConference: 15 * 10,
-  maxTotal: 15 * 10 * 2,
-} as const;
+export {
+  SEASON_STANDINGS_SCORE,
+  SEASON_STANDINGS_SCORE_PREVIEW,
+} from "@/lib/predict/seasonPredictScoring";

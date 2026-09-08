@@ -2,6 +2,10 @@ import { teamColorsB1 } from "../../../../../lib/teams-b1";
 import { teamColorsJ1 } from "../../../../../lib/teams-j1";
 import { teamColorsNBA } from "../../../../../lib/teams-nba";
 import { teamColorsPL } from "../../../../../lib/teams-pl";
+import {
+  matchupTeamUiAccent as matchupTeamUiAccentLib,
+  resolveMatchupUiAccents as resolveMatchupUiAccentsLib,
+} from "../../../../../lib/team-colors";
 import type { SupportedLeague } from "./useTodayGames";
 
 type SideLike = {
@@ -177,4 +181,52 @@ export function resolveTeamJerseyPalette(
   if (!secondary) secondary = deriveSecondaryFromPrimary(primary);
 
   return { primary, secondary };
+}
+
+/**
+ * 同系色対決時の UI アクセント（市場バー・スコアラータグ）。
+ * ユニフォーム色は変えない。
+ */
+export function resolveMatchupUiAccents(
+  leagueRaw: unknown,
+  homeSide: unknown,
+  awaySide: unknown,
+  homeFallback = "#ff6b8a",
+  awayFallback = "#5aa4ff"
+): { homeAccent: string; awayAccent: string; clash: boolean } {
+  const league = normalizeLeague(leagueRaw);
+  const homeParsed = parseSide(homeSide);
+  const awayParsed = parseSide(awaySide);
+  if (homeParsed.teamId && awayParsed.teamId) {
+    return resolveMatchupUiAccentsLib(
+      league,
+      homeParsed.teamId,
+      awayParsed.teamId
+    );
+  }
+  return {
+    homeAccent: resolveTeamPrimaryColor(leagueRaw, homeSide, homeFallback),
+    awayAccent: resolveTeamPrimaryColor(leagueRaw, awaySide, awayFallback),
+    clash: false,
+  };
+}
+
+export function matchupTeamUiAccent(
+  leagueRaw: unknown,
+  teamId: string | null | undefined,
+  homeSide: unknown,
+  awaySide: unknown
+): string {
+  const league = normalizeLeague(leagueRaw);
+  const homeParsed = parseSide(homeSide);
+  const awayParsed = parseSide(awaySide);
+  if (homeParsed.teamId && awayParsed.teamId) {
+    return matchupTeamUiAccentLib(
+      league,
+      teamId,
+      homeParsed.teamId,
+      awayParsed.teamId
+    );
+  }
+  return resolveTeamPrimaryColor(leagueRaw, { teamId }, "#e8edf5");
 }

@@ -27,6 +27,7 @@ import {
 } from "../../../../../../lib/predict/nbaInjuryReport";
 import { useNbaMatchupInjuryReport } from "../../../../../../lib/nba/predict/useNbaMatchupInjuryReport";
 import { getUniterzApiBaseUrl } from "../submitPredictionApi";
+import { matchupTeamUiAccent } from "../../../../../../lib/team-colors";
 
 const TOP_N = 5;
 const OXANIUM_800 = "Oxanium_800ExtraBold";
@@ -221,7 +222,19 @@ export default function NbaTopScorerPickerNative({
                       ) : null}
                     </View>
                     <View style={styles.colTeam}>
-                      <TeamAbbrBadgeNative teamId={row.teamId} />
+                      <TeamAbbrBadgeNative
+                        teamId={row.teamId}
+                        fillColor={
+                          homeTeamId && awayTeamId
+                            ? matchupTeamUiAccent(
+                                "nba",
+                                row.teamId,
+                                homeTeamId,
+                                awayTeamId
+                              )
+                            : null
+                        }
+                      />
                     </View>
                     <Text style={styles.tdGp}>{row.gp ?? "—"}</Text>
                     <Text style={styles.tdMetric}>{fmtPpg(row.ppg)}</Text>

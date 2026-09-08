@@ -9,11 +9,9 @@ import {
   addMarkInMemory,
   beginMarksWrite,
   getMarksMemorySnapshot,
-  hydrateMarksMemory,
   peekMarksWriteEpoch,
   removeMarkInMemory,
   replaceMarksMemory,
-  resetMarksMemory,
   subscribeMarksMemory,
 } from "../../../../../lib/marks/marksMemoryStore";
 import {
@@ -59,7 +57,6 @@ export function useProfileMarksNative(
 
   const refresh = useCallback(async () => {
     if (!owner) {
-      resetMarksMemory();
       setLoading(false);
       setMarkedByCount(0);
       return;
@@ -68,28 +65,30 @@ export function useProfileMarksNative(
     setLoading(true);
     try {
       const rows = await listMarksNative(owner);
-      hydrateMarksMemory(owner, rows, epoch);
+      // 書き込みと競合した古い list は捨てる。失敗時に空で消さない。
+      if (epoch !== peekMarksWriteEpoch()) return;
+      replaceMarksMemory(owner, rows);
     } catch {
-      hydrateMarksMemory(owner, [], epoch);
+      // keep existing memory
     } finally {
       setLoading(false);
     }
   }, [owner]);
 
   useEffect(() => {
+    // auth 前の一時的な owner 空でメモリを消さない（lazy:false Profile 起動レース）
     if (!owner) {
-      resetMarksMemory();
       setLoading(false);
       setMarkedByCount(0);
       return;
     }
     const current = getMarksMemorySnapshot();
-    if (current.hydrated && current.owner === owner) {
+    if (current.hydrated && current.owner === owner && current.marks.length > 0) {
       setLoading(false);
       return;
     }
     const peek = peekProfileUserDocNative(owner);
-    // レガシー配列があれば暫定表示。本データは users/{uid}/marks
+    // レガシーに実データがあるときだけ暫定表示。本データは subcollection + legacy merge
     if (peek && hydrateMarksFromUserDoc(owner, peek)) {
       setLoading(false);
     }
@@ -128,10 +127,9 @@ export function useProfileMarksNative(
       if (next === "cap") return { ok: false as const, error: "cap" as const };
       const result = await writeMarkNative(owner, row);
       if (!result.ok) {
-        const epoch = peekMarksWriteEpoch();
         try {
           const rows = await listMarksNative(owner);
-          hydrateMarksMemory(owner, rows, epoch);
+          replaceMarksMemory(owner, rows);
         } catch {
           replaceMarksMemory(owner, EMPTY);
         }
@@ -151,10 +149,9 @@ export function useProfileMarksNative(
       removeMarkInMemory(owner, target);
       const result = await deleteMarkNative(owner, target);
       if (!result.ok) {
-        const epoch = peekMarksWriteEpoch();
         try {
           const rows = await listMarksNative(owner);
-          hydrateMarksMemory(owner, rows, epoch);
+          replaceMarksMemory(owner, rows);
         } catch {
           replaceMarksMemory(owner, EMPTY);
         }

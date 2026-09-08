@@ -175,8 +175,13 @@ function titleHasCjk(title: string): boolean {
 export type CyberSubpageHeaderProps = {
   eyebrow?: string;
   title: string;
-  /** 短い説明（右上 ? からオーバーレイ表示） */
+  /** 短い説明（右上 ? からオーバーレイ表示）。`onHelpPress` があるときは表示トリガー用 */
   subtitle?: string;
+  /**
+   * 右上はてな押下時。指定時は既定の subtitle オーバーレイの代わりに呼ぶ
+   * （シーズン予想ルールモーダル等）。
+   */
+  onHelpPress?: () => void;
   /**
    * 右上はてなの左に置く追加アクション（例: プレビュー用バーガー）。
    * はてなと同じ 40px タップ領域を想定。
@@ -210,6 +215,7 @@ export function CyberSubpageHeader({
   eyebrow = "PROFILE",
   title,
   subtitle,
+  onHelpPress,
   headerTrailing,
   onBack,
   backAriaLabel = "戻る",
@@ -232,32 +238,43 @@ export function CyberSubpageHeader({
     return acquireAppBrandWordmark(title);
   }, [titleInBrandShelf, title]);
   const titleVariant = titleHasCjk(title) ? "jp-chrome" : "horizon-chrome";
-  const hasRightCluster = Boolean(subtitle || headerTrailing);
+  const showHelp = Boolean(subtitle || onHelpPress);
+  const hasRightCluster = Boolean(showHelp || headerTrailing);
   const showLeftBack = !hideBack && !edgeBack;
 
+  const openHelp = () => {
+    if (onHelpPress) {
+      onHelpPress();
+      return;
+    }
+    setHelpOpen(true);
+  };
+
   if (titleInBrandShelf) {
-    if (!subtitle && !headerTrailing) return null;
+    if (!showHelp && !headerTrailing) return null;
     return (
       <div className="relative z-30 flex items-center justify-end gap-1.5 px-3 pt-1">
         {headerTrailing}
-        {subtitle ? (
+        {showHelp ? (
           <>
             <button
               type="button"
-              onClick={() => setHelpOpen(true)}
+              onClick={openHelp}
               className="flex h-10 w-10 shrink-0 items-center justify-center transition active:scale-95"
               aria-label="説明"
-              aria-expanded={helpOpen}
+              aria-expanded={onHelpPress ? undefined : helpOpen}
               aria-haspopup="dialog"
             >
-              <CyberHelpMark active={helpOpen} />
+              <CyberHelpMark active={onHelpPress ? false : helpOpen} />
             </button>
-            <CyberHelpOverlay
-              open={helpOpen}
-              text={subtitle}
-              onClose={() => setHelpOpen(false)}
-              reduceMotion={reduceMotion}
-            />
+            {!onHelpPress && subtitle ? (
+              <CyberHelpOverlay
+                open={helpOpen}
+                text={subtitle}
+                onClose={() => setHelpOpen(false)}
+                reduceMotion={reduceMotion}
+              />
+            ) : null}
           </>
         ) : null}
       </div>
@@ -298,7 +315,7 @@ export function CyberSubpageHeader({
         <motion.div
           className={cn(
             "pointer-events-none absolute inset-0 flex flex-col items-center justify-center",
-            headerTrailing && subtitle ? "px-24" : "px-14"
+            headerTrailing && showHelp ? "px-24" : "px-14"
           )}
           initial={reduceMotion ? false : { opacity: 0, scaleX: 1.12 }}
           animate={{ opacity: 1, scaleX: 1 }}
@@ -328,16 +345,16 @@ export function CyberSubpageHeader({
             transition={{ duration: 0.28, ease: GAMES_CYBER_EASE, delay: 0.08 }}
           >
             {headerTrailing}
-            {subtitle ? (
+            {showHelp ? (
               <button
                 type="button"
-                onClick={() => setHelpOpen(true)}
+                onClick={openHelp}
                 className="flex h-10 w-10 shrink-0 items-center justify-center transition active:scale-95"
                 aria-label="説明"
-                aria-expanded={helpOpen}
+                aria-expanded={onHelpPress ? undefined : helpOpen}
                 aria-haspopup="dialog"
               >
-                <CyberHelpMark active={helpOpen} />
+                <CyberHelpMark active={onHelpPress ? false : helpOpen} />
               </button>
             ) : null}
           </motion.div>
@@ -346,7 +363,7 @@ export function CyberSubpageHeader({
         )}
       </div>
 
-      {subtitle ? (
+      {!onHelpPress && subtitle ? (
         <CyberHelpOverlay
           open={helpOpen}
           text={subtitle}

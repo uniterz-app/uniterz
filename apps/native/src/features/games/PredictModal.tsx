@@ -16,6 +16,7 @@ import { nativeBlurViewExtraProps } from "../../ui/nativeBlurProps";
 import MatchCardOverlayMarketBarNative from "./MatchCardOverlayMarketBarNative";
 import type { GamesLanguage, GamesTexts } from "./gamesI18n";
 import { PredictToolTabContent } from "./PredictToolTabContent";
+import { resolveMatchupUiAccents } from "./teamColors";
 import type { NativeGameRow, SupportedLeague } from "./useTodayGames";
 import type { GameCardCenterBlock } from "./gameCardCenterTypes";
 import MatchTeamMarkNative from "./MatchTeamMarkNative";
@@ -670,6 +671,8 @@ export function PredictMatchPreview({
                 <NbaTopScorerResultRowNative
                   label={mergedFinal.nbaTopScorerLabel}
                   info={mergedFinal.nbaTopScorer}
+                  homeTeamId={homeTeamId}
+                  awayTeamId={awayTeamId}
                 />
               ) : null}
               {mergedFinal.statRows.map((row) => (
@@ -1540,8 +1543,20 @@ export default function PredictModal({
                             subjectGame={predictData.subjectGame}
                             peerGames={predictData.peerGames}
                             formatGameDateMs={predictData.formatGameDateMs}
-                            homeColor={matchPreview.homePalette.primary}
-                            awayColor={matchPreview.awayPalette.primary}
+                            homeColor={
+                              resolveMatchupUiAccents(
+                                matchPreview.leagueRaw,
+                                matchPreview.homeSide,
+                                matchPreview.awaySide
+                              ).homeAccent
+                            }
+                            awayColor={
+                              resolveMatchupUiAccents(
+                                matchPreview.leagueRaw,
+                                matchPreview.homeSide,
+                                matchPreview.awaySide
+                              ).awayAccent
+                            }
                             isSoccerLeague={predictData.isSoccerLeague}
                           />
                         ) : (

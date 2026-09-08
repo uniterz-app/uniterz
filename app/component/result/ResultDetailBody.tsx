@@ -81,7 +81,7 @@ function SectionCard({
 }) {
   return (
     <div
-      className="flex flex-col gap-2.5 border bg-transparent px-3 py-3"
+      className="flex flex-col gap-2 border bg-transparent px-2.5 py-2"
       style={{ borderColor: frameColor }}
     >
       {children}
@@ -126,18 +126,18 @@ function MatchStatsPanel({
       <SectionHeader title={ja ? "この試合" : "THIS MATCH"} accent={ACCENT} />
       <SectionCard frameColor={frameColor}>
         <div className="flex items-stretch">
-          <div className="flex flex-1 flex-col items-center gap-1 py-1">
+          <div className="flex flex-1 flex-col items-center gap-0.5 py-0.5">
             <span
-              className={`${nameOxanium.className} text-[9px] font-bold uppercase tracking-[0.12em] text-slate-400/90`}
+              className={`${nameOxanium.className} text-[8px] font-bold uppercase tracking-[0.11em] text-slate-400/90`}
             >
               {ja ? "投稿数" : "POSTS"}
             </span>
             <span
-              className={`${matchScoreClass} text-[28px] font-black italic leading-none text-slate-50`}
+              className={`${matchScoreClass} text-[22px] font-black italic leading-none text-slate-50`}
             >
               {postCount}
             </span>
-            <span className="text-[9px] tracking-wide text-slate-400/70">
+            <span className="text-[8px] tracking-wide text-slate-400/70">
               {ja ? "この試合" : "This match"}
             </span>
           </div>
@@ -145,18 +145,18 @@ function MatchStatsPanel({
             className="mx-0 my-0.5 w-px"
             style={{ backgroundColor: hexToRgba(ACCENT, 0.22) }}
           />
-          <div className="flex flex-1 flex-col items-center gap-1 py-1">
+          <div className="flex flex-1 flex-col items-center gap-0.5 py-0.5">
             <span
-              className={`${nameOxanium.className} text-[9px] font-bold uppercase tracking-[0.12em] text-slate-400/90`}
+              className={`${nameOxanium.className} text-[8px] font-bold uppercase tracking-[0.11em] text-slate-400/90`}
             >
               {ja ? "中央値" : "MEDIAN"}
             </span>
             <span
-              className={`${matchScoreClass} text-[28px] font-black italic leading-none text-cyan-300`}
+              className={`${matchScoreClass} text-[22px] font-black italic leading-none text-cyan-300`}
             >
               {fmtPt(median)}
             </span>
-            <span className="text-[9px] tracking-wide text-slate-400/70">
+            <span className="text-[8px] tracking-wide text-slate-400/70">
               {ja ? "全投稿の中央" : "All posts"}
             </span>
           </div>
@@ -165,21 +165,21 @@ function MatchStatsPanel({
         {market && slices.length > 0 ? (
           <>
             <div
-              className="my-3.5 h-px"
+              className="my-2.5 h-px"
               style={{ backgroundColor: hexToRgba(ACCENT, 0.18) }}
             />
             <p
-              className={`${nameOxanium.className} mb-2.5 text-[10px] font-extrabold uppercase tracking-[0.14em] text-cyan-300/70`}
+              className={`${nameOxanium.className} mb-2 text-[9px] font-extrabold uppercase tracking-[0.14em] text-cyan-300/70`}
             >
               TOP SCORER
             </p>
-            <div className="flex items-start gap-3">
+            <div className="flex items-start gap-2.5">
               <ResultDetailScoreDonut
                 segments={donutSegments}
                 total={hitRate ?? slices[0]?.pct ?? 0}
                 totalLabel={ja ? "的中率%" : "HIT %"}
-                size={108}
-                thickness={14}
+                size={92}
+                thickness={12}
               />
               <div className="min-w-0 flex-1 space-y-2">
                 {slices.map((slice, i) => {
@@ -206,8 +206,13 @@ function MatchStatsPanel({
                           ) : null}
                         </div>
                         {showPoints ? (
-                          <span className="text-[10px] text-slate-400">
-                            {slice.points} PT
+                          <span
+                            className={`${nameOxanium.className} text-[15px] font-extrabold tabular-nums leading-none text-slate-100`}
+                          >
+                            {slice.points}
+                            <span className="ml-1 text-[11px] font-bold tracking-[0.08em] text-slate-400">
+                              PTS
+                            </span>
                           </span>
                         ) : null}
                       </div>
@@ -241,8 +246,13 @@ function MatchStatsPanel({
                 </p>
                 {myPickSlice?.points != null &&
                 Number.isFinite(myPickSlice.points) ? (
-                  <p className="text-[10px] text-slate-400">
-                    {myPickSlice.points} PT
+                  <p
+                    className={`${nameOxanium.className} text-[14px] font-extrabold tabular-nums leading-none text-slate-100`}
+                  >
+                    {myPickSlice.points}
+                    <span className="ml-1 text-[10px] font-bold tracking-[0.08em] text-slate-400">
+                      PTS
+                    </span>
                   </p>
                 ) : null}
               </div>
@@ -313,6 +323,8 @@ function TopScoresPanel({
               metric="totalScore"
               metricTag={metricTag}
               countryCode={entry.countryCode}
+              compact
+              scoreLayout="web"
               hideListMeta
               showFirstPlaceFrame
               nameExtra={
@@ -330,6 +342,8 @@ function TopScoresPanel({
                   rank={entry.rank}
                   metric="totalScore"
                   counted={entry.points}
+                  compact
+                  scoreLayout="web"
                 />
               }
             />

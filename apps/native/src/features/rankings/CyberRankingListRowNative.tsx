@@ -50,7 +50,12 @@ function cyberScoreColor(rank: number): string {
   return "rgba(255,255,255,0.96)";
 }
 
-function scoreFontSize(rank: number, compact = false): number {
+function scoreFontSize(
+  rank: number,
+  compact = false,
+  scoreInline = false
+): number {
+  if (scoreInline) return rank <= 3 ? 20 : 17;
   if (compact) return rank <= 3 ? 15 : 13;
   return rank <= 3 ? 23 : 19;
 }
@@ -66,6 +71,7 @@ function CyberRankingScoreNative({
   counted,
   plainWhite = false,
   compact = false,
+  scoreInline = false,
 }: {
   rank: number;
   metric: MobileMetric;
@@ -73,9 +79,11 @@ function CyberRankingScoreNative({
   /** My Rank Free — 順位色ではなく白 */
   plainWhite?: boolean;
   compact?: boolean;
+  /** 数字を大きくしつつ PTS と横並び */
+  scoreInline?: boolean;
 }) {
   const color = plainWhite ? "rgba(255,255,255,0.96)" : cyberScoreColor(rank);
-  const fontSize = scoreFontSize(rank, compact);
+  const fontSize = scoreFontSize(rank, compact, scoreInline);
   const displayValue =
     metric === "winRate" || metric === "streak" || metric === "goalScorerHits"
       ? String(Math.round(counted))
@@ -224,6 +232,7 @@ export function CyberRankingListRowNative({
   rankMuted = false,
   nameExtra = null,
   compact = false,
+  scoreInline = false,
 }: {
   rank: number;
   displayName: string;
@@ -266,6 +275,8 @@ export function CyberRankingListRowNative({
   nameExtra?: ReactNode;
   /** リザルト詳細の得点上位など — 行高を少し低く */
   compact?: boolean;
+  /** スコア数字を大きくし、PTS 等を横並び */
+  scoreInline?: boolean;
 }) {
   const palette = cyberRankPalette(rank);
   const firstFrame = !bare && palette.firstPlaceFrame;
@@ -273,7 +284,10 @@ export function CyberRankingListRowNative({
   const metricTag = cyberMetricTag(metric, language === "ja" ? "ja" : "en");
   const nameJa = hasJaScript(displayName);
   const nameFontSize = rankingFontSizePx(compact ? 13 : 15, displayName);
-  const tagFontSize = rankingFontSizePx(compact ? 7 : 8, metricTag);
+  const tagFontSize = rankingFontSizePx(
+    scoreInline ? 9 : compact ? 7 : 8,
+    metricTag
+  );
   const dayDeltaText = formatListMetricDayDelta(metric, metricValueDelta);
   const dayDeltaFontSize = rankingFontSizePx(compact ? 9 : 10, dayDeltaText ?? "+0");
   const avatarSize = compact ? 36 : 44;
@@ -438,22 +452,60 @@ export function CyberRankingListRowNative({
           )}
         </View>
 
-        <View style={styles.scoreCol}>
-          {scoreSlot ?? (
-            <CyberRankingScoreNative
-              rank={rank}
-              metric={metric}
-              counted={counted}
-              plainWhite={plainWhiteScore}
-              compact={compact}
-            />
+        <View
+          style={[styles.scoreCol, scoreInline ? styles.scoreColInline : null]}
+        >
+          {scoreInline ? (
+            <View style={styles.scoreInlineRow}>
+              {scoreSlot ?? (
+                <CyberRankingScoreNative
+                  rank={rank}
+                  metric={metric}
+                  counted={counted}
+                  plainWhite={plainWhiteScore}
+                  compact={compact}
+                  scoreInline
+                />
+              )}
+              <Text
+                style={[
+                  styles.metricTag,
+                  styles.metricTagInline,
+                  {
+                    fontSize: tagFontSize,
+                    fontFamily: rankingTagFont(metricTag),
+                  },
+                ]}
+                numberOfLines={1}
+              >
+                {metricTag}
+              </Text>
+            </View>
+          ) : (
+            <>
+              {scoreSlot ?? (
+                <CyberRankingScoreNative
+                  rank={rank}
+                  metric={metric}
+                  counted={counted}
+                  plainWhite={plainWhiteScore}
+                  compact={compact}
+                />
+              )}
+              <Text
+                style={[
+                  styles.metricTag,
+                  {
+                    fontSize: tagFontSize,
+                    fontFamily: rankingTagFont(metricTag),
+                  },
+                ]}
+                numberOfLines={1}
+              >
+                {metricTag}
+              </Text>
+            </>
           )}
-          <Text
-            style={[styles.metricTag, { fontSize: tagFontSize, fontFamily: rankingTagFont(metricTag) }]}
-            numberOfLines={1}
-          >
-            {metricTag}
-          </Text>
           {dayDeltaText ? (
             <Text style={[styles.dayDelta, { fontSize: dayDeltaFontSize }]}>
               {dayDeltaText}
@@ -677,6 +729,14 @@ const styles = StyleSheet.create({
     paddingTop: 1,
     overflow: "visible",
   },
+  scoreColInline: {
+    minWidth: 88,
+  },
+  scoreInlineRow: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    gap: 5,
+  },
   scoreMainSkew: {
     transform: [{ skewX: "-12deg" }],
   },
@@ -692,6 +752,11 @@ const styles = StyleSheet.create({
     lineHeight: 14,
     includeFontPadding: false,
     textTransform: "uppercase",
+  },
+  metricTagInline: {
+    marginTop: 0,
+    letterSpacing: 1.4,
+    lineHeight: 12,
   },
   dayDelta: {
     marginTop: 2,

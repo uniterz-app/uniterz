@@ -258,6 +258,140 @@ export function getTeamJerseySecondaryColor(
   return getTeamSecondaryColor(league, teamId);
 }
 
+export type JerseyPalette = {
+  /** 地（ボディ） */
+  primary: string;
+  /** 斜めライン等 */
+  secondary: string;
+};
+
+function parseHexRgb(
+  hex: string
+): { r: number; g: number; b: number } | null {
+  const raw = hex.replace("#", "").trim();
+  if (raw.length !== 6) return null;
+  const r = Number.parseInt(raw.slice(0, 2), 16);
+  const g = Number.parseInt(raw.slice(2, 4), 16);
+  const b = Number.parseInt(raw.slice(4, 6), 16);
+  if (![r, g, b].every((n) => Number.isFinite(n))) return null;
+  return { r, g, b };
+}
+
+function relativeLuminance(hex: string): number {
+  const rgb = parseHexRgb(hex);
+  if (!rgb) return 0.5;
+  const channel = (c: number) => {
+    const s = c / 255;
+    return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+  };
+  return 0.2126 * channel(rgb.r) + 0.7152 * channel(rgb.g) + 0.0722 * channel(rgb.b);
+}
+
+function hexHue(hex: string): number | null {
+  const rgb = parseHexRgb(hex);
+  if (!rgb) return null;
+  const r = rgb.r / 255;
+  const g = rgb.g / 255;
+  const b = rgb.b / 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const d = max - min;
+  if (d < 1e-6) return null;
+  let h = 0;
+  if (max === r) h = ((g - b) / d + (g < b ? 6 : 0)) * 60;
+  else if (max === g) h = ((b - r) / d + 2) * 60;
+  else h = ((r - g) / d + 4) * 60;
+  return h;
+}
+
+function hexSaturation(hex: string): number {
+  const rgb = parseHexRgb(hex);
+  if (!rgb) return 0;
+  const r = rgb.r / 255;
+  const g = rgb.g / 255;
+  const b = rgb.b / 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  if (max < 1e-6) return 0;
+  return (max - min) / max;
+}
+
+/** 試合カードで主色が被って見えるか（同系色対決） */
+export function jerseyPrimariesClash(a: string, b: string): boolean {
+  const sa = hexSaturation(a);
+  const sb = hexSaturation(b);
+  // 白・黒・グレーは色相衝突にしない
+  if (sa < 0.22 || sb < 0.22) return false;
+  const ha = hexHue(a);
+  const hb = hexHue(b);
+  if (ha == null || hb == null) return false;
+  let dh = Math.abs(ha - hb);
+  if (dh > 180) dh = 360 - dh;
+  return dh <= 30;
+}
+
+/**
+ * 同系色対決時の UI アクセント（市場バー・トップスコアラータグ用）。
+ * ユニフォーム色は変えない。home は primary のまま、away だけ secondary 寄りへ。
+ */
+export function resolveMatchupUiAccents(
+  league: League,
+  homeTeamId: string | null | undefined,
+  awayTeamId: string | null | undefined
+): {
+  homeAccent: string;
+  awayAccent: string;
+  clash: boolean;
+} {
+  const homePrimary = getTeamJerseyPrimaryColor(league, homeTeamId);
+  const awayPrimary = getTeamJerseyPrimaryColor(league, awayTeamId);
+  const clash = jerseyPrimariesClash(homePrimary, awayPrimary);
+
+  if (!clash) {
+    return {
+      homeAccent: homePrimary,
+      awayAccent: awayPrimary,
+      clash: false,
+    };
+  }
+
+  const awaySecondary = getTeamJerseySecondaryColor(league, awayTeamId);
+  const secondaryOk =
+    awaySecondary.replace("#", "").trim().toLowerCase() !==
+      awayPrimary.replace("#", "").trim().toLowerCase() &&
+    !jerseyPrimariesClash(awaySecondary, homePrimary);
+
+  let awayAccent = secondaryOk
+    ? awaySecondary
+    : relativeLuminance(homePrimary) > 0.4
+      ? "#111827"
+      : "#F5F5F5";
+
+  if (relativeLuminance(awayAccent) > 0.65) {
+    awayAccent = "#111827";
+  }
+
+  return {
+    homeAccent: homePrimary,
+    awayAccent,
+    clash: true,
+  };
+}
+
+/** マッチアップ内のチーム用アクセント（タグ塗りなど） */
+export function matchupTeamUiAccent(
+  league: League,
+  teamId: string | null | undefined,
+  homeTeamId: string | null | undefined,
+  awayTeamId: string | null | undefined
+): string {
+  const accents = resolveMatchupUiAccents(league, homeTeamId, awayTeamId);
+  if (!teamId) return accents.homeAccent;
+  if (teamId === homeTeamId) return accents.homeAccent;
+  if (teamId === awayTeamId) return accents.awayAccent;
+  return getTeamJerseyPrimaryColor(league, teamId);
+}
+
 /** `#RRGGBB` → `rgba(...)`。UI の薄い塗り用。 */
 export function teamColorRgba(hex: string, alpha: number): string {
   const raw = hex.replace("#", "").trim();

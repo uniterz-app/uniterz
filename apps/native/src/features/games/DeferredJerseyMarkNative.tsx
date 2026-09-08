@@ -1,8 +1,9 @@
 /**
  * ScrollVisibilityProvider 配下で画面外の Skia ジャージを載せずサイズだけ確保。
+ * 一度近くに来たらアンマウントしない（スクロール中の Skia 生成・破棄を防ぐ）。
  * Provider が無い画面では常に描画。
  */
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { View } from "react-native";
 import type { JerseyDotDensity } from "../../../../../lib/jersey/jerseyDensity";
 import JerseyMarkAdaptive from "./JerseyMarkAdaptive";
@@ -23,6 +24,11 @@ export default function DeferredJerseyMarkNative({
 }: DeferredJerseyMarkNativeProps) {
   const hostRef = useRef<View>(null);
   const { near, onLayout } = useNearViewportNative(hostRef, true);
+  const [mounted, setMounted] = useState(near);
+
+  useEffect(() => {
+    if (near) setMounted(true);
+  }, [near]);
 
   return (
     <View
@@ -31,7 +37,7 @@ export default function DeferredJerseyMarkNative({
       style={{ width: size, height: size }}
       onLayout={onLayout}
     >
-      {near ? (
+      {mounted ? (
         <JerseyMarkAdaptive
           accent={accent}
           accentEnd={accentEnd}

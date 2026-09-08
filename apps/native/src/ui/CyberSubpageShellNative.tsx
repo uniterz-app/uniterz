@@ -110,6 +110,10 @@ export type CyberSubpageHeaderNativeProps = {
   title: string;
   subtitle?: string;
   /**
+   * 右上はてな押下時。指定時は既定の subtitle オーバーレイの代わりに呼ぶ。
+   */
+  onHelpPress?: () => void;
+  /**
    * 右上はてなの左に置く追加アクション（例: プレビュー用バーガー）。
    * はてなと同じ 40px タップ領域を想定。
    */
@@ -141,6 +145,7 @@ export function CyberSubpageHeaderNative({
   eyebrow = "PROFILE",
   title,
   subtitle,
+  onHelpPress,
   headerTrailing,
   onBack,
   edgeBack = true,
@@ -155,7 +160,16 @@ export function CyberSubpageHeaderNative({
   const [helpOpen, setHelpOpen] = useState(false);
   const reduceMotion = useReducedMotion();
   const motionOn = reduceMotion !== true;
-  const hasRightCluster = Boolean(subtitle || headerTrailing);
+  const showHelp = Boolean(subtitle || onHelpPress);
+  const hasRightCluster = Boolean(showHelp || headerTrailing);
+
+  const openHelp = () => {
+    if (onHelpPress) {
+      onHelpPress();
+      return;
+    }
+    setHelpOpen(true);
+  };
 
   useFocusEffect(
     useCallback(() => {
@@ -172,29 +186,31 @@ export function CyberSubpageHeaderNative({
   );
 
   if (titleInBrandShelf) {
-    if (!subtitle && !headerTrailing) return null;
+    if (!showHelp && !headerTrailing) return null;
     return (
       <View style={styles.shelfHelpRow}>
         {headerTrailing}
-        {subtitle ? (
+        {showHelp ? (
           <>
             <Pressable
-              onPress={() => setHelpOpen(true)}
+              onPress={openHelp}
               accessibilityRole="button"
               accessibilityLabel="説明"
-              accessibilityState={{ expanded: helpOpen }}
+              accessibilityState={onHelpPress ? undefined : { expanded: helpOpen }}
               style={({ pressed }) => [
                 styles.helpBtn,
                 pressed && styles.helpBtnPressed,
               ]}
             >
-              <CyberHelpMarkNative active={helpOpen} />
+              <CyberHelpMarkNative active={onHelpPress ? false : helpOpen} />
             </Pressable>
-            <CyberHelpOverlayNative
-              open={helpOpen}
-              text={subtitle}
-              onClose={() => setHelpOpen(false)}
-            />
+            {!onHelpPress && subtitle ? (
+              <CyberHelpOverlayNative
+                open={helpOpen}
+                text={subtitle}
+                onClose={() => setHelpOpen(false)}
+              />
+            ) : null}
           </>
         ) : null}
       </View>
@@ -238,7 +254,7 @@ export function CyberSubpageHeaderNative({
         <TitleWrap
           style={[
             styles.titleBlock,
-            headerTrailing && subtitle ? styles.titleBlockWide : null,
+            headerTrailing && showHelp ? styles.titleBlockWide : null,
           ]}
           pointerEvents="none"
           {...(!embedded && motionOn
@@ -253,18 +269,20 @@ export function CyberSubpageHeaderNative({
         {hasRightCluster ? (
           <View style={styles.rightCluster}>
             {headerTrailing}
-            {subtitle ? (
+            {showHelp ? (
               <Pressable
-                onPress={() => setHelpOpen(true)}
+                onPress={openHelp}
                 accessibilityRole="button"
                 accessibilityLabel="説明"
-                accessibilityState={{ expanded: helpOpen }}
+                accessibilityState={
+                  onHelpPress ? undefined : { expanded: helpOpen }
+                }
                 style={({ pressed }) => [
                   styles.helpBtn,
                   pressed && styles.helpBtnPressed,
                 ]}
               >
-                <CyberHelpMarkNative active={helpOpen} />
+                <CyberHelpMarkNative active={onHelpPress ? false : helpOpen} />
               </Pressable>
             ) : null}
           </View>
@@ -273,7 +291,7 @@ export function CyberSubpageHeaderNative({
         )}
       </View>
 
-      {subtitle ? (
+      {!onHelpPress && subtitle ? (
         <CyberHelpOverlayNative
           open={helpOpen}
           text={subtitle}
@@ -297,6 +315,7 @@ export default function CyberSubpageShellNative({
   eyebrow = "NBA · 2026-27",
   title,
   subtitle,
+  onHelpPress,
   headerTrailing,
   onBack,
   edgeBack = true,
@@ -347,6 +366,7 @@ export default function CyberSubpageShellNative({
         eyebrow={eyebrow}
         title={title}
         subtitle={subtitle}
+        onHelpPress={onHelpPress}
         headerTrailing={headerTrailing}
         onBack={onBack}
         edgeBack={useEdgeBack}

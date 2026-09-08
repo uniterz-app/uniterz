@@ -11,6 +11,8 @@ type Props = {
   title: string;
   /** 短い説明（右上 ? から表示） */
   subtitle?: string;
+  /** 右上はてな押下（指定時は既定の説明オーバーレイの代わり） */
+  onHelpPress?: () => void;
   children: ReactNode;
   /** 本文ラッパークラス（ブラケットは幅を広げる） */
   contentClassName?: string;
@@ -28,6 +30,7 @@ export default function GamesNbaSubpageShell({
   eyebrow = "NBA · 2026-27",
   title,
   subtitle,
+  onHelpPress,
   children,
   contentClassName,
   hideBrandShelf = false,
@@ -47,6 +50,7 @@ export default function GamesNbaSubpageShell({
       eyebrow={eyebrow}
       title={title}
       subtitle={subtitle}
+      onHelpPress={onHelpPress}
       contentClassName={resolvedContentClassName}
       hideBrandShelf={hideBrandShelf}
       titleInBrandShelf={titleInBrandShelf}

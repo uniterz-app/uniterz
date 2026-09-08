@@ -64,6 +64,7 @@ export default function ResultTopScoresList({
               metricTag={metricTag}
               countryCode={entry.countryCode}
               compact
+              scoreLayout="web"
               hideListMeta
               showFirstPlaceFrame
               nameExtra={
@@ -82,6 +83,7 @@ export default function ResultTopScoresList({
                   metric="totalScore"
                   counted={entry.points}
                   compact
+                  scoreLayout="web"
                 />
               }
             />

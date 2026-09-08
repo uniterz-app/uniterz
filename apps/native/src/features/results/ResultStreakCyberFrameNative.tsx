@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { type LayoutChangeEvent, StyleSheet, View } from "react-native";
 import { resultStreakTier } from "../../../../../lib/result/resultGlass";
 import { resultStreakBorderSweepVariant } from "../../../../../lib/result/resultFrameBorderSweep";
+import { useScreenActiveNative } from "../../hooks/useScreenActiveNative";
+import { useNearViewportNative } from "../games/ScrollVisibilityNative";
 import ResultCyberFrameBorderSweepNative from "./ResultCyberFrameBorderSweepNative";
 import ResultCyberFrameDecorNative from "./ResultCyberFrameDecorNative";
 import { nativeStreakFrameColors } from "./resultCyberFrameNativeTokens";
@@ -15,6 +17,8 @@ type Props = {
   activeWinStreak: unknown;
   showSweep?: boolean;
   shellContext?: ResultCyberFrameShellContext;
+  /** false で Skia デコール／スイープを外す */
+  effectsActive?: boolean;
 };
 
 /** Web `ResultStreakCyberFrame` */
@@ -23,11 +27,17 @@ export default function ResultStreakCyberFrameNative({
   /** 一覧は GPU 負荷のため false（Predict オーバーレイ等のみ true） */
   showSweep = false,
   shellContext = "default",
+  effectsActive = true,
 }: Props) {
   const tier = resultStreakTier(activeWinStreak);
+  const hostRef = useRef<View>(null);
+  const screenActive = useScreenActiveNative();
+  const { near, onLayout: onNearLayout } = useNearViewportNative(hostRef, true);
   const [size, setSize] = useState({ w: 0, h: 0 });
+  const showFx = effectsActive && screenActive && near;
 
   function onLayout(e: LayoutChangeEvent) {
+    onNearLayout();
     const { width, height } = e.nativeEvent.layout;
     if (Math.abs(width - size.w) < 0.5 && Math.abs(height - size.h) < 0.5) return;
     setSize({ w: width, h: height });
@@ -40,8 +50,14 @@ export default function ResultStreakCyberFrameNative({
   const sweepClipShape = resultCyberFrameShellClipShape(shellContext);
 
   return (
-    <View pointerEvents="none" style={styles.overlay} onLayout={onLayout}>
-      {size.w > 0 && size.h > 0 ? (
+    <View
+      ref={hostRef}
+      collapsable={false}
+      pointerEvents="none"
+      style={styles.overlay}
+      onLayout={onLayout}
+    >
+      {showFx && size.w > 0 && size.h > 0 ? (
         <ResultCyberFrameDecorNative
           width={size.w}
           height={size.h}
@@ -52,7 +68,11 @@ export default function ResultStreakCyberFrameNative({
         />
       ) : null}
 
-      {showSweep && shellContext !== "predictOverlay" && size.w > 0 && size.h > 0 ? (
+      {showFx &&
+      showSweep &&
+      shellContext !== "predictOverlay" &&
+      size.w > 0 &&
+      size.h > 0 ? (
         <ResultCyberFrameBorderSweepNative
           width={size.w}
           height={size.h}
@@ -60,6 +80,7 @@ export default function ResultStreakCyberFrameNative({
           variant={resultStreakBorderSweepVariant(tier)}
           clipShape={sweepClipShape}
           layerZIndex={18}
+          active={showFx}
         />
       ) : null}
     </View>

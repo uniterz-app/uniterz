@@ -226,7 +226,7 @@ Web / Native 同じルール。Settings モーダルは SafeArea 済みのため
 | **A. UI 本番反映** | **2026-07-20 ワールドカップ終了以降** | 予想オーバーレイ新パネル、My Rank / Gap / Shadow の Pro UI、シーズン予想ページなど、プレビュー済み UI の本番配線 |
 | **B. 外部スタッツ / Injury データ** | **NBA 系 API 契約完了以降** | Injury Report / Team Stats / Roster / Pro Insight の実データ取得・キャッシュ |
 | **C. シーズン予想の締切・公式日程** | **開幕戦スケジュール公表以降** | 締切日時の実装・表示。編集可能期間の確定 |
-| **D. シーズン予想の採点** | **未定（あとで決める）** | 順位予想・アワード予想のポイント表。今は決めなくてよい |
+| **D. シーズン予想の採点** | **採点・Unit 表は確定（2026-09-04）**。照合バッチ・付与ジョブはシーズン終了後 | 順位 / アワードのポイント表と Unit 配布は `seasonPredictScoring` / `seasonPredictUnitRewards`。ルールモーダル実装済み |
 
 **方針メモ**
 
@@ -247,11 +247,12 @@ Web / Native 同じルール。Settings モーダルは SafeArea 済みのため
 | 型・ロジック | ✅ | `lib/predict/nbaSeasonStandingsPredict.ts` / `lib/nba/nbaConferenceTeams.ts` |
 | East/West 1–15・チーム1回制限 | ✅ | |
 | 帯表示 1–6 / 7–10 / 11–15 | ✅ | Straight in / Play-in / Out |
-| **締切ルール** | 方針のみ | **開幕戦キックオフ前まで編集可**。開幕戦開始後はロック。スケジュール未公表のため日時未設定 |
-| **採点** | ⏳ 後回し | 仮表記（exact / ±1 / ±2）はあるが本番ルール未確定。今は決めなくてよい |
-| Firestore 提出・本人1通 | ❌ | |
+| **締切ルール** | ✅ 設定 | 開幕戦キックオフ前まで（`2026-10-21T08:00:00+09:00`）。正: `seasonPredictDeadline`。API 403 + UI ロック |
+| **採点** | ✅ 確定 | 完全一致 +10 / ±1 +4 / ±2 +2。`playoffCutoffBonus` は v1 対象外。正: `seasonPredictScoring` |
+| Firestore 提出・本人1通 | ✅ | `/api/me/season-standings` |
 | 公式最終順位の取り込み・照合 UI | ❌ | シーズン終了後 |
-| 本番ページ（mobile/web） | ❌ | ゲート A 以降 |
+| 本番ページ（mobile/web） | ✅ | `/mobile/season-standings` 等 |
+| Unit | ✅ 表確定 | 別ランキング上位 20・1位 200。付与ジョブは未 |
 | **提出後ビュー（出力 UI）** | ✅ プレビュー | http://localhost:3000/dev/season-picks-view-preview · `NbaSeasonStandingsViewPanel` / `NbaSeasonAwardsViewPanel` |
 
 ### 2.2 アワード予想
@@ -262,8 +263,9 @@ Web / Native 同じルール。Settings モーダルは SafeArea 済みのため
 | ピッカー UX | ✅（mock） | **入力なし → 他ユーザー人気ピック最大 5 人**。**入力あり → 前方一致**（N → NI → NIK…） |
 | 選手 / コーチ名簿 | ❌ | **ゲート B（API 契約後）** に取得して差し替え。いまは `nbaSeasonAwardsPreviewMocks` |
 | 人気ピック集計 | ❌ | 提出データの集計 API（アワードごと Top 5）。いまはモック固定 |
-| 採点 | ⏳ 後回し | ゲート D |
-| 本番配線 | ❌ | ゲート A 以降 |
+| 採点 | ✅ 確定 | 的中 +25 / 種。正: `seasonPredictScoring` |
+| Unit | ✅ 表確定 | 順位予想とは別ランキング。同じ配布表 |
+| 本番配線 | ✅ | `/mobile/season-awards` 等 |
 
 **選手サジェスト仕様（確定）**
 
@@ -352,15 +354,20 @@ Web / Native 同じルール。Settings モーダルは SafeArea 済みのため
 
 ### ゲート C（開幕戦スケジュール公表後）
 
-- [ ] 順位予想・アワード予想の **締切日時** を設定（開幕戦開始前まで編集可）
-- [ ] 締切表示・ロック UI
+- [x] 順位予想・アワード予想の **締切日時** を設定（開幕戦キックオフ `2026-10-21 08:00 JST`）
+- [x] 締切表示・ロック UI（編集不可 + API 403）
+- [x] 締切後マーケット集計（`seasonPredictMarkets` + admin ingest + 公開 GET + 本番ページ配線）
 - [ ]（任意）リマインド通知
+- [ ] 公式 tip 確定時に `SEASON_PREDICT_SUBMIT_DEADLINE_AT_MS` を精密更新
+- [ ] 締切後に手動 1 回: `POST /api/admin/season-predict-market-ingest`
 
-### ゲート D（採点を決めたあと）
+### ゲート D（採点確定後の実装）
 
-- [ ] 順位予想ポイント表の確定実装
-- [ ] アワード予想ポイント表
-- [ ] シーズン終了バッチ / 照合 / ランキング or イベントへの反映
+- [x] 順位予想ポイント表の確定（定数・ルールモーダル）
+- [x] アワード予想ポイント表の確定（定数・ルールモーダル）
+- [x] Unit 配布表の確定（上位 20・1位 200・別ランキング）
+- [ ] シーズン終了バッチ / 照合 / ランキング反映
+- [ ] Unit 付与ジョブ（冪等）
 
 ---
 
@@ -369,12 +376,16 @@ Web / Native 同じルール。Settings モーダルは SafeArea 済みのため
 | 領域 | パス |
 |---|---|
 | プレビュー一覧（mobile） | http://localhost:3000/mobile/season-preview |
+| 締切後マーケット（順位+アワード） | http://localhost:3000/mobile/season-market-preview |
 | 順位予想（入力） | `/mobile/season-standings-preview`（同内容 `/dev/...`） |
 | アワード予想（入力） | `/mobile/season-awards-preview` |
 | 提出後ビュー | `/mobile/season-picks-view-preview` |
 | 順位予想 UI | `app/component/predict/season/NbaSeasonStandingsPredictPanel.tsx` |
 | アワード UI | `app/component/predict/season/NbaSeasonAwardsPredictPanel.tsx` |
 | 提出後ビュー | `NbaSeasonStandingsViewPanel` / `NbaSeasonAwardsViewPanel` |
+| 締切後マーケット UI | `NbaSeasonStandingsMarketPanel` / `NbaSeasonAwardsMarketPanel` |
+| マーケット集計 | `POST /api/admin/season-predict-market-ingest` → `seasonPredictMarkets/{season}` |
+| マーケット公開 | `GET /api/nba/season-predict-market` |
 | オーバーレイ preview | `/mobile/predict-timing-preview` |
 | Pro 課金導線 preview | `/mobile/pro-subscribe-preview` → **本番** `/mobile/pro/subscribe` · `ProSubscribePreview` |
 | Pro Skin ピッカー（本番） | `/mobile/pro/skin` · `ProfilePlanProSkinPicker` production |

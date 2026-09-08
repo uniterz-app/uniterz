@@ -59,6 +59,7 @@ import {
   getTeamPrimaryColor,
   getTeamJerseyPrimaryColor,
   getTeamJerseySecondaryColor,
+  resolveMatchupUiAccents,
 } from "@/lib/team-colors";
 import { normalizeLeague, type League } from "@/lib/leagues";
 import { auth } from "@/lib/firebase";
@@ -661,6 +662,13 @@ const awaySecondaryColor = useMemo(
   () => getTeamJerseySecondaryColor(normalizedLeague, away.teamId),
   [normalizedLeague, away.teamId]
 );
+const matchupAccents = useMemo(
+  () =>
+    resolveMatchupUiAccents(normalizedLeague, home.teamId, away.teamId),
+  [normalizedLeague, home.teamId, away.teamId]
+);
+const homeMarketColor = matchupAccents.homeAccent;
+const awayMarketColor = matchupAccents.awayAccent;
 const homeBiasPct = Math.max(0, Math.min(100, marketBias?.homePct ?? 68));
 const awayBiasPct = Math.max(0, Math.min(100, marketBias?.awayPct ?? 32));
 
@@ -2219,8 +2227,8 @@ const card = (
             score={score}
             language={language}
             fallbackMarketBias={marketBias}
-            homeColor={homeColor}
-            awayColor={awayColor}
+            homeColor={homeMarketColor}
+            awayColor={awayMarketColor}
             homeLabel={
               league === "nba"
                 ? (homeL2 || homeL1 || "HOME").trim()
@@ -2256,6 +2264,8 @@ const card = (
                 label={m.results.nbaTopScorerResultLabel}
                 info={nbaTopScorerResult}
                 compact={isMobile}
+                homeTeamId={home.teamId}
+                awayTeamId={away.teamId}
               />
             ) : null}
             {!hideMergedStatsSection ? (

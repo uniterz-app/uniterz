@@ -19,6 +19,7 @@ import {
   type NbaInjuryReport,
 } from "@/lib/predict/nbaInjuryReport";
 import { useNbaMatchupInjuryReport } from "@/lib/nba/predict/useNbaMatchupInjuryReport";
+import { matchupTeamUiAccent } from "@/lib/team-colors";
 
 type Props = {
   homeTeamId?: string | null;
@@ -223,7 +224,19 @@ export default function NbaTopScorerPicker({
                   {injuryStatus ? <InjuryChip status={injuryStatus} /> : null}
                 </span>
                 <span className="flex w-[46px] items-center">
-                  <TeamAbbrBadge teamId={row.teamId} />
+                  <TeamAbbrBadge
+                    teamId={row.teamId}
+                    fillColor={
+                      homeTeamId && awayTeamId
+                        ? matchupTeamUiAccent(
+                            "nba",
+                            row.teamId,
+                            homeTeamId,
+                            awayTeamId
+                          )
+                        : null
+                    }
+                  />
                 </span>
                 <span
                   className={`${nameOxanium.className} w-[28px] text-right text-[12px] font-bold tabular-nums text-white/55`}

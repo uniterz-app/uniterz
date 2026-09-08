@@ -33,6 +33,11 @@ const screenOptions = {
   freezeOnBlur: false,
 };
 
+const publicProfileScreenOptions = {
+  animation: "slide_from_right" as const,
+  animationDuration: 120,
+};
+
 /**
  * 深層画面は getComponent + require で初回遷移までモジュール評価を遅延する。
  * タブホームだけ静的 import（起動時に必要な画面）。
@@ -169,6 +174,7 @@ function ResultStackScreen() {
           getComponent={() =>
             require("../features/profile/screens/PublicProfileScreenNative").default
           }
+          options={publicProfileScreenOptions}
         />
       </ResultStack.Navigator>
     </NativeStackBackdrop>
@@ -202,6 +208,7 @@ function RankingsStackScreen() {
           getComponent={() =>
             require("../features/profile/screens/PublicProfileScreenNative").default
           }
+          options={publicProfileScreenOptions}
         />
       </RankingsStack.Navigator>
     </NativeStackBackdrop>
@@ -241,6 +248,7 @@ function LeaderboardsStackScreen() {
           getComponent={() =>
             require("../features/profile/screens/PublicProfileScreenNative").default
           }
+          options={publicProfileScreenOptions}
         />
       </LeaderboardsStack.Navigator>
     </NativeStackBackdrop>
@@ -274,6 +282,7 @@ function ProfileStackScreen() {
           getComponent={() =>
             require("../features/profile/screens/PublicProfileScreenNative").default
           }
+          options={publicProfileScreenOptions}
         />
         <ProfileStack.Screen
           name="ProfileSettings"

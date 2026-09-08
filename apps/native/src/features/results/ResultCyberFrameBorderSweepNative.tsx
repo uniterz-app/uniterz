@@ -16,10 +16,12 @@ import {
   cancelAnimation,
   Easing,
   useDerivedValue,
+  useReducedMotion,
   useSharedValue,
   withRepeat,
   withTiming,
 } from "react-native-reanimated";
+import { useScreenActiveNative } from "../../hooks/useScreenActiveNative";
 import {
   chamferedRectPathD,
   insetChamferedRectPathD,
@@ -45,6 +47,8 @@ type Props = {
   layerZIndex?: number;
   ringWidth?: number;
   borderStrokeWidth?: number;
+  /** false でスピン停止（一覧の裏タブ・オーバーレイ時など） */
+  active?: boolean;
 };
 
 function outlinePathD(
@@ -83,6 +87,7 @@ function makeRingClipPath(
 
 /**
  * Web `.result-card-border-sweep` + `__spin` — conic 回転 + リングマスク + screen。
+ * 画面非アクティブ時はループを止め、最終フレームを静止表示する。
  */
 export default function ResultCyberFrameBorderSweepNative({
   width,
@@ -92,10 +97,14 @@ export default function ResultCyberFrameBorderSweepNative({
   clipShape = "hit",
   layerZIndex = 11,
   ringWidth: ringWidthProp,
+  active = true,
 }: Props) {
   const theme = resultFrameBorderSweepTheme(variant);
   const ringPadding = ringWidthProp ?? theme.paddingPx;
   const durationMs = variant === "default" ? 3800 : theme.durationMs;
+  const screenActive = useScreenActiveNative();
+  const reduceMotion = useReducedMotion() ?? false;
+  const shouldSpin = active && screenActive && !reduceMotion;
 
   const ringPath = useMemo(
     () => makeRingClipPath(width, height, cut, clipShape, ringPadding),
@@ -105,6 +114,11 @@ export default function ResultCyberFrameBorderSweepNative({
   const progress = useSharedValue(0);
 
   useEffect(() => {
+    cancelAnimation(progress);
+    if (!shouldSpin) {
+      progress.value = 0;
+      return;
+    }
     progress.value = 0;
     progress.value = withRepeat(
       withTiming(1, { duration: durationMs, easing: Easing.linear }),
@@ -114,7 +128,7 @@ export default function ResultCyberFrameBorderSweepNative({
     return () => {
       cancelAnimation(progress);
     };
-  }, [durationMs, progress]);
+  }, [durationMs, progress, shouldSpin]);
 
   const cx = width / 2;
   const cy = height / 2;

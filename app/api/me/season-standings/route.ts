@@ -3,6 +3,10 @@ import { requireUidFromRequest } from "@/lib/communities/serverAuth";
 import { getAdminDb } from "@/lib/firebaseAdmin";
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
 import {
+  isSeasonPredictSubmitOpen,
+  seasonPredictSubmitLockedMessage,
+} from "@/lib/predict/seasonPredictDeadline";
+import {
   loadSeasonStandingsDoc,
   resolveSeasonStandingsForSubmit,
   upsertSeasonStandingsDoc,
@@ -56,6 +60,13 @@ export async function POST(req: Request) {
       typeof body.season === "string" && body.season.trim()
         ? body.season.trim()
         : CURRENT_NBA_SEASON_KEY;
+
+    if (!isSeasonPredictSubmitOpen()) {
+      return NextResponse.json(
+        { error: seasonPredictSubmitLockedMessage("ja") },
+        { status: 403 }
+      );
+    }
 
     const resolved = resolveSeasonStandingsForSubmit({
       season,

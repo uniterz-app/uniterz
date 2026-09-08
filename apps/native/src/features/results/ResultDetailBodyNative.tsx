@@ -33,7 +33,7 @@ import type {
 import type { ResultTopScorerMarketView } from "../../../../../lib/result/resultTopScorerMarket";
 import type { GamePointsTopEntryV1 } from "../../../../../lib/results/gamePointsTop";
 import { profilePathKeyFromRow } from "../../../../../lib/profile/profilePathKey";
-import { warmPublicProfileNative } from "../profile/warmPublicProfileNative";
+import type { OpenPublicProfileWarm } from "../../navigation/navigateToPublicProfileNative";
 
 const ACCENT = "#00F5FF";
 
@@ -166,8 +166,8 @@ function MatchStatsPanel({
                 segments={donutSegments}
                 total={hitRate ?? slices[0]?.pct ?? 0}
                 totalLabel={ja ? "的中率%" : "HIT %"}
-                size={108}
-                thickness={14}
+                size={92}
+                thickness={12}
               />
               <View style={styles.topScorerLegend}>
                 {slices.map((slice, i) => {
@@ -201,7 +201,8 @@ function MatchStatsPanel({
                         </View>
                         {showPoints ? (
                           <Text style={styles.topScorerPoints}>
-                            {slice.points} PT
+                            {slice.points}
+                            <Text style={styles.topScorerPtsUnit}> PTS</Text>
                           </Text>
                         ) : null}
                       </View>
@@ -234,7 +235,8 @@ function MatchStatsPanel({
                 {myPickSlice?.points != null &&
                 Number.isFinite(myPickSlice.points) ? (
                   <Text style={styles.myPickPoints}>
-                    {myPickSlice.points} PT
+                    {myPickSlice.points}
+                    <Text style={styles.myPickPtsUnit}> PTS</Text>
                   </Text>
                 ) : null}
               </View>
@@ -271,7 +273,7 @@ function Top10Panel({
   ja: boolean;
   frameColor: string;
   entries: GamePointsTopEntryV1[];
-  onOpenProfile?: (handle: string) => void;
+  onOpenProfile?: (handle: string, warm?: OpenPublicProfileWarm) => void;
 }) {
   const reduceMotion = useReducedMotion() ?? false;
   if (entries.length === 0) return null;
@@ -295,24 +297,22 @@ function Top10Panel({
               countryCode={row.countryCode}
               language={ja ? "ja" : "en"}
               isPro={row.isPro}
-              compact
               hideListMeta
+              compact
+              scoreInline
               animateCrown={row.rank === 1}
               reduceMotion={reduceMotion}
               onPress={
                 onOpenProfile && profileKey
                   ? () => {
-                      warmPublicProfileNative({
-                        routeKey: profileKey,
+                      onOpenProfile(profileKey, {
                         uid: row.uid,
                         handle: row.handle === "—" ? "" : row.handle,
                         displayName: row.displayName,
                         photoURL: row.photoURL,
                         plan: row.isPro ? "pro" : "free",
                         countryCode: row.countryCode,
-                        skipStatsPrime: true,
                       });
-                      onOpenProfile(profileKey);
                     }
                   : undefined
               }
@@ -491,7 +491,7 @@ export type ResultDetailBodySections = "full" | "cardAndLiveStats";
 type Props = {
   language: "ja" | "en";
   view: ResultDetailViewModel;
-  onOpenProfile?: (handle: string) => void;
+  onOpenProfile?: (handle: string, warm?: OpenPublicProfileWarm) => void;
   /** ScrollView の contentContainerStyle に足す余白 */
   contentPaddingBottom?: number;
   /**
@@ -643,7 +643,7 @@ const styles = StyleSheet.create({
     marginVertical: 16,
   },
   sectionBlock: {
-    gap: 10,
+    gap: 8,
   },
   sectionTitleRow: {
     flexDirection: "row",
@@ -665,9 +665,9 @@ const styles = StyleSheet.create({
   sectionCard: {
     borderWidth: 1,
     backgroundColor: "transparent",
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    gap: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    gap: 8,
   },
   matchStatsRow: {
     flexDirection: "row",
@@ -676,8 +676,8 @@ const styles = StyleSheet.create({
   matchStatCell: {
     flex: 1,
     alignItems: "center",
-    gap: 4,
-    paddingVertical: 4,
+    gap: 2,
+    paddingVertical: 2,
   },
   matchStatRule: {
     width: 1,
@@ -685,15 +685,15 @@ const styles = StyleSheet.create({
   },
   matchStatLabel: {
     fontFamily: METRIC_FONT,
-    fontSize: 9,
+    fontSize: 8,
     fontWeight: "700",
-    letterSpacing: 1.2,
+    letterSpacing: 1.1,
     textTransform: "uppercase",
     color: "rgba(148,163,184,0.88)",
   },
   matchStatValue: {
     fontFamily: MATCH_CARD_SCORE_FONT,
-    fontSize: 28,
+    fontSize: 22,
     fontWeight: "900",
     fontStyle: "italic",
     color: "#F8FAFC",
@@ -703,22 +703,22 @@ const styles = StyleSheet.create({
   },
   matchStatSub: {
     fontFamily: METRIC_FONT,
-    fontSize: 9,
-    letterSpacing: 0.6,
+    fontSize: 8,
+    letterSpacing: 0.5,
     color: "rgba(148,163,184,0.7)",
   },
   topScorerRule: {
     height: StyleSheet.hairlineWidth,
-    marginTop: 14,
-    marginBottom: 12,
+    marginTop: 10,
+    marginBottom: 8,
   },
   topScorerSectionLabel: {
     fontFamily: METRIC_FONT,
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: "800",
-    letterSpacing: 1.4,
+    letterSpacing: 1.3,
     color: hexToRgba(ACCENT, 0.72),
-    marginBottom: 10,
+    marginBottom: 8,
   },
   topScorerRow: {
     flexDirection: "row",
@@ -761,11 +761,19 @@ const styles = StyleSheet.create({
   },
   topScorerPoints: {
     fontFamily: MATCH_CARD_SCORE_FONT,
-    fontSize: 13,
+    fontSize: 17,
     fontWeight: "800",
     fontStyle: "italic",
-    letterSpacing: 0.4,
-    color: "rgba(226,232,240,0.82)",
+    letterSpacing: 0.3,
+    color: "rgba(248,250,252,0.95)",
+  },
+  topScorerPtsUnit: {
+    fontFamily: METRIC_FONT,
+    fontSize: 11,
+    fontWeight: "700",
+    fontStyle: "normal",
+    letterSpacing: 0.8,
+    color: "rgba(148,163,184,0.85)",
   },
   topScorerPct: {
     fontFamily: MATCH_CARD_SCORE_FONT,
@@ -816,10 +824,19 @@ const styles = StyleSheet.create({
   },
   myPickPoints: {
     fontFamily: MATCH_CARD_SCORE_FONT,
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: "800",
     fontStyle: "italic",
-    color: "rgba(226,232,240,0.78)",
+    letterSpacing: 0.3,
+    color: "rgba(248,250,252,0.95)",
+  },
+  myPickPtsUnit: {
+    fontFamily: METRIC_FONT,
+    fontSize: 10,
+    fontWeight: "700",
+    fontStyle: "normal",
+    letterSpacing: 0.8,
+    color: "rgba(148,163,184,0.85)",
   },
   myPickHitCluster: {
     flexDirection: "row",

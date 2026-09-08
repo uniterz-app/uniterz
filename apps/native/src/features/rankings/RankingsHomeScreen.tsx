@@ -356,6 +356,15 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
     navigateToPublicProfileNative(stackNavigation, {
       handle: key,
       fromRankings: true,
+      warm: {
+        uid: row.uid,
+        handle: typeof row.handle === "string" ? row.handle : null,
+        displayName: row.displayName,
+        photoURL: typeof row.photoURL === "string" ? row.photoURL : null,
+        plan: row.plan === "pro" ? "pro" : "free",
+        countryCode:
+          typeof row.countryCode === "string" ? row.countryCode : null,
+      },
     });
   }, [stackNavigation]);
 

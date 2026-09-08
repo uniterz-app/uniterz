@@ -1116,6 +1116,8 @@ function ResultCardPresentationImpl({
             label={m.results.nbaTopScorerResultLabel}
             info={nbaTopScorer}
             compact={isMobile}
+            homeTeamId={post.home?.teamId}
+            awayTeamId={post.away?.teamId}
           />
         ) : null}
 
