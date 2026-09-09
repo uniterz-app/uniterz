@@ -2,7 +2,7 @@
  * Native 観測性の起動フック。
  * Sentry DSN 未設定時は no-op。DSN 設定後に `@sentry/react-native` を入れて差し替える。
  */
-import { trackAppEvent } from "@/lib/observability/trackAppEvent";
+import { trackAppEvent } from "../../../../lib/observability/trackAppEvent";
 
 export function initNativeObservability(): void {
   trackAppEvent({ name: "app_open", props: { surface: "native" } });

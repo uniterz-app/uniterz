@@ -379,44 +379,73 @@ function SquadGoldPhaseTrackNative({
 
   return (
     <View style={styles.phaseTrack}>
-      <View
-        style={[
-          styles.phaseRailWrap,
-          { left: edgeInsetPct, right: edgeInsetPct },
-        ]}
-        pointerEvents="none"
-      >
-        <View style={styles.phaseRail} />
+      {/* ドット行でレールを縦中央揃え。点灯はハロー＋コア */}
+      <View style={styles.phaseDotsRow}>
         <View
-          style={[styles.phaseRailFill, { width: `${progressPct}%` }]}
-        />
+          style={[
+            styles.phaseRailWrap,
+            { left: edgeInsetPct, right: edgeInsetPct },
+          ]}
+          pointerEvents="none"
+        >
+          <View style={styles.phaseRail} />
+          {progressPct > 0 ? (
+            <>
+              <View
+                style={[styles.phaseRailFillGlow, { width: `${progressPct}%` }]}
+              />
+              <View
+                style={[styles.phaseRailFill, { width: `${progressPct}%` }]}
+              />
+            </>
+          ) : null}
+        </View>
+        {SQUAD_BATTLE_SEASON_PHASES.map((p) => {
+          const idx = order.indexOf(p.key);
+          const active = activeKey != null && p.key === activeKey;
+          const done = activeIdx >= 0 && idx < activeIdx;
+          return (
+            <View key={p.key} style={styles.phaseDotSlot}>
+              <View style={styles.phaseDotStack}>
+                {active ? (
+                  <View style={styles.phaseDotHalo} pointerEvents="none" />
+                ) : null}
+                <View
+                  style={[
+                    styles.phaseDot,
+                    active
+                      ? styles.phaseDotActive
+                      : done
+                        ? styles.phaseDotDone
+                        : styles.phaseDotIdle,
+                  ]}
+                />
+              </View>
+            </View>
+          );
+        })}
       </View>
-      {SQUAD_BATTLE_SEASON_PHASES.map((p) => {
-        const idx = order.indexOf(p.key);
-        const active = activeKey != null && p.key === activeKey;
-        const done = activeIdx >= 0 && idx < activeIdx;
-        const lit = active || done;
-        return (
-          <View key={p.key} style={styles.phaseNode}>
-            <View
-              style={[
-                styles.phaseDot,
-                lit ? styles.phaseDotLit : styles.phaseDotIdle,
-              ]}
-            />
-            <Text
-              style={[
-                styles.phaseSegText,
-                active && styles.phaseSegTextActive,
-                !active && done && styles.phaseSegTextDone,
-                !active && !done && styles.phaseSegTextIdle,
-              ]}
-            >
-              {p.label}
-            </Text>
-          </View>
-        );
-      })}
+      <View style={styles.phaseLabelsRow}>
+        {SQUAD_BATTLE_SEASON_PHASES.map((p) => {
+          const idx = order.indexOf(p.key);
+          const active = activeKey != null && p.key === activeKey;
+          const done = activeIdx >= 0 && idx < activeIdx;
+          return (
+            <View key={p.key} style={styles.phaseLabelSlot}>
+              <Text
+                style={[
+                  styles.phaseSegText,
+                  active && styles.phaseSegTextActive,
+                  !active && done && styles.phaseSegTextDone,
+                  !active && !done && styles.phaseSegTextIdle,
+                ]}
+              >
+                {p.label}
+              </Text>
+            </View>
+          );
+        })}
+      </View>
     </View>
   );
 }
@@ -5933,48 +5962,37 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   phaseTrack: {
+    gap: 4,
+  },
+  phaseDotsRow: {
     position: "relative",
     flexDirection: "row",
-    alignItems: "flex-start",
-    paddingTop: 2,
+    alignItems: "center",
+    height: 28,
+    overflow: "visible",
   },
   phaseRailWrap: {
     position: "absolute",
-    top: 7,
+    top: 13,
     height: 2,
-    overflow: "hidden",
+    overflow: "visible",
     borderRadius: 1,
   },
   phaseRail: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(251,191,36,0.18)",
   },
+  phaseRailFillGlow: {
+    position: "absolute",
+    left: 0,
+    top: -3,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "rgba(251,191,36,0.35)",
+  },
   phaseRailFill: {
     height: 2,
     borderRadius: 1,
-    backgroundColor: JOIN_BATTLE_AMBER,
-    ...Platform.select({
-      ios: {
-        shadowColor: JOIN_BATTLE_AMBER,
-        shadowOpacity: 0.55,
-        shadowRadius: 8,
-        shadowOffset: { width: 0, height: 0 },
-      },
-      default: {},
-    }),
-  },
-  phaseNode: {
-    flex: 1,
-    alignItems: "center",
-    gap: 6,
-    zIndex: 1,
-  },
-  phaseDot: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-  },
-  phaseDotLit: {
     backgroundColor: JOIN_BATTLE_AMBER,
     ...Platform.select({
       ios: {
@@ -5986,8 +6004,70 @@ const styles = StyleSheet.create({
       default: {},
     }),
   },
+  phaseDotSlot: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 1,
+  },
+  phaseLabelsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  phaseLabelSlot: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  phaseDotStack: {
+    width: 16,
+    height: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  phaseDotHalo: {
+    position: "absolute",
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "rgba(251,191,36,0.28)",
+  },
+  phaseDot: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+  },
+  phaseDotActive: {
+    backgroundColor: JOIN_BATTLE_AMBER,
+    ...Platform.select({
+      ios: {
+        shadowColor: JOIN_BATTLE_AMBER,
+        shadowOpacity: 0.95,
+        shadowRadius: 14,
+        shadowOffset: { width: 0, height: 0 },
+      },
+      android: {
+        elevation: 6,
+      },
+      default: {},
+    }),
+  },
+  phaseDotDone: {
+    backgroundColor: JOIN_BATTLE_AMBER,
+    opacity: 0.72,
+    ...Platform.select({
+      ios: {
+        shadowColor: JOIN_BATTLE_AMBER,
+        shadowOpacity: 0.4,
+        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 0 },
+      },
+      default: {},
+    }),
+  },
   phaseDotIdle: {
-    backgroundColor: "transparent",
+    /** 背景色でレールを隠し、線が輪の内側を貫通して見えないようにする */
+    backgroundColor: SQUAD_GOLD_NATIVE.bg,
     borderWidth: 1.5,
     borderColor: "rgba(251,191,36,0.22)",
   },
@@ -5996,10 +6076,15 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: "900",
     letterSpacing: 1.6,
+    /** RN の letterSpacing 末尾余白で右に寄るのを相殺 */
+    marginRight: -1.6,
     textTransform: "uppercase",
   },
   phaseSegTextActive: {
     color: JOIN_BATTLE_AMBER,
+    textShadowColor: "rgba(251,191,36,0.85)",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 10,
   },
   phaseSegTextDone: {
     color: SQUAD_GOLD_NATIVE.mut,

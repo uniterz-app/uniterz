@@ -102,6 +102,14 @@ export default function MainTabNavigator() {
     getAppBrandWordmarkOverride,
     () => null
   );
+  /**
+   * ナビ解決を正にする。未フォーカス画面の stale override が具体的なタブ名を上書きしない。
+   * override はナビがまだデフォルトのあいだの先行表示用。
+   */
+  const shelfTitle =
+    wordmark !== DEFAULT_HEADER_WORDMARK
+      ? wordmark
+      : (wordmarkOverride ?? wordmark);
   const welcomeBrandHidden = useSyncExternalStore(
     subscribeTutorialWelcomeBrandHidden,
     getTutorialWelcomeBrandHidden,
@@ -157,7 +165,7 @@ export default function MainTabNavigator() {
           >
             <UniterzBrandShelfNative
               includeSafeAreaTop
-              title={wordmarkOverride ?? wordmark}
+              title={shelfTitle}
             />
           </View>
         )}

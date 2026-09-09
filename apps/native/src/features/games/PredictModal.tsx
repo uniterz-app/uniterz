@@ -1640,15 +1640,15 @@ export default function PredictModal({
                       <TutorialTargetNative id="predict-scores">
                       <Animated.View entering={scoreBlockEnter}>
                         {overlayUnifiedForm ? (
+                          <View style={s.predictFormStack}>
                           <View
                             style={[
                               s.predictScoreFormPanel,
                               tutorialMode
                                 ? {
-                                    borderColor: "rgba(0,245,255,0.4)",
-                                    borderWidth: 1,
+                                    borderColor: "rgba(0,245,255,0.5)",
                                     shadowColor: TUTORIAL_CYAN,
-                                    shadowOpacity: 0.25,
+                                    shadowOpacity: 0.28,
                                     shadowRadius: 12,
                                   }
                                 : null,
@@ -1783,6 +1783,10 @@ export default function PredictModal({
                               gameId={predictData?.gameId}
                             />
                           ) : null}
+                          {isSoccerPredict && !isWcLeague ? (
+                            <Text style={s.soccerHint}>{t.drawAvailable}</Text>
+                          ) : null}
+                          </View>
                           {!isWcLeague &&
                           predictData?.league === "nba" &&
                           setGoalScorerPick ? (
@@ -1808,9 +1812,6 @@ export default function PredictModal({
                               onChange={setGoalScorerPick}
                               language={language}
                             />
-                          ) : null}
-                          {isSoccerPredict && !isWcLeague ? (
-                            <Text style={s.soccerHint}>{t.drawAvailable}</Text>
                           ) : null}
                           </View>
                         ) : (
@@ -1945,6 +1946,10 @@ export default function PredictModal({
                               gameId={predictData?.gameId}
                             />
                           ) : null}
+                          {isSoccerPredict && !isWcLeague ? (
+                            <Text style={s.soccerHint}>{t.drawAvailable}</Text>
+                          ) : null}
+                          </View>
                           {!isWcLeague &&
                           predictData?.league === "nba" &&
                           setGoalScorerPick ? (
@@ -1971,10 +1976,6 @@ export default function PredictModal({
                               language={language}
                             />
                           ) : null}
-                          {isSoccerPredict && !isWcLeague ? (
-                            <Text style={s.soccerHint}>{t.drawAvailable}</Text>
-                          ) : null}
-                          </View>
                         </PredictOverlayCyberFormPanelNative>
                         )}
                       </Animated.View>
@@ -2226,9 +2227,18 @@ const s = StyleSheet.create({
     lineHeight: 18,
     fontWeight: "600",
   },
+  predictFormStack: {
+    gap: 12,
+  },
   predictScoreFormPanel: {
     position: "relative",
-    gap: 16,
+    gap: 12,
+    paddingHorizontal: 12,
+    paddingTop: 14,
+    paddingBottom: 14,
+    borderWidth: 1,
+    borderColor: "rgba(0,245,255,0.32)",
+    backgroundColor: "rgba(0,14,20,0.55)",
   },
   predictSectionTitleWithChip: {
     paddingRight: 36,

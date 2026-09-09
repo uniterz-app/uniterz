@@ -167,11 +167,15 @@ export default function NbaTopScorerPickerNative({
       </View>
 
       {candidatesLoading && sorted.length === 0 ? (
-        <Text style={styles.empty}>
-          {isJa ? "選手リストを読み込み中…" : "Loading players…"}
-        </Text>
+        <View style={styles.emptyBox}>
+          <Text style={styles.empty}>
+            {isJa ? "選手リストを読み込み中…" : "Loading players…"}
+          </Text>
+        </View>
       ) : sorted.length === 0 ? (
-        <Text style={styles.empty}>{t.nbaTopScorerEmpty}</Text>
+        <View style={styles.emptyBox}>
+          <Text style={styles.empty}>{t.nbaTopScorerEmpty}</Text>
+        </View>
       ) : (
         <View style={styles.table}>
           <View style={styles.head}>
@@ -270,16 +274,20 @@ export default function NbaTopScorerPickerNative({
 
 const styles = StyleSheet.create({
   root: {
-    marginTop: 12,
-    paddingHorizontal: 0,
-    paddingVertical: 4,
+    marginTop: 4,
+    paddingHorizontal: 12,
+    paddingTop: 12,
+    paddingBottom: 12,
+    borderWidth: 1,
+    borderColor: "rgba(0,245,255,0.32)",
+    backgroundColor: "rgba(0,14,20,0.55)",
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     gap: 8,
-    marginBottom: 8,
+    marginBottom: 10,
   },
   headerText: {
     flex: 1,
@@ -313,16 +321,24 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     textDecorationLine: "underline",
   },
+  emptyBox: {
+    borderWidth: 1,
+    borderColor: "rgba(0,245,255,0.18)",
+    backgroundColor: "rgba(4,16,24,0.45)",
+    paddingHorizontal: 12,
+    paddingVertical: 14,
+  },
   empty: {
-    color: "rgba(255,255,255,0.4)",
-    fontSize: 11,
+    color: "rgba(255,255,255,0.45)",
+    fontSize: 12,
+    lineHeight: 18,
   },
   table: {
     overflow: "hidden",
     borderRadius: 2,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "rgba(0,245,255,0.12)",
-    backgroundColor: "rgba(4,16,24,0.35)",
+    borderWidth: 1,
+    borderColor: "rgba(0,245,255,0.22)",
+    backgroundColor: "rgba(4,16,24,0.45)",
   },
   head: {
     flexDirection: "row",

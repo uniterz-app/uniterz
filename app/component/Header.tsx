@@ -4,6 +4,7 @@ import { motion, useReducedMotion } from "framer-motion";
 import { usePathname } from "next/navigation";
 import { useSyncExternalStore } from "react";
 import {
+  DEFAULT_HEADER_WORDMARK,
   getAppBrandWordmarkOverride,
   resolveHeaderWordmark,
   subscribeAppBrandWordmarkOverride,
@@ -26,7 +27,16 @@ export default function Header({ title }: Props) {
   );
   const isMobileWeb = (pathname ?? "").startsWith("/mobile");
   const animate = !reduceMotion && !isMobileWeb;
-  const wordmark = title ?? wordmarkOverride ?? resolveHeaderWordmark(pathname);
+  const fromPath = resolveHeaderWordmark(pathname);
+  /**
+   * pathname が具体的な棚名ならそれを正にする（離脱後の stale override 対策）。
+   * /dev などパスが UNITERZ のままのプレビューは override を使う。
+   */
+  const wordmark =
+    title ??
+    (fromPath !== DEFAULT_HEADER_WORDMARK
+      ? fromPath
+      : (wordmarkOverride ?? fromPath));
   const wordmarkLetters = wordmark.split("");
 
   return (

@@ -94,29 +94,39 @@ export function isHeaderWordmark(value: string): value is HeaderWordmark {
   return HEADER_WORDMARK_SET.has(value);
 }
 
-/** titleInBrandShelf 中のページ名で棚の文字を上書き */
-let wordmarkOverride: HeaderWordmark | null = null;
-let wordmarkAcquireCount = 0;
+/**
+ * titleInBrandShelf 中のページ名で棚の文字を上書き。
+ * 参照カウントではなくリース配列 — 途中の解除で直前の上書きに戻す。
+ * （未フォーカスのスタック画面が握ったままになるのを防ぐ前提で、acquire 側もフォーカス連動させる）
+ */
+type WordmarkLease = { id: number; mark: HeaderWordmark };
+let wordmarkLeaseSeq = 0;
+const wordmarkLeases: WordmarkLease[] = [];
 const wordmarkListeners = new Set<() => void>();
 
 function emitWordmarkOverride(): void {
   wordmarkListeners.forEach((listener) => listener());
 }
 
+function currentWordmarkOverride(): HeaderWordmark | null {
+  const top = wordmarkLeases[wordmarkLeases.length - 1];
+  return top ? top.mark : null;
+}
+
 export function getAppBrandWordmarkOverride(): HeaderWordmark | null {
-  return wordmarkAcquireCount > 0 ? wordmarkOverride : null;
+  return currentWordmarkOverride();
 }
 
 export function acquireAppBrandWordmark(mark: HeaderWordmark): () => void {
-  wordmarkAcquireCount += 1;
-  wordmarkOverride = mark;
+  const id = ++wordmarkLeaseSeq;
+  wordmarkLeases.push({ id, mark });
   emitWordmarkOverride();
   let released = false;
   return () => {
     if (released) return;
     released = true;
-    wordmarkAcquireCount = Math.max(0, wordmarkAcquireCount - 1);
-    if (wordmarkAcquireCount === 0) wordmarkOverride = null;
+    const idx = wordmarkLeases.findIndex((lease) => lease.id === id);
+    if (idx >= 0) wordmarkLeases.splice(idx, 1);
     emitWordmarkOverride();
   };
 }

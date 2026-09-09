@@ -60,10 +60,10 @@ export default function PredictOverlayScoreInputNative({
       cut={PREDICT_OVERLAY_SCORE_INPUT_CUT}
       gradientColors={["#000000", "#000000"]}
       gradientLocations={[0, 1]}
-      borderColor="rgba(0,245,255,0.24)"
+      borderColor="rgba(0,245,255,0.52)"
       shadowColor="#00f5ff"
-      shadowOpacity={0.05}
-      shadowRadius={12}
+      shadowOpacity={0.18}
+      shadowRadius={14}
       style={styles.root}
       contentStyle={styles.content}
       overflowHidden
@@ -98,6 +98,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingHorizontal: 14,
     paddingVertical: 0,
+    backgroundColor: "rgba(0,18,24,0.92)",
   },
   input: {
     width: "100%",

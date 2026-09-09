@@ -303,64 +303,112 @@ function SquadGoldPhaseTrack({
   const edgeInsetPct = 100 / (2 * n);
 
   return (
-    <div className="relative pt-0.5">
-      {/* レール: 先頭〜末尾ドットの中心同士 */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute top-[7px] h-0.5 overflow-hidden rounded-full"
-        style={{
-          left: `${edgeInsetPct}%`,
-          right: `${edgeInsetPct}%`,
-        }}
-      >
+    <div>
+      {/* ドット行 — レール縦中央。点灯はハロー＋コアで光らせる */}
+      <div className="relative flex h-7 items-center">
         <div
-          className="absolute inset-0 rounded-full"
-          style={{ background: SQUAD_GOLD.lineSoft }}
-        />
-        <div
-          className="absolute left-0 top-0 h-full rounded-full"
+          aria-hidden
+          className="pointer-events-none absolute top-1/2 h-0.5 -translate-y-1/2 overflow-visible rounded-full"
           style={{
-            width: `${progressPct}%`,
-            background: `linear-gradient(90deg, ${SQUAD_GOLD.accDeep}, ${SQUAD_GOLD.acc})`,
-            boxShadow: `0 0 10px rgba(${SQUAD_GOLD.glowRgb},0.55)`,
+            left: `${edgeInsetPct}%`,
+            right: `${edgeInsetPct}%`,
           }}
-        />
-      </div>
+        >
+          <div
+            className="absolute inset-0 rounded-full"
+            style={{ background: SQUAD_GOLD.lineSoft }}
+          />
+          {progressPct > 0 ? (
+            <>
+              <div
+                className="absolute left-0 top-1/2 h-2 -translate-y-1/2 rounded-full opacity-50 blur-[3px]"
+                style={{
+                  width: `${progressPct}%`,
+                  background: SQUAD_GOLD.acc,
+                }}
+              />
+              <div
+                className="absolute left-0 top-0 h-full rounded-full"
+                style={{
+                  width: `${progressPct}%`,
+                  background: `linear-gradient(90deg, ${SQUAD_GOLD.accDeep}, ${SQUAD_GOLD.acc})`,
+                  boxShadow: `0 0 12px rgba(${SQUAD_GOLD.glowRgb},0.7)`,
+                }}
+              />
+            </>
+          ) : null}
+        </div>
 
-      <div className="relative z-[1] flex">
         {SQUAD_BATTLE_SEASON_PHASES.map((p) => {
           const idx = order.indexOf(p.key);
           const active = activeKey != null && p.key === activeKey;
           const done = activeIdx >= 0 && idx < activeIdx;
-          const lit = active || done;
           return (
             <div
               key={p.key}
-              className="flex flex-1 flex-col items-center gap-1.5"
+              className="relative z-[1] flex flex-1 items-center justify-center"
             >
-              <span
-                className="h-4 w-4 shrink-0 rounded-full"
-                style={{
-                  background: lit ? SQUAD_GOLD.acc : "transparent",
-                  border: lit
-                    ? "none"
-                    : `1.5px solid ${SQUAD_GOLD.lineSoft}`,
-                  boxShadow: lit
-                    ? `0 0 14px rgba(${SQUAD_GOLD.glowRgb},0.75)`
-                    : "none",
-                }}
-              />
+              <span className="relative flex h-4 w-4 items-center justify-center">
+                {active ? (
+                  <span
+                    aria-hidden
+                    className="pointer-events-none absolute left-1/2 top-1/2 h-7 w-7 -translate-x-1/2 -translate-y-1/2 rounded-full"
+                    style={{
+                      background: `radial-gradient(circle, rgba(${SQUAD_GOLD.glowRgb},0.55) 0%, rgba(${SQUAD_GOLD.glowRgb},0.18) 42%, transparent 70%)`,
+                    }}
+                  />
+                ) : null}
+                <span
+                  className="relative h-4 w-4 shrink-0 rounded-full"
+                  style={
+                    active
+                      ? {
+                          background: SQUAD_GOLD.acc,
+                          boxShadow: `0 0 10px rgba(${SQUAD_GOLD.glowRgb},0.95), 0 0 22px rgba(${SQUAD_GOLD.glowRgb},0.55)`,
+                        }
+                      : done
+                        ? {
+                            background: SQUAD_GOLD.acc,
+                            opacity: 0.72,
+                            boxShadow: `0 0 8px rgba(${SQUAD_GOLD.glowRgb},0.35)`,
+                          }
+                        : {
+                            background: SQUAD_GOLD.bg,
+                            border: `1.5px solid ${SQUAD_GOLD.lineSoft}`,
+                          }
+                  }
+                />
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="mt-1 flex">
+        {SQUAD_BATTLE_SEASON_PHASES.map((p) => {
+          const idx = order.indexOf(p.key);
+          const active = activeKey != null && p.key === activeKey;
+          const done = activeIdx >= 0 && idx < activeIdx;
+          return (
+            <div
+              key={p.key}
+              className="flex flex-1 items-center justify-center"
+            >
               <span
                 className={cn(
                   nameOxanium.className,
                   "text-[9px] font-black uppercase tracking-[0.18em]"
                 )}
                 style={{
+                  marginRight: "-0.18em",
                   color: active
                     ? SQUAD_GOLD.acc
                     : done
                       ? SQUAD_GOLD.mut
                       : SQUAD_GOLD.mutFaint,
+                  textShadow: active
+                    ? `0 0 12px rgba(${SQUAD_GOLD.glowRgb},0.85)`
+                    : undefined,
                 }}
               >
                 {p.label}
