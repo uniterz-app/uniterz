@@ -116,10 +116,10 @@ import {
   isProfilePlanProFuturisticBgVariant,
   type ProfilePlanProFuturisticBgVariant,
 } from "../../../../../../lib/profile/profilePlanProFuturisticBgVariants";
-import EclipseBackground from "../backgrounds/EclipseBackground";
-import DataStreamBackground from "../backgrounds/DataStreamBackground";
-import ParallaxLayersNative from "../backgrounds/ParallaxLayersNative";
 import { PROFILE_PLAN_PRO_BG } from "../../../../../../lib/profile/profilePlanVisual";
+import RasterizeOnceNative, {
+  proSkinRasterCacheKey,
+} from "./RasterizeOnceNative";
 
 type Props = {
   width: number;
@@ -580,24 +580,30 @@ function SvgSkinHudLayers({
         layerStyle,
       ]}
     >
-      <View style={StyleSheet.absoluteFillObject}>
-        <SvgXml
-          xml={skinXml}
-          width={width}
-          height={artH}
-          viewBox={`0 0 ${canvasW} ${canvasH}`}
-          preserveAspectRatio="none"
-        />
-      </View>
-      <View style={StyleSheet.absoluteFillObject}>
-        <SvgXml
-          xml={hudXml}
-          width={width}
-          height={artH}
-          viewBox={`0 0 ${canvasW} ${canvasH}`}
-          preserveAspectRatio="none"
-        />
-      </View>
+      <RasterizeOnceNative
+        cacheKey={proSkinRasterCacheKey(variantKey, width, artH)}
+        width={width}
+        height={artH}
+      >
+        <View style={StyleSheet.absoluteFillObject}>
+          <SvgXml
+            xml={skinXml}
+            width={width}
+            height={artH}
+            viewBox={`0 0 ${canvasW} ${canvasH}`}
+            preserveAspectRatio="none"
+          />
+        </View>
+        <View style={StyleSheet.absoluteFillObject}>
+          <SvgXml
+            xml={hudXml}
+            width={width}
+            height={artH}
+            viewBox={`0 0 ${canvasW} ${canvasH}`}
+            preserveAspectRatio="none"
+          />
+        </View>
+      </RasterizeOnceNative>
     </Animated.View>
   );
 }
@@ -847,7 +853,7 @@ function FormLayers({
   );
 }
 
-/** 参考画像準拠の Skia 背景（簡略 WebParity ではなく本番品質） */
+/** 重い Skia（Eclipse / DataStream）は静的グラデに落とす */
 function FuturisticLayers({
   width,
   height,
@@ -859,9 +865,56 @@ function FuturisticLayers({
 }) {
   const artId = getProfilePlanProFuturisticArtId(variant);
   if (artId === "data-stream") {
-    return <DataStreamBackground width={width} height={height} />;
+    return (
+      <View style={{ width, height }}>
+        <LinearGradient
+          colors={["#020305", "#050a14", "#0a1020", "#050a14", "#020305"]}
+          locations={[0, 0.28, 0.52, 0.78, 1]}
+          start={{ x: 0.5, y: 0 }}
+          end={{ x: 0.5, y: 1 }}
+          style={StyleSheet.absoluteFillObject}
+        />
+        <LinearGradient
+          colors={[
+            "transparent",
+            "rgba(232,121,249,0.22)",
+            "rgba(167,139,250,0.28)",
+            "rgba(34,211,238,0.2)",
+            "transparent",
+          ]}
+          locations={[0.35, 0.48, 0.55, 0.65, 0.8]}
+          start={{ x: 0, y: 0.5 }}
+          end={{ x: 1, y: 0.5 }}
+          style={StyleSheet.absoluteFillObject}
+        />
+      </View>
+    );
   }
-  return <EclipseBackground width={width} height={height} />;
+  return (
+    <View style={{ width, height }}>
+      <LinearGradient
+        colors={["#020305", "#0a1020", "#1a0a28", "#020305"]}
+        locations={[0, 0.38, 0.72, 1]}
+        start={{ x: 0.2, y: 0 }}
+        end={{ x: 0.9, y: 1 }}
+        style={StyleSheet.absoluteFillObject}
+      />
+      <LinearGradient
+        colors={["transparent", "rgba(232,121,249,0.28)", "transparent"]}
+        locations={[0.35, 0.78, 1]}
+        start={{ x: 0.1, y: 0.2 }}
+        end={{ x: 1, y: 1 }}
+        style={StyleSheet.absoluteFillObject}
+      />
+      <LinearGradient
+        colors={["transparent", "rgba(34,211,238,0.16)", "transparent"]}
+        locations={[0.2, 0.55, 0.85]}
+        start={{ x: 0, y: 0.6 }}
+        end={{ x: 0.6, y: 0.3 }}
+        style={StyleSheet.absoluteFillObject}
+      />
+    </View>
+  );
 }
 
 /** Web `neo-*` 相当（フルブリード skin — cover 相当） */
@@ -930,7 +983,13 @@ function NeoLayers({
           height: coverH,
         }}
       >
-        <SvgXml xml={skinXml} width={width} height={coverH} />
+        <RasterizeOnceNative
+          cacheKey={proSkinRasterCacheKey(variant, width, coverH)}
+          width={width}
+          height={coverH}
+        >
+          <SvgXml xml={skinXml} width={width} height={coverH} />
+        </RasterizeOnceNative>
       </View>
     </Animated.View>
   );
@@ -1038,16 +1097,22 @@ function ScaleLayers({
         layerStyle,
       ]}
     >
-      <Svg
+      <RasterizeOnceNative
+        cacheKey={proSkinRasterCacheKey(variant, width, artH)}
         width={width}
         height={artH}
-        viewBox={`0 0 ${PROFILE_PLAN_PRO_SCALE_CANVAS.width} ${PROFILE_PLAN_PRO_SCALE_CANVAS.height}`}
-        preserveAspectRatio="none"
-        pointerEvents="none"
       >
-        {renderItems(skin, "skin")}
-        {renderItems(hud, "hud")}
-      </Svg>
+        <Svg
+          width={width}
+          height={artH}
+          viewBox={`0 0 ${PROFILE_PLAN_PRO_SCALE_CANVAS.width} ${PROFILE_PLAN_PRO_SCALE_CANVAS.height}`}
+          preserveAspectRatio="none"
+          pointerEvents="none"
+        >
+          {renderItems(skin, "skin")}
+          {renderItems(hud, "hud")}
+        </Svg>
+      </RasterizeOnceNative>
     </Animated.View>
   );
 }
@@ -1126,23 +1191,29 @@ function AtmosLayers({
         layerStyle,
       ]}
     >
-      <Svg
+      <RasterizeOnceNative
+        cacheKey={proSkinRasterCacheKey(`atmos:${accent}`, width, artH)}
         width={width}
         height={artH}
-        viewBox={`0 0 ${PROFILE_PLAN_PRO_ATMOS_CANVAS.width} ${PROFILE_PLAN_PRO_ATMOS_CANVAS.height}`}
-        preserveAspectRatio="none"
-        pointerEvents="none"
       >
-        {cells.map((cell, i) => (
-          <Path
-            key={`atmos-${i}`}
-            d={cell.d}
-            fill="none"
-            stroke={cell.stroke}
-            strokeWidth={cell.strokeWidth}
-          />
-        ))}
-      </Svg>
+        <Svg
+          width={width}
+          height={artH}
+          viewBox={`0 0 ${PROFILE_PLAN_PRO_ATMOS_CANVAS.width} ${PROFILE_PLAN_PRO_ATMOS_CANVAS.height}`}
+          preserveAspectRatio="none"
+          pointerEvents="none"
+        >
+          {cells.map((cell, i) => (
+            <Path
+              key={`atmos-${i}`}
+              d={cell.d}
+              fill="none"
+              stroke={cell.stroke}
+              strokeWidth={cell.strokeWidth}
+            />
+          ))}
+        </Svg>
+      </RasterizeOnceNative>
     </Animated.View>
   );
 }
@@ -1216,23 +1287,29 @@ function HexLayoutLayers({
         ]}
         pointerEvents="none"
       >
-        <Svg
+        <RasterizeOnceNative
+          cacheKey={proSkinRasterCacheKey(variant, width, artH)}
           width={width}
           height={artH}
-          viewBox={`0 0 ${PROFILE_PLAN_PRO_HEX_LAYOUT_W} ${PROFILE_PLAN_PRO_HEX_LAYOUT_H}`}
-          preserveAspectRatio="none"
         >
-          {art.cells.map((cell, i) => (
-            <Path
-              key={`hex-${i}`}
-              d={hexCellToPathD(cell)}
-              fill="rgba(34,211,238,0.04)"
-              stroke={cell.stroke.replace(",1)", `,${cell.opacity})`)}
-              strokeWidth={1}
-              opacity={0.85}
-            />
-          ))}
-        </Svg>
+          <Svg
+            width={width}
+            height={artH}
+            viewBox={`0 0 ${PROFILE_PLAN_PRO_HEX_LAYOUT_W} ${PROFILE_PLAN_PRO_HEX_LAYOUT_H}`}
+            preserveAspectRatio="none"
+          >
+            {art.cells.map((cell, i) => (
+              <Path
+                key={`hex-${i}`}
+                d={hexCellToPathD(cell)}
+                fill="rgba(34,211,238,0.04)"
+                stroke={cell.stroke.replace(",1)", `,${cell.opacity})`)}
+                strokeWidth={1}
+                opacity={0.85}
+              />
+            ))}
+          </Svg>
+        </RasterizeOnceNative>
       </Animated.View>
       <LinearGradient
         colors={["transparent", "rgba(2,4,8,0.4)"]}
@@ -1459,7 +1536,9 @@ export default function ProfilePlanProBackgroundNative({
 }: Props) {
   const reduceMotion = useReducedMotion();
   const screenActive = useScreenActiveNative();
-  const shouldAnimate = animate && reduceMotion !== true && screenActive;
+  /** 入場フェードのみ（画面アクティブ時）。常時ループはしない */
+  const allowEnter = animate && reduceMotion !== true && screenActive;
+  const shouldLoop = false;
 
   if (width <= 0 || height <= 0) return null;
 
@@ -1501,7 +1580,7 @@ export default function ProfilePlanProBackgroundNative({
           width={width}
           height={height}
           accent={profileAccent}
-          shouldAnimate={shouldAnimate}
+          shouldAnimate={allowEnter}
           accentReady={accentReady}
         />
       </View>
@@ -1509,12 +1588,22 @@ export default function ProfilePlanProBackgroundNative({
   }
 
   if (variant === "parallax") {
+    /** BlurMask 多重 Skia は常時重い → 静的グラデに落とす */
     return (
       <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
-        <ParallaxLayersNative
-          width={width}
-          height={height}
-          shouldAnimate={shouldAnimate}
+        <LinearGradient
+          colors={["#030712", "#0b1224", "#111827", "#030712"]}
+          locations={[0, 0.35, 0.7, 1]}
+          start={{ x: 0.15, y: 0 }}
+          end={{ x: 0.85, y: 1 }}
+          style={StyleSheet.absoluteFillObject}
+        />
+        <LinearGradient
+          colors={["rgba(34,211,238,0.14)", "transparent", "rgba(167,139,250,0.1)"]}
+          locations={[0, 0.5, 1]}
+          start={{ x: 0.2, y: 0 }}
+          end={{ x: 0.8, y: 1 }}
+          style={StyleSheet.absoluteFillObject}
         />
       </View>
     );
@@ -1527,7 +1616,7 @@ export default function ProfilePlanProBackgroundNative({
           width={width}
           height={height}
           variant={variant}
-          shouldAnimate={shouldAnimate}
+          shouldAnimate={allowEnter}
         />
       </View>
     );
@@ -1540,7 +1629,7 @@ export default function ProfilePlanProBackgroundNative({
           width={width}
           height={height}
           variant={variant}
-          shouldAnimate={shouldAnimate}
+          shouldAnimate={allowEnter}
         />
       </View>
     );
@@ -1553,7 +1642,7 @@ export default function ProfilePlanProBackgroundNative({
           width={width}
           height={height}
           variant={variant}
-          shouldAnimate={shouldAnimate}
+          shouldAnimate={allowEnter}
         />
       </View>
     );
@@ -1566,7 +1655,7 @@ export default function ProfilePlanProBackgroundNative({
           width={width}
           height={height}
           variant={variant}
-          shouldAnimate={shouldAnimate}
+          shouldAnimate={allowEnter}
         />
       </View>
     );
@@ -1579,7 +1668,7 @@ export default function ProfilePlanProBackgroundNative({
           width={width}
           height={height}
           variant={variant}
-          shouldAnimate={shouldAnimate}
+          shouldAnimate={allowEnter}
         />
       </View>
     );
@@ -1592,7 +1681,7 @@ export default function ProfilePlanProBackgroundNative({
           width={width}
           height={height}
           variant={variant}
-          shouldAnimate={shouldAnimate}
+          shouldAnimate={allowEnter}
         />
       </View>
     );
@@ -1605,7 +1694,7 @@ export default function ProfilePlanProBackgroundNative({
           width={width}
           height={height}
           variant={variant}
-          shouldAnimate={shouldAnimate}
+          shouldAnimate={allowEnter}
         />
       </View>
     );
@@ -1621,27 +1710,27 @@ export default function ProfilePlanProBackgroundNative({
 
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
-      {isMood ? <MoodLayers variant={variant} shouldAnimate={shouldAnimate} /> : null}
+      {isMood ? <MoodLayers variant={variant} shouldAnimate={shouldLoop} /> : null}
       {isHexLayout ? (
         <HexLayoutLayers
           width={width}
           height={height}
           variant={variant as ProfilePlanProHexBgVariant}
-          shouldAnimate={shouldAnimate}
+          shouldAnimate={allowEnter}
         />
       ) : null}
       {isGeo ? (
-        <GeoLayers variant={variant} shouldAnimate={shouldAnimate} height={height} />
+        <GeoLayers variant={variant} shouldAnimate={shouldLoop} height={height} />
       ) : null}
       {isNova ? (
-        <NovaLayers variant={variant} height={height} shouldAnimate={shouldAnimate} />
+        <NovaLayers variant={variant} height={height} shouldAnimate={shouldLoop} />
       ) : null}
-      {useTunnel ? <TunnelLayers shouldAnimate={shouldAnimate} /> : null}
-      {useParallax ? <ParallaxLayers shouldAnimate={shouldAnimate} /> : null}
-      {useDepthField ? <DepthFieldLayers shouldAnimate={shouldAnimate} /> : null}
-      {useSonar ? <SonarLayers shouldAnimate={shouldAnimate} variant={variant} /> : null}
+      {useTunnel ? <TunnelLayers shouldAnimate={shouldLoop} /> : null}
+      {useParallax ? <ParallaxLayers shouldAnimate={shouldLoop} /> : null}
+      {useDepthField ? <DepthFieldLayers shouldAnimate={shouldLoop} /> : null}
+      {useSonar ? <SonarLayers shouldAnimate={shouldLoop} variant={variant} /> : null}
       {(!isDepth && !isMood && !isNova && !isGeo && !isHexLayout) || variant === "cloud-volume" ? (
-        <AuroraLayers shouldAnimate={shouldAnimate} />
+        <AuroraLayers shouldAnimate={shouldLoop} />
       ) : null}
 
       <LinearGradient

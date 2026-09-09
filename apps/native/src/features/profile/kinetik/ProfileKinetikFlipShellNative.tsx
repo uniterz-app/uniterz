@@ -14,7 +14,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { ProfileKinetikFlipEarProvider } from "./ProfileKinetikFlipEarNative";
 
-const FLIP_MS = 420;
+export const PROFILE_KINETIK_FLIP_MS = 420;
 
 type Props = {
   language: "ja" | "en";
@@ -44,7 +44,7 @@ export default function ProfileKinetikFlipShellNative({
       return;
     }
     progress.value = withTiming(next ? 1 : 0, {
-      duration: FLIP_MS,
+      duration: PROFILE_KINETIK_FLIP_MS,
       easing: Easing.out(Easing.cubic),
     });
   }, [flipped, onFlipChange, progress, reduceMotion]);

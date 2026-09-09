@@ -44,6 +44,8 @@ type Props = {
   variant?: "section" | "face";
   isPro?: boolean;
   planProBgVariant?: ProfilePlanProBgVariant;
+  /** false のあいだは Pro 背景を載せない（フリップ前・表面表示中） */
+  proSkinActive?: boolean;
 };
 
 type CareerRow = { key: string; label: string; value: string };
@@ -57,10 +59,11 @@ export default function ProfileCareerPanelNative({
   variant = "section",
   isPro = false,
   planProBgVariant = PROFILE_PLAN_PRO_BG_DEFAULT,
+  proSkinActive = true,
 }: Props) {
   const isJa = language === "ja";
   const isFace = variant === "face";
-  const showProSkin = isPro && isFace;
+  const showProSkin = isPro && isFace && proSkinActive;
   const reduceMotion = useReducedMotion() === true;
   const flipEar = useProfileKinetikFlipEar();
   const [frameSize, setFrameSize] = useState({ width: 0, height: 0 });

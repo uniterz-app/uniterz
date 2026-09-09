@@ -1,7 +1,7 @@
 /**
  * Web `ProfileKinetikHero` 相当 — Season/Playoff × Total/Week/Month。
  */
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ViewStyle } from "react-native";
 import type { Profile } from "../../../../../../app/component/profile/useProfile";
 import { mapProfileToKinetikPanel } from "../../../../../../lib/profile/mapProfileToKinetikPanel";
@@ -24,7 +24,9 @@ import type { ProfilePlanProBgVariant } from "../../../../../../lib/profile/prof
 import { PROFILE_PLAN_PRO_BG_DEFAULT } from "../../../../../../lib/profile/profilePlanProBgVariants";
 import { getUniterzApiBaseUrl } from "../../games/submitPredictionApi";
 import ProfileKinetikPanelNative from "./ProfileKinetikPanelNative";
-import ProfileKinetikFlipShellNative from "./ProfileKinetikFlipShellNative";
+import ProfileKinetikFlipShellNative, {
+  PROFILE_KINETIK_FLIP_MS,
+} from "./ProfileKinetikFlipShellNative";
 import ProfileCareerPanelNative from "../ProfileCareerPanelNative";
 import { useUserCareerNative } from "../useUserCareerNative";
 
@@ -130,7 +132,20 @@ export default function ProfileKinetikHeroNative({
     useState<ProfileKinetikMetricsTab>("total");
   const [windowLabel, setWindowLabel] = useState<string | null>(null);
   const [careerFlipped, setCareerFlipped] = useState(false);
+  const [careerMounted, setCareerMounted] = useState(false);
+  const careerUnmountTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null
+  );
   const apiBase = useMemo(() => getUniterzApiBaseUrl() ?? undefined, []);
+
+  useEffect(
+    () => () => {
+      if (careerUnmountTimerRef.current) {
+        clearTimeout(careerUnmountTimerRef.current);
+      }
+    },
+    []
+  );
 
   const windowEnabled = metricsTab !== "total";
   const fetchedBoard = preferredNbaKinetikPeriod();
@@ -282,7 +297,21 @@ export default function ProfileKinetikHeroNative({
   return (
     <ProfileKinetikFlipShellNative
       language={language}
-      onFlipChange={setCareerFlipped}
+      onFlipChange={(next) => {
+        if (careerUnmountTimerRef.current) {
+          clearTimeout(careerUnmountTimerRef.current);
+          careerUnmountTimerRef.current = null;
+        }
+        setCareerFlipped(next);
+        if (next) {
+          setCareerMounted(true);
+          return;
+        }
+        careerUnmountTimerRef.current = setTimeout(() => {
+          setCareerMounted(false);
+          careerUnmountTimerRef.current = null;
+        }, PROFILE_KINETIK_FLIP_MS + 40);
+      }}
       front={
         <ProfileKinetikPanelNative
           style={style}
@@ -338,16 +367,19 @@ export default function ProfileKinetikHeroNative({
         />
       }
       back={
-        <ProfileCareerPanelNative
-          language={language}
-          variant="face"
-          career={career}
-          badges={badges}
-          loading={careerPending}
-          loadError={careerError}
-          isPro={plan === "pro"}
-          planProBgVariant={planProBgVariant}
-        />
+        careerMounted ? (
+          <ProfileCareerPanelNative
+            language={language}
+            variant="face"
+            career={career}
+            badges={badges}
+            loading={careerPending}
+            loadError={careerError}
+            isPro={plan === "pro"}
+            planProBgVariant={planProBgVariant}
+            proSkinActive={careerFlipped}
+          />
+        ) : null
       }
     />
   );

@@ -23,10 +23,10 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withDelay,
-  withRepeat,
   withSequence,
   withTiming,
 } from "react-native-reanimated";
+import { useScreenActiveNative } from "../../../hooks/useScreenActiveNative";
 import type { ProfileEditKinetikStats } from "../../../../../../app/component/profile/edit/profileEditKinetikTypes";
 import type { ProfileEditTronIdentity } from "../../../../../../app/component/profile/edit/profileEditTronTypes";
 import {
@@ -38,7 +38,6 @@ import {
 } from "../../../../../../app/component/profile/edit/kinetikRankBadge";
 import {
   proBridgeBadgeEnterDelayMs,
-  proBridgeBadgeFloatDelayMs,
   resolveProBridgeBadgeLayout,
   shouldProBridgeBadgeNudgeScroll,
   shouldProBridgeBadgeScroll,
@@ -491,19 +490,15 @@ function KinetikHeaderHatch() {
   );
 }
 
-const PRO_BRIDGE_FLOAT_PHASE_STAGGER = 5;
 const PRO_BRIDGE_BADGE_GAP = 10;
 /** Web `profile-kinetik-badge-enter` — cubic-bezier(0.22, 1, 0.36, 1) */
 const BADGE_ENTER_EASE = Easing.bezier(0.22, 1, 0.36, 1);
-/** Web `profile-kinetik-badge-float` 3.4s の片道 */
-const BADGE_FLOAT_HALF_MS = 1700;
-/** Web float 振幅（-6px）＋盾型など先端が枠いっぱいのバッジ用バッファ */
+/** 旧 float 振幅ぶんの余白。盾型バッジが枠に触れないように残す */
 const BADGE_FLOAT_TRAVEL_PX = 6;
 const BADGE_FLOAT_TOP_CLEARANCE_PX = BADGE_FLOAT_TRAVEL_PX + 8;
 
 /**
- * Web と同じく入場ラッパーとフロート本体を分離する。
- * 同一 transform に合成すると入場後も scale/translate が干渉して動きが崩れる。
+ * Pro バッジ入場のみ（常時 float はしない）。
  */
 function KinetikBadgeProBridgeWrapNative({
   index,
@@ -511,22 +506,18 @@ function KinetikBadgeProBridgeWrapNative({
   children,
 }: {
   index: number;
-  /** Unit 獲得演出中など — フロートを止めて負荷を下げる */
   paused?: boolean;
   children: ReactNode;
 }) {
   const reduceMotion = useReducedMotion();
   const enter = useSharedValue(reduceMotion ? 1 : 0);
-  const floatY = useSharedValue(0);
   const enteredRef = useRef(false);
 
   useEffect(() => {
     cancelAnimation(enter);
-    cancelAnimation(floatY);
 
     if (reduceMotion || paused) {
       enter.value = 1;
-      floatY.value = 0;
       enteredRef.current = true;
       return;
     }
@@ -534,10 +525,6 @@ function KinetikBadgeProBridgeWrapNative({
     const enterDelayMs = enteredRef.current
       ? 0
       : proBridgeBadgeEnterDelayMs(index);
-    const floatDelayMs = enteredRef.current
-      ? 0
-      : proBridgeBadgeFloatDelayMs(index) +
-        (index % PRO_BRIDGE_FLOAT_PHASE_STAGGER) * 80;
 
     if (!enteredRef.current) {
       enter.value = 0;
@@ -550,25 +537,10 @@ function KinetikBadgeProBridgeWrapNative({
       enter.value = 1;
     }
 
-    floatY.value = 0;
-    /** Web: `animation: profile-kinetik-badge-float 3.4s ease-in-out infinite` */
-    floatY.value = withDelay(
-      floatDelayMs,
-      withRepeat(
-        withTiming(-BADGE_FLOAT_TRAVEL_PX, {
-          duration: BADGE_FLOAT_HALF_MS,
-          easing: Easing.inOut(Easing.ease),
-        }),
-        -1,
-        true
-      )
-    );
-
     return () => {
       cancelAnimation(enter);
-      cancelAnimation(floatY);
     };
-  }, [enter, floatY, index, paused, reduceMotion]);
+  }, [enter, index, paused, reduceMotion]);
 
   const enterStyle = useAnimatedStyle(() => {
     const enterT = enter.value;
@@ -582,13 +554,9 @@ function KinetikBadgeProBridgeWrapNative({
     };
   });
 
-  const floatStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: floatY.value }],
-  }));
-
   return (
     <Animated.View style={[styles.badgeEnterWrap, enterStyle]}>
-      <Animated.View style={[styles.badgeFloatWrap, floatStyle]}>{children}</Animated.View>
+      {children}
     </Animated.View>
   );
 }
@@ -819,12 +787,6 @@ function KinetikIdentityIdChipNative({
   );
 }
 
-/** Web の Unit コインアニメ秒数（CSS keyframes と揃える） */
-const UNIT_COIN_GLOW_HALF_MS = 1400;
-const UNIT_COIN_SHEEN_CYCLE_MS = 3600;
-const UNIT_COIN_SHEEN_SWEEP_MS = 580;
-const UNIT_COIN_SHEEN_HOLD_MS = Math.round(UNIT_COIN_SHEEN_CYCLE_MS * 0.55);
-
 function formatVaultBalance(n: number): string {
   return Math.max(0, Math.floor(n)).toLocaleString("en-US");
 }
@@ -853,7 +815,6 @@ const KinetikUnitVaultNative = forwardRef<
     onPress,
     absorbPulse = false,
     countUpEnabled = true,
-    effectsPaused = false,
     onCountBusyChange,
   },
   ref
@@ -932,9 +893,6 @@ const KinetikUnitVaultNative = forwardRef<
   /** 復帰マウントで入場アニメをやり直さない（獲得演出の硬さ対策） */
   const enter = useSharedValue(1);
   const absorb = useSharedValue(1);
-  const glow = useSharedValue(0);
-  const sheenX = useSharedValue(-1.4);
-  const sheenOpacity = useSharedValue(0);
 
   useEffect(() => {
     if (!absorbPulse || reduceMotion) {
@@ -953,100 +911,9 @@ const KinetikUnitVaultNative = forwardRef<
     );
   }, [absorb, absorbPulse, reduceMotion]);
 
-  useEffect(() => {
-    cancelAnimation(glow);
-    cancelAnimation(sheenX);
-    cancelAnimation(sheenOpacity);
-
-    if (reduceMotion || effectsPaused) {
-      glow.value = 0;
-      sheenX.value = -1.4;
-      sheenOpacity.value = 0;
-      return;
-    }
-
-    /** タブ復帰直後はレイアウトが落ち着いてからループ開始 */
-    const settleId = setTimeout(() => {
-      /** Web: `profile-unit-coin-glow 2.8s` */
-      glow.value = withRepeat(
-        withSequence(
-          withTiming(1, {
-            duration: UNIT_COIN_GLOW_HALF_MS,
-            easing: Easing.inOut(Easing.ease),
-          }),
-          withTiming(0, {
-            duration: UNIT_COIN_GLOW_HALF_MS,
-            easing: Easing.inOut(Easing.ease),
-          })
-        ),
-        -1,
-        false
-      );
-
-      /** Web: `profile-unit-coin-sheen 3.6s` */
-      sheenX.value = -1.4;
-      sheenOpacity.value = 0;
-      sheenX.value = withRepeat(
-        withSequence(
-          withDelay(
-            UNIT_COIN_SHEEN_HOLD_MS,
-            withTiming(2.2, {
-              duration: UNIT_COIN_SHEEN_SWEEP_MS,
-              easing: Easing.inOut(Easing.ease),
-            })
-          ),
-          withTiming(-1.4, { duration: 0 })
-        ),
-        -1,
-        false
-      );
-      sheenOpacity.value = withRepeat(
-        withSequence(
-          withDelay(UNIT_COIN_SHEEN_HOLD_MS, withTiming(0.85, { duration: 80 })),
-          withTiming(0, {
-            duration: UNIT_COIN_SHEEN_SWEEP_MS - 80,
-            easing: Easing.in(Easing.ease),
-          }),
-          withTiming(0, { duration: 0 })
-        ),
-        -1,
-        false
-      );
-    }, 480);
-
-    return () => {
-      clearTimeout(settleId);
-      cancelAnimation(glow);
-      cancelAnimation(sheenX);
-      cancelAnimation(sheenOpacity);
-    };
-  }, [effectsPaused, glow, reduceMotion, sheenOpacity, sheenX]);
-
   const rootStyle = useAnimatedStyle(() => ({
     opacity: enter.value,
     transform: [{ scale: absorb.value }],
-  }));
-
-  const discStyle = useAnimatedStyle(() => {
-    const g = glow.value;
-    return {
-      transform: [{ scale: 1 + g * 0.05 }],
-      shadowOpacity: 0.38 + g * 0.37,
-      shadowRadius: 6 + g * 6,
-    };
-  });
-
-  const sheenStyle = useAnimatedStyle(() => ({
-    opacity: sheenOpacity.value,
-    transform: [
-      { translateX: sheenX.value * disc },
-      { rotate: "18deg" },
-    ],
-  }));
-
-  const valueGlowStyle = useAnimatedStyle(() => ({
-    textShadowRadius: 6 + glow.value * 6,
-    textShadowColor: `rgba(246,195,68,${0.4 + glow.value * 0.32})`,
   }));
 
   return (
@@ -1066,11 +933,10 @@ const KinetikUnitVaultNative = forwardRef<
           ]}
           hitSlop={6}
         >
-          <Animated.View
+          <View
             style={[
               styles.unitVaultDisc,
               { width: disc, height: disc, borderRadius: disc / 2 },
-              discStyle,
             ]}
           >
             <LinearGradient
@@ -1078,10 +944,6 @@ const KinetikUnitVaultNative = forwardRef<
               start={{ x: 0.15, y: 0 }}
               end={{ x: 0.85, y: 1 }}
               style={StyleSheet.absoluteFillObject}
-            />
-            <Animated.View
-              pointerEvents="none"
-              style={[styles.unitVaultSheen, { height: disc * 1.4, top: -disc * 0.2 }, sheenStyle]}
             />
             <View
               style={[
@@ -1101,16 +963,15 @@ const KinetikUnitVaultNative = forwardRef<
               />
               <Text style={[styles.unitVaultU, corner ? styles.unitVaultUCorner : null]}>U</Text>
             </View>
-          </Animated.View>
-          <Animated.Text
+          </View>
+          <Text
             style={[
               styles.unitVaultValue,
               corner ? styles.unitVaultValueCorner : null,
-              valueGlowStyle,
             ]}
           >
             {label}
-          </Animated.Text>
+          </Text>
         </Pressable>
       </Animated.View>
     </View>
@@ -1269,42 +1130,6 @@ function MetricsScopeArrowNative({
   );
 }
 
-function MetricsScopeTitleBreathingNative({
-  children,
-  animate,
-}: {
-  children: string;
-  animate: boolean;
-}) {
-  const reduceMotion = useReducedMotion();
-  const opacity = useSharedValue(0.85);
-
-  useEffect(() => {
-    if (!animate || reduceMotion) {
-      opacity.value = 0.88;
-      return;
-    }
-    opacity.value = withRepeat(
-      withSequence(
-        withTiming(0.96, { duration: 1800, easing: Easing.inOut(Easing.ease) }),
-        withTiming(0.76, { duration: 1800, easing: Easing.inOut(Easing.ease) })
-      ),
-      -1,
-      false
-    );
-  }, [animate, opacity, reduceMotion]);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    opacity: opacity.value,
-  }));
-
-  return (
-    <Animated.Text style={[styles.metricsTitle, animatedStyle]} numberOfLines={1}>
-      {children}
-    </Animated.Text>
-  );
-}
-
 export type ProfileKinetikPanelNativeProps = {
   identity: ProfileEditTronIdentity;
   stats: ProfileEditKinetikStats;
@@ -1422,6 +1247,9 @@ export default function ProfileKinetikPanelNative({
     setVaultSettling(busy);
   }, []);
   const earnFxPaused = unitEarn.active != null || vaultSettling;
+  const screenActive = useScreenActiveNative();
+  /** 獲得演出中・裏タブでは常時ループを止める */
+  const uiMotionPaused = earnFxPaused || !screenActive;
   /** hook 側でモック / プレビュー加算済み（1000→1250）まで解決済み */
   const vaultDisplayBalance =
     unitEarn.vaultBalance ?? unitVaultUiBalance(unitBalance);
@@ -1454,11 +1282,11 @@ export default function ProfileKinetikPanelNative({
   const reduceMotion = useReducedMotion();
   const { width: windowW } = useWindowDimensions();
   /**
-   * 獲得演出中は Pro 背景ループも止める（SvgSkinHud は再開時に入場をやり直さない）。
-   * バッジ／金庫の常時ループも earnFxPaused で止める。
+   * Pro 背景は常時ループしない（ProfilePlanProBackground 側）。
+   * ここは入場許可フラグのみ。裏タブ・獲得演出中は止める。
    */
   const animatePlanProBg =
-    isPro && reduceMotion !== true && !earnFxPaused;
+    isPro && reduceMotion !== true && !earnFxPaused && screenActive;
   const [frameSize, setFrameSize] = useState(() => ({
     width: Math.max(0, windowW - 24),
     height: isPro ? 520 : 0,
@@ -1722,6 +1550,7 @@ export default function ProfileKinetikPanelNative({
               streak={activeWinStreak}
               accentKey={menuAccent}
               isPlanPro={isPro}
+              motionPaused={uiMotionPaused}
             />
             <View style={styles.avatarViews}>
               {profileViewCount != null ? (
@@ -1789,7 +1618,7 @@ export default function ProfileKinetikPanelNative({
                         onPress={onOpenUnitLedger}
                         absorbPulse={unitEarn.active != null && unitEarn.absorbed}
                         countUpEnabled={!unitEarn.active || unitEarn.absorbed}
-                        effectsPaused={earnFxPaused}
+                        effectsPaused={uiMotionPaused}
                         onCountBusyChange={onVaultCountBusyChange}
                       />
                     </TutorialTargetNative>
@@ -1841,7 +1670,7 @@ export default function ProfileKinetikPanelNative({
               badges={badges}
               onBadgePress={onBadgePress}
               variant="proBridge"
-              motionPaused={earnFxPaused}
+              motionPaused={uiMotionPaused}
             />
           ) : null}
         </View>
@@ -1849,7 +1678,7 @@ export default function ProfileKinetikPanelNative({
         <KinetikBadgeRowNative
           badges={badges}
           onBadgePress={onBadgePress}
-          motionPaused={earnFxPaused}
+          motionPaused={uiMotionPaused}
         />
       )}
 
@@ -1870,9 +1699,9 @@ export default function ProfileKinetikPanelNative({
                 <MetricsScopeArrowNative direction="left" planPro={isPro} />
               </Pressable>
               <Pressable style={styles.metricsTitlePressPicker} onPress={onToggleMetricsScope}>
-                <MetricsScopeTitleBreathingNative animate>
+                <Text style={styles.metricsTitle} numberOfLines={1}>
                   {metricsHeaderTitle}
-                </MetricsScopeTitleBreathingNative>
+                </Text>
               </Pressable>
               <Pressable
                 style={[styles.scopeNavBtn, styles.scopeNavBtnRight]}
