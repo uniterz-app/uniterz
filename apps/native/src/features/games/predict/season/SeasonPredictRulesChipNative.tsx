@@ -15,7 +15,6 @@ import {
   MATCH_CARD_METRIC_FONT,
 } from "../../matchCardTypography";
 import {
-  seasonPredictRulesFootNote,
   seasonPredictRulesSections,
   type SeasonPredictRulesKind,
   type SeasonPredictRulesLang,
@@ -107,9 +106,6 @@ export default function SeasonPredictRulesChipNative({
                   ))}
                 </View>
               ))}
-              <Text style={styles.footnote}>
-                {seasonPredictRulesFootNote(language)}
-              </Text>
             </ScrollView>
             <View style={styles.footer}>
               <PredictOverlaySubmitButtonNative
@@ -198,12 +194,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 18,
     color: "rgba(255,255,255,0.75)",
-  },
-  footnote: {
-    marginTop: 4,
-    fontSize: 11,
-    lineHeight: 16,
-    color: "rgba(255,255,255,0.45)",
   },
   footer: {
     paddingHorizontal: 16,

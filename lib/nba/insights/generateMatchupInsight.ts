@@ -23,8 +23,10 @@ import {
   type TeamScheduleInput,
 } from "@/lib/nba/insights/buildScheduleLines";
 import { buildContextLinesForTeam } from "@/lib/nba/insights/buildContextLines";
+import { buildPlayerLinesForTeam } from "@/lib/nba/insights/buildPlayerLines";
 import type { NbaTeamSeasonRecordsBundle } from "@/lib/nba/insights/priorSeasonRecordTypes";
 import type { NbaTeamAceOutRecordsBundle } from "@/lib/nba/insights/aceOutRecordTypes";
+import type { NbaPlayerStatLeadersBundle } from "@/lib/predict/nbaPlayerStatLeadersMocks";
 
 export type GenerateMatchupInsightInput = {
   homeTeamId: string;
@@ -41,6 +43,8 @@ export type GenerateMatchupInsightInput = {
   priorAceOutRecords?: NbaTeamAceOutRecordsBundle | null;
   /** early / full 用の今季エース欠場 W–L */
   seasonAceOutRecords?: NbaTeamAceOutRecordsBundle | null;
+  /** PLAYERS 用。無ければ players は空 */
+  playerLeaders?: NbaPlayerStatLeadersBundle | null;
   homeInjuries: NbaTeamInjuryEntry[];
   awayInjuries: NbaTeamInjuryEntry[];
   homePriorGames: TeamScheduleInput["priorGames"];
@@ -153,17 +157,35 @@ export function generateMatchupInsight(
     recentOppWinPcts: input.awayRecentOppWinPcts ?? [],
   });
 
+  const leaders = input.playerLeaders ?? null;
+  const homePlayers = buildPlayerLinesForTeam({
+    phase,
+    seasonRows: input.seasonRows,
+    leaders,
+    teamId: input.homeTeamId,
+    opponentId: input.awayTeamId,
+  });
+  const awayPlayers = buildPlayerLinesForTeam({
+    phase,
+    seasonRows: input.seasonRows,
+    leaders,
+    teamId: input.awayTeamId,
+    opponentId: input.homeTeamId,
+  });
+
   const nowMs = input.nowMs ?? Date.now();
   const brief: PredictProBrief = {
     home: {
       edges: homeEdges,
       schedule: homeSchedule,
       context: homeContext,
+      players: homePlayers,
     },
     away: {
       edges: awayEdges,
       schedule: awaySchedule,
       context: awayContext,
+      players: awayPlayers,
     },
     phase,
     gamesPlayed,

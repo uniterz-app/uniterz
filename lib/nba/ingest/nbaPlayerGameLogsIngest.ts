@@ -56,7 +56,7 @@ export async function ingestNbaPlayerGameLogsFromBdl(
     targets = targets.filter((t) => want.has(t.playerId));
     for (const id of filterIds) {
       if (!targets.some((t) => t.playerId === id)) {
-        targets.push({ playerId: id, teamId: "", position: "—" });
+        targets.push({ playerId: id, teamId: "", position: "—", draftYear: null });
       }
     }
   }

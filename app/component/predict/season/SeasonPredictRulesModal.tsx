@@ -3,7 +3,6 @@
 import { nameBebas, nameOxanium } from "@/lib/fonts";
 import { matchCardTeamNameStyle } from "@/lib/games/teamDisplayTypography";
 import {
-  seasonPredictRulesFootNote,
   seasonPredictRulesSections,
   type SeasonPredictRulesKind,
   type SeasonPredictRulesLang,
@@ -112,15 +111,6 @@ export default function SeasonPredictRulesModal({
                 </section>
               ))}
             </div>
-
-            <p
-              className={[
-                "mt-4 leading-relaxed text-white/45",
-                isWeb ? "text-[12px]" : "text-[11px]",
-              ].join(" ")}
-            >
-              {seasonPredictRulesFootNote(language)}
-            </p>
           </div>
 
           <div className={isWeb ? "px-5 pb-5 sm:px-7" : "px-4 pb-4"}>

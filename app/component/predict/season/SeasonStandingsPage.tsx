@@ -23,8 +23,10 @@ import {
 import { fetchSeasonPredictMarket } from "@/lib/api/fetchSeasonPredictMarket";
 import { auth } from "@/lib/firebase";
 import { nameOxanium } from "@/lib/fonts";
+import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import {
   isSeasonPredictSubmitOpen,
+  SEASON_PREDICT_SUBMIT_DEADLINE_LABEL_EN,
   SEASON_PREDICT_SUBMIT_DEADLINE_LABEL_JA,
   seasonPredictSubmitLockedMessage,
 } from "@/lib/predict/seasonPredictDeadline";
@@ -35,6 +37,12 @@ import {
   isSeasonStandingsComplete,
   type NbaSeasonStandingsPrediction,
 } from "@/lib/predict/nbaSeasonStandingsPredict";
+import {
+  seasonPredictInvalidSubmitError,
+  seasonPredictMarketPendingBody,
+  seasonPredictStandingsIncompleteError,
+  seasonPredictStandingsPageSubtitle,
+} from "@/lib/predict/seasonPredictUiCopy";
 
 type Mode = "loading" | "edit" | "view" | "market" | "market_pending";
 
@@ -54,6 +62,12 @@ export default function SeasonStandingsPage() {
   const [uid, setUid] = useState<string | null>(null);
   const [rulesOpen, setRulesOpen] = useState(false);
   const [rulesAutoShown, setRulesAutoShown] = useState(false);
+  const { language } = useUserLanguage(uid);
+  const rulesLang = language === "en" ? "en" : "ja";
+  const deadlineLabel =
+    rulesLang === "en"
+      ? SEASON_PREDICT_SUBMIT_DEADLINE_LABEL_EN
+      : SEASON_PREDICT_SUBMIT_DEADLINE_LABEL_JA;
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (user) => {
@@ -126,11 +140,11 @@ export default function SeasonStandingsPage() {
   const handleSubmit = useCallback(async () => {
     if (submitting) return;
     if (!submitOpen) {
-      setError(seasonPredictSubmitLockedMessage("ja"));
+      setError(seasonPredictSubmitLockedMessage(rulesLang));
       return;
     }
     if (!isSeasonStandingsComplete(value)) {
-      setError("East / West それぞれ 1〜15 位を埋めてから提出してください。");
+      setError(seasonPredictStandingsIncompleteError(rulesLang));
       return;
     }
     setSubmitting(true);
@@ -142,7 +156,7 @@ export default function SeasonStandingsPage() {
         west: value.west,
       });
       if (!data.prediction) {
-        throw new Error("提出レスポンスが不正です");
+        throw new Error(seasonPredictInvalidSubmitError(rulesLang));
       }
       setValue(data.prediction);
       setMode("view");
@@ -151,17 +165,13 @@ export default function SeasonStandingsPage() {
     } finally {
       setSubmitting(false);
     }
-  }, [value, submitting, submitOpen]);
+  }, [value, submitting, submitOpen, rulesLang]);
 
   return (
     <GamesNbaSubpageShell
       eyebrow="NBA · SEASON"
       title={submitOpen ? "STANDINGS" : "MARKET"}
-      subtitle={
-        submitOpen
-          ? "East / West 各 1〜15 位を予想。同じチームは同じカンファレンス内で一度だけ使えます。"
-          : "締切後の提出集計。チームを押すと順位帯のシェアが見られます。"
-      }
+      subtitle={seasonPredictStandingsPageSubtitle(rulesLang, submitOpen)}
       onHelpPress={() => setRulesOpen(true)}
     >
       {mode === "loading" ? (
@@ -178,7 +188,10 @@ export default function SeasonStandingsPage() {
           >
             Deadline passed · crowd market
           </p>
-          <NbaSeasonStandingsMarketPanel market={market} />
+          <NbaSeasonStandingsMarketPanel
+            market={market}
+            language={rulesLang}
+          />
         </div>
       ) : mode === "market_pending" ? (
         <div className="space-y-3 py-8 text-center">
@@ -191,7 +204,7 @@ export default function SeasonStandingsPage() {
             Market pending
           </p>
           <p className="text-[13px] leading-relaxed text-white/50">
-            提出期限を過ぎました。集計が完了次第、ここにマーケットが表示されます。
+            {seasonPredictMarketPendingBody(rulesLang)}
           </p>
           {error ? (
             <p className="text-[12px] text-[#FF8AB4]/85">{error}</p>
@@ -205,7 +218,7 @@ export default function SeasonStandingsPage() {
               "text-[10px] font-bold uppercase tracking-[0.12em] text-white/40",
             ].join(" ")}
           >
-            提出期限 · {SEASON_PREDICT_SUBMIT_DEADLINE_LABEL_JA}
+            {rulesLang === "en" ? "Deadline" : "提出期限"} · {deadlineLabel}
           </p>
           <NbaSeasonStandingsViewPanel prediction={value} />
           {submitOpen ? (
@@ -224,7 +237,7 @@ export default function SeasonStandingsPage() {
             </button>
           ) : (
             <p className="text-[12px] text-white/45">
-              {seasonPredictSubmitLockedMessage("ja")}
+              {seasonPredictSubmitLockedMessage(rulesLang)}
             </p>
           )}
         </div>
@@ -236,14 +249,14 @@ export default function SeasonStandingsPage() {
               "text-[10px] font-bold uppercase tracking-[0.12em] text-white/40",
             ].join(" ")}
           >
-            提出期限 · {SEASON_PREDICT_SUBMIT_DEADLINE_LABEL_JA}
+            {rulesLang === "en" ? "Deadline" : "提出期限"} · {deadlineLabel}
           </p>
           {error ? (
             <p className="text-[12px] text-[#FF8AB4]/85">{error}</p>
           ) : null}
           {!submitOpen ? (
             <p className="text-[12px] text-white/45">
-              {seasonPredictSubmitLockedMessage("ja")}
+              {seasonPredictSubmitLockedMessage(rulesLang)}
             </p>
           ) : (
             <NbaSeasonStandingsPredictPanel
@@ -251,6 +264,7 @@ export default function SeasonStandingsPage() {
               onChange={setValue}
               onSubmit={() => void handleSubmit()}
               submitDisabled={submitting}
+              language={rulesLang}
             />
           )}
           {submitting ? (
@@ -271,6 +285,7 @@ export default function SeasonStandingsPage() {
             <SeasonPredictRulesModal
               open={rulesOpen}
               kind="standings"
+              language={rulesLang}
               onClose={() => setRulesOpen(false)}
             />,
             document.body

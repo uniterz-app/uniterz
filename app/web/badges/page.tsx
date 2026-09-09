@@ -79,6 +79,7 @@ export default function WebBadgesPage() {
           variant="web"
           onSelect={setSelected}
           emptyLabel={m.badges.noBadges}
+          language={language}
         />
 
         {selected && (

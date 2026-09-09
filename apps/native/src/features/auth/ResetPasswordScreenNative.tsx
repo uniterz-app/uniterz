@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { cyberAlert } from "../../components/cyberAlert";
 import { StyleSheet, Text, TextInput, View } from "react-native";
 import { sendPasswordResetEmail } from "firebase/auth";
@@ -10,12 +10,12 @@ import AuthFormShellNative from "./AuthFormShellNative";
 import SlantCtaNative from "../../ui/SlantCtaNative";
 import ProfileBackEdgeHandleNative from "../profile/ProfileBackEdgeHandleNative";
 import { spacing } from "../../theme/tokens";
-
-const BTN_SKEW = "-10deg";
-const BTN_UNSKEW = "10deg";
+import { authFormCopy } from "@/lib/auth/authFormCopy";
+import { resolveDeviceAppLanguage } from "../../i18n/resolveDeviceAppLanguage";
 
 export default function ResetPasswordScreenNative() {
   const navigation = useNavigation<NativeStackNavigationProp<AuthStackParamList>>();
+  const copy = useMemo(() => authFormCopy(resolveDeviceAppLanguage()), []);
   const [email, setEmail] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -27,16 +27,16 @@ export default function ResetPasswordScreenNative() {
   async function handleReset() {
     const normalized = email.trim().toLowerCase();
     if (!normalized) {
-      cyberAlert("Missing input", "Please enter your email address.");
+      cyberAlert(copy.missingInputTitle, copy.missingEmail);
       return;
     }
     setSubmitting(true);
     try {
       await sendPasswordResetEmail(auth, normalized);
-      cyberAlert("Reset link sent", "If this email is registered, we sent a reset link.");
+      cyberAlert(copy.resetSentTitle, copy.resetSentBody);
       backToLogin();
     } catch {
-      cyberAlert("Reset link sent", "If this email is registered, we sent a reset link.");
+      cyberAlert(copy.resetSentTitle, copy.resetSentBody);
       backToLogin();
     } finally {
       setSubmitting(false);
@@ -46,7 +46,7 @@ export default function ResetPasswordScreenNative() {
   return (
     <View style={styles.root}>
       <AuthFormShellNative title="RESET PASSWORD">
-        <Text style={styles.desc}>登録メールアドレスを入力してください。</Text>
+        <Text style={styles.desc}>{copy.resetHint}</Text>
         <View style={styles.field}>
           <TextInput
             style={styles.input}
@@ -65,7 +65,7 @@ export default function ResetPasswordScreenNative() {
           disabled={submitting}
         />
       </AuthFormShellNative>
-      <ProfileBackEdgeHandleNative onPress={backToLogin} />
+      <ProfileBackEdgeHandleNative onPress={backToLogin} accessibilityLabel={copy.backA11y} />
     </View>
   );
 }
@@ -93,42 +93,5 @@ const styles = StyleSheet.create({
     color: "#f1f5f9",
     fontSize: 16,
     minHeight: 52,
-  },
-  ctaSkewWrap: {
-    width: "100%",
-    marginTop: 6,
-    transform: [{ skewX: BTN_SKEW }],
-  },
-  ctaPressable: { width: "100%" },
-  ctaBorder: {
-    width: "100%",
-    borderWidth: 1,
-    borderColor: "rgba(0,245,255,0.34)",
-    backgroundColor: "rgba(8,14,22,0.96)",
-    overflow: "hidden",
-  },
-  ctaFill: {
-    minHeight: 52,
-    justifyContent: "center",
-    paddingHorizontal: spacing.lg,
-    paddingVertical: 14,
-  },
-  ctaRail: {
-    position: "absolute",
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 2,
-    backgroundColor: "rgba(0,245,255,0.55)",
-  },
-  ctaLabelWrap: {
-    transform: [{ skewX: BTN_UNSKEW }],
-    alignItems: "center",
-  },
-  ctaLabel: {
-    fontFamily: "BebasNeue_400Regular",
-    fontSize: 20,
-    letterSpacing: 2.5,
-    color: "#e8eaed",
   },
 });

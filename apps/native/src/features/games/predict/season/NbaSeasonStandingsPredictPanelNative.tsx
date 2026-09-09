@@ -8,7 +8,10 @@ import {
 } from "../../../rankings/CyberSlantedTabNative";
 import type { NbaConferenceId } from "../../../../../../../lib/nba/nbaConferenceTeams";
 import { NBA_STANDINGS_RANKS } from "../../../../../../../lib/nba/nbaConferenceTeams";
-import { NBA_TEAM_NAME_BY_ID } from "../../../../../../../lib/nba-team-names";
+import {
+  NBA_TEAM_NAME_BY_ID,
+  getNbaTeamNicknameById,
+} from "../../../../../../../lib/nba-team-names";
 import { TEAM_SHORT } from "../../../../../../../lib/team-short";
 import {
   getTeamJerseyPrimaryColor,
@@ -27,6 +30,15 @@ import {
   type NbaStandingsRank,
 } from "../../../../../../../lib/predict/nbaSeasonStandingsPredict";
 import {
+  seasonPredictStandingsBoardHint,
+  seasonPredictStandingsClearHint,
+  seasonPredictStandingsConfHeading,
+  seasonPredictStandingsHowTo,
+  seasonPredictStandingsSlotHint,
+  seasonPredictStandingsTrayEmpty,
+  type SeasonPredictUiLang,
+} from "../../../../../../../lib/predict/seasonPredictUiCopy";
+import {
   MATCH_CARD_BRACKET_LETTER_SPACING_12,
   MATCH_CARD_BRACKET_TEXT,
 } from "../../matchCardTypography";
@@ -36,6 +48,7 @@ type Props = {
   onChange: (next: NbaSeasonStandingsPrediction) => void;
   onSubmit?: () => void;
   submitDisabled?: boolean;
+  language?: SeasonPredictUiLang;
 };
 
 type StandingsBand = "straight" | "playin" | "out";
@@ -54,8 +67,8 @@ function fullName(teamId: string): string {
   return (TEAM_SHORT[teamId] ?? teamId).toUpperCase();
 }
 
-function abbr(teamId: string): string {
-  return (TEAM_SHORT[teamId] ?? "—").toUpperCase();
+function nick(teamId: string): string {
+  return getNbaTeamNicknameById(teamId).toUpperCase();
 }
 
 function hexToRgba(hex: string, alpha: number): string {
@@ -94,11 +107,13 @@ function RankRow({
   teamId,
   selected,
   onSelect,
+  language,
 }: {
   rank: NbaStandingsRank;
   teamId: string | null | undefined;
   selected: boolean;
   onSelect: () => void;
+  language: SeasonPredictUiLang;
 }) {
   const primary = teamId
     ? softenTeamUiColor(getTeamJerseyPrimaryColor("nba", teamId))
@@ -137,12 +152,16 @@ function RankRow({
             <Text style={styles.rankTeamName} numberOfLines={1}>
               {fullName(teamId)}
             </Text>
-            {selected ? <Text style={styles.rankHint}>もう一度タップでクリア</Text> : null}
+            {selected ? (
+              <Text style={styles.rankHint}>
+                {seasonPredictStandingsClearHint(language)}
+              </Text>
+            ) : null}
           </View>
         </>
       ) : (
         <Text style={styles.rankPlaceholder}>
-          {selected ? "下からチームを選ぶ" : "タップして配置"}
+          {seasonPredictStandingsSlotHint(language, selected)}
         </Text>
       )}
     </Pressable>
@@ -152,12 +171,18 @@ function RankRow({
 function TeamSlotTray({
   teamIds,
   onPick,
+  language,
 }: {
   teamIds: string[];
   onPick: (teamId: string) => void;
+  language: SeasonPredictUiLang;
 }) {
   if (teamIds.length === 0) {
-    return <Text style={styles.trayEmpty}>全チーム配置済み</Text>;
+    return (
+      <Text style={styles.trayEmpty}>
+        {seasonPredictStandingsTrayEmpty(language)}
+      </Text>
+    );
   }
   return (
     <View style={styles.tray}>
@@ -172,13 +197,9 @@ function TeamSlotTray({
               { borderColor: hexToRgba(primary, 0.4), backgroundColor: hexToRgba(primary, 0.07) },
             ]}
           >
-            <JerseyMarkSvg
-              accent={getTeamJerseyPrimaryColor("nba", teamId)}
-              accentEnd={getTeamJerseySecondaryColor("nba", teamId)}
-              size={32}
-              density="coarse"
-            />
-            <Text style={styles.trayAbbr}>{abbr(teamId)}</Text>
+            <Text style={styles.trayName} numberOfLines={1}>
+              {nick(teamId)}
+            </Text>
           </Pressable>
         );
       })}
@@ -190,10 +211,12 @@ function ConferenceBoard({
   conference,
   picks,
   onPicksChange,
+  language,
 }: {
   conference: NbaConferenceId;
   picks: NbaConferenceStandingsPicks;
   onPicksChange: (next: NbaConferenceStandingsPicks) => void;
+  language: SeasonPredictUiLang;
 }) {
   const [selectedRank, setSelectedRank] = useState<NbaStandingsRank | null>(null);
 
@@ -242,6 +265,7 @@ function ConferenceBoard({
           teamId={picks[rank]}
           selected={selectedRank === rank}
           onSelect={() => onRankTap(rank)}
+          language={language}
         />
         {selectedRank === rank ? (
           <View style={styles.slotBox}>
@@ -249,7 +273,11 @@ function ConferenceBoard({
               Team slots · #{rank}
               <Text style={styles.slotLeft}> · {available.length} left</Text>
             </Text>
-            <TeamSlotTray teamIds={available} onPick={place} />
+            <TeamSlotTray
+              teamIds={available}
+              onPick={place}
+              language={language}
+            />
           </View>
         ) : null}
       </View>
@@ -259,7 +287,7 @@ function ConferenceBoard({
     <View style={{ gap: 8 }}>
       <View style={styles.boardHead}>
         <Text style={styles.boardTitle}>
-          {conference === "east" ? "Eastern" : "Western"} · 1–15
+          {seasonPredictStandingsConfHeading(language, conference === "east")}
         </Text>
         <Text style={[styles.boardCount, complete ? styles.boardCountDone : null]}>
           {filled}/{NBA_STANDINGS_RANKS}
@@ -276,7 +304,7 @@ function ConferenceBoard({
       <View style={{ gap: 4 }}>{renderRankBlock(ranks.slice(10))}</View>
 
       <Text style={styles.boardNote}>
-        順位をタップ → 下にチームスロット。配置済みはスロットから消えます。同じ順位をもう一度タップでクリア。
+        {seasonPredictStandingsHowTo(language, "mobile")}
       </Text>
     </View>
   );
@@ -287,6 +315,7 @@ export default function NbaSeasonStandingsPredictPanelNative({
   onChange,
   onSubmit,
   submitDisabled,
+  language = "ja",
 }: Props) {
   const [conference, setConference] = useState<NbaConferenceId>("east");
   const eastDone = isConferenceComplete(value.east);
@@ -298,7 +327,7 @@ export default function NbaSeasonStandingsPredictPanelNative({
       <View style={{ gap: 4, marginBottom: 12 }}>
         <Text style={styles.h2}>Season standings · {value.season}</Text>
         <Text style={styles.lead}>
-          1–6 ストレートイン / 7–10 プレーイン / 11–15 圏外。採点・Unit・提出期限は右上のはてなを参照。
+          {seasonPredictStandingsBoardHint(language)}
         </Text>
       </View>
 
@@ -326,12 +355,14 @@ export default function NbaSeasonStandingsPredictPanelNative({
           conference="east"
           picks={value.east}
           onPicksChange={(east) => onChange({ ...value, east })}
+          language={language}
         />
       ) : (
         <ConferenceBoard
           conference="west"
           picks={value.west}
           onPicksChange={(west) => onChange({ ...value, west })}
+          language={language}
         />
       )}
 
@@ -429,18 +460,20 @@ const styles = StyleSheet.create({
   slotLeft: { color: "rgba(255,255,255,0.3)" },
   tray: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
   trayItem: {
-    width: "18%",
+    width: "31.5%",
     alignItems: "center",
-    gap: 4,
+    justifyContent: "center",
     borderWidth: 1,
-    paddingHorizontal: 2,
-    paddingVertical: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 8,
+    minHeight: 36,
   },
-  trayAbbr: {
+  trayName: {
     ...MATCH_CARD_BRACKET_TEXT,
-    fontSize: 10,
+    fontSize: 11,
     letterSpacing: MATCH_CARD_BRACKET_LETTER_SPACING_12,
-    color: "rgba(255,255,255,0.85)",
+    color: "rgba(255,255,255,0.9)",
+    textTransform: "uppercase",
     transform: [{ skewX: "-6deg" }],
   },
   trayEmpty: { paddingHorizontal: 4, paddingVertical: 8, fontSize: 11, color: "rgba(255,255,255,0.35)" },

@@ -31,7 +31,9 @@ function resolvePlayerName(
   candidates: NbaTopScorerCandidate[],
   leaders: NbaLeadingScorer[]
 ): string {
-  if (pick.name && pick.name.trim()) return pick.name.trim();
+  if (pick.name && pick.name.trim() && pick.name.trim() !== "—") {
+    return pick.name.trim();
+  }
   const fromCand = candidates.find(
     (c) => c.playerId === pick.playerId && c.teamId === pick.teamId
   );
@@ -39,8 +41,8 @@ function resolvePlayerName(
   const fromLeader = leaders.find(
     (c) => c.playerId === pick.playerId && c.teamId === pick.teamId
   );
-  if (fromLeader?.name) return fromLeader.name;
-  return "—";
+  if (fromLeader?.name && fromLeader.name !== "—") return fromLeader.name;
+  return "";
 }
 
 type PostLike = {

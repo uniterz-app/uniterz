@@ -50,7 +50,7 @@ export default function RankingsOpenProLock({
           color: PRO_LEAGUE_ATMOSPHERE.ink,
         }}
       >
-        {m.divisionOpenCta ?? "Pro を見る"}
+        {m.divisionOpenCta ?? "Explore Pro"}
       </Link>
     </div>
   );

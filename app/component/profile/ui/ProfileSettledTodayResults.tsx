@@ -6,7 +6,9 @@ import ResultCard from "@/app/component/result/ResultCard";
 import { useProfileSettledTodayResults } from "@/lib/profile/useProfileSettledTodayResults";
 import {
   resolveResultPostGameMarket,
+  resolveResultPostGameRoundMeta,
   useResultPostsGameMarkets,
+  useResultPostsGameRoundMeta,
 } from "@/lib/games/useResultPostsGameMarkets";
 import type { ProfileStatsStreakContext } from "@/lib/profile/profileStreakScope";
 import CandleChartLoader from "@/app/component/common/CandleChartLoader";
@@ -56,6 +58,7 @@ export default function ProfileSettledTodayResults({
       ? posts.slice(0, MOBILE_SETTLED_TODAY_MAX)
       : posts;
   const marketsFromGames = useResultPostsGameMarkets(visiblePosts);
+  const roundMetaFromGames = useResultPostsGameRoundMeta(visiblePosts);
 
   return (
     <ProfileOverviewLineFrame title={title}>
@@ -97,6 +100,10 @@ export default function ProfileSettledTodayResults({
                 gamesRoutePrefix={gamesRoutePrefix}
                 visualEffectsLite={visualEffectsLite}
                 gameMarket={resolveResultPostGameMarket(post, marketsFromGames)}
+                gameRoundMeta={resolveResultPostGameRoundMeta(
+                  post,
+                  roundMetaFromGames
+                )}
                 href={`${gamesRoutePrefix}/result/${post.id}`}
               />
             ))}

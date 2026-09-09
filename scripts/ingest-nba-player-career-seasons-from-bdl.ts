@@ -5,6 +5,7 @@
  *   npx tsx scripts/ingest-nba-player-career-seasons-from-bdl.ts 2026-27
  *   npx tsx scripts/ingest-nba-player-career-seasons-from-bdl.ts 2026-27 175
  *   npx tsx scripts/ingest-nba-player-career-seasons-from-bdl.ts 2026-27 175,237
+ *   npx tsx scripts/ingest-nba-player-career-seasons-from-bdl.ts 2026-27 --min-career-years=15
  *
  * 認証: `.env.local` の FIREBASE_* と BALLDONTLIE_API_KEY
  */
@@ -37,14 +38,33 @@ function loadEnvLocal(): void {
 async function main() {
   loadEnvLocal();
   const { getAdminDb } = await import("../lib/firebaseAdmin");
-  const seasonKey = (process.argv[2] ?? CURRENT_NBA_SEASON_KEY).trim();
-  const playerIdsRaw = (process.argv[3] ?? "").trim();
-  const playerIds = playerIdsRaw
-    ? playerIdsRaw.split(/[,\s]+/).map((s) => s.trim()).filter(Boolean)
-    : undefined;
+  const args = process.argv.slice(2);
+  let seasonKey = CURRENT_NBA_SEASON_KEY;
+  let playerIds: string[] | undefined;
+  let minCareerYears: number | undefined;
+
+  for (const arg of args) {
+    if (arg.startsWith("--min-career-years=")) {
+      const n = Number(arg.slice("--min-career-years=".length));
+      if (Number.isFinite(n) && n > 0) minCareerYears = Math.trunc(n);
+      continue;
+    }
+    if (/^\d{4}-\d{2}$/.test(arg)) {
+      seasonKey = arg;
+      continue;
+    }
+    if (/^\d/.test(arg) || arg.includes(",")) {
+      playerIds = arg
+        .split(/[,\s]+/)
+        .map((s) => s.trim())
+        .filter(Boolean);
+    }
+  }
+
   const result = await ingestNbaPlayerCareerSeasonsFromBdl(getAdminDb(), {
     seasonKey,
     playerIds,
+    minCareerYears,
   });
   console.log(JSON.stringify(result, null, 2));
 }

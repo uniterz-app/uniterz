@@ -134,7 +134,7 @@ export type ProfileStackParamList = {
   ProfileSettings: undefined;
   NotificationSettings: undefined;
   ProfilePassword: undefined;
-  ProSkin: undefined;
+  ProSkin: { fromTrial?: boolean } | undefined;
   DeleteAccount: undefined;
   PublicProfile: PublicProfileParams;
   Badges: undefined;
@@ -165,6 +165,9 @@ export type ProfileStackParamList = {
   PlayerDetailPreview: { playerId?: string } | undefined;
   /** __DEV__ ライブ試合スタッツ（Team / Box Score） */
   LiveGameStatsPreview: undefined;
+  /** __DEV__ Free → PRO LEAGUE ゲート（ティーザー） */
+  ProLeagueTeaserPreview: undefined;
+  ProInsightGatePreview: undefined;
   ProSuccess: { plan?: "weekly" | "monthly" | "season" } | undefined;
   PlanChange: undefined;
   PlanChangeComplete: undefined;

@@ -23,6 +23,7 @@ import { CYBER_MENU_BTN_CUT, cyberMenuBtnPathD } from "./cyberMenuClipPath";
 import {
   CYBER_CHAMFER_THEMES,
   type CyberChamferAction,
+  type CyberChamferTheme,
 } from "./cyberChamferButtonTheme";
 
 export type CyberChamferButtonSize = "xs" | "sm" | "md" | "lg";
@@ -50,6 +51,8 @@ type Props = {
   embedded?: boolean;
   floatingAlign?: FloatingAlign;
   variant?: CyberChamferAction;
+  /** variant テーマを上書き（例: 白枠メニュー） */
+  themeOverride?: CyberChamferTheme;
   /** @deprecated variant を使用 */
   icon?: "close" | "edit" | "delete" | "menu" | "share";
   /** menu 時：展開中は × */
@@ -88,6 +91,7 @@ export default function CyberChamferButtonNative({
   embedded = true,
   floatingAlign = "left",
   variant,
+  themeOverride,
   icon = "menu",
   open = false,
   onPress,
@@ -101,7 +105,7 @@ export default function CyberChamferButtonNative({
   const buttonDim = dim ?? SIZE_PX[size];
   const iconPx = ICON_PX[size];
   const action = resolveVariant(variant, icon);
-  const theme = CYBER_CHAMFER_THEMES[action];
+  const theme = themeOverride ?? CYBER_CHAMFER_THEMES[action];
   const [layout, setLayout] = useState({ w: 0, h: 0 });
 
   const skiaPath = useMemo(

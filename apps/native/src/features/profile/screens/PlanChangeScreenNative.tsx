@@ -22,6 +22,7 @@ import { useFirebaseUser } from "../../../auth/FirebaseUserProvider";
 import { db } from "../../../lib/firebase";
 import type { ProfileStackParamList } from "../../../navigation/types";
 import { useBottomTabBarInsets } from "../../../navigation/useBottomTabBarInsets";
+import { useNativeUserLanguage } from "../../../hooks/useNativeUserLanguage";
 import { fonts } from "../../../theme/tokens";
 import ProCyberBadgeNative from "../kinetik/ProCyberBadgeNative";
 import UniterzLogoNative from "../UniterzLogoNative";
@@ -39,6 +40,21 @@ import {
   suggestedChangeTarget,
   type StoredPlanType,
 } from "../../billing/planChangeDisplay";
+import {
+  planChangeConfirmHint,
+  planChangeCurrentLabel,
+  planChangeFreeGateBody,
+  planChangeNextLabel,
+  planChangeNotices,
+  planChangePageSubtitle,
+  planChangeScreenTitle,
+  planChangeSeasonPassNote,
+  planChangeStartedLabel,
+  planChangeSwitchCta,
+  planChangeTaxSuffix,
+  planChangeUpgradeCta,
+  type PlanChangeUiLang,
+} from "../../../../../../lib/pro/planChangeUiCopy";
 
 function openSubscriptionManagement() {
   const url =
@@ -51,12 +67,17 @@ function openSubscriptionManagement() {
 export default function PlanChangeScreenNative() {
   const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
   const { fUser } = useFirebaseUser();
+  const { language } = useNativeUserLanguage(fUser?.uid ?? null);
+  const lang: PlanChangeUiLang = language === "en" ? "en" : "ja";
   const { bottomContentReserveY } = useBottomTabBarInsets();
   const [plan, setPlan] = useState<"free" | "pro">("free");
   const [storedType, setStoredType] = useState<StoredPlanType | null>(null);
   const [proUntil, setProUntil] = useState<Date | null>(null);
   const [planStart, setPlanStart] = useState<Date | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const subtitle = planChangePageSubtitle(lang);
+  const notices = planChangeNotices(lang);
 
   useEffect(() => {
     if (!fUser) {
@@ -91,20 +112,22 @@ export default function PlanChangeScreenNative() {
       from: currentPlan,
       to: nextPlan,
       periodEnd: proUntil,
-      lang: "ja",
+      lang,
     });
-  }, [currentPlan, nextPlan, proUntil]);
+  }, [currentPlan, nextPlan, proUntil, lang]);
 
   if (loading) {
     return (
       <MobilePageShell
         title="CHANGE"
-        subtitle="プランの変更手続きを行います。"
+        subtitle={subtitle}
         appBackground
         onClose={() => navigation.goBack()}
       >
         <View style={styles.center}>
-          <CandleChartLoaderNative label="読み込み中" />
+          <CandleChartLoaderNative
+            label={lang === "en" ? "Loading" : "読み込み中"}
+          />
         </View>
       </MobilePageShell>
     );
@@ -114,7 +137,7 @@ export default function PlanChangeScreenNative() {
     return (
       <MobilePageShell
         title="CHANGE"
-        subtitle="プランの変更手続きを行います。"
+        subtitle={subtitle}
         appBackground
         onClose={() => navigation.goBack()}
       >
@@ -128,9 +151,9 @@ export default function PlanChangeScreenNative() {
           keyboardShouldPersistTaps="handled"
         >
           <PlanChamferPanelNative>
-            <Text style={styles.hint}>Pro プラン加入後に変更できます。</Text>
+            <Text style={styles.hint}>{planChangeFreeGateBody(lang)}</Text>
             <PlanSlantCtaNative
-              label="Pro にアップグレード"
+              label={planChangeUpgradeCta(lang)}
               onPress={() => navigation.navigate("ProSubscribe")}
             />
           </PlanChamferPanelNative>
@@ -142,7 +165,7 @@ export default function PlanChangeScreenNative() {
   return (
     <MobilePageShell
       title="CHANGE"
-      subtitle="プランの変更手続きを行います。"
+      subtitle={subtitle}
       appBackground
       onClose={() => navigation.goBack()}
     >
@@ -161,14 +184,18 @@ export default function PlanChangeScreenNative() {
               <UniterzLogoNative width={220} />
             </View>
             <ProCyberBadgeNative premium />
-            <Text style={styles.title}>プラン変更</Text>
+            <Text style={styles.title}>{planChangeScreenTitle(lang)}</Text>
             {planStart ? (
-              <Text style={styles.started}>開始日: {formatPlanDate(planStart, "ja")}</Text>
+              <Text style={styles.started}>
+                {planChangeStartedLabel(lang)}: {formatPlanDate(planStart, lang)}
+              </Text>
             ) : null}
           </View>
 
           <View style={styles.currentCard}>
-            <Text style={styles.sectionLabel}>現在のプラン</Text>
+            <Text style={styles.sectionLabel}>
+              {planChangeCurrentLabel(lang)}
+            </Text>
             <Text
               style={[
                 styles.currentPlan,
@@ -179,26 +206,42 @@ export default function PlanChangeScreenNative() {
                     : styles.monthly,
               ]}
             >
-              {planDisplayNameFull(storedType ?? currentPlan, "ja")}
+              {planDisplayNameFull(storedType ?? currentPlan, lang)}
             </Text>
             <View style={styles.priceRow}>
-              <Text style={styles.priceAmt}>{planCatalogPrice(currentPlan, "ja")}</Text>
-              <Text style={styles.tax}>{planPeriodLabel(currentPlan, "ja")}・税込み</Text>
+              <Text style={styles.priceAmt}>
+                {planCatalogPrice(currentPlan, lang)}
+              </Text>
+              <Text style={styles.tax}>
+                {planPeriodLabel(currentPlan, lang)}
+                {planChangeTaxSuffix(lang)}
+              </Text>
             </View>
             <Text style={styles.untilLine}>
-              {periodEndLabel(currentPlan, "ja")}:{" "}
-              <Text style={styles.untilStrong}>{formatPlanDate(proUntil, "ja")}</Text>
+              {periodEndLabel(currentPlan, lang)}:{" "}
+              <Text style={styles.untilStrong}>
+                {formatPlanDate(proUntil, lang)}
+              </Text>
             </Text>
           </View>
 
           {nextPlan && copy ? (
             <>
               <View style={styles.nextCard}>
-                <Text style={styles.sectionLabelAmber}>変更後のプラン</Text>
-                <Text style={styles.priceTitle}>{planDisplayNameFull(nextPlan, "ja")}</Text>
+                <Text style={styles.sectionLabelAmber}>
+                  {planChangeNextLabel(lang)}
+                </Text>
+                <Text style={styles.priceTitle}>
+                  {planDisplayNameFull(nextPlan, lang)}
+                </Text>
                 <View style={styles.priceRow}>
-                  <Text style={styles.priceAmt}>{planCatalogPrice(nextPlan, "ja")}</Text>
-                  <Text style={styles.tax}>{planPeriodLabel(nextPlan, "ja")}・税込み</Text>
+                  <Text style={styles.priceAmt}>
+                    {planCatalogPrice(nextPlan, lang)}
+                  </Text>
+                  <Text style={styles.tax}>
+                    {planPeriodLabel(nextPlan, lang)}
+                    {planChangeTaxSuffix(lang)}
+                  </Text>
                 </View>
                 <Text style={styles.nextCharge}>{copy.nextChargeLabel}</Text>
                 <Text style={styles.timing}>
@@ -207,11 +250,15 @@ export default function PlanChangeScreenNative() {
                 </Text>
               </View>
               <Text style={styles.hint}>
-                実際の変更内容・請求日はストアの管理画面で確認できます
+                {planChangeConfirmHint(lang, "store")}
               </Text>
 
               <PlanSlantCtaNative
-                label={`${planDisplayNameFull(nextPlan, "ja")} へ変更（ストア）`}
+                label={planChangeSwitchCta(
+                  lang,
+                  planDisplayNameFull(nextPlan, lang),
+                  "store"
+                )}
                 onPress={() => {
                   openSubscriptionManagement();
                   navigation.navigate("PlanChangeComplete");
@@ -219,18 +266,15 @@ export default function PlanChangeScreenNative() {
               />
             </>
           ) : (
-            <Text style={styles.hint}>
-              Season Pass は買い切りのため、Weekly / Monthly への自動切替はありません。期間終了後に改めて購入してください。
-            </Text>
+            <Text style={styles.hint}>{planChangeSeasonPassNote(lang)}</Text>
           )}
 
           <View style={styles.notice}>
-            <Text style={styles.noticeText}>※ Weekly / Monthly は自動更新されます。</Text>
-            <Text style={styles.noticeText}>
-              ※ ダウングレードは現在の契約期間終了後に適用されます。
-            </Text>
-            <Text style={styles.noticeText}>※ 変更までの期間は現在のプランをご利用いただけます。</Text>
-            <Text style={styles.noticeText}>※ ダウングレード時の返金はありません。</Text>
+            {notices.map((line) => (
+              <Text key={line} style={styles.noticeText}>
+                {line}
+              </Text>
+            ))}
           </View>
         </PlanChamferPanelNative>
       </ScrollView>

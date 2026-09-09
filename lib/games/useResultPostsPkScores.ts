@@ -39,13 +39,11 @@ export function useResultPostsPkScores(
   const [fromGames, setFromGames] = useState<Record<string, PkScore>>({});
 
   useEffect(() => {
-    if (missingGameIds.length === 0) {
-      setFromGames({});
-      return;
-    }
+    if (missingGameIds.length === 0) return;
     let alive = true;
     void fetchGamePkScores(db, missingGameIds).then((map) => {
-      if (alive) setFromGames(map);
+      if (!alive) return;
+      setFromGames((prev) => ({ ...prev, ...map }));
     });
     return () => {
       alive = false;

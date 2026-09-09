@@ -28,6 +28,25 @@ export type UserCareerSeasonChapter = {
   playoffs: UserCareerBoardStats;
 };
 
+export type UserCareerBoardKey = "regular" | "playoffs";
+
+/**
+ * CAREER シーズン章で出すボード。
+ * 2025-26 はプレーオフのみ（レギュラーは出さない）。
+ */
+export function careerBoardsForSeason(
+  seasonKey: string
+): readonly UserCareerBoardKey[] {
+  if (seasonKey === "2025-26") return ["playoffs"];
+  return ["regular", "playoffs"];
+}
+
+export function defaultCareerBoardForSeason(
+  seasonKey: string
+): UserCareerBoardKey {
+  return careerBoardsForSeason(seasonKey)[0] ?? "playoffs";
+}
+
 /** 通算サマリー（CAREER 面の主表示） */
 export type UserCareerSummary = UserCareerBoardStats & {
   sinceYear: number | null;

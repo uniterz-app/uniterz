@@ -216,6 +216,22 @@ export function getTeamUiAccentColor(
 }
 
 /**
+ * ロスター HOME/AWAY・背番号枠用。
+ * チーム色（jersey primary）を優先。黒・極暗色だけ secondary / UI 可読色へフォールバック
+ * （readableTeamAccentOnDark のピンク寄せは使わない）。
+ */
+export function getTeamRosterMarkColor(
+  league: League,
+  teamId: string | null | undefined
+): string {
+  const primary = getTeamJerseyPrimaryColor(league, teamId);
+  if (relativeLuminance(primary) >= 0.08) return primary;
+  const secondary = getTeamJerseySecondaryColor(league, teamId);
+  if (relativeLuminance(secondary) >= 0.08) return secondary;
+  return getTeamUiAccentColor(league, teamId);
+}
+
+/**
  * 暗い背景上のテキスト／枠用。Kings 紫など低輝度を持ち上げて視認性を確保。
  */
 export function readableTeamAccentOnDark(hex: string): string {
@@ -332,7 +348,7 @@ export function jerseyPrimariesClash(a: string, b: string): boolean {
 
 /**
  * 同系色対決時の UI アクセント（市場バー・トップスコアラータグ用）。
- * ユニフォーム色は変えない。home は primary のまま、away だけ secondary 寄りへ。
+ * ユニフォーム色は変えない。主色が黒などで潰れる側は secondary / 可読色へ。
  */
 export function resolveMatchupUiAccents(
   league: League,
@@ -347,10 +363,31 @@ export function resolveMatchupUiAccents(
   const awayPrimary = getTeamJerseyPrimaryColor(league, awayTeamId);
   const clash = jerseyPrimariesClash(homePrimary, awayPrimary);
 
+  /** 暗い画面で潰れる黒→青、白→黄 */
+  const FALLBACK_YELLOW = "#F5C518";
+  const FALLBACK_BLUE = "#2563EB";
+
+  const liftSideAccent = (
+    teamId: string | null | undefined,
+    primary: string,
+    preferred?: string
+  ): string => {
+    let accent = preferred ?? primary;
+    if (relativeLuminance(accent) < 0.15) {
+      const secondary = getTeamJerseySecondaryColor(league, teamId);
+      accent =
+        relativeLuminance(secondary) >= 0.15 ? secondary : FALLBACK_BLUE;
+    }
+    if (relativeLuminance(accent) > 0.65) {
+      accent = FALLBACK_YELLOW;
+    }
+    return accent;
+  };
+
   if (!clash) {
     return {
-      homeAccent: homePrimary,
-      awayAccent: awayPrimary,
+      homeAccent: liftSideAccent(homeTeamId, homePrimary),
+      awayAccent: liftSideAccent(awayTeamId, awayPrimary),
       clash: false,
     };
   }
@@ -361,19 +398,15 @@ export function resolveMatchupUiAccents(
       awayPrimary.replace("#", "").trim().toLowerCase() &&
     !jerseyPrimariesClash(awaySecondary, homePrimary);
 
-  let awayAccent = secondaryOk
+  const awayPreferred = secondaryOk
     ? awaySecondary
     : relativeLuminance(homePrimary) > 0.4
-      ? "#111827"
+      ? FALLBACK_YELLOW
       : "#F5F5F5";
 
-  if (relativeLuminance(awayAccent) > 0.65) {
-    awayAccent = "#111827";
-  }
-
   return {
-    homeAccent: homePrimary,
-    awayAccent,
+    homeAccent: liftSideAccent(homeTeamId, homePrimary),
+    awayAccent: liftSideAccent(awayTeamId, awayPrimary, awayPreferred),
     clash: true,
   };
 }

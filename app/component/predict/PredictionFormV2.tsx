@@ -140,6 +140,10 @@ type Props = {
   onUserPredictionWinnerChange?: (
     winner: "home" | "away" | "draw" | null
   ) => void;
+  /** オーバーレイ MatchCard の TOP SCORER 行用 */
+  onOverlayGoalScorerChange?: (
+    pick: import("@/lib/nba/topScorer").NbaTopScorerPick | null
+  ) => void;
   /** 親 MatchCard の修正メニューから編集を起動（nonce が増えたときだけ反映） */
   predictEditTriggerNonce?: number;
   /** 予想修正の送信完了後（親の nonce リセット用） */
@@ -195,6 +199,7 @@ export default function PredictionFormV2({
   overlayExistingPostId = null,
   onExistingResultPostChange,
   onUserPredictionWinnerChange,
+  onOverlayGoalScorerChange,
   predictEditTriggerNonce = 0,
   onPredictEditEnd,
   overlayUnifiedForm = false,
@@ -605,6 +610,15 @@ export default function PredictionFormV2({
       existingResultPost?.prediction?.winner ?? null
     );
   }, [onUserPredictionWinnerChange, existingResultPost]);
+
+  useEffect(() => {
+    if (!onOverlayGoalScorerChange) return;
+    if (!isNba) {
+      onOverlayGoalScorerChange(null);
+      return;
+    }
+    onOverlayGoalScorerChange(normalizeNbaTopScorerPick(goalScorerPick));
+  }, [onOverlayGoalScorerChange, isNba, goalScorerPick]);
 
   useLayoutEffect(() => {
     if (!hideMarketTab && toolsTab === "market") {

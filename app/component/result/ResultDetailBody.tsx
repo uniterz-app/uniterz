@@ -3,7 +3,9 @@
 /**
  * Native `ResultDetailBodyNative` 相当 — リザルト詳細ボディ（カード面 + この試合 + Top10 + 内訳）。
  */
+import { useMemo } from "react";
 import { Check, X } from "lucide-react";
+import { useNbaTopScorerCandidates } from "@/lib/nba/useNbaTopScorerCandidates";
 import Link from "next/link";
 import ResultCardDesignFace from "@/app/component/result/ResultCardDesignFace";
 import ResultDetailScoreDonut from "@/app/component/result/ResultDetailScoreDonut";
@@ -520,6 +522,27 @@ export default function ResultDetailBody({
   const frameColor = hexToRgba(ACCENT, 0.4);
   const dividerColor = hexToRgba(ACCENT, 0.22);
   const matchStats = view.matchStats;
+  const needScorerName = Boolean(
+    !view.card.topScorer &&
+      view.card.topScorerPlayerId &&
+      view.card.topScorerTeamId
+  );
+  const { candidates: topScorerCandidates } = useNbaTopScorerCandidates({
+    homeTeamId: view.card.homeTeamId,
+    awayTeamId: view.card.awayTeamId,
+    enabled: needScorerName,
+  });
+  const cardFace = useMemo(() => {
+    if (view.card.topScorer) return view.card;
+    const pid = view.card.topScorerPlayerId?.trim();
+    const tid = view.card.topScorerTeamId?.trim();
+    if (!pid || !tid) return view.card;
+    const hit = topScorerCandidates.find(
+      (c) => c.playerId === pid && c.teamId === tid
+    );
+    if (!hit?.name) return view.card;
+    return { ...view.card, topScorer: hit.name };
+  }, [topScorerCandidates, view.card]);
 
   return (
     <div
@@ -533,7 +556,7 @@ export default function ResultDetailBody({
       >
         <ResultCardDesignFace
           language={language}
-          face={view.card}
+          face={cardFace}
           showDetailTab={false}
         />
       </div>

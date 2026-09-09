@@ -72,6 +72,7 @@ export default function MobileBadgesPage() {
         variant="mobile"
         onSelect={setSelected}
         emptyLabel={m.badges.noBadges}
+        language={language}
       />
 
       {selected && (

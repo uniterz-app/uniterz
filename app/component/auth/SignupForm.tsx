@@ -20,6 +20,8 @@ import {
   normalizeReferralInviteCode,
   pickReferralInviteCodeFromSearch,
 } from "@/lib/referral/referralInviteCode";
+import { authFormCopy } from "@/lib/auth/authFormCopy";
+import { resolveAppUiLanguage } from "@/lib/i18n/resolveAppUiLanguage";
 
 type SignupFormProps = {
   variant?: "web" | "mobile";
@@ -50,22 +52,22 @@ export default function SignupForm({ variant = "web" }: SignupFormProps) {
   const bodySans =
     "font-[family-name:var(--font-geist-sans)] text-sm leading-relaxed text-white/85";
 
-  const ui = useMemo(
-    () => ({
+  const ui = useMemo(() => {
+    const copy = authFormCopy(resolveAppUiLanguage());
+    return {
       title: "CREATE ACCOUNT",
       emailPlaceholder: "Email Address",
       passwordPlaceholder: "Password",
       invitePlaceholder: "Invite code (optional)",
-      inviteHint: "友達からコードをもらった場合のみ入力",
+      inviteHint: copy.inviteHint,
       signupCta: "SIGN UP",
-      alreadyLead: "すでにアカウントをお持ちの方は",
+      alreadyLead: copy.alreadyLead,
       loginText: "Login",
       signupFailed: "Signup failed",
       showPw: "Show password",
       hidePw: "Hide password",
-    }),
-    []
-  );
+    };
+  }, []);
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();

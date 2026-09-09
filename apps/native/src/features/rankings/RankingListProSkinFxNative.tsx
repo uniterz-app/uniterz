@@ -1,11 +1,17 @@
 /**
  * Web `RankingListProSkinFx` 相当 — ランキング行用 Pro Skin（cover + wash）
+ * SVG は 1 回焼いて Image に差し替える（同じスキンの行は使い回し）。
  */
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Image, LayoutChangeEvent, StyleSheet, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { SvgXml } from "react-native-svg";
 import type { ProfilePlanProBgVariant } from "../../../../../lib/profile/profilePlanProBgVariants";
+import RasterizeOnceNative, {
+  peekProSkinRaster,
+  proSkinRasterCacheKey,
+  subscribeProSkinRaster,
+} from "../profile/kinetik/RasterizeOnceNative";
 import {
   getProfilePlanProAtmosHexSvg,
   getProfilePlanProAtmosHudSvg,
@@ -168,14 +174,23 @@ export default function RankingListProSkinFxNative({
   intensity = "medium",
 }: Props) {
   const [{ w, h }, setSize] = useState({ w: 0, h: 0 });
+  const [, setRasterTick] = useState(0);
+
+  useEffect(() => subscribeProSkinRaster(() => setRasterTick((n) => n + 1)), []);
 
   const onLayout = (e: LayoutChangeEvent) => {
     const { width, height } = e.nativeEvent.layout;
     if (width !== w || height !== h) setSize({ w: width, h: height });
   };
 
+  const cacheKey =
+    w > 0 && h > 0
+      ? proSkinRasterCacheKey(`rank:${variant}:${intensity}`, w, h)
+      : "";
+  const cached = cacheKey ? peekProSkinRaster(cacheKey) : null;
+
   const layers = useMemo(() => {
-    if (w <= 0 || h <= 0) return null;
+    if (cached || w <= 0 || h <= 0) return null;
 
     if (isProfilePlanProScaleBgVariant(variant)) {
       return (
@@ -335,11 +350,31 @@ export default function RankingListProSkinFxNative({
         <Wash intensity={intensity} />
       </>
     );
-  }, [variant, intensity, w, h]);
+  }, [cached, variant, intensity, w, h]);
+
+  if (cached) {
+    return (
+      <Image
+        source={{ uri: cached }}
+        style={styles.root}
+        resizeMode="stretch"
+        pointerEvents="none"
+      />
+    );
+  }
 
   return (
     <View pointerEvents="none" style={styles.root} onLayout={onLayout}>
-      {layers}
+      {w > 0 && h > 0 ? (
+        <RasterizeOnceNative
+          cacheKey={cacheKey}
+          width={w}
+          height={h}
+          pixelRatio={1}
+        >
+          {layers}
+        </RasterizeOnceNative>
+      ) : null}
     </View>
   );
 }

@@ -5,6 +5,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { useFirebaseUser } from "@/lib/useFirebaseUser";
+import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import SquadBattleLaunchOverlay from "@/app/component/squads/SquadBattleLaunchOverlay";
 import {
   markSquadBattleLaunchSeen,
@@ -22,6 +24,8 @@ export default function SquadBattleLaunchPromptHost() {
   const [battleId, setBattleId] = useState<string | null>(null);
   const [deadlineLabel, setDeadlineLabel] = useState<string | null>(null);
   const decidedRef = useRef(false);
+  const { fUser } = useFirebaseUser();
+  const { language } = useUserLanguage(fUser?.uid ?? null);
 
   const evaluate = useCallback(async () => {
     if (decidedRef.current) return;
@@ -69,6 +73,7 @@ export default function SquadBattleLaunchPromptHost() {
     <SquadBattleLaunchOverlay
       open={open}
       battleId={battleId}
+      language={language}
       deadlineLabel={deadlineLabel}
       onClose={() => setOpen(false)}
       onEnter={() => {

@@ -22,21 +22,24 @@ import { TUTORIAL_STATS_EDGE_FADE_MS } from "../../../../../lib/tutorial/tutoria
 const OPEN_DX = 40;
 const CANCEL_DY = 24;
 const FADE_EASE = Easing.bezier(0.37, 0, 0.18, 1);
+const HANDLE_W = 28;
 
 const VARIANTS = {
   menu: {
     top: "46%" as const,
     borderColor: "rgba(250,204,21,0.55)",
     backgroundColor: "rgba(8,12,6,0.92)",
+    pressedBackgroundColor: "rgba(36,42,14,0.98)",
     letterColor: "#facc15",
     shadowColor: "#facc15",
     zIndex: 20,
     elevation: 4,
   },
   mark: {
-    top: "36%" as const,
+    top: "35%" as const,
     borderColor: "rgba(0,245,255,0.52)",
     backgroundColor: "rgba(6,12,14,0.92)",
+    pressedBackgroundColor: "rgba(8,32,38,0.98)",
     letterColor: "#a5f3fc",
     shadowColor: "#00f5ff",
     zIndex: 22,
@@ -172,19 +175,22 @@ export default function ProfileMenuEdgeHandleNative({
   if (inline) {
     return (
       <Pressable
-        style={[
+        style={({ pressed }) => [
           styles.handleInline,
           {
             borderColor: theme.borderColor,
-            backgroundColor: theme.backgroundColor,
+            backgroundColor: pressed
+              ? theme.pressedBackgroundColor
+              : theme.backgroundColor,
             shadowColor: theme.shadowColor,
+            shadowOpacity: pressed ? 0.55 : 0.25,
           },
         ]}
         onPress={onOpen}
         disabled={hidden}
         accessibilityRole="button"
         accessibilityLabel={label.toUpperCase()}
-        hitSlop={inline ? { left: 8, right: 0, top: 0, bottom: 0 } : 8}
+        hitSlop={{ left: 14, right: 0, top: 4, bottom: 4 }}
       >
         {letters}
       </Pressable>
@@ -208,13 +214,16 @@ export default function ProfileMenuEdgeHandleNative({
         />
       ) : null}
       <Pressable
-        style={[
+        style={({ pressed }) => [
           styles.handle,
           {
             top: handleTop,
             borderColor: theme.borderColor,
-            backgroundColor: theme.backgroundColor,
+            backgroundColor: pressed
+              ? theme.pressedBackgroundColor
+              : theme.backgroundColor,
             shadowColor: theme.shadowColor,
+            shadowOpacity: pressed ? 0.55 : 0.25,
             zIndex: theme.zIndex,
             elevation: theme.elevation,
           },
@@ -225,7 +234,7 @@ export default function ProfileMenuEdgeHandleNative({
         accessibilityLabel={label.toUpperCase()}
         accessibilityElementsHidden={hidden}
         importantForAccessibility={hidden ? "no-hide-descendants" : "auto"}
-        hitSlop={8}
+        hitSlop={{ left: 14, right: 0, top: 6, bottom: 6 }}
       >
         {letters}
       </Pressable>
@@ -243,26 +252,26 @@ const styles = StyleSheet.create({
     right: 0,
     top: "42%",
     bottom: 0,
-    width: 14,
+    width: 20,
     zIndex: 19,
   },
   handle: {
     position: "absolute",
     right: 0,
-    width: 22,
-    paddingVertical: 9,
+    width: HANDLE_W,
+    paddingVertical: 11,
     alignItems: "center",
     gap: 3,
     borderWidth: 1,
     borderRightWidth: 0,
     shadowOpacity: 0.25,
-    shadowRadius: 8,
+    shadowRadius: 10,
     shadowOffset: { width: 0, height: 0 },
     overflow: "visible",
   },
   handleInline: {
-    width: 22,
-    paddingVertical: 9,
+    width: HANDLE_W,
+    paddingVertical: 11,
     alignItems: "center",
     gap: 3,
     borderWidth: 1,
@@ -279,10 +288,10 @@ const styles = StyleSheet.create({
   },
   letter: {
     fontFamily: "Oxanium_700Bold",
-    fontSize: 7,
+    fontSize: 8,
     fontWeight: "700",
     letterSpacing: 0,
-    lineHeight: 8,
+    lineHeight: 10,
   },
   badge: {
     position: "absolute",

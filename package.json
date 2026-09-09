@@ -54,7 +54,8 @@
     "badges:wcgp:revoke-test": "tsx scripts/archive/revoke-wc-2026-gp-test-grants.ts",
     "badges:wcgp:grant:dry": "DRY_RUN=1 tsx scripts/archive/grant-wc-2026-gp-total-points-badges.ts",
     "badges:wcgp:grant": "tsx scripts/archive/grant-wc-2026-gp-total-points-badges.ts",
-    "sync:pro-skin-milestone-catalog": "node scripts/sync-pro-skin-milestone-catalog.mjs"
+    "sync:pro-skin-milestone-catalog": "node scripts/sync-pro-skin-milestone-catalog.mjs",
+    "generate:pro-skin-previews": "tsx scripts/generate-pro-skin-preview-assets.ts"
   },
   "dependencies": {
     "@apple/app-store-server-library": "^3.1.0",

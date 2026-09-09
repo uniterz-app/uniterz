@@ -47,6 +47,16 @@ import {
   saveMeSeasonStandingsNative,
 } from "../../profile/seasonStandingsApiNative";
 import { fetchSeasonPredictMarketNative } from "../../profile/seasonPredictMarketApiNative";
+import {
+  seasonPredictAwardsIncompleteError,
+  seasonPredictAwardsPageSubtitle,
+  seasonPredictInvalidSubmitError,
+  seasonPredictMarketPendingBody,
+  seasonPredictNudgeCopy,
+  seasonPredictStandingsIncompleteError,
+  seasonPredictStandingsPageSubtitle,
+} from "../../../../../../lib/predict/seasonPredictUiCopy";
+import { useNativeUserLanguageFromAuth } from "../../../hooks/useNativeUserLanguage";
 
 type PanelMode = "loading" | "edit" | "view" | "market" | "market_pending";
 
@@ -54,7 +64,8 @@ export default function SeasonPredictScreenNative() {
   const navigation = useNavigation<NativeStackNavigationProp<GamesStackParamList>>();
   const route = useRoute<RouteProp<GamesStackParamList, "SeasonPredict">>();
   const mode = route.params?.mode ?? "standings";
-  const language: "ja" | "en" = "ja";
+  const { language: userLanguage } = useNativeUserLanguageFromAuth();
+  const language: "ja" | "en" = userLanguage === "en" ? "en" : "ja";
   const isJa = language === "ja";
   const season = CURRENT_NBA_SEASON_KEY;
   const submitOpen = isSeasonPredictSubmitOpen();
@@ -209,26 +220,20 @@ export default function SeasonPredictScreenNative() {
     } catch {
       /* 未提出扱いで案内 */
     }
-    cyberAlert(
-      isJa ? "順位予想もしますか？" : "Predict standings too?",
-      isJa
-        ? "アワード予想を提出しました。続けて East / West の順位予想もできます。"
-        : "Awards submitted. Continue to East / West standings prediction?",
-      [
-        {
-          text: isJa ? "あとで" : "Later",
-          style: "cancel",
+    const nudge = seasonPredictNudgeCopy(language);
+    cyberAlert(nudge.title, nudge.body, [
+      {
+        text: nudge.later,
+        style: "cancel",
+      },
+      {
+        text: nudge.goStandings,
+        onPress: () => {
+          navigation.navigate("SeasonPredict", { mode: "standings" });
         },
-        {
-          text: isJa ? "順位予想へ" : "Go to standings",
-          onPress: () => {
-            navigation.navigate("SeasonPredict", { mode: "standings" });
-          },
-        },
-      ],
-      { variant: "success" }
-    );
-  }, [isJa, navigation, season]);
+      },
+    ], { variant: "success" });
+  }, [language, navigation, season]);
 
   const handleSubmitAwards = useCallback(async () => {
     if (submitting) return;
@@ -242,9 +247,7 @@ export default function SeasonPredictScreenNative() {
     if (!isSeasonAwardsComplete(awards)) {
       cyberAlert(
         isJa ? "未入力があります" : "Incomplete",
-        isJa
-          ? "7つのアワードすべて選んでから提出してください。"
-          : "Pick all 7 awards before submitting."
+        seasonPredictAwardsIncompleteError(language)
       );
       return;
     }
@@ -283,9 +286,7 @@ export default function SeasonPredictScreenNative() {
     if (!isSeasonStandingsComplete(standings)) {
       cyberAlert(
         isJa ? "未入力があります" : "Incomplete",
-        isJa
-          ? "East / West それぞれ 1〜15 位を埋めてから提出してください。"
-          : "Fill East and West 1–15 before submitting."
+        seasonPredictStandingsIncompleteError(language)
       );
       return;
     }
@@ -325,23 +326,13 @@ export default function SeasonPredictScreenNative() {
       ? "AWARDS"
       : "STANDINGS";
 
-  const subtitle = !submitOpen
-    ? mode === "awards"
-      ? isJa
-        ? "締切後の提出集計。各アワードのシェア Top5 です。"
-        : "Post-deadline crowd shares for each award."
-      : isJa
-        ? "締切後の提出集計。チームを押すと順位帯のシェアが見られます。"
-        : "Post-deadline board. Tap a team for rank-band shares."
-    : mode === "awards"
-      ? isJa
-        ? "MVP・DPOY など主要アワードを予想。候補は人気ピックから選び、名前検索でも絞り込めます。"
-        : "Predict major awards. Pick from popular candidates or search by name."
-      : isJa
-        ? "East / West 各 1〜15 位を予想。同じチームは同じカンファレンス内で一度だけ使えます。"
-        : "Rank East / West 1–15. Each team can be used once per conference.";
+  const subtitle =
+    mode === "awards"
+      ? seasonPredictAwardsPageSubtitle(language, submitOpen)
+      : seasonPredictStandingsPageSubtitle(language, submitOpen);
 
-  const lockedMsg = seasonPredictSubmitLockedMessage(isJa ? "ja" : "en");
+  const lockedMsg = seasonPredictSubmitLockedMessage(language);
+  const marketPendingBody = seasonPredictMarketPendingBody(language);
 
   return (
     <GamesNbaSubpageShellNative
@@ -368,14 +359,15 @@ export default function SeasonPredictScreenNative() {
             <ActivityIndicator color="rgba(103,232,249,0.8)" />
           </View>
         ) : standingsMode === "market" && standingsMarket ? (
-          <NbaSeasonStandingsMarketPanelNative market={standingsMarket} />
+          <NbaSeasonStandingsMarketPanelNative
+            market={standingsMarket}
+            language={language}
+          />
         ) : standingsMode === "market_pending" ? (
           <View style={{ gap: 8 }}>
             <Text style={styles.pendingTitle}>Market pending</Text>
             <Text style={styles.locked}>
-              {isJa
-                ? "提出期限を過ぎました。集計が完了次第、ここにマーケットが表示されます。"
-                : "The deadline has passed. The market will appear once aggregation finishes."}
+              {marketPendingBody}
             </Text>
             {error ? <Text style={styles.error}>{error}</Text> : null}
           </View>
@@ -407,6 +399,7 @@ export default function SeasonPredictScreenNative() {
                 onChange={setStandings}
                 onSubmit={() => void handleSubmitStandings()}
                 submitDisabled={submitting}
+                language={language}
               />
             )}
             {submitting ? (
@@ -421,14 +414,15 @@ export default function SeasonPredictScreenNative() {
           <ActivityIndicator color="rgba(252,211,77,0.8)" />
         </View>
       ) : awardsMode === "market" && awardsMarket ? (
-        <NbaSeasonAwardsMarketPanelNative market={awardsMarket} />
+        <NbaSeasonAwardsMarketPanelNative
+          market={awardsMarket}
+          language={language}
+        />
       ) : awardsMode === "market_pending" ? (
         <View style={{ gap: 8 }}>
           <Text style={styles.pendingTitle}>Market pending</Text>
           <Text style={styles.locked}>
-            {isJa
-              ? "提出期限を過ぎました。集計が完了次第、ここにマーケットが表示されます。"
-              : "The deadline has passed. The market will appear once aggregation finishes."}
+            {marketPendingBody}
           </Text>
           {error ? <Text style={styles.error}>{error}</Text> : null}
         </View>
@@ -463,6 +457,7 @@ export default function SeasonPredictScreenNative() {
               onChange={setAwards}
               onSubmit={() => void handleSubmitAwards()}
               submitDisabled={submitting}
+              language={language}
             />
           )}
           {submitting ? (

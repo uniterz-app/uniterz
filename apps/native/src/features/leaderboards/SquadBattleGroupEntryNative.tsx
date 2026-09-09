@@ -41,6 +41,7 @@ export default function SquadBattleGroupEntryNative({
     phase,
     myRank,
     deadlineLabel,
+    lang: isEn ? "en" : "ja",
   });
 
   const chipBoxStyle =

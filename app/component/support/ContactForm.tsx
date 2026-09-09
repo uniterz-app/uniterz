@@ -33,6 +33,10 @@ const CONTACT_TYPE_KEYS: Record<ContactType, "contactTypeBug" | "contactTypeFeat
   other: "contactTypeOther",
 };
 
+const fieldClass =
+  "w-full border border-white/20 bg-black px-3 py-2.5 text-xs md:text-sm text-white outline-none focus:border-white/45";
+const labelClass = "text-xs md:text-sm text-white/70";
+
 export default function ContactForm({
   variant,
   initialType = "bug",
@@ -41,7 +45,7 @@ export default function ContactForm({
   const router = useRouter();
   const pathname = usePathname();
 
-  const { fUser: user, status } = useFirebaseUser();
+  const { fUser: user } = useFirebaseUser();
   const { language } = useUserLanguage(user?.uid ?? null);
   const m = t(language);
 
@@ -80,8 +84,7 @@ export default function ContactForm({
     setForm((prev) => ({ ...prev, type: initialType }));
   }, [initialType]);
 
-  const baseContainerClass =
-    "w-full rounded-2xl bg-slate-900/50 border border-white/5 shadow-xl backdrop-blur-sm";
+  const baseContainerClass = "w-full border border-white/20 bg-black";
   const paddingClass = variant === "web" ? "p-8 md:p-10" : "p-6 pb-7";
 
   const contactTypeOptions = CONTACT_TYPE_OPTIONS.map((o) => ({
@@ -205,14 +208,14 @@ export default function ContactForm({
     return (
       <div className={`${baseContainerClass} ${paddingClass}`}>
         <div className="flex items-start gap-3">
-          <div className="rounded-full bg-emerald-500/10 p-2">
-            <CheckCircle2 className="h-5 w-5 text-emerald-400" />
+          <div className="border border-white/30 bg-black p-2">
+            <CheckCircle2 className="h-5 w-5 text-white" />
           </div>
           <div className="space-y-1">
-            <h2 className="text-base md:text-lg font-semibold text-emerald-200">
+            <h2 className="text-base md:text-lg font-semibold text-white">
               {m.support.sent}
             </h2>
-            <p className="text-xs md:text-sm text-slate-100/80">
+            <p className="text-xs md:text-sm text-white/70">
               {m.support.returnToProfile}
             </p>
           </div>
@@ -229,25 +232,25 @@ export default function ContactForm({
 
       {/* エラー表示 */}
       {submitError && (
-        <div className="flex items-start gap-2 rounded-xl bg-rose-500/10 px-3 py-2.5 border border-rose-500/40">
-          <AlertCircle className="mt-0.5 h-4 w-4 text-rose-300" />
-          <p className="text-xs text-rose-100">{submitError}</p>
+        <div className="flex items-start gap-2 border border-white/25 bg-black px-3 py-2.5">
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-white" />
+          <p className="text-xs text-white/85">{submitError}</p>
         </div>
       )}
 
       {!hideTypeSelect && (
         <div className="space-y-1.5">
-          <label className="text-xs md:text-sm text-sky-100">
+          <label className={labelClass}>
             {m.support.contactType}
           </label>
 
           <select
             value={form.type}
             onChange={(e) => setForm({ ...form, type: e.target.value as ContactType })}
-            className="w-full rounded-xl bg-slate-900/80 border border-white/10 px-3 py-3 text-sm text-slate-50"
+            className={fieldClass}
           >
             {contactTypeOptions.map((o) => (
-              <option key={o.value} value={o.value}>
+              <option key={o.value} value={o.value} className="bg-black text-white">
                 {o.label}
               </option>
             ))}
@@ -257,7 +260,7 @@ export default function ContactForm({
 
       {/* メール */}
       <div className="space-y-1.5">
-        <label className="text-xs md:text-sm text-sky-100">
+        <label className={labelClass}>
           {m.support.email}
         </label>
         <input
@@ -265,36 +268,36 @@ export default function ContactForm({
           value={form.email}
           onChange={(e) => setForm({ ...form, email: e.target.value })}
           placeholder={m.support.emailPlaceholder}
-          className="w-full rounded-xl bg-slate-900/80 border border-white/10 px-3 py-2.5 text-xs md:text-sm text-slate-50"
+          className={fieldClass}
         />
-        {errors.email && <p className="text-[11px] text-rose-300">{errors.email}</p>}
+        {errors.email && <p className="text-[11px] text-white/80">{errors.email}</p>}
       </div>
 
       {/* 内容 */}
       <div className="space-y-1.5">
-        <label className="text-xs md:text-sm text-sky-100">
+        <label className={labelClass}>
           {m.support.message}
         </label>
         <textarea
           rows={variant === "web" ? 6 : 5}
           value={form.message}
           onChange={(e) => setForm({ ...form, message: e.target.value })}
-          className="w-full rounded-xl bg-slate-900/80 border border-white/10 px-3 py-2.5 text-xs md:text-sm text-slate-50 resize-none"
+          className={`${fieldClass} resize-none`}
         />
-        {errors.message && <p className="text-[11px] text-rose-300">{errors.message}</p>}
+        {errors.message && <p className="text-[11px] text-white/80">{errors.message}</p>}
       </div>
 
       {/* 写真 */}
       <div className="space-y-1.5">
-        <label className="text-xs md:text-sm text-sky-100">
+        <label className={labelClass}>
           {m.support.attachImage}
         </label>
 
         <label
-          className="flex items-center gap-3 rounded-xl bg-slate-900/80 border border-white/10 px-3 py-2 cursor-pointer"
+          className="flex cursor-pointer items-center gap-3 border border-white/20 bg-black px-3 py-2.5 transition-colors hover:border-white/40"
         >
-          <ImageIcon className="h-4 w-4 text-slate-300" />
-          <span className="text-xs md:text-sm text-slate-300">
+          <ImageIcon className="h-4 w-4 text-white/70" />
+          <span className="text-xs md:text-sm text-white/70">
             {m.support.attachImage}
           </span>
           <input type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
@@ -303,7 +306,7 @@ export default function ContactForm({
         {previewUrl && (
           <img
             src={previewUrl}
-            className="mt-2 w-full rounded-xl border border-white/10 max-h-60 object-cover"
+            className="mt-2 w-full border border-white/20 max-h-60 object-cover"
             alt="preview"
           />
         )}
@@ -314,7 +317,7 @@ export default function ContactForm({
         <button
           type="submit"
           disabled={submitting || uploading || !user}
-          className="inline-flex items-center gap-2 rounded-full bg-sky-500 px-5 py-2.5 text-xs md:text-sm font-semibold text-white shadow-lg disabled:opacity-60"
+          className="inline-flex items-center gap-2 border border-white bg-white px-5 py-2.5 text-xs md:text-sm font-semibold text-black disabled:opacity-50"
         >
           <Send className="h-4 w-4" />
           {submitting || uploading

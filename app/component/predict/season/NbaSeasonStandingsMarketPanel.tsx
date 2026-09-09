@@ -19,10 +19,15 @@ import {
   getTeamJerseyPrimaryColor,
   getTeamJerseySecondaryColor,
 } from "@/lib/team-colors";
+import {
+  seasonPredictStandingsMarketHint,
+  type SeasonPredictUiLang,
+} from "@/lib/predict/seasonPredictUiCopy";
 
 type Props = {
   market: SeasonStandingsMarketSnapshot;
   className?: string;
+  language?: SeasonPredictUiLang;
 };
 
 type Band = "straight" | "playin" | "out";
@@ -39,7 +44,13 @@ function bandAccent(band: Band): { bar: string; rank: string } {
   return { bar: "rgba(255,255,255,0.18)", rank: "text-white/35" };
 }
 
-function DetailBands({ row }: { row: SeasonStandingsCrowdBoardRow }) {
+function DetailBands({
+  row,
+  language = "ja",
+}: {
+  row: SeasonStandingsCrowdBoardRow;
+  language?: SeasonPredictUiLang;
+}) {
   const bands = standingsDetailBandWidths(row.detailBandPct);
   return (
     <div className="mt-2 space-y-1.5 border-t border-white/8 pt-2">
@@ -76,7 +87,7 @@ function DetailBands({ row }: { row: SeasonStandingsCrowdBoardRow }) {
                 "text-[8px] font-bold uppercase tracking-[0.06em] text-white/40",
               ].join(" ")}
             >
-              {b.labelJa}
+              {language === "en" ? b.labelEn : b.labelJa}
             </p>
             <p
               className={[
@@ -98,10 +109,12 @@ function TeamListRow({
   row,
   expanded,
   onToggle,
+  language = "ja",
 }: {
   row: SeasonStandingsCrowdBoardRow;
   expanded: boolean;
   onToggle: () => void;
+  language?: SeasonPredictUiLang;
 }) {
   const band = bandForRank(row.boardRank);
   const accent = bandAccent(band);
@@ -169,7 +182,7 @@ function TeamListRow({
       </button>
       {expanded ? (
         <div className="px-2.5 pb-2.5">
-          <DetailBands row={row} />
+          <DetailBands row={row} language={language} />
         </div>
       ) : null}
     </li>
@@ -180,6 +193,7 @@ function TeamListRow({
 export default function NbaSeasonStandingsMarketPanel({
   market,
   className,
+  language = "ja",
 }: Props) {
   const [conference, setConference] = useState<NbaConferenceId>("east");
   const [expandedTeamId, setExpandedTeamId] = useState<string | null>(null);
@@ -219,8 +233,7 @@ export default function NbaSeasonStandingsMarketPanel({
           </p>
         </div>
         <p className="text-[11px] leading-relaxed text-white/45">
-          平均予想の順位表。チームを押すと 1–3 / 4–6 / 7–9 / 10–12 / 13–15
-          の置き方シェアが出ます。
+          {seasonPredictStandingsMarketHint(language)}
         </p>
       </header>
 
@@ -262,6 +275,7 @@ export default function NbaSeasonStandingsMarketPanel({
                 cur === row.teamId ? null : row.teamId
               )
             }
+            language={language}
           />
         ))}
       </ol>

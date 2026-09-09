@@ -13,7 +13,7 @@ type Props = {
   intro?: string;
 };
 
-/** Web `ScoringLogicSections` 相当 */
+/** Web `ScoringLogicSections` 相当 — 四角・白黒 */
 export default function HelpScoringLogicNative({ sections, defaultOpenId, intro }: Props) {
   const [openId, setOpenId] = useState<string | null>(defaultOpenId ?? null);
 
@@ -52,10 +52,10 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   section: {
-    borderRadius: 12,
+    borderRadius: 0,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
-    backgroundColor: "rgba(255,255,255,0.03)",
+    borderColor: "rgba(255,255,255,0.2)",
+    backgroundColor: "#000000",
     overflow: "hidden",
   },
   sectionHeader: {
@@ -72,13 +72,13 @@ const styles = StyleSheet.create({
     color: "rgba(255,255,255,0.9)",
   },
   toggle: {
-    fontSize: 12,
-    color: "rgba(103,232,249,0.8)",
+    fontSize: 14,
+    color: "rgba(255,255,255,0.7)",
     marginLeft: 8,
   },
   sectionBody: {
     borderTopWidth: 1,
-    borderTopColor: "rgba(255,255,255,0.1)",
+    borderTopColor: "rgba(255,255,255,0.15)",
     paddingHorizontal: 12,
     paddingVertical: 10,
   },

@@ -21,10 +21,10 @@ export default function WebContactPage() {
       description={m.support.contactDescription}
       updatedAt={updatedAt}
     >
-      <section className="space-y-3 text-xs text-slate-100/80 mb-5">
+      <section className="mb-5 space-y-3 text-xs text-white/75">
         <p>
           {m.support.contactEmailBefore}{" "}
-          <span className="text-sky-300 font-semibold">{SUPPORT_EMAIL}</span>
+          <span className="font-semibold text-white">{SUPPORT_EMAIL}</span>
           {m.support.contactEmailAfter}
         </p>
       </section>

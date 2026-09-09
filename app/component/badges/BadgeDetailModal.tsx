@@ -12,6 +12,7 @@ import {
   formatBadgeParticipantCount,
   readBadgeParticipantCount,
 } from "@/lib/badges/badgeCohort";
+import { resolveBadgeCopy } from "@/lib/badges/resolveBadgeCopy";
 import VelvetTuftField from "./VelvetTuftField";
 import "./badgeDetailModal.css";
 
@@ -64,6 +65,7 @@ export default function BadgeDetailModal({
   const participantCount = readBadgeParticipantCount(badge);
   const portalRoot = useDocumentBody();
   const isJa = language === "ja";
+  const copy = resolveBadgeCopy(badge, language);
 
   useLayoutEffect(() => {
     if (!portalRoot) return;
@@ -110,7 +112,7 @@ export default function BadgeDetailModal({
               <div className="badge-detail-modal__hero-glow" aria-hidden />
               <img
                 src={badge.icon}
-                alt={badge.title ?? badge.id}
+                alt={copy.title}
                 className={[
                   "badge-detail-modal__badge-img",
                   shine ? "badge-detail-modal__badge-img--float" : "",
@@ -129,11 +131,11 @@ export default function BadgeDetailModal({
             id="badge-detail-modal-title"
             className={[nameOxanium.className, "badge-detail-modal__title"].join(" ")}
           >
-            {badge.title ?? badge.id}
+            {copy.title}
           </h2>
 
-          {badge.description ? (
-            <p className="badge-detail-modal__desc">{badge.description}</p>
+          {copy.description ? (
+            <p className="badge-detail-modal__desc">{copy.description}</p>
           ) : null}
 
           {awardedMs != null || participantCount != null ? (
@@ -141,7 +143,7 @@ export default function BadgeDetailModal({
               {awardedMs != null ? (
                 <p className="badge-detail-modal__meta-row">
                   <span className="badge-detail-modal__meta-label">
-                    {isJa ? "付与日" : "Granted"}
+                    {m.badges?.grantedAt ?? (isJa ? "付与日" : "Granted")}
                   </span>
                   <span className="badge-detail-modal__meta-value" aria-hidden>
                     ·

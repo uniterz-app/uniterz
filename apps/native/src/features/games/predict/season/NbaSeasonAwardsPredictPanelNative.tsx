@@ -17,6 +17,10 @@ import {
   AWARDS_PREVIEW_POPULAR,
 } from "../../../../../../../lib/predict/nbaSeasonAwardsPreviewMocks";
 import {
+  seasonPredictAwardsPredictHint,
+  type SeasonPredictUiLang,
+} from "../../../../../../../lib/predict/seasonPredictUiCopy";
+import {
   MATCH_CARD_BRACKET_LETTER_SPACING_12,
   MATCH_CARD_BRACKET_TEXT,
 } from "../../matchCardTypography";
@@ -26,6 +30,7 @@ type Props = {
   onChange?: (next: NbaSeasonAwardsPrediction) => void;
   onSubmit?: () => void;
   submitDisabled?: boolean;
+  language?: SeasonPredictUiLang;
 };
 
 const OX = "Oxanium_700Bold";
@@ -45,6 +50,7 @@ function AwardPickRow({
   kind,
   selectedId,
   onSelect,
+  language,
 }: {
   awardId: NbaAwardId;
   labelEn: string;
@@ -52,6 +58,7 @@ function AwardPickRow({
   kind: "player" | "coach";
   selectedId: string | null | undefined;
   onSelect: (id: string | null) => void;
+  language: SeasonPredictUiLang;
 }) {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
@@ -68,7 +75,9 @@ function AwardPickRow({
     <View style={styles.row}>
       <View style={styles.rowHead}>
         <Text style={styles.rowLabelEn}>{labelEn}</Text>
-        <Text style={styles.rowLabelJa}>{labelJa}</Text>
+        {language !== "en" ? (
+          <Text style={styles.rowLabelJa}>{labelJa}</Text>
+        ) : null}
       </View>
 
       {selected ? (
@@ -143,6 +152,7 @@ export default function NbaSeasonAwardsPredictPanelNative({
   onChange,
   onSubmit,
   submitDisabled,
+  language = "ja",
 }: Props) {
   const filled = filledSeasonAwardsCount(value.picks);
   const total = NBA_SEASON_AWARD_DEFS.length;
@@ -153,7 +163,7 @@ export default function NbaSeasonAwardsPredictPanelNative({
       <View style={{ gap: 4, marginBottom: 12 }}>
         <Text style={styles.h2}>Season awards · {value.season}</Text>
         <Text style={styles.lead}>
-          フォーカス直後は他ユーザー人気ピック約 5 人。入力すると名前の前方一致で候補が出ます。採点・Unit・提出期限は右上のはてなを参照。
+          {seasonPredictAwardsPredictHint(language)}
         </Text>
       </View>
 
@@ -166,6 +176,7 @@ export default function NbaSeasonAwardsPredictPanelNative({
             labelJa={def.labelJa}
             kind={def.kind}
             selectedId={value.picks[def.id]}
+            language={language}
             onSelect={(id) =>
               onChange?.({ ...value, picks: { ...value.picks, [def.id]: id } })
             }

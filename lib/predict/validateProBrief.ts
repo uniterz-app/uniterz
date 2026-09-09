@@ -6,12 +6,14 @@ import type {
   PredictProBrief,
   ProBriefEdgeItem,
   ProBriefLineItem,
+  ProBriefPlayerItem,
   ProBriefTeamCard,
 } from "@/lib/predict/predictProBrief";
 
 const MATCHUP_MAX = 2;
 const SCHEDULE_MAX = 3;
 const CONTEXT_MAX = 2;
+const PLAYERS_MAX = 2;
 
 const BANNED: readonly RegExp[] = [
   /勝て[るなよ]/,
@@ -36,7 +38,13 @@ function blobOfCard(card: ProBriefTeamCard): string {
     l.textJa,
     l.textEn,
   ]);
-  return [...edges, ...lines].join("\n");
+  const players = (card.players ?? []).flatMap((p) => [
+    p.playerName,
+    p.label,
+    p.detailJa,
+    p.detailEn,
+  ]);
+  return [...edges, ...lines, ...players].join("\n");
 }
 
 function hasBannedLanguage(brief: PredictProBrief): boolean {
@@ -52,11 +60,16 @@ function clipLines(lines: ProBriefLineItem[], max: number): ProBriefLineItem[] {
   return lines.slice(0, max);
 }
 
+function clipPlayers(players: ProBriefPlayerItem[] | undefined): ProBriefPlayerItem[] {
+  return (players ?? []).slice(0, PLAYERS_MAX);
+}
+
 function clipCard(card: ProBriefTeamCard): ProBriefTeamCard {
   return {
     edges: clipEdges(card.edges),
     schedule: clipLines(card.schedule, SCHEDULE_MAX),
     context: clipLines(card.context, CONTEXT_MAX),
+    players: clipPlayers(card.players),
   };
 }
 

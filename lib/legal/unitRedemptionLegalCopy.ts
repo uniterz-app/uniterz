@@ -1,6 +1,11 @@
 /**
  * Unit / 商品交換の規約・プライバシー追記（docs/unit-redemption-design.md）
+ * 利用規約第12条と整合。
  */
+import {
+  REDELIVERY_SHIPPING_FEE_JPY,
+} from "@/lib/legal/companyInfo";
+
 export type LegalLang = "ja" | "en";
 
 export const UNIT_TERMS_SECTION = {
@@ -34,20 +39,24 @@ export const REDEMPTION_TERMS_SECTION = {
       "ユーザーは保有 Unit を用い、運営が定めるカタログ条件の範囲で NBA 関連商品との交換を申請できます。",
       "必要 Unit 数・商品価格上限・シーズン交換上限はアプリ内カタログおよび運営告知に従います。価格が上限未満でも必要 Unit は変わりません。",
       "申請時に必要 Unit は交換申請中として一時拘束され、運営が商品を購入した時点で消費済みとなります。注文前の取消・却下時は保有中へ戻ります。",
-      "交換申請は月中いつでも受け付け、その月の申請はおおよそ毎月 25 日前後にまとめて購入します。申請時点の在庫が注文時点で欠品となる場合があります。",
+      "交換申請は月中いつでも受け付け、当該月に受け付けた申請は原則として当該月末前後にまとめて購入します。申請時点の在庫が注文時点で欠品となる場合があります。",
       "対象は運営が承認した正規販売店の新品に限ります。中古・転売・ギフトカード・予約・カスタム等は対象外です。",
       "通常の国内・海外送料は原則運営負担です。関税・輸入税・現地手数料等はユーザー負担となる場合があります。",
+      `配達先情報の誤り等による再配達・配達先変更の送料（着払い）はユーザー負担とし、全国一律 ${REDELIVERY_SHIPPING_FEE_JPY} 円（税込）とします。`,
       "商品注文後のサイズ・カラー・配送先変更、およびユーザー都合のキャンセル・返品は受け付けません（販売店規定・法令に基づく初期不良等を除く）。",
+      "本サービス上に交換対象商品のロゴ・画像は掲載しません（カテゴリ名・必要 Unit 数・価格上限等のテキストは表示する場合があります）。",
       "NBA・チーム・選手等の名称・ロゴは各権利者に帰属します。本サービスは NBA またはその関係会社の公式サービスではありません。",
     ],
     en: [
       "Users may apply to exchange held Units for NBA-related products within the catalog rules set by the operator.",
       "Required Units, price caps, and season caps follow the in-app catalog and operator notices. Required Units do not change if the item price is below the cap.",
       "On application, required Units are temporarily reserved; they are consumed when the operator purchases the item. On cancel/reject before order, Units return to available balance.",
-      "Applications are accepted anytime in the month and are typically purchased in a batch around the 25th. Stock available at application may sell out before order.",
+      "Applications are accepted anytime in the month and are typically purchased in a batch around month-end. Stock available at application may sell out before order.",
       "Only new items from operator-approved authorized retailers are eligible. Used, resale, gift cards, preorders, and custom items are excluded.",
       "Ordinary domestic/international shipping is generally paid by the operator. Duties, import taxes, and local fees may be borne by the user.",
+      `Redelivery or address-change shipping caused by incorrect shipping details is borne by the user at a flat ¥${REDELIVERY_SHIPPING_FEE_JPY} (tax included) nationwide.`,
       "After the retailer order, changes to size/color/address and user-initiated cancel/return are not accepted (except defects under retailer policy or law).",
+      "We do not post logos or images of exchange products on the Service (category names, required Units, and price caps may still appear as text).",
       "NBA, team, and player names/logos belong to their respective owners. This Service is not an official NBA service or affiliate.",
     ],
   },

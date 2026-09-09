@@ -47,6 +47,12 @@ import {
   isPlayerDetailSalaryRankShown,
 } from "../../../../../../lib/predict/nbaPlayerDetailHowTheyPlay";
 import { nbaTwoWaySalaryForSeason } from "../../../../../../lib/nba/teamPayroll/mapBdlToTeamPayroll";
+import {
+  CAREER_CHAMPIONSHIP_ROW_COLOR,
+  careerSeasonAwardChipsForPlayer,
+  isPlayerChampionshipSeason,
+  playerHasAnyCareerSeasonAward,
+} from "../../../../../../lib/nba/playerAwards/playerCareerSeasonAwards";
 import { CURRENT_NBA_SEASON_KEY } from "../../../../../../lib/rankings/nbaSeason";
 import { rankingFlagImageUri } from "../../rankings/rankingFlagUri";
 import {
@@ -137,7 +143,7 @@ function formatDraftHero(
   round: number | null,
   number: number | null
 ): string {
-  if (year == null) return "—";
+  if (year == null || !Number.isFinite(year) || year <= 0) return "UNDRAFTED";
   const pick = number != null ? `#${number}` : "—";
   const r = round != null ? `R${round}` : "";
   return r ? `${year} ${r} ${pick}` : `${year} ${pick}`;
@@ -830,23 +836,32 @@ function fmtPctBrefNative(n: number): string {
   return n.toFixed(3).replace(/^0/, "");
 }
 
+const CAREER_COL_GAP_PX = 8;
+
 const CAREER_COLS_NATIVE: Array<{
   key: string;
   label: string;
   width: number;
-  align?: "left" | "right";
+  align?: "left" | "right" | "center";
   render: (row: NbaPlayerCareerSeasonRow) => string;
   emphasize?: boolean;
 }> = [
   {
     key: "season",
     label: "Season",
-    width: 64,
+    width: 72,
     align: "left",
     render: (r) => formatCareerSeasonLabel(r.seasonStart),
     emphasize: true,
   },
-  { key: "age", label: "Age", width: 28, align: "left", render: (r) => String(r.age) },
+  {
+    key: "awards",
+    label: "Awards",
+    width: 108,
+    align: "center",
+    render: () => "",
+  },
+  { key: "age", label: "Age", width: 36, align: "left", render: (r) => String(r.age) },
   {
     key: "team",
     label: "TEAM",
@@ -855,39 +870,41 @@ const CAREER_COLS_NATIVE: Array<{
     render: (r) => r.teamAbbr,
     emphasize: true,
   },
-  { key: "g", label: "G", width: 28, render: (r) => String(r.games) },
-  { key: "gs", label: "GS", width: 28, render: (r) => (r.gamesStarted == null ? "—" : String(r.gamesStarted)) },
-  { key: "mp", label: "MP", width: 36, render: (r) => fmtPerGameNative(r.min) },
+  { key: "g", label: "G", width: 28, align: "left", render: (r) => String(r.games) },
+  { key: "gs", label: "GS", width: 32, align: "left", render: (r) => (r.gamesStarted == null ? "—" : String(r.gamesStarted)) },
+  { key: "mp", label: "MP", width: 40, render: (r) => fmtPerGameNative(r.min) },
   {
     key: "pts",
     label: "PTS",
-    width: 36,
+    width: 40,
     render: (r) => fmtPerGameNative(r.pts),
     emphasize: true,
   },
-  { key: "reb", label: "REB", width: 36, render: (r) => fmtPerGameNative(r.reb) },
-  { key: "ast", label: "AST", width: 36, render: (r) => fmtPerGameNative(r.ast) },
-  { key: "fg", label: "FG", width: 32, render: (r) => fmtPerGameNative(r.fgm) },
-  { key: "fga", label: "FGA", width: 36, render: (r) => fmtPerGameNative(r.fga) },
-  { key: "fgp", label: "FG%", width: 40, render: (r) => fmtPctBrefNative(r.fgPct) },
-  { key: "3p", label: "3P", width: 32, render: (r) => fmtPerGameNative(r.fg3m) },
-  { key: "3pa", label: "3PA", width: 36, render: (r) => fmtPerGameNative(r.fg3a) },
-  { key: "3pp", label: "3P%", width: 40, render: (r) => fmtPctBrefNative(r.fg3Pct) },
-  { key: "ft", label: "FT", width: 32, render: (r) => fmtPerGameNative(r.ftm) },
-  { key: "fta", label: "FTA", width: 36, render: (r) => fmtPerGameNative(r.fta) },
-  { key: "ftp", label: "FT%", width: 40, render: (r) => fmtPctBrefNative(r.ftPct) },
-  { key: "stl", label: "STL", width: 32, render: (r) => fmtPerGameNative(r.stl) },
-  { key: "blk", label: "BLK", width: 32, render: (r) => fmtPerGameNative(r.blk) },
-  { key: "tov", label: "TOV", width: 32, render: (r) => fmtPerGameNative(r.tov) },
+  { key: "reb", label: "REB", width: 40, render: (r) => fmtPerGameNative(r.reb) },
+  { key: "ast", label: "AST", width: 40, render: (r) => fmtPerGameNative(r.ast) },
+  { key: "fg", label: "FG", width: 36, render: (r) => fmtPerGameNative(r.fgm) },
+  { key: "fga", label: "FGA", width: 40, render: (r) => fmtPerGameNative(r.fga) },
+  { key: "fgp", label: "FG%", width: 44, render: (r) => fmtPctBrefNative(r.fgPct) },
+  { key: "3p", label: "3P", width: 36, render: (r) => fmtPerGameNative(r.fg3m) },
+  { key: "3pa", label: "3PA", width: 40, render: (r) => fmtPerGameNative(r.fg3a) },
+  { key: "3pp", label: "3P%", width: 44, render: (r) => fmtPctBrefNative(r.fg3Pct) },
+  { key: "ft", label: "FT", width: 36, render: (r) => fmtPerGameNative(r.ftm) },
+  { key: "fta", label: "FTA", width: 40, render: (r) => fmtPerGameNative(r.fta) },
+  { key: "ftp", label: "FT%", width: 44, render: (r) => fmtPctBrefNative(r.ftPct) },
+  { key: "stl", label: "STL", width: 36, render: (r) => fmtPerGameNative(r.stl) },
+  { key: "blk", label: "BLK", width: 36, render: (r) => fmtPerGameNative(r.blk) },
+  { key: "tov", label: "TOV", width: 36, render: (r) => fmtPerGameNative(r.tov) },
 ];
 
 /** Web `SeasonHistoryTable` 相当 — BRef 風シーズン平均 */
 function SeasonHistorySection({
+  playerId,
   regular,
   playoffs,
   accent,
   currentSeasonStart = 2025,
 }: {
+  playerId?: string | null;
   regular: NbaPlayerCareerSeasonRow[];
   playoffs: NbaPlayerCareerSeasonRow[];
   accent: string;
@@ -900,6 +917,10 @@ function SeasonHistorySection({
   );
   const frame = hexToRgba(accent, 0.35);
   const headLine = hexToRgba(accent, 0.18);
+  const showAwardsCol = playerHasAnyCareerSeasonAward(playerId);
+  const cols = showAwardsCol
+    ? CAREER_COLS_NATIVE
+    : CAREER_COLS_NATIVE.filter((c) => c.key !== "awards");
 
   return (
     <View style={styles.careerWrap}>
@@ -957,14 +978,20 @@ function SeasonHistorySection({
                 },
               ]}
             >
-              {CAREER_COLS_NATIVE.map((col) => (
+              {cols.map((col) => (
                 <Text
                   key={col.key}
                   style={[
                     styles.careerHeadCell,
                     {
                       width: col.width,
-                      textAlign: col.align === "left" ? "left" : "right",
+                      flexShrink: 0,
+                      textAlign:
+                        col.align === "left"
+                          ? "left"
+                          : col.align === "center"
+                            ? "center"
+                            : "right",
                     },
                   ]}
                 >
@@ -974,6 +1001,19 @@ function SeasonHistorySection({
             </View>
             {rows.map((row, i) => {
               const isCurrent = row.seasonStart === currentSeasonStart;
+              const zebra = i % 2 === 1;
+              const isChamp =
+                board === "playoffs" &&
+                isPlayerChampionshipSeason(row.seasonStart, {
+                  teamAbbr: row.teamAbbr,
+                  teamId: row.teamId,
+                });
+              const chips = showAwardsCol
+                ? careerSeasonAwardChipsForPlayer(playerId, row.seasonStart)
+                : [];
+              const numColor = isChamp
+                ? CAREER_CHAMPIONSHIP_ROW_COLOR
+                : undefined;
               return (
                 <View
                   key={`${board}-${row.seasonStart}-${row.teamAbbr}`}
@@ -981,7 +1021,9 @@ function SeasonHistorySection({
                     styles.careerRow,
                     isCurrent
                       ? { backgroundColor: hexToRgba(accent, 0.12) }
-                      : null,
+                      : zebra
+                        ? { backgroundColor: "rgba(255,255,255,0.035)" }
+                        : null,
                     i < rows.length - 1
                       ? {
                           borderBottomWidth: StyleSheet.hairlineWidth,
@@ -990,24 +1032,119 @@ function SeasonHistorySection({
                       : null,
                   ]}
                 >
-                  {CAREER_COLS_NATIVE.map((col) => (
-                    <Text
-                      key={col.key}
-                      style={[
-                        styles.careerCell,
-                        {
-                          width: col.width,
-                          textAlign: col.align === "left" ? "left" : "right",
-                          color: col.emphasize
-                            ? "#FFFFFF"
-                            : "rgba(255,255,255,0.75)",
-                          fontWeight: col.emphasize ? "800" : "600",
-                        },
-                      ]}
-                    >
-                      {col.render(row)}
-                    </Text>
-                  ))}
+                  {cols.map((col) => {
+                    if (col.key === "season") {
+                      return (
+                        <View
+                          key={col.key}
+                          style={[
+                            styles.careerSeasonLabelRow,
+                            { width: col.width, flexShrink: 0 },
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.careerCell,
+                              {
+                                width: undefined,
+                                color: numColor ?? "#FFFFFF",
+                                fontWeight: "800",
+                                textAlign: "left",
+                              },
+                            ]}
+                          >
+                            {col.render(row)}
+                          </Text>
+                          {isChamp ? (
+                            <MaterialCommunityIcons
+                              name="trophy"
+                              size={13}
+                              color={CAREER_CHAMPIONSHIP_ROW_COLOR}
+                            />
+                          ) : null}
+                        </View>
+                      );
+                    }
+                    if (col.key === "awards") {
+                      return (
+                        <View
+                          key={col.key}
+                          style={[
+                            styles.careerAwardChips,
+                            {
+                              width: col.width,
+                              flexShrink: 0,
+                              justifyContent: "center",
+                            },
+                          ]}
+                        >
+                          {chips.map((chip) => (
+                            <View
+                              key={chip.id}
+                              style={[
+                                styles.careerAwardChip,
+                                {
+                                  borderColor: isChamp
+                                    ? hexToRgba(
+                                        CAREER_CHAMPIONSHIP_ROW_COLOR,
+                                        0.55
+                                      )
+                                    : hexToRgba(accent, 0.45),
+                                  backgroundColor: isChamp
+                                    ? hexToRgba(
+                                        CAREER_CHAMPIONSHIP_ROW_COLOR,
+                                        0.12
+                                      )
+                                    : hexToRgba(accent, 0.1),
+                                },
+                              ]}
+                            >
+                              <Text
+                                style={[
+                                  styles.careerAwardChipText,
+                                  {
+                                    color: isChamp
+                                      ? CAREER_CHAMPIONSHIP_ROW_COLOR
+                                      : hexToRgba(accent, 0.95),
+                                  },
+                                ]}
+                              >
+                                {chip.short}
+                              </Text>
+                            </View>
+                          ))}
+                        </View>
+                      );
+                    }
+                    return (
+                      <Text
+                        key={col.key}
+                        style={[
+                          styles.careerCell,
+                          {
+                            width: col.width,
+                            flexShrink: 0,
+                            textAlign:
+                              col.align === "left"
+                                ? "left"
+                                : col.align === "center"
+                                  ? "center"
+                                  : "right",
+                            color: numColor
+                              ? col.emphasize
+                                ? numColor
+                                : hexToRgba(CAREER_CHAMPIONSHIP_ROW_COLOR, 0.78)
+                              : col.emphasize
+                                ? "#FFFFFF"
+                                : "rgba(255,255,255,0.75)",
+                            fontWeight: col.emphasize ? "800" : "600",
+                          },
+                        ]}
+                      >
+                        {col.render(row)}
+                      </Text>
+                    );
+                  })}
                 </View>
               );
             })}
@@ -1475,6 +1612,7 @@ export default function NbaPlayerDetailPanelNative({
 
         <View style={[styles.divider, { backgroundColor: dividerColor }]} />
         <SeasonHistorySection
+          playerId={detail.playerId}
           regular={detail.careerSeasons.regular}
           playoffs={detail.careerSeasons.playoffs}
           accent={accent}
@@ -1684,8 +1822,14 @@ export default function NbaPlayerDetailPanelNative({
             />
           ) : null}
           <InfoRow
-            label="COLLEGE"
-            value={detail.college ?? "—"}
+            label="COLLEGE/PRIOR"
+            value={
+              detail.college?.trim()
+                ? detail.college
+                : isJa
+                  ? "大学なし"
+                  : "None"
+            }
             accent={accent}
           />
           <InfoRow label="TEAM" value={detail.teamName} accent={accent} />
@@ -2070,16 +2214,40 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     backgroundColor: "rgba(0,0,0,0.45)",
   },
-  /** 右の BACK レールに最終列が隠れないよう余白 */
+  /** 右の BACK レールに最終列が隠れない最小余白（空き列に見えない程度） */
   careerScrollContent: {
-    paddingRight: 56,
+    paddingRight: 28,
   },
   careerRow: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 8,
     paddingVertical: 12,
+    gap: CAREER_COL_GAP_PX,
+  },
+  careerSeasonLabelRow: {
+    flexDirection: "row",
+    alignItems: "center",
     gap: 4,
+  },
+  careerAwardChips: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    gap: 3,
+  },
+  careerAwardChip: {
+    borderWidth: 1,
+    borderRadius: 2,
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+  },
+  careerAwardChipText: {
+    fontSize: 8,
+    fontWeight: "800",
+    letterSpacing: 0.4,
+    textTransform: "uppercase",
+    transform: [{ skewX: "-6deg" }],
   },
   careerHeadCell: {
     fontFamily: METRIC_FONT,

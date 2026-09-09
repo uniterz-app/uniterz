@@ -222,7 +222,7 @@ const ar: Messages = {
     divisionOpenTitle: "PRO LEAGUE",
     divisionOpenLockBody:
       "A Pro-only ranking across every game. Subscribe to Pro to join and view it.",
-    divisionOpenCta: "See Pro",
+    divisionOpenCta: "Explore Pro",
     divisionOpenModalDismiss: "Close",
     divisionOpenBackToPickUp: "Back to Pick Up",
     winStreak: "سلسلة الانتصارات",
@@ -430,6 +430,7 @@ const ar: Messages = {
     nbaTopScorerResultLabel: "Top scorer",
     upsetPointsLabel: "نقاط المفاجأة",
     totalPointsLabel: "إجمالي النقاط",
+    pendingCallLabel: "YOUR CALL",
     upsetPointsDesc: "مقياس منفصل (0–10) يُمنح فقط عندما تكون المباراة مفاجأة وتوقعت بشكل صحيح كأقلية. وإلا فهو 0.",
     totalPointsDesc: "نقاط أساسية يحددها الفائز الصحيح وقرب الفارق وقرب مجموع النقاط، بالإضافة إلى مكافأة المفاجأة وسلسلة الانتصارات.",
     helpPageLink: "اطّلع على منطق التسجيل في صفحة المساعدة",

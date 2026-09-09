@@ -10,7 +10,12 @@ import type {
   GroupBattlePayoutLine,
 } from "@/lib/groupBattles/myPayoutTypes";
 import type { GroupBattlePeriod } from "@/lib/groupBattles/types";
-import type { SquadBattleWeekIndex } from "@/lib/squads/squadBattleUiCopy";
+import {
+  squadBattlePayoutNote,
+  type SquadBattlePayoutNoteKey,
+  type SquadBattleUiLang,
+  type SquadBattleWeekIndex,
+} from "@/lib/squads/squadBattleUiCopy";
 import {
   getBattle,
   getMembership,
@@ -99,18 +104,19 @@ async function squadRankFromSnapshot(
 export async function loadMyGroupBattlePayout(
   db: Firestore,
   battleId: string,
-  uid: string
+  uid: string,
+  lang: SquadBattleUiLang = "ja"
 ): Promise<GroupBattleMyPayout> {
+  const note = (key: SquadBattlePayoutNoteKey) =>
+    squadBattlePayoutNote(key, lang);
   const battle = await getBattle(db, battleId);
   if (!battle) {
-    return emptyPayout("大会が見つかりません。");
+    return emptyPayout(note("battleNotFound"));
   }
 
   const membership = await getMembership(db, battleId, uid);
   if (!membership?.squadId) {
-    return emptyPayout(
-      "未参加のため配布対象外です。次回 ENTRY から参加できます。"
-    );
+    return emptyPayout(note("notEntered"));
   }
 
   const ledger = await loadLedgerByBattle(db, uid, battleId);
@@ -224,17 +230,15 @@ export async function loadMyGroupBattlePayout(
   else if (paidCount > 0) source = "ledger";
   else if (pendingCount > 0) source = "estimate";
 
-  let payoutNote = "確定メンバー全員へ同額付与 · Pick Up 試合のみ";
+  let payoutNote: string;
   if (pendingCount > 0 && paidCount === 0) {
-    payoutNote =
-      "順位は確定。Unit 反映まで最大24時間かかる場合があります";
+    payoutNote = note("rankFinalUnitsPending");
   } else if (pendingCount > 0) {
-    payoutNote =
-      "一部は付与済み。残りは反映まで最大24時間かかる場合があります";
+    payoutNote = note("partiallyPaid");
   } else if (paidCount > 0) {
-    payoutNote = "台帳に記録済み · Pick Up 試合のみ · Free / Pro 共通";
+    payoutNote = note("ledgerRecorded");
   } else {
-    payoutNote = "まだ確定結果がありません";
+    payoutNote = note("noFinalResults");
   }
 
   return {

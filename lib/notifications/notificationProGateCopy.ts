@@ -50,7 +50,7 @@ const JA: NotificationProGateCopy = {
       detail: "レーダー・クセ・相性のまとめが届く",
     },
   ],
-  cta: "Pro を見る",
+  cta: "Explore Pro",
   dismiss: "とじる",
 };
 
@@ -84,7 +84,7 @@ const EN: NotificationProGateCopy = {
       detail: "Radar, habits, affinity — your monthly recap",
     },
   ],
-  cta: "See Pro",
+  cta: "Explore Pro",
   dismiss: "Close",
 };
 

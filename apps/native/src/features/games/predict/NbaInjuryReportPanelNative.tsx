@@ -1,5 +1,4 @@
-/** Web `NbaInjuryReportPanel` 相当（HOME/AWAY 2カラム・ステータス + EXP + 詳細展開） */
-import { useState } from "react";
+/** Web `NbaInjuryReportPanel` 相当（HOME/AWAY 2カラム・ステータス + EXP） */
 import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import {
   injuryDetailLabel,
@@ -11,7 +10,6 @@ import {
   type NbaInjuryReport,
   type NbaInjuryTeamReport,
 } from "../../../../../../lib/predict/nbaInjuryReport";
-import { injuryReasonFullNews } from "../../../../../../lib/nba/teamInjuries/injuryReasonDisplay";
 import { NBA_TEAM_NAME_BY_ID } from "../../../../../../lib/nba-team-names";
 import { getMobileTeamName } from "../../../../../../lib/team-name-split-mobile";
 import type { GamesLanguage } from "../gamesI18n";
@@ -38,14 +36,10 @@ const TONE_COLORS = {
 function InjuryCard({
   row,
   language,
-  expanded,
-  onToggleExpand,
   onPress,
 }: {
   row: NbaInjuryEntry;
   language: GamesLanguage;
-  expanded: boolean;
-  onToggleExpand: () => void;
   onPress?: (playerId: string) => void;
 }) {
   const tone = injuryStatusTone(row.status);
@@ -53,7 +47,6 @@ function InjuryCard({
   const lang = language === "ja" ? "ja" : "en";
   const statusShort = injuryStatusShortLabel(row.status);
   const detail = injuryDetailLabel(row, lang);
-  const fullNews = injuryReasonFullNews(row.description, lang);
   const expected = (row.returnDate ?? "—").toUpperCase();
   const playerName = playerCardName(row.player);
 
@@ -87,20 +80,6 @@ function InjuryCard({
       <Text style={[styles.exp, { color: colors.accent }]} numberOfLines={1}>
         ↳ {expected}
       </Text>
-
-      {fullNews && language !== "ja" ? (
-        <Pressable onPress={onToggleExpand} accessibilityRole="button">
-          <Text style={styles.moreBtn}>
-            {expanded ? "Hide detail" : "More detail"}
-          </Text>
-        </Pressable>
-      ) : null}
-
-      {expanded && fullNews && language !== "ja" ? (
-        <View style={styles.newsBox}>
-          <Text style={styles.newsText}>{fullNews}</Text>
-        </View>
-      ) : null}
     </>
   );
 
@@ -143,14 +122,10 @@ function TeamColumn({
   team,
   language,
   onPlayerPress,
-  expandedId,
-  onToggleExpand,
 }: {
   team: NbaInjuryTeamReport;
   language: GamesLanguage;
   onPlayerPress?: (playerId: string) => void;
-  expandedId: string | null;
-  onToggleExpand: (id: string) => void;
 }) {
   const rows = sortInjuryEntries(team.entries);
   const countLabel = language === "ja" ? `${rows.length}名` : `${rows.length}`;
@@ -175,8 +150,6 @@ function TeamColumn({
               key={`${rowKey}-${row.returnDate ?? ""}`}
               row={row}
               language={language}
-              expanded={expandedId === rowKey}
-              onToggleExpand={() => onToggleExpand(rowKey)}
               onPress={onPlayerPress}
             />
           );
@@ -191,8 +164,6 @@ export default function NbaInjuryReportPanelNative({
   language,
   onPlayerPress,
 }: Props) {
-  const [expandedId, setExpandedId] = useState<string | null>(null);
-
   return (
     <View>
       <View style={styles.grid}>
@@ -200,19 +171,11 @@ export default function NbaInjuryReportPanelNative({
           team={report.home}
           language={language}
           onPlayerPress={onPlayerPress}
-          expandedId={expandedId}
-          onToggleExpand={(id) =>
-            setExpandedId((cur) => (cur === id ? null : id))
-          }
         />
         <TeamColumn
           team={report.away}
           language={language}
           onPlayerPress={onPlayerPress}
-          expandedId={expandedId}
-          onToggleExpand={(id) =>
-            setExpandedId((cur) => (cur === id ? null : id))
-          }
         />
       </View>
       {report.asOfLabel ? (
@@ -290,6 +253,7 @@ const styles = StyleSheet.create({
     color: "#fff",
     textTransform: "uppercase",
     flex: 1,
+    transform: [{ skewX: "-6deg" }],
   },
   statusBadge: {
     borderWidth: 1,
@@ -316,26 +280,6 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     letterSpacing: 0.3,
     textTransform: "uppercase",
-  },
-  moreBtn: {
-    marginTop: 2,
-    fontSize: 9,
-    fontWeight: "700",
-    color: "rgba(255,255,255,0.4)",
-    textTransform: "uppercase",
-  },
-  newsBox: {
-    marginTop: 4,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
-    backgroundColor: "rgba(0,0,0,0.3)",
-    borderRadius: 2,
-    padding: 8,
-  },
-  newsText: {
-    fontSize: 10,
-    lineHeight: 15,
-    color: "rgba(255,255,255,0.6)",
   },
   asOf: {
     marginTop: 8,

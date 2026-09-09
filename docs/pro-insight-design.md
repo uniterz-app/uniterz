@@ -164,6 +164,24 @@ npx tsx scripts/ingest-nba-team-ace-out-records.ts 2025-26 --force
 
 ---
 
+## 6.5. PLAYERS（選手単位）
+
+チーム型の左右比較とは別に、**今夜効きそうな選手を各サイド最大 2 本**。Injury 名簿の代わりではない。
+
+| 種類 | 見る数字 | 出すとき |
+|---|---|---|
+| PAINT EDGE | 選手ペイント得点 / PAINT% × 相手守備（`oppEfgPct` 代理） | 衝突スコアが高い |
+| 3-POINT EDGE | 選手 3PM / 3P% × 相手被3P | 衝突スコアが高い |
+| LAST 10 FORM | last10 得点順位 vs 今季 | 直近が明確に上振れ |
+| HOT 3PT | last10 3P% | 直近 Top 寄り |
+
+- ソース: `nbaLeaguePlayerStats` leaders（season + last10）+ チームリーグ表
+- opening は出さない（選手今季サンプル不足）
+- 勝者・「この選手が決める」は書かない
+- ケガ名簿は INJURY タブ。PLAYERS に OUT 名を並べない（MATCHUP 折り込みと役割分担）
+
+---
+
 ## 7. 選び方・更新タイミング
 
 種類ごとに点数（衝突の大きさ **または** 欠場インパクト）を付け、各サイド上位 2 本。言い回しをランダムに回さない。同じ試合は同じ行。穴埋め（`{rank}` `{player}` `{km}`）。

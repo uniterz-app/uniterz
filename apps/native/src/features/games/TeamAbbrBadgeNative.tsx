@@ -8,7 +8,7 @@ import {
 } from "../../../../../lib/team-colors";
 import { TEAM_SHORT } from "../../../../../lib/team-short";
 
-const OX = "Oxanium_700Bold";
+const OX = "Oxanium_800ExtraBold";
 
 type Props = {
   /** 略称（LAL）または teamId（nba-lakers） */
@@ -108,13 +108,14 @@ const styles = StyleSheet.create({
     fontSize: 9,
     letterSpacing: 0.8,
     textTransform: "uppercase",
-    transform: [{ skewX: "14deg" }],
+    /** 枠 -14deg + 文字 +8deg → 選手名と同じ -6deg */
+    transform: [{ skewX: "8deg" }],
   },
   badgeTextSm: {
     fontFamily: OX,
     fontSize: 7,
     letterSpacing: 0.5,
     textTransform: "uppercase",
-    transform: [{ skewX: "14deg" }],
+    transform: [{ skewX: "8deg" }],
   },
 });

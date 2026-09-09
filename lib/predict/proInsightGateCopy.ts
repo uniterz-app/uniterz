@@ -21,11 +21,13 @@ export type ProInsightGateCopy = {
   body: string;
   bullets: readonly ProInsightGateBullet[];
   cta: string;
+  /** ゲート下に出す実画面サンプルの見出し */
+  exampleLabel: string;
 };
 
 const JA: ProInsightGateCopy = {
   eyebrow: "PRO INSIGHT",
-  title: "試合の読み解きは Pro から",
+  title: "試合の読み解きは PRO INSIGHT",
   body: "マッチアップ・日程・文脈を左右比較で把握できます。",
   bullets: [
     {
@@ -50,16 +52,17 @@ const JA: ProInsightGateCopy = {
     },
     {
       icon: "comment",
-      title: "根拠つき解説",
-      detail: "数字つきの短い読みポイント",
+      title: "プレイヤー",
+      detail: "型×相手穴・直近フォームの選手読み",
     },
   ],
-  cta: "Pro を見る",
+  cta: "Explore Pro",
+  exampleLabel: "表示イメージ（例）",
 };
 
 const EN: ProInsightGateCopy = {
   eyebrow: "PRO INSIGHT",
-  title: "Match reads unlock with Pro",
+  title: "Match reads unlock with PRO INSIGHT",
   body: "Compare matchup, schedule, and context side by side.",
   bullets: [
     {
@@ -84,11 +87,12 @@ const EN: ProInsightGateCopy = {
     },
     {
       icon: "comment",
-      title: "Evidence notes",
-      detail: "Short reads backed by numbers",
+      title: "Players",
+      detail: "Fit vs opponent holes · last-10 form",
     },
   ],
   cta: "Explore Pro",
+  exampleLabel: "What it looks like (example)",
 };
 
 export function proInsightGateCopy(language: "ja" | "en"): ProInsightGateCopy {

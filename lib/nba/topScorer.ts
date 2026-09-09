@@ -34,7 +34,9 @@ export function normalizeNbaTopScorerPick(
   const playerId = String((raw as NbaTopScorerPick).playerId ?? "").trim();
   const teamId = String((raw as NbaTopScorerPick).teamId ?? "").trim();
   if (!playerId || !teamId) return null;
-  const nameRaw = (raw as NbaTopScorerPick).name;
+  const nameRaw =
+    (raw as NbaTopScorerPick).name ??
+    (raw as { playerName?: unknown }).playerName;
   const name =
     nameRaw == null || String(nameRaw).trim() === ""
       ? null

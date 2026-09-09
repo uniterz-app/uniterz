@@ -74,12 +74,22 @@ export async function loadResultPostDetailClient(
         total?: number;
       }
     | undefined;
-  const market: ResultPostDetailMarket = {
-    homeRate: mkt?.homeRate ?? 0,
-    awayRate: mkt?.awayRate ?? 0,
-    drawRate: mkt?.drawRate ?? 0,
-    total: mkt?.total ?? 0,
-  };
+  const homeRate = Number(mkt?.homeRate ?? 0);
+  const awayRate = Number(mkt?.awayRate ?? 0);
+  const drawRate = Number(mkt?.drawRate ?? 0);
+  const total = Number(mkt?.total ?? 0);
+  const market: ResultPostDetailMarket | null =
+    (Number.isFinite(homeRate) && homeRate > 0) ||
+    (Number.isFinite(awayRate) && awayRate > 0) ||
+    (Number.isFinite(drawRate) && drawRate > 0) ||
+    (Number.isFinite(total) && total > 0)
+      ? {
+          homeRate: Number.isFinite(homeRate) ? homeRate : 0,
+          awayRate: Number.isFinite(awayRate) ? awayRate : 0,
+          drawRate: Number.isFinite(drawRate) ? drawRate : 0,
+          total: Number.isFinite(total) ? total : 0,
+        }
+      : null;
 
   const pointsDistribution = parseGamePointsDistributionV1(
     rawPointsDistributionFromGameDoc(gameData)
@@ -128,6 +138,14 @@ export function buildResultDetailViewFromLoad(
       game,
       loaded.post as Record<string, unknown>
     ),
+    gameMeta: game
+      ? {
+          roundLabel: (game as Record<string, unknown>).roundLabel,
+          playoffRound: (game as Record<string, unknown>).playoffRound,
+          seasonRound: (game as Record<string, unknown>).seasonRound,
+          seasonPhase: (game as Record<string, unknown>).seasonPhase,
+        }
+      : null,
     viewer,
   });
 }

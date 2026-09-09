@@ -32,6 +32,25 @@ import {
   type StoredPlanType,
 } from "@/lib/pro/planChangeDisplay";
 import type { ProIapPlan } from "@/lib/pro/iapProductIds";
+import {
+  planChangeConfirmHint,
+  planChangeCurrentLabel,
+  planChangeFreeGateBody,
+  planChangeNextLabel,
+  planChangeNotices,
+  planChangeOpeningLabel,
+  planChangePortalNetworkError,
+  planChangePortalOpenFailed,
+  planChangePortalSignInRequired,
+  planChangePageSubtitle,
+  planChangeSeasonPassNote,
+  planChangeScreenTitle,
+  planChangeStartedLabel,
+  planChangeSwitchCta,
+  planChangeTaxSuffix,
+  planChangeUpgradeCta,
+  type PlanChangeUiLang,
+} from "@/lib/pro/planChangeUiCopy";
 
 export default function PlanChangePage() {
   const router = useRouter();
@@ -46,8 +65,8 @@ export default function PlanChangePage() {
 
   const { language } = useUserLanguage(uid);
   const m = t(language);
-  const ja = language !== "en";
-  const lang = ja ? "ja" : "en";
+  const lang: PlanChangeUiLang = language === "en" ? "en" : "ja";
+  const notices = planChangeNotices(lang);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -95,7 +114,7 @@ export default function PlanChangePage() {
       const auth = getAuth();
       const user = auth.currentUser;
       if (!user) {
-        setPortalError(ja ? "ログインが必要です" : "Please sign in");
+        setPortalError(planChangePortalSignInRequired(lang));
         return;
       }
 
@@ -116,18 +135,12 @@ export default function PlanChangePage() {
       } | null;
 
       if (!res.ok || !data?.url) {
-        setPortalError(
-          ja
-            ? "課金管理画面を開けませんでした。Stripe 顧客が未登録の可能性があります。"
-            : "Could not open billing portal. Stripe customer may be missing."
-        );
+        setPortalError(planChangePortalOpenFailed(lang));
         return;
       }
       window.location.href = data.url;
     } catch {
-      setPortalError(
-        ja ? "通信エラーが発生しました" : "A network error occurred"
-      );
+      setPortalError(planChangePortalNetworkError(lang));
     } finally {
       setPortalBusy(false);
     }
@@ -164,18 +177,12 @@ export default function PlanChangePage() {
     return (
       <ProfileCyberPage
         title="CHANGE"
-        subtitle={
-          ja
-            ? "プランの変更手続きを行います。"
-            : "Manage your subscription plan."
-        }
+        subtitle={planChangePageSubtitle(lang)}
         contentClassName="max-w-md px-4 pb-bottom-nav pt-2"
       >
         <div className={panelClass} style={panelStyle}>
           <p className={[jp.className, "text-center text-sm text-white/70"].join(" ")}>
-            {ja
-              ? "Pro プラン加入後に変更できます。"
-              : "Available after you join Pro."}
+            {planChangeFreeGateBody(lang)}
           </p>
           <button
             type="button"
@@ -187,7 +194,7 @@ export default function PlanChangePage() {
             ].join(" ")}
             style={ctaStyle}
           >
-            {m.settings.upgradeToPro}
+            {planChangeUpgradeCta(lang)}
           </button>
         </div>
       </ProfileCyberPage>
@@ -197,11 +204,7 @@ export default function PlanChangePage() {
   return (
     <ProfileCyberPage
       title="CHANGE"
-      subtitle={
-        ja
-          ? "プランの変更手続きを行います。"
-          : "Manage your subscription plan."
-      }
+      subtitle={planChangePageSubtitle(lang)}
       contentClassName="max-w-md px-4 pb-bottom-nav pt-2"
     >
       <div className={panelClass} style={panelStyle}>
@@ -216,11 +219,11 @@ export default function PlanChangePage() {
               "mt-4 text-[22px] font-extrabold uppercase tracking-[0.14em] text-white",
             ].join(" ")}
           >
-            {m.settings.changePlan}
+            {planChangeScreenTitle(lang)}
           </h1>
           {planStart ? (
             <p className={[jp.className, "mt-2 text-[11px] text-white/45"].join(" ")}>
-              {ja ? "開始日" : "Started"}: {formatPlanDate(planStart, lang)}
+              {planChangeStartedLabel(lang)}: {formatPlanDate(planStart, lang)}
             </p>
           ) : null}
         </div>
@@ -235,7 +238,7 @@ export default function PlanChangePage() {
               "text-[9px] font-extrabold uppercase tracking-[0.16em] text-white/45",
             ].join(" ")}
           >
-            {ja ? "現在のプラン" : "Current plan"}
+            {planChangeCurrentLabel(lang)}
           </div>
           <div
             className={[
@@ -266,7 +269,7 @@ export default function PlanChangePage() {
               ].join(" ")}
             >
               {planPeriodLabel(currentPlan, lang)}
-              {ja ? "・税込み" : " · tax incl."}
+              {planChangeTaxSuffix(lang)}
             </span>
           </div>
           <p className={[jp.className, "mt-2.5 text-[13px] text-white/65"].join(" ")}>
@@ -289,7 +292,7 @@ export default function PlanChangePage() {
                   "text-[9px] font-extrabold uppercase tracking-[0.16em] text-amber-200/70",
                 ].join(" ")}
               >
-                {ja ? "変更後のプラン" : "New plan"}
+                {planChangeNextLabel(lang)}
               </div>
               <div
                 className={[
@@ -315,7 +318,7 @@ export default function PlanChangePage() {
                   ].join(" ")}
                 >
                   {planPeriodLabel(nextPlan, lang)}
-                  {ja ? "・税込み" : " · tax incl."}
+                  {planChangeTaxSuffix(lang)}
                 </span>
               </div>
               <p
@@ -335,9 +338,7 @@ export default function PlanChangePage() {
             </section>
 
             <p className={[jp.className, "mb-4 text-center text-[11px] text-white/50"].join(" ")}>
-              {ja
-                ? "実際の変更内容・請求日は次の課金画面で確認できます"
-                : "Confirm the exact change and billing date on the next screen"}
+{planChangeConfirmHint(lang, "web")}
             </p>
 
             <button
@@ -354,12 +355,12 @@ export default function PlanChangePage() {
               style={ctaStyle}
             >
               {portalBusy
-                ? ja
-                  ? "開いています…"
-                  : "Opening…"
-                : ja
-                  ? `${planDisplayNameFull(nextPlan, "ja")} へ変更`
-                  : `Switch to ${planDisplayNameFull(nextPlan, "en")}`}
+                ? planChangeOpeningLabel(lang)
+                : planChangeSwitchCta(
+                    lang,
+                    planDisplayNameFull(nextPlan, lang),
+                    "web"
+                  )}
             </button>
 
             {portalError ? (
@@ -374,34 +375,15 @@ export default function PlanChangePage() {
             style={sectionStyle}
           >
             <p className={[jp.className, "text-[13px] leading-relaxed text-white/65"].join(" ")}>
-              {ja
-                ? "Season Pass は買い切りのため、Weekly / Monthly への自動切替はありません。期間終了後に改めて購入してください。"
-                : "Season Pass is one-time. It does not auto-switch to Weekly / Monthly. Purchase again after it ends."}
+              {planChangeSeasonPassNote(lang)}
             </p>
           </section>
         )}
 
         <div className={[jp.className, "space-y-1 text-center text-[11px] text-white/50"].join(" ")}>
-          <p>
-            {ja
-              ? "※ Weekly / Monthly は自動更新されます。"
-              : "※ Weekly / Monthly renew automatically."}
-          </p>
-          <p>
-            {ja
-              ? "※ ダウングレードは現在の契約期間終了後に適用されます。"
-              : "※ Downgrades apply after the current period ends."}
-          </p>
-          <p>
-            {ja
-              ? "※ 変更までの期間は現在のプランをご利用いただけます。"
-              : "※ Keep current plan benefits until the change takes effect."}
-          </p>
-          <p>
-            {ja
-              ? "※ ダウングレード時の返金はありません。"
-              : "※ No refunds on downgrade."}
-          </p>
+          {notices.map((line) => (
+            <p key={line}>{line}</p>
+          ))}
         </div>
       </div>
     </ProfileCyberPage>

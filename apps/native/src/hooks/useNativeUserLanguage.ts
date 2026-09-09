@@ -2,15 +2,18 @@ import { useEffect, useState } from "react";
 import type { DocumentData } from "firebase/firestore";
 import { auth } from "../lib/firebase";
 import { subscribeUserDocLive } from "../../../../lib/user/subscribeUserDocLive";
+import { resolveDeviceAppLanguage } from "../i18n/resolveDeviceAppLanguage";
 
 /** Firestore `users.language` を読む（Web `useUserLanguage` 相当） */
 export function useNativeUserLanguage(uid: string | null | undefined) {
-  const [language, setLanguage] = useState<"ja" | "en">("ja");
+  const [language, setLanguage] = useState<"ja" | "en">(() =>
+    uid ? "ja" : resolveDeviceAppLanguage(),
+  );
   const [ready, setReady] = useState(!uid);
 
   useEffect(() => {
     if (!uid) {
-      setLanguage("ja");
+      setLanguage(resolveDeviceAppLanguage());
       setReady(true);
       return;
     }

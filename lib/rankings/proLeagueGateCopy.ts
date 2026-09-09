@@ -28,7 +28,8 @@ export function proLeagueGateCopy(language: "ja" | "en"): ProLeagueGateCopy {
         {
           icon: "swords",
           title: "All games",
-          detail: "Regular-season rankings on every ranking-eligible game",
+          detail:
+            "Not just Pick Up — every ranking-eligible game counts toward the board",
         },
         {
           icon: "trophy",
@@ -56,7 +57,7 @@ export function proLeagueGateCopy(language: "ja" | "en"): ProLeagueGateCopy {
           detail: "Stats accrue while Free; after Pro you join with that history",
         },
       ],
-      cta: "See Pro",
+      cta: "Explore Pro",
       dismiss: "Close",
       backToPickUp: "Back to Pick Up",
     };
@@ -69,7 +70,8 @@ export function proLeagueGateCopy(language: "ja" | "en"): ProLeagueGateCopy {
       {
         icon: "swords",
         title: "全試合対象",
-        detail: "ランキング対象の試合すべてで順位を競います",
+        detail:
+          "Pick Up だけでなく、ランキング対象の試合すべてが順位に入ります",
       },
       {
         icon: "trophy",
@@ -97,7 +99,7 @@ export function proLeagueGateCopy(language: "ja" | "en"): ProLeagueGateCopy {
         detail: "Pro 加入後は、それまでの集計を引き継いで参加できます",
       },
     ],
-    cta: "Pro を見る",
+    cta: "Explore Pro",
     dismiss: "とじる",
     backToPickUp: "Pick Up に戻る",
   };

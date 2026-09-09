@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useReducedMotion } from "framer-motion";
 import ProfileEditKinetikGlitchTitle from "@/app/component/profile/edit/ProfileEditKinetikGlitchTitle";
 import ProfileKinetikPanelFrame from "@/app/component/profile/ui/ProfileKinetikPanelFrame";
@@ -16,6 +16,8 @@ import { PROFILE_PLAN_PRO_BG_DEFAULT } from "@/lib/profile/profilePlanProBgVaria
 import {
   buildUserCareerBoardRows,
   buildUserCareerSummaryRows,
+  careerBoardsForSeason,
+  defaultCareerBoardForSeason,
   type UserCareerDoc,
 } from "@/lib/profile/userCareer";
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
@@ -75,7 +77,18 @@ export default function ProfileCareerPanel({
   const [seasonKey, setSeasonKey] = useState<string>(
     () => seasonKeys[seasonKeys.length - 1] ?? CURRENT_NBA_SEASON_KEY
   );
-  const [board, setBoard] = useState<"regular" | "playoffs">("regular");
+  const [board, setBoard] = useState<"regular" | "playoffs">(() =>
+    defaultCareerBoardForSeason(
+      seasonKeys[seasonKeys.length - 1] ?? CURRENT_NBA_SEASON_KEY
+    )
+  );
+
+  useEffect(() => {
+    const boards = careerBoardsForSeason(seasonKey);
+    if (!boards.includes(board)) {
+      setBoard(defaultCareerBoardForSeason(seasonKey));
+    }
+  }, [seasonKey, board]);
 
   const awards = useMemo(
     () => aggregateCareerAwardsFromBadges(badges, lang),
@@ -107,19 +120,24 @@ export default function ProfileCareerPanel({
 
   const cycleScope = () => {
     if (viewMode === "career") {
+      const nextKey =
+        seasonKeys[seasonKeys.length - 1] ?? CURRENT_NBA_SEASON_KEY;
       setViewMode("season");
-      setBoard("regular");
-      setSeasonKey(seasonKeys[seasonKeys.length - 1] ?? CURRENT_NBA_SEASON_KEY);
+      setSeasonKey(nextKey);
+      setBoard(defaultCareerBoardForSeason(nextKey));
       return;
     }
-    if (board === "regular") {
-      setBoard("playoffs");
+    const boards = careerBoardsForSeason(seasonKey);
+    const boardIdx = boards.indexOf(board);
+    if (boardIdx >= 0 && boardIdx < boards.length - 1) {
+      setBoard(boards[boardIdx + 1]!);
       return;
     }
     const idx = seasonKeys.indexOf(seasonKey);
     if (idx >= 0 && idx < seasonKeys.length - 1) {
-      setSeasonKey(seasonKeys[idx + 1]!);
-      setBoard("regular");
+      const nextKey = seasonKeys[idx + 1]!;
+      setSeasonKey(nextKey);
+      setBoard(defaultCareerBoardForSeason(nextKey));
       return;
     }
     setViewMode("career");
@@ -345,7 +363,7 @@ export default function ProfileCareerPanel({
                   onClick={() => {
                     setViewMode("season");
                     setSeasonKey(opt);
-                    setBoard("regular");
+                    setBoard(defaultCareerBoardForSeason(opt));
                   }}
                   className={[
                     nameRajdhani.className,

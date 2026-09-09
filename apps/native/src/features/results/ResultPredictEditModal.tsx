@@ -48,7 +48,7 @@ import {
   buildClientPredictionPayload,
   validateClientPrediction,
 } from "../../../../../lib/predict/clientPredictionSubmit";
-import { resolveMarketBiasFallback } from "../../../../../lib/predict/gameMarketDistribution";
+import { resolveMarketBiasFallback, readGamePredictorCount } from "../../../../../lib/predict/gameMarketDistribution";
 import { scheduleAfterPredictModalDismissed } from "../games/scheduleAfterPredictModalDismissed";
 import {
   readEditModeHintShown,
@@ -469,8 +469,9 @@ export default function ResultPredictEditModal({
       awayLabel: toCompactTeamName(game.league, awayName),
       compact: selectedLeague === "wc",
       userPredictionWinner: winner ?? pred?.winner ?? null,
+      predictionCount: readGamePredictorCount(game) ?? (post ? 1 : undefined),
     };
-  }, [game, post?.prediction, selectedLeague, winner]);
+  }, [game, post, selectedLeague, winner]);
 
   const predictScheduleMeta = useMemo((): PredictModalScheduleMeta | null => {
     if (!game) return null;

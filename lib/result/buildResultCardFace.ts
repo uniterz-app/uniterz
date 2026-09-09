@@ -4,6 +4,7 @@
  * 詳細は任意で games.pointsSummary を足す（Top10・中央値など）。
  */
 import { resolveMarketBiasFallback } from "@/lib/predict/gameMarketDistribution";
+import { formatResultRoundLabel } from "@/lib/result/resultRoundLabel";
 import {
   extractResultSettlementBreakdown,
   type ResultSettlementBreakdown,
@@ -14,6 +15,7 @@ import {
   type ResultOutcomeOnlyBadge,
 } from "@/lib/result/resultBadge";
 import { resolveNbaTopScorerResultInfo } from "@/lib/result/resolveNbaTopScorerResult";
+import { normalizeNbaTopScorerPick } from "@/lib/nba/topScorer";
 import {
   resolveResultScoreRelForPost,
   type ResultScoreRelKind,
@@ -74,19 +76,21 @@ function compactTeamDisplayName(
   return id.toUpperCase() || "—";
 }
 
-export function roundLabelFromPost(post: Record<string, unknown>): string {
-  const seasonRound = post.seasonRound;
-  if (typeof seasonRound === "string" && seasonRound.trim()) {
-    return seasonRound.trim().toUpperCase();
-  }
-  if (typeof seasonRound === "number" && Number.isFinite(seasonRound)) {
-    return `ROUND ${seasonRound}`;
-  }
-  const phase = post.seasonPhase;
-  if (typeof phase === "string" && phase.trim()) {
-    return phase.trim().toUpperCase();
-  }
-  return "MATCH";
+export function roundLabelFromPost(
+  post: Record<string, unknown>,
+  gameMeta?: {
+    roundLabel?: unknown;
+    playoffRound?: unknown;
+    seasonRound?: unknown;
+    seasonPhase?: unknown;
+  } | null
+): string {
+  return formatResultRoundLabel({
+    roundLabel: post.roundLabel ?? gameMeta?.roundLabel,
+    playoffRound: post.playoffRound ?? gameMeta?.playoffRound,
+    seasonRound: post.seasonRound ?? gameMeta?.seasonRound,
+    seasonPhase: post.seasonPhase ?? gameMeta?.seasonPhase,
+  });
 }
 
 export type ResultCardFaceMarketInput = {
@@ -117,6 +121,9 @@ export type ResultCardFaceModel = {
   totalPoints: number;
   topScorer: string | null;
   topScorerHit: boolean | null;
+  /** 名前未解決時の詳細画面フォールバック用 */
+  topScorerPlayerId: string | null;
+  topScorerTeamId: string | null;
   winStreak: number;
   outcomeBadge: ResultOutcomeOnlyBadge;
   badges: ResultBadgeDisplay;
@@ -129,6 +136,17 @@ function asMarketPct(v: unknown): number | undefined {
   // games.market は 0–1、marketMeta / bias は 0–100 の両方があり得る
   if (v >= 0 && v <= 1) return v * 100;
   return v;
+}
+
+/** 両方 0 は「未設定の game.market」扱い（post.marketMeta を潰さない） */
+function isUsableMarketPair(
+  homePct: number | undefined,
+  awayPct: number | undefined
+): boolean {
+  if (homePct === undefined && awayPct === undefined) return false;
+  const h = homePct ?? 0;
+  const a = awayPct ?? 0;
+  return !(h === 0 && a === 0);
 }
 
 function marketPctFromMajorityMeta(
@@ -174,19 +192,34 @@ function marketFromPost(
     homePct: asMarketPct(meta?.homePct ?? meta?.homeRate),
     awayPct: asMarketPct(meta?.awayPct ?? meta?.awayRate),
   };
+  const gameUsable = isUsableMarketPair(fromGame.homePct, fromGame.awayPct);
+  const metaUsable = isUsableMarketPair(fromMeta.homePct, fromMeta.awayPct);
 
-  if (hasEmbeddedMarketPct(meta)) {
-    return resolveMarketBiasFallback(fromMeta, fromGame);
+  if (hasEmbeddedMarketPct(meta) && metaUsable) {
+    return resolveMarketBiasFallback(
+      fromMeta,
+      gameUsable ? fromGame : null
+    );
   }
 
-  const hasGame =
-    fromGame.homePct !== undefined || fromGame.awayPct !== undefined;
-  if (hasGame) {
-    return resolveMarketBiasFallback(fromGame, fromMeta);
+  if (gameUsable) {
+    return resolveMarketBiasFallback(
+      fromGame,
+      metaUsable ? fromMeta : null
+    );
   }
 
   const fromMajority = marketPctFromMajorityMeta(meta);
   if (fromMajority) return fromMajority;
+
+  // ライブ market 未書き込みの既存投稿向け: この投稿の勝敗を単票として表示
+  const prediction =
+    post.prediction !== null && typeof post.prediction === "object"
+      ? (post.prediction as Record<string, unknown>)
+      : null;
+  const winner = prediction?.winner;
+  if (winner === "home") return { homePct: 100, awayPct: 0 };
+  if (winner === "away") return { homePct: 0, awayPct: 100 };
 
   return resolveMarketBiasFallback(null, null);
 }
@@ -195,6 +228,13 @@ function marketFromPost(
  * posts（+ 任意の market / distribution / leadingScorers）からカード面を構築。
  * Firestore 追加 read はしない。
  */
+export type ResultCardFaceGameMeta = {
+  roundLabel?: unknown;
+  playoffRound?: unknown;
+  seasonRound?: unknown;
+  seasonPhase?: unknown;
+};
+
 export function buildResultCardFaceModel(
   post: Record<string, unknown> & { id?: string },
   options?: {
@@ -202,6 +242,8 @@ export function buildResultCardFaceModel(
     pointsSummary?: GamePointsSummaryV1 | null;
     leadingScorers?: unknown;
     topScorerCandidates?: unknown;
+    /** 旧投稿向け: games から補完したラウンド情報 */
+    gameMeta?: ResultCardFaceGameMeta | null;
   }
 ): ResultCardFaceModel {
   const home =
@@ -248,6 +290,9 @@ export function buildResultCardFaceModel(
     candidates: options?.topScorerCandidates,
     leadingScorers: options?.leadingScorers,
   });
+  const topScorerPick = normalizeNbaTopScorerPick(
+    (prediction as { goalScorer?: unknown }).goalScorer
+  );
 
   const marketPct = marketFromPost(post, options?.market ?? null);
   const winner = prediction.winner;
@@ -269,7 +314,7 @@ export function buildResultCardFaceModel(
     postId: typeof post.id === "string" ? post.id : "",
     gameId: typeof post.gameId === "string" ? post.gameId : "",
     league: String(post.league ?? ""),
-    roundLabel: roundLabelFromPost(post),
+    roundLabel: roundLabelFromPost(post, options?.gameMeta),
     homeName: compactTeamDisplayName(post.league, home.name, home.teamId),
     awayName: compactTeamDisplayName(post.league, away.name, away.teamId),
     homeTeamId: typeof home.teamId === "string" ? home.teamId : "",
@@ -283,8 +328,13 @@ export function buildResultCardFaceModel(
     userPick,
     upsetPoints: breakdown.hadUpsetGame ? breakdown.upsetPoints : null,
     totalPoints: breakdown.totalPoints,
-    topScorer: topInfo?.playerName ?? null,
+    topScorer:
+      topInfo?.playerName && topInfo.playerName !== "—"
+        ? topInfo.playerName
+        : null,
     topScorerHit: topInfo?.hit ?? null,
+    topScorerPlayerId: topScorerPick?.playerId ?? null,
+    topScorerTeamId: topScorerPick?.teamId ?? null,
     winStreak,
     outcomeBadge: badges.outcomeBadge,
     badges,

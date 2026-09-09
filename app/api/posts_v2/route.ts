@@ -9,6 +9,7 @@ import { normalizeLeague, type League } from "@/lib/leagues";
 import { parsePredictionPayload } from "@/lib/predict/parsePredictionPayload";
 import {
   normalizeNbaTopScorerCandidates,
+  normalizeNbaTopScorerPick,
   validateNbaTopScorerPickForGame,
 } from "@/lib/nba/topScorer";
 import {
@@ -23,6 +24,11 @@ import {
   deterministicPostV2Id,
   loadGameKickoffLock,
 } from "@/lib/predict/gameKickoffLock";
+import {
+  applyLiveMarketDelta,
+  parseMarketSide,
+  readLiveMarketCounts,
+} from "@/lib/predict/liveGameMarket";
 import { consumeUidActionRateLimit } from "@/lib/security/consumeUidRateLimit";
 
 /* ========= 型 ========= */
@@ -262,7 +268,10 @@ export async function POST(req: Request) {
       (g.awayTeamId as string | undefined) ??
       null;
     const rawGoalScorer = predictionParsed.rawGoalScorer;
-    const goalScorerPick = normalizeWcGoalScorerPick(rawGoalScorer);
+    const goalScorerPick =
+      league === "nba"
+        ? normalizeNbaTopScorerPick(rawGoalScorer)
+        : normalizeWcGoalScorerPick(rawGoalScorer);
     const allowsGoalScorer = league === "wc" || league === "nba";
     if (allowsGoalScorer && rawGoalScorer != null && !goalScorerPick) {
       return NextResponse.json(
@@ -343,7 +352,13 @@ export async function POST(req: Request) {
       gameId: parsed.gameId,
       league,
       seasonPhase: g?.seasonPhase ?? null,
+      /** プレーオフは playoffRound（cf 等）。seasonRound は互換のため同値 */
+      playoffRound: g?.playoffRound ?? null,
       seasonRound: g?.playoffRound ?? g?.seasonRound ?? null,
+      roundLabel:
+        typeof g?.roundLabel === "string" && g.roundLabel.trim()
+          ? g.roundLabel.trim()
+          : null,
       wcStage: resolveWcStageFromGame(g) ?? g?.wcStage ?? null,
       home: g?.home ?? null,
       away: g?.away ?? null,
@@ -385,13 +400,30 @@ export async function POST(req: Request) {
         throw createErr;
       }
       try {
-        await adminDb.doc(`games/${parsed.gameId}`).set(
-          {
-            predictorUids: FieldValue.arrayUnion(uid),
-            predictorCount: FieldValue.increment(1),
-          },
-          { merge: true }
-        );
+        const gameRef = adminDb.doc(`games/${parsed.gameId}`);
+        const side = parseMarketSide(prediction.winner);
+        await adminDb.runTransaction(async (tx) => {
+          const gameSnap = await tx.get(gameRef);
+          const gameData = (gameSnap.data() ?? {}) as Record<string, unknown>;
+          const patch = side
+            ? applyLiveMarketDelta(readLiveMarketCounts(gameData), side, 1)
+            : null;
+          tx.set(
+            gameRef,
+            {
+              predictorUids: FieldValue.arrayUnion(uid),
+              predictorCount: FieldValue.increment(1),
+              ...(patch
+                ? {
+                    marketPickCounts: patch.marketPickCounts,
+                    market: patch.market,
+                    marketBias: patch.marketBias,
+                  }
+                : {}),
+            },
+            { merge: true }
+          );
+        });
       } catch (predErr) {
         console.error("[POST /api/posts_v2] predictorUids", predErr);
       }

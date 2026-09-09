@@ -13,10 +13,14 @@ import cn from "clsx";
 import { nameOxanium, jp } from "@/lib/fonts";
 import {
   SQUAD_BATTLE_INTRO_STORAGE_KEY,
-  SQUAD_BATTLE_INTRO_TAGLINE,
-  SQUAD_BATTLE_SEASON_PHASES,
+  squadBattleIntroTagline,
+  squadBattleSeasonPhases,
 } from "@/lib/squads/squadBattleMock";
-import { SQUAD_BATTLE_INTRO_NOTICES } from "@/lib/squads/squadBattleUiCopy";
+import {
+  squadBattleIntroNotices,
+  squadBattleIntroOverlayCopy,
+  type SquadBattleUiLang,
+} from "@/lib/squads/squadBattleUiCopy";
 import {
   SQUAD_INTRO_BG_FADE_S,
   SQUAD_INTRO_ENTER_DELAY_S,
@@ -43,6 +47,7 @@ const EASE = [0.22, 1, 0.36, 1] as const;
 type Props = {
   open: boolean;
   onClose: () => void;
+  language?: string | null;
 };
 
 /**
@@ -78,9 +83,17 @@ export function hasSeenSquadBattleIntro(): boolean {
   }
 }
 
-export default function SquadBattleIntroOverlay({ open, onClose }: Props) {
+export default function SquadBattleIntroOverlay({
+  open,
+  onClose,
+  language,
+}: Props) {
   const [mounted, setMounted] = useState(false);
   const reduceMotion = useReducedMotion() === true;
+  const lang: SquadBattleUiLang = language === "en" ? "en" : "ja";
+  const copy = squadBattleIntroOverlayCopy(lang);
+  const phases = squadBattleSeasonPhases(lang);
+  const notices = squadBattleIntroNotices(lang);
 
   useEffect(() => {
     setMounted(true);
@@ -148,7 +161,7 @@ export default function SquadBattleIntroOverlay({ open, onClose }: Props) {
             onClick={handleDismiss}
             className="absolute right-3 top-3 z-20 flex h-10 w-10 items-center justify-center border border-amber-400/35 bg-black/40 text-amber-100/90 transition hover:border-amber-300/55 hover:bg-amber-400/10"
             style={chamferStyle}
-            aria-label="スキップ"
+            aria-label={copy.skip}
             initial={reduceMotion ? false : { opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{
@@ -244,7 +257,7 @@ export default function SquadBattleIntroOverlay({ open, onClose }: Props) {
                 ease: EASE,
               }}
             >
-              {SQUAD_BATTLE_INTRO_TAGLINE}
+              {squadBattleIntroTagline(lang)}
             </motion.p>
 
             {/* フェーズタイムライン（枠なし・レールのみ） */}
@@ -255,7 +268,7 @@ export default function SquadBattleIntroOverlay({ open, onClose }: Props) {
               />
 
               <ol className="flex flex-col gap-4">
-                {SQUAD_BATTLE_SEASON_PHASES.map((phase, i) => (
+                {phases.map((phase, i) => (
                   <motion.li
                     key={phase.key}
                     className="relative flex items-start gap-3.5 pl-0.5"
@@ -307,7 +320,7 @@ export default function SquadBattleIntroOverlay({ open, onClose }: Props) {
 
               {/* フェーズと重複しない補足のみ */}
               <ul className="mt-5 flex flex-col gap-1 border-t border-amber-400/15 pt-3">
-                {SQUAD_BATTLE_INTRO_NOTICES.map((line) => (
+                {notices.map((line) => (
                   <li
                     key={line}
                     className={cn(
@@ -349,9 +362,7 @@ export default function SquadBattleIntroOverlay({ open, onClose }: Props) {
 
           {/* 退出用の暗転は AnimatePresence 側の opacity で十分 */}
           <span className="sr-only" aria-live="polite">
-            {open
-              ? "スクワッドバトルの説明。3〜5人で平均スコアを競う。募集約1〜2週間、バトル約1ヶ月、結果確定後に上位へ Unit 配布。"
-              : ""}
+            {open ? copy.srSummary : ""}
           </span>
         </motion.div>
       ) : null}

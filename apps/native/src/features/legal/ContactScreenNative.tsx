@@ -170,7 +170,7 @@ export default function ContactScreenNative({
         description={labels.description}
       >
         <View style={styles.successBox}>
-          <MaterialCommunityIcons name="check-circle-outline" size={40} color="#67e8f9" />
+          <MaterialCommunityIcons name="check-circle-outline" size={40} color="#ffffff" />
           <Text style={styles.successTitle}>{labels.success}</Text>
           <Text style={styles.successBody}>{labels.successBody}</Text>
           <Pressable style={styles.submitBtn} onPress={() => navigation.goBack()}>
@@ -217,7 +217,7 @@ export default function ContactScreenNative({
           onChangeText={setEmail}
           keyboardType="email-address"
           autoCapitalize="none"
-          placeholderTextColor="rgba(255,255,255,0.35)"
+          placeholderTextColor="rgba(255,255,255,0.4)"
         />
 
         <Text style={styles.fieldLabel}>{labels.message}</Text>
@@ -226,11 +226,11 @@ export default function ContactScreenNative({
           value={message}
           onChangeText={setMessage}
           multiline
-          placeholderTextColor="rgba(255,255,255,0.35)"
+          placeholderTextColor="rgba(255,255,255,0.4)"
         />
 
         <Pressable style={styles.attachBtn} onPress={() => void pickImage()}>
-          <MaterialCommunityIcons name="image-outline" size={18} color="#67e8f9" />
+          <MaterialCommunityIcons name="image-outline" size={18} color="#ffffff" />
           <Text style={styles.attachLabel}>{labels.attach}</Text>
         </Pressable>
         {imageUri ? (
@@ -238,11 +238,11 @@ export default function ContactScreenNative({
         ) : null}
 
         <Pressable
-          style={[styles.submitBtn, submitting && { opacity: 0.7 }]}
+          style={[styles.submitBtn, submitting && { opacity: 0.55 }]}
           onPress={() => void handleSubmit()}
           disabled={submitting}
         >
-          <MaterialCommunityIcons name="send" size={16} color="#fff" />
+          <MaterialCommunityIcons name="send" size={16} color="#000000" />
           <Text style={styles.submitBtnText}>{submitting ? labels.submitting : labels.submit}</Text>
         </Pressable>
       </View>
@@ -256,12 +256,12 @@ export function FeatureRequestScreenNative() {
 
 const styles = StyleSheet.create({
   intro: { fontSize: 12, lineHeight: 18, color: "rgba(255,255,255,0.75)", marginBottom: 8 },
-  emailHint: { fontSize: 12, color: "#7dd3fc", fontWeight: "600", marginBottom: 16 },
+  emailHint: { fontSize: 12, color: "#ffffff", fontWeight: "600", marginBottom: 16 },
   formCard: {
-    borderRadius: 16,
+    borderRadius: 0,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.08)",
-    backgroundColor: "rgba(15,23,42,0.5)",
+    borderColor: "rgba(255,255,255,0.2)",
+    backgroundColor: "#000000",
     padding: 20,
     gap: 10,
   },
@@ -269,42 +269,46 @@ const styles = StyleSheet.create({
   chip: {
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 999,
+    borderRadius: 0,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.12)",
-    backgroundColor: "rgba(255,255,255,0.04)",
+    borderColor: "rgba(255,255,255,0.2)",
+    backgroundColor: "#000000",
   },
   chipActive: {
-    borderColor: "rgba(0,245,255,0.45)",
-    backgroundColor: "rgba(0,245,255,0.1)",
+    borderColor: "#ffffff",
+    backgroundColor: "#ffffff",
   },
-  chipLabel: { fontSize: 12, color: "rgba(255,255,255,0.65)", fontWeight: "600" },
-  chipLabelActive: { color: "#67e8f9" },
-  fieldLabel: { fontSize: 12, fontWeight: "600", color: "rgba(255,255,255,0.75)", marginTop: 4 },
+  chipLabel: { fontSize: 12, color: "rgba(255,255,255,0.7)", fontWeight: "600" },
+  chipLabelActive: { color: "#000000" },
+  fieldLabel: { fontSize: 12, fontWeight: "600", color: "rgba(255,255,255,0.7)", marginTop: 4 },
   input: {
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.12)",
-    borderRadius: 12,
+    borderColor: "rgba(255,255,255,0.2)",
+    borderRadius: 0,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    color: "#fff",
+    color: "#ffffff",
     fontSize: 14,
-    backgroundColor: "rgba(0,0,0,0.25)",
+    backgroundColor: "#000000",
   },
   textarea: { minHeight: 120, textAlignVertical: "top" },
   attachBtn: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    paddingVertical: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.2)",
+    backgroundColor: "#000000",
   },
-  attachLabel: { fontSize: 13, color: "#67e8f9", fontWeight: "600" },
+  attachLabel: { fontSize: 13, color: "rgba(255,255,255,0.7)", fontWeight: "600" },
   preview: {
     width: "100%",
     height: 120,
-    borderRadius: 10,
+    borderRadius: 0,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
+    borderColor: "rgba(255,255,255,0.2)",
   },
   submitBtn: {
     marginTop: 8,
@@ -312,14 +316,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    borderRadius: 12,
+    borderRadius: 0,
     paddingVertical: 14,
-    backgroundColor: "rgba(0,245,255,0.18)",
+    backgroundColor: "#ffffff",
     borderWidth: 1,
-    borderColor: "rgba(0,245,255,0.35)",
+    borderColor: "#ffffff",
   },
-  submitBtnText: { color: "#fff", fontWeight: "700", fontSize: 15 },
+  submitBtnText: { color: "#000000", fontWeight: "700", fontSize: 15 },
   successBox: { alignItems: "center", gap: 12, paddingVertical: 32 },
-  successTitle: { fontSize: 18, fontWeight: "700", color: "#fff" },
+  successTitle: { fontSize: 18, fontWeight: "700", color: "#ffffff" },
   successBody: { fontSize: 14, color: "rgba(255,255,255,0.75)", textAlign: "center" },
 });

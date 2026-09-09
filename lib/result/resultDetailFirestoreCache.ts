@@ -28,6 +28,17 @@ const gameDocInflight = new Map<
   Promise<{ exists: boolean; data: Record<string, unknown> | null }>
 >();
 
+/** 一覧の market/PK バッチ取得結果を詳細用キャッシュへ載せる */
+export function primeGameDocCacheForResult(
+  gameId: string,
+  data: Record<string, unknown> | null,
+  exists: boolean = data != null
+): void {
+  const safeId = gameId.trim();
+  if (!safeId) return;
+  gameDocCache.set(safeId, { at: Date.now(), exists, data });
+}
+
 export async function getCachedGameDocForResult(
   gameId: string,
   firestore: Firestore

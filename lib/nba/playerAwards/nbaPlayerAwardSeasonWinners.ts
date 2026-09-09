@@ -5,6 +5,7 @@
  * playerId はロスター／詳細と同じ BallDontLie id 必須。
  * 仮 id（666xxx / 17896xxx の手付け等）だと突合に失敗し AWARDS が欠ける。
  */
+import { NBA_ALL_STAR_SEASON_WINNERS } from "@/lib/nba/playerAwards/nbaAllStarSeasonWinners";
 import {
   NBA_PLAYER_AWARD_CATALOG,
   NBA_PLAYER_AWARD_LABEL_BY_ID,
@@ -279,7 +280,7 @@ export const NBA_BLK_CHAMP_SEASON_WINNERS: readonly NbaPlayerAwardSeasonWinner[]
 
 /**
  * All-NBA First Team（2005-06〜2025-26）。
- * 現役のみ格納（引退勢は省略）。1シーズン最大5人のうち現役分だけ行を持つ。
+ * 現役のみ格納（引退勢は省略）。同一選手が 1st/2nd/3rd に二重掲載されないこと。
  */
 export const NBA_ALL_NBA_1ST_SEASON_WINNERS: readonly NbaPlayerAwardSeasonWinner[] =
   [
@@ -322,6 +323,7 @@ export const NBA_ALL_NBA_1ST_SEASON_WINNERS: readonly NbaPlayerAwardSeasonWinner
     // 2016-17
     { seasonKey: "2016-17", playerId: "237", playerName: "LeBron James" },
     { seasonKey: "2016-17", playerId: "274", playerName: "Kawhi Leonard" },
+    { seasonKey: "2016-17", playerId: "117", playerName: "Anthony Davis" },
     { seasonKey: "2016-17", playerId: "192", playerName: "James Harden" },
     { seasonKey: "2016-17", playerId: "472", playerName: "Russell Westbrook" },
     // 2017-18
@@ -357,12 +359,12 @@ export const NBA_ALL_NBA_1ST_SEASON_WINNERS: readonly NbaPlayerAwardSeasonWinner
     // 2022-23
     { seasonKey: "2022-23", playerId: "15", playerName: "Giannis Antetokounmpo" },
     { seasonKey: "2022-23", playerId: "434", playerName: "Jayson Tatum" },
-    { seasonKey: "2022-23", playerId: "246", playerName: "Nikola Jokic" },
+    { seasonKey: "2022-23", playerId: "145", playerName: "Joel Embiid" },
     { seasonKey: "2022-23", playerId: "132", playerName: "Luka Doncic" },
     { seasonKey: "2022-23", playerId: "175", playerName: "Shai Gilgeous-Alexander" },
     // 2023-24
+    { seasonKey: "2023-24", playerId: "15", playerName: "Giannis Antetokounmpo" },
     { seasonKey: "2023-24", playerId: "434", playerName: "Jayson Tatum" },
-    { seasonKey: "2023-24", playerId: "70", playerName: "Jaylen Brown" },
     { seasonKey: "2023-24", playerId: "246", playerName: "Nikola Jokic" },
     { seasonKey: "2023-24", playerId: "132", playerName: "Luka Doncic" },
     { seasonKey: "2023-24", playerId: "175", playerName: "Shai Gilgeous-Alexander" },
@@ -382,7 +384,7 @@ export const NBA_ALL_NBA_1ST_SEASON_WINNERS: readonly NbaPlayerAwardSeasonWinner
 
 /**
  * All-NBA Second Team（2004-05〜2025-26）。
- * 現役のみ格納。
+ * 現役のみ。1st と重複させない。
  */
 export const NBA_ALL_NBA_2ND_SEASON_WINNERS: readonly NbaPlayerAwardSeasonWinner[] =
   [
@@ -390,70 +392,66 @@ export const NBA_ALL_NBA_2ND_SEASON_WINNERS: readonly NbaPlayerAwardSeasonWinner
     { seasonKey: "2004-05", playerId: "237", playerName: "LeBron James" },
     // 2006-07
     { seasonKey: "2006-07", playerId: "237", playerName: "LeBron James" },
-    // 2009-10
-    { seasonKey: "2009-10", playerId: "140", playerName: "Kevin Durant" },
     // 2011-12
-    { seasonKey: "2011-12", playerId: "140", playerName: "Kevin Durant" },
     { seasonKey: "2011-12", playerId: "472", playerName: "Russell Westbrook" },
     // 2012-13
-    { seasonKey: "2012-13", playerId: "140", playerName: "Kevin Durant" },
     { seasonKey: "2012-13", playerId: "472", playerName: "Russell Westbrook" },
     // 2013-14
     { seasonKey: "2013-14", playerId: "115", playerName: "Stephen Curry" },
-    { seasonKey: "2013-14", playerId: "278", playerName: "Damian Lillard" },
     // 2014-15
     { seasonKey: "2014-15", playerId: "472", playerName: "Russell Westbrook" },
     { seasonKey: "2014-15", playerId: "228", playerName: "Kyrie Irving" },
     // 2015-16
     { seasonKey: "2015-16", playerId: "140", playerName: "Kevin Durant" },
-    { seasonKey: "2015-16", playerId: "274", playerName: "Kawhi Leonard" },
+    { seasonKey: "2015-16", playerId: "185", playerName: "Draymond Green" },
+    { seasonKey: "2015-16", playerId: "367", playerName: "Chris Paul" },
     { seasonKey: "2015-16", playerId: "278", playerName: "Damian Lillard" },
     // 2016-17
     { seasonKey: "2016-17", playerId: "15", playerName: "Giannis Antetokounmpo" },
     { seasonKey: "2016-17", playerId: "140", playerName: "Kevin Durant" },
     { seasonKey: "2016-17", playerId: "176", playerName: "Rudy Gobert" },
     { seasonKey: "2016-17", playerId: "115", playerName: "Stephen Curry" },
-    { seasonKey: "2016-17", playerId: "125", playerName: "DeMar DeRozan" },
     // 2017-18
     { seasonKey: "2017-18", playerId: "15", playerName: "Giannis Antetokounmpo" },
     { seasonKey: "2017-18", playerId: "145", playerName: "Joel Embiid" },
     { seasonKey: "2017-18", playerId: "125", playerName: "DeMar DeRozan" },
+    { seasonKey: "2017-18", playerId: "472", playerName: "Russell Westbrook" },
     // 2018-19
-    { seasonKey: "2018-19", playerId: "115", playerName: "Stephen Curry" },
+    { seasonKey: "2018-19", playerId: "140", playerName: "Kevin Durant" },
     { seasonKey: "2018-19", playerId: "145", playerName: "Joel Embiid" },
     { seasonKey: "2018-19", playerId: "228", playerName: "Kyrie Irving" },
     { seasonKey: "2018-19", playerId: "278", playerName: "Damian Lillard" },
     { seasonKey: "2018-19", playerId: "274", playerName: "Kawhi Leonard" },
     // 2019-20
     { seasonKey: "2019-20", playerId: "274", playerName: "Kawhi Leonard" },
-    { seasonKey: "2019-20", playerId: "15", playerName: "Giannis Antetokounmpo" },
-    { seasonKey: "2019-20", playerId: "145", playerName: "Joel Embiid" },
-    { seasonKey: "2019-20", playerId: "278", playerName: "Damian Lillard" },
     { seasonKey: "2019-20", playerId: "246", playerName: "Nikola Jokic" },
+    { seasonKey: "2019-20", playerId: "278", playerName: "Damian Lillard" },
+    { seasonKey: "2019-20", playerId: "367", playerName: "Chris Paul" },
+    { seasonKey: "2019-20", playerId: "416", playerName: "Pascal Siakam" },
     // 2020-21
     { seasonKey: "2020-21", playerId: "145", playerName: "Joel Embiid" },
     { seasonKey: "2020-21", playerId: "387", playerName: "Julius Randle" },
     { seasonKey: "2020-21", playerId: "278", playerName: "Damian Lillard" },
-    { seasonKey: "2020-21", playerId: "132", playerName: "Luka Doncic" },
-    { seasonKey: "2020-21", playerId: "115", playerName: "Stephen Curry" },
+    { seasonKey: "2020-21", playerId: "237", playerName: "LeBron James" },
+    { seasonKey: "2020-21", playerId: "367", playerName: "Chris Paul" },
     // 2021-22
     { seasonKey: "2021-22", playerId: "145", playerName: "Joel Embiid" },
     { seasonKey: "2021-22", playerId: "666786", playerName: "Ja Morant" },
-    { seasonKey: "2021-22", playerId: "57", playerName: "Devin Booker" },
     { seasonKey: "2021-22", playerId: "125", playerName: "DeMar DeRozan" },
     { seasonKey: "2021-22", playerId: "115", playerName: "Stephen Curry" },
+    { seasonKey: "2021-22", playerId: "140", playerName: "Kevin Durant" },
     // 2022-23
-    { seasonKey: "2022-23", playerId: "434", playerName: "Jayson Tatum" },
     { seasonKey: "2022-23", playerId: "79", playerName: "Jimmy Butler" },
-    { seasonKey: "2022-23", playerId: "145", playerName: "Joel Embiid" },
     { seasonKey: "2022-23", playerId: "70", playerName: "Jaylen Brown" },
+    { seasonKey: "2022-23", playerId: "246", playerName: "Nikola Jokic" },
     { seasonKey: "2022-23", playerId: "322", playerName: "Donovan Mitchell" },
+    { seasonKey: "2022-23", playerId: "115", playerName: "Stephen Curry" },
     // 2023-24
-    { seasonKey: "2023-24", playerId: "15", playerName: "Giannis Antetokounmpo" },
-    { seasonKey: "2023-24", playerId: "3547238", playerName: "Anthony Edwards" },
+    { seasonKey: "2023-24", playerId: "73", playerName: "Jalen Brunson" },
+    { seasonKey: "2023-24", playerId: "117", playerName: "Anthony Davis" },
     { seasonKey: "2023-24", playerId: "140", playerName: "Kevin Durant" },
+    { seasonKey: "2023-24", playerId: "3547238", playerName: "Anthony Edwards" },
     { seasonKey: "2023-24", playerId: "274", playerName: "Kawhi Leonard" },
-    { seasonKey: "2023-24", playerId: "175", playerName: "Shai Gilgeous-Alexander" },
     // 2024-25
     { seasonKey: "2024-25", playerId: "73", playerName: "Jalen Brunson" },
     { seasonKey: "2024-25", playerId: "115", playerName: "Stephen Curry" },
@@ -469,12 +467,12 @@ export const NBA_ALL_NBA_2ND_SEASON_WINNERS: readonly NbaPlayerAwardSeasonWinner
   ] as const;
 
 /**
- * All-NBA Third Team（2012-13〜2025-26）。
- * 現役のみ格納。
+ * All-NBA Third Team（2010-11〜2025-26）。
+ * 現役のみ。1st/2nd と重複させない。
  */
 export const NBA_ALL_NBA_3RD_SEASON_WINNERS: readonly NbaPlayerAwardSeasonWinner[] =
   [
-    // 2010-11（Horford 現役）
+    // 2010-11
     { seasonKey: "2010-11", playerId: "219", playerName: "Al Horford" },
     // 2012-13
     { seasonKey: "2012-13", playerId: "278", playerName: "Damian Lillard" },
@@ -483,34 +481,30 @@ export const NBA_ALL_NBA_3RD_SEASON_WINNERS: readonly NbaPlayerAwardSeasonWinner
     { seasonKey: "2013-14", playerId: "172", playerName: "Paul George" },
     { seasonKey: "2013-14", playerId: "278", playerName: "Damian Lillard" },
     // 2014-15
-    { seasonKey: "2014-15", playerId: "472", playerName: "Russell Westbrook" },
     { seasonKey: "2014-15", playerId: "443", playerName: "Klay Thompson" },
     // 2015-16
-    { seasonKey: "2015-16", playerId: "185", playerName: "Draymond Green" },
-    { seasonKey: "2015-16", playerId: "125", playerName: "DeMar DeRozan" },
+    { seasonKey: "2015-16", playerId: "172", playerName: "Paul George" },
     { seasonKey: "2015-16", playerId: "443", playerName: "Klay Thompson" },
-    { seasonKey: "2015-16", playerId: "228", playerName: "Kyrie Irving" },
     // 2016-17
-    { seasonKey: "2016-17", playerId: "176", playerName: "Rudy Gobert" },
+    { seasonKey: "2016-17", playerId: "185", playerName: "Draymond Green" },
+    { seasonKey: "2016-17", playerId: "79", playerName: "Jimmy Butler" },
     { seasonKey: "2016-17", playerId: "125", playerName: "DeMar DeRozan" },
-    { seasonKey: "2016-17", playerId: "278", playerName: "Damian Lillard" },
-    { seasonKey: "2016-17", playerId: "228", playerName: "Kyrie Irving" },
     // 2017-18
     { seasonKey: "2017-18", playerId: "79", playerName: "Jimmy Butler" },
     { seasonKey: "2017-18", playerId: "172", playerName: "Paul George" },
     { seasonKey: "2017-18", playerId: "447", playerName: "Karl-Anthony Towns" },
+    { seasonKey: "2017-18", playerId: "115", playerName: "Stephen Curry" },
     // 2018-19
-    { seasonKey: "2018-19", playerId: "246", playerName: "Nikola Jokic" },
-    { seasonKey: "2018-19", playerId: "115", playerName: "Stephen Curry" },
-    { seasonKey: "2018-19", playerId: "145", playerName: "Joel Embiid" },
+    { seasonKey: "2018-19", playerId: "237", playerName: "LeBron James" },
+    { seasonKey: "2018-19", playerId: "176", playerName: "Rudy Gobert" },
     { seasonKey: "2018-19", playerId: "472", playerName: "Russell Westbrook" },
     // 2019-20
     { seasonKey: "2019-20", playerId: "434", playerName: "Jayson Tatum" },
+    { seasonKey: "2019-20", playerId: "79", playerName: "Jimmy Butler" },
     { seasonKey: "2019-20", playerId: "176", playerName: "Rudy Gobert" },
-    { seasonKey: "2019-20", playerId: "367", playerName: "Chris Paul" },
     { seasonKey: "2019-20", playerId: "472", playerName: "Russell Westbrook" },
     // 2020-21
-    { seasonKey: "2020-21", playerId: "387", playerName: "Julius Randle" },
+    { seasonKey: "2020-21", playerId: "37", playerName: "Bradley Beal" },
     { seasonKey: "2020-21", playerId: "172", playerName: "Paul George" },
     { seasonKey: "2020-21", playerId: "176", playerName: "Rudy Gobert" },
     { seasonKey: "2020-21", playerId: "79", playerName: "Jimmy Butler" },
@@ -522,15 +516,15 @@ export const NBA_ALL_NBA_3RD_SEASON_WINNERS: readonly NbaPlayerAwardSeasonWinner
     { seasonKey: "2021-22", playerId: "490", playerName: "Trae Young" },
     { seasonKey: "2021-22", playerId: "367", playerName: "Chris Paul" },
     // 2022-23
-    { seasonKey: "2022-23", playerId: "70", playerName: "Jaylen Brown" },
     { seasonKey: "2022-23", playerId: "387", playerName: "Julius Randle" },
+    { seasonKey: "2022-23", playerId: "237", playerName: "LeBron James" },
     { seasonKey: "2022-23", playerId: "406", playerName: "Domantas Sabonis" },
     { seasonKey: "2022-23", playerId: "161", playerName: "De'Aaron Fox" },
-    { seasonKey: "2022-23", playerId: "666786", playerName: "Ja Morant" },
+    { seasonKey: "2022-23", playerId: "278", playerName: "Damian Lillard" },
     // 2023-24
-    { seasonKey: "2023-24", playerId: "73", playerName: "Jalen Brunson" },
-    { seasonKey: "2023-24", playerId: "3547238", playerName: "Anthony Edwards" },
-    { seasonKey: "2023-24", playerId: "274", playerName: "Kawhi Leonard" },
+    { seasonKey: "2023-24", playerId: "57", playerName: "Devin Booker" },
+    { seasonKey: "2023-24", playerId: "115", playerName: "Stephen Curry" },
+    { seasonKey: "2023-24", playerId: "3547245", playerName: "Tyrese Haliburton" },
     { seasonKey: "2023-24", playerId: "237", playerName: "LeBron James" },
     { seasonKey: "2023-24", playerId: "406", playerName: "Domantas Sabonis" },
     // 2024-25
@@ -582,14 +576,13 @@ export const NBA_ALL_DEF_1ST_SEASON_WINNERS: readonly NbaPlayerAwardSeasonWinner
     { seasonKey: "2016-17", playerId: "367", playerName: "Chris Paul" },
     // 2017-18
     { seasonKey: "2017-18", playerId: "117", playerName: "Anthony Davis" },
-    { seasonKey: "2017-18", playerId: "219", playerName: "Al Horford" },
+    { seasonKey: "2017-18", playerId: "176", playerName: "Rudy Gobert" },
     { seasonKey: "2017-18", playerId: "214", playerName: "Jrue Holiday" },
     // 2018-19
     { seasonKey: "2018-19", playerId: "15", playerName: "Giannis Antetokounmpo" },
     { seasonKey: "2018-19", playerId: "172", playerName: "Paul George" },
     { seasonKey: "2018-19", playerId: "176", playerName: "Rudy Gobert" },
     { seasonKey: "2018-19", playerId: "420", playerName: "Marcus Smart" },
-    { seasonKey: "2018-19", playerId: "214", playerName: "Jrue Holiday" },
     // 2019-20
     { seasonKey: "2019-20", playerId: "15", playerName: "Giannis Antetokounmpo" },
     { seasonKey: "2019-20", playerId: "117", playerName: "Anthony Davis" },
@@ -598,16 +591,16 @@ export const NBA_ALL_DEF_1ST_SEASON_WINNERS: readonly NbaPlayerAwardSeasonWinner
     { seasonKey: "2020-21", playerId: "15", playerName: "Giannis Antetokounmpo" },
     { seasonKey: "2020-21", playerId: "176", playerName: "Rudy Gobert" },
     { seasonKey: "2020-21", playerId: "214", playerName: "Jrue Holiday" },
-    { seasonKey: "2020-21", playerId: "79", playerName: "Jimmy Butler" },
+    { seasonKey: "2020-21", playerId: "185", playerName: "Draymond Green" },
     // 2021-22
     { seasonKey: "2021-22", playerId: "15", playerName: "Giannis Antetokounmpo" },
-    { seasonKey: "2021-22", playerId: "231", playerName: "Jaren Jackson Jr." },
+    { seasonKey: "2021-22", playerId: "176", playerName: "Rudy Gobert" },
     { seasonKey: "2021-22", playerId: "420", playerName: "Marcus Smart" },
     { seasonKey: "2021-22", playerId: "61", playerName: "Mikal Bridges" },
-    { seasonKey: "2021-22", playerId: "214", playerName: "Jrue Holiday" },
-    // 2022-23
+    { seasonKey: "2021-22", playerId: "231", playerName: "Jaren Jackson Jr." },
+    // 2022-23（Giannis はこの年 All-Def なし）
     { seasonKey: "2022-23", playerId: "231", playerName: "Jaren Jackson Jr." },
-    { seasonKey: "2022-23", playerId: "15", playerName: "Giannis Antetokounmpo" },
+    { seasonKey: "2022-23", playerId: "17896076", playerName: "Evan Mobley" },
     { seasonKey: "2022-23", playerId: "283", playerName: "Brook Lopez" },
     { seasonKey: "2022-23", playerId: "214", playerName: "Jrue Holiday" },
     { seasonKey: "2022-23", playerId: "89", playerName: "Alex Caruso" },
@@ -616,13 +609,13 @@ export const NBA_ALL_DEF_1ST_SEASON_WINNERS: readonly NbaPlayerAwardSeasonWinner
     { seasonKey: "2023-24", playerId: "56677822", playerName: "Victor Wembanyama" },
     { seasonKey: "2023-24", playerId: "4", playerName: "Bam Adebayo" },
     { seasonKey: "2023-24", playerId: "17896024", playerName: "Herbert Jones" },
-    { seasonKey: "2023-24", playerId: "214", playerName: "Jrue Holiday" },
+    { seasonKey: "2023-24", playerId: "117", playerName: "Anthony Davis" },
     // 2024-25
     { seasonKey: "2024-25", playerId: "17896076", playerName: "Evan Mobley" },
     { seasonKey: "2024-25", playerId: "185", playerName: "Draymond Green" },
     { seasonKey: "2024-25", playerId: "38017677", playerName: "Dyson Daniels" },
-    { seasonKey: "2024-25", playerId: "38017703", playerName: "Jalen Williams" },
-    { seasonKey: "2024-25", playerId: "89", playerName: "Alex Caruso" },
+    { seasonKey: "2024-25", playerId: "56677825", playerName: "Amen Thompson" },
+    // Luguentz Dort も 1st（BDL id 未確定のため省略可）
     // 2025-26
     { seasonKey: "2025-26", playerId: "56677822", playerName: "Victor Wembanyama" },
     { seasonKey: "2025-26", playerId: "38017685", playerName: "Chet Holmgren" },
@@ -644,16 +637,14 @@ export const NBA_ALL_DEF_2ND_SEASON_WINNERS: readonly NbaPlayerAwardSeasonWinner
     // 2013-14
     { seasonKey: "2013-14", playerId: "237", playerName: "LeBron James" },
     // 2014-15
-    { seasonKey: "2014-15", playerId: "185", playerName: "Draymond Green" },
     { seasonKey: "2014-15", playerId: "117", playerName: "Anthony Davis" },
     { seasonKey: "2014-15", playerId: "367", playerName: "Chris Paul" },
     // 2015-16
-    { seasonKey: "2015-16", playerId: "185", playerName: "Draymond Green" },
     { seasonKey: "2015-16", playerId: "172", playerName: "Paul George" },
     { seasonKey: "2015-16", playerId: "79", playerName: "Jimmy Butler" },
     // 2016-17
+    { seasonKey: "2016-17", playerId: "15", playerName: "Giannis Antetokounmpo" },
     { seasonKey: "2016-17", playerId: "117", playerName: "Anthony Davis" },
-    { seasonKey: "2016-17", playerId: "176", playerName: "Rudy Gobert" },
     // 2017-18
     { seasonKey: "2017-18", playerId: "79", playerName: "Jimmy Butler" },
     { seasonKey: "2017-18", playerId: "185", playerName: "Draymond Green" },
@@ -662,40 +653,42 @@ export const NBA_ALL_DEF_2ND_SEASON_WINNERS: readonly NbaPlayerAwardSeasonWinner
     // 2018-19
     { seasonKey: "2018-19", playerId: "145", playerName: "Joel Embiid" },
     { seasonKey: "2018-19", playerId: "185", playerName: "Draymond Green" },
-    { seasonKey: "2018-19", playerId: "452", playerName: "Myles Turner" },
+    { seasonKey: "2018-19", playerId: "214", playerName: "Jrue Holiday" },
+    { seasonKey: "2018-19", playerId: "274", playerName: "Kawhi Leonard" },
     { seasonKey: "2018-19", playerId: "443", playerName: "Klay Thompson" },
     // 2019-20
-    { seasonKey: "2019-20", playerId: "117", playerName: "Anthony Davis" },
     { seasonKey: "2019-20", playerId: "283", playerName: "Brook Lopez" },
+    { seasonKey: "2019-20", playerId: "274", playerName: "Kawhi Leonard" },
+    { seasonKey: "2019-20", playerId: "4", playerName: "Bam Adebayo" },
     // 2020-21
     { seasonKey: "2020-21", playerId: "4", playerName: "Bam Adebayo" },
-    { seasonKey: "2020-21", playerId: "214", playerName: "Jrue Holiday" },
+    { seasonKey: "2020-21", playerId: "79", playerName: "Jimmy Butler" },
+    { seasonKey: "2020-21", playerId: "145", playerName: "Joel Embiid" },
     { seasonKey: "2020-21", playerId: "666923", playerName: "Matisse Thybulle" },
-    { seasonKey: "2020-21", playerId: "476", playerName: "Robert Williams III" },
-    { seasonKey: "2020-21", playerId: "185", playerName: "Draymond Green" },
+    { seasonKey: "2020-21", playerId: "274", playerName: "Kawhi Leonard" },
     // 2021-22
     { seasonKey: "2021-22", playerId: "4", playerName: "Bam Adebayo" },
     { seasonKey: "2021-22", playerId: "185", playerName: "Draymond Green" },
-    { seasonKey: "2021-22", playerId: "61", playerName: "Mikal Bridges" },
-    { seasonKey: "2021-22", playerId: "420", playerName: "Marcus Smart" },
+    { seasonKey: "2021-22", playerId: "214", playerName: "Jrue Holiday" },
+    { seasonKey: "2021-22", playerId: "666923", playerName: "Matisse Thybulle" },
+    { seasonKey: "2021-22", playerId: "476", playerName: "Robert Williams III" },
     // 2022-23
-    { seasonKey: "2022-23", playerId: "231", playerName: "Jaren Jackson Jr." },
-    { seasonKey: "2022-23", playerId: "89", playerName: "Alex Caruso" },
+    { seasonKey: "2022-23", playerId: "4", playerName: "Bam Adebayo" },
     { seasonKey: "2022-23", playerId: "18", playerName: "OG Anunoby" },
     { seasonKey: "2022-23", playerId: "66", playerName: "Dillon Brooks" },
     { seasonKey: "2022-23", playerId: "185", playerName: "Draymond Green" },
-    // 2023-24（提供リストどおり）
-    { seasonKey: "2023-24", playerId: "4", playerName: "Bam Adebayo" },
+    { seasonKey: "2022-23", playerId: "473", playerName: "Derrick White" },
+    // 2023-24
+    { seasonKey: "2023-24", playerId: "89", playerName: "Alex Caruso" },
     { seasonKey: "2023-24", playerId: "214", playerName: "Jrue Holiday" },
-    { seasonKey: "2023-24", playerId: "666923", playerName: "Matisse Thybulle" },
-    { seasonKey: "2023-24", playerId: "476", playerName: "Robert Williams III" },
-    { seasonKey: "2023-24", playerId: "185", playerName: "Draymond Green" },
+    { seasonKey: "2023-24", playerId: "3547259", playerName: "Jaden McDaniels" },
+    { seasonKey: "2023-24", playerId: "17896073", playerName: "Jalen Suggs" },
+    { seasonKey: "2023-24", playerId: "473", playerName: "Derrick White" },
     // 2024-25
     { seasonKey: "2024-25", playerId: "176", playerName: "Rudy Gobert" },
-    { seasonKey: "2024-25", playerId: "38017677", playerName: "Dyson Daniels" },
-    { seasonKey: "2024-25", playerId: "18", playerName: "OG Anunoby" },
-    { seasonKey: "2024-25", playerId: "17896055", playerName: "Scottie Barnes" },
-    { seasonKey: "2024-25", playerId: "4", playerName: "Bam Adebayo" },
+    { seasonKey: "2024-25", playerId: "231", playerName: "Jaren Jackson Jr." },
+    { seasonKey: "2024-25", playerId: "38017703", playerName: "Jalen Williams" },
+    { seasonKey: "2024-25", playerId: "493", playerName: "Ivica Zubac" },
     // 2025-26
     { seasonKey: "2025-26", playerId: "4", playerName: "Bam Adebayo" },
     { seasonKey: "2025-26", playerId: "18", playerName: "OG Anunoby" },
@@ -883,6 +876,7 @@ const SEASON_WINNERS_BY_AWARD: Partial<
   reb_champ: NBA_REB_CHAMP_SEASON_WINNERS,
   stl_champ: NBA_STL_CHAMP_SEASON_WINNERS,
   blk_champ: NBA_BLK_CHAMP_SEASON_WINNERS,
+  all_star: NBA_ALL_STAR_SEASON_WINNERS,
   all_nba_1st: NBA_ALL_NBA_1ST_SEASON_WINNERS,
   all_nba_2nd: NBA_ALL_NBA_2ND_SEASON_WINNERS,
   all_nba_3rd: NBA_ALL_NBA_3RD_SEASON_WINNERS,

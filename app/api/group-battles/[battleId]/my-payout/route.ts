@@ -14,7 +14,14 @@ export async function GET(req: Request, ctx: Ctx) {
     const uid = await requireUidFromRequest(req);
     const { battleId } = await ctx.params;
     if (!battleId) return jsonErr("not_found", 404);
-    const payout = await loadMyGroupBattlePayout(adminDb, battleId, uid);
+    const lang =
+      new URL(req.url).searchParams.get("lang") === "en" ? "en" : "ja";
+    const payout = await loadMyGroupBattlePayout(
+      adminDb,
+      battleId,
+      uid,
+      lang
+    );
     return jsonOk({ payout });
   } catch (e) {
     return mapAuthError(e);

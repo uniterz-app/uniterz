@@ -29,6 +29,12 @@ export type NbaPlayerCareerSeasonsIngestInput = {
   seasonKey?: string;
   playerIds?: string[];
   maxPlayers?: number;
+  /**
+   * キャリア年数の下限（draftYear 基準: currentYear - draftYear + 1）。
+   * 例: 15 → ドラフトから 15 シーズン以上の選手だけ再 ingest。
+   * draftYear 不明の選手はスキップ（playerIds 指定時は不明でも対象）。
+   */
+  minCareerYears?: number;
 };
 
 export type NbaPlayerCareerSeasonsIngestResult = {
@@ -109,15 +115,36 @@ export async function ingestNbaPlayerCareerSeasonsFromBdl(
   const filterIds = (input.playerIds ?? [])
     .map((id) => String(id).trim())
     .filter(Boolean);
-  if (filterIds.length > 0) {
+  const explicitIds = filterIds.length > 0;
+  if (explicitIds) {
     const want = new Set(filterIds);
     targets = targets.filter((t) => want.has(t.playerId));
     for (const id of filterIds) {
       if (!targets.some((t) => t.playerId === id)) {
-        targets.push({ playerId: id, teamId: "", position: "—" });
+        targets.push({
+          playerId: id,
+          teamId: "",
+          position: "—",
+          draftYear: null,
+        });
       }
     }
   }
+
+  const minCareerYears =
+    typeof input.minCareerYears === "number" &&
+    Number.isFinite(input.minCareerYears) &&
+    input.minCareerYears > 0
+      ? Math.trunc(input.minCareerYears)
+      : null;
+  if (minCareerYears != null && !explicitIds) {
+    targets = targets.filter((t) => {
+      if (t.draftYear == null) return false;
+      const years = currentYear - t.draftYear + 1;
+      return years >= minCareerYears;
+    });
+  }
+
   if (
     typeof input.maxPlayers === "number" &&
     Number.isFinite(input.maxPlayers) &&
@@ -148,9 +175,11 @@ export async function ingestNbaPlayerCareerSeasonsFromBdl(
           return;
         }
         const info = await fetchBdlPlayerBasicInfo(bdlId);
+        /** 長いキャリア（例: レブロン 2003-）も省略しない。draftYear が無いときだけ長めに遡る */
+        const draftOrFallback = info?.draftYear ?? currentYear - 30;
         const startYear = Math.max(
-          2010,
-          Math.min(currentYear, info?.draftYear ?? currentYear - 12)
+          1946,
+          Math.min(currentYear, draftOrFallback)
         );
         const years: number[] = [];
         for (let y = startYear; y <= currentYear; y += 1) years.push(y);

@@ -18,6 +18,10 @@ import {
   AWARDS_PREVIEW_POPULAR,
 } from "@/lib/predict/nbaSeasonAwardsPreviewMocks";
 import { nameOxanium } from "@/lib/fonts";
+import {
+  seasonPredictAwardsPredictHint,
+  type SeasonPredictUiLang,
+} from "@/lib/predict/seasonPredictUiCopy";
 
 type Props = {
   value: NbaSeasonAwardsPrediction;
@@ -25,6 +29,7 @@ type Props = {
   onSubmit?: () => void;
   submitDisabled?: boolean;
   className?: string;
+  language?: SeasonPredictUiLang;
 };
 
 function findInCatalog(
@@ -42,6 +47,7 @@ function AwardPickRow({
   kind,
   selectedId,
   onSelect,
+  language,
 }: {
   awardId: NbaAwardId;
   labelEn: string;
@@ -49,6 +55,7 @@ function AwardPickRow({
   kind: "player" | "coach";
   selectedId: string | null | undefined;
   onSelect: (id: string | null) => void;
+  language: SeasonPredictUiLang;
 }) {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
@@ -74,7 +81,9 @@ function AwardPickRow({
         >
           {labelEn}
         </span>
-        <span className="text-[11px] text-white/40">{labelJa}</span>
+        {language !== "en" ? (
+          <span className="text-[11px] text-white/40">{labelJa}</span>
+        ) : null}
       </div>
 
       {selected ? (
@@ -193,6 +202,7 @@ export default function NbaSeasonAwardsPredictPanel({
   onSubmit,
   submitDisabled,
   className,
+  language = "ja",
 }: Props) {
   const pathname = usePathname() ?? "";
   const isNarrow =
@@ -220,7 +230,7 @@ export default function NbaSeasonAwardsPredictPanel({
           Season awards · {value.season}
         </h2>
         <p className="text-[11px] leading-relaxed text-white/45 md:max-w-3xl md:text-sm">
-          フォーカス直後は他ユーザー人気ピック約 5 人。入力すると名前の前方一致で候補が出ます。採点・Unit・提出期限は右上のはてなを参照。
+          {seasonPredictAwardsPredictHint(language)}
         </p>
       </header>
 
@@ -239,6 +249,7 @@ export default function NbaSeasonAwardsPredictPanel({
             labelJa={def.labelJa}
             kind={def.kind}
             selectedId={value.picks[def.id]}
+            language={language}
             onSelect={(id) => {
               onChange?.({
                 ...value,

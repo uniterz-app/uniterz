@@ -19,6 +19,7 @@ import {
 } from "@/lib/rankings/server/readNbaPeriodRankingSnapshots";
 import { assertProUser } from "@/lib/rankings/server/fetchRankGapAnalysis";
 import { getAdminAuth } from "@/lib/firebaseAdmin";
+import { mergeUserPlansIntoBulkByMetric } from "@/lib/rankings/mergeUserPlanIntoRankingPayload";
 
 async function optionalUid(req: Request): Promise<string | null> {
   const authz =
@@ -144,6 +145,9 @@ export async function GET(req: Request) {
           myRankDeltaPlaces: payload.myRankDeltaPlaces,
         };
       }
+      await mergeUserPlansIntoBulkByMetric(
+        byMetric as Record<string, { rows?: unknown[]; myRow?: unknown | null }>
+      );
       return NextResponse.json(
         {
           ok: true,
@@ -200,8 +204,21 @@ export async function GET(req: Request) {
       );
     }
 
+    const body =
+      typeof structuredClone === "function"
+        ? structuredClone(payload)
+        : (JSON.parse(JSON.stringify(payload)) as typeof payload);
+    if (body.byMetric && typeof body.byMetric === "object") {
+      await mergeUserPlansIntoBulkByMetric(
+        body.byMetric as Record<
+          string,
+          { rows?: unknown[]; myRow?: unknown | null }
+        >
+      );
+    }
+
     return NextResponse.json(
-      { ...payload, label, division, availableLabels },
+      { ...body, label, division, availableLabels },
       { headers: { "Cache-Control": cacheControl } }
     );
   } catch (e: unknown) {

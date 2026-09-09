@@ -54,6 +54,11 @@ export const PROFILE_OVERVIEW_LINE_FRAME_PAINT = {
   glow: "rgba(255,255,255,0.2)",
 } as const;
 
+/** 判定前のリザルト（予想済み・未確定）— 試合一覧の予想済みと同じミュート青 */
+export function resultPendingLineFramePaint(): { color: string; glow: string } {
+  return matchLineFramePaint({ pickup: false, predicted: true });
+}
+
 /** リザルト outcome の線枠色（HIT / PERFECT / UPSET / MISS） */
 export function resultOutcomeLineFramePaint(
   badge: "hit" | "perfect" | "upset" | "miss" | "streak" | null | undefined

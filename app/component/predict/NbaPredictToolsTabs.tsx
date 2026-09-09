@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import CandleChartLoader from "@/app/component/common/CandleChartLoader";
 import PredictProBriefPanel from "@/app/component/predict/PredictProBriefPanel";
 import NbaInjuryReportPanel from "@/app/component/predict/NbaInjuryReportPanel";
 import NbaTeamStatsPanel from "@/app/component/predict/NbaTeamStatsPanel";
@@ -51,6 +52,14 @@ function PendingPanel({ text }: { text: string }) {
   );
 }
 
+function LoadingPanel({ label }: { label: string }) {
+  return (
+    <div className="flex min-h-[120px] items-center justify-center py-6" role="status">
+      <CandleChartLoader className="scale-75" label={label} />
+    </div>
+  );
+}
+
 /**
  * NBA 予想フォームの情報タブ（本番）。
  * Insight (Pro) / Injury / Team Stats / Roster を常時タブで表示。
@@ -72,10 +81,18 @@ export default function NbaPredictToolsTabs({
   className = "",
 }: Props) {
   const m = t(language).predict;
+  const loadingLabel = t(language).common.loading;
   const searchParams = useSearchParams();
   const [tab, setTab] = useState<NbaPredictToolsTab | null>("injuries");
   const router = useRouter();
 
+  /**
+   * Injury / Stats / Roster はオーバーレイ表示と同時に取りに行く。
+   * タブ切替の一瞬だけ「データ準備中」と出さない（キャッシュがあれば即表示）。
+   */
+  const [visited, setVisited] = useState<Set<NbaPredictToolsTab>>(
+    () => new Set<NbaPredictToolsTab>(["injuries", "stats", "roster"])
+  );
   useEffect(() => {
     const pt = searchParams.get("predictTools");
     if (
@@ -89,15 +106,8 @@ export default function NbaPredictToolsTabs({
   }, [searchParams]);
   const selectTab = (next: NbaPredictToolsTab) => {
     setTab((cur) => (cur === next ? null : next));
+    setVisited((cur) => (cur.has(next) ? cur : new Set(cur).add(next)));
   };
-
-  /**
-   * 一度開いたタブのデータは保持する（タブを閉じても再取得しない）。
-   * 初期表示は injuries なので、STATS / ROSTER は開くまで取りに行かない。
-   */
-  const [visited, setVisited] = useState<Set<NbaPredictToolsTab>>(
-    () => new Set(tab ? [tab] : [])
-  );
   useEffect(() => {
     if (!tab) return;
     setVisited((cur) => (cur.has(tab) ? cur : new Set(cur).add(tab)));
@@ -186,11 +196,7 @@ export default function NbaPredictToolsTabs({
       {tab ? (
         <div className="mt-1.5 min-h-30 px-0.5">
           {tab === "insight" ? (
-            briefLoading ? (
-              <PendingPanel text={m.panelDataPending} />
-            ) : isPro && !resolvedBrief ? (
-              <PendingPanel text={m.panelDataPending} />
-            ) : (
+            resolvedBrief || !isPro ? (
               <PredictProBriefPanel
                 brief={resolvedBrief}
                 language={language}
@@ -201,24 +207,26 @@ export default function NbaPredictToolsTabs({
                 locked={!isPro}
                 onPressUpgrade={openProSubscribe}
               />
+            ) : briefLoading ? (
+              <LoadingPanel label={loadingLabel} />
+            ) : (
+              <PendingPanel text={m.panelDataPending} />
             )
           ) : tab === "injuries" ? (
-            injuryLoading ? (
-              <PendingPanel text={m.panelDataPending} />
-            ) : resolvedInjury ? (
+            resolvedInjury ? (
               <NbaInjuryReportPanel
                 report={resolvedInjury}
                 language={language}
                 fromPredictGameId={fromPredictGameId}
                 predictReturnMode={predictReturnMode}
               />
+            ) : injuryLoading ? (
+              <LoadingPanel label={loadingLabel} />
             ) : (
               <PendingPanel text={m.panelDataPending} />
             )
           ) : tab === "stats" ? (
-            statsLoading ? (
-              <PendingPanel text={m.panelDataPending} />
-            ) : resolvedStats ? (
+            resolvedStats ? (
               <NbaTeamStatsPanel
                 data={resolvedStats}
                 isPro={isPro}
@@ -226,11 +234,11 @@ export default function NbaPredictToolsTabs({
                 fromPredictGameId={fromPredictGameId}
                 predictReturnMode={predictReturnMode}
               />
+            ) : statsLoading ? (
+              <LoadingPanel label={loadingLabel} />
             ) : (
               <PendingPanel text={m.panelDataPending} />
             )
-          ) : rosterLoading ? (
-            <PendingPanel text={m.panelDataPending} />
           ) : resolvedRoster ? (
             <NbaRosterPanel
               report={resolvedRoster}
@@ -238,6 +246,8 @@ export default function NbaPredictToolsTabs({
               fromPredictGameId={fromPredictGameId}
               predictReturnMode={predictReturnMode}
             />
+          ) : rosterLoading ? (
+            <LoadingPanel label={loadingLabel} />
           ) : (
             <PendingPanel text={m.panelDataPending} />
           )}

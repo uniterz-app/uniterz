@@ -156,7 +156,7 @@ const styles = StyleSheet.create({
   card: {
     width: "90%",
     maxWidth: 384,
-    borderRadius: 16,
+    borderRadius: 0,
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.12)",
     overflow: "hidden",
@@ -180,7 +180,7 @@ const styles = StyleSheet.create({
   iconSlot: {
     width: 44,
     height: 44,
-    borderRadius: 12,
+    borderRadius: 0,
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.14)",
     backgroundColor: "rgba(255,255,255,0.06)",
@@ -193,37 +193,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     marginBottom: 16,
-  },
-  btnRow: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  btnCancel: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.14)",
-    backgroundColor: "rgba(255,255,255,0.07)",
-    alignItems: "center",
-  },
-  btnCancelText: {
-    color: "rgba(255,255,255,0.9)",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  btnConfirm: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 14,
-    backgroundColor: "#dc2626",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "rgba(252,165,165,0.35)",
-  },
-  btnConfirmText: {
-    color: "#fff",
-    fontSize: 14,
-    fontWeight: "700",
   },
 });

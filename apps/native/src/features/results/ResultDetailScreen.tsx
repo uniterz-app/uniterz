@@ -62,6 +62,10 @@ export default function ResultDetailScreen({
   sections = "full",
   /** true: RN Modal を使わず親ツリーに載せる（チュートリアルコーチが前面に出る） */
   embedInParent = false,
+  /** 一覧から渡すと初回描画を即時化（裏で正式 load） */
+  warmPost = null,
+  warmMarket = null,
+  warmRoundMeta = null,
 }: {
   visible: boolean;
   postId: string | null;
@@ -70,6 +74,14 @@ export default function ResultDetailScreen({
   onOpenProfile?: (handle: string, warm?: OpenPublicProfileWarm) => void;
   sections?: ResultDetailBodySections;
   embedInParent?: boolean;
+  warmPost?: (Record<string, unknown> & { id: string }) | null;
+  warmMarket?: { homeRate: number; awayRate: number } | null;
+  warmRoundMeta?: {
+    roundLabel?: string | null;
+    playoffRound?: string | null;
+    seasonRound?: string | number | null;
+    seasonPhase?: string | null;
+  } | null;
 }) {
   const isEn = language === "en";
   const reduceMotion = useReducedMotion() ?? false;
@@ -168,19 +180,42 @@ export default function ResultDetailScreen({
       return;
     }
     let alive = true;
-    setLoading(true);
     setMissing(false);
+
+    const viewer = {
+      uid: fUser?.uid ?? null,
+      handle: null as string | null,
+      displayName: fUser?.displayName ?? null,
+      photoURL: fUser?.photoURL ?? null,
+      isPro: false,
+    };
+
+    // 一覧の投稿で先に描画（詳細の posts getDoc を待たない）
+    if (
+      warmPost &&
+      warmPost.id === postId &&
+      postId !== RESULT_DETAIL_DESIGN_PREVIEW_POST_ID &&
+      postId !== TUTORIAL_RESULT_POST_ID
+    ) {
+      setView(
+        buildResultDetailViewModel(warmPost, {
+          market: warmMarket
+            ? {
+                homeRate: warmMarket.homeRate,
+                awayRate: warmMarket.awayRate,
+              }
+            : null,
+          gameMeta: warmRoundMeta,
+          viewer,
+        })
+      );
+      setLoading(false);
+    } else {
+      setLoading(true);
+    }
 
     void (async () => {
       try {
-        const viewer = {
-          uid: fUser?.uid ?? null,
-          handle: null as string | null,
-          displayName: fUser?.displayName ?? null,
-          photoURL: fUser?.photoURL ?? null,
-          isPro: false,
-        };
-
         if (postId === RESULT_DETAIL_DESIGN_PREVIEW_POST_ID) {
           if (!alive) return;
           setView(buildResultDetailDesignPreviewView(viewer));
@@ -218,10 +253,6 @@ export default function ResultDetailScreen({
           return;
         }
         setView(buildResultDetailViewFromLoad(loaded, viewer));
-      } catch {
-        if (!alive) return;
-        setMissing(true);
-        setView(null);
       } finally {
         if (alive) setLoading(false);
       }
@@ -230,7 +261,9 @@ export default function ResultDetailScreen({
     return () => {
       alive = false;
     };
-  }, [postId, reset, fUser?.uid, fUser?.displayName, fUser?.photoURL]);
+    // warmPost / warmMarket は postId 切替時の先出し描画用。identity 変化で再取得しない
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
+  }, [postId, fUser?.uid, fUser?.displayName, fUser?.photoURL, reset]);
 
   useEffect(() => {
     if (!modalChromeVisible) return;

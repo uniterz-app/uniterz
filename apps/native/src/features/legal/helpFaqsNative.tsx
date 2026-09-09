@@ -2,13 +2,6 @@ import { ReactNode } from "react";
 import HelpScoringLogicNative from "./HelpScoringLogicNative";
 import { HelpAnswerText, HelpBulletList, HelpFaqItemNative } from "./HelpAccordionItemNative";
 
-const GRADIENTS = {
-  cyan: ["rgba(6,182,212,0.7)", "rgba(59,130,246,0.7)", "rgba(99,102,241,0.7)"] as const,
-  violet: ["rgba(139,92,246,0.7)", "rgba(217,70,239,0.7)", "rgba(99,102,241,0.7)"] as const,
-  emerald: ["rgba(16,185,129,0.7)", "rgba(20,184,166,0.7)", "rgba(6,182,212,0.7)"] as const,
-  amber: ["rgba(245,158,11,0.7)", "rgba(249,115,22,0.7)", "rgba(239,68,68,0.7)"] as const,
-};
-
 function scoringLogicJa(): ReactNode {
   return (
     <HelpScoringLogicNative
@@ -73,8 +66,6 @@ export function getHelpFaqsNative(language: "ja" | "en"): HelpFaqItemNative[] {
         label: "How to play",
         question: "What can I enjoy in this app?",
         icon: "gamepad-variant",
-        iconColor: "#a5f3fc",
-        gradient: GRADIENTS.cyan,
         answer: (
           <>
             <HelpAnswerText>
@@ -99,8 +90,6 @@ export function getHelpFaqsNative(language: "ja" | "en"): HelpFaqItemNative[] {
         label: "Scoring",
         question: "What performance metrics are available?",
         icon: "chart-bar",
-        iconColor: "#ddd6fe",
-        gradient: GRADIENTS.violet,
         answer: (
           <>
             <HelpBulletList
@@ -121,8 +110,6 @@ export function getHelpFaqsNative(language: "ja" | "en"): HelpFaqItemNative[] {
         label: "Scoring logic",
         question: "How are points calculated?",
         icon: "function-variant",
-        iconColor: "#a7f3d0",
-        gradient: GRADIENTS.emerald,
         answer: scoringLogicEn(),
       },
       {
@@ -130,8 +117,6 @@ export function getHelpFaqsNative(language: "ja" | "en"): HelpFaqItemNative[] {
         label: "Rankings",
         question: "How are rankings displayed?",
         icon: "trophy",
-        iconColor: "#fde68a",
-        gradient: GRADIENTS.amber,
         answer: (
           <>
             <HelpAnswerText>Rankings are displayed separately for each metric:</HelpAnswerText>
@@ -157,8 +142,6 @@ export function getHelpFaqsNative(language: "ja" | "en"): HelpFaqItemNative[] {
       label: "ゲームの遊び方",
       question: "このアプリでは何を楽しめますか？",
       icon: "gamepad-variant",
-      iconColor: "#a5f3fc",
-      gradient: GRADIENTS.cyan,
       answer: (
         <>
           <HelpAnswerText>
@@ -176,8 +159,6 @@ export function getHelpFaqsNative(language: "ja" | "en"): HelpFaqItemNative[] {
       label: "スコア計算",
       question: "どんな成績指標がありますか？",
       icon: "chart-bar",
-      iconColor: "#ddd6fe",
-      gradient: GRADIENTS.violet,
       answer: (
         <>
           <HelpBulletList
@@ -196,8 +177,6 @@ export function getHelpFaqsNative(language: "ja" | "en"): HelpFaqItemNative[] {
       label: "採点ロジック",
       question: "得点はどう計算されていますか？",
       icon: "function-variant",
-      iconColor: "#a7f3d0",
-      gradient: GRADIENTS.emerald,
       answer: scoringLogicJa(),
     },
     {
@@ -205,8 +184,6 @@ export function getHelpFaqsNative(language: "ja" | "en"): HelpFaqItemNative[] {
       label: "ランキング",
       question: "ランキングはどのように表示されますか？",
       icon: "trophy",
-      iconColor: "#fde68a",
-      gradient: GRADIENTS.amber,
       answer: (
         <>
           <HelpAnswerText>ランキングは指標ごとに個別に表示されます。</HelpAnswerText>

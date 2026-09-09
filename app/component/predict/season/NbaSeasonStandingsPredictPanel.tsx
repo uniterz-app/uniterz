@@ -9,7 +9,10 @@ import {
 } from "@/app/component/rankings/CyberSlantedTab";
 import type { NbaConferenceId } from "@/lib/nba/nbaConferenceTeams";
 import { NBA_STANDINGS_RANKS } from "@/lib/nba/nbaConferenceTeams";
-import { NBA_TEAM_NAME_BY_ID } from "@/lib/nba-team-names";
+import {
+  NBA_TEAM_NAME_BY_ID,
+  getNbaTeamNicknameById,
+} from "@/lib/nba-team-names";
 import { nameOxanium } from "@/lib/fonts";
 import {
   assignTeamToRank,
@@ -28,6 +31,15 @@ import {
   getTeamJerseySecondaryColor,
   softenTeamUiColor,
 } from "@/lib/team-colors";
+import {
+  seasonPredictStandingsBoardHint,
+  seasonPredictStandingsClearHint,
+  seasonPredictStandingsConfHeading,
+  seasonPredictStandingsHowTo,
+  seasonPredictStandingsSlotHint,
+  seasonPredictStandingsTrayEmpty,
+  type SeasonPredictUiLang,
+} from "@/lib/predict/seasonPredictUiCopy";
 
 type Props = {
   value: NbaSeasonStandingsPrediction;
@@ -35,6 +47,7 @@ type Props = {
   onSubmit?: () => void;
   submitDisabled?: boolean;
   className?: string;
+  language?: SeasonPredictUiLang;
 };
 
 type StandingsBand = "straight" | "playin" | "out";
@@ -51,8 +64,8 @@ function fullName(teamId: string): string {
   return (TEAM_SHORT[teamId] ?? teamId).toUpperCase();
 }
 
-function abbr(teamId: string): string {
-  return (TEAM_SHORT[teamId] ?? "—").toUpperCase();
+function nick(teamId: string): string {
+  return getNbaTeamNicknameById(teamId).toUpperCase();
 }
 
 function hexToRgba(hex: string, alpha: number): string {
@@ -106,11 +119,13 @@ function RankRow({
   teamId,
   selected,
   onSelect,
+  language,
 }: {
   rank: NbaStandingsRank;
   teamId: string | null | undefined;
   selected: boolean;
   onSelect: () => void;
+  language: SeasonPredictUiLang;
 }) {
   const primary = teamId
     ? softenTeamUiColor(getTeamJerseyPrimaryColor("nba", teamId))
@@ -177,7 +192,7 @@ function RankRow({
             </span>
             {selected ? (
               <span className="text-[9px] font-bold text-white/32">
-                tap again to clear
+                {seasonPredictStandingsClearHint(language)}
               </span>
             ) : null}
           </span>
@@ -189,7 +204,7 @@ function RankRow({
             "text-[10px] font-bold uppercase tracking-[0.14em] text-white/28",
           ].join(" ")}
         >
-          {selected ? "pick a team below" : "tap to assign"}
+          {seasonPredictStandingsSlotHint(language, selected)}
         </span>
       )}
     </button>
@@ -200,20 +215,22 @@ function RankRow({
 function TeamSlotTray({
   teamIds,
   onPick,
+  language,
 }: {
   teamIds: string[];
   onPick: (teamId: string) => void;
+  language: SeasonPredictUiLang;
 }) {
   if (teamIds.length === 0) {
     return (
       <p className="px-1 py-2 text-[11px] text-white/35">
-        全チーム配置済み
+        {seasonPredictStandingsTrayEmpty(language)}
       </p>
     );
   }
 
   return (
-    <div className="grid grid-cols-5 gap-1.5 sm:grid-cols-5">
+    <div className="grid grid-cols-3 gap-1.5">
       {teamIds.map((teamId) => {
         const primary = softenTeamUiColor(
           getTeamJerseyPrimaryColor("nba", teamId)
@@ -223,30 +240,21 @@ function TeamSlotTray({
             key={teamId}
             type="button"
             onClick={() => onPick(teamId)}
-            className="flex flex-col items-center gap-1 border px-1 py-1.5 transition hover:brightness-110 active:scale-[0.97]"
+            className="flex min-h-9 items-center justify-center border px-1.5 py-2 transition hover:brightness-110 active:scale-[0.97]"
             style={{
               borderColor: hexToRgba(primary, 0.4),
               background: hexToRgba(primary, 0.07),
               transform: "skewX(-6deg)",
             }}
           >
-            <span style={{ transform: "skewX(6deg)" }}>
-              <HalftoneJerseyMark
-                accent={getTeamJerseyPrimaryColor("nba", teamId)}
-                accentEnd={getTeamJerseySecondaryColor("nba", teamId)}
-                className="h-8 w-8 shrink-0"
-                glow="none"
-                density="coarse"
-              />
-            </span>
             <span
               className={[
                 nameOxanium.className,
-                "text-[9px] font-extrabold uppercase tracking-[0.04em] text-white/85",
+                "truncate text-[11px] font-extrabold uppercase tracking-[0.04em] text-white/90",
               ].join(" ")}
               style={{ transform: "skewX(6deg)" }}
             >
-              {abbr(teamId)}
+              {nick(teamId)}
             </span>
           </button>
         );
@@ -261,11 +269,13 @@ function ConferenceBoard({
   onPicksChange,
   /** Web 横並び時はカンファレンス見出しを大きく */
   emphasizeLabel = false,
+  language,
 }: {
   conference: NbaConferenceId;
   picks: NbaConferenceStandingsPicks;
   onPicksChange: (next: NbaConferenceStandingsPicks) => void;
   emphasizeLabel?: boolean;
+  language: SeasonPredictUiLang;
 }) {
   const [selectedRank, setSelectedRank] = useState<NbaStandingsRank | null>(
     null
@@ -318,6 +328,7 @@ function ConferenceBoard({
           teamId={picks[rank]}
           selected={selectedRank === rank}
           onSelect={() => onRankTap(rank)}
+          language={language}
         />
         {selectedRank === rank ? (
           <div className="border border-cyan-300/20 bg-[rgba(4,10,16,0.92)] px-2 py-2">
@@ -333,7 +344,11 @@ function ConferenceBoard({
                 · {available.length} left
               </span>
             </p>
-            <TeamSlotTray teamIds={available} onPick={place} />
+            <TeamSlotTray
+              teamIds={available}
+              onPick={place}
+              language={language}
+            />
           </div>
         ) : null}
       </div>
@@ -363,7 +378,7 @@ function ConferenceBoard({
           {isEast ? "East" : "West"}
         </p>
         <p className="mt-1 text-[11px] font-semibold text-white/50">
-          {isEast ? "イースタン · 1–15" : "ウェスタン · 1–15"}
+          {seasonPredictStandingsConfHeading(language, isEast)}
         </p>
       </div>
       <p
@@ -388,7 +403,7 @@ function ConferenceBoard({
           "text-[10px] font-bold uppercase tracking-[0.16em] text-white/45",
         ].join(" ")}
       >
-        {isEast ? "Eastern" : "Western"} · 1–15
+        {seasonPredictStandingsConfHeading(language, isEast)}
       </p>
       <p
         className={[
@@ -431,7 +446,7 @@ function ConferenceBoard({
 
       {!emphasizeLabel ? (
         <p className="pt-1 text-[10px] leading-relaxed text-white/30">
-          順位をタップ → 下にチームスロット。配置済みはスロットから消えます。同じ順位をもう一度タップでクリア。
+          {seasonPredictStandingsHowTo(language, "mobile")}
         </p>
       ) : null}
     </div>
@@ -445,6 +460,7 @@ export default function NbaSeasonStandingsPredictPanel({
   onSubmit,
   submitDisabled,
   className,
+  language = "ja",
 }: Props) {
   const pathname = usePathname() ?? "";
   const isNarrow =
@@ -473,7 +489,7 @@ export default function NbaSeasonStandingsPredictPanel({
           Season standings · {value.season}
         </h2>
         <p className="text-[11px] leading-relaxed text-white/45 md:max-w-3xl md:text-sm">
-          1–6 ストレートイン / 7–10 プレーイン / 11–15 圏外。採点・Unit・提出期限は右上のはてなを参照。
+          {seasonPredictStandingsBoardHint(language)}
         </p>
       </header>
 
@@ -505,12 +521,14 @@ export default function NbaSeasonStandingsPredictPanel({
               conference="east"
               picks={value.east}
               onPicksChange={(east) => onChange({ ...value, east })}
+              language={language}
             />
           ) : (
             <ConferenceBoard
               conference="west"
               picks={value.west}
               onPicksChange={(west) => onChange({ ...value, west })}
+              language={language}
             />
           )}
         </>
@@ -522,16 +540,18 @@ export default function NbaSeasonStandingsPredictPanel({
               emphasizeLabel
               picks={value.east}
               onPicksChange={(east) => onChange({ ...value, east })}
+              language={language}
             />
             <ConferenceBoard
               conference="west"
               emphasizeLabel
               picks={value.west}
               onPicksChange={(west) => onChange({ ...value, west })}
+              language={language}
             />
           </div>
           <p className="mt-3 text-[11px] leading-relaxed text-white/35">
-            左が East（シアン）・右が West（アンバー）。順位をタップ → 下にチームスロット。同じ順位をもう一度タップでクリア。
+            {seasonPredictStandingsHowTo(language, "web")}
           </p>
         </>
       )}

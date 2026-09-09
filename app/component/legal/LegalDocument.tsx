@@ -3,9 +3,12 @@ import type { LegalLang, LegalSection } from "@/lib/legal/legalSection";
 export default function LegalDocument({
   language,
   sections,
+  showIndex = true,
 }: {
   language: LegalLang;
   sections: readonly LegalSection[];
+  /** false のとき条タイトル（第N条…）のみ表示 */
+  showIndex?: boolean;
 }) {
   const lang: LegalLang = language === "en" ? "en" : "ja";
 
@@ -14,7 +17,8 @@ export default function LegalDocument({
       {sections.map((section, index) => (
         <div key={section.id}>
           <h2 className="mb-1 text-base font-semibold text-white">
-            {index + 1}. {section.title[lang]}
+            {showIndex ? `${index + 1}. ` : ""}
+            {section.title[lang]}
           </h2>
           {section.paragraphs?.[lang].map((text) => (
             <p key={text} className="mt-2 first:mt-0">

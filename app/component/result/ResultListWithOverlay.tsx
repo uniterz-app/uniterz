@@ -119,7 +119,9 @@ import {
 } from "@/lib/games/useResultPostsPkScores";
 import {
   resolveResultPostGameMarket,
+  resolveResultPostGameRoundMeta,
   useResultPostsGameMarkets,
+  useResultPostsGameRoundMeta,
 } from "@/lib/games/useResultPostsGameMarkets";
 import { resolveWcTeamId } from "@/lib/legacyWcWebShims";
 import { toMatchCardProps } from "@/lib/games/transform";
@@ -689,6 +691,7 @@ export default function ResultListWithOverlay({
   );
   const pkFromGames = useResultPostsPkScores(visiblePostsFlat);
   const marketsFromGames = useResultPostsGameMarkets(visiblePostsFlat);
+  const roundMetaFromGames = useResultPostsGameRoundMeta(visiblePostsFlat);
 
   const selectedPost = useMemo(() => {
     if (!openPostId) return null;
@@ -950,6 +953,12 @@ export default function ResultListWithOverlay({
                 leadingScorers: (d as Record<string, unknown>).leadingScorers,
                 topScorerCandidates: (d as Record<string, unknown>).topScorerCandidates,
                 topScorerMarket,
+                gameMeta: {
+                  roundLabel: (d as Record<string, unknown>).roundLabel,
+                  playoffRound: (d as Record<string, unknown>).playoffRound,
+                  seasonRound: (d as Record<string, unknown>).seasonRound,
+                  seasonPhase: (d as Record<string, unknown>).seasonPhase,
+                },
                 viewer: viewerUid ? { uid: viewerUid } : null,
               })
             );
@@ -1620,6 +1629,10 @@ export default function ResultListWithOverlay({
                     post={post}
                     pkScore={resolveResultPostPkScore(post, pkFromGames)}
                     gameMarket={resolveResultPostGameMarket(post, marketsFromGames)}
+                    gameRoundMeta={resolveResultPostGameRoundMeta(
+                      post,
+                      roundMetaFromGames
+                    )}
                     onOpen={open}
                     language={language}
                     platform={platform}
@@ -1906,7 +1919,7 @@ export default function ResultListWithOverlay({
                     aria-modal="true"
                     aria-labelledby="result-delete-confirm-title"
                     className={[
-                      "relative w-full max-w-sm overflow-hidden rounded-2xl border border-white/18 p-5",
+                      "relative w-full max-w-sm overflow-hidden rounded-none border border-white/18 p-5",
                       "bg-linear-to-b from-white/12 via-cyan-950/25 to-zinc-950/50",
                       "shadow-[inset_0_1px_0_rgba(255,255,255,0.2),inset_0_-1px_0_rgba(0,0,0,0.25),0_28px_96px_rgba(0,0,0,0.55)]",
                       "ring-1 ring-cyan-400/25",
@@ -1935,7 +1948,7 @@ export default function ResultListWithOverlay({
                         type="button"
                         disabled={deleteInProgress}
                         className={[
-                          "group relative flex h-[2.9em] min-w-[8.5em] shrink-0 items-center justify-start gap-2 overflow-hidden rounded-[11px]",
+                          "group relative flex h-[2.9em] min-w-[8.5em] shrink-0 items-center justify-start gap-2 overflow-hidden rounded-none",
                           "border-2 border-cyan-400/55 bg-white/6 px-3",
                           "shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]",
                           "transition-all duration-500 ease-out",
@@ -1966,7 +1979,7 @@ export default function ResultListWithOverlay({
                         type="button"
                         disabled={deleteInProgress}
                         className={[
-                          "group relative flex h-[2.9em] min-w-[8.5em] shrink-0 items-center justify-end gap-2 overflow-hidden rounded-[11px]",
+                          "group relative flex h-[2.9em] min-w-[8.5em] shrink-0 items-center justify-end gap-2 overflow-hidden rounded-none",
                           "border-2 border-red-600 bg-white/6 px-3",
                           "shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_0_22px_rgba(220,38,38,0.45),0_0_40px_rgba(185,28,28,0.22)]",
                           "transition-all duration-500 ease-out",

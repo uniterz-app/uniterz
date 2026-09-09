@@ -8,7 +8,6 @@ import { useNativeUserLanguage } from "../../../hooks/useNativeUserLanguage";
 import MobileBadgesScreen from "../mobileScreens/MobileBadgesScreen";
 import MobileAnnouncementsScreen from "../mobileScreens/MobileAnnouncementsScreen";
 import MobilePlanStatusScreen from "../mobileScreens/MobilePlanStatusScreen";
-import MobileProSubscribeScreen from "../mobileScreens/MobileProSubscribeScreen";
 import ProSubscribePreviewNative from "../mobileScreens/ProSubscribePreviewNative";
 import SeasonPredictPreviewScreenNative from "../mobileScreens/SeasonPredictPreviewScreenNative";
 import MonthlyReportPreviewScreenNative from "../mobileScreens/MonthlyReportPreviewScreenNative";
@@ -18,6 +17,8 @@ import PlayerStatsPreviewScreenNative from "../../games/playerStats/PlayerStatsP
 import PlayerDetailPreviewScreenNative from "../../games/playerDetail/PlayerDetailPreviewScreenNative";
 import TeamDetailPreviewScreenNative from "../../games/teamDetail/TeamDetailPreviewScreenNative";
 import LiveGameStatsPreviewScreenNative from "../../games/live/LiveGameStatsPreviewScreenNative";
+import ProLeagueTeaserPreviewScreenNative from "../../rankings/ProLeagueTeaserPreviewScreenNative";
+import ProInsightGatePreviewScreenNative from "../../games/predict/ProInsightGatePreviewScreenNative";
 import type { ProfileStackParamList } from "../../../navigation/types";
 
 const apiBase = process.env.EXPO_PUBLIC_UNITERZ_API_BASE_URL ?? null;
@@ -70,22 +71,8 @@ export function PlanStatusScreenWrapper() {
   );
 }
 
+/** Web `/mobile/pro/subscribe`（`ProSubscribePreview`）と同デザイン */
 export function ProSubscribeScreenWrapper() {
-  const navigation =
-    useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
-  const { fUser } = useFirebaseUser();
-  const { language } = useNativeUserLanguage(fUser?.uid);
-  return (
-    <MobileProSubscribeScreen
-      language={language}
-      onClose={() => navigation.goBack()}
-      onSuccess={() => navigation.navigate("ProSkin")}
-      onOpenPreview={() => navigation.navigate("ProSubscribePreview")}
-    />
-  );
-}
-
-export function ProSubscribePreviewScreenWrapper() {
   const navigation =
     useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
   const { fUser } = useFirebaseUser();
@@ -94,9 +81,19 @@ export function ProSubscribePreviewScreenWrapper() {
     <ProSubscribePreviewNative
       language={language}
       onClose={() => navigation.goBack()}
-      onOpenSkin={() => navigation.navigate("ProSkin")}
+      onOpenSkin={(opts) =>
+        navigation.navigate(
+          "ProSkin",
+          opts?.fromTrial ? { fromTrial: true } : undefined
+        )
+      }
     />
   );
+}
+
+/** DEV / サイドメニュー用。本番 ProSubscribe と同 UI */
+export function ProSubscribePreviewScreenWrapper() {
+  return <ProSubscribeScreenWrapper />;
 }
 
 export function SeasonPredictPreviewScreenWrapper() {
@@ -220,6 +217,34 @@ export function LiveGameStatsPreviewScreenWrapper() {
     <LiveGameStatsPreviewScreenNative
       language={language === "ja" ? "ja" : "en"}
       onClose={() => navigation.goBack()}
+    />
+  );
+}
+
+export function ProLeagueTeaserPreviewScreenWrapper() {
+  const navigation =
+    useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
+  const { fUser } = useFirebaseUser();
+  const { language } = useNativeUserLanguage(fUser?.uid);
+  return (
+    <ProLeagueTeaserPreviewScreenNative
+      language={language === "ja" ? "ja" : "en"}
+      onClose={() => navigation.goBack()}
+      onPressSubscribe={() => navigation.navigate("ProSubscribe")}
+    />
+  );
+}
+
+export function ProInsightGatePreviewScreenWrapper() {
+  const navigation =
+    useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
+  const { fUser } = useFirebaseUser();
+  const { language } = useNativeUserLanguage(fUser?.uid);
+  return (
+    <ProInsightGatePreviewScreenNative
+      language={language === "ja" ? "ja" : "en"}
+      onClose={() => navigation.goBack()}
+      onPressSubscribe={() => navigation.navigate("ProSubscribe")}
     />
   );
 }

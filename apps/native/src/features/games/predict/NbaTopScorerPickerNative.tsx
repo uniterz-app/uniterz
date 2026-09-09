@@ -10,8 +10,6 @@ import { useNbaTopScorerCandidates } from "../../../../../../lib/nba/useNbaTopSc
 import type { GamesLanguage } from "../gamesI18n";
 import { getGamesTexts } from "../gamesI18n";
 import {
-  MATCH_CARD_BRACKET_LETTER_SPACING_15,
-  MATCH_CARD_BRACKET_TEXT,
   MATCH_CARD_DISPLAY_FONT,
 } from "../matchCardTypography";
 import {
@@ -396,10 +394,11 @@ const styles = StyleSheet.create({
     paddingRight: 4,
   },
   tdPlayer: {
-    ...MATCH_CARD_BRACKET_TEXT,
-    color: "rgba(255,255,255,0.92)",
-    fontSize: 15,
-    letterSpacing: MATCH_CARD_BRACKET_LETTER_SPACING_15,
+    fontFamily: OXANIUM_800,
+    color: "#fff",
+    fontSize: 13,
+    fontWeight: "800",
+    letterSpacing: 0.3,
     textTransform: "uppercase",
     transform: [{ skewX: "-6deg" }],
   },

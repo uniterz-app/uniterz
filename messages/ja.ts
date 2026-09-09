@@ -221,7 +221,7 @@ const ja = {
     divisionOpenTitle: "PRO LEAGUE",
     divisionOpenLockBody:
       "全試合の成績で競う Pro 限定リーグです。閲覧・参加には Pro プランが必要です。",
-    divisionOpenCta: "Pro を見る",
+    divisionOpenCta: "Explore Pro",
     divisionOpenModalDismiss: "とじる",
     divisionOpenBackToPickUp: "Pick Up に戻る",
     upset: "アップセット",
@@ -428,6 +428,7 @@ const ja = {
     nbaTopScorerResultLabel: "最多得点者",
     upsetPointsLabel: "アップセット",
     totalPointsLabel: "スコア",
+    pendingCallLabel: "あなたの予想",
     upsetPointsDesc:
       "その試合がアップセット（波乱）だったうえで、あなたが少数派予想で的中したときだけ加点される別指標（1試合 0〜10）。条件を満たさない場合は 0。",
     totalPointsDesc:
@@ -453,8 +454,8 @@ const ja = {
     shareResultTotal: "総合 {pts}pt",
     shareResultCardFailed: "画像の作成に失敗しました",
     performanceStats: "パフォーマンス",
-    marketBiasTitle: "Market Bias",
-    totalPredictionsCount: "Total：",
+    marketBiasTitle: "市場の偏り",
+    totalPredictionsCount: "総予想数：",
     drawLabel: "Draw",
     noResultsForFilter: "この条件に合うリザルトがありません。",
     showingLatest: "動作を軽く保つため、最新 {n} 件まで表示しています。",

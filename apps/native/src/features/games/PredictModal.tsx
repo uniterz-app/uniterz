@@ -1,5 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { cyberAlert } from "../../components/cyberAlert";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   Keyboard, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View,
 } from "react-native";
@@ -42,9 +41,12 @@ import {
   WcTeamNameMobileNative,
   WcBroadcastNamesNative,
 } from "./legacyWcNativeShims";
-import ResultStatRatingBarNative from "../results/ResultStatRatingBarNative";
-import NbaTopScorerResultRowNative from "../results/NbaTopScorerResultRowNative";
 import ResultOutcomeBadgesNative from "../results/ResultOutcomeBadgesNative";
+import {
+  ResultCardMarketBiasNative,
+  ResultCardTopScorerRowNative,
+  ResultCardUpsetScoreSplitNative,
+} from "../results/ResultCardFaceMarketNative";
 import {
   formatTeamRecordLabelNative,
   useTeamRecordLineNative,
@@ -58,6 +60,7 @@ import LiveGameStatsPanelNative from "./live/LiveGameStatsPanelNative";
 import LiveGameStatsPlaceholderNative from "./live/LiveGameStatsPlaceholderNative";
 import { useLiveGameStats } from "../../../../../lib/games/useLiveGameStats";
 import { getUniterzApiBaseUrl } from "./submitPredictionApi";
+import { useNbaTopScorerCandidates } from "../../../../../lib/nba/useNbaTopScorerCandidates";
 import { useAppActiveNative } from "../../hooks/useAppActiveNative";
 import CountryFlagNative from "./CountryFlagNative";
 import NbaTopScorerPickerNative from "./predict/NbaTopScorerPickerNative";
@@ -67,6 +70,9 @@ import {
   type NbaTopScorerPick,
 } from "../../../../../lib/nba/topScorer";
 import type { PredictModalMergedFinalPreview } from "./buildPredictModalMergedFinal";
+import { buildResultCardFaceModel } from "../../../../../lib/result/buildResultCardFace";
+import type { ResultCardFaceModel } from "../../../../../lib/result/buildResultCardFace";
+import { ResultCardDesignFaceNative } from "../results/ResultCardDesignPreviewScreenNative";
 import {
   PREDICT_MODAL_EXIT_COMPLETION_MS,
   predictModalBackdropEnter,
@@ -80,11 +86,11 @@ import {
   predictPanelRevealEnter,
 } from "./predictMotion";
 import ProfileBackEdgeHandleNative from "../profile/ProfileBackEdgeHandleNative";
-import PredictOverlayActionFabNative from "./PredictOverlayActionFabNative";
-import ShareLinkCaptureFooterNative from "../share/ShareLinkCaptureFooterNative";
-import { shareResultCardNative } from "../results/shareResultCardNative";
-import { buildResultShareUrl, getShareAppOrigin } from "../../../../../lib/share/shareAppUrls";
 import { t as i18nT } from "../../../../../lib/i18n/t";
+import {
+  resolveNbaTopScorerResultInfo,
+  type NbaTopScorerResultInfo,
+} from "../../../../../lib/result/resolveNbaTopScorerResult";
 import PredictOverlayChamferedFrameNative from "./PredictOverlayChamferedFrameNative";
 import PredictOverlayCyberDeckTabNative from "./PredictOverlayCyberDeckTabNative";
 import PredictOverlayCyberFormPanelNative from "./PredictOverlayCyberFormPanelNative";
@@ -201,12 +207,13 @@ export type PredictOverlayMarketBarProps = {
   awayLabel: string;
   compact?: boolean;
   userPredictionWinner?: "home" | "away" | "draw" | null;
+  predictionCount?: number;
 };
 
 export function PredictMatchPreview({
   data,
-  onClose,
-  closeLabel,
+  onClose: _onClose,
+  closeLabel: _closeLabel,
   overlayMarketBar,
   language,
   t,
@@ -216,12 +223,13 @@ export function PredictMatchPreview({
   wcGoalScorer,
   isWcLeague = false,
   overlayCenterMode = false,
-  onEditPrediction,
-  showEditButton = false,
   overlayUnifiedForm: _overlayUnifiedForm = false,
-  hideCloseButton = false,
+  hideCloseButton: _hideCloseButton = false,
   myPostId = null,
   tutorialMode = false,
+  nbaTopScorer = null,
+  resultFace = null,
+  resultFaceLive = false,
 }: {
   data: PredictModalMatchPreview;
   onClose: () => void;
@@ -238,20 +246,21 @@ export function PredictMatchPreview({
   isWcLeague?: boolean;
   /** Web オーバーレイ：未開始試合の中央を VS にする */
   overlayCenterMode?: boolean;
-  onEditPrediction?: () => void;
-  showEditButton?: boolean;
   overlayUnifiedForm?: boolean;
   hideCloseButton?: boolean;
   myPostId?: string | null;
   tutorialMode?: boolean;
+  /** 未確定オーバーレイ：NBA 最多得点者の予想 */
+  nbaTopScorer?: NbaTopScorerResultInfo | null;
+  /** WC 以外・予想済み：リザルト一覧・詳細と同じカード面 */
+  resultFace?: ResultCardFaceModel | null;
+  resultFaceLive?: boolean;
 }) {
   const captureRef = useRef<View>(null);
-  const [sharing, setSharing] = useState(false);
-  const resultCopy = i18nT(language).results;
 
   /** リザルト詳細チュートリアル: カード全体を1つの穴として測る */
   useEffect(() => {
-    if (!mergedFinal) return;
+    if (!mergedFinal && !resultFace) return;
     return registerTutorialTarget("result-detail-card", () =>
       new Promise((resolve) => {
         const node = captureRef.current;
@@ -268,7 +277,7 @@ export function PredictMatchPreview({
         });
       })
     );
-  }, [mergedFinal]);
+  }, [mergedFinal, resultFace]);
   const { centerBlock, seriesPair } = data;
   const isKnockout = data.knockout === true;
   const homeTeamId = rawTeamIdFromGameSide(data.homeSide);
@@ -322,65 +331,6 @@ export function PredictMatchPreview({
     [isKnockout, isWcLeague, awayTeamId, awayRecordLine]
   );
   const wcBroadcastSep = language === "ja" ? "：" : ": ";
-  const canShare = Boolean(myPostId && (mergedFinal || mergedPrediction));
-  const showActionMenu = Boolean(
-    (showEditButton && onEditPrediction) || canShare
-  );
-  const shareLinkUrl = useMemo(
-    () => (myPostId ? buildResultShareUrl(myPostId) : ""),
-    [myPostId]
-  );
-  const totalPoints = useMemo(() => {
-    const row = mergedFinal?.statRows.find((r) => r.key === "pointsV3");
-    return row?.value ?? null;
-  }, [mergedFinal?.statRows]);
-
-  const handleShareResult = useCallback(async () => {
-    if (!canShare || !myPostId || sharing) return;
-    const predictedHome =
-      mergedFinal?.predictedScore.home ?? mergedPrediction?.home ?? null;
-    const predictedAway =
-      mergedFinal?.predictedScore.away ?? mergedPrediction?.away ?? null;
-    if (predictedHome == null || predictedAway == null) return;
-
-    setSharing(true);
-    await new Promise<void>((resolve) => {
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => resolve());
-      });
-    });
-    try {
-      const shareOutcome = await shareResultCardNative(captureRef, {
-        language,
-        homeName: data.homeCompact,
-        awayName: data.awayCompact,
-        predictedHome,
-        predictedAway,
-        finalHome: mergedFinal?.finalScore.home ?? null,
-        finalAway: mergedFinal?.finalScore.away ?? null,
-        totalPoints,
-        postId: myPostId,
-        appBaseUrl: getShareAppOrigin(),
-      });
-      if (shareOutcome === "failed") {
-        cyberAlert("", resultCopy.shareResultCardFailed);
-      }
-    } finally {
-      setSharing(false);
-    }
-  }, [
-    canShare,
-    data.awayCompact,
-    data.homeCompact,
-    language,
-    mergedFinal,
-    mergedPrediction?.away,
-    mergedPrediction?.home,
-    myPostId,
-    resultCopy.shareResultCardFailed,
-    sharing,
-    totalPoints,
-  ]);
 
   const previewBody = (
       <View pointerEvents="box-none" style={s.matchPreviewPaddedContent}>
@@ -604,36 +554,22 @@ export function PredictMatchPreview({
           </View>
         </View>
         </TutorialTargetNative>
-        {scheduleMeta && !mergedFinal ? (
+        {scheduleMeta &&
+        !mergedFinal &&
+        scheduleMeta.broadcastLabels.length > 0 ? (
           <View style={s.matchPreviewScheduleMeta}>
             <View style={s.matchPreviewScheduleMetaRow}>
-              {scheduleMeta.kickoffValue ? (
-                <View
-                  style={[
-                    s.matchPreviewScheduleMetaGroup,
-                    scheduleMeta.broadcastLabels.length > 0 &&
-                      s.matchPreviewScheduleMetaGroupAfter,
-                  ]}
-                >
-                  <Text style={s.matchPreviewScheduleMetaLabel}>{t.kickoffAt}</Text>
-                  <Text style={s.matchPreviewScheduleMetaValue}>
-                    {scheduleMeta.kickoffValue}
-                  </Text>
-                </View>
-              ) : null}
-              {scheduleMeta.broadcastLabels.length > 0 ? (
-                <View style={s.matchPreviewScheduleMetaGroup}>
-                  <Text style={s.matchPreviewScheduleMetaLabel}>{t.broadcasters}</Text>
-                  <WcBroadcastNamesNative
-                    labels={scheduleMeta.broadcastLabels}
-                    separator={wcBroadcastSep}
-                  />
-                </View>
-              ) : null}
+              <View style={s.matchPreviewScheduleMetaGroup}>
+                <Text style={s.matchPreviewScheduleMetaLabel}>{t.broadcasters}</Text>
+                <WcBroadcastNamesNative
+                  labels={scheduleMeta.broadcastLabels}
+                  separator={wcBroadcastSep}
+                />
+              </View>
             </View>
           </View>
         ) : null}
-        {overlayMarketBar ? (
+        {isWcLeague && overlayMarketBar ? (
           <View style={s.matchPreviewMarketBarWrap}>
             {tutorialMode ? (
               <TutorialTargetNative id="predict-market">
@@ -661,53 +597,73 @@ export function PredictMatchPreview({
               cyberValue
             />
           </View>
-        ) : null}
-        {mergedFinal &&
-        (mergedFinal.nbaTopScorer || mergedFinal.statRows.length > 0) ? (
-          <TutorialTargetNative id="result-detail-stats">
-            <View style={s.matchPreviewStatBlock}>
-              <View style={s.matchPreviewStatHairline} />
-              {mergedFinal.nbaTopScorer ? (
-                <NbaTopScorerResultRowNative
-                  label={mergedFinal.nbaTopScorerLabel}
-                  info={mergedFinal.nbaTopScorer}
-                  homeTeamId={homeTeamId}
-                  awayTeamId={awayTeamId}
+        ) : !isWcLeague && overlayMarketBar ? (
+          <View style={s.matchPreviewResultFooter}>
+            <View style={s.matchPreviewLayerDivider} />
+            {tutorialMode ? (
+              <TutorialTargetNative id="predict-market">
+                <ResultCardMarketBiasNative
+                  homePct={overlayMarketBar.fallbackMarketBias?.homePct ?? 50}
+                  awayPct={overlayMarketBar.fallbackMarketBias?.awayPct ?? 50}
+                  homeAccent={overlayMarketBar.homeColor}
+                  awayAccent={overlayMarketBar.awayColor}
+                  ja={language === "ja"}
+                  predictionCount={overlayMarketBar.predictionCount ?? null}
+                  predictionCountLabel={t.totalPredictions}
                 />
-              ) : null}
-              {mergedFinal.statRows.map((row) => (
-                <View key={row.key} style={s.matchPreviewStatRow}>
-                  <Text style={s.matchPreviewStatLabel} numberOfLines={1}>
-                    {row.label}
-                  </Text>
-                  <View style={s.matchPreviewStatBarSlot}>
-                    <ResultStatRatingBarNative
-                      ratio={row.ratio}
-                      size="lg"
-                      metricKey={row.key}
-                    />
-                  </View>
-                  <Text
-                    style={[
-                      s.matchPreviewStatValue,
-                      row.valueTone === "yellow" && s.matchPreviewStatValueYellow,
-                      row.valueTone === "red" && s.matchPreviewStatValueRed,
-                    ]}
-                  >
-                    {row.display}
-                  </Text>
-                </View>
-              ))}
+              </TutorialTargetNative>
+            ) : (
+              <ResultCardMarketBiasNative
+                homePct={overlayMarketBar.fallbackMarketBias?.homePct ?? 50}
+                awayPct={overlayMarketBar.fallbackMarketBias?.awayPct ?? 50}
+                homeAccent={overlayMarketBar.homeColor}
+                awayAccent={overlayMarketBar.awayColor}
+                ja={language === "ja"}
+                predictionCount={overlayMarketBar.predictionCount ?? null}
+                predictionCountLabel={t.totalPredictions}
+              />
+            )}
+            <View style={s.matchPreviewResultStatBlock}>
+              <ResultCardTopScorerRowNative
+                name={
+                  (mergedFinal?.nbaTopScorer ?? nbaTopScorer)?.playerName ?? null
+                }
+                hit={(mergedFinal?.nbaTopScorer ?? nbaTopScorer)?.hit ?? null}
+                settled={Boolean(mergedFinal)}
+              />
+              <ResultCardUpsetScoreSplitNative
+                ja={language === "ja"}
+                settled={Boolean(mergedFinal)}
+                upsetPoints={(() => {
+                  const row = mergedFinal?.statRows.find(
+                    (r) => r.key === "upsetPoints"
+                  );
+                  if (!row || row.display === "--") return null;
+                  return row.value;
+                })()}
+                totalPoints={
+                  mergedFinal?.statRows.find((r) => r.key === "pointsV3")
+                    ?.value ?? null
+                }
+              />
             </View>
-          </TutorialTargetNative>
+          </View>
         ) : null}
-        <ShareLinkCaptureFooterNative url={shareLinkUrl} visible={sharing} />
       </View>
   );
 
   return (
     <View style={s.matchPreviewWrap}>
       <View ref={captureRef} collapsable={false}>
+      {resultFace && !isWcLeague ? (
+        <ResultCardDesignFaceNative
+          language={language === "en" ? "en" : "ja"}
+          face={resultFace}
+          showDetailTab={false}
+          live={resultFaceLive}
+          tutorialMetricsTargetId="result-detail-metrics"
+        />
+      ) : (
       <TutorialTargetNative id="predict-round">
         <MatchListLineFrameNative
           topLabel={data.roundLabel || undefined}
@@ -717,8 +673,9 @@ export function PredictMatchPreview({
           {previewBody}
         </MatchListLineFrameNative>
       </TutorialTargetNative>
+      )}
       </View>
-      {mergedFinal?.badge || mergedFinal?.streakBadge ? (
+      {!resultFace && (mergedFinal?.badge || mergedFinal?.streakBadge) ? (
         <View
           pointerEvents="none"
           style={s.matchPreviewOutcomeBadge}
@@ -733,20 +690,6 @@ export function PredictMatchPreview({
             badgeScale={0.88}
           />
         </View>
-      ) : null}
-      {showActionMenu ? (
-        <PredictOverlayActionFabNative
-          showClose={false}
-          onClose={onClose}
-          closeLabel={closeLabel}
-          showEdit={Boolean(showEditButton && onEditPrediction)}
-          showShare={canShare}
-          onEdit={onEditPrediction}
-          onShare={() => void handleShareResult()}
-          menuLabel={resultCopy.openActions}
-          editLabel={t.editScoresCta}
-          shareLabel={resultCopy.shareMyResult}
-        />
       ) : null}
     </View>
   );
@@ -802,6 +745,8 @@ type PredictModalProps = {
   goalScorerPick?: WcGoalScorerPick | NbaTopScorerPick | null;
   setGoalScorerPick?: (value: WcGoalScorerPick | NbaTopScorerPick | null) => void;
   mergedFinalPreview?: PredictModalMergedFinalPreview | null;
+  /** 自分の投稿 stats（カード面の Upset / Score / scoreRel 用） */
+  resultPostStats?: Record<string, unknown> | null;
   /** 親の predict-overlay-cyber-form 一枚に内包（MatchCard + フォームを分割しない） */
   overlayUnifiedForm?: boolean;
   /** 自分の投稿 ID（共有キャプチャ用） */
@@ -899,7 +844,7 @@ export default function PredictModal({
   onClose,
   spectatorStartedNoPost = false,
   predictionEditLockedAfterKickoff = false,
-  expandScoreFormWhenEditing = false,
+  expandScoreFormWhenEditing: _expandScoreFormWhenEditing = false,
   predictData = null,
   overlayMarketBar = null,
   language,
@@ -908,6 +853,7 @@ export default function PredictModal({
   goalScorerPick = null,
   setGoalScorerPick,
   mergedFinalPreview = null,
+  resultPostStats = null,
   overlayUnifiedForm = false,
   myPostId = null,
   isProUser = false,
@@ -1040,12 +986,12 @@ export default function PredictModal({
 
   useEffect(() => {
     if (!visible) return;
-    if (isEditingPrediction && !expandScoreFormWhenEditing) {
+    if (predictionEditLockedAfterKickoff && isEditingPrediction) {
       setScoreFormExpanded(false);
     } else {
       setScoreFormExpanded(true);
     }
-  }, [visible, isEditingPrediction, expandScoreFormWhenEditing]);
+  }, [visible, isEditingPrediction, predictionEditLockedAfterKickoff]);
 
   useEffect(
     () => () => {
@@ -1070,9 +1016,10 @@ export default function PredictModal({
   const showMergedFinalInPreview =
     showMergedPredictionInPreview && gameStatus === "final" && mergedFinalPreview != null;
   const showMergedScheduledInPreview =
-    showMergedPredictionInPreview &&
+    Boolean(overlayMarketBar) &&
     gameStatus === "scheduled" &&
-    mergedFinalPreview == null;
+    mergedFinalPreview == null &&
+    !spectatorStartedNoPost;
   const mergedPredictionForPreview = useMemo(() => {
     if (!showMergedScheduledInPreview) return null;
     const homeRaw = scoreHome.trim();
@@ -1110,19 +1057,57 @@ export default function PredictModal({
     { apiBaseUrl: getUniterzApiBaseUrl(), paused: !appActive }
   );
   /** Web 同様モックには落とさない（実在しない選手を賭け対象にしない） */
-  const nbaTopScorerCandidates = useMemo(
+  const nbaTopScorerCandidatesFromGame = useMemo(
     () =>
       normalizeNbaTopScorerCandidates(
         predictData?.subjectGame?.topScorerCandidates
       ),
     [predictData?.subjectGame]
   );
+  const nbaTopScorerMatchupIds = {
+    home:
+      rawTeamIdFromGameSide(matchPreview?.homeSide) ??
+      rawTeamIdFromGameSide(predictData?.subjectGame?.home),
+    away:
+      rawTeamIdFromGameSide(matchPreview?.awaySide) ??
+      rawTeamIdFromGameSide(predictData?.subjectGame?.away),
+  };
+  const { candidates: nbaTopScorerCandidates } = useNbaTopScorerCandidates({
+    homeTeamId: nbaTopScorerMatchupIds.home,
+    awayTeamId: nbaTopScorerMatchupIds.away,
+    override: nbaTopScorerCandidatesFromGame,
+    apiBaseUrl: getUniterzApiBaseUrl(),
+    enabled: predictData?.league === "nba" && !isWcLeague,
+  });
+  const nbaTopScorerPreview = useMemo(() => {
+    if (isWcLeague || predictData?.league !== "nba") return null;
+    const info = resolveNbaTopScorerResultInfo(
+      {
+        league: "nba",
+        status: "scheduled",
+        prediction: { goalScorer: goalScorerPick },
+      },
+      {
+        candidates: nbaTopScorerCandidates,
+        leadingScorers: predictData?.subjectGame?.leadingScorers,
+      }
+    );
+    if (!info?.playerName) return null;
+    return info;
+  }, [
+    goalScorerPick,
+    isWcLeague,
+    nbaTopScorerCandidates,
+    predictData?.league,
+    predictData?.subjectGame?.leadingScorers,
+  ]);
   const showWcOverlayTabs = isWcLeague && hideMarketTab;
   const overlayCenterMode = hideMarketTab;
   const showOverlayScheduleMeta =
     overlayCenterMode &&
     overlayMarketBar?.status === "scheduled" &&
     predictScheduleMeta != null &&
+    predictScheduleMeta.broadcastLabels.length > 0 &&
     !showMergedFinalInPreview;
 
   const predictedScoreForGoalScorer = useMemo(() => {
@@ -1136,6 +1121,98 @@ export default function PredictModal({
     }
     return { home, away };
   }, [scoreHome, scoreAway]);
+
+  /** WC 以外・予想済みオーバーレイ: リザルト一覧・詳細と同じカード面 */
+  const overlayResultFace = useMemo((): ResultCardFaceModel | null => {
+    if (isWcLeague || !matchPreview || !showMergedPredictionInPreview) return null;
+    const pred = predictedScoreForGoalScorer;
+    if (!pred) return null;
+    const homeTeamId = nbaTopScorerMatchupIds.home ?? "";
+    const awayTeamId = nbaTopScorerMatchupIds.away ?? "";
+    const status = gameStatus;
+    const finalScore =
+      status === "final"
+        ? mergedFinalPreview?.finalScore ??
+          overlayMarketBar?.score ??
+          null
+        : null;
+    const pickWinner =
+      winner === "home" || winner === "away" || winner === "draw"
+        ? winner
+        : overlayMarketBar?.userPredictionWinner ?? "home";
+    const post: Record<string, unknown> = {
+      id: myPostId ?? "",
+      gameId: predictData?.gameId ?? overlayMarketBar?.gameId ?? "",
+      league: predictData?.league ?? overlayMarketBar?.league ?? "",
+      status,
+      home: {
+        name: matchPreview.homeCompact,
+        teamId: homeTeamId,
+      },
+      away: {
+        name: matchPreview.awayCompact,
+        teamId: awayTeamId,
+      },
+      prediction: {
+        winner: pickWinner,
+        score: { home: pred.home, away: pred.away },
+        ...(goalScorerPick ? { goalScorer: goalScorerPick } : {}),
+      },
+      result: finalScore
+        ? { home: finalScore.home, away: finalScore.away }
+        : null,
+      stats: resultPostStats ?? {},
+      ...(matchPreview.roundLabel
+        ? { roundLabel: matchPreview.roundLabel }
+        : {}),
+    };
+    const market = overlayMarketBar?.fallbackMarketBias;
+    return buildResultCardFaceModel(post, {
+      ...(market
+        ? {
+            market: {
+              homeRate: market.homePct,
+              awayRate: market.awayPct,
+            },
+          }
+        : {}),
+      gameMeta: {
+        roundLabel: matchPreview.roundLabel,
+      },
+      ...(nbaTopScorerCandidates.length > 0
+        ? { topScorerCandidates: nbaTopScorerCandidates }
+        : {}),
+      ...(predictData?.subjectGame?.leadingScorers
+        ? { leadingScorers: predictData.subjectGame.leadingScorers }
+        : {}),
+    });
+  }, [
+    isWcLeague,
+    matchPreview,
+    showMergedPredictionInPreview,
+    predictedScoreForGoalScorer,
+    nbaTopScorerMatchupIds.home,
+    nbaTopScorerMatchupIds.away,
+    gameStatus,
+    mergedFinalPreview?.finalScore,
+    overlayMarketBar?.score,
+    overlayMarketBar?.userPredictionWinner,
+    overlayMarketBar?.fallbackMarketBias,
+    overlayMarketBar?.gameId,
+    overlayMarketBar?.league,
+    winner,
+    myPostId,
+    predictData?.gameId,
+    predictData?.league,
+    predictData?.subjectGame?.leadingScorers,
+    goalScorerPick,
+    resultPostStats,
+    nbaTopScorerCandidates,
+  ]);
+  const overlayResultFaceLive =
+    Boolean(overlayResultFace) &&
+    gameStatus === "live" &&
+    overlayResultFace?.resultHome == null;
 
   useEffect(() => {
     if (hideMarketTab && predictToolsTab === "market") {
@@ -1309,16 +1386,15 @@ export default function PredictModal({
                         wcGoalScorer={
                           showMergedScheduledInPreview ? wcGoalScorerPreview : null
                         }
+                        nbaTopScorer={nbaTopScorerPreview}
                         isWcLeague={isWcLeague}
                         tutorialMode={tutorialMode}
                         overlayCenterMode={overlayCenterMode}
-                        showEditButton={
-                          showMergedScheduledInPreview && !editingLockedAfterKickoff
-                        }
-                        onEditPrediction={() => setScoreFormExpanded(true)}
                         overlayUnifiedForm={overlayUnifiedForm}
                         hideCloseButton
                         myPostId={myPostId}
+                        resultFace={overlayResultFace}
+                        resultFaceLive={overlayResultFaceLive}
                       />
                     </Animated.View>
                   ) : null}
@@ -2420,6 +2496,22 @@ const s = StyleSheet.create({
     paddingTop: 2,
     paddingBottom: 6,
   },
+  matchPreviewResultFooter: {
+    width: "100%",
+    marginTop: 2,
+    paddingBottom: 4,
+  },
+  matchPreviewLayerDivider: {
+    height: StyleSheet.hairlineWidth,
+    width: "100%",
+    backgroundColor: "rgba(255,255,255,0.1)",
+    marginTop: 10,
+    marginBottom: 10,
+  },
+  matchPreviewResultStatBlock: {
+    gap: 6,
+    paddingTop: 2,
+  },
   /** Web overlay `text-xl` + `bracketMarketTeamTypography` */
   matchPreviewRoundPadded: {
     ...MATCH_CARD_BRACKET_TEXT,
@@ -2458,8 +2550,8 @@ const s = StyleSheet.create({
   matchPreviewMergedBlock: {
     alignItems: "center",
     justifyContent: "center",
-    minHeight: 56,
-    gap: 4,
+    minHeight: 40,
+    gap: 2,
     paddingTop: 2,
   },
   matchPreviewMergedKicker: {
@@ -2478,20 +2570,20 @@ const s = StyleSheet.create({
   matchPreviewMergedScoreNum: {
     fontFamily: MATCH_CARD_SCORE_FONT,
     color: "#ecfeff",
-    fontSize: 28,
-    lineHeight: 30,
+    fontSize: 16,
+    lineHeight: 18,
     fontWeight: "900",
-    letterSpacing: -0.5,
+    letterSpacing: -0.2,
     fontVariant: ["tabular-nums"],
-    textShadowColor: "rgba(34,211,238,0.38)",
+    textShadowColor: "rgba(34,211,238,0.32)",
     textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 12,
+    textShadowRadius: 8,
   },
   matchPreviewMergedScoreDash: {
     fontFamily: MATCH_CARD_SCORE_FONT,
     color: "rgba(255,255,255,0.9)",
-    fontSize: 24,
-    lineHeight: 28,
+    fontSize: 14,
+    lineHeight: 16,
     fontWeight: "700",
   },
   matchPreviewScheduleMeta: {

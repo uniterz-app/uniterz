@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, type ReactNode } from "react";
+import { Trophy } from "lucide-react";
 import { nameOxanium } from "@/lib/fonts";
 import HalftoneJerseyMark from "@/app/component/games/HalftoneJerseyMark";
 import CountryFlag from "@/app/component/games/CountryFlag";
@@ -38,6 +39,12 @@ import {
   isPlayerDetailRankShown,
   isPlayerDetailSalaryRankShown,
 } from "@/lib/predict/nbaPlayerDetailHowTheyPlay";
+import {
+  CAREER_CHAMPIONSHIP_ROW_COLOR,
+  careerSeasonAwardChipsForPlayer,
+  isPlayerChampionshipSeason,
+  playerHasAnyCareerSeasonAward,
+} from "@/lib/nba/playerAwards/playerCareerSeasonAwards";
 import { nbaTwoWaySalaryForSeason } from "@/lib/nba/teamPayroll/mapBdlToTeamPayroll";
 import { CyberNoDataLabel } from "@/app/component/common/CyberNoDataLabel";
 import {
@@ -88,7 +95,7 @@ function formatDraftHero(
   round: number | null,
   number: number | null
 ): string {
-  if (year == null) return "—";
+  if (year == null || !Number.isFinite(year) || year <= 0) return "UNDRAFTED";
   const pick = number != null ? `#${number}` : "—";
   const r = round != null ? `R${round}` : "";
   return r ? `${year} ${r} ${pick}` : `${year} ${pick}`;
@@ -543,151 +550,165 @@ function fmtPctBref(n: number): string {
   return n.toFixed(3).replace(/^0/, "");
 }
 
+const CAREER_COL_GAP_CLASS = "gap-x-2"; // 8px — ヘッダー／行で共通
+
 const CAREER_SEASON_COLS: Array<{
   key: string;
   label: string;
-  align?: "left" | "right";
-  width: string;
+  align?: "left" | "right" | "center";
+  /** px。ヘッダーとセルで同一幅にして列間を等間隔に見せる */
+  widthPx: number;
   render: (row: NbaPlayerCareerSeasonRow) => string;
 }> = [
   {
     key: "season",
     label: "Season",
     align: "left",
-    width: "w-[64px]",
+    widthPx: 72,
     render: (r) => formatCareerSeasonLabel(r.seasonStart),
+  },
+  {
+    key: "awards",
+    label: "Awards",
+    align: "center",
+    widthPx: 108,
+    render: () => "",
   },
   {
     key: "age",
     label: "Age",
     align: "left",
-    width: "w-7",
+    widthPx: 36,
     render: (r) => String(r.age),
   },
   {
     key: "teamAbbr",
     label: "TEAM",
     align: "left",
-    width: "w-10",
+    widthPx: 40,
     render: (r) => r.teamAbbr,
   },
   {
     key: "games",
     label: "G",
-    width: "w-7",
+    align: "left",
+    widthPx: 28,
     render: (r) => String(r.games),
   },
   {
     key: "gamesStarted",
     label: "GS",
-    width: "w-7",
+    align: "left",
+    widthPx: 32,
     render: (r) =>
       r.gamesStarted == null ? "—" : String(r.gamesStarted),
   },
   {
     key: "min",
     label: "MP",
-    width: "w-9",
+    widthPx: 40,
     render: (r) => fmtPerGame(r.min),
   },
   {
     key: "pts",
     label: "PTS",
-    width: "w-9",
+    widthPx: 40,
     render: (r) => fmtPerGame(r.pts),
   },
   {
     key: "reb",
     label: "REB",
-    width: "w-9",
+    widthPx: 40,
     render: (r) => fmtPerGame(r.reb),
   },
   {
     key: "ast",
     label: "AST",
-    width: "w-9",
+    widthPx: 40,
     render: (r) => fmtPerGame(r.ast),
   },
   {
     key: "fgm",
     label: "FG",
-    width: "w-8",
+    widthPx: 36,
     render: (r) => fmtPerGame(r.fgm),
   },
   {
     key: "fga",
     label: "FGA",
-    width: "w-9",
+    widthPx: 40,
     render: (r) => fmtPerGame(r.fga),
   },
   {
     key: "fgPct",
     label: "FG%",
-    width: "w-10",
+    widthPx: 44,
     render: (r) => fmtPctBref(r.fgPct),
   },
   {
     key: "fg3m",
     label: "3P",
-    width: "w-8",
+    widthPx: 36,
     render: (r) => fmtPerGame(r.fg3m),
   },
   {
     key: "fg3a",
     label: "3PA",
-    width: "w-9",
+    widthPx: 40,
     render: (r) => fmtPerGame(r.fg3a),
   },
   {
     key: "fg3Pct",
     label: "3P%",
-    width: "w-10",
+    widthPx: 44,
     render: (r) => fmtPctBref(r.fg3Pct),
   },
   {
     key: "ftm",
     label: "FT",
-    width: "w-8",
+    widthPx: 36,
     render: (r) => fmtPerGame(r.ftm),
   },
   {
     key: "fta",
     label: "FTA",
-    width: "w-9",
+    widthPx: 40,
     render: (r) => fmtPerGame(r.fta),
   },
   {
     key: "ftPct",
     label: "FT%",
-    width: "w-10",
+    widthPx: 44,
     render: (r) => fmtPctBref(r.ftPct),
   },
   {
     key: "stl",
     label: "STL",
-    width: "w-8",
+    widthPx: 36,
     render: (r) => fmtPerGame(r.stl),
   },
   {
     key: "blk",
     label: "BLK",
-    width: "w-8",
+    widthPx: 36,
     render: (r) => fmtPerGame(r.blk),
   },
   {
     key: "tov",
     label: "TOV",
-    width: "w-8",
+    widthPx: 36,
     render: (r) => fmtPerGame(r.tov),
   },
 ];
 
 function SeasonHistoryTable({
+  playerId,
   regular,
   playoffs,
   accent,
   currentSeasonStart = 2025,
 }: {
+  playerId?: string | null;
   regular: NbaPlayerCareerSeasonRow[];
   playoffs: NbaPlayerCareerSeasonRow[];
   accent: string;
@@ -698,6 +719,10 @@ function SeasonHistoryTable({
   const rows = [...(board === "regular" ? regular : playoffs)].sort(
     (a, b) => b.seasonStart - a.seasonStart
   );
+  const showAwardsCol = playerHasAnyCareerSeasonAward(playerId);
+  const cols = showAwardsCol
+    ? CAREER_SEASON_COLS
+    : CAREER_SEASON_COLS.filter((c) => c.key !== "awards");
 
   return (
     <section className="space-y-3">
@@ -741,15 +766,20 @@ function SeasonHistoryTable({
         >
           <div className="min-w-max">
             <div
-              className={`${nameOxanium.className} flex items-center gap-x-1 border-b px-2 py-1.5 text-[11px] font-bold uppercase tracking-wider text-white/40`}
+              className={`${nameOxanium.className} flex items-center ${CAREER_COL_GAP_CLASS} border-b px-2 py-1.5 text-[11px] font-bold uppercase tracking-wider text-white/40`}
               style={{ borderBottomColor: hexToRgba(accent, 0.18) }}
             >
-              {CAREER_SEASON_COLS.map((col) => (
+              {cols.map((col) => (
                 <span
                   key={col.key}
-                  className={`${col.width} shrink-0 ${
-                    col.align === "left" ? "text-left" : "text-right"
+                  className={`shrink-0 ${
+                    col.align === "left"
+                      ? "text-left"
+                      : col.align === "center"
+                        ? "text-center"
+                        : "text-right"
                   }`}
+                  style={{ width: col.widthPx }}
                 >
                   <SkewText>{col.label}</SkewText>
                 </span>
@@ -757,36 +787,128 @@ function SeasonHistoryTable({
             </div>
             {rows.map((row, i) => {
               const isCurrent = row.seasonStart === currentSeasonStart;
+              const zebra = i % 2 === 1;
+              const isChamp =
+                board === "playoffs" &&
+                isPlayerChampionshipSeason(row.seasonStart, {
+                  teamAbbr: row.teamAbbr,
+                  teamId: row.teamId,
+                });
+              const chips = showAwardsCol
+                ? careerSeasonAwardChipsForPlayer(playerId, row.seasonStart)
+                : [];
+              const numColor = isChamp
+                ? CAREER_CHAMPIONSHIP_ROW_COLOR
+                : undefined;
               return (
                 <div
                   key={`${board}-${row.seasonStart}-${row.teamAbbr}`}
-                  className={`${nameOxanium.className} flex items-center gap-x-1 px-2 py-3 text-[14px] tabular-nums`}
+                  className={`${nameOxanium.className} flex items-center ${CAREER_COL_GAP_CLASS} px-2 py-3 text-[14px] tabular-nums`}
                   style={{
                     backgroundColor: isCurrent
                       ? hexToRgba(accent, 0.12)
-                      : "transparent",
+                      : zebra
+                        ? "rgba(255,255,255,0.035)"
+                        : "transparent",
                     borderBottom:
                       i < rows.length - 1
                         ? `1px solid ${hexToRgba(accent, 0.1)}`
                         : undefined,
                   }}
                 >
-                  {CAREER_SEASON_COLS.map((col) => {
+                  {cols.map((col) => {
                     const value = col.render(row);
                     const emphasize =
                       col.key === "season" ||
                       col.key === "pts" ||
                       col.key === "teamAbbr";
+                    if (col.key === "season") {
+                      return (
+                        <span
+                          key={col.key}
+                          className="inline-flex shrink-0 items-center gap-1 text-left"
+                          style={{ width: col.widthPx }}
+                        >
+                          <span
+                            className="font-extrabold"
+                            style={{
+                              color: numColor ?? "#FFFFFF",
+                              transform: "skewX(-6deg)",
+                            }}
+                          >
+                            {value}
+                          </span>
+                          {isChamp ? (
+                            <Trophy
+                              size={12}
+                              strokeWidth={2.4}
+                              color={CAREER_CHAMPIONSHIP_ROW_COLOR}
+                              fill={hexToRgba(
+                                CAREER_CHAMPIONSHIP_ROW_COLOR,
+                                0.35
+                              )}
+                              aria-label="Champion"
+                              style={{ flexShrink: 0 }}
+                            />
+                          ) : null}
+                        </span>
+                      );
+                    }
+                    if (col.key === "awards") {
+                      return (
+                        <span
+                          key={col.key}
+                          className="flex shrink-0 flex-wrap items-center justify-center gap-x-1 gap-y-0.5 text-center"
+                          style={{ width: col.widthPx }}
+                        >
+                          {chips.map((chip) => (
+                            <span
+                              key={chip.id}
+                              className="rounded-[2px] border px-1 py-px text-[8px] font-extrabold uppercase tracking-wide"
+                              style={{
+                                borderColor: isChamp
+                                  ? hexToRgba(
+                                      CAREER_CHAMPIONSHIP_ROW_COLOR,
+                                      0.55
+                                    )
+                                  : hexToRgba(accent, 0.45),
+                                color: isChamp
+                                  ? CAREER_CHAMPIONSHIP_ROW_COLOR
+                                  : hexToRgba(accent, 0.95),
+                                backgroundColor: isChamp
+                                  ? hexToRgba(
+                                      CAREER_CHAMPIONSHIP_ROW_COLOR,
+                                      0.12
+                                    )
+                                  : hexToRgba(accent, 0.1),
+                              }}
+                            >
+                              <SkewText>{chip.short}</SkewText>
+                            </span>
+                          ))}
+                        </span>
+                      );
+                    }
                     return (
                       <span
                         key={col.key}
-                        className={`${col.width} shrink-0 ${
-                          col.align === "left" ? "text-left" : "text-right"
-                        } ${
-                          emphasize
-                            ? "font-extrabold text-white"
-                            : "font-semibold text-white/75"
-                        }`}
+                        className={`shrink-0 ${
+                          col.align === "left"
+                            ? "text-left"
+                            : col.align === "center"
+                              ? "text-center"
+                              : "text-right"
+                        } ${emphasize ? "font-extrabold" : "font-semibold"}`}
+                        style={{
+                          width: col.widthPx,
+                          color: numColor
+                            ? emphasize
+                              ? numColor
+                              : hexToRgba(CAREER_CHAMPIONSHIP_ROW_COLOR, 0.78)
+                            : emphasize
+                              ? "#FFFFFF"
+                              : "rgba(255,255,255,0.75)",
+                        }}
                       >
                         <SkewText>{value}</SkewText>
                       </span>
@@ -1168,7 +1290,7 @@ export default function NbaPlayerDetailPanel({
           [string, string]
         >)
       : []),
-    ["COLLEGE", detail.college ?? "—"],
+    ["COLLEGE/PRIOR", detail.college?.trim() ? detail.college : isJa ? "大学なし" : "None"],
     ["TEAM", detail.teamName],
     [isJa ? "経歴" : "HISTORY", formatTeamHistory(detail.teamHistory)],
   ];
@@ -1433,6 +1555,7 @@ export default function NbaPlayerDetailPanel({
           />
         </>
       ) : null}      <SeasonHistoryTable
+        playerId={detail.playerId}
         regular={detail.careerSeasons.regular}
         playoffs={detail.careerSeasons.playoffs}
         accent={uiAccent}

@@ -4,17 +4,25 @@ import TeamAbbrBadgeNative from "../../TeamAbbrBadgeNative";
 import type { SeasonAwardsMarketSnapshot } from "../../../../../../../lib/predict/seasonPredictMarket";
 import { nbaTeamIdFromBracketCode } from "../../../../../../../lib/nba-bracket-code";
 import {
+  seasonPredictAwardsMarketHint,
+  type SeasonPredictUiLang,
+} from "../../../../../../../lib/predict/seasonPredictUiCopy";
+import {
   MATCH_CARD_BRACKET_LETTER_SPACING_12,
   MATCH_CARD_BRACKET_TEXT,
 } from "../../matchCardTypography";
 
 type Props = {
   market: SeasonAwardsMarketSnapshot;
+  language?: SeasonPredictUiLang;
 };
 
 const OX = "Oxanium_700Bold";
 
-export default function NbaSeasonAwardsMarketPanelNative({ market }: Props) {
+export default function NbaSeasonAwardsMarketPanelNative({
+  market,
+  language = "ja",
+}: Props) {
   return (
     <View style={styles.card}>
       <Text style={styles.h2}>Awards market · {market.season}</Text>
@@ -22,7 +30,7 @@ export default function NbaSeasonAwardsMarketPanelNative({ market }: Props) {
         {market.submissionCount.toLocaleString()} submissions
       </Text>
       <Text style={styles.lead}>
-        各アワードの提出シェア Top5。締切後に公開される本番ビューと同じレイアウトです。
+        {seasonPredictAwardsMarketHint(language)}
       </Text>
 
       <View style={{ gap: 16, marginTop: 12 }}>
@@ -30,7 +38,9 @@ export default function NbaSeasonAwardsMarketPanelNative({ market }: Props) {
           <View key={block.awardId}>
             <View style={styles.awardHead}>
               <Text style={styles.awardEn}>{block.labelEn}</Text>
-              <Text style={styles.awardJa}>{block.labelJa}</Text>
+              {language !== "en" ? (
+                <Text style={styles.awardJa}>{block.labelJa}</Text>
+              ) : null}
             </View>
             <View style={{ gap: 6 }}>
               {block.top.map((row, i) => {

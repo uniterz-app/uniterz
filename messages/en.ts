@@ -205,13 +205,13 @@ const en: Messages = {
   rankings: {
     title: "Rankings",
     myCommunity: "My community",
-    totalScore: "Total Score",
+    totalScore: "Score",
     winRate: "Win Rate",
     exactHits: "Exact Score Hits",
     upsetScore: "Upset Score",
     winStreak: "Win Streak",
-    goalScorerHits: "Goal Scorers",
-    topScorerHits: "Top Scorer Hits",
+    goalScorerHits: "Scorer",
+    topScorerHits: "Scorer",
     periodSeason: "Season",
     periodWeekly: "Weekly",
     periodMonthly: "Monthly",
@@ -223,7 +223,7 @@ const en: Messages = {
     divisionOpenTitle: "PRO LEAGUE",
     divisionOpenLockBody:
       "A Pro-only league across every game. Subscribe to Pro to view and join.",
-    divisionOpenCta: "See Pro",
+    divisionOpenCta: "Explore Pro",
     divisionOpenModalDismiss: "Close",
     divisionOpenBackToPickUp: "Back to Pick Up",
     upset: "Upset",
@@ -398,7 +398,7 @@ const en: Messages = {
 
   results: {
     user: "User",
-    userPrediction: "Your prediction",
+    userPrediction: "YOUR CALL",
     actualResult: "Actual result",
     pointsEarned: "Points earned",
     base: "Base",
@@ -409,7 +409,7 @@ const en: Messages = {
     correct: "Correct",
     incorrect: "Incorrect",
     pending: "Pending",
-    myPrediction: "Your prediction",
+    myPrediction: "YOUR CALL",
     final: "Final",
     predictions: "Predictions",
     deleteConfirm: "Delete this prediction?",
@@ -431,6 +431,7 @@ const en: Messages = {
     nbaTopScorerResultLabel: "Top scorer",
     upsetPointsLabel: "Upset",
     totalPointsLabel: "Score",
+    pendingCallLabel: "YOUR CALL",
     upsetPointsDesc:
       "A separate metric (0–10 per match) awarded only when the match is an upset and you correctly predicted it with a minority pick. If conditions aren't met, it's 0.",
     totalPointsDesc:
@@ -776,7 +777,7 @@ const en: Messages = {
     scorePlaceholder: "Score",
     cancelEditing: "Cancel editing",
     editScoresCta: "Edit",
-    yourPrediction: "Your prediction",
+    yourPrediction: "YOUR CALL",
     enterValidScores: "Please enter valid scores.",
     predictionUpdated: "Prediction updated.",
     predictionSubmitted: "Prediction submitted.",

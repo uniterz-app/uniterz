@@ -363,6 +363,8 @@ export type GameDoc = {
   };
   homePct?: number;
   awayPct?: number;
+  /** 投稿数（posts_v2 作成時に increment） */
+  predictorCount?: number;
   seasonPhase?: unknown;
   seriesHomeWins?: unknown;
   seriesAwayWins?: unknown;
@@ -460,19 +462,23 @@ export function toMatchCardProps(
       : (gid: string) => `/web/games/${gid}/predict`);
 
   // --------------------------------------------------------
-  // marketBias 抽出
+  // marketBias 抽出（0–1 rate も pct に正規化）
   // --------------------------------------------------------
+  const asPct = (v: unknown): number | undefined => {
+    if (typeof v !== "number" || !Number.isFinite(v)) return undefined;
+    if (v >= 0 && v <= 1) return v * 100;
+    if (v >= 0 && v <= 100) return v;
+    return undefined;
+  };
   const homePct = Math.max(
     0,
     Math.min(
       100,
-      Number(
-        raw?.marketBias?.homePct ??
-          raw?.market?.homePct ??
-          raw?.market?.homeRate ??
-          raw?.homePct ??
-          50
-      )
+      asPct(raw?.marketBias?.homePct) ??
+        asPct(raw?.market?.homePct) ??
+        asPct(raw?.market?.homeRate) ??
+        asPct(raw?.homePct) ??
+        50
     )
   );
 
@@ -480,13 +486,11 @@ export function toMatchCardProps(
     0,
     Math.min(
       100,
-      Number(
-        raw?.marketBias?.awayPct ??
-          raw?.market?.awayPct ??
-          raw?.market?.awayRate ??
-          raw?.awayPct ??
-          50
-      )
+      asPct(raw?.marketBias?.awayPct) ??
+        asPct(raw?.market?.awayPct) ??
+        asPct(raw?.market?.awayRate) ??
+        asPct(raw?.awayPct) ??
+        50
     )
   );
 
@@ -516,6 +520,12 @@ export function toMatchCardProps(
       homePct,
       awayPct,
     },
+    predictorCount:
+      typeof raw?.predictorCount === "number" &&
+      Number.isFinite(raw.predictorCount) &&
+      raw.predictorCount >= 0
+        ? Math.floor(raw.predictorCount)
+        : undefined,
 
     // V2では MatchCard が自前でリンク生成するため不要
     viewPredictionHref: buildView(id),

@@ -3,6 +3,7 @@
  */
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import type { ResolvedBadgeNative } from "./useNativeProfileBadges";
+import { resolveBadgeCopy } from "../../../../../lib/badges/resolveBadgeCopy";
 
 const COLS = 4;
 const GAP = 10;
@@ -26,6 +27,7 @@ export default function BadgePaletteNative({
   badges,
   emptyLabel,
   onSelect,
+  language,
 }: Props) {
   const totalSlots = computeTotalSlots(badges.length);
   const rowCount = Math.ceil(totalSlots / COLS);
@@ -41,10 +43,12 @@ export default function BadgePaletteNative({
               const slotIdx = rowIdx * COLS + colIdx;
               const badge = badges[slotIdx];
               if (badge) {
+                const title = resolveBadgeCopy(badge, language).title;
                 return (
                   <Pressable
                     key={badge.id}
                     onPress={() => onSelect(badge)}
+                    accessibilityLabel={title}
                     style={({ pressed }) => [styles.slot, pressed && styles.slotPressed]}
                   >
                     <View pointerEvents="none" style={styles.groundShadow} />
@@ -55,7 +59,7 @@ export default function BadgePaletteNative({
                         resizeMode="contain"
                       />
                     ) : (
-                      <Text style={styles.fallback}>{badge.title.slice(0, 8)}</Text>
+                      <Text style={styles.fallback}>{title.slice(0, 8)}</Text>
                     )}
                   </Pressable>
                 );

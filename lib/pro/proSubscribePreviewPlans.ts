@@ -112,8 +112,8 @@ const SEASON_EXTRA: ProSubscribePreviewFeature = {
   icon: "season",
   titleJa: "シーズン通し + 振り返り",
   titleEn: "Full season + recap",
-  detailJa: "シーズン終了まで Pro。大会／シーズンの振り返り（予定）",
-  detailEn: "Pro through the season, plus a season recap (planned).",
+  detailJa: "対象 NBA シーズンは原則 7/31 まで Pro。シーズン振り返り（予定）",
+  detailEn: "Pro through the NBA season (through July 31). Season recap (planned).",
 };
 
 export const PRO_SUBSCRIBE_PREVIEW_PLANS: readonly ProSubscribePreviewPlan[] = [
@@ -152,12 +152,14 @@ export const PRO_SUBSCRIBE_PREVIEW_PLANS: readonly ProSubscribePreviewPlan[] = [
     labelEn: "Season Pass",
     priceJa: "¥5,000",
     priceEn: "¥5,000",
-    periodJa: "/ シーズン",
-    periodEn: "/ season",
-    badgeJa: "買い切り",
-    badgeEn: "One-time",
-    blurbJa: "シーズン通しで使う人向け。自動更新なし・途中解約の返金なし。",
-    blurbEn: "Full season access. No auto-renew / no mid-season refund.",
+    periodJa: "〜7/31",
+    periodEn: "until Jul 31",
+    badgeJa: "〜7月末",
+    badgeEn: "Until July",
+    blurbJa:
+      "対象 NBA シーズン終了まで Pro。自動更新なし。途中解約の返金なし。次シーズンは再購入。",
+    blurbEn:
+      "Pro through the NBA season. No auto-renew. No mid-season refund. Buy again next season.",
     features: [...CORE_FEATURES, WEEKLY_REPORT, MONTHLY_REPORT, SEASON_EXTRA],
   },
 ];

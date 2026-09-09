@@ -85,7 +85,7 @@ export function getGamesTexts(language: GamesLanguage) {
       apiBaseMissingBody:
         "Set EXPO_PUBLIC_UNITERZ_API_BASE_URL in apps/native/.env to your deployed Next.js site (no trailing slash), e.g. https://example.com",
       gameDetail: "Game Details",
-      myPrediction: "Your prediction",
+      myPrediction: "YOUR CALL",
       tabH2h: "Matchup",
       tabMarket: "Market",
       tabStats: "Stats",

@@ -14,7 +14,6 @@ import {
 import { createPortal } from "react-dom";
 import ProfileEditKinetikPanel from "@/app/component/profile/edit/ProfileEditKinetikPanel";
 import { PROFILE_EDIT_KINETIK_MOCK } from "@/app/component/profile/edit/profileEditKinetikTypes";
-import ProfilePlanProBackgroundFx from "@/app/component/profile/ui/ProfilePlanProBackgroundFx";
 import { nameOxanium, nameRajdhani } from "@/lib/fonts";
 import { saveMeProSkin } from "@/lib/api/saveMeProSkin";
 import { fetchProSkinStatus } from "@/lib/api/fetchProSkinStatus";
@@ -37,6 +36,7 @@ import { profilePlanProAdoptedSkinSwatch } from "@/lib/profile/profilePlanProAdo
 import type { ProfilePlanProBgVariant } from "@/lib/profile/profilePlanProBgVariants";
 import { PROFILE_PLAN_PRO_CLASS } from "@/lib/profile/profilePlanVisual";
 import { PRO_SUBSCRIBE_PATH } from "@/lib/pro/proSkinRoutes";
+import { proSkinThumbPublicPath } from "@/lib/profile/proSkinStaticPreview";
 import { getUserDocDataCached } from "@/lib/user/userDocCache";
 import { auth } from "@/lib/firebase";
 import "@/app/component/profile/pro/profilePlanProBgPickerPreview.css";
@@ -139,11 +139,13 @@ function SkinThumbnail({ entry }: { entry: ProfilePlanProAdoptedEntry }) {
         ].join(" ")}
         style={{ background: swatch }}
       >
-        {/* 一覧で模様が見えるよう、全スキンで本番 FX をサムネ描画（アニメなし） */}
-        <ProfilePlanProBackgroundFx
-          variant={entry.id}
-          animate={false}
-          web
+        {/* カタログは静止 WebP。確認オーバーレイは本番 Kinetik カード */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={proSkinThumbPublicPath(entry.id)}
+          alt=""
+          className="profile-plan-pro-bg-picker-skin-thumb__img"
+          draggable={false}
         />
         <span
           className="profile-kinetik-frame-corner profile-kinetik-frame-corner--tl"
@@ -415,11 +417,11 @@ export default function ProfilePlanProSkinPicker({
     null
   );
   const [overlayMounted, setOverlayMounted] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [replayByVariant, setReplayByVariant] = useState<
     Partial<Record<ProfilePlanProBgVariant, number>>
   >({});
-  const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
   const [unlockedIds, setUnlockedIds] = useState<Set<string>>(() =>
     new Set(PRO_SKIN_UNLOCK_CATALOG.map((e) => e.id))
   );
@@ -828,11 +830,12 @@ export default function ProfilePlanProSkinPicker({
         "profile-plan-pro-bg-picker-preview-page text-white",
         isWeb
           ? isProduction
-            ? "pb-10"
+            ? ""
             : "min-h-screen bg-[#03080d] px-4 py-6 md:px-8 md:py-8 pb-16"
           : [
-              "min-h-screen bg-[#03080d] px-3 py-6 sm:px-4 md:px-8",
-              isProduction ? "pb-16" : "pb-28",
+              isProduction
+                ? "px-3 py-4 sm:px-4 md:px-8"
+                : "min-h-screen bg-[#03080d] px-3 py-6 sm:px-4 md:px-8 pb-28",
             ].join(" "),
       ].join(" ")}
     >

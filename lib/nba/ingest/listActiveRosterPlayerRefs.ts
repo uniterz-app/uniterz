@@ -8,6 +8,8 @@ export type RosterPlayerRef = {
   playerId: string;
   teamId: string;
   position: string;
+  /** ロスター bio。無いときは null */
+  draftYear: number | null;
 };
 
 export async function listActiveRosterPlayerRefs(
@@ -22,10 +24,17 @@ export async function listActiveRosterPlayerRefs(
       const playerId = String(p.id ?? "").trim();
       if (!playerId || seen.has(playerId)) continue;
       seen.add(playerId);
+      const draftYear =
+        typeof p.draftYear === "number" &&
+        Number.isFinite(p.draftYear) &&
+        p.draftYear > 0
+          ? Math.trunc(p.draftYear)
+          : null;
       out.push({
         playerId,
         teamId: team.teamId,
         position: String(p.position ?? "").trim() || "—",
+        draftYear,
       });
     }
   }

@@ -26,6 +26,12 @@ import type { NbaTeamRosterDocTeam } from "@/lib/nba/teamRosters/teamRosterTypes
 import { buildTeamHistoryFromCareerSeasons } from "@/lib/nba/playerDetail/buildTeamHistoryFromCareerSeasons";
 import { buildPlayerSplitsFromGameLogs } from "@/lib/nba/playerDetail/buildPlayerSplitsFromGameLogs";
 import { mergeCuratedPlayerAwards } from "@/lib/nba/playerAwards/nbaPlayerAwardSeasonWinners";
+import {
+  CAREER_CHAMPIONSHIP_AWARD_ID,
+  countCareerChampionships,
+} from "@/lib/nba/playerAwards/playerCareerSeasonAwards";
+import { NBA_PLAYER_AWARD_LABEL_BY_ID } from "@/lib/nba/playerAwards/nbaPlayerAwardCatalog";
+import type { NbaPlayerAward } from "@/lib/predict/nbaPlayerDetailPreviewMocks";
 import type { NbaPlayerSeasonMetricCell } from "@/lib/nba/playerSeasonMetrics/playerSeasonMetricsTypes";
 import type { NbaPlayerLeaderMetricId } from "@/lib/predict/nbaPlayerStatLeadersMocks";
 import {
@@ -358,8 +364,35 @@ export function applyCuratedPlayerAwardsToPlayerDetail(
 ): NbaPlayerDetailPreview {
   const id = String(playerId ?? detail.playerId ?? "").trim();
   if (!id) return detail;
+  const awards = mergeChampionshipIntoAwards(
+    mergeCuratedPlayerAwards(detail.awards, id),
+    detail.careerSeasons
+  );
   return {
     ...detail,
-    awards: mergeCuratedPlayerAwards(detail.awards, id),
+    awards,
   };
+}
+
+/**
+ * Champion 回数はレギュラー／プレーオフ在籍の和集合。
+ * プレーオフ未出場でも優勝チームに在籍していれば数える（例: Kevon Looney）。
+ */
+function mergeChampionshipIntoAwards(
+  awards: NbaPlayerAward[],
+  careerSeasons: NbaPlayerDetailPreview["careerSeasons"] | null | undefined
+): NbaPlayerAward[] {
+  const rows = [
+    ...(careerSeasons?.regular ?? []),
+    ...(careerSeasons?.playoffs ?? []),
+  ];
+  const count = countCareerChampionships(rows);
+  const without = awards.filter((a) => a.id !== CAREER_CHAMPIONSHIP_AWARD_ID);
+  if (count <= 0) return without;
+  const champ: NbaPlayerAward = {
+    id: CAREER_CHAMPIONSHIP_AWARD_ID,
+    label: NBA_PLAYER_AWARD_LABEL_BY_ID.championship,
+    count,
+  };
+  return [champ, ...without];
 }

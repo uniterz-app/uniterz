@@ -22,6 +22,8 @@ import { isWithinProBriefPatchWindow } from "@/lib/nba/insights/proInsightPhases
 import type { TeamScheduleInput } from "@/lib/nba/insights/buildScheduleLines";
 import { loadOrBuildTeamSeasonRecords } from "@/lib/nba/insights/loadPriorSeasonTeamRecords";
 import { loadAceOutRecordsBundle } from "@/lib/nba/insights/ingestNbaTeamAceOutRecords";
+import { loadPlayerStatLeadersSnapshot } from "@/lib/nba/playerStatLeaders/loadPlayerStatLeadersSnapshot";
+import type { NbaPlayerStatLeadersBundle } from "@/lib/predict/nbaPlayerStatLeadersMocks";
 
 export type NbaProBriefIngestMode = "full" | "patch";
 
@@ -261,6 +263,19 @@ export async function ingestNbaProBriefs(
     );
   }
 
+  let playerLeaders: NbaPlayerStatLeadersBundle | null = null;
+  try {
+    const leadersSnap = await loadPlayerStatLeadersSnapshot(db, seasonKey);
+    if (leadersSnap.ok && leadersSnap.bundle) {
+      playerLeaders = leadersSnap.bundle;
+    }
+  } catch (e) {
+    console.warn(
+      "[ingestNbaProBriefs] player leaders unavailable",
+      e instanceof Error ? e.message : e
+    );
+  }
+
   let injurySnap = await loadTeamInjuriesSnapshot(db, seasonKey);
   const injuryTeams = injurySnap.bundle.teams;
 
@@ -356,6 +371,7 @@ export async function ingestNbaProBriefs(
           allDocs: recentDocs,
           limit: 5,
         }),
+        playerLeaders,
         nowMs,
       };
 

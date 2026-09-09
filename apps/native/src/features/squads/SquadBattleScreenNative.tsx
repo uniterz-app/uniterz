@@ -1,7 +1,15 @@
 /**
  * Web `SquadBattlePage` 相当 — SQUAD BATTLE（スナップショット接続、未接続時はモック）
  */
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import {
   Image,
   Modal,
@@ -128,30 +136,24 @@ import {
 import {
   SQUAD_BATTLE_MOCK_DEADLINE_LABEL,
   SQUAD_BATTLE_INVITE_CODE_PLACEHOLDER,
-  SQUAD_BATTLE_IDLE_PANEL,
-  SQUAD_BATTLE_RULES_SECTION,
-  SQUAD_BATTLE_RANK_SPECTATOR_HINT,
-  SQUAD_INVITE_DEADLINE_PREFIX,
-  SQUAD_INVITE_HOLD_HINT,
-  SQUAD_INVITE_LIST_EMPTY,
-  SQUAD_INVITE_LIST_HINT,
-  SQUAD_INVITE_LIST_TITLE,
-  SQUAD_INVITE_JOIN_PROMPT,
-  SQUAD_APPLICANT_OPEN_PROFILE,
-  SQUAD_APPLICANT_SCORE_LABEL,
-  SQUAD_APPLICANT_WINRATE_LABEL,
-  SQUAD_APPLICANT_WR_LABEL,
+  squadBattleIdlePanel,
+  squadBattleRulesSection,
+  squadBattleRankSpectatorHint,
+  squadBattleInviteCopy,
+  squadBattleScreenCopy,
+  localizeSquadMockRelativeLabel,
   squadInviteIncomingTitle,
   squadInviteSendPrompt,
   squadApplicantApprovePrompt,
   SQUAD_BATTLE_PREVIEW_JUMPS,
-  SQUAD_BATTLE_REWARD_RESULT_MOCK,
+  squadBattleRewardResultMock,
   squadBattlePayoutTotalUnits,
   type SquadBattleRewardResult,
-  SQUAD_BATTLE_UI_PHASE_OPTIONS,
-  SQUAD_BATTLE_WEEK_OPTIONS,
-  SQUAD_OPEN_PERIOD_RANKS,
-  SQUAD_OPEN_PERIOD_RANK_GROUP_LABEL,
+  type SquadBattleScreenCopy,
+  type SquadBattleUiLang,
+  squadBattleUiPhaseOptions,
+  squadOpenPeriodRanks,
+  squadOpenPeriodRankGroupLabel,
   squadBattlePhaseBanner,
   SQUAD_RANKING_DETAIL_SPINE,
   squadMemberCountLabel,
@@ -166,11 +168,29 @@ import {
   type SquadBattleWeekIndex,
 } from "../../../../../lib/squads/squadBattleUiCopy";
 import { formatGroupBattleAvgPoints } from "../../../../../lib/groupBattles/score";
+import { useNativeUserLanguageFromAuth } from "../../hooks/useNativeUserLanguage";
 
 /** GOLD LEGION アクセント（CyberSubpageShell / タブは共有シアンのまま） */
 const JOIN_BATTLE_AMBER = SQUAD_GOLD_NATIVE.acc;
 /** 行入場スタッガー（ms）— Web の 40ms に合わせる */
 const LB_ROW_STAGGER_MS = 40;
+
+/** 画面内の全サブコンポーネントで同じ言語コピーを引く（Web と同じ設計） */
+type SquadBattleCopyBundle = {
+  lang: SquadBattleUiLang;
+  c: SquadBattleScreenCopy;
+  invite: ReturnType<typeof squadBattleInviteCopy>;
+};
+
+const SquadBattleCopyCtx = createContext<SquadBattleCopyBundle>({
+  lang: "ja",
+  c: squadBattleScreenCopy("ja"),
+  invite: squadBattleInviteCopy("ja"),
+});
+
+function useSquadCopy() {
+  return useContext(SquadBattleCopyCtx);
+}
 
 /** フェーズ帯の下 — 締切・LOCKED・休止などの状況 */
 function SquadPhaseStatusBannerNative({
@@ -184,11 +204,13 @@ function SquadPhaseStatusBannerNative({
   activeMemberCount: number;
   deadlineLabel?: string | null;
 }) {
+  const { lang } = useSquadCopy();
   const banner = squadBattlePhaseBanner({
     phase,
     hasSquad,
     activeMemberCount,
     deadlineLabel,
+    lang,
   });
   const toneStyle =
     banner.tone === "warn"
@@ -224,15 +246,14 @@ function SquadRewardResultPanelNative({
   result: SquadBattleRewardResult;
   loading?: boolean;
 }) {
+  const { c } = useSquadCopy();
   const r = result;
   const total = squadBattlePayoutTotalUnits(r);
   if (loading) {
     return (
       <View style={styles.rewardPanelEmpty}>
         <Text style={styles.rewardPanelKicker}>REWARD</Text>
-        <Text style={styles.rewardPanelEmptyText}>
-          獲得 Unit を読み込み中…
-        </Text>
+        <Text style={styles.rewardPanelEmptyText}>{c.rewardLoading}</Text>
       </View>
     );
   }
@@ -241,8 +262,7 @@ function SquadRewardResultPanelNative({
       <View style={styles.rewardPanelEmpty}>
         <Text style={styles.rewardPanelKicker}>REWARD</Text>
         <Text style={styles.rewardPanelEmptyText}>
-          {r.payoutNote ||
-            "未参加のため配布対象外です。次回 ENTRY から参加できます。"}
+          {r.payoutNote || c.rewardNotEligible}
         </Text>
       </View>
     );
@@ -294,17 +314,18 @@ function SquadRewardResultPanelNative({
 
 /** 休止期間の専用面（告知 + ルールを1枠） */
 function SquadIdlePanelNative() {
+  const { lang } = useSquadCopy();
+  const idle = squadBattleIdlePanel(lang);
+  const rules = squadBattleRulesSection(lang);
   return (
     <View style={styles.idlePanel}>
-      <Text style={styles.idleKicker}>{SQUAD_BATTLE_IDLE_PANEL.kicker}</Text>
-      <Text style={styles.idleTitle}>{SQUAD_BATTLE_IDLE_PANEL.title}</Text>
-      <Text style={styles.idleDetail}>{SQUAD_BATTLE_IDLE_PANEL.detail}</Text>
+      <Text style={styles.idleKicker}>{idle.kicker}</Text>
+      <Text style={styles.idleTitle}>{idle.title}</Text>
+      <Text style={styles.idleDetail}>{idle.detail}</Text>
       <View style={styles.idleRulesDivider} />
-      <Text style={styles.idleRulesTitle}>
-        {SQUAD_BATTLE_RULES_SECTION.title}
-      </Text>
+      <Text style={styles.idleRulesTitle}>{rules.title}</Text>
       <View style={styles.idleRulesList}>
-        {SQUAD_BATTLE_RULES_SECTION.items.map((item) => (
+        {rules.items.map((item) => (
           <View key={item} style={styles.idleRulesRow}>
             <View style={styles.idleRulesDot} />
             <Text style={styles.idleRulesText}>{item}</Text>
@@ -333,7 +354,8 @@ function SquadWeekChipsNative({
   onChange: (w: SquadBattleWeekIndex) => void;
   weeklyLabels: readonly string[];
 }) {
-  const options = squadBattleWeekChipOptions(weeklyLabels);
+  const { lang } = useSquadCopy();
+  const options = squadBattleWeekChipOptions(weeklyLabels, lang);
   const active = options.find((w) => w.index === weekIndex);
   return (
     <View style={styles.weekChipsWrap}>
@@ -514,6 +536,7 @@ function SquadPageBarNative({
   pageCount: number;
   onChange: (page: number) => void;
 }) {
+  const { c } = useSquadCopy();
   if (pageCount <= 1) return null;
   const pages = Array.from({ length: pageCount }, (_, i) => i);
   return (
@@ -521,7 +544,7 @@ function SquadPageBarNative({
       <Pressable
         disabled={page <= 0}
         onPress={() => onChange(page - 1)}
-        accessibilityLabel="前のページ"
+        accessibilityLabel={c.prevPage}
         style={({ pressed }) => [
           styles.pageNavBtn,
           page <= 0 && styles.pageNavBtnDisabled,
@@ -540,7 +563,7 @@ function SquadPageBarNative({
           <Pressable
             key={p}
             onPress={() => onChange(p)}
-            accessibilityLabel={`${p + 1}ページ目`}
+            accessibilityLabel={c.pageNumber(p + 1)}
             style={({ pressed }) => [
               styles.pageNumBtn,
               active && styles.pageNumBtnActive,
@@ -558,7 +581,7 @@ function SquadPageBarNative({
       <Pressable
         disabled={page >= pageCount - 1}
         onPress={() => onChange(page + 1)}
-        accessibilityLabel="次のページ"
+        accessibilityLabel={c.nextPage}
         style={({ pressed }) => [
           styles.pageNavBtn,
           page >= pageCount - 1 && styles.pageNavBtnDisabled,
@@ -778,6 +801,7 @@ function MemberRowNative({
   periodRanks?: boolean;
   entryFrame?: boolean;
 }) {
+  const { c } = useSquadCopy();
   const useEntryFrame = periodRanks || entryFrame;
   if (member.empty) {
     return (
@@ -791,7 +815,7 @@ function MemberRowNative({
       >
         <MemberAvatarNative member={member} />
         <View style={styles.memberMeta}>
-          <Text style={styles.memberEmptyTitle}>空き枠 · 募集中</Text>
+          <Text style={styles.memberEmptyTitle}>{c.emptySlotTitle}</Text>
           <Text style={styles.memberEmptySub}>OPEN SLOT</Text>
         </View>
       </View>
@@ -866,6 +890,7 @@ function MySquadCardNative({
   onDissolveSquad?: () => void;
   isOwner?: boolean;
 }) {
+  const { c } = useSquadCopy();
   const [editingName, setEditingName] = useState(false);
   const [draftName, setDraftName] = useState(squad.name);
 
@@ -976,7 +1001,7 @@ function MySquadCardNative({
                     setEditingName(true);
                   }}
                   accessibilityRole="button"
-                  accessibilityLabel="スクワッド名を変更"
+                  accessibilityLabel={c.renameSquadLabel}
                   hitSlop={8}
                   style={({ pressed }) => [
                     styles.mySquadRenameBtn,
@@ -1050,7 +1075,7 @@ function MySquadCardNative({
               <Pressable
                 onPress={() => onCopyInviteCode?.(inviteCode)}
                 accessibilityRole="button"
-                accessibilityLabel={`招待コード ${inviteCode} をコピー`}
+                accessibilityLabel={c.copyInviteCodeLabel(inviteCode)}
                 style={({ pressed }) => [
                   styles.mySquadHudCell,
                   !showBattleStats && styles.mySquadHudCellEntry,
@@ -1128,9 +1153,9 @@ function MySquadCardNative({
                     pressed && { opacity: 0.88 },
                   ]}
                   accessibilityRole="button"
-                  accessibilityLabel="解散する"
+                  accessibilityLabel={c.dissolve}
                 >
-                  <Text style={styles.mySquadDissolveBtnText}>解散する</Text>
+                  <Text style={styles.mySquadDissolveBtnText}>{c.dissolve}</Text>
                 </Pressable>
               ) : null}
               {!isOwner && onLeaveSquad ? (
@@ -1141,9 +1166,9 @@ function MySquadCardNative({
                     pressed && { opacity: 0.88 },
                   ]}
                   accessibilityRole="button"
-                  accessibilityLabel="脱退する"
+                  accessibilityLabel={c.leave}
                 >
-                  <Text style={styles.mySquadLeaveBtnText}>脱退する</Text>
+                  <Text style={styles.mySquadLeaveBtnText}>{c.leave}</Text>
                 </Pressable>
               ) : null}
             </View>
@@ -1161,7 +1186,7 @@ function CreateSquadNameModalNative({
   onCreate,
   initialName = "",
   eyebrow = "CREATE SQUAD",
-  submitLabel = "作成する",
+  submitLabel,
 }: {
   visible: boolean;
   onClose: () => void;
@@ -1170,6 +1195,7 @@ function CreateSquadNameModalNative({
   eyebrow?: string;
   submitLabel?: string;
 }) {
+  const { c } = useSquadCopy();
   const [name, setName] = useState(initialName);
   const [agreed, setAgreed] = useState(false);
   const trimmed = name.trim();
@@ -1214,7 +1240,7 @@ function CreateSquadNameModalNative({
               <Pressable
                 onPress={dismiss}
                 style={styles.createModalCloseBtn}
-                accessibilityLabel="閉じる"
+                accessibilityLabel={c.close}
               >
                 <MaterialCommunityIcons
                   name="close"
@@ -1237,9 +1263,7 @@ function CreateSquadNameModalNative({
               >
                 {preview}
               </Text>
-              <Text style={styles.createPreviewHint}>
-                対戦相手に表示される名前 · あとから変更可
-              </Text>
+              <Text style={styles.createPreviewHint}>{c.createNameHint}</Text>
             </View>
 
             <View style={styles.createFieldHeader}>
@@ -1289,9 +1313,10 @@ function CreateSquadNameModalNative({
                 ) : null}
               </View>
               <Text style={styles.createAgreeText}>
-                {SQUAD_BATTLE_MIN_MEMBERS}〜{SQUAD_BATTLE_MAX_MEMBERS}
-                人で確定し、開始後の入れ替え不可・同点は同順位同
-                Unit・不正は失格に同意します。あなたが代表者になります。
+                {c.createConsent(
+                  SQUAD_BATTLE_MIN_MEMBERS,
+                  SQUAD_BATTLE_MAX_MEMBERS
+                )}
               </Text>
             </Pressable>
 
@@ -1310,7 +1335,9 @@ function CreateSquadNameModalNative({
               ]}
             >
               <MaterialCommunityIcons name="plus" size={15} color="#FEF3C7" />
-              <Text style={styles.createModalSubmitText}>{submitLabel}</Text>
+              <Text style={styles.createModalSubmitText}>
+                {submitLabel ?? c.createSubmit}
+              </Text>
             </Pressable>
             <Pressable
               onPress={dismiss}
@@ -1347,6 +1374,7 @@ function JoinByInviteCodeModalNative({
   onJoin: (code: string) => void;
   busy?: boolean;
 }) {
+  const { c } = useSquadCopy();
   const [code, setCode] = useState("");
   const trimmed = normalizeUiInviteCodeNative(code);
   const canSubmit = trimmed.length >= 4 && !busy;
@@ -1382,7 +1410,7 @@ function JoinByInviteCodeModalNative({
               <Pressable
                 onPress={dismiss}
                 style={styles.createModalCloseBtn}
-                accessibilityLabel="閉じる"
+                accessibilityLabel={c.close}
               >
                 <MaterialCommunityIcons
                   name="close"
@@ -1392,9 +1420,7 @@ function JoinByInviteCodeModalNative({
               </Pressable>
             </View>
 
-            <Text style={styles.joinCodeHint}>
-              代表者から共有されたコードを入力
-            </Text>
+            <Text style={styles.joinCodeHint}>{c.inviteCodeHint}</Text>
 
             <View style={styles.createFieldHeader}>
               <Text style={styles.createModalFieldLabel}>Code</Text>
@@ -1432,7 +1458,7 @@ function JoinByInviteCodeModalNative({
                 color="#FEF3C7"
               />
               <Text style={styles.createModalSubmitText}>
-                {busy ? "参加中…" : "参加する"}
+                {busy ? c.joining : c.join}
               </Text>
             </Pressable>
             <Pressable
@@ -1490,6 +1516,7 @@ function SquadRankingDetailModalNative({
   squad: Squad | null;
   onClose: () => void;
 }) {
+  const { c } = useSquadCopy();
   if (!squad) return null;
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -1510,7 +1537,7 @@ function SquadRankingDetailModalNative({
               <Pressable
                 onPress={onClose}
                 style={styles.applyConfirmClose}
-                accessibilityLabel="閉じる"
+                accessibilityLabel={c.close}
               >
                 <MaterialCommunityIcons
                   name="close"
@@ -1569,6 +1596,7 @@ function ApplicantProfileModalNative({
   onApprove?: () => void;
   onReject?: () => void;
 }) {
+  const { c, invite } = useSquadCopy();
   if (!profile) return null;
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -1581,7 +1609,7 @@ function ApplicantProfileModalNative({
             <Pressable
               onPress={onClose}
               style={styles.applicantSheetCloseAbs}
-              accessibilityLabel="閉じる"
+              accessibilityLabel={c.close}
             >
               <MaterialCommunityIcons
                 name="close"
@@ -1615,7 +1643,7 @@ function ApplicantProfileModalNative({
               <View style={styles.applicantSheetStatsRow}>
                 <View style={styles.applicantSheetStatCell}>
                   <Text style={styles.applicantSheetStatKey}>
-                    {SQUAD_APPLICANT_SCORE_LABEL}
+                    {invite.scoreLabel}
                   </Text>
                   <View style={styles.applicantSheetStatValue}>
                     <SquadPointsTextNative value={profile.points} size="md" />
@@ -1623,7 +1651,7 @@ function ApplicantProfileModalNative({
                 </View>
                 <View style={styles.applicantSheetStatCell}>
                   <Text style={styles.applicantSheetStatKey}>
-                    {SQUAD_APPLICANT_WINRATE_LABEL}
+                    {invite.winRateLabel}
                   </Text>
                   <View style={styles.applicantSheetStatValue}>
                     <CyberNumberNative
@@ -1646,7 +1674,7 @@ function ApplicantProfileModalNative({
                 ]}
               >
                 <Text style={styles.applicantProfileBtnText}>
-                  {SQUAD_APPLICANT_OPEN_PROFILE}
+                  {invite.openProfile}
                 </Text>
               </Pressable>
             ) : null}
@@ -1662,7 +1690,7 @@ function ApplicantProfileModalNative({
                     ]}
                   >
                     <MaterialCommunityIcons name="close" size={14} color="#fecdd3" />
-                    <Text style={styles.rejectBtnText}>拒否</Text>
+                    <Text style={styles.rejectBtnText}>{c.reject}</Text>
                   </Pressable>
                 ) : null}
                 {onApprove ? (
@@ -1678,7 +1706,7 @@ function ApplicantProfileModalNative({
                       size={14}
                       color={SQUAD_GOLD_NATIVE.accOn}
                     />
-                    <Text style={styles.approveBtnText}>承認</Text>
+                    <Text style={styles.approveBtnText}>{c.approve}</Text>
                   </Pressable>
                 ) : null}
               </View>
@@ -1691,13 +1719,14 @@ function ApplicantProfileModalNative({
 }
 
 function OpenMemberPeriodRankHeaderNative() {
+  const { lang } = useSquadCopy();
   return (
     <View style={styles.openPeriodRankHeader} accessibilityElementsHidden>
       <Text style={styles.openPeriodRankGroupLabel}>
-        {SQUAD_OPEN_PERIOD_RANK_GROUP_LABEL}
+        {squadOpenPeriodRankGroupLabel(lang)}
       </Text>
       <View style={styles.openPeriodRanks}>
-        {SQUAD_OPEN_PERIOD_RANKS.map((item) => (
+        {squadOpenPeriodRanks(lang).map((item) => (
           <Text key={item.key} style={styles.openPeriodRankHeaderLabel}>
             {item.label}
           </Text>
@@ -1712,9 +1741,10 @@ function OpenMemberPeriodRanksNative({
 }: {
   profile: SquadApplicantProfile;
 }) {
+  const { lang } = useSquadCopy();
   return (
     <View style={styles.openPeriodRanks}>
-      {SQUAD_OPEN_PERIOD_RANKS.map((item) => {
+      {squadOpenPeriodRanks(lang).map((item) => {
         const rank = profile[item.key];
         const missing = rank == null || rank <= 0;
         return (
@@ -1777,6 +1807,7 @@ function OpenSquadRowNative({
   onApply: () => void;
   onOpenMemberProfile: (profile: SquadApplicantProfile) => void;
 }) {
+  const { c } = useSquadCopy();
   const [expanded, setExpanded] = useState(false);
   const canApply = !applied && !applyDisabled;
 
@@ -1796,7 +1827,9 @@ function OpenSquadRowNative({
           <Pressable
             onPress={() => setExpanded((v) => !v)}
             accessibilityRole="button"
-            accessibilityLabel={expanded ? "メンバーを閉じる" : "メンバーを見る"}
+            accessibilityLabel={
+              expanded ? c.membersCollapse : c.membersExpand
+            }
             accessibilityState={{ expanded }}
             style={({ pressed }) => [
               styles.viewMembersBtn,
@@ -1828,7 +1861,7 @@ function OpenSquadRowNative({
                 applyDisabled && !applied && styles.applyBtnTextDisabled,
               ]}
             >
-              {applied ? "申請中" : "申請"}
+              {applied ? c.applying : c.applyShort}
             </Text>
           </Pressable>
         </View>
@@ -1859,6 +1892,7 @@ function ApplyJoinConfirmModalNative({
   onConfirm: () => void;
   onOpenMemberProfile: (profile: SquadApplicantProfile) => void;
 }) {
+  const { c } = useSquadCopy();
   if (!squad) return null;
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -1874,13 +1908,13 @@ function ApplyJoinConfirmModalNative({
                   {squad.name}
                 </Text>
                 <Text style={styles.applyConfirmCopy}>
-                  このグループへの参加を申請します
+                  {c.applyConfirmBody}
                 </Text>
               </View>
               <Pressable
                 onPress={onClose}
                 style={styles.applyConfirmClose}
-                accessibilityLabel="閉じる"
+                accessibilityLabel={c.close}
               >
                 <MaterialCommunityIcons
                   name="close"
@@ -1908,7 +1942,7 @@ function ApplyJoinConfirmModalNative({
                 pressed && styles.pressed,
               ]}
             >
-              <Text style={styles.applyConfirmSubmitText}>申請する</Text>
+              <Text style={styles.applyConfirmSubmitText}>{c.apply}</Text>
             </Pressable>
             <Pressable
               onPress={onClose}
@@ -1944,6 +1978,7 @@ function IncomingJoinConfirmModalNative({
   onDecline: () => void;
   onOpenMemberProfile: (profile: SquadApplicantProfile) => void;
 }) {
+  const { c, invite: inviteCopy } = useSquadCopy();
   if (!invite) return null;
   const members = squadIncomingInviteMemberProfiles(invite, openSquads);
   return (
@@ -1960,16 +1995,16 @@ function IncomingJoinConfirmModalNative({
                   {invite.squadName}
                 </Text>
                 <Text style={styles.applyConfirmCopy}>
-                  {SQUAD_INVITE_JOIN_PROMPT}
+                  {inviteCopy.joinPrompt}
                 </Text>
                 <Text style={styles.openSub}>
-                  {invite.fromDisplayName} からの招待
+                  {c.inviteFrom(invite.fromDisplayName)}
                 </Text>
               </View>
               <Pressable
                 onPress={onClose}
                 style={styles.applyConfirmClose}
-                accessibilityLabel="閉じる"
+                accessibilityLabel={c.close}
               >
                 <MaterialCommunityIcons
                   name="close"
@@ -1999,7 +2034,7 @@ function IncomingJoinConfirmModalNative({
                 pressed && styles.pressed,
               ]}
             >
-              <Text style={styles.applyConfirmSubmitText}>参加する</Text>
+              <Text style={styles.applyConfirmSubmitText}>{c.join}</Text>
             </Pressable>
             <Pressable
               onPress={onDecline}
@@ -2008,7 +2043,9 @@ function IncomingJoinConfirmModalNative({
                 pressed && styles.pressed,
               ]}
             >
-              <Text style={styles.incomingInviteHoldBtnText}>今回はパス</Text>
+              <Text style={styles.incomingInviteHoldBtnText}>
+                {c.passThisTime}
+              </Text>
             </Pressable>
           </View>
         </Pressable>
@@ -2035,6 +2072,7 @@ function InviteSendConfirmModalNative({
   onClose: () => void;
   onConfirm: () => void;
 }) {
+  const { c, lang } = useSquadCopy();
   if (!target) return null;
   const { member } = target;
   return (
@@ -2050,7 +2088,7 @@ function InviteSendConfirmModalNative({
               <Pressable
                 onPress={onClose}
                 style={styles.applyConfirmClose}
-                accessibilityLabel="閉じる"
+                accessibilityLabel={c.close}
               >
                 <MaterialCommunityIcons
                   name="close"
@@ -2081,7 +2119,7 @@ function InviteSendConfirmModalNative({
                 <Text style={styles.inviteSendHandle}>@{member.handle}</Text>
               ) : null}
               <Text style={styles.applyConfirmCopy}>
-                {squadInviteSendPrompt(member.displayName, squadName)}
+                {squadInviteSendPrompt(member.displayName, squadName, lang)}
               </Text>
             </View>
             <Pressable
@@ -2091,7 +2129,7 @@ function InviteSendConfirmModalNative({
                 pressed && styles.pressed,
               ]}
             >
-              <Text style={styles.applyConfirmSubmitText}>誘う</Text>
+              <Text style={styles.applyConfirmSubmitText}>{c.invite}</Text>
             </Pressable>
             <Pressable
               onPress={onClose}
@@ -2121,6 +2159,7 @@ function ApproveApplicantConfirmModalNative({
   onClose: () => void;
   onConfirm: () => void;
 }) {
+  const { c, lang } = useSquadCopy();
   if (!request) return null;
   const { applicant } = request;
   return (
@@ -2136,7 +2175,7 @@ function ApproveApplicantConfirmModalNative({
               <Pressable
                 onPress={onClose}
                 style={styles.applyConfirmClose}
-                accessibilityLabel="閉じる"
+                accessibilityLabel={c.close}
               >
                 <MaterialCommunityIcons
                   name="close"
@@ -2156,7 +2195,7 @@ function ApproveApplicantConfirmModalNative({
                 />
               </View>
               <Text style={styles.applyConfirmCopy}>
-                {squadApplicantApprovePrompt(applicant.displayName)}
+                {squadApplicantApprovePrompt(applicant.displayName, lang)}
               </Text>
             </View>
             <Pressable
@@ -2166,7 +2205,9 @@ function ApproveApplicantConfirmModalNative({
                 pressed && styles.pressed,
               ]}
             >
-              <Text style={styles.applyConfirmSubmitText}>承認する</Text>
+              <Text style={styles.applyConfirmSubmitText}>
+                {c.approveSubmit}
+              </Text>
             </Pressable>
             <Pressable
               onPress={onClose}
@@ -2197,6 +2238,7 @@ function IncomingInviteModalNative({
   onAccept: () => void;
   onHold: () => void;
 }) {
+  const { c, invite: inviteCopy, lang } = useSquadCopy();
   if (!invite) return null;
   const members = invite.members ?? [];
   const deadline = invite.deadlineLabel?.trim() || null;
@@ -2211,18 +2253,18 @@ function IncomingInviteModalNative({
             <View style={styles.applyConfirmHeader}>
               <View style={styles.openMeta}>
                 <Text style={styles.incomingInviteModalTitle}>
-                  {squadInviteIncomingTitle(invite.fromDisplayName)}
+                  {squadInviteIncomingTitle(invite.fromDisplayName, lang)}
                 </Text>
                 <Text style={styles.applyConfirmCopy}>
                   {deadline
-                    ? `${SQUAD_INVITE_DEADLINE_PREFIX} ${deadline}`
-                    : SQUAD_INVITE_DEADLINE_PREFIX}
+                    ? `${inviteCopy.deadlinePrefix} ${deadline}`
+                    : inviteCopy.deadlinePrefix}
                 </Text>
               </View>
               <Pressable
                 onPress={onClose}
                 style={styles.applyConfirmClose}
-                accessibilityLabel="閉じる"
+                accessibilityLabel={c.close}
               >
                 <MaterialCommunityIcons
                   name="close"
@@ -2252,7 +2294,7 @@ function IncomingInviteModalNative({
               </View>
             ) : null}
             <Text style={styles.incomingInviteHoldHint}>
-              {SQUAD_INVITE_HOLD_HINT}
+              {inviteCopy.holdHint}
             </Text>
             <Pressable
               onPress={onAccept}
@@ -2261,7 +2303,7 @@ function IncomingInviteModalNative({
                 pressed && styles.pressed,
               ]}
             >
-              <Text style={styles.applyConfirmSubmitText}>参加する</Text>
+              <Text style={styles.applyConfirmSubmitText}>{c.join}</Text>
             </Pressable>
             <Pressable
               onPress={onHold}
@@ -2270,7 +2312,7 @@ function IncomingInviteModalNative({
                 pressed && styles.pressed,
               ]}
             >
-              <Text style={styles.incomingInviteHoldBtnText}>保留する</Text>
+              <Text style={styles.incomingInviteHoldBtnText}>{c.hold}</Text>
             </Pressable>
           </View>
         </Pressable>
@@ -2301,15 +2343,18 @@ function PastSquadsPanelNative({
     memberUid: string
   ) => void;
 }) {
+  const { c } = useSquadCopy();
   if (pastSquads.length === 0) return null;
 
   return (
     <View style={styles.sectionBlock}>
       <SquadSectionHeaderNative
-        kicker="Past squads"
-        title="過去のスクワッド"
+        kicker={c.pastSquadsKicker}
+        title={c.pastSquadsTitle}
         trailing={
-          <Text style={styles.boardCount}>直近 {pastSquads.length} 大会</Text>
+          <Text style={styles.boardCount}>
+            {c.pastSquadsRecent(pastSquads.length)}
+          </Text>
         }
       />
       <View style={styles.listGap}>
@@ -2331,7 +2376,9 @@ function PastSquadsPanelNative({
                   </Text>
                   <Text style={styles.openSub}>
                     {item.battleName}
-                    {item.role === "owner" ? " · 代表" : " · メンバー"}
+                    {item.role === "owner"
+                      ? c.roleOwnerSuffix
+                      : c.roleMemberSuffix}
                   </Text>
                   <Text style={styles.pastSquadMembers} numberOfLines={1}>
                     {item.members.map((m) => m.displayName).join(" · ")}
@@ -2355,7 +2402,7 @@ function PastSquadsPanelNative({
                     color="#FFF7E0"
                   />
                   <Text style={styles.pastSquadReformBtnText}>
-                    同じメンバーで募集
+                    {c.reformCta}
                   </Text>
                 </Pressable>
               ) : null}
@@ -2385,7 +2432,7 @@ function PastSquadsPanelNative({
                             styles.pressed,
                         ]}
                       >
-                        <Text style={styles.pastInviteBtnText}>誘う</Text>
+                        <Text style={styles.pastInviteBtnText}>{c.invite}</Text>
                       </Pressable>
                     </View>
                   ))}
@@ -2394,7 +2441,7 @@ function PastSquadsPanelNative({
 
               {!canReform && !canInvite && item.role === "owner" ? (
                 <Text style={styles.pastSquadHint}>
-                  未所属時に「同じメンバーで募集」できます
+                  {c.reformOnlyWhenFree}
                 </Text>
               ) : null}
             </View>
@@ -2416,21 +2463,22 @@ function IncomingInvitesPanelNative({
   onDecline: (invite: SquadIncomingInviteMock) => void;
   showEmpty?: boolean;
 }) {
+  const { c, invite: inviteCopy } = useSquadCopy();
   if (invites.length === 0 && !showEmpty) return null;
 
   return (
     <View style={styles.sectionBlock}>
       <SquadSectionHeaderNative
-        kicker="Invites"
-        title={SQUAD_INVITE_LIST_TITLE}
+        kicker={c.invitesKicker}
+        title={inviteCopy.listTitle}
         accent="amber"
         trailing={
           <Text style={styles.boardCount}>{invites.length} pending</Text>
         }
       />
-      <Text style={styles.incomingInviteHoldHint}>{SQUAD_INVITE_LIST_HINT}</Text>
+      <Text style={styles.incomingInviteHoldHint}>{inviteCopy.listHint}</Text>
       {invites.length === 0 ? (
-        <Text style={styles.pastSquadHint}>{SQUAD_INVITE_LIST_EMPTY}</Text>
+        <Text style={styles.pastSquadHint}>{inviteCopy.listEmpty}</Text>
       ) : null}
       <View style={styles.listGap}>
         {invites.map((inv) => (
@@ -2446,7 +2494,7 @@ function IncomingInvitesPanelNative({
                   {inv.squadName}
                 </Text>
                 <Text style={styles.openSub}>
-                  {inv.fromDisplayName} からの招待
+                  {c.inviteFrom(inv.fromDisplayName)}
                 </Text>
               </View>
             </View>
@@ -2459,7 +2507,7 @@ function IncomingInvitesPanelNative({
                 ]}
               >
                 <MaterialCommunityIcons name="check" size={13} color="#FFFFFF" />
-                <Text style={styles.incomingInviteAcceptText}>参加する</Text>
+                <Text style={styles.incomingInviteAcceptText}>{c.join}</Text>
               </Pressable>
               <Pressable
                 onPress={() => onDecline(inv)}
@@ -2468,7 +2516,9 @@ function IncomingInvitesPanelNative({
                   pressed && styles.pressed,
                 ]}
               >
-                <Text style={styles.incomingInviteDeclineText}>今回はパス</Text>
+                <Text style={styles.incomingInviteDeclineText}>
+                  {c.passThisTime}
+                </Text>
               </Pressable>
             </View>
           </View>
@@ -2513,6 +2563,7 @@ function NoneStateNative({
   onAcceptInvite: (invite: SquadIncomingInviteMock) => void;
   onDeclineInvite: (invite: SquadIncomingInviteMock) => void;
 }) {
+  const { c } = useSquadCopy();
   const atLimit = pendingCount >= SQUAD_BATTLE_MAX_PENDING_APPLICATIONS;
   const [page, setPage] = useState(0);
   const [applyConfirmSquad, setApplyConfirmSquad] =
@@ -2546,14 +2597,14 @@ function NoneStateNative({
           style={({ pressed }) => [styles.ctaPrimary, pressed && styles.pressed]}
         >
           <MaterialCommunityIcons name="plus" size={16} color="#FEF3C7" />
-          <Text style={styles.ctaPrimaryText}>グループを作成</Text>
+          <Text style={styles.ctaPrimaryText}>{c.createGroup}</Text>
         </Pressable>
         <Pressable
           onPress={onJoinByCode}
           style={({ pressed }) => [styles.ctaSecondary, pressed && styles.pressed]}
         >
           <MaterialCommunityIcons name="ticket-outline" size={16} color="rgba(254,243,199,0.85)" />
-          <Text style={styles.ctaSecondaryText}>招待コードで参加</Text>
+          <Text style={styles.ctaSecondaryText}>{c.joinByInviteCode}</Text>
         </Pressable>
         </View>
         </View>
@@ -2578,7 +2629,7 @@ function NoneStateNative({
 
       <View style={styles.sectionBlock}>
         <SquadSectionHeaderNative
-          kicker="My applications"
+          kicker={c.myApplicationsKicker}
           accent="amber"
           trailing={
             <Text
@@ -2593,14 +2644,11 @@ function NoneStateNative({
         />
         {atLimit ? (
           <Text style={styles.limitHint}>
-            申請は最大 {SQUAD_BATTLE_MAX_PENDING_APPLICATIONS}{" "}
-            件までです。承認または取り下げ後に追加できます。
+            {c.applicationLimitHint(SQUAD_BATTLE_MAX_PENDING_APPLICATIONS)}
           </Text>
         ) : null}
         {outgoingRequests.length === 0 ? (
-          <SquadEmptyHintNative>
-            送信中の参加申請はありません。
-          </SquadEmptyHintNative>
+          <SquadEmptyHintNative>{c.noOutgoingApplications}</SquadEmptyHintNative>
         ) : (
           <View style={styles.listGap}>
             {outgoingRequests.map((req) => (
@@ -2615,7 +2663,7 @@ function NoneStateNative({
                     {req.squadName}
                   </Text>
                   <Text style={styles.openSub}>
-                    承認待ち · {req.createdAtLabel}
+                    {c.awaitingApproval} · {req.createdAtLabel}
                   </Text>
                 </View>
                 <Pressable
@@ -2625,9 +2673,9 @@ function NoneStateNative({
                     pressed && styles.pressed,
                   ]}
                   accessibilityRole="button"
-                  accessibilityLabel="取り下げ"
+                  accessibilityLabel={c.withdraw}
                 >
-                  <Text style={styles.withdrawBtnText}>取り下げ</Text>
+                  <Text style={styles.withdrawBtnText}>{c.withdraw}</Text>
                 </Pressable>
               </View>
             ))}
@@ -2637,8 +2685,8 @@ function NoneStateNative({
 
       <View style={styles.sectionBlock}>
         <SquadSectionHeaderNative
-          kicker="Open squads"
-          title="空き枠あり"
+          kicker={c.openSquadsKicker}
+          title={c.openSquadsTitle}
           trailing={
             <View style={styles.applyCounterBlock}>
               <Text
@@ -2655,8 +2703,7 @@ function NoneStateNative({
         />
         {atLimit && outgoingRequests.length === 0 ? (
           <Text style={styles.limitHint}>
-            申請は最大 {SQUAD_BATTLE_MAX_PENDING_APPLICATIONS}{" "}
-            件までです。承認または取り下げ後に追加できます。
+            {c.applicationLimitHint(SQUAD_BATTLE_MAX_PENDING_APPLICATIONS)}
           </Text>
         ) : null}
         <View style={styles.listGap}>
@@ -2704,12 +2751,13 @@ function IncomingRequestsNative({
   onApprove: (req: SquadJoinRequest) => void;
   onReject: (req: SquadJoinRequest) => void;
 }) {
+  const { c, invite } = useSquadCopy();
   if (requests.length === 0) return null;
   return (
     <View style={styles.sectionBlock}>
       <SquadSectionHeaderNative
-        kicker="Join requests"
-        title="参加申請"
+        kicker={c.joinRequestsKicker}
+        title={c.joinRequestsTitle}
         trailing={
           <Text style={styles.boardCount}>{requests.length} pending</Text>
         }
@@ -2723,7 +2771,9 @@ function IncomingRequestsNative({
             <Pressable
               onPress={() => onOpenProfile(req)}
               style={({ pressed }) => [styles.requestMain, pressed && styles.pressed]}
-              accessibilityLabel={`${req.applicant.displayName}のプロフィール`}
+              accessibilityLabel={c.applicantProfileOf(
+                req.applicant.displayName
+              )}
             >
               <ProfileAvatarNative profile={req.applicant} square />
               <View style={styles.openMeta}>
@@ -2737,7 +2787,7 @@ function IncomingRequestsNative({
                   </Text>
                 </View>
                 <View style={styles.requestStatsRow}>
-                  <Text style={styles.requestThisWeekLabel}>今週</Text>
+                  <Text style={styles.requestThisWeekLabel}>{c.thisWeek}</Text>
                   <CyberRankNumberNative
                     rank={weekMissing ? 0 : weekRank}
                     compact
@@ -2749,7 +2799,7 @@ function IncomingRequestsNative({
                     ·
                   </Text>
                   <Text style={styles.requestStatsWrLabel}>
-                    {SQUAD_APPLICANT_WR_LABEL}
+                    {invite.wrLabel}
                   </Text>
                   <CyberNumberNative
                     value={req.applicant.winRate.toFixed(1)}
@@ -2766,7 +2816,7 @@ function IncomingRequestsNative({
                 style={({ pressed }) => [styles.rejectBtn, pressed && styles.pressed]}
               >
                 <MaterialCommunityIcons name="close" size={13} color="#fecdd3" />
-                <Text style={styles.rejectBtnText}>拒否</Text>
+                <Text style={styles.rejectBtnText}>{c.reject}</Text>
               </Pressable>
               <Pressable
                 onPress={() => onApprove(req)}
@@ -2777,7 +2827,7 @@ function IncomingRequestsNative({
                   size={13}
                   color={SQUAD_GOLD_NATIVE.accOn}
                 />
-                <Text style={styles.approveBtnText}>承認</Text>
+                <Text style={styles.approveBtnText}>{c.approve}</Text>
               </Pressable>
             </View>
           </View>
@@ -3146,6 +3196,14 @@ function LeaderboardRowNative({
 export default function SquadBattleScreenNative() {
   const navigation = useNavigation();
   const route = useRoute();
+  const { language: userLanguage } = useNativeUserLanguageFromAuth();
+  const lang: SquadBattleUiLang = userLanguage === "en" ? "en" : "ja";
+  const c = useMemo(() => squadBattleScreenCopy(lang), [lang]);
+  const inviteCopy = useMemo(() => squadBattleInviteCopy(lang), [lang]);
+  const copyBundle = useMemo<SquadBattleCopyBundle>(
+    () => ({ lang, c, invite: inviteCopy }),
+    [lang, c, inviteCopy]
+  );
   const isPreviewMode = route.name === "SquadBattlePreview";
   const { bottomContentReserveY } = useBottomTabBarInsets();
   const [previewState, setPreviewState] =
@@ -3375,10 +3433,14 @@ export default function SquadBattleScreenNative() {
         }
         if (boot.joinRequests) {
           setLiveIncomingRequests(
-            boot.joinRequests.incoming.map(mapJoinRequestApiToUi)
+            boot.joinRequests.incoming.map((row) =>
+              mapJoinRequestApiToUi(row, lang)
+            )
           );
           setLiveOutgoingRequests(
-            boot.joinRequests.outgoing.map(mapJoinRequestApiToUi)
+            boot.joinRequests.outgoing.map((row) =>
+              mapJoinRequestApiToUi(row, lang)
+            )
           );
         }
       } catch {
@@ -3388,7 +3450,7 @@ export default function SquadBattleScreenNative() {
     return () => {
       cancelled = true;
     };
-  }, [isPreviewMode]);
+  }, [isPreviewMode, lang]);
 
   useEffect(() => {
     if (!liveBattleId) return;
@@ -3469,6 +3531,7 @@ export default function SquadBattleScreenNative() {
         const token = await auth.currentUser?.getIdToken();
         const res = await fetchGroupBattleMyPayoutNative(liveBattleId, {
           idToken: token,
+          lang,
         });
         if (cancelled || !res?.payout) return;
         const p = res.payout;
@@ -3494,7 +3557,7 @@ export default function SquadBattleScreenNative() {
     return () => {
       cancelled = true;
     };
-  }, [uiPhase, liveBattleId, isPreviewMode]);
+  }, [uiPhase, liveBattleId, isPreviewMode, lang]);
 
   useEffect(() => {
     const max = Math.min(
@@ -3598,19 +3661,28 @@ export default function SquadBattleScreenNative() {
     const base =
       liveIncomingRequests ??
       (useLiveFallbacks ? [] : mock.incomingRequests);
-    return base.filter((r) => !dismissedRequestIds.includes(r.id));
+    return base
+      .filter((r) => !dismissedRequestIds.includes(r.id))
+      .map((r) => ({
+        ...r,
+        createdAtLabel: localizeSquadMockRelativeLabel(r.createdAtLabel, lang),
+      }));
   }, [
     liveIncomingRequests,
     mock.incomingRequests,
     dismissedRequestIds,
     useLiveFallbacks,
+    lang,
   ]);
 
   const outgoingForDisplay = useMemo(() => {
     const base = [
       ...(liveOutgoingRequests ??
         (useLiveFallbacks ? [] : mock.myOutgoingRequests)),
-    ];
+    ].map((r) => ({
+      ...r,
+      createdAtLabel: localizeSquadMockRelativeLabel(r.createdAtLabel, lang),
+    }));
     for (const id of extraAppliedIds) {
       if (base.some((r) => r.squadId === id)) continue;
       const squad = openSquadsForUi.find((s) => s.id === id);
@@ -3620,7 +3692,7 @@ export default function SquadBattleScreenNative() {
         squadId: id,
         squadName: squad.name,
         status: "pending",
-        createdAtLabel: "たった今",
+        createdAtLabel: c.justNow,
         applicant: {
           uid: liveSelfUid ?? "me",
           handle: "",
@@ -3642,6 +3714,8 @@ export default function SquadBattleScreenNative() {
     withdrawnRequestIds,
     useLiveFallbacks,
     liveSelfUid,
+    c,
+    lang,
   ]);
 
   const pendingCount = outgoingForDisplay.length;
@@ -3732,7 +3806,7 @@ export default function SquadBattleScreenNative() {
           { idToken: token }
         );
         if (!res.ok) {
-          flash(`再招集失敗: ${res.error}`);
+          flash(c.flashReformFailed(res.error));
           setReformBusyId(null);
           return;
         }
@@ -3741,10 +3815,10 @@ export default function SquadBattleScreenNative() {
         setLiveMySquadId(res.squadId);
         setLiveIsOwner(true);
         flash(
-          `再招集: ${name}（招待 ${res.invited.length} / スキップ ${res.skipped.length}）`
+          c.flashReformDone(name, res.invited.length, res.skipped.length)
         );
       } catch {
-        flash("再招集に失敗しました");
+        flash(c.flashReformError);
       }
       setReformBusyId(null);
       return;
@@ -3756,7 +3830,7 @@ export default function SquadBattleScreenNative() {
     setDismissedRequestIds([]);
     setProfileRequest(null);
     setMainTab("join");
-    flash(`同じメンバーで募集: ${name}`);
+    flash(c.flashReformMock(name));
     setReformBusyId(null);
   }
 
@@ -3780,16 +3854,16 @@ export default function SquadBattleScreenNative() {
           },
           { idToken: token }
         );
-        flash(res.ok ? "招待を送りました" : `招待失敗: ${res.error}`);
+        flash(res.ok ? c.flashInviteSent : c.flashInviteFailed(res.error));
         if (res.ok) setInviteSendTarget(null);
       } catch {
-        flash("招待に失敗しました");
+        flash(c.flashInviteError);
       }
       setReformBusyId(null);
       return;
     }
     const member = item.members.find((m) => m.uid === memberUid);
-    flash(`招待を送りました: ${member?.displayName ?? memberUid}`);
+    flash(c.flashInviteSentTo(member?.displayName ?? memberUid));
     setInviteSendTarget(null);
     setReformBusyId(null);
   }
@@ -3802,7 +3876,7 @@ export default function SquadBattleScreenNative() {
           idToken: token,
         });
         if (!res.ok) {
-          flash(`参加失敗: ${res.error}`);
+          flash(c.flashJoinFailed(res.error));
           return;
         }
         setDismissedInviteIds((prev) => [...prev, invite.id]);
@@ -3818,10 +3892,10 @@ export default function SquadBattleScreenNative() {
         setDismissedRequestIds([]);
         setLiveOutgoingRequests([]);
         setMainTab("join");
-        flash(`参加: ${invite.squadName}`);
+        flash(c.flashJoined(invite.squadName));
         return;
       } catch {
-        flash("参加に失敗しました");
+        flash(c.flashJoinError);
         return;
       }
     }
@@ -3832,7 +3906,7 @@ export default function SquadBattleScreenNative() {
     setPreviewState("recruiting");
     setCreatedSquadName(invite.squadName);
     setMainTab("join");
-    flash(`参加: ${invite.squadName}`);
+    flash(c.flashJoined(invite.squadName));
   }
 
   async function handleDeclineInvite(invite: SquadIncomingInviteMock) {
@@ -3845,17 +3919,17 @@ export default function SquadBattleScreenNative() {
           { idToken: token }
         );
         if (!res.ok) {
-          flash(`パス失敗: ${res.error}`);
+          flash(c.flashPassFailed(res.error));
           return;
         }
       } catch {
-        flash("パスに失敗しました");
+        flash(c.flashPassError);
         return;
       }
     }
     setDismissedInviteIds((prev) => [...prev, invite.id]);
     setIncomingJoinConfirmInvite(null);
-    flash(`パス: ${invite.squadName}`);
+    flash(c.flashPassed(invite.squadName));
   }
 
   function handlePreviewStateChange(next: SquadBattlePreviewState) {
@@ -3933,8 +4007,8 @@ export default function SquadBattleScreenNative() {
         if (!res.ok) {
           flash(
             res.error === "invalid_invite"
-              ? "コードが無効です"
-              : `参加失敗: ${res.error}`
+              ? c.flashInvalidCode
+              : c.flashJoinFailed(res.error)
           );
           setJoinByCodeBusy(false);
           return;
@@ -3960,9 +4034,9 @@ export default function SquadBattleScreenNative() {
         setLiveOutgoingRequests([]);
         setJoinedInviteSquad(null);
         setMainTab("join");
-        flash("スクワッドに参加しました");
+        flash(c.flashJoinedSquad);
       } catch {
-        flash("参加に失敗しました");
+        flash(c.flashJoinError);
       }
       setJoinByCodeBusy(false);
       return;
@@ -3970,7 +4044,7 @@ export default function SquadBattleScreenNative() {
 
     const mockNorm = normalizeUiInviteCodeNative(SQUAD_BATTLE_MOCK_INVITE_CODE);
     if (normalized !== mockNorm) {
-      flash("コードが無効です（プレビューは NC-7K2M）");
+      flash(c.flashInvalidCodePreview);
       setJoinByCodeBusy(false);
       return;
     }
@@ -3979,7 +4053,7 @@ export default function SquadBattleScreenNative() {
     setExtraAppliedIds([]);
     setDismissedRequestIds([]);
     setMainTab("join");
-    flash("招待コードで参加しました");
+    flash(c.flashJoinedByCode);
     setJoinByCodeBusy(false);
   }
 
@@ -3994,7 +4068,7 @@ export default function SquadBattleScreenNative() {
           { idToken: token }
         );
         if (!res.ok) {
-          flash(`作成失敗: ${res.error}`);
+          flash(c.flashCreateFailed(res.error));
           setCreateSquadBusy(false);
           return;
         }
@@ -4019,16 +4093,16 @@ export default function SquadBattleScreenNative() {
         setDismissedRequestIds([]);
         setProfileRequest(null);
         setMainTab("join");
-        flash(`グループを作成: ${name}`);
+        flash(c.flashCreated(name));
       } catch {
-        flash("作成に失敗しました");
+        flash(c.flashCreateError);
       }
       setCreateSquadBusy(false);
       return;
     }
 
     if (!isPreviewMode) {
-      flash("開催中の大会がありません");
+      flash(c.flashNoActiveBattle);
       return;
     }
 
@@ -4039,13 +4113,13 @@ export default function SquadBattleScreenNative() {
     setDismissedRequestIds([]);
     setProfileRequest(null);
     setMainTab("join");
-    flash(`グループを作成: ${name}`);
+    flash(c.flashCreated(name));
   }
 
   async function handleApplyToSquad(squadId: string, squadName: string) {
     if (appliedSquadIds.has(squadId)) return;
     if (pendingCount >= SQUAD_BATTLE_MAX_PENDING_APPLICATIONS) {
-      flash(`申請は最大${SQUAD_BATTLE_MAX_PENDING_APPLICATIONS}件まで`);
+      flash(c.flashApplicationLimit(SQUAD_BATTLE_MAX_PENDING_APPLICATIONS));
       return;
     }
     if (liveBattleId) {
@@ -4057,7 +4131,7 @@ export default function SquadBattleScreenNative() {
           { idToken: token }
         );
         if (!res.ok) {
-          flash(`申請失敗: ${res.error}`);
+          flash(c.flashApplyFailed(res.error));
           return;
         }
         setExtraAppliedIds((prev) =>
@@ -4073,7 +4147,7 @@ export default function SquadBattleScreenNative() {
               squadId,
               squadName,
               status: "pending",
-              createdAtLabel: "たった今",
+              createdAtLabel: c.justNow,
               applicant: {
                 uid: liveSelfUid ?? "me",
                 handle: "",
@@ -4087,22 +4161,22 @@ export default function SquadBattleScreenNative() {
             },
           ];
         });
-        flash(`申請を送信: ${squadName}`);
+        flash(c.flashApplySent(squadName));
       } catch {
-        flash("申請に失敗しました");
+        flash(c.flashApplyError);
       }
       return;
     }
 
     if (!isPreviewMode) {
-      flash("開催中の大会がありません");
+      flash(c.flashNoActiveBattle);
       return;
     }
 
     setExtraAppliedIds((prev) =>
       prev.includes(squadId) ? prev : [...prev, squadId]
     );
-    flash(`申請を送信: ${squadName}`);
+    flash(c.flashApplySent(squadName));
   }
 
   async function handleResolveJoinRequest(
@@ -4119,9 +4193,7 @@ export default function SquadBattleScreenNative() {
           { idToken: token }
         );
         if (!res.ok) {
-          flash(
-            `${decision === "approve" ? "承認" : "拒否"}失敗: ${res.error}`
-          );
+          flash(c.flashResolveFailed(decision, res.error));
           return;
         }
         setDismissedRequestIds((prev) =>
@@ -4154,11 +4226,9 @@ export default function SquadBattleScreenNative() {
         }
         setApproveConfirmRequest(null);
         setProfileRequest(null);
-        flash(
-          `${decision === "approve" ? "承認" : "拒否"}: ${req.applicant.displayName}`
-        );
+        flash(c.flashResolveDone(decision, req.applicant.displayName));
       } catch {
-        flash("処理に失敗しました");
+        flash(c.flashResolveError);
       }
       return;
     }
@@ -4168,9 +4238,7 @@ export default function SquadBattleScreenNative() {
     );
     setApproveConfirmRequest(null);
     setProfileRequest(null);
-    flash(
-      `${decision === "approve" ? "承認" : "拒否"}: ${req.applicant.displayName}`
-    );
+    flash(c.flashResolveDone(decision, req.applicant.displayName));
   }
 
   async function handleRenameSquad(name: string) {
@@ -4184,22 +4252,22 @@ export default function SquadBattleScreenNative() {
           { idToken: token }
         );
         if (!res.ok) {
-          flash(`名前変更失敗: ${res.error}`);
+          flash(c.flashRenameFailed(res.error));
           return;
         }
         setCreatedSquadName(res.name);
         setLiveFormingSquad((prev) =>
           prev ? { ...prev, name: res.name } : prev
         );
-        flash(`名前を変更: ${res.name}`);
+        flash(c.flashRenamed(res.name));
         return;
       } catch {
-        flash("名前変更に失敗しました");
+        flash(c.flashRenameError);
         return;
       }
     }
     setCreatedSquadName(name);
-    flash(`名前を変更: ${name}`);
+    flash(c.flashRenamed(name));
   }
 
   async function handleWithdrawRequest(req: SquadJoinRequest) {
@@ -4212,17 +4280,17 @@ export default function SquadBattleScreenNative() {
           { idToken: token }
         );
         if (!res.ok) {
-          flash(`取り下げ失敗: ${res.error}`);
+          flash(c.flashWithdrawFailed(res.error));
           return;
         }
         setLiveOutgoingRequests((prev) =>
           prev ? prev.filter((r) => r.id !== req.id) : prev
         );
         setExtraAppliedIds((prev) => prev.filter((id) => id !== req.squadId));
-        flash(`申請を取り下げ: ${req.squadName}`);
+        flash(c.flashWithdrawn(req.squadName));
         return;
       } catch {
-        flash("取り下げに失敗しました");
+        flash(c.flashWithdrawError);
         return;
       }
     }
@@ -4230,7 +4298,7 @@ export default function SquadBattleScreenNative() {
       prev.includes(req.id) ? prev : [...prev, req.id]
     );
     setExtraAppliedIds((prev) => prev.filter((id) => id !== req.squadId));
-    flash(`申請を取り下げ: ${req.squadName}`);
+    flash(c.flashWithdrawn(req.squadName));
   }
 
   async function handleLeaveSquad() {
@@ -4243,16 +4311,16 @@ export default function SquadBattleScreenNative() {
         { idToken: token }
       );
       if (!res.ok) {
-        flash(`脱退失敗: ${res.error}`);
+        flash(c.flashLeaveFailed(res.error));
         return;
       }
       setLiveFormingSquad(null);
       setLiveMySquadId(null);
       setLiveIsOwner(false);
       setCreatedSquadName(null);
-      flash("スクワッドから脱退しました");
+      flash(c.flashLeft);
     } catch {
-      flash("脱退に失敗しました");
+      flash(c.flashLeaveError);
     }
   }
 
@@ -4266,16 +4334,16 @@ export default function SquadBattleScreenNative() {
         { idToken: token }
       );
       if (!res.ok) {
-        flash(`解散失敗: ${res.error}`);
+        flash(c.flashDissolveFailed(res.error));
         return;
       }
       setLiveFormingSquad(null);
       setLiveMySquadId(null);
       setLiveIsOwner(false);
       setCreatedSquadName(null);
-      flash("スクワッドを解散しました");
+      flash(c.flashDissolved);
     } catch {
-      flash("解散に失敗しました");
+      flash(c.flashDissolveError);
     }
   }
 
@@ -4299,6 +4367,7 @@ export default function SquadBattleScreenNative() {
     mainTab === "rank" && mySquad != null ? [2] : undefined;
 
   return (
+    <SquadBattleCopyCtx.Provider value={copyBundle}>
     <View style={styles.root}>
       <CyberSubpageShellNative
         eyebrow="RANKINGS"
@@ -4380,7 +4449,7 @@ export default function SquadBattleScreenNative() {
                 result={
                   liveRewardResult ??
                   (isPreviewMode
-                    ? SQUAD_BATTLE_REWARD_RESULT_MOCK
+                    ? squadBattleRewardResultMock(lang)
                     : {
                         weekly: [
                           {
@@ -4411,7 +4480,7 @@ export default function SquadBattleScreenNative() {
                         monthlyRank: null,
                         monthlyUnits: 0,
                         monthlyStatus: "none",
-                        payoutNote: "獲得 Unit を読み込み中…",
+                        payoutNote: c.rewardLoading,
                       })
                 }
                 loading={
@@ -4424,8 +4493,7 @@ export default function SquadBattleScreenNative() {
               uiPhase === "battle" ? (
                 <View style={styles.battleSpectatorStack}>
                   <SquadEmptyHintNative>
-                    バトル中のため新規参加・作成はできません。順位表は RANK
-                    タブで観戦できます。
+                    {c.spectatorDuringBattle}
                   </SquadEmptyHintNative>
                   <Pressable
                     onPress={() => setMainTab("rank")}
@@ -4434,19 +4502,19 @@ export default function SquadBattleScreenNative() {
                       pressed && styles.pressed,
                     ]}
                     accessibilityRole="button"
-                    accessibilityLabel="RANK を見る"
+                    accessibilityLabel={c.viewRank}
                   >
-                    <Text style={styles.spectatorCtaText}>RANK を見る</Text>
+                    <Text style={styles.spectatorCtaText}>{c.viewRank}</Text>
                   </Pressable>
                 </View>
               ) : !joinActionsOpen ? (
                 <View style={styles.battleSpectatorStack}>
                   <SquadEmptyHintNative>
                     {liveBattlePhase === "locking"
-                      ? "メンバー確定中です。募集は締め切られました。"
+                      ? c.lockingNotice
                       : liveBattlePhase === "announced"
-                        ? "まもなく募集が始まります。開始までお待ちください。"
-                        : "いまは参加・作成できません。"}
+                        ? c.announcedNotice
+                        : c.joinClosedNotice}
                   </SquadEmptyHintNative>
                 </View>
               ) : (
@@ -4502,7 +4570,7 @@ export default function SquadBattleScreenNative() {
                   onCopyInviteCode={(code) => {
                     void copyTextNative(code).then((ok) => {
                       flash(
-                        ok ? `コピーしました: ${code}` : `招待コード: ${code}`
+                        ok ? c.flashCopied(code) : c.flashInviteCode(code)
                       );
                     });
                   }}
@@ -4510,7 +4578,7 @@ export default function SquadBattleScreenNative() {
                 {membersLocked ? (
                   <View style={styles.lockedNote}>
                     <Text style={styles.lockedNoteText}>
-                      メンバー LOCKED · 入れ替え・追加申請の受付は終了しています。
+                      {c.membersLockedNotice}
                     </Text>
                   </View>
                 ) : null}
@@ -4587,8 +4655,8 @@ export default function SquadBattleScreenNative() {
                     ]}
                     accessibilityLabel={
                       liveBattleId
-                        ? `大会 ${liveBattleId} ${boardStatus}`
-                        : `プレビュー ${boardStatus}`
+                        ? `${c.boardBattleTitle(liveBattleId)} ${boardStatus}`
+                        : `${c.boardPreviewTitle} ${boardStatus}`
                     }
                   >
                     <Text
@@ -4602,9 +4670,10 @@ export default function SquadBattleScreenNative() {
                       {boardStatus === "final" ? "FINAL" : "LIVE"}
                     </Text>
                   </View>
-                  {formatSquadBattleBoardBuiltAt(boardBuiltAtMs) ? (
+                  {formatSquadBattleBoardBuiltAt(boardBuiltAtMs, lang) ? (
                     <Text style={styles.boardBuiltAtText}>
-                      更新 {formatSquadBattleBoardBuiltAt(boardBuiltAtMs)}
+                      {c.boardUpdatedPrefix}{" "}
+                      {formatSquadBattleBoardBuiltAt(boardBuiltAtMs, lang)}
                     </Text>
                   ) : null}
                 </View>
@@ -4617,9 +4686,7 @@ export default function SquadBattleScreenNative() {
                   weeklyLabels={liveWeeklyLabels}
                 />
               ) : (
-                <Text style={styles.monthPeriodHint}>
-                  月間 · 開催期間全体の平均スコア
-                </Text>
+                <Text style={styles.monthPeriodHint}>{c.monthlyHint}</Text>
               )}
 
               {uiPhase === "idle" ? <SquadIdlePanelNative /> : null}
@@ -4636,7 +4703,7 @@ export default function SquadBattleScreenNative() {
             ) : (
               <View style={styles.rankEmptyPinWrap}>
                 <SquadEmptyHintNative>
-                  {SQUAD_BATTLE_RANK_SPECTATOR_HINT}
+                  {squadBattleRankSpectatorHint(lang)}
                 </SquadEmptyHintNative>
               </View>
             )}
@@ -4648,7 +4715,7 @@ export default function SquadBattleScreenNative() {
               >
                 {rankingList.length === 0 ? (
                   <SquadEmptyHintNative>
-                    リーダーボードに表示するグループがありません。
+                    {c.leaderboardEmpty}
                   </SquadEmptyHintNative>
                 ) : (
                   rankingList.map((squad, i) => (
@@ -4692,7 +4759,7 @@ export default function SquadBattleScreenNative() {
         visible={reformTarget != null}
         initialName={reformTarget?.squadName ?? ""}
         eyebrow="Reform squad · callsign"
-        submitLabel="招待を送る"
+        submitLabel={c.reformSubmit}
         onClose={() => setReformTarget(null)}
         onCreate={(name) => {
           void handleReformConfirm(name);
@@ -4704,7 +4771,7 @@ export default function SquadBattleScreenNative() {
         profile={profileRequest?.applicant ?? null}
         metaLabel={
           profileRequest
-            ? `申請 · ${profileRequest.createdAtLabel}`
+            ? c.applicationMeta(profileRequest.createdAtLabel)
             : undefined
         }
         onClose={() => setProfileRequest(null)}
@@ -4787,7 +4854,7 @@ export default function SquadBattleScreenNative() {
         onHold={() => {
           if (!incomingInviteForModal) return;
           holdIncomingInvite(incomingInviteForModal.id);
-          flash("保留しました。招待されているスクワッドから参加できます");
+          flash(c.flashHeldInvite);
         }}
       />
 
@@ -4816,7 +4883,7 @@ export default function SquadBattleScreenNative() {
             style={styles.previewOverlayBackdrop}
             onPress={() => setPreviewToolsOpen(false)}
             accessibilityRole="button"
-            accessibilityLabel="閉じる"
+            accessibilityLabel={c.close}
           />
           <View
             style={styles.previewOverlayCard}
@@ -4827,7 +4894,7 @@ export default function SquadBattleScreenNative() {
               <Pressable
                 onPress={() => setPreviewToolsOpen(false)}
                 accessibilityRole="button"
-                accessibilityLabel="閉じる"
+                accessibilityLabel={c.close}
                 style={({ pressed }) => [
                   styles.previewOverlayClose,
                   pressed && styles.previewOverlayClosePressed,
@@ -4880,7 +4947,7 @@ export default function SquadBattleScreenNative() {
             </View>
             <Text style={styles.previewSectionLabel}>Season phase</Text>
             <View style={styles.stateChips}>
-              {SQUAD_BATTLE_UI_PHASE_OPTIONS.map((s) => {
+              {squadBattleUiPhaseOptions(lang).map((s) => {
                 const active = uiPhase === s.id;
                 return (
                   <Pressable
@@ -4971,6 +5038,7 @@ export default function SquadBattleScreenNative() {
       <SquadBattleIntroOverlayNative
         open={introOpen}
         onClose={() => setIntroOpen(false)}
+        language={lang}
       />
       <SquadBattleLaunchOverlayNative
         visible={launchOpen}
@@ -4984,8 +5052,10 @@ export default function SquadBattleScreenNative() {
           formatSquadBattleRecruitDeadlineLabel(liveRecruitEndAtMs) ??
           (isPreviewMode ? SQUAD_BATTLE_MOCK_DEADLINE_LABEL : null)
         }
+        language={lang}
       />
     </View>
+    </SquadBattleCopyCtx.Provider>
   );
 }
 

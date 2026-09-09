@@ -230,7 +230,7 @@ export function useNativeResultPosts(
     setHasFetchedOnce(false);
     setLoading(true);
     void loadPage({ reset: true });
-  }, [uid, language, league, fetchEnabled, loadPage, applyListEntry]);
+  }, [uid, league, fetchEnabled, loadPage, applyListEntry]);
 
   const grouped = useMemo(
     () => groupPostsByResultDay(posts, language),

@@ -9,6 +9,7 @@ import { motion, useReducedMotion } from "framer-motion";
 import { ProCyberBadge } from "@/app/component/common/ProCyberBadge";
 import { getUserDocDataCached } from "@/lib/user/userDocCache";
 import { nameOxanium } from "@/lib/fonts";
+import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import { PRO_SUCCESS_ACCENT } from "@/lib/pro/proSuccessAccent";
 import { PRO_SUBSCRIBE_SUCCESS_MOTION as SM } from "@/lib/pro/proSubscribeSuccessMotion";
 import {
@@ -21,6 +22,11 @@ import {
   planPeriodLabel,
   type StoredPlanType,
 } from "@/lib/pro/planChangeDisplay";
+import {
+  planChangeCompleteCopy,
+  planChangeTaxSuffix,
+  type PlanChangeUiLang,
+} from "@/lib/pro/planChangeUiCopy";
 import type { ProIapPlan } from "@/lib/pro/iapProductIds";
 
 /** プラン変更完了 — Trial ON / 課金成功と同型レイアウト・アンバーアクセント */
@@ -54,9 +60,13 @@ function MetaRow({ label, value }: { label: string; value: string }) {
 export default function PlanChangeCompletePage() {
   const router = useRouter();
 
+  const [uid, setUid] = useState<string | null>(null);
   const [storedType, setStoredType] = useState<StoredPlanType | null>(null);
   const [proUntil, setProUntil] = useState<Date | null>(null);
   const [profileHref, setProfileHref] = useState("/mobile");
+  const { language } = useUserLanguage(uid);
+  const lang: PlanChangeUiLang = language === "en" ? "en" : "ja";
+  const c = planChangeCompleteCopy(lang);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -64,6 +74,7 @@ export default function PlanChangeCompletePage() {
       const user = auth.currentUser;
       if (!user) return;
 
+      setUid(user.uid);
       const data = await getUserDocDataCached(user.uid);
       if (!data) return;
 
@@ -81,10 +92,10 @@ export default function PlanChangeCompletePage() {
   }, []);
 
   const plan: ProIapPlan = asProIapPlan(storedType);
-  const planLabel = planDisplayNameFull(storedType ?? plan, "en");
-  const price = planCatalogPrice(plan, "ja");
-  const period = planPeriodLabel(plan, "ja");
-  const untilLabel = formatPlanDate(proUntil, "ja");
+  const planLabel = planDisplayNameFull(storedType ?? plan, lang);
+  const price = planCatalogPrice(plan, lang);
+  const period = planPeriodLabel(plan, lang);
+  const untilLabel = formatPlanDate(proUntil, lang);
 
   const reduceMotion = useReducedMotion();
   const motionOn = reduceMotion !== true;
@@ -331,7 +342,8 @@ export default function PlanChangeCompletePage() {
                     className="ml-1 text-[10px] font-bold tracking-[0.06em]"
                     style={{ color: A.soft }}
                   >
-                    {period}・税込み
+                    {period}
+                    {planChangeTaxSuffix(lang)}
                   </span>
                 </p>
               </div>
@@ -362,7 +374,7 @@ export default function PlanChangeCompletePage() {
                     boxShadow: `0 0 16px rgba(${A.mainRgb},0.28)`,
                   }}
                 >
-                  Proデータを見る
+                  {c.viewProData}
                 </button>
                 <div className="flex items-center justify-center gap-2 pt-1">
                   <Link
@@ -373,7 +385,7 @@ export default function PlanChangeCompletePage() {
                     ].join(" ")}
                     style={{ color: A.soft, opacity: 0.85 }}
                   >
-                    利用規約
+                    {c.terms}
                   </Link>
                   <span
                     className="text-[9px]"
@@ -389,7 +401,7 @@ export default function PlanChangeCompletePage() {
                     ].join(" ")}
                     style={{ color: A.soft, opacity: 0.85 }}
                   >
-                    お問い合わせ
+                    {c.contact}
                   </Link>
                 </div>
               </div>

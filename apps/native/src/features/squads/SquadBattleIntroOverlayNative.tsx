@@ -13,10 +13,14 @@ import Animated, {
 } from "react-native-reanimated";
 import { fonts } from "../../theme/tokens";
 import {
-  SQUAD_BATTLE_INTRO_TAGLINE,
-  SQUAD_BATTLE_SEASON_PHASES,
+  squadBattleIntroTagline,
+  squadBattleSeasonPhases,
 } from "../../../../../lib/squads/squadBattleMock";
-import { SQUAD_BATTLE_INTRO_NOTICES } from "../../../../../lib/squads/squadBattleUiCopy";
+import {
+  squadBattleIntroNotices,
+  squadBattleIntroOverlayCopy,
+  type SquadBattleUiLang,
+} from "../../../../../lib/squads/squadBattleUiCopy";
 import {
   SQUAD_INTRO_BG_FADE_MS,
   SQUAD_INTRO_ENTER_DELAY_MS,
@@ -36,13 +40,19 @@ const TITLE = "#FFF7E6";
 type Props = {
   open: boolean;
   onClose: () => void;
+  language?: string | null;
 };
 
 export default function SquadBattleIntroOverlayNative({
   open,
   onClose,
+  language,
 }: Props) {
   const reduceMotion = useReducedMotion();
+  const lang: SquadBattleUiLang = language === "en" ? "en" : "ja";
+  const copy = squadBattleIntroOverlayCopy(lang);
+  const phases = squadBattleSeasonPhases(lang);
+  const notices = squadBattleIntroNotices(lang);
 
   async function handleDismiss() {
     await markSquadBattleIntroSeenNative();
@@ -85,7 +95,7 @@ export default function SquadBattleIntroOverlayNative({
               void handleDismiss();
             }}
             accessibilityRole="button"
-            accessibilityLabel="スキップ"
+            accessibilityLabel={copy.skip}
             style={({ pressed }) => [
               styles.closeBtn,
               pressed && styles.closeBtnPressed,
@@ -151,13 +161,13 @@ export default function SquadBattleIntroOverlayNative({
                 : FadeInDown.duration(280).delay(SQUAD_INTRO_RULE_DELAY_MS)
             }
           >
-            {SQUAD_BATTLE_INTRO_TAGLINE}
+            {squadBattleIntroTagline(lang)}
           </Animated.Text>
 
           {/* フェーズタイムライン（枠なし・レールのみ） */}
           <View style={styles.timeline}>
             <View style={styles.rail} pointerEvents="none" />
-            {SQUAD_BATTLE_SEASON_PHASES.map((phase, i) => (
+            {phases.map((phase, i) => (
               <Animated.View
                 key={phase.key}
                 style={styles.phaseRow}
@@ -182,7 +192,7 @@ export default function SquadBattleIntroOverlayNative({
 
             {/* フェーズと重複しない補足のみ */}
             <View style={styles.notices}>
-              {SQUAD_BATTLE_INTRO_NOTICES.map((line) => (
+              {notices.map((line) => (
                 <Text key={line} style={styles.noticeText}>
                   {line}
                 </Text>
@@ -222,9 +232,7 @@ export default function SquadBattleIntroOverlayNative({
           importantForAccessibility="no-hide-descendants"
           style={styles.srOnly}
         >
-          <Text>
-            スクワッドバトルの説明。3〜5人で平均スコアを競う。募集約1〜2週間、バトル約1ヶ月、結果確定後に上位へ Unit 配布。
-          </Text>
+          <Text>{copy.srSummary}</Text>
         </View>
       </View>
     </Modal>

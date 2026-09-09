@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import ProfileCyberPage from "@/app/component/profile/ProfileCyberPage";
 import ProfilePlanProSkinPicker from "@/app/component/profile/pro/ProfilePlanProSkinPicker";
 import { isAuthStateResolved, useFirebaseUser } from "@/lib/useFirebaseUser";
@@ -16,6 +16,8 @@ type Props = {
 
 export default function ProSkinPage({ platform }: Props) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const fromTrial = searchParams.get("from") === "trial";
   const { fUser, status } = useFirebaseUser();
   const { language } = useUserLanguage(fUser?.uid ?? null);
   const [ready, setReady] = useState(false);
@@ -55,6 +57,8 @@ export default function ProSkinPage({ platform }: Props) {
           ? "Choose a Pro profile background skin."
           : "Pro プロフィール背景スキンを選べます。"
       }
+      edgeBack={fromTrial ? false : undefined}
+      hideBack={fromTrial ? true : undefined}
       contentClassName={
         isWeb
           ? "max-w-6xl px-4 py-2 md:px-6 md:py-4"

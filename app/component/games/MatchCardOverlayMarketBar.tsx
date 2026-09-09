@@ -27,6 +27,8 @@ type Props = {
   language: Language;
   /** ログインユーザーの勝者予想（home / away / draw） */
   userPredictionWinner?: MarketKey | null;
+  /** games.predictorCount。無ければ分布 total */
+  predictionCount?: number;
 };
 
 type MarketKey = "home" | "away" | "draw";
@@ -401,6 +403,7 @@ export default function MatchCardOverlayMarketBar({
   compact = false,
   language,
   userPredictionWinner = null,
+  predictionCount,
 }: Props) {
   const m = t(language);
   const { isSoccer, total, homePct, awayPct, drawPct, fromFallback } =
@@ -435,6 +438,15 @@ export default function MatchCardOverlayMarketBar({
 
   if (!hasData) return null;
 
+  const displayCount =
+    typeof predictionCount === "number" &&
+    Number.isFinite(predictionCount) &&
+    predictionCount >= 0
+      ? Math.floor(predictionCount)
+      : total > 0 && !fromFallback
+        ? total
+        : null;
+
   return (
     <div className="w-full" data-tutorial-target="predict-market">
       <div
@@ -457,7 +469,7 @@ export default function MatchCardOverlayMarketBar({
           >
             -{m.predict.marketBias}-
           </span>
-          {total > 0 && !fromFallback ? (
+          {displayCount != null ? (
             <span
               className={[
                 "absolute right-0 top-1/2 -translate-y-1/2 shrink-0 tabular-nums leading-none text-white/70",
@@ -472,7 +484,7 @@ export default function MatchCardOverlayMarketBar({
                   compact ? "text-[11px]" : "text-xs md:text-sm",
                 ].join(" ")}
               >
-                {total}
+                {displayCount}
               </span>
             </span>
           ) : null}

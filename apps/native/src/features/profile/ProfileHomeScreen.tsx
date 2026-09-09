@@ -1787,12 +1787,20 @@ export default function ProfileHomeScreen({
         }
         else if (page === "seasonPreview" && __DEV__)
           navigation.navigate("SeasonPredictPreview");
+        else if (page === "weeklyReportPreview" && __DEV__)
+          navigation.navigate("MonthlyReportPreview", { tab: "weekly" });
+        else if (page === "monthlyReportPreview" && __DEV__)
+          navigation.navigate("MonthlyReportPreview", { tab: "monthly" });
         else if (page === "squadBattlePreview" && __DEV__)
           navigation.navigate("SquadBattlePreview");
         else if (page === "liveGameStatsPreview" && __DEV__)
           navigation.navigate("LiveGameStatsPreview");
         else if (page === "leagueStatsPreview" && __DEV__)
           navigation.navigate("LeagueStatsPreview");
+        else if (page === "proLeagueTeaserPreview" && __DEV__)
+          navigation.navigate("ProLeagueTeaserPreview");
+        else if (page === "proInsightGatePreview" && __DEV__)
+          navigation.navigate("ProInsightGatePreview");
       }}
     />
     <ProfileBadgeDetailModal

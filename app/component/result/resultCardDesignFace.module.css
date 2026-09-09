@@ -42,14 +42,14 @@
 }
 
 .pad {
-  padding: 10px 10px 12px;
+  padding: 18px 10px 14px;
 }
 
 .layerDivider {
   width: 100%;
   height: 1px;
-  margin-top: 4px;
-  margin-bottom: 6px;
+  margin-top: 10px;
+  margin-bottom: 10px;
   background: rgba(255, 255, 255, 0.1);
 }
 
@@ -105,6 +105,7 @@
   flex-direction: column;
   align-items: center;
   gap: 3px;
+  padding-top: 16px;
 }
 
 .homeAwayLabel {
@@ -135,7 +136,8 @@
   flex: 1;
   flex-direction: column;
   align-items: center;
-  padding-top: 4px;
+  /* 判定前の「あなたの予想」＋数字をユニフォーム寄りに少し下げる */
+  padding-top: 20px;
   gap: 2px;
 }
 
@@ -146,6 +148,13 @@
   letter-spacing: 2.2px;
   text-transform: uppercase;
   color: rgba(248, 250, 252, 0.75);
+}
+
+.finalStatusJa {
+  font-size: 10px;
+  letter-spacing: 0.6px;
+  text-transform: none;
+  color: rgba(226, 232, 240, 0.55);
 }
 
 .finalScore {
@@ -162,6 +171,17 @@
   font-weight: 900;
   font-style: italic;
   color: rgba(255, 255, 255, 0.7);
+}
+
+/** 判定前 — 予想スコアを本番スコアと同じサイズでアンバー表示 */
+.predScoreMain {
+  font-size: 22px;
+  font-weight: 900;
+  font-style: italic;
+  line-height: 24px;
+  letter-spacing: -0.5px;
+  color: rgba(253, 224, 71, 0.95);
+  text-shadow: 0 0 12px rgba(251, 191, 36, 0.32);
 }
 
 .predCaption {
@@ -188,7 +208,7 @@
 
 .biasRoot {
   width: 100%;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
 }
 
 .biasPctHeader {
@@ -212,6 +232,16 @@
   text-align: right;
 }
 
+.biasPctHeaderMidCol {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-width: 0;
+}
+
 .biasPctHeaderMid {
   flex: 1;
   text-align: center;
@@ -220,6 +250,24 @@
   letter-spacing: 1.2px;
   text-transform: uppercase;
   color: rgba(0, 245, 255, 0.55);
+}
+
+.biasPctHeaderMidCol .biasPctHeaderMid {
+  flex: none;
+  width: 100%;
+}
+
+.biasCount {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  color: rgba(226, 232, 240, 0.55);
+}
+
+.biasCountNum {
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: rgba(248, 250, 252, 0.88);
 }
 
 .biasBarInner {
@@ -251,6 +299,7 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
+  padding-top: 2px;
 }
 
 .splitRow {
@@ -327,7 +376,8 @@
 }
 
 .scorerBlock {
-  margin-bottom: 4px;
+  margin: 0;
+  padding: 3px 0;
 }
 
 .scorerValueRow {
@@ -337,13 +387,13 @@
 }
 
 .scorerLabel {
-  width: 78px;
+  width: 88px;
   flex-shrink: 0;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 1.1px;
+  font-size: 14px;
+  font-weight: 400;
+  letter-spacing: 1.04px;
   text-transform: uppercase;
-  color: rgba(148, 163, 184, 0.75);
+  color: rgba(248, 250, 252, 0.92);
 }
 
 .scorerNameWrap {
@@ -364,7 +414,7 @@
   text-align: center;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 400;
   letter-spacing: 0.8px;
   text-transform: uppercase;
@@ -373,7 +423,7 @@
 
 .scorerHitCluster {
   display: flex;
-  width: 78px;
+  width: 88px;
   flex-shrink: 0;
   align-items: center;
   justify-content: flex-end;

@@ -68,7 +68,8 @@ export default function TeamAbbrBadge({
       }}
       aria-hidden
     >
-      <span style={{ transform: "skewX(14deg)" }}>{resolvedAbbr}</span>
+      {/* 枠 -14deg + 文字 +8deg → 画面上は選手名と同じ -6deg */}
+      <span style={{ transform: "skewX(8deg)" }}>{resolvedAbbr}</span>
     </span>
   );
 }

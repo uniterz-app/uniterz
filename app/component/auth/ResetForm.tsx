@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { FaEnvelope } from "react-icons/fa";
 import { sendPasswordResetEmail } from "firebase/auth";
@@ -9,6 +9,8 @@ import CyberAuthField from "./CyberAuthField";
 import AuthFormBranding from "./AuthFormBranding";
 import cyberFieldStyles from "./cyberAuthField.module.css";
 import { authDisplayHeadingLong, authDisplayButton } from "./authEnglishDisplay";
+import { authFormCopy } from "@/lib/auth/authFormCopy";
+import { resolveAppUiLanguage } from "@/lib/i18n/resolveAppUiLanguage";
 
 type Props = {
   variant?: "web" | "mobile";
@@ -20,6 +22,7 @@ export default function ResetForm({ variant = "web" }: Props) {
   const [pressed, setPressed] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const copy = useMemo(() => authFormCopy(resolveAppUiLanguage()), []);
 
   const formWidth = variant === "mobile" ? 320 : 380;
 
@@ -28,16 +31,15 @@ export default function ResetForm({ variant = "web" }: Props) {
 
   const ui = {
     title: "RESET PASSWORD",
-    lead: "登録したメールアドレスにリセット用のリンクをお送りします。",
-    leadNote: "＊迷惑フォルダもご確認ください。",
+    lead: copy.resetLead,
+    leadNote: copy.resetLeadNote,
     emailPlaceholder: "Email Address",
     sendCta: "SEND RESET LINK",
     sending: "Sending…",
-    backLead: "Back to ",
-    loginLink: "Log in",
-    enterEmail: "Please enter your email address.",
-    success:
-      "If this email is registered, we sent a reset link. Check spam if you don't see it.",
+    backLead: copy.backToLoginLead,
+    loginLink: copy.backToLoginLink,
+    enterEmail: copy.missingEmail,
+    success: copy.resetSentBody,
     timeout:
       "Request timed out. In DevTools → Network, check identitytoolkit / sendOobCode.",
     tooMany: "Too many attempts. Please try again later.",

@@ -1,16 +1,12 @@
 import { ReactNode } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import CyberHelpMarkNative from "../../ui/CyberHelpMarkNative";
 
 export type HelpFaqItemNative = {
   id: string;
   label: string;
   question: string;
   icon: React.ComponentProps<typeof MaterialCommunityIcons>["name"];
-  iconColor: string;
-  gradient: readonly [string, string, string];
   answer: ReactNode;
 };
 
@@ -20,21 +16,21 @@ type Props = {
   onToggle: () => void;
 };
 
-/** Web `HelpPage` の `AccordionItem` 相当 */
+/** Web `HelpPage` の `AccordionItem` 相当 — 四角・白黒 */
 export default function HelpAccordionItemNative({ item, isOpen, onToggle }: Props) {
   return (
     <View style={styles.root}>
       <Pressable style={styles.header} onPress={onToggle}>
         <View style={styles.headerLeft}>
-          <LinearGradient colors={[...item.gradient]} style={styles.iconBox}>
-            <MaterialCommunityIcons name={item.icon} size={20} color={item.iconColor} />
-          </LinearGradient>
+          <View style={styles.iconBox}>
+            <MaterialCommunityIcons name={item.icon} size={18} color="#ffffff" />
+          </View>
           <View style={styles.headerText}>
             <Text style={styles.label}>{item.label}</Text>
             <Text style={styles.question}>{item.question}</Text>
           </View>
         </View>
-        <CyberHelpMarkNative />
+        <Text style={styles.chevron}>{isOpen ? "−" : "+"}</Text>
       </Pressable>
       {isOpen ? <View style={styles.answer}>{item.answer}</View> : null}
     </View>
@@ -60,18 +56,18 @@ export function HelpBulletList({ items }: { items: string[] }) {
 
 const styles = StyleSheet.create({
   root: {
-    borderRadius: 16,
+    borderRadius: 0,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
-    backgroundColor: "#0b1020",
+    borderColor: "rgba(255,255,255,0.2)",
+    backgroundColor: "#000000",
     overflow: "hidden",
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
   },
   headerLeft: {
     flex: 1,
@@ -83,7 +79,10 @@ const styles = StyleSheet.create({
   iconBox: {
     width: 32,
     height: 32,
-    borderRadius: 8,
+    borderRadius: 0,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.3)",
+    backgroundColor: "#000000",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -94,20 +93,27 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 10,
     fontWeight: "500",
-    letterSpacing: 0.8,
-    color: "rgba(255,255,255,0.5)",
+    letterSpacing: 1.4,
+    textTransform: "uppercase",
+    color: "rgba(255,255,255,0.45)",
   },
   question: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#fff",
+    color: "#ffffff",
     lineHeight: 20,
+  },
+  chevron: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "rgba(255,255,255,0.7)",
+    marginLeft: 4,
   },
   answer: {
     borderTopWidth: 1,
-    borderTopColor: "rgba(255,255,255,0.1)",
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    borderTopColor: "rgba(255,255,255,0.15)",
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     gap: 8,
   },
   answerText: {

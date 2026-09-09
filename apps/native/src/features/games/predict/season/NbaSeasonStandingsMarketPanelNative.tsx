@@ -19,12 +19,17 @@ import {
   getTeamJerseySecondaryColor,
 } from "../../../../../../../lib/team-colors";
 import {
+  seasonPredictStandingsMarketHint,
+  type SeasonPredictUiLang,
+} from "../../../../../../../lib/predict/seasonPredictUiCopy";
+import {
   MATCH_CARD_BRACKET_LETTER_SPACING_12,
   MATCH_CARD_BRACKET_TEXT,
 } from "../../matchCardTypography";
 
 type Props = {
   market: SeasonStandingsMarketSnapshot;
+  language?: SeasonPredictUiLang;
 };
 
 type Band = "straight" | "playin" | "out";
@@ -49,7 +54,13 @@ function bandRankColor(band: Band): string {
   return "rgba(255,255,255,0.35)";
 }
 
-function DetailBands({ row }: { row: SeasonStandingsCrowdBoardRow }) {
+function DetailBands({
+  row,
+  language = "ja",
+}: {
+  row: SeasonStandingsCrowdBoardRow;
+  language?: SeasonPredictUiLang;
+}) {
   const bands = standingsDetailBandWidths(row.detailBandPct);
   return (
     <View style={styles.detail}>
@@ -71,7 +82,9 @@ function DetailBands({ row }: { row: SeasonStandingsCrowdBoardRow }) {
       <View style={styles.detailGrid}>
         {bands.map((b) => (
           <View key={b.id} style={styles.detailCell}>
-            <Text style={styles.detailBandLabel}>{b.labelJa}</Text>
+            <Text style={styles.detailBandLabel}>
+              {language === "en" ? b.labelEn : b.labelJa}
+            </Text>
             <Text style={styles.detailPct}>
               {b.pct.toFixed(0)}
               <Text style={styles.detailPctUnit}>%</Text>
@@ -87,10 +100,12 @@ function TeamListRow({
   row,
   expanded,
   onToggle,
+  language = "ja",
 }: {
   row: SeasonStandingsCrowdBoardRow;
   expanded: boolean;
   onToggle: () => void;
+  language?: SeasonPredictUiLang;
 }) {
   const band = bandForRank(row.boardRank);
   const name = (
@@ -129,12 +144,15 @@ function TeamListRow({
         </View>
         <Text style={styles.chevron}>{expanded ? "▲" : "▼"}</Text>
       </Pressable>
-      {expanded ? <DetailBands row={row} /> : null}
+      {expanded ? <DetailBands row={row} language={language} /> : null}
     </View>
   );
 }
 
-export default function NbaSeasonStandingsMarketPanelNative({ market }: Props) {
+export default function NbaSeasonStandingsMarketPanelNative({
+  market,
+  language = "ja",
+}: Props) {
   const [conference, setConference] = useState<NbaConferenceId>("east");
   const [expandedTeamId, setExpandedTeamId] = useState<string | null>(null);
 
@@ -151,8 +169,7 @@ export default function NbaSeasonStandingsMarketPanelNative({ market }: Props) {
         {market.submissionCount.toLocaleString()} submissions
       </Text>
       <Text style={styles.lead}>
-        平均予想の順位表。チームを押すと 1–3 / 4–6 / 7–9 / 10–12 / 13–15
-        の置き方シェアが出ます。
+        {seasonPredictStandingsMarketHint(language)}
       </Text>
 
       <View style={{ marginVertical: 10 }}>
@@ -191,6 +208,7 @@ export default function NbaSeasonStandingsMarketPanelNative({ market }: Props) {
                 cur === row.teamId ? null : row.teamId
               )
             }
+            language={language}
           />
         ))}
       </View>

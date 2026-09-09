@@ -22,7 +22,7 @@ export default function MobileFeatureRequestPage() {
       }
       updatedAt={updatedAt}
     >
-      <section className="mb-5 space-y-3 text-xs text-slate-100/80">
+      <section className="mb-5 space-y-3 text-xs text-white/75">
         <p>
           {isEn
             ? "Your request will be reviewed by the team."

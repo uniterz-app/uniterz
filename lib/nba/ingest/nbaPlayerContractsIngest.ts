@@ -94,7 +94,7 @@ export async function ingestNbaPlayerContractsFromBdl(
     // ロスター外でも明示指定は取りに行く
     for (const id of filterIds) {
       if (!targets.some((t) => t.playerId === id)) {
-        targets.push({ playerId: id, teamId: "", position: "—" });
+        targets.push({ playerId: id, teamId: "", position: "—", draftYear: null });
       }
     }
   }

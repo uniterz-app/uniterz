@@ -144,9 +144,42 @@ export const SQUAD_BATTLE_SEASON_PHASES: readonly SquadBattleSeasonPhase[] = [
   },
 ] as const;
 
+/** 開催サイクル（ja / en）。`label` はフェーズ名なので共通 */
+export function squadBattleSeasonPhases(
+  lang: "ja" | "en" = "ja"
+): readonly SquadBattleSeasonPhase[] {
+  if (lang !== "en") return SQUAD_BATTLE_SEASON_PHASES;
+  return [
+    {
+      key: "entry",
+      label: "ENTRY",
+      period: "~1–2 weeks before",
+      desc: "Squad locks · no swaps after the start",
+    },
+    {
+      key: "battle",
+      label: "BATTLE",
+      period: "~1 month",
+      desc: "Average score in Pick Up games. 4 weekly + 1 monthly",
+    },
+    {
+      key: "reward",
+      label: "REWARD",
+      period: "After results",
+      desc: "Weekly 1st: 30 Units each, monthly 1st: 100 each. Top 20 earn by rank",
+    },
+  ];
+}
+
 /** 初回イントロのルール1行（キッカー／フェーズと重複しないこと） */
 export const SQUAD_BATTLE_INTRO_TAGLINE =
   "3〜5人のスクワッドで、Pick Up 試合の総合スコア平均を競う。";
+
+export function squadBattleIntroTagline(lang: "ja" | "en" = "ja"): string {
+  return lang === "en"
+    ? "Squads of 3–5 compete on their average total score in Pick Up games."
+    : SQUAD_BATTLE_INTRO_TAGLINE;
+}
 
 /** はてな（？）ヘルプ用のルール要約 */
 export const SQUAD_BATTLE_HELP_TEXT = `3〜5人のスクワッドで、メンバー全員の総合スコア平均を競います。対象は Pick Up 試合のみ（PRO LEAGUE の全試合スコアは使いません）。所属できるグループは1大会につき1つまで。空き枠があるグループに申請し、承認されると参加できます。募集中は招待コードでも参加可能。同時申請は最大${SQUAD_BATTLE_MAX_PENDING_APPLICATIONS}件。約2ヶ月に1回開催。募集は開催約1〜2週間前から → メンバー確定後は入れ替え不可 → 1ヶ月間バトル（週間ランキング原則4回 + 月間1回）→ 結果確定後に週間1位はメンバー全員へ 30 Unit、月間1位は 100 Unit。上位20グループまで順位に応じた Unit を確定メンバー全員へ同額配布。過去のスクワッドから同じ顔ぶれを再招集できます。`;

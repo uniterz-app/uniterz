@@ -95,12 +95,15 @@ export async function loadResultPostDetailNative(
     const n = Number(v ?? fallback);
     return Number.isFinite(n) ? n : fallback;
   };
-  const market: ResultPostDetailMarket = {
-    homeRate: asFinite(mkt?.homeRate, 0),
-    awayRate: asFinite(mkt?.awayRate, 0),
-    drawRate: asFinite(mkt?.drawRate, 0),
-    total: asFinite(mkt?.total, 0),
-  };
+  const homeRate = asFinite(mkt?.homeRate, 0);
+  const awayRate = asFinite(mkt?.awayRate, 0);
+  const drawRate = asFinite(mkt?.drawRate, 0);
+  const total = asFinite(mkt?.total, 0);
+  // 未書き込みの {0,0,0} は null（post.marketMeta を 0% で潰さない）
+  const market: ResultPostDetailMarket | null =
+    homeRate > 0 || awayRate > 0 || drawRate > 0 || total > 0
+      ? { homeRate, awayRate, drawRate, total }
+      : null;
 
   const pointsDistribution = parseGamePointsDistributionV1(
     rawPointsDistributionFromGameDoc(gameData)
@@ -146,6 +149,14 @@ export function buildResultDetailViewFromLoad(
     leadingScorers: game?.leadingScorers,
     topScorerCandidates: game?.topScorerCandidates,
     topScorerMarket: resolveTopScorerMarketView(game, loaded.post),
+    gameMeta: game
+      ? {
+          roundLabel: game.roundLabel,
+          playoffRound: game.playoffRound,
+          seasonRound: game.seasonRound,
+          seasonPhase: game.seasonPhase,
+        }
+      : null,
     viewer,
   });
 }

@@ -1,5 +1,6 @@
 /**
  * Web `RankingsProLeagueTeaser` 相当 — Report ゲート同型（ぼかし + Pro バッジ + CTA）。
+ * 本文は通常フローで高さを確保（absolute オーバーレイだと下端が切れる）。
  */
 
 import { useMemo } from "react";
@@ -20,6 +21,7 @@ import {
 import { nativeBlurViewExtraProps } from "../../ui/nativeBlurProps";
 import { RankingListCardNative } from "./RankingsRankingCards";
 import ProCyberBadgeNative from "../profile/kinetik/ProCyberBadgeNative";
+import UniterzLogoNative from "../profile/UniterzLogoNative";
 import {
   OXANIUM_700,
   OXANIUM_800,
@@ -39,17 +41,23 @@ const BULLET_ICONS: Record<
 
 function TitleWithBrandFontsNative({ title }: { title: string }) {
   return (
-    <>
-      {title.split(/(PRO LEAGUE|Pro)/).map((part, i) =>
-        part === "PRO LEAGUE" || part === "Pro" ? (
-          <Text key={i} style={styles.titleBrand}>
+    <View style={styles.titleRowFlex}>
+      {title.split(/(PRO LEAGUE|Pro)/).map((part, i) => {
+        if (!part) return null;
+        if (part === "PRO LEAGUE" || part === "Pro") {
+          return (
+            <View key={i} style={styles.titleBrandSkewWrap}>
+              <Text style={[styles.title, styles.titleBrand]}>{part}</Text>
+            </View>
+          );
+        }
+        return (
+          <Text key={i} style={styles.title}>
             {part}
           </Text>
-        ) : (
-          <Text key={i}>{part}</Text>
-        )
-      )}
-    </>
+        );
+      })}
+    </View>
   );
 }
 
@@ -68,47 +76,60 @@ export function RankingsProLeagueTeaserNative({
 
   return (
     <View style={styles.root}>
-      <View style={styles.previewClip} pointerEvents="none">
-        <View style={styles.listPad}>
-          {rows.map((r, i) => (
-            <RankingListCardNative
-              key={r.uid}
-              row={r}
-              rank={i + 1}
-              metric="totalScore"
-              language={language}
-            />
-          ))}
+      <View style={styles.bgLayer} pointerEvents="none">
+        <View style={styles.previewClip}>
+          <View style={styles.listPad}>
+            {rows.map((r, i) => (
+              <RankingListCardNative
+                key={r.uid}
+                row={r}
+                rank={i + 1}
+                metric="totalScore"
+                language={language}
+              />
+            ))}
+          </View>
         </View>
+        <BlurView
+          intensity={36}
+          tint="dark"
+          style={StyleSheet.absoluteFillObject}
+          {...nativeBlurViewExtraProps()}
+        />
+        <View style={styles.veil} />
       </View>
-      <BlurView
-        intensity={36}
-        tint="dark"
-        style={StyleSheet.absoluteFillObject}
-        {...nativeBlurViewExtraProps()}
-      />
-      <View style={styles.veil} pointerEvents="none" />
 
-      <View style={styles.overlay} pointerEvents="box-none">
+      <View style={styles.messageWrap}>
         <View style={styles.message}>
           <View style={styles.centerBlock}>
             <View style={styles.eyebrowBlock}>
-              <Text style={styles.eyebrow}>{copy.eyebrow}</Text>
+              <View style={styles.brandLogo}>
+                <UniterzLogoNative width={168} />
+              </View>
               <View style={styles.badgeScale}>
                 <ProCyberBadgeNative premium />
               </View>
             </View>
-            <Text style={styles.title}>
+            <View style={styles.titleRow}>
               <TitleWithBrandFontsNative title={copy.title} />
-            </Text>
+            </View>
             <Text style={styles.body}>{copy.body}</Text>
             <Pressable
               onPress={onPressSubscribe}
-              style={styles.cta}
+              style={({ pressed }) => [
+                styles.cta,
+                pressed ? styles.ctaPressed : null,
+              ]}
               accessibilityRole="button"
               accessibilityLabel={copy.cta}
             >
-              <Text style={styles.ctaLabel}>{copy.cta}</Text>
+              {({ pressed }) => (
+                <Text
+                  style={[styles.ctaLabel, pressed ? styles.ctaLabelPressed : null]}
+                >
+                  {copy.cta}
+                </Text>
+              )}
             </Pressable>
           </View>
           <View style={styles.bulletPanel}>
@@ -117,7 +138,7 @@ export function RankingsProLeagueTeaserNative({
                 <View style={styles.bulletIcon}>
                   <MaterialCommunityIcons
                     name={BULLET_ICONS[item.icon]}
-                    size={12}
+                    size={15}
                     color="#fdba74"
                   />
                 </View>
@@ -148,8 +169,12 @@ const styles = StyleSheet.create({
     borderRadius: 0,
     minHeight: 420,
   },
+  /** ぼかし下地のみ absolute。本文の高さで root が伸びる */
+  bgLayer: {
+    ...StyleSheet.absoluteFillObject,
+  },
   previewClip: {
-    maxHeight: 520,
+    flex: 1,
     overflow: "hidden",
     opacity: 0.9,
   },
@@ -160,46 +185,55 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(4,8,14,0.55)",
   },
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
+  messageWrap: {
+    position: "relative",
+    zIndex: 1,
     alignItems: "center",
-    justifyContent: "flex-start",
-    paddingTop: 48,
-    paddingBottom: 40,
+    paddingTop: 40,
+    paddingBottom: 28,
     paddingHorizontal: 12,
   },
   message: {
     width: "100%",
-    maxWidth: 360,
+    maxWidth: 380,
     alignItems: "stretch",
-    gap: 12,
+    gap: 14,
     paddingHorizontal: 4,
   },
   centerBlock: {
     alignItems: "center",
-    gap: 12,
+    gap: 14,
   },
   eyebrowBlock: {
     alignItems: "center",
     gap: 10,
   },
+  brandLogo: {
+    width: 168,
+    maxWidth: "72%",
+    alignItems: "center",
+  },
   badgeScale: {
     transform: [{ scale: 1.45 }],
     marginVertical: 6,
   },
-  eyebrow: {
-    fontFamily: OXANIUM_700,
-    fontSize: 10,
-    fontWeight: "700",
-    letterSpacing: 2,
-    color: "rgba(165,243,252,0.8)",
-    textTransform: "uppercase",
-    textAlign: "center",
+  titleRow: {
+    width: "100%",
+    alignItems: "center",
+  },
+  titleRowFlex: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  titleBrandSkewWrap: {
+    transform: [{ skewX: "-10deg" }],
   },
   title: {
-    fontSize: 17,
+    fontSize: 19,
     fontWeight: "700",
-    lineHeight: 24,
+    lineHeight: 28,
     color: "#ffffff",
     textAlign: "center",
   },
@@ -210,29 +244,43 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
   },
   body: {
-    fontSize: 13,
-    lineHeight: 20,
+    fontSize: 15,
+    lineHeight: 22,
     color: "rgba(255,255,255,0.72)",
     textAlign: "center",
   },
   cta: {
-    minHeight: 40,
-    minWidth: 160,
+    minHeight: 44,
+    minWidth: 168,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.35)",
-    backgroundColor: "#00F5FF",
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    borderColor: "rgba(252,211,77,0.75)",
+    backgroundColor: "#050508",
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    shadowColor: "#fbbf24",
+    shadowOpacity: 0.22,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 0 },
+  },
+  ctaPressed: {
+    transform: [{ scale: 0.94 }],
+    borderColor: "rgba(253,230,138,0.95)",
+    backgroundColor: "rgba(251,191,36,0.2)",
+    shadowOpacity: 0.4,
+    shadowRadius: 14,
   },
   ctaLabel: {
     fontFamily: OXANIUM_800,
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: "800",
     letterSpacing: 1.4,
     textTransform: "uppercase",
-    color: "#050508",
+    color: "#fde68a",
+  },
+  ctaLabelPressed: {
+    color: "#fffbeb",
   },
   bulletPanel: {
     width: "100%",
@@ -240,18 +288,18 @@ const styles = StyleSheet.create({
     borderColor: "rgba(251,146,60,0.55)",
     borderRadius: 0,
     backgroundColor: "rgba(249,115,22,0.07)",
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    gap: 10,
   },
   bulletRow: {
     flexDirection: "row",
     alignItems: "flex-start",
-    gap: 10,
+    gap: 12,
   },
   bulletIcon: {
-    width: 20,
-    height: 20,
+    width: 26,
+    height: 26,
     marginTop: 1,
     borderRadius: 0,
     borderWidth: 1,
@@ -266,20 +314,20 @@ const styles = StyleSheet.create({
   },
   bulletTitle: {
     fontFamily: OXANIUM_800,
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: "800",
     letterSpacing: 0.4,
     color: "#ffedd5",
   },
   bulletDetail: {
-    marginTop: 2,
-    fontSize: 11,
-    lineHeight: 15,
+    marginTop: 3,
+    fontSize: 13,
+    lineHeight: 18,
     color: "rgba(255,255,255,0.7)",
   },
   backLink: {
     marginTop: 4,
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "600",
     color: "rgba(255,255,255,0.55)",
     textAlign: "center",

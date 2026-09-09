@@ -1,11 +1,12 @@
 /**
  * Web `ProSkinPage` / `ProfilePlanProSkinPicker`（production）相当
- * — カタログ + 模様タップでオーバーレイ確認
+ * — カタログ + 模様タップでオーバーレイ確認（本番 Kinetik カード）
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
+  Image,
   Modal,
   Platform,
   Pressable,
@@ -17,14 +18,16 @@ import {
 } from "react-native";
 import {
   useNavigation,
+  useRoute,
   type NavigationProp,
+  type RouteProp,
 } from "@react-navigation/native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import MobilePageShell from "../mobileScreens/MobilePageShell";
-import ProfilePlanProBackgroundNative from "../kinetik/ProfilePlanProBackgroundNative";
 import ProfileKinetikPanelNative from "../kinetik/ProfileKinetikPanelNative";
+import { PRO_SKIN_THUMB_SOURCES } from "../proSkinStaticAssets.generated";
 import {
   fetchProSkinStatusNative,
   saveMeProSkinNative,
@@ -50,13 +53,18 @@ import {
 import { proSkinMilestoneProgressBar } from "../../../../../../lib/profile/proSkinProgress";
 import { parseUserPlanProBgVariant } from "../../../../../../lib/profile/profilePlanProBgVariantField";
 import type { ProfilePlanProBgVariant } from "../../../../../../lib/profile/profilePlanProBgVariants";
+import { PROFILE_EDIT_KINETIK_MOCK } from "../../../../../../app/component/profile/edit/profileEditKinetikTypes";
 import { db } from "../../../lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
-import { PROFILE_EDIT_KINETIK_MOCK } from "../../../../../../app/component/profile/edit/profileEditKinetikTypes";
 import { CYBER_TAB_CYAN } from "../../../ui/cyberSideMenuNative";
+import { useBottomTabBarInsets } from "../../../navigation/useBottomTabBarInsets";
 
 const COLS = 2;
 const GAP = 10;
+
+function thumbPreviewHeight(width: number) {
+  return Math.max(84, Math.min(108, Math.round(width / 2.05)));
+}
 
 function categoryBadgeColors(category: ProfilePlanProAdoptedCategory): {
   bg: string;
@@ -91,7 +99,7 @@ function previewPanelProps(language: "ja" | "en") {
       posts: 71,
       hits: 45,
       totalPoints: 350,
-      scorePrecision: 8,
+      exactHits: 0,
       upset: 9,
     },
     winStreak: 0,
@@ -99,7 +107,7 @@ function previewPanelProps(language: "ja" | "en") {
     totalPointsRankDenominator: 800,
     rankDeltaPlaces: 0,
     bio: "PREVIEW",
-    metricsTitle: "NBA // PLAYOFFS STATS",
+    metricsTitle: "NBA // SEASON STATS",
     countryCode: "JP",
     memberSinceMs: new Date("2025-12-01T00:00:00+09:00").getTime(),
     shareHandle: "mpj",
@@ -117,6 +125,26 @@ function ThumbCorners() {
       <View style={[styles.thumbCorner, styles.thumbCornerBL]} pointerEvents="none" />
       <View style={[styles.thumbCorner, styles.thumbCornerBR]} pointerEvents="none" />
     </>
+  );
+}
+
+function SkinThumbPatternNative({
+  variant,
+  width,
+  height,
+}: {
+  variant: ProfilePlanProBgVariant;
+  width: number;
+  height: number;
+}) {
+  const source = PRO_SKIN_THUMB_SOURCES[variant];
+  if (source == null) return null;
+  return (
+    <Image
+      source={source}
+      style={{ width, height }}
+      resizeMode="cover"
+    />
   );
 }
 
@@ -147,7 +175,7 @@ function SkinThumbNative({
   };
   onPress: () => void;
 }) {
-  const height = Math.max(84, Math.min(108, Math.round(width / 2.05)));
+  const height = thumbPreviewHeight(width);
   const cat = categoryBadgeColors(entry.category);
   const condition = formatProSkinUnlockCondition(entry.unlock, language);
   const swatchColors = parseCssLinearGradientColors(
@@ -228,46 +256,32 @@ function SkinThumbNative({
         </Text>
       </View>
       <View style={[styles.tilePreview, { height }]} collapsable={false}>
-        {/* フォールバック用 swatch（FX 未対応時も空にしない） */}
         <LinearGradient
           colors={swatchColors}
           start={{ x: 0.1, y: 0 }}
           end={{ x: 0.9, y: 1 }}
           style={StyleSheet.absoluteFillObject}
         />
-        {/* 一覧で模様が見えるよう本番背景をサムネ描画（FlatList 仮想化で同時描画は少数） */}
-        <View style={StyleSheet.absoluteFillObject} pointerEvents="none">
-          <ProfilePlanProBackgroundNative
-            width={width}
-            height={height}
-            variant={entry.id}
-            animate={false}
-          />
-        </View>
+        <SkinThumbPatternNative
+          variant={entry.id}
+          width={width}
+          height={height}
+        />
         <ThumbCorners />
         {!unlocked ? (
-          <View style={styles.tileLockOverlay} pointerEvents="none">
-            <MaterialCommunityIcons
-              name="lock"
-              size={18}
-              color="rgba(253,230,138,0.95)"
-            />
-            <Text style={styles.tileLockOverlayText}>
-              {entry.unlock.kind === "pro" ? "PRO" : "MILESTONE"}
-            </Text>
-            {bar ? (
-              <View style={styles.tileProgressWrap}>
-                <View style={styles.tileProgressTrack}>
-                  <View
-                    style={[
-                      styles.tileProgressFill,
-                      { width: `${Math.round(bar.ratio * 100)}%` },
-                    ]}
-                  />
-                </View>
-                <Text style={styles.tileProgressLabel}>{bar.label}</Text>
-              </View>
-            ) : null}
+          <View style={styles.tileDim} pointerEvents="none" />
+        ) : null}
+        {bar ? (
+          <View style={styles.tileProgressWrap}>
+            <View style={styles.tileProgressTrack}>
+              <View
+                style={[
+                  styles.tileProgressFill,
+                  { width: `${Math.round(bar.ratio * 100)}%` },
+                ]}
+              />
+            </View>
+            <Text style={styles.tileProgressLabel}>{bar.label}</Text>
           </View>
         ) : null}
       </View>
@@ -278,7 +292,10 @@ function SkinThumbNative({
 export default function ProSkinScreenNative() {
   const navigation =
     useNavigation<NavigationProp<ProfileStackParamList>>();
+  const route = useRoute<RouteProp<ProfileStackParamList, "ProSkin">>();
+  const fromTrial = route.params?.fromTrial === true;
   const insets = useSafeAreaInsets();
+  const { bottomContentReserveY } = useBottomTabBarInsets();
   const { fUser } = useFirebaseUser();
   const { language } = useNativeUserLanguageFromAuth();
   const isJa = language === "ja";
@@ -467,6 +484,7 @@ export default function ProSkinScreenNative() {
             : "Preview is free. Upgrade to Pro to apply a skin."
       }
       appBackground
+      edgeBack={!fromTrial}
       onClose={() => navigation.goBack()}
     >
       <View style={styles.pageBg}>
@@ -476,18 +494,23 @@ export default function ProSkinScreenNative() {
           </View>
         ) : (
           <FlatList
+            style={styles.list}
             data={PRO_SKIN_UNLOCK_CATALOG as ProSkinUnlockCatalogEntry[]}
             keyExtractor={(item) => item.id}
             numColumns={COLS}
             columnWrapperStyle={styles.row}
             contentContainerStyle={[
               styles.listContent,
-              { width: contentW, alignSelf: "center" },
+              {
+                width: contentW,
+                alignSelf: "center",
+                paddingBottom: bottomContentReserveY + 16,
+              },
             ]}
             showsVerticalScrollIndicator={false}
-            initialNumToRender={6}
-            maxToRenderPerBatch={4}
-            windowSize={5}
+            initialNumToRender={8}
+            maxToRenderPerBatch={8}
+            windowSize={7}
             removeClippedSubviews={Platform.OS === "android"}
             ListHeaderComponent={
               <View style={styles.headerBlock}>
@@ -702,15 +725,19 @@ const styles = StyleSheet.create({
   pageBg: {
     flex: 1,
     backgroundColor: "#03080d",
+    overflow: "hidden",
   },
   loading: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
   },
+  list: {
+    flex: 1,
+    zIndex: 1,
+  },
   listContent: {
     paddingTop: 12,
-    paddingBottom: 48,
   },
   row: {
     gap: GAP,
@@ -986,6 +1013,11 @@ const styles = StyleSheet.create({
     backgroundColor: "#060809",
     overflow: "hidden",
   },
+  tileDim: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(3,8,13,0.45)",
+    zIndex: 2,
+  },
   tileLockOverlay: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 3,
@@ -1001,10 +1033,14 @@ const styles = StyleSheet.create({
     color: "rgba(253,230,138,0.9)",
   },
   tileProgressWrap: {
-    marginTop: 4,
-    width: "84%",
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 6,
+    zIndex: 4,
     alignItems: "center",
     gap: 3,
+    paddingHorizontal: 10,
   },
   tileProgressTrack: {
     height: 5,

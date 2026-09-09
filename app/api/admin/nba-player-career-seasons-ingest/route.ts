@@ -12,7 +12,12 @@ import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
  * BDL → Firestore `nbaPlayerCareerSeasons/{playerId}`。
  * 認証: Admin UID または job secret。
  *
- * body: { seasonKey?: "2026-27", playerIds?: string[], maxPlayers?: number }
+ * body: {
+ *   seasonKey?: "2026-27",
+ *   playerIds?: string[],
+ *   maxPlayers?: number,
+ *   minCareerYears?: number  // 例: 15 → ドラフトから15シーズン以上だけ
+ * }
  */
 export async function POST(req: Request) {
   try {
@@ -24,6 +29,7 @@ export async function POST(req: Request) {
       seasonKey?: string;
       playerIds?: string[];
       maxPlayers?: number;
+      minCareerYears?: number;
     };
     const seasonKey =
       typeof body.seasonKey === "string" && body.seasonKey.trim()
@@ -35,6 +41,10 @@ export async function POST(req: Request) {
       playerIds: Array.isArray(body.playerIds) ? body.playerIds : undefined,
       maxPlayers:
         typeof body.maxPlayers === "number" ? body.maxPlayers : undefined,
+      minCareerYears:
+        typeof body.minCareerYears === "number"
+          ? body.minCareerYears
+          : undefined,
     });
 
     return NextResponse.json(result);

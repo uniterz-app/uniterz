@@ -1,376 +1,694 @@
 /**
  * Uniterz 利用規約本文。
- * 現行のサービス設計（予想無料、Pro は分析・通知・レポート・見た目、
- * Unit は無償付与のみ、Free/Pro で競技条件同一）に合わせた確定稿。
- * 弁護士確認済み。
+ * 弁護士たたき台をベースに、サービス設計で補完した運用正。
+ * （予想無料、Pro は分析・通知・レポート・見た目、Unit は無償付与のみ、
+ * Free/Pro で競技条件同一、Season Pass は対象シーズン終了までの買い切り）
  */
 import type { LegalSection } from "@/lib/legal/legalSection";
-import { SUPPORT_EMAIL } from "@/lib/contact/companyEmails";
 import {
-  REDEMPTION_TERMS_SECTION,
-  UNIT_TERMS_SECTION,
-  type LegalLang,
-} from "@/lib/legal/unitRedemptionLegalCopy";
+  companyAddressFull,
+  COMPANY_ADDRESS_FULL,
+  COMPANY_LEGAL_NAME,
+  companyLegalName,
+  COMPANY_WEB_URL,
+  PRIVACY_POLICY_URL,
+  REDELIVERY_SHIPPING_FEE_JPY,
+  SEASON_PASS_END_MONTH_DAY,
+} from "@/lib/legal/companyInfo";
+import { SUPPORT_EMAIL } from "@/lib/contact/companyEmails";
+import type { LegalLang } from "@/lib/legal/unitRedemptionLegalCopy";
 
 export type { LegalLang };
 
-export const TERMS_UPDATED_AT = "2026-08-18";
+export const TERMS_UPDATED_AT = "2026-09-09";
 
 export const TERMS_INTRO = {
   ja: "Uniterz におけるご利用条件を定めたページです。ご利用前に必ずご確認ください。",
   en: "This page sets forth the terms and conditions for using Uniterz. Please review them carefully before using the Service.",
 } as const;
 
+export const TERMS_PREAMBLE = {
+  ja: [
+    `Uniterz利用規約（以下「本規約」といいます）は、${COMPANY_LEGAL_NAME}（以下「当社」といいます）が運営する、NBA等のスポーツの試合結果に関するユーザーの分析力を競うプラットフォームである「Uniterz」を通じて提供する有償・無償の各サービス（以下「本サービス」といいます）の利用条件を定めるものです。本サービスをご利用いただくにあたっては、本規約及び当社プライバシーポリシー（${PRIVACY_POLICY_URL}）（以下「プライバシーポリシー」といいます）の全文をお読みいただいた上で、本規約及びプライバシーポリシーの全ての条項について承諾いただく必要があります。`,
+    "本サービスをご利用いただいた場合、ユーザーが本規約及びプライバシーポリシーの内容を理解しており、かつ、本規約及びプライバシーポリシーの全ての条項について承諾したものとみなします。",
+  ],
+  en: [
+    `These Uniterz Terms of Use (the "Terms") set the conditions for using the paid and free services (the "Service") provided through Uniterz, a platform operated by ${COMPANY_LEGAL_NAME} ("we") where users compete on analyzing NBA and other sports results. Before using the Service, please read these Terms and our Privacy Policy (${PRIVACY_POLICY_URL}) in full and accept all of their provisions.`,
+    "By using the Service, you are deemed to understand and accept these Terms and the Privacy Policy in full.",
+  ],
+} as const;
+
+export const TERMS_FOOTER = {
+  ja: [
+    `${TERMS_UPDATED_AT} 制定`,
+    COMPANY_LEGAL_NAME,
+    COMPANY_ADDRESS_FULL,
+    `お問い合わせ：${SUPPORT_EMAIL}`,
+    "電話番号：請求があった場合に遅滞なく開示します",
+    `Web：${COMPANY_WEB_URL}`,
+  ],
+  en: [
+    `Adopted ${TERMS_UPDATED_AT}`,
+    companyLegalName("en"),
+    companyAddressFull("en"),
+    `Contact: ${SUPPORT_EMAIL}`,
+    "Phone: Disclosed without delay upon request",
+    `Web: ${COMPANY_WEB_URL}`,
+  ],
+} as const;
+
 export const TERMS_SECTIONS: readonly LegalSection[] = [
   {
     id: "apply",
-    title: { ja: "適用", en: "Scope" },
-    paragraphs: {
+    title: { ja: "第1条（適用）", en: "Article 1 (Scope)" },
+    bullets: {
       ja: [
-        "本規約は、Uniterz（以下「本サービス」）の利用に関する条件を定めるものです。本サービスを利用した時点で、本規約に同意したものとみなします。",
-        "本規約は、モバイルアプリ、Web、および本サービスに付随する機能のすべてに適用されます。",
+        "本規約は、利用契約その他ユーザーと当社との間の本サービスの利用に関わる一切の関係に適用されます。",
+        "当社が本サービス又は当社ウェブサイト上で掲載する本サービスの利用に関するルールは、本規約の一部を構成するものとします（以下総称して「本規約等」といいます）。",
+        "本規約の内容と、その他の本規約外における本サービスの説明等とが矛盾・抵触する場合は、当該説明等の規定を優先させる旨の特段の定めがない限り、本規約の規定が優先して適用されるものとします。",
+        "本規約等のほか、本サービスからリンク・呼び出しされているサービスについては、そのサービスの利用規約に同意した上でご利用ください。",
       ],
       en: [
-        "These Terms set the conditions for using Uniterz (the \"Service\"). By using the Service, you agree to these Terms.",
-        "These Terms apply to the mobile app, the web version, and all related features.",
+        "These Terms apply to all relationships between you and us concerning use of the Service, including the user agreement.",
+        "Rules we post on the Service or our website about use of the Service form part of these Terms (together, the \"Terms etc.\").",
+        "If these Terms conflict with other descriptions of the Service outside these Terms, these Terms prevail unless that description expressly says otherwise.",
+        "For services linked or launched from the Service, please also accept that service's terms before use.",
       ],
     },
   },
   {
     id: "define",
-    title: { ja: "定義", en: "Definitions" },
+    title: { ja: "第2条（定義）", en: "Article 2 (Definitions)" },
     bullets: {
       ja: [
-        "「当社」：本サービスの運営者（株式会社UNITERZ）をいいます。法人情報は特定商取引法に基づく表記をご確認ください。",
-        "「ユーザー」：本サービスを利用する個人をいいます。",
-        "「予想」：試合の勝敗、スコアその他、当社が定める項目についての投稿をいいます。",
-        "「スコア」：予想結果に基づき、ランキング算出のために付与される本サービス内の成績指標をいいます。金銭的価値はなく、購入・換金・譲渡・商品交換はできません。",
-        "「ランキング」：スコアその他当社が定める指標に基づく順位表示をいいます。",
-        "「Unit」：当社が条件達成者に無償で付与するアプリ内報酬をいいます。",
-        "「Pro」：分析、通知、レポート、見た目等を提供する有料プランをいいます。",
+        "「ユーザー」とは、当社と利用契約を締結し本サービスを利用する者（法人、個人を問いません）を指します。",
+        "「本アプリ」とは、当社がApp Store、Google Play等のアプリストア上で配信する、本サービス提供のためのアプリケーションプログラムを指します。",
+        "「対象試合」とは、本サービス内において当社が指定し、ユーザーが勝敗、スコア及び得点者等の予想の投稿を行うことができる個々のスポーツ等の試合をいいます。",
+        "「PT」とは、対象試合の終了後、公式結果に基づき当社独自の基準によって計算した、予想結果の成績点を指します。なお、本アプリ内では「スコア」その他当社所定の名称で表示される場合があります。",
+        "「Unit」とは、商品の交換にのみ利用できる本アプリ内報酬を指します。",
+        "「Pro」とは、本サービスの有料プランを指します。",
+        "「Proユーザー」とは、Proに登録し、これを利用するユーザーを指します。",
+        "「一般ユーザー」とは、Proに登録していないユーザーを指します。",
+        "「チームスタッツ」とは、対象試合に出場するチームに関する戦績、過去の対戦成績、得点率、所属選手の情報、その他チームに関する各種情報をいいます。",
+        "「プレイヤースタッツ」とは、対象試合に出場するチームに所属する選手の得点及びアシスト数、成績その他選手個人に関する各種情報をいいます。",
+        "「利用契約」とは、本規約等に基づき当社とユーザーの間で規律されるすべての契約関係を総称して呼称する場合に用います。",
+        "「ユーザーID」とは、本サービスを利用するためにユーザーごとに付与される本サービス上のアカウント情報を指します。原則としてメールアドレス1個につき1個のIDを登録することができ、ログインIDとパスワードの組み合わせ、又は当社が認める外部認証サービスに紐づく識別子により構成されます。",
       ],
       en: [
-        "\"We\" / \"the operator\" means UNITERZ Inc., the operator of the Service. Corporate details are published on the legally required notices page.",
-        "\"User\" means an individual who uses the Service.",
-        "\"Prediction\" means a submission on win/loss, score, or other items we specify.",
-        "\"Score\" means an in-Service performance metric used to calculate rankings. It has no monetary value and cannot be purchased, cashed out, transferred, or exchanged for goods.",
-        "\"Rankings\" means ranking displays based on Score and other metrics we specify.",
-        "\"Units\" means in-app rewards we grant free of charge when conditions are met.",
-        "\"Pro\" means the paid plan for analysis, alerts, reports, visuals, and similar features.",
+        "\"User\" means a person (individual or entity) who enters into a user agreement with us and uses the Service.",
+        "\"App\" means the application we distribute on the App Store, Google Play, or similar stores to provide the Service.",
+        "\"Eligible Match\" means a sports match we designate in the Service for which users may post predictions such as win/loss, score, and scorers.",
+        "\"PT\" means the performance points we calculate under our own rules from official results after an Eligible Match ends. The App may display PT as \"Score\" or another name we specify.",
+        "\"Units\" means in-app rewards usable only to exchange for products.",
+        "\"Pro\" means the Service's paid plan.",
+        "\"Pro User\" means a User registered for and using Pro.",
+        "\"General User\" means a User not registered for Pro.",
+        "\"Team Stats\" means team records, head-to-head history, scoring rates, roster information, and other team information for teams in an Eligible Match.",
+        "\"Player Stats\" means points, assists, and other individual player information for players on teams in an Eligible Match.",
+        "\"User Agreement\" means all contractual relationships between you and us under the Terms etc.",
+        "\"User ID\" means the account information issued per User. As a rule, one email address maps to one ID, composed of a login ID and password, or an identifier linked to an external authentication service we allow.",
       ],
     },
   },
   {
-    id: "nature",
-    title: { ja: "サービスの性質", en: "Nature of the Service" },
+    id: "register",
+    title: { ja: "第3条（登録）", en: "Article 3 (Registration)" },
+    bullets: {
+      ja: [
+        "登録希望者が本規約を遵守することに同意し、かつ、当社が定める方法で登録事項を当社に提供することにより、当社に対し、本サービスの利用の登録を申請することができます。",
+        "当社は、本条第5項の基準に従って、登録希望者の登録の可否を判断し、当社が登録を認める場合にはその旨を当社所定の方法にて、当該登録希望者に通知します。登録希望者のユーザーとしての登録は、当社が本項の通知を行ったことをもって完了します。",
+        "前項に定める登録の完了時に、本規約を契約内容とする利用契約がユーザーと当社の間に成立します。ユーザーはこれをもって、本サービスを本規約に従って利用することができるものとします。",
+        "本契約の有効期間は、本規約により本契約が解除若しくは解約されるまでの期間又はユーザーと当社が合意した期間とし、ユーザーは、当該期間に限り本サービスを利用することができるものとします。",
+        "当社は、登録希望者が次のいずれかに該当する場合には、本サービスの利用登録を拒否することができます。（1）過去に本規約違反等により当社サービスの利用停止等を受けたことがある場合（2）提供情報に虚偽・誤記・記載漏れ等があった場合（3）未成年者等で法定代理人等の同意が得られていない場合（4）本規約に違反するおそれがある場合（5）第26条（反社会的勢力の排除）に違反し又は過去に違反していた場合（6）その他当社が不適当と判断した場合",
+      ],
+      en: [
+        "A registration applicant may apply by agreeing to these Terms and providing registration details by the method we specify.",
+        "We decide whether to accept registration under paragraph 5 of this Article and notify the applicant by our designated method if accepted. Registration completes upon that notice.",
+        "Upon completion of registration, a User Agreement incorporating these Terms is formed, and the User may use the Service under these Terms.",
+        "The agreement remains in effect until terminated under these Terms or for any other period we agree with the User.",
+        "We may refuse registration if the applicant (1) was previously suspended from our services for Terms violations or similar, (2) submitted false or incomplete information, (3) is a minor or similarly restricted person without required guardian consent, (4) is likely to violate these Terms, (5) violates or previously violated Article 26 (Exclusion of Anti-Social Forces), or (6) we otherwise deem unsuitable.",
+      ],
+    },
+  },
+  {
+    id: "eligibility",
+    title: { ja: "第4条（利用資格）", en: "Article 4 (Eligibility)" },
     paragraphs: {
       ja: [
-        "本サービスは、NBAなどの試合結果を無料で予想し、的中などの成績をランキングで競うスポーツ予想アプリです。現金を賭けるサービス、ベッティングサービス、投資助言サービスではありません。",
+        "未成年者が本サービスを利用する場合には、事前に法定代理人の同意を得るものとします。未成年者が本サービスの利用を開始した時点で、本サービスの利用及び本規約の内容について法定代理人の同意があったものとみなします。",
       ],
       en: [
-        "The Service is a sports prediction app where you freely predict results of NBA and other matches and compete on accuracy and related performance in rankings. It is not a cash-betting service, a betting service, or an investment advisory service.",
-      ],
-    },
-    bullets: {
-      ja: [
-        "試合結果の予想は無料で行えます。予想が外れても、財産を失う仕組みではありません。",
-        "現金を賭けることはできません。",
-        "Unit を購入することはできません。",
-        "Unit を現金に換えることはできません。",
-        "Pro の対価は、後記の Pro 機能の利用対価であり、予想の参加費、Unit の購入代金、商品交換の対価ではありません。",
-      ],
-      en: [
-        "Predictions are free. A wrong prediction does not cause you to lose money or property.",
-        "You cannot bet cash.",
-        "You cannot buy Units.",
-        "You cannot cash out Units.",
-        "Pro fees are consideration for the Pro features described below, not an entry fee for predictions, a purchase of Units, or payment for product exchange.",
+        "Minors must obtain a legal representative's consent before using the Service. Starting to use the Service is deemed to mean that consent was given to use of the Service and these Terms.",
       ],
     },
   },
   {
-    id: "account",
-    title: { ja: "アカウント", en: "Account" },
+    id: "conditions",
+    title: { ja: "第5条（利用条件）", en: "Article 5 (Conditions of Use)" },
     bullets: {
       ja: [
-        "登録情報は正確かつ最新の内容を維持してください。",
-        "アカウントは本人のみが利用できます。貸与、共有、譲渡はできません。",
-        "ログイン情報の管理はユーザーの責任です。",
-        "未成年者が利用する場合は、保護者の同意を得たうえで利用してください。Pro の購入および商品交換の申請についても同様です。",
-        "当社は、不正利用が疑われる場合、利用制限、利用権の取消し、アカウント停止等の措置を行うことがあります。",
+        "本サービスの利用中に発生したユーザー側の通信費その他の実費については、理由の如何を問わずユーザーが負担するものとします。",
+        "当社は合理的努力により本サービスの安定稼働を維持するよう努めるものとし、ユーザーは、データの永続性や完全な稼働を保証するものではないことを理解して本サービスを利用するものとします。",
       ],
       en: [
-        "Keep your registration information accurate and up to date.",
-        "An account may be used only by its holder. Lending, sharing, or transferring accounts is not allowed.",
-        "You are responsible for your login credentials.",
-        "Minors may use the Service only with a parent or guardian's consent. The same applies to Pro purchases and product-exchange applications.",
-        "If we suspect misuse, we may restrict use, revoke Pro access, or suspend the account.",
+        "Users bear their own communication and other out-of-pocket costs incurred while using the Service, for any reason.",
+        "We use reasonable efforts to keep the Service running stably. Users understand that we do not guarantee data permanence or uninterrupted availability.",
       ],
     },
   },
   {
-    id: "predict",
-    title: { ja: "予想、スコア、ランキング", en: "Predictions, Scores, and Rankings" },
+    id: "notice",
+    title: { ja: "第6条（連絡/通知）", en: "Article 6 (Communications)" },
     bullets: {
       ja: [
-        "予想の投稿および変更は、原則として試合開始前までです。開始後はロックされます。",
-        "試合終了後、公式の試合結果等を反映して成績を集計します。公式記録の訂正、データ遅延、障害等により、表示や集計が後から変わることがあります。",
-        "スコアおよびランキングは、当社が定める計算方法に基づきます。将来の的中や順位を保証するものではありません。",
-        "スコアの計算方法、ランキングへの参加条件、Unit の付与条件および付与量、商品交換の条件は、Free と Pro で同一です。Pro 加入による加点、Unit 増量、当選枠の優遇その他の競技上の優位はありません。",
-        "計算方法、対象試合、表示項目は、改善のため変更することがあります。",
+        "当社からユーザーへの連絡及び通知は、メールの送信、当社ウェブサイトへの掲載若しくは書面の送付、本アプリ内通知、その他当社が定める方法により行います。",
+        "ユーザーは、当社からユーザー宛に送信されるメールの受信を拒否する設定等を行ってはならないものとし、受信拒否設定やメールアドレス変更等により不着であっても、当社からの通知の発信時をもって通知がなされたものとみなします。",
+        "前2項の場合に、ユーザーが当社からの通知を受領できなかったことで損害が生じても、当社は、故意又は重過失がある場合を除き、一切の責任を負いません。",
+        `ユーザーから当社への問い合わせその他の連絡は、メール（${SUPPORT_EMAIL}）の送信その他当社が定める方法により行うものとします。`,
       ],
       en: [
-        "Predictions may be submitted or edited only before the match starts, unless we specify otherwise. They lock after tip-off.",
-        "After a match ends, we tally results based on official records and similar sources. Displays and tallies may later change due to official corrections, data delays, or outages.",
-        "Scores and rankings follow our calculation rules. They do not guarantee future accuracy or rank.",
-        "Scoring, ranking eligibility, Unit grant conditions and amounts, and product-exchange conditions are the same for Free and Pro. Pro does not add score bonuses, extra Units, better odds of rewards, or other competitive advantages.",
-        "We may change calculation methods, eligible matches, and display items to improve the Service.",
+        "We may contact Users by email, website posting, mail, in-app notice, or other methods we designate.",
+        "Users must not block our emails. If mail fails due to blocking or an outdated address, notice is deemed given when we send it.",
+        "Except for our willful misconduct or gross negligence, we are not liable for damages from a User not receiving notice.",
+        `Users contact us by email (${SUPPORT_EMAIL}) or another method we designate.`,
       ],
     },
   },
   {
-    id: "unit",
-    title: UNIT_TERMS_SECTION.title,
+    id: "change-of-details",
+    title: {
+      ja: "第7条（届出事項の変更）",
+      en: "Article 7 (Changes to Registered Details)",
+    },
     paragraphs: {
       ja: [
-        "Pro 利用料金は Pro 機能の利用対価であり、Unit の購入代金または商品交換の対価ではありません。",
+        "ユーザーは、本サービスの申込み時に当社へ届け出た事項に変更が生じた場合、遅滞なく、当社の定める方法により、当該変更事項を当社に通知し、当社から要求された資料を提出するものとします。当該情報の変更がなされなかったことに起因してユーザーに生じた損害については、全て当該ユーザーが負担するものとし、当社は、当社に故意又は重過失がある場合を除き、一切の責任を負わないものとします。",
       ],
       en: [
-        "Pro fees are consideration for Pro features, not a purchase of Units or payment for product exchange.",
+        "If details you filed with us change, notify us promptly by our designated method and submit any documents we request. Except for our willful misconduct or gross negligence, you bear all damages from failure to update those details, and we have no liability.",
       ],
     },
-    bullets: UNIT_TERMS_SECTION.bullets,
+  },
+  {
+    id: "amend-terms",
+    title: {
+      ja: "第8条（本規約の変更・更新）",
+      en: "Article 8 (Amendment of These Terms)",
+    },
+    bullets: {
+      ja: [
+        "当社は、(1)ユーザーの一般の利益に適合するとき、又は(2)利用契約の目的に反せず、変更の必要性・相当性その他の事情に照らして合理的であるときに、本規約（本サービスの内容、利用料金を含みますがこれらに限られません）を変更できます。",
+        "前項の場合、当社は、効力発生日の1ヶ月前までに、変更する旨、変更後の内容及び効力発生日を当社ウェブサイト等に掲載し、又は電子メールその他の方法によりユーザーに通知します。",
+        "変更後の効力発生日以降にユーザーが本サービスを利用したときは、当該変更に同意したものとみなします。",
+        "常に最新の本規約を確認することはユーザーの義務です。変更後の本規約に同意しない場合、ユーザーは第22条に従い利用契約を解約できます。",
+        "前各項のほか、当社は、ユーザーの同意を得た上で本規約を変更することがあります。",
+      ],
+      en: [
+        "We may amend these Terms (including Service content and fees) when (1) the change suits Users' general interests, or (2) it does not conflict with the purpose of the User Agreement and is reasonable in light of necessity and proportionality.",
+        "In that case, at least one month before the effective date we will post or email notice of the change, the new text, and the effective date.",
+        "Using the Service on or after the effective date is deemed acceptance of the change.",
+        "Users must keep up with the latest Terms. If you disagree, you may terminate under Article 22.",
+        "Separately, we may amend these Terms with your consent.",
+      ],
+    },
+  },
+  {
+    id: "credentials",
+    title: {
+      ja: "第9条（認証情報の管理）",
+      en: "Article 9 (Credential Management)",
+    },
+    bullets: {
+      ja: [
+        "ユーザーは、自己の責任において、ユーザーID及びパスワードその他の認証情報（以下「ユーザー認証情報」といいます）を適切に管理及び保管するものとし、第三者に利用させ、又は貸与、譲渡、名義変更、売買等をしてはなりません。",
+        "当社は、ユーザー認証情報に基づき本サービスが利用されているときは、当該ユーザー本人が利用しているものとみなします。",
+        "ユーザー認証情報の管理不十分、使用上の過誤、第三者の使用等によって生じた損害の責任はユーザーが負い、当社は一切の責任を負いません。",
+      ],
+      en: [
+        "Users must properly manage User IDs, passwords, and other credentials (\"Credentials\") and must not let third parties use them or lend, transfer, rename, or sell them.",
+        "When the Service is used with Credentials, we treat that as use by the registered User.",
+        "Users are responsible for damages from poor Credential management, misuse, or third-party use; we have no liability.",
+      ],
+    },
+  },
+  {
+    id: "features",
+    title: {
+      ja: "第10条（本サービスの機能）",
+      en: "Article 10 (Service Features)",
+    },
+    paragraphs: {
+      ja: [
+        "当社は、ユーザーに対し、本サービスの利用契約期間中、本サービスの利用を許諾します。本サービスは、NBA等の試合結果に関するユーザーの分析力を競うプラットフォームであり、各機能の詳細は本サービス上及び当社ウェブサイト上の説明に従います。",
+      ],
+      en: [
+        "During the User Agreement term, we license use of the Service. The Service is a platform for competing on analyzing NBA and other sports results; feature details follow in-Service and website descriptions.",
+      ],
+    },
+    bullets: {
+      ja: [
+        "対象試合についての勝敗、スコア、得点者等の予想の投稿",
+        "チームスタッツ、プレイヤースタッツ、出場及び欠場選手の情報その他対象試合に関する情報の閲覧",
+        "PTの付与及び表示、並びに特定期間におけるランキングの表示",
+        "Unitの付与、管理及び商品交換申請",
+        "Proユーザー向けの分析結果、アラート通知、成績レポート並びに本アプリ内の見た目及びバッジその他当社が定める機能",
+        "データ可視化機能（予想成績、ランキングその他当社が定める指標の集計及び表示）",
+        "当社は、本サービスの機能の追加及び変更を随時実施することができます。",
+      ],
+      en: [
+        "Posting predictions on win/loss, score, scorers, and similar for Eligible Matches",
+        "Viewing Team Stats, Player Stats, availability information, and other Eligible Match information",
+        "Granting and displaying PT, and rankings for designated periods",
+        "Granting and managing Units and product-exchange applications",
+        "Pro features such as analysis, alerts, performance reports, visuals, and badges",
+        "Data visualization of prediction performance, rankings, and other metrics we specify",
+        "We may add or change features at any time.",
+      ],
+    },
+  },
+  {
+    id: "predict-unit",
+    title: {
+      ja: "第11条（試合結果等の予想、Unitの付与）",
+      en: "Article 11 (Predictions and Unit Grants)",
+    },
+    bullets: {
+      ja: [
+        "ユーザーは対象の試合を選択し、勝敗、スコア、得点者等の予想を無償で投稿することができます。",
+        "ユーザーは、前項に定める予想の投稿を行うにあたり、対象試合が本サービス上で公開された後、チームスタッツ、プレイヤースタッツ、出場及び欠場選手の情報その他対象試合に関する情報を確認することができます。なお、当該情報は公開時点における情報であり、当社はその完全性、正確性、最新性及び有用性等を何ら保証するものではありません。",
+        "当社は、対象試合の終了後、PTをユーザーに付与の上、本アプリ内に表示します。",
+        "当社は、特定の期間（週間、月間等）におけるユーザーの合計PTに基づきランキングを決定し、本アプリ内に表示します。",
+        "当社は、当社所定の条件を満たしたユーザーのアカウントに対し、Unitを無償で付与します。なお当該条件の詳細は、本アプリ内に表示します。",
+        "ユーザーはUnitを有償で購入し、他のユーザーその他第三者へ譲渡若しくは貸与し、又は換金することは一切できないものとします。",
+      ],
+      en: [
+        "Users may select Eligible Matches and post free predictions such as win/loss, score, and scorers.",
+        "When posting those predictions, Users may view Team Stats, Player Stats, availability information, and other Eligible Match information after the match is published on the Service. That information is as of publication; we do not warrant completeness, accuracy, currency, or usefulness.",
+        "After an Eligible Match ends, we grant PT and display it in the App.",
+        "We determine rankings from Users' total PT over designated periods (weekly, monthly, etc.) and display them in the App.",
+        "We grant Units free of charge to accounts that meet our conditions; details are shown in the App.",
+        "Users may not buy Units for value, transfer or lend them to others, or cash them out.",
+      ],
+    },
   },
   {
     id: "redemption",
-    title: REDEMPTION_TERMS_SECTION.title,
-    bullets: REDEMPTION_TERMS_SECTION.bullets,
-  },
-  {
-    id: "pro",
-    title: { ja: "Pro プラン", en: "Pro Plan" },
-    paragraphs: {
-      ja: [
-        "Pro は、ユーザー自身の予想を支援するための有料プランです。的中、順位上昇、Unit 獲得、商品交換を保証するものではありません。",
-      ],
-      en: [
-        "Pro is a paid plan to support your own predictions. It does not guarantee hits, higher rank, Units, or product exchange.",
-      ],
+    title: {
+      ja: "第12条（Unitと商品の交換）",
+      en: "Article 12 (Unit Product Exchange)",
     },
     bullets: {
       ja: [
-        "Pro で提供し得る機能は、PRO INSIGHT、試合直前の重要変化アラート、週次レポート、月次レポート、Pro Skin、Pro バッジ、その他当社が定める見た目および分析機能です。",
-        "PRO INSIGHT は、無料でも見られる情報を要約し、見るべき点を整理する機能です。勝敗を断定したり、特定の予想を推奨したりするものではありません。",
-        "週次レポートは Pro の各プランで提供します。月次レポートは Monthly および Season Pass で提供し、Weekly には含まれません。",
-        "Pro Skin および Pro バッジは、有効な Pro 利用権がある期間に限り表示・装着できます。解約後は通常表示に戻ります。",
-        "機能の詳細、対象スポーツ、提供時期はアプリ内の表示に従います。",
+        "ユーザーは、当社所定の方法により、保有するUnitとの交換を希望する商品の写真、販売元のWebサイトURL、規格及び配送先情報を指定して申請するものとし、当社が当該申請を承認した場合に限り、当該Unitと商品の交換を行うことができます。",
+        "前項に定める商品交換の申請は、月中いつでも行うことができます。当社は、当該月に受け付けた申請を、当社所定の時期（原則として当該月末前後）にまとめて処理します。",
+        "当社は、第1項の申請を承認した場合、正規販売店から商品を購入し、当該ユーザーへ配送します。ユーザーは、当社による商品の購入完了時にUnitを消費するものとします。商品の品切れ、生産終了その他の事情により、当初予定していた商品を提供できない場合、Unitの消費は発生せず、当社からの代替品の発送等の対応は実施しません。",
+        `商品の配送に要する送料は、当社が負担するものとします。ただし、ユーザーが交換申請時に指定した配達先情報に誤りがあった場合、再配達及び配達先の変更等により生じた送料（着払い）は、当該ユーザーが負担するものとします。当該ユーザー負担となる送料は、全国一律${REDELIVERY_SHIPPING_FEE_JPY}円（税込）とします。`,
+        "当社が購入した商品が、当社の責めに帰すべき事由によらずにユーザーに配達されなかった場合、当社は一切の責任を負わないものとします。",
+        "当社は本サービス上において、交換対象となり得る商品のロゴ、画像等を掲載しないものとします。なお、商品カテゴリ、必要Unit数、価格上限その他のテキスト情報を表示する場合があります。",
       ],
       en: [
-        "Pro may include PRO INSIGHT, late-breaking alerts, weekly reports, monthly reports, Pro Skin, Pro Badge, and other visuals or analysis we specify.",
-        "PRO INSIGHT summarizes information also available on Free and highlights what to watch. It does not declare a winner or recommend a specific prediction.",
-        "Weekly reports are included in Pro plans. Monthly reports are included in Monthly and Season Pass only, not Weekly.",
-        "Pro Skin and Pro Badge may be shown or equipped only while Pro access is active. After cancellation, the usual appearance returns.",
-        "Feature details, sports coverage, and availability follow in-app notices.",
+        "Users apply by our designated method with a photo of the desired product, the retailer's URL, specs, and shipping details. Exchange occurs only if we approve the application.",
+        "Applications may be submitted anytime during the month. We generally batch-process that month's applications around month-end.",
+        "If we approve an application, we buy the product from an authorized retailer and ship it to the User. Units are consumed when our purchase completes. If we cannot supply the intended product due to stock-outs, discontinuation, or similar, Units are not consumed and we do not ship substitutes.",
+        `Ordinary shipping is borne by us. If shipping details the User provided are wrong, the User bears redelivery or address-change shipping (cash on delivery). That User-paid fee is a flat ¥${REDELIVERY_SHIPPING_FEE_JPY} (tax included) nationwide.`,
+        "If a purchased product is not delivered for reasons not attributable to us, we have no liability.",
+        "We do not post logos or images of potentially exchangeable products on the Service. We may still show text such as category, required Units, and price caps.",
       ],
     },
   },
   {
-    id: "billing",
-    title: { ja: "料金、支払、解約、返金", en: "Fees, Payment, Cancellation, and Refunds" },
+    id: "pro",
+    title: {
+      ja: "第13条（Proへの登録、特典の付与）",
+      en: "Article 13 (Pro Registration and Benefits)",
+    },
     paragraphs: {
       ja: [
-        "Pro の契約内容、税込価格、利用期間、自動更新の有無、解約方法は、購入画面および特定商取引法に基づく表記の表示が優先します。地域、通貨、ストアによって表示価格が異なる場合があります。",
+        "Proの利用契約は、当社の指定する方法により、ユーザーが申込みを行い、当社がこれを承諾した時点で成立するものとします。",
+        "ユーザーは、Proを利用する場合、その契約成立時に、当社がプランごとに定める利用料金を、App Store、Google Play等アプリストアが提供する決済システムを用いて支払うものとします。なお、当該支払いに要する決済手数料その他の一切の費用はユーザーの負担とします。詳細並びに表示価格は購入画面及び特定商取引法に基づく表記の表示を優先します。",
       ],
       en: [
-        "The purchase screen and the legally required commercial-transaction notice control Pro contract details, tax-included price, term, auto-renewal, and how to cancel. Displayed prices may differ by region, currency, and store.",
+        "A Pro agreement is formed when the User applies by our designated method and we accept.",
+        "Users pay the plan fee at formation through App Store, Google Play, or similar store payment systems, and bear payment fees and related costs. Purchase-screen and legally required commercial notices control details and displayed prices.",
       ],
     },
     subsections: [
       {
-        title: { ja: "プランの種類", en: "Plan types" },
+        title: { ja: "プラン", en: "Plans" },
         bullets: {
           ja: [
-            "Weekly：7日間の自動更新。日本の App Store における税込予定価格は 280 円 / 7日です。",
-            "Monthly：1か月間の自動更新。同 780 円 / 月です。",
-            "Season Pass：対象シーズン終了までの買い切り。同 5,000 円です。自動更新しません。購入時期にかかわらず終了日は同一です。",
-            "無料体験を提供する場合、対象プラン、期間、終了後の料金および解約期限は購入画面の表示に従います。Season Pass に無料体験は付きません。",
+            "Weekly：280円（税込・日本における予定価格）／7日間／自動更新",
+            "Monthly：780円（税込・日本における予定価格）／1か月間／自動更新",
+            `Season Pass：5,000円（税込・日本における予定価格）／対象NBAシーズン終了まで／買い切り（自動更新なし）。終了日は購入画面の表示を優先し、原則として当該年の${SEASON_PASS_END_MONTH_DAY}とします。次シーズンは再購入が必要です。`,
           ],
           en: [
-            "Weekly: auto-renews every 7 days. Planned Japan App Store price is ¥280 per 7 days, tax included.",
-            "Monthly: auto-renews monthly. Planned Japan App Store price is ¥780 per month, tax included.",
-            "Season Pass: one-time purchase until the end of the designated season. Planned Japan App Store price is ¥5,000, tax included. It does not auto-renew. The end date is the same regardless of when you buy.",
-            "If a free trial is offered, the eligible plan, length, post-trial price, and cancel-by date follow the purchase screen. Season Pass has no free trial.",
+            "Weekly: ¥280 (planned Japan tax-included price) / 7 days / auto-renews",
+            "Monthly: ¥780 (planned Japan tax-included price) / 1 month / auto-renews",
+            `Season Pass: ¥5,000 (planned Japan tax-included price) / until the end of the designated NBA season / one-time (no auto-renew). The purchase-screen end date controls; as a rule it is ${SEASON_PASS_END_MONTH_DAY} of that year. The next season requires a new purchase.`,
           ],
         },
       },
       {
-        title: { ja: "支払", en: "Payment" },
+        title: { ja: "特典", en: "Benefits" },
         paragraphs: {
           ja: [
-            "支払は、App Store その他、提供時点で対応するストアが定める方法によります。ストアの利用規約および課金条件も適用されます。",
+            "当社は、ユーザーがProへの登録を完了した場合、下記の特典を付与します。なお、当該特典が付与される点以外に、Proユーザーと一般ユーザーとで利用できるサービス内容、Unitの付与条件及びその数量、Unitと交換できる商品の内容及び条件等に差異はないものとします。",
           ],
           en: [
-            "Payment is made through the App Store or another store we support at the time, under that store's terms and billing rules.",
+            "When Pro registration completes, we grant the benefits below. Aside from those benefits, Pro and General Users have the same Service content, Unit grant conditions and amounts, and product-exchange terms.",
+          ],
+        },
+        bullets: {
+          ja: [
+            "試合結果等の予想の参考となる分析結果",
+            "試合直前のアラート通知（当社が公開した第11条第2項に定める情報の変更等に限ります）",
+            "当該ユーザーの週次の成績レポート、並びにMonthly及びSeason Passにおける月次の成績レポート（Weeklyには月次レポートを含みません）",
+            "Pro専用の本アプリ内における見た目及びバッジ",
+          ],
+          en: [
+            "Analysis to support match predictions",
+            "Pre-game alerts (limited to changes to information under Article 11(2) that we publish)",
+            "Weekly performance reports for all Pro plans; monthly reports for Monthly and Season Pass only (not Weekly)",
+            "Pro-only in-app visuals and badges",
           ],
         },
       },
       {
-        title: { ja: "解約", en: "Cancellation" },
-        paragraphs: {
+        title: { ja: "更新・返金・無料体験等", en: "Renewal, refunds, trials" },
+        bullets: {
           ja: [
-            "Weekly および Monthly の解約は、購入したストアのサブスクリプション管理画面から行ってください。アプリを削除してもストアの定期購入は解約されません。",
-            "解約後も、すでに支払い済みの期間が終了するまでは Pro 機能を利用できます。期間終了後は Free に戻ります。",
-            "Season Pass は自動更新しないため、期間途中の解約による残期間の払戻しは、法令およびストアの方針が認める場合を除き行いません。",
+            "Weekly及びMonthlyは、契約期間満了日の前日までに各アプリストアのサブスクリプション管理その他当社所定の方法で解約しない限り、同一条件で自動更新されます。Season Passは自動更新されません。",
+            "当社は、理由のいかんを問わず、一度受領した利用料金の返金、日割り計算による減額、及び途中解約に伴う払戻し等には一切応じません。ただし、各アプリストアが定める返金手続による場合、及び法令により返金等が認められる場合は、この限りではありません。",
+            "当社は、利用料金及びサービスの内容等の変更を随時実施することができます。",
+            "Proの利用料金は、本条の特典の付与に対する対価であり、試合結果の予想に参加するための費用又は当該予想を顕著に有利にするための対価ではありません。",
+            "当社は、Weekly又はMonthlyの初回申込みに限り、当社所定の条件で無料体験期間（原則7日間）を付与することがあります。Season Passには無料体験を付与しません。条件は購入画面の表示に従います。",
           ],
           en: [
-            "Cancel Weekly and Monthly in the subscription settings of the store you used. Deleting the app does not cancel a store subscription.",
-            "After you cancel, Pro features remain available until the paid period ends. You then return to Free.",
-            "Season Pass does not auto-renew. We do not refund unused time mid-season except where required by law or store policy.",
-          ],
-        },
-      },
-      {
-        title: { ja: "返金", en: "Refunds" },
-        paragraphs: {
-          ja: [
-            "返金は、購入したストアの返金手続および適用法令に従います。デジタルコンテンツの性質上、当社独自の返金は原則として行いません。ただし、法令により返金または契約解除が認められる場合は、その定めに従います。",
-          ],
-          en: [
-            "Refunds follow the store's refund process and applicable law. Given the nature of digital content, we generally do not issue separate refunds. Where law requires a refund or cancellation, we follow that law.",
+            "Weekly and Monthly auto-renew on the same terms unless canceled by the day before period end via store subscription settings or our designated method. Season Pass does not auto-renew.",
+            "We do not refund fees once received, prorate, or refund mid-term cancellations, for any reason—except store refund processes and cases required by law.",
+            "We may change fees and Service content at any time.",
+            "Pro fees are consideration for the benefits in this Article, not an entry fee for predictions or payment to materially advantage predictions.",
+            "We may offer a free trial (generally 7 days) on first Weekly or Monthly signup under our conditions. Season Pass has no free trial. Purchase-screen terms control.",
           ],
         },
       },
     ],
   },
   {
-    id: "alerts",
-    title: { ja: "通知", en: "Notifications" },
-    paragraphs: {
+    id: "data",
+    title: {
+      ja: "第14条（データ及び個人情報の管理）",
+      en: "Article 14 (Data and Personal Information)",
+    },
+    bullets: {
       ja: [
-        "通知は、端末設定、通信環境、外部データの更新状況等により遅延または未達となることがあり、到達を保証しません。",
+        "当社は、ユーザーが本サービスの利用にあたり当社が取得する情報及び個人情報（以下総称して「対象データ」といいます）を、当社が指定するクラウド環境において適切に管理・処理します。",
+        "当社は、対象データを、原則として複数のユーザーでリソースを共有する共有環境で管理します。",
+        "法令に基づき公的機関から開示又は差押えを求められた場合等には、法令の許す範囲で最小限度の情報を開示し、可能な範囲でユーザーに通知するよう努めます。",
+        "当社は、対象データの漏えい、滅失又は毀損の防止その他の安全管理のため、必要かつ合理的な範囲で安全管理措置を講じます。",
+        "セキュリティインシデント又は重大なシステム障害が発生し、対象データに影響を及ぼすと判断した場合には、速やかに調査し、ユーザーに必要な情報を報告します。",
+        "当社は、本サービスに関するログ及びバックアップデータについて、当社の裁量により消去でき、消去済みデータの復元等の責任を負いません。",
+        "ユーザーは、当社所定の方法で対象データの返還又は削除を請求できます。返還請求を受けた場合、当社はCSV形式その他一般的な電子ファイル形式で提供します。",
+        "個人情報の取扱いは、プライバシーポリシーに従います。",
       ],
       en: [
-        "Notifications may be delayed or fail depending on device settings, connectivity, and third-party data updates. Delivery is not guaranteed.",
+        "We appropriately manage and process information and personal data obtained through use of the Service (\"Covered Data\") in cloud environments we designate.",
+        "As a rule, Covered Data is managed in a shared environment.",
+        "If a public authority lawfully demands disclosure or seizure, we may disclose the minimum allowed by law and will try to notify Users where permitted.",
+        "We take necessary and reasonable security measures to prevent leakage, loss, or damage of Covered Data.",
+        "If a security incident or major outage may affect Covered Data, we will investigate promptly and report needed information to Users.",
+        "We may delete logs and backups at our discretion and have no duty to restore deleted data.",
+        "Users may request return or deletion of Covered Data by our designated method. On a return request, we provide CSV or another common electronic format.",
+        "Personal information is handled under the Privacy Policy.",
       ],
     },
   },
   {
-    id: "prohibited",
-    title: { ja: "禁止事項", en: "Prohibited Conduct" },
-    bullets: {
+    id: "data-rights",
+    title: {
+      ja: "第15条（対象データの権利）",
+      en: "Article 15 (Rights in Covered Data)",
+    },
+    paragraphs: {
       ja: [
-        "法令または本規約に違反する行為",
-        "他者または当社になりすます行為",
-        "自動化、過剰アクセス、不正アクセス、システムの妨害",
-        "チート、複数アカウントによる無料体験の重複取得、決済情報の不正利用",
-        "Pro 機能の内容を組織的に転載し、または再販売する行為",
-        "他のユーザーへの迷惑行為、誹謗中傷",
-        "知的財産権その他の権利を侵害する行為",
+        "対象データに関する一切の権利は、ユーザー又は当該権利の正当な権利者に帰属します。ただし、当社は、次の目的及び範囲において無償で利用（複製、加工、分析等）でき、ユーザーはこれに同意します。（1）本サービスの円滑な運営、保守及び不具合の解消（2）本サービスの品質向上、新機能の開発及びマーケティング（3）新サービスの開発及びマーケティング",
       ],
       en: [
-        "Violating law or these Terms",
-        "Impersonating others or us",
-        "Automation, excessive requests, unauthorized access, or interfering with systems",
-        "Cheating, creating multiple accounts to repeat a free trial, or misusing payment information",
-        "Systematically copying or reselling Pro features",
-        "Harassment or defamation",
-        "Infringing intellectual property or other rights",
+        "Rights in Covered Data belong to the User or rightful owner. We may freely use (copy, process, analyze, etc.) it for (1) operating, maintaining, and fixing the Service, (2) improving quality, developing features, and marketing, and (3) developing and marketing new services, and Users agree to this.",
       ],
     },
   },
   {
     id: "ip",
-    title: { ja: "知的財産権", en: "Intellectual Property" },
+    title: { ja: "第16条（知的財産権）", en: "Article 16 (Intellectual Property)" },
     paragraphs: {
       ja: [
-        "本サービスに関する権利は、当社または正当な権利者に帰属します。ユーザーが投稿した予想その他の内容について、当社は本サービスの運営、表示、品質改善に必要な範囲で利用できるものとします。",
-        "NBA、チーム、選手等の名称・ロゴは各権利者に帰属します。本サービスは NBA またはその関係会社の公式サービスではありません。",
+        "本サービスに関する知的財産権は、別途合意した場合を除き、全て当社又は当社に利用を許諾しているものに帰属しており、利用契約は本サービスに関する知的財産権の使用許諾を意味するものではありません。NBA、チーム、選手等の名称・ロゴは各権利者に帰属します。本サービスはNBA又はその関係会社の公式サービスではありません。",
       ],
       en: [
-        "Rights in the Service belong to us or the rightful owners. We may use predictions and other content you submit as needed to operate, display, and improve the Service.",
-        "NBA, team, and player names and logos belong to their respective owners. The Service is not an official NBA service or affiliate.",
+        "Except as separately agreed, IP in the Service belongs to us or our licensors; the User Agreement is not a license to that IP. NBA, team, and player names and logos belong to their owners. The Service is not an official NBA service or affiliate.",
       ],
     },
   },
   {
-    id: "privacy",
-    title: { ja: "個人情報", en: "Personal Information" },
+    id: "subcontract",
+    title: {
+      ja: "第17条（第三者への委託）",
+      en: "Article 17 (Subcontracting)",
+    },
     paragraphs: {
       ja: [
-        "個人情報の取扱いは、プライバシーポリシーに従います。",
+        "当社は、本サービスの提供に関する業務の全部又は一部を第三者に委託することができます。",
       ],
       en: [
-        "We handle personal information under our Privacy Policy.",
+        "We may subcontract all or part of work related to providing the Service.",
       ],
     },
   },
   {
-    id: "change",
-    title: { ja: "サービスの変更、停止", en: "Changes and Suspension" },
+    id: "prohibited",
+    title: { ja: "第18条（禁止行為）", en: "Article 18 (Prohibited Conduct)" },
+    paragraphs: {
+      ja: [
+        "ユーザーは、当社の事前の書面による同意なく、以下の行為を行い又は第三者をして行わせてはなりません。違反した場合、当社は直ちに利用停止若しくは利用契約の解約をし、損害の賠償を請求することがあります。",
+      ],
+      en: [
+        "Without our prior written consent, Users must not do (or have others do) the following. On violation, we may immediately suspend use or terminate the User Agreement and claim damages.",
+      ],
+    },
     bullets: {
       ja: [
-        "当社は、機能の追加、変更、停止、終了を行うことがあります。",
-        "料金、課金周期、利用期間、主要機能の廃止、Season Pass の終了日など重大な変更は、原則として事前に告知します。",
-        "メンテナンス、外部データの障害、災害その他の事情により、一時的に利用できないことがあります。",
+        "当社又は第三者に不利益又は損害を与えるおそれのある行為",
+        "詐欺、脅迫その他犯罪を構成する行為、並びに犯罪の教唆・幇助等",
+        "サーバーに不当な負荷をかける行為その他運営を妨げる行為",
+        "当社又は本サービスの信用を毀損する行為",
+        "虚偽の申告・届出・登録、及び判明後に直ちに訂正しない行為",
+        "コンピューターウィルスその他有害プログラムの開発、使用、頒布又は提供",
+        "登録したメールアドレス及びユーザーIDを第三者に入力させて利用させる行為",
+        "本サービスにより取得した情報を、当社と契約していない第三者に提供する行為、又は目的外利用する行為",
+        "対価の有無を問わず第三者の事務処理のために本サービスを利用する行為",
+        "本サービスにより生成されたデータを第三者に販売する行為",
+        "本サービスの全部又は一部のコピー、ダウンロード、リバースエンジニアリングその他の解析",
+        "本サービスについて知的財産権を主張し、又は出願する行為",
+        "管理権限へのアクセス試行、改造デバイスでの利用",
+        "反社会的勢力の活動に関連して本サービスを使用する行為",
+        "法令に違反する行為、前各号に準ずる行為、その他当社が不適切と判断する行為、運営を妨害するおそれのある行為",
       ],
       en: [
-        "We may add, change, suspend, or end features.",
-        "We will generally give prior notice of material changes such as price, billing cycle, term, removal of a core feature, or the Season Pass end date.",
-        "Maintenance, third-party data outages, disasters, or similar events may temporarily interrupt the Service.",
+        "Conduct likely to harm us or third parties",
+        "Fraud, threats, other crimes, or aiding such crimes",
+        "Unreasonable server load or other interference with operations",
+        "Damaging our or the Service's reputation",
+        "False filings or registrations, or failing to correct them promptly",
+        "Developing, using, distributing, or providing malware",
+        "Letting third parties sign in with your email or User ID",
+        "Giving Service-derived information to third parties not under contract with us, or using it off-purpose",
+        "Using the Service to process third-party work, whether paid or not",
+        "Selling data generated by the Service",
+        "Copying, downloading, reverse engineering, or otherwise analyzing the Service",
+        "Claiming or applying for IP rights in the Service",
+        "Attempting admin access or using modified devices",
+        "Using the Service in connection with anti-social forces",
+        "Violating law, similar conduct, other conduct we deem inappropriate, or conduct likely to disrupt operations",
       ],
     },
   },
   {
-    id: "liability",
-    title: { ja: "免責", en: "Limitation of Liability" },
+    id: "assignment",
+    title: { ja: "第19条（権利譲渡）", en: "Article 19 (Assignment)" },
     bullets: {
       ja: [
-        "試合情報、スタッツ、Injury、PRO INSIGHT、通知その他の情報について、正確性、完全性、特定目的への適合性を保証しません。",
-        "当社の故意または重過失による場合を除き、当社は本サービスの利用により生じた損害について、法令で認められる範囲でのみ責任を負います。",
-        "前項に基づき当社が責任を負う場合でも、当社の軽過失による通常損害については、当該ユーザーが直近1か月間に当社へ支払った Pro 対価の総額を上限とします。無料で利用しているユーザーについては、法令で認められる範囲に限ります。",
-        "本規約のうち、消費者契約法その他の法令により無効とされる部分があっても、その他の部分は効力を有します。",
+        "ユーザーは、予め当社の書面による承諾がない限り、本規約上の地位及び本規約に基づく権利又は義務の全部又は一部を第三者に譲渡してはなりません。ただし、当社が本サービスの内容として具体的に定めている場合は、この限りでありません。",
+        "当社は、本サービスの全部又は一部を当社の裁量により第三者に譲渡することができ、その場合、譲渡された権利及び義務の範囲内でユーザーのアカウントを含む本サービスにかかるユーザーの一切の権利が譲渡先に移転します。",
       ],
       en: [
-        "We do not warrant the accuracy, completeness, or fitness for a particular purpose of match data, stats, injury information, PRO INSIGHT, notifications, or other information.",
-        "Except in cases of our willful misconduct or gross negligence, we are liable for damages from use of the Service only to the extent permitted by law.",
-        "Where we are liable for ordinary damages caused by our slight negligence, our liability is capped at the Pro fees that user paid us in the preceding one-month period. For users who paid nothing, liability is limited to what the law requires.",
-        "If any part of these Terms is invalid under consumer-contract or other law, the rest remains in effect.",
+        "Users may not assign their status under these Terms or related rights or duties without our prior written consent, except where we specifically allow it as part of the Service.",
+        "We may assign all or part of the Service at our discretion; within the assigned scope, Users' rights including accounts transfer to the assignee.",
       ],
     },
   },
   {
-    id: "amend",
-    title: { ja: "規約の変更", en: "Changes to These Terms" },
-    paragraphs: {
+    id: "suspend",
+    title: {
+      ja: "第20条（本サービスの中断）",
+      en: "Article 20 (Suspension of the Service)",
+    },
+    bullets: {
       ja: [
-        "当社は、必要に応じて本規約を変更できます。変更後の規約は、本サービス上で告知した時点から効力を生じます。変更後に本サービスを利用した場合、変更後の規約に同意したものとみなします。",
+        "保守、障害、通信回線若しくはデータセンターの障害、不可抗力等により、事前通知のうえ（緊急時を除く）本サービスの全部又は一部を一時中断することがあります。",
+        "利用料金の未払、規約違反、連絡不能等が確認された場合、事由解消を確認できるまで、事前連絡なく中断することがあります。",
+        "前2項の中断によりユーザーが利用できなかったことによる損害等について、当社は一切の責任を負いません。",
       ],
       en: [
-        "We may amend these Terms as needed. An amendment takes effect when posted on the Service. Continued use after that posting means you accept the amended Terms.",
+        "We may temporarily suspend all or part of the Service for maintenance, outages, network or data-center failures, or force majeure, with prior notice except in emergencies.",
+        "We may suspend without prior notice until issues such as unpaid fees, Terms violations, or inability to contact the User are resolved.",
+        "We have no liability for damages from inability to use the Service due to such suspension.",
       ],
     },
   },
   {
-    id: "law",
-    title: { ja: "準拠法および管轄", en: "Governing Law and Venue" },
+    id: "discontinue",
+    title: {
+      ja: "第21条（本サービスの廃止）",
+      en: "Article 21 (Discontinuation)",
+    },
     paragraphs: {
       ja: [
-        "本規約は日本法に準拠します。本サービスに関する紛争は、東京地方裁判所を第一審の専属的合意管轄裁判所とします。",
+        "当社は、廃止日の60日前までにユーザーに通知した場合、又は不可抗力等やむをえない事由により継続提供できない場合、本サービスの全部又は一部を廃止し、廃止日をもって利用契約の全部又は一部を解約できます。",
       ],
       en: [
-        "These Terms are governed by the laws of Japan. The Tokyo District Court has exclusive first-instance jurisdiction over disputes relating to the Service.",
+        "We may discontinue all or part of the Service and terminate all or part of the User Agreement as of the discontinuation date if we give 60 days' prior notice, or if force majeure or similar makes continued provision impossible.",
       ],
     },
   },
   {
-    id: "contact",
-    title: { ja: "お問い合わせ", en: "Contact" },
+    id: "user-terminate",
+    title: {
+      ja: "第22条（ユーザーによる本契約の終了）",
+      en: "Article 22 (Termination by User)",
+    },
     paragraphs: {
       ja: [
-        `本規約に関するお問い合わせは、${SUPPORT_EMAIL} までご連絡ください。`,
+        "ユーザーは、当社の定める解約フォームから申込むことにより、いつでも本契約を解約することができます。この場合、ユーザーは、当社に対し、解約申込時点で既に発生している本サービスの利用料金（日割り計算による減額等は行いません。）を支払うものとします。",
       ],
       en: [
-        `Questions about these Terms: ${SUPPORT_EMAIL}.`,
+        "Users may terminate at any time via our designated cancellation form. Fees already incurred at the time of the request remain payable without proration.",
+      ],
+    },
+  },
+  {
+    id: "our-terminate",
+    title: {
+      ja: "第23条（当社による本契約の終了）",
+      en: "Article 23 (Termination by Us)",
+    },
+    paragraphs: {
+      ja: [
+        "当社は、ユーザーが禁止行為その他本規約違反、虚偽登録、第三者への加害目的の利用、運営妨害、支払停止・倒産手続、差押等、6ヶ月以上の未利用かつ連絡不能、その他継続が適当でないと判断した場合、事前の通知又は催告なく、利用の一時停止又は利用契約の解除ができます。この場合、ユーザーは期限の利益を失い、当社への債務を直ちに支払うものとします。当社は、故意又は重過失がある場合を除き、本条に基づく措置による損害について責任を負いません。",
+      ],
+      en: [
+        "We may suspend use or terminate the User Agreement without prior notice if the User violates these Terms, registers falsely, uses the Service in ways likely to harm others, disrupts operations, becomes insolvent or subject to enforcement, is inactive for 6+ months with no response, or we otherwise deem continued use unsuitable. The User then loses the benefit of time and must pay all debts to us immediately. Except for our willful misconduct or gross negligence, we are not liable for damages from actions under this Article.",
+      ],
+    },
+  },
+  {
+    id: "disclaimer",
+    title: {
+      ja: "第24条（免責及び保証の否認）",
+      en: "Article 24 (Disclaimers and Limitation of Liability)",
+    },
+    bullets: {
+      ja: [
+        "当社は、チームスタッツその他本サービスにおいて提供するデータの完全性、正確性、及び特定の目的への適合性等について、いかなる保証も行わず、当該データに起因する損害について一切の責任を負いません。",
+        "当社は、本サービスの内容変更、中断、終了、又は本サービスの利用により生じた損害について、故意又は重過失がある場合を除き、一切責任を負いません。",
+        "ユーザーと第三者との紛争について、当社は保証しません。",
+        "消費者契約に該当する場合、一切免責の規定は適用せず、当社に軽過失がある場合の損害賠償上限は、Proユーザーについては直近6ヶ月間に実際に支払ったPro利用料金の合計額、一般ユーザーについては10,000円とします。",
+        "ユーザーは、他のユーザー又は第三者との紛争を自己の費用と責任で解決し、当社に迷惑を及ぼさないものとします。ユーザーの行為により第三者から当社が請求を受けた場合、ユーザーの費用と責任で解決し、当社が支払った損害等を償還するものとします。",
+      ],
+      en: [
+        "We make no warranty as to completeness, accuracy, or fitness for purpose of Team Stats or other data on the Service, and have no liability for damages arising from that data.",
+        "Except for our willful misconduct or gross negligence, we are not liable for damages from changes, suspension, or termination of the Service, or from use of the Service.",
+        "We do not warrant the absence of disputes between Users and third parties.",
+        "If the contract is a consumer contract, absolute disclaimers do not apply; for our slight negligence, liability is capped at Pro fees actually paid in the preceding 6 months for Pro Users, or ¥10,000 for General Users.",
+        "Users resolve disputes with other Users or third parties at their own cost and must not burden us. If a third party claims against us due to a User's conduct, the User resolves it and reimburses us.",
+      ],
+    },
+  },
+  {
+    id: "confidential",
+    title: { ja: "第25条（秘密保持）", en: "Article 25 (Confidentiality)" },
+    paragraphs: {
+      ja: [
+        "当社及びユーザーは、本サービスの利用に当たり開示された相手方の秘密情報（秘密である旨が指定若しくは明示された情報、又は商慣習上秘密にすべき情報を含みます）を、相手方の書面承諾なく第三者に開示・漏洩せず、利用契約の履行又は権利行使に必要な場合を除き利用しません。ただし、法令に基づく開示等はこの限りでなく、その場合は可能な限り事前通知します。公知情報、受領者の責めによらず公知となった情報、受領前から適法に保有していた情報、正当な第三者から守秘義務なく入手した情報、独自開発した情報は秘密情報に該当しません。利用契約終了後又は開示者の要求時、秘密情報を返却又は破棄します。本条は利用契約終了後も5年間存続します。",
+      ],
+      en: [
+        "Each party must not disclose the other's confidential information (including information marked confidential or that customarily should be kept secret) without written consent, and may use it only as needed to perform the User Agreement—except lawful disclosures, with prior notice where possible. Public information, information that becomes public without the recipient's fault, information already lawfully held, information lawfully obtained from a third party without a duty of confidence, and independently developed information are not confidential. On termination or request, return or destroy confidential information. This Article survives for 5 years after termination.",
+      ],
+    },
+  },
+  {
+    id: "antisocial",
+    title: {
+      ja: "第26条（反社会的勢力等の排除）",
+      en: "Article 26 (Exclusion of Anti-Social Forces)",
+    },
+    paragraphs: {
+      ja: [
+        "当社及びユーザーは、暴力団、暴力団員、暴力団準構成員、暴力団関係企業、総会屋等、社会運動等標ぼうゴロ、特殊知能暴力集団等その他これらに準ずる者に該当しないこと、及び暴力的要求、法的責任を超えた不当要求、脅迫的言動若しくは暴力、風説の流布・偽計・威力による信用毀損若しくは業務妨害その他これらに準ずる行為を行わないことを表明・確約します。相手方がこれに違反した場合、利用契約を解除できます。",
+      ],
+      en: [
+        "Each party represents it is not an organized-crime group or related party, and will not engage in violent or improper demands, threats, violence, or defamation/interference by rumor, fraud, or force. Either party may terminate the User Agreement if the other breaches this Article.",
+      ],
+    },
+  },
+  {
+    id: "severability",
+    title: { ja: "第27条（分離可能性）", en: "Article 27 (Severability)" },
+    paragraphs: {
+      ja: [
+        "本規約の規定の一部が法令により違法、無効又は執行不能とされた場合でも、その他の規定は有効に存続し、当該部分は趣旨に沿う形で合理的に修正される範囲で有効に存続します。",
+      ],
+      en: [
+        "If any provision is illegal, invalid, or unenforceable, the rest remains in effect, and the affected part remains effective to the extent reasonably modified to match its purpose.",
+      ],
+    },
+  },
+  {
+    id: "governing-law",
+    title: { ja: "第28条（準拠法）", en: "Article 28 (Governing Law)" },
+    paragraphs: {
+      ja: [
+        "利用契約は日本法に準拠し日本法に従い解釈されるものとします。",
+      ],
+      en: [
+        "The User Agreement is governed by and construed under the laws of Japan.",
+      ],
+    },
+  },
+  {
+    id: "jurisdiction",
+    title: {
+      ja: "第29条（専属的合意管轄）",
+      en: "Article 29 (Exclusive Jurisdiction)",
+    },
+    paragraphs: {
+      ja: [
+        "本サービス及び利用契約に基づく又はこれらに関連する一切の紛争については、東京地方裁判所を第一審の専属的合意管轄裁判所とします。",
+      ],
+      en: [
+        "The Tokyo District Court has exclusive first-instance jurisdiction over all disputes arising from or relating to the Service or the User Agreement.",
+      ],
+    },
+  },
+  {
+    id: "discuss",
+    title: { ja: "第30条（協議）", en: "Article 30 (Good-Faith Discussion)" },
+    paragraphs: {
+      ja: [
+        "利用契約に定めのない事項及び利用契約各条項の解釈に疑義が生じた場合は、ユーザーと当社は誠意をもって協議し、その解決に努めるものとします。",
+      ],
+      en: [
+        "For matters not covered by the User Agreement or doubts about interpretation, the User and we will discuss in good faith to resolve them.",
       ],
     },
   },

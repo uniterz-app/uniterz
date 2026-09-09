@@ -18,6 +18,7 @@ import {
 } from "@/lib/rankings/server/readNbaOpenSeasonRanking";
 import { rankingFunctionUrl } from "@/lib/rankings/server/rankingFunctionUrl";
 import { getAdminAuth } from "@/lib/firebaseAdmin";
+import { mergeUserPlansIntoBulkByMetric } from "@/lib/rankings/mergeUserPlanIntoRankingPayload";
 
 export const runtime = "nodejs";
 
@@ -146,13 +147,19 @@ export async function GET(req: Request) {
         snapshotGeneration
       );
 
+      const byMetric =
+        typeof structuredClone === "function"
+          ? structuredClone(payload.byMetric)
+          : (JSON.parse(JSON.stringify(payload.byMetric)) as typeof payload.byMetric);
+      await mergeUserPlansIntoBulkByMetric(byMetric);
+
       return NextResponse.json(
         {
           ok: true,
           division: "open",
           wcStage: null,
           snapshotGeneration,
-          byMetric: payload.byMetric,
+          byMetric,
           myMetricValueDeltas: null,
         },
         {
@@ -214,6 +221,12 @@ export async function GET(req: Request) {
       typeof structuredClone === "function"
         ? structuredClone(listSource)
         : (JSON.parse(JSON.stringify(listSource)) as typeof listSource);
+
+    if (data.byMetric && typeof data.byMetric === "object") {
+      await mergeUserPlansIntoBulkByMetric(
+        data.byMetric as Record<string, { rows?: unknown[]; myRow?: unknown | null }>
+      );
+    }
 
     const cacheControl = `public, max-age=0, s-maxage=${CUMULATIVE_RANKING_REVALIDATE_SEC}, stale-while-revalidate=${CUMULATIVE_RANKING_REVALIDATE_SEC * 4}`;
 

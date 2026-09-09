@@ -555,7 +555,7 @@ export const officialContact = {
 } as const;
 
 export const officialTokushoho = {
-  heading: TOKUSHOHO_HEADING,
+  heading: TOKUSHOHO_HEADING.ja,
   lead: TOKUSHOHO_LEAD,
   rows: TOKUSHOHO_ROWS,
 } as const;

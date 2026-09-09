@@ -2,7 +2,7 @@
  * Web `ProfileCareerPanel` 相当 — 予想者の履歴書（公開）。
  * face + Pro のときは表カードと同じ Pro スキン背景を載せる。
  */
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useReducedMotion } from "react-native-reanimated";
@@ -15,6 +15,8 @@ import { PROFILE_PLAN_PRO_BG_DEFAULT } from "../../../../../lib/profile/profileP
 import {
   buildUserCareerBoardRows,
   buildUserCareerSummaryRows,
+  careerBoardsForSeason,
+  defaultCareerBoardForSeason,
   type UserCareerDoc,
 } from "../../../../../lib/profile/userCareer";
 import { CURRENT_NBA_SEASON_KEY } from "../../../../../lib/rankings/nbaSeason";
@@ -81,7 +83,18 @@ export default function ProfileCareerPanelNative({
   const [seasonKey, setSeasonKey] = useState<string>(
     () => seasonKeys[seasonKeys.length - 1] ?? CURRENT_NBA_SEASON_KEY
   );
-  const [board, setBoard] = useState<"regular" | "playoffs">("regular");
+  const [board, setBoard] = useState<"regular" | "playoffs">(() =>
+    defaultCareerBoardForSeason(
+      seasonKeys[seasonKeys.length - 1] ?? CURRENT_NBA_SEASON_KEY
+    )
+  );
+
+  useEffect(() => {
+    const boards = careerBoardsForSeason(seasonKey);
+    if (!boards.includes(board)) {
+      setBoard(defaultCareerBoardForSeason(seasonKey));
+    }
+  }, [seasonKey, board]);
 
   const copy = useMemo(
     () =>
@@ -131,19 +144,24 @@ export default function ProfileCareerPanelNative({
 
   const cycleScope = () => {
     if (viewMode === "career") {
+      const nextKey =
+        seasonKeys[seasonKeys.length - 1] ?? CURRENT_NBA_SEASON_KEY;
       setViewMode("season");
-      setBoard("regular");
-      setSeasonKey(seasonKeys[seasonKeys.length - 1] ?? CURRENT_NBA_SEASON_KEY);
+      setSeasonKey(nextKey);
+      setBoard(defaultCareerBoardForSeason(nextKey));
       return;
     }
-    if (board === "regular") {
-      setBoard("playoffs");
+    const boards = careerBoardsForSeason(seasonKey);
+    const boardIdx = boards.indexOf(board);
+    if (boardIdx >= 0 && boardIdx < boards.length - 1) {
+      setBoard(boards[boardIdx + 1]!);
       return;
     }
     const idx = seasonKeys.indexOf(seasonKey);
     if (idx >= 0 && idx < seasonKeys.length - 1) {
-      setSeasonKey(seasonKeys[idx + 1]!);
-      setBoard("regular");
+      const nextKey = seasonKeys[idx + 1]!;
+      setSeasonKey(nextKey);
+      setBoard(defaultCareerBoardForSeason(nextKey));
       return;
     }
     setViewMode("career");
@@ -323,7 +341,7 @@ export default function ProfileCareerPanelNative({
                   onPress={() => {
                     setViewMode("season");
                     setSeasonKey(opt);
-                    setBoard("regular");
+                    setBoard(defaultCareerBoardForSeason(opt));
                   }}
                   style={[
                     styles.seasonPill,

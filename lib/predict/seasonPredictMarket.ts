@@ -203,12 +203,14 @@ export function standingsDetailBandWidths(
 ): readonly {
   id: SeasonStandingsDetailBandId;
   labelJa: string;
+  labelEn: string;
   pct: number;
   color: string;
 }[] {
   return SEASON_STANDINGS_DETAIL_BANDS.map((b) => ({
     id: b.id,
     labelJa: b.labelJa,
+    labelEn: b.labelEn,
     pct: detailBandPct[b.id] ?? 0,
     color: b.color,
   }));

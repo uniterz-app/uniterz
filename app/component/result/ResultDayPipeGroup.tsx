@@ -378,7 +378,7 @@ export function ResultDayPipeGroup({
                     : "flex min-w-0 flex-col items-end justify-center sm:pl-2"
                 }
               >
-                <span className="border border-dashed border-fuchsia-500/50 bg-black/60 px-2.5 py-1.5 font-mono text-[11px] font-semibold tracking-wide text-fuchsia-300/80 [box-shadow:0_0_16px_-4px_rgba(217,70,239,0.4)] sm:text-xs">
+                <span className="border border-dashed border-white/45 bg-black/60 px-2.5 py-1.5 font-mono text-[11px] font-semibold tracking-wide text-white/90 sm:text-xs">
                   {dayPoints.line}
                 </span>
               </div>

@@ -5,13 +5,8 @@ import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { fonts } from "../../theme/tokens";
 import {
-  SQUAD_BATTLE_LAUNCH_CTA,
-  SQUAD_BATTLE_LAUNCH_FACTS,
-  SQUAD_BATTLE_LAUNCH_KICKER,
-  SQUAD_BATTLE_LAUNCH_LEAD,
-  SQUAD_BATTLE_LAUNCH_LATER,
-  SQUAD_BATTLE_LAUNCH_TITLE,
-  SQUAD_INVITE_DEADLINE_PREFIX,
+  squadBattleLaunchCopy,
+  type SquadBattleUiLang,
 } from "../../../../../lib/squads/squadBattleUiCopy";
 import { SQUAD_GOLD_NATIVE } from "../../../../../lib/squads/squadBattleGoldTheme";
 import { markSquadBattleLaunchSeenNative } from "./squadBattleLaunchSeenNative";
@@ -22,6 +17,7 @@ type Props = {
   onEnter: () => void;
   deadlineLabel?: string | null;
   battleId?: string | null;
+  language?: string | null;
 };
 
 export default function SquadBattleLaunchOverlayNative({
@@ -30,8 +26,11 @@ export default function SquadBattleLaunchOverlayNative({
   onEnter,
   deadlineLabel,
   battleId,
+  language,
 }: Props) {
   const deadline = deadlineLabel?.trim() || null;
+  const lang: SquadBattleUiLang = language === "en" ? "en" : "ja";
+  const copy = squadBattleLaunchCopy(lang);
 
   async function dismiss() {
     await markSquadBattleLaunchSeenNative(battleId);
@@ -63,17 +62,17 @@ export default function SquadBattleLaunchOverlayNative({
           <View style={styles.inner}>
             <View style={styles.kickerRow}>
               <View style={styles.dot} />
-              <Text style={styles.kicker}>{SQUAD_BATTLE_LAUNCH_KICKER}</Text>
+              <Text style={styles.kicker}>{copy.kicker}</Text>
             </View>
-            <Text style={styles.title}>{SQUAD_BATTLE_LAUNCH_TITLE}</Text>
-            <Text style={styles.lead}>{SQUAD_BATTLE_LAUNCH_LEAD}</Text>
+            <Text style={styles.title}>{copy.title}</Text>
+            <Text style={styles.lead}>{copy.lead}</Text>
             <Text style={styles.deadline}>
               {deadline
-                ? `${SQUAD_INVITE_DEADLINE_PREFIX} ${deadline}`
-                : SQUAD_INVITE_DEADLINE_PREFIX}
+                ? `${copy.deadlinePrefix} ${deadline}`
+                : copy.deadlinePrefix}
             </Text>
             <View style={styles.facts}>
-              {SQUAD_BATTLE_LAUNCH_FACTS.map((fact) => (
+              {copy.facts.map((fact) => (
                 <View key={fact.kicker} style={styles.factRow}>
                   <Text style={styles.factKicker}>{fact.kicker}</Text>
                   <Text style={styles.factValue}>{fact.value}</Text>
@@ -89,18 +88,18 @@ export default function SquadBattleLaunchOverlayNative({
                 pressed && styles.ctaPressed,
               ]}
               accessibilityRole="button"
-              accessibilityLabel={SQUAD_BATTLE_LAUNCH_CTA}
+              accessibilityLabel={copy.cta}
             >
-              <Text style={styles.ctaText}>{SQUAD_BATTLE_LAUNCH_CTA}</Text>
+              <Text style={styles.ctaText}>{copy.cta}</Text>
             </Pressable>
             <Pressable
               onPress={() => {
                 void dismiss();
               }}
               accessibilityRole="button"
-              accessibilityLabel={SQUAD_BATTLE_LAUNCH_LATER}
+              accessibilityLabel={copy.later}
             >
-              <Text style={styles.later}>{SQUAD_BATTLE_LAUNCH_LATER}</Text>
+              <Text style={styles.later}>{copy.later}</Text>
             </Pressable>
           </View>
         </Pressable>

@@ -222,7 +222,7 @@ const es: Messages = {
     divisionOpenTitle: "PRO LEAGUE",
     divisionOpenLockBody:
       "A Pro-only ranking across every game. Subscribe to Pro to join and view it.",
-    divisionOpenCta: "See Pro",
+    divisionOpenCta: "Explore Pro",
     divisionOpenModalDismiss: "Close",
     divisionOpenBackToPickUp: "Back to Pick Up",
     winStreak: "Racha de victorias",
@@ -430,6 +430,7 @@ const es: Messages = {
     nbaTopScorerResultLabel: "Top scorer",
     upsetPointsLabel: "Puntos sorpresa",
     totalPointsLabel: "Puntos totales",
+    pendingCallLabel: "YOUR CALL",
     upsetPointsDesc: "Métrica aparte (0–10) otorgada solo cuando el partido es una sorpresa y acertaste con una predicción minoritaria. Si no se cumple, es 0.",
     totalPointsDesc: "Puntos base determinados por acertar el ganador, cercanía del margen y del puntaje total, más bonos de sorpresa y racha.",
     helpPageLink: "Consulta la lógica de puntuación en la página de Ayuda",

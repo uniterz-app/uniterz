@@ -1,7 +1,7 @@
 /**
  * Web `ResultCard` mobile dense 相当。リザルト一覧・プロフィール Result Drop 共用。
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, memo } from "react";
 import {
   Platform,
   Pressable,
@@ -23,7 +23,6 @@ import { resolvePostListLeague } from "../../../../../lib/leagues";
 import { resolveResultBadgeDisplay } from "../../../../../lib/result/resultBadge";
 import { isResultPostLiveGame, isResultPostMatchStarted } from "../../../../../lib/result/resultLiveGame";
 import { resolvePkScoreFromResultPost } from "../../../../../lib/games/pkScore";
-import { buildResultShareUrl, getShareAppOrigin } from "../../../../../lib/share/shareAppUrls";
 import { getTeamAlias, splitTeamNameByLeague } from "../../utils/teamName";
 import DeferredJerseyMarkNative from "../games/DeferredJerseyMarkNative";
 import CountryFlagNative from "../games/CountryFlagNative";
@@ -51,9 +50,7 @@ import MatchPkResultLineNative from "../games/MatchPkResultLineNative";
 import { useTeamRecordLineNative } from "../games/useTeamRecordLineNative";
 import CornerMenuClusterNative from "../../ui/CornerMenuClusterNative";
 import CyberChamferButtonNative from "../../ui/CyberChamferButtonNative";
-import ShareLinkCaptureFooterNative from "../share/ShareLinkCaptureFooterNative";
 import { registerTutorialTarget, notifyTutorialTargetsChanged } from "../tutorial/tutorialMeasureNative";
-import { cyberAlert } from "../../components/cyberAlert";
 import type { PostWithMillis } from "./nativeResultModel";
 import { canDismissResultListPostNow } from "./nativeResultModel";
 import ResultGlassShellNative from "./ResultGlassShellNative";
@@ -88,8 +85,10 @@ import {
   useResultPostCardEntrance,
   type ResultStatRowEntranceMeta,
 } from "./useResultHomeEntrance";
-import { shareResultCardNative } from "./shareResultCardNative";
 import { buildResultCardFaceModel } from "../../../../../lib/result/buildResultCardFace";
+import { normalizeNbaTopScorerPick } from "../../../../../lib/nba/topScorer";
+import { useNbaTopScorerCandidates } from "../../../../../lib/nba/useNbaTopScorerCandidates";
+import { getUniterzApiBaseUrl } from "../games/submitPredictionApi";
 import {
   ResultCardDesignFaceNative,
 } from "./ResultCardDesignPreviewScreenNative";
@@ -188,7 +187,7 @@ function getMobileTeamName(
   return [l1, l2].filter(Boolean).join(" ");
 }
 
-export default function ResultPostCardNative({
+function ResultPostCardNativeInner({
   post,
   language,
   nowMs,
@@ -201,6 +200,7 @@ export default function ResultPostCardNative({
   onRequestPredictEdit,
   pkScore: pkScoreProp = null,
   gameMarket = null,
+  gameRoundMeta = null,
   compactSpacing = false,
   tutorialTargetId,
 }: {
@@ -222,15 +222,21 @@ export default function ResultPostCardNative({
   /** プロフィール等 — カード下マージンを抑える */
   compactSpacing?: boolean;
   pkScore?: { home: number; away: number } | null;
-  /** games.market 補完（marketMeta 未埋め込みの確定投稿向け） */
+  /** games.marketBias / market 補完（marketMeta 未埋め込みの投稿向け） */
   gameMarket?: { homeRate: number; awayRate: number } | null;
+  /** games.roundLabel / playoffRound 補完（旧投稿の MATCH 落ち向け） */
+  gameRoundMeta?: {
+    roundLabel?: string | null;
+    playoffRound?: string | null;
+    seasonRound?: string | number | null;
+    seasonPhase?: string | null;
+  } | null;
   /** チュートリアル穴測定（外枠マージンを含めないカード実寸） */
   tutorialTargetId?: string;
 }) {
   const isEn = language === "en";
   const resultCopy = i18nT(language).results;
   const [cornerFabOpen, setCornerFabOpen] = useState(false);
-  const [sharing, setSharing] = useState(false);
   const captureRef = useRef<View>(null);
 
   useEffect(() => {
@@ -281,13 +287,13 @@ export default function ResultPostCardNative({
       onRequestPredictEdit
   );
   const hasCornerActions =
-    !isMatchStarted && (hasCornerTrash || hasCornerEdit);
-  const canShare =
-    Boolean(viewerUid && authorUid === viewerUid) && !sharing;
+    !isMatchStarted &&
+    !isPredictionFinalized &&
+    (hasCornerTrash || hasCornerEdit);
 
   useEffect(() => {
-    if (isMatchStarted) setCornerFabOpen(false);
-  }, [isMatchStarted]);
+    if (isMatchStarted || isPredictionFinalized) setCornerFabOpen(false);
+  }, [isMatchStarted, isPredictionFinalized]);
 
   /** Web ResultCard の isLiveGame と同じ：開始〜確定まで LIVE */
   const showLiveMark = isResultPostLiveGame(
@@ -393,57 +399,6 @@ export default function ResultPostCardNative({
   const hasFinal = typeof rh === "number" && typeof ra === "number";
   const pkScore =
     pkScoreProp ?? resolvePkScoreFromResultPost(post as Record<string, unknown>);
-  const showShareInMenu = canShare;
-
-  const shareLinkUrl = useMemo(
-    () => buildResultShareUrl(post.id),
-    [post.id]
-  );
-
-  const handleShareResult = useCallback(async () => {
-    if (!canShare) return;
-    setCornerFabOpen(false);
-    setSharing(true);
-    await new Promise<void>((resolve) => {
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => resolve());
-      });
-    });
-    try {
-      const pointsV3 = toNumber(stats?.pointsV3, NaN);
-      const shareOutcome = await shareResultCardNative(captureRef, {
-        language,
-        homeName,
-        awayName,
-        predictedHome: hasPredictedScore ? ph : null,
-        predictedAway: hasPredictedScore ? pa : null,
-        finalHome: hasFinal ? rh : null,
-        finalAway: hasFinal ? ra : null,
-        totalPoints: hasFinal && Number.isFinite(pointsV3) ? pointsV3 : null,
-        postId: post.id,
-        appBaseUrl: getShareAppOrigin(),
-      });
-      if (shareOutcome === "failed") {
-        cyberAlert("", resultCopy.shareResultCardFailed);
-      }
-    } finally {
-      setSharing(false);
-    }
-  }, [
-    awayName,
-    canShare,
-    hasFinal,
-    hasPredictedScore,
-    homeName,
-    language,
-    pa,
-    ph,
-    post.id,
-    ra,
-    resultCopy.shareResultCardFailed,
-    rh,
-    stats?.pointsV3,
-  ]);
 
   const wcMatchGoalScorers = useMemo(() => {
     if (!isWcCard || !hasFinal) return [];
@@ -565,8 +520,7 @@ export default function ResultPostCardNative({
                 ? styles.cardFrameMiss
                 : null;
 
-  const showCornerControl =
-    (!isMatchStarted && hasCornerActions) || canShare;
+  const showCornerControl = hasCornerActions;
   const shellOverflowStyle =
     cornerFabOpen && showCornerControl ? styles.cardShellOverflowVisible : null;
 
@@ -589,10 +543,30 @@ export default function ResultPostCardNative({
         elevation: (frameStyle as ViewStyle).elevation,
       }
     : null;
-  const roundLabel = roundLabelFromPost(post as unknown as Record<string, unknown>);
+  const roundLabel = roundLabelFromPost(
+    post as unknown as Record<string, unknown>,
+    gameRoundMeta
+  );
   const lineFramePaint = resultOutcomeLineFramePaint(
     badge === "streak" ? "streak" : badge
   );
+
+  const nbaScorerPick = useMemo(
+    () =>
+      leagueKey === "nba"
+        ? normalizeNbaTopScorerPick(
+            (post.prediction as { goalScorer?: unknown } | undefined)?.goalScorer
+          )
+        : null,
+    [leagueKey, post.prediction]
+  );
+  const needScorerNames = Boolean(nbaScorerPick && !nbaScorerPick.name);
+  const { candidates: topScorerCandidates } = useNbaTopScorerCandidates({
+    homeTeamId: home?.teamId,
+    awayTeamId: away?.teamId,
+    enabled: needScorerNames,
+    apiBaseUrl: getUniterzApiBaseUrl(),
+  });
 
   const faceModel = useMemo(
     () =>
@@ -601,20 +575,64 @@ export default function ResultPostCardNative({
           ...(post as Record<string, unknown>),
           id: post.id,
         },
-        gameMarket
-          ? {
-              market: {
-                homeRate: gameMarket.homeRate,
-                awayRate: gameMarket.awayRate,
-              },
-            }
-          : undefined
+        {
+          ...(gameMarket
+            ? {
+                market: {
+                  homeRate: gameMarket.homeRate,
+                  awayRate: gameMarket.awayRate,
+                },
+              }
+            : {}),
+          ...(gameRoundMeta ? { gameMeta: gameRoundMeta } : {}),
+          ...(topScorerCandidates.length > 0
+            ? { topScorerCandidates }
+            : {}),
+        }
       ),
-    [post, gameMarket]
+    [post, gameMarket, gameRoundMeta, topScorerCandidates]
   );
 
-  /** 新カード面（WC 以外の確定済み）。未確定・WC は従来カード */
-  if (!isWcCard && hasFinal) {
+  const cornerCluster = showCornerControl ? (
+        <View style={styles.rightActionCluster} pointerEvents="box-none">
+          <CornerMenuClusterNative
+            open={cornerFabOpen}
+            onToggle={() => setCornerFabOpen((v) => !v)}
+            menuLabel={isEn ? "Open actions" : "操作メニュー"}
+            horizontalFlyout="left"
+            size="xs"
+            dim={26}
+            menuFrameWhite
+            sideFlyout={
+              hasCornerEdit ? (
+                <CyberChamferButtonNative
+                  size="xs"
+                  dim={26}
+                  embedded
+                  variant="edit"
+                  onPress={requestPredictEdit}
+                  accessibilityLabel={isEn ? "Edit prediction" : "予想を修正"}
+                />
+              ) : null
+            }
+            bottomFlyout={
+              hasCornerTrash ? (
+                <CyberChamferButtonNative
+                  size="xs"
+                  dim={26}
+                  embedded
+                  variant="delete"
+                  onPress={requestDeletePost}
+                  accessibilityLabel={isEn ? "Remove from list" : "一覧から除外"}
+                />
+              ) : null
+            }
+          />
+        </View>
+      ) : null;
+
+  /** 新カード面（WC 以外）。判定前も含む */
+  if (!isWcCard) {
     return (
       <Animated.View
         collapsable={false}
@@ -645,7 +663,13 @@ export default function ResultPostCardNative({
               ? 0
               : withTiming(0, { duration: 160 });
           }}
-          onPress={() => onOpenDetail(post.id)}
+          onPress={() => {
+            if (cornerFabOpen) {
+              setCornerFabOpen(false);
+              return;
+            }
+            onOpenDetail(post.id);
+          }}
         >
           <View style={styles.cardCaptureWrap}>
             <View
@@ -662,13 +686,15 @@ export default function ResultPostCardNative({
                 face={faceModel}
                 frameGlow
                 showDetailTab
+                live={showLiveMark}
+                deferJerseys
                 animateDraw={!reduceMotionList && entranceEnabled && !pauseListFx}
                 drawDelayMs={listEnterIndex * RESULT_CARD_STAGGER_MS}
                 motion={faceMotion}
                 detailSpineStyle={detailSpinePressStyle}
               />
             </View>
-            <ShareLinkCaptureFooterNative url={shareLinkUrl} visible={sharing} />
+            {cornerCluster}
           </View>
         </AnimatedResultCardPressable>
       </Animated.View>
@@ -964,7 +990,6 @@ export default function ResultPostCardNative({
               );
             })}
           </View>
-          <ShareLinkCaptureFooterNative url={shareLinkUrl} visible={sharing} />
           </View>
         </Animated.View>
         {!pauseListFx && badge === "hit" ? (
@@ -983,59 +1008,74 @@ export default function ResultPostCardNative({
       </MatchListLineFrameNative>
       </View>
 
-      {showCornerControl ? (
-        <View style={styles.leftActionCluster} pointerEvents="box-none">
-          <CornerMenuClusterNative
-            open={cornerFabOpen}
-            onToggle={() => setCornerFabOpen((v) => !v)}
-            menuLabel={isEn ? "Open actions" : "操作メニュー"}
-            horizontalFlyout="right"
-            sideFlyout={
-              <>
-                {showShareInMenu ? (
-                  <CyberChamferButtonNative
-                    size="xs"
-                    embedded
-                    variant="share"
-                    onPress={() => {
-                      setCornerFabOpen(false);
-                      void handleShareResult();
-                    }}
-                    disabled={!canShare || sharing}
-                    accessibilityLabel={resultCopy.shareMyResult}
-                  />
-                ) : null}
-                {hasCornerActions && hasCornerEdit ? (
-                  <CyberChamferButtonNative
-                    size="xs"
-                    embedded
-                    variant="edit"
-                    onPress={requestPredictEdit}
-                    accessibilityLabel={isEn ? "Edit prediction" : "予想を修正"}
-                  />
-                ) : null}
-              </>
-            }
-            bottomFlyout={
-              hasCornerActions && hasCornerTrash ? (
-                <CyberChamferButtonNative
-                  size="xs"
-                  embedded
-                  variant="delete"
-                  onPress={requestDeletePost}
-                  accessibilityLabel={isEn ? "Remove from list" : "一覧から除外"}
-                />
-              ) : null
-            }
-          />
-        </View>
-      ) : null}
+      {cornerCluster}
       </View>
       </AnimatedResultCardPressable>
     </Animated.View>
   );
 }
 
+function clockSensitiveKey(
+  post: PostWithMillis,
+  nowMs: number
+): string {
+  const status = typeof post.status === "string" ? post.status : "";
+  if (status === "final") return "final";
+  return [
+    isResultPostMatchStarted(
+      {
+        status,
+        startAtMillis:
+          typeof post.startAtMillis === "number" ? post.startAtMillis : null,
+      },
+      nowMs
+    )
+      ? "1"
+      : "0",
+    isResultPostLiveGame(
+      {
+        status,
+        startAtMillis:
+          typeof post.startAtMillis === "number" ? post.startAtMillis : null,
+      },
+      nowMs
+    )
+      ? "1"
+      : "0",
+    canDismissResultListPostNow(post, nowMs) ? "1" : "0",
+  ].join("|");
+}
+
+const ResultPostCardNative = memo(
+  ResultPostCardNativeInner,
+  (prev, next) => {
+    if (prev.post !== next.post) return false;
+    if (prev.language !== next.language) return false;
+    if (prev.viewerUid !== next.viewerUid) return false;
+    if (prev.listEnterIndex !== next.listEnterIndex) return false;
+    if (prev.entranceEnabled !== next.entranceEnabled) return false;
+    if (prev.siblingOverlayOpen !== next.siblingOverlayOpen) return false;
+    if (prev.compactSpacing !== next.compactSpacing) return false;
+    if (prev.tutorialTargetId !== next.tutorialTargetId) return false;
+    if (prev.pkScore !== next.pkScore) return false;
+    if (prev.gameMarket !== next.gameMarket) return false;
+    if (prev.gameRoundMeta !== next.gameRoundMeta) return false;
+    if (prev.onOpenDetail !== next.onOpenDetail) return false;
+    if (prev.onRequestDeleteConfirm !== next.onRequestDeleteConfirm) return false;
+    if (prev.onRequestPredictEdit !== next.onRequestPredictEdit) return false;
+    if (prev.nowMs !== next.nowMs) {
+      if (
+        clockSensitiveKey(prev.post, prev.nowMs) !==
+        clockSensitiveKey(next.post, next.nowMs)
+      ) {
+        return false;
+      }
+    }
+    return true;
+  }
+);
+
+export default ResultPostCardNative;
 
 const styles = StyleSheet.create({
   listRowOuter: {
@@ -1094,11 +1134,12 @@ const styles = StyleSheet.create({
     position: "relative",
     overflow: "visible",
   },
-  /** 左上：Web mobile `CyberMenuButton` + 右／下フライアウト */
-  leftActionCluster: {
+  /** 右上：キックオフ前のみ。修正（左）／削除（下）。
+   * LineFrame の marginTop:14 + 枠内 inset（Web `right-2.5 top-7`） */
+  rightActionCluster: {
     position: "absolute",
-    top: 6,
-    left: 8,
+    top: 28,
+    right: 10,
     zIndex: 60,
     overflow: "visible",
   },

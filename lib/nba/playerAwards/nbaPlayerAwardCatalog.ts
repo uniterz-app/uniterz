@@ -4,6 +4,7 @@
  */
 
 export const NBA_PLAYER_AWARD_CATALOG = [
+  { id: "championship", label: "Champion" },
   { id: "mvp", label: "MVP" },
   { id: "fmvp", label: "Finals MVP" },
   { id: "dpoy", label: "DPOY" },

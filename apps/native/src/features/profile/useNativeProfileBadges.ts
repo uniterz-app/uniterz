@@ -21,6 +21,8 @@ export type MasterBadgeNative = {
   id: string;
   title: string;
   description: string;
+  titleEn?: string;
+  descriptionEn?: string;
   icon?: string;
   participantCount?: number;
 };
@@ -71,11 +73,22 @@ async function loadMasterBadgesFromFirestore(): Promise<MasterBadgeNative[]> {
   const snap = await getDocs(col);
   const list: MasterBadgeNative[] = [];
   snap.forEach((d) => {
-    const data = d.data() as Omit<MasterBadgeNative, "id">;
+    const data = d.data() as Omit<MasterBadgeNative, "id"> & {
+      titleEn?: unknown;
+      descriptionEn?: unknown;
+    };
+    const titleEn =
+      typeof data.titleEn === "string" ? data.titleEn.trim() : "";
+    const descriptionEn =
+      typeof data.descriptionEn === "string"
+        ? data.descriptionEn.trim()
+        : "";
     list.push({
       id: d.id,
       title: data.title,
       description: data.description,
+      ...(titleEn ? { titleEn } : {}),
+      ...(descriptionEn ? { descriptionEn } : {}),
       icon: data.icon,
       ...(typeof data.participantCount === "number" &&
       Number.isFinite(data.participantCount) &&

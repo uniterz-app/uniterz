@@ -1,7 +1,7 @@
 /**
  * リーグ表などの選手名短縮。
  * 既定: `Luka Dončić` → `L.Doncic`
- * 例外: 長い定番名は通称（SGA など）
+ * 例外: 長い定番名は通称（SGA / NAW / KCP など）
  */
 const NAME_SUFFIX = /^(jr\.?|sr\.?|ii|iii|iv|v)$/i;
 
@@ -11,6 +11,8 @@ const NBA_PLAYER_LIST_ALIAS_BY_ID: Record<string, string> = {
   "175": "SGA",
   // Nickeil Alexander-Walker
   "666400": "NAW",
+  // Kentavious Caldwell-Pope
+  "81": "KCP",
 };
 
 const NBA_PLAYER_LIST_ALIAS_BY_NAME: Record<string, string> = {
@@ -20,6 +22,9 @@ const NBA_PLAYER_LIST_ALIAS_BY_NAME: Record<string, string> = {
   "nickeil alexander-walker": "NAW",
   "n. alexander-walker": "NAW",
   "n alexander-walker": "NAW",
+  "kentavious caldwell-pope": "KCP",
+  "k. caldwell-pope": "KCP",
+  "k caldwell-pope": "KCP",
 };
 
 function normalizeNameKey(fullName: string): string {

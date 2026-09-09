@@ -219,7 +219,7 @@ const ko: Messages = {
     divisionOpenTitle: "PRO LEAGUE",
     divisionOpenLockBody:
       "A Pro-only ranking across every game. Subscribe to Pro to join and view it.",
-    divisionOpenCta: "See Pro",
+    divisionOpenCta: "Explore Pro",
     divisionOpenModalDismiss: "Close",
     divisionOpenBackToPickUp: "Back to Pick Up",
     winStreak: "연승",
@@ -426,6 +426,7 @@ const ko: Messages = {
     nbaTopScorerResultLabel: "Top scorer",
     upsetPointsLabel: "이변 득점",
     totalPointsLabel: "총 득점",
+    pendingCallLabel: "YOUR CALL",
     upsetPointsDesc: "해당 경기가 이변이었고, 소수파 예측으로 적중했을 때만 가산되는 별도 지표 (경기당 0–10). 조건 불충족 시 0.",
     totalPointsDesc: "승자 적중·점수차 근접도·합계 득점 근접도로 결정되는 기본점에 이변 보너스와 연승 보너스를 더한 종합 점수.",
     helpPageLink: "득점 계산 방식은 도움말 페이지를 참조하세요",

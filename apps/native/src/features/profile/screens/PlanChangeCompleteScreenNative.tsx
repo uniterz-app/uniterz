@@ -28,6 +28,7 @@ import MobilePageShell from "../mobileScreens/MobilePageShell";
 import ProCyberBadgeNative from "../kinetik/ProCyberBadgeNative";
 import { OXANIUM_700, OXANIUM_800 } from "../reports/reportThemeNative";
 import { useFirebaseUser } from "../../../auth/FirebaseUserProvider";
+import { useNativeUserLanguage } from "../../../hooks/useNativeUserLanguage";
 import { db } from "../../../lib/firebase";
 import type { ProfileStackParamList } from "../../../navigation/types";
 import { spacing } from "../../../theme/tokens";
@@ -42,6 +43,11 @@ import {
   planPeriodLabel,
   type StoredPlanType,
 } from "../../billing/planChangeDisplay";
+import {
+  planChangeCompleteCopy,
+  planChangeTaxSuffix,
+  type PlanChangeUiLang,
+} from "../../../../../../lib/pro/planChangeUiCopy";
 import { PRO_SUCCESS_ACCENT } from "../../../../../../lib/pro/proSuccessAccent";
 import { PRO_SUBSCRIBE_SUCCESS_MOTION as SM } from "../../../../../../lib/pro/proSubscribeSuccessMotion";
 
@@ -94,6 +100,9 @@ export default function PlanChangeCompleteScreenNative() {
   const navigation =
     useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
   const { fUser } = useFirebaseUser();
+  const { language } = useNativeUserLanguage(fUser?.uid ?? null);
+  const lang: PlanChangeUiLang = language === "en" ? "en" : "ja";
+  const c = planChangeCompleteCopy(lang);
   const [storedType, setStoredType] = useState<StoredPlanType | null>(null);
   const [proUntil, setProUntil] = useState<Date | null>(null);
 
@@ -173,10 +182,10 @@ export default function PlanChangeCompleteScreenNative() {
   }));
 
   const plan: ProIapPlan = asProIapPlan(storedType);
-  const planLabel = planDisplayNameFull(storedType ?? plan, "en");
-  const price = planCatalogPrice(plan, "ja");
-  const period = planPeriodLabel(plan, "ja");
-  const untilLabel = formatPlanDate(proUntil, "ja");
+  const planLabel = planDisplayNameFull(storedType ?? plan, lang);
+  const price = planCatalogPrice(plan, lang);
+  const period = planPeriodLabel(plan, lang);
+  const untilLabel = formatPlanDate(proUntil, lang);
 
   return (
     <MobilePageShell
@@ -260,7 +269,7 @@ export default function PlanChangeCompleteScreenNative() {
                   {price}
                   <Text style={styles.successPriceMuted}>
                     {" "}
-                    {period}・税込み
+                    {period}{planChangeTaxSuffix(lang)}
                   </Text>
                 </Text>
               </View>
@@ -284,16 +293,16 @@ export default function PlanChangeCompleteScreenNative() {
                 }}
                 style={styles.successPrimary}
               >
-                <Text style={styles.successPrimaryText}>Proデータを見る</Text>
+                <Text style={styles.successPrimaryText}>{c.viewProData}</Text>
               </Pressable>
 
               <View style={styles.linkRow}>
                 <Pressable onPress={() => navigation.navigate("Terms")}>
-                  <Text style={styles.link}>利用規約</Text>
+                  <Text style={styles.link}>{c.terms}</Text>
                 </Pressable>
                 <Text style={styles.linkSep}>|</Text>
                 <Pressable onPress={() => navigation.navigate("Contact")}>
-                  <Text style={styles.link}>お問い合わせ</Text>
+                  <Text style={styles.link}>{c.contact}</Text>
                 </Pressable>
               </View>
             </View>

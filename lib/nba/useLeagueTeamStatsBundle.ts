@@ -4,15 +4,12 @@ import { useCallback, useEffect, useState } from "react";
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
 import { enrichLeagueTeamStatsBundle } from "@/lib/predict/nbaLeagueTeamStatsMocks";
 import { fetchLeagueTeamStats } from "@/lib/nba/leagueTeamStats/fetchLeagueTeamStatsClient";
-import {
-  createSnapshotFetchCache,
-  nbaSnapshotCacheKey,
-  NBA_SNAPSHOT_CACHE_TTL_MS,
-} from "@/lib/nba/snapshotFetchCache";
+import { nbaSnapshotCacheKey } from "@/lib/nba/snapshotFetchCache";
 import type {
   NbaLeagueTeamStatsApiPayload,
   NbaLeagueTeamStatsSnapshotSource,
 } from "@/lib/nba/leagueTeamStats/leagueTeamStatsTypes";
+import { leagueTeamStatsSnapshotCache as cache } from "@/lib/nba/leagueTeamStats/leagueTeamStatsSnapshotCache";
 import type { NbaLeagueTeamStatsBundle } from "@/lib/predict/nbaLeagueTeamStatsMocks";
 import { trackAppEvent } from "@/lib/observability/trackAppEvent";
 
@@ -23,13 +20,8 @@ const EMPTY_BUNDLE: NbaLeagueTeamStatsBundle = {
 };
 
 /**
- * STATS ハブでは検索バーと各パネルが同じ bundle を要求するため、
- * season 単位で 1 リクエストに畳む。
+ * リーグチーム表スナップショット。STATS ハブと予想 STATS タブで season 単位に共有する。
  */
-const cache = createSnapshotFetchCache<NbaLeagueTeamStatsApiPayload>(
-  NBA_SNAPSHOT_CACHE_TTL_MS
-);
-
 export type UseLeagueTeamStatsBundleOptions = {
   apiBaseUrl?: string | null;
   season?: string;

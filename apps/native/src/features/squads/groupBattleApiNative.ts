@@ -22,6 +22,8 @@ const API_BASE =
 
 export type GroupBattleApiOptions = {
   idToken?: string | null;
+  /** payout note など表示言語 */
+  lang?: "ja" | "en";
 };
 
 function withAuth(
@@ -531,8 +533,9 @@ export async function fetchGroupBattleMyPayoutNative(
   opts?: GroupBattleApiOptions
 ) {
   if (!API_BASE) return null;
+  const lang = opts?.lang === "en" ? "en" : "ja";
   const res = await fetch(
-    `${API_BASE}/api/group-battles/${encodeURIComponent(battleId)}/my-payout`,
+    `${API_BASE}/api/group-battles/${encodeURIComponent(battleId)}/my-payout?lang=${lang}`,
     {
       headers: withAuth({ "Content-Type": "application/json" }, opts),
     }

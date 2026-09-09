@@ -5,15 +5,18 @@ import { getRankingsScheduleNoticeText } from "@/lib/rankings/getRankingsSchedul
 
 type Props = {
   language: Language;
+  /** プロフィールの居住国。未設定なら 16:00 JST 表記 */
+  countryCode?: string | null;
   className?: string;
 };
 
 /** ランキング更新時刻・累積スコアの説明（マイランクカードと指標タブの間） */
 export default function RankingsScheduleNotice({
   language,
+  countryCode = null,
   className = "",
 }: Props) {
-  const text = getRankingsScheduleNoticeText(language);
+  const text = getRankingsScheduleNoticeText(language, countryCode);
 
   return (
     <p

@@ -1,6 +1,6 @@
 /**
- * Pro Prediction Brief — HOME / AWAY カード
- * EDGE（Matchup）· SCHEDULE（日程/疲労）· CONTEXT（対戦相手の強さ）
+ * Pro Prediction Brief — HOME / AWAY
+ * MATCHUP · SCHEDULE · CONTEXT · PLAYERS
  * 推奨スコア / KEY / 共有Risk は出さない。
  */
 
@@ -17,12 +17,24 @@ export type ProBriefLineItem = {
   textEn: string;
 };
 
+/** 選手単位の読み（型×相手穴 / 直近フォーム） */
+export type ProBriefPlayerItem = {
+  playerId?: string;
+  playerName: string;
+  /** 英語ラベル（PAINT EDGE / HOT 3PT など） */
+  label: string;
+  detailJa: string;
+  detailEn: string;
+};
+
 export type ProBriefTeamCard = {
   edges: ProBriefEdgeItem[];
   /** 日程・疲労（目安 2） */
   schedule: ProBriefLineItem[];
   /** 直近対戦相手の強さなど */
   context: ProBriefLineItem[];
+  /** 選手インサイト（目安 1〜2） */
+  players?: ProBriefPlayerItem[];
 };
 
 /** シーズン進行に応じた生成モード（設計: docs/pro-insight-design.md） */
@@ -54,6 +66,13 @@ export function briefLineText(
   language: "ja" | "en"
 ): string {
   return language === "ja" ? item.textJa : item.textEn;
+}
+
+export function briefPlayerDetail(
+  item: ProBriefPlayerItem,
+  language: "ja" | "en"
+): string {
+  return language === "ja" ? item.detailJa : item.detailEn;
 }
 
 /** 「開幕戦 · 休養十分」→ 見出し + 本文。区切りが無ければ本文のみ */

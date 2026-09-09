@@ -22,7 +22,9 @@ import {
 } from "./settledTodayDesignPreviewNative";
 import {
   resolveResultPostGameMarket,
+  resolveResultPostGameRoundMeta,
   useResultPostsGameMarkets,
+  useResultPostsGameRoundMeta,
 } from "../../../../../lib/games/useResultPostsGameMarkets";
 import { useNativeProfileSettledTodayResults } from "./useNativeProfileSettledTodayResults";
 
@@ -77,6 +79,7 @@ export default function ProfileSettledTodayResultsNative({
   }, [loading, posts, showDesignPreviewWhenEmpty]);
 
   const marketsFromGames = useResultPostsGameMarkets(visiblePosts);
+  const roundMetaFromGames = useResultPostsGameRoundMeta(visiblePosts);
 
   const openPost = (postId: string) => {
     if (isSettledTodayDesignPreviewPost(postId)) return;
@@ -126,6 +129,10 @@ export default function ProfileSettledTodayResultsNative({
               entranceEnabled={false}
               compactSpacing
               gameMarket={resolveResultPostGameMarket(post, marketsFromGames)}
+              gameRoundMeta={resolveResultPostGameRoundMeta(
+                post,
+                roundMetaFromGames
+              )}
               onOpenDetail={openPost}
             />
           ))}

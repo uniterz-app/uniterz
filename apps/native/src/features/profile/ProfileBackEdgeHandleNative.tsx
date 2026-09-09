@@ -20,11 +20,14 @@ export default function ProfileBackEdgeHandleNative({
 }: Props) {
   return (
     <Pressable
-      style={styles.handle}
+      style={({ pressed }) => [
+        styles.handle,
+        pressed ? styles.handlePressed : null,
+      ]}
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
-      hitSlop={8}
+      hitSlop={{ left: 14, right: 0, top: 6, bottom: 6 }}
     >
       <MaterialCommunityIcons
         name="chevron-left"
@@ -45,10 +48,12 @@ const styles = StyleSheet.create({
   handle: {
     position: "absolute",
     right: 0,
-    top: "46%",
+    /** 中央付近だと誤タップしやすい → 画面下から約 1/3（上から ~67%・中心合わせ） */
+    top: "67%",
+    transform: [{ translateY: -42 }],
     zIndex: 20,
-    width: 22,
-    paddingVertical: 7,
+    width: 28,
+    paddingVertical: 9,
     alignItems: "center",
     gap: 2,
     borderWidth: 1,
@@ -61,15 +66,20 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 0 },
     elevation: 8,
   },
+  handlePressed: {
+    backgroundColor: "rgba(28,32,40,0.98)",
+    shadowOpacity: 0.28,
+    transform: [{ translateY: -42 }, { scale: 0.98 }],
+  },
   icon: {
     marginBottom: 1,
   },
   letter: {
     fontFamily: "Oxanium_700Bold",
-    fontSize: 7,
+    fontSize: 8,
     fontWeight: "700",
     letterSpacing: 0,
-    lineHeight: 8,
+    lineHeight: 10,
     color: FG,
   },
 });

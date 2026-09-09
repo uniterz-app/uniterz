@@ -8,6 +8,7 @@ import SquadBattleLaunchOverlayNative from "./SquadBattleLaunchOverlayNative";
 import { readSquadBattleLaunchSeenBattleIdNative, markSquadBattleLaunchSeenNative } from "./squadBattleLaunchSeenNative";
 import { fetchCurrentGroupBattleNative } from "./groupBattleApiNative";
 import { auth } from "../../lib/firebase";
+import { useNativeUserLanguageFromAuth } from "../../hooks/useNativeUserLanguage";
 import type { MainTabParamList } from "../../navigation/types";
 import {
   formatSquadBattleRecruitDeadlineLabel,
@@ -25,6 +26,7 @@ export default function SquadBattleLaunchPromptHostNative() {
   const [battleId, setBattleId] = useState<string | null>(null);
   const [deadlineLabel, setDeadlineLabel] = useState<string | null>(null);
   const decidedRef = useRef(false);
+  const { language } = useNativeUserLanguageFromAuth();
 
   const evaluate = useCallback(async () => {
     if (decidedRef.current) return;
@@ -73,6 +75,7 @@ export default function SquadBattleLaunchPromptHostNative() {
     <SquadBattleLaunchOverlayNative
       visible={open}
       battleId={battleId}
+      language={language}
       deadlineLabel={deadlineLabel}
       onClose={() => setOpen(false)}
       onEnter={() => {

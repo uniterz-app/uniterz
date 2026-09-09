@@ -23,6 +23,7 @@ import { AUTH_LANDING } from "./authLandingPalette";
 import SlantCtaNative from "../../ui/SlantCtaNative";
 import { LEAGUES } from "../../../../../lib/leagues";
 import { hideNativeBootSplash } from "../../bootstrap/nativeBootSplash";
+import { resolveDeviceAppLanguage } from "../../i18n/resolveDeviceAppLanguage";
 import { ensureUserSlug } from "../../../../../lib/ensureSlug";
 import { normalizeReferralInviteCode } from "../../../../../lib/referral/referralInviteCode";
 import { bindMeReferralNative } from "../profile/referralApiNative";
@@ -113,7 +114,7 @@ function countryRowLabel(code: string, appLang: "ja" | "en"): string {
 export default function OnboardingScreenNative() {
   const [displayName, setDisplayName] = useState("");
   const [inviteCode, setInviteCode] = useState("");
-  const [language, setLanguage] = useState<"ja" | "en">("ja");
+  const [language, setLanguage] = useState<"ja" | "en">(resolveDeviceAppLanguage);
   const [countryCode, setCountryCode] = useState("");
   const [countryOpen, setCountryOpen] = useState(false);
   const [avatar, setAvatar] = useState<PendingAvatar | null>(null);

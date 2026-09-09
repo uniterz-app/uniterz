@@ -63,7 +63,7 @@ function InjuryChip({ status }: { status: string }) {
 }
 
 const TOP_N = 5;
-const playerNameTy = matchCardTeamNameStyle(true);
+const playerNameSkew = { transform: "skewX(-6deg)" } as const;
 const rankCellSkew = { transform: "skewX(-10deg)" } as const;
 const metricCellSkew = { transform: "skewX(-6deg)" } as const;
 
@@ -216,8 +216,8 @@ export default function NbaTopScorerPicker({
                 </span>
                 <span className="flex min-w-0 flex-1 flex-col items-start justify-center pr-1">
                   <span
-                    className={`${nameBebas.className} w-full truncate text-[15px] leading-tight text-white/92`}
-                    style={playerNameTy}
+                    className={`${nameOxanium.className} w-full truncate text-[13px] font-extrabold uppercase tracking-[0.02em] text-white`}
+                    style={playerNameSkew}
                   >
                     {row.name}
                   </span>

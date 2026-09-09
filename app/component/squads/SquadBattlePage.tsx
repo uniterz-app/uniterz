@@ -53,6 +53,8 @@ import {
   writeHeldInviteIdsToLocalStorage,
 } from "@/lib/squads/squadBattleInviteHold";
 import { nameOxanium, nameRajdhani, nameBebas, jp, cyberNumberDisplay } from "@/lib/fonts";
+import { useFirebaseUser } from "@/lib/useFirebaseUser";
+import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import {
   SQUAD_BATTLE_MAX_MEMBERS,
   SQUAD_BATTLE_MIN_MEMBERS,
@@ -128,29 +130,23 @@ import {
 import {
   SQUAD_BATTLE_MOCK_DEADLINE_LABEL,
   SQUAD_BATTLE_INVITE_CODE_PLACEHOLDER,
-  SQUAD_BATTLE_IDLE_PANEL,
-  SQUAD_BATTLE_RULES_SECTION,
-  SQUAD_BATTLE_RANK_SPECTATOR_HINT,
-  SQUAD_INVITE_DEADLINE_PREFIX,
-  SQUAD_INVITE_HOLD_HINT,
-  SQUAD_INVITE_LIST_EMPTY,
-  SQUAD_INVITE_LIST_HINT,
-  SQUAD_INVITE_LIST_TITLE,
-  SQUAD_INVITE_JOIN_PROMPT,
-  SQUAD_APPLICANT_OPEN_PROFILE,
-  SQUAD_APPLICANT_SCORE_LABEL,
-  SQUAD_APPLICANT_WINRATE_LABEL,
-  SQUAD_APPLICANT_WR_LABEL,
+  squadBattleIdlePanel,
+  squadBattleRulesSection,
+  squadBattleRankSpectatorHint,
+  squadBattleInviteCopy,
+  squadBattleScreenCopy,
+  localizeSquadMockRelativeLabel,
   squadInviteIncomingTitle,
   squadInviteSendPrompt,
   squadApplicantApprovePrompt,
-  SQUAD_BATTLE_REWARD_RESULT_MOCK,
+  squadBattleRewardResultMock,
   squadBattlePayoutTotalUnits,
   type SquadBattleRewardResult,
-  SQUAD_BATTLE_UI_PHASE_OPTIONS,
-  SQUAD_BATTLE_WEEK_OPTIONS,
-  SQUAD_OPEN_PERIOD_RANKS,
-  SQUAD_OPEN_PERIOD_RANK_GROUP_LABEL,
+  type SquadBattleScreenCopy,
+  type SquadBattleUiLang,
+  squadBattleUiPhaseOptions,
+  squadOpenPeriodRanks,
+  squadOpenPeriodRankGroupLabel,
   squadBattlePhaseBanner,
   SQUAD_RANKING_DETAIL_SPINE,
   squadMemberCountLabel,
@@ -434,11 +430,13 @@ function SquadPhaseStatusBanner({
   deadlineLabel?: string | null;
 }) {
   const isWeb = useSquadBattleIsWeb();
+  const { lang } = useSquadCopy();
   const banner = squadBattlePhaseBanner({
     phase,
     hasSquad,
     activeMemberCount,
     deadlineLabel,
+    lang,
   });
   const toneBorder =
     banner.tone === "warn"
@@ -495,6 +493,7 @@ function SquadRewardResultPanel({
   result: SquadBattleRewardResult;
   loading?: boolean;
 }) {
+  const { c } = useSquadCopy();
   const r = result;
   const total = squadBattlePayoutTotalUnits(r);
   if (loading) {
@@ -512,7 +511,7 @@ function SquadRewardResultPanel({
           REWARD
         </p>
         <p className={cn(jp.className, "mt-2 text-sm text-white/45")}>
-          獲得 Unit を読み込み中…
+          {c.rewardLoading}
         </p>
       </div>
     );
@@ -532,8 +531,7 @@ function SquadRewardResultPanel({
           REWARD
         </p>
         <p className={cn(jp.className, "mt-2 text-sm text-white/55")}>
-          {r.payoutNote ||
-            "未参加のため配布対象外です。次回 ENTRY から参加できます。"}
+          {r.payoutNote || c.rewardNotEligible}
         </p>
       </div>
     );
@@ -650,6 +648,9 @@ function SquadRewardResultPanel({
 
 /** 休止期間の専用面（告知 + ルールを1枠） */
 function SquadIdlePanel() {
+  const { lang } = useSquadCopy();
+  const idle = squadBattleIdlePanel(lang);
+  const rules = squadBattleRulesSection(lang);
   return (
     <div
       className="border border-amber-400/25 bg-black/30 px-3.5 py-5"
@@ -662,7 +663,7 @@ function SquadIdlePanel() {
             "text-[11px] font-black uppercase tracking-[0.22em] text-white/40"
           )}
         >
-          {SQUAD_BATTLE_IDLE_PANEL.kicker}
+          {idle.kicker}
         </p>
         <p
           className={cn(
@@ -670,7 +671,7 @@ function SquadIdlePanel() {
             "mt-2 text-[26px] tracking-[0.06em] text-white/70"
           )}
         >
-          {SQUAD_BATTLE_IDLE_PANEL.title}
+          {idle.title}
         </p>
         <p
           className={cn(
@@ -678,7 +679,7 @@ function SquadIdlePanel() {
             "mx-auto mt-2 max-w-xs text-[13px] text-white/40"
           )}
         >
-          {SQUAD_BATTLE_IDLE_PANEL.detail}
+          {idle.detail}
         </p>
       </div>
       <div className="mt-5 border-t border-white/10 pt-4">
@@ -688,10 +689,10 @@ function SquadIdlePanel() {
             "text-[14px] font-black tracking-wide text-amber-50"
           )}
         >
-          {SQUAD_BATTLE_RULES_SECTION.title}
+          {rules.title}
         </p>
         <ul className="mt-3 flex flex-col gap-2.5">
-          {SQUAD_BATTLE_RULES_SECTION.items.map((item) => (
+          {rules.items.map((item) => (
             <li key={item} className="flex items-start gap-2.5">
               <span
                 className="mt-[5px] h-1.5 w-1.5 shrink-0 rounded-full"
@@ -741,7 +742,8 @@ function SquadWeekChips({
   onChange: (w: SquadBattleWeekIndex) => void;
   weeklyLabels: readonly string[];
 }) {
-  const options = squadBattleWeekChipOptions(weeklyLabels);
+  const { lang } = useSquadCopy();
+  const options = squadBattleWeekChipOptions(weeklyLabels, lang);
   const active = options.find((w) => w.index === weekIndex);
   return (
     <div className="mb-3">
@@ -1022,6 +1024,7 @@ function SquadPageBar({
   onChange: (page: number) => void;
 }) {
   const isWeb = useSquadBattleIsWeb();
+  const { c } = useSquadCopy();
   if (pageCount <= 1) return null;
   const pages = Array.from({ length: pageCount }, (_, i) => i);
   const btnSize = isWeb ? "h-9 w-9" : "h-8 w-8";
@@ -1032,13 +1035,13 @@ function SquadPageBar({
         isWeb ? "mt-4" : "mt-3"
       )}
       role="navigation"
-      aria-label="ページ"
+      aria-label={c.paginationLabel}
     >
       <button
         type="button"
         disabled={page <= 0}
         onClick={() => onChange(page - 1)}
-        aria-label="前のページ"
+        aria-label={c.prevPage}
         className={cn(
           "inline-flex items-center justify-center rounded-sm border transition",
           btnSize,
@@ -1056,7 +1059,7 @@ function SquadPageBar({
             key={p}
             type="button"
             onClick={() => onChange(p)}
-            aria-label={`${p + 1}ページ目`}
+            aria-label={c.pageNumber(p + 1)}
             aria-current={active ? "page" : undefined}
             className={cn(
               nameOxanium.className,
@@ -1075,7 +1078,7 @@ function SquadPageBar({
         type="button"
         disabled={page >= pageCount - 1}
         onClick={() => onChange(page + 1)}
-        aria-label="次のページ"
+        aria-label={c.nextPage}
         className={cn(
           "inline-flex items-center justify-center rounded-sm border transition",
           btnSize,
@@ -1100,6 +1103,23 @@ type Props = {
 const SquadBattleIsWebCtx = createContext(false);
 function useSquadBattleIsWeb() {
   return useContext(SquadBattleIsWebCtx);
+}
+
+/** 画面内の全サブコンポーネントで同じ言語コピーを引く */
+type SquadBattleCopyBundle = {
+  lang: SquadBattleUiLang;
+  c: SquadBattleScreenCopy;
+  invite: ReturnType<typeof squadBattleInviteCopy>;
+};
+
+const SquadBattleCopyCtx = createContext<SquadBattleCopyBundle>({
+  lang: "ja",
+  c: squadBattleScreenCopy("ja"),
+  invite: squadBattleInviteCopy("ja"),
+});
+
+function useSquadCopy() {
+  return useContext(SquadBattleCopyCtx);
 }
 
 /** 得点・順位数字: 1〜3位はパレット、4位以下は白 */
@@ -1258,6 +1278,7 @@ function MemberAvatar({
   size?: "sm" | "md";
 }) {
   const isWeb = useSquadBattleIsWeb();
+  const { c } = useSquadCopy();
   const dim =
     size === "sm"
       ? isWeb
@@ -1273,7 +1294,7 @@ function MemberAvatar({
           "flex shrink-0 items-center justify-center overflow-hidden rounded-sm border border-dashed border-amber-400/30 bg-amber-400/[0.04] text-amber-200/40",
           dim
         )}
-        title="募集中"
+        title={c.recruitingLabel}
       >
         <Plus size={size === "sm" ? (isWeb ? 11 : 10) : isWeb ? 13 : 12} strokeWidth={2.5} />
       </div>
@@ -1369,6 +1390,7 @@ function MemberRow({
   entryFrame?: boolean;
 }) {
   const isWeb = useSquadBattleIsWeb();
+  const { c } = useSquadCopy();
   const rowPad = isWeb ? "gap-3.5 px-4 py-3" : "gap-3 px-3 py-2.5";
   const nameClass = isWeb ? "text-[15px]" : "text-sm";
   const useEntryFrame = periodRanks || entryFrame;
@@ -1402,7 +1424,7 @@ function MemberRow({
         <MemberAvatar member={member} />
         <div className="min-w-0 flex-1">
           <p className={cn(jp.className, nameClass, "text-white/40")}>
-            空き枠 · 募集中
+            {c.emptySlotTitle}
           </p>
           <p
             className={cn(
@@ -1546,6 +1568,7 @@ function MySquadCard({
   isOwner?: boolean;
 }) {
   const isWeb = useSquadBattleIsWeb();
+  const { c } = useSquadCopy();
   const [editingName, setEditingName] = useState(false);
   const [draftName, setDraftName] = useState(squad.name);
 
@@ -1627,7 +1650,7 @@ function MySquadCard({
               value={draftName}
               maxLength={SQUAD_BATTLE_NAME_MAX_LEN}
               autoFocus
-              aria-label="スクワッド名"
+              aria-label={c.squadNameLabel}
               onChange={(e) => setDraftName(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === "Enter") commitRename();
@@ -1685,7 +1708,7 @@ function MySquadCard({
                   setDraftName(squad.name);
                   setEditingName(true);
                 }}
-                aria-label="スクワッド名を変更"
+                aria-label={c.renameSquadLabel}
                 className={cn(
                   "absolute right-0 top-1/2 flex -translate-y-1/2 items-center justify-center transition",
                   showBattleStats
@@ -1766,8 +1789,8 @@ function MySquadCard({
                   : "hover:border-white/45 hover:bg-white/[0.04]"
               )}
               style={chamferStyle}
-              aria-label={`招待コード ${inviteCode} をコピー`}
-              title="タップでコピー"
+              aria-label={c.copyInviteCodeLabel(inviteCode)}
+              title={c.tapToCopy}
             >
               <p className={hudLabel}>Code</p>
               <div className={cn(hudValue, "gap-1")}>
@@ -1857,7 +1880,7 @@ function MySquadCard({
                   "flex-1 border border-rose-400/35 bg-rose-500/10 py-2.5 text-[11px] font-black uppercase tracking-[0.14em] text-rose-100/85"
                 )}
               >
-                解散する
+                {c.dissolve}
               </button>
             ) : null}
             {!isOwner && onLeaveSquad ? (
@@ -1869,7 +1892,7 @@ function MySquadCard({
                   "flex-1 border border-white/20 bg-white/[0.04] py-2.5 text-[11px] font-black uppercase tracking-[0.14em] text-white/55"
                 )}
               >
-                脱退する
+                {c.leave}
               </button>
             ) : null}
           </div>
@@ -1885,8 +1908,8 @@ function CreateSquadNameSheet({
   onCreate,
   initialName = "",
   title = "CREATE SQUAD",
-  ariaLabel = "グループ作成",
-  submitLabel = "作成する",
+  ariaLabel,
+  submitLabel,
 }: {
   onClose: () => void;
   onCreate: (name: string) => void;
@@ -1899,6 +1922,9 @@ function CreateSquadNameSheet({
   const [agreed, setAgreed] = useState(false);
   const reduceMotion = useReducedMotion() === true;
   const isWeb = useSquadBattleIsWeb();
+  const { c } = useSquadCopy();
+  const sheetAriaLabel = ariaLabel ?? c.createGroupAriaLabel;
+  const sheetSubmitLabel = submitLabel ?? c.createSubmit;
   const trimmed = name.trim();
   const canSubmit =
     trimmed.length > 0 &&
@@ -1911,7 +1937,7 @@ function CreateSquadNameSheet({
       className="fixed inset-0 z-[60] flex items-end justify-center p-3 sm:items-center"
       role="dialog"
       aria-modal
-      aria-label={ariaLabel}
+      aria-label={sheetAriaLabel}
       onClick={onClose}
     >
       <div
@@ -1983,7 +2009,7 @@ function CreateSquadNameSheet({
               onClick={onClose}
               className="flex h-9 w-9 shrink-0 items-center justify-center border border-amber-400/30 bg-black/35 text-amber-100/85 transition hover:border-amber-300/50 hover:bg-amber-400/10"
               style={chamferStyle}
-              aria-label="閉じる"
+              aria-label={c.close}
             >
               <X size={15} strokeWidth={2.4} />
             </button>
@@ -2023,7 +2049,7 @@ function CreateSquadNameSheet({
               {preview}
             </p>
             <p className={cn(jp.className, "mt-2 text-center text-[11px] text-white/40")}>
-              対戦相手に表示される名前 · あとから変更可
+              {c.createNameHint}
             </p>
           </div>
 
@@ -2065,9 +2091,7 @@ function CreateSquadNameSheet({
               className="mt-0.5 h-4 w-4 shrink-0 accent-amber-400"
             />
             <span className={cn(jp.className, "text-[12px] leading-snug text-white/55")}>
-              {SQUAD_BATTLE_MIN_MEMBERS}〜{SQUAD_BATTLE_MAX_MEMBERS}
-              人で確定し、開始後の入れ替え不可・同点は同順位同
-              Unit・不正は失格に同意します。あなたが代表者になります。
+              {c.createConsent(SQUAD_BATTLE_MIN_MEMBERS, SQUAD_BATTLE_MAX_MEMBERS)}
             </span>
           </label>
 
@@ -2086,7 +2110,7 @@ function CreateSquadNameSheet({
               )}
             >
               <Plus size={15} strokeWidth={2.6} />
-              {submitLabel}
+              {sheetSubmitLabel}
             </SquadChamferButton>
             <button
               type="button"
@@ -2125,6 +2149,7 @@ function JoinByInviteCodeSheet({
   const [code, setCode] = useState("");
   const reduceMotion = useReducedMotion() === true;
   const isWeb = useSquadBattleIsWeb();
+  const { c } = useSquadCopy();
   const trimmed = normalizeUiInviteCode(code);
   const canSubmit = trimmed.length >= 4 && !busy;
 
@@ -2133,7 +2158,7 @@ function JoinByInviteCodeSheet({
       className="fixed inset-0 z-[60] flex items-end justify-center p-3 sm:items-center"
       role="dialog"
       aria-modal
-      aria-label="招待コードで参加"
+      aria-label={c.joinByInviteCodeAriaLabel}
       onClick={onClose}
     >
       <div
@@ -2177,7 +2202,7 @@ function JoinByInviteCodeSheet({
                 </p>
               </div>
               <p className={cn(jp.className, "mt-2 text-sm text-white/55")}>
-                代表者から共有されたコードを入力
+                {c.inviteCodeHint}
               </p>
             </div>
             <button
@@ -2185,7 +2210,7 @@ function JoinByInviteCodeSheet({
               onClick={onClose}
               className="flex h-9 w-9 shrink-0 items-center justify-center border border-amber-400/30 bg-black/35 text-amber-100/85"
               style={chamferStyle}
-              aria-label="閉じる"
+              aria-label={c.close}
             >
               <X size={15} strokeWidth={2.4} />
             </button>
@@ -2229,7 +2254,7 @@ function JoinByInviteCodeSheet({
               className="flex w-full items-center justify-center gap-2 py-3.5 text-sm font-black uppercase tracking-[0.22em] disabled:opacity-35"
             >
               <Ticket size={15} strokeWidth={2.4} />
-              {busy ? "参加中…" : "参加する"}
+              {busy ? c.joining : c.join}
             </SquadChamferButton>
             <button
               type="button"
@@ -2255,6 +2280,7 @@ function ApplicantThisWeekRank({
   profile: SquadApplicantProfile;
   size: "sm" | "md";
 }) {
+  const { c } = useSquadCopy();
   const rank = profile.thisWeekRank;
   const missing = rank == null || rank <= 0;
   return (
@@ -2266,7 +2292,7 @@ function ApplicantThisWeekRank({
           size === "md" ? "text-[12px]" : "text-[11px]"
         )}
       >
-        今週
+        {c.thisWeek}
       </span>
       <CyberRankNumber
         rank={missing ? 0 : rank}
@@ -2295,12 +2321,13 @@ function ApplicantProfileSheet({
   onReject?: () => void;
 }) {
   const isWeb = useSquadBattleIsWeb();
+  const { c, invite } = useSquadCopy();
   return (
     <div
       className="fixed inset-0 z-[70] flex items-center justify-center p-3"
       role="dialog"
       aria-modal
-      aria-label="申請者プロフィール"
+      aria-label={c.applicantProfileAriaLabel}
       onClick={onClose}
     >
       <div
@@ -2318,7 +2345,7 @@ function ApplicantProfileSheet({
           type="button"
           onClick={onClose}
           className="absolute right-3 top-3 z-[11] flex h-9 w-9 items-center justify-center border border-white/25 bg-black/35 text-white/80"
-          aria-label="閉じる"
+          aria-label={c.close}
         >
           <X size={15} strokeWidth={2.4} />
         </button>
@@ -2376,7 +2403,7 @@ function ApplicantProfileSheet({
                     "text-[11px] font-semibold text-white/45"
                   )}
                 >
-                  {SQUAD_APPLICANT_SCORE_LABEL}
+                  {invite.scoreLabel}
                 </p>
                 <div className="mt-1 flex justify-center">
                   <SquadPointsText value={profile.points} size={isWeb ? "lg" : "md"} />
@@ -2389,7 +2416,7 @@ function ApplicantProfileSheet({
                     "text-[11px] font-semibold text-white/45"
                   )}
                 >
-                  {SQUAD_APPLICANT_WINRATE_LABEL}
+                  {invite.winRateLabel}
                 </p>
                 <div className="mt-1 flex justify-center">
                   <CyberNumber
@@ -2413,7 +2440,7 @@ function ApplicantProfileSheet({
                   "flex w-full items-center justify-center border border-white/25 bg-black py-3 text-[12px] font-bold uppercase tracking-[0.16em] text-white/80"
                 )}
               >
-                {SQUAD_APPLICANT_OPEN_PROFILE}
+                {invite.openProfile}
               </button>
             ) : null}
             {onApprove || onReject ? (
@@ -2429,7 +2456,7 @@ function ApplicantProfileSheet({
                     )}
                   >
                     <X size={14} />
-                    拒否
+                    {c.reject}
                   </button>
                 ) : null}
                 {onApprove ? (
@@ -2446,7 +2473,7 @@ function ApplicantProfileSheet({
                     }}
                   >
                     <Check size={14} />
-                    承認
+                    {c.approve}
                   </button>
                 ) : null}
               </div>
@@ -2467,6 +2494,7 @@ function SquadRankingDetailSheet({
 }) {
   const isWeb = useSquadBattleIsWeb();
   const reduceMotion = useReducedMotion() === true;
+  const { c } = useSquadCopy();
   return (
     <div
       className="fixed inset-0 z-[70] flex items-center justify-center p-3"
@@ -2504,7 +2532,7 @@ function SquadRankingDetailSheet({
               type="button"
               onClick={onClose}
               className="flex h-9 w-9 shrink-0 items-center justify-center border border-white/25 bg-black/35 text-white/80"
-              aria-label="閉じる"
+              aria-label={c.close}
             >
               <X size={15} strokeWidth={2.4} />
             </button>
@@ -2561,6 +2589,7 @@ function OpenSquadListShell({ children }: { children: ReactNode }) {
 const OPEN_PERIOD_RANK_COL = "w-11";
 
 function OpenMemberPeriodRankHeader() {
+  const { lang } = useSquadCopy();
   return (
     <div className="flex shrink-0 flex-col items-stretch gap-1">
       <p
@@ -2569,10 +2598,10 @@ function OpenMemberPeriodRankHeader() {
           "text-center text-[12px] font-semibold text-white/80"
         )}
       >
-        {SQUAD_OPEN_PERIOD_RANK_GROUP_LABEL}
+        {squadOpenPeriodRankGroupLabel(lang)}
       </p>
       <div className="flex gap-2.5">
-        {SQUAD_OPEN_PERIOD_RANKS.map((item) => (
+        {squadOpenPeriodRanks(lang).map((item) => (
           <p
             key={item.key}
             className={cn(
@@ -2594,9 +2623,10 @@ function OpenMemberPeriodRanks({
 }: {
   profile: SquadApplicantProfile;
 }) {
+  const { lang } = useSquadCopy();
   return (
     <div className="flex shrink-0 items-center gap-2.5">
-      {SQUAD_OPEN_PERIOD_RANKS.map((item) => {
+      {squadOpenPeriodRanks(lang).map((item) => {
         const rank = profile[item.key];
         const missing = rank == null || rank <= 0;
         return (
@@ -2681,6 +2711,7 @@ function ApplyJoinConfirmSheet({
 }) {
   const reduceMotion = useReducedMotion() === true;
   const isWeb = useSquadBattleIsWeb();
+  const { c } = useSquadCopy();
 
   return (
     <div
@@ -2718,14 +2749,14 @@ function ApplyJoinConfirmSheet({
                 {squad.name}
               </p>
               <p className={cn(jp.className, "mt-1.5 text-sm text-white/60")}>
-                このグループへの参加を申請します
+                {c.applyConfirmBody}
               </p>
             </div>
             <button
               type="button"
               onClick={onClose}
               className="flex h-9 w-9 shrink-0 items-center justify-center border border-white/25 bg-black/35 text-white/80"
-              aria-label="閉じる"
+              aria-label={c.close}
             >
               <X size={15} strokeWidth={2.4} />
             </button>
@@ -2748,7 +2779,7 @@ function ApplyJoinConfirmSheet({
                 background: `linear-gradient(180deg, ${SQUAD_GOLD.acc}, ${SQUAD_GOLD.accDeep})`,
               }}
             >
-              申請する
+              {c.apply}
             </button>
             <button
               type="button"
@@ -2785,6 +2816,7 @@ function IncomingJoinConfirmSheet({
 }) {
   const reduceMotion = useReducedMotion() === true;
   const isWeb = useSquadBattleIsWeb();
+  const { c, invite: inviteCopy } = useSquadCopy();
   const members = squadIncomingInviteMemberProfiles(invite, openSquads);
 
   return (
@@ -2823,17 +2855,17 @@ function IncomingJoinConfirmSheet({
                 {invite.squadName}
               </p>
               <p className={cn(jp.className, "mt-1.5 text-sm text-white/60")}>
-                {SQUAD_INVITE_JOIN_PROMPT}
+                {inviteCopy.joinPrompt}
               </p>
               <p className={cn(jp.className, "mt-1 text-xs text-white/40")}>
-                {invite.fromDisplayName} からの招待
+                {c.inviteFrom(invite.fromDisplayName)}
               </p>
             </div>
             <button
               type="button"
               onClick={onClose}
               className="flex h-9 w-9 shrink-0 items-center justify-center border border-white/25 bg-black/35 text-white/80"
-              aria-label="閉じる"
+              aria-label={c.close}
             >
               <X size={15} strokeWidth={2.4} />
             </button>
@@ -2858,7 +2890,7 @@ function IncomingJoinConfirmSheet({
                 background: `linear-gradient(180deg, ${SQUAD_GOLD.acc}, ${SQUAD_GOLD.accDeep})`,
               }}
             >
-              参加する
+              {c.join}
             </button>
             <button
               type="button"
@@ -2868,7 +2900,7 @@ function IncomingJoinConfirmSheet({
                 "flex w-full items-center justify-center border border-white/25 bg-black py-3 text-[12px] font-bold uppercase tracking-[0.16em] text-white/75"
               )}
             >
-              今回はパス
+              {c.passThisTime}
             </button>
           </div>
         </div>
@@ -2896,6 +2928,7 @@ function InviteSendConfirmSheet({
 }) {
   const reduceMotion = useReducedMotion() === true;
   const isWeb = useSquadBattleIsWeb();
+  const { c, lang } = useSquadCopy();
   const { member } = target;
 
   return (
@@ -2936,7 +2969,7 @@ function InviteSendConfirmSheet({
               type="button"
               onClick={onClose}
               className="flex h-9 w-9 shrink-0 items-center justify-center border border-white/25 bg-black/35 text-white/80"
-              aria-label="閉じる"
+              aria-label={c.close}
             >
               <X size={15} strokeWidth={2.4} />
             </button>
@@ -2966,7 +2999,7 @@ function InviteSendConfirmSheet({
               </p>
             ) : null}
             <p className={cn(jp.className, "mt-4 text-sm leading-relaxed text-white/70")}>
-              {squadInviteSendPrompt(member.displayName, squadName)}
+              {squadInviteSendPrompt(member.displayName, squadName, lang)}
             </p>
           </div>
 
@@ -2982,7 +3015,7 @@ function InviteSendConfirmSheet({
                 background: `linear-gradient(180deg, ${SQUAD_GOLD.acc}, ${SQUAD_GOLD.accDeep})`,
               }}
             >
-              誘う
+              {c.invite}
             </button>
             <button
               type="button"
@@ -3013,6 +3046,7 @@ function ApproveApplicantConfirmSheet({
 }) {
   const reduceMotion = useReducedMotion() === true;
   const isWeb = useSquadBattleIsWeb();
+  const { c, lang } = useSquadCopy();
   const { applicant } = request;
 
   return (
@@ -3053,7 +3087,7 @@ function ApproveApplicantConfirmSheet({
               type="button"
               onClick={onClose}
               className="flex h-9 w-9 shrink-0 items-center justify-center border border-white/25 bg-black/35 text-white/80"
-              aria-label="閉じる"
+              aria-label={c.close}
             >
               <X size={15} strokeWidth={2.4} />
             </button>
@@ -3070,7 +3104,7 @@ function ApproveApplicantConfirmSheet({
               />
             </p>
             <p className={cn(jp.className, "mt-4 text-sm leading-relaxed text-white/70")}>
-              {squadApplicantApprovePrompt(applicant.displayName)}
+              {squadApplicantApprovePrompt(applicant.displayName, lang)}
             </p>
           </div>
 
@@ -3086,7 +3120,7 @@ function ApproveApplicantConfirmSheet({
                 background: `linear-gradient(180deg, ${SQUAD_GOLD.acc}, ${SQUAD_GOLD.accDeep})`,
               }}
             >
-              承認する
+              {c.approveSubmit}
             </button>
             <button
               type="button"
@@ -3119,6 +3153,7 @@ function IncomingInviteSheet({
 }) {
   const reduceMotion = useReducedMotion() === true;
   const isWeb = useSquadBattleIsWeb();
+  const { c, lang, invite: inviteCopy } = useSquadCopy();
   const members = invite.members ?? [];
   const deadline = invite.deadlineLabel?.trim() || null;
 
@@ -3155,19 +3190,19 @@ function IncomingInviteSheet({
                   isWeb ? "text-[16px]" : "text-[15px]"
                 )}
               >
-                {squadInviteIncomingTitle(invite.fromDisplayName)}
+                {squadInviteIncomingTitle(invite.fromDisplayName, lang)}
               </p>
               <p className={cn(jp.className, "mt-2 text-sm text-white/55")}>
                 {deadline
-                  ? `${SQUAD_INVITE_DEADLINE_PREFIX} ${deadline}`
-                  : SQUAD_INVITE_DEADLINE_PREFIX}
+                  ? `${inviteCopy.deadlinePrefix} ${deadline}`
+                  : inviteCopy.deadlinePrefix}
               </p>
             </div>
             <button
               type="button"
               onClick={onClose}
               className="flex h-9 w-9 shrink-0 items-center justify-center border border-white/25 bg-black/35 text-white/80"
-              aria-label="閉じる"
+              aria-label={c.close}
             >
               <X size={15} strokeWidth={2.4} />
             </button>
@@ -3213,7 +3248,7 @@ function IncomingInviteSheet({
           ) : null}
 
           <p className={cn(jp.className, "mt-4 text-[12px] leading-relaxed text-white/45")}>
-            {SQUAD_INVITE_HOLD_HINT}
+            {inviteCopy.holdHint}
           </p>
 
           <div className="mt-4 flex flex-col gap-2.5">
@@ -3228,7 +3263,7 @@ function IncomingInviteSheet({
                 background: `linear-gradient(180deg, ${SQUAD_GOLD.acc}, ${SQUAD_GOLD.accDeep})`,
               }}
             >
-              参加する
+              {c.join}
             </button>
             <button
               type="button"
@@ -3238,7 +3273,7 @@ function IncomingInviteSheet({
                 "flex w-full items-center justify-center border border-white/25 bg-black py-3 text-[12px] font-bold uppercase tracking-[0.16em] text-white/75"
               )}
             >
-              保留する
+              {c.hold}
             </button>
           </div>
         </div>
@@ -3262,6 +3297,7 @@ function OpenSquadRow({
   onOpenMemberProfile: (profile: SquadApplicantProfile) => void;
 }) {
   const isWeb = useSquadBattleIsWeb();
+  const { c } = useSquadCopy();
   const [expanded, setExpanded] = useState(false);
   const canApply = !applied && !applyDisabled;
   const actionH = isWeb ? "h-9" : "h-8";
@@ -3306,7 +3342,7 @@ function OpenSquadRow({
             type="button"
             onClick={() => setExpanded((v) => !v)}
             aria-expanded={expanded}
-            aria-label={expanded ? "メンバーを閉じる" : "メンバーを見る"}
+            aria-label={expanded ? c.membersCollapse : c.membersExpand}
             className={cn(
               "box-border flex w-8 shrink-0 items-center justify-center border border-white/25 bg-white/[0.04] text-white/80 transition hover:border-white/40 hover:bg-white/[0.08]",
               actionH,
@@ -3348,7 +3384,7 @@ function OpenSquadRow({
                 : undefined
             }
           >
-            {applied ? "申請中" : "申請"}
+            {applied ? c.applying : c.applyShort}
           </button>
         </div>
       </div>
@@ -3391,23 +3427,22 @@ function PastSquadsPanel({
   showEmpty?: boolean;
 }) {
   const isWeb = useSquadBattleIsWeb();
+  const { c } = useSquadCopy();
   if (pastSquads.length === 0 && !showEmpty) return null;
 
   return (
     <section>
       <SquadSectionHeader
-        kicker="Past squads"
-        title="過去のスクワッド"
+        kicker={c.pastSquadsKicker}
+        title={c.pastSquadsTitle}
         trailing={
           <p className={cn(jp.className, "text-[11px] text-white/35")}>
-            直近 {pastSquads.length} 大会
+            {c.pastSquadsRecent(pastSquads.length)}
           </p>
         }
       />
       {pastSquads.length === 0 ? (
-        <SquadEmptyHint>
-          まだ過去のスクワッドがありません。大会終了後にここに表示されます。
-        </SquadEmptyHint>
+        <SquadEmptyHint>{c.pastSquadsEmpty}</SquadEmptyHint>
       ) : null}
       <div className={cn("flex flex-col", isWeb ? "gap-2.5" : "gap-2")}>
         {pastSquads.map((item) => {
@@ -3439,7 +3474,9 @@ function PastSquadsPanel({
                   </p>
                   <p className={cn(jp.className, "mt-0.5 text-xs text-white/40")}>
                     {item.battleName}
-                    {item.role === "owner" ? " · 代表" : " · メンバー"}
+                    {item.role === "owner"
+                      ? c.roleOwnerSuffix
+                      : c.roleMemberSuffix}
                   </p>
                   <p
                     className={cn(
@@ -3465,7 +3502,7 @@ function PastSquadsPanel({
                   )}
                 >
                   <Users size={14} strokeWidth={2.4} />
-                  同じメンバーで募集
+                  {c.reformCta}
                 </SquadChamferButton>
               ) : null}
 
@@ -3502,7 +3539,7 @@ function PastSquadsPanel({
                         )}
                         style={chamferStyle}
                       >
-                        誘う
+                        {c.invite}
                       </button>
                     </div>
                   ))}
@@ -3511,7 +3548,7 @@ function PastSquadsPanel({
 
               {!canReform && !canInvite && item.role === "owner" ? (
                 <p className={cn(jp.className, "mt-2 text-[11px] text-white/35")}>
-                  未所属時に「同じメンバーで募集」できます
+                  {c.reformOnlyWhenFree}
                 </p>
               ) : null}
             </div>
@@ -3534,13 +3571,14 @@ function IncomingInvitesPanel({
   showEmpty?: boolean;
 }) {
   const isWeb = useSquadBattleIsWeb();
+  const { c, invite: inviteCopy } = useSquadCopy();
   if (invites.length === 0 && !showEmpty) return null;
 
   return (
     <section>
       <SquadSectionHeader
-        kicker="Invites"
-        title={SQUAD_INVITE_LIST_TITLE}
+        kicker={c.invitesKicker}
+        title={inviteCopy.listTitle}
         accent="amber"
         trailing={
           <p className={cn(jp.className, "text-[11px] text-white/35")}>
@@ -3549,10 +3587,10 @@ function IncomingInvitesPanel({
         }
       />
       <p className={cn(jp.className, "mb-2 text-[12px] text-white/40")}>
-        {SQUAD_INVITE_LIST_HINT}
+        {inviteCopy.listHint}
       </p>
       {invites.length === 0 ? (
-        <SquadEmptyHint>{SQUAD_INVITE_LIST_EMPTY}</SquadEmptyHint>
+        <SquadEmptyHint>{inviteCopy.listEmpty}</SquadEmptyHint>
       ) : null}
       <div className={cn("flex flex-col", isWeb ? "gap-2" : "gap-1.5")}>
         {invites.map((inv) => (
@@ -3573,7 +3611,7 @@ function IncomingInvitesPanel({
                   {inv.squadName}
                 </p>
                 <p className={cn(jp.className, "text-xs text-white/40")}>
-                  {inv.fromDisplayName} からの招待
+                  {c.inviteFrom(inv.fromDisplayName)}
                 </p>
               </div>
             </div>
@@ -3585,7 +3623,7 @@ function IncomingInvitesPanel({
                 style={{ color: "#FFFFFF" }}
               >
                 <Check size={13} strokeWidth={2.6} />
-                参加する
+                {c.join}
               </SquadChamferButton>
               <button
                 type="button"
@@ -3596,7 +3634,7 @@ function IncomingInvitesPanel({
                 )}
                 style={chamferStyle}
               >
-                今回はパス
+                {c.passThisTime}
               </button>
             </div>
           </div>
@@ -3642,6 +3680,7 @@ function NoneState({
   onDeclineInvite: (invite: SquadIncomingInviteMock) => void;
 }) {
   const isWeb = useSquadBattleIsWeb();
+  const { c } = useSquadCopy();
   const atLimit = pendingCount >= SQUAD_BATTLE_MAX_PENDING_APPLICATIONS;
   const [page, setPage] = useState(0);
   const pageCount = Math.max(
@@ -3702,7 +3741,7 @@ function NoneState({
             )}
           >
             <Plus size={isWeb ? 17 : 16} strokeWidth={2.5} />
-            グループを作成
+            {c.createGroup}
           </SquadChamferButton>
           <SquadChamferButton
             onClick={onJoinByCode}
@@ -3713,7 +3752,7 @@ function NoneState({
             )}
           >
             <Ticket size={isWeb ? 17 : 16} strokeWidth={2} />
-            招待コードで参加
+            {c.joinByInviteCode}
           </SquadChamferButton>
           </div>
         </div>
@@ -3739,7 +3778,7 @@ function NoneState({
 
       <section>
         <SquadSectionHeader
-          kicker="My applications"
+          kicker={c.myApplicationsKicker}
           accent="amber"
           trailing={
             <p
@@ -3758,12 +3797,11 @@ function NoneState({
         />
         {atLimit ? (
           <p className={cn(jp.className, "mb-2 text-xs text-amber-200/70")}>
-            申請は最大 {SQUAD_BATTLE_MAX_PENDING_APPLICATIONS}{" "}
-            件までです。承認または取り下げ後に追加できます。
+            {c.applicationLimitHint(SQUAD_BATTLE_MAX_PENDING_APPLICATIONS)}
           </p>
         ) : null}
         {outgoingRequests.length === 0 ? (
-          <SquadEmptyHint>送信中の参加申請はありません。</SquadEmptyHint>
+          <SquadEmptyHint>{c.noOutgoingApplications}</SquadEmptyHint>
         ) : (
           <div className="flex flex-col gap-2">
             {outgoingRequests.map((req) => (
@@ -3783,7 +3821,7 @@ function NoneState({
                     {req.squadName}
                   </p>
                   <p className={cn(jp.className, "text-xs text-white/40")}>
-                    承認待ち · {req.createdAtLabel}
+                    {c.awaitingApproval} · {req.createdAtLabel}
                   </p>
                 </div>
                 <button
@@ -3795,7 +3833,7 @@ function NoneState({
                   )}
                   style={chamferStyle}
                 >
-                  取り下げ
+                  {c.withdraw}
                 </button>
               </div>
             ))}
@@ -3805,8 +3843,8 @@ function NoneState({
 
       <section>
         <SquadSectionHeader
-          kicker="Open squads"
-          title="空き枠あり"
+          kicker={c.openSquadsKicker}
+          title={c.openSquadsTitle}
           trailing={
             <div className="text-right">
               <p
@@ -3829,14 +3867,11 @@ function NoneState({
         />
         {atLimit && outgoingRequests.length === 0 ? (
           <p className={cn(jp.className, "mb-2 text-xs text-amber-200/70")}>
-            申請は最大 {SQUAD_BATTLE_MAX_PENDING_APPLICATIONS}{" "}
-            件までです。承認または取り下げ後に追加できます。
+            {c.applicationLimitHint(SQUAD_BATTLE_MAX_PENDING_APPLICATIONS)}
           </p>
         ) : null}
         {pageItems.length === 0 ? (
-          <SquadEmptyHint>
-            いま空き枠のある公開スクワッドはありません。グループを作成するか、招待コードで参加してください。
-          </SquadEmptyHint>
+          <SquadEmptyHint>{c.noOpenSquads}</SquadEmptyHint>
         ) : (
           <div className="flex flex-col gap-2">
             {pageItems.map((squad) => (
@@ -3873,13 +3908,14 @@ function IncomingRequestsPanel({
   onReject: (req: SquadJoinRequest) => void;
 }) {
   const isWeb = useSquadBattleIsWeb();
+  const { c, invite: inviteCopy } = useSquadCopy();
   if (requests.length === 0) return null;
 
   return (
     <section className={cn(isWeb ? "mt-6" : "mt-5")}>
       <SquadSectionHeader
-        kicker="Join requests"
-        title="参加申請"
+        kicker={c.joinRequestsKicker}
+        title={c.joinRequestsTitle}
         trailing={
           <p className={cn(jp.className, "text-[11px] text-white/35")}>
             {requests.length} pending
@@ -3899,7 +3935,7 @@ function IncomingRequestsPanel({
               type="button"
               onClick={() => onOpenProfile(req)}
               className="flex w-full items-center gap-3 text-left"
-              aria-label={`${req.applicant.displayName}のプロフィール`}
+              aria-label={c.applicantProfileOf(req.applicant.displayName)}
             >
               <ProfileAvatar profile={req.applicant} square />
               <div className="min-w-0 flex-1">
@@ -3939,7 +3975,7 @@ function IncomingRequestsPanel({
                         "text-[10px] font-bold tracking-[0.08em] text-white/45"
                       )}
                     >
-                      {SQUAD_APPLICANT_WR_LABEL}
+                      {inviteCopy.wrLabel}
                     </span>
                     <CyberNumber
                       value={req.applicant.winRate.toFixed(1)}
@@ -3962,7 +3998,7 @@ function IncomingRequestsPanel({
                 )}
               >
                 <X size={isWeb ? 14 : 13} />
-                拒否
+                {c.reject}
               </button>
               <button
                 type="button"
@@ -3977,7 +4013,7 @@ function IncomingRequestsPanel({
                 }}
               >
                 <Check size={isWeb ? 14 : 13} />
-                承認
+                {c.approve}
               </button>
             </div>
           </div>
@@ -4453,6 +4489,7 @@ function SquadBattlePreviewToolsOverlay({
 }) {
   const [mounted, setMounted] = useState(false);
   const isWeb = variant === "web";
+  const { c, lang } = useSquadCopy();
 
   useEffect(() => {
     setMounted(true);
@@ -4493,7 +4530,7 @@ function SquadBattlePreviewToolsOverlay({
         >
           <button
             type="button"
-            aria-label="閉じる"
+            aria-label={c.close}
             className="absolute inset-0 bg-[#020609]/78"
             onClick={onClose}
           />
@@ -4555,7 +4592,7 @@ function SquadBattlePreviewToolsOverlay({
                   clipPath:
                     "polygon(5px 0%, 100% 0%, 100% calc(100% - 5px), calc(100% - 5px) 100%, 0% 100%, 0% 5px)",
                 }}
-                aria-label="閉じる"
+                aria-label={c.close}
               >
                 <X size={isWeb ? 15 : 14} strokeWidth={2.4} />
               </button>
@@ -4601,7 +4638,7 @@ function SquadBattlePreviewToolsOverlay({
               Season phase
             </p>
             <div className={cn("mb-4 flex flex-wrap", isWeb ? "gap-2.5" : "gap-2")}>
-              {SQUAD_BATTLE_UI_PHASE_OPTIONS.map((s) => {
+              {squadBattleUiPhaseOptions(lang).map((s) => {
                 const active = uiPhase === s.id;
                 return (
                   <button
@@ -4706,6 +4743,15 @@ export default function SquadBattlePage({
 }: Props) {
   const isPreviewMode = mode === "preview";
   const router = useRouter();
+  const { fUser } = useFirebaseUser();
+  const { language } = useUserLanguage(fUser?.uid ?? null);
+  const lang: SquadBattleUiLang = language === "en" ? "en" : "ja";
+  const c = useMemo(() => squadBattleScreenCopy(lang), [lang]);
+  const inviteCopy = useMemo(() => squadBattleInviteCopy(lang), [lang]);
+  const copyBundle = useMemo<SquadBattleCopyBundle>(
+    () => ({ lang, c, invite: inviteCopy }),
+    [lang, c, inviteCopy]
+  );
   const [previewState, setPreviewState] =
     useState<SquadBattlePreviewState>(isPreviewMode ? "full" : "none");
   const [previewToolsOpen, setPreviewToolsOpen] = useState(false);
@@ -4935,10 +4981,14 @@ export default function SquadBattlePage({
         }
         if (boot.joinRequests) {
           setLiveIncomingRequests(
-            boot.joinRequests.incoming.map(mapJoinRequestApiToUi)
+            boot.joinRequests.incoming.map((row) =>
+              mapJoinRequestApiToUi(row, lang)
+            )
           );
           setLiveOutgoingRequests(
-            boot.joinRequests.outgoing.map(mapJoinRequestApiToUi)
+            boot.joinRequests.outgoing.map((row) =>
+              mapJoinRequestApiToUi(row, lang)
+            )
           );
         }
       } catch {
@@ -4948,7 +4998,7 @@ export default function SquadBattlePage({
     return () => {
       cancelled = true;
     };
-  }, [isPreviewMode]);
+  }, [isPreviewMode, lang]);
 
   useEffect(() => {
     if (!liveBattleId) return;
@@ -5030,6 +5080,7 @@ export default function SquadBattlePage({
         );
         const res = await fetchGroupBattleMyPayout(liveBattleId, {
           idToken: token,
+          lang,
         });
         if (cancelled || !res?.payout) return;
         const p = res.payout;
@@ -5055,7 +5106,7 @@ export default function SquadBattlePage({
     return () => {
       cancelled = true;
     };
-  }, [uiPhase, liveBattleId, isPreviewMode]);
+  }, [uiPhase, liveBattleId, isPreviewMode, lang]);
 
   useEffect(() => {
     const max = Math.min(
@@ -5149,19 +5200,28 @@ export default function SquadBattlePage({
     const base =
       liveIncomingRequests ??
       (useLiveFallbacks ? [] : mock.incomingRequests);
-    return base.filter((r) => !dismissedRequestIds.includes(r.id));
+    return base
+      .filter((r) => !dismissedRequestIds.includes(r.id))
+      .map((r) => ({
+        ...r,
+        createdAtLabel: localizeSquadMockRelativeLabel(r.createdAtLabel, lang),
+      }));
   }, [
     liveIncomingRequests,
     mock.incomingRequests,
     dismissedRequestIds,
     useLiveFallbacks,
+    lang,
   ]);
 
   const outgoingForDisplay = useMemo(() => {
     const base = [
       ...(liveOutgoingRequests ??
         (useLiveFallbacks ? [] : mock.myOutgoingRequests)),
-    ];
+    ].map((r) => ({
+      ...r,
+      createdAtLabel: localizeSquadMockRelativeLabel(r.createdAtLabel, lang),
+    }));
     for (const id of extraAppliedIds) {
       if (base.some((r) => r.squadId === id)) continue;
       const squad = openSquadsForUi.find((s) => s.id === id);
@@ -5171,7 +5231,7 @@ export default function SquadBattlePage({
         squadId: id,
         squadName: squad.name,
         status: "pending",
-        createdAtLabel: "たった今",
+        createdAtLabel: c.justNow,
         applicant: {
           uid: liveSelfUid ?? "me",
           handle: "",
@@ -5193,6 +5253,8 @@ export default function SquadBattlePage({
     withdrawnRequestIds,
     useLiveFallbacks,
     liveSelfUid,
+    c.justNow,
+    lang,
   ]);
 
   const pendingCount = outgoingForDisplay.length;
@@ -5288,7 +5350,7 @@ export default function SquadBattlePage({
           { idToken: token }
         );
         if (!res.ok) {
-          flash(`再招集失敗: ${res.error}`);
+          flash(c.flashReformFailed(res.error));
           setReformBusyId(null);
           return;
         }
@@ -5297,10 +5359,10 @@ export default function SquadBattlePage({
         setLiveMySquadId(res.squadId);
         setLiveIsOwner(true);
         flash(
-          `再招集: ${name}（招待 ${res.invited.length} / スキップ ${res.skipped.length}）`
+          c.flashReformDone(name, res.invited.length, res.skipped.length)
         );
       } catch {
-        flash("再招集に失敗しました");
+        flash(c.flashReformError);
       }
       setReformBusyId(null);
       return;
@@ -5312,7 +5374,7 @@ export default function SquadBattlePage({
     setDismissedRequestIds([]);
     setProfileRequest(null);
     setMainTab("join");
-    flash(`同じメンバーで募集: ${name}`);
+    flash(c.flashReformMock(name));
     setReformBusyId(null);
   }
 
@@ -5339,16 +5401,16 @@ export default function SquadBattlePage({
           },
           { idToken: token }
         );
-        flash(res.ok ? "招待を送りました" : `招待失敗: ${res.error}`);
+        flash(res.ok ? c.flashInviteSent : c.flashInviteFailed(res.error));
         if (res.ok) setInviteSendTarget(null);
       } catch {
-        flash("招待に失敗しました");
+        flash(c.flashInviteError);
       }
       setReformBusyId(null);
       return;
     }
     const member = item.members.find((m) => m.uid === memberUid);
-    flash(`招待を送りました: ${member?.displayName ?? memberUid}`);
+    flash(c.flashInviteSentTo(member?.displayName ?? memberUid));
     setInviteSendTarget(null);
     setReformBusyId(null);
   }
@@ -5364,7 +5426,7 @@ export default function SquadBattlePage({
           idToken: token,
         });
         if (!res.ok) {
-          flash(`参加失敗: ${res.error}`);
+          flash(c.flashJoinFailed(res.error));
           return;
         }
         setDismissedInviteIds((prev) => [...prev, invite.id]);
@@ -5380,10 +5442,10 @@ export default function SquadBattlePage({
         setDismissedRequestIds([]);
         setLiveOutgoingRequests([]);
         setMainTab("join");
-        flash(`参加: ${invite.squadName}`);
+        flash(c.flashJoined(invite.squadName));
         return;
       } catch {
-        flash("参加に失敗しました");
+        flash(c.flashJoinError);
         return;
       }
     }
@@ -5394,7 +5456,7 @@ export default function SquadBattlePage({
     setPreviewState("recruiting");
     setCreatedSquadName(invite.squadName);
     setMainTab("join");
-    flash(`参加: ${invite.squadName}`);
+    flash(c.flashJoined(invite.squadName));
   }
 
   async function handleDeclineInvite(invite: SquadIncomingInviteMock) {
@@ -5408,17 +5470,17 @@ export default function SquadBattlePage({
           idToken: token,
         });
         if (!res.ok) {
-          flash(`パス失敗: ${res.error}`);
+          flash(c.flashPassFailed(res.error));
           return;
         }
       } catch {
-        flash("パスに失敗しました");
+        flash(c.flashPassError);
         return;
       }
     }
     setDismissedInviteIds((prev) => [...prev, invite.id]);
     setIncomingJoinConfirmInvite(null);
-    flash(`パス: ${invite.squadName}`);
+    flash(c.flashPassed(invite.squadName));
   }
 
   function handlePreviewStateChange(next: SquadBattlePreviewState) {
@@ -5458,8 +5520,8 @@ export default function SquadBattlePage({
         if (!res.ok) {
           flash(
             res.error === "invalid_invite"
-              ? "コードが無効です"
-              : `参加失敗: ${res.error}`
+              ? c.flashInvalidCode
+              : c.flashJoinFailed(res.error)
           );
           setJoinByCodeBusy(false);
           return;
@@ -5485,9 +5547,9 @@ export default function SquadBattlePage({
         setLiveOutgoingRequests([]);
         setJoinedInviteSquad(null);
         setMainTab("join");
-        flash("スクワッドに参加しました");
+        flash(c.flashJoinedSquad);
       } catch {
-        flash("参加に失敗しました");
+        flash(c.flashJoinError);
       }
       setJoinByCodeBusy(false);
       return;
@@ -5495,7 +5557,7 @@ export default function SquadBattlePage({
 
     const mockNorm = normalizeUiInviteCode(SQUAD_BATTLE_MOCK_INVITE_CODE);
     if (normalized !== mockNorm) {
-      flash("コードが無効です（プレビューは NC-7K2M）");
+      flash(c.flashInvalidCodePreview);
       setJoinByCodeBusy(false);
       return;
     }
@@ -5504,7 +5566,7 @@ export default function SquadBattlePage({
     setExtraAppliedIds([]);
     setDismissedRequestIds([]);
     setMainTab("join");
-    flash("招待コードで参加しました");
+    flash(c.flashJoinedByCode);
     setJoinByCodeBusy(false);
   }
 
@@ -5523,7 +5585,7 @@ export default function SquadBattlePage({
           { idToken: token }
         );
         if (!res.ok) {
-          flash(`作成失敗: ${res.error}`);
+          flash(c.flashCreateFailed(res.error));
           setCreateSquadBusy(false);
           return;
         }
@@ -5548,16 +5610,16 @@ export default function SquadBattlePage({
         setDismissedRequestIds([]);
         setProfileRequest(null);
         setMainTab("join");
-        flash(`グループを作成: ${name}`);
+        flash(c.flashCreated(name));
       } catch {
-        flash("作成に失敗しました");
+        flash(c.flashCreateError);
       }
       setCreateSquadBusy(false);
       return;
     }
 
     if (!isPreviewMode) {
-      flash("開催中の大会がありません");
+      flash(c.flashNoActiveBattle);
       return;
     }
 
@@ -5568,13 +5630,13 @@ export default function SquadBattlePage({
     setDismissedRequestIds([]);
     setProfileRequest(null);
     setMainTab("join");
-    flash(`グループを作成: ${name}`);
+    flash(c.flashCreated(name));
   }
 
   async function handleApplyToSquad(squad: OpenSquadListing) {
     if (appliedSquadIds.has(squad.id)) return;
     if (pendingCount >= SQUAD_BATTLE_MAX_PENDING_APPLICATIONS) {
-      flash(`申請は最大${SQUAD_BATTLE_MAX_PENDING_APPLICATIONS}件まで`);
+      flash(c.flashApplicationLimit(SQUAD_BATTLE_MAX_PENDING_APPLICATIONS));
       return;
     }
     if (liveBattleId) {
@@ -5588,7 +5650,7 @@ export default function SquadBattlePage({
           idToken: token,
         });
         if (!res.ok) {
-          flash(`申請失敗: ${res.error}`);
+          flash(c.flashApplyFailed(res.error));
           return;
         }
         setExtraAppliedIds((prev) =>
@@ -5604,7 +5666,7 @@ export default function SquadBattlePage({
               squadId: squad.id,
               squadName: squad.name,
               status: "pending",
-              createdAtLabel: "たった今",
+              createdAtLabel: c.justNow,
               applicant: {
                 uid: liveSelfUid ?? "me",
                 handle: "",
@@ -5618,23 +5680,23 @@ export default function SquadBattlePage({
             },
           ];
         });
-        flash(`申請を送信: ${squad.name}`);
+        flash(c.flashApplySent(squad.name));
         setApplyConfirmSquad(null);
       } catch {
-        flash("申請に失敗しました");
+        flash(c.flashApplyError);
       }
       return;
     }
 
     if (!isPreviewMode) {
-      flash("開催中の大会がありません");
+      flash(c.flashNoActiveBattle);
       return;
     }
 
     setExtraAppliedIds((prev) =>
       prev.includes(squad.id) ? prev : [...prev, squad.id]
     );
-    flash(`申請を送信: ${squad.name}`);
+    flash(c.flashApplySent(squad.name));
     setApplyConfirmSquad(null);
   }
 
@@ -5656,7 +5718,7 @@ export default function SquadBattlePage({
           { idToken: token }
         );
         if (!res.ok) {
-          flash(`${decision === "approve" ? "承認" : "拒否"}失敗: ${res.error}`);
+          flash(c.flashResolveFailed(decision, res.error));
           return;
         }
         setDismissedRequestIds((prev) =>
@@ -5689,11 +5751,9 @@ export default function SquadBattlePage({
         }
         setApproveConfirmRequest(null);
         setProfileRequest(null);
-        flash(
-          `${decision === "approve" ? "承認" : "拒否"}: ${req.applicant.displayName}`
-        );
+        flash(c.flashResolveDone(decision, req.applicant.displayName));
       } catch {
-        flash("処理に失敗しました");
+        flash(c.flashResolveError);
       }
       return;
     }
@@ -5703,9 +5763,7 @@ export default function SquadBattlePage({
     );
     setApproveConfirmRequest(null);
     setProfileRequest(null);
-    flash(
-      `${decision === "approve" ? "承認" : "拒否"}: ${req.applicant.displayName}`
-    );
+    flash(c.flashResolveDone(decision, req.applicant.displayName));
   }
 
   async function handleRenameSquad(name: string) {
@@ -5723,22 +5781,22 @@ export default function SquadBattlePage({
           { idToken: token }
         );
         if (!res.ok) {
-          flash(`名前変更失敗: ${res.error}`);
+          flash(c.flashRenameFailed(res.error));
           return;
         }
         setCreatedSquadName(res.name);
         setLiveFormingSquad((prev) =>
           prev ? { ...prev, name: res.name } : prev
         );
-        flash(`名前を変更: ${res.name}`);
+        flash(c.flashRenamed(res.name));
         return;
       } catch {
-        flash("名前変更に失敗しました");
+        flash(c.flashRenameError);
         return;
       }
     }
     setCreatedSquadName(name);
-    flash(`名前を変更: ${name}`);
+    flash(c.flashRenamed(name));
   }
 
   async function handleWithdrawRequest(req: SquadJoinRequest) {
@@ -5755,17 +5813,17 @@ export default function SquadBattlePage({
           { idToken: token }
         );
         if (!res.ok) {
-          flash(`取り下げ失敗: ${res.error}`);
+          flash(c.flashWithdrawFailed(res.error));
           return;
         }
         setLiveOutgoingRequests((prev) =>
           prev ? prev.filter((r) => r.id !== req.id) : prev
         );
         setExtraAppliedIds((prev) => prev.filter((id) => id !== req.squadId));
-        flash(`申請を取り下げ: ${req.squadName}`);
+        flash(c.flashWithdrawn(req.squadName));
         return;
       } catch {
-        flash("取り下げに失敗しました");
+        flash(c.flashWithdrawError);
         return;
       }
     }
@@ -5773,7 +5831,7 @@ export default function SquadBattlePage({
       prev.includes(req.id) ? prev : [...prev, req.id]
     );
     setExtraAppliedIds((prev) => prev.filter((id) => id !== req.squadId));
-    flash(`申請を取り下げ: ${req.squadName}`);
+    flash(c.flashWithdrawn(req.squadName));
   }
 
   async function handleLeaveSquad() {
@@ -5788,16 +5846,16 @@ export default function SquadBattlePage({
         idToken: token,
       });
       if (!res.ok) {
-        flash(`脱退失敗: ${res.error}`);
+        flash(c.flashLeaveFailed(res.error));
         return;
       }
       setLiveFormingSquad(null);
       setLiveMySquadId(null);
       setLiveIsOwner(false);
       setCreatedSquadName(null);
-      flash("スクワッドから脱退しました");
+      flash(c.flashLeft);
     } catch {
-      flash("脱退に失敗しました");
+      flash(c.flashLeaveError);
     }
   }
 
@@ -5813,16 +5871,16 @@ export default function SquadBattlePage({
         idToken: token,
       });
       if (!res.ok) {
-        flash(`解散失敗: ${res.error}`);
+        flash(c.flashDissolveFailed(res.error));
         return;
       }
       setLiveFormingSquad(null);
       setLiveMySquadId(null);
       setLiveIsOwner(false);
       setCreatedSquadName(null);
-      flash("スクワッドを解散しました");
+      flash(c.flashDissolved);
     } catch {
-      flash("解散に失敗しました");
+      flash(c.flashDissolveError);
     }
   }
 
@@ -5834,6 +5892,7 @@ export default function SquadBattlePage({
 
   return (
     <SquadBattleIsWebCtx.Provider value={variant === "web"}>
+    <SquadBattleCopyCtx.Provider value={copyBundle}>
     <>
       <CyberSubpageShell
         eyebrow="RANKINGS"
@@ -5931,7 +5990,7 @@ export default function SquadBattlePage({
               result={
                 liveRewardResult ??
                 (isPreviewMode
-                  ? SQUAD_BATTLE_REWARD_RESULT_MOCK
+                  ? squadBattleRewardResultMock(lang)
                   : {
                       weekly: [
                         { weekIndex: 1, rank: null, units: 0, status: "none" },
@@ -5942,7 +6001,7 @@ export default function SquadBattlePage({
                       monthlyRank: null,
                       monthlyUnits: 0,
                       monthlyStatus: "none",
-                      payoutNote: "獲得 Unit を読み込み中…",
+                      payoutNote: c.rewardLoading,
                     })
               }
               loading={
@@ -5954,10 +6013,7 @@ export default function SquadBattlePage({
           ) : mySquad == null ? (
             uiPhase === "battle" ? (
               <div className={cn("flex flex-col", variant === "web" ? "gap-4" : "gap-3")}>
-                <SquadEmptyHint>
-                  バトル中のため新規参加・作成はできません。順位表は RANK
-                  タブで観戦できます。
-                </SquadEmptyHint>
+                <SquadEmptyHint>{c.spectatorDuringBattle}</SquadEmptyHint>
                 <button
                   type="button"
                   onClick={() => setMainTab("rank")}
@@ -5967,17 +6023,17 @@ export default function SquadBattlePage({
                   )}
                   style={chamferStyle}
                 >
-                  RANK を見る
+                  {c.viewRank}
                 </button>
               </div>
             ) : !joinActionsOpen ? (
               <div className={cn("flex flex-col", variant === "web" ? "gap-4" : "gap-3")}>
                 <SquadEmptyHint>
                   {liveBattlePhase === "locking"
-                    ? "メンバー確定中です。募集は締め切られました。"
+                    ? c.lockingNotice
                     : liveBattlePhase === "announced"
-                      ? "まもなく募集が始まります。開始までお待ちください。"
-                      : "いまは参加・作成できません。"}
+                      ? c.announcedNotice
+                      : c.joinClosedNotice}
                 </SquadEmptyHint>
               </div>
             ) : (
@@ -6015,7 +6071,7 @@ export default function SquadBattlePage({
                 onOpenMemberProfile={openMemberProfile}
                 onCopyInviteCode={(code) => {
                   void copyTextToClipboard(code).then((ok) => {
-                    flash(ok ? `コピーしました: ${code}` : `コピー失敗: ${code}`);
+                    flash(ok ? c.flashCopied(code) : c.flashCopyFailed(code));
                   });
                 }}
                 onRenameSquad={
@@ -6040,7 +6096,7 @@ export default function SquadBattlePage({
                   )}
                   style={chamferStyle}
                 >
-                  メンバー LOCKED · 入れ替え・追加申請の受付は終了しています。
+                  {c.membersLockedNotice}
                 </p>
               ) : null}
               {(liveIsOwner ||
@@ -6092,7 +6148,7 @@ export default function SquadBattlePage({
               )}
             >
               <div className="min-w-0 flex-1">
-                <CyberSlantedTabBar fill aria-label="週間・月間">
+                <CyberSlantedTabBar fill aria-label={c.periodTabsLabel}>
                   <CyberSlantedTab
                     role="tab"
                     label="WEEK"
@@ -6122,15 +6178,16 @@ export default function SquadBattlePage({
                   )}
                   title={
                     liveBattleId
-                      ? `大会 ${liveBattleId}`
-                      : "プレビュー（モック）"
+                      ? c.boardBattleTitle(liveBattleId)
+                      : c.boardPreviewTitle
                   }
                 >
                   {boardStatus === "final" ? "FINAL" : "LIVE"}
                 </span>
-                {formatSquadBattleBoardBuiltAt(boardBuiltAtMs) ? (
+                {formatSquadBattleBoardBuiltAt(boardBuiltAtMs, lang) ? (
                   <span className={cn(jp.className, "text-[10px] text-white/35")}>
-                    更新 {formatSquadBattleBoardBuiltAt(boardBuiltAtMs)}
+                    {c.boardUpdatedPrefix}{" "}
+                    {formatSquadBattleBoardBuiltAt(boardBuiltAtMs, lang)}
                   </span>
                 ) : null}
               </div>
@@ -6140,7 +6197,7 @@ export default function SquadBattlePage({
               <SquadWeekChips weekIndex={weekIndex} onChange={setWeekIndex} weeklyLabels={liveWeeklyLabels} />
             ) : (
               <p className={cn(jp.className, "mb-3 text-[11px] text-white/40")}>
-                月間 · 開催期間全体の平均スコア
+                {c.monthlyHint}
               </p>
             )}
 
@@ -6163,7 +6220,7 @@ export default function SquadBattlePage({
             ) : (
               <div className="mb-4">
                 <SquadEmptyHint>
-                  {SQUAD_BATTLE_RANK_SPECTATOR_HINT}
+                  {squadBattleRankSpectatorHint(lang)}
                 </SquadEmptyHint>
               </div>
             )}
@@ -6177,7 +6234,7 @@ export default function SquadBattlePage({
               )}
             >
                 {rankingList.length === 0 ? (
-                  <SquadEmptyHint>リーダーボードに表示するグループがありません。</SquadEmptyHint>
+                  <SquadEmptyHint>{c.leaderboardEmpty}</SquadEmptyHint>
                 ) : (
                   rankingList.map((squad, i) => (
                   <LeaderboardRow
@@ -6283,7 +6340,7 @@ export default function SquadBattlePage({
           }}
           onHold={() => {
             holdIncomingInvite(incomingInviteForModal.id);
-            flash("保留しました。招待されているスクワッドから参加できます");
+            flash(c.flashHeldInvite);
           }}
         />
       ) : null}
@@ -6292,8 +6349,8 @@ export default function SquadBattlePage({
         <CreateSquadNameSheet
           initialName={reformTarget.squadName}
           title="REFORM SQUAD"
-          ariaLabel="同じメンバーで募集"
-          submitLabel="招待を送る"
+          ariaLabel={c.reformAriaLabel}
+          submitLabel={c.reformSubmit}
           onClose={() => setReformTarget(null)}
           onCreate={(name) => {
             void handleReformConfirm(name);
@@ -6304,7 +6361,7 @@ export default function SquadBattlePage({
       {profileRequest ? (
         <ApplicantProfileSheet
           profile={profileRequest.applicant}
-          metaLabel={`申請 · ${profileRequest.createdAtLabel}`}
+          metaLabel={c.applicationMeta(profileRequest.createdAtLabel)}
           onClose={() => setProfileRequest(null)}
           onOpenPublicProfile={() => {
             const profile = profileRequest.applicant;
@@ -6355,10 +6412,12 @@ export default function SquadBattlePage({
       <SquadBattleIntroOverlay
         open={introOpen}
         onClose={() => setIntroOpen(false)}
+        language={language}
       />
       <SquadBattleLaunchOverlay
         open={launchOpen}
         battleId={liveBattleId}
+        language={language}
         onClose={() => setLaunchOpen(false)}
         onEnter={() => {
           setLaunchOpen(false);
@@ -6370,6 +6429,7 @@ export default function SquadBattlePage({
         }
       />
     </>
+    </SquadBattleCopyCtx.Provider>
     </SquadBattleIsWebCtx.Provider>
   );
 }

@@ -23,23 +23,27 @@ export function useNbaMatchupProBrief(opts: {
   const override = opts.override;
   const gameId = (opts.gameId ?? "").trim();
   const apiBase = (opts.apiBaseUrl ?? "").replace(/\/$/, "");
+  const want = enabled && override == null && !!gameId;
+  const fetchScope = `${gameId}|${apiBase}`;
+
   const [brief, setBrief] = useState<PredictProBrief | null>(
     () => sanitizeProBriefForDisplay(override) ?? null
   );
-  const [loading, setLoading] = useState(false);
+  const [readyScope, setReadyScope] = useState<string | null>(() =>
+    override != null ? fetchScope : null
+  );
 
   useEffect(() => {
     if (override !== undefined && override !== null) {
       setBrief(sanitizeProBriefForDisplay(override));
+      setReadyScope(fetchScope);
       return;
     }
     if (!enabled || !gameId) {
-      setBrief(null);
       return;
     }
 
     let cancelled = false;
-    setLoading(true);
     (async () => {
       try {
         const user = auth.currentUser;
@@ -67,14 +71,18 @@ export function useNbaMatchupProBrief(opts: {
       } catch {
         if (!cancelled) setBrief(null);
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) setReadyScope(fetchScope);
       }
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [enabled, gameId, override, apiBase]);
+  }, [enabled, gameId, override, apiBase, fetchScope]);
 
-  return { brief, loading };
+  const resolved =
+    override != null ? sanitizeProBriefForDisplay(override) ?? null : brief;
+  const loading = Boolean(want && !resolved && readyScope !== fetchScope);
+
+  return { brief: resolved, loading };
 }

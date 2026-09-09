@@ -72,12 +72,12 @@ export function predictOverlayCornerButtonClasses(
 
 /** リザルトカード FAB フライアウト（修正 / ゴミ箱）— 親基準の absolute（cyber-menu-btn の relative を上書き） */
 export function resultCardFlyoutButtonClasses(
-  isMobile: boolean,
+  _isMobile: boolean,
   action: Extract<CyberChamferAction, "edit" | "delete">
 ): string {
   return [
-    cyberChamferButtonClasses(isMobile ? "xs" : "sm", action),
-    isMobile ? "size-7" : "size-8",
+    cyberChamferButtonClasses("xs", action),
+    "size-[26px]",
     "!absolute",
   ].join(" ");
 }

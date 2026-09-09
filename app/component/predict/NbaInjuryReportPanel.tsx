@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, type KeyboardEvent } from "react";
+import { type KeyboardEvent } from "react";
 import {
   injuryDetailLabel,
   injuryStatusShortLabel,
@@ -14,7 +14,6 @@ import {
   type NbaInjuryReport,
   type NbaInjuryTeamReport,
 } from "@/lib/predict/nbaInjuryReport";
-import { injuryReasonFullNews } from "@/lib/nba/teamInjuries/injuryReasonDisplay";
 import { NBA_TEAM_NAME_BY_ID } from "@/lib/nba-team-names";
 import { getMobileTeamName } from "@/lib/team-name-split-mobile";
 import { nameBebas, nameOxanium } from "@/lib/fonts";
@@ -155,21 +154,16 @@ function InjuryStatusCard({
   row,
   language,
   onPress,
-  expanded,
-  onToggleExpand,
 }: {
   row: NbaInjuryCardRow;
   language: Language;
   onPress?: (row: NbaInjuryCardRow) => void;
-  expanded?: boolean;
-  onToggleExpand?: () => void;
 }) {
   const tone = injuryStatusTone(row.status);
   const colors = TONE[tone];
   const expected = (row.returnDate ?? "—").toUpperCase();
   const lang = language === "ja" ? "ja" : "en";
   const detail = injuryDetailLabel(row, lang);
-  const fullNews = injuryReasonFullNews(row.description, lang);
   const name = playerCardName(row.player);
   const statusShort = injuryStatusShortLabel(row.status);
 
@@ -196,6 +190,7 @@ function InjuryStatusCard({
             nameOxanium.className,
             "truncate text-left text-[13px] font-bold uppercase tracking-[0.02em] text-white",
           ].join(" ")}
+          style={{ transform: "skewX(-6deg)" }}
         >
           {name}
         </span>
@@ -236,30 +231,6 @@ function InjuryStatusCard({
       >
         ↳ {expected}
       </p>
-
-      {fullNews && language !== "ja" ? (
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggleExpand?.();
-          }}
-          className="mt-0.5 text-left text-[9px] font-bold uppercase tracking-wide text-white/40 hover:text-white/70"
-        >
-          {expanded ? "Hide detail" : "More detail"}
-        </button>
-      ) : null}
-
-      {expanded && fullNews && language !== "ja" ? (
-        <p
-          className={[
-            "mt-1 rounded-[2px] border border-white/10 bg-black/30 p-2 text-[10px] leading-relaxed text-white/60",
-            nameOxanium.className,
-          ].join(" ")}
-        >
-          {fullNews}
-        </p>
-      ) : null}
     </div>
   );
 
@@ -287,14 +258,10 @@ function TeamInjuryColumn({
   team,
   language,
   onPlayerPress,
-  expandedId,
-  onToggleExpand,
 }: {
   team: NbaInjuryTeamReport;
   language: Language;
   onPlayerPress?: (row: NbaInjuryCardRow) => void;
-  expandedId: string | null;
-  onToggleExpand: (id: string) => void;
 }) {
   const rows = toCardRows(team);
   const label = columnTeamLabel(team);
@@ -337,8 +304,6 @@ function TeamInjuryColumn({
                 row={row}
                 language={language}
                 onPress={onPlayerPress}
-                expanded={expandedId === rowKey}
-                onToggleExpand={() => onToggleExpand(rowKey)}
               />
             );
           })}
@@ -357,7 +322,6 @@ export default function NbaInjuryReportPanel({
   predictReturnMode,
 }: Props) {
   const router = useRouter();
-  const [expandedId, setExpandedId] = useState<string | null>(null);
   const resolvedReturnMode =
     predictReturnMode ?? (fromPredictGameId ? "overlay" : "route");
 
@@ -384,19 +348,11 @@ export default function NbaInjuryReportPanel({
           team={report.home}
           language={language}
           onPlayerPress={openPlayerDetail}
-          expandedId={expandedId}
-          onToggleExpand={(id) =>
-            setExpandedId((cur) => (cur === id ? null : id))
-          }
         />
         <TeamInjuryColumn
           team={report.away}
           language={language}
           onPlayerPress={openPlayerDetail}
-          expandedId={expandedId}
-          onToggleExpand={(id) =>
-            setExpandedId((cur) => (cur === id ? null : id))
-          }
         />
       </div>
       {report.asOfLabel ? (

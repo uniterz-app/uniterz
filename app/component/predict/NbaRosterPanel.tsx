@@ -21,6 +21,7 @@ import { TEAM_SHORT } from "@/lib/team-short";
 import {
   getTeamJerseyPrimaryColor,
   getTeamJerseySecondaryColor,
+  getTeamRosterMarkColor,
   getTeamUiAccentColor,
 } from "@/lib/team-colors";
 import { nameBebas, nameOxanium, resultStatsMetricNumClass } from "@/lib/fonts";
@@ -206,6 +207,7 @@ function IdentityCell({
             nameOxanium.className,
             "max-w-[5.25rem] truncate text-[11px] font-bold uppercase tracking-[0.03em] text-white",
           ].join(" ")}
+          style={{ transform: "skewX(-6deg)" }}
         >
           {playerCardName(p)}
         </p>
@@ -346,6 +348,8 @@ function TeamRosterCard({
   const jerseySecondary = getTeamJerseySecondaryColor("nba", block.teamId);
   /** 暗い背景上の文字・枠（Nets 黒など raw primary は潰れる） */
   const uiAccent = getTeamUiAccentColor("nba", block.teamId);
+  /** HOME/AWAY・背番号枠 — チーム色そのもの（ピンク寄せしない） */
+  const markAccent = getTeamRosterMarkColor("nba", block.teamId);
   const border = hexToRgba(uiAccent, 0.55);
   const fill = hexToRgba(uiAccent, 0.05);
   const divider = hexToRgba(uiAccent, 0.22);
@@ -368,8 +372,8 @@ function TeamRosterCard({
                 "rounded-[2px] border bg-transparent px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-[0.12em]",
               ].join(" ")}
               style={{
-                borderColor: uiAccent,
-                color: uiAccent,
+                borderColor: markAccent,
+                color: markAccent,
               }}
             >
               {sideLabel}
@@ -447,7 +451,7 @@ function TeamRosterCard({
           <div className="overflow-x-auto pl-1.5 pr-2.5 pb-1.5 pt-1">
             <div className="min-w-max">
               <div className="mb-0.5 flex items-center rounded-[2px] bg-white/[0.04] pr-1">
-                <IdentityCell accent={uiAccent} header />
+                <IdentityCell accent={markAccent} header />
                 <StatsCells header />
               </div>
 
@@ -457,7 +461,7 @@ function TeamRosterCard({
                 const identity = (
                   <IdentityCell
                     player={p}
-                    accent={uiAccent}
+                    accent={markAccent}
                     injuryStatus={injuryById[String(p.id)]}
                     dim={p.dimmed}
                   />
@@ -478,7 +482,7 @@ function TeamRosterCard({
                     >
                       <IdentityCell
                         player={p}
-                        accent={uiAccent}
+                        accent={markAccent}
                         injuryStatus={injuryById[String(p.id)]}
                         dim={p.dimmed}
                         interactive

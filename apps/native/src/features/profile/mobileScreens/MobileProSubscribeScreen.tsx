@@ -52,12 +52,12 @@ const PLANS: readonly {
     id: "season",
     titleJa: "Season Pass",
     titleEn: "Season Pass",
-    periodJa: "/ シーズン",
-    periodEn: "/ season",
-    badgeJa: "買い切り",
-    badgeEn: "One-time",
-    noteJa: "自動更新なし・返金なし",
-    noteEn: "No auto-renew / no refund",
+    periodJa: "〜7/31",
+    periodEn: "until Jul 31",
+    badgeJa: "〜7月末",
+    badgeEn: "Until July",
+    noteJa: "自動更新なし・途中返金なし",
+    noteEn: "No auto-renew / no mid-season refund",
   },
 ];
 
@@ -190,8 +190,8 @@ export default function MobileProSubscribeScreen({
 
           <Text style={styles.noteSmall}>
             {isJa
-              ? "※ Season Pass は自動更新しません。途中解約の返金はありません。"
-              : "Season Pass does not auto-renew. No mid-season refund."}
+              ? "※ Season Pass は対象 NBA シーズン終了（原則 7/31）まで。自動更新なし。途中解約の返金なし。"
+              : "Season Pass lasts through the NBA season (through July 31). No auto-renew. No mid-season refund."}
           </Text>
 
           <SlantCtaNative

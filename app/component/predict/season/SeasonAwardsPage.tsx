@@ -24,8 +24,10 @@ import { fetchMeSeasonStandings } from "@/lib/api/fetchSeasonStandings";
 import { fetchSeasonPredictMarket } from "@/lib/api/fetchSeasonPredictMarket";
 import { auth } from "@/lib/firebase";
 import { nameOxanium } from "@/lib/fonts";
+import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import {
   isSeasonPredictSubmitOpen,
+  SEASON_PREDICT_SUBMIT_DEADLINE_LABEL_EN,
   SEASON_PREDICT_SUBMIT_DEADLINE_LABEL_JA,
   seasonPredictSubmitLockedMessage,
 } from "@/lib/predict/seasonPredictDeadline";
@@ -37,6 +39,13 @@ import {
   type NbaAwardCandidate,
   type NbaSeasonAwardsPrediction,
 } from "@/lib/predict/nbaSeasonAwardsPredict";
+import {
+  seasonPredictAwardsIncompleteError,
+  seasonPredictAwardsPageSubtitle,
+  seasonPredictInvalidSubmitError,
+  seasonPredictMarketPendingBody,
+  seasonPredictNudgeCopy,
+} from "@/lib/predict/seasonPredictUiCopy";
 
 type Mode = "loading" | "edit" | "view" | "market" | "market_pending";
 
@@ -56,6 +65,12 @@ export default function SeasonAwardsPage() {
   const [standingsNudgeOpen, setStandingsNudgeOpen] = useState(false);
   const [rulesOpen, setRulesOpen] = useState(false);
   const [rulesAutoShown, setRulesAutoShown] = useState(false);
+  const { language } = useUserLanguage(uid);
+  const rulesLang = language === "en" ? "en" : "ja";
+  const deadlineLabel =
+    rulesLang === "en"
+      ? SEASON_PREDICT_SUBMIT_DEADLINE_LABEL_EN
+      : SEASON_PREDICT_SUBMIT_DEADLINE_LABEL_JA;
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (user) => {
@@ -130,11 +145,11 @@ export default function SeasonAwardsPage() {
   const handleSubmit = useCallback(async () => {
     if (submitting) return;
     if (!submitOpen) {
-      setError(seasonPredictSubmitLockedMessage("ja"));
+      setError(seasonPredictSubmitLockedMessage(rulesLang));
       return;
     }
     if (!isSeasonAwardsComplete(value)) {
-      setError("7つのアワードすべて選んでから提出してください。");
+      setError(seasonPredictAwardsIncompleteError(rulesLang));
       return;
     }
     setSubmitting(true);
@@ -145,7 +160,7 @@ export default function SeasonAwardsPage() {
         picks: value.picks,
       });
       if (!data.prediction) {
-        throw new Error("提出レスポンスが不正です");
+        throw new Error(seasonPredictInvalidSubmitError(rulesLang));
       }
       setValue(data.prediction);
       setCandidates(data.candidates ?? []);
@@ -161,17 +176,15 @@ export default function SeasonAwardsPage() {
     } finally {
       setSubmitting(false);
     }
-  }, [value, submitting, season, submitOpen]);
+  }, [value, submitting, season, submitOpen, rulesLang]);
+
+  const nudge = seasonPredictNudgeCopy(rulesLang);
 
   return (
     <GamesNbaSubpageShell
       eyebrow="NBA · SEASON"
       title={submitOpen ? "AWARDS" : "MARKET"}
-      subtitle={
-        submitOpen
-          ? "MVP・DPOY など主要アワードを予想。候補は人気ピックから選び、名前検索でも絞り込めます。"
-          : "締切後の提出集計。各アワードのシェア Top5 です。"
-      }
+      subtitle={seasonPredictAwardsPageSubtitle(rulesLang, submitOpen)}
       onHelpPress={() => setRulesOpen(true)}
     >
       {mode === "loading" ? (
@@ -188,7 +201,10 @@ export default function SeasonAwardsPage() {
           >
             Deadline passed · crowd market
           </p>
-          <NbaSeasonAwardsMarketPanel market={market} />
+          <NbaSeasonAwardsMarketPanel
+            market={market}
+            language={rulesLang}
+          />
         </div>
       ) : mode === "market_pending" ? (
         <div className="space-y-3 py-8 text-center">
@@ -201,7 +217,7 @@ export default function SeasonAwardsPage() {
             Market pending
           </p>
           <p className="text-[13px] leading-relaxed text-white/50">
-            提出期限を過ぎました。集計が完了次第、ここにマーケットが表示されます。
+            {seasonPredictMarketPendingBody(rulesLang)}
           </p>
           {error ? (
             <p className="text-[12px] text-[#FF8AB4]/85">{error}</p>
@@ -215,7 +231,7 @@ export default function SeasonAwardsPage() {
               "text-[10px] font-bold uppercase tracking-[0.12em] text-white/40",
             ].join(" ")}
           >
-            提出期限 · {SEASON_PREDICT_SUBMIT_DEADLINE_LABEL_JA}
+            {rulesLang === "en" ? "Deadline" : "提出期限"} · {deadlineLabel}
           </p>
           <NbaSeasonAwardsViewPanel
             prediction={value}
@@ -237,7 +253,7 @@ export default function SeasonAwardsPage() {
             </button>
           ) : (
             <p className="text-[12px] text-white/45">
-              {seasonPredictSubmitLockedMessage("ja")}
+              {seasonPredictSubmitLockedMessage(rulesLang)}
             </p>
           )}
         </div>
@@ -249,14 +265,14 @@ export default function SeasonAwardsPage() {
               "text-[10px] font-bold uppercase tracking-[0.12em] text-white/40",
             ].join(" ")}
           >
-            提出期限 · {SEASON_PREDICT_SUBMIT_DEADLINE_LABEL_JA}
+            {rulesLang === "en" ? "Deadline" : "提出期限"} · {deadlineLabel}
           </p>
           {error ? (
             <p className="text-[12px] text-[#FF8AB4]/85">{error}</p>
           ) : null}
           {!submitOpen ? (
             <p className="text-[12px] text-white/45">
-              {seasonPredictSubmitLockedMessage("ja")}
+              {seasonPredictSubmitLockedMessage(rulesLang)}
             </p>
           ) : (
             <NbaSeasonAwardsPredictPanel
@@ -264,6 +280,7 @@ export default function SeasonAwardsPage() {
               onChange={setValue}
               onSubmit={() => void handleSubmit()}
               submitDisabled={submitting}
+              language={rulesLang}
             />
           )}
           {submitting ? (
@@ -294,11 +311,10 @@ export default function SeasonAwardsPage() {
                 "text-[13px] font-extrabold uppercase tracking-[0.14em] text-cyan-100",
               ].join(" ")}
             >
-              順位予想もしますか？
+              {nudge.title}
             </h3>
             <p className="mt-2 text-[12px] leading-relaxed text-white/55">
-              アワード予想を提出しました。続けて East / West
-              の順位予想もできます。
+              {nudge.body}
             </p>
             <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end">
               <button
@@ -309,7 +325,7 @@ export default function SeasonAwardsPage() {
                   "border border-white/15 bg-white/[0.04] px-3 py-2 text-[10px] font-extrabold uppercase tracking-[0.12em] text-white/60",
                 ].join(" ")}
               >
-                あとで
+                {nudge.later}
               </button>
               <button
                 type="button"
@@ -322,7 +338,7 @@ export default function SeasonAwardsPage() {
                   "border border-cyan-300/50 bg-cyan-300/20 px-3 py-2 text-[10px] font-extrabold uppercase tracking-[0.12em] text-cyan-50",
                 ].join(" ")}
               >
-                順位予想へ
+                {nudge.goStandings}
               </button>
             </div>
           </div>
@@ -334,6 +350,7 @@ export default function SeasonAwardsPage() {
             <SeasonPredictRulesModal
               open={rulesOpen}
               kind="awards"
+              language={rulesLang}
               onClose={() => setRulesOpen(false)}
             />,
             document.body

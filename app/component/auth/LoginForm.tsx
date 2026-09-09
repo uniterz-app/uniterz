@@ -17,6 +17,8 @@ import {
   sanitizeInternalNext,
   stashPostOnboardingRedirect,
 } from "@/lib/auth/safeNextRedirect";
+import { authFormCopy } from "@/lib/auth/authFormCopy";
+import { resolveAppUiLanguage } from "@/lib/i18n/resolveAppUiLanguage";
 
 type LoginFormProps = {
   variant?: "web" | "mobile";
@@ -53,13 +55,15 @@ export default function LoginForm({ variant }: LoginFormProps) {
   const bodySans =
     "font-[family-name:var(--font-geist-sans)] text-sm leading-relaxed text-white/85";
 
+  const copy = useMemo(() => authFormCopy(resolveAppUiLanguage()), []);
+
   const ui = {
     title: "LOGIN",
     emailPlaceholder: "Email Address",
     passwordPlaceholder: "Password",
     loginCta: "LOG IN",
-    forgotLead: "パスワードをお忘れの方は",
-    forgotLink: "こちら",
+    forgotLead: copy.forgotLead,
+    forgotLink: copy.forgotLink,
     createAccount: "Create Account",
     showPw: "Show password",
     hidePw: "Hide password",

@@ -53,7 +53,6 @@ import { useNativeMyRankingUser } from "./useNativeMyRankingUser";
 import { rankingsTexts, type RankingsLanguage } from "./rankingsTexts";
 import {
   MyRankCardNative,
-  PlayoffRoundTabsNative,
   RankingListCardNative,
   RankingsMetricRowNative,
   RankingsTopPodiumNative,
@@ -81,9 +80,12 @@ type Props = {
   bottomReserveY: number;
 };
 
-function scheduleNoticeForUser(language: RankingsLanguage): string {
+function scheduleNoticeForUser(
+  language: RankingsLanguage,
+  countryCode: string | null,
+): string {
   const lang = (language === "en" ? "en" : "ja") as Language;
-  return getRankingsScheduleNoticeText(lang);
+  return getRankingsScheduleNoticeText(lang, countryCode);
 }
 
 export default function RankingsHomeScreen({ bottomReserveY }: Props) {
@@ -449,10 +451,6 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
 
           {category === "playoffs" ? (
             <>
-              {rankingsLeague === "nba" && nbaBoard === "playoffs" ? (
-                <PlayoffRoundTabsNative round={round} onChange={setRound} language={language} />
-              ) : null}
-
               {openProLocked ? null : (
               <MyRankCardNative
                 rank={rankingHasNoEntries ? null : myRank}
@@ -518,7 +516,7 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
         ) : category === "playoffs" ? (
           <>
             <Text style={styles.scheduleNoticeInline} maxFontSizeMultiplier={1.1}>
-              {scheduleNoticeForUser(language)}
+              {scheduleNoticeForUser(language, user.countryCode)}
             </Text>
             <View style={styles.metricRowWrap}>
               <RankingsMetricRowNative

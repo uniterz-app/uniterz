@@ -13,6 +13,7 @@ import {
   injuryStatusTone,
 } from "../../../../../../lib/predict/nbaInjuryReport";
 import {
+  getTeamRosterMarkColor,
   getTeamUiAccentColor,
 } from "../../../../../../lib/team-colors";
 import { nbaConferenceForTeam } from "../../../../../../lib/nba/nbaConferenceTeams";
@@ -266,6 +267,7 @@ function TeamRosterCard({
   const [open, setOpen] = useState(defaultOpen || isDetail);
   const [sort, setSort] = useState<SortState>(null);
   const primary = getTeamUiAccentColor("nba", block.teamId);
+  const markAccent = getTeamRosterMarkColor("nba", block.teamId);
   const players = useMemo(
     () => sortPlayersByCol(block.players, sort),
     [block.players, sort]
@@ -304,8 +306,8 @@ function TeamRosterCard({
         <View style={styles.headerMain}>
           <View style={styles.headerTitleRow}>
             {!isDetail ? (
-              <View style={[styles.sideBadge, { borderColor: primary }]}>
-                <Text style={[styles.sideBadgeText, { color: primary }]}>
+              <View style={[styles.sideBadge, { borderColor: markAccent }]}>
+                <Text style={[styles.sideBadgeText, { color: markAccent }]}>
                   {block.side === "home" ? "HOME" : "AWAY"}
                 </Text>
               </View>
@@ -345,7 +347,7 @@ function TeamRosterCard({
                 <IdentityRow
                   key={String(p.id)}
                   player={p}
-                  accent={primary}
+                  accent={markAccent}
                   injuryStatus={injuryById[String(p.id)]}
                   onPress={onPlayerPress}
                 />

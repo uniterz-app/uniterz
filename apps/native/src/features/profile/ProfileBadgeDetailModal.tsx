@@ -16,6 +16,7 @@ import {
   formatBadgeParticipantCount,
   readBadgeParticipantCount,
 } from "../../../../../lib/badges/badgeCohort";
+import { resolveBadgeCopy } from "../../../../../lib/badges/resolveBadgeCopy";
 
 type Props = {
   visible: boolean;
@@ -78,6 +79,7 @@ export default function ProfileBadgeDetailModal({
   const isJa = language === "ja";
   if (!badge) return null;
 
+  const copy = resolveBadgeCopy(badge, language);
   const awardedLabel = isJa ? "付与日" : "Granted";
   const lang = isJa ? "ja" : "en";
   const participantCount = readBadgeParticipantCount(badge);
@@ -97,8 +99,8 @@ export default function ProfileBadgeDetailModal({
 
           <View style={styles.copy}>
             <Text style={styles.kicker}>{isJa ? "バッジ" : "Badge"}</Text>
-            <Text style={styles.title}>{badge.title}</Text>
-            {badge.description ? <Text style={styles.desc}>{badge.description}</Text> : null}
+            <Text style={styles.title}>{copy.title}</Text>
+            {copy.description ? <Text style={styles.desc}>{copy.description}</Text> : null}
 
             {badge.grantedAt || participantCount != null ? (
               <View style={styles.metaBlock}>

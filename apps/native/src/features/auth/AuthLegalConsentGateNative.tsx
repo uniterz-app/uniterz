@@ -2,8 +2,9 @@
  * GET STARTED 直後の同意ゲート。
  * 利用規約・プライバシーの両方にチェックしてから登録画面へ進む。
  * 本文は別スタックに出さず、ゲート内で開いて BACK で戻る。
+ * 言語: 端末設定が日本語なら ja、それ以外は en。
  */
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Platform,
   Pressable,
@@ -20,18 +21,26 @@ import {
 } from "../../ui/ModalActionButtonNative";
 import UniterzLogoNative from "../profile/UniterzLogoNative";
 import ProfileBackEdgeHandleNative from "../profile/ProfileBackEdgeHandleNative";
+import LegalDocumentNative from "../legal/LegalDocumentNative";
 import { AUTH_LANDING } from "./authLandingPalette";
-import type { LegalSection } from "@/lib/legal/legalSection";
 import {
+  PRIVACY_FOOTER,
   PRIVACY_INTRO,
+  PRIVACY_PREAMBLE,
   PRIVACY_SECTIONS,
   PRIVACY_UPDATED_AT,
 } from "@/lib/legal/privacyCopy";
 import {
+  TERMS_FOOTER,
   TERMS_INTRO,
+  TERMS_PREAMBLE,
   TERMS_SECTIONS,
   TERMS_UPDATED_AT,
 } from "@/lib/legal/termsCopy";
+import {
+  resolveDeviceAppLanguage,
+  type NativeAppLanguage,
+} from "../../i18n/resolveDeviceAppLanguage";
 
 type Props = {
   visible: boolean;
@@ -41,18 +50,75 @@ type Props = {
 
 type DocKind = "terms" | "privacy";
 
+const COPY: Record<
+  NativeAppLanguage,
+  {
+    title: string;
+    message: string;
+    termsAgree: string;
+    privacyAgree: string;
+    openLink: string;
+    openTermsA11y: string;
+    openPrivacyA11y: string;
+    back: string;
+    continue: string;
+    closeA11y: string;
+    backToConsentA11y: string;
+    termsTitle: string;
+    privacyTitle: string;
+    lastUpdated: string;
+  }
+> = {
+  ja: {
+    title: "利用規約とプライバシーポリシーに同意しますか？",
+    message:
+      "アカウントを作成する前に、内容をご確認ください。両方に同意すると登録画面へ進みます。",
+    termsAgree: "利用規約に同意する",
+    privacyAgree: "プライバシーポリシーに同意する",
+    openLink: "内容を見る",
+    openTermsA11y: "利用規約を開く",
+    openPrivacyA11y: "プライバシーポリシーを開く",
+    back: "戻る",
+    continue: "同意して続ける",
+    closeA11y: "閉じる",
+    backToConsentA11y: "同意画面に戻る",
+    termsTitle: "利用規約",
+    privacyTitle: "プライバシーポリシー",
+    lastUpdated: "最終更新: ",
+  },
+  en: {
+    title: "Agree to the Terms of Use and Privacy Policy?",
+    message:
+      "Please review both documents before creating an account. Agreeing to both continues to registration.",
+    termsAgree: "I agree to the Terms of Use",
+    privacyAgree: "I agree to the Privacy Policy",
+    openLink: "View",
+    openTermsA11y: "Open Terms of Use",
+    openPrivacyA11y: "Open Privacy Policy",
+    back: "Back",
+    continue: "Agree & continue",
+    closeA11y: "Close",
+    backToConsentA11y: "Back to consent",
+    termsTitle: "Terms of Use",
+    privacyTitle: "Privacy Policy",
+    lastUpdated: "Last updated: ",
+  },
+};
+
 function CheckRow({
   checked,
   onToggle,
   onOpen,
   label,
   openLabel,
+  openLinkLabel,
 }: {
   checked: boolean;
   onToggle: () => void;
   onOpen: () => void;
   label: string;
   openLabel: string;
+  openLinkLabel: string;
 }) {
   return (
     <View style={styles.checkRow}>
@@ -76,41 +142,8 @@ function CheckRow({
         accessibilityRole="link"
         accessibilityLabel={openLabel}
       >
-        <Text style={styles.openLink}>内容を見る</Text>
+        <Text style={styles.openLink}>{openLinkLabel}</Text>
       </Pressable>
-    </View>
-  );
-}
-
-function SectionBlock({ section }: { section: LegalSection }) {
-  return (
-    <View style={styles.docSection}>
-      <Text style={styles.docH}>{section.title.ja}</Text>
-      {section.paragraphs?.ja?.map((p) => (
-        <Text key={p.slice(0, 24)} style={styles.docP}>
-          {p}
-        </Text>
-      ))}
-      {section.bullets?.ja?.map((b) => (
-        <Text key={b.slice(0, 24)} style={styles.docP}>
-          {`・${b}`}
-        </Text>
-      ))}
-      {section.subsections?.map((sub) => (
-        <View key={sub.title.ja} style={styles.docSub}>
-          <Text style={styles.docH2}>{sub.title.ja}</Text>
-          {sub.paragraphs?.ja?.map((p) => (
-            <Text key={p.slice(0, 24)} style={styles.docP}>
-              {p}
-            </Text>
-          ))}
-          {sub.bullets?.ja?.map((b) => (
-            <Text key={b.slice(0, 24)} style={styles.docP}>
-              {`・${b}`}
-            </Text>
-          ))}
-        </View>
-      ))}
     </View>
   );
 }
@@ -121,6 +154,8 @@ export default function AuthLegalConsentGateNative({
   onAgree,
 }: Props) {
   const { height } = useWindowDimensions();
+  const lang = useMemo(() => resolveDeviceAppLanguage(), []);
+  const t = COPY[lang];
   const [termsOk, setTermsOk] = useState(false);
   const [privacyOk, setPrivacyOk] = useState(false);
   const [doc, setDoc] = useState<DocKind | null>(null);
@@ -135,32 +170,40 @@ export default function AuthLegalConsentGateNative({
 
   if (!visible) return null;
 
-  const docTitle = doc === "privacy" ? "プライバシーポリシー" : "利用規約";
-  const docIntro = doc === "privacy" ? PRIVACY_INTRO.ja : TERMS_INTRO.ja;
+  const docTitle = doc === "privacy" ? t.privacyTitle : t.termsTitle;
+  const docIntro = doc === "privacy" ? PRIVACY_INTRO[lang] : TERMS_INTRO[lang];
   const docUpdated = doc === "privacy" ? PRIVACY_UPDATED_AT : TERMS_UPDATED_AT;
-  const docSections = doc === "privacy" ? PRIVACY_SECTIONS : TERMS_SECTIONS;
 
   return (
     <View style={styles.root} pointerEvents="auto">
       <Pressable
         style={styles.scrim}
         onPress={doc ? () => setDoc(null) : onClose}
-        accessibilityLabel="閉じる"
+        accessibilityLabel={t.closeA11y}
       />
       {doc ? (
         <View style={[styles.docWrap, { height: Math.min(height * 0.82, 640) }]}>
           <View style={styles.docCard}>
             <Text style={styles.docTitle}>{docTitle}</Text>
-            <Text style={styles.docMeta}>最終更新: {docUpdated}</Text>
+            <Text style={styles.docMeta}>
+              {t.lastUpdated}
+              {docUpdated}
+            </Text>
             <ScrollView
               style={styles.docScroll}
               contentContainerStyle={styles.docScrollContent}
               showsVerticalScrollIndicator
             >
               <Text style={styles.docIntro}>{docIntro}</Text>
-              {docSections.map((section) => (
-                <SectionBlock key={section.id} section={section} />
-              ))}
+              <LegalDocumentNative
+                language={lang}
+                preamble={
+                  doc === "terms" ? TERMS_PREAMBLE[lang] : PRIVACY_PREAMBLE[lang]
+                }
+                sections={doc === "privacy" ? PRIVACY_SECTIONS : TERMS_SECTIONS}
+                footer={doc === "terms" ? TERMS_FOOTER[lang] : PRIVACY_FOOTER[lang]}
+                showIndex={false}
+              />
             </ScrollView>
           </View>
         </View>
@@ -172,39 +215,37 @@ export default function AuthLegalConsentGateNative({
               <UniterzLogoNative width={112} />
               <View style={styles.headerBrandLine} />
             </View>
-            <Text style={styles.title}>
-              利用規約とプライバシーポリシーに同意しますか？
-            </Text>
-            <Text style={styles.message}>
-              アカウントを作成する前に、内容をご確認ください。両方に同意すると登録画面へ進みます。
-            </Text>
+            <Text style={styles.title}>{t.title}</Text>
+            <Text style={styles.message}>{t.message}</Text>
 
             <View style={styles.checks}>
               <CheckRow
                 checked={termsOk}
                 onToggle={() => setTermsOk((v) => !v)}
                 onOpen={() => setDoc("terms")}
-                label="利用規約に同意する"
-                openLabel="利用規約を開く"
+                label={t.termsAgree}
+                openLabel={t.openTermsA11y}
+                openLinkLabel={t.openLink}
               />
               <CheckRow
                 checked={privacyOk}
                 onToggle={() => setPrivacyOk((v) => !v)}
                 onOpen={() => setDoc("privacy")}
-                label="プライバシーポリシーに同意する"
-                openLabel="プライバシーポリシーを開く"
+                label={t.privacyAgree}
+                openLabel={t.openPrivacyA11y}
+                openLinkLabel={t.openLink}
               />
             </View>
 
             <View style={styles.actions}>
               <ModalActionRowNative>
                 <ModalActionButtonNative
-                  label="戻る"
+                  label={t.back}
                   tone="ghost"
                   onPress={onClose}
                 />
                 <ModalActionButtonNative
-                  label="同意して続ける"
+                  label={t.continue}
                   tone="primary"
                   onPress={() => {
                     if (!canContinue) return;
@@ -220,7 +261,7 @@ export default function AuthLegalConsentGateNative({
       {doc ? (
         <ProfileBackEdgeHandleNative
           onPress={() => setDoc(null)}
-          accessibilityLabel="同意画面に戻る"
+          accessibilityLabel={t.backToConsentA11y}
         />
       ) : null}
     </View>
@@ -334,42 +375,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     textDecorationLine: "underline",
   },
-  actionPressable: {
-    marginTop: 20,
-    width: "100%",
-  },
-  actionFrame: {
-    width: "100%",
-  },
-  actionContent: {
-    paddingVertical: 11,
-    paddingHorizontal: 10,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  actionLabel: {
-    fontFamily: Platform.select({
-      ios: "Oxanium_700Bold",
-      android: "Oxanium_700Bold",
-      default: "sans-serif",
-    }),
-    fontSize: 12,
-    fontWeight: "700",
-    letterSpacing: 1.4,
-    color: "rgba(148,163,184,0.7)",
-    textAlign: "center",
-  },
-  actionLabelOn: {
-    color: "rgba(224,254,255,0.96)",
-  },
-  backHit: {
-    marginTop: 12,
-    alignItems: "center",
-  },
-  backLabel: {
-    color: "rgba(148,163,184,0.88)",
-    fontSize: 13,
-  },
   docWrap: {
     width: "100%",
     maxWidth: 360,
@@ -405,28 +410,6 @@ const styles = StyleSheet.create({
   },
   docIntro: {
     color: "rgba(226,232,240,0.82)",
-    fontSize: 13,
-    lineHeight: 20,
-  },
-  docSection: {
-    gap: 6,
-  },
-  docSub: {
-    marginTop: 6,
-    gap: 4,
-  },
-  docH: {
-    color: "#ffffff",
-    fontSize: 15,
-    fontWeight: "700",
-  },
-  docH2: {
-    color: "rgba(248,250,252,0.92)",
-    fontSize: 13,
-    fontWeight: "700",
-  },
-  docP: {
-    color: "rgba(255,255,255,0.78)",
     fontSize: 13,
     lineHeight: 20,
   },

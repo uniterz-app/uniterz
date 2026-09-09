@@ -11,14 +11,10 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import cn from "clsx";
 import { nameOxanium, jp } from "@/lib/fonts";
 import {
-  SQUAD_BATTLE_LAUNCH_CTA,
-  SQUAD_BATTLE_LAUNCH_FACTS,
-  SQUAD_BATTLE_LAUNCH_KICKER,
-  SQUAD_BATTLE_LAUNCH_LEAD,
-  SQUAD_BATTLE_LAUNCH_LATER,
   SQUAD_BATTLE_LAUNCH_STORAGE_KEY,
-  SQUAD_BATTLE_LAUNCH_TITLE,
-  SQUAD_INVITE_DEADLINE_PREFIX,
+  squadBattleLaunchCopy,
+  squadBattleScreenCopy,
+  type SquadBattleUiLang,
 } from "@/lib/squads/squadBattleUiCopy";
 import { SQUAD_GOLD, SQUAD_GOLD_CHAMFER } from "@/lib/squads/squadBattleGoldTheme";
 
@@ -35,6 +31,7 @@ type Props = {
   onEnter: () => void;
   deadlineLabel?: string | null;
   battleId?: string | null;
+  language?: string | null;
 };
 
 export function markSquadBattleLaunchSeen(battleId?: string | null): void {
@@ -88,10 +85,14 @@ export default function SquadBattleLaunchOverlay({
   onEnter,
   deadlineLabel,
   battleId,
+  language,
 }: Props) {
   const [mounted, setMounted] = useState(false);
   const reduceMotion = useReducedMotion() === true;
   const deadline = deadlineLabel?.trim() || null;
+  const lang: SquadBattleUiLang = language === "en" ? "en" : "ja";
+  const copy = squadBattleLaunchCopy(lang);
+  const screen = squadBattleScreenCopy(lang);
 
   useEffect(() => {
     setMounted(true);
@@ -142,7 +143,7 @@ export default function SquadBattleLaunchOverlay({
         >
           <button
             type="button"
-            aria-label="閉じる"
+            aria-label={screen.close}
             className="absolute inset-0 bg-[#050308]/82"
             onClick={dismiss}
           />
@@ -170,7 +171,7 @@ export default function SquadBattleLaunchOverlay({
                   "text-[10px] font-black uppercase tracking-[0.28em] text-amber-200/80"
                 )}
               >
-                {SQUAD_BATTLE_LAUNCH_KICKER}
+                {copy.kicker}
               </p>
             </div>
 
@@ -184,7 +185,7 @@ export default function SquadBattleLaunchOverlay({
                 textShadow: `0 0 18px rgba(${SQUAD_GOLD.glowRgb},0.5)`,
               }}
             >
-              {SQUAD_BATTLE_LAUNCH_TITLE}
+              {copy.title}
             </h2>
             <p
               className={cn(
@@ -192,7 +193,7 @@ export default function SquadBattleLaunchOverlay({
                 "mt-3 text-[13px] leading-relaxed text-white/62"
               )}
             >
-              {SQUAD_BATTLE_LAUNCH_LEAD}
+              {copy.lead}
             </p>
 
             <p
@@ -202,12 +203,12 @@ export default function SquadBattleLaunchOverlay({
               )}
             >
               {deadline
-                ? `${SQUAD_INVITE_DEADLINE_PREFIX} ${deadline}`
-                : SQUAD_INVITE_DEADLINE_PREFIX}
+                ? `${copy.deadlinePrefix} ${deadline}`
+                : copy.deadlinePrefix}
             </p>
 
             <dl className="mt-4 flex flex-col border-t border-amber-400/20 pt-3">
-              {SQUAD_BATTLE_LAUNCH_FACTS.map((fact) => (
+              {copy.facts.map((fact) => (
                 <div
                   key={fact.kicker}
                   className="flex items-baseline justify-between gap-3 py-1.5"
@@ -244,7 +245,7 @@ export default function SquadBattleLaunchOverlay({
                 background: `linear-gradient(180deg, ${SQUAD_GOLD.acc}, ${SQUAD_GOLD.accDeep})`,
               }}
             >
-              {SQUAD_BATTLE_LAUNCH_CTA}
+              {copy.cta}
             </button>
             <button
               type="button"
@@ -254,7 +255,7 @@ export default function SquadBattleLaunchOverlay({
                 "mt-2.5 w-full py-2 text-[11px] font-bold uppercase tracking-[0.16em] text-white/45"
               )}
             >
-              {SQUAD_BATTLE_LAUNCH_LATER}
+              {copy.later}
             </button>
           </motion.div>
         </motion.div>

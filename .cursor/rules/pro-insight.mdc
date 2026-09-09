@@ -11,9 +11,10 @@ alwaysApply: false
 - 名簿は INJURY。Insight は今夜の読み（HOME / AWAY 最大 2 本）
 - MATCHUP は **型の衝突が大きい** か **欠場インパクトが大きい** の OR。差が小さくても、そのスタッツを厚く担う OUT/QUES は出す
 - 欠場の折り込みはペイント限定ではない（3P / リバウンド / TO 等すべて）
-- Injury Impact という 4 つ目の枠は作らない
+- Injury Impact という 4 つ目の枠は作らない（選手読みは **PLAYERS**）
 - 勝者・推奨スコアは出さない
 - 今夜移動は 800km 以上、48h 合計は 2 レグ以上かつ 2,000km 以上のときだけ
 - **フェーズ**: opening（0試合）= 前季 / early（1〜4）= 今季累計＋サンプル注記 / full（≥5）= 今季正式
+- **PLAYERS**: 型×相手穴・直近フォーム。leaders season+last10。opening は空
 - **保存**: `games/{id}.proBrief`。**前日 19:00 JST** に初版フル生成、**tip 1h 前**にケガ情報を反映した完全版。開くたびに再計算しない
 - LLM なし。テンプレ穴埋めのみ

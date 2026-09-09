@@ -3,9 +3,10 @@
 /**
  * Free が PRO LEAGUE を開いたとき — Report ゲート同型（ぼかし下地 + 説明 + CTA）。
  * 実ランキング API は使わない。
+ * 本文は通常フローで高さを確保（absolute オーバーレイだと下端が切れる）。
  */
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
   Award,
@@ -20,6 +21,7 @@ import {
   ProCyberBadge,
   proBadgeStaticMotion,
 } from "@/app/component/common/ProCyberBadge";
+import UniterzLogo from "@/app/component/units/UniterzLogo";
 import { buildProLeagueTeaserRows } from "@/lib/rankings/proLeagueTeaserMocks";
 import {
   PRO_LEAGUE_GATE_CTA_HREF,
@@ -56,7 +58,8 @@ function TitleWithBrandFonts({ title }: { title: string }) {
             key={i}
             className={[
               nameOxanium.className,
-              "font-extrabold uppercase tracking-[0.06em]",
+              "inline-block origin-center font-extrabold uppercase tracking-[0.06em]",
+              "[transform:skewX(-10deg)]",
             ].join(" ")}
           >
             {part}
@@ -77,15 +80,16 @@ export default function RankingsProLeagueTeaser({
   const lang = language === "en" ? "en" : "ja";
   const copy = proLeagueGateCopy(lang);
   const rows = useMemo(() => buildProLeagueTeaserRows(), []);
+  const [ctaPressed, setCtaPressed] = useState(false);
 
   return (
     <div className="relative isolate min-h-[min(70dvh,560px)] overflow-hidden rounded-none border border-white/10">
       <div
         aria-hidden
-        className="pointer-events-none select-none [mask-image:linear-gradient(180deg,#000_45%,transparent_100%)]"
+        className="pointer-events-none absolute inset-0 select-none [mask-image:linear-gradient(180deg,#000_45%,transparent_100%)]"
       >
         <div
-          className="max-h-[520px] overflow-hidden px-2 opacity-90"
+          className="h-full overflow-hidden px-2 opacity-90"
           style={{ filter: "blur(10px)", transform: "scale(1.02)" }}
         >
           <div className="cyber-rank-list-panel">
@@ -113,17 +117,12 @@ export default function RankingsProLeagueTeaser({
         }}
       />
 
-      <div className="absolute inset-0 z-[1] flex items-start justify-center px-3 pb-10 pt-12 sm:pt-14">
-        <div className="flex w-full max-w-[22rem] flex-col items-stretch gap-3 text-center">
-          <div className="flex flex-col items-center gap-2">
-            <p
-              className={[
-                nameOxanium.className,
-                "text-[10px] font-bold uppercase tracking-[0.2em] text-violet-200/85",
-              ].join(" ")}
-            >
-              {copy.eyebrow}
-            </p>
+      <div className="relative z-[1] flex flex-col items-center px-3 pb-7 pt-10">
+        <div className="flex w-full max-w-[24rem] flex-col items-stretch gap-3.5 text-center">
+          <div className="flex flex-col items-center gap-2.5">
+            <div className="w-[168px] max-w-[72%]">
+              <UniterzLogo width="100%" title="UNITERZ" />
+            </div>
             <span className="inline-flex origin-top scale-[1.45]">
               <ProCyberBadge
                 {...proBadgeStaticMotion}
@@ -132,45 +131,52 @@ export default function RankingsProLeagueTeaser({
               />
             </span>
           </div>
-          <h2 className="text-balance text-[17px] font-bold leading-snug text-white">
+          <h2 className="text-balance text-[19px] font-bold leading-snug text-white">
             <TitleWithBrandFonts title={copy.title} />
           </h2>
-          <p className="text-pretty text-[13px] leading-relaxed text-white/72">
+          <p className="text-pretty text-[15px] leading-relaxed text-white/72">
             {copy.body}
           </p>
           <div className="flex justify-center">
             <Link
               href={subscribeHref}
+              onPointerDown={() => setCtaPressed(true)}
+              onPointerUp={() => setCtaPressed(false)}
+              onPointerLeave={() => setCtaPressed(false)}
+              onPointerCancel={() => setCtaPressed(false)}
               className={[
                 nameOxanium.className,
-                "inline-flex min-h-10 min-w-[160px] items-center justify-center border border-white/35 bg-[#00F5FF] px-4 py-2 text-[12px] font-extrabold uppercase tracking-[0.12em] text-[#050508] transition hover:brightness-110 active:scale-[0.98]",
+                "inline-flex min-h-11 min-w-[168px] items-center justify-center border px-[18px] py-2.5 text-[13px] font-extrabold uppercase tracking-[0.12em] transition-[transform,background-color,border-color,color,box-shadow] duration-150 ease-out",
+                ctaPressed
+                  ? "scale-[0.94] border-amber-200 bg-amber-300/20 text-amber-50 shadow-[0_0_22px_rgba(251,191,36,0.35)]"
+                  : "scale-100 border-amber-300/75 bg-[#050508] text-amber-200 shadow-[0_0_18px_rgba(251,191,36,0.18)] hover:border-amber-200 hover:bg-amber-300/10 hover:text-amber-100",
               ].join(" ")}
             >
               {copy.cta}
             </Link>
           </div>
-          <div className="w-full rounded-none border border-orange-400/55 bg-orange-500/[0.07] px-3 py-2.5 text-left shadow-[0_0_18px_rgba(251,146,60,0.12)]">
-            <ul className="list-none space-y-2">
+          <div className="w-full rounded-none border border-orange-400/55 bg-orange-500/[0.07] px-3.5 py-3 text-left shadow-[0_0_18px_rgba(251,146,60,0.12)]">
+            <ul className="list-none space-y-2.5">
               {copy.bullets.map((item) => {
                 const Icon = BULLET_ICONS[item.icon];
                 return (
-                  <li key={item.title} className="flex items-start gap-2.5">
+                  <li key={item.title} className="flex items-start gap-3">
                     <span
-                      className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-none border border-orange-400/45 bg-orange-500/15 text-orange-300"
+                      className="mt-0.5 flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-none border border-orange-400/45 bg-orange-500/15 text-orange-300"
                       aria-hidden
                     >
-                      <Icon className="h-3 w-3" strokeWidth={2.4} />
+                      <Icon className="h-[15px] w-[15px]" strokeWidth={2.4} />
                     </span>
                     <div className="min-w-0 flex-1">
                       <p
                         className={[
                           nameOxanium.className,
-                          "text-[11px] font-extrabold tracking-[0.04em] text-orange-100",
+                          "text-[13px] font-extrabold tracking-[0.04em] text-orange-100",
                         ].join(" ")}
                       >
                         {item.title}
                       </p>
-                      <p className="mt-0.5 break-words text-[11px] leading-snug text-white/70">
+                      <p className="mt-0.5 break-words text-[13px] leading-snug text-white/70">
                         {item.detail}
                       </p>
                     </div>
@@ -183,15 +189,13 @@ export default function RankingsProLeagueTeaser({
             <button
               type="button"
               onClick={onBackToPickUp}
-              className="text-[11px] font-semibold tracking-wide text-white/55 underline-offset-2 hover:text-white/80 hover:underline"
+              className="text-[12px] font-semibold tracking-wide text-white/55 underline-offset-2 hover:text-white/80 hover:underline"
             >
               {copy.backToPickUp}
             </button>
           ) : null}
         </div>
       </div>
-
-      <div className="pointer-events-none invisible min-h-[320px]" aria-hidden />
     </div>
   );
 }

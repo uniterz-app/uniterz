@@ -5,6 +5,10 @@
 import type { GroupBattleEntryProfile } from "./entryProfileTypes";
 import type { GroupBattleJoinRequestApiItem, GroupBattleRankRow } from "./types";
 import {
+  formatSquadRequestRelativeTime,
+  type SquadBattleUiLang,
+} from "@/lib/squads/squadBattleUiCopy";
+import {
   SQUAD_BATTLE_MAX_MEMBERS,
   type OpenSquadListing,
   type Squad,
@@ -247,7 +251,8 @@ function joinRequestStatus(
 
 /** GET join-requests → 申請カード */
 export function mapJoinRequestApiToUi(
-  row: JoinRequestApiItem
+  row: JoinRequestApiItem,
+  lang: SquadBattleUiLang = "ja"
 ): SquadJoinRequest {
   const a = row.applicant;
   return {
@@ -255,7 +260,7 @@ export function mapJoinRequestApiToUi(
     squadId: row.squadId,
     squadName: row.squadName,
     status: joinRequestStatus(row.status),
-    createdAtLabel: "申請中",
+    createdAtLabel: formatSquadRequestRelativeTime(row.createdAtMs, lang),
     applicant: {
       uid: a.uid,
       handle: a.handle,

@@ -4,7 +4,7 @@
 import React, { memo, useMemo } from "react";
 import DonutChart from "@/app/component/predict/DonutChart";
 import { normalizeLeague } from "@/lib/leagues";
-import { getTeamJerseyPrimaryColor } from "@/lib/team-colors";
+import { resolveMatchupUiAccents } from "@/lib/team-colors";
 import { splitTeamNameByLeague } from "@/lib/team-name-split";
 import { getTeamAlias } from "@/lib/team-alias";
 import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
@@ -54,10 +54,13 @@ function MobileResultMarketCard({
   const normalizedLeague = normalizeLeague(post.league);
   const teamNameFont = bracketMarketTeamTypography(true);
 
-  const homeColor =
-    getTeamJerseyPrimaryColor(normalizedLeague, post.home?.teamId) ?? "#3B82F6";
-  const awayColor =
-    getTeamJerseyPrimaryColor(normalizedLeague, post.away?.teamId) ?? "#EF4444";
+  const matchupAccents = resolveMatchupUiAccents(
+    normalizedLeague,
+    post.home?.teamId,
+    post.away?.teamId
+  );
+  const homeColor = matchupAccents.homeAccent || "#3B82F6";
+  const awayColor = matchupAccents.awayAccent || "#EF4444";
 
   const isSoccer = post.league === "j1" || post.league === "pl";
 

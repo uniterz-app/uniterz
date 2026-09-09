@@ -44,6 +44,7 @@ import {
   RANKINGS_TAB_METRIC_PARAM,
   RANKINGS_TAB_CATEGORY_PARAM,
   RANKINGS_TAB_PERIOD_PARAM,
+  RANKINGS_TAB_BOARD_PARAM,
   isMobileMetricParam,
   isRankingsCategoryParam,
 } from "@/lib/navigation/rankingsProfileFrom";
@@ -69,7 +70,6 @@ import RankingsPeriodTabs from "@/app/component/rankings/RankingsPeriodTabs";
 import RankingsPeriodLabelNav from "@/app/component/rankings/RankingsPeriodLabelNav";
 import RankingsDivisionTabs from "@/app/component/rankings/RankingsDivisionTabs";
 import RankingsProLeagueTeaser from "@/app/component/rankings/RankingsProLeagueTeaser";
-import PlayoffRoundTabs from "@/app/component/rankings/PlayoffRoundTabs";
 import {
   isRankingPeriod,
   periodWinRateMinPosts,
@@ -77,6 +77,7 @@ import {
 } from "@/lib/rankings/rankingPeriod";
 import {
   divisionFromNbaBoard,
+  isNbaRankingBoard,
   type NbaRankingBoard,
   type RankingDivision,
 } from "@/lib/rankings/rankingDivision";
@@ -121,6 +122,8 @@ export default function MobileRankingsPage() {
     if (isRankingsCategoryParam(cat)) setCategory(cat);
     const period = searchParams.get(RANKINGS_TAB_PERIOD_PARAM);
     if (isRankingPeriod(period)) setRankingPeriod(period);
+    const board = searchParams.get(RANKINGS_TAB_BOARD_PARAM);
+    if (isNbaRankingBoard(board)) setNbaBoard(board);
   }, [searchParams]);
 
   useEffect(() => {
@@ -443,15 +446,6 @@ export default function MobileRankingsPage() {
               />
             ) : null}
 
-            {rankingLeague === "nba" && nbaBoard === "playoffs" ? (
-              <PlayoffRoundTabs
-                round={playoffRound}
-                onChange={setPlayoffRound}
-                isMobile
-                language={language}
-              />
-            ) : null}
-
             {effectiveCategory === "playoffs" && !openProLocked ? (
               <MyRankCard
                 rank={rankingHasNoEntries ? null : myRank}
@@ -510,7 +504,11 @@ export default function MobileRankingsPage() {
 
           {effectiveCategory === "playoffs" && !openProLocked ? (
             <>
-              <RankingsScheduleNotice language={language} className="px-1" />
+              <RankingsScheduleNotice
+                language={language}
+                countryCode={countryCode}
+                className="px-1"
+              />
               <RankingsMetricRow
                 metrics={metricItems}
                 metric={metric}
@@ -569,6 +567,8 @@ export default function MobileRankingsPage() {
                   rankPhase={phase}
                   playoffRound={effectiveRound}
                   rankingLeague={rankingLeague}
+                  rankingPeriod={rankingPeriod}
+                  nbaBoard={nbaBoard}
                   participantCount={rankingListCount || null}
                   onTopCountDone={handleTopCountDone}
                   countUpEnabled={!skipCountUp}
@@ -596,6 +596,8 @@ export default function MobileRankingsPage() {
                         rankPhase={phase}
                         playoffRound={effectiveRound}
                         rankingLeague={rankingLeague}
+                        rankingPeriod={rankingPeriod}
+                        nbaBoard={nbaBoard}
                         participantCount={rankingListCount || null}
                         language={language}
                         animateValue={!skipCountUp && i < 6}

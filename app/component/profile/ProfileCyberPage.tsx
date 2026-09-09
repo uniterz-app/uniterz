@@ -16,6 +16,10 @@ type Props = {
   contentClassName?: string;
   /** ページ全面の背景 */
   backdrop?: ReactNode;
+  /** 右端 BACK タブ。未指定はルート既定（mobile=on） */
+  edgeBack?: boolean;
+  /** 左戻るを隠す。トライアル導線などで BACK ごと消すとき true */
+  hideBack?: boolean;
   children: ReactNode;
 };
 
@@ -29,6 +33,8 @@ export default function ProfileCyberPage({
   eyebrow = "PROFILE",
   contentClassName,
   backdrop,
+  edgeBack,
+  hideBack,
   children,
 }: Props) {
   const { fUser: user } = useFirebaseUser();
@@ -45,6 +51,8 @@ export default function ProfileCyberPage({
       subtitle={subtitle}
       onBack={goBack}
       backAriaLabel={backAria}
+      edgeBack={edgeBack}
+      hideBack={hideBack}
       contentClassName={contentClassName}
       backdrop={backdrop}
     >

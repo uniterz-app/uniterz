@@ -39,6 +39,7 @@ const PredictionFormV2 = dynamic(() => import("../predict/PredictionFormV2"), {
   ssr: false,
 });
 import type { PredictionPostV2 } from "@/types/prediction-post-v2";
+import type { NbaTopScorerPick } from "@/lib/nba/topScorer";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import { t } from "@/lib/i18n/t";
@@ -211,6 +212,8 @@ export default function ScheduleList({
     useState<PredictionPostV2 | null>(null);
   const [overlayUserPredictionWinner, setOverlayUserPredictionWinner] =
     useState<"home" | "away" | "draw" | null>(null);
+  const [overlayGoalScorerPick, setOverlayGoalScorerPick] =
+    useState<NbaTopScorerPick | null>(null);
   const [predictEditTriggerNonce, setPredictEditTriggerNonce] = useState(0);
   const [overlayLiveMarketBias, setOverlayLiveMarketBias] = useState<{
     homePct: number;
@@ -742,6 +745,7 @@ export default function ScheduleList({
   useEffect(() => {
     setOverlayResultPost(null);
     setOverlayUserPredictionWinner(null);
+    setOverlayGoalScorerPick(null);
     setPredictEditTriggerNonce(0);
     setOverlayLiveMarketBias(null);
   }, [openGameId]);
@@ -876,6 +880,7 @@ export default function ScheduleList({
                   language={language}
                   resultPost={overlayResultPost}
                   userPredictionWinner={overlayUserPredictionWinner}
+                  overlayGoalScorerPick={overlayGoalScorerPick}
                   resultRatingBarsImmediate
                   marketBias={
                     overlayLiveMarketBias ?? overlayGameProps.marketBias
@@ -979,6 +984,7 @@ export default function ScheduleList({
                 }
                 onExistingResultPostChange={setOverlayResultPost}
                 onUserPredictionWinnerChange={setOverlayUserPredictionWinner}
+                onOverlayGoalScorerChange={setOverlayGoalScorerPick}
                 onPredictEditEnd={() => setPredictEditTriggerNonce(0)}
                 overlayScheduleGameIds={gameIds}
                 overlayScheduleGames={propsList}

@@ -9,6 +9,8 @@ export type MasterBadgeDto = {
   id: string;
   title: string;
   description: string;
+  titleEn?: string;
+  descriptionEn?: string;
   icon?: string;
   /** 同じ回の共有フォールバック。正本は user_badges.meta.participantCount */
   participantCount?: number;
@@ -28,14 +30,20 @@ export async function loadMasterBadges(
     const data = d.data() as {
       title?: string;
       description?: string;
+      titleEn?: string;
+      descriptionEn?: string;
       icon?: string;
       participantCount?: unknown;
     };
     const stored = readStoredCount(data.participantCount);
+    const titleEn = String(data.titleEn ?? "").trim();
+    const descriptionEn = String(data.descriptionEn ?? "").trim();
     return {
       id: d.id,
       title: String(data.title ?? ""),
       description: String(data.description ?? ""),
+      ...(titleEn ? { titleEn } : {}),
+      ...(descriptionEn ? { descriptionEn } : {}),
       icon: data.icon ? String(data.icon) : undefined,
       ...(stored != null ? { participantCount: stored } : {}),
     };

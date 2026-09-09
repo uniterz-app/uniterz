@@ -25,6 +25,8 @@ async function authHeaders(): Promise<HeadersInit> {
 
 export type GroupBattleApiOptions = {
   idToken?: string | null;
+  /** payout note など表示言語 */
+  lang?: "ja" | "en";
 };
 
 function withAuth(
@@ -538,8 +540,9 @@ export async function fetchGroupBattleMyPayout(
   battleId: string,
   opts?: GroupBattleApiOptions
 ) {
+  const lang = opts?.lang === "en" ? "en" : "ja";
   const res = await fetch(
-    `/api/group-battles/${encodeURIComponent(battleId)}/my-payout`,
+    `/api/group-battles/${encodeURIComponent(battleId)}/my-payout?lang=${lang}`,
     {
       headers: withAuth(await authHeaders(), opts),
       cache: "no-store",

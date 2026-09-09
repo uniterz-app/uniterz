@@ -1,13 +1,38 @@
-import { LegalWebOrNativeScreen } from "./legalWebViewRoutesNative";
+/**
+ * Web `/mobile/privacy` → `PrivacyDocument` 相当。
+ * `lib/legal/privacyCopy` をアプリ内表示（WebView / 外部接続なし）。
+ */
+import LegalDocumentNative from "./LegalDocumentNative";
+import LegalPageLayoutNative from "./LegalPageLayoutNative";
+import {
+  PRIVACY_FOOTER,
+  PRIVACY_INTRO,
+  PRIVACY_PREAMBLE,
+  PRIVACY_SECTIONS,
+  PRIVACY_UPDATED_AT,
+} from "@/lib/legal/privacyCopy";
+import { useFirebaseUser } from "../../auth/FirebaseUserProvider";
+import { useNativeUserLanguage } from "../../hooks/useNativeUserLanguage";
 
 export default function PrivacyScreenNative() {
+  const { fUser } = useFirebaseUser();
+  const { language } = useNativeUserLanguage(fUser?.uid);
+  const lang = language === "en" ? "en" : "ja";
+
   return (
-    <LegalWebOrNativeScreen
-      path="/mobile/privacy"
-      fallbackTitle="PRIVACY"
-      fallbackDescription="Uniterz におけるユーザー情報の取り扱いについて"
-      updatedAt="2026-08-18"
-      fallbackBody="個人情報の取得・利用目的・第三者提供等について定めています。詳細は Web 版をご確認ください。"
-    />
+    <LegalPageLayoutNative
+      title="PRIVACY"
+      description={PRIVACY_INTRO[lang]}
+      updatedAt={PRIVACY_UPDATED_AT}
+      lastUpdatedLabel={lang === "en" ? "Last updated: " : "最終更新: "}
+    >
+      <LegalDocumentNative
+        language={lang}
+        preamble={PRIVACY_PREAMBLE[lang]}
+        sections={PRIVACY_SECTIONS}
+        footer={PRIVACY_FOOTER[lang]}
+        showIndex={false}
+      />
+    </LegalPageLayoutNative>
   );
 }

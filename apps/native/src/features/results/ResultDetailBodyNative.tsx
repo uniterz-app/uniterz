@@ -2,7 +2,7 @@
  * 本番／DEV 共用 — リザルト詳細ボディ（カード面 + 中央値/最高 + Top10 + 内訳）。
  * `ResultDetailViewModel` をそのまま描画。
  */
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useReducedMotion } from "react-native-reanimated";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
@@ -34,6 +34,7 @@ import type { ResultTopScorerMarketView } from "../../../../../lib/result/result
 import type { GamePointsTopEntryV1 } from "../../../../../lib/results/gamePointsTop";
 import { profilePathKeyFromRow } from "../../../../../lib/profile/profilePathKey";
 import type { OpenPublicProfileWarm } from "../../navigation/navigateToPublicProfileNative";
+import { useNbaTopScorerCandidates } from "../../../../../lib/nba/useNbaTopScorerCandidates";
 
 const ACCENT = "#00F5FF";
 
@@ -513,13 +514,35 @@ export default function ResultDetailBodyNative({
   const frameColor = hexToRgba(ACCENT, 0.4);
   const dividerColor = hexToRgba(ACCENT, 0.22);
   const matchStats = view.matchStats;
-  const cardBadge = view.card.outcomeBadge ?? "hit";
+  const cardBadge = view.card.outcomeBadge ?? undefined;
   const scoreRel = view.card.scoreRel;
   const cardAndLiveStats = sections === "cardAndLiveStats";
   const nbaGameId =
     String(view.card.league ?? "").toLowerCase() === "nba"
       ? view.card.gameId || null
       : null;
+  const needScorerName = Boolean(
+    !view.card.topScorer &&
+      view.card.topScorerPlayerId &&
+      view.card.topScorerTeamId
+  );
+  const { candidates: topScorerCandidates } = useNbaTopScorerCandidates({
+    homeTeamId: view.card.homeTeamId,
+    awayTeamId: view.card.awayTeamId,
+    enabled: needScorerName,
+    apiBaseUrl: getUniterzApiBaseUrl(),
+  });
+  const cardFace = useMemo(() => {
+    if (view.card.topScorer) return view.card;
+    const pid = view.card.topScorerPlayerId?.trim();
+    const tid = view.card.topScorerTeamId?.trim();
+    if (!pid || !tid) return view.card;
+    const hit = topScorerCandidates.find(
+      (c) => c.playerId === pid && c.teamId === tid
+    );
+    if (!hit?.name) return view.card;
+    return { ...view.card, topScorer: hit.name };
+  }, [topScorerCandidates, view.card]);
   const screenActive = useScreenActiveNative();
   const { report: liveStatsReport, loading: liveStatsLoading } = useLiveGameStats(
     nbaGameId,
@@ -567,7 +590,12 @@ export default function ResultDetailBodyNative({
             bare
             badge={cardBadge}
             scoreRel={scoreRel}
-            face={view.card}
+            face={cardFace}
+            live={
+              cardFace.resultHome == null &&
+              cardFace.resultAway == null &&
+              Boolean(liveStatsReport)
+            }
             tutorialMetricsTargetId="result-detail-metrics"
           />
         </WeeklyReportCardShell>

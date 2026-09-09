@@ -1,5 +1,6 @@
 import { ReactNode } from "react";
 import { useNavigation } from "@react-navigation/native";
+import type { StyleProp, ViewStyle } from "react-native";
 import CyberSubpageShellNative from "../../ui/CyberSubpageShellNative";
 
 type Props = {
@@ -8,6 +9,7 @@ type Props = {
   updatedAt?: string;
   lastUpdatedLabel?: string;
   eyebrow?: string;
+  contentStyle?: StyleProp<ViewStyle>;
   children: ReactNode;
 };
 
@@ -18,6 +20,7 @@ export default function LegalPageLayoutNative({
   updatedAt,
   lastUpdatedLabel = "最終更新: ",
   eyebrow = "PROFILE",
+  contentStyle,
   children,
 }: Props) {
   const navigation = useNavigation();
@@ -31,6 +34,7 @@ export default function LegalPageLayoutNative({
       title={title}
       subtitle={helpText || undefined}
       onBack={() => navigation.goBack()}
+      contentStyle={contentStyle}
     >
       {children}
     </CyberSubpageShellNative>

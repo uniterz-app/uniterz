@@ -37,6 +37,37 @@ const cache = createSnapshotFetchCache<NbaTeamInjuriesApiPayload>(
   NBA_SNAPSHOT_CACHE_TTL_MS
 );
 
+function reportFromPayload(
+  payload: NbaTeamInjuriesApiPayload,
+  homeTeamId: string,
+  awayTeamId: string,
+  language: "ja" | "en"
+): NbaInjuryReport {
+  const homeEntries = payload.bundle.teams[homeTeamId] ?? [];
+  const awayEntries = payload.bundle.teams[awayTeamId] ?? [];
+  return buildMatchupInjuryReport({
+    homeTeamId,
+    awayTeamId,
+    homeEntries,
+    awayEntries,
+    asOfLabel: payload.updatedAt || null,
+    language,
+  });
+}
+
+function sourceFromPayload(
+  payload: NbaTeamInjuriesApiPayload,
+  homeTeamId: string,
+  awayTeamId: string
+): "firestore" | "empty" {
+  const homeEntries = payload.bundle.teams[homeTeamId] ?? [];
+  const awayEntries = payload.bundle.teams[awayTeamId] ?? [];
+  const any =
+    homeEntries.length + awayEntries.length > 0 ||
+    payload.source === "firestore";
+  return any ? "firestore" : "empty";
+}
+
 export function useNbaMatchupInjuryReport(options: Options): {
   report: NbaInjuryReport | null;
   loading: boolean;
@@ -49,60 +80,65 @@ export function useNbaMatchupInjuryReport(options: Options): {
   const apiBaseUrl = options.apiBaseUrl;
   const enabled = options.enabled ?? true;
   const language = options.language ?? "en";
+  const want = enabled && !override && !!homeTeamId && !!awayTeamId;
+  const key = nbaSnapshotCacheKey(apiBaseUrl, season);
+  const peeked = want ? cache.peek(key) : null;
+  const peekedReport =
+    peeked && homeTeamId && awayTeamId
+      ? reportFromPayload(peeked, homeTeamId, awayTeamId, language)
+      : null;
+  const scopeKey = `${key}|${homeTeamId}|${awayTeamId}|${language}`;
 
   const [report, setReport] = useState<NbaInjuryReport | null>(
-    override ?? null
-  );
-  const [loading, setLoading] = useState(
-    enabled && !override && !!homeTeamId && !!awayTeamId
+    () => override ?? peekedReport
   );
   const [source, setSource] = useState<
     "override" | "firestore" | "empty" | "error"
-  >(override ? "override" : "empty");
+  >(() =>
+    override
+      ? "override"
+      : peeked
+        ? sourceFromPayload(peeked, homeTeamId, awayTeamId)
+        : "empty"
+  );
+  const [readyScope, setReadyScope] = useState<string | null>(() =>
+    override || peekedReport ? scopeKey : null
+  );
 
   useEffect(() => {
     if (override) {
       setReport(override);
       setSource("override");
-      setLoading(false);
+      setReadyScope(scopeKey);
       return;
     }
     if (!enabled) {
-      setLoading(false);
       return;
     }
     if (!homeTeamId || !awayTeamId) {
       setReport(null);
       setSource("empty");
-      setLoading(false);
+      setReadyScope(scopeKey);
+      return;
+    }
+
+    const hit = cache.peek(key);
+    if (hit) {
+      setReport(reportFromPayload(hit, homeTeamId, awayTeamId, language));
+      setSource(sourceFromPayload(hit, homeTeamId, awayTeamId));
+      setReadyScope(scopeKey);
       return;
     }
 
     let cancelled = false;
-    setLoading(true);
-
     cache
-      .load(nbaSnapshotCacheKey(apiBaseUrl, season), () =>
-        fetchTeamInjuriesSnapshot({ season, apiBaseUrl })
-      )
+      .load(key, () => fetchTeamInjuriesSnapshot({ season, apiBaseUrl }))
       .then((payload) => {
         if (cancelled) return;
-        const homeEntries = payload.bundle.teams[homeTeamId] ?? [];
-        const awayEntries = payload.bundle.teams[awayTeamId] ?? [];
         setReport(
-          buildMatchupInjuryReport({
-            homeTeamId,
-            awayTeamId,
-            homeEntries,
-            awayEntries,
-            asOfLabel: payload.updatedAt || null,
-            language,
-          })
+          reportFromPayload(payload, homeTeamId, awayTeamId, language)
         );
-        const any =
-          homeEntries.length + awayEntries.length > 0 ||
-          payload.source === "firestore";
-        setSource(any ? "firestore" : "empty");
+        setSource(sourceFromPayload(payload, homeTeamId, awayTeamId));
       })
       .catch(() => {
         if (cancelled) return;
@@ -110,13 +146,26 @@ export function useNbaMatchupInjuryReport(options: Options): {
         setSource("error");
       })
       .finally(() => {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) setReadyScope(scopeKey);
       });
 
     return () => {
       cancelled = true;
     };
-  }, [enabled, homeTeamId, awayTeamId, season, apiBaseUrl, override, language]);
+  }, [
+    enabled,
+    homeTeamId,
+    awayTeamId,
+    season,
+    apiBaseUrl,
+    override,
+    language,
+    key,
+    scopeKey,
+  ]);
 
-  return { report, loading, source };
+  const resolved = override ?? report ?? peekedReport;
+  const loading = Boolean(want && !resolved && readyScope !== scopeKey);
+
+  return { report: resolved, loading, source };
 }

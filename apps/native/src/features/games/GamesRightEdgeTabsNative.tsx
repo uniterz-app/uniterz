@@ -107,7 +107,7 @@ const styles = StyleSheet.create({
     right: 0,
     top: "62%",
     bottom: 0,
-    width: 14,
+    width: 20,
     zIndex: 19,
   },
   rail: {

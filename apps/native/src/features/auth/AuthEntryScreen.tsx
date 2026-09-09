@@ -32,6 +32,8 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFirebaseUser } from "../../auth/FirebaseUserProvider";
 import type { AuthStackParamList } from "../../navigation/types";
+import { resolveDeviceAppLanguage } from "../../i18n/resolveDeviceAppLanguage";
+import { authFormCopy } from "@/lib/auth/authFormCopy";
 import AuthLandingBackgroundNative from "./AuthLandingBackgroundNative";
 import { AUTH_LANDING } from "./authLandingPalette";
 import AuthLegalConsentGateNative from "./AuthLegalConsentGateNative";
@@ -115,6 +117,7 @@ export default function AuthEntryScreen({
   const initialMode = initialModeProp ?? routeInitial ?? "login";
 
   const { status, fUser } = useFirebaseUser();
+  const copy = useMemo(() => authFormCopy(resolveDeviceAppLanguage()), []);
   const [mode, setMode] = useState<AuthMode>(initialMode);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -188,22 +191,16 @@ export default function AuthEntryScreen({
     if (submitting) return;
     const normalizedEmail = email.trim().toLowerCase();
     if (!normalizedEmail) {
-      cyberAlert("Missing input", "Please enter your email address.");
+      cyberAlert(copy.missingInputTitle, copy.missingEmail);
       return;
     }
     setSubmitting(true);
     try {
       await sendPasswordResetEmail(auth, normalizedEmail);
-      cyberAlert(
-        "Reset link sent",
-        "If this email is registered, we sent a reset link. Check spam if you don't see it."
-      );
+      cyberAlert(copy.resetSentTitle, copy.resetSentBody);
       setMode("login");
     } catch {
-      cyberAlert(
-        "Reset link sent",
-        "If this email is registered, we sent a reset link. Check spam if you don't see it."
-      );
+      cyberAlert(copy.resetSentTitle, copy.resetSentBody);
       setMode("login");
     } finally {
       setSubmitting(false);
@@ -219,11 +216,11 @@ export default function AuthEntryScreen({
     const normalizedEmail = email.trim().toLowerCase();
 
     if (!normalizedEmail || !password) {
-      cyberAlert("Missing input", "Please enter both email and password.");
+      cyberAlert(copy.missingInputTitle, copy.missingBoth);
       return;
     }
     if (mode === "signup" && password.length < 6) {
-      cyberAlert("Missing input", "Password must be at least 6 characters.");
+      cyberAlert(copy.missingInputTitle, copy.weakPassword);
       return;
     }
 
@@ -246,7 +243,7 @@ export default function AuthEntryScreen({
         );
       }
     } catch (error: unknown) {
-      cyberAlert("Authentication error", mapAuthErrorMessage(error, mode));
+      cyberAlert(copy.authErrorTitle, mapAuthErrorMessage(error, mode));
     } finally {
       setSubmitting(false);
     }
@@ -286,7 +283,7 @@ export default function AuthEntryScreen({
         {interactive ? (
           <ProfileBackEdgeHandleNative
             onPress={handleBack}
-            accessibilityLabel="Back to landing"
+            accessibilityLabel={copy.backA11y}
           />
         ) : null}
 
@@ -325,9 +322,7 @@ export default function AuthEntryScreen({
             </View>
 
             {mode === "reset" ? (
-              <Text style={styles.resetHint}>
-                登録メールアドレスを入力してください。
-              </Text>
+              <Text style={styles.resetHint}>{copy.resetHint}</Text>
             ) : null}
 
             <View style={[styles.field, styles.fieldEmail]}>
@@ -395,12 +390,12 @@ export default function AuthEntryScreen({
             {mode === "login" ? (
               <View style={styles.footer}>
                 <Text style={styles.helperText}>
-                  パスワードをお忘れの方は
+                  {copy.forgotLead}
                   <Text
                     style={styles.helperLinkInline}
                     onPress={() => setMode("reset")}
                   >
-                    こちら
+                    {copy.forgotLink}
                   </Text>
                 </Text>
                 <Pressable onPress={() => setConsentOpen(true)}>
@@ -410,7 +405,7 @@ export default function AuthEntryScreen({
             ) : mode === "signup" ? (
               <View style={styles.footer}>
                 <Text style={styles.helperText}>
-                  すでにアカウントをお持ちの方は
+                  {copy.alreadyLead}
                   <Text style={styles.helperLinkInline} onPress={() => setMode("login")}>
                     {" LOGIN"}
                   </Text>

@@ -56,6 +56,7 @@ export default function SquadBattleGroupEntry({
     phase,
     myRank,
     deadlineLabel,
+    lang: isEn ? "en" : "ja",
   });
 
   return (

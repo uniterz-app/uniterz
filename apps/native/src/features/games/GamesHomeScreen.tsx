@@ -53,6 +53,7 @@ import {
 import { splitTeamNameByLeague, getTeamAlias } from "../../utils/teamName";
 import { auth, db } from "../../lib/firebase";
 import { useFirebaseUser } from "../../auth/FirebaseUserProvider";
+import { useNativeUserLanguageFromAuth } from "../../hooks/useNativeUserLanguage";
 import {
   type NativeGameRow,
   type SupportedLeague,
@@ -198,7 +199,7 @@ import {
   type ClientPredictionValidationCode,
 } from "../../../../../lib/predict/clientPredictionSubmit";
 import { findNextUnpredictedScheduledGameInList } from "../../../../../lib/games/nextPredictGame";
-import { resolveMarketBiasFallback } from "../../../../../lib/predict/gameMarketDistribution";
+import { resolveGameMarketBiasDisplay, readGamePredictorCount } from "../../../../../lib/predict/gameMarketDistribution";
 import type { GameCardCenterBlock } from "./gameCardCenterTypes";
 import { formatTeamRecordForCard } from "./teamRecordDisplay";
 import { useTeamRecordMap } from "./useTeamRecordMap";
@@ -716,7 +717,7 @@ export default function GamesHomeScreen({
   const [myPredictionsReloadNonce, setMyPredictionsReloadNonce] = useState(0);
   const [countdownNowMs, setCountdownNowMs] = useState(() => Date.now());
   const [userDisplayName, setUserDisplayName] = useState("");
-  const [language, setLanguage] = useState<"ja" | "en">("ja");
+  const { language } = useNativeUserLanguageFromAuth();
   /** ロード完了直後の日付チップのみ入場アニメ（窓移動での再マウント連打を防ぐ） */
   const [dayStripEntranceEnabled, setDayStripEntranceEnabled] = useState(true);
   const {
@@ -940,7 +941,6 @@ export default function GamesHomeScreen({
           ? (snap.data() as {
               preferredLeague?: unknown;
               displayName?: unknown;
-              language?: unknown;
             })
           : undefined;
         const preferred = parsePreferredLeague(row?.preferredLeague ?? null);
@@ -950,12 +950,10 @@ export default function GamesHomeScreen({
         const name =
           typeof row?.displayName === "string" ? row.displayName.trim() : "";
         setUserDisplayName(name || (fUser?.displayName ?? ""));
-        setLanguage(row?.language === "en" ? "en" : "ja");
       } catch {
         // Web と同じく、取得できない場合は画面既定のリーグを使う。
         if (!cancelled) {
           setUserDisplayName(fUser?.displayName ?? "");
-          setLanguage("ja");
         }
       } finally {
         if (!cancelled) {
@@ -1296,6 +1294,7 @@ export default function GamesHomeScreen({
     if (predictSpectatorStartedNoPost) return;
     const gameId = String(selectedGame.id ?? "");
     if (!gameId) return;
+    if (myPostIdByGameId[gameId]) return;
     const key = draftStorageKey(fUser.uid, gameId);
     void AsyncStorage.setItem(
       key,
@@ -1313,6 +1312,7 @@ export default function GamesHomeScreen({
     winner,
     scoreHome,
     scoreAway,
+    myPostIdByGameId,
   ]);
 
   useEffect(() => {
@@ -1714,25 +1714,42 @@ export default function GamesHomeScreen({
     const homeName = resolveGameTeamName(g.home, g.homeTeamName, "HOME");
     const awayName = resolveGameTeamName(g.away, g.awayTeamName, "AWAY");
     const existingWinner = myPredictionByGameId[gameId]?.winner ?? null;
+    const liveWinner = winner ?? existingWinner;
     const accents = resolveMatchupUiAccents(g.league, g.home, g.away);
-    const marketBias = g.marketBias as { homePct?: number; awayPct?: number } | undefined;
-    const nestedMarket = g.market as
-      | { homePct?: number; awayPct?: number; homeRate?: number; awayRate?: number }
-      | undefined;
+    const predictionCount = (() => {
+      const stored = readGamePredictorCount(g as Record<string, unknown>);
+      const hasMine = Boolean(
+        myPostIdByGameId[gameId] || myPredictionByGameId[gameId]
+      );
+      if (stored != null) return Math.max(stored, hasMine ? 1 : 0);
+      return hasMine ? 1 : undefined;
+    })();
     return {
       gameId,
       league: selectedLeague,
       status: resolveGameStatus(g),
       score: resolveGameScore(g),
-      fallbackMarketBias: resolveMarketBiasFallback(marketBias, nestedMarket),
+      fallbackMarketBias: resolveGameMarketBiasDisplay(
+        g as Record<string, unknown>,
+        {
+          userWinner:
+            liveWinner === "home" ||
+            liveWinner === "away" ||
+            liveWinner === "draw"
+              ? liveWinner
+              : null,
+          predictionCount: predictionCount ?? null,
+        }
+      ),
       homeColor: accents.homeAccent,
       awayColor: accents.awayAccent,
       homeLabel: toCompactTeamName(g.league, homeName),
       awayLabel: toCompactTeamName(g.league, awayName),
       compact: selectedLeague === "wc",
-      userPredictionWinner: winner ?? existingWinner,
+      userPredictionWinner: liveWinner,
+      predictionCount,
     };
-  }, [selectedGame, selectedLeague, winner, myPredictionByGameId]);
+  }, [selectedGame, selectedLeague, winner, myPredictionByGameId, myPostIdByGameId]);
 
   const predictScheduleMeta = useMemo((): PredictModalScheduleMeta | null => {
     if (!selectedGame) return null;
@@ -1856,12 +1873,23 @@ export default function GamesHomeScreen({
         }));
       }
     }
-    const peekedPostId =
-      !editBootstrap?.postId && fUser?.uid
-        ? peekScheduleMyPosts(fUser.uid, [gameId])[gameId]?.postId
-        : undefined;
+    const peeked =
+      fUser?.uid ? peekScheduleMyPosts(fUser.uid, [gameId])[gameId] : undefined;
     const existingPostId =
-      editBootstrap?.postId ?? myPostIdByGameId[gameId] ?? peekedPostId;
+      editBootstrap?.postId ?? myPostIdByGameId[gameId] ?? peeked?.postId;
+    if (existingPostId && !editBootstrap?.postId) {
+      setMyPostIdByGameId((prev) =>
+        prev[gameId] === existingPostId
+          ? prev
+          : { ...prev, [gameId]: existingPostId }
+      );
+      setPredictedGameIds((prev) => {
+        if (prev.has(gameId)) return prev;
+        const next = new Set(prev);
+        next.add(gameId);
+        return next;
+      });
+    }
     if (
       gameId !== TUTORIAL_NBA_GAME_ID &&
       resolveGameStatus(sourceGame) === "final" &&
@@ -1872,6 +1900,19 @@ export default function GamesHomeScreen({
       setResultDetailPostId(existingPostId);
       return;
     }
+    const peekedPrediction =
+      peeked &&
+      (peeked.winner === "home" ||
+        peeked.winner === "away" ||
+        peeked.winner === "draw") &&
+      peeked.score
+        ? {
+            winner: peeked.winner as "home" | "away" | "draw",
+            score: peeked.score,
+            comment: peeked.comment ?? "",
+            goalScorer: peeked.goalScorer,
+          }
+        : undefined;
     const existingPrediction = editBootstrap?.seed
       ? {
           winner: editBootstrap.seed.winner,
@@ -1882,7 +1923,20 @@ export default function GamesHomeScreen({
           comment: "",
           goalScorer: editBootstrap.seed.goalScorer,
         }
-      : myPredictionByGameId[gameId];
+      : myPredictionByGameId[gameId] ?? peekedPrediction;
+    if (existingPrediction && !myPredictionByGameId[gameId]) {
+      setMyPredictionByGameId((prev) => ({
+        ...prev,
+        [gameId]: {
+          winner: existingPrediction.winner,
+          score: existingPrediction.score,
+          comment: existingPrediction.comment ?? prev[gameId]?.comment ?? "",
+          updatedAt: prev[gameId]?.updatedAt,
+          goalScorer: existingPrediction.goalScorer ?? prev[gameId]?.goalScorer,
+          postStats: prev[gameId]?.postStats ?? null,
+        },
+      }));
+    }
     const started = isGameStarted(sourceGame);
     /** Web 一覧カードの `onOpenPredict`：開始後・未投稿でもオーバーレイを開く（フォームだけ非表示） */
     const spectatorStartedNoPost = Boolean(started && !existingPostId);
@@ -1916,16 +1970,16 @@ export default function GamesHomeScreen({
 
     if (!fUser?.uid) return;
 
-    if (editBootstrap?.seed) {
-      setWinner(editBootstrap.seed.winner);
-      setScoreHome(String(editBootstrap.seed.scoreHome));
-      setScoreAway(String(editBootstrap.seed.scoreAway));
+    if (existingPrediction) {
+      setWinner(existingPrediction.winner);
+      setScoreHome(String(existingPrediction.score.home));
+      setScoreAway(String(existingPrediction.score.away));
       if (
-        editBootstrap.seed.scoreHome === editBootstrap.seed.scoreAway &&
-        (editBootstrap.seed.winner === "home" ||
-          editBootstrap.seed.winner === "away")
+        existingPrediction.score.home === existingPrediction.score.away &&
+        (existingPrediction.winner === "home" ||
+          existingPrediction.winner === "away")
       ) {
-        setPkWinner(editBootstrap.seed.winner);
+        setPkWinner(existingPrediction.winner);
       } else {
         setPkWinner(null);
       }
@@ -1933,8 +1987,8 @@ export default function GamesHomeScreen({
         const league = String(sourceGame.league ?? "").toLowerCase();
         setGoalScorerPick(
           league === "nba"
-            ? normalizeNbaTopScorerPick(editBootstrap.seed.goalScorer)
-            : normalizeWcGoalScorerPick(editBootstrap.seed.goalScorer)
+            ? normalizeNbaTopScorerPick(existingPrediction.goalScorer)
+            : normalizeWcGoalScorerPick(existingPrediction.goalScorer)
         );
       }
       return;
@@ -1953,30 +2007,9 @@ export default function GamesHomeScreen({
           setWinner(draft.winner ?? null);
           setScoreHome(draft.scoreHome ?? "");
           setScoreAway(draft.scoreAway ?? "");
-          return;
         } catch {
           // ignore broken draft
         }
-      }
-      if (existingPrediction) {
-        setWinner(existingPrediction.winner);
-        setScoreHome(String(existingPrediction.score.home));
-        setScoreAway(String(existingPrediction.score.away));
-        if (
-          existingPrediction.score.home === existingPrediction.score.away &&
-          (existingPrediction.winner === "home" ||
-            existingPrediction.winner === "away")
-        ) {
-          setPkWinner(existingPrediction.winner);
-        } else {
-          setPkWinner(null);
-        }
-        const league = String(sourceGame.league ?? "").toLowerCase();
-        setGoalScorerPick(
-          league === "nba"
-            ? normalizeNbaTopScorerPick(existingPrediction.goalScorer)
-            : normalizeWcGoalScorerPick(existingPrediction.goalScorer)
-        );
       }
     })();
   }
@@ -2601,6 +2634,11 @@ export default function GamesHomeScreen({
         goalScorerPick={goalScorerPick}
         setGoalScorerPick={setGoalScorerPick}
         mergedFinalPreview={predictMergedFinalPreview}
+        resultPostStats={
+          selectedGameId
+            ? myPredictionByGameId[selectedGameId]?.postStats ?? null
+            : null
+        }
         myPostId={selectedGameId ? myPostIdByGameId[selectedGameId] ?? null : null}
         isProUser={isProUser}
       />

@@ -4,16 +4,22 @@ import TeamAbbrBadge from "@/app/component/games/TeamAbbrBadge";
 import { nameOxanium } from "@/lib/fonts";
 import type { SeasonAwardsMarketSnapshot } from "@/lib/predict/seasonPredictMarket";
 import { nbaTeamIdFromBracketCode } from "@/lib/nba-bracket-code";
+import {
+  seasonPredictAwardsMarketHint,
+  type SeasonPredictUiLang,
+} from "@/lib/predict/seasonPredictUiCopy";
 
 type Props = {
   market: SeasonAwardsMarketSnapshot;
   className?: string;
+  language?: SeasonPredictUiLang;
 };
 
 /** 締切後・アワード予想マーケット（賞ごと Top5） */
 export default function NbaSeasonAwardsMarketPanel({
   market,
   className,
+  language = "ja",
 }: Props) {
   return (
     <section
@@ -44,7 +50,7 @@ export default function NbaSeasonAwardsMarketPanel({
           </p>
         </div>
         <p className="text-[11px] leading-relaxed text-white/45">
-          各アワードの提出シェア Top5。締切後に公開される本番ビューと同じレイアウトです。
+          {seasonPredictAwardsMarketHint(language)}
         </p>
       </header>
 
@@ -60,7 +66,9 @@ export default function NbaSeasonAwardsMarketPanel({
               >
                 {block.labelEn}
               </span>
-              <span className="text-[10px] text-white/35">{block.labelJa}</span>
+              {language !== "en" ? (
+                <span className="text-[10px] text-white/35">{block.labelJa}</span>
+              ) : null}
             </div>
             <ol className="space-y-1.5">
               {block.top.map((row, i) => {

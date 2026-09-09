@@ -61,7 +61,7 @@ const JA: Record<ReportGateKind, ReportGateCopy> = {
         detail: "今週の総括と、次週の焦点",
       },
     ],
-    cta: "Pro を見る",
+    cta: "Explore Pro",
   },
   waitingMonday: {
     eyebrow: "WEEKLY",

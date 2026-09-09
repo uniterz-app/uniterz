@@ -36,6 +36,8 @@ import {
 } from "@/lib/games/pkScore";
 import NbaTopScorerResultRow from "@/app/component/result/NbaTopScorerResultRow";
 import { resolveNbaTopScorerResultInfo } from "@/lib/result/resolveNbaTopScorerResult";
+import { normalizeNbaTopScorerPick } from "@/lib/nba/topScorer";
+import { useNbaTopScorerCandidates } from "@/lib/nba/useNbaTopScorerCandidates";
 import { bracketMarketTeamTypography, wcBracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
 import { MOBILE_RESULT_CARD_OUTER_CLASS } from "@/lib/games/mobileListCardLayout";
 import ResultGlassShell from "@/app/component/result/ResultGlassShell";
@@ -124,8 +126,15 @@ type Props = {
   pkScore?: PkScore | null;
   /** 線枠パス描画の開始遅延（秒）。一覧スロットと同期 */
   lineFrameDrawDelaySec?: number;
-  /** games.market 補完（新カード面の市場偏り） */
+  /** games.marketBias / market 補完（新カード面の市場偏り） */
   gameMarket?: GameMarketRates | null;
+  /** games.roundLabel / playoffRound 補完（旧投稿の MATCH 落ち向け） */
+  gameRoundMeta?: {
+    roundLabel?: string | null;
+    playoffRound?: string | null;
+    seasonRound?: string | number | null;
+    seasonPhase?: string | null;
+  } | null;
 };
 
 /** Router に繋がない環境（CSS3D の別ルート等）でも同じ UI を出す用 */
@@ -187,6 +196,7 @@ function ResultCardPresentationImpl({
   pkScore: pkScoreProp = null,
   lineFrameDrawDelaySec = 0,
   gameMarket = null,
+  gameRoundMeta = null,
 }: ResultCardPresentationProps) {
   const clock = useResultCardClockMs(cardClockMs);
   const mobileScheduleDense = Boolean(isMobile && scheduleDense);
@@ -440,9 +450,11 @@ function ResultCardPresentationImpl({
   const isMatchStarted = isResultPostMatchStarted(post, clock);
 
   const hasCornerActions =
-    !isMatchStarted && (hasCornerEdit || hasCornerTrash);
+    !isMatchStarted &&
+    !isPredictionFinalized &&
+    (hasCornerEdit || hasCornerTrash);
 
-  const showCornerControl = !isMatchStarted && hasCornerActions;
+  const showCornerControl = hasCornerActions;
 
   /** モバイルはホバーが使えないため、ハンバーガーでメニュー開閉 */
   const [cornerFabOpen, setCornerFabOpen] = useState(false);
@@ -471,38 +483,161 @@ function ResultCardPresentationImpl({
     ? "pointer-events-auto visible -translate-y-1/2 translate-x-0 opacity-100"
     : "pointer-events-none invisible -translate-y-1/2 translate-x-2 opacity-0 group-hover/card:pointer-events-auto group-hover/card:visible group-hover/card:translate-x-0 group-hover/card:opacity-100";
 
-  const roundLabel = roundLabelFromPost(post as unknown as Record<string, unknown>);
+  const roundLabel = roundLabelFromPost(
+    post as unknown as Record<string, unknown>,
+    gameRoundMeta
+  );
   const lineFramePaint = resultOutcomeLineFramePaint(
     badge === "streak" ? "streak" : badge
   );
+
+  const nbaScorerPick = useMemo(
+    () =>
+      normalizedLeague === "nba"
+        ? normalizeNbaTopScorerPick(post.prediction?.goalScorer)
+        : null,
+    [normalizedLeague, post.prediction]
+  );
+  const needScorerNames = Boolean(nbaScorerPick && !nbaScorerPick.name);
+  const { candidates: topScorerCandidates } = useNbaTopScorerCandidates({
+    homeTeamId: post.home?.teamId,
+    awayTeamId: post.away?.teamId,
+    enabled: needScorerNames,
+  });
 
   const faceModel = useMemo(
     () =>
       buildResultCardFaceModel(
         { ...(post as unknown as Record<string, unknown>), id: post.id },
-        gameMarket
-          ? {
-              market: {
-                homeRate: gameMarket.homeRate,
-                awayRate: gameMarket.awayRate,
-              },
-            }
-          : undefined
+        {
+          ...(gameMarket
+            ? {
+                market: {
+                  homeRate: gameMarket.homeRate,
+                  awayRate: gameMarket.awayRate,
+                },
+              }
+            : {}),
+          ...(gameRoundMeta ? { gameMeta: gameRoundMeta } : {}),
+          ...(topScorerCandidates.length > 0
+            ? { topScorerCandidates }
+            : {}),
+        }
       ),
-    [post, gameMarket]
+    [post, gameMarket, gameRoundMeta, topScorerCandidates]
   );
 
-  if (!isWc && hasFinal) {
+  const cornerMenu = showCornerControl ? (
+        <div
+          ref={cornerFabRef}
+          data-capture-skip
+          className={[
+            /* ホバーでペンへ移る途中でも閉じにくいようホットエリアを広げる（見た目位置は維持） */
+            "pointer-events-auto absolute",
+            /* MatchListLineFrame は topLabel 用に pt-3.5 / marginTop:14 があり、枠上辺はその下。
+               top は「枠オフセット 14 + 枠内 inset」で指定しないと枠線に乗る */
+            isMobile
+              ? "-m-3 p-3 right-2.5 top-7 z-[50]"
+              : "-m-5 p-5 right-2.5 top-7 z-40 sm:right-3 sm:top-8",
+          ].join(" ")}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div
+            className={[
+              "relative flex items-center justify-center",
+              isMobile ? "touch-manipulation" : "",
+            ].join(" ")}
+          >
+            {/* 左に飛び出す：予想修正（ペン） */}
+            {hasCornerEdit ? (
+              <button
+                type="button"
+                className={[
+                  "absolute right-full top-1/2 mr-1.5 flex -translate-y-1/2 items-center justify-center transition-all duration-300 ease-out",
+                  resultCardFlyoutButtonClasses(isMobile, "edit"),
+                  isMobile ? "z-[55]" : "z-30",
+                  isMobile ? "touch-manipulation" : "",
+                  flyoutPenClass,
+                ].join(" ")}
+                aria-label={m.results.editPredictionAriaLabel}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setCornerFabOpen(false);
+                  if (onRequestPredictEdit) {
+                    onRequestPredictEdit(post);
+                  } else if (predictEditHref) {
+                    onNavigate?.(predictEditHref);
+                  }
+                }}
+              >
+                <Pencil
+                  className="h-3 w-3"
+                  strokeWidth={2.2}
+                  aria-hidden
+                />
+              </button>
+            ) : null}
+            {/* 下に飛び出す：一覧から除外（ゴミ箱） */}
+            {hasCornerTrash && onPreKickoffDismiss ? (
+              <button
+                type="button"
+                className={[
+                  "absolute top-full left-1/2 mt-1.5 flex items-center justify-center transition-all duration-300 ease-out",
+                  resultCardFlyoutButtonClasses(isMobile, "delete"),
+                  isMobile ? "z-[55]" : "z-30",
+                  isMobile ? "touch-manipulation" : "",
+                  flyoutTrashClass,
+                ].join(" ")}
+                aria-label={m.results.removeFromList}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setCornerFabOpen(false);
+                  void onPreKickoffDismiss();
+                }}
+              >
+                <Trash2
+                  className="h-3 w-3"
+                  strokeWidth={2.2}
+                  aria-hidden
+                />
+              </button>
+            ) : null}
+            {/* メイン：ハンバーガー（サイバー角パネル） */}
+            <CyberMenuButton
+              size="xs"
+              className={[
+                "cyber-menu-btn--white relative size-[26px] transition-all duration-300 ease-out",
+                isMobile ? "z-[52]" : "z-20",
+              ].join(" ")}
+              aria-expanded={cornerFabOpen}
+              aria-haspopup="true"
+              aria-label={m.results.openActions}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setCornerFabOpen((v) => !v);
+              }}
+            />
+          </div>
+        </div>
+      ) : null;
+
+  /** 新カード面（WC 以外）。判定前も含む */
+  if (!isWc) {
     return (
       <div
-        className={
+        className={[
           embedded
             ? "w-full overflow-visible"
             : isMobile
               ? `${MOBILE_RESULT_CARD_OUTER_CLASS} overflow-visible`
-              : "mx-auto w-full max-w-[1200px] overflow-visible"
-        }
+              : "mx-auto w-full max-w-[1200px] overflow-visible",
+          "group/card relative",
+        ].join(" ")}
       >
+        {cornerMenu}
         <ResultCardDesignFace
           language={language}
           face={faceModel}
@@ -510,6 +645,7 @@ function ResultCardPresentationImpl({
           animateDraw={!visualEffectsLite}
           drawDelaySec={lineFrameDrawDelaySec}
           onOpen={embedded ? undefined : handle}
+          live={isLiveGame}
         />
       </div>
     );
@@ -550,98 +686,7 @@ function ResultCardPresentationImpl({
         .filter(Boolean)
         .join(" ")}
     >
-      {showCornerControl ? (
-        <div
-          ref={cornerFabRef}
-          data-capture-skip
-          className={[
-            /* ホバーでペンへ移る途中でも閉じにくいようホットエリアを広げる（見た目位置は維持） */
-            "pointer-events-auto absolute",
-            isMobile ? "-m-3 p-3 right-2.5 top-2 z-[50]" : "-m-5 p-5 right-2 top-2 z-40 sm:right-2.5 sm:top-2.5",
-          ].join(" ")}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div
-            className={[
-              "relative flex items-center justify-center",
-              isMobile ? "touch-manipulation" : "",
-            ].join(" ")}
-          >
-            {/* 左に飛び出す：予想修正（ペン） */}
-            {hasCornerEdit ? (
-              <button
-                type="button"
-                className={[
-                  "absolute right-full top-1/2 mr-1.5 flex -translate-y-1/2 items-center justify-center transition-all duration-300 ease-out",
-                  resultCardFlyoutButtonClasses(isMobile, "edit"),
-                  isMobile ? "z-[55]" : "z-30",
-                  isMobile ? "touch-manipulation" : "",
-                  flyoutPenClass,
-                ].join(" ")}
-                aria-label={m.results.editPredictionAriaLabel}
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  setCornerFabOpen(false);
-                  if (onRequestPredictEdit) {
-                    onRequestPredictEdit(post);
-                  } else if (predictEditHref) {
-                    onNavigate?.(predictEditHref);
-                  }
-                }}
-              >
-                <Pencil
-                  className={isMobile ? "h-3 w-3" : "h-[14px] w-[14px]"}
-                  strokeWidth={2.2}
-                  aria-hidden
-                />
-              </button>
-            ) : null}
-            {/* 下に飛び出す：一覧から除外（ゴミ箱） */}
-            {hasCornerTrash && onPreKickoffDismiss ? (
-              <button
-                type="button"
-                className={[
-                  "absolute top-full left-1/2 mt-1.5 flex items-center justify-center transition-all duration-300 ease-out",
-                  resultCardFlyoutButtonClasses(isMobile, "delete"),
-                  isMobile ? "z-[55]" : "z-30",
-                  isMobile ? "touch-manipulation" : "",
-                  flyoutTrashClass,
-                ].join(" ")}
-                aria-label={m.results.removeFromList}
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  setCornerFabOpen(false);
-                  void onPreKickoffDismiss();
-                }}
-              >
-                <Trash2
-                  className={isMobile ? "h-3 w-3" : "h-[14px] w-[14px]"}
-                  strokeWidth={2.2}
-                  aria-hidden
-                />
-              </button>
-            ) : null}
-            {/* メイン：ハンバーガー（サイバー角パネル） */}
-            <CyberMenuButton
-              size="xs"
-              className={[
-                "relative transition-all duration-300 ease-out",
-                isMobile ? "z-[52]" : "z-20",
-              ].join(" ")}
-              aria-expanded={cornerFabOpen}
-              aria-haspopup="true"
-              aria-label={m.results.openActions}
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                setCornerFabOpen((v) => !v);
-              }}
-            />
-          </div>
-        </div>
-      ) : null}
+      {cornerMenu}
       {listDateLabel ? (
         <div
           className={[
@@ -666,7 +711,7 @@ function ResultCardPresentationImpl({
           <div
             className={[
               "pointer-events-none absolute top-1.5 z-20 flex max-w-[min(100%,11rem)] flex-col items-end gap-1.5",
-              showCornerControl ? "right-11" : "right-2",
+              showCornerControl ? "right-12" : "right-2",
             ].join(" ")}
           >
             <ResultOutcomeBadges

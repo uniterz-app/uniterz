@@ -75,9 +75,13 @@ type Props = {
     | "notificationDev"
     | "restartTutorial"
     | "seasonPreview"
+    | "weeklyReportPreview"
+    | "monthlyReportPreview"
     | "squadBattlePreview"
     | "liveGameStatsPreview"
     | "leagueStatsPreview"
+    | "proLeagueTeaserPreview"
+    | "proInsightGatePreview"
     | "adminFeatureInbox"
     | "adminContactInbox"
     | "adminRedemptions"
@@ -249,9 +253,13 @@ export default function ProfileSideMenuModal({
       | "notificationDev"
       | "restartTutorial"
       | "seasonPreview"
+      | "weeklyReportPreview"
+      | "monthlyReportPreview"
       | "squadBattlePreview"
       | "liveGameStatsPreview"
       | "leagueStatsPreview"
+      | "proLeagueTeaserPreview"
+      | "proInsightGatePreview"
       | "adminFeatureInbox"
       | "adminContactInbox"
       | "adminRedemptions"
@@ -592,6 +600,22 @@ export default function ProfileSideMenuModal({
                           シーズン予想プレビュー
                         </SideMenuItemButtonNative>
                         <SideMenuItemButtonNative
+                          icon="file-chart-outline"
+                          dense
+                          labelStyle={labelStyle}
+                          onPress={() => openUserPage("weeklyReportPreview")}
+                        >
+                          週間レポート
+                        </SideMenuItemButtonNative>
+                        <SideMenuItemButtonNative
+                          icon="radar"
+                          dense
+                          labelStyle={labelStyle}
+                          onPress={() => openUserPage("monthlyReportPreview")}
+                        >
+                          月間レポート
+                        </SideMenuItemButtonNative>
+                        <SideMenuItemButtonNative
                           icon="account-group-outline"
                           dense
                           labelStyle={labelStyle}
@@ -614,6 +638,22 @@ export default function ProfileSideMenuModal({
                           onPress={() => openUserPage("leagueStatsPreview")}
                         >
                           リーグスタッツ（左レール）
+                        </SideMenuItemButtonNative>
+                        <SideMenuItemButtonNative
+                          icon="sword-cross"
+                          dense
+                          labelStyle={labelStyle}
+                          onPress={() => openUserPage("proLeagueTeaserPreview")}
+                        >
+                          PRO LEAGUE ゲート
+                        </SideMenuItemButtonNative>
+                        <SideMenuItemButtonNative
+                          icon="lightbulb-on-outline"
+                          dense
+                          labelStyle={labelStyle}
+                          onPress={() => openUserPage("proInsightGatePreview")}
+                        >
+                          PRO INSIGHT ゲート
                         </SideMenuItemButtonNative>
                       </View>
                     </>
