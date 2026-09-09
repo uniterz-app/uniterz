@@ -1,5 +1,11 @@
 import { StyleSheet, View } from "react-native";
-import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import type { NavigationState, PartialState } from "@react-navigation/native";
 import { useReducedMotion } from "react-native-reanimated";
@@ -12,6 +18,8 @@ import {
 import NativePushNotificationsHost from "../notifications/NativePushNotificationsHost";
 import UniterzBrandShelfNative from "../features/UniterzBrandShelfNative";
 import { hideNativeBootSplash } from "../bootstrap/nativeBootSplash";
+import { getSplashVideoGateNative } from "../features/splash/video/expoVideoModuleNative";
+import { consumeSplashVideoColdStart } from "../features/splash/video/splashVideoColdStart";
 import {
   DEFAULT_HEADER_WORDMARK,
   getAppBrandWordmarkOverride,
@@ -73,6 +81,11 @@ function resolveTabWordmark(
 
 export default function MainTabNavigator() {
   const reduceMotion = useReducedMotion() === true;
+  const SplashGate = useMemo(() => getSplashVideoGateNative(), []);
+  const [splashGateOpen, setSplashGateOpen] = useState(() => {
+    if (!SplashGate) return false;
+    return consumeSplashVideoColdStart();
+  });
   const [wordmark, setWordmark] = useState(DEFAULT_HEADER_WORDMARK);
   const brandShelfHidden = useSyncExternalStore(
     subscribeAppBrandShelfHidden,
@@ -122,9 +135,14 @@ export default function MainTabNavigator() {
     [reduceMotion, tabTransitionQuiet]
   );
 
-  useEffect(() => {
-    hideNativeBootSplash();
+  const onSplashDone = useCallback(() => {
+    setSplashGateOpen(false);
   }, []);
+
+  useEffect(() => {
+    // 動画ゲート中は OS スプラッシュ解除をゲート側に任せる
+    if (!splashGateOpen) hideNativeBootSplash();
+  }, [splashGateOpen]);
 
   return (
     <>
@@ -179,6 +197,9 @@ export default function MainTabNavigator() {
             <Tab.Screen name="ProfileTab" component={ProfileStackScreen} />
           </Tab.Navigator>
         </View>
+        {splashGateOpen && SplashGate ? (
+          <SplashGate onDone={onSplashDone} />
+        ) : null}
       </View>
     </>
   );

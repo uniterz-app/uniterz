@@ -31,7 +31,9 @@
         "NSPrivacyAccessedAPITypes": [
           {
             "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryUserDefaults",
-            "NSPrivacyAccessedAPITypeReasons": ["CA92.1"]
+            "NSPrivacyAccessedAPITypeReasons": [
+              "CA92.1"
+            ]
           }
         ]
       }
@@ -61,7 +63,10 @@
               "pathPrefix": "/mobile"
             }
           ],
-          "category": ["BROWSABLE", "DEFAULT"]
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         }
       ],
       "permissions": [
@@ -85,7 +90,8 @@
           "cameraPermission": "プロフィール写真を撮影するためにカメラを使います。"
         }
       ],
-      "expo-asset"
+      "expo-asset",
+      "expo-video"
     ],
     "web": {
       "favicon": "./assets/favicon.png"

@@ -30,7 +30,7 @@ import AppShellNative from "./src/components/AppShellNative";
 import TutorialRestartCoverNative from "./src/features/tutorial/TutorialRestartCoverNative";
 import MaintenanceGateNative from "./src/components/MaintenanceGateNative";
 import CyberAlertProvider from "./src/components/CyberAlertProvider";
-import { NATIVE_PAGE_SURFACE_COLOR } from "./src/features/background/nativeBackgroundPalette";
+import { APP_MESH_BG_FALLBACK } from "../../lib/app/appMeshBackground";
 import { ensureNativeSplashHeld } from "./src/bootstrap/nativeBootSplash";
 import { prefetchRankingsLogoGlb } from "./src/features/rankings/rankingsLogoGlbCache";
 import { initNativeObservability } from "./src/observability/initNativeObservability";
@@ -75,7 +75,7 @@ export default function App() {
   if (!fontsLoaded) return null;
 
   return (
-    <GestureHandlerRootView style={{ flex: 1, backgroundColor: NATIVE_PAGE_SURFACE_COLOR }}>
+    <GestureHandlerRootView style={{ flex: 1, backgroundColor: APP_MESH_BG_FALLBACK }}>
       <SafeAreaProvider style={{ flex: 1, backgroundColor: "transparent" }}>
         <MaintenanceGateNative>
         <FirebaseUserProvider>
