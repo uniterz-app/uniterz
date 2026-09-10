@@ -15,6 +15,7 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import LegalPageLayoutNative from "../../legal/LegalPageLayoutNative";
 import { useFirebaseUser } from "../../../auth/FirebaseUserProvider";
 import { useNativeUserLanguage } from "../../../hooks/useNativeUserLanguage";
+import { useBottomTabBarInsets } from "../../../navigation/useBottomTabBarInsets";
 import { L } from "../../../../../../lib/i18n/localize";
 import { cyberAlert } from "../../../components/cyberAlert";
 import { fetchMeReferralNative } from "../referralApiNative";
@@ -46,6 +47,7 @@ function qrImageUrl(data: string): string {
 export default function ReferralInviteScreenNative() {
   const { fUser } = useFirebaseUser();
   const { language } = useNativeUserLanguage(fUser?.uid);
+  const { bottomContentReserveY } = useBottomTabBarInsets();
   const inviteCopy = referralInviteScreenCopy(language);
   const lang = inviteCopy.lang;
   const [summary, setSummary] = useState<ReferralInviteSummary>(() =>
@@ -119,6 +121,7 @@ export default function ReferralInviteScreenNative() {
       title="INVITE"
       eyebrow="PROFILE"
       description={inviteCopy.description}
+      contentStyle={{ paddingBottom: bottomContentReserveY + 16 }}
     >
       {loading ? (
         <Text style={styles.loading}>
@@ -312,7 +315,6 @@ export default function ReferralInviteScreenNative() {
             </Text>
           </View>
         ))}
-        <Text style={styles.footnote}>{inviteCopy.footnote}</Text>
       </View>
     </LegalPageLayoutNative>
   );
@@ -569,5 +571,4 @@ const styles = StyleSheet.create({
   rowStatusDone: {
     color: "rgba(249,115,22,0.9)",
   },
-  footnote: { fontSize: 10, color: "rgba(255,255,255,0.3)", marginTop: 4 },
 });

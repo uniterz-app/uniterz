@@ -42,7 +42,7 @@ export const GROUP_BATTLE_DEFAULT_WEEKLY_UNITS_PER_MEMBER = [
 ] as const;
 
 export const GROUP_BATTLE_DEFAULT_MONTHLY_UNITS_PER_MEMBER = [
-  100, 80, 64, 50, 42, 36, 30, 26, 22, 20, 18, 16, 14, 12, 10, 9, 8, 7, 6, 5,
+  150, 120, 96, 75, 63, 54, 45, 39, 33, 30, 27, 24, 21, 18, 15, 14, 12, 11, 9, 8,
 ] as const;
 
 /** いまの順位で、メンバー1人あたりの推定 Unit（確定前） */

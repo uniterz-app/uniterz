@@ -141,7 +141,7 @@ export const SQUAD_BATTLE_SEASON_PHASES: readonly SquadBattleSeasonPhase[] = [
     key: "reward",
     label: "REWARD",
     period: "結果確定後",
-    desc: "週間1位は全員 30 Unit、月間1位は全員 100 Unit。上位20まで順位に応じて獲得",
+    desc: "週間1位は全員 30 Unit、月間1位は全員 150 Unit。上位20まで順位に応じて獲得",
   },
 ] as const;
 
@@ -208,12 +208,12 @@ export function squadBattleSeasonPhases(
       }),
       desc: L(lang, {
         ja: SQUAD_BATTLE_SEASON_PHASES[2]!.desc,
-        en: "Weekly 1st: 30 Units each, monthly 1st: 100 each. Top 20 earn by rank",
-        ko: "주간 1위 전원 30 Unit, 월간 1위 전원 100 Unit. 상위 20까지 순위별 획득",
-        zh: "周冠军全员 30 Unit，月冠军全员 100 Unit。前 20 名按排名获得",
-        es: "1.º semanal: 30 Units c/u; 1.º mensual: 100 c/u. Top 20 ganan por puesto",
-        pt: "1.º semanal: 30 Units cada; 1.º mensal: 100 cada. Top 20 ganham por colocação",
-        fr: "1er hebdo : 30 Units chacun ; 1er mensuel : 100 chacun. Top 20 selon le rang",
+        en: "Weekly 1st: 30 Units each, monthly 1st: 150 each. Top 20 earn by rank",
+        ko: "주간 1위 전원 30 Unit, 월간 1위 전원 150 Unit. 상위 20까지 순위별 획득",
+        zh: "周冠军全员 30 Unit，月冠军全员 150 Unit。前 20 名按排名获得",
+        es: "1.º semanal: 30 Units c/u; 1.º mensual: 150 c/u. Top 20 ganan por puesto",
+        pt: "1.º semanal: 30 Units cada; 1.º mensal: 150 cada. Top 20 ganham por colocação",
+        fr: "1er hebdo : 30 Units chacun ; 1er mensuel : 150 chacun. Top 20 selon le rang",
       }),
     },
   ];
@@ -221,7 +221,7 @@ export function squadBattleSeasonPhases(
 
 /** 初回イントロのルール1行（キッカー／フェーズと重複しないこと） */
 export const SQUAD_BATTLE_INTRO_TAGLINE =
-  "3〜5人のスクワッドで、Pick Up 試合の総合スコア平均を競う。";
+  "3〜5人のスクワッドで、Pick Up 試合のスコア平均を競う。";
 
 export function squadBattleIntroTagline(lang: LocalizedLang = "ja"): string {
   return L(lang, {
@@ -236,7 +236,7 @@ export function squadBattleIntroTagline(lang: LocalizedLang = "ja"): string {
 }
 
 /** はてな（？）ヘルプ用のルール要約 */
-export const SQUAD_BATTLE_HELP_TEXT = `3〜5人のスクワッドで、メンバー全員の総合スコア平均を競います。対象は Pick Up 試合のみ（PRO LEAGUE の全試合スコアは使いません）。所属できるグループは1大会につき1つまで。空き枠があるグループに申請し、承認されると参加できます。募集中は招待コードでも参加可能。同時申請は最大${SQUAD_BATTLE_MAX_PENDING_APPLICATIONS}件。約2ヶ月に1回開催。募集は開催約1〜2週間前から → メンバー確定後は入れ替え不可 → 1ヶ月間バトル（週間ランキング原則4回 + 月間1回）→ 結果確定後に週間1位はメンバー全員へ 30 Unit、月間1位は 100 Unit。上位20グループまで順位に応じた Unit を確定メンバー全員へ同額配布。過去のスクワッドから同じ顔ぶれを再招集できます。`;
+export const SQUAD_BATTLE_HELP_TEXT = `3〜5人のスクワッドで、メンバー全員のスコア平均を競います。対象は Pick Up 試合のみ（PRO LEAGUE の全試合スコアは使いません）。所属できるグループは1大会につき1つまで。空き枠があるグループに申請し、承認されると参加できます。募集中は招待コードでも参加可能。同時申請は最大${SQUAD_BATTLE_MAX_PENDING_APPLICATIONS}件。約2ヶ月に1回開催。募集は開催約1〜2週間前から → メンバー確定後は入れ替え不可 → 1ヶ月間バトル（週間ランキング原則4回 + 月間1回）→ 結果確定後に週間1位はメンバー全員へ 30 Unit、月間1位は 150 Unit。上位20グループまで順位に応じた Unit を確定メンバー全員へ同額配布。過去のスクワッドから同じ顔ぶれを再招集できます。`;
 
 /** 初回イントロ既読フラグ（localStorage） */
 export const SQUAD_BATTLE_INTRO_STORAGE_KEY = "uniterz:squad-battle-intro:v1";

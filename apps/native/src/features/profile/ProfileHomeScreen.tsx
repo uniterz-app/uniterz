@@ -91,6 +91,7 @@ import { COUNTRY_OPTIONS } from "../../../../../lib/rankings/country";
 import type { ProfileStatsStreakContext } from "../../../../../lib/profile/profileStreakScope";
 import { parseUserProfileViewCount, parseUserUnitBalance } from "../../../../../lib/profile/parseUserProfileFields";
 import { parseUserPlanProBgVariant } from "../../../../../lib/profile/profilePlanProBgVariantField";
+import { peekPublicProfileIdentity } from "../../../../../lib/profile/publicProfileIdentityCache";
 import { currentSeasonWinStreak } from "../../../../../lib/profile/currentSeasonWinStreak";
 import {
   PROFILE_PLAN_PRO_BG_DEFAULT,
@@ -397,30 +398,46 @@ export default function ProfileHomeScreen({
     return peekOwnProfileSeedNative(myUid);
   }, [isPublicProfileView, myUid]);
 
+  const publicIdentityAtMount = useMemo(() => {
+    if (!isPublicProfileView) return null;
+    return peekPublicProfileIdentity(publicRouteKey);
+  }, [isPublicProfileView, publicRouteKey]);
+
   const [profileLoading, setProfileLoading] = useState(
     () => !isPublicProfileView && !ownSeedAtMount
   );
   const [displayName, setDisplayName] = useState(
-    () => ownSeedAtMount?.displayName ?? ""
+    () =>
+      ownSeedAtMount?.displayName ?? publicIdentityAtMount?.displayName ?? ""
   );
-  const [bio, setBio] = useState(() => ownSeedAtMount?.bio ?? "");
-  const [handle, setHandle] = useState(() => ownSeedAtMount?.handle ?? "");
+  const [bio, setBio] = useState(
+    () => ownSeedAtMount?.bio ?? publicIdentityAtMount?.bio ?? ""
+  );
+  const [handle, setHandle] = useState(
+    () => ownSeedAtMount?.handle ?? publicIdentityAtMount?.handle ?? ""
+  );
   const [avatarUrl, setAvatarUrl] = useState(
-    () => ownSeedAtMount?.avatarUrl ?? ""
+    () =>
+      ownSeedAtMount?.avatarUrl ?? publicIdentityAtMount?.photoURL ?? ""
   );
   const [language, setLanguage] = useState<LocalizedLang>(() =>
     resolveLocalizedLang(ownSeedAtMount?.language)
   );
   const [countryCode, setCountryCode] = useState(
-    () => ownSeedAtMount?.countryCode ?? ""
+    () =>
+      ownSeedAtMount?.countryCode ?? publicIdentityAtMount?.countryCode ?? ""
   );
   const [plan, setPlan] = useState<"free" | "pro">(
-    () => ownSeedAtMount?.plan ?? "free"
+    () => ownSeedAtMount?.plan ?? publicIdentityAtMount?.plan ?? "free"
   );
-  const [planProBgVariant, setPlanProBgVariant] =
-    useState<ProfilePlanProBgVariant>(
-      () => ownSeedAtMount?.planProBgVariant ?? PROFILE_PLAN_PRO_BG_DEFAULT
-    );
+  const [planProBgVariant, setPlanProBgVariant] = useState<
+    ProfilePlanProBgVariant | null
+  >(() => {
+    if (isPublicProfileView) {
+      return publicIdentityAtMount?.planProBgVariant ?? null;
+    }
+    return ownSeedAtMount?.planProBgVariant ?? PROFILE_PLAN_PRO_BG_DEFAULT;
+  });
   const [memberSinceMs, setMemberSinceMs] = useState<number | null>(
     () => ownSeedAtMount?.memberSinceMs ?? null
   );
@@ -1775,6 +1792,7 @@ export default function ProfileHomeScreen({
             displayName: row.displayName,
             photoURL: row.photoURL,
             plan: row.isPro ? "pro" : "free",
+            planProBgVariant: row.planProBgVariant,
           },
         });
         setMarkListOpen(false);

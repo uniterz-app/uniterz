@@ -20,7 +20,7 @@ const jerseyPrimaryOverridesNBA: Record<string, string> = {
   "nba-heat": "#C8102E",
   "nba-bucks": "#00471B",
   "nba-knicks": "#F58426",
-  "nba-magic": "#000000",
+  "nba-magic": "#0077C0",
   "nba-76ers": "#0B6BD8",
   "nba-raptors": "#E31837",
   "nba-wizards": "#002B5C",
@@ -54,7 +54,7 @@ const jerseySecondaryOverridesNBA: Record<string, string> = {
   "nba-heat": "#FFFFFF",
   "nba-bucks": "#EEE1C6",
   "nba-knicks": "#006BB6",
-  "nba-magic": "#0077C0",
+  "nba-magic": "#000000",
   "nba-76ers": "#FFFFFF",
   "nba-raptors": "#000000",
   "nba-wizards": "#E31837",
@@ -332,11 +332,92 @@ function hexSaturation(hex: string): number {
   return (max - min) / max;
 }
 
-/** 試合カードで主色が被って見えるか（同系色対決） */
+const NEAR_BLACK_LUM = 0.08;
+/** 市場バーで主色を副色に逃がすのは「ほぼ無彩の黒」だけ（ネッツ等） */
+const NEAR_BLACK_SAT = 0.18;
+/** 暗い有彩色は色相を保ったままここまで持ち上げる */
+const MARKET_MIN_LUM = 0.16;
+const FALLBACK_BLUE = "#2563EB";
+const FALLBACK_SILVER = "#C8CDD4";
+const FALLBACK_GOLD = "#F5C518";
+
+function hexDistance(a: string, b: string): number {
+  const ra = parseHexRgb(a);
+  const rb = parseHexRgb(b);
+  if (!ra || !rb) return 999;
+  const dr = ra.r - rb.r;
+  const dg = ra.g - rb.g;
+  const db = ra.b - rb.b;
+  return Math.sqrt(dr * dr + dg * dg + db * db);
+}
+
+function sameHex(a: string, b: string): boolean {
+  return (
+    a.replace("#", "").trim().toLowerCase() ===
+    b.replace("#", "").trim().toLowerCase()
+  );
+}
+
+function isNearBlackNeutral(hex: string): boolean {
+  return (
+    relativeLuminance(hex) < NEAR_BLACK_LUM && hexSaturation(hex) < NEAR_BLACK_SAT
+  );
+}
+
+/** 暗い有彩色を同系のまま視認できる輝度まで持ち上げる（彩度ブーストしない） */
+function liftDarkChromaticForMarket(hex: string): string {
+  if (relativeLuminance(hex) >= MARKET_MIN_LUM) return hex;
+  const rgb = parseHexRgb(hex);
+  if (!rgb) return hex;
+
+  const toHex = (r: number, g: number, b: number) => {
+    const h = (n: number) =>
+      Math.min(255, Math.max(0, Math.round(n)))
+        .toString(16)
+        .padStart(2, "0");
+    return `#${h(r)}${h(g)}${h(b)}`.toUpperCase();
+  };
+
+  // 白へ少しずつ混ぜて目標輝度へ（ネオン化・色相ズレを避ける）
+  let lo = 0;
+  let hi = 0.72;
+  let best = hex;
+  for (let i = 0; i < 14; i++) {
+    const t = (lo + hi) / 2;
+    const mixed = toHex(
+      rgb.r + (255 - rgb.r) * t,
+      rgb.g + (255 - rgb.g) * t,
+      rgb.b + (255 - rgb.b) * t
+    );
+    best = mixed;
+    if (relativeLuminance(mixed) < MARKET_MIN_LUM) lo = t;
+    else hi = t;
+  }
+  return best;
+}
+
+/** 試合カードで主色が被って見えるか（同系色・黒同士・白同士） */
 export function jerseyPrimariesClash(a: string, b: string): boolean {
+  if (sameHex(a, b)) return true;
+  if (hexDistance(a, b) < 55) return true;
+
+  const la = relativeLuminance(a);
+  const lb = relativeLuminance(b);
+  // 無彩の黒同士
+  if (isNearBlackNeutral(a) && isNearBlackNeutral(b)) return true;
+  // 白・シルバー同士（市場バーで溶け合う）
+  if (
+    la > 0.55 &&
+    lb > 0.55 &&
+    hexSaturation(a) < 0.3 &&
+    hexSaturation(b) < 0.3 &&
+    hexDistance(a, b) < 110
+  ) {
+    return true;
+  }
+
   const sa = hexSaturation(a);
   const sb = hexSaturation(b);
-  // 白・黒・グレーは色相衝突にしない
   if (sa < 0.22 || sb < 0.22) return false;
   const ha = hexHue(a);
   const hb = hexHue(b);
@@ -347,8 +428,61 @@ export function jerseyPrimariesClash(a: string, b: string): boolean {
 }
 
 /**
+ * 市場バー用のベース色。原則ユニフォーム主色。
+ * 無彩の黒だけ secondary（ネッツ→白）。暗い紺・紫・ワインは同系のまま持ち上げる。
+ */
+function marketAccentFromJersey(
+  league: League,
+  teamId: string | null | undefined,
+  preferred?: string
+): string {
+  const primary = getTeamJerseyPrimaryColor(league, teamId);
+  let accent = preferred ?? primary;
+  if (isNearBlackNeutral(accent)) {
+    const secondary = getTeamJerseySecondaryColor(league, teamId);
+    if (!isNearBlackNeutral(secondary)) {
+      accent = secondary;
+    } else {
+      accent = FALLBACK_BLUE;
+    }
+  } else if (relativeLuminance(accent) < MARKET_MIN_LUM) {
+    accent = liftDarkChromaticForMarket(accent);
+  }
+  return accent;
+}
+
+function distinctAlternateAccent(
+  league: League,
+  teamId: string | null | undefined,
+  primary: string,
+  otherAccent: string
+): string {
+  const secondary = getTeamJerseySecondaryColor(league, teamId);
+  const secondaryForMarket = isNearBlackNeutral(secondary)
+    ? null
+    : relativeLuminance(secondary) < MARKET_MIN_LUM
+      ? liftDarkChromaticForMarket(secondary)
+      : secondary;
+  if (
+    secondaryForMarket &&
+    !sameHex(secondary, primary) &&
+    !jerseyPrimariesClash(secondaryForMarket, otherAccent)
+  ) {
+    return secondaryForMarket;
+  }
+  // 相手が明るい中立なら青、暗い／有彩なら銀〜金
+  if (relativeLuminance(otherAccent) > 0.55 && hexSaturation(otherAccent) < 0.3) {
+    return FALLBACK_BLUE;
+  }
+  if (relativeLuminance(otherAccent) < 0.35) {
+    return FALLBACK_SILVER;
+  }
+  return FALLBACK_GOLD;
+}
+
+/**
  * 同系色対決時の UI アクセント（市場バー・トップスコアラータグ用）。
- * ユニフォーム色は変えない。主色が黒などで潰れる側は secondary / 可読色へ。
+ * ユニフォーム mark 色は変えない。市場バーは主色ベース、衝突時だけ差し替え。
  */
 export function resolveMatchupUiAccents(
   league: League,
@@ -361,54 +495,34 @@ export function resolveMatchupUiAccents(
 } {
   const homePrimary = getTeamJerseyPrimaryColor(league, homeTeamId);
   const awayPrimary = getTeamJerseyPrimaryColor(league, awayTeamId);
-  const clash = jerseyPrimariesClash(homePrimary, awayPrimary);
-
-  /** 暗い画面で潰れる黒→青、白→黄 */
-  const FALLBACK_YELLOW = "#F5C518";
-  const FALLBACK_BLUE = "#2563EB";
-
-  const liftSideAccent = (
-    teamId: string | null | undefined,
-    primary: string,
-    preferred?: string
-  ): string => {
-    let accent = preferred ?? primary;
-    if (relativeLuminance(accent) < 0.15) {
-      const secondary = getTeamJerseySecondaryColor(league, teamId);
-      accent =
-        relativeLuminance(secondary) >= 0.15 ? secondary : FALLBACK_BLUE;
-    }
-    if (relativeLuminance(accent) > 0.65) {
-      accent = FALLBACK_YELLOW;
-    }
-    return accent;
-  };
+  let homeAccent = marketAccentFromJersey(league, homeTeamId);
+  let awayAccent = marketAccentFromJersey(league, awayTeamId);
+  const clash =
+    jerseyPrimariesClash(homePrimary, awayPrimary) ||
+    jerseyPrimariesClash(homeAccent, awayAccent);
 
   if (!clash) {
-    return {
-      homeAccent: liftSideAccent(homeTeamId, homePrimary),
-      awayAccent: liftSideAccent(awayTeamId, awayPrimary),
-      clash: false,
-    };
+    return { homeAccent, awayAccent, clash: false };
   }
 
-  const awaySecondary = getTeamJerseySecondaryColor(league, awayTeamId);
-  const secondaryOk =
-    awaySecondary.replace("#", "").trim().toLowerCase() !==
-      awayPrimary.replace("#", "").trim().toLowerCase() &&
-    !jerseyPrimariesClash(awaySecondary, homePrimary);
+  // アウェイ側を副色／代替色へ（ホームは主色寄りを維持）
+  awayAccent = distinctAlternateAccent(
+    league,
+    awayTeamId,
+    awayPrimary,
+    homeAccent
+  );
+  // まだ被る場合はホーム側もずらす
+  if (jerseyPrimariesClash(homeAccent, awayAccent)) {
+    homeAccent = distinctAlternateAccent(
+      league,
+      homeTeamId,
+      homePrimary,
+      awayAccent
+    );
+  }
 
-  const awayPreferred = secondaryOk
-    ? awaySecondary
-    : relativeLuminance(homePrimary) > 0.4
-      ? FALLBACK_YELLOW
-      : "#F5F5F5";
-
-  return {
-    homeAccent: liftSideAccent(homeTeamId, homePrimary),
-    awayAccent: liftSideAccent(awayTeamId, awayPrimary, awayPreferred),
-    clash: true,
-  };
+  return { homeAccent, awayAccent, clash: true };
 }
 
 /** マッチアップ内のチーム用アクセント（タグ塗りなど） */

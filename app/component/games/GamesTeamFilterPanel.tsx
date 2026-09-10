@@ -129,7 +129,11 @@ export default function GamesTeamFilterPanel({
   });
   const reduceMotion = useReducedMotion();
   const tabFont = bracketMarketTeamTypography(layoutMobile);
-  const teamNameFont = matchCardTeamNameStyle(layoutMobile);
+  /** 試合カードと同系だが、フィルター一覧は SemiBold で少し細く */
+  const teamNameFont: CSSProperties = {
+    ...matchCardTeamNameStyle(layoutMobile),
+    fontWeight: 600,
+  };
   /** モバイルで number/search 入力にフォーカスしたとき、16px 未満だと iOS がページを拡大するのを防ぐ */
   const filterInputTextClass = layoutMobile
     ? "text-[16px] leading-normal"

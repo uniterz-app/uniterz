@@ -149,7 +149,7 @@ export default function OfficialLpRankingScreen({
               "text-[11px] font-semibold tracking-normal text-white/50",
             ].join(" ")}
           >
-            総合スコア
+            スコア
           </span>
         </p>
       </div>

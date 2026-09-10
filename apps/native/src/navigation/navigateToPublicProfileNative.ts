@@ -15,6 +15,7 @@ export type OpenPublicProfileWarm = {
   displayName?: string | null;
   photoURL?: string | null;
   plan?: "free" | "pro" | string | null;
+  planProBgVariant?: string | null;
   countryCode?: string | null;
   /** 既定 true（ランキング行の stats prime は呼び出し側で別途） */
   skipStatsPrime?: boolean;
@@ -83,6 +84,7 @@ export function navigateToPublicProfileNative(
     displayName: warm?.displayName,
     photoURL: warm?.photoURL,
     plan: warm?.plan,
+    planProBgVariant: warm?.planProBgVariant,
     countryCode: warm?.countryCode,
     skipStatsPrime: warm?.skipStatsPrime ?? true,
   });

@@ -297,8 +297,8 @@ export default function ReferralStampBoard({ completedCount, isJa }: Props) {
               ? `次のスタンプ目標: ${next.target} 人目（あと ${next.remaining}）· ボーナス +${next.bonusUnits} Unit`
               : `Next stamp: #${next.target} (need ${next.remaining}) · bonus +${next.bonusUnits}`
             : isJa
-              ? "10 枠すべて INVITE。マイルストーン上限到達（モック）"
-              : "All 10 slots INVITE. Milestone cap reached (mock)"}
+              ? "10 枠すべて INVITE。マイルストーン上限到達"
+              : "All 10 slots INVITE. Milestone cap reached"}
         </p>
         <p className="text-[10px] text-white/35">
           {isJa

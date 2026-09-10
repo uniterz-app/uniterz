@@ -100,10 +100,7 @@ import {
   useProfileKinetikFlipEar,
 } from "./ProfileKinetikFlipEarNative";
 import { LinearGradient } from "expo-linear-gradient";
-import {
-  PROFILE_PLAN_PRO_BG_DEFAULT,
-  type ProfilePlanProBgVariant,
-} from "../../../../../../lib/profile/profilePlanProBgVariants";
+import type { ProfilePlanProBgVariant } from "../../../../../../lib/profile/profilePlanProBgVariants";
 import { isProfilePlanProScaleBgVariant } from "../../../../../../lib/profile/profilePlanProScaleBgVariants";
 import { isProfilePlanProBeastBgVariant } from "../../../../../../lib/profile/profilePlanProBeastBgVariants";
 import { isProfilePlanProCosmosBgVariant } from "../../../../../../lib/profile/profilePlanProCosmosBgVariants";
@@ -1133,8 +1130,8 @@ export type ProfileKinetikPanelNativeProps = {
   memberSinceMs?: number | null;
   isPro?: boolean;
   accountUid?: string | null;
-  /** Pro Skin（users.planProBgVariant） */
-  planProBgVariant?: ProfilePlanProBgVariant;
+  /** Pro Skin（users.planProBgVariant）。null = 未確定（デフォルトを出さない） */
+  planProBgVariant?: ProfilePlanProBgVariant | null;
   winStreak?: number;
   totalPointsRank?: number | null;
   totalPointsRankDenominator?: number | null;
@@ -1182,7 +1179,7 @@ export default function ProfileKinetikPanelNative({
   memberSinceMs = null,
   isPro = false,
   accountUid = null,
-  planProBgVariant = PROFILE_PLAN_PRO_BG_DEFAULT,
+  planProBgVariant = null,
   winStreak,
   totalPointsRank: totalPointsRankProp,
   totalPointsRankDenominator: totalPointsRankDenominatorProp,
@@ -1271,6 +1268,7 @@ export default function ProfileKinetikPanelNative({
     rankBadge,
   });
   const goldMonogramSkin = planProBgVariant === "wave-gold-monogram";
+  const hasProSkin = isPro && planProBgVariant != null;
   const proFrameTheme = isPro ? kinetikPlanProFrameTheme(profileAccent) : null;
   const panelBorder = kinetikPanelBorderColor(profileAccent);
   const flipEar = useProfileKinetikFlipEar();
@@ -1486,7 +1484,7 @@ export default function ProfileKinetikPanelNative({
       {flipEar ? (
         <ProfileKinetikFlipEarTopEdgesNative borderColor={panelBorder} />
       ) : null}
-      {isPro && frameSize.width > 0 ? (
+      {hasProSkin && frameSize.width > 0 ? (
         <ProfilePlanProBackgroundNative
           width={frameSize.width}
           height={frameSize.height}
@@ -1498,7 +1496,7 @@ export default function ProfileKinetikPanelNative({
       ) : null}
 
       {/* Web 同様 — atmos / scale / beast / cosmos / form / neo / lab / wave では ambient を載せない */}
-      {isPro &&
+      {hasProSkin &&
       planProBgVariant !== "atmos" &&
       !isProfilePlanProScaleBgVariant(planProBgVariant) &&
       !isProfilePlanProBeastBgVariant(planProBgVariant) &&

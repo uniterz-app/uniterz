@@ -37,8 +37,8 @@ export const teamColorsNBA: TeamColorMap = {
   // NYK Knicks → Orange 地 + Blue ライン
   "nba-knicks":       { primary: "#F58426", secondary: "#006BB6" },
 
-  // ORL Magic → Black 地 + Blue ライン
-  "nba-magic":        { primary: "#000000", secondary: "#0077C0", textOnPrimary: "#fff" },
+  // ORL Magic → Blue 地 + Black ライン
+  "nba-magic":        { primary: "#0077C0", secondary: "#000000", textOnPrimary: "#fff" },
 
   // PHI 76ers → はっきりした Blue 地 + White ライン（紫寄りを避ける）
   "nba-76ers":        { primary: "#0B6BD8", secondary: "#FFFFFF" },

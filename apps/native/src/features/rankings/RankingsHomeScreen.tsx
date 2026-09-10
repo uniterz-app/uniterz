@@ -363,6 +363,10 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
         displayName: row.displayName,
         photoURL: typeof row.photoURL === "string" ? row.photoURL : null,
         plan: row.plan === "pro" ? "pro" : "free",
+        planProBgVariant:
+          typeof row.planProBgVariant === "string"
+            ? row.planProBgVariant
+            : null,
         countryCode:
           typeof row.countryCode === "string" ? row.countryCode : null,
       },

@@ -14,6 +14,19 @@ export function parseUserPlanProBgVariant(
   return PROFILE_PLAN_PRO_BG_DEFAULT;
 }
 
+/**
+ * 採用スキンとして確定できるときだけ返す。
+ * 未確定時にデフォルト（titanium）を当てない（他人プロフィールのチラつき防止）。
+ */
+export function tryParseUserPlanProBgVariant(
+  raw: unknown
+): ProfilePlanProBgVariant | null {
+  if (typeof raw === "string" && isAdoptedProBgVariant(raw)) {
+    return raw;
+  }
+  return null;
+}
+
 /** Pro かつ所持リストにあるときだけ装備スキンを返す */
 export function parseEquippedProSkinFromUserDoc(data: {
   plan?: unknown;

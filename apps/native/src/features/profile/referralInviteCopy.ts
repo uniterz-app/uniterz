@@ -138,15 +138,6 @@ export function referralInviteScreenCopy(language: string | null | undefined) {
       pt: "Revisão",
       fr: "Revue",
     }),
-    footnote: L(lang, {
-      ja: "※ プレビュー用モック。本番データ接続はこれから。",
-      en: "※ Preview mock. Live API comes next.",
-      ko: "※ 미리보기 목. 실데이터 연결은 예정.",
-      zh: "※ 预览用模拟。正式数据即将接入。",
-      es: "※ Mock de vista previa. API en vivo próximamente.",
-      pt: "※ Mock de prévia. API ao vivo em breve.",
-      fr: "※ Mock de prévisualisation. API live à venir.",
-    }),
     completedDone: L(lang, {
       ja: "条件達成・付与済",
       en: "Completed",

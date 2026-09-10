@@ -186,8 +186,8 @@ function ResultListHeaderBlock({
             {filterActive ? <View style={styles.filterActiveDot} /> : null}
           </Pressable>
         </Animated.View>
+        {filterPanelOpen ? filterPanel : null}
       </View>
-      {filterPanelOpen ? filterPanel : null}
     </View>
   );
 }
@@ -282,7 +282,9 @@ export default function ResultHomeScreen({
   const { fUser } = useFirebaseUser();
   const isFocused = useIsFocused();
   const appActive = useAppActiveNative();
-  const listTickActive = isFocused && appActive;
+  const [detailPostId, setDetailPostId] = useState<string | null>(null);
+  /** 詳細オープン中は一覧 tick / 再取得を止めて裏コストを落とす */
+  const listTickActive = isFocused && appActive && detailPostId == null;
   const tabNavigation = useNavigation<BottomTabNavigationProp<MainTabParamList>>();
   const stackNavigation =
     useNavigation<NativeStackNavigationProp<ResultStackParamList>>();
@@ -330,7 +332,6 @@ export default function ResultHomeScreen({
     return () => clearInterval(id);
   }, [listTickActive]);
 
-  const [detailPostId, setDetailPostId] = useState<string | null>(null);
   const deleteSubmittingRef = useRef(false);
 
   useEffect(() => {
@@ -615,7 +616,10 @@ export default function ResultHomeScreen({
   return (
     <ScrollVisibilityProvider margin={360}>
     <View style={styles.resultScreenWrap}>
-    <View style={styles.root}>
+    <View
+      style={styles.root}
+      pointerEvents={detailPostId != null ? "none" : "auto"}
+    >
       {showInitialSpinner ? (
         <View style={[styles.centered, { paddingTop: listTopPad, paddingBottom: bottomReserveY }]}>
           <BlocksPulseLoader />
@@ -633,7 +637,7 @@ export default function ResultHomeScreen({
           contentContainerStyle={listContentWithBottomPad}
           ListHeaderComponent={listHeader}
           ListEmptyComponent={listEmpty}
-          scrollEnabled={tutorialListScrollEnabled}
+          scrollEnabled={tutorialListScrollEnabled && detailPostId == null}
           onScrollY={(y) => {
             resultScrollYRef.current = y;
           }}
@@ -649,6 +653,8 @@ export default function ResultHomeScreen({
               refreshing={manualRefreshing}
               onRefresh={() => void onRefresh()}
               tintColor={colors.accent}
+              /** 詳細オープン中は一覧操作を止める */
+              enabled={detailPostId == null}
             />
           }
           onEndReached={() => loadMore()}
@@ -837,11 +843,7 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: "rgba(34,211,238,0.95)",
-    shadowColor: "#22d3ee",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.7,
-    shadowRadius: 8,
+    backgroundColor: "#FFFFFF",
     marginLeft: "auto",
   },
   hint: {

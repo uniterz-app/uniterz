@@ -336,7 +336,7 @@ export function flattenResultDayGroups(
 }
 
 /** リザルト一覧：初回取得件数 */
-export const RESULT_INITIAL_PAGE_SIZE = 15;
+export const RESULT_INITIAL_PAGE_SIZE = 10;
 /** リザルト一覧：スクロール追加取得件数 */
 export const RESULT_NEXT_PAGE_SIZE = 10;
 /** @deprecated 初回は RESULT_INITIAL_PAGE_SIZE、追加は RESULT_NEXT_PAGE_SIZE */

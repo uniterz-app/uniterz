@@ -696,7 +696,7 @@ function ResultPostCardNativeInner({
                 face={faceModel}
                 frameGlow
                 showDetailTab
-                live={showLiveMark}
+                live={showLiveMark && !pauseListFx}
                 deferJerseys
                 animateDraw={!reduceMotionList && entranceEnabled && !pauseListFx}
                 drawDelayMs={listEnterIndex * RESULT_CARD_STAGGER_MS}
@@ -790,7 +790,7 @@ function ResultPostCardNativeInner({
             stackBadges={stackBadges}
             streakBadge={streakBadge}
             activeWinStreak={activeWinStreak}
-            showLiveMark={showLiveMark}
+            showLiveMark={showLiveMark && !pauseListFx}
             hitBadgeSubtle
           />
         </Animated.View>

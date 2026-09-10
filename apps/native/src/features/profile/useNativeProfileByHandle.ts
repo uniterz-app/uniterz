@@ -18,10 +18,7 @@ import {
 import { peekUserDocMemory } from "../../../../../lib/user/userDocMemoryCache";
 import { looksLikeFirestoreUid } from "../../../../../lib/profile/profilePathKey";
 import { seedNativeProfileStatsFromUserDoc } from "./useNativeProfileStats";
-import {
-  PROFILE_PLAN_PRO_BG_DEFAULT,
-  type ProfilePlanProBgVariant,
-} from "../../../../../lib/profile/profilePlanProBgVariants";
+import type { ProfilePlanProBgVariant } from "../../../../../lib/profile/profilePlanProBgVariants";
 
 export type NativeProfileByHandleState = {
   loading: boolean;
@@ -36,7 +33,8 @@ export type NativeProfileByHandleState = {
   language: LocalizedLang;
   countryCode: string;
   plan: "free" | "pro";
-  planProBgVariant: ProfilePlanProBgVariant;
+  /** null = Pro Skin 未確定（デフォルト titanium を出さない） */
+  planProBgVariant: ProfilePlanProBgVariant | null;
   currentStreak: number;
   maxStreak: number;
   memberSinceMs: number | null;
@@ -57,7 +55,7 @@ const idleState: NativeProfileByHandleState = {
   language: "ja",
   countryCode: "",
   plan: "free",
-  planProBgVariant: PROFILE_PLAN_PRO_BG_DEFAULT,
+  planProBgVariant: null,
   currentStreak: 0,
   maxStreak: 0,
   memberSinceMs: null,
@@ -76,6 +74,7 @@ function mapUserDoc(
       : typeof data.avatarUrl === "string" && data.avatarUrl.trim().length > 0
         ? data.avatarUrl.trim()
         : "";
+  const plan: "free" | "pro" = data.plan === "pro" ? "pro" : "free";
 
   return {
     loading: false,
@@ -90,8 +89,9 @@ function mapUserDoc(
       typeof data.language === "string" ? data.language : null
     ),
     countryCode: typeof data.countryCode === "string" ? data.countryCode : "",
-    plan: data.plan === "pro" ? "pro" : "free",
-    planProBgVariant: parseUserPlanProBgVariant(data.planProBgVariant),
+    plan,
+    planProBgVariant:
+      plan === "pro" ? parseUserPlanProBgVariant(data.planProBgVariant) : null,
     currentStreak: currentSeasonWinStreak(
       data.currentStreak,
       data.streakSeasonKeyBasketball
@@ -130,6 +130,7 @@ function seedFromCaches(decoded: string): NativeProfileByHandleState | null {
     bio: identity.bio,
     avatarUrl: identity.photoURL,
     plan: identity.plan,
+    planProBgVariant: identity.planProBgVariant,
     countryCode: identity.countryCode,
   };
 }
@@ -195,6 +196,7 @@ export function useNativeProfileByHandle(routeKey: string | undefined | null) {
           bio: mapped.bio,
           photoURL: mapped.avatarUrl,
           plan: mapped.plan,
+          planProBgVariant: mapped.planProBgVariant,
           countryCode: mapped.countryCode,
           fromUserDoc: true,
         });

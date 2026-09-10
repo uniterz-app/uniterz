@@ -277,26 +277,21 @@ export const resultDayStripPanelNative = StyleSheet.create({
   },
 });
 
-/** Web `.cyber-filter-bar` */
+/** Web `.cyber-filter-bar` — リザルト絞り込みは白黒 */
 export const resultFilterBarNative = StyleSheet.create({
   bar: {
     position: "relative",
     overflow: "hidden",
     borderRadius: 0,
-    borderWidth: 1,
-    borderColor: "rgba(0,245,255,0.2)",
-    backgroundColor: "#000",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(255,255,255,0.4)",
+    backgroundColor: "#000000",
     paddingVertical: 10,
     paddingHorizontal: 12,
-    shadowColor: "#00f5ff",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 4,
   },
   barPressed: {
     opacity: 0.9,
-    borderColor: "rgba(0,245,255,0.38)",
+    borderColor: "rgba(255,255,255,0.65)",
   },
   text: {
     color: "rgba(255,255,255,0.92)",

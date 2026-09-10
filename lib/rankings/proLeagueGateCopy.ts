@@ -85,7 +85,7 @@ export function proLeagueGateCopy(language: "ja" | "en"): ProLeagueGateCopy {
       },
       {
         icon: "grid",
-        title: "総合 / 勝率 / SCORER / UPSET",
+        title: "スコア / 勝率 / SCORER / UPSET",
         detail: "指標タブ一式。PRO LEAGUE 専用の雰囲気",
       },
       {

@@ -432,8 +432,7 @@ const styles = StyleSheet.create({
   backdropDim: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(0,0,0,0.35)",
-  },
-  kav: {
+  },  kav: {
     flex: 1,
     zIndex: 1,
     justifyContent: "flex-start",

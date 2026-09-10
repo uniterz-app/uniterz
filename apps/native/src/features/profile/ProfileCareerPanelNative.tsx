@@ -11,7 +11,6 @@ import {
   type ProfileCareerBadgeLike,
 } from "../../../../../lib/profile/profileCareerStats";
 import type { ProfilePlanProBgVariant } from "../../../../../lib/profile/profilePlanProBgVariants";
-import { PROFILE_PLAN_PRO_BG_DEFAULT } from "../../../../../lib/profile/profilePlanProBgVariants";
 import {
   buildUserCareerBoardRows,
   buildUserCareerSummaryRows,
@@ -47,7 +46,7 @@ type Props = {
   /** section: overview / face: カード裏面 */
   variant?: "section" | "face";
   isPro?: boolean;
-  planProBgVariant?: ProfilePlanProBgVariant;
+  planProBgVariant?: ProfilePlanProBgVariant | null;
   /** false のあいだは Pro 背景を載せない（フリップ前・表面表示中） */
   proSkinActive?: boolean;
 };
@@ -62,13 +61,13 @@ export default function ProfileCareerPanelNative({
   loadError = null,
   variant = "section",
   isPro = false,
-  planProBgVariant = PROFILE_PLAN_PRO_BG_DEFAULT,
+  planProBgVariant = null,
   proSkinActive = true,
 }: Props) {
   const copy = profileCareerPanelCopy(language);
   const lang = resolveLocalizedLang(language);
   const isFace = variant === "face";
-  const showProSkin = isPro && isFace && proSkinActive;
+  const showProSkin = isPro && isFace && proSkinActive && planProBgVariant != null;
   const reduceMotion = useReducedMotion() === true;
   const flipEar = useProfileKinetikFlipEar();
   const [frameSize, setFrameSize] = useState({ width: 0, height: 0 });

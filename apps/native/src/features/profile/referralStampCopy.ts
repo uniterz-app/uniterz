@@ -54,13 +54,13 @@ export function referralStampBoardCopy(language: string | null | undefined) {
         fr: `Prochain tampon : #${target} (reste ${remaining}) · bonus +${bonusUnits}`,
       }),
     completeHint: L(lang, {
-      ja: "10 枠すべて INVITE。マイルストーン上限到達（モック）",
-      en: "All 10 slots INVITE. Milestone cap reached (mock)",
-      ko: "10칸 모두 INVITE. 마일스톤 상한 도달（목）",
-      zh: "10 格全部 INVITE。已达里程碑上限（模拟）",
-      es: "10 slots INVITE. Tope de hito alcanzado (mock)",
-      pt: "10 slots INVITE. Teto de marco atingido (mock)",
-      fr: "10 emplacements INVITE. Cap de jalon atteint (mock)",
+      ja: "10 枠すべて INVITE。マイルストーン上限到達",
+      en: "All 10 slots INVITE. Milestone cap reached",
+      ko: "10칸 모두 INVITE. 마일스톤 상한 도달",
+      zh: "10 格全部 INVITE。已达里程碑上限",
+      es: "10 slots INVITE. Tope de hito alcanzado",
+      pt: "10 slots INVITE. Teto de marco atingido",
+      fr: "10 emplacements INVITE. Cap de jalon atteint",
     }),
     breakdown: (base: number, milestones: number) =>
       L(lang, {

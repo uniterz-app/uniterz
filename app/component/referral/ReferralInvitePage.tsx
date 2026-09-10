@@ -183,7 +183,7 @@ export default function ReferralInvitePage() {
           ? "友達を招待して Unit を獲得。相手が7日分の予想を出すと双方に付与されます。"
           : "Invite friends for Units. Both earn when they predict on 7 different days."
       }
-      contentClassName="max-w-lg space-y-4"
+      contentClassName="max-w-lg space-y-4 pb-8"
     >
       {loading ? (
         <p
@@ -486,11 +486,6 @@ export default function ReferralInvitePage() {
             </li>
           ))}
         </ul>
-        <p className="text-[10px] text-white/30">
-          {isJa
-            ? "※ 表示はプレビュー用モックです。本番のデータ接続はこれから。"
-            : "※ Preview mock data. Live API wiring comes next."}
-        </p>
       </section>
     </ProfileCyberPage>
   );

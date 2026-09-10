@@ -138,22 +138,22 @@ const styles = StyleSheet.create({
   chip: {
     paddingHorizontal: cyberFilter.chipPaddingH,
     paddingVertical: cyberFilter.chipPaddingV,
-    borderRadius: 999,
+    borderRadius: 0,
     borderWidth: 1,
-    borderColor: colors.borderSubtle,
-    backgroundColor: "rgba(15,23,42,0.4)",
+    borderColor: "rgba(255,255,255,0.16)",
+    backgroundColor: "rgba(255,255,255,0.04)",
   },
   chipActive: {
-    borderColor: colors.accentCyan,
-    backgroundColor: "rgba(34,211,238,0.12)",
+    borderColor: "rgba(255,255,255,0.72)",
+    backgroundColor: "rgba(255,255,255,0.12)",
   },
   chipLabel: {
     fontSize: 12,
     fontFamily: fonts.metric,
-    color: colors.textSecondary,
+    color: "rgba(255,255,255,0.62)",
     letterSpacing: 0.3,
   },
   chipLabelActive: {
-    color: colors.accentCyan,
+    color: "#FFFFFF",
   },
 });

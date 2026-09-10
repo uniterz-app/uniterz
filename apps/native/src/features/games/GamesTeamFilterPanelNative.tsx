@@ -37,7 +37,6 @@ import {
 } from "../../../../../lib/team-colors";
 import {
   MATCH_CARD_BRACKET_LETTER_SPACING_15,
-  MATCH_CARD_BRACKET_TEXT,
 } from "./matchCardTypography";
 
 const OXANIUM_BOLD = Platform.select({
@@ -267,7 +266,7 @@ export default function GamesTeamFilterPanelNative({
                         onPress={() => toggleTeam(id)}
                       >
                         <FilterTeamFlagNative teamId={id} />
-                        <Text style={[styles.selectedChipText, MATCH_CARD_BRACKET_TEXT]} numberOfLines={1}>
+                        <Text style={styles.selectedChipText} numberOfLines={1}>
                           {name}
                         </Text>
                         <MaterialCommunityIcons
@@ -369,8 +368,6 @@ export default function GamesTeamFilterPanelNative({
                       <Text
                         style={[
                           styles.teamName,
-                          MATCH_CARD_BRACKET_TEXT,
-                          { letterSpacing: MATCH_CARD_BRACKET_LETTER_SPACING_15 },
                           sel && styles.teamNameSelected,
                         ]}
                         numberOfLines={1}
@@ -618,9 +615,11 @@ const styles = StyleSheet.create({
   selectedChipText: {
     color: "#fff",
     fontSize: 13,
-    fontWeight: "400",
+    fontFamily: "Oxanium_600SemiBold",
+    fontWeight: "600",
     maxWidth: 200,
     letterSpacing: MATCH_CARD_BRACKET_LETTER_SPACING_15,
+    transform: [{ skewX: "-6deg" }],
   },
   modeBtnActive: {
     backgroundColor: "#fff",
@@ -738,11 +737,15 @@ const styles = StyleSheet.create({
   teamName: {
     flex: 1,
     color: "rgba(255,255,255,0.88)",
-    fontSize: 16,
+    fontSize: 15,
+    fontFamily: "Oxanium_600SemiBold",
+    fontWeight: "600",
+    letterSpacing: MATCH_CARD_BRACKET_LETTER_SPACING_15,
+    /** Web `matchCardTeamNameStyle` と同じ傾き */
+    transform: [{ skewX: "-6deg" }],
   },
   teamNameSelected: {
     color: "#fff",
-    fontWeight: "600",
   },
   emptyTeams: {
     textAlign: "center",

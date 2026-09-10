@@ -52,10 +52,19 @@ export type MarkListRow = UserMark & {
   weeklyRank: number | null;
   weeklyPoints: number | null;
   isPro: boolean;
+  /** 既知のときだけ（未キャッシュは null → open 時に warm で再解決） */
+  planProBgVariant: string | null;
 };
 
 function isProPlan(data: Record<string, unknown> | null | undefined): boolean {
   return data?.plan === "pro";
+}
+
+function skinFromPeek(uid: string, isPro: boolean): string | null {
+  if (!isPro) return null;
+  const data = peekProfileUserDocNative(uid);
+  const raw = data?.planProBgVariant;
+  return typeof raw === "string" && raw.trim() ? raw.trim() : null;
 }
 
 function rowsFromBoard(
@@ -64,11 +73,13 @@ function rowsFromBoard(
 ): MarkListRow[] {
   const next = marks.map((m) => {
     const entry = board[m.targetUid];
+    const isPro = entry?.isPro ?? isProPlan(peekProfileUserDocNative(m.targetUid));
     return {
       ...m,
       weeklyRank: entry?.rank ?? null,
       weeklyPoints: entry?.points ?? null,
-      isPro: entry?.isPro ?? isProPlan(peekProfileUserDocNative(m.targetUid)),
+      isPro,
+      planProBgVariant: skinFromPeek(m.targetUid, isPro),
     } satisfies MarkListRow;
   });
   next.sort((a, b) => {

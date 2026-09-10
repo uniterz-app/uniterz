@@ -37,7 +37,7 @@ export type ProfileKinetikHeroNativeProps = {
   bio: string;
   countryCode: string;
   plan: "free" | "pro";
-  planProBgVariant?: ProfilePlanProBgVariant;
+  planProBgVariant?: ProfilePlanProBgVariant | null;
   memberSinceMs?: number | null;
   language: string;
   summary?: ProfileSummaryNative | null;
@@ -102,7 +102,7 @@ export default function ProfileKinetikHeroNative({
   bio,
   countryCode,
   plan,
-  planProBgVariant = PROFILE_PLAN_PRO_BG_DEFAULT,
+  planProBgVariant = null,
   memberSinceMs = null,
   language,
   summary = null,
@@ -235,7 +235,7 @@ export default function ProfileKinetikHeroNative({
       bio,
       countryCode: countryCode.trim() || null,
       plan,
-      planProBgVariant,
+      planProBgVariant: planProBgVariant ?? PROFILE_PLAN_PRO_BG_DEFAULT,
       memberSinceMs: memberSinceMs ?? null,
       counts: { posts: summary?.posts ?? 0 },
       currentStreak: winStreak,

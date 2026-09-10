@@ -130,11 +130,8 @@ import { MOBILE_PREDICT_OVERLAY_CARD_OUTER_CLASS, MOBILE_RESULT_CARD_OUTER_CLASS
 import {
   PREDICT_OVERLAY_BACKDROP,
   PREDICT_OVERLAY_FORM_PANEL,
+  RESULT_DETAIL_OVERLAY_BACKDROP,
 } from "@/lib/ui/matchOverlayGlass";
-import {
-  CYBER_FILTER_PANEL_CLASS,
-  cyberFilterBarClasses,
-} from "@/lib/ui/cyberFilterBar";
 import { fetchPlayoffSeriesPeerGames } from "@/lib/games/fetchPlayoffSeriesPeerGames";
 import { useMatchCardTeamRecords } from "@/lib/games/useMatchCardTeamRecords";
 
@@ -1055,12 +1052,16 @@ export default function ResultListWithOverlay({
 
   const filterChipClass = (active: boolean) =>
     [
-      "rounded-xl border font-semibold tracking-wide transition-colors",
-      isMobile ? "px-2 py-1.5 text-[11px]" : "px-3 py-2 text-xs sm:text-sm",
+      "flex min-w-0 items-center justify-center rounded-none border-[0.5px] font-semibold tracking-wide transition-colors",
+      isMobile ? "px-1.5 py-2.5 text-[11px]" : "px-2 py-2.5 text-xs sm:text-sm",
       active
-        ? "border-cyan-200/35 bg-cyan-500/20 text-cyan-50 shadow-[0_0_14px_rgba(34,211,238,0.12)]"
-        : "border-white/12 bg-white/[0.04] text-white/70 hover:border-white/18 hover:text-white/90",
+        ? "border-white/85 bg-[#1A1A1A] text-white"
+        : "border-white/35 bg-[#0A0A0A] text-white/70 hover:border-white/55 hover:bg-[#141414] hover:text-white",
     ].join(" ");
+
+  const filterChipRowClass = "grid grid-cols-4 gap-2";
+  const filterChipCellClass = "min-w-0";
+  const filterChipCellSpan2Class = "col-span-2 min-w-0";
 
   const totalLoaded = grouped.reduce(
     (a, d) => a + d.pending.length + d.final.length,
@@ -1095,7 +1096,9 @@ export default function ResultListWithOverlay({
         className={[
           "relative z-20",
           isMobile ? "space-y-3" : "space-y-4",
+          openPostId ? "pointer-events-none select-none" : "",
         ].join(" ")}
+        aria-hidden={openPostId ? true : undefined}
       >
         {showResultLeagueTabs ? (
           <motion.div
@@ -1160,10 +1163,12 @@ export default function ResultListWithOverlay({
                 ? fc.filterFoldCollapse
                 : fc.filterFoldCollapsedLabel
             }
-            className={cyberFilterBarClasses(
-              !isDefaultResultListFilters(filters),
-              "flex w-full items-center justify-between gap-2 px-3 py-2.5 text-left"
-            )}
+            className={[
+              "flex w-full items-center justify-between gap-2 rounded-none border-[0.5px] bg-black px-3 py-2.5 text-left",
+              !isDefaultResultListFilters(filters)
+                ? "border-white/80"
+                : "border-white/35",
+            ].join(" ")}
             onClick={() => setFilterPanelOpen((o) => !o)}
           >
             <span className="flex items-center gap-2 text-[11px] font-semibold text-white sm:text-xs">
@@ -1179,7 +1184,7 @@ export default function ResultListWithOverlay({
                 : fc.filterFoldCollapsedLabel}
               {!isDefaultResultListFilters(filters) ? (
                 <span
-                  className="inline-block h-1.5 w-1.5 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.7)]"
+                  className="inline-block h-1.5 w-1.5 rounded-full bg-white"
                   aria-hidden
                 />
               ) : null}
@@ -1189,8 +1194,7 @@ export default function ResultListWithOverlay({
           {filterPanelOpen ? (
         <motion.div
           className={[
-            CYBER_FILTER_PANEL_CLASS,
-            "absolute left-0 right-0 top-full z-40 mt-2 max-h-[min(72vh,640px)] overflow-y-auto overflow-x-hidden overscroll-contain px-3 py-3 sm:px-4 sm:py-3.5",
+            "absolute left-0 right-0 top-full z-40 mt-2 max-h-[min(72vh,640px)] overflow-y-auto overflow-x-hidden overscroll-contain rounded-none border-[0.5px] border-white/55 bg-black px-3 py-3 sm:px-4 sm:py-3.5",
             isMobile ? "pb-2" : "pb-3",
           ].join(" ")}
           role="group"
@@ -1216,14 +1220,14 @@ export default function ResultListWithOverlay({
               ].join(" ")}
             >
               {fc.panelTitle ? (
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-white/50 sm:text-xs">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-white/55 sm:text-xs">
                   {fc.panelTitle}
                 </span>
               ) : null}
               {!isDefaultResultListFilters(filters) ? (
                 <button
                   type="button"
-                  className="rounded-lg border border-white/14 bg-white/6 px-2.5 py-1 text-[11px] font-semibold text-white/80 transition hover:border-cyan-400/30 hover:text-white"
+                  className="rounded-none border border-white/35 bg-[#111] px-2.5 py-1 text-[11px] font-semibold text-white transition hover:border-white/55 hover:bg-[#1a1a1a]"
                   onClick={() => {
                     setFilters({ ...DEFAULT_RESULT_LIST_FILTERS });
                     setDetailFiltersOpen(false);
@@ -1240,7 +1244,7 @@ export default function ResultListWithOverlay({
             <div className="mb-1.5 text-[10px] font-medium text-white/40 sm:text-[11px]">
               {fc.outcome}
             </div>
-            <div className="flex flex-wrap items-center gap-2">
+            <div className={filterChipRowClass}>
               {(["all", "win", "loss"] as const).map((k) => (
                 <motion.button
                   key={k}
@@ -1263,7 +1267,7 @@ export default function ResultListWithOverlay({
                   }
                   whileTap={prefersReducedMotion ? undefined : { scale: 0.96 }}
                   whileHover={prefersReducedMotion ? undefined : { scale: 1.02 }}
-                  className={filterChipClass(filters.outcome === k)}
+                  className={`${filterChipCellClass} ${filterChipClass(filters.outcome === k)}`}
                 >
                   {fc.outcomeOpt[k]}
                 </motion.button>
@@ -1277,7 +1281,7 @@ export default function ResultListWithOverlay({
                 className="h-3.5 w-3.5 shrink-0 text-cyan-400/75"
                 aria-hidden
               />
-              <div className="text-[10px] font-medium text-white/40 sm:text-[11px]">
+              <div className="text-[10px] font-medium text-cyan-300/45 sm:text-[11px]">
                 {fc.matchDaySection}
               </div>
             </div>
@@ -1434,12 +1438,12 @@ export default function ResultListWithOverlay({
             </button>
 
             {detailFiltersOpen ? (
-              <div className="mt-3 space-y-3 border-l-2 border-cyan-500/25 pl-3">
+              <div className="mt-3 space-y-3 border-l-2 border-white/20 pl-3">
           <div className="mb-3">
             <div className="mb-1.5 text-[10px] font-medium text-white/40 sm:text-[11px]">
               {fc.settlement}
             </div>
-            <div className="flex flex-wrap items-center gap-2">
+            <div className={filterChipRowClass}>
               {(["all", "pending", "final"] as const).map((k) => (
                 <motion.button
                   key={k}
@@ -1462,7 +1466,7 @@ export default function ResultListWithOverlay({
                   }
                   whileTap={prefersReducedMotion ? undefined : { scale: 0.96 }}
                   whileHover={prefersReducedMotion ? undefined : { scale: 1.02 }}
-                  className={filterChipClass(filters.settlement === k)}
+                  className={`${filterChipCellClass} ${filterChipClass(filters.settlement === k)}`}
                 >
                   {fc.settlementOpt[k]}
                 </motion.button>
@@ -1474,7 +1478,7 @@ export default function ResultListWithOverlay({
             <div className="mb-1.5 text-[10px] font-medium text-white/40 sm:text-[11px]">
               {fc.upsetScore}
             </div>
-            <div className="flex flex-wrap items-center gap-2">
+            <div className={filterChipRowClass}>
               {(["none", "upsetBonus"] as const).map((k) => (
                 <motion.button
                   key={k}
@@ -1497,7 +1501,7 @@ export default function ResultListWithOverlay({
                   }
                   whileTap={prefersReducedMotion ? undefined : { scale: 0.96 }}
                   whileHover={prefersReducedMotion ? undefined : { scale: 1.02 }}
-                  className={filterChipClass(filters.specialty === k)}
+                  className={`${filterChipCellSpan2Class} ${filterChipClass(filters.specialty === k)}`}
                 >
                   {fc.upsetOpt[k]}
                 </motion.button>
@@ -1509,7 +1513,7 @@ export default function ResultListWithOverlay({
             <div className="mb-1.5 text-[10px] font-medium text-white/40 sm:text-[11px]">
               {fc.totalScore}
             </div>
-            <div className="flex flex-wrap items-center gap-2">
+            <div className={filterChipRowClass}>
               {(["all", "high", "mid", "low"] as const).map((k) => (
                 <motion.button
                   key={`ts-${k}`}
@@ -1532,7 +1536,7 @@ export default function ResultListWithOverlay({
                   }
                   whileTap={prefersReducedMotion ? undefined : { scale: 0.96 }}
                   whileHover={prefersReducedMotion ? undefined : { scale: 1.02 }}
-                  className={filterChipClass(filters.pointsTier === k)}
+                  className={`${filterChipCellClass} ${filterChipClass(filters.pointsTier === k)}`}
                 >
                   {fc.tierOpt[k]}
                 </motion.button>
@@ -2039,7 +2043,7 @@ export default function ResultListWithOverlay({
                     ariaLabel={t(resolveLocalizedLang(language)).common.back}
                   />
                   <motion.div
-                    className={`absolute inset-0 z-0 ${PREDICT_OVERLAY_BACKDROP}`}
+                    className={`absolute inset-0 z-0 ${RESULT_DETAIL_OVERLAY_BACKDROP}`}
                     onClick={close}
                     aria-hidden
                   />

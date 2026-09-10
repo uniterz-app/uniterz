@@ -2,12 +2,7 @@
 
 import type { CSSProperties, InputHTMLAttributes } from "react";
 import { nameBebas, nameOxanium } from "@/lib/fonts";
-import type { League } from "@/lib/leagues";
 import { NBA_TEAM_NAME_BY_ID } from "@/lib/nba-team-names";
-import {
-  getTeamJerseyPrimaryColor,
-  softenTeamUiColor,
-} from "@/lib/team-colors";
 import { getMobileTeamName } from "@/lib/team-name-split-mobile";
 import { PREDICT_OVERLAY_SCORE_INPUT_CLASS } from "@/lib/ui/predictOverlayCyber";
 
@@ -41,35 +36,6 @@ type Props = {
   className?: string;
 };
 
-function hexToRgba(hex: string, alpha: number): string {
-  const raw = hex.replace("#", "");
-  if (raw.length !== 6) return `rgba(0,245,255,${alpha})`;
-  const r = Number.parseInt(raw.slice(0, 2), 16);
-  const g = Number.parseInt(raw.slice(2, 4), 16);
-  const b = Number.parseInt(raw.slice(4, 6), 16);
-  return `rgba(${r},${g},${b},${alpha})`;
-}
-
-function inferLeague(teamId: string): League {
-  if (teamId.startsWith("nba-")) return "nba";
-  if (teamId.startsWith("wc-")) return "wc";
-  if (teamId.startsWith("pl-")) return "pl";
-  if (teamId.startsWith("bj-") || teamId.startsWith("b1-")) return "bj";
-  return "j1";
-}
-
-function sideAccent(
-  teamId: string | null | undefined,
-  side: "home" | "away"
-): string {
-  if (teamId) {
-    return softenTeamUiColor(
-      getTeamJerseyPrimaryColor(inferLeague(teamId), teamId)
-    );
-  }
-  return side === "home" ? "#00F5FF" : "#B388FF";
-}
-
 /** HUD 用英語チーム名（例: LAKERS）。NBA は nickname のみ。 */
 function englishHudTeamName(
   teamId: string | null | undefined,
@@ -100,8 +66,6 @@ function ScoreField({
   disabled,
   inputProps,
 }: SideField) {
-  const primary = sideAccent(teamId, side);
-  const border = hexToRgba(primary, 0.55);
   const sideLabel = side === "home" ? "HOME" : "AWAY";
   const teamName = englishHudTeamName(teamId, label);
   const title = `${sideLabel}: ${teamName}`;
@@ -128,9 +92,9 @@ function ScoreField({
       </span>
 
       <span
-        className="relative block overflow-hidden transition-[border-color] duration-150 group-focus-within:brightness-110"
+        className="relative block overflow-hidden bg-black transition-[border-color] duration-150 group-focus-within:border-white/70"
         style={{
-          border: `1px solid ${border}`,
+          border: "1px solid rgba(255,255,255,0.55)",
           borderRadius: 0,
           background: "#000",
         }}
@@ -150,8 +114,8 @@ function ScoreField({
             "relative z-[1] w-full bg-transparent px-3 py-2.5 text-center text-[18px] font-normal uppercase leading-none tracking-[0.08em] outline-none md:text-[18px]",
           ].join(" ")}
           style={{
-            caretColor: primary,
-            color: "#F0FDFF",
+            caretColor: "#ffffff",
+            color: "#ffffff",
             transform: "skewX(-6deg)",
           }}
           {...inputProps}

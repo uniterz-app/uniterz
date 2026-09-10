@@ -8,6 +8,10 @@ import {
   scheduleDifficultyTierLabel,
 } from "../../../../../../lib/nba/detailInsights/buildScheduleDifficulty";
 import { L, resolveLocalizedLang } from "../../../../../../lib/i18n/localize";
+import {
+  compactNbaCardNickname,
+  getNbaTeamNicknameById,
+} from "../../../../../../lib/nba-team-names";
 
 function hexToRgba(hex: string, alpha: number): string {
   const raw = hex.replace("#", "");
@@ -23,6 +27,11 @@ function hexToRgba(hex: string, alpha: number): string {
   const g = (n >> 8) & 255;
   const b = n & 255;
   return `rgba(${r},${g},${b},${alpha})`;
+}
+
+function upcomingOppLabel(game: NbaTeamUpcomingGame): string {
+  const nick = getNbaTeamNicknameById(game.oppTeamId);
+  return compactNbaCardNickname(nick || game.oppAbbr, game.oppTeamId);
 }
 
 const OXANIUM = "Oxanium_700Bold";
@@ -102,7 +111,7 @@ export function DetailScheduleSectionNative({
       <View style={[styles.card, { borderColor: frame }]}>
         {upcomingGames.map((game, i) => (
           <View
-            key={`${game.dateLabel}-${game.oppAbbr}-${i}`}
+            key={`${game.dateLabel}-${game.oppTeamId}-${i}`}
             style={[
               styles.row,
               i < upcomingGames.length - 1
@@ -114,13 +123,17 @@ export function DetailScheduleSectionNative({
             ]}
           >
             <Text style={styles.date}>{game.dateLabel}</Text>
-            <Text style={styles.matchup} numberOfLines={1}>
-              {game.home ? "vs" : "@"} {game.oppAbbr}
-              {game.conferenceGame ? (
-                <Text style={styles.confTag}> · CONF</Text>
-              ) : null}
-            </Text>
-            <Text style={styles.tip}>{game.tipLabel}</Text>
+            <View style={styles.matchupSkew}>
+              <Text style={styles.matchup} numberOfLines={1}>
+                {game.home ? "vs" : "@"} {upcomingOppLabel(game)}
+                {game.conferenceGame ? (
+                  <Text style={styles.confTag}> · CONF</Text>
+                ) : null}
+              </Text>
+            </View>
+            <View style={styles.tipSkew}>
+              <Text style={styles.tip}>{game.tipLabel}</Text>
+            </View>
           </View>
         ))}
       </View>
@@ -190,21 +203,31 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "rgba(255,255,255,0.4)",
   },
-  matchup: {
+  matchupSkew: {
     flex: 1,
+    minWidth: 0,
+    transform: [{ skewX: "-10deg" }],
+  },
+  matchup: {
     fontFamily: OXANIUM,
     fontSize: 14,
     fontWeight: "700",
     color: "#fff",
+    textTransform: "uppercase",
+    transform: [{ skewX: "4deg" }],
   },
   confTag: {
     color: "rgba(255,255,255,0.45)",
     fontWeight: "600",
+  },
+  tipSkew: {
+    transform: [{ skewX: "-10deg" }],
   },
   tip: {
     fontFamily: OXANIUM,
     fontSize: 14,
     fontWeight: "700",
     color: "rgba(255,255,255,0.85)",
+    transform: [{ skewX: "4deg" }],
   },
 });

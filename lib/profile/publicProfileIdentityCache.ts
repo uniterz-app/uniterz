@@ -3,6 +3,12 @@
  * users 本文が来るまでのカード骨格用。TTL 短め。
  */
 
+import type { ProfilePlanProBgVariant } from "@/lib/profile/profilePlanProBgVariants";
+import {
+  parseUserPlanProBgVariant,
+  tryParseUserPlanProBgVariant,
+} from "@/lib/profile/profilePlanProBgVariantField";
+
 export type PublicProfileIdentitySeed = {
   targetUid: string | null;
   displayName: string;
@@ -10,6 +16,11 @@ export type PublicProfileIdentitySeed = {
   bio: string;
   photoURL: string;
   plan: "free" | "pro";
+  /**
+   * Pro Skin。null = 未確定（デフォルト titanium を出さない）。
+   * fromUserDoc 後は必ず確定値（不正値は呼び出し側で DEFAULT 化）。
+   */
+  planProBgVariant: ProfilePlanProBgVariant | null;
   countryCode: string;
   posts: number;
   /** true = users ドキュメント由来（bio / skin まで揃いやすい） */
@@ -57,6 +68,7 @@ export function primePublicProfileIdentity(input: {
   bio?: string | null;
   photoURL?: string | null;
   plan?: "free" | "pro" | string | null;
+  planProBgVariant?: ProfilePlanProBgVariant | string | null;
   countryCode?: string | null;
   posts?: number | null;
   fromUserDoc?: boolean;
@@ -69,19 +81,28 @@ export function primePublicProfileIdentity(input: {
       : handle || "User";
   const country =
     typeof input.countryCode === "string" ? input.countryCode.trim() : "";
+  const plan: "free" | "pro" = input.plan === "pro" ? "pro" : "free";
+  const fromUserDoc = input.fromUserDoc === true;
+  const skin =
+    plan !== "pro"
+      ? null
+      : fromUserDoc
+        ? parseUserPlanProBgVariant(input.planProBgVariant)
+        : tryParseUserPlanProBgVariant(input.planProBgVariant);
   const seed: PublicProfileIdentitySeed = {
     targetUid: uid || null,
     displayName,
     handle,
     bio: typeof input.bio === "string" ? input.bio : "",
     photoURL: typeof input.photoURL === "string" ? input.photoURL.trim() : "",
-    plan: input.plan === "pro" ? "pro" : "free",
+    plan,
+    planProBgVariant: skin,
     countryCode: country,
     posts:
       typeof input.posts === "number" && Number.isFinite(input.posts)
         ? Math.max(0, Math.floor(input.posts))
         : 0,
-    fromUserDoc: input.fromUserDoc === true,
+    fromUserDoc,
   };
   writeKeys([input.routeKey, uid, handle], seed);
   return seed;

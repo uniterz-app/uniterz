@@ -27,7 +27,7 @@ type Props = TextInputProps & {
 
 export default function PredictOverlayScoreInputNative({
   style,
-  placeholderTextColor = "rgba(0,245,255,0.36)",
+  placeholderTextColor = "rgba(255,255,255,0.35)",
   tutorialFocusId,
   value,
   onChangeText,
@@ -60,10 +60,10 @@ export default function PredictOverlayScoreInputNative({
       cut={PREDICT_OVERLAY_SCORE_INPUT_CUT}
       gradientColors={["#000000", "#000000"]}
       gradientLocations={[0, 1]}
-      borderColor="rgba(0,245,255,0.52)"
-      shadowColor="#00f5ff"
-      shadowOpacity={0.18}
-      shadowRadius={14}
+      borderColor="rgba(255,255,255,0.55)"
+      shadowColor="#ffffff"
+      shadowOpacity={0}
+      shadowRadius={0}
       style={styles.root}
       contentStyle={styles.content}
       overflowHidden
@@ -98,7 +98,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingHorizontal: 14,
     paddingVertical: 0,
-    backgroundColor: "rgba(0,18,24,0.92)",
+    backgroundColor: "#000000",
   },
   input: {
     width: "100%",
@@ -107,7 +107,7 @@ const styles = StyleSheet.create({
     margin: 0,
     borderWidth: 0,
     backgroundColor: "transparent",
-    color: "#e8fdff",
+    color: "#ffffff",
     /** TOP SCORER / Score prediction 見出しと同型（Bebas + skew） */
     fontFamily: MATCH_CARD_DISPLAY_FONT,
     fontSize: 18,

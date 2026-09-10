@@ -8,6 +8,10 @@ import {
   scheduleDifficultyTierLabel,
 } from "@/lib/nba/detailInsights/buildScheduleDifficulty";
 import { resolveLocalizedLang } from "@/lib/i18n/localize";
+import {
+  compactNbaCardNickname,
+  getNbaTeamNicknameById,
+} from "@/lib/nba-team-names";
 
 function hexToRgba(hex: string, alpha: number): string {
   const raw = hex.replace("#", "");
@@ -23,6 +27,11 @@ function hexToRgba(hex: string, alpha: number): string {
   const g = (n >> 8) & 255;
   const b = n & 255;
   return `rgba(${r},${g},${b},${alpha})`;
+}
+
+function upcomingOppLabel(game: NbaTeamUpcomingGame): string {
+  const nick = getNbaTeamNicknameById(game.oppTeamId);
+  return compactNbaCardNickname(nick || game.oppAbbr, game.oppTeamId);
 }
 
 type Props = {
@@ -91,7 +100,7 @@ export function DetailScheduleSection({
       >
         {upcomingGames.map((game, i) => (
           <div
-            key={`${game.dateLabel}-${game.oppAbbr}-${i}`}
+            key={`${game.dateLabel}-${game.oppTeamId}-${i}`}
             className="flex items-center gap-1.5 px-2.5 py-2.5"
             style={
               i < upcomingGames.length - 1
@@ -102,14 +111,24 @@ export function DetailScheduleSection({
             <span className="w-11 shrink-0 text-[13px] text-white/40">
               {game.dateLabel}
             </span>
-            <span className="min-w-0 flex-1 truncate text-[14px] font-bold">
-              {game.home ? "vs" : "@"} {game.oppAbbr}
-              {game.conferenceGame ? (
-                <span className="text-white/45"> · CONF</span>
-              ) : null}
+            <span
+              className="min-w-0 flex-1 truncate text-[14px] font-bold uppercase"
+              style={{ transform: "skewX(-10deg)" }}
+            >
+              <span style={{ display: "inline-block", transform: "skewX(4deg)" }}>
+                {game.home ? "vs" : "@"} {upcomingOppLabel(game)}
+                {game.conferenceGame ? (
+                  <span className="text-white/45"> · CONF</span>
+                ) : null}
+              </span>
             </span>
-            <span className="shrink-0 text-[14px] font-bold text-white/85">
-              {game.tipLabel}
+            <span
+              className="shrink-0 text-[14px] font-bold text-white/85"
+              style={{ transform: "skewX(-10deg)" }}
+            >
+              <span style={{ display: "inline-block", transform: "skewX(4deg)" }}>
+                {game.tipLabel}
+              </span>
             </span>
           </div>
         ))}
