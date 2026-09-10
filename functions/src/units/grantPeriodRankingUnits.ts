@@ -1,6 +1,6 @@
 /**
  * 個人ランキング（週総合 / 月総合+部門）Unit 冪等付与。
- * period_ranking_snapshots（standard）確定後に、別 cron（16:05 JST）から実行。
+ * period_ranking_snapshots（standard）確定後に、別 cron（16:10 JST）から実行。
  * 同順位は同量（competition）。タイブレークなし。
  */
 import { FieldValue, getFirestore } from "firebase-admin/firestore";

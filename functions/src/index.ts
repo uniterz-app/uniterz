@@ -171,7 +171,7 @@ export const buildCumulativeRankingSnapshotCron = onSchedule(
       );
     }
 
-    // 期間スナップショットは無試合日も実行（Unit 付与は 16:05 の別 cron）
+    // 期間スナップショットは無試合日も実行（Unit 付与は 16:10 の別 cron）
     try {
       await buildNbaPeriodRankingSnapshots();
     } catch (err) {
@@ -195,12 +195,12 @@ export const buildCumulativeRankingSnapshotCron = onSchedule(
 );
 
 /**
- * 期間ランキング Unit 付与 — スナップショット cron（16:00 JST）の 5 分後。
+ * 期間ランキング Unit 付与 — スナップショット cron（16:00 JST）の 10 分後。
  * 確定スナップが書いてから付与し、同一実行のタイムアウト連鎖を避ける。
  */
 export const grantPeriodRankingUnitsCron = onSchedule(
   {
-    schedule: "5 16 * * *",
+    schedule: "10 16 * * *",
     timeZone: "Asia/Tokyo",
     memory: "512MiB",
     timeoutSeconds: 540,
