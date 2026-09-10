@@ -102,6 +102,21 @@ export function unitsForPeriodRankingRank(
   return unitsFromRankTable(rank, MONTHLY_DEPARTMENT_BY_RANK);
 }
 
+/** UI 表用: 順位 → Unit の連番行 */
+export function listPeriodRankingUnitRows(
+  period: PeriodRankingUnitPeriod,
+  metric: PeriodRankingUnitMetric
+): Array<{ rank: number; units: number }> {
+  const max = periodRankingUnitMaxRank(period, metric);
+  if (max <= 0) return [];
+  const rows: Array<{ rank: number; units: number }> = [];
+  for (let rank = 1; rank <= max; rank++) {
+    const units = unitsForPeriodRankingRank(period, metric, rank);
+    if (units != null) rows.push({ rank, units });
+  }
+  return rows;
+}
+
 /** その period で付与対象の metric 一覧 */
 export function periodRankingUnitMetricsForPeriod(
   period: PeriodRankingUnitPeriod
@@ -128,21 +143,3 @@ export function periodRankingUnitLedgerReason(
   return period === "weekly" ? "weekly_rank" : "monthly_rank";
 }
 
-export function periodRankingUnitMetricLabel(
-  metric: PeriodRankingUnitMetric,
-  language: "ja" | "en"
-): string {
-  const ja = language === "ja";
-  switch (metric) {
-    case "totalPoints":
-      return ja ? "総合" : "Overall";
-    case "winRate":
-      return ja ? "勝率" : "Win%";
-    case "totalUpset":
-      return ja ? "アップセット" : "Upset";
-    case "totalGoalScorerHits":
-      return ja ? "得点者" : "Scorer";
-    default:
-      return metric;
-  }
-}
