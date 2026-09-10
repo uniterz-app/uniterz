@@ -443,8 +443,8 @@ async function writePeriodDivisionSnapshots(opts: {
 
 /**
  * 現在の週・月のスナップショットを再構築する。
- * 新しい週／月の初日（grace=0）または猶予日内は前期間も最終集計し、
- * その後 Unit / Pro Skin 付与へ進む。
+ * 新しい週／月の初日（grace=0）または猶予日内は前期間も最終集計する。
+ * Unit 付与は別 cron（snapshot の数分後）— grantPeriodRankingUnitsCron。
  */
 export async function buildNbaPeriodRankingSnapshots(
   now: Date = new Date()
@@ -498,18 +498,6 @@ export async function buildNbaPeriodRankingSnapshots(
   } catch (err) {
     console.error(
       "[buildNbaPeriodRankingSnapshots] user_career period sync failed",
-      err
-    );
-  }
-
-  try {
-    const { grantPeriodRankingUnitsAfterPeriodSnapshots } = await import(
-      "../units/grantPeriodRankingUnits"
-    );
-    await grantPeriodRankingUnitsAfterPeriodSnapshots(now);
-  } catch (err) {
-    console.error(
-      "[buildNbaPeriodRankingSnapshots] period ranking unit grants failed",
       err
     );
   }

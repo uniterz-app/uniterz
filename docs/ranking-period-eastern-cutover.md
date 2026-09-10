@@ -3,7 +3,9 @@
  *
  * ## 方針
  * - 期間ラベル・「今日」・月曜始まりは全員共通 `America/New_York`
- * - 期間終了 → 新しい週／月の初日に前期間を最終スナップショット → Unit 付与（grace 0）
+ * - 期間終了 → 新しい週／月の初日 16:00 JST に前期間を最終スナップショット
+- Unit 付与は **16:05 JST** の別 cron（`grantPeriodRankingUnitsCron`）
+  （同一実行のタイムアウト連鎖を避け、スナップ確定後に配布）
  * - Weekly / Monthly Pro レポートも同じ Eastern 期間 + cron TZ
  *
  * ## 実装済み
