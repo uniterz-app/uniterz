@@ -1823,7 +1823,7 @@ export default function ProfileHomeScreen({
       onOpenProfile={(row: MarkListRow) => {
         const handle = row.handle.trim();
         if (!handle) return;
-        // pageSheet のまま push すると下に自プロフィールが見えるので即閉じる
+        // 横スライド Modal を即閉じて自プロフィールを見せない
         navigateToPublicProfileNative(navigation, {
           handle,
           fromMarkList: true,

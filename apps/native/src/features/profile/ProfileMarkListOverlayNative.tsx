@@ -1,8 +1,12 @@
-/** Web 未実装 — Native MARK LIST。下から出すシート（得点上位行に近い細いサイバーリスト）。 */
-import { useEffect, useState } from "react";
+/** Web 未実装 — Native MARK LIST。左から横スライドするサイドシート。 */
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Animated,
+  Dimensions,
+  Easing,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -10,6 +14,7 @@ import {
   View,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { BlurView } from "expo-blur";
 import {
   initialWindowMetrics,
   SafeAreaProvider,
@@ -19,6 +24,7 @@ import { MAX_MARKS_FREE, type UserMark } from "../../../../../lib/marks/markType
 import { loadMarksWeeklyBoard, peekMarksWeeklyBoard } from "../../../../../lib/profile/fetchMarksWeeklyBoard";
 import { getUniterzApiBaseUrl } from "../games/submitPredictionApi";
 import { peekProfileUserDocNative } from "./profileUserDocCacheNative";
+import ProfileBackEdgeHandleNative from "./ProfileBackEdgeHandleNative";
 import ProCyberBadgeNative from "./kinetik/ProCyberBadgeNative";
 import { CyberRankNumberNative } from "../rankings/CyberRankNumberNative";
 import { RankingsAvatarNative } from "../rankings/RankingsAvatarAndTabs";
@@ -38,6 +44,7 @@ import {
   CYBER_LIST_MAGENTA,
   cyberMetricTag,
 } from "../../../../../lib/rankings/cyberRankVisual";
+import { nativeBlurViewExtraProps } from "../../ui/nativeBlurProps";
 
 export type MarkListRow = UserMark & {
   weeklyRank: number | null;
@@ -84,8 +91,12 @@ type Props = {
 };
 
 const AVATAR = 32;
+/** 右端 BACK タブと背景の覗き窓 */
+const SHEET_RIGHT_GAP = 28;
+const EXIT_MS = 220;
 
 function MarkListSheetBody({
+  visible,
   language,
   marks,
   loading,
@@ -94,7 +105,6 @@ function MarkListSheetBody({
   onClose,
   onOpenProfile,
   onUnmark,
-  visible,
 }: Props) {
   const insets = useSafeAreaInsets();
   const isJa = language === "ja";
@@ -102,6 +112,47 @@ function MarkListSheetBody({
   const [statsLoading, setStatsLoading] = useState(false);
   const metricTag = cyberMetricTag("totalScore", language);
   const tagFontSize = rankingFontSizePx(7, metricTag);
+  const sheetWidth = useMemo(
+    () => Math.max(280, Dimensions.get("window").width - SHEET_RIGHT_GAP),
+    []
+  );
+  const slide = useRef(new Animated.Value(-sheetWidth - 24)).current;
+  const backdrop = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (visible) {
+      slide.setValue(-sheetWidth - 24);
+      backdrop.setValue(0);
+      Animated.parallel([
+        Animated.timing(backdrop, {
+          toValue: 1,
+          duration: 220,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        Animated.spring(slide, {
+          toValue: 0,
+          friction: 9,
+          tension: 68,
+          useNativeDriver: true,
+        }),
+      ]).start();
+      return;
+    }
+    Animated.parallel([
+      Animated.timing(backdrop, {
+        toValue: 0,
+        duration: 160,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slide, {
+        toValue: -sheetWidth - 24,
+        duration: 200,
+        easing: Easing.in(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [visible, slide, backdrop, sheetWidth]);
 
   useEffect(() => {
     if (!visible) return;
@@ -139,174 +190,220 @@ function MarkListSheetBody({
   const showEmpty = !showSpinner && marks.length === 0;
 
   return (
-    <View
-      style={[
-        styles.root,
-        {
-          paddingTop: Math.max(insets.top, 12),
-          paddingBottom: Math.max(insets.bottom, 8),
-        },
-      ]}
-    >
-      <View style={styles.header}>
-        <View style={styles.headerText}>
-          <Text style={styles.title}>MARK LIST</Text>
-          <Text style={styles.sub}>
-            {isJa
-              ? `マーク中 ${marks.length}/${maxMarks} · マークされた数 ${markedByCount}`
-              : `Marked ${marks.length}/${maxMarks} · marked by ${markedByCount}`}
-          </Text>
-        </View>
-        <Pressable onPress={onClose} style={styles.closeBtn} hitSlop={8}>
-          <Text style={styles.closeText}>{isJa ? "閉じる" : "Close"}</Text>
-        </Pressable>
-      </View>
-
-      {showSpinner ? (
-        <View style={styles.center}>
-          <ActivityIndicator color="#a5f3fc" />
-        </View>
-      ) : showEmpty ? (
-        <View style={styles.center}>
-          <MaterialCommunityIcons
-            name="crosshairs"
-            size={28}
-            color="rgba(165,243,252,0.45)"
+    <View style={styles.root}>
+      <Animated.View style={[styles.backdrop, { opacity: backdrop }]}>
+        {(Platform.OS === "ios" || Platform.OS === "android") && (
+          <BlurView
+            intensity={Platform.OS === "ios" ? 48 : 36}
+            tint="dark"
+            {...nativeBlurViewExtraProps()}
+            style={StyleSheet.absoluteFillObject}
           />
-          <Text style={styles.empty}>
-            {isJa
-              ? "他の予想者を MARK するとここに並びます"
-              : "MARK other predictors to see them here"}
-          </Text>
-        </View>
-      ) : (
-        <ScrollView
-          style={styles.scroll}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={styles.sectionTitleRow}>
-            <Text style={styles.sectionTitle}>
-              {isJa ? "今週の順位" : "WEEKLY"}
-            </Text>
-            <View style={styles.sectionTitleLine} />
+        )}
+        <View style={styles.backdropDim} pointerEvents="none" />
+        <Pressable
+          style={StyleSheet.absoluteFillObject}
+          onPress={onClose}
+          accessibilityRole="button"
+          accessibilityLabel={isJa ? "戻る" : "Back"}
+        />
+      </Animated.View>
+
+      <Animated.View
+        style={[
+          styles.sheetWrap,
+          {
+            width: sheetWidth,
+            paddingTop: Math.max(insets.top, 12),
+            transform: [{ translateX: slide }],
+          },
+        ]}
+        pointerEvents="box-none"
+      >
+        <View style={styles.sheetInner}>
+          <View style={styles.header}>
+            <View style={styles.headerText}>
+              <Text style={styles.title}>MARK LIST</Text>
+              <Text style={styles.sub}>
+                {isJa
+                  ? `マーク中 ${marks.length}/${maxMarks} · マークされた数 ${markedByCount}`
+                  : `Marked ${marks.length}/${maxMarks} · marked by ${markedByCount}`}
+              </Text>
+            </View>
           </View>
-          {statsLoading ? (
-            <Text style={styles.hint}>
-              {isJa ? "今週の成績を読み込み中…" : "Loading weekly stats…"}
-            </Text>
-          ) : null}
-          {rows.map((row) => {
-            const handle = row.handle.trim();
-            const nameJa = hasJaScript(row.displayName);
-            const nameFontSize = rankingFontSizePx(13, row.displayName);
-            const rank = row.weeklyRank;
-            const pts = row.weeklyPoints;
-            return (
-              <Pressable
-                key={row.targetUid}
-                onPress={() => {
-                  if (!handle) return;
-                  onOpenProfile(row);
-                }}
-                style={({ pressed }) => [
-                  styles.article,
-                  pressed ? styles.rowPressed : null,
-                ]}
-              >
-                <View style={styles.rowInner}>
-                  <View style={styles.rankCol}>
-                    <CyberRankNumberNative
-                      rank={rank && rank > 0 ? rank : 99}
-                      compact
-                      muted={rank == null || rank < 1}
-                      displayValue={
-                        rank != null && rank > 0
-                          ? String(rank).padStart(2, "0")
-                          : "—"
-                      }
-                    />
-                  </View>
-                  <View style={styles.avatarSquare}>
-                    <View style={styles.avatarCrop}>
-                      <RankingsAvatarNative
-                        photoURL={row.photoURL}
-                        label={row.displayName}
-                        size={AVATAR}
-                        square
-                      />
-                    </View>
-                  </View>
-                  <View style={styles.mainCol}>
-                    <View style={styles.nameRow}>
-                      <Text
-                        style={[
-                          styles.name,
-                          {
-                            fontSize: nameFontSize,
-                            letterSpacing: nameJa ? 0.4 : 0.6,
-                            fontFamily: rankingNameFont(row.displayName),
-                            textTransform: nameJa ? "none" : "uppercase",
-                          },
-                        ]}
-                        numberOfLines={1}
-                      >
-                        {row.displayName}
-                      </Text>
-                      {row.isPro ? <ProCyberBadgeNative compact /> : null}
-                    </View>
-                    <Text style={styles.handle} numberOfLines={1}>
-                      {handle ? `@${handle}` : ""}
-                    </Text>
-                  </View>
-                  <View style={styles.scoreCol}>
-                    <View style={styles.scoreSkew}>
-                      <Text style={styles.scoreMain}>
-                        {pts != null ? formatMetricDecimals(pts, 1) : "—"}
-                      </Text>
-                    </View>
-                    <Text
-                      style={[
-                        styles.metricTag,
-                        {
-                          fontSize: tagFontSize,
-                          fontFamily: rankingTagFont(metricTag),
-                        },
-                      ]}
-                      numberOfLines={1}
-                    >
-                      {metricTag}
-                    </Text>
-                  </View>
+
+          {showSpinner ? (
+            <View style={styles.center}>
+              <ActivityIndicator color="#a5f3fc" />
+            </View>
+          ) : showEmpty ? (
+            <View style={styles.center}>
+              <MaterialCommunityIcons
+                name="crosshairs"
+                size={28}
+                color="rgba(165,243,252,0.45)"
+              />
+              <Text style={styles.empty}>
+                {isJa
+                  ? "他の予想者を MARK するとここに並びます"
+                  : "MARK other predictors to see them here"}
+              </Text>
+            </View>
+          ) : (
+            <ScrollView
+              style={styles.scroll}
+              contentContainerStyle={[
+                styles.scrollContent,
+                { paddingBottom: Math.max(insets.bottom, 20) },
+              ]}
+              showsVerticalScrollIndicator={false}
+            >
+              <View style={styles.sectionTitleRow}>
+                <Text style={styles.sectionTitle}>
+                  {isJa ? "今週の順位" : "WEEKLY"}
+                </Text>
+                <View style={styles.sectionTitleLine} />
+              </View>
+              {statsLoading ? (
+                <Text style={styles.hint}>
+                  {isJa ? "今週の成績を読み込み中…" : "Loading weekly stats…"}
+                </Text>
+              ) : null}
+              {rows.map((row) => {
+                const handle = row.handle.trim();
+                const nameJa = hasJaScript(row.displayName);
+                const nameFontSize = rankingFontSizePx(13, row.displayName);
+                const rank = row.weeklyRank;
+                const pts = row.weeklyPoints;
+                return (
                   <Pressable
-                    onPress={() => onUnmark(row.targetUid)}
-                    hitSlop={8}
-                    style={styles.unmarkBtn}
-                    accessibilityRole="button"
-                    accessibilityLabel={isJa ? "マークを外す" : "Unmark"}
+                    key={row.targetUid}
+                    onPress={() => {
+                      if (!handle) return;
+                      onOpenProfile(row);
+                    }}
+                    style={({ pressed }) => [
+                      styles.article,
+                      pressed ? styles.rowPressed : null,
+                    ]}
                   >
-                    <MaterialCommunityIcons
-                      name="close"
-                      size={16}
-                      color="rgba(255,255,255,0.45)"
-                    />
+                    <View style={styles.rowInner}>
+                      <View style={styles.rankCol}>
+                        <CyberRankNumberNative
+                          rank={rank && rank > 0 ? rank : 99}
+                          compact
+                          muted={rank == null || rank < 1}
+                          displayValue={
+                            rank != null && rank > 0
+                              ? String(rank).padStart(2, "0")
+                              : "—"
+                          }
+                        />
+                      </View>
+                      <View style={styles.avatarSquare}>
+                        <View style={styles.avatarCrop}>
+                          <RankingsAvatarNative
+                            photoURL={row.photoURL}
+                            label={row.displayName}
+                            size={AVATAR}
+                            square
+                          />
+                        </View>
+                      </View>
+                      <View style={styles.mainCol}>
+                        <View style={styles.nameRow}>
+                          <Text
+                            style={[
+                              styles.name,
+                              {
+                                fontSize: nameFontSize,
+                                letterSpacing: nameJa ? 0.4 : 0.6,
+                                fontFamily: rankingNameFont(row.displayName),
+                                textTransform: nameJa ? "none" : "uppercase",
+                              },
+                            ]}
+                            numberOfLines={1}
+                          >
+                            {row.displayName}
+                          </Text>
+                          {row.isPro ? <ProCyberBadgeNative compact /> : null}
+                        </View>
+                        <Text style={styles.handle} numberOfLines={1}>
+                          {handle ? `@${handle}` : ""}
+                        </Text>
+                      </View>
+                      <View style={styles.scoreCol}>
+                        <View style={styles.scoreSkew}>
+                          <Text style={styles.scoreMain}>
+                            {pts != null ? formatMetricDecimals(pts, 1) : "—"}
+                          </Text>
+                        </View>
+                        <Text
+                          style={[
+                            styles.metricTag,
+                            {
+                              fontSize: tagFontSize,
+                              fontFamily: rankingTagFont(metricTag),
+                            },
+                          ]}
+                          numberOfLines={1}
+                        >
+                          {metricTag}
+                        </Text>
+                      </View>
+                      <Pressable
+                        onPress={() => onUnmark(row.targetUid)}
+                        hitSlop={8}
+                        style={styles.unmarkBtn}
+                        accessibilityRole="button"
+                        accessibilityLabel={isJa ? "マークを外す" : "Unmark"}
+                      >
+                        <MaterialCommunityIcons
+                          name="close"
+                          size={16}
+                          color="rgba(255,255,255,0.45)"
+                        />
+                      </Pressable>
+                    </View>
                   </Pressable>
-                </View>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
-      )}
+                );
+              })}
+            </ScrollView>
+          )}
+        </View>
+      </Animated.View>
+
+      <ProfileBackEdgeHandleNative
+        onPress={onClose}
+        accessibilityLabel={isJa ? "戻る" : "Back"}
+      />
     </View>
   );
 }
 
 export default function ProfileMarkListOverlayNative(props: Props) {
+  const [mounted, setMounted] = useState(props.visible);
+
+  useEffect(() => {
+    if (props.visible) {
+      setMounted(true);
+      return;
+    }
+    const t = setTimeout(() => setMounted(false), EXIT_MS);
+    return () => clearTimeout(t);
+  }, [props.visible]);
+
+  if (!mounted && !props.visible) return null;
+
   return (
     <Modal
-      visible={props.visible}
-      animationType="slide"
-      presentationStyle="pageSheet"
+      visible={mounted}
+      transparent
+      animationType="none"
+      statusBarTranslucent
+      {...(Platform.OS === "ios"
+        ? ({ presentationStyle: "overFullScreen" } as const)
+        : {})}
       onRequestClose={props.onClose}
     >
       <SafeAreaProvider initialMetrics={initialWindowMetrics}>
@@ -319,7 +416,26 @@ export default function ProfileMarkListOverlayNative(props: Props) {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: "#07090d",
+    backgroundColor: "transparent",
+  },
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  backdropDim: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.62)",
+  },
+  sheetWrap: {
+    position: "absolute",
+    left: 0,
+    top: 0,
+    bottom: 0,
+    backgroundColor: "rgba(6,8,12,0.96)",
+    borderRightWidth: StyleSheet.hairlineWidth,
+    borderRightColor: "rgba(165,243,252,0.22)",
+  },
+  sheetInner: {
+    flex: 1,
   },
   header: {
     flexDirection: "row",
@@ -343,15 +459,6 @@ const styles = StyleSheet.create({
     color: "rgba(255,255,255,0.5)",
     fontSize: 12,
   },
-  closeBtn: {
-    paddingVertical: 4,
-    paddingHorizontal: 2,
-  },
-  closeText: {
-    color: "rgba(165,243,252,0.85)",
-    fontSize: 13,
-    fontWeight: "600",
-  },
   center: {
     flex: 1,
     alignItems: "center",
@@ -368,7 +475,7 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   scrollContent: {
     paddingTop: 12,
-    paddingBottom: 20,
+    paddingBottom: 8,
   },
   sectionTitleRow: {
     flexDirection: "row",
