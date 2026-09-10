@@ -97,4 +97,4 @@ export function periodWinRateMinPosts(period: NbaRankingPeriod): number {
  * 期間開始直後の猶予日数。前期間の遅延精算（期間最終日の試合が
  * 翌日 JST に確定するケース）を拾うため、この日数以内なら前期間も再集計する。
  */
-export const PERIOD_FINALIZE_GRACE_DAYS = 2;
+export const PERIOD_FINALIZE_GRACE_DAYS = 1;
