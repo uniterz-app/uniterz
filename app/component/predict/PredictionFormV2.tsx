@@ -86,6 +86,7 @@ import { useUserPlan } from "@/hooks/useUserPlan";
 import { usePredictionPostDistribution } from "@/lib/hooks/usePredictionPostDistribution";
 import { loadResultPostDetailClient } from "@/lib/result/loadResultPostDetailClient";
 import { mergeGameIntoResultPost } from "@/lib/result/mergeGameIntoResultPost";
+import { invalidateResultPostsListCache } from "@/lib/result/resultPostsListCache";
 import type { PredictionPostV2 } from "@/types/prediction-post-v2";
 
 /* ======================
@@ -955,6 +956,7 @@ export default function PredictionFormV2({
 
       toast.success(m.predict.predictionSubmitted);
       onPostCreated?.({ id: json.id ?? "(local)", at: new Date() });
+      invalidateResultPostsListCache(me.uid);
 
       setWinner(null);
       setPkWinner(null);

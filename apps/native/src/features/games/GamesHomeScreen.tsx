@@ -205,6 +205,8 @@ import {
   type ClientPredictionValidationCode,
 } from "../../../../../lib/predict/clientPredictionSubmit";
 import { findNextUnpredictedScheduledGameInList } from "../../../../../lib/games/nextPredictGame";
+import { invalidateResultPostsListCache } from "../../../../../lib/result/resultPostsListCache";
+import { subscribeScheduleMyPostDeleted } from "../../../../../lib/games/scheduleMyPostSyncEvents";
 import { resolveGameMarketBiasDisplay, readGamePredictorCount } from "../../../../../lib/predict/gameMarketDistribution";
 import type { GameCardCenterBlock } from "./gameCardCenterTypes";
 import { formatTeamRecordForCard } from "./teamRecordDisplay";
@@ -1521,7 +1523,33 @@ export default function GamesHomeScreen({
     };
   }, [fUser, gameIdsKey, gameIdSet, myPredictionsReloadNonce, windowGameIds]);
 
-  const t = useMemo(() => getGamesTexts(gamesLanguage), [gamesLanguage]);
+  /** リザルトで投稿削除されたとき、一覧の「予想済み」を外す */
+  useEffect(() => {
+    return subscribeScheduleMyPostDeleted(({ gameId }) => {
+      const gid = String(gameId ?? "").trim();
+      if (!gid) return;
+      setPredictedGameIds((prev) => {
+        if (!prev.has(gid)) return prev;
+        const next = new Set(prev);
+        next.delete(gid);
+        return next;
+      });
+      setMyPostIdByGameId((prev) => {
+        if (!prev[gid]) return prev;
+        const next = { ...prev };
+        delete next[gid];
+        return next;
+      });
+      setMyPredictionByGameId((prev) => {
+        if (!prev[gid]) return prev;
+        const next = { ...prev };
+        delete next[gid];
+        return next;
+      });
+    });
+  }, []);
+
+  const t = useMemo(() => getGamesTexts(gameLanguage), [gameLanguage]);
 
   const gamesFilterKey = useMemo(
     () =>
@@ -2261,6 +2289,8 @@ export default function GamesHomeScreen({
       setPredictedGameIds(nextPredictedIds);
       setMyPredictionsReloadNonce((prev) => prev + 1);
       if (fUser?.uid) {
+        /** Result 一覧の短 TTL キャッシュを捨て、タブ再訪で新投稿が見えるようにする */
+        invalidateResultPostsListCache(fUser.uid);
         await AsyncStorage.removeItem(draftStorageKey(fUser.uid, gameId));
       }
 

@@ -340,7 +340,8 @@ export function useResultPagePosts(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authReady, uid, league, fetchEnabled]);
 
-  /** タブ復帰時に再取得（連続切替の空振りを抑える） */
+  /** タブ復帰時に再取得（連続切替の空振りを抑える）。
+   * 温かいキャッシュがあるときだけ 30s スロットル。投稿後 invalidate 直後は必ず取り直す。 */
   useEffect(() => {
     if (!authReady || !uid || !fetchEnabled) return;
     if (typeof document === "undefined") return;
@@ -348,7 +349,8 @@ export function useResultPagePosts(
     const onVisible = () => {
       if (document.visibilityState !== "visible") return;
       const now = Date.now();
-      if (now - lastAt < 30_000) return;
+      const hasWarmCache = Boolean(peekResultPostsListCache(uid, league));
+      if (hasWarmCache && now - lastAt < 30_000) return;
       lastAt = now;
       void loadPage({ reset: true });
     };

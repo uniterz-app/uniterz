@@ -64,6 +64,7 @@ import {
   isDefaultResultListFilters,
   postMatchesResultListFilters,
 } from "../../../../../lib/result/resultListFilterMatch";
+import { peekResultPostsListCache } from "../../../../../lib/result/resultPostsListCache";
 import CornerMenuClusterNative from "../../ui/CornerMenuClusterNative";
 import CyberChamferButtonNative from "../../ui/CyberChamferButtonNative";
 import { useResultLeagueFlagsNative, type ResultListLeagueTab } from "./useResultLeagueFlagsNative";
@@ -96,6 +97,7 @@ import {
   deletePredictionPostApi,
   PredictionApiError,
 } from "../games/submitPredictionApi";
+import { notifyScheduleMyPostDeleted } from "../../../../../lib/games/scheduleMyPostSyncEvents";
 import ResultStatRatingBarNative from "./ResultStatRatingBarNative";
 import ResultDetailScreen from "./ResultDetailScreen";
 import ResultHitCyberFrameNative from "./ResultHitCyberFrameNative";
@@ -365,15 +367,18 @@ export default function ResultHomeScreen({
   const lastFocusRefreshAtRef = useRef(0);
 
   /** タブ再訪で再取得（精算直後の pending を残さない）。
-   * 連打で毎回 Firestore を叩かないよう最短間隔を空ける。
+   * 温かいキャッシュがあるときだけ 30s スロットル。予想投稿後の invalidate 直後は必ず取り直す。
    * refreshPosts を deps に入れると identity 変化でフォーカス中に無限再取得になる */
   useFocusEffect(
     useCallback(() => {
       const now = Date.now();
-      if (now - lastFocusRefreshAtRef.current < 30_000) return;
+      const hasWarmCache = Boolean(
+        uid && leagueTab && peekResultPostsListCache(uid, leagueTab)
+      );
+      if (hasWarmCache && now - lastFocusRefreshAtRef.current < 30_000) return;
       lastFocusRefreshAtRef.current = now;
       void refreshPostsRef.current();
-    }, [])
+    }, [uid, leagueTab])
   );
 
   const hasPendingSettlement = useMemo(
@@ -577,6 +582,14 @@ export default function ResultHomeScreen({
                 try {
                   await deletePredictionPostApi(post.id);
                   removePostById(post.id);
+                  const gameId =
+                    typeof post.gameId === "string" ? post.gameId.trim() : "";
+                  if (gameId) {
+                    notifyScheduleMyPostDeleted({
+                      gameId,
+                      uid,
+                    });
+                  }
                 } catch (err) {
                   const msg =
                     err instanceof PredictionApiError
@@ -593,7 +606,7 @@ export default function ResultHomeScreen({
         { variant: "confirm" }
       );
     },
-    [language, removePostById]
+    [language, removePostById, uid]
   );
   const listEmpty =
     hasFetchedOnce && !loading && filteredGrouped.length === 0 ? (

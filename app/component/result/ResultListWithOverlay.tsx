@@ -31,7 +31,7 @@ import { CyberNoDataPage } from "@/app/component/common/CyberNoDataLabel";
 import { auth, db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import { getCachedGameDocForResult } from "@/lib/result/resultDetailFirestoreCache";
-import { SCHEDULE_MY_POST_DELETED_EVENT } from "@/lib/games/scheduleMyPostSyncEvents";
+import { notifyScheduleMyPostDeleted } from "@/lib/games/scheduleMyPostSyncEvents";
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
 import { resolveLocalizedLang } from "@/lib/i18n/localize";
@@ -738,13 +738,10 @@ export default function ResultListWithOverlay({
       }
       if (!deleted) return false;
 
-      if (typeof window !== "undefined") {
-        window.dispatchEvent(
-          new CustomEvent(SCHEDULE_MY_POST_DELETED_EVENT, {
-            detail: { gameId: post.gameId },
-          })
-        );
-      }
+      notifyScheduleMyPostDeleted({
+        gameId: String(post.gameId ?? ""),
+        uid: user.uid,
+      });
 
       if (openPostId === post.id) close();
 
