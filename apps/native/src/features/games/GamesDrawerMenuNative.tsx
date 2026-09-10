@@ -9,6 +9,11 @@ import {
   sideMenuLabelStyle,
 } from "../../ui/cyberSideMenuNative";
 import { formatCyberSideMenuDate } from "../../../../../lib/ui/cyberSideMenuDate";
+import { t } from "../../../../../lib/i18n/t";
+import {
+  normalizeLanguage,
+  type Language,
+} from "../../../../../lib/i18n/language";
 
 const ICONS = {
   nba: require("../../../assets/games-drawer/nba.png") as number,
@@ -25,7 +30,7 @@ type Props = {
   onSelectStandingsPredict?: () => void;
   onSelectTeamStats?: () => void;
   onSelectPlayerStats?: () => void;
-  language: "ja" | "en";
+  language: Language | string;
 };
 
 function BranchRow({ last, children }: { last?: boolean; children: ReactNode }) {
@@ -53,8 +58,9 @@ export default function GamesDrawerMenuNative({
   onSelectPlayerStats,
   language,
 }: Props) {
-  const isJa = language === "ja";
-  const labelStyle = sideMenuLabelStyle(language);
+  const lang = normalizeLanguage(language) ?? "en";
+  const msgs = t(lang).games;
+  const labelStyle = sideMenuLabelStyle(lang === "en" ? "en" : "ja");
   const hudDate = formatCyberSideMenuDate();
   const statsOnly = mode === "stats";
 
@@ -80,7 +86,7 @@ export default function GamesDrawerMenuNative({
       onSelectStandingsPredict ? (
         <>
           <CyberSideMenuSectionTitleNative first>
-            {isJa ? "試合" : "Games"}
+            {msgs.games}
           </CyberSideMenuSectionTitleNative>
           <View style={styles.itemGroup}>
             <View style={styles.nbaCluster}>
@@ -103,7 +109,7 @@ export default function GamesDrawerMenuNative({
                     labelStyle={labelStyle}
                     onPress={onSelectAwardsPredict}
                   >
-                    {isJa ? "アワード予想" : "Award Predictions"}
+                    {msgs.awardsPredict}
                   </SideMenuItemButtonNative>
                 </BranchRow>
                 <BranchRow last>
@@ -113,7 +119,7 @@ export default function GamesDrawerMenuNative({
                     labelStyle={labelStyle}
                     onPress={onSelectStandingsPredict}
                   >
-                    {isJa ? "順位予想" : "Standings Predictions"}
+                    {msgs.standingsPredict}
                   </SideMenuItemButtonNative>
                 </BranchRow>
               </View>
@@ -134,7 +140,7 @@ export default function GamesDrawerMenuNative({
                 labelStyle={labelStyle}
                 onPress={onSelectTeamStats}
               >
-                Team Stats
+                {msgs.teamStatsMenu}
               </SideMenuItemButtonNative>
             ) : null}
             {onSelectPlayerStats ? (
@@ -143,7 +149,7 @@ export default function GamesDrawerMenuNative({
                 labelStyle={labelStyle}
                 onPress={onSelectPlayerStats}
               >
-                Player Stats
+                {msgs.playerStatsMenu}
               </SideMenuItemButtonNative>
             ) : null}
           </View>

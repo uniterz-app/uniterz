@@ -21,7 +21,7 @@ export default function LegalDocumentNative({
   footer = [],
   showIndex = false,
 }: Props) {
-  const lang: LegalLang = language === "en" ? "en" : "ja";
+  const lang: LegalLang = language === "ja" ? "ja" : "en";
 
   return (
     <View style={styles.root}>

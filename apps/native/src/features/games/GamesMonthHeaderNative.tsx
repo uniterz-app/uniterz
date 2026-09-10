@@ -1,6 +1,12 @@
 import { useCallback, useRef } from "react";
 import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { GAMES_HEADER_CONTROL_HEIGHT } from "./gamesMobileLayout";
+import {
+  DATE_LOCALE,
+  normalizeLanguage,
+  type Language,
+} from "../../../../../lib/i18n/language";
+import { L, resolveLocalizedLang } from "../../../../../lib/i18n/localize";
 
 const NUMERIC_FONT = Platform.select({
   ios: "Oxanium_700Bold",
@@ -10,7 +16,7 @@ const NUMERIC_FONT = Platform.select({
 
 type GamesMonthHeaderNativeProps = {
   month: Date;
-  language: "ja" | "en";
+  language: Language | string;
   timeZone: string;
   onPrev: () => void;
   onNext: () => void;
@@ -35,6 +41,8 @@ export default function GamesMonthHeaderNative({
   centerDisabled = false,
 }: GamesMonthHeaderNativeProps) {
   const lastTapMs = useRef(0);
+  const lang = resolveLocalizedLang(language);
+  const dateLocale = DATE_LOCALE[normalizeLanguage(language) ?? "en"];
 
   const y = Number(
     new Intl.DateTimeFormat("en-US", { timeZone, year: "numeric" }).format(month)
@@ -42,7 +50,7 @@ export default function GamesMonthHeaderNative({
   const m = Number(
     new Intl.DateTimeFormat("en-US", { timeZone, month: "2-digit" }).format(month)
   );
-  const enMonthLabel = new Intl.DateTimeFormat("en-US", {
+  const localizedMonthLabel = new Intl.DateTimeFormat(dateLocale, {
     timeZone,
     month: "short",
     year: "numeric",
@@ -57,7 +65,6 @@ export default function GamesMonthHeaderNative({
     const now = Date.now();
     if (now - lastTapMs.current < 320) {
       onMoveToToday();
-      lastTapMs.current = 0;
     } else {
       lastTapMs.current = now;
     }
@@ -81,13 +88,17 @@ export default function GamesMonthHeaderNative({
         disabled={centerDisabledCombined}
         accessibilityRole="button"
         accessibilityState={{ disabled: centerDisabledCombined }}
-        accessibilityHint={
-          language === "ja"
-            ? "ダブルタップで当日の試合日へ"
-            : "Double-tap to jump to the game day for today"
-        }
+        accessibilityHint={L(lang, {
+          ja: "ダブルタップで当日の試合日へ",
+          en: "Double-tap to jump to the game day for today",
+          ko: "두 번 탭하면 오늘 경기일로 이동",
+          zh: "双击跳转到今日比赛日",
+          es: "Doble toque para ir al día de partidos de hoy",
+          pt: "Toque duas vezes para ir ao dia de jogos de hoje",
+          fr: "Double-tapez pour aller au jour de match d'aujourd'hui",
+        })}
       >
-        {language === "ja" ? (
+        {lang === "ja" ? (
           <Text style={[s.centerText, centerDisabledCombined && s.centerTextDisabled]}>
             <Text style={s.centerNum}>{y}</Text>年{" "}
             <Text style={s.centerNum}>{m}</Text>月
@@ -100,7 +111,7 @@ export default function GamesMonthHeaderNative({
               centerDisabledCombined && s.centerTextDisabled,
             ]}
           >
-            {enMonthLabel}
+            {localizedMonthLabel}
           </Text>
         )}
       </Pressable>

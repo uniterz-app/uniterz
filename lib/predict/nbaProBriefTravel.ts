@@ -3,6 +3,7 @@
  */
 
 import type { ProBriefLineItem } from "@/lib/predict/predictProBrief";
+import { proBriefLine } from "@/lib/predict/predictProBrief";
 import {
   formatTravelKm,
   nbaTravelAbbr,
@@ -32,17 +33,33 @@ export function proBriefTravelLines(
     const from = nbaTravelAbbr(summary.tonightFromId ?? "");
     const to = nbaTravelAbbr(summary.tonightToId);
     const km = formatTravelKm(summary.tonightKm);
-    const hopJa = `${from}→${to} · 移動距離 ${km}`;
-    const hopEn = `${from}→${to} · Travel ${km}`;
-    lines.push({ textJa: hopJa, textEn: hopEn });
+    const hop = `${from}→${to}`;
+    lines.push(
+      proBriefLine({
+        ja: `${hop} · 移動距離 ${km}`,
+        en: `${hop} · Travel ${km}`,
+        ko: `${hop} · 이동 거리 ${km}`,
+        zh: `${hop} · 移动距离 ${km}`,
+        es: `${hop} · Viaje ${km}`,
+        pt: `${hop} · Viagem ${km}`,
+        fr: `${hop} · Trajet ${km}`,
+      })
+    );
   }
 
   if (shouldShowTwoDayTravel(summary)) {
     const km = formatTravelKm(summary.windowKm);
-    lines.push({
-      textJa: `48時間 · 移動距離 ${km}`,
-      textEn: `48h · Travel ${km}`,
-    });
+    lines.push(
+      proBriefLine({
+        ja: `48時間 · 移動距離 ${km}`,
+        en: `48h · Travel ${km}`,
+        ko: `48시간 · 이동 거리 ${km}`,
+        zh: `48 小时 · 移动距离 ${km}`,
+        es: `48 h · Viaje ${km}`,
+        pt: `48 h · Viagem ${km}`,
+        fr: `48 h · Trajet ${km}`,
+      })
+    );
   }
 
   if (
@@ -50,10 +67,17 @@ export function proBriefTravelLines(
     options?.homeNoTravel &&
     summary.isHomeTonight
   ) {
-    lines.push({
-      textJa: "ホーム · 移動なし",
-      textEn: "Home · no travel",
-    });
+    lines.push(
+      proBriefLine({
+        ja: "ホーム · 移動なし",
+        en: "Home · no travel",
+        ko: "홈 · 이동 없음",
+        zh: "主场 · 无需移动",
+        es: "En casa · sin viaje",
+        pt: "Em casa · sem viagem",
+        fr: "À domicile · sans trajet",
+      })
+    );
   }
 
   return lines;

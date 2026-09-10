@@ -3,9 +3,11 @@ import { StyleSheet, Text, View } from "react-native";
 import type { TeamScheduleDifficulty } from "../../../../../../lib/nba/detailInsights/detailInsightTypes";
 import type { NbaTeamUpcomingGame } from "../../../../../../lib/predict/nbaTeamDetailPreviewMocks";
 import {
+  scheduleDifficultySummaryText,
   scheduleDifficultyTierColor,
   scheduleDifficultyTierLabel,
 } from "../../../../../../lib/nba/detailInsights/buildScheduleDifficulty";
+import { L, resolveLocalizedLang } from "../../../../../../lib/i18n/localize";
 
 function hexToRgba(hex: string, alpha: number): string {
   const raw = hex.replace("#", "");
@@ -29,18 +31,28 @@ export function DetailScheduleSectionNative({
   upcomingGames,
   scheduleDifficulty,
   accent,
-  isJa,
+  language = "en",
   sectionTitle = "UPCOMING",
 }: {
   upcomingGames: NbaTeamUpcomingGame[];
   scheduleDifficulty: TeamScheduleDifficulty | null;
   accent: string;
-  isJa: boolean;
+  language?: string;
   sectionTitle?: string;
 }) {
+  const lang = resolveLocalizedLang(language);
   const frame = hexToRgba(accent, 0.3);
   const line = hexToRgba(accent, 0.12);
-  const emptyCopy = isJa ? "データがありません" : "No data yet";
+  const emptyCopy = L(lang, {
+    ja: "データがありません",
+    en: "No data yet",
+    ko: "데이터가 없습니다",
+    zh: "暂无数据",
+    es: "Aún no hay datos",
+    pt: "Ainda sem dados",
+    fr: "Pas encore de données",
+  });
+  const catalogJa = lang === "ja";
 
   if (!upcomingGames.length) {
     return (
@@ -59,9 +71,7 @@ export function DetailScheduleSectionNative({
       {scheduleDifficulty ? (
         <View style={styles.summaryRow}>
           <Text style={styles.summaryText}>
-            {isJa
-              ? scheduleDifficulty.summaryJa
-              : scheduleDifficulty.summaryEn}
+            {scheduleDifficultySummaryText(scheduleDifficulty, lang)}
           </Text>
           <View
             style={[
@@ -81,7 +91,10 @@ export function DetailScheduleSectionNative({
                 },
               ]}
             >
-              {scheduleDifficultyTierLabel(scheduleDifficulty.overallTier, isJa)}
+              {scheduleDifficultyTierLabel(
+                scheduleDifficulty.overallTier,
+                catalogJa
+              )}
             </Text>
           </View>
         </View>

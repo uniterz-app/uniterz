@@ -143,6 +143,7 @@ import {
   squadBattlePayoutTotalUnits,
   type SquadBattleRewardResult,
   type SquadBattleScreenCopy,
+  resolveSquadBattleUiLang,
   type SquadBattleUiLang,
   squadBattleUiPhaseOptions,
   squadOpenPeriodRanks,
@@ -4727,7 +4728,7 @@ export default function SquadBattlePage({
   const router = useRouter();
   const { fUser } = useFirebaseUser();
   const { language } = useUserLanguage(fUser?.uid ?? null);
-  const lang: SquadBattleUiLang = language === "en" ? "en" : "ja";
+  const lang: SquadBattleUiLang = resolveSquadBattleUiLang(language);
   const c = useMemo(() => squadBattleScreenCopy(lang), [lang]);
   const inviteCopy = useMemo(() => squadBattleInviteCopy(lang), [lang]);
   const copyBundle = useMemo<SquadBattleCopyBundle>(

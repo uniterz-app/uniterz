@@ -32,7 +32,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFirebaseUser } from "../../auth/FirebaseUserProvider";
 import type { AuthStackParamList } from "../../navigation/types";
-import { resolveDeviceAppLanguage } from "../../i18n/resolveDeviceAppLanguage";
+import { resolveDeviceLocalizedLang } from "../../i18n/resolveDeviceAppLanguage";
 import { authFormCopy } from "@/lib/auth/authFormCopy";
 import AuthLandingBackgroundNative from "./AuthLandingBackgroundNative";
 import { AUTH_LANDING } from "./authLandingPalette";
@@ -117,7 +117,7 @@ export default function AuthEntryScreen({
   const initialMode = initialModeProp ?? routeInitial ?? "login";
 
   const { status, fUser } = useFirebaseUser();
-  const copy = useMemo(() => authFormCopy(resolveDeviceAppLanguage()), []);
+  const copy = useMemo(() => authFormCopy(resolveDeviceLocalizedLang()), []);
   const [mode, setMode] = useState<AuthMode>(initialMode);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

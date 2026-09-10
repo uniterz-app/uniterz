@@ -2,6 +2,7 @@
  * Web `lib/groupBattles/clientApi` 相当（Native）。
  */
 
+import type { LocalizedLang } from "../../../../../lib/i18n/localize";
 import type { GroupBattleMyPayout } from "../../../../../lib/groupBattles/myPayoutTypes";
 import type { GroupBattleEntryProfile } from "../../../../../lib/groupBattles/entryProfileTypes";
 import type {
@@ -23,8 +24,12 @@ const API_BASE =
 export type GroupBattleApiOptions = {
   idToken?: string | null;
   /** payout note など表示言語 */
-  lang?: "ja" | "en";
+  lang?: LocalizedLang;
 };
+
+function groupBattleApiQueryLang(lang: LocalizedLang | undefined): "ja" | "en" {
+  return lang === "ja" ? "ja" : "en";
+}
 
 function withAuth(
   headers: HeadersInit,
@@ -533,7 +538,7 @@ export async function fetchGroupBattleMyPayoutNative(
   opts?: GroupBattleApiOptions
 ) {
   if (!API_BASE) return null;
-  const lang = opts?.lang === "en" ? "en" : "ja";
+  const lang = groupBattleApiQueryLang(opts?.lang);
   const res = await fetch(
     `${API_BASE}/api/group-battles/${encodeURIComponent(battleId)}/my-payout?lang=${lang}`,
     {

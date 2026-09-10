@@ -10,8 +10,9 @@ import {
   CyberRankingScore,
 } from "@/app/component/rankings/CyberRankingListParts";
 import { cyberMetricTag } from "@/lib/rankings/cyberRankVisual";
-import { t } from "@/lib/i18n/t";
 import type { Language } from "@/lib/i18n/language";
+import { L, resolveLocalizedLang } from "@/lib/i18n/localize";
+import { t } from "@/lib/i18n/t";
 import { profilePathKeyFromRow } from "@/lib/profile/profilePathKey";
 import type { GamePointsTopEntryV1 } from "@/lib/results/gamePointsTop";
 import { warmPublicProfileFromListEntry } from "@/app/component/profile/useProfile";
@@ -25,12 +26,21 @@ type Props = {
 /** リザルト詳細 — この試合の得点上位。見た目は本番 CyberRankingListRow。 */
 export default function ResultTopScoresList({
   entries,
-  language = "ja",
+  language = "en",
   gamesRoutePrefix = "/mobile",
 }: Props) {
   if (entries.length === 0) return null;
-  const metricTag = cyberMetricTag("totalScore", language);
-  const title = language === "en" ? "TOP SCORES" : "得点上位";
+  const loc = resolveLocalizedLang(language);
+  const metricTag = cyberMetricTag("totalScore", loc);
+  const title = L(loc, {
+    ja: "得点上位",
+    en: "TOP SCORES",
+    ko: "득점 상위",
+    zh: "得分前列",
+    es: "MÁX. PUNTOS",
+    pt: "MAIORES PONTOS",
+    fr: "MEILLEURS SCORES",
+  });
 
   return (
     <section className="-mx-3 mt-4 sm:-mx-4">

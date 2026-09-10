@@ -8,7 +8,7 @@ import SquadBattleLaunchOverlayNative from "./SquadBattleLaunchOverlayNative";
 import { readSquadBattleLaunchSeenBattleIdNative, markSquadBattleLaunchSeenNative } from "./squadBattleLaunchSeenNative";
 import { fetchCurrentGroupBattleNative } from "./groupBattleApiNative";
 import { auth } from "../../lib/firebase";
-import { useNativeUserLanguageFromAuth } from "../../hooks/useNativeUserLanguage";
+import { useNativeUserLanguageFromAuth } from "../../i18n/useNativeUserLanguageFromAuth";
 import type { MainTabParamList } from "../../navigation/types";
 import {
   formatSquadBattleRecruitDeadlineLabel,

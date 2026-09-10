@@ -1,3 +1,4 @@
+import { L, resolveLocalizedLang, type LocalizedLang } from "@/lib/i18n/localize";
 import type { NbaTeamInjuryEntry } from "@/lib/predict/nbaTeamDetailPreviewMocks";
 import type { NbaPlayerAvailabilityStatus } from "@/lib/predict/nbaPlayerDetailPreviewMocks";
 
@@ -64,71 +65,139 @@ export function teamInjuryStatusColor(status: NbaTeamInjurySnapshotStatus): stri
 
 export function formatTeamInjuryStatus(
   status: NbaTeamInjurySnapshotStatus,
-  isJa: boolean
+  language: LocalizedLang | string | boolean | null | undefined
 ): string {
-  if (isJa) {
-    switch (status) {
-      case "out":
-        return "欠場";
-      case "doubtful":
-        return "欠場見込み";
-      case "questionable":
-        return "試合時判断";
-      case "probable":
-        return "出場見込み";
-      case "day-to-day":
-        return "日次判断";
-      default:
-        return "試合時判断";
-    }
-  }
+  const lang =
+    typeof language === "boolean"
+      ? language
+        ? "ja"
+        : "en"
+      : resolveLocalizedLang(language);
   switch (status) {
     case "out":
-      return "OUT";
+      return L(lang, {
+        ja: "欠場",
+        en: "OUT",
+        ko: "결장",
+        zh: "缺阵",
+        es: "OUT",
+        pt: "OUT",
+        fr: "OUT",
+      });
     case "doubtful":
-      return "DOUBTFUL";
+      return L(lang, {
+        ja: "欠場見込み",
+        en: "DOUBTFUL",
+        ko: "결장 유력",
+        zh: "大概率缺阵",
+        es: "DOUBTFUL",
+        pt: "DOUBTFUL",
+        fr: "DOUBTFUL",
+      });
     case "questionable":
-      return "QUESTIONABLE";
+      return L(lang, {
+        ja: "試合時判断",
+        en: "QUESTIONABLE",
+        ko: "경기 당일 판단",
+        zh: "赛前再定",
+        es: "QUESTIONABLE",
+        pt: "QUESTIONABLE",
+        fr: "QUESTIONABLE",
+      });
     case "probable":
-      return "PROBABLE";
+      return L(lang, {
+        ja: "出場見込み",
+        en: "PROBABLE",
+        ko: "출전 유력",
+        zh: "大概率上场",
+        es: "PROBABLE",
+        pt: "PROBABLE",
+        fr: "PROBABLE",
+      });
     case "day-to-day":
-      return "DAY-TO-DAY";
+      return L(lang, {
+        ja: "日次判断",
+        en: "DAY-TO-DAY",
+        ko: "일일 판단",
+        zh: "每日评估",
+        es: "DAY-TO-DAY",
+        pt: "DAY-TO-DAY",
+        fr: "DAY-TO-DAY",
+      });
     default:
-      return "GTD";
+      return L(lang, {
+        ja: "試合時判断",
+        en: "GTD",
+        ko: "경기 당일 판단",
+        zh: "赛前再定",
+        es: "GTD",
+        pt: "GTD",
+        fr: "GTD",
+      });
   }
 }
 
 export function formatTeamInjuryStatusShort(
   status: NbaTeamInjurySnapshotStatus,
-  isJa: boolean
+  language: LocalizedLang | string | boolean | null | undefined
 ): string {
-  if (isJa) {
-    switch (status) {
-      case "out":
-        return "欠場";
-      case "doubtful":
-        return "欠場見込";
-      case "questionable":
-        return "試合時判断";
-      case "probable":
-        return "出場見込";
-      case "day-to-day":
-        return "日次";
-      default:
-        return "GTD";
-    }
-  }
+  const lang =
+    typeof language === "boolean"
+      ? language
+        ? "ja"
+        : "en"
+      : resolveLocalizedLang(language);
   switch (status) {
     case "out":
-      return "OUT";
+      return L(lang, {
+        ja: "欠場",
+        en: "OUT",
+        ko: "결장",
+        zh: "缺阵",
+        es: "OUT",
+        pt: "OUT",
+        fr: "OUT",
+      });
     case "doubtful":
-      return "DOUBT";
+      return L(lang, {
+        ja: "欠場見込",
+        en: "DOUBT",
+        ko: "결장 유력",
+        zh: "大概率缺",
+        es: "DOUBT",
+        pt: "DOUBT",
+        fr: "DOUBT",
+      });
     case "questionable":
-      return "QUES";
+      return L(lang, {
+        ja: "試合時判断",
+        en: "QUES",
+        ko: "당일 판단",
+        zh: "赛前再定",
+        es: "QUES",
+        pt: "QUES",
+        fr: "QUES",
+      });
     case "probable":
-      return "PROB";
+      return L(lang, {
+        ja: "出場見込",
+        en: "PROB",
+        ko: "출전 유력",
+        zh: "大概率上",
+        es: "PROB",
+        pt: "PROB",
+        fr: "PROB",
+      });
     case "day-to-day":
-      return "DTD";
+      return L(lang, {
+        ja: "日次",
+        en: "DTD",
+        ko: "일일",
+        zh: "日评",
+        es: "DTD",
+        pt: "DTD",
+        fr: "DTD",
+      });
     default:
       return "GTD";
   }

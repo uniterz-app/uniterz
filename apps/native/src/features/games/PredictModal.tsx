@@ -88,6 +88,11 @@ import {
 import ProfileBackEdgeHandleNative from "../profile/ProfileBackEdgeHandleNative";
 import { t as i18nT } from "../../../../../lib/i18n/t";
 import {
+  normalizeLanguage,
+  type Language,
+} from "../../../../../lib/i18n/language";
+import { L, resolveLocalizedLang } from "../../../../../lib/i18n/localize";
+import {
   resolveNbaTopScorerResultInfo,
   type NbaTopScorerResultInfo,
 } from "../../../../../lib/result/resolveNbaTopScorerResult";
@@ -102,7 +107,6 @@ import {
   registerTutorialTarget,
 } from "../tutorial/tutorialMeasureNative";
 import { TUTORIAL_CYAN } from "../../../../../lib/tutorial/tutorialMotion";
-import type { Language } from "../../../../../lib/i18n/language";
 import PredictOverlaySubmitButtonNative from "./PredictOverlaySubmitButtonNative";
 import { PREDICT_OVERLAY_CYBER_DECK_CUT } from "./matchListCyberClipPath";
 import {
@@ -657,7 +661,7 @@ export function PredictMatchPreview({
       <View ref={captureRef} collapsable={false}>
       {resultFace && !isWcLeague ? (
         <ResultCardDesignFaceNative
-          language={language === "en" ? "en" : "ja"}
+          language={language === "ja" ? "ja" : "en"}
           face={resultFace}
           showDetailTab={false}
           live={resultFaceLive}
@@ -866,9 +870,8 @@ export default function PredictModal({
   const [tutorialAnnotDismissed, setTutorialAnnotDismissed] = useState(false);
   const [tutorialUserScrollEnabled, setTutorialUserScrollEnabled] =
     useState(true);
-  const tutorialMsgs = i18nT(
-    (language === "en" ? "en" : "ja") as Language
-  ).tutorial.practice;
+  const tutorialMsgs = i18nT(normalizeLanguage(language) ?? "en").tutorial
+    .practice;
   const predictScrollRef = useRef<ScrollView>(null);
   const predictScrollYRef = useRef(0);
 
@@ -898,7 +901,16 @@ export default function PredictModal({
             resolve(null);
             return;
           }
-          node.measureInWindow((_x, y, _w, h) => {
+          const host = node as unknown as {
+            measureInWindow?: (
+              callback: (x: number, y: number, w: number, h: number) => void
+            ) => void;
+          };
+          if (!host.measureInWindow) {
+            resolve(null);
+            return;
+          }
+          host.measureInWindow((_x, y, _w, h) => {
             resolve(h > 32 ? { y, height: h } : null);
           });
         }),
@@ -1274,6 +1286,28 @@ export default function PredictModal({
       return true;
     })();
 
+  const predictSubmitButton = (
+    <TutorialTargetNative id="predict-submit">
+      <PredictOverlaySubmitButtonNative
+        enabled={canSubmit}
+        tutorialPulse={tutorialMode}
+        onPress={onSubmit}
+        label={
+          predictSubmitting
+            ? isEditingPrediction
+              ? t.updating
+              : t.posting
+            : isEditingPrediction
+              ? t.submitUpdate
+              : t.submitPrediction
+        }
+        disabledLabel={
+          isEditingPrediction ? t.submitUpdate : t.submitPrediction
+        }
+      />
+    </TutorialTargetNative>
+  );
+
   const modalChromeVisible = visible || exitingUi;
 
   /** ×・背景タップ・Android 戻る：閉じるアニメ後に親へ通知（親が即 visible=false にしないため exitingUi でモーダルを維持） */
@@ -1402,12 +1436,12 @@ export default function PredictModal({
                     liveStatsReport ? (
                       <LiveGameStatsPanelNative
                         report={liveStatsReport}
-                        language={language === "en" ? "en" : "ja"}
+                        language={language === "ja" ? "ja" : "en"}
                         omitScoreHeader
                       />
                     ) : (
                       <LiveGameStatsPlaceholderNative
-                        language={language === "en" ? "en" : "ja"}
+                        language={language === "ja" ? "ja" : "en"}
                         loading={liveStatsLoading}
                       />
                     )
@@ -1780,9 +1814,15 @@ export default function PredictModal({
                           setPkWinner ? (
                             <View style={s.pkAdvanceBlock}>
                               <Text style={s.pkAdvanceTitle}>
-                                {language === "en"
-                                  ? "Who advances on penalties?"
-                                  : "PK戦で勝ち上がるチーム"}
+                                {L(resolveLocalizedLang(language), {
+                                  ja: "PK戦で勝ち上がるチーム",
+                                  en: "Who advances on penalties?",
+                                  ko: "PK로 진출할 팀",
+                                  zh: "点球大战晋级球队",
+                                  es: "¿Quién avanza en penaltis?",
+                                  pt: "Quem avança nos pênaltis?",
+                                  fr: "Qui se qualifie aux tirs au but ?",
+                                })}
                               </Text>
                               <View style={s.pkAdvanceRow}>
                                 {(
@@ -1889,9 +1929,12 @@ export default function PredictModal({
                               language={language}
                             />
                           ) : null}
+                          {predictSubmitButton}
                           </View>
                         ) : (
-                        <PredictOverlayCyberFormPanelNative>
+                        <PredictOverlayCyberFormPanelNative
+                          contentStyle={s.predictFormPanelContent}
+                        >
                           <View style={s.predictScoreFormPanel}>
                           <PredictionScoringRulesChipNative
                             language={language}
@@ -1943,9 +1986,15 @@ export default function PredictModal({
                           setPkWinner ? (
                             <View style={s.pkAdvanceBlock}>
                               <Text style={s.pkAdvanceTitle}>
-                                {language === "en"
-                                  ? "Who advances on penalties?"
-                                  : "PK戦で勝ち上がるチーム"}
+                                {L(resolveLocalizedLang(language), {
+                                  ja: "PK戦で勝ち上がるチーム",
+                                  en: "Who advances on penalties?",
+                                  ko: "PK로 진출할 팀",
+                                  zh: "点球大战晋级球队",
+                                  es: "¿Quién avanza en penaltis?",
+                                  pt: "Quem avança nos pênaltis?",
+                                  fr: "Qui se qualifie aux tirs au but ?",
+                                })}
                               </Text>
                               <View style={s.pkAdvanceRow}>
                                 {(
@@ -2052,29 +2101,10 @@ export default function PredictModal({
                               language={language}
                             />
                           ) : null}
+                          {predictSubmitButton}
                         </PredictOverlayCyberFormPanelNative>
                         )}
                       </Animated.View>
-                      </TutorialTargetNative>
-
-                      <TutorialTargetNative id="predict-submit">
-                      <PredictOverlaySubmitButtonNative
-                        enabled={canSubmit}
-                        tutorialPulse={tutorialMode}
-                        onPress={onSubmit}
-                        label={
-                          predictSubmitting
-                            ? isEditingPrediction
-                              ? t.updating
-                              : t.posting
-                            : isEditingPrediction
-                              ? t.submitUpdate
-                              : t.submitPrediction
-                        }
-                        disabledLabel={
-                          isEditingPrediction ? t.submitUpdate : t.submitPrediction
-                        }
-                      />
                       </TutorialTargetNative>
                     </>
                   ) : null}
@@ -2104,9 +2134,9 @@ export default function PredictModal({
                 enterBody={tutorialMsgs.predictEnterBody}
                 submitTitle={tutorialMsgs.predictSubmitTitle}
                 submitBody={tutorialMsgs.predictSubmitBody}
-                nextLabel={i18nT((language === "en" ? "en" : "ja") as Language).tutorial.next}
-                skipLabel={i18nT((language === "en" ? "en" : "ja") as Language).tutorial.skip}
-                backLabel={i18nT((language === "en" ? "en" : "ja") as Language).tutorial.back}
+                nextLabel={i18nT(normalizeLanguage(language) ?? "en").tutorial.next}
+                skipLabel={i18nT(normalizeLanguage(language) ?? "en").tutorial.skip}
+                backLabel={i18nT(normalizeLanguage(language) ?? "en").tutorial.back}
                 enterWaitHint={tutorialMsgs.predictEnterWait}
                 submitWaitHint={tutorialMsgs.predictSubmitWait}
                 toolsWaitHint={tutorialMsgs.predictToolsWait}
@@ -2121,7 +2151,15 @@ export default function PredictModal({
             ) : null}
             <ProfileBackEdgeHandleNative
               onPress={scheduleCloseAfterExitAnimation}
-              accessibilityLabel={language === "en" ? "Back" : "戻る"}
+              accessibilityLabel={L(resolveLocalizedLang(language), {
+                ja: "戻る",
+                en: "Back",
+                ko: "뒤로",
+                zh: "返回",
+                es: "Atrás",
+                pt: "Voltar",
+                fr: "Retour",
+              })}
             />
             </>
           ) : null}
@@ -2297,14 +2335,26 @@ const s = StyleSheet.create({
     lineHeight: 15,
     textAlign: "left",
   },
+  /** TOP SCORER 見出し（NbaTopScorerPickerNative `title`）と同型 */
   predictSectionTitle: {
-    color: "rgba(255,255,255,0.88)",
-    fontSize: 14,
-    lineHeight: 18,
-    fontWeight: "600",
+    color: "#fff",
+    fontFamily: MATCH_CARD_DISPLAY_FONT,
+    fontSize: 18,
+    lineHeight: 20,
+    fontWeight: "400",
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
+    includeFontPadding: false,
+    transform: [{ skewX: "-6deg" }],
   },
   predictFormStack: {
     width: "100%",
+    gap: 12,
+  },
+  /** スコア枠・TOP SCORER・送信ボタンを同幅に揃える（横パディングなし） */
+  predictFormPanelContent: {
+    paddingHorizontal: 0,
+    paddingVertical: 0,
     gap: 12,
   },
   predictScoreFormPanel: {
@@ -2372,11 +2422,11 @@ const s = StyleSheet.create({
     flex: 1,
     minWidth: 0,
     color: "#f8fafc",
-    fontSize: 15,
-    lineHeight: 18,
-    fontWeight: "400",
-    fontFamily: MATCH_CARD_DISPLAY_FONT,
-    letterSpacing: 1.2,
+    fontSize: 13,
+    lineHeight: 15,
+    fontWeight: "600",
+    fontFamily: "Oxanium_600SemiBold",
+    letterSpacing: 0.6,
     includeFontPadding: false,
     textTransform: "uppercase",
     textAlign: "center",
@@ -2427,11 +2477,11 @@ const s = StyleSheet.create({
   },
   teamNameLabel: {
     color: "#F8FAFC",
-    fontSize: 15,
-    lineHeight: 18,
-    fontWeight: "400",
-    fontFamily: MATCH_CARD_DISPLAY_FONT,
-    letterSpacing: 1.2,
+    fontSize: 13,
+    lineHeight: 15,
+    fontWeight: "600",
+    fontFamily: "Oxanium_600SemiBold",
+    letterSpacing: 0.6,
     includeFontPadding: false,
     textTransform: "uppercase",
     transform: [{ skewX: "-6deg" }],

@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { nameOxanium } from "@/lib/fonts";
+import { resolveLocalizedLang } from "@/lib/i18n/localize";
 import {
   searchNbaStatsIndex,
   type NbaStatsSearchHit,
@@ -12,7 +13,7 @@ import { usePlayerStatLeadersBundle } from "@/lib/nba/usePlayerStatLeadersBundle
 
 type Props = {
   kind: NbaStatsSearchKind;
-  language?: "ja" | "en";
+  language?: string;
   onSelect: (hit: NbaStatsSearchHit) => void;
 };
 
@@ -21,7 +22,7 @@ export default function NbaStatsSearchBar({
   language = "ja",
   onSelect,
 }: Props) {
-  const isJa = language === "ja";
+  const isJa = resolveLocalizedLang(language) === "ja";
   const [query, setQuery] = useState("");
   // 検索対象の kind 側だけ取得する。パネルが既に読んだ bundle は共有キャッシュから来る
   const { bundle: teamBundle } = useLeagueTeamStatsBundle({

@@ -81,9 +81,19 @@ export const REDEMPTION_APPLY_CONSENT = {
   label: {
     ja: "配送に必要な個人情報を販売店・配送会社等へ提供すること、および利用規約・プライバシーポリシーに同意します。",
     en: "I agree that shipping details may be shared with retailers/carriers as needed, and I agree to the Terms and Privacy Policy.",
+    ko: "배송에 필요한 개인정보를 판매점·배송사 등에 제공하고, 이용약관·개인정보처리방침에 동의합니다.",
+    zh: "我同意为配送向零售商/承运商提供必要个人信息，并同意服务条款与隐私政策。",
+    es: "Acepto que los datos de envío se compartan con tiendas/transportistas según sea necesario, y acepto los Términos y la Política de privacidad.",
+    pt: "Concordo que dados de envio possam ser compartilhados com lojas/transportadoras conforme necessário, e aceito os Termos e a Política de Privacidade.",
+    fr: "J’accepte que les infos d’expédition soient partagées avec revendeurs/transporteurs si besoin, et j’accepte les Conditions et la Politique de confidentialité.",
   },
   requiredError: {
     ja: "申請には同意が必要です。",
     en: "Consent is required to submit.",
+    ko: "신청하려면 동의가 필요합니다.",
+    zh: "提交申请需要同意。",
+    es: "Se requiere consentimiento para enviar.",
+    pt: "É necessário consentimento para enviar.",
+    fr: "Le consentement est requis pour envoyer.",
   },
 } as const;

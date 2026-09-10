@@ -23,12 +23,13 @@ import { streakChartLayoutMaxAbs } from "../../../../../lib/profile/streakTracke
 import { BlocksPulseLoader } from "../../components/BlocksPulseLoader";
 import { PROFILE_CHART_CYBER } from "./profileOverviewChartCyberTheme";
 import ProfileStreakPlotGridNative from "./ProfileStreakPlotGridNative";
+import { profileStreakTrackerCopy } from "./profileOverviewWidgetsCopy";
 
 type Props = {
   points: StreakTrackerPointNative[];
   loading: boolean;
   unavailable?: boolean;
-  language: "ja" | "en";
+  language: string;
 };
 
 const COL_MIN_W = 9;
@@ -92,7 +93,7 @@ export default function ProfileStreakTrackerNative({
   unavailable = false,
   language,
 }: Props) {
-  const isJa = language === "ja";
+  const copy = profileStreakTrackerCopy(language, STREAK_TRACKER_LAST_N);
   const [plotInnerW, setPlotInnerW] = useState(0);
   const onPlotLayout = (e: LayoutChangeEvent) => {
     const w = e.nativeEvent.layout.width;
@@ -114,21 +115,20 @@ export default function ProfileStreakTrackerNative({
           : 1;
 
   const title = "Last20 Tracker";
-  const subtitleJa = `直近${STREAK_TRACKER_LAST_N}試合の連勝・連敗を表示`;
-  const subtitleEn = `Win/loss streaks from your last ${STREAK_TRACKER_LAST_N} settled picks`;
-  const subtitle = isJa ? subtitleJa : subtitleEn;
+  const subtitle = copy.subtitle;
 
-  const winStreakCaption = isJa ? "連勝中" : "Win streak";
-  const lossStreakCaption = isJa ? "連敗中" : "Loss streak";
-  const flatCaption = isJa ? "直近" : "Last pick";
   const caption =
-    lastStreak > 0 ? winStreakCaption : lastStreak < 0 ? lossStreakCaption : points.length > 0 ? flatCaption : "—";
+    lastStreak > 0
+      ? copy.winStreakCaption
+      : lastStreak < 0
+        ? copy.lossStreakCaption
+        : points.length > 0
+          ? copy.flatCaption
+          : "—";
 
-  const statWinLabel = isJa ? "最高連勝" : "Best W streak";
-  const statLossLabel = isJa ? "最高連敗" : "Best L streak";
-  const statRecordLabel = isJa
-    ? `直近${STREAK_TRACKER_LAST_N}試合の成績`
-    : `Last ${STREAK_TRACKER_LAST_N} games`;
+  const statWinLabel = copy.statWinLabel;
+  const statLossLabel = copy.statLossLabel;
+  const statRecordLabel = copy.statRecordLabel;
   const statRecordValue = `${stats.wins}-${stats.losses}`;
 
   const n = points.length;
@@ -182,13 +182,7 @@ export default function ProfileStreakTrackerNative({
           <View style={[styles.noDataBox, { minHeight: PLOT_H + 40 }]}>
             <Text style={styles.noData}>NO DATA</Text>
             <Text style={styles.noDataHint}>
-              {unavailable
-                ? isJa
-                  ? "データが取れません"
-                  : "Couldn't load data"
-                : isJa
-                  ? "確定済みの予想がありません"
-                  : "No settled predictions"}
+              {unavailable ? copy.loadError : copy.empty}
             </Text>
           </View>
         </View>

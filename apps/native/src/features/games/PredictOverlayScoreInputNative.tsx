@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import PredictOverlayChamferedFrameNative from "./PredictOverlayChamferedFrameNative";
 import { PREDICT_OVERLAY_SCORE_INPUT_CUT } from "./matchListCyberClipPath";
-import { MATCH_CARD_SCORE_FONT } from "./matchCardTypography";
+import { MATCH_CARD_DISPLAY_FONT } from "./matchCardTypography";
 import {
   registerTutorialPredictScoreSide,
   type TutorialPredictScoreSide,
@@ -108,14 +108,16 @@ const styles = StyleSheet.create({
     borderWidth: 0,
     backgroundColor: "transparent",
     color: "#e8fdff",
-    fontFamily: MATCH_CARD_SCORE_FONT,
-    fontSize: 16,
+    /** TOP SCORER / Score prediction 見出しと同型（Bebas + skew） */
+    fontFamily: MATCH_CARD_DISPLAY_FONT,
+    fontSize: 18,
     lineHeight: Platform.OS === "ios" ? 20 : 22,
-    fontWeight: "900",
-    letterSpacing: -0.35,
+    fontWeight: "400",
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
     textAlign: "left",
     textAlignVertical: "center",
-    fontVariant: ["tabular-nums"],
     includeFontPadding: false,
+    transform: [{ skewX: "-6deg" }],
   },
 });

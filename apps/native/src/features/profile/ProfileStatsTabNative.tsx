@@ -32,10 +32,12 @@ import { weeklyReportPreviewClimbed } from "../../../../../lib/reports/weeklyRep
 import { monthlyReportPreviewTop10 } from "../../../../../lib/reports/monthlyReportPreviewMocks";
 import { colors, spacing, typography } from "../../theme/tokens";
 import { OXANIUM_700 } from "./reports/reportThemeNative";
+import { profileStatsTabCopy } from "./profileOverviewWidgetsCopy";
+import { resolveLocalizedLang } from "../../../../../lib/i18n/localize";
 
 type Props = {
   uid: string | undefined;
-  language: "ja" | "en";
+  language: string;
   isProView: boolean;
   myPlan: string | null;
   isMe: boolean;
@@ -59,7 +61,8 @@ export default function ProfileStatsTabNative({
   const canViewReport =
     isProView || (isMe ? myPlan === "pro" : isMyPro && isTargetPro);
   const [tab, setTab] = useState<Tab>("weekly");
-  const isJa = language === "ja";
+  const copy = profileStatsTabCopy(language);
+  const periodLang = resolveLocalizedLang(language);
 
   const { loading, weeklies, monthlies } = useUserReportsArchiveNative({
     uid,
@@ -117,11 +120,11 @@ export default function ProfileStatsTabNative({
       return (
         <ReportGateSurfaceNative
           kind="free"
-          language={language}
+          language={periodLang}
           showCta={showCta}
           onPressCta={() => handleGateCta("free")}
           preview={
-            <WeeklyReportViewNative report={mockWeekly} language={language} />
+            <WeeklyReportViewNative report={mockWeekly} language={periodLang} />
           }
         />
       );
@@ -130,13 +133,13 @@ export default function ProfileStatsTabNative({
       return (
         <ReportGateSurfaceNative
           kind="monthlyLocked"
-          language={language}
+          language={periodLang}
           showCta={showCta}
           onPressCta={() => handleGateCta("monthlyLocked")}
           preview={
             <MonthlyReportViewNative
               report={mockMonthly}
-              language={language}
+              language={periodLang}
             />
           }
         />
@@ -145,7 +148,7 @@ export default function ProfileStatsTabNative({
     return (
       <ReportGateSurfaceNative
         kind={kind}
-        language={language}
+        language={periodLang}
         showCta={showCta}
         onPressCta={
           kind === "insufficientPicks"
@@ -159,7 +162,7 @@ export default function ProfileStatsTabNative({
   if (!uid) {
     return (
       <Text style={styles.muted}>
-        {isJa ? "ログインが必要です" : "Sign in required"}
+        {copy.signIn}
       </Text>
     );
   }
@@ -225,7 +228,7 @@ export default function ProfileStatsTabNative({
                     selected && styles.periodChipTextOn,
                   ]}
                 >
-                  {formatReportPeriodLabel(item.kind, item.periodKey, language)}
+                  {formatReportPeriodLabel(item.kind, item.periodKey, periodLang)}
                 </Text>
               </Pressable>
             );
@@ -240,10 +243,10 @@ export default function ProfileStatsTabNative({
           ) : (
             <WeeklyReportViewNative
               report={selectedWeekly.report}
-              language={language}
+              language={periodLang}
               periods={weeklies.map((w) => ({
                 id: w.id,
-                label: formatReportPeriodLabel("weekly", w.periodKey, language),
+                label: formatReportPeriodLabel("weekly", w.periodKey, periodLang),
               }))}
               selectedPeriodId={selectedWeekly.id}
               onSelectPeriod={setSelectedWeeklyId}
@@ -255,7 +258,7 @@ export default function ProfileStatsTabNative({
       ) : selectedMonthly && selectedMonthly.kind === "monthly" ? (
         <MonthlyReportViewNative
           report={selectedMonthly.report}
-          language={language}
+          language={periodLang}
         />
       ) : (
         renderGate("waitingMonth")

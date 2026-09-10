@@ -150,6 +150,7 @@ import {
   squadBattlePayoutTotalUnits,
   type SquadBattleRewardResult,
   type SquadBattleScreenCopy,
+  resolveSquadBattleUiLang,
   type SquadBattleUiLang,
   squadBattleUiPhaseOptions,
   squadOpenPeriodRanks,
@@ -168,7 +169,7 @@ import {
   type SquadBattleWeekIndex,
 } from "../../../../../lib/squads/squadBattleUiCopy";
 import { formatGroupBattleAvgPoints } from "../../../../../lib/groupBattles/score";
-import { useNativeUserLanguageFromAuth } from "../../hooks/useNativeUserLanguage";
+import { useNativeUserLanguageFromAuth } from "../../i18n/useNativeUserLanguageFromAuth";
 
 /** GOLD LEGION アクセント（CyberSubpageShell / タブは共有シアンのまま） */
 const JOIN_BATTLE_AMBER = SQUAD_GOLD_NATIVE.acc;
@@ -3187,7 +3188,7 @@ export default function SquadBattleScreenNative() {
   const navigation = useNavigation();
   const route = useRoute();
   const { language: userLanguage } = useNativeUserLanguageFromAuth();
-  const lang: SquadBattleUiLang = userLanguage === "en" ? "en" : "ja";
+  const lang: SquadBattleUiLang = resolveSquadBattleUiLang(userLanguage);
   const c = useMemo(() => squadBattleScreenCopy(lang), [lang]);
   const inviteCopy = useMemo(() => squadBattleInviteCopy(lang), [lang]);
   const copyBundle = useMemo<SquadBattleCopyBundle>(

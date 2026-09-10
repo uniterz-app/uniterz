@@ -23,7 +23,7 @@ function requireBase(): string {
 }
 
 export async function fetchMeUnitLedgerNative(
-  language: "ja" | "en" = "ja"
+  language: string = "ja"
 ): Promise<UnitLedgerListPayload> {
   const base = requireBase();
   const headers = await authHeader();

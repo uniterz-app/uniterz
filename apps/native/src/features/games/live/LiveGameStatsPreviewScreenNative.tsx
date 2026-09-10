@@ -24,12 +24,13 @@ import {
 } from "../../../../../../lib/games/liveGameStatsPreviewMocks";
 import { getTeamPrimaryColor } from "../../../../../../lib/team-colors";
 import LiveGameStatsPanelNative from "./LiveGameStatsPanelNative";
+import { liveGameStatsPreviewCopy } from "../stats/nbaStatsUiCopy";
 
 const OXANIUM = "Oxanium_700Bold";
 const OXANIUM_800 = "Oxanium_800ExtraBold";
 
 type Props = {
-  language: "ja" | "en";
+  language: string;
   onClose: () => void;
 };
 
@@ -39,10 +40,10 @@ function MatchTapCard({
   onOpen,
 }: {
   report: LiveGameStatsReport;
-  language: "ja" | "en";
+  language: string;
   onOpen: () => void;
 }) {
-  const isJa = language === "ja";
+  const copy = liveGameStatsPreviewCopy(language);
   const homeColor =
     getTeamPrimaryColor("nba", report.home.teamId) ?? "#e8edf5";
   const awayColor =
@@ -84,9 +85,7 @@ function MatchTapCard({
         </Text>
       </View>
 
-      <Text style={styles.tapHint}>
-        {isJa ? "タップでスタッツを開く" : "Tap to open stats"}
-      </Text>
+      <Text style={styles.tapHint}>{copy.tapToOpen}</Text>
     </Pressable>
   );
 }
@@ -95,7 +94,7 @@ export default function LiveGameStatsPreviewScreenNative({
   language,
   onClose,
 }: Props) {
-  const isJa = language === "ja";
+  const copy = liveGameStatsPreviewCopy(language);
   const insets = useSafeAreaInsets();
   const liveReport = useMemo(() => liveGameStatsPreviewReport("live"), []);
   const finalReport = useMemo(() => liveGameStatsPreviewReport("final"), []);
@@ -112,11 +111,7 @@ export default function LiveGameStatsPreviewScreenNative({
     <MobilePageShell
       title="Live Game Stats"
       eyebrow="PREVIEW"
-      subtitle={
-        isJa
-          ? "試合カード → チームスタッツ + ボックススコア。データは mock。"
-          : "Match card → Team stats + Box score. Mock data."
-      }
+      subtitle={copy.subtitle}
       appBackground
       onClose={onClose}
     >
@@ -161,7 +156,7 @@ export default function LiveGameStatsPreviewScreenNative({
               {openReport ? (
                 <LiveGameStatsPanelNative
                   report={openReport}
-                  language={language}
+                  language={language === "ja" ? "ja" : "en"}
                 />
               ) : null}
             </ScrollView>

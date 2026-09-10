@@ -8,6 +8,7 @@ import {
   joinTeamNameLines,
   splitTeamNameByLeague,
 } from "@/lib/team-name-split";
+import { compactNbaCardNickname } from "@/lib/nba-team-names";
 import { usePathname, useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useState, useMemo, useCallback, useEffect } from "react";
@@ -285,8 +286,8 @@ function wcListNameTextClass(
   if (league === "wc" && isMobile && mobileDense) {
     return "text-[14px] font-bold leading-[1.12] md:text-[15px]";
   }
-  if (isMobile) return "text-[15px] font-bold md:text-[18px]";
-  return "text-base font-bold leading-tight md:text-xl lg:text-2xl";
+  if (isMobile) return "text-[13px] font-semibold md:text-[15px]";
+  return "text-base font-semibold leading-tight md:text-xl lg:text-2xl";
 }
 
 function wcListNameFontStyle(
@@ -324,19 +325,6 @@ function ordinal(n: number) {
 /** ResultMatchHeader の予想スコア数字と同じスタック */
 const RESULT_CARD_NUM_FONT =
   'Impact,"Anton","Arial Black",Inter,ui-sans-serif,system-ui,sans-serif';
-
-/** BracketCardWeb / BracketCardMobile のチーム短名と同じ系統 */
-function bracketMarketTeamNameStyle(isMobile: boolean): React.CSSProperties {
-  return isMobile
-    ? {
-        fontFamily: '"Bebas Neue", sans-serif',
-        letterSpacing: "0.08em",
-      }
-    : {
-        fontFamily: "Oswald, Bebas Neue, sans-serif",
-        letterSpacing: "0.06em",
-      };
-}
 
 /** ResultStatsCard「総合得点」等と同じ数値フォント（Oxanium） */
 function RecordWithRank({
@@ -449,7 +437,7 @@ function MatchCardView({
     roundLabel,
     language === "ja"
   );
-  const displayTimeZone = language === "en" ? TIMEZONE_ET : TIMEZONE_JST;
+  const displayTimeZone = language === "ja" ? TIMEZONE_JST : TIMEZONE_ET;
 
   const [navigating, setNavigating] = useState(false);
   // Full-area tap: scale the whole card shell (transparent overlay alone shows no motion).
@@ -630,10 +618,16 @@ const isMobile = prefix === "/mobile" || prefix.startsWith("/m/");
       : null;
   const hideMergedStatsSection =
     showMergedResult && resultPost?.status !== "final";
-  const teamNameFont = {
-    ...bracketMarketTeamTypography(isMobile),
-    transform: "skewX(-6deg)",
-  };
+  const teamNameFont = (() => {
+    const base = bracketMarketTeamTypography(isMobile);
+    return {
+      ...base,
+      fontWeight: 600,
+      fontSize: isMobile ? 13 : undefined,
+      letterSpacing: isMobile ? "0.05em" : base.letterSpacing,
+      transform: "skewX(-6deg)",
+    };
+  })();
   /** letter-spacing は末尾にも余白が乗るため、中央揃え時の見た目ずれを補正 */
   const wcTeamNameFont: React.CSSProperties =
     league === "wc"
@@ -660,10 +654,10 @@ const isMobile = prefix === "/mobile" || prefix.startsWith("/m/");
         : scheduleSharedContentVtName(sharedTransitionBaseKey)
       : "";
 
-  // ▼ 追加：NBA × mobile のときは nickname（line2 のみ）
+  // ▼ 追加：NBA × mobile のときは nickname（line2 のみ）／長い名は短縮
   function getDisplayName(league: League, l1: string, l2: string): string {
     if (league === "nba" && isMobile) {
-      return l2 || l1; // ← NBA mobile → line2 だけ
+      return compactNbaCardNickname(l2 || l1);
     }
     return `${l1}\n${l2 || ""}`;
   }
@@ -801,9 +795,10 @@ const marketMajority = useMemo(() => {
   const teamText = dense ? "text-sm md:text-base" : "text-base md:text-xl";
   const recordText = dense ? "text-[12px]" : "text-sm";
   const lineFrameTeamNameClass =
-    "text-[17px] font-normal leading-[19px] tracking-[0.075em]";
+    "text-[13px] font-semibold leading-[15px] tracking-[0.05em]";
   const lineFrameTeamNameStyle: React.CSSProperties = {
     ...teamNameFont,
+    fontWeight: 600,
     transform: "skewX(-6deg)",
   };
   const Icon =
@@ -1189,8 +1184,16 @@ const mergedPreKickoffScoreClass = [
     );
   }
 
-  const [homeL1, homeL2] = splitTeamNameByLeague(league, home.name);
-  const [awayL1, awayL2] = splitTeamNameByLeague(league, away.name);
+  const [homeL1, homeL2Raw] = splitTeamNameByLeague(league, home.name);
+  const [awayL1, awayL2Raw] = splitTeamNameByLeague(league, away.name);
+  const homeL2 =
+    league === "nba"
+      ? compactNbaCardNickname(homeL2Raw || homeL1, home.teamId)
+      : homeL2Raw;
+  const awayL2 =
+    league === "nba"
+      ? compactNbaCardNickname(awayL2Raw || awayL1, away.teamId)
+      : awayL2Raw;
 
   /** Same behavior as the predict CTA (schedule overlay when logged in). */
   const triggerOpenPredictLikeButton = () => {
@@ -1916,7 +1919,7 @@ const card = (
           className={
             showListLineFrame
               ? lineFrameTeamNameClass
-              : "text-[15px] font-bold md:text-[18px]"
+              : "text-[13px] font-semibold md:text-[15px]"
           }
           style={showListLineFrame ? lineFrameTeamNameStyle : teamNameFont}
         >
@@ -1929,7 +1932,7 @@ const card = (
             className={
               showListLineFrame
                 ? lineFrameTeamNameClass
-                : "text-[15px] font-bold md:text-[18px]"
+                : "text-[13px] font-semibold md:text-[15px]"
             }
             style={showListLineFrame ? lineFrameTeamNameStyle : teamNameFont}
           >
@@ -1939,7 +1942,7 @@ const card = (
             className={
               showListLineFrame
                 ? lineFrameTeamNameClass
-                : "text-[15px] font-bold md:text-[18px]"
+                : "text-[13px] font-semibold md:text-[15px]"
             }
             style={showListLineFrame ? lineFrameTeamNameStyle : teamNameFont}
           >
@@ -2185,7 +2188,7 @@ const card = (
           className={
             showListLineFrame
               ? lineFrameTeamNameClass
-              : "text-[15px] font-bold md:text-[18px]"
+              : "text-[13px] font-semibold md:text-[15px]"
           }
           style={showListLineFrame ? lineFrameTeamNameStyle : teamNameFont}
         >
@@ -2198,7 +2201,7 @@ const card = (
             className={
               showListLineFrame
                 ? lineFrameTeamNameClass
-                : "text-[15px] font-bold md:text-[18px]"
+                : "text-[13px] font-semibold md:text-[15px]"
             }
             style={showListLineFrame ? lineFrameTeamNameStyle : teamNameFont}
           >
@@ -2208,7 +2211,7 @@ const card = (
             className={
               showListLineFrame
                 ? lineFrameTeamNameClass
-                : "text-[15px] font-bold md:text-[18px]"
+                : "text-[13px] font-semibold md:text-[15px]"
             }
             style={showListLineFrame ? lineFrameTeamNameStyle : teamNameFont}
           >

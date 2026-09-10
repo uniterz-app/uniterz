@@ -6,6 +6,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { fonts } from "../../theme/tokens";
 import {
   squadBattleLaunchCopy,
+  resolveSquadBattleUiLang,
   type SquadBattleUiLang,
 } from "../../../../../lib/squads/squadBattleUiCopy";
 import { SQUAD_GOLD_NATIVE } from "../../../../../lib/squads/squadBattleGoldTheme";
@@ -29,7 +30,7 @@ export default function SquadBattleLaunchOverlayNative({
   language,
 }: Props) {
   const deadline = deadlineLabel?.trim() || null;
-  const lang: SquadBattleUiLang = language === "en" ? "en" : "ja";
+  const lang: SquadBattleUiLang = resolveSquadBattleUiLang(language);
   const copy = squadBattleLaunchCopy(lang);
 
   async function dismiss() {

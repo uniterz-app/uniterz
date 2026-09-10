@@ -52,6 +52,7 @@ import {
 } from "../../../../../lib/units/unitEarnMotion";
 import { formatUnitEarnRankOrdinal } from "../../../../../lib/units/formatUnitEarnRank";
 import UnitCoinDiscNative from "./UnitCoinDiscNative";
+import { unitEarnOverlayCopy } from "./unitEarnCopy";
 
 type Props = {
   open: boolean;
@@ -60,7 +61,7 @@ type Props = {
   title?: string | null;
   subtitle?: string | null;
   rank?: number | null;
-  language?: "ja" | "en";
+  language?: string | null;
   vaultRef: RefObject<ViewType | null>;
   onAbsorb: () => void;
   onDone: () => void;
@@ -88,7 +89,7 @@ export default function UnitEarnOverlayNative({
   onAbsorb,
   onDone,
 }: Props) {
-  const isJa = language === "ja";
+  const copy = unitEarnOverlayCopy(language);
   const reduceMotion = useReducedMotion();
   const [phase, setPhase] = useState<Phase>("enter");
   /** AnimatedTextInput は使わない（Hermes hades GC × TextInputState 連鎖で SIGBUS） */
@@ -133,11 +134,9 @@ export default function UnitEarnOverlayNative({
   const ringScale = useSharedValue(0.35);
 
   const reasonTitle =
-    title?.trim() ||
-    label?.trim() ||
-    (isJa ? "Unit 報酬" : "Unit reward");
+    title?.trim() || label?.trim() || copy.defaultTitle;
   const reasonSub = subtitle?.trim() || null;
-  const claimLabel = isJa ? "獲得する" : "Claim";
+  const claimLabel = copy.claim;
   const rankText =
     safeRank != null ? formatUnitEarnRankOrdinal(safeRank) : null;
 

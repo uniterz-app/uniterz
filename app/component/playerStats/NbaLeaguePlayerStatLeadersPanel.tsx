@@ -5,7 +5,8 @@
  */
 import { useMemo, useState } from "react";
 import { ArrowDown, ArrowUp } from "lucide-react";
-import { nameOxanium, nameBebas, resultStatsMetricNumClass } from "@/lib/fonts";
+import { nameOxanium, resultStatsMetricNumClass } from "@/lib/fonts";
+import { L, resolveLocalizedLang } from "@/lib/i18n/localize";
 import { matchCardTeamNameStyle } from "@/lib/games/teamDisplayTypography";
 import TeamAbbrBadge from "@/app/component/games/TeamAbbrBadge";
 import {
@@ -39,7 +40,7 @@ import NbaLeagueStatsTableEmpty from "@/app/component/stats/NbaLeagueStatsTableE
 type SortDir = "desc" | "asc";
 
 type Props = {
-  language?: "ja" | "en";
+  language?: string;
   onSelectPlayer?: (playerId: string) => void;
 };
 
@@ -99,10 +100,11 @@ export default function NbaLeaguePlayerStatLeadersPanel({
   language = "ja",
   onSelectPlayer,
 }: Props) {
-  const isJa = language === "ja";
+  const lang = resolveLocalizedLang(language);
+  const isJa = lang === "ja";
   const { bundle, loading } = usePlayerStatLeadersBundle();
   const isPreseason = isNbaLeagueStatsPreseason();
-  const updateFootnote = nbaDailyStatsUpdateFootnote(isJa ? "ja" : "en", bundle.asOfLabel, {
+  const updateFootnote = nbaDailyStatsUpdateFootnote(lang, bundle.asOfLabel, {
     preseason: isPreseason,
   });
   const [phase, setPhase] = useState<NbaLeagueStatsPhase>("season");
@@ -147,7 +149,7 @@ export default function NbaLeaguePlayerStatLeadersPanel({
     return sortDir === "asc" ? [...list].reverse() : list;
   }, [bundle, phase, mode, metric, sortDir]);
 
-  const emptyCopy = leagueStatsTableEmptyCopy(isJa ? "ja" : "en", mode);
+  const emptyCopy = leagueStatsTableEmptyCopy(lang, mode);
   const showEmptyTable = !loading && leaders.length === 0;
 
   return (
@@ -238,7 +240,7 @@ export default function NbaLeaguePlayerStatLeadersPanel({
           <p
             className={`${nameOxanium.className} mb-1.5 line-clamp-2 text-[12px] leading-[17px] text-[#00F5FF]/70`}
           >
-            {isJa ? metricMeta.hintJa : metricMeta.hintEn}
+            {L(lang, metricMeta.hint)}
           </p>
 
           {showEmptyTable ? (
@@ -304,10 +306,10 @@ export default function NbaLeaguePlayerStatLeadersPanel({
                   </span>
                   <span
                     className={[
-                      nameBebas.className,
-                      "min-w-0 flex-1 truncate text-[15px] leading-tight text-white/92",
+                      nameOxanium.className,
+                      "min-w-0 flex-1 truncate text-[13px] font-semibold leading-tight text-white/92",
                     ].join(" ")}
-                    style={playerNameTy}
+                    style={{ ...playerNameTy, fontWeight: 600, letterSpacing: "0.04em" }}
                   >
                     {formatNbaPlayerListName(row.playerName, row.playerId)}
                   </span>
@@ -321,7 +323,7 @@ export default function NbaLeaguePlayerStatLeadersPanel({
                     {row.gamesPlayed}
                   </span>
                   <span
-                    className={`${nameOxanium.className} w-[52px] text-right text-[14px] font-extrabold tabular-nums text-[#00F5FF]`}
+                    className={`${nameOxanium.className} w-[52px] text-right text-[13px] font-bold tabular-nums text-[#00F5FF]`}
                     style={metricCellSkew}
                   >
                     {formatPlayerLeaderValue(metric, row.value)}

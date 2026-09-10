@@ -17,7 +17,7 @@ import { ProfileKinetikFlipEarProvider } from "./ProfileKinetikFlipEarNative";
 export const PROFILE_KINETIK_FLIP_MS = 420;
 
 type Props = {
-  language: "ja" | "en";
+  language: string;
   front: ReactNode;
   back: ReactNode;
   /** 裏面表示時に true — CAREER データの遅延読込用 */

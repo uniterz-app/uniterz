@@ -3,6 +3,7 @@
  * gamesPlayed = 今夜より前に消化した試合数（wins+losses）。
  */
 import type { ProBriefPhase } from "@/lib/predict/predictProBrief";
+import type { UiStrings } from "@/lib/i18n/ui";
 
 /** 今夜が 6 試合目以降 → full（gamesPlayed ≥ 5） */
 export const PRO_INSIGHT_FULL_MIN_GAMES_PLAYED = 5;
@@ -18,11 +19,22 @@ export function resolveProBriefPhase(gamesPlayed: number): ProBriefPhase {
 export function proBriefSampleNote(gamesPlayed: number): {
   sampleNoteJa: string;
   sampleNoteEn: string;
+  sampleNote: UiStrings;
 } {
   const n = Math.max(1, Math.floor(gamesPlayed));
+  const sampleNote: UiStrings = {
+    ja: `※ 開幕${n}試合時点 · サンプル少 · 上振れの可能性あり`,
+    en: `※ Through ${n} games · small sample · may regress`,
+    ko: `※ ${n}경기 시점 · 표본 부족 · 변동 가능`,
+    zh: `※ 赛季 ${n} 场时点 · 样本偏小 · 可能回落`,
+    es: `※ Tras ${n} partidos · muestra pequeña · puede regresar`,
+    pt: `※ Após ${n} jogos · amostra pequena · pode regredir`,
+    fr: `※ Après ${n} matchs · échantillon réduit · peut régresser`,
+  };
   return {
-    sampleNoteJa: `※ 開幕${n}試合時点 · サンプル少 · 上振れの可能性あり`,
-    sampleNoteEn: `※ Through ${n} games · small sample · may regress`,
+    sampleNoteJa: sampleNote.ja,
+    sampleNoteEn: sampleNote.en,
+    sampleNote,
   };
 }
 

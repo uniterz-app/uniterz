@@ -43,8 +43,26 @@ import {
   PRO_SUBSCRIBE_PLAN_DIFF_ROWS,
   planDiffCellLabel,
   planDiffColLabel,
+  planDiffRowLabel,
   planDiffTitle,
   proLegalLinkLabel,
+  proSubscribeAfterTrialNote,
+  proSubscribeBackLabel,
+  proSubscribeBuyPreviewLabel,
+  proSubscribeBuyWithoutTrialLabel,
+  proSubscribeCancelInTrialValue,
+  proSubscribeChooseSkinLabel,
+  proSubscribeFreeThenPrefix,
+  proSubscribeIncludedTitle,
+  proSubscribeLead,
+  proSubscribeNoTrialMicroNote,
+  proSubscribeProcessingLabel,
+  proSubscribeStartTrialLabel,
+  proSubscribeSuccessTitle,
+  proSubscribeTrialMicroNote,
+  proSubscribeTrialModalPoints,
+  proSubscribeTrialModalSelected,
+  proSubscribeTrialModalTitle,
   purchaseDisclaimer,
   restorePurchasesLabel,
   seasonPassBlurb,
@@ -53,6 +71,8 @@ import {
   trialConditionsTitle,
   type ProLegalLinkKind,
 } from "../../../../../../lib/pro/proSubscribePurchaseCopy";
+import { DATE_LOCALE } from "../../../../../../lib/i18n/language";
+import { L, resolveLocalizedLang } from "../../../../../../lib/i18n/localize";
 import {
   PRIVACY_POLICY_URL,
   TERMS_URL,
@@ -119,7 +139,7 @@ const FEATURE_ICONS: Record<
 };
 
 type Props = {
-  language: "ja" | "en";
+  language: string;
   onClose: () => void;
   onOpenSkin?: (opts?: { fromTrial?: boolean }) => void;
 };
@@ -172,8 +192,7 @@ export default function ProSubscribePreviewNative({
   onClose,
   onOpenSkin,
 }: Props) {
-  const ja = language === "ja";
-  const lang = ja ? "ja" : "en";
+  const lang = resolveLocalizedLang(language);
   const seasonLabel = seasonPassTargetLabel(lang);
   const seasonBlurbText = seasonPassBlurb(lang);
   const [planId, setPlanId] = useState<ProSubscribePreviewPlanId | null>(null);
@@ -229,16 +248,12 @@ export default function ProSubscribePreviewNative({
           showsVerticalScrollIndicator={false}
         >
           <SuccessPanel
-            ja={ja}
+            lang={lang}
             planId={planId}
-            planLabel={ja ? selected.labelJa : selected.labelEn}
-            price={ja ? selected.priceJa : selected.priceEn}
+            planLabel={selected.label}
+            price={selected.price}
             period={
-              planId === "season"
-                ? seasonLabel
-                : ja
-                  ? selected.periodJa
-                  : selected.periodEn
+              planId === "season" ? seasonLabel : L(lang, selected.period)
             }
             trial={checkoutKind === "trial"}
             onOpenSkin={onOpenSkin}
@@ -247,7 +262,7 @@ export default function ProSubscribePreviewNative({
         {checkoutKind === "trial" ? null : (
           <ProfileBackEdgeHandleNative
             onPress={onClose}
-            accessibilityLabel={ja ? "戻る" : "Back"}
+            accessibilityLabel={proSubscribeBackLabel(lang)}
           />
         )}
       </View>
@@ -264,14 +279,10 @@ export default function ProSubscribePreviewNative({
             <View style={styles.header}>
               <ProCyberBadgeNative premium />
               <Text style={styles.h1}>Get Pro</Text>
-              <Text style={styles.lead}>
-                {ja
-                  ? "プランをタップして、できることを確認。もう一度タップで閉じます。"
-                  : "Tap a plan to see what’s included. Tap again to close."}
-              </Text>
+              <Text style={styles.lead}>{proSubscribeLead(lang)}</Text>
             </View>
 
-            <PlanDiffTableNative ja={ja} />
+            <PlanDiffTableNative lang={lang} />
 
             <View style={styles.planList}>
               {PRO_SUBSCRIBE_PREVIEW_PLANS.map((plan) => {
@@ -301,27 +312,27 @@ export default function ProSubscribePreviewNative({
                     >
                       <View style={styles.planTopRow}>
                         <PlanScanLabel
-                          label={ja ? plan.labelJa : plan.labelEn}
+                          label={plan.label}
                           accent={accent.fill}
                         />
                         <View style={styles.planTopRight}>
-                          {plan.badgeJa || plan.recommended ? (
+                          {plan.badge || plan.recommended ? (
                             <View
                               style={[
                                 styles.planBadge,
-                                plan.badgeJa === "7日無料"
+                                plan.badgeHighlight
                                   ? { backgroundColor: accent.fill }
                                   : styles.planBadgeMuted,
                               ]}
                             >
                               <Text
                                 style={
-                                  plan.badgeJa === "7日無料"
+                                  plan.badgeHighlight
                                     ? styles.planBadgeAccentText
                                     : styles.planBadgeMutedText
                                 }
                               >
-                                {ja ? plan.badgeJa : plan.badgeEn}
+                                {plan.badge ? L(lang, plan.badge) : ""}
                               </Text>
                             </View>
                           ) : null}
@@ -339,23 +350,17 @@ export default function ProSubscribePreviewNative({
                       </View>
 
                       <View style={styles.priceRow}>
-                        <Text style={styles.price}>
-                          {ja ? plan.priceJa : plan.priceEn}
-                        </Text>
+                        <Text style={styles.price}>{plan.price}</Text>
                         <Text style={styles.period}>
                           {plan.id === "season"
                             ? seasonLabel
-                            : ja
-                              ? plan.periodJa
-                              : plan.periodEn}
+                            : L(lang, plan.period)}
                         </Text>
                       </View>
                       <Text style={styles.blurb}>
                         {plan.id === "season"
                           ? seasonBlurbText
-                          : ja
-                            ? plan.blurbJa
-                            : plan.blurbEn}
+                          : L(lang, plan.blurb)}
                       </Text>
                     </Pressable>
 
@@ -367,10 +372,10 @@ export default function ProSubscribePreviewNative({
                         ]}
                       >
                         <Text style={[styles.includedTitle, { color: accent.fill }]}>
-                          {ja ? "このプランでできること" : "Included"}
+                          {proSubscribeIncludedTitle(lang)}
                         </Text>
                         {plan.features.map((f) => (
-                          <View key={f.titleEn} style={styles.featureRow}>
+                          <View key={f.icon} style={styles.featureRow}>
                             <View
                               style={[
                                 styles.featureIcon,
@@ -388,10 +393,10 @@ export default function ProSubscribePreviewNative({
                             </View>
                             <View style={styles.featureCopy}>
                               <Text style={styles.featureTitle}>
-                                {ja ? f.titleJa : f.titleEn}
+                                {L(lang, f.title)}
                               </Text>
                               <Text style={styles.featureDetail}>
-                                {ja ? f.detailJa : f.detailEn}
+                                {L(lang, f.detail)}
                               </Text>
                             </View>
                           </View>
@@ -418,22 +423,15 @@ export default function ProSubscribePreviewNative({
                                 ]}
                               >
                                 {phase === "purchasing"
-                                  ? ja
-                                    ? "処理中…"
-                                    : "Processing…"
-                                  : ja
-                                    ? "7日間無料で試す"
-                                    : "Start 7-day free trial"}
+                                  ? proSubscribeProcessingLabel(lang)
+                                  : proSubscribeStartTrialLabel(lang)}
                               </Text>
                             </Pressable>
                             <Text style={styles.afterTrial}>
-                              {plan.id === "weekly"
-                                ? ja
-                                  ? "お試し後は週額 ¥280。期間中の解約で課金なし。"
-                                  : "Then ¥280/week. Cancel during trial — no charge."
-                                : ja
-                                  ? "お試し後は月額 ¥780。期間中の解約で課金なし。"
-                                  : "Then ¥780/month. Cancel during trial — no charge."}
+                              {proSubscribeAfterTrialNote(
+                                lang,
+                                plan.id === "weekly" ? "weekly" : "monthly"
+                              )}
                             </Text>
                             <Pressable
                               disabled={phase === "purchasing"}
@@ -454,16 +452,15 @@ export default function ProSubscribePreviewNative({
                                       styles.secondaryBtnTextPressed,
                                   ]}
                                 >
-                                  {ja
-                                    ? `お試しなしで${plan.labelJa}を購入`
-                                    : `Buy ${plan.labelEn} (no trial)`}
+                                  {proSubscribeBuyWithoutTrialLabel(
+                                    lang,
+                                    plan.label
+                                  )}
                                 </Text>
                               )}
                             </Pressable>
                             <Text style={styles.micro}>
-                              {ja
-                                ? "※ 初回のみ。iOS は App Store のサブスク管理から解約できます。プレビューでは決済しません。"
-                                : "※ First time only. On iOS, cancel in App Store subscriptions. Preview does not charge."}
+                              {proSubscribeTrialMicroNote(lang)}
                             </Text>
                           </View>
                         ) : (
@@ -487,18 +484,15 @@ export default function ProSubscribePreviewNative({
                                 ]}
                               >
                                 {phase === "purchasing"
-                                  ? ja
-                                    ? "処理中…"
-                                    : "Processing…"
-                                  : ja
-                                    ? `${plan.labelJa} を購入（プレビュー）`
-                                    : `Buy ${plan.labelEn} (preview)`}
+                                  ? proSubscribeProcessingLabel(lang)
+                                  : proSubscribeBuyPreviewLabel(
+                                      lang,
+                                      plan.label
+                                    )}
                               </Text>
                             </Pressable>
                             <Text style={styles.micro}>
-                              {ja
-                                ? "※ 7日無料は Weekly / Monthly のみ。価格・特典は仮。決済は走りません。"
-                                : "※ 7-day trial is Weekly / Monthly only. Prices are draft. No real charge."}
+                              {proSubscribeNoTrialMicroNote(lang)}
                             </Text>
                           </View>
                         )}
@@ -510,7 +504,7 @@ export default function ProSubscribePreviewNative({
             </View>
 
             <PurchaseFootnotesNative
-              ja={ja}
+              lang={lang}
               restoreDisabled={!iapReady || iapBusy}
               onRestore={() => void restore()}
             />
@@ -519,7 +513,7 @@ export default function ProSubscribePreviewNative({
 
       <ProfileBackEdgeHandleNative
         onPress={onClose}
-        accessibilityLabel={ja ? "戻る" : "Back"}
+        accessibilityLabel={proSubscribeBackLabel(lang)}
       />
 
       <Modal
@@ -530,7 +524,7 @@ export default function ProSubscribePreviewNative({
       >
         {selected ? (
           <TrialExplainModal
-            ja={ja}
+            lang={lang}
             plan={selected}
             onClose={() => setTrialModalOpen(false)}
             onConfirm={confirmTrial}
@@ -547,8 +541,11 @@ const LEGAL_URLS: Record<ProLegalLinkKind, string> = {
   tokushoho: TOKUSHOHO_URL,
 };
 
-function PlanDiffTableNative({ ja }: { ja: boolean }) {
-  const lang = ja ? "ja" : "en";
+function PlanDiffTableNative({
+  lang,
+}: {
+  lang: import("@/lib/i18n/localize").LocalizedLang;
+}) {
   const cols = ["weekly", "monthly", "season"] as const;
   return (
     <View style={styles.diffWrap} accessibilityLabel={planDiffTitle(lang)}>
@@ -563,9 +560,7 @@ function PlanDiffTableNative({ ja }: { ja: boolean }) {
       </View>
       {PRO_SUBSCRIBE_PLAN_DIFF_ROWS.map((row) => (
         <View key={row.id} style={styles.diffRow}>
-          <Text style={styles.diffLabel}>
-            {ja ? row.labelJa : row.labelEn}
-          </Text>
+          <Text style={styles.diffLabel}>{planDiffRowLabel(row, lang)}</Text>
           {cols.map((col) => {
             const cell = row[col];
             const on = cell === "yes";
@@ -585,15 +580,14 @@ function PlanDiffTableNative({ ja }: { ja: boolean }) {
 }
 
 function PurchaseFootnotesNative({
-  ja,
+  lang,
   restoreDisabled,
   onRestore,
 }: {
-  ja: boolean;
+  lang: import("@/lib/i18n/localize").LocalizedLang;
   restoreDisabled: boolean;
   onRestore: () => void;
 }) {
-  const lang = ja ? "ja" : "en";
   const links: ProLegalLinkKind[] = ["terms", "privacy", "tokushoho"];
   return (
     <View style={styles.footnotes}>
@@ -640,44 +634,28 @@ function PurchaseFootnotesNative({
 }
 
 function TrialExplainModal({
-  ja,
+  lang,
   plan,
   onClose,
   onConfirm,
 }: {
-  ja: boolean;
+  lang: import("@/lib/i18n/localize").LocalizedLang;
   plan: ProSubscribePreviewPlan;
   onClose: () => void;
   onConfirm: () => void;
 }) {
-  const afterPrice = ja
-    ? `${plan.priceJa}${plan.periodJa}`
-    : `${plan.priceEn}${plan.periodEn}`;
-  const points = ja
-    ? [
-        "7日間無料で Pro を試せます（アカウントあたり初回のみ）。",
-        "期間中に解約すれば、お金はかかりません。",
-        `解約しなければ、お試し開始から7日後に初回請求され、自動で有料の ${plan.labelJa}（${afterPrice}）に切り替わります。`,
-        "Weekly と Monthly の変更は、いつでもできます。",
-      ]
-    : [
-        "Try Pro free for 7 days (first time only per account).",
-        "Cancel during the trial and you won’t be charged.",
-        `Unless you cancel, the first charge is 7 days after start, then paid ${plan.labelEn} (${afterPrice}).`,
-        "You can switch Weekly ⇔ Monthly anytime.",
-      ];
+  const afterPrice = `${plan.price}${L(lang, plan.period)}`;
+  const points = proSubscribeTrialModalPoints(lang, plan.label, afterPrice);
 
   return (
     <View style={styles.modalBackdrop}>
       <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
       <View style={styles.modalCard}>
         <Text style={styles.modalTitle}>
-          {ja ? "お試しの前に" : "Before you start"}
+          {proSubscribeTrialModalTitle(lang)}
         </Text>
         <Text style={styles.modalSub}>
-          {ja
-            ? `選択中: ${plan.labelJa} · 7日間無料`
-            : `Selected: ${plan.labelEn} · 7-day free`}
+          {proSubscribeTrialModalSelected(lang, plan.label)}
         </Text>
         <View style={styles.modalPoints}>
           {points.map((text) => (
@@ -703,7 +681,17 @@ function TrialExplainModal({
             pressed && styles.modalBackPressed,
           ]}
         >
-          <Text style={styles.modalBackText}>{ja ? "もどる" : "Back"}</Text>
+          <Text style={styles.modalBackText}>
+            {L(lang, {
+              ja: "もどる",
+              en: "Back",
+              ko: "뒤로",
+              zh: "返回",
+              es: "Atrás",
+              pt: "Voltar",
+              fr: "Retour",
+            })}
+          </Text>
         </Pressable>
       </View>
     </View>
@@ -728,7 +716,7 @@ function MetaRow({
 }
 
 function SuccessPanel({
-  ja,
+  lang,
   planId,
   planLabel,
   price,
@@ -736,7 +724,7 @@ function SuccessPanel({
   trial,
   onOpenSkin,
 }: {
-  ja: boolean;
+  lang: import("@/lib/i18n/localize").LocalizedLang;
   planId: ProSubscribePreviewPlanId;
   planLabel: string;
   price: string;
@@ -745,23 +733,19 @@ function SuccessPanel({
   onOpenSkin?: (opts?: { fromTrial?: boolean }) => void;
 }) {
   const A = trial ? PRO_SUCCESS_ACCENT.trial : PRO_SUCCESS_ACCENT.billing;
-  const started = new Date().toLocaleDateString(ja ? "ja-JP" : "en-US", {
+  const started = new Date().toLocaleDateString(DATE_LOCALE[lang], {
     year: "numeric",
     month: "short",
     day: "numeric",
   });
   const end = new Date();
   end.setDate(end.getDate() + 7);
-  const trialEndLabel = end.toLocaleDateString(ja ? "ja-JP" : "en-US", {
+  const trialEndLabel = end.toLocaleDateString(DATE_LOCALE[lang], {
     year: "numeric",
     month: "short",
     day: "numeric",
   });
-  const title = trial
-    ? ja
-      ? "Pro お試し開始"
-      : "Pro trial started"
-    : "Upgrade to Pro";
+  const title = proSubscribeSuccessTitle(lang, trial);
   const statusLine = trial
     ? `7DAY_TRIAL // ${planLabel.toUpperCase()}`
     : `ACTIVE // ${planLabel.toUpperCase()}`;
@@ -917,7 +901,7 @@ function SuccessPanel({
                 {statusLine}
               </Text>
               <Text style={[styles.successPrice, { color: A.main }]}>
-                {trial ? (ja ? "無料 → その後 " : "FREE → THEN ") : ""}
+                {trial ? proSubscribeFreeThenPrefix(lang) : ""}
                 {price}
                 {trial ? period : ""}
               </Text>
@@ -931,7 +915,7 @@ function SuccessPanel({
                   <MetaRow
                     accent={A}
                     label="CHARGE"
-                    value={ja ? "期間中解約で課金なし" : "Cancel in trial = ¥0"}
+                    value={proSubscribeCancelInTrialValue(lang)}
                   />
                 </>
               ) : (
@@ -951,7 +935,7 @@ function SuccessPanel({
               onPress={() => onOpenSkin?.({ fromTrial: trial })}
             >
               <Text style={[styles.successPrimaryText, { color: A.ink }]}>
-                {ja ? "Pro Skin を選ぶ" : "Choose Pro Skin"}
+                {proSubscribeChooseSkinLabel(lang)}
               </Text>
             </Pressable>
           </View>

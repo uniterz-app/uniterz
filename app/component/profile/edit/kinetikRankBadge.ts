@@ -2,6 +2,7 @@ import {
   getKinetikStreakTier,
   isKinetikWinStreakActive,
 } from "./kinetikStreakFx";
+import { L, resolveLocalizedLang, type LocalizedLang } from "@/lib/i18n/localize";
 
 export type KinetikRankBadgeTier =
   | "legend"
@@ -92,74 +93,92 @@ export function isKinetikRisingBadge(rankDeltaPlaces: unknown): boolean {
 
 function tierDescription(
   tier: KinetikRankBadgeTier,
-  language: "ja" | "en",
+  language: string | null | undefined,
   topPercent: number | null,
   rankDeltaPlaces: number | null
 ): string {
+  const lang = resolveLocalizedLang(language);
   if (tier === "rising") {
     const n = rankDeltaPlaces ?? 0;
-    return language === "ja"
-      ? `順位を${n}位上げた`
-      : `Moved up ${n} places`;
+    return L(lang, {
+      ja: `順位を${n}位上げた`,
+      en: `Moved up ${n} places`,
+      ko: `${n}계단 상승`,
+      zh: `上升 ${n} 名`,
+      es: `Subió ${n} puestos`,
+      pt: `Subiu ${n} posições`,
+      fr: `A monté de ${n} places`,
+    });
   }
 
   const pct = topPercent ?? TIER_TOP_PERCENT[tier] ?? null;
   const pctLabel = pct != null ? formatKinetikTopPercent(pct) : null;
-  if (language === "ja") {
-    if (pctLabel != null) return `総合得点 上位${pctLabel}%`;
-    return TIER_LABEL[tier];
+  if (pctLabel != null) {
+    return L(lang, {
+      ja: `総合得点 上位${pctLabel}%`,
+      en: `Top ${pctLabel}% total points`,
+      ko: `종합득점 상위 ${pctLabel}%`,
+      zh: `总得分前 ${pctLabel}%`,
+      es: `Top ${pctLabel}% puntos totales`,
+      pt: `Top ${pctLabel}% pontos totais`,
+      fr: `Top ${pctLabel}% points totaux`,
+    });
   }
-  if (pctLabel != null) return `Top ${pctLabel}% total points`;
   return TIER_LABEL[tier];
 }
 
 /** タグタップ時に表示する説明文 */
 export function getKinetikRankBadgeExplanation(
   badge: KinetikRankBadgeResult,
-  language: "ja" | "en"
+  language: string | null | undefined
 ): string {
+  const lang = resolveLocalizedLang(language);
   const pct =
     badge.topPercent ??
     (badge.tier !== "rising" ? TIER_TOP_PERCENT[badge.tier] ?? null : null);
 
   if (badge.tier === "rising") {
-    return language === "ja"
-      ? `${badge.label}\n\n前回のランキング更新（日本時間 16:00）から 5 位以上順位を上げたときに付与されます。\n\n${badge.description}`
-      : `${badge.label}\n\nAwarded when you climb at least 5 places since the last ranking update (16:00 JST).\n\n${badge.description}`;
+    const body = L(lang, {
+      ja: "前回のランキング更新（日本時間 16:00）から 5 位以上順位を上げたときに付与されます。",
+      en: "Awarded when you climb at least 5 places since the last ranking update (16:00 JST).",
+      ko: "이전 랭킹 갱신(일본시간 16:00) 이후 5계단 이상 상승하면 부여됩니다.",
+      zh: "自上次排名更新（日本时间 16:00）起上升至少 5 名时授予。",
+      es: "Se otorga al subir al menos 5 puestos desde la última actualización (16:00 JST).",
+      pt: "Concedido ao subir pelo menos 5 posições desde a última atualização (16:00 JST).",
+      fr: "Attribué si vous grimpez d’au moins 5 places depuis la dernière MAJ (16:00 JST).",
+    });
+    return `${badge.label}\n\n${body}\n\n${badge.description}`;
   }
 
   const pctLabel = pct != null ? formatKinetikTopPercent(pct) : null;
-
-  if (language === "ja") {
-    const pctLine =
-      pctLabel != null
-        ? `総合得点ランキングの上位 ${pctLabel}% 以内`
-        : "";
-    const body = [
-      pctLine,
-      "日本時間 16:00 に更新される累積ランキングの順位に基づく称号です。",
-    ]
-      .filter(Boolean)
-      .join("\n\n");
-    return `${badge.label}\n${body}`;
-  }
-
   const pctLine =
     pctLabel != null
-      ? `You are in the top ${pctLabel}% of total points.`
+      ? L(lang, {
+          ja: `総合得点ランキングの上位 ${pctLabel}% 以内`,
+          en: `You are in the top ${pctLabel}% of total points.`,
+          ko: `종합득점 랭킹 상위 ${pctLabel}% 이내`,
+          zh: `总得分排名前 ${pctLabel}%`,
+          es: `Estás en el top ${pctLabel}% de puntos totales.`,
+          pt: `Você está no top ${pctLabel}% de pontos totais.`,
+          fr: `Vous êtes dans le top ${pctLabel}% des points totaux.`,
+        })
       : "";
-  const body = [
-    pctLine,
-    "Based on the cumulative ranking updated daily at 16:00 JST.",
-  ]
-    .filter(Boolean)
-    .join("\n\n");
+  const basis = L(lang, {
+    ja: "日本時間 16:00 に更新される累積ランキングの順位に基づく称号です。",
+    en: "Based on the cumulative ranking updated daily at 16:00 JST.",
+    ko: "일본시간 16:00에 갱신되는 누적 랭킹 순위 기반 칭호입니다.",
+    zh: "基于日本时间 16:00 更新的累计排名称号。",
+    es: "Basado en el ranking acumulado actualizado a las 16:00 JST.",
+    pt: "Baseado no ranking acumulado atualizado às 16:00 JST.",
+    fr: "Basé sur le classement cumulatif mis à jour à 16:00 JST.",
+  });
+  const body = [pctLine, basis].filter(Boolean).join("\n\n");
   return `${badge.label}\n${body}`;
 }
 
 function buildResult(
   tier: KinetikRankBadgeTier,
-  language: "ja" | "en",
+  language: string | null | undefined,
   topPercent: number | null,
   rankDeltaPlaces: number | null
 ): KinetikRankBadgeResult {
@@ -179,9 +198,9 @@ export function resolveKinetikRankBadge(input: {
   totalPointsRank?: number | null;
   totalPointsRankDenominator?: number | null;
   rankDeltaPlaces?: number | null;
-  language?: "ja" | "en";
+  language?: string | null;
 }): KinetikRankBadgeResult | null {
-  const language = input.language ?? "ja";
+  const language = resolveLocalizedLang(input.language);
   const rank = normalizeTotalPointsRank(input.totalPointsRank);
   const denominator = normalizeRankDenominator(
     input.totalPointsRankDenominator

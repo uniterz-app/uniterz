@@ -15,6 +15,8 @@ import type { RouteProp } from "@react-navigation/native";
 import LegalPageLayoutNative from "../../legal/LegalPageLayoutNative";
 import { useFirebaseUser } from "../../../auth/FirebaseUserProvider";
 import { useNativeUserLanguage } from "../../../hooks/useNativeUserLanguage";
+import { DATE_LOCALE } from "../../../../../../lib/i18n/language";
+import { L, resolveLocalizedLang } from "../../../../../../lib/i18n/localize";
 import type { ProfileStackParamList } from "../../../navigation/types";
 import {
   createMeRedemptionNative,
@@ -23,6 +25,7 @@ import {
 import {
   REDEMPTION_CATALOG,
   normalizeRedemptionProductKind,
+  redemptionCatalogTitle,
   redemptionPriceCapShort,
 } from "../../../../../../lib/redemption/redemptionCatalog";
 import { redemptionBatchScheduleCopy } from "../../../../../../lib/redemption/redemptionBatchScheduleCopy";
@@ -42,8 +45,9 @@ export default function RedemptionApplyScreenNative() {
   const route = useRoute<RouteProp<ProfileStackParamList, "RedeemApply">>();
   const { fUser } = useFirebaseUser();
   const { language } = useNativeUserLanguage(fUser?.uid);
-  const isJa = language === "ja";
-  const lang = isJa ? "ja" : "en";
+  const lang = resolveLocalizedLang(language);
+  /** 価格上限ラベルは ja|en のみ */
+  const catalogLang = lang === "ja" ? ("ja" as const) : ("en" as const);
   const batch = redemptionBatchScheduleCopy(lang);
 
   const initial =
@@ -159,11 +163,15 @@ export default function RedemptionApplyScreenNative() {
     <LegalPageLayoutNative
       title="APPLY"
       eyebrow="UNIT EXCHANGE"
-      description={
-        isJa
-          ? "購入は月末まとめ（おおよそ25日前後）。"
-          : "Purchase is batched near month-end (~25th)."
-      }
+      description={L(lang, {
+        ja: "購入は月末まとめ（おおよそ25日前後）。",
+        en: "Purchase is batched near month-end (~25th).",
+        ko: "구매는 월말 일괄(대략 25일 전후).",
+        zh: "采购为月末集中（约 25 日前后）。",
+        es: "La compra se agrupa a fin de mes (~día 25).",
+        pt: "A compra é em lote no fim do mês (~dia 25).",
+        fr: "Achat groupé en fin de mois (~25).",
+      })}
     >
       <View style={styles.batchCard}>
         <Text style={styles.batchTitle}>{batch.short}</Text>
@@ -172,14 +180,26 @@ export default function RedemptionApplyScreenNative() {
 
       <View style={styles.walletCard}>
         <Text style={styles.walletLine}>
-          {isJa
-            ? `利用可能 ${available.toLocaleString("ja-JP")} Unit`
-            : `Available ${available.toLocaleString("en-US")} Units`}
+          {L(lang, {
+            ja: `利用可能 ${available.toLocaleString("ja-JP")} Unit`,
+            en: `Available ${available.toLocaleString("en-US")} Units`,
+            ko: `사용 가능 ${available.toLocaleString("en-US")} Unit`,
+            zh: `可用 ${available.toLocaleString("en-US")} Unit`,
+            es: `Disponibles ${available.toLocaleString("en-US")} Units`,
+            pt: `Disponíveis ${available.toLocaleString("en-US")} Units`,
+            fr: `Disponibles ${available.toLocaleString("en-US")} Units`,
+          })}
         </Text>
         <Text style={styles.walletSub}>
-          {isJa
-            ? `保有 ${balance.toLocaleString("ja-JP")} − 申請中 ${reservedUnits.toLocaleString("ja-JP")} · 今シーズン ${seasonUnitsUsed}/${seasonCap}`
-            : `Held ${balance.toLocaleString("en-US")} − reserved ${reservedUnits.toLocaleString("en-US")} · Season ${seasonUnitsUsed}/${seasonCap}`}
+          {L(lang, {
+            ja: `保有 ${balance.toLocaleString("ja-JP")} − 申請中 ${reservedUnits.toLocaleString("ja-JP")} · 今シーズン ${seasonUnitsUsed}/${seasonCap}`,
+            en: `Held ${balance.toLocaleString("en-US")} − reserved ${reservedUnits.toLocaleString("en-US")} · Season ${seasonUnitsUsed}/${seasonCap}`,
+            ko: `보유 ${balance.toLocaleString("en-US")} − 신청 중 ${reservedUnits.toLocaleString("en-US")} · 시즌 ${seasonUnitsUsed}/${seasonCap}`,
+            zh: `持有 ${balance.toLocaleString("en-US")} − 申请中 ${reservedUnits.toLocaleString("en-US")} · 赛季 ${seasonUnitsUsed}/${seasonCap}`,
+            es: `Saldo ${balance.toLocaleString("en-US")} − reservado ${reservedUnits.toLocaleString("en-US")} · Temp. ${seasonUnitsUsed}/${seasonCap}`,
+            pt: `Saldo ${balance.toLocaleString("en-US")} − reservado ${reservedUnits.toLocaleString("en-US")} · Temp. ${seasonUnitsUsed}/${seasonCap}`,
+            fr: `Solde ${balance.toLocaleString("en-US")} − réservé ${reservedUnits.toLocaleString("en-US")} · Saison ${seasonUnitsUsed}/${seasonCap}`,
+          })}
         </Text>
         {submitBlocked ? (
           <Text style={styles.walletWarn}>
@@ -188,7 +208,7 @@ export default function RedemptionApplyScreenNative() {
         ) : null}
       </View>
 
-      <Text style={styles.label}>{isJa ? "商品区分" : "Tier"}</Text>
+      <Text style={styles.label}>{L(lang, { ja: "商品区分", en: "Tier", ko: "상품 구분", zh: "商品档位", es: "Nivel", pt: "Nível", fr: "Niveau" })}</Text>
       <View style={styles.kindRow}>
         {REDEMPTION_CATALOG.map((item) => {
           const on = item.kind === productKind;
@@ -199,7 +219,7 @@ export default function RedemptionApplyScreenNative() {
               style={[styles.kindChip, on && styles.kindChipOn]}
             >
               <Text style={[styles.kindText, on && styles.kindTextOn]}>
-                {isJa ? item.titleJa : item.titleEn}
+                {redemptionCatalogTitle(item, lang)}
               </Text>
             </Pressable>
           );
@@ -208,22 +228,22 @@ export default function RedemptionApplyScreenNative() {
       {selected ? (
         <Text style={styles.hint}>
           {selected.unitsRequired} Unit ·{" "}
-          {redemptionPriceCapShort(selected, lang)}
+          {redemptionPriceCapShort(selected, catalogLang)}
         </Text>
       ) : null}
 
       {(
         [
-          [isJa ? "商品名" : "Product name", productName, setProductName],
-          [isJa ? "URL" : "URL", productUrl, setProductUrl],
-          [isJa ? "販売店" : "Store", storeName, setStoreName],
-          [isJa ? "サイズ" : "Size", size, setSize],
-          [isJa ? "カラー" : "Color", color, setColor],
-          [isJa ? "氏名" : "Name", shippingName, setShippingName],
-          [isJa ? "郵便番号" : "Postal", shippingPostalCode, setShippingPostalCode],
-          [isJa ? "住所" : "Address", shippingAddress, setShippingAddress],
-          [isJa ? "電話" : "Phone", shippingPhone, setShippingPhone],
-          [isJa ? "国" : "Country", shippingCountry, setShippingCountry],
+          [L(lang, { ja: "商品名", en: "Product name", ko: "상품명", zh: "商品名", es: "Producto", pt: "Produto", fr: "Produit" }), productName, setProductName],
+          [L(lang, { ja: "URL", en: "URL", ko: "URL", zh: "URL", es: "URL", pt: "URL", fr: "URL" }), productUrl, setProductUrl],
+          [L(lang, { ja: "販売店", en: "Store", ko: "판매점", zh: "店铺", es: "Tienda", pt: "Loja", fr: "Magasin" }), storeName, setStoreName],
+          [L(lang, { ja: "サイズ", en: "Size", ko: "사이즈", zh: "尺码", es: "Talla", pt: "Tamanho", fr: "Taille" }), size, setSize],
+          [L(lang, { ja: "カラー", en: "Color", ko: "색상", zh: "颜色", es: "Color", pt: "Cor", fr: "Couleur" }), color, setColor],
+          [L(lang, { ja: "氏名", en: "Name", ko: "성명", zh: "姓名", es: "Nombre", pt: "Nome", fr: "Nom" }), shippingName, setShippingName],
+          [L(lang, { ja: "郵便番号", en: "Postal", ko: "우편번호", zh: "邮编", es: "CP", pt: "CEP", fr: "CP" }), shippingPostalCode, setShippingPostalCode],
+          [L(lang, { ja: "住所", en: "Address", ko: "주소", zh: "地址", es: "Dirección", pt: "Endereço", fr: "Adresse" }), shippingAddress, setShippingAddress],
+          [L(lang, { ja: "電話", en: "Phone", ko: "전화", zh: "电话", es: "Teléfono", pt: "Telefone", fr: "Téléphone" }), shippingPhone, setShippingPhone],
+          [L(lang, { ja: "国", en: "Country", ko: "국가", zh: "国家", es: "País", pt: "País", fr: "Pays" }), shippingCountry, setShippingCountry],
         ] as const
       ).map(([label, value, set]) => (
         <View key={label} style={styles.field}>
@@ -239,7 +259,7 @@ export default function RedemptionApplyScreenNative() {
       ))}
 
       <View style={styles.field}>
-        <Text style={styles.label}>{isJa ? "補足" : "Notes"}</Text>
+        <Text style={styles.label}>{L(lang, { ja: "補足", en: "Notes", ko: "메모", zh: "备注", es: "Notas", pt: "Notas", fr: "Notes" })}</Text>
         <TextInput
           style={[styles.input, styles.textarea]}
           value={notes}
@@ -257,9 +277,7 @@ export default function RedemptionApplyScreenNative() {
       >
         <View style={[styles.checkbox, consent && styles.checkboxOn]} />
         <Text style={styles.consentText}>
-          {isJa
-            ? REDEMPTION_APPLY_CONSENT.label.ja
-            : REDEMPTION_APPLY_CONSENT.label.en}
+          {L(lang, REDEMPTION_APPLY_CONSENT.label)}
         </Text>
       </Pressable>
 
@@ -270,7 +288,7 @@ export default function RedemptionApplyScreenNative() {
           onPress={() => void submit(false)}
         >
           <Text style={styles.primaryBtnText}>
-            {isJa ? "申請する" : "Submit"}
+            {L(lang, { ja: "申請する", en: "Submit", ko: "신청", zh: "提交", es: "Enviar", pt: "Enviar", fr: "Envoyer" })}
           </Text>
         </Pressable>
         <Pressable
@@ -279,7 +297,7 @@ export default function RedemptionApplyScreenNative() {
           onPress={() => void submit(true)}
         >
           <Text style={styles.ghostBtnText}>
-            {isJa ? "下書き" : "Draft"}
+            {L(lang, { ja: "下書き", en: "Draft", ko: "초안", zh: "草稿", es: "Borrador", pt: "Rascunho", fr: "Brouillon" })}
           </Text>
         </Pressable>
       </View>

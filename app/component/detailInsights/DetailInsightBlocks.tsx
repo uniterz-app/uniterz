@@ -27,14 +27,14 @@ type ChipRowProps = {
   chips: DetailInsightChip[];
   accent: string;
   title?: string;
-  isJa?: boolean;
+  language?: string;
 };
 
 export function DetailIdentityChipRow({
   chips,
   accent,
   title,
-  isJa = true,
+  language = "ja",
 }: ChipRowProps) {
   const [explain, setExplain] = useState<DetailChipExplainPayload | null>(
     null
@@ -55,11 +55,7 @@ export function DetailIdentityChipRow({
               key={chip.id}
               type="button"
               onClick={() =>
-                setExplain({
-                  label: chip.label,
-                  hintJa: chip.hintJa,
-                  hintEn: chip.hintEn,
-                })
+                setExplain({ label: chip.label, hint: chip.hint })
               }
               className="shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide transition-opacity hover:opacity-90 active:opacity-75"
               style={{ borderColor: accent, color: accent }}
@@ -72,7 +68,7 @@ export function DetailIdentityChipRow({
       <DetailChipExplainModal
         open={explain != null}
         payload={explain}
-        isJa={isJa}
+        language={language}
         accent={accent}
         onClose={() => setExplain(null)}
       />

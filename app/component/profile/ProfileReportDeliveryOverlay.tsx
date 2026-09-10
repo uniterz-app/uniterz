@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { nameOxanium } from "@/lib/fonts";
 import type { ActiveReportOverlay } from "@/lib/reports/useProReportDeliveryOverlay";
 import { formatReportPeriodLabel } from "@/lib/reports/reportDelivery";
+import { L, resolveLocalizedLang } from "@/lib/i18n/localize";
 
 const WeeklyReportView = dynamic(
   () => import("@/app/component/reports/WeeklyReportView"),
@@ -17,7 +18,7 @@ const MonthlyReportView = dynamic(
 
 type Props = {
   active: ActiveReportOverlay;
-  language: "ja" | "en";
+  language: string;
   onDismiss: () => void;
 };
 
@@ -27,20 +28,14 @@ export default function ProfileReportDeliveryOverlay({
   language,
   onDismiss,
 }: Props) {
-  const isJa = language === "ja";
+  const lang = resolveLocalizedLang(language);
+  const catalogLang = lang === "ja" ? ("ja" as const) : ("en" as const);
   const kind = active.candidate.kind;
-  const title =
-    kind === "weekly"
-      ? isJa
-        ? "WEEKLY REPORT"
-        : "WEEKLY REPORT"
-      : isJa
-        ? "MONTHLY REPORT"
-        : "MONTHLY REPORT";
+  const title = kind === "weekly" ? "WEEKLY REPORT" : "MONTHLY REPORT";
   const period = formatReportPeriodLabel(
     kind,
     active.candidate.periodKey,
-    language
+    catalogLang
   );
 
   if (typeof document === "undefined") return null;
@@ -75,31 +70,53 @@ export default function ProfileReportDeliveryOverlay({
             onClick={onDismiss}
             className="shrink-0 rounded-lg border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-semibold text-white/80 transition hover:bg-white/10"
           >
-            {isJa ? "閉じる" : "Close"}
+            {L(lang, {
+              ja: "閉じる",
+              en: "Close",
+              ko: "닫기",
+              zh: "关闭",
+              es: "Cerrar",
+              pt: "Fechar",
+              fr: "Fermer",
+            })}
           </button>
         </header>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-3 py-4">
           {kind === "weekly" && active.weekly ? (
-            <WeeklyReportView report={active.weekly} language={language} />
+            <WeeklyReportView report={active.weekly} language={lang} />
           ) : null}
           {kind === "monthly" && active.monthly ? (
-            <MonthlyReportView report={active.monthly} language={language} />
+            <MonthlyReportView report={active.monthly} language={lang} />
           ) : null}
         </div>
 
         <footer className="border-t border-white/8 px-4 py-3">
           <p className="text-center text-[11px] leading-relaxed text-white/45">
-            {isJa
-              ? "Report タブに保存されました。いつでも見返せます。"
-              : "Saved to the Report tab. You can revisit anytime."}
+            {L(lang, {
+              ja: "Report タブに保存されました。いつでも見返せます。",
+              en: "Saved to the Report tab. You can revisit anytime.",
+              ko: "Report 탭에 저장되었습니다. 언제든 다시 볼 수 있습니다.",
+              zh: "已保存到 Report 标签，可随时回看。",
+              es: "Guardado en la pestaña Report. Puedes volver cuando quieras.",
+              pt: "Salvo na aba Report. Você pode revisar quando quiser.",
+              fr: "Enregistré dans l’onglet Report. Revenez quand vous voulez.",
+            })}
           </p>
           <button
             type="button"
             onClick={onDismiss}
             className="mt-2 flex min-h-11 w-full items-center justify-center rounded-xl border border-cyan-300/40 bg-cyan-400/12 text-sm font-semibold text-cyan-100 transition hover:bg-cyan-400/18"
           >
-            {isJa ? "OK" : "Got it"}
+            {L(lang, {
+              ja: "OK",
+              en: "Got it",
+              ko: "확인",
+              zh: "知道了",
+              es: "Entendido",
+              pt: "Entendi",
+              fr: "Compris",
+            })}
           </button>
         </footer>
       </div>

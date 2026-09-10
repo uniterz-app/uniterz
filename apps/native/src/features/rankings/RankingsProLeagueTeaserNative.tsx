@@ -66,11 +66,11 @@ export function RankingsProLeagueTeaserNative({
   onPressSubscribe,
   onBackToPickUp,
 }: {
-  language: "ja" | "en";
+  language: import("./rankingsTexts").RankingsLanguage;
   onPressSubscribe: () => void;
   onBackToPickUp?: () => void;
 }) {
-  const lang = language === "en" ? "en" : "ja";
+  const lang = language === "ja" ? "ja" : "en";
   const copy = proLeagueGateCopy(lang);
   const rows = useMemo(() => buildProLeagueTeaserRows(), []);
 

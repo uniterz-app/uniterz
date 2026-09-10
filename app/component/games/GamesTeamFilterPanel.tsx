@@ -14,6 +14,7 @@ import {
 import type { TeamFilterMatchMode } from "@/lib/games/gameTeamFilter";
 import { t } from "@/lib/i18n/t";
 import type { Language } from "@/lib/i18n/language";
+import { L, resolveLocalizedLang } from "@/lib/i18n/localize";
 import type { League } from "@/lib/leagues";
 import {
   getTeamPrimaryColor,
@@ -107,6 +108,25 @@ export default function GamesTeamFilterPanel({
   league,
 }: Props) {
   const m = t(language);
+  const loc = resolveLocalizedLang(language);
+  const filterKicker = L(loc, {
+    ja: "FILTER // 試合",
+    en: "FILTER // SCHEDULE",
+    ko: "FILTER // 경기",
+    zh: "FILTER // 赛程",
+    es: "FILTER // PARTIDOS",
+    pt: "FILTER // JOGOS",
+    fr: "FILTER // MATCHS",
+  });
+  const teamSearchLabel = L(loc, {
+    ja: "チーム検索",
+    en: "TEAM SEARCH",
+    ko: "팀 검색",
+    zh: "搜索球队",
+    es: "BUSCAR EQUIPO",
+    pt: "BUSCAR TIME",
+    fr: "RECHERCHER ÉQUIPE",
+  });
   const reduceMotion = useReducedMotion();
   const tabFont = bracketMarketTeamTypography(layoutMobile);
   const teamNameFont = matchCardTeamNameStyle(layoutMobile);
@@ -212,7 +232,7 @@ export default function GamesTeamFilterPanel({
         <div className="games-filter-panel-header md:px-5 md:pt-4">
           <div className="min-w-0 flex-1">
             <p className={nameOxanium.className + " games-filter-kicker"}>
-              {language === "ja" ? "FILTER // 試合" : "FILTER // SCHEDULE"}
+              {filterKicker}
             </p>
             <h2
               id="games-team-filter-title"
@@ -336,7 +356,7 @@ export default function GamesTeamFilterPanel({
         >
           <div className="games-filter-team-search-head">
             <p className="games-filter-section-label mb-2" style={tabFont}>
-              {language === "ja" ? "チーム検索" : "TEAM SEARCH"}
+              {teamSearchLabel}
             </p>
             <div className="relative">
               <Search
@@ -627,7 +647,7 @@ export default function GamesTeamFilterPanel({
                   : `≤${marginMax}`
             }
           >
-            {language === "ja"
+            {loc === "ja"
               ? marginMin != null && marginMax != null
                 ? `${marginMin}〜${marginMax}`
                 : marginMin != null

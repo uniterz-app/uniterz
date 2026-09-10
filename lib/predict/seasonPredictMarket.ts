@@ -4,11 +4,25 @@
  * アワード: 賞ごと Top5。
  */
 
+import type { UiStrings } from "@/lib/i18n/ui";
 import {
   NBA_STANDINGS_RANKS,
   type NbaConferenceId,
 } from "@/lib/nba/nbaConferenceTeams";
 import type { NbaAwardId } from "@/lib/predict/nbaSeasonAwardsPredict";
+
+/** 「2–6」「1–3」など数字だけの帯は全言語同じ表記 */
+function numericBandLabel(range: string): UiStrings {
+  return {
+    ja: range,
+    en: range,
+    ko: range,
+    zh: range,
+    es: range,
+    pt: range,
+    fr: range,
+  };
+}
 
 /** 順位帯（粗い帯・レガシー） */
 export type SeasonStandingsMarketBandId =
@@ -19,30 +33,39 @@ export type SeasonStandingsMarketBandId =
 
 export const SEASON_STANDINGS_MARKET_BANDS: readonly {
   id: SeasonStandingsMarketBandId;
-  labelJa: string;
-  labelEn: string;
+  label: UiStrings;
   ranks: readonly number[];
   color: string;
 }[] = [
-  { id: "first", labelJa: "1位", labelEn: "1st", ranks: [1], color: "#00E5FF" },
+  {
+    id: "first",
+    label: {
+      ja: "1位",
+      en: "1st",
+      ko: "1위",
+      zh: "第1名",
+      es: "1.º",
+      pt: "1.º",
+      fr: "1er",
+    },
+    ranks: [1],
+    color: "#00E5FF",
+  },
   {
     id: "straight",
-    labelJa: "2–6",
-    labelEn: "2–6",
+    label: numericBandLabel("2–6"),
     ranks: [2, 3, 4, 5, 6],
     color: "#67E8F9",
   },
   {
     id: "playin",
-    labelJa: "7–10",
-    labelEn: "7–10",
+    label: numericBandLabel("7–10"),
     ranks: [7, 8, 9, 10],
     color: "#2DFF6E",
   },
   {
     id: "out",
-    labelJa: "11–15",
-    labelEn: "11–15",
+    label: numericBandLabel("11–15"),
     ranks: [11, 12, 13, 14, 15],
     color: "rgba(255,255,255,0.28)",
   },
@@ -58,43 +81,37 @@ export type SeasonStandingsDetailBandId =
 
 export const SEASON_STANDINGS_DETAIL_BANDS: readonly {
   id: SeasonStandingsDetailBandId;
-  labelJa: string;
-  labelEn: string;
+  label: UiStrings;
   ranks: readonly number[];
   color: string;
 }[] = [
   {
     id: "b1_3",
-    labelJa: "1–3",
-    labelEn: "1–3",
+    label: numericBandLabel("1–3"),
     ranks: [1, 2, 3],
     color: "#00E5FF",
   },
   {
     id: "b4_6",
-    labelJa: "4–6",
-    labelEn: "4–6",
+    label: numericBandLabel("4–6"),
     ranks: [4, 5, 6],
     color: "#67E8F9",
   },
   {
     id: "b7_9",
-    labelJa: "7–9",
-    labelEn: "7–9",
+    label: numericBandLabel("7–9"),
     ranks: [7, 8, 9],
     color: "#2DFF6E",
   },
   {
     id: "b10_12",
-    labelJa: "10–12",
-    labelEn: "10–12",
+    label: numericBandLabel("10–12"),
     ranks: [10, 11, 12],
     color: "#F5C518",
   },
   {
     id: "b13_15",
-    labelJa: "13–15",
-    labelEn: "13–15",
+    label: numericBandLabel("13–15"),
     ranks: [13, 14, 15],
     color: "rgba(255,255,255,0.32)",
   },
@@ -146,8 +163,10 @@ export type SeasonAwardsMarketPickRow = {
 
 export type SeasonAwardsMarketAwardBlock = {
   awardId: NbaAwardId;
+  /** MVP / DPOY … 言語非依存の略号 */
   labelEn: string;
-  labelJa: string;
+  /** 賞の正式名（7言語） */
+  name: UiStrings;
   top: readonly SeasonAwardsMarketPickRow[];
 };
 
@@ -202,15 +221,13 @@ export function standingsDetailBandWidths(
   detailBandPct: Readonly<Record<SeasonStandingsDetailBandId, number>>
 ): readonly {
   id: SeasonStandingsDetailBandId;
-  labelJa: string;
-  labelEn: string;
+  label: UiStrings;
   pct: number;
   color: string;
 }[] {
   return SEASON_STANDINGS_DETAIL_BANDS.map((b) => ({
     id: b.id,
-    labelJa: b.labelJa,
-    labelEn: b.labelEn,
+    label: b.label,
     pct: detailBandPct[b.id] ?? 0,
     color: b.color,
   }));

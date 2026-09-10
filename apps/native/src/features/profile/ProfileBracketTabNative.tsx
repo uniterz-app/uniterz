@@ -5,19 +5,22 @@ import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { BlocksPulseLoader } from "../../components/BlocksPulseLoader";
 import PlayoffFullBracketNative from "../games/playoffBracket/PlayoffFullBracketNative";
 import { useNativePlayoffBracketView } from "../games/playoffBracket/useNativePlayoffBracketView";
+import { profileBracketTabCopy } from "./profileOverviewWidgetsCopy";
+import { resolveLocalizedLang } from "../../../../../lib/i18n/localize";
 
 type Props = {
   uid: string | undefined;
-  language: "ja" | "en";
+  language: string;
 };
 
 export default function ProfileBracketTabNative({ uid, language }: Props) {
-  const isJa = language === "ja";
+  const copy = profileBracketTabCopy(language);
+  const langJaEn = resolveLocalizedLang(language) === "ja" ? "ja" : "en";
   const { loading, display, savedBracket, score, season, officialResults, hasSubmitted } =
     useNativePlayoffBracketView(uid);
 
   if (!uid) {
-    return <Text style={styles.muted}>{isJa ? "ログインが必要です" : "Sign in required"}</Text>;
+    return <Text style={styles.muted}>{copy.signIn}</Text>;
   }
 
   if (loading) {
@@ -33,7 +36,7 @@ export default function ProfileBracketTabNative({ uid, language }: Props) {
       <View style={styles.noDataBox}>
         <Text style={styles.noDataBebas}>NO DATA</Text>
         <Text style={styles.muted}>
-          {isJa ? "提出済みのプレーオフブラケットがありません" : "No playoff bracket submitted"}
+          {copy.noBracket}
         </Text>
       </View>
     );
@@ -56,7 +59,7 @@ export default function ProfileBracketTabNative({ uid, language }: Props) {
         champion={display.champion}
         bracket={savedBracket ?? undefined}
         results={officialResults ?? undefined}
-        hitLegend={{ language }}
+        hitLegend={{ language: langJaEn }}
       />
     </ScrollView>
   );

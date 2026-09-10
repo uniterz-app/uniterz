@@ -12,7 +12,7 @@ import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 export default function MobileLawPage() {
   const { fUser: user } = useFirebaseUser();
   const { language } = useUserLanguage(user?.uid ?? null);
-  const lang = language === "en" ? "en" : "ja";
+  const lang = language === "ja" ? "ja" : "en";
 
   return (
     <LegalPageLayout

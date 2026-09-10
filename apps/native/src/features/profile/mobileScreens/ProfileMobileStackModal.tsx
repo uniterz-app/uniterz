@@ -11,13 +11,17 @@ import MobilePlanStatusScreen from "./MobilePlanStatusScreen";
 import ProSubscribePreviewNative from "./ProSubscribePreviewNative";
 import MobileCommunityGuidelinesScreen from "./MobileCommunityGuidelinesScreen";
 import MobileLegalWebViewScreen from "./MobileLegalWebViewScreen";
+import {
+  profileMobileStackCopy,
+  profileMobileWebviewTitle,
+} from "../profileMobileStackCopy";
 
 type Props = {
   kind: ProfileMobileOverlayKind;
   onClose: () => void;
   /** プラン画面から「アップグレード」など同一モーダル内の遷移 */
   onNavigate: (next: ProfileMobileOverlayKind) => void;
-  language: "ja" | "en";
+  language: string;
   uid: string | undefined;
   authReady: boolean;
   plan: "free" | "pro";
@@ -37,16 +41,17 @@ export default function ProfileMobileStackModal({
   readIds,
 }: Props) {
   const visible = kind != null;
+  const stackCopy = profileMobileStackCopy(language);
 
   const openWebPath = useMemo(
     () => (path: string) => {
       if (!apiBase) {
-        cyberAlert("", language === "ja" ? "Web URL が未設定です。" : "Web URL is not configured.");
+        cyberAlert("", stackCopy.webUrlMissing);
         return;
       }
       void Linking.openURL(`${apiBase.replace(/\/$/, "")}${path}`).catch(() => {});
     },
-    [apiBase, language]
+    [apiBase, stackCopy.webUrlMissing]
   );
 
   const webviewPath = kind && typeof kind === "object" && "webview" in kind ? kind.webview : null;
@@ -87,25 +92,17 @@ export default function ProfileMobileStackModal({
           <MobileLegalWebViewScreen
             apiBase={apiBase}
             path={webviewPath}
-            title={webviewTitle(webviewPath, language)}
+            title={profileMobileWebviewTitle(webviewPath, language)}
             onClose={onClose}
           />
         ) : webviewPath && !apiBase ? (
           <View style={styles.missing}>
-            <Text style={styles.missingText}>
-              {language === "ja" ? "Web URL が未設定です。" : "Web URL is not configured."}
-            </Text>
+            <Text style={styles.missingText}>{stackCopy.webUrlMissing}</Text>
           </View>
         ) : null}
       </View>
     </Modal>
   );
-}
-
-function webviewTitle(path: string, language: "ja" | "en"): string {
-  if (path.includes("help")) return language === "ja" ? "ヘルプ" : "Help";
-  if (path.includes("terms")) return language === "ja" ? "利用規約" : "Terms";
-  return language === "ja" ? "お問い合わせ" : "Contact";
 }
 
 const styles = StyleSheet.create({

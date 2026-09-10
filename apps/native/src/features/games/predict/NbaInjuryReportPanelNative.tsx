@@ -10,10 +10,15 @@ import {
   type NbaInjuryReport,
   type NbaInjuryTeamReport,
 } from "../../../../../../lib/predict/nbaInjuryReport";
+import {
+  injuryReportCountLabel,
+  injuryReportUiCopy,
+  resolveInjuryReportUiLang,
+} from "../../../../../../lib/predict/injuryReportUiCopy";
 import { NBA_TEAM_NAME_BY_ID } from "../../../../../../lib/nba-team-names";
 import { getMobileTeamName } from "../../../../../../lib/team-name-split-mobile";
 import type { GamesLanguage } from "../gamesI18n";
-import { MATCH_CARD_DISPLAY_FONT } from "../matchCardTypography";
+import { MATCH_CARD_TEAM_NAME_FONT } from "../matchCardTypography";
 
 type Props = {
   report: NbaInjuryReport;
@@ -44,9 +49,8 @@ function InjuryCard({
 }) {
   const tone = injuryStatusTone(row.status);
   const colors = TONE_COLORS[tone] ?? TONE_COLORS.neutral;
-  const lang = language === "ja" ? "ja" : "en";
   const statusShort = injuryStatusShortLabel(row.status);
-  const detail = injuryDetailLabel(row, lang);
+  const detail = injuryDetailLabel(row, language);
   const expected = (row.returnDate ?? "—").toUpperCase();
   const playerName = playerCardName(row.player);
 
@@ -128,7 +132,8 @@ function TeamColumn({
   onPlayerPress?: (playerId: string) => void;
 }) {
   const rows = sortInjuryEntries(team.entries);
-  const countLabel = language === "ja" ? `${rows.length}名` : `${rows.length}`;
+  const ui = injuryReportUiCopy(resolveInjuryReportUiLang(language));
+  const countLabel = injuryReportCountLabel(rows.length, language);
 
   return (
     <View style={styles.column}>
@@ -139,9 +144,7 @@ function TeamColumn({
         <Text style={styles.columnCount}>{countLabel}</Text>
       </View>
       {rows.length === 0 ? (
-        <Text style={styles.empty}>
-          {language === "ja" ? "怪我人なし" : "No injuries"}
-        </Text>
+        <Text style={styles.empty}>{ui.noInjuries}</Text>
       ) : (
         rows.map((row) => {
           const rowKey = `${team.side}-${row.player.id}-${row.status}`;
@@ -164,6 +167,7 @@ export default function NbaInjuryReportPanelNative({
   language,
   onPlayerPress,
 }: Props) {
+  const ui = injuryReportUiCopy(resolveInjuryReportUiLang(language));
   return (
     <View>
       <View style={styles.grid}>
@@ -180,7 +184,7 @@ export default function NbaInjuryReportPanelNative({
       </View>
       {report.asOfLabel ? (
         <Text style={styles.asOf}>
-          {language === "ja" ? "更新" : "Updated"} · {report.asOfLabel}
+          {ui.updated} · {report.asOfLabel}
         </Text>
       ) : null}
     </View>
@@ -201,9 +205,9 @@ const styles = StyleSheet.create({
   },
   columnTitle: {
     flex: 1,
-    fontFamily: MATCH_CARD_DISPLAY_FONT,
+    fontFamily: MATCH_CARD_TEAM_NAME_FONT,
     fontSize: 15,
-    fontWeight: "400",
+    fontWeight: "800",
     letterSpacing: 1.2,
     lineHeight: 18,
     color: "#fff",

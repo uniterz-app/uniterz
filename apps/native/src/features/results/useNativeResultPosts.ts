@@ -31,7 +31,7 @@ import {
 
 export function useNativeResultPosts(
   uid: string | null | undefined,
-  language: "ja" | "en",
+  language: import("../../../../../lib/i18n/language").Language,
   options?: {
     league: ResultListLeagueTab | null;
     enabled?: boolean;

@@ -4,6 +4,7 @@
  */
 import type { ProBriefPlayerItem } from "@/lib/predict/predictProBrief";
 import type { ProBriefPhase } from "@/lib/predict/predictProBrief";
+import { proBriefPlayer } from "@/lib/predict/predictProBrief";
 import type { NbaLeagueTeamStatRow } from "@/lib/predict/nbaLeagueTeamStatsMocks";
 import type {
   NbaPlayerStatLeaderRow,
@@ -89,14 +90,27 @@ export function buildPlayerLinesForTeam(input: {
     const shareRank = leagueIndex(season.pct_pts_paint, p.playerId);
     const score = clashScore(paintRank ?? shareRank, oppPaintDef) + 2;
     if (score < 8) continue;
+    const mine = paintRank ?? "—";
+    const opp = oppPaintDef ?? "—";
     candidates.push({
       kind: "paint",
       score,
-      playerId: p.playerId,
-      playerName: shortPlayerName(p.playerName),
-      label: "PAINT EDGE",
-      detailJa: `ペイント得点 #${paintRank ?? "—"} · 相手守備 #${oppPaintDef ?? "—"}`,
-      detailEn: `Paint PPG #${paintRank ?? "—"} · Opp defense #${oppPaintDef ?? "—"}`,
+      ...proBriefPlayer(
+        {
+          playerId: p.playerId,
+          playerName: shortPlayerName(p.playerName),
+          label: "PAINT EDGE",
+        },
+        {
+          ja: `ペイント得点 #${mine} · 相手守備 #${opp}`,
+          en: `Paint PPG #${mine} · Opp defense #${opp}`,
+          ko: `페인트 득점 #${mine} · 상대 수비 #${opp}`,
+          zh: `油漆区得分 #${mine} · 对手防守 #${opp}`,
+          es: `PTS en pintura #${mine} · Defensa rival #${opp}`,
+          pt: `PTS no garrafão #${mine} · Defesa adv. #${opp}`,
+          fr: `Pts dans la raquette #${mine} · Défense adv. #${opp}`,
+        }
+      ),
     });
   }
 
@@ -106,14 +120,27 @@ export function buildPlayerLinesForTeam(input: {
     const pctRank = leagueIndex(season.fg3_pct, p.playerId);
     const score = clashScore(mRank ?? pctRank, opp3Def) + 1;
     if (score < 8) continue;
+    const mine = mRank ?? "—";
+    const opp = opp3Def ?? "—";
     candidates.push({
       kind: "three",
       score,
-      playerId: p.playerId,
-      playerName: shortPlayerName(p.playerName),
-      label: "3-POINT EDGE",
-      detailJa: `3PM #${mRank ?? "—"} · 相手被3P #${opp3Def ?? "—"}`,
-      detailEn: `3PM #${mRank ?? "—"} · Opp 3P% allowed #${opp3Def ?? "—"}`,
+      ...proBriefPlayer(
+        {
+          playerId: p.playerId,
+          playerName: shortPlayerName(p.playerName),
+          label: "3-POINT EDGE",
+        },
+        {
+          ja: `3PM #${mine} · 相手被3P #${opp}`,
+          en: `3PM #${mine} · Opp 3P% allowed #${opp}`,
+          ko: `3점 성공 #${mine} · 상대 3P% 허용 #${opp}`,
+          zh: `三分命中 #${mine} · 对手三分被命中率 #${opp}`,
+          es: `Triples anotados #${mine} · 3P% permitido rival #${opp}`,
+          pt: `Bolas de 3 #${mine} · 3P% cedido adv. #${opp}`,
+          fr: `3 pts marqués #${mine} · 3P% concédé adv. #${opp}`,
+        }
+      ),
     });
   }
 
@@ -128,20 +155,27 @@ export function buildPlayerLinesForTeam(input: {
     if (hotBoost < 5 && l10Rank > 40) continue;
     const score = Math.max(0, 18 - l10Rank) + hotBoost;
     if (score < 10) continue;
+    const seasonSuffix = (open: string, close: string) =>
+      seasonRank != null ? `${open}${seasonRank}${close}` : "";
     candidates.push({
       kind: "hot",
       score,
-      playerId: p.playerId,
-      playerName: shortPlayerName(p.playerName),
-      label: "LAST 10 FORM",
-      detailJa:
-        seasonRank != null
-          ? `直近10 得点 #${l10Rank}（今季 #${seasonRank}）`
-          : `直近10 得点 #${l10Rank}`,
-      detailEn:
-        seasonRank != null
-          ? `Last 10 PTS #${l10Rank} (season #${seasonRank})`
-          : `Last 10 PTS #${l10Rank}`,
+      ...proBriefPlayer(
+        {
+          playerId: p.playerId,
+          playerName: shortPlayerName(p.playerName),
+          label: "LAST 10 FORM",
+        },
+        {
+          ja: `直近10 得点 #${l10Rank}${seasonSuffix("（今季 #", "）")}`,
+          en: `Last 10 PTS #${l10Rank}${seasonSuffix(" (season #", ")")}`,
+          ko: `최근 10경기 득점 #${l10Rank}${seasonSuffix(" (시즌 #", ")")}`,
+          zh: `近 10 场得分 #${l10Rank}${seasonSuffix("（赛季 #", "）")}`,
+          es: `Últimos 10 PTS #${l10Rank}${seasonSuffix(" (temporada #", ")")}`,
+          pt: `Últimos 10 PTS #${l10Rank}${seasonSuffix(" (temporada #", ")")}`,
+          fr: `10 derniers PTS #${l10Rank}${seasonSuffix(" (saison #", ")")}`,
+        }
+      ),
     });
   }
 
@@ -153,11 +187,22 @@ export function buildPlayerLinesForTeam(input: {
     candidates.push({
       kind: "hot3",
       score,
-      playerId: p.playerId,
-      playerName: shortPlayerName(p.playerName),
-      label: "HOT 3PT",
-      detailJa: `直近10 3P% #${l10Rank}`,
-      detailEn: `Last 10 3P% #${l10Rank}`,
+      ...proBriefPlayer(
+        {
+          playerId: p.playerId,
+          playerName: shortPlayerName(p.playerName),
+          label: "HOT 3PT",
+        },
+        {
+          ja: `直近10 3P% #${l10Rank}`,
+          en: `Last 10 3P% #${l10Rank}`,
+          ko: `최근 10경기 3P% #${l10Rank}`,
+          zh: `近 10 场三分命中率 #${l10Rank}`,
+          es: `Últimos 10 3P% #${l10Rank}`,
+          pt: `Últimos 10 3P% #${l10Rank}`,
+          fr: `10 derniers 3P% #${l10Rank}`,
+        }
+      ),
     });
   }
 
@@ -176,6 +221,7 @@ export function buildPlayerLinesForTeam(input: {
       label: c.label,
       detailJa: c.detailJa,
       detailEn: c.detailEn,
+      detail: c.detail,
     });
     if (picked.length >= PLAYERS_MAX) break;
   }

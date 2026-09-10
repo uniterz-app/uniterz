@@ -17,7 +17,7 @@ type League = "nba";
 type Props = {
   league: League;
   onChange: (league: League) => void;
-  language: "ja" | "en";
+  language: import("./rankingsTexts").RankingsLanguage;
   nbaBoard?: NbaRankingBoard;
   onSelectNbaRegular?: () => void;
   onSelectNbaPlayoffs?: () => void;
@@ -49,9 +49,8 @@ export default function RankingsDrawerMenuNative({
   onSelectNbaPlayoffs,
   onOpenSquadBattlePreview,
 }: Props) {
-  const isJa = language === "ja";
   const t = rankingsTexts(language);
-  const labelStyle = sideMenuLabelStyle(language);
+  const labelStyle = sideMenuLabelStyle(language === "ja" ? "ja" : "en");
   const nbaClusterActive = league === "nba";
   const regularActive =
     league === "nba" && (nbaBoard === "regular" || nbaBoard === "open");
@@ -61,7 +60,7 @@ export default function RankingsDrawerMenuNative({
   return (
     <View style={styles.root}>
       <CyberSideMenuSectionTitleNative first>
-        {isJa ? "ランキング" : "Rankings"}
+        {t.title}
       </CyberSideMenuSectionTitleNative>
       <View style={styles.itemGroup}>
         {showNbaBranch ? (

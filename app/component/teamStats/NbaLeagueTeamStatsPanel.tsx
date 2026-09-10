@@ -3,7 +3,8 @@
 import { useMemo, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ArrowDown, ArrowUp, X } from "lucide-react";
-import { nameOxanium, nameBebas, resultStatsMetricNumClass } from "@/lib/fonts";
+import { nameOxanium, resultStatsMetricNumClass } from "@/lib/fonts";
+import { L, resolveLocalizedLang } from "@/lib/i18n/localize";
 import { matchCardTeamNameStyle } from "@/lib/games/teamDisplayTypography";
 import { getMobileTeamName } from "@/lib/team-name-split-mobile";
 import { getTeamPrimaryColor } from "@/lib/team-colors";
@@ -44,7 +45,7 @@ import {
 
 type Props = {
   className?: string;
-  language?: "ja" | "en";
+  language?: string;
   onSelectTeam?: (teamId: string) => void;
 };
 
@@ -160,10 +161,10 @@ function CompareBar({
         <div className="min-w-0 text-left">
           <div
             className={[
-              nameBebas.className,
+              nameOxanium.className,
               "truncate text-[12px] leading-tight text-white",
             ].join(" ")}
-            style={{ ...teamNameTy, color: leftColor }}
+            style={{ ...teamNameTy, fontWeight: 600, letterSpacing: "0.04em", color: leftColor }}
           >
             {nick(left)}
           </div>
@@ -193,10 +194,10 @@ function CompareBar({
         <div className="min-w-0 text-right">
           <div
             className={[
-              nameBebas.className,
+              nameOxanium.className,
               "truncate text-[12px] leading-tight text-white",
             ].join(" ")}
-            style={{ ...teamNameTy, color: rightColor }}
+            style={{ ...teamNameTy, fontWeight: 600, letterSpacing: "0.04em", color: rightColor }}
           >
             {nick(right)}
           </div>
@@ -275,11 +276,12 @@ export default function NbaLeagueTeamStatsPanel({
   language = "ja",
   onSelectTeam,
 }: Props) {
-  const isJa = language === "ja";
+  const lang = resolveLocalizedLang(language);
+  const isJa = lang === "ja";
   const reduceMotion = useReducedMotion();
   const { bundle, loading } = useLeagueTeamStatsBundle();
   const isPreseason = isNbaLeagueStatsPreseason();
-  const updateFootnote = nbaDailyStatsUpdateFootnote(isJa ? "ja" : "en", bundle.asOfLabel, {
+  const updateFootnote = nbaDailyStatsUpdateFootnote(lang, bundle.asOfLabel, {
     preseason: isPreseason,
   });
   const [phase, setPhase] = useState<NbaLeagueStatsPhase>("season");
@@ -332,7 +334,7 @@ export default function NbaLeagueTeamStatsPanel({
     .map((id) => rows.find((r) => r.teamId === id) ?? bundle.season.find((r) => r.teamId === id))
     .filter(Boolean) as NbaLeagueTeamStatRow[];
 
-  const emptyCopy = leagueStatsTableEmptyCopy(isJa ? "ja" : "en", mode);
+  const emptyCopy = leagueStatsTableEmptyCopy(lang, mode);
   const showEmptyTable =
     !loading &&
     (mode === "last10"
@@ -439,7 +441,7 @@ export default function NbaLeagueTeamStatsPanel({
           <p
             className={`${nameOxanium.className} mb-1.5 line-clamp-2 text-[12px] leading-[17px] text-[#00F5FF]/70`}
           >
-            {isJa ? metricMeta.hintJa : metricMeta.hintEn}
+            {L(lang, metricMeta.hint)}
           </p>
           {onSelectTeam ? null : (
             <p className="mb-1.5 text-[10px] text-[#00F5FF]/45">
@@ -560,10 +562,10 @@ export default function NbaLeagueTeamStatsPanel({
                       <span className="flex min-w-0 flex-1 items-center gap-2">
                         <span
                           className={[
-                            nameBebas.className,
-                            "truncate text-[17px] leading-tight text-white",
+                            nameOxanium.className,
+                            "truncate text-[14px] font-semibold leading-tight text-white",
                           ].join(" ")}
-                          style={teamNameTy}
+                          style={{ ...teamNameTy, fontWeight: 600, letterSpacing: "0.05em" }}
                         >
                           {nick(row)}
                         </span>

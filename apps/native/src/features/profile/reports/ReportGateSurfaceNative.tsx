@@ -28,8 +28,7 @@ import {
   PANEL_BG,
   REPORT_FRAME,
 } from "./reportThemeNative";
-
-type Lang = "ja" | "en";
+import { resolveLocalizedLang } from "../../../../../../lib/i18n/localize";
 
 const BULLET_ICONS: Record<
   ReportGateBulletIcon,
@@ -65,7 +64,7 @@ function TitleWithBrandFontsNative({ title }: { title: string }) {
 
 type Props = {
   kind: ReportGateKind;
-  language: Lang;
+  language: string;
   preview?: ReactNode;
   style?: StyleProp<ViewStyle>;
   showCta?: boolean;
@@ -86,11 +85,13 @@ export default function ReportGateSurfaceNative({
   showCta = true,
   onPressCta,
 }: Props) {
-  const copy = reportGateCopy(kind, language);
+  const lang = resolveLocalizedLang(language);
+  const copy = reportGateCopy(kind, lang);
   const showBlur = BLUR_KINDS.includes(kind) && preview != null;
   const ctaVisible = Boolean(showCta && copy.cta && onPressCta);
   const period = gatePeriod(kind);
   const frame = REPORT_FRAME[period];
+  const useLatinChrome = lang === "en" || lang === "es" || lang === "pt" || lang === "fr";
 
   const message = (
     <View style={styles.message}>
@@ -101,14 +102,14 @@ export default function ReportGateSurfaceNative({
             <ProCyberBadgeNative premium />
           </View>
         </View>
-        <Text style={[styles.title, { fontFamily: language === "en" ? OXANIUM_800 : JP_700 }]}>
+        <Text style={[styles.title, { fontFamily: useLatinChrome ? OXANIUM_800 : JP_700 }]}>
           {kind === "free" || kind === "monthlyLocked" ? (
             <TitleWithBrandFontsNative title={copy.title} />
           ) : (
             copy.title
           )}
         </Text>
-        <Text style={[styles.body, { fontFamily: language === "en" ? OXANIUM_700 : JP_400 }]}>
+        <Text style={[styles.body, { fontFamily: useLatinChrome ? OXANIUM_700 : JP_400 }]}>
           {copy.body}
         </Text>
         {ctaVisible ? (
@@ -156,7 +157,7 @@ export default function ReportGateSurfaceNative({
                   style={[
                     styles.bulletTitle,
                     {
-                      fontFamily: language === "en" ? OXANIUM_800 : JP_700,
+                      fontFamily: useLatinChrome ? OXANIUM_800 : JP_700,
                       color: period === "monthly" ? "#ede9fe" : "#ecfeff",
                     },
                   ]}
@@ -166,7 +167,7 @@ export default function ReportGateSurfaceNative({
                 <Text
                   style={[
                     styles.bulletDetail,
-                    { fontFamily: language === "en" ? OXANIUM_700 : JP_400 },
+                    { fontFamily: useLatinChrome ? OXANIUM_700 : JP_400 },
                   ]}
                 >
                   {item.detail}

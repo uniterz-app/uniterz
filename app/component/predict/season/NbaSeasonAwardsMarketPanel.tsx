@@ -4,6 +4,7 @@ import TeamAbbrBadge from "@/app/component/games/TeamAbbrBadge";
 import { nameOxanium } from "@/lib/fonts";
 import type { SeasonAwardsMarketSnapshot } from "@/lib/predict/seasonPredictMarket";
 import { nbaTeamIdFromBracketCode } from "@/lib/nba-bracket-code";
+import { awardName } from "@/lib/predict/nbaSeasonAwardsPredict";
 import {
   seasonPredictAwardsMarketHint,
   type SeasonPredictUiLang,
@@ -66,9 +67,9 @@ export default function NbaSeasonAwardsMarketPanel({
               >
                 {block.labelEn}
               </span>
-              {language !== "en" ? (
-                <span className="text-[10px] text-white/35">{block.labelJa}</span>
-              ) : null}
+              <span className="text-[10px] text-white/35">
+                {awardName(language, block)}
+              </span>
             </div>
             <ol className="space-y-1.5">
               {block.top.map((row, i) => {

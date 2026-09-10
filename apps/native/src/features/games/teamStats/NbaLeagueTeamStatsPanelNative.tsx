@@ -46,6 +46,10 @@ import {
 } from "../../../../../../lib/nba/leagueStatsTableTabs";
 import { getUniterzApiBaseUrl } from "../submitPredictionApi";
 import {
+  nbaLocalizedText,
+  nbaLeagueStatsChrome,
+} from "../stats/nbaStatsUiCopy";
+import {
   CyberSlantedTabBarNative,
   CyberSlantedTabNative,
   CYBER_TAB_CYAN,
@@ -54,17 +58,11 @@ import {
   METRIC_FONT,
   RANK_DISPLAY_FONT,
 } from "../../rankings/rankingsUiTheme";
-import {
-  MATCH_CARD_BRACKET_LETTER_SPACING_15,
-  MATCH_CARD_BRACKET_TEXT,
-} from "../matchCardTypography";
 import { CYBER_SIDE_MENU_PANEL } from "../../../ui/cyberSideMenuNative";
 import { useBottomTabBarInsets } from "../../../navigation/useBottomTabBarInsets";
 
-const OXANIUM_800 = "Oxanium_800ExtraBold";
-
 type Props = {
-  language: "ja" | "en";
+  language: string;
   onSelectTeam: (teamId: string) => void;
 };
 
@@ -112,7 +110,8 @@ export default function NbaLeagueTeamStatsPanelNative({
   language,
   onSelectTeam,
 }: Props) {
-  const isJa = language === "ja";
+  const chrome = nbaLeagueStatsChrome(language);
+  const { lang } = chrome;
   const { width: screenW } = useWindowDimensions();
   const railW = Math.round(screenW * 0.22);
   const { bottomContentReserveY } = useBottomTabBarInsets();
@@ -120,7 +119,7 @@ export default function NbaLeagueTeamStatsPanelNative({
     apiBaseUrl: getUniterzApiBaseUrl(),
   });
   const isPreseason = isNbaLeagueStatsPreseason();
-  const updateFootnote = nbaDailyStatsUpdateFootnote(isJa ? "ja" : "en", bundle.asOfLabel, {
+  const updateFootnote = nbaDailyStatsUpdateFootnote(lang, bundle.asOfLabel, {
     preseason: isPreseason,
   });
   const [phase, setPhase] = useState<NbaLeagueStatsPhase>("season");
@@ -168,7 +167,7 @@ export default function NbaLeagueTeamStatsPanelNative({
     return sortLeagueTeamRows(base, metric, sortDir);
   }, [bundle, phase, mode, metric, sortDir]);
 
-  const emptyCopy = leagueStatsTableEmptyCopy(isJa ? "ja" : "en", mode);
+  const emptyCopy = leagueStatsTableEmptyCopy(lang, mode);
   const showEmptyTable =
     !loading &&
     (mode === "last10"
@@ -187,9 +186,7 @@ export default function NbaLeagueTeamStatsPanelNative({
         <Text style={styles.asOf}>{updateFootnote}</Text>
         {error ? (
           <Text style={styles.fetchWarn}>
-            {isJa
-              ? `読み込み失敗（${error}）`
-              : `Failed to load (${error})`}
+            {chrome.loadFailed(error)}
           </Text>
         ) : null}
         <View style={styles.tabBlock}>
@@ -291,7 +288,7 @@ export default function NbaLeagueTeamStatsPanelNative({
 
         <View style={styles.main}>
           <Text style={styles.metricHint} numberOfLines={2}>
-            {isJa ? metricMeta.hintJa : metricMeta.hintEn}
+            {nbaLocalizedText(lang, metricMeta.hint)}
           </Text>
 
           {showEmptyTable ? (
@@ -314,24 +311,12 @@ export default function NbaLeagueTeamStatsPanelNative({
                   style={styles.thTeamBtn}
                   accessibilityRole="button"
                   accessibilityLabel={
-                    isJa
-                      ? sortDir === "desc"
-                        ? "降順。タップで昇順"
-                        : "昇順。タップで降順"
-                      : sortDir === "desc"
-                        ? "Descending. Tap for ascending"
-                        : "Ascending. Tap for descending"
+                    sortDir === "desc" ? chrome.sortA11yDesc : chrome.sortA11yAsc
                   }
                 >
                   <Text style={styles.th}>Team</Text>
                   <Text style={styles.thSortDir}>
-                    {isJa
-                      ? sortDir === "desc"
-                        ? "降順"
-                        : "昇順"
-                      : sortDir === "desc"
-                        ? "hi→lo"
-                        : "lo→hi"}
+                    {sortDir === "desc" ? chrome.sortDesc : chrome.sortAsc}
                   </Text>
                   <MaterialCommunityIcons
                     name={sortDir === "desc" ? "arrow-down" : "arrow-up"}
@@ -607,12 +592,14 @@ const styles = StyleSheet.create({
   },
   colTeamInner: { flex: 1, minWidth: 0 },
   tdTeam: {
-    ...MATCH_CARD_BRACKET_TEXT,
     flexShrink: 1,
+    fontFamily: "Oxanium_600SemiBold",
+    fontWeight: "600",
     color: "rgba(255,255,255,0.92)",
-    fontSize: 17,
-    letterSpacing: MATCH_CARD_BRACKET_LETTER_SPACING_15,
+    fontSize: 14,
+    letterSpacing: 0.5,
     textTransform: "uppercase",
+    includeFontPadding: false,
     transform: [{ skewX: "-6deg" }],
   },
   tdGp: {
@@ -638,9 +625,10 @@ const styles = StyleSheet.create({
   tdMetric: {
     width: 56,
     textAlign: "right",
-    fontFamily: OXANIUM_800,
+    fontFamily: METRIC_FONT,
+    fontWeight: "700",
     color: CYBER_TAB_CYAN,
-    fontSize: 14,
+    fontSize: 13,
     fontVariant: ["tabular-nums"],
     transform: [{ skewX: "-6deg" }],
   },

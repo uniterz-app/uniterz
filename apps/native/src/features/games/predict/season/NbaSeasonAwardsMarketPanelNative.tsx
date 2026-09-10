@@ -3,6 +3,7 @@ import { StyleSheet, Text, View } from "react-native";
 import TeamAbbrBadgeNative from "../../TeamAbbrBadgeNative";
 import type { SeasonAwardsMarketSnapshot } from "../../../../../../../lib/predict/seasonPredictMarket";
 import { nbaTeamIdFromBracketCode } from "../../../../../../../lib/nba-bracket-code";
+import { awardName } from "../../../../../../../lib/predict/nbaSeasonAwardsPredict";
 import {
   seasonPredictAwardsMarketHint,
   type SeasonPredictUiLang,
@@ -38,9 +39,9 @@ export default function NbaSeasonAwardsMarketPanelNative({
           <View key={block.awardId}>
             <View style={styles.awardHead}>
               <Text style={styles.awardEn}>{block.labelEn}</Text>
-              {language !== "en" ? (
-                <Text style={styles.awardJa}>{block.labelJa}</Text>
-              ) : null}
+              <Text style={styles.awardFullName}>
+                {awardName(language, block)}
+              </Text>
             </View>
             <View style={{ gap: 6 }}>
               {block.top.map((row, i) => {
@@ -122,7 +123,7 @@ const styles = StyleSheet.create({
     color: "rgba(253,230,138,0.85)",
     textTransform: "uppercase",
   },
-  awardJa: { fontSize: 10, color: "rgba(255,255,255,0.35)" },
+  awardFullName: { fontSize: 10, color: "rgba(255,255,255,0.35)" },
   pickRow: {
     flexDirection: "row",
     alignItems: "center",

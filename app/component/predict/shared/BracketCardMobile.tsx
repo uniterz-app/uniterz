@@ -1,6 +1,7 @@
 "use client";
 
 import type { League } from "@/lib/leagues";
+import { nameOxanium } from "@/lib/fonts";
 import { getTeamPrimaryColor } from "@/lib/team-colors";
 import { TEAM_SHORT } from "@/lib/team-short";
 
@@ -187,9 +188,8 @@ export default function BracketCard({
         }}
       >
         <div
-          className="font-bold tracking-[0.08em]"
+          className={`${nameOxanium.className} font-bold tracking-[0.08em]`}
           style={{
-            fontFamily: "Bebas Neue, sans-serif",
             fontSize: 38 * SCALE,
           }}
         >
@@ -197,9 +197,8 @@ export default function BracketCard({
         </div>
 
         <div
-          className="font-bold"
+          className={`${nameOxanium.className} font-bold`}
           style={{
-            fontFamily: "Bebas Neue, sans-serif",
             fontSize: 30 * SCALE,
             opacity: 0.85,
           }}

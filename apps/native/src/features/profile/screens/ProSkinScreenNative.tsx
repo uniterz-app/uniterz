@@ -58,6 +58,7 @@ import { db } from "../../../lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import { CYBER_TAB_CYAN } from "../../../ui/cyberSideMenuNative";
 import { useBottomTabBarInsets } from "../../../navigation/useBottomTabBarInsets";
+import { proSkinScreenCopy } from "../proSkinScreenCopy";
 
 const COLS = 2;
 const GAP = 10;
@@ -298,7 +299,6 @@ export default function ProSkinScreenNative() {
   const { bottomContentReserveY } = useBottomTabBarInsets();
   const { fUser } = useFirebaseUser();
   const { language } = useNativeUserLanguageFromAuth();
-  const isJa = language === "ja";
   const { width: winW, height: winH } = useWindowDimensions();
   const contentW = Math.min(420, winW - 24);
   const tileW = Math.floor((contentW - GAP) / COLS);
@@ -327,6 +327,7 @@ export default function ProSkinScreenNative() {
   });
   const [viewerIsPro, setViewerIsPro] = useState(false);
   const [noticeIds, setNoticeIds] = useState<Set<string>>(() => new Set());
+  const copy = proSkinScreenCopy(language, viewerIsPro);
 
   useEffect(() => {
     if (!fUser) {
@@ -412,22 +413,14 @@ export default function ProSkinScreenNative() {
     overlayId != null && overlayUnlocked && overlayId !== savedId;
   const canConfirm = Boolean(overlayId) && !saving && hasUnsavedChange;
   const confirmLabel = saving
-    ? isJa
-      ? "保存中…"
-      : "Saving…"
+    ? copy.saving
     : !viewerIsPro
       ? "GET PRO"
       : !overlayUnlocked
-        ? isJa
-          ? "未解放"
-          : "Locked"
+        ? copy.locked
         : hasUnsavedChange
-          ? isJa
-            ? "このスキンを適用"
-            : "Apply skin"
-          : isJa
-            ? "適用済み"
-            : "Applied";
+          ? copy.applySkin
+          : copy.applied;
 
   const goGetPro = useCallback(() => {
     navigation.navigate("ProSubscribe");
@@ -451,16 +444,12 @@ export default function ProSkinScreenNative() {
       navigation.navigate("ProfileHome");
     } catch (e) {
       const msg =
-        e instanceof Error
-          ? e.message
-          : isJa
-            ? "保存に失敗しました。"
-            : "Save failed.";
+        e instanceof Error ? e.message : copy.saveFailed;
       setSaveError(msg);
       cyberAlert("", msg);
       setSaving(false);
     }
-  }, [hasUnsavedChange, isJa, navigation, overlayId, saving]);
+  }, [copy.saveFailed, hasUnsavedChange, navigation, overlayId, saving]);
 
   const openOverlay = useCallback((id: ProfilePlanProBgVariant) => {
     setSaveError(null);
@@ -474,15 +463,7 @@ export default function ProSkinScreenNative() {
   return (
     <MobilePageShell
       title="SKIN"
-      subtitle={
-        isJa
-          ? viewerIsPro
-            ? "上段は Pro ですぐ使えるスキン。下段はマイルストーン達成で解放されます。"
-            : "プレビューは無料で見られます。適用するには Pro プランが必要です。"
-          : viewerIsPro
-            ? "Top skins unlock with Pro. Milestone skins unlock as you progress."
-            : "Preview is free. Upgrade to Pro to apply a skin."
-      }
+      subtitle={copy.subtitle}
       appBackground
       edgeBack={!fromTrial}
       onClose={() => navigation.goBack()}
@@ -516,15 +497,7 @@ export default function ProSkinScreenNative() {
               <View style={styles.headerBlock}>
                 <Text style={styles.eyebrow}>Pro Skin</Text>
                 <Text style={styles.pageTitle}>Choose Pro Skin</Text>
-                <Text style={styles.desc}>
-                  {isJa
-                    ? viewerIsPro
-                      ? "上段は Pro ですぐ使えるスキン。下段はマイルストーン達成で解放されます。"
-                      : "プレビューは無料で見られます。適用するには Pro プランが必要です。"
-                    : viewerIsPro
-                      ? "Top skins unlock with Pro. Milestone skins unlock as you progress."
-                      : "Preview is free. Upgrade to Pro to apply a skin."}
-                </Text>
+                <Text style={styles.desc}>{copy.subtitle}</Text>
               </View>
             }
             renderItem={({ item }) => (
@@ -535,7 +508,7 @@ export default function ProSkinScreenNative() {
                 unlocked={unlockedIds.has(item.id)}
                 isNew={noticeIds.has(item.id)}
                 owners={ownerCounts[item.id] ?? 0}
-                language={language === "ja" ? "ja" : "en"}
+                language={copy.catalogLang}
                 progress={milestoneProgress}
                 onPress={() => openOverlay(item.id)}
               />
@@ -555,7 +528,7 @@ export default function ProSkinScreenNative() {
             style={styles.overlayBackdrop}
             onPress={closeOverlay}
             accessibilityRole="button"
-            accessibilityLabel={isJa ? "閉じる" : "Close"}
+            accessibilityLabel={copy.closeA11y}
           />
           {overlayEntry ? (
             <View
@@ -580,12 +553,12 @@ export default function ProSkinScreenNative() {
                   <Text style={styles.overlayCondition} numberOfLines={2}>
                     {formatProSkinUnlockCondition(
                       overlayEntry.unlock,
-                      isJa ? "ja" : "en"
+                      copy.catalogLang
                     )}
                     {" · "}
                     {formatProSkinOwnerCount(
                       ownerCounts[overlayEntry.id] ?? 0,
-                      isJa ? "ja" : "en"
+                      copy.catalogLang
                     )}
                   </Text>
                 </View>
@@ -600,7 +573,7 @@ export default function ProSkinScreenNative() {
                 <View style={styles.openPreview} pointerEvents="none">
                   <ProfileKinetikPanelNative
                     key={`${overlayEntry.id}:${replayByVariant[overlayEntry.id] ?? 0}`}
-                    {...previewPanelProps(language === "ja" ? "ja" : "en")}
+                    {...previewPanelProps(copy.catalogLang)}
                     planProBgVariant={overlayEntry.id}
                   />
                 </View>
@@ -613,12 +586,8 @@ export default function ProSkinScreenNative() {
                     />
                     <Text style={styles.lockedBannerText}>
                       {!viewerIsPro
-                        ? isJa
-                          ? "プレビューのみ · 適用には Pro が必要です"
-                          : "Preview only · Pro required to apply"
-                        : isJa
-                          ? "このスキンはまだ解放されていません"
-                          : "This skin is still locked"}
+                        ? copy.lockedPreviewOnly
+                        : copy.lockedStill}
                     </Text>
                   </View>
                 ) : null}
@@ -649,9 +618,7 @@ export default function ProSkinScreenNative() {
                       onPress={closeOverlay}
                       style={styles.cancelBtn}
                     >
-                      <Text style={styles.cancelBtnText}>
-                        {isJa ? "キャンセル" : "Cancel"}
-                      </Text>
+                      <Text style={styles.cancelBtnText}>{copy.cancel}</Text>
                     </Pressable>
                   </>
                 ) : overlayUnlocked ? (
@@ -694,9 +661,7 @@ export default function ProSkinScreenNative() {
                       onPress={closeOverlay}
                       style={styles.cancelBtn}
                     >
-                      <Text style={styles.cancelBtnText}>
-                        {isJa ? "キャンセル" : "Cancel"}
-                      </Text>
+                      <Text style={styles.cancelBtnText}>{copy.cancel}</Text>
                     </Pressable>
                   </>
                 ) : (
@@ -705,7 +670,7 @@ export default function ProSkinScreenNative() {
                     style={[styles.confirmBtn, styles.confirmBtnOff, styles.confirmBtnGrow]}
                   >
                     <Text style={[styles.confirmBtnText, styles.confirmBtnTextOff]}>
-                      {isJa ? "閉じる" : "Close"}
+                      {copy.close}
                     </Text>
                   </Pressable>
                 )}

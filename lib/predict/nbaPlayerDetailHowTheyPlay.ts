@@ -2,6 +2,12 @@
  * プレイヤー詳細「どう点を取って、どう守るか」。
  * リーグ表の Advanced と同じ指標を、この1人の顔として出す。
  */
+import type { UiStrings } from "@/lib/i18n/ui";
+import {
+  HOW_THEY_PLAY_HUSTLE_HINTS,
+  HOW_THEY_PLAY_SCORING_LABELS,
+  HOW_THEY_PLAY_TRACKING_HINTS,
+} from "@/lib/predict/nbaHowTheyPlayHints";
 import { nbaSeasonStatsReady } from "@/lib/predict/nbaSeasonStatsReady";
 import { getNbaPlayerDetailPreview } from "@/lib/predict/nbaPlayerDetailPreviewMocks";
 import type { NbaPlayerDetailPreview } from "@/lib/predict/nbaPlayerDetailPreviewMocks";
@@ -62,56 +68,111 @@ export type PlayerHowTheyPlayTab =
 export const PLAYER_HOW_THEY_PLAY_TABS: readonly {
   id: PlayerHowTheyPlayTab;
   short: string;
-  hintJa: string;
-  hintEn: string;
+  hint: UiStrings;
 }[] = [
   {
     id: "fourFactors",
     short: "4FCT",
-    hintJa: "eFG・TO・FT・OREB。個人の攻撃の型。",
-    hintEn: "eFG, TO, FT, OREB. Individual four-factor profile.",
+    hint: {
+      ja: "eFG・TO・FT・OREB。個人の攻撃の型。",
+      en: "eFG, TO, FT, OREB. Individual four-factor profile.",
+      ko: "eFG·TO·FT·OREB. 개인 공격 프로필.",
+      zh: "eFG、失误、罚球、进攻篮板。个人进攻画像。",
+      es: "eFG, pérdidas, FT, OREB. Perfil ofensivo individual.",
+      pt: "eFG, turnovers, FT, OREB. Perfil ofensivo individual.",
+      fr: "eFG, pertes, LF, OREB. Profil offensif individuel.",
+    },
   },
   {
     id: "scoring",
     short: "SCORING",
-    hintJa: "得点のうち 3P / ペイント / ミッド / FT / ファストブレイク。割合と1試合平均の得点。",
-    hintEn: "Share of points from 3s, paint, mid-range, FTs, and fast breaks — plus points per game.",
+    hint: {
+      ja: "得点のうち 3P / ペイント / ミッド / FT / ファストブレイク。割合と1試合平均の得点。",
+      en: "Share of points from 3s, paint, mid-range, FTs, and fast breaks — plus points per game.",
+      ko: "득점 중 3점 / 페인트 / 미드레인지 / 자유투 / 속공 비중과 경기당 득점.",
+      zh: "三分、禁区、中距离、罚球、快攻的得分占比与场均得分。",
+      es: "Cuota de puntos de triple, zona, media distancia, libres y contragolpe, y puntos por partido.",
+      pt: "Fatia de pontos de 3, garrafão, média distância, lances livres e contra-ataque, e pontos por jogo.",
+      fr: "Part des points à 3 pts, raquette, mi-distance, lancers et contre-attaque, et points par match.",
+    },
   },
   {
     id: "playtype",
     short: "PLAYTYPE",
-    hintJa: "PPP は効率、バーは使用率、pts はその型からの1試合平均得点。",
-    hintEn: "PPP is efficiency. Bar is frequency. Pts is points per game from that type.",
+    hint: {
+      ja: "PPP は効率、バーは使用率、pts はその型からの1試合平均得点。",
+      en: "PPP is efficiency. Bar is frequency. Pts is points per game from that type.",
+      ko: "PPP는 효율, 바는 사용 비중, pts는 해당 플레이의 경기당 득점.",
+      zh: "PPP 为效率，条形为使用占比，pts 为该战术的场均得分。",
+      es: "PPP es eficiencia. La barra es frecuencia. Pts son puntos por partido de ese tipo.",
+      pt: "PPP é eficiência. A barra é frequência. Pts são pontos por jogo naquele tipo.",
+      fr: "PPP = efficacité. La barre = fréquence. Pts = points par match sur ce type.",
+    },
   },
   {
     id: "shooting",
     short: "SHOT",
-    hintJa: "restricted FG% とコーナー3%。成功率と、その場所からの1試合平均得点。",
-    hintEn: "Restricted-area FG% and corner 3% — plus points per game from that spot.",
+    hint: {
+      ja: "restricted FG% とコーナー3%。成功率と、その場所からの1試合平均得点。",
+      en: "Restricted-area FG% and corner 3% — plus points per game from that spot.",
+      ko: "제한구역 FG%와 코너 3점%. 성공률과 해당 위치의 경기당 득점.",
+      zh: "禁区命中率与底角三分命中率，以及该位置的场均得分。",
+      es: "FG% en zona restringida y triple de esquina, con los puntos por partido de esa posición.",
+      pt: "FG% na área restrita e 3 de canto, com os pontos por jogo daquela posição.",
+      fr: "FG% en zone restreinte et 3 pts de coin, avec les points par match depuis ce spot.",
+    },
   },
   {
     id: "clutch",
     short: "CLUTCH",
-    hintJa: "僅差・終盤の PTS / FG% / USG。",
-    hintEn: "Clutch PTS / FG% / usage.",
+    hint: {
+      ja: "僅差・終盤の PTS / FG% / USG。",
+      en: "Clutch PTS / FG% / usage.",
+      ko: "클러치 상황의 득점 / FG% / 사용 비중.",
+      zh: "关键时刻的得分、命中率与使用率。",
+      es: "PTS / FG% / usage en clutch.",
+      pt: "PTS / FG% / usage no clutch.",
+      fr: "PTS / FG% / usage en clutch.",
+    },
   },
   {
     id: "defense",
     short: "DEFENSE",
-    hintJa: "マッチアップと相手 FG%。低いほど止めている。",
-    hintEn: "Matchup and opponent FG%. Lower is better.",
+    hint: {
+      ja: "マッチアップと相手 FG%。低いほど止めている。",
+      en: "Matchup and opponent FG%. Lower is better.",
+      ko: "매치업과 상대 FG%. 낮을수록 잘 막고 있음.",
+      zh: "对位与对手命中率。越低说明防得越好。",
+      es: "Matchup y FG% del rival. Más bajo, mejor.",
+      pt: "Matchup e FG% do adversário. Menor é melhor.",
+      fr: "Duel et FG% adverse. Plus bas, mieux.",
+    },
   },
   {
     id: "hustle",
     short: "HUSTLE",
-    hintJa: "ディフレクション・チャージ・ルーズボール。手数と体。",
-    hintEn: "Deflections, charges, loose balls. Effort that doesn’t show in the box.",
+    hint: {
+      ja: "ディフレクション・チャージ・ルーズボール。手数と体。",
+      en: "Deflections, charges, loose balls. Effort that doesn’t show in the box.",
+      ko: "디플렉션·차징·루즈볼. 기록지에 남지 않는 노력.",
+      zh: "干扰球、造进攻犯规、争抢球。数据栏之外的努力。",
+      es: "Desvíos, cargas, balones sueltos. El esfuerzo que no sale en el box score.",
+      pt: "Desvios, faltas de ataque, bolas soltas. Esforço que não aparece no box score.",
+      fr: "Déviations, fautes provoquées, ballons perdus. L’effort invisible au box score.",
+    },
   },
   {
     id: "tracking",
     short: "TRACK",
-    hintJa: "ドライブ回数とドライブからの得点。C&S / プルアップも成功率と得点。",
-    hintEn: "Drive volume and points from drives. Catch-and-shoot / pull-up FG% plus points.",
+    hint: {
+      ja: "ドライブ回数とドライブからの得点。C&S / プルアップも成功率と得点。",
+      en: "Drive volume and points from drives. Catch-and-shoot / pull-up FG% plus points.",
+      ko: "드라이브 횟수와 드라이브 득점. 캐치&슛 / 풀업의 성공률과 득점.",
+      zh: "突破次数与突破得分。接球投与急停跳投的命中率和得分。",
+      es: "Volumen de penetraciones y sus puntos. FG% y puntos en catch-and-shoot / pull-up.",
+      pt: "Volume de drives e seus pontos. FG% e pontos em catch-and-shoot / pull-up.",
+      fr: "Volume de pénétrations et points associés. FG% et points en catch-and-shoot / pull-up.",
+    },
   },
 ];
 
@@ -124,8 +185,7 @@ export type PlayerHowCell = {
 export type PlayerHowRow = {
   id: string;
   short: string;
-  hintJa: string;
-  hintEn: string;
+  hint: UiStrings;
   cell: PlayerHowCell;
   pts?: HowPts;
 };
@@ -133,8 +193,7 @@ export type PlayerHowRow = {
 export type PlayerScoringRow = {
   id: string;
   short: string;
-  labelJa: string;
-  labelEn: string;
+  label: UiStrings;
   cell: PlayerHowCell;
   pts: HowPts;
 };
@@ -150,8 +209,7 @@ export type PlayerPlaytypeRow = {
 export type PlayerShotRow = {
   id: string;
   short: string;
-  labelJa: string;
-  labelEn: string;
+  label: UiStrings;
   cell: PlayerHowCell;
   pts: HowPts;
 };
@@ -246,8 +304,7 @@ function rowFromMetric(
   return {
     id: metric,
     short: def.short,
-    hintJa: def.hintJa,
-    hintEn: def.hintEn,
+    hint: def.hint,
     cell: cell(playerId, metric, leaders, seasonMetrics, preset),
   };
 }
@@ -373,27 +430,45 @@ export function getPlayerHowTheyPlay(
   const scoringShare = (
     id: string,
     short: string,
-    labelJa: string,
-    labelEn: string,
+    label: UiStrings,
     metric: NbaPlayerAdvancedLeaderMetric
   ): PlayerScoringRow => {
     const share = c(metric);
     return {
       id,
       short,
-      labelJa,
-      labelEn,
+      label,
       cell: share,
       pts: howPtsCell(ptsFromShare(ppg, share.value)),
     };
   };
 
   const scoring: PlayerScoringRow[] = [
-    scoringShare("3", "3PT", "3P", "Threes", "pct_pts_3"),
-    scoringShare("paint", "PAINT", "ペイント", "Paint", "pct_pts_paint"),
-    scoringShare("mid", "MID", "ミッドレンジ", "Mid-range", "pct_pts_mid"),
-    scoringShare("ft", "FT", "FT", "Free throws", "pct_pts_ft"),
-    scoringShare("fb", "FB", "ファストブレイク", "Fast break", "pct_pts_fb"),
+    scoringShare("3", "3PT", HOW_THEY_PLAY_SCORING_LABELS.threes, "pct_pts_3"),
+    scoringShare(
+      "paint",
+      "PAINT",
+      HOW_THEY_PLAY_SCORING_LABELS.paint,
+      "pct_pts_paint"
+    ),
+    scoringShare(
+      "mid",
+      "MID",
+      HOW_THEY_PLAY_SCORING_LABELS.midRange,
+      "pct_pts_mid"
+    ),
+    scoringShare(
+      "ft",
+      "FT",
+      HOW_THEY_PLAY_SCORING_LABELS.freeThrows,
+      "pct_pts_ft"
+    ),
+    scoringShare(
+      "fb",
+      "FB",
+      HOW_THEY_PLAY_SCORING_LABELS.fastBreak,
+      "pct_pts_fb"
+    ),
   ];
 
   const teamPace =
@@ -443,16 +518,30 @@ export function getPlayerHowTheyPlay(
     {
       id: "rim",
       short: "RIM",
-      labelJa: "RESTRICTED FG%",
-      labelEn: "RESTRICTED FG%",
+      label: {
+        ja: "ゴール下 FG%",
+        en: "RESTRICTED FG%",
+        ko: "제한구역 FG%",
+        zh: "禁区命中率",
+        es: "FG% ZONA RESTRINGIDA",
+        pt: "FG% ÁREA RESTRITA",
+        fr: "FG% ZONE RESTREINTE",
+      },
       cell: c("restricted_fg_pct"),
       pts: zonePts(["restricted"], 2),
     },
     {
       id: "c3",
       short: "C3",
-      labelJa: "CORNER 3%",
-      labelEn: "CORNER 3%",
+      label: {
+        ja: "コーナー3%",
+        en: "CORNER 3%",
+        ko: "코너 3점%",
+        zh: "底角三分命中率",
+        es: "TRIPLE DE ESQUINA %",
+        pt: "3 DE CANTO %",
+        fr: "3 PTS DE COIN %",
+      },
       cell: c("corner3_pct"),
       pts: zonePts(["left_corner_3", "right_corner_3"], 3),
     },
@@ -473,30 +562,13 @@ export function getPlayerHowTheyPlay(
   ];
 
   const hustle: PlayerHowRow[] = [
-    {
-      ...m("deflections"),
-      hintJa: "パスを触って崩す回数。スティールの手前。",
-      hintEn: "Deflections. The step before a steal.",
-    },
-    {
-      ...m("charges"),
-      hintJa: "チャージングを誘った回数。体を張った守備。",
-      hintEn: "Charges drawn. Taking a hit to stop the drive.",
-    },
-    {
-      ...m("loose_balls"),
-      hintJa: "ルーズボール。拾えば攻撃、拾われれば失点。",
-      hintEn: "Loose balls recovered. Extra possessions, fewer giveaways.",
-    },
-    {
-      ...m("screen_ast"),
-      hintJa: "スクリーンから味方が決めた数。オフボールの仕事。",
-      hintEn: "Screen assists. Off-ball work that creates a make.",
-    },
+    { ...m("deflections"), hint: HOW_THEY_PLAY_HUSTLE_HINTS.deflections },
+    { ...m("charges"), hint: HOW_THEY_PLAY_HUSTLE_HINTS.charges },
+    { ...m("loose_balls"), hint: HOW_THEY_PLAY_HUSTLE_HINTS.looseBalls },
+    { ...m("screen_ast"), hint: HOW_THEY_PLAY_HUSTLE_HINTS.screenAst },
     {
       ...m("contested_shots"),
-      hintJa: "相手シュートに手を出した数。クローズアウト。",
-      hintEn: "Contested shots. Closeouts that bother the shooter.",
+      hint: HOW_THEY_PLAY_HUSTLE_HINTS.contestedShots,
     },
   ];
 
@@ -505,38 +577,26 @@ export function getPlayerHowTheyPlay(
   const tracking: PlayerHowRow[] = [
     {
       ...m("drives"),
-      hintJa: "ゴールへ仕掛ける回数と、ドライブからの1試合平均得点。",
-      hintEn: "Drives per game, and points per game from those drives.",
+      hint: HOW_THEY_PLAY_TRACKING_HINTS.drives,
       pts: howPtsCell(drives.value * (0.42 + c("pct_pts_paint").value * 0.35)),
     },
     {
       ...m("cns_fg_pct"),
-      hintJa: "止まって受けるシュート。成功率と、そこからの1試合平均得点。",
-      hintEn: "Catch-and-shoot FG%, and points per game from those looks.",
+      hint: HOW_THEY_PLAY_TRACKING_HINTS.catchAndShoot,
       pts: howPtsCell(ptsFromShare(ppg, freq.spot!.value * 0.9)),
     },
     {
       ...m("pullup_fg_pct"),
-      hintJa: "ドリブルから自分で打つ精度と、そこからの1試合平均得点。",
-      hintEn: "Pull-up FG%, and points per game created off the dribble.",
+      hint: HOW_THEY_PLAY_TRACKING_HINTS.pullUp,
       pts: howPtsCell(
         ptsFromShare(ppg, freq.iso!.value * 0.75 + freq.pnrB!.value * 0.2)
       ),
     },
-    {
-      ...m("passes"),
-      hintJa: "ボールを動かす手数。",
-      hintEn: "Passes per game. How much the ball moves.",
-    },
-    {
-      ...m("speed"),
-      hintJa: "コート上の平均スピード。",
-      hintEn: "Average speed on the floor.",
-    },
+    { ...m("passes"), hint: HOW_THEY_PLAY_TRACKING_HINTS.passes },
+    { ...m("speed"), hint: HOW_THEY_PLAY_TRACKING_HINTS.speed },
     {
       ...m("paint_touches"),
-      hintJa: "ペイントに触れた回数と、ペイントタッチからの1試合平均得点。",
-      hintEn: "Paint touches, and points per game from those touches.",
+      hint: HOW_THEY_PLAY_TRACKING_HINTS.paintTouches,
       pts: howPtsCell(
         paintTouches.value * (0.28 + c("restricted_fg_pct").value * 0.22)
       ),

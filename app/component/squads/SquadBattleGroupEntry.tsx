@@ -15,7 +15,10 @@ import {
   communityCrtMono,
 } from "@/app/component/communities/CommunityCrtTheme";
 import {
+  resolveSquadBattleUiLang,
   squadBattleEntryStatusChip,
+  squadBattleGroupEntryCopy,
+  type SquadBattleUiLang,
   type SquadBattleUiPhase,
 } from "@/lib/squads/squadBattleUiCopy";
 
@@ -28,7 +31,7 @@ const PILL_CHAMFER =
 const SQUAD_BATTLE_ICON = "/squad-battle/icon.png";
 
 type Props = {
-  language: "ja" | "en" | string;
+  language: SquadBattleUiLang | string;
   /** mobile は密、web はやや広め */
   isWeb?: boolean;
   onOpen: () => void;
@@ -51,18 +54,19 @@ export default function SquadBattleGroupEntry({
   deadlineLabel = null,
 }: Props) {
   const reduceMotion = useReducedMotion() === true;
-  const isEn = language === "en";
+  const lang = resolveSquadBattleUiLang(language);
+  const entryCopy = squadBattleGroupEntryCopy(lang);
   const statusChip = squadBattleEntryStatusChip({
     phase,
     myRank,
     deadlineLabel,
-    lang: isEn ? "en" : "ja",
+    lang,
   });
 
   return (
     <section className={cn(communityCrtMono.className, className)}>
       <CommunityCrtSectionLabel large accent="amber">
-        {isEn ? ">> SQUAD BATTLE" : ">> スクワッドバトル"}
+        {entryCopy.sectionLabel}
       </CommunityCrtSectionLabel>
 
       <motion.button
@@ -164,7 +168,7 @@ export default function SquadBattleGroupEntry({
                   "0 0 18px rgba(251,191,36,0.55), 0 0 2px rgba(255,248,231,0.8)",
               }}
             >
-              Squad Battle
+              {entryCopy.title}
             </p>
             <span
               className={cn(
@@ -198,7 +202,7 @@ export default function SquadBattleGroupEntry({
               boxShadow: "0 0 16px rgba(251,191,36,0.25)",
             }}
           >
-            Enter
+            {entryCopy.enter}
             <ChevronRight size={13} strokeWidth={2.8} className="shrink-0" />
           </span>
         </div>

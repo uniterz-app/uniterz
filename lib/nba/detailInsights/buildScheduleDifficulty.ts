@@ -4,6 +4,8 @@ import type {
 } from "@/lib/nba/detailInsights/detailInsightTypes";
 import type { NbaLeagueTeamStatRow } from "@/lib/predict/nbaLeagueTeamStatsMocks";
 import type { NbaTeamUpcomingGame } from "@/lib/predict/nbaTeamDetailPreviewMocks";
+import { L, resolveLocalizedLang } from "@/lib/i18n/localize";
+import type { UiStrings } from "@/lib/i18n/ui";
 
 const MIN_UPCOMING = 2;
 const OPP_MIN_GP = 3;
@@ -15,15 +17,11 @@ export function overallTierFromAvg(avg: number): ScheduleDifficultyTier {
   return "balanced";
 }
 
+/** ティア表記は全言語共通の英字バッジ */
 export function scheduleDifficultyTierLabel(
   tier: ScheduleDifficultyTier,
-  isJa: boolean
+  _isJa?: boolean
 ): string {
-  if (isJa) {
-    if (tier === "tough") return "TOUGH";
-    if (tier === "soft") return "SOFT";
-    return "BALANCED";
-  }
   if (tier === "tough") return "TOUGH";
   if (tier === "soft") return "SOFT";
   return "BALANCED";
@@ -67,12 +65,38 @@ export function buildScheduleDifficulty(input: {
     winPcts.reduce((sum, value) => sum + value, 0) / winPcts.length;
   const overallTier = overallTierFromAvg(avgOppWinPct);
   const pctText = formatWinPct(avgOppWinPct);
+  const n = slice.length;
+  const tier = scheduleDifficultyTierLabel(overallTier);
+
+  const summary: UiStrings = {
+    ja: `残り${n}試合 · 相手平均勝率 ${pctText} · ${tier}`,
+    en: `Next ${n} · avg opp ${pctText} · ${tier}`,
+    ko: `남은 ${n}경기 · 상대 평균 승률 ${pctText} · ${tier}`,
+    zh: `未来 ${n} 场 · 对手平均胜率 ${pctText} · ${tier}`,
+    es: `Próximos ${n} · rival medio ${pctText} · ${tier}`,
+    pt: `Próximos ${n} · adversário médio ${pctText} · ${tier}`,
+    fr: `${n} prochains · adversaire moyen ${pctText} · ${tier}`,
+  };
 
   return {
-    gameCount: slice.length,
+    gameCount: n,
     avgOppWinPct,
     overallTier,
-    summaryJa: `残り${slice.length}試合 · 相手平均勝率 ${pctText} · ${scheduleDifficultyTierLabel(overallTier, true)}`,
-    summaryEn: `Next ${slice.length} · avg opp ${pctText} · ${scheduleDifficultyTierLabel(overallTier, false)}`,
+    summaryJa: summary.ja,
+    summaryEn: summary.en,
+    summary,
   };
+}
+
+/** 表示用: 7言語版があればそれを、無ければ ja/en フォールバック */
+export function scheduleDifficultySummaryText(
+  difficulty: Pick<
+    TeamScheduleDifficulty,
+    "summary" | "summaryJa" | "summaryEn"
+  >,
+  language: string | null | undefined
+): string {
+  const lang = resolveLocalizedLang(language);
+  if (difficulty.summary) return L(lang, difficulty.summary);
+  return lang === "ja" ? difficulty.summaryJa : difficulty.summaryEn;
 }

@@ -3,6 +3,9 @@
  * フィールドは BallDontLie `player_injuries` に寄せる（同期後にそのまま写せる形）。
  */
 
+import { L, resolveLocalizedLang, type LocalizedLang } from "@/lib/i18n/localize";
+import type { UiStrings } from "@/lib/i18n/ui";
+
 export type NbaInjuryStatus =
   | "Out"
   | "Doubtful"
@@ -122,103 +125,593 @@ export function injuryBodyPart(description: string | null | undefined): string |
   return part;
 }
 
-/** 部位・キーワード対応表（英語 → 日本語） */
-const INJURY_BODY_PARTS: Array<{ en: string; ja: string; pattern: RegExp }> = [
-  { en: "Plantar Fasciitis", ja: "足底腱膜炎", pattern: /\bplantar\s+fasciitis\b/i },
-  { en: "Achilles", ja: "アキレス腱", pattern: /\bachilles\b/i },
-  { en: "Hamstring", ja: "ハムストリング", pattern: /\bhamstring\b/i },
-  { en: "Quadriceps", ja: "大腿四頭筋", pattern: /\b(quadriceps|quad)\b/i },
-  { en: "Adductor", ja: "内転筋", pattern: /\badductor\b/i },
-  { en: "Abdomen", ja: "腹部", pattern: /\b(abdominal|abdomen|oblique)\b/i },
-  { en: "Lower Back", ja: "腰", pattern: /\b(lower\s+back|lumbar)\b/i },
-  { en: "Back", ja: "背中", pattern: /\bback\b/i },
-  { en: "Shoulder", ja: "肩", pattern: /\bshoulder\b/i },
-  { en: "Ankle", ja: "足首", pattern: /\bankle\b/i },
-  { en: "Foot", ja: "足", pattern: /\b(foot|feet)\b/i },
-  { en: "Knee", ja: "膝", pattern: /\bknee\b/i },
-  { en: "Hip", ja: "股関節", pattern: /\bhip\b/i },
-  { en: "Groin", ja: "鼠径部", pattern: /\bgroin\b/i },
-  { en: "Calf", ja: "ふくらはぎ", pattern: /\b(calf|calves|soleus)\b/i },
-  { en: "Elbow", ja: "肘", pattern: /\belbow\b/i },
-  { en: "Wrist", ja: "手首", pattern: /\bwrist\b/i },
-  { en: "Hand", ja: "手", pattern: /\bhand\b/i },
-  { en: "Thumb", ja: "親指", pattern: /\bthumb\b/i },
-  { en: "Finger", ja: "指", pattern: /\bfinger\b/i },
-  { en: "Neck", ja: "首", pattern: /\bneck\b/i },
-  { en: "Head", ja: "頭", pattern: /\bhead\b/i },
-  { en: "Concussion", ja: "脳震盪", pattern: /\bconcussion\b/i },
-  { en: "Eye", ja: "目", pattern: /\beye\b/i },
-  { en: "Nose", ja: "鼻", pattern: /\bnose\b/i },
-  { en: "Rib", ja: "肋骨", pattern: /\bribs?\b/i },
-  { en: "Chest", ja: "胸", pattern: /\bchest\b/i },
-  { en: "Shin", ja: "すね", pattern: /\bshin\b/i },
-  { en: "Toe", ja: "つま先", pattern: /\btoes?\b/i },
-  { en: "Heel", ja: "かかと", pattern: /\bheel\b/i },
+type InjuryLabelRow = { label: UiStrings; pattern: RegExp };
+
+/** 部位・キーワード対応表（7言語） */
+const INJURY_BODY_PARTS: InjuryLabelRow[] = [
+  {
+    pattern: /\bplantar\s+fasciitis\b/i,
+    label: {
+      ja: "足底腱膜炎",
+      en: "Plantar Fasciitis",
+      ko: "족저근막염",
+      zh: "足底筋膜炎",
+      es: "Fascitis plantar",
+      pt: "Fascite plantar",
+      fr: "Fasciite plantaire",
+    },
+  },
+  {
+    pattern: /\bachilles\b/i,
+    label: {
+      ja: "アキレス腱",
+      en: "Achilles",
+      ko: "아킬레스건",
+      zh: "跟腱",
+      es: "Aquiles",
+      pt: "Aquiles",
+      fr: "Achille",
+    },
+  },
+  {
+    pattern: /\bhamstring\b/i,
+    label: {
+      ja: "ハムストリング",
+      en: "Hamstring",
+      ko: "햄스트링",
+      zh: "腘绳肌",
+      es: "Isquiotibial",
+      pt: "Isquiotibial",
+      fr: "Ischio-jambier",
+    },
+  },
+  {
+    pattern: /\b(quadriceps|quad)\b/i,
+    label: {
+      ja: "大腿四頭筋",
+      en: "Quadriceps",
+      ko: "대퇴사두근",
+      zh: "股四头肌",
+      es: "Cuádriceps",
+      pt: "Quadríceps",
+      fr: "Quadriceps",
+    },
+  },
+  {
+    pattern: /\badductor\b/i,
+    label: {
+      ja: "内転筋",
+      en: "Adductor",
+      ko: "내전근",
+      zh: "内收肌",
+      es: "Aductor",
+      pt: "Adutor",
+      fr: "Adducteur",
+    },
+  },
+  {
+    pattern: /\b(abdominal|abdomen|oblique)\b/i,
+    label: {
+      ja: "腹部",
+      en: "Abdomen",
+      ko: "복부",
+      zh: "腹部",
+      es: "Abdomen",
+      pt: "Abdômen",
+      fr: "Abdomen",
+    },
+  },
+  {
+    pattern: /\b(lower\s+back|lumbar)\b/i,
+    label: {
+      ja: "腰",
+      en: "Lower Back",
+      ko: "허리",
+      zh: "下背部",
+      es: "Zona lumbar",
+      pt: "Lombar",
+      fr: "Bas du dos",
+    },
+  },
+  {
+    pattern: /\bback\b/i,
+    label: {
+      ja: "背中",
+      en: "Back",
+      ko: "등",
+      zh: "背部",
+      es: "Espalda",
+      pt: "Costas",
+      fr: "Dos",
+    },
+  },
+  {
+    pattern: /\bshoulder\b/i,
+    label: {
+      ja: "肩",
+      en: "Shoulder",
+      ko: "어깨",
+      zh: "肩部",
+      es: "Hombro",
+      pt: "Ombro",
+      fr: "Épaule",
+    },
+  },
+  {
+    pattern: /\bankle\b/i,
+    label: {
+      ja: "足首",
+      en: "Ankle",
+      ko: "발목",
+      zh: "脚踝",
+      es: "Tobillo",
+      pt: "Tornozelo",
+      fr: "Cheville",
+    },
+  },
+  {
+    pattern: /\b(foot|feet)\b/i,
+    label: {
+      ja: "足",
+      en: "Foot",
+      ko: "발",
+      zh: "脚部",
+      es: "Pie",
+      pt: "Pé",
+      fr: "Pied",
+    },
+  },
+  {
+    pattern: /\bknee\b/i,
+    label: {
+      ja: "膝",
+      en: "Knee",
+      ko: "무릎",
+      zh: "膝盖",
+      es: "Rodilla",
+      pt: "Joelho",
+      fr: "Genou",
+    },
+  },
+  {
+    pattern: /\bhip\b/i,
+    label: {
+      ja: "股関節",
+      en: "Hip",
+      ko: "고관절",
+      zh: "髋部",
+      es: "Cadera",
+      pt: "Quadril",
+      fr: "Hanche",
+    },
+  },
+  {
+    pattern: /\bgroin\b/i,
+    label: {
+      ja: "鼠径部",
+      en: "Groin",
+      ko: "사타구니",
+      zh: "腹股沟",
+      es: "Ingle",
+      pt: "Virilha",
+      fr: "Aine",
+    },
+  },
+  {
+    pattern: /\b(calf|calves|soleus)\b/i,
+    label: {
+      ja: "ふくらはぎ",
+      en: "Calf",
+      ko: "종아리",
+      zh: "小腿",
+      es: "Gemelo",
+      pt: "Panturrilha",
+      fr: "Mollet",
+    },
+  },
+  {
+    pattern: /\belbow\b/i,
+    label: {
+      ja: "肘",
+      en: "Elbow",
+      ko: "팔꿈치",
+      zh: "肘部",
+      es: "Codo",
+      pt: "Cotovelo",
+      fr: "Coude",
+    },
+  },
+  {
+    pattern: /\bwrist\b/i,
+    label: {
+      ja: "手首",
+      en: "Wrist",
+      ko: "손목",
+      zh: "手腕",
+      es: "Muñeca",
+      pt: "Punho",
+      fr: "Poignet",
+    },
+  },
+  {
+    pattern: /\bhand\b/i,
+    label: {
+      ja: "手",
+      en: "Hand",
+      ko: "손",
+      zh: "手部",
+      es: "Mano",
+      pt: "Mão",
+      fr: "Main",
+    },
+  },
+  {
+    pattern: /\bthumb\b/i,
+    label: {
+      ja: "親指",
+      en: "Thumb",
+      ko: "엄지",
+      zh: "拇指",
+      es: "Pulgar",
+      pt: "Polegar",
+      fr: "Pouce",
+    },
+  },
+  {
+    pattern: /\bfinger\b/i,
+    label: {
+      ja: "指",
+      en: "Finger",
+      ko: "손가락",
+      zh: "手指",
+      es: "Dedo",
+      pt: "Dedo",
+      fr: "Doigt",
+    },
+  },
+  {
+    pattern: /\bneck\b/i,
+    label: {
+      ja: "首",
+      en: "Neck",
+      ko: "목",
+      zh: "颈部",
+      es: "Cuello",
+      pt: "Pescoço",
+      fr: "Cou",
+    },
+  },
+  {
+    pattern: /\bhead\b/i,
+    label: {
+      ja: "頭",
+      en: "Head",
+      ko: "머리",
+      zh: "头部",
+      es: "Cabeza",
+      pt: "Cabeça",
+      fr: "Tête",
+    },
+  },
+  {
+    pattern: /\bconcussion\b/i,
+    label: {
+      ja: "脳震盪",
+      en: "Concussion",
+      ko: "뇌진탕",
+      zh: "脑震荡",
+      es: "Conmoción",
+      pt: "Concussão",
+      fr: "Commotion",
+    },
+  },
+  {
+    pattern: /\beye\b/i,
+    label: {
+      ja: "目",
+      en: "Eye",
+      ko: "눈",
+      zh: "眼部",
+      es: "Ojo",
+      pt: "Olho",
+      fr: "Œil",
+    },
+  },
+  {
+    pattern: /\bnose\b/i,
+    label: {
+      ja: "鼻",
+      en: "Nose",
+      ko: "코",
+      zh: "鼻部",
+      es: "Nariz",
+      pt: "Nariz",
+      fr: "Nez",
+    },
+  },
+  {
+    pattern: /\bribs?\b/i,
+    label: {
+      ja: "肋骨",
+      en: "Rib",
+      ko: "갈비뼈",
+      zh: "肋骨",
+      es: "Costilla",
+      pt: "Costela",
+      fr: "Côte",
+    },
+  },
+  {
+    pattern: /\bchest\b/i,
+    label: {
+      ja: "胸",
+      en: "Chest",
+      ko: "가슴",
+      zh: "胸部",
+      es: "Pecho",
+      pt: "Peito",
+      fr: "Poitrine",
+    },
+  },
+  {
+    pattern: /\bshin\b/i,
+    label: {
+      ja: "すね",
+      en: "Shin",
+      ko: "정강이",
+      zh: "胫部",
+      es: "Espinilla",
+      pt: "Canela",
+      fr: "Tibia",
+    },
+  },
+  {
+    pattern: /\btoes?\b/i,
+    label: {
+      ja: "つま先",
+      en: "Toe",
+      ko: "발가락",
+      zh: "脚趾",
+      es: "Dedo del pie",
+      pt: "Dedo do pé",
+      fr: "Orteil",
+    },
+  },
+  {
+    pattern: /\bheel\b/i,
+    label: {
+      ja: "かかと",
+      en: "Heel",
+      ko: "발뒤꿈치",
+      zh: "脚跟",
+      es: "Talón",
+      pt: "Calcanhar",
+      fr: "Talon",
+    },
+  },
 ];
 
-/** 症状・状態対応表（英語 → 日本語） */
-const INJURY_CONDITIONS: Array<{ en: string; ja: string; pattern: RegExp }> = [
-  { en: "Undisclosed", ja: "非公開", pattern: /\b(undisclosed|unspecified)\b/i },
-  { en: "Sprain", ja: "捻挫", pattern: /\bsprain\b/i },
-  { en: "Strain", ja: "肉離れ", pattern: /\bstrain\b/i },
-  { en: "Fracture", ja: "骨折", pattern: /\bfracture\b/i },
-  { en: "Contusion", ja: "打撲", pattern: /\b(contusion|bruise)\b/i },
-  { en: "Soreness", ja: "張り", pattern: /\b(soreness|pain)\b/i },
-  { en: "Surgery", ja: "手術", pattern: /\bsurgery\b/i },
-  { en: "Recovery", ja: "回復中", pattern: /\b(rehab|recovery)\b/i },
-  { en: "Inflammation", ja: "炎症", pattern: /\binflammation\b/i },
-  { en: "Tendinitis", ja: "腱炎", pattern: /\b(tendinitis|tendonitis)\b/i },
-  { en: "Dislocation", ja: "脱臼", pattern: /\bdislocation\b/i },
-  { en: "Tear", ja: "断裂", pattern: /\btear\b/i },
-  { en: "Illness", ja: "体調不良", pattern: /\b(illness|sick|flu)\b/i },
-  { en: "Personal", ja: "私事", pattern: /\bpersonal\b/i },
-  { en: "Rest", ja: "休養", pattern: /\b(rest|load\s+management)\b/i },
-  { en: "Conditioning", ja: "コンディション調整", pattern: /\b(conditioning|maintenance)\b/i },
-];
-
-/** 日本語が直接入っている場合の逆引き用（例: "膝" → "Knee"） */
-const JA_TO_EN_BODY_PARTS: Record<string, string> = {
-  "足底腱膜炎": "Plantar Fasciitis",
-  "アキレス腱": "Achilles",
-  "ハムストリング": "Hamstring",
-  "大腿四頭筋": "Quadriceps",
-  "内転筋": "Adductor",
-  "腹部": "Abdomen",
-  "腰": "Lower Back",
-  "背中": "Back",
-  "肩": "Shoulder",
-  "足首": "Ankle",
-  "足": "Foot",
-  "膝": "Knee",
-  "股関節": "Hip",
-  "鼠径部": "Groin",
-  "ふくらはぎ": "Calf",
-  "ヒラメ筋": "Soleus",
-  "肘": "Elbow",
-  "手首": "Wrist",
-  "手": "Hand",
-  "親指": "Thumb",
-  "指": "Finger",
-  "首": "Neck",
-  "頭": "Head",
-  "脳震盪": "Concussion",
-  "目": "Eye",
-  "鼻": "鼻",
-  "肋骨": "Rib",
-  "胸": "Chest",
-  "すね": "Shin",
-  "つま先": "Toe",
-  "かかと": "Heel",
-  "非公開": "Undisclosed",
-  "捻挫": "Sprain",
-  "肉離れ": "Strain",
-  "骨折": "Fracture",
-  "打撲": "Contusion",
-  "張り": "Soreness",
-  "体調不良": "Illness",
-  "休養": "Rest",
-  "コンディション調整": "Conditioning",
+const CONDITIONING_LABEL: UiStrings = {
+  ja: "コンディション調整",
+  en: "Conditioning",
+  ko: "컨디셔닝",
+  zh: "状态调整",
+  es: "Puesta a punto",
+  pt: "Condicionamento",
+  fr: "Remise en forme",
 };
+
+/** 症状・状態対応表（7言語） */
+const INJURY_CONDITIONS: InjuryLabelRow[] = [
+  {
+    pattern: /\b(undisclosed|unspecified)\b/i,
+    label: {
+      ja: "非公開",
+      en: "Undisclosed",
+      ko: "비공개",
+      zh: "未公开",
+      es: "No revelado",
+      pt: "Não divulgado",
+      fr: "Non communiqué",
+    },
+  },
+  {
+    pattern: /\bsprain\b/i,
+    label: {
+      ja: "捻挫",
+      en: "Sprain",
+      ko: "염좌",
+      zh: "扭伤",
+      es: "Esguince",
+      pt: "Entorse",
+      fr: "Entorse",
+    },
+  },
+  {
+    pattern: /\bstrain\b/i,
+    label: {
+      ja: "肉離れ",
+      en: "Strain",
+      ko: "근육 파열",
+      zh: "拉伤",
+      es: "Distensión",
+      pt: "Estiramento",
+      fr: "Élongation",
+    },
+  },
+  {
+    pattern: /\bfracture\b/i,
+    label: {
+      ja: "骨折",
+      en: "Fracture",
+      ko: "골절",
+      zh: "骨折",
+      es: "Fractura",
+      pt: "Fratura",
+      fr: "Fracture",
+    },
+  },
+  {
+    pattern: /\b(contusion|bruise)\b/i,
+    label: {
+      ja: "打撲",
+      en: "Contusion",
+      ko: "타박상",
+      zh: "挫伤",
+      es: "Contusión",
+      pt: "Contusão",
+      fr: "Contusion",
+    },
+  },
+  {
+    pattern: /\b(soreness|pain)\b/i,
+    label: {
+      ja: "張り",
+      en: "Soreness",
+      ko: "통증",
+      zh: "酸痛",
+      es: "Molestias",
+      pt: "Dores",
+      fr: "Douleurs",
+    },
+  },
+  {
+    pattern: /\bsurgery\b/i,
+    label: {
+      ja: "手術",
+      en: "Surgery",
+      ko: "수술",
+      zh: "手术",
+      es: "Cirugía",
+      pt: "Cirurgia",
+      fr: "Chirurgie",
+    },
+  },
+  {
+    pattern: /\b(rehab|recovery)\b/i,
+    label: {
+      ja: "回復中",
+      en: "Recovery",
+      ko: "회복 중",
+      zh: "恢复中",
+      es: "Recuperación",
+      pt: "Recuperação",
+      fr: "Récupération",
+    },
+  },
+  {
+    pattern: /\binflammation\b/i,
+    label: {
+      ja: "炎症",
+      en: "Inflammation",
+      ko: "염증",
+      zh: "炎症",
+      es: "Inflamación",
+      pt: "Inflamação",
+      fr: "Inflammation",
+    },
+  },
+  {
+    pattern: /\b(tendinitis|tendonitis)\b/i,
+    label: {
+      ja: "腱炎",
+      en: "Tendinitis",
+      ko: "건염",
+      zh: "肌腱炎",
+      es: "Tendinitis",
+      pt: "Tendinite",
+      fr: "Tendinite",
+    },
+  },
+  {
+    pattern: /\bdislocation\b/i,
+    label: {
+      ja: "脱臼",
+      en: "Dislocation",
+      ko: "탈구",
+      zh: "脱臼",
+      es: "Luxación",
+      pt: "Luxação",
+      fr: "Luxation",
+    },
+  },
+  {
+    pattern: /\btear\b/i,
+    label: {
+      ja: "断裂",
+      en: "Tear",
+      ko: "파열",
+      zh: "撕裂",
+      es: "Rotura",
+      pt: "Ruptura",
+      fr: "Déchirure",
+    },
+  },
+  {
+    pattern: /\b(illness|sick|flu)\b/i,
+    label: {
+      ja: "体調不良",
+      en: "Illness",
+      ko: "컨디션 난조",
+      zh: "身体不适",
+      es: "Enfermedad",
+      pt: "Doença",
+      fr: "Maladie",
+    },
+  },
+  {
+    pattern: /\bpersonal\b/i,
+    label: {
+      ja: "私事",
+      en: "Personal",
+      ko: "개인 사유",
+      zh: "个人原因",
+      es: "Motivos personales",
+      pt: "Motivos pessoais",
+      fr: "Raisons personnelles",
+    },
+  },
+  {
+    pattern: /\b(rest|load\s+management)\b/i,
+    label: {
+      ja: "休養",
+      en: "Rest",
+      ko: "휴식",
+      zh: "轮休",
+      es: "Descanso",
+      pt: "Descanso",
+      fr: "Repos",
+    },
+  },
+  {
+    pattern: /\b(conditioning|maintenance)\b/i,
+    label: CONDITIONING_LABEL,
+  },
+];
+
+/** 日本語がそのまま入っている保存データの逆引き（例: "膝" → 7言語） */
+const JA_LABEL_LOOKUP: Record<string, UiStrings> = (() => {
+  const map: Record<string, UiStrings> = {};
+  for (const row of [...INJURY_BODY_PARTS, ...INJURY_CONDITIONS]) {
+    map[row.label.ja] = row.label;
+  }
+  map["ヒラメ筋"] = {
+    ja: "ヒラメ筋",
+    en: "Soleus",
+    ko: "가자미근",
+    zh: "比目鱼肌",
+    es: "Sóleo",
+    pt: "Sóleo",
+    fr: "Soléaire",
+  };
+  return map;
+})();
+
+/** 部位ラベルは ja 以外は大文字（カード見出しのトーン） */
+function injuryLabelText(label: UiStrings, lang: LocalizedLang): string {
+  const value = L(lang, label);
+  return lang === "ja" ? value : value.toUpperCase();
+}
 
 /**
  * 任意のテキスト（長文ニュース文や短い部位文字列）から
@@ -226,23 +719,18 @@ const JA_TO_EN_BODY_PARTS: Record<string, string> = {
  */
 export function extractInjuryConciseLabel(
   rawText: string | null | undefined,
-  language: "ja" | "en" = "en"
+  language: string | null | undefined = "en"
 ): string {
-  if (!rawText) {
-    return language === "ja" ? "コンディション調整" : "CONDITIONING";
-  }
+  const lang = resolveLocalizedLang(language);
+  const conditioning = injuryLabelText(CONDITIONING_LABEL, lang);
+  if (!rawText) return conditioning;
 
   const trimmed = rawText.trim();
-  if (!trimmed) {
-    return language === "ja" ? "コンディション調整" : "CONDITIONING";
-  }
+  if (!trimmed) return conditioning;
 
   // すでに登録された日本語文字列の場合
-  if (JA_TO_EN_BODY_PARTS[trimmed]) {
-    return language === "ja"
-      ? trimmed
-      : (JA_TO_EN_BODY_PARTS[trimmed] ?? trimmed).toUpperCase();
-  }
+  const jaHit = JA_LABEL_LOOKUP[trimmed];
+  if (jaHit) return injuryLabelText(jaHit, lang);
 
   // 1. カッコ内 (hip) 等があれば最優先で抽出
   const parenMatch = trimmed.match(/\(([^)]+)\)/);
@@ -251,37 +739,37 @@ export function extractInjuryConciseLabel(
   // 2. 部位を最優先で検索
   for (const part of INJURY_BODY_PARTS) {
     if (part.pattern.test(targetToScan)) {
-      return language === "ja" ? part.ja : part.en.toUpperCase();
+      return injuryLabelText(part.label, lang);
     }
   }
 
   // 3. 症状・状態（非公開・捻挫・体調不良など）を検索
   for (const cond of INJURY_CONDITIONS) {
     if (cond.pattern.test(targetToScan)) {
-      return language === "ja" ? cond.ja : cond.en.toUpperCase();
+      return injuryLabelText(cond.label, lang);
     }
   }
 
   // 4. スラッシュ区切りで短い単語がある場合（"Foot / Plantar Fasciitis" 等）
   if (trimmed.length <= 30 && !trimmed.includes(".")) {
-    return language === "ja" ? trimmed : trimmed.toUpperCase();
+    return lang === "ja" ? trimmed : trimmed.toUpperCase();
   }
 
   // 5. 部位・症状が見つからない長文ニュースなどの場合は「コンディション調整」
-  return language === "ja" ? "コンディション調整" : "CONDITIONING";
+  return conditioning;
 }
 
 /** "Foot / Plantar Fasciitis" → ja: "足 / 足底腱膜炎" */
 export function formatInjuryDetailLabel(
   detail: string,
-  language: "ja" | "en" = "en"
+  language: string | null | undefined = "en"
 ): string {
   return extractInjuryConciseLabel(detail, language);
 }
 
 export function injuryDetailLabel(
   entry: NbaInjuryEntry,
-  language: "ja" | "en" = "en"
+  language: string | null | undefined = "en"
 ): string {
   const raw = entry.injuryDetail?.trim() || entry.description?.trim();
   return extractInjuryConciseLabel(raw, language);

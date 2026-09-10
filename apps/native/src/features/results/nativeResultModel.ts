@@ -64,11 +64,11 @@ function toStartAtMillis(p: unknown): number | null {
 }
 
 function resultListTimeZoneForLanguage(lang: "ja" | "en"): string {
-  return lang === "en" ? TIMEZONE_ET : TIMEZONE_JST;
+  return lang === "ja" ? TIMEZONE_JST : TIMEZONE_ET;
 }
 
 function formatResultDateLabel(ms: number | null | undefined, lang: "ja" | "en"): string {
-  if (!ms) return lang === "en" ? "Unknown" : "不明";
+  if (!ms) return lang === "ja" ? "不明" : "Unknown";
   const tz = resultListTimeZoneForLanguage(lang);
   const { year, month, day } = getZonedYMD(new Date(ms), tz);
   return `${year}.${month}.${day}`;
@@ -77,7 +77,7 @@ function formatResultDateLabel(ms: number | null | undefined, lang: "ja" | "en")
 /** カード中央ラベル用：開催日を優先し、無ければ投稿作成日 */
 export function formatResultPostCardDateLabel(
   post: Record<string, unknown>,
-  lang: "ja" | "en"
+  lang: "ja" | "en" | import("../../../../../lib/i18n/language").Language
 ): string {
   const start = post.startAtMillis;
   const created = post.createdAtMillis;
@@ -87,7 +87,8 @@ export function formatResultPostCardDateLabel(
       : typeof created === "number" && Number.isFinite(created)
         ? created
         : null;
-  return formatResultDateLabel(ms, lang);
+  const compact = lang === "ja" ? "ja" : "en";
+  return formatResultDateLabel(ms, compact);
 }
 
 function getGroupDateMillis(post: PostWithMillis): number {
@@ -178,7 +179,7 @@ export function mapDocToPostWithMillis(id: string, raw: unknown): PostWithMillis
 
 export function groupPostsByResultDay(
   posts: PostWithMillis[],
-  language: "ja" | "en"
+  language: "ja" | "en" | import("../../../../../lib/i18n/language").Language
 ): ResultDayGroup[] {
   const dayMap = new Map<
     string,
@@ -192,7 +193,10 @@ export function groupPostsByResultDay(
 
   posts.forEach((post) => {
     const groupMs = getGroupDateMillis(post);
-    const dateLabel = formatResultDateLabel(groupMs, language);
+    const dateLabel = formatResultDateLabel(
+      groupMs,
+      language === "ja" ? "ja" : "en"
+    );
 
     if (!dayMap.has(dateLabel)) {
       dayMap.set(dateLabel, {

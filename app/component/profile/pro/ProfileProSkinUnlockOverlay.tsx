@@ -18,11 +18,12 @@ import type { ProfilePlanProBgVariant } from "@/lib/profile/profilePlanProBgVari
 import { PROFILE_PLAN_PRO_CLASS } from "@/lib/profile/profilePlanVisual";
 import ProfilePlanProBackgroundFx from "@/app/component/profile/ui/ProfilePlanProBackgroundFx";
 import { saveMeProSkin } from "@/lib/api/saveMeProSkin";
+import { L, resolveLocalizedLang } from "@/lib/i18n/localize";
 import "@/app/component/profile/pro/profilePlanProBgPickerPreview.css";
 
 type Props = {
   unlockedIds: readonly ProfilePlanProBgVariant[];
-  language?: "ja" | "en";
+  language?: string | null;
   preview?: boolean;
   platform?: "mobile" | "web";
   ownerCounts?: Record<string, number>;
@@ -42,7 +43,8 @@ export default function ProfileProSkinUnlockOverlay({
   onApplied,
   inline = false,
 }: Props) {
-  const isJa = language === "ja";
+  const lang = resolveLocalizedLang(language);
+  const skinLang = lang === "ja" ? ("ja" as const) : ("en" as const);
   const router = useRouter();
   const entries = resolveProSkinUnlockNoticeEntries(unlockedIds);
   const featured = entries[0] ?? null;
@@ -75,9 +77,15 @@ export default function ProfileProSkinUnlockOverlay({
       setError(
         e instanceof Error
           ? e.message
-          : isJa
-            ? "適用に失敗しました"
-            : "Failed to apply"
+          : L(lang, {
+              ja: "適用に失敗しました",
+              en: "Failed to apply",
+              ko: "적용에 실패했습니다",
+              zh: "应用失败",
+              es: "No se pudo aplicar",
+              pt: "Falha ao aplicar",
+              fr: "Échec de l’application",
+            })
       );
     } finally {
       setApplying(false);
@@ -93,13 +101,29 @@ export default function ProfileProSkinUnlockOverlay({
       }
       role="dialog"
       aria-modal="true"
-      aria-label={isJa ? "スキン解放" : "Skin unlocked"}
+      aria-label={L(lang, {
+        ja: "スキン解放",
+        en: "Skin unlocked",
+        ko: "스킨 해제",
+        zh: "皮肤解锁",
+        es: "Skin desbloqueada",
+        pt: "Skin desbloqueada",
+        fr: "Skin débloquée",
+      })}
     >
       {!inline ? (
         <button
           type="button"
           className="absolute inset-0 bg-black/78 backdrop-blur-[2px]"
-          aria-label={isJa ? "閉じる" : "Close"}
+          aria-label={L(lang, {
+            ja: "閉じる",
+            en: "Close",
+            ko: "닫기",
+            zh: "关闭",
+            es: "Cerrar",
+            pt: "Fechar",
+            fr: "Fermer",
+          })}
           onClick={onDismiss}
           disabled={applying}
         />
@@ -157,15 +181,21 @@ export default function ProfileProSkinUnlockOverlay({
                 "mt-1.5 text-[12px] font-bold tracking-[0.05em] text-cyan-100/85",
               ].join(" ")}
             >
-              {formatProSkinUnlockCondition(featured.unlock, language)}
+              {formatProSkinUnlockCondition(featured.unlock, skinLang)}
               <span className="mx-1.5 text-white/25">·</span>
-              {formatProSkinOwnerCount(owners, language)}
+              {formatProSkinOwnerCount(owners, skinLang)}
             </p>
             {moreCount > 0 ? (
               <p className="mt-1.5 text-[11px] text-white/45">
-                {isJa
-                  ? `ほか ${moreCount} 件も解放`
-                  : `+${moreCount} more unlocked`}
+                {L(lang, {
+                  ja: `ほか ${moreCount} 件も解放`,
+                  en: `+${moreCount} more unlocked`,
+                  ko: `외 ${moreCount}개 더 해제`,
+                  zh: `另有 ${moreCount} 个已解锁`,
+                  es: `+${moreCount} más desbloqueados`,
+                  pt: `+${moreCount} mais desbloqueados`,
+                  fr: `+${moreCount} de plus débloqués`,
+                })}
               </p>
             ) : null}
           </div>
@@ -185,12 +215,24 @@ export default function ProfileProSkinUnlockOverlay({
             ].join(" ")}
           >
             {applying
-              ? isJa
-                ? "適用中…"
-                : "Applying…"
-              : isJa
-                ? "適用する"
-                : "Apply"}
+              ? L(lang, {
+                  ja: "適用中…",
+                  en: "Applying…",
+                  ko: "적용 중…",
+                  zh: "应用中…",
+                  es: "Aplicando…",
+                  pt: "Aplicando…",
+                  fr: "Application…",
+                })
+              : L(lang, {
+                  ja: "適用する",
+                  en: "Apply",
+                  ko: "적용",
+                  zh: "应用",
+                  es: "Aplicar",
+                  pt: "Aplicar",
+                  fr: "Appliquer",
+                })}
           </button>
           <button
             type="button"
@@ -201,7 +243,15 @@ export default function ProfileProSkinUnlockOverlay({
               "w-full border border-white/15 bg-white/5 py-2.5 text-[11px] font-extrabold uppercase tracking-[0.14em] text-white/75 transition hover:bg-white/10 disabled:opacity-60",
             ].join(" ")}
           >
-            {isJa ? "とじる" : "Close"}
+            {L(lang, {
+              ja: "とじる",
+              en: "Close",
+              ko: "닫기",
+              zh: "关闭",
+              es: "Cerrar",
+              pt: "Fechar",
+              fr: "Fermer",
+            })}
           </button>
         </div>
       </div>

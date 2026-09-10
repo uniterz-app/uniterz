@@ -1,12 +1,13 @@
 import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import type { DetailChipExplainPayload } from "../../../../../../lib/nba/detailInsights/detailInsightTypes";
+import { L, resolveLocalizedLang } from "../../../../../../lib/i18n/localize";
 
 const OXANIUM = "Oxanium_700Bold";
 
 type Props = {
   visible: boolean;
   payload: DetailChipExplainPayload | null;
-  isJa: boolean;
+  language: string;
   accent: string;
   onClose: () => void;
 };
@@ -14,10 +15,11 @@ type Props = {
 export function DetailChipExplainModalNative({
   visible,
   payload,
-  isJa,
+  language,
   accent,
   onClose,
 }: Props) {
+  const lang = resolveLocalizedLang(language);
   return (
     <Modal
       visible={visible && payload != null}
@@ -35,11 +37,21 @@ export function DetailChipExplainModalNative({
               {payload?.label ?? ""}
             </Text>
             <Pressable onPress={onClose} hitSlop={8}>
-              <Text style={styles.close}>{isJa ? "閉じる" : "Close"}</Text>
+              <Text style={styles.close}>
+                {L(lang, {
+                  ja: "閉じる",
+                  en: "Close",
+                  ko: "닫기",
+                  zh: "关闭",
+                  es: "Cerrar",
+                  pt: "Fechar",
+                  fr: "Fermer",
+                })}
+              </Text>
             </Pressable>
           </View>
           <Text style={styles.body}>
-            {isJa ? payload?.hintJa : payload?.hintEn}
+            {payload ? L(lang, payload.hint) : ""}
           </Text>
         </Pressable>
       </Pressable>

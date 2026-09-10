@@ -22,6 +22,7 @@ import {
 } from "../../../../../../lib/nba/nbaConferenceStandings";
 import type { NbaConferenceId } from "../../../../../../lib/nba/nbaConferenceTeams";
 import { getUniterzApiBaseUrl } from "../submitPredictionApi";
+import { nbaLeagueStatsChrome } from "../stats/nbaStatsUiCopy";
 import {
   CyberSlantedTabBarNative,
   CyberSlantedTabNative,
@@ -31,14 +32,10 @@ import {
   METRIC_FONT,
   RANK_DISPLAY_FONT,
 } from "../../rankings/rankingsUiTheme";
-import {
-  MATCH_CARD_BRACKET_LETTER_SPACING_15,
-  MATCH_CARD_BRACKET_TEXT,
-} from "../matchCardTypography";
 import { useBottomTabBarInsets } from "../../../navigation/useBottomTabBarInsets";
 
 type Props = {
-  language: "ja" | "en";
+  language: string;
   onSelectTeam: (teamId: string) => void;
 };
 
@@ -112,12 +109,12 @@ export default function NbaLeagueStandingsPanelNative({
   language,
   onSelectTeam,
 }: Props) {
-  const isJa = language === "ja";
+  const chrome = nbaLeagueStatsChrome(language);
   const { bottomContentReserveY } = useBottomTabBarInsets();
   const { board, asOfLabel, loading } = useNbaConferenceStandings({
     apiBaseUrl: getUniterzApiBaseUrl(),
   });
-  const updateFootnote = nbaDailyStatsUpdateFootnote(isJa ? "ja" : "en", asOfLabel);
+  const updateFootnote = nbaDailyStatsUpdateFootnote(chrome.lang, asOfLabel);
   const [conference, setConference] = useState<NbaConferenceId>("east");
   const rows = conference === "east" ? board.east : board.west;
 
@@ -164,11 +161,11 @@ export default function NbaLeagueStandingsPanelNative({
             <View style={styles.head}>
               <Text style={[styles.th, styles.colRank]}>#</Text>
               <Text style={[styles.th, styles.colTeam]}>
-                {isJa ? "チーム" : "Team"}
+                {chrome.teamCol}
               </Text>
               <MetricCol width={COL.wl}>
                 <Text style={[styles.th, styles.thMetric]}>
-                  {isJa ? "成績" : "W-L"}
+                  {chrome.standingsWl}
                 </Text>
               </MetricCol>
               <MetricCol width={COL.pct}>
@@ -176,7 +173,7 @@ export default function NbaLeagueStandingsPanelNative({
               </MetricCol>
               <MetricCol width={COL.strk}>
                 <Text style={[styles.th, styles.thMetric]}>
-                  {isJa ? "連勝" : "STRK"}
+                  {chrome.standingsStreak}
                 </Text>
               </MetricCol>
               <MetricCol width={COL.split}>
@@ -401,12 +398,14 @@ const styles = StyleSheet.create({
     transform: [{ skewX: "-10deg" }],
   },
   tdTeam: {
-    ...MATCH_CARD_BRACKET_TEXT,
     width: COL.team,
+    fontFamily: "Oxanium_600SemiBold",
+    fontWeight: "600",
     color: "rgba(255,255,255,0.94)",
-    fontSize: 18,
-    letterSpacing: MATCH_CARD_BRACKET_LETTER_SPACING_15,
+    fontSize: 15,
+    letterSpacing: 0.6,
     textTransform: "uppercase",
+    includeFontPadding: false,
     transform: [{ skewX: "-6deg" }],
     paddingRight: 8,
   },

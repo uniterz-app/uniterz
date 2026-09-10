@@ -6,6 +6,7 @@ import type {
   RedemptionCatalogItem,
   RedemptionProductKind,
 } from "@/lib/redemption/redemptionTypes";
+import { L, resolveLocalizedLang } from "@/lib/i18n/localize";
 
 export const REDEMPTION_SEASON_CAP_UNITS = 2000;
 
@@ -17,8 +18,26 @@ export const REDEMPTION_CATALOG: readonly RedemptionCatalogItem[] = [
     priceCapUsd: 170,
     titleJa: "NBA ジャージ",
     titleEn: "NBA Jersey",
+    title: {
+      ja: "NBA ジャージ",
+      en: "NBA Jersey",
+      ko: "NBA 저지",
+      zh: "NBA 球衣",
+      es: "Camiseta NBA",
+      pt: "Camisa NBA",
+      fr: "Maillot NBA",
+    },
     blurbJa: "スウィングマン基本。25,000円まで。上限内ならオーセンティック可。",
     blurbEn: "Swingman baseline; up to $170. Authentic OK within cap.",
+    blurb: {
+      ja: "スウィングマン基本。25,000円まで。上限内ならオーセンティック可。",
+      en: "Swingman baseline; up to $170. Authentic OK within cap.",
+      ko: "스윙맨 기준, 최대 $170. 한도 내라면 어센틱도 가능합니다.",
+      zh: "以 Swingman 版为准，上限 $170。在上限内可选球员版。",
+      es: "Base Swingman; hasta $170. Authentic válida dentro del tope.",
+      pt: "Base Swingman; até $170. Authentic permitida dentro do teto.",
+      fr: "Base Swingman ; jusqu'à 170 $. Authentic possible dans la limite.",
+    },
   },
   {
     kind: "tshirt",
@@ -27,8 +46,26 @@ export const REDEMPTION_CATALOG: readonly RedemptionCatalogItem[] = [
     priceCapUsd: 80,
     titleJa: "NBA Tシャツ",
     titleEn: "NBA T-Shirt",
+    title: {
+      ja: "NBA Tシャツ",
+      en: "NBA T-Shirt",
+      ko: "NBA 티셔츠",
+      zh: "NBA T恤",
+      es: "Camiseta NBA",
+      pt: "Camiseta NBA",
+      fr: "T-shirt NBA",
+    },
     blurbJa: "正規販売店の新品のみ。12,000円まで。",
     blurbEn: "New items from approved retailers only. Up to $80.",
+    blurb: {
+      ja: "正規販売店の新品のみ。12,000円まで。",
+      en: "New items from approved retailers only. Up to $80.",
+      ko: "공식 판매처의 새 상품만. 최대 $80.",
+      zh: "仅限正规零售商的全新商品，上限 $80。",
+      es: "Solo artículos nuevos de tiendas autorizadas. Hasta $80.",
+      pt: "Apenas itens novos de lojas autorizadas. Até $80.",
+      fr: "Uniquement des articles neufs de revendeurs agréés. Jusqu'à 80 $.",
+    },
   },
   {
     kind: "cap",
@@ -37,11 +74,49 @@ export const REDEMPTION_CATALOG: readonly RedemptionCatalogItem[] = [
     priceCapUsd: 50,
     titleJa: "NBA キャップ",
     titleEn: "NBA Cap",
+    title: {
+      ja: "NBA キャップ",
+      en: "NBA Cap",
+      ko: "NBA 모자",
+      zh: "NBA 球帽",
+      es: "Gorra NBA",
+      pt: "Boné NBA",
+      fr: "Casquette NBA",
+    },
     blurbJa: "7,000円まで。価格が上限未満でも必要 Unit は変わりません。",
     blurbEn:
       "Up to $50. Units required stay fixed even if the price is lower.",
+    blurb: {
+      ja: "7,000円まで。価格が上限未満でも必要 Unit は変わりません。",
+      en: "Up to $50. Units required stay fixed even if the price is lower.",
+      ko: "최대 $50. 가격이 한도보다 낮아도 필요 Unit은 동일합니다.",
+      zh: "上限 $50。即使价格低于上限，所需 Unit 也不变。",
+      es: "Hasta $50. Las Units necesarias no cambian aunque el precio sea menor.",
+      pt: "Até $50. As Units necessárias não mudam mesmo com preço menor.",
+      fr: "Jusqu'à 50 $. Les Units requises restent identiques même si le prix est inférieur.",
+    },
   },
 ] as const;
+
+/** カタログ名（7言語） */
+export function redemptionCatalogTitle(
+  item: Pick<RedemptionCatalogItem, "title" | "titleJa" | "titleEn">,
+  language: string | null | undefined
+): string {
+  const lang = resolveLocalizedLang(language);
+  if (item.title) return L(lang, item.title);
+  return lang === "ja" ? item.titleJa : item.titleEn;
+}
+
+/** カタログ説明（7言語） */
+export function redemptionCatalogBlurb(
+  item: Pick<RedemptionCatalogItem, "blurb" | "blurbJa" | "blurbEn">,
+  language: string | null | undefined
+): string {
+  const lang = resolveLocalizedLang(language);
+  if (item.blurb) return L(lang, item.blurb);
+  return lang === "ja" ? item.blurbJa : item.blurbEn;
+}
 
 export function redemptionCatalogItem(
   kind: RedemptionProductKind
@@ -78,7 +153,67 @@ export function redemptionPriceCapShort(
   return `${item.priceCapJpy.toLocaleString("ja-JP")} 円`;
 }
 
-/** 対象外の案内（カタログ注意書き） */
+/** 対象外の案内（カタログ注意書き）— chrome は 7言語 */
+export function redemptionExclusionsCopy(
+  language: string | null | undefined
+): readonly string[] {
+  const lang = resolveLocalizedLang(language);
+  return [
+    L(lang, {
+      ja: "中古・転売・フリマ・オークション",
+      en: "Used, resale, flea market, or auction items",
+      ko: "중고·리셀·플리마켓·경매",
+      zh: "二手、转售、跳蚤市场或拍卖",
+      es: "Usado, reventa, mercadillo o subasta",
+      pt: "Usado, revenda, brechó ou leilão",
+      fr: "Occasion, revente, brocante ou enchères",
+    }),
+    L(lang, {
+      ja: "ギフトカード・金券・デジタルコード",
+      en: "Gift cards, vouchers, or digital codes",
+      ko: "기프트카드·상품권·디지털 코드",
+      zh: "礼品卡、代金券或数字兑换码",
+      es: "Tarjetas regalo, vales o códigos digitales",
+      pt: "Cartões-presente, vales ou códigos digitais",
+      fr: "Cartes cadeaux, bons ou codes numériques",
+    }),
+    L(lang, {
+      ja: "予約商品・オーダーメイド・名前入れ",
+      en: "Pre-orders, custom, or name-customized items",
+      ko: "예약·주문 제작·각인 상품",
+      zh: "预售、定制或刻名商品",
+      es: "Preventas, personalizados o con nombre",
+      pt: "Pré-venda, sob medida ou com nome",
+      fr: "Précommandes, sur-mesure ou nominatifs",
+    }),
+    L(lang, {
+      ja: "正規品と確認できない商品",
+      en: "Items that cannot be verified as authentic",
+      ko: "정품 확인이 불가한 상품",
+      zh: "无法核实为正品的商品",
+      es: "Artículos no verificables como auténticos",
+      pt: "Itens que não podem ser verificados como autênticos",
+      fr: "Articles non vérifiables comme authentiques",
+    }),
+  ];
+}
+
+export function redemptionDisclaimerCopy(
+  language: string | null | undefined
+): string {
+  const lang = resolveLocalizedLang(language);
+  return L(lang, {
+    ja: "UNITERZ は NBA およびその関連団体とは無関係の独立したサービスです。商品は運営が正規販売店から購入し、ユーザーへお届けします。",
+    en: "UNITERZ is an independent service and is not affiliated with the NBA or its partners. Products are purchased by the operator from authorized retailers and shipped to you.",
+    ko: "UNITERZ는 NBA 및 관련 단체와 무관한 독립 서비스입니다. 상품은 운영자가 공식 판매점에서 구매해 배송합니다.",
+    zh: "UNITERZ 为独立服务，与 NBA 及其关联机构无关。商品由运营方从正规零售商采购并寄送给您。",
+    es: "UNITERZ es un servicio independiente y no está afiliado a la NBA ni a sus socios. Compramos en tiendas autorizadas y te enviamos el producto.",
+    pt: "UNITERZ é um serviço independente e não é afiliado à NBA ou parceiros. Compramos em lojas autorizadas e enviamos a você.",
+    fr: "UNITERZ est un service indépendant, non affilié à la NBA ni à ses partenaires. Nous achetons chez des revendeurs agréés et vous livrons.",
+  });
+}
+
+/** @deprecated 互換: JA 配列 — 新規は redemptionExclusionsCopy */
 export const REDEMPTION_EXCLUSIONS_JA = [
   "中古・転売・フリマ・オークション",
   "ギフトカード・金券・デジタルコード",
@@ -86,6 +221,7 @@ export const REDEMPTION_EXCLUSIONS_JA = [
   "正規品と確認できない商品",
 ] as const;
 
+/** @deprecated 互換: EN 配列 — 新規は redemptionExclusionsCopy */
 export const REDEMPTION_EXCLUSIONS_EN = [
   "Used, resale, flea market, or auction items",
   "Gift cards, vouchers, or digital codes",
@@ -93,8 +229,10 @@ export const REDEMPTION_EXCLUSIONS_EN = [
   "Items that cannot be verified as authentic",
 ] as const;
 
+/** @deprecated 互換 — 新規は redemptionDisclaimerCopy */
 export const REDEMPTION_DISCLAIMER_JA =
   "UNITERZ は NBA およびその関連団体とは無関係の独立したサービスです。商品は運営が正規販売店から購入し、ユーザーへお届けします。";
 
+/** @deprecated 互換 — 新規は redemptionDisclaimerCopy */
 export const REDEMPTION_DISCLAIMER_EN =
   "UNITERZ is an independent service and is not affiliated with the NBA or its partners. Products are purchased by the operator from authorized retailers and shipped to you.";

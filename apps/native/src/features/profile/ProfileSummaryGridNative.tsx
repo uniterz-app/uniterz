@@ -25,12 +25,13 @@ import {
   profileSummaryGridKeysProOverview,
   type ProfileSummaryCellKey,
 } from "../../../../../lib/profile/profileSummaryGridOrder";
+import { profileSummaryGridCopy } from "./profileOverviewWidgetsCopy";
 
 type Props = {
   summary: ProfileSummaryNative;
   ranks: ProfileSummaryRanksNative | null;
   maxStreak: number;
-  language: "ja" | "en";
+  language: string;
   /** Web Pro 概要グリッドと同じ視覚順（連勝を精度の前へ） */
   proOverviewLayout?: boolean;
 };
@@ -129,7 +130,7 @@ export default function ProfileSummaryGridNative({
   language,
   proOverviewLayout = false,
 }: Props) {
-  const isJa = language === "ja";
+  const copy = profileSummaryGridCopy(language);
   /** 常に 2 列×3 行にするため実幅からセル幅を決める（flexGrow だと横幅広い端末で1行になる） */
   const [gridLayoutW, setGridLayoutW] = useState(0);
   const winPct = Math.round((summary.winRate ?? 0) * 100);
@@ -158,7 +159,7 @@ export default function ProfileSummaryGridNative({
   const cellsUnordered: CellModel[] = [
     {
       key: "posts",
-      label: isJa ? "投稿数" : "Posts",
+      label: copy.posts,
       icon: "file-document-outline",
       valueMain: `${summary.posts}`,
       rank: null,
@@ -166,7 +167,7 @@ export default function ProfileSummaryGridNative({
     },
     {
       key: "winrate",
-      label: isJa ? "勝率" : "Win rate",
+      label: copy.winRate,
       icon: "trophy-outline",
       valueMain: `${winPct}%`,
       rank: null,
@@ -174,7 +175,7 @@ export default function ProfileSummaryGridNative({
     },
     {
       key: "upset",
-      label: isJa ? "アップセット得点" : "Upset pts",
+      label: copy.upset,
       icon: "lightning-bolt-outline",
       showInfo: true,
       valueMain: format1(summary.upsetPointsSum),
@@ -183,7 +184,7 @@ export default function ProfileSummaryGridNative({
     },
     {
       key: "streak",
-      label: isJa ? "最大連勝" : "Max win streak",
+      label: copy.streak,
       icon: "fire",
       showInfo: true,
       valueMain: `${Math.max(0, Math.floor(maxStreak))}`,
@@ -192,7 +193,7 @@ export default function ProfileSummaryGridNative({
     },
     {
       key: "total",
-      label: isJa ? "総合得点" : "Total pts",
+      label: copy.total,
       icon: "crown-outline",
       showInfo: true,
       valueMain: format1(summary.pointsSumV3),
@@ -236,9 +237,7 @@ export default function ProfileSummaryGridNative({
               valueMain={c.valueMain}
               rankSuffix={
                 c.rank != null
-                  ? isJa
-                    ? ` / ${c.rank}位`
-                    : ` / ${ordinalEn(c.rank)}`
+                  ? copy.rankSuffix(c.rank, ordinalEn(c.rank))
                   : null
               }
               rankHighlight={c.rank != null && c.rank <= 20}

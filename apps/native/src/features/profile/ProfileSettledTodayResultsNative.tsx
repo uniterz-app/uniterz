@@ -27,10 +27,12 @@ import {
   useResultPostsGameRoundMeta,
 } from "../../../../../lib/games/useResultPostsGameMarkets";
 import { useNativeProfileSettledTodayResults } from "./useNativeProfileSettledTodayResults";
+import { profileSettledTodayCopy } from "./profileOverviewWidgetsCopy";
+import { resolveLocalizedLang } from "../../../../../lib/i18n/localize";
 
 type Props = {
   uid: string | null | undefined;
-  language: "ja" | "en";
+  language: string;
   profileStatsContext: ProfileStatsStreakContext;
   /**
    * true（既定）: 本日確定が空でもデザイン確認用モックを表示。
@@ -45,7 +47,8 @@ export default function ProfileSettledTodayResultsNative({
   profileStatsContext,
   showDesignPreviewWhenEmpty = false,
 }: Props) {
-  const isJa = language === "ja";
+  const copy = profileSettledTodayCopy(language);
+  const cardLang = resolveLocalizedLang(language);
   const navigation = useNavigation();
   const nowMs = Date.now();
   const { posts, loading } = useNativeProfileSettledTodayResults(
@@ -55,12 +58,8 @@ export default function ProfileSettledTodayResultsNative({
   );
 
   const title = "Result Drop";
-  const subtitle = isJa
-    ? "今日確定した分析一覧"
-    : "Today's finalized analyses";
-  const empty = isJa
-    ? "今日確定した分析はまだありません"
-    : "No analyses finalized today yet";
+  const subtitle = copy.subtitle;
+  const empty = copy.empty;
 
   const { visiblePosts, isDesignPreview } = useMemo(() => {
     if (posts.length > 0) {
@@ -103,9 +102,7 @@ export default function ProfileSettledTodayResultsNative({
       {isDesignPreview ? (
         <View style={styles.previewBanner}>
           <Text style={styles.previewBannerText}>
-            {isJa
-              ? "デザインプレビュー（本日確定なし）"
-              : "Design preview (none settled today)"}
+            {copy.designPreview}
           </Text>
         </View>
       ) : null}
@@ -122,7 +119,7 @@ export default function ProfileSettledTodayResultsNative({
             <ResultPostCardNative
               key={post.id}
               post={post}
-              language={language}
+              language={cardLang}
               nowMs={nowMs}
               viewerUid={null}
               listEnterIndex={index}

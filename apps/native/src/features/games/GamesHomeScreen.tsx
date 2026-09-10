@@ -51,6 +51,7 @@ import {
   resolvePkScore,
 } from "@uniterz/shared";
 import { splitTeamNameByLeague, getTeamAlias } from "../../utils/teamName";
+import { compactNbaCardNickname } from "../../../../../lib/nba-team-names";
 import { auth, db } from "../../lib/firebase";
 import { useFirebaseUser } from "../../auth/FirebaseUserProvider";
 import { useNativeUserLanguageFromAuth } from "../../hooks/useNativeUserLanguage";
@@ -168,14 +169,18 @@ import {
   prevTutorialGamesSubstep,
 } from "../../../../../lib/tutorial/tutorialGamesSubsteps";
 import { t as i18nT } from "../../../../../lib/i18n/t";
-import type { Language } from "../../../../../lib/i18n/language";
+import {
+  DATE_LOCALE,
+  normalizeLanguage,
+  type Language,
+} from "../../../../../lib/i18n/language";
 import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import type { MainTabParamList } from "../../navigation/types";
 import {
   resolveNativeSeriesLabel,
   resolveNativeSeriesPair,
 } from "./resolveNativeSeriesStanding";
-import { getGamesTexts } from "./gamesI18n";
+import { getGamesTexts, toNativeGamesLanguage } from "./gamesI18n";
 import {
   parsePreferredLeague,
   preferredLeagueToGamesLeague,
@@ -235,10 +240,10 @@ import { displayNbaRoundLabel } from "../../../../../lib/games/displayNbaRoundLa
 
 function formatKickoffTime(
   startAt: Date | null,
-  language: "ja" | "en"
+  language: Language | string
 ): string {
   if (!startAt) return "--:--";
-  const timeZone = language === "en" ? "America/New_York" : "Asia/Tokyo";
+  const timeZone = language === "ja" ? "Asia/Tokyo" : "America/New_York";
   const parts = new Intl.DateTimeFormat("en-GB", {
     timeZone,
     hour: "2-digit",
@@ -253,11 +258,11 @@ function formatKickoffTime(
 /** Web `MatchCard` の `fmtKickoffDateTime` 相当 */
 function formatKickoffDateTime(
   startAt: Date | null,
-  language: "ja" | "en"
+  language: Language | string
 ): string {
   if (!startAt) return "--:--";
-  const timeZone = language === "en" ? "America/New_York" : "Asia/Tokyo";
-  const locale = language === "en" ? "en-US" : "ja-JP";
+  const timeZone = language === "ja" ? "Asia/Tokyo" : "America/New_York";
+  const locale = DATE_LOCALE[normalizeLanguage(language) ?? "en"];
   return startAt.toLocaleString(locale, {
     timeZone,
     month: "numeric",
@@ -287,17 +292,16 @@ function isEffectiveLive(game: Record<string, unknown>): boolean {
  */
 function getGameCardCenterBlock(
   game: Record<string, unknown>,
-  language: "ja" | "en"
+  language: Language | string
 ): GameCardCenterBlock {
+  const texts = getGamesTexts(language);
   const status = resolveGameStatus(game);
   const score = resolveGameScore(game);
   const startAt = resolveGameStartAt(game);
   const liveUi = isEffectiveLive(game);
   if (status === "final" && score) {
     const ot = resolveFinalMetaOt(game);
-    const sub = `${language === "en" ? "Final" : "試合終了"}${
-      ot ? " (OT)" : ""
-    }`;
+    const sub = `${texts.final}${ot ? " (OT)" : ""}`;
     const pkScore = resolvePkScore(game);
     return {
       variant: "score",
@@ -323,14 +327,14 @@ function getGameCardCenterBlock(
 
 function renderCenterText(
   game: Record<string, unknown>,
-  language: "ja" | "en"
+  language: Language | string
 ): string {
   const b = getGameCardCenterBlock(game, language);
   if (b.variant === "score") {
     return `${b.home} – ${b.away}`;
   }
   if (b.variant === "liveMark") {
-    return language === "en" ? "Live" : "試合中";
+    return getGamesTexts(language).live;
   }
   return b.time;
 }
@@ -342,15 +346,16 @@ function isSoccerLeague(leagueRaw: unknown): boolean {
 
 function renderStatusLabel(
   game: Record<string, unknown>,
-  language: "ja" | "en"
+  language: Language | string
 ): string {
+  const texts = getGamesTexts(language);
   const status = resolveGameStatus(game);
-  if (status === "final") return language === "en" ? "Final" : "試合終了";
+  if (status === "final") return texts.final;
   /** API が scheduled のままでもキックオフ後はライブ扱い（Web `isMatchStartedForPredict` と同趣旨） */
   if (status === "live" || isEffectiveLive(game)) {
-    return language === "en" ? "Live" : "試合中";
+    return texts.live;
   }
-  return language === "en" ? "Scheduled" : "試合予定";
+  return texts.scheduled;
 }
 
 function renderWinnerLabel(
@@ -393,9 +398,7 @@ function toCompactTeamName(
   const toUnifiedLabel = (value: string) => normalize(value).toLocaleUpperCase("en-US");
   if (league === "pl") return toUnifiedLabel(getTeamAlias(rawName) ?? rawName);
   if (league === "nba") {
-    const normalized = normalize(rawName);
-    const nbaLabel = normalized.split(" ").filter(Boolean).slice(-1)[0] ?? normalized;
-    return toUnifiedLabel(nbaLabel);
+    return toUnifiedLabel(compactNbaCardNickname(normalize(rawName)));
   }
   if (league === "bj" || league === "j1") {
     const [line1, line2] = splitTeamNameByLeague(
@@ -718,6 +721,7 @@ export default function GamesHomeScreen({
   const [countdownNowMs, setCountdownNowMs] = useState(() => Date.now());
   const [userDisplayName, setUserDisplayName] = useState("");
   const { language } = useNativeUserLanguageFromAuth();
+  const gamesLanguage = useMemo(() => toNativeGamesLanguage(language), [language]);
   /** ロード完了直後の日付チップのみ入場アニメ（窓移動での再マウント連打を防ぐ） */
   const [dayStripEntranceEnabled, setDayStripEntranceEnabled] = useState(true);
   const {
@@ -914,7 +918,7 @@ export default function GamesHomeScreen({
   }, [fUser?.uid]);
 
   const tutorialCopy = useMemo(
-    () => i18nT((language === "en" ? "en" : "ja") as Language),
+    () => i18nT(normalizeLanguage(language) ?? "en"),
     [language]
   );
   const skipConfirm = tutorialSkipConfirmProps(tutorialCopy.tutorial);
@@ -1037,9 +1041,12 @@ export default function GamesHomeScreen({
   }, [selectedGame, language, formatSideRecord, peerGamesForSeries]);
   const formatGameDateMs = useCallback(
     (ms: number) =>
-      new Date(ms).toLocaleString(language === "en" ? "en-US" : "ja-JP", {
-        timeZone: "Asia/Tokyo",
-      }),
+      new Date(ms).toLocaleString(
+        DATE_LOCALE[normalizeLanguage(language) ?? "en"],
+        {
+          timeZone: language === "ja" ? "Asia/Tokyo" : "America/New_York",
+        }
+      ),
     [language]
   );
   const predictModalData = useMemo(() => {
@@ -1051,13 +1058,13 @@ export default function GamesHomeScreen({
     return {
       gameId: String(selectedGame.id),
       league: selectedLeague,
-      language,
+      language: gamesLanguage,
       subjectGame: row,
       peerGames: peerGamesForSeries,
       formatGameDateMs,
       isSoccerLeague: isSoccerLeague(selectedLeague),
     };
-  }, [selectedGame, selectedLeague, language, peerGamesForSeries, formatGameDateMs]);
+  }, [selectedGame, selectedLeague, gamesLanguage, peerGamesForSeries, formatGameDateMs]);
   const today = useMemo(() => startOfLocalDay(new Date()), []);
   const mainScrollContentStyle = useMemo(
     () => [
@@ -1213,13 +1220,11 @@ export default function GamesHomeScreen({
     const g = nextGameAfterPost;
     const homeN = resolveGameTeamName(g.home, g.homeTeamName, "HOME");
     const awayN = resolveGameTeamName(g.away, g.awayTeamName, "AWAY");
-    const isEn = language === "en";
     const roundLabelRaw = g.roundLabel;
     const roundLabel = displayNbaRoundLabel(
       typeof roundLabelRaw === "string" && roundLabelRaw.trim()
         ? roundLabelRaw.trim()
-        : "",
-      !isEn
+        : ""
     ) || null;
     const seasonPhase = g.seasonPhase as
       | "preseason"
@@ -1232,9 +1237,9 @@ export default function GamesHomeScreen({
     const showSeriesRow =
       seriesStanding != null && isPlayoffStyleGameCard(seasonPhase, roundLabel);
     return {
-      homeTitle: scoreboardTeamLabelForNextModal(g.league, homeN, isEn),
-      awayTitle: scoreboardTeamLabelForNextModal(g.league, awayN, isEn),
-      deckLabel: broadcastDeckTitleForNextModal(isEn, seasonPhase, roundLabel),
+      homeTitle: scoreboardTeamLabelForNextModal(g.league, homeN, language),
+      awayTitle: scoreboardTeamLabelForNextModal(g.league, awayN, language),
+      deckLabel: broadcastDeckTitleForNextModal(language, seasonPhase, roundLabel),
       kickoff: formatKickoffTime(resolveGameStartAt(g), language),
       homePalette: resolveTeamJerseyPalette(g.league, g.home, "#ff6b8a"),
       awayPalette: resolveTeamJerseyPalette(g.league, g.away, "#5aa4ff"),
@@ -1507,7 +1512,7 @@ export default function GamesHomeScreen({
     };
   }, [fUser, gameIdsKey, gameIdSet, myPredictionsReloadNonce, windowGameIds]);
 
-  const t = useMemo(() => getGamesTexts(language), [language]);
+  const t = useMemo(() => getGamesTexts(gamesLanguage), [gamesLanguage]);
 
   const gamesFilterKey = useMemo(
     () =>
@@ -1814,7 +1819,7 @@ export default function GamesHomeScreen({
     const awaySide = selectedGame.away as { teamId?: string } | undefined;
     return buildPredictModalMergedFinalPreview({
       league: selectedLeague,
-      language,
+      language: gamesLanguage,
       finalScore,
       predictedScore: stored.score,
       stats: stored.postStats ?? null,
@@ -1827,7 +1832,7 @@ export default function GamesHomeScreen({
         .topScorerCandidates,
       leadingScorers: (selectedGame as { leadingScorers?: unknown }).leadingScorers,
     });
-  }, [selectedGame, selectedLeague, language, myPredictionByGameId]);
+  }, [selectedGame, selectedLeague, gamesLanguage, myPredictionByGameId]);
 
   type PredictModalEditBootstrap = {
     postId: string;
@@ -2292,6 +2297,8 @@ export default function GamesHomeScreen({
     () => ({ ...styles, ...gameCardListStyles }),
     []
   );
+  const tutorialPulseFirstCard = tutorialPhase === "games";
+  const tutorialRegisterPickupLabel = tutorialPhase === "gamesPickup";
   const cardListProps: GameCardListProps = useMemo(
     () => ({
       games: filteredGames,
@@ -2314,13 +2321,12 @@ export default function GamesHomeScreen({
       getTeamRecordLabel: formatSideRecord,
       teamRecordById,
       resolveTeamJerseyPalette,
-      tutorialPulseFirstCard: tutorialPhase === "tapCard",
-      tutorialPulseLabel:
-        tutorialPhase === "tapCard"
-          ? tutorialCopy.tutorial.pulseHint
-          : undefined,
-      tutorialRegisterMatchCard: tutorialPhase === "tapCard",
-      tutorialRegisterPickupLabel: tutorialPhase === "gamePickup",
+      tutorialPulseFirstCard,
+      tutorialPulseLabel: tutorialPulseFirstCard
+        ? tutorialCopy.tutorial.pulseHint
+        : undefined,
+      tutorialRegisterMatchCard: tutorialPulseFirstCard,
+      tutorialRegisterPickupLabel,
       shellVariant: "lineFrame",
       pickupMark: "left",
     }),
@@ -2338,7 +2344,8 @@ export default function GamesHomeScreen({
       resolveSeriesPairForList,
       formatSideRecord,
       teamRecordById,
-      tutorialPhase,
+      tutorialPulseFirstCard,
+      tutorialRegisterPickupLabel,
       tutorialCopy.tutorial.pulseHint,
     ]
   );
@@ -2433,11 +2440,9 @@ export default function GamesHomeScreen({
                 onStandings={() =>
                   navigation.navigate("SeasonPredict", { mode: "standings" })
                 }
-                awardsLabel={
-                  language === "ja" ? "アワード予想" : "Award Predictions"
-                }
+                awardsLabel={i18nT(normalizeLanguage(language) ?? "en").games.awardsPredict}
                 standingsLabel={
-                  language === "ja" ? "順位予想" : "Standings Predictions"
+                  i18nT(normalizeLanguage(language) ?? "en").games.standingsPredict
                 }
               />
             </Animated.View>
@@ -2552,7 +2557,7 @@ export default function GamesHomeScreen({
         formatCountdownLabel={formatCountdownLabel}
         isGameStarted={isGameStarted}
         countdownNowMs={countdownNowMs}
-        language={language}
+        language={language === "ja" ? "ja" : "en"}
         t={t}
         openPredictModal={() => void openPredictModal()}
         onOpenCommunityPredictions={() => {
@@ -2628,7 +2633,7 @@ export default function GamesHomeScreen({
         expandScoreFormWhenEditing={expandScoreFormWhenEditing}
         predictData={predictModalData}
         overlayMarketBar={predictOverlayMarketBar}
-        language={language}
+        language={gamesLanguage}
         predictScheduleMeta={predictScheduleMeta}
         wcGoalScorerPreview={wcGoalScorerPreview}
         goalScorerPick={goalScorerPick}
@@ -2645,7 +2650,7 @@ export default function GamesHomeScreen({
       <ResultDetailScreen
         visible={resultDetailPostId != null}
         postId={resultDetailPostId}
-        language={language}
+        language={language === "ja" ? "ja" : "en"}
         sections="cardAndLiveStats"
         onClose={() => setResultDetailPostId(null)}
       />
@@ -2788,7 +2793,7 @@ export default function GamesHomeScreen({
       />
       <TutorialLiveHostNative
         page="games"
-        language={(language === "en" ? "en" : "ja") as Language}
+        language={normalizeLanguage(language) ?? "en"}
       />
       </View>
     </View>
@@ -3429,16 +3434,16 @@ const styles = StyleSheet.create({
   /** MobileMatchCard NBA 等（一覧・プレビューと揃えてややコンパクト） */
   teamNameMain: {
     color: colors.textPrimary,
-    fontSize: 15,
-    fontWeight: "400",
+    fontSize: 13,
+    fontWeight: "600",
     textAlign: "center",
-    letterSpacing: 0.96,
-    lineHeight: 18,
+    letterSpacing: 0.6,
+    lineHeight: 15,
     marginTop: 0,
     marginBottom: 0,
     includeFontPadding: false,
     textTransform: "uppercase",
-    fontFamily: MATCH_CARD_DISPLAY_FONT,
+    fontFamily: "Oxanium_600SemiBold",
     maxWidth: "100%",
     transform: [{ skewX: "-6deg" }],
   },

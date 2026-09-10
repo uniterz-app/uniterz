@@ -24,7 +24,7 @@ import {
   getTeamRosterMarkColor,
   getTeamUiAccentColor,
 } from "@/lib/team-colors";
-import { nameBebas, nameOxanium, resultStatsMetricNumClass } from "@/lib/fonts";
+import { nameOxanium, resultStatsMetricNumClass } from "@/lib/fonts";
 import { matchCardTeamNameStyle } from "@/lib/games/teamDisplayTypography";
 import { getMobileTeamName } from "@/lib/team-name-split-mobile";
 import { nbaConferenceForTeam } from "@/lib/nba/nbaConferenceTeams";
@@ -381,8 +381,8 @@ function TeamRosterCard({
           ) : null}
           <p
             className={[
-              nameBebas.className,
-              "min-w-0 truncate text-[20px] font-bold uppercase leading-tight text-white",
+              nameOxanium.className,
+              "min-w-0 truncate text-[14px] font-bold uppercase leading-tight text-white",
             ].join(" ")}
             style={matchCardTeamNameStyle(true)}
           >

@@ -17,7 +17,7 @@ import { useNativeUserLanguage } from "../../hooks/useNativeUserLanguage";
 export default function TermsScreenNative() {
   const { fUser } = useFirebaseUser();
   const { language } = useNativeUserLanguage(fUser?.uid);
-  const lang = language === "en" ? "en" : "ja";
+  const lang = language === "ja" ? "ja" : "en";
 
   return (
     <LegalPageLayoutNative

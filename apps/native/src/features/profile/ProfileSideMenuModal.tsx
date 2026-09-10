@@ -25,8 +25,10 @@ import SideMenuItemButtonNative, {
 import LogoutConfirmModalNative from "../../ui/LogoutConfirmModalNative";
 import { sideMenuLabelStyle } from "../../ui/cyberSideMenuNative";
 import ProCyberBadgeNative from "./kinetik/ProCyberBadgeNative";
+import { profileSideMenuLabels } from "./profileSideMenuCopy";
+import { resolveLocalizedLang } from "@/lib/i18n/localize";
 
-type Lang = "ja" | "en";
+type Lang = string;
 
 type Props = {
   visible: boolean;
@@ -106,10 +108,12 @@ export default function ProfileSideMenuModal({
   unitBalance = 0,
   onOpenInApp,
 }: Props) {
-  const isJa = language === "ja";
-  const labelStyle = sideMenuLabelStyle(language);
+  const lang = resolveLocalizedLang(language);
+  const labelStyle = sideMenuLabelStyle(lang);
+  const labels = profileSideMenuLabels(lang);
   const identityName =
-    displayName.trim() || (isJa ? "ユーザー" : "User");
+    displayName.trim() || labels.userFallback;
+
   const identityInitial = identityName.charAt(0).toUpperCase() || "?";
   const planLabel = plan === "pro" ? "PRO" : "FREE";
   const identitySub = handle.trim()
@@ -167,67 +171,7 @@ export default function ProfileSideMenuModal({
     }
   }, [visible, slide, backdropOpacity]);
 
-  const labels = isJa
-    ? {
-        main: "メイン",
-        subscription: "サブスクリプション",
-        support: "サポート",
-        admin: "管理",
-        profile: "プロフィール編集",
-        badges: "バッジパレット",
-        invite: "招待",
-        unitHistory: "Unit 履歴",
-        unitRedeem: "商品交換",
-        announcements: "お知らせ",
-        plan: "プランの確認",
-        proSkin: "Pro Skin",
-        help: "ヘルプ",
-        guidelines: "ガイドライン",
-        terms: "利用規約",
-        contact: "お問い合わせ",
-        privacy: "プライバシーポリシー",
-        commercialLaw: "特定商取引法に基づく表記",
-        password: "パスワード変更",
-        notifications: "通知設定",
-        featureRequest: "機能リクエスト",
-        electronicNotice: "電子公告",
-        deleteAccount: "アカウント削除",
-        logout: "ログアウト",
-        adminFeatureRequests: "機能リクエスト",
-        adminContacts: "問い合わせ",
-        adminRedemptions: "商品交換申請",
-        adminGroupBattles: "スクワッドバトル開催",
-      }
-    : {
-        main: "MAIN",
-        subscription: "SUBSCRIPTION",
-        support: "SUPPORT",
-        admin: "ADMIN",
-        profile: "Edit Profile",
-        badges: "Badge Palette",
-        invite: "Invite",
-        unitHistory: "Unit History",
-        unitRedeem: "Redeem Units",
-        announcements: "Announcements",
-        plan: "Plan Status",
-        proSkin: "Pro Skin",
-        help: "Help",
-        guidelines: "Community Guidelines",
-        terms: "Terms of Service",
-        contact: "Contact",
-        privacy: "Privacy Policy",
-        commercialLaw: "Commercial Transactions Notice",
-        password: "Change Password",
-        notifications: "Notifications",
-        featureRequest: "Feature Request",
-        electronicNotice: "Electronic Notice",
-        deleteAccount: "Delete Account",
-        logout: "Log out",
-        adminFeatureRequests: "Feature Requests",
-        adminContacts: "Inquiries",
-        adminRedemptions: "Redemption Requests",
-        adminGroupBattles: "Squad Battle Ops",
-      };
+
 
   function openUserPage(
     page:
@@ -279,7 +223,7 @@ export default function ProfileSideMenuModal({
     try {
       await signOut(auth);
     } catch {
-      cyberAlert("", isJa ? "ログアウトに失敗しました。" : "Failed to log out.");
+      cyberAlert("", labels.logoutFailed);
     }
   }
 
@@ -341,7 +285,7 @@ export default function ProfileSideMenuModal({
                       onPress={() => openUserPage("unitLedger")}
                       accessibilityRole="button"
                       accessibilityLabel={
-                        isJa
+                        lang === "ja"
                           ? `保有 Unit ${unitBalance.toLocaleString("ja-JP")} · 履歴を開く`
                           : `${unitBalance.toLocaleString("en-US")} Units · Open history`
                       }
@@ -449,7 +393,7 @@ export default function ProfileSideMenuModal({
                       labelStyle={labelStyle}
                       onPress={() => openUserPage("restartTutorial")}
                     >
-                      {language === "ja" ? "チュートリアル" : "Tutorial"}
+                      {labels.tutorial}
                     </SideMenuItemButtonNative>
                     <SideMenuItemButtonNative
                       icon="help-circle-outline"
@@ -752,7 +696,7 @@ export default function ProfileSideMenuModal({
             open={logoutOpen}
             onClose={() => setLogoutOpen(false)}
             onConfirm={() => void confirmLogout()}
-            language={language}
+            language={lang === "ja" ? "ja" : "en"}
           />
         </View>
       </Modal>

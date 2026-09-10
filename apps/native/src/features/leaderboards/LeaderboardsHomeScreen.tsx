@@ -53,7 +53,7 @@ export default function LeaderboardsHomeScreen({ bottomReserveY = 0 }: Props) {
       </ScrollView>
       <TutorialLiveHostNative
         page="groups"
-        language={(language === "en" ? "en" : "ja") as Language}
+        language={(language === "ja" ? "ja" : "en") as Language}
       />
     </View>
   );

@@ -13,10 +13,11 @@ import type { ActiveReportOverlayNative } from "./useProReportDeliveryOverlayNat
 import WeeklyReportViewNative from "./WeeklyReportViewNative";
 import MonthlyReportViewNative from "./MonthlyReportViewNative";
 import { OXANIUM_800 } from "./reportThemeNative";
+import { L, resolveLocalizedLang } from "@/lib/i18n/localize";
 
 type Props = {
   active: ActiveReportOverlayNative;
-  language: "ja" | "en";
+  language: string;
   onDismiss: () => void;
 };
 
@@ -26,13 +27,13 @@ export default function ProfileReportDeliveryOverlayNative({
   onDismiss,
 }: Props) {
   const insets = useSafeAreaInsets();
-  const isJa = language === "ja";
+  const lang = resolveLocalizedLang(language);
   const kind = active.candidate.kind;
   const title = kind === "weekly" ? "WEEKLY REPORT" : "MONTHLY REPORT";
   const period = formatReportPeriodLabel(
     kind,
     active.candidate.periodKey,
-    language
+    lang
   );
 
   return (
@@ -52,7 +53,7 @@ export default function ProfileReportDeliveryOverlayNative({
             ) : null}
           </View>
           <Pressable onPress={onDismiss} style={styles.closeBtn} hitSlop={8}>
-            <Text style={styles.closeText}>{isJa ? "閉じる" : "Close"}</Text>
+            <Text style={styles.closeText}>{L(lang, { ja: "閉じる", en: "Close", ko: "닫기", zh: "关闭", es: "Cerrar", pt: "Fechar", fr: "Fermer" })}</Text>
           </Pressable>
         </View>
 
@@ -62,24 +63,30 @@ export default function ProfileReportDeliveryOverlayNative({
           showsVerticalScrollIndicator={false}
         >
           {kind === "weekly" && active.weekly ? (
-            <WeeklyReportViewNative report={active.weekly} language={language} />
+            <WeeklyReportViewNative report={active.weekly} language={lang} />
           ) : null}
           {kind === "monthly" && active.monthly ? (
             <MonthlyReportViewNative
               report={active.monthly}
-              language={language}
+              language={lang}
             />
           ) : null}
         </ScrollView>
 
         <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 14) }]}>
           <Text style={styles.footerHint}>
-            {isJa
-              ? "Report タブに保存されました。いつでも見返せます。"
-              : "Saved to the Report tab. You can revisit anytime."}
+            {L(lang, {
+              ja: "Report タブに保存されました。いつでも見返せます。",
+              en: "Saved to the Report tab. You can revisit anytime.",
+              ko: "Report 탭에 저장되었습니다. 언제든 다시 볼 수 있습니다.",
+              zh: "已保存到 Report 标签，可随时回看。",
+              es: "Guardado en la pestaña Report. Puedes volver cuando quieras.",
+              pt: "Salvo na aba Report. Você pode rever a qualquer momento.",
+              fr: "Enregistré dans l’onglet Report. Vous pouvez y revenir.",
+            })}
           </Text>
           <Pressable onPress={onDismiss} style={styles.okBtn}>
-            <Text style={styles.okText}>{isJa ? "OK" : "Got it"}</Text>
+            <Text style={styles.okText}>{L(lang, { ja: "OK", en: "Got it", ko: "확인", zh: "知道了", es: "Entendido", pt: "Entendi", fr: "Compris" })}</Text>
           </Pressable>
         </View>
       </View>

@@ -18,6 +18,7 @@ import type {
   ProfileKinetikBoard,
   ProfileKinetikWindow,
 } from "@/lib/profile/resolveNbaWindowProfileSummary";
+import { L, resolveLocalizedLang } from "@/lib/i18n/localize";
 
 export type { ProfileKinetikBoard, ProfileKinetikWindow };
 export type ProfileKinetikMetricsPeriod = ProfileKinetikBoard;
@@ -468,7 +469,7 @@ export function getNbaKinetikMonthlyTitle(monthLabel: string): string {
 /** メトリクスカード右上の期間ヒント（TOTAL / 今週 / 今月 / 過去期間） */
 export function getKinetikMetricsScopeHint(
   tab: ProfileKinetikMetricsTab,
-  language: "ja" | "en",
+  language: string | null | undefined,
   opts?: {
     windowLabel?: string | null;
     isCurrentWindow?: boolean;
@@ -477,12 +478,32 @@ export function getKinetikMetricsScopeHint(
   unitHint: string;
   windowJa: string;
   windowEn: string;
+  window: string;
 } {
+  const lang = resolveLocalizedLang(language);
   if (tab === "total") {
+    const window = L(lang, {
+      ja: "シーズン累計",
+      en: "season total",
+      ko: "시즌 누계",
+      zh: "赛季累计",
+      es: "total de temporada",
+      pt: "total da temporada",
+      fr: "total de saison",
+    });
     return {
-      unitHint: language === "ja" ? "累計" : "TTL",
+      unitHint: L(lang, {
+        ja: "累計",
+        en: "TTL",
+        ko: "누계",
+        zh: "累计",
+        es: "TTL",
+        pt: "TTL",
+        fr: "TTL",
+      }),
       windowJa: "シーズン累計",
       windowEn: "season total",
+      window,
     };
   }
   const current =
@@ -493,24 +514,40 @@ export function getKinetikMetricsScopeHint(
     return tab === "weekly"
       ? {
           // カード内の「今週」文字は不要との要望に合わせて表示を消す。
-          // ツールチップ等に使う windowJa/windowEn は残す。
           unitHint: "",
           windowJa: "今週",
           windowEn: "this week",
+          window: L(lang, {
+            ja: "今週",
+            en: "this week",
+            ko: "이번 주",
+            zh: "本周",
+            es: "esta semana",
+            pt: "esta semana",
+            fr: "cette semaine",
+          }),
         }
       : {
-          // カード内の「今月」文字は不要との要望に合わせて表示を消す。
-          // ツールチップ等に使う windowJa/windowEn は残す。
           unitHint: "",
           windowJa: "今月",
           windowEn: "this month",
+          window: L(lang, {
+            ja: "今月",
+            en: "this month",
+            ko: "이번 달",
+            zh: "本月",
+            es: "este mes",
+            pt: "este mês",
+            fr: "ce mois",
+          }),
         };
   }
   const label = opts?.windowLabel ?? currentRankingPeriodLabel(tab);
-  const display = formatRankingPeriodDisplay(tab, label, language);
+  const display = formatRankingPeriodDisplay(tab, label, lang);
   return {
     unitHint: display,
     windowJa: display,
     windowEn: display,
+    window: display,
   };
 }

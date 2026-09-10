@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, type CSSProperties, type ReactNode } from "react";
-import { nameOxanium, nameBebas, resultStatsMetricNumClass } from "@/lib/fonts";
+import { nameOxanium, resultStatsMetricNumClass } from "@/lib/fonts";
 import { matchCardTeamNameStyle } from "@/lib/games/teamDisplayTypography";
 import { getMobileTeamName } from "@/lib/team-name-split-mobile";
 import { getTeamJerseyPrimaryColor } from "@/lib/team-colors";
@@ -240,9 +240,11 @@ export default function NbaLeagueStandingsPanel({
                     {row.rank}
                   </span>
                   <span
-                    className={`${nameBebas.className} sticky z-[1] truncate pr-1 text-[18px] leading-none text-white/94`}
+                    className={`${nameOxanium.className} sticky z-[1] truncate pr-1 text-[15px] font-semibold leading-none text-white/94`}
                     style={{
                       ...teamNameTy,
+                      fontWeight: 600,
+                      letterSpacing: "0.05em",
                       width: COL.team,
                       left: COL.rank,
                       backgroundImage: stickyFill,

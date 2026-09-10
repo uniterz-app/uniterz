@@ -1,6 +1,7 @@
 import { Platform } from "react-native";
 import { getTeamAlias } from "../../../../../lib/team-alias";
 import { splitTeamNameByLeague } from "../../../../../lib/team-name-split";
+import { compactNbaCardNickname } from "../../../../../lib/nba-team-names";
 import {
   resolveGameLiveMeta,
   resolveGameScore,
@@ -8,6 +9,11 @@ import {
   resolveGameStatus,
   resolvePkScore,
 } from "@uniterz/shared";
+import {
+  DATE_LOCALE,
+  normalizeLanguage,
+  type Language,
+} from "../../../../../lib/i18n/language";
 import type { GameCardCenterBlock } from "./gameCardCenterTypes";
 import type { SupportedLeague } from "./useTodayGames";
 
@@ -31,10 +37,15 @@ export const NUMERIC_FONT_FAMILY = Platform.select({
   default: "Oxanium_700Bold",
 });
 
-function formatKickoffTime(startAt: Date | null, language: "ja" | "en"): string {
+function formatKickoffTime(
+  startAt: Date | null,
+  language: Language | string
+): string {
   if (!startAt) return "—";
-  const parts = new Intl.DateTimeFormat(language === "en" ? "en-US" : "ja-JP", {
-    timeZone: "Asia/Tokyo",
+  const lang = normalizeLanguage(language) ?? "en";
+  const timeZone = lang === "ja" ? "Asia/Tokyo" : "America/New_York";
+  const parts = new Intl.DateTimeFormat(DATE_LOCALE[lang], {
+    timeZone,
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
@@ -59,7 +70,7 @@ export function isEffectiveLive(game: Record<string, unknown>): boolean {
 
 export function getGameCardCenterBlock(
   game: Record<string, unknown>,
-  language: "ja" | "en"
+  language: Language | string
 ): GameCardCenterBlock {
   const status = resolveGameStatus(game);
   const score = resolveGameScore(game);
@@ -102,9 +113,7 @@ export function toCompactTeamName(leagueRaw: unknown, rawName: string): string {
   const toUnifiedLabel = (value: string) => normalize(value).toLocaleUpperCase("en-US");
   if (league === "pl") return toUnifiedLabel(getTeamAlias(rawName) ?? rawName);
   if (league === "nba") {
-    const normalized = normalize(rawName);
-    const nbaLabel = normalized.split(" ").filter(Boolean).slice(-1)[0] ?? normalized;
-    return toUnifiedLabel(nbaLabel);
+    return toUnifiedLabel(compactNbaCardNickname(normalize(rawName)));
   }
   if (league === "bj" || league === "j1") {
     const [line1, line2] = splitTeamNameByLeague(

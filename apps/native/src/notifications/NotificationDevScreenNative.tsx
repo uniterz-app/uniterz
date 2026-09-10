@@ -16,6 +16,7 @@ import type { PushNotificationType } from "@/lib/notifications/pushPayloadTypes"
 import MobilePageShell from "../features/profile/mobileScreens/MobilePageShell";
 import { useFirebaseUser } from "../auth/FirebaseUserProvider";
 import { useNativeUserLanguage } from "../hooks/useNativeUserLanguage";
+import { resolveLocalizedLang } from "../../../../lib/i18n/localize";
 import type { ProfileStackParamList } from "../navigation/types";
 import { useNativeNavTabNotificationBadges } from "../navigation/useNativeNavTabNotificationBadges";
 import {
@@ -120,6 +121,7 @@ export default function NotificationDevScreenNative() {
     useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
   const { fUser } = useFirebaseUser();
   const { language } = useNativeUserLanguage(fUser?.uid);
+  const pushLang = resolveLocalizedLang(language) === "ja" ? "ja" : "en";
   const uid = fUser?.uid ?? null;
 
   const badges = useNativeNavTabNotificationBadges();
@@ -193,7 +195,7 @@ export default function NotificationDevScreenNative() {
     try {
       const result = await scheduleLocalPushPreview({
         type,
-        language,
+        language: pushLang,
         gameId: type !== "ranking_updated" ? gameId : undefined,
         postId: type === "game_final" ? postId : undefined,
         delaySeconds,

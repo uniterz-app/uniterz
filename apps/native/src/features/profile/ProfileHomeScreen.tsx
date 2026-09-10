@@ -118,7 +118,18 @@ import { requestTutorialClearedNative } from "../tutorial/tutorialRestartEventsN
 import { setTutorialWelcomeAudienceNative } from "../tutorial/tutorialWelcomeAudienceNative";
 import { tutorialSkipConfirmProps } from "../../../../../lib/tutorial/tutorialSkipConfirmProps";
 import { t as i18nT } from "../../../../../lib/i18n/t";
-import type { Language } from "../../../../../lib/i18n/language";
+import {
+  LANGUAGE_NATIVE_NAMES,
+  type Language,
+} from "../../../../../lib/i18n/language";
+import {
+  LOCALIZED_UI_LANGUAGES,
+  L,
+  resolveLocalizedLang,
+  type LocalizedLang,
+} from "../../../../../lib/i18n/localize";
+import { profileSettingsSheetCopy } from "./profileSettingsSheetCopy";
+import { profileMarkToastCopy } from "./referralInviteCopy";
 import { TUTORIAL_WELCOME_LAND_HOLD_MS } from "../../../../../lib/tutorial/tutorialMotion";
 import { setTutorialRestartCover } from "../../../../../lib/tutorial/tutorialRestartCover";
 import {
@@ -147,9 +158,13 @@ const PROFILE_TAB_ORDER: ProfileTab[] = [
   "bracket",
 ];
 
-function profileCountryRowLabel(code: string, appLang: "ja" | "en"): string {
+function profileCountryRowLabel(
+  code: string,
+  appLang: LocalizedLang,
+  notSetLabel: string
+): string {
   const trimmed = code.trim();
-  if (!trimmed) return appLang === "ja" ? "未設定" : "Not set";
+  if (!trimmed) return notSetLabel;
   const row = COUNTRY_OPTIONS.find((c) => c.code === trimmed);
   return row ? (appLang === "ja" ? row.labelJa : row.labelEn) : trimmed;
 }
@@ -393,8 +408,8 @@ export default function ProfileHomeScreen({
   const [avatarUrl, setAvatarUrl] = useState(
     () => ownSeedAtMount?.avatarUrl ?? ""
   );
-  const [language, setLanguage] = useState<"ja" | "en">(
-    () => ownSeedAtMount?.language ?? "ja"
+  const [language, setLanguage] = useState<LocalizedLang>(() =>
+    resolveLocalizedLang(ownSeedAtMount?.language)
   );
   const [countryCode, setCountryCode] = useState(
     () => ownSeedAtMount?.countryCode ?? ""
@@ -419,15 +434,11 @@ export default function ProfileHomeScreen({
   const [langModalOpen, setLangModalOpen] = useState(false);
   const [countryModalOpen, setCountryModalOpen] = useState(false);
   /** プロフィール保存成功 — システム Alert の代わりにサイバーガラストースト */
-  const isJa = language === "ja";
+  const lang = resolveLocalizedLang(language);
+  const sheet = useMemo(() => profileSettingsSheetCopy(language), [language]);
+  const markToast = useMemo(() => profileMarkToastCopy(language), [language]);
 
-  const externalBackLabel = fromMarkList
-    ? isJa
-      ? "マークリストに戻る"
-      : "Back to MARK LIST"
-    : isJa
-      ? "戻る"
-      : "Back";
+  const externalBackLabel = fromMarkList ? sheet.backToMarkList : sheet.back;
 
   const renderProfileBackHandle = () =>
     showExternalBack ? (
@@ -449,18 +460,13 @@ export default function ProfileHomeScreen({
       return;
     }
     if (!otherUid) {
-      cyberAlert(
-        "",
-        isJa
-          ? "プロフィールの読み込みを待ってから、もう一度押してください"
-          : "Wait for the profile to load, then try again"
-      );
+      cyberAlert("", markToast.waitLoad);
       return;
     }
     if (isMarked(otherUid)) {
       const result = await removeMark(otherUid);
       if (result && "ok" in result && !result.ok) {
-        cyberAlert("", isJa ? "マークを外せませんでした" : "Could not unmark");
+        cyberAlert("", markToast.unmarkFailed);
       }
       return;
     }
@@ -474,31 +480,21 @@ export default function ProfileHomeScreen({
     if (!result.ok) {
       const msg =
         result.error === "cap"
-          ? isJa
-            ? myIsPro
-              ? `マークは ${maxMarks} 人までです`
-              : `マークは ${maxMarks} 人までです（Pro は 50 人）`
-            : myIsPro
-              ? `You can MARK up to ${maxMarks} predictors`
-              : `You can MARK up to ${maxMarks} predictors (Pro: 50)`
+          ? myIsPro
+            ? markToast.capPro(maxMarks)
+            : markToast.capFree(maxMarks)
           : result.error === "empty"
-            ? isJa
-              ? "プロフィールの読み込みを待ってから、もう一度押してください"
-              : "Wait for the profile to load, then try again"
-            : isJa
-              ? "マークできませんでした"
-              : "Could not MARK this predictor";
+            ? markToast.waitLoad
+            : markToast.markFailed;
       cyberAlert("", msg);
       return;
     }
     cyberAlert(
-      isJa ? "マークしました" : "MARKED",
-      isJa
-        ? `${markedName} をマークリストに追加しました`
-        : `${markedName} was added to your MARK list`,
+      markToast.markedTitle,
+      markToast.markedBody(markedName),
       [
         {
-          text: isJa ? "リストを見る" : "View list",
+          text: markToast.viewList,
           onPress: () => setMarkListOpen(true),
         },
         { text: "OK", style: "cancel" },
@@ -510,9 +506,9 @@ export default function ProfileHomeScreen({
     avatarUrl,
     displayName,
     handle,
-    isJa,
     isMe,
     isMarked,
+    markToast,
     maxMarks,
     myIsPro,
     myUid,
@@ -708,7 +704,7 @@ export default function ProfileHomeScreen({
   const skinUnlockEnabled = Boolean(isMe && myUid) && reportOverlay == null;
 
   const tutorialCopy = useMemo(
-    () => i18nT((language === "en" ? "en" : "ja") as Language),
+    () => i18nT(language as Language),
     [language]
   );
   const tutorialSkipConfirm = tutorialSkipConfirmProps(tutorialCopy.tutorial);
@@ -806,82 +802,7 @@ export default function ProfileHomeScreen({
   const secondaryIdLine =
     handle.trim() || fUser?.email?.trim() || fUser?.uid?.slice(0, 12) || "";
 
-  const t = useMemo(
-    () =>
-      isJa
-        ? {
-            playoffsTitle: "2026 NBA PLAYOFFS STATS",
-            apiMissing:
-              "EXPO_PUBLIC_UNITERZ_API_BASE_URL を .env に設定し、Next.js を起動してください。",
-            bracketSoon:
-              "プレーオフブラケットは Web 版と同様の表示を順次対応します。",
-            statsSoon: "詳細分析（Pro）は Web 版でご利用いただけます。",
-            settingsTitle: "プロフィール設定",
-            settingsSubtitle: "アイコン・名前・自己紹介・使用言語・国を編集できます",
-            settingsClose: "閉じる",
-            nameLabel: "名前",
-            namePlaceholder: "名前",
-            bio: "自己紹介",
-            bioPlaceholder: "自己紹介",
-            langLabel: "使用言語",
-            countryLabel: "住んでいる国（任意）",
-            countryNotSet: "未設定",
-            save: "変更を保存",
-            saving: "保存中…",
-            logout: "ログアウト",
-            invalidTitle: "入力不正",
-            invalidName: "名前は50文字以内で入力してください。",
-            savedTitle: "保存完了",
-            savedBody: "プロフィールを更新しました。",
-            saveErrorTitle: "保存エラー",
-            saveErrorBody: "プロフィール更新に失敗しました。",
-            pickPhotoTitle: "写真へのアクセス",
-            pickPhotoDenied: "プロフィール写真を選ぶには、写真ライブラリへのアクセスを許可してください。",
-            uploadAvatarFail: "画像のアップロードに失敗しました。通信状況を確認して再度お試しください。",
-            imagePickerNativeTitle: "写真の選択を使えません",
-            imagePickerNativeHint:
-              "expo-image-picker を組み込んだ開発ビルドが必要です。apps/native で `npx expo run:ios` または `npx expo run:android` を実行してアプリを再ビルドしてください。",
-            changePhotoA11y: "プロフィール写真を変更",
-            proBadge: "PRO",
-            streakLabel: "連勝",
-          }
-        : {
-            playoffsTitle: "2026 NBA PLAYOFFS STATS",
-            apiMissing:
-              "Set EXPO_PUBLIC_UNITERZ_API_BASE_URL and run the Next.js app.",
-            bracketSoon: "Playoff bracket view will match the web app in a future update.",
-            statsSoon: "Pro analysis is available on the web app.",
-            settingsTitle: "Profile Settings",
-            settingsSubtitle: "Edit your icon, name, bio, language, and country.",
-            settingsClose: "Close",
-            nameLabel: "Name",
-            namePlaceholder: "Name",
-            bio: "Bio",
-            bioPlaceholder: "Bio",
-            langLabel: "App Language",
-            countryLabel: "Country (optional)",
-            countryNotSet: "Not set",
-            save: "Save Changes",
-            saving: "Saving…",
-            logout: "Log out",
-            invalidTitle: "Invalid input",
-            invalidName: "Name must be 50 characters or fewer.",
-            savedTitle: "Saved",
-            savedBody: "Profile has been updated.",
-            saveErrorTitle: "Save error",
-            saveErrorBody: "Failed to update profile.",
-            pickPhotoTitle: "Photo access",
-            pickPhotoDenied: "Allow photo library access to choose a profile picture.",
-            uploadAvatarFail: "Could not upload the image. Check your connection and try again.",
-            imagePickerNativeTitle: "Photo picker unavailable",
-            imagePickerNativeHint:
-              "Rebuild the native app with expo-image-picker linked. From apps/native run `npx expo run:ios` or `npx expo run:android`.",
-            changePhotoA11y: "Change profile photo",
-            proBadge: "PRO",
-            streakLabel: "Streak",
-          },
-    [isJa]
-  );
+  const t = sheet;
 
   useEffect(() => {
     if (isPublicProfileView) return;
@@ -1218,13 +1139,25 @@ export default function ProfileHomeScreen({
           <Text style={styles.errorText}>{statsBundle.error}</Text>
           <Text style={styles.warnText}>
             {isFirestoreTransient
-              ? isJa
-                ? "Firestore への接続が一時的に切れました。しばらくしてから画面を引き下げて再読み込みしてください。"
-                : "Firestore connection dropped temporarily. Pull to refresh in a moment."
+              ? L(lang, {
+                  ja: "Firestore への接続が一時的に切れました。しばらくしてから画面を引き下げて再読み込みしてください。",
+                  en: "Firestore connection dropped temporarily. Pull to refresh in a moment.",
+                  ko: "Firestore 연결이 잠시 끊겼습니다. 잠시 후 당겨서 새로고침하세요.",
+                  zh: "Firestore 连接暂时中断。请稍后下拉刷新。",
+                  es: "Se perdió la conexión a Firestore. Desliza para actualizar en un momento.",
+                  pt: "Conexão com Firestore caiu temporariamente. Puxe para atualizar em breve.",
+                  fr: "Connexion Firestore interrompue. Tirez pour actualiser dans un instant.",
+                })
               : isTimeout
-                ? isJa
-                  ? "Next.js（npm run dev）が起動しているか、EXPO_PUBLIC_UNITERZ_API_BASE_URL がシミュレータなら http://127.0.0.1:3000 になっているか確認してください。"
-                  : "Check that Next.js (npm run dev) is running and EXPO_PUBLIC_UNITERZ_API_BASE_URL is http://127.0.0.1:3000 for the iOS Simulator."
+                ? L(lang, {
+                    ja: "Next.js（npm run dev）が起動しているか、EXPO_PUBLIC_UNITERZ_API_BASE_URL がシミュレータなら http://127.0.0.1:3000 になっているか確認してください。",
+                    en: "Check that Next.js (npm run dev) is running and EXPO_PUBLIC_UNITERZ_API_BASE_URL is http://127.0.0.1:3000 for the iOS Simulator.",
+                    ko: "Next.js(npm run dev) 실행 여부와 EXPO_PUBLIC_UNITERZ_API_BASE_URL이 시뮬레이터에서 http://127.0.0.1:3000인지 확인하세요.",
+                    zh: "请确认 Next.js（npm run dev）已启动，且模拟器中 EXPO_PUBLIC_UNITERZ_API_BASE_URL 为 http://127.0.0.1:3000。",
+                    es: "Comprueba que Next.js (npm run dev) esté en marcha y EXPO_PUBLIC_UNITERZ_API_BASE_URL sea http://127.0.0.1:3000 en el simulador.",
+                    pt: "Verifique se o Next.js (npm run dev) está rodando e EXPO_PUBLIC_UNITERZ_API_BASE_URL é http://127.0.0.1:3000 no simulador.",
+                    fr: "Vérifiez que Next.js (npm run dev) tourne et que EXPO_PUBLIC_UNITERZ_API_BASE_URL est http://127.0.0.1:3000 sur le simulateur.",
+                  })
                 : t.apiMissing}
           </Text>
         </View>
@@ -1293,7 +1226,7 @@ export default function ProfileHomeScreen({
         >
 
           <Text style={styles.errorText}>
-            {isJa ? "ユーザーが見つかりません" : "User not found"}
+            {t.userNotFound}
           </Text>
         </ScrollView>
         {renderProfileBackHandle()}
@@ -1471,7 +1404,7 @@ export default function ProfileHomeScreen({
               />
               <ProfileBackEdgeHandleNative
                 onPress={returnFromSettingsToMenu}
-                accessibilityLabel={isJa ? "戻る" : "Back"}
+                accessibilityLabel={t.back}
               />
               <ScrollView
                 style={styles.profileModalFill}
@@ -1560,7 +1493,7 @@ export default function ProfileHomeScreen({
                       disabled={saving || uploadingAvatar}
                     >
                       <Text style={styles.selectRowText}>
-                        {language === "ja" ? "日本語" : "English"}
+                        {LANGUAGE_NATIVE_NAMES[language]}
                       </Text>
                       <MaterialCommunityIcons
                         name="chevron-down"
@@ -1581,7 +1514,11 @@ export default function ProfileHomeScreen({
                       disabled={saving || uploadingAvatar}
                     >
                       <Text style={styles.selectRowText} numberOfLines={1}>
-                        {profileCountryRowLabel(countryCode, language)}
+                        {profileCountryRowLabel(
+                          countryCode,
+                          language,
+                          t.countryNotSet
+                        )}
                       </Text>
                       <MaterialCommunityIcons
                         name="chevron-down"
@@ -1612,32 +1549,37 @@ export default function ProfileHomeScreen({
                   }}
                 />
                 {langModalOpen ? (
-                  <View style={styles.modalSheet}>
+                  <View style={styles.modalSheetTall}>
                     <Text style={styles.modalSheetTitle}>{t.langLabel}</Text>
-                    <Pressable
-                      style={({ pressed }) => [styles.modalOption, pressed && styles.modalOptionPressed]}
-                      onPress={() => {
-                        setLanguage("ja");
-                        setLangModalOpen(false);
-                      }}
+                    <ScrollView
+                      style={styles.modalScroll}
+                      keyboardShouldPersistTaps="handled"
                     >
-                      <Text style={styles.modalOptionText}>日本語</Text>
-                      {language === "ja" ? (
-                        <MaterialCommunityIcons name="check" size={18} color="rgba(147,197,253,0.95)" />
-                      ) : null}
-                    </Pressable>
-                    <Pressable
-                      style={({ pressed }) => [styles.modalOption, pressed && styles.modalOptionPressed]}
-                      onPress={() => {
-                        setLanguage("en");
-                        setLangModalOpen(false);
-                      }}
-                    >
-                      <Text style={styles.modalOptionText}>English</Text>
-                      {language === "en" ? (
-                        <MaterialCommunityIcons name="check" size={18} color="rgba(147,197,253,0.95)" />
-                      ) : null}
-                    </Pressable>
+                      {LOCALIZED_UI_LANGUAGES.map((code) => (
+                        <Pressable
+                          key={code}
+                          style={({ pressed }) => [
+                            styles.modalOption,
+                            pressed && styles.modalOptionPressed,
+                          ]}
+                          onPress={() => {
+                            setLanguage(code);
+                            setLangModalOpen(false);
+                          }}
+                        >
+                          <Text style={styles.modalOptionText}>
+                            {LANGUAGE_NATIVE_NAMES[code]}
+                          </Text>
+                          {language === code ? (
+                            <MaterialCommunityIcons
+                              name="check"
+                              size={18}
+                              color="rgba(147,197,253,0.95)"
+                            />
+                          ) : null}
+                        </Pressable>
+                      ))}
+                    </ScrollView>
                   </View>
                 ) : (
                   <View style={styles.modalSheetTall}>
@@ -1851,7 +1793,7 @@ export default function ProfileHomeScreen({
     {skinUnlockIds && skinUnlockIds.length > 0 ? (
       <ProfileProSkinUnlockOverlayNative
         unlockedIds={skinUnlockIds}
-        language={language === "ja" ? "ja" : "en"}
+        language={language}
         preview={skinUnlockPreview}
         visible
         ownerCounts={skinUnlockOwnerCounts}
@@ -1865,7 +1807,7 @@ export default function ProfileHomeScreen({
       <View style={styles.tutorialHostLayer} pointerEvents="box-none">
         <TutorialLiveHostNative
           page="profile"
-          language={(language === "en" ? "en" : "ja") as Language}
+          language={language as Language}
         />
       </View>
     ) : null}

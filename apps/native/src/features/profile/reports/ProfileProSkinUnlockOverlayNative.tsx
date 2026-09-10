@@ -20,10 +20,11 @@ import type { ProfilePlanProBgVariant } from "../../../../../../lib/profile/prof
 import ProfilePlanProBackgroundNative from "../kinetik/ProfilePlanProBackgroundNative";
 import { saveMeProSkinNative } from "../accountApiNative";
 import { CYBER_TAB_CYAN } from "../../../ui/cyberSideMenuNative";
+import { L, resolveLocalizedLang } from "@/lib/i18n/localize";
 
 type Props = {
   unlockedIds: readonly ProfilePlanProBgVariant[];
-  language: "ja" | "en";
+  language: string;
   preview?: boolean;
   visible: boolean;
   ownerCounts?: Record<string, number>;
@@ -41,7 +42,8 @@ export default function ProfileProSkinUnlockOverlayNative({
   onDismiss,
   onApplied,
 }: Props) {
-  const isJa = language === "ja";
+  const lang = resolveLocalizedLang(language);
+  const skinLang = lang === "ja" ? ("ja" as const) : ("en" as const);
   const entries = resolveProSkinUnlockNoticeEntries(unlockedIds);
   const featured = entries[0] ?? null;
   const [heroSize, setHeroSize] = useState({ w: 0, h: 0 });
@@ -80,9 +82,15 @@ export default function ProfileProSkinUnlockOverlayNative({
       setError(
         e instanceof Error
           ? e.message
-          : isJa
-            ? "適用に失敗しました"
-            : "Failed to apply"
+          : L(lang, {
+              ja: "適用に失敗しました",
+              en: "Failed to apply",
+              ko: "적용에 실패했습니다",
+              zh: "应用失败",
+              es: "No se pudo aplicar",
+              pt: "Falha ao aplicar",
+              fr: "Échec de l’application",
+            })
       );
     } finally {
       setApplying(false);
@@ -137,15 +145,21 @@ export default function ProfileProSkinUnlockOverlayNative({
                 ) : null}
               </Text>
               <Text style={styles.skinCond}>
-                {formatProSkinUnlockCondition(featured.unlock, language)}
+                {formatProSkinUnlockCondition(featured.unlock, skinLang)}
                 {" · "}
-                {formatProSkinOwnerCount(owners, language)}
+                {formatProSkinOwnerCount(owners, skinLang)}
               </Text>
               {moreCount > 0 ? (
                 <Text style={styles.moreText}>
-                  {isJa
-                    ? `ほか ${moreCount} 件も解放`
-                    : `+${moreCount} more unlocked`}
+                  {L(lang, {
+                    ja: `ほか ${moreCount} 件も解放`,
+                    en: `+${moreCount} more unlocked`,
+                    ko: `외 ${moreCount}개 더 해제`,
+                    zh: `另有 ${moreCount} 个已解锁`,
+                    es: `+${moreCount} más desbloqueados`,
+                    pt: `+${moreCount} mais desbloqueados`,
+                    fr: `+${moreCount} de plus débloqués`,
+                  })}
                 </Text>
               ) : null}
             </View>
@@ -160,12 +174,24 @@ export default function ProfileProSkinUnlockOverlayNative({
             >
               <Text style={styles.primaryBtnText}>
                 {applying
-                  ? isJa
-                    ? "適用中…"
-                    : "Applying…"
-                  : isJa
-                    ? "適用する"
-                    : "Apply"}
+                  ? L(lang, {
+                      ja: "適用中…",
+                      en: "Applying…",
+                      ko: "적용 중…",
+                      zh: "应用中…",
+                      es: "Aplicando…",
+                      pt: "Aplicando…",
+                      fr: "Application…",
+                    })
+                  : L(lang, {
+                      ja: "適用する",
+                      en: "Apply",
+                      ko: "적용",
+                      zh: "应用",
+                      es: "Aplicar",
+                      pt: "Aplicar",
+                      fr: "Appliquer",
+                    })}
               </Text>
             </Pressable>
             <Pressable
@@ -174,7 +200,15 @@ export default function ProfileProSkinUnlockOverlayNative({
               disabled={applying}
             >
               <Text style={styles.secondaryBtnText}>
-                {isJa ? "とじる" : "Close"}
+                {L(lang, {
+                  ja: "とじる",
+                  en: "Close",
+                  ko: "닫기",
+                  zh: "关闭",
+                  es: "Cerrar",
+                  pt: "Fechar",
+                  fr: "Fermer",
+                })}
               </Text>
             </Pressable>
           </View>

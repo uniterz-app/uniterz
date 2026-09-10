@@ -4,7 +4,7 @@ import { registerTutorialTarget } from "../tutorial/tutorialMeasureNative";
 import Animated, { useReducedMotion, withTiming } from "react-native-reanimated";
 import type { TeamRecordSnapshot } from "./teamRecordDisplay";
 import MatchTeamMarkNative from "./MatchTeamMarkNative";
-import type { GamesTexts } from "./gamesI18n";
+import type { GamesLanguage, GamesTexts } from "./gamesI18n";
 import type { GameCardCenterBlock } from "./gameCardCenterTypes";
 import { LiveMarkPill } from "./LiveMarkPill";
 import MatchPkResultLineNative from "./MatchPkResultLineNative";
@@ -58,7 +58,7 @@ export type GameCardListProps = {
   /** `light` = 日付変更時の簡易入場（フル cyber reveal は初回・リーグ切替のみ） */
   entranceVariant?: GameCardEntranceVariant;
   predictedGameIds: Set<string>;
-  language: "ja" | "en";
+  language: GamesLanguage | string;
   t: GamesTexts;
   styles: ScreenStyles;
   openPredictModal: (game: Record<string, unknown>) => void | Promise<void>;
@@ -252,7 +252,6 @@ export const GameCardListRow = memo(function GameCardListRow(props: GameCardList
   return (
     <AnimatedPressable
       collapsable={false}
-      delayPressIn={0}
       android_ripple={Platform.OS === "android" ? { color: "rgba(255,255,255,0.06)" } : undefined}
       onPress={() => {
         void openPredictModal(game);

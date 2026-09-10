@@ -22,8 +22,12 @@ import {
   gamesFilterHelpParagraphs,
 } from "../../../../../lib/games/gamesFilterHelp";
 import CyberHelpMarkNative from "../../ui/CyberHelpMarkNative";
-import jaMessages from "../../../../../messages/ja";
-import enMessages from "../../../../../messages/en";
+import { t } from "../../../../../lib/i18n/t";
+import {
+  normalizeLanguage,
+  type Language,
+} from "../../../../../lib/i18n/language";
+import { L, resolveLocalizedLang } from "../../../../../lib/i18n/localize";
 import type { League } from "../../../../../lib/leagues";
 import {
   getTeamPrimaryColor,
@@ -45,7 +49,7 @@ const OXANIUM_BOLD = Platform.select({
 type Props = {
   visible: boolean;
   onClose: () => void;
-  language: "ja" | "en";
+  language: Language | string;
   teams: ScheduleTeamOption[];
   onApply: (filter: GamesFilterState) => void;
   initial: GamesFilterState;
@@ -75,7 +79,8 @@ export default function GamesTeamFilterPanelNative({
   initial,
   league,
 }: Props) {
-  const isJa = language === "ja";
+  const lang = normalizeLanguage(language) ?? "en";
+  const localized = resolveLocalizedLang(language);
   const insets = useSafeAreaInsets();
   const [state, setState] = useState(initial);
   const [q, setQ] = useState("");
@@ -121,20 +126,36 @@ export default function GamesTeamFilterPanelNative({
   const helpParagraphs = useMemo(
     () =>
       gamesFilterHelpParagraphs({
-        language,
+        language: lang,
         selectedIds: state.selectedTeamIds,
         teams,
         matchMode: state.matchMode,
       }),
-    [language, state.selectedTeamIds, state.matchMode, teams],
+    [lang, state.selectedTeamIds, state.matchMode, teams],
   );
-  const helpButtonLabel = gamesFilterHelpButtonLabel(language);
+  const helpButtonLabel = gamesFilterHelpButtonLabel(lang);
 
-  const m = isJa ? jaMessages : enMessages;
+  const m = t(lang);
   const labels = {
-    kicker: isJa ? "FILTER // 試合" : "FILTER // SCHEDULE",
+    kicker: L(localized, {
+      ja: "FILTER // 試合",
+      en: "FILTER // SCHEDULE",
+      ko: "FILTER // 경기",
+      zh: "FILTER // 赛程",
+      es: "FILTER // PARTIDOS",
+      pt: "FILTER // JOGOS",
+      fr: "FILTER // MATCHS",
+    }),
     title: m.games.filterSchedule,
-    teamSearch: isJa ? "チーム検索" : "TEAM SEARCH",
+    teamSearch: L(localized, {
+      ja: "チーム検索",
+      en: "TEAM SEARCH",
+      ko: "팀 검색",
+      zh: "搜索球队",
+      es: "BUSCAR EQUIPO",
+      pt: "BUSCAR TIME",
+      fr: "RECHERCHER ÉQUIPE",
+    }),
     marginRange: m.games.marginRange,
     marginMin: m.games.marginMin,
     marginMax: m.games.marginMax,
@@ -520,7 +541,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.2)",
   },
-  closeBtn: {
+  helpPanel: {
     gap: 8,
     paddingHorizontal: spacing.md,
     paddingVertical: 12,

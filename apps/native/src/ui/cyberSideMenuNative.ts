@@ -70,7 +70,7 @@ export const SIDE_MENU_LABEL_FONT_JA = {
 } as const;
 
 /** 言語に応じたメニュー行ラベル（CJK は `SideMenuItemButtonNative` 側で Noto に差替え） */
-export function sideMenuLabelStyle(language: "ja" | "en"): TextStyle {
+export function sideMenuLabelStyle(language: string): TextStyle {
   if (language === "en") {
     return { ...SIDE_MENU_LABEL_FONT, textTransform: "uppercase" };
   }

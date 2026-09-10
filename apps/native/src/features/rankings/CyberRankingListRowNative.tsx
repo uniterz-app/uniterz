@@ -281,7 +281,7 @@ export function CyberRankingListRowNative({
   const palette = cyberRankPalette(rank);
   const firstFrame = !bare && palette.firstPlaceFrame;
   const quietFrame = bare ? null : cyberRankQuietFrameColor(rank);
-  const metricTag = cyberMetricTag(metric, language === "ja" ? "ja" : "en");
+  const metricTag = cyberMetricTag(metric, language);
   const nameJa = hasJaScript(displayName);
   const nameFontSize = rankingFontSizePx(compact ? 13 : 15, displayName);
   const tagFontSize = rankingFontSizePx(

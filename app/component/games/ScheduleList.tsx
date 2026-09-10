@@ -43,6 +43,7 @@ import type { NbaTopScorerPick } from "@/lib/nba/topScorer";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import { t } from "@/lib/i18n/t";
+import { L, resolveLocalizedLang } from "@/lib/i18n/localize";
 import { CyberNoDataPage } from "@/app/component/common/CyberNoDataLabel";
 import { loadNbaStandingsTeamRecordsShared } from "@/lib/nba/standings/loadNbaStandingsTeamRecordsShared";
 import { footballWinsLossesDraws } from "@/lib/teamRecordDisplay";
@@ -799,7 +800,15 @@ export default function ScheduleList({
           label="BACK"
           tone="back"
           overlay
-          ariaLabel={language === "en" ? "Back" : "戻る"}
+          ariaLabel={L(resolveLocalizedLang(language), {
+            ja: "戻る",
+            en: "Back",
+            ko: "뒤로",
+            zh: "返回",
+            es: "Atrás",
+            pt: "Voltar",
+            fr: "Retour",
+          })}
         />
         <motion.div
           className={[

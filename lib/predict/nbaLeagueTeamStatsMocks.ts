@@ -2,6 +2,7 @@
  * リーグ視点の Team Stats mock（30 チーム）。
  * 予想オーバーレイの 2 チーム比較とは別。後で BallDontLie / 自前集計に差し替え。
  */
+import type { UiStrings } from "@/lib/i18n/ui";
 import { NBA_TEAM_NAME_BY_ID } from "@/lib/nba-team-names";
 import {
   NBA_EAST_TEAM_IDS,
@@ -99,8 +100,7 @@ export type NbaLeagueTeamStatMetricDef = {
   label: string;
   short: string;
   higherIsBetter: boolean;
-  hintJa: string;
-  hintEn: string;
+  hint: UiStrings;
 };
 
 export const NBA_LEAGUE_TEAM_STAT_METRICS: readonly NbaLeagueTeamStatMetricDef[] =
@@ -110,96 +110,180 @@ export const NBA_LEAGUE_TEAM_STAT_METRICS: readonly NbaLeagueTeamStatMetricDef[]
       label: "Win %",
       short: "W%",
       higherIsBetter: true,
-      hintJa: "勝率。結果そのものの順位。",
-      hintEn: "Win percentage. Standings outcome.",
+      hint: {
+        ja: "勝率。結果そのものの順位。",
+        en: "Win percentage. Standings outcome.",
+        ko: "승률. 결과 그 자체의 순위.",
+        zh: "胜率。最直接的战绩排名。",
+        es: "Porcentaje de victorias. El resultado puro.",
+        pt: "Percentual de vitórias. O resultado puro.",
+        fr: "Pourcentage de victoires. Le résultat brut.",
+      },
     },
     {
       id: "netrtg",
       label: "Net Rating",
       short: "NET",
       higherIsBetter: true,
-      hintJa: "100possあたりの得失点差。チームの強さの目安。",
-      hintEn: "Point diff per 100 possessions. Overall team strength.",
+      hint: {
+        ja: "100possあたりの得失点差。チームの強さの目安。",
+        en: "Point diff per 100 possessions. Overall team strength.",
+        ko: "100포제션당 득실 차. 팀 전력의 기준.",
+        zh: "每100回合净胜分。衡量球队整体实力。",
+        es: "Diferencial por 100 posesiones. Fuerza global del equipo.",
+        pt: "Saldo de pontos por 100 posses. Força geral do time.",
+        fr: "Différentiel par 100 possessions. Force globale de l’équipe.",
+      },
     },
     {
       id: "ortg",
       label: "Off Rating",
       short: "ORTG",
       higherIsBetter: true,
-      hintJa: "100possあたりの得点。攻撃力。",
-      hintEn: "Points scored per 100 possessions. Offense.",
+      hint: {
+        ja: "100possあたりの得点。攻撃力。",
+        en: "Points scored per 100 possessions. Offense.",
+        ko: "100포제션당 득점. 공격력.",
+        zh: "每100回合得分。进攻能力。",
+        es: "Puntos por 100 posesiones. Ataque.",
+        pt: "Pontos por 100 posses. Ataque.",
+        fr: "Points par 100 possessions. Attaque.",
+      },
     },
     {
       id: "drtg",
       label: "Def Rating",
       short: "DRTG",
       higherIsBetter: false,
-      hintJa: "100possあたりの失点。低いほど DF がいい。",
-      hintEn: "Points allowed per 100 possessions. Lower is better defense.",
+      hint: {
+        ja: "100possあたりの失点。低いほど DF がいい。",
+        en: "Points allowed per 100 possessions. Lower is better defense.",
+        ko: "100포제션당 실점. 낮을수록 수비가 좋음.",
+        zh: "每100回合失分。越低说明防守越好。",
+        es: "Puntos concedidos por 100 posesiones. Más bajo = mejor defensa.",
+        pt: "Pontos cedidos por 100 posses. Menor = melhor defesa.",
+        fr: "Points concédés par 100 possessions. Plus bas = meilleure défense.",
+      },
     },
     {
       id: "pace",
       label: "Pace",
       short: "PACE",
       higherIsBetter: true,
-      hintJa: "1試合あたりの poss 数。高いほどテンポが速い。",
-      hintEn: "Possessions per game. Higher means faster pace.",
+      hint: {
+        ja: "1試合あたりの poss 数。高いほどテンポが速い。",
+        en: "Possessions per game. Higher means faster pace.",
+        ko: "경기당 포제션 수. 높을수록 템포가 빠름.",
+        zh: "场均回合数。越高说明节奏越快。",
+        es: "Posesiones por partido. Más alto = ritmo más rápido.",
+        pt: "Posses por jogo. Maior = ritmo mais rápido.",
+        fr: "Possessions par match. Plus haut = rythme plus rapide.",
+      },
     },
     {
       id: "diff",
       label: "Point Diff",
       short: "DIFF",
       higherIsBetter: true,
-      hintJa: "1 試合平均の得失点差。",
-      hintEn: "Average point differential per game.",
+      hint: {
+        ja: "1 試合平均の得失点差。",
+        en: "Average point differential per game.",
+        ko: "경기당 평균 득실 차.",
+        zh: "场均净胜分。",
+        es: "Diferencial de puntos por partido.",
+        pt: "Saldo de pontos por jogo.",
+        fr: "Différentiel de points par match.",
+      },
     },
     {
       id: "ppg",
       label: "Points / G",
       short: "PPG",
       higherIsBetter: true,
-      hintJa: "1 試合平均得点。",
-      hintEn: "Average points scored per game.",
+      hint: {
+        ja: "1 試合平均得点。",
+        en: "Average points scored per game.",
+        ko: "경기당 평균 득점.",
+        zh: "场均得分。",
+        es: "Puntos anotados por partido.",
+        pt: "Pontos marcados por jogo.",
+        fr: "Points marqués par match.",
+      },
     },
     {
       id: "papg",
       label: "Opp Points / G",
       short: "PA",
       higherIsBetter: false,
-      hintJa: "1 試合平均失点。低いほど良い。",
-      hintEn: "Average points allowed per game. Lower is better.",
+      hint: {
+        ja: "1 試合平均失点。低いほど良い。",
+        en: "Average points allowed per game. Lower is better.",
+        ko: "경기당 평균 실점. 낮을수록 좋음.",
+        zh: "场均失分。越低越好。",
+        es: "Puntos concedidos por partido. Más bajo, mejor.",
+        pt: "Pontos cedidos por jogo. Menor é melhor.",
+        fr: "Points concédés par match. Plus bas, mieux.",
+      },
     },
     {
       id: "efgPct",
       label: "eFG%",
       short: "EFG",
       higherIsBetter: true,
-      hintJa: "実効 FG%。3P の価値を込めたシュート精度。",
-      hintEn: "Effective FG%. Shooting efficiency including 3s.",
+      hint: {
+        ja: "実効 FG%。3P の価値を込めたシュート精度。",
+        en: "Effective FG%. Shooting efficiency including 3s.",
+        ko: "실질 야투 성공률(eFG%). 3점의 가치를 반영.",
+        zh: "有效命中率：计入三分价值的投篮效率。",
+        es: "eFG%: eficiencia de tiro contando el valor del triple.",
+        pt: "eFG%: eficiência de arremesso contando o valor do 3.",
+        fr: "eFG% : efficacité au tir intégrant la valeur du 3 pts.",
+      },
     },
     {
       id: "fg3Pct",
       label: "3P%",
       short: "3P%",
       higherIsBetter: true,
-      hintJa: "3 ポイント成功率。",
-      hintEn: "Three-point percentage.",
+      hint: {
+        ja: "3 ポイント成功率。",
+        en: "Three-point percentage.",
+        ko: "3점 성공률.",
+        zh: "三分命中率。",
+        es: "Porcentaje de triples.",
+        pt: "Aproveitamento de 3 pontos.",
+        fr: "Pourcentage à 3 points.",
+      },
     },
     {
       id: "fg3a",
       label: "3PA / G",
       short: "3PA",
       higherIsBetter: true,
-      hintJa: "1 試合平均の 3 ポイント試投数。外への依存度。",
-      hintEn: "Three-point attempts per game. Perimeter volume.",
+      hint: {
+        ja: "1 試合平均の 3 ポイント試投数。外への依存度。",
+        en: "Three-point attempts per game. Perimeter volume.",
+        ko: "경기당 3점 시도. 외곽 의존도.",
+        zh: "场均三分出手数。外线依赖程度。",
+        es: "Triples intentados por partido. Volumen exterior.",
+        pt: "Tentativas de 3 por jogo. Volume de perímetro.",
+        fr: "Tirs à 3 pts tentés par match. Volume extérieur.",
+      },
     },
     {
       id: "tovPct",
       label: "TOV%",
       short: "TOV",
       higherIsBetter: false,
-      hintJa: "possあたりのターンオーバー率。低いほど良い。",
-      hintEn: "Turnover rate on possessions. Lower is better.",
+      hint: {
+        ja: "possあたりのターンオーバー率。低いほど良い。",
+        en: "Turnover rate on possessions. Lower is better.",
+        ko: "포제션당 턴오버 비율. 낮을수록 좋음.",
+        zh: "每回合失误率。越低越好。",
+        es: "Tasa de pérdidas por posesión. Más bajo, mejor.",
+        pt: "Taxa de turnovers por posse. Menor é melhor.",
+        fr: "Taux de pertes de balle par possession. Plus bas, mieux.",
+      },
     },
   ] as const;
 
@@ -234,8 +318,7 @@ function advAsBoardDef(
     short: found.short,
     label: found.label,
     higherIsBetter: found.higherIsBetter,
-    hintJa: found.hintJa,
-    hintEn: found.hintEn,
+    hint: found.hint,
   };
 }
 

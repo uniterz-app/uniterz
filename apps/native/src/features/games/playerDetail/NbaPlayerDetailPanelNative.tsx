@@ -100,6 +100,7 @@ import { DetailConsistencySectionNative } from "../detailInsights/DetailConsiste
 import { formatNbaPlayerDisplayName } from "@/lib/nba/formatNbaPlayerListName";
 import { nbaSeasonStatsReady } from "@/lib/predict/nbaSeasonStatsReady";
 import { getUniterzApiBaseUrl } from "../submitPredictionApi";
+import { nbaPlayerDetailChrome } from "./nbaPlayerDetailChromeCopy";
 
 type Props = {
   language: "ja" | "en";
@@ -630,19 +631,20 @@ function SplitTableRow({
 function PlayerVenueSplitsSectionNative({
   splits,
   accent,
-  isJa,
+  language,
 }: {
   splits: NbaPlayerVenueSplit[];
   accent: string;
-  isJa: boolean;
+  language: string;
 }) {
+  const chrome = nbaPlayerDetailChrome(language);
   const line = hexToRgba(accent, 0.18);
   const frame = hexToRgba(accent, 0.4);
   return (
     <View style={styles.advWrap}>
       <View style={styles.advTitleRow}>
         <Text style={styles.advTitle}>
-          {isJa ? "ホーム / アウェイ" : "HOME / AWAY"}
+          {chrome.homeAway}
         </Text>
         <View
           style={styles.advTitleLine}
@@ -652,11 +654,7 @@ function PlayerVenueSplitsSectionNative({
         <PlayerDetailSectionNoDataNative accent={accent} />
       ) : (
         <>
-          <Text style={styles.splitHint}>
-            {isJa
-              ? "今季の出場試合からの平均"
-              : "Season average from games played"}
-          </Text>
+          <Text style={styles.splitHint}>{chrome.seasonAvgHint}</Text>
           <View style={[styles.splitTable, { borderColor: frame }]}>
             <SplitTableRow
               cols={["", "GP", "PTS", "REB", "AST", "+/-"]}
@@ -689,19 +687,20 @@ function PlayerVenueSplitsSectionNative({
 function PlayerVsOpponentSectionNative({
   samples,
   accent,
-  isJa,
+  language,
 }: {
   samples: NbaPlayerVsOpponentSample[];
   accent: string;
-  isJa: boolean;
+  language: string;
 }) {
+  const chrome = nbaPlayerDetailChrome(language);
   const line = hexToRgba(accent, 0.18);
   const frame = hexToRgba(accent, 0.4);
   return (
     <View style={styles.advWrap}>
       <View style={styles.advTitleRow}>
         <Text style={styles.advTitle}>
-          {isJa ? "対戦相手別（平均）" : "VS OPPONENT (AVG)"}
+          {chrome.vsOppAvg}
         </Text>
         <View
           style={styles.advTitleLine}
@@ -711,14 +710,10 @@ function PlayerVsOpponentSectionNative({
         <PlayerDetailSectionNoDataNative accent={accent} />
       ) : (
         <>
-          <Text style={styles.splitHint}>
-            {isJa
-              ? "今季の出場試合からの平均"
-              : "Season average from games played"}
-          </Text>
+          <Text style={styles.splitHint}>{chrome.seasonAvgHint}</Text>
           <View style={[styles.splitTable, { borderColor: frame }]}>
             <SplitTableRow
-              cols={[isJa ? "相手" : "OPP", "GP", "PTS", "REB", "AST", "+/-"]}
+              cols={[chrome.oppCol, "GP", "PTS", "REB", "AST", "+/-"]}
               borderColor={line}
               bottomBorder
               header
@@ -749,13 +744,15 @@ function SeasonMetricsGrid({
   metrics,
   accent,
   gamesPlayed,
-  isJa,
+  language,
 }: {
   metrics: NbaPlayerSeasonMetric[];
   accent: string;
   gamesPlayed: number;
-  isJa: boolean;
+  language: string;
 }) {
+  const chrome = nbaPlayerDetailChrome(language);
+  const isJa = chrome.catalogJa;
   const shown = NBA_PLAYER_DETAIL_SEASON_SHOWN.map(
     (id) => metrics.find((m) => m.id === id)
   ).filter((m): m is NbaPlayerSeasonMetric => Boolean(m));
@@ -766,7 +763,7 @@ function SeasonMetricsGrid({
     <View style={styles.advWrap}>
       <View style={styles.advTitleRow}>
         <Text style={styles.advTitle}>
-          {isJa ? "シーズン平均" : "SEASON AVERAGES"}
+          {chrome.seasonAverages}
         </Text>
         <View style={styles.advTitleLine} />
       </View>
@@ -1448,7 +1445,8 @@ export default function NbaPlayerDetailPanelNative({
   language,
   playerId,
 }: Props) {
-  const isJa = language === "ja";
+  const chrome = nbaPlayerDetailChrome(language);
+  const isJa = chrome.catalogJa;
   const insets = useSafeAreaInsets();
   const apiBaseUrl = getUniterzApiBaseUrl();
   const { bundle: leaders } = usePlayerStatLeadersBundle({ apiBaseUrl });
@@ -1529,7 +1527,7 @@ export default function NbaPlayerDetailPanelNative({
               chips={playerInsights.roles}
               accent={accent}
               title="ROLE"
-              isJa={isJa}
+              language={language}
             />
             <View style={{ height: 10 }} />
           </>
@@ -1550,7 +1548,7 @@ export default function NbaPlayerDetailPanelNative({
           metrics={detail.seasonMetrics}
           accent={accent}
           gamesPlayed={detail.season.gamesPlayed}
-          isJa={isJa}
+          language={language}
         />
 
         <View
@@ -1568,7 +1566,7 @@ export default function NbaPlayerDetailPanelNative({
               : playerInsights.roleChangeDetailEn
           }
           accent={accent}
-          isJa={isJa}
+          language={language}
         />
         {playerInsights.roleChanges.length > 0 ? (
           <View
@@ -1582,7 +1580,7 @@ export default function NbaPlayerDetailPanelNative({
         <NbaPlayerHowTheyPlayNative
           playerId={detail.playerId}
           accent={accent}
-          isJa={isJa}
+          language={language}
           leaders={leaders}
           teamStats={teamStats}
           detail={detail}
@@ -1594,7 +1592,7 @@ export default function NbaPlayerDetailPanelNative({
             <PlayerVenueSplitsSectionNative
               splits={detail.venueSplits}
               accent={accent}
-              isJa={isJa}
+              language={language}
             />
           </>
         ) : null}
@@ -1605,7 +1603,7 @@ export default function NbaPlayerDetailPanelNative({
             <PlayerVsOpponentSectionNative
               samples={detail.vsOpponentSamples}
               accent={accent}
-              isJa={isJa}
+              language={language}
             />
           </>
         ) : null}
@@ -1647,7 +1645,7 @@ export default function NbaPlayerDetailPanelNative({
               <View style={styles.contractTop}>
                 <View style={styles.contractSalaryBlock}>
                   <Text style={styles.contractLabel}>
-                    {isJa ? "今季年俸" : "THIS SEASON"}
+                    {chrome.thisSeason}
                   </Text>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
                     {currentSalary.baseSalary > 0 ? (
@@ -1695,7 +1693,7 @@ export default function NbaPlayerDetailPanelNative({
                   ·
                 </Text>
                 <Text style={styles.contractMeta}>
-                  {isJa ? "残" : "REM"} {detail.contract.yearsRemaining} YR
+                  {chrome.rem} {detail.contract.yearsRemaining} YR
                 </Text>
                 <Text style={styles.contractMetaDot}>
                   ·
@@ -1708,10 +1706,10 @@ export default function NbaPlayerDetailPanelNative({
                 </Text>
               </View>
               <Text style={[styles.contractTotal, { color: accent }]}>
-                {isJa ? "総額" : "TOTAL"}{" "}
+                {chrome.total}{" "}
                 {formatSalaryUsd(detail.contract.totalValue)}
                 {"  ·  "}
-                {isJa ? "残保証" : "GUAR."}{" "}
+                {chrome.guar}{" "}
                 {formatSalaryUsd(detail.contract.remainingGuaranteed)}
               </Text>
 
@@ -1766,10 +1764,10 @@ export default function NbaPlayerDetailPanelNative({
             <View style={styles.contractTop}>
               <View style={styles.contractSalaryBlock}>
                 <Text style={styles.contractLabel}>
-                  {isJa ? "契約ステータス" : "CONTRACT STATUS"}
+                  {chrome.contractStatus}
                 </Text>
                 <Text style={[styles.contractSalary, { fontSize: 18, color: "rgba(255,255,255,0.85)" }]}>
-                  {isJa ? "契約満了 (FREE AGENT)" : "FREE AGENT / EXPIRED"}
+                  {chrome.freeAgent}
                 </Text>
               </View>
             </View>
@@ -1803,7 +1801,7 @@ export default function NbaPlayerDetailPanelNative({
               />
             ))
           ) : (
-            <InfoRow label="—" value={isJa ? "なし" : "None"} accent={accent} />
+            <InfoRow label="—" value={chrome.none} accent={accent} />
           )}
         </View>
 
@@ -1816,7 +1814,7 @@ export default function NbaPlayerDetailPanelNative({
         <View style={[styles.infoCard, { borderColor: frameColor }]}>
           {displayAge != null ? (
             <InfoRow
-              label={isJa ? "年齢" : "AGE"}
+              label={chrome.age}
               value={String(displayAge)}
               accent={accent}
             />
@@ -1834,7 +1832,7 @@ export default function NbaPlayerDetailPanelNative({
           />
           <InfoRow label="TEAM" value={detail.teamName} accent={accent} />
           <InfoRow
-            label={isJa ? "経歴" : "HISTORY"}
+            label={chrome.history}
             value={formatTeamHistory(detail.teamHistory)}
             accent={accent}
           />

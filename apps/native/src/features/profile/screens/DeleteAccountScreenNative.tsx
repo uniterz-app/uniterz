@@ -23,11 +23,12 @@ import { auth } from "../../../lib/firebase";
 import { cyberAlert } from "../../../components/cyberAlert";
 import { useNativeUserLanguageFromAuth } from "../../../hooks/useNativeUserLanguage";
 import { CYBER_TAB_CYAN } from "../../../ui/cyberSideMenuNative";
+import { deleteAccountCopy } from "../deleteAccountCopy";
 
 export default function DeleteAccountScreenNative() {
   const navigation = useNavigation();
   const { language } = useNativeUserLanguageFromAuth();
-  const isJa = language === "ja";
+  const labels = deleteAccountCopy(language);
   const [password, setPassword] = useState("");
   const [confirmText, setConfirmText] = useState("");
   const [busy, setBusy] = useState(false);
@@ -40,40 +41,6 @@ export default function DeleteAccountScreenNative() {
       ),
     [user]
   );
-
-  const labels = isJa
-    ? {
-        title: "アカウント削除",
-        desc:
-          "アカウントを削除すると、プロフィール情報は消去され、ログインできなくなります。投稿データなどの一部はシステム上に残る場合があります。",
-        proNote:
-          "Pro をご利用の場合は、削除前に App Store / Google Play でサブスクリプションを解約してください。",
-        password: "現在のパスワード",
-        typeDelete: "確認のため DELETE と入力",
-        placeholder: "DELETE",
-        submit: "アカウントを削除する",
-        submitting: "削除中…",
-        needDelete: "確認のため DELETE と入力してください。",
-        needPassword: "パスワードを入力してください。",
-        done: "アカウントを削除しました。",
-        fail: "削除に失敗しました。時間をおいて再度お試しください。",
-      }
-    : {
-        title: "Delete Account",
-        desc:
-          "Deleting your account removes your profile and you will no longer be able to sign in. Some historical data may remain in the system.",
-        proNote:
-          "If you have Pro, cancel your subscription in the App Store / Google Play before deleting.",
-        password: "Current password",
-        typeDelete: "Type DELETE to confirm",
-        placeholder: "DELETE",
-        submit: "Delete my account",
-        submitting: "Deleting…",
-        needDelete: "Please type DELETE to confirm.",
-        needPassword: "Please enter your password.",
-        done: "Your account has been deleted.",
-        fail: "Deletion failed. Please try again later.",
-      };
 
   async function handleDelete() {
     if (!user) return;
@@ -166,7 +133,7 @@ export default function DeleteAccountScreenNative() {
             disabled={busy}
             onPress={() => navigation.goBack()}
           >
-            <Text style={styles.backText}>{isJa ? "戻る" : "Back"}</Text>
+            <Text style={styles.backText}>{labels.back}</Text>
           </Pressable>
         </View>
       </View>

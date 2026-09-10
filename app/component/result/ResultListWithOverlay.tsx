@@ -34,6 +34,7 @@ import { getCachedGameDocForResult } from "@/lib/result/resultDetailFirestoreCac
 import { SCHEDULE_MY_POST_DELETED_EVENT } from "@/lib/games/scheduleMyPostSyncEvents";
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
+import { resolveLocalizedLang } from "@/lib/i18n/localize";
 import { nameBebas } from "@/lib/fonts";
 import {
   cyberNoDataLabelStyle,
@@ -869,7 +870,7 @@ export default function ResultListWithOverlay({
     if (post.id === TUTORIAL_RESULT_POST_ID) {
       setDetailGame(
         buildTutorialFinalMatchCardProps({
-          language: language === "en" ? "en" : "ja",
+          language: language === "ja" ? "ja" : "en",
         })
       );
       setMarket(buildTutorialResultMarket());
@@ -2035,7 +2036,7 @@ export default function ResultListWithOverlay({
                     label="BACK"
                     tone="back"
                     overlay
-                    ariaLabel={language === "en" ? "Back" : "戻る"}
+                    ariaLabel={t(resolveLocalizedLang(language)).common.back}
                   />
                   <motion.div
                     className={`absolute inset-0 z-0 ${PREDICT_OVERLAY_BACKDROP}`}

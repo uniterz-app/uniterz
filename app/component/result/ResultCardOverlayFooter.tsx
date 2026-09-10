@@ -5,7 +5,7 @@
  * 予想オーバーレイ（試合カード）用。
  */
 import { Check, X } from "lucide-react";
-import { nameBebas, nameOxanium, matchScoreClass } from "@/lib/fonts";
+import { nameOxanium, matchScoreClass } from "@/lib/fonts";
 import { resultCardFaceCopy } from "@/lib/result/resultCardFaceCopy";
 import type { Language } from "@/lib/i18n/language";
 import styles from "./resultCardDesignFace.module.css";
@@ -140,14 +140,14 @@ export default function ResultCardOverlayFooter({
           <div className={styles.scorerBlock}>
             <div className={styles.scorerValueRow}>
               <span className={styles.skewWrap}>
-                <span className={`${styles.scorerLabel} ${nameBebas.className}`}>
+                <span className={`${styles.scorerLabel} ${nameOxanium.className}`}>
                   TOP SCORER
                 </span>
               </span>
               <div className={styles.scorerNameWrap}>
                 <span className={styles.scorerNameSkew}>
                   <span
-                    className={`${styles.scorerName} ${nameBebas.className}`}
+                    className={`${styles.scorerName} ${nameOxanium.className}`}
                   >
                     {topScorer}
                   </span>

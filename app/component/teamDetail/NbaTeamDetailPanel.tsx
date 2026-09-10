@@ -4,7 +4,12 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { Flame, Snowflake } from "lucide-react";
-import { nameOxanium, nameBebas } from "@/lib/fonts";
+import { nameOxanium } from "@/lib/fonts";
+import {
+  L,
+  resolveLocalizedLang,
+  type LocalizedLang,
+} from "@/lib/i18n/localize";
 import { matchCardTeamNameStyle } from "@/lib/games/teamDisplayTypography";
 import HalftoneJerseyMark from "@/app/component/games/HalftoneJerseyMark";
 import { CyberSlantedSegBar } from "@/app/component/rankings/CyberSlantedSegBar";
@@ -81,7 +86,7 @@ import { playerCardName } from "@/lib/predict/nbaRoster";
 
 type Props = {
   teamId?: string;
-  language?: "ja" | "en";
+  language?: string;
 };
 
 const FORM_WIN = "#00F5FF";
@@ -454,12 +459,13 @@ function GameLogs({
 function Injuries({
   injuries,
   accent,
-  isJa,
+  lang,
 }: {
   injuries: NbaTeamInjuryEntry[];
   accent: string;
-  isJa: boolean;
+  lang: LocalizedLang;
 }) {
+  const isJa = lang === "ja";
   return (
     <section className="space-y-2.5">
       <SectionTitle title="INJURIES" accent={accent} />
@@ -474,10 +480,10 @@ function Injuries({
         ) : (
           injuries.map((inj, i) => {
             const tone = teamInjuryStatusColor(inj.status);
-            const reasonLabel = injuryReasonLabel(inj.reason, isJa ? "ja" : "en");
+            const reasonLabel = injuryReasonLabel(inj.reason, lang);
             const returnLabel = formatInjuryReturnEstimate(
               inj.returnEstimate,
-              isJa ? "ja" : "en"
+              lang
             );
             return (
               <div
@@ -494,7 +500,7 @@ function Injuries({
                     {inj.name}
                   </span>
                   <span className={`${nameOxanium.className} text-[11px] font-extrabold tracking-wide`} style={{ color: tone, transform: "skewX(-8deg)" }}>
-                    {formatTeamInjuryStatus(inj.status, isJa)}
+                    {formatTeamInjuryStatus(inj.status, lang)}
                   </span>
                 </div>
                 <div className="flex items-center justify-between gap-2">
@@ -608,14 +614,15 @@ function MetricStack({
 function HowTheyPlayBoard({
   teamId,
   accent,
-  isJa,
+  lang,
   bundle,
 }: {
   teamId: string;
   accent: string;
-  isJa: boolean;
+  lang: LocalizedLang;
   bundle: NbaLeagueTeamStatsBundle;
 }) {
+  const isJa = lang === "ja";
   const board = useMemo(
     () => getTeamHowTheyPlay(teamId, bundle),
     [teamId, bundle]
@@ -649,7 +656,7 @@ function HowTheyPlayBoard({
         ))}
       </div>
       <p className={`${nameOxanium.className} text-[11px] leading-snug text-[#00F5FF]/70`}>
-        {isJa ? tabMeta.hintJa : tabMeta.hintEn}
+        {L(lang, tabMeta.hint)}
       </p>
 
       {tab === "fourFactors" ? (
@@ -721,7 +728,7 @@ function HowTheyPlayBoard({
 
       {tab === "fourFactors" ? (
         <p className={`${nameOxanium.className} text-[13px] font-bold leading-snug text-white/85`}>
-          {isJa ? factor.hintJa : factor.hintEn}
+          {L(lang, factor.hint)}
         </p>
       ) : null}
 
@@ -731,7 +738,7 @@ function HowTheyPlayBoard({
               <div key={row.id} className="space-y-1">
                 <div className="flex items-center gap-2">
                   <span className={`${nameOxanium.className} min-w-0 flex-1 text-[10px] font-bold uppercase tracking-[0.12em] text-white/55`}>
-                    {isJa ? row.labelJa : row.labelEn}
+                    {L(lang, row.label)}
                   </span>
                   <HowPtsCol display={row.pts.display} />
                   <MetricStack
@@ -865,13 +872,7 @@ function HowTheyPlayBoard({
             })}
           </div>
           <p className={`${nameOxanium.className} text-[13px] font-bold leading-snug text-white/85`}>
-            {tab === "hustle"
-              ? isJa
-                ? hustle.hintJa
-                : hustle.hintEn
-              : isJa
-                ? tracking.hintJa
-                : tracking.hintEn}
+            {L(lang, tab === "hustle" ? hustle.hint : tracking.hint)}
           </p>
         </>
       ) : null}
@@ -1821,7 +1822,8 @@ export default function NbaTeamDetailPanel({
   language = "ja",
 }: Props) {
   const router = useRouter();
-  const isJa = language === "ja";
+  const lang = resolveLocalizedLang(language);
+  const isJa = lang === "ja";
   const { bundle } = useLeagueTeamStatsBundle();
   const baseDetail = useMemo(
     () => getNbaTeamDetailPreview(teamId, bundle),
@@ -1894,7 +1896,7 @@ export default function NbaTeamDetailPanel({
                 {detail.cityEn.toUpperCase()}
               </p>
               <p
-                className={`${nameBebas.className} text-[26px] uppercase leading-none text-white`}
+                className={`${nameOxanium.className} text-[20px] font-bold uppercase leading-none text-white`}
                 style={teamNickTy}
               >
                 {detail.nickEn.toUpperCase()}
@@ -1953,7 +1955,7 @@ export default function NbaTeamDetailPanel({
             chips={teamInsights.identity}
             accent={accent}
             title="TEAM IDENTITY"
-            isJa={isJa}
+            language={lang}
           />
         </>
       ) : teamInsights.identity.length > 0 ? (
@@ -1961,7 +1963,7 @@ export default function NbaTeamDetailPanel({
           chips={teamInsights.identity}
           accent={accent}
           title="TEAM IDENTITY"
-          isJa={isJa}
+          language={lang}
         />
       ) : null}
 
@@ -1972,7 +1974,7 @@ export default function NbaTeamDetailPanel({
         />
       ) : null}
 
-      <Injuries injuries={detail.injuries} accent={accent} isJa={isJa} />
+      <Injuries injuries={detail.injuries} accent={accent} lang={lang} />
 
       <div
         className="h-px"
@@ -1988,7 +1990,7 @@ export default function NbaTeamDetailPanel({
       <HowTheyPlayBoard
         teamId={detail.teamId}
         accent={accent}
-        isJa={isJa}
+        lang={lang}
         bundle={bundle}
       />
 
@@ -2034,6 +2036,7 @@ export default function NbaTeamDetailPanel({
         scheduleDifficulty={teamInsights.scheduleDifficulty}
         accent={accent}
         isJa={isJa}
+        language={language}
       />
 
       <div

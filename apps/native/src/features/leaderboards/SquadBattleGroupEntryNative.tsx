@@ -8,7 +8,9 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { fonts } from "../../theme/tokens";
 import { CommunityCrtSectionLabelNative } from "./CommunityCrtPartsNative";
 import {
+  resolveSquadBattleUiLang,
   squadBattleEntryStatusChip,
+  squadBattleGroupEntryCopy,
   type SquadBattleUiPhase,
 } from "../../../../../lib/squads/squadBattleUiCopy";
 
@@ -36,12 +38,13 @@ export default function SquadBattleGroupEntryNative({
   myRank = null,
   deadlineLabel = null,
 }: Props) {
-  const isEn = language === "en";
+  const lang = resolveSquadBattleUiLang(language);
+  const entryCopy = squadBattleGroupEntryCopy(lang);
   const statusChip = squadBattleEntryStatusChip({
     phase,
     myRank,
     deadlineLabel,
-    lang: isEn ? "en" : "ja",
+    lang,
   });
 
   const chipBoxStyle =
@@ -64,13 +67,13 @@ export default function SquadBattleGroupEntryNative({
   return (
     <View style={styles.section}>
       <CommunityCrtSectionLabelNative accent="amber">
-        {isEn ? ">> SQUAD BATTLE" : ">> スクワッドバトル"}
+        {entryCopy.sectionLabel}
       </CommunityCrtSectionLabelNative>
 
       <Pressable
         onPress={onOpen}
         accessibilityRole="button"
-        accessibilityLabel="Squad Battle"
+        accessibilityLabel={entryCopy.accessibilityLabel}
         style={({ pressed }) => [styles.cardOuter, pressed && styles.cardPressed]}
       >
         <LinearGradient
@@ -109,7 +112,7 @@ export default function SquadBattleGroupEntryNative({
             </View>
 
             <View style={styles.copy}>
-              <Text style={styles.title}>Squad Battle</Text>
+              <Text style={styles.title}>{entryCopy.title}</Text>
               <View style={[styles.statusChip, chipBoxStyle]}>
                 <Text style={[styles.statusChipText, chipTextStyle]}>
                   {statusChip.label}
@@ -118,7 +121,7 @@ export default function SquadBattleGroupEntryNative({
             </View>
 
             <View style={styles.enterBtn}>
-              <Text style={styles.enterText}>ENTER</Text>
+              <Text style={styles.enterText}>{entryCopy.enter.toUpperCase()}</Text>
               <MaterialCommunityIcons
                 name="chevron-right"
                 size={14}

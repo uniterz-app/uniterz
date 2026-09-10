@@ -1,5 +1,6 @@
 /**
  * Web `.predict-overlay-submit-btn` 相当。
+ * ソリッド塗り（ガラス／発光グラデなし）・直角・1px 枠。
  */
 import { useEffect } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
@@ -13,7 +14,6 @@ import Animated, {
   withSequence,
   withTiming,
 } from "react-native-reanimated";
-import PredictOverlayChamferedFrameNative from "./PredictOverlayChamferedFrameNative";
 import { registerTutorialPredictSubmit } from "../tutorial/tutorialPredictSubmitBridgeNative";
 
 type Props = {
@@ -63,8 +63,7 @@ export default function PredictOverlaySubmitButtonNative({
   }, [enabled, tutorialPulse, reduceMotion, glow]);
 
   const glowStyle = useAnimatedStyle(() => ({
-    opacity: enabled ? 0.35 + glow.value * 0.55 : 0,
-    transform: [{ scale: 1 + glow.value * 0.012 }],
+    opacity: enabled ? 0.22 + glow.value * 0.35 : 0,
   }));
 
   return (
@@ -78,61 +77,17 @@ export default function PredictOverlaySubmitButtonNative({
       <Pressable
         disabled={!enabled}
         onPress={onPress}
-        style={({ pressed }) => [pressed && enabled ? styles.pressed : null]}
+        style={({ pressed }) => [
+          styles.root,
+          enabled ? styles.rootOn : styles.rootOff,
+          pressed && enabled ? styles.pressed : null,
+        ]}
         accessibilityRole="button"
         accessibilityState={{ disabled: !enabled }}
       >
-        {/* 外枠リング — 背景に溶けないよう明示的なシアン縁 */}
-        <View
-          style={[
-            styles.outerRing,
-            enabled ? styles.outerRingOn : styles.outerRingOff,
-          ]}
-        >
-          <PredictOverlayChamferedFrameNative
-            key={enabled ? "submit-on" : "submit-off"}
-            cut={0}
-            gradientColors={
-              enabled
-                ? [
-                    "rgba(0,245,255,0.48)",
-                    "rgba(0,200,235,0.58)",
-                    "rgba(0,120,170,0.68)",
-                  ]
-                : [
-                    "rgba(148,163,184,0.1)",
-                    "rgba(71,85,105,0.16)",
-                    "rgba(51,65,85,0.2)",
-                  ]
-            }
-            gradientLocations={[0, 0.46, 1]}
-            borderColor={
-              enabled ? "rgba(180,255,255,0.72)" : "rgba(148,163,184,0.28)"
-            }
-            borderWidth={1.5}
-            /**
-             * RN の shadow/elevation は矩形のまま出るため、角切りボタンの下に
-             * 「ずれた影プレート」が見える。Web は clip-path で影も切れるが Native では不可。
-             * チュートリアル発光は背面の glowPlate で表現する。
-             */
-            shadowOpacity={0}
-            maskCorners={false}
-            overflowHidden
-            style={styles.root}
-            contentStyle={styles.content}
-          >
-            <View
-              pointerEvents="none"
-              style={[
-                styles.insetShine,
-                !enabled ? styles.insetShineOff : null,
-              ]}
-            />
-            <Text style={[styles.label, !enabled && styles.labelDisabled]}>
-              {enabled ? label : disabledLabel ?? label}
-            </Text>
-          </PredictOverlayChamferedFrameNative>
-        </View>
+        <Text style={[styles.label, !enabled && styles.labelDisabled]}>
+          {enabled ? label : disabledLabel ?? label}
+        </Text>
       </Pressable>
     </View>
   );
@@ -146,65 +101,43 @@ const styles = StyleSheet.create({
   },
   glowPlate: {
     ...StyleSheet.absoluteFillObject,
-    borderRadius: 2,
-    backgroundColor: "rgba(0,245,255,0.55)",
+    backgroundColor: "rgba(0,245,255,0.28)",
     shadowColor: "#00F5FF",
-    shadowOpacity: 0.9,
-    shadowRadius: 18,
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
     shadowOffset: { width: 0, height: 0 },
-    elevation: 8,
-  },
-  outerRing: {
-    width: "100%",
-    borderWidth: 1,
-    padding: 2,
-  },
-  outerRingOn: {
-    borderColor: "rgba(0,245,255,0.55)",
-    backgroundColor: "rgba(0,245,255,0.08)",
-  },
-  outerRingOff: {
-    borderColor: "rgba(148,163,184,0.22)",
-    backgroundColor: "rgba(15,23,42,0.35)",
   },
   root: {
     width: "100%",
-  },
-  content: {
     minHeight: 52,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 16,
-    position: "relative",
+    borderWidth: 1,
+    borderRadius: 0,
+    overflow: "hidden",
   },
-  insetShine: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 1,
-    backgroundColor: "rgba(255,255,255,0.35)",
+  rootOn: {
+    borderColor: "#00F5FF",
+    backgroundColor: "#00F5FF",
   },
-  insetShineOff: {
-    backgroundColor: "rgba(255,255,255,0.08)",
+  rootOff: {
+    borderColor: "rgba(148,163,184,0.28)",
+    backgroundColor: "rgba(71,85,105,0.35)",
   },
   label: {
-    color: "#F0FDFF",
+    color: "#050508",
     fontSize: 15,
     lineHeight: 19,
     fontWeight: "800",
     letterSpacing: 1.2,
     textTransform: "uppercase",
-    textShadowColor: "rgba(0,245,255,0.65)",
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 12,
   },
   labelDisabled: {
-    color: "rgba(255,255,255,0.4)",
-    textShadowRadius: 0,
+    color: "rgba(255,255,255,0.42)",
   },
   pressed: {
-    opacity: 0.92,
+    opacity: 0.88,
     transform: [{ scale: 0.985 }],
   },
 });

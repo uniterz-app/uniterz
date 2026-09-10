@@ -9,6 +9,7 @@ import {
   briefEdgeDetail,
   briefLineText,
   briefPlayerDetail,
+  briefSampleNote,
   splitBriefLineLead,
   type PredictProBrief,
   type ProBriefEdgeItem,
@@ -22,6 +23,7 @@ import {
   type ProInsightGateBulletIcon,
 } from "../../../../../../lib/predict/proInsightGateCopy";
 import { PRO_INSIGHT_GATE_SAMPLE_BRIEF } from "../../../../../../lib/predict/proInsightGateSampleBrief";
+import { resolveLocalizedLang } from "../../../../../../lib/i18n/localize";
 import { getMobileTeamName } from "../../../../../../lib/team-name-split-mobile";
 import { NBA_TEAM_NAME_BY_ID } from "../../../../../../lib/nba-team-names";
 import { getTeamJerseyPrimaryColor } from "../../../../../../lib/team-colors";
@@ -33,7 +35,7 @@ import {
   OXANIUM_800,
   JP_400,
 } from "../../profile/reports/reportThemeNative";
-import { MATCH_CARD_DISPLAY_FONT } from "../matchCardTypography";
+import { MATCH_CARD_TEAM_NAME_FONT } from "../matchCardTypography";
 import type { GamesLanguage } from "../gamesI18n";
 import { UNITERZ_PRO_BADGE_GOLD } from "../../../../../../lib/units/uniterzProBadge";
 
@@ -141,7 +143,7 @@ function EdgeBlock({
   language: GamesLanguage;
   align: "left" | "right";
 }) {
-  const lang = language === "ja" ? "ja" : "en";
+  const lang = resolveLocalizedLang(language);
   const end = align === "right";
   if (edges.length === 0) {
     return (
@@ -196,7 +198,7 @@ function LineBlock({
   align: "left" | "right";
   tone: "schedule" | "context";
 }) {
-  const lang = language === "ja" ? "ja" : "en";
+  const lang = resolveLocalizedLang(language);
   const end = align === "right";
   const detailTone =
     tone === "schedule" ? styles.itemDetailSchedule : styles.itemDetailContext;
@@ -266,7 +268,7 @@ function PlayerBlock({
   language: GamesLanguage;
   align: "left" | "right";
 }) {
-  const lang = language === "ja" ? "ja" : "en";
+  const lang = resolveLocalizedLang(language);
   const end = align === "right";
   if (players.length === 0) {
     return (
@@ -311,7 +313,7 @@ function PlayerBlock({
   );
 }
 
-function detailFont(lang: "ja" | "en") {
+function detailFont(lang: ReturnType<typeof resolveLocalizedLang>) {
   return { fontFamily: lang === "ja" ? JP_400 : OXANIUM_600 };
 }
 
@@ -399,8 +401,7 @@ export default function PredictProBriefPanelNative({
   locked = false,
   onPressUpgrade,
 }: Props) {
-  const gateLang = language === "ja" ? "ja" : "en";
-  const gate = proInsightGateCopy(gateLang);
+  const gate = proInsightGateCopy(language);
   const homeNick = teamNick(homeTeamId, homeTeamName).toUpperCase();
   const awayNick = teamNick(awayTeamId, awayTeamName).toUpperCase();
   const homeColor = getTeamJerseyPrimaryColor("nba", homeTeamId);
@@ -531,9 +532,7 @@ export default function PredictProBriefPanelNative({
       !usePlaceholder &&
       (safeBrief?.sampleNoteJa || safeBrief?.sampleNoteEn) ? (
         <Text style={styles.sampleNote}>
-          {language === "ja"
-            ? safeBrief.sampleNoteJa
-            : safeBrief.sampleNoteEn ?? safeBrief.sampleNoteJa}
+          {briefSampleNote(safeBrief, language)}
         </Text>
       ) : null}
 
@@ -656,9 +655,9 @@ const styles = StyleSheet.create({
     marginBottom: 3,
   },
   titleNick: {
-    fontFamily: MATCH_CARD_DISPLAY_FONT,
+    fontFamily: MATCH_CARD_TEAM_NAME_FONT,
     fontSize: 18,
-    fontWeight: "400",
+    fontWeight: "800",
     lineHeight: 20,
     letterSpacing: 1.44,
     textTransform: "uppercase",

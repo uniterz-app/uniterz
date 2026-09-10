@@ -18,7 +18,7 @@ const NOTICE_URL = `${COMPANY_WEB_URL}/web/electronic-notice`;
 export default function ElectronicNoticeScreenNative() {
   const { fUser } = useFirebaseUser();
   const { language } = useNativeUserLanguage(fUser?.uid);
-  const lang = language === "en" ? "en" : "ja";
+  const lang = language === "ja" ? "ja" : "en";
   const isEn = lang === "en";
 
   const rows = isEn

@@ -12,7 +12,7 @@ type Props = {
   detailText: string | null;
   accent: string;
   title?: string;
-  isJa?: boolean;
+  language?: string;
 };
 
 export function DetailRoleChangeSection({
@@ -20,7 +20,7 @@ export function DetailRoleChangeSection({
   detailText,
   accent,
   title = "RECENT ROLE CHANGE",
-  isJa = true,
+  language = "ja",
 }: Props) {
   const [explain, setExplain] = useState<DetailChipExplainPayload | null>(
     null
@@ -39,11 +39,7 @@ export function DetailRoleChangeSection({
               key={s.id}
               type="button"
               onClick={() =>
-                setExplain({
-                  label: s.label,
-                  hintJa: s.hintJa,
-                  hintEn: s.hintEn,
-                })
+                setExplain({ label: s.label, hint: s.hint })
               }
               className="rounded-full border px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide"
               style={{ borderColor: accent, color: accent }}
@@ -59,7 +55,7 @@ export function DetailRoleChangeSection({
       <DetailChipExplainModal
         open={explain != null}
         payload={explain}
-        isJa={isJa}
+        language={language}
         accent={accent}
         onClose={() => setExplain(null)}
       />

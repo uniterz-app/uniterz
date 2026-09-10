@@ -16,7 +16,7 @@ import { useNativeUserLanguage } from "../../hooks/useNativeUserLanguage";
 export default function CommercialLawScreenNative() {
   const { fUser } = useFirebaseUser();
   const { language } = useNativeUserLanguage(fUser?.uid);
-  const lang = language === "en" ? "en" : "ja";
+  const lang = language === "ja" ? "ja" : "en";
   const rows = tokushohoRows(lang);
   const lead = tokushohoLead(lang);
 

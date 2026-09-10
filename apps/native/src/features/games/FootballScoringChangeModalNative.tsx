@@ -1,5 +1,9 @@
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { resolveFootballScoringChangeCopy } from "../../../../../lib/predict/resolveFootballScoringChangeCopy";
+import {
+  footballScoringChangeRuleBlocks,
+  resolveFootballScoringChangeCopy,
+  type FootballScoringChangeRuleBlock,
+} from "../../../../../lib/predict/resolveFootballScoringChangeCopy";
 import type { GamesLanguage } from "./gamesI18n";
 
 type Props = {
@@ -9,80 +13,7 @@ type Props = {
   onClose: () => void;
 };
 
-type RuleBlock = {
-  tone?: "default" | "highlight" | "warn";
-  title?: string;
-  lines: string[];
-};
-
-const RULE_BLOCKS: Record<GamesLanguage, RuleBlock[]> = {
-  ja: [
-    {
-      tone: "warn",
-      lines: ["勝者予想が外れた試合は基本点 0点（得点者ボーナスは別枠で加点あり）。"],
-    },
-    {
-      lines: ["採点に使うスコアは規定時間＋延長の結果です。PK戦の本数は含みません。"],
-    },
-    {
-      tone: "highlight",
-      title: "勝者が合っているとき（基本点・最大10点）",
-      lines: [
-        "勝者 … +4点",
-        "HOME得点 … +2点（ホーム得点が完全一致）",
-        "AWAY得点 … +2点（アウェイ得点が完全一致）",
-        "得失点差 … +2点（得点差が完全一致）",
-        "例）予想 2–0・結果 2–1 → HOME +2 → 基本点 6点",
-        "例）予想 2–0・結果 2–0 → 4+2+2+2 = 10点",
-      ],
-    },
-    {
-      title: "ボーナス（基本点に上乗せ）",
-      lines: [
-        "得点者ボーナス … +2点（W杯・オウンゴール除く）",
-        "アップセットボーナス … +2点",
-        "連勝ボーナス … 3〜4連勝 +1点 / 5〜6連勝 +2点 / 7連勝以上 +3点",
-      ],
-    },
-    {
-      lines: ["総合得点 ＝ 基本点 ＋ ボーナス"],
-    },
-  ],
-  en: [
-    {
-      tone: "warn",
-      lines: ["Wrong winner → 0 base points (goal scorer bonus is separate)."],
-    },
-    {
-      lines: ["Line score = regulation + extra time (penalty shootout goals not counted)."],
-    },
-    {
-      tone: "highlight",
-      title: "When the winner is correct (base, max 10)",
-      lines: [
-        "Winner … +4",
-        "HOME goals … +2 (exact match)",
-        "AWAY goals … +2 (exact match)",
-        "Goal difference … +2 (exact match)",
-        "e.g. pick 2–0, result 2–1 → HOME +2 → base 6",
-        "e.g. pick 2–0, result 2–0 → 4+2+2+2 = 10",
-      ],
-    },
-    {
-      title: "Bonuses (added on top)",
-      lines: [
-        "Goal scorer bonus … +2 (WC, own goals excluded)",
-        "Upset bonus … +2",
-        "Win-streak bonus … 3-4 wins +1 / 5-6 wins +2 / 7+ wins +3",
-      ],
-    },
-    {
-      lines: ["Total score = base + bonuses"],
-    },
-  ],
-};
-
-function RuleBlockView({ block }: { block: RuleBlock }) {
+function RuleBlockView({ block }: { block: FootballScoringChangeRuleBlock }) {
   return (
     <View
       style={[
@@ -109,7 +40,7 @@ export default function FootballScoringChangeModalNative({
   onClose,
 }: Props) {
   const copy = resolveFootballScoringChangeCopy(language);
-  const blocks = RULE_BLOCKS[language];
+  const blocks = footballScoringChangeRuleBlocks(language);
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>

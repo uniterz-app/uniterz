@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import type { RankingPeriod } from "@/lib/rankings/rankingPeriod";
 import type { Language } from "@/lib/i18n/language";
+import { L, resolveLocalizedLang } from "@/lib/i18n/localize";
 
 type Props = {
   period: Exclude<RankingPeriod, "season">;
@@ -107,7 +108,15 @@ export default function RankingsPeriodLabelNav({
           onClick={() => onChange(null)}
           className="rounded-sm border border-white/15 px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-white/55 transition-colors hover:text-white"
         >
-          {language === "ja" ? "今" : "Now"}
+          {L(resolveLocalizedLang(language), {
+            ja: "今",
+            en: "Now",
+            ko: "지금",
+            zh: "现在",
+            es: "Ahora",
+            pt: "Agora",
+            fr: "Maintenant",
+          })}
         </button>
       ) : null}
     </div>

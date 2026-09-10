@@ -9,6 +9,7 @@ import { nbaSeasonStatsReady } from "@/lib/predict/nbaSeasonStatsReady";
 import type { NbaRosterPlayer } from "@/lib/predict/nbaRoster";
 import type { NbaPlayerLeaderMetricId } from "@/lib/predict/nbaPlayerStatLeadersMocks";
 import type { NbaPlayerSeasonMetricCell } from "@/lib/nba/playerSeasonMetrics/playerSeasonMetricsTypes";
+import type { UiStrings } from "@/lib/i18n/ui";
 
 /**
  * Player Detail 叩き台モック。
@@ -188,8 +189,7 @@ export type NbaPlayerAdvancedMetric = {
   value: number;
   display: string;
   leagueRank: number;
-  hintJa: string;
-  hintEn: string;
+  hint: UiStrings;
 };
 
 export type NbaPlayerDetailPreview = {
@@ -1086,38 +1086,52 @@ function buildShotZones(
 const ADVANCED_METRIC_DEFS: Array<{
   id: NbaPlayerAdvancedMetricId;
   short: string;
-  hintJa: string;
-  hintEn: string;
+  hint: UiStrings;
   kind: "per" | "pct";
   fallbackValue: number;
 }> = [
   {
     id: "per",
     short: "PER",
-    hintJa:
-      "得点・リバ・パス等を1分あたりの貢献度にまとめた指標。平均≈15。高いほど個人の影響力は大きいが、勝ち負けだけを示す数値ではない。",
-    hintEn:
-      "Per-minute box-score impact (pts, reb, ast…). Avg ≈15. Higher = bigger individual impact, not wins alone.",
+    hint: {
+      ja: "得点・リバ・パス等を1分あたりの貢献度にまとめた指標。平均≈15。高いほど個人の影響力は大きいが、勝ち負けだけを示す数値ではない。",
+      en: "Per-minute box-score impact (pts, reb, ast…). Avg ≈15. Higher = bigger individual impact, not wins alone.",
+      ko: "득점·리바운드·어시스트 등을 분당 기여도로 합친 지표. 평균 ≈15. 높을수록 개인 영향력이 크지만 승패만을 뜻하진 않는다.",
+      zh: "把得分、篮板、助攻等折算成每分钟贡献的指标。平均约 15。越高个人影响力越大，但不等于胜负。",
+      es: "Impacto de box score por minuto (pts, reb, ast…). Media ≈15. Más alto = mayor impacto individual, no solo victorias.",
+      pt: "Impacto de box score por minuto (pts, reb, ast…). Média ≈15. Maior = mais impacto individual, não só vitórias.",
+      fr: "Impact statistique par minute (pts, reb, pd…). Moyenne ≈15. Plus haut = plus d’impact individuel, pas seulement des victoires.",
+    },
     kind: "per",
     fallbackValue: 18,
   },
   {
     id: "ts_pct",
     short: "TS%",
-    hintJa:
-      "2P・3P・FTをまとめたシュート成功率。高いほど、投げた1本あたりの得点が増える。",
-    hintEn:
-      "Shooting efficiency across 2P, 3P, and FT. Higher = more points per shot taken.",
+    hint: {
+      ja: "2P・3P・FTをまとめたシュート成功率。高いほど、投げた1本あたりの得点が増える。",
+      en: "Shooting efficiency across 2P, 3P, and FT. Higher = more points per shot taken.",
+      ko: "2점·3점·자유투를 합친 슛 효율. 높을수록 슛 1개당 득점이 많다.",
+      zh: "综合两分、三分与罚球的投篮效率。越高表示每次出手得分越多。",
+      es: "Eficiencia de tiro juntando 2P, 3P y TL. Más alto = más puntos por tiro.",
+      pt: "Eficiência de arremesso somando 2P, 3P e LL. Maior = mais pontos por tentativa.",
+      fr: "Efficacité au tir combinant 2P, 3P et LF. Plus haut = plus de points par tir.",
+    },
     kind: "pct",
     fallbackValue: 0.56,
   },
   {
     id: "usg",
     short: "USG",
-    hintJa:
-      "出場中に攻撃をどれだけ使ったか。高い＝エース役・ボール使用が多い。",
-    hintEn:
-      "Share of offense while on court. Higher = star role, more touches.",
+    hint: {
+      ja: "出場中に攻撃をどれだけ使ったか。高い＝エース役・ボール使用が多い。",
+      en: "Share of offense while on court. Higher = star role, more touches.",
+      ko: "코트에 있을 때 공격을 얼마나 소화했는지. 높을수록 에이스 역할·볼 소유가 많다.",
+      zh: "在场时占用了多少进攻回合。越高＝核心角色、持球更多。",
+      es: "Cuota de ataque mientras juega. Más alto = rol de estrella, más balón.",
+      pt: "Fatia do ataque enquanto está em quadra. Maior = papel de estrela, mais bola.",
+      fr: "Part de l’attaque assumée sur le terrain. Plus haut = rôle de star, plus de ballons.",
+    },
     kind: "pct",
     fallbackValue: 0.24,
   },
@@ -1145,8 +1159,7 @@ function buildAdvancedMetrics(
           ? `${(value * 100).toFixed(1)}%`
           : value.toFixed(1),
       leagueRank,
-      hintJa: def.hintJa,
-      hintEn: def.hintEn,
+      hint: def.hint,
     };
   });
 }
@@ -1701,8 +1714,7 @@ function zeroAdvancedMetrics(): NbaPlayerAdvancedMetric[] {
     value: 0,
     display: String(def.id).includes("pct") ? "0.0%" : "0.0",
     leagueRank: RANK_HIDDEN,
-    hintJa: def.hintJa,
-    hintEn: def.hintEn,
+    hint: def.hint,
   }));
 }
 

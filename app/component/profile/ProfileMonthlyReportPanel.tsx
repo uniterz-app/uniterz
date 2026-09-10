@@ -120,7 +120,7 @@ export default function ProfileMonthlyReportPanel({
           kind="free"
           language={lang}
           ctaHref={showUpgrade ? undefined : null}
-          preview={<WeeklyReportView report={mockWeekly} language={lang} />}
+          preview={<WeeklyReportView report={mockWeekly} language={language} />}
         />
       );
     }
@@ -129,7 +129,7 @@ export default function ProfileMonthlyReportPanel({
         <ReportGateSurface
           kind="monthlyLocked"
           language={lang}
-          preview={<MonthlyReportView report={mockMonthly} language={lang} />}
+          preview={<MonthlyReportView report={mockMonthly} language={language} />}
         />
       );
     }
@@ -204,7 +204,7 @@ export default function ProfileMonthlyReportPanel({
           ) : (
             <WeeklyReportView
               report={selectedWeekly.report}
-              language={lang}
+              language={language}
               periods={weeklies.map((w) => ({
                 id: w.id,
                 label: formatReportPeriodLabel("weekly", w.periodKey, lang),
@@ -217,7 +217,7 @@ export default function ProfileMonthlyReportPanel({
           renderGate("waitingMonday")
         )
       ) : selectedMonthly ? (
-        <MonthlyReportView report={selectedMonthly.report} language={lang} />
+        <MonthlyReportView report={selectedMonthly.report} language={language} />
       ) : (
         renderGate("waitingMonth")
       )}

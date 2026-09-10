@@ -20,6 +20,7 @@ import {
 } from "@/lib/predict/nbaInjuryReport";
 import { useNbaMatchupInjuryReport } from "@/lib/nba/predict/useNbaMatchupInjuryReport";
 import { matchupTeamUiAccent } from "@/lib/team-colors";
+import { L, resolveLocalizedLang } from "@/lib/i18n/localize";
 
 type Props = {
   homeTeamId?: string | null;
@@ -96,7 +97,7 @@ export default function NbaTopScorerPicker({
   injuryReport,
 }: Props) {
   const m = t(language).predict;
-  const isJa = language === "ja";
+  const lang = resolveLocalizedLang(language);
   const { candidates, loading: candidatesLoading } = useNbaTopScorerCandidates({
     homeTeamId,
     awayTeamId,
@@ -170,7 +171,15 @@ export default function NbaTopScorerPicker({
 
       {candidatesLoading && sorted.length === 0 ? (
         <p className="text-[11px] text-white/40">
-          {isJa ? "選手リストを読み込み中…" : "Loading players…"}
+          {L(lang, {
+            ja: "選手リストを読み込み中…",
+            en: "Loading players…",
+            ko: "선수 목록 불러오는 중…",
+            zh: "正在加载球员列表…",
+            es: "Cargando jugadores…",
+            pt: "Carregando jogadores…",
+            fr: "Chargement des joueurs…",
+          })}
         </p>
       ) : sorted.length === 0 ? (
         <p className="text-[11px] text-white/40">{m.nbaTopScorerEmpty}</p>
@@ -180,8 +189,28 @@ export default function NbaTopScorerPicker({
             className={`${nameOxanium.className} flex items-center border-b border-[rgba(0,245,255,0.12)] bg-[rgba(0,245,255,0.06)] px-2 py-2 text-[8px] font-bold uppercase tracking-[0.11em] text-white/42`}
           >
             <span className="w-[26px]">#</span>
-            <span className="min-w-0 flex-1">{isJa ? "選手" : "Player"}</span>
-            <span className="w-[46px]">{isJa ? "チーム" : "Team"}</span>
+            <span className="min-w-0 flex-1">
+              {L(lang, {
+                ja: "選手",
+                en: "Player",
+                ko: "선수",
+                zh: "球员",
+                es: "Jugador",
+                pt: "Jogador",
+                fr: "Joueur",
+              })}
+            </span>
+            <span className="w-[46px]">
+              {L(lang, {
+                ja: "チーム",
+                en: "Team",
+                ko: "팀",
+                zh: "球队",
+                es: "Equipo",
+                pt: "Time",
+                fr: "Équipe",
+              })}
+            </span>
             <span className="w-[28px] text-right">GP</span>
             <span className="w-[52px] text-right text-[#00F5FF]">PTS</span>
           </div>
@@ -216,7 +245,7 @@ export default function NbaTopScorerPicker({
                 </span>
                 <span className="flex min-w-0 flex-1 flex-col items-start justify-center pr-1">
                   <span
-                    className={`${nameOxanium.className} w-full truncate text-[13px] font-extrabold uppercase tracking-[0.02em] text-white`}
+                    className={`${nameOxanium.className} w-full truncate text-[13px] font-bold uppercase tracking-[0.02em] text-white`}
                     style={playerNameSkew}
                   >
                     {row.name}

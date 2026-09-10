@@ -13,13 +13,13 @@ export function DetailRoleChangeSectionNative({
   detailText,
   accent,
   title = "RECENT ROLE CHANGE",
-  isJa = true,
+  language = "en",
 }: {
   signals: PlayerRoleChangeSignal[];
   detailText: string | null;
   accent: string;
   title?: string;
-  isJa?: boolean;
+  language?: string;
 }) {
   const [explain, setExplain] = useState<DetailChipExplainPayload | null>(
     null
@@ -35,11 +35,7 @@ export function DetailRoleChangeSectionNative({
             <Pressable
               key={s.id}
               onPress={() =>
-                setExplain({
-                  label: s.label,
-                  hintJa: s.hintJa,
-                  hintEn: s.hintEn,
-                })
+                setExplain({ label: s.label, hint: s.hint })
               }
               style={[styles.chip, { borderColor: accent }]}
             >
@@ -54,7 +50,7 @@ export function DetailRoleChangeSectionNative({
       <DetailChipExplainModalNative
         visible={explain != null}
         payload={explain}
-        isJa={isJa}
+        language={language}
         accent={accent}
         onClose={() => setExplain(null)}
       />

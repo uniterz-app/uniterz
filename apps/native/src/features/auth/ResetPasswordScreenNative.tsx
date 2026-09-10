@@ -11,11 +11,11 @@ import SlantCtaNative from "../../ui/SlantCtaNative";
 import ProfileBackEdgeHandleNative from "../profile/ProfileBackEdgeHandleNative";
 import { spacing } from "../../theme/tokens";
 import { authFormCopy } from "@/lib/auth/authFormCopy";
-import { resolveDeviceAppLanguage } from "../../i18n/resolveDeviceAppLanguage";
+import { resolveDeviceLocalizedLang } from "../../i18n/resolveDeviceAppLanguage";
 
 export default function ResetPasswordScreenNative() {
   const navigation = useNavigation<NativeStackNavigationProp<AuthStackParamList>>();
-  const copy = useMemo(() => authFormCopy(resolveDeviceAppLanguage()), []);
+  const copy = useMemo(() => authFormCopy(resolveDeviceLocalizedLang()), []);
   const [email, setEmail] = useState("");
   const [submitting, setSubmitting] = useState(false);
 

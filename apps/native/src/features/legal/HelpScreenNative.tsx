@@ -5,15 +5,17 @@ import HelpAccordionItemNative from "./HelpAccordionItemNative";
 import { getHelpFaqsNative, getHelpPageCopy } from "./helpFaqsNative";
 import { useFirebaseUser } from "../../auth/FirebaseUserProvider";
 import { useNativeUserLanguage } from "../../hooks/useNativeUserLanguage";
+import { resolveLocalizedLang } from "../../../../../lib/i18n/localize";
 
 /** Web `/mobile/help` → `HelpPage` 相当 */
 export default function HelpScreenNative() {
   const { fUser } = useFirebaseUser();
   const { language } = useNativeUserLanguage(fUser?.uid);
+  const lang = resolveLocalizedLang(language);
   const [openId, setOpenId] = useState<string | null>(null);
 
-  const copy = getHelpPageCopy(language);
-  const faqs = getHelpFaqsNative(language);
+  const copy = getHelpPageCopy(lang);
+  const faqs = getHelpFaqsNative(lang);
 
   return (
     <LegalPageLayoutNative

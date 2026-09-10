@@ -4,6 +4,7 @@ import { getTeamPrimaryColor } from "../../../../../../lib/team-colors";
 import { TEAM_SHORT } from "../../../../../../lib/team-short";
 import type { BracketCardHitStatus } from "./playoffBracketHitLogic";
 import Svg, { Path } from "react-native-svg";
+import { MATCH_CARD_TEAM_NAME_FONT } from "../matchCardTypography";
 
 const SCALE = 0.375;
 const CARD_W = 160 * SCALE;
@@ -139,12 +140,6 @@ export default function BracketCardNative({
   );
 }
 
-const bebas = Platform.select({
-  ios: "BebasNeue_400Regular",
-  android: "BebasNeue_400Regular",
-  default: "sans-serif",
-});
-
 const styles = StyleSheet.create({
   card: {
     backgroundColor: "rgba(7, 17, 34, 0.9)",
@@ -162,19 +157,22 @@ const styles = StyleSheet.create({
     gap: 6 * SCALE,
   },
   name: {
-    fontFamily: bebas,
+    fontFamily: MATCH_CARD_TEAM_NAME_FONT,
+    fontWeight: "800",
     color: "#f8fbff",
     letterSpacing: 1,
     includeFontPadding: false,
   },
   colon: {
-    fontFamily: bebas,
+    fontFamily: MATCH_CARD_TEAM_NAME_FONT,
+    fontWeight: "800",
     color: "#f8fbff",
     opacity: 0.85,
     includeFontPadding: false,
   },
   wins: {
-    fontFamily: bebas,
+    fontFamily: MATCH_CARD_TEAM_NAME_FONT,
+    fontWeight: "800",
     includeFontPadding: false,
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 3,

@@ -19,6 +19,7 @@ import {
 import {
   squadBattleIntroNotices,
   squadBattleIntroOverlayCopy,
+  resolveSquadBattleUiLang,
   type SquadBattleUiLang,
 } from "../../../../../lib/squads/squadBattleUiCopy";
 import {
@@ -49,7 +50,7 @@ export default function SquadBattleIntroOverlayNative({
   language,
 }: Props) {
   const reduceMotion = useReducedMotion();
-  const lang: SquadBattleUiLang = language === "en" ? "en" : "ja";
+  const lang: SquadBattleUiLang = resolveSquadBattleUiLang(language);
   const copy = squadBattleIntroOverlayCopy(lang);
   const phases = squadBattleSeasonPhases(lang);
   const notices = squadBattleIntroNotices(lang);

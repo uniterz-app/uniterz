@@ -7,6 +7,7 @@ import { CyberScanlineText } from "@/app/component/rankings/CyberRankingListPart
 import CandleChartLoader from "@/app/component/common/CandleChartLoader";
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
+import { L, resolveLocalizedLang } from "@/lib/i18n/localize";
 import { nameOxanium, summaryMetricNumClass } from "@/lib/fonts";
 import { formatMetricDecimals } from "@/lib/format/metricDecimals";
 import type {
@@ -73,7 +74,15 @@ function axisUnit(
   language: Language
 ): string {
   if (id === "exactHits") {
-    return language === "en" ? "hits" : "回";
+    return L(resolveLocalizedLang(language), {
+      ja: "回",
+      en: "hits",
+      ko: "회",
+      zh: "次",
+      es: "aciertos",
+      pt: "acertos",
+      fr: "réussites",
+    });
   }
   return unitPt;
 }
@@ -108,10 +117,16 @@ function formatCohortBandDeltaLine(
   deltaLabel: string,
   language: Language
 ): string {
-  if (language === "en") {
-    return `${tierLabel} band ${deltaLabel}`;
-  }
-  return `${tierLabel}帯 ${deltaLabel}`;
+  const lang = resolveLocalizedLang(language);
+  return L(lang, {
+    ja: `${tierLabel}帯 ${deltaLabel}`,
+    en: `${tierLabel} band ${deltaLabel}`,
+    ko: `${tierLabel} 구간 ${deltaLabel}`,
+    zh: `${tierLabel} 区间 ${deltaLabel}`,
+    es: `banda ${tierLabel} ${deltaLabel}`,
+    pt: `faixa ${tierLabel} ${deltaLabel}`,
+    fr: `bande ${tierLabel} ${deltaLabel}`,
+  });
 }
 
 function RankGapAxisRowView({
@@ -139,18 +154,37 @@ function RankGapAxisRowView({
     unitPt,
     language
   );
+  const lang = resolveLocalizedLang(language);
   const tagLabel =
     row.tag === "weakness"
-      ? language === "en"
-        ? "Gap"
-        : "不足"
+      ? L(lang, {
+          ja: "不足",
+          en: "Gap",
+          ko: "부족",
+          zh: "差距",
+          es: "Brecha",
+          pt: "Lacuna",
+          fr: "Écart",
+        })
       : row.tag === "strength"
-        ? language === "en"
-          ? "Edge"
-          : "強み"
-        : language === "en"
-          ? "Even"
-          : "同水準";
+        ? L(lang, {
+            ja: "強み",
+            en: "Edge",
+            ko: "강점",
+            zh: "优势",
+            es: "Ventaja",
+            pt: "Vantagem",
+            fr: "Atout",
+          })
+        : L(lang, {
+            ja: "同水準",
+            en: "Even",
+            ko: "동률",
+            zh: "持平",
+            es: "Igual",
+            pt: "Igual",
+            fr: "Égal",
+          });
   const cohortBandDeltaLine = formatCohortBandDeltaLine(
     tierLabel,
     deltaLabel,

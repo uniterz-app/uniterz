@@ -20,6 +20,7 @@ import LiveGameStatsPreviewScreenNative from "../../games/live/LiveGameStatsPrev
 import ProLeagueTeaserPreviewScreenNative from "../../rankings/ProLeagueTeaserPreviewScreenNative";
 import ProInsightGatePreviewScreenNative from "../../games/predict/ProInsightGatePreviewScreenNative";
 import type { ProfileStackParamList } from "../../../navigation/types";
+import { resolveLocalizedLang } from "@/lib/i18n/localize";
 
 const apiBase = process.env.EXPO_PUBLIC_UNITERZ_API_BASE_URL ?? null;
 
@@ -116,7 +117,7 @@ export function MonthlyReportPreviewScreenWrapper() {
 
   return (
     <MonthlyReportPreviewScreenNative
-      language={language}
+      language={resolveLocalizedLang(language) === "ja" ? "ja" : "en"}
       initialCaseKey={route.params?.caseKey}
       initialTab={route.params?.tab}
       onClose={() => navigation.goBack()}
@@ -131,7 +132,7 @@ export function LeagueStatsPreviewScreenWrapper() {
   const { language } = useNativeUserLanguage(fUser?.uid);
   return (
     <LeagueStatsRailPreviewScreenNative
-      language={language === "ja" ? "ja" : "en"}
+      language={resolveLocalizedLang(language) === "ja" ? "ja" : "en"}
       onClose={() => navigation.goBack()}
       onSelectTeam={(teamId) =>
         navigation.navigate("TeamDetailPreview", { teamId })
@@ -150,7 +151,7 @@ export function TeamStatsPreviewScreenWrapper() {
   const { language } = useNativeUserLanguage(fUser?.uid);
   return (
     <TeamStatsPreviewScreenNative
-      language={language === "ja" ? "ja" : "en"}
+      language={resolveLocalizedLang(language) === "ja" ? "ja" : "en"}
       onClose={() => navigation.goBack()}
       onSelectTeam={(teamId) =>
         navigation.navigate("TeamDetailPreview", { teamId })
@@ -166,7 +167,7 @@ export function PlayerStatsPreviewScreenWrapper() {
   const { language } = useNativeUserLanguage(fUser?.uid);
   return (
     <PlayerStatsPreviewScreenNative
-      language={language === "ja" ? "ja" : "en"}
+      language={resolveLocalizedLang(language) === "ja" ? "ja" : "en"}
       onClose={() => navigation.goBack()}
       onSelectPlayer={(playerId) =>
         navigation.navigate("PlayerDetailPreview", { playerId })
@@ -183,7 +184,7 @@ export function TeamDetailPreviewScreenWrapper() {
   const { language } = useNativeUserLanguage(fUser?.uid);
   return (
     <TeamDetailPreviewScreenNative
-      language={language === "ja" ? "ja" : "en"}
+      language={resolveLocalizedLang(language) === "ja" ? "ja" : "en"}
       onClose={() => navigation.goBack()}
       teamId={route.params?.teamId}
       onSelectPlayer={(playerId) =>
@@ -201,7 +202,7 @@ export function PlayerDetailPreviewScreenWrapper() {
   const { language } = useNativeUserLanguage(fUser?.uid);
   return (
     <PlayerDetailPreviewScreenNative
-      language={language === "ja" ? "ja" : "en"}
+      language={resolveLocalizedLang(language) === "ja" ? "ja" : "en"}
       onClose={() => navigation.goBack()}
       playerId={route.params?.playerId}
     />
@@ -215,7 +216,7 @@ export function LiveGameStatsPreviewScreenWrapper() {
   const { language } = useNativeUserLanguage(fUser?.uid);
   return (
     <LiveGameStatsPreviewScreenNative
-      language={language === "ja" ? "ja" : "en"}
+      language={language}
       onClose={() => navigation.goBack()}
     />
   );
@@ -228,7 +229,7 @@ export function ProLeagueTeaserPreviewScreenWrapper() {
   const { language } = useNativeUserLanguage(fUser?.uid);
   return (
     <ProLeagueTeaserPreviewScreenNative
-      language={language === "ja" ? "ja" : "en"}
+      language={resolveLocalizedLang(language) === "ja" ? "ja" : "en"}
       onClose={() => navigation.goBack()}
       onPressSubscribe={() => navigation.navigate("ProSubscribe")}
     />
@@ -242,7 +243,7 @@ export function ProInsightGatePreviewScreenWrapper() {
   const { language } = useNativeUserLanguage(fUser?.uid);
   return (
     <ProInsightGatePreviewScreenNative
-      language={language === "ja" ? "ja" : "en"}
+      language={resolveLocalizedLang(language) === "ja" ? "ja" : "en"}
       onClose={() => navigation.goBack()}
       onPressSubscribe={() => navigation.navigate("ProSubscribe")}
     />

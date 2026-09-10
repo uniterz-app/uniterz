@@ -24,6 +24,9 @@ import { useFirebaseUser } from "../../auth/FirebaseUserProvider";
 import { navigateToPublicProfileNative } from "../../navigation/navigateToPublicProfileNative";
 import type { OpenPublicProfileWarm } from "../../navigation/navigateToPublicProfileNative";
 import { useBottomTabBarInsets } from "../../navigation/useBottomTabBarInsets";
+import type { Language } from "../../../../../lib/i18n/language";
+import { t } from "../../../../../lib/i18n/t";
+import { L, resolveLocalizedLang } from "../../../../../lib/i18n/localize";
 import ProfileBackEdgeHandleNative from "../profile/ProfileBackEdgeHandleNative";
 import {
   PREDICT_MODAL_EXIT_COMPLETION_MS,
@@ -69,7 +72,7 @@ export default function ResultDetailScreen({
 }: {
   visible: boolean;
   postId: string | null;
-  language: "ja" | "en";
+  language: Language;
   onClose: () => void;
   onOpenProfile?: (handle: string, warm?: OpenPublicProfileWarm) => void;
   sections?: ResultDetailBodySections;
@@ -83,7 +86,8 @@ export default function ResultDetailScreen({
     seasonPhase?: string | null;
   } | null;
 }) {
-  const isEn = language === "en";
+  const loc = resolveLocalizedLang(language);
+  const common = t(loc).common;
   const reduceMotion = useReducedMotion() ?? false;
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavigationProp<ParamListBase>>();
@@ -304,7 +308,15 @@ export default function ResultDetailScreen({
               style={StyleSheet.absoluteFillObject}
               onPress={scheduleCloseAfterExitAnimation}
               accessibilityRole="button"
-              accessibilityLabel={isEn ? "Close detail" : "詳細を閉じる"}
+              accessibilityLabel={L(loc, {
+                ja: "詳細を閉じる",
+                en: "Close detail",
+                ko: "상세 닫기",
+                zh: "关闭详情",
+                es: "Cerrar detalle",
+                pt: "Fechar detalhe",
+                fr: "Fermer le détail",
+              })}
             />
           </Animated.View>
 
@@ -343,14 +355,22 @@ export default function ResultDetailScreen({
                   ) : missing || !view ? (
                     <View style={styles.centerFill}>
                       <Text style={styles.missingTitle}>
-                        {isEn ? "Post not found" : "投稿が見つかりません"}
+                        {L(loc, {
+                          ja: "投稿が見つかりません",
+                          en: "Post not found",
+                          ko: "게시물을 찾을 수 없습니다",
+                          zh: "未找到帖子",
+                          es: "Publicación no encontrada",
+                          pt: "Publicação não encontrada",
+                          fr: "Publication introuvable",
+                        })}
                       </Text>
                       <Pressable
                         onPress={scheduleCloseAfterExitAnimation}
                         style={styles.primaryBtn}
                       >
                         <Text style={styles.primaryBtnText}>
-                          {isEn ? "Close" : "閉じる"}
+                          {common.close}
                         </Text>
                       </Pressable>
                     </View>
@@ -369,7 +389,7 @@ export default function ResultDetailScreen({
             </KeyboardAvoidingView>
             <ProfileBackEdgeHandleNative
               onPress={scheduleCloseAfterExitAnimation}
-              accessibilityLabel={isEn ? "Back" : "戻る"}
+              accessibilityLabel={common.back}
             />
           </Animated.View>
         </>

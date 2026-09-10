@@ -7,9 +7,10 @@ import { ScrollView, StyleSheet, View } from "react-native";
 import MobilePageShell from "../../profile/mobileScreens/MobilePageShell";
 import PredictProBriefPanelNative from "./PredictProBriefPanelNative";
 import { useBottomTabBarInsets } from "../../../navigation/useBottomTabBarInsets";
+import { L, resolveLocalizedLang } from "../../../../../../lib/i18n/localize";
 
 type Props = {
-  language: "ja" | "en";
+  language: string;
   onClose: () => void;
   onPressSubscribe?: () => void;
 };
@@ -19,18 +20,30 @@ export default function ProInsightGatePreviewScreenNative({
   onClose,
   onPressSubscribe,
 }: Props) {
-  const isJa = language === "ja";
+  const lang = resolveLocalizedLang(language);
   const { bottomContentReserveY } = useBottomTabBarInsets();
 
   return (
     <MobilePageShell
-      title={isJa ? "PRO INSIGHT ゲート" : "PRO INSIGHT Gate"}
+      title={L(lang, {
+        ja: "PRO INSIGHT ゲート",
+        en: "PRO INSIGHT Gate",
+        ko: "PRO INSIGHT 게이트",
+        zh: "PRO INSIGHT 入口",
+        es: "Puerta PRO INSIGHT",
+        pt: "Portão PRO INSIGHT",
+        fr: "Portail PRO INSIGHT",
+      })}
       eyebrow="DEV"
-      subtitle={
-        isJa
-          ? "Free 向けゲート。下に Insight の表示イメージ（例）"
-          : "Free gate with an example Insight preview below"
-      }
+      subtitle={L(lang, {
+        ja: "Free 向けゲート。下に Insight の表示イメージ（例）",
+        en: "Free gate with an example Insight preview below",
+        ko: "Free용 게이트. 아래에 Insight 예시",
+        zh: "面向 Free 的入口。下方为 Insight 示例",
+        es: "Puerta Free con ejemplo de Insight abajo",
+        pt: "Portão Free com exemplo de Insight abaixo",
+        fr: "Portail Free avec aperçu Insight en dessous",
+      })}
       onClose={onClose}
       appBackground
     >
@@ -44,11 +57,11 @@ export default function ProInsightGatePreviewScreenNative({
         <View style={styles.card}>
           <PredictProBriefPanelNative
             brief={null}
-            language={language}
+            language={lang === "ja" ? "ja" : "en"}
             homeTeamId="nba-lakers"
             awayTeamId="nba-celtics"
-            homeTeamName={isJa ? "レイカーズ" : "Lakers"}
-            awayTeamName={isJa ? "セルティックス" : "Celtics"}
+            homeTeamName={lang === "ja" ? "レイカーズ" : "Lakers"}
+            awayTeamName={lang === "ja" ? "セルティックス" : "Celtics"}
             locked
             onPressUpgrade={
               onPressSubscribe ??

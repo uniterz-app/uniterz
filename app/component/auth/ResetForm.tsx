@@ -10,7 +10,7 @@ import AuthFormBranding from "./AuthFormBranding";
 import cyberFieldStyles from "./cyberAuthField.module.css";
 import { authDisplayHeadingLong, authDisplayButton } from "./authEnglishDisplay";
 import { authFormCopy } from "@/lib/auth/authFormCopy";
-import { resolveAppUiLanguage } from "@/lib/i18n/resolveAppUiLanguage";
+import { resolveAppUiLocalizedLang } from "@/lib/i18n/resolveAppUiLanguage";
 
 type Props = {
   variant?: "web" | "mobile";
@@ -22,7 +22,7 @@ export default function ResetForm({ variant = "web" }: Props) {
   const [pressed, setPressed] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
-  const copy = useMemo(() => authFormCopy(resolveAppUiLanguage()), []);
+  const copy = useMemo(() => authFormCopy(resolveAppUiLocalizedLang()), []);
 
   const formWidth = variant === "mobile" ? 320 : 380;
 

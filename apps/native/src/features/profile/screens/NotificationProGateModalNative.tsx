@@ -17,7 +17,7 @@ import {
 
 type Props = {
   visible: boolean;
-  language: "ja" | "en";
+  language: string;
   onClose: () => void;
   onSeePro: () => void;
 };

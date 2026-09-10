@@ -77,7 +77,7 @@ export default function RankingsProLeagueTeaser({
   subscribeHref = PRO_LEAGUE_GATE_CTA_HREF,
   onBackToPickUp,
 }: Props) {
-  const lang = language === "en" ? "en" : "ja";
+  const lang = language === "ja" ? "ja" : "en";
   const copy = proLeagueGateCopy(lang);
   const rows = useMemo(() => buildProLeagueTeaserRows(), []);
   const [ctaPressed, setCtaPressed] = useState(false);

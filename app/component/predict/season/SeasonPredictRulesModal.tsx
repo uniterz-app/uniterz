@@ -7,6 +7,7 @@ import {
   type SeasonPredictRulesKind,
   type SeasonPredictRulesLang,
 } from "@/lib/predict/seasonPredictRulesCopy";
+import { seasonPredictPageUiCopy } from "@/lib/predict/seasonPredictUiCopy";
 import { PREDICT_OVERLAY_SUBMIT_BTN_CLASS } from "@/lib/ui/predictOverlayCyber";
 
 type Props = {
@@ -27,7 +28,7 @@ export default function SeasonPredictRulesModal({
   closeLabel,
 }: Props) {
   const isWeb = displaySize === "web";
-  const ja = language !== "en";
+  const pageUi = seasonPredictPageUiCopy(language);
   const sections = seasonPredictRulesSections(kind, language);
 
   if (!open) return null;
@@ -82,7 +83,7 @@ export default function SeasonPredictRulesModal({
                   isWeb ? "text-[10px]" : "text-[9px]",
                 ].join(" ")}
               >
-                {ja ? "採点ルール" : "How points are scored"}
+                {pageUi.rulesTitle}
               </span>
             </div>
 
@@ -122,7 +123,7 @@ export default function SeasonPredictRulesModal({
                 "flex h-12 w-full items-center justify-center text-sm font-bold tracking-[0.06em]",
               ].join(" ")}
             >
-              {closeLabel ?? (ja ? "閉じる" : "Close")}
+              {closeLabel ?? pageUi.close}
             </button>
           </div>
         </div>

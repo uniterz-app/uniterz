@@ -8,6 +8,7 @@ import type {
   SeasonPredictRulesKind,
   SeasonPredictRulesLang,
 } from "@/lib/predict/seasonPredictRulesCopy";
+import { seasonPredictPageUiCopy } from "@/lib/predict/seasonPredictUiCopy";
 
 type Props = {
   kind: SeasonPredictRulesKind;
@@ -24,7 +25,7 @@ export default function SeasonPredictRulesChip({
   className = "",
 }: Props) {
   const [open, setOpen] = useState(false);
-  const ja = language !== "en";
+  const pageUi = seasonPredictPageUiCopy(language);
 
   useEffect(() => {
     if (!open) return;
@@ -45,7 +46,7 @@ export default function SeasonPredictRulesChip({
           "hover:opacity-95 active:scale-[0.98]",
           className,
         ].join(" ")}
-        aria-label={ja ? "採点ルール" : "Scoring rules"}
+        aria-label={pageUi.rulesAria}
         aria-haspopup="dialog"
         aria-expanded={open}
       >

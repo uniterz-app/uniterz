@@ -13,6 +13,10 @@ import {
 import type { NbaPlayerDetailPreview } from "../../../../../../lib/predict/nbaPlayerDetailPreviewMocks";
 import type { NbaPlayerStatLeadersBundle } from "../../../../../../lib/predict/nbaPlayerStatLeadersMocks";
 import type { NbaLeagueTeamStatsBundle } from "../../../../../../lib/predict/nbaLeagueTeamStatsMocks";
+import {
+  nbaLocalizedText,
+  nbaHowTheyPlayChrome,
+} from "../stats/nbaStatsUiCopy";
 
 const CYAN = "#00F5FF";
 const LEAGUE_RANK_SEGMENTS = 6;
@@ -112,7 +116,8 @@ function HintList({
   selectedId,
   onSelect,
   accent,
-  isJa,
+  lang,
+  noData,
   line,
   frame,
 }: {
@@ -120,7 +125,8 @@ function HintList({
   selectedId: string;
   onSelect: (id: string) => void;
   accent: string;
-  isJa: boolean;
+  lang: import("../../../../../../lib/i18n/localize").LocalizedLang;
+  noData: string;
   line: string;
   frame: string;
 }) {
@@ -129,7 +135,7 @@ function HintList({
   if (!selected) {
     return (
       <Text style={styles.detailHint}>
-        {isJa ? "データがありません" : "No data yet"}
+        {noData}
       </Text>
     );
   }
@@ -162,7 +168,7 @@ function HintList({
         })}
       </View>
       <Text style={styles.detailHint}>
-        {isJa ? selected.hintJa : selected.hintEn}
+        {nbaLocalizedText(lang, selected.hint)}
       </Text>
     </>
   );
@@ -171,7 +177,9 @@ function HintList({
 type Props = {
   playerId: string;
   accent: string;
-  isJa: boolean;
+  language?: string;
+  /** @deprecated use language */
+  isJa?: boolean;
   leaders?: NbaPlayerStatLeadersBundle;
   teamStats?: NbaLeagueTeamStatsBundle;
   detail?: NbaPlayerDetailPreview;
@@ -180,11 +188,14 @@ type Props = {
 export default function NbaPlayerHowTheyPlayNative({
   playerId,
   accent,
+  language,
   isJa,
   leaders,
   teamStats,
   detail,
 }: Props) {
+  const chrome = nbaHowTheyPlayChrome(language ?? (isJa ? "ja" : "en"));
+  const { lang } = chrome;
   const board = useMemo(
     () => getPlayerHowTheyPlay(playerId, { leaders, teamStats, detail }),
     [playerId, leaders, teamStats, detail]
@@ -266,7 +277,7 @@ export default function NbaPlayerHowTheyPlayNative({
       </View>
 
       <Text style={styles.tabHint}>
-        {isJa ? tabMeta.hintJa : tabMeta.hintEn}
+        {nbaLocalizedText(lang, tabMeta.hint)}
       </Text>
 
       {tab === "fourFactors" ? (
@@ -275,7 +286,8 @@ export default function NbaPlayerHowTheyPlayNative({
           selectedId={factorId}
           onSelect={setFactorId}
           accent={accent}
-          isJa={isJa}
+          lang={lang}
+          noData={chrome.noData}
           line={line}
           frame={frame}
         />
@@ -287,7 +299,7 @@ export default function NbaPlayerHowTheyPlayNative({
             <View key={row.id} style={styles.barBlock}>
               <View style={styles.barTop}>
                 <Text style={styles.barLabel}>
-                  {isJa ? row.labelJa : row.labelEn}
+                  {nbaLocalizedText(lang, row.label)}
                 </Text>
                 <HowPtsCol display={row.pts.display} />
                 <MetricStack
@@ -359,7 +371,7 @@ export default function NbaPlayerHowTheyPlayNative({
             <View key={row.id} style={styles.shotBlock}>
               <View style={styles.barTop}>
                 <Text style={styles.shotLabel}>
-                  {isJa ? row.labelJa : row.labelEn}
+                  {nbaLocalizedText(lang, row.label)}
                 </Text>
                 <HowPtsCol display={row.pts.display} />
                 <MetricStack
@@ -413,7 +425,8 @@ export default function NbaPlayerHowTheyPlayNative({
           selectedId={defenseId}
           onSelect={setDefenseId}
           accent={accent}
-          isJa={isJa}
+          lang={lang}
+          noData={chrome.noData}
           line={line}
           frame={frame}
         />
@@ -425,7 +438,8 @@ export default function NbaPlayerHowTheyPlayNative({
           selectedId={hustleId}
           onSelect={setHustleId}
           accent={accent}
-          isJa={isJa}
+          lang={lang}
+          noData={chrome.noData}
           line={line}
           frame={frame}
         />
@@ -437,7 +451,8 @@ export default function NbaPlayerHowTheyPlayNative({
           selectedId={trackId}
           onSelect={setTrackId}
           accent={accent}
-          isJa={isJa}
+          lang={lang}
+          noData={chrome.noData}
           line={line}
           frame={frame}
         />

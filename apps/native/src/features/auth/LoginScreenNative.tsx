@@ -13,11 +13,11 @@ import { mapAuthErrorMessage } from "./authShared";
 import SlantCtaNative from "../../ui/SlantCtaNative";
 import { spacing } from "../../theme/tokens";
 import { authFormCopy } from "@/lib/auth/authFormCopy";
-import { resolveDeviceAppLanguage } from "../../i18n/resolveDeviceAppLanguage";
+import { resolveDeviceLocalizedLang } from "../../i18n/resolveDeviceAppLanguage";
 
 export default function LoginScreenNative() {
   const navigation = useNavigation<NativeStackNavigationProp<AuthStackParamList>>();
-  const copy = useMemo(() => authFormCopy(resolveDeviceAppLanguage()), []);
+  const copy = useMemo(() => authFormCopy(resolveDeviceLocalizedLang()), []);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);

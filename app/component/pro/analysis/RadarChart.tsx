@@ -765,7 +765,7 @@ ${spokeDelays}
                   const pct = approxPercentileFromRadar10(evalScores[row.key]);
                   const disp = formatPercentileDisplay(
                     pct,
-                    language === "en" ? "en" : "ja"
+                    language === "ja" ? "ja" : "en"
                   );
                   return (
                     <div
@@ -799,7 +799,7 @@ ${spokeDelays}
                 const pct = approxPercentileFromRadar10(evalScores[row.key]);
                 const disp = formatPercentileDisplay(
                   pct,
-                  language === "en" ? "en" : "ja"
+                  language === "ja" ? "ja" : "en"
                 );
                 return (
                   <div

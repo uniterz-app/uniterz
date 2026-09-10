@@ -5,6 +5,9 @@
  * 順位ごと異なる Unit（帯の同額なし）。同点で同順位になった場合のみ同額。
  */
 
+import { L, type LocalizedLang } from "@/lib/i18n/localize";
+import type { UiStrings } from "@/lib/i18n/ui";
+
 export type PeriodRankingUnitPeriod = "weekly" | "monthly";
 
 /** period_ranking_snapshots の metric キー（standard のみ付与） */
@@ -126,21 +129,49 @@ export function periodRankingUnitLedgerReason(
   return period === "weekly" ? "weekly_rank" : "monthly_rank";
 }
 
+const METRIC_LABELS: Record<PeriodRankingUnitMetric, UiStrings> = {
+  totalPoints: {
+    ja: "総合",
+    en: "Overall",
+    ko: "종합",
+    zh: "总榜",
+    es: "General",
+    pt: "Geral",
+    fr: "Général",
+  },
+  winRate: {
+    ja: "勝率",
+    en: "Win%",
+    ko: "승률",
+    zh: "胜率",
+    es: "% Victorias",
+    pt: "% Vitórias",
+    fr: "% Victoires",
+  },
+  totalUpset: {
+    ja: "アップセット",
+    en: "Upset",
+    ko: "이변",
+    zh: "爆冷",
+    es: "Sorpresas",
+    pt: "Zebras",
+    fr: "Exploits",
+  },
+  totalGoalScorerHits: {
+    ja: "得点者",
+    en: "Scorer",
+    ko: "득점자",
+    zh: "射手",
+    es: "Goleador",
+    pt: "Artilheiro",
+    fr: "Buteur",
+  },
+};
+
 export function periodRankingUnitMetricLabel(
   metric: PeriodRankingUnitMetric,
-  language: "ja" | "en"
+  language: LocalizedLang
 ): string {
-  const ja = language === "ja";
-  switch (metric) {
-    case "totalPoints":
-      return ja ? "総合" : "Overall";
-    case "winRate":
-      return ja ? "勝率" : "Win%";
-    case "totalUpset":
-      return ja ? "アップセット" : "Upset";
-    case "totalGoalScorerHits":
-      return ja ? "得点者" : "Scorer";
-    default:
-      return metric;
-  }
+  const label = METRIC_LABELS[metric];
+  return label ? L(language, label) : metric;
 }

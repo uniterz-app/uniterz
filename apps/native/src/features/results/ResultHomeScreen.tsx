@@ -17,6 +17,11 @@ import Animated, {
 } from "react-native-reanimated";
 import { useFirebaseUser } from "../../auth/FirebaseUserProvider";
 import type { Language } from "../../../../../lib/i18n/language";
+import { t as i18nT } from "../../../../../lib/i18n/t";
+import {
+  L,
+  resolveLocalizedLang,
+} from "../../../../../lib/i18n/localize";
 import { useNativeUserLanguageFromAuth } from "../../hooks/useNativeUserLanguage";
 import TutorialLiveHostNative from "../tutorial/TutorialLiveHostNative";
 import { BlocksPulseLoader } from "../../components/BlocksPulseLoader";
@@ -121,7 +126,6 @@ import {
   type ResultStatRowEntranceMeta,
 } from "./useResultHomeEntrance";
 import { useTeamRecordLineNative } from "../games/useTeamRecordLineNative";
-import { t as i18nT } from "../../../../../lib/i18n/t";
 import { shareResultCardNative } from "./shareResultCardNative";
 import ShareLinkCaptureFooterNative from "../share/ShareLinkCaptureFooterNative";
 import { buildResultShareUrl, getShareAppOrigin } from "../../../../../lib/share/shareAppUrls";
@@ -290,25 +294,34 @@ export default function ResultHomeScreen({
   const [manualRefreshing, setManualRefreshing] = useState(false);
   const uid = fUser?.uid ?? null;
 
-  const t = useMemo(
-    () =>
-      language === "ja"
-        ? {
-            empty: "まだ予想の投稿がありません。",
-            cacheHint: "古い投稿の一部は表示を省略しています。",
-            pull: "引っ張って更新",
-            filterFold: "絞り込み条件を指定",
-            filterClose: "閉じる",
-          }
-        : {
-            empty: "No predictions yet.",
-            cacheHint: "Older posts may be omitted from this list.",
-            pull: "Pull to refresh",
-            filterFold: "Specify filters",
-            filterClose: "Close",
-          },
-    [language]
-  );
+  const t = useMemo(() => {
+    const lang = resolveLocalizedLang(language);
+    const r = i18nT(lang).results;
+    const profile = i18nT(lang).profile;
+    return {
+      empty: profile.noStatsYet,
+      cacheHint: L(lang, {
+        ja: "古い投稿の一部は表示を省略しています。",
+        en: "Older posts may be omitted from this list.",
+        ko: "오래된 게시물 일부는 표시에서 생략됩니다.",
+        zh: "部分旧帖可能未在此列表中显示。",
+        es: "Algunas publicaciones antiguas pueden omitirse de esta lista.",
+        pt: "Algumas publicações antigas podem ser omitidas desta lista.",
+        fr: "Certaines publications anciennes peuvent être omises de cette liste.",
+      }),
+      pull: L(lang, {
+        ja: "引っ張って更新",
+        en: "Pull to refresh",
+        ko: "당겨서 새로고침",
+        zh: "下拉刷新",
+        es: "Desliza para actualizar",
+        pt: "Puxe para atualizar",
+        fr: "Tirez pour actualiser",
+      }),
+      filterFold: r.filterTitle,
+      filterClose: r.filterClose,
+    };
+  }, [language]);
 
   const [listNowTick, setListNowTick] = useState(() => Date.now());
   useEffect(() => {
@@ -544,14 +557,16 @@ export default function ResultHomeScreen({
 
   const requestDeleteConfirm = useCallback(
     (post: PostWithMillis) => {
-      const isEn = language === "en";
+      const loc = resolveLocalizedLang(language);
+      const common = i18nT(loc).common;
+      const results = i18nT(loc).results;
       cyberAlert(
-        isEn ? "Delete this post?" : "本当に削除しますか",
+        results.deletePostConfirm,
         "",
         [
-          { text: isEn ? "Cancel" : "キャンセル", style: "cancel" },
+          { text: common.cancel, style: "cancel" },
           {
-            text: isEn ? "Delete" : "削除",
+            text: common.delete,
             style: "destructive",
             onPress: () => {
               void (async () => {
@@ -565,10 +580,8 @@ export default function ResultHomeScreen({
                   const msg =
                     err instanceof PredictionApiError
                       ? err.message
-                      : isEn
-                        ? "Could not delete."
-                        : "削除に失敗しました。";
-                  cyberAlert(isEn ? "Error" : "エラー", msg);
+                      : results.deleteFailed;
+                  cyberAlert(common.error, msg);
                 } finally {
                   deleteSubmittingRef.current = false;
                 }
@@ -701,7 +714,7 @@ export default function ResultHomeScreen({
     <View style={styles.tutorialHostLayer} pointerEvents="box-none">
       <TutorialLiveHostNative
         page="results"
-        language={(language === "en" ? "en" : "ja") as Language}
+        language={(language === "ja" ? "ja" : "en") as Language}
       />
     </View>
     </View>
@@ -1240,13 +1253,16 @@ const styles = StyleSheet.create({
   },
   teamName: {
     marginTop: 4,
-    fontSize: 15,
-    fontWeight: "700",
+    fontSize: 13,
+    fontWeight: "600",
     color: "rgba(248,250,252,0.95)",
-    letterSpacing: 1.04,
-    fontFamily: MATCH_CARD_DISPLAY_FONT,
+    letterSpacing: 0.6,
+    fontFamily: "Oxanium_600SemiBold",
     textAlign: "center",
     width: "100%",
+    textTransform: "uppercase",
+    includeFontPadding: false,
+    transform: [{ skewX: "-6deg" }],
   },
   teamRecordText: {
     marginTop: 2,

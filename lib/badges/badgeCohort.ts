@@ -3,6 +3,13 @@
  * 付与対象の「その回のランキング母数」を引く。
  */
 
+import { DATE_LOCALE } from "@/lib/i18n/language";
+import {
+  L,
+  resolveLocalizedLang,
+  type LocalizedLang,
+} from "@/lib/i18n/localize";
+
 export type BadgePeriodMetric =
   | "totalPoints"
   | "winRate"
@@ -140,15 +147,27 @@ export function resolveBadgeCohortSource(
 
 export function formatBadgeParticipantCount(
   count: number,
-  language: "ja" | "en",
+  language: LocalizedLang | string,
 ): string {
+  const lang = resolveLocalizedLang(language);
   const n = Math.floor(count);
-  if (language === "ja") return `${n.toLocaleString("ja-JP")}人`;
-  return n.toLocaleString("en-US");
+  const formatted = n.toLocaleString(DATE_LOCALE[lang]);
+  if (lang === "ja") return `${formatted}人`;
+  if (lang === "ko") return `${formatted}명`;
+  if (lang === "zh") return `${formatted}人`;
+  return formatted;
 }
 
-export function badgeParticipantLabel(language: "ja" | "en"): string {
-  return language === "ja" ? "参加者" : "Participants";
+export function badgeParticipantLabel(language: LocalizedLang | string): string {
+  return L(resolveLocalizedLang(language), {
+    ja: "参加者",
+    en: "Participants",
+    ko: "참가자",
+    zh: "参与者",
+    es: "Participantes",
+    pt: "Participantes",
+    fr: "Participants",
+  });
 }
 
 export function readBadgeParticipantCount(badge: {

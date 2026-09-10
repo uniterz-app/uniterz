@@ -87,6 +87,8 @@ import {
   kinetikPlanProFrameTheme,
   type KinetikMetricAccent,
 } from "./profileKinetikNativeTheme";
+import { profileKinetikPanelCopy } from "../profileKinetikPanelCopy";
+import { resolveLocalizedLang } from "../../../../../../lib/i18n/localize";
 import ProCyberBadgeNative from "./ProCyberBadgeNative";
 import ProfileKinetikAvatarWithStreakNative from "./ProfileKinetikAvatarWithStreakNative";
 import ResultImpactStreakTagNative from "../../results/ResultImpactStreakTagNative";
@@ -201,7 +203,7 @@ function KinetikMetricCardNative({
   rankBelowSegBar?: boolean;
   compact?: boolean;
   isPlanPro?: boolean;
-  language?: "ja" | "en";
+  language?: string;
 }) {
   const reduceMotion = useReducedMotion() === true;
   const useCount = countFormat != null && countTarget != null;
@@ -355,7 +357,7 @@ function KinetikSlantTabNative({
   rankTier?: KinetikRankBadgeTier;
   streakTier?: 1 | 2 | 3 | 4;
   explanation?: string;
-  language: "ja" | "en";
+  language: string;
   onPress?: () => void;
 }) {
   const rankTheme = rankTier ? KINETIK_SLANT_TAB_RANK[rankTier] : null;
@@ -429,9 +431,10 @@ function KinetikHeaderTabsNative({
 }: {
   rankBadge: KinetikRankBadgeResult | null;
   winStreak: number;
-  language: "ja" | "en";
+  language: string;
 }) {
-  const streakLabel = formatKinetikWinStreakLabel(winStreak, language);
+  const lang = resolveLocalizedLang(language);
+  const streakLabel = formatKinetikWinStreakLabel(winStreak, lang);
   if (!rankBadge && !streakLabel) return null;
 
   const showTagExplanation = useCallback(
@@ -449,11 +452,11 @@ function KinetikHeaderTabsNative({
           label={rankBadge.label}
           variant="filled"
           rankTier={rankBadge.tier}
-          explanation={getKinetikRankBadgeExplanation(rankBadge, language)}
-          language={language}
+          explanation={getKinetikRankBadgeExplanation(rankBadge, lang)}
+          language={lang}
           onPress={() =>
             showTagExplanation(
-              getKinetikRankBadgeExplanation(rankBadge, language)
+              getKinetikRankBadgeExplanation(rankBadge, lang)
             )
           }
         />
@@ -463,7 +466,7 @@ function KinetikHeaderTabsNative({
           accessibilityRole="button"
           accessibilityLabel={streakLabel}
           onPress={() =>
-            showTagExplanation(getKinetikWinStreakExplanation(winStreak, language))
+            showTagExplanation(getKinetikWinStreakExplanation(winStreak, lang))
           }
           style={({ pressed }) => [pressed ? { opacity: 0.85 } : null]}
         >
@@ -1061,19 +1064,12 @@ function KinetikViewCountChipNative({
   viewCount: number;
   viewCountAriaLabel: string | null;
   underAvatar?: boolean;
-  language: "ja" | "en";
+  language: string;
 }) {
-  const isJa = language === "ja";
+  const copy = profileKinetikPanelCopy(language);
   return (
     <Pressable
-      onPress={() =>
-        cyberAlert(
-          isJa ? "プロフィール閲覧数" : "Profile views",
-          isJa
-            ? "ログインした人がこのプロフィールを見た回数です。同じ人が同じ日に何度見ても 1 回です。自分で自分のプロフィールを見た分は入りません。"
-            : "How many logged-in people have opened this profile. Multiple views by the same person on the same day count as one. Viewing your own profile is not counted."
-        )
-      }
+      onPress={() => cyberAlert(copy.viewsTitle, copy.viewsBody)}
       style={[
         styles.viewCountChip,
         underAvatar ? styles.viewCountChipUnderAvatar : null,
@@ -1081,9 +1077,7 @@ function KinetikViewCountChipNative({
       hitSlop={8}
       accessibilityRole="button"
       accessibilityLabel={viewCountAriaLabel ?? undefined}
-      accessibilityHint={
-        isJa ? "閲覧数の説明を表示" : "Show what profile views means"
-      }
+      accessibilityHint={copy.viewsHint}
     >
       <MaterialCommunityIcons name="eye" size={12} color="#00F5FF" />
       <Text style={styles.viewCountNum}>
@@ -1133,7 +1127,7 @@ function MetricsScopeArrowNative({
 export type ProfileKinetikPanelNativeProps = {
   identity: ProfileEditTronIdentity;
   stats: ProfileEditKinetikStats;
-  language: "ja" | "en";
+  language: string;
   bio?: string | null;
   countryCode?: string | null;
   memberSinceMs?: number | null;
@@ -1217,11 +1211,12 @@ export default function ProfileKinetikPanelNative({
   markCount: _markCount = 0,
   onPressMark,
 }: ProfileKinetikPanelNativeProps) {
-  const isJa = language === "ja";
+  const copy = profileKinetikPanelCopy(language);
+  const lang = copy.lang;
   const showNbaMetricsTabs = metricsTab != null && !!onMetricsTabChange;
   const scopeHint = getKinetikMetricsScopeHint(
     metricsTab ?? "total",
-    isJa ? "ja" : "en",
+    lang,
     metricsTab === "weekly" || metricsTab === "monthly"
       ? {
           windowLabel: metricsWindowLabel,
@@ -1239,7 +1234,7 @@ export default function ProfileKinetikPanelNative({
     balance: unitBalance ?? null,
     enabled: !!onOpenUnitLedger && unitBalance != null,
     storageKey: shareHandle?.trim() || "me",
-    language: isJa ? "ja" : "en",
+    language: lang,
   });
   /** 金庫加算中はバッジ／コイン常時ループを止め続ける */
   const [vaultSettling, setVaultSettling] = useState(false);
@@ -1264,7 +1259,7 @@ export default function ProfileKinetikPanelNative({
     totalPointsRank: activeTotalPointsRank,
     totalPointsRankDenominator: activeRankDenominator,
     rankDeltaPlaces: activeRankDelta,
-    language,
+    language: lang,
   });
   const menuAccent = resolveKinetikMenuAccent({
     totalPointsRank: activeTotalPointsRank,
@@ -1291,34 +1286,25 @@ export default function ProfileKinetikPanelNative({
     width: Math.max(0, windowW - 24),
     height: isPro ? 520 : 0,
   }));
-  const memberSinceLabel = formatProfileMemberSince(memberSinceMs, language);
+  const memberSinceLabel = formatProfileMemberSince(memberSinceMs, lang);
   const profileViewCountAria =
-    profileViewCount == null
-      ? null
-      : isJa
-        ? `プロフィール閲覧数 ${profileViewCount.toLocaleString("ja-JP")}`
-        : `${profileViewCount.toLocaleString("en-US")} profile views`;
+    profileViewCount == null ? null : copy.viewsAria(profileViewCount);
   const unitBalanceAria =
-    unitBalance == null
-      ? null
-      : isJa
-        ? `保有 Unit ${unitBalance.toLocaleString("ja-JP")}`
-        : `${unitBalance.toLocaleString("en-US")} Units`;
+    unitBalance == null ? null : copy.unitsAria(unitBalance);
   const shareTargetHandle = shareHandle?.trim() || identity.handle?.trim() || "";
   const profileFlagUri = countryCode?.trim()
     ? rankingFlagImageUri(countryCode.trim())
     : null;
   const profileIdLabel = identity.systemId.trim();
-  const shareProfileLabel = isJa ? "プロフィールを共有" : "Share profile";
-  const shareCopiedLabel = isJa ? "コピー済" : "Copied";
+  const shareProfileLabel = copy.shareProfile;
+  const shareCopiedLabel = copy.shareCopied;
 
   const handleShareProfile = useCallback(async () => {
     if (!shareTargetHandle) return;
     const base = getUniterzApiBaseUrl();
     const url = buildProfileShareUrl(shareTargetHandle, base);
     const title = identity.displayName;
-    const text =
-      language === "ja" ? `${title} のプロフィール` : `${title}'s profile`;
+    const text = copy.shareText(title);
     try {
       await Share.share({ message: `${text}\n${url}`, url, title });
       setShareCopied(true);
@@ -1326,16 +1312,16 @@ export default function ProfileKinetikPanelNative({
     } catch {
       /* cancelled */
     }
-  }, [identity.displayName, language, shareTargetHandle]);
+  }, [copy, identity.displayName, shareTargetHandle]);
 
   const metricCopy = useMemo(
     () => ({
       ptsUnit: "pts",
-      matchUnit: isJa ? "試合" : "matches",
+      matchUnit: copy.matchUnit,
       cumulativeUnitHint: scopeHint.unitHint,
       winRateUnitHint: "%",
     }),
-    [isJa, scopeHint.unitHint]
+    [copy.matchUnit, scopeHint.unitHint]
   );
 
   const metricsHeaderTitle = metricsTitle ?? "NBA // 26-27";
@@ -1352,14 +1338,10 @@ export default function ProfileKinetikPanelNative({
     const pendingMark = "—";
     const sectionWinRateFootnote = valuesPending
       ? pendingMark
-      : isJa
-        ? `投稿 ${sectionStats.posts} · 的中 ${sectionStats.hits}`
-        : `${sectionStats.hits} hits · ${sectionStats.posts} posts`;
+      : copy.winRateFootnote(sectionStats.posts, sectionStats.hits);
     const sectionTotalPointsRankLabel =
       !valuesPending && sectionRank.totalPointsRank != null
-        ? isJa
-          ? `${sectionRank.totalPointsRank}位`
-          : `#${sectionRank.totalPointsRank}`
+        ? copy.rankLabel(sectionRank.totalPointsRank)
         : undefined;
     const sectionPtsSegmentsReady =
       !valuesPending &&
@@ -1370,7 +1352,7 @@ export default function ProfileKinetikPanelNative({
     return (
       <View style={styles.metricsGrid}>
         <KinetikMetricCardNative
-          label={isJa ? "勝率" : "WIN RATE"}
+          label={copy.winRateLabel}
           countTarget={sectionStats.winRate}
           countFormat="percent"
           countDecimals={1}
@@ -1394,7 +1376,7 @@ export default function ProfileKinetikPanelNative({
           isPlanPro={isPro}
         />
         <KinetikMetricCardNative
-          label={isJa ? "総合得点" : "TOTAL PTS"}
+          label={copy.totalPtsLabel}
           countTarget={sectionStats.totalPoints}
           countFormat="locale"
           valuesPending={valuesPending}
@@ -1428,7 +1410,7 @@ export default function ProfileKinetikPanelNative({
               : profileMetricDeltaTone(sectionDeltas?.totalPoints ?? null)
           }
           isPlanPro={isPro}
-          language={language}
+          language={lang}
         />
         <KinetikMetricCardNative
           label={KINETIK_UPSET_METRIC_LABEL}
@@ -1456,7 +1438,7 @@ export default function ProfileKinetikPanelNative({
           isPlanPro={isPro}
         />
         <KinetikMetricCardNative
-          label={isJa ? "最多得点者" : "TOP SCORER"}
+          label={copy.topScorerLabel}
           countTarget={Math.max(0, Math.round(sectionStats.goalScorerHits ?? 0))}
           countFormat="int"
           valuesPending={valuesPending}
@@ -1573,9 +1555,7 @@ export default function ProfileKinetikPanelNative({
                 style={styles.markBtn}
                 hitSlop={10}
                 accessibilityRole="button"
-                accessibilityLabel={
-                  isJa ? "マークリスト" : "Mark list"
-                }
+                accessibilityLabel={copy.markList}
               >
                 <MaterialCommunityIcons
                   name="crosshairs"
@@ -1609,9 +1589,7 @@ export default function ProfileKinetikPanelNative({
                         balance={vaultDisplayBalance}
                         ariaLabel={
                           onOpenUnitLedger
-                            ? isJa
-                              ? `${unitBalanceAria} · 履歴を開く`
-                              : `${unitBalanceAria} · Open history`
+                            ? copy.unitsOpenHistoryAria(unitBalanceAria)
                             : unitBalanceAria
                         }
                         corner
@@ -1759,7 +1737,7 @@ export default function ProfileKinetikPanelNative({
                 }
                 availableLabels={metricsPeriodLabels}
                 onChange={onMetricsWindowLabelChange}
-                language={isJa ? "ja" : "en"}
+                language={lang}
               />
             ) : metricsTab !== "total" && scopeHint.unitHint ? (
               <Text style={styles.metricsPeriodHint}>{scopeHint.unitHint}</Text>
@@ -1799,13 +1777,7 @@ export default function ProfileKinetikPanelNative({
               ? {
                   marked,
                   onPress: onPressMark,
-                  accessibilityLabel: marked
-                    ? isJa
-                      ? "マーク済み"
-                      : "Marked"
-                    : isJa
-                      ? "マークする"
-                      : "Mark",
+                  accessibilityLabel: marked ? copy.marked : copy.mark,
                 }
               : null
           }
@@ -1821,7 +1793,7 @@ export default function ProfileKinetikPanelNative({
         title={unitEarn.active.title}
         subtitle={unitEarn.active.subtitle}
         rank={unitEarn.active.rank}
-        language={isJa ? "ja" : "en"}
+        language={lang}
         vaultRef={unitVaultRef}
         onAbsorb={unitEarn.markAbsorbed}
         onDone={unitEarn.dismiss}

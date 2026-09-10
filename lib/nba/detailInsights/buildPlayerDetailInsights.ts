@@ -149,12 +149,7 @@ function buildRoleChanges(detail: NbaPlayerDetailPreview): {
   const signals: PlayerRoleChangeSignal[] = [];
   const pushSignal = (id: string, label: string) => {
     const enriched = enrichInsightChip({ id, label, category: "change", score: 0 });
-    signals.push({
-      id,
-      label,
-      hintJa: enriched.hintJa,
-      hintEn: enriched.hintEn,
-    });
+    signals.push({ id, label, hint: enriched.hint });
   };
   if (priorMin > 0 && recentMin >= priorMin * 1.15) {
     pushSignal("min_up", "MIN ↑");

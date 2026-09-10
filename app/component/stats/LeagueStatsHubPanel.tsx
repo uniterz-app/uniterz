@@ -19,7 +19,7 @@ import MobilePageShell from "@/app/component/common/MobilePageShell";
 type TabId = "team" | "player";
 
 type Props = {
-  language?: "ja" | "en";
+  language?: string;
   initialTab?: TabId;
   /** MobilePageShell 内では見出しを出さない */
   embedded?: boolean;

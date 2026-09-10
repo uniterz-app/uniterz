@@ -17,10 +17,11 @@ import { useLeagueTeamStatsBundle } from "../../../../../../lib/nba/useLeagueTea
 import { usePlayerStatLeadersBundle } from "../../../../../../lib/nba/usePlayerStatLeadersBundle";
 import { getUniterzApiBaseUrl } from "../submitPredictionApi";
 import { METRIC_FONT } from "../../rankings/rankingsUiTheme";
+import { nbaStatsSearchCopy } from "./nbaStatsUiCopy";
 
 type Props = {
   kind: NbaStatsSearchKind;
-  language: "ja" | "en";
+  language: string;
   onSelect: (hit: NbaStatsSearchHit) => void;
 };
 
@@ -29,7 +30,7 @@ export default function NbaStatsSearchBarNative({
   language,
   onSelect,
 }: Props) {
-  const isJa = language === "ja";
+  const copy = nbaStatsSearchCopy(language);
   const [query, setQuery] = useState("");
   const apiBaseUrl = getUniterzApiBaseUrl();
   // 検索対象の kind 側だけ取得する。パネルが既に読んだ bundle は共有キャッシュから来る
@@ -50,13 +51,7 @@ export default function NbaStatsSearchBarNative({
     [query, kind, teamBundle, playerBundle]
   );
   const placeholder =
-    kind === "team"
-      ? isJa
-        ? "チームを検索（Lakers / LAL）"
-        : "Search teams (Lakers / LAL)"
-      : isJa
-        ? "選手を検索（Luka / Curry）"
-        : "Search players (Luka / Curry)";
+    kind === "team" ? copy.placeholderTeam : copy.placeholderPlayer;
 
   return (
     <View style={styles.wrap}>
@@ -73,9 +68,7 @@ export default function NbaStatsSearchBarNative({
       {query.trim() ? (
         <View style={styles.dropdown}>
           {hits.length === 0 ? (
-            <Text style={styles.empty}>
-              {isJa ? "該当なし" : "NO MATCHES"}
-            </Text>
+            <Text style={styles.empty}>{copy.noMatches}</Text>
           ) : (
             hits.map((hit) => (
               <Pressable

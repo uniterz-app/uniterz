@@ -14,6 +14,8 @@ import type { RouteProp } from "@react-navigation/native";
 import LegalPageLayoutNative from "../../legal/LegalPageLayoutNative";
 import { useFirebaseUser } from "../../../auth/FirebaseUserProvider";
 import { useNativeUserLanguage } from "../../../hooks/useNativeUserLanguage";
+import { DATE_LOCALE } from "../../../../../../lib/i18n/language";
+import { L, resolveLocalizedLang } from "../../../../../../lib/i18n/localize";
 import type { ProfileStackParamList } from "../../../navigation/types";
 import {
   cancelMeRedemptionNative,
@@ -36,9 +38,8 @@ export default function RedemptionProgressScreenNative() {
   const id = route.params?.id ?? "";
   const { fUser } = useFirebaseUser();
   const { language } = useNativeUserLanguage(fUser?.uid);
-  const isJa = language === "ja";
-  const gateLang = isJa ? "ja" : "en";
-  const batch = redemptionBatchScheduleCopy(gateLang);
+  const lang = resolveLocalizedLang(language);
+  const batch = redemptionBatchScheduleCopy(lang);
 
   const [request, setRequest] = useState<RedemptionRequest | null>(null);
   const [loading, setLoading] = useState(true);
@@ -74,11 +75,15 @@ export default function RedemptionProgressScreenNative() {
     <LegalPageLayoutNative
       title="TRACK"
       eyebrow="UNIT EXCHANGE"
-      description={
-        isJa
-          ? "購入は月末まとめ（おおよそ25日前後）。"
-          : "Purchase is batched near month-end (~25th)."
-      }
+      description={L(lang, {
+        ja: "購入は月末まとめ（おおよそ25日前後）。",
+        en: "Purchase is batched near month-end (~25th).",
+        ko: "구매는 월말 일괄(대략 25일 전후).",
+        zh: "采购为月末集中（约 25 日前后）。",
+        es: "La compra se agrupa a fin de mes (~día 25).",
+        pt: "A compra é em lote no fim do mês (~dia 25).",
+        fr: "Achat groupé en fin de mois (~25).",
+      })}
     >
       <View style={styles.batchCard}>
         <Text style={styles.batchBody}>{batch.detail}</Text>
@@ -90,14 +95,14 @@ export default function RedemptionProgressScreenNative() {
         <Text style={styles.error}>{error}</Text>
       ) : !request ? (
         <Text style={styles.muted}>
-          {isJa ? "申請が見つかりません。" : "Not found."}
+          {L(lang, { ja: "申請が見つかりません。", en: "Not found.", ko: "신청을 찾을 수 없습니다.", zh: "未找到申请。", es: "No encontrado.", pt: "Não encontrado.", fr: "Introuvable." })}
         </Text>
       ) : (
         <>
           <View style={styles.card}>
             <Text style={styles.title}>{request.productName}</Text>
             <Text style={styles.meta}>
-              {redemptionStatusLabel(request.status, gateLang)} ·{" "}
+              {redemptionStatusLabel(request.status, lang)} ·{" "}
               {request.unitsRequired} Unit
             </Text>
             {request.status === "pending" ||
@@ -134,27 +139,27 @@ export default function RedemptionProgressScreenNative() {
                       {String(i + 1).padStart(2, "0")}
                     </Text>
                     <Text style={styles.stepLabel}>
-                      {redemptionStatusLabel(step, gateLang)}
+                      {redemptionStatusLabel(step, lang)}
                     </Text>
                   </View>
                 );
               })
             : (
               <Text style={styles.bad}>
-                {redemptionStatusLabel(request.status, gateLang)}
+                {redemptionStatusLabel(request.status, lang)}
               </Text>
             )}
 
-          <Text style={styles.section}>{isJa ? "履歴" : "Timeline"}</Text>
+          <Text style={styles.section}>{L(lang, { ja: "履歴", en: "Timeline", ko: "이력", zh: "时间线", es: "Historial", pt: "Linha do tempo", fr: "Historique" })}</Text>
           {[...request.timeline].reverse().map((ev, i) => (
             <Text key={`${ev.status}-${ev.atMs}-${i}`} style={styles.timeline}>
               {ev.atMs
                 ? new Date(ev.atMs).toLocaleDateString(
-                    isJa ? "ja-JP" : "en-US",
+                    DATE_LOCALE[lang],
                     { month: "short", day: "numeric" }
                   )
                 : "—"}{" "}
-              · {redemptionStatusLabel(ev.status, gateLang)}
+              · {redemptionStatusLabel(ev.status, lang)}
               {ev.note ? ` — ${ev.note}` : ""}
             </Text>
           ))}
@@ -175,7 +180,7 @@ export default function RedemptionProgressScreenNative() {
                 }}
               >
                 <Text style={styles.primaryBtnText}>
-                  {isJa ? "申請を送信" : "Submit draft"}
+                  {L(lang, { ja: "申請を送信", en: "Submit draft", ko: "신청 제출", zh: "提交申请", es: "Enviar borrador", pt: "Enviar rascunho", fr: "Envoyer le brouillon" })}
                 </Text>
               </Pressable>
             ) : null}
@@ -194,7 +199,7 @@ export default function RedemptionProgressScreenNative() {
                 }}
               >
                 <Text style={styles.dangerBtnText}>
-                  {isJa ? "取り消す" : "Cancel"}
+                  {L(lang, { ja: "取り消す", en: "Cancel", ko: "취소", zh: "取消", es: "Cancelar", pt: "Cancelar", fr: "Annuler" })}
                 </Text>
               </Pressable>
             ) : null}

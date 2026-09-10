@@ -13,6 +13,7 @@ import { useFirebaseUser } from "../../auth/FirebaseUserProvider";
 import { useNativeUserLanguage } from "../../hooks/useNativeUserLanguage";
 import { db, storage } from "../../lib/firebase";
 import { SUPPORT_EMAIL } from "@/lib/contact/companyEmails";
+import { L, resolveLocalizedLang } from "../../../../../lib/i18n/localize";
 
 const API_BASE = process.env.EXPO_PUBLIC_UNITERZ_API_BASE_URL?.replace(/\/$/, "") ?? "";
 
@@ -33,7 +34,7 @@ export default function ContactScreenNative({
   const navigation = useNavigation();
   const { fUser } = useFirebaseUser();
   const { language } = useNativeUserLanguage(fUser?.uid);
-  const isJa = language === "ja";
+  const lang = resolveLocalizedLang(language);
   const isFeature = variant === "featureRequest";
 
   const [type, setType] = useState<ContactType>(initialType);
@@ -55,49 +56,163 @@ export default function ContactScreenNative({
     });
   }, [fUser?.uid]);
 
-  const labels = isJa
-    ? {
-        title: isFeature ? "機能リクエスト" : "お問い合わせ",
-        description: isFeature
-          ? "Uniterz で実装してほしい機能や改善案をお送りください。"
-          : "不具合報告・ご要望・お問い合わせはこちらから送信できます。",
-        intro: isFeature
-          ? "送信いただいた要望は運営チームで確認し、今後の改善に活用します。"
-          : `${SUPPORT_EMAIL} へのメールでもお問い合わせいただけます。`,
-        types: { bug: "不具合", feature: "要望", report: "報告", other: "その他" },
-        email: "メールアドレス（任意）",
-        message: "メッセージ",
-        attach: "スクリーンショットを添付",
-        submit: "送信",
-        submitting: "送信中…",
-        success: "送信完了",
-        successBody: "お問い合わせを受け付けました。",
-        err: "送信に失敗しました。",
-        needMsg: "メッセージを10文字以上入力してください。",
-        needApi: "API が未設定です。",
-        updated: "最終更新: ",
-      }
-    : {
-        title: isFeature ? "Feature Request" : "Contact",
-        description: isFeature
-          ? "Share feature ideas and improvements you want to see in Uniterz."
-          : "Report bugs, send feedback, or contact us here.",
-        intro: isFeature
-          ? "Your request will be reviewed by the team."
-          : `You can also email ${SUPPORT_EMAIL}.`,
-        types: { bug: "Bug", feature: "Feature", report: "Report", other: "Other" },
-        email: "Email (optional)",
-        message: "Message",
-        attach: "Attach screenshot",
-        submit: "Send",
-        submitting: "Sending…",
-        success: "Sent",
-        successBody: "We received your message.",
-        err: "Failed to send.",
-        needMsg: "Please enter at least 10 characters.",
-        needApi: "API is not configured.",
-        updated: "Last updated: ",
-      };
+  const labels = {
+    title: isFeature
+      ? L(lang, {
+          ja: "機能リクエスト",
+          en: "Feature Request",
+          ko: "기능 요청",
+          zh: "功能请求",
+          es: "Solicitud de función",
+          pt: "Pedido de recurso",
+          fr: "Demande de fonctionnalité",
+        })
+      : L(lang, {
+          ja: "お問い合わせ",
+          en: "Contact",
+          ko: "문의",
+          zh: "联系我们",
+          es: "Contacto",
+          pt: "Contato",
+          fr: "Contact",
+        }),
+    description: isFeature
+      ? L(lang, {
+          ja: "Uniterz で実装してほしい機能や改善案をお送りください。",
+          en: "Share feature ideas and improvements you want to see in Uniterz.",
+          ko: "Uniterz에 원하는 기능·개선안을 보내 주세요.",
+          zh: "请提交您希望 Uniterz 实现的功能或改进建议。",
+          es: "Comparte ideas y mejoras que quieras ver en Uniterz.",
+          pt: "Compartilhe ideias e melhorias que deseja no Uniterz.",
+          fr: "Partagez les idées et améliorations que vous voulez pour Uniterz.",
+        })
+      : L(lang, {
+          ja: "不具合報告・ご要望・お問い合わせはこちらから送信できます。",
+          en: "Report bugs, send feedback, or contact us here.",
+          ko: "버그 제보·요청·문의는 여기서 보낼 수 있습니다.",
+          zh: "可在此提交故障报告、反馈或联系我们。",
+          es: "Informa errores, envía comentarios o contáctanos aquí.",
+          pt: "Relate bugs, envie feedback ou fale conosco aqui.",
+          fr: "Signalez des bugs, envoyez des retours ou contactez-nous ici.",
+        }),
+    intro: isFeature
+      ? L(lang, {
+          ja: "送信いただいた要望は運営チームで確認し、今後の改善に活用します。",
+          en: "Your request will be reviewed by the team.",
+          ko: "보내주신 요청은 운영팀이 검토해 개선에 활용합니다.",
+          zh: "您提交的请求将由运营团队审核并用于后续改进。",
+          es: "Tu solicitud será revisada por el equipo.",
+          pt: "Seu pedido será analisado pela equipe.",
+          fr: "Votre demande sera examinée par l’équipe.",
+        })
+      : L(lang, {
+          ja: `${SUPPORT_EMAIL} へのメールでもお問い合わせいただけます。`,
+          en: `You can also email ${SUPPORT_EMAIL}.`,
+          ko: `${SUPPORT_EMAIL}로도 문의할 수 있습니다.`,
+          zh: `也可发送邮件至 ${SUPPORT_EMAIL}。`,
+          es: `También puedes escribir a ${SUPPORT_EMAIL}.`,
+          pt: `Você também pode e-mail ${SUPPORT_EMAIL}.`,
+          fr: `Vous pouvez aussi écrire à ${SUPPORT_EMAIL}.`,
+        }),
+    types: {
+      bug: L(lang, { ja: "不具合", en: "Bug", ko: "버그", zh: "故障", es: "Error", pt: "Bug", fr: "Bug" }),
+      feature: L(lang, { ja: "要望", en: "Feature", ko: "요청", zh: "功能", es: "Función", pt: "Recurso", fr: "Fonctionnalité" }),
+      report: L(lang, { ja: "報告", en: "Report", ko: "신고", zh: "举报", es: "Informe", pt: "Denúncia", fr: "Signalement" }),
+      other: L(lang, { ja: "その他", en: "Other", ko: "기타", zh: "其他", es: "Otro", pt: "Outro", fr: "Autre" }),
+    },
+    email: L(lang, {
+      ja: "メールアドレス（任意）",
+      en: "Email (optional)",
+      ko: "이메일(선택)",
+      zh: "邮箱（可选）",
+      es: "Email (opcional)",
+      pt: "E-mail (opcional)",
+      fr: "E-mail (facultatif)",
+    }),
+    message: L(lang, {
+      ja: "メッセージ",
+      en: "Message",
+      ko: "메시지",
+      zh: "留言",
+      es: "Mensaje",
+      pt: "Mensagem",
+      fr: "Message",
+    }),
+    attach: L(lang, {
+      ja: "スクリーンショットを添付",
+      en: "Attach screenshot",
+      ko: "스크린샷 첨부",
+      zh: "附加截图",
+      es: "Adjuntar captura",
+      pt: "Anexar captura",
+      fr: "Joindre une capture",
+    }),
+    submit: L(lang, { ja: "送信", en: "Send", ko: "보내기", zh: "发送", es: "Enviar", pt: "Enviar", fr: "Envoyer" }),
+    submitting: L(lang, {
+      ja: "送信中…",
+      en: "Sending…",
+      ko: "보내는 중…",
+      zh: "发送中…",
+      es: "Enviando…",
+      pt: "Enviando…",
+      fr: "Envoi…",
+    }),
+    success: L(lang, { ja: "送信完了", en: "Sent", ko: "전송 완료", zh: "已发送", es: "Enviado", pt: "Enviado", fr: "Envoyé" }),
+    successBody: L(lang, {
+      ja: "お問い合わせを受け付けました。",
+      en: "We received your message.",
+      ko: "문의가 접수되었습니다.",
+      zh: "我们已收到您的消息。",
+      es: "Recibimos tu mensaje.",
+      pt: "Recebemos sua mensagem.",
+      fr: "Nous avons reçu votre message.",
+    }),
+    err: L(lang, {
+      ja: "送信に失敗しました。",
+      en: "Failed to send.",
+      ko: "전송에 실패했습니다.",
+      zh: "发送失败。",
+      es: "Error al enviar.",
+      pt: "Falha ao enviar.",
+      fr: "Échec de l’envoi.",
+    }),
+    needMsg: L(lang, {
+      ja: "メッセージを10文字以上入力してください。",
+      en: "Please enter at least 10 characters.",
+      ko: "메시지를 10자 이상 입력하세요.",
+      zh: "请输入至少 10 个字符。",
+      es: "Introduce al menos 10 caracteres.",
+      pt: "Digite pelo menos 10 caracteres.",
+      fr: "Saisissez au moins 10 caractères.",
+    }),
+    needApi: L(lang, {
+      ja: "API が未設定です。",
+      en: "API is not configured.",
+      ko: "API가 설정되지 않았습니다.",
+      zh: "未配置 API。",
+      es: "La API no está configurada.",
+      pt: "API não configurada.",
+      fr: "API non configurée.",
+    }),
+    updated: L(lang, {
+      ja: "最終更新: ",
+      en: "Last updated: ",
+      ko: "최종 업데이트: ",
+      zh: "最后更新：",
+      es: "Última actualización: ",
+      pt: "Última atualização: ",
+      fr: "Dernière mise à jour : ",
+    }),
+    rateLimit: L(lang, {
+      ja: "送信上限に達しました。明日またお試しください。",
+      en: "Daily limit reached. Try again tomorrow.",
+      ko: "일일 전송 한도에 도달했습니다. 내일 다시 시도하세요.",
+      zh: "已达每日发送上限。请明天再试。",
+      es: "Límite diario alcanzado. Inténtalo mañana.",
+      pt: "Limite diário atingido. Tente amanhã.",
+      fr: "Limite quotidienne atteinte. Réessayez demain.",
+    }),
+  };
 
   async function pickImage() {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -150,7 +265,7 @@ export default function ContactScreenNative({
       });
       if (!res.ok) {
         if (res.status === 429) {
-          cyberAlert("", isJa ? "送信上限に達しました。明日またお試しください。" : "Daily limit reached. Try again tomorrow.");
+          cyberAlert("", labels.rateLimit);
           return;
         }
         throw new Error("failed");

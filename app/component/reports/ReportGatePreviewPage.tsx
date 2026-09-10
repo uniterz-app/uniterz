@@ -106,19 +106,19 @@ export default function ReportGatePreviewPage() {
               ? "ゲートなし。実レポートがそのまま見えます（ここでは週次モック）。"
               : "No gate. Full report as Pro would see it (weekly mock here)."}
           </p>
-          <WeeklyReportView report={weekly} language={lang} />
+          <WeeklyReportView report={weekly} language={language} />
         </div>
       ) : gateKind === "monthlyLocked" ? (
         <ReportGateSurface
           kind={gateKind}
           language={lang}
-          preview={<MonthlyReportView report={monthly} language={lang} />}
+          preview={<MonthlyReportView report={monthly} language={language} />}
         />
       ) : gateKind === "free" ? (
         <ReportGateSurface
           kind={gateKind}
           language={lang}
-          preview={<WeeklyReportView report={weekly} language={lang} />}
+          preview={<WeeklyReportView report={weekly} language={language} />}
         />
       ) : (
         <ReportGateSurface kind={gateKind} language={lang} />

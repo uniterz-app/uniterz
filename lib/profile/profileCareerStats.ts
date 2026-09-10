@@ -4,6 +4,7 @@
  */
 
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
+import { L, resolveLocalizedLang } from "@/lib/i18n/localize";
 
 export type ProfileCareerAwardHonor = {
   /** 集約キー（metric + rank） */
@@ -71,9 +72,10 @@ const METRIC_LABEL_EN: Record<string, string> = {
   goal_scorer: "SCORER",
 };
 
-function metricLabel(metric: string, language: "ja" | "en"): string {
+function metricLabel(metric: string, language: string | null | undefined): string {
+  const lang = resolveLocalizedLang(language);
   const key = metric.toLowerCase();
-  const map = language === "ja" ? METRIC_LABEL_JA : METRIC_LABEL_EN;
+  const map = lang === "ja" ? METRIC_LABEL_JA : METRIC_LABEL_EN;
   if (map[key]) return map[key];
   return metric.replace(/_/g, " ").toUpperCase();
 }
@@ -83,7 +85,7 @@ function metricLabel(metric: string, language: "ja" | "en"): string {
  */
 export function aggregateCareerAwardsFromBadges(
   badges: readonly ProfileCareerBadgeLike[],
-  language: "ja" | "en"
+  language: string | null | undefined
 ): ProfileCareerAwardHonor[] {
   const counts = new Map<string, { metric: string; rank: number; count: number }>();
 
@@ -103,10 +105,16 @@ export function aggregateCareerAwardsFromBadges(
     .sort((a, b) => b.count - a.count || a.metric.localeCompare(b.metric))
     .map((row) => {
       const metric = metricLabel(row.metric, language);
-      const label =
-        language === "ja"
-          ? `月間 ${metric} ${row.rank}位`
-          : `Monthly ${metric} #${row.rank}`;
+      const lang = resolveLocalizedLang(language);
+      const label = L(lang, {
+        ja: `月間 ${metric} ${row.rank}位`,
+        en: `Monthly ${metric} #${row.rank}`,
+        ko: `월간 ${metric} ${row.rank}위`,
+        zh: `月度 ${metric} 第 ${row.rank}`,
+        es: `Mensual ${metric} #${row.rank}`,
+        pt: `Mensal ${metric} #${row.rank}`,
+        fr: `Mensuel ${metric} #${row.rank}`,
+      });
       return {
         key: `${row.metric}:rank${row.rank}`,
         label,
@@ -138,7 +146,7 @@ export function formatCareerSinceDate(
 }
 
 export function buildProfileCareerStats(input: {
-  language: "ja" | "en";
+  language: string | null | undefined;
   posts?: number | null;
   winRate?: number | null;
   totalPointsRank?: number | null;

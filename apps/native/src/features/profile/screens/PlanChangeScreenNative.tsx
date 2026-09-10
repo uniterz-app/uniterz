@@ -22,7 +22,7 @@ import { useFirebaseUser } from "../../../auth/FirebaseUserProvider";
 import { db } from "../../../lib/firebase";
 import type { ProfileStackParamList } from "../../../navigation/types";
 import { useBottomTabBarInsets } from "../../../navigation/useBottomTabBarInsets";
-import { useNativeUserLanguage } from "../../../hooks/useNativeUserLanguage";
+import { useNativeUserLanguage } from "../../../i18n/useNativeUserLanguage";
 import { fonts } from "../../../theme/tokens";
 import ProCyberBadgeNative from "../kinetik/ProCyberBadgeNative";
 import UniterzLogoNative from "../UniterzLogoNative";
@@ -45,6 +45,7 @@ import {
   planChangeCurrentLabel,
   planChangeFreeGateBody,
   planChangeNextLabel,
+  planChangeLoadingLabel,
   planChangeNotices,
   planChangePageSubtitle,
   planChangeScreenTitle,
@@ -53,6 +54,7 @@ import {
   planChangeSwitchCta,
   planChangeTaxSuffix,
   planChangeUpgradeCta,
+  resolvePlanChangeUiLang,
   type PlanChangeUiLang,
 } from "../../../../../../lib/pro/planChangeUiCopy";
 
@@ -68,7 +70,7 @@ export default function PlanChangeScreenNative() {
   const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
   const { fUser } = useFirebaseUser();
   const { language } = useNativeUserLanguage(fUser?.uid ?? null);
-  const lang: PlanChangeUiLang = language === "en" ? "en" : "ja";
+  const lang: PlanChangeUiLang = resolvePlanChangeUiLang(language);
   const { bottomContentReserveY } = useBottomTabBarInsets();
   const [plan, setPlan] = useState<"free" | "pro">("free");
   const [storedType, setStoredType] = useState<StoredPlanType | null>(null);
@@ -126,7 +128,7 @@ export default function PlanChangeScreenNative() {
       >
         <View style={styles.center}>
           <CandleChartLoaderNative
-            label={lang === "en" ? "Loading" : "読み込み中"}
+            label={planChangeLoadingLabel(lang)}
           />
         </View>
       </MobilePageShell>

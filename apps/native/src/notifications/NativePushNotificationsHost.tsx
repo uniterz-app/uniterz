@@ -76,7 +76,7 @@ export default function NativePushNotificationsHost() {
   return (
     <PushPermissionPrimerModalNative
       open={primerOpen}
-      language={language === "en" ? "en" : "ja"}
+      language={language === "ja" ? "ja" : "en"}
       onAllow={handlePrimerAllow}
       onLater={handlePrimerLater}
     />

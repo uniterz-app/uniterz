@@ -85,6 +85,7 @@ export function sanitizeProBriefForDisplay(
     phase: brief.phase,
     sampleNoteJa: brief.sampleNoteJa,
     sampleNoteEn: brief.sampleNoteEn,
+    sampleNote: brief.sampleNote,
     gamesPlayed: brief.gamesPlayed,
     generatedAtMs: brief.generatedAtMs,
     patchedAtMs: brief.patchedAtMs,

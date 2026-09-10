@@ -1,9 +1,11 @@
 /** Web `NbaSeasonAwardsPredictPanel` 相当（人気5 + 前方一致サジェスト・名簿はモック） */
 import { useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import type { UiStrings } from "../../../../../../../lib/i18n/ui";
 import {
   NBA_SEASON_AWARD_DEFS,
   awardCandidateLabel,
+  awardName,
   filterAwardCandidatesByPrefix,
   filledSeasonAwardsCount,
   isSeasonAwardsComplete,
@@ -46,7 +48,7 @@ function findInCatalog(
 function AwardPickRow({
   awardId,
   labelEn,
-  labelJa,
+  name,
   kind,
   selectedId,
   onSelect,
@@ -54,7 +56,7 @@ function AwardPickRow({
 }: {
   awardId: NbaAwardId;
   labelEn: string;
-  labelJa: string;
+  name: UiStrings;
   kind: "player" | "coach";
   selectedId: string | null | undefined;
   onSelect: (id: string | null) => void;
@@ -75,9 +77,9 @@ function AwardPickRow({
     <View style={styles.row}>
       <View style={styles.rowHead}>
         <Text style={styles.rowLabelEn}>{labelEn}</Text>
-        {language !== "en" ? (
-          <Text style={styles.rowLabelJa}>{labelJa}</Text>
-        ) : null}
+        <Text style={styles.rowLabelFullName}>
+          {awardName(language, { name })}
+        </Text>
       </View>
 
       {selected ? (
@@ -173,7 +175,7 @@ export default function NbaSeasonAwardsPredictPanelNative({
             key={def.id}
             awardId={def.id}
             labelEn={def.labelEn}
-            labelJa={def.labelJa}
+            name={def.name}
             kind={def.kind}
             selectedId={value.picks[def.id]}
             language={language}
@@ -256,7 +258,7 @@ const styles = StyleSheet.create({
     color: "rgba(253,230,138,0.85)",
     textTransform: "uppercase",
   },
-  rowLabelJa: { fontSize: 11, color: "rgba(255,255,255,0.4)" },
+  rowLabelFullName: { fontSize: 11, color: "rgba(255,255,255,0.4)" },
   selectedBox: {
     flexDirection: "row",
     alignItems: "center",

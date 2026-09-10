@@ -40,8 +40,25 @@ import {
   PRO_SUBSCRIBE_PLAN_DIFF_ROWS,
   planDiffCellLabel,
   planDiffColLabel,
+  planDiffRowLabel,
   planDiffTitle,
   proLegalLinkLabel,
+  proSubscribeAfterTrialNote,
+  proSubscribeBuyPreviewLabel,
+  proSubscribeBuyWithoutTrialLabel,
+  proSubscribeCancelInTrialValue,
+  proSubscribeFreeThenPrefix,
+  proSubscribeIncludedTitle,
+  proSubscribeLead,
+  proSubscribeNoTrialMicroNote,
+  proSubscribeProcessingLabel,
+  proSubscribeStartTrialLabel,
+  proSubscribeSuccessTitle,
+  proSubscribeTrialMicroNote,
+  proSubscribeTrialModalPoints,
+  proSubscribeTrialModalSelected,
+  proSubscribeTrialModalTitle,
+  proSubscribeTryProSkinLabel,
   purchaseDisclaimer,
   seasonPassBlurb,
   seasonPassTargetLabel,
@@ -53,7 +70,8 @@ import { proSkinHref } from "@/lib/pro/proSkinRoutes";
 import { PRO_SUBSCRIBE_SUCCESS_MOTION as SM } from "@/lib/pro/proSubscribeSuccessMotion";
 import { PRO_SUCCESS_ACCENT } from "@/lib/pro/proSuccessAccent";
 import { jp, nameOxanium } from "@/lib/fonts";
-import type { Language } from "@/lib/i18n/language";
+import { DATE_LOCALE, type Language } from "@/lib/i18n/language";
+import { L, resolveLocalizedLang, type LocalizedLang } from "@/lib/i18n/localize";
 import { acquireAppBrandShelfHidden, setAppBrandShelfHidden } from "@/lib/ui/appBrandShelfVisibility";
 import { motion, useReducedMotion } from "framer-motion";
 
@@ -236,8 +254,7 @@ export default function ProSubscribePreview({
   const isWeb = pathname.startsWith("/web");
   const skinPickerHref = proSkinHref(isWeb ? "web" : "mobile");
   const legalPaths = isWeb ? PRO_LEGAL_PATHS_WEB : PRO_LEGAL_PATHS_MOBILE;
-  const ja = language === "ja";
-  const lang = ja ? "ja" : "en";
+  const lang = resolveLocalizedLang(language);
   const seasonLabel = seasonPassTargetLabel(lang);
   const seasonBlurb = seasonPassBlurb(lang);
   const [planId, setPlanId] = useState<ProSubscribePreviewPlanId | null>(null);
@@ -297,16 +314,12 @@ export default function ProSubscribePreview({
       >
         <div className="-translate-y-5 sm:-translate-y-6">
           <SuccessPanel
-            ja={ja}
+            lang={lang}
             planId={planId}
-            planLabel={ja ? selected.labelJa : selected.labelEn}
-            price={ja ? selected.priceJa : selected.priceEn}
+            planLabel={selected.label}
+            price={selected.price}
             period={
-              planId === "season"
-                ? seasonLabel
-                : ja
-                  ? selected.periodJa
-                  : selected.periodEn
+              planId === "season" ? seasonLabel : L(lang, selected.period)
             }
             trial={checkoutKind === "trial"}
             skinPickerHref={
@@ -349,14 +362,12 @@ export default function ProSubscribePreview({
                 "mt-2 text-[12px] leading-relaxed text-white/50",
               ].join(" ")}
             >
-              {ja
-                ? "プランをタップして、できることを確認。もう一度タップで閉じます。"
-                : "Tap a plan to see what’s included. Tap again to close."}
+              {proSubscribeLead(lang)}
             </p>
           </div>
         </header>
 
-        <PlanDiffTable ja={ja} />
+        <PlanDiffTable lang={lang} />
 
         {/* モバイル縦並び: タップでそのカード直下に機能が開閉 */}
         <div className="flex flex-col gap-2.5">
@@ -388,26 +399,26 @@ export default function ProSubscribePreview({
                 >
                   <div className="flex items-center justify-between gap-2">
                     <PlanScanLabel
-                      label={ja ? plan.labelJa : plan.labelEn}
+                      label={plan.label}
                       accent={accent.fill}
                     />
                     <div className="flex shrink-0 items-center gap-1.5">
-                      {(plan.badgeJa || plan.recommended) && (
+                      {(plan.badge || plan.recommended) && (
                         <span
                           className={[
                             nameOxanium.className,
                             "inline-flex h-[18px] items-center rounded-[2px] px-1.5 text-[8px] font-extrabold uppercase leading-none tracking-[0.08em]",
-                            plan.badgeJa === "7日無料"
+                            plan.badgeHighlight
                               ? "text-[#120e08]"
                               : "border border-white/20 bg-black/40 text-white/70",
                           ].join(" ")}
                           style={
-                            plan.badgeJa === "7日無料"
+                            plan.badgeHighlight
                               ? { background: accent.fill }
                               : undefined
                           }
                         >
-                          {ja ? plan.badgeJa : plan.badgeEn}
+                          {plan.badge ? L(lang, plan.badge) : ""}
                         </span>
                       )}
                       <span
@@ -431,7 +442,7 @@ export default function ProSubscribePreview({
                         "text-[22px] font-black tabular-nums leading-none text-white",
                       ].join(" ")}
                     >
-                      {ja ? plan.priceJa : plan.priceEn}
+                      {plan.price}
                     </CyberScanlineText>
                     <span
                       className={[
@@ -441,9 +452,7 @@ export default function ProSubscribePreview({
                     >
                       {plan.id === "season"
                         ? seasonLabel
-                        : ja
-                          ? plan.periodJa
-                          : plan.periodEn}
+                        : L(lang, plan.period)}
                     </span>
                   </div>
                   <p
@@ -452,11 +461,7 @@ export default function ProSubscribePreview({
                       "mt-2 text-[11px] leading-snug text-white/45",
                     ].join(" ")}
                   >
-                    {plan.id === "season"
-                      ? seasonBlurb
-                      : ja
-                        ? plan.blurbJa
-                        : plan.blurbEn}
+                    {plan.id === "season" ? seasonBlurb : L(lang, plan.blurb)}
                   </p>
                 </button>
 
@@ -464,7 +469,7 @@ export default function ProSubscribePreview({
                   <section
                     className="mt-0 border border-t-0 bg-black/35 px-3 py-3"
                     style={{ borderColor: accent.border }}
-                    aria-label={ja ? "このプランでできること" : "Included"}
+                    aria-label={proSubscribeIncludedTitle(lang)}
                   >
                     <p
                       className={[
@@ -473,14 +478,14 @@ export default function ProSubscribePreview({
                       ].join(" ")}
                       style={{ color: accent.fill }}
                     >
-                      {ja ? "このプランでできること" : "Included"}
+                      {proSubscribeIncludedTitle(lang)}
                     </p>
                     <ul className="space-y-2.5">
                       {plan.features.map((f) => {
                         const Icon = FEATURE_ICONS[f.icon];
                         return (
                           <li
-                            key={f.titleEn}
+                            key={f.icon}
                             className="flex items-start gap-2.5"
                           >
                             <span
@@ -501,7 +506,7 @@ export default function ProSubscribePreview({
                                   "text-[12px] font-extrabold tracking-[0.04em] text-white/90",
                                 ].join(" ")}
                               >
-                                {ja ? f.titleJa : f.titleEn}
+                                {L(lang, f.title)}
                               </p>
                               <p
                                 className={[
@@ -509,7 +514,7 @@ export default function ProSubscribePreview({
                                   "mt-0.5 text-[12px] leading-snug text-white/50",
                                 ].join(" ")}
                               >
-                                {ja ? f.detailJa : f.detailEn}
+                                {L(lang, f.detail)}
                               </p>
                             </div>
                           </li>
@@ -533,12 +538,8 @@ export default function ProSubscribePreview({
                           ].join(" ")}
                         >
                           {phase === "purchasing"
-                            ? ja
-                              ? "処理中…"
-                              : "Processing…"
-                            : ja
-                              ? "7日間無料で試す"
-                              : "Start 7-day free trial"}
+                            ? proSubscribeProcessingLabel(lang)
+                            : proSubscribeStartTrialLabel(lang)}
                         </PressAnimButton>
                         <p
                           className={[
@@ -546,13 +547,10 @@ export default function ProSubscribePreview({
                             "text-center text-[11px] leading-relaxed text-white/50",
                           ].join(" ")}
                         >
-                          {plan.id === "weekly"
-                            ? ja
-                              ? "お試し後は週額 ¥280。期間中の解約で課金なし。"
-                              : "Then ¥280/week. Cancel during trial — no charge."
-                            : ja
-                              ? "お試し後は月額 ¥780。期間中の解約で課金なし。"
-                              : "Then ¥780/month. Cancel during trial — no charge."}
+                          {proSubscribeAfterTrialNote(
+                            lang,
+                            plan.id === "weekly" ? "weekly" : "monthly"
+                          )}
                         </p>
                         <PressAnimButton
                           type="button"
@@ -564,14 +562,10 @@ export default function ProSubscribePreview({
                             "w-full py-2 text-[10px] font-bold uppercase tracking-[0.14em] text-white/45 hover:text-white/70",
                           ].join(" ")}
                         >
-                          {ja
-                            ? `お試しなしで${plan.labelJa}を購入`
-                            : `Buy ${plan.labelEn} (no trial)`}
+                          {proSubscribeBuyWithoutTrialLabel(lang, plan.label)}
                         </PressAnimButton>
                         <p className="text-center text-[10px] leading-relaxed text-white/35">
-                          {ja
-                            ? "※ 初回のみ。iOS は App Store のサブスク管理から解約できます。プレビューでは決済しません。"
-                            : "※ First time only. On iOS, cancel in App Store subscriptions. Preview does not charge."}
+                          {proSubscribeTrialMicroNote(lang)}
                         </p>
                       </div>
                     ) : (
@@ -590,17 +584,11 @@ export default function ProSubscribePreview({
                           ].join(" ")}
                         >
                           {phase === "purchasing"
-                            ? ja
-                              ? "処理中…"
-                              : "Processing…"
-                            : ja
-                              ? `${plan.labelJa} を購入（プレビュー）`
-                              : `Buy ${plan.labelEn} (preview)`}
+                            ? proSubscribeProcessingLabel(lang)
+                            : proSubscribeBuyPreviewLabel(lang, plan.label)}
                         </PressAnimButton>
                         <p className="text-center text-[10px] leading-relaxed text-white/35">
-                          {ja
-                            ? "※ 7日無料は Weekly / Monthly のみ。価格・特典は仮。決済は走りません。"
-                            : "※ 7-day trial is Weekly / Monthly only. Prices are draft. No real charge."}
+                          {proSubscribeNoTrialMicroNote(lang)}
                         </p>
                       </div>
                     )}
@@ -611,12 +599,12 @@ export default function ProSubscribePreview({
           })}
         </div>
 
-        <PurchaseFootnotes ja={ja} legalPaths={legalPaths} />
+        <PurchaseFootnotes lang={lang} legalPaths={legalPaths} />
       </div>
 
       {trialModalOpen && selected ? (
         <TrialExplainModal
-          ja={ja}
+          lang={lang}
           plan={selected}
           onClose={() => setTrialModalOpen(false)}
           onConfirm={confirmTrialFromModal}
@@ -626,8 +614,7 @@ export default function ProSubscribePreview({
   );
 }
 
-function PlanDiffTable({ ja }: { ja: boolean }) {
-  const lang = ja ? "ja" : "en";
+function PlanDiffTable({ lang }: { lang: LocalizedLang }) {
   const cols = ["weekly", "monthly", "season"] as const;
   return (
     <section
@@ -663,7 +650,7 @@ function PlanDiffTable({ ja }: { ja: boolean }) {
                 "bg-[#080c14] px-2 py-2.5 text-[11px] leading-snug text-white/70",
               ].join(" ")}
             >
-              {ja ? row.labelJa : row.labelEn}
+              {planDiffRowLabel(row, lang)}
             </div>
             {cols.map((col) => {
               const cell = row[col];
@@ -689,13 +676,12 @@ function PlanDiffTable({ ja }: { ja: boolean }) {
 }
 
 function PurchaseFootnotes({
-  ja,
+  lang,
   legalPaths,
 }: {
-  ja: boolean;
+  lang: LocalizedLang;
   legalPaths: typeof PRO_LEGAL_PATHS_MOBILE | typeof PRO_LEGAL_PATHS_WEB;
 }) {
-  const lang = ja ? "ja" : "en";
   const links: ProLegalLinkKind[] = ["terms", "privacy", "tokushoho"];
   return (
     <div className="mt-5 space-y-3.5 border-t border-white/10 pt-4">
@@ -734,7 +720,15 @@ function PurchaseFootnotes({
 
       <nav
         className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1"
-        aria-label={ja ? "規約" : "Legal"}
+        aria-label={L(lang, {
+          ja: "規約",
+          en: "Legal",
+          ko: "약관",
+          zh: "条款",
+          es: "Legal",
+          pt: "Jurídico",
+          fr: "Mentions légales",
+        })}
       >
         {links.map((kind, i) => (
           <span key={kind} className="inline-flex items-center gap-2">
@@ -760,33 +754,18 @@ function PurchaseFootnotes({
 }
 
 function TrialExplainModal({
-  ja,
+  lang,
   plan,
   onClose,
   onConfirm,
 }: {
-  ja: boolean;
+  lang: LocalizedLang;
   plan: ProSubscribePreviewPlan;
   onClose: () => void;
   onConfirm: () => void;
 }) {
-  const afterPrice = ja
-    ? `${plan.priceJa}${plan.periodJa}`
-    : `${plan.priceEn}${plan.periodEn}`;
-
-  const points = ja
-    ? [
-        "7日間無料で Pro を試せます（アカウントあたり初回のみ）。",
-        "期間中に解約すれば、お金はかかりません。",
-        `解約しなければ、お試し開始から7日後に初回請求され、自動で有料の ${plan.labelJa}（${afterPrice}）に切り替わります。`,
-        "Weekly と Monthly の変更は、いつでもできます。",
-      ]
-    : [
-        "Try Pro free for 7 days (first time only per account).",
-        "Cancel during the trial and you won’t be charged.",
-        `Unless you cancel, the first charge is 7 days after start, then paid ${plan.labelEn} (${afterPrice}).`,
-        "You can switch Weekly ⇔ Monthly anytime.",
-      ];
+  const afterPrice = `${plan.price}${L(lang, plan.period)}`;
+  const points = proSubscribeTrialModalPoints(lang, plan.label, afterPrice);
 
   return (
     <div
@@ -811,12 +790,10 @@ function TrialExplainModal({
             "text-center text-[14px] font-extrabold uppercase tracking-[0.14em] text-white",
           ].join(" ")}
         >
-          {ja ? "お試しの前に" : "Before you start"}
+          {proSubscribeTrialModalTitle(lang)}
         </p>
         <p className={[jp.className, "mt-2 text-center text-[12px] text-white/50"].join(" ")}>
-          {ja
-            ? `選択中: ${plan.labelJa} · 7日間無料`
-            : `Selected: ${plan.labelEn} · 7-day free`}
+          {proSubscribeTrialModalSelected(lang, plan.label)}
         </p>
 
         <ul className="mt-4 space-y-3 border border-white/10 bg-black/30 px-3.5 py-3.5">
@@ -851,7 +828,15 @@ function TrialExplainModal({
             "mt-2 w-full py-2 text-[10px] font-bold uppercase tracking-[0.14em] text-white/40",
           ].join(" ")}
         >
-          {ja ? "もどる" : "Back"}
+          {L(lang, {
+            ja: "もどる",
+            en: "Back",
+            ko: "뒤로",
+            zh: "返回",
+            es: "Atrás",
+            pt: "Voltar",
+            fr: "Retour",
+          })}
         </PressAnimButton>
       </div>
     </div>
@@ -860,7 +845,7 @@ function TrialExplainModal({
 
 /** 成功カード — Trial=シアン / 有料アップグレード=グリーン */
 function SuccessPanel({
-  ja,
+  lang,
   planId,
   planLabel,
   price,
@@ -868,7 +853,7 @@ function SuccessPanel({
   trial,
   skinPickerHref,
 }: {
-  ja: boolean;
+  lang: LocalizedLang;
   planId: ProSubscribePreviewPlanId;
   planLabel: string;
   price: string;
@@ -877,24 +862,21 @@ function SuccessPanel({
   skinPickerHref: string;
 }) {
   const A = trial ? PRO_SUCCESS_ACCENT.trial : PRO_SUCCESS_ACCENT.billing;
-  const started = new Date().toLocaleDateString(ja ? "ja-JP" : "en-US", {
+  const dateLocale = DATE_LOCALE[lang];
+  const started = new Date().toLocaleDateString(dateLocale, {
     year: "numeric",
     month: "short",
     day: "numeric",
   });
   const trialEnd = new Date();
   trialEnd.setDate(trialEnd.getDate() + 7);
-  const trialEndLabel = trialEnd.toLocaleDateString(ja ? "ja-JP" : "en-US", {
+  const trialEndLabel = trialEnd.toLocaleDateString(dateLocale, {
     year: "numeric",
     month: "short",
     day: "numeric",
   });
 
-  const title = trial
-    ? ja
-      ? "Pro お試し開始"
-      : "Pro trial started"
-    : "Upgrade to Pro";
+  const title = proSubscribeSuccessTitle(lang, trial);
 
   const statusLine = trial
     ? `7DAY_TRIAL // ${planLabel.toUpperCase()}`
@@ -1135,7 +1117,7 @@ function SuccessPanel({
                   textShadow: `0 0 8px rgba(${A.mainRgb},0.35)`,
                 }}
               >
-                {trial ? (ja ? "無料 → その後 " : "FREE → THEN ") : ""}
+                {trial ? proSubscribeFreeThenPrefix(lang) : ""}
                 {price}
                 {trial ? period : ""}
               </p>
@@ -1152,7 +1134,7 @@ function SuccessPanel({
                   <MetaRow
                     accent={A}
                     label="CHARGE"
-                    value={ja ? "期間中解約で課金なし" : "Cancel in trial = ¥0"}
+                    value={proSubscribeCancelInTrialValue(lang)}
                   />
                 </>
               ) : (
@@ -1177,7 +1159,7 @@ function SuccessPanel({
                   boxShadow: `0 0 16px rgba(${A.mainRgb},0.18)`,
                 }}
               >
-                {ja ? "Pro Skinを試す" : "Try Pro Skin"}
+                {proSubscribeTryProSkinLabel(lang)}
               </PressAnimLink>
             </div>
 

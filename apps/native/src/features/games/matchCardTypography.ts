@@ -1,10 +1,17 @@
 import { Platform, type TextStyle } from "react-native";
 
-/** Web `nameOxanium` / Bebas 表示用 */
+/** Web Bebas 表示用（セクション見出し等） */
 export const MATCH_CARD_DISPLAY_FONT = Platform.select({
   ios: "BebasNeue_400Regular",
   android: "BebasNeue_400Regular",
   default: "BebasNeue_400Regular",
+});
+
+/** Web `nameOxanium` — チーム名（Injury 選手名と同じ Oxanium Bold） */
+export const MATCH_CARD_TEAM_NAME_FONT = Platform.select({
+  ios: "Oxanium_700Bold",
+  android: "Oxanium_700Bold",
+  default: "Oxanium_700Bold",
 });
 
 /** Web `matchScoreClass`（Montserrat Black Italic） */
@@ -21,10 +28,10 @@ export const MATCH_CARD_METRIC_FONT = Platform.select({
   default: "Oxanium_700Bold",
 });
 
-/** Web `bracketMarketTeamTypography` mobile — Bebas は 400 のみ（太字指定で別字体になるのを防ぐ） */
+/** Web `bracketMarketTeamTypography` — チーム短名（Injury 選手名と同じ Oxanium_700Bold） */
 export const MATCH_CARD_BRACKET_TEXT: TextStyle = {
-  fontFamily: MATCH_CARD_DISPLAY_FONT,
-  fontWeight: "400",
+  fontFamily: MATCH_CARD_TEAM_NAME_FONT,
+  fontWeight: "800",
   includeFontPadding: false,
 };
 

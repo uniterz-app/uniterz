@@ -17,12 +17,13 @@ import {
 import UniterzClearStampNative, {
   type UniterzClearStampToneNative,
 } from "./UniterzClearStampNative";
+import { referralStampBoardCopy } from "../referralStampCopy";
 
 const OX = "Oxanium_700Bold";
 
 type Props = {
   completedCount: number;
-  isJa: boolean;
+  language: string;
 };
 
 // Ledger background: thin hex-outline pattern (subtle, static).
@@ -158,8 +159,9 @@ function StampCellNative({
 
 export default function ReferralStampBoardNative({
   completedCount,
-  isJa,
+  language,
 }: Props) {
+  const copy = referralStampBoardCopy(language);
   const slots = useMemo(
     () => buildReferralStampSlots(completedCount),
     [completedCount]
@@ -201,17 +203,17 @@ export default function ReferralStampBoardNative({
       <View style={styles.head}>
         <View style={{ flex: 1, minWidth: 0 }}>
           <Text style={styles.eyebrow}>
-            {isJa ? "招待スタンプラリー" : "Invite stamp rally"}
+            {copy.eyebrow}
           </Text>
           <Text style={styles.title}>
             <Text style={styles.titleDigits}>
               {completedCount} / 10
             </Text>
-            {isJa ? " 達成" : " locked"}
+            {copy.lockedSuffix}
           </Text>
         </View>
         <View style={styles.earnedCol}>
-          <Text style={styles.earnedLabel}>{isJa ? "獲得" : "Earned"}</Text>
+          <Text style={styles.earnedLabel}>{copy.earned}</Text>
           <Text style={styles.earnedValue}>
             {earned.total}
             <Text style={styles.earnedUnit}> UNIT</Text>
@@ -234,17 +236,11 @@ export default function ReferralStampBoardNative({
 
       <Text style={styles.hint}>
         {next
-          ? isJa
-            ? `次のスタンプ目標: ${next.target} 人目（あと ${next.remaining}）· ボーナス +${next.bonusUnits} Unit`
-            : `Next stamp: #${next.target} (need ${next.remaining}) · bonus +${next.bonusUnits}`
-          : isJa
-            ? "10 枠すべて INVITE。マイルストーン上限到達（モック）"
-            : "All 10 slots INVITE. Milestone cap reached (mock)"}
+          ? copy.nextHint(next.target, next.remaining, next.bonusUnits)
+          : copy.completeHint}
       </Text>
       <Text style={styles.breakdown}>
-        {isJa
-          ? `内訳: 基本 ${earned.base} + マイルストーン ${earned.milestones} · 3 LIME / 5 AMBER / 10 INK`
-          : `Base ${earned.base} + milestones ${earned.milestones} · 3 LIME / 5 AMBER / 10 INK`}
+        {copy.breakdown(earned.base, earned.milestones)}
       </Text>
     </View>
   );

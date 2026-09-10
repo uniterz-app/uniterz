@@ -94,7 +94,7 @@ export function pruneDismissedResultListPostIds(
 
 /** リザルト一覧の日付見出し用 TZ（試合一覧の dayTimeZone と揃える） */
 export function resultListTimeZoneForLanguage(lang: Language): string {
-  return lang === "en" ? TIMEZONE_ET : TIMEZONE_JST;
+  return lang === "ja" ? TIMEZONE_JST : TIMEZONE_ET;
 }
 
 export function formatResultDateLabel(
@@ -102,7 +102,7 @@ export function formatResultDateLabel(
   lang: Language,
   timeZone?: string
 ): string {
-  if (!ms) return lang === "en" ? "Unknown" : "不明";
+  if (!ms) return lang === "ja" ? "不明" : "Unknown";
   const tz = timeZone ?? resultListTimeZoneForLanguage(lang);
   const { year, month, day } = getZonedYMD(new Date(ms), tz);
   return `${year}.${month}.${day}`;

@@ -553,7 +553,7 @@ export default function NbaTeamStatsPanel({
             onClick={stashReturnBeforeTeamNav}
             className={[
               nameBebas.className,
-              "truncate text-center text-[22px] font-bold uppercase leading-tight text-cyan-200",
+              "truncate text-center text-[14px] font-bold uppercase leading-tight text-cyan-200",
             ].join(" ")}
             style={matchCardTeamNameStyle(true)}
           >
@@ -563,7 +563,7 @@ export default function NbaTeamStatsPanel({
           <p
             className={[
               nameBebas.className,
-              "truncate text-center text-[22px] font-bold uppercase leading-tight text-white",
+              "truncate text-center text-[14px] font-bold uppercase leading-tight text-white",
             ].join(" ")}
             style={matchCardTeamNameStyle(true)}
           >
@@ -577,7 +577,7 @@ export default function NbaTeamStatsPanel({
             onClick={stashReturnBeforeTeamNav}
             className={[
               nameBebas.className,
-              "truncate text-center text-[22px] font-bold uppercase leading-tight text-violet-200",
+              "truncate text-center text-[14px] font-bold uppercase leading-tight text-violet-200",
             ].join(" ")}
             style={matchCardTeamNameStyle(true)}
           >
@@ -587,7 +587,7 @@ export default function NbaTeamStatsPanel({
           <p
             className={[
               nameBebas.className,
-              "truncate text-center text-[22px] font-bold uppercase leading-tight text-white",
+              "truncate text-center text-[14px] font-bold uppercase leading-tight text-white",
             ].join(" ")}
             style={matchCardTeamNameStyle(true)}
           >

@@ -1,15 +1,15 @@
-import type { Language } from "../../../../../lib/i18n/language";
 import { t } from "../../../../../lib/i18n/t";
+import {
+  L,
+  resolveLocalizedLang,
+  type LocalizedLang,
+} from "../../../../../lib/i18n/localize";
 
-export type RankingsLanguage = "ja" | "en";
-
-function langOf(language: RankingsLanguage): Language {
-  return language === "en" ? "en" : "ja";
-}
+export type RankingsLanguage = LocalizedLang;
 
 /** Web `t(lang).rankings` をそのまま Native ランキング画面で使う */
-export function rankingsTexts(language: RankingsLanguage) {
-  const lang = langOf(language);
+export function rankingsTexts(language: string | null | undefined) {
+  const lang = resolveLocalizedLang(language);
   const m = t(lang).rankings;
   const common = t(lang).common;
   return {
@@ -20,10 +20,15 @@ export function rankingsTexts(language: RankingsLanguage) {
     playoffs: "Playoffs",
     worldCup: "WORLD CUP",
     bracket: "Bracket",
-    bracketSoon:
-      language === "ja"
-        ? "ブラケットランキングは Web 版と同様に順次対応します。"
-        : "Bracket rankings will match the web app in a future update.",
+    bracketSoon: L(lang, {
+      ja: "ブラケットランキングは Web 版と同様に順次対応します。",
+      en: "Bracket rankings will match the web app in a future update.",
+      ko: "브래킷 랭킹은 웹과 같이 순차 지원됩니다.",
+      zh: "对阵图排名将与网页版一样逐步支持。",
+      es: "Las clasificaciones de bracket se alinearán con la web en una actualización futura.",
+      pt: "Os rankings de chave ficarão iguais ao app web em uma atualização futura.",
+      fr: "Les classements bracket suivront l’app web dans une prochaine mise à jour.",
+    }),
     yourRank: m.yourRank,
     pts: m.pts,
     streakShort: m.winStreak,
@@ -62,8 +67,17 @@ export function rankingsTexts(language: RankingsLanguage) {
     divisionOpenTitle: m.divisionOpenTitle,
     divisionOpenLockBody: m.divisionOpenLockBody,
     divisionOpenCta: m.divisionOpenCta,
-    divisionOpenModalDismiss: m.divisionOpenModalDismiss ?? (language === "en" ? "Close" : "とじる"),
+    divisionOpenModalDismiss: m.divisionOpenModalDismiss ?? common.close,
     divisionOpenBackToPickUp:
-      m.divisionOpenBackToPickUp ?? (language === "en" ? "Back to Pick Up" : "Pick Up に戻る"),
+      m.divisionOpenBackToPickUp ??
+      L(lang, {
+        ja: "Pick Up に戻る",
+        en: "Back to Pick Up",
+        ko: "Pick Up으로 돌아가기",
+        zh: "返回 Pick Up",
+        es: "Volver a Pick Up",
+        pt: "Voltar ao Pick Up",
+        fr: "Retour à Pick Up",
+      }),
   };
 }

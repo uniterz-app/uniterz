@@ -28,6 +28,7 @@ import {
 } from "../../../../../../lib/playoff-bracket-config";
 import { getPlayoffBracketStrings } from "../../../../../../lib/i18n/playoffBracket";
 import PlayoffBracketBoardNative from "../playoffBracket/PlayoffBracketBoardNative";
+import { useNativeUserLanguage } from "../../../hooks/useNativeUserLanguage";
 
 type Team = { code: string; seed: number };
 
@@ -36,7 +37,7 @@ export default function PlayoffBracketPredictNative() {
   const navigation = useNavigation<NativeStackNavigationProp<GamesStackParamList>>();
   const { fUser } = useFirebaseUser();
   const season = getCurrentPlayoffSeason();
-  const language: "ja" | "en" = "ja";
+  const { language } = useNativeUserLanguage(fUser?.uid);
   const t = getPlayoffBracketStrings(language);
 
   const [bracket, setBracket] = useState<BracketState>({});

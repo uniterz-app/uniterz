@@ -328,12 +328,12 @@ function TeamRow({
               </span>
               <span
                 className={[
-                  "min-w-0 truncate font-bold text-white",
+                  "min-w-0 truncate font-semibold text-white",
                   compact
                     ? "text-[13px] leading-tight"
                     : "text-sm leading-tight md:text-base",
                 ].join(" ")}
-                style={teamNameTy}
+                style={{ ...teamNameTy, fontWeight: 600 }}
               >
                 {team.name}
               </span>

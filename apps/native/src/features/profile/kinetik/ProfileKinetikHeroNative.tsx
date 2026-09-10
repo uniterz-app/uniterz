@@ -39,7 +39,7 @@ export type ProfileKinetikHeroNativeProps = {
   plan: "free" | "pro";
   planProBgVariant?: ProfilePlanProBgVariant;
   memberSinceMs?: number | null;
-  language: "ja" | "en";
+  language: string;
   summary?: ProfileSummaryNative | null;
   summaryRanks?: ProfileSummaryRanksNative | null;
   profileStatsContext: ProfileStatsStreakContext;
@@ -241,6 +241,7 @@ export default function ProfileKinetikHeroNative({
       currentStreak: winStreak,
       maxStreak: winStreak,
       unitBalance: unitBalance ?? 0,
+      profileViewCount: profileViewCount ?? null,
     }),
     [
       avatarUrl,
@@ -251,6 +252,7 @@ export default function ProfileKinetikHeroNative({
       memberSinceMs,
       plan,
       planProBgVariant,
+      profileViewCount,
       summary?.posts,
       unitBalance,
       winStreak,

@@ -14,6 +14,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import LegalPageLayoutNative from "../../legal/LegalPageLayoutNative";
 import { useFirebaseUser } from "../../../auth/FirebaseUserProvider";
 import { useNativeUserLanguage } from "../../../hooks/useNativeUserLanguage";
+import { L, resolveLocalizedLang } from "../../../../../../lib/i18n/localize";
 import type { ProfileStackParamList } from "../../../navigation/types";
 import { fetchMeUnitLedgerNative } from "../unitLedgerApiNative";
 import {
@@ -29,8 +30,9 @@ export default function UnitLedgerScreenNative() {
     useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
   const { fUser } = useFirebaseUser();
   const { language } = useNativeUserLanguage(fUser?.uid);
-  const isJa = language === "ja";
-  const gateLang = isJa ? "ja" : "en";
+  const lang = resolveLocalizedLang(language);
+  /** 台帳 API / 日付フォーマットは ja|en */
+  const catalogLang = lang === "ja" ? ("ja" as const) : ("en" as const);
 
   const [balance, setBalance] = useState(0);
   const [entries, setEntries] = useState<UnitLedgerEntry[]>([]);
@@ -45,7 +47,7 @@ export default function UnitLedgerScreenNative() {
     setLoading(true);
     setError(null);
     try {
-      const data = await fetchMeUnitLedgerNative(gateLang);
+      const data = await fetchMeUnitLedgerNative(catalogLang);
       setBalance(data.balance ?? 0);
       setEntries(Array.isArray(data.entries) ? data.entries : []);
     } catch (e) {
@@ -54,7 +56,7 @@ export default function UnitLedgerScreenNative() {
     } finally {
       setLoading(false);
     }
-  }, [fUser?.uid, gateLang]);
+  }, [fUser?.uid, catalogLang]);
 
   useEffect(() => {
     void load();
@@ -64,11 +66,15 @@ export default function UnitLedgerScreenNative() {
     <LegalPageLayoutNative
       title="UNIT HISTORY"
       eyebrow="UNIT LEDGER"
-      description={
-        isJa
-          ? "獲得・使用の記録。招待やバトル報酬などがここに並びます。"
-          : "Earn and spend history — invites, battles, and more."
-      }
+      description={L(lang, {
+        ja: "獲得・使用の記録。招待やバトル報酬などがここに並びます。",
+        en: "Earn and spend history — invites, battles, and more.",
+        ko: "획득·사용 기록. 초대·배틀 보상 등이 여기에 표시됩니다.",
+        zh: "获取与使用记录。邀请、对战奖励等会显示在此。",
+        es: "Historial de ganancias y gastos: invitaciones, batallas y más.",
+        pt: "Histórico de ganhos e gastos — convites, batalhas e mais.",
+        fr: "Historique gains/dépenses — invitations, batailles, etc.",
+      })}
     >
       <View style={styles.balanceCard}>
         <View style={styles.balanceMeta}>
@@ -85,9 +91,9 @@ export default function UnitLedgerScreenNative() {
             pressed && styles.refreshPressed,
           ]}
           accessibilityRole="button"
-          accessibilityLabel={isJa ? "更新" : "Refresh"}
+          accessibilityLabel={L(lang, { ja: "更新", en: "Refresh", ko: "새로고침", zh: "刷新", es: "Actualizar", pt: "Atualizar", fr: "Actualiser" })}
         >
-          <Text style={styles.refreshText}>{isJa ? "更新" : "Refresh"}</Text>
+          <Text style={styles.refreshText}>{L(lang, { ja: "更新", en: "Refresh", ko: "새로고침", zh: "刷新", es: "Actualizar", pt: "Atualizar", fr: "Actualiser" })}</Text>
         </Pressable>
       </View>
       <Pressable
@@ -95,7 +101,7 @@ export default function UnitLedgerScreenNative() {
         style={styles.redeemBtn}
       >
         <Text style={styles.redeemBtnText}>
-          {isJa ? "商品交換" : "Redeem"}
+          {L(lang, { ja: "商品交換", en: "Redeem", ko: "상품 교환", zh: "兑换", es: "Canjear", pt: "Resgatar", fr: "Échanger" })}
         </Text>
       </Pressable>
 
@@ -103,16 +109,22 @@ export default function UnitLedgerScreenNative() {
         <View style={styles.center}>
           <ActivityIndicator color="#67e8f9" />
           <Text style={styles.muted}>
-            {isJa ? "読み込み中…" : "Loading…"}
+            {L(lang, { ja: "読み込み中…", en: "Loading…", ko: "불러오는 중…", zh: "加载中…", es: "Cargando…", pt: "Carregando…", fr: "Chargement…" })}
           </Text>
         </View>
       ) : error ? (
         <Text style={styles.error}>{error}</Text>
       ) : entries.length === 0 ? (
         <Text style={styles.mutedCenter}>
-          {isJa
-            ? "まだ履歴がありません。招待達成などで Unit が付与されるとここに表示されます。"
-            : "No history yet. Entries appear when you earn Units (e.g. referrals)."}
+          {L(lang, {
+            ja: "まだ履歴がありません。招待達成などで Unit が付与されるとここに表示されます。",
+            en: "No history yet. Entries appear when you earn Units (e.g. referrals).",
+            ko: "아직 이력이 없습니다. 초대 달성 등으로 Unit이 지급되면 여기에 표시됩니다.",
+            zh: "暂无记录。通过邀请等获得 Unit 后会显示在此。",
+            es: "Aún no hay historial. Aparece al ganar Units (p. ej. referidos).",
+            pt: "Ainda sem histórico. Aparece ao ganhar Units (ex.: indicações).",
+            fr: "Pas encore d’historique. Apparaît quand vous gagnez des Units.",
+          })}
         </Text>
       ) : (
         <View style={styles.list}>
@@ -128,7 +140,7 @@ export default function UnitLedgerScreenNative() {
                 ]}
               >
                 <Text style={styles.date}>
-                  {formatUnitLedgerDate(row.createdAtMs, gateLang)}
+                  {formatUnitLedgerDate(row.createdAtMs, catalogLang)}
                 </Text>
                 <View style={styles.rowBody}>
                   <Text style={styles.title} numberOfLines={1}>
@@ -150,7 +162,7 @@ export default function UnitLedgerScreenNative() {
                         : null,
                   ]}
                 >
-                  {formatUnitLedgerAmount(row.amount, gateLang)}
+                  {formatUnitLedgerAmount(row.amount, catalogLang)}
                 </Text>
               </View>
             );

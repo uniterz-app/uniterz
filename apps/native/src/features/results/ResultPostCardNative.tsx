@@ -19,6 +19,7 @@ import Animated, {
 } from "react-native-reanimated";
 import type { Language } from "../../../../../lib/i18n/language";
 import { t as i18nT } from "../../../../../lib/i18n/t";
+import { L, resolveLocalizedLang } from "../../../../../lib/i18n/localize";
 import { resolvePostListLeague } from "../../../../../lib/leagues";
 import { resolveResultBadgeDisplay } from "../../../../../lib/result/resultBadge";
 import { isResultPostLiveGame, isResultPostMatchStarted } from "../../../../../lib/result/resultLiveGame";
@@ -149,7 +150,7 @@ function isRedUpset(v: unknown): boolean {
 
 type StreakBadge = { label: string; tone: "silver" | "platinum" | "gold" };
 
-function getStreakBadge(activeWinStreak: unknown, isEn: boolean): StreakBadge | null {
+function getStreakBadge(activeWinStreak: unknown, isJa: boolean): StreakBadge | null {
   const v =
     typeof activeWinStreak === "number" && Number.isFinite(activeWinStreak)
       ? Math.floor(activeWinStreak)
@@ -157,18 +158,18 @@ function getStreakBadge(activeWinStreak: unknown, isEn: boolean): StreakBadge | 
   if (v < 3) return null;
   if (v >= 7) {
     return {
-      label: isEn ? `${v} Win Streak` : `${v}連勝`,
+      label: isJa ? `${v}連勝` : `${v} Win Streak`,
       tone: "gold",
     };
   }
   if (v >= 5) {
     return {
-      label: isEn ? `${v} Win Streak` : `${v}連勝`,
+      label: isJa ? `${v}連勝` : `${v} Win Streak`,
       tone: "platinum",
     };
   }
   return {
-    label: isEn ? `${v} Win Streak` : `${v}連勝`,
+    label: isJa ? `${v}連勝` : `${v} Win Streak`,
     tone: "silver",
   };
 }
@@ -205,7 +206,7 @@ function ResultPostCardNativeInner({
   tutorialTargetId,
 }: {
   post: PostWithMillis;
-  language: "ja" | "en";
+  language: import("../../../../../lib/i18n/language").Language;
   nowMs: number;
   viewerUid: string | null;
   /** 一覧入場のスタッガー（試合一覧と同じ「浮き出し」入場） */
@@ -234,8 +235,9 @@ function ResultPostCardNativeInner({
   /** チュートリアル穴測定（外枠マージンを含めないカード実寸） */
   tutorialTargetId?: string;
 }) {
-  const isEn = language === "en";
-  const resultCopy = i18nT(language).results;
+  const loc = resolveLocalizedLang(language);
+  const isJa = loc === "ja";
+  const resultCopy = i18nT(loc).results;
   const [cornerFabOpen, setCornerFabOpen] = useState(false);
   const captureRef = useRef<View>(null);
 
@@ -420,7 +422,7 @@ function ResultPostCardNativeInner({
   const activeWinStreak =
     toInt((stats?.pointsV3Detail as { activeWinStreak?: number } | undefined)?.activeWinStreak) ??
     0;
-  const streakBadge = getStreakBadge(activeWinStreak, isEn);
+  const streakBadge = getStreakBadge(activeWinStreak, isJa);
   const {
     frameBadge: badge,
     outcomeBadge,
@@ -598,7 +600,7 @@ function ResultPostCardNativeInner({
           <CornerMenuClusterNative
             open={cornerFabOpen}
             onToggle={() => setCornerFabOpen((v) => !v)}
-            menuLabel={isEn ? "Open actions" : "操作メニュー"}
+            menuLabel={resultCopy.openActions}
             horizontalFlyout="left"
             size="xs"
             dim={26}
@@ -611,7 +613,7 @@ function ResultPostCardNativeInner({
                   embedded
                   variant="edit"
                   onPress={requestPredictEdit}
-                  accessibilityLabel={isEn ? "Edit prediction" : "予想を修正"}
+                  accessibilityLabel={resultCopy.editPredictionAriaLabel}
                 />
               ) : null
             }
@@ -623,7 +625,7 @@ function ResultPostCardNativeInner({
                   embedded
                   variant="delete"
                   onPress={requestDeletePost}
-                  accessibilityLabel={isEn ? "Remove from list" : "一覧から除外"}
+                  accessibilityLabel={resultCopy.removeFromList}
                 />
               ) : null
             }
@@ -651,7 +653,15 @@ function ResultPostCardNativeInner({
           collapsable={false}
           delayPressIn={0}
           accessibilityRole="button"
-          accessibilityLabel={isEn ? "Open result detail" : "リザルト詳細を開く"}
+          accessibilityLabel={L(loc, {
+            ja: "リザルト詳細を開く",
+            en: "Open result detail",
+            ko: "결과 상세 열기",
+            zh: "打开结果详情",
+            es: "Abrir detalle del resultado",
+            pt: "Abrir detalhe do resultado",
+            fr: "Ouvrir le détail du résultat",
+          })}
           style={styles.resultCardPressable}
           onPressIn={() => {
             entrance.pressed.value = reduceMotionList
@@ -942,7 +952,7 @@ function ResultPostCardNativeInner({
           <View style={styles.statBlock}>
             {wcGoalScorer ? (
               <WcGoalScorerResultRowNative
-                label={isEn ? "Goal scorer" : "ゴールする選手"}
+                label={resultCopy.wcGoalScorerLabel}
                 info={wcGoalScorer}
               />
             ) : null}
@@ -1252,13 +1262,16 @@ const styles = StyleSheet.create({
   },
   teamName: {
     marginTop: 4,
-    fontSize: 15,
-    fontWeight: "700",
+    fontSize: 13,
+    fontWeight: "600",
     color: "rgba(248,250,252,0.95)",
-    letterSpacing: 1.04,
-    fontFamily: MATCH_CARD_DISPLAY_FONT,
+    letterSpacing: 0.6,
+    fontFamily: "Oxanium_600SemiBold",
     textAlign: "center",
     width: "100%",
+    textTransform: "uppercase",
+    includeFontPadding: false,
+    transform: [{ skewX: "-6deg" }],
   },
   teamRecordText: {
     marginTop: 2,

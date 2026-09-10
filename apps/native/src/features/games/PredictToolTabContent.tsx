@@ -26,6 +26,11 @@ import type { NativeGameRow, SupportedLeague } from "./useTodayGames";
 import { usePairTeamStats, type PairTeamStatsView } from "./usePairTeamStats";
 import GameMarketDistributionNative from "./GameMarketDistributionNative";
 import { predictMarketInnerEnter, predictStatsCompareRowEnter } from "./predictMotion";
+import {
+  DATE_LOCALE,
+  normalizeLanguage,
+} from "../../../../../lib/i18n/language";
+import { L, resolveLocalizedLang } from "../../../../../lib/i18n/localize";
 
 const DISPLAY_FONT_FAMILY = Platform.select({
   ios: "BebasNeue_400Regular",
@@ -63,27 +68,20 @@ function resolveTeamDisplay(side: unknown, fallback: string): string {
 
 function formatRankNba(
   n: number | undefined,
-  language: GamesLanguage,
+  _language: GamesLanguage,
   t: GamesTexts
 ): string | null {
   if (n == null || n < 1 || !Number.isFinite(n)) return null;
   const r = Math.round(n);
-  if (language === "en") return `#${r}`;
   return t.predictToolRank.replace("{n}", String(r));
 }
 
 function formatH2hDateOnly(ms: number, language: GamesLanguage): string {
   if (!Number.isFinite(ms) || ms <= 0) return "—";
-  if (language === "en") {
-    return new Date(ms).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
-  }
-  return new Date(ms).toLocaleDateString("ja-JP", {
+  const locale = DATE_LOCALE[normalizeLanguage(language) ?? "en"];
+  return new Date(ms).toLocaleDateString(locale, {
     year: "numeric",
-    month: "long",
+    month: language === "ja" ? "long" : "short",
     day: "numeric",
   });
 }
@@ -346,8 +344,8 @@ function MarketBars({
     // progress は useSharedValue の安定参照のため依存に含めない
   }, [distKey, reduceMotion]);
   const mEnter = (i: number) => (reduceMotion ? undefined : predictMarketInnerEnter(i));
-  const titleText = language === "en" ? "Market bias" : "市場の偏り";
-  const totalPrefix = language === "en" ? "Total predictions: " : "総予想数：";
+  const titleText = t.marketBias;
+  const totalPrefix = t.totalPredictions;
   return (
     <View style={s.marketDonutWrap}>
       <View style={s.marketDonutContent}>
@@ -545,7 +543,6 @@ function NbaStatsBody({
   language: GamesLanguage;
 }) {
   const reduceMotion = useReducedMotion() ?? false;
-  const isEn = language === "en";
   const r = (n: number | undefined) => formatRankNba(n, language, t);
 
   const [ppgL, ppgR] = barPctMaxNorm(home.avgFor, away.avgFor);
@@ -566,8 +563,8 @@ function NbaStatsBody({
   const [nL, nR] =
     bothN && hn != null && an != null ? barPctDiffNorm(hn, an) : [0, 0];
 
-  const homeLbl = isEn ? "Home" : "ホーム戦績";
-  const awayLbl = isEn ? "Away" : "アウェイ戦績";
+  const homeLbl = t.predictToolRecordHome;
+  const awayLbl = t.predictToolRecordAway;
   const hWinBar = Math.round(Math.min(100, Math.max(0, home.homeWinPct)));
   const aWinBar = Math.round(Math.min(100, Math.max(0, away.homeWinPct)));
   const hAwayBar = Math.round(Math.min(100, Math.max(0, home.awayWinPct)));
@@ -706,12 +703,11 @@ function NonNbaStatsBody({
   language: GamesLanguage;
 }) {
   const reduceMotion = useReducedMotion() ?? false;
-  const isEn = language === "en";
   const [ppgL, ppgR] = barPctMaxNorm(home.avgFor, away.avgFor);
   const [papgL, papgR] = barPctMinPaNorm(home.avgAgainst, away.avgAgainst);
   const [diffL, diffR] = barPctDiffNorm(home.diff, away.diff);
-  const homeLbl = isEn ? "Home" : "ホーム戦績";
-  const awayLbl = isEn ? "Away" : "アウェイ戦績";
+  const homeLbl = t.predictToolRecordHome;
+  const awayLbl = t.predictToolRecordAway;
   const hWinBar = Math.round(Math.min(100, Math.max(0, home.homeWinPct)));
   const aWinBar = Math.round(Math.min(100, Math.max(0, away.homeWinPct)));
   const hAwayBar = Math.round(Math.min(100, Math.max(0, home.awayWinPct)));
@@ -904,7 +900,15 @@ export function PredictToolTabContent({
         return [
           {
             key: "pts",
-            label: language === "en" ? "H2H PTS / G" : "H2H平均得点",
+            label: L(resolveLocalizedLang(language), {
+              ja: "H2H平均得点",
+              en: "H2H PTS / G",
+              ko: "H2H 평균 득점",
+              zh: "H2H 场均得分",
+              es: "H2H PTS / P",
+              pt: "H2H PTS / J",
+              fr: "H2H PTS / M",
+            }),
             left: homeAvgPts,
             right: awayAvgPts,
             leftWin: homeAvgPts > awayAvgPts,
@@ -915,7 +919,15 @@ export function PredictToolTabContent({
           },
           {
             key: "allowed",
-            label: language === "en" ? "H2H OPP PTS / G" : "H2H平均失点",
+            label: L(resolveLocalizedLang(language), {
+              ja: "H2H平均失点",
+              en: "H2H OPP PTS / G",
+              ko: "H2H 평균 실점",
+              zh: "H2H 场均失分",
+              es: "H2H PTS RIV / P",
+              pt: "H2H PTS ADV / J",
+              fr: "H2H PTS ADV / M",
+            }),
             left: homeAvgAllowed,
             right: awayAvgAllowed,
             leftWin: homeAvgAllowed < awayAvgAllowed,
@@ -965,7 +977,15 @@ export function PredictToolTabContent({
       return [
         {
           key: "pts",
-          label: language === "en" ? "H2H PTS / G" : "H2H平均得点",
+          label: L(resolveLocalizedLang(language), {
+            ja: "H2H平均得点",
+            en: "H2H PTS / G",
+            ko: "H2H 평균 득점",
+            zh: "H2H 场均得分",
+            es: "H2H PTS / P",
+            pt: "H2H PTS / J",
+            fr: "H2H PTS / M",
+          }),
           left: homeAvgPts,
           right: awayAvgPts,
           leftWin: homeAvgPts > awayAvgPts,
@@ -976,7 +996,15 @@ export function PredictToolTabContent({
         },
         {
           key: "allowed",
-          label: language === "en" ? "H2H OPP PTS / G" : "H2H平均失点",
+          label: L(resolveLocalizedLang(language), {
+            ja: "H2H平均失点",
+            en: "H2H OPP PTS / G",
+            ko: "H2H 평균 실점",
+            zh: "H2H 场均失分",
+            es: "H2H PTS RIV / P",
+            pt: "H2H PTS ADV / J",
+            fr: "H2H PTS ADV / M",
+          }),
           left: homeAvgAllowed,
           right: awayAvgAllowed,
           leftWin: homeAvgAllowed < awayAvgAllowed,
@@ -1068,7 +1096,7 @@ export function PredictToolTabContent({
                     <Text style={[s.h2hInjuryLine, s.h2hInjuryLineLeft]}>
                       {leftInjuries.length > 0 ? leftInjuries.join(" ・ ") : "—"}
                     </Text>
-                    <Text style={s.h2hInjuryTitle}>{language === "en" ? "Inactive" : "欠場"}</Text>
+                    <Text style={s.h2hInjuryTitle}>{t.predictToolH2hInjury}</Text>
                     <Text style={[s.h2hInjuryLine, s.h2hInjuryLineRight]}>
                       {rightInjuries.length > 0 ? rightInjuries.join(" ・ ") : "—"}
                     </Text>
@@ -1076,15 +1104,15 @@ export function PredictToolTabContent({
                 </View>
               ) : null;
             })()}
-            {((language === "en" ? row.summaryEn : row.summaryJa) ??
-              row.summaryJa ??
-              row.summaryEn) ? (
+            {((language === "ja" ? row.summaryJa : row.summaryEn) ??
+              row.summaryEn ??
+              row.summaryJa) ? (
               <View style={s.h2hSummaryCard}>
-                <Text style={s.h2hSummaryTitle}>Game Summary</Text>
+                <Text style={s.h2hSummaryTitle}>{t.predictToolH2hSummary}</Text>
                 <Text style={s.h2hSummaryBody}>
-                  {(language === "en" ? row.summaryEn : row.summaryJa) ??
-                    row.summaryJa ??
-                    row.summaryEn}
+                  {(language === "ja" ? row.summaryJa : row.summaryEn) ??
+                    row.summaryEn ??
+                    row.summaryJa}
                 </Text>
               </View>
             ) : null}
@@ -1107,7 +1135,7 @@ export function PredictToolTabContent({
           const rightName = compactTeamLabel(first?.rightTeamDisplay ?? h2hAwayName);
           return (
             <View style={s.h2hTrendCard}>
-              <Text style={s.h2hTrendTitle}>Series Trend</Text>
+              <Text style={s.h2hTrendTitle}>{t.predictToolH2hTrend}</Text>
               {/* チーム名を勝敗数のすぐ横に（全体は中央寄せ） */}
               <View style={s.h2hTrendRow}>
                 <Text style={[s.h2hTrendTeam, s.h2hTrendTeamLeft]} numberOfLines={1}>
@@ -1139,7 +1167,25 @@ export function PredictToolTabContent({
                 setRsExpanded((v) => !v);
               }}
             >
-              {rsExpanded ? (language === "en" ? "Hide" : "閉じる") : language === "en" ? "Show" : "表示"}
+              {rsExpanded
+                ? L(resolveLocalizedLang(language), {
+                    ja: "閉じる",
+                    en: "Hide",
+                    ko: "접기",
+                    zh: "收起",
+                    es: "Ocultar",
+                    pt: "Ocultar",
+                    fr: "Masquer",
+                  })
+                : L(resolveLocalizedLang(language), {
+                    ja: "表示",
+                    en: "Show",
+                    ko: "표시",
+                    zh: "显示",
+                    es: "Mostrar",
+                    pt: "Mostrar",
+                    fr: "Afficher",
+                  })}
             </Text>
           </View>
           {rsExpanded
@@ -1147,7 +1193,17 @@ export function PredictToolTabContent({
               ? renderH2hRows(rsGames)
               : (
                 <View style={s.rsEmptyWrap}>
-                  <Text style={s.muted}>{language === "en" ? "No RS head-to-head data yet." : "RSの直接対決データはまだありません。"}</Text>
+                  <Text style={s.muted}>
+                    {L(resolveLocalizedLang(language), {
+                      ja: "RSの直接対決データはまだありません。",
+                      en: "No RS head-to-head data yet.",
+                      ko: "아직 RS 맞대결 데이터가 없습니다.",
+                      zh: "尚无常规赛交锋数据。",
+                      es: "Aún no hay datos H2H de temporada regular.",
+                      pt: "Ainda não há dados H2H da temporada regular.",
+                      fr: "Pas encore de données H2H de saison régulière.",
+                    })}
+                  </Text>
                 </View>
               )
             : null}
@@ -1155,7 +1211,15 @@ export function PredictToolTabContent({
         {h2hStatsRows ? (
           <View style={s.h2hStatsCard}>
             <Text style={s.h2hStatsTitle}>
-              {language === "en" ? "Head-to-head stats" : "直接対決のスタッツ"}
+              {L(resolveLocalizedLang(language), {
+                ja: "直接対決のスタッツ",
+                en: "Head-to-head stats",
+                ko: "맞대결 스탯",
+                zh: "交锋数据",
+                es: "Stats cara a cara",
+                pt: "Stats confronto direto",
+                fr: "Stats face-à-face",
+              })}
             </Text>
             {h2hStatsRows.map((row) => (
               <View key={row.key} style={s.h2hStatsRow}>

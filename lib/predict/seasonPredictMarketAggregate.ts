@@ -163,7 +163,7 @@ export function aggregateAwardsMarket(input: {
       return {
         awardId: def.id,
         labelEn: def.labelEn,
-        labelJa: def.labelJa,
+        name: def.name,
         top,
       };
     }

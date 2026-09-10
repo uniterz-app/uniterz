@@ -1,6 +1,4 @@
-/**
- * users/{uid} → プロフィールカード初回描画用シード（peek / load 共通）。
- */
+import { resolveLocalizedLang, type LocalizedLang } from "../../../../../lib/i18n/localize";
 import { auth } from "../../lib/firebase";
 import { parseMemberSinceMs } from "../../../../../lib/profile/parseMemberSinceMs";
 import {
@@ -17,7 +15,7 @@ export type OwnProfileSeedNative = {
   handle: string;
   bio: string;
   avatarUrl: string;
-  language: "ja" | "en";
+  language: LocalizedLang;
   countryCode: string;
   /** 期限解決前の表示用（resolveAndExpireMyPlan で後から確定） */
   plan: "free" | "pro";
@@ -45,7 +43,9 @@ export function seedOwnProfileFromUserDocNative(
     handle,
     bio: typeof data.bio === "string" ? data.bio : "",
     avatarUrl: fromFirestorePhoto || authPhoto,
-    language: data.language === "en" ? "en" : "ja",
+    language: resolveLocalizedLang(
+      typeof data.language === "string" ? data.language : null
+    ),
     countryCode: typeof data.countryCode === "string" ? data.countryCode : "",
     plan: data.plan === "pro" ? "pro" : "free",
     planProBgVariant: parseUserPlanProBgVariant(data.planProBgVariant),

@@ -21,6 +21,7 @@ import {
   profileOverviewChartSubtitleStyle,
   profileOverviewChartTitleStyle,
 } from "./profileOverviewChartShell";
+import { profileDailyTrendCopy } from "./profileChartCopy";
 
 export type ProfileDailyComboChartPoint = ProfileDailyTrendRow;
 
@@ -198,24 +199,13 @@ function buildLinePath(points: { x: number; y: number }[]): string {
   return d;
 }
 
-function profileCopy(language: "ja" | "en") {
-  const isJa = language === "ja";
-  return {
-    title: "Daily Combo Chart",
-    subtitle: isJa ? "過去10日のスタッツの推移" : "Trend of stats over the last 10 days",
-    hitsPosts: isJa ? "的中 / 投稿" : "Hits / Posts",
-    totalPts: isJa ? "総合得点" : "Total Points",
-    upset: isJa ? "アップセット" : "Upset",
-    unitCount: isJa ? "件" : "items",
-    unitPts: "pts",
-    legendBars: isJa ? "投稿数 / 的中" : "Posts / Correct Picks",
-    legendLine: isJa ? "累積 総合得点" : "Cumulative Total Points",
-  };
+function profileCopy(language: string | null | undefined) {
+  return profileDailyTrendCopy(language);
 }
 
 type Props = {
   data: ProfileDailyComboChartPoint[];
-  language?: "ja" | "en";
+  language?: string;
   rankingLeague?: RankingLeagueSource;
   hideTitle?: boolean;
 };

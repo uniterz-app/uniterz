@@ -12,6 +12,7 @@ import {
   briefEdgeDetail,
   briefLineText,
   briefPlayerDetail,
+  briefSampleNote,
   splitBriefLineLead,
 } from "@/lib/predict/predictProBrief";
 import { sanitizeProBriefForDisplay } from "@/lib/predict/validateProBrief";
@@ -21,11 +22,12 @@ import {
 } from "@/lib/predict/proInsightGateCopy";
 import { PRO_INSIGHT_GATE_SAMPLE_BRIEF } from "@/lib/predict/proInsightGateSampleBrief";
 import { UNITERZ_PRO_BADGE_GOLD } from "@/lib/units/uniterzProBadge";
-import { nameBebas, nameOxanium, jp } from "@/lib/fonts";
+import { nameOxanium, jp } from "@/lib/fonts";
 import { matchCardTeamNameStyle } from "@/lib/games/teamDisplayTypography";
 import { NBA_TEAM_NAME_BY_ID } from "@/lib/nba-team-names";
 import { getMobileTeamName } from "@/lib/team-name-split-mobile";
 import { getTeamJerseyPrimaryColor } from "@/lib/team-colors";
+import { resolveLocalizedLang, type LocalizedLang } from "@/lib/i18n/localize";
 import {
   ProCyberBadge,
   proBadgeStaticMotion,
@@ -151,11 +153,11 @@ const ITEM_LABEL =
 const ITEM_LABEL_SKEW = { transform: "skewX(-6deg)" } as const;
 const ITEM_DETAIL = "mt-0.5 text-[12px] leading-snug tracking-[0.02em]";
 
-function detailFontClass(lang: "ja" | "en"): string {
+function detailFontClass(lang: LocalizedLang): string {
   return lang === "ja" ? jp.className : nameOxanium.className;
 }
 
-function labelFontClass(lang: "ja" | "en"): string {
+function labelFontClass(lang: LocalizedLang): string {
   return [
     nameOxanium.className,
     ITEM_LABEL,
@@ -174,7 +176,7 @@ function EdgeBlock({
   language: Language;
   align: "left" | "right";
 }) {
-  const lang = language === "ja" ? "ja" : "en";
+  const lang = resolveLocalizedLang(language);
   const textAlign = align === "right" ? "text-right" : "text-left";
   if (edges.length === 0) {
     return (
@@ -231,7 +233,7 @@ function LineBlock({
   align: "left" | "right";
   tone: "schedule" | "context";
 }) {
-  const lang = language === "ja" ? "ja" : "en";
+  const lang = resolveLocalizedLang(language);
   const textAlign = align === "right" ? "text-right" : "text-left";
   const bodyColor =
     tone === "schedule" ? "text-amber-50/82" : "text-cyan-50/82";
@@ -303,7 +305,7 @@ function PlayerBlock({
   language: Language;
   align: "left" | "right";
 }) {
-  const lang = language === "ja" ? "ja" : "en";
+  const lang = resolveLocalizedLang(language);
   const textAlign = align === "right" ? "text-right" : "text-left";
   if (players.length === 0) {
     return (
@@ -415,7 +417,7 @@ function TitleRow({
         </p>
         <p
           className={[
-            nameBebas.className,
+            nameOxanium.className,
             "truncate text-[18px] font-bold uppercase leading-none",
           ].join(" ")}
           style={{ ...matchCardTeamNameStyle(true), color: homeColor }}
@@ -443,7 +445,7 @@ function TitleRow({
         </p>
         <p
           className={[
-            nameBebas.className,
+            nameOxanium.className,
             "truncate text-[18px] font-bold uppercase leading-none",
           ].join(" ")}
           style={{ ...matchCardTeamNameStyle(true), color: awayColor }}
@@ -467,8 +469,7 @@ export default function PredictProBriefPanel({
   locked = false,
   onPressUpgrade,
 }: Props) {
-  const gateLang = language === "ja" ? "ja" : "en";
-  const gate = proInsightGateCopy(gateLang);
+  const gate = proInsightGateCopy(language);
   const [ctaPressed, setCtaPressed] = useState(false);
   const homeNick = teamNick(homeTeamId, homeTeamName).toUpperCase();
   const awayNick = teamNick(awayTeamId, awayTeamName).toUpperCase();
@@ -621,9 +622,7 @@ export default function PredictProBriefPanel({
             "mb-2 text-[10px] font-semibold leading-snug text-amber-200/75",
           ].join(" ")}
         >
-          {language === "ja"
-            ? safeBrief.sampleNoteJa
-            : safeBrief.sampleNoteEn ?? safeBrief.sampleNoteJa}
+          {briefSampleNote(safeBrief, language)}
         </p>
       ) : null}
 
@@ -639,7 +638,7 @@ export default function PredictProBriefPanel({
                   <ProCyberBadge
                     {...proBadgeStaticMotion}
                     premium
-                    ariaLabel={gateLang === "ja" ? "Pro会員" : "Pro member"}
+                    ariaLabel={gate.proMemberAria}
                   />
                 </span>
               </div>

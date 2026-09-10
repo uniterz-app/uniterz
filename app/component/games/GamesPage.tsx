@@ -204,7 +204,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
   const { language } = useUserLanguage(user?.uid ?? null);
   const m = t(language);
   const skipConfirm = tutorialSkipConfirmProps(m.tutorial);
-  const dayTimeZone = language === "en" ? TIMEZONE_ET : TIMEZONE_JST;
+  const dayTimeZone = language === "ja" ? TIMEZONE_JST : TIMEZONE_ET;
   const isMobileRoute = Boolean(
     pathname?.startsWith("/mobile") || pathname?.startsWith("/m/")
   );
@@ -1478,7 +1478,21 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
         autoScrollOnInit={false}
         snapSelectOnScroll={isMobile}
         timeZone={dayTimeZone}
-        a11yLocale={language === "en" ? "en-US" : "ja-JP"}
+        a11yLocale={
+          language === "ja"
+            ? "ja-JP"
+            : language === "ko"
+              ? "ko-KR"
+              : language === "zh"
+                ? "zh-CN"
+                : language === "es"
+                  ? "es-ES"
+                  : language === "pt"
+                    ? "pt-BR"
+                    : language === "fr"
+                      ? "fr-FR"
+                      : "en-US"
+        }
         wideItemGap={isMobile}
         compactWebGap={!isMobile}
       />

@@ -16,6 +16,8 @@ import {
   REDEMPTION_DISCLAIMER_JA,
   REDEMPTION_EXCLUSIONS_EN,
   REDEMPTION_EXCLUSIONS_JA,
+  redemptionCatalogBlurb,
+  redemptionCatalogTitle,
   redemptionPriceCapLabel,
 } from "@/lib/redemption/redemptionCatalog";
 import { redemptionCatalogImageSrc } from "@/lib/redemption/redemptionCatalogImages";
@@ -177,7 +179,7 @@ export default function RedemptionHubPage() {
                 <div className="min-w-0 flex-1">
                   <div className="flex items-start justify-between gap-2">
                     <p className="text-[14px] font-semibold text-white/90">
-                      {isJa ? item.titleJa : item.titleEn}
+                      {redemptionCatalogTitle(item, language)}
                     </p>
                     <p
                       className={[
@@ -192,7 +194,7 @@ export default function RedemptionHubPage() {
                     </p>
                   </div>
                   <p className="mt-0.5 text-[11px] text-white/45">
-                    {isJa ? item.blurbJa : item.blurbEn}
+                    {redemptionCatalogBlurb(item, language)}
                   </p>
                   <p className="mt-1 text-[11px] text-white/40">
                     {redemptionPriceCapLabel(item, isJa ? "ja" : "en")}

@@ -34,85 +34,10 @@ import {
   registerNativePushTokenIfGranted,
 } from "../../../notifications/registerPushTokenNative";
 import type { ProfileStackParamList } from "../../../navigation/types";
+import { notificationSettingsCopy } from "../notificationSettingsCopy";
+import { L } from "@/lib/i18n/localize";
 
 type PermissionState = "unknown" | "granted" | "denied" | "unavailable";
-
-type PrefRow = {
-  key: PushNotificationPrefKey;
-  titleJa: string;
-  titleEn: string;
-  descJa: string;
-  descEn: string;
-};
-
-const MATCH_PREF_ROWS: PrefRow[] = [
-  {
-    key: "gameStart",
-    titleJa: "試合開始（15分前）",
-    titleEn: "Match start (15 min before)",
-    descJa: "予想した試合が始まる前にお知らせ",
-    descEn: "Before a match you predicted is about to start",
-  },
-  {
-    key: "gameFinal",
-    titleJa: "結果確定",
-    titleEn: "Result confirmed",
-    descJa: "予想した試合の結果が確定したとき",
-    descEn: "When a match you predicted is finalized",
-  },
-  {
-    key: "rankingUpdated",
-    titleJa: "ランキング更新",
-    titleEn: "Rankings updated",
-    descJa: "本日予想した日の累積ランキング更新（16:00頃）",
-    descEn: "Daily ranking update on days you predicted (~4pm JST)",
-  },
-  {
-    key: "predictionDeadline",
-    titleJa: "予想締切",
-    titleEn: "Prediction deadline",
-    descJa: "未予想の試合だけ。締切前にお知らせ",
-    descEn: "Unpredicted matches only — before the deadline",
-  },
-];
-
-const PRO_PREF_ROWS: PrefRow[] = [
-  {
-    key: "injuryStatus",
-    titleJa: "出場ステータス変更",
-    titleEn: "Availability change",
-    descJa: "欠場・復帰など、予想を見直すべき変化",
-    descEn: "Out / return — changes that warrant a recheck",
-  },
-  {
-    key: "starterChange",
-    titleJa: "重要な先発変更",
-    titleEn: "High-impact lineup change",
-    descJa: "主力落ち・控え先発。通常の先発発表は送らない",
-    descEn: "Starters dropped / bench starts — not every lineup",
-  },
-  {
-    key: "pregameDigest",
-    titleJa: "複数変化のまとめ",
-    titleEn: "Pregame digest",
-    descJa: "短時間の更新を1通にまとめる",
-    descEn: "Bundle several updates into one notification",
-  },
-  {
-    key: "proInsightUpdate",
-    titleJa: "PRO INSIGHT 重要更新",
-    titleEn: "PRO INSIGHT update",
-    descJa: "結論が変わったときだけ",
-    descEn: "Only when the conclusion changes",
-  },
-  {
-    key: "monthlyReport",
-    titleJa: "月次レポート",
-    titleEn: "Monthly report",
-    descJa: "月次レポートが確定したとき",
-    descEn: "When your monthly report is ready",
-  },
-];
 
 /** アプリ内通知設定（試合の進行 / Pro の見直し / 端末許可） */
 export default function NotificationSettingsScreenNative() {
@@ -121,8 +46,8 @@ export default function NotificationSettingsScreenNative() {
   const { fUser } = useFirebaseUser();
   const uid = fUser?.uid ?? null;
   const { language } = useNativeUserLanguageFromAuth();
-  const isJa = language === "ja";
-  const gateLanguage = isJa ? "ja" : "en";
+  const labels = notificationSettingsCopy(language);
+  const gateLanguage = labels.lang;
   const { isPro } = useNativeUserPlan(uid);
   const { prefs, loading, updatePref, updateDeadlineMinutes } =
     usePushNotificationPrefsNative(uid);
@@ -166,50 +91,6 @@ export default function NotificationSettingsScreenNative() {
     void refreshPermission();
   }, [refreshPermission]);
 
-  const labels = isJa
-    ? {
-        title: "通知設定",
-        description:
-          "受け取る通知の種類を選べます。端末の通知がオフの場合は届きません。",
-        osSection: "端末の通知",
-        osGranted: "許可済み",
-        osDenied: "オフ（システム設定で変更）",
-        osUnknown: "未設定",
-        osUnavailable: "このビルドでは利用できません",
-        allowBtn: "通知を許可",
-        openSettingsBtn: "システム設定を開く",
-        matchSection: "試合の進行",
-        matchHint: "予想した試合の開始・結果・ランキングと、未予想の締切。",
-        deadlineSection: "締切の何分前",
-        deadlineFreeHint: "Free は 30 分前。60 / 10 分前は Pro。",
-        reviewSection: "予想を見直す",
-        reviewHintPro: "欠場・先発など、予想を直すべき変化だけ。",
-        reviewHintFree:
-          "欠場・先発・Insight・月次レポートは Pro で届きます。",
-        requesting: "確認中…",
-      }
-    : {
-        title: "Notifications",
-        description:
-          "Choose which notifications you receive. They won't arrive if system notifications are off.",
-        osSection: "Device notifications",
-        osGranted: "Allowed",
-        osDenied: "Off (change in system settings)",
-        osUnknown: "Not set",
-        osUnavailable: "Unavailable in this build",
-        allowBtn: "Allow notifications",
-        openSettingsBtn: "Open system settings",
-        matchSection: "Match progress",
-        matchHint: "Start, result, and rankings for matches you predicted — plus deadlines you haven't entered.",
-        deadlineSection: "Minutes before deadline",
-        deadlineFreeHint: "Free is 30 min. Pro unlocks 60 / 10.",
-        reviewSection: "Recheck alerts",
-        reviewHintPro: "Only changes that warrant editing a prediction.",
-        reviewHintFree:
-          "Availability, lineup, Insight, and monthly report are Pro.",
-        requesting: "Checking…",
-      };
-
   async function handleAllowPress() {
     setRequesting(true);
     try {
@@ -218,9 +99,15 @@ export default function NotificationSettingsScreenNative() {
       if (!token && permission !== "granted") {
         cyberAlert(
           "",
-          isJa
-            ? "通知を許可できませんでした。システム設定から変更できます。"
-            : "Could not enable notifications. You can change this in system settings."
+          L(labels.lang, {
+            ja: "通知を許可できませんでした。システム設定から変更できます。",
+            en: "Could not enable notifications. You can change this in system settings.",
+            ko: "알림을 허용할 수 없습니다. 시스템 설정에서 변경할 수 있습니다.",
+            zh: "无法启用通知。可在系统设置中更改。",
+            es: "No se pudieron activar las notificaciones. Cámbialo en ajustes del sistema.",
+            pt: "Não foi possível ativar as notificações. Altere nas configurações do sistema.",
+            fr: "Impossible d’activer les notifications. Modifiez-les dans les réglages système.",
+          })
         );
       }
     } finally {
@@ -232,10 +119,7 @@ export default function NotificationSettingsScreenNative() {
     try {
       await Linking.openSettings();
     } catch {
-      cyberAlert(
-        "",
-        isJa ? "設定アプリを開けませんでした。" : "Could not open settings."
-      );
+      cyberAlert("", labels.openSettingsFail);
     }
   }
 
@@ -278,7 +162,10 @@ export default function NotificationSettingsScreenNative() {
     void updateDeadlineMinutes(minutes);
   }
 
-  function renderSwitchRows(rows: PrefRow[], locked: boolean) {
+  function renderSwitchRows(
+    rows: { key: (typeof labels.matchRows)[number]["key"]; title: string; desc: string }[],
+    locked: boolean
+  ) {
     return rows.map((row, index) => {
       const switchEl = (
         <Switch
@@ -308,17 +195,23 @@ export default function NotificationSettingsScreenNative() {
           accessibilityRole={locked ? "button" : undefined}
           accessibilityHint={
             locked
-              ? isJa
-                ? "Pro 限定です。プランの説明を開きます"
-                : "Pro-only. Opens plan details"
+              ? L(labels.lang, {
+                  ja: "Pro 限定です。プランの説明を開きます",
+                  en: "Pro-only. Opens plan details",
+                  ko: "Pro 전용입니다. 플랜 설명을 엽니다",
+                  zh: "仅限 Pro。打开方案说明",
+                  es: "Solo Pro. Abre detalles del plan",
+                  pt: "Somente Pro. Abre detalhes do plano",
+                  fr: "Réservé Pro. Ouvre les détails du plan",
+                })
               : undefined
           }
         >
           <View style={styles.prefTextCol}>
             <Text style={[styles.prefTitle, locked && styles.prefMuted]}>
-              {isJa ? row.titleJa : row.titleEn}
+              {row.title}
             </Text>
-            <Text style={styles.prefDesc}>{isJa ? row.descJa : row.descEn}</Text>
+            <Text style={styles.prefDesc}>{row.desc}</Text>
           </View>
           {locked ? <View pointerEvents="none">{switchEl}</View> : switchEl}
         </Pressable>
@@ -368,7 +261,7 @@ export default function NotificationSettingsScreenNative() {
       <View style={[styles.card, !osReady && styles.cardDimmed]}>
         <Text style={styles.sectionTitle}>{labels.matchSection}</Text>
         <Text style={styles.sectionHint}>{labels.matchHint}</Text>
-        {renderSwitchRows(MATCH_PREF_ROWS, false)}
+        {renderSwitchRows(labels.matchRows, false)}
         {prefs.predictionDeadline ? (
           <View style={styles.deadlineBlock}>
             <Text style={styles.deadlineLabel}>{labels.deadlineSection}</Text>
@@ -399,7 +292,7 @@ export default function NotificationSettingsScreenNative() {
                       ]}
                     >
                       {minutes}
-                      {isJa ? "分前" : "m"}
+                      {labels.minutesShort}
                     </Text>
                     {locked ? (
                       <View style={styles.chipBadge} pointerEvents="none">
@@ -422,7 +315,7 @@ export default function NotificationSettingsScreenNative() {
         <Text style={styles.sectionHint}>
           {isPro ? labels.reviewHintPro : labels.reviewHintFree}
         </Text>
-        {renderSwitchRows(PRO_PREF_ROWS, !isPro)}
+        {renderSwitchRows(labels.proRows, !isPro)}
       </View>
 
       <NotificationProGateModalNative

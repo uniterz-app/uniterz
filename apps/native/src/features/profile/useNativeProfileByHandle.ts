@@ -1,6 +1,4 @@
-/**
- * Web `useProfile` の Firestore 解決（handle / uid → users ドキュメント）。
- */
+import { resolveLocalizedLang, type LocalizedLang } from "../../../../../lib/i18n/localize";
 import { useEffect, useMemo, useState } from "react";
 import { db } from "../../lib/firebase";
 import { fetchUserDocByRouteKey } from "../../../../../lib/profile/fetchUserDocByRouteKey";
@@ -35,7 +33,7 @@ export type NativeProfileByHandleState = {
   handle: string;
   bio: string;
   avatarUrl: string;
-  language: "ja" | "en";
+  language: LocalizedLang;
   countryCode: string;
   plan: "free" | "pro";
   planProBgVariant: ProfilePlanProBgVariant;
@@ -88,7 +86,9 @@ function mapUserDoc(
     handle: typeof data.handle === "string" ? data.handle.trim() : handle,
     bio: typeof data.bio === "string" ? data.bio : "",
     avatarUrl: fromFirestorePhoto,
-    language: data.language === "en" ? "en" : "ja",
+    language: resolveLocalizedLang(
+      typeof data.language === "string" ? data.language : null
+    ),
     countryCode: typeof data.countryCode === "string" ? data.countryCode : "",
     plan: data.plan === "pro" ? "pro" : "free",
     planProBgVariant: parseUserPlanProBgVariant(data.planProBgVariant),

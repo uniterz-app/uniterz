@@ -25,6 +25,7 @@ import {
 import {
   planChangeCompleteCopy,
   planChangeTaxSuffix,
+  resolvePlanChangeUiLang,
   type PlanChangeUiLang,
 } from "@/lib/pro/planChangeUiCopy";
 import type { ProIapPlan } from "@/lib/pro/iapProductIds";
@@ -65,7 +66,7 @@ export default function PlanChangeCompletePage() {
   const [proUntil, setProUntil] = useState<Date | null>(null);
   const [profileHref, setProfileHref] = useState("/web");
   const { language } = useUserLanguage(uid);
-  const lang: PlanChangeUiLang = language === "en" ? "en" : "ja";
+  const lang: PlanChangeUiLang = resolvePlanChangeUiLang(language);
   const c = planChangeCompleteCopy(lang);
 
   useEffect(() => {

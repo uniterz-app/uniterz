@@ -99,7 +99,6 @@ export default function NbaTopScorerPickerNative({
   injuryReport,
 }: Props) {
   const t = getGamesTexts(language);
-  const isJa = language === "ja";
   const apiBaseUrl = getUniterzApiBaseUrl();
   const { candidates, loading: candidatesLoading } = useNbaTopScorerCandidates({
     homeTeamId,
@@ -166,9 +165,7 @@ export default function NbaTopScorerPickerNative({
 
       {candidatesLoading && sorted.length === 0 ? (
         <View style={styles.emptyBox}>
-          <Text style={styles.empty}>
-            {isJa ? "選手リストを読み込み中…" : "Loading players…"}
-          </Text>
+          <Text style={styles.empty}>{t.nbaTopScorerLoading}</Text>
         </View>
       ) : sorted.length === 0 ? (
         <View style={styles.emptyBox}>
@@ -179,10 +176,10 @@ export default function NbaTopScorerPickerNative({
           <View style={styles.head}>
             <Text style={[styles.th, styles.colRank]}>#</Text>
             <Text style={[styles.th, styles.colPlayer]}>
-              {isJa ? "選手" : "Player"}
+              {t.nbaTopScorerPlayerCol}
             </Text>
             <Text style={[styles.th, styles.colTeamHead]}>
-              {isJa ? "チーム" : "Team"}
+              {t.nbaTopScorerTeamCol}
             </Text>
             <Text style={[styles.th, styles.colGp]}>GP</Text>
             <Text style={[styles.th, styles.colMetric]}>PTS</Text>
@@ -396,7 +393,7 @@ const styles = StyleSheet.create({
     paddingRight: 4,
   },
   tdPlayer: {
-    fontFamily: OXANIUM_800,
+    fontFamily: METRIC_FONT,
     color: "#fff",
     fontSize: 13,
     fontWeight: "800",

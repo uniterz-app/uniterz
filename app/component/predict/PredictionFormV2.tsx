@@ -69,7 +69,7 @@ import {
   writePredictNextGameModalSkip,
 } from "@/lib/predict/nextGameModalPrefs";
 import { matchScoreClass, nameBebas, nameOxanium } from "@/lib/fonts";
-import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
+import { matchCardTeamNameStyle } from "@/lib/games/teamDisplayTypography";
 import { PREDICT_OVERLAY_FORM_PANEL } from "@/lib/ui/matchOverlayGlass";
 import {
   PREDICT_OVERLAY_CYBER_DECK_CLASS,
@@ -353,7 +353,9 @@ export default function PredictionFormV2({
   const homeLabel = getMobileTeamLabel(game.league, homeL1, homeL2);
   const awayLabel = getMobileTeamLabel(game.league, awayL1, awayL2);
   const predictTeamNameTy = {
-    ...bracketMarketTeamTypography(isMobile),
+    fontFamily: nameOxanium.style.fontFamily,
+    fontWeight: 600,
+    letterSpacing: "0.05em",
     transform: "skewX(-6deg)",
   };
 
@@ -717,9 +719,9 @@ export default function PredictionFormV2({
 
   const scoreInputClass = [
     overlayEmbedded
-      ? `${PREDICT_OVERLAY_SCORE_INPUT_CLASS} w-full text-left font-black outline-none`
+      ? `${PREDICT_OVERLAY_SCORE_INPUT_CLASS} w-full text-left font-bold outline-none`
       : "w-full rounded-xl border border-white/15 bg-white/[0.10] text-left text-white placeholder-white/35 outline-none transition focus:border-cyan-300/40 focus:bg-white/[0.12]",
-    matchScoreClass,
+    overlayEmbedded ? nameOxanium.className : matchScoreClass,
     // iOS Safari: 16px 未満だとフォーカス時に自動ズームする
     isMobile ? "px-3.5 py-2.5 text-base" : "px-4 py-3 text-base",
     overlayEmbedded ? "" : "w-full",
@@ -1541,7 +1543,10 @@ export default function PredictionFormV2({
                 size={isMobile ? "mobile" : "web"}
                 className="absolute right-1 top-1 z-10"
               />
-              <div className="relative z-1 min-w-0 pr-9 text-sm font-semibold text-white/88">
+              <div
+                className={`${nameBebas.className} relative z-1 min-w-0 pr-9 text-[18px] font-bold uppercase leading-none text-white`}
+                style={matchCardTeamNameStyle(true)}
+              >
                 {m.predict.scorePrediction}
                 {isKnockout ? (
                   <span className="ml-0.5 align-super text-[10px] font-bold text-amber-300/90">
@@ -1603,7 +1608,7 @@ export default function PredictionFormV2({
                 <div className="relative z-1 grid grid-cols-2 gap-3">
                   <div>
                     <div
-                      className={`${nameBebas.className} mb-2 text-[15px] font-bold uppercase leading-tight text-white/88 md:text-[18px]`}
+                      className={`${nameOxanium.className} mb-2 text-[13px] font-semibold uppercase leading-tight text-white/88 md:text-[14px]`}
                       style={predictTeamNameTy}
                     >
                       {homeLabel}
@@ -1620,7 +1625,7 @@ export default function PredictionFormV2({
 
                   <div>
                     <div
-                      className={`${nameBebas.className} mb-2 text-[15px] font-bold uppercase leading-tight text-white/88 md:text-[18px]`}
+                      className={`${nameOxanium.className} mb-2 text-[13px] font-semibold uppercase leading-tight text-white/88 md:text-[14px]`}
                       style={predictTeamNameTy}
                     >
                       {awayLabel}

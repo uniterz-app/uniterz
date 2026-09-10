@@ -196,6 +196,7 @@ export function generateMatchupInsight(
     const note = proBriefSampleNote(gamesPlayed);
     brief.sampleNoteJa = note.sampleNoteJa;
     brief.sampleNoteEn = note.sampleNoteEn;
+    brief.sampleNote = note.sampleNote;
   }
 
   return brief;

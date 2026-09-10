@@ -12,6 +12,7 @@ import {
   formatWl,
   wlTotal,
 } from "@/lib/nba/insights/priorSeasonRecordTypes";
+import type { UiStrings } from "@/lib/i18n/ui";
 
 /** Insight に出す最低サンプル */
 export const ACE_OUT_MIN_GAMES = 3;
@@ -65,11 +66,32 @@ export function findAceOutRecordForInjury(
   return findAceOutPlayerForInjury(bundle, teamId, injury);
 }
 
+/** 前季（opening）か今季（early / full）か */
+export type AceOutPhase = "prior" | "current";
+
+/** 「〜欠場時 W–L」の 7 言語テンプレ */
+function aceOutWhenOutText(phase: AceOutPhase, body: string): UiStrings {
+  const prior = phase === "prior";
+  return {
+    ja: `${prior ? "前季" : "今季"}欠場時 ${body}`,
+    en: `without him ${prior ? "last yr " : ""}${body}`.replace(/\s+/g, " ").trim(),
+    ko: `${prior ? "지난 시즌" : "이번 시즌"} 결장 시 ${body}`,
+    zh: `${prior ? "上季" : "本季"}缺阵时 ${body}`,
+    es: `sin él ${prior ? "temp. pasada " : ""}${body}`.replace(/\s+/g, " ").trim(),
+    pt: `sem ele ${prior ? "temp. passada " : ""}${body}`
+      .replace(/\s+/g, " ")
+      .trim(),
+    fr: `sans lui ${prior ? "saison dern. " : ""}${body}`
+      .replace(/\s+/g, " ")
+      .trim(),
+  };
+}
+
 export function aceOutSuffix(
   player: NbaAceOutPlayerSplit,
-  phaseLabel: "前季" | "今季",
+  phase: AceOutPhase,
   _team?: Pick<NbaTeamAceOutRecord, "teamPtsFor" | "teamPtsAgainst"> | null
-): { ja: string; en: string } {
+): UiStrings {
   const wl = formatWl(player.whenOut);
   const ptsFor = player.whenOutPtsFor;
   const ptsAgainst = player.whenOutPtsAgainst;
@@ -79,15 +101,9 @@ export function aceOutSuffix(
     Number.isFinite(ptsAgainst) &&
     (ptsFor > 0 || ptsAgainst > 0)
   ) {
-    return {
-      ja: `${phaseLabel}欠場時 ${wl} · ${ptsFor}-${ptsAgainst}`,
-      en: `without him ${phaseLabel === "前季" ? "last yr " : ""}${wl} · ${ptsFor}-${ptsAgainst}`.trim(),
-    };
+    return aceOutWhenOutText(phase, `${wl} · ${ptsFor}-${ptsAgainst}`);
   }
-  return {
-    ja: `${phaseLabel}欠場時 ${wl}`,
-    en: `without him ${phaseLabel === "前季" ? "last yr " : ""}${wl}`.trim(),
-  };
+  return aceOutWhenOutText(phase, wl);
 }
 
 export function findAceOutForInjuryWithTeam(

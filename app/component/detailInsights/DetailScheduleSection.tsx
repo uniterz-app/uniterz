@@ -3,9 +3,11 @@
 import type { TeamScheduleDifficulty } from "@/lib/nba/detailInsights/detailInsightTypes";
 import type { NbaTeamUpcomingGame } from "@/lib/predict/nbaTeamDetailPreviewMocks";
 import {
+  scheduleDifficultySummaryText,
   scheduleDifficultyTierColor,
   scheduleDifficultyTierLabel,
 } from "@/lib/nba/detailInsights/buildScheduleDifficulty";
+import { resolveLocalizedLang } from "@/lib/i18n/localize";
 
 function hexToRgba(hex: string, alpha: number): string {
   const raw = hex.replace("#", "");
@@ -28,6 +30,8 @@ type Props = {
   scheduleDifficulty: TeamScheduleDifficulty | null;
   accent: string;
   isJa: boolean;
+  /** 7言語コピー用。未指定なら isJa にフォールバック */
+  language?: string;
   sectionTitle?: string;
 };
 
@@ -36,8 +40,10 @@ export function DetailScheduleSection({
   scheduleDifficulty,
   accent,
   isJa,
+  language,
   sectionTitle = "UPCOMING",
 }: Props) {
+  const lang = resolveLocalizedLang(language ?? (isJa ? "ja" : "en"));
   const frame = hexToRgba(accent, 0.3);
   const line = hexToRgba(accent, 0.12);
   const emptyCopy = isJa ? "データがありません" : "No data yet";
@@ -66,9 +72,7 @@ export function DetailScheduleSection({
       {scheduleDifficulty ? (
         <div className="flex flex-wrap items-center gap-2">
           <p className="text-[12px] font-semibold text-white/72">
-            {isJa
-              ? scheduleDifficulty.summaryJa
-              : scheduleDifficulty.summaryEn}
+            {scheduleDifficultySummaryText(scheduleDifficulty, lang)}
           </p>
           <span
             className="rounded px-2 py-0.5 text-[9px] font-extrabold tracking-wide"

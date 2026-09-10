@@ -2,11 +2,12 @@
 
 import { useEffect } from "react";
 import type { DetailChipExplainPayload } from "@/lib/nba/detailInsights/detailInsightTypes";
+import { L, resolveLocalizedLang } from "@/lib/i18n/localize";
 
 type Props = {
   open: boolean;
   payload: DetailChipExplainPayload | null;
-  isJa: boolean;
+  language: string;
   accent: string;
   onClose: () => void;
 };
@@ -14,10 +15,12 @@ type Props = {
 export function DetailChipExplainModal({
   open,
   payload,
-  isJa,
+  language,
   accent,
   onClose,
 }: Props) {
+  const lang = resolveLocalizedLang(language);
+  const isJa = lang === "ja";
   useEffect(() => {
     if (!open) return;
     const prev = document.body.style.overflow;
@@ -68,7 +71,7 @@ export function DetailChipExplainModal({
           </button>
         </div>
         <p className="whitespace-pre-line text-[13px] leading-relaxed text-white/78">
-          {isJa ? payload.hintJa : payload.hintEn}
+          {L(lang, payload.hint)}
         </p>
       </div>
     </div>

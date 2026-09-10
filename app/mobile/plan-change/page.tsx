@@ -49,6 +49,7 @@ import {
   planChangeSwitchCta,
   planChangeTaxSuffix,
   planChangeUpgradeCta,
+  resolvePlanChangeUiLang,
   type PlanChangeUiLang,
 } from "@/lib/pro/planChangeUiCopy";
 
@@ -65,7 +66,7 @@ export default function PlanChangePage() {
 
   const { language } = useUserLanguage(uid);
   const m = t(language);
-  const lang: PlanChangeUiLang = language === "en" ? "en" : "ja";
+  const lang: PlanChangeUiLang = resolvePlanChangeUiLang(language);
   const notices = planChangeNotices(lang);
 
   useEffect(() => {

@@ -1,12 +1,13 @@
 /** Phase A — Team / Player 詳細インサイト出力 */
 
+import type { UiStrings } from "@/lib/i18n/ui";
+
 export type DetailInsightChip = {
   id: string;
   label: string;
   category: string;
   score: number;
-  hintJa: string;
-  hintEn: string;
+  hint: UiStrings;
 };
 
 export type ScoredChipCandidate = {
@@ -49,6 +50,8 @@ export type TeamScheduleDifficulty = {
   overallTier: ScheduleDifficultyTier;
   summaryJa: string;
   summaryEn: string;
+  /** 7言語版。旧データには無いので任意 */
+  summary?: UiStrings;
 };
 
 export type PlayerDetailSummary = {
@@ -59,8 +62,7 @@ export type PlayerDetailSummary = {
 export type PlayerRoleChangeSignal = {
   id: string;
   label: string;
-  hintJa: string;
-  hintEn: string;
+  hint: UiStrings;
 };
 
 export type PlayerConsistencyInsight = {
@@ -95,6 +97,5 @@ export type PlayerDetailInsights = {
 
 export type DetailChipExplainPayload = {
   label: string;
-  hintJa: string;
-  hintEn: string;
+  hint: UiStrings;
 };

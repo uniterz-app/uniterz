@@ -13,21 +13,46 @@ import {
   type ResolvedBadgeNative,
 } from "../useNativeProfileBadges";
 import { VELVET_BASE } from "@/lib/badges/velvetPalette";
+import { L, resolveLocalizedLang } from "@/lib/i18n/localize";
 
 type Props = {
-  language: "ja" | "en";
+  language: string;
   uid: string | undefined;
   onClose: () => void;
 };
 
 export default function MobileBadgesScreen({ language, uid, onClose }: Props) {
-  const isJa = language === "ja";
+  const lang = resolveLocalizedLang(language);
   const { resolvedBadges, loading } = useNativeProfileBadges(uid);
   const [selected, setSelected] = useState<ResolvedBadgeNative | null>(null);
 
-  const subtitle = isJa
-    ? "獲得したバッジを一覧できます。タップで詳細を表示します。"
-    : "Browse badges you’ve earned. Tap one for details.";
+  const subtitle = L(lang, {
+    ja: "獲得したバッジを一覧できます。タップで詳細を表示します。",
+    en: "Browse badges you’ve earned. Tap one for details.",
+    ko: "획득한 배지를 볼 수 있습니다. 탭하면 상세가 표시됩니다.",
+    zh: "可浏览已获得的徽章。点按查看详情。",
+    es: "Consulta las insignias que has ganado. Toca para ver detalles.",
+    pt: "Veja as medalhas que você ganhou. Toque para detalhes.",
+    fr: "Parcourez vos badges. Touchez pour les détails.",
+  });
+  const loadingLabel = L(lang, {
+    ja: "読み込み中",
+    en: "Loading",
+    ko: "불러오는 중",
+    zh: "加载中",
+    es: "Cargando",
+    pt: "Carregando",
+    fr: "Chargement",
+  });
+  const emptyLabel = L(lang, {
+    ja: "まだ獲得バッジがありません。",
+    en: "No badges yet.",
+    ko: "아직 획득한 배지가 없습니다.",
+    zh: "还没有徽章。",
+    es: "Aún no hay insignias.",
+    pt: "Ainda sem medalhas.",
+    fr: "Pas encore de badges.",
+  });
 
   if (loading) {
     return (
@@ -42,7 +67,7 @@ export default function MobileBadgesScreen({ language, uid, onClose }: Props) {
           appBackground
         >
           <View style={styles.center}>
-            <CandleChartLoaderNative label={isJa ? "読み込み中" : "Loading"} />
+            <CandleChartLoaderNative label={loadingLabel} />
           </View>
         </MobilePageShell>
       </View>
@@ -63,15 +88,15 @@ export default function MobileBadgesScreen({ language, uid, onClose }: Props) {
         <ScrollView contentContainerStyle={styles.listPad}>
           <BadgePaletteNative
             badges={resolvedBadges}
-            language={language}
-            emptyLabel={isJa ? "まだ獲得バッジがありません。" : "No badges yet."}
+            language={lang}
+            emptyLabel={emptyLabel}
             onSelect={setSelected}
           />
         </ScrollView>
         <ProfileBadgeDetailModal
           visible={!!selected}
           badge={selected}
-          language={language}
+          language={lang}
           onClose={() => setSelected(null)}
         />
       </MobilePageShell>

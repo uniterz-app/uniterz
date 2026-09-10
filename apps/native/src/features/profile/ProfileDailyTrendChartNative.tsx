@@ -8,6 +8,7 @@ import type { ProfileDailyTrendRow } from "../../../../../lib/profile/profileDai
 import type { RankingLeagueSource } from "../../../../../lib/rankings/rankingLeagueSource";
 import ProfileDailyComboChartNeuralNative from "./ProfileDailyComboChartNeuralNative";
 import ProfileOverviewChartCardNative from "./ProfileOverviewChartCardNative";
+import { profileDailyTrendCopy } from "./profileChartCopy";
 import {
   profileOverviewChartEmptyHintStyle,
   profileOverviewChartNoDataStyle,
@@ -19,7 +20,7 @@ const EMPTY_CHART_H = 168;
 
 type Props = {
   data: ProfileDailyTrendRow[];
-  language: "ja" | "en";
+  language: string;
   allowAll?: boolean;
   rankingLeague?: RankingLeagueSource;
   range?: "7d" | "30d";
@@ -31,14 +32,10 @@ export default function ProfileDailyTrendChartNative({
   rankingLeague = "nba",
   range = "30d",
 }: Props) {
-  const isJa = language === "ja";
-  const title = "Daily Combo Chart";
-  const subtitle = isJa
-    ? "過去10日のスタッツの推移"
-    : "Trend of stats over the last 10 days";
-  const emptyHint = isJa
-    ? "シーズンの日次スタッツが溜まると表示されます"
-    : "Daily season stats appear after you settle picks.";
+  const copy = profileDailyTrendCopy(language);
+  const title = copy.title;
+  const subtitle = copy.subtitle;
+  const emptyHint = copy.emptyHint;
 
   const limitedData = useMemo(() => {
     const rows = Array.isArray(data) ? data : [];

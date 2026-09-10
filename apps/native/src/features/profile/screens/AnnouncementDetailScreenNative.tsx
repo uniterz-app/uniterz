@@ -19,6 +19,10 @@ import {
   getSyntheticEventById,
   isInAppEventAnnouncementDetailNative,
 } from "../mobileScreens/announcementsNativeUtils";
+import { useNativeUserLanguage } from "../../../hooks/useNativeUserLanguage";
+import { L, resolveLocalizedLang } from "@/lib/i18n/localize";
+import type { UiStrings } from "@/lib/i18n/ui";
+import { resolveEventNoticeCopy } from "@/lib/events/resolveEventNoticeCopy";
 
 type AnnouncementRow = {
   title: string;
@@ -30,12 +34,67 @@ type AnnouncementRow = {
 
 const API_BASE = process.env.EXPO_PUBLIC_UNITERZ_API_BASE_URL?.replace(/\/$/, "") ?? null;
 
-const TYPE_META: Record<string, { label: string; colors: [string, string] }> = {
-  event: { label: "イベント", colors: ["#00E5FF", "#0077FF"] },
-  campaign: { label: "キャンペーン", colors: ["#FF4DFF", "#A64DFF"] },
-  update: { label: "アップデート", colors: ["#9DFF00", "#3DFF75"] },
-  maintenance: { label: "メンテナンス", colors: ["#FFC400", "#FF7A00"] },
-  info: { label: "お知らせ", colors: ["#9CA3AF", "#6B7280"] },
+const TYPE_META: Record<string, { label: UiStrings; colors: [string, string] }> = {
+  event: {
+    label: {
+      ja: "イベント",
+      en: "Event",
+      ko: "이벤트",
+      zh: "活动",
+      es: "Evento",
+      pt: "Evento",
+      fr: "Événement",
+    },
+    colors: ["#00E5FF", "#0077FF"],
+  },
+  campaign: {
+    label: {
+      ja: "キャンペーン",
+      en: "Campaign",
+      ko: "캠페인",
+      zh: "活动推广",
+      es: "Campaña",
+      pt: "Campanha",
+      fr: "Campagne",
+    },
+    colors: ["#FF4DFF", "#A64DFF"],
+  },
+  update: {
+    label: {
+      ja: "アップデート",
+      en: "Update",
+      ko: "업데이트",
+      zh: "更新",
+      es: "Actualización",
+      pt: "Atualização",
+      fr: "Mise à jour",
+    },
+    colors: ["#9DFF00", "#3DFF75"],
+  },
+  maintenance: {
+    label: {
+      ja: "メンテナンス",
+      en: "Maintenance",
+      ko: "점검",
+      zh: "维护",
+      es: "Mantenimiento",
+      pt: "Manutenção",
+      fr: "Maintenance",
+    },
+    colors: ["#FFC400", "#FF7A00"],
+  },
+  info: {
+    label: {
+      ja: "お知らせ",
+      en: "News",
+      ko: "공지",
+      zh: "公告",
+      es: "Noticias",
+      pt: "Avisos",
+      fr: "Actualités",
+    },
+    colors: ["#9CA3AF", "#6B7280"],
+  },
 };
 
 function formatDate(d?: Timestamp | Date | null) {
@@ -61,6 +120,8 @@ export default function AnnouncementDetailScreenNative() {
   const route = useRoute<RouteProp<ProfileStackParamList, "AnnouncementDetail">>();
   const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
   const { fUser } = useFirebaseUser();
+  const { language } = useNativeUserLanguage(fUser?.uid);
+  const lang = resolveLocalizedLang(language);
   const { id } = route.params;
   const [row, setRow] = useState<AnnouncementRow | null>(null);
   const [synthetic, setSynthetic] = useState(false);
@@ -98,46 +159,110 @@ export default function AnnouncementDetailScreenNative() {
   }, [fUser?.uid, id, loading, missing]);
 
   const syntheticEvent = synthetic ? getSyntheticEventById(id) : undefined;
+  const eventCopy = syntheticEvent
+    ? resolveEventNoticeCopy(syntheticEvent, lang)
+    : null;
   const typeKey = synthetic ? "event" : row?.type ?? "info";
   const meta = TYPE_META[typeKey] ?? TYPE_META.info!;
-  const title = syntheticEvent ? syntheticEvent.title : row?.title ?? "";
-  const body = syntheticEvent ? syntheticEvent.description : row?.body ?? "";
+  const title = eventCopy ? eventCopy.title : row?.title ?? "";
+  const body = eventCopy ? eventCopy.description : row?.body ?? "";
   const postedAt = syntheticEvent ? Timestamp.fromMillis(syntheticEvent.postedAtMs) : row?.postedAt;
   const src = synthetic ? null : heroUri(row?.heroImageURL);
 
   return (
     <MobilePageShell
       title="NEWS"
-      subtitle="公式のお知らせ詳細です。"
+      subtitle={L(lang, {
+        ja: "公式のお知らせ詳細です。",
+        en: "Official announcement details.",
+        ko: "공식 공지 상세 내용입니다.",
+        zh: "官方公告详情。",
+        es: "Detalles del anuncio oficial.",
+        pt: "Detalhes do aviso oficial.",
+        fr: "Détails de l'annonce officielle.",
+      })}
       appBackground
       onClose={() => navigation.goBack()}
     >
       <ScrollView contentContainerStyle={styles.content}>
         {loading ? (
           <View style={styles.center}>
-            <CandleChartLoaderNative label="読み込み中" />
+            <CandleChartLoaderNative
+              label={L(lang, {
+                ja: "読み込み中",
+                en: "Loading",
+                ko: "불러오는 중",
+                zh: "加载中",
+                es: "Cargando",
+                pt: "Carregando",
+                fr: "Chargement",
+              })}
+            />
           </View>
         ) : missing || (!row && !syntheticEvent) ? (
-          <Text style={styles.muted}>お知らせが見つかりません。</Text>
+          <Text style={styles.muted}>
+            {L(lang, {
+              ja: "お知らせが見つかりません。",
+              en: "This announcement was not found.",
+              ko: "공지를 찾을 수 없습니다.",
+              zh: "未找到该公告。",
+              es: "No se encontró el anuncio.",
+              pt: "Aviso não encontrado.",
+              fr: "Annonce introuvable.",
+            })}
+          </Text>
         ) : (
           <>
             {src ? <Image source={{ uri: src }} style={styles.hero} resizeMode="cover" /> : null}
             <View style={styles.typeRow}>
               <LinearGradient colors={meta.colors} style={styles.typePill}>
-                <Text style={styles.typePillText}>{meta.label}</Text>
+                <Text style={styles.typePillText}>{L(lang, meta.label)}</Text>
               </LinearGradient>
               <Text style={styles.date}>{formatDate(postedAt)}</Text>
             </View>
             <Text style={styles.title}>{title}</Text>
             <Text style={styles.body}>{body}</Text>
-            {syntheticEvent ? (
+            {eventCopy ? (
               <View style={styles.eventBox}>
-                <Text style={styles.eventLine}>期間: {syntheticEvent.period}</Text>
-                {syntheticEvent.target ? (
-                  <Text style={styles.eventLine}>参加条件: {syntheticEvent.target}</Text>
+                <Text style={styles.eventLine}>
+                  {L(lang, {
+                    ja: "期間",
+                    en: "Period",
+                    ko: "기간",
+                    zh: "期间",
+                    es: "Periodo",
+                    pt: "Período",
+                    fr: "Période",
+                  })}
+                  : {eventCopy.period}
+                </Text>
+                {eventCopy.target ? (
+                  <Text style={styles.eventLine}>
+                    {L(lang, {
+                      ja: "参加条件",
+                      en: "Eligibility",
+                      ko: "참가 조건",
+                      zh: "参与条件",
+                      es: "Requisitos",
+                      pt: "Requisitos",
+                      fr: "Conditions",
+                    })}
+                    : {eventCopy.target}
+                  </Text>
                 ) : null}
-                {syntheticEvent.reward ? (
-                  <Text style={styles.eventLine}>特典: {syntheticEvent.reward}</Text>
+                {eventCopy.reward ? (
+                  <Text style={styles.eventLine}>
+                    {L(lang, {
+                      ja: "特典",
+                      en: "Reward",
+                      ko: "보상",
+                      zh: "奖励",
+                      es: "Recompensa",
+                      pt: "Recompensa",
+                      fr: "Récompense",
+                    })}
+                    : {eventCopy.reward}
+                  </Text>
                 ) : null}
               </View>
             ) : null}

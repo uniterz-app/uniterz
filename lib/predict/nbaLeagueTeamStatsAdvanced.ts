@@ -2,6 +2,7 @@
  * リーグ Team Stats の Advanced 指標（モック）。
  * Firestore スナップショットにはまだ無いので、core 行に後付けする。
  */
+import type { UiStrings } from "@/lib/i18n/ui";
 import type { NbaLeagueAdvancedCategory } from "@/lib/predict/nbaLeagueStatBoard";
 import { chunkForChipGrid, NBA_LEAGUE_STAT_CHIP_COLS } from "@/lib/predict/nbaLeagueStatBoard";
 
@@ -85,8 +86,7 @@ export type NbaLeagueTeamAdvancedMetricDef = {
   short: string;
   label: string;
   higherIsBetter: boolean;
-  hintJa: string;
-  hintEn: string;
+  hint: UiStrings;
   category: NbaLeagueAdvancedCategory | "basic";
   format: "pct" | "signed" | "ppp" | "one";
   /** false = リーグ表チップに出さない（詳細専用） */
@@ -100,8 +100,7 @@ function def(
   category: NbaLeagueAdvancedCategory | "basic",
   higherIsBetter: boolean,
   format: NbaLeagueTeamAdvancedMetricDef["format"],
-  hintJa: string,
-  hintEn: string,
+  hint: UiStrings,
   showInLeague = true
 ): NbaLeagueTeamAdvancedMetricDef {
   return {
@@ -111,104 +110,94 @@ function def(
     category,
     higherIsBetter,
     format,
-    hintJa,
-    hintEn,
+    hint,
     showInLeague,
   };
 }
 
 export const NBA_LEAGUE_TEAM_ADVANCED_METRIC_DEFS: readonly NbaLeagueTeamAdvancedMetricDef[] =
   [
-    def(
-      "fgPct",
-      "FG%",
-      "Field Goal %",
-      "basic",
-      true,
-      "pct",
-      "フィールドゴール成功率。",
-      "Field goal percentage."
-    ),
-    def(
-      "ftPct",
-      "FT%",
-      "Free Throw %",
-      "basic",
-      true,
-      "pct",
-      "フリースロー成功率。",
-      "Free throw percentage."
-    ),
-    def(
-      "tsPct",
-      "TS%",
-      "True Shooting %",
-      "basic",
-      true,
-      "pct",
-      "3P と FT を込めたシュート効率。",
-      "True shooting. Efficiency including 3s and FTs."
-    ),
-    def(
-      "ftaRate",
-      "FTr",
-      "FT Attempt Rate",
-      "fourFactors",
-      true,
-      "pct",
-      "FGA に対する FTA。フリースローをもらう力。",
-      "FTA per FGA. Ability to get to the line."
-    ),
-    def(
-      "orebPct",
-      "OREB%",
-      "Offensive Rebound %",
-      "fourFactors",
-      true,
-      "pct",
-      "オフェンスリバウンド率。",
-      "Offensive rebound percentage."
-    ),
-    def(
-      "oppEfgPct",
-      "oEFG",
-      "Opp eFG%",
-      "fourFactors",
-      false,
-      "pct",
-      "相手に許した eFG%。低いほど良い。",
-      "Opponent eFG%. Lower is better."
-    ),
-    def(
-      "oppTovPct",
-      "oTOV",
-      "Opp TOV%",
-      "fourFactors",
-      true,
-      "pct",
-      "相手のターンオーバー率。高いほど誘発できている。",
-      "Opponent turnover rate. Higher means more forced TOs."
-    ),
-    def(
-      "oppFtaRate",
-      "oFTr",
-      "Opp FT Rate",
-      "fourFactors",
-      false,
-      "pct",
-      "相手の FTA レート。低いほどファウルが少ない。",
-      "Opponent FT rate. Lower means fewer fouls."
-    ),
-    def(
-      "oppOrebPct",
-      "oORB",
-      "Opp OREB%",
-      "fourFactors",
-      false,
-      "pct",
-      "相手の OREB%。低いほどボックスアウトが良い。",
-      "Opponent OREB%. Lower is better boxing out."
-    ),
+    def("fgPct", "FG%", "Field Goal %", "basic", true, "pct", {
+      ja: "フィールドゴール成功率。",
+      en: "Field goal percentage.",
+      ko: "필드골 성공률.",
+      zh: "投篮命中率。",
+      es: "Porcentaje de tiros de campo.",
+      pt: "Aproveitamento de arremessos de quadra.",
+      fr: "Pourcentage aux tirs.",
+    }),
+    def("ftPct", "FT%", "Free Throw %", "basic", true, "pct", {
+      ja: "フリースロー成功率。",
+      en: "Free throw percentage.",
+      ko: "자유투 성공률.",
+      zh: "罚球命中率。",
+      es: "Porcentaje de tiros libres.",
+      pt: "Aproveitamento de lances livres.",
+      fr: "Pourcentage aux lancers francs.",
+    }),
+    def("tsPct", "TS%", "True Shooting %", "basic", true, "pct", {
+      ja: "3P と FT を込めたシュート効率。",
+      en: "True shooting. Efficiency including 3s and FTs.",
+      ko: "3점과 자유투를 포함한 슈팅 효율(TS%).",
+      zh: "真实命中率：包含三分与罚球的投篮效率。",
+      es: "True shooting: eficiencia incluyendo triples y libres.",
+      pt: "True shooting: eficiência incluindo 3 e lances livres.",
+      fr: "True shooting : efficacité incluant 3 pts et lancers.",
+    }),
+    def("ftaRate", "FTr", "FT Attempt Rate", "fourFactors", true, "pct", {
+      ja: "FGA に対する FTA。フリースローをもらう力。",
+      en: "FTA per FGA. Ability to get to the line.",
+      ko: "야투 시도당 자유투 시도. 자유투를 얻어내는 능력.",
+      zh: "罚球出手／投篮出手。造罚球的能力。",
+      es: "FTA por FGA. Capacidad de ir a la línea.",
+      pt: "FTA por FGA. Capacidade de ir à linha.",
+      fr: "LF tentés par tir tenté. Capacité à provoquer des fautes.",
+    }),
+    def("orebPct", "OREB%", "Offensive Rebound %", "fourFactors", true, "pct", {
+      ja: "オフェンスリバウンド率。",
+      en: "Offensive rebound percentage.",
+      ko: "공격 리바운드 비율.",
+      zh: "进攻篮板率。",
+      es: "Porcentaje de rebote ofensivo.",
+      pt: "Percentual de rebote ofensivo.",
+      fr: "Pourcentage de rebonds offensifs.",
+    }),
+    def("oppEfgPct", "oEFG", "Opp eFG%", "fourFactors", false, "pct", {
+      ja: "相手に許した eFG%。低いほど良い。",
+      en: "Opponent eFG%. Lower is better.",
+      ko: "상대에게 허용한 eFG%. 낮을수록 좋음.",
+      zh: "对手 eFG%。越低越好。",
+      es: "eFG% del rival. Cuanto más bajo, mejor.",
+      pt: "eFG% do adversário. Quanto menor, melhor.",
+      fr: "eFG% adverse. Plus bas, mieux c’est.",
+    }),
+    def("oppTovPct", "oTOV", "Opp TOV%", "fourFactors", true, "pct", {
+      ja: "相手のターンオーバー率。高いほど誘発できている。",
+      en: "Opponent turnover rate. Higher means more forced TOs.",
+      ko: "상대 턴오버 비율. 높을수록 많이 유도.",
+      zh: "对手失误率。越高说明造失误越多。",
+      es: "Tasa de pérdidas del rival. Más alta = más robos forzados.",
+      pt: "Taxa de turnovers do adversário. Maior = mais erros forçados.",
+      fr: "Taux de pertes de balle adverse. Plus haut = plus provoqué.",
+    }),
+    def("oppFtaRate", "oFTr", "Opp FT Rate", "fourFactors", false, "pct", {
+      ja: "相手の FTA レート。低いほどファウルが少ない。",
+      en: "Opponent FT rate. Lower means fewer fouls.",
+      ko: "상대 자유투 비율. 낮을수록 파울이 적음.",
+      zh: "对手罚球率。越低说明犯规越少。",
+      es: "Tasa de FT del rival. Más baja = menos faltas.",
+      pt: "Taxa de FT do adversário. Menor = menos faltas.",
+      fr: "Taux de LF adverse. Plus bas = moins de fautes.",
+    }),
+    def("oppOrebPct", "oORB", "Opp OREB%", "fourFactors", false, "pct", {
+      ja: "相手の OREB%。低いほどボックスアウトが良い。",
+      en: "Opponent OREB%. Lower is better boxing out.",
+      ko: "상대 OREB%. 낮을수록 박스아웃이 좋음.",
+      zh: "对手进攻篮板率。越低说明卡位越好。",
+      es: "OREB% del rival. Más bajo = mejor bloqueo de rebote.",
+      pt: "OREB% do adversário. Menor = melhor bloqueio.",
+      fr: "OREB% adverse. Plus bas = meilleur écran de rebond.",
+    }),
     def(
       "pctPts3",
       "3PT%",
@@ -216,8 +205,15 @@ export const NBA_LEAGUE_TEAM_ADVANCED_METRIC_DEFS: readonly NbaLeagueTeamAdvance
       "scoring",
       true,
       "pct",
-      "得点のうち 3P の割合。",
-      "Share of points from threes.",
+      {
+        ja: "得点のうち 3P の割合。",
+        en: "Share of points from threes.",
+        ko: "득점 중 3점 비중.",
+        zh: "三分得分占比。",
+        es: "Porcentaje de puntos desde el triple.",
+        pt: "Percentual de pontos vindos do 3.",
+        fr: "Part des points venant du 3 pts.",
+      },
       false
     ),
     def(
@@ -227,8 +223,15 @@ export const NBA_LEAGUE_TEAM_ADVANCED_METRIC_DEFS: readonly NbaLeagueTeamAdvance
       "scoring",
       true,
       "pct",
-      "得点のうちペイントの割合。",
-      "Share of points in the paint.",
+      {
+        ja: "得点のうちペイントの割合。",
+        en: "Share of points in the paint.",
+        ko: "득점 중 페인트존 비중.",
+        zh: "禁区得分占比。",
+        es: "Porcentaje de puntos en la zona.",
+        pt: "Percentual de pontos no garrafão.",
+        fr: "Part des points dans la raquette.",
+      },
       false
     ),
     def(
@@ -238,8 +241,15 @@ export const NBA_LEAGUE_TEAM_ADVANCED_METRIC_DEFS: readonly NbaLeagueTeamAdvance
       "scoring",
       true,
       "pct",
-      "得点のうちフリースローの割合。",
-      "Share of points from free throws.",
+      {
+        ja: "得点のうちフリースローの割合。",
+        en: "Share of points from free throws.",
+        ko: "득점 중 자유투 비중.",
+        zh: "罚球得分占比。",
+        es: "Porcentaje de puntos desde la línea.",
+        pt: "Percentual de pontos em lances livres.",
+        fr: "Part des points venant des lancers francs.",
+      },
       false
     ),
     def(
@@ -249,8 +259,15 @@ export const NBA_LEAGUE_TEAM_ADVANCED_METRIC_DEFS: readonly NbaLeagueTeamAdvance
       "scoring",
       true,
       "pct",
-      "得点のうちファストブレイクの割合。",
-      "Share of points from fast breaks.",
+      {
+        ja: "得点のうちファストブレイクの割合。",
+        en: "Share of points from fast breaks.",
+        ko: "득점 중 속공 비중.",
+        zh: "快攻得分占比。",
+        es: "Porcentaje de puntos al contragolpe.",
+        pt: "Percentual de pontos em contra-ataque.",
+        fr: "Part des points en contre-attaque.",
+      },
       false
     ),
     def(
@@ -260,100 +277,98 @@ export const NBA_LEAGUE_TEAM_ADVANCED_METRIC_DEFS: readonly NbaLeagueTeamAdvance
       "scoring",
       true,
       "pct",
-      "得点のうち相手 TO 後の割合。",
-      "Share of points off turnovers.",
+      {
+        ja: "得点のうち相手 TO 後の割合。",
+        en: "Share of points off turnovers.",
+        ko: "득점 중 상대 턴오버 이후 비중.",
+        zh: "由对手失误转化的得分占比。",
+        es: "Porcentaje de puntos tras pérdida rival.",
+        pt: "Percentual de pontos após turnover.",
+        fr: "Part des points après perte de balle adverse.",
+      },
       false
     ),
-    def(
-      "pts3",
-      "3PT",
-      "Points from 3 / G",
-      "scoring",
-      true,
-      "one",
-      "1試合あたりの3P得点。",
-      "Points per game from threes."
-    ),
-    def(
-      "ptsPaint",
-      "PAINT",
-      "Paint points / G",
-      "scoring",
-      true,
-      "one",
-      "1試合あたりのペイント得点。",
-      "Points per game in the paint."
-    ),
-    def(
-      "ptsFt",
-      "FT",
-      "FT points / G",
-      "scoring",
-      true,
-      "one",
-      "1試合あたりのフリースロー得点。",
-      "Points per game from free throws."
-    ),
-    def(
-      "ptsFb",
-      "FB",
-      "Fast-break points / G",
-      "scoring",
-      true,
-      "one",
-      "1試合あたりのファストブレイク得点。",
-      "Points per game on the break."
-    ),
-    def(
-      "ptsTov",
-      "TO",
-      "Points off TO / G",
-      "scoring",
-      true,
-      "one",
-      "1試合あたりの相手TO後の得点。",
-      "Points per game off turnovers."
-    ),
-    def(
-      "clutchNet",
-      "NET",
-      "Clutch Net Rating",
-      "clutch",
-      true,
-      "signed",
-      "僅差・終盤のネットレーティング。",
-      "Net rating in the clutch."
-    ),
-    def(
-      "clutchOrtg",
-      "ORTG",
-      "Clutch Off Rating",
-      "clutch",
-      true,
-      "one",
-      "僅差・終盤のオフェンスレーティング。",
-      "Offensive rating in the clutch."
-    ),
-    def(
-      "clutchDrtg",
-      "DRTG",
-      "Clutch Def Rating",
-      "clutch",
-      false,
-      "one",
-      "僅差・終盤のディフェンスレーティング。低いほど良い。",
-      "Defensive rating in the clutch. Lower is better."
-    ),
-    def(
-      "clutchEfg",
-      "EFG",
-      "Clutch eFG%",
-      "clutch",
-      true,
-      "pct",
-      "僅差・終盤の eFG%。",
-      "eFG% in the clutch."
-    ),
+    def("pts3", "3PT", "Points from 3 / G", "scoring", true, "one", {
+      ja: "1試合あたりの3P得点。",
+      en: "Points per game from threes.",
+      ko: "경기당 3점 득점.",
+      zh: "场均三分得分。",
+      es: "Puntos por partido de triple.",
+      pt: "Pontos por jogo em bolas de 3.",
+      fr: "Points par match à 3 pts.",
+    }),
+    def("ptsPaint", "PAINT", "Paint points / G", "scoring", true, "one", {
+      ja: "1試合あたりのペイント得点。",
+      en: "Points per game in the paint.",
+      ko: "경기당 페인트존 득점.",
+      zh: "场均禁区得分。",
+      es: "Puntos por partido en la zona.",
+      pt: "Pontos por jogo no garrafão.",
+      fr: "Points par match dans la raquette.",
+    }),
+    def("ptsFt", "FT", "FT points / G", "scoring", true, "one", {
+      ja: "1試合あたりのフリースロー得点。",
+      en: "Points per game from free throws.",
+      ko: "경기당 자유투 득점.",
+      zh: "场均罚球得分。",
+      es: "Puntos por partido en tiros libres.",
+      pt: "Pontos por jogo em lances livres.",
+      fr: "Points par match aux lancers francs.",
+    }),
+    def("ptsFb", "FB", "Fast-break points / G", "scoring", true, "one", {
+      ja: "1試合あたりのファストブレイク得点。",
+      en: "Points per game on the break.",
+      ko: "경기당 속공 득점.",
+      zh: "场均快攻得分。",
+      es: "Puntos por partido al contragolpe.",
+      pt: "Pontos por jogo em contra-ataque.",
+      fr: "Points par match en contre-attaque.",
+    }),
+    def("ptsTov", "TO", "Points off TO / G", "scoring", true, "one", {
+      ja: "1試合あたりの相手TO後の得点。",
+      en: "Points per game off turnovers.",
+      ko: "경기당 상대 턴오버 이후 득점.",
+      zh: "场均由失误转化的得分。",
+      es: "Puntos por partido tras pérdida rival.",
+      pt: "Pontos por jogo após turnover.",
+      fr: "Points par match après perte adverse.",
+    }),
+    def("clutchNet", "NET", "Clutch Net Rating", "clutch", true, "signed", {
+      ja: "僅差・終盤のネットレーティング。",
+      en: "Net rating in the clutch.",
+      ko: "클러치 상황 넷 레이팅.",
+      zh: "关键时刻净效率值。",
+      es: "Net rating en clutch.",
+      pt: "Net rating no clutch.",
+      fr: "Net rating en clutch.",
+    }),
+    def("clutchOrtg", "ORTG", "Clutch Off Rating", "clutch", true, "one", {
+      ja: "僅差・終盤のオフェンスレーティング。",
+      en: "Offensive rating in the clutch.",
+      ko: "클러치 상황 공격 레이팅.",
+      zh: "关键时刻进攻效率值。",
+      es: "Offensive rating en clutch.",
+      pt: "Offensive rating no clutch.",
+      fr: "Offensive rating en clutch.",
+    }),
+    def("clutchDrtg", "DRTG", "Clutch Def Rating", "clutch", false, "one", {
+      ja: "僅差・終盤のディフェンスレーティング。低いほど良い。",
+      en: "Defensive rating in the clutch. Lower is better.",
+      ko: "클러치 상황 수비 레이팅. 낮을수록 좋음.",
+      zh: "关键时刻防守效率值。越低越好。",
+      es: "Defensive rating en clutch. Más bajo, mejor.",
+      pt: "Defensive rating no clutch. Menor é melhor.",
+      fr: "Defensive rating en clutch. Plus bas, mieux.",
+    }),
+    def("clutchEfg", "EFG", "Clutch eFG%", "clutch", true, "pct", {
+      ja: "僅差・終盤の eFG%。",
+      en: "eFG% in the clutch.",
+      ko: "클러치 상황 eFG%.",
+      zh: "关键时刻 eFG%。",
+      es: "eFG% en clutch.",
+      pt: "eFG% no clutch.",
+      fr: "eFG% en clutch.",
+    }),
     def(
       "isoPpp",
       "ISO",
@@ -361,8 +376,15 @@ export const NBA_LEAGUE_TEAM_ADVANCED_METRIC_DEFS: readonly NbaLeagueTeamAdvance
       "playtype",
       true,
       "ppp",
-      "アイソレーションの得点効率。",
-      "Isolation points per possession.",
+      {
+        ja: "アイソレーションの得点効率。",
+        en: "Isolation points per possession.",
+        ko: "아이솔레이션 포제션당 득점(PPP).",
+        zh: "单打每回合得分（PPP）。",
+        es: "PPP en isolación.",
+        pt: "PPP em isolamento.",
+        fr: "PPP en isolation.",
+      },
       false
     ),
     def(
@@ -372,8 +394,15 @@ export const NBA_LEAGUE_TEAM_ADVANCED_METRIC_DEFS: readonly NbaLeagueTeamAdvance
       "playtype",
       true,
       "ppp",
-      "ピック&ロール（ボールハンドラー）の PPP。",
-      "Pick-and-roll ball-handler PPP.",
+      {
+        ja: "ピック&ロール（ボールハンドラー）の PPP。",
+        en: "Pick-and-roll ball-handler PPP.",
+        ko: "픽앤롤 볼핸들러 PPP.",
+        zh: "挡拆持球人 PPP。",
+        es: "PPP del manejador en pick-and-roll.",
+        pt: "PPP do condutor no pick-and-roll.",
+        fr: "PPP du porteur sur pick-and-roll.",
+      },
       false
     ),
     def(
@@ -383,8 +412,15 @@ export const NBA_LEAGUE_TEAM_ADVANCED_METRIC_DEFS: readonly NbaLeagueTeamAdvance
       "playtype",
       true,
       "ppp",
-      "ピック&ロール（ロールマン）の PPP。",
-      "Pick-and-roll roll man PPP.",
+      {
+        ja: "ピック&ロール（ロールマン）の PPP。",
+        en: "Pick-and-roll roll man PPP.",
+        ko: "픽앤롤 롤맨 PPP.",
+        zh: "挡拆顺下者 PPP。",
+        es: "PPP del roll man en pick-and-roll.",
+        pt: "PPP do roll man no pick-and-roll.",
+        fr: "PPP du roll man sur pick-and-roll.",
+      },
       false
     ),
     def(
@@ -394,8 +430,15 @@ export const NBA_LEAGUE_TEAM_ADVANCED_METRIC_DEFS: readonly NbaLeagueTeamAdvance
       "playtype",
       true,
       "ppp",
-      "スポットアップの PPP。",
-      "Spot-up PPP.",
+      {
+        ja: "スポットアップの PPP。",
+        en: "Spot-up PPP.",
+        ko: "스팟업 PPP.",
+        zh: "定点接球投篮 PPP。",
+        es: "PPP en spot-up.",
+        pt: "PPP em spot-up.",
+        fr: "PPP en spot-up.",
+      },
       false
     ),
     def(
@@ -405,8 +448,15 @@ export const NBA_LEAGUE_TEAM_ADVANCED_METRIC_DEFS: readonly NbaLeagueTeamAdvance
       "playtype",
       true,
       "ppp",
-      "トランジションの PPP。",
-      "Transition PPP.",
+      {
+        ja: "トランジションの PPP。",
+        en: "Transition PPP.",
+        ko: "트랜지션 PPP.",
+        zh: "转换进攻 PPP。",
+        es: "PPP en transición.",
+        pt: "PPP em transição.",
+        fr: "PPP en transition.",
+      },
       false
     ),
     def(
@@ -416,8 +466,15 @@ export const NBA_LEAGUE_TEAM_ADVANCED_METRIC_DEFS: readonly NbaLeagueTeamAdvance
       "playtype",
       true,
       "ppp",
-      "カットの PPP。",
-      "Cut PPP.",
+      {
+        ja: "カットの PPP。",
+        en: "Cut PPP.",
+        ko: "컷인 PPP.",
+        zh: "空切 PPP。",
+        es: "PPP en cortes.",
+        pt: "PPP em cortes.",
+        fr: "PPP sur les coupes.",
+      },
       false
     ),
     def(
@@ -427,20 +484,26 @@ export const NBA_LEAGUE_TEAM_ADVANCED_METRIC_DEFS: readonly NbaLeagueTeamAdvance
       "playtype",
       true,
       "ppp",
-      "ポストアップの PPP。",
-      "Post-up PPP.",
+      {
+        ja: "ポストアップの PPP。",
+        en: "Post-up PPP.",
+        ko: "포스트업 PPP.",
+        zh: "背身单打 PPP。",
+        es: "PPP en post-up.",
+        pt: "PPP em post-up.",
+        fr: "PPP en poste bas.",
+      },
       false
     ),
-    def(
-      "isoPts",
-      "ISO",
-      "Isolation PTS / G",
-      "playtype",
-      true,
-      "one",
-      "1試合あたりのアイソ得点。",
-      "Isolation points per game."
-    ),
+    def("isoPts", "ISO", "Isolation PTS / G", "playtype", true, "one", {
+      ja: "1試合あたりのアイソ得点。",
+      en: "Isolation points per game.",
+      ko: "경기당 아이솔레이션 득점.",
+      zh: "场均单打得分。",
+      es: "Puntos por partido en isolación.",
+      pt: "Pontos por jogo em isolamento.",
+      fr: "Points par match en isolation.",
+    }),
     def(
       "pnrBhPts",
       "PnR-B",
@@ -448,8 +511,15 @@ export const NBA_LEAGUE_TEAM_ADVANCED_METRIC_DEFS: readonly NbaLeagueTeamAdvance
       "playtype",
       true,
       "one",
-      "1試合あたりの PnR ハンドラー得点。",
-      "Pick-and-roll ball-handler points per game."
+      {
+        ja: "1試合あたりの PnR ハンドラー得点。",
+        en: "Pick-and-roll ball-handler points per game.",
+        ko: "경기당 픽앤롤 볼핸들러 득점.",
+        zh: "场均挡拆持球人得分。",
+        es: "Puntos por partido del manejador en pick-and-roll.",
+        pt: "Pontos por jogo do condutor no pick-and-roll.",
+        fr: "Points par match du porteur sur pick-and-roll.",
+      }
     ),
     def(
       "pnrRollPts",
@@ -458,49 +528,52 @@ export const NBA_LEAGUE_TEAM_ADVANCED_METRIC_DEFS: readonly NbaLeagueTeamAdvance
       "playtype",
       true,
       "one",
-      "1試合あたりの PnR ロール得点。",
-      "Pick-and-roll roll-man points per game."
+      {
+        ja: "1試合あたりの PnR ロール得点。",
+        en: "Pick-and-roll roll-man points per game.",
+        ko: "경기당 픽앤롤 롤맨 득점.",
+        zh: "场均挡拆顺下者得分。",
+        es: "Puntos por partido del roll man.",
+        pt: "Pontos por jogo do roll man.",
+        fr: "Points par match du roll man.",
+      }
     ),
-    def(
-      "spotupPts",
-      "SPOT",
-      "Spot-up PTS / G",
-      "playtype",
-      true,
-      "one",
-      "1試合あたりのスポットアップ得点。",
-      "Spot-up points per game."
-    ),
-    def(
-      "transPts",
-      "TRAN",
-      "Transition PTS / G",
-      "playtype",
-      true,
-      "one",
-      "1試合あたりのトランジション得点。",
-      "Transition points per game."
-    ),
-    def(
-      "cutPts",
-      "CUT",
-      "Cut PTS / G",
-      "playtype",
-      true,
-      "one",
-      "1試合あたりのカット得点。",
-      "Cut points per game."
-    ),
-    def(
-      "postPts",
-      "POST",
-      "Post-up PTS / G",
-      "playtype",
-      true,
-      "one",
-      "1試合あたりのポストアップ得点。",
-      "Post-up points per game."
-    ),
+    def("spotupPts", "SPOT", "Spot-up PTS / G", "playtype", true, "one", {
+      ja: "1試合あたりのスポットアップ得点。",
+      en: "Spot-up points per game.",
+      ko: "경기당 스팟업 득점.",
+      zh: "场均定点投篮得分。",
+      es: "Puntos por partido en spot-up.",
+      pt: "Pontos por jogo em spot-up.",
+      fr: "Points par match en spot-up.",
+    }),
+    def("transPts", "TRAN", "Transition PTS / G", "playtype", true, "one", {
+      ja: "1試合あたりのトランジション得点。",
+      en: "Transition points per game.",
+      ko: "경기당 트랜지션 득점.",
+      zh: "场均转换进攻得分。",
+      es: "Puntos por partido en transición.",
+      pt: "Pontos por jogo em transição.",
+      fr: "Points par match en transition.",
+    }),
+    def("cutPts", "CUT", "Cut PTS / G", "playtype", true, "one", {
+      ja: "1試合あたりのカット得点。",
+      en: "Cut points per game.",
+      ko: "경기당 컷인 득점.",
+      zh: "场均空切得分。",
+      es: "Puntos por partido en cortes.",
+      pt: "Pontos por jogo em cortes.",
+      fr: "Points par match sur les coupes.",
+    }),
+    def("postPts", "POST", "Post-up PTS / G", "playtype", true, "one", {
+      ja: "1試合あたりのポストアップ得点。",
+      en: "Post-up points per game.",
+      ko: "경기당 포스트업 득점.",
+      zh: "场均背身单打得分。",
+      es: "Puntos por partido en post-up.",
+      pt: "Pontos por jogo em post-up.",
+      fr: "Points par match en poste bas.",
+    }),
     def(
       "isoFreq",
       "ISO%",
@@ -508,8 +581,15 @@ export const NBA_LEAGUE_TEAM_ADVANCED_METRIC_DEFS: readonly NbaLeagueTeamAdvance
       "playtype",
       true,
       "pct",
-      "アイソの使用割合。",
-      "Isolation possession share.",
+      {
+        ja: "アイソの使用割合。",
+        en: "Isolation possession share.",
+        ko: "아이솔레이션 사용 비중.",
+        zh: "单打回合占比。",
+        es: "Cuota de posesiones en isolación.",
+        pt: "Fatia de posses em isolamento.",
+        fr: "Part des possessions en isolation.",
+      },
       false
     ),
     def(
@@ -519,8 +599,15 @@ export const NBA_LEAGUE_TEAM_ADVANCED_METRIC_DEFS: readonly NbaLeagueTeamAdvance
       "playtype",
       true,
       "pct",
-      "PnR ハンドラーの使用割合。",
-      "PnR ball-handler possession share.",
+      {
+        ja: "PnR ハンドラーの使用割合。",
+        en: "PnR ball-handler possession share.",
+        ko: "픽앤롤 볼핸들러 사용 비중.",
+        zh: "挡拆持球人回合占比。",
+        es: "Cuota de posesiones del manejador en PnR.",
+        pt: "Fatia de posses do condutor no PnR.",
+        fr: "Part des possessions du porteur sur PnR.",
+      },
       false
     ),
     def(
@@ -530,8 +617,15 @@ export const NBA_LEAGUE_TEAM_ADVANCED_METRIC_DEFS: readonly NbaLeagueTeamAdvance
       "playtype",
       true,
       "pct",
-      "PnR ロールの使用割合。",
-      "PnR roll possession share.",
+      {
+        ja: "PnR ロールの使用割合。",
+        en: "PnR roll possession share.",
+        ko: "픽앤롤 롤맨 사용 비중.",
+        zh: "挡拆顺下回合占比。",
+        es: "Cuota de posesiones del roll man.",
+        pt: "Fatia de posses do roll man.",
+        fr: "Part des possessions du roll man.",
+      },
       false
     ),
     def(
@@ -541,8 +635,15 @@ export const NBA_LEAGUE_TEAM_ADVANCED_METRIC_DEFS: readonly NbaLeagueTeamAdvance
       "playtype",
       true,
       "pct",
-      "スポットアップの使用割合。",
-      "Spot-up possession share.",
+      {
+        ja: "スポットアップの使用割合。",
+        en: "Spot-up possession share.",
+        ko: "스팟업 사용 비중.",
+        zh: "定点投篮回合占比。",
+        es: "Cuota de posesiones en spot-up.",
+        pt: "Fatia de posses em spot-up.",
+        fr: "Part des possessions en spot-up.",
+      },
       false
     ),
     def(
@@ -552,8 +653,15 @@ export const NBA_LEAGUE_TEAM_ADVANCED_METRIC_DEFS: readonly NbaLeagueTeamAdvance
       "playtype",
       true,
       "pct",
-      "トランジションの使用割合。",
-      "Transition possession share.",
+      {
+        ja: "トランジションの使用割合。",
+        en: "Transition possession share.",
+        ko: "트랜지션 사용 비중.",
+        zh: "转换进攻回合占比。",
+        es: "Cuota de posesiones en transición.",
+        pt: "Fatia de posses em transição.",
+        fr: "Part des possessions en transition.",
+      },
       false
     ),
     def(
@@ -563,8 +671,15 @@ export const NBA_LEAGUE_TEAM_ADVANCED_METRIC_DEFS: readonly NbaLeagueTeamAdvance
       "playtype",
       true,
       "pct",
-      "カットの使用割合。",
-      "Cut possession share.",
+      {
+        ja: "カットの使用割合。",
+        en: "Cut possession share.",
+        ko: "컷인 사용 비중.",
+        zh: "空切回合占比。",
+        es: "Cuota de posesiones en cortes.",
+        pt: "Fatia de posses em cortes.",
+        fr: "Part des possessions sur les coupes.",
+      },
       false
     ),
     def(
@@ -574,8 +689,15 @@ export const NBA_LEAGUE_TEAM_ADVANCED_METRIC_DEFS: readonly NbaLeagueTeamAdvance
       "playtype",
       true,
       "pct",
-      "ポストアップの使用割合。",
-      "Post-up possession share.",
+      {
+        ja: "ポストアップの使用割合。",
+        en: "Post-up possession share.",
+        ko: "포스트업 사용 비중.",
+        zh: "背身单打回合占比。",
+        es: "Cuota de posesiones en post-up.",
+        pt: "Fatia de posses em post-up.",
+        fr: "Part des possessions en poste bas.",
+      },
       false
     ),
     def(
@@ -585,8 +707,15 @@ export const NBA_LEAGUE_TEAM_ADVANCED_METRIC_DEFS: readonly NbaLeagueTeamAdvance
       "shooting",
       true,
       "pct",
-      "restricted area の FG%。",
-      "Restricted-area FG%.",
+      {
+        ja: "restricted area の FG%。",
+        en: "Restricted-area FG%.",
+        ko: "제한구역 야투 성공률.",
+        zh: "禁区（限制区）命中率。",
+        es: "FG% en zona restringida.",
+        pt: "FG% na área restrita.",
+        fr: "FG% dans la zone restreinte.",
+      },
       false
     ),
     def(
@@ -596,130 +725,125 @@ export const NBA_LEAGUE_TEAM_ADVANCED_METRIC_DEFS: readonly NbaLeagueTeamAdvance
       "shooting",
       true,
       "pct",
-      "コーナー3の成功率。",
-      "Corner three percentage.",
+      {
+        ja: "コーナー3の成功率。",
+        en: "Corner three percentage.",
+        ko: "코너 3점 성공률.",
+        zh: "底角三分命中率。",
+        es: "Porcentaje en triples de esquina.",
+        pt: "Aproveitamento em 3 de canto.",
+        fr: "Pourcentage à 3 pts de coin.",
+      },
       false
     ),
-    def(
-      "fgPctAllowed",
-      "FG%",
-      "Opp FG%",
-      "defense",
-      false,
-      "pct",
-      "相手に許した FG%。低いほど良い。",
-      "Opponent FG%. Lower is better."
-    ),
-    def(
-      "fg3PctAllowed",
-      "3P%",
-      "Opp 3P%",
-      "defense",
-      false,
-      "pct",
-      "相手に許した 3P%。低いほど良い。",
-      "Opponent 3P%. Lower is better."
-    ),
-    def(
-      "rebAllowed",
-      "REB",
-      "Opp REB / G",
-      "defense",
-      false,
-      "one",
-      "相手に許したリバウンド。低いほど良い。",
-      "Rebounds allowed per game. Lower is better."
-    ),
-    def(
-      "astAllowed",
-      "AST",
-      "Opp AST / G",
-      "defense",
-      false,
-      "one",
-      "相手に許したアシスト。低いほど良い。",
-      "Assists allowed per game. Lower is better."
-    ),
-    def(
-      "tovForced",
-      "TOV",
-      "TOs forced / G",
-      "defense",
-      true,
-      "one",
-      "誘発したターンオーバー。高いほど良い。",
-      "Turnovers forced per game."
-    ),
-    def(
-      "drives",
-      "DRIVE",
-      "Drives / G",
-      "tracking",
-      true,
-      "one",
-      "1試合あたりのドライブ数。",
-      "Drives per game."
-    ),
-    def(
-      "drivePts",
-      "D-PTS",
-      "Drive PTS / G",
-      "tracking",
-      true,
-      "one",
-      "ドライブからの1試合平均得点。",
-      "Points per game from drives."
-    ),
-    def(
-      "cnsFgPct",
-      "C&S",
-      "Catch & Shoot FG%",
-      "tracking",
-      true,
-      "pct",
-      "キャッチ&シュートの FG%。",
-      "Catch-and-shoot FG%."
-    ),
-    def(
-      "cnsPts",
-      "CS-PTS",
-      "Catch & Shoot PTS / G",
-      "tracking",
-      true,
-      "one",
-      "キャッチ&シュートからの1試合平均得点。",
-      "Points per game from catch-and-shoot."
-    ),
-    def(
-      "pullupFgPct",
-      "PULL",
-      "Pull-up FG%",
-      "tracking",
-      true,
-      "pct",
-      "プルアップの FG%。",
-      "Pull-up FG%."
-    ),
-    def(
-      "pullupPts",
-      "PU-PTS",
-      "Pull-up PTS / G",
-      "tracking",
-      true,
-      "one",
-      "プルアップからの1試合平均得点。",
-      "Points per game from pull-ups."
-    ),
-    def(
-      "paintTouches",
-      "PAINT",
-      "Paint touches / G",
-      "tracking",
-      true,
-      "one",
-      "ペイントタッチ数。",
-      "Paint touches per game."
-    ),
+    def("fgPctAllowed", "FG%", "Opp FG%", "defense", false, "pct", {
+      ja: "相手に許した FG%。低いほど良い。",
+      en: "Opponent FG%. Lower is better.",
+      ko: "상대에게 허용한 야투 성공률. 낮을수록 좋음.",
+      zh: "对手投篮命中率。越低越好。",
+      es: "FG% del rival. Más bajo, mejor.",
+      pt: "FG% do adversário. Menor é melhor.",
+      fr: "FG% adverse. Plus bas, mieux.",
+    }),
+    def("fg3PctAllowed", "3P%", "Opp 3P%", "defense", false, "pct", {
+      ja: "相手に許した 3P%。低いほど良い。",
+      en: "Opponent 3P%. Lower is better.",
+      ko: "상대에게 허용한 3점 성공률. 낮을수록 좋음.",
+      zh: "对手三分命中率。越低越好。",
+      es: "3P% del rival. Más bajo, mejor.",
+      pt: "3P% do adversário. Menor é melhor.",
+      fr: "3P% adverse. Plus bas, mieux.",
+    }),
+    def("rebAllowed", "REB", "Opp REB / G", "defense", false, "one", {
+      ja: "相手に許したリバウンド。低いほど良い。",
+      en: "Rebounds allowed per game. Lower is better.",
+      ko: "경기당 허용 리바운드. 낮을수록 좋음.",
+      zh: "场均被对手抢下的篮板。越低越好。",
+      es: "Rebotes concedidos por partido. Más bajo, mejor.",
+      pt: "Rebotes concedidos por jogo. Menor é melhor.",
+      fr: "Rebonds concédés par match. Plus bas, mieux.",
+    }),
+    def("astAllowed", "AST", "Opp AST / G", "defense", false, "one", {
+      ja: "相手に許したアシスト。低いほど良い。",
+      en: "Assists allowed per game. Lower is better.",
+      ko: "경기당 허용 어시스트. 낮을수록 좋음.",
+      zh: "场均被对手打出的助攻。越低越好。",
+      es: "Asistencias concedidas por partido. Más bajo, mejor.",
+      pt: "Assistências concedidas por jogo. Menor é melhor.",
+      fr: "Passes décisives concédées par match. Plus bas, mieux.",
+    }),
+    def("tovForced", "TOV", "TOs forced / G", "defense", true, "one", {
+      ja: "誘発したターンオーバー。高いほど良い。",
+      en: "Turnovers forced per game.",
+      ko: "경기당 유도한 턴오버. 높을수록 좋음.",
+      zh: "场均造成对手失误。越高越好。",
+      es: "Pérdidas forzadas por partido.",
+      pt: "Turnovers forçados por jogo.",
+      fr: "Pertes de balle provoquées par match.",
+    }),
+    def("drives", "DRIVE", "Drives / G", "tracking", true, "one", {
+      ja: "1試合あたりのドライブ数。",
+      en: "Drives per game.",
+      ko: "경기당 드라이브 횟수.",
+      zh: "场均突破次数。",
+      es: "Penetraciones por partido.",
+      pt: "Drives por jogo.",
+      fr: "Pénétrations par match.",
+    }),
+    def("drivePts", "D-PTS", "Drive PTS / G", "tracking", true, "one", {
+      ja: "ドライブからの1試合平均得点。",
+      en: "Points per game from drives.",
+      ko: "경기당 드라이브 득점.",
+      zh: "场均突破得分。",
+      es: "Puntos por partido en penetraciones.",
+      pt: "Pontos por jogo em drives.",
+      fr: "Points par match sur pénétrations.",
+    }),
+    def("cnsFgPct", "C&S", "Catch & Shoot FG%", "tracking", true, "pct", {
+      ja: "キャッチ&シュートの FG%。",
+      en: "Catch-and-shoot FG%.",
+      ko: "캐치&슛 야투 성공률.",
+      zh: "接球即投命中率。",
+      es: "FG% en catch-and-shoot.",
+      pt: "FG% em catch-and-shoot.",
+      fr: "FG% en catch-and-shoot.",
+    }),
+    def("cnsPts", "CS-PTS", "Catch & Shoot PTS / G", "tracking", true, "one", {
+      ja: "キャッチ&シュートからの1試合平均得点。",
+      en: "Points per game from catch-and-shoot.",
+      ko: "경기당 캐치&슛 득점.",
+      zh: "场均接球即投得分。",
+      es: "Puntos por partido en catch-and-shoot.",
+      pt: "Pontos por jogo em catch-and-shoot.",
+      fr: "Points par match en catch-and-shoot.",
+    }),
+    def("pullupFgPct", "PULL", "Pull-up FG%", "tracking", true, "pct", {
+      ja: "プルアップの FG%。",
+      en: "Pull-up FG%.",
+      ko: "풀업 점퍼 야투 성공률.",
+      zh: "拉杆／急停跳投命中率。",
+      es: "FG% en pull-up.",
+      pt: "FG% em pull-up.",
+      fr: "FG% en pull-up.",
+    }),
+    def("pullupPts", "PU-PTS", "Pull-up PTS / G", "tracking", true, "one", {
+      ja: "プルアップからの1試合平均得点。",
+      en: "Points per game from pull-ups.",
+      ko: "경기당 풀업 점퍼 득점.",
+      zh: "场均急停跳投得分。",
+      es: "Puntos por partido en pull-up.",
+      pt: "Pontos por jogo em pull-up.",
+      fr: "Points par match en pull-up.",
+    }),
+    def("paintTouches", "PAINT", "Paint touches / G", "tracking", true, "one", {
+      ja: "ペイントタッチ数。",
+      en: "Paint touches per game.",
+      ko: "경기당 페인트존 터치.",
+      zh: "场均禁区触球次数。",
+      es: "Toques en la zona por partido.",
+      pt: "Toques no garrafão por jogo.",
+      fr: "Ballons touchés dans la raquette par match.",
+    }),
     def(
       "paintTouchPts",
       "PT-PTS",
@@ -727,69 +851,70 @@ export const NBA_LEAGUE_TEAM_ADVANCED_METRIC_DEFS: readonly NbaLeagueTeamAdvance
       "tracking",
       true,
       "one",
-      "ペイントタッチからの1試合平均得点。",
-      "Points per game from paint touches."
+      {
+        ja: "ペイントタッチからの1試合平均得点。",
+        en: "Points per game from paint touches.",
+        ko: "경기당 페인트존 터치 득점.",
+        zh: "场均禁区触球得分。",
+        es: "Puntos por partido tras toques en la zona.",
+        pt: "Pontos por jogo após toques no garrafão.",
+        fr: "Points par match après ballon dans la raquette.",
+      }
     ),
-    def(
-      "passes",
-      "PASS",
-      "Passes / G",
-      "tracking",
-      true,
-      "one",
-      "1試合あたりのパス数。",
-      "Passes per game."
-    ),
-    def(
-      "speed",
-      "SPD",
-      "Avg speed",
-      "tracking",
-      true,
-      "one",
-      "平均スピード。",
-      "Average speed."
-    ),
-    def(
-      "deflections",
-      "DEFL",
-      "Deflections / G",
-      "hustle",
-      true,
-      "one",
-      "ディフレクション。",
-      "Deflections per game."
-    ),
-    def(
-      "charges",
-      "CHG",
-      "Charges drawn / G",
-      "hustle",
-      true,
-      "one",
-      "チャージングをもらった数。",
-      "Charges drawn per game."
-    ),
-    def(
-      "looseBalls",
-      "LOOSE",
-      "Loose balls / G",
-      "hustle",
-      true,
-      "one",
-      "ルーズボールリカバー。",
-      "Loose balls recovered per game."
-    ),
-    def(
-      "screenAst",
-      "SCRN",
-      "Screen assists / G",
-      "hustle",
-      true,
-      "one",
-      "スクリーンアシスト。",
-      "Screen assists per game."
-    ),
+    def("passes", "PASS", "Passes / G", "tracking", true, "one", {
+      ja: "1試合あたりのパス数。",
+      en: "Passes per game.",
+      ko: "경기당 패스 횟수.",
+      zh: "场均传球次数。",
+      es: "Pases por partido.",
+      pt: "Passes por jogo.",
+      fr: "Passes par match.",
+    }),
+    def("speed", "SPD", "Avg speed", "tracking", true, "one", {
+      ja: "平均スピード。",
+      en: "Average speed.",
+      ko: "평균 스피드.",
+      zh: "平均移动速度。",
+      es: "Velocidad media.",
+      pt: "Velocidade média.",
+      fr: "Vitesse moyenne.",
+    }),
+    def("deflections", "DEFL", "Deflections / G", "hustle", true, "one", {
+      ja: "ディフレクション。",
+      en: "Deflections per game.",
+      ko: "경기당 디플렉션.",
+      zh: "场均干扰球次数。",
+      es: "Desvíos por partido.",
+      pt: "Desvios por jogo.",
+      fr: "Déviations par match.",
+    }),
+    def("charges", "CHG", "Charges drawn / G", "hustle", true, "one", {
+      ja: "チャージングをもらった数。",
+      en: "Charges drawn per game.",
+      ko: "경기당 유도한 차징 파울.",
+      zh: "场均造对手带球撞人。",
+      es: "Cargas provocadas por partido.",
+      pt: "Faltas de ataque provocadas por jogo.",
+      fr: "Fautes offensives provoquées par match.",
+    }),
+    def("looseBalls", "LOOSE", "Loose balls / G", "hustle", true, "one", {
+      ja: "ルーズボールリカバー。",
+      en: "Loose balls recovered per game.",
+      ko: "경기당 루즈볼 획득.",
+      zh: "场均争抢到的球。",
+      es: "Balones sueltos recuperados por partido.",
+      pt: "Bolas soltas recuperadas por jogo.",
+      fr: "Ballons perdus récupérés par match.",
+    }),
+    def("screenAst", "SCRN", "Screen assists / G", "hustle", true, "one", {
+      ja: "スクリーンアシスト。",
+      en: "Screen assists per game.",
+      ko: "경기당 스크린 어시스트.",
+      zh: "场均掩护助攻。",
+      es: "Asistencias de bloqueo por partido.",
+      pt: "Assistências de bloqueio por jogo.",
+      fr: "Passes décisives sur écran par match.",
+    }),
     def(
       "contestedShots",
       "CONT",
@@ -797,8 +922,15 @@ export const NBA_LEAGUE_TEAM_ADVANCED_METRIC_DEFS: readonly NbaLeagueTeamAdvance
       "hustle",
       true,
       "one",
-      "コンテストしたシュート。",
-      "Contested shots per game."
+      {
+        ja: "コンテストしたシュート。",
+        en: "Contested shots per game.",
+        ko: "경기당 컨테스트한 슈팅.",
+        zh: "场均干扰对手出手次数。",
+        es: "Tiros disputados por partido.",
+        pt: "Arremessos contestados por jogo.",
+        fr: "Tirs contestés par match.",
+      }
     ),
   ];
 

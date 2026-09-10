@@ -20,7 +20,7 @@ import { nbaConferenceForTeam } from "../../../../../../lib/nba/nbaConferenceTea
 import { NBA_TEAM_NAME_BY_ID } from "../../../../../../lib/nba-team-names";
 import { getMobileTeamName } from "../../../../../../lib/team-name-split-mobile";
 import { TEAM_SHORT } from "../../../../../../lib/team-short";
-import { MATCH_CARD_DISPLAY_FONT } from "../matchCardTypography";
+import { MATCH_CARD_TEAM_NAME_FONT } from "../matchCardTypography";
 
 type Props = {
   report: NbaRosterReport;
@@ -496,12 +496,12 @@ const styles = StyleSheet.create({
   },
   teamName: {
     flex: 1,
-    fontFamily: MATCH_CARD_DISPLAY_FONT,
-    fontSize: 20,
-    lineHeight: 24,
-    fontWeight: "400",
+    fontFamily: MATCH_CARD_TEAM_NAME_FONT,
+    fontSize: 14,
+    lineHeight: 18,
+    fontWeight: "700",
     color: "#fff",
-    letterSpacing: 1.2,
+    letterSpacing: 0.8,
     textTransform: "uppercase",
     includeFontPadding: false,
     transform: [{ skewX: "-6deg" }],

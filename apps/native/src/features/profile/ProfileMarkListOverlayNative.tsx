@@ -45,6 +45,8 @@ import {
   cyberMetricTag,
 } from "../../../../../lib/rankings/cyberRankVisual";
 import { nativeBlurViewExtraProps } from "../../ui/nativeBlurProps";
+import { profileMarkListCopy } from "./profileOverviewWidgetsCopy";
+import { resolveLocalizedLang } from "../../../../../lib/i18n/localize";
 
 export type MarkListRow = UserMark & {
   weeklyRank: number | null;
@@ -80,7 +82,7 @@ function rowsFromBoard(
 
 type Props = {
   visible: boolean;
-  language: "ja" | "en";
+  language: string;
   marks: UserMark[];
   loading: boolean;
   maxMarks?: number;
@@ -107,10 +109,10 @@ function MarkListSheetBody({
   onUnmark,
 }: Props) {
   const insets = useSafeAreaInsets();
-  const isJa = language === "ja";
+  const copy = profileMarkListCopy(language);
   const [rows, setRows] = useState<MarkListRow[]>([]);
   const [statsLoading, setStatsLoading] = useState(false);
-  const metricTag = cyberMetricTag("totalScore", language);
+  const metricTag = cyberMetricTag("totalScore", resolveLocalizedLang(language));
   const tagFontSize = rankingFontSizePx(7, metricTag);
   const sheetWidth = useMemo(
     () => Math.max(280, Dimensions.get("window").width - SHEET_RIGHT_GAP),
@@ -205,7 +207,7 @@ function MarkListSheetBody({
           style={StyleSheet.absoluteFillObject}
           onPress={onClose}
           accessibilityRole="button"
-          accessibilityLabel={isJa ? "戻る" : "Back"}
+          accessibilityLabel={copy.back}
         />
       </Animated.View>
 
@@ -225,9 +227,7 @@ function MarkListSheetBody({
             <View style={styles.headerText}>
               <Text style={styles.title}>MARK LIST</Text>
               <Text style={styles.sub}>
-                {isJa
-                  ? `マーク中 ${marks.length}/${maxMarks} · マークされた数 ${markedByCount}`
-                  : `Marked ${marks.length}/${maxMarks} · marked by ${markedByCount}`}
+                {copy.sub(marks.length, maxMarks, markedByCount)}
               </Text>
             </View>
           </View>
@@ -244,9 +244,7 @@ function MarkListSheetBody({
                 color="rgba(165,243,252,0.45)"
               />
               <Text style={styles.empty}>
-                {isJa
-                  ? "他の予想者を MARK するとここに並びます"
-                  : "MARK other predictors to see them here"}
+                {copy.empty}
               </Text>
             </View>
           ) : (
@@ -260,13 +258,13 @@ function MarkListSheetBody({
             >
               <View style={styles.sectionTitleRow}>
                 <Text style={styles.sectionTitle}>
-                  {isJa ? "今週の順位" : "WEEKLY"}
+                  {copy.weekly}
                 </Text>
                 <View style={styles.sectionTitleLine} />
               </View>
               {statsLoading ? (
                 <Text style={styles.hint}>
-                  {isJa ? "今週の成績を読み込み中…" : "Loading weekly stats…"}
+                  {copy.loadingWeekly}
                 </Text>
               ) : null}
               {rows.map((row) => {
@@ -356,7 +354,7 @@ function MarkListSheetBody({
                         hitSlop={8}
                         style={styles.unmarkBtn}
                         accessibilityRole="button"
-                        accessibilityLabel={isJa ? "マークを外す" : "Unmark"}
+                        accessibilityLabel={copy.unmark}
                       >
                         <MaterialCommunityIcons
                           name="close"
@@ -375,7 +373,7 @@ function MarkListSheetBody({
 
       <ProfileBackEdgeHandleNative
         onPress={onClose}
-        accessibilityLabel={isJa ? "戻る" : "Back"}
+        accessibilityLabel={copy.back}
       />
     </View>
   );

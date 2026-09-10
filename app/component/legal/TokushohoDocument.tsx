@@ -12,7 +12,7 @@ export default function TokushohoDocument({
 }: {
   language?: CompanyLang;
 }) {
-  const lang: CompanyLang = language === "en" ? "en" : "ja";
+  const lang: CompanyLang = language === "ja" ? "ja" : "en";
   const rows = tokushohoRows(lang);
   const emailPrefix = lang === "en" ? "Email: " : "メールアドレス：";
 

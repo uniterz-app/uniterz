@@ -8,6 +8,7 @@ import {
   subtractDaysFromDateKeyJST,
 } from "@/lib/rankings/rankSnapshotDate";
 import { nbaSeasonKeyFromDateJST } from "@/lib/rankings/nbaSeason";
+import { resolveLocalizedLang } from "@/lib/i18n/localize";
 
 export type RankingPeriod = "season" | "weekly" | "monthly";
 
@@ -249,15 +250,16 @@ function weekEndLabelFromStart(startKey: string): string {
 export function formatRankingPeriodDisplay(
   period: Exclude<RankingPeriod, "season">,
   label: string,
-  language: "ja" | "en"
+  language: string | null | undefined
 ): string {
+  const lang = resolveLocalizedLang(language);
   if (period === "weekly") {
     const [, m1, d1] = label.split("-");
     const [, m2, d2] = weekEndLabelFromStart(label).split("-");
     return `${Number(m1)}/${Number(d1)} – ${Number(m2)}/${Number(d2)}`;
   }
   const [y, m] = label.split("-").map(Number);
-  if (language === "en") {
+  if (lang !== "ja") {
     const months = [
       "Jan",
       "Feb",

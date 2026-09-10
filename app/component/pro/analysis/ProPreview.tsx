@@ -68,7 +68,7 @@ export default function ProPreviewPage() {
 
       <ProAnalysisView
         isSample
-        language={language === "en" ? "en" : "ja"}
+        language={language === "ja" ? "ja" : "en"}
         prevMonthSummary={{
           monthKey: "2025-12",
           stats: {

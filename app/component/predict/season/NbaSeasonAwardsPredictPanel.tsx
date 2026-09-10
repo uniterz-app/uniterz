@@ -18,8 +18,11 @@ import {
   AWARDS_PREVIEW_POPULAR,
 } from "@/lib/predict/nbaSeasonAwardsPreviewMocks";
 import { nameOxanium } from "@/lib/fonts";
+import type { UiStrings } from "@/lib/i18n/ui";
+import { awardName } from "@/lib/predict/nbaSeasonAwardsPredict";
 import {
   seasonPredictAwardsPredictHint,
+  seasonPredictPageUiCopy,
   type SeasonPredictUiLang,
 } from "@/lib/predict/seasonPredictUiCopy";
 
@@ -43,7 +46,7 @@ function findInCatalog(
 function AwardPickRow({
   awardId,
   labelEn,
-  labelJa,
+  name,
   kind,
   selectedId,
   onSelect,
@@ -51,7 +54,7 @@ function AwardPickRow({
 }: {
   awardId: NbaAwardId;
   labelEn: string;
-  labelJa: string;
+  name: UiStrings;
   kind: "player" | "coach";
   selectedId: string | null | undefined;
   onSelect: (id: string | null) => void;
@@ -81,9 +84,9 @@ function AwardPickRow({
         >
           {labelEn}
         </span>
-        {language !== "en" ? (
-          <span className="text-[11px] text-white/40">{labelJa}</span>
-        ) : null}
+        <span className="text-[11px] text-white/40">
+          {awardName(language, { name })}
+        </span>
       </div>
 
       {selected ? (
@@ -246,7 +249,7 @@ export default function NbaSeasonAwardsPredictPanel({
             key={def.id}
             awardId={def.id}
             labelEn={def.labelEn}
-            labelJa={def.labelJa}
+            name={def.name}
             kind={def.kind}
             selectedId={value.picks[def.id]}
             language={language}
@@ -287,7 +290,7 @@ export default function NbaSeasonAwardsPredictPanel({
                   : "border border-white/15 bg-white/[0.04] text-white/55 hover:bg-white/[0.08]",
             ].join(" ")}
           >
-            {submitDisabled ? "Submitting…" : "Submit prediction"}
+            {submitDisabled ? seasonPredictPageUiCopy(language ?? "ja").submitting : seasonPredictPageUiCopy(language ?? "ja").submitPrediction}
           </button>
         </div>
       ) : null}

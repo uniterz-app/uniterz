@@ -20,7 +20,7 @@ type Props = {
   badges: ResolvedBadgeNative[];
   emptyLabel: string;
   onSelect: (badge: ResolvedBadgeNative) => void;
-  language: "ja" | "en";
+  language: string;
 };
 
 export default function BadgePaletteNative({

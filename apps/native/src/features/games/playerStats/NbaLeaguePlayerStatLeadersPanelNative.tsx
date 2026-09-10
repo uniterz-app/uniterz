@@ -37,6 +37,10 @@ import {
 
 import { getUniterzApiBaseUrl } from "../submitPredictionApi";
 import {
+  nbaLocalizedText,
+  nbaLeagueStatsChrome,
+} from "../stats/nbaStatsUiCopy";
+import {
   CyberSlantedTabBarNative,
   CyberSlantedTabNative,
   CYBER_TAB_CYAN,
@@ -45,20 +49,14 @@ import {
   METRIC_FONT,
   RANK_DISPLAY_FONT,
 } from "../../rankings/rankingsUiTheme";
-import {
-  MATCH_CARD_BRACKET_LETTER_SPACING_15,
-  MATCH_CARD_BRACKET_TEXT,
-} from "../matchCardTypography";
 import { CYBER_SIDE_MENU_PANEL } from "../../../ui/cyberSideMenuNative";
 import { useBottomTabBarInsets } from "../../../navigation/useBottomTabBarInsets";
 import TeamAbbrBadgeNative from "../TeamAbbrBadgeNative";
 
-const OXANIUM_800 = "Oxanium_800ExtraBold";
-
 type SortDir = "desc" | "asc";
 
 type Props = {
-  language: "ja" | "en";
+  language: string;
   onSelectPlayer?: (playerId: string) => void;
 };
 
@@ -106,7 +104,8 @@ export default function NbaLeaguePlayerStatLeadersPanelNative({
   language,
   onSelectPlayer,
 }: Props) {
-  const isJa = language === "ja";
+  const chrome = nbaLeagueStatsChrome(language);
+  const { lang } = chrome;
   const { width: screenW } = useWindowDimensions();
   const railW = Math.round(screenW * 0.22);
   const { bottomContentReserveY } = useBottomTabBarInsets();
@@ -114,7 +113,7 @@ export default function NbaLeaguePlayerStatLeadersPanelNative({
     apiBaseUrl: getUniterzApiBaseUrl(),
   });
   const isPreseason = isNbaLeagueStatsPreseason();
-  const updateFootnote = nbaDailyStatsUpdateFootnote(isJa ? "ja" : "en", bundle.asOfLabel, {
+  const updateFootnote = nbaDailyStatsUpdateFootnote(lang, bundle.asOfLabel, {
     preseason: isPreseason,
   });
   const [phase, setPhase] = useState<NbaLeagueStatsPhase>("season");
@@ -159,7 +158,7 @@ export default function NbaLeaguePlayerStatLeadersPanelNative({
     return sortDir === "asc" ? [...list].reverse() : list;
   }, [bundle, phase, mode, metric, sortDir]);
 
-  const emptyCopy = leagueStatsTableEmptyCopy(isJa ? "ja" : "en", mode);
+  const emptyCopy = leagueStatsTableEmptyCopy(lang, mode);
   const showEmptyTable = !loading && leaders.length === 0;
 
   return (
@@ -174,9 +173,7 @@ export default function NbaLeaguePlayerStatLeadersPanelNative({
         <Text style={styles.asOf}>{updateFootnote}</Text>
         {error ? (
           <Text style={styles.fetchWarn}>
-            {isJa
-              ? `読み込み失敗（${error}）`
-              : `Failed to load (${error})`}
+            {chrome.loadFailed(error)}
           </Text>
         ) : null}
                 <View style={styles.tabBlock}>
@@ -284,7 +281,7 @@ export default function NbaLeaguePlayerStatLeadersPanelNative({
             style={styles.metricHint}
             numberOfLines={2}
           >
-            {isJa ? metricMeta.hintJa : metricMeta.hintEn}
+            {nbaLocalizedText(lang, metricMeta.hint)}
           </Text>
 
           {showEmptyTable ? (
@@ -306,15 +303,9 @@ export default function NbaLeaguePlayerStatLeadersPanelNative({
                   style={styles.thPlayerBtn}
                   accessibilityRole="button"
                 >
-                  <Text style={styles.th}>{isJa ? "選手" : "Player"}</Text>
+                  <Text style={styles.th}>{chrome.playerCol}</Text>
                   <Text style={styles.thSortDir}>
-                    {isJa
-                      ? sortDir === "desc"
-                        ? "降順"
-                        : "昇順"
-                      : sortDir === "desc"
-                        ? "hi→lo"
-                        : "lo→hi"}
+                    {sortDir === "desc" ? chrome.sortDesc : chrome.sortAsc}
                   </Text>
                   <MaterialCommunityIcons
                     name={sortDir === "desc" ? "arrow-down" : "arrow-up"}
@@ -323,7 +314,7 @@ export default function NbaLeaguePlayerStatLeadersPanelNative({
                   />
                 </Pressable>
                 <Text style={[styles.th, styles.colTeamHead]}>
-                  {isJa ? "チーム" : "Team"}
+                  {chrome.teamCol}
                 </Text>
                 <Text style={[styles.th, styles.colGp]}>GP</Text>
                 <Text style={[styles.th, styles.colMetric]}>
@@ -573,13 +564,15 @@ const styles = StyleSheet.create({
     transform: [{ skewX: "-10deg" }],
   },
   tdPlayer: {
-    ...MATCH_CARD_BRACKET_TEXT,
     flex: 1,
     minWidth: 0,
+    fontFamily: "Oxanium_600SemiBold",
+    fontWeight: "600",
     color: "rgba(255,255,255,0.92)",
-    fontSize: 15,
-    letterSpacing: MATCH_CARD_BRACKET_LETTER_SPACING_15,
+    fontSize: 13,
+    letterSpacing: 0.4,
     textTransform: "uppercase",
+    includeFontPadding: false,
     transform: [{ skewX: "-6deg" }],
   },
   colTeam: {
@@ -600,9 +593,10 @@ const styles = StyleSheet.create({
   tdMetric: {
     width: 52,
     textAlign: "right",
-    fontFamily: OXANIUM_800,
+    fontFamily: METRIC_FONT,
+    fontWeight: "700",
     color: CYBER_TAB_CYAN,
-    fontSize: 14,
+    fontSize: 13,
     fontVariant: ["tabular-nums"],
     transform: [{ skewX: "-6deg" }],
   },

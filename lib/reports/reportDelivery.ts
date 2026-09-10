@@ -10,6 +10,7 @@ import { subtractDaysFromDateKeyJST } from "@/lib/rankings/rankSnapshotDate";
 import { resolveRankingWeekStartDateKey } from "@/lib/rankings/rankingPeriod";
 import { getZonedYMD, TIMEZONE_JST } from "@/lib/time/zonedTime";
 import { weeklyReportDocId } from "@/lib/reports/parseWeeklyReportDoc";
+import { resolveLocalizedLang } from "@/lib/i18n/localize";
 
 export type ReportDeliveryKind = "weekly" | "monthly";
 
@@ -138,8 +139,9 @@ export function currentWeeklyReportDocId(uid: string, now: Date = new Date()): s
 export function formatReportPeriodLabel(
   kind: ReportDeliveryKind,
   periodKey: string,
-  lang: "ja" | "en"
+  language: string | null | undefined
 ): string {
+  const lang = resolveLocalizedLang(language);
   if (kind === "monthly") {
     const [y, m] = periodKey.split("-");
     return lang === "ja" ? `${y}年${Number(m)}月` : `${y}.${m}`;

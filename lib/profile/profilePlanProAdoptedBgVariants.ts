@@ -6,6 +6,8 @@
  * `family`   = 実装系統（パターン生成の参照元）
  */
 
+import { L, resolveLocalizedLang } from "@/lib/i18n/localize";
+import type { UiStrings } from "@/lib/i18n/ui";
 import {
   PROFILE_PLAN_PRO_BEAST_BG_VARIANTS,
   type ProfilePlanProBeastBgMeta,
@@ -65,48 +67,116 @@ export type ProfilePlanProAdoptedGroup = ProfilePlanProAdoptedFamily;
 
 export type ProfilePlanProAdoptedCategoryMeta = {
   id: ProfilePlanProAdoptedCategory;
-  labelJa: string;
-  labelEn: string;
-  descriptionJa: string;
-  descriptionEn: string;
+  label: UiStrings;
+  description: UiStrings;
 };
 
 export const PROFILE_PLAN_PRO_ADOPTED_CATEGORIES: readonly ProfilePlanProAdoptedCategoryMeta[] =
   [
     {
       id: "cyber",
-      labelJa: "サイバー空間",
-      labelEn: "Cyber Space",
-      descriptionJa: "シアン格子・ネオン稜線など、線画サイバー HUD。",
-      descriptionEn: "Cyan grids, neon ridges, and line-art cyber HUD.",
+      label: {
+        ja: "サイバー空間",
+        en: "Cyber Space",
+        ko: "사이버 공간",
+        zh: "赛博空间",
+        es: "Ciberespacio",
+        pt: "Ciberespaço",
+        fr: "Cyberespace",
+      },
+      description: {
+        ja: "シアン格子・ネオン稜線など、線画サイバー HUD。",
+        en: "Cyan grids, neon ridges, and line-art cyber HUD.",
+        ko: "시안 격자와 네온 능선 등 선화 사이버 HUD.",
+        zh: "青色网格、霓虹棱线等线稿赛博 HUD。",
+        es: "Rejillas cian, crestas neón y HUD ciber lineal.",
+        pt: "Grades ciano, cristas neon e HUD cyber em linhas.",
+        fr: "Grilles cyan, crêtes néon et HUD cyber au trait.",
+      },
     },
     {
       id: "reptile",
-      labelJa: "爬虫類",
-      labelEn: "Reptile",
-      descriptionJa: "蛇・鱗・竜鱗・クロコなど、爬虫類モチーフのスキン。",
-      descriptionEn: "Snakes, scales, dragon plate, crocodile leather.",
+      label: {
+        ja: "爬虫類",
+        en: "Reptile",
+        ko: "파충류",
+        zh: "爬行动物",
+        es: "Reptil",
+        pt: "Réptil",
+        fr: "Reptile",
+      },
+      description: {
+        ja: "蛇・鱗・竜鱗・クロコなど、爬虫類モチーフのスキン。",
+        en: "Snakes, scales, dragon plate, crocodile leather.",
+        ko: "뱀·비늘·용린·크로코 등 파충류 모티브 스킨.",
+        zh: "蛇皮、鳞片、龙鳞、鳄鱼皮等爬行动物主题。",
+        es: "Serpientes, escamas, placa de dragón y piel de cocodrilo.",
+        pt: "Cobras, escamas, placa de dragão e couro de crocodilo.",
+        fr: "Serpents, écailles, plaques de dragon, cuir de crocodile.",
+      },
     },
     {
       id: "beast",
-      labelJa: "獣皮",
-      labelEn: "Beast Hide",
-      descriptionJa: "豹・鮫など、哺乳類・水生の肌理・ファー。",
-      descriptionEn: "Panther fur, shark skin, and other animal textures.",
+      label: {
+        ja: "獣皮",
+        en: "Beast Hide",
+        ko: "짐승 가죽",
+        zh: "兽皮",
+        es: "Piel de bestia",
+        pt: "Pele de fera",
+        fr: "Peau de bête",
+      },
+      description: {
+        ja: "豹・鮫など、哺乳類・水生の肌理・ファー。",
+        en: "Panther fur, shark skin, and other animal textures.",
+        ko: "표범·상어 등 포유류·수생 동물의 질감과 털.",
+        zh: "豹纹、鲨鱼皮等哺乳与水生动物的质感与毛发。",
+        es: "Pelaje de pantera, piel de tiburón y otras texturas animales.",
+        pt: "Pelo de pantera, pele de tubarão e outras texturas animais.",
+        fr: "Fourrure de panthère, peau de requin et autres textures animales.",
+      },
     },
     {
       id: "material",
-      labelJa: "素材",
-      labelEn: "Material",
-      descriptionJa: "チタン・装甲・回路レースなど、素材・ブランド柄。",
-      descriptionEn: "Titanium, armor plate, and circuit-lace motifs.",
+      label: {
+        ja: "素材",
+        en: "Material",
+        ko: "소재",
+        zh: "材质",
+        es: "Material",
+        pt: "Material",
+        fr: "Matière",
+      },
+      description: {
+        ja: "チタン・装甲・回路レースなど、素材・ブランド柄。",
+        en: "Titanium, armor plate, and circuit-lace motifs.",
+        ko: "티타늄·장갑판·회로 레이스 등 소재·브랜드 패턴.",
+        zh: "钛金属、装甲板、电路蕾丝等材质与品牌纹样。",
+        es: "Titanio, placas de blindaje y motivos de circuito.",
+        pt: "Titânio, placas de blindagem e motivos de circuito.",
+        fr: "Titane, plaques de blindage et motifs de circuits.",
+      },
     },
     {
       id: "geometry",
-      labelJa: "幾何学",
-      labelEn: "Geometry",
-      descriptionJa: "六角・立体格子など、幾何パターンのスキン。",
-      descriptionEn: "Hex grids, isometric cubes, and geometric patterns.",
+      label: {
+        ja: "幾何学",
+        en: "Geometry",
+        ko: "기하학",
+        zh: "几何",
+        es: "Geometría",
+        pt: "Geometria",
+        fr: "Géométrie",
+      },
+      description: {
+        ja: "六角・立体格子など、幾何パターンのスキン。",
+        en: "Hex grids, isometric cubes, and geometric patterns.",
+        ko: "육각 격자·입체 큐브 등 기하 패턴 스킨.",
+        zh: "六边形网格、立体方块等几何图案。",
+        es: "Rejillas hexagonales, cubos isométricos y patrones geométricos.",
+        pt: "Grades hexagonais, cubos isométricos e padrões geométricos.",
+        fr: "Grilles hexagonales, cubes isométriques et motifs géométriques.",
+      },
     },
   ] as const;
 
@@ -283,10 +353,9 @@ export function profilePlanProAdoptedCategoryMeta(
 
 export function profilePlanProAdoptedCategoryLabel(
   category: ProfilePlanProAdoptedCategory,
-  language: "ja" | "en" = "en"
+  language: string = "en"
 ): string {
-  const meta = profilePlanProAdoptedCategoryMeta(category);
-  return language === "ja" ? meta.labelJa : meta.labelEn;
+  return L(resolveLocalizedLang(language), profilePlanProAdoptedCategoryMeta(category).label);
 }
 
 export const PROFILE_PLAN_PRO_ADOPTED_BG: readonly ProfilePlanProAdoptedEntry[] =

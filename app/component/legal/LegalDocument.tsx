@@ -10,7 +10,7 @@ export default function LegalDocument({
   /** false のとき条タイトル（第N条…）のみ表示 */
   showIndex?: boolean;
 }) {
-  const lang: LegalLang = language === "en" ? "en" : "ja";
+  const lang: LegalLang = language === "ja" ? "ja" : "en";
 
   return (
     <section className="space-y-6">

@@ -14,7 +14,7 @@ import {
 
 /** Web `RankingsMetricRow` の `formatLabel` と同じ短縮ルール */
 function pillMetricLabel(m: MobileMetric, lang: RankingsLanguage): string {
-  const l = (lang === "en" ? "en" : "ja") as Language;
+  const l = lang as Language;
   if (m === "upsetScore") return upsetShortLabel(l);
   return webMetricLabel(m, l);
 }

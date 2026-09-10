@@ -20,6 +20,7 @@ import {
 } from "@/lib/predict/nbaLeagueTeamStatsMocks";
 import { nbaSeasonStatsReady } from "@/lib/predict/nbaSeasonStatsReady";
 import { nbaConferenceForTeam } from "@/lib/nba/nbaConferenceTeams";
+import type { UiStrings } from "@/lib/i18n/ui";
 
 export type NbaTeamProfileLean = "offense" | "defense" | "balanced";
 
@@ -165,8 +166,7 @@ export type NbaTeamOpponentAllowedMetricDef = {
   short: string;
   /** false = 高いほど良い（誘発 TOV など） */
   lowerIsBetter: boolean;
-  hintJa: string;
-  hintEn: string;
+  hint: UiStrings;
 };
 
 /** BallDontLie `general?type=opponent` / four-factors 相当の指標定義 */
@@ -176,64 +176,127 @@ export const NBA_TEAM_OPPONENT_ALLOWED_METRICS: readonly NbaTeamOpponentAllowedM
       id: "pts_allowed",
       short: "PTS",
       lowerIsBetter: true,
-      hintJa: "相手に許した平均得点。低いほど DF が良い。順位 #1 = 最少失点。",
-      hintEn: "Points allowed per game. Lower is better. Rank #1 = fewest allowed.",
+      hint: {
+        ja: "相手に許した平均得点。低いほど DF が良い。順位 #1 = 最少失点。",
+        en: "Points allowed per game. Lower is better. Rank #1 = fewest allowed.",
+        ko: "경기당 실점. 낮을수록 수비가 좋다. 1위 = 최소 실점.",
+        zh: "场均失分。越低防守越好。第 1 名＝失分最少。",
+        es: "Puntos permitidos por partido. Menos es mejor. #1 = menos permitidos.",
+        pt: "Pontos sofridos por jogo. Menor é melhor. #1 = menos sofridos.",
+        fr: "Points encaissés par match. Plus bas, mieux c’est. #1 = le moins encaissé.",
+      },
     },
     {
       id: "fg_pct_allowed",
       short: "FG%",
       lowerIsBetter: true,
-      hintJa: "相手の FG%。低いほどシュートを抑えられている。",
-      hintEn: "Opponent FG%. Lower means better shot defense.",
+      hint: {
+        ja: "相手の FG%。低いほどシュートを抑えられている。",
+        en: "Opponent FG%. Lower means better shot defense.",
+        ko: "상대 야투 성공률. 낮을수록 슛 수비가 좋다.",
+        zh: "对手投篮命中率。越低表示投篮防守越好。",
+        es: "FG% del rival. Menos indica mejor defensa al tiro.",
+        pt: "FG% do adversário. Menor indica melhor defesa de arremesso.",
+        fr: "FG% adverse. Plus bas = meilleure défense sur tir.",
+      },
     },
     {
       id: "fg3_pct_allowed",
       short: "3P%",
       lowerIsBetter: true,
-      hintJa: "相手の 3P%。低いほど外を抑えられている。",
-      hintEn: "Opponent 3P%. Lower means better perimeter defense.",
+      hint: {
+        ja: "相手の 3P%。低いほど外を抑えられている。",
+        en: "Opponent 3P%. Lower means better perimeter defense.",
+        ko: "상대 3점 성공률. 낮을수록 외곽 수비가 좋다.",
+        zh: "对手三分命中率。越低表示外线防守越好。",
+        es: "3P% del rival. Menos indica mejor defensa exterior.",
+        pt: "3P% do adversário. Menor indica melhor defesa de perímetro.",
+        fr: "3P% adverse. Plus bas = meilleure défense extérieure.",
+      },
     },
     {
       id: "ft_pct_allowed",
       short: "FT%",
       lowerIsBetter: true,
-      hintJa: "相手の FT%。低いほどフリースローを決められていない（運要素あり）。",
-      hintEn: "Opponent FT%. Lower is better (some luck).",
+      hint: {
+        ja: "相手の FT%。低いほどフリースローを決められていない（運要素あり）。",
+        en: "Opponent FT%. Lower is better (some luck).",
+        ko: "상대 자유투 성공률. 낮을수록 좋다(운 요소 있음).",
+        zh: "对手罚球命中率。越低越好（含运气成分）。",
+        es: "TL% del rival. Menos es mejor (hay algo de suerte).",
+        pt: "FT% do adversário. Menor é melhor (tem sorte envolvida).",
+        fr: "LF% adverse. Plus bas, mieux c’est (part de chance).",
+      },
     },
     {
       id: "reb_allowed",
       short: "REB",
       lowerIsBetter: true,
-      hintJa: "相手のリバウンド数。低いほどボードで負けていない。",
-      hintEn: "Opponent rebounds. Lower means better glass control.",
+      hint: {
+        ja: "相手のリバウンド数。低いほどボードで負けていない。",
+        en: "Opponent rebounds. Lower means better glass control.",
+        ko: "상대 리바운드. 낮을수록 보드 장악력이 좋다.",
+        zh: "对手篮板。越低表示篮板控制越好。",
+        es: "Rebotes del rival. Menos indica mejor control del rebote.",
+        pt: "Rebotes do adversário. Menor indica melhor domínio do garrafão.",
+        fr: "Rebonds adverses. Plus bas = meilleur contrôle du rebond.",
+      },
     },
     {
       id: "ast_allowed",
       short: "AST",
       lowerIsBetter: true,
-      hintJa: "相手のアシスト。低いほどパスを通されにくい。",
-      hintEn: "Opponent assists. Lower means less ball movement allowed.",
+      hint: {
+        ja: "相手のアシスト。低いほどパスを通されにくい。",
+        en: "Opponent assists. Lower means less ball movement allowed.",
+        ko: "상대 어시스트. 낮을수록 패스를 덜 허용한다.",
+        zh: "对手助攻。越低表示越少让对方传导球。",
+        es: "Asistencias del rival. Menos indica menos circulación permitida.",
+        pt: "Assistências do adversário. Menor indica menos circulação permitida.",
+        fr: "Passes décisives adverses. Plus bas = moins de circulation concédée.",
+      },
     },
     {
       id: "tov_forced",
       short: "TOV",
       lowerIsBetter: false,
-      hintJa: "相手のターンオーバー（誘発数）。高いほど DF がボールを奪えている。",
-      hintEn: "Opponent turnovers forced. Higher is better defense.",
+      hint: {
+        ja: "相手のターンオーバー（誘発数）。高いほど DF がボールを奪えている。",
+        en: "Opponent turnovers forced. Higher is better defense.",
+        ko: "유도한 상대 턴오버. 높을수록 수비가 좋다.",
+        zh: "迫使对手失误数。越高防守越好。",
+        es: "Pérdidas forzadas al rival. Más es mejor defensa.",
+        pt: "Erros forçados do adversário. Maior é melhor defesa.",
+        fr: "Ballons perdus provoqués. Plus haut = meilleure défense.",
+      },
     },
     {
       id: "oreb_allowed",
       short: "OREB",
       lowerIsBetter: true,
-      hintJa: "相手のオフェンスリバウンド。低いほどセカンドチャンスを許さない。",
-      hintEn: "Opponent offensive rebounds. Lower limits second chances.",
+      hint: {
+        ja: "相手のオフェンスリバウンド。低いほどセカンドチャンスを許さない。",
+        en: "Opponent offensive rebounds. Lower limits second chances.",
+        ko: "상대 공격 리바운드. 낮을수록 세컨드 찬스를 덜 준다.",
+        zh: "对手进攻篮板。越低越能限制二次进攻。",
+        es: "Rebotes ofensivos del rival. Menos limita las segundas opciones.",
+        pt: "Rebotes ofensivos do adversário. Menor limita as segundas chances.",
+        fr: "Rebonds offensifs adverses. Plus bas = moins de secondes chances.",
+      },
     },
     {
       id: "efg_pct_allowed",
       short: "EFG%",
       lowerIsBetter: true,
-      hintJa: "相手の eFG%（3P 加味）。低いほど総合的にシュートを抑えられている。",
-      hintEn: "Opponent eFG%. Lower means better overall shot defense.",
+      hint: {
+        ja: "相手の eFG%（3P 加味）。低いほど総合的にシュートを抑えられている。",
+        en: "Opponent eFG%. Lower means better overall shot defense.",
+        ko: "상대 eFG%(3점 가중). 낮을수록 전반적인 슛 수비가 좋다.",
+        zh: "对手 eFG%（计入三分）。越低表示整体投篮防守越好。",
+        es: "eFG% del rival. Menos indica mejor defensa al tiro en general.",
+        pt: "eFG% do adversário. Menor indica melhor defesa de arremesso no geral.",
+        fr: "eFG% adverse. Plus bas = meilleure défense globale sur tir.",
+      },
     },
   ] as const;
 
@@ -245,8 +308,7 @@ export type NbaTeamOpponentAllowedMetric = {
   leagueRank: number;
   /** true = 値が低いほど良い（許している量が少ない） */
   lowerIsBetter: boolean;
-  hintJa: string;
-  hintEn: string;
+  hint: UiStrings;
 };
 
 export type NbaApronStatus =
@@ -500,8 +562,7 @@ function buildOpponentStats(
       display,
       leagueRank: rank,
       lowerIsBetter: def.lowerIsBetter,
-      hintJa: def.hintJa,
-      hintEn: def.hintEn,
+      hint: def.hint,
     };
   };
 

@@ -10,10 +10,8 @@ import type {
   MonthlyReportMetric,
   MonthlyReportMetricKey,
   MonthlyReportOutlook,
-  MonthlyReportRadarAxisKey,
   MonthlyReportTeam,
   MonthlyReportUnitGrant,
-  MonthlyReportUnitMetric,
   MonthlyReportUnitSource,
 } from "../../../../../../lib/reports/monthlyReportTypes";
 import { MONTHLY_REPORT_RADAR_STRENGTH_P } from "../../../../../../lib/reports/monthlyReportTypes";
@@ -53,175 +51,17 @@ import {
 } from "./reportThemeNative";
 import { MonthlyReportCardShell } from "./reportCardShellNative";
 import { ReportIsometricGridOverlay } from "./reportGridOverlaysNative";
+import type { LocalizedLang } from "../../../../../../lib/i18n/localize";
+import {
+  monthlyReportUiCopy,
+  type MonthlyReportUiCopy,
+} from "../../../../../../lib/reports/monthlyReportUiCopy";
 
-type Lang = "ja" | "en";
+type Lang = LocalizedLang;
 
 /* ============================================================
- * copy（Web MonthlyReportView と同一・要点のみ）
+ * copy — 7言語は lib/reports/monthlyReportUiCopy.ts に集約
  * ============================================================ */
-
-const COPY = {
-  ja: {
-    title: "MONTHLY REPORT",
-    thisMonth: "今月の結果",
-    participants: (n: number) => `${n}人中`,
-    rankLabel: "RANK",
-    unitsLabel: "UNITS",
-    unitsEarnedLabel: "今月の獲得",
-    monthlyChange: "前月比",
-    typeLabel: "今月の分析タイプ",
-    numbers: "数字で見る今月",
-    unitsBreakdown: "獲得 Unit 内訳",
-    unitsBreakdownEmpty: "今月の Unit 付与はありません。",
-    unitsBreakdownTotal: "今月の合計",
-    unitsBreakdownExpand: "タップで内訳",
-    unitsBreakdownCollapse: "閉じる",
-    unitSource: {
-      personal_weekly: "個人・週間",
-      personal_monthly: "個人・月間",
-      group_weekly: "グループ・週間",
-      group_monthly: "グループ・月間",
-      invite: "招待",
-      metric_rank: "部門上位",
-      event: "イベント",
-    } satisfies Record<MonthlyReportUnitSource, string>,
-    unitMetric: {
-      totalPoints: "総合得点",
-      winRate: "勝率",
-      scorer: "SCORER",
-      upset: "UPSET",
-    } satisfies Record<MonthlyReportUnitMetric, string>,
-    unitRank: (n: number) => `#${n}`,
-    radar: "能力チャート",
-    habits: "予想のクセ",
-    habitsEmpty: "サンプルが足りず、今月のクセはまだ出せません。",
-    habitsMapHint: "横: Away ←→ Home / 縦: 順当 ←→ 逆張り · 点の大きさ=勝率",
-    homeAway: "Home / Away",
-    market: "順当 / 逆張り",
-    homeWr: "Home勝率",
-    awayWr: "Away勝率",
-    favWr: "順当勝率",
-    dogWr: "逆張り勝率",
-    homeShare: "Home",
-    awayShare: "Away",
-    favShare: "順当",
-    dogShare: "逆張り",
-    affinity: "チーム相性",
-    strong: "得意",
-    weak: "苦手",
-    highlights: "月間ハイライト",
-    bestPick: "ベスト予想",
-    myPick: "自分の予想",
-    bestDay: "ベストデー",
-    bestDayLine: (w: number, p: number) => `${p}試合 ${w}勝`,
-    streak: "最長連勝",
-    streakUnit: "連勝",
-    upset: "最大アップセット",
-    divisionTop10: (d: string, n: number) => `${d} 部門 #${n}`,
-    outlook: "今月のサマリー",
-    metric: {
-      posts: "予想数",
-      points: "総合得点",
-      winRate: "勝率",
-      goalScorerHits: "SCORER 的中",
-      upsetPoints: "UPSET pt",
-      units: "獲得 Unit",
-    } satisfies Record<MonthlyReportMetricKey, string>,
-    prevDelta: "前月比",
-    medianMark: "中央値",
-    youMark: "自分",
-    top10Mark: "上位10%",
-    vsMedian: "中央値より",
-    vsTop10: "上位10%より",
-    radarAxis: {
-      win: "WIN",
-      scorer: "SCORER",
-      upset: "UPSET",
-      activity: "ACTIVITY",
-      consistency: "CONSISTENCY",
-    } satisfies Record<MonthlyReportRadarAxisKey, string>,
-  },
-  en: {
-    title: "MONTHLY REPORT",
-    thisMonth: "This Month",
-    participants: (n: number) => `of ${n}`,
-    rankLabel: "RANK",
-    unitsLabel: "UNITS",
-    unitsEarnedLabel: "Earned",
-    monthlyChange: "MoM",
-    typeLabel: "Analysis Type",
-    numbers: "Month in Numbers",
-    unitsBreakdown: "Units Breakdown",
-    unitsBreakdownEmpty: "No Units granted this month.",
-    unitsBreakdownTotal: "Month total",
-    unitsBreakdownExpand: "Tap for details",
-    unitsBreakdownCollapse: "Hide",
-    unitSource: {
-      personal_weekly: "Personal · Weekly",
-      personal_monthly: "Personal · Monthly",
-      group_weekly: "Group · Weekly",
-      group_monthly: "Group · Monthly",
-      invite: "Invite",
-      metric_rank: "Metric top",
-      event: "Event",
-    } satisfies Record<MonthlyReportUnitSource, string>,
-    unitMetric: {
-      totalPoints: "Points",
-      winRate: "Win %",
-      scorer: "Scorer",
-      upset: "Upset",
-    } satisfies Record<MonthlyReportUnitMetric, string>,
-    unitRank: (n: number) => `#${n}`,
-    radar: "Ability Chart",
-    habits: "Habits",
-    habitsEmpty: "Not enough sample to surface habits this month.",
-    habitsMapHint: "X: Away ←→ Home / Y: Consensus ←→ Fade · Dot size = win rate",
-    homeAway: "Home / Away",
-    market: "Consensus / Fade",
-    homeWr: "Home win %",
-    awayWr: "Away win %",
-    favWr: "Consensus win %",
-    dogWr: "Fade win %",
-    homeShare: "Home",
-    awayShare: "Away",
-    favShare: "Consensus",
-    dogShare: "Fade",
-    affinity: "Team Affinity",
-    strong: "Strong",
-    weak: "Weak",
-    highlights: "Highlights",
-    bestPick: "Best Pick",
-    myPick: "Your pick",
-    bestDay: "Best Day",
-    bestDayLine: (w: number, p: number) => `${w}W of ${p}`,
-    streak: "Longest Streak",
-    streakUnit: "wins",
-    upset: "Biggest Upset",
-    divisionTop10: (d: string, n: number) => `${d} #${n}`,
-    outlook: "Month Summary",
-    metric: {
-      posts: "Picks",
-      points: "Total Points",
-      winRate: "Win %",
-      goalScorerHits: "Scorer hits",
-      upsetPoints: "Upset pts",
-      units: "Units",
-    } satisfies Record<MonthlyReportMetricKey, string>,
-    prevDelta: "vs last",
-    medianMark: "Median",
-    youMark: "You",
-    top10Mark: "Top 10%",
-    vsMedian: "vs med",
-    vsTop10: "vs top10%",
-    radarAxis: {
-      win: "WIN",
-      scorer: "SCORER",
-      upset: "UPSET",
-      activity: "ACTIVITY",
-      consistency: "CONSISTENCY",
-    } satisfies Record<MonthlyReportRadarAxisKey, string>,
-  },
-} as const;
 
 const RADAR_ORDER = MONTHLY_RADAR_ORDER;
 
@@ -337,7 +177,7 @@ function winRateToDotSize(winRate: number): number {
   return 24;
 }
 
-function unitGrantTitle(g: MonthlyReportUnitGrant, c: (typeof COPY)[Lang]): string {
+function unitGrantTitle(g: MonthlyReportUnitGrant, c: MonthlyReportUiCopy): string {
   if (g.label) return g.label;
   if (g.source === "metric_rank" && g.metric) {
     return `${c.unitSource.metric_rank} · ${c.unitMetric[g.metric]}`;
@@ -389,10 +229,10 @@ function SlantTag({
  * ============================================================ */
 
 function CoverBlock({ report, lang }: { report: MonthlyReport; lang: Lang }) {
-  const c = COPY[lang];
+  const c = monthlyReportUiCopy(lang);
   const delta = report.rankDeltaPlaces;
   const typeColor = ANALYSIS_TYPE_COLOR[report.analysisTypeId] ?? "#f8fafc";
-  const typeCopy = resolveMonthlyReportAnalysisTypeCopy(report.analysisTypeId);
+  const typeCopy = resolveMonthlyReportAnalysisTypeCopy(report.analysisTypeId, lang);
   const band = monthlyReportRankBandAccent(report.rank);
   const topPct = report.topPercent ?? computeTopPercentile(report.rank, report.participantCount);
   const tier = getKinetikRankBadgeTierFromTopPercent(topPct);
@@ -486,7 +326,7 @@ function MetricRangeBar({
   /** you マーカーの色決定に使う順位 */
   youRankForColor: number | null;
 }) {
-  const c = COPY[lang];
+  const c = monthlyReportUiCopy(lang);
   const { value, median, top10 } = metric;
   if (median == null && top10 == null) return null;
 
@@ -584,7 +424,7 @@ function NumbersBlock({
   /** ユニット獲得順位（表紙右側の band） */
   unitsEarnedRank: number | null;
 }) {
-  const c = COPY[lang];
+  const c = monthlyReportUiCopy(lang);
   const ordered = sortNumbersMetrics(metrics);
   return (
     <View>
@@ -682,7 +522,7 @@ function UnitsBreakdownBlock({
   entries: MonthlyReportUnitGrant[];
   lang: Lang;
 }) {
-  const c = COPY[lang];
+  const c = monthlyReportUiCopy(lang);
   const [open, setOpen] = useState(false);
   const sorted = useMemo(
     () =>
@@ -801,8 +641,8 @@ function UnitsBreakdownBlock({
  * ============================================================ */
 
 function RadarBlock({ report, lang }: { report: MonthlyReport; lang: Lang }) {
-  const c = COPY[lang];
-  const typeCopy = resolveMonthlyReportAnalysisTypeCopy(report.analysisTypeId);
+  const c = monthlyReportUiCopy(lang);
+  const typeCopy = resolveMonthlyReportAnalysisTypeCopy(report.analysisTypeId, lang);
   const typeColor = ANALYSIS_TYPE_COLOR[report.analysisTypeId] ?? "#f8fafc";
   const typeLines = typeCopy.description
     .split("\n")
@@ -967,7 +807,7 @@ function HabitsRatePair({
 }
 
 function HabitsBlock({ habits, lang }: { habits: MonthlyReportHabits | null; lang: Lang }) {
-  const c = COPY[lang];
+  const c = monthlyReportUiCopy(lang);
 
   if (!habits) {
     return (
@@ -999,10 +839,10 @@ function HabitsBlock({ habits, lang }: { habits: MonthlyReportHabits | null; lan
             <Text style={[styles.mapEdgeLabelSide, { left: 6 }]}>Away</Text>
             <Text style={[styles.mapEdgeLabelSide, { right: 6 }]}>Home</Text>
             <Text style={[styles.mapEdgeLabelTop, { top: 6 }]}>
-              {lang === "ja" ? "順当" : "CONSENSUS"}
+              {c.consensus}
             </Text>
             <Text style={[styles.mapEdgeLabelTop, { bottom: 6 }]}>
-              {lang === "ja" ? "逆張り" : "FADE"}
+              {c.fade}
             </Text>
             <View
               style={[
@@ -1100,7 +940,7 @@ function AffinityBlock({
   weak: MonthlyReportTeam[];
   lang: Lang;
 }) {
-  const c = COPY[lang];
+  const c = monthlyReportUiCopy(lang);
   return (
     <View>
       <SectionBadge>{c.affinity}</SectionBadge>
@@ -1117,7 +957,7 @@ function AffinityBlock({
  * ============================================================ */
 
 function HighlightCard({ item, lang }: { item: MonthlyReportHighlight; lang: Lang }) {
-  const c = COPY[lang];
+  const c = monthlyReportUiCopy(lang);
 
   if (item.kind === "bestPick") {
     const homeColor = getTeamPrimaryColor("nba", item.home.teamId);
@@ -1208,7 +1048,7 @@ function HighlightsBlock({
   highlights: MonthlyReportHighlight[];
   lang: Lang;
 }) {
-  const c = COPY[lang];
+  const c = monthlyReportUiCopy(lang);
   const primary = highlights.find((h) => h.kind === "bestPick") ?? null;
   const rest = highlights.filter((h) => h !== primary);
 
@@ -1236,7 +1076,7 @@ function HighlightsBlock({
  * ============================================================ */
 
 function OutlookBlock({ outlook, lang }: { outlook: MonthlyReportOutlook; lang: Lang }) {
-  const c = COPY[lang];
+  const c = monthlyReportUiCopy(lang);
   const body = outlook.summary.trim();
   if (!body) return null;
 
@@ -1259,9 +1099,10 @@ export default function MonthlyReportViewNative({
   language = "ja",
 }: {
   report: MonthlyReport;
-  language?: Lang;
+  language?: string;
 }) {
-  const c = COPY[language];
+  const c = monthlyReportUiCopy(language);
+  const lang = c.lang;
 
   return (
     <View style={styles.root}>
@@ -1270,19 +1111,19 @@ export default function MonthlyReportViewNative({
         <Text style={styles.range}>{fmtReportMonth(report.monthKey)}</Text>
       </View>
 
-      <CoverBlock report={report} lang={language} />
+      <CoverBlock report={report} lang={lang} />
       <NumbersBlock
         metrics={report.metrics}
-        lang={language}
+        lang={lang}
         overallRank={report.rank}
         unitsEarnedRank={report.unitsEarnedRank}
       />
-      <UnitsBreakdownBlock total={report.unitsEarned} entries={report.unitsBreakdown} lang={language} />
-      <RadarBlock report={report} lang={language} />
-      <HabitsBlock habits={report.habits} lang={language} />
-      <AffinityBlock strong={report.teamAffinity.strong} weak={report.teamAffinity.weak} lang={language} />
-      <HighlightsBlock highlights={report.highlights} lang={language} />
-      <OutlookBlock outlook={report.outlook} lang={language} />
+      <UnitsBreakdownBlock total={report.unitsEarned} entries={report.unitsBreakdown} lang={lang} />
+      <RadarBlock report={report} lang={lang} />
+      <HabitsBlock habits={report.habits} lang={lang} />
+      <AffinityBlock strong={report.teamAffinity.strong} weak={report.teamAffinity.weak} lang={lang} />
+      <HighlightsBlock highlights={report.highlights} lang={lang} />
+      <OutlookBlock outlook={report.outlook} lang={lang} />
     </View>
   );
 }

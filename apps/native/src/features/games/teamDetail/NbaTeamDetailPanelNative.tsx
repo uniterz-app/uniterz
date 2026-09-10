@@ -57,6 +57,12 @@ import {
 import JerseyMarkSvg from "../JerseyMarkSvg";
 import { NbaTeamRosterCardNative } from "../predict/NbaRosterPanelNative";
 import NbaTeamHowTheyPlayNative from "./NbaTeamHowTheyPlayNative";
+import {
+  apronStatusLabel,
+  draftBadgeHeadline,
+  nbaTeamDetailUiCopy,
+  type NbaTeamDetailUiCopy,
+} from "./nbaTeamDetailUiCopy";
 import { useLeagueTeamStatsBundle } from "../../../../../../lib/nba/useLeagueTeamStatsBundle";
 import { useNbaTeamDetailLiveOverlay } from "../../../../../../lib/nba/teamDetail/useNbaTeamDetailLiveOverlay";
 import { buildTeamDetailInsights } from "../../../../../../lib/nba/detailInsights/buildTeamDetailInsights";
@@ -78,7 +84,7 @@ import type {
 } from "../../../../../../lib/nba/draftPicks/draftPicksTypes";
 
 type Props = {
-  language: "ja" | "en";
+  language: string;
   teamId?: string;
   onSelectPlayer?: (playerId: string) => void;
 };
@@ -265,13 +271,13 @@ function RecentFormSection({
   games,
   streak,
   accent,
-  isJa,
+  ui,
   trends = [],
 }: {
   games: NbaTeamRecentGame[];
   streak: NbaTeamStreak;
   accent: string;
-  isJa: boolean;
+  ui: NbaTeamDetailUiCopy;
   trends?: DetailTrendDelta[];
 }) {
   const results = games.slice(-10).map((g) => g.result);
@@ -279,7 +285,7 @@ function RecentFormSection({
   const losses = results.length - wins;
   const streakLabel = formatStreakLabel(streak);
   const streakWin = streak.kind === "W";
-  const emptyCopy = isJa ? "データがありません" : "No data yet";
+  const emptyCopy = ui.noData;
 
   return (
     <View style={styles.formSection}>
@@ -327,16 +333,16 @@ function RecentFormSection({
 function GameLogsSection({
   games,
   accent,
-  isJa,
+  ui,
 }: {
   games: NbaTeamRecentGame[];
   accent: string;
-  isJa: boolean;
+  ui: NbaTeamDetailUiCopy;
 }) {
   const list = [...games].slice(-10).reverse();
   const frame = hexToRgba(accent, 0.3);
   const line = hexToRgba(accent, 0.12);
-  const emptyCopy = isJa ? "データがありません" : "No data yet";
+  const emptyCopy = ui.noData;
   return (
     <View style={styles.schedSection}>
       <SectionHeader
@@ -404,12 +410,13 @@ function GameLogsSection({
 function InjuriesSection({
   injuries,
   accent,
-  isJa,
+  ui,
 }: {
   injuries: NbaTeamInjuryEntry[];
   accent: string;
-  isJa: boolean;
+  ui: NbaTeamDetailUiCopy;
 }) {
+  const lang = ui.lang;
   const frame = hexToRgba(accent, 0.35);
   return (
     <View style={styles.schedSection}>
@@ -418,16 +425,16 @@ function InjuriesSection({
         {injuries.length === 0 ? (
           <View style={styles.gameRow}>
             <Text style={styles.injuryEmpty}>
-              {isJa ? "データがありません" : "No data yet"}
+              {ui.noData}
             </Text>
           </View>
         ) : (
           injuries.map((inj, i) => {
             const tone = teamInjuryStatusColor(inj.status);
-            const reasonLabel = injuryReasonLabel(inj.reason, isJa ? "ja" : "en");
+            const reasonLabel = injuryReasonLabel(inj.reason, lang);
             const returnLabel = formatInjuryReturnEstimate(
               inj.returnEstimate,
-              isJa ? "ja" : "en"
+              lang
             );
             return (
               <View
@@ -445,7 +452,7 @@ function InjuriesSection({
                 <View style={styles.injuryTop}>
                   <Text style={styles.injuryName}>{inj.name}</Text>
                   <Text style={[styles.injuryStatus, { color: tone }]}>
-                    {formatTeamInjuryStatus(inj.status, isJa)}
+                    {formatTeamInjuryStatus(inj.status, lang)}
                   </Text>
                 </View>
                 <View style={styles.injuryMeta}>
@@ -475,15 +482,15 @@ function InjuriesSection({
 function HeadToHeadSection({
   rows,
   accent,
-  isJa,
+  ui,
 }: {
   rows: NbaTeamHeadToHeadEntry[];
   accent: string;
-  isJa: boolean;
+  ui: NbaTeamDetailUiCopy;
 }) {
   const frame = hexToRgba(accent, 0.3);
   const line = hexToRgba(accent, 0.12);
-  const emptyCopy = isJa ? "データがありません" : "No data yet";
+  const emptyCopy = ui.noData;
   return (
     <View style={styles.schedSection}>
       <SectionHeader title="HEAD-TO-HEAD" accent={accent} />
@@ -556,43 +563,38 @@ function SplitCard({
 
 function ApronBadge({
   status,
-  isJa,
+  lang,
 }: {
   status: NbaApronStatus;
-  isJa: boolean;
+  lang: import("../../../../../../lib/i18n/localize").LocalizedLang;
 }) {
-  let label = "UNDER CAP";
+  let label = apronStatusLabel(status, lang);
   let color = "#00F5FF";
   let bg = "rgba(0,245,255,0.12)";
   let border = "rgba(0,245,255,0.45)";
 
   switch (status) {
     case "under_cap":
-      label = isJa ? "CAP以下" : "UNDER CAP";
       color = "#00F5FF";
       bg = "rgba(0,245,255,0.12)";
       border = "rgba(0,245,255,0.45)";
       break;
     case "over_cap":
-      label = isJa ? "CAP超過" : "OVER CAP";
       color = "#D8D8D8";
       bg = "rgba(255,255,255,0.08)";
       border = "rgba(255,255,255,0.3)";
       break;
     case "tax_payer":
-      label = isJa ? "TAX超過" : "TAX PAYER";
       color = "#FFD000";
       bg = "rgba(255,208,0,0.14)";
       border = "rgba(255,208,0,0.5)";
       break;
     case "first_apron":
-      label = isJa ? "1ST APRON超過" : "1ST APRON";
       color = "#FF8A00";
       bg = "rgba(255,138,0,0.16)";
       border = "rgba(255,138,0,0.55)";
       break;
     case "second_apron":
-      label = isJa ? "2ND APRON超過" : "2ND APRON";
       color = "#FF2D78";
       bg = "rgba(255,45,120,0.18)";
       border = "rgba(255,45,120,0.6)";
@@ -610,13 +612,14 @@ function PayrollSection({
   payroll,
   rosterBlock,
   accent,
-  isJa,
+  ui,
 }: {
   payroll: NbaTeamPayroll;
   rosterBlock?: NbaRosterTeamBlock | null;
   accent: string;
-  isJa: boolean;
+  ui: NbaTeamDetailUiCopy;
 }) {
+  const lang = ui.lang;
   const [selectedSeasonIdx, setSelectedSeasonIdx] = useState(0);
   const frame = hexToRgba(accent, 0.45);
 
@@ -710,14 +713,10 @@ function PayrollSection({
             <View style={styles.payrollLabelWithBadge}>
               <Text style={styles.payrollLabel}>
                 {active.isCurrent
-                  ? isJa
-                    ? `総年俸 (${active.label})`
-                    : `TOTAL SALARY (${active.label})`
-                  : isJa
-                  ? `確定年俸 (${active.label})`
-                  : `COMMITTED (${active.label})`}
+                  ? ui.totalSalary(active.label)
+                  : ui.committedSalary(active.label)}
               </Text>
-              <ApronBadge status={active.apronStatus} isJa={isJa} />
+              <ApronBadge status={active.apronStatus} lang={lang} />
             </View>
             <Text style={styles.payrollSalary}>
               {formatSalaryUsd(active.totalSalary)}
@@ -768,7 +767,7 @@ function PayrollSection({
                 },
               ]}
             >
-              {isJa ? "1ST APRON余裕" : "1ST APRON SPACE"}{" "}
+              {ui.apronSpace1st}{" "}
               {active.firstApronSpace >= 0 ? "+" : ""}
               {formatSalaryUsd(active.firstApronSpace)}
             </Text>
@@ -783,7 +782,7 @@ function PayrollSection({
                 },
               ]}
             >
-              {isJa ? "2ND APRON余裕" : "2ND APRON SPACE"}{" "}
+              {ui.apronSpace2nd}{" "}
               {active.secondApronSpace >= 0 ? "+" : ""}
               {formatSalaryUsd(active.secondApronSpace)}
             </Text>
@@ -792,9 +791,7 @@ function PayrollSection({
 
         {/* Player composition stacked bar */}
         <Text style={styles.payrollBreakdownTitle}>
-          {isJa
-            ? `選手内訳 (${slices.length}名) · % はCAP比`
-            : `BY PLAYER (${slices.length}) · % OF CAP`}
+          {ui.byPlayerCapPct(slices.length)}
         </Text>
         <View style={styles.payrollStackWrap}>
           <View style={styles.payrollStack}>
@@ -815,7 +812,7 @@ function PayrollSection({
         <View style={styles.payrollLines}>
           {slices.length === 0 ? (
             <Text style={styles.injuryEmpty}>
-              {isJa ? "データがありません" : "No data yet"}
+              {ui.noData}
             </Text>
           ) : (
           slices.map((s) => {
@@ -907,7 +904,7 @@ function PayrollSection({
         {/* Option Badges & Contract Legend */}
         <View style={styles.payrollLegendWrap}>
           <Text style={styles.payrollLegendTitle}>
-            {isJa ? "契約オプション / 表記凡例" : "CONTRACT OPTIONS & LEGEND"}
+            {ui.contractLegendTitle}
           </Text>
           <View style={styles.payrollLegendList}>
             <View style={styles.payrollLegendItem}>
@@ -923,7 +920,7 @@ function PayrollSection({
                 TEAM
               </Text>
               <Text style={styles.payrollLegendText}>
-                {isJa ? "チームオプション（球団に行使権）" : "Team Option (Club decision)"}
+                {ui.teamOption}
               </Text>
             </View>
             <View style={styles.payrollLegendItem}>
@@ -939,7 +936,7 @@ function PayrollSection({
                 PLAYER
               </Text>
               <Text style={styles.payrollLegendText}>
-                {isJa ? "プレイヤーオプション（選手に行使権）" : "Player Option (Player decision)"}
+                {ui.playerOption}
               </Text>
             </View>
             <View style={styles.payrollLegendItem}>
@@ -955,7 +952,7 @@ function PayrollSection({
                 MUTUAL
               </Text>
               <Text style={styles.payrollLegendText}>
-                {isJa ? "双方合意オプション（球団・選手両方）" : "Mutual Option (Both agree)"}
+                {ui.mutualOption}
               </Text>
             </View>
           </View>
@@ -968,12 +965,13 @@ function PayrollSection({
 function DraftPicksSection({
   teamId,
   accent,
-  isJa,
+  ui,
 }: {
   teamId: string;
   accent: string;
-  isJa: boolean;
+  ui: NbaTeamDetailUiCopy;
 }) {
+  const isJa = ui.lang === "ja";
   const draftCapital = useMemo(() => getNbaTeamDraftCapital(teamId), [teamId]);
   const { summary } = draftCapital;
   const frame = hexToRgba(accent, 0.45);
@@ -990,7 +988,7 @@ function DraftPicksSection({
   return (
     <View style={styles.payrollWrap}>
       <SectionHeader
-        title={isJa ? "DRAFT ASSETS (ドラフト指名権・資産)" : "DRAFT ASSETS & CAPITAL"}
+        title={ui.draftAssetsTitle}
         accent={accent}
       />
 
@@ -999,10 +997,10 @@ function DraftPicksSection({
         {/* Header row with Flexibility */}
         <View style={styles.draftSummaryHeaderRow}>
           <Text style={styles.draftSummaryMainLabel}>
-            {isJa ? "ドラフト資産サマリー (2027-2033)" : "ASSETS SUMMARY (7-YEAR)"}
+            {ui.draftSummaryTitle}
           </Text>
           <View style={styles.draftFlexibilityWrap}>
-            <Text style={styles.draftFlexibilityLabel}>{isJa ? "柔軟性" : "FLEX"}</Text>
+            <Text style={styles.draftFlexibilityLabel}>{ui.flex}</Text>
             <View
               style={[
                 styles.draftFlexibilityBadge,
@@ -1024,16 +1022,16 @@ function DraftPicksSection({
           {/* 1st Round */}
           <View style={styles.draftSummaryBox}>
             <Text style={[styles.draftSummaryBoxLabel, { color: "#00F5FF" }]}>
-              {isJa ? "1巡目指名権" : "1ST ROUND"}
+              {ui.firstRound}
             </Text>
             <View style={styles.draftSummaryBoxValRow}>
               <Text style={styles.draftSummaryBoxVal}>{summary.total1st}</Text>
-              <Text style={styles.draftSummaryBoxUnit}>{isJa ? "本" : "picks"}</Text>
+              <Text style={styles.draftSummaryBoxUnit}>{ui.picksUnit}</Text>
             </View>
             <Text style={styles.draftSummaryBoxSub}>
-              {isJa ? "確定 " : "Guar "}
+              {ui.guar}
               <Text style={styles.draftSummaryBoxSubBold}>{summary.guaranteed1st}</Text>
-              {isJa ? " / 条件付 " : " / Cond "}
+              {ui.cond}
               <Text style={[styles.draftSummaryBoxSubBold, { color: "#FFB800" }]}>
                 {summary.conditional1st}
               </Text>
@@ -1043,16 +1041,16 @@ function DraftPicksSection({
           {/* 2nd Round */}
           <View style={styles.draftSummaryBox}>
             <Text style={styles.draftSummaryBoxLabel}>
-              {isJa ? "2巡目指名権" : "2ND ROUND"}
+              {ui.secondRound}
             </Text>
             <View style={styles.draftSummaryBoxValRow}>
               <Text style={styles.draftSummaryBoxVal}>{summary.total2nd}</Text>
-              <Text style={styles.draftSummaryBoxUnit}>{isJa ? "本" : "picks"}</Text>
+              <Text style={styles.draftSummaryBoxUnit}>{ui.picksUnit}</Text>
             </View>
             <Text style={styles.draftSummaryBoxSub}>
-              {isJa ? "確定 " : "Guar "}
+              {ui.guar}
               <Text style={styles.draftSummaryBoxSubBold}>{summary.guaranteed2nd}</Text>
-              {isJa ? " / 条件付 " : " / Cond "}
+              {ui.cond}
               <Text style={[styles.draftSummaryBoxSubBold, { color: "#FFB800" }]}>
                 {summary.conditional2nd}
               </Text>
@@ -1062,32 +1060,32 @@ function DraftPicksSection({
           {/* Swap Rights */}
           <View style={styles.draftSummaryBox}>
             <Text style={[styles.draftSummaryBoxLabel, { color: "#FFB800" }]}>
-              {isJa ? "スワップ権" : "SWAP RIGHTS"}
+              {ui.swapRights}
             </Text>
             <View style={styles.draftSummaryBoxValRow}>
               <Text style={[styles.draftSummaryBoxVal, { color: "#FFB800" }]}>
                 {summary.swapRights}
               </Text>
-              <Text style={styles.draftSummaryBoxUnit}>{isJa ? "件" : "swaps"}</Text>
+              <Text style={styles.draftSummaryBoxUnit}>{ui.swapsUnit}</Text>
             </View>
             <Text style={styles.draftSummaryBoxSub}>
-              {isJa ? "有利交換権利" : "Favorable swap"}
+              {ui.favorableSwap}
             </Text>
           </View>
 
           {/* Outgoing */}
           <View style={styles.draftSummaryBox}>
             <Text style={[styles.draftSummaryBoxLabel, { color: "#FF2D78" }]}>
-              {isJa ? "放出済み" : "OUTGOING"}
+              {ui.outgoing}
             </Text>
             <View style={styles.draftSummaryBoxValRow}>
               <Text style={[styles.draftSummaryBoxVal, { color: "#FF2D78" }]}>
                 {summary.outgoingPicks}
               </Text>
-              <Text style={styles.draftSummaryBoxUnit}>{isJa ? "本" : "picks"}</Text>
+              <Text style={styles.draftSummaryBoxUnit}>{ui.picksUnit}</Text>
             </View>
             <Text style={styles.draftSummaryBoxSub}>
-              {isJa ? "トレード譲渡" : "Traded away"}
+              {ui.tradedAway}
             </Text>
           </View>
         </View>
@@ -1097,16 +1095,16 @@ function DraftPicksSection({
       <View style={[styles.draftListCard, { borderColor: frame }]}>
         <View style={styles.draftTimelineHeaderRow}>
           <Text style={styles.draftTimelineHeaderTitle}>
-            {isJa ? "年別タイムライン (タップで条件詳細)" : "PICKS TIMELINE (TAP FOR DETAILS)"}
+            {ui.picksTimeline}
           </Text>
           <View style={styles.draftLegendRow}>
             <View style={styles.draftLegendItem}>
               <View style={[styles.draftLegendDot, { backgroundColor: "#00F5FF" }]} />
-              <Text style={styles.draftLegendText}>{isJa ? "自前" : "OWN"}</Text>
+              <Text style={styles.draftLegendText}>{ui.legendOwn}</Text>
             </View>
             <View style={styles.draftLegendItem}>
               <View style={[styles.draftLegendDot, { backgroundColor: "#5CF0B5" }]} />
-              <Text style={styles.draftLegendText}>{isJa ? "取得" : "FROM"}</Text>
+              <Text style={styles.draftLegendText}>{ui.legendFrom}</Text>
             </View>
             <View style={styles.draftLegendItem}>
               <View style={[styles.draftLegendDot, { backgroundColor: "#FFB800" }]} />
@@ -1114,15 +1112,15 @@ function DraftPicksSection({
             </View>
             <View style={styles.draftLegendItem}>
               <View style={[styles.draftLegendDot, { backgroundColor: "#B388FF" }]} />
-              <Text style={styles.draftLegendText}>{isJa ? "保護" : "PROT"}</Text>
+              <Text style={styles.draftLegendText}>{ui.legendProt}</Text>
             </View>
             <View style={styles.draftLegendItem}>
               <View style={[styles.draftLegendDot, { backgroundColor: "#FF2D78" }]} />
-              <Text style={styles.draftLegendText}>{isJa ? "放出" : "OUT"}</Text>
+              <Text style={styles.draftLegendText}>{ui.legendOut}</Text>
             </View>
             <View style={styles.draftLegendItem}>
               <View style={[styles.draftLegendDot, { backgroundColor: "#FF503C" }]} />
-              <Text style={styles.draftLegendText}>{isJa ? "没収" : "FORFEIT"}</Text>
+              <Text style={styles.draftLegendText}>{ui.legendForfeit}</Text>
             </View>
           </View>
         </View>
@@ -1144,12 +1142,12 @@ function DraftPicksSection({
                     {y.firstRound.length === 0 ? (
                       <View style={[styles.draftChip, styles.draftChipNone]}>
                         <Text style={styles.draftChipTextNone}>
-                          {isJa ? "保有なし" : "None"}
+                          {ui.none}
                         </Text>
                       </View>
                     ) : (
                       y.firstRound.map((p) => {
-                        return renderNativePickChip(p, isJa, () => setSelectedPick(p));
+                        return renderNativePickChip(p, ui, () => setSelectedPick(p));
                       })
                     )}
                   </View>
@@ -1164,12 +1162,12 @@ function DraftPicksSection({
                     {y.secondRound.length === 0 ? (
                       <View style={[styles.draftChip, styles.draftChipNone]}>
                         <Text style={styles.draftChipTextNone}>
-                          {isJa ? "保有なし" : "None"}
+                          {ui.none}
                         </Text>
                       </View>
                     ) : (
                       y.secondRound.map((p) => {
-                        return renderNativePickChip(p, isJa, () => setSelectedPick(p));
+                        return renderNativePickChip(p, ui, () => setSelectedPick(p));
                       })
                     )}
                   </View>
@@ -1224,19 +1222,7 @@ function DraftPicksSection({
                   {selectedPick.badgeType && (
                     <View style={styles.draftModalTagBadge}>
                       <Text style={styles.draftModalTagBadgeText}>
-                        {selectedPick.badgeType === "own"
-                          ? isJa ? "自前指名権" : "OWN PICK"
-                          : selectedPick.badgeType === "from"
-                          ? isJa ? `獲得 (via ${selectedPick.fromTeamId ?? ""})` : `VIA ${selectedPick.fromTeamId ?? ""}`
-                          : selectedPick.badgeType === "swap"
-                          ? isJa ? `スワップ権 (${selectedPick.swapWithTeamId ?? ""})` : `SWAP (${selectedPick.swapWithTeamId ?? ""})`
-                          : selectedPick.badgeType === "prot"
-                          ? isJa ? "プロテクト付き" : "PROTECTED"
-                          : selectedPick.badgeType === "outgoing"
-                          ? isJa ? `放出済み (to ${selectedPick.toTeamId ?? ""})` : `OUTGOING (to ${selectedPick.toTeamId ?? ""})`
-                          : selectedPick.badgeType === "forfeited"
-                          ? isJa ? "NBA没収" : "NBA FORFEITED"
-                          : isJa ? "条件付き" : "CONDITIONAL"}
+                        {draftBadgeHeadline(selectedPick.badgeType, ui, selectedPick)}
                       </Text>
                     </View>
                   )}
@@ -1260,9 +1246,7 @@ function DraftPicksSection({
                       <Text style={styles.draftOriginBodyText}>
                         {body.length > 0
                           ? body
-                          : isJa
-                            ? "経緯データなし"
-                            : "No origin on file"}
+                          : ui.noOrigin}
                       </Text>
                     </View>
                   );
@@ -1271,7 +1255,7 @@ function DraftPicksSection({
                 {/* Conditions list */}
                 <View style={styles.draftModalBodyBox}>
                   <Text style={styles.draftModalBodyLabel}>
-                    {isJa ? "行使条件・保護ルール" : "CONDITIONS & CONVEYANCE"}
+                    {ui.conditionsTitle}
                   </Text>
                   {selectedPick.conditionsJa && selectedPick.conditionsJa.length > 0 ? (
                     (isJa ? selectedPick.conditionsJa : selectedPick.conditionsEn ?? selectedPick.conditionsJa).map(
@@ -1285,8 +1269,8 @@ function DraftPicksSection({
                   ) : (
                     <Text style={styles.draftConditionText}>
                       {isJa
-                        ? selectedPick.detailsJa ?? "追加のプロテクション条件はありません（確定）"
-                        : selectedPick.detailsEn ?? "No additional protection conditions (guaranteed)."}
+                        ? selectedPick.detailsJa ?? ui.noExtraProtection
+                        : selectedPick.detailsEn ?? ui.noExtraProtection}
                     </Text>
                   )}
                 </View>
@@ -1297,7 +1281,7 @@ function DraftPicksSection({
                   onPress={() => setSelectedPick(null)}
                 >
                   <Text style={styles.draftModalActionBtnText}>
-                    {isJa ? "閉じる" : "CLOSE"}
+                    {ui.close}
                   </Text>
                 </Pressable>
               </>
@@ -1311,9 +1295,10 @@ function DraftPicksSection({
 
 function renderNativePickChip(
   p: NbaDraftPickEntry,
-  isJa: boolean,
+  ui: NbaTeamDetailUiCopy,
   onPress: () => void
 ) {
+  const isJa = ui.lang === "ja";
   const badgeType = p.badgeType ?? "own";
   const isForfeited =
     p.kind === "forfeited" || badgeType === "forfeited";
@@ -1328,20 +1313,20 @@ function renderNativePickChip(
   let border = "rgba(0,245,255,0.35)";
   let color = "#00F5FF";
   let tagBg = "rgba(0,245,255,0.2)";
-  let tagText = isJa ? "自前" : "OWN";
+  let tagText = ui.tagOwn;
 
   if (isForfeited) {
     bg = "rgba(255,80,60,0.08)";
     border = "rgba(255,80,60,0.4)";
     color = "#FF503C";
     tagBg = "rgba(255,80,60,0.22)";
-    tagText = isJa ? "没収" : "FORFEIT";
+    tagText = ui.tagForfeit;
   } else if (isOutgoing) {
     bg = "rgba(255,45,120,0.06)";
     border = "rgba(255,45,120,0.3)";
     color = "#FF2D78";
     tagBg = "rgba(255,45,120,0.2)";
-    tagText = isJa ? "放出" : "OUT";
+    tagText = ui.tagOut;
   } else if (isSwap) {
     bg = "rgba(255,184,0,0.08)";
     border = "rgba(255,184,0,0.4)";
@@ -1353,13 +1338,13 @@ function renderNativePickChip(
     border = "rgba(179,136,255,0.4)";
     color = "#B388FF";
     tagBg = "rgba(179,136,255,0.2)";
-    tagText = p.protectionTag ?? (isJa ? "プロテクト" : "PROT");
+    tagText = p.protectionTag ?? ui.tagProt;
   } else if (isFrom) {
     bg = "rgba(92,240,181,0.08)";
     border = "rgba(92,240,181,0.4)";
     color = "#5CF0B5";
     tagBg = "rgba(92,240,181,0.2)";
-    tagText = p.fromTeamId ? `FROM ${p.fromTeamId}` : isJa ? "取得" : "FROM";
+    tagText = p.fromTeamId ? `FROM ${p.fromTeamId}` : ui.tagFrom;
   }
 
   const label = isJa
@@ -1405,7 +1390,9 @@ export default function NbaTeamDetailPanelNative({
   teamId,
   onSelectPlayer,
 }: Props) {
-  const isJa = language === "ja";
+  const ui = nbaTeamDetailUiCopy(language);
+  const lang = ui.lang;
+  const isJa = lang === "ja";
   const insets = useSafeAreaInsets();
   const { bundle } = useLeagueTeamStatsBundle({
     apiBaseUrl: getUniterzApiBaseUrl(),
@@ -1459,9 +1446,7 @@ export default function NbaTeamDetailPanelNative({
         
         {hasFetchError ? (
           <Text style={{ color: "rgba(255,255,255,0.65)", fontSize: 11, fontWeight: "700", marginBottom: 8 }}>
-            {isJa
-              ? "一部データの取得に失敗しました。表示が古い／空の可能性があります。"
-              : "Some live data failed to load. Parts may be empty or stale."}
+            {ui.fetchError}
           </Text>
         ) : null}
 {/* HEADER */}
@@ -1535,7 +1520,7 @@ export default function NbaTeamDetailPanelNative({
               chips={teamInsights.identity}
               accent={accent}
               title="TEAM IDENTITY"
-              isJa={isJa}
+              language={lang}
             />
             <View style={[styles.divider, { backgroundColor: dividerColor }]} />
           </>
@@ -1545,7 +1530,7 @@ export default function NbaTeamDetailPanelNative({
               chips={teamInsights.identity}
               accent={accent}
               title="TEAM IDENTITY"
-              isJa={isJa}
+              language={lang}
             />
             <View style={[styles.divider, { backgroundColor: dividerColor }]} />
           </>
@@ -1554,7 +1539,7 @@ export default function NbaTeamDetailPanelNative({
         <InjuriesSection
           injuries={detail.injuries}
           accent={accent}
-          isJa={isJa}
+          ui={ui}
         />
 
         <View style={[styles.divider, { backgroundColor: dividerColor }]} />
@@ -1596,7 +1581,7 @@ export default function NbaTeamDetailPanelNative({
         <NbaTeamHowTheyPlayNative
           teamId={detail.teamId}
           accent={accent}
-          isJa={isJa}
+          language={language}
           bundle={bundle}
         />
 
@@ -1607,7 +1592,7 @@ export default function NbaTeamDetailPanelNative({
             games={detail.recentGames}
             streak={detail.streak}
             accent={accent}
-            isJa={isJa}
+            ui={ui}
             trends={teamInsights.trends}
           />
         </View>
@@ -1617,7 +1602,7 @@ export default function NbaTeamDetailPanelNative({
         <GameLogsSection
           games={detail.recentGames}
           accent={accent}
-          isJa={isJa}
+          ui={ui}
         />
 
         <View style={[styles.divider, { backgroundColor: dividerColor }]} />
@@ -1625,7 +1610,7 @@ export default function NbaTeamDetailPanelNative({
         <HeadToHeadSection
           rows={detail.headToHead}
           accent={accent}
-          isJa={isJa}
+          ui={ui}
         />
 
         <View style={[styles.divider, { backgroundColor: dividerColor }]} />
@@ -1634,7 +1619,7 @@ export default function NbaTeamDetailPanelNative({
           upcomingGames={detail.upcomingGames}
           scheduleDifficulty={teamInsights.scheduleDifficulty}
           accent={accent}
-          isJa={isJa}
+          language={lang}
         />
 
         <View style={[styles.divider, { backgroundColor: dividerColor }]} />
@@ -1691,7 +1676,7 @@ export default function NbaTeamDetailPanelNative({
           payroll={detail.payroll}
           rosterBlock={detail.rosterBlock}
           accent={accent}
-          isJa={isJa}
+          ui={ui}
         />
 
         <View style={[styles.divider, { backgroundColor: dividerColor }]} />
@@ -1699,7 +1684,7 @@ export default function NbaTeamDetailPanelNative({
         <DraftPicksSection
           teamId={detail.teamId}
           accent={accent}
-          isJa={isJa}
+          ui={ui}
         />
 
         <View style={[styles.divider, { backgroundColor: dividerColor }]} />
@@ -1778,7 +1763,7 @@ const styles = StyleSheet.create({
   nick: {
     ...MATCH_CARD_BRACKET_TEXT,
     color: "#FFFFFF",
-    fontSize: 26,
+    fontSize: 20,
     letterSpacing: MATCH_CARD_BRACKET_LETTER_SPACING_12,
     textTransform: "uppercase",
     marginBottom: 2,

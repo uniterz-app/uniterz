@@ -4,32 +4,31 @@
 import { StyleSheet, Text, View } from "react-native";
 import type { TeamAffinityRow } from "./profileAnalysisUtils";
 import { colors, radius } from "../../theme/tokens";
+import { profileTeamAffinityCopy } from "./profileOverviewWidgetsCopy";
 
 type Props = {
   strong: TeamAffinityRow[];
   weak: TeamAffinityRow[];
-  language: "ja" | "en";
+  language: string;
 };
 
 export default function ProfileTeamAffinityCardNative({ strong, weak, language }: Props) {
-  const isJa = language === "ja";
+  const copy = profileTeamAffinityCopy(language);
   return (
     <View style={styles.card}>
-      <Text style={styles.title}>
-        {isJa ? "チーム別パフォーマンス" : "Team performance"}
-      </Text>
+      <Text style={styles.title}>{copy.title}</Text>
       <View style={styles.columns}>
         <TeamList
-          title={isJa ? "相性の良いチーム" : "Strong matchups"}
+          title={copy.strong}
           tone="strong"
           data={strong}
-          isJa={isJa}
+          copy={copy}
         />
         <TeamList
-          title={isJa ? "相性の悪いチーム" : "Weak matchups"}
+          title={copy.weak}
           tone="weak"
           data={weak}
-          isJa={isJa}
+          copy={copy}
         />
       </View>
     </View>
@@ -40,12 +39,12 @@ function TeamList({
   title,
   tone,
   data,
-  isJa,
+  copy,
 }: {
   title: string;
   tone: "strong" | "weak";
   data: TeamAffinityRow[];
-  isJa: boolean;
+  copy: ReturnType<typeof profileTeamAffinityCopy>;
 }) {
   const titleColor = tone === "strong" ? "#67e8f9" : "#e879f9";
   const barColor = tone === "strong" ? "#22d3ee" : "#e879f9";
@@ -55,10 +54,8 @@ function TeamList({
       <View style={styles.listCol}>
         <Text style={[styles.listTitle, { color: titleColor }]}>{title}</Text>
         <View style={styles.emptyBox}>
-          <Text style={styles.emptyTitle}>{isJa ? "データ不足" : "Not enough data"}</Text>
-          <Text style={styles.emptyBody}>
-            {isJa ? "各チーム最低5投稿が必要です" : "At least 5 posts per team required"}
-          </Text>
+          <Text style={styles.emptyTitle}>{copy.notEnough}</Text>
+          <Text style={styles.emptyBody}>{copy.needFive}</Text>
         </View>
       </View>
     );
@@ -79,16 +76,14 @@ function TeamList({
                 </Text>
               </View>
               <View style={styles.teamMeta}>
-                <Text style={styles.games}>
-                  {isJa ? `${team.games}試合` : `${team.games} games`}
-                </Text>
+                <Text style={styles.games}>{copy.games(team.games)}</Text>
                 <Text style={[styles.rate, { color: titleColor }]}>{rate}%</Text>
               </View>
             </View>
             <View style={styles.barTrack}>
               <View style={[styles.barFill, { width: `${rate}%`, backgroundColor: barColor }]} />
             </View>
-            <Text style={styles.hint}>{affinityHint(rate, isJa)}</Text>
+            <Text style={styles.hint}>{copy.hint(rate)}</Text>
           </View>
         );
       })}
@@ -98,19 +93,6 @@ function TeamList({
 
 function clamp01(x: number) {
   return Math.max(0, Math.min(1, x));
-}
-
-function affinityHint(rate: number, isJa: boolean): string {
-  if (isJa) {
-    if (rate >= 70) return "安定して勝てている";
-    if (rate >= 55) return "やや相性が良い";
-    if (rate >= 45) return "五分の相性";
-    return "相性が悪い";
-  }
-  if (rate >= 70) return "Consistently strong";
-  if (rate >= 55) return "Slightly favorable";
-  if (rate >= 45) return "Even matchup";
-  return "Unfavorable";
 }
 
 const styles = StyleSheet.create({

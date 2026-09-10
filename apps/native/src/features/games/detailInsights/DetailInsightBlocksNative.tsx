@@ -22,12 +22,12 @@ export function DetailIdentityChipRowNative({
   chips,
   accent,
   title,
-  isJa = true,
+  language = "en",
 }: {
   chips: DetailInsightChip[];
   accent: string;
   title?: string;
-  isJa?: boolean;
+  language?: string;
 }) {
   const [explain, setExplain] = useState<DetailChipExplainPayload | null>(
     null
@@ -47,11 +47,7 @@ export function DetailIdentityChipRowNative({
             <Pressable
               key={chip.id}
               onPress={() =>
-                setExplain({
-                  label: chip.label,
-                  hintJa: chip.hintJa,
-                  hintEn: chip.hintEn,
-                })
+                setExplain({ label: chip.label, hint: chip.hint })
               }
               style={[styles.chip, { borderColor: accent }]}
             >
@@ -65,7 +61,7 @@ export function DetailIdentityChipRowNative({
       <DetailChipExplainModalNative
         visible={explain != null}
         payload={explain}
-        isJa={isJa}
+        language={language}
         accent={accent}
         onClose={() => setExplain(null)}
       />

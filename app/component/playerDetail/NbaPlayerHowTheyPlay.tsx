@@ -3,6 +3,8 @@
 /** チーム詳細 `HowTheyPlayBoard` 相当 — プレイヤーの PERFORMANCE + HOW THEY PLAY */
 import { useMemo, useState } from "react";
 import { nameOxanium } from "@/lib/fonts";
+import { L, type LocalizedLang } from "@/lib/i18n/localize";
+import type { UiStrings } from "@/lib/i18n/ui";
 import { CyberSlantedSegBar } from "@/app/component/rankings/CyberSlantedSegBar";
 import {
   PLAYER_HOW_THEY_PLAY_TABS,
@@ -161,21 +163,21 @@ function HintRow({
   selectedId,
   onSelect,
   accent,
-  isJa,
+  lang,
 }: {
   rows: Array<{
     id: string;
     short: string;
-    hintJa: string;
-    hintEn: string;
+    hint: UiStrings;
     cell: { display: string; rank: number };
     pts?: { display: string };
   }>;
   selectedId: string;
   onSelect: (id: string) => void;
   accent: string;
-  isJa: boolean;
+  lang: LocalizedLang;
 }) {
+  const isJa = lang === "ja";
   const frame = hexToRgba(accent, 0.4);
   const line = hexToRgba(accent, 0.15);
   const selected = rows.find((r) => r.id === selectedId) ?? rows[0];
@@ -220,7 +222,7 @@ function HintRow({
         })}
       </div>
       <p className={`${nameOxanium.className} text-[13px] font-bold leading-snug text-white/85`}>
-        {isJa ? selected.hintJa : selected.hintEn}
+        {L(lang, selected.hint)}
       </p>
     </>
   );
@@ -229,14 +231,14 @@ function HintRow({
 export default function NbaPlayerHowTheyPlay({
   playerId,
   accent,
-  isJa,
+  lang,
   leaders,
   teamStats,
   detail,
 }: {
   playerId: string;
   accent: string;
-  isJa: boolean;
+  lang: LocalizedLang;
   leaders?: NbaPlayerStatLeadersBundle;
   teamStats?: NbaLeagueTeamStatsBundle;
   detail?: NbaPlayerDetailPreview;
@@ -312,7 +314,7 @@ export default function NbaPlayerHowTheyPlay({
           ))}
         </div>
         <p className={`${nameOxanium.className} text-[11px] leading-snug text-[#00F5FF]/70`}>
-          {isJa ? tabMeta.hintJa : tabMeta.hintEn}
+          {L(lang, tabMeta.hint)}
         </p>
 
         {tab === "fourFactors" ? (
@@ -321,7 +323,7 @@ export default function NbaPlayerHowTheyPlay({
             selectedId={factorId}
             onSelect={setFactorId}
             accent={accent}
-            isJa={isJa}
+            lang={lang}
           />
         ) : null}
 
@@ -331,7 +333,7 @@ export default function NbaPlayerHowTheyPlay({
               <div key={row.id} className="space-y-1">
                 <div className="flex items-center gap-2">
                   <span className={`${nameOxanium.className} min-w-0 flex-1 text-[10px] font-bold uppercase tracking-[0.12em] text-white/55`}>
-                    {isJa ? row.labelJa : row.labelEn}
+                    {L(lang, row.label)}
                   </span>
                   <HowPtsCol display={row.pts.display} />
                   <MetricStack
@@ -402,7 +404,7 @@ export default function NbaPlayerHowTheyPlay({
               <div key={row.id} className="space-y-2">
                 <div className="flex items-center gap-2">
                   <span className={`${nameOxanium.className} min-w-0 flex-1 text-[12px] font-bold uppercase tracking-wide text-white/88`}>
-                    {isJa ? row.labelJa : row.labelEn}
+                    {L(lang, row.label)}
                   </span>
                   <HowPtsCol display={row.pts.display} />
                   <MetricStack
@@ -465,7 +467,7 @@ export default function NbaPlayerHowTheyPlay({
             selectedId={defenseId}
             onSelect={setDefenseId}
             accent={accent}
-            isJa={isJa}
+            lang={lang}
           />
         ) : null}
 
@@ -475,7 +477,7 @@ export default function NbaPlayerHowTheyPlay({
             selectedId={hustleId}
             onSelect={setHustleId}
             accent={accent}
-            isJa={isJa}
+            lang={lang}
           />
         ) : null}
 
@@ -485,7 +487,7 @@ export default function NbaPlayerHowTheyPlay({
             selectedId={trackId}
             onSelect={setTrackId}
             accent={accent}
-            isJa={isJa}
+            lang={lang}
           />
         ) : null}
       </section>

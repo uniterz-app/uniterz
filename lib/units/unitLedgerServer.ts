@@ -32,7 +32,7 @@ export async function loadUnitLedgerForUid(
   uid: string,
   opts?: { limit?: number; language?: "ja" | "en" }
 ): Promise<{ balance: number; entries: UnitLedgerEntry[] }> {
-  const language = opts?.language === "en" ? "en" : "ja";
+  const language = opts?.language === "ja" ? "ja" : "en";
   const limit = Math.min(100, Math.max(1, opts?.limit ?? 50));
 
   const userSnap = await db.collection("users").doc(uid).get();

@@ -84,8 +84,7 @@ function scheduleNoticeForUser(
   language: RankingsLanguage,
   countryCode: string | null,
 ): string {
-  const lang = (language === "en" ? "en" : "ja") as Language;
-  return getRankingsScheduleNoticeText(lang, countryCode);
+  return getRankingsScheduleNoticeText(language as Language, countryCode);
 }
 
 export default function RankingsHomeScreen({ bottomReserveY }: Props) {
@@ -640,7 +639,7 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
 
       <TutorialLiveHostNative
         page="rankings"
-        language={(language === "en" ? "en" : "ja") as Language}
+        language={(language === "ja" ? "ja" : "en") as Language}
       />
     </View>
   );

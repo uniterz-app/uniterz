@@ -28,7 +28,7 @@ import MobilePageShell from "../mobileScreens/MobilePageShell";
 import ProCyberBadgeNative from "../kinetik/ProCyberBadgeNative";
 import { OXANIUM_700, OXANIUM_800 } from "../reports/reportThemeNative";
 import { useFirebaseUser } from "../../../auth/FirebaseUserProvider";
-import { useNativeUserLanguage } from "../../../hooks/useNativeUserLanguage";
+import { useNativeUserLanguage } from "../../../i18n/useNativeUserLanguage";
 import { db } from "../../../lib/firebase";
 import type { ProfileStackParamList } from "../../../navigation/types";
 import { spacing } from "../../../theme/tokens";
@@ -46,6 +46,7 @@ import {
 import {
   planChangeCompleteCopy,
   planChangeTaxSuffix,
+  resolvePlanChangeUiLang,
   type PlanChangeUiLang,
 } from "../../../../../../lib/pro/planChangeUiCopy";
 import { PRO_SUCCESS_ACCENT } from "../../../../../../lib/pro/proSuccessAccent";
@@ -101,7 +102,7 @@ export default function PlanChangeCompleteScreenNative() {
     useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
   const { fUser } = useFirebaseUser();
   const { language } = useNativeUserLanguage(fUser?.uid ?? null);
-  const lang: PlanChangeUiLang = language === "en" ? "en" : "ja";
+  const lang: PlanChangeUiLang = resolvePlanChangeUiLang(language);
   const c = planChangeCompleteCopy(lang);
   const [storedType, setStoredType] = useState<StoredPlanType | null>(null);
   const [proUntil, setProUntil] = useState<Date | null>(null);

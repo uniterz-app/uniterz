@@ -239,7 +239,7 @@ export default function ResultCardDesignFace({
                 density="coarse"
               />
               <span className={styles.skewWrap}>
-                <span className={`${styles.teamNameSlant} ${nameBebas.className}`}>
+                <span className={`${styles.teamNameSlant} ${nameOxanium.className} font-semibold`}>
                   {face.homeName}
                 </span>
               </span>
@@ -294,7 +294,7 @@ export default function ResultCardDesignFace({
                 density="coarse"
               />
               <span className={styles.skewWrap}>
-                <span className={`${styles.teamNameSlant} ${nameBebas.className}`}>
+                <span className={`${styles.teamNameSlant} ${nameOxanium.className} font-semibold`}>
                   {face.awayName}
                 </span>
               </span>
@@ -373,7 +373,7 @@ export default function ResultCardDesignFace({
                   <div className={styles.scorerValueRow}>
                     <span className={styles.skewWrap}>
                       <span
-                        className={`${styles.scorerLabel} ${nameBebas.className}`}
+                        className={`${styles.scorerLabel} ${nameOxanium.className}`}
                       >
                         TOP SCORER
                       </span>
@@ -381,7 +381,7 @@ export default function ResultCardDesignFace({
                     <div className={styles.scorerNameWrap}>
                       <span className={styles.scorerNameSkew}>
                         <span
-                          className={`${styles.scorerName} ${nameBebas.className}`}
+                          className={`${styles.scorerName} ${nameOxanium.className}`}
                         >
                           {face.topScorer}
                         </span>

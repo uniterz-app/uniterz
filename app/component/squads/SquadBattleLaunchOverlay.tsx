@@ -14,6 +14,7 @@ import {
   SQUAD_BATTLE_LAUNCH_STORAGE_KEY,
   squadBattleLaunchCopy,
   squadBattleScreenCopy,
+  resolveSquadBattleUiLang,
   type SquadBattleUiLang,
 } from "@/lib/squads/squadBattleUiCopy";
 import { SQUAD_GOLD, SQUAD_GOLD_CHAMFER } from "@/lib/squads/squadBattleGoldTheme";
@@ -90,7 +91,7 @@ export default function SquadBattleLaunchOverlay({
   const [mounted, setMounted] = useState(false);
   const reduceMotion = useReducedMotion() === true;
   const deadline = deadlineLabel?.trim() || null;
-  const lang: SquadBattleUiLang = language === "en" ? "en" : "ja";
+  const lang: SquadBattleUiLang = resolveSquadBattleUiLang(language);
   const copy = squadBattleLaunchCopy(lang);
   const screen = squadBattleScreenCopy(lang);
 

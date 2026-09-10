@@ -14,10 +14,11 @@ import type {
 import type { NbaSeasonStandingsPrediction } from "../../../../../lib/predict/nbaSeasonStandingsPredict";
 import { fetchProfileSeasonAwardsNative } from "./seasonAwardsApiNative";
 import { fetchProfileSeasonStandingsNative } from "./seasonStandingsApiNative";
+import { L, resolveLocalizedLang } from "@/lib/i18n/localize";
 
 type Props = {
   uid: string | undefined;
-  language: "ja" | "en";
+  language: string;
   /** 明示指定時は fetch せずこれを表示（プレビュー用） */
   prediction?: NbaSeasonAwardsPrediction | null;
   candidates?: NbaAwardCandidate[];
@@ -31,7 +32,7 @@ export default function ProfileAwardsTabNative({
   candidates: candidatesProp,
   standings: standingsProp,
 }: Props) {
-  const isJa = language === "ja";
+  const lang = resolveLocalizedLang(language);
   const controlled =
     predictionProp !== undefined || standingsProp !== undefined;
   const [loading, setLoading] = useState(!controlled && Boolean(uid));
@@ -99,7 +100,15 @@ export default function ProfileAwardsTabNative({
   if (!uid) {
     return (
       <Text style={styles.muted}>
-        {isJa ? "ログインが必要です" : "Sign in required"}
+        {L(lang, {
+          ja: "ログインが必要です",
+          en: "Sign in required",
+          ko: "로그인이 필요합니다",
+          zh: "需要登录",
+          es: "Inicia sesión",
+          pt: "Faça login",
+          fr: "Connexion requise",
+        })}
       </Text>
     );
   }
@@ -117,9 +126,15 @@ export default function ProfileAwardsTabNative({
       <View style={styles.noDataBox}>
         <Text style={styles.noDataBebas}>NO DATA</Text>
         <Text style={styles.muted}>
-          {isJa
-            ? "提出済みのシーズン予想がありません"
-            : "No season predictions submitted"}
+          {L(lang, {
+            ja: "提出済みのシーズン予想がありません",
+            en: "No season predictions submitted",
+            ko: "제출된 시즌 예측이 없습니다",
+            zh: "尚无已提交的赛季预测",
+            es: "No hay predicciones de temporada",
+            pt: "Nenhuma previsão de temporada",
+            fr: "Aucune prédiction de saison",
+          })}
         </Text>
       </View>
     );

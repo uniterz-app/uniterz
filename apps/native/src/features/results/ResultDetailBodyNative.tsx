@@ -23,6 +23,7 @@ import { CyberRankingListRowNative } from "../rankings/CyberRankingListRowNative
 import { MATCH_CARD_SCORE_FONT } from "../games/matchCardTypography";
 import { METRIC_FONT } from "../rankings/rankingsUiTheme";
 import { CYBER_LIST_CYAN } from "../../../../../lib/rankings/cyberRankVisual";
+import type { Language } from "../../../../../lib/i18n/language";
 import { WeeklyReportCardShell } from "../profile/reports/reportCardShellNative";
 import { SCORE_BREAKDOWN_COLORS } from "../../../../../lib/result/resultScoreBreakdownColors";
 import type {
@@ -490,7 +491,7 @@ function ScoreBreakdownPanel({
 export type ResultDetailBodySections = "full" | "cardAndLiveStats";
 
 type Props = {
-  language: "ja" | "en";
+  language: Language;
   view: ResultDetailViewModel;
   onOpenProfile?: (handle: string, warm?: OpenPublicProfileWarm) => void;
   /** ScrollView の contentContainerStyle に足す余白 */

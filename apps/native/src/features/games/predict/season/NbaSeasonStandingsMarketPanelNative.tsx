@@ -19,6 +19,8 @@ import {
   getTeamJerseySecondaryColor,
 } from "../../../../../../../lib/team-colors";
 import {
+  seasonPredictPredictedRankBandsHeading,
+  seasonPredictStandingsBandLabel,
   seasonPredictStandingsMarketHint,
   type SeasonPredictUiLang,
 } from "../../../../../../../lib/predict/seasonPredictUiCopy";
@@ -64,7 +66,9 @@ function DetailBands({
   const bands = standingsDetailBandWidths(row.detailBandPct);
   return (
     <View style={styles.detail}>
-      <Text style={styles.detailLabel}>Predicted rank bands</Text>
+      <Text style={styles.detailLabel}>
+        {seasonPredictPredictedRankBandsHeading(language)}
+      </Text>
       <View style={styles.stackBar}>
         {bands.map((b) =>
           b.pct > 0 ? (
@@ -83,7 +87,7 @@ function DetailBands({
         {bands.map((b) => (
           <View key={b.id} style={styles.detailCell}>
             <Text style={styles.detailBandLabel}>
-              {language === "en" ? b.labelEn : b.labelJa}
+              {seasonPredictStandingsBandLabel(language, b)}
             </Text>
             <Text style={styles.detailPct}>
               {b.pct.toFixed(0)}

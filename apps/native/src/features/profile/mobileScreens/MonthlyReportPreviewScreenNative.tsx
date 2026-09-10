@@ -2,6 +2,8 @@
  * Monthly Report UI 调整用の Native プレビュー（mock）。
  * Web: /mobile/monthly-report-preview と同様にケースを切り替えて確認。
  */
+import { profileReportChromeCopy } from "../profileOverviewWidgetsCopy";
+import { resolveLocalizedLang } from "../../../../../../lib/i18n/localize";
 import { useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import type { MonthlyReport } from "../../../../../../lib/reports/monthlyReportTypes";
@@ -117,11 +119,12 @@ export default function MonthlyReportPreviewScreenNative({
   initialTab,
   onClose,
 }: {
-  language: "ja" | "en";
+  language: string;
   initialCaseKey?: string | null;
   initialTab?: TabKey | null;
   onClose: () => void;
 }) {
+  const periodLang = resolveLocalizedLang(language);
   const initialTabResolved: TabKey = useMemo(() => {
     if (initialTab === "weekly" || initialTab === "monthly") return initialTab;
     return "monthly";
@@ -154,7 +157,7 @@ export default function MonthlyReportPreviewScreenNative({
       <View style={styles.header}>
         <Text style={styles.title}>Report Preview</Text>
         <Pressable onPress={onClose} accessibilityRole="button">
-          <Text style={styles.close}>{language === "ja" ? "閉じる" : "Close"}</Text>
+          <Text style={styles.close}>{profileReportChromeCopy(language).close}</Text>
         </Pressable>
       </View>
 
@@ -165,13 +168,13 @@ export default function MonthlyReportPreviewScreenNative({
       >
         <CyberSlantedTabBarNative fill style={styles.tabBar}>
           <CyberSlantedTabNative
-            label={language === "ja" ? "週間" : "Weekly"}
+            label={profileReportChromeCopy(language).weekly}
             active={tab === "weekly"}
             onPress={() => setTab("weekly")}
             compact
           />
           <CyberSlantedTabNative
-            label={language === "ja" ? "月間" : "Monthly"}
+            label={profileReportChromeCopy(language).monthly}
             active={tab === "monthly"}
             onPress={() => setTab("monthly")}
             compact
@@ -200,9 +203,9 @@ export default function MonthlyReportPreviewScreenNative({
 
         <View style={styles.previewWrap}>
           {tab === "weekly" ? (
-            <WeeklyReportViewNative report={weeklyReport} language={language} />
+            <WeeklyReportViewNative report={weeklyReport} language={periodLang} />
           ) : (
-            <MonthlyReportViewNative report={monthlyReport} language={language} />
+            <MonthlyReportViewNative report={monthlyReport} language={periodLang} />
           )}
         </View>
       </ScrollView>

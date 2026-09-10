@@ -46,6 +46,7 @@ import {
 } from "@/lib/rankings/myRankRankingProgress";
 import type { EstimatedPeriodUnits } from "@/lib/rankings/estimatePeriodRankingUnits";
 import { periodRankingUnitMetricLabel } from "@/lib/units/periodRankingUnitRewards";
+import { L, resolveLocalizedLang } from "@/lib/i18n/localize";
 
 export type { MyRankProgressPoint };
 
@@ -626,31 +627,57 @@ export default function MyRankCard({
   });
   const progressPoints = rankProgress ?? [];
 
-  const estimatedUnitsLabel =
-    language === "en" ? "EST. UNITS" : "推定獲得 UNIT";
+  const loc = resolveLocalizedLang(language);
+  const estimatedUnitsLabel = L(loc, {
+    ja: "推定獲得 UNIT",
+    en: "EST. UNITS",
+    ko: "예상 UNIT",
+    zh: "预计 UNIT",
+    es: "UNIT EST.",
+    pt: "UNIT EST.",
+    fr: "UNIT EST.",
+  });
   const estimatedUnitsHint =
     estimatedUnits?.period === "monthly"
-      ? language === "en"
-        ? "Sum of 4 metrics · current ranks · final after period ends"
-        : "4指標合計（総合・勝率・Upset・得点者）· 現順位ベース"
-      : language === "en"
-        ? "Based on current ranks · final after period ends"
-        : "現順位ベース · 期間確定後に付与";
+      ? L(loc, {
+          ja: "4指標合計（総合・勝率・Upset・得点者）· 現順位ベース",
+          en: "Sum of 4 metrics · current ranks · final after period ends",
+          ko: "4지표 합계 · 현재 순위 기준 · 기간 종료 후 확정",
+          zh: "四项合计 · 按当前排名 · 周期结束后结算",
+          es: "Suma de 4 métricas · rangos actuales · final al cerrar el periodo",
+          pt: "Soma de 4 métricas · ranks atuais · final após o período",
+          fr: "Somme de 4 métriques · rangs actuels · final en fin de période",
+        })
+      : L(loc, {
+          ja: "現順位ベース · 期間確定後に付与",
+          en: "Based on current ranks · final after period ends",
+          ko: "현재 순위 기준 · 기간 종료 후 지급",
+          zh: "按当前排名 · 周期结束后发放",
+          es: "Según rangos actuales · final al cerrar el periodo",
+          pt: "Com base nos ranks atuais · final após o período",
+          fr: "Selon les rangs actuels · final en fin de période",
+        });
   const estimatedBreakdown =
     estimatedUnits && estimatedUnits.lines.length > 0
       ? estimatedUnits.lines
           .map((line) => {
             const label = periodRankingUnitMetricLabel(
               line.metric,
-              language === "en" ? "en" : "ja"
+              loc === "ja" ? "ja" : "en"
             );
             return `${label} #${line.rank} +${line.units}`;
           })
           .join(" · ")
       : estimatedUnits?.period === "monthly"
-        ? language === "en"
-          ? "Overall + Win% + Upset + Scorer"
-          : "総合 + 勝率 + Upset + 得点者"
+        ? L(loc, {
+            ja: "総合 + 勝率 + Upset + 得点者",
+            en: "Overall + Win% + Upset + Scorer",
+            ko: "종합 + 승률 + Upset + 득점자",
+            zh: "总分 + 胜率 + Upset + 得分手",
+            es: "General + Win% + Upset + Scorer",
+            pt: "Geral + Win% + Upset + Scorer",
+            fr: "Global + Win% + Upset + Scorer",
+          })
         : null;
 
   const outerPad =

@@ -32,12 +32,14 @@ import {
   profileOverviewChartSubtitleStyle,
   profileOverviewChartTitleStyle,
 } from "./profileOverviewChartShell";
+import { profileCareerPanelCopy } from "./profileOverviewWidgetsCopy";
+import { resolveLocalizedLang } from "../../../../../lib/i18n/localize";
 
 const RAJDHANI = "Rajdhani_600SemiBold";
 const OXANIUM = "Oxanium_700Bold";
 
 type Props = {
-  language: "ja" | "en";
+  language: string;
   career?: UserCareerDoc | null;
   badges?: readonly ProfileCareerBadgeLike[];
   loading?: boolean;
@@ -63,7 +65,8 @@ export default function ProfileCareerPanelNative({
   planProBgVariant = PROFILE_PLAN_PRO_BG_DEFAULT,
   proSkinActive = true,
 }: Props) {
-  const isJa = language === "ja";
+  const copy = profileCareerPanelCopy(language);
+  const lang = resolveLocalizedLang(language);
   const isFace = variant === "face";
   const showProSkin = isPro && isFace && proSkinActive;
   const reduceMotion = useReducedMotion() === true;
@@ -96,44 +99,22 @@ export default function ProfileCareerPanelNative({
     }
   }, [seasonKey, board]);
 
-  const copy = useMemo(
-    () =>
-      isJa
-        ? {
-            title: "CAREER",
-            sheetTitle: "CAREER // SHEET",
-            desc: "予想者としての履歴書。長期成績は信頼の証明になる。",
-            awards: "Awards",
-            seasonAllTime: "All-Time",
-            dossier: "PREDICTOR DOSSIER",
-          }
-        : {
-            title: "CAREER",
-            sheetTitle: "CAREER // SHEET",
-            desc: "Your résumé as a predictor. Long-term records build trust.",
-            awards: "Awards",
-            seasonAllTime: "All-Time",
-            dossier: "PREDICTOR DOSSIER",
-          },
-    [isJa]
-  );
-
   const awards = useMemo(
-    () => aggregateCareerAwardsFromBadges(badges, language),
-    [badges, language]
+    () => aggregateCareerAwardsFromBadges(badges, lang),
+    [badges, lang]
   );
 
   const rows: CareerRow[] = useMemo(() => {
     if (!career) return [];
     if (viewMode === "career") {
-      return buildUserCareerSummaryRows(career.summary, language);
+      return buildUserCareerSummaryRows(career.summary, lang);
     }
     const chapter = career.seasons[seasonKey];
     const boardStats =
       board === "playoffs" ? chapter?.playoffs : chapter?.regular;
     if (!boardStats) return [];
-    return buildUserCareerBoardRows(boardStats, language);
-  }, [career, viewMode, seasonKey, board, language]);
+    return buildUserCareerBoardRows(boardStats, lang);
+  }, [career, viewMode, seasonKey, board, lang]);
 
   const scopeTitle =
     viewMode === "career"
@@ -198,7 +179,7 @@ export default function ProfileCareerPanelNative({
             onPress={cycleScope}
             hitSlop={8}
             accessibilityRole="button"
-            accessibilityLabel={isJa ? "前の統計ボード" : "Previous stats board"}
+            accessibilityLabel={copy.prevBoard}
           >
             <View
               style={[
@@ -212,9 +193,7 @@ export default function ProfileCareerPanelNative({
             style={styles.scopeTitlePress}
             onPress={cycleScope}
             accessibilityRole="button"
-            accessibilityLabel={
-              isJa ? "CAREER / SEASON / PLAYOFF を切り替え" : "Switch Career / Season / Playoff"
-            }
+accessibilityLabel={copy.switchBoard}
           >
             <Text
               style={[
@@ -232,7 +211,7 @@ export default function ProfileCareerPanelNative({
             onPress={cycleScope}
             hitSlop={8}
             accessibilityRole="button"
-            accessibilityLabel={isJa ? "次の統計ボード" : "Next stats board"}
+            accessibilityLabel={copy.nextBoard}
           >
             <View
               style={[
@@ -259,13 +238,7 @@ export default function ProfileCareerPanelNative({
         <View style={styles.skeleton} />
       ) : rows.length === 0 ? (
         <Text style={styles.emptyAward}>
-          {loadError
-            ? isJa
-              ? "CAREER を取得できませんでした"
-              : "Couldn’t load CAREER"
-            : isJa
-              ? "CAREER データがまだありません"
-              : "No CAREER data yet"}
+          {loadError ? copy.loadError : copy.empty}
         </Text>
       ) : (
         <>

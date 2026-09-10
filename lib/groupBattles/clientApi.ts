@@ -3,6 +3,7 @@
  * 未認証・大会なしのときは null を返し、UI はモックへフォールバック可能。
  */
 
+import type { LocalizedLang } from "@/lib/i18n/localize";
 import type { GroupBattleMyPayout } from "./myPayoutTypes";
 import type { GroupBattleEntryProfile } from "./entryProfileTypes";
 import type {
@@ -26,8 +27,13 @@ async function authHeaders(): Promise<HeadersInit> {
 export type GroupBattleApiOptions = {
   idToken?: string | null;
   /** payout note など表示言語 */
-  lang?: "ja" | "en";
+  lang?: LocalizedLang;
 };
+
+/** API が ja/en のみ受け付けるエンドポイント用 */
+function groupBattleApiQueryLang(lang: LocalizedLang | undefined): "ja" | "en" {
+  return lang === "ja" ? "ja" : "en";
+}
 
 function withAuth(
   headers: HeadersInit,
@@ -540,7 +546,7 @@ export async function fetchGroupBattleMyPayout(
   battleId: string,
   opts?: GroupBattleApiOptions
 ) {
-  const lang = opts?.lang === "en" ? "en" : "ja";
+  const lang = groupBattleApiQueryLang(opts?.lang);
   const res = await fetch(
     `/api/group-battles/${encodeURIComponent(battleId)}/my-payout?lang=${lang}`,
     {

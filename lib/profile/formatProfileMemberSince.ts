@@ -1,6 +1,6 @@
 export function formatProfileMemberSince(
   memberSinceMs: number | null | undefined,
-  _language: "ja" | "en"
+  _language: string | null | undefined
 ): string | null {
   if (memberSinceMs == null || !Number.isFinite(memberSinceMs)) return null;
   const date = new Date(memberSinceMs);

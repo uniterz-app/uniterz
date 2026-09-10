@@ -29,8 +29,7 @@ import {
 } from "../../../../../../lib/predict/nbaSeasonAwardsPredict";
 import {
   isSeasonPredictSubmitOpen,
-  SEASON_PREDICT_SUBMIT_DEADLINE_LABEL_EN,
-  SEASON_PREDICT_SUBMIT_DEADLINE_LABEL_JA,
+  seasonPredictSubmitDeadlineLabel,
   seasonPredictSubmitLockedMessage,
 } from "../../../../../../lib/predict/seasonPredictDeadline";
 import type {
@@ -48,15 +47,19 @@ import {
 } from "../../profile/seasonStandingsApiNative";
 import { fetchSeasonPredictMarketNative } from "../../profile/seasonPredictMarketApiNative";
 import {
+  resolveSeasonPredictUiLang,
+  seasonPredictAlertCopy,
   seasonPredictAwardsIncompleteError,
   seasonPredictAwardsPageSubtitle,
   seasonPredictInvalidSubmitError,
   seasonPredictMarketPendingBody,
   seasonPredictNudgeCopy,
+  seasonPredictPageUiCopy,
   seasonPredictStandingsIncompleteError,
   seasonPredictStandingsPageSubtitle,
+  type SeasonPredictUiLang,
 } from "../../../../../../lib/predict/seasonPredictUiCopy";
-import { useNativeUserLanguageFromAuth } from "../../../hooks/useNativeUserLanguage";
+import { useNativeUserLanguageFromAuth } from "../../../i18n/useNativeUserLanguageFromAuth";
 
 type PanelMode = "loading" | "edit" | "view" | "market" | "market_pending";
 
@@ -65,13 +68,12 @@ export default function SeasonPredictScreenNative() {
   const route = useRoute<RouteProp<GamesStackParamList, "SeasonPredict">>();
   const mode = route.params?.mode ?? "standings";
   const { language: userLanguage } = useNativeUserLanguageFromAuth();
-  const language: "ja" | "en" = userLanguage === "en" ? "en" : "ja";
-  const isJa = language === "ja";
+  const language: SeasonPredictUiLang = resolveSeasonPredictUiLang(userLanguage);
+  const pageCopy = seasonPredictPageUiCopy(language);
+  const alerts = seasonPredictAlertCopy(language);
   const season = CURRENT_NBA_SEASON_KEY;
   const submitOpen = isSeasonPredictSubmitOpen();
-  const deadlineLabel = isJa
-    ? SEASON_PREDICT_SUBMIT_DEADLINE_LABEL_JA
-    : SEASON_PREDICT_SUBMIT_DEADLINE_LABEL_EN;
+  const deadlineLabel = seasonPredictSubmitDeadlineLabel(language);
 
   const [standings, setStandings] = useState<NbaSeasonStandingsPrediction>(() =>
     emptySeasonStandingsPrediction(season)
@@ -239,14 +241,14 @@ export default function SeasonPredictScreenNative() {
     if (submitting) return;
     if (!submitOpen) {
       cyberAlert(
-        isJa ? "提出期限終了" : "Deadline passed",
-        seasonPredictSubmitLockedMessage(isJa ? "ja" : "en")
+        alerts.deadlinePassedTitle,
+        seasonPredictSubmitLockedMessage(language)
       );
       return;
     }
     if (!isSeasonAwardsComplete(awards)) {
       cyberAlert(
-        isJa ? "未入力があります" : "Incomplete",
+        alerts.incompleteTitle,
         seasonPredictAwardsIncompleteError(language)
       );
       return;
@@ -259,7 +261,7 @@ export default function SeasonPredictScreenNative() {
         picks: awards.picks,
       });
       if (!data.prediction) {
-        throw new Error(isJa ? "提出レスポンスが不正です" : "Invalid submit response");
+        throw new Error(seasonPredictInvalidSubmitError(language));
       }
       setAwards(data.prediction);
       setCandidates(data.candidates ?? []);
@@ -268,24 +270,24 @@ export default function SeasonPredictScreenNative() {
     } catch (e) {
       const msg = e instanceof Error ? e.message : "submit failed";
       setError(msg);
-      cyberAlert(isJa ? "提出に失敗しました" : "Submit failed", msg);
+      cyberAlert(alerts.submitFailedTitle, msg);
     } finally {
       setSubmitting(false);
     }
-  }, [awards, submitting, isJa, offerStandingsNudge, submitOpen]);
+  }, [alerts, awards, language, offerStandingsNudge, submitOpen, submitting]);
 
   const handleSubmitStandings = useCallback(async () => {
     if (submitting) return;
     if (!submitOpen) {
       cyberAlert(
-        isJa ? "提出期限終了" : "Deadline passed",
-        seasonPredictSubmitLockedMessage(isJa ? "ja" : "en")
+        alerts.deadlinePassedTitle,
+        seasonPredictSubmitLockedMessage(language)
       );
       return;
     }
     if (!isSeasonStandingsComplete(standings)) {
       cyberAlert(
-        isJa ? "未入力があります" : "Incomplete",
+        alerts.incompleteTitle,
         seasonPredictStandingsIncompleteError(language)
       );
       return;
@@ -299,26 +301,24 @@ export default function SeasonPredictScreenNative() {
         west: standings.west,
       });
       if (!data.prediction) {
-        throw new Error(isJa ? "提出レスポンスが不正です" : "Invalid submit response");
+        throw new Error(seasonPredictInvalidSubmitError(language));
       }
       setStandings(data.prediction);
       setStandingsMode("view");
       cyberAlert(
-        isJa ? "提出しました" : "Submitted",
-        isJa
-          ? "順位予想を保存しました。"
-          : "Standings prediction saved.",
+        alerts.submittedTitle,
+        alerts.standingsSavedBody,
         undefined,
         { variant: "success" }
       );
     } catch (e) {
       const msg = e instanceof Error ? e.message : "submit failed";
       setError(msg);
-      cyberAlert(isJa ? "提出に失敗しました" : "Submit failed", msg);
+      cyberAlert(alerts.submitFailedTitle, msg);
     } finally {
       setSubmitting(false);
     }
-  }, [standings, submitting, isJa, submitOpen]);
+  }, [alerts, language, standings, submitOpen, submitting]);
 
   const title = !submitOpen
     ? "MARKET"
@@ -347,10 +347,8 @@ export default function SeasonPredictScreenNative() {
     >
       <Text style={styles.deadline}>
         {submitOpen
-          ? `${isJa ? "提出期限 · " : "Deadline · "}${deadlineLabel}`
-          : isJa
-            ? "DEADLINE PASSED · CROWD MARKET"
-            : "DEADLINE PASSED · CROWD MARKET"}
+          ? `${pageCopy.deadlineLabel} · ${deadlineLabel}`
+          : pageCopy.marketPassed.toUpperCase()}
       </Text>
 
       {mode === "standings" ? (
@@ -365,7 +363,7 @@ export default function SeasonPredictScreenNative() {
           />
         ) : standingsMode === "market_pending" ? (
           <View style={{ gap: 8 }}>
-            <Text style={styles.pendingTitle}>Market pending</Text>
+            <Text style={styles.pendingTitle}>{pageCopy.marketPending}</Text>
             <Text style={styles.locked}>
               {marketPendingBody}
             </Text>
@@ -382,7 +380,7 @@ export default function SeasonPredictScreenNative() {
                 }}
                 style={styles.editBtn}
               >
-                <Text style={styles.editBtnText}>Edit & resubmit</Text>
+                <Text style={styles.editBtnText}>{pageCopy.editResubmit}</Text>
               </Pressable>
             ) : (
               <Text style={styles.locked}>{lockedMsg}</Text>
@@ -404,7 +402,7 @@ export default function SeasonPredictScreenNative() {
             )}
             {submitting ? (
               <Text style={styles.submitting}>
-                {isJa ? "提出中…" : "Submitting…"}
+                {pageCopy.submitting}
               </Text>
             ) : null}
           </View>
@@ -420,7 +418,7 @@ export default function SeasonPredictScreenNative() {
         />
       ) : awardsMode === "market_pending" ? (
         <View style={{ gap: 8 }}>
-          <Text style={styles.pendingTitle}>Market pending</Text>
+          <Text style={styles.pendingTitle}>{pageCopy.marketPending}</Text>
           <Text style={styles.locked}>
             {marketPendingBody}
           </Text>
@@ -440,7 +438,7 @@ export default function SeasonPredictScreenNative() {
               }}
               style={styles.editBtn}
             >
-              <Text style={styles.editBtnText}>Edit & resubmit</Text>
+              <Text style={styles.editBtnText}>{pageCopy.editResubmit}</Text>
             </Pressable>
           ) : (
             <Text style={styles.locked}>{lockedMsg}</Text>
@@ -462,7 +460,7 @@ export default function SeasonPredictScreenNative() {
           )}
           {submitting ? (
             <Text style={styles.submitting}>
-              {isJa ? "提出中…" : "Submitting…"}
+              {pageCopy.submitting}
             </Text>
           ) : null}
         </View>

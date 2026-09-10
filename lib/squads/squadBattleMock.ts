@@ -2,6 +2,7 @@
  * SQUAD BATTLE（グループ対抗戦）プレビュー用の型とモック。
  * 本番 API / Firestore には未接続。
  */
+import { L, type LocalizedLang } from "@/lib/i18n/localize";
 
 export type SquadBattlePreviewState = "none" | "recruiting" | "full";
 
@@ -144,29 +145,76 @@ export const SQUAD_BATTLE_SEASON_PHASES: readonly SquadBattleSeasonPhase[] = [
   },
 ] as const;
 
-/** 開催サイクル（ja / en）。`label` はフェーズ名なので共通 */
+/** 開催サイクル（7言語）。`label` はフェーズ名なので共通 */
 export function squadBattleSeasonPhases(
-  lang: "ja" | "en" = "ja"
+  lang: LocalizedLang = "ja"
 ): readonly SquadBattleSeasonPhase[] {
-  if (lang !== "en") return SQUAD_BATTLE_SEASON_PHASES;
   return [
     {
       key: "entry",
       label: "ENTRY",
-      period: "~1–2 weeks before",
-      desc: "Squad locks · no swaps after the start",
+      period: L(lang, {
+        ja: SQUAD_BATTLE_SEASON_PHASES[0]!.period,
+        en: "~1–2 weeks before",
+        ko: "약 1~2주 전",
+        zh: "约 1–2 周前",
+        es: "~1–2 semanas antes",
+        pt: "~1–2 semanas antes",
+        fr: "~1–2 semaines avant",
+      }),
+      desc: L(lang, {
+        ja: SQUAD_BATTLE_SEASON_PHASES[0]!.desc,
+        en: "Squad locks · no swaps after the start",
+        ko: "스쿼드 확정 · 시작 후 교체 불가",
+        zh: "小队锁定 · 开始后不可更换",
+        es: "Escuadra fijada · sin cambios tras el inicio",
+        pt: "Esquadra fixada · sem trocas após o início",
+        fr: "Escouade verrouillée · plus d’échanges après le début",
+      }),
     },
     {
       key: "battle",
       label: "BATTLE",
-      period: "~1 month",
-      desc: "Average score in Pick Up games. 4 weekly + 1 monthly",
+      period: L(lang, {
+        ja: SQUAD_BATTLE_SEASON_PHASES[1]!.period,
+        en: "~1 month",
+        ko: "약 1개월",
+        zh: "约 1 个月",
+        es: "~1 mes",
+        pt: "~1 mês",
+        fr: "~1 mois",
+      }),
+      desc: L(lang, {
+        ja: SQUAD_BATTLE_SEASON_PHASES[1]!.desc,
+        en: "Average score in Pick Up games. 4 weekly + 1 monthly",
+        ko: "Pick Up 경기 평균 점수. 주간×4 + 월간×1",
+        zh: "Pick Up 比赛平均得分。每周×4 + 每月×1",
+        es: "Puntuación media en Pick Up. 4 semanales + 1 mensual",
+        pt: "Média de pontos em Pick Up. 4 semanais + 1 mensal",
+        fr: "Score moyen en Pick Up. 4 hebdos + 1 mensuel",
+      }),
     },
     {
       key: "reward",
       label: "REWARD",
-      period: "After results",
-      desc: "Weekly 1st: 30 Units each, monthly 1st: 100 each. Top 20 earn by rank",
+      period: L(lang, {
+        ja: SQUAD_BATTLE_SEASON_PHASES[2]!.period,
+        en: "After results",
+        ko: "결과 확정 후",
+        zh: "结果确定后",
+        es: "Tras los resultados",
+        pt: "Após os resultados",
+        fr: "Après les résultats",
+      }),
+      desc: L(lang, {
+        ja: SQUAD_BATTLE_SEASON_PHASES[2]!.desc,
+        en: "Weekly 1st: 30 Units each, monthly 1st: 100 each. Top 20 earn by rank",
+        ko: "주간 1위 전원 30 Unit, 월간 1위 전원 100 Unit. 상위 20까지 순위별 획득",
+        zh: "周冠军全员 30 Unit，月冠军全员 100 Unit。前 20 名按排名获得",
+        es: "1.º semanal: 30 Units c/u; 1.º mensual: 100 c/u. Top 20 ganan por puesto",
+        pt: "1.º semanal: 30 Units cada; 1.º mensal: 100 cada. Top 20 ganham por colocação",
+        fr: "1er hebdo : 30 Units chacun ; 1er mensuel : 100 chacun. Top 20 selon le rang",
+      }),
     },
   ];
 }
@@ -175,10 +223,16 @@ export function squadBattleSeasonPhases(
 export const SQUAD_BATTLE_INTRO_TAGLINE =
   "3〜5人のスクワッドで、Pick Up 試合の総合スコア平均を競う。";
 
-export function squadBattleIntroTagline(lang: "ja" | "en" = "ja"): string {
-  return lang === "en"
-    ? "Squads of 3–5 compete on their average total score in Pick Up games."
-    : SQUAD_BATTLE_INTRO_TAGLINE;
+export function squadBattleIntroTagline(lang: LocalizedLang = "ja"): string {
+  return L(lang, {
+    ja: SQUAD_BATTLE_INTRO_TAGLINE,
+    en: "Squads of 3–5 compete on their average total score in Pick Up games.",
+    ko: "3~5명 스쿼드가 Pick Up 경기 종합 평균 점수로 경쟁합니다.",
+    zh: "3–5 人小队比拼 Pick Up 比赛的综合平均得分。",
+    es: "Escuadras de 3–5 compiten por su puntuación total media en Pick Up.",
+    pt: "Esquadras de 3–5 competem pela média de pontos totais em Pick Up.",
+    fr: "Des escouades de 3–5 rivalisent sur leur score total moyen en Pick Up.",
+  });
 }
 
 /** はてな（？）ヘルプ用のルール要約 */

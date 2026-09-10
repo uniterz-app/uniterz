@@ -7,7 +7,7 @@ import {
 } from "@/lib/legal/privacyCopy";
 
 export default function PrivacyDocument({ language }: { language: LegalLang }) {
-  const lang: LegalLang = language === "en" ? "en" : "ja";
+  const lang: LegalLang = language === "ja" ? "ja" : "en";
 
   return (
     <div className="space-y-6">

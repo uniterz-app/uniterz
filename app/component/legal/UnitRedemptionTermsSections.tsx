@@ -18,7 +18,7 @@ export default function UnitRedemptionTermsSections({
   unitNumber?: string;
   redemptionNumber?: string;
 }) {
-  const lang = language === "en" ? "en" : "ja";
+  const lang = language === "ja" ? "ja" : "en";
   return (
     <>
       <div>

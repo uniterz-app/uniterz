@@ -793,7 +793,7 @@ export function ResultCardDesignFaceNative({
   live = false,
   deferJerseys = false,
 }: {
-  language: "ja" | "en";
+  language: import("../../../../../lib/i18n/language").Language;
   badge?: OutcomeBadge | null;
   scoreRel?: ScoreRelKind;
   sample?: Sample;
@@ -1255,17 +1255,17 @@ const styles = StyleSheet.create({
   homeAwayLabel: {
     fontFamily: MATCH_CARD_METRIC_FONT,
     fontSize: 9,
-    fontWeight: "700",
+    fontWeight: "800",
     letterSpacing: 1.4,
     color: "rgba(226,232,240,0.45)",
   },
-  /** 本番 teamName — Bebas */
+  /** 本番 teamName — マッチカードと同じ Oxanium SemiBold */
   teamNameSlant: {
     marginTop: 4,
-    fontFamily: MATCH_CARD_DISPLAY_FONT,
-    fontSize: 15,
-    fontWeight: "400",
-    letterSpacing: 1.04,
+    fontFamily: "Oxanium_600SemiBold",
+    fontSize: 13,
+    fontWeight: "600",
+    letterSpacing: 0.6,
     color: "rgba(248,250,252,0.95)",
     textAlign: "center",
     width: "100%",
@@ -1370,6 +1370,7 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     letterSpacing: 0.4,
     minWidth: 48,
+    transform: [{ skewX: "-6deg" }],
   },
   biasPctHeaderNumAway: {
     marginRight: -6,
@@ -1468,10 +1469,10 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
   },
   scorerLabel: {
-    fontFamily: MATCH_CARD_DISPLAY_FONT,
-    fontSize: 14,
-    fontWeight: "400",
-    letterSpacing: 1.04,
+    fontFamily: "Oxanium_600SemiBold",
+    fontSize: 12,
+    fontWeight: "600",
+    letterSpacing: 0.8,
     color: "rgba(248,250,252,0.92)",
     textTransform: "uppercase",
     flexShrink: 0,
@@ -1494,10 +1495,10 @@ const styles = StyleSheet.create({
     maxWidth: "100%",
   },
   scorerName: {
-    fontFamily: MATCH_CARD_DISPLAY_FONT,
-    fontSize: 14,
-    fontWeight: "400",
-    letterSpacing: 0.8,
+    fontFamily: "Oxanium_600SemiBold",
+    fontSize: 12,
+    fontWeight: "600",
+    letterSpacing: 0.5,
     color: "#F8FAFC",
     textTransform: "uppercase",
     textAlign: "center",

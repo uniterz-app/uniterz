@@ -18,7 +18,7 @@ import {
   stashPostOnboardingRedirect,
 } from "@/lib/auth/safeNextRedirect";
 import { authFormCopy } from "@/lib/auth/authFormCopy";
-import { resolveAppUiLanguage } from "@/lib/i18n/resolveAppUiLanguage";
+import { resolveAppUiLocalizedLang } from "@/lib/i18n/resolveAppUiLanguage";
 
 type LoginFormProps = {
   variant?: "web" | "mobile";
@@ -55,7 +55,7 @@ export default function LoginForm({ variant }: LoginFormProps) {
   const bodySans =
     "font-[family-name:var(--font-geist-sans)] text-sm leading-relaxed text-white/85";
 
-  const copy = useMemo(() => authFormCopy(resolveAppUiLanguage()), []);
+  const copy = useMemo(() => authFormCopy(resolveAppUiLocalizedLang()), []);
 
   const ui = {
     title: "LOGIN",

@@ -1,6 +1,9 @@
 import { type ReactNode } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { CyberFilterChip } from "../../ui/CyberFilterBarNative";
+import type { Language } from "../../../../../lib/i18n/language";
+import { normalizeLanguage } from "../../../../../lib/i18n/language";
+import { t } from "../../../../../lib/i18n/t";
 import {
   DEFAULT_RESULT_LIST_FILTERS,
   isDefaultResultListFilters,
@@ -15,7 +18,7 @@ export type ResultFilterState = ResultListFilters & {
 };
 
 type Props = {
-  language: "ja" | "en";
+  language: Language;
   filters: ResultFilterState;
   onChange: (next: ResultFilterState) => void;
 };
@@ -26,52 +29,41 @@ export default function ResultListFiltersNative({
   filters,
   onChange,
 }: Props) {
-  const isJa = language === "ja";
+  const lang = normalizeLanguage(language) ?? "en";
+  const r = t(lang).results;
 
-  const tierLabels = isJa
-    ? {
-        all: "すべて",
-        high: "高（7+）",
-        mid: "中（4–6）",
-        low: "低（<4）",
-      }
-    : {
-        all: "All",
-        high: "High (7+)",
-        mid: "Mid (4–6)",
-        low: "Low (<4)",
-      };
+  const tierLabels = {
+    all: r.filterAll,
+    high: r.filterHighScore,
+    mid: r.filterMidScore,
+    low: r.filterLowScore,
+  };
 
-  const labels = isJa
-    ? {
-        outcome: "勝敗",
-        settlement: "確定状態",
-        league: "リーグ",
-        specialty: "スペシャル",
-        points: "総合スコア",
-        reset: "リセット",
-      }
-    : {
-        outcome: "Outcome",
-        settlement: "Status",
-        league: "League",
-        specialty: "Special",
-        points: "Total score",
-        reset: "Reset",
-      };
+  const labels = {
+    outcome: r.filterOutcome,
+    settlement: r.filterMatchStatus,
+    league: r.filterLeague,
+    specialty: r.filterUpsetScore,
+    points: r.filterTotalScore,
+    reset: r.filterReset,
+  };
 
-  const outcomeOpts = isJa
-    ? { all: "すべて", win: "勝", loss: "負" }
-    : { all: "All", win: "Win", loss: "Loss" };
+  const outcomeOpts = {
+    all: r.filterAll,
+    win: r.filterWins,
+    loss: r.filterLosses,
+  };
 
-  const settlementOpts = isJa
-    ? { all: "全状態", pending: "未確定", final: "確定" }
-    : { all: "Any", pending: "Open", final: "Final" };
+  const settlementOpts = {
+    all: r.filterAll,
+    pending: r.filterPendingStatus,
+    final: r.filterFinalStatus,
+  };
 
   return (
     <View style={styles.panel}>
       <View style={styles.panelHeader}>
-        <Text style={styles.panelTitle}>{isJa ? "フィルター" : "Filters"}</Text>
+        <Text style={styles.panelTitle}>{r.filterTitle}</Text>
         {!isDefaultResultListFilters(filters) ? (
           <Pressable
             style={styles.resetBtn}
@@ -117,7 +109,7 @@ export default function ResultListFiltersNative({
 
       <FilterGroup title={labels.specialty}>
         <CyberFilterChip
-          label={isJa ? "Upset加点" : "Upset bonus"}
+          label={r.filterUpsetScore}
           active={filters.specialty === "upsetBonus"}
           onPress={() =>
             onChange({

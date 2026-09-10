@@ -16,11 +16,11 @@ import Animated, {
 } from "react-native-reanimated";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import {
-  MATCH_CARD_DISPLAY_FONT,
   MATCH_CARD_METRIC_FONT,
   MATCH_CARD_SCORE_FONT,
 } from "../games/matchCardTypography";
 import { resultCardFaceCopy } from "../../../../../lib/result/resultCardFaceCopy";
+import type { Language } from "../../../../../lib/i18n/language";
 
 const BIAS_SEGS = 16;
 const BIAS_SEG_STAGGER_MS = 32;
@@ -98,7 +98,7 @@ export function ResultCardMarketBiasNative({
   homeAccent: string;
   awayAccent: string;
   ja?: boolean;
-  language?: "ja" | "en";
+  language?: Language;
   animate?: boolean;
   revealDelayMs?: number;
   predictionCount?: number | null;
@@ -236,7 +236,7 @@ export function ResultCardUpsetScoreSplitNative({
   scoreRel = null,
 }: {
   ja?: boolean;
-  language?: "ja" | "en";
+  language?: Language;
   settled?: boolean;
   upsetPoints?: number | null;
   totalPoints?: number | null;
@@ -307,6 +307,7 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     letterSpacing: 0.4,
     minWidth: 48,
+    transform: [{ skewX: "-6deg" }],
   },
   biasPctHeaderNumAway: {
     marginRight: -6,
@@ -372,10 +373,10 @@ const styles = StyleSheet.create({
     alignSelf: "center",
   },
   scorerLabel: {
-    fontFamily: MATCH_CARD_DISPLAY_FONT,
-    fontSize: 14,
-    fontWeight: "400",
-    letterSpacing: 1.04,
+    fontFamily: "Oxanium_600SemiBold",
+    fontSize: 12,
+    fontWeight: "600",
+    letterSpacing: 0.8,
     color: "rgba(248,250,252,0.92)",
     textTransform: "uppercase",
     flexShrink: 0,
@@ -393,10 +394,10 @@ const styles = StyleSheet.create({
     maxWidth: "100%",
   },
   scorerName: {
-    fontFamily: MATCH_CARD_DISPLAY_FONT,
-    fontSize: 14,
-    fontWeight: "400",
-    letterSpacing: 0.8,
+    fontFamily: "Oxanium_600SemiBold",
+    fontSize: 12,
+    fontWeight: "600",
+    letterSpacing: 0.5,
     color: "#F8FAFC",
     textTransform: "uppercase",
     textAlign: "center",

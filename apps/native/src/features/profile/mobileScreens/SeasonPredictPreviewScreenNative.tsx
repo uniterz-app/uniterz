@@ -26,18 +26,19 @@ import {
   buildSeasonStandingsMarketPreviewMock,
 } from "../../../../../../lib/predict/seasonPredictMarketMocks";
 import { CURRENT_NBA_SEASON_KEY } from "../../../../../../lib/rankings/nbaSeason";
+import { L, resolveLocalizedLang } from "../../../../../../lib/i18n/localize";
 
 type Mode = "standings" | "awards" | "view" | "market";
 
 const SEASON = CURRENT_NBA_SEASON_KEY;
 
 type Props = {
-  language: "ja" | "en";
+  language: string;
   onClose: () => void;
 };
 
 export default function SeasonPredictPreviewScreenNative({ language, onClose }: Props) {
-  const isJa = language === "ja";
+  const lang = resolveLocalizedLang(language);
   const [mode, setMode] = useState<Mode>("standings");
   const [standings, setStandings] = useState(() => emptySeasonStandingsPrediction(SEASON));
   const [awards, setAwards] = useState(() => emptySeasonAwardsPrediction(SEASON));
@@ -52,34 +53,76 @@ export default function SeasonPredictPreviewScreenNative({ language, onClose }: 
     []
   );
 
+  const title = L(lang, {
+    ja: "シーズン予想（プレビュー）",
+    en: "Season picks (preview)",
+    ko: "시즌 예측(미리보기)",
+    zh: "赛季预测（预览）",
+    es: "Picks de temporada (vista previa)",
+    pt: "Palpites da temporada (prévia)",
+    fr: "Picks de saison (aperçu)",
+  });
+
   return (
-    <MobilePageShell title={isJa ? "シーズン予想（プレビュー）" : "Season picks (preview)"} appBackground onClose={onClose}>
+    <MobilePageShell title={title} appBackground onClose={onClose}>
       <ScrollView contentContainerStyle={styles.pad} keyboardShouldPersistTaps="handled">
         <View style={{ marginBottom: 14 }}>
           <CyberSlantedTabBarNative fill>
             <CyberSlantedTabNative
-              label={isJa ? "順位予想" : "STANDINGS"}
+              label={L(lang, {
+                ja: "順位予想",
+                en: "STANDINGS",
+                ko: "순위",
+                zh: "排名",
+                es: "STANDINGS",
+                pt: "STANDINGS",
+                fr: "STANDINGS",
+              })}
               active={mode === "standings"}
               onPress={() => setMode("standings")}
               compact
               fontWeight="700"
             />
             <CyberSlantedTabNative
-              label={isJa ? "アワード" : "AWARDS"}
+              label={L(lang, {
+                ja: "アワード",
+                en: "AWARDS",
+                ko: "어워드",
+                zh: "奖项",
+                es: "AWARDS",
+                pt: "AWARDS",
+                fr: "AWARDS",
+              })}
               active={mode === "awards"}
               onPress={() => setMode("awards")}
               compact
               fontWeight="700"
             />
             <CyberSlantedTabNative
-              label={isJa ? "提出後" : "SUBMITTED"}
+              label={L(lang, {
+                ja: "提出後",
+                en: "SUBMITTED",
+                ko: "제출 후",
+                zh: "已提交",
+                es: "ENVIADO",
+                pt: "ENVIADO",
+                fr: "SOUMIS",
+              })}
               active={mode === "view"}
               onPress={() => setMode("view")}
               compact
               fontWeight="700"
             />
             <CyberSlantedTabNative
-              label={isJa ? "市場" : "MARKET"}
+              label={L(lang, {
+                ja: "市場",
+                en: "MARKET",
+                ko: "마켓",
+                zh: "市场",
+                es: "MARKET",
+                pt: "MARKET",
+                fr: "MARKET",
+              })}
               active={mode === "market"}
               onPress={() => setMode("market")}
               compact

@@ -7,6 +7,8 @@ import {
   type PeriodRankingUnitMetric,
   type PeriodRankingUnitPeriod,
 } from "@/lib/units/periodRankingUnitRewards";
+import { L, type LocalizedLang } from "@/lib/i18n/localize";
+import { DATE_LOCALE } from "@/lib/i18n/language";
 
 function isPeriodMetric(raw: string): raw is PeriodRankingUnitMetric {
   return (
@@ -21,18 +23,22 @@ function isPeriodMetric(raw: string): raw is PeriodRankingUnitMetric {
 export function formatPeriodRankingUnitEarnLabel(
   period: PeriodRankingUnitPeriod,
   label: string,
-  language: "ja" | "en"
+  language: LocalizedLang
 ): string {
   if (period === "monthly") {
     const m = /^(\d{4})-(\d{2})$/.exec(label);
     if (m) {
       const y = Number(m[1]);
       const mo = Number(m[2]);
-      if (language === "en") {
-        const d = new Date(Date.UTC(y, mo - 1, 1));
-        return `${d.toLocaleString("en-US", { month: "short", timeZone: "UTC" })} ${y} · NBA`;
-      }
-      return `${y}年${mo}月 · NBA`;
+      if (language === "ja") return `${y}年${mo}月 · NBA`;
+      if (language === "ko") return `${y}년 ${mo}월 · NBA`;
+      if (language === "zh") return `${y}年${mo}月 · NBA`;
+      const d = new Date(Date.UTC(y, mo - 1, 1));
+      const monthName = d.toLocaleString(DATE_LOCALE[language], {
+        month: "short",
+        timeZone: "UTC",
+      });
+      return `${monthName} ${y} · NBA`;
     }
   }
   const w = /^(\d{4})-(\d{2})-(\d{2})$/.exec(label);
@@ -40,44 +46,65 @@ export function formatPeriodRankingUnitEarnLabel(
     const y = Number(w[1]);
     const mo = Number(w[2]);
     const d = Number(w[3]);
-    if (language === "en") {
-      return `Week of ${mo}/${d}/${y} · NBA`;
-    }
-    return `${y}/${mo}/${d}週 · NBA`;
+    return L(language, {
+      ja: `${y}/${mo}/${d}週 · NBA`,
+      en: `Week of ${mo}/${d}/${y} · NBA`,
+      ko: `${y}/${mo}/${d} 주간 · NBA`,
+      zh: `${y}/${mo}/${d} 当周 · NBA`,
+      es: `Semana del ${d}/${mo}/${y} · NBA`,
+      pt: `Semana de ${d}/${mo}/${y} · NBA`,
+      fr: `Semaine du ${d}/${mo}/${y} · NBA`,
+    });
   }
-  return language === "en" ? `${label} · NBA` : `${label} · NBA`;
+  return `${label} · NBA`;
 }
 
 export function formatPeriodRankingUnitEarnTitle(
   period: PeriodRankingUnitPeriod,
   metric: string | undefined,
   rank: number,
-  language: "ja" | "en"
+  language: LocalizedLang
 ): string {
-  const safeRank = Math.max(1, Math.floor(rank));
+  const r = Math.max(1, Math.floor(rank));
   const metricLabel =
     metric && isPeriodMetric(metric)
       ? periodRankingUnitMetricLabel(metric, language)
       : null;
   const isOverall = !metric || metric === "totalPoints";
 
-  if (language === "en") {
-    if (period === "weekly") {
-      return `Weekly rank #${safeRank}`;
-    }
-    if (isOverall || !metricLabel) {
-      return `Monthly rank #${safeRank}`;
-    }
-    return `Monthly ${metricLabel} #${safeRank}`;
+  if (period === "weekly") {
+    return L(language, {
+      ja: `週間ランキング ${r}位`,
+      en: `Weekly rank #${r}`,
+      ko: `주간 랭킹 ${r}위`,
+      zh: `周榜第 ${r} 名`,
+      es: `Ranking semanal #${r}`,
+      pt: `Ranking semanal #${r}`,
+      fr: `Classement hebdo #${r}`,
+    });
   }
 
-  if (period === "weekly") {
-    return `週間ランキング ${safeRank}位`;
-  }
   if (isOverall || !metricLabel) {
-    return `月間ランキング ${safeRank}位`;
+    return L(language, {
+      ja: `月間ランキング ${r}位`,
+      en: `Monthly rank #${r}`,
+      ko: `월간 랭킹 ${r}위`,
+      zh: `月榜第 ${r} 名`,
+      es: `Ranking mensual #${r}`,
+      pt: `Ranking mensal #${r}`,
+      fr: `Classement mensuel #${r}`,
+    });
   }
-  return `月間${metricLabel} ${safeRank}位`;
+
+  return L(language, {
+    ja: `月間${metricLabel} ${r}位`,
+    en: `Monthly ${metricLabel} #${r}`,
+    ko: `월간 ${metricLabel} ${r}위`,
+    zh: `月度${metricLabel}第 ${r} 名`,
+    es: `${metricLabel} mensual #${r}`,
+    pt: `${metricLabel} mensal #${r}`,
+    fr: `${metricLabel} mensuel #${r}`,
+  });
 }
 
 export function buildPeriodRankingUnitEarnCopy(input: {

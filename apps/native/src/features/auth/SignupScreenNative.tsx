@@ -20,13 +20,13 @@ import SlantCtaNative from "../../ui/SlantCtaNative";
 import { bindMeReferralNative } from "../profile/referralApiNative";
 import { normalizeReferralInviteCode } from "../../../../../lib/referral/referralInviteCode";
 import { authFormCopy } from "@/lib/auth/authFormCopy";
-import { resolveDeviceAppLanguage } from "../../i18n/resolveDeviceAppLanguage";
+import { resolveDeviceLocalizedLang } from "../../i18n/resolveDeviceAppLanguage";
 
 export default function SignupScreenNative() {
   const navigation =
     useNavigation<NativeStackNavigationProp<AuthStackParamList>>();
   const route = useRoute<RouteProp<AuthStackParamList, "Signup">>();
-  const copy = useMemo(() => authFormCopy(resolveDeviceAppLanguage()), []);
+  const copy = useMemo(() => authFormCopy(resolveDeviceLocalizedLang()), []);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [inviteCode, setInviteCode] = useState(

@@ -32,6 +32,7 @@ import {
   unitEarnFlyPoint,
 } from "@/lib/units/unitEarnMotion";
 import { formatUnitEarnRankOrdinal } from "@/lib/units/formatUnitEarnRank";
+import { unitEarnOverlayCopy } from "@/lib/units/unitEarnUiCopy";
 
 type Props = {
   open: boolean;
@@ -40,7 +41,7 @@ type Props = {
   title?: string | null;
   subtitle?: string | null;
   rank?: number | null;
-  language?: "ja" | "en";
+  language?: string | null;
   onAbsorb: () => void;
   onDone: () => void;
   inline?: boolean;
@@ -77,7 +78,7 @@ export default function UnitEarnOverlay({
   onDone,
   inline = false,
 }: Props) {
-  const isJa = language === "ja";
+  const copy = unitEarnOverlayCopy(language);
   const reduceMotion = useReducedMotion() === true;
   const [mounted, setMounted] = useState(false);
   const [visible, setVisible] = useState(false);
@@ -440,11 +441,9 @@ export default function UnitEarnOverlay({
   if (!mounted || !open || !visible) return null;
 
   const reasonTitle =
-    title?.trim() ||
-    label?.trim() ||
-    (isJa ? "Unit 報酬" : "Unit reward");
+    title?.trim() || label?.trim() || copy.defaultTitle;
   const reasonSub = subtitle?.trim() || null;
-  const claimLabel = isJa ? "獲得する" : "Claim";
+  const claimLabel = copy.claim;
   const rankText =
     safeRank != null ? formatUnitEarnRankOrdinal(safeRank) : null;
   const ariaLabel =

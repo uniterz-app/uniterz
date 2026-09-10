@@ -1,8 +1,7 @@
 "use client";
 
 import type { CSSProperties, InputHTMLAttributes } from "react";
-import { matchScoreClass, nameBebas, nameOxanium } from "@/lib/fonts";
-import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
+import { nameBebas, nameOxanium } from "@/lib/fonts";
 import type { League } from "@/lib/leagues";
 import { NBA_TEAM_NAME_BY_ID } from "@/lib/nba-team-names";
 import {
@@ -12,9 +11,11 @@ import {
 import { getMobileTeamName } from "@/lib/team-name-split-mobile";
 import { PREDICT_OVERLAY_SCORE_INPUT_CLASS } from "@/lib/ui/predictOverlayCyber";
 
-/** 試合カードのチーム名（Bebas + skewX(-6deg)）と揃える */
+/** Score prediction パネルのチーム名 — マッチカードと同系（Oxanium SemiBold） */
 const overlayTeamNameStyle: CSSProperties = {
-  ...bracketMarketTeamTypography(true),
+  fontFamily: nameOxanium.style.fontFamily,
+  fontWeight: 600,
+  letterSpacing: "0.05em",
   transform: "skewX(-6deg)",
   color: "#F8FAFC",
 };
@@ -117,8 +118,8 @@ function ScoreField({
       </span>
       <span
         className={[
-          nameBebas.className,
-          "truncate px-0.5 text-[15px] font-bold uppercase leading-tight md:text-[18px]",
+          nameOxanium.className,
+          "truncate px-0.5 text-[13px] font-semibold uppercase leading-tight md:text-[14px]",
         ].join(" ")}
         style={overlayTeamNameStyle}
         title={title}
@@ -145,12 +146,13 @@ function ScoreField({
           aria-label={title}
           className={[
             PREDICT_OVERLAY_SCORE_INPUT_CLASS,
-            matchScoreClass,
-            "relative z-[1] w-full bg-transparent px-3 py-2.5 text-center text-[18px] font-black leading-none outline-none md:text-[20px]",
+            nameBebas.className,
+            "relative z-[1] w-full bg-transparent px-3 py-2.5 text-center text-[18px] font-normal uppercase leading-none tracking-[0.08em] outline-none md:text-[18px]",
           ].join(" ")}
           style={{
             caretColor: primary,
             color: "#F0FDFF",
+            transform: "skewX(-6deg)",
           }}
           {...inputProps}
         />

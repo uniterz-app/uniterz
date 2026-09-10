@@ -21,7 +21,7 @@ import {
   pickReferralInviteCodeFromSearch,
 } from "@/lib/referral/referralInviteCode";
 import { authFormCopy } from "@/lib/auth/authFormCopy";
-import { resolveAppUiLanguage } from "@/lib/i18n/resolveAppUiLanguage";
+import { resolveAppUiLocalizedLang } from "@/lib/i18n/resolveAppUiLanguage";
 
 type SignupFormProps = {
   variant?: "web" | "mobile";
@@ -53,7 +53,7 @@ export default function SignupForm({ variant = "web" }: SignupFormProps) {
     "font-[family-name:var(--font-geist-sans)] text-sm leading-relaxed text-white/85";
 
   const ui = useMemo(() => {
-    const copy = authFormCopy(resolveAppUiLanguage());
+    const copy = authFormCopy(resolveAppUiLocalizedLang());
     return {
       title: "CREATE ACCOUNT",
       emailPlaceholder: "Email Address",

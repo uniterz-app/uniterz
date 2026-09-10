@@ -8,40 +8,38 @@ import { colors } from "../../../theme/tokens";
 import { BlocksPulseLoader } from "../../../components/BlocksPulseLoader";
 import PlayoffFullBracketNative from "../playoffBracket/PlayoffFullBracketNative";
 import { useNativePlayoffBracketView } from "../playoffBracket/useNativePlayoffBracketView";
+import { useNativeUserLanguage } from "../../../hooks/useNativeUserLanguage";
+import { playoffBracketViewCopy } from "../stats/nbaStatsUiCopy";
 
 /** Web `/mobile/playoff-bracket/view` 相当：提出済みブラケットのフル表示 */
 export default function PlayoffBracketViewNative() {
   const navigation = useNavigation<NativeStackNavigationProp<GamesStackParamList>>();
   const { fUser } = useFirebaseUser();
-  const language: "ja" | "en" = "ja";
-  const isJa = language === "ja";
+  const { language } = useNativeUserLanguage(fUser?.uid);
+  const copy = playoffBracketViewCopy(language);
 
   const { loading, display, savedBracket, score, season, officialResults, hasSubmitted } =
     useNativePlayoffBracketView(fUser?.uid);
-
-  const subtitle = isJa
-    ? "提出済みのプレーオフブラケット。的中状況は公式結果と照合して表示されます。"
-    : "Your submitted playoff bracket. Hits are checked against official results.";
 
   return (
     <GamesNbaSubpageShellNative
       eyebrow="NBA · PLAYOFFS"
       title="BRACKET"
-      subtitle={subtitle}
+      subtitle={copy.subtitle}
       onBack={() => navigation.navigate("GamesHome", { openMenu: true })}
       scroll={false}
     >
       <View style={styles.actions}>
         <Pressable style={styles.actionBtn} onPress={() => navigation.navigate("BracketMarket")}>
-          <Text style={styles.actionText}>{isJa ? "マーケット" : "Market"}</Text>
+          <Text style={styles.actionText}>{copy.market}</Text>
         </Pressable>
         <Pressable style={styles.actionBtn} onPress={() => navigation.navigate("PlayoffBracket")}>
-          <Text style={styles.actionText}>{isJa ? "予想する" : "Predict"}</Text>
+          <Text style={styles.actionText}>{copy.predict}</Text>
         </Pressable>
       </View>
 
       {!fUser?.uid ? (
-        <Text style={styles.muted}>{isJa ? "ログインが必要です" : "Sign in required"}</Text>
+        <Text style={styles.muted}>{copy.signInRequired}</Text>
       ) : loading ? (
         <View style={styles.loading}>
           <BlocksPulseLoader pixelScale={0.9} />
@@ -49,15 +47,9 @@ export default function PlayoffBracketViewNative() {
       ) : !hasSubmitted || !display ? (
         <View style={styles.noDataBox}>
           <Text style={styles.noDataTitle}>NO DATA</Text>
-          <Text style={styles.muted}>
-            {isJa
-              ? "提出済みのプレーオフブラケットがありません"
-              : "No playoff bracket submitted yet"}
-          </Text>
+          <Text style={styles.muted}>{copy.noBracket}</Text>
           <Pressable style={styles.predictCta} onPress={() => navigation.navigate("PlayoffBracket")}>
-            <Text style={styles.predictCtaText}>
-              {isJa ? "ブラケットを予想する" : "Predict the bracket"}
-            </Text>
+            <Text style={styles.predictCtaText}>{copy.predictCta}</Text>
           </Pressable>
         </View>
       ) : (

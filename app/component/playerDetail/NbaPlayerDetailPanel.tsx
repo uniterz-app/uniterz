@@ -3,6 +3,7 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { Trophy } from "lucide-react";
 import { nameOxanium } from "@/lib/fonts";
+import { resolveLocalizedLang } from "@/lib/i18n/localize";
 import HalftoneJerseyMark from "@/app/component/games/HalftoneJerseyMark";
 import CountryFlag from "@/app/component/games/CountryFlag";
 import {
@@ -87,7 +88,7 @@ import { nbaSeasonStatsReady } from "@/lib/predict/nbaSeasonStatsReady";
 
 type Props = {
   playerId?: string;
-  language?: "ja" | "en";
+  language?: string;
 };
 
 function formatDraftHero(
@@ -1234,7 +1235,8 @@ export default function NbaPlayerDetailPanel({
   playerId,
   language = "ja",
 }: Props) {
-  const isJa = language === "ja";
+  const lang = resolveLocalizedLang(language);
+  const isJa = lang === "ja";
   const { bundle: leaders } = usePlayerStatLeadersBundle();
   const { bundle: teamStats } = useLeagueTeamStatsBundle();
   const base = useMemo(
@@ -1404,7 +1406,7 @@ export default function NbaPlayerDetailPanel({
           chips={playerInsights.roles}
           accent={uiAccent}
           title="ROLE"
-          isJa={isJa}
+          language={lang}
         />
       ) : null}
       <DetailUsageStrip cells={playerInsights.usageStrip} accent={uiAccent} />
@@ -1515,12 +1517,12 @@ export default function NbaPlayerDetailPanel({
             : playerInsights.roleChangeDetailEn
         }
         accent={uiAccent}
-        isJa={isJa}
+        language={lang}
       />
       <NbaPlayerHowTheyPlay
         playerId={detail.playerId}
         accent={uiAccent}
-        isJa={isJa}
+        lang={lang}
         leaders={leaders}
         teamStats={teamStats}
         detail={detail}

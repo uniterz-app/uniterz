@@ -5,6 +5,7 @@
 import { useMemo } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import type { RankingPeriod } from "../../../../../lib/rankings/rankingPeriod";
+import { L, resolveLocalizedLang } from "../../../../../lib/i18n/localize";
 import type { RankingsLanguage } from "./rankingsTexts";
 import { METRIC_FONT } from "./rankingsUiTheme";
 
@@ -31,24 +32,24 @@ function formatLabel(
     return `${Number(m1)}/${Number(d1)} – ${Number(m2)}/${Number(d2)}`;
   }
   const [y, m] = label.split("-").map(Number);
-  if (language === "en") {
-    const months = [
-      "Jan",
-      "Feb",
-      "Mar",
-      "Apr",
-      "May",
-      "Jun",
-      "Jul",
-      "Aug",
-      "Sep",
-      "Oct",
-      "Nov",
-      "Dec",
-    ];
-    return `${months[m - 1]} ${y}`;
+  if (language === "ja") {
+    return `${y}年${m}月`;
   }
-  return `${y}年${m}月`;
+  const months = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
+  return `${months[m - 1]} ${y}`;
 }
 
 export function RankingsPeriodLabelNavNative({
@@ -56,7 +57,7 @@ export function RankingsPeriodLabelNavNative({
   activeLabel,
   availableLabels,
   onChange,
-  language = "ja",
+  language = "en",
 }: {
   period: Exclude<RankingPeriod, "season">;
   activeLabel: string | null;
@@ -64,6 +65,7 @@ export function RankingsPeriodLabelNavNative({
   onChange: (label: string | null) => void;
   language?: RankingsLanguage;
 }) {
+  const loc = resolveLocalizedLang(language);
   const { prevLabel, nextLabel, display } = useMemo(() => {
     if (!activeLabel || availableLabels.length === 0) {
       return { prevLabel: null, nextLabel: null, display: null };
@@ -78,13 +80,22 @@ export function RankingsPeriodLabelNavNative({
     return {
       prevLabel: prev,
       nextLabel: next,
-      display: formatLabel(period, activeLabel, language),
+      display: formatLabel(period, activeLabel, loc),
     };
-  }, [activeLabel, availableLabels, period, language]);
+  }, [activeLabel, availableLabels, period, loc]);
 
   if (!display) return null;
 
   const isCurrent = activeLabel === availableLabels[0];
+  const nowLabel = L(loc, {
+    ja: "今",
+    en: "Now",
+    ko: "지금",
+    zh: "现在",
+    es: "Ahora",
+    pt: "Agora",
+    fr: "Maintenant",
+  });
 
   return (
     <View style={styles.row}>
@@ -135,7 +146,7 @@ export function RankingsPeriodLabelNavNative({
             pressed ? styles.nowBtnPressed : null,
           ]}
         >
-          <Text style={styles.nowText}>{language === "en" ? "Now" : "今"}</Text>
+          <Text style={styles.nowText}>{nowLabel}</Text>
         </Pressable>
       ) : null}
     </View>

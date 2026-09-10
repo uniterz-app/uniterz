@@ -1,19 +1,24 @@
 import type { CSSProperties } from "react";
+import { nameOxanium } from "@/lib/fonts";
 
-/** ブラケットマーケットのチーム短名と揃える（リーグタブ・Bracket ボタン・マッチカードのチーム名等） */
+/** ブラケットマーケットのチーム短名と揃える（リーグタブ・Bracket ボタン・マッチカードのチーム名等）
+ * Injury 選手名と同じ Oxanium Bold（700 face）
+ */
 export function bracketMarketTeamTypography(isMobile: boolean): CSSProperties {
   return isMobile
     ? {
-        fontFamily: '"Bebas Neue", sans-serif',
+        fontFamily: nameOxanium.style.fontFamily,
+        fontWeight: 700,
         letterSpacing: "0.08em",
       }
     : {
-        fontFamily: "Oswald, Bebas Neue, sans-serif",
+        fontFamily: nameOxanium.style.fontFamily,
+        fontWeight: 700,
         letterSpacing: "0.06em",
       };
 }
 
-/** 試合カードのチーム名：Bebas + 右斜め */
+/** 試合カードのチーム名：Oxanium + 右斜め */
 export function matchCardTeamNameStyle(isMobile: boolean): CSSProperties {
   return {
     ...bracketMarketTeamTypography(isMobile),

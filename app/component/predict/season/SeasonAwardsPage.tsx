@@ -27,8 +27,7 @@ import { nameOxanium } from "@/lib/fonts";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import {
   isSeasonPredictSubmitOpen,
-  SEASON_PREDICT_SUBMIT_DEADLINE_LABEL_EN,
-  SEASON_PREDICT_SUBMIT_DEADLINE_LABEL_JA,
+  seasonPredictSubmitDeadlineLabel,
   seasonPredictSubmitLockedMessage,
 } from "@/lib/predict/seasonPredictDeadline";
 import type { SeasonAwardsMarketSnapshot } from "@/lib/predict/seasonPredictMarket";
@@ -45,6 +44,8 @@ import {
   seasonPredictInvalidSubmitError,
   seasonPredictMarketPendingBody,
   seasonPredictNudgeCopy,
+  resolveSeasonPredictUiLang,
+  seasonPredictPageUiCopy,
 } from "@/lib/predict/seasonPredictUiCopy";
 
 type Mode = "loading" | "edit" | "view" | "market" | "market_pending";
@@ -66,11 +67,9 @@ export default function SeasonAwardsPage() {
   const [rulesOpen, setRulesOpen] = useState(false);
   const [rulesAutoShown, setRulesAutoShown] = useState(false);
   const { language } = useUserLanguage(uid);
-  const rulesLang = language === "en" ? "en" : "ja";
-  const deadlineLabel =
-    rulesLang === "en"
-      ? SEASON_PREDICT_SUBMIT_DEADLINE_LABEL_EN
-      : SEASON_PREDICT_SUBMIT_DEADLINE_LABEL_JA;
+  const rulesLang = resolveSeasonPredictUiLang(language);
+  const deadlineLabel = seasonPredictSubmitDeadlineLabel(rulesLang);
+  const pageUi = seasonPredictPageUiCopy(rulesLang);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (user) => {
@@ -199,7 +198,7 @@ export default function SeasonAwardsPage() {
               "text-[10px] font-bold uppercase tracking-[0.12em] text-amber-200/70",
             ].join(" ")}
           >
-            Deadline passed · crowd market
+            {pageUi.marketPassed}
           </p>
           <NbaSeasonAwardsMarketPanel
             market={market}
@@ -214,7 +213,7 @@ export default function SeasonAwardsPage() {
               "text-[12px] font-extrabold uppercase tracking-[0.14em] text-amber-200/80",
             ].join(" ")}
           >
-            Market pending
+            {pageUi.marketPending}
           </p>
           <p className="text-[13px] leading-relaxed text-white/50">
             {seasonPredictMarketPendingBody(rulesLang)}
@@ -231,7 +230,7 @@ export default function SeasonAwardsPage() {
               "text-[10px] font-bold uppercase tracking-[0.12em] text-white/40",
             ].join(" ")}
           >
-            {rulesLang === "en" ? "Deadline" : "提出期限"} · {deadlineLabel}
+            {pageUi.deadlineLabel} · {deadlineLabel}
           </p>
           <NbaSeasonAwardsViewPanel
             prediction={value}
@@ -249,7 +248,7 @@ export default function SeasonAwardsPage() {
                 "w-full border border-white/15 bg-white/[0.04] px-4 py-2.5 text-[11px] font-extrabold uppercase tracking-[0.14em] text-white/70 transition hover:bg-white/[0.08]",
               ].join(" ")}
             >
-              Edit & resubmit
+              {pageUi.editResubmit}
             </button>
           ) : (
             <p className="text-[12px] text-white/45">
@@ -265,7 +264,7 @@ export default function SeasonAwardsPage() {
               "text-[10px] font-bold uppercase tracking-[0.12em] text-white/40",
             ].join(" ")}
           >
-            {rulesLang === "en" ? "Deadline" : "提出期限"} · {deadlineLabel}
+            {pageUi.deadlineLabel} · {deadlineLabel}
           </p>
           {error ? (
             <p className="text-[12px] text-[#FF8AB4]/85">{error}</p>
@@ -290,7 +289,7 @@ export default function SeasonAwardsPage() {
                 "text-[10px] font-bold uppercase tracking-[0.12em] text-white/40",
               ].join(" ")}
             >
-              Submitting…
+              {pageUi.submitting}
             </p>
           ) : null}
         </div>

@@ -3,6 +3,18 @@
  */
 import type { ProBriefEdgeItem } from "@/lib/predict/predictProBrief";
 import type { ProBriefPhase } from "@/lib/predict/predictProBrief";
+import { proBriefEdge } from "@/lib/predict/predictProBrief";
+import type { UiStrings } from "@/lib/i18n/ui";
+import { joinUiStrings } from "@/lib/i18n/uiCompose";
+import {
+  PHASE_WORD,
+  injuryStatusPhrase,
+  venueWord,
+  vsConfTopLine,
+  vsOver500Line,
+  vsUnder500Line,
+  type InsightPhase,
+} from "@/lib/nba/insights/insightPhrases";
 import type { NbaLeagueTeamStatRow } from "@/lib/predict/nbaLeagueTeamStatsMocks";
 import type { NbaTeamInjuryEntry } from "@/lib/predict/nbaTeamDetailPreviewMocks";
 import { isOutOrQuestionableInjury } from "@/lib/nba/teamInjuries/injuryStatusDisplay";
@@ -30,7 +42,7 @@ type EdgeCandidate = ProBriefEdgeItem & { score: number; kind: string };
 type InjuryFoldOpts = {
   teamId: string;
   aceOut?: NbaTeamAceOutRecordsBundle | null;
-  aceOutPhaseLabel: "前季" | "今季";
+  aceOutPhase: InsightPhase;
 };
 
 function shortName(entry: NbaTeamInjuryEntry): string {
@@ -48,9 +60,8 @@ function outOrGtd(injuries: NbaTeamInjuryEntry[]): NbaTeamInjuryEntry[] {
   return injuries.filter((i) => isOutOrQuestionableInjury(i.status));
 }
 
-function statusWord(entry: NbaTeamInjuryEntry): string {
-  if (entry.status === "out" || entry.status === "doubtful") return "OUT";
-  return "QUES";
+function isOutStatus(entry: NbaTeamInjuryEntry): boolean {
+  return entry.status === "out" || entry.status === "doubtful";
 }
 
 /** 衝突: 自分の良い順位 + 相手の悪い順位 */
@@ -73,43 +84,30 @@ function pickTopInjuries(
 }
 
 function withInjurySuffix(
-  baseJa: string,
-  baseEn: string,
+  base: UiStrings,
   injuries: NbaTeamInjuryEntry[],
   fold?: InjuryFoldOpts
-): { detailJa: string; detailEn: string; injuryBoost: number } {
+): { detail: UiStrings; injuryBoost: number } {
   const pick = pickTopInjuries(injuries, 1)[0];
   if (!pick) {
-    return { detailJa: baseJa, detailEn: baseEn, injuryBoost: 0 };
+    return { detail: base, injuryBoost: 0 };
   }
-  const name = shortName(pick);
-  const st = statusWord(pick);
-  let ja =
-    st === "OUT"
-      ? `${baseJa} · ${name} OUT`
-      : `${baseJa} · ${name} QUES`;
-  let en =
-    st === "OUT"
-      ? `${baseEn} · ${name} OUT`
-      : `${baseEn} · ${name} QUES`;
+  const isOut = isOutStatus(pick);
+  const parts: Array<UiStrings | null> = [
+    base,
+    injuryStatusPhrase(shortName(pick), isOut),
+  ];
 
   if (fold) {
-    const hit = findAceOutForInjuryWithTeam(
-      fold.aceOut,
-      fold.teamId,
-      pick
-    );
+    const hit = findAceOutForInjuryWithTeam(fold.aceOut, fold.teamId, pick);
     if (hit) {
-      const suf = aceOutSuffix(hit.player, fold.aceOutPhaseLabel, hit.team);
-      ja = `${ja} · ${suf.ja}`;
-      en = `${en} · ${suf.en}`;
+      parts.push(aceOutSuffix(hit.player, fold.aceOutPhase, hit.team));
     }
   }
 
   return {
-    detailJa: ja,
-    detailEn: en,
-    injuryBoost: st === "OUT" ? 8 : 5,
+    detail: joinUiStrings(parts),
+    injuryBoost: isOut ? 8 : 5,
   };
 }
 
@@ -118,8 +116,7 @@ type ClashDef = {
   label: string;
   myKey: RankedMetricKey;
   oppKey: RankedMetricKey;
-  ja: (my: number, opp: number) => string;
-  en: (my: number, opp: number) => string;
+  text: (my: number, opp: number) => UiStrings;
 };
 
 const CLASH_DEFS: ClashDef[] = [
@@ -128,64 +125,120 @@ const CLASH_DEFS: ClashDef[] = [
     label: "PAINT ATTACK",
     myKey: "ptsPaint",
     oppKey: "oppEfgPct",
-    ja: (my, opp) => `ペイント得点 #${my} · 相手守備 #${opp}`,
-    en: (my, opp) => `Paint PPG #${my} · Opp defense #${opp}`,
+    text: (my, opp) => ({
+      ja: `ペイント得点 #${my} · 相手守備 #${opp}`,
+      en: `Paint PPG #${my} · Opp defense #${opp}`,
+      ko: `페인트 득점 #${my} · 상대 수비 #${opp}`,
+      zh: `油漆区得分 #${my} · 对手防守 #${opp}`,
+      es: `PTS en pintura #${my} · Defensa rival #${opp}`,
+      pt: `PTS no garrafão #${my} · Defesa adv. #${opp}`,
+      fr: `Pts dans la raquette #${my} · Défense adv. #${opp}`,
+    }),
   },
   {
     kind: "three",
     label: "3-POINT VOLUME",
     myKey: "fg3a",
     oppKey: "oppFg3Pct",
-    ja: (my, opp) => `3PA率 #${my} · 相手被3P #${opp}`,
-    en: (my, opp) => `3PA rate #${my} · Opp 3P% allowed #${opp}`,
+    text: (my, opp) => ({
+      ja: `3PA率 #${my} · 相手被3P #${opp}`,
+      en: `3PA rate #${my} · Opp 3P% allowed #${opp}`,
+      ko: `3PA 비율 #${my} · 상대 3P% 허용 #${opp}`,
+      zh: `三分出手占比 #${my} · 对手三分被命中率 #${opp}`,
+      es: `Tasa de 3PA #${my} · 3P% permitido rival #${opp}`,
+      pt: `Taxa de 3PA #${my} · 3P% cedido adv. #${opp}`,
+      fr: `Taux de 3PA #${my} · 3P% concédé adv. #${opp}`,
+    }),
   },
   {
     kind: "glass",
     label: "GLASS",
     myKey: "orebPct",
     oppKey: "oppOrebPct",
-    ja: (my, opp) => `OREB% #${my} · 相手 DREB側 #${opp}`,
-    en: (my, opp) => `OREB% #${my} · Opp OREB allowed #${opp}`,
+    text: (my, opp) => ({
+      ja: `OREB% #${my} · 相手 DREB側 #${opp}`,
+      en: `OREB% #${my} · Opp OREB allowed #${opp}`,
+      ko: `OREB% #${my} · 상대 OREB 허용 #${opp}`,
+      zh: `进攻篮板率 #${my} · 对手进攻篮板被抢 #${opp}`,
+      es: `OREB% #${my} · OREB permitido rival #${opp}`,
+      pt: `OREB% #${my} · OREB cedido adv. #${opp}`,
+      fr: `OREB% #${my} · OREB concédé adv. #${opp}`,
+    }),
   },
   {
     kind: "tov",
     label: "TURNOVER",
     myKey: "tovPct",
     oppKey: "oppTov",
-    ja: (my, opp) => `TOV% #${my} · 相手強制TO #${opp}`,
-    en: (my, opp) => `TOV% #${my} · Opp TO forced #${opp}`,
+    text: (my, opp) => ({
+      ja: `TOV% #${my} · 相手強制TO #${opp}`,
+      en: `TOV% #${my} · Opp TO forced #${opp}`,
+      ko: `TOV% #${my} · 상대 턴오버 유발 #${opp}`,
+      zh: `失误率 #${my} · 对手制造失误 #${opp}`,
+      es: `TOV% #${my} · Pérdidas forzadas rival #${opp}`,
+      pt: `TOV% #${my} · Erros forçados adv. #${opp}`,
+      fr: `TOV% #${my} · Pertes provoquées adv. #${opp}`,
+    }),
   },
   {
     kind: "fta",
     label: "FREE THROW",
     myKey: "ftaRate",
     oppKey: "oppEfgPct",
-    ja: (my, opp) => `FTA率 #${my} · 相手守備 #${opp}`,
-    en: (my, opp) => `FTA rate #${my} · Opp defense #${opp}`,
+    text: (my, opp) => ({
+      ja: `FTA率 #${my} · 相手守備 #${opp}`,
+      en: `FTA rate #${my} · Opp defense #${opp}`,
+      ko: `FTA 비율 #${my} · 상대 수비 #${opp}`,
+      zh: `罚球出手率 #${my} · 对手防守 #${opp}`,
+      es: `Tasa de TL #${my} · Defensa rival #${opp}`,
+      pt: `Taxa de LL #${my} · Defesa adv. #${opp}`,
+      fr: `Taux de LF #${my} · Défense adv. #${opp}`,
+    }),
   },
   {
     kind: "trans",
     label: "TRANSITION",
     myKey: "ptsFb",
     oppKey: "oppEfgPct",
-    ja: (my, opp) => `FB得点 #${my} · 相手守備 #${opp}`,
-    en: (my, opp) => `FB points #${my} · Opp defense #${opp}`,
+    text: (my, opp) => ({
+      ja: `FB得点 #${my} · 相手守備 #${opp}`,
+      en: `FB points #${my} · Opp defense #${opp}`,
+      ko: `속공 득점 #${my} · 상대 수비 #${opp}`,
+      zh: `快攻得分 #${my} · 对手防守 #${opp}`,
+      es: `Pts al contraataque #${my} · Defensa rival #${opp}`,
+      pt: `Pts em contra-ataque #${my} · Defesa adv. #${opp}`,
+      fr: `Pts en contre-attaque #${my} · Défense adv. #${opp}`,
+    }),
   },
   {
     kind: "net",
     label: "NET RATING",
     myKey: "netrtg",
     oppKey: "drtg",
-    ja: (my, opp) => `NET #${my} · 相手 DRTG #${opp}`,
-    en: (my, opp) => `NET #${my} · Opp DRTG #${opp}`,
+    text: (my, opp) => ({
+      ja: `NET #${my} · 相手 DRTG #${opp}`,
+      en: `NET #${my} · Opp DRTG #${opp}`,
+      ko: `NET #${my} · 상대 DRTG #${opp}`,
+      zh: `NET #${my} · 对手 DRTG #${opp}`,
+      es: `NET #${my} · DRTG rival #${opp}`,
+      pt: `NET #${my} · DRTG adv. #${opp}`,
+      fr: `NET #${my} · DRTG adv. #${opp}`,
+    }),
   },
   {
     kind: "ortg",
     label: "OFFENSE",
     myKey: "ortg",
     oppKey: "drtg",
-    ja: (my, opp) => `ORTG #${my} · 相手 DRTG #${opp}`,
-    en: (my, opp) => `ORTG #${my} · Opp DRTG #${opp}`,
+    text: (my, opp) => ({
+      ja: `ORTG #${my} · 相手 DRTG #${opp}`,
+      en: `ORTG #${my} · Opp DRTG #${opp}`,
+      ko: `ORTG #${my} · 상대 DRTG #${opp}`,
+      zh: `ORTG #${my} · 对手 DRTG #${opp}`,
+      es: `ORTG #${my} · DRTG rival #${opp}`,
+      pt: `ORTG #${my} · DRTG adv. #${opp}`,
+      fr: `ORTG #${my} · DRTG adv. #${opp}`,
+    }),
   },
 ];
 
@@ -203,10 +256,11 @@ function buildSeasonClashEdges(input: {
     if (!ranks.has(def.oppKey)) ranks.set(def.oppKey, rankTeamsByMetric(input.rows, def.oppKey));
   }
 
+  const phase: InsightPhase = input.priorPrefix ? "prior" : "current";
   const fold: InjuryFoldOpts = {
     teamId: input.teamId,
     aceOut: input.aceOut,
-    aceOutPhaseLabel: input.priorPrefix ? "前季" : "今季",
+    aceOutPhase: phase,
   };
 
   const out: EdgeCandidate[] = [];
@@ -217,20 +271,17 @@ function buildSeasonClashEdges(input: {
     if (myRank == null || oppRank == null) continue;
     if (score < 6 && pickTopInjuries(input.injuries).length === 0) continue;
 
-    const prefixJa = input.priorPrefix ? "前季" : "";
-    const prefixEn = input.priorPrefix ? "Last season " : "";
-    const baseJa = `${prefixJa}${def.ja(myRank, oppRank)}`;
-    const baseEn = `${prefixEn}${def.en(myRank, oppRank)}`;
-    const folded = withInjurySuffix(baseJa, baseEn, input.injuries, fold);
+    const base = input.priorPrefix
+      ? joinUiStrings([PHASE_WORD.prior, def.text(myRank, oppRank)], " ")
+      : def.text(myRank, oppRank);
+    const folded = withInjurySuffix(base, input.injuries, fold);
     score += folded.injuryBoost;
     if (score < 6) continue;
 
     out.push({
       kind: def.kind,
-      label: def.label,
-      detailJa: folded.detailJa,
-      detailEn: folded.detailEn,
       score,
+      ...proBriefEdge(def.label, folded.detail),
     });
   }
   return out;
@@ -242,53 +293,52 @@ function buildVenueRecordEdge(input: {
   teamId: string;
   isHome: boolean;
   injuries: NbaTeamInjuryEntry[];
-  labelPrefixJa: "前季" | "今季";
-  labelPrefixEn: "Last season" | "This season";
+  phase: InsightPhase;
   aceOut?: NbaTeamAceOutRecordsBundle | null;
 }): EdgeCandidate[] {
   const split = input.records?.teams[input.teamId];
   const venue = input.isHome ? split?.home : split?.away;
   const netRank = rankTeamsByMetric(input.seasonRows, "netrtg").get(input.teamId);
   const label = input.isHome ? "HOME COURT" : "ROAD FORM";
-  const minGames = input.labelPrefixJa === "今季" ? 2 : 5;
+  const minGames = input.phase === "current" ? 2 : 5;
+  const netPart = netRank != null ? `NetRtg #${netRank}` : null;
   const fold: InjuryFoldOpts = {
     teamId: input.teamId,
     aceOut: input.aceOut,
-    aceOutPhaseLabel: input.labelPrefixJa,
+    aceOutPhase: input.phase,
   };
 
   if (venue && wlTotal(venue) >= minGames) {
-    const baseJa = input.isHome
-      ? `${input.labelPrefixJa}ホーム ${formatWl(venue)}${netRank != null ? ` · NetRtg #${netRank}` : ""}`
-      : `${input.labelPrefixJa}アウェイ ${formatWl(venue)}${netRank != null ? ` · NetRtg #${netRank}` : ""}`;
-    const baseEn = input.isHome
-      ? `${input.labelPrefixEn} home ${formatWl(venue)}${netRank != null ? ` · NetRtg #${netRank}` : ""}`
-      : `${input.labelPrefixEn} road ${formatWl(venue)}${netRank != null ? ` · NetRtg #${netRank}` : ""}`;
-    const folded = withInjurySuffix(baseJa, baseEn, input.injuries, fold);
+    const base = joinUiStrings([
+      joinUiStrings(
+        [PHASE_WORD[input.phase], venueWord(input.isHome), formatWl(venue)],
+        " "
+      ),
+      netPart,
+    ]);
+    const folded = withInjurySuffix(base, input.injuries, fold);
     return [
       {
         kind: "venue",
-        label,
-        detailJa: folded.detailJa,
-        detailEn: folded.detailEn,
         score: 14 + folded.injuryBoost,
+        ...proBriefEdge(label, folded.detail),
       },
     ];
   }
 
-  if (input.labelPrefixJa === "前季") {
+  if (input.phase === "prior") {
     const row = findTeamRow(input.seasonRows, input.teamId);
     if (!row) return [];
-    const baseJa = `前季 ${row.wins}-${row.losses}${netRank != null ? ` · NetRtg #${netRank}` : ""}`;
-    const baseEn = `Last season ${row.wins}-${row.losses}${netRank != null ? ` · NetRtg #${netRank}` : ""}`;
-    const folded = withInjurySuffix(baseJa, baseEn, input.injuries, fold);
+    const base = joinUiStrings([
+      joinUiStrings([PHASE_WORD.prior, `${row.wins}-${row.losses}`], " "),
+      netPart,
+    ]);
+    const folded = withInjurySuffix(base, input.injuries, fold);
     return [
       {
         kind: "venue",
-        label,
-        detailJa: folded.detailJa,
-        detailEn: folded.detailEn,
         score: 10 + folded.injuryBoost,
+        ...proBriefEdge(label, folded.detail),
       },
     ];
   }
@@ -300,30 +350,44 @@ function buildH2HEdge(input: {
   teamId: string;
   opponentId: string;
   isHome: boolean;
-  labelPrefixJa: "前季" | "今季";
-  labelPrefixEn: "Last season" | "This season";
+  phase: InsightPhase;
 }): EdgeCandidate | null {
   if (!input.records) return null;
   const pair = input.records.h2h[h2hPairKey(input.teamId, input.opponentId)];
   const from = h2hFromPerspective(pair, input.teamId);
   if (!from || wlTotal(from.overall) <= 0) return null;
 
+  const overall = formatWl(from.overall);
   const venue = input.isHome ? from.atHome : from.atAway;
   if (wlTotal(venue) > 0) {
+    const here = formatWl(venue);
     return {
       kind: "h2h",
-      label: "H2H",
-      detailJa: `${input.labelPrefixJa}この会場 ${formatWl(venue)} · シリーズ ${formatWl(from.overall)}`,
-      detailEn: `${input.labelPrefixEn} here ${formatWl(venue)} · series ${formatWl(from.overall)}`,
       score: 16,
+      ...proBriefEdge(
+        "H2H",
+        joinUiStrings([
+          PHASE_WORD[input.phase],
+          {
+            ja: `この会場 ${here} · シリーズ ${overall}`,
+            en: `here ${here} · series ${overall}`,
+            ko: `이 경기장 ${here} · 시리즈 ${overall}`,
+            zh: `该球馆 ${here} · 系列赛 ${overall}`,
+            es: `aquí ${here} · serie ${overall}`,
+            pt: `aqui ${here} · série ${overall}`,
+            fr: `ici ${here} · série ${overall}`,
+          },
+        ], " ")
+      ),
     };
   }
   return {
     kind: "h2h",
-    label: "H2H",
-    detailJa: `${input.labelPrefixJa} H2H ${formatWl(from.overall)}`,
-    detailEn: `${input.labelPrefixEn} H2H ${formatWl(from.overall)}`,
     score: 15,
+    ...proBriefEdge(
+      "H2H",
+      joinUiStrings([PHASE_WORD[input.phase], `H2H ${overall}`], " ")
+    ),
   };
 }
 
@@ -332,26 +396,29 @@ function buildVsTopEdge(input: {
   seasonRows: NbaLeagueTeamStatRow[];
   teamId: string;
   isHome: boolean;
-  labelPrefixJa: "前季" | "今季";
-  labelPrefixEn: "Last season" | "This season";
+  phase: InsightPhase;
 }): EdgeCandidate | null {
   const split = input.records?.teams[input.teamId];
   const row = findTeamRow(input.seasonRows, input.teamId);
   const conf = row?.conference === "west" ? "WEST" : "EAST";
-  const minGames = input.labelPrefixJa === "今季" ? 2 : 3;
+  const minGames = input.phase === "current" ? 2 : 3;
 
   if (split) {
     const venueTop = input.isHome ? split.vsConfTop6Home : split.vsConfTop6Away;
     const use = wlTotal(venueTop) >= minGames ? venueTop : split.vsConfTop6;
     if (wlTotal(use) >= minGames) {
-      const venueJa = input.isHome ? "ホーム" : "アウェイ";
-      const venueEn = input.isHome ? "home" : "road";
       return {
         kind: "vsTop",
-        label: "VS TOP",
-        detailJa: `${input.labelPrefixJa} ${conf} 上位との${venueJa} ${formatWl(use)}`,
-        detailEn: `${input.labelPrefixEn} vs ${conf} top-6 (${venueEn}) ${formatWl(use)}`,
         score: 13,
+        ...proBriefEdge(
+          "VS TOP",
+          vsConfTopLine({
+            phase: input.phase,
+            conference: conf,
+            isHome: input.isHome,
+            record: formatWl(use),
+          })
+        ),
       };
     }
   }
@@ -361,13 +428,12 @@ function buildVsTopEdge(input: {
 function buildVs500Edges(input: {
   records: NbaTeamSeasonRecordsBundle | null;
   teamId: string;
-  labelPrefixJa: "前季" | "今季";
-  labelPrefixEn: "Last season" | "This season";
+  phase: InsightPhase;
 }): EdgeCandidate[] {
   const split = input.records?.teams[input.teamId];
   if (!split) return [];
   const out: EdgeCandidate[] = [];
-  const minGames = input.labelPrefixJa === "今季" ? 3 : 5;
+  const minGames = input.phase === "current" ? 3 : 5;
 
   if (wlTotal(split.vsOver500) >= minGames) {
     const pct = Math.round(
@@ -375,10 +441,15 @@ function buildVs500Edges(input: {
     );
     out.push({
       kind: "vsOver500",
-      label: "VS .500+",
-      detailJa: `${input.labelPrefixJa} 勝率5割以上相手 ${formatWl(split.vsOver500)}（${pct}%）`,
-      detailEn: `${input.labelPrefixEn} vs .500+ ${formatWl(split.vsOver500)} (${pct}%)`,
       score: 11 + Math.max(0, pct - 45) / 5,
+      ...proBriefEdge(
+        "VS .500+",
+        vsOver500Line({
+          phase: input.phase,
+          record: formatWl(split.vsOver500),
+          winPct: pct,
+        })
+      ),
     });
   }
 
@@ -388,10 +459,15 @@ function buildVs500Edges(input: {
     );
     out.push({
       kind: "vsUnder500",
-      label: "VS SUB-.500",
-      detailJa: `${input.labelPrefixJa} 勝率5割未満相手 ${formatWl(split.vsUnder500)}（${pct}%）`,
-      detailEn: `${input.labelPrefixEn} vs sub-.500 ${formatWl(split.vsUnder500)} (${pct}%)`,
       score: 10 + Math.max(0, pct - 60) / 5,
+      ...proBriefEdge(
+        "VS SUB-.500",
+        vsUnder500Line({
+          phase: input.phase,
+          record: formatWl(split.vsUnder500),
+          winPct: pct,
+        })
+      ),
     });
   }
 
@@ -423,8 +499,7 @@ export function buildMatchupEdgesForTeam(input: {
       teamId: input.teamId,
       opponentId: input.opponentId,
       isHome: input.isHome,
-      labelPrefixJa: "前季",
-      labelPrefixEn: "Last season",
+      phase: "prior",
     });
     if (h2h) candidates.push(h2h);
     candidates.push(
@@ -434,15 +509,13 @@ export function buildMatchupEdgesForTeam(input: {
         teamId: input.teamId,
         isHome: input.isHome,
         injuries: input.injuries,
-        labelPrefixJa: "前季",
-        labelPrefixEn: "Last season",
+        phase: "prior",
         aceOut,
       }),
       ...buildVs500Edges({
         records,
         teamId: input.teamId,
-        labelPrefixJa: "前季",
-        labelPrefixEn: "Last season",
+        phase: "prior",
       })
     );
     const vsTop = buildVsTopEdge({
@@ -450,8 +523,7 @@ export function buildMatchupEdgesForTeam(input: {
       seasonRows: prior,
       teamId: input.teamId,
       isHome: input.isHome,
-      labelPrefixJa: "前季",
-      labelPrefixEn: "Last season",
+      phase: "prior",
     });
     if (vsTop) candidates.push(vsTop);
 
@@ -472,8 +544,7 @@ export function buildMatchupEdgesForTeam(input: {
       teamId: input.teamId,
       opponentId: input.opponentId,
       isHome: input.isHome,
-      labelPrefixJa: "今季",
-      labelPrefixEn: "This season",
+      phase: "current",
     });
     if (h2h) candidates.push(h2h);
     candidates.push(
@@ -483,15 +554,13 @@ export function buildMatchupEdgesForTeam(input: {
         teamId: input.teamId,
         isHome: input.isHome,
         injuries: input.injuries,
-        labelPrefixJa: "今季",
-        labelPrefixEn: "This season",
+        phase: "current",
         aceOut,
       }),
       ...buildVs500Edges({
         records,
         teamId: input.teamId,
-        labelPrefixJa: "今季",
-        labelPrefixEn: "This season",
+        phase: "current",
       })
     );
     const vsTop = buildVsTopEdge({
@@ -499,8 +568,7 @@ export function buildMatchupEdgesForTeam(input: {
       seasonRows: input.seasonRows,
       teamId: input.teamId,
       isHome: input.isHome,
-      labelPrefixJa: "今季",
-      labelPrefixEn: "This season",
+      phase: "current",
     });
     if (vsTop) candidates.push(vsTop);
 
@@ -525,7 +593,12 @@ export function buildMatchupEdgesForTeam(input: {
   return [...byKind.values()]
     .sort((a, b) => b.score - a.score)
     .slice(0, 2)
-    .map(({ label, detailJa, detailEn }) => ({ label, detailJa, detailEn }));
+    .map(({ label, detailJa, detailEn, detail }) => ({
+      label,
+      detailJa,
+      detailEn,
+      detail,
+    }));
 }
 
 export function injuryNamesUsedInEdges(edges: ProBriefEdgeItem[]): Set<string> {

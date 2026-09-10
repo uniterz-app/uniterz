@@ -87,7 +87,7 @@ export default function NbaPredictToolsTabsNative({
   onOpenPlayerDetail,
 }: Props) {
   const t = getGamesTexts(language);
-  const loadingLabel = language === "en" ? "Loading" : "読み込み中";
+  const loadingLabel = t.predictToolLoading;
   const [tab, setTab] = useState<NbaPredictToolsTab | null>("injuries");
   const navigation = useNavigation<NavigationProp<MainTabParamList>>();
   /**

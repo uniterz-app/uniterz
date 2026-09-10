@@ -17,6 +17,7 @@ import {
 import {
   REDEMPTION_CATALOG,
   normalizeRedemptionProductKind,
+  redemptionCatalogTitle,
   redemptionPriceCapShort,
 } from "@/lib/redemption/redemptionCatalog";
 import { redemptionBatchScheduleCopy } from "@/lib/redemption/redemptionBatchScheduleCopy";
@@ -219,7 +220,8 @@ export default function RedemptionApplyPage() {
         >
           {REDEMPTION_CATALOG.map((item) => (
             <option key={item.kind} value={item.kind}>
-              {isJa ? item.titleJa : item.titleEn} ({item.unitsRequired} Unit)
+              {redemptionCatalogTitle(item, language)} ({item.unitsRequired}{" "}
+              Unit)
             </option>
           ))}
         </select>

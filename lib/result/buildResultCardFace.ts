@@ -20,7 +20,7 @@ import {
   resolveResultScoreRelForPost,
   type ResultScoreRelKind,
 } from "@/lib/result/resultScoreRelative";
-import { getNbaTeamNicknameById } from "@/lib/nba-team-names";
+import { getNbaTeamNicknameById, compactNbaCardNickname } from "@/lib/nba-team-names";
 import type { GamePointsSummaryV1 } from "@/lib/results/gamePointsSummary";
 import { getTeamAlias } from "@/lib/team-alias";
 import { splitTeamNameByLeague } from "@/lib/team-name-split";
@@ -47,11 +47,13 @@ function compactTeamDisplayName(
   if (league === "nba") {
     if (id) {
       const nick = getNbaTeamNicknameById(id);
-      if (nick && nick !== id) return toUnifiedLabel(nick);
+      if (nick && nick !== id) {
+        return toUnifiedLabel(compactNbaCardNickname(nick, id));
+      }
     }
     if (raw) {
       const [, nick] = splitTeamNameByLeague("nba", raw);
-      return toUnifiedLabel(nick || raw);
+      return toUnifiedLabel(compactNbaCardNickname(nick || raw, id || null));
     }
     return id.replace(/^nba-/i, "").toUpperCase() || "—";
   }

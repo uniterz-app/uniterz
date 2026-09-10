@@ -1,3 +1,5 @@
+import type { LocalizedLang } from "../../../../../../lib/i18n/localize";
+import { weeklyReportUiCopy } from "../../../../../../lib/reports/weeklyReportUiCopy";
 /** Web `WeeklyReportView` 相当。画面順: 結果 / 部門 / 順位変動 / ライバル / 診断。 */
 import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View, type ViewStyle } from "react-native";
@@ -6,7 +8,6 @@ import {
   INITIAL_REPORT_RIVALS,
   type WeeklyReport,
   type WeeklyReportComment,
-  type WeeklyReportCommentTone,
   type WeeklyReportDivision,
   type WeeklyReportRival,
 } from "../../../../../../lib/reports/weeklyReportTypes";
@@ -35,118 +36,11 @@ import {
 import { WeeklyReportCardShell } from "./reportCardShellNative";
 import { ReportSquareGridOverlay } from "./reportGridOverlaysNative";
 
-type Lang = "ja" | "en";
+type Lang = LocalizedLang;
 
 /* ============================================================
- * copy（Web WeeklyReportView と同一）
+ * copy — 7言語は lib/reports/weeklyReportUiCopy.ts に集約
  * ============================================================ */
-
-const COPY = {
-  ja: {
-    title: "WEEKLY REPORT",
-    live: "LEGACY",
-    liveNote: "過去の進行中レポートです。いまは確定週のみ配信されます。",
-    heroRank: "順位",
-    heroScore: "スコア",
-    participants: (n: number) => `${n}人中`,
-    top: (p: string) => `TOP ${p}%`,
-    posts: "投稿",
-    wins: "勝",
-    losses: "敗",
-    firstWeekRank: "今週から参戦",
-    divisions: "部門成績",
-    divisionRank: (n: number) => `部門 #${n}`,
-    divisionUnranked: "圏外",
-    divisionReference: "参考記録",
-    divisionPostsToQualify: (n: number) => `あと${n}予想`,
-    overtaken: "抜いた相手",
-    overtakenBy: "抜かれた相手",
-    noOvertaken: "今週は誰も抜けなかった",
-    noOvertakenBy: "誰にも抜かれなかった",
-    moreRivals: (n: number) => `ほか ${n} 人`,
-    showMore: (n: number) => `もっと見る（${n}人）`,
-    showLess: "閉じる",
-    firstWeekBattle: "今週から参戦。抜いた・抜かれたは来週から表示されます。",
-    battleSummary: (passed: number, passedBy: number) =>
-      `今週は${passed}人を抜き、${passedBy}人に抜かれました`,
-    battleSection: "順位変動",
-    nowRank: (n: number) => `現在 #${n}`,
-    nextTarget: "次のターゲット",
-    targetGapLabel: "抜くまであと",
-    youAreTop: "あなたが首位。追われる側です。",
-    threat: "背後の脅威",
-    threatGapLabel: "背後に接近中",
-    noThreat: "背後に脅威なし",
-    proMember: "Pro会員",
-    commentTone: {
-      climbedBig: "圧巻の週。",
-      climbed: "確実に順位を上げた。",
-      held: "順位キープ。",
-      dropped: "後退した週。",
-      firstWeek: "初参戦の記録がここから始まる。来週は順位変動も表示される。",
-    } satisfies Record<WeeklyReportCommentTone, string>,
-    commentFactor: {
-      targetGap: (rank: number, name: string, pt: string) =>
-        `#${rank} ${name} まであと ${pt}pt。来週の数試合で届く。`,
-      overtakenBy: (name: string) => `${name} に抜かれたまま終わるか、抜き返すか。`,
-      divisionUp: (label: string) => `${label} の伸びが効いた。`,
-      divisionDown: (label: string) => `${label} が足を引っ張った。`,
-      lowVolume: (n: number) => `投稿 ${n} 件。まずは母数から。`,
-    },
-  },
-  en: {
-    title: "WEEKLY REPORT",
-    live: "LEGACY",
-    liveNote: "Legacy in-progress report. Weekly reports now ship as finals only.",
-    heroRank: "Rank",
-    heroScore: "Score",
-    participants: (n: number) => `of ${n}`,
-    top: (p: string) => `TOP ${p}%`,
-    posts: "picks",
-    wins: "W",
-    losses: "L",
-    firstWeekRank: "First week",
-    divisions: "Divisions",
-    divisionRank: (n: number) => `Div #${n}`,
-    divisionUnranked: "Unranked",
-    divisionReference: "Reference",
-    divisionPostsToQualify: (n: number) => `${n} more picks`,
-    overtaken: "Passed",
-    overtakenBy: "Passed by",
-    noOvertaken: "No one passed this week",
-    noOvertakenBy: "Nobody passed you",
-    moreRivals: (n: number) => `+${n} more`,
-    showMore: (n: number) => `Show all (+${n})`,
-    showLess: "Show less",
-    firstWeekBattle: "First week in. Battle log starts next week.",
-    battleSummary: (passed: number, passedBy: number) =>
-      `Passed ${passed}, passed by ${passedBy} this week`,
-    battleSection: "Rank Moves",
-    nowRank: (n: number) => `now #${n}`,
-    nextTarget: "Next Target",
-    targetGapLabel: "To pass",
-    youAreTop: "You lead the board.",
-    threat: "Closing In",
-    threatGapLabel: "Behind you",
-    noThreat: "No threat behind",
-    proMember: "Pro member",
-    commentTone: {
-      climbedBig: "A statement week.",
-      climbed: "A solid climb.",
-      held: "Held your ground.",
-      dropped: "A step back.",
-      firstWeek: "Your record starts here. Rank moves show next week.",
-    } satisfies Record<WeeklyReportCommentTone, string>,
-    commentFactor: {
-      targetGap: (rank: number, name: string, pt: string) =>
-        `${pt}pt to #${rank} ${name}. A few games away.`,
-      overtakenBy: (name: string) => `Passed by ${name}. Pass back next week.`,
-      divisionUp: (label: string) => `${label} carried the week.`,
-      divisionDown: (label: string) => `${label} held you back.`,
-      lowVolume: (n: number) => `${n} picks. Volume first.`,
-    },
-  },
-} as const;
 
 const DIVISION_META: Record<
   WeeklyReportDivision["key"],
@@ -168,7 +62,7 @@ function slabStyle(_accent?: ReportAccent): ViewStyle {
 }
 
 function commentText(comment: WeeklyReportComment, lang: Lang): string {
-  const c = COPY[lang];
+  const c = weeklyReportUiCopy(lang);
   const tone = c.commentTone[comment.tone];
   const f = comment.factor;
   const factor =
@@ -183,7 +77,7 @@ function commentText(comment: WeeklyReportComment, lang: Lang): string {
             : f.kind === "lowVolume"
               ? c.commentFactor.lowVolume(f.posts)
               : null;
-  return factor ? `${tone}${lang === "en" ? " " : ""}${factor}` : tone;
+  return factor ? `${tone}${c.toneFactorSeparator}${factor}` : tone;
 }
 
 /* ============================================================
@@ -256,7 +150,7 @@ function RivalRow({
   accent: ReportAccent;
   lang: Lang;
 }) {
-  const c = COPY[lang];
+  const c = weeklyReportUiCopy(lang);
   const navigation =
     useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
   return (
@@ -283,7 +177,7 @@ function RivalRow({
  * ============================================================ */
 
 function HeroBlock({ report, lang }: { report: WeeklyReport; lang: Lang }) {
-  const c = COPY[lang];
+  const c = weeklyReportUiCopy(lang);
   const delta = report.rankDeltaPlaces;
   const losses = Math.max(0, report.totalPosts - report.totalWins);
 
@@ -374,7 +268,7 @@ function HeroBlock({ report, lang }: { report: WeeklyReport; lang: Lang }) {
 }
 
 function DivisionsBlock({ report, lang }: { report: WeeklyReport; lang: Lang }) {
-  const c = COPY[lang];
+  const c = weeklyReportUiCopy(lang);
   return (
     <View>
       <SectionBadge>{c.divisions}</SectionBadge>
@@ -405,7 +299,7 @@ function DivisionsBlock({ report, lang }: { report: WeeklyReport; lang: Lang }) 
               </View>
               {isReference ? (
                 <View style={styles.divRefBlock}>
-                  <Text style={[styles.divRefLabel, lang === "ja" ? { fontFamily: reportBodyFontSemibold(lang) } : null]}>{c.divisionReference}</Text>
+                  <Text style={[styles.divRefLabel, (lang === "ja" || lang === "ko" || lang === "zh") ? { fontFamily: reportBodyFontSemibold(lang) } : null]}>{c.divisionReference}</Text>
                   <Text style={styles.divRefSub}>{c.divisionPostsToQualify(d.postsToQualify!)}</Text>
                 </View>
               ) : (
@@ -443,7 +337,7 @@ function BattlePanel({
   emptyText: string;
   lang: Lang;
 }) {
-  const c = COPY[lang];
+  const c = weeklyReportUiCopy(lang);
   const [expanded, setExpanded] = useState(false);
   const visible = expanded ? rivals : rivals.slice(0, INITIAL_REPORT_RIVALS);
   const hiddenInList = rivals.length - visible.length;
@@ -498,7 +392,7 @@ function BattlePanel({
 }
 
 function BattleBlock({ report, lang }: { report: WeeklyReport; lang: Lang }) {
-  const c = COPY[lang];
+  const c = weeklyReportUiCopy(lang);
   const firstWeek = report.rankDeltaPlaces == null && report.prevRank == null;
 
   if (firstWeek && report.overtaken.length === 0 && report.overtakenBy.length === 0) {
@@ -560,7 +454,7 @@ function GapValue({
 }
 
 function TargetThreatBlock({ report, lang }: { report: WeeklyReport; lang: Lang }) {
-  const c = COPY[lang];
+  const c = weeklyReportUiCopy(lang);
   const navigation =
     useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
 
@@ -641,12 +535,13 @@ export default function WeeklyReportViewNative({
   onSelectPeriod,
 }: {
   report: WeeklyReport;
-  language?: Lang;
+  language?: string;
   periods?: WeeklyReportPeriodOptionNative[];
   selectedPeriodId?: string;
   onSelectPeriod?: (id: string) => void;
 }) {
-  const c = COPY[language];
+  const c = weeklyReportUiCopy(language);
+  const lang = c.lang;
   const periodList = periods ?? [];
   const selectedIdx = periodList.findIndex((p) => p.id === selectedPeriodId);
   const activeIdx = selectedIdx >= 0 ? selectedIdx : 0;
@@ -677,7 +572,7 @@ export default function WeeklyReportViewNative({
               }}
               style={[styles.rangeNavBtn, !canPrev && styles.rangeNavBtnDisabled]}
               accessibilityRole="button"
-              accessibilityLabel={language === "ja" ? "前の週" : "Previous week"}
+              accessibilityLabel={c.prevWeek}
             >
               <MaterialCommunityIcons
                 name="chevron-left"
@@ -698,7 +593,7 @@ export default function WeeklyReportViewNative({
               }}
               style={[styles.rangeNavBtn, !canNext && styles.rangeNavBtnDisabled]}
               accessibilityRole="button"
-              accessibilityLabel={language === "ja" ? "次の週" : "Next week"}
+              accessibilityLabel={c.nextWeek}
             >
               <MaterialCommunityIcons
                 name="chevron-right"
@@ -734,17 +629,17 @@ export default function WeeklyReportViewNative({
         ) : null}
 
       {report.status === "live" ? (
-        <Text style={[styles.liveNote, { fontFamily: reportBodyFont(language) }]}>{c.liveNote}</Text>
+        <Text style={[styles.liveNote, { fontFamily: reportBodyFont(lang) }]}>{c.liveNote}</Text>
       ) : null}
 
-      <HeroBlock report={report} lang={language} />
-      <DivisionsBlock report={report} lang={language} />
-      <BattleBlock report={report} lang={language} />
-      <TargetThreatBlock report={report} lang={language} />
+      <HeroBlock report={report} lang={lang} />
+      <DivisionsBlock report={report} lang={lang} />
+      <BattleBlock report={report} lang={lang} />
+      <TargetThreatBlock report={report} lang={lang} />
 
       <WeeklyReportCardShell style={[styles.commentSlab, slabStyle(REPORT_ACCENT.cyan)]}>
-        <Text style={[styles.commentText, { fontFamily: reportBodyFont(language) }]}>
-          {commentText(report.comment, language)}
+        <Text style={[styles.commentText, { fontFamily: reportBodyFont(lang) }]}>
+          {commentText(report.comment, lang)}
         </Text>
       </WeeklyReportCardShell>
     </View>

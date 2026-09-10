@@ -14,9 +14,14 @@ import {
   type NbaInjuryReport,
   type NbaInjuryTeamReport,
 } from "@/lib/predict/nbaInjuryReport";
+import {
+  injuryReportCountLabel,
+  injuryReportUiCopy,
+  resolveInjuryReportUiLang,
+} from "@/lib/predict/injuryReportUiCopy";
 import { NBA_TEAM_NAME_BY_ID } from "@/lib/nba-team-names";
 import { getMobileTeamName } from "@/lib/team-name-split-mobile";
-import { nameBebas, nameOxanium } from "@/lib/fonts";
+import { nameOxanium } from "@/lib/fonts";
 import { matchCardTeamNameStyle } from "@/lib/games/teamDisplayTypography";
 import type { Language } from "@/lib/i18n/language";
 import { nbaPlayerDetailPreviewHref } from "@/lib/predict/nbaTeamDetailHref";
@@ -162,8 +167,7 @@ function InjuryStatusCard({
   const tone = injuryStatusTone(row.status);
   const colors = TONE[tone];
   const expected = (row.returnDate ?? "—").toUpperCase();
-  const lang = language === "ja" ? "ja" : "en";
-  const detail = injuryDetailLabel(row, lang);
+  const detail = injuryDetailLabel(row, language);
   const name = playerCardName(row.player);
   const statusShort = injuryStatusShortLabel(row.status);
 
@@ -265,15 +269,15 @@ function TeamInjuryColumn({
 }) {
   const rows = toCardRows(team);
   const label = columnTeamLabel(team);
-  const countLabel =
-    language === "ja" ? `${rows.length}名` : `${rows.length}`;
+  const ui = injuryReportUiCopy(resolveInjuryReportUiLang(language));
+  const countLabel = injuryReportCountLabel(rows.length, language);
 
   return (
     <section className="min-w-0">
       <header className="mb-1.5 flex items-end justify-between gap-2 px-0.5">
         <p
           className={[
-            nameBebas.className,
+            nameOxanium.className,
             "min-w-0 flex-1 truncate text-center text-[15px] font-bold uppercase leading-tight text-white md:text-[18px]",
           ].join(" ")}
           style={matchCardTeamNameStyle(true)}
@@ -292,7 +296,7 @@ function TeamInjuryColumn({
 
       {rows.length === 0 ? (
         <p className="border border-white/10 bg-[rgba(8,10,14,0.92)] px-2 py-3.5 text-center text-[10px] text-white/35 md:px-1.5 md:py-3 md:text-[9px]">
-          {language === "ja" ? "怪我人なし" : "No injuries"}
+          {ui.noInjuries}
         </p>
       ) : (
         <div className="flex flex-col gap-2 md:gap-1.5">
@@ -341,6 +345,8 @@ export default function NbaInjuryReportPanel({
     );
   };
 
+  const ui = injuryReportUiCopy(resolveInjuryReportUiLang(language));
+
   return (
     <div className={className}>
       <div className="grid grid-cols-2 gap-2">
@@ -362,7 +368,7 @@ export default function NbaInjuryReportPanel({
             "mt-2 text-center text-[9px] font-bold uppercase tracking-wide text-white/35",
           ].join(" ")}
         >
-          {language === "ja" ? "更新" : "Updated"} · {report.asOfLabel}
+          {ui.updated} · {report.asOfLabel}
         </p>
       ) : null}
     </div>

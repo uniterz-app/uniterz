@@ -1,19 +1,13 @@
 /**
  * シーズン予想（順位 / アワード）提出締切。
- * 方針: 開幕戦キックオフ前まで編集・提出可。開始後ロック。
- * 日時の正は開幕夜アンカー（`nbaOpeningNightPreviewGames`）と揃える。
  */
+import { L, resolveLocalizedLang, type LocalizedLang } from "@/lib/i18n/localize";
 import { NBA_OPENING_NIGHT_DATE_KEY } from "@/lib/games/nbaOpeningNightPreviewGames";
 
-/**
- * 2026-27 開幕戦キックオフ（JST）。
- * Games 既定の開幕アンカーと同じ瞬間。公式 tip が確定したらここを更新する。
- */
 export const SEASON_PREDICT_SUBMIT_DEADLINE_AT_MS = Date.parse(
   "2026-10-21T08:00:00+09:00"
 );
 
-/** ルールモーダルなど短い締切表示 */
 export const SEASON_PREDICT_SUBMIT_DEADLINE_WHEN = `${NBA_OPENING_NIGHT_DATE_KEY} 08:00 JST`;
 
 export const SEASON_PREDICT_SUBMIT_DEADLINE_LABEL_JA =
@@ -22,6 +16,20 @@ export const SEASON_PREDICT_SUBMIT_DEADLINE_LABEL_JA =
 export const SEASON_PREDICT_SUBMIT_DEADLINE_LABEL_EN =
   `Before opening tip-off (${NBA_OPENING_NIGHT_DATE_KEY} 08:00 JST)`;
 
+export function seasonPredictSubmitDeadlineLabel(
+  lang: LocalizedLang = "ja"
+): string {
+  return L(lang, {
+    ja: SEASON_PREDICT_SUBMIT_DEADLINE_LABEL_JA,
+    en: SEASON_PREDICT_SUBMIT_DEADLINE_LABEL_EN,
+    ko: `개막전 킥오프 전 (${NBA_OPENING_NIGHT_DATE_KEY} 08:00 JST)`,
+    zh: `开幕战开球前（${NBA_OPENING_NIGHT_DATE_KEY} 08:00 JST）`,
+    es: `Antes del salto inicial (${NBA_OPENING_NIGHT_DATE_KEY} 08:00 JST)`,
+    pt: `Antes do tip-off de abertura (${NBA_OPENING_NIGHT_DATE_KEY} 08:00 JST)`,
+    fr: `Avant le tip-off d’ouverture (${NBA_OPENING_NIGHT_DATE_KEY} 08:00 JST)`,
+  });
+}
+
 export function isSeasonPredictSubmitOpen(
   nowMs: number = Date.now()
 ): boolean {
@@ -29,9 +37,17 @@ export function isSeasonPredictSubmitOpen(
 }
 
 export function seasonPredictSubmitLockedMessage(
-  lang: "ja" | "en" = "ja"
+  lang: LocalizedLang = "ja"
 ): string {
-  return lang === "ja"
-    ? "提出期限を過ぎたため、編集・再提出はできません。"
-    : "The submission deadline has passed. Editing is locked.";
+  return L(lang, {
+    ja: "提出期限を過ぎたため、編集・再提出はできません。",
+    en: "The submission deadline has passed. Editing is locked.",
+    ko: "제출 기한이 지나 편집 및 재제출할 수 없습니다.",
+    zh: "提交期限已过，无法编辑或重新提交。",
+    es: "El plazo de envío ha terminado. La edición está bloqueada.",
+    pt: "O prazo de envio passou. A edição está bloqueada.",
+    fr: "La date limite est passée. La modification est verrouillée.",
+  });
 }
+
+export { resolveLocalizedLang as resolveSeasonPredictDeadlineLang };

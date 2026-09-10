@@ -15,6 +15,7 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import LegalPageLayoutNative from "../../legal/LegalPageLayoutNative";
 import { useFirebaseUser } from "../../../auth/FirebaseUserProvider";
 import { useNativeUserLanguage } from "../../../hooks/useNativeUserLanguage";
+import { L } from "../../../../../../lib/i18n/localize";
 import { cyberAlert } from "../../../components/cyberAlert";
 import { fetchMeReferralNative } from "../referralApiNative";
 import {
@@ -24,70 +25,19 @@ import {
   REFERRAL_REFERRER_MAX_UNITS,
   REFERRAL_REFERRER_UNITS_PER_COMPLETED,
   emptyReferralInviteSummary,
-  type ReferralInviteProgressRow,
-  type ReferralInviteStatus,
   type ReferralInviteSummary,
 } from "../../../../../../lib/referral/referralRewards";
 import ReferralStampBoardNative from "./ReferralStampBoardNative";
+import {
+  referralInviteProgressHint,
+  referralInviteScreenCopy,
+  referralInviteStatusLabel,
+} from "../referralInviteCopy";
 
 const OX = "Oxanium_700Bold";
 const WEB_ORIGIN =
   process.env.EXPO_PUBLIC_UNITERZ_API_BASE_URL?.replace(/\/$/, "") ||
   "https://uniterz.app";
-
-function statusLabel(status: ReferralInviteStatus, isJa: boolean): string {
-  if (isJa) {
-    switch (status) {
-      case "completed":
-        return "達成";
-      case "in_progress":
-        return "進行中";
-      case "under_review":
-        return "確認中";
-      case "registered":
-        return "登録済";
-      case "invalid":
-        return "無効";
-      case "fraud_rejected":
-        return "対象外";
-      case "withdrawn":
-        return "退会";
-      default:
-        return status;
-    }
-  }
-  switch (status) {
-    case "completed":
-      return "Done";
-    case "in_progress":
-      return "In progress";
-    case "under_review":
-      return "Review";
-    case "registered":
-      return "Registered";
-    case "invalid":
-      return "Invalid";
-    case "fraud_rejected":
-      return "Rejected";
-    case "withdrawn":
-      return "Left";
-    default:
-      return status;
-  }
-}
-
-function progressHint(row: ReferralInviteProgressRow, isJa: boolean): string {
-  if (row.status === "completed") {
-    return isJa ? "条件達成・付与済" : "Completed";
-  }
-  if (row.status === "in_progress" || row.status === "registered") {
-    const left = Math.max(0, 7 - row.activePredictDays);
-    return isJa
-      ? `予想投稿日数：${row.activePredictDays}／7日 / あと${left}日間の予想投稿で条件達成`
-      : `Predict days: ${row.activePredictDays}/7 · ${left} more day(s) to qualify`;
-  }
-  return statusLabel(row.status, isJa);
-}
 
 function qrImageUrl(data: string): string {
   return `https://api.qrserver.com/v1/create-qr-code/?size=168x168&margin=8&data=${encodeURIComponent(data)}`;
@@ -96,7 +46,8 @@ function qrImageUrl(data: string): string {
 export default function ReferralInviteScreenNative() {
   const { fUser } = useFirebaseUser();
   const { language } = useNativeUserLanguage(fUser?.uid);
-  const isJa = language === "ja";
+  const inviteCopy = referralInviteScreenCopy(language);
+  const lang = inviteCopy.lang;
   const [summary, setSummary] = useState<ReferralInviteSummary>(() =>
     emptyReferralInviteSummary()
   );
@@ -145,36 +96,33 @@ export default function ReferralInviteScreenNative() {
         await Clipboard.setStringAsync(text);
         cyberAlert("", ok, undefined, { variant: "success" });
       } catch {
-        cyberAlert("", isJa ? "コピーに失敗しました" : "Copy failed");
+        cyberAlert("", inviteCopy.copyFailed);
       }
     },
-    [isJa]
+    [inviteCopy.copyFailed]
   );
 
   const share = useCallback(async () => {
-    const message = isJa
-      ? `Uniterz でスポーツ予想しよう。招待コード: ${summary.inviteCode}\n${summary.inviteUrl}`
-      : `Join me on Uniterz. Invite code: ${summary.inviteCode}\n${summary.inviteUrl}`;
+    const message = inviteCopy.shareMessage(
+      summary.inviteCode,
+      summary.inviteUrl
+    );
     try {
       await Share.share({ message, url: summary.inviteUrl });
     } catch {
       /* cancelled */
     }
-  }, [isJa, summary.inviteCode, summary.inviteUrl]);
+  }, [inviteCopy, summary.inviteCode, summary.inviteUrl]);
 
   return (
     <LegalPageLayoutNative
       title="INVITE"
       eyebrow="PROFILE"
-      description={
-        isJa
-          ? "友達を招待して Unit を獲得。相手が7日分の予想を出すと双方に付与されます。"
-          : "Invite friends for Units. Both earn when they predict on 7 different days."
-      }
+      description={inviteCopy.description}
     >
       {loading ? (
         <Text style={styles.loading}>
-          {isJa ? "読み込み中…" : "Loading…"}
+          {L(lang, { ja: "読み込み中…", en: "Loading…", ko: "불러오는 중…", zh: "加载中…", es: "Cargando…", pt: "Carregando…", fr: "Chargement…" })}
         </Text>
       ) : null}
       <View style={styles.stack}>
@@ -182,7 +130,7 @@ export default function ReferralInviteScreenNative() {
         <View style={styles.shareCard}>
           <View style={styles.shareHead}>
             <Text style={styles.sectionTitleCyan}>
-              {isJa ? "招待を送る" : "Send invite"}
+              {L(lang, { ja: "招待を送る", en: "Send invite", ko: "초대 보내기", zh: "发送邀请", es: "Enviar invitación", pt: "Enviar convite", fr: "Envoyer une invitation" })}
             </Text>
             <Text style={styles.shareHeadMeta}>CODE · LINK · QR</Text>
           </View>
@@ -190,7 +138,7 @@ export default function ReferralInviteScreenNative() {
           <View style={styles.shareRow}>
             <View style={styles.shareCol}>
               <Text style={styles.fieldLabel}>
-                {isJa ? "招待コード" : "Invite code"}
+                {L(lang, { ja: "招待コード", en: "Invite code", ko: "초대 코드", zh: "邀请码", es: "Código de invitación", pt: "Código de convite", fr: "Code d’invitation" })}
               </Text>
               <View style={styles.codeRow}>
                 <Text style={styles.code} numberOfLines={1}>
@@ -200,19 +148,19 @@ export default function ReferralInviteScreenNative() {
                   onPress={() =>
                     void copy(
                       summary.inviteCode,
-                      isJa ? "コードをコピーしました" : "Code copied"
+                      inviteCopy.codeCopied
                     )
                   }
                   style={styles.copyAmber}
                 >
                   <Text style={styles.copyAmberText}>
-                    {isJa ? "コピー" : "Copy"}
+                    {L(lang, { ja: "コピー", en: "Copy", ko: "복사", zh: "复制", es: "Copiar", pt: "Copiar", fr: "Copier" })}
                   </Text>
                 </Pressable>
               </View>
 
               <Text style={[styles.fieldLabel, { marginTop: 10 }]}>
-                {isJa ? "招待リンク" : "Invite link"}
+                {L(lang, { ja: "招待リンク", en: "Invite link", ko: "초대 링크", zh: "邀请链接", es: "Enlace de invitación", pt: "Link de convite", fr: "Lien d’invitation" })}
               </Text>
               <View style={styles.linkRow}>
                 <Text style={styles.linkBox} numberOfLines={2}>
@@ -222,13 +170,13 @@ export default function ReferralInviteScreenNative() {
                   onPress={() =>
                     void copy(
                       summary.inviteUrl,
-                      isJa ? "リンクをコピーしました" : "Link copied"
+                      inviteCopy.linkCopied
                     )
                   }
                   style={styles.ghostBtn}
                 >
                   <Text style={styles.ghostBtnText}>
-                    {isJa ? "コピー" : "Copy"}
+                    {L(lang, { ja: "コピー", en: "Copy", ko: "복사", zh: "复制", es: "Copiar", pt: "Copiar", fr: "Copier" })}
                   </Text>
                 </Pressable>
               </View>
@@ -245,7 +193,7 @@ export default function ReferralInviteScreenNative() {
 
           <Pressable onPress={() => void share()} style={styles.primaryBtn}>
             <Text style={styles.primaryBtnText}>
-              {isJa ? "招待を共有" : "Share invite"}
+              {L(lang, { ja: "招待を共有", en: "Share invite", ko: "초대 공유", zh: "分享邀请", es: "Compartir invitación", pt: "Compartilhar convite", fr: "Partager l’invitation" })}
             </Text>
           </Pressable>
         </View>
@@ -253,28 +201,28 @@ export default function ReferralInviteScreenNative() {
         {/* 報酬（コンパクト） */}
         <View style={styles.rewardsCard}>
           <Text style={styles.sectionTitleMuted}>
-            {isJa ? "報酬" : "Rewards"}
+            {L(lang, { ja: "報酬", en: "Rewards", ko: "보상", zh: "奖励", es: "Recompensas", pt: "Recompensas", fr: "Récompenses" })}
           </Text>
           <View style={styles.rewardGrid}>
             {(
               [
                 [
-                  isJa ? "あなた" : "You",
+                  inviteCopy.you,
                   `+${REFERRAL_REFERRER_UNITS_PER_COMPLETED}`,
-                  isJa ? "1人達成ごと" : "per clear",
+                  inviteCopy.perClear,
                 ],
                 [
-                  isJa ? "友達" : "Friend",
+                  inviteCopy.friend,
                   `+${REFERRAL_INVITEE_UNITS}`,
-                  isJa ? "1回のみ" : "once",
+                  inviteCopy.once,
                 ],
                 [
-                  isJa ? "区切り" : "Bonus",
+                  inviteCopy.bonus,
                   `+${REFERRAL_MILESTONES[0].bonusUnits}/+${REFERRAL_MILESTONES[1].bonusUnits}/+${REFERRAL_MILESTONES[2].bonusUnits}`,
                   "3 / 5 / 10",
                 ],
                 [
-                  isJa ? "上限" : "Cap",
+                  inviteCopy.cap,
                   String(REFERRAL_REFERRER_MAX_UNITS),
                   `${REFERRAL_REFERRER_MAX_COMPLETED} invites`,
                 ],
@@ -308,18 +256,14 @@ export default function ReferralInviteScreenNative() {
               </View>
             ))}
           </View>
-          <Text style={styles.muted}>
-            {isJa
-              ? "付与は、友達が異なる7日に有効予想を投稿したあと。登録だけでは付きません。"
-              : "Granted after the invitee posts on 7 different days. Signup alone does not count."}
-          </Text>
+          <Text style={styles.muted}>{inviteCopy.grantNote}</Text>
         </View>
 
         <View style={styles.statsGrid}>
           {(
             [
-              [isJa ? "進行中" : "Active", summary.inProgressCount],
-              [isJa ? "確認中" : "Review", summary.underReviewCount],
+              [inviteCopy.active, summary.inProgressCount],
+              [inviteCopy.review, summary.underReviewCount],
             ] as const
           ).map(([label, value]) => (
             <View key={label} style={styles.statCell}>
@@ -331,11 +275,11 @@ export default function ReferralInviteScreenNative() {
 
         <ReferralStampBoardNative
           completedCount={summary.completedCount}
-          isJa={isJa}
+          language={lang}
         />
 
         <Text style={styles.sectionTitleMuted}>
-          {isJa ? "招待の進捗" : "Invite progress"}
+          {L(lang, { ja: "招待の進捗", en: "Invite progress", ko: "초대 진행", zh: "邀请进度", es: "Progreso de invitaciones", pt: "Progresso dos convites", fr: "Progression des invitations" })}
         </Text>
         {summary.rows.map((row) => (
           <View key={row.id} style={styles.rowCard}>
@@ -360,17 +304,15 @@ export default function ReferralInviteScreenNative() {
                   row.status === "completed" ? styles.rowStatusDone : null,
                 ]}
               >
-                {statusLabel(row.status, isJa)}
+                {referralInviteStatusLabel(row.status, lang)}
               </Text>
             </View>
-            <Text style={styles.muted}>{progressHint(row, isJa)}</Text>
+            <Text style={styles.muted}>
+              {referralInviteProgressHint(row, language)}
+            </Text>
           </View>
         ))}
-        <Text style={styles.footnote}>
-          {isJa
-            ? "※ プレビュー用モック。本番データ接続はこれから。"
-            : "※ Preview mock. Live API comes next."}
-        </Text>
+        <Text style={styles.footnote}>{inviteCopy.footnote}</Text>
       </View>
     </LegalPageLayoutNative>
   );

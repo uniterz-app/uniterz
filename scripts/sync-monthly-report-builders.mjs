@@ -27,6 +27,9 @@ function rewriteForFunctions(source) {
       "@/lib/reports/monthlyRadarJudge",
       "./monthlyRadarJudge"
     )
+    .replaceAll("@/lib/i18n/localize", "./localize")
+    .replaceAll("@/lib/i18n/language", "./language")
+    .replaceAll("@/lib/i18n/ui", "./ui")
     .replaceAll("@/shared/analysis/types", "../stats/analysis/types");
 }
 
@@ -49,4 +52,23 @@ await writeFile(
   rewriteForFunctions(await readFile(typesPath, "utf8"))
 );
 
-console.log(`Synced ${BUILDERS.length} monthly report builders.`);
+// functions の tsconfig には `@/` エイリアスがないため、builder が使う 7 言語ヘルパーも
+// 同じ単一ソースから複製する。
+const I18N_HELPERS = [
+  ["lib/i18n/language.ts", "language.ts"],
+  ["lib/i18n/ui.ts", "ui.ts"],
+  ["lib/i18n/localize.ts", "localize.ts"],
+];
+
+for (const [sourceRelPath, fileName] of I18N_HELPERS) {
+  const source = await readFile(resolve(repositoryRoot, sourceRelPath), "utf8");
+  const header = `// synced from ${sourceRelPath} — run npm run sync:monthly-report-builders\n`;
+  await writeFile(
+    resolve(targetDir, fileName),
+    `${header}${rewriteForFunctions(source)}`
+  );
+}
+
+console.log(
+  `Synced ${BUILDERS.length} monthly report builders and ${I18N_HELPERS.length} i18n helpers.`
+);

@@ -20,6 +20,8 @@ import {
   getTeamJerseySecondaryColor,
 } from "@/lib/team-colors";
 import {
+  seasonPredictPredictedRankBandsHeading,
+  seasonPredictStandingsBandLabel,
   seasonPredictStandingsMarketHint,
   type SeasonPredictUiLang,
 } from "@/lib/predict/seasonPredictUiCopy";
@@ -60,7 +62,7 @@ function DetailBands({
           "text-[8px] font-bold uppercase tracking-[0.12em] text-white/35",
         ].join(" ")}
       >
-        Predicted rank bands
+        {seasonPredictPredictedRankBandsHeading(language)}
       </p>
       <div
         className="flex h-2 w-full overflow-hidden rounded-[1px] bg-white/5"
@@ -87,7 +89,7 @@ function DetailBands({
                 "text-[8px] font-bold uppercase tracking-[0.06em] text-white/40",
               ].join(" ")}
             >
-              {language === "en" ? b.labelEn : b.labelJa}
+              {seasonPredictStandingsBandLabel(language, b)}
             </p>
             <p
               className={[

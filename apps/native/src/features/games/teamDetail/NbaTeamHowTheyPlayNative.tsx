@@ -9,6 +9,10 @@ import {
   type TeamHowTheyPlayTab,
 } from "../../../../../../lib/predict/nbaTeamDetailHowTheyPlay";
 import type { NbaLeagueTeamStatsBundle } from "../../../../../../lib/predict/nbaLeagueTeamStatsMocks";
+import {
+  nbaLocalizedText,
+  nbaHowTheyPlayChrome,
+} from "../stats/nbaStatsUiCopy";
 
 const CYAN = "#00F5FF";
 const OWN = "#FF3D5A";
@@ -93,18 +97,23 @@ function MetricStack({
 type Props = {
   teamId: string;
   accent: string;
-  isJa: boolean;
+  language?: string;
+  /** @deprecated use language */
+  isJa?: boolean;
   bundle?: NbaLeagueTeamStatsBundle;
 };
 
 export default function NbaTeamHowTheyPlayNative({
   teamId,
   accent,
+  language,
   isJa,
   bundle,
 }: Props) {
+  const chrome = nbaHowTheyPlayChrome(language ?? (isJa ? "ja" : "en"));
+  const { lang } = chrome;
   const board = useMemo(
-    () => getTeamHowTheyPlay(teamId, bundle),
+    () => (bundle ? getTeamHowTheyPlay(teamId, bundle) : null),
     [teamId, bundle]
   );
   const [tab, setTab] = useState<TeamHowTheyPlayTab>("fourFactors");
@@ -153,7 +162,7 @@ export default function NbaTeamHowTheyPlayNative({
       </View>
 
       <Text style={styles.tabHint}>
-        {isJa ? tabMeta.hintJa : tabMeta.hintEn}
+        {nbaLocalizedText(lang, tabMeta.hint)}
       </Text>
 
       {tab === "fourFactors" ? (
@@ -161,10 +170,10 @@ export default function NbaTeamHowTheyPlayNative({
           <View style={[styles.ffHead, { borderBottomColor: line }]}>
             <Text style={styles.ffHeadSpacer} />
             <Text style={[styles.ffHeadLabel, { color: OWN }]}>
-              {isJa ? "自分" : "US"}
+              {chrome.us}
             </Text>
             <Text style={[styles.ffHeadLabel, { color: OPP }]}>
-              {isJa ? "相手" : "THEM"}
+              {chrome.them}
             </Text>
           </View>
           {board.fourFactors.map((row) => {
@@ -204,7 +213,7 @@ export default function NbaTeamHowTheyPlayNative({
 
       {tab === "fourFactors" ? (
         <Text style={styles.detailHint}>
-          {isJa ? factor.hintJa : factor.hintEn}
+          {nbaLocalizedText(lang, factor.hint)}
         </Text>
       ) : null}
 
@@ -214,7 +223,7 @@ export default function NbaTeamHowTheyPlayNative({
             <View key={row.id} style={styles.barBlock}>
               <View style={styles.barTop}>
                 <Text style={styles.barLabel}>
-                  {isJa ? row.labelJa : row.labelEn}
+                  {nbaLocalizedText(lang, row.label)}
                 </Text>
                 <HowPtsCol display={row.pts.display} />
                 <MetricStack
@@ -335,12 +344,8 @@ export default function NbaTeamHowTheyPlayNative({
           </View>
           <Text style={styles.detailHint}>
             {tab === "hustle"
-              ? isJa
-                ? hustle.hintJa
-                : hustle.hintEn
-              : isJa
-                ? tracking.hintJa
-                : tracking.hintEn}
+              ? nbaLocalizedText(lang, hustle.hint)
+              : nbaLocalizedText(lang, tracking.hint)}
           </Text>
         </>
       ) : null}

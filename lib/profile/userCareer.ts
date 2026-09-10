@@ -6,6 +6,8 @@
  * 期間確定 / settle 時に差分更新（表示時の横断スキャン禁止）。
  */
 
+import { resolveLocalizedLang } from "@/lib/i18n/localize";
+
 export const USER_CAREER_COLLECTION = "user_career";
 export const USER_CAREER_SCHEMA_VERSION = 1 as const;
 
@@ -320,27 +322,12 @@ export type UserCareerSummaryRow = {
   value: string;
 };
 
-export function userCareerSummaryLabels(language: "ja" | "en"): Record<
-  UserCareerSummaryRowKey,
-  string
-> {
-  if (language === "ja") {
-    return {
-      since: "Since",
-      predictions: "Predictions",
-      hits: "Hits",
-      exactHits: "Exact Hits",
-      winRate: "Win Rate",
-      maxWinStreak: "Max Win Streak",
-      bestWeeklyRank: "Best Weekly Rank",
-      bestMonthlyRank: "Best Monthly Rank",
-      weeklyTop10: "Weekly Top 10",
-      monthlyTop10: "Monthly Top 10",
-      bestGroupBattleRank: "Group Battle Best",
-      unlockedSkins: "Unlocked Skins",
-      lifetimeUnits: "Lifetime Units",
-    };
-  }
+export function userCareerSummaryLabels(
+  language: string | null | undefined
+): Record<UserCareerSummaryRowKey, string> {
+  const lang = resolveLocalizedLang(language);
+  // CAREER ボードは英語ラベル固定（Web と同型）。言語引数は API 互換・将来訳用。
+  void lang;
   return {
     since: "Since",
     predictions: "Predictions",
@@ -361,7 +348,7 @@ export function userCareerSummaryLabels(language: "ja" | "en"): Record<
 /** 通算サマリー行（表示順固定） */
 export function buildUserCareerSummaryRows(
   summary: UserCareerSummary,
-  language: "ja" | "en"
+  language: string | null | undefined
 ): UserCareerSummaryRow[] {
   const labels = userCareerSummaryLabels(language);
   return [
@@ -436,7 +423,7 @@ export function buildUserCareerSummaryRows(
 /** シーズン章用（スキン・Unit・GB・Since なし） */
 export function buildUserCareerBoardRows(
   board: UserCareerBoardStats,
-  language: "ja" | "en"
+  language: string | null | undefined
 ): UserCareerSummaryRow[] {
   const labels = userCareerSummaryLabels(language);
   const keys: UserCareerSummaryRowKey[] = [

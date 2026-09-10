@@ -208,7 +208,7 @@ export default function MobileRankingsPage() {
   const language = sessionUser.language;
   const countryCode = sessionUser.countryCode;
   const m = t(language);
-  const langUi = language === "en" ? "en" : "ja";
+  const langUi = language === "ja" ? "ja" : "en";
 
   /** PRO LEAGUE は Pro 以外にはロック（API 403 もフォールバック） */
   const openProLocked =

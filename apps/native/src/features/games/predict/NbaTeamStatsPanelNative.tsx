@@ -12,7 +12,7 @@ import {
   CyberSlantedTabBarNative,
   CyberSlantedTabNative,
 } from "../../rankings/CyberSlantedTabNative";
-import { MATCH_CARD_DISPLAY_FONT } from "../matchCardTypography";
+import { MATCH_CARD_DISPLAY_FONT, MATCH_CARD_TEAM_NAME_FONT } from "../matchCardTypography";
 import type { GamesLanguage } from "../gamesI18n";
 import { getGamesTexts } from "../gamesI18n";
 
@@ -541,11 +541,11 @@ const styles = StyleSheet.create({
   },
   teamHeader: {
     flex: 1,
-    fontFamily: MATCH_CARD_DISPLAY_FONT,
-    fontSize: 22,
-    fontWeight: "400",
-    letterSpacing: 1.2,
-    lineHeight: 26,
+    fontFamily: MATCH_CARD_TEAM_NAME_FONT,
+    fontSize: 14,
+    fontWeight: "700",
+    letterSpacing: 0.8,
+    lineHeight: 18,
     color: "#fff",
     textAlign: "center",
     textTransform: "uppercase",

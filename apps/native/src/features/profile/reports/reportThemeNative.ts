@@ -133,12 +133,20 @@ export function fmtReportMonth(monthKey: string): string {
   return `${y}.${m}`;
 }
 
-/** 通常本文: ja → Noto 400, en → Rajdhani */
-export function reportBodyFont(lang: "ja" | "en"): TextStyle["fontFamily"] {
-  return lang === "ja" ? JP_400 : RAJDHANI;
+import { resolveLocalizedLang } from "../../../../../../lib/i18n/localize";
+
+/** 通常本文: CJK → Noto 400, Latin → Rajdhani */
+export function reportBodyFont(
+  language: string | null | undefined
+): TextStyle["fontFamily"] {
+  const lang = resolveLocalizedLang(language);
+  return lang === "ja" || lang === "ko" || lang === "zh" ? JP_400 : RAJDHANI;
 }
 
 /** セミボールド本文（バトル要約・名前など） */
-export function reportBodyFontSemibold(lang: "ja" | "en"): TextStyle["fontFamily"] {
-  return lang === "ja" ? JP_600 : RAJDHANI;
+export function reportBodyFontSemibold(
+  language: string | null | undefined
+): TextStyle["fontFamily"] {
+  const lang = resolveLocalizedLang(language);
+  return lang === "ja" || lang === "ko" || lang === "zh" ? JP_600 : RAJDHANI;
 }

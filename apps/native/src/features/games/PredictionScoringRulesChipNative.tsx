@@ -7,6 +7,10 @@ import {
   Text,
   View,
 } from "react-native";
+import {
+  resolveScoringRulesLang,
+  scoringRulesCopy,
+} from "../../../../../lib/predict/scoringRulesCopy";
 import type { GamesLanguage } from "./gamesI18n";
 import PredictionScoringRulesBodyNative from "./PredictionScoringRulesBodyNative";
 import {
@@ -33,7 +37,7 @@ export default function PredictionScoringRulesChipNative({
   rulesFootNote,
 }: Props) {
   const [open, setOpen] = useState(false);
-  const ja = language !== "en";
+  const rules = scoringRulesCopy(resolveScoringRulesLang(language));
 
   return (
     <>
@@ -63,9 +67,7 @@ export default function PredictionScoringRulesChipNative({
           <View style={styles.sheet}>
             <View style={styles.header}>
               <Text style={styles.headerTitle}>SCORING RULES</Text>
-              <Text style={styles.headerHint}>
-                {ja ? "採点ルール" : "How points are scored"}
-              </Text>
+              <Text style={styles.headerHint}>{rules.headerHint}</Text>
             </View>
             <ScrollView
               style={styles.scroll}

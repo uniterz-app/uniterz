@@ -1,7 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
+import {
+  CURRENT_NBA_SEASON_KEY,
+  previousNbaSeasonKey,
+} from "@/lib/rankings/nbaSeason";
 import { enrichLeagueTeamStatsBundle } from "@/lib/predict/nbaLeagueTeamStatsMocks";
 import { fetchLeagueTeamStats } from "@/lib/nba/leagueTeamStats/fetchLeagueTeamStatsClient";
 import { nbaSnapshotCacheKey } from "@/lib/nba/snapshotFetchCache";
@@ -12,6 +15,9 @@ import type {
 import { leagueTeamStatsSnapshotCache as cache } from "@/lib/nba/leagueTeamStats/leagueTeamStatsSnapshotCache";
 import type { NbaLeagueTeamStatsBundle } from "@/lib/predict/nbaLeagueTeamStatsMocks";
 import { trackAppEvent } from "@/lib/observability/trackAppEvent";
+
+/** TEMP: フォント確認用に前季データを表示。確認後に false へ戻す */
+const TEMP_USE_PREVIOUS_SEASON_FOR_STATS_PREVIEW = false;
 
 const EMPTY_BUNDLE: NbaLeagueTeamStatsBundle = {
   season: [],
@@ -61,7 +67,11 @@ const EMPTY_RESOLVED: Resolved = {
 export function useLeagueTeamStatsBundle(
   options: UseLeagueTeamStatsBundleOptions = {}
 ): UseLeagueTeamStatsBundleState {
-  const season = options.season ?? CURRENT_NBA_SEASON_KEY;
+  const season =
+    options.season ??
+    (TEMP_USE_PREVIOUS_SEASON_FOR_STATS_PREVIEW
+      ? previousNbaSeasonKey(CURRENT_NBA_SEASON_KEY)
+      : CURRENT_NBA_SEASON_KEY);
   const enabled = options.enabled ?? true;
   const key = nbaSnapshotCacheKey(options.apiBaseUrl, season);
 
