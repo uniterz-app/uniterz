@@ -76,13 +76,22 @@ export function isNbaPeriodFinalForUnitGrants(
   return true;
 }
 
+/** Pro Skin 付与と同じ 4 セグメント doc パス（奇数セグメントは Firestore が拒否する） */
+function periodUnitGrantLockPath(
+  period: PeriodRankingUnitPeriod,
+  labelKey: string
+): string {
+  const id = `${period}_${labelKey}`.replace(/\//g, "_");
+  return `meta/periodRankingUnitGrants/locks/${id}`;
+}
+
 async function claimPeriodUnitGrant(opts: {
   period: PeriodRankingUnitPeriod;
   labelKey: string;
 }): Promise<boolean> {
   const db = getFirestore();
   const grantRef = db.doc(
-    `meta/periodRankingUnitGrants/${opts.period}_${opts.labelKey}`
+    periodUnitGrantLockPath(opts.period, opts.labelKey)
   );
   return db.runTransaction(async (tx) => {
     const snap = await tx.get(grantRef);
@@ -152,9 +161,7 @@ export async function grantPeriodRankingUnitsForPeriod(opts: {
   if (!claimed) return { granted: false, ledgerWrites: 0, skipped: 0 };
 
   const db = getFirestore();
-  const grantRef = db.doc(
-    `meta/periodRankingUnitGrants/${opts.period}_${opts.labelKey}`
-  );
+  const grantRef = db.doc(periodUnitGrantLockPath(opts.period, opts.labelKey));
   const reason = periodRankingUnitLedgerReason(opts.period);
   const metrics = periodRankingUnitMetricsForPeriod(opts.period);
 

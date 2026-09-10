@@ -121,7 +121,7 @@ Unit は、以下の条件を満たしたユーザーに付与する。
 - トリガー: `buildNbaPeriodRankingSnapshots` 完了後（期間猶予明けの前週 / 前月）
 - 対象スナップ: `period_ranking_snapshots/nba_{weekly|monthly}_{label}_{metric}`（**standard のみ**）
 - 冪等キー: `pr:{period}:{label}:{metric}:uid{uid}`
-- 期間ロック: `meta/periodRankingUnitGrants/{period}_{label}`
+- 期間ロック: `meta/periodRankingUnitGrants/locks/{period}_{label}`
 
 ---
 
