@@ -256,7 +256,7 @@ function CyberListRowMeta({
             className={[nameOxanium.className, "shrink-0 font-bold uppercase tracking-[0.14em] tabular-nums leading-none"].join(
               " "
             )}
-            style={{ color: "rgba(255,255,255,0.42)", fontSize: metaSize }}
+            style={{ color: "rgba(255,255,255,0.78)", fontSize: metaSize }}
           >
             {volText}
           </span>
@@ -265,7 +265,7 @@ function CyberListRowMeta({
               className={[nameOxanium.className, "min-w-0 truncate font-bold uppercase tracking-[0.12em] tabular-nums leading-none"].join(
                 " "
               )}
-              style={{ color: "rgba(0,245,255,0.55)", fontSize: metaSize }}
+              style={{ color: "rgba(0,245,255,0.88)", fontSize: metaSize }}
             >
               {avgText}
             </span>

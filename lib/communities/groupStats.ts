@@ -4,7 +4,8 @@ import type {
   CommunityMetric,
   CommunityPeriodType,
 } from "./types";
-import { dateKeysFromStartToTodayJST } from "./dateRange";
+import type { CommunityGamesScope } from "./communityGamesScope";
+import { resolveCommunityDateKeys } from "./resolveCommunityDateKeys";
 import { aggregateFromDailyTeams } from "./groupStatsTeams";
 import {
   resolveRankingStartDateKey,
@@ -12,6 +13,7 @@ import {
 } from "./rankingStartDate";
 import { normalizeLeague } from "@/lib/leagues";
 import { TIMEZONE_JST, parseDateKeyInTimeZone } from "@/lib/time/zonedTime";
+import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
 
 function readWcOverallDailyBucket(
   data: Record<string, unknown>
@@ -62,41 +64,83 @@ function addBucketToAgg(
   );
 }
 
+function asBucket(v: unknown): Record<string, unknown> | undefined {
+  if (!v || typeof v !== "object") return undefined;
+  return v as Record<string, unknown>;
+}
+
+function nestedSeasonBucket(
+  root: unknown,
+  seasonKey: string
+): Record<string, unknown> | undefined {
+  const map = asBucket(root);
+  if (!map) return undefined;
+  return asBucket(map[seasonKey]);
+}
+
+/**
+ * 日次ドキュメントから集計バケットを選ぶ。
+ * writer（updateUserStatsV2）と揃える。危険なフォールバックは置かない。
+ *
+ * pickup: ranking / rankingBySeason
+ * all:    openRanking / openRankingBySeason / rankingByNbaPlayoffs
+ * pickup+playoffs は日次に専用バケットが無い → 呼び出し側で marker 集計
+ */
 function dailyBucket(
   data: Record<string, unknown> | undefined,
-  league: CommunityLeague
+  league: CommunityLeague,
+  gamesScope: CommunityGamesScope,
+  periodType: CommunityPeriodType,
+  seasonKey: string
 ): Record<string, unknown> | undefined {
   if (!data) return undefined;
-  if (league === "all") {
-    const ranking = data.ranking;
-    if (ranking && typeof ranking === "object") {
-      return ranking as Record<string, unknown>;
+
+  if (gamesScope === "pickup") {
+    if (periodType === "nba_season") {
+      return nestedSeasonBucket(data.rankingBySeason, seasonKey);
     }
-    const all = data.all;
-    return all && typeof all === "object"
-      ? (all as Record<string, unknown>)
-      : undefined;
+    if (periodType === "nba_playoffs") {
+      // pickup 専用プレーオフ日次は無い（marker 経路へ）
+      return undefined;
+    }
+    // from_now / calendar_month: Match Pickup のみ（all に落とさない）
+    return asBucket(data.ranking);
   }
-  /**
-   * WC: プロフィール（rankingByWcStage.overall）と同じバケットを使う。
-   * leagues.wc はランキング対象外投稿も含むため 1〜2 点ずれることがある。
-   */
+
+  if (periodType === "nba_season") {
+    return nestedSeasonBucket(data.openRankingBySeason, seasonKey);
+  }
+
+  if (periodType === "nba_playoffs") {
+    return nestedSeasonBucket(data.rankingByNbaPlayoffs, seasonKey);
+  }
+
+  // from_now / calendar_month — オープンランキング
+  if (league === "all" || league === "nba") {
+    return asBucket(data.openRanking);
+  }
+
   if (league === "wc") {
     const overall = readWcOverallDailyBucket(data);
     if (Number(overall.posts ?? 0) > 0) {
-      return overall as Record<string, unknown>;
+      return overall;
     }
     const leagues = data.leagues as Record<string, unknown> | undefined;
-    const legacy = leagues?.wc;
-    return legacy && typeof legacy === "object"
-      ? (legacy as Record<string, unknown>)
-      : undefined;
+    return asBucket(leagues?.wc);
   }
+
   const leagues = data.leagues as Record<string, unknown> | undefined;
-  const bucket = leagues?.[league];
-  return bucket && typeof bucket === "object"
-    ? (bucket as Record<string, unknown>)
-    : undefined;
+  return asBucket(leagues?.[league]);
+}
+
+function mustUseAppliedPostsMarkers(
+  rankingTeamIds: string[],
+  gamesScope: CommunityGamesScope,
+  periodType: CommunityPeriodType
+): boolean {
+  if (rankingTeamIds.length > 0) return true;
+  // pickup × プレーオフ: 日次バケットが無い
+  return gamesScope === "pickup" && periodType === "nba_playoffs";
 }
 
 /** daily doc id: {uid}_{yyyy-mm-dd} */
@@ -110,7 +154,10 @@ async function aggregateFromDaily(
   db: Firestore,
   uids: string[],
   dateKeys: string[],
-  league: CommunityLeague
+  league: CommunityLeague,
+  gamesScope: CommunityGamesScope,
+  periodType: CommunityPeriodType,
+  seasonKey: string
 ): Promise<Map<string, MemberAgg>> {
   const map = new Map<string, MemberAgg>();
   for (const uid of uids) map.set(uid, emptyAgg());
@@ -132,7 +179,10 @@ async function aggregateFromDaily(
       if (!parsed) continue;
       const agg = map.get(parsed.uid);
       if (!agg) continue;
-      addBucketToAgg(agg, dailyBucket(snap.data(), league));
+      addBucketToAgg(
+        agg,
+        dailyBucket(snap.data(), league, gamesScope, periodType, seasonKey)
+      );
     }
   }
 
@@ -164,24 +214,33 @@ function markerCountsSince(
   return atMs >= sinceMs;
 }
 
+function markerMatchesGamesScope(
+  marker: Record<string, unknown>,
+  gamesScope: CommunityGamesScope
+): boolean {
+  if (gamesScope === "pickup") return marker.countedForPickup === true;
+  return marker.countedForRanking !== false;
+}
+
 function markerCountsForLeague(
   marker: Record<string, unknown>,
-  league: CommunityLeague
+  league: CommunityLeague,
+  gamesScope: CommunityGamesScope
 ): boolean {
-  if (marker.countedForRanking === false) return false;
+  if (!markerMatchesGamesScope(marker, gamesScope)) return false;
   if (league === "all") return true;
   const raw = marker.league;
   if (raw == null) return false;
   return normalizeLeague(raw) === league;
 }
 
-/** 開始日のみ: applied_posts から sinceMs 以降を合算（daily バケットと同等のリーグ条件） */
 async function aggregateFromAppliedPostsSince(
   db: Firestore,
   uids: string[],
   dateKey: string,
   league: CommunityLeague,
-  sinceMs: number
+  sinceMs: number,
+  gamesScope: CommunityGamesScope
 ): Promise<Map<string, MemberAgg>> {
   const map = new Map<string, MemberAgg>();
   for (const uid of uids) map.set(uid, emptyAgg());
@@ -197,7 +256,7 @@ async function aggregateFromAppliedPostsSince(
       for (const doc of snap.docs) {
         const marker = doc.data() as Record<string, unknown>;
         if (!markerCountsSince(marker, sinceMs)) continue;
-        if (!markerCountsForLeague(marker, league)) continue;
+        if (!markerCountsForLeague(marker, league, gamesScope)) continue;
         addBucketToAgg(agg, marker);
       }
     })
@@ -212,7 +271,10 @@ async function aggregateFromDailyRange(
   dateKeys: string[],
   league: CommunityLeague,
   rankingTeamIds: string[],
-  firstDaySinceMs?: number | null
+  firstDaySinceMs: number | null | undefined,
+  gamesScope: CommunityGamesScope,
+  periodType: CommunityPeriodType,
+  seasonKey: string
 ): Promise<Map<string, MemberAgg>> {
   if (dateKeys.length === 0) {
     const map = new Map<string, MemberAgg>();
@@ -220,7 +282,11 @@ async function aggregateFromDailyRange(
     return map;
   }
 
-  const teamFilterActive = rankingTeamIds.length > 0;
+  const useMarkers = mustUseAppliedPostsMarkers(
+    rankingTeamIds,
+    gamesScope,
+    periodType
+  );
   const [firstKey, ...restKeys] = dateKeys;
   const dayStartMs =
     parseDateKeyInTimeZone(firstKey, TIMEZONE_JST)?.getTime() ?? 0;
@@ -228,48 +294,71 @@ async function aggregateFromDailyRange(
     firstDaySinceMs != null && firstDaySinceMs > dayStartMs + 1000;
 
   if (!usePartialStartDay) {
-    return teamFilterActive
-      ? aggregateFromDailyTeams(
-          db,
-          uids,
-          dateKeys,
-          league,
-          rankingTeamIds
-        )
-      : aggregateFromDaily(db, uids, dateKeys, league);
+    if (useMarkers) {
+      return aggregateFromDailyTeams(
+        db,
+        uids,
+        dateKeys,
+        league,
+        rankingTeamIds,
+        null,
+        gamesScope
+      );
+    }
+    return aggregateFromDaily(
+      db,
+      uids,
+      dateKeys,
+      league,
+      gamesScope,
+      periodType,
+      seasonKey
+    );
   }
 
   const map = new Map<string, MemberAgg>();
   for (const uid of uids) map.set(uid, emptyAgg());
 
-  const partial = teamFilterActive
+  const partial = useMarkers
     ? await aggregateFromDailyTeams(
         db,
         uids,
         [firstKey],
         league,
         rankingTeamIds,
-        firstDaySinceMs
+        firstDaySinceMs,
+        gamesScope
       )
     : await aggregateFromAppliedPostsSince(
         db,
         uids,
         firstKey,
         league,
-        firstDaySinceMs!
+        firstDaySinceMs!,
+        gamesScope
       );
   mergeMemberAggs(map, partial);
 
   if (restKeys.length > 0) {
-    const rest = teamFilterActive
+    const rest = useMarkers
       ? await aggregateFromDailyTeams(
           db,
           uids,
           restKeys,
           league,
-          rankingTeamIds
+          rankingTeamIds,
+          null,
+          gamesScope
         )
-      : await aggregateFromDaily(db, uids, restKeys, league);
+      : await aggregateFromDaily(
+          db,
+          uids,
+          restKeys,
+          league,
+          gamesScope,
+          periodType,
+          seasonKey
+        );
     mergeMemberAggs(map, rest);
   }
 
@@ -282,7 +371,6 @@ export type CumulativeRow = {
   handle: string | null;
   photoURL: string | null;
   countryCode: string | null;
-  /** cumulative_stats / users 由来の表示用プラン */
   plan: "free" | "pro";
   totalPosts: number;
   totalWins: number;
@@ -351,18 +439,31 @@ function rowFromAgg(
   };
 }
 
+export type BuildMemberLeaderboardOptions = {
+  periodType: CommunityPeriodType;
+  league?: CommunityLeague;
+  rankingStartDateKey?: string | null;
+  rankingEndDateKey?: string | null;
+  rankingPeriodMonthKey?: string | null;
+  rankingSeasonKey?: string | null;
+  rankingTeamIds?: string[];
+  rankingStartAtMs?: number | null;
+  gamesScope?: CommunityGamesScope;
+};
+
 /**
  * メンバーごとの表示用行 + ソート値（降順）
+ * 互換: 旧引数並び (period, league, startKey, teamIds, startAtMs) も可。
  */
 export async function buildMemberLeaderboard(
   db: Firestore,
   memberUids: string[],
   metric: CommunityMetric,
-  _period: CommunityPeriodType,
-  league: CommunityLeague = "all",
-  rankingStartDateKey?: string | null,
-  rankingTeamIds: string[] = [],
-  rankingStartAtMs?: number | null
+  periodOrOpts: CommunityPeriodType | BuildMemberLeaderboardOptions,
+  leagueArg: CommunityLeague = "all",
+  rankingStartDateKeyArg?: string | null,
+  rankingTeamIdsArg: string[] = [],
+  rankingStartAtMsArg?: number | null
 ): Promise<
   {
     uid: string;
@@ -380,6 +481,23 @@ export async function buildMemberLeaderboard(
     sortValue: number;
   }[]
 > {
+  const opts: BuildMemberLeaderboardOptions =
+    typeof periodOrOpts === "string"
+      ? {
+          periodType: periodOrOpts,
+          league: leagueArg,
+          rankingStartDateKey: rankingStartDateKeyArg,
+          rankingTeamIds: rankingTeamIdsArg,
+          rankingStartAtMs: rankingStartAtMsArg,
+          gamesScope: "all",
+        }
+      : periodOrOpts;
+
+  const league = opts.league ?? "all";
+  const rankingTeamIds = opts.rankingTeamIds ?? [];
+  const gamesScope = opts.gamesScope ?? "all";
+  const periodType = opts.periodType;
+
   const uids = [...new Set(memberUids)].filter(Boolean);
   if (uids.length === 0) return [];
 
@@ -408,19 +526,32 @@ export async function buildMemberLeaderboard(
     });
   }
 
-  const startKey = rankingStartDateKey ?? resolveRankingStartDateKey(undefined);
-  const dateKeys = dateKeysFromStartToTodayJST(startKey);
-  const firstDaySinceMs = rankingStartAtMs ?? null;
+  const startKey =
+    opts.rankingStartDateKey ?? resolveRankingStartDateKey(undefined);
+  const resolved = resolveCommunityDateKeys({
+    periodType,
+    rankingStartDateKey: startKey,
+    rankingEndDateKey: opts.rankingEndDateKey,
+    rankingPeriodMonthKey: opts.rankingPeriodMonthKey,
+    rankingSeasonKey: opts.rankingSeasonKey ?? CURRENT_NBA_SEASON_KEY,
+  });
+
+  const firstDaySinceMs =
+    periodType === "from_now" ? opts.rankingStartAtMs ?? null : null;
+
   const dailyAgg =
     metric === "activeWinStreak"
       ? new Map(uids.map((uid) => [uid, emptyAgg()] as const))
       : await aggregateFromDailyRange(
           db,
           uids,
-          dateKeys,
+          resolved.dateKeys,
           league,
           rankingTeamIds,
-          firstDaySinceMs
+          firstDaySinceMs,
+          gamesScope,
+          periodType,
+          resolved.seasonKey
         );
 
   const rows = uids.map((uid) => {

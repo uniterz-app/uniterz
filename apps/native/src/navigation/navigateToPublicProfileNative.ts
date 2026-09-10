@@ -8,6 +8,7 @@
 import type { NavigationProp, ParamListBase } from "@react-navigation/native";
 import type { PublicProfileParams } from "./types";
 import { warmPublicProfileNative } from "../features/profile/warmPublicProfileNative";
+import { peekPublicProfileIdentity } from "../../../../lib/profile/publicProfileIdentityCache";
 
 export type OpenPublicProfileWarm = {
   uid?: string | null;
@@ -77,15 +78,20 @@ export function navigateToPublicProfileNative(
   if (!handle) return;
 
   const warm = params.warm;
+  const existing = peekPublicProfileIdentity(handle);
+  /**
+   * 呼び出し側が先に ranking 行で prime していることがある。
+   * warm 省略時に plan=free / skin=null で上書きしない（グループ→プロフィールのチラつき防止）。
+   */
   warmPublicProfileNative({
     routeKey: handle,
-    uid: warm?.uid,
-    handle: warm?.handle?.trim() || handle,
-    displayName: warm?.displayName,
-    photoURL: warm?.photoURL,
-    plan: warm?.plan,
-    planProBgVariant: warm?.planProBgVariant,
-    countryCode: warm?.countryCode,
+    uid: warm?.uid ?? existing?.targetUid,
+    handle: warm?.handle?.trim() || existing?.handle || handle,
+    displayName: warm?.displayName ?? existing?.displayName,
+    photoURL: warm?.photoURL ?? existing?.photoURL,
+    plan: warm?.plan ?? existing?.plan,
+    planProBgVariant: warm?.planProBgVariant ?? existing?.planProBgVariant,
+    countryCode: warm?.countryCode ?? existing?.countryCode,
     skipStatsPrime: warm?.skipStatsPrime ?? true,
   });
 

@@ -215,3 +215,19 @@ export async function mergeUserPlansIntoSingleRanking(body: {
     }
   }
 }
+
+/**
+ * コミュニティ / グループ leaderboard 行に users の plan・Pro Skin を反映。
+ * cumulative / snapshot には planProBgVariant が無いため、未マージだとチタン固定になる。
+ */
+export async function mergeUserPlansIntoLeaderboardRows<
+  T extends { uid: string },
+>(rows: T[]): Promise<T[]> {
+  if (rows.length === 0) return rows;
+  const fieldsByUid = await loadUserMergeFieldsByUid(rows.map((r) => r.uid));
+  return rows.map((row) => {
+    const f = fieldsByUid.get(row.uid);
+    if (f === undefined) return row;
+    return applyMergeFieldsToRow(row as RowLike, f) as T;
+  });
+}

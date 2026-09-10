@@ -12,6 +12,7 @@ import {
   communityRowToRankingCardRow,
 } from "../../../../../lib/communities/leaderboardDisplayRow";
 import { warmPublicProfileFromRankingRowNative } from "../profile/warmPublicProfileNative";
+import type { OpenPublicProfileWarm } from "../../navigation/navigateToPublicProfileNative";
 import { SkeletonScanNative } from "../../components/SkeletonScanNative";
 import {
   RankingsCyberPanelNative,
@@ -47,7 +48,7 @@ type Props = {
   onSummaryLoaded?: (summary: CommunityGroupSummary) => void;
   onExitAction?: () => void;
   onRequestEndGroup?: (groupName: string) => void;
-  onOpenProfile?: (handle: string) => void;
+  onOpenProfile?: (handle: string, warm?: OpenPublicProfileWarm) => void;
   onImageUpdated?: () => void;
   /** ヘッダー画像編集中 — 親 ScrollView 制御用 */
   onHeaderImageEditingChange?: (editing: boolean) => void;
@@ -254,7 +255,21 @@ export default function CommunityGroupDetailViewNative({
         // グループ行は期間集計のためカード全体スタッツには載せない
         skipStatsPrime: true,
       });
-      if (handle && onOpenProfile) onOpenProfile(handle);
+      if (!handle || !onOpenProfile) return;
+      onOpenProfile(handle, {
+        uid: row.uid,
+        handle: typeof row.handle === "string" ? row.handle : null,
+        displayName: row.displayName,
+        photoURL: typeof row.photoURL === "string" ? row.photoURL : null,
+        plan: row.plan === "pro" ? "pro" : "free",
+        planProBgVariant:
+          typeof row.planProBgVariant === "string"
+            ? row.planProBgVariant
+            : null,
+        countryCode:
+          typeof row.countryCode === "string" ? row.countryCode : null,
+        skipStatsPrime: true,
+      });
     },
     [onOpenProfile]
   );

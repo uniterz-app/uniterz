@@ -23,11 +23,43 @@ import {
   writeLeaderboardSnapshot,
 } from "@/lib/communities/leaderboardSnapshot";
 import { buildCommunityGroupSummaryPayload } from "@/lib/communities/buildCommunityGroupSummaryPayload";
+import { mergeUserPlansIntoLeaderboardRows } from "@/lib/rankings/mergeUserPlanIntoRankingPayload";
+import { readCommunityGamesScope } from "@/lib/communities/communityGamesScope";
+import {
+  parseRankingEndDateKey,
+  parseRankingPeriodMonthKey,
+  parseRankingSeasonKey,
+} from "@/lib/communities/resolveCommunityDateKeys";
+import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 type Ctx = { params: Promise<{ groupId: string }> };
+
+type RankedLeaderboardRow = {
+  rank: number;
+  uid: string;
+  displayName: string;
+  handle: string | null;
+  photoURL: string | null;
+  plan: "free" | "pro";
+  planProBgVariant?: string;
+  countryCode: string | null;
+  totalPosts: number;
+  totalWins: number;
+  winRate: number;
+  totalPoints: number;
+  totalUpset: number;
+  activeWinStreak: number;
+  sortValue: number;
+};
+
+async function withLiveUserFields(
+  rows: RankedLeaderboardRow[]
+): Promise<RankedLeaderboardRow[]> {
+  return mergeUserPlansIntoLeaderboardRows(rows);
+}
 
 function sameTeamIds(a: string[], b: string[]): boolean {
   if (a.length !== b.length) return false;
@@ -45,15 +77,31 @@ function snapshotMatchesGroup(
     periodType: ReturnType<typeof parseCommunityPeriod>;
     rankingStartDateKey: string;
     rankingStartAtMs: number;
+    rankingGamesScope: string;
+    rankingEndDateKey: string;
+    rankingPeriodMonthKey: string;
+    rankingSeasonKey: string;
+    memberCount: number;
   }
 ): boolean {
+  const snap = snapshot as typeof snapshot & {
+    rankingGamesScope?: string;
+    rankingEndDateKey?: string;
+    rankingPeriodMonthKey?: string;
+    rankingSeasonKey?: string;
+  };
   return (
     snapshot.rankingMetric === opts.rankingMetric &&
     snapshot.rankingLeague === opts.rankingLeague &&
     sameTeamIds(snapshot.rankingTeamIds, opts.rankingTeamIds) &&
     snapshot.periodType === opts.periodType &&
     snapshot.rankingStartDateKey === opts.rankingStartDateKey &&
-    snapshot.rankingStartAtMs === opts.rankingStartAtMs
+    snapshot.rankingStartAtMs === opts.rankingStartAtMs &&
+    (snap.rankingGamesScope ?? "all") === opts.rankingGamesScope &&
+    (snap.rankingEndDateKey ?? "") === opts.rankingEndDateKey &&
+    (snap.rankingPeriodMonthKey ?? "") === opts.rankingPeriodMonthKey &&
+    (snap.rankingSeasonKey ?? "") === opts.rankingSeasonKey &&
+    snapshot.memberCount === opts.memberCount
   );
 }
 
@@ -68,8 +116,15 @@ export async function GET(req: Request, ctx: Ctx) {
     const periodType = parseCommunityPeriod(d.periodType);
     const rankingLeague = parseCommunityLeague(d.rankingLeague);
     const rankingTeamIds = readRankingTeamIds(d);
+    const rankingGamesScope = readCommunityGamesScope(d as Record<string, unknown>);
     const rankingStartDateKey = resolveRankingStartDateKey(d);
     const rankingStartAtMs = resolveRankingStartAtMs(d);
+    const rankingEndDateKey = parseRankingEndDateKey(d.rankingEndDateKey) ?? "";
+    const rankingPeriodMonthKey =
+      parseRankingPeriodMonthKey(d.rankingPeriodMonthKey) ?? "";
+    const rankingSeasonKey = parseRankingSeasonKey(
+      d.rankingSeasonKey ?? CURRENT_NBA_SEASON_KEY
+    );
     const snapshotSlotKey = getLeaderboardSnapshotSlotKeyJst();
     const rankingOpts = {
       rankingMetric,
@@ -78,6 +133,11 @@ export async function GET(req: Request, ctx: Ctx) {
       periodType,
       rankingStartDateKey,
       rankingStartAtMs,
+      rankingGamesScope,
+      rankingEndDateKey,
+      rankingPeriodMonthKey,
+      rankingSeasonKey,
+      memberCount: Number(d.memberCount ?? 0),
     };
 
     /**
@@ -90,15 +150,17 @@ export async function GET(req: Request, ctx: Ctx) {
       snapshotSlotKey
     );
         if (snapshot && snapshotMatchesGroup(snapshot, rankingOpts)) {
-      const myRowFromSnapshot =
-        snapshot.rows.find((x) => x.uid === uid) ?? null;
+      const rows = await withLiveUserFields(
+        snapshot.rows as RankedLeaderboardRow[]
+      );
+      const myRowFromSnapshot = rows.find((x) => x.uid === uid) ?? null;
       const payload = {
         ok: true as const,
         group,
         rankingMetric,
         periodType,
         rankingLeague,
-        rows: snapshot.rows,
+        rows,
         myRow: myRowFromSnapshot,
       };
       setCachedLeaderboardResponse(
@@ -110,6 +172,10 @@ export async function GET(req: Request, ctx: Ctx) {
           periodType,
           rankingStartDateKey,
           rankingStartAtMs,
+          rankingGamesScope,
+          rankingEndDateKey,
+          rankingPeriodMonthKey,
+          rankingSeasonKey,
           memberCount: snapshot.memberCount,
           topMemberUidSample: "",
         },
@@ -137,27 +203,36 @@ export async function GET(req: Request, ctx: Ctx) {
       periodType,
       rankingStartDateKey,
       rankingStartAtMs,
+      rankingGamesScope,
+      rankingEndDateKey,
+      rankingPeriodMonthKey,
+      rankingSeasonKey,
       memberCount: memberUids.length,
       topMemberUidSample: memberUidSample,
     } as const;
 
     const cached = getCachedLeaderboardResponse(cacheParams);
     if (cached) {
-      return NextResponse.json({ ...cached, group });
+      const rows = await withLiveUserFields(
+        cached.rows as RankedLeaderboardRow[]
+      );
+      const myRow = rows.find((x) => x.uid === uid) ?? null;
+      return NextResponse.json({ ...cached, group, rows, myRow });
     }
 
-    const rows = await buildMemberLeaderboard(
-      adminDb,
-      memberUids,
-      rankingMetric,
+    const rows = await buildMemberLeaderboard(adminDb, memberUids, rankingMetric, {
       periodType,
-      rankingLeague,
+      league: rankingLeague,
       rankingStartDateKey,
+      rankingEndDateKey: rankingEndDateKey || null,
+      rankingPeriodMonthKey: rankingPeriodMonthKey || null,
+      rankingSeasonKey,
       rankingTeamIds,
-      rankingStartAtMs
-    );
+      rankingStartAtMs,
+      gamesScope: rankingGamesScope,
+    });
 
-    const ranked = rows.map((r, i) => ({
+    const rankedBase = rows.map((r, i) => ({
       rank: i + 1,
       uid: r.uid,
       displayName: r.displayName,
@@ -173,6 +248,7 @@ export async function GET(req: Request, ctx: Ctx) {
       activeWinStreak: r.activeWinStreak,
       sortValue: r.sortValue,
     }));
+    const ranked = await withLiveUserFields(rankedBase);
 
     const myRow = ranked.find((x) => x.uid === uid) ?? null;
 
@@ -193,6 +269,10 @@ export async function GET(req: Request, ctx: Ctx) {
       periodType,
       rankingStartDateKey,
       rankingStartAtMs,
+      rankingGamesScope,
+      rankingEndDateKey,
+      rankingPeriodMonthKey,
+      rankingSeasonKey,
       memberCount: memberUids.length,
       rows: ranked,
       builtAtMs: Date.now(),

@@ -9,8 +9,15 @@ import {
   parseCommunityPeriod,
 } from "./types";
 import { readRankingTeamIds } from "./rankingTeams";
+import { readCommunityGamesScope } from "./communityGamesScope";
+import {
+  parseRankingEndDateKey,
+  parseRankingPeriodMonthKey,
+  parseRankingSeasonKey,
+} from "./resolveCommunityDateKeys";
 import { sanitizeHeaderImagePositionY } from "./headerImagePosition";
 import { resolveRankingStartDateKey } from "./rankingStartDate";
+import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
 
 export type CommunityGroupSummaryPayload = {
   id: string;
@@ -24,6 +31,10 @@ export type CommunityGroupSummaryPayload = {
   periodType: ReturnType<typeof parseCommunityPeriod>;
   rankingLeague: ReturnType<typeof parseCommunityLeague>;
   rankingTeamIds: string[];
+  rankingGamesScope: ReturnType<typeof readCommunityGamesScope>;
+  rankingPeriodMonthKey: string | null;
+  rankingEndDateKey: string | null;
+  rankingSeasonKey: string;
   archived: boolean;
   isOwner: boolean;
   inviteCode: string | null;
@@ -37,6 +48,7 @@ export function buildCommunityGroupSummaryPayload(
 ): CommunityGroupSummaryPayload {
   const ownerUid = String(d.ownerUid ?? "");
   const isOwner = ownerUid === viewerUid;
+  const raw = d as Record<string, unknown>;
   return {
     id: groupId,
     name: String(d.name ?? ""),
@@ -52,6 +64,12 @@ export function buildCommunityGroupSummaryPayload(
     periodType: parseCommunityPeriod(d.periodType),
     rankingLeague: parseCommunityLeague(d.rankingLeague),
     rankingTeamIds: readRankingTeamIds(d),
+    rankingGamesScope: readCommunityGamesScope(raw),
+    rankingPeriodMonthKey: parseRankingPeriodMonthKey(d.rankingPeriodMonthKey),
+    rankingEndDateKey: parseRankingEndDateKey(d.rankingEndDateKey),
+    rankingSeasonKey: parseRankingSeasonKey(
+      d.rankingSeasonKey ?? CURRENT_NBA_SEASON_KEY
+    ),
     archived: !!d.archivedAt,
     isOwner,
     inviteCode:

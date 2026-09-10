@@ -39,7 +39,7 @@ export default function LeaderboardsHomeScreen({ bottomReserveY = 0 }: Props) {
           onOpenSquadBattle={() => {
             stackNavigation.navigate("SquadBattle");
           }}
-          onOpenProfile={(handle, groupId) => {
+          onOpenProfile={(handle, groupId, warm) => {
             if (groupId) {
               stackNavigation.setParams({ reopenGroupId: groupId });
             }
@@ -47,6 +47,7 @@ export default function LeaderboardsHomeScreen({ bottomReserveY = 0 }: Props) {
               handle,
               fromLeaderboards: true,
               ...(groupId ? { leaderboardsGroupId: groupId } : {}),
+              ...(warm ? { warm } : {}),
             });
           }}
         />

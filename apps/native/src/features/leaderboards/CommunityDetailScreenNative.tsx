@@ -106,11 +106,12 @@ export default function CommunityDetailScreenNative() {
                 invalidateCommunityGroupDetail(groupId);
               }}
               onHeaderImageEditingChange={setHeaderImageEditing}
-              onOpenProfile={(handle) => {
+              onOpenProfile={(handle, warm) => {
                 navigateToPublicProfileNative(navigation, {
                   handle,
                   fromLeaderboards: true,
                   leaderboardsGroupId: groupId,
+                  ...(warm ? { warm } : {}),
                 });
               }}
             />

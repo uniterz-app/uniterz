@@ -33,11 +33,16 @@ import {
   peekLeaderboardsGroupReturnPreview,
   stashLeaderboardsGroupReturn,
 } from "../../../../../lib/navigation/leaderboardsGroupReturn";
+import type { OpenPublicProfileWarm } from "../../navigation/navigateToPublicProfileNative";
 
 type Props = {
   language: Language;
   bottomReserveY?: number;
-  onOpenProfile?: (handle: string, groupId?: string) => void;
+  onOpenProfile?: (
+    handle: string,
+    groupId?: string,
+    warm?: OpenPublicProfileWarm
+  ) => void;
   /** プロフィールから戻ったときに開き直すグループ */
   reopenGroupId?: string | null;
   onReopenGroupConsumed?: () => void;
@@ -165,6 +170,14 @@ export default function RankingsCommunityPanelNative({
       setErr(null);
       setGroups(json.groups ?? []);
       if (json.limits) setLimits(json.limits as CommunityListLimits);
+    } catch {
+      setGroups([]);
+      setLimits(DEFAULT_COMMUNITY_LIMITS);
+      setErr(
+        language === "en"
+          ? "Could not reach the server. Check Wi‑Fi and that the API is running."
+          : "サーバーに接続できません。Wi‑Fi と API 起動を確認してください。"
+      );
     } finally {
       setLoadingList(false);
     }

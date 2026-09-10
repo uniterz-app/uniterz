@@ -707,7 +707,7 @@ const styles = StyleSheet.create({
     opacity: 0.8,
   },
   volText: {
-    color: "rgba(255,255,255,0.42)",
+    color: "rgba(255,255,255,0.78)",
     fontSize: 11,
     fontWeight: "700",
     letterSpacing: 1.2,
@@ -715,7 +715,7 @@ const styles = StyleSheet.create({
   },
   avgText: {
     flexShrink: 1,
-    color: "rgba(0,245,255,0.55)",
+    color: "rgba(0,245,255,0.88)",
     fontSize: 11,
     fontWeight: "700",
     letterSpacing: 1,

@@ -15,6 +15,7 @@ import CommunityGroupDetailCardNative, {
   communityGroupOverlayTopInset,
 } from "./CommunityGroupDetailCardNative";
 import ProfileBackEdgeHandleNative from "../profile/ProfileBackEdgeHandleNative";
+import type { OpenPublicProfileWarm } from "../../navigation/navigateToPublicProfileNative";
 
 type Props = {
   visible: boolean;
@@ -23,7 +24,11 @@ type Props = {
   language: Language;
   onClose: () => void;
   onRefreshList?: () => void;
-  onOpenProfile?: (handle: string, groupId: string) => void;
+  onOpenProfile?: (
+    handle: string,
+    groupId: string,
+    warm?: OpenPublicProfileWarm
+  ) => void;
   getIdToken: () => Promise<string>;
 };
 
@@ -127,9 +132,9 @@ export default function CommunityGroupOverlayNative({
                   }}
                   onImageUpdated={onRefreshList}
                   onHeaderImageEditingChange={setHeaderImageEditing}
-                  onOpenProfile={(handle) => {
+                  onOpenProfile={(handle, warm) => {
                     setProfileCoverHidden(true);
-                    onOpenProfile?.(handle, groupId);
+                    onOpenProfile?.(handle, groupId, warm);
                   }}
                 />
               </CommunityGroupDetailCardNative>

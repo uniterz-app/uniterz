@@ -38,20 +38,36 @@ export function parseCommunityMetric(raw: unknown): CommunityMetric {
     : "totalPoints";
 }
 
-/** グループは作成日以降の成績のみ（累計・直近ウィンドウは使わない） */
-export const COMMUNITY_PERIODS = ["from_now"] as const;
+/**
+ * グループ集計期間（作成時に確定）
+ * - from_now: 開始日〜（任意で終了日）今日まで
+ * - calendar_month: 指定 YYYY-MM のその月
+ * - nba_season / nba_playoffs: 現行シーズン窓（日付近似 + 日次バケット）
+ */
+export const COMMUNITY_PERIODS = [
+  "from_now",
+  "calendar_month",
+  "nba_season",
+  "nba_playoffs",
+] as const;
 
 export type CommunityPeriodType = (typeof COMMUNITY_PERIODS)[number];
 
-const LEGACY_PERIODS = new Set([
-  "all_time",
+/** 新規作成で選べる期間 */
+export const COMMUNITY_CREATE_PERIODS = [
+  "from_now",
   "calendar_month",
-  "rolling_30d",
-]);
+  "nba_season",
+  "nba_playoffs",
+] as const satisfies readonly CommunityPeriodType[];
+
+const LEGACY_PERIODS = new Set(["all_time", "rolling_30d"]);
 
 export function parseCommunityPeriod(raw: unknown): CommunityPeriodType {
   const s = String(raw ?? "").trim();
-  if (s === "from_now") return "from_now";
+  if ((COMMUNITY_PERIODS as readonly string[]).includes(s)) {
+    return s as CommunityPeriodType;
+  }
   if (LEGACY_PERIODS.has(s)) return "from_now";
   return "from_now";
 }

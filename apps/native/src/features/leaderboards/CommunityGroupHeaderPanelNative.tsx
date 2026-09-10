@@ -2,7 +2,8 @@
 import { StyleSheet, Text, View } from "react-native";
 import type { Language } from "../../../../../lib/i18n/language";
 import { COMMUNITY_GROUP_PANEL_PADDING_X } from "../../../../../lib/communities/communityGroupShell";
-import { leagueLabel, metricLabel, communityRankingPeriodValue, rankingTeamsLabel } from "../../../../../lib/communities/labels";
+import { leagueLabel, metricLabel, communityRankingPeriodValue, rankingTeamsLabel, gamesScopeLabel } from "../../../../../lib/communities/labels";
+import type { CommunityPeriodType } from "../../../../../lib/communities/types";
 import type { CommunityGroupSummary } from "./communityApiNative";
 import MatchListCyberClipNative from "../games/MatchListCyberClipNative";
 import { communityMono } from "./communityCrtThemeNative";
@@ -28,7 +29,6 @@ function ConditionChip({
   value,
   accent = "cyan",
   wide = false,
-  overlay = false,
 }: {
   label: string;
   value: string;
@@ -36,14 +36,26 @@ function ConditionChip({
   wide?: boolean;
   overlay?: boolean;
 }) {
-  const accentStyle =
-    accent === "amber" ? styles.chipAccentAmber : accent === "emerald" ? styles.chipAccentEmerald : styles.chipAccentCyan;
+  const borderStyle =
+    accent === "amber"
+      ? styles.chipBorderAmber
+      : accent === "emerald"
+        ? styles.chipBorderEmerald
+        : styles.chipBorderCyan;
 
   return (
-    <View style={[styles.chip, overlay && styles.chipOverlay, wide && styles.chipWide]}>
-      <View style={[styles.chipHair, accentStyle]} />
+    <View style={[styles.chip, borderStyle, wide && styles.chipWide]}>
       <View style={styles.chipBody}>
-        <Text style={[styles.chipLabel, accent === "amber" ? styles.chipLabelAmber : accent === "emerald" ? styles.chipLabelEmerald : null]}>
+        <Text
+          style={[
+            styles.chipLabel,
+            accent === "amber"
+              ? styles.chipLabelAmber
+              : accent === "emerald"
+                ? styles.chipLabelEmerald
+                : null,
+          ]}
+        >
           {label}
         </Text>
         <Text style={styles.chipValue} numberOfLines={wide ? 2 : 1}>
@@ -107,8 +119,19 @@ export default function CommunityGroupHeaderPanelNative({
     {
       key: "period",
       label: labels.period,
-      value: communityRankingPeriodValue(summary.rankingStartDateKey, language),
+      value: communityRankingPeriodValue(summary.rankingStartDateKey, language, {
+        periodType: summary.periodType as CommunityPeriodType,
+        rankingEndDateKey: summary.rankingEndDateKey,
+        rankingPeriodMonthKey: summary.rankingPeriodMonthKey,
+        rankingSeasonKey: summary.rankingSeasonKey,
+      }),
       accent: "cyan",
+    },
+    {
+      key: "scope",
+      label: language === "en" ? "Games" : "対象試合",
+      value: gamesScopeLabel(summary.rankingGamesScope ?? "all", language),
+      accent: "amber",
     },
   ];
 
@@ -148,7 +171,6 @@ export default function CommunityGroupHeaderPanelNative({
                 value={item.value}
                 accent={item.accent}
                 wide={item.wide}
-                overlay={overlay}
               />
             ))}
           </View>
@@ -220,31 +242,22 @@ const styles = StyleSheet.create({
     flexGrow: 0,
     flexBasis: "48%",
     borderWidth: 1,
-    borderColor: "rgba(34,211,238,0.16)",
     backgroundColor: "#000000",
     minHeight: 52,
     overflow: "hidden",
   },
-  chipOverlay: {
-    backgroundColor: "#000000",
-    borderColor: "rgba(34,211,238,0.2)",
+  chipBorderCyan: {
+    borderColor: "rgba(0,245,255,0.7)",
+  },
+  chipBorderAmber: {
+    borderColor: "rgba(251,191,36,0.7)",
+  },
+  chipBorderEmerald: {
+    borderColor: "rgba(52,211,153,0.7)",
   },
   chipWide: {
     width: "100%",
     flexBasis: "100%",
-  },
-  chipHair: {
-    height: 1,
-    width: "100%",
-  },
-  chipAccentCyan: {
-    backgroundColor: "rgba(0,245,255,0.85)",
-  },
-  chipAccentAmber: {
-    backgroundColor: "rgba(251,191,36,0.85)",
-  },
-  chipAccentEmerald: {
-    backgroundColor: "rgba(52,211,153,0.85)",
   },
   chipBody: {
     flex: 1,

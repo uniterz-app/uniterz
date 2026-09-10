@@ -16,6 +16,10 @@ export type CommunityGroupSummary = {
   periodType: string;
   rankingLeague: CommunityLeague;
   rankingTeamIds: string[];
+  rankingGamesScope?: "all" | "pickup";
+  rankingPeriodMonthKey?: string | null;
+  rankingEndDateKey?: string | null;
+  rankingSeasonKey?: string | null;
   archived: boolean;
   isOwner: boolean;
   inviteCode: string | null;
@@ -29,6 +33,8 @@ export type CommunityGroupLeaderboardRow = {
   handle: string | null;
   photoURL: string | null;
   plan?: "free" | "pro";
+  /** Pro Skin（users.planProBgVariant）。未設定だとカード側でチタンになる */
+  planProBgVariant?: string;
   countryCode?: string;
   totalPosts?: number;
   totalWins?: number;
@@ -113,6 +119,14 @@ export function getCachedCommunityGroupDetail(
   const hit = cache.get(groupId);
   if (!hit) return null;
   if (Date.now() - hit.fetchedAt > CACHE_TTL_MS) {
+    cache.delete(groupId);
+    return null;
+  }
+  if (
+    hit.rows.some(
+      (r) => r.plan === "pro" && typeof r.planProBgVariant !== "string"
+    )
+  ) {
     cache.delete(groupId);
     return null;
   }

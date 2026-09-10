@@ -92,9 +92,9 @@ function ScoreField({
       </span>
 
       <span
-        className="relative block overflow-hidden bg-black transition-[border-color] duration-150 group-focus-within:border-white/70"
+        className="relative block overflow-hidden bg-black transition-[border-color] duration-150 group-focus-within:border-white/85"
         style={{
-          border: "1px solid rgba(255,255,255,0.55)",
+          border: "1px solid rgba(255,255,255,0.85)",
           borderRadius: 0,
           background: "#000",
         }}

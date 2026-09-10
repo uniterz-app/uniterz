@@ -293,7 +293,7 @@ function RankMetaStrip({
           "inline-block shrink-0 font-bold uppercase tracking-[0.14em] tabular-nums leading-none",
         ].join(" ")}
         style={{
-          color: "rgba(255,255,255,0.42)",
+          color: "rgba(255,255,255,0.78)",
           fontSize: metaSize,
           transform: "skewX(-12deg)",
         }}
@@ -307,7 +307,7 @@ function RankMetaStrip({
             "inline-block min-w-0 truncate font-bold uppercase tracking-[0.12em] tabular-nums leading-none",
           ].join(" ")}
           style={{
-            color: "rgba(0,245,255,0.55)",
+            color: "rgba(0,245,255,0.88)",
             fontSize: metaSize,
             transform: "skewX(-12deg)",
           }}

@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { cyberAlert } from "../../components/cyberAlert";
 import {
   Image, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View,
@@ -11,22 +11,40 @@ import type { Language } from "../../../../../lib/i18n/language";
 import {
   COMMUNITY_CREATE_LEAGUES,
   COMMUNITY_CREATE_METRICS,
+  COMMUNITY_CREATE_PERIODS,
   type CommunityLeague,
   type CommunityMetric,
+  type CommunityPeriodType,
 } from "../../../../../lib/communities/types";
-import { leagueLabel, metricLabel } from "../../../../../lib/communities/labels";
+import {
+  gamesScopeLabel,
+  leagueLabel,
+  metricLabel,
+  periodLabel,
+} from "../../../../../lib/communities/labels";
+import {
+  COMMUNITY_GAMES_SCOPES,
+  type CommunityGamesScope,
+} from "../../../../../lib/communities/communityGamesScope";
+import {
+  communityCreateMonthKeysJST,
+  upcomingMonthEndDateKeysJST,
+} from "../../../../../lib/communities/resolveCommunityDateKeys";
 import {
   FREE_MAX_MEMBERSHIPS,
   FREE_MAX_OWNED_GROUPS,
   PRO_MAX_MEMBERSHIPS,
   PRO_MAX_OWNED_GROUPS,
 } from "../../../../../lib/communities/limitValues";
+import { CURRENT_NBA_SEASON_KEY } from "../../../../../lib/rankings/nbaSeason";
 import { storage } from "../../lib/firebase";
 import { useFirebaseUser } from "../../auth/FirebaseUserProvider";
 import { nativeBlurViewExtraProps } from "../../ui/nativeBlurProps";
 import { MATCH_CARD_METRIC_FONT } from "../games/matchCardTypography";
+import { useScheduleTeamsNative } from "../games/useScheduleTeamsNative";
 import type { CreatedCommunityGroup } from "./communityApiNative";
 import { communityApiUrl, communityAuthHeader } from "./communityApiNative";
+import CommunityTeamPickerNative from "./CommunityTeamPickerNative";
 import {
   communityMono,
   communityPressableTapStyle,
@@ -69,6 +87,8 @@ const JP_MED = Platform.select({
   default: "NotoSansJP_600SemiBold",
 });
 
+const DEFAULT_MONTH_KEY = communityCreateMonthKeysJST()[0] ?? "";
+
 export default function CreateGroupModalNative({ visible, language, onClose, onCreated }: Props) {
   const { fUser } = useFirebaseUser();
   const [name, setName] = useState("");
@@ -76,7 +96,21 @@ export default function CreateGroupModalNative({ visible, language, onClose, onC
   const [headerUri, setHeaderUri] = useState<string | null>(null);
   const [metric, setMetric] = useState<CommunityMetric>("totalPoints");
   const [league, setLeague] = useState<CommunityLeague>("nba");
+  const [teamIds, setTeamIds] = useState<string[]>([]);
+  const [periodType, setPeriodType] =
+    useState<CommunityPeriodType>("from_now");
+  const [gamesScope, setGamesScope] = useState<CommunityGamesScope>("all");
+  const [periodMonthKey, setPeriodMonthKey] = useState(DEFAULT_MONTH_KEY);
+  const [endDateKey, setEndDateKey] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  const { teams } = useScheduleTeamsNative(league === "nba" ? "nba" : "nba");
+  const monthKeys = useMemo(() => communityCreateMonthKeysJST(), []);
+  const endDateOptions = useMemo(() => upcomingMonthEndDateKeysJST(), []);
+
+  useEffect(() => {
+    setTeamIds([]);
+  }, [league]);
 
   const t = useMemo(
     () =>
@@ -89,8 +123,15 @@ export default function CreateGroupModalNative({ visible, language, onClose, onC
             header: "Header image",
             metric: "Compete on",
             league: "League",
+            period: "Period",
+            periodMonth: "Month",
+            periodEnd: "End date (optional)",
+            noEnd: "No end",
+            untilMonth: (mk: string) => `Until ${mk}`,
+            gamesScope: "Games",
+            teams: "Teams (optional)",
             scoringNote:
-              "Scores count from the day this group is created (JST). Past results are not included.",
+              "Ranking options (period, games, teams) are locked when the group is created. For “From group start”, scores count from the create day (JST); past results are not included.",
             cancel: "Cancel",
             submit: "Create",
             planLimits: `Plan limits: Free users can create up to ${FREE_MAX_OWNED_GROUPS} groups and join up to ${FREE_MAX_MEMBERSHIPS} groups. Pro users can create up to ${PRO_MAX_OWNED_GROUPS} groups and join up to ${PRO_MAX_MEMBERSHIPS} groups.`,
@@ -105,8 +146,15 @@ export default function CreateGroupModalNative({ visible, language, onClose, onC
             header: "ヘッダー画像",
             metric: "競う項目",
             league: "リーグ",
+            period: "期間",
+            periodMonth: "対象月",
+            periodEnd: "終了日（任意）",
+            noEnd: "終了なし",
+            untilMonth: (mk: string) => `〜${mk}まで`,
+            gamesScope: "試合対象",
+            teams: "チーム（任意）",
             scoringNote:
-              "グループ作成日（JST）以降の予想だけが集計されます。過去の成績は含みません。",
+              "期間・試合対象・チームなどの集計設定は作成時に確定し、あとから変更できません。「グループ開始以降」の場合、作成日（JST）以降の予想だけが集計され、過去の成績は含みません。",
             cancel: "キャンセル",
             submit: "作成",
             planLimits: `プラン上限: Free はグループを最大 ${FREE_MAX_OWNED_GROUPS} 件まで作成でき、最大 ${FREE_MAX_MEMBERSHIPS} 件まで参加できます。Pro はグループを最大 ${PRO_MAX_OWNED_GROUPS} 件まで作成でき、最大 ${PRO_MAX_MEMBERSHIPS} 件まで参加できます。`,
@@ -116,15 +164,24 @@ export default function CreateGroupModalNative({ visible, language, onClose, onC
     [language]
   );
 
-  const closeReset = useCallback(() => {
-    if (busy) return;
+  const resetFormFields = useCallback(() => {
     setName("");
     setDescription("");
     setHeaderUri(null);
     setMetric("totalPoints");
     setLeague("nba");
+    setTeamIds([]);
+    setPeriodType("from_now");
+    setGamesScope("all");
+    setPeriodMonthKey(communityCreateMonthKeysJST()[0] ?? "");
+    setEndDateKey(null);
+  }, []);
+
+  const closeReset = useCallback(() => {
+    if (busy) return;
+    resetFormFields();
     onClose();
-  }, [busy, onClose]);
+  }, [busy, onClose, resetFormFields]);
 
   const pickImage = useCallback(async () => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -159,18 +216,30 @@ export default function CreateGroupModalNative({ visible, language, onClose, onC
         headerImageUrl = await getDownloadURL(fileRef);
       }
 
+      const body: Record<string, unknown> = {
+        name: n,
+        description: description.trim() || null,
+        headerImageUrl,
+        rankingMetric: metric,
+        periodType,
+        rankingLeague: "nba",
+        rankingTeamIds: teamIds,
+        rankingGamesScope: gamesScope,
+      };
+      if (periodType === "calendar_month") {
+        body.rankingPeriodMonthKey = periodMonthKey;
+      }
+      if (periodType === "from_now" && endDateKey) {
+        body.rankingEndDateKey = endDateKey;
+      }
+      if (periodType === "nba_season" || periodType === "nba_playoffs") {
+        body.rankingSeasonKey = CURRENT_NBA_SEASON_KEY;
+      }
+
       const res = await fetch(communityApiUrl("/api/communities/create"), {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: h },
-        body: JSON.stringify({
-          name: n,
-          description: description.trim() || null,
-          headerImageUrl,
-          rankingMetric: "totalPoints",
-          periodType: "from_now",
-          rankingLeague: "nba",
-          rankingTeamIds: [],
-        }),
+        body: JSON.stringify(body),
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok || !json?.ok) {
@@ -179,25 +248,42 @@ export default function CreateGroupModalNative({ visible, language, onClose, onC
       }
       const created = json.group as CreatedCommunityGroup | undefined;
       const payload: CreatedCommunityGroup = created?.id
-        ? { ...created, periodType: "from_now", role: created.role ?? "owner" }
+        ? { ...created, periodType: created.periodType ?? periodType, role: created.role ?? "owner" }
         : {
             id: String(json.groupId ?? ""),
             name: n,
             description: description.trim() || null,
             memberCount: 1,
             headerImageUrl,
-            rankingMetric: "totalPoints",
-            periodType: "from_now",
+            rankingMetric: metric,
+            periodType,
             rankingLeague: "nba",
-            rankingTeamIds: [],
+            rankingTeamIds: teamIds,
             role: "owner",
           };
       onCreated(payload, String(json.inviteCode ?? "") || undefined);
-      closeReset();
+      resetFormFields();
+      onClose();
     } finally {
       setBusy(false);
     }
-  }, [name, description, headerUri, fUser, busy, language, onCreated, closeReset]);
+  }, [
+    name,
+    description,
+    headerUri,
+    fUser,
+    busy,
+    language,
+    metric,
+    periodType,
+    teamIds,
+    gamesScope,
+    periodMonthKey,
+    endDateKey,
+    onCreated,
+    onClose,
+    resetFormFields,
+  ]);
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={closeReset}>
@@ -275,6 +361,62 @@ export default function CreateGroupModalNative({ visible, language, onClose, onC
                 }))}
                 value={metric}
                 onChange={(v) => setMetric(v as CommunityMetric)}
+              />
+
+              <Text style={[LABEL, styles.gapTop]}>{t.period}</Text>
+              <OptionRow
+                options={COMMUNITY_CREATE_PERIODS.map((k) => ({
+                  key: k,
+                  label: periodLabel(k, language),
+                }))}
+                value={periodType}
+                onChange={(v) => setPeriodType(v as CommunityPeriodType)}
+              />
+
+              {periodType === "calendar_month" ? (
+                <>
+                  <Text style={[LABEL, styles.gapTop]}>{t.periodMonth}</Text>
+                  <OptionRow
+                    options={monthKeys.map((mk) => ({ key: mk, label: mk }))}
+                    value={periodMonthKey}
+                    onChange={setPeriodMonthKey}
+                  />
+                </>
+              ) : null}
+
+              {periodType === "from_now" ? (
+                <>
+                  <Text style={[LABEL, styles.gapTop]}>{t.periodEnd}</Text>
+                  <OptionRow
+                    options={[
+                      { key: "__none__", label: t.noEnd },
+                      ...endDateOptions.map(({ monthKey, endDateKey: edk }) => ({
+                        key: edk,
+                        label: t.untilMonth(monthKey),
+                      })),
+                    ]}
+                    value={endDateKey ?? "__none__"}
+                    onChange={(v) => setEndDateKey(v === "__none__" ? null : v)}
+                  />
+                </>
+              ) : null}
+
+              <Text style={[LABEL, styles.gapTop]}>{t.gamesScope}</Text>
+              <OptionRow
+                options={COMMUNITY_GAMES_SCOPES.map((k) => ({
+                  key: k,
+                  label: gamesScopeLabel(k, language),
+                }))}
+                value={gamesScope}
+                onChange={(v) => setGamesScope(v as CommunityGamesScope)}
+              />
+
+              <Text style={[LABEL, styles.gapTop]}>{t.teams}</Text>
+              <CommunityTeamPickerNative
+                teams={teams}
+                selectedIds={teamIds}
+                onChange={setTeamIds}
+                language={language}
               />
             </ScrollView>
 

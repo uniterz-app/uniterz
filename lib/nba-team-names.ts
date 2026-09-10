@@ -14,7 +14,7 @@ export const NBA_TEAM_NAME_BY_ID: Record<string, string> = {
   "nba-warriors": "Golden State Warriors",
   "nba-rockets": "Houston Rockets",
   "nba-pacers": "Indiana Pacers",
-  "nba-clippers": "LA Clippers",
+  "nba-clippers": "Los Angeles Clippers",
   "nba-lakers": "Los Angeles Lakers",
   "nba-grizzlies": "Memphis Grizzlies",
   "nba-heat": "Miami Heat",

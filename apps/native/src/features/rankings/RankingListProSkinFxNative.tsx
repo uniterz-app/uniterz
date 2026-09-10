@@ -1,11 +1,20 @@
 /**
  * Web `RankingListProSkinFx` 相当 — ランキング行用 Pro Skin（cover + wash）
  * SVG は 1 回焼いて Image に差し替える（同じスキンの行は使い回し）。
+ * 初回マウントで下から浮き上がる入場。
  */
 import { useEffect, useMemo, useState } from "react";
 import { Image, LayoutChangeEvent, StyleSheet, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { SvgXml } from "react-native-svg";
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withDelay,
+  withTiming,
+} from "react-native-reanimated";
 import type { ProfilePlanProBgVariant } from "../../../../../lib/profile/profilePlanProBgVariants";
 import RasterizeOnceNative, {
   peekProSkinRaster,
@@ -175,8 +184,33 @@ export default function RankingListProSkinFxNative({
 }: Props) {
   const [{ w, h }, setSize] = useState({ w: 0, h: 0 });
   const [, setRasterTick] = useState(0);
+  const reduced = useReducedMotion() ?? false;
+  const rise = useSharedValue(reduced ? 1 : 0);
 
   useEffect(() => subscribeProSkinRaster(() => setRasterTick((n) => n + 1)), []);
+
+  useEffect(() => {
+    if (reduced) {
+      rise.value = 1;
+      return;
+    }
+    rise.value = 0;
+    rise.value = withDelay(
+      30,
+      withTiming(1, {
+        duration: 560,
+        easing: Easing.out(Easing.cubic),
+      })
+    );
+  }, [variant, intensity, reduced, rise]);
+
+  const riseStyle = useAnimatedStyle(() => ({
+    opacity: rise.value,
+    transform: [
+      { translateY: (1 - rise.value) * 14 },
+      { scale: 1.04 - rise.value * 0.04 },
+    ],
+  }));
 
   const onLayout = (e: LayoutChangeEvent) => {
     const { width, height } = e.nativeEvent.layout;
@@ -354,17 +388,23 @@ export default function RankingListProSkinFxNative({
 
   if (cached) {
     return (
-      <Image
-        source={{ uri: cached }}
-        style={styles.root}
-        resizeMode="stretch"
-        pointerEvents="none"
-      />
+      <Animated.View style={[styles.root, riseStyle]} pointerEvents="none">
+        <Image
+          source={{ uri: cached }}
+          style={StyleSheet.absoluteFillObject}
+          resizeMode="stretch"
+          pointerEvents="none"
+        />
+      </Animated.View>
     );
   }
 
   return (
-    <View pointerEvents="none" style={styles.root} onLayout={onLayout}>
+    <Animated.View
+      pointerEvents="none"
+      style={[styles.root, riseStyle]}
+      onLayout={onLayout}
+    >
       {w > 0 && h > 0 ? (
         <RasterizeOnceNative
           cacheKey={cacheKey}
@@ -375,7 +415,7 @@ export default function RankingListProSkinFxNative({
           {layers}
         </RasterizeOnceNative>
       ) : null}
-    </View>
+    </Animated.View>
   );
 }
 

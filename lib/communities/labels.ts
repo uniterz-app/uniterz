@@ -44,31 +44,112 @@ export function metricLabel(m: CommunityMetric, lang: Language): string {
 
 export function periodLabel(p: CommunityPeriodType, lang: Language): string {
   if (lang === "en") {
-    return p === "from_now" ? "From group start" : p;
+    switch (p) {
+      case "from_now":
+        return "From group start";
+      case "calendar_month":
+        return "Calendar month";
+      case "nba_season":
+        return "NBA season";
+      case "nba_playoffs":
+        return "NBA playoffs";
+      default:
+        return p;
+    }
   }
-  return p === "from_now" ? "グループ開始以降" : p;
+  switch (p) {
+    case "from_now":
+      return "グループ開始以降";
+    case "calendar_month":
+      return "カレンダー月";
+    case "nba_season":
+      return "NBAシーズン";
+    case "nba_playoffs":
+      return "プレーオフ";
+    default:
+      return p;
+  }
+}
+
+export function gamesScopeLabel(
+  scope: "all" | "pickup",
+  lang: Language
+): string {
+  if (lang === "en") {
+    return scope === "pickup" ? "Match Pickup only" : "All ranked games";
+  }
+  return scope === "pickup" ? "ピックアップのみ" : "全試合（ランキング対象）";
 }
 
 const DATE_KEY_RE = /^\d{4}-\d{2}-\d{2}$/;
+const MONTH_KEY_RE = /^\d{4}-\d{2}$/;
 
-/** 集計期間の表示値（グループ作成日。集計は作成時刻以降） */
-export function communityRankingPeriodValue(
-  rankingStartDateKey: string | null | undefined,
-  lang: Language
-): string {
-  if (!rankingStartDateKey || !DATE_KEY_RE.test(rankingStartDateKey)) {
-    return lang === "en" ? "—" : "—";
-  }
-  const [y, m, d] = rankingStartDateKey.split("-").map(Number);
+function formatDateKey(dateKey: string, lang: Language): string {
+  if (!DATE_KEY_RE.test(dateKey)) return "—";
+  const [y, m, d] = dateKey.split("-").map(Number);
   const date = new Date(y, m - 1, d);
-  if (Number.isNaN(date.getTime())) {
-    return lang === "en" ? "—" : "—";
-  }
+  if (Number.isNaN(date.getTime())) return "—";
   return date.toLocaleDateString(lang === "en" ? "en-US" : "ja-JP", {
     year: "numeric",
     month: "short",
     day: "numeric",
   });
+}
+
+function formatMonthKey(monthKey: string, lang: Language): string {
+  if (!MONTH_KEY_RE.test(monthKey)) return "—";
+  const [y, m] = monthKey.split("-").map(Number);
+  const date = new Date(y, m - 1, 1);
+  if (Number.isNaN(date.getTime())) return "—";
+  return date.toLocaleDateString(lang === "en" ? "en-US" : "ja-JP", {
+    year: "numeric",
+    month: "long",
+  });
+}
+
+/** 集計期間の表示値（プリセット + 開始/終了） */
+export function communityRankingPeriodValue(
+  rankingStartDateKey: string | null | undefined,
+  lang: Language,
+  opts?: {
+    periodType?: CommunityPeriodType;
+    rankingEndDateKey?: string | null;
+    rankingPeriodMonthKey?: string | null;
+    rankingSeasonKey?: string | null;
+  }
+): string {
+  const period = opts?.periodType ?? "from_now";
+  if (period === "calendar_month") {
+    const mk = opts?.rankingPeriodMonthKey;
+    return mk ? formatMonthKey(mk, lang) : periodLabel(period, lang);
+  }
+  if (period === "nba_season") {
+    const sk = opts?.rankingSeasonKey;
+    return sk
+      ? lang === "en"
+        ? `Season ${sk}`
+        : `シーズン ${sk}`
+      : periodLabel(period, lang);
+  }
+  if (period === "nba_playoffs") {
+    const sk = opts?.rankingSeasonKey;
+    return sk
+      ? lang === "en"
+        ? `Playoffs ${sk}`
+        : `プレーオフ ${sk}`
+      : periodLabel(period, lang);
+  }
+
+  if (!rankingStartDateKey || !DATE_KEY_RE.test(rankingStartDateKey)) {
+    return lang === "en" ? "—" : "—";
+  }
+  const start = formatDateKey(rankingStartDateKey, lang);
+  const endKey = opts?.rankingEndDateKey;
+  if (endKey && DATE_KEY_RE.test(endKey)) {
+    const end = formatDateKey(endKey, lang);
+    return lang === "en" ? `${start} → ${end}` : `${start} 〜 ${end}`;
+  }
+  return lang === "en" ? `From ${start}` : `${start} 以降`;
 }
 
 /** チームIDから表示名（WC は国旗名、それ以外は nameById または ID 末尾） */

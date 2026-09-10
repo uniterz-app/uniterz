@@ -46,12 +46,27 @@ export function getCachedCommunityGroupDetail(groupId: string): CommunityGroupDe
     cache.delete(groupId);
     return null;
   }
+  /** Pro なのにスキン欠落の古いキャッシュは捨てる（チタン固定の残骸） */
+  if (
+    hit.rows.some(
+      (r) => r.plan === "pro" && typeof r.planProBgVariant !== "string"
+    )
+  ) {
+    cache.delete(groupId);
+    return null;
+  }
   return hit;
 }
 
 export function invalidateCommunityGroupDetail(groupId: string) {
   cache.delete(groupId);
   inflight.delete(groupId);
+}
+
+/** 一覧・詳細のスキン反映漏れを避けるため detail キャッシュを捨てる */
+export function invalidateAllCommunityGroupDetails() {
+  cache.clear();
+  inflight.clear();
 }
 
 export async function fetchCommunityGroupDetail(

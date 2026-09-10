@@ -27,18 +27,18 @@ export function tryParseUserPlanProBgVariant(
   return null;
 }
 
-/** Pro かつ所持リストにあるときだけ装備スキンを返す */
+/** Pro の装備スキン。プロフィール表示と一致させる（所持リスト欠落でチタンに落とさない） */
 export function parseEquippedProSkinFromUserDoc(data: {
   plan?: unknown;
   planProBgVariant?: unknown;
   proSkinUnlockedIds?: unknown;
 }): ProfilePlanProBgVariant | undefined {
   if (data.plan !== "pro") return undefined;
-  const equipped = parseUserPlanProBgVariant(data.planProBgVariant);
-  if (!Array.isArray(data.proSkinUnlockedIds)) return equipped;
-  const unlocked = new Set(
-    data.proSkinUnlockedIds.filter((x): x is string => typeof x === "string")
-  );
-  if (unlocked.size === 0) return equipped;
-  return unlocked.has(equipped) ? equipped : PROFILE_PLAN_PRO_BG_DEFAULT;
+  /**
+   * 以前は proSkinUnlockedIds に無い装備をデフォルト（titanium）へ落としていた。
+   * マイルストーン解放のリスト遅延・欠落と装備値のズレで、プロフィールは
+   * Jagged Plate なのにランキングだけチタン、という不整合が起きていた。
+   * 装備フィールドが採用スキンならそれを返す（保存 API 側で所持検証済み）。
+   */
+  return parseUserPlanProBgVariant(data.planProBgVariant);
 }

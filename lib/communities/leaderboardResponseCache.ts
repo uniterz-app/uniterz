@@ -7,6 +7,7 @@ type RankedRow = {
   handle: string | null;
   photoURL: string | null;
   plan: "free" | "pro";
+  planProBgVariant?: string;
   countryCode: string | null;
   totalPosts: number;
   totalWins: number;
@@ -43,7 +44,7 @@ function teamIdsKey(teamIds: string[]): string {
   return [...teamIds].sort().join(",");
 }
 
-function makeCacheKey(params: {
+type LeaderboardCacheParams = {
   groupId: string;
   rankingMetric: CommunityMetric;
   rankingLeague: CommunityLeague;
@@ -51,9 +52,15 @@ function makeCacheKey(params: {
   periodType: CommunityPeriodType;
   rankingStartDateKey: string;
   rankingStartAtMs: number;
+  rankingGamesScope?: string;
+  rankingEndDateKey?: string;
+  rankingPeriodMonthKey?: string;
+  rankingSeasonKey?: string;
   memberCount: number;
   topMemberUidSample: string;
-}) {
+};
+
+function makeCacheKey(params: LeaderboardCacheParams) {
   return [
     params.groupId,
     params.rankingMetric,
@@ -62,22 +69,16 @@ function makeCacheKey(params: {
     params.periodType,
     params.rankingStartDateKey,
     params.rankingStartAtMs,
+    params.rankingGamesScope ?? "all",
+    params.rankingEndDateKey ?? "",
+    params.rankingPeriodMonthKey ?? "",
+    params.rankingSeasonKey ?? "",
     params.memberCount,
     params.topMemberUidSample,
   ].join("|");
 }
 
-export function getCachedLeaderboardResponse(params: {
-  groupId: string;
-  rankingMetric: CommunityMetric;
-  rankingLeague: CommunityLeague;
-  rankingTeamIds: string[];
-  periodType: CommunityPeriodType;
-  rankingStartDateKey: string;
-  rankingStartAtMs: number;
-  memberCount: number;
-  topMemberUidSample: string;
-}): LeaderboardResponsePayload | null {
+export function getCachedLeaderboardResponse(params: LeaderboardCacheParams): LeaderboardResponsePayload | null {
   const key = makeCacheKey(params);
   const hit = cache.get(key);
   if (!hit) return null;
@@ -89,17 +90,7 @@ export function getCachedLeaderboardResponse(params: {
 }
 
 export function setCachedLeaderboardResponse(
-  params: {
-    groupId: string;
-    rankingMetric: CommunityMetric;
-    rankingLeague: CommunityLeague;
-    rankingTeamIds: string[];
-    periodType: CommunityPeriodType;
-    rankingStartDateKey: string;
-    rankingStartAtMs: number;
-    memberCount: number;
-    topMemberUidSample: string;
-  },
+  params: LeaderboardCacheParams,
   value: LeaderboardResponsePayload
 ) {
   const key = makeCacheKey(params);

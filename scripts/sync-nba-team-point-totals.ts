@@ -160,7 +160,7 @@ const ROWS: Row[] = [
     awayPointsAgainstTotal: 4986,
   },
   {
-    name: "LA Clippers",
+    name: "Los Angeles Clippers",
     wins: 42,
     losses: 40,
     pointsForTotal: 9329,

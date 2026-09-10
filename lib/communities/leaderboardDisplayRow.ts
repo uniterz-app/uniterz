@@ -57,6 +57,10 @@ export function communityRowToRankingCardRow(
     handle: row.handle ?? "",
     photoURL: row.photoURL ?? undefined,
     plan: row.plan === "pro" ? "pro" : "free",
+    planProBgVariant:
+      row.plan === "pro" && typeof row.planProBgVariant === "string"
+        ? row.planProBgVariant
+        : undefined,
     countryCode: row.countryCode,
     posts,
     winRate,

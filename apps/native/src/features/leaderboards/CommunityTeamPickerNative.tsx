@@ -11,6 +11,7 @@ import type { Language } from "../../../../../lib/i18n/language";
 import { MAX_RANKING_TEAM_IDS } from "../../../../../lib/communities/rankingTeams";
 import type { ScheduleTeamOption } from "../games/useScheduleTeamsNative";
 import { communityPressableTapStyle } from "./communityCrtThemeNative";
+import { MATCH_CARD_BRACKET_LETTER_SPACING_15 } from "../games/matchCardTypography";
 
 type Props = {
   teams: ScheduleTeamOption[];
@@ -223,10 +224,15 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     lineHeight: 12,
   },
+  /** Games チームフィルターと同系（Oxanium SemiBold + 傾き） */
   rowName: {
     flex: 1,
     fontSize: 13,
-    color: "rgba(255,255,255,0.75)",
+    fontFamily: "Oxanium_600SemiBold",
+    fontWeight: "600",
+    letterSpacing: MATCH_CARD_BRACKET_LETTER_SPACING_15,
+    color: "rgba(255,255,255,0.88)",
+    transform: [{ skewX: "-6deg" }],
   },
   rowNameOn: {
     color: "#000000",

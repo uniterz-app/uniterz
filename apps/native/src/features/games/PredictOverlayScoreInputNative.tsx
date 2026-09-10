@@ -60,13 +60,15 @@ export default function PredictOverlayScoreInputNative({
       cut={PREDICT_OVERLAY_SCORE_INPUT_CUT}
       gradientColors={["#000000", "#000000"]}
       gradientLocations={[0, 1]}
-      borderColor="rgba(255,255,255,0.55)"
+      borderColor="rgba(255,255,255,0.85)"
+      borderWidth={1}
       shadowColor="#ffffff"
       shadowOpacity={0}
       shadowRadius={0}
       style={styles.root}
       contentStyle={styles.content}
       overflowHidden
+      maskCorners={false}
     >
       <TextInput
         ref={inputRef}
@@ -92,9 +94,13 @@ const styles = StyleSheet.create({
   root: {
     width: "100%",
     height: SCORE_INPUT_H,
+    /** Skia stroke は overflow:hidden で半分切れるので RN border で確実に白枠 */
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.85)",
+    backgroundColor: "#000000",
   },
   content: {
-    height: SCORE_INPUT_H,
+    height: SCORE_INPUT_H - 2,
     justifyContent: "center",
     paddingHorizontal: 14,
     paddingVertical: 0,
@@ -102,7 +108,7 @@ const styles = StyleSheet.create({
   },
   input: {
     width: "100%",
-    height: SCORE_INPUT_H - 2,
+    height: SCORE_INPUT_H - 4,
     padding: 0,
     margin: 0,
     borderWidth: 0,
