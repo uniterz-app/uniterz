@@ -139,6 +139,16 @@ export function weekStartDateKeyET(now: Date = new Date()): string {
   return addDaysToDateKey(todayKey, -weekdayMon0(todayKey));
 }
 
+/** Eastern 暦で月曜か（週次 Unit 付与日） */
+export function isEasternMonday(now: Date = new Date()): boolean {
+  return weekdayMon0(dateKeyET(now)) === 0;
+}
+
+/** Eastern 暦で毎月1日か（月次 Unit 付与日） */
+export function isEasternMonthStart(now: Date = new Date()): boolean {
+  return dateKeyET(now).endsWith("-01");
+}
+
 /** @deprecated 中身は Eastern */
 export function weekStartDateKeyJST(now: Date = new Date()): string {
   return weekStartDateKeyET(now);

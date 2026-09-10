@@ -196,7 +196,7 @@ export const buildCumulativeRankingSnapshotCron = onSchedule(
 
 /**
  * 期間ランキング Unit 付与 — スナップショット cron（16:00 JST）の 10 分後。
- * 確定スナップが書いてから付与し、同一実行のタイムアウト連鎖を避ける。
+ * 実付与は Eastern 月曜（週次）・毎月1日（月次）のみ。他日は即 skip。
  */
 export const grantPeriodRankingUnitsCron = onSchedule(
   {

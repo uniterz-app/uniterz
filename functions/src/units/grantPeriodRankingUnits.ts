@@ -1,12 +1,15 @@
 /**
  * 個人ランキング（週総合 / 月総合+部門）Unit 冪等付与。
  * period_ranking_snapshots（standard）確定後に、別 cron（16:10 JST）から実行。
+ * 実付与は ET 月曜（週）／ET 毎月1日（月）のみ。
  * 同順位は同量（competition）。タイブレークなし。
  */
 import { FieldValue, getFirestore } from "firebase-admin/firestore";
 import {
   addDaysToDateKey,
   dateKeyJST,
+  isEasternMonday,
+  isEasternMonthStart,
   monthLabelJST,
   PERIOD_FINALIZE_GRACE_DAYS,
   previousLabel,
@@ -367,22 +370,42 @@ export async function grantPeriodRankingUnitsForPeriod(opts: {
   }
 }
 
+/**
+ * 確定済み前週・前月への Unit 付与。
+ * 既定は Eastern の月曜（週次）/ 毎月1日（月次）だけ実行。
+ * force で手動リトライ可。
+ */
 export async function grantPeriodRankingUnitsAfterPeriodSnapshots(
-  now: Date = new Date()
+  now: Date = new Date(),
+  opts?: { force?: boolean }
 ): Promise<void> {
+  const force = opts?.force === true;
+  const runWeekly = force || isEasternMonday(now);
+  const runMonthly = force || isEasternMonthStart(now);
+  if (!runWeekly && !runMonthly) {
+    console.log(
+      "[grantPeriodRankingUnits] skip: not ET Monday or month start"
+    );
+    return;
+  }
+
   const weekCurrent = weekStartDateKeyJST(now);
   const weekPrev = previousLabel("weekly", weekCurrent);
   const monthCurrent = monthLabelJST(now);
   const monthPrev = previousLabel("monthly", monthCurrent);
 
-  await grantPeriodRankingUnitsForPeriod({
-    period: "weekly",
-    labelKey: weekPrev,
-    now,
-  });
-  await grantPeriodRankingUnitsForPeriod({
-    period: "monthly",
-    labelKey: monthPrev,
-    now,
-  });
+  if (runWeekly) {
+    await grantPeriodRankingUnitsForPeriod({
+      period: "weekly",
+      labelKey: weekPrev,
+      now,
+    });
+  }
+  if (runMonthly) {
+    await grantPeriodRankingUnitsForPeriod({
+      period: "monthly",
+      labelKey: monthPrev,
+      now,
+    });
+  }
 }
