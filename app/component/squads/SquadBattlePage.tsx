@@ -300,7 +300,7 @@ function SquadGoldPhaseTrack({
 
   return (
     <div>
-      {/* ドット行 — レール縦中央。点灯はハロー＋コアで光らせる */}
+      {/* ドット行 — レール縦中央。点灯は細いリム光（大きなハローは使わない） */}
       <div className="relative flex h-7 items-center">
         <div
           aria-hidden
@@ -315,23 +315,14 @@ function SquadGoldPhaseTrack({
             style={{ background: SQUAD_GOLD.lineSoft }}
           />
           {progressPct > 0 ? (
-            <>
-              <div
-                className="absolute left-0 top-1/2 h-2 -translate-y-1/2 rounded-full opacity-50 blur-[3px]"
-                style={{
-                  width: `${progressPct}%`,
-                  background: SQUAD_GOLD.acc,
-                }}
-              />
-              <div
-                className="absolute left-0 top-0 h-full rounded-full"
-                style={{
-                  width: `${progressPct}%`,
-                  background: `linear-gradient(90deg, ${SQUAD_GOLD.accDeep}, ${SQUAD_GOLD.acc})`,
-                  boxShadow: `0 0 12px rgba(${SQUAD_GOLD.glowRgb},0.7)`,
-                }}
-              />
-            </>
+            <div
+              className="absolute left-0 top-0 h-full rounded-full"
+              style={{
+                width: `${progressPct}%`,
+                background: `linear-gradient(90deg, ${SQUAD_GOLD.accDeep}, ${SQUAD_GOLD.acc})`,
+                boxShadow: `0 0 4px rgba(${SQUAD_GOLD.glowRgb},0.45)`,
+              }}
+            />
           ) : null}
         </div>
 
@@ -345,28 +336,19 @@ function SquadGoldPhaseTrack({
               className="relative z-[1] flex flex-1 items-center justify-center"
             >
               <span className="relative flex h-4 w-4 items-center justify-center">
-                {active ? (
-                  <span
-                    aria-hidden
-                    className="pointer-events-none absolute left-1/2 top-1/2 h-7 w-7 -translate-x-1/2 -translate-y-1/2 rounded-full"
-                    style={{
-                      background: `radial-gradient(circle, rgba(${SQUAD_GOLD.glowRgb},0.55) 0%, rgba(${SQUAD_GOLD.glowRgb},0.18) 42%, transparent 70%)`,
-                    }}
-                  />
-                ) : null}
                 <span
-                  className="relative h-4 w-4 shrink-0 rounded-full"
+                  className="relative h-3.5 w-3.5 shrink-0 rounded-full"
                   style={
                     active
                       ? {
                           background: SQUAD_GOLD.acc,
-                          boxShadow: `0 0 10px rgba(${SQUAD_GOLD.glowRgb},0.95), 0 0 22px rgba(${SQUAD_GOLD.glowRgb},0.55)`,
+                          boxShadow: `0 0 0 1px rgba(${SQUAD_GOLD.glowRgb},0.55), 0 0 6px rgba(${SQUAD_GOLD.glowRgb},0.5)`,
                         }
                       : done
                         ? {
                             background: SQUAD_GOLD.acc,
-                            opacity: 0.72,
-                            boxShadow: `0 0 8px rgba(${SQUAD_GOLD.glowRgb},0.35)`,
+                            opacity: 0.78,
+                            boxShadow: `0 0 4px rgba(${SQUAD_GOLD.glowRgb},0.28)`,
                           }
                         : {
                             background: SQUAD_GOLD.bg,
@@ -403,7 +385,7 @@ function SquadGoldPhaseTrack({
                       ? SQUAD_GOLD.mut
                       : SQUAD_GOLD.mutFaint,
                   textShadow: active
-                    ? `0 0 12px rgba(${SQUAD_GOLD.glowRgb},0.85)`
+                    ? `0 0 6px rgba(${SQUAD_GOLD.glowRgb},0.4)`
                     : undefined,
                 }}
               >

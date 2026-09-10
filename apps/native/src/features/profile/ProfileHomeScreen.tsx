@@ -628,7 +628,7 @@ export default function ProfileHomeScreen({
   useEffect(() => {
     if (!markListOpen || isPublicProfileView) return;
     if (markRows.length > 0 || marksLoading) return;
-    void refreshMarks();
+    void refreshMarks({ silent: true });
   }, [
     isPublicProfileView,
     markListOpen,
@@ -1823,7 +1823,7 @@ export default function ProfileHomeScreen({
       onOpenProfile={(row: MarkListRow) => {
         const handle = row.handle.trim();
         if (!handle) return;
-        // Modal は animationType=none。push 後に即閉じて自プロフィールを見せない。
+        // pageSheet のまま push すると下に自プロフィールが見えるので即閉じる
         navigateToPublicProfileNative(navigation, {
           handle,
           fromMarkList: true,

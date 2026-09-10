@@ -55,21 +55,32 @@ export function useProfileMarksNative(
     setMarkedByCount(n);
   }, [owner]);
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (opts?: { silent?: boolean }) => {
     if (!owner) {
       setLoading(false);
       setMarkedByCount(0);
       return;
     }
     const epoch = peekMarksWriteEpoch();
-    setLoading(true);
+    if (!opts?.silent) setLoading(true);
     try {
-      const rows = await listMarksNative(owner);
+      const rows = await Promise.race([
+        listMarksNative(owner),
+        new Promise<UserMark[]>((_, reject) => {
+          setTimeout(() => reject(new Error("marks-list-timeout")), 10000);
+        }),
+      ]);
       // 書き込みと競合した古い list は捨てる。失敗時に空で消さない。
       if (epoch !== peekMarksWriteEpoch()) return;
       replaceMarksMemory(owner, rows);
     } catch {
-      // keep existing memory
+      // keep existing memory / タイムアウト時は空 hydrated にしてスピナー解除
+      if (epoch === peekMarksWriteEpoch()) {
+        const current = getMarksMemorySnapshot();
+        if (!(current.hydrated && current.owner === owner)) {
+          replaceMarksMemory(owner, EMPTY);
+        }
+      }
     } finally {
       setLoading(false);
     }
@@ -83,14 +94,18 @@ export function useProfileMarksNative(
       return;
     }
     const current = getMarksMemorySnapshot();
-    if (current.hydrated && current.owner === owner && current.marks.length > 0) {
+    // 0 件でも hydrated 済みならスピナーを出さず、裏で再取得
+    if (current.hydrated && current.owner === owner) {
       setLoading(false);
+      void refresh({ silent: true });
       return;
     }
     const peek = peekProfileUserDocNative(owner);
     // レガシーに実データがあるときだけ暫定表示。本データは subcollection + legacy merge
     if (peek && hydrateMarksFromUserDoc(owner, peek)) {
       setLoading(false);
+      void refresh({ silent: true });
+      return;
     }
     void refresh();
   }, [owner, refresh]);

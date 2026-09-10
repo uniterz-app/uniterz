@@ -401,7 +401,7 @@ function SquadGoldPhaseTrackNative({
 
   return (
     <View style={styles.phaseTrack}>
-      {/* ドット行でレールを縦中央揃え。点灯はハロー＋コア */}
+      {/* ドット行でレールを縦中央揃え。点灯は細いリム光 */}
       <View style={styles.phaseDotsRow}>
         <View
           style={[
@@ -412,14 +412,9 @@ function SquadGoldPhaseTrackNative({
         >
           <View style={styles.phaseRail} />
           {progressPct > 0 ? (
-            <>
-              <View
-                style={[styles.phaseRailFillGlow, { width: `${progressPct}%` }]}
-              />
-              <View
-                style={[styles.phaseRailFill, { width: `${progressPct}%` }]}
-              />
-            </>
+            <View
+              style={[styles.phaseRailFill, { width: `${progressPct}%` }]}
+            />
           ) : null}
         </View>
         {SQUAD_BATTLE_SEASON_PHASES.map((p) => {
@@ -428,21 +423,16 @@ function SquadGoldPhaseTrackNative({
           const done = activeIdx >= 0 && idx < activeIdx;
           return (
             <View key={p.key} style={styles.phaseDotSlot}>
-              <View style={styles.phaseDotStack}>
-                {active ? (
-                  <View style={styles.phaseDotHalo} pointerEvents="none" />
-                ) : null}
-                <View
-                  style={[
-                    styles.phaseDot,
-                    active
-                      ? styles.phaseDotActive
-                      : done
-                        ? styles.phaseDotDone
-                        : styles.phaseDotIdle,
-                  ]}
-                />
-              </View>
+              <View
+                style={[
+                  styles.phaseDot,
+                  active
+                    ? styles.phaseDotActive
+                    : done
+                      ? styles.phaseDotDone
+                      : styles.phaseDotIdle,
+                ]}
+              />
             </View>
           );
         })}
@@ -6052,14 +6042,6 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(251,191,36,0.18)",
   },
-  phaseRailFillGlow: {
-    position: "absolute",
-    left: 0,
-    top: -3,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: "rgba(251,191,36,0.35)",
-  },
   phaseRailFill: {
     height: 2,
     borderRadius: 1,
@@ -6067,8 +6049,8 @@ const styles = StyleSheet.create({
     ...Platform.select({
       ios: {
         shadowColor: JOIN_BATTLE_AMBER,
-        shadowOpacity: 0.75,
-        shadowRadius: 10,
+        shadowOpacity: 0.4,
+        shadowRadius: 3,
         shadowOffset: { width: 0, height: 0 },
       },
       default: {},
@@ -6089,47 +6071,36 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  phaseDotStack: {
-    width: 16,
-    height: 16,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  phaseDotHalo: {
-    position: "absolute",
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: "rgba(251,191,36,0.28)",
-  },
   phaseDot: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
   },
   phaseDotActive: {
     backgroundColor: JOIN_BATTLE_AMBER,
+    borderWidth: 1,
+    borderColor: "rgba(255,230,160,0.65)",
     ...Platform.select({
       ios: {
         shadowColor: JOIN_BATTLE_AMBER,
-        shadowOpacity: 0.95,
-        shadowRadius: 14,
+        shadowOpacity: 0.5,
+        shadowRadius: 5,
         shadowOffset: { width: 0, height: 0 },
       },
       android: {
-        elevation: 6,
+        elevation: 2,
       },
       default: {},
     }),
   },
   phaseDotDone: {
     backgroundColor: JOIN_BATTLE_AMBER,
-    opacity: 0.72,
+    opacity: 0.78,
     ...Platform.select({
       ios: {
         shadowColor: JOIN_BATTLE_AMBER,
-        shadowOpacity: 0.4,
-        shadowRadius: 8,
+        shadowOpacity: 0.28,
+        shadowRadius: 3,
         shadowOffset: { width: 0, height: 0 },
       },
       default: {},
@@ -6152,9 +6123,9 @@ const styles = StyleSheet.create({
   },
   phaseSegTextActive: {
     color: JOIN_BATTLE_AMBER,
-    textShadowColor: "rgba(251,191,36,0.85)",
+    textShadowColor: "rgba(251,191,36,0.35)",
     textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 10,
+    textShadowRadius: 4,
   },
   phaseSegTextDone: {
     color: SQUAD_GOLD_NATIVE.mut,

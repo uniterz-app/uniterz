@@ -27,9 +27,13 @@ const styles = StyleSheet.create({
   root: {
     width: "100%",
   },
+  /**
+   * スコア／TOP SCORER は自前で枠を持つので横パディングしない。
+   * Injury 等の上段ツールと同じコンテンツ幅に揃える。
+   */
   content: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 0,
+    paddingVertical: 4,
     gap: 12,
   },
 });

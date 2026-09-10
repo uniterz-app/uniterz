@@ -1123,11 +1123,11 @@ const styles = StyleSheet.create({
   cardCaptureWrap: {
     position: "relative",
   },
-  /** 左上：Web mobile `CyberMenuButton` + 右／下フライアウト */
+  /** 左上：線枠 marginTop(14) の内側へ。枠線に乗らないよう少し下げる */
   leftActionCluster: {
     position: "absolute",
-    top: 6,
-    left: 8,
+    top: 24,
+    left: 10,
     zIndex: 60,
     overflow: "visible",
   },

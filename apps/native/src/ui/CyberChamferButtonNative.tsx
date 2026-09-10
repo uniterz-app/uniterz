@@ -84,6 +84,23 @@ function resolveVariant(
   return "menu";
 }
 
+/**
+ * MCI の menu グリフは上下余白が偏り、角切り枠だと左上に寄って見える。
+ * 3 本線を自前で描いて幾何中心に揃える。
+ */
+function MenuGlyph({ size, color }: { size: number; color: string }) {
+  const barH = Math.max(1.5, Math.round(size * 0.14 * 10) / 10);
+  const width = Math.max(8, Math.round(size * 0.92));
+  const gap = Math.max(2, Math.round(size * 0.2 * 10) / 10);
+  return (
+    <View style={{ width, gap, alignItems: "stretch", justifyContent: "center" }}>
+      <View style={{ height: barH, borderRadius: 0.5, backgroundColor: color }} />
+      <View style={{ height: barH, borderRadius: 0.5, backgroundColor: color }} />
+      <View style={{ height: barH, borderRadius: 0.5, backgroundColor: color }} />
+    </View>
+  );
+}
+
 /** 予想オーバーレイ × / ペン / 共有 / バーガー（Native 共通） */
 export default function CyberChamferButtonNative({
   size = "sm",
@@ -191,40 +208,38 @@ export default function CyberChamferButtonNative({
             </View>
           </>
         ) : null}
-        {children ??
-          (action === "edit" ? (
-            <MaterialCommunityIcons
-              name="pencil"
-              size={iconPx}
-              color={theme.icon}
-            />
-          ) : action === "delete" ? (
-            <MaterialCommunityIcons
-              name="trash-can-outline"
-              size={iconPx}
-              color={theme.icon}
-            />
-          ) : action === "menu" ? (
-            <MaterialCommunityIcons
-              name="menu"
-              size={iconPx}
-              color={theme.icon}
-            />
-          ) : action === "share" ? (
-            <MaterialCommunityIcons
-              name="share-variant"
-              size={iconPx}
-              color={theme.icon}
-            />
-          ) : (
-            <Text
-              style={[styles.closeIcon, { color: theme.icon }]}
-              accessibilityElementsHidden
-              importantForAccessibility="no"
-            >
-              ×
-            </Text>
-          ))}
+        <View style={styles.iconSlot} pointerEvents="none">
+          {children ??
+            (action === "edit" ? (
+              <MaterialCommunityIcons
+                name="pencil"
+                size={iconPx}
+                color={theme.icon}
+              />
+            ) : action === "delete" ? (
+              <MaterialCommunityIcons
+                name="trash-can-outline"
+                size={iconPx}
+                color={theme.icon}
+              />
+            ) : action === "menu" ? (
+              <MenuGlyph size={iconPx} color={theme.icon} />
+            ) : action === "share" ? (
+              <MaterialCommunityIcons
+                name="share-variant"
+                size={iconPx}
+                color={theme.icon}
+              />
+            ) : (
+              <Text
+                style={[styles.closeIcon, { color: theme.icon }]}
+                accessibilityElementsHidden
+                importantForAccessibility="no"
+              >
+                ×
+              </Text>
+            ))}
+        </View>
       </View>
     </Pressable>
   );
@@ -254,6 +269,18 @@ const styles = StyleSheet.create({
   frame: {
     alignItems: "center",
     justifyContent: "center",
+  },
+  /**
+   * 左上・右下カットの重心はわずかに右下寄り。
+   * 幾何中心に置くとアイコンが左上に見えるため光学補正する。
+   */
+  iconSlot: {
+    alignItems: "center",
+    justifyContent: "center",
+    transform: [
+      { translateX: CYBER_MENU_BTN_CUT * 0.12 },
+      { translateY: CYBER_MENU_BTN_CUT * 0.12 },
+    ],
   },
   closeIcon: {
     fontSize: 16,

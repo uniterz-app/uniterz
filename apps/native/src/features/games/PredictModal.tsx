@@ -2304,10 +2304,13 @@ const s = StyleSheet.create({
     fontWeight: "600",
   },
   predictFormStack: {
+    width: "100%",
     gap: 12,
   },
   predictScoreFormPanel: {
     position: "relative",
+    alignSelf: "stretch",
+    width: "100%",
     gap: 12,
     paddingHorizontal: 12,
     paddingTop: 14,

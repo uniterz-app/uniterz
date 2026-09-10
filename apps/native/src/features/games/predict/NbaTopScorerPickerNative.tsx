@@ -272,7 +272,9 @@ export default function NbaTopScorerPickerNative({
 
 const styles = StyleSheet.create({
   root: {
-    marginTop: 4,
+    alignSelf: "stretch",
+    width: "100%",
+    overflow: "hidden",
     paddingHorizontal: 12,
     paddingTop: 12,
     paddingBottom: 12,
