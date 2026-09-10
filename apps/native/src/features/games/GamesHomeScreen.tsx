@@ -1549,7 +1549,7 @@ export default function GamesHomeScreen({
     });
   }, []);
 
-  const t = useMemo(() => getGamesTexts(gameLanguage), [gameLanguage]);
+  const t = useMemo(() => getGamesTexts(gamesLanguage), [gamesLanguage]);
 
   const gamesFilterKey = useMemo(
     () =>
