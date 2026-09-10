@@ -6,9 +6,14 @@ import { StyleSheet, View } from "react-native";
 import AuthLandingAmoebaFieldNative from "./AuthLandingAmoebaFieldNative";
 import { AUTH_LANDING_FIELD_VARIANT } from "./camera3d/authLandingFieldVariant";
 
-export default function AuthLandingBackgroundNative() {
+type Props = {
+  /** 同意ゲート・着地後など、帯アニメを止める */
+  paused?: boolean;
+};
+
+export default function AuthLandingBackgroundNative({ paused = false }: Props) {
   if (AUTH_LANDING_FIELD_VARIANT === "grainWave") {
-    return <AuthLandingAmoebaFieldNative />;
+    return <AuthLandingAmoebaFieldNative paused={paused} />;
   }
   return <View style={styles.root} pointerEvents="none" />;
 }

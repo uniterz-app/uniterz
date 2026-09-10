@@ -1,9 +1,13 @@
 /**
  * Get Started 背景 — 黒地に、粒子の乗った一本のうねる帯。
- * 金銀枠とは別バリアント。塊（メタボール）は使わない。
- * App が background / inactive のときは時刻を凍結して GPU 負荷を止める。
+ * 見た目は維持しつつ GPU 負荷を抑える:
+ * - 0.72 解像度キャンバスを拡大表示
+ * - 粒はフル論理解像度でサンプル（低解像拡大で粗く見えないように）
+ * - u_time を ~24fps に間引き
+ * - fbm は 2 octave
+ * - App inactive / paused（同意モーダル・フォーム着地）で時刻凍結
  */
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { StyleSheet, View, useWindowDimensions } from "react-native";
 import {
   BlurMask,
@@ -15,23 +19,33 @@ import {
   Oval,
   Shader,
   Skia,
-  useClock,
   vec,
 } from "@shopify/react-native-skia";
 import {
   useDerivedValue,
   useReducedMotion,
+  useSharedValue,
 } from "react-native-reanimated";
 import { AUTH_LANDING } from "./authLandingPalette";
 import { useAppActiveNative } from "../../hooks/useAppActiveNative";
 
 const FROZEN_MS = 22000;
+/** 描画解像度（帯の形状用）。0.72 ≈ 画素 ~1/2、拡大ボケを抑えつつフルより軽い */
+const RENDER_SCALE = 0.72;
+/** シェーダ時刻の更新間隔（約 24fps） */
+const CLOCK_INTERVAL_MS = Math.round(1000 / 24);
 const FOG_PEAK = AUTH_LANDING.fogPeak;
 const FOG_PEAK_BYTE = Math.round(FOG_PEAK * 255);
 
+/**
+ * 帯の形状・明るさは従来どおり。
+ * fbm は 2 octave のまま。粒は u_grain_res（フル論理解像度）でサンプルし、
+ * 低解像度拡大で粒が粗く見えないようにする。
+ */
 const WAVE_SKSL = `
 uniform float u_time;
 uniform float2 u_res;
+uniform float2 u_grain_res;
 uniform float u_peak;
 
 float hash(float2 p) {
@@ -51,20 +65,19 @@ float vnoise(float2 p) {
 
 float fbm(float2 p) {
   float s = 0.0;
-  float a = 0.5;
+  float a = 0.55;
   s += a * vnoise(p);
   p *= 2.02;
   a *= 0.5;
   s += a * vnoise(p);
-  p *= 2.03;
-  a *= 0.5;
-  s += a * vnoise(p);
-  return s;
+  return s * 1.12;
 }
 
 half4 main(float2 xy) {
   float2 uv = xy / u_res;
   float t = u_time * 0.001;
+  // 粒密度はフル解像度相当（低解像キャンバスの xy 直叩きだと拡大で荒くなる）
+  float2 gx = uv * u_grain_res;
 
   float n1 = fbm(uv * float2(1.35, 2.4) + float2(t * 0.042, t * 0.033));
   float n2 = fbm(uv * float2(1.7, 2.8) + float2(4.2, 1.6) + float2(-t * 0.036, t * 0.047));
@@ -77,27 +90,27 @@ half4 main(float2 xy) {
   spine += (fbm(float2(wuv.x * 2.8, t * 0.07 + 2.4)) - 0.5) * 0.08;
 
   float d = abs(wuv.y - spine);
-  float thick = 0.12
-    + 0.05 * sin(wuv.x * 3.1 + phase * 0.4)
-    + 0.04 * fbm(float2(wuv.x * 2.2 + t * 0.048, 8.0));
+  float thick = 0.105
+    + 0.042 * sin(wuv.x * 3.1 + phase * 0.4)
+    + 0.034 * fbm(float2(wuv.x * 2.2 + t * 0.048, 8.0));
 
-  float veil = exp(-pow(d / max(thick * 1.55, 0.04), 1.55));
-  float mist = exp(-pow(d / max(thick, 0.03), 2.05));
-  float core = exp(-pow(d / max(thick * 0.40, 0.012), 2.35));
-  float lum = (veil * 0.14 + mist * 0.42 + core * 0.52) * u_peak;
+  float veil = exp(-pow(d / max(thick * 1.08, 0.035), 2.15));
+  float mist = exp(-pow(d / max(thick * 0.82, 0.028), 2.45));
+  float core = exp(-pow(d / max(thick * 0.32, 0.01), 2.55));
+  float lum = (veil * 0.04 + mist * 0.26 + core * 0.62) * u_peak;
 
   float g =
-    hash(xy) * 0.18
-    + hash(xy * 1.85 + 11.0) * 0.18
-    + hash(xy * 3.4 + 23.0) * 0.16
-    + hash(xy * 6.1 + 41.0) * 0.16
-    + hash(xy * 10.7 + 59.0) * 0.14
-    + hash(xy * 17.3 + 73.0) * 0.10
-    + hash(xy * 27.0 + 97.0) * 0.08;
-  float speckle = step(0.52, hash(xy * 1.28 + 5.0));
-  lum += (g - 0.5) * (0.24 + lum * 0.72);
-  lum += speckle * lum * 0.22;
-  lum += (hash(xy * 2.6 + 8.0) - 0.5) * veil * 0.28;
+    hash(gx) * 0.18
+    + hash(gx * 1.85 + 11.0) * 0.18
+    + hash(gx * 3.4 + 23.0) * 0.16
+    + hash(gx * 6.1 + 41.0) * 0.16
+    + hash(gx * 10.7 + 59.0) * 0.14
+    + hash(gx * 17.3 + 73.0) * 0.10
+    + hash(gx * 27.0 + 97.0) * 0.08;
+  float speckle = step(0.52, hash(gx * 1.28 + 5.0));
+  lum += (g - 0.5) * (0.18 + lum * 0.62);
+  lum += speckle * lum * 0.18;
+  lum += (hash(gx * 2.6 + 8.0) - 0.5) * veil * 0.1;
   lum = clamp(lum, 0.0, 1.0);
 
   return half4(lum, lum, lum, 1.0);
@@ -133,24 +146,51 @@ function WaveFallback({ width, height }: { width: number; height: number }) {
       </Oval>
       <Group blendMode="overlay" opacity={0.48}>
         <Fill>
-          <FractalNoise freqX={2.4} freqY={2.4} octaves={5} seed={9} />
+          <FractalNoise freqX={2.4} freqY={2.4} octaves={3} seed={9} />
         </Fill>
       </Group>
     </>
   );
 }
 
-export default function AuthLandingAmoebaFieldNative() {
+type Props = {
+  /** 同意ゲートやフォーム着地など、表に出ないときの凍結 */
+  paused?: boolean;
+};
+
+export default function AuthLandingAmoebaFieldNative({ paused = false }: Props) {
   const { width, height } = useWindowDimensions();
   const reduceMotion = useReducedMotion();
   const appActive = useAppActiveNative();
-  const clock = useClock();
   const effect = useMemo(() => makeWaveEffect(), []);
-  const animate = !reduceMotion && appActive;
+  const timeMs = useSharedValue(FROZEN_MS);
+
+  const animate = !reduceMotion && appActive && !paused;
+
+  const renderW = Math.max(1, Math.round(width * RENDER_SCALE));
+  const renderH = Math.max(1, Math.round(height * RENDER_SCALE));
+  const upscale = 1 / RENDER_SCALE;
+  // RN の transform 原点は中心のため、拡大後に左上合わせする
+  const originFixX = (renderW * (upscale - 1)) / 2;
+  const originFixY = (renderH * (upscale - 1)) / 2;
+
+  useEffect(() => {
+    if (!animate) {
+      timeMs.value = FROZEN_MS;
+      return;
+    }
+    const startedAt = performance.now();
+    timeMs.value = FROZEN_MS;
+    const id = setInterval(() => {
+      timeMs.value = FROZEN_MS + (performance.now() - startedAt);
+    }, CLOCK_INTERVAL_MS);
+    return () => clearInterval(id);
+  }, [animate, timeMs]);
 
   const uniforms = useDerivedValue(() => ({
-    u_time: animate ? clock.value : FROZEN_MS,
-    u_res: [width, height],
+    u_time: timeMs.value,
+    u_res: [renderW, renderH],
+    u_grain_res: [width, height],
     u_peak: FOG_PEAK,
   }));
 
@@ -158,24 +198,35 @@ export default function AuthLandingAmoebaFieldNative() {
     return <View pointerEvents="none" style={styles.root} />;
   }
 
-  // 非アクティブ時は静的フォールバック（useClock 駆動の再描画を止める）
+  const canvasStyle = {
+    width: renderW,
+    height: renderH,
+    transform: [
+      { translateX: originFixX },
+      { translateY: originFixY },
+      { scale: upscale },
+    ],
+  } as const;
+
+  // 非アクティブ / paused: 静的フレーム（interval なし）
   if (!animate) {
     return (
       <View pointerEvents="none" style={styles.root} collapsable={false}>
-        <Canvas style={{ width, height }} pointerEvents="none">
+        <Canvas style={canvasStyle} pointerEvents="none">
           {effect ? (
             <Fill>
               <Shader
                 source={effect}
                 uniforms={{
                   u_time: FROZEN_MS,
-                  u_res: [width, height],
+                  u_res: [renderW, renderH],
+                  u_grain_res: [width, height],
                   u_peak: FOG_PEAK,
                 }}
               />
             </Fill>
           ) : (
-            <WaveFallback width={width} height={height} />
+            <WaveFallback width={renderW} height={renderH} />
           )}
         </Canvas>
       </View>
@@ -184,13 +235,13 @@ export default function AuthLandingAmoebaFieldNative() {
 
   return (
     <View pointerEvents="none" style={styles.root} collapsable={false}>
-      <Canvas style={{ width, height }} pointerEvents="none">
+      <Canvas style={canvasStyle} pointerEvents="none">
         {effect ? (
           <Fill>
             <Shader source={effect} uniforms={uniforms} />
           </Fill>
         ) : (
-          <WaveFallback width={width} height={height} />
+          <WaveFallback width={renderW} height={renderH} />
         )}
       </Canvas>
     </View>
@@ -201,6 +252,7 @@ const styles = StyleSheet.create({
   root: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "#000000",
+    overflow: "hidden",
     zIndex: 0,
   },
 });

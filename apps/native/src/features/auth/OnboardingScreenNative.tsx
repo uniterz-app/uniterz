@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { cyberAlert } from "../../components/cyberAlert";
 import {
   ActivityIndicator,
@@ -23,9 +23,16 @@ import { AUTH_LANDING } from "./authLandingPalette";
 import SlantCtaNative from "../../ui/SlantCtaNative";
 import { LEAGUES } from "../../../../../lib/leagues";
 import { hideNativeBootSplash } from "../../bootstrap/nativeBootSplash";
-import { resolveDeviceAppLanguage } from "../../i18n/resolveDeviceAppLanguage";
+import { resolveDeviceLocalizedLang } from "../../i18n/resolveDeviceAppLanguage";
+import { LANGUAGE_NATIVE_NAMES } from "../../../../../lib/i18n/language";
+import {
+  LOCALIZED_UI_LANGUAGES,
+  type LocalizedLang,
+} from "../../../../../lib/i18n/localize";
+import { onboardingWelcomeCopy } from "../../../../../lib/auth/onboardingWelcomeCopy";
 import { ensureUserSlug } from "../../../../../lib/ensureSlug";
 import { normalizeReferralInviteCode } from "../../../../../lib/referral/referralInviteCode";
+import { referralBindUserMessage } from "../../../../../lib/referral/referralBindErrorCopy";
 import { bindMeReferralNative } from "../profile/referralApiNative";
 import {
   assertProfileTextsFreeOfGamblingTerms,
@@ -59,64 +66,23 @@ function isImagePickerNativeMissingError(e: unknown): boolean {
   return /ExponentImagePicker|Cannot find native module/i.test(msg);
 }
 
-const COPY = {
-  ja: {
-    desc: "ユーザー名と言語を設定してください。画像・国・招待コードは任意です。",
-    pickPhoto: "プロフィール画像を選ぶ",
-    username: "ユーザー名",
-    country: "住んでいる国（任意）",
-    countryNotSet: "未設定",
-    invite: "招待コード（任意）",
-    inviteHint: "招待コードを入力し条件を満たすとUnitが獲得できます.",
-    continue: "CONTINUE",
-    saving: "保存中...",
-    nameTooLong: "ユーザー名は50文字以内にしてください。",
-    invalidTitle: "入力エラー",
-    saveFail: "プロフィールの保存に失敗しました。",
-    photoDeniedTitle: "写真へのアクセス",
-    photoDenied: "設定から写真へのアクセスを許可してください。",
-    photoPickerTitle: "写真を選べません",
-    photoPickerHint:
-      "このビルドでは画像ライブラリが使えません。開発クライアントを入れ直してください。",
-    photoFail: "画像の読み込みに失敗しました。",
-    backFail: "戻るのに失敗しました。",
-  },
-  en: {
-    desc: "Set your username and language. Photo, country, and invite code are optional.",
-    pickPhoto: "Choose profile photo",
-    username: "Username",
-    country: "Country (optional)",
-    countryNotSet: "Not set",
-    invite: "Invite code (optional)",
-    inviteHint: "Enter an invite code and meet the conditions to earn Units.",
-    continue: "CONTINUE",
-    saving: "Saving...",
-    nameTooLong: "Username must be 50 characters or fewer.",
-    invalidTitle: "Invalid input",
-    saveFail: "Could not save your profile.",
-    photoDeniedTitle: "Photo access",
-    photoDenied: "Allow photo access in Settings, then try again.",
-    photoPickerTitle: "Can't pick a photo",
-    photoPickerHint:
-      "The image library isn't available in this build. Reinstall the dev client.",
-    photoFail: "Could not load the image.",
-    backFail: "Could not go back. Try again.",
-  },
-} as const;
-
-function countryRowLabel(code: string, appLang: "ja" | "en"): string {
+function countryRowLabel(code: string, appLang: LocalizedLang): string {
   const trimmed = code.trim();
   if (!trimmed) return "";
   const row = COUNTRY_OPTIONS.find((c) => c.code === trimmed);
   return row ? (appLang === "ja" ? row.labelJa : row.labelEn) : trimmed;
 }
 
+type PickerKind = "language" | "country" | null;
+
 export default function OnboardingScreenNative() {
   const [displayName, setDisplayName] = useState("");
   const [inviteCode, setInviteCode] = useState("");
-  const [language, setLanguage] = useState<"ja" | "en">(resolveDeviceAppLanguage);
+  const [language, setLanguage] = useState<LocalizedLang>(
+    resolveDeviceLocalizedLang
+  );
   const [countryCode, setCountryCode] = useState("");
-  const [countryOpen, setCountryOpen] = useState(false);
+  const [picker, setPicker] = useState<PickerKind>(null);
   const [avatar, setAvatar] = useState<PendingAvatar | null>(null);
   const [saving, setSaving] = useState(false);
   const [picking, setPicking] = useState(false);
@@ -126,13 +92,13 @@ export default function OnboardingScreenNative() {
   }, []);
 
   const canSubmit = displayName.trim().length > 0;
-  const t = COPY[language];
+  const t = useMemo(() => onboardingWelcomeCopy(language), [language]);
   const selectedFlagUri = rankingFlagImageUri(countryCode.trim() || undefined);
 
   async function handleBack() {
     if (saving) return;
-    if (countryOpen) {
-      setCountryOpen(false);
+    if (picker) {
+      setPicker(null);
       return;
     }
     try {
@@ -279,8 +245,11 @@ export default function OnboardingScreenNative() {
       if (code) {
         try {
           await bindMeReferralNative(code);
-        } catch {
-          /* 招待の失敗ではオンボーディングを止めない */
+        } catch (e: unknown) {
+          // 招待失敗でもオンボーディングは完了。自分コード等は明示する。
+          const errCode = e instanceof Error ? e.message : "";
+          const msg = referralBindUserMessage(errCode, language);
+          if (msg) cyberAlert(t.invalidTitle, msg);
         }
       }
     } catch (e) {
@@ -342,7 +311,28 @@ export default function OnboardingScreenNative() {
           style={styles.field}
           onPress={() => {
             if (saving) return;
-            setCountryOpen(true);
+            setPicker("language");
+          }}
+          disabled={saving}
+          accessibilityRole="button"
+          accessibilityLabel={t.language}
+        >
+          <View style={styles.selectRow}>
+            <Text style={styles.selectText} numberOfLines={1}>
+              {LANGUAGE_NATIVE_NAMES[language]}
+            </Text>
+            <MaterialCommunityIcons
+              name="chevron-down"
+              size={20}
+              color="rgba(226,232,240,0.65)"
+            />
+          </View>
+        </Pressable>
+        <Pressable
+          style={styles.field}
+          onPress={() => {
+            if (saving) return;
+            setPicker("country");
           }}
           disabled={saving}
           accessibilityRole="button"
@@ -378,31 +368,13 @@ export default function OnboardingScreenNative() {
             placeholder={t.invite}
             placeholderTextColor="rgba(186,200,210,0.45)"
             value={inviteCode}
-            onChangeText={(t) => setInviteCode(normalizeReferralInviteCode(t))}
+            onChangeText={(v) => setInviteCode(normalizeReferralInviteCode(v))}
             autoCapitalize="characters"
             autoCorrect={false}
           />
         </View>
         <Text style={styles.inviteHint}>{t.inviteHint}</Text>
 
-        <View style={styles.langRow}>
-          {(["ja", "en"] as const).map((lang) => {
-            const on = language === lang;
-            return (
-              <Pressable
-                key={lang}
-                style={[styles.langBtn, on && styles.langBtnOn]}
-                onPress={() => setLanguage(lang)}
-                accessibilityRole="button"
-                accessibilityState={{ selected: on }}
-              >
-                <Text style={[styles.langLabel, on && styles.langLabelOn]}>
-                  {lang === "ja" ? "日本語" : "English"}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
         <SlantCtaNative
           display
           variant="mono"
@@ -413,83 +385,121 @@ export default function OnboardingScreenNative() {
       </AuthFormShellNative>
       <ProfileBackEdgeHandleNative onPress={() => void handleBack()} />
       <Modal
-        visible={countryOpen}
+        visible={picker != null}
         transparent
         animationType="fade"
-        onRequestClose={() => setCountryOpen(false)}
+        onRequestClose={() => setPicker(null)}
       >
         <View style={styles.pickerRoot}>
           <Pressable
             style={styles.pickerBackdrop}
-            onPress={() => setCountryOpen(false)}
+            onPress={() => setPicker(null)}
           />
           <View style={styles.pickerSheet}>
-            <Text style={styles.pickerTitle}>{t.country}</Text>
+            <Text style={styles.pickerTitle}>
+              {picker === "language" ? t.language : t.country}
+            </Text>
             <ScrollView
               style={styles.pickerScroll}
               keyboardShouldPersistTaps="handled"
             >
-              <Pressable
-                style={({ pressed }) => [
-                  styles.pickerOption,
-                  pressed && styles.pickerOptionPressed,
-                ]}
-                onPress={() => {
-                  setCountryCode("");
-                  setCountryOpen(false);
-                }}
-              >
-                <View style={styles.pickerOptionMain}>
-                  <View style={styles.flagSlot} />
-                  <Text style={styles.pickerOptionText}>{t.countryNotSet}</Text>
-                </View>
-                {!countryCode.trim() ? (
-                  <MaterialCommunityIcons
-                    name="check"
-                    size={18}
-                    color="rgba(255,255,255,0.92)"
-                  />
-                ) : null}
-              </Pressable>
-              {COUNTRY_OPTIONS.map((c) => {
-                const selected = countryCode.trim() === c.code;
-                const flagUri = rankingFlagImageUri(c.code);
-                return (
-                  <Pressable
-                    key={c.code}
-                    style={({ pressed }) => [
-                      styles.pickerOption,
-                      pressed && styles.pickerOptionPressed,
-                    ]}
-                    onPress={() => {
-                      setCountryCode(c.code);
-                      setCountryOpen(false);
-                    }}
-                  >
-                    <View style={styles.pickerOptionMain}>
-                      <View style={styles.flagSlot}>
-                        {flagUri ? (
-                          <Image
-                            source={{ uri: flagUri }}
-                            style={styles.flag}
-                            resizeMode="cover"
+              {picker === "language"
+                ? LOCALIZED_UI_LANGUAGES.map((code) => {
+                    const selected = language === code;
+                    return (
+                      <Pressable
+                        key={code}
+                        style={({ pressed }) => [
+                          styles.pickerOption,
+                          pressed && styles.pickerOptionPressed,
+                        ]}
+                        onPress={() => {
+                          setLanguage(code);
+                          setPicker(null);
+                        }}
+                      >
+                        <View style={styles.pickerOptionMain}>
+                          <Text style={styles.pickerOptionText}>
+                            {LANGUAGE_NATIVE_NAMES[code]}
+                          </Text>
+                        </View>
+                        {selected ? (
+                          <MaterialCommunityIcons
+                            name="check"
+                            size={18}
+                            color="rgba(255,255,255,0.92)"
                           />
                         ) : null}
+                      </Pressable>
+                    );
+                  })
+                : (
+                  <>
+                    <Pressable
+                      style={({ pressed }) => [
+                        styles.pickerOption,
+                        pressed && styles.pickerOptionPressed,
+                      ]}
+                      onPress={() => {
+                        setCountryCode("");
+                        setPicker(null);
+                      }}
+                    >
+                      <View style={styles.pickerOptionMain}>
+                        <View style={styles.flagSlot} />
+                        <Text style={styles.pickerOptionText}>
+                          {t.countryNotSet}
+                        </Text>
                       </View>
-                      <Text style={styles.pickerOptionText}>
-                        {language === "ja" ? c.labelJa : c.labelEn}
-                      </Text>
-                    </View>
-                    {selected ? (
-                      <MaterialCommunityIcons
-                        name="check"
-                        size={18}
-                        color="rgba(255,255,255,0.92)"
-                      />
-                    ) : null}
-                  </Pressable>
-                );
-              })}
+                      {!countryCode.trim() ? (
+                        <MaterialCommunityIcons
+                          name="check"
+                          size={18}
+                          color="rgba(255,255,255,0.92)"
+                        />
+                      ) : null}
+                    </Pressable>
+                    {COUNTRY_OPTIONS.map((c) => {
+                      const selected = countryCode.trim() === c.code;
+                      const flagUri = rankingFlagImageUri(c.code);
+                      return (
+                        <Pressable
+                          key={c.code}
+                          style={({ pressed }) => [
+                            styles.pickerOption,
+                            pressed && styles.pickerOptionPressed,
+                          ]}
+                          onPress={() => {
+                            setCountryCode(c.code);
+                            setPicker(null);
+                          }}
+                        >
+                          <View style={styles.pickerOptionMain}>
+                            <View style={styles.flagSlot}>
+                              {flagUri ? (
+                                <Image
+                                  source={{ uri: flagUri }}
+                                  style={styles.flag}
+                                  resizeMode="cover"
+                                />
+                              ) : null}
+                            </View>
+                            <Text style={styles.pickerOptionText}>
+                              {language === "ja" ? c.labelJa : c.labelEn}
+                            </Text>
+                          </View>
+                          {selected ? (
+                            <MaterialCommunityIcons
+                              name="check"
+                              size={18}
+                              color="rgba(255,255,255,0.92)"
+                            />
+                          ) : null}
+                        </Pressable>
+                      );
+                    })}
+                  </>
+                )}
             </ScrollView>
           </View>
         </View>
@@ -501,11 +511,14 @@ export default function OnboardingScreenNative() {
 const styles = StyleSheet.create({
   root: { flex: 1 },
   desc: {
-    color: "rgba(226,232,240,0.65)",
+    color: "rgba(248,250,252,0.92)",
     fontSize: 13,
-    lineHeight: 18,
+    lineHeight: 19,
     textAlign: "center",
     marginBottom: 2,
+    textShadowColor: "rgba(0,0,0,0.9)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 5,
   },
   avatarHit: {
     alignSelf: "center",
@@ -640,35 +653,11 @@ const styles = StyleSheet.create({
   inviteHint: {
     marginTop: -8,
     paddingHorizontal: 2,
-    color: "rgba(210,220,228,0.82)",
+    color: "rgba(248,250,252,0.9)",
     fontSize: 11,
-    lineHeight: 15,
-  },
-  langRow: {
-    flexDirection: "row",
-    gap: 10,
-  },
-  langBtn: {
-    flex: 1,
-    minHeight: 32,
-    paddingVertical: 6,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.12)",
-    backgroundColor: "rgba(4,10,14,0.72)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  langBtnOn: {
-    borderColor: "rgba(255,255,255,0.88)",
-    backgroundColor: "rgba(255,255,255,0.08)",
-  },
-  langLabel: {
-    color: "rgba(226,232,240,0.62)",
-    fontSize: 13,
-    fontWeight: "600",
-    letterSpacing: 0.4,
-  },
-  langLabelOn: {
-    color: "#FFFFFF",
+    lineHeight: 16,
+    textShadowColor: "rgba(0,0,0,0.9)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 5,
   },
 });

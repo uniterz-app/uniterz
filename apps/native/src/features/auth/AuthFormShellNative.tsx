@@ -1,5 +1,6 @@
 /**
  * 認証画面共通シェル — Landing / AuthEntry と同世界観（カード枠なし）
+ * 背景の粒子帯は凍結＋中央を暗くして、WELCOME 下の説明文などが被っても読めるようにする。
  */
 import { ReactNode } from "react";
 import {
@@ -52,10 +53,23 @@ export default function AuthFormShellNative({ title, children, footer }: Props) 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
       <View style={styles.root}>
-        <AuthLandingBackgroundNative />
+        <AuthLandingBackgroundNative paused />
         {AUTH_LANDING_FIELD_VARIANT === "hexTunnel" ? (
           <AuthHexTunnelOverlayNative />
         ) : null}
+        {/* 帯と文字の重なりを抑える暗幕（デザインはそのまま） */}
+        <LinearGradient
+          pointerEvents="none"
+          colors={[
+            "rgba(0,0,0,0.35)",
+            "rgba(0,0,0,0.72)",
+            "rgba(0,0,0,0.78)",
+            "rgba(0,0,0,0.72)",
+            "rgba(0,0,0,0.4)",
+          ]}
+          locations={[0, 0.28, 0.5, 0.72, 1]}
+          style={styles.readabilityScrim}
+        />
         <View
           style={[
             styles.screen,
@@ -94,6 +108,10 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: "#000000",
+  },
+  readabilityScrim: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 1,
   },
   screen: {
     flex: 1,
@@ -139,6 +157,9 @@ const styles = StyleSheet.create({
     letterSpacing: 2.4,
     color: "rgba(248,250,252,0.95)",
     textAlign: "center",
+    textShadowColor: "rgba(0,0,0,0.85)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 6,
   },
   titleLong: {
     fontSize: 18,

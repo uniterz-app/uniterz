@@ -334,7 +334,15 @@ export default function CommunityGroupDetailView({
 
   const onLeave = useCallback(async () => {
     const h = await authHeader();
-    if (!h) return;
+    if (!h) {
+      toast.error(
+        commMsg(language, {
+          en: "Sign in required.",
+          ja: "ログインが必要です。",
+        })
+      );
+      return;
+    }
     const ok = window.confirm(
       commMsg(language, {
         en: "Leave this group?",

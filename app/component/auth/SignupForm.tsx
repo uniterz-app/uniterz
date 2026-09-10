@@ -22,6 +22,7 @@ import {
 } from "@/lib/referral/referralInviteCode";
 import { authFormCopy } from "@/lib/auth/authFormCopy";
 import { resolveAppUiLocalizedLang } from "@/lib/i18n/resolveAppUiLanguage";
+import { referralBindUserMessage } from "@/lib/referral/referralBindErrorCopy";
 
 type SignupFormProps = {
   variant?: "web" | "mobile";
@@ -36,6 +37,7 @@ export default function SignupForm({ variant = "web" }: SignupFormProps) {
   const [pressed, setPressed] = useState(false);
 
   const router = useRouter();
+  const uiLang = useMemo(() => resolveAppUiLocalizedLang(), []);
 
   const loginBase = variant === "mobile" ? "/mobile/login" : "/web/login";
   const [loginHref, setLoginHref] = useState(loginBase);
@@ -53,7 +55,7 @@ export default function SignupForm({ variant = "web" }: SignupFormProps) {
     "font-[family-name:var(--font-geist-sans)] text-sm leading-relaxed text-white/85";
 
   const ui = useMemo(() => {
-    const copy = authFormCopy(resolveAppUiLocalizedLang());
+    const copy = authFormCopy(uiLang);
     return {
       title: "CREATE ACCOUNT",
       emailPlaceholder: "Email Address",
@@ -67,7 +69,7 @@ export default function SignupForm({ variant = "web" }: SignupFormProps) {
       showPw: "Show password",
       hidePw: "Hide password",
     };
-  }, []);
+  }, [uiLang]);
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -98,7 +100,11 @@ export default function SignupForm({ variant = "web" }: SignupFormProps) {
         try {
           await bindMeReferral(code);
         } catch (bindErr) {
-          console.warn("referral bind skipped:", bindErr);
+          const errCode =
+            bindErr instanceof Error ? bindErr.message : String(bindErr ?? "");
+          const msg = referralBindUserMessage(errCode, uiLang);
+          if (msg) alert(msg);
+          else console.warn("referral bind skipped:", bindErr);
         }
       }
 

@@ -180,8 +180,8 @@ export default function ReferralInvitePage() {
       eyebrow="PROFILE"
       subtitle={
         isJa
-          ? "友達を招待して Unit を獲得。相手が7日分の予想を出すと双方に付与されます。"
-          : "Invite friends for Units. Both earn when they predict on 7 different days."
+          ? "友達を招待して Unit を獲得。友達はコード入力で 30 Unit、あなたは相手が7日間予想すると受け取れます。"
+          : "Invite friends for Units. They get 30 Units when they enter your code; you earn after they predict on 7 days."
       }
       contentClassName="max-w-lg space-y-4 pb-8"
     >
@@ -393,8 +393,8 @@ export default function ReferralInvitePage() {
         </div>
         <p className="text-[11px] leading-relaxed text-white/40">
           {isJa
-            ? "付与は、友達が異なる7日に有効予想を投稿したあと。登録だけでは付きません。"
-            : "Granted after the invitee posts on 7 different days. Signup alone does not count."}
+            ? "あなたへの付与は、友達が異なる7日に有効予想を投稿したあと。友達本人はコード入力時に 30 Unit を受け取ります。"
+            : "You earn after they post on 7 different days. They get 30 Units when they enter your code."}
         </p>
       </section>
 

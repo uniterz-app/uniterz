@@ -57,7 +57,16 @@ export function mergeSyntheticIdsIntoVisibleSet(
 
 /** @deprecated 複数合成に対応した merge を使う */
 export function buildSyntheticEventAnnouncementItem(): AnnouncementListShape {
-  const e = SYNTHETIC_EVENT_NOTICES[0]!;
+  const e = SYNTHETIC_EVENT_NOTICES[0];
+  if (!e) {
+    return {
+      id: "",
+      title: "",
+      type: "event",
+      postedAt: null,
+      pinned: false,
+    };
+  }
   return buildListItem(e);
 }
 

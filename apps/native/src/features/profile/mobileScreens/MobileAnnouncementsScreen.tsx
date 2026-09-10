@@ -480,16 +480,16 @@ const styles = StyleSheet.create({
   loaderWrap: { paddingTop: 24, alignItems: "center" },
   skelWrap: { gap: 16 },
   skelCard: {
-    borderRadius: 16,
+    borderRadius: 0,
     overflow: "hidden",
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.1)",
     backgroundColor: "rgba(255,255,255,0.05)",
   },
   skelImg: { height: 176, backgroundColor: "rgba(255,255,255,0.08)" },
-  skelLine: { height: 14, marginHorizontal: 12, marginVertical: 6, borderRadius: 6, backgroundColor: "rgba(255,255,255,0.08)" },
+  skelLine: { height: 14, marginHorizontal: 12, marginVertical: 6, borderRadius: 0, backgroundColor: "rgba(255,255,255,0.08)" },
   card: {
-    borderRadius: 16,
+    borderRadius: 0,
     overflow: "hidden",
     marginBottom: 4,
     borderWidth: 1,
@@ -518,7 +518,7 @@ const styles = StyleSheet.create({
   detailHero: {
     width: "100%",
     height: 192,
-    borderRadius: 12,
+    borderRadius: 0,
     marginBottom: 12,
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.1)",

@@ -82,11 +82,13 @@ export default function AuthLandingFlyShellNative() {
 
   const hexTunnel = AUTH_LANDING_FIELD_VARIANT === "hexTunnel";
   const skipGl = hexTunnel || AUTH_LANDING_FIELD_VARIANT === "grainWave";
+  // 同意中・フォーム着地後は裏の帯シェーダを止める（見た目は最後のフレームを保持）
+  const fieldPaused = consentOpen || landed;
 
   if (!glOk) {
     return (
       <View style={styles.root}>
-        <AuthLandingBackgroundNative />
+        <AuthLandingBackgroundNative paused={fieldPaused} />
         {hexTunnel ? <AuthHexTunnelOverlayNative /> : null}
         <AuthLandingWorldCameraNative
           active
@@ -112,7 +114,7 @@ export default function AuthLandingFlyShellNative() {
 
   return (
     <View style={styles.root}>
-      <AuthLandingBackgroundNative />
+      <AuthLandingBackgroundNative paused={fieldPaused} />
       {hexTunnel ? <AuthHexTunnelOverlayNative /> : null}
       {skipGl ? null : (
         <AuthLandingGlCanvasNative

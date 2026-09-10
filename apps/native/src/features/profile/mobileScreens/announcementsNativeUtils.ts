@@ -42,7 +42,17 @@ export function shouldInjectSyntheticEventAnnouncementNative(
 }
 
 export function buildSyntheticEventAnnouncementItemNative(): AnnouncementListShapeNative {
-  return buildListItemNative(SYNTHETIC_EVENT_NOTICES[0]!);
+  const e = SYNTHETIC_EVENT_NOTICES[0];
+  if (!e) {
+    return {
+      id: "",
+      title: "",
+      type: "event",
+      postedAt: null,
+      pinned: false,
+    };
+  }
+  return buildListItemNative(e);
 }
 
 export function mergeSyntheticEventIntoAnnouncementsNative<

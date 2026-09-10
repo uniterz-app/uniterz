@@ -18,8 +18,16 @@ import {
   authDisplayButton,
 } from "./authEnglishDisplay";
 import type { Language } from "@/lib/i18n/language";
-import { ALL_LANGUAGES, LANGUAGE_NATIVE_NAMES, guessLanguageFromNavigator } from "@/lib/i18n/language";
-import { ui as uiStr } from "@/lib/i18n/ui";
+import {
+  LANGUAGE_NATIVE_NAMES,
+  guessLanguageFromNavigator,
+} from "@/lib/i18n/language";
+import {
+  LOCALIZED_UI_LANGUAGES,
+  resolveLocalizedLang,
+  type LocalizedLang,
+} from "@/lib/i18n/localize";
+import { onboardingWelcomeCopy } from "@/lib/auth/onboardingWelcomeCopy";
 import { saveMeProfile } from "@/lib/api/saveMeProfile";
 import { consumePostOnboardingRedirect } from "@/lib/auth/safeNextRedirect";
 import { LEAGUES } from "@/lib/leagues";
@@ -43,14 +51,15 @@ export default function OnboardingForm({ variant }: Props) {
   }, [variant, pathname]);
 
   const [displayName, setDisplayName] = useState("");
-  const [language, setLanguage] = useState<Language>(() =>
-    guessLanguageFromNavigator()
+  const [language, setLanguage] = useState<LocalizedLang>(() =>
+    resolveLocalizedLang(guessLanguageFromNavigator())
   );
   const [countryCode, setCountryCode] = useState("");
   const [preferredLeague] = useState<PreferredLeague>(LEAGUES.NBA);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
   const [pressed, setPressed] = useState(false);
+  const t = useMemo(() => onboardingWelcomeCopy(language), [language]);
 
   const avatarPreviewUrl = useMemo(() => {
     if (!avatarFile) return null;
@@ -123,39 +132,21 @@ export default function OnboardingForm({ variant }: Props) {
         alert(profileGamblingTermsUserMessage(language));
         return;
       }
-      alert(
-        uiStr(language, {
-          ja: "保存に失敗しました。時間をおいて再度お試しください。",
-          en: "Failed to save. Please try again later.",
-        })
-      );
+      alert(t.saveFail);
     } finally {
       setSaving(false);
     }
   };
 
-  const setupDesc = uiStr(language, {
-    ja: "ユーザーネームと言語を設定すると次へ進めます（必須）",
-    en: "Set your username and language to continue (required)",
-  });
-
   const usernameField = (
     <div className="space-y-1.5">
-      <label className="text-xs font-medium text-white/75">
-        {uiStr(language, {
-          ja: "ユーザーネーム（必須）",
-          en: "Username (required)",
-        })}
-      </label>
+      <label className="text-xs font-medium text-white/75">{t.username}</label>
       <CyberAuthField
         inputProps={{
           type: "text",
           name: "username",
           autoComplete: "username",
-          placeholder: uiStr(language, {
-            ja: "Username",
-            en: "Username",
-          }),
+          placeholder: t.username,
           value: displayName,
           onChange: (e) => setDisplayName(e.target.value),
         }}
@@ -170,19 +161,15 @@ export default function OnboardingForm({ variant }: Props) {
 
   const languageField = (
     <div className="space-y-1.5">
-      <label className="text-xs font-medium text-white/75">
-        {uiStr(language, {
-          ja: "使用言語（必須）",
-          en: "App Language (required)",
-        })}
-      </label>
+      <label className="text-xs font-medium text-white/75">{t.language}</label>
       <CyberAuthSelect
         selectProps={{
           value: language,
-          onChange: (e) => setLanguage(e.target.value as Language),
+          onChange: (e) =>
+            setLanguage(resolveLocalizedLang(e.target.value as Language)),
         }}
       >
-        {ALL_LANGUAGES.map((l) => (
+        {LOCALIZED_UI_LANGUAGES.map((l) => (
           <option key={l} value={l}>
             {LANGUAGE_NATIVE_NAMES[l]}
           </option>
@@ -193,24 +180,14 @@ export default function OnboardingForm({ variant }: Props) {
 
   const countryField = (
     <div className="space-y-1.5">
-      <label className="text-xs font-medium text-white/75">
-        {uiStr(language, {
-          ja: "住んでいる国（任意）",
-          en: "Country (optional)",
-        })}
-      </label>
+      <label className="text-xs font-medium text-white/75">{t.country}</label>
       <CyberAuthSelect
         selectProps={{
           value: countryCode,
           onChange: (e) => setCountryCode(e.target.value),
         }}
       >
-        <option value="">
-          {uiStr(language, {
-            ja: "未設定",
-            en: "Not set",
-          })}
-        </option>
+        <option value="">{t.countryNotSet}</option>
         {COUNTRY_OPTIONS.map((c) => (
           <option key={c.code} value={c.code}>
             {language === "ja" ? c.labelJa : c.labelEn}
@@ -218,16 +195,8 @@ export default function OnboardingForm({ variant }: Props) {
         ))}
       </CyberAuthSelect>
       <p className="mt-1 font-[family-name:var(--font-geist-sans)] text-xs leading-relaxed text-white/60">
-        {uiStr(language, {
-          ja: "国はランキング表示時のフラッグに使用されます。",
-          en: "Country is used for the flag shown on rankings.",
-        })}
-        {countryCode && !selectedCountryHasFlag
-          ? uiStr(language, {
-              ja: "（一部の国は今後フラッグ画像を追加予定）",
-              en: "(Some flags may be added later.)",
-            })
-          : ""}
+        {t.countryHint}
+        {countryCode && !selectedCountryHasFlag ? t.countryFlagLater : ""}
       </p>
     </div>
   );
@@ -281,15 +250,7 @@ export default function OnboardingForm({ variant }: Props) {
         !canSubmit || saving ? "cursor-not-allowed opacity-60" : "cursor-pointer",
       ].join(" ")}
     >
-      {saving
-        ? uiStr(language, {
-            ja: "保存中...",
-            en: "SAVING...",
-          })
-        : uiStr(language, {
-            ja: "次へ",
-            en: "CONTINUE",
-          })}
+      {saving ? t.saving : t.continue}
     </button>
   );
 
@@ -303,13 +264,10 @@ export default function OnboardingForm({ variant }: Props) {
             <aside className="flex flex-col items-center justify-center border-b border-white/10 px-8 py-10 text-center md:border-b-0 md:border-r md:px-10 md:py-12">
               <AuthFormBranding />
               <h1 className={`mt-1 ${authDisplayHeadingLong}`}>PROFILE SETUP</h1>
-              <p className={`mt-3 max-w-[280px] ${bodySans}`}>{setupDesc}</p>
+              <p className={`mt-3 max-w-[280px] ${bodySans}`}>{t.desc}</p>
               <div className="mt-8">{avatarPicker}</div>
               <p className="mt-3 font-[family-name:var(--font-geist-sans)] text-xs text-white/45">
-                {uiStr(language, {
-                  ja: "プロフィール写真（任意）",
-                  en: "Profile photo (optional)",
-                })}
+                {t.pickPhoto}
               </p>
             </aside>
 
@@ -339,7 +297,7 @@ export default function OnboardingForm({ variant }: Props) {
         <div className="relative z-10">
           <AuthFormBranding />
           <h1 className={`mt-1 ${authDisplayHeadingLong}`}>PROFILE SETUP</h1>
-          <p className={`mt-2 ${bodySans}`}>{setupDesc}</p>
+          <p className={`mt-2 ${bodySans}`}>{t.desc}</p>
 
           <div className="mt-4 flex justify-center">{avatarPicker}</div>
 

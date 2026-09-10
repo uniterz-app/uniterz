@@ -21,12 +21,14 @@ import { bindMeReferralNative } from "../profile/referralApiNative";
 import { normalizeReferralInviteCode } from "../../../../../lib/referral/referralInviteCode";
 import { authFormCopy } from "@/lib/auth/authFormCopy";
 import { resolveDeviceLocalizedLang } from "../../i18n/resolveDeviceAppLanguage";
+import { referralBindUserMessage } from "@/lib/referral/referralBindErrorCopy";
 
 export default function SignupScreenNative() {
   const navigation =
     useNavigation<NativeStackNavigationProp<AuthStackParamList>>();
   const route = useRoute<RouteProp<AuthStackParamList, "Signup">>();
-  const copy = useMemo(() => authFormCopy(resolveDeviceLocalizedLang()), []);
+  const uiLang = useMemo(() => resolveDeviceLocalizedLang(), []);
+  const copy = useMemo(() => authFormCopy(uiLang), [uiLang]);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [inviteCode, setInviteCode] = useState(
@@ -67,8 +69,10 @@ export default function SignupScreenNative() {
       if (code) {
         try {
           await bindMeReferralNative(code);
-        } catch {
-          /* bind 失敗でもサインアップは継続 */
+        } catch (e: unknown) {
+          const errCode = e instanceof Error ? e.message : "";
+          const msg = referralBindUserMessage(errCode, uiLang);
+          if (msg) cyberAlert(copy.missingInputTitle, msg);
         }
       }
     } catch (e) {

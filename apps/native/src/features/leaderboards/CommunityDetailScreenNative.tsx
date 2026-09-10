@@ -31,6 +31,8 @@ export default function CommunityDetailScreenNative() {
   const [endConfirmOpen, setEndConfirmOpen] = useState(false);
   const [endConfirmName, setEndConfirmName] = useState("");
   const [endingGroup, setEndingGroup] = useState(false);
+  const [leaveConfirmOpen, setLeaveConfirmOpen] = useState(false);
+  const [leavingGroup, setLeavingGroup] = useState(false);
   const [headerImageEditing, setHeaderImageEditing] = useState(false);
 
   const getIdToken = useCallback(() => {
@@ -58,6 +60,32 @@ export default function CommunityDetailScreenNative() {
       navigation.goBack();
     } finally {
       setEndingGroup(false);
+    }
+  }, [groupId, language, getIdToken, navigation]);
+
+  const confirmLeaveGroup = useCallback(async () => {
+    const h = await communityAuthHeader(getIdToken);
+    if (!h) {
+      cyberAlert("", language === "en" ? "Sign in required." : "ログインが必要です。");
+      return;
+    }
+    setLeavingGroup(true);
+    try {
+      const res = await fetch(communityApiUrl(`/api/communities/${groupId}/leave`), {
+        method: "POST",
+        headers: { Authorization: h },
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json?.ok) {
+        cyberAlert("", String(json?.error ?? "failed"));
+        return;
+      }
+      setLeaveConfirmOpen(false);
+      cyberAlert("", language === "en" ? "Left group." : "退会しました。");
+      invalidateCommunityGroupDetail(groupId);
+      navigation.goBack();
+    } finally {
+      setLeavingGroup(false);
     }
   }, [groupId, language, getIdToken, navigation]);
 
@@ -102,6 +130,7 @@ export default function CommunityDetailScreenNative() {
                 setEndConfirmName(name);
                 setEndConfirmOpen(true);
               }}
+              onRequestLeave={() => setLeaveConfirmOpen(true)}
               onImageUpdated={() => {
                 invalidateCommunityGroupDetail(groupId);
               }}
@@ -129,7 +158,65 @@ export default function CommunityDetailScreenNative() {
         }}
         onConfirm={() => void confirmEndGroup()}
       />
+
+      <LeaveGroupConfirmModalNative
+        visible={leaveConfirmOpen}
+        groupName={endConfirmName}
+        language={language}
+        busy={leavingGroup}
+        onCancel={() => {
+          if (!leavingGroup) setLeaveConfirmOpen(false);
+        }}
+        onConfirm={() => void confirmLeaveGroup()}
+      />
     </>
+  );
+}
+
+function LeaveGroupConfirmModalNative({
+  visible,
+  groupName,
+  language,
+  busy,
+  onCancel,
+  onConfirm,
+}: {
+  visible: boolean;
+  groupName?: string;
+  language: Language;
+  busy: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  const title = language === "en" ? "Leave this group?" : "このグループから退会しますか？";
+  const body =
+    language === "en"
+      ? `You will leave "${groupName ?? "this group"}".`
+      : `「${groupName ?? "このグループ"}」から退会します。`;
+
+  return (
+    <CommunityModalBackdropNative visible={visible} onClose={busy ? () => {} : onCancel}>
+      <Text style={modalStyles.title}>{title}</Text>
+      <Text style={modalStyles.body}>{body}</Text>
+      <View style={modalStyles.actions}>
+        <Pressable
+          disabled={busy}
+          onPress={onCancel}
+          style={({ pressed }) => [modalStyles.cancelBtn, pressed && communityPressableTapStyle(true)]}
+        >
+          <Text style={modalStyles.cancelText}>{language === "en" ? "Cancel" : "キャンセル"}</Text>
+        </Pressable>
+        <Pressable
+          disabled={busy}
+          onPress={onConfirm}
+          style={({ pressed }) => [modalStyles.confirmBtn, pressed && communityPressableTapStyle(true)]}
+        >
+          <Text style={modalStyles.confirmText}>
+            {busy ? "…" : language === "en" ? "Leave" : "退会する"}
+          </Text>
+        </Pressable>
+      </View>
+    </CommunityModalBackdropNative>
   );
 }
 

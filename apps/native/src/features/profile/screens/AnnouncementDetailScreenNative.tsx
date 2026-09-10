@@ -280,7 +280,7 @@ const styles = StyleSheet.create({
   hero: {
     width: "100%",
     height: 192,
-    borderRadius: 12,
+    borderRadius: 0,
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.1)",
     marginBottom: 12,
@@ -293,7 +293,7 @@ const styles = StyleSheet.create({
   body: { color: "rgba(248,250,252,0.9)", fontSize: 15, lineHeight: 23, marginTop: 12 },
   eventBox: {
     marginTop: 14,
-    borderRadius: 12,
+    borderRadius: 0,
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.1)",
     backgroundColor: "rgba(18,8,24,0.72)",

@@ -2,7 +2,7 @@
  * GET STARTED 直後の同意ゲート。
  * 利用規約・プライバシーの両方にチェックしてから登録画面へ進む。
  * 本文は別スタックに出さず、ゲート内で開いて BACK で戻る。
- * 言語: 端末設定が日本語なら ja、それ以外は en。
+ * UI 文言: Signup と同じ端末ロケール 7 言語。本文は ja/en のみ。
  */
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -24,6 +24,10 @@ import ProfileBackEdgeHandleNative from "../profile/ProfileBackEdgeHandleNative"
 import LegalDocumentNative from "../legal/LegalDocumentNative";
 import { AUTH_LANDING } from "./authLandingPalette";
 import {
+  authLegalConsentCopy,
+  legalBodyLang,
+} from "@/lib/auth/authLegalConsentCopy";
+import {
   PRIVACY_FOOTER,
   PRIVACY_INTRO,
   PRIVACY_PREAMBLE,
@@ -37,10 +41,7 @@ import {
   TERMS_SECTIONS,
   TERMS_UPDATED_AT,
 } from "@/lib/legal/termsCopy";
-import {
-  resolveDeviceAppLanguage,
-  type NativeAppLanguage,
-} from "../../i18n/resolveDeviceAppLanguage";
+import { resolveDeviceLocalizedLang } from "../../i18n/resolveDeviceAppLanguage";
 
 type Props = {
   visible: boolean;
@@ -49,61 +50,6 @@ type Props = {
 };
 
 type DocKind = "terms" | "privacy";
-
-const COPY: Record<
-  NativeAppLanguage,
-  {
-    title: string;
-    message: string;
-    termsAgree: string;
-    privacyAgree: string;
-    openLink: string;
-    openTermsA11y: string;
-    openPrivacyA11y: string;
-    back: string;
-    continue: string;
-    closeA11y: string;
-    backToConsentA11y: string;
-    termsTitle: string;
-    privacyTitle: string;
-    lastUpdated: string;
-  }
-> = {
-  ja: {
-    title: "利用規約とプライバシーポリシーに同意しますか？",
-    message:
-      "アカウントを作成する前に、内容をご確認ください。両方に同意すると登録画面へ進みます。",
-    termsAgree: "利用規約に同意する",
-    privacyAgree: "プライバシーポリシーに同意する",
-    openLink: "内容を見る",
-    openTermsA11y: "利用規約を開く",
-    openPrivacyA11y: "プライバシーポリシーを開く",
-    back: "戻る",
-    continue: "同意して続ける",
-    closeA11y: "閉じる",
-    backToConsentA11y: "同意画面に戻る",
-    termsTitle: "利用規約",
-    privacyTitle: "プライバシーポリシー",
-    lastUpdated: "最終更新: ",
-  },
-  en: {
-    title: "Agree to the Terms of Use and Privacy Policy?",
-    message:
-      "Please review both documents before creating an account. Agreeing to both continues to registration.",
-    termsAgree: "I agree to the Terms of Use",
-    privacyAgree: "I agree to the Privacy Policy",
-    openLink: "View",
-    openTermsA11y: "Open Terms of Use",
-    openPrivacyA11y: "Open Privacy Policy",
-    back: "Back",
-    continue: "Agree & continue",
-    closeA11y: "Close",
-    backToConsentA11y: "Back to consent",
-    termsTitle: "Terms of Use",
-    privacyTitle: "Privacy Policy",
-    lastUpdated: "Last updated: ",
-  },
-};
 
 function CheckRow({
   checked,
@@ -154,8 +100,9 @@ export default function AuthLegalConsentGateNative({
   onAgree,
 }: Props) {
   const { height } = useWindowDimensions();
-  const lang = useMemo(() => resolveDeviceAppLanguage(), []);
-  const t = COPY[lang];
+  const uiLang = useMemo(() => resolveDeviceLocalizedLang(), []);
+  const t = useMemo(() => authLegalConsentCopy(uiLang), [uiLang]);
+  const bodyLang = legalBodyLang(uiLang);
   const [termsOk, setTermsOk] = useState(false);
   const [privacyOk, setPrivacyOk] = useState(false);
   const [doc, setDoc] = useState<DocKind | null>(null);
@@ -171,7 +118,8 @@ export default function AuthLegalConsentGateNative({
   if (!visible) return null;
 
   const docTitle = doc === "privacy" ? t.privacyTitle : t.termsTitle;
-  const docIntro = doc === "privacy" ? PRIVACY_INTRO[lang] : TERMS_INTRO[lang];
+  const docIntro =
+    doc === "privacy" ? PRIVACY_INTRO[bodyLang] : TERMS_INTRO[bodyLang];
   const docUpdated = doc === "privacy" ? PRIVACY_UPDATED_AT : TERMS_UPDATED_AT;
 
   return (
@@ -196,12 +144,18 @@ export default function AuthLegalConsentGateNative({
             >
               <Text style={styles.docIntro}>{docIntro}</Text>
               <LegalDocumentNative
-                language={lang}
+                language={bodyLang}
                 preamble={
-                  doc === "terms" ? TERMS_PREAMBLE[lang] : PRIVACY_PREAMBLE[lang]
+                  doc === "terms"
+                    ? TERMS_PREAMBLE[bodyLang]
+                    : PRIVACY_PREAMBLE[bodyLang]
                 }
                 sections={doc === "privacy" ? PRIVACY_SECTIONS : TERMS_SECTIONS}
-                footer={doc === "terms" ? TERMS_FOOTER[lang] : PRIVACY_FOOTER[lang]}
+                footer={
+                  doc === "terms"
+                    ? TERMS_FOOTER[bodyLang]
+                    : PRIVACY_FOOTER[bodyLang]
+                }
                 showIndex={false}
               />
             </ScrollView>
