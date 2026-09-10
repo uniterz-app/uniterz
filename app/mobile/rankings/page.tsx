@@ -508,6 +508,8 @@ export default function MobileRankingsPage() {
                 language={language}
                 countryCode={countryCode}
                 className="px-1"
+                showUnitRewards
+                rankingPeriod={rankingPeriod}
               />
               <RankingsMetricRow
                 metrics={metricItems}

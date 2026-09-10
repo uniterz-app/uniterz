@@ -59,6 +59,7 @@ import {
 } from "./RankingsUiParts";
 import { RankingsPeriodTabsNative } from "./RankingsPeriodTabsNative";
 import { RankingsPeriodLabelNavNative } from "./RankingsPeriodLabelNavNative";
+import PeriodRankingUnitRewardsSheetNative from "./PeriodRankingUnitRewardsSheetNative";
 import RankingsListEntranceRowNative from "./RankingsListEntranceRowNative";
 import { useNativeMyRankProgress } from "./useNativeMyRankProgress";
 import { useNativeMyRankCardFast } from "./useNativeMyRankCardFast";
@@ -518,9 +519,18 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
           />
         ) : category === "playoffs" ? (
           <>
-            <Text style={styles.scheduleNoticeInline} maxFontSizeMultiplier={1.1}>
-              {scheduleNoticeForUser(language, user.countryCode)}
-            </Text>
+            <View style={styles.scheduleNoticeRow}>
+              <Text
+                style={[styles.scheduleNoticeInline, styles.scheduleNoticeText]}
+                maxFontSizeMultiplier={1.1}
+              >
+                {scheduleNoticeForUser(language, user.countryCode)}
+              </Text>
+              <PeriodRankingUnitRewardsSheetNative
+                language={language}
+                rankingPeriod={rankingPeriod}
+              />
+            </View>
             <View style={styles.metricRowWrap}>
               <RankingsMetricRowNative
                 metrics={metricItems}
@@ -666,6 +676,21 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 10,
+  },
+  scheduleNoticeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 4,
+    marginTop: 10,
+    marginBottom: 2,
+  },
+  scheduleNoticeText: {
+    flex: 1,
+    minWidth: 0,
+    marginTop: 0,
+    marginBottom: 0,
+    paddingHorizontal: 0,
   },
   scheduleNoticeInline: {
     textAlign: "center",

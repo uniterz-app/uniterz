@@ -482,6 +482,8 @@ export default function WebRankingsShell() {
               language={language}
               countryCode={countryCode}
               className="px-1"
+              showUnitRewards
+              rankingPeriod={rankingPeriod}
             />
             <RankingsMetricRow
               metrics={visibleMetrics}
