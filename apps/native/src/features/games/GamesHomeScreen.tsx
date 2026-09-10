@@ -24,7 +24,8 @@ import {
 } from "firebase/firestore";
 import { LinearGradient } from "expo-linear-gradient";
 import { colors, radius, spacing, typography } from "../../theme/tokens";
-import { TIMEZONE_JST, toDateKeyInTimeZone } from "../../utils/date";
+import { toDateKeyInTimeZone } from "../../utils/date";
+import { resolveUserTimezone } from "../../../../../lib/i18n/countryTimezone";
 import {
   parseDateKeyInTimeZone,
   shiftCalendarMonthStart,
@@ -240,10 +241,9 @@ import { displayNbaRoundLabel } from "../../../../../lib/games/displayNbaRoundLa
 
 function formatKickoffTime(
   startAt: Date | null,
-  language: Language | string
+  timeZone: string
 ): string {
   if (!startAt) return "--:--";
-  const timeZone = language === "ja" ? "Asia/Tokyo" : "America/New_York";
   const parts = new Intl.DateTimeFormat("en-GB", {
     timeZone,
     hour: "2-digit",
@@ -258,10 +258,10 @@ function formatKickoffTime(
 /** Web `MatchCard` の `fmtKickoffDateTime` 相当 */
 function formatKickoffDateTime(
   startAt: Date | null,
-  language: Language | string
+  language: Language | string,
+  timeZone: string
 ): string {
   if (!startAt) return "--:--";
-  const timeZone = language === "ja" ? "Asia/Tokyo" : "America/New_York";
   const locale = DATE_LOCALE[normalizeLanguage(language) ?? "en"];
   return startAt.toLocaleString(locale, {
     timeZone,
@@ -292,7 +292,8 @@ function isEffectiveLive(game: Record<string, unknown>): boolean {
  */
 function getGameCardCenterBlock(
   game: Record<string, unknown>,
-  language: Language | string
+  language: Language | string,
+  timeZone: string
 ): GameCardCenterBlock {
   const texts = getGamesTexts(language);
   const status = resolveGameStatus(game);
@@ -321,15 +322,16 @@ function getGameCardCenterBlock(
   }
   return {
     variant: "time",
-    time: formatKickoffTime(startAt, language),
+    time: formatKickoffTime(startAt, timeZone),
   };
 }
 
 function renderCenterText(
   game: Record<string, unknown>,
-  language: Language | string
+  language: Language | string,
+  timeZone: string
 ): string {
-  const b = getGameCardCenterBlock(game, language);
+  const b = getGameCardCenterBlock(game, language, timeZone);
   if (b.variant === "score") {
     return `${b.home} – ${b.away}`;
   }
@@ -720,8 +722,13 @@ export default function GamesHomeScreen({
   const [myPredictionsReloadNonce, setMyPredictionsReloadNonce] = useState(0);
   const [countdownNowMs, setCountdownNowMs] = useState(() => Date.now());
   const [userDisplayName, setUserDisplayName] = useState("");
-  const { language } = useNativeUserLanguageFromAuth();
+  const { language, countryCode } = useNativeUserLanguageFromAuth();
   const gamesLanguage = useMemo(() => toNativeGamesLanguage(language), [language]);
+  /** 登録国の代表 TZ。未登録時は言語フォールバック */
+  const dayTimeZone = useMemo(
+    () => resolveUserTimezone(countryCode, language),
+    [countryCode, language]
+  );
   /** ロード完了直後の日付チップのみ入場アニメ（窓移動での再マウント連打を防ぐ） */
   const [dayStripEntranceEnabled, setDayStripEntranceEnabled] = useState(true);
   const {
@@ -738,7 +745,7 @@ export default function GamesHomeScreen({
     setSelectedLeague,
     goPrevDay,
     goNextDay,
-  } = useTodayGames({ enabled: true });
+  } = useTodayGames({ enabled: true, timeZone: dayTimeZone });
   const reduceMotion = useReducedMotion() ?? false;
   const { teams: scheduleTeams, nameById: teamNameById } =
     useScheduleTeamsNative(selectedLeague);
@@ -755,7 +762,8 @@ export default function GamesHomeScreen({
   const dateKeysForDayStrip = useMemo(() => {
     if (!filterActive) return dateKeysWithGames;
     return sortedUniqueDateKeysFromRows(
-      applyNativeGamesFilter(peerGamesForSeries, gamesFilter, teamNameById)
+      applyNativeGamesFilter(peerGamesForSeries, gamesFilter, teamNameById),
+      dayTimeZone
     );
   }, [
     filterActive,
@@ -763,6 +771,7 @@ export default function GamesHomeScreen({
     peerGamesForSeries,
     gamesFilter,
     teamNameById,
+    dayTimeZone,
   ]);
   const leagueHeaderLabel = LEAGUE_HEADER_LABEL.nba;
 
@@ -1003,7 +1012,7 @@ export default function GamesHomeScreen({
     const awayCompact = toCompactTeamName(g.league, awayName);
     const homeRecord = formatSideRecord(g.home, g.league);
     const awayRecord = formatSideRecord(g.away, g.league);
-    const centerBlock = getGameCardCenterBlock(g, language);
+    const centerBlock = getGameCardCenterBlock(g, language, dayTimeZone);
     const seriesLabel = resolveNativeSeriesLabel(g, peerGamesForSeries);
     const seriesPair = resolveNativeSeriesPair(g, peerGamesForSeries);
     const roundLabelRaw = g.roundLabel;
@@ -1044,7 +1053,7 @@ export default function GamesHomeScreen({
       new Date(ms).toLocaleString(
         DATE_LOCALE[normalizeLanguage(language) ?? "en"],
         {
-          timeZone: language === "ja" ? "Asia/Tokyo" : "America/New_York",
+          timeZone: dayTimeZone,
         }
       ),
     [language]
@@ -1081,7 +1090,7 @@ export default function GamesHomeScreen({
   /** Web `gameDaysForStrip` 相当: 取得窓の試合日をそのまま出す（月で切らない） */
   const dayStripDates = useMemo(() => {
     const parsed = dateKeysForDayStrip
-      .map((key) => parseDateKeyInTimeZone(key, TIMEZONE_JST))
+      .map((key) => parseDateKeyInTimeZone(key, dayTimeZone))
       .filter((d): d is Date => d != null);
     if (parsed.length === 0) {
       return [startOfLocalDay(selectedDate)];
@@ -1098,19 +1107,19 @@ export default function GamesHomeScreen({
   useEffect(() => {
     let cancelled = false;
     setAdjacentMonthHasGames((s) => ({ ...s, loading: true }));
-    const prevAnchor = shiftCalendarMonthStart(selectedDate, -1, TIMEZONE_JST);
-    const nextAnchor = shiftCalendarMonthStart(selectedDate, 1, TIMEZONE_JST);
+    const prevAnchor = shiftCalendarMonthStart(selectedDate, -1, dayTimeZone);
+    const nextAnchor = shiftCalendarMonthStart(selectedDate, 1, dayTimeZone);
     void Promise.all([
       fetchMonthHasGames({
         league: selectedLeague,
         monthAnchor: prevAnchor,
-        timeZone: TIMEZONE_JST,
+        timeZone: dayTimeZone,
         apiBaseUrl: getUniterzApiBaseUrl(),
       }),
       fetchMonthHasGames({
         league: selectedLeague,
         monthAnchor: nextAnchor,
-        timeZone: TIMEZONE_JST,
+        timeZone: dayTimeZone,
         apiBaseUrl: getUniterzApiBaseUrl(),
       }),
     ])
@@ -1240,7 +1249,7 @@ export default function GamesHomeScreen({
       homeTitle: scoreboardTeamLabelForNextModal(g.league, homeN, language),
       awayTitle: scoreboardTeamLabelForNextModal(g.league, awayN, language),
       deckLabel: broadcastDeckTitleForNextModal(language, seasonPhase, roundLabel),
-      kickoff: formatKickoffTime(resolveGameStartAt(g), language),
+      kickoff: formatKickoffTime(resolveGameStartAt(g), dayTimeZone),
       homePalette: resolveTeamJerseyPalette(g.league, g.home, "#ff6b8a"),
       awayPalette: resolveTeamJerseyPalette(g.league, g.away, "#5aa4ff"),
       homeRecordLine: formatSideRecord(g.home, g.league),
@@ -1524,7 +1533,7 @@ export default function GamesHomeScreen({
       ]),
     [gamesFilter]
   );
-  const selectedDayKey = toDateKeyInTimeZone(selectedDate, TIMEZONE_JST);
+  const selectedDayKey = toDateKeyInTimeZone(selectedDate, dayTimeZone);
   const { scheduleBlockKey, listShellIntro, richScheduleMotion } =
     useGamesListShellIntro({
       reduceMotion,
@@ -1586,12 +1595,12 @@ export default function GamesHomeScreen({
       tutorialNearestFetchRef.current = null;
       return;
     }
-    const todayKey = toDateKeyInTimeZone(today, TIMEZONE_JST);
-    const current = toDateKeyInTimeZone(selectedDate, TIMEZONE_JST);
+    const todayKey = toDateKeyInTimeZone(today, dayTimeZone);
+    const current = toDateKeyInTimeZone(selectedDate, dayTimeZone);
     if (filteredGames.length === 0) {
       const memoryNearest = pickNearestDateKey(todayKey, dateKeysForDayStrip);
       if (memoryNearest && memoryNearest !== current) {
-        const next = parseDateKeyInTimeZone(memoryNearest, TIMEZONE_JST);
+        const next = parseDateKeyInTimeZone(memoryNearest, dayTimeZone);
         if (next) setSelectedDate(next);
       }
     }
@@ -1603,22 +1612,22 @@ export default function GamesHomeScreen({
       try {
         const apiDay = await fetchNearestGameDayToLocalDay({
           league: selectedLeague,
-          timeZone: TIMEZONE_JST,
+          timeZone: dayTimeZone,
           day: today,
           apiBaseUrl: getUniterzApiBaseUrl(),
         });
         if (cancelled) return;
         const apiKey = apiDay
-          ? toDateKeyInTimeZone(apiDay, TIMEZONE_JST)
+          ? toDateKeyInTimeZone(apiDay, dayTimeZone)
           : null;
         const nearest = pickNearestDateKey(todayKey, [
           ...dateKeysForDayStrip,
           ...(apiKey ? [apiKey] : []),
         ]);
         if (!nearest) return;
-        const selectedKey = toDateKeyInTimeZone(selectedDate, TIMEZONE_JST);
+        const selectedKey = toDateKeyInTimeZone(selectedDate, dayTimeZone);
         if (nearest === selectedKey) return;
-        const next = parseDateKeyInTimeZone(nearest, TIMEZONE_JST);
+        const next = parseDateKeyInTimeZone(nearest, dayTimeZone);
         if (next) setSelectedDate(next);
       } catch {
         /* 最寄り探索失敗でも案内は続ける */
@@ -1648,14 +1657,14 @@ export default function GamesHomeScreen({
     if (dayStripDates.length === 0) return;
     skipAutoAdvanceRef.current = true;
     suppressAutoAdvanceForTodayRef.current = true;
-    const monthPrefix = toDateKeyInTimeZone(selectedDate, TIMEZONE_JST).slice(0, 7);
+    const monthPrefix = toDateKeyInTimeZone(selectedDate, dayTimeZone).slice(0, 7);
     const sorted = [...dayStripDates].sort((a, b) => a.getTime() - b.getTime());
-    const todayKey = toDateKeyInTimeZone(today, TIMEZONE_JST);
+    const todayKey = toDateKeyInTimeZone(today, dayTimeZone);
     const inMonth = sorted.filter((d) =>
-      toDateKeyInTimeZone(d, TIMEZONE_JST).startsWith(monthPrefix)
+      toDateKeyInTimeZone(d, dayTimeZone).startsWith(monthPrefix)
     );
     const pick =
-      inMonth.find((d) => toDateKeyInTimeZone(d, TIMEZONE_JST) >= todayKey) ??
+      inMonth.find((d) => toDateKeyInTimeZone(d, dayTimeZone) >= todayKey) ??
       inMonth[inMonth.length - 1];
     if (pick) setSelectedDate(pick);
   }
@@ -1664,14 +1673,14 @@ export default function GamesHomeScreen({
     skipAutoAdvanceRef.current = true;
     suppressAutoAdvanceForTodayRef.current = true;
     if (adjacentMonthHasGames.loading) return;
-    setSelectedDate(shiftCalendarMonthStart(selectedDate, -1, TIMEZONE_JST));
+    setSelectedDate(shiftCalendarMonthStart(selectedDate, -1, dayTimeZone));
   }
 
   function goNextMonth() {
     skipAutoAdvanceRef.current = true;
     suppressAutoAdvanceForTodayRef.current = true;
     if (adjacentMonthHasGames.loading) return;
-    setSelectedDate(shiftCalendarMonthStart(selectedDate, 1, TIMEZONE_JST));
+    setSelectedDate(shiftCalendarMonthStart(selectedDate, 1, dayTimeZone));
   }
 
   function goPrevGameDay() {
@@ -1679,10 +1688,10 @@ export default function GamesHomeScreen({
     suppressAutoAdvanceForTodayRef.current = true;
     const keys = dateKeysForDayStrip;
     if (keys.length > 0) {
-      const current = toDateKeyInTimeZone(selectedDate, TIMEZONE_JST);
+      const current = toDateKeyInTimeZone(selectedDate, dayTimeZone);
       const idx = keys.indexOf(current);
       if (idx > 0) {
-        setSelectedDate(parseDateKeyInTimeZone(keys[idx - 1]!, TIMEZONE_JST)!);
+        setSelectedDate(parseDateKeyInTimeZone(keys[idx - 1]!, dayTimeZone)!);
         return;
       }
       return;
@@ -1695,10 +1704,10 @@ export default function GamesHomeScreen({
     suppressAutoAdvanceForTodayRef.current = true;
     const keys = dateKeysForDayStrip;
     if (keys.length > 0) {
-      const current = toDateKeyInTimeZone(selectedDate, TIMEZONE_JST);
+      const current = toDateKeyInTimeZone(selectedDate, dayTimeZone);
       const idx = keys.indexOf(current);
       if (idx >= 0 && idx < keys.length - 1) {
-        setSelectedDate(parseDateKeyInTimeZone(keys[idx + 1]!, TIMEZONE_JST)!);
+        setSelectedDate(parseDateKeyInTimeZone(keys[idx + 1]!, dayTimeZone)!);
         return;
       }
       return;
@@ -1760,7 +1769,7 @@ export default function GamesHomeScreen({
     if (!selectedGame) return null;
     if (resolveGameStatus(selectedGame) !== "scheduled") return null;
     const startAt = resolveGameStartAt(selectedGame);
-    const kickoffValue = formatKickoffDateTime(startAt, language);
+    const kickoffValue = formatKickoffDateTime(startAt, language, dayTimeZone);
     const gameId = String(selectedGame.id ?? "");
     const broadcastLabels =
       selectedLeague === "wc"
@@ -2290,8 +2299,8 @@ export default function GamesHomeScreen({
     void openPredictModalRef.current(game);
   }, []);
   const getGameCardCenterBlockForList = useCallback(
-    (game: Record<string, unknown>) => getGameCardCenterBlock(game, language),
-    [language]
+    (game: Record<string, unknown>) => getGameCardCenterBlock(game, language, dayTimeZone),
+    [language, dayTimeZone]
   );
   const cardListStyles = useMemo(
     () => ({ ...styles, ...gameCardListStyles }),
@@ -2487,7 +2496,7 @@ export default function GamesHomeScreen({
         <GamesDateNavigatorNative
           dates={dayStripDates}
           selectedDate={selectedDate}
-          timeZone={TIMEZONE_JST}
+          timeZone={dayTimeZone}
           language={language}
           onSelectDate={selectDateManually}
           onPrevMonth={goPrevMonth}
@@ -2550,7 +2559,9 @@ export default function GamesHomeScreen({
         toCompactTeamName={toCompactTeamName}
         resolveGameTeamName={resolveGameTeamName}
         resolveTeamPrimaryColor={resolveTeamPrimaryColor}
-        renderCenterText={renderCenterText}
+        renderCenterText={(game, lang) =>
+          renderCenterText(game, lang, dayTimeZone)
+        }
         renderStatusLabel={renderStatusLabel}
         resolveGameStartAt={resolveGameStartAt}
         resolveGameStatus={resolveGameStatus}

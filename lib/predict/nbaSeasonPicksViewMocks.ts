@@ -59,12 +59,12 @@ export const MOCK_SUBMITTED_STANDINGS: NbaSeasonStandingsPrediction = {
 export const MOCK_SUBMITTED_AWARDS: NbaSeasonAwardsPrediction = {
   season: "2026-27",
   picks: {
-    mvp: "p-jokic",
-    dpoy: "p-wembanyama",
-    roy: "p-flage",
-    mip: "p-cade",
-    sixth: "p-reed",
-    coy: "p-shai",
+    mvp: "56677822",
+    dpoy: "56677822",
+    roy: "1091339280",
+    mip: "56677823",
+    sixth: "1057262518",
+    coy: "73",
     coty: "c-daigneault",
   },
 };

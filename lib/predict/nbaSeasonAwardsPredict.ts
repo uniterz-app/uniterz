@@ -2,8 +2,8 @@
  * NBA シーズンアワード予想 — 型・検索（本番は API 選手名簿接続後）
  *
  * 選手ピッカー仕様（確定）:
- * - 入力なし / フォーカス直後: 他ユーザーが多く選んでいる候補を最大 5 人（人気ピック）
- * - 入力あり: 前方一致サジェスト（N → NI → NIK …）。選手名簿は API 契約後に取得
+ * - 入力なし / フォーカス直後: 運営指定の候補を最大 5 人（`seasonAwardsCuratedPopular`）
+ * - 入力あり: 前方一致サジェスト。名簿は team-rosters（全アクティブ選手）
  * - 採点: `seasonPredictScoring`（確定）
  */
 import { L, type LocalizedLang } from "@/lib/i18n/localize";
@@ -224,7 +224,7 @@ export function normalizeAwardQuery(q: string): string {
 export function filterAwardCandidatesByPrefix(
   candidates: readonly NbaAwardCandidate[],
   query: string,
-  limit = 12
+  limit = 500
 ): NbaAwardCandidate[] {
   const q = normalizeAwardQuery(query);
   if (!q) return [];
@@ -248,7 +248,7 @@ export function filterAwardCandidatesByPrefix(
   return scored.slice(0, limit).map((x) => x.c);
 }
 
-/** 入力なし時: 人気ピック最大 5（他ユーザー選択集計。本番は API） */
+/** 入力なし時: 運営指定の候補最大 5 */
 export const AWARD_POPULAR_PICK_LIMIT = 5;
 
 export function popularAwardPicks(

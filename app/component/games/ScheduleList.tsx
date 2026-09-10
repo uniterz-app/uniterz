@@ -42,6 +42,7 @@ import type { PredictionPostV2 } from "@/types/prediction-post-v2";
 import type { NbaTopScorerPick } from "@/lib/nba/topScorer";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
+import { resolveUserTimezone } from "@/lib/i18n/countryTimezone";
 import { t } from "@/lib/i18n/t";
 import { L, resolveLocalizedLang } from "@/lib/i18n/localize";
 import { CyberNoDataPage } from "@/app/component/common/CyberNoDataLabel";
@@ -236,8 +237,12 @@ export default function ScheduleList({
     pathname?.startsWith("/mobile") || pathname?.startsWith("/m/");
 
   const { fUser: user } = useFirebaseUser();
-  const { language } = useUserLanguage(user?.uid ?? null);
+  const { language, countryCode } = useUserLanguage(user?.uid ?? null);
   const m = t(language);
+  const kickoffTimeZone = useMemo(
+    () => resolveUserTimezone(countryCode, language),
+    [countryCode, language]
+  );
 
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   const scrollYRef = useRef(0);
@@ -887,6 +892,7 @@ export default function ScheduleList({
                 <MatchCard
                   {...overlayGameProps}
                   language={language}
+                  timeZone={kickoffTimeZone}
                   resultPost={overlayResultPost}
                   userPredictionWinner={overlayUserPredictionWinner}
                   overlayGoalScorerPick={overlayGoalScorerPick}
@@ -1092,6 +1098,7 @@ export default function ScheduleList({
             : undefined
         }
         language={language}
+        timeZone={kickoffTimeZone}
         className={
           hideListCardForOverlay ? "invisible select-none" : undefined
         }

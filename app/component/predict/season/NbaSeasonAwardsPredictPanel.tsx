@@ -13,10 +13,10 @@ import {
   type NbaAwardId,
   type NbaSeasonAwardsPrediction,
 } from "@/lib/predict/nbaSeasonAwardsPredict";
-import {
-  awardsPreviewCatalog,
-  AWARDS_PREVIEW_POPULAR,
-} from "@/lib/predict/nbaSeasonAwardsPreviewMocks";
+import { AWARDS_PREVIEW_COACHES } from "@/lib/predict/nbaSeasonAwardsPreviewMocks";
+import { SEASON_AWARDS_CURATED_POPULAR } from "@/lib/predict/seasonAwardsCuratedPopular";
+import { seasonAwardsCatalogForAward } from "@/lib/predict/seasonAwardsCatalogFromRosters";
+import { useSeasonAwardsPlayerCatalog } from "@/lib/predict/useSeasonAwardsPlayerCatalog";
 import { nameOxanium } from "@/lib/fonts";
 import type { UiStrings } from "@/lib/i18n/ui";
 import { awardName } from "@/lib/predict/nbaSeasonAwardsPredict";
@@ -35,43 +35,49 @@ type Props = {
   language?: SeasonPredictUiLang;
 };
 
-function findInCatalog(
-  id: string | null | undefined,
-  catalog: readonly NbaAwardCandidate[]
-): NbaAwardCandidate | null {
-  if (!id) return null;
-  return catalog.find((c) => c.id === id) ?? null;
-}
-
 function AwardPickRow({
   awardId,
   labelEn,
   name,
   kind,
+  selected,
   selectedId,
   onSelect,
   language,
+  catalog,
 }: {
   awardId: NbaAwardId;
   labelEn: string;
   name: UiStrings;
   kind: "player" | "coach";
+  selected: NbaAwardCandidate | null;
   selectedId: string | null | undefined;
   onSelect: (id: string | null) => void;
   language: SeasonPredictUiLang;
+  catalog: readonly NbaAwardCandidate[];
 }) {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
-  const catalog = awardsPreviewCatalog(kind);
-  const selected = findInCatalog(selectedId, catalog);
+  const placeholder =
+    awardId === "roy"
+      ? "Rookie name…"
+      : kind === "coach"
+        ? "Coach name…"
+        : "Player name…";
 
   const suggestions = useMemo(() => {
+    if (selectedId) return [];
     const trimmed = query.trim();
     if (!trimmed) {
-      return popularAwardPicks(AWARDS_PREVIEW_POPULAR[awardId], catalog);
+      // COTY: HC は知名度差が大きいので全30人を出す
+      if (awardId === "coty") return [...catalog];
+      return popularAwardPicks(
+        SEASON_AWARDS_CURATED_POPULAR[awardId],
+        catalog
+      );
     }
     return filterAwardCandidatesByPrefix(catalog, trimmed);
-  }, [awardId, catalog, query]);
+  }, [awardId, catalog, query, selectedId]);
 
   return (
     <li className="border border-white/12 bg-white/[0.02] px-3 py-2.5">
@@ -110,9 +116,18 @@ function AwardPickRow({
             type="button"
             className={[
               nameOxanium.className,
-              "shrink-0 text-[9px] font-bold uppercase tracking-[0.12em] text-white/45 hover:text-white/70",
+              "shrink-0 touch-manipulation px-2.5 py-2 text-[9px] font-bold uppercase tracking-[0.12em] text-white/45 hover:text-white/70 active:text-white/90",
             ].join(" ")}
-            onClick={() => {
+            onPointerDown={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onSelect(null);
+              setQuery("");
+              setOpen(false);
+            }}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
               onSelect(null);
               setQuery("");
               setOpen(false);
@@ -121,12 +136,65 @@ function AwardPickRow({
             Clear
           </button>
         </div>
+      ) : awardId === "coty" ? (
+        <div>
+          <button
+            type="button"
+            onClick={() => setOpen((v) => !v)}
+            className={[
+              nameOxanium.className,
+              "w-full border border-white/15 bg-[rgba(4,10,16,0.9)] px-2.5 py-2.5 text-left text-base font-bold tracking-wide text-white/25 outline-none",
+            ].join(" ")}
+          >
+            {open ? "Tap to close list…" : "Select head coach…"}
+          </button>
+          {open ? (
+            <div className="relative z-10 mt-1 max-h-80 w-full overflow-y-auto border border-white/12 bg-[rgba(6,10,16,0.98)] shadow-[0_12px_28px_rgba(0,0,0,0.45)]">
+              <p
+                className={[
+                  nameOxanium.className,
+                  "border-b border-white/8 px-2.5 py-1.5 text-[8px] font-extrabold uppercase tracking-[0.14em] text-white/35",
+                ].join(" ")}
+              >
+                All head coaches · 30
+              </p>
+              <ul>
+                {suggestions.map((c) => (
+                  <li key={c.id}>
+                    <button
+                      type="button"
+                      className="flex w-full items-center justify-between gap-2 px-2.5 py-2 text-left hover:bg-amber-300/10"
+                      onClick={() => {
+                        onSelect(c.id);
+                        setOpen(false);
+                      }}
+                    >
+                      <span
+                        className={[
+                          nameOxanium.className,
+                          "text-[12px] font-bold uppercase tracking-[0.03em] text-white/90",
+                        ].join(" ")}
+                      >
+                        {awardCandidateLabel(c)}
+                      </span>
+                      {c.teamAbbr ? (
+                        <span className="text-[9px] font-bold text-white/30">
+                          {c.teamAbbr}
+                        </span>
+                      ) : null}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+        </div>
       ) : (
         <div className="relative">
           <input
             type="text"
             value={query}
-            placeholder={kind === "coach" ? "Coach name…" : "Player name…"}
+            placeholder={placeholder}
             autoComplete="off"
             spellCheck={false}
             onFocus={() => setOpen(true)}
@@ -152,7 +220,7 @@ function AwardPickRow({
               >
                 {query.trim()
                   ? `Suggestions · “${query.trim()}”`
-                  : "Popular picks · top 5"}
+                  : "Featured · top 5"}
               </p>
               {suggestions.length === 0 ? (
                 <p className="px-2.5 py-3 text-[11px] text-white/35">
@@ -198,7 +266,7 @@ function AwardPickRow({
   );
 }
 
-/** アワード予想（プレビュー: 人気5 + 前方一致。名簿は mock） */
+/** アワード予想（運営指定の候補5 + ロスター全選手検索） */
 export default function NbaSeasonAwardsPredictPanel({
   value,
   onChange,
@@ -213,6 +281,28 @@ export default function NbaSeasonAwardsPredictPanel({
   const filled = filledSeasonAwardsCount(value.picks);
   const total = NBA_SEASON_AWARD_DEFS.length;
   const allDone = isSeasonAwardsComplete(value);
+  const { players, loading } = useSeasonAwardsPlayerCatalog({
+    season: value.season,
+  });
+  const catalogsByAward = useMemo(() => {
+    const out = {} as Record<NbaAwardId, readonly NbaAwardCandidate[]>;
+    for (const def of NBA_SEASON_AWARD_DEFS) {
+      out[def.id] = seasonAwardsCatalogForAward(
+        def.id,
+        players,
+        value.season,
+        AWARDS_PREVIEW_COACHES
+      );
+    }
+    return out;
+  }, [players, value.season]);
+  const candidateById = useMemo(() => {
+    const m = new Map<string, NbaAwardCandidate>();
+    for (const list of Object.values(catalogsByAward)) {
+      for (const c of list) m.set(c.id, c);
+    }
+    return m;
+  }, [catalogsByAward]);
 
   return (
     <div
@@ -235,6 +325,16 @@ export default function NbaSeasonAwardsPredictPanel({
         <p className="text-[11px] leading-relaxed text-white/45 md:max-w-3xl md:text-sm">
           {seasonPredictAwardsPredictHint(language)}
         </p>
+        {loading ? (
+          <p
+            className={[
+              nameOxanium.className,
+              "text-[9px] font-bold uppercase tracking-[0.12em] text-white/30",
+            ].join(" ")}
+          >
+            Loading roster…
+          </p>
+        ) : null}
       </header>
 
       <ul
@@ -244,14 +344,22 @@ export default function NbaSeasonAwardsPredictPanel({
             : "grid gap-3 sm:grid-cols-2 xl:grid-cols-3"
         }
       >
-        {NBA_SEASON_AWARD_DEFS.map((def) => (
+        {NBA_SEASON_AWARD_DEFS.map((def) => {
+          const selectedId = value.picks[def.id];
+          return (
           <AwardPickRow
             key={def.id}
             awardId={def.id}
             labelEn={def.labelEn}
             name={def.name}
             kind={def.kind}
-            selectedId={value.picks[def.id]}
+            catalog={catalogsByAward[def.id] ?? []}
+            selected={
+              typeof selectedId === "string" && selectedId
+                ? candidateById.get(selectedId) ?? null
+                : null
+            }
+            selectedId={selectedId}
             language={language}
             onSelect={(id) => {
               onChange?.({
@@ -260,7 +368,8 @@ export default function NbaSeasonAwardsPredictPanel({
               });
             }}
           />
-        ))}
+          );
+        })}
       </ul>
 
       {onSubmit ? (

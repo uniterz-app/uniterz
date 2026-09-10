@@ -45,10 +45,9 @@ import { loadPlayoffBracket } from "@/lib/playoff-bracket-firestore";
 import { getCurrentPlayoffSeason } from "@/lib/playoff-bracket-config";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
+import { resolveUserTimezone } from "@/lib/i18n/countryTimezone";
 import { t } from "@/lib/i18n/t";
 import {
-  TIMEZONE_ET,
-  TIMEZONE_JST,
   getTodayKeyInTimeZone,
   parseDateKeyInTimeZone,
   toDateKeyInTimeZone,
@@ -201,10 +200,14 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
   const deepLinkOpenPredictGameId = searchParams.get("openPredict");
 
   const { fUser: user } = useFirebaseUser();
-  const { language } = useUserLanguage(user?.uid ?? null);
+  const { language, countryCode } = useUserLanguage(user?.uid ?? null);
   const m = t(language);
   const skipConfirm = tutorialSkipConfirmProps(m.tutorial);
-  const dayTimeZone = language === "ja" ? TIMEZONE_JST : TIMEZONE_ET;
+  /** 登録国の代表 TZ。未登録時は言語フォールバック（ja→JST 等） */
+  const dayTimeZone = useMemo(
+    () => resolveUserTimezone(countryCode, language),
+    [countryCode, language]
+  );
   const isMobileRoute = Boolean(
     pathname?.startsWith("/mobile") || pathname?.startsWith("/m/")
   );

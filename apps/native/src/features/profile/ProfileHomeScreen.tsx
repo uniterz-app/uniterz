@@ -1574,7 +1574,7 @@ export default function ProfileHomeScreen({
                             <MaterialCommunityIcons
                               name="check"
                               size={18}
-                              color="rgba(147,197,253,0.95)"
+                              color="rgba(245,245,245,0.95)"
                             />
                           ) : null}
                         </Pressable>
@@ -1594,7 +1594,7 @@ export default function ProfileHomeScreen({
                       >
                         <Text style={styles.modalOptionText}>{t.countryNotSet}</Text>
                         {!countryCode.trim() ? (
-                          <MaterialCommunityIcons name="check" size={18} color="rgba(147,197,253,0.95)" />
+                          <MaterialCommunityIcons name="check" size={18} color="rgba(245,245,245,0.95)" />
                         ) : null}
                       </Pressable>
                       {COUNTRY_OPTIONS.map((c) => (
@@ -1610,7 +1610,7 @@ export default function ProfileHomeScreen({
                             {language === "ja" ? c.labelJa : c.labelEn}
                           </Text>
                           {countryCode.trim() === c.code ? (
-                            <MaterialCommunityIcons name="check" size={18} color="rgba(147,197,253,0.95)" />
+                            <MaterialCommunityIcons name="check" size={18} color="rgba(245,245,245,0.95)" />
                           ) : null}
                         </Pressable>
                       ))}
@@ -2177,8 +2177,8 @@ const styles = StyleSheet.create({
     minHeight: 40,
     borderRadius: 0,
     borderWidth: 1,
-    borderColor: "rgba(0, 245, 255, 0.28)",
-    backgroundColor: "rgba(0,0,0,0.35)",
+    borderColor: "rgba(255, 255, 255, 0.38)",
+    backgroundColor: "rgba(0,0,0,0.55)",
     paddingHorizontal: 12,
     paddingVertical: 8,
     flexDirection: "row",
@@ -2205,8 +2205,8 @@ const styles = StyleSheet.create({
     zIndex: 1,
     borderRadius: 0,
     borderWidth: 1,
-    borderColor: "rgba(0, 245, 255, 0.28)",
-    backgroundColor: "rgba(15,23,42,0.98)",
+    borderColor: "rgba(255, 255, 255, 0.32)",
+    backgroundColor: "rgba(8,8,10,0.98)",
     paddingVertical: 8,
     overflow: "hidden",
   },
@@ -2216,8 +2216,8 @@ const styles = StyleSheet.create({
     maxHeight: 480,
     borderRadius: 0,
     borderWidth: 1,
-    borderColor: "rgba(0, 245, 255, 0.28)",
-    backgroundColor: "rgba(15,23,42,0.98)",
+    borderColor: "rgba(255, 255, 255, 0.32)",
+    backgroundColor: "rgba(8,8,10,0.98)",
     paddingVertical: 8,
     overflow: "hidden",
   },

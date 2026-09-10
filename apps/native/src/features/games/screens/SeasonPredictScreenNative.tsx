@@ -3,12 +3,21 @@
  * 試合サイドメニュー「アワード予想」「順位予想」からの入口。
  */
 import { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { cyberAlert } from "../../../components/cyberAlert";
 import GamesNbaSubpageShellNative from "../GamesNbaSubpageShellNative";
 import type { GamesStackParamList } from "../../../navigation/types";
+import { useBottomTabBarInsets } from "../../../navigation/useBottomTabBarInsets";
 import NbaSeasonStandingsPredictPanelNative from "../predict/season/NbaSeasonStandingsPredictPanelNative";
 import NbaSeasonStandingsViewPanelNative from "../predict/season/NbaSeasonStandingsViewPanelNative";
 import NbaSeasonStandingsMarketPanelNative from "../predict/season/NbaSeasonStandingsMarketPanelNative";
@@ -71,6 +80,7 @@ export default function SeasonPredictScreenNative() {
   const language: SeasonPredictUiLang = resolveSeasonPredictUiLang(userLanguage);
   const pageCopy = seasonPredictPageUiCopy(language);
   const alerts = seasonPredictAlertCopy(language);
+  const { bottomContentReserveY } = useBottomTabBarInsets();
   const season = CURRENT_NBA_SEASON_KEY;
   const submitOpen = isSeasonPredictSubmitOpen();
   const deadlineLabel = seasonPredictSubmitDeadlineLabel(language);
@@ -335,11 +345,16 @@ export default function SeasonPredictScreenNative() {
   const marketPendingBody = seasonPredictMarketPendingBody(language);
 
   return (
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+    >
     <GamesNbaSubpageShellNative
       eyebrow="NBA · SEASON"
       title={title}
       subtitle={subtitle}
       onHelpPress={() => setRulesOpen(true)}
+      contentStyle={{ paddingBottom: bottomContentReserveY + 48 }}
       onBack={() => {
         if (navigation.canGoBack()) navigation.goBack();
         else navigation.navigate("GamesHome");
@@ -474,6 +489,7 @@ export default function SeasonPredictScreenNative() {
         onOpenChange={setRulesOpen}
       />
     </GamesNbaSubpageShellNative>
+    </KeyboardAvoidingView>
   );
 }
 

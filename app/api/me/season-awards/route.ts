@@ -8,6 +8,7 @@ import {
 } from "@/lib/predict/seasonPredictDeadline";
 import {
   loadSeasonAwardsDoc,
+  loadSeasonAwardsSubmitCatalog,
   resolveSeasonAwardsForSubmit,
   upsertSeasonAwardsDoc,
 } from "@/lib/predict/seasonAwardsServer";
@@ -69,9 +70,15 @@ export async function POST(req: Request) {
       );
     }
 
+    const catalogPack = await loadSeasonAwardsSubmitCatalog(
+      getAdminDb(),
+      season
+    );
     const resolved = resolveSeasonAwardsForSubmit({
       season,
       picksRaw: body.picks,
+      catalog: catalogPack.catalog,
+      kindSets: catalogPack.kindSets,
     });
     if (!resolved.ok) {
       return NextResponse.json({ error: resolved.error }, { status: 400 });

@@ -39,13 +39,16 @@ export const NUMERIC_FONT_FAMILY = Platform.select({
 
 function formatKickoffTime(
   startAt: Date | null,
-  language: Language | string
+  language: Language | string,
+  timeZone?: string
 ): string {
   if (!startAt) return "—";
   const lang = normalizeLanguage(language) ?? "en";
-  const timeZone = lang === "ja" ? "Asia/Tokyo" : "America/New_York";
+  const tz =
+    timeZone ??
+    (lang === "ja" ? "Asia/Tokyo" : "America/New_York");
   const parts = new Intl.DateTimeFormat(DATE_LOCALE[lang], {
-    timeZone,
+    timeZone: tz,
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
@@ -70,7 +73,8 @@ export function isEffectiveLive(game: Record<string, unknown>): boolean {
 
 export function getGameCardCenterBlock(
   game: Record<string, unknown>,
-  language: Language | string
+  language: Language | string,
+  timeZone?: string
 ): GameCardCenterBlock {
   const status = resolveGameStatus(game);
   const score = resolveGameScore(game);
@@ -98,7 +102,7 @@ export function getGameCardCenterBlock(
   }
   return {
     variant: "time",
-    time: formatKickoffTime(startAt, language),
+    time: formatKickoffTime(startAt, language, timeZone),
   };
 }
 

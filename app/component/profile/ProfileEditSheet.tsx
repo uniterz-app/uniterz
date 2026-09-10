@@ -232,6 +232,7 @@ export default function ProfileEditSheet({
         </label>
         <CyberAuthSelect
           angular
+          tone="mono"
           selectProps={{
             value: language,
             onChange: (e) => setLanguage(e.target.value as Language),
@@ -251,6 +252,7 @@ export default function ProfileEditSheet({
         </label>
         <CyberAuthSelect
           angular
+          tone="mono"
           selectProps={{
             value: countryCode,
             onChange: (e) => setCountryCode(e.target.value),

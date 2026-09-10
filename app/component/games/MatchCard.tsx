@@ -61,7 +61,7 @@ import {
 } from "./cyberMotion";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import type { Language } from "@/lib/i18n/language";
-import { TIMEZONE_ET, TIMEZONE_JST } from "@/lib/time/zonedTime";
+import { resolveUserTimezone } from "@/lib/i18n/countryTimezone";
 import { t } from "@/lib/i18n/t";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import {
@@ -234,6 +234,8 @@ homeRecord?: {
   onClosePredictOverlay?: () => void;
   /** 親で言語を渡すと users/{uid} の購読をカード毎に増やさない */
   language?: Language;
+  /** キックオフ・日付表示用 IANA TZ（未指定時は国/言語から解決） */
+  timeZone?: string;
   /** NBA: 最多得点者予想の候補選手 */
   topScorerCandidates?: import("@/lib/nba/topScorer").NbaTopScorerCandidate[] | null;
   /** 予想オーバーレイ：フォーム側の最多得点者ピック（投稿前のライブ反映） */
@@ -426,18 +428,21 @@ function MatchCardView({
   onRequestPredictEdit,
   onClosePredictOverlay,
   language,
+  timeZone: timeZoneProp,
   isPickup = false,
   tutorialPickupLabelTarget,
 }: MatchCardProps & { language: Language }) {
   const router = useRouter();
 
   const { fUser: user } = useFirebaseUser();
+  const { countryCode } = useUserLanguage(user?.uid ?? null);
   const m = t(language);
   const displayedRoundLabel = displayNbaRoundLabel(
     roundLabel,
     language === "ja"
   );
-  const displayTimeZone = language === "ja" ? TIMEZONE_JST : TIMEZONE_ET;
+  const displayTimeZone =
+    timeZoneProp ?? resolveUserTimezone(countryCode, language);
 
   const [navigating, setNavigating] = useState(false);
   // Full-area tap: scale the whole card shell (transparent overlay alone shows no motion).

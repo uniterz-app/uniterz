@@ -7,6 +7,8 @@ import styles from "./cyberAuthField.module.css";
 type Props = {
   /** 角ばり（border-radius なし） */
   angular?: boolean;
+  /** 白黒トーン（紫／マゼンタ発光を抑える） */
+  tone?: "default" | "mono";
   selectProps: React.SelectHTMLAttributes<HTMLSelectElement>;
   children: React.ReactNode;
 };
@@ -14,6 +16,7 @@ type Props = {
 /** ログインの入力と同系のコニック発光枠付き select */
 export default function CyberAuthSelect({
   angular = false,
+  tone = "default",
   selectProps,
   children,
 }: Props) {
@@ -22,7 +25,11 @@ export default function CyberAuthSelect({
   return (
     <div className={styles.fieldMain}>
       <div
-        className={[styles.fieldPoda, angular ? styles.angular : ""]
+        className={[
+          styles.fieldPoda,
+          angular ? styles.angular : "",
+          tone === "mono" ? styles.mono : "",
+        ]
           .filter(Boolean)
           .join(" ")}
       >
