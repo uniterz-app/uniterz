@@ -2,33 +2,37 @@ import { onRequest } from "firebase-functions/v2/https";
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import { defineSecret } from "firebase-functions/params";
 import { buildWeeklyReportsCore } from "./buildWeeklyReportsCore";
-import { previousLabel, weekStartDateKeyJST } from "../rankings/nbaPeriod";
+import { previousLabel, weekStartDateKeyET } from "../rankings/nbaPeriod";
 import { assertManualJobAuth } from "../http/assertManualJobAuth";
 
 const INTERNAL_JOB_SECRET = defineSecret("INTERNAL_JOB_SECRET");
 
-function isMondayJst(now: Date): boolean {
-  return new Date(now.getTime() + 9 * 60 * 60 * 1000).getUTCDay() === 1;
+function isMondayET(now: Date): boolean {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York",
+    weekday: "short",
+  }).formatToParts(now);
+  return parts.find((p) => p.type === "weekday")?.value === "Mon";
 }
 
 /**
- * 月曜 08:30 JST のみ: 先週の週間レポートを final 確定する。
+ * Eastern 月曜 08:30 のみ: 先週の週間レポートを final 確定する。
  * （進行中 live 日次更新は廃止。確定週だけを履歴に残す）
  */
 export const rebuildWeeklyReportsCronV2 = onSchedule(
   {
     schedule: "30 8 * * 1",
-    timeZone: "Asia/Tokyo",
+    timeZone: "America/New_York",
     memory: "1GiB",
     timeoutSeconds: 540,
   },
   async () => {
     const now = new Date();
-    if (!isMondayJst(now)) {
-      console.log("[rebuildWeeklyReportsCronV2] skip: not Monday JST");
+    if (!isMondayET(now)) {
+      console.log("[rebuildWeeklyReportsCronV2] skip: not Monday ET");
       return;
     }
-    const currentWeek = weekStartDateKeyJST(now);
+    const currentWeek = weekStartDateKeyET(now);
     const final = await buildWeeklyReportsCore({
       weekLabel: previousLabel("weekly", currentWeek),
       status: "final",

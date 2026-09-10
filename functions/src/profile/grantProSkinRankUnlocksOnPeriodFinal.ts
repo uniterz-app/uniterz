@@ -66,7 +66,10 @@ function timestampToMs(v: unknown): number {
   return 0;
 }
 
-/** 猶予終了後の過去期間のみ true */
+/**
+ * 進行中でない過去期間なら true（Unit 付与と同じ判定）。
+ * grace=0: 新しい週／月に入った時点で前期間は確定。
+ */
 export function isNbaPeriodFinalForProSkinGrants(
   period: NbaRankingPeriod,
   labelKey: string,
@@ -76,6 +79,7 @@ export function isNbaPeriodFinalForProSkinGrants(
   if (period === "weekly") {
     const current = weekStartDateKeyJST(now);
     if (labelKey >= current) return false;
+    if (PERIOD_FINALIZE_GRACE_DAYS <= 0) return true;
     if (
       todayKey <= addGrace(current) &&
       labelKey === previousLabel("weekly", current)
@@ -86,6 +90,7 @@ export function isNbaPeriodFinalForProSkinGrants(
   }
   const current = monthLabelJST(now);
   if (labelKey >= current) return false;
+  if (PERIOD_FINALIZE_GRACE_DAYS <= 0) return true;
   if (
     todayKey <= addGrace(`${current}-01`) &&
     labelKey === previousLabel("monthly", current)

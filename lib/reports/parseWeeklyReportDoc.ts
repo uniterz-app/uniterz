@@ -1,21 +1,15 @@
 // 週次レポート Firestore doc の id / パース。
 
 import type { WeeklyReport } from "@/lib/reports/weeklyReportTypes";
-import { dateKeyJST } from "@/lib/rankings/rankSnapshotDate";
+import { resolveRankingWeekStartDateKey } from "@/lib/rankings/rankingPeriod";
 
 export function weeklyReportDocId(uid: string, weekLabel: string): string {
   return `${uid}_weekly_${weekLabel}`;
 }
 
-/** 直近の月曜 dateKey（JST）。当日が月曜なら当日 */
+/** 直近の月曜 dateKey（US Eastern）。当日が月曜なら当日 */
 export function weekStartDateKeyJST(now: Date = new Date()): string {
-  const todayKey = dateKeyJST(now);
-  const jst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
-  const daysSinceMonday = (jst.getUTCDay() + 6) % 7;
-  const [y, m, d] = todayKey.split("-").map(Number);
-  const base = new Date(Date.UTC(y, m - 1, d - daysSinceMonday));
-  const pad2 = (n: number) => String(n).padStart(2, "0");
-  return `${base.getUTCFullYear()}-${pad2(base.getUTCMonth() + 1)}-${pad2(base.getUTCDate())}`;
+  return resolveRankingWeekStartDateKey(now);
 }
 
 function isRival(v: unknown): boolean {

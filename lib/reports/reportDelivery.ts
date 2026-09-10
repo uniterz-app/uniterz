@@ -1,14 +1,18 @@
 /**
- * Pro レポート配信スケジュール（JST）。
- * - 週次 final: 月曜 08:30 に前週を確定。未読なら以降いつ開いてもオーバーレイ。
- * - 月次 final: 毎月1日 08:00 に前月を確定。未読なら以降いつ開いてもオーバーレイ。
+ * Pro レポート配信スケジュール（週・月はランキングと同じ US Eastern）。
+ * - 週次 final: Eastern 月曜朝に前週を確定。未読なら以降いつ開いてもオーバーレイ。
+ * - 月次 final: Eastern 毎月1日朝に前月を確定。未読なら以降いつ開いてもオーバーレイ。
  * Report タブは直近の確定 ID を getDoc（全件 query しない）。
  * トライアル1回保証: lib/reports/weeklyReportTrialGuarantee.ts
  */
 
 import { subtractDaysFromDateKeyJST } from "@/lib/rankings/rankSnapshotDate";
 import { resolveRankingWeekStartDateKey } from "@/lib/rankings/rankingPeriod";
-import { getZonedYMD, TIMEZONE_JST } from "@/lib/time/zonedTime";
+import {
+  rankingPeriodMonthLabel,
+  rankingPeriodTodayKey,
+  rankingPeriodWeekdayMon0,
+} from "@/lib/rankings/rankingPeriodClock";
 import { weeklyReportDocId } from "@/lib/reports/parseWeeklyReportDoc";
 import { resolveLocalizedLang } from "@/lib/i18n/localize";
 
@@ -28,11 +32,13 @@ function pad2(n: number): string {
   return String(n).padStart(2, "0");
 }
 
-function addDaysToDateKeyJST(dateKey: string, days: number): string {
+function addDaysToDateKey(dateKey: string, days: number): string {
   const [y, m, d] = dateKey.split("-").map(Number);
   const base = new Date(Date.UTC(y, m - 1, d));
   base.setUTCDate(base.getUTCDate() + Math.max(0, Math.floor(days)));
-  return `${base.getUTCFullYear()}-${pad2(base.getUTCMonth() + 1)}-${pad2(base.getUTCDate())}`;
+  return `${base.getUTCFullYear()}-${pad2(base.getUTCMonth() + 1)}-${pad2(
+    base.getUTCDate()
+  )}`;
 }
 
 function previousMonthKeyFrom(monthKey: string): string {
@@ -42,32 +48,33 @@ function previousMonthKeyFrom(monthKey: string): string {
   return `${y}-${pad2(m - 1)}`;
 }
 
-/** JST で月曜か */
+/** Eastern で月曜か（旧名互換） */
 export function isMondayJST(now: Date = new Date()): boolean {
-  const jst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
-  return jst.getUTCDay() === 1;
+  return rankingPeriodWeekdayMon0(rankingPeriodTodayKey(now)) === 0;
 }
 
-/** JST で毎月1日か */
+/** Eastern で毎月1日か（旧名互換） */
 export function isFirstOfMonthJST(now: Date = new Date()): boolean {
-  return getZonedYMD(now, TIMEZONE_JST).day === 1;
+  return rankingPeriodTodayKey(now).endsWith("-01");
 }
 
 /** 確定配信対象の前週ラベル（どの曜日でも「直近の確定週」） */
-export function previousWeekLabelForMondayDelivery(now: Date = new Date()): string {
+export function previousWeekLabelForMondayDelivery(
+  now: Date = new Date()
+): string {
   const thisMonday = resolveRankingWeekStartDateKey(now);
   return subtractDaysFromDateKeyJST(thisMonday, 7);
 }
 
-/** 直前に完了した暦月の monthKey */
+/** 直前に完了した暦月の monthKey（Eastern） */
 export function previousMonthKeyJST(now: Date = new Date()): string {
-  const { year, month } = getZonedYMD(now, TIMEZONE_JST);
-  if (month === 1) return `${year - 1}-12`;
-  return `${year}-${pad2(month - 1)}`;
+  return previousMonthKeyFrom(rankingPeriodMonthLabel(now));
 }
 
 /** 確定配信対象の前月 monthKey */
-export function previousMonthKeyForFirstDelivery(now: Date = new Date()): string {
+export function previousMonthKeyForFirstDelivery(
+  now: Date = new Date()
+): string {
   return previousMonthKeyJST(now);
 }
 
@@ -132,7 +139,10 @@ export function buildReportDeliveryCandidates(
 }
 
 /** 一覧用: 今週の進行中週次 doc id */
-export function currentWeeklyReportDocId(uid: string, now: Date = new Date()): string {
+export function currentWeeklyReportDocId(
+  uid: string,
+  now: Date = new Date()
+): string {
   return weeklyReportDocId(uid, resolveRankingWeekStartDateKey(now));
 }
 
@@ -146,7 +156,7 @@ export function formatReportPeriodLabel(
     const [y, m] = periodKey.split("-");
     return lang === "ja" ? `${y}年${Number(m)}月` : `${y}.${m}`;
   }
-  const end = addDaysToDateKeyJST(periodKey, 6);
+  const end = addDaysToDateKey(periodKey, 6);
   const md = (k: string) => {
     const [, m, d] = k.split("-");
     return `${Number(m)}/${Number(d)}`;
@@ -165,14 +175,14 @@ export function buildForcedDeliveryCandidates(
     if (kind === "monthly") {
       const periodKey = previousMonthKeyJST(now);
       out.push({
-        kind: "monthly",
+        kind,
         periodKey,
         reportId: monthlyReportDocId(uid, periodKey),
       });
     } else {
       const periodKey = previousWeekLabelForMondayDelivery(now);
       out.push({
-        kind: "weekly",
+        kind,
         periodKey,
         reportId: weeklyReportDocId(uid, periodKey),
       });

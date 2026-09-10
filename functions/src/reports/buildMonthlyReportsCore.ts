@@ -9,6 +9,7 @@ import {
   monthLabelJST,
   previousLabel,
   rangeForLabel,
+  rankingPeriodDayBoundsUtc,
 } from "../rankings/nbaPeriod";
 import {
   buildMonthlyRadarPercentiles,
@@ -351,8 +352,10 @@ export async function rebuildMonthlyReportsCore(opts?: {
   const habitsRawByUid = new Map<string, MonthlyHabitsRaw>();
 
   if (pickupSet.size > 0) {
-    const settledStart = new Date(`${startKey}T00:00:00+09:00`);
-    const settledEnd = new Date(`${endKey}T23:59:59.999+09:00`);
+    const settledStart = rankingPeriodDayBoundsUtc(startKey).start;
+    const settledEnd = new Date(
+      rankingPeriodDayBoundsUtc(addDaysToDateKey(endKey, 1)).start.getTime() - 1
+    );
     const postSnap = await db()
       .collection("posts")
       .where("status", "==", "final")

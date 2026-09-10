@@ -1,16 +1,24 @@
 /**
  * 期間内・asOf までの tip-off がある NBA ピックアップ試合数（勝率 65% ガード用）。
  * パターン B: 分母は「その時点まで」の pickup。
+ * dateKey は US Eastern 暦日（ランキング期間と同一）。
  */
 import { Timestamp, type Firestore } from "firebase-admin/firestore";
 import { isNbaPickupGame } from "./isPickupGame";
+import {
+  addDaysToDateKey,
+  rankingPeriodDayBoundsUtc,
+} from "./nbaPeriod";
 
-function jstDayStart(dateKey: string): Timestamp {
-  return Timestamp.fromDate(new Date(`${dateKey}T00:00:00+09:00`));
+function etDayStart(dateKey: string): Timestamp {
+  return Timestamp.fromDate(rankingPeriodDayBoundsUtc(dateKey).start);
 }
 
-function jstDayEnd(dateKey: string): Timestamp {
-  return Timestamp.fromDate(new Date(`${dateKey}T23:59:59.999+09:00`));
+function etDayEndInclusive(dateKey: string): Timestamp {
+  const nextStart = rankingPeriodDayBoundsUtc(
+    addDaysToDateKey(dateKey, 1)
+  ).start;
+  return Timestamp.fromMillis(nextStart.getTime() - 1);
 }
 
 export async function countNbaPickupGamesSoFar(opts: {
@@ -24,8 +32,8 @@ export async function countNbaPickupGamesSoFar(opts: {
   const snap = await opts.db
     .collection("games")
     .where("league", "==", "nba")
-    .where("startAtJst", ">=", jstDayStart(opts.startKey))
-    .where("startAtJst", "<=", jstDayEnd(opts.asOfKey))
+    .where("startAtJst", ">=", etDayStart(opts.startKey))
+    .where("startAtJst", "<=", etDayEndInclusive(opts.asOfKey))
     .get();
 
   let n = 0;

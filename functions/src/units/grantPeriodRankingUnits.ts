@@ -46,7 +46,11 @@ function periodStandardSnapshotDocId(
   return `nba_${period}_${label}_${metric}`;
 }
 
-/** Pro Skin 付与と同じ猶予（期間終了 + grace 後のみ true） */
+/**
+ * 進行中でない過去期間なら true。
+ * grace=0: 新しい週／月に入った時点で前期間は確定（スナップショット後に付与可）。
+ * grace≥1: 開始日から grace 日以内は前期間の付与を待つ。
+ */
 export function isNbaPeriodFinalForUnitGrants(
   period: NbaRankingPeriod,
   labelKey: string,
@@ -56,6 +60,7 @@ export function isNbaPeriodFinalForUnitGrants(
   if (period === "weekly") {
     const current = weekStartDateKeyJST(now);
     if (labelKey >= current) return false;
+    if (PERIOD_FINALIZE_GRACE_DAYS <= 0) return true;
     if (
       todayKey <= addDaysToDateKey(current, PERIOD_FINALIZE_GRACE_DAYS) &&
       labelKey === previousLabel("weekly", current)
@@ -66,6 +71,7 @@ export function isNbaPeriodFinalForUnitGrants(
   }
   const current = monthLabelJST(now);
   if (labelKey >= current) return false;
+  if (PERIOD_FINALIZE_GRACE_DAYS <= 0) return true;
   if (
     todayKey <=
       addDaysToDateKey(`${current}-01`, PERIOD_FINALIZE_GRACE_DAYS) &&

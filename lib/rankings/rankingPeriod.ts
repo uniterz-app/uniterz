@@ -1,14 +1,22 @@
 /**
- * NBA ランキング期間: Season（累計）/ Weekly（月曜始まり JST）/ Monthly（暦月 JST）
+ * NBA ランキング期間: Season（累計）/ Weekly（月曜始まり ET）/ Monthly（暦月 ET）
+ * 期間時計は全員共通 America/New_York（US Eastern、DST あり）。
  * functions/src/rankings/nbaPeriod.ts と定義を同期すること。
  */
 
+import {
+  addDaysToDateKey,
+  rankingPeriodMonthLabel,
+  rankingPeriodTodayKey,
+  rankingPeriodWeekStartKey,
+} from "@/lib/rankings/rankingPeriodClock";
 import {
   dateKeyJST,
   subtractDaysFromDateKeyJST,
 } from "@/lib/rankings/rankSnapshotDate";
 import { nbaSeasonKeyFromDateJST } from "@/lib/rankings/nbaSeason";
 import { resolveLocalizedLang } from "@/lib/i18n/localize";
+import { TIMEZONE_ET, zonedTimeToUtcMs } from "@/lib/time/zonedTime";
 
 export type RankingPeriod = "season" | "weekly" | "monthly";
 
@@ -21,9 +29,7 @@ export const RANKING_PERIODS: readonly RankingPeriod[] = [
 export function isRankingPeriod(
   v: string | null | undefined
 ): v is RankingPeriod {
-  return (
-    v === "season" || v === "weekly" || v === "monthly"
-  );
+  return v === "season" || v === "weekly" || v === "monthly";
 }
 
 export type RankingPeriodRange = {
@@ -38,30 +44,19 @@ function pad2(n: number) {
   return String(n).padStart(2, "0");
 }
 
-function addDaysToDateKey(dateKey: string, days: number): string {
-  const [y, m, d] = dateKey.split("-").map(Number);
-  const base = new Date(Date.UTC(y, m - 1, d + days));
-  return `${base.getUTCFullYear()}-${pad2(base.getUTCMonth() + 1)}-${pad2(
-    base.getUTCDate()
-  )}`;
-}
-
-/** 今週の開始日（直近の月曜・当日が月曜なら当日） */
+/** 今週の開始日（Eastern 直近の月曜・当日が月曜なら当日） */
 export function resolveRankingWeekStartDateKey(
   now: Date = new Date()
 ): string {
-  const todayKey = dateKeyJST(now);
-  const jst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
-  const daysSinceMonday = (jst.getUTCDay() + 6) % 7;
-  return subtractDaysFromDateKeyJST(todayKey, daysSinceMonday);
+  return rankingPeriodWeekStartKey(now);
 }
 
-/** 今週（月曜始まり）の日付範囲 */
+/** 今週（月曜始まり ET）の日付範囲 */
 export function resolveWeeklyRankingRange(
   now: Date = new Date()
 ): RankingPeriodRange {
   const startKey = resolveRankingWeekStartDateKey(now);
-  const endKey = dateKeyJST(now);
+  const endKey = rankingPeriodTodayKey(now);
   return {
     period: "weekly",
     startKey,
@@ -70,20 +65,19 @@ export function resolveWeeklyRankingRange(
   };
 }
 
-/** 今月（JST 暦月）の日付範囲 */
+/** 今月（Eastern 暦月）の日付範囲 */
 export function resolveMonthlyRankingRange(
   now: Date = new Date()
 ): RankingPeriodRange {
-  const endKey = dateKeyJST(now);
-  const jst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
-  const y = jst.getUTCFullYear();
-  const m = jst.getUTCMonth() + 1;
+  const endKey = rankingPeriodTodayKey(now);
+  const labelKey = rankingPeriodMonthLabel(now);
+  const [y, m] = labelKey.split("-").map(Number);
   const startKey = `${y}-${pad2(m)}-01`;
   return {
     period: "monthly",
     startKey,
     endKey,
-    labelKey: `${y}-${pad2(m)}`,
+    labelKey,
   };
 }
 
@@ -116,14 +110,14 @@ export function isValidPeriodLabel(
 
 /**
  * 過去も含む任意の labelKey から日付範囲を復元する。
- * endKey は「期間終端」と「今日」の早い方。
+ * endKey は「期間終端」と「今日（ET）」の早い方。
  */
 export function resolveRankingPeriodRangeForLabel(
   period: Exclude<RankingPeriod, "season">,
   label: string,
   now: Date = new Date()
 ): RankingPeriodRange {
-  const todayKey = dateKeyJST(now);
+  const todayKey = rankingPeriodTodayKey(now);
   if (period === "weekly") {
     const startKey = label;
     const fullEnd = addDaysToDateKey(startKey, 6);
@@ -188,7 +182,7 @@ export function enumerateDateKeysInclusive(
   return out;
 }
 
-/** NBA シーズン開始日（10/1 JST） */
+/** NBA シーズン開始日（10/1・Eastern 暦のラベル） */
 export function nbaSeasonCalendarStartKey(seasonKey: string): string {
   const startYear = Number.parseInt(seasonKey.slice(0, 4), 10);
   if (!Number.isFinite(startYear)) return `${seasonKey}-10-01`;
@@ -225,9 +219,15 @@ export function listRankingPeriodLabels(
     }
   } else {
     const seasonStart = nbaSeasonCalendarStartKey(seasonKey);
-    let weekStart = resolveRankingWeekStartDateKey(
-      new Date(`${seasonStart}T12:00:00+09:00`)
-    );
+    const [sy, sm, sd] = seasonStart.split("-").map(Number);
+    const seasonNoonMs = zonedTimeToUtcMs({
+      year: sy,
+      month: sm,
+      day: sd,
+      hour: 12,
+      timeZone: TIMEZONE_ET,
+    });
+    let weekStart = resolveRankingWeekStartDateKey(new Date(seasonNoonMs));
     if (weekStart < seasonStart) {
       weekStart = addDaysToDateKey(weekStart, 7);
     }
@@ -279,4 +279,4 @@ export function formatRankingPeriodDisplay(
   return `${y}年${m}月`;
 }
 
-export { subtractDaysFromDateKeyJST, dateKeyJST };
+export { subtractDaysFromDateKeyJST, dateKeyJST, addDaysToDateKey };

@@ -157,6 +157,29 @@ function toDateKeyJST(ts: Timestamp) {
   return `${yyyy}-${mm}-${dd}`;
 }
 
+/** NBA 週次・月次ランキングと揃える Eastern 暦日 */
+function toDateKeyET(ts: Timestamp) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(ts.toDate());
+  const get = (type: string) => {
+    const p = parts.find((x) => x.type === type);
+    return p?.value ? Number(p.value) : NaN;
+  };
+  const yyyy = get("year");
+  const mm = String(get("month")).padStart(2, "0");
+  const dd = String(get("day")).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+/** NBA は ET、その他リーグは JST のまま */
+function toStatsDateKey(ts: Timestamp, leagueKey: string | null) {
+  return leagueKey === "nba" ? toDateKeyET(ts) : toDateKeyJST(ts);
+}
+
 function normalizeLeague(raw?: string | null): string | null {
   if (!raw) return null;
   const v = String(raw).trim().toLowerCase();
@@ -255,8 +278,8 @@ export async function applyPostToUserStatsV2(opts: ApplyOptsV2) {
     awayTeamId,
   } = opts;
 
-  const dateKey = toDateKeyJST(startAt);
   const leagueKey = normalizeLeague(league);
+  const dateKey = toStatsDateKey(startAt, leagueKey);
   const forOpenRanking =
     shouldCountForRanking(countsForRanking) && leagueKey !== "wc";
   const forPickupRanking = forOpenRanking && isPickup === true;

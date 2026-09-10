@@ -443,7 +443,8 @@ async function writePeriodDivisionSnapshots(opts: {
 
 /**
  * 現在の週・月のスナップショットを再構築する。
- * 期間開始直後（猶予日数内）は前期間も再集計して遅延精算を反映する。
+ * 新しい週／月の初日（grace=0）または猶予日内は前期間も最終集計し、
+ * その後 Unit / Pro Skin 付与へ進む。
  */
 export async function buildNbaPeriodRankingSnapshots(
   now: Date = new Date()
@@ -453,6 +454,7 @@ export async function buildNbaPeriodRankingSnapshots(
 
   const weekLabel = weekStartDateKeyJST(now);
   targets.push(rangeForLabel("weekly", weekLabel, now));
+  // grace=0: 月曜だけ前週を最終スナップショット。grace≥1: 猶予日まで再集計。
   if (todayKey <= addGrace(weekLabel)) {
     targets.push(rangeForLabel("weekly", previousLabel("weekly", weekLabel), now));
   }

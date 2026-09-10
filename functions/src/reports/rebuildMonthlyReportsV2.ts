@@ -7,11 +7,11 @@ import { assertManualJobAuth } from "../http/assertManualJobAuth";
 
 const INTERNAL_JOB_SECRET = defineSecret("INTERNAL_JOB_SECRET");
 
-/** 毎月 1 日 8:00 JST — 前月レポートを確定書き込み（period snapshot 後を想定） */
+/** Eastern 毎月 1 日 8:00 — 前月レポートを確定書き込み（period snapshot 後を想定） */
 export const rebuildMonthlyReportsCronV2 = onSchedule(
   {
     schedule: "0 8 1 * *",
-    timeZone: "Asia/Tokyo",
+    timeZone: "America/New_York",
     memory: "1GiB",
     timeoutSeconds: 540,
   },
