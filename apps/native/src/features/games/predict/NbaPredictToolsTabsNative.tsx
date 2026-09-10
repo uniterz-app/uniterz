@@ -282,11 +282,12 @@ const styles = StyleSheet.create({
     width: "100%",
     gap: 6,
   },
+  /** Web / ランキング period タブと同様。skew 先端が ScrollView 端で四角く切れないよう余白 */
   tabShell: {
     alignSelf: "stretch",
     width: "100%",
     overflow: "visible",
-    paddingHorizontal: 3,
+    paddingHorizontal: 12,
     paddingTop: 0,
     paddingBottom: 6,
   },

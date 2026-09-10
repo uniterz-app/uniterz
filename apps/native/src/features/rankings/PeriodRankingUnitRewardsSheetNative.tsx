@@ -155,8 +155,7 @@ const styles = StyleSheet.create({
     fontFamily: MATCH_CARD_METRIC_FONT,
     fontSize: 10,
     fontWeight: "800",
-    letterSpacing: 1.4,
-    textTransform: "uppercase",
+    letterSpacing: 0.6,
     color: "rgba(165,243,252,0.8)",
   },
   backdrop: {

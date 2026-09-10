@@ -115,7 +115,15 @@ export function periodRankingUnitRewardsUiCopy(
       pt: "Abrir tabela de Units",
       fr: "Ouvrir le tableau des Units",
     }),
-    chipLabel: "UNIT",
+    chipLabel: L(lang, {
+      ja: "unit表",
+      en: "Unit table",
+      ko: "unit표",
+      zh: "unit表",
+      es: "Tabla Unit",
+      pt: "Tabela Unit",
+      fr: "Table Unit",
+    }),
     tabWeekly: L(lang, {
       ja: "週間",
       en: "Weekly",

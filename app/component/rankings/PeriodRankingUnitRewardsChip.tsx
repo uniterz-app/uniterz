@@ -55,7 +55,7 @@ export default function PeriodRankingUnitRewardsChip({
         <span
           className={[
             nameOxanium.className,
-            "font-extrabold uppercase tracking-[0.14em] text-cyan-200/80",
+            "font-extrabold tracking-[0.06em] text-cyan-200/80",
             size === "web" ? "text-[11px]" : "text-[10px]",
           ].join(" ")}
         >

@@ -155,8 +155,11 @@ export default function NbaPredictToolsTabs({
 
   return (
     <div className={className} data-tutorial-target="predict-tools">
-      {/* 試合カードと同幅。skew 分だけ極小余白（大きくするとカードより狭く見える） */}
-      <div className="w-full min-w-0 overflow-visible px-0.5 pb-1.5 pt-0">
+      {/*
+        親（PredictionFormV2）が overflow-x-hidden のため、skew(-14deg) の先端が
+        端で四角く切れる。ランキング period タブ（px-3 + overflow-x-clip）と同じ横余白。
+      */}
+      <div className="w-full min-w-0 overflow-visible px-3 pb-1.5 pt-0">
         <CyberSlantedTabBar fill aria-label="NBA predict tools">
           <CyberSlantedTab
             role="tab"
@@ -164,7 +167,6 @@ export default function NbaPredictToolsTabs({
             active={tab === "insight"}
             onClick={() => selectTab("insight")}
             compact
-            fontWeight={900}
           />
           <CyberSlantedTab
             role="tab"
@@ -172,7 +174,6 @@ export default function NbaPredictToolsTabs({
             active={tab === "injuries"}
             onClick={() => selectTab("injuries")}
             compact
-            fontWeight={900}
           />
           <CyberSlantedTab
             role="tab"
@@ -180,7 +181,6 @@ export default function NbaPredictToolsTabs({
             active={tab === "stats"}
             onClick={() => selectTab("stats")}
             compact
-            fontWeight={900}
           />
           <CyberSlantedTab
             role="tab"
@@ -188,7 +188,6 @@ export default function NbaPredictToolsTabs({
             active={tab === "roster"}
             onClick={() => selectTab("roster")}
             compact
-            fontWeight={900}
           />
         </CyberSlantedTabBar>
       </div>
