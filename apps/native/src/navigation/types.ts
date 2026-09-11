@@ -82,6 +82,8 @@ export type PublicProfileParams = {
   fromResultDetail?: boolean;
   resultDetailPostId?: string;
   fromMarkList?: boolean;
+  /** ユーザー検索から遷移してきた他人プロフィール */
+  fromUserSearch?: boolean;
 };
 
 export type ResultStackParamList = {
@@ -138,6 +140,7 @@ export type ProfileStackParamList = {
   DeleteAccount: undefined;
   PublicProfile: PublicProfileParams;
   Badges: undefined;
+  UserSearch: undefined;
   Invite: undefined;
   UnitLedger: undefined;
   Redeem: undefined;

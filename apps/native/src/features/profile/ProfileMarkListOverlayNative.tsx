@@ -26,6 +26,7 @@ import { getUniterzApiBaseUrl } from "../games/submitPredictionApi";
 import { peekProfileUserDocNative } from "./profileUserDocCacheNative";
 import ProfileBackEdgeHandleNative from "./ProfileBackEdgeHandleNative";
 import ProCyberBadgeNative from "./kinetik/ProCyberBadgeNative";
+import UniterzUMarkNative from "../units/UniterzUMarkNative";
 import { CyberRankNumberNative } from "../rankings/CyberRankNumberNative";
 import { RankingsAvatarNative } from "../rankings/RankingsAvatarAndTabs";
 import {
@@ -227,7 +228,7 @@ function MarkListSheetBody({
           styles.sheetWrap,
           {
             width: sheetWidth,
-            paddingTop: Math.max(insets.top, 12),
+            paddingTop: Math.max(insets.top, 12) + 10,
             transform: [{ translateX: slide }],
           },
         ]}
@@ -235,12 +236,13 @@ function MarkListSheetBody({
       >
         <View style={styles.sheetInner}>
           <View style={styles.header}>
-            <View style={styles.headerText}>
+            <View style={styles.titleRow}>
+              <UniterzUMarkNative size={22} color="#a5f3fc" />
               <Text style={styles.title}>MARK LIST</Text>
-              <Text style={styles.sub}>
-                {copy.sub(marks.length, maxMarks, markedByCount)}
-              </Text>
             </View>
+            <Text style={styles.sub}>
+              {copy.sub(marks.length, maxMarks, markedByCount)}
+            </Text>
           </View>
 
           {showSpinner ? (
@@ -447,26 +449,34 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-    gap: 12,
     paddingHorizontal: 16,
-    paddingBottom: 12,
+    paddingTop: 4,
+    paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(74,163,255,0.18)",
+    borderBottomColor: "rgba(74,163,255,0.22)",
+    gap: 8,
   },
-  headerText: { flex: 1, minWidth: 0 },
+  titleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    minWidth: 0,
+  },
   title: {
+    flexShrink: 1,
     fontFamily: METRIC_FONT,
-    color: "#a5f3fc",
-    fontSize: 12,
-    letterSpacing: 1.8,
+    color: "#e0faff",
+    fontSize: 15,
+    fontWeight: "700",
+    letterSpacing: 2.2,
   },
   sub: {
-    marginTop: 4,
-    color: "rgba(255,255,255,0.5)",
+    color: "rgba(226, 242, 255, 0.78)",
     fontSize: 12,
+    lineHeight: 17,
+    fontWeight: "600",
+    letterSpacing: 0.2,
+    paddingLeft: 32,
   },
   center: {
     flex: 1,
@@ -476,14 +486,14 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   empty: {
-    color: "rgba(255,255,255,0.55)",
+    color: "rgba(226,242,255,0.72)",
     fontSize: 13,
     textAlign: "center",
     lineHeight: 20,
   },
   scroll: { flex: 1 },
   scrollContent: {
-    paddingTop: 12,
+    paddingTop: 14,
     paddingBottom: 8,
   },
   sectionTitleRow: {
@@ -495,19 +505,19 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontFamily: METRIC_FONT,
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: "700",
-    letterSpacing: 1.6,
+    letterSpacing: 1.4,
     textTransform: "uppercase",
-    color: "rgba(0,245,255,0.75)",
+    color: "rgba(165,243,252,0.92)",
   },
   sectionTitleLine: {
     flex: 1,
     height: StyleSheet.hairlineWidth,
-    backgroundColor: "rgba(0,245,255,0.35)",
+    backgroundColor: "rgba(0,245,255,0.42)",
   },
   hint: {
-    color: "rgba(165,243,252,0.55)",
+    color: "rgba(200,236,255,0.7)",
     fontSize: 11,
     paddingHorizontal: 12,
     paddingBottom: 6,

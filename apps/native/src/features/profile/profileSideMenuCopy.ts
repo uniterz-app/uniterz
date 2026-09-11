@@ -9,6 +9,7 @@ export type ProfileSideMenuLabels = {
   support: string;
   admin: string;
   profile: string;
+  userSearch: string;
   badges: string;
   invite: string;
   unitHistory: string;
@@ -86,6 +87,15 @@ export function profileSideMenuLabels(
       es: "Editar perfil",
       pt: "Editar perfil",
       fr: "Modifier le profil",
+    }),
+    userSearch: L(lang, {
+      ja: "ユーザー検索",
+      en: "User Search",
+      ko: "사용자 검색",
+      zh: "搜索用户",
+      es: "Buscar usuarios",
+      pt: "Buscar usuários",
+      fr: "Recherche d'utilisateurs",
     }),
     badges: L(lang, {
       ja: "バッジパレット",

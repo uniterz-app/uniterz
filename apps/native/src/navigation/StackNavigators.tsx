@@ -323,6 +323,13 @@ function ProfileStackScreen() {
           }
         />
         <ProfileStack.Screen
+          name="UserSearch"
+          getComponent={() =>
+            require("../features/profile/screens/UserSearchScreenNative")
+              .default
+          }
+        />
+        <ProfileStack.Screen
           name="Invite"
           getComponent={() =>
             require("../features/profile/screens/ReferralInviteScreenNative")

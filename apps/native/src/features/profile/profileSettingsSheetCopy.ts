@@ -299,5 +299,14 @@ export function profileSettingsSheetCopy(language: string | null | undefined) {
       pt: "Voltar à MARK LIST",
       fr: "Retour à MARK LIST",
     }),
+    backToUserSearch: L(lang, {
+      ja: "ユーザー検索に戻る",
+      en: "Back to User Search",
+      ko: "사용자 검색으로 돌아가기",
+      zh: "返回用户搜索",
+      es: "Volver a la búsqueda",
+      pt: "Voltar à busca",
+      fr: "Retour à la recherche",
+    }),
   };
 }

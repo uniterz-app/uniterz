@@ -57,6 +57,7 @@ type Props = {
   onOpenInApp: (page:
     | "badges"
     | "invite"
+    | "userSearch"
     | "unitLedger"
     | "redeem"
     | "announcements"
@@ -177,6 +178,7 @@ export default function ProfileSideMenuModal({
     page:
       | "badges"
       | "invite"
+      | "userSearch"
       | "unitLedger"
       | "redeem"
       | "announcements"
@@ -321,6 +323,13 @@ export default function ProfileSideMenuModal({
                       }}
                     >
                       {labels.profile}
+                    </SideMenuItemButtonNative>
+                    <SideMenuItemButtonNative
+                      icon="magnify"
+                      labelStyle={labelStyle}
+                      onPress={() => openUserPage("userSearch")}
+                    >
+                      {labels.userSearch}
                     </SideMenuItemButtonNative>
                     <SideMenuItemButtonNative
                       icon="trophy-outline"

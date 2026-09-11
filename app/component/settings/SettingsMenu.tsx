@@ -25,6 +25,7 @@ import {
   ShoppingBag,
   GraduationCap,
   Bell,
+  Search,
 } from "lucide-react";
 import {
   parseUserProfileFields,
@@ -38,6 +39,7 @@ import { auth } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import { t } from "@/lib/i18n/t";
+import { userSearchCopy } from "@/lib/users/userSearchCopy";
 import { useAnnouncementsUnread } from "@/lib/hooks/useAnnouncementsUnread";
 import { useAdminInboxUnread } from "@/lib/admin/useAdminInboxUnread";
 import LogoutConfirmModal from "../modals/LogoutConfirmModal";
@@ -99,6 +101,7 @@ export default function SettingsMenu({
   const { language } = useUserLanguage(user?.uid ?? null);
   const m = t(language);
   const isEn = language === "en";
+  const searchCopy = userSearchCopy(language);
 
   // ===== state =====
   const [showLogoutModal, setShowLogoutModal] = useState(false);
@@ -302,6 +305,18 @@ export default function SettingsMenu({
             onClick={() => pushFromMenu(p("/web/badges", "/mobile/badges"))}
           >
             <span className={cn(isEn && "uppercase")}>{m.profile.badgePalette}</span>
+          </SideMenuItemButton>
+
+          <SideMenuItemButton
+            icon={Search}
+            labelStyle={menuLabelFont}
+            onClick={() =>
+              pushFromMenu(p("/web/user-search", "/mobile/user-search"))
+            }
+          >
+            <span className={cn(isEn && "uppercase")}>
+              {searchCopy.menuLabel}
+            </span>
           </SideMenuItemButton>
 
           <SideMenuItemButton

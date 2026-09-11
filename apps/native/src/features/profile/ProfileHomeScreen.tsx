@@ -179,6 +179,7 @@ export default function ProfileHomeScreen({
   fromWeeklyReport = false,
   fromResultDetail = false,
   fromMarkList = false,
+  fromUserSearch = false,
   resultDetailPostId,
   leaderboardsGroupId,
   openSettingsOnMount = false,
@@ -199,6 +200,8 @@ export default function ProfileHomeScreen({
   fromResultDetail?: boolean;
   /** MARK LIST から遷移してきた他人プロフィール */
   fromMarkList?: boolean;
+  /** ユーザー検索から遷移してきた他人プロフィール */
+  fromUserSearch?: boolean;
   /** リザルト詳細へ戻るときの投稿 ID */
   resultDetailPostId?: string;
   leaderboardsGroupId?: string;
@@ -258,7 +261,8 @@ export default function ProfileHomeScreen({
       fromLeaderboards ||
       fromWeeklyReport ||
       fromResultDetail ||
-      fromMarkList);
+      fromMarkList ||
+      fromUserSearch);
 
   const dismissPublicProfileRoute = useCallback(() => {
     const state = navigation.getState();
@@ -348,6 +352,16 @@ export default function ProfileHomeScreen({
       });
       return;
     }
+    if (fromUserSearch) {
+      if (navigation.canGoBack()) {
+        navigation.goBack();
+        return;
+      }
+      tabNavigation.navigate("ProfileTab", {
+        screen: "UserSearch",
+      });
+      return;
+    }
     if (fromResultDetail) {
       if (navigation.canGoBack()) {
         navigation.goBack();
@@ -381,6 +395,7 @@ export default function ProfileHomeScreen({
     dismissPublicProfileRoute,
     fromLeaderboards,
     fromMarkList,
+    fromUserSearch,
     fromResultDetail,
     fromWeeklyReport,
     leaderboardsGroupId,
@@ -455,7 +470,11 @@ export default function ProfileHomeScreen({
   const sheet = useMemo(() => profileSettingsSheetCopy(language), [language]);
   const markToast = useMemo(() => profileMarkToastCopy(language), [language]);
 
-  const externalBackLabel = fromMarkList ? sheet.backToMarkList : sheet.back;
+  const externalBackLabel = fromMarkList
+    ? sheet.backToMarkList
+    : fromUserSearch
+      ? sheet.backToUserSearch
+      : sheet.back;
 
   const renderProfileBackHandle = () =>
     showExternalBack ? (
@@ -1668,6 +1687,7 @@ export default function ProfileHomeScreen({
         setMenuOpen(false);
         if (page === "badges") navigation.navigate("Badges");
         else if (page === "invite") navigation.navigate("Invite");
+        else if (page === "userSearch") navigation.navigate("UserSearch");
         else if (page === "unitLedger") navigation.navigate("UnitLedger");
         else if (page === "redeem") navigation.navigate("Redeem");
         else if (page === "announcements") navigation.navigate("Announcements");

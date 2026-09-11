@@ -20,6 +20,7 @@ export default function PublicProfileScreenNative() {
       fromWeeklyReport={route.params?.fromWeeklyReport === true}
       fromResultDetail={route.params?.fromResultDetail === true}
       fromMarkList={route.params?.fromMarkList === true}
+      fromUserSearch={route.params?.fromUserSearch === true}
       resultDetailPostId={route.params?.resultDetailPostId}
       leaderboardsGroupId={route.params?.leaderboardsGroupId}
     />
