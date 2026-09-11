@@ -14,9 +14,9 @@ import {
   CyberSlantedTabBar,
 } from "@/app/component/rankings/CyberSlantedTab";
 import {
-  coerceModeForPhase,
+  coercePlayerModeForPhase,
   modeTabLabel,
-  modesForPhase,
+  modesForPlayerPhase,
   NBA_LEAGUE_STATS_PHASES,
   phaseTabLabel,
   resolvePlayerStatLeaderRows,
@@ -137,7 +137,7 @@ export default function NbaLeaguePlayerStatLeadersPanel({
     setSortDir(defaultSortDir(meta.higherIsBetter));
   }
 
-  const modeOptions = modesForPhase(phase);
+  const modeOptions = modesForPlayerPhase(phase);
   const leaders = useMemo(() => {
     const list = resolvePlayerStatLeaderRows({
       phase,
@@ -174,7 +174,7 @@ export default function NbaLeaguePlayerStatLeadersPanel({
                 active={phase === p}
                 onClick={() => {
                   setPhase(p);
-                  setMode(coerceModeForPhase(p, mode));
+                  setMode(coercePlayerModeForPhase(p, mode));
                 }}
                 compact
                 fontWeight={700}

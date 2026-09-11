@@ -1,6 +1,9 @@
 /**
- * JST 毎日 19:00 — 翌日窓の Pro Insight 初版をフル生成。
- * （日次スタッツ ingest 18:00 のあと。ケガ反映の完全版は tip 1h 前の patch cron）
+ * JST 毎日 20:00 — 翌日窓の Pro Insight ナラティブを OpenAI Batch 投入。
+ * 目標: 21:00 までに初版表示（batch_poll が 15 分ごと完了反映）。
+ * tip 1h 前は injury 変更時のみ narrative_patch。
+ *
+ * body.mode = batch_submit（OPENAI_API_KEY 未設定時は fact フォールバック即書き）
  *
  * env（どちらか）:
  *   NEXT_NBA_PRO_BRIEF_INGEST_URL  … 例 https://www.uniterz.app/api/admin/nba-pro-brief-ingest
@@ -25,7 +28,7 @@ function resolveProBriefIngestUrl(): string | null {
 
 export const runNbaProBriefFullCron = onSchedule(
   {
-    schedule: "0 19 * * *",
+    schedule: "0 20 * * *",
     timeZone: "Asia/Tokyo",
     region: "asia-northeast1",
     timeoutSeconds: 540,
@@ -48,14 +51,14 @@ export const runNbaProBriefFullCron = onSchedule(
         "content-type": "application/json",
         "x-internal-job-secret": secret,
       },
-      body: JSON.stringify({ mode: "full", fullHorizonHours: 36 }),
+      body: JSON.stringify({ mode: "batch_submit", fullHorizonHours: 36 }),
     });
     const text = await res.text().catch(() => "");
     if (!res.ok) {
       console.error(
         `[runNbaProBriefFullCron] failed: ${res.status} ${text.slice(0, 800)}`
       );
-      throw new Error(`nba-pro-brief-ingest full HTTP ${res.status}`);
+      throw new Error(`nba-pro-brief-ingest batch_submit HTTP ${res.status}`);
     }
     console.log(`[runNbaProBriefFullCron] ok: ${text.slice(0, 1200)}`);
   }

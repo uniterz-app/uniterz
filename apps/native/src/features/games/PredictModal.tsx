@@ -1450,6 +1450,26 @@ export default function PredictModal({
                       language={language}
                       isPro={isProUser}
                       gameId={predictData?.gameId ?? null}
+                      tipAtMs={(() => {
+                        const raw = predictData?.subjectGame?.startAtJst as
+                          | Date
+                          | number
+                          | { toMillis?: () => number; toDate?: () => Date }
+                          | null
+                          | undefined;
+                        if (raw instanceof Date) return raw.getTime();
+                        if (typeof raw === "number" && Number.isFinite(raw))
+                          return raw;
+                        if (raw && typeof raw.toMillis === "function") {
+                          const ms = raw.toMillis();
+                          return Number.isFinite(ms) ? ms : null;
+                        }
+                        if (raw && typeof raw.toDate === "function") {
+                          const d = raw.toDate();
+                          return d instanceof Date ? d.getTime() : null;
+                        }
+                        return null;
+                      })()}
                       homeTeamId={
                         rawTeamIdFromGameSide(matchPreview?.homeSide) ?? ""
                       }

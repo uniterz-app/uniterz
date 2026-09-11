@@ -1,18 +1,30 @@
 import type { PushNotificationType } from "./pushNotificationCopy";
 
 export const PUSH_NOTIFICATION_PREF_KEYS = [
-  "gameStart",
   "gameFinal",
-  "rankingUpdated",
-  "injuryStatus",
-  "starterChange",
   "predictionDeadline",
-  "pregameDigest",
+  "unitReward",
+  "injuryStatus",
   "proInsightUpdate",
   "monthlyReport",
 ] as const;
 
 export type PushNotificationPrefKey = (typeof PUSH_NOTIFICATION_PREF_KEYS)[number];
+
+export const RETIRED_PUSH_TYPES = [
+  "game_start",
+  "ranking_updated",
+  "starter_change",
+  "pregame_digest",
+] as const satisfies readonly PushNotificationType[];
+
+export type RetiredPushType = (typeof RETIRED_PUSH_TYPES)[number];
+
+export function isRetiredPushType(
+  type: PushNotificationType
+): type is RetiredPushType {
+  return (RETIRED_PUSH_TYPES as readonly string[]).includes(type);
+}
 
 export const PREDICTION_DEADLINE_MINUTE_OPTIONS = [60, 30, 10] as const;
 export type PredictionDeadlineMinutes =
@@ -23,13 +35,10 @@ export type PushNotificationPrefs = Record<PushNotificationPrefKey, boolean> & {
 };
 
 export const DEFAULT_PUSH_NOTIFICATION_PREFS: PushNotificationPrefs = {
-  gameStart: true,
   gameFinal: true,
-  rankingUpdated: true,
-  injuryStatus: false,
-  starterChange: false,
   predictionDeadline: true,
-  pregameDigest: false,
+  unitReward: true,
+  injuryStatus: false,
   proInsightUpdate: false,
   monthlyReport: true,
   predictionDeadlineMinutes: 30,
@@ -39,33 +48,28 @@ export function prefKeyForPushType(
   type: PushNotificationType
 ): PushNotificationPrefKey {
   switch (type) {
-    case "game_start":
-      return "gameStart";
     case "game_final":
       return "gameFinal";
-    case "ranking_updated":
-      return "rankingUpdated";
     case "unit_reward":
-      return "rankingUpdated";
+      return "unitReward";
     case "injury_status":
       return "injuryStatus";
-    case "starter_change":
-      return "starterChange";
     case "prediction_deadline":
       return "predictionDeadline";
-    case "pregame_digest":
-      return "pregameDigest";
     case "pro_insight_update":
       return "proInsightUpdate";
     case "monthly_report":
       return "monthlyReport";
+    case "game_start":
+    case "ranking_updated":
+    case "starter_change":
+    case "pregame_digest":
+      return "gameFinal";
   }
 }
 
 export const PRO_PREGAME_ALERT_PREF_KEYS = [
   "injuryStatus",
-  "starterChange",
-  "pregameDigest",
   "proInsightUpdate",
 ] as const satisfies readonly PushNotificationPrefKey[];
 
@@ -79,6 +83,7 @@ export function isProOnlyPrefKey(key: PushNotificationPrefKey): boolean {
 }
 
 export function isPushTypeProOnly(type: PushNotificationType): boolean {
+  if (isRetiredPushType(type)) return false;
   return isProOnlyPrefKey(prefKeyForPushType(type));
 }
 
@@ -95,31 +100,26 @@ export function parsePushNotificationPrefs(raw: unknown): PushNotificationPrefs 
     return { ...DEFAULT_PUSH_NOTIFICATION_PREFS };
   }
   const src = raw as Record<string, unknown>;
-  const boolOr = (key: PushNotificationPrefKey, fallback: boolean): boolean =>
+  const boolOr = (key: string, fallback: boolean): boolean =>
     typeof src[key] === "boolean" ? (src[key] as boolean) : fallback;
 
+  const unitRewardFallback =
+    typeof src.unitReward === "boolean"
+      ? (src.unitReward as boolean)
+      : typeof src.rankingUpdated === "boolean"
+        ? (src.rankingUpdated as boolean)
+        : DEFAULT_PUSH_NOTIFICATION_PREFS.unitReward;
+
   return {
-    gameStart: boolOr("gameStart", DEFAULT_PUSH_NOTIFICATION_PREFS.gameStart),
     gameFinal: boolOr("gameFinal", DEFAULT_PUSH_NOTIFICATION_PREFS.gameFinal),
-    rankingUpdated: boolOr(
-      "rankingUpdated",
-      DEFAULT_PUSH_NOTIFICATION_PREFS.rankingUpdated
-    ),
-    injuryStatus: boolOr(
-      "injuryStatus",
-      DEFAULT_PUSH_NOTIFICATION_PREFS.injuryStatus
-    ),
-    starterChange: boolOr(
-      "starterChange",
-      DEFAULT_PUSH_NOTIFICATION_PREFS.starterChange
-    ),
     predictionDeadline: boolOr(
       "predictionDeadline",
       DEFAULT_PUSH_NOTIFICATION_PREFS.predictionDeadline
     ),
-    pregameDigest: boolOr(
-      "pregameDigest",
-      DEFAULT_PUSH_NOTIFICATION_PREFS.pregameDigest
+    unitReward: unitRewardFallback,
+    injuryStatus: boolOr(
+      "injuryStatus",
+      DEFAULT_PUSH_NOTIFICATION_PREFS.injuryStatus
     ),
     proInsightUpdate: boolOr(
       "proInsightUpdate",
@@ -139,6 +139,7 @@ export function isPushTypeEnabledForPrefs(
   prefs: PushNotificationPrefs,
   type: PushNotificationType
 ): boolean {
+  if (isRetiredPushType(type)) return false;
   return prefs[prefKeyForPushType(type)];
 }
 

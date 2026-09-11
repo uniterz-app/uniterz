@@ -36,13 +36,13 @@ export default function ProInsightGatePreviewScreenNative({
       })}
       eyebrow="DEV"
       subtitle={L(lang, {
-        ja: "Free 向けゲート。下に Insight の表示イメージ（例）",
-        en: "Free gate with an example Insight preview below",
-        ko: "Free용 게이트. 아래에 Insight 예시",
-        zh: "面向 Free 的入口。下方为 Insight 示例",
-        es: "Puerta Free con ejemplo de Insight abajo",
-        pt: "Portão Free com exemplo de Insight abaixo",
-        fr: "Portail Free avec aperçu Insight en dessous",
+        ja: "Free 向けゲート。下に新UIの表示イメージ（例）",
+        en: "Free gate with new UI example below",
+        ko: "Free용 게이트. 아래에 새 UI 예시",
+        zh: "面向 Free 的入口。下方为新 UI 示例",
+        es: "Puerta Free con ejemplo de nueva UI abajo",
+        pt: "Portão Free com exemplo da nova UI abaixo",
+        fr: "Portail Free avec aperçu nouvelle UI en dessous",
       })}
       onClose={onClose}
       appBackground

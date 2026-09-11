@@ -1,12 +1,16 @@
 /**
  * リーグ Team / Player 表の二段タブ。
  * SEASON | PLAYOFFS
- *  └ PER GAME | TOTAL | LAST 10（PLAYOFFS は PER GAME | TOTAL のみ）
+ *  └ Team: PER GAME | TOTAL
+ *  └ Player: PER GAME | TOTAL | LAST 10（PLAYOFFS は PER GAME | TOTAL のみ）
+ *
+ * Team Last 10 は BDL に season と同粒度が無いためタブ廃止。
+ * （マッチアップ FORM / Pro Insight は box 由来の狭いセットのみ）
  *
  * データ:
  * - SEASON + PER GAME → season
- * - SEASON + LAST 10 → last10
  * - SEASON + TOTAL → season を出場数で積算（レート系はそのまま）
+ * - Player SEASON + LAST 10 → last10（game logs）
  * - PLAYOFFS → 未接続のため UI では非表示（`NBA_LEAGUE_STATS_PHASES`）
  */
 
@@ -31,7 +35,8 @@ export type NbaLeagueStatsPhase = "season" | "playoffs";
 export type NbaLeagueStatsMode = "per_game" | "total" | "last10";
 
 /** playoffs スナップショットが来るまで season のみ */
-export const NBA_LEAGUE_STATS_PHASES = ["season"] as const satisfies readonly NbaLeagueStatsPhase[];
+export const NBA_LEAGUE_STATS_PHASES =
+  ["season"] as const satisfies readonly NbaLeagueStatsPhase[];
 
 export function phaseTabLabel(phase: NbaLeagueStatsPhase): string {
   return phase === "season" ? "SEASON" : "PLAYOFFS";
@@ -48,7 +53,15 @@ export function modeTabLabel(mode: NbaLeagueStatsMode): string {
   }
 }
 
-export function modesForPhase(
+/** Team リーグ表 — Last 10 なし */
+export function modesForTeamPhase(
+  _phase: NbaLeagueStatsPhase
+): readonly NbaLeagueStatsMode[] {
+  return ["per_game", "total"] as const;
+}
+
+/** Player Leaders — Last 10 あり（game logs） */
+export function modesForPlayerPhase(
   phase: NbaLeagueStatsPhase
 ): readonly NbaLeagueStatsMode[] {
   return phase === "season"
@@ -56,12 +69,35 @@ export function modesForPhase(
     : (["per_game", "total"] as const);
 }
 
+/** @deprecated Player 用。Team は `modesForTeamPhase` */
+export function modesForPhase(
+  phase: NbaLeagueStatsPhase
+): readonly NbaLeagueStatsMode[] {
+  return modesForPlayerPhase(phase);
+}
+
+export function coerceTeamModeForPhase(
+  phase: NbaLeagueStatsPhase,
+  mode: NbaLeagueStatsMode
+): NbaLeagueStatsMode {
+  const allowed = modesForTeamPhase(phase);
+  return allowed.includes(mode) ? mode : "per_game";
+}
+
+export function coercePlayerModeForPhase(
+  phase: NbaLeagueStatsPhase,
+  mode: NbaLeagueStatsMode
+): NbaLeagueStatsMode {
+  const allowed = modesForPlayerPhase(phase);
+  return allowed.includes(mode) ? mode : "per_game";
+}
+
+/** @deprecated Player 用。Team は `coerceTeamModeForPhase` */
 export function coerceModeForPhase(
   phase: NbaLeagueStatsPhase,
   mode: NbaLeagueStatsMode
 ): NbaLeagueStatsMode {
-  const allowed = modesForPhase(phase);
-  return allowed.includes(mode) ? mode : "per_game";
+  return coercePlayerModeForPhase(phase, mode);
 }
 
 const TEAM_COUNTING_METRICS = new Set<NbaLeagueTeamStatMetric>([
@@ -81,16 +117,15 @@ function playerMetricScalesWithGames(metric: NbaPlayerLeaderMetricId): boolean {
   return def?.kind === "perGame" || def?.kind === "minutes";
 }
 
-/** Team 表用: phase/mode → 表示行 */
+/** Team 表用: phase/mode → 表示行（last10 モードは per_game に落とす） */
 export function resolveLeagueTeamStatRows(input: {
   phase: NbaLeagueStatsPhase;
   mode: NbaLeagueStatsMode;
   season: readonly NbaLeagueTeamStatRow[];
   last10: readonly NbaLeagueTeamStatRow[];
 }): NbaLeagueTeamStatRow[] {
-  const mode = coerceModeForPhase(input.phase, input.mode);
+  const mode = coerceTeamModeForPhase(input.phase, input.mode);
   if (input.phase === "playoffs") return [];
-  if (mode === "last10") return [...input.last10];
   if (mode === "per_game") return [...input.season];
   return input.season.map((row) => {
     const gp = teamGamesPlayed(row);
@@ -113,17 +148,18 @@ export function resolvePlayerStatLeaderRows(input: {
   season: readonly NbaPlayerStatLeaderRow[];
   last10: readonly NbaPlayerStatLeaderRow[];
 }): NbaPlayerStatLeaderRow[] {
-  const mode = coerceModeForPhase(input.phase, input.mode);
+  const mode = coercePlayerModeForPhase(input.phase, input.mode);
   if (input.phase === "playoffs") return [];
   const source = mode === "last10" ? input.last10 : input.season;
   if (mode !== "total" || !playerMetricScalesWithGames(input.metric)) {
     return [...source];
   }
-  return source.map((row) => ({
-    ...row,
-    value:
-      row.gamesPlayed > 0
-        ? Math.round(row.value * row.gamesPlayed * 10) / 10
-        : row.value,
-  }));
+  return source.map((row) => {
+    const gp = row.gamesPlayed;
+    if (gp <= 0) return { ...row };
+    return {
+      ...row,
+      value: Math.round(row.value * gp * 10) / 10,
+    };
+  });
 }

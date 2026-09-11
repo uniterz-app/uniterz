@@ -3,7 +3,8 @@
  *
  * クライアント / Native は BallDontLie を叩かない。
  * ここから `nbaLeagueTeamStats` と `nbaLeaguePlayerStats` を書く。
- * team last10 は試合スコア（firestore `games`）から集計（W–L / PPG のみ実値）。
+ * team last10 は試合スコア（firestore `games`）から集計。
+ * W–L/PPG 実値 + ORTG/DRTG/NET（PPG÷season pace）+ 3P%（liveStats）。
  * player last10 は ingest 済み `nbaPlayerGameLogs` から集計（追加 BDL なし）。
  */
 import type { Firestore } from "firebase-admin/firestore";
@@ -28,7 +29,10 @@ import {
   last10BoardHasRows,
   listPlayerGameLogsForLeaders,
 } from "@/lib/nba/playerStatLeaders/buildLast10LeadersFromGameLogs";
-import { buildLast10RowsFromGames } from "@/lib/nba/leagueTeamStats/buildLast10RowsFromGames";
+import {
+  buildLast10RowsFromGames,
+  seasonPaceByTeamIdFromRows,
+} from "@/lib/nba/leagueTeamStats/buildLast10RowsFromGames";
 import { writeLeagueTeamStatsSnapshot } from "@/lib/nba/leagueTeamStats/loadLeagueTeamStatsSnapshot";
 import { writePlayerStatLeadersSnapshot } from "@/lib/nba/playerStatLeaders/loadPlayerStatLeadersSnapshot";
 import { writePlayerSeasonMetricsSnapshots } from "@/lib/nba/playerSeasonMetrics/loadPlayerSeasonMetricsSnapshot";
@@ -111,7 +115,9 @@ export async function ingestNbaLeagueStatsFromProvider(
   const playerBundle = playerBuilt.bundle;
 
   const gameRows = await loadNbaSeasonGameRows(db, dataSeasonKey, 1500);
-  teamBundle.last10 = buildLast10RowsFromGames(gameRows);
+  teamBundle.last10 = buildLast10RowsFromGames(gameRows, {
+    seasonPaceByTeamId: seasonPaceByTeamIdFromRows(teamBundle.season),
+  });
   if (teamBundle.last10.some((r) => r.wins + r.losses > 0)) {
     teamBundle.asOfLabel = teamBundle.asOfLabel.replace(
       "last10 pending",

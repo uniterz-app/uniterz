@@ -30,32 +30,25 @@ type PrefRow = {
 
 const MATCH_PREF_ROWS: PrefRow[] = [
   {
-    key: "gameStart",
-    titleJa: "試合開始（15分前）",
-    titleEn: "Match start (15 min before)",
-    descJa: "予想した試合が始まる前にお知らせ",
-    descEn: "Before a match you predicted is about to start",
-  },
-  {
     key: "gameFinal",
     titleJa: "結果確定",
     titleEn: "Result confirmed",
-    descJa: "予想した試合の結果が確定したとき",
-    descEn: "When a match you predicted is finalized",
-  },
-  {
-    key: "rankingUpdated",
-    titleJa: "ランキング更新",
-    titleEn: "Rankings updated",
-    descJa: "本日予想した日の累積ランキング更新（16:00頃）",
-    descEn: "Daily ranking update on days you predicted (~4pm JST)",
+    descJa: "予想した試合の結果が確定したとき（スコアは出ません）",
+    descEn: "When a match you predicted is finalized (no score spoiler)",
   },
   {
     key: "predictionDeadline",
     titleJa: "予想締切",
     titleEn: "Prediction deadline",
-    descJa: "未予想の試合だけ。締切前にお知らせ",
-    descEn: "Unpredicted matches only — before the deadline",
+    descJa: "未予想だけ。複数あるときは1通にまとめる",
+    descEn: "Unpredicted only — batched into one when several",
+  },
+  {
+    key: "unitReward",
+    titleJa: "Unit 付与",
+    titleEn: "Unit rewards",
+    descJa: "ランキング報酬の Unit が付与されたとき",
+    descEn: "When ranking Unit rewards are granted",
   },
 ];
 
@@ -64,22 +57,8 @@ const PRO_PREF_ROWS: PrefRow[] = [
     key: "injuryStatus",
     titleJa: "出場ステータス変更",
     titleEn: "Availability change",
-    descJa: "欠場・復帰など、予想を見直すべき変化",
-    descEn: "Out / return — changes that warrant a recheck",
-  },
-  {
-    key: "starterChange",
-    titleJa: "重要な先発変更",
-    titleEn: "High-impact lineup change",
-    descJa: "主力落ち・控え先発。通常の先発発表は送らない",
-    descEn: "Starters dropped / bench starts — not every lineup",
-  },
-  {
-    key: "pregameDigest",
-    titleJa: "複数変化のまとめ",
-    titleEn: "Pregame digest",
-    descJa: "短時間の更新を1通にまとめる",
-    descEn: "Bundle several updates into one notification",
+    descJa: "平均出場 25 分以上の選手の欠場・復帰など",
+    descEn: "Out / return for players averaging 25+ minutes",
   },
   {
     key: "proInsightUpdate",
@@ -166,13 +145,13 @@ export default function NotificationSettingsPage({
         osSection: "配信先",
         osHint: "プッシュはアプリ側の端末通知がオンのときに届きます。種類はここで選べます。",
         matchSection: "試合の進行",
-        matchHint: "予想した試合の開始・結果・ランキングと、未予想の締切。",
+        matchHint: "予想した試合の結果・Unit、未予想の締切まとめ。",
         deadlineSection: "締切の何分前",
         deadlineFreeHint: "Free は 30 分前。60 / 10 分前は Pro。",
         reviewSection: "予想を見直す",
-        reviewHintPro: "欠場・先発など、予想を直すべき変化だけ。",
+        reviewHintPro: "欠場・Insight など、予想を直すべき変化だけ。",
         reviewHintFree:
-          "欠場・先発・Insight・月次レポートは Pro で届きます。",
+          "出場ステータス・Insight・月次レポートは Pro で届きます。",
         signIn: "ログインすると保存できます。",
       }
     : {
@@ -182,13 +161,13 @@ export default function NotificationSettingsPage({
         osHint: "Pushes land when device notifications are on in the app. Types are chosen here.",
         matchSection: "Match progress",
         matchHint:
-          "Start, result, and rankings for matches you predicted — plus deadlines you haven't entered.",
+          "Results and Units for matches you predicted — plus batched deadlines.",
         deadlineSection: "Minutes before deadline",
         deadlineFreeHint: "Free is 30 min. Pro unlocks 60 / 10.",
         reviewSection: "Recheck alerts",
-        reviewHintPro: "Only changes that warrant editing a prediction.",
+        reviewHintPro: "Only availability / Insight changes that warrant a recheck.",
         reviewHintFree:
-          "Availability, lineup, Insight, and monthly report are Pro.",
+          "Availability, Insight, and monthly report are Pro.",
         signIn: "Sign in to save these settings.",
       };
 

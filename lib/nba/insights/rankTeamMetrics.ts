@@ -14,12 +14,19 @@ export type RankedMetricKey =
   | "orebPct"
   | "ftaRate"
   | "ptsFb"
+  | "ptsTov"
+  | "ptsSecondChance"
   | "rimFgPct"
   | "corner3Pct"
   | "oppFg3Pct"
   | "oppTov"
   | "oppOrebPct"
   | "oppEfgPct"
+  | "oppFtaRate"
+  | "oppPtsPaint"
+  | "oppPtsFb"
+  | "oppPtsOffTov"
+  | "oppPtsSecondChance"
   | "winPct";
 
 const HIGHER_IS_BETTER: Record<RankedMetricKey, boolean> = {
@@ -33,12 +40,19 @@ const HIGHER_IS_BETTER: Record<RankedMetricKey, boolean> = {
   orebPct: true,
   ftaRate: true,
   ptsFb: true,
+  ptsTov: true,
+  ptsSecondChance: true,
   rimFgPct: true,
   corner3Pct: true,
   oppFg3Pct: false,
   oppTov: true,
   oppOrebPct: false,
   oppEfgPct: false,
+  oppFtaRate: false,
+  oppPtsPaint: false,
+  oppPtsFb: false,
+  oppPtsOffTov: false,
+  oppPtsSecondChance: false,
   winPct: true,
 };
 
@@ -48,6 +62,17 @@ function metricValue(
 ): number | null {
   const v = (row as Record<string, unknown>)[key];
   if (typeof v !== "number" || !Number.isFinite(v)) return null;
+  // misc 未配線の 0 は欠損扱い（偽 rank を作らない）
+  if (
+    (key === "oppPtsPaint" ||
+      key === "oppPtsFb" ||
+      key === "oppPtsOffTov" ||
+      key === "oppPtsSecondChance" ||
+      key === "ptsSecondChance") &&
+    v === 0
+  ) {
+    return null;
+  }
   return v;
 }
 

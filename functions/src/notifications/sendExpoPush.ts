@@ -4,12 +4,14 @@ import {
   buildPushNotificationCopy,
   normalizePushLanguage,
   type GameMatchupCopyInput,
+  type PushLanguage,
   type PushNotificationData,
   type PushNotificationType,
 } from "./pushNotificationCopy";
 import {
   isPushTypeEnabledForPrefs,
   isPushTypeProOnly,
+  isRetiredPushType,
   parsePushNotificationPrefs,
   type PushNotificationPrefs,
 } from "./pushNotificationPrefs";
@@ -75,14 +77,14 @@ async function loadUserPushContexts(
 ): Promise<
   Map<
     string,
-    { language: "ja" | "en"; prefs: PushNotificationPrefs; isPro: boolean }
+    { language: PushLanguage; prefs: PushNotificationPrefs; isPro: boolean }
   >
 > {
   const firestore = getFirestore();
   const unique = [...new Set(uids.filter(Boolean))];
   const map = new Map<
     string,
-    { language: "ja" | "en"; prefs: PushNotificationPrefs; isPro: boolean }
+    { language: PushLanguage; prefs: PushNotificationPrefs; isPro: boolean }
   >();
   const chunkSize = 30;
   for (let i = 0; i < unique.length; i += chunkSize) {
@@ -138,6 +140,10 @@ export async function sendExpoPushToUids(input: {
   matchup?: GameMatchupCopyInput;
   predictionDeadlineMinutes?: 10 | 30 | 60;
 }): Promise<{ sent: number; skipped: number }> {
+  if (isRetiredPushType(input.type)) {
+    return { sent: 0, skipped: input.targets.length };
+  }
+
   const uids = input.targets.map((t) => t.uid);
   const [tokens, userContexts] = await Promise.all([
     loadTokensForUids(uids),
@@ -171,8 +177,22 @@ export async function sendExpoPushToUids(input: {
     ) {
       continue;
     }
-    const copy = buildPushNotificationCopy(input.type, ctx.language, input.matchup);
     const data = dataByUid.get(rec.uid) ?? { type: input.type };
+    const matchupForCopy =
+      input.type === "unit_reward" &&
+      typeof data.amount === "string" &&
+      data.amount
+        ? {
+            detail: [data.label, `+${data.amount} Unit`]
+              .filter((x): x is string => typeof x === "string" && x.length > 0)
+              .join(" "),
+          }
+        : input.matchup;
+    const copy = buildPushNotificationCopy(
+      input.type,
+      ctx.language,
+      matchupForCopy
+    );
     messages.push({
       to: rec.expoPushToken,
       sound: "default",

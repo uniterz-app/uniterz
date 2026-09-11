@@ -70,7 +70,7 @@ BDL（サーバーのみ）
 - `mode: "heavy"` でプレイヤー試合ログ全件も（タイムアウト注意）。試合ログ書き込み後に leaders last10 を game logs から再集計（追加 BDL なし）
 - 週次 Firebase cron `runNbaStatsWeeklyIngestCron` — **月曜 10:00 JST** → `POST /api/admin/nba-stats-weekly-ingest`（payroll + contracts）。キャリアは手動
 - チーム league-stats は scoring / hustle / tracking / clutch / playtype 込み（HOW THEY PLAY）。team by_zone は BDL 不可 → リーグ表 RIM/C3 非表示・チーム詳細 SHOT 枠なし
-- 公開 API の前期フォールバックはしない。Team Last 10 は games 由来の W–L/PPG のみ表示
+- 公開 API の前期フォールバックはしない。Team リーグ表に Last 10 タブは出さない（マッチアップ FORM / Pro Insight のみ box 由来）
 - ロスターに bio（height/weight/college/country/draft*）を載せ、プレイヤー詳細はシード bio を使わない
 - 詳細 overlay は `?team=` / `?player=` でレスポンスを絞る
 - プレイヤー詳細の venue / vs-opp はデータ未配線のためセクション非表示（空 NO DATA を出さない）

@@ -105,7 +105,7 @@ export type BdlTeamTrackingType = (typeof BDL_TEAM_TRACKING_TYPES)[number];
 /**
  * BDL team season averages → リーグ Team Stats advanced。
  *
- * 取る: base / advanced / opponent / scoring / hustle / tracking / clutch / playtype
+ * 取る: base / advanced / opponent / scoring / misc / hustle / tracking / clutch / playtype
  * 取らない: team shooting/by_zone（BDL 400）→ rimFgPct / corner3Pct は 0 のまま
  */
 export function mapBdlTeamAdvancedFields(input: {
@@ -113,6 +113,7 @@ export function mapBdlTeamAdvancedFields(input: {
   advanced?: BdlTeamSeasonAverageRow;
   opponent?: BdlTeamSeasonAverageRow;
   scoring?: BdlTeamSeasonAverageRow;
+  misc?: BdlTeamSeasonAverageRow;
   hustle?: BdlTeamSeasonAverageRow;
   trackingByType?: Partial<
     Record<BdlTeamTrackingType, BdlTeamSeasonAverageRow | undefined>
@@ -131,6 +132,7 @@ export function mapBdlTeamAdvancedFields(input: {
   const a = input.advanced?.stats ?? {};
   const o = input.opponent?.stats ?? {};
   const sc = input.scoring?.stats ?? {};
+  const mi = input.misc?.stats ?? {};
   const h = input.hustle?.stats ?? {};
   const tr = input.trackingByType ?? {};
 
@@ -212,6 +214,26 @@ export function mapBdlTeamAdvancedFields(input: {
     if (pctFb != null) set(out, "ptsFb", round1(ppg * pctFb));
     if (pctTov != null) set(out, "ptsTov", round1(ppg * pctTov));
   }
+
+  // --- misc（真の得点 / 失点。scoring 推計より優先）---
+  // BDL 実キー: pts_paint / opp_pts_paint 等（docs の points_paint は別名）
+  const miscPtsPaint = num(mi, "pts_paint", "points_paint");
+  const miscPtsFb = num(mi, "pts_fb", "points_fast_break");
+  const miscPtsOffTov = num(mi, "pts_off_tov", "points_off_turnovers");
+  const miscPts2nd = num(mi, "pts_2nd_chance", "points_second_chance");
+  if (miscPtsPaint != null) set(out, "ptsPaint", round1(miscPtsPaint));
+  if (miscPtsFb != null) set(out, "ptsFb", round1(miscPtsFb));
+  if (miscPtsOffTov != null) set(out, "ptsTov", round1(miscPtsOffTov));
+  if (miscPts2nd != null) set(out, "ptsSecondChance", round1(miscPts2nd));
+
+  const oppPtsPaint = num(mi, "opp_pts_paint", "opp_points_paint");
+  const oppPtsFb = num(mi, "opp_pts_fb", "opp_points_fast_break");
+  const oppPtsOffTov = num(mi, "opp_pts_off_tov", "opp_points_off_turnovers");
+  const oppPts2nd = num(mi, "opp_pts_2nd_chance", "opp_points_second_chance");
+  if (oppPtsPaint != null) set(out, "oppPtsPaint", round1(oppPtsPaint));
+  if (oppPtsFb != null) set(out, "oppPtsFb", round1(oppPtsFb));
+  if (oppPtsOffTov != null) set(out, "oppPtsOffTov", round1(oppPtsOffTov));
+  if (oppPts2nd != null) set(out, "oppPtsSecondChance", round1(oppPts2nd));
 
   // --- defense allowed ---
   set(out, "fgPctAllowed", rate(num(o, "opp_fg_pct", "fg_pct")));

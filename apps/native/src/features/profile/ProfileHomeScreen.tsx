@@ -1763,6 +1763,10 @@ export default function ProfileHomeScreen({
           navigation.navigate("ProLeagueTeaserPreview");
         else if (page === "proInsightGatePreview" && __DEV__)
           navigation.navigate("ProInsightGatePreview");
+        else if (page === "proInsightNarrativePreview" && __DEV__)
+          navigation.navigate("ProInsightNarrativePreview");
+        else if (page === "matchupTeamStatsPreview" && __DEV__)
+          navigation.navigate("MatchupTeamStatsPreview");
       }}
     />
     <ProfileBadgeDetailModal

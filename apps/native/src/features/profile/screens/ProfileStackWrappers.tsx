@@ -19,6 +19,8 @@ import TeamDetailPreviewScreenNative from "../../games/teamDetail/TeamDetailPrev
 import LiveGameStatsPreviewScreenNative from "../../games/live/LiveGameStatsPreviewScreenNative";
 import ProLeagueTeaserPreviewScreenNative from "../../rankings/ProLeagueTeaserPreviewScreenNative";
 import ProInsightGatePreviewScreenNative from "../../games/predict/ProInsightGatePreviewScreenNative";
+import ProInsightNarrativePreviewScreenNative from "../../games/predict/ProInsightNarrativePreviewScreenNative";
+import MatchupTeamStatsPreviewScreenNative from "../../games/predict/MatchupTeamStatsPreviewScreenNative";
 import type { ProfileStackParamList } from "../../../navigation/types";
 import { resolveLocalizedLang } from "@/lib/i18n/localize";
 
@@ -246,6 +248,32 @@ export function ProInsightGatePreviewScreenWrapper() {
       language={resolveLocalizedLang(language) === "ja" ? "ja" : "en"}
       onClose={() => navigation.goBack()}
       onPressSubscribe={() => navigation.navigate("ProSubscribe")}
+    />
+  );
+}
+
+export function ProInsightNarrativePreviewScreenWrapper() {
+  const navigation =
+    useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
+  const { fUser } = useFirebaseUser();
+  const { language } = useNativeUserLanguage(fUser?.uid);
+  return (
+    <ProInsightNarrativePreviewScreenNative
+      language={resolveLocalizedLang(language)}
+      onClose={() => navigation.goBack()}
+    />
+  );
+}
+
+export function MatchupTeamStatsPreviewScreenWrapper() {
+  const navigation =
+    useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
+  const { fUser } = useFirebaseUser();
+  const { language } = useNativeUserLanguage(fUser?.uid);
+  return (
+    <MatchupTeamStatsPreviewScreenNative
+      language={resolveLocalizedLang(language)}
+      onClose={() => navigation.goBack()}
     />
   );
 }

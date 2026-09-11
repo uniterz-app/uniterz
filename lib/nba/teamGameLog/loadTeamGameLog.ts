@@ -59,6 +59,41 @@ function resolveHeadToHead(raw: unknown): NbaTeamHeadToHeadEntry[] {
   );
 }
 
+function resolveRecentGames(
+  raw: unknown
+): NbaTeamGameLogSlice["recentGames"] {
+  if (!Array.isArray(raw)) return [];
+  const out: NbaTeamGameLogSlice["recentGames"] = [];
+  for (const item of raw) {
+    if (!item || typeof item !== "object") continue;
+    const row = item as Record<string, unknown>;
+    const dateLabel =
+      typeof row.dateLabel === "string" ? row.dateLabel.trim() : "";
+    const oppAbbr =
+      typeof row.oppAbbr === "string" ? row.oppAbbr.trim() : "";
+    const oppTeamId =
+      typeof row.oppTeamId === "string" ? row.oppTeamId.trim() : "";
+    const result = row.result === "W" || row.result === "L" ? row.result : null;
+    if (!dateLabel || !oppAbbr || !oppTeamId || !result) continue;
+    const gameId =
+      typeof row.gameId === "string" && row.gameId.trim()
+        ? row.gameId.trim()
+        : undefined;
+    out.push({
+      dateLabel,
+      ...(gameId ? { gameId } : null),
+      oppTeamId,
+      oppAbbr,
+      home: row.home === true,
+      teamScore: isFiniteNumber(row.teamScore) ? row.teamScore : 0,
+      oppScore: isFiniteNumber(row.oppScore) ? row.oppScore : 0,
+      result,
+      conferenceGame: row.conferenceGame === true,
+    });
+  }
+  return out;
+}
+
 function resolveTeamLog(
   teamId: string,
   season: string,
@@ -98,9 +133,7 @@ function resolveTeamLog(
       kind,
       count: isFiniteNumber(streakRaw?.count) ? streakRaw!.count : 0,
     },
-    recentGames: Array.isArray(row.recentGames)
-      ? (row.recentGames as NbaTeamGameLogSlice["recentGames"])
-      : [],
+    recentGames: resolveRecentGames(row.recentGames),
     upcomingGames: Array.isArray(row.upcomingGames)
       ? (row.upcomingGames as NbaTeamGameLogSlice["upcomingGames"])
       : [],

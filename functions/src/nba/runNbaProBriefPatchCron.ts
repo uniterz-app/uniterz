@@ -1,5 +1,6 @@
 /**
- * JST 毎時 — tip 1h 前の試合に Pro Insight 完全版を書く（injury は専用 cron のスナップショットを読む）。
+ * JST 毎時 — tip 1h 前の試合。injury ステータスが変わっていたらナラティブを再生成。
+ * （変更なしは skip。injury スナップショットは専用 cron が更新済み）
  *
  * env（どちらか）:
  *   NEXT_NBA_PRO_BRIEF_INGEST_URL  … 例 https://www.uniterz.app/api/admin/nba-pro-brief-ingest
@@ -47,14 +48,14 @@ export const runNbaProBriefPatchCron = onSchedule(
         "content-type": "application/json",
         "x-internal-job-secret": secret,
       },
-      body: JSON.stringify({ mode: "patch" }),
+      body: JSON.stringify({ mode: "narrative_patch" }),
     });
     const text = await res.text().catch(() => "");
     if (!res.ok) {
       console.error(
         `[runNbaProBriefPatchCron] failed: ${res.status} ${text.slice(0, 800)}`
       );
-      throw new Error(`nba-pro-brief-ingest patch HTTP ${res.status}`);
+      throw new Error(`nba-pro-brief-ingest narrative_patch HTTP ${res.status}`);
     }
     console.log(`[runNbaProBriefPatchCron] ok: ${text.slice(0, 1200)}`);
   }

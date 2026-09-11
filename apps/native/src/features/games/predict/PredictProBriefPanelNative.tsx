@@ -23,6 +23,7 @@ import {
   type ProInsightGateBulletIcon,
 } from "../../../../../../lib/predict/proInsightGateCopy";
 import { PRO_INSIGHT_GATE_SAMPLE_BRIEF } from "../../../../../../lib/predict/proInsightGateSampleBrief";
+import PredictProInsightNarrativePanelNative from "./PredictProInsightNarrativePanelNative";
 import { resolveLocalizedLang } from "../../../../../../lib/i18n/localize";
 import { getMobileTeamName } from "../../../../../../lib/team-name-split-mobile";
 import { NBA_TEAM_NAME_BY_ID } from "../../../../../../lib/nba-team-names";
@@ -67,8 +68,7 @@ const BULLET_ICONS: Record<
   matchup: "sword-cross",
   schedule: "calendar-range",
   context: "chart-timeline-variant",
-  edge: "scale-balance",
-  comment: "comment-text-outline",
+  injury: "heart-pulse",
 };
 
 function hexToRgba(hex: string, alpha: number): string {
@@ -407,9 +407,7 @@ export default function PredictProBriefPanelNative({
   const homeColor = getTeamJerseyPrimaryColor("nba", homeTeamId);
   const awayColor = getTeamJerseyPrimaryColor("nba", awayTeamId);
   const safeBrief = useMemo(() => sanitizeProBriefForDisplay(brief), [brief]);
-  /** Free ゲート下は実データ or サンプルで実画面例を見せる */
-  const displayBrief =
-    safeBrief ?? (locked ? PRO_INSIGHT_GATE_SAMPLE_BRIEF : null);
+  const displayBrief = safeBrief;
   const home = displayBrief?.home ?? EMPTY_CARD;
   const away = displayBrief?.away ?? EMPTY_CARD;
   const homePlayers = home.players ?? [];
@@ -594,18 +592,15 @@ export default function PredictProBriefPanelNative({
             </View>
           </View>
 
-          {/* ゲート下に実際の PRO INSIGHT 画面例 */}
+          {/* ゲート下に実際の PRO INSIGHT 画面例（新 UI） */}
           <View style={styles.exampleBlock} pointerEvents="none">
             <Text style={styles.exampleLabel}>{gate.exampleLabel}</Text>
-            <View style={styles.exampleCard}>
-              <TitleRow
-                homeNick={homeNick}
-                awayNick={awayNick}
-                homeColor={homeColor}
-                awayColor={awayColor}
-              />
-              {body}
-            </View>
+            <PredictProInsightNarrativePanelNative
+              brief={PRO_INSIGHT_GATE_SAMPLE_BRIEF}
+              language={language}
+              homeTeamName={homeTeamName}
+              awayTeamName={awayTeamName}
+            />
           </View>
         </View>
       ) : (

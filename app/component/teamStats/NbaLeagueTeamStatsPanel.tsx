@@ -11,16 +11,16 @@ import { getTeamPrimaryColor } from "@/lib/team-colors";
 import { useLeagueTeamStatsBundle } from "@/lib/nba/useLeagueTeamStatsBundle";
 import { nbaDailyStatsUpdateFootnote } from "@/lib/nba/nbaStatsUpdateSchedule";
 import { isNbaLeagueStatsPreseason } from "@/lib/nba/leagueStatsPreseason";
-import { leagueStatsTableEmptyCopy, teamLast10HasPlayData } from "@/lib/nba/leagueStatsEmptyState";
+import { leagueStatsTableEmptyCopy } from "@/lib/nba/leagueStatsEmptyState";
 import NbaLeagueStatsTableEmpty from "@/app/component/stats/NbaLeagueStatsTableEmpty";
 import {
   CyberSlantedTab,
   CyberSlantedTabBar,
 } from "@/app/component/rankings/CyberSlantedTab";
 import {
-  coerceModeForPhase,
+  coerceTeamModeForPhase,
   modeTabLabel,
-  modesForPhase,
+  modesForTeamPhase,
   NBA_LEAGUE_STATS_PHASES,
   phaseTabLabel,
   resolveLeagueTeamStatRows,
@@ -319,7 +319,7 @@ export default function NbaLeagueTeamStatsPanel({
     setSortDir((d) => (d === "desc" ? "asc" : "desc"));
   }
 
-  const modeOptions = modesForPhase(phase);
+  const modeOptions = modesForTeamPhase(phase);
   const rows = useMemo(() => {
     const base = resolveLeagueTeamStatRows({
       phase,
@@ -335,11 +335,7 @@ export default function NbaLeagueTeamStatsPanel({
     .filter(Boolean) as NbaLeagueTeamStatRow[];
 
   const emptyCopy = leagueStatsTableEmptyCopy(lang, mode);
-  const showEmptyTable =
-    !loading &&
-    (mode === "last10"
-      ? !teamLast10HasPlayData(bundle.last10)
-      : rows.length === 0);
+  const showEmptyTable = !loading && rows.length === 0;
 
   function togglePick(teamId: string) {
     setPicked((prev) => {
@@ -375,7 +371,7 @@ export default function NbaLeagueTeamStatsPanel({
                 active={phase === p}
                 onClick={() => {
                   setPhase(p);
-                  setMode(coerceModeForPhase(p, mode));
+                  setMode(coerceTeamModeForPhase(p, mode));
                 }}
                 compact
                 fontWeight={700}

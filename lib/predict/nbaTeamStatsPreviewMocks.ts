@@ -6,6 +6,18 @@
 import { getNbaTeamNicknameById } from "@/lib/nba-team-names";
 import { nbaSeasonStatsReady } from "@/lib/predict/nbaSeasonStatsReady";
 
+/** マッチアップ表下の直近フォーム行 */
+export type NbaTeamFormGame = {
+  dateLabel: string;
+  /** Firestore `games/{id}`。あればボックススコアへ */
+  gameId?: string;
+  oppAbbr: string;
+  home: boolean;
+  teamScore: number;
+  oppScore: number;
+  result: "W" | "L";
+};
+
 export type NbaTeamStatSide = {
   teamId: string;
   teamName: string;
@@ -16,6 +28,12 @@ export type NbaTeamStatSide = {
   drtg: number;
   netrtg: number;
   pace: number;
+  /** 0–1。box / season advanced */
+  fgPct?: number;
+  fg3Pct?: number;
+  efgPct?: number;
+  ftPct?: number;
+  tovPct?: number;
   homeW: number;
   homeL: number;
   awayW: number;
@@ -25,6 +43,8 @@ export type NbaTeamStatSide = {
   formL?: number;
   /** 直近結果の並び（古い→新しい）。L10 の W/L マス表示用 */
   formResults?: Array<"W" | "L">;
+  /** 直近 ≤5 試合（新しい→古い）。対戦相手・結果・点数・H/A */
+  recentFormGames?: NbaTeamFormGame[];
   /** リーグ順位（表示用 #n）— Season 向け。L10 は省略可 */
   ranks?: {
     ppg?: number;
@@ -34,6 +54,11 @@ export type NbaTeamStatSide = {
     drtg?: number;
     netrtg?: number;
     pace?: number;
+    fgPct?: number;
+    fg3Pct?: number;
+    efgPct?: number;
+    ftPct?: number;
+    tovPct?: number;
   };
 };
 
@@ -93,6 +118,26 @@ function last10FromSeason(
   const drtg = +(side.drtg + shift.drtg).toFixed(1);
   const diff = +(ppg - papg).toFixed(1);
   const netrtg = +(ortg - drtg).toFixed(1);
+  const formResults =
+    shift.formResults ?? buildFormResults(shift.formW, shift.formL);
+  // formResults は古い→新しい。表示は新しい→古いの直近5
+  const recentSlice = formResults.slice(-5).reverse();
+  const mockOpps = ["BOS", "NYK", "MIA", "PHI", "MIL"];
+  const recentFormGames: NbaTeamFormGame[] = recentSlice.map((result, i) => {
+    const home = i % 2 === 0;
+    const teamScore = result === "W" ? 112 - i : 98 - i;
+    const oppScore = result === "W" ? 104 - i : 110 - i;
+    const month = 3;
+    const day = 28 - i;
+    return {
+      dateLabel: `${month}/${day}`,
+      oppAbbr: mockOpps[i % mockOpps.length]!,
+      home,
+      teamScore,
+      oppScore,
+      result,
+    };
+  });
   return {
     teamId: side.teamId,
     teamName: side.teamName,
@@ -109,8 +154,9 @@ function last10FromSeason(
     awayL: side.awayL,
     formW: shift.formW,
     formL: shift.formL,
-    formResults:
-      shift.formResults ?? buildFormResults(shift.formW, shift.formL),
+    formResults,
+    recentFormGames:
+      recentFormGames.length > 0 ? recentFormGames : undefined,
     ranks: shift.ranks,
   };
 }
@@ -120,11 +166,22 @@ function bundle(
   homeShift: Parameters<typeof last10FromSeason>[1],
   awayShift: Parameters<typeof last10FromSeason>[1]
 ): NbaTeamStatsBundle {
+  const last10Home = last10FromSeason(season.home, homeShift);
+  const last10Away = last10FromSeason(season.away, awayShift);
   return {
-    season,
+    season: {
+      home: {
+        ...season.home,
+        recentFormGames: last10Home.recentFormGames,
+      },
+      away: {
+        ...season.away,
+        recentFormGames: last10Away.recentFormGames,
+      },
+    },
     last10: {
-      home: last10FromSeason(season.home, homeShift),
-      away: last10FromSeason(season.away, awayShift),
+      home: last10Home,
+      away: last10Away,
     },
   };
 }

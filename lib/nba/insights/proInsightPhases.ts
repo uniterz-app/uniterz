@@ -50,3 +50,18 @@ export function isWithinProBriefPatchWindow(
   const delta = tipAtMs - nowMs;
   return delta > 0 && delta <= PRO_BRIEF_PATCH_BEFORE_TIP_MS;
 }
+
+/**
+ * Pro Insight 生成対象か。
+ * プレシーズンは作らない（regular / play_in / playoffs / 未設定=regular）。
+ */
+export function isProInsightEligibleNbaGame(
+  data: Record<string, unknown> | null | undefined
+): boolean {
+  if (!data) return false;
+  const phase = String(data.seasonPhase ?? "regular")
+    .trim()
+    .toLowerCase();
+  if (phase === "preseason" || phase === "pre") return false;
+  return true;
+}

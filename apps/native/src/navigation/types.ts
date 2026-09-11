@@ -171,6 +171,10 @@ export type ProfileStackParamList = {
   /** __DEV__ Free → PRO LEAGUE ゲート（ティーザー） */
   ProLeagueTeaserPreview: undefined;
   ProInsightGatePreview: undefined;
+  /** __DEV__ 新 Pro Insight ナラティブ UI（HOME/AWAY 短文） */
+  ProInsightNarrativePreview: undefined;
+  /** __DEV__ 予想マッチアップ Team Stats + LAST 5 */
+  MatchupTeamStatsPreview: undefined;
   ProSuccess: { plan?: "weekly" | "monthly" | "season" } | undefined;
   PlanChange: undefined;
   PlanChangeComplete: undefined;

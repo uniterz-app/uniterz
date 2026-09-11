@@ -87,6 +87,18 @@ export async function runNbaInjuryIngestSchedule(
         INJURY_INGEST_MIN_INTERVAL_MS
       )
     ) {
+      // BDL 再取得はスキップでも、試合 doc への injuryReport 同期は行う
+      const { syncGameInjuryReportsForPush } = await import(
+        "./syncGameInjuryReportsForPush"
+      );
+      try {
+        await syncGameInjuryReportsForPush(db, { seasonKey, nowMs });
+      } catch (err) {
+        console.warn(
+          "[runNbaInjuryIngestSchedule] game injuryReport sync failed",
+          err
+        );
+      }
       return {
         ok: true,
         trigger: input.trigger,

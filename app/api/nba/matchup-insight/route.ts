@@ -2,12 +2,22 @@ import { NextResponse } from "next/server";
 import { getAdminDb } from "@/lib/firebaseAdmin";
 import type { PredictProBrief } from "@/lib/predict/predictProBrief";
 import { sanitizeProBriefForDisplay } from "@/lib/predict/validateProBrief";
+import {
+  readProInsightNarrativeMeta,
+  resolveProInsightNarrativeStatus,
+  sanitizeProInsightNarrativeForDisplay,
+} from "@/lib/predict/validateProInsightNarrative";
 import { requireUidFromRequest } from "@/lib/communities/serverAuth";
 import { assertProUser } from "@/lib/pro/assertProUser";
 
 /**
  * GET /api/nba/matchup-insight?gameId=
- * Firestore games/{id}.proBrief — Pro 限定。
+ *
+ * Firestore games/{id}:
+ *   - proInsightNarrative … 新 UI（試合共通スナップショット · Pro 限定）
+ *   - proBrief … 旧 HOME/AWAY テンプレ（互換のため残す）
+ *
+ * クライアントは narrative を優先。未生成は status: "empty" | "pending"。
  */
 export async function GET(req: Request) {
   try {
@@ -51,23 +61,43 @@ export async function GET(req: Request) {
       );
     }
 
+    const narrative = sanitizeProInsightNarrativeForDisplay(
+      data.proInsightNarrative
+    );
+    const narrativeMeta = readProInsightNarrativeMeta(
+      data.proInsightNarrative,
+      data.proInsightFacts
+    );
+    const status = resolveProInsightNarrativeStatus({
+      narrative,
+      pendingBatch: narrativeMeta.pendingBatch === true,
+    });
+
     const brief = sanitizeProBriefForDisplay(
       data.proBrief as PredictProBrief | null | undefined
     );
+
+    const updatedAtMs =
+      (typeof narrativeMeta.generatedAtMs === "number"
+        ? narrativeMeta.generatedAtMs
+        : null) ??
+      (data.proBriefUpdatedAt &&
+      typeof (data.proBriefUpdatedAt as { toMillis?: () => number }).toMillis ===
+        "function"
+        ? (data.proBriefUpdatedAt as { toMillis: () => number }).toMillis()
+        : null);
 
     return NextResponse.json(
       {
         ok: true,
         gameId,
+        status,
+        narrative,
+        narrativeMeta,
+        /** @deprecated 旧 HOME/AWAY。新 UI は narrative を使う */
         brief,
         updatedAt:
-          data.proBriefUpdatedAt &&
-          typeof (data.proBriefUpdatedAt as { toDate?: () => Date }).toDate ===
-            "function"
-            ? (data.proBriefUpdatedAt as { toDate: () => Date })
-                .toDate()
-                .toISOString()
-            : null,
+          updatedAtMs != null ? new Date(updatedAtMs).toISOString() : null,
       },
       {
         headers: {

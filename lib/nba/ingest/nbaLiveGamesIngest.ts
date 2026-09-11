@@ -208,19 +208,24 @@ export async function ingestNbaLiveGamesFromBdl(
 
     if (!dryRun) {
       const { id: _id, startAtMs, startAtJstIso, ...rest } = mappedGame;
-      await db
-        .collection("games")
-        .doc(docId)
-        .set(
-          {
-            ...rest,
-            startAt: Timestamp.fromMillis(startAtMs),
-            startAtJst: Timestamp.fromMillis(startAtMs),
-            startAtJstIso,
-            ...patch,
-          },
-          { merge: true }
-        );
+      const ref = db.collection("games").doc(docId);
+      if (isFinal) {
+        const existing = await ref.get();
+        const prev = existing.data() as { finalAt?: unknown } | undefined;
+        if (prev?.finalAt == null) {
+          patch.finalAt = FieldValue.serverTimestamp();
+        }
+      }
+      await ref.set(
+        {
+          ...rest,
+          startAt: Timestamp.fromMillis(startAtMs),
+          startAtJst: Timestamp.fromMillis(startAtMs),
+          startAtJstIso,
+          ...patch,
+        },
+        { merge: true }
+      );
     }
     gamesUpdated += 1;
     if (liveStats) liveStatsWritten += 1;
@@ -232,30 +237,34 @@ export async function ingestNbaLiveGamesFromBdl(
     const liveStats = normalizeLiveGameStatsDoc(box.liveStats);
     if (!liveStats) continue;
     const docId = nbaGameDocIdFromBdlId(box.bdlGameId);
+    const isFinalBox = box.phase === "final";
     if (!dryRun) {
-      await db
-        .collection("games")
-        .doc(docId)
-        .set(
-          {
-            status: box.phase === "final" ? "final" : "live",
-            final: box.phase === "final",
-            homeScore: box.homeScore,
-            awayScore: box.awayScore,
-            score: { home: box.homeScore, away: box.awayScore },
-            homeTeamId: box.homeAppTeamId,
-            awayTeamId: box.awayAppTeamId,
-            periodLabel: box.periodLabel,
-            clock: box.clock,
-            liveStats,
-            league: "nba",
-            source: "bdl",
-            bdlGameId: box.bdlGameId,
-            updatedAt: FieldValue.serverTimestamp(),
-            liveSyncedAt: FieldValue.serverTimestamp(),
-          },
-          { merge: true }
-        );
+      const ref = db.collection("games").doc(docId);
+      const patchBox: Record<string, unknown> = {
+        status: isFinalBox ? "final" : "live",
+        final: isFinalBox,
+        homeScore: box.homeScore,
+        awayScore: box.awayScore,
+        score: { home: box.homeScore, away: box.awayScore },
+        homeTeamId: box.homeAppTeamId,
+        awayTeamId: box.awayAppTeamId,
+        periodLabel: box.periodLabel,
+        clock: box.clock,
+        liveStats,
+        league: "nba",
+        source: "bdl",
+        bdlGameId: box.bdlGameId,
+        updatedAt: FieldValue.serverTimestamp(),
+        liveSyncedAt: FieldValue.serverTimestamp(),
+      };
+      if (isFinalBox) {
+        const existing = await ref.get();
+        const prev = existing.data() as { finalAt?: unknown } | undefined;
+        if (prev?.finalAt == null) {
+          patchBox.finalAt = FieldValue.serverTimestamp();
+        }
+      }
+      await ref.set(patchBox, { merge: true });
     }
     gamesUpdated += 1;
     liveStatsWritten += 1;

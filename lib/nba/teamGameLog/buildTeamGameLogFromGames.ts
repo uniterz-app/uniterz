@@ -140,11 +140,13 @@ export function buildTeamGameLogFromGames(input: {
       const teamScore = home ? score.home : score.away;
       const oppScore = home ? score.away : score.home;
       const result: "W" | "L" = teamScore > oppScore ? "W" : "L";
+      const gameId = typeof raw.id === "string" ? raw.id.trim() : "";
       finals.push({
         startMs,
         countsForSeason,
         recent: {
           dateLabel: formatDateLabel(startMs),
+          ...(gameId ? { gameId } : null),
           oppTeamId,
           oppAbbr,
           home,

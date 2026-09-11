@@ -1165,6 +1165,11 @@ export default function PredictionFormV2({
                 awayTeamId={game.away.teamId}
                 homeTeamName={homeSafe.name}
                 awayTeamName={awaySafe.name}
+                tipAtMs={
+                  game.startAtJst instanceof Date
+                    ? game.startAtJst.getTime()
+                    : null
+                }
                 fromPredictGameId={gameId}
                 predictReturnMode={inOverlay ? "overlay" : "route"}
               />

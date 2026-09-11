@@ -11,7 +11,7 @@ alwaysApply: true
 
 Team Stats / Player Leaders のリーグ表は **左レール**:
 
-- Season | Last 10
+- Season | Per Game / Total（Team Last 10 タブは廃止 — box 粒度のみのためマッチアップ FORM へ）
 - 左に BASIC / RATINGS / 4FCT … の親＋指標チップ
 - 選択チップはシアン塗り + 黒横線。非選択は透明
 - MORE シートは採用しない

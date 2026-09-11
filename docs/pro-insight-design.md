@@ -100,7 +100,9 @@ BDL に専用フィールドは無い。自前集計:
 4. チームのレギュラー確定試合 − 出場 = 欠場試合 → **W–L + 平均得点 + 平均失点**
 5. Firestore `nbaTeamAceOutRecords/{season}` → 公開 API は読むだけ
 
-Insight 表示: `欠場時 {W}-{L} · {得点}-{失点}`（例: Jokic OUT · 前季欠場時 11-6 · 109.9-110.1）
+Insight 表示: `欠場時 {W}-{L} · {得点}-{失点} · OFF {Δ} · DEF {Δ}`
+（通算平均得点/失点との差分。poss 未集計のため真正 ORTG/DRTG ではない）
+例: Jokic OUT · 前季欠場時 11-6 · 109.9-110.1 · OFF −5.3 · DEF +1.8
 
 ```
 npx tsx scripts/ingest-nba-team-ace-out-records.ts 2025-26 --force
@@ -129,38 +131,31 @@ npx tsx scripts/ingest-nba-team-ace-out-records.ts 2025-26 --force
 
 ## 5. SCHEDULE（負荷）
 
-カレンダーと会場。感想は書かない。差がある行だけ。プレシーズンは「プレ」。全フェーズ共通。
+カレンダーと会場。感想は書かない。**差ファクト優先 → 無ければ片側負荷**。詳細 kind は [`pro-insight-generation-rules.md`](./pro-insight-generation-rules.md)。  
+会場 TZ: `lib/nba/nbaTeamVenueTz.ts`。終了時刻: `games.finalAt`。Cup / 次が強豪 / OT回数は対象外。
 
-| 種類 | 出すとき | 例 |
-|---|---|---|
-| 休養差 | 片方が B2B、もう片方は 2 日以上 | B2B · 相手は休養 3 日 |
-| 3-in-4 / 4-in-6 | 該当する側だけ | 4 日で 3 試合目 |
-| ホーム / ロード連戦 | 3 試合以上 | ホーム連戦 3 試合目 |
-| 今夜の移動 | **800km 以上** | `BOS→DET` / 移動距離 984km |
-| 48 時間移動 | **2 本以上かつ合計 2,000km 以上** | `48時間` / 移動距離 4,270km |
-| 時差 | 短休養で 2 ゾーン以上 | 東→西 · 時差 3 時間 |
-| 高地 | アウェイが DEN | 高地 · DEN |
-| 前試合の負荷 | 延長、または主力 2 人以上が 36 分超 | 前試合 OT · 主力 36 分超 |
-| 開幕・プレ | 開幕戦のみ | 開幕戦 · プレ最終から 4 日 |
-| ホーム | 移動なしのとき | ホーム · 移動なし |
-
-短い移動は出さない。実装: `lib/nba/nbaArenaTravel.ts`。
+短い移動は出さない（800km / 48h·2000km）。実装: `lib/nba/nbaArenaTravel.ts` · facts: `buildScheduleFacts.ts`。
 
 ---
 
 ## 6. CONTEXT（今夜の状況）
 
-型の衝突ではないが、読みが変わるもの。MATCHUP に書いたケガは繰り返さない。
+型の衝突ではないが、読みが変わるもの。MATCHUP / INJURY のケガ詳細は繰り返さない。  
+正: [`pro-insight-generation-rules.md`](./pro-insight-generation-rules.md) · `buildContextFacts.ts`。
 
 | 種類 | 出すとき | 例 |
 |---|---|---|
-| ローテ欠場 | 型を書き換えない OUT / QUES | Ausar QUES · 守備ローテが薄い |
-| 復帰・デビュー | 初戦、長期離脱明け、分管理 | George QUES · デビューは負荷管理 |
-| 直近の傾き | シーズンと直近 10 で NET / ORTG が明確にズレ | 直近 10 · NET がシーズンより下落 |
-| 相手の強度 | 直近 3〜10 が格下続き、または強豪続き | 直近 3 · 相手は勝率 5 割未満 |
-| 対上位 | 勝率 5 割超や上位に偏った成績 | 格上に直近 1-4 |
-| ホーム / アウェイの偏り | 今の会場で極端 | 前季アウェイ強豪戦 25-16（opening） |
-| 複数欠場 | スターター 2 人以上 OUT（MATCHUP に無いとき） | スターター 2 人 OUT · 作成が分散 |
+| 直近相手強度 | 直近相手の平均勝率が硬い / 柔らかい | hard SOS · 連敗中でも強豪続き |
+| 連勝/連敗の質 | ≥3 + その期間の相手勝率帯 | 強豪消化の連勝 / 雑魚狩りの連勝 |
+| 会場連勝・連敗 | 今夜の home/away 側が ≥3 連続 | ホーム3連勝 |
+| 点差プロファイル | 直近≤10・接戦≤5 / 大差≥15 の偏り | 勝ちはほとんど接戦 |
+| 対勝率帯 | 今夜相手の帯に応じた自成績が極端 | vs top6 · vs under .500 |
+| last10 レーティング | season vs last10 の NET/ORTG/DRTG ズレ | OF 好調 / DF 崩壊 |
+| クラッチ | clutchNet と season NET のズレ | クラッチだけ弱い |
+| 直近 3P | last10 3P% が明確に上 | 3P ホット |
+| 会場スプリット | 今夜会場の season が極端（低優先） | ホーム極端 |
+
+復帰・デビュー・次が強豪・`multi_out` は今スコープ外（後者は INJURY）。
 
 ---
 
@@ -189,15 +184,18 @@ npx tsx scripts/ingest-nba-team-ace-out-records.ts 2025-26 --force
 ### 生成・保存（全ユーザー共通スナップショット）
 
 ```
-前日 19:00 JST フル生成 → games/{gameId}.proBrief（初版）
-tip 1h 前 → ケガ情報を反映した完全版
+前日 20:00 JST Batch 投入 → games/{gameId}.proInsightNarrative（初版）
+tip 1h 前 → injury 変更時のみ Chat 再生成
 クライアント → Firestore / 公開 API を読むだけ（開くたびに再計算しない）
 ```
 
 | いつ | 何をする |
 |---|---|
-| **前日 19:00 JST** | MATCHUP / SCHEDULE / CONTEXT をフル生成して保存（初版） |
-| **tip 1h 前** | BDL から最新ケガを再取得し、injury を折り込んだ完全版を保存 |
+| **毎日 20:00 JST** | 翌日窓の試合を OpenAI Batch でナラティブ初版投入（`batch_submit`）。**21:00 までに初版表示**を目標（15 分 poll）。**プレシーズンは対象外** |
+| **tip 1h 前** | injury ステータス指紋が変わった試合だけ Chat で再生成（`narrative_patch`） |
+| **15 分ごと** | Batch 完了ポーリング（`batch_poll`） |
+
+公開 API: `GET /api/nba/matchup-insight?gameId=`（Pro · Bearer）→ `narrative` / `status`（`ready` | `pending` | `empty`）。全 Pro ユーザー共通スナップショット。
 
 LLM なし。コスト ≈ $0（Cloud Functions / Next の CPU のみ）。
 
@@ -208,7 +206,7 @@ LLM なし。コスト ≈ $0（Cloud Functions / Next の CPU のみ）。
 - 生成: `lib/nba/insights/*`
 - 完成品: `games/{gameId}.proBrief`（`liveStats` と同じ置き場）
 - 公開: `GET /api/nba/matchup-insight?gameId=`
-- 管理: `POST /api/admin/nba-pro-brief-ingest`（`mode: "full" | "patch"`）
+- 管理: `POST /api/admin/nba-pro-brief-ingest`（`mode: "batch_submit" | "batch_poll" | "narrative_patch" | "full" | "patch"`）
 - 表示前: `sanitizeProBriefForDisplay`
 - Brief 型: `lib/predict/predictProBrief.ts`
 - iOS / Web は同じ Firestore brief を読む

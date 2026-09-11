@@ -31,13 +31,12 @@ import { nbaDailyStatsUpdateFootnote } from "../../../../../../lib/nba/nbaStatsU
 import { isNbaLeagueStatsPreseason } from "../../../../../../lib/nba/leagueStatsPreseason";
 import {
   leagueStatsTableEmptyCopy,
-  teamLast10HasPlayData,
 } from "../../../../../../lib/nba/leagueStatsEmptyState";
 import NbaLeagueStatsTableEmptyNative from "../stats/NbaLeagueStatsTableEmptyNative";
 import {
-  coerceModeForPhase,
+  coerceTeamModeForPhase,
   modeTabLabel,
-  modesForPhase,
+  modesForTeamPhase,
   NBA_LEAGUE_STATS_PHASES,
   phaseTabLabel,
   resolveLeagueTeamStatRows,
@@ -156,7 +155,7 @@ export default function NbaLeagueTeamStatsPanelNative({
     setSortDir((d) => (d === "desc" ? "asc" : "desc"));
   }
 
-  const modeOptions = modesForPhase(phase);
+  const modeOptions = modesForTeamPhase(phase);
   const rows = useMemo(() => {
     const base = resolveLeagueTeamStatRows({
       phase,
@@ -168,11 +167,7 @@ export default function NbaLeagueTeamStatsPanelNative({
   }, [bundle, phase, mode, metric, sortDir]);
 
   const emptyCopy = leagueStatsTableEmptyCopy(lang, mode);
-  const showEmptyTable =
-    !loading &&
-    (mode === "last10"
-      ? !teamLast10HasPlayData(bundle.last10)
-      : rows.length === 0);
+  const showEmptyTable = !loading && rows.length === 0;
 
   return (
     <View style={styles.root}>
@@ -198,7 +193,7 @@ export default function NbaLeagueTeamStatsPanelNative({
                 active={phase === p}
                 onPress={() => {
                   setPhase(p);
-                  setMode(coerceModeForPhase(p, mode));
+                  setMode(coerceTeamModeForPhase(p, mode));
                 }}
                 compact
                 fontWeight="700"

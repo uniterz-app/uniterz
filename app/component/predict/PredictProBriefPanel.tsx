@@ -21,6 +21,7 @@ import {
   type ProInsightGateBulletIcon,
 } from "@/lib/predict/proInsightGateCopy";
 import { PRO_INSIGHT_GATE_SAMPLE_BRIEF } from "@/lib/predict/proInsightGateSampleBrief";
+import PredictProInsightNarrativePanel from "@/app/component/predict/PredictProInsightNarrativePanel";
 import { UNITERZ_PRO_BADGE_GOLD } from "@/lib/units/uniterzProBadge";
 import { nameOxanium, jp } from "@/lib/fonts";
 import { matchCardTeamNameStyle } from "@/lib/games/teamDisplayTypography";
@@ -37,8 +38,7 @@ import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
 import {
   CalendarRange,
-  MessageSquareText,
-  Scale,
+  HeartPulse,
   Swords,
   Waypoints,
 } from "lucide-react";
@@ -69,8 +69,7 @@ const BULLET_ICONS: Record<ProInsightGateBulletIcon, typeof Swords> = {
   matchup: Swords,
   schedule: CalendarRange,
   context: Waypoints,
-  edge: Scale,
-  comment: MessageSquareText,
+  injury: HeartPulse,
 };
 
 function teamNick(teamId: string, fallback: string): string {
@@ -476,9 +475,7 @@ export default function PredictProBriefPanel({
   const homeColor = teamAccent(homeTeamId);
   const awayColor = teamAccent(awayTeamId);
   const safeBrief = useMemo(() => sanitizeProBriefForDisplay(brief), [brief]);
-  /** Free ゲート下は実データ or サンプルで実画面例を見せる */
-  const displayBrief =
-    safeBrief ?? (locked ? PRO_INSIGHT_GATE_SAMPLE_BRIEF : null);
+  const displayBrief = safeBrief;
   const home = displayBrief?.home ?? EMPTY_CARD;
   const away = displayBrief?.away ?? EMPTY_CARD;
   const homePlayers = home.players ?? [];
@@ -711,15 +708,12 @@ export default function PredictProBriefPanel({
             >
               {gate.exampleLabel}
             </p>
-            <div className="border border-white/14 bg-black/55 px-2 py-2.5">
-              <TitleRow
-                homeNick={homeNick}
-                awayNick={awayNick}
-                homeColor={homeColor}
-                awayColor={awayColor}
-              />
-              {body}
-            </div>
+            <PredictProInsightNarrativePanel
+              brief={PRO_INSIGHT_GATE_SAMPLE_BRIEF}
+              language={language}
+              homeTeamName={homeTeamName}
+              awayTeamName={awayTeamName}
+            />
           </div>
         </div>
       ) : (

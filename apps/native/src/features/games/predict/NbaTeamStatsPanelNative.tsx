@@ -1,11 +1,21 @@
 /** Web `NbaTeamStatsPanel` 相当（SymmetricalCompareRow レイアウト） */
 import { useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import { doc, getDoc } from "firebase/firestore";
 import type {
+  NbaTeamFormGame,
   NbaTeamStatsBundle,
   NbaTeamStatSide,
 } from "../../../../../../lib/predict/nbaTeamStatsPreviewMocks";
 import { metricDelta } from "../../../../../../lib/predict/nbaTeamStatsForm";
+import { useLiveGameStats } from "../../../../../../lib/games/useLiveGameStats";
 import { NBA_TEAM_NAME_BY_ID } from "../../../../../../lib/nba-team-names";
 import { getMobileTeamName } from "../../../../../../lib/team-name-split-mobile";
 import {
@@ -15,8 +25,13 @@ import {
 import { MATCH_CARD_DISPLAY_FONT, MATCH_CARD_TEAM_NAME_FONT } from "../matchCardTypography";
 import type { GamesLanguage } from "../gamesI18n";
 import { getGamesTexts } from "../gamesI18n";
+import LiveGameStatsPanelNative from "../live/LiveGameStatsPanelNative";
+import { getUniterzApiBaseUrl } from "../submitPredictionApi";
+import { db } from "../../../lib/firebase";
 
 type WindowId = "season" | "last10";
+
+/** Web と同じ — LAST 10 は box 由来（NET/ORTG/DRTG/PACE + FG%/3P%） */
 type MetaTone = "up" | "down" | "flat";
 
 type Props = {
@@ -146,65 +161,193 @@ function MetricRow({ row }: { row: RowSpec }) {
   );
 }
 
-function FormChip({
-  result,
-  index,
-  total,
+const FORM_WIN = "#F5C518";
+const FORM_LOSS = "#FF2D78";
+
+function FormGameLine({
+  game,
+  align,
+  onOpen,
 }: {
-  result: "W" | "L";
-  index: number;
-  total: number;
+  game: NbaTeamFormGame;
+  align: "left" | "right";
+  onOpen?: (gameId: string) => void;
 }) {
-  const win = result === "W";
-  const last = total > 0 && index === total - 1;
-  const t = total <= 1 ? 1 : index / (total - 1);
-  const opacity = 0.34 + t * 0.66;
-  return (
+  const venue = game.home ? "vs" : "@";
+  const win = game.result === "W";
+  const canOpen = Boolean(game.gameId && onOpen);
+  const row = (
     <View
       style={[
-        styles.formChip,
-        { backgroundColor: win ? "#00F5FF" : "#FF2D78", opacity },
-        last && styles.formChipLast,
+        styles.formGameLine,
+        align === "right" ? styles.formGameLineRight : styles.formGameLineLeft,
       ]}
     >
-      <Text style={styles.formChipText}>{result}</Text>
+      <Text style={styles.formDate}>{game.dateLabel}</Text>
+      <Text style={styles.formVenue}>{venue}</Text>
+      <Text style={styles.formOpp} numberOfLines={1}>
+        {game.oppAbbr}
+      </Text>
+      <Text style={styles.formScore}>
+        {game.teamScore}-{game.oppScore}
+      </Text>
+      <Text style={[styles.formResult, { color: win ? FORM_WIN : FORM_LOSS }]}>
+        {game.result}
+      </Text>
     </View>
+  );
+  if (canOpen && game.gameId && onOpen) {
+    return (
+      <Pressable
+        onPress={() => onOpen(game.gameId!)}
+        accessibilityRole="button"
+        accessibilityLabel={`Box score ${game.oppAbbr}`}
+      >
+        {row}
+      </Pressable>
+    );
+  }
+  return row;
+}
+
+async function loadGameDocForLiveStats(
+  gameId: string
+): Promise<Record<string, unknown> | null> {
+  const snap = await getDoc(doc(db, "games", gameId));
+  if (!snap.exists()) return null;
+  return { id: snap.id, ...snap.data() };
+}
+
+function FormGameBoxOverlay({
+  gameId,
+  language,
+  onClose,
+}: {
+  gameId: string;
+  language: GamesLanguage;
+  onClose: () => void;
+}) {
+  const isJa = language === "ja";
+  const { report, loading } = useLiveGameStats(gameId, true, {
+    apiBaseUrl: getUniterzApiBaseUrl(),
+    loadGameDoc: loadGameDocForLiveStats,
+  });
+  return (
+    <Modal
+      visible
+      animationType="slide"
+      presentationStyle="fullScreen"
+      onRequestClose={onClose}
+    >
+      <View style={styles.boxOverlay}>
+        <View style={styles.boxOverlayHeader}>
+          <Text style={styles.boxOverlayTitle}>BOX SCORE</Text>
+          <Pressable
+            onPress={onClose}
+            style={styles.boxOverlayClose}
+            accessibilityRole="button"
+          >
+            <Text style={styles.boxOverlayCloseText}>
+              {isJa ? "閉じる" : "Close"}
+            </Text>
+          </Pressable>
+        </View>
+        <ScrollView
+          contentContainerStyle={styles.boxOverlayScroll}
+          showsVerticalScrollIndicator={false}
+        >
+          {loading && !report ? (
+            <Text style={styles.boxOverlayEmpty}>
+              {isJa ? "読み込み中…" : "Loading…"}
+            </Text>
+          ) : report ? (
+            <LiveGameStatsPanelNative report={report} language={language} />
+          ) : (
+            <Text style={styles.boxOverlayEmpty}>
+              {isJa ? "ボックススコアがありません" : "No box score yet"}
+            </Text>
+          )}
+        </ScrollView>
+      </View>
+    </Modal>
   );
 }
 
-function FormStrip({
+function RecentFormGamesStrip({
   left,
   right,
+  language,
 }: {
-  left: Array<"W" | "L">;
-  right: Array<"W" | "L">;
+  left: NbaTeamFormGame[];
+  right: NbaTeamFormGame[];
+  language: GamesLanguage;
 }) {
-  const leftWins = left.filter((r) => r === "W").length;
-  const rightWins = right.filter((r) => r === "W").length;
+  const [open, setOpen] = useState(false);
+  const [boxGameId, setBoxGameId] = useState<string | null>(null);
+  const rows = Math.max(left.length, right.length, 1);
+  const hint = language === "ja" ? "タップ→BOXスコア" : "tap→box score";
   return (
-    <View style={styles.formStrip}>
-      <View style={styles.formRow}>
-        <View style={styles.formChipsLeft}>
-          {left.map((r, i) => (
-            <FormChip key={`l-${i}`} result={r} index={i} total={left.length} />
-          ))}
+    <View style={styles.recentForm}>
+      <Pressable
+        onPress={() => setOpen((v) => !v)}
+        style={styles.recentFormHeader}
+        accessibilityRole="button"
+        accessibilityState={{ expanded: open }}
+        accessibilityLabel="LAST 5"
+      >
+        <View style={styles.recentFormTitleRow}>
+          <Text style={styles.recentFormTitle}>LAST 5</Text>
+          <Text
+            style={[
+              styles.recentFormChevron,
+              open && styles.recentFormChevronOpen,
+            ]}
+          >
+            ▼
+          </Text>
         </View>
-        <Text style={styles.formLabel}>L10</Text>
-        <View style={styles.formChipsRight}>
-          {right.map((r, i) => (
-            <FormChip key={`r-${i}`} result={r} index={i} total={right.length} />
-          ))}
+        <Text style={styles.recentFormHint}>{hint}</Text>
+      </Pressable>
+      {open ? (
+        <View style={styles.recentFormGrid}>
+          <View style={styles.recentFormCol}>
+            {Array.from({ length: rows }, (_, i) =>
+              left[i] ? (
+                <FormGameLine
+                  key={`l-${i}`}
+                  game={left[i]}
+                  align="right"
+                  onOpen={setBoxGameId}
+                />
+              ) : (
+                <View key={`l-${i}`} style={styles.formGameSpacer} />
+              )
+            )}
+          </View>
+          <View style={styles.recentFormDivider} />
+          <View style={styles.recentFormCol}>
+            {Array.from({ length: rows }, (_, i) =>
+              right[i] ? (
+                <FormGameLine
+                  key={`r-${i}`}
+                  game={right[i]}
+                  align="left"
+                  onOpen={setBoxGameId}
+                />
+              ) : (
+                <View key={`r-${i}`} style={styles.formGameSpacer} />
+              )
+            )}
+          </View>
         </View>
-      </View>
-      <View style={styles.formRecordRow}>
-        <Text style={[styles.formRecord, styles.formRecordLeft]}>
-          {leftWins}-{left.length - leftWins}
-        </Text>
-        <Text style={styles.formNewLabel}>←NEW→</Text>
-        <Text style={[styles.formRecord, styles.formRecordRight]}>
-          {rightWins}-{right.length - rightWins}
-        </Text>
-      </View>
+      ) : null}
+      {boxGameId ? (
+        <FormGameBoxOverlay
+          gameId={boxGameId}
+          language={language}
+          onClose={() => setBoxGameId(null)}
+        />
+      ) : null}
     </View>
   );
 }
@@ -366,20 +509,42 @@ function buildCoreRows(
       last10.away.pace
     ),
     make(
-      "ppg",
-      "PPG",
-      home.ppg,
-      away.ppg,
-      home.ppg > away.ppg,
-      away.ppg > home.ppg,
-      (n) => n.toFixed(1),
-      "ppg",
-      season.home.ppg,
-      season.away.ppg,
-      last10.home.ppg,
-      last10.away.ppg
+      "fgPct",
+      "FG%",
+      pct(home.fgPct),
+      pct(away.fgPct),
+      pct(home.fgPct) > pct(away.fgPct),
+      pct(away.fgPct) > pct(home.fgPct),
+      fmtPct,
+      "fgPct",
+      pct(season.home.fgPct),
+      pct(season.away.fgPct),
+      pct(last10.home.fgPct),
+      pct(last10.away.fgPct)
+    ),
+    make(
+      "fg3Pct",
+      "3P%",
+      pct(home.fg3Pct),
+      pct(away.fg3Pct),
+      pct(home.fg3Pct) > pct(away.fg3Pct),
+      pct(away.fg3Pct) > pct(home.fg3Pct),
+      fmtPct,
+      "fg3Pct",
+      pct(season.home.fg3Pct),
+      pct(season.away.fg3Pct),
+      pct(last10.home.fg3Pct),
+      pct(last10.away.fg3Pct)
     ),
   ];
+}
+
+function pct(n: number | undefined): number {
+  return typeof n === "number" && Number.isFinite(n) ? n : 0;
+}
+
+function fmtPct(n: number): string {
+  return `${(n <= 1 ? n * 100 : n).toFixed(1)}`;
 }
 
 /** 今試合の条件: ホームの HOME 成績 vs アウェイの ROAD 成績 */
@@ -435,9 +600,15 @@ export default function NbaTeamStatsPanelNative({
   const splitRows = windowId === "season" ? buildSiteRow(home, away) : [];
   const rows = [...coreRows, ...splitRows];
 
-  const formLeft = data.last10.home.formResults ?? [];
-  const formRight = data.last10.away.formResults ?? [];
-  const showForm = formLeft.length > 0 || formRight.length > 0;
+  const formLeft =
+    data.season.home.recentFormGames ??
+    data.last10.home.recentFormGames ??
+    [];
+  const formRight =
+    data.season.away.recentFormGames ??
+    data.last10.away.recentFormGames ??
+    [];
+  const showRecentForm = formLeft.length > 0 || formRight.length > 0;
 
   return (
     <View style={styles.shell}>
@@ -498,7 +669,13 @@ export default function NbaTeamStatsPanelNative({
         {rows.map((row) => (
           <MetricRow key={`${windowId}-${row.key}`} row={row} />
         ))}
-        {showForm ? <FormStrip left={formLeft} right={formRight} /> : null}
+        {showRecentForm ? (
+          <RecentFormGamesStrip
+            left={formLeft}
+            right={formRight}
+            language={language}
+          />
+        ) : null}
       </View>
     </View>
   );
@@ -637,77 +814,163 @@ const styles = StyleSheet.create({
     fontVariant: ["tabular-nums"],
     transform: [{ skewX: "-6deg" }],
   },
-  formStrip: {
-    paddingTop: 6,
-    paddingBottom: 2,
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(255,255,255,0.08)",
+  recentForm: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: "rgba(255,255,255,0.1)",
+    paddingTop: 10,
   },
-  formRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  formChipsLeft: {
-    flex: 1,
-    flexDirection: "row-reverse",
-    gap: 1,
-  },
-  formChipsRight: {
-    flex: 1,
-    flexDirection: "row",
-    gap: 1,
-  },
-  formChip: {
-    flex: 1,
-    height: 16,
+  recentFormHeader: {
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 1,
-    transform: [{ skewX: "-12deg" }],
+    gap: 2,
+    marginBottom: 6,
+    paddingVertical: 2,
   },
-  formChipLast: {
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.92)",
+  recentFormTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
   },
-  formChipText: {
-    fontFamily: OXANIUM,
-    fontSize: 8,
-    fontWeight: "900",
-    color: "#050508",
-    transform: [{ skewX: "12deg" }],
-  },
-  formLabel: {
-    width: 64,
+  recentFormTitle: {
     textAlign: "center",
+    fontFamily: OXANIUM,
+    fontSize: 13,
+    fontWeight: "700",
+    letterSpacing: 1.6,
+    color: "rgba(255,255,255,0.55)",
+    textTransform: "uppercase",
+    transform: [{ skewX: "-6deg" }],
+  },
+  recentFormChevron: {
+    fontSize: 10,
+    color: "rgba(255,255,255,0.4)",
+  },
+  recentFormChevronOpen: {
+    transform: [{ rotate: "180deg" }],
+  },
+  recentFormHint: {
     fontFamily: OXANIUM,
     fontSize: 10,
     fontWeight: "700",
-    letterSpacing: 1,
-    color: "rgba(255,255,255,0.7)",
+    letterSpacing: 0.6,
+    color: "rgba(255,255,255,0.45)",
+    transform: [{ skewX: "-6deg" }],
   },
-  formRecordRow: {
+  boxOverlay: {
+    flex: 1,
+    backgroundColor: "#050508",
+  },
+  boxOverlayHeader: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: 4,
+    justifyContent: "space-between",
+    gap: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "rgba(255,255,255,0.1)",
+    paddingHorizontal: 12,
+    paddingTop: 54,
+    paddingBottom: 12,
   },
-  formRecord: {
-    flex: 1,
+  boxOverlayTitle: {
     fontFamily: OXANIUM,
     fontSize: 13,
-    fontWeight: "800",
-    color: "rgba(255,255,255,0.65)",
-    fontVariant: ["tabular-nums"],
+    fontWeight: "700",
+    letterSpacing: 1.4,
+    color: "rgba(255,255,255,0.7)",
+    textTransform: "uppercase",
+    transform: [{ skewX: "-6deg" }],
   },
-  formRecordLeft: { textAlign: "right" },
-  formRecordRight: { textAlign: "left" },
-  formNewLabel: {
-    width: 64,
+  boxOverlayClose: {
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.25)",
+    borderRadius: 2,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  boxOverlayCloseText: {
+    fontFamily: OXANIUM,
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 1,
+    color: "rgba(255,255,255,0.8)",
+    textTransform: "uppercase",
+  },
+  boxOverlayScroll: {
+    paddingHorizontal: 8,
+    paddingTop: 12,
+    paddingBottom: 40,
+  },
+  boxOverlayEmpty: {
+    marginTop: 24,
     textAlign: "center",
     fontFamily: OXANIUM,
-    fontSize: 8,
+    fontSize: 12,
+    fontWeight: "700",
+    color: "rgba(255,255,255,0.45)",
+  },
+  recentFormGrid: {
+    flexDirection: "row",
+    alignItems: "stretch",
+    gap: 12,
+  },
+  recentFormCol: {
+    flex: 1,
+    minWidth: 0,
+  },
+  recentFormDivider: {
+    width: StyleSheet.hairlineWidth,
+    alignSelf: "stretch",
+    backgroundColor: "#ffffff",
+  },
+  formGameLine: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    minWidth: 0,
+    paddingVertical: 6,
+  },
+  formGameLineRight: {
+    justifyContent: "flex-end",
+  },
+  formGameLineLeft: {
+    justifyContent: "flex-start",
+  },
+  formGameSpacer: { height: 30 },
+  formDate: {
+    fontFamily: OXANIUM,
+    fontSize: 13,
+    fontWeight: "700",
+    color: "rgba(255,255,255,0.45)",
+    fontVariant: ["tabular-nums"],
+  },
+  formVenue: {
+    fontFamily: OXANIUM,
+    fontSize: 13,
+    fontWeight: "700",
+    color: "rgba(255,255,255,0.55)",
+  },
+  formOpp: {
+    flexShrink: 1,
+    fontFamily: MATCH_CARD_TEAM_NAME_FONT,
+    fontSize: 14,
+    fontWeight: "700",
+    color: "rgba(255,255,255,0.9)",
+    textTransform: "uppercase",
+    transform: [{ skewX: "-6deg" }],
+  },
+  formScore: {
+    fontFamily: OXANIUM,
+    fontSize: 14,
     fontWeight: "800",
-    letterSpacing: 0.4,
-    color: "rgba(255,255,255,0.4)",
+    color: "rgba(255,255,255,0.85)",
+    fontVariant: ["tabular-nums"],
+  },
+  formResult: {
+    width: 16,
+    textAlign: "center",
+    fontFamily: OXANIUM,
+    fontSize: 15,
+    fontWeight: "800",
   },
 });

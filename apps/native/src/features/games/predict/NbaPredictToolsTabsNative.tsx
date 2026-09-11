@@ -10,6 +10,7 @@ import {
 import TutorialTargetNative from "../../tutorial/TutorialTargetNative";
 import { registerTutorialPredictToolsListener } from "../../tutorial/tutorialPredictToolsBridgeNative";
 import PredictProBriefPanelNative from "./PredictProBriefPanelNative";
+import PredictProInsightNarrativePanelNative from "./PredictProInsightNarrativePanelNative";
 import NbaInjuryReportPanelNative from "./NbaInjuryReportPanelNative";
 import NbaTeamStatsPanelNative from "./NbaTeamStatsPanelNative";
 import NbaRosterPanelNative from "./NbaRosterPanelNative";
@@ -27,6 +28,9 @@ import type { GamesLanguage } from "../gamesI18n";
 import { getGamesTexts } from "../gamesI18n";
 import type { MainTabParamList } from "../../../navigation/types";
 import { getUniterzApiBaseUrl } from "../submitPredictionApi";
+import { useNativeUserLanguageFromAuth } from "../../../i18n/useNativeUserLanguageFromAuth";
+import { formatProInsightFirstReadyPending } from "../../../../../../lib/predict/proInsightFirstReadyCopy";
+import type { Language } from "../../../../../../lib/i18n/language";
 
 export type NbaPredictToolsTab = "insight" | "injuries" | "stats" | "roster";
 
@@ -40,6 +44,8 @@ type Props = {
   awayTeamName: string;
   /** games/{id}.proBrief 取得用 */
   gameId?: string | null;
+  /** tip 時刻（現地換算用） */
+  tipAtMs?: number | null;
   brief?: PredictProBrief | null;
   injuryReport?: NbaInjuryReport | null;
   teamStats?: NbaTeamStatsBundle | null;
@@ -79,6 +85,7 @@ export default function NbaPredictToolsTabsNative({
   homeTeamName,
   awayTeamName,
   gameId = null,
+  tipAtMs = null,
   brief = null,
   injuryReport = null,
   teamStats = null,
@@ -88,6 +95,12 @@ export default function NbaPredictToolsTabsNative({
 }: Props) {
   const t = getGamesTexts(language);
   const loadingLabel = t.predictToolLoading;
+  const { countryCode } = useNativeUserLanguageFromAuth();
+  const insightPendingText = formatProInsightFirstReadyPending({
+    language: language as Language,
+    countryCode,
+    tipAtMs,
+  });
   const [tab, setTab] = useState<NbaPredictToolsTab | null>("injuries");
   const navigation = useNavigation<NavigationProp<MainTabParamList>>();
   /**
@@ -108,13 +121,15 @@ export default function NbaPredictToolsTabsNative({
     setVisited((cur) => (cur.has(tab) ? cur : new Set(cur).add(tab)));
   }, [tab]);
 
-  const { brief: liveBrief, loading: briefLoading } = useNbaMatchupProBrief({
+  const {
+    narrative: liveNarrative,
+    loading: briefLoading,
+  } = useNbaMatchupProBrief({
     gameId,
     override: brief,
     apiBaseUrl,
     enabled: visited.has("insight") && isPro,
   });
-  const resolvedBrief = liveBrief;
 
   const { report: liveInjury, loading: injuryLoading } =
     useNbaMatchupInjuryReport({
@@ -210,21 +225,28 @@ export default function NbaPredictToolsTabsNative({
         {tab ? (
           <View style={styles.panel}>
             {tab === "insight" ? (
-              resolvedBrief || !isPro ? (
+              !isPro ? (
                 <PredictProBriefPanelNative
-                  brief={resolvedBrief}
+                  brief={null}
                   language={language}
                   homeTeamId={homeTeamId ?? ""}
                   awayTeamId={awayTeamId ?? ""}
                   homeTeamName={homeTeamName}
                   awayTeamName={awayTeamName}
-                  locked={!isPro}
+                  locked
                   onPressUpgrade={openProSubscribe}
+                />
+              ) : liveNarrative ? (
+                <PredictProInsightNarrativePanelNative
+                  brief={liveNarrative}
+                  language={language}
+                  homeTeamName={homeTeamName}
+                  awayTeamName={awayTeamName}
                 />
               ) : briefLoading ? (
                 <LoadingPanel label={loadingLabel} />
               ) : (
-                <PendingPanel text={t.panelDataPending} />
+                <PendingPanel text={insightPendingText} />
               )
             ) : tab === "injuries" ? (
               resolvedInjury ? (
@@ -297,11 +319,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 2,
   },
   pending: {
-    borderRadius: 8,
+    borderRadius: 0,
     borderWidth: 1,
-    borderStyle: "dashed",
-    borderColor: "rgba(255,255,255,0.12)",
-    backgroundColor: "rgba(255,255,255,0.02)",
+    borderStyle: "solid",
+    borderColor: "rgba(255,255,255,0.35)",
+    backgroundColor: "transparent",
     paddingHorizontal: 16,
     paddingVertical: 32,
     alignItems: "center",

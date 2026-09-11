@@ -25,10 +25,8 @@ export async function notifyGameFinalPush(input: {
     return;
   }
 
-  const matchup = resolveGameMatchupCopy(input.after, {
-    home: input.homeScore,
-    away: input.awayScore,
-  });
+  // ネタバレ回避 — スコアは載せない（対戦名のみ）
+  const matchup = resolveGameMatchupCopy(input.after);
 
   const result = await sendExpoPushToUids({
     type: "game_final",

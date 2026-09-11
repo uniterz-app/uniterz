@@ -14,6 +14,7 @@ import {
   CyberSlantedTabBar,
 } from "@/app/component/rankings/CyberSlantedTab";
 import type {
+  NbaTeamFormGame,
   NbaTeamStatSide,
   NbaTeamStatsBundle,
 } from "@/lib/predict/nbaTeamStatsPreviewMocks";
@@ -26,9 +27,15 @@ import { NBA_TEAM_NAME_BY_ID } from "@/lib/nba-team-names";
 import { getMobileTeamName } from "@/lib/team-name-split-mobile";
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
+import LiveGameStatsPanel from "@/app/component/games/live/LiveGameStatsPanel";
+import { useLiveGameStats } from "@/lib/games/useLiveGameStats";
 
 type WindowId = "season" | "last10";
 
+/**
+ * LAST 10 は box / スコアから導けるセット
+ *（NET/ORTG/DRTG/PACE + FG%/3P%）。
+ */
 type Props = {
   data: NbaTeamStatsBundle;
   /** Pro: SZN± 差分 + #順位（LAST 10） */
@@ -60,139 +67,220 @@ function teamLabel(teamId: string, fallback: string): string {
   return fallback.toUpperCase();
 }
 
-function FormResultChip({
-  result,
-  index,
-  total,
-}: {
-  result: "W" | "L";
-  index: number;
-  total: number;
-}) {
-  const win = result === "W";
-  const fill = win ? "#00F5FF" : "#FF2D78";
-  const last = total > 0 && index === total - 1;
-  /** 古い→新しい：0.34 → 1.0 */
-  const t = total <= 1 ? 1 : index / (total - 1);
-  const opacity = 0.34 + t * 0.66;
-  const glow = win ? "rgba(0,245,255," : "rgba(255,45,120,";
+const FORM_WIN = "#F5C518";
+const FORM_LOSS = "#FF2D78";
 
-  return (
-    <span
-      className={[
-        nameOxanium.className,
-        "relative inline-grid h-[15px] w-full min-w-0 flex-1 place-items-center overflow-visible",
-        "text-[7px] font-black leading-none text-[#050508] md:h-[17px] md:text-[8px]",
-        last ? "z-[1]" : "",
-      ].join(" ")}
-      style={{
-        background: fill,
-        opacity,
-        transform: "skewX(-12deg)",
-        boxShadow: last
-          ? `0 0 0 1px rgba(255,255,255,0.92), 0 0 10px ${glow}0.72)`
-          : `0 0 6px ${glow}${0.18 + t * 0.2})`,
-      }}
-      aria-label={
-        last
-          ? win
-            ? "Win, most recent"
-            : "Loss, most recent"
-          : win
-            ? "Win"
-            : "Loss"
-      }
-    >
-      <span
-        aria-hidden
-        className="pointer-events-none absolute inset-0 overflow-hidden"
-        style={{
-          backgroundImage: `repeating-linear-gradient(
-            0deg,
-            transparent,
-            transparent 2px,
-            rgba(0, 0, 0, 0.16) 2px,
-            rgba(0, 0, 0, 0.16) 3px
-          )`,
-        }}
-      />
-      <span className="relative z-[1]" style={{ transform: "skewX(12deg)" }}>
-        {result}
+function FormGameLine({
+  game,
+  align,
+  onOpen,
+}: {
+  game: NbaTeamFormGame;
+  align: "left" | "right";
+  onOpen?: (gameId: string) => void;
+}) {
+  const venue = game.home ? "vs" : "@";
+  const win = game.result === "W";
+  const endAlign = align === "right";
+  const canOpen = Boolean(game.gameId && onOpen);
+  const body = (
+    <>
+      <span className="shrink-0 tabular-nums text-[12px] text-white/45 md:text-[13px]">
+        {game.dateLabel}
       </span>
-    </span>
+      <span className="shrink-0 text-white/55">{venue}</span>
+      <span
+        className="min-w-0 truncate text-[13px] text-white/90 md:text-[14px]"
+        style={{ transform: "skewX(-6deg)" }}
+      >
+        {game.oppAbbr}
+      </span>
+      <span className="shrink-0 tabular-nums text-white/85">
+        {game.teamScore}-{game.oppScore}
+      </span>
+      <span
+        className="w-4 shrink-0 text-center text-[14px] font-extrabold md:text-[15px]"
+        style={{ color: win ? FORM_WIN : FORM_LOSS }}
+      >
+        {game.result}
+      </span>
+    </>
+  );
+  const className = [
+    nameOxanium.className,
+    "flex min-w-0 items-center gap-1.5 py-1.5 text-[13px] font-bold leading-none md:gap-2 md:text-[14px]",
+    endAlign ? "justify-end" : "justify-start",
+    canOpen ? "cursor-pointer hover:bg-white/[0.04] active:bg-white/[0.07]" : "",
+  ].join(" ");
+  if (canOpen && game.gameId && onOpen) {
+    return (
+      <button
+        type="button"
+        onClick={() => onOpen(game.gameId!)}
+        className={["w-full", className].join(" ")}
+        aria-label={`Box score ${game.oppAbbr}`}
+      >
+        {body}
+      </button>
+    );
+  }
+  return <div className={className}>{body}</div>;
+}
+
+function FormGameBoxOverlay({
+  gameId,
+  language,
+  onClose,
+}: {
+  gameId: string;
+  language: Language;
+  onClose: () => void;
+}) {
+  const { report, loading } = useLiveGameStats(gameId, true);
+  const isJa = language === "ja";
+  return (
+    <div
+      className="fixed inset-0 z-[80] flex flex-col bg-black/92"
+      role="dialog"
+      aria-modal
+      aria-label="Box score"
+    >
+      <div className="flex items-center justify-between gap-3 border-b border-white/10 px-3 py-3">
+        <p
+          className={[
+            nameOxanium.className,
+            "text-[13px] font-bold uppercase tracking-[0.12em] text-white/70",
+          ].join(" ")}
+          style={{ transform: "skewX(-6deg)" }}
+        >
+          BOX SCORE
+        </p>
+        <button
+          type="button"
+          onClick={onClose}
+          className={[
+            nameOxanium.className,
+            "rounded-[2px] border border-white/25 px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-[0.1em] text-white/80",
+          ].join(" ")}
+        >
+          {isJa ? "閉じる" : "Close"}
+        </button>
+      </div>
+      <div className="min-h-0 flex-1 overflow-y-auto px-2 py-3">
+        {loading && !report ? (
+          <p
+            className={[
+              nameOxanium.className,
+              "px-2 py-6 text-center text-[12px] font-bold text-white/45",
+            ].join(" ")}
+          >
+            {isJa ? "読み込み中…" : "Loading…"}
+          </p>
+        ) : report ? (
+          <LiveGameStatsPanel report={report} language={language} />
+        ) : (
+          <p
+            className={[
+              nameOxanium.className,
+              "px-2 py-6 text-center text-[12px] font-bold text-white/45",
+            ].join(" ")}
+          >
+            {isJa ? "ボックススコアがありません" : "No box score yet"}
+          </p>
+        )}
+      </div>
+    </div>
   );
 }
 
-function FormResultsStrip({
+/** 表下: 各チーム直近 ≤5 試合。初期折りたたみ。行タップで BOX */
+function RecentFormGamesStrip({
   left,
   right,
+  language,
 }: {
-  left: Array<"W" | "L">;
-  right: Array<"W" | "L">;
+  left: NbaTeamFormGame[];
+  right: NbaTeamFormGame[];
+  language: Language;
 }) {
-  const leftWins = left.filter((r) => r === "W").length;
-  const rightWins = right.filter((r) => r === "W").length;
-
+  const [open, setOpen] = useState(false);
+  const [boxGameId, setBoxGameId] = useState<string | null>(null);
+  const rows = Math.max(left.length, right.length, 1);
+  const isJa = language === "ja";
+  const hint = isJa ? "タップ→BOXスコア" : "tap→box score";
   return (
-    <div className="border-b border-white/8 py-1.5 last:border-b-0">
-      <div className="grid grid-cols-[minmax(0,1fr)_4rem_minmax(0,1fr)] items-center gap-y-0.5">
-        {/* HOME: セグメント同様・中央（右）→外側（左）＝古い→新しい */}
-        <div className="flex min-w-0 flex-row-reverse gap-px">
-          {left.map((r, i) => (
-            <FormResultChip
-              key={`l-${i}`}
-              result={r}
-              index={i}
-              total={left.length}
-            />
-          ))}
+    <div className="border-t border-white/10 pt-2.5">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="mb-1.5 flex w-full flex-col items-center gap-0.5"
+      >
+        <span
+          className={[
+            nameOxanium.className,
+            "inline-flex items-center gap-1.5 text-[13px] font-bold uppercase tracking-[0.14em] text-white/55 md:text-[14px]",
+          ].join(" ")}
+        >
+          <span style={{ transform: "skewX(-6deg)" }}>LAST 5</span>
+          <span
+            aria-hidden
+            className="text-[10px] text-white/40"
+            style={{ transform: open ? "rotate(180deg)" : undefined }}
+          >
+            ▼
+          </span>
+        </span>
+        <span
+          className={[
+            nameOxanium.className,
+            "text-[10px] font-bold tracking-[0.06em] text-white/45 md:text-[11px]",
+          ].join(" ")}
+          style={{ transform: "skewX(-6deg)" }}
+        >
+          {hint}
+        </span>
+      </button>
+      {open ? (
+        <div className="grid grid-cols-[minmax(0,1fr)_1px_minmax(0,1fr)] items-start gap-x-3">
+          <div className="flex min-w-0 flex-col">
+            {Array.from({ length: rows }, (_, i) =>
+              left[i] ? (
+                <FormGameLine
+                  key={`l-${i}`}
+                  game={left[i]}
+                  align="right"
+                  onOpen={setBoxGameId}
+                />
+              ) : (
+                <div key={`l-${i}`} className="h-[30px]" />
+              )
+            )}
+          </div>
+          <div className="self-stretch bg-white" aria-hidden />
+          <div className="flex min-w-0 flex-col">
+            {Array.from({ length: rows }, (_, i) =>
+              right[i] ? (
+                <FormGameLine
+                  key={`r-${i}`}
+                  game={right[i]}
+                  align="left"
+                  onOpen={setBoxGameId}
+                />
+              ) : (
+                <div key={`r-${i}`} className="h-[30px]" />
+              )
+            )}
+          </div>
         </div>
-        <div
-          className={[
-            nameOxanium.className,
-            "w-16 shrink-0 px-0 text-center text-[8px] font-bold uppercase tracking-[0.1em] text-white/70 md:text-[10px] md:tracking-[0.12em]",
-          ].join(" ")}
-        >
-          L10
-        </div>
-        {/* AWAY: 中央（左）→外側（右）＝古い→新しい */}
-        <div className="flex min-w-0 gap-px">
-          {right.map((r, i) => (
-            <FormResultChip
-              key={`r-${i}`}
-              result={r}
-              index={i}
-              total={right.length}
-            />
-          ))}
-        </div>
-
-        <p
-          className={[
-            nameOxanium.className,
-            "text-right text-[11px] font-extrabold tabular-nums tracking-wide text-white/65 md:text-[12px]",
-          ].join(" ")}
-        >
-          {leftWins}-{left.length - leftWins}
-        </p>
-        <p
-          className={[
-            nameOxanium.className,
-            "w-16 shrink-0 px-0 text-center text-[7px] font-extrabold uppercase tracking-[0.04em] text-white/40 md:text-[8px] md:tracking-[0.06em]",
-          ].join(" ")}
-          title="Oldest near center → newest outward"
-        >
-          ←NEW→
-        </p>
-        <p
-          className={[
-            nameOxanium.className,
-            "text-left text-[11px] font-extrabold tabular-nums tracking-wide text-white/65 md:text-[12px]",
-          ].join(" ")}
-        >
-          {rightWins}-{right.length - rightWins}
-        </p>
-      </div>
+      ) : null}
+      {boxGameId ? (
+        <FormGameBoxOverlay
+          gameId={boxGameId}
+          language={language}
+          onClose={() => setBoxGameId(null)}
+        />
+      ) : null}
     </div>
   );
 }
@@ -226,7 +314,7 @@ function sideProExtras(
 
 /**
  * NBA 予想ツール — Team Stats（対戦比較）
- * NET / ORTG / DRTG / PACE / PPG。SEASON は今試合の HOME vs ROAD。LAST10 は W/L。
+ * NET / ORTG / DRTG / PACE + FG%/3P%。SEASON は今試合の HOME vs ROAD。LAST10 は W/L。
  */
 export default function NbaTeamStatsPanel({
   data,
@@ -267,7 +355,11 @@ export default function NbaTeamStatsPanel({
   const [ortgL, ortgR] = barPctMaxNorm(home.ortg, away.ortg);
   const [drtgL, drtgR] = barPctMinPaNorm(home.drtg, away.drtg);
   const [paceL, paceR] = barPctMaxNorm(home.pace, away.pace);
-  const [ppgL, ppgR] = barPctMaxNorm(home.ppg, away.ppg);
+  const fmtPct = (n: number) => `${(n <= 1 ? n * 100 : n).toFixed(1)}`;
+  const pct = (n: number | undefined) =>
+    typeof n === "number" && Number.isFinite(n) ? n : 0;
+  const [fgL, fgR] = barPctMaxNorm(pct(home.fgPct), pct(away.fgPct));
+  const [fg3L, fg3R] = barPctMaxNorm(pct(home.fg3Pct), pct(away.fg3Pct));
 
   const showSplit = windowId === "season";
   const homeSitePct = winPct(home.homeW, home.homeL);
@@ -438,20 +530,36 @@ export default function NbaTeamStatsPanel({
       "pace"
     ),
     metricRow(
-      "ppg",
-      "PPG",
-      home.ppg,
-      away.ppg,
-      ppgL,
-      ppgR,
-      home.ppg > away.ppg,
-      away.ppg > home.ppg,
-      (n) => n.toFixed(1),
-      seasonHome.ppg,
-      seasonAway.ppg,
-      last10Home.ppg,
-      last10Away.ppg,
-      "ppg"
+      "fgPct",
+      "FG%",
+      pct(home.fgPct),
+      pct(away.fgPct),
+      fgL,
+      fgR,
+      pct(home.fgPct) > pct(away.fgPct),
+      pct(away.fgPct) > pct(home.fgPct),
+      fmtPct,
+      pct(seasonHome.fgPct),
+      pct(seasonAway.fgPct),
+      pct(last10Home.fgPct),
+      pct(last10Away.fgPct),
+      "fgPct"
+    ),
+    metricRow(
+      "fg3Pct",
+      "3P%",
+      pct(home.fg3Pct),
+      pct(away.fg3Pct),
+      fg3L,
+      fg3R,
+      pct(home.fg3Pct) > pct(away.fg3Pct),
+      pct(away.fg3Pct) > pct(home.fg3Pct),
+      fmtPct,
+      pct(seasonHome.fg3Pct),
+      pct(seasonAway.fg3Pct),
+      pct(last10Home.fg3Pct),
+      pct(last10Away.fg3Pct),
+      "fg3Pct"
     ),
   ];
 
@@ -488,22 +596,14 @@ export default function NbaTeamStatsPanel({
     : [];
 
   const formLeft =
-    last10Home.formResults ??
-    (last10Home.formW != null || last10Home.formL != null
-      ? Array.from(
-          { length: (last10Home.formW ?? 0) + (last10Home.formL ?? 0) },
-          (_, i) => (i < (last10Home.formL ?? 0) ? ("L" as const) : ("W" as const))
-        )
-      : []);
+    data.season.home.recentFormGames ??
+    data.last10.home.recentFormGames ??
+    [];
   const formRight =
-    last10Away.formResults ??
-    (last10Away.formW != null || last10Away.formL != null
-      ? Array.from(
-          { length: (last10Away.formW ?? 0) + (last10Away.formL ?? 0) },
-          (_, i) => (i < (last10Away.formL ?? 0) ? ("L" as const) : ("W" as const))
-        )
-      : []);
-  const showFormStrip = formLeft.length > 0 || formRight.length > 0;
+    data.season.away.recentFormGames ??
+    data.last10.away.recentFormGames ??
+    [];
+  const showRecentForm = formLeft.length > 0 || formRight.length > 0;
 
   const rows = [...coreRows, ...splitRows];
 
@@ -620,8 +720,8 @@ export default function NbaTeamStatsPanel({
             compactHud
           />
         ))}
-        {showFormStrip ? (
-          <FormResultsStrip left={formLeft} right={formRight} />
+        {showRecentForm ? (
+          <RecentFormGamesStrip left={formLeft} right={formRight} language={language ?? "ja"} />
         ) : null}
       </section>
     </div>

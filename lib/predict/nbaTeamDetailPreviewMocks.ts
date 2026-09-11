@@ -35,6 +35,8 @@ export type NbaTeamMetricWithRank = {
 
 export type NbaTeamRecentGame = {
   dateLabel: string;
+  /** Firestore `games/{id}`。あればボックススコアへ遷移可 */
+  gameId?: string;
   oppTeamId: string;
   oppAbbr: string;
   home: boolean;

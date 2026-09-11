@@ -1,23 +1,19 @@
 /**
- * Free ゲート下の表示イメージ用サンプル Brief。
- * 本番で出す踏み込んだ行（移動距離・エース欠場・相手強度・選手型）を入れる。
+ * Free ゲート下の表示イメージ用サンプル（新 UI · 試合1本ナラティブ）。
+ * BOS @ LAL · 移動距離・Tatum OUT を含む。A.Davis は出さない。
  */
-import type { PredictProBrief } from "@/lib/predict/predictProBrief";
+import type { ProInsightNarrativeBrief } from "@/lib/predict/proInsightNarrativeTypes";
 import {
-  proBriefEdge,
-  proBriefLine,
-  proBriefPlayer,
-} from "@/lib/predict/predictProBrief";
-import {
-  proBriefTravelLines,
-  travelSummaryForBrief,
-} from "@/lib/predict/nbaProBriefTravel";
+  formatTravelKm,
+  nbaTravelAbbr,
+} from "@/lib/nba/nbaArenaTravel";
+import { travelSummaryForBrief } from "@/lib/predict/nbaProBriefTravel";
 
 const TIP_MS = Date.UTC(2026, 2, 13, 2, 30);
 const HOUR = 60 * 60 * 1000;
 
-/** BOS → PHX（30h前）→ LAL 今夜。2レグで 2,000km 超 */
-const CELTICS_ROAD_TRIP_TRAVEL = travelSummaryForBrief({
+/** BOS → MIA（30h前）→ LAL 今夜。今夜移動 + 48h 合計を出す */
+const CELTICS_TRAVEL = travelSummaryForBrief({
   teamId: "nba-celtics",
   tonightVenueTeamId: "nba-lakers",
   tonightStartAtMs: TIP_MS,
@@ -27,181 +23,158 @@ const CELTICS_ROAD_TRIP_TRAVEL = travelSummaryForBrief({
       startAtMs: TIP_MS - 72 * HOUR,
     },
     {
-      venueTeamId: "nba-suns",
+      venueTeamId: "nba-heat",
       startAtMs: TIP_MS - 30 * HOUR,
     },
   ],
 });
 
-export const PRO_INSIGHT_GATE_SAMPLE_BRIEF: PredictProBrief = {
-  phase: "full",
-  gamesPlayed: 58,
-  home: {
-    edges: [
-      proBriefEdge("REBOUNDING", {
-        ja: "OREB% #4 · 相手 DREB% #26",
-        en: "OREB% #4 · Opp DREB% #26",
-        ko: "OREB% #4 · 상대 DREB% #26",
-        zh: "进攻篮板率 #4 · 对手防守篮板率 #26",
-        es: "OREB% #4 · DREB% rival #26",
-        pt: "OREB% #4 · DREB% adv. #26",
-        fr: "OREB% #4 · DREB% adv. #26",
-      }),
-      proBriefEdge("PAINT ATTACK", {
-        ja: "ペイント得点 #5 · 相手失点 #27 · A.Davis QUES",
-        en: "Paint PPG #5 · Opp paint #27 · A.Davis QUES",
-        ko: "페인트 득점 #5 · 상대 페인트 실점 #27 · A.Davis 출전 불투명",
-        zh: "油漆区得分 #5 · 对手油漆区失分 #27 · A.Davis 出战成疑",
-        es: "PTS en pintura #5 · Pintura rival #27 · A.Davis en duda",
-        pt: "PTS no garrafão #5 · Garrafão adv. #27 · A.Davis em dúvida",
-        fr: "Pts dans la raquette #5 · Raquette adv. #27 · A.Davis incertain",
-      }),
-    ],
-    schedule: [
-      proBriefLine({
-        ja: "休養 2日 · ホーム連戦 3試合目",
-        en: "2 days rest · 3rd home game in a row",
-        ko: "2일 휴식 · 홈 연전 3번째 경기",
-        zh: "休息 2 天 · 主场连战第 3 场",
-        es: "2 días de descanso · 3.er partido seguido en casa",
-        pt: "2 dias de descanso · 3.º jogo seguido em casa",
-        fr: "2 jours de repos · 3e match d'affilée à domicile",
-      }),
-      proBriefLine({
-        ja: "前試合 OT · 主力 2人 36分超",
-        en: "Last game OT · 2 starters 36+ min",
-        ko: "직전 경기 연장 · 주전 2명 36분 이상",
-        zh: "上一场加时 · 2 名首发出场 36 分钟以上",
-        es: "Prórroga en el último · 2 titulares con 36+ min",
-        pt: "Prorrogação no último · 2 titulares com 36+ min",
-        fr: "Prolongation au dernier match · 2 titulaires à 36+ min",
-      }),
-    ],
-    context: [
-      proBriefLine({
-        ja: "直近3 · 相手はすべて勝率5割未満",
-        en: "LAST 3 · all opponents sub-.500",
-        ko: "최근 3경기 · 상대 모두 승률 5할 미만",
-        zh: "近 3 场 · 对手胜率均低于五成",
-        es: "Últimos 3 · todos los rivales sub-.500",
-        pt: "Últimos 3 · todos os adversários abaixo de .500",
-        fr: "3 derniers · tous les adversaires sous .500",
-      }),
-      proBriefLine({
-        ja: "直近10 · 勝率上位10位以内と未対戦",
-        en: "LAST 10 · no Top-10 win-pct foes",
-        ko: "최근 10경기 · 승률 상위 10팀과 미대결",
-        zh: "近 10 场 · 未遇胜率前十球队",
-        es: "Últimos 10 · sin rivales del Top-10 en % de victorias",
-        pt: "Últimos 10 · sem adversários do Top-10 em aproveitamento",
-        fr: "10 derniers · aucun adversaire du Top-10 en % de victoires",
-      }),
-    ],
-    players: [
-      proBriefPlayer(
-        { playerId: "237", playerName: "L.James", label: "PAINT EDGE" },
+const tonightHop = `${nbaTravelAbbr(CELTICS_TRAVEL.tonightFromId ?? "")}→${nbaTravelAbbr(CELTICS_TRAVEL.tonightToId)}`;
+const tonightKm =
+  CELTICS_TRAVEL.tonightKm != null
+    ? formatTravelKm(CELTICS_TRAVEL.tonightKm)
+    : "";
+const windowKm = formatTravelKm(CELTICS_TRAVEL.windowKm);
+
+const e = (line: string) => ({
+  ja: line,
+  en: line,
+  ko: line,
+  zh: line,
+  es: line,
+  pt: line,
+  fr: line,
+});
+
+export const PRO_INSIGHT_GATE_SAMPLE_BRIEF: ProInsightNarrativeBrief = {
+  homeTeamId: "nba-lakers",
+  awayTeamId: "nba-celtics",
+  sampleNote: null,
+  sections: [
+    {
+      kind: "MATCHUP",
+      items: [
         {
-          ja: "ペイント得点 #6 · PAINT% #9 · 相手守備 #27",
-          en: "Paint PPG #6 · PAINT% #9 · Opp defense #27",
-          ko: "페인트 득점 #6 · PAINT% #9 · 상대 수비 #27",
-          zh: "油漆区得分 #6 · 油漆区占比 #9 · 对手防守 #27",
-          es: "PTS en pintura #6 · PAINT% #9 · Defensa rival #27",
-          pt: "PTS no garrafão #6 · PAINT% #9 · Defesa adv. #27",
-          fr: "Pts dans la raquette #6 · PAINT% #9 · Défense adv. #27",
-        }
-      ),
-      proBriefPlayer(
-        { playerId: "15", playerName: "A.Reaves", label: "LAST 10 FORM" },
+          body: {
+            ja: "BOS の 3P ボリュームは上位だが、J.Tatum OUT で決め手が薄い。外周は LAL 有利に寄りやすい。",
+            en: "BOS leads in 3P volume, but without J.Tatum the finisher thins out — edge LAL on the perimeter.",
+            ko: "BOS 3P 볼륨은 상위지만 J.Tatum OUT으로 마무리가 얇다. 외곽은 LAL 유리.",
+            zh: "凯尔特人三分出手靠前，但 J.Tatum OUT 终结变薄，外线偏湖人有利。",
+            es: "BOS lidera en volumen de 3P, pero sin J.Tatum remata menos — ventaja LAL en perímetro.",
+            pt: "BOS lidera em volume de 3P, mas sem J.Tatum finaliza menos — vantagem LAL no perímetro.",
+            fr: "BOS mène en volume 3P, mais sans J.Tatum finit moins — avantage LAL au périmètre.",
+          },
+          evidence: [e("BOS 3PA #3 · Opp 3P% #24 · J.Tatum OUT")],
+        },
         {
-          ja: "直近10 得点 #18（今季 #42）· 3P% .410",
-          en: "Last 10 PTS #18 (season #42) · 3P% .410",
-          ko: "최근 10경기 득점 #18 (시즌 #42) · 3P% .410",
-          zh: "近 10 场得分 #18（赛季 #42）· 三分命中率 .410",
-          es: "Últimos 10 PTS #18 (temporada #42) · 3P% .410",
-          pt: "Últimos 10 PTS #18 (temporada #42) · 3P% .410",
-          fr: "10 derniers PTS #18 (saison #42) · 3P% .410",
-        }
-      ),
-    ],
-  },
-  away: {
-    edges: [
-      proBriefEdge("3-POINT VOLUME", {
-        ja: "3PA率 #3 · 相手被3P #24",
-        en: "3PA rate #3 · Opp 3P% allowed #24",
-        ko: "3PA 비율 #3 · 상대 3P% 허용 #24",
-        zh: "三分出手占比 #3 · 对手三分被命中率 #24",
-        es: "Tasa de 3PA #3 · 3P% permitido rival #24",
-        pt: "Taxa de 3PA #3 · 3P% cedido adv. #24",
-        fr: "Taux de 3PA #3 · 3P% concédé adv. #24",
-      }),
-      proBriefEdge("ACE OUT", {
-        ja: "J.Tatum OUT · 今季欠場時 11-6 · 109.9-110.1",
-        en: "J.Tatum OUT · when out 11-6 · 109.9-110.1",
-        ko: "J.Tatum 결장 · 이번 시즌 결장 시 11-6 · 109.9-110.1",
-        zh: "J.Tatum 缺阵 · 本季缺阵时 11-6 · 109.9-110.1",
-        es: "J.Tatum fuera · sin él esta temp. 11-6 · 109.9-110.1",
-        pt: "J.Tatum fora · sem ele nesta temp. 11-6 · 109.9-110.1",
-        fr: "J.Tatum absent · sans lui cette saison 11-6 · 109.9-110.1",
-      }),
-    ],
-    schedule: [
-      ...proBriefTravelLines(CELTICS_ROAD_TRIP_TRAVEL),
-      proBriefLine({
-        ja: "連戦2日目 · 4日で3試合目",
-        en: "2nd of B2B · 3rd game in 4 nights",
-        ko: "백투백 2번째 · 4일간 3번째 경기",
-        zh: "背靠背第 2 场 · 4 天内第 3 场",
-        es: "2.º del B2B · 3.er partido en 4 días",
-        pt: "2.º do B2B · 3.º jogo em 4 dias",
-        fr: "2e du B2B · 3e match en 4 jours",
-      }),
-    ],
-    context: [
-      proBriefLine({
-        ja: "格上相手に直近5で 1勝4敗",
-        en: "VS .500+ · 1-4 in last 5",
-        ko: "승률 5할 이상 상대 최근 5경기 1승 4패",
-        zh: "对阵五成胜率以上球队近 5 场 1 胜 4 负",
-        es: "vs equipos .500+ · 1-4 en los últimos 5",
-        pt: "vs times .500+ · 1-4 nos últimos 5",
-        fr: "vs équipes .500+ · 1-4 sur les 5 derniers",
-      }),
-      proBriefLine({
-        ja: "直近アウェイ · 相手平均勝率 .620",
-        en: "ROAD SOS · opp avg .620",
-        ko: "최근 원정 · 상대 평균 승률 .620",
-        zh: "近期客场 · 对手平均胜率 .620",
-        es: "Calendario fuera · rival medio .620",
-        pt: "Calendário fora · adversário médio .620",
-        fr: "Calendrier à l'extérieur · adversaire moyen .620",
-      }),
-    ],
-    players: [
-      proBriefPlayer(
-        { playerId: "70", playerName: "J.Brown", label: "HOT 3PT" },
+          body: {
+            ja: "LAL のリバウンドは上位。BOS は連戦でボックスアウトが甘くなりやすく、ボードは LAL 有利。",
+            en: "LAL rank high on the glass. BOS on a B2B tend to box out late — edge LAL rebounding.",
+            ko: "LAL 리바운드 상위. BOS는 연전이라 박스아웃이 늦기 쉬워 보드에서 LAL 유리.",
+            zh: "湖人篮板靠前。凯尔特人连战易松掉篮板，篮板偏湖人有利。",
+            es: "LAL alto en rebotes. BOS en B2B boxea tarde — ventaja LAL.",
+            pt: "LAL alto no rebote. BOS em B2B boxeia tarde — vantagem LAL.",
+            fr: "LAL fort au rebond. BOS en B2B boxe tard — avantage LAL.",
+          },
+          evidence: [e("LAL OREB% #4 · Opp DREB% #26 · BOS rest 0")],
+        },
+      ],
+    },
+    {
+      kind: "SCHEDULE",
+      items: [
         {
-          ja: "直近10 3P% #7（今季 #28）· 3PM 3.4",
-          en: "Last 10 3P% #7 (season #28) · 3PM 3.4",
-          ko: "최근 10경기 3P% #7 (시즌 #28) · 3PM 3.4",
-          zh: "近 10 场三分命中率 #7（赛季 #28）· 场均三分 3.4",
-          es: "Últimos 10 3P% #7 (temporada #28) · 3PM 3.4",
-          pt: "Últimos 10 3P% #7 (temporada #28) · 3PM 3.4",
-          fr: "10 derniers 3P% #7 (saison #28) · 3PM 3.4",
-        }
-      ),
-      proBriefPlayer(
-        { playerId: "434", playerName: "D.White", label: "3-POINT EDGE" },
+          body: {
+            ja: `BOS は ${tonightHop} · 移動距離 ${tonightKm}。LAL は休養 2 日・ホーム。今夜いちばん大きい負荷差。`,
+            en: `BOS ${tonightHop} · travel ${tonightKm}. LAL with 2 days rest at home — clearest load gap tonight.`,
+            ko: `BOS ${tonightHop} · 이동 ${tonightKm}. LAL은 2일 휴식·홈. 오늘 가장 큰 부하 차.`,
+            zh: `凯尔特人 ${tonightHop} · 移动 ${tonightKm}。湖人休息 2 天主场——今晚最大负荷差。`,
+            es: `BOS ${tonightHop} · viaje ${tonightKm}. LAL con 2 días en casa — mayor hueco de carga.`,
+            pt: `BOS ${tonightHop} · viagem ${tonightKm}. LAL com 2 dias em casa — maior gap de carga.`,
+            fr: `BOS ${tonightHop} · trajet ${tonightKm}. LAL avec 2 jours à domicile — plus grand écart de charge.`,
+          },
+          evidence: [
+            e(`BOS ${tonightHop} ${tonightKm} · 48h ${windowKm} · LAL rest 2`),
+          ],
+        },
         {
-          ja: "3PM #14 · 相手被3P #24 · Tatum OUTで使用増",
-          en: "3PM #14 · Opp 3P allowed #24 · usage up w/ Tatum OUT",
-          ko: "3PM #14 · 상대 3P 허용 #24 · Tatum 결장으로 사용률 증가",
-          zh: "三分命中 #14 · 对手三分被命中 #24 · Tatum 缺阵下球权提升",
-          es: "3PM #14 · 3P permitido rival #24 · más uso sin Tatum",
-          pt: "3PM #14 · 3P cedido adv. #24 · mais uso sem Tatum",
-          fr: "3PM #14 · 3P concédé adv. #24 · usage accru sans Tatum",
-        }
-      ),
-    ],
-  },
+          body: {
+            ja: "BOS は連戦2日目・4日で3試合目。LAL は前試合 OT で主力 2 人が 36 分超。",
+            en: "BOS: 2nd of a B2B, 3rd game in 4 nights. LAL had two starters 36+ min after OT.",
+            ko: "BOS는 백투백 2번째·4일간 3번째. LAL은 직전 연장에서 주전 2명 36분 이상.",
+            zh: "凯尔特人背靠背第 2 场、4 天内第 3 场。湖人上一场加时两名主力超过 36 分钟。",
+            es: "BOS: 2.º del B2B, 3.er en 4 días. LAL: 2 titulares 36+ tras prórroga.",
+            pt: "BOS: 2.º do B2B, 3.º em 4 dias. LAL: 2 titulares 36+ após OT.",
+            fr: "BOS: 2e du B2B, 3e en 4 jours. LAL: 2 titulaires 36+ après OT.",
+          },
+          evidence: [e("BOS B2B · 3 in 4 · LAL OT · A.Reaves 38 · L.James 37")],
+        },
+      ],
+    },
+    {
+      kind: "CONTEXT",
+      items: [
+        {
+          body: {
+            ja: "LAL は直近 10 の NET が上振れ。BOS は格上相手に直近 5 で 1勝4敗。",
+            en: "LAL’s last-10 NET is up. BOS are 1-4 in their last 5 vs .500+ foes.",
+            ko: "LAL은 최근 10 NET이 상승. BOS는 강호 상대 최근 5경기 1승 4패.",
+            zh: "湖人近 10 场 NET 上扬。凯尔特人对阵五成以上近 5 场 1 胜 4 负。",
+            es: "NET de LAL en últimos 10 arriba. BOS 1-4 en 5 vs .500+.",
+            pt: "NET do LAL nos últimos 10 sobe. BOS 1-4 em 5 vs .500+.",
+            fr: "NET LAL sur 10 en hausse. BOS 1-4 sur 5 vs .500+.",
+          },
+          evidence: [e("LAL last10 NET +4.2 · BOS vs .500+ 1-4")],
+        },
+        {
+          body: {
+            ja: "LAL の直近相手は勝率 5 割未満続き。今夜は格上ロードの BOS で強度が上がる。",
+            en: "LAL’s recent foes were mostly sub-.500. Tonight a tougher road BOS raises the bar.",
+            ko: "LAL 최근 상대는 승률 5할 미만이 많았다. 오늘은 강호 원정 BOS로 강도가 오른다.",
+            zh: "湖人近几场对手多在五成以下。今晚客场强队凯尔特人强度上升。",
+            es: "Rivales recientes de LAL bajo .500. Hoy BOS de visita sube la intensidad.",
+            pt: "Rivais recentes do LAL abaixo de .500. Hoje BOS visitante sobe a intensidade.",
+            fr: "Adversaires récents de LAL sous .500. Ce soir BOS en déplacement monte l’intensité.",
+          },
+          evidence: [e("LAL last 4 opp win% .41 · vs BOS")],
+        },
+      ],
+    },
+    {
+      kind: "INJURY IMPACT",
+      items: [
+        {
+          body: {
+            ja: "J.Tatum OUT · BOS 今季欠場時 11-6。チーム USG/AST リーダー欠場で形が変わり、OFF −5.3 · DEF +1.8。LAL 有利。",
+            en: "J.Tatum OUT · BOS when-out 11-6. Team USG/AST leader out — shape shifts; OFF −5.3 · DEF +1.8. Edge LAL.",
+            ko: "J.Tatum OUT · BOS 결장 시 11-6. 팀 USG/AST 리더 결장으로 형이 바뀌고 OFF −5.3 · DEF +1.8. LAL 유리.",
+            zh: "J.Tatum OUT · 凯尔特人本季缺阵 11-6。球队 USG/AST 核心缺阵导致形制变化；OFF −5.3 · DEF +1.8。偏湖人有利。",
+            es: "J.Tatum OUT · BOS sin él 11-6. Sale el líder USG/AST — cambia la forma; OFF −5.3 · DEF +1.8. Ventaja LAL.",
+            pt: "J.Tatum OUT · BOS sem ele 11-6. Sai o líder USG/AST — a forma muda; OFF −5.3 · DEF +1.8. Vantagem LAL.",
+            fr: "J.Tatum OUT · BOS sans lui 11-6. Leader USG/AST absent — la forme change ; OFF −5.3 · DEF +1.8. Avantage LAL.",
+          },
+          evidence: [
+            e(
+              "J.Tatum OUT · leaders USG/AST/… · when-out 11-6 · 109.9-110.1 · OFF −5.3 · DEF +1.8"
+            ),
+          ],
+        },
+        {
+          body: {
+            ja: "LAL は主力フル。欠場の影響は BOS 側に寄っており、今夜は LAL 有利。",
+            en: "LAL are at full strength. The absence load sits with BOS — edge LAL tonight.",
+            ko: "LAL은 주력 풀. 결장 영향은 BOS 쪽에 있어 오늘은 LAL 유리.",
+            zh: "湖人主力齐全。伤停影响在凯尔特人一侧，今晚偏湖人有利。",
+            es: "LAL a plena. La carga de bajas cae en BOS — ventaja LAL.",
+            pt: "LAL completo. A carga de baixas fica com o BOS — vantagem LAL.",
+            fr: "LAL au complet. La charge d’absences est côté BOS — avantage LAL.",
+          },
+          evidence: [e("LAL OUT 0 · BOS OUT 1 (J.Tatum)")],
+        },
+      ],
+    },
+  ],
 };
+
+/** @deprecated 旧 HOME/AWAY Brief 型。ゲート例はナラティブのみ。 */
+export type ProInsightGateSampleBrief = ProInsightNarrativeBrief;

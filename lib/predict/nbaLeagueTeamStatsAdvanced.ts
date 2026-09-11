@@ -28,6 +28,11 @@ export type NbaLeagueTeamAdvancedMetric =
   | "ptsFt"
   | "ptsFb"
   | "ptsTov"
+  | "ptsSecondChance"
+  | "oppPtsPaint"
+  | "oppPtsFb"
+  | "oppPtsOffTov"
+  | "oppPtsSecondChance"
   | "clutchNet"
   | "clutchOrtg"
   | "clutchDrtg"
@@ -333,6 +338,91 @@ export const NBA_LEAGUE_TEAM_ADVANCED_METRIC_DEFS: readonly NbaLeagueTeamAdvance
       pt: "Pontos por jogo após turnover.",
       fr: "Points par match après perte adverse.",
     }),
+    def(
+      "ptsSecondChance",
+      "2ND",
+      "Second-chance PTS / G",
+      "scoring",
+      true,
+      "one",
+      {
+        ja: "1試合あたりのセカンドチャンス得点。",
+        en: "Second-chance points per game.",
+        ko: "경기당 세컨드찬스 득점.",
+        zh: "场均二次进攻得分。",
+        es: "Puntos de segunda oportunidad por partido.",
+        pt: "Pontos de segunda chance por jogo.",
+        fr: "Points de seconde chance par match.",
+      }
+    ),
+    def(
+      "oppPtsPaint",
+      "OPP PAINT",
+      "Opp paint PTS / G",
+      "scoring",
+      false,
+      "one",
+      {
+        ja: "1試合あたりのペイント失点。低いほど良い。",
+        en: "Opponent paint points allowed per game. Lower is better.",
+        ko: "경기당 페인트 실점. 낮을수록 좋음.",
+        zh: "场均禁区失分。越低越好。",
+        es: "Puntos en pintura permitidos. Más bajo, mejor.",
+        pt: "Pontos no garrafão cedidos. Quanto menor, melhor.",
+        fr: "Points dans la raquette concédés. Plus bas = mieux.",
+      }
+    ),
+    def(
+      "oppPtsFb",
+      "OPP FB",
+      "Opp fast-break PTS / G",
+      "scoring",
+      false,
+      "one",
+      {
+        ja: "1試合あたりのファストブレイク失点。低いほど良い。",
+        en: "Opponent fast-break points allowed. Lower is better.",
+        ko: "경기당 속공 실점. 낮을수록 좋음.",
+        zh: "场均快攻失分。越低越好。",
+        es: "Puntos al contragolpe permitidos. Más bajo, mejor.",
+        pt: "Pontos de contra-ataque cedidos. Quanto menor, melhor.",
+        fr: "Points en contre-attaque concédés. Plus bas = mieux.",
+      }
+    ),
+    def(
+      "oppPtsOffTov",
+      "OPP TO",
+      "Opp PTS off TO / G",
+      "scoring",
+      false,
+      "one",
+      {
+        ja: "1試合あたりの被TO失点。低いほど良い。",
+        en: "Opponent points off turnovers allowed. Lower is better.",
+        ko: "경기당 턴오버 이후 실점. 낮을수록 좋음.",
+        zh: "场均被失误转化失分。越低越好。",
+        es: "Puntos tras pérdida permitidos. Más bajo, mejor.",
+        pt: "Pontos após turnover cedidos. Quanto menor, melhor.",
+        fr: "Points après perte concédés. Plus bas = mieux.",
+      }
+    ),
+    def(
+      "oppPtsSecondChance",
+      "OPP 2ND",
+      "Opp second-chance PTS / G",
+      "scoring",
+      false,
+      "one",
+      {
+        ja: "1試合あたりのセカンドチャンス失点。低いほど良い。",
+        en: "Opponent second-chance points allowed. Lower is better.",
+        ko: "경기당 세컨드찬스 실점. 낮을수록 좋음.",
+        zh: "场均二次进攻失分。越低越好。",
+        es: "Puntos de 2ª oportunidad permitidos. Más bajo, mejor.",
+        pt: "Pontos de 2ª chance cedidos. Quanto menor, melhor.",
+        fr: "Points de 2e chance concédés. Plus bas = mieux.",
+      }
+    ),
     def("clutchNet", "NET", "Clutch Net Rating", "clutch", true, "signed", {
       ja: "僅差・終盤のネットレーティング。",
       en: "Net rating in the clutch.",
@@ -1116,6 +1206,11 @@ export function buildLeagueTeamAdvancedFields(
     ptsFt,
     ptsFb,
     ptsTov,
+    ptsSecondChance: round1(ptsPaint * 0.28),
+    oppPtsPaint: round1(42 + (1 - tier) * 12 + (rnd() - 0.5) * 6),
+    oppPtsFb: round1(12 + (1 - tier) * 6 + (rnd() - 0.5) * 3),
+    oppPtsOffTov: round1(14 + (1 - tier) * 6 + (rnd() - 0.5) * 3),
+    oppPtsSecondChance: round1(12 + (1 - tier) * 5 + (rnd() - 0.5) * 3),
     clutchNet,
     clutchOrtg,
     clutchDrtg,

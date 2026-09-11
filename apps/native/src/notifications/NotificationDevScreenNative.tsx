@@ -14,6 +14,7 @@ import * as Device from "expo-device";
 import { buildPushNotificationCopy } from "@/lib/notifications/pushNotificationCopy";
 import type { PushNotificationType } from "@/lib/notifications/pushPayloadTypes";
 import MobilePageShell from "../features/profile/mobileScreens/MobilePageShell";
+import NotificationProGateModalNative from "../features/profile/screens/NotificationProGateModalNative";
 import { useFirebaseUser } from "../auth/FirebaseUserProvider";
 import { useNativeUserLanguage } from "../hooks/useNativeUserLanguage";
 import { resolveLocalizedLang } from "../../../../lib/i18n/localize";
@@ -24,6 +25,7 @@ import {
   registerNativePushTokenFlow,
 } from "./registerPushTokenNative";
 import { loadExpoNotificationsModule } from "./expoNotificationsModuleNative";
+import PushPermissionPrimerModalNative from "./PushPermissionPrimerModalNative";
 import { copyTextNative } from "../features/leaderboards/copyTextNative";
 import { colors, fonts, spacing } from "../theme/tokens";
 
@@ -44,7 +46,7 @@ async function ensureNotificationPermission(): Promise<boolean> {
 
 async function scheduleLocalPushPreview(input: {
   type: PushNotificationType;
-  language: "ja" | "en";
+  language: string;
   gameId?: string;
   postId?: string;
   /** ロック画面確認用 — 秒数指定で遅延送信 */
@@ -60,33 +62,19 @@ async function scheduleLocalPushPreview(input: {
     return "denied";
   }
 
+  // 選手名・状態ラベル・Unit は英語固定
   const detailByType: Partial<Record<PushNotificationType, string>> = {
-    injury_status:
-      input.language === "en"
-        ? "Doncic: Questionable → Out"
-        : "ドンチッチ: Questionable → Out",
-    starter_change:
-      input.language === "en"
-        ? "Star forward moved to bench"
-        : "主力フォワードが先発落ち",
-    pregame_digest:
-      input.language === "en"
-        ? "• Key guard out\n• Bench player starting\n• Opponent on a back-to-back"
-        : "・主力ガード欠場\n・控え選手が先発\n・相手は連戦",
-    pro_insight_update:
-      input.language === "en"
-        ? "Conclusion shifted after injury update"
-        : "欠場反映で結論が変わりました",
+    injury_status: "Doncic: Questionable → Out",
+    unit_reward: "Weekly ranking +12 Unit",
   };
 
   const copy = buildPushNotificationCopy(input.type, input.language, {
-    homeLabel: "Japan",
-    awayLabel: "Brazil",
-    homeTeamId: "wc-jpn",
-    awayTeamId: "wc-bra",
-    homeScore: input.type === "game_final" ? 2 : undefined,
-    awayScore: input.type === "game_final" ? 1 : undefined,
+    homeLabel: "Lakers",
+    awayLabel: "Celtics",
+    homeTeamId: "lal",
+    awayTeamId: "bos",
     detail: detailByType[input.type],
+    pendingCount: input.type === "prediction_deadline" ? 3 : undefined,
   });
 
   const data: Record<string, string> = { type: input.type };
@@ -121,7 +109,7 @@ export default function NotificationDevScreenNative() {
     useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
   const { fUser } = useFirebaseUser();
   const { language } = useNativeUserLanguage(fUser?.uid);
-  const pushLang = resolveLocalizedLang(language) === "ja" ? "ja" : "en";
+  const pushLang = resolveLocalizedLang(language);
   const uid = fUser?.uid ?? null;
 
   const badges = useNativeNavTabNotificationBadges();
@@ -131,6 +119,8 @@ export default function NotificationDevScreenNative() {
   const [gameId, setGameId] = useState("test-game-id");
   const [postId, setPostId] = useState("test-post-id");
   const [busy, setBusy] = useState(false);
+  const [primerOpen, setPrimerOpen] = useState(false);
+  const [proGateOpen, setProGateOpen] = useState(false);
 
   const refreshStatus = useCallback(async () => {
     const Notifications = await loadExpoNotificationsModule();
@@ -277,6 +267,20 @@ export default function NotificationDevScreenNative() {
           />
         </Section>
 
+        <Section title="通知モーダル（デザイン確認）">
+          <Text style={styles.hint}>
+            本番と同じコンポーネントをそのまま表示。言語はプロフィール設定に追従。
+          </Text>
+          <DevButton
+            label="許可 Primers（OS 前の説明）"
+            onPress={() => setPrimerOpen(true)}
+          />
+          <DevButton
+            label="Pro ゲート（Free が Pro 行を触ったとき）"
+            onPress={() => setProGateOpen(true)}
+          />
+        </Section>
+
         <Section title="登録状態">
           <Row label="端末" value={Device.isDevice ? "実機" : "シミュレータ"} />
           <Row label="権限" value={permission} />
@@ -377,6 +381,19 @@ export default function NotificationDevScreenNative() {
           </Text>
         </Section>
       </ScrollView>
+
+      <PushPermissionPrimerModalNative
+        open={primerOpen}
+        language={pushLang === "ja" ? "ja" : "en"}
+        onAllow={() => setPrimerOpen(false)}
+        onLater={() => setPrimerOpen(false)}
+      />
+      <NotificationProGateModalNative
+        visible={proGateOpen}
+        language={language}
+        onClose={() => setProGateOpen(false)}
+        onSeePro={() => setProGateOpen(false)}
+      />
     </MobilePageShell>
   );
 }

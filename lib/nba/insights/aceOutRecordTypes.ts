@@ -3,6 +3,7 @@
  * Firestore `nbaTeamAceOutRecords/{seasonKey}`
  *
  * 保持するのは W–L + 平均得点 + 平均失点のみ。
+ * Insight 表示時に通算 `teamPts*` との OFF/DEF 差分を付与する。
  */
 import type { WlRecord } from "@/lib/nba/insights/priorSeasonRecordTypes";
 

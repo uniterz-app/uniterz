@@ -8,6 +8,7 @@ import { requireBdlNbaApiKey } from "@/lib/nba/bdl/bdlNbaEnv";
 import { fetchBdlPlayerInjuries } from "@/lib/nba/bdl/fetchBdlPlayerInjuries";
 import { buildTeamInjuriesBundleFromBdl } from "@/lib/nba/teamInjuries/mapBdlToTeamInjuries";
 import { writeTeamInjuriesSnapshot } from "@/lib/nba/teamInjuries/loadTeamInjuriesSnapshot";
+import { syncGameInjuryReportsForPush } from "@/lib/nba/teamInjuries/syncGameInjuryReportsForPush";
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
 
 export const NBA_TEAM_INJURIES_INGEST_READY = true;
@@ -21,6 +22,7 @@ export type NbaTeamInjuriesIngestResult = {
   seasonKey: string;
   teamCount: number;
   injuryCount: number;
+  gamesInjurySynced?: number;
 };
 
 export async function ingestNbaTeamInjuriesFromBdl(
@@ -39,5 +41,13 @@ export async function ingestNbaTeamInjuriesFromBdl(
 
   const injuryCount = Object.values(teams).reduce((s, list) => s + list.length, 0);
 
-  return { ok: true, seasonKey, teamCount, injuryCount };
+  let gamesInjurySynced = 0;
+  try {
+    const synced = await syncGameInjuryReportsForPush(db, { seasonKey });
+    gamesInjurySynced = synced.gamesUpdated;
+  } catch (err) {
+    console.warn("[ingestNbaTeamInjuriesFromBdl] game injuryReport sync failed", err);
+  }
+
+  return { ok: true, seasonKey, teamCount, injuryCount, gamesInjurySynced };
 }

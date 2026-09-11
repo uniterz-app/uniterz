@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import CandleChartLoader from "@/app/component/common/CandleChartLoader";
 import PredictProBriefPanel from "@/app/component/predict/PredictProBriefPanel";
+import PredictProInsightNarrativePanel from "@/app/component/predict/PredictProInsightNarrativePanel";
 import NbaInjuryReportPanel from "@/app/component/predict/NbaInjuryReportPanel";
 import NbaTeamStatsPanel from "@/app/component/predict/NbaTeamStatsPanel";
 import NbaRosterPanel from "@/app/component/predict/NbaRosterPanel";
@@ -21,6 +22,9 @@ import { useNbaMatchupTeamStats } from "@/lib/nba/predict/useNbaMatchupTeamStats
 import { useNbaMatchupProBrief } from "@/lib/nba/predict/useNbaMatchupProBrief";
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
+import { useAuth } from "@/app/AuthProvider";
+import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
+import { formatProInsightFirstReadyPending } from "@/lib/predict/proInsightFirstReadyCopy";
 
 export type NbaPredictToolsTab = "insight" | "injuries" | "stats" | "roster";
 
@@ -37,6 +41,8 @@ type Props = {
   injuryReport?: NbaInjuryReport | null;
   teamStats?: NbaTeamStatsBundle | null;
   roster?: NbaRosterReport | null;
+  /** tip 時刻（現地換算用 · 試合前日 21:00 JST） */
+  tipAtMs?: number | null;
   /** 予想入力から STATS → チーム詳細へ行ったあと戻れるようにする */
   fromPredictGameId?: string;
   /** Games オーバーレイ vs /predict 専用ルート */
@@ -46,7 +52,7 @@ type Props = {
 
 function PendingPanel({ text }: { text: string }) {
   return (
-    <div className="rounded-lg border border-dashed border-white/12 bg-white/2 px-4 py-8 text-center text-xs leading-relaxed text-white/40">
+    <div className="border border-white/35 bg-transparent px-4 py-8 text-center text-xs leading-relaxed text-white/40">
       {text}
     </div>
   );
@@ -76,12 +82,20 @@ export default function NbaPredictToolsTabs({
   injuryReport = null,
   teamStats = null,
   roster = null,
+  tipAtMs = null,
   fromPredictGameId,
   predictReturnMode = "route",
   className = "",
 }: Props) {
   const m = t(language).predict;
   const loadingLabel = t(language).common.loading;
+  const { fUser } = useAuth();
+  const { countryCode } = useUserLanguage(fUser?.uid ?? null);
+  const insightPendingText = formatProInsightFirstReadyPending({
+    language,
+    countryCode,
+    tipAtMs,
+  });
   const searchParams = useSearchParams();
   const [tab, setTab] = useState<NbaPredictToolsTab | null>("injuries");
   const router = useRouter();
@@ -114,15 +128,17 @@ export default function NbaPredictToolsTabs({
   }, [tab]);
 
   /**
-   * モックへは落とさない。本番は games.proBrief（前日 19:00 初版 / tip 1h 前ケガ反映）。
-   * brief prop があれば優先（プレビュー用）。
+   * 本番: games.proInsightNarrative（試合共通）。Free はゲート。
+   * brief prop は旧互換プレビュー用（narrative 優先）。
    */
-  const { brief: liveBrief, loading: briefLoading } = useNbaMatchupProBrief({
+  const {
+    narrative: liveNarrative,
+    loading: briefLoading,
+  } = useNbaMatchupProBrief({
     gameId: fromPredictGameId,
     override: brief,
     enabled: visited.has("insight") && isPro,
   });
-  const resolvedBrief = liveBrief;
 
   const { report: liveInjury, loading: injuryLoading } =
     useNbaMatchupInjuryReport({
@@ -195,21 +211,28 @@ export default function NbaPredictToolsTabs({
       {tab ? (
         <div className="mt-1.5 min-h-30 px-0.5">
           {tab === "insight" ? (
-            resolvedBrief || !isPro ? (
+            !isPro ? (
               <PredictProBriefPanel
-                brief={resolvedBrief}
+                brief={null}
                 language={language}
                 homeTeamId={homeTeamId ?? ""}
                 awayTeamId={awayTeamId ?? ""}
                 homeTeamName={homeTeamName}
                 awayTeamName={awayTeamName}
-                locked={!isPro}
+                locked
                 onPressUpgrade={openProSubscribe}
+              />
+            ) : liveNarrative ? (
+              <PredictProInsightNarrativePanel
+                brief={liveNarrative}
+                language={language}
+                homeTeamName={homeTeamName}
+                awayTeamName={awayTeamName}
               />
             ) : briefLoading ? (
               <LoadingPanel label={loadingLabel} />
             ) : (
-              <PendingPanel text={m.panelDataPending} />
+              <PendingPanel text={insightPendingText} />
             )
           ) : tab === "injuries" ? (
             resolvedInjury ? (

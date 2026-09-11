@@ -13,10 +13,8 @@ import { buildGroupBattlePeriodSnapshots } from "./groupBattles/buildGroupBattle
 import { grantAllFinalGroupBattleUnits } from "./groupBattles/grantGroupBattleUnits";
 import { advanceDueGroupBattlePhases } from "./groupBattles/advanceDuePhases";
 import { hasRankingAggregationScheduledJstToday } from "./schedule/hasRankingAggregationScheduledJstToday";
-import { runNotifyGameStartCron } from "./notifications/notifyGameStartCron";
 import { runNotifyPredictionDeadlineCron } from "./notifications/notifyPredictionDeadlineCron";
 import { runNotifyPregameAlertCron } from "./notifications/notifyPregameAlertCron";
-import { notifyRankingUpdatedPush } from "./notifications/notifyPushEvents";
 
 // ===============================
 // V2 Core
@@ -54,8 +52,10 @@ export {
 } from "./nba/runNbaInjuryIngestCron";
 // NBA スタッツ週次（ペイロール + 契約）
 export { runNbaStatsWeeklyIngestCron } from "./nba/runNbaStatsWeeklyIngestCron";
-// Pro Insight 前日 19:00 フル生成
+// Pro Insight 前日 19:00 ナラティブ Batch 投入
 export { runNbaProBriefFullCron } from "./nba/runNbaProBriefFullCron";
+// Pro Insight OpenAI Batch 完了ポーリング（15 分）
+export { runNbaProInsightBatchPollCron } from "./nba/runNbaProInsightBatchPollCron";
 // Pro Insight tip 1h 前パッチ（injury は専用 cron が更新済みスナップショットを読む）
 export { runNbaProBriefPatchCron } from "./nba/runNbaProBriefPatchCron";
 // NBA ライブ試合スコア / box（60 秒）— オフシーズンは停止。再開時に export を戻す
@@ -157,14 +157,6 @@ export const buildCumulativeRankingSnapshotCron = onSchedule(
         }
       }
 
-      try {
-        await notifyRankingUpdatedPush(snapshotResult.notifiedUids ?? []);
-      } catch (err) {
-        console.error(
-          "[buildCumulativeRankingSnapshotCron] push notify failed",
-          err
-        );
-      }
     } else {
       console.log(
         "[buildCumulativeRankingSnapshotCron] skip cumulative: no NBA games scheduled this JST date"
@@ -239,17 +231,13 @@ export const rebuildGroupBattleSnapshotsEveningCron = onSchedule(
 );
 
 /* ============================================================================
- * Game start push (10 min) — 15 分以内に開始する試合の予想者へ
+ * Game start push — 廃止（スケジュール枠は no-op で残し、デプロイ差分で消えるのを避ける）
  * ==========================================================================*/
 
 export const notifyGameStartPushCron = onSchedule(
   { schedule: "*/10 * * * *", timeZone: "Asia/Tokyo" },
   async () => {
-    try {
-      await runNotifyGameStartCron();
-    } catch (err) {
-      console.error("[notifyGameStartPushCron] failed", err);
-    }
+    console.log("[notifyGameStartPushCron] retired — skip");
   }
 );
 

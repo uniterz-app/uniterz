@@ -58,6 +58,7 @@ function buildRow(
   advanced: BdlTeamSeasonAverageRow | undefined,
   opponent: BdlTeamSeasonAverageRow | undefined,
   scoring: BdlTeamSeasonAverageRow | undefined,
+  misc: BdlTeamSeasonAverageRow | undefined,
   hustle: BdlTeamSeasonAverageRow | undefined,
   trackingByType: Partial<
     Record<BdlTeamTrackingType, BdlTeamSeasonAverageRow | undefined>
@@ -158,6 +159,7 @@ function buildRow(
     advanced,
     opponent,
     scoring,
+    misc,
     hustle,
     trackingByType,
     clutchBase,
@@ -174,7 +176,7 @@ function buildRow(
  * BDL team season averages → リーグ Team Stats bundle。
  * last10 は BDL に専用口がないため空（あとで試合集計）。
  *
- * HOW THEY PLAY 用に scoring / hustle / tracking も取得する。
+ * HOW THEY PLAY 用に scoring / misc / hustle / tracking も取得する。
  * team shooting/by_zone は BDL 400 のため rimFgPct / corner3Pct は未配線。
  */
 export async function buildLeagueTeamStatsBundleFromBdl(input: {
@@ -202,6 +204,7 @@ export async function buildLeagueTeamStatsBundleFromBdl(input: {
     advancedRows,
     opponentRows,
     scoringRows,
+    miscRows,
     hustleRows,
     clutchBaseRows,
     clutchAdvancedRows,
@@ -222,6 +225,10 @@ export async function buildLeagueTeamStatsBundleFromBdl(input: {
     fetchBdlTeamSeasonAverages({
       seasonYear: input.seasonYear,
       type: "scoring",
+    }),
+    fetchBdlTeamSeasonAverages({
+      seasonYear: input.seasonYear,
+      type: "misc",
     }),
     fetchBdlTeamSeasonAverages({
       seasonYear: input.seasonYear,
@@ -253,6 +260,7 @@ export async function buildLeagueTeamStatsBundleFromBdl(input: {
   const advMap = indexByAppTeamId(advancedRows);
   const oppMap = indexByAppTeamId(opponentRows);
   const scoringMap = indexByAppTeamId(scoringRows);
+  const miscMap = indexByAppTeamId(miscRows);
   const hustleMap = indexByAppTeamId(hustleRows);
   const clutchBaseMap = indexByAppTeamId(clutchBaseRows);
   const clutchAdvMap = indexByAppTeamId(clutchAdvancedRows);
@@ -283,6 +291,7 @@ export async function buildLeagueTeamStatsBundleFromBdl(input: {
       advMap.get(teamId),
       oppMap.get(teamId),
       scoringMap.get(teamId),
+      miscMap.get(teamId),
       hustleMap.get(teamId),
       trackingByType,
       clutchBaseMap.get(teamId),

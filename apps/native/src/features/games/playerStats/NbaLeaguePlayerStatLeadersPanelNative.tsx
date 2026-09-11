@@ -25,9 +25,9 @@ import { isNbaLeagueStatsPreseason } from "../../../../../../lib/nba/leagueStats
 import { leagueStatsTableEmptyCopy } from "../../../../../../lib/nba/leagueStatsEmptyState";
 import NbaLeagueStatsTableEmptyNative from "../stats/NbaLeagueStatsTableEmptyNative";
 import {
-  coerceModeForPhase,
+  coercePlayerModeForPhase,
   modeTabLabel,
-  modesForPhase,
+  modesForPlayerPhase,
   NBA_LEAGUE_STATS_PHASES,
   phaseTabLabel,
   resolvePlayerStatLeaderRows,
@@ -146,7 +146,7 @@ export default function NbaLeaguePlayerStatLeadersPanelNative({
     }
   }
 
-  const modeOptions = modesForPhase(phase);
+  const modeOptions = modesForPlayerPhase(phase);
   const leaders = useMemo(() => {
     const list = resolvePlayerStatLeaderRows({
       phase,
@@ -185,7 +185,7 @@ export default function NbaLeaguePlayerStatLeadersPanelNative({
                 active={phase === p}
                 onPress={() => {
                   setPhase(p);
-                  setMode(coerceModeForPhase(p, mode));
+                  setMode(coercePlayerModeForPhase(p, mode));
                 }}
                 compact
                 fontWeight="700"

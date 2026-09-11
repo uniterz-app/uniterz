@@ -18,7 +18,7 @@ import {
   generateMatchupInsight,
   patchMatchupInsightInjuriesAndSchedule,
 } from "@/lib/nba/insights/generateMatchupInsight";
-import { isWithinProBriefPatchWindow } from "@/lib/nba/insights/proInsightPhases";
+import { isWithinProBriefPatchWindow, isProInsightEligibleNbaGame } from "@/lib/nba/insights/proInsightPhases";
 import type { TeamScheduleInput } from "@/lib/nba/insights/buildScheduleLines";
 import { loadOrBuildTeamSeasonRecords } from "@/lib/nba/insights/loadPriorSeasonTeamRecords";
 import { loadAceOutRecordsBundle } from "@/lib/nba/insights/ingestNbaTeamAceOutRecords";
@@ -309,6 +309,10 @@ export async function ingestNbaProBriefs(
     try {
       const tipAtMs = toMs(game.data.startAtJst);
       if (tipAtMs == null) {
+        skipped += 1;
+        continue;
+      }
+      if (!isProInsightEligibleNbaGame(game.data)) {
         skipped += 1;
         continue;
       }

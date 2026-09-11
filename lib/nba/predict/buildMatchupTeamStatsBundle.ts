@@ -1,11 +1,14 @@
 /**
  * リーグチーム表 + 試合ログ → 予想 STATS タブ用 NbaTeamStatsBundle。
  * 当該 home/away の行だけ使う（他チームのモックは使わない）。
+ *
+ * Last 10 は box 由来（ratings + FG%/3P% など）。UI 表示はパネル側で絞る。
  */
 import { getNbaTeamNicknameById } from "@/lib/nba-team-names";
 import type { NbaLeagueTeamStatRow } from "@/lib/predict/nbaLeagueTeamStatsMocks";
 import type { NbaTeamGameLogSlice } from "@/lib/nba/teamGameLog/teamGameLogTypes";
 import type {
+  NbaTeamFormGame,
   NbaTeamStatSide,
   NbaTeamStatsBundle,
 } from "@/lib/predict/nbaTeamStatsPreviewMocks";
@@ -21,7 +24,21 @@ const RANK_METRICS: RankKey[] = [
   "drtg",
   "netrtg",
   "pace",
+  "fgPct",
+  "fg3Pct",
+  "efgPct",
+  "ftPct",
+  "tovPct",
 ];
+
+function numField(
+  row: NbaLeagueTeamStatRow | undefined,
+  key: string
+): number {
+  if (!row) return 0;
+  const v = (row as unknown as Record<string, unknown>)[key];
+  return typeof v === "number" && Number.isFinite(v) ? v : 0;
+}
 
 function rankMap(
   rows: NbaLeagueTeamStatRow[],
@@ -31,9 +48,9 @@ function rankMap(
   const scored = rows
     .map((r) => ({
       teamId: r.teamId,
-      value: Number(r[metric as keyof NbaLeagueTeamStatRow] ?? 0),
+      value: numField(r, metric),
     }))
-    .filter((r) => Number.isFinite(r.value));
+    .filter((r) => Number.isFinite(r.value) && (r.value !== 0 || metric === "diff" || metric === "netrtg"));
   scored.sort((a, b) =>
     higherIsBetter ? b.value - a.value : a.value - b.value
   );
@@ -46,8 +63,18 @@ function ranksForTeam(
   rows: NbaLeagueTeamStatRow[],
   teamId: string
 ): NbaTeamStatSide["ranks"] {
-  const higher: RankKey[] = ["ppg", "diff", "ortg", "netrtg", "pace"];
-  const lower: RankKey[] = ["papg", "drtg"];
+  const higher: RankKey[] = [
+    "ppg",
+    "diff",
+    "ortg",
+    "netrtg",
+    "pace",
+    "fgPct",
+    "fg3Pct",
+    "efgPct",
+    "ftPct",
+  ];
+  const lower: RankKey[] = ["papg", "drtg", "tovPct"];
   const ranks: NonNullable<NbaTeamStatSide["ranks"]> = {};
   for (const m of RANK_METRICS) {
     const map = rankMap(rows, m, higher.includes(m) && !lower.includes(m));
@@ -61,11 +88,26 @@ function formResultsFromLog(
   log: NbaTeamGameLogSlice | null | undefined
 ): Array<"W" | "L"> {
   if (!log?.recentGames?.length) return [];
-  // recentGames は新しい→古い。チップは古い→新しい。
   return [...log.recentGames]
     .reverse()
     .map((g) => g.result)
     .filter((r): r is "W" | "L" => r === "W" || r === "L");
+}
+
+/** recentGames は新しい→古い。先頭 5 件。 */
+function recentFormGamesFromLog(
+  log: NbaTeamGameLogSlice | null | undefined
+): NbaTeamFormGame[] {
+  if (!log?.recentGames?.length) return [];
+  return log.recentGames.slice(0, 5).map((g) => ({
+    dateLabel: g.dateLabel,
+    ...(g.gameId ? { gameId: g.gameId } : null),
+    oppAbbr: g.oppAbbr,
+    home: g.home,
+    teamScore: g.teamScore,
+    oppScore: g.oppScore,
+    result: g.result,
+  }));
 }
 
 function sideFromSources(input: {
@@ -73,7 +115,6 @@ function sideFromSources(input: {
   row: NbaLeagueTeamStatRow | undefined;
   allRows: NbaLeagueTeamStatRow[];
   log: NbaTeamGameLogSlice | null | undefined;
-  /** last10 窓では form を last10Record から */
   window: "season" | "last10";
 }): NbaTeamStatSide {
   const { teamId, row, allRows, log, window } = input;
@@ -94,6 +135,8 @@ function sideFromSources(input: {
       ? (log?.last10Record.losses ?? row?.losses ?? 0)
       : (log?.seasonRecord.losses ?? row?.losses ?? 0);
 
+  const recentFormGames = recentFormGamesFromLog(log);
+
   return {
     teamId,
     teamName: row?.teamName || nick,
@@ -104,6 +147,11 @@ function sideFromSources(input: {
     drtg: row?.drtg ?? 0,
     netrtg: row?.netrtg ?? 0,
     pace: row?.pace ?? 0,
+    fgPct: numField(row, "fgPct") || undefined,
+    fg3Pct: row?.fg3Pct || undefined,
+    efgPct: row?.efgPct || undefined,
+    ftPct: numField(row, "ftPct") || undefined,
+    tovPct: row?.tovPct || undefined,
     homeW,
     homeL,
     awayW,
@@ -112,6 +160,8 @@ function sideFromSources(input: {
     formL: window === "last10" ? formL : undefined,
     formResults:
       window === "last10" ? formResultsFromLog(log) : undefined,
+    recentFormGames:
+      recentFormGames.length > 0 ? recentFormGames : undefined,
     ranks,
   };
 }
@@ -135,7 +185,6 @@ export function buildMatchupTeamStatsBundle(input: {
   const last10Home = input.last10Rows.find((r) => r.teamId === homeId);
   const last10Away = input.last10Rows.find((r) => r.teamId === awayId);
 
-  // リーグ行も試合ログも無いときは空バンドル（モックに落とさない）
   const hasAny =
     Boolean(seasonHome || seasonAway || last10Home || last10Away) ||
     Boolean(input.homeLog?.finalCount || input.awayLog?.finalCount);

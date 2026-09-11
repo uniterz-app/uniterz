@@ -93,6 +93,8 @@ type Props = {
     | "leagueStatsPreview"
     | "proLeagueTeaserPreview"
     | "proInsightGatePreview"
+    | "proInsightNarrativePreview"
+    | "matchupTeamStatsPreview"
     | "adminFeatureInbox"
     | "adminContactInbox"
     | "adminRedemptions"
@@ -258,6 +260,8 @@ export default function ProfileSideMenuModal({
       | "leagueStatsPreview"
       | "proLeagueTeaserPreview"
       | "proInsightGatePreview"
+      | "proInsightNarrativePreview"
+      | "matchupTeamStatsPreview"
       | "adminFeatureInbox"
       | "adminContactInbox"
       | "adminRedemptions"
@@ -668,6 +672,26 @@ export default function ProfileSideMenuModal({
                           onPress={() => openUserPage("proInsightGatePreview")}
                         >
                           PRO INSIGHT ゲート
+                        </SideMenuItemButtonNative>
+                        <SideMenuItemButtonNative
+                          icon="text-box-outline"
+                          dense
+                          labelStyle={labelStyle}
+                          onPress={() =>
+                            openUserPage("proInsightNarrativePreview")
+                          }
+                        >
+                          PRO INSIGHT 新UI
+                        </SideMenuItemButtonNative>
+                        <SideMenuItemButtonNative
+                          icon="chart-timeline-variant"
+                          dense
+                          labelStyle={labelStyle}
+                          onPress={() =>
+                            openUserPage("matchupTeamStatsPreview")
+                          }
+                        >
+                          マッチアップ STATS + LAST 5
                         </SideMenuItemButtonNative>
                       </View>
                     </>

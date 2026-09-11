@@ -7,8 +7,14 @@ import { FieldValue } from "firebase-admin/firestore";
 import { bdlSeasonYearFromSeasonKey } from "@/lib/nba/bdl/bdlNbaEnv";
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
 import { buildTeamGameLogsBundleFromGames } from "@/lib/nba/teamGameLog/buildTeamGameLogsBundleFromGames";
-import { buildLast10RowsFromGames } from "@/lib/nba/leagueTeamStats/buildLast10RowsFromGames";
-import { mergeLast10IntoLeagueTeamStatsSnapshot } from "@/lib/nba/leagueTeamStats/loadLeagueTeamStatsSnapshot";
+import {
+  buildLast10RowsFromGames,
+  seasonPaceByTeamIdFromRows,
+} from "@/lib/nba/leagueTeamStats/buildLast10RowsFromGames";
+import {
+  loadLeagueTeamStatsSnapshot,
+  mergeLast10IntoLeagueTeamStatsSnapshot,
+} from "@/lib/nba/leagueTeamStats/loadLeagueTeamStatsSnapshot";
 import {
   normalizeTeamGameLogSeasonKey,
   writeTeamGameLogsSnapshot,
@@ -72,7 +78,11 @@ export async function ingestNbaTeamGameLogsFromGames(
     serverTimestamp: FieldValue.serverTimestamp(),
   });
 
-  const last10 = buildLast10RowsFromGames(rows);
+  const last10 = buildLast10RowsFromGames(rows, {
+    seasonPaceByTeamId: seasonPaceByTeamIdFromRows(
+      (await loadLeagueTeamStatsSnapshot(db, seasonKey)).bundle.season
+    ),
+  });
   await mergeLast10IntoLeagueTeamStatsSnapshot(
     db,
     seasonKey,

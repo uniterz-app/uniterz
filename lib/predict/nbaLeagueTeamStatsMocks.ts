@@ -406,8 +406,9 @@ export function leagueTeamRailGroups(): NbaLeagueTeamRailGroup[] {
 }
 
 /**
- * Last 10 は `games` のスコアから取れる実値だけ（W% / PPG / PAPG / DIFF）。
- * 仮 ORTG やゼロ埋め advanced をレールに出さない。
+ * Last 10 はリーグ表タブでは出さない（BDL に season 同粒度なし）。
+ * マッチアップ FORM 用に rows には残す: W–L/PPG + box 推定 ORTG/DRTG/NET/pace/3P。
+ * @deprecated レール用。Team 表は常に `leagueTeamRailGroups()`。
  */
 export const NBA_LEAGUE_TEAM_LAST10_METRICS: readonly NbaLeagueTeamStatMetricDef[] =
   [coreDef("winPct"), coreDef("ppg"), coreDef("papg"), coreDef("diff")];
@@ -415,15 +416,8 @@ export const NBA_LEAGUE_TEAM_LAST10_METRICS: readonly NbaLeagueTeamStatMetricDef
 export function leagueTeamRailGroupsForMode(
   mode: "per_game" | "total" | "last10"
 ): NbaLeagueTeamRailGroup[] {
-  if (mode === "last10") {
-    return [
-      {
-        id: "basic",
-        short: "BASIC",
-        metrics: NBA_LEAGUE_TEAM_LAST10_METRICS,
-      },
-    ];
-  }
+  // Team Last 10 タブ廃止 — どの mode でもフルレール（PER GAME / TOTAL）
+  void mode;
   return leagueTeamRailGroups();
 }
 

@@ -495,6 +495,24 @@ function ProfileStackScreen() {
             }
           />
         ) : null}
+        {__DEV__ ? (
+          <ProfileStack.Screen
+            name="ProInsightNarrativePreview"
+            getComponent={() =>
+              require("../features/profile/screens/ProfileStackWrappers")
+                .ProInsightNarrativePreviewScreenWrapper
+            }
+          />
+        ) : null}
+        {__DEV__ ? (
+          <ProfileStack.Screen
+            name="MatchupTeamStatsPreview"
+            getComponent={() =>
+              require("../features/profile/screens/ProfileStackWrappers")
+                .MatchupTeamStatsPreviewScreenWrapper
+            }
+          />
+        ) : null}
         <ProfileStack.Screen
           name="ProSuccess"
           getComponent={() =>
