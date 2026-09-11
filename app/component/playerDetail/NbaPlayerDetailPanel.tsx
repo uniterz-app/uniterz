@@ -18,12 +18,16 @@ import {
   formatCareerSeasonLabel,
   formatContractSeasonLabel,
   formatFgLine,
+  formatMetricDisplay,
   formatPhysique,
   formatSalaryUsd,
   formatTeamHistory,
   getNbaPlayerDetailPreview,
+  isPlayerDetailLast10AboveSeason,
   NBA_PLAYER_DETAIL_SEASON_SHOWN,
   nbaCountryNameToIso2,
+  playerDetailRecentRawValue,
+  playerDetailSeasonRawValue,
   resolvePlayerDisplayAge,
   type NbaPlayerCareerSeasonBoard,
   type NbaPlayerCareerSeasonRow,
@@ -436,109 +440,6 @@ function ShotZoneHeat({
         </span>
       </div>
     </section>
-  );
-}
-
-function RecentWindowCompare({ logs }: { logs: NbaPlayerGameLog[] }) {
-  const l5 = averageRecentGameLogs(logs, 5);
-  const l10 = averageRecentGameLogs(logs, 10);
-  if (!l5 || !l10) return null;
-  const hot = "#FCD34D";
-
-  const rows: Array<{
-    label: string;
-    left: string;
-    right: string;
-    leftN: number;
-    rightN: number;
-  }> = [
-    {
-      label: "PTS",
-      left: l5.pts.toFixed(1),
-      right: l10.pts.toFixed(1),
-      leftN: l5.pts,
-      rightN: l10.pts,
-    },
-    {
-      label: "REB",
-      left: l5.reb.toFixed(1),
-      right: l10.reb.toFixed(1),
-      leftN: l5.reb,
-      rightN: l10.reb,
-    },
-    {
-      label: "AST",
-      left: l5.ast.toFixed(1),
-      right: l10.ast.toFixed(1),
-      leftN: l5.ast,
-      rightN: l10.ast,
-    },
-    {
-      label: "FG%",
-      left: `${(l5.fgPct * 100).toFixed(1)}%`,
-      right: `${(l10.fgPct * 100).toFixed(1)}%`,
-      leftN: l5.fgPct,
-      rightN: l10.fgPct,
-    },
-    {
-      label: "3PT%",
-      left: `${(l5.fg3Pct * 100).toFixed(1)}%`,
-      right: `${(l10.fg3Pct * 100).toFixed(1)}%`,
-      leftN: l5.fg3Pct,
-      rightN: l10.fg3Pct,
-    },
-  ];
-
-  return (
-    <div className="space-y-0.5 border-b border-white/10 px-2.5 py-2.5">
-      <div className="mb-1 flex items-center">
-        <span
-          className={`${nameOxanium.className} flex-1 text-center text-[11px] font-extrabold tracking-[0.14em]`}
-          style={{ color: hot }}
-        >
-          LAST 5
-        </span>
-        <span className="w-[52px]" />
-        <span
-          className={`${nameOxanium.className} flex-1 text-center text-[11px] font-extrabold tracking-[0.14em]`}
-          style={{ color: hot }}
-        >
-          LAST 10
-        </span>
-      </div>
-      {rows.map((row) => {
-        const leftWin = row.leftN > row.rightN;
-        const rightWin = row.rightN > row.leftN;
-        return (
-          <div
-            key={row.label}
-            className="flex items-center border-b border-white/[0.06] py-1.5"
-          >
-            <span
-              className={`${nameOxanium.className} flex-1 pr-2 text-right text-[16px] font-extrabold tabular-nums`}
-              style={{
-                color: leftWin ? hot : "rgba(255,255,255,0.88)",
-              }}
-            >
-              {row.left}
-            </span>
-            <span
-              className={`${nameOxanium.className} w-[52px] text-center text-[11px] font-bold tracking-wider text-white/55`}
-            >
-              {row.label}
-            </span>
-            <span
-              className={`${nameOxanium.className} flex-1 pl-2 text-left text-[16px] font-extrabold tabular-nums`}
-              style={{
-                color: rightWin ? hot : "rgba(255,255,255,0.88)",
-              }}
-            >
-              {row.right}
-            </span>
-          </div>
-        );
-      })}
-    </div>
   );
 }
 
@@ -1174,7 +1075,6 @@ function GameLogs({
           className="overflow-hidden border bg-black/40"
           style={{ borderColor: hexToRgba(accent, 0.3) }}
         >
-          <RecentWindowCompare logs={logs} />
           <div
             className={`${nameOxanium.className} flex items-center gap-1.5 border-b px-2 py-2 text-[11px] font-bold tracking-wider text-white/35`}
             style={{ borderBottomColor: hexToRgba(accent, 0.14) }}
@@ -1283,8 +1183,10 @@ export default function NbaPlayerDetailPanel({
   const seasonShown = NBA_PLAYER_DETAIL_SEASON_SHOWN.map(
     (id) => detail.seasonMetrics.find((m) => m.id === id)
   ).filter((m): m is NonNullable<typeof m> => Boolean(m));
-  /** 開幕前 / 未出場は 0 埋めグリッドにせず NO DATA */
+  const last10Avg = averageRecentGameLogs(detail.gameLogs, 10);
   const hasSeasonAverages = detail.season.gamesPlayed > 0;
+  const [avgWindow, setAvgWindow] = useState<"season" | "last10">("season");
+  const hot = "#FCD34D";
   const displayAge = resolvePlayerDisplayAge(detail);
   const moreRows: Array<[string, string]> = [
     ...(displayAge != null
@@ -1459,10 +1361,39 @@ export default function NbaPlayerDetailPanel({
       ) : null}
 
       <section className="space-y-3">
-        <h2 className={SECTION_HEADING_CLASS}>
-          {isJa ? "シーズン平均" : "SEASON AVERAGES"}
-        </h2>
-        {hasSeasonAverages ? (
+        <div className="flex items-center justify-between gap-3">
+          <h2 className={SECTION_HEADING_CLASS}>
+            {isJa ? "シーズン平均" : "SEASON AVERAGES"}
+          </h2>
+          <div
+            className="flex overflow-hidden border"
+            style={{ borderColor: hexToRgba(uiAccent, 0.35) }}
+          >
+            {(
+              [
+                ["season", "Season"],
+                ["last10", "Last 10"],
+              ] as const
+            ).map(([id, label]) => {
+              const active = avgWindow === id;
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setAvgWindow(id)}
+                  className={`${nameOxanium.className} px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide`}
+                  style={{
+                    backgroundColor: active ? uiAccent : "transparent",
+                    color: active ? "#050508" : "rgba(255,255,255,0.55)",
+                  }}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+        {avgWindow === "season" && hasSeasonAverages ? (
           <div
             className="grid grid-cols-3 overflow-hidden border bg-black/50"
             style={{ borderColor: hexToRgba(uiAccent, 0.4) }}
@@ -1499,6 +1430,41 @@ export default function NbaPlayerDetailPanel({
                 </p>
               </div>
             ))}
+          </div>
+        ) : avgWindow === "last10" && last10Avg ? (
+          <div
+            className="grid grid-cols-3 overflow-hidden border bg-black/50"
+            style={{ borderColor: hexToRgba(uiAccent, 0.4) }}
+          >
+            {seasonShown.map((m) => {
+              const l10 = playerDetailRecentRawValue(last10Avg, m.id);
+              const seasonV = playerDetailSeasonRawValue(detail.season, m.id);
+              const above =
+                hasSeasonAverages &&
+                isPlayerDetailLast10AboveSeason(l10, seasonV);
+              return (
+                <div
+                  key={m.id}
+                  className="px-2.5 py-3"
+                  style={{
+                    borderBottom: `1px solid ${hexToRgba(uiAccent, 0.15)}`,
+                    borderRight: `1px solid ${hexToRgba(uiAccent, 0.15)}`,
+                  }}
+                >
+                  <div className="flex items-center justify-between gap-1">
+                    <span className={`${nameOxanium.className} text-[9px] font-bold uppercase tracking-wider text-white/40`}>
+                      {m.short}
+                    </span>
+                  </div>
+                  <p
+                    className={`${nameOxanium.className} mt-1 text-[18px] font-extrabold tabular-nums`}
+                    style={{ color: above ? hot : undefined }}
+                  >
+                    {formatMetricDisplay(m.id, l10)}
+                  </p>
+                </div>
+              );
+            })}
           </div>
         ) : (
           <PlayerDetailSectionNoData accent={uiAccent} />

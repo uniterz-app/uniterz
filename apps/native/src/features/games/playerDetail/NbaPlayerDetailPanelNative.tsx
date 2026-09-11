@@ -21,6 +21,7 @@ import {
 import {
   averageRecentGameLogs,
   formatFgLine,
+  formatMetricDisplay,
   formatPhysique,
   formatSalaryUsd,
   formatContractSeasonLabel,
@@ -30,8 +31,11 @@ import {
   resolvePlayerDisplayAge,
   formatTeamHistory,
   getNbaPlayerDetailPreview,
+  isPlayerDetailLast10AboveSeason,
   NBA_PLAYER_DETAIL_SEASON_SHOWN,
   nbaCountryNameToIso2,
+  playerDetailRecentRawValue,
+  playerDetailSeasonRawValue,
   type NbaPlayerAvailability,
   type NbaPlayerCareerSeasonBoard,
   type NbaPlayerCareerSeasonRow,
@@ -742,84 +746,154 @@ function PlayerVsOpponentSectionNative({
 
 function SeasonMetricsGrid({
   metrics,
+  season,
+  logs,
   accent,
-  gamesPlayed,
   language,
 }: {
   metrics: NbaPlayerSeasonMetric[];
+  season: NbaPlayerDetailPreview["season"];
+  logs: NbaPlayerGameLog[];
   accent: string;
-  gamesPlayed: number;
   language: string;
 }) {
   const chrome = nbaPlayerDetailChrome(language);
-  const isJa = chrome.catalogJa;
   const shown = NBA_PLAYER_DETAIL_SEASON_SHOWN.map(
     (id) => metrics.find((m) => m.id === id)
   ).filter((m): m is NbaPlayerSeasonMetric => Boolean(m));
   const cellLine = hexToRgba(accent, 0.22);
-  /** 開幕前 / 未出場は 0 埋めグリッドにせず NO DATA */
-  const hasSeasonAverages = gamesPlayed > 0;
+  const last10Avg = averageRecentGameLogs(logs, 10);
+  const hasSeasonAverages = season.gamesPlayed > 0;
+  const [avgWindow, setAvgWindow] = useState<"season" | "last10">("season");
+  const hot = "#FCD34D";
+  const frame = hexToRgba(accent, 0.35);
+
+  const renderCells = (
+    cells: Array<{
+      id: string;
+      short: string;
+      display: string;
+      leagueRank?: number;
+      highlight?: boolean;
+    }>
+  ) => (
+    <View style={[styles.advGrid, { borderColor: hexToRgba(accent, 0.4) }]}>
+      {cells.map((m, i) => {
+        const col = i % 3;
+        const row = Math.floor(i / 3);
+        const lastRow = Math.floor((cells.length - 1) / 3);
+        return (
+          <View
+            key={m.id}
+            style={[
+              styles.advCell,
+              col < 2
+                ? {
+                    borderRightWidth: StyleSheet.hairlineWidth,
+                    borderRightColor: cellLine,
+                  }
+                : null,
+              row < lastRow
+                ? {
+                    borderBottomWidth: StyleSheet.hairlineWidth,
+                    borderBottomColor: cellLine,
+                  }
+                : null,
+            ]}
+          >
+            <View style={styles.advCellTop}>
+              <Text style={styles.advLabel}>{m.short}</Text>
+              {m.leagueRank != null && isPlayerDetailRankShown(m.leagueRank) ? (
+                <Text
+                  style={[
+                    styles.advRank,
+                    {
+                      color:
+                        m.leagueRank <= 10
+                          ? accent
+                          : "rgba(255,255,255,0.35)",
+                    },
+                  ]}
+                >
+                  #{m.leagueRank}
+                </Text>
+              ) : null}
+            </View>
+            <Text
+              style={[
+                styles.advValue,
+                m.highlight ? { color: hot } : null,
+              ]}
+            >
+              {m.display}
+            </Text>
+          </View>
+        );
+      })}
+    </View>
+  );
+
   return (
     <View style={styles.advWrap}>
-      <View style={styles.advTitleRow}>
-        <Text style={styles.advTitle}>
-          {chrome.seasonAverages}
-        </Text>
-        <View style={styles.advTitleLine} />
-      </View>
-      {hasSeasonAverages ? (
-        <View
-          style={[styles.advGrid, { borderColor: hexToRgba(accent, 0.4) }]}
-        >
-          {shown.map((m, i) => {
-            const col = i % 3;
-            const row = Math.floor(i / 3);
-            const lastRow = Math.floor((shown.length - 1) / 3);
+      <View style={styles.careerHeadRow}>
+        <Text style={styles.advTitle}>{chrome.seasonAverages}</Text>
+        <View style={[styles.careerTabs, { borderColor: frame }]}>
+          {(
+            [
+              ["season", "Season"],
+              ["last10", "Last 10"],
+            ] as const
+          ).map(([id, label]) => {
+            const active = avgWindow === id;
             return (
-              <View
-                key={m.id}
+              <Pressable
+                key={id}
+                onPress={() => setAvgWindow(id)}
                 style={[
-                  styles.advCell,
-                  col < 2
-                    ? {
-                        borderRightWidth: StyleSheet.hairlineWidth,
-                        borderRightColor: cellLine,
-                      }
-                    : null,
-                  row < lastRow
-                    ? {
-                        borderBottomWidth: StyleSheet.hairlineWidth,
-                        borderBottomColor: cellLine,
-                      }
-                    : null,
+                  styles.careerTab,
+                  active ? { backgroundColor: accent } : null,
                 ]}
               >
-                <View style={styles.advCellTop}>
-                  <Text style={styles.advLabel}>{m.short}</Text>
-                  {isPlayerDetailRankShown(m.leagueRank) ? (
-                    <Text
-                      style={[
-                        styles.advRank,
-                        {
-                          color:
-                            m.leagueRank <= 10
-                              ? accent
-                              : "rgba(255,255,255,0.35)",
-                        },
-                      ]}
-                    >
-                      #{m.leagueRank}
-                    </Text>
-                  ) : null}
-                </View>
-                <Text style={styles.advValue}>{m.display}</Text>
-              </View>
+                <Text
+                  style={[
+                    styles.careerTabText,
+                    { color: active ? "#050508" : "rgba(255,255,255,0.55)" },
+                  ]}
+                >
+                  {label}
+                </Text>
+              </Pressable>
             );
           })}
         </View>
-      ) : (
-        <PlayerDetailSectionNoDataNative accent={accent} />
-      )}
+      </View>
+      {avgWindow === "season" && hasSeasonAverages
+        ? renderCells(
+            shown.map((m) => ({
+              id: m.id,
+              short: m.short,
+              display: m.display,
+              leagueRank: m.leagueRank,
+            }))
+          )
+        : avgWindow === "last10" && last10Avg
+          ? renderCells(
+              shown.map((m) => {
+                const l10 = playerDetailRecentRawValue(last10Avg, m.id);
+                const seasonV = playerDetailSeasonRawValue(season, m.id);
+                return {
+                  id: m.id,
+                  short: m.short,
+                  display: formatMetricDisplay(m.id, l10),
+                  highlight:
+                    hasSeasonAverages &&
+                    isPlayerDetailLast10AboveSeason(l10, seasonV),
+                };
+              })
+            )
+          : (
+              <PlayerDetailSectionNoDataNative accent={accent} />
+            )}
     </View>
   );
 }
@@ -1219,108 +1293,6 @@ function GameLogRow({
   );
 }
 
-function RecentWindowCompare({
-  logs,
-  borderColor,
-}: {
-  logs: NbaPlayerGameLog[];
-  borderColor: string;
-}) {
-  const l5 = averageRecentGameLogs(logs, 5);
-  const l10 = averageRecentGameLogs(logs, 10);
-  if (!l5 || !l10) return null;
-  const hot = "#FCD34D";
-
-  const rows: Array<{
-    label: string;
-    left: string;
-    right: string;
-    leftN: number;
-    rightN: number;
-  }> = [
-    {
-      label: "PTS",
-      left: l5.pts.toFixed(1),
-      right: l10.pts.toFixed(1),
-      leftN: l5.pts,
-      rightN: l10.pts,
-    },
-    {
-      label: "REB",
-      left: l5.reb.toFixed(1),
-      right: l10.reb.toFixed(1),
-      leftN: l5.reb,
-      rightN: l10.reb,
-    },
-    {
-      label: "AST",
-      left: l5.ast.toFixed(1),
-      right: l10.ast.toFixed(1),
-      leftN: l5.ast,
-      rightN: l10.ast,
-    },
-    {
-      label: "FG%",
-      left: `${(l5.fgPct * 100).toFixed(1)}%`,
-      right: `${(l10.fgPct * 100).toFixed(1)}%`,
-      leftN: l5.fgPct,
-      rightN: l10.fgPct,
-    },
-    {
-      label: "3PT%",
-      left: `${(l5.fg3Pct * 100).toFixed(1)}%`,
-      right: `${(l10.fg3Pct * 100).toFixed(1)}%`,
-      leftN: l5.fg3Pct,
-      rightN: l10.fg3Pct,
-    },
-  ];
-
-  return (
-    <View
-      style={[
-        styles.recentCompare,
-        {
-          borderBottomWidth: StyleSheet.hairlineWidth,
-          borderBottomColor: borderColor,
-        },
-      ]}
-    >
-      <View style={styles.recentCompareHead}>
-        <Text style={[styles.recentCompareSide, { color: hot }]}>LAST 5</Text>
-        <View style={styles.recentCompareLabelCol} />
-        <Text style={[styles.recentCompareSide, { color: hot }]}>LAST 10</Text>
-      </View>
-      {rows.map((row) => {
-        const leftWin = row.leftN > row.rightN;
-        const rightWin = row.rightN > row.leftN;
-        return (
-          <View key={row.label} style={styles.recentCompareRow}>
-            <Text
-              style={[
-                styles.recentCompareVal,
-                styles.recentCompareValLeft,
-                leftWin ? { color: hot } : null,
-              ]}
-            >
-              {row.left}
-            </Text>
-            <Text style={styles.recentCompareLabel}>{row.label}</Text>
-            <Text
-              style={[
-                styles.recentCompareVal,
-                styles.recentCompareValRight,
-                rightWin ? { color: hot } : null,
-              ]}
-            >
-              {row.right}
-            </Text>
-          </View>
-        );
-      })}
-    </View>
-  );
-}
-
 function GameLogsSection({
   logs,
   accent,
@@ -1364,7 +1336,6 @@ function GameLogsSection({
         <View
           style={[styles.gameList, { borderColor: hexToRgba(accent, 0.3) }]}
         >
-          <RecentWindowCompare logs={logs} borderColor={line} />
           <GameLogHeader borderColor={line} />
           {logs.map((log, i) => (
             <GameLogRow
@@ -1546,8 +1517,9 @@ export default function NbaPlayerDetailPanelNative({
 
         <SeasonMetricsGrid
           metrics={detail.seasonMetrics}
+          season={detail.season}
+          logs={detail.gameLogs}
           accent={accent}
-          gamesPlayed={detail.season.gamesPlayed}
           language={language}
         />
 

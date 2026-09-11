@@ -1,16 +1,15 @@
 /**
  * リーグ Team / Player 表の二段タブ。
  * SEASON | PLAYOFFS
- *  └ Team: PER GAME | TOTAL
- *  └ Player: PER GAME | TOTAL | LAST 10（PLAYOFFS は PER GAME | TOTAL のみ）
+ *  └ Team / Player: PER GAME | TOTAL
  *
- * Team Last 10 は BDL に season と同粒度が無いためタブ廃止。
+ * Last 10 は BDL に season と同粒度（ADVANCED）が無いためタブ廃止。
+ * Player 詳細は game logs 由来の LAST 10 をシーズン平均と比較表示。
  * （マッチアップ FORM / Pro Insight は box 由来の狭いセットのみ）
  *
  * データ:
  * - SEASON + PER GAME → season
  * - SEASON + TOTAL → season を出場数で積算（レート系はそのまま）
- * - Player SEASON + LAST 10 → last10（game logs）
  * - PLAYOFFS → 未接続のため UI では非表示（`NBA_LEAGUE_STATS_PHASES`）
  */
 
@@ -60,13 +59,11 @@ export function modesForTeamPhase(
   return ["per_game", "total"] as const;
 }
 
-/** Player Leaders — Last 10 あり（game logs） */
+/** Player Leaders — Last 10 なし（詳細ページの box LAST 10 へ） */
 export function modesForPlayerPhase(
-  phase: NbaLeagueStatsPhase
+  _phase: NbaLeagueStatsPhase
 ): readonly NbaLeagueStatsMode[] {
-  return phase === "season"
-    ? (["per_game", "total", "last10"] as const)
-    : (["per_game", "total"] as const);
+  return ["per_game", "total"] as const;
 }
 
 /** @deprecated Player 用。Team は `modesForTeamPhase` */

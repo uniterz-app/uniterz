@@ -44,6 +44,15 @@ export function nbaPlayerDetailChrome(language: string | null | undefined) {
       pt: "MÉDIAS DA TEMPORADA",
       fr: "MOYENNES DE SAISON",
     }),
+    last10: L(lang, {
+      ja: "LAST 10",
+      en: "LAST 10",
+      ko: "LAST 10",
+      zh: "LAST 10",
+      es: "LAST 10",
+      pt: "LAST 10",
+      fr: "LAST 10",
+    }),
     thisSeason: L(lang, {
       ja: "今季年俸",
       en: "THIS SEASON",

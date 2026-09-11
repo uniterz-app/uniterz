@@ -1812,11 +1812,72 @@ export type NbaPlayerRecentWindowAvg = {
   pts: number;
   reb: number;
   ast: number;
+  stl: number;
+  blk: number;
+  tov: number;
+  min: number;
+  plusMinus: number;
   fgPct: number;
+  fga: number;
   fg3Pct: number;
+  fg3m: number;
+  fg3a: number;
+  ftPct: number;
 };
 
-/** Game logs 先頭から直近 N 試合の簡易平均 */
+/** シーズン平均グリッドと同じ id の生値 */
+export function playerDetailSeasonRawValue(
+  season: NbaPlayerDetailPreview["season"],
+  id: NbaPlayerSeasonMetricId
+): number {
+  return seasonValue(season, id);
+}
+
+export function playerDetailRecentRawValue(
+  avg: NbaPlayerRecentWindowAvg,
+  id: NbaPlayerSeasonMetricId
+): number {
+  switch (id) {
+    case "pts":
+      return avg.pts;
+    case "reb":
+      return avg.reb;
+    case "ast":
+      return avg.ast;
+    case "stl":
+      return avg.stl;
+    case "blk":
+      return avg.blk;
+    case "tov":
+      return avg.tov;
+    case "min":
+      return avg.min;
+    case "fg_pct":
+      return avg.fgPct;
+    case "fga":
+      return avg.fga;
+    case "fg3_pct":
+      return avg.fg3Pct;
+    case "fg3m":
+      return avg.fg3m;
+    case "fg3a":
+      return avg.fg3a;
+    case "ft_pct":
+      return avg.ftPct;
+    case "plus_minus":
+      return avg.plusMinus;
+  }
+}
+
+/** LAST 10 がシーズン平均より数値が高い（ハイライト用） */
+export function isPlayerDetailLast10AboveSeason(
+  last10: number,
+  season: number
+): boolean {
+  return Number.isFinite(last10) && Number.isFinite(season) && last10 > season;
+}
+
+/** Game logs 先頭から直近 N 試合の平均（詳細グリッドと同指標） */
 export function averageRecentGameLogs(
   logs: NbaPlayerGameLog[],
   window: number
@@ -1830,13 +1891,25 @@ export function averageRecentGameLogs(
   const fga = sum((g) => g.fga);
   const fg3m = sum((g) => g.fg3m);
   const fg3a = sum((g) => g.fg3a);
+  const ftm = sum((g) => g.ftm);
+  const fta = sum((g) => g.fta);
+  const r1 = (v: number) => Math.round((v / n) * 10) / 10;
   return {
     window,
     games: n,
-    pts: Math.round((sum((g) => g.pts) / n) * 10) / 10,
-    reb: Math.round((sum((g) => g.reb) / n) * 10) / 10,
-    ast: Math.round((sum((g) => g.ast) / n) * 10) / 10,
+    pts: r1(sum((g) => g.pts)),
+    reb: r1(sum((g) => g.reb)),
+    ast: r1(sum((g) => g.ast)),
+    stl: r1(sum((g) => g.stl)),
+    blk: r1(sum((g) => g.blk)),
+    tov: r1(sum((g) => g.tov)),
+    min: r1(sum((g) => g.min)),
+    plusMinus: r1(sum((g) => g.plusMinus)),
+    fga: r1(fga),
+    fg3m: r1(fg3m),
+    fg3a: r1(fg3a),
     fgPct: fga > 0 ? fgm / fga : 0,
     fg3Pct: fg3a > 0 ? fg3m / fg3a : 0,
+    ftPct: fta > 0 ? ftm / fta : 0,
   };
 }
