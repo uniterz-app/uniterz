@@ -972,12 +972,12 @@ const fr: Messages = {
       gamesPickupTitle: "Matchs Pick Up",
       gamesPickupBody:
         "Matchs choisis chaque semaine. Le **classement Pick Up** ne compte que ces pronostics. Le classement de réussite exige **65 %+** des Pick Up déjà joués.",
-      gamesStatsTitle: "STATS",
+      gamesStatsTitle: "STANDING / STATS",
       gamesStatsBody:
-        "L’onglet jaune **STATS** à droite ouvre les stats équipes/joueurs. Un swipe depuis le bord droit marche aussi.",
+        "**STANDING** et **STATS** à droite ouvrent classements et stats équipes/joueurs. Un swipe depuis le bord droit marche aussi.",
       resultsTitle: "Résultats",
       resultsBody:
-        "Après le match, le bilan arrive ici. **Grands chiffres = score final, en dessous = ton pick.** En haut à droite : HIT / MISS.",
+        "Ton pick **apparaît ici dès l’envoi**. Après le match, c’est le bilan — **grands chiffres = score final, en dessous = ton pick.** En haut à droite : HIT / MISS.",
       tapTitle: "Tap the match card",
       tapBody:
         "This is a mock NBA game. Tap the glowing card to start predicting. No real data is affected.",
@@ -1094,9 +1094,9 @@ const fr: Messages = {
       horizonStatsWhatTitle: "What is STATS?",
       horizonStatsWhatBody:
         "**Team and player stats** from the **Games** tab.\nUse for **pre-pick research** — scoring, efficiency, recent form.\nLinks to the live **STATS hub** backed by real data.",
-      horizonStatsHowTitle: "Opening STATS",
+      horizonStatsHowTitle: "Opening STANDING / STATS",
       horizonStatsHowBody:
-        "The highlighted **yellow STATS** tab opens it (or swipe from the right edge).\n**Tap STATS** to try it, or press **Start the app** below when you're ready.",
+        "**STANDING** and **STATS** on the right edge open them (or swipe from the right edge).\n**Tap either tab** to try it, or press **Start the app** below when you're ready.",
       doneTitle: "You're ready",
       doneBody:
         "That's the UNITERZ loop. Predict real games and climb the ranks.",

@@ -969,12 +969,12 @@ const de: Messages = {
       gamesPickupTitle: "Pick-up-Spiele",
       gamesPickupBody:
         "Wöchentlich ausgewählte Spiele. Das **Pick-Up-Ranking** zählt nur diese Tipps. Fürs Trefferquoten-Ranking brauchst du Tipps auf **65 %+** der bisherigen Pick-ups.",
-      gamesStatsTitle: "STATS",
+      gamesStatsTitle: "STANDING / STATS",
       gamesStatsBody:
-        "Der gelbe **STATS**-Tab rechts öffnet Team- und Spielerstatistiken. Wischen vom rechten Rand geht auch.",
+        "**STANDING** und **STATS** rechts öffnen Tabelle und Team-/Spielerstatistiken. Wischen vom rechten Rand geht auch.",
       resultsTitle: "Results",
       resultsBody:
-        "Nach dem Spiel landet der Abgleich hier. **Große Zahlen = Endstand, darunter dein Tipp.** Oben rechts: HIT / MISS.",
+        "Dein Tipp **erscheint hier sofort nach dem Absenden**. Nach dem Spiel wird es der Abgleich — **große Zahlen = Endstand, darunter dein Tipp.** Oben rechts: HIT / MISS.",
       tapTitle: "Tap the match card",
       tapBody:
         "This is a mock NBA game. Tap the glowing card to start predicting. No real data is affected.",
@@ -1091,9 +1091,9 @@ const de: Messages = {
       horizonStatsWhatTitle: "What is STATS?",
       horizonStatsWhatBody:
         "**Team and player stats** from the **Games** tab.\nUse for **pre-pick research** — scoring, efficiency, recent form.\nLinks to the live **STATS hub** backed by real data.",
-      horizonStatsHowTitle: "Opening STATS",
+      horizonStatsHowTitle: "Opening STANDING / STATS",
       horizonStatsHowBody:
-        "The highlighted **yellow STATS** tab opens it (or swipe from the right edge).\n**Tap STATS** to try it, or press **Start the app** below when you're ready.",
+        "**STANDING** and **STATS** on the right edge open them (or swipe from the right edge).\n**Tap either tab** to try it, or press **Start the app** below when you're ready.",
       doneTitle: "You're ready",
       doneBody:
         "That's the UNITERZ loop. Predict real games and climb the ranks.",

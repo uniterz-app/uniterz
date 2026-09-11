@@ -981,12 +981,12 @@ const en: Messages = {
       gamesPickupTitle: "Pick-up games",
       gamesPickupBody:
         "Games chosen each week. **Pick Up rankings** count only these picks. Win-rate rankings need picks on **65%+** of pick-up games so far.",
-      gamesStatsTitle: "STATS",
+      gamesStatsTitle: "STANDING / STATS",
       gamesStatsBody:
-        "The yellow **STATS** tab on the right opens team and player stats. You can also swipe in from the right edge.",
+        "**STANDING** and **STATS** on the right edge open standings and team/player stats. Swiping from the right edge works too.",
       resultsTitle: "Results",
       resultsBody:
-        "After the game, the recap lands here. **Big numbers = final, below = your pick.** Top-right is HIT / MISS.",
+        "Your pick **shows up here as soon as you submit**. After the game, it becomes the recap — **big numbers = final, below = your pick.** Top-right is HIT / MISS.",
       tapTitle: "Tap the glowing card",
       tapBody:
         "**Mock game** — won't affect live data. Tap the card to start.",
@@ -1093,9 +1093,9 @@ const en: Messages = {
       horizonStatsWhatTitle: "What is STATS?",
       horizonStatsWhatBody:
         "**Team and player stats** from the **Games** tab.\nUse for **pre-pick research** — scoring, efficiency, recent form.\nLinks to the live **STATS hub** backed by real data.",
-      horizonStatsHowTitle: "Opening STATS",
+      horizonStatsHowTitle: "Opening STANDING / STATS",
       horizonStatsHowBody:
-        "The highlighted **yellow STATS** tab opens it (or swipe from the right edge).\n**Tap STATS** to try it, or press **Start the app** below when you're ready.",
+        "**STANDING** and **STATS** on the right edge open them (or swipe from the right edge).\n**Tap either tab** to try it, or press **Start the app** below when you're ready.",
       doneTitle: "You're ready",
       doneBody:
         "That's the core. Post live picks and chase rankings that **update daily at 16:00 JST.**",

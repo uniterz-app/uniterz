@@ -14,7 +14,6 @@ import {
   Image,
   InteractionManager,
   KeyboardAvoidingView,
-  Modal,
   Platform,
   Pressable,
   SafeAreaView,
@@ -58,6 +57,10 @@ import {
   consumeMarkListResume,
   requestMarkListResume,
 } from "./markListResumeNative";
+import {
+  consumeSideMenuResume,
+  requestSideMenuResume,
+} from "./sideMenuResumeNative";
 import { useProfileMarksNative } from "./useProfileMarksNative";
 import { maxMarksForPlan } from "../../../../../lib/marks/markTypes";
 import { useNativeUserPlan } from "../../hooks/useNativeUserPlan";
@@ -234,9 +237,9 @@ export default function ProfileHomeScreen({
 
   const [tab, setTab] = useState<ProfileTab>("overview");
   const [settingsOpen, setSettingsOpen] = useState(false);
-  /** メニューへ戻るときは fade せず即閉じる */
-  const [settingsAnim, setSettingsAnim] = useState<"fade" | "none">("fade");
   const [menuOpen, setMenuOpen] = useState(false);
+  /** stack 画面 BACK 復帰時は入場アニメなしでメニューを出す */
+  const [menuInstantOpen, setMenuInstantOpen] = useState(false);
   const [markListOpen, setMarkListOpen] = useState(false);
   /** チャート等の重いブロックは1フレ後。ヒーロー＋タブを先に出す */
   const [heavyReady, setHeavyReady] = useState(false);
@@ -250,8 +253,6 @@ export default function ProfileHomeScreen({
   const welcomeLandTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
     null
   );
-  /** 設定 Modal を閉じたあとサイドメニューを開く（iOS は onDismiss 待ち） */
-  const reopenMenuAfterSettingsRef = useRef(false);
   const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
   const tabNavigation = useNavigation<BottomTabNavigationProp<MainTabParamList>>();
   const { topContentPadY } = useBottomTabBarInsets();
@@ -294,49 +295,16 @@ export default function ProfileHomeScreen({
     });
   }, [navigation]);
 
-  /** iOS は Modal 同時表示不可。閉じ完了（onDismiss）後にメニューを開く */
-  const openMenuAfterSettingsClosed = useCallback(() => {
-    if (!reopenMenuAfterSettingsRef.current) return;
-    reopenMenuAfterSettingsRef.current = false;
-    setSettingsAnim("fade");
-    setMenuOpen(true);
-  }, []);
-
   const returnFromSettingsToMenu = useCallback(() => {
     setLangModalOpen(false);
     setCountryModalOpen(false);
-    reopenMenuAfterSettingsRef.current = true;
-    setSettingsAnim("none");
-    // animationType を none に切り替えてから閉じる
-    requestAnimationFrame(() => {
-      setSettingsOpen(false);
-      // Android は onDismiss が無いのでここで再開
-      if (Platform.OS !== "ios") {
-        setTimeout(() => openMenuAfterSettingsClosed(), 50);
-      }
-    });
-  }, [openMenuAfterSettingsClosed]);
-
-  const openSettingsFromMenu = useCallback(() => {
-    reopenMenuAfterSettingsRef.current = false;
-    setMenuOpen(false);
-    // メニュー Modal が閉じたあと設定を開く
-    const delay = Platform.OS === "ios" ? 320 : 60;
-    setTimeout(() => {
-      setSettingsAnim("fade");
-      setSettingsOpen(true);
-    }, delay);
+    // 同一 Modal 内オーバーレイを外すだけ。サイドメニューはそのまま残る
+    setSettingsOpen(false);
   }, []);
 
-  // iOS onDismiss が発火しない場合のフォールバック
-  useEffect(() => {
-    if (settingsOpen) return;
-    if (!reopenMenuAfterSettingsRef.current) return;
-    const id = setTimeout(() => {
-      openMenuAfterSettingsClosed();
-    }, Platform.OS === "ios" ? 380 : 0);
-    return () => clearTimeout(id);
-  }, [settingsOpen, openMenuAfterSettingsClosed]);
+  const openSettingsFromMenu = useCallback(() => {
+    setSettingsOpen(true);
+  }, []);
 
   const returnToPreviousScreen = useCallback(() => {
     if (fromMarkList) {
@@ -465,6 +433,16 @@ export default function ProfileHomeScreen({
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [langModalOpen, setLangModalOpen] = useState(false);
   const [countryModalOpen, setCountryModalOpen] = useState(false);
+
+  const handleSettingsRequestClose = useCallback(() => {
+    if (langModalOpen || countryModalOpen) {
+      setLangModalOpen(false);
+      setCountryModalOpen(false);
+      return;
+    }
+    returnFromSettingsToMenu();
+  }, [langModalOpen, countryModalOpen, returnFromSettingsToMenu]);
+
   /** プロフィール保存成功 — システム Alert の代わりにサイバーガラストースト */
   const lang = resolveLocalizedLang(language);
   const sheet = useMemo(() => profileSettingsSheetCopy(language), [language]);
@@ -654,6 +632,16 @@ export default function ProfileHomeScreen({
       if (isPublicProfileView) return;
       if (!consumeMarkListResume()) return;
       setMarkListOpen(true);
+    }, [isPublicProfileView])
+  );
+
+  /** サイドメニューから stack 画面へ飛んだあと、BACK で戻ったらメニューを即開き */
+  useFocusEffect(
+    useCallback(() => {
+      if (isPublicProfileView) return;
+      if (!consumeSideMenuResume()) return;
+      setMenuInstantOpen(true);
+      setMenuOpen(true);
     }, [isPublicProfileView])
   );
 
@@ -1403,24 +1391,37 @@ export default function ProfileHomeScreen({
 
     {renderProfileBackHandle()}
 
-    <Modal
-      visible={settingsOpen}
-      transparent
-      animationType={settingsAnim}
-      onRequestClose={() => {
-        if (langModalOpen || countryModalOpen) {
-          setLangModalOpen(false);
-          setCountryModalOpen(false);
-          return;
-        }
-        returnFromSettingsToMenu();
+    <ProfileSideMenuModal
+      visible={menuOpen && isMe}
+      instantOpen={menuInstantOpen}
+      onInstantOpenConsumed={() => setMenuInstantOpen(false)}
+      onClose={() => {
+        setSettingsOpen(false);
+        setMenuOpen(false);
       }}
-      onDismiss={() => {
-        // iOS: Modal が完全に閉じたあとサイドメニューを開く
-        openMenuAfterSettingsClosed();
-      }}
-      {...(Platform.OS === "ios" ? ({ presentationStyle: "overFullScreen" } as const) : {})}
-    >
+      language={language}
+      apiBase={apiBase}
+      unreadAnnouncements={menuUnreadCount}
+      adminInbox={adminInbox}
+      uid={fUser?.uid ?? null}
+      isAdmin={isAdminUser}
+      plan={plan}
+      displayName={
+        displayName.trim() ||
+        fUser?.displayName?.trim() ||
+        ""
+      }
+      handle={handle.trim()}
+      avatarUrl={
+        avatarUrl.trim() ||
+        fUser?.photoURL?.trim() ||
+        ""
+      }
+      unitBalance={unitBalance ?? undefined}
+      onOpenProfileSettings={openSettingsFromMenu}
+      onSettingsRequestClose={handleSettingsRequestClose}
+      settingsOverlay={
+        settingsOpen ? (
       <View style={styles.profileModalRoot}>
         <GamesPageBackgroundNative lite />
         <SafeAreaView style={styles.profileModalSafe}>
@@ -1567,6 +1568,7 @@ export default function ProfileHomeScreen({
                   <SlantCtaNative
                     label={saving || uploadingAvatar ? t.saving : t.save}
                     variant="accent"
+                    square
                     onPress={() => void handleSaveProfile()}
                     disabled={saving || uploadingAvatar}
                   />
@@ -1658,32 +1660,13 @@ export default function ProfileHomeScreen({
           </View>
         </SafeAreaView>
       </View>
-    </Modal>
-
-    <ProfileSideMenuModal
-      visible={menuOpen && isMe}
-      onClose={() => setMenuOpen(false)}
-      language={language}
-      apiBase={apiBase}
-      unreadAnnouncements={menuUnreadCount}
-      adminInbox={adminInbox}
-      uid={fUser?.uid ?? null}
-      isAdmin={isAdminUser}
-      plan={plan}
-      displayName={
-        displayName.trim() ||
-        fUser?.displayName?.trim() ||
-        ""
+        ) : null
       }
-      handle={handle.trim()}
-      avatarUrl={
-        avatarUrl.trim() ||
-        fUser?.photoURL?.trim() ||
-        ""
-      }
-      unitBalance={unitBalance ?? undefined}
-      onOpenProfileSettings={openSettingsFromMenu}
       onOpenInApp={(page) => {
+        if (page !== "restartTutorial") {
+          requestSideMenuResume();
+        }
+        setSettingsOpen(false);
         setMenuOpen(false);
         if (page === "badges") navigation.navigate("Badges");
         else if (page === "invite") navigation.navigate("Invite");

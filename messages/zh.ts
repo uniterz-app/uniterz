@@ -954,12 +954,12 @@ const zh: Messages = {
       gamesPickupTitle: "精选比赛",
       gamesPickupBody:
         "每周指定的比赛。**Pick Up 排行榜**只统计这些预测。命中率榜需预测目前精选赛的 **65% 以上**。",
-      gamesStatsTitle: "STATS",
+      gamesStatsTitle: "STANDING / STATS",
       gamesStatsBody:
-        "右侧黄色 **STATS** 可查看球队/球员数据。从右缘滑动也能打开。",
+        "右侧 **STANDING** 与 **STATS** 可查看排名和球队/球员数据。从右缘滑动也能打开。",
       resultsTitle: "结果",
       resultsBody:
-        "赛后在这里对答案。**大数字是赛果，下方是你的预测。** 右上角为 HIT / MISS。",
+        "**提交预测后立刻**出现在这里。赛后变成对答案 — **大数字是赛果，下方是你的预测。** 右上角为 HIT / MISS。",
       tapTitle: "Tap the match card",
       tapBody:
         "This is a mock NBA game. Tap the glowing card to start predicting. No real data is affected.",
@@ -1076,9 +1076,9 @@ const zh: Messages = {
       horizonStatsWhatTitle: "What is STATS?",
       horizonStatsWhatBody:
         "**Team and player stats** from the **Games** tab.\nUse for **pre-pick research** — scoring, efficiency, recent form.\nLinks to the live **STATS hub** backed by real data.",
-      horizonStatsHowTitle: "Opening STATS",
+      horizonStatsHowTitle: "Opening STANDING / STATS",
       horizonStatsHowBody:
-        "The highlighted **yellow STATS** tab opens it (or swipe from the right edge).\n**Tap STATS** to try it, or press **Start the app** below when you're ready.",
+        "**STANDING** and **STATS** on the right edge open them (or swipe from the right edge).\n**Tap either tab** to try it, or press **Start the app** below when you're ready.",
       doneTitle: "You're ready",
       doneBody:
         "That's the UNITERZ loop. Predict real games and climb the ranks.",

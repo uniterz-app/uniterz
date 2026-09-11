@@ -107,7 +107,10 @@ type Props = {
 const AVATAR = 32;
 /** 右端 BACK タブと背景の覗き窓 */
 const SHEET_RIGHT_GAP = 28;
-const EXIT_MS = 220;
+/** 退場: シート / 背景・BACK。Modal 解除は最大に合わせる */
+const EXIT_SHEET_MS = 140;
+const EXIT_FADE_MS = 110;
+const EXIT_MS = EXIT_SHEET_MS;
 
 function MarkListSheetBody({
   visible,
@@ -156,12 +159,13 @@ function MarkListSheetBody({
     Animated.parallel([
       Animated.timing(backdrop, {
         toValue: 0,
-        duration: 160,
+        duration: EXIT_FADE_MS,
+        easing: Easing.in(Easing.cubic),
         useNativeDriver: true,
       }),
       Animated.timing(slide, {
         toValue: -sheetWidth - 24,
-        duration: 200,
+        duration: EXIT_SHEET_MS,
         easing: Easing.in(Easing.cubic),
         useNativeDriver: true,
       }),
@@ -384,10 +388,16 @@ function MarkListSheetBody({
         </View>
       </Animated.View>
 
-      <ProfileBackEdgeHandleNative
-        onPress={onClose}
-        accessibilityLabel={copy.back}
-      />
+      {/** BACK はシート外の覗き窓に載るので、退場時は背景と一緒にフェード（固まったまま残らない） */}
+      <Animated.View
+        style={[styles.backHandleWrap, { opacity: backdrop }]}
+        pointerEvents={visible ? "box-none" : "none"}
+      >
+        <ProfileBackEdgeHandleNative
+          onPress={onClose}
+          accessibilityLabel={copy.back}
+        />
+      </Animated.View>
     </View>
   );
 }
@@ -618,5 +628,9 @@ const styles = StyleSheet.create({
     height: 26,
     alignItems: "center",
     justifyContent: "center",
+  },
+  backHandleWrap: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 20,
   },
 });

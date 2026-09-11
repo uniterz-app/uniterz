@@ -973,12 +973,12 @@ const es: Messages = {
       gamesPickupTitle: "Partidos Pick Up",
       gamesPickupBody:
         "Partidos elegidos cada semana. El **ranking Pick Up** solo cuenta estos pronósticos. El ranking de acierto pide pronosticar el **65%+** de los Pick Up hasta ahora.",
-      gamesStatsTitle: "STATS",
+      gamesStatsTitle: "STANDING / STATS",
       gamesStatsBody:
-        "La pestaña amarilla **STATS** a la derecha abre estadísticas de equipos y jugadores. También puedes deslizar desde el borde derecho.",
+        "**STANDING** y **STATS** a la derecha abren clasificaciones y estadísticas de equipos/jugadores. También puedes deslizar desde el borde derecho.",
       resultsTitle: "Resultados",
       resultsBody:
-        "Tras el partido, el recuento llega aquí. **Números grandes = final, abajo = tu pick.** Arriba a la derecha: HIT / MISS.",
+        "Tu pick **aparece aquí en cuanto lo envías**. Tras el partido es el recuento — **números grandes = final, abajo = tu pick.** Arriba a la derecha: HIT / MISS.",
       tapTitle: "Tap the match card",
       tapBody:
         "This is a mock NBA game. Tap the glowing card to start predicting. No real data is affected.",
@@ -1095,9 +1095,9 @@ const es: Messages = {
       horizonStatsWhatTitle: "What is STATS?",
       horizonStatsWhatBody:
         "**Team and player stats** from the **Games** tab.\nUse for **pre-pick research** — scoring, efficiency, recent form.\nLinks to the live **STATS hub** backed by real data.",
-      horizonStatsHowTitle: "Opening STATS",
+      horizonStatsHowTitle: "Opening STANDING / STATS",
       horizonStatsHowBody:
-        "The highlighted **yellow STATS** tab opens it (or swipe from the right edge).\n**Tap STATS** to try it, or press **Start the app** below when you're ready.",
+        "**STANDING** and **STATS** on the right edge open them (or swipe from the right edge).\n**Tap either tab** to try it, or press **Start the app** below when you're ready.",
       doneTitle: "You're ready",
       doneBody:
         "That's the UNITERZ loop. Predict real games and climb the ranks.",

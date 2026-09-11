@@ -954,12 +954,12 @@ const ko: Messages = {
       gamesPickupTitle: "픽업 게임",
       gamesPickupBody:
         "주마다 고른 경기입니다. **Pick Up 랭킹**은 이 경기 예측만 반영됩니다. 승률 랭킹은 픽업의 **65% 이상**을 예측한 사람이 대상입니다.",
-      gamesStatsTitle: "STATS",
+      gamesStatsTitle: "STANDING / STATS",
       gamesStatsBody:
-        "오른쪽 노란 **STATS**에서 팀/선수 스탯을 엽니다. 오른쪽 끝에서 스와이프해도 같습니다.",
+        "오른쪽 **STANDING** 과 **STATS** 에서 순위와 팀/선수 스탯을 엽니다. 오른쪽 끝에서 스와이프해도 같습니다.",
       resultsTitle: "결과",
       resultsBody:
-        "경기 후 여기에서 맞춰 봅니다. **큰 숫자가 결과, 아래가 내 예측.** 오른쪽 위가 HIT / MISS입니다.",
+        "**예상한 순간부터** 여기에 카드가 뜹니다. 경기 후에는 맞춰 보기 — **큰 숫자가 결과, 아래가 내 예측.** 오른쪽 위가 HIT / MISS입니다.",
       tapTitle: "Tap the match card",
       tapBody:
         "This is a mock NBA game. Tap the glowing card to start predicting. No real data is affected.",
@@ -1076,9 +1076,9 @@ const ko: Messages = {
       horizonStatsWhatTitle: "What is STATS?",
       horizonStatsWhatBody:
         "**Team and player stats** from the **Games** tab.\nUse for **pre-pick research** — scoring, efficiency, recent form.\nLinks to the live **STATS hub** backed by real data.",
-      horizonStatsHowTitle: "Opening STATS",
+      horizonStatsHowTitle: "Opening STANDING / STATS",
       horizonStatsHowBody:
-        "The highlighted **yellow STATS** tab opens it (or swipe from the right edge).\n**Tap STATS** to try it, or press **Start the app** below when you're ready.",
+        "**STANDING** and **STATS** on the right edge open them (or swipe from the right edge).\n**Tap either tab** to try it, or press **Start the app** below when you're ready.",
       doneTitle: "You're ready",
       doneBody:
         "That's the UNITERZ loop. Predict real games and climb the ranks.",

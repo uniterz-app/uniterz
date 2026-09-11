@@ -1,7 +1,7 @@
 /**
  * Web `SideMenuDrawer` + `SettingsMenu`（モバイル相当）に準拠したサイドメニュー。
  */
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { cyberAlert } from "../../components/cyberAlert";
 import {
   Animated, Dimensions, Easing, Image, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View,
@@ -34,6 +34,14 @@ type Props = {
   visible: boolean;
   onClose: () => void;
   language: Lang;
+  /** true のあいだは入場アニメなしで開いた状態を出す（BACK 復帰用） */
+  instantOpen?: boolean;
+  onInstantOpenConsumed?: () => void;
+  /**
+   * プロフィール編集など。同一 Modal 内に重ねる（二重 Modal 回避・メニューはそのまま残す）。
+   */
+  settingsOverlay?: ReactNode;
+  onSettingsRequestClose?: () => void;
   /** Web アプリのオリジン（末尾スラッシュなし） */
   apiBase: string | null;
   unreadAnnouncements: number;
@@ -97,6 +105,10 @@ export default function ProfileSideMenuModal({
   visible,
   onClose,
   language,
+  instantOpen = false,
+  onInstantOpenConsumed,
+  settingsOverlay = null,
+  onSettingsRequestClose,
   unreadAnnouncements,
   adminInbox = EMPTY_ADMIN_INBOX,
   onOpenProfileSettings,
@@ -139,8 +151,41 @@ export default function ProfileSideMenuModal({
     }
   }, [visible]);
 
-  useEffect(() => {
+  /** BACK 復帰の即開きは ref で一度だけ。instantOpen→false で spring 再入場しない */
+  const pendingInstantOpenRef = useRef(false);
+  const onInstantOpenConsumedRef = useRef(onInstantOpenConsumed);
+  onInstantOpenConsumedRef.current = onInstantOpenConsumed;
+  /** visible セッション中に effect が再走っても入場を繰り返さない */
+  const openSessionRef = useRef(false);
+
+  useLayoutEffect(() => {
+    if (instantOpen) {
+      pendingInstantOpenRef.current = true;
+    }
+  }, [instantOpen]);
+
+  useLayoutEffect(() => {
     if (visible) {
+      const wantInstant =
+        pendingInstantOpenRef.current || instantOpen;
+      if (openSessionRef.current) {
+        // コールバック参照変化などでの再実行 — 既に開いているので触らない
+        if (wantInstant) {
+          pendingInstantOpenRef.current = false;
+          onInstantOpenConsumedRef.current?.();
+        }
+        return;
+      }
+      openSessionRef.current = true;
+      if (wantInstant) {
+        pendingInstantOpenRef.current = false;
+        backdropOpacity.setValue(1);
+        slide.setValue(0);
+        onInstantOpenConsumedRef.current?.();
+        return;
+      }
+      slide.setValue(PANEL_W + 24);
+      backdropOpacity.setValue(0);
       Animated.parallel([
         Animated.timing(backdropOpacity, {
           toValue: 1,
@@ -155,22 +200,29 @@ export default function ProfileSideMenuModal({
           useNativeDriver: true,
         }),
       ]).start();
-    } else {
-      Animated.parallel([
-        Animated.timing(backdropOpacity, {
-          toValue: 0,
-          duration: 180,
-          useNativeDriver: true,
-        }),
-        Animated.timing(slide, {
-          toValue: PANEL_W + 24,
-          duration: 240,
-          easing: Easing.in(Easing.cubic),
-          useNativeDriver: true,
-        }),
-      ]).start();
+      return;
     }
-  }, [visible, slide, backdropOpacity]);
+    openSessionRef.current = false;
+    // 設定への退避（instant 予約あり）は退場アニメなし。開位置のまま隠す
+    if (pendingInstantOpenRef.current || instantOpen) {
+      backdropOpacity.setValue(1);
+      slide.setValue(0);
+      return;
+    }
+    Animated.parallel([
+      Animated.timing(backdropOpacity, {
+        toValue: 0,
+        duration: 180,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slide, {
+        toValue: PANEL_W + 24,
+        duration: 240,
+        easing: Easing.in(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [visible, instantOpen, slide, backdropOpacity]);
 
 
 
@@ -241,6 +293,10 @@ export default function ProfileSideMenuModal({
             setLogoutOpen(false);
             return;
           }
+          if (settingsOverlay != null) {
+            onSettingsRequestClose?.();
+            return;
+          }
           onClose();
         }}
       >
@@ -255,7 +311,12 @@ export default function ProfileSideMenuModal({
               />
             )}
             <View style={styles.backdropDim} pointerEvents="none" />
-            <Pressable style={StyleSheet.absoluteFillObject} onPress={onClose} accessibilityRole="button" />
+            <Pressable
+              style={StyleSheet.absoluteFillObject}
+              onPress={onClose}
+              accessibilityRole="button"
+              disabled={settingsOverlay != null}
+            />
           </Animated.View>
 
           <Animated.View
@@ -707,6 +768,12 @@ export default function ProfileSideMenuModal({
             onConfirm={() => void confirmLogout()}
             language={lang === "ja" ? "ja" : "en"}
           />
+
+          {settingsOverlay != null ? (
+            <View style={styles.settingsOverlayHost} pointerEvents="box-none">
+              {settingsOverlay}
+            </View>
+          ) : null}
         </View>
       </Modal>
     </>
@@ -717,6 +784,10 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
     flexDirection: "row",
+  },
+  settingsOverlayHost: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 80,
   },
   backdropWrap: {
     ...StyleSheet.absoluteFillObject,

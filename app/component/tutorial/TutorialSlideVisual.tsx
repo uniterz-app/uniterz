@@ -785,24 +785,37 @@ function MockHorizonStats() {
         >
           GAMES
         </div>
-        <div
-          className="absolute right-0 top-[22%] flex w-[18px] flex-col items-center gap-0.5 border border-r-0 border-amber-300/70 bg-[rgba(8,12,6,0.95)] py-2"
-        >
-          {"STATS".split("").map((ch, i) => (
-            <span
-              key={`${ch}-${i}`}
-              className={cn(
-                nameOxanium.className,
-                "text-[7px] font-extrabold leading-[8px] text-amber-300"
-              )}
-            >
-              {ch}
-            </span>
-          ))}
+        <div className="absolute right-0 top-[12%] bottom-[8%] flex flex-col items-end justify-center gap-1.5">
+          <div className="flex w-[18px] flex-col items-center gap-0.5 border border-r-0 border-amber-300/70 bg-[rgba(8,12,6,0.95)] py-1.5">
+            {"STANDING".split("").map((ch, i) => (
+              <span
+                key={`s-${ch}-${i}`}
+                className={cn(
+                  nameOxanium.className,
+                  "text-[6px] font-extrabold leading-[7px] text-amber-300"
+                )}
+              >
+                {ch}
+              </span>
+            ))}
+          </div>
+          <div className="flex w-[18px] flex-col items-center gap-0.5 border border-r-0 border-amber-300/70 bg-[rgba(8,12,6,0.95)] py-1.5">
+            {"STATS".split("").map((ch, i) => (
+              <span
+                key={`t-${ch}-${i}`}
+                className={cn(
+                  nameOxanium.className,
+                  "text-[6px] font-extrabold leading-[7px] text-amber-300"
+                )}
+              >
+                {ch}
+              </span>
+            ))}
+          </div>
         </div>
       </div>
       <p className={cn(nameOxanium.className, "text-[10px] tracking-wide text-white/55")}>
-        右端の黄色いタブ
+        右端の STANDING / STATS
       </p>
     </div>
   );

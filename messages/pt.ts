@@ -967,12 +967,12 @@ const pt: Messages = {
       gamesPickupTitle: "Jogos Pick Up",
       gamesPickupBody:
         "Jogos escolhidos a cada semana. O **ranking Pick Up** conta só esses palpites. O ranking de acerto pede palpites em **65%+** dos Pick Up até agora.",
-      gamesStatsTitle: "STATS",
+      gamesStatsTitle: "STANDING / STATS",
       gamesStatsBody:
-        "A aba amarela **STATS** à direita abre stats de times e jogadores. Também dá para deslizar pela borda direita.",
+        "**STANDING** e **STATS** à direita abrem standings e stats de times/jogadores. Também dá para deslizar pela borda direita.",
       resultsTitle: "Resultados",
       resultsBody:
-        "Depois do jogo, o recap chega aqui. **Números grandes = placar, abaixo = seu palpite.** Canto superior: HIT / MISS.",
+        "Seu palpite **aparece aqui assim que você envia**. Depois do jogo vira o recap — **números grandes = placar, abaixo = seu palpite.** Canto superior: HIT / MISS.",
       tapTitle: "Tap the match card",
       tapBody:
         "This is a mock NBA game. Tap the glowing card to start predicting. No real data is affected.",
@@ -1089,9 +1089,9 @@ const pt: Messages = {
       horizonStatsWhatTitle: "What is STATS?",
       horizonStatsWhatBody:
         "**Team and player stats** from the **Games** tab.\nUse for **pre-pick research** — scoring, efficiency, recent form.\nLinks to the live **STATS hub** backed by real data.",
-      horizonStatsHowTitle: "Opening STATS",
+      horizonStatsHowTitle: "Opening STANDING / STATS",
       horizonStatsHowBody:
-        "The highlighted **yellow STATS** tab opens it (or swipe from the right edge).\n**Tap STATS** to try it, or press **Start the app** below when you're ready.",
+        "**STANDING** and **STATS** on the right edge open them (or swipe from the right edge).\n**Tap either tab** to try it, or press **Start the app** below when you're ready.",
       doneTitle: "You're ready",
       doneBody:
         "That's the UNITERZ loop. Predict real games and climb the ranks.",

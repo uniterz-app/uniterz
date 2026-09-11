@@ -24,6 +24,8 @@ type Props = {
   onPressOut?: () => void;
   /** ランディング CTA と同じ Bebas Neue */
   display?: boolean;
+  /** true: 斜めなしの直角矩形（プロフィール保存など） */
+  square?: boolean;
 };
 
 export default function SlantCtaNative({
@@ -34,6 +36,7 @@ export default function SlantCtaNative({
   onPressIn,
   onPressOut,
   display = false,
+  square = false,
 }: Props) {
   return (
     <Pressable
@@ -52,6 +55,7 @@ export default function SlantCtaNative({
       <View
         style={[
           styles.skew,
+          square && styles.skewSquare,
           variant === "primary" && styles.primary,
           variant === "accent" && styles.accent,
           variant === "ghost" && styles.ghost,
@@ -60,11 +64,12 @@ export default function SlantCtaNative({
           variant === "danger" && styles.danger,
         ]}
       >
-        <View style={styles.unskew}>
+        <View style={[styles.unskew, square && styles.unskewSquare]}>
           <Text
             style={[
               styles.label,
               display && styles.labelDisplay,
+              display && square && styles.labelDisplaySquare,
               variant === "primary" && styles.primaryText,
               variant === "accent" && styles.accentText,
               variant === "ghost" && styles.ghostText,
@@ -98,6 +103,9 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     alignItems: "center",
   },
+  skewSquare: {
+    transform: [],
+  },
   primary: {
     backgroundColor: "#fcd34d",
   },
@@ -126,6 +134,9 @@ const styles = StyleSheet.create({
     transform: [{ skewX: "12deg" }],
     alignItems: "center",
   },
+  unskewSquare: {
+    transform: [],
+  },
   label: {
     fontFamily: fonts.metric,
     fontSize: 13,
@@ -139,6 +150,9 @@ const styles = StyleSheet.create({
     fontWeight: "400",
     letterSpacing: 2.4,
     transform: [{ skewX: "-10deg" }],
+  },
+  labelDisplaySquare: {
+    transform: [],
   },
   primaryText: {
     color: "#120e08",

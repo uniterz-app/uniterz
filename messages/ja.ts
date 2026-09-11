@@ -975,12 +975,12 @@ const ja = {
       gamesPickupTitle: "ピックアップゲーム",
       gamesPickupBody:
         "週ごとに選ばれた試合です。**Pick Up ランキング**はこの試合への予想だけで決まります。勝率ランキングは、ピックアップの **65%以上** に予想した人が対象です。",
-      gamesStatsTitle: "STATS",
+      gamesStatsTitle: "STANDING / STATS",
       gamesStatsBody:
-        "右端の黄色い **STATS** から、チームや選手のスタッツを開けます。右端をスワイプしても同じです。",
+        "右端の **STANDING** と **STATS** から、順位やチーム・選手のスタッツを開けます。右端をスワイプしても同じです。",
       resultsTitle: "リザルト",
       resultsBody:
-        "試合後、ここに答え合わせが出ます。**大きい数字が結果、下が自分の予想。** 右上が HIT / MISS です。",
+        "**予想した時点で**ここにカードが出ます。試合後は答え合わせになり、**大きい数字が結果、下が自分の予想。** 右上が HIT / MISS です。",
       tapTitle: "光るカードをタップ",
       tapBody:
         "**モック試合**です（本番には影響しません）。カードをタップして予想を始めましょう。",
@@ -1088,9 +1088,9 @@ const ja = {
       horizonStatsWhatTitle: "STATS とは",
       horizonStatsWhatBody:
         "**試合タブ**から見られる**チーム／選手スタッツ**です。\n得点・効率・直近の調子など、**予想前のリサーチ**に使えます。\n本番データに基づく** STATS ハブ**へつながります。",
-      horizonStatsHowTitle: "STATS の開き方",
+      horizonStatsHowTitle: "STANDING / STATS の開き方",
       horizonStatsHowBody:
-        "光っている**黄色い STATS** が入口です（右端スワイプでも開けます）。\n**STATS をタップ**して開くか、準備OKなら下の**アプリをはじめる**を押してください。",
+        "右端の **STANDING** と **STATS** が入口です（右端スワイプでも開けます）。\nどちらかをタップして開くか、準備OKなら下の**アプリをはじめる**を押してください。",
       doneTitle: "準備OK",
       doneBody:
         "基本は以上です。本番で予想して、**毎日 16:00 更新のランキング**を目指しましょう。",

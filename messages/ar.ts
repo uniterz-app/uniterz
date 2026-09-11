@@ -973,12 +973,12 @@ const ar: Messages = {
       gamesPickupTitle: "مباريات البيك أب",
       gamesPickupBody:
         "مباريات تُختار أسبوعياً. **ترتيب Pick Up** يحسب هذه التوقعات فقط. ترتيب نسبة التوفيق يتطلب توقع **65%+** من مباريات البيك أب حتى الآن.",
-      gamesStatsTitle: "STATS",
+      gamesStatsTitle: "STANDING / STATS",
       gamesStatsBody:
-        "تبويب **STATS** الأصفر على اليمين يفتح إحصائيات الفرق واللاعبين. يمكنك أيضاً السحب من الحافة اليمنى.",
+        "**STANDING** و **STATS** على اليمين يفتحان الترتيب وإحصائيات الفرق واللاعبين. يمكنك أيضاً السحب من الحافة اليمنى.",
       resultsTitle: "النتائج",
       resultsBody:
-        "بعد المباراة تظهر المراجعة هنا. **الأرقام الكبيرة = النتيجة، وأسفلها توقعك.** أعلى اليمين HIT / MISS.",
+        "توقعك **يظهر هنا فور الإرسال**. بعد المباراة تصبح مراجعة — **الأرقام الكبيرة = النتيجة، وأسفلها توقعك.** أعلى اليمين HIT / MISS.",
       tapTitle: "Tap the match card",
       tapBody:
         "This is a mock NBA game. Tap the glowing card to start predicting. No real data is affected.",
@@ -1095,9 +1095,9 @@ const ar: Messages = {
       horizonStatsWhatTitle: "What is STATS?",
       horizonStatsWhatBody:
         "**Team and player stats** from the **Games** tab.\nUse for **pre-pick research** — scoring, efficiency, recent form.\nLinks to the live **STATS hub** backed by real data.",
-      horizonStatsHowTitle: "Opening STATS",
+      horizonStatsHowTitle: "Opening STANDING / STATS",
       horizonStatsHowBody:
-        "The highlighted **yellow STATS** tab opens it (or swipe from the right edge).\n**Tap STATS** to try it, or press **Start the app** below when you're ready.",
+        "**STANDING** and **STATS** on the right edge open them (or swipe from the right edge).\n**Tap either tab** to try it, or press **Start the app** below when you're ready.",
       doneTitle: "You're ready",
       doneBody:
         "That's the UNITERZ loop. Predict real games and climb the ranks.",

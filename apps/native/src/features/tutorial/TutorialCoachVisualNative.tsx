@@ -369,15 +369,24 @@ function MockHorizonStats() {
     <View style={styles.statsEdgeWrap}>
       <View style={styles.statsEdgeMockScreen}>
         <Text style={styles.statsEdgeHint}>GAMES</Text>
-        <View style={styles.statsEdgeHandle}>
-          {"STATS".split("").map((ch, i) => (
-            <Text key={`${ch}-${i}`} style={styles.statsEdgeLetter}>
-              {ch}
-            </Text>
-          ))}
+        <View style={styles.statsEdgeRail}>
+          <View style={styles.statsEdgeHandle}>
+            {"STANDING".split("").map((ch, i) => (
+              <Text key={`s-${ch}-${i}`} style={styles.statsEdgeLetter}>
+                {ch}
+              </Text>
+            ))}
+          </View>
+          <View style={[styles.statsEdgeHandle, styles.statsEdgeHandleGap]}>
+            {"STATS".split("").map((ch, i) => (
+              <Text key={`t-${ch}-${i}`} style={styles.statsEdgeLetter}>
+                {ch}
+              </Text>
+            ))}
+          </View>
         </View>
       </View>
-      <Text style={styles.statsEdgeCaption}>右端の黄色いタブ</Text>
+      <Text style={styles.statsEdgeCaption}>右端の STANDING / STATS</Text>
     </View>
   );
 }
@@ -857,7 +866,7 @@ const styles = StyleSheet.create({
   },
   statsEdgeMockScreen: {
     width: "100%",
-    height: 88,
+    height: 112,
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.12)",
     backgroundColor: "rgba(4,8,12,0.9)",
@@ -873,24 +882,30 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
     color: "rgba(255,255,255,0.35)",
   },
-  statsEdgeHandle: {
+  statsEdgeRail: {
     position: "absolute",
     right: 0,
-    top: "22%",
+    top: "14%",
+    bottom: "10%",
+    justifyContent: "center",
+    gap: 6,
+  },
+  statsEdgeHandle: {
     width: 22,
-    paddingVertical: 8,
+    paddingVertical: 6,
     alignItems: "center",
-    gap: 2,
+    gap: 1,
     borderWidth: 1,
     borderRightWidth: 0,
     borderColor: "rgba(250,204,21,0.7)",
     backgroundColor: "rgba(8,12,6,0.95)",
   },
+  statsEdgeHandleGap: {},
   statsEdgeLetter: {
     fontFamily: fonts.metric,
-    fontSize: 7,
+    fontSize: 6,
     fontWeight: "800",
-    lineHeight: 8,
+    lineHeight: 7,
     color: "#facc15",
   },
   statsEdgeCaption: {

@@ -94,6 +94,9 @@ export default function GamesRightEdgeTabs({
         !show && "games-right-edge-tabs--hidden"
       )}
       aria-hidden={!show}
+      {...(statsTutorialTargetId && show
+        ? { "data-tutorial-target": statsTutorialTargetId }
+        : {})}
     >
       <div className="games-right-edge-tabs__standing">
         <ProfileMenuEdgeHandle
@@ -109,7 +112,6 @@ export default function GamesRightEdgeTabs({
           label="STATS"
           onOpen={onOpenStats}
           ariaLabel={statsAriaLabel}
-          tutorialTargetId={statsTutorialTargetId}
         />
       </div>
     </div>,
