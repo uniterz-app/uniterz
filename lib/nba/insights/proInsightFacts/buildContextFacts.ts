@@ -20,6 +20,11 @@ import {
 import { proInsightTeamAbbr } from "@/lib/nba/insights/proInsightFacts/teamAbbr";
 import type { ProInsightFact } from "@/lib/nba/insights/proInsightFacts/types";
 import type { ProBriefPhase } from "@/lib/predict/predictProBrief";
+import type { NbaTeamShapeRecordsBundle } from "@/lib/nba/teamShapes/teamShapeTypes";
+import {
+  formatShapeEdgeHintEn,
+  selectTeamShapeEdges,
+} from "@/lib/nba/teamShapes/selectTeamShapeEdges";
 
 /** @deprecated 配線は prior から derive。テスト用 override のみ */
 export type TeamStreakFactInput = {
@@ -703,6 +708,7 @@ function sideFacts(input: {
   confRankByTeamId: Record<string, number>;
   seasonRows: NbaLeagueTeamStatRow[];
   last10Rows: NbaLeagueTeamStatRow[] | null | undefined;
+  shapeRecords?: NbaTeamShapeRecordsBundle | null;
 }): ProInsightFact[] {
   const form = formFor(
     input.teamId,
@@ -753,7 +759,62 @@ function sideFacts(input: {
     phase: input.phase,
   });
   if (vsplit) facts.push(vsplit);
+  facts.push(
+    ...shapeEdgeFacts({
+      teamId: input.teamId,
+      shapeRecords: input.shapeRecords,
+    })
+  );
   return facts;
+}
+
+function shapeEdgeFacts(input: {
+  teamId: string;
+  shapeRecords: NbaTeamShapeRecordsBundle | null | undefined;
+}): ProInsightFact[] {
+  const rec = input.shapeRecords?.teams?.[input.teamId];
+  if (!rec) return [];
+  const edges = selectTeamShapeEdges(rec, { surface: "context" });
+  const nick = abbr(input.teamId);
+  const out: ProInsightFact[] = [];
+  for (const edge of edges) {
+    const pp = Math.round(edge.split.deltaWinPct * 100);
+    const score =
+      edge.kind === "strength"
+        ? 52 + Math.min(18, Math.abs(pp))
+        : 48 + Math.min(16, Math.abs(pp));
+    out.push({
+      id: `shape_${edge.kind}_${edge.def.id}_${input.teamId}`,
+      section: "CONTEXT",
+      kind: edge.kind === "strength" ? "shape_strength" : "shape_weakness",
+      label:
+        edge.kind === "strength" ? "SHAPE_STRENGTH" : "SHAPE_WEAKNESS",
+      score,
+      teamIds: [input.teamId],
+      metrics: [
+        {
+          key: "whenRecord",
+          value: formatWl(edge.split.when),
+          teamId: input.teamId,
+        },
+        {
+          key: "deltaWinPct",
+          value: pct1(edge.split.deltaWinPct),
+          teamId: input.teamId,
+        },
+        {
+          key: "shapeGames",
+          value: String(edge.split.games),
+          teamId: input.teamId,
+        },
+      ],
+      players: [],
+      mode: edge.kind === "strength" ? "strength" : "weakening",
+      dedupeKeys: [`shape_edge:${input.teamId}:${edge.def.id}`],
+      hintEn: `${nick}: ${formatShapeEdgeHintEn(edge)}`,
+    });
+  }
+  return out;
 }
 
 export function buildContextFactCandidates(input: {
@@ -773,6 +834,7 @@ export function buildContextFactCandidates(input: {
   /** unused — prior から derive */
   streaks?: TeamStreakFactInput[];
   confRankByTeamId?: Record<string, number> | null;
+  shapeRecords?: NbaTeamShapeRecordsBundle | null;
 }): ProInsightFact[] {
   const records =
     input.phase === "opening"
@@ -792,6 +854,7 @@ export function buildContextFactCandidates(input: {
       confRankByTeamId: ranks,
       seasonRows: input.seasonRows,
       last10Rows: input.last10Rows,
+      shapeRecords: input.shapeRecords,
     }),
     ...sideFacts({
       teamId: input.awayTeamId,
@@ -804,6 +867,7 @@ export function buildContextFactCandidates(input: {
       confRankByTeamId: ranks,
       seasonRows: input.seasonRows,
       last10Rows: input.last10Rows,
+      shapeRecords: input.shapeRecords,
     }),
   ];
 }

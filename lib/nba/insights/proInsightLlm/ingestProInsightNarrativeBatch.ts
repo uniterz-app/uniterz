@@ -16,6 +16,8 @@ import { loadTeamInjuriesSnapshot } from "@/lib/nba/teamInjuries/loadTeamInjurie
 import type { NbaLeagueTeamStatRow } from "@/lib/predict/nbaLeagueTeamStatsMocks";
 import type { NbaTeamInjuryEntry } from "@/lib/predict/nbaTeamDetailPreviewMocks";
 import { loadOrBuildTeamSeasonRecords } from "@/lib/nba/insights/loadPriorSeasonTeamRecords";
+import { loadTeamShapeRecordsBundle } from "@/lib/nba/teamShapes/loadTeamShapeRecords";
+import type { NbaTeamShapeRecordsBundle } from "@/lib/nba/teamShapes/teamShapeTypes";
 import { loadAceOutRecordsBundle } from "@/lib/nba/insights/ingestNbaTeamAceOutRecords";
 import { loadPlayerStatLeadersSnapshot } from "@/lib/nba/playerStatLeaders/loadPlayerStatLeadersSnapshot";
 import { loadNbaConferenceStandings } from "@/lib/nba/standings/loadNbaConferenceStandings";
@@ -419,6 +421,13 @@ export async function submitProInsightNarrativeBatch(
     /* optional */
   }
 
+  let shapeRecords = null as NbaTeamShapeRecordsBundle | null;
+  try {
+    shapeRecords = await loadTeamShapeRecordsBundle(db, seasonKey);
+  } catch {
+    /* optional — 開幕前は empty でもよい */
+  }
+
   let priorAceOut = null as Awaited<ReturnType<typeof loadAceOutRecordsBundle>>;
   let seasonAceOut = null as Awaited<ReturnType<typeof loadAceOutRecordsBundle>>;
   try {
@@ -652,6 +661,7 @@ export async function submitProInsightNarrativeBatch(
           seasonMpgByPlayerId,
           priorMpgByPlayerId
         ),
+        shapeRecords,
       });
 
       prepared.push({ gameId: game.id, pack, injuryFingerprint });
@@ -1162,6 +1172,13 @@ export async function patchProInsightNarrativesIfInjuryChanged(
     /* optional */
   }
 
+  let shapeRecords = null as NbaTeamShapeRecordsBundle | null;
+  try {
+    shapeRecords = await loadTeamShapeRecordsBundle(db, seasonKey);
+  } catch {
+    /* optional — 開幕前は empty でもよい */
+  }
+
   let priorAceOut = null as Awaited<ReturnType<typeof loadAceOutRecordsBundle>>;
   let seasonAceOut = null as Awaited<ReturnType<typeof loadAceOutRecordsBundle>>;
   try {
@@ -1390,6 +1407,7 @@ export async function patchProInsightNarrativesIfInjuryChanged(
           seasonMpgByPlayerId,
           priorMpgByPlayerId
         ),
+        shapeRecords,
       });
 
       const brief = await generateProInsightNarrativeForGameChat(pack);

@@ -123,16 +123,12 @@ export default function NbaTopScorerPickerNative({
     [liveInjury]
   );
   const restCount = Math.max(0, sorted.length - TOP_N);
-  const selectedOutsideTop = useMemo(() => {
-    if (!value) return false;
-    const idx = sorted.findIndex((row) => isSamePick(value, row));
-    return idx >= TOP_N;
-  }, [sorted, value]);
-  const [expanded, setExpanded] = useState(selectedOutsideTop);
+  /** 初回は常に上位 5。選択が下位でも自動展開しない */
+  const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
-    if (selectedOutsideTop) setExpanded(true);
-  }, [selectedOutsideTop]);
+    setExpanded(false);
+  }, [homeTeamId, awayTeamId]);
 
   const visible = expanded ? sorted : sorted.slice(0, TOP_N);
 
@@ -332,9 +328,9 @@ const styles = StyleSheet.create({
   },
   table: {
     overflow: "hidden",
-    borderRadius: 2,
+    borderRadius: 0,
     borderWidth: 1,
-    borderColor: "rgba(0,245,255,0.22)",
+    borderColor: "rgba(0,245,255,0.32)",
     backgroundColor: "rgba(4,16,24,0.45)",
   },
   head: {

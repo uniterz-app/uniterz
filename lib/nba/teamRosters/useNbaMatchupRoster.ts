@@ -3,13 +3,10 @@
 import { useEffect, useState } from "react";
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
 import { buildMatchupRosterReport } from "@/lib/nba/teamRosters/buildMatchupRosterReport";
-import { fetchMatchupRoster } from "@/lib/nba/teamRosters/fetchTeamRostersClient";
 import {
-  createSnapshotFetchCache,
-  nbaSnapshotCacheKey,
-  NBA_SNAPSHOT_CACHE_TTL_MS,
-} from "@/lib/nba/snapshotFetchCache";
-import type { NbaMatchupRosterApiPayload } from "@/lib/nba/teamRosters/teamRosterTypes";
+  fetchMatchupDetailBundle,
+  peekMatchupDetailBundle,
+} from "@/lib/nba/predict/fetchMatchupDetailClient";
 import type { NbaRosterReport } from "@/lib/predict/nbaRoster";
 
 type Options = {
@@ -24,35 +21,8 @@ type Options = {
   enabled?: boolean;
 };
 
-const cache = createSnapshotFetchCache<NbaMatchupRosterApiPayload>(
-  NBA_SNAPSHOT_CACHE_TTL_MS
-);
-
-function rosterCacheKey(
-  apiBaseUrl: string | null | undefined,
-  season: string,
-  homeTeamId: string,
-  awayTeamId: string
-): string {
-  return `${nbaSnapshotCacheKey(apiBaseUrl, season)}|${homeTeamId}|${awayTeamId}`;
-}
-
-function reportFromPayload(
-  payload: NbaMatchupRosterApiPayload,
-  homeTeamId: string,
-  awayTeamId: string
-): NbaRosterReport | null {
-  return buildMatchupRosterReport(
-    homeTeamId,
-    awayTeamId,
-    payload.home,
-    payload.away
-  );
-}
-
 /**
- * 予想 ROSTER: Firestore のアクティブロスターを優先。
- * 未 ingest / 失敗時は null（呼び出し側でモックに落とさない想定）。
+ * 予想 ROSTER: `/api/nba/matchup-detail` 共有キャッシュから切り出し。
  */
 export function useNbaMatchupRoster(options: Options): {
   roster: NbaRosterReport | null;
@@ -66,13 +36,19 @@ export function useNbaMatchupRoster(options: Options): {
   const apiBaseUrl = options.apiBaseUrl;
   const enabled = options.enabled ?? true;
   const want = enabled && !override && !!homeTeamId && !!awayTeamId;
-  const key = rosterCacheKey(apiBaseUrl, season, homeTeamId, awayTeamId);
-  const peeked = want ? cache.peek(key) : null;
+  const fetchOpts = { homeTeamId, awayTeamId, season, apiBaseUrl };
+  const peeked = want ? peekMatchupDetailBundle(fetchOpts) : null;
   const peekedRoster =
-    peeked && homeTeamId && awayTeamId
-      ? reportFromPayload(peeked, homeTeamId, awayTeamId)
-      : null;
-  const scopeKey = key;
+    peeked?.roster ??
+    (peeked
+      ? buildMatchupRosterReport(
+          homeTeamId,
+          awayTeamId,
+          peeked.rosterHome,
+          peeked.rosterAway
+        )
+      : null);
+  const scopeKey = `${homeTeamId}|${awayTeamId}|${season}|roster`;
 
   const [roster, setRoster] = useState<NbaRosterReport | null>(
     () => override ?? peekedRoster
@@ -82,12 +58,12 @@ export function useNbaMatchupRoster(options: Options): {
   >(() =>
     override
       ? "override"
-      : peeked && (peeked.home || peeked.away)
+      : peeked && (peeked.rosterHome || peeked.rosterAway)
         ? "firestore"
         : "empty"
   );
   const [readyScope, setReadyScope] = useState<string | null>(() =>
-    override || peeked ? scopeKey : null
+    override || peekedRoster ? scopeKey : null
   );
 
   useEffect(() => {
@@ -97,9 +73,7 @@ export function useNbaMatchupRoster(options: Options): {
       setReadyScope(scopeKey);
       return;
     }
-    if (!enabled) {
-      return;
-    }
+    if (!enabled) return;
     if (!homeTeamId || !awayTeamId) {
       setRoster(null);
       setSource("empty");
@@ -107,31 +81,41 @@ export function useNbaMatchupRoster(options: Options): {
       return;
     }
 
-    const hit = cache.peek(key);
+    const hit = peekMatchupDetailBundle(fetchOpts);
     if (hit) {
-      const built = reportFromPayload(hit, homeTeamId, awayTeamId);
+      const built =
+        hit.roster ??
+        buildMatchupRosterReport(
+          homeTeamId,
+          awayTeamId,
+          hit.rosterHome,
+          hit.rosterAway
+        );
       setRoster(built);
-      setSource(built && (hit.home || hit.away) ? "firestore" : "empty");
+      setSource(
+        built && (hit.rosterHome || hit.rosterAway) ? "firestore" : "empty"
+      );
       setReadyScope(scopeKey);
       return;
     }
 
     let cancelled = false;
-    cache
-      .load(key, () =>
-        fetchMatchupRoster({
-          homeTeamId,
-          awayTeamId,
-          season,
-          apiBaseUrl,
-        })
-      )
+    fetchMatchupDetailBundle(fetchOpts)
       .then((payload) => {
         if (cancelled) return;
-        const built = reportFromPayload(payload, homeTeamId, awayTeamId);
+        const built =
+          payload.roster ??
+          buildMatchupRosterReport(
+            homeTeamId,
+            awayTeamId,
+            payload.rosterHome,
+            payload.rosterAway
+          );
         setRoster(built);
         setSource(
-          built && (payload.home || payload.away) ? "firestore" : "empty"
+          built && (payload.rosterHome || payload.rosterAway)
+            ? "firestore"
+            : "empty"
         );
       })
       .catch(() => {
@@ -153,7 +137,6 @@ export function useNbaMatchupRoster(options: Options): {
     season,
     apiBaseUrl,
     override,
-    key,
     scopeKey,
   ]);
 

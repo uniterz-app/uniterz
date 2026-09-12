@@ -2,16 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
-import { fetchTeamInjuriesSnapshot } from "@/lib/nba/teamInjuries/fetchTeamInjuriesClient";
-import { buildMatchupInjuryReport } from "@/lib/nba/predict/buildMatchupInjuryReport";
 import {
-  createSnapshotFetchCache,
-  nbaSnapshotCacheKey,
-  NBA_SNAPSHOT_CACHE_TTL_MS,
-} from "@/lib/nba/snapshotFetchCache";
-import type { NbaTeamInjuriesApiPayload } from "@/lib/nba/teamInjuries/teamInjuryTypes";
+  fetchMatchupDetailBundle,
+  peekMatchupDetailBundle,
+} from "@/lib/nba/predict/fetchMatchupDetailClient";
+import { buildMatchupInjuryReport } from "@/lib/nba/predict/buildMatchupInjuryReport";
 import type { NbaInjuryReport } from "@/lib/predict/nbaInjuryReport";
 import { emptyInjuryReport } from "@/lib/predict/nbaInjuryReportPreviewMocks";
+import type { NbaMatchupDetailApiPayload } from "@/lib/nba/predict/loadMatchupDetailBundle";
 
 type Options = {
   homeTeamId?: string;
@@ -24,50 +22,32 @@ type Options = {
   language?: "ja" | "en";
 };
 
-/**
- * 予想 INJURY: 対戦2チーム分を合成。
- *
- * `?team=` を2本叩くとサーバーが同じ `nbaTeamInjuries/{season}` を2回読み、
- * CDN のキャッシュキーもチーム毎に散る。リーグ全体スナップショットを
- * 1 回取ってクライアントで切り出す（doc は元々 1 つ）。
- *
- * モックには落とさない（未 ingest は空レポート）。
- */
-const cache = createSnapshotFetchCache<NbaTeamInjuriesApiPayload>(
-  NBA_SNAPSHOT_CACHE_TTL_MS
-);
-
-function reportFromPayload(
-  payload: NbaTeamInjuriesApiPayload,
-  homeTeamId: string,
-  awayTeamId: string,
+function reportFromDetail(
+  payload: NbaMatchupDetailApiPayload,
   language: "ja" | "en"
 ): NbaInjuryReport {
-  const homeEntries = payload.bundle.teams[homeTeamId] ?? [];
-  const awayEntries = payload.bundle.teams[awayTeamId] ?? [];
   return buildMatchupInjuryReport({
-    homeTeamId,
-    awayTeamId,
-    homeEntries,
-    awayEntries,
-    asOfLabel: payload.updatedAt || null,
+    homeTeamId: payload.homeTeamId,
+    awayTeamId: payload.awayTeamId,
+    homeEntries: payload.injuryHome,
+    awayEntries: payload.injuryAway,
+    asOfLabel: payload.injuryUpdatedAt || null,
     language,
   });
 }
 
-function sourceFromPayload(
-  payload: NbaTeamInjuriesApiPayload,
-  homeTeamId: string,
-  awayTeamId: string
+function sourceFromDetail(
+  payload: NbaMatchupDetailApiPayload
 ): "firestore" | "empty" {
-  const homeEntries = payload.bundle.teams[homeTeamId] ?? [];
-  const awayEntries = payload.bundle.teams[awayTeamId] ?? [];
   const any =
-    homeEntries.length + awayEntries.length > 0 ||
+    payload.injuryHome.length + payload.injuryAway.length > 0 ||
     payload.source === "firestore";
   return any ? "firestore" : "empty";
 }
 
+/**
+ * 予想 INJURY: `/api/nba/matchup-detail` 共有キャッシュから切り出し。
+ */
 export function useNbaMatchupInjuryReport(options: Options): {
   report: NbaInjuryReport | null;
   loading: boolean;
@@ -81,13 +61,10 @@ export function useNbaMatchupInjuryReport(options: Options): {
   const enabled = options.enabled ?? true;
   const language = options.language ?? "en";
   const want = enabled && !override && !!homeTeamId && !!awayTeamId;
-  const key = nbaSnapshotCacheKey(apiBaseUrl, season);
-  const peeked = want ? cache.peek(key) : null;
-  const peekedReport =
-    peeked && homeTeamId && awayTeamId
-      ? reportFromPayload(peeked, homeTeamId, awayTeamId, language)
-      : null;
-  const scopeKey = `${key}|${homeTeamId}|${awayTeamId}|${language}`;
+  const fetchOpts = { homeTeamId, awayTeamId, season, apiBaseUrl };
+  const peeked = want ? peekMatchupDetailBundle(fetchOpts) : null;
+  const peekedReport = peeked ? reportFromDetail(peeked, language) : null;
+  const scopeKey = `${homeTeamId}|${awayTeamId}|${season}|${language}|injury`;
 
   const [report, setReport] = useState<NbaInjuryReport | null>(
     () => override ?? peekedReport
@@ -95,11 +72,7 @@ export function useNbaMatchupInjuryReport(options: Options): {
   const [source, setSource] = useState<
     "override" | "firestore" | "empty" | "error"
   >(() =>
-    override
-      ? "override"
-      : peeked
-        ? sourceFromPayload(peeked, homeTeamId, awayTeamId)
-        : "empty"
+    override ? "override" : peeked ? sourceFromDetail(peeked) : "empty"
   );
   const [readyScope, setReadyScope] = useState<string | null>(() =>
     override || peekedReport ? scopeKey : null
@@ -112,9 +85,7 @@ export function useNbaMatchupInjuryReport(options: Options): {
       setReadyScope(scopeKey);
       return;
     }
-    if (!enabled) {
-      return;
-    }
+    if (!enabled) return;
     if (!homeTeamId || !awayTeamId) {
       setReport(null);
       setSource("empty");
@@ -122,23 +93,20 @@ export function useNbaMatchupInjuryReport(options: Options): {
       return;
     }
 
-    const hit = cache.peek(key);
+    const hit = peekMatchupDetailBundle(fetchOpts);
     if (hit) {
-      setReport(reportFromPayload(hit, homeTeamId, awayTeamId, language));
-      setSource(sourceFromPayload(hit, homeTeamId, awayTeamId));
+      setReport(reportFromDetail(hit, language));
+      setSource(sourceFromDetail(hit));
       setReadyScope(scopeKey);
       return;
     }
 
     let cancelled = false;
-    cache
-      .load(key, () => fetchTeamInjuriesSnapshot({ season, apiBaseUrl }))
+    fetchMatchupDetailBundle(fetchOpts)
       .then((payload) => {
         if (cancelled) return;
-        setReport(
-          reportFromPayload(payload, homeTeamId, awayTeamId, language)
-        );
-        setSource(sourceFromPayload(payload, homeTeamId, awayTeamId));
+        setReport(reportFromDetail(payload, language));
+        setSource(sourceFromDetail(payload));
       })
       .catch(() => {
         if (cancelled) return;
@@ -160,7 +128,6 @@ export function useNbaMatchupInjuryReport(options: Options): {
     apiBaseUrl,
     override,
     language,
-    key,
     scopeKey,
   ]);
 

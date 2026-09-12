@@ -610,7 +610,7 @@ export default function NbaTeamStatsPanel({
   return (
     <div
       className={[
-        "relative z-[1] bg-black px-1 py-1",
+        "relative z-[1] rounded-none border border-[rgba(0,245,255,0.32)] bg-[rgba(0,14,20,0.55)] px-1.5 py-2",
         className,
       ]
         .filter(Boolean)

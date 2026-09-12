@@ -24,6 +24,7 @@ import type { NbaLeagueTeamStatRow } from "@/lib/predict/nbaLeagueTeamStatsMocks
 import type { NbaTeamInjuryEntry } from "@/lib/predict/nbaTeamDetailPreviewMocks";
 import type { NbaTeamAceOutRecordsBundle } from "@/lib/nba/insights/aceOutRecordTypes";
 import type { NbaTeamSeasonRecordsBundle } from "@/lib/nba/insights/priorSeasonRecordTypes";
+import type { NbaTeamShapeRecordsBundle } from "@/lib/nba/teamShapes/teamShapeTypes";
 import type { NbaPlayerStatLeadersBundle } from "@/lib/predict/nbaPlayerStatLeadersMocks";
 import type { ProBriefPhase } from "@/lib/predict/predictProBrief";
 
@@ -64,6 +65,8 @@ export type AssembleProInsightFactsInput = {
   confRankByTeamId?: Record<string, number> | null;
   /** ロスター平均出場（MATCHUP 欠場ゲート用） */
   mpgByPlayerId?: Record<string, number> | null;
+  /** 条件付き得意／苦手形（中盤以降に効く） */
+  shapeRecords?: NbaTeamShapeRecordsBundle | null;
 };
 
 /**
@@ -211,6 +214,7 @@ export function assembleProInsightFactPack(
     priorRecords: input.priorRecords,
     streaks: input.streaks,
     confRankByTeamId: input.confRankByTeamId,
+    shapeRecords: input.shapeRecords,
   });
 
   const injury = buildInjuryImpactFactCandidates({

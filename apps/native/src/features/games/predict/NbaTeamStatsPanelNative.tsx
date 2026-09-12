@@ -686,9 +686,12 @@ const OXANIUM = "Oxanium_700Bold";
 const styles = StyleSheet.create({
   shell: {
     gap: 8,
-    paddingHorizontal: 4,
-    paddingVertical: 4,
-    backgroundColor: "#000000",
+    paddingHorizontal: 6,
+    paddingVertical: 8,
+    backgroundColor: "rgba(0,14,20,0.55)",
+    borderWidth: 1,
+    borderColor: "rgba(0,245,255,0.32)",
+    borderRadius: 0,
   },
   body: { gap: 0 },
   teamHeaderRow: {

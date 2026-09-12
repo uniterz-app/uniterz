@@ -7,6 +7,8 @@ import {
   type NbaConferenceStandingsBoard,
 } from "@/lib/nba/nbaConferenceStandings";
 import { fetchNbaConferenceStandings } from "@/lib/nba/standings/fetchNbaConferenceStandingsClient";
+import { nbaStandingsSnapshotCache } from "@/lib/nba/standings/nbaStandingsSnapshotCache";
+import { nbaSnapshotCacheKey } from "@/lib/nba/snapshotFetchCache";
 import type { NbaConferenceStandingsSource } from "@/lib/nba/standings/nbaConferenceStandingsTypes";
 
 export type UseNbaConferenceStandingsOptions = {
@@ -26,24 +28,38 @@ export function useNbaConferenceStandings(
     EMPTY_NBA_CONFERENCE_STANDINGS
   );
   const [asOfLabel, setAsOfLabel] = useState("");
-  const [source, setSource] = useState<NbaConferenceStandingsSource | null>(null);
+  const [source, setSource] = useState<NbaConferenceStandingsSource | null>(
+    null
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    const ac = new AbortController();
     setLoading(true);
     setError(null);
-    setBoard(EMPTY_NBA_CONFERENCE_STANDINGS);
-    setAsOfLabel("");
-    setSource(null);
 
-    void fetchNbaConferenceStandings({
-      apiBaseUrl: options.apiBaseUrl,
-      season: CURRENT_NBA_SEASON_KEY,
-      signal: ac.signal,
-    })
+    const season = CURRENT_NBA_SEASON_KEY;
+    const key = nbaSnapshotCacheKey(options.apiBaseUrl, season);
+    const cached = nbaStandingsSnapshotCache.peek(key);
+    if (cached) {
+      setBoard(cached.board);
+      setAsOfLabel(cached.asOfLabel);
+      setSource(cached.source);
+      setLoading(false);
+    } else {
+      setBoard(EMPTY_NBA_CONFERENCE_STANDINGS);
+      setAsOfLabel("");
+      setSource(null);
+    }
+
+    void nbaStandingsSnapshotCache
+      .load(key, () =>
+        fetchNbaConferenceStandings({
+          apiBaseUrl: options.apiBaseUrl,
+          season,
+        })
+      )
       .then((data) => {
         if (cancelled) return;
         setBoard(data.board);
@@ -51,9 +67,9 @@ export function useNbaConferenceStandings(
         setSource(data.source);
       })
       .catch((e) => {
-        if (cancelled || ac.signal.aborted) return;
+        if (cancelled) return;
         setError(e instanceof Error ? e.message : "standings load failed");
-        setBoard(EMPTY_NBA_CONFERENCE_STANDINGS);
+        if (!cached) setBoard(EMPTY_NBA_CONFERENCE_STANDINGS);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -61,7 +77,6 @@ export function useNbaConferenceStandings(
 
     return () => {
       cancelled = true;
-      ac.abort();
     };
   }, [options.apiBaseUrl]);
 

@@ -121,16 +121,12 @@ export default function NbaTopScorerPicker({
     [liveInjury]
   );
   const restCount = Math.max(0, sorted.length - TOP_N);
-  const selectedOutsideTop = useMemo(() => {
-    if (!value) return false;
-    const idx = sorted.findIndex((row) => isSamePick(value, row));
-    return idx >= TOP_N;
-  }, [sorted, value]);
-  const [expanded, setExpanded] = useState(selectedOutsideTop);
+  /** 初回は常に上位 5。選択が下位でも自動展開しない */
+  const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
-    if (selectedOutsideTop) setExpanded(true);
-  }, [selectedOutsideTop]);
+    setExpanded(false);
+  }, [homeTeamId, awayTeamId]);
 
   const visible = expanded ? sorted : sorted.slice(0, TOP_N);
 
@@ -184,7 +180,7 @@ export default function NbaTopScorerPicker({
       ) : sorted.length === 0 ? (
         <p className="text-[11px] text-white/40">{m.nbaTopScorerEmpty}</p>
       ) : (
-        <div className="overflow-hidden rounded-[2px] border border-[rgba(0,245,255,0.12)] bg-[rgba(4,16,24,0.35)]">
+        <div className="overflow-hidden rounded-none border border-[rgba(0,245,255,0.32)] bg-[rgba(4,16,24,0.45)]">
           <div
             className={`${nameOxanium.className} flex items-center border-b border-[rgba(0,245,255,0.12)] bg-[rgba(0,245,255,0.06)] px-2 py-2 text-[8px] font-bold uppercase tracking-[0.11em] text-white/42`}
           >

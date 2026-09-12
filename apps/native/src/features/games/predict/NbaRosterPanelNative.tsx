@@ -465,7 +465,7 @@ const styles = StyleSheet.create({
   shell: { gap: 10 },
   teamCard: {
     borderWidth: 1,
-    borderRadius: 8,
+    borderRadius: 0,
     backgroundColor: "rgba(8,10,16,0.94)",
     overflow: "hidden",
   },

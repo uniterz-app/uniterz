@@ -65,6 +65,7 @@ import {
 } from "./nbaTeamDetailUiCopy";
 import { useLeagueTeamStatsBundle } from "../../../../../../lib/nba/useLeagueTeamStatsBundle";
 import { useNbaTeamDetailLiveOverlay } from "../../../../../../lib/nba/teamDetail/useNbaTeamDetailLiveOverlay";
+import type { NbaTeamDetailShapeEdges } from "../../../../../../lib/nba/teamShapes/fetchTeamShapeEdgesClient";
 import { buildTeamDetailInsights } from "../../../../../../lib/nba/detailInsights/buildTeamDetailInsights";
 import {
   DetailIdentityChipRowNative,
@@ -557,6 +558,86 @@ function SplitCard({
         </Text>
         <Text style={styles.splitPct}>{winPctLabel(wins, losses)}</Text>
       </View>
+    </View>
+  );
+}
+
+function shapeDeltaPpLabel(deltaWinPct: number): string {
+  const pp = Math.round(deltaWinPct * 100);
+  return `${pp > 0 ? "+" : ""}${pp}pp`;
+}
+
+function TeamShapeEdgesSectionNative({
+  shapeEdges,
+  accent,
+  isJa,
+}: {
+  shapeEdges: NbaTeamDetailShapeEdges | null;
+  accent: string;
+  isJa: boolean;
+}) {
+  if (!shapeEdges?.edges.length) return null;
+  const frame = hexToRgba(accent, 0.3);
+  return (
+    <View style={styles.edgeSection}>
+      <View style={styles.advTitleRow}>
+        <Text style={[styles.advTitle, { color: "rgba(255,255,255,0.75)" }]}>
+          EDGE
+        </Text>
+        {shapeEdges.fromPriorSeason ? (
+          <View
+            style={[
+              styles.edgeSeasonBadge,
+              { borderColor: hexToRgba(accent, 0.35) },
+            ]}
+          >
+            <Text style={styles.edgeSeasonBadgeText}>{shapeEdges.season}</Text>
+          </View>
+        ) : null}
+        <View
+          style={[
+            styles.advTitleLine,
+            { backgroundColor: hexToRgba(accent, 0.35) },
+          ]}
+        />
+      </View>
+      {shapeEdges.edges.map((edge) => {
+        const strength = edge.kind === "strength";
+        const kindColor = strength ? "#00F5FF" : "#FF8A00";
+        const kindLabel = strength
+          ? isJa
+            ? "得意"
+            : "STRENGTH"
+          : isJa
+            ? "苦手"
+            : "WEAKNESS";
+        return (
+          <View
+            key={`${edge.kind}-${edge.shapeId}`}
+            style={[styles.edgeRow, { borderColor: frame }]}
+          >
+            <View style={styles.edgeCopy}>
+              <View style={styles.edgeLabelRow}>
+                <Text style={[styles.edgeKind, { color: kindColor }]}>
+                  {kindLabel}
+                </Text>
+                <Text style={styles.edgeLabel} numberOfLines={1}>
+                  {isJa ? edge.labelJa : edge.labelEn}
+                </Text>
+              </View>
+              <Text style={styles.edgeCondition} numberOfLines={2}>
+                {isJa ? edge.conditionJa : edge.conditionEn}
+              </Text>
+            </View>
+            <View style={styles.edgeStats}>
+              <Text style={styles.edgeWhen}>{edge.when}</Text>
+              <Text style={[styles.edgeDelta, { color: kindColor }]}>
+                {shapeDeltaPpLabel(edge.deltaWinPct)}
+              </Text>
+            </View>
+          </View>
+        );
+      })}
     </View>
   );
 }
@@ -1403,11 +1484,12 @@ export default function NbaTeamDetailPanelNative({
     () => getNbaTeamDetailPreview(teamId, bundle),
     [teamId, bundle]
   );
-  const { detail, aceOut, hasFetchError } = useNbaTeamDetailLiveOverlay({
-    teamId: baseDetail.teamId,
-    apiBaseUrl: getUniterzApiBaseUrl(),
-    base: baseDetail,
-  });
+  const { detail, aceOut, shapeEdges, hasFetchError } =
+    useNbaTeamDetailLiveOverlay({
+      teamId: baseDetail.teamId,
+      apiBaseUrl: getUniterzApiBaseUrl(),
+      base: baseDetail,
+    });
   const teamInsights = useMemo(
     () =>
       buildTeamDetailInsights({
@@ -1671,6 +1753,17 @@ export default function NbaTeamDetailPanelNative({
             accent={accent}
           />
         </View>
+
+        {shapeEdges?.edges.length ? (
+          <>
+            <View style={[styles.divider, { backgroundColor: dividerColor }]} />
+            <TeamShapeEdgesSectionNative
+              shapeEdges={shapeEdges}
+              accent={accent}
+              isJa={isJa}
+            />
+          </>
+        ) : null}
 
         <View style={[styles.divider, { backgroundColor: dividerColor }]} />
 
@@ -2875,6 +2968,84 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     letterSpacing: 0.3,
     transform: [{ skewX: "-8deg" }],
+  },
+  edgeSection: {
+    gap: 8,
+  },
+  edgeSeasonBadge: {
+    borderWidth: 1,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  edgeSeasonBadgeText: {
+    fontFamily: METRIC_FONT,
+    color: "rgba(255,255,255,0.55)",
+    fontSize: 8,
+    fontWeight: "700",
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
+  },
+  edgeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+    borderWidth: 1,
+    backgroundColor: "rgba(0,0,0,0.4)",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  edgeCopy: {
+    flex: 1,
+    minWidth: 0,
+    gap: 4,
+  },
+  edgeLabelRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    gap: 8,
+  },
+  edgeKind: {
+    fontFamily: METRIC_FONT,
+    fontSize: 8,
+    fontWeight: "700",
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
+  },
+  edgeLabel: {
+    fontFamily: METRIC_FONT,
+    color: "rgba(255,255,255,0.85)",
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 0.8,
+    textTransform: "uppercase",
+    flexShrink: 1,
+  },
+  edgeCondition: {
+    fontFamily: METRIC_FONT,
+    color: "rgba(255,255,255,0.45)",
+    fontSize: 9,
+    fontWeight: "700",
+    letterSpacing: 0.4,
+  },
+  edgeStats: {
+    alignItems: "flex-end",
+    gap: 2,
+  },
+  edgeWhen: {
+    fontFamily: METRIC_FONT,
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "800",
+    fontVariant: ["tabular-nums"],
+    transform: [{ skewX: "-8deg" }],
+  },
+  edgeDelta: {
+    fontFamily: METRIC_FONT,
+    fontSize: 10,
+    fontWeight: "700",
+    fontVariant: ["tabular-nums"],
   },
   footerAsOf: {
     marginTop: 18,

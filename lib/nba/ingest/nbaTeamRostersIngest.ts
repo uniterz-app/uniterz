@@ -58,8 +58,11 @@ async function loadAveragesForSeasonYear(
 }
 
 /**
- * 2026-27（今季）のスタッツのみを厳密に使用する。
- * 2026-27に出場データ/スタッツが無ければ昨季データへフォールバックせず 0 とする。
+ * PPG の季の切り替え:
+ * - プレシーズン〜今季レギュラーが 0 試合: 直前季（例 2025-26）
+ * - 今季レギュラーを 1 試合でも誰かが出場（BDL regular averages に gp≥1）: 今季
+ *
+ * BDL `season_type=regular` のみ見るのでプレシーズン平均は混ざらない。
  */
 async function resolveRosterAverages(seasonKey: string): Promise<{
   averagesSeasonKey: string;
@@ -67,6 +70,16 @@ async function resolveRosterAverages(seasonKey: string): Promise<{
 }> {
   const year = bdlSeasonYearFromSeasonKey(seasonKey);
   const currentRows = await loadAveragesForSeasonYear(year);
+  // 今季レギュラーが1試合でも始まっていれば今季平均
+  if (playerAveragesRowsHavePlayed(currentRows)) {
+    return { averagesSeasonKey: seasonKey, rows: currentRows };
+  }
+  const prevKey = previousNbaSeasonKey(seasonKey);
+  const prevYear = bdlSeasonYearFromSeasonKey(prevKey);
+  const prevRows = await loadAveragesForSeasonYear(prevYear);
+  if (playerAveragesRowsHavePlayed(prevRows)) {
+    return { averagesSeasonKey: seasonKeyFromYear(prevYear), rows: prevRows };
+  }
   return { averagesSeasonKey: seasonKey, rows: currentRows };
 }
 

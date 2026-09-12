@@ -63,6 +63,7 @@ import type {
 } from "@/lib/nba/draftPicks/draftPicksTypes";
 import { useLeagueTeamStatsBundle } from "@/lib/nba/useLeagueTeamStatsBundle";
 import { useNbaTeamDetailLiveOverlay } from "@/lib/nba/teamDetail/useNbaTeamDetailLiveOverlay";
+import type { NbaTeamDetailShapeEdges } from "@/lib/nba/teamShapes/fetchTeamShapeEdgesClient";
 import { buildTeamDetailInsights } from "@/lib/nba/detailInsights/buildTeamDetailInsights";
 import {
   DetailIdentityChipRow,
@@ -193,6 +194,102 @@ function SectionTitle({
         style={{ backgroundColor: hexToRgba(accent, 0.35) }}
       />
     </div>
+  );
+}
+
+function shapeDeltaPpLabel(deltaWinPct: number): string {
+  const pp = Math.round(deltaWinPct * 100);
+  return `${pp > 0 ? "+" : ""}${pp}pp`;
+}
+
+function TeamShapeEdgesSection({
+  shapeEdges,
+  accent,
+  isJa,
+}: {
+  shapeEdges: NbaTeamDetailShapeEdges | null;
+  accent: string;
+  isJa: boolean;
+}) {
+  if (!shapeEdges?.edges.length) return null;
+  const frame = hexToRgba(accent, 0.3);
+  return (
+    <section className="space-y-2.5">
+      <div className="flex items-center gap-2.5">
+        <h2
+          className={`${nameOxanium.className} text-[10px] font-bold uppercase tracking-[0.16em] text-white/75`}
+        >
+          EDGE
+        </h2>
+        {shapeEdges.fromPriorSeason ? (
+          <span
+            className={`${nameOxanium.className} shrink-0 border px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-[0.12em] text-white/55`}
+            style={{ borderColor: hexToRgba(accent, 0.35) }}
+          >
+            {shapeEdges.season}
+          </span>
+        ) : null}
+        <div
+          className="h-px flex-1"
+          style={{ backgroundColor: hexToRgba(accent, 0.35) }}
+        />
+      </div>
+      <div className="space-y-2">
+        {shapeEdges.edges.map((edge) => {
+          const strength = edge.kind === "strength";
+          const kindColor = strength ? "#00F5FF" : "#FF8A00";
+          const kindLabel = strength
+            ? isJa
+              ? "得意"
+              : "STRENGTH"
+            : isJa
+              ? "苦手"
+              : "WEAKNESS";
+          return (
+            <div
+              key={`${edge.kind}-${edge.shapeId}`}
+              className="flex items-center justify-between gap-3 border bg-black/40 px-3 py-2.5"
+              style={{ borderColor: frame }}
+            >
+              <div className="min-w-0 flex-1 space-y-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span
+                    className={`${nameOxanium.className} text-[8px] font-bold uppercase tracking-[0.12em]`}
+                    style={{ color: kindColor }}
+                  >
+                    {kindLabel}
+                  </span>
+                  <p
+                    className={`${nameOxanium.className} truncate text-[11px] font-bold uppercase tracking-[0.08em] text-white/85`}
+                  >
+                    {isJa ? edge.labelJa : edge.labelEn}
+                  </p>
+                </div>
+                <p
+                  className={`${nameOxanium.className} text-[9px] font-bold tracking-wide text-white/45`}
+                >
+                  {isJa ? edge.conditionJa : edge.conditionEn}
+                </p>
+              </div>
+              <div className="shrink-0 text-right">
+                <p
+                  className={`${nameOxanium.className} text-[16px] font-extrabold tabular-nums`}
+                  style={{ transform: "skewX(-8deg)" }}
+                >
+                  {edge.when}
+                </p>
+                <p
+                  className={`${nameOxanium.className} text-[10px] font-bold tabular-nums`}
+                  style={{ color: kindColor }}
+                >
+                  {shapeDeltaPpLabel(edge.deltaWinPct)}
+                </p>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </section>
   );
 }
 
@@ -1831,10 +1928,11 @@ export default function NbaTeamDetailPanel({
     () => getNbaTeamDetailPreview(teamId, bundle),
     [teamId, bundle]
   );
-  const { detail, aceOut, hasFetchError } = useNbaTeamDetailLiveOverlay({
-    teamId: baseDetail.teamId,
-    base: baseDetail,
-  });
+  const { detail, aceOut, shapeEdges, hasFetchError } =
+    useNbaTeamDetailLiveOverlay({
+      teamId: baseDetail.teamId,
+      base: baseDetail,
+    });
   const teamInsights = useMemo(
     () =>
       buildTeamDetailInsights({
@@ -2093,6 +2191,20 @@ export default function NbaTeamDetailPanel({
           />
         </div>
       </section>
+
+      {shapeEdges?.edges.length ? (
+        <>
+          <div
+            className="h-px"
+            style={{ backgroundColor: hexToRgba(accent, 0.22) }}
+          />
+          <TeamShapeEdgesSection
+            shapeEdges={shapeEdges}
+            accent={accent}
+            isJa={isJa}
+          />
+        </>
+      ) : null}
 
       <div
         className="h-px"

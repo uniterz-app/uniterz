@@ -421,7 +421,7 @@ function TeamRosterCard({
 
   return (
     <section
-      className="overflow-hidden rounded-lg border bg-[rgba(8,10,16,0.94)]"
+      className="overflow-hidden rounded-none border bg-[rgba(8,10,16,0.94)]"
       style={{
         borderColor: border,
         background: `linear-gradient(165deg, ${fill} 0%, rgba(8,10,16,0.96) 50%)`,

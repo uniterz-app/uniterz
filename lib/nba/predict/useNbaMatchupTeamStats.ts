@@ -2,20 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
-import { fetchLeagueTeamStats } from "@/lib/nba/leagueTeamStats/fetchLeagueTeamStatsClient";
-import { fetchTeamGameLog } from "@/lib/nba/teamGameLog/fetchTeamGameLogClient";
-import { enrichLeagueTeamStatsBundle } from "@/lib/predict/nbaLeagueTeamStatsMocks";
-import { buildMatchupTeamStatsBundle } from "@/lib/nba/predict/buildMatchupTeamStatsBundle";
 import {
-  createSnapshotFetchCache,
-  nbaSnapshotCacheKey,
-  NBA_SNAPSHOT_CACHE_TTL_MS,
-} from "@/lib/nba/snapshotFetchCache";
-import { leagueTeamStatsSnapshotCache } from "@/lib/nba/leagueTeamStats/leagueTeamStatsSnapshotCache";
-import type { NbaLeagueTeamStatsApiPayload } from "@/lib/nba/leagueTeamStats/leagueTeamStatsTypes";
+  fetchMatchupDetailBundle,
+  peekMatchupDetailBundle,
+} from "@/lib/nba/predict/fetchMatchupDetailClient";
 import type { NbaTeamStatsBundle } from "@/lib/predict/nbaTeamStatsPreviewMocks";
 import { emptyTeamStatsBundle } from "@/lib/predict/nbaTeamStatsPreviewMocks";
-import type { NbaTeamGameLogSlice } from "@/lib/nba/teamGameLog/teamGameLogTypes";
 
 type Options = {
   homeTeamId?: string;
@@ -27,69 +19,9 @@ type Options = {
   enabled?: boolean;
 };
 
-const gameLogCache = createSnapshotFetchCache<NbaTeamGameLogSlice>(
-  NBA_SNAPSHOT_CACHE_TTL_MS
-);
-
-const matchupStatsCache = createSnapshotFetchCache<NbaTeamStatsBundle>(
-  NBA_SNAPSHOT_CACHE_TTL_MS
-);
-
-function logCacheKey(
-  apiBaseUrl: string | null | undefined,
-  season: string,
-  teamId: string
-): string {
-  return `${nbaSnapshotCacheKey(apiBaseUrl, season)}|log|${teamId}`;
-}
-
-function matchupCacheKey(
-  apiBaseUrl: string | null | undefined,
-  season: string,
-  homeTeamId: string,
-  awayTeamId: string
-): string {
-  return `${nbaSnapshotCacheKey(apiBaseUrl, season)}|${homeTeamId}|${awayTeamId}`;
-}
-
-function bundleFromLeague(
-  league: NbaLeagueTeamStatsApiPayload,
-  homeTeamId: string,
-  awayTeamId: string,
-  homeLog: NbaTeamGameLogSlice | null,
-  awayLog: NbaTeamGameLogSlice | null
-): NbaTeamStatsBundle {
-  const bundle = enrichLeagueTeamStatsBundle(league.bundle, league.source);
-  return buildMatchupTeamStatsBundle({
-    homeTeamId,
-    awayTeamId,
-    seasonRows: bundle.season,
-    last10Rows: bundle.last10,
-    homeLog,
-    awayLog,
-  });
-}
-
-function sourceFromBuilt(
-  league: NbaLeagueTeamStatsApiPayload,
-  homeTeamId: string,
-  awayTeamId: string,
-  homeLog: NbaTeamGameLogSlice | null,
-  awayLog: NbaTeamGameLogSlice | null
-): "firestore" | "empty" {
-  const enriched = enrichLeagueTeamStatsBundle(league.bundle, league.source);
-  const live =
-    league.source === "firestore" ||
-    Boolean(homeLog?.finalCount || awayLog?.finalCount) ||
-    enriched.season.some(
-      (r) => r.teamId === homeTeamId || r.teamId === awayTeamId
-    );
-  return live ? "firestore" : "empty";
-}
-
 /**
- * 予想 STATS: リーグ表の当該2チーム + 試合ログ（H/A・FORM）。
- * モック matchup には落とさない。
+ * 予想 STATS: `/api/nba/matchup-detail` 共有キャッシュから切り出し。
+ * （旧: league-team-stats + game-log×2 の 3 本 fan-out）
  */
 export function useNbaMatchupTeamStats(options: Options): {
   stats: NbaTeamStatsBundle | null;
@@ -103,33 +35,10 @@ export function useNbaMatchupTeamStats(options: Options): {
   const apiBaseUrl = options.apiBaseUrl;
   const enabled = options.enabled ?? true;
   const want = enabled && !override && !!homeTeamId && !!awayTeamId;
-  const leagueKey = nbaSnapshotCacheKey(apiBaseUrl, season);
-  const builtKey = matchupCacheKey(apiBaseUrl, season, homeTeamId, awayTeamId);
-  const peekedBuilt = want ? matchupStatsCache.peek(builtKey) : null;
-  const peekedLeague =
-    want && !peekedBuilt
-      ? leagueTeamStatsSnapshotCache.peek(leagueKey)
-      : null;
-  const peekedFromLeague =
-    peekedLeague &&
-    homeTeamId &&
-    awayTeamId &&
-    (peekedLeague.bundle.season.some(
-      (r) => r.teamId === homeTeamId || r.teamId === awayTeamId
-    ) ||
-      peekedLeague.bundle.last10.some(
-        (r) => r.teamId === homeTeamId || r.teamId === awayTeamId
-      ))
-      ? bundleFromLeague(
-          peekedLeague,
-          homeTeamId,
-          awayTeamId,
-          gameLogCache.peek(logCacheKey(apiBaseUrl, season, homeTeamId)),
-          gameLogCache.peek(logCacheKey(apiBaseUrl, season, awayTeamId))
-        )
-      : null;
-  const peekedStats = peekedBuilt ?? peekedFromLeague;
-  const scopeKey = builtKey;
+  const fetchOpts = { homeTeamId, awayTeamId, season, apiBaseUrl };
+  const peeked = want ? peekMatchupDetailBundle(fetchOpts) : null;
+  const peekedStats = peeked?.stats ?? null;
+  const scopeKey = `${homeTeamId}|${awayTeamId}|${season}|stats`;
 
   const [stats, setStats] = useState<NbaTeamStatsBundle | null>(
     () => override ?? peekedStats
@@ -148,9 +57,7 @@ export function useNbaMatchupTeamStats(options: Options): {
       setReadyScope(scopeKey);
       return;
     }
-    if (!enabled) {
-      return;
-    }
+    if (!enabled) return;
     if (!homeTeamId || !awayTeamId) {
       setStats(null);
       setSource("empty");
@@ -158,44 +65,20 @@ export function useNbaMatchupTeamStats(options: Options): {
       return;
     }
 
-    const cachedBuilt = matchupStatsCache.peek(builtKey);
-    if (cachedBuilt) {
-      setStats(cachedBuilt);
-      setSource("firestore");
+    const hit = peekMatchupDetailBundle(fetchOpts);
+    if (hit) {
+      setStats(hit.stats);
+      setSource(hit.source === "firestore" ? "firestore" : "empty");
       setReadyScope(scopeKey);
       return;
     }
 
     let cancelled = false;
-
-    const wrapLog = (teamId: string): Promise<NbaTeamGameLogSlice | null> =>
-      gameLogCache
-        .load(logCacheKey(apiBaseUrl, season, teamId), () =>
-          fetchTeamGameLog({ teamId, season, apiBaseUrl }).then((p) => p.log)
-        )
-        .catch(() => null);
-
-    Promise.all([
-      leagueTeamStatsSnapshotCache.load(leagueKey, () =>
-        fetchLeagueTeamStats({ season, apiBaseUrl })
-      ),
-      wrapLog(homeTeamId),
-      wrapLog(awayTeamId),
-    ])
-      .then(([league, homeLog, awayLog]) => {
+    fetchMatchupDetailBundle(fetchOpts)
+      .then((payload) => {
         if (cancelled) return;
-        const built = bundleFromLeague(
-          league,
-          homeTeamId,
-          awayTeamId,
-          homeLog,
-          awayLog
-        );
-        matchupStatsCache.load(builtKey, () => Promise.resolve(built));
-        setStats(built);
-        setSource(
-          sourceFromBuilt(league, homeTeamId, awayTeamId, homeLog, awayLog)
-        );
+        setStats(payload.stats);
+        setSource(payload.source === "firestore" ? "firestore" : "empty");
       })
       .catch(() => {
         if (cancelled) return;
@@ -216,8 +99,6 @@ export function useNbaMatchupTeamStats(options: Options): {
     season,
     apiBaseUrl,
     override,
-    leagueKey,
-    builtKey,
     scopeKey,
   ]);
 

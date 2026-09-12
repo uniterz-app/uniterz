@@ -1,17 +1,11 @@
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
 import type { MatchCardTeamRecord } from "@/lib/games/useMatchCardTeamRecords";
 import {
-  createSnapshotFetchCache,
   nbaSnapshotCacheKey,
-  NBA_SNAPSHOT_CACHE_TTL_MS,
 } from "@/lib/nba/snapshotFetchCache";
 import { fetchNbaConferenceStandings } from "@/lib/nba/standings/fetchNbaConferenceStandingsClient";
-import type { NbaConferenceStandingsApiPayload } from "@/lib/nba/standings/nbaConferenceStandingsTypes";
+import { nbaStandingsSnapshotCache } from "@/lib/nba/standings/nbaStandingsSnapshotCache";
 import { buildNbaStandingsTeamRecordMap } from "@/lib/nba/standings/buildNbaStandingsTeamRecordMap";
-
-const cache = createSnapshotFetchCache<NbaConferenceStandingsApiPayload>(
-  NBA_SNAPSHOT_CACHE_TTL_MS
-);
 
 export type LoadNbaStandingsTeamRecordsOptions = {
   apiBaseUrl?: string | null;
@@ -39,7 +33,7 @@ export async function loadNbaStandingsTeamRecordsShared(
 ): Promise<Record<string, MatchCardTeamRecord>> {
   const season = (options.season ?? CURRENT_NBA_SEASON_KEY).trim();
   const key = nbaSnapshotCacheKey(options.apiBaseUrl, season);
-  const payload = await cache.load(key, () =>
+  const payload = await nbaStandingsSnapshotCache.load(key, () =>
     fetchNbaConferenceStandings({
       apiBaseUrl: options.apiBaseUrl,
       season,

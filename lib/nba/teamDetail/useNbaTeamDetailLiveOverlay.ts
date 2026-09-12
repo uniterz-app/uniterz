@@ -2,17 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
-import { fetchTeamRosterSlice } from "@/lib/nba/teamRosters/fetchTeamRostersClient";
-import { buildMatchupRosterReport } from "@/lib/nba/teamRosters/buildMatchupRosterReport";
-import { fetchTeamPayroll } from "@/lib/nba/teamPayroll/fetchTeamPayrollClient";
-import { fetchTeamGameLog } from "@/lib/nba/teamGameLog/fetchTeamGameLogClient";
-import { fetchTeamInjuries } from "@/lib/nba/teamInjuries/fetchTeamInjuriesClient";
-import {
-  fetchTeamStrengthSplit,
-  type NbaTeamStrengthSplit,
-} from "@/lib/nba/insights/fetchTeamStrengthSplitClient";
-import { fetchNbaConferenceStandings } from "@/lib/nba/standings/fetchNbaConferenceStandingsClient";
-import { findNbaConferenceStandingsRow } from "@/lib/nba/standings/findNbaConferenceStandingsRow";
+import { fetchTeamDetailBundle } from "@/lib/nba/teamDetail/fetchTeamDetailClient";
 import { applyStandingsToTeamDetailPreview } from "@/lib/nba/teamDetail/applyStandingsToTeamDetailPreview";
 import { applyTeamGameLogToTeamDetailPreview } from "@/lib/nba/teamDetail/applyTeamGameLogToTeamDetailPreview";
 import type {
@@ -23,8 +13,9 @@ import type {
 import type { NbaConferenceStandingsRow } from "@/lib/nba/nbaConferenceStandings";
 import type { NbaTeamGameLogSlice } from "@/lib/nba/teamGameLog/teamGameLogTypes";
 import type { NbaRosterTeamBlock } from "@/lib/predict/nbaRoster";
-import { fetchTeamAceOutRecord } from "@/lib/nba/detailInsights/fetchTeamAceOutClient";
 import type { NbaTeamAceOutRecord } from "@/lib/nba/insights/aceOutRecordTypes";
+import type { NbaTeamStrengthSplit } from "@/lib/nba/insights/fetchTeamStrengthSplitClient";
+import type { NbaTeamDetailShapeEdges } from "@/lib/nba/teamShapes/fetchTeamShapeEdgesClient";
 
 type Options = {
   teamId?: string;
@@ -43,6 +34,7 @@ export type NbaTeamDetailOverlayFailures = {
   injuries: boolean;
   strengthSplit: boolean;
   aceOut: boolean;
+  shapeEdges: boolean;
 };
 
 function emptyFailures(): NbaTeamDetailOverlayFailures {
@@ -54,22 +46,20 @@ function emptyFailures(): NbaTeamDetailOverlayFailures {
     injuries: false,
     strengthSplit: false,
     aceOut: false,
+    shapeEdges: false,
   };
 }
 
 /**
  * チーム詳細の live データを公開 API（Firestore スナップショット）で上書き。
  *
- * - **W–L / 順位 / HOME-AWAY / L10 / 連勝** → BDL standings（`/api/nba/standings`）
- * - **直近試合・H2H・vs East/West** → team game logs（`games` 由来）
- * - **指標** → league stats bundle（ベース）+ overlay は触らない
- * - roster / payroll / injuries / strengthSplit / aceOut → 各 team API
- *
- * `teams` コレクションは読まない。
+ * **1 fetch:** `GET /api/nba/team-detail`（player-detail と同型の合成）。
+ * リーグ表指標は `useLeagueTeamStatsBundle`（別・共有キャッシュ）のまま。
  */
 export function useNbaTeamDetailLiveOverlay(options: Options): {
   detail: NbaTeamDetailPreview;
   aceOut: NbaTeamAceOutRecord | null;
+  shapeEdges: NbaTeamDetailShapeEdges | null;
   loading: boolean;
   failures: NbaTeamDetailOverlayFailures;
   hasFetchError: boolean;
@@ -90,6 +80,8 @@ export function useNbaTeamDetailLiveOverlay(options: Options): {
   const [strengthSplit, setStrengthSplit] =
     useState<NbaTeamStrengthSplit | null>(null);
   const [aceOut, setAceOut] = useState<NbaTeamAceOutRecord | null>(null);
+  const [shapeEdges, setShapeEdges] =
+    useState<NbaTeamDetailShapeEdges | null>(null);
   const [failures, setFailures] =
     useState<NbaTeamDetailOverlayFailures>(emptyFailures);
   const [loading, setLoading] = useState(!!teamId);
@@ -103,114 +95,60 @@ export function useNbaTeamDetailLiveOverlay(options: Options): {
       setInjuries(null);
       setStrengthSplit(null);
       setAceOut(null);
+      setShapeEdges(null);
       setFailures(emptyFailures());
       setLoading(false);
       return;
     }
-    const ac = new AbortController();
+    let cancelled = false;
     setLoading(true);
     setFailures(emptyFailures());
 
-    type Settled<T> = { ok: true; value: T } | { ok: false };
-
-    const wrap = <T,>(p: Promise<T>): Promise<Settled<T>> =>
-      p.then((value) => ({ ok: true as const, value })).catch(() => ({
-        ok: false as const,
-      }));
-
-    Promise.all([
-      wrap(
-        fetchTeamRosterSlice({
-          teamId,
-          season,
-          apiBaseUrl,
-          signal: ac.signal,
-        }).then((payload) => {
-          const team = payload.team;
-          if (!team) return null;
-          const report = buildMatchupRosterReport(
-            teamId,
-            teamId,
-            team,
-            team
-          );
-          return report?.home ?? null;
-        })
-      ),
-      wrap(
-        fetchTeamPayroll({
-          teamId,
-          season,
-          apiBaseUrl,
-          signal: ac.signal,
-        }).then((payload) => payload.payroll)
-      ),
-      wrap(
-        fetchTeamGameLog({
-          teamId,
-          season,
-          apiBaseUrl,
-          signal: ac.signal,
-        }).then((payload) => payload.log)
-      ),
-      wrap(
-        fetchNbaConferenceStandings({
-          season,
-          apiBaseUrl,
-          signal: ac.signal,
-        }).then((payload) =>
-          findNbaConferenceStandingsRow(payload.board, teamId)
-        )
-      ),
-      wrap(
-        fetchTeamInjuries({
-          teamId,
-          season,
-          apiBaseUrl,
-          signal: ac.signal,
-        }).then((payload) => payload.injuries)
-      ),
-      wrap(
-        fetchTeamStrengthSplit({
-          teamId,
-          season,
-          apiBaseUrl,
-          signal: ac.signal,
-        })
-      ),
-      wrap(
-        fetchTeamAceOutRecord({
-          teamId,
-          season,
-          apiBaseUrl,
-          signal: ac.signal,
-        })
-      ),
-    ])
-      .then(([roster, pay, log, standings, inj, strength, ace]) => {
-        if (ac.signal.aborted) return;
-        setRosterBlock(roster.ok ? roster.value : null);
-        setPayroll(pay.ok ? pay.value : null);
-        setGameLog(log.ok ? log.value : null);
-        setStandingsRow(standings.ok ? standings.value : null);
-        setInjuries(inj.ok ? inj.value : null);
-        setStrengthSplit(strength.ok ? strength.value : null);
-        setAceOut(ace.ok ? ace.value : null);
+    void fetchTeamDetailBundle({
+      teamId,
+      season,
+      apiBaseUrl,
+    })
+      .then((payload) => {
+        if (cancelled) return;
+        setRosterBlock(payload.rosterBlock);
+        setPayroll(payload.payroll);
+        setGameLog(payload.gameLog);
+        setStandingsRow(payload.standingsRow);
+        setInjuries(payload.injuries);
+        setStrengthSplit(payload.strengthSplit);
+        setAceOut(payload.aceOut);
+        setShapeEdges(payload.shapeEdges);
+        setFailures(emptyFailures());
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setRosterBlock(null);
+        setPayroll(null);
+        setGameLog(null);
+        setStandingsRow(null);
+        setInjuries(null);
+        setStrengthSplit(null);
+        setAceOut(null);
+        setShapeEdges(null);
         setFailures({
-          roster: !roster.ok,
-          payroll: !pay.ok,
-          gameLog: !log.ok,
-          standings: !standings.ok,
-          injuries: !inj.ok,
-          strengthSplit: !strength.ok,
-          aceOut: !ace.ok,
+          roster: true,
+          payroll: true,
+          gameLog: true,
+          standings: true,
+          injuries: true,
+          strengthSplit: true,
+          aceOut: true,
+          shapeEdges: true,
         });
       })
       .finally(() => {
-        if (!ac.signal.aborted) setLoading(false);
+        if (!cancelled) setLoading(false);
       });
 
-    return () => ac.abort();
+    return () => {
+      cancelled = true;
+    };
   }, [teamId, season, apiBaseUrl]);
 
   const detail = useMemo((): NbaTeamDetailPreview => {
@@ -251,5 +189,5 @@ export function useNbaTeamDetailLiveOverlay(options: Options): {
     failures.injuries ||
     failures.strengthSplit;
 
-  return { detail, aceOut, loading, failures, hasFetchError };
+  return { detail, aceOut, shapeEdges, loading, failures, hasFetchError };
 }

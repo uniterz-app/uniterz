@@ -1,5 +1,12 @@
 import type { Firestore } from "firebase-admin/firestore";
-import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
+import {
+  CURRENT_NBA_SEASON_KEY,
+  previousNbaSeasonKey,
+} from "@/lib/rankings/nbaSeason";
+import {
+  mergePriorAveragesOntoRosterTeams,
+  rosterBundleHasSeasonAverages,
+} from "./applyPriorSeasonRosterAverages";
 import type {
   NbaMatchupRosterApiPayload,
   NbaPlayerRosterHitApiPayload,
@@ -98,7 +105,7 @@ export async function loadTeamRostersSnapshot(
   const resolved = data
     ? resolveTeamRostersFromFirestore(data, key)
     : null;
-  const averagesSeasonKey =
+  let averagesSeasonKey =
     typeof data?.averagesSeasonKey === "string" && data.averagesSeasonKey.trim()
       ? data.averagesSeasonKey.trim()
       : key;
@@ -116,11 +123,49 @@ export async function loadTeamRostersSnapshot(
     };
   }
 
+  let bundle = resolved.bundle;
+  // 今季平均が空（開幕前など）→ 前季ロスターから PPG 等を載せる
+  const needsPrior =
+    averagesSeasonKey === key &&
+    !rosterBundleHasSeasonAverages(bundle.teams);
+  if (needsPrior) {
+    const priorKey = previousNbaSeasonKey(key);
+    if (priorKey !== key) {
+      const priorSnap = await db
+        .collection(NBA_TEAM_ROSTERS_COLLECTION)
+        .doc(priorKey)
+        .get();
+      const priorData = priorSnap.exists
+        ? (priorSnap.data() as NbaTeamRostersFirestoreDoc)
+        : null;
+      const priorResolved = priorData
+        ? resolveTeamRostersFromFirestore(priorData, priorKey)
+        : null;
+      if (
+        priorResolved &&
+        rosterBundleHasSeasonAverages(priorResolved.bundle.teams)
+      ) {
+        bundle = {
+          seasonKey: key,
+          teams: mergePriorAveragesOntoRosterTeams(
+            bundle.teams,
+            priorResolved.bundle.teams
+          ),
+        };
+        averagesSeasonKey =
+          typeof priorData?.averagesSeasonKey === "string" &&
+          priorData.averagesSeasonKey.trim()
+            ? priorData.averagesSeasonKey.trim()
+            : priorKey;
+      }
+    }
+  }
+
   return {
     ok: true,
     season: key,
     averagesSeasonKey,
-    bundle: resolved.bundle,
+    bundle,
     source: resolved.source,
     updatedAt: resolved.updatedAt?.toISOString() ?? null,
     playerCount: resolved.playerCount,
