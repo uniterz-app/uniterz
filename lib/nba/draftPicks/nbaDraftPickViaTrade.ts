@@ -810,13 +810,17 @@ export const NBA_DRAFT_PICK_VIA_TRADE: Record<string, DraftPickViaTrade> = {
     viaTradeJa: "2025年 MEM–IND スワップ取引で取得",
     viaTradeEn: "via 2025 MEM–IND swap",
   },
+  "mem-2031-2-tor": {
+    viaTradeJa: "2026年 MEM–NOP 取引で獲得（TOR由来・経由 NOP）",
+    viaTradeEn: "Acquired via 2026 MEM–NOP trade (TOR origin via NOP)",
+  },
   "mem-2032-2-gsw-prot": {
     viaTradeJa: "2025年 GSW–MEM 取引で獲得",
     viaTradeEn: "Acquired via 2025 GSW–MEM trade",
   },
   "mem-2032-2-swap-multi": {
-    viaTradeJa: "2026年 MEM–PHI スワップ取引で取得",
-    viaTradeEn: "via 2026 MEM–PHI swap",
+    viaTradeJa: "2026年 MEM–PHI スワップ＋2026年 MEM–NOP スワップで取得",
+    viaTradeEn: "via 2026 MEM–PHI swap and 2026 MEM–NOP swap",
   },
   "mem-2033-2-okc": {
     viaTradeJa: "2026年 MEM–OKC ドラフト当日取引で獲得",
@@ -1014,9 +1018,13 @@ export const NBA_DRAFT_PICK_VIA_TRADE: Record<string, DraftPickViaTrade> = {
     viaTradeJa: "2025年 NOP–OKC 取引で放出",
     viaTradeEn: "Sent out via 2025 NOP–OKC trade",
   },
-  "nop-2031-2-tor": {
-    viaTradeJa: "2025年 TOR–NOP 取引で獲得",
-    viaTradeEn: "Acquired via 2025 TOR–NOP trade",
+  "nop-2031-2-tor-out": {
+    viaTradeJa: "2026年 MEM–NOP 取引で放出（元は2025年 TOR–NOP で獲得）",
+    viaTradeEn: "Sent out via 2026 MEM–NOP trade (originally acquired via 2025 TOR–NOP)",
+  },
+  "nop-2032-2-own": {
+    viaTradeJa: "2026年 MEM–NOP スワップ対象",
+    viaTradeEn: "Subject to swap via 2026 MEM–NOP trade",
   },
   "nyk-2027-1-own-out": {
     viaTradeJa: "2024年 Mikal Bridges のトレードで放出",
@@ -1429,8 +1437,8 @@ export const NBA_DRAFT_PICK_VIA_TRADE: Record<string, DraftPickViaTrade> = {
     viaTradeEn: "Sent out via 2019 Kawhi Leonard trade",
   },
   "tor-2031-2-own-out": {
-    viaTradeJa: "2025年 TOR–NOP 取引で放出",
-    viaTradeEn: "Sent out via 2025 TOR–NOP trade",
+    viaTradeJa: "2025年 TOR–NOP 放出後、2026年 MEM–NOP で MEM へ移動",
+    viaTradeEn: "Sent to NOP in 2025; conveyed to MEM via 2026 MEM–NOP trade",
   },
   "tor-2032-2-own-out": {
     viaTradeJa: "2026年 TOR–BKN 取引で放出",

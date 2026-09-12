@@ -4217,13 +4217,17 @@ const TEAM_CUSTOM_PICKS: Record<string, NbaDraftPickEntry[]> = {
       kind: "outgoing",
       badgeType: "outgoing",
       isOutgoing: true,
-      toTeamId: "NOP",
-      shortLabelJa: "自前 (NOPへ放出)",
-      shortLabelEn: "Own (to NOP)",
-      detailsJa: "TOR 自前 2巡目 (NOPへ放出済み)",
-      detailsEn: "Own 2nd (Traded to NOP)",
-      conditionsJa: ["ニューオーリンズ・ペリカンズ（NOP）へトレード放出済み"],
-      conditionsEn: ["Traded to New Orleans Pelicans"],
+      toTeamId: "MEM",
+      shortLabelJa: "自前 (MEMへ放出)",
+      shortLabelEn: "Own (to MEM)",
+      detailsJa: "TOR 自前 2巡目 (MEMへ放出済み / 経由 NOP)",
+      detailsEn: "Own 2nd (Traded to MEM / via NOP)",
+      conditionsJa: [
+        "2025年に NOP へ放出後、2026年 MEM–NOP 取引でメンフィス・グリズリーズ（MEM）へ移動",
+      ],
+      conditionsEn: [
+        "Originally to NOP (2025); conveyed to Memphis via 2026 MEM–NOP trade",
+      ],
     },
 
     // 2032
@@ -8173,16 +8177,24 @@ const TEAM_CUSTOM_PICKS: Record<string, NbaDraftPickEntry[]> = {
       conditionsEn: ["Traded away via ORL/OKC arrangements"],
     },
     {
-      id: "nop-2031-2-tor",
+      id: "nop-2031-2-tor-out",
       year: 2031,
       round: 2,
-      kind: "incoming",
-      badgeType: "from",
+      kind: "outgoing",
+      badgeType: "outgoing",
+      isOutgoing: true,
+      toTeamId: "MEM",
       fromTeamId: "TOR",
-      shortLabelJa: "TOR",
-      shortLabelEn: "TOR",
-      detailsJa: "TOR 2巡目",
-      detailsEn: "via TOR 2nd",
+      shortLabelJa: "TOR (MEMへ放出)",
+      shortLabelEn: "TOR (to MEM)",
+      detailsJa: "TOR 2巡目 (MEMへ放出済み / 旧 NOP 保有)",
+      detailsEn: "via TOR 2nd (Traded to MEM / previously held by NOP)",
+      conditionsJa: [
+        "元は TOR→NOP（2025）。2026年 MEM–NOP 取引でメンフィス・グリズリーズ（MEM）へ放出",
+      ],
+      conditionsEn: [
+        "Originally TOR→NOP (2025); conveyed to Memphis via 2026 MEM–NOP trade",
+      ],
     },
 
     // 2032
@@ -8204,11 +8216,20 @@ const TEAM_CUSTOM_PICKS: Record<string, NbaDraftPickEntry[]> = {
       year: 2032,
       round: 2,
       kind: "own",
-      badgeType: "own",
-      shortLabelJa: "自前",
-      shortLabelEn: "OWN",
-      detailsJa: "NOP 自前 2巡目",
-      detailsEn: "NOP Own 2nd",
+      badgeType: "swap",
+      isSwap: true,
+      swapWithTeamId: "MEM",
+      protectionTag: "SWAP MEM",
+      shortLabelJa: "自前 (MEMスワップ対象)",
+      shortLabelEn: "Own (MEM swap)",
+      detailsJa: "NOP 自前 2巡目 (MEM が MEM/PHI/UTA 最良とスワップ可能)",
+      detailsEn: "NOP Own 2nd (Subject to MEM swap vs best of MEM/PHI/UTA)",
+      conditionsJa: [
+        "メンフィスが MEM/PHI/UTA の最良 2巡目とこの NOP 自前をスワップする権利を保有（2026 MEM–NOP）",
+      ],
+      conditionsEn: [
+        "MEM may swap the most favorable of MEM/PHI/UTA 2032 2nds for this NOP own 2nd (2026 MEM–NOP)",
+      ],
     },
 
     // 2033
@@ -8609,6 +8630,24 @@ const TEAM_CUSTOM_PICKS: Record<string, NbaDraftPickEntry[]> = {
       conditionsJa: ["MEM・IND・MIA絡みの複合スワップ処理後に残る2巡目を保有"],
       conditionsEn: ["Retains 2nd round pick after multi-team swap with IND and MIA"],
     },
+    {
+      id: "mem-2031-2-tor",
+      year: 2031,
+      round: 2,
+      kind: "incoming",
+      badgeType: "from",
+      fromTeamId: "TOR",
+      shortLabelJa: "TOR (via NOP)",
+      shortLabelEn: "TOR (via NOP)",
+      detailsJa: "TOR 2巡目 (NOP経由)",
+      detailsEn: "via TOR 2nd (via NOP)",
+      conditionsJa: [
+        "トロント・ラプターズ（TOR）の2巡目（元 NOP 保有）。2026年 MEM–NOP 取引で獲得",
+      ],
+      conditionsEn: [
+        "Toronto 2031 2nd previously held by NOP; acquired via 2026 MEM–NOP trade",
+      ],
+    },
 
     // 2032
     {
@@ -8631,13 +8670,20 @@ const TEAM_CUSTOM_PICKS: Record<string, NbaDraftPickEntry[]> = {
       kind: "own",
       badgeType: "swap",
       isSwap: true,
-      protectionTag: "SWAP",
-      shortLabelJa: "MEM/PHI/UTA 複合スワップ後",
-      shortLabelEn: "MEM/PHI/UTA Multi Swap",
-      detailsJa: "MEM / PHI / UTA 絡みの複合スワップ後 1本保有",
-      detailsEn: "Retains 2nd round pick after multi-team swap involving MEM, PHI, and UTA",
-      conditionsJa: ["MEM・PHI・UTA絡みの複合スワップ処理後に残る2巡目を保有"],
-      conditionsEn: ["Retains 2nd round pick after multi-team swap with PHI and UTA"],
+      swapWithTeamId: "NOP",
+      protectionTag: "SWAP NOP",
+      shortLabelJa: "MEM/PHI/UTA 最良 ↔ NOP",
+      shortLabelEn: "Best MEM/PHI/UTA ↔ NOP",
+      detailsJa: "MEM / PHI / UTA の最良 2巡目を保有し、NOP 自前とスワップ可能",
+      detailsEn: "Most favorable of MEM/PHI/UTA 2nd, with right to swap for NOP own 2nd",
+      conditionsJa: [
+        "MEM・PHI・UTAのうち最も良い2巡目を保有（既存スワップ）",
+        "その最良と NOP 自前 2巡目をスワップする権利（2026 MEM–NOP / Bobby Marks）",
+      ],
+      conditionsEn: [
+        "Holds the most favorable of MEM, PHI, and UTA 2032 2nds",
+        "May swap that pick for NOP's own 2032 2nd (2026 MEM–NOP; per Bobby Marks)",
+      ],
     },
     {
       id: "mem-2032-2-gsw-prot",
