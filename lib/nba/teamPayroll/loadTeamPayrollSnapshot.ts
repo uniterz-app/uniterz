@@ -54,7 +54,18 @@ function resolveLines(raw: unknown): NbaTeamPayrollLine[] {
         ? ("MO" as const)
         : null;
     if (!playerId || !name) continue;
-    out.push({ playerId, name, salary, share, isTwoWay, option });
+    const baseSalary = isFiniteNumber(row.baseSalary) ? row.baseSalary : undefined;
+    const capHit = isFiniteNumber(row.capHit) ? row.capHit : undefined;
+    out.push({
+      playerId,
+      name,
+      salary,
+      ...(baseSalary != null ? { baseSalary } : {}),
+      ...(capHit != null ? { capHit } : {}),
+      share,
+      isTwoWay,
+      option,
+    });
   }
   return out;
 }

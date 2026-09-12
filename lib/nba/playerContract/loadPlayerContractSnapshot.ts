@@ -12,6 +12,7 @@ import {
   type NbaPlayerContractApiPayload,
   type NbaPlayerContractDoc,
 } from "@/lib/nba/playerContract/playerContractTypes";
+import { playerIdLookupSet } from "@/lib/nba/playerIdAliases";
 
 export function normalizePlayerContractSeasonKey(
   raw: string | null | undefined
@@ -76,8 +77,18 @@ export async function loadPlayerContractSnapshot(
     };
   }
 
-  const snap = await playerContractDocRef(db, season, id).get();
-  if (!snap.exists) {
+  let data: NbaPlayerContractDoc | null = null;
+  for (const cand of playerIdLookupSet(id)) {
+    const snap = await playerContractDocRef(db, season, cand).get();
+    if (!snap.exists) continue;
+    const row = snap.data() as NbaPlayerContractDoc;
+    if (row.contract && typeof row.contract === "object") {
+      data = row;
+      break;
+    }
+  }
+
+  if (!data) {
     return {
       ok: true,
       season,
@@ -88,7 +99,6 @@ export async function loadPlayerContractSnapshot(
     };
   }
 
-  const data = snap.data() as NbaPlayerContractDoc;
   const contract =
     data.contract && typeof data.contract === "object"
       ? data.contract

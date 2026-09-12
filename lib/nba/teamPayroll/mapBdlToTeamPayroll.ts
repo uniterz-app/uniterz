@@ -14,6 +14,7 @@ import type {
 import type { NbaTeamPayrollDocTeam } from "./teamPayrollTypes";
 import type { NbaRosterPlayer } from "@/lib/predict/nbaRoster";
 import { curatedOptionForPlayerSeason } from "./nbaCuratedPlayerOptions";
+import { playerIdsAreAliases } from "@/lib/nba/playerIdAliases";
 
 function resolvePayrollLineOption(
   playerId: string,
@@ -137,25 +138,24 @@ function money(n: unknown): number {
 
 /**
  * BDL でロスター用 ID と契約用 ID が食い違う選手。
- * 例: Jaylin Williams — players `38017706` / contracts `1028257789`
+ * 正: `lib/nba/playerIdAliases.ts`
  */
-const PAYROLL_PLAYER_ID_ALIASES: ReadonlyArray<ReadonlySet<string>> = [
-  new Set(["38017706", "1028257789"]), // Jaylin Williams
-];
-
 function payrollPlayerIdsAlias(a: string, b: string): boolean {
-  if (!a || !b || a === b) return false;
-  return PAYROLL_PLAYER_ID_ALIASES.some((set) => set.has(a) && set.has(b));
+  return playerIdsAreAliases(a, b);
 }
 
-/** 名前キーを A-Z のみに正規化 */
+/** 名前キーを A-Z のみに正規化（II/JR 等サフィックス除去） */
 function payrollNameKey(name: string): string {
-  return name.toUpperCase().replace(/[^A-Z]/g, "");
+  return name
+    .toUpperCase()
+    .replace(/\b(II|III|IV|JR|SR)\b/g, "")
+    .replace(/[^A-Z]/g, "");
 }
 
 /**
  * ペイロール行名とロスター名の完全一致のみ。
- * 前方一致・部分一致・イニシャルのみ（JWILLIAMS 等）・年俸帯ヒューリスティックは使わない。
+ * 頭文字+姓（J.WILLIAMS）は禁止 — Jeenathan(GSW) が Jalen(OKC) に食い込むため。
+ * ID / エイリアス一致を正とし、名前はフルネームキーのみ。
  */
 function payrollNamesExactMatch(
   lineName: string,
@@ -231,8 +231,12 @@ export function linesFromContractRows(
   const lineMap = new Map<string, NbaTeamPayrollLine>();
 
   for (const row of rows) {
-    const salary =
+    const baseSalary =
+      money(row.base_salary) || money(row.cap_hit) || money(row.total_cash);
+    const capHit =
       money(row.cap_hit) || money(row.base_salary) || money(row.total_cash);
+    /** チーム総年俸・エプロンは cap が正 */
+    const salary = capHit;
     const contractTypeStr = String(row.contract_type ?? "").toLowerCase();
     const signedUsingStr = String(row.signed_using ?? "").toLowerCase();
     const isTwoWay =
@@ -241,7 +245,7 @@ export function linesFromContractRows(
       signedUsingStr.includes("two-way") ||
       signedUsingStr.includes("2-way");
 
-    if (salary <= 0 && !isTwoWay) continue;
+    if (salary <= 0 && !isTwoWay && baseSalary <= 0) continue;
     const first = (row.player?.first_name ?? "").trim();
     const last = (row.player?.last_name ?? "").trim();
     const playerId = String(
@@ -254,6 +258,9 @@ export function linesFromContractRows(
       lastName: last || playerId,
       id: playerId,
     });
+    /** 突合用はフルネーム（カード名 J.WILLIAMS は同姓衝突するため使わない） */
+    const matchName =
+      [first, last].filter(Boolean).join(" ").trim() || displayName;
 
     const upperFirst = first.toUpperCase();
     const upperLast = last.toUpperCase();
@@ -421,8 +428,10 @@ export function linesFromContractRows(
     if (!existing || salary > existing.salary || (!existing.isTwoWay && isTwoWay)) {
       lineMap.set(key, {
         playerId,
-        name: displayName,
-        salary,
+        name: matchName,
+        salary: isTwoWay ? 0 : salary,
+        baseSalary: isTwoWay ? 0 : baseSalary,
+        capHit: isTwoWay ? 0 : capHit,
         share: 0,
         isTwoWay,
         option,
@@ -440,6 +449,21 @@ export function linesFromContractRows(
  * ロスターの全選手が名簿に含まれ、ロスターに存在しない選手は除外される。
  * BDLにデータがない選手は推測で埋めず 0（$0 / —）とする。
  */
+function rosterClaimsContractPlayerId(
+  rosterPlayers: NbaRosterPlayer[],
+  contractPlayerId: string,
+  exceptRosterId: string
+): boolean {
+  const cid = String(contractPlayerId ?? "").trim();
+  if (!cid) return false;
+  for (const other of rosterPlayers) {
+    const oid = String(other.id ?? "").trim();
+    if (!oid || oid === exceptRosterId) continue;
+    if (oid === cid || payrollPlayerIdsAlias(oid, cid)) return true;
+  }
+  return false;
+}
+
 export function buildSynchronizedTeamPayrollLines(
   rosterPlayers: NbaRosterPlayer[] | undefined | null,
   rawPayrollLines: NbaTeamPayrollLine[] | undefined | null,
@@ -465,7 +489,7 @@ export function buildSynchronizedTeamPayrollLines(
 
       // 既存の payroll.lines (BDL正データ) から同選手を検索
       // 1) playerId / 別名一致を最優先
-      // 2) なければ名前の完全一致のみ（前方一致・部分一致・年俸ヒューリスティック禁止）
+      // 2) なければフルネーム完全一致のみ（頭文字+姓禁止）。別ロスター選手が既にその契約 ID を主張している行は除外
       const idMatchedLines = (rawPayrollLines ?? []).filter((l) => {
         if (!pId || !l.playerId) return false;
         return l.playerId === pId || payrollPlayerIdsAlias(pId, l.playerId);
@@ -474,16 +498,12 @@ export function buildSynchronizedTeamPayrollLines(
         idMatchedLines.length > 0
           ? []
           : (rawPayrollLines ?? []).filter((l) => {
-              // 別選手の契約行（playerId 付き）には名前で食い込まない
               if (
-                pId &&
                 l.playerId &&
-                l.playerId !== pId &&
-                !payrollPlayerIdsAlias(pId, l.playerId)
+                rosterClaimsContractPlayerId(rosterPlayers, l.playerId, pId)
               ) {
                 return false;
               }
-              // 表示名（C.HOLMGREN）ではなく、フルネームキーで完全一致
               return payrollNamesExactMatch(
                 l.name,
                 upperFirst,
@@ -496,6 +516,14 @@ export function buildSynchronizedTeamPayrollLines(
       );
 
       let rawSalary = existingLine ? existingLine.salary : 0;
+      let rawBase =
+        existingLine?.baseSalary != null && existingLine.baseSalary > 0
+          ? existingLine.baseSalary
+          : rawSalary;
+      let rawCap =
+        existingLine?.capHit != null && existingLine.capHit > 0
+          ? existingLine.capHit
+          : rawSalary;
       const option = existingLine?.option ?? null;
       let forcedStandardContract = false;
 
@@ -503,15 +531,21 @@ export function buildSynchronizedTeamPayrollLines(
       if (isCurrentSeason) {
         if (pId === "56677857" || (upperFirst === "JULIAN" && upperLast === "PHILLIPS")) {
           rawSalary = 2537526;
+          rawBase = 2537526;
+          rawCap = 2537526;
           forcedStandardContract = true;
         }
         if (pId === "56677778" || (upperFirst === "OSCAR" && upperLast === "TSHIEBWE")) {
           rawSalary = 2537526;
+          rawBase = 2537526;
+          rawCap = 2537526;
           forcedStandardContract = true;
         }
         // Bogdan Bogdanovic ロケッツ所属時はベテランミニマム $2,449,421
         if (pId === "53" || (upperFirst === "BOGDAN" && upperLast.includes("BOGDANOVIC"))) {
           rawSalary = 2449421;
+          rawBase = 2449421;
+          rawCap = 2449421;
           forcedStandardContract = true;
         }
         // Jaylin Williams: ロスター ID と契約 ID が別。旧 ingest の偽 TW 行だけ残っている場合の補正
@@ -522,13 +556,16 @@ export function buildSynchronizedTeamPayrollLines(
           (upperFirst === "JAYLIN" && upperLast === "WILLIAMS")
         ) {
           rawSalary = Math.max(rawSalary, 7_774_648);
+          rawBase = Math.max(rawBase, rawSalary);
+          rawCap = Math.max(rawCap, rawSalary);
           forcedStandardContract = true;
         }
       }
 
       // 今季 (2026-27) のみ Two-Way 判定を適用。将来季は Two-Way 適用なし
-      // BDL の team contracts は標準契約のみ返すことが多い → ロスターにいて年俸 0 は TW
-      // （ID 完全一致・別名で標準契約が付く選手はここに落ちない）
+      // BDL active に TW フラグがなく、team contracts も TW を返さないことが多い。
+      // → ロスターにいるが標準契約行に突合できない選手を TW とみなす。
+      // （標準契約は ID / エイリアス / フルネーム完全一致で先に付く。突合漏れで偽 TW にしない）
       if (isCurrentSeason) {
         const explicitTwoWay =
           (p.position ?? "").toLowerCase().includes("two-way") ||
@@ -536,30 +573,37 @@ export function buildSynchronizedTeamPayrollLines(
           (p.position ?? "").toLowerCase() === "tw" ||
           p.isTwoWay === true ||
           existingLine?.isTwoWay === true;
+        const noStandardSalary = rawSalary <= 0 && rawBase <= 0;
         const isTwoWay =
-          !forcedStandardContract && (explicitTwoWay || rawSalary <= 0);
+          !forcedStandardContract && (explicitTwoWay || noStandardSalary);
 
         const salary = isTwoWay ? 0 : rawSalary;
-        // 標準契約年俸なし & TW でもない → ペイロールに載せない（将来季用）
-        if (salary <= 0 && !isTwoWay) continue;
+        const baseSalary = isTwoWay ? 0 : rawBase;
+        const capHit = isTwoWay ? 0 : rawCap;
+        // 標準契約年俸なし & TW でもない → ペイロールに載せない
+        if (salary <= 0 && baseSalary <= 0 && !isTwoWay) continue;
 
         const key = pId || displayName;
         lineMap.set(key, {
           playerId: pId,
           name: displayName,
           salary,
+          baseSalary,
+          capHit,
           share: 0,
           isTwoWay,
           option: isTwoWay ? null : option,
         });
       } else {
         // 将来季: BDL実契約 (salary > 0) のある選手のみ追加
-        if (rawSalary > 0) {
+        if (rawSalary > 0 || rawBase > 0) {
           const key = pId || displayName;
           lineMap.set(key, {
             playerId: pId,
             name: displayName,
-            salary: rawSalary,
+            salary: rawSalary || rawBase,
+            baseSalary: rawBase || rawSalary,
+            capHit: rawCap || rawSalary || rawBase,
             share: 0,
             isTwoWay: false,
             option,
@@ -609,11 +653,17 @@ export function buildSynchronizedTeamPayrollLines(
   }
 
   const result = Array.from(lineMap.values());
-  // 年俸降順（2-Way選手は末尾、同額は名前昇順）
+  // 表示年俸（base 優先）降順。2-Way は末尾、同額は名前昇順
+  const cash = (l: NbaTeamPayrollLine) =>
+    l.isTwoWay
+      ? 0
+      : l.baseSalary != null && l.baseSalary > 0
+        ? l.baseSalary
+        : l.salary;
   result.sort((a, b) => {
     if (a.isTwoWay && !b.isTwoWay) return 1;
     if (!a.isTwoWay && b.isTwoWay) return -1;
-    return b.salary - a.salary || a.name.localeCompare(b.name);
+    return cash(b) - cash(a) || a.name.localeCompare(b.name);
   });
   return result;
 }

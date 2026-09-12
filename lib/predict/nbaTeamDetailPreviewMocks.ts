@@ -374,8 +374,16 @@ export type NbaTeamPayrollLine = {
   playerId: string;
   /** 表示名（例: L.DONCIC） */
   name: string;
+  /**
+   * キャップヒット（チーム総年俸・エプロン算入の正）。
+   * Two-Way は 0。
+   */
   salary: number;
-  /** 総年俸に占める割合 0–1 */
+  /** 現金年俸（base）。ミニマムで cap と分かれるとき用。無ければ salary と同じ扱い */
+  baseSalary?: number;
+  /** 明示 cap（salary と同値のことが多い） */
+  capHit?: number;
+  /** 総年俸に占める割合 0–1（cap ベース） */
   share: number;
   /** 2-Way 契約フラグ（サラリーキャップ非算入） */
   isTwoWay?: boolean;
@@ -910,7 +918,10 @@ const PAYROLL_SEG_FALLBACK = [
 export type NbaTeamPayrollSlice = {
   key: string;
   label: string;
+  /** キャップヒット（チーム合計・%） */
   salary: number;
+  /** 行に出す現金年俸（無ければ salary） */
+  displaySalary?: number;
   share: number;
   color: string;
   isTwoWay?: boolean;
@@ -920,6 +931,7 @@ export type NbaTeamPayrollSlice = {
 /**
  * ペイロール積み上げバー / リスト用スライス。
  * `topN` 省略時は全員表示（OTHER なし）。数値を渡すと上位 N + OTHER。
+ * 並びは表示年俸（base 優先、なければ cap）の降順。TW は末尾。
  */
 export function payrollDisplaySlices(
   lines: NbaTeamPayrollLine[],
@@ -931,39 +943,59 @@ export function payrollDisplaySlices(
       ? accent
       : PAYROLL_SEG_FALLBACK[(i - 1) % PAYROLL_SEG_FALLBACK.length]!;
 
-  // 契約がある選手（給与 > 0）または 2-Way 選手のみをペイロール内訳に表示
-  const activeLines = lines.filter((l) => l.salary > 0 || l.isTwoWay === true);
+  const lineCash = (l: NbaTeamPayrollLine): number => {
+    if (l.isTwoWay === true) return 0;
+    if (l.baseSalary != null && l.baseSalary > 0) return l.baseSalary;
+    return l.salary;
+  };
+
+  // 契約がある選手（cap または base > 0）または 2-Way のみ
+  const activeLines = lines
+    .filter(
+      (l) =>
+        l.salary > 0 ||
+        (l.baseSalary != null && l.baseSalary > 0) ||
+        l.isTwoWay === true
+    )
+    .slice()
+    .sort((a, b) => {
+      const aTw = a.isTwoWay === true ? 1 : 0;
+      const bTw = b.isTwoWay === true ? 1 : 0;
+      if (aTw !== bTw) return aTw - bTw;
+      return lineCash(b) - lineCash(a) || a.name.localeCompare(b.name);
+    });
+
+  const toSlice = (l: NbaTeamPayrollLine, i: number): NbaTeamPayrollSlice => ({
+    key: l.playerId,
+    label: l.name,
+    salary: l.salary,
+    displaySalary:
+      l.isTwoWay === true
+        ? undefined
+        : l.baseSalary != null && l.baseSalary > 0
+          ? l.baseSalary
+          : l.salary,
+    share: l.share,
+    color: colorAt(i),
+    isTwoWay: l.isTwoWay === true,
+    option: l.option ?? null,
+  });
 
   if (topN == null || topN >= activeLines.length) {
-    return activeLines.map((l, i) => ({
-      key: l.playerId,
-      label: l.name,
-      salary: l.salary,
-      share: l.share,
-      color: colorAt(i),
-      isTwoWay: l.isTwoWay === true,
-      option: l.option ?? null,
-    }));
+    return activeLines.map((l, i) => toSlice(l, i));
   }
 
   const top = activeLines.slice(0, topN);
   const rest = activeLines.slice(topN);
   const otherSalary = rest.reduce((s, l) => s + l.salary, 0);
   const otherShare = rest.reduce((s, l) => s + l.share, 0);
-  const slices: NbaTeamPayrollSlice[] = top.map((l, i) => ({
-    key: l.playerId,
-    label: l.name,
-    salary: l.salary,
-    share: l.share,
-    color: colorAt(i),
-    isTwoWay: l.isTwoWay === true,
-    option: l.option ?? null,
-  }));
+  const slices: NbaTeamPayrollSlice[] = top.map((l, i) => toSlice(l, i));
   if (otherSalary > 0) {
     slices.push({
       key: "other",
       label: "OTHER",
       salary: otherSalary,
+      displaySalary: otherSalary,
       share: otherShare,
       color: "rgba(255,255,255,0.22)",
     });

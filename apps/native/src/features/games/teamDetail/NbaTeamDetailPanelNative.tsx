@@ -819,7 +819,9 @@ function PayrollSection({
             const isTw = s.isTwoWay === true && active.key === CURRENT_NBA_SEASON_KEY;
             const displaySalary = isTw
               ? nbaTwoWaySalaryForSeason(active.key)
-              : s.salary;
+              : s.displaySalary != null && s.displaySalary > 0
+                ? s.displaySalary
+                : s.salary;
             const capPct =
               !isTw && s.salary > 0 && active.salaryCap > 0
                 ? ((s.salary / active.salaryCap) * 100).toFixed(1)
