@@ -846,19 +846,13 @@ html {
   /* clip / 枠 / 色は `.cyber-menu-btn--close` に委譲 */
 }
 
-/* 角切り黄枠 — ハンバーガー / 共有（基準 `#facc15`）。×=シアン / ペン=アンバーは別クラス */
+/* 直角四角枠 — ハンバーガー / 共有（基準 `#facc15`）。×=シアン / ペン=アンバーは別クラス */
 .cyber-menu-btn,
 .predict-overlay-menu-btn {
   position: relative;
-  overflow: hidden;
-  clip-path: polygon(
-    5px 0%,
-    100% 0%,
-    100% calc(100% - 5px),
-    calc(100% - 5px) 100%,
-    0% 100%,
-    0% 5px
-  );
+  overflow: visible;
+  clip-path: none;
+  border-radius: 0;
   border: 1px solid rgba(250, 204, 21, 0.42);
   background: rgba(4, 10, 18, 0.84);
   color: rgba(250, 204, 21, 0.95);
@@ -871,6 +865,7 @@ html {
     background 0.2s ease,
     box-shadow 0.2s ease,
     color 0.2s ease;
+  box-sizing: border-box;
 }
 
 .cyber-menu-btn:hover,
@@ -1095,20 +1090,14 @@ html {
   max-width: 2.5rem !important;
 }
 
-/* 試合ヘッダー絞り込み：バーガー（.cyber-menu-btn）と同じ clip / 影 / 高さ */
+/* 試合ヘッダー絞り込み：バーガー（.cyber-menu-btn）と同じ直角枠 / 影 / 高さ */
 .cyber-filter-bar.games-header-control-h,
 .cyber-filter-bar.cyber-filter-bar--header.games-header-control-h {
   padding-top: 0 !important;
   padding-bottom: 0 !important;
   line-height: 1 !important;
-  clip-path: polygon(
-    5px 0%,
-    100% 0%,
-    100% calc(100% - 5px),
-    calc(100% - 5px) 100%,
-    0% 100%,
-    0% 5px
-  );
+  clip-path: none;
+  border-radius: 0;
   border-color: rgba(0, 245, 255, 0.34);
   background: rgba(4, 10, 18, 0.84);
   backdrop-filter: blur(6px);

@@ -12,6 +12,7 @@ import {
   type NbaPlayerStatLeadersBundle,
 } from "@/lib/predict/nbaPlayerStatLeadersMocks";
 import { NBA_PLAYER_ADVANCED_LEADER_METRICS } from "@/lib/predict/nbaPlayerStatLeadersAdvanced";
+import { NBA_PLAYER_COUNT_LEADER_METRICS } from "@/lib/predict/nbaPlayerCountLeaderMetrics";
 import { fetchPlayerStatLeaders } from "@/lib/nba/playerStatLeaders/fetchPlayerStatLeadersClient";
 import {
   createSnapshotFetchCache,
@@ -38,6 +39,9 @@ function emptyPlayerLeadersBoard(): Record<
     board[m.id] = [];
   }
   for (const m of NBA_PLAYER_ADVANCED_LEADER_METRICS) {
+    board[m.id] = [];
+  }
+  for (const m of NBA_PLAYER_COUNT_LEADER_METRICS) {
     board[m.id] = [];
   }
   return board as Record<NbaPlayerLeaderMetricId, NbaPlayerStatLeaderRow[]>;

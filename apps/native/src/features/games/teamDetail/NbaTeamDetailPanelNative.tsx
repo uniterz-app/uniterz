@@ -1,6 +1,6 @@
 /** Team Detail 再構築 — 参考ダッシュボード UI をそのまま再現（微調整前提） */
 import { useMemo, useState } from "react";
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View, type StyleProp, type TextStyle } from "react-native";
 import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -63,9 +63,20 @@ import {
   nbaTeamDetailUiCopy,
   type NbaTeamDetailUiCopy,
 } from "./nbaTeamDetailUiCopy";
+import {
+  draftFlexibilityLabel,
+  draftPickBodyLines,
+  draftPickBodyText,
+} from "../../../../../../lib/nba/draftPicks/nbaDraftAssetsUiCopy";
+import { draftTextSegmentsWithTeamColors } from "../../../../../../lib/nba/draftPicks/draftTextTeamColors";
 import { useLeagueTeamStatsBundle } from "../../../../../../lib/nba/useLeagueTeamStatsBundle";
 import { useNbaTeamDetailLiveOverlay } from "../../../../../../lib/nba/teamDetail/useNbaTeamDetailLiveOverlay";
 import type { NbaTeamDetailShapeEdges } from "../../../../../../lib/nba/teamShapes/fetchTeamShapeEdgesClient";
+import {
+  resolveTeamShapeCondition,
+  resolveTeamShapeEdgeKindLabel,
+  resolveTeamShapeLabel,
+} from "../../../../../../lib/nba/teamShapes/shapeDefs";
 import { buildTeamDetailInsights } from "../../../../../../lib/nba/detailInsights/buildTeamDetailInsights";
 import {
   DetailIdentityChipRowNative,
@@ -80,8 +91,6 @@ import { getNbaTeamDraftCapital } from "../../../../../../lib/nba/draftPicks/nba
 import { resolveDraftPickOrigin } from "../../../../../../lib/nba/draftPicks/nbaDraftPickViaTrade";
 import type {
   NbaDraftPickEntry,
-  NbaDraftPickKind,
-  NbaTeamDraftCapital,
 } from "../../../../../../lib/nba/draftPicks/draftPicksTypes";
 
 type Props = {
@@ -570,11 +579,11 @@ function shapeDeltaPpLabel(deltaWinPct: number): string {
 function TeamShapeEdgesSectionNative({
   shapeEdges,
   accent,
-  isJa,
+  lang,
 }: {
   shapeEdges: NbaTeamDetailShapeEdges | null;
   accent: string;
-  isJa: boolean;
+  lang: import("../../../../../../lib/i18n/localize").LocalizedLang;
 }) {
   if (!shapeEdges?.edges.length) return null;
   const frame = hexToRgba(accent, 0.3);
@@ -604,13 +613,7 @@ function TeamShapeEdgesSectionNative({
       {shapeEdges.edges.map((edge) => {
         const strength = edge.kind === "strength";
         const kindColor = strength ? "#00F5FF" : "#FF8A00";
-        const kindLabel = strength
-          ? isJa
-            ? "得意"
-            : "STRENGTH"
-          : isJa
-            ? "苦手"
-            : "WEAKNESS";
+        const kindLabel = resolveTeamShapeEdgeKindLabel(edge.kind, lang);
         return (
           <View
             key={`${edge.kind}-${edge.shapeId}`}
@@ -622,11 +625,17 @@ function TeamShapeEdgesSectionNative({
                   {kindLabel}
                 </Text>
                 <Text style={styles.edgeLabel} numberOfLines={1}>
-                  {isJa ? edge.labelJa : edge.labelEn}
+                  {resolveTeamShapeLabel(edge.shapeId, lang, {
+                    ja: edge.labelJa,
+                    en: edge.labelEn,
+                  })}
                 </Text>
               </View>
               <Text style={styles.edgeCondition} numberOfLines={2}>
-                {isJa ? edge.conditionJa : edge.conditionEn}
+                {resolveTeamShapeCondition(edge.shapeId, lang, {
+                  ja: edge.conditionJa,
+                  en: edge.conditionEn,
+                })}
               </Text>
             </View>
             <View style={styles.edgeStats}>
@@ -1045,6 +1054,30 @@ function PayrollSection({
   );
 }
 
+function DraftTeamColoredTextNative({
+  text,
+  style,
+  baseColor = "rgba(255,255,255,0.88)",
+}: {
+  text: string;
+  style?: StyleProp<TextStyle>;
+  baseColor?: string;
+}) {
+  const segs = draftTextSegmentsWithTeamColors(text);
+  return (
+    <Text style={[{ color: baseColor }, style]}>
+      {segs.map((seg, i) => (
+        <Text
+          key={`${i}-${seg.text.slice(0, 16)}`}
+          style={seg.color ? { color: seg.color } : undefined}
+        >
+          {seg.text}
+        </Text>
+      ))}
+    </Text>
+  );
+}
+
 function DraftPicksSection({
   teamId,
   accent,
@@ -1054,7 +1087,6 @@ function DraftPicksSection({
   accent: string;
   ui: NbaTeamDetailUiCopy;
 }) {
-  const isJa = ui.lang === "ja";
   const draftCapital = useMemo(() => getNbaTeamDraftCapital(teamId), [teamId]);
   const { summary } = draftCapital;
   const frame = hexToRgba(accent, 0.45);
@@ -1094,7 +1126,7 @@ function DraftPicksSection({
               ]}
             >
               <Text style={[styles.draftFlexibilityText, { color: flexColor }]}>
-                {isJa ? summary.flexibilityJa : summary.flexibility}
+                {draftFlexibilityLabel(ui.lang, summary.flexibility)}
               </Text>
             </View>
           </View>
@@ -1285,11 +1317,15 @@ function DraftPicksSection({
                       {selectedPick.year} NBA DRAFT •{" "}
                       {selectedPick.round === 1 ? "1ST ROUND" : "2ND ROUND"}
                     </Text>
-                    <Text style={styles.draftModalMainTitle}>
-                      {isJa
-                        ? selectedPick.detailsJa ?? selectedPick.detailsEn
-                        : selectedPick.detailsEn ?? selectedPick.detailsJa}
-                    </Text>
+                    <DraftTeamColoredTextNative
+                      text={draftPickBodyText(
+                        ui.lang,
+                        selectedPick.detailsJa,
+                        selectedPick.detailsEn
+                      )}
+                      style={styles.draftModalMainTitle}
+                      baseColor="#FFFFFF"
+                    />
                   </View>
                   <Pressable
                     hitSlop={8}
@@ -1304,14 +1340,25 @@ function DraftPicksSection({
                 <View style={styles.draftModalTagRow}>
                   {selectedPick.badgeType && (
                     <View style={styles.draftModalTagBadge}>
-                      <Text style={styles.draftModalTagBadgeText}>
-                        {draftBadgeHeadline(selectedPick.badgeType, ui, selectedPick)}
-                      </Text>
+                      <DraftTeamColoredTextNative
+                        text={draftBadgeHeadline(
+                          selectedPick.badgeType,
+                          ui,
+                          selectedPick
+                        )}
+                        style={styles.draftModalTagBadgeText}
+                        baseColor="rgba(255,255,255,0.9)"
+                      />
                     </View>
                   )}
                   {selectedPick.protection && (
-                    <View style={[styles.draftModalTagBadge, { backgroundColor: "rgba(255,184,0,0.15)", borderColor: "rgba(255,184,0,0.4)" }]}>
-                      <Text style={[styles.draftModalTagBadgeText, { color: "#FFB800" }]}>
+                    <View style={styles.draftModalTagBadge}>
+                      <Text
+                        style={[
+                          styles.draftModalTagBadgeText,
+                          { color: "rgba(255,255,255,0.75)" },
+                        ]}
+                      >
                         {selectedPick.protection}
                       </Text>
                     </View>
@@ -1320,17 +1367,30 @@ function DraftPicksSection({
 
                 {(() => {
                   const origin = resolveDraftPickOrigin(selectedPick);
-                  const body = (isJa ? origin.textJa : origin.textEn).trim();
+                  const body = draftPickBodyText(
+                    ui.lang,
+                    origin.textJa,
+                    origin.textEn
+                  );
                   return (
                     <View style={styles.draftModalBodyBox}>
                       <Text style={styles.draftModalBodyLabel}>
-                        {isJa ? origin.labelJa : origin.labelEn}
+                        {draftPickBodyText(
+                          ui.lang,
+                          origin.labelJa,
+                          origin.labelEn
+                        )}
                       </Text>
-                      <Text style={styles.draftOriginBodyText}>
-                        {body.length > 0
-                          ? body
-                          : ui.noOrigin}
-                      </Text>
+                      {body.length > 0 ? (
+                        <DraftTeamColoredTextNative
+                          text={body}
+                          style={styles.draftOriginBodyText}
+                        />
+                      ) : (
+                        <Text style={styles.draftOriginBodyText}>
+                          {ui.noOrigin}
+                        </Text>
+                      )}
                     </View>
                   );
                 })()}
@@ -1340,22 +1400,40 @@ function DraftPicksSection({
                   <Text style={styles.draftModalBodyLabel}>
                     {ui.conditionsTitle}
                   </Text>
-                  {selectedPick.conditionsJa && selectedPick.conditionsJa.length > 0 ? (
-                    (isJa ? selectedPick.conditionsJa : selectedPick.conditionsEn ?? selectedPick.conditionsJa).map(
-                      (c, idx) => (
+                  {(() => {
+                    const lines = draftPickBodyLines(
+                      ui.lang,
+                      selectedPick.conditionsJa,
+                      selectedPick.conditionsEn
+                    );
+                    if (lines.length > 0) {
+                      return lines.map((c, idx) => (
                         <View key={idx} style={styles.draftConditionItem}>
                           <Text style={styles.draftConditionBullet}>•</Text>
-                          <Text style={styles.draftConditionText}>{c}</Text>
+                          <DraftTeamColoredTextNative
+                            text={c}
+                            style={styles.draftConditionText}
+                          />
                         </View>
-                      )
-                    )
-                  ) : (
-                    <Text style={styles.draftConditionText}>
-                      {isJa
-                        ? selectedPick.detailsJa ?? ui.noExtraProtection
-                        : selectedPick.detailsEn ?? ui.noExtraProtection}
-                    </Text>
-                  )}
+                      ));
+                    }
+                    const fallback = draftPickBodyText(
+                      ui.lang,
+                      selectedPick.detailsJa,
+                      selectedPick.detailsEn
+                    );
+                    return fallback ? (
+                      <DraftTeamColoredTextNative
+                        text={fallback}
+                        style={styles.draftConditionText}
+                        baseColor="rgba(255,255,255,0.7)"
+                      />
+                    ) : (
+                      <Text style={styles.draftConditionText}>
+                        {ui.noExtraProtection}
+                      </Text>
+                    );
+                  })()}
                 </View>
 
                 {/* Close Button */}
@@ -1381,7 +1459,6 @@ function renderNativePickChip(
   ui: NbaTeamDetailUiCopy,
   onPress: () => void
 ) {
-  const isJa = ui.lang === "ja";
   const badgeType = p.badgeType ?? "own";
   const isForfeited =
     p.kind === "forfeited" || badgeType === "forfeited";
@@ -1430,9 +1507,9 @@ function renderNativePickChip(
     tagText = p.fromTeamId ? `FROM ${p.fromTeamId}` : ui.tagFrom;
   }
 
-  const label = isJa
-    ? p.shortLabelJa ?? p.detailsJa ?? p.detailsEn
-    : p.shortLabelEn ?? p.detailsEn ?? p.detailsJa;
+  const label =
+    draftPickBodyText(ui.lang, p.shortLabelJa, p.shortLabelEn) ||
+    draftPickBodyText(ui.lang, p.detailsJa, p.detailsEn);
 
   return (
     <Pressable
@@ -1760,7 +1837,7 @@ export default function NbaTeamDetailPanelNative({
             <TeamShapeEdgesSectionNative
               shapeEdges={shapeEdges}
               accent={accent}
-              isJa={isJa}
+              lang={lang}
             />
           </>
         ) : null}
@@ -2449,7 +2526,7 @@ const styles = StyleSheet.create({
     maxWidth: 380,
     backgroundColor: "#0C0D14",
     borderWidth: 1,
-    borderColor: "rgba(0,245,255,0.5)",
+    borderColor: "rgba(255,255,255,0.25)",
     padding: 18,
     borderRadius: 2,
     gap: 14,
@@ -2468,7 +2545,7 @@ const styles = StyleSheet.create({
   },
   draftModalSubTitle: {
     fontFamily: METRIC_FONT,
-    color: "#00F5FF",
+    color: "rgba(255,255,255,0.55)",
     fontSize: 9.5,
     fontWeight: "800",
     letterSpacing: 0.8,
@@ -2476,7 +2553,6 @@ const styles = StyleSheet.create({
   },
   draftModalMainTitle: {
     fontFamily: METRIC_FONT,
-    color: "#FFFFFF",
     fontSize: 16,
     fontWeight: "800",
   },
@@ -2503,7 +2579,6 @@ const styles = StyleSheet.create({
   },
   draftModalTagBadgeText: {
     fontFamily: METRIC_FONT,
-    color: "#FFFFFF",
     fontSize: 9,
     fontWeight: "700",
     textTransform: "uppercase",
@@ -2511,7 +2586,7 @@ const styles = StyleSheet.create({
   draftModalBodyBox: {
     backgroundColor: "rgba(255,255,255,0.02)",
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.06)",
+    borderColor: "rgba(255,255,255,0.08)",
     padding: 10,
     borderRadius: 2,
     gap: 8,
@@ -2525,7 +2600,6 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
   },
   draftOriginBodyText: {
-    color: "rgba(255,255,255,0.85)",
     fontSize: 12,
     lineHeight: 17,
   },
@@ -2535,13 +2609,12 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   draftConditionBullet: {
-    color: "#00F5FF",
+    color: "rgba(255,255,255,0.4)",
     fontSize: 12,
     lineHeight: 16,
   },
   draftConditionText: {
     flex: 1,
-    color: "rgba(255,255,255,0.85)",
     fontSize: 11.5,
     lineHeight: 16,
   },

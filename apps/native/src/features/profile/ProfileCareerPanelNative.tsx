@@ -5,7 +5,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { useReducedMotion } from "react-native-reanimated";
 import {
   aggregateCareerAwardsFromBadges,
   type ProfileCareerBadgeLike,
@@ -68,7 +67,6 @@ export default function ProfileCareerPanelNative({
   const lang = resolveLocalizedLang(language);
   const isFace = variant === "face";
   const showProSkin = isPro && isFace && proSkinActive && planProBgVariant != null;
-  const reduceMotion = useReducedMotion() === true;
   const flipEar = useProfileKinetikFlipEar();
   const [frameSize, setFrameSize] = useState({ width: 0, height: 0 });
   const faceBorder = showProSkin
@@ -364,7 +362,8 @@ accessibilityLabel={copy.switchBoard}
             <ProfilePlanProBackgroundNative
               width={frameSize.width}
               height={frameSize.height}
-              animate={!reduceMotion}
+              /** 裏は静的表示（enter / ループなし）。表の Rasterize キャッシュを再利用しやすい */
+              animate={false}
               variant={planProBgVariant}
               accentReady
             />
@@ -506,11 +505,11 @@ const styles = StyleSheet.create({
     color: "rgba(255,255,255,0.78)",
   },
   scopeTitleText: {
-    fontFamily: RAJDHANI,
-    fontSize: 16,
-    letterSpacing: 1.6,
+    fontFamily: OXANIUM,
+    fontSize: 15,
+    letterSpacing: 1.4,
     textTransform: "uppercase",
-    fontWeight: "600",
+    fontWeight: "700",
     color: "rgba(255,255,255,0.95)",
   },
   titlePro: {
@@ -561,9 +560,9 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.58)",
   },
   label: {
-    fontFamily: RAJDHANI,
+    fontFamily: OXANIUM,
     fontSize: 9,
-    letterSpacing: 1.8,
+    letterSpacing: 1.6,
     textTransform: "uppercase",
     color: "rgba(255,255,255,0.55)",
   },
@@ -579,6 +578,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     letterSpacing: 0.4,
     color: "rgba(255,255,255,0.9)",
+    fontVariant: ["tabular-nums"],
+    transform: [{ skewX: "-12deg" }],
+    alignSelf: "flex-start",
   },
   valuePro: {
     color: "#ffffff",

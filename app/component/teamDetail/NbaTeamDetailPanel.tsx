@@ -56,14 +56,26 @@ import {
 } from "@/lib/predict/nbaTeamDetailPreviewMocks";
 import { getNbaTeamDraftCapital } from "@/lib/nba/draftPicks/nbaDraftCapitalData";
 import { resolveDraftPickOrigin } from "@/lib/nba/draftPicks/nbaDraftPickViaTrade";
+import {
+  draftBadgeHeadline,
+  draftFlexibilityLabel,
+  draftPickBodyLines,
+  draftPickBodyText,
+  nbaDraftAssetsUiCopy,
+  type NbaDraftAssetsUiCopy,
+} from "@/lib/nba/draftPicks/nbaDraftAssetsUiCopy";
+import { draftTextSegmentsWithTeamColors } from "@/lib/nba/draftPicks/draftTextTeamColors";
 import type {
   NbaDraftPickEntry,
-  NbaDraftPickKind,
-  NbaTeamDraftCapital,
 } from "@/lib/nba/draftPicks/draftPicksTypes";
 import { useLeagueTeamStatsBundle } from "@/lib/nba/useLeagueTeamStatsBundle";
 import { useNbaTeamDetailLiveOverlay } from "@/lib/nba/teamDetail/useNbaTeamDetailLiveOverlay";
 import type { NbaTeamDetailShapeEdges } from "@/lib/nba/teamShapes/fetchTeamShapeEdgesClient";
+import {
+  resolveTeamShapeCondition,
+  resolveTeamShapeEdgeKindLabel,
+  resolveTeamShapeLabel,
+} from "@/lib/nba/teamShapes/shapeDefs";
 import { buildTeamDetailInsights } from "@/lib/nba/detailInsights/buildTeamDetailInsights";
 import {
   DetailIdentityChipRow,
@@ -205,11 +217,11 @@ function shapeDeltaPpLabel(deltaWinPct: number): string {
 function TeamShapeEdgesSection({
   shapeEdges,
   accent,
-  isJa,
+  lang,
 }: {
   shapeEdges: NbaTeamDetailShapeEdges | null;
   accent: string;
-  isJa: boolean;
+  lang: LocalizedLang;
 }) {
   if (!shapeEdges?.edges.length) return null;
   const frame = hexToRgba(accent, 0.3);
@@ -238,13 +250,7 @@ function TeamShapeEdgesSection({
         {shapeEdges.edges.map((edge) => {
           const strength = edge.kind === "strength";
           const kindColor = strength ? "#00F5FF" : "#FF8A00";
-          const kindLabel = strength
-            ? isJa
-              ? "得意"
-              : "STRENGTH"
-            : isJa
-              ? "苦手"
-              : "WEAKNESS";
+          const kindLabel = resolveTeamShapeEdgeKindLabel(edge.kind, lang);
           return (
             <div
               key={`${edge.kind}-${edge.shapeId}`}
@@ -262,13 +268,19 @@ function TeamShapeEdgesSection({
                   <p
                     className={`${nameOxanium.className} truncate text-[11px] font-bold uppercase tracking-[0.08em] text-white/85`}
                   >
-                    {isJa ? edge.labelJa : edge.labelEn}
+                    {resolveTeamShapeLabel(edge.shapeId, lang, {
+                      ja: edge.labelJa,
+                      en: edge.labelEn,
+                    })}
                   </p>
                 </div>
                 <p
                   className={`${nameOxanium.className} text-[9px] font-bold tracking-wide text-white/45`}
                 >
-                  {isJa ? edge.conditionJa : edge.conditionEn}
+                  {resolveTeamShapeCondition(edge.shapeId, lang, {
+                    ja: edge.conditionJa,
+                    en: edge.conditionEn,
+                  })}
                 </p>
               </div>
               <div className="shrink-0 text-right">
@@ -1480,21 +1492,47 @@ function PayrollCard({
   );
 }
 
+function DraftTeamColoredText({
+  text,
+  className,
+  baseColor = "rgba(255,255,255,0.88)",
+}: {
+  text: string;
+  className?: string;
+  baseColor?: string;
+}) {
+  const segs = draftTextSegmentsWithTeamColors(text);
+  return (
+    <span className={className} style={{ color: baseColor }}>
+      {segs.map((seg, i) =>
+        seg.color ? (
+          <span key={`${i}-${seg.text}`} style={{ color: seg.color }}>
+            {seg.text}
+          </span>
+        ) : (
+          <span key={`${i}-${seg.text.slice(0, 12)}`}>{seg.text}</span>
+        )
+      )}
+    </span>
+  );
+}
+
 function DraftPicksCard({
   teamId,
   accent,
-  isJa,
+  language,
 }: {
   teamId: string;
   accent: string;
-  isJa: boolean;
+  language: string;
 }) {
+  const ui = nbaDraftAssetsUiCopy(language);
+  const { lang } = ui;
   const draftCapital = useMemo(() => getNbaTeamDraftCapital(teamId), [teamId]);
   const { summary } = draftCapital;
 
   const [selectedPick, setSelectedPick] = useState<NbaDraftPickEntry | null>(null);
 
-  // 柔軟性バッジの色
   const flexColor =
     summary.flexibility === "VERY HIGH" || summary.flexibility === "HIGH"
       ? "#00F5FF"
@@ -1504,12 +1542,8 @@ function DraftPicksCard({
 
   return (
     <section className="space-y-3">
-      <SectionTitle
-        title={isJa ? "DRAFT ASSETS (ドラフト指名権・資産)" : "DRAFT ASSETS & CAPITAL"}
-        accent={accent}
-      />
+      <SectionTitle title={ui.draftAssetsTitle} accent={accent} />
 
-      {/* ① Summary (資産サマリー) */}
       <div
         className="border bg-black/60 p-3.5 space-y-3"
         style={{ borderColor: hexToRgba(accent, 0.4) }}
@@ -1519,11 +1553,11 @@ function DraftPicksCard({
             <span
               className={`${nameOxanium.className} text-[11px] font-bold uppercase tracking-wider text-white/50`}
             >
-              {isJa ? "ドラフト資産サマリー (2027-2033)" : "ASSETS SUMMARY (7-YEAR HORIZON)"}
+              {ui.draftSummaryTitle}
             </span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="text-[10px] text-white/40">{isJa ? "柔軟性" : "FLEXIBILITY"}</span>
+            <span className="text-[10px] text-white/40">{ui.flex}</span>
             <span
               className={`${nameOxanium.className} px-2 py-0.5 text-[10px] font-extrabold border rounded-[2px]`}
               style={{
@@ -1533,208 +1567,189 @@ function DraftPicksCard({
                 transform: "skewX(-6deg)",
               }}
             >
-              {isJa ? summary.flexibilityJa : summary.flexibility}
+              {draftFlexibilityLabel(lang, summary.flexibility)}
             </span>
           </div>
         </div>
 
-        {/* 4カードグリッド */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          {/* 1巡目 */}
           <div className="bg-white/[0.03] border border-white/10 p-2.5 rounded-[2px] space-y-1">
             <p className="text-[9px] font-bold uppercase text-[#00F5FF]/80 tracking-wider">
-              {isJa ? "1巡目指名権" : "1ST ROUND PICKS"}
+              {ui.firstRound}
             </p>
             <div className="flex items-baseline gap-1">
               <span className={`${nameOxanium.className} text-[20px] font-extrabold text-white`}>
                 {summary.total1st}
               </span>
-              <span className="text-[11px] text-white/50">{isJa ? "本" : "picks"}</span>
+              <span className="text-[11px] text-white/50">{ui.picksUnit}</span>
             </div>
             <p className="text-[9px] text-white/50">
-              {isJa ? (
-                <>
-                  確定 <strong className="text-white font-bold">{summary.guaranteed1st}</strong> / 条件付{" "}
-                  <strong className="text-[#FFB800] font-bold">{summary.conditional1st}</strong>
-                </>
-              ) : (
-                <>
-                  Guar <strong className="text-white font-bold">{summary.guaranteed1st}</strong> / Cond{" "}
-                  <strong className="text-[#FFB800] font-bold">{summary.conditional1st}</strong>
-                </>
-              )}
+              {ui.guar}
+              <strong className="text-white font-bold">{summary.guaranteed1st}</strong>
+              {ui.cond}
+              <strong className="text-[#FFB800] font-bold">{summary.conditional1st}</strong>
             </p>
           </div>
 
-          {/* 2巡目 */}
           <div className="bg-white/[0.03] border border-white/10 p-2.5 rounded-[2px] space-y-1">
             <p className="text-[9px] font-bold uppercase text-white/70 tracking-wider">
-              {isJa ? "2巡目指名権" : "2ND ROUND PICKS"}
+              {ui.secondRound}
             </p>
             <div className="flex items-baseline gap-1">
               <span className={`${nameOxanium.className} text-[20px] font-extrabold text-white`}>
                 {summary.total2nd}
               </span>
-              <span className="text-[11px] text-white/50">{isJa ? "本" : "picks"}</span>
+              <span className="text-[11px] text-white/50">{ui.picksUnit}</span>
             </div>
             <p className="text-[9px] text-white/50">
-              {isJa ? (
-                <>
-                  確定 <strong className="text-white font-bold">{summary.guaranteed2nd}</strong> / 条件付{" "}
-                  <strong className="text-[#FFB800] font-bold">{summary.conditional2nd}</strong>
-                </>
-              ) : (
-                <>
-                  Guar <strong className="text-white font-bold">{summary.guaranteed2nd}</strong> / Cond{" "}
-                  <strong className="text-[#FFB800] font-bold">{summary.conditional2nd}</strong>
-                </>
-              )}
+              {ui.guar}
+              <strong className="text-white font-bold">{summary.guaranteed2nd}</strong>
+              {ui.cond}
+              <strong className="text-[#FFB800] font-bold">{summary.conditional2nd}</strong>
             </p>
           </div>
 
-          {/* スワップ権 */}
           <div className="bg-white/[0.03] border border-white/10 p-2.5 rounded-[2px] space-y-1">
             <p className="text-[9px] font-bold uppercase text-[#FFB800]/80 tracking-wider">
-              {isJa ? "スワップ権利" : "SWAP RIGHTS"}
+              {ui.swapRights}
             </p>
             <div className="flex items-baseline gap-1">
               <span className={`${nameOxanium.className} text-[20px] font-extrabold text-[#FFB800]`}>
                 {summary.swapRights}
               </span>
-              <span className="text-[11px] text-white/50">{isJa ? "件" : "swaps"}</span>
+              <span className="text-[11px] text-white/50">{ui.swapsUnit}</span>
             </div>
-            <p className="text-[9px] text-white/40">{isJa ? "有利交換権" : "Favorable swap"}</p>
+            <p className="text-[9px] text-white/40">{ui.favorableSwap}</p>
           </div>
 
-          {/* 放出済み */}
           <div className="bg-white/[0.03] border border-white/10 p-2.5 rounded-[2px] space-y-1">
             <p className="text-[9px] font-bold uppercase text-[#FF2D78]/80 tracking-wider">
-              {isJa ? "放出済み指名権" : "OUTGOING PICKS"}
+              {ui.outgoing}
             </p>
             <div className="flex items-baseline gap-1">
               <span className={`${nameOxanium.className} text-[20px] font-extrabold text-[#FF2D78]`}>
                 {summary.outgoingPicks}
               </span>
-              <span className="text-[11px] text-white/50">{isJa ? "本" : "picks"}</span>
+              <span className="text-[11px] text-white/50">{ui.picksUnit}</span>
             </div>
-            <p className="text-[9px] text-white/40">{isJa ? "トレード譲渡" : "Traded away"}</p>
+            <p className="text-[9px] text-white/40">{ui.tradedAway}</p>
           </div>
         </div>
       </div>
 
-      {/* ② Year-by-Year Timeline (年別タイムライン) */}
       <div
         className="border bg-black/60 p-3.5 space-y-3"
         style={{ borderColor: hexToRgba(accent, 0.4) }}
       >
         <div className="flex items-center justify-between pb-2 border-b border-white/[0.08]">
           <span className={`${nameOxanium.className} text-[11px] font-bold uppercase tracking-wider text-white/50`}>
-            {isJa ? "年別タイムライン (タップで条件詳細)" : "FUTURE PICKS TIMELINE (TAP FOR DETAILS)"}
+            {ui.picksTimeline}
           </span>
           <div className="flex items-center gap-2 text-[8px] text-white/40">
             <span className="inline-flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#00F5FF]" /> {isJa ? "自前" : "OWN"}
+              <span className="w-1.5 h-1.5 rounded-full bg-[#00F5FF]" /> {ui.legendOwn}
             </span>
             <span className="inline-flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#5CF0B5]" /> {isJa ? "取得" : "FROM"}
+              <span className="w-1.5 h-1.5 rounded-full bg-[#5CF0B5]" /> {ui.legendFrom}
             </span>
             <span className="inline-flex items-center gap-1">
               <span className="w-1.5 h-1.5 rounded-full bg-[#FFB800]" /> SWAP
             </span>
             <span className="inline-flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#B388FF]" /> {isJa ? "条件/保護" : "PROT"}
+              <span className="w-1.5 h-1.5 rounded-full bg-[#B388FF]" /> {ui.legendProt}
             </span>
             <span className="inline-flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#FF2D78]" /> {isJa ? "放出" : "OUT"}
+              <span className="w-1.5 h-1.5 rounded-full bg-[#FF2D78]" /> {ui.legendOut}
             </span>
             <span className="inline-flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#FF503C]" /> {isJa ? "没収" : "FORFEIT"}
+              <span className="w-1.5 h-1.5 rounded-full bg-[#FF503C]" /> {ui.legendForfeit}
             </span>
           </div>
         </div>
 
         <div className="divide-y divide-white/[0.06]">
-          {draftCapital.years.map((y) => {
-            return (
-              <div key={y.year} className="py-2.5 first:pt-0 last:pb-0 flex flex-col sm:flex-row sm:items-start gap-2.5">
-                {/* 年表示 */}
-                <div className="w-14 shrink-0 pt-1">
+          {draftCapital.years.map((y) => (
+            <div
+              key={y.year}
+              className="py-2.5 first:pt-0 last:pb-0 flex flex-col sm:flex-row sm:items-start gap-2.5"
+            >
+              <div className="w-14 shrink-0 pt-1">
+                <span
+                  className={`${nameOxanium.className} text-[16px] font-extrabold text-white flex items-center gap-1`}
+                  style={{ transform: "skewX(-6deg)" }}
+                >
+                  {y.year}
+                </span>
+              </div>
+
+              <div className="flex-1 space-y-2">
+                <div className="flex items-start gap-2">
                   <span
-                    className={`${nameOxanium.className} text-[16px] font-extrabold text-white flex items-center gap-1`}
-                    style={{ transform: "skewX(-6deg)" }}
+                    className={`${nameOxanium.className} text-[10px] font-extrabold text-[#00F5FF] w-7 pt-1 shrink-0`}
                   >
-                    {y.year}
+                    1ST
                   </span>
+                  <div className="flex flex-wrap gap-1.5 flex-1">
+                    {y.firstRound.length === 0 ? (
+                      <span className="text-[10px] text-white/25 italic py-0.5">
+                        {ui.none}
+                      </span>
+                    ) : (
+                      y.firstRound.map((p) =>
+                        renderPickBadge(p, ui, () => setSelectedPick(p))
+                      )
+                    )}
+                  </div>
                 </div>
 
-                {/* 1st & 2nd Rounds */}
-                <div className="flex-1 space-y-2">
-                  {/* 1巡目 (1ST ROUND) */}
-                  <div className="flex items-start gap-2">
-                    <span
-                      className={`${nameOxanium.className} text-[10px] font-extrabold text-[#00F5FF] w-7 pt-1 shrink-0`}
-                    >
-                      1ST
-                    </span>
-                    <div className="flex flex-wrap gap-1.5 flex-1">
-                      {y.firstRound.length === 0 ? (
-                        <span className="text-[10px] text-white/25 italic py-0.5">
-                          {isJa ? "保有なし" : "None"}
-                        </span>
-                      ) : (
-                        y.firstRound.map((p) => {
-                          const badge = renderPickBadge(p, isJa, () => setSelectedPick(p));
-                          return badge;
-                        })
-                      )}
-                    </div>
-                  </div>
-
-                  {/* 2巡目 (2ND ROUND) */}
-                  <div className="flex items-start gap-2">
-                    <span
-                      className={`${nameOxanium.className} text-[10px] font-extrabold text-white/40 w-7 pt-1 shrink-0`}
-                    >
-                      2ND
-                    </span>
-                    <div className="flex flex-wrap gap-1.5 flex-1">
-                      {y.secondRound.length === 0 ? (
-                        <span className="text-[10px] text-white/25 italic py-0.5">
-                          {isJa ? "保有なし" : "None"}
-                        </span>
-                      ) : (
-                        y.secondRound.map((p) => {
-                          const badge = renderPickBadge(p, isJa, () => setSelectedPick(p));
-                          return badge;
-                        })
-                      )}
-                    </div>
+                <div className="flex items-start gap-2">
+                  <span
+                    className={`${nameOxanium.className} text-[10px] font-extrabold text-white/40 w-7 pt-1 shrink-0`}
+                  >
+                    2ND
+                  </span>
+                  <div className="flex flex-wrap gap-1.5 flex-1">
+                    {y.secondRound.length === 0 ? (
+                      <span className="text-[10px] text-white/25 italic py-0.5">
+                        {ui.none}
+                      </span>
+                    ) : (
+                      y.secondRound.map((p) =>
+                        renderPickBadge(p, ui, () => setSelectedPick(p))
+                      )
+                    )}
                   </div>
                 </div>
               </div>
-            );
-          })}
+            </div>
+          ))}
         </div>
       </div>
 
-      {/* ③ タップで開く詳細モーダル */}
       {selectedPick && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
           onClick={() => setSelectedPick(null)}
         >
           <div
-            className="w-full max-w-md bg-[#0c0d14] border border-[#00F5FF]/50 p-5 space-y-4 shadow-[0_0_30px_rgba(0,245,255,0.2)] rounded-[2px]"
+            className="w-full max-w-md bg-[#0c0d14] border border-white/25 p-5 space-y-4 shadow-[0_0_24px_rgba(0,0,0,0.55)] rounded-[2px]"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Modal Header */}
             <div className="flex items-start justify-between border-b border-white/10 pb-3">
               <div>
-                <p className={`${nameOxanium.className} text-[11px] font-bold text-[#00F5FF] uppercase tracking-wider`}>
-                  {selectedPick.year} NBA DRAFT • {selectedPick.round === 1 ? "1ST ROUND" : "2ND ROUND"}
+                <p className={`${nameOxanium.className} text-[11px] font-bold text-white/55 uppercase tracking-wider`}>
+                  {selectedPick.year} NBA DRAFT •{" "}
+                  {selectedPick.round === 1 ? "1ST ROUND" : "2ND ROUND"}
                 </p>
-                <h3 className={`${nameOxanium.className} text-[18px] font-extrabold text-white mt-0.5`}>
-                  {isJa ? selectedPick.detailsJa ?? selectedPick.detailsEn : selectedPick.detailsEn ?? selectedPick.detailsJa}
+                <h3 className={`${nameOxanium.className} text-[18px] font-extrabold mt-0.5`}>
+                  <DraftTeamColoredText
+                    text={draftPickBodyText(
+                      lang,
+                      selectedPick.detailsJa,
+                      selectedPick.detailsEn
+                    )}
+                    baseColor="#FFFFFF"
+                  />
                 </h3>
               </div>
               <button
@@ -1746,28 +1761,22 @@ function DraftPicksCard({
               </button>
             </div>
 
-            {/* Badges / Meta */}
             <div className="flex flex-wrap gap-2 text-[10px]">
               {selectedPick.badgeType && (
-                <span className="px-2 py-0.5 font-bold uppercase rounded-[2px] bg-white/10 text-white border border-white/20">
-                  {selectedPick.badgeType === "own"
-                    ? isJa ? "自前指名権" : "OWN PICK"
-                    : selectedPick.badgeType === "from"
-                    ? isJa ? `獲得 (via ${selectedPick.fromTeamId ?? ""})` : `VIA ${selectedPick.fromTeamId ?? ""}`
-                    : selectedPick.badgeType === "swap"
-                    ? isJa ? `スワップ権 (${selectedPick.swapWithTeamId ?? ""})` : `SWAP (${selectedPick.swapWithTeamId ?? ""})`
-                    : selectedPick.badgeType === "prot"
-                    ? isJa ? "プロテクト付き" : "PROTECTED"
-                    : selectedPick.badgeType === "outgoing"
-                    ? isJa ? `放出済み (to ${selectedPick.toTeamId ?? ""})` : `OUTGOING (to ${selectedPick.toTeamId ?? ""})`
-                    : selectedPick.badgeType === "forfeited"
-                    ? isJa ? "NBA没収" : "NBA FORFEITED"
-                    : isJa ? "条件付き" : "CONDITIONAL"}
+                <span className="px-2 py-0.5 font-bold uppercase rounded-[2px] bg-white/10 text-white/90 border border-white/20">
+                  <DraftTeamColoredText
+                    text={draftBadgeHeadline(
+                      selectedPick.badgeType,
+                      ui,
+                      selectedPick
+                    )}
+                    baseColor="rgba(255,255,255,0.9)"
+                  />
                 </span>
               )}
 
               {selectedPick.protection && (
-                <span className="px-2 py-0.5 font-bold text-[#FFB800] rounded-[2px] bg-[#FFB800]/10 border border-[#FFB800]/30">
+                <span className="px-2 py-0.5 font-bold text-white/75 rounded-[2px] bg-white/[0.06] border border-white/20">
                   {selectedPick.protection}
                 </span>
               )}
@@ -1775,56 +1784,72 @@ function DraftPicksCard({
 
             {(() => {
               const origin = resolveDraftPickOrigin(selectedPick);
-              const body = (isJa ? origin.textJa : origin.textEn).trim();
+              const body = draftPickBodyText(lang, origin.textJa, origin.textEn);
               return (
-                <div className="space-y-1.5 bg-white/[0.02] border border-white/[0.06] px-3 py-2.5 rounded-[2px]">
+                <div className="space-y-1.5 bg-white/[0.02] border border-white/[0.08] px-3 py-2.5 rounded-[2px]">
                   <p className="text-[10px] font-bold uppercase text-white/40 tracking-wider">
-                    {isJa ? origin.labelJa : origin.labelEn}
+                    {draftPickBodyText(lang, origin.labelJa, origin.labelEn)}
                   </p>
-                  <p className="text-[12px] leading-snug text-white/85">
-                    {body.length > 0
-                      ? body
-                      : isJa
-                        ? "経緯データなし"
-                        : "No origin on file"}
+                  <p className="text-[12px] leading-snug">
+                    {body.length > 0 ? (
+                      <DraftTeamColoredText text={body} />
+                    ) : (
+                      <span className="text-white/85">{ui.noOrigin}</span>
+                    )}
                   </p>
                 </div>
               );
             })()}
 
-            {/* Conditions List */}
-            <div className="space-y-2 bg-white/[0.02] border border-white/[0.06] p-3 rounded-[2px]">
+            <div className="space-y-2 bg-white/[0.02] border border-white/[0.08] p-3 rounded-[2px]">
               <p className="text-[10px] font-bold uppercase text-white/40 tracking-wider">
-                {isJa ? "行使条件・保護ルール" : "CONDITIONS & CONVEYANCE"}
+                {ui.conditionsTitle}
               </p>
-              {selectedPick.conditionsJa && selectedPick.conditionsJa.length > 0 ? (
-                <ul className="space-y-1.5 text-[12px] text-white/80">
-                  {(isJa ? selectedPick.conditionsJa : selectedPick.conditionsEn ?? selectedPick.conditionsJa).map(
-                    (c, idx) => (
-                      <li key={idx} className="flex items-start gap-2">
-                        <span className="text-[#00F5FF] mt-0.5">•</span>
-                        <span>{c}</span>
-                      </li>
-                    )
-                  )}
-                </ul>
-              ) : (
-                <p className="text-[12px] text-white/70">
-                  {isJa
-                    ? selectedPick.detailsJa ?? "追加のプロテクション条件はありません（確定）"
-                    : selectedPick.detailsEn ?? "No additional protection conditions (guaranteed)."}
-                </p>
-              )}
+              {(() => {
+                const lines = draftPickBodyLines(
+                  lang,
+                  selectedPick.conditionsJa,
+                  selectedPick.conditionsEn
+                );
+                if (lines.length > 0) {
+                  return (
+                    <ul className="space-y-1.5 text-[12px]">
+                      {lines.map((c, idx) => (
+                        <li key={idx} className="flex items-start gap-2">
+                          <span className="text-white/40 mt-0.5">•</span>
+                          <DraftTeamColoredText text={c} />
+                        </li>
+                      ))}
+                    </ul>
+                  );
+                }
+                const fallback = draftPickBodyText(
+                  lang,
+                  selectedPick.detailsJa,
+                  selectedPick.detailsEn
+                );
+                return (
+                  <p className="text-[12px]">
+                    {fallback ? (
+                      <DraftTeamColoredText
+                        text={fallback}
+                        baseColor="rgba(255,255,255,0.7)"
+                      />
+                    ) : (
+                      <span className="text-white/70">{ui.noExtraProtection}</span>
+                    )}
+                  </p>
+                );
+              })()}
             </div>
 
-            {/* Close Button */}
             <div className="pt-2">
               <button
                 type="button"
                 className="w-full py-2 bg-white/10 hover:bg-white/20 text-white font-bold text-[12px] rounded-[2px] border border-white/20 transition-colors"
                 onClick={() => setSelectedPick(null)}
               >
-                {isJa ? "閉じる" : "CLOSE"}
+                {ui.close}
               </button>
             </div>
           </div>
@@ -1836,7 +1861,7 @@ function DraftPicksCard({
 
 function renderPickBadge(
   p: NbaDraftPickEntry,
-  isJa: boolean,
+  ui: NbaDraftAssetsUiCopy,
   onClick: () => void
 ) {
   const badgeType = p.badgeType ?? "own";
@@ -1846,27 +1871,31 @@ function renderPickBadge(
     !isForfeited &&
     (p.kind === "outgoing" || p.isOutgoing || badgeType === "outgoing");
   const isSwap = p.kind.startsWith("swap") || p.isSwap || badgeType === "swap";
-  const isProt = badgeType === "prot" || (p.protection && p.protection.toLowerCase() !== "unprotected");
-  const isFrom = badgeType === "from" || (!isSwap && !isProt && !isOutgoing && !isForfeited && !!p.fromTeamId);
+  const isProt =
+    badgeType === "prot" ||
+    (p.protection && p.protection.toLowerCase() !== "unprotected");
+  const isFrom =
+    badgeType === "from" ||
+    (!isSwap && !isProt && !isOutgoing && !isForfeited && !!p.fromTeamId);
 
   let bg = "rgba(0,245,255,0.08)";
   let border = "rgba(0,245,255,0.35)";
   let color = "#00F5FF";
   let tagBg = "rgba(0,245,255,0.2)";
-  let tagText = isJa ? "自前" : "OWN";
+  let tagText = ui.tagOwn;
 
   if (isForfeited) {
     bg = "rgba(255,80,60,0.08)";
     border = "rgba(255,80,60,0.4)";
     color = "#FF503C";
     tagBg = "rgba(255,80,60,0.22)";
-    tagText = isJa ? "没収" : "FORFEIT";
+    tagText = ui.tagForfeit;
   } else if (isOutgoing) {
     bg = "rgba(255,45,120,0.06)";
     border = "rgba(255,45,120,0.3)";
     color = "#FF2D78";
     tagBg = "rgba(255,45,120,0.2)";
-    tagText = isJa ? "放出" : "OUT";
+    tagText = ui.tagOut;
   } else if (isSwap) {
     bg = "rgba(255,184,0,0.08)";
     border = "rgba(255,184,0,0.4)";
@@ -1878,18 +1907,18 @@ function renderPickBadge(
     border = "rgba(179,136,255,0.4)";
     color = "#B388FF";
     tagBg = "rgba(179,136,255,0.2)";
-    tagText = p.protectionTag ?? (isJa ? "プロテクト" : "PROT");
+    tagText = p.protectionTag ?? ui.tagProt;
   } else if (isFrom) {
     bg = "rgba(92,240,181,0.08)";
     border = "rgba(92,240,181,0.4)";
     color = "#5CF0B5";
     tagBg = "rgba(92,240,181,0.2)";
-    tagText = p.fromTeamId ? `FROM ${p.fromTeamId}` : isJa ? "取得" : "FROM";
+    tagText = p.fromTeamId ? `FROM ${p.fromTeamId}` : ui.tagFrom;
   }
 
-  const label = isJa
-    ? p.shortLabelJa ?? p.detailsJa ?? p.detailsEn
-    : p.shortLabelEn ?? p.detailsEn ?? p.detailsJa;
+  const label =
+    draftPickBodyText(ui.lang, p.shortLabelJa, p.shortLabelEn) ||
+    draftPickBodyText(ui.lang, p.detailsJa, p.detailsEn);
 
   return (
     <button
@@ -2201,7 +2230,7 @@ export default function NbaTeamDetailPanel({
           <TeamShapeEdgesSection
             shapeEdges={shapeEdges}
             accent={accent}
-            isJa={isJa}
+            lang={lang}
           />
         </>
       ) : null}
@@ -2223,7 +2252,7 @@ export default function NbaTeamDetailPanel({
         style={{ backgroundColor: hexToRgba(accent, 0.22) }}
       />
 
-      <DraftPicksCard teamId={detail.teamId} accent={accent} isJa={isJa} />
+      <DraftPicksCard teamId={detail.teamId} accent={accent} language={lang} />
 
       <div
         className="h-px"

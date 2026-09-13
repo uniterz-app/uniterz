@@ -126,7 +126,7 @@ const styles = StyleSheet.create({
     gap: 4,
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 8,
+    borderRadius: 0,
   },
   iconBtnActive: {
     backgroundColor: "rgba(34,211,238,0.12)",

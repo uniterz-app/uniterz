@@ -92,5 +92,5 @@ export function formatShapeEdgeHintEn(edge: TeamShapeEdge): string {
   const pp = Math.round(edge.split.deltaWinPct * 100);
   const sign = pp >= 0 ? `+${pp}` : String(pp);
   const tag = edge.kind === "strength" ? "strength" : "weakness";
-  return `When ${edge.def.conditionEn}: ${formatWl(edge.split.when)} (${sign}pp vs season; ${tag}).`;
+  return `When ${edge.def.condition.en}: ${formatWl(edge.split.when)} (${sign}pp vs season; ${tag}).`;
 }

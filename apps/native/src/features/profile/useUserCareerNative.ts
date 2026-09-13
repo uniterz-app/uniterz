@@ -29,9 +29,12 @@ export function useUserCareerNative(
 
   useEffect(() => {
     if (!enabled || !uid) {
-      setCareer(null);
+      // フリップ戻し等で disabled になってもキャッシュは保持（uid 変更時のみ捨てる）
+      if (!uid) {
+        setCareer(null);
+        setError(null);
+      }
       setLoading(false);
-      setError(null);
       return;
     }
 
@@ -78,6 +81,11 @@ export function useUserCareerNative(
       cancelled = true;
     };
   }, [uid, enabled, apiBase, tick]);
+
+  useEffect(() => {
+    setCareer(null);
+    setError(null);
+  }, [uid]);
 
   return {
     career,

@@ -16,6 +16,10 @@ import {
   last10BoardHasRows,
   listPlayerGameLogsForLeaders,
 } from "./buildLast10LeadersFromGameLogs";
+import {
+  buildSeasonCountLeadersFromGameLogs,
+  seasonCountBoardHasRows,
+} from "./buildSeasonCountLeadersFromGameLogs";
 
 export const NBA_LEAGUE_PLAYER_STATS_COLLECTION = "nbaLeaguePlayerStats";
 
@@ -142,7 +146,7 @@ export async function mergeLast10IntoPlayerStatLeadersSnapshot(
 }
 
 /**
- * 試合ログから last10 を再集計して leaders スナップショットへ書く。
+ * 試合ログから last10 + シーズン回数ボードを再集計して leaders スナップショットへ書く。
  * リーグ ingest / プレイヤー game-logs ingest の両方から呼ぶ。
  */
 export async function rebuildPlayerLast10FromGameLogs(
@@ -152,15 +156,57 @@ export async function rebuildPlayerLast10FromGameLogs(
 ): Promise<{ playerCount: number; merged: boolean }> {
   const players = await listPlayerGameLogsForLeaders(db, seasonKey);
   const last10 = buildLast10LeadersFromGameLogs(players);
-  if (!last10BoardHasRows(last10)) {
+  const seasonCounts = buildSeasonCountLeadersFromGameLogs(players);
+  const hasLast10 = last10BoardHasRows(last10);
+  const hasCounts = seasonCountBoardHasRows(seasonCounts);
+  if (!hasLast10 && !hasCounts) {
     return { playerCount: players.length, merged: false };
   }
-  const merged = await mergeLast10IntoPlayerStatLeadersSnapshot(
-    db,
-    seasonKey,
-    last10,
-    serverTimestamp,
-    "last10 from game logs"
+
+  const key = normalizePlayerStatLeadersSeasonKey(seasonKey);
+  const snap = await db
+    .collection(NBA_LEAGUE_PLAYER_STATS_COLLECTION)
+    .doc(key)
+    .get();
+  if (!snap.exists) {
+    return { playerCount: players.length, merged: false };
+  }
+  const resolved = resolvePlayerStatLeadersFromFirestore(
+    snap.data() as NbaPlayerStatLeadersFirestoreDoc
   );
-  return { playerCount: players.length, merged };
+  if (!resolved) {
+    return { playerCount: players.length, merged: false };
+  }
+
+  let asOfLabel = resolved.bundle.asOfLabel;
+  const season = { ...resolved.bundle.season };
+  let last10Board = resolved.bundle.last10;
+
+  if (hasLast10) {
+    last10Board = last10;
+    asOfLabel = /last10/i.test(asOfLabel)
+      ? asOfLabel
+          .replace(/last10[^·]*|pending/gi, "last10 from game logs")
+          .replace(/\s+/g, " ")
+      : `${asOfLabel} · last10 from game logs`;
+  }
+  if (hasCounts) {
+    for (const id of Object.keys(seasonCounts) as Array<
+      keyof typeof seasonCounts
+    >) {
+      season[id] = seasonCounts[id];
+    }
+    if (!/count/i.test(asOfLabel)) {
+      asOfLabel = `${asOfLabel} · count from game logs`;
+    }
+  }
+
+  await writePlayerStatLeadersSnapshot(
+    db,
+    key,
+    { ...resolved.bundle, season, last10: last10Board, asOfLabel },
+    resolved.source === "empty" ? "firestore" : resolved.source,
+    serverTimestamp
+  );
+  return { playerCount: players.length, merged: true };
 }

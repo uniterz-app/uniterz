@@ -87,10 +87,10 @@ export async function loadTeamShapeRecordsApiPayload(
         const def = TEAM_SHAPE_DEF_BY_ID.get(s.shapeId);
         return {
           ...s,
-          labelEn: def?.labelEn ?? s.shapeId,
-          labelJa: def?.labelJa ?? s.shapeId,
-          conditionEn: def?.conditionEn ?? s.shapeId,
-          conditionJa: def?.conditionJa ?? s.shapeId,
+          labelEn: def?.label.en ?? s.shapeId,
+          labelJa: def?.label.ja ?? s.shapeId,
+          conditionEn: def?.condition.en ?? s.shapeId,
+          conditionJa: def?.condition.ja ?? s.shapeId,
         };
       })
       .sort((a, b) => b.deltaWinPct - a.deltaWinPct);
@@ -98,10 +98,10 @@ export async function loadTeamShapeRecordsApiPayload(
     const edges = selectTeamShapeEdges(rec).map((e) => ({
       kind: e.kind,
       shapeId: e.def.id,
-      labelEn: e.def.labelEn,
-      labelJa: e.def.labelJa,
-      conditionEn: e.def.conditionEn,
-      conditionJa: e.def.conditionJa,
+      labelEn: e.def.label.en,
+      labelJa: e.def.label.ja,
+      conditionEn: e.def.condition.en,
+      conditionJa: e.def.condition.ja,
       when: formatWl(e.split.when),
       games: e.split.games,
       winPct: e.split.winPct,

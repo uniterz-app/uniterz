@@ -1,8 +1,8 @@
 /**
  * Web `ProfileKinetikHero` 相当 — Season/Playoff × Total/Week/Month。
  */
-import { useEffect, useMemo, useRef, useState } from "react";
-import type { ViewStyle } from "react-native";
+import { useEffect, useMemo, useState } from "react";
+import { InteractionManager, type ViewStyle } from "react-native";
 import type { Profile } from "../../../../../../app/component/profile/useProfile";
 import { mapProfileToKinetikPanel } from "../../../../../../lib/profile/mapProfileToKinetikPanel";
 import type { ProfileStatsStreakContext } from "../../../../../../lib/profile/profileStreakScope";
@@ -24,9 +24,7 @@ import type { ProfilePlanProBgVariant } from "../../../../../../lib/profile/prof
 import { PROFILE_PLAN_PRO_BG_DEFAULT } from "../../../../../../lib/profile/profilePlanProBgVariants";
 import { getUniterzApiBaseUrl } from "../../games/submitPredictionApi";
 import ProfileKinetikPanelNative from "./ProfileKinetikPanelNative";
-import ProfileKinetikFlipShellNative, {
-  PROFILE_KINETIK_FLIP_MS,
-} from "./ProfileKinetikFlipShellNative";
+import ProfileKinetikFlipShellNative from "./ProfileKinetikFlipShellNative";
 import ProfileCareerPanelNative from "../ProfileCareerPanelNative";
 import { useUserCareerNative } from "../useUserCareerNative";
 
@@ -132,20 +130,27 @@ export default function ProfileKinetikHeroNative({
     useState<ProfileKinetikMetricsTab>("total");
   const [windowLabel, setWindowLabel] = useState<string | null>(null);
   const [careerFlipped, setCareerFlipped] = useState(false);
+  /** 一度マウントしたら保持（毎回の Pro Skin 再構築を避ける） */
   const [careerMounted, setCareerMounted] = useState(false);
-  const careerUnmountTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
-    null
-  );
   const apiBase = useMemo(() => getUniterzApiBaseUrl() ?? undefined, []);
 
-  useEffect(
-    () => () => {
-      if (careerUnmountTimerRef.current) {
-        clearTimeout(careerUnmountTimerRef.current);
-      }
-    },
-    []
-  );
+  /** Pro のみ: 表の描画後に裏を温める（非表示の静的 Image。アニメは裏に付けない） */
+  useEffect(() => {
+    if (plan !== "pro" || planProBgVariant == null) return;
+    let cancelled = false;
+    let warmTimer: ReturnType<typeof setTimeout> | null = null;
+    const task = InteractionManager.runAfterInteractions(() => {
+      warmTimer = setTimeout(() => {
+        if (!cancelled) setCareerMounted(true);
+      }, 480);
+    });
+    return () => {
+      cancelled = true;
+      if (warmTimer) clearTimeout(warmTimer);
+      const cancel = (task as { cancel?: () => void }).cancel;
+      cancel?.();
+    };
+  }, [plan, planProBgVariant, targetUid]);
 
   const windowEnabled = metricsTab !== "total";
   const fetchedBoard = preferredNbaKinetikPeriod();
@@ -186,10 +191,11 @@ export default function ProfileKinetikHeroNative({
     windowLabel
   );
 
+  /** Web と同じくプロフィール表示時に prefetch（フリップ待ちを消す） */
   const { career, loading: careerDocLoading, error: careerError } =
     useUserCareerNative(targetUid, {
       apiBaseUrl: apiBase,
-      enabled: careerFlipped,
+      enabled: Boolean(targetUid?.trim()),
     });
 
   useEffect(() => {
@@ -300,19 +306,8 @@ export default function ProfileKinetikHeroNative({
     <ProfileKinetikFlipShellNative
       language={language}
       onFlipChange={(next) => {
-        if (careerUnmountTimerRef.current) {
-          clearTimeout(careerUnmountTimerRef.current);
-          careerUnmountTimerRef.current = null;
-        }
         setCareerFlipped(next);
-        if (next) {
-          setCareerMounted(true);
-          return;
-        }
-        careerUnmountTimerRef.current = setTimeout(() => {
-          setCareerMounted(false);
-          careerUnmountTimerRef.current = null;
-        }, PROFILE_KINETIK_FLIP_MS + 40);
+        if (next) setCareerMounted(true);
       }}
       front={
         <ProfileKinetikPanelNative
@@ -379,7 +374,7 @@ export default function ProfileKinetikHeroNative({
             loadError={careerError}
             isPro={plan === "pro"}
             planProBgVariant={planProBgVariant}
-            proSkinActive={careerFlipped}
+            proSkinActive={careerMounted}
           />
         ) : null
       }

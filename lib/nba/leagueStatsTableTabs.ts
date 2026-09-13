@@ -25,6 +25,7 @@ import {
 } from "@/lib/predict/nbaPlayerStatLeadersAdvanced";
 import {
   isPlayerAdvancedLeaderMetric,
+  isPlayerCountLeaderMetric,
   NBA_PLAYER_STAT_LEADER_METRICS,
   type NbaPlayerLeaderMetricId,
   type NbaPlayerStatLeaderRow,
@@ -104,6 +105,7 @@ const TEAM_COUNTING_METRICS = new Set<NbaLeagueTeamStatMetric>([
 ]);
 
 function playerMetricScalesWithGames(metric: NbaPlayerLeaderMetricId): boolean {
+  if (isPlayerCountLeaderMetric(metric)) return false;
   if (isPlayerAdvancedLeaderMetric(metric)) {
     const kind = playerAdvancedMetricDef(
       metric as NbaPlayerAdvancedLeaderMetric

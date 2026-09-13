@@ -30,6 +30,10 @@ import {
   listPlayerGameLogsForLeaders,
 } from "@/lib/nba/playerStatLeaders/buildLast10LeadersFromGameLogs";
 import {
+  buildSeasonCountLeadersFromGameLogs,
+  seasonCountBoardHasRows,
+} from "@/lib/nba/playerStatLeaders/buildSeasonCountLeadersFromGameLogs";
+import {
   buildLast10RowsFromGames,
   seasonPaceByTeamIdFromRows,
 } from "@/lib/nba/leagueTeamStats/buildLast10RowsFromGames";
@@ -135,6 +139,18 @@ export async function ingestNbaLeagueStatsFromProvider(
           "last10 from game logs"
         )
       : `${playerBundle.asOfLabel} · last10 from game logs`;
+  }
+
+  const seasonCounts = buildSeasonCountLeadersFromGameLogs(logPlayers);
+  if (seasonCountBoardHasRows(seasonCounts)) {
+    for (const id of Object.keys(seasonCounts) as Array<
+      keyof typeof seasonCounts
+    >) {
+      playerBundle.season[id] = seasonCounts[id];
+    }
+    if (!playerBundle.asOfLabel.includes("count")) {
+      playerBundle.asOfLabel = `${playerBundle.asOfLabel} · count from game logs`;
+    }
   }
 
   const ts = FieldValue.serverTimestamp();

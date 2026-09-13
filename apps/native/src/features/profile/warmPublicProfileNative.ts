@@ -24,6 +24,7 @@ import {
   primeNativeProfileStatsFromRankingRow,
   seedNativeProfileStatsFromUserDoc,
 } from "./useNativeProfileStats";
+import { prefetchNativeProfileSettledTodayResults } from "./useNativeProfileSettledTodayResults";
 
 export type WarmPublicProfileNativeInput = {
   routeKey: string;
@@ -50,6 +51,7 @@ function warmFromUserDoc(uid: string, data: Record<string, unknown>): void {
   seedProfileHeroFromUserDoc(uid, data);
   void prefetchNativeProfileBadges(uid);
   void prefetchNativeProfileStats(uid);
+  prefetchNativeProfileSettledTodayResults(uid);
 }
 
 function resolveWarmSkin(input: {
@@ -124,6 +126,8 @@ export function warmPublicProfileNative(
   }
 
   if (uid) {
+    // Result Drop は users 待ちせず並列開始（同一キーは inflight / resolved で共有）
+    prefetchNativeProfileSettledTodayResults(uid);
     void (async () => {
       const loaded = await loadProfileUserDocNative(uid);
       if (!loaded?.exists) return;

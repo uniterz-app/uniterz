@@ -38,6 +38,7 @@ import {
   NBA_PLAYER_ADVANCED_LEADER_METRICS,
   type NbaPlayerAdvancedLeaderMetric,
 } from "@/lib/predict/nbaPlayerStatLeadersAdvanced";
+import { NBA_PLAYER_COUNT_LEADER_METRIC_IDS } from "@/lib/predict/nbaPlayerCountLeaderMetrics";
 import type { NbaPlayerSeasonMetricsWrite } from "@/lib/nba/playerSeasonMetrics/playerSeasonMetricsTypes";
 
 /** リーグ表チップ: 全選手から資格絞り → ソート後の上位 */
@@ -74,6 +75,7 @@ function emptyBoard(): Record<NbaPlayerLeaderMetricId, NbaPlayerStatLeaderRow[]>
   > = {};
   for (const id of NBA_BDL_PLAYER_LEADER_STAT_TYPES) board[id] = [];
   for (const m of NBA_PLAYER_ADVANCED_LEADER_METRICS) board[m.id] = [];
+  for (const id of NBA_PLAYER_COUNT_LEADER_METRIC_IDS) board[id] = [];
   return board as Record<NbaPlayerLeaderMetricId, NbaPlayerStatLeaderRow[]>;
 }
 

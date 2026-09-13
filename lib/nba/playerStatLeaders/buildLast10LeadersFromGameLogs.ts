@@ -20,6 +20,7 @@ import {
   type NbaPlayerStatLeaderRow,
 } from "@/lib/predict/nbaPlayerStatLeadersMocks";
 import { NBA_PLAYER_ADVANCED_LEADER_METRICS } from "@/lib/predict/nbaPlayerStatLeadersAdvanced";
+import { NBA_PLAYER_COUNT_LEADER_METRIC_IDS } from "@/lib/predict/nbaPlayerCountLeaderMetrics";
 
 const LAST10_WINDOW = 10;
 const LEADER_BOARD_LIMIT = 30;
@@ -39,6 +40,7 @@ function emptyBoard(): Record<NbaPlayerLeaderMetricId, NbaPlayerStatLeaderRow[]>
   > = {};
   for (const id of NBA_BDL_PLAYER_LEADER_STAT_TYPES) board[id] = [];
   for (const m of NBA_PLAYER_ADVANCED_LEADER_METRICS) board[m.id] = [];
+  for (const id of NBA_PLAYER_COUNT_LEADER_METRIC_IDS) board[id] = [];
   return board as Record<NbaPlayerLeaderMetricId, NbaPlayerStatLeaderRow[]>;
 }
 

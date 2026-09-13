@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useReducedMotion } from "framer-motion";
 import ProfileEditKinetikGlitchTitle from "@/app/component/profile/edit/ProfileEditKinetikGlitchTitle";
 import ProfileKinetikPanelFrame from "@/app/component/profile/ui/ProfileKinetikPanelFrame";
 import { jp, nameOxanium, nameRajdhani } from "@/lib/fonts";
@@ -65,7 +64,6 @@ export default function ProfileCareerPanel({
   const isCjk = lang === "ja" || lang === "ko" || lang === "zh";
   const isMobile = layout === "mobile";
   const isFace = variant === "face";
-  const reduceMotion = useReducedMotion() === true;
   const showProSkin = isPro && isFace;
   /** Free の裏面はキャリア数字のみ（表のバッジ／タブを残さない） */
   const showFaceExtras = !isFace || isPro;
@@ -215,9 +213,9 @@ export default function ProfileCareerPanel({
               >
                 <span
                   className={[
-                    nameRajdhani.className,
-                    "font-semibold tracking-[0.14em] text-white/95",
-                    isFace || isMobile ? "text-base" : "text-lg sm:text-xl",
+                    nameOxanium.className,
+                    "font-bold tracking-[0.14em] text-white/95",
+                    isFace || isMobile ? "text-[15px]" : "text-lg sm:text-xl",
                     showProSkin
                       ? "drop-shadow-[0_0_12px_rgba(34,211,238,0.28)]"
                       : "",
@@ -274,10 +272,10 @@ export default function ProfileCareerPanel({
               >
                 <dt
                   className={[
-                    nameRajdhani.className,
+                    nameOxanium.className,
                     showProSkin
-                      ? "text-[9px] font-semibold uppercase tracking-[0.18em] text-white/75 [text-shadow:0_1px_3px_rgba(0,0,0,0.85)]"
-                      : "text-[9px] font-semibold uppercase tracking-[0.18em] text-white/55",
+                      ? "text-[9px] font-semibold uppercase tracking-[0.16em] text-white/75 [text-shadow:0_1px_3px_rgba(0,0,0,0.85)]"
+                      : "text-[9px] font-semibold uppercase tracking-[0.16em] text-white/55",
                   ].join(" ")}
                 >
                   {row.label}
@@ -285,9 +283,10 @@ export default function ProfileCareerPanel({
                 <dd
                   className={[
                     nameOxanium.className,
+                    "profile-metric-card__value mt-1 inline-block origin-bottom-left truncate text-[1.02rem] font-bold tabular-nums tracking-tight",
                     showProSkin
-                      ? "mt-1 truncate text-[1.02rem] font-semibold tabular-nums tracking-wide text-white [text-shadow:0_1px_4px_rgba(0,0,0,0.9)]"
-                      : "mt-1 truncate text-[1.02rem] font-semibold tabular-nums tracking-wide text-white/90",
+                      ? "text-white [text-shadow:0_1px_4px_rgba(0,0,0,0.9)]"
+                      : "text-white/90",
                   ].join(" ")}
                 >
                   {row.value}
@@ -386,7 +385,7 @@ export default function ProfileCareerPanel({
       <ProfileKinetikPanelFrame
         as="div"
         isPlanPro={isPro}
-        animatePlanProBg={isPro && !reduceMotion}
+        animatePlanProBg={false}
         planProBgVariant={planProBgVariant}
         proMobileStage={isPro && isMobile}
         web={layout === "web"}

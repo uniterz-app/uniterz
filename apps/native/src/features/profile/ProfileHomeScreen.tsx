@@ -31,6 +31,7 @@ import { colors, radius, spacing, typography } from "../../theme/tokens";
 import { useFirebaseUser } from "../../auth/FirebaseUserProvider";
 import { getUniterzApiBaseUrl } from "../games/submitPredictionApi";
 import { useNativeProfileStats, seedNativeProfileStatsFromUserDoc } from "./useNativeProfileStats";
+import { prefetchNativeProfileSettledTodayResults } from "./useNativeProfileSettledTodayResults";
 import {
   loadProfileUserDocNative,
   peekProfileUserDocNative,
@@ -697,6 +698,12 @@ export default function ProfileHomeScreen({
     profileStatsContext,
     authReady
   );
+
+  /** Result Drop を charts と並列開始（Overview マウント待ちしない） */
+  useEffect(() => {
+    if (!authReady || !targetUid) return;
+    prefetchNativeProfileSettledTodayResults(targetUid, profileStatsContext);
+  }, [authReady, targetUid, profileStatsContext]);
 
   useEffect(() => {
     if (isPublicProfileView || !myUid || myUserDoc == null) return;

@@ -1,5 +1,5 @@
 /**
- * Web `.predict-overlay-close-btn` / `.cyber-menu-btn` 相当 — 角切り枠ボタン
+ * Web `.predict-overlay-close-btn` / `.cyber-menu-btn` 相当 — 直角四角枠ボタン
  */
 import { type ReactNode, useMemo, useState } from "react";
 import {
@@ -42,6 +42,12 @@ const ICON_PX: Record<CyberChamferButtonSize, number> = {
   lg: 16,
 };
 
+/** 直角枠は RN border（Skia 端ストローク欠けを避ける） */
+const USE_SQUARE_BORDER = CYBER_MENU_BTN_CUT <= 0;
+
+/** chamfer 時: strokeWidth 1 がキャンバス端で欠けるのを防ぐ内側オフセット */
+const STROKE_INSET = 0.5;
+
 type FloatingAlign = "left" | "right";
 
 type Props = {
@@ -66,10 +72,18 @@ type Props = {
   children?: ReactNode;
 };
 
-function makeSkiaPath(width: number, height: number) {
-  const d = cyberMenuBtnPathD(width, height, CYBER_MENU_BTN_CUT);
+function makeSkiaPath(width: number, height: number, inset = 0) {
+  const d = cyberMenuBtnPathD(
+    Math.max(0, width - inset * 2),
+    Math.max(0, height - inset * 2)
+  );
   if (!d) return null;
-  return Skia.Path.MakeFromSVGString(d);
+  const path = Skia.Path.MakeFromSVGString(d);
+  if (!path) return null;
+  if (inset > 0) {
+    path.offset(inset, inset);
+  }
+  return path;
 }
 
 function resolveVariant(
@@ -125,10 +139,17 @@ export default function CyberChamferButtonNative({
   const theme = themeOverride ?? CYBER_CHAMFER_THEMES[action];
   const [layout, setLayout] = useState({ w: 0, h: 0 });
 
-  const skiaPath = useMemo(
+  const fillPath = useMemo(
     () =>
-      layout.w > 0 && layout.h > 0
+      !USE_SQUARE_BORDER && layout.w > 0 && layout.h > 0
         ? makeSkiaPath(layout.w, layout.h)
+        : null,
+    [layout.w, layout.h]
+  );
+  const strokePath = useMemo(
+    () =>
+      !USE_SQUARE_BORDER && layout.w > 0 && layout.h > 0
+        ? makeSkiaPath(layout.w, layout.h, STROKE_INSET)
         : null,
     [layout.w, layout.h]
   );
@@ -162,10 +183,18 @@ export default function CyberChamferButtonNative({
       ]}
     >
       <View
-        style={[styles.frame, { width: buttonDim, height: buttonDim }]}
+        style={[
+          styles.frame,
+          { width: buttonDim, height: buttonDim },
+          USE_SQUARE_BORDER && {
+            backgroundColor: theme.fill,
+            borderWidth: 1,
+            borderColor: theme.stroke,
+          },
+        ]}
         onLayout={onLayout}
       >
-        {hasSize && skiaPath ? (
+        {!USE_SQUARE_BORDER && hasSize && fillPath && strokePath ? (
           <>
             <Canvas
               pointerEvents="none"
@@ -177,7 +206,7 @@ export default function CyberChamferButtonNative({
                 height: layout.h,
               }}
             >
-              <Group clip={skiaPath}>
+              <Group clip={fillPath}>
                 <Rect
                   x={0}
                   y={0}
@@ -199,7 +228,7 @@ export default function CyberChamferButtonNative({
             >
               <Canvas style={{ width: layout.w, height: layout.h }} pointerEvents="none">
                 <Path
-                  path={skiaPath}
+                  path={strokePath}
                   style="stroke"
                   strokeWidth={1}
                   color={theme.stroke}
@@ -271,16 +300,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   /**
-   * 左上・右下カットの重心はわずかに右下寄り。
-   * 幾何中心に置くとアイコンが左上に見えるため光学補正する。
-   */
+ * ハンバーガー等の幾何中心。角切り時のみ光学補正していたが、直角枠では不要。
+ */
   iconSlot: {
     alignItems: "center",
     justifyContent: "center",
-    transform: [
-      { translateX: CYBER_MENU_BTN_CUT * 0.12 },
-      { translateY: CYBER_MENU_BTN_CUT * 0.12 },
-    ],
   },
   closeIcon: {
     fontSize: 16,

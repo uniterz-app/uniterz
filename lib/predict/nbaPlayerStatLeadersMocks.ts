@@ -17,6 +17,12 @@ import {
   playerAdvancedMetricsForCategory,
   type NbaPlayerAdvancedLeaderMetric,
 } from "@/lib/predict/nbaPlayerStatLeadersAdvanced";
+import {
+  isPlayerCountLeaderMetric,
+  NBA_PLAYER_COUNT_LEADER_METRICS,
+  playerCountMetricDef,
+  type NbaPlayerCountLeaderMetric,
+} from "@/lib/predict/nbaPlayerCountLeaderMetrics";
 
 /**
  * BallDontLie `GET /v1/leaders` の `stat_type` と同一 ID。
@@ -45,7 +51,8 @@ export type NbaPlayerLeaderBdlStatType =
 
 export type NbaPlayerLeaderMetricId =
   | NbaPlayerLeaderBdlStatType
-  | NbaPlayerAdvancedLeaderMetric;
+  | NbaPlayerAdvancedLeaderMetric
+  | NbaPlayerCountLeaderMetric;
 
 /** @deprecated 命名互換 — 実体は leaders / advanced 指標 ID */
 export type NbaPlayerStatLeaderMetric = NbaPlayerLeaderMetricId;
@@ -475,13 +482,24 @@ export type NbaPlayerRailGroup = {
   metrics: readonly NbaPlayerLeaderBoardMetricDef[];
 };
 
-/** 左レール。BASIC の下に RATINGS / 4FCT … */
+/** 左レール。BASIC の下に COUNT / RATINGS / 4FCT … */
 export function leaguePlayerRailGroups(): NbaPlayerRailGroup[] {
   return [
     {
       id: "basic",
       short: "BASIC",
       metrics: NBA_PLAYER_STAT_LEADER_CHIP_METRICS.map((m) => ({
+        id: m.id,
+        label: m.label,
+        short: m.short,
+        higherIsBetter: m.higherIsBetter,
+        hint: m.hint,
+      })),
+    },
+    {
+      id: "count",
+      short: "COUNT",
+      metrics: NBA_PLAYER_COUNT_LEADER_METRICS.map((m) => ({
         id: m.id,
         label: m.label,
         short: m.short,
@@ -544,6 +562,8 @@ export function isPlayerAdvancedLeaderMetric(
   return NBA_PLAYER_ADVANCED_LEADER_METRICS.some((m) => m.id === id);
 }
 
+export { isPlayerCountLeaderMetric };
+
 const PCT_METRICS = new Set<NbaPlayerLeaderBdlStatType>([
   "fg3_pct",
   "fg_pct",
@@ -579,6 +599,9 @@ function pick<T>(arr: readonly T[], rnd: () => number): T {
 }
 
 function formatValue(metric: NbaPlayerLeaderMetricId, value: number) {
+  if (isPlayerCountLeaderMetric(metric)) {
+    return String(Math.round(value));
+  }
   if (isPlayerAdvancedLeaderMetric(metric)) {
     return formatPlayerAdvancedLeaderValue(metric, value);
   }
@@ -735,6 +758,10 @@ function buildLeadersBundle(window: "season" | "last10") {
       id: m.id as NbaPlayerLeaderMetricId,
       higherIsBetter: m.higherIsBetter,
     })),
+    ...NBA_PLAYER_COUNT_LEADER_METRICS.map((m) => ({
+      id: m.id as NbaPlayerLeaderMetricId,
+      higherIsBetter: m.higherIsBetter,
+    })),
     ...NBA_PLAYER_ADVANCED_LEADER_METRICS.map((m) => ({
       id: m.id,
       higherIsBetter: m.higherIsBetter,
@@ -749,15 +776,19 @@ function buildLeadersBundle(window: "season" | "last10") {
       const rnd = mulberry32(
         hashSeed(`${p.playerId}:${metricId}:${window}:bdl-v1`)
       );
-      const base = buildMetricValue(metricId, rnd);
+      const base = isPlayerCountLeaderMetric(metricId)
+        ? Math.round(1 + rnd() * (metricId === "triple_doubles" ? 8 : 28))
+        : buildMetricValue(metricId, rnd);
       const noise = last10Noise ? (rnd() - 0.5) * 0.06 : 0;
       const isPct =
         (isPlayerAdvancedLeaderMetric(metricId) &&
           playerAdvancedMetricDef(metricId).kind === "pct") ||
         PCT_METRICS.has(metricId as NbaPlayerLeaderBdlStatType);
-      const scaled = isPct
-        ? pct(Math.min(0.999, Math.max(0.001, base * seasonBoost + noise)))
-        : base * seasonBoost + (last10Noise ? (rnd() - 0.5) * 0.85 : 0);
+      const scaled = isPlayerCountLeaderMetric(metricId)
+        ? base
+        : isPct
+          ? pct(Math.min(0.999, Math.max(0.001, base * seasonBoost + noise)))
+          : base * seasonBoost + (last10Noise ? (rnd() - 0.5) * 0.85 : 0);
       const gpRnd = mulberry32(
         hashSeed(`${p.playerId}:gp:${window}:bdl-v1`)
       );
@@ -803,6 +834,16 @@ export function getNbaPlayerStatLeadersMock(): NbaPlayerStatLeadersBundle {
 export function playerLeaderMetricDef(
   id: NbaPlayerLeaderMetricId
 ): NbaPlayerLeaderBoardMetricDef {
+  if (isPlayerCountLeaderMetric(id)) {
+    const found = playerCountMetricDef(id);
+    return {
+      id: found.id,
+      label: found.label,
+      short: found.short,
+      higherIsBetter: found.higherIsBetter,
+      hint: found.hint,
+    };
+  }
   if (isPlayerAdvancedLeaderMetric(id)) {
     const found = playerAdvancedMetricDef(id);
     return {

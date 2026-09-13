@@ -24,6 +24,7 @@ import {
 } from "./useNativeProfileStats";
 import { prefetchMarksWeeklyBoard } from "../../../../../lib/profile/fetchMarksWeeklyBoard";
 import { getUniterzApiBaseUrl } from "../games/submitPredictionApi";
+import { prefetchNativeProfileSettledTodayResults } from "./useNativeProfileSettledTodayResults";
 
 export default function ProfileStatsPrefetchHost() {
   const { fUser, status } = useFirebaseUser();
@@ -61,6 +62,7 @@ export default function ProfileStatsPrefetchHost() {
 
       void prefetchNativeProfileStats(uid);
       void prefetchNativeProfileBadges(uid);
+      prefetchNativeProfileSettledTodayResults(uid);
     });
 
     return () => task.cancel();
