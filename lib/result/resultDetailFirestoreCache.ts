@@ -39,6 +39,18 @@ export function primeGameDocCacheForResult(
   gameDocCache.set(safeId, { at: Date.now(), exists, data });
 }
 
+/** 同期 peek（TTL 内）。一覧カードの名前解決用。未ヒットは null */
+export function peekGameDocCacheForResult(
+  gameId: string | null | undefined
+): Record<string, unknown> | null {
+  const safeId = (gameId ?? "").trim();
+  if (!safeId) return null;
+  const hit = gameDocCache.get(safeId);
+  if (!hit || !hit.exists || !hit.data) return null;
+  if (Date.now() - hit.at >= GAME_DOC_TTL_MS) return null;
+  return hit.data;
+}
+
 export async function getCachedGameDocForResult(
   gameId: string,
   firestore: Firestore

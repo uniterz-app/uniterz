@@ -7,6 +7,10 @@ import type { RankingDivision } from "@/lib/rankings/rankingDivision";
 import type { RankingPeriod } from "@/lib/rankings/rankingPeriod";
 import type { BulkMetricPayload } from "@/lib/rankings/useCumulativeRankingsBulk";
 import { mergePeriodPersonalOverlay } from "@/lib/rankings/mergePeriodPersonalOverlay";
+import {
+  appendRankingSnapshotGenerationParam,
+  fetchRankingSnapshotGeneration,
+} from "@/lib/rankings/rankingSnapshotGenerationClient";
 
 type PeriodBulkResult = {
   byMetric: Record<string, BulkMetricPayload>;
@@ -14,6 +18,7 @@ type PeriodBulkResult = {
   availableLabels: string[];
   activeLabel: string | null;
   proRequired: boolean;
+  snapshotGeneration: string | null;
 };
 
 const emptyResult: PeriodBulkResult = {
@@ -22,9 +27,11 @@ const emptyResult: PeriodBulkResult = {
   availableLabels: [],
   activeLabel: null,
   proRequired: false,
+  snapshotGeneration: null,
 };
 
-const PERIOD_CACHE_TTL_MS = 10 * 60 * 1000;
+/** 世代キー付きなので長めでも安全（16:00 で key が変わる） */
+const PERIOD_CACHE_TTL_MS = 12 * 60 * 60 * 1000;
 const PERSONAL_CACHE_TTL_MS = 60 * 1000;
 
 type PeriodCacheEntry = { at: number; value: PeriodBulkResult };
@@ -41,21 +48,31 @@ const personalInflight = new Map<
   Promise<Record<string, BulkMetricPayload>>
 >();
 
+/** Pro Skin / プロフィール更新後にクライアント一覧メモリを捨てる */
+export function clearPeriodRankingsClientCache(): void {
+  periodCache.clear();
+  periodInflight.clear();
+  personalCache.clear();
+  personalInflight.clear();
+}
+
 function periodCacheKey(
   period: string,
   label: string | null,
-  division: RankingDivision
+  division: RankingDivision,
+  generation: string
 ): string {
-  return `${period}|${label ?? "current"}|${division}`;
+  return `${period}|${label ?? "current"}|${division}|${generation}`;
 }
 
 function personalCacheKey(
   uid: string,
   period: string,
   label: string | null,
-  division: RankingDivision
+  division: RankingDivision,
+  generation: string
 ): string {
-  return `${uid}|${periodCacheKey(period, label, division)}`;
+  return `${uid}|${periodCacheKey(period, label, division, generation)}`;
 }
 
 async function fetchPeriodPersonalOverlay(opts: {
@@ -125,7 +142,8 @@ export function usePeriodRankingsBulk(
       return;
     }
 
-    const key = periodCacheKey(period, label, division);
+    const generation = await fetchRankingSnapshotGeneration();
+    const key = periodCacheKey(period, label, division, generation);
     const cached = periodCache.get(key);
     if (cached && Date.now() - cached.at < PERIOD_CACHE_TTL_MS) {
       setSharedByMetric(cached.value.byMetric);
@@ -153,11 +171,12 @@ export function usePeriodRankingsBulk(
           const params = new URLSearchParams({ period });
           if (label) params.set("label", label);
           if (division === "open") params.set("division", "open");
+          appendRankingSnapshotGenerationParam(params, generation);
           const res = await fetch(`/api/period-ranking/bulk?${params}`, {
             headers: token
               ? { Authorization: `Bearer ${token}` }
               : undefined,
-              cache: "force-cache",
+            cache: "force-cache",
           });
           const json = (await res.json()) as {
             ok?: boolean;
@@ -166,6 +185,7 @@ export function usePeriodRankingsBulk(
             byMetric?: Record<string, BulkMetricPayload>;
             range?: PeriodBulkResult["range"];
             availableLabels?: string[];
+            snapshotGeneration?: string;
           };
           if (res.status === 403 && json?.error === "pro_required") {
             return { ...emptyResult, proRequired: true };
@@ -179,6 +199,7 @@ export function usePeriodRankingsBulk(
             availableLabels: json.availableLabels ?? [],
             activeLabel: json.label ?? null,
             proRequired: false,
+            snapshotGeneration: generation,
           };
         } catch {
           return emptyResult;
@@ -219,9 +240,12 @@ export function usePeriodRankingsBulk(
     }
 
     let cancelled = false;
-    const key = personalCacheKey(uid, period, label, division);
 
     void (async () => {
+      const generation = await fetchRankingSnapshotGeneration();
+      if (cancelled) return;
+      const key = personalCacheKey(uid, period, label, division, generation);
+
       const hit = personalCache.get(key);
       if (hit && Date.now() - hit.at < PERSONAL_CACHE_TTL_MS) {
         if (cancelled) return;

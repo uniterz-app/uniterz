@@ -5,10 +5,55 @@ export const CUMULATIVE_RANKING_INVALIDATE_EVENT = "cumulative-ranking:invalidat
 export const CUMULATIVE_RANKING_PATCH_MY_COUNTRY_EVENT =
   "cumulative-ranking:patch-my-country";
 
+/** Pro Skin 装備を API 待ちせず一覧に反映 */
+export const CUMULATIVE_RANKING_PATCH_MY_PRO_SKIN_EVENT =
+  "cumulative-ranking:patch-my-pro-skin";
+
 export type CumulativeRankingPatchMyCountryDetail = {
   uid: string;
   countryCode: string | null;
 };
+
+export type CumulativeRankingPatchMyProSkinDetail = {
+  uid: string;
+  planProBgVariant: string;
+};
+
+/** Native（window なし）用。Web は CustomEvent と併用 */
+const invalidateSubs = new Set<() => void>();
+const patchCountrySubs = new Set<
+  (detail: CumulativeRankingPatchMyCountryDetail) => void
+>();
+const patchProSkinSubs = new Set<
+  (detail: CumulativeRankingPatchMyProSkinDetail) => void
+>();
+
+export function subscribeCumulativeRankingInvalidate(
+  fn: () => void
+): () => void {
+  invalidateSubs.add(fn);
+  return () => {
+    invalidateSubs.delete(fn);
+  };
+}
+
+export function subscribeCumulativeRankingPatchMyCountry(
+  fn: (detail: CumulativeRankingPatchMyCountryDetail) => void
+): () => void {
+  patchCountrySubs.add(fn);
+  return () => {
+    patchCountrySubs.delete(fn);
+  };
+}
+
+export function subscribeCumulativeRankingPatchMyProSkin(
+  fn: (detail: CumulativeRankingPatchMyProSkinDetail) => void
+): () => void {
+  patchProSkinSubs.add(fn);
+  return () => {
+    patchProSkinSubs.delete(fn);
+  };
+}
 
 function rankCountrySessionKey(uid: string): string {
   return `uniterz_rank_country_${uid}`;
@@ -72,6 +117,13 @@ export function readRankCountrySessionOverride(
 }
 
 export function dispatchCumulativeRankingInvalidate(): void {
+  for (const fn of invalidateSubs) {
+    try {
+      fn();
+    } catch {
+      /* ignore */
+    }
+  }
   if (typeof window === "undefined") return;
   window.dispatchEvent(new Event(CUMULATIVE_RANKING_INVALIDATE_EVENT));
 }
@@ -80,11 +132,43 @@ export function dispatchCumulativeRankingPatchMyCountry(
   uid: string,
   countryCode: string | null
 ): void {
+  const detail: CumulativeRankingPatchMyCountryDetail = { uid, countryCode };
+  for (const fn of patchCountrySubs) {
+    try {
+      fn(detail);
+    } catch {
+      /* ignore */
+    }
+  }
   if (typeof window === "undefined") return;
   window.dispatchEvent(
     new CustomEvent<CumulativeRankingPatchMyCountryDetail>(
       CUMULATIVE_RANKING_PATCH_MY_COUNTRY_EVENT,
-      { detail: { uid, countryCode } }
+      { detail }
+    )
+  );
+}
+
+export function dispatchCumulativeRankingPatchMyProSkin(
+  uid: string,
+  planProBgVariant: string
+): void {
+  const detail: CumulativeRankingPatchMyProSkinDetail = {
+    uid,
+    planProBgVariant,
+  };
+  for (const fn of patchProSkinSubs) {
+    try {
+      fn(detail);
+    } catch {
+      /* ignore */
+    }
+  }
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(
+    new CustomEvent<CumulativeRankingPatchMyProSkinDetail>(
+      CUMULATIVE_RANKING_PATCH_MY_PRO_SKIN_EVENT,
+      { detail }
     )
   );
 }

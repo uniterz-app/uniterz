@@ -40,6 +40,7 @@ import { nativeBlurViewExtraProps } from "../../ui/nativeBlurProps";
 import { spacing } from "../../theme/tokens";
 import {
   buildResultDetailViewFromLoad,
+  buildWarmResultDetailViewFromPost,
   loadResultPostDetailNative,
 } from "./loadResultPostDetailNative";
 import ResultDetailBodyNative, {
@@ -202,13 +203,8 @@ export default function ResultDetailScreen({
       postId !== TUTORIAL_RESULT_POST_ID
     ) {
       setView(
-        buildResultDetailViewModel(warmPost, {
-          market: warmMarket
-            ? {
-                homeRate: warmMarket.homeRate,
-                awayRate: warmMarket.awayRate,
-              }
-            : null,
+        buildWarmResultDetailViewFromPost(warmPost, {
+          market: warmMarket,
           gameMeta: warmRoundMeta,
           viewer,
         })

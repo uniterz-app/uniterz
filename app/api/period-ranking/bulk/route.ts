@@ -20,6 +20,7 @@ import {
 import { assertProUser } from "@/lib/rankings/server/fetchRankGapAnalysis";
 import { getAdminAuth } from "@/lib/firebaseAdmin";
 import { mergeUserPlansIntoBulkByMetric } from "@/lib/rankings/mergeUserPlanIntoRankingPayload";
+import { loadRankingSnapshotGenerationKey } from "@/lib/rankings/server/loadRankingSnapshotGeneration";
 
 async function optionalUid(req: Request): Promise<string | null> {
   const authz =
@@ -170,13 +171,24 @@ export async function GET(req: Request) {
       async (): Promise<string[]> =>
         listNbaPeriodLabels(period, 26, division).catch(() => [] as string[]),
       [`nba-period-ranking-labels-${period}-${division}`],
-      { revalidate: CUMULATIVE_RANKING_REVALIDATE_SEC }
+      {
+        revalidate: CUMULATIVE_RANKING_REVALIDATE_SEC,
+        tags: ["period-ranking", "cumulative-ranking"],
+      }
     )();
+
+    const snapshotGeneration = await loadRankingSnapshotGenerationKey();
 
     const payload = await unstable_cache(
       async () => loadSharedPayload(period, label, division),
-      [`nba-period-ranking-shared-v2-${period}-${label}-${division}`],
-      { revalidate: CUMULATIVE_RANKING_REVALIDATE_SEC }
+      [
+        `nba-period-ranking-shared-v3-${period}-${label}-${division}`,
+        snapshotGeneration,
+      ],
+      {
+        revalidate: CUMULATIVE_RANKING_REVALIDATE_SEC,
+        tags: ["period-ranking", "cumulative-ranking"],
+      }
     )();
 
     const availableLabels = await labelsPromise;
@@ -199,6 +211,7 @@ export async function GET(req: Request) {
           range: null,
           byMetric: {},
           availableLabels,
+          snapshotGeneration,
         },
         { headers: { "Cache-Control": cacheControl } }
       );
@@ -218,7 +231,7 @@ export async function GET(req: Request) {
     }
 
     return NextResponse.json(
-      { ...body, label, division, availableLabels },
+      { ...body, label, division, availableLabels, snapshotGeneration },
       { headers: { "Cache-Control": cacheControl } }
     );
   } catch (e: unknown) {

@@ -8,7 +8,6 @@ import {
   Text,
   View,
 } from "react-native";
-import { doc, getDoc } from "firebase/firestore";
 import type {
   NbaTeamFormGame,
   NbaTeamStatsBundle,
@@ -28,6 +27,7 @@ import { getGamesTexts } from "../gamesI18n";
 import LiveGameStatsPanelNative from "../live/LiveGameStatsPanelNative";
 import { getUniterzApiBaseUrl } from "../submitPredictionApi";
 import { db } from "../../../lib/firebase";
+import { getCachedGameDocForResult } from "../../../../../../lib/result/resultDetailFirestoreCache";
 import { L, resolveLocalizedLang } from "../../../../../../lib/i18n/localize";
 
 type WindowId = "season" | "last10";
@@ -214,9 +214,9 @@ function FormGameLine({
 async function loadGameDocForLiveStats(
   gameId: string
 ): Promise<Record<string, unknown> | null> {
-  const snap = await getDoc(doc(db, "games", gameId));
-  if (!snap.exists()) return null;
-  return { id: snap.id, ...snap.data() };
+  const { exists, data } = await getCachedGameDocForResult(gameId, db);
+  if (!exists || !data) return null;
+  return { id: gameId, ...data };
 }
 
 function FormGameBoxOverlay({

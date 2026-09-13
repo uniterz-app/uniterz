@@ -20,7 +20,7 @@ import { t } from "@/lib/i18n/t";
 import type { ResultPlatform } from "@/lib/result/result-platform";
 import type { PkScore } from "@/lib/games/pkScore";
 import { normalizeNbaTopScorerPick } from "@/lib/nba/topScorer";
-import { useNbaTopScorerCandidates } from "@/lib/nba/useNbaTopScorerCandidates";
+import { peekGameDocCacheForResult } from "@/lib/result/resultDetailFirestoreCache";
 import { MOBILE_RESULT_CARD_OUTER_CLASS } from "@/lib/games/mobileListCardLayout";
 import { buildResultCardFaceModel } from "@/lib/result/buildResultCardFace";
 import type { GameMarketRates } from "@/lib/games/fetchGameMarkets";
@@ -186,12 +186,16 @@ function ResultCardPresentationImpl({
         : null,
     [normalizedLeague, post.prediction]
   );
-  const needScorerNames = Boolean(nbaScorerPick && !nbaScorerPick.name);
-  const { candidates: topScorerCandidates } = useNbaTopScorerCandidates({
-    homeTeamId: post.home?.teamId,
-    awayTeamId: post.away?.teamId,
-    enabled: needScorerNames,
-  });
+  // 一覧は matchup-detail を叩かない。games キャッシュにあれば名前だけ補完。
+  const scorerFromGame = useMemo(() => {
+    if (!nbaScorerPick || nbaScorerPick.name) return null;
+    const game = peekGameDocCacheForResult(post.gameId);
+    if (!game) return null;
+    return {
+      topScorerCandidates: game.topScorerCandidates,
+      leadingScorers: game.leadingScorers,
+    };
+  }, [nbaScorerPick, post.gameId]);
 
   const faceModel = useMemo(
     () =>
@@ -207,12 +211,15 @@ function ResultCardPresentationImpl({
               }
             : {}),
           ...(gameRoundMeta ? { gameMeta: gameRoundMeta } : {}),
-          ...(topScorerCandidates.length > 0
-            ? { topScorerCandidates }
+          ...(scorerFromGame?.topScorerCandidates
+            ? { topScorerCandidates: scorerFromGame.topScorerCandidates }
+            : {}),
+          ...(scorerFromGame?.leadingScorers
+            ? { leadingScorers: scorerFromGame.leadingScorers }
             : {}),
         }
       ),
-    [post, gameMarket, gameRoundMeta, topScorerCandidates]
+    [post, gameMarket, gameRoundMeta, scorerFromGame]
   );
 
   const cornerMenu = showCornerControl ? (

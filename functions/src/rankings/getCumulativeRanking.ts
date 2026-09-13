@@ -31,18 +31,54 @@ type CachedSnapshotDoc = {
   data: Record<string, unknown> | undefined;
 };
 
-/** 同一インスタンスの stampede を 1 read にまとめる */
+/** 同一インスタンスの stampede を 1 read にまとめる（世代付きで 16:00 後に即切替） */
 const SNAPSHOT_MEM_TTL_MS = 10 * 60 * 1000;
+const GENERATION_MEM_TTL_MS = 30 * 1000;
 const snapshotMem = new Map<string, CachedSnapshotDoc>();
 const snapshotInflight = new Map<string, Promise<CachedSnapshotDoc>>();
+
+let generationMem: { at: number; ms: number } | null = null;
+let generationInflight: Promise<number> | null = null;
+
+async function loadNbaSnapshotGenerationMs(): Promise<number> {
+  const now = Date.now();
+  if (generationMem && now - generationMem.at < GENERATION_MEM_TTL_MS) {
+    return generationMem.ms;
+  }
+  if (generationInflight) return generationInflight;
+
+  generationInflight = (async () => {
+    try {
+      const snap = await db()
+        .collection("cumulative_ranking_snapshots")
+        .doc("_generation")
+        .get();
+      const raw = snap.exists
+        ? (snap.data() as { nba?: { updatedAtMs?: unknown } } | undefined)
+        : undefined;
+      const ms = Number(raw?.nba?.updatedAtMs);
+      const safe = Number.isFinite(ms) && ms > 0 ? ms : 0;
+      generationMem = { at: Date.now(), ms: safe };
+      return safe;
+    } catch {
+      return generationMem?.ms ?? 0;
+    } finally {
+      generationInflight = null;
+    }
+  })();
+
+  return generationInflight;
+}
 
 async function loadRankingSnapshotDoc(
   snapshotDocId: string
 ): Promise<CachedSnapshotDoc> {
+  const genMs = await loadNbaSnapshotGenerationMs();
+  const cacheKey = `${snapshotDocId}:${genMs}`;
   const now = Date.now();
-  const hit = snapshotMem.get(snapshotDocId);
+  const hit = snapshotMem.get(cacheKey);
   if (hit && now - hit.at < SNAPSHOT_MEM_TTL_MS) return hit;
-  const pending = snapshotInflight.get(snapshotDocId);
+  const pending = snapshotInflight.get(cacheKey);
   if (pending) return pending;
 
   const p = (async (): Promise<CachedSnapshotDoc> => {
@@ -57,12 +93,12 @@ async function loadRankingSnapshotDoc(
         ? (snapDoc.data() as Record<string, unknown>)
         : undefined,
     };
-    snapshotMem.set(snapshotDocId, cached);
+    snapshotMem.set(cacheKey, cached);
     return cached;
   })().finally(() => {
-    snapshotInflight.delete(snapshotDocId);
+    snapshotInflight.delete(cacheKey);
   });
-  snapshotInflight.set(snapshotDocId, p);
+  snapshotInflight.set(cacheKey, p);
   return p;
 }
 

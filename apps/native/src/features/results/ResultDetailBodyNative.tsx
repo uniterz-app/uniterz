@@ -6,7 +6,6 @@ import { useEffect, useMemo, useRef } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useReducedMotion } from "react-native-reanimated";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { doc, getDoc } from "firebase/firestore";
 import { db } from "../../lib/firebase";
 import { ResultCardDesignFaceNative } from "./ResultCardDesignPreviewScreenNative";
 import { useLiveGameStats } from "../../../../../lib/games/useLiveGameStats";
@@ -36,15 +35,16 @@ import type { GamePointsTopEntryV1 } from "../../../../../lib/results/gamePoints
 import { profilePathKeyFromRow } from "../../../../../lib/profile/profilePathKey";
 import type { OpenPublicProfileWarm } from "../../navigation/navigateToPublicProfileNative";
 import { useNbaTopScorerCandidates } from "../../../../../lib/nba/useNbaTopScorerCandidates";
+import { getCachedGameDocForResult } from "../../../../../lib/result/resultDetailFirestoreCache";
 
 const ACCENT = "#00F5FF";
 
 async function loadGameDocForLiveStats(
   gameId: string
 ): Promise<Record<string, unknown> | null> {
-  const snap = await getDoc(doc(db, "games", gameId));
-  if (!snap.exists()) return null;
-  return { id: snap.id, ...snap.data() };
+  const { exists, data } = await getCachedGameDocForResult(gameId, db);
+  if (!exists || !data) return null;
+  return { id: gameId, ...data };
 }
 
 const TOP_SCORER_SLICE_COLORS = [

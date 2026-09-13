@@ -90,6 +90,7 @@ type Props = {
     | "monthlyReportPreview"
     | "squadBattlePreview"
     | "liveGameStatsPreview"
+    | "resultDetailPreview"
     | "leagueStatsPreview"
     | "proLeagueTeaserPreview"
     | "proInsightGatePreview"
@@ -257,6 +258,7 @@ export default function ProfileSideMenuModal({
       | "monthlyReportPreview"
       | "squadBattlePreview"
       | "liveGameStatsPreview"
+      | "resultDetailPreview"
       | "leagueStatsPreview"
       | "proLeagueTeaserPreview"
       | "proInsightGatePreview"
@@ -652,6 +654,14 @@ export default function ProfileSideMenuModal({
                           onPress={() => openUserPage("liveGameStatsPreview")}
                         >
                           ライブ試合スタッツ
+                        </SideMenuItemButtonNative>
+                        <SideMenuItemButtonNative
+                          icon="card-account-details-outline"
+                          dense
+                          labelStyle={labelStyle}
+                          onPress={() => openUserPage("resultDetailPreview")}
+                        >
+                          リザルト詳細（TOP SCORER）
                         </SideMenuItemButtonNative>
                         <SideMenuItemButtonNative
                           icon="table-large"

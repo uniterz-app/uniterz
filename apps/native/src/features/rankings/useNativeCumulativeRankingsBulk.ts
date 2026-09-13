@@ -9,7 +9,18 @@ import {
   allRankingMetricsParam,
   isMetricListBundleLoaded,
 } from "../../../../../lib/rankings/rankingBulkMetrics";
-import { isNewerSnapshotGeneration } from "../../../../../lib/rankings/rankingSnapshotGeneration";
+import {
+  isNewerSnapshotGeneration,
+  scoreGenerationFromListToken,
+} from "../../../../../lib/rankings/rankingSnapshotGeneration";
+import {
+  appendRankingSnapshotGenerationParam,
+  fetchRankingSnapshotGeneration,
+} from "../../../../../lib/rankings/rankingSnapshotGenerationClient";
+import {
+  subscribeCumulativeRankingInvalidate,
+  subscribeCumulativeRankingPatchMyProSkin,
+} from "../../../../../lib/rankings/cumulativeRankingInvalidate";
 
 export type BulkMetricPayload = {
   ok: boolean;
@@ -48,6 +59,13 @@ const listCache = new Map<string, ListCacheEntry>();
 const scopeSnapshotGeneration = new Map<string, string>();
 /** 同一 scope の同時 totalPoints 取得を1本に */
 const listInflight = new Map<string, Promise<BulkFetchResult | null>>();
+
+/** Pro Skin 装備後など — 一覧メモリを捨てて次表示で取り直す */
+export function clearNativeCumulativeRankingsListCache(): void {
+  listCache.clear();
+  listInflight.clear();
+  scopeSnapshotGeneration.clear();
+}
 
 function scopeKey(
   phase: RankingPhase,
@@ -125,6 +143,50 @@ function mergeMetricBundles(
   return { ...(prev ?? {}), ...patch };
 }
 
+function patchProSkinInBundles(
+  prev: Record<string, BulkMetricPayload> | null,
+  uid: string,
+  planProBgVariant: string
+): Record<string, BulkMetricPayload> | null {
+  if (!prev) return prev;
+  const next: Record<string, BulkMetricPayload> = {};
+  for (const [key, bundle] of Object.entries(prev)) {
+    const b = bundle;
+    const rows = Array.isArray(b.rows)
+      ? b.rows.map((row) => {
+          const r = row as { uid?: string };
+          if (r?.uid === uid) {
+            return { ...r, plan: "pro", planProBgVariant };
+          }
+          return row;
+        })
+      : b.rows;
+    const my = b.myRow as { uid?: string } | null | undefined;
+    const myRow =
+      my && typeof my.uid === "string" && my.uid === uid
+        ? ({ ...my, plan: "pro", planProBgVariant } as Record<string, unknown>)
+        : b.myRow;
+    next[key] = { ...b, rows, myRow };
+  }
+  return next;
+}
+
+/** 装備直後 — メモリ一覧も同スキンに揃える（再マウントで旧 CDN を出さない） */
+function patchProSkinInListCaches(
+  uid: string,
+  planProBgVariant: string
+): void {
+  for (const [key, entry] of listCache.entries()) {
+    const byMetric = patchProSkinInBundles(
+      entry.byMetric,
+      uid,
+      planProBgVariant
+    );
+    if (!byMetric) continue;
+    listCache.set(key, { ...entry, byMetric, at: Date.now() });
+  }
+}
+
 async function fetchSharedList(
   metrics: string,
   phase: RankingPhase,
@@ -139,6 +201,8 @@ async function fetchSharedList(
   params.set("phase", phase);
   params.set("round", round);
   if (wcStage) params.set("wcStage", wcStage);
+  const generation = await fetchRankingSnapshotGeneration(base);
+  appendRankingSnapshotGenerationParam(params, generation);
 
   const res = await fetch(
     `${base}/api/cumulative-ranking/bulk?${params.toString()}`,
@@ -154,10 +218,8 @@ async function fetchSharedList(
   if (wcStage != null && json.wcStage !== wcStage) return null;
   return {
     byMetric: json.byMetric,
-    snapshotGeneration:
-      typeof json.snapshotGeneration === "string"
-        ? json.snapshotGeneration
-        : null,
+    // score|ui token（CDN 切替用）。API の score 世代だけにはしない
+    snapshotGeneration: generation,
   };
 }
 
@@ -181,12 +243,15 @@ async function resolveSharedList(
     if (!partial) return null;
 
     const cachedGen = readScopeSnapshotGeneration(phase, round, wcStage);
-    if (!isNewerSnapshotGeneration(partial.snapshotGeneration, cachedGen)) {
+    const incomingScore = scoreGenerationFromListToken(
+      partial.snapshotGeneration
+    );
+    if (!isNewerSnapshotGeneration(incomingScore, cachedGen)) {
       writeScopeSnapshotGeneration(
         phase,
         round,
         wcStage,
-        partial.snapshotGeneration
+        incomingScore ?? partial.snapshotGeneration
       );
       return partial;
     }
@@ -198,18 +263,21 @@ async function resolveSharedList(
         phase,
         round,
         wcStage,
-        partial.snapshotGeneration
+        incomingScore ?? partial.snapshotGeneration
       );
       return partial;
     }
 
     const refreshed = await fetchSharedList(allMetrics, phase, round, wcStage);
-    if (refreshed?.snapshotGeneration) {
+    const refreshedScore = scoreGenerationFromListToken(
+      refreshed?.snapshotGeneration
+    );
+    if (refreshedScore || refreshed?.snapshotGeneration) {
       writeScopeSnapshotGeneration(
         phase,
         round,
         wcStage,
-        refreshed.snapshotGeneration
+        refreshedScore ?? refreshed?.snapshotGeneration ?? null
       );
     }
     return refreshed ?? partial;
@@ -232,18 +300,31 @@ export function prefetchNativeCumulativeRankingsList(
   round: PlayoffRoundKey = "overall",
   wcStage: WcRankingStage | null = null
 ): void {
-  if (readListCache(phase, round, wcStage)) return;
-  const inflightKey = `${scopeKey(phase, round, wcStage)}|${INITIAL_RANKING_METRICS}`;
-  if (listInflight.has(inflightKey)) return;
-  void resolveSharedList(INITIAL_RANKING_METRICS, phase, round, wcStage).then(
-    (partial) => {
-      if (!partial) return;
-      writeListCache(phase, round, wcStage, {
-        byMetric: partial.byMetric,
-        snapshotGeneration: partial.snapshotGeneration,
-      });
+  void (async () => {
+    const base = getUniterzApiBaseUrl();
+    const generation = await fetchRankingSnapshotGeneration(base);
+    const cached = readListCache(phase, round, wcStage);
+    if (
+      cached &&
+      cached.snapshotGeneration &&
+      cached.snapshotGeneration === generation
+    ) {
+      return;
     }
-  );
+    const inflightKey = `${scopeKey(phase, round, wcStage)}|${INITIAL_RANKING_METRICS}`;
+    if (listInflight.has(inflightKey)) return;
+    const partial = await resolveSharedList(
+      INITIAL_RANKING_METRICS,
+      phase,
+      round,
+      wcStage
+    );
+    if (!partial) return;
+    writeListCache(phase, round, wcStage, {
+      byMetric: partial.byMetric,
+      snapshotGeneration: partial.snapshotGeneration,
+    });
+  })();
 }
 
 export function useNativeCumulativeRankingsBulk(
@@ -278,6 +359,47 @@ export function useNativeCumulativeRankingsBulk(
   }, []);
 
   useEffect(() => {
+    return subscribeCumulativeRankingPatchMyProSkin((d) => {
+      if (!d?.uid || !d.planProBgVariant) return;
+      patchProSkinInListCaches(d.uid, d.planProBgVariant);
+      setByMetric((prev) =>
+        patchProSkinInBundles(prev, d.uid, d.planProBgVariant)
+      );
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!enabled) return;
+    let cancelled = false;
+    const unsub = subscribeCumulativeRankingInvalidate(() => {
+      void (async () => {
+        const g = ++mountPrimaryGenRef.current;
+        try {
+          const partial = await resolveSharedList(
+            INITIAL_RANKING_METRICS,
+            phase,
+            round,
+            wcStage
+          );
+          if (cancelled || g !== mountPrimaryGenRef.current) return;
+          if (!partial) return;
+          setByMetric(partial.byMetric);
+          writeListCache(phase, round, wcStage, {
+            byMetric: partial.byMetric,
+            snapshotGeneration: partial.snapshotGeneration,
+          });
+        } catch {
+          /* keep current */
+        }
+      })();
+    });
+    return () => {
+      cancelled = true;
+      unsub();
+    };
+  }, [enabled, phase, round, wcStage]);
+
+  useEffect(() => {
     phaseRoundGenRef.current += 1;
     metricReqSeqRef.current += 1;
     attemptedMetricsRef.current = new Set();
@@ -295,7 +417,37 @@ export function useNativeCumulativeRankingsBulk(
     if (cached) {
       setByMetric(cached.byMetric);
       setLoading(false);
-      // TTL 内はネット再取得しない（prefetch / 再訪の二重打ち防止）
+      const g = ++mountPrimaryGenRef.current;
+      void (async () => {
+        const base = getUniterzApiBaseUrl();
+        const generation = await fetchRankingSnapshotGeneration(base);
+        if (cancelled || g !== mountPrimaryGenRef.current) return;
+        if (
+          cached.snapshotGeneration &&
+          cached.snapshotGeneration === generation
+        ) {
+          return;
+        }
+        try {
+          const partial = await resolveSharedList(
+            INITIAL_RANKING_METRICS,
+            phase,
+            round,
+            wcStage
+          );
+          if (cancelled || g !== mountPrimaryGenRef.current) return;
+          const bundles = partial?.byMetric ?? {
+            totalPoints: emptyBulkMetric(),
+          };
+          setByMetric(bundles);
+          writeListCache(phase, round, wcStage, {
+            byMetric: bundles,
+            snapshotGeneration: partial?.snapshotGeneration ?? null,
+          });
+        } catch {
+          /* keep cached */
+        }
+      })();
       return () => {
         cancelled = true;
       };

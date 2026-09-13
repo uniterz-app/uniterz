@@ -4,6 +4,12 @@ import { auth } from "@/lib/firebase";
 import type { ProfilePlanProBgVariant } from "@/lib/profile/profilePlanProBgVariants";
 import { invalidateAllProfileCache } from "@/app/component/profile/useProfile";
 import { invalidateUserDocCache } from "@/lib/user/userDocCache";
+import {
+  dispatchCumulativeRankingPatchMyProSkin,
+} from "@/lib/rankings/cumulativeRankingInvalidate";
+import { clearRankingSnapshotGenerationClientMem } from "@/lib/rankings/rankingSnapshotGenerationClient";
+import { clearPeriodRankingsClientCache } from "@/lib/rankings/usePeriodRankingsBulk";
+import { clearOpenSeasonRankingsClientCache } from "@/lib/rankings/useOpenSeasonRankingsBulk";
 
 export async function saveMeProSkin(
   planProBgVariant: ProfilePlanProBgVariant
@@ -27,6 +33,11 @@ export async function saveMeProSkin(
 
   invalidateUserDocCache(user.uid);
   invalidateAllProfileCache();
+  clearRankingSnapshotGenerationClientMem();
+  clearPeriodRankingsClientCache();
+  clearOpenSeasonRankingsClientCache();
+  // 自分の行は即反映。invalidate 再取得は gen CDN が古い u= のままだと上書きするのでしない
+  dispatchCumulativeRankingPatchMyProSkin(user.uid, planProBgVariant);
 }
 
 /** ライブ達成モーダルを閉じたあと notice キューをサーバから落とす */

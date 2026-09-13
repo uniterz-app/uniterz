@@ -125,38 +125,7 @@ export const buildCumulativeRankingSnapshotCron = onSchedule(
 
     if (hasGamesToday) {
       const snapshotResult = await buildCumulativeRankingSnapshot();
-
-      const revalidateUrl = process.env.NEXT_REVALIDATE_CUMULATIVE_RANKING_URL;
-      const token = process.env.INTERNAL_REVALIDATE_SECRET;
-      if (!revalidateUrl || !token) {
-        console.warn(
-          "[buildCumulativeRankingSnapshotCron] skip revalidate (missing NEXT_REVALIDATE_CUMULATIVE_RANKING_URL or INTERNAL_REVALIDATE_SECRET)"
-        );
-      } else {
-        try {
-          const res = await fetch(revalidateUrl, {
-            method: "POST",
-            headers: { "x-revalidate-token": token },
-          });
-          if (!res.ok) {
-            const body = await res.text().catch(() => "");
-            console.error(
-              `[buildCumulativeRankingSnapshotCron] revalidate failed: ${res.status} ${body}`
-            );
-          } else {
-            console.log(
-              "[buildCumulativeRankingSnapshotCron] revalidate success"
-            );
-          }
-        } catch (err: unknown) {
-          const message =
-            err instanceof Error ? err.message : String(err ?? "");
-          console.error(
-            `[buildCumulativeRankingSnapshotCron] revalidate error: ${message}`
-          );
-        }
-      }
-
+      void snapshotResult;
     } else {
       console.log(
         "[buildCumulativeRankingSnapshotCron] skip cumulative: no NBA games scheduled this JST date"
@@ -171,6 +140,53 @@ export const buildCumulativeRankingSnapshotCron = onSchedule(
         "[buildCumulativeRankingSnapshotCron] period snapshots failed",
         err
       );
+    }
+
+    // 無試合日は cumulative が _generation を進めない → period 更新後に bump
+    if (!hasGamesToday) {
+      try {
+        const { bumpNbaRankingSnapshotGeneration } = await import(
+          "./rankings/bumpNbaRankingSnapshotGeneration"
+        );
+        await bumpNbaRankingSnapshotGeneration();
+      } catch (err) {
+        console.error(
+          "[buildCumulativeRankingSnapshotCron] generation bump failed",
+          err
+        );
+      }
+    }
+
+    // season / period とも Next + CDN 世代切替のため毎回 revalidate
+    const revalidateUrl = process.env.NEXT_REVALIDATE_CUMULATIVE_RANKING_URL;
+    const token = process.env.INTERNAL_REVALIDATE_SECRET;
+    if (!revalidateUrl || !token) {
+      console.warn(
+        "[buildCumulativeRankingSnapshotCron] skip revalidate (missing NEXT_REVALIDATE_CUMULATIVE_RANKING_URL or INTERNAL_REVALIDATE_SECRET)"
+      );
+    } else {
+      try {
+        const res = await fetch(revalidateUrl, {
+          method: "POST",
+          headers: { "x-revalidate-token": token },
+        });
+        if (!res.ok) {
+          const body = await res.text().catch(() => "");
+          console.error(
+            `[buildCumulativeRankingSnapshotCron] revalidate failed: ${res.status} ${body}`
+          );
+        } else {
+          console.log(
+            "[buildCumulativeRankingSnapshotCron] revalidate success"
+          );
+        }
+      } catch (err: unknown) {
+        const message =
+          err instanceof Error ? err.message : String(err ?? "");
+        console.error(
+          `[buildCumulativeRankingSnapshotCron] revalidate error: ${message}`
+        );
+      }
     }
 
     try {

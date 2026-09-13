@@ -1,6 +1,6 @@
 /**
  * Web `useOpenSeasonRankingsBulk` 相当 — NBA 無差別級シーズン（Pro 限定）
- * 短い TTL + inflight。uid hydrate での二重取得を抑える。
+ * 世代キー付きキャッシュ。uid hydrate での二重取得を抑える。
  */
 
 import { useCallback, useEffect, useState } from "react";
@@ -9,15 +9,25 @@ import { auth } from "../../lib/firebase";
 import { getUniterzApiBaseUrl } from "../games/submitPredictionApi";
 import type { BulkMetricPayload } from "./useNativeCumulativeRankingsBulk";
 import { allRankingMetricsParam } from "../../../../../lib/rankings/rankingBulkMetrics";
+import {
+  appendRankingSnapshotGenerationParam,
+  fetchRankingSnapshotGeneration,
+} from "../../../../../lib/rankings/rankingSnapshotGenerationClient";
 
 type OpenSeasonResult = {
   byMetric: Record<string, BulkMetricPayload>;
   proRequired: boolean;
+  snapshotGeneration: string | null;
 };
 
-const OPEN_CACHE_TTL_MS = 5 * 60 * 1000;
+const OPEN_CACHE_TTL_MS = 12 * 60 * 60 * 1000;
 let openCache: { at: number; value: OpenSeasonResult } | null = null;
 let openInflight: Promise<OpenSeasonResult> | null = null;
+
+export function clearNativeOpenSeasonRankingsClientCache(): void {
+  openCache = null;
+  openInflight = null;
+}
 
 export function useNativeOpenSeasonRankingsBulk(enabled: boolean) {
   const [uid, setUid] = useState<string | null>(null);
@@ -43,15 +53,23 @@ export function useNativeOpenSeasonRankingsBulk(enabled: boolean) {
       return;
     }
 
+    const base = getUniterzApiBaseUrl();
     if (
       openCache &&
       Date.now() - openCache.at < OPEN_CACHE_TTL_MS &&
       !openCache.value.proRequired
     ) {
-      setByMetric(openCache.value.byMetric);
-      setProRequired(false);
-      setListReady(true);
-      return;
+      const generation = await fetchRankingSnapshotGeneration(base);
+      if (
+        openCache.value.snapshotGeneration &&
+        openCache.value.snapshotGeneration === generation
+      ) {
+        setByMetric(openCache.value.byMetric);
+        setProRequired(false);
+        setListReady(true);
+        return;
+      }
+      openCache = null;
     }
 
     setListReady(false);
@@ -61,13 +79,20 @@ export function useNativeOpenSeasonRankingsBulk(enabled: boolean) {
       openInflight ??
       (async (): Promise<OpenSeasonResult> => {
         try {
-          const base = getUniterzApiBaseUrl();
-          if (!base) return { byMetric: {}, proRequired: false };
+          if (!base) {
+            return {
+              byMetric: {},
+              proRequired: false,
+              snapshotGeneration: null,
+            };
+          }
           const token = await auth.currentUser?.getIdToken().catch(() => null);
+          const generation = await fetchRankingSnapshotGeneration(base);
           const params = new URLSearchParams({
             division: "open",
             metrics: allRankingMetricsParam(),
           });
+          appendRankingSnapshotGenerationParam(params, generation);
           const res = await fetch(
             `${base}/api/cumulative-ranking/bulk?${params.toString()}`,
             {
@@ -81,25 +106,39 @@ export function useNativeOpenSeasonRankingsBulk(enabled: boolean) {
             ok?: boolean;
             error?: string;
             byMetric?: Record<string, BulkMetricPayload>;
+            snapshotGeneration?: string;
           };
-          if (res.status === 403 && json?.error === "pro_required") {
-            return { byMetric: {}, proRequired: true };
+          if (res.status === 403 || json?.error === "pro_required") {
+            return {
+              byMetric: {},
+              proRequired: true,
+              snapshotGeneration: null,
+            };
           }
           if (!res.ok || !json?.ok) {
-            return { byMetric: {}, proRequired: false };
+            return {
+              byMetric: {},
+              proRequired: false,
+              snapshotGeneration: null,
+            };
           }
           return {
             byMetric: json.byMetric ?? {},
             proRequired: false,
+            snapshotGeneration: generation,
           };
         } catch {
-          return { byMetric: {}, proRequired: false };
+          return {
+            byMetric: {},
+            proRequired: false,
+            snapshotGeneration: null,
+          };
         }
       })().finally(() => {
         openInflight = null;
       });
 
-    if (!openInflight) openInflight = run;
+    openInflight = run;
 
     try {
       const value = await run;
@@ -126,6 +165,7 @@ export function useNativeOpenSeasonRankingsBulk(enabled: boolean) {
     personalPending: false,
     myUid: uid,
     byMetric: enabled ? byMetric : {},
+    myMetricValueDeltas: null as null,
     ensureMetric,
     proRequired,
   };

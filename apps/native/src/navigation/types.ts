@@ -168,6 +168,8 @@ export type ProfileStackParamList = {
   PlayerDetailPreview: { playerId?: string } | undefined;
   /** __DEV__ ライブ試合スタッツ（Team / Box Score） */
   LiveGameStatsPreview: undefined;
+  /** __DEV__ リザルト詳細（TOP SCORER / 得点上位） */
+  ResultDetailPreview: undefined;
   /** __DEV__ Free → PRO LEAGUE ゲート（ティーザー） */
   ProLeagueTeaserPreview: undefined;
   ProInsightGatePreview: undefined;

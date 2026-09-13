@@ -103,8 +103,16 @@ export async function POST(req: Request) {
 
     await getAdminDb().doc(`users/${uid}`).set(patch, { merge: true });
 
-    // 累積ランキング API（unstable_cache）が users.countryCode の更新より古い JSON を返さないようにする
+    // ランキング行 chrome（国旗・名前・Skin）を CDN から外す
+    const {
+      bumpRankingUiGeneration,
+      clearRankingSnapshotGenerationMemCache,
+    } = await import("@/lib/rankings/server/loadRankingSnapshotGeneration");
+    await bumpRankingUiGeneration();
+    clearRankingSnapshotGenerationMemCache();
     revalidateTag("cumulative-ranking", {});
+    revalidateTag("period-ranking", {});
+    revalidateTag("ranking-ui", {});
 
     return NextResponse.json({ ok: true });
   } catch (e: unknown) {

@@ -30,7 +30,6 @@ import CandleChartLoader from "@/app/component/common/CandleChartLoader";
 import { CyberNoDataPage } from "@/app/component/common/CyberNoDataLabel";
 import { auth, db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
-import { getCachedGameDocForResult } from "@/lib/result/resultDetailFirestoreCache";
 import { notifyScheduleMyPostDeleted } from "@/lib/games/scheduleMyPostSyncEvents";
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
@@ -59,7 +58,11 @@ const ResultDetail = dynamic(
 import ResultDetailBody from "@/app/component/result/ResultDetailBody";
 import { buildResultDetailViewModel } from "@/lib/result/buildResultDetailView";
 import type { ResultDetailViewModel } from "@/lib/result/buildResultDetailView";
-import { resolveTopScorerMarketView } from "@/lib/result/buildTopScorerMarketEmbed";
+import {
+  buildResultDetailViewFromLoad,
+  buildWarmResultDetailViewFromPost,
+  loadResultPostDetailClient,
+} from "@/lib/result/loadResultPostDetailClient";
 import {
   ResultDayPipeGroup,
   type ResultDayPointsHeader,
@@ -90,13 +93,9 @@ import {
   writeDismissedResultPostIds,
 } from "@/lib/result/resultListDismissedPostIds";
 import {
-  parseGamePointsDistributionV1,
-  rawPointsDistributionFromGameDoc,
   type GamePointsDistributionV1,
 } from "@/lib/results/gamePointsDistribution";
-import { resolveGamePointsSummary } from "@/lib/results/gamePointsSummary";
 import { resolveResultTopEntries } from "@/lib/results/resolveResultTopEntries";
-import { enrichTopEntriesCountryFromUsers } from "@/lib/results/enrichTopEntriesCountryFromUsers";
 import type { GamePointsTopEntryV1 } from "@/lib/results/gamePointsTop";
 import { LEAGUE_DISPLAY } from "@/lib/leagues";
 import {
@@ -783,16 +782,31 @@ export default function ResultListWithOverlay({
     return () => document.removeEventListener("keydown", onKey);
   }, [deleteConfirmPost, deleteInProgress]);
 
-  const open = useCallback((post: PredictionPostV2 | PostWithMillis) => {
+  const open = useCallback(
+    (post: PredictionPostV2 | PostWithMillis) => {
       setOpenPostId(post.id);
       setDetailGame(null);
       setMarket(null);
       setPointsDistribution(null);
       setPointsDistributionLoading(false);
       setTopEntries([]);
-      setResultDetailView(null);
+      const warmMarket = resolveResultPostGameMarket(
+        post as PostWithMillis,
+        marketsFromGames
+      );
+      const warmRound = resolveResultPostGameRoundMeta(
+        post as PostWithMillis,
+        roundMetaFromGames
+      );
+      setResultDetailView(
+        buildWarmResultDetailViewFromPost(post as Record<string, unknown>, {
+          market: warmMarket,
+          gameMeta: warmRound,
+          viewer: viewerUid ? { uid: viewerUid } : null,
+        })
+      );
     },
-    []
+    [marketsFromGames, roundMetaFromGames, viewerUid]
   );
 
   const displayDetailResultPost = useMemo((): PredictionPostV2 | null => {
@@ -884,85 +898,59 @@ export default function ResultListWithOverlay({
       return;
     }
 
+    // 一覧カードから即時描画（Native warmPost 相当）
+    const warmMarket = resolveResultPostGameMarket(post, marketsFromGames);
+    const warmRound = resolveResultPostGameRoundMeta(post, roundMetaFromGames);
+    setResultDetailView(
+      buildWarmResultDetailViewFromPost(post as Record<string, unknown>, {
+        market: warmMarket,
+        gameMeta: warmRound,
+        viewer: viewerUid ? { uid: viewerUid } : null,
+      })
+    );
+
     let cancelled = false;
     setPointsDistributionLoading(true);
     (async () => {
       try {
-        const { exists, data: d } = await getCachedGameDocForResult(
-          post.gameId,
-          db
-        );
+        const loaded = await loadResultPostDetailClient(post.id);
         if (cancelled) return;
-        if (!exists || !d) {
-          if (!cancelled) {
-            setDetailGame(null);
-            setResultDetailView(null);
-            setMarket(null);
-            setPointsDistribution(null);
-            setTopEntries([]);
-          }
+        if (!loaded.ok) {
+          setDetailGame(null);
+          setMarket(null);
+          setPointsDistribution(null);
+          setTopEntries([]);
           return;
         }
-        const game = await buildMatchCardPropsForResultPost(
-          post,
-          d as Record<string, unknown>,
-          isMobile
+
+        setMarket(loaded.market);
+        setPointsDistribution(loaded.pointsDistribution);
+        setTopEntries(
+          resolveResultTopEntries({
+            pointsSummary: loaded.pointsSummary,
+            pointsDistribution: loaded.pointsDistribution,
+          })
         );
-        const marketRaw = d.market as Record<string, unknown> | undefined;
-        const pdRaw = rawPointsDistributionFromGameDoc(d);
-        const parsedDistribution = parseGamePointsDistributionV1(pdRaw);
-        const pointsSummary = resolveGamePointsSummary(
-          d as Record<string, unknown>
+        setResultDetailView(
+          buildResultDetailViewFromLoad(
+            loaded,
+            viewerUid ? { uid: viewerUid } : null
+          )
         );
-        if (!cancelled) {
-          setDetailGame(game);
-          const marketInput = marketRaw
-            ? {
-                homeRate: Number(marketRaw.homeRate ?? 0),
-                awayRate: Number(marketRaw.awayRate ?? 0),
-                drawRate:
-                  marketRaw.drawRate == null
-                    ? undefined
-                    : Number(marketRaw.drawRate),
-                total:
-                  marketRaw.total == null ? undefined : Number(marketRaw.total),
-              }
-            : null;
-          if (marketInput) setMarket(marketInput);
-          setPointsDistribution(parsedDistribution);
-          const rawTop = resolveResultTopEntries({
-            pointsSummary,
-            pointsDistribution: parsedDistribution,
-          });
-          const topWithCountry = await enrichTopEntriesCountryFromUsers(db, rawTop);
-          if (!cancelled) {
-            setTopEntries(topWithCountry);
-            const topScorerMarket = resolveTopScorerMarketView(
-              d as Record<string, unknown>,
-              post as Record<string, unknown>
-            );
-            setResultDetailView(
-              buildResultDetailViewModel(post as Record<string, unknown>, {
-                market: marketInput,
-                pointsSummary,
-                leadingScorers: (d as Record<string, unknown>).leadingScorers,
-                topScorerCandidates: (d as Record<string, unknown>).topScorerCandidates,
-                topScorerMarket,
-                gameMeta: {
-                  roundLabel: (d as Record<string, unknown>).roundLabel,
-                  playoffRound: (d as Record<string, unknown>).playoffRound,
-                  seasonRound: (d as Record<string, unknown>).seasonRound,
-                  seasonPhase: (d as Record<string, unknown>).seasonPhase,
-                },
-                viewer: viewerUid ? { uid: viewerUid } : null,
-              })
-            );
-          }
+
+        if (loaded.game) {
+          const game = await buildMatchCardPropsForResultPost(
+            post,
+            loaded.game,
+            isMobile
+          );
+          if (!cancelled) setDetailGame(game);
+        } else if (!cancelled) {
+          setDetailGame(null);
         }
       } catch {
         if (!cancelled) {
           setDetailGame(null);
-          setResultDetailView(null);
           setMarket(null);
           setPointsDistribution(null);
           setTopEntries([]);
@@ -975,6 +963,8 @@ export default function ResultListWithOverlay({
     return () => {
       cancelled = true;
     };
+    // markets / roundMeta は open() と初回 warm 用。identity 変化で再取得しない
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
   }, [openPostId, selectedPost, isMobile, language, viewerUid]);
 
   /** チュートリアルから詳細の開閉を依頼 */
@@ -2070,23 +2060,24 @@ export default function ResultListWithOverlay({
                           PREDICT_OVERLAY_FORM_PANEL,
                         ].join(" ")}
                       >
-                        {detailGame && displayDetailResultPost ? (
-                          isMobile ? (
-                            resultDetailView ? (
-                              <ResultDetailBody
-                                language={language}
-                                view={resultDetailView}
-                                gamesRoutePrefix={gamesRoutePrefix}
-                              />
-                            ) : (
-                              <div className="flex min-h-[28vh] items-center justify-center px-4 py-10">
-                                <CandleChartLoader
-                                  label={m.results.loadingMatch}
-                                />
-                              </div>
-                            )
+                        {isMobile ? (
+                          resultDetailView ? (
+                            <ResultDetailBody
+                              language={language}
+                              view={resultDetailView}
+                              gamesRoutePrefix={gamesRoutePrefix}
+                            />
                           ) : (
-                            <>
+                            <div className="flex min-h-[28vh] items-center justify-center px-4 py-10">
+                              <CandleChartLoader
+                                label={m.results.loadingMatch}
+                              />
+                            </div>
+                          )
+                        ) : selectedPost &&
+                          detailGame &&
+                          displayDetailResultPost ? (
+                          <>
                               <MatchCard
                                 {...detailGame}
                                 {...overlayMatchCardRecords}
@@ -2130,7 +2121,6 @@ export default function ResultListWithOverlay({
                                 onRequestPredictEdit={requestPredictEditFromCard}
                               />
                             </>
-                          )
                         ) : (
                           <div className="flex min-h-[28vh] items-center justify-center px-4 py-10">
                             <CandleChartLoader label={m.results.loadingMatch} />

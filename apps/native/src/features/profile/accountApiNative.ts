@@ -43,6 +43,26 @@ export async function saveMeProSkinNative(
   if (!res.ok) {
     throw new Error(data.condition ?? data.error ?? res.statusText);
   }
+
+  const { clearRankingSnapshotGenerationClientMem } = await import(
+    "../../../../../lib/rankings/rankingSnapshotGenerationClient"
+  );
+  const { clearPeriodRankingsClientCache } = await import(
+    "../rankings/useNativePeriodRankingsBulk"
+  );
+  const { clearNativeOpenSeasonRankingsClientCache } = await import(
+    "../rankings/useNativeOpenSeasonRankingsBulk"
+  );
+  const {
+    dispatchCumulativeRankingPatchMyProSkin,
+  } = await import("../../../../../lib/rankings/cumulativeRankingInvalidate");
+  clearRankingSnapshotGenerationClientMem();
+  clearPeriodRankingsClientCache();
+  clearNativeOpenSeasonRankingsClientCache();
+  const uid = auth.currentUser?.uid;
+  if (uid) {
+    dispatchCumulativeRankingPatchMyProSkin(uid, planProBgVariant);
+  }
 }
 
 /** Web `dismissMeProSkinNotices` 相当 */

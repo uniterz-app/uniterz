@@ -160,6 +160,15 @@ export async function POST(req: Request) {
       { merge: true }
     );
 
+    const { bumpRankingUiGeneration } = await import(
+      "@/lib/rankings/server/loadRankingSnapshotGeneration"
+    );
+    const { revalidateTag } = await import("next/cache");
+    await bumpRankingUiGeneration();
+    revalidateTag("cumulative-ranking", {});
+    revalidateTag("period-ranking", {});
+    revalidateTag("ranking-ui", {});
+
     return NextResponse.json({ ok: true, planProBgVariant: variant });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : "server error";

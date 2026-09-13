@@ -21,6 +21,7 @@ import ProLeagueTeaserPreviewScreenNative from "../../rankings/ProLeagueTeaserPr
 import ProInsightGatePreviewScreenNative from "../../games/predict/ProInsightGatePreviewScreenNative";
 import ProInsightNarrativePreviewScreenNative from "../../games/predict/ProInsightNarrativePreviewScreenNative";
 import MatchupTeamStatsPreviewScreenNative from "../../games/predict/MatchupTeamStatsPreviewScreenNative";
+import ResultDetailPreviewScreenNative from "../../results/ResultDetailPreviewScreenNative";
 import type { ProfileStackParamList } from "../../../navigation/types";
 import { resolveLocalizedLang } from "@/lib/i18n/localize";
 
@@ -218,6 +219,19 @@ export function LiveGameStatsPreviewScreenWrapper() {
   const { language } = useNativeUserLanguage(fUser?.uid);
   return (
     <LiveGameStatsPreviewScreenNative
+      language={language}
+      onClose={() => navigation.goBack()}
+    />
+  );
+}
+
+export function ResultDetailPreviewScreenWrapper() {
+  const navigation =
+    useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
+  const { fUser } = useFirebaseUser();
+  const { language } = useNativeUserLanguage(fUser?.uid);
+  return (
+    <ResultDetailPreviewScreenNative
       language={language}
       onClose={() => navigation.goBack()}
     />

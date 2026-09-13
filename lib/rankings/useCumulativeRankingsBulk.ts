@@ -6,9 +6,11 @@ import { auth } from "@/lib/firebase";
 import {
   CUMULATIVE_RANKING_INVALIDATE_EVENT,
   CUMULATIVE_RANKING_PATCH_MY_COUNTRY_EVENT,
+  CUMULATIVE_RANKING_PATCH_MY_PRO_SKIN_EVENT,
   clearRankCountrySessionOverride,
   readRankCountrySessionOverride,
   type CumulativeRankingPatchMyCountryDetail,
+  type CumulativeRankingPatchMyProSkinDetail,
 } from "@/lib/rankings/cumulativeRankingInvalidate";
 import type { RankingPhase } from "@/lib/rankings/rankingPhase";
 import type { PlayoffRoundKey } from "@/lib/rankings/playoffRound";
@@ -18,7 +20,16 @@ import {
   allRankingMetricsParam,
   isMetricListBundleLoaded,
 } from "@/lib/rankings/rankingBulkMetrics";
-import { isNewerSnapshotGeneration } from "@/lib/rankings/rankingSnapshotGeneration";
+import {
+  isNewerSnapshotGeneration,
+  scoreGenerationFromListToken,
+} from "@/lib/rankings/rankingSnapshotGeneration";
+import {
+  appendRankingListCacheParams,
+  clearRankingSnapshotGenerationClientMem,
+  fetchRankingListCacheKeys,
+  rankingListCacheToken,
+} from "@/lib/rankings/rankingSnapshotGenerationClient";
 
 type BulkFetchResult = {
   byMetric: Record<string, BulkMetricPayload>;
@@ -117,7 +128,7 @@ function readScopeSnapshotGeneration(
   for (const key of bulkCache.keys()) {
     if (!key.startsWith(`${phase}:${round}:${wcStage ?? "-"}:`)) continue;
     const gen = bulkCache.get(key)?.snapshotGeneration;
-    if (gen) return gen;
+    if (gen) return scoreGenerationFromListToken(gen);
   }
   return null;
 }
@@ -186,6 +197,49 @@ function patchCountryInBundles(
   return next;
 }
 
+function patchProSkinInBundles(
+  prev: Record<string, BulkMetricPayload> | null,
+  uid: string,
+  planProBgVariant: string
+): Record<string, BulkMetricPayload> | null {
+  if (!prev) return prev;
+  const next: Record<string, BulkMetricPayload> = {};
+  for (const [key, bundle] of Object.entries(prev)) {
+    const b = bundle as BulkMetricPayload;
+    const rows = Array.isArray(b.rows)
+      ? b.rows.map((row) => {
+          const r = row as { uid?: string };
+          if (r?.uid === uid) {
+            return { ...r, plan: "pro", planProBgVariant };
+          }
+          return row;
+        })
+      : b.rows;
+    const my = b.myRow as { uid?: string } | null | undefined;
+    const myRow =
+      my && typeof my.uid === "string" && my.uid === uid
+        ? ({ ...my, plan: "pro", planProBgVariant } as Record<string, unknown>)
+        : b.myRow;
+    next[key] = { ...b, rows, myRow };
+  }
+  return next;
+}
+
+function patchProSkinInAllBulkCaches(
+  uid: string,
+  planProBgVariant: string
+): void {
+  for (const [key, entry] of bulkCache.entries()) {
+    const bundles = patchProSkinInBundles(
+      entry.bundles,
+      uid,
+      planProBgVariant
+    );
+    if (!bundles) continue;
+    bulkCache.set(key, { ...entry, bundles, at: Date.now() });
+  }
+}
+
 function applySessionCountryOverride(
   bundles: Record<string, BulkMetricPayload> | null,
   uid: string | null
@@ -237,20 +291,20 @@ async function fetchBulkMetrics(
   if (wcStage) params.set("wcStage", wcStage);
   // 一覧は全員共通。uid / personalOnly は付けない（My Rank は client 直読）
   void opts;
+  const cacheKeys = await fetchRankingListCacheKeys();
+  appendRankingListCacheParams(params, cacheKeys);
+  const listToken = rankingListCacheToken(cacheKeys);
   const res = await fetch(`/api/cumulative-ranking/bulk?${params.toString()}`, {
+    // URL に g= / u= があるので CDN 長寿命でも世代切替できる
     cache: "force-cache",
   });
   const json = await res.json();
   if (!json?.ok || !json?.byMetric) return null;
   if (wcStage != null && json.wcStage !== wcStage) return null;
-  const snapshotGeneration =
-    typeof json.snapshotGeneration === "string"
-      ? json.snapshotGeneration
-      : null;
   return {
     byMetric: json.byMetric as Record<string, BulkMetricPayload>,
     myMetricValueDeltas: null,
-    snapshotGeneration,
+    snapshotGeneration: listToken,
   };
 }
 
@@ -274,7 +328,13 @@ async function resolveBulkFetch(
   if (!partial || opts?.personalOnly) return partial;
 
   const scopeGen = readScopeSnapshotGeneration(phase, round, wcStage);
-  if (!isNewerSnapshotGeneration(partial.snapshotGeneration, scopeGen)) {
+  const incomingScore = scoreGenerationFromListToken(
+    partial.snapshotGeneration
+  );
+  if (!isNewerSnapshotGeneration(incomingScore, scopeGen)) {
+    if (incomingScore) {
+      // keep scope gen in sync when first paint
+    }
     return partial;
   }
 
@@ -329,13 +389,32 @@ export function prefetchCumulativeRankingsList(
   round: PlayoffRoundKey = "overall",
   wcStage: WcRankingStage | null = null
 ): void {
-  if (readBulkCache(phase, round, wcStage, ANON_KEY)) return;
-  const inflightKey = listInflightKey(phase, round, wcStage);
-  if (inflightListKeys.has(inflightKey)) return;
-  inflightListKeys.add(inflightKey);
+  void (async () => {
+    const cacheKeys = await fetchRankingListCacheKeys();
+    const generation = rankingListCacheToken(cacheKeys);
+    const cached = readBulkCache(phase, round, wcStage, ANON_KEY);
+    if (
+      cached &&
+      cached.snapshotGeneration &&
+      cached.snapshotGeneration === generation
+    ) {
+      return;
+    }
+    if (cached && cached.snapshotGeneration !== generation) {
+      clearBulkCacheScope(phase, round, wcStage);
+    }
+    const inflightKey = listInflightKey(phase, round, wcStage);
+    if (inflightListKeys.has(inflightKey)) return;
+    inflightListKeys.add(inflightKey);
 
-  void resolveBulkFetch(INITIAL_RANKING_METRICS, null, phase, round, wcStage)
-    .then((partial) => {
+    try {
+      const partial = await resolveBulkFetch(
+        INITIAL_RANKING_METRICS,
+        null,
+        phase,
+        round,
+        wcStage
+      );
       if (!partial) return;
       const applied = applyBulkResult(partial, null);
       writeBulkCache(phase, round, wcStage, {
@@ -344,10 +423,10 @@ export function prefetchCumulativeRankingsList(
         appliedUid: ANON_KEY,
         snapshotGeneration: applied.snapshotGeneration,
       });
-    })
-    .finally(() => {
+    } finally {
       inflightListKeys.delete(inflightKey);
-    });
+    }
+  })();
 }
 
 export function useCumulativeRankingsBulk(
@@ -385,14 +464,31 @@ export function useCumulativeRankingsBulk(
       if (!d?.uid) return;
       setByMetric((prev) => patchCountryInBundles(prev, d.uid, d.countryCode));
     };
+    const onPatchMyProSkin = (ev: Event) => {
+      const d = (ev as CustomEvent<CumulativeRankingPatchMyProSkinDetail>)
+        .detail;
+      if (!d?.uid || !d.planProBgVariant) return;
+      patchProSkinInAllBulkCaches(d.uid, d.planProBgVariant);
+      setByMetric((prev) =>
+        patchProSkinInBundles(prev, d.uid, d.planProBgVariant)
+      );
+    };
     window.addEventListener(
       CUMULATIVE_RANKING_PATCH_MY_COUNTRY_EVENT,
       onPatchMyCountry
+    );
+    window.addEventListener(
+      CUMULATIVE_RANKING_PATCH_MY_PRO_SKIN_EVENT,
+      onPatchMyProSkin
     );
     return () => {
       window.removeEventListener(
         CUMULATIVE_RANKING_PATCH_MY_COUNTRY_EVENT,
         onPatchMyCountry
+      );
+      window.removeEventListener(
+        CUMULATIVE_RANKING_PATCH_MY_PRO_SKIN_EVENT,
+        onPatchMyProSkin
       );
     };
   }, []);
@@ -400,6 +496,7 @@ export function useCumulativeRankingsBulk(
   useEffect(() => {
     const onInvalidate = () => {
       const seq = ++invalidateSeqRef.current;
+      clearRankingSnapshotGenerationClientMem();
       clearBulkCacheScope(phase, round, wcStage);
       void (async () => {
         const uid = auth.currentUser?.uid ?? null;
@@ -544,7 +641,19 @@ export function useCumulativeRankingsBulk(
       setAppliedTotalPointsUid(ANON_KEY);
       setLoading(false);
       const seq = ++listFetchSeqRef.current;
-      void runListFetch(seq);
+      // 世代が進んでいれば裏で取り直し（日中は同一 g= で CDN hit）
+      void (async () => {
+        const cacheKeys = await fetchRankingListCacheKeys();
+        const generation = rankingListCacheToken(cacheKeys);
+        if (cancelled || seq !== listFetchSeqRef.current) return;
+        if (
+          anonCache.snapshotGeneration &&
+          anonCache.snapshotGeneration === generation
+        ) {
+          return;
+        }
+        await runListFetch(seq);
+      })();
     } else {
       setByMetric(null);
       setMyMetricValueDeltas(null);
