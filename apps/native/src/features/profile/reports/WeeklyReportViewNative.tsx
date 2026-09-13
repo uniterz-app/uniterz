@@ -27,6 +27,7 @@ import {
   PANEL_BG,
   REPORT_ACCENT,
   REPORT_FRAME,
+  REPORT_KUROKIN,
   fmtReportPt,
   fmtReportRange,
   reportBodyFont,
@@ -34,7 +35,6 @@ import {
   type ReportAccent,
 } from "./reportThemeNative";
 import { WeeklyReportCardShell } from "./reportCardShellNative";
-import { ReportSquareGridOverlay } from "./reportGridOverlaysNative";
 
 type Lang = LocalizedLang;
 
@@ -54,7 +54,7 @@ const DIVISION_META: Record<
 function slabStyle(_accent?: ReportAccent): ViewStyle {
   return {
     borderWidth: 1,
-    borderColor: REPORT_FRAME.weekly.border,
+    borderColor: REPORT_KUROKIN.goldBorder,
     backgroundColor: PANEL_BG,
     borderRadius: 3,
     overflow: "hidden",
@@ -188,9 +188,9 @@ function HeroBlock({ report, lang }: { report: WeeklyReport; lang: Lang }) {
         marginBottom: 0,
         backgroundColor: PANEL_BG,
         borderColor: REPORT_FRAME.weekly.border,
+        borderWidth: 1,
       }}
     >
-      <ReportSquareGridOverlay borderRadius={0} />
       {/* 左=順位 / 右=スコア。数字は同一テキスト行でベースライン共有 */}
       <View style={styles.heroSplit}>
         <View style={styles.heroDivider} pointerEvents="none" />
@@ -361,8 +361,13 @@ function BattlePanel({
       {rivals.length > 0 ? (
         <>
           <View style={styles.rivalList}>
-            {visible.map((r) => (
-              <RivalRow key={r.uid} rival={r} accent={accent} lang={lang} />
+            {visible.map((r, i) => (
+              <View
+                key={r.uid}
+                style={i > 0 ? styles.rivalRowBorder : null}
+              >
+                <RivalRow rival={r} accent={accent} lang={lang} />
+              </View>
             ))}
           </View>
           {expanded && overflowCount > 0 ? (
@@ -718,8 +723,8 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
   },
   periodChipOn: {
-    borderColor: REPORT_FRAME.weekly.border,
-    backgroundColor: "rgba(34,211,238,0.14)",
+    borderColor: "rgba(255,255,255,0.28)",
+    backgroundColor: "rgba(255,255,255,0.10)",
   },
   periodChipText: {
     fontFamily: OXANIUM_700,
@@ -729,7 +734,7 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
   },
   periodChipTextOn: {
-    color: "#a5f3fc",
+    color: "#fff",
   },
   liveNote: { color: "rgba(255,255,255,0.45)", fontSize: 11, lineHeight: 16 },
 
@@ -777,7 +782,7 @@ const styles = StyleSheet.create({
     left: "50%",
     width: 1,
     marginLeft: -0.5,
-    backgroundColor: "rgba(34,211,238,0.16)",
+    backgroundColor: REPORT_KUROKIN.hairline,
   },
   heroLabelRow: {
     flexDirection: "row",
@@ -938,6 +943,10 @@ const styles = StyleSheet.create({
   battleCountRow: { flexDirection: "row", alignItems: "center", gap: 2 },
   battleCountText: { fontFamily: BEBAS, fontSize: 20 },
   rivalList: { marginTop: 4 },
+  rivalRowBorder: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: REPORT_KUROKIN.divider,
+  },
   moreRivalsText: {
     fontFamily: OXANIUM_700,
     fontSize: 10,

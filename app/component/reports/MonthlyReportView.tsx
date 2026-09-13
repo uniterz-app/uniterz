@@ -8,8 +8,6 @@
 import type { CSSProperties } from "react";
 import { useState } from "react";
 import { ArrowDown, ArrowUp, Flame } from "lucide-react";
-import CyberTooltip from "@/app/component/common/CyberTooltip";
-import { KINETIK_CYBER_TOOLTIP_DEFAULT } from "@/app/component/profile/edit/kinetikSlantTabTheme";
 import {
   PolarAngleAxis,
   PolarGrid,
@@ -34,8 +32,10 @@ import {
 } from "@/lib/reports/monthlyReportRankBand";
 import { resolveMonthlyReportAnalysisTypeCopy } from "@/lib/reports/monthlyReportAnalysisTypeCopy";
 import type { LocalizedLang } from "@/lib/i18n/localize";
+import { REPORT_KUROKIN } from "@/lib/reports/reportChrome";
 import {
   monthlyReportUiCopy,
+  splitMonthlyRadarAxisHelp,
   type MonthlyReportUiCopy,
 } from "@/lib/reports/monthlyReportUiCopy";
 import type {
@@ -65,7 +65,7 @@ function bodyFontClass(lang: Lang, latinClassName: string): string {
     : latinClassName;
 }
 
-const PANEL_BG = "linear-gradient(170deg, rgba(14,20,32,0.98), rgba(6,10,16,1))";
+const PANEL_BG = REPORT_KUROKIN.bgGrad;
 const NOTCH_SM =
   "polygon(0 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%)";
 
@@ -108,11 +108,23 @@ function hexTint(hex: string, alpha: string): string {
 
 function cellStyle(extra?: CSSProperties): CSSProperties {
   return {
-    border: "1px solid rgba(34,211,238,0.28)",
+    border: `1px solid ${REPORT_KUROKIN.goldBorder}`,
     background: PANEL_BG,
-    boxShadow: "inset 0 0 0 1px rgba(8,14,26,0.85)",
+    boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.85)",
     clipPath: NOTCH_SM,
     WebkitClipPath: NOTCH_SM,
+    ...extra,
+  };
+}
+
+function listShellStyle(extra?: CSSProperties): CSSProperties {
+  return {
+    border: `1px solid ${REPORT_KUROKIN.goldBorder}`,
+    background: PANEL_BG,
+    boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.85)",
+    clipPath: NOTCH_SM,
+    WebkitClipPath: NOTCH_SM,
+    overflow: "hidden",
     ...extra,
   };
 }
@@ -344,11 +356,12 @@ function CoverBlock({ report, lang }: { report: MonthlyReport; lang: Lang }) {
 
   return (
     <RankingsCyberPanel
-      accentRgb={band.glow}
+      subtle
+      accentRgb="rgba(0,0,0,0)"
       shellStyle={{
-        border: `1px solid ${band.border}`,
-        background: `linear-gradient(170deg, ${band.tint}, rgba(6,10,16,0.98) 62%), ${PANEL_BG}`,
-        boxShadow: `inset 0 0 0 1px rgba(8,14,26,0.9), inset 0 0 28px ${band.tint}, 0 0 22px ${band.glow}`,
+        border: `1px solid ${REPORT_KUROKIN.goldBorder}`,
+        background: PANEL_BG,
+        boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.9)",
       }}
     >
       <div className="relative z-10">
@@ -703,12 +716,20 @@ function NumbersBlock({
           {c.top10Mark}
         </span>
       </div>
-      <div className="mt-2 grid gap-1.5">
-        {ordered.map((m) => {
+      <div className="mt-2" style={listShellStyle()}>
+        {ordered.map((m, i) => {
           const prev = formatMetricDelta(m, m.prevDelta);
           const showRank = showsMetricRank(m.key) && m.rank != null;
           return (
-            <div key={m.key} className="px-3.5 py-3" style={cellStyle()}>
+            <div
+              key={m.key}
+              className="px-3.5 py-3"
+              style={
+                i > 0
+                  ? { borderTop: `1px solid ${REPORT_KUROKIN.divider}` }
+                  : undefined
+              }
+            >
               <div className="flex items-center justify-between gap-2">
                 <div className="flex min-w-0 items-center gap-2">
                   <p
@@ -835,7 +856,7 @@ function UnitsBreakdownBlock({
           ].join(" ")}
           style={cellStyle(
             canExpand && open
-              ? { borderColor: "rgba(34,211,238,0.45)" }
+              ? { borderColor: REPORT_KUROKIN.goldBorder }
               : undefined
           )}
         >
@@ -843,7 +864,7 @@ function UnitsBreakdownBlock({
             <p
               className={[
                 nameOxanium.className,
-                "text-[9px] font-bold uppercase tracking-[0.16em] text-cyan-300/75",
+                "text-[9px] font-bold uppercase tracking-[0.16em] text-amber-200/80",
               ].join(" ")}
             >
               {c.unitsBreakdownTotal}
@@ -918,14 +939,18 @@ function UnitsBreakdownBlock({
         </button>
 
         {open && canExpand ? (
-          <div className="grid gap-1.5">
-            {sorted.map((g) => {
+          <div className="mt-1.5" style={listShellStyle()}>
+            {sorted.map((g, i) => {
               const accent = UNIT_SOURCE_COLOR[g.source];
               return (
                 <div
                   key={g.id}
                   className="flex items-center gap-3 px-3 py-2.5"
-                  style={cellStyle()}
+                  style={
+                    i > 0
+                      ? { borderTop: `1px solid ${REPORT_KUROKIN.divider}` }
+                      : undefined
+                  }
                 >
                   <span
                     className="mt-0.5 h-2.5 w-2.5 shrink-0 rounded-full"
@@ -1028,10 +1053,6 @@ function RadarBlock({
     .split("\n")
     .map((l) => l.trim())
     .filter(Boolean);
-  const [axisTip, setAxisTip] = useState<{
-    key: MonthlyReportRadarAxisKey;
-    rect: DOMRect;
-  } | null>(null);
 
   return (
     <section>
@@ -1041,7 +1062,7 @@ function RadarBlock({
         style={{
           ...cellStyle(),
           background:
-            "radial-gradient(ellipse 80% 55% at 50% 28%, rgba(34,211,238,0.10), transparent 62%), linear-gradient(170deg, rgba(12,16,24,0.98), rgba(5,8,12,1))",
+            "radial-gradient(ellipse 80% 55% at 50% 28%, rgba(34,211,238,0.08), transparent 62%), linear-gradient(170deg, #0c0c10 0%, #050508 100%)",
         }}
       >
         <div className="mx-auto h-[260px] w-full max-w-[340px]">
@@ -1051,7 +1072,7 @@ function RadarBlock({
               cx="50%"
               cy="52%"
               outerRadius="58%"
-              margin={{ top: 18, right: 36, bottom: 18, left: 36 }}
+              margin={{ top: 18, right: 48, bottom: 18, left: 48 }}
             >
               <PolarGrid
                 stroke="rgba(148,163,184,0.28)"
@@ -1110,28 +1131,17 @@ function RadarBlock({
               </span>
             );
             return (
-              <button
+              <div
                 key={key}
-                type="button"
                 className={[
                   "flex min-w-0 flex-1 flex-col items-center px-0.5",
                   i > 0 ? "border-l border-white/10" : "",
                 ].join(" ")}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  const rect = (
-                    e.currentTarget as HTMLButtonElement
-                  ).getBoundingClientRect();
-                  setAxisTip((prev) =>
-                    prev?.key === key ? null : { key, rect }
-                  );
-                }}
-                aria-label={c.radarAxisHelp[key].replace("\n", ": ")}
               >
                 <p
                   className={[
                     nameOxanium.className,
-                    "max-w-full text-center text-[7px] font-bold uppercase leading-tight tracking-[0.02em] text-white/40 underline decoration-white/20 decoration-dotted underline-offset-2",
+                    "max-w-full text-center text-[7px] font-bold uppercase leading-tight tracking-[0.02em] text-white/40",
                   ].join(" ")}
                 >
                   {c.radarAxis[key]}
@@ -1139,10 +1149,50 @@ function RadarBlock({
                 <div className="mt-0.5">
                   <CyberScanlineText subtle={!strong}>{num}</CyberScanlineText>
                 </div>
-              </button>
+              </div>
             );
           })}
         </div>
+
+        <ul
+          className="mt-3 border-t pt-0"
+          style={{ borderColor: REPORT_KUROKIN.divider }}
+        >
+          {RADAR_ORDER.map((key, i) => {
+            const { title, body } = splitMonthlyRadarAxisHelp(
+              c.radarAxisHelp[key]
+            );
+            return (
+              <li
+                key={key}
+                className="flex gap-2 py-2"
+                style={
+                  i > 0
+                    ? { borderTop: `1px solid ${REPORT_KUROKIN.divider}` }
+                    : undefined
+                }
+              >
+                <span
+                  className={[
+                    nameOxanium.className,
+                    "w-[5.5rem] shrink-0 pt-0.5 text-[8px] font-extrabold uppercase tracking-[0.08em]",
+                  ].join(" ")}
+                  style={{ color: "rgba(165,243,252,0.82)" }}
+                >
+                  {title}
+                </span>
+                <p
+                  className={[
+                    jp.className,
+                    "min-w-0 flex-1 text-[11px] leading-relaxed text-white/55",
+                  ].join(" ")}
+                >
+                  {body}
+                </p>
+              </li>
+            );
+          })}
+        </ul>
 
         <div className="mt-4 border-t border-white/[0.08] pt-3.5">
           <p
@@ -1180,15 +1230,6 @@ function RadarBlock({
           </div>
         </div>
       </div>
-
-      {axisTip ? (
-        <CyberTooltip
-          anchorRect={axisTip.rect}
-          message={c.radarAxisHelp[axisTip.key]}
-          theme={KINETIK_CYBER_TOOLTIP_DEFAULT}
-          onClose={() => setAxisTip(null)}
-        />
-      ) : null}
     </section>
   );
 }
@@ -1290,12 +1331,13 @@ function HabitsRatePair({
   const rightHigher = rightPct > leftPct;
 
   return (
-    <div className="px-3 py-2.5" style={cellStyle()}>
+    <div className="px-3 py-2.5">
       <p
         className={[
           nameOxanium.className,
-          "text-[8px] font-bold uppercase tracking-[0.16em] text-cyan-300/75",
+          "text-[8px] font-bold uppercase tracking-[0.16em]",
         ].join(" ")}
+        style={{ color: "rgba(103,232,249,0.75)" }}
       >
         {title}
       </p>
@@ -1401,85 +1443,29 @@ function HabitsBlock({
           <div
             className="relative h-44 overflow-hidden"
             style={{
-              border: "1px solid rgba(34,211,238,0.22)",
+              border: `1px solid ${REPORT_KUROKIN.goldBorderSoft}`,
               background:
-                "radial-gradient(ellipse 70% 55% at 50% 50%, rgba(34,211,238,0.10), transparent 62%), radial-gradient(ellipse 90% 80% at 50% 50%, #07101c 0%, #03060e 100%)",
+                "radial-gradient(ellipse 70% 55% at 50% 50%, rgba(34,211,238,0.06), transparent 62%), radial-gradient(ellipse 90% 80% at 50% 50%, #0a0a0c 0%, #050508 100%)",
             }}
           >
-            {/* fine cyan grid */}
-            <div
-              className="absolute inset-0 opacity-[0.55]"
-              style={{
-                backgroundImage: `
-                  linear-gradient(rgba(34,211,238,0.11) 1px, transparent 1px),
-                  linear-gradient(90deg, rgba(34,211,238,0.11) 1px, transparent 1px)
-                `,
-                backgroundSize: "14px 14px",
-                maskImage:
-                  "radial-gradient(ellipse 85% 75% at 50% 50%, #000 40%, transparent 100%)",
-                WebkitMaskImage:
-                  "radial-gradient(ellipse 85% 75% at 50% 50%, #000 40%, transparent 100%)",
-              }}
-              aria-hidden
-            />
-            {/* major grid */}
-            <div
-              className="absolute inset-0 opacity-[0.45]"
-              style={{
-                backgroundImage: `
-                  linear-gradient(rgba(56,189,248,0.22) 1px, transparent 1px),
-                  linear-gradient(90deg, rgba(56,189,248,0.22) 1px, transparent 1px)
-                `,
-                backgroundSize: "56px 56px",
-                backgroundPosition: "center",
-                maskImage:
-                  "radial-gradient(ellipse 80% 70% at 50% 50%, #000 35%, transparent 100%)",
-                WebkitMaskImage:
-                  "radial-gradient(ellipse 80% 70% at 50% 50%, #000 35%, transparent 100%)",
-              }}
-              aria-hidden
-            />
-            {/* scanlines */}
-            <div
-              className="absolute inset-0 opacity-[0.18]"
-              style={{
-                backgroundImage:
-                  "repeating-linear-gradient(0deg, transparent 0, transparent 2px, rgba(0,0,0,0.45) 2px, rgba(0,0,0,0.45) 3px)",
-              }}
-              aria-hidden
-            />
-            {/* quadrant tint */}
-            <div
-              className="pointer-events-none absolute inset-0 opacity-40"
-              style={{
-                background: `
-                  linear-gradient(135deg, rgba(232,121,249,0.07) 0%, transparent 42%),
-                  linear-gradient(315deg, rgba(34,211,238,0.08) 0%, transparent 42%)
-                `,
-              }}
-              aria-hidden
-            />
-
-            {/* crosshair axes */}
+            {/* crosshair axes only */}
             <div
               className="absolute bottom-0 left-1/2 top-0 w-px"
               style={{
                 background:
-                  "linear-gradient(180deg, transparent, rgba(34,211,238,0.55) 18%, rgba(34,211,238,0.85) 50%, rgba(34,211,238,0.55) 82%, transparent)",
-                boxShadow: "0 0 10px rgba(34,211,238,0.35)",
+                  "linear-gradient(180deg, transparent, rgba(34,211,238,0.35) 18%, rgba(34,211,238,0.7) 50%, rgba(34,211,238,0.35) 82%, transparent)",
               }}
             />
             <div
               className="absolute left-0 right-0 top-1/2 h-px"
               style={{
                 background:
-                  "linear-gradient(90deg, transparent, rgba(232,121,249,0.45) 18%, rgba(255,255,255,0.55) 50%, rgba(34,211,238,0.45) 82%, transparent)",
-                boxShadow: "0 0 10px rgba(125,211,252,0.25)",
+                  "linear-gradient(90deg, transparent, rgba(232,121,249,0.35) 18%, rgba(255,255,255,0.45) 50%, rgba(34,211,238,0.35) 82%, transparent)",
               }}
             />
             {/* center reticle */}
             <div
-              className="absolute left-1/2 top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border border-cyan-300/40"
+              className="absolute left-1/2 top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border border-cyan-300/35"
               aria-hidden
             />
 
@@ -1554,31 +1540,43 @@ function HabitsBlock({
           </p>
         </div>
 
-        <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
-          <HabitsRatePair
-            title={c.homeAway}
-            leftLabel={c.homeWr}
-            rightLabel={c.awayWr}
-            leftShareLabel={c.homeShare}
-            rightShareLabel={c.awayShare}
-            leftRate={habits.home.winRate}
-            rightRate={habits.away.winRate}
-            leftColor={COLOR_HOME}
-            rightColor={COLOR_AWAY}
-            leftShare={habits.home.share}
-          />
-          <HabitsRatePair
-            title={c.market}
-            leftLabel={c.dogWr}
-            rightLabel={c.favWr}
-            leftShareLabel={c.dogShare}
-            rightShareLabel={c.favShare}
-            leftRate={habits.underdog.winRate}
-            rightRate={habits.favorite.winRate}
-            leftColor={COLOR_DOG}
-            rightColor={COLOR_FAV}
-            leftShare={habits.underdog.share}
-          />
+        <div className="mt-1.5" style={listShellStyle()}>
+          <div
+            className="grid grid-cols-1 sm:grid-cols-2"
+            style={{ borderColor: REPORT_KUROKIN.divider }}
+          >
+            <div className="sm:border-r" style={{ borderColor: REPORT_KUROKIN.divider }}>
+              <HabitsRatePair
+                title={c.homeAway}
+                leftLabel={c.homeWr}
+                rightLabel={c.awayWr}
+                leftShareLabel={c.homeShare}
+                rightShareLabel={c.awayShare}
+                leftRate={habits.home.winRate}
+                rightRate={habits.away.winRate}
+                leftColor={COLOR_HOME}
+                rightColor={COLOR_AWAY}
+                leftShare={habits.home.share}
+              />
+            </div>
+            <div
+              className="border-t sm:border-t-0"
+              style={{ borderColor: REPORT_KUROKIN.divider }}
+            >
+              <HabitsRatePair
+                title={c.market}
+                leftLabel={c.dogWr}
+                rightLabel={c.favWr}
+                leftShareLabel={c.dogShare}
+                rightShareLabel={c.favShare}
+                leftRate={habits.underdog.winRate}
+                rightRate={habits.favorite.winRate}
+                leftColor={COLOR_DOG}
+                rightColor={COLOR_FAV}
+                leftShare={habits.underdog.share}
+              />
+            </div>
+          </div>
         </div>
       </div>
     </section>
@@ -1610,11 +1608,19 @@ function TeamList({
       >
         {title}
       </p>
-      <ul className="mt-2.5 space-y-2">
-        {teams.map((t) => {
+      <ul className="mt-1">
+        {teams.map((t, i) => {
           const color = getTeamPrimaryColor("nba", t.teamId);
           return (
-            <li key={t.teamId} className="flex items-baseline justify-between gap-2">
+            <li
+              key={t.teamId}
+              className="flex items-baseline justify-between gap-2 py-2"
+              style={
+                i > 0
+                  ? { borderTop: `1px solid ${REPORT_KUROKIN.divider}` }
+                  : undefined
+              }
+            >
               <span
                 className={[
                   nameOxanium.className,
@@ -1680,7 +1686,7 @@ function HighlightCard({
     const homeColor = getTeamPrimaryColor("nba", item.home.teamId);
     const awayColor = getTeamPrimaryColor("nba", item.away.teamId);
     return (
-      <div className="relative overflow-hidden px-4 py-3" style={cellStyle()}>
+      <div className="relative overflow-hidden px-4 py-3">
         <div
           className="pointer-events-none absolute inset-0"
           style={{
@@ -1754,7 +1760,7 @@ function HighlightCard({
 
   if (item.kind === "bestDay") {
     return (
-      <div className="px-3 py-2.5" style={cellStyle()}>
+      <div className="px-3 py-2.5">
         <p
           className={[
             nameOxanium.className,
@@ -1793,7 +1799,7 @@ function HighlightCard({
 
   if (item.kind === "winStreak") {
     return (
-      <div className="px-3 py-2.5" style={cellStyle()}>
+      <div className="px-3 py-2.5">
         <p
           className={[
             nameOxanium.className,
@@ -1827,7 +1833,7 @@ function HighlightCard({
 
   if (item.kind === "upset") {
     return (
-      <div className="px-3 py-2.5" style={cellStyle()}>
+      <div className="px-3 py-2.5">
         <p
           className={[
             nameOxanium.className,
@@ -1862,7 +1868,7 @@ function HighlightCard({
         ? "SCORER"
         : "UPSET";
   return (
-    <div className="px-3 py-2.5" style={cellStyle()}>
+    <div className="px-3 py-2.5">
       <p
         className={[
           nameOxanium.className,
@@ -1896,12 +1902,30 @@ function HighlightsBlock({
   return (
     <section>
       <SectionBadge>{c.highlights}</SectionBadge>
-      <div className="mt-2 grid gap-1.5">
+      <div className="mt-2" style={listShellStyle()}>
         {primary ? <HighlightCard item={primary} lang={lang} /> : null}
         {rest.length > 0 ? (
-          <div className="grid grid-cols-2 gap-1.5">
+          <div
+            className="grid grid-cols-2"
+            style={
+              primary
+                ? { borderTop: `1px solid ${REPORT_KUROKIN.divider}` }
+                : undefined
+            }
+          >
             {rest.map((h, i) => (
-              <HighlightCard key={`${h.kind}-${i}`} item={h} lang={lang} />
+              <div
+                key={`${h.kind}-${i}`}
+                style={
+                  i > 0
+                    ? {
+                        borderLeft: `1px solid ${REPORT_KUROKIN.divider}`,
+                      }
+                    : undefined
+                }
+              >
+                <HighlightCard item={h} lang={lang} />
+              </div>
             ))}
           </div>
         ) : null}
@@ -1930,11 +1954,7 @@ function OutlookBlock({
       <SectionBadge>{c.outlook}</SectionBadge>
       <div
         className="mt-2 px-3.5 py-3.5"
-        style={cellStyle({
-          border: "1px solid rgba(34,211,238,0.32)",
-          background:
-            "linear-gradient(165deg, rgba(34,211,238,0.10), rgba(6,10,16,0.98) 55%), rgba(8,14,22,0.96)",
-        })}
+        style={cellStyle()}
       >
         <p
           className={[

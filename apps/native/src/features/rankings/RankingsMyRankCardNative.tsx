@@ -204,12 +204,12 @@ export function MyRankCardNative({
     });
   }, [canShare, sharing, handleShare, onShareStateChange, freeTier]);
 
-  if (loading || statsPending) {
-    return null;
-  }
+  /** 読み込み中も枠は維持（Pick Up→PRO 切替の unmount フラッシュ防止） */
+  const rankPending = loading || statsPending;
+  const hasRank = !rankPending && rank != null && rank >= 1;
 
   if (freeTier) {
-    const listRank = rank != null && rank >= 1 ? rank : 99;
+    const listRank = hasRank ? rank! : 99;
     return (
       <View style={[styles.myRankOuter, mobileWide ? styles.myRankOuterWide : null]}>
         <MyRankCardFrameNative
@@ -233,6 +233,8 @@ export function MyRankCardNative({
               hideAccentBar
               rankOverline={t.yourRank}
               plainWhiteScore
+              rankDisplayValue={hasRank ? undefined : "--"}
+              rankMuted={!hasRank}
             />
           </View>
         </MyRankCardFrameNative>
@@ -253,7 +255,7 @@ export function MyRankCardNative({
             {/* 上段: リスト行と同じ配置 / 下段: Pro 専用 */}
             <View style={styles.myRankProStack}>
                 <CyberRankingListRowNative
-                  rank={rank != null && rank >= 1 ? rank : 99}
+                  rank={hasRank ? rank! : 99}
                   displayName={displayName.trim() || "?"}
                   photoURL={photoURL}
                   metric={metric}
@@ -263,6 +265,7 @@ export function MyRankCardNative({
                   language={language}
                   isPro={showProBadge}
                   rankDeltaPlaces={
+                    !rankPending &&
                     typeof rankDeltaPlaces === "number" &&
                     Number.isFinite(rankDeltaPlaces)
                       ? rankDeltaPlaces
@@ -270,11 +273,9 @@ export function MyRankCardNative({
                   }
                   hideAccentBar
                   bare
-                  rankDisplayValue={
-                    rank != null && rank >= 1 ? undefined : "--"
-                  }
-                  rankMuted={!(rank != null && rank >= 1)}
-                  plainWhiteScore={!(rank != null && rank >= 1)}
+                  rankDisplayValue={hasRank ? undefined : "--"}
+                  rankMuted={!hasRank}
+                  plainWhiteScore={!hasRank}
                 />
 
               {showRankingProgress ? (

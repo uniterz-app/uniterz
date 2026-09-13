@@ -3,7 +3,7 @@
  * 一覧は共有キャッシュ。My Rank は personalOnly overlay（top50 外対応）。
  */
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "../../lib/firebase";
 import { getUniterzApiBaseUrl } from "../games/submitPredictionApi";
@@ -131,7 +131,11 @@ export function useNativePeriodRankingsBulk(
     return onAuthStateChanged(auth, (u) => setUid(u?.uid ?? null));
   }, []);
 
-  const loadShared = useCallback(async () => {
+  /**
+   * Pick Up ↔ PRO LEAGUE 切替で、旧 division の byMetric が1フレ残ると
+   * Pro クロムに Pickup 順位が出る。描画前に必ず捨てる。
+   */
+  useLayoutEffect(() => {
     if (!period) {
       setByMetric({});
       setSharedByMetric({});
@@ -142,23 +146,23 @@ export function useNativePeriodRankingsBulk(
       setListReady(true);
       return;
     }
+    setListReady(false);
+    setPersonalPending(false);
+    setByMetric({});
+    setSharedByMetric({});
+    setProRequired(false);
+  }, [period, label, division]);
+
+  const loadShared = useCallback(async (): Promise<PeriodBulkResult> => {
+    if (!period) return emptyResult;
 
     const base = getUniterzApiBaseUrl();
     const generation = await fetchRankingSnapshotGeneration(base);
     const key = periodCacheKey(period, label, division, generation);
     const cached = periodCache.get(key);
     if (cached && Date.now() - cached.at < PERIOD_CACHE_TTL_MS) {
-      setSharedByMetric(cached.value.byMetric);
-      setByMetric(cached.value.byMetric);
-      setAvailableLabels(cached.value.availableLabels);
-      setActiveLabel(cached.value.activeLabel);
-      setProRequired(cached.value.proRequired);
-      setListReady(true);
-      return;
+      return cached.value;
     }
-
-    setListReady(false);
-    setProRequired(false);
 
     const pending = periodInflight.get(key);
     const run =
@@ -211,22 +215,28 @@ export function useNativePeriodRankingsBulk(
 
     if (!pending) periodInflight.set(key, run);
 
-    try {
-      const value = await run;
-      periodCache.set(key, { at: Date.now(), value });
+    const value = await run;
+    periodCache.set(key, { at: Date.now(), value });
+    return value;
+  }, [period, label, division]);
+
+  useEffect(() => {
+    if (!period) return;
+    let cancelled = false;
+    void (async () => {
+      const value = await loadShared();
+      if (cancelled) return;
       setSharedByMetric(value.byMetric);
       setByMetric(value.byMetric);
       setAvailableLabels(value.availableLabels);
       setActiveLabel(value.activeLabel);
       setProRequired(value.proRequired);
-    } finally {
       setListReady(true);
-    }
-  }, [period, label, division]);
-
-  useEffect(() => {
-    void loadShared();
-  }, [loadShared]);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [loadShared, period]);
 
   useEffect(() => {
     if (!period || !listReady || proRequired) {

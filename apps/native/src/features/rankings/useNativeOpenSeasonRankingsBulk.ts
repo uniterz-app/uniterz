@@ -3,7 +3,7 @@
  * 世代キー付きキャッシュ。uid hydrate での二重取得を抑える。
  */
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "../../lib/firebase";
 import { getUniterzApiBaseUrl } from "../games/submitPredictionApi";
@@ -41,16 +41,26 @@ export function useNativeOpenSeasonRankingsBulk(enabled: boolean) {
     return onAuthStateChanged(auth, (u) => setUid(u?.uid ?? null));
   }, []);
 
-  const load = useCallback(async () => {
+  /** enable 切替で空 byMetric + listReady=true の隙間を作らない */
+  useLayoutEffect(() => {
     if (!enabled) {
       setByMetric({});
       setProRequired(false);
-      setListReady(true);
-      return;
-    }
-    if (!uid) {
       setListReady(false);
       return;
+    }
+    setListReady(false);
+    setByMetric({});
+    setProRequired(false);
+  }, [enabled]);
+
+  const load = useCallback(async (): Promise<OpenSeasonResult> => {
+    if (!enabled || !uid) {
+      return {
+        byMetric: {},
+        proRequired: false,
+        snapshotGeneration: null,
+      };
     }
 
     const base = getUniterzApiBaseUrl();
@@ -64,16 +74,10 @@ export function useNativeOpenSeasonRankingsBulk(enabled: boolean) {
         openCache.value.snapshotGeneration &&
         openCache.value.snapshotGeneration === generation
       ) {
-        setByMetric(openCache.value.byMetric);
-        setProRequired(false);
-        setListReady(true);
-        return;
+        return openCache.value;
       }
       openCache = null;
     }
-
-    setListReady(false);
-    setProRequired(false);
 
     const run =
       openInflight ??
@@ -140,21 +144,31 @@ export function useNativeOpenSeasonRankingsBulk(enabled: boolean) {
 
     openInflight = run;
 
-    try {
-      const value = await run;
-      if (!value.proRequired) {
-        openCache = { at: Date.now(), value };
-      }
-      setByMetric(value.byMetric);
-      setProRequired(value.proRequired);
-    } finally {
-      setListReady(true);
+    const value = await run;
+    if (!value.proRequired) {
+      openCache = { at: Date.now(), value };
     }
+    return value;
   }, [enabled, uid]);
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    if (!enabled) return;
+    if (!uid) {
+      setListReady(false);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      const value = await load();
+      if (cancelled) return;
+      setByMetric(value.byMetric);
+      setProRequired(value.proRequired);
+      setListReady(true);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [load, enabled, uid]);
 
   const ensureMetric = useCallback((_metric: string) => {
     /* open season bulk loads all metrics at once */

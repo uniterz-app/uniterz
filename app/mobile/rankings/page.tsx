@@ -463,7 +463,10 @@ export default function MobileRankingsPage() {
                 }
                 loading={cardLoading}
                 statsScramble={
-                  listReady && personalPending && !cardFast.myRow
+                  listReady &&
+                  personalPending &&
+                  !cardFast.myRow &&
+                  myRank == null
                 }
                 animateRank={!skipCountUp}
                 language={language}

@@ -631,7 +631,7 @@ export function monthlyReportUiCopy(language: LocalizedLang | string | null | un
       }),
       scorer: L(lang, {
         ja: "SCORER\n得点者予想の的中力。最多得点者を当てる力の相対位置。",
-        en: "SCORER\nGoal-scorer hit strength. Relative skill at picking top scorers.",
+        en: "SCORER\nTop-scorer pick strength. Relative skill at picking leading scorers.",
         ko: "SCORER\n득점자 예상의 적중력. 최다 득점자를 맞히는 능력의 상대적 위치.",
         zh: "SCORER\n得分者预测的命中力。猜中最高得分者能力的相对位置。",
         es: "SCORER\nAcierto en máximos anotadores. Posición relativa al elegir al máximo anotador.",
@@ -666,5 +666,18 @@ export function monthlyReportUiCopy(language: LocalizedLang | string | null | un
         fr: "CONSISTENCY\nRégularité. Exploiter les séries positives et limiter les négatives.",
       }),
     } satisfies Record<MonthlyReportRadarAxisKey, string>,
+  };
+}
+
+/** `radarAxisHelp` の「軸名\\n説明」を分割 */
+export function splitMonthlyRadarAxisHelp(help: string): {
+  title: string;
+  body: string;
+} {
+  const nl = help.indexOf("\n");
+  if (nl < 0) return { title: help.trim(), body: "" };
+  return {
+    title: help.slice(0, nl).trim(),
+    body: help.slice(nl + 1).trim(),
   };
 }

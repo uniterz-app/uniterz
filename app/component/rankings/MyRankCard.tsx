@@ -685,13 +685,11 @@ export default function MyRankCard({
       ? (ui.outerPadWide as string)
       : (ui.outerPad as string);
 
-  /** 読み込み枠でパスを一度描くと、データ到着後にサイズが変わって再描画される */
-  if (!ready || statsPending) {
-    return null;
-  }
+  void outerPad;
 
   if (freeTier) {
-    const listRank = rank != null && rank >= 1 ? rank : 99;
+    const hasRank = !loading && !statsPending && rank != null && rank >= 1;
+    const listRank = hasRank ? rank! : 99;
     const freeInner = (
       <CyberRankingListRow
         rank={listRank}
@@ -706,6 +704,8 @@ export default function MyRankCard({
         scoreLayout={layout === "web" ? "web" : "stack"}
         hideAccentBar
         rankOverline={m.rankings.yourRank}
+        rankDisplayValue={hasRank ? undefined : "--"}
+        rankMuted={!hasRank}
         scoreSlot={
           <CyberRankingScore
             rank={listRank}
@@ -835,6 +835,8 @@ export default function MyRankCard({
               scoreLayout={layout === "web" ? "web" : "stack"}
               hideAccentBar
               rankDeltaPlaces={
+                !loading &&
+                !statsPending &&
                 typeof rankDeltaPlaces === "number" &&
                 Number.isFinite(rankDeltaPlaces)
                   ? rankDeltaPlaces
@@ -842,9 +844,13 @@ export default function MyRankCard({
               }
               language={language}
               rankDisplayValue={
-                rank != null && rank >= 1 ? undefined : "--"
+                !loading && !statsPending && rank != null && rank >= 1
+                  ? undefined
+                  : "--"
               }
-              rankMuted={!(rank != null && rank >= 1)}
+              rankMuted={
+                loading || statsPending || !(rank != null && rank >= 1)
+              }
               nameExtra={
                 <RankingNameBadges
                   {...proBadgeStaticMotion}
@@ -860,7 +866,11 @@ export default function MyRankCard({
                   counted={value}
                   compact={layout === "mobile"}
                   scoreLayout={layout === "web" ? "web" : "stack"}
-                  plainWhite={!(rank != null && rank >= 1)}
+                  plainWhite={
+                    loading ||
+                    statsPending ||
+                    !(rank != null && rank >= 1)
+                  }
                 />
               }
               bare

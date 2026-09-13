@@ -469,7 +469,12 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
                   typeof myRawRow?.totalPosts === "number" ? myRawRow.totalPosts : undefined
                 }
                 loading={cardLoading}
-                statsScramble={listReady && personalPending && !cardFast.myRow}
+                statsScramble={
+                  listReady &&
+                  personalPending &&
+                  !cardFast.myRow &&
+                  myRank == null
+                }
                 isPro={myRankCardTier === "pro"}
                 displayTier={myRankCardTier}
                 rankDeltaPlaces={rankingHasNoEntries ? null : myRankDeltaPlaces}

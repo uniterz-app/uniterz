@@ -439,7 +439,12 @@ export default function WebRankingsShell() {
               handle={sessionUser.handle}
               totalPosts={myRow?.totalPosts}
               loading={cardLoading}
-              statsScramble={listReady && personalPending && !cardFast.myRow}
+              statsScramble={
+                listReady &&
+                personalPending &&
+                !cardFast.myRow &&
+                myRank == null
+              }
               animateRank={!skipCountUp}
               language={language}
               isPro={myRankCardTier === "pro"}

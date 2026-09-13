@@ -21,6 +21,7 @@ import {
   PROFILE_FROM_REPORT_VALUE,
 } from "@/lib/navigation/rankingsProfileFrom";
 import type { LocalizedLang } from "@/lib/i18n/localize";
+import { REPORT_KUROKIN } from "@/lib/reports/reportChrome";
 import { weeklyReportUiCopy } from "@/lib/reports/weeklyReportUiCopy";
 import {
   INITIAL_REPORT_RIVALS,
@@ -47,7 +48,7 @@ function bodyFontClass(lang: Lang, latinClassName: string): string {
  * theme — ランキング画面と同じ語彙 + 部門アクセント
  * ============================================================ */
 
-const PANEL_BG = "linear-gradient(170deg, rgba(14,20,32,0.98), rgba(6,10,16,1))";
+const PANEL_BG = REPORT_KUROKIN.bgGrad;
 
 /** 小さめのコーナーカット（部門セル・バトルパネル用） */
 const NOTCH_SM = "polygon(0 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%)";
@@ -73,10 +74,10 @@ const ACCENT = {
     glow: "rgba(52,211,153,0.32)",
   },
   gold: {
-    main: "#facc15",
-    border: "rgba(250,204,21,0.4)",
-    tint: "rgba(250,204,21,0.07)",
-    glow: "rgba(250,204,21,0.3)",
+    main: REPORT_KUROKIN.gold,
+    border: REPORT_KUROKIN.goldBorder,
+    tint: "rgba(232,198,106,0.07)",
+    glow: REPORT_KUROKIN.goldGlow,
   },
   orange: {
     main: "#fb923c",
@@ -95,11 +96,11 @@ const DIVISION_META: Record<
   upset: { label: "UPSET", accent: ACCENT.orange },
 };
 
-function slabStyle(accent: Accent, clip: string = NOTCH_SM): CSSProperties {
+function slabStyle(_accent?: Accent, clip: string = NOTCH_SM): CSSProperties {
   return {
-    border: `1px solid ${accent.border}`,
-    background: `linear-gradient(170deg, ${accent.tint}, rgba(6,10,16,0.98) 70%), ${PANEL_BG}`,
-    boxShadow: `inset 0 0 0 1px rgba(8,14,26,0.85), inset 0 0 16px ${accent.tint}`,
+    border: `1px solid ${REPORT_KUROKIN.goldBorder}`,
+    background: PANEL_BG,
+    boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.85)",
     clipPath: clip,
     WebkitClipPath: clip,
   };
@@ -200,13 +201,21 @@ function HeroBlock({ report, lang }: { report: WeeklyReport; lang: Lang }) {
   const losses = Math.max(0, report.totalPosts - report.totalWins);
 
   return (
-    <RankingsCyberPanel>
+    <RankingsCyberPanel
+      subtle
+      accentRgb="rgba(0,0,0,0)"
+      shellStyle={{
+        border: `1px solid ${REPORT_KUROKIN.goldBorder}`,
+        background: PANEL_BG,
+        boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.9)",
+      }}
+    >
       <div className="relative z-10">
         {/* 左=順位 / 右=スコア。数字は同一テキスト行でベースライン共有 */}
         <div className="relative mt-1">
           <div
             className="pointer-events-none absolute inset-y-0 left-1/2 w-px -translate-x-1/2"
-            style={{ background: "rgba(34,211,238,0.16)" }}
+            style={{ background: REPORT_KUROKIN.hairline }}
             aria-hidden
           />
 
@@ -536,9 +545,21 @@ function BattlePanel({
       </div>
       {rivals.length > 0 ? (
         <>
-          <ul className="mt-1 divide-y divide-white/6">
-            {visible.map((r) => (
-              <RivalRow key={r.uid} rival={r} lang={lang} accent={accent} />
+          <ul
+            className="mt-1"
+            style={{ borderColor: REPORT_KUROKIN.divider }}
+          >
+            {visible.map((r, i) => (
+              <div
+                key={r.uid}
+                style={
+                  i > 0
+                    ? { borderTop: `1px solid ${REPORT_KUROKIN.divider}` }
+                    : undefined
+                }
+              >
+                <RivalRow rival={r} lang={lang} accent={accent} />
+              </div>
             ))}
           </ul>
           {expanded && overflowCount > 0 ? (
@@ -840,7 +861,7 @@ export default function WeeklyReportView({
               className={[
                 "flex h-9 w-9 shrink-0 items-center justify-center rounded-md border transition",
                 canPrev
-                  ? "border-white/18 bg-white/5 text-white/80 hover:border-cyan-300/40 hover:text-cyan-100"
+                  ? "border-white/18 bg-white/5 text-white/80 hover:border-white/35 hover:text-white"
                   : "border-white/8 bg-transparent text-white/20",
               ].join(" ")}
             >
@@ -869,7 +890,7 @@ export default function WeeklyReportView({
               className={[
                 "flex h-9 w-9 shrink-0 items-center justify-center rounded-md border transition",
                 canNext
-                  ? "border-white/18 bg-white/5 text-white/80 hover:border-cyan-300/40 hover:text-cyan-100"
+                  ? "border-white/18 bg-white/5 text-white/80 hover:border-white/35 hover:text-white"
                   : "border-white/8 bg-transparent text-white/20",
               ].join(" ")}
             >
@@ -891,7 +912,7 @@ export default function WeeklyReportView({
                     nameOxanium.className,
                     "shrink-0 rounded-md border px-2.5 py-1.5 text-[11px] font-bold uppercase tracking-wide transition",
                     selected
-                      ? "border-cyan-400/55 bg-cyan-400/14 text-cyan-100"
+                      ? "border-white/28 bg-white/10 text-white"
                       : "border-white/12 bg-white/4 text-white/55 hover:border-white/25",
                   ].join(" ")}
                 >
