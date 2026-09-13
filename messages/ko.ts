@@ -914,12 +914,12 @@ const ko: Messages = {
 
   tutorial: {
     skip: "건너뛰기",
-    skipConfirmTitle: "Skip the tutorial?",
+    skipConfirmTitle: "튜토리얼을 건너뛸까요?",
     skipConfirmBody:
-      "Are you sure?\nYou can review it again anytime from Tutorial in the side menu.",
-    skipConfirmStay: "Keep going",
-    skipConfirmLeave: "Skip",
-    restartFromMenu: "Tutorial",
+      "정말 건너뛸까요?\n나중에 사이드 메뉴의 「튜토리얼」에서 다시 확인할 수 있어요.",
+    skipConfirmStay: "계속하기",
+    skipConfirmLeave: "건너뛰기",
+    restartFromMenu: "튜토리얼",
     back: "뒤로",
     next: "다음",
     seeGames: "경기 보기",
@@ -939,7 +939,7 @@ const ko: Messages = {
       tabGames: "Games",
       tabResult: "Results",
       tabRankings: "Rankings",
-      tabGroups: "Groups",
+      tabGroups: "그룹",
       tabProfile: "Profile",
       welcomeTitle: "Welcome to UNITERZ",
       welcomeBody:
@@ -1014,8 +1014,8 @@ const ko: Messages = {
         "Outcomes land on the Results tab. Tap it below.",
       gotoRankingsTitle: "Open Rankings",
       gotoRankingsBody: "Next up is the Rankings tab. Tap it below.",
-      gotoGroupsTitle: "Open Groups",
-      gotoGroupsBody: "Next up is the Groups tab. Tap it below.",
+      gotoGroupsTitle: "그룹으로",
+      gotoGroupsBody: "다음은 **그룹**입니다. 아래 탭이나 「다음」으로 진행하세요.",
       gotoProfileTitle: "Open Profile",
       gotoProfileBody: "Next up is the Profile tab. Tap it below.",
       resultHitTitle: "HIT!",
@@ -1045,22 +1045,22 @@ const ko: Messages = {
       rankingsTitle: "Rankings",
       rankingsBody:
         "Hits earn points that decide your place. Switch periods and categories to track yourself.",
-      groupsTitle: "Groups (Leaderboards)",
+      groupsTitle: "그룹",
       groupsBody:
-        "Create a group with friends and compete in a private ranking. Join with an invite code too.",
-      groupsMockName: "Night Owls",
-      groupsMockMeta: "8 members · You're #2 in the group",
+        "**친구만의 순위표.** 초대 코드로도 참여할 수 있어요.",
+      groupsMockName: "나이트 아울스",
+      groupsMockMeta: "멤버 8명 · 그룹 내 2위",
       profileTitle: "Profile",
       profileBody:
         "Your page shows stats, streaks, settings, and plans. Change avatar and display name here.",
       profileMockStats: "Hit rate · Streak · Total points",
       horizonFeatureTag: "신기능",
-      horizonSquadWhatTitle: "What is Squad Battle?",
+      horizonSquadWhatTitle: "스쿼드 배틀이란",
       horizonSquadWhatBody:
-        "Form a **squad of 3–5** and compete on **every member's average score** in a **limited-time event**.\nSeparate from **Groups** (friend boards) — this is its **own battlefield**.\nRuns about **once every two months** for **one month** of weekly and monthly ranks.",
-      horizonSquadHowTitle: "Joining a squad",
+        "**3〜5명이 하나의 스쿼드**를 짜고, **멤버 전원의 평균 점수**로 다른 팀과 겨루는 **기간 한정 이벤트**입니다.\n**그룹**(친구와의 순위표)과는 **다른 전용 배틀**.\n약 **2개월에 1회** 개최되며, **1개월간** 주간·월간 순위를 겨룹니다.",
+      horizonSquadHowTitle: "스쿼드 참가",
       horizonSquadHowBody:
-        "From **Groups**, **apply** to an open squad or join with an **invite code**.\nDuring the event, **weekly (×4)** and **monthly (×1)** standings update.\n**All members** of top squads receive **UNIT**.",
+        "**그룹 탭**에서 빈자리가 있는 스쿼드에 **참가 신청**하거나 **초대 코드**로 들어갑니다.\n배틀 중에는 **주간(원칙 4회)**과 **월간(1회)** 순위가 갱신됩니다.\n**상위 스쿼드 멤버 전원**에게 **UNIT**이 지급됩니다.",
       horizonUnitWhatTitle: "What is UNIT?",
       horizonUnitWhatBody:
         "The highlighted **coin** is your **UNIT balance**.\nUNITERZ **in-app currency** for **skins** and Profile looks.\nTap the coin to open your **history**.",

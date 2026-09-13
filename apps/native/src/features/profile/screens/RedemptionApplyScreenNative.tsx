@@ -3,6 +3,7 @@
  */
 import { useEffect, useMemo, useState } from "react";
 import {
+  Image,
   Pressable,
   StyleSheet,
   Text,
@@ -12,10 +13,12 @@ import {
 import { useNavigation, useRoute } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RouteProp } from "@react-navigation/native";
+import * as ImagePicker from "expo-image-picker";
+import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import LegalPageLayoutNative from "../../legal/LegalPageLayoutNative";
 import { useFirebaseUser } from "../../../auth/FirebaseUserProvider";
 import { useNativeUserLanguage } from "../../../hooks/useNativeUserLanguage";
-import { DATE_LOCALE } from "../../../../../../lib/i18n/language";
+import { storage } from "../../../lib/firebase";
 import { L, resolveLocalizedLang } from "../../../../../../lib/i18n/localize";
 import type { ProfileStackParamList } from "../../../navigation/types";
 import {
@@ -28,7 +31,6 @@ import {
   redemptionCatalogTitle,
   redemptionPriceCapShort,
 } from "../../../../../../lib/redemption/redemptionCatalog";
-import { redemptionBatchScheduleCopy } from "../../../../../../lib/redemption/redemptionBatchScheduleCopy";
 import type { RedemptionProductKind } from "../../../../../../lib/redemption/redemptionTypes";
 import { REDEMPTION_APPLY_CONSENT } from "../../../../../../lib/legal/unitRedemptionLegalCopy";
 import {
@@ -36,6 +38,13 @@ import {
   redemptionApplyErrorMessage,
   redemptionAvailableUnits,
 } from "../../../../../../lib/redemption/redemptionApplyGate";
+import {
+  REDEMPTION_PRODUCT_IMAGE_MAX_BYTES,
+  redemptionProductImageStoragePath,
+} from "../../../../../../lib/redemption/uploadRedemptionProductImage";
+import { cyberAlert } from "../../../components/cyberAlert";
+import { redemptionApplyFlowCopy } from "../../../../../../lib/redemption/redemptionApplyFlowCopy";
+import RedemptionApplyFlowModalNative from "./RedemptionApplyFlowModalNative";
 
 const OX = "Oxanium_700Bold";
 
@@ -46,9 +55,6 @@ export default function RedemptionApplyScreenNative() {
   const { fUser } = useFirebaseUser();
   const { language } = useNativeUserLanguage(fUser?.uid);
   const lang = resolveLocalizedLang(language);
-  /** 価格上限ラベルは ja|en のみ */
-  const catalogLang = lang === "ja" ? ("ja" as const) : ("en" as const);
-  const batch = redemptionBatchScheduleCopy(lang);
 
   const initial =
     normalizeRedemptionProductKind(route.params?.kind) ?? "tshirt";
@@ -60,6 +66,7 @@ export default function RedemptionApplyScreenNative() {
   const [size, setSize] = useState("");
   const [color, setColor] = useState("");
   const [notes, setNotes] = useState("");
+  const [imageUri, setImageUri] = useState<string | null>(null);
   const [shippingName, setShippingName] = useState("");
   const [shippingPostalCode, setShippingPostalCode] = useState("");
   const [shippingAddress, setShippingAddress] = useState("");
@@ -73,6 +80,8 @@ export default function RedemptionApplyScreenNative() {
   const [seasonUnitsUsed, setSeasonUnitsUsed] = useState(0);
   const [seasonCap, setSeasonCap] = useState(2000);
   const [walletReady, setWalletReady] = useState(false);
+  const [flowOpen, setFlowOpen] = useState(true);
+  const flowCopy = redemptionApplyFlowCopy(lang);
 
   const selected = useMemo(
     () => REDEMPTION_CATALOG.find((x) => x.kind === productKind),
@@ -112,9 +121,68 @@ export default function RedemptionApplyScreenNative() {
     };
   }, [fUser?.uid]);
 
+  async function pickImage() {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) {
+      cyberAlert(
+        "",
+        L(lang, {
+          ja: "写真ライブラリへのアクセスを許可してください。",
+          en: "Please allow photo library access.",
+          ko: "사진 라이브러리 접근을 허용해 주세요.",
+          zh: "请允许访问相册。",
+          es: "Permite el acceso a la galería.",
+          pt: "Permita acesso à galeria.",
+          fr: "Autorisez l’accès à la photothèque.",
+        })
+      );
+      return;
+    }
+    const picked = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      quality: 0.85,
+    });
+    if (!picked.canceled && picked.assets[0]?.uri) {
+      setImageUri(picked.assets[0].uri);
+      setError(null);
+    }
+  }
+
+  async function uploadProductImage(): Promise<string> {
+    if (!imageUri || !fUser?.uid) return "";
+    const res = await fetch(imageUri);
+    const buf = await res.arrayBuffer();
+    if (buf.byteLength > REDEMPTION_PRODUCT_IMAGE_MAX_BYTES) {
+      throw new Error(
+        L(lang, {
+          ja: "画像は 8MB 以下にしてください。",
+          en: "Image must be 8MB or less.",
+          ko: "이미지는 8MB 이하여야 합니다.",
+          zh: "图片须不超过 8MB。",
+          es: "La imagen debe ser de 8 MB o menos.",
+          pt: "A imagem deve ter no máximo 8 MB.",
+          fr: "L’image doit faire 8 Mo ou moins.",
+        })
+      );
+    }
+    const fileId = `${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+    const fileRef = ref(
+      storage,
+      redemptionProductImageStoragePath(fUser.uid, fileId)
+    );
+    await uploadBytes(fileRef, new Uint8Array(buf), {
+      contentType: "image/jpeg",
+    });
+    return getDownloadURL(fileRef);
+  }
+
   async function submit(asDraft: boolean) {
     if (!asDraft && !consent) {
       setError(redemptionApplyErrorMessage("consent_required", lang));
+      return;
+    }
+    if (!asDraft && !imageUri) {
+      setError(redemptionApplyErrorMessage("image_required", lang));
       return;
     }
     if (!asDraft && selected) {
@@ -133,6 +201,10 @@ export default function RedemptionApplyScreenNative() {
     setBusy(true);
     setError(null);
     try {
+      let imageUrl: string | undefined;
+      if (imageUri) {
+        imageUrl = await uploadProductImage();
+      }
       const req = await createMeRedemptionNative(
         {
           productKind,
@@ -142,6 +214,7 @@ export default function RedemptionApplyScreenNative() {
           size,
           color,
           notes,
+          imageUrl,
           shippingName,
           shippingPostalCode,
           shippingAddress,
@@ -164,19 +237,24 @@ export default function RedemptionApplyScreenNative() {
       title="APPLY"
       eyebrow="UNIT EXCHANGE"
       description={L(lang, {
-        ja: "購入は月末まとめ（おおよそ25日前後）。",
-        en: "Purchase is batched near month-end (~25th).",
-        ko: "구매는 월말 일괄(대략 25일 전후).",
-        zh: "采购为月末集中（约 25 日前后）。",
-        es: "La compra se agrupa a fin de mes (~día 25).",
-        pt: "A compra é em lote no fim do mês (~dia 25).",
-        fr: "Achat groupé en fin de mois (~25).",
+        ja: "審査後に購入し、直送します。",
+        en: "After review, we purchase and ship direct to you.",
+        ko: "심사 후 구매해 직송합니다.",
+        zh: "审核后采购并直送。",
+        es: "Tras la revisión, compramos y enviamos directo a ti.",
+        pt: "Após a análise, compramos e enviamos direto a você.",
+        fr: "Après revue, nous achetons et expédions directement.",
       })}
     >
-      <View style={styles.batchCard}>
-        <Text style={styles.batchTitle}>{batch.short}</Text>
-        <Text style={styles.batchBody}>{batch.detail}</Text>
-      </View>
+      <RedemptionApplyFlowModalNative
+        open={flowOpen}
+        language={lang}
+        onClose={() => setFlowOpen(false)}
+      />
+
+      <Pressable onPress={() => setFlowOpen(true)} style={styles.reopenBtn}>
+        <Text style={styles.reopenText}>{flowCopy.reopen}</Text>
+      </Pressable>
 
       <View style={styles.walletCard}>
         <Text style={styles.walletLine}>
@@ -228,8 +306,52 @@ export default function RedemptionApplyScreenNative() {
       {selected ? (
         <Text style={styles.hint}>
           {selected.unitsRequired} Unit ·{" "}
-          {redemptionPriceCapShort(selected, catalogLang)}
+          {redemptionPriceCapShort(selected, lang)}
         </Text>
+      ) : null}
+
+      <Text style={styles.label}>
+        {L(lang, {
+          ja: "商品画像（スクショ）※申請時必須",
+          en: "Product screenshot (required)",
+          ko: "상품 이미지(필수)",
+          zh: "商品截图（必填）",
+          es: "Captura del producto (obligatoria)",
+          pt: "Captura do produto (obrigatória)",
+          fr: "Capture produit (obligatoire)",
+        })}
+      </Text>
+      <Pressable style={styles.imagePick} onPress={() => void pickImage()}>
+        {imageUri ? (
+          <Image source={{ uri: imageUri }} style={styles.imagePreview} />
+        ) : (
+          <Text style={styles.imagePickText}>
+            {L(lang, {
+              ja: "タップして画像を選択",
+              en: "Tap to choose image",
+              ko: "탭하여 이미지 선택",
+              zh: "点按选择图片",
+              es: "Toca para elegir imagen",
+              pt: "Toque para escolher imagem",
+              fr: "Appuyez pour choisir une image",
+            })}
+          </Text>
+        )}
+      </Pressable>
+      {imageUri ? (
+        <Pressable onPress={() => setImageUri(null)} style={styles.removeImg}>
+          <Text style={styles.removeImgText}>
+            {L(lang, {
+              ja: "画像を削除",
+              en: "Remove image",
+              ko: "이미지 삭제",
+              zh: "删除图片",
+              es: "Quitar imagen",
+              pt: "Remover imagem",
+              fr: "Supprimer l’image",
+            })}
+          </Text>
+        </Pressable>
       ) : null}
 
       {(
@@ -306,26 +428,11 @@ export default function RedemptionApplyScreenNative() {
 }
 
 const styles = StyleSheet.create({
-  batchCard: {
-    marginBottom: 12,
-    padding: 12,
-    borderRadius: 2,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "rgba(103,232,249,0.3)",
-    backgroundColor: "rgba(34,211,238,0.06)",
-  },
-  batchTitle: {
-    fontFamily: OX,
-    fontSize: 10,
-    fontWeight: "700",
-    letterSpacing: 1.2,
-    color: "rgba(165,243,252,0.85)",
-  },
-  batchBody: {
-    marginTop: 6,
-    fontSize: 12,
-    lineHeight: 18,
-    color: "rgba(236,254,255,0.85)",
+  reopenBtn: { alignSelf: "flex-start", marginBottom: 10 },
+  reopenText: {
+    fontSize: 11,
+    color: "rgba(165,243,252,0.75)",
+    textDecorationLine: "underline",
   },
   walletCard: {
     marginBottom: 12,
@@ -360,6 +467,21 @@ const styles = StyleSheet.create({
   },
   kindText: { fontSize: 11, color: "rgba(255,255,255,0.65)" },
   kindTextOn: { color: "#ecfeff", fontWeight: "700" },
+  imagePick: {
+    minHeight: 140,
+    marginBottom: 8,
+    borderRadius: 2,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(255,255,255,0.18)",
+    backgroundColor: "rgba(0,0,0,0.35)",
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+  },
+  imagePreview: { width: "100%", height: 160, resizeMode: "contain" },
+  imagePickText: { fontSize: 12, color: "rgba(255,255,255,0.45)" },
+  removeImg: { marginBottom: 10 },
+  removeImgText: { fontSize: 11, color: "rgba(253,164,175,0.9)" },
   hint: { fontSize: 11, color: "rgba(255,255,255,0.4)", marginBottom: 12 },
   field: { marginBottom: 10 },
   input: {

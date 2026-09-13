@@ -94,6 +94,10 @@ import ProfileMonthlyReportPanel from "./ProfileMonthlyReportPanel";
 import ProfileReportDeliveryOverlay from "./ProfileReportDeliveryOverlay";
 import ProfileProSkinUnlockOverlay from "./pro/ProfileProSkinUnlockOverlay";
 import Tabs from "./ui/Tabs";
+import {
+  canViewMonthlyReport,
+  canViewWeeklyReport,
+} from "@/lib/reports/reportEntitlements";
 import { useProReportDeliveryOverlay } from "@/lib/reports/useProReportDeliveryOverlay";
 import { useProSkinUnlockOverlay } from "@/lib/profile/useProSkinUnlockOverlay";
 import {
@@ -101,6 +105,7 @@ import {
   isProfileVisualLite,
 } from "@/lib/profile/profileVisualEffects";
 import { useProfileViewCount } from "@/lib/profile/useProfileViewCount";
+import { profileAwardsBracketCopy } from "@/lib/profile/profileAwardsBracketCopy";
 export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -113,9 +118,11 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
 
   const resolvedUid = typeof targetUid === "string" ? targetUid : null;
   const { language } = useUserLanguage(resolvedUid);
+  const awardsBracketCopy = profileAwardsBracketCopy(language);
 
   const {
     myPlan,
+    myPlanType,
     loadingPlan,
     isMe,
     isMyPro,
@@ -135,12 +142,29 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
     profile.profileViewCount
   );
 
+  const viewerCanViewWeekly = canViewWeeklyReport({
+    plan: myPlan,
+    planType: myPlanType,
+  });
+  const viewerCanViewMonthly = canViewMonthlyReport({
+    plan: myPlan,
+    planType: myPlanType,
+  });
+  const canViewReport =
+    currentIsProView ||
+    (isMe ? viewerCanViewWeekly : isMyPro && isTargetPro);
+  const canViewMonthly =
+    isMe
+      ? viewerCanViewMonthly
+      : isMyPro && isTargetPro && viewerCanViewMonthly;
+
   const reportOverlayEnabled =
     Boolean(isMe && !loadingPlan && (currentIsProView || myPlan === "pro"));
   const { active: reportOverlay, dismiss: dismissReportOverlay } =
     useProReportDeliveryOverlay({
       uid: resolvedUid,
       enabled: reportOverlayEnabled,
+      canViewMonthly: viewerCanViewMonthly,
     });
   const skinUnlockEnabled =
     Boolean(isMe && resolvedUid) && reportOverlay == null;
@@ -377,15 +401,14 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
           <ProfileMonthlyReportPanel
             uid={resolvedUid}
             language={language}
-            canViewReport={
-              currentIsProView || (isMe ? myPlan === "pro" : isMyPro && isTargetPro)
-            }
+            canViewReport={canViewReport}
+            canViewMonthly={canViewMonthly}
             showUpgrade={isMe && !currentIsProView && myPlan !== "pro"}
           />
         ) : tab === "awards" ? (
           <ProfileAwardsTab
             uid={resolvedUid}
-            language={language === "ja" ? "ja" : "en"}
+            language={language}
           />
         ) : tab === "bracket" ? (
           playoffBracketLoading ? (
@@ -396,9 +419,7 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
             <div className="mt-4 rounded-2xl border border-white/10 bg-[rgba(5,8,20,0.55)] px-6 py-6 text-center">
               <CyberNoDataLabel variant="bracket" />
               <p className="mt-2 text-sm text-white/45">
-                {language === "ja"
-                  ? "提出済みのプレーオフブラケットがありません"
-                  : "No playoff bracket submitted"}
+                {awardsBracketCopy.noPlayoffBracket}
               </p>
             </div>
           ) : (
@@ -475,7 +496,7 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
       {reportOverlay ? (
         <ProfileReportDeliveryOverlay
           active={reportOverlay}
-          language={language === "ja" ? "ja" : "en"}
+          language={language}
           onDismiss={dismissReportOverlay}
         />
       ) : null}
@@ -483,7 +504,7 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
       {skinUnlockIds && skinUnlockIds.length > 0 ? (
         <ProfileProSkinUnlockOverlay
           unlockedIds={skinUnlockIds}
-          language={language === "ja" ? "ja" : "en"}
+          language={language}
           preview={skinUnlockPreview}
           platform="mobile"
           ownerCounts={skinUnlockOwnerCounts}

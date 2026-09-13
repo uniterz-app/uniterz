@@ -28,6 +28,7 @@ import { getGamesTexts } from "../gamesI18n";
 import LiveGameStatsPanelNative from "../live/LiveGameStatsPanelNative";
 import { getUniterzApiBaseUrl } from "../submitPredictionApi";
 import { db } from "../../../lib/firebase";
+import { L, resolveLocalizedLang } from "../../../../../../lib/i18n/localize";
 
 type WindowId = "season" | "last10";
 
@@ -227,7 +228,7 @@ function FormGameBoxOverlay({
   language: GamesLanguage;
   onClose: () => void;
 }) {
-  const isJa = language === "ja";
+  const lang = resolveLocalizedLang(language);
   const { report, loading } = useLiveGameStats(gameId, true, {
     apiBaseUrl: getUniterzApiBaseUrl(),
     loadGameDoc: loadGameDocForLiveStats,
@@ -248,7 +249,15 @@ function FormGameBoxOverlay({
             accessibilityRole="button"
           >
             <Text style={styles.boxOverlayCloseText}>
-              {isJa ? "閉じる" : "Close"}
+              {L(lang, {
+                ja: "閉じる",
+                en: "Close",
+                ko: "닫기",
+                zh: "关闭",
+                es: "Cerrar",
+                pt: "Fechar",
+                fr: "Fermer",
+              })}
             </Text>
           </Pressable>
         </View>
@@ -258,13 +267,29 @@ function FormGameBoxOverlay({
         >
           {loading && !report ? (
             <Text style={styles.boxOverlayEmpty}>
-              {isJa ? "読み込み中…" : "Loading…"}
+              {L(lang, {
+                ja: "読み込み中…",
+                en: "Loading…",
+                ko: "불러오는 중…",
+                zh: "加载中…",
+                es: "Cargando…",
+                pt: "Carregando…",
+                fr: "Chargement…",
+              })}
             </Text>
           ) : report ? (
             <LiveGameStatsPanelNative report={report} language={language} />
           ) : (
             <Text style={styles.boxOverlayEmpty}>
-              {isJa ? "ボックススコアがありません" : "No box score yet"}
+              {L(lang, {
+                ja: "ボックススコアがありません",
+                en: "No box score yet",
+                ko: "박스스코어가 없습니다",
+                zh: "暂无技术统计",
+                es: "Aún no hay box score",
+                pt: "Ainda sem box score",
+                fr: "Pas encore de box score",
+              })}
             </Text>
           )}
         </ScrollView>
@@ -285,7 +310,15 @@ function RecentFormGamesStrip({
   const [open, setOpen] = useState(false);
   const [boxGameId, setBoxGameId] = useState<string | null>(null);
   const rows = Math.max(left.length, right.length, 1);
-  const hint = language === "ja" ? "タップ→BOXスコア" : "tap→box score";
+  const hint = L(resolveLocalizedLang(language), {
+    ja: "タップ→BOXスコア",
+    en: "tap→box score",
+    ko: "탭→박스스코어",
+    zh: "点按→技术统计",
+    es: "toca→box score",
+    pt: "toque→box score",
+    fr: "toucher→box score",
+  });
   return (
     <View style={styles.recentForm}>
       <Pressable

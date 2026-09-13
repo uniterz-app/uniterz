@@ -344,7 +344,7 @@ export async function buildWeeklyReportsCore(opts?: {
   status?: Status;
   limit?: number;
   now?: Date;
-}): Promise<{ weekLabel: string; status: Status; written: number }> {
+}): Promise<{ weekLabel: string; status: Status; written: number; writtenUids: string[] }> {
   const now = opts?.now ?? new Date();
   const status = opts?.status ?? "final";
   const weekLabel = opts?.weekLabel ?? weekStartDateKeyJST(now);
@@ -356,7 +356,7 @@ export async function buildWeeklyReportsCore(opts?: {
   ]);
   if (Object.keys(current.ranks.totalPoints).length === 0) {
     console.warn(`[buildWeeklyReportsCore] no totalPoints snapshot for ${weekLabel}`);
-    return { weekLabel, status, written: 0 };
+    return { weekLabel, status, written: 0, writtenUids: [] };
   }
 
   const aggs = await loadAggs(range, current.rows);
@@ -374,6 +374,7 @@ export async function buildWeeklyReportsCore(opts?: {
   );
   const indexByUid = new Map(ranked.map((uid, index) => [uid, index]));
   let written = 0;
+  const writtenUids: string[] = [];
 
   for (let offset = 0; offset < uids.length; offset += WRITE_CHUNK) {
     const batch = db().batch();
@@ -483,8 +484,9 @@ export async function buildWeeklyReportsCore(opts?: {
       };
       batch.set(db().collection("user_reports").doc(`${uid}_weekly_${weekLabel}`), report, { merge: true });
       written++;
+      writtenUids.push(uid);
     }
     await batch.commit();
   }
-  return { weekLabel, status, written };
+  return { weekLabel, status, written, writtenUids };
 }

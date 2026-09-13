@@ -1,20 +1,37 @@
 import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-
-type Section = {
-  id: string;
-  title: string;
-  content: string;
-};
+import type {
+  HelpScoringSectionCopy,
+  HelpTextBlock,
+} from "../../../../../lib/settings/helpFaqsCopy";
 
 type Props = {
-  sections: Section[];
+  sections: readonly HelpScoringSectionCopy[];
   defaultOpenId?: string;
   intro?: string;
 };
 
+function ScoringBlocks({ blocks }: { blocks: readonly HelpTextBlock[] }) {
+  return (
+    <View style={styles.blocks}>
+      {blocks.map((block, index) => (
+        <Text
+          key={`${block.kind}-${index}`}
+          style={block.kind === "heading" ? styles.heading : styles.sectionText}
+        >
+          {block.text}
+        </Text>
+      ))}
+    </View>
+  );
+}
+
 /** Web `ScoringLogicSections` 相当 — 四角・白黒 */
-export default function HelpScoringLogicNative({ sections, defaultOpenId, intro }: Props) {
+export default function HelpScoringLogicNative({
+  sections,
+  defaultOpenId,
+  intro,
+}: Props) {
   const [openId, setOpenId] = useState<string | null>(defaultOpenId ?? null);
 
   return (
@@ -33,7 +50,7 @@ export default function HelpScoringLogicNative({ sections, defaultOpenId, intro 
             </Pressable>
             {open ? (
               <View style={styles.sectionBody}>
-                <Text style={styles.sectionText}>{section.content}</Text>
+                <ScoringBlocks blocks={section.blocks} />
               </View>
             ) : null}
           </View>
@@ -81,6 +98,13 @@ const styles = StyleSheet.create({
     borderTopColor: "rgba(255,255,255,0.15)",
     paddingHorizontal: 12,
     paddingVertical: 10,
+  },
+  blocks: { gap: 8 },
+  heading: {
+    fontSize: 14,
+    lineHeight: 22,
+    fontWeight: "600",
+    color: "rgba(255,255,255,0.92)",
   },
   sectionText: {
     fontSize: 14,

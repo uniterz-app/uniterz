@@ -46,7 +46,7 @@ export async function GET(req: Request) {
   }
 }
 
-/** 完全提出（本人1通 upsert。開幕戦キックオフ後は 403） */
+/** 完全提出（本人1通 upsert。開幕戦ティップオフ後は 403） */
 export async function POST(req: Request) {
   try {
     const uid = await requireUidFromRequest(req);

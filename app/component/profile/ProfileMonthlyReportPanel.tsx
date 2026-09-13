@@ -11,6 +11,8 @@ import { monthlyReportPreviewTop10 } from "@/lib/reports/monthlyReportPreviewMoc
 import type { ReportGateKind } from "@/lib/reports/reportGateTypes";
 import ReportGateSurface from "@/app/component/reports/ReportGateSurface";
 import { nameOxanium } from "@/lib/fonts";
+import { resolveLocalizedLang } from "@/lib/i18n/localize";
+import { profileReportPanelCopy } from "@/lib/reports/profileReportPanelCopy";
 
 const MonthlyReportView = dynamic(
   () => import("@/app/component/reports/MonthlyReportView"),
@@ -36,6 +38,8 @@ type Props = {
   uid: string | null;
   language: string;
   canViewReport: boolean;
+  /** Weekly プランは false → 月次タブで monthlyLocked */
+  canViewMonthly: boolean;
   showUpgrade: boolean;
 };
 
@@ -48,6 +52,7 @@ export default function ProfileMonthlyReportPanel({
   uid,
   language,
   canViewReport,
+  canViewMonthly,
   showUpgrade,
 }: Props) {
   const [tab, setTab] = useState<Tab>("weekly");
@@ -59,8 +64,8 @@ export default function ProfileMonthlyReportPanel({
   );
   const [loading, setLoading] = useState(canViewReport && Boolean(uid));
 
-  const isJa = language === "ja";
-  const lang = isJa ? "ja" : "en";
+  const lang = resolveLocalizedLang(language);
+  const tabCopy = profileReportPanelCopy(lang);
 
   const mockWeekly = useMemo(() => weeklyReportPreviewClimbed(), []);
   const mockMonthly = useMemo(() => monthlyReportPreviewTop10(), []);
@@ -153,8 +158,8 @@ export default function ProfileMonthlyReportPanel({
       <div className="flex gap-1.5">
         {(
           [
-            ["weekly", isJa ? "週次" : "Weekly"],
-            ["monthly", isJa ? "月次" : "Monthly"],
+            ["weekly", tabCopy.weeklyTab],
+            ["monthly", tabCopy.monthlyTab],
           ] as const
         ).map(([key, label]) => (
           <button
@@ -173,7 +178,7 @@ export default function ProfileMonthlyReportPanel({
         ))}
       </div>
 
-      {tab === "monthly" && list.length > 1 ? (
+      {tab === "monthly" && canViewMonthly && list.length > 1 ? (
         <div className="flex gap-1.5 overflow-x-auto pb-1">
           {list.map((item) => {
             const selected = item.id === selectedMonthly?.id;
@@ -216,6 +221,8 @@ export default function ProfileMonthlyReportPanel({
         ) : (
           renderGate("waitingMonday")
         )
+      ) : !canViewMonthly ? (
+        renderGate("monthlyLocked")
       ) : selectedMonthly ? (
         <MonthlyReportView report={selectedMonthly.report} language={language} />
       ) : (

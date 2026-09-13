@@ -44,7 +44,6 @@ export default function ProfileProSkinUnlockOverlay({
   inline = false,
 }: Props) {
   const lang = resolveLocalizedLang(language);
-  const skinLang = lang === "ja" ? ("ja" as const) : ("en" as const);
   const router = useRouter();
   const entries = resolveProSkinUnlockNoticeEntries(unlockedIds);
   const featured = entries[0] ?? null;
@@ -181,9 +180,9 @@ export default function ProfileProSkinUnlockOverlay({
                 "mt-1.5 text-[12px] font-bold tracking-[0.05em] text-cyan-100/85",
               ].join(" ")}
             >
-              {formatProSkinUnlockCondition(featured.unlock, skinLang)}
+              {formatProSkinUnlockCondition(featured.unlock, lang)}
               <span className="mx-1.5 text-white/25">·</span>
-              {formatProSkinOwnerCount(owners, skinLang)}
+              {formatProSkinOwnerCount(owners, lang)}
             </p>
             {moreCount > 0 ? (
               <p className="mt-1.5 text-[11px] text-white/45">

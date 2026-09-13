@@ -6,7 +6,9 @@ import ProfileEditKinetikGlitchTitle from "@/app/component/profile/edit/ProfileE
 import ProfileKinetikPanelFrame from "@/app/component/profile/ui/ProfileKinetikPanelFrame";
 import { jp, nameOxanium, nameRajdhani } from "@/lib/fonts";
 import type { Language } from "@/lib/i18n/language";
+import { resolveLocalizedLang } from "@/lib/i18n/localize";
 import { t } from "@/lib/i18n/t";
+import { profileKinetikPanelCopy } from "@/lib/profile/profileKinetikPanelCopy";
 import {
   aggregateCareerAwardsFromBadges,
   type ProfileCareerBadgeLike,
@@ -58,10 +60,11 @@ export default function ProfileCareerPanel({
   planProBgVariant = PROFILE_PLAN_PRO_BG_DEFAULT,
 }: Props) {
   const msg = t(language);
-  const isJa = language === "ja";
+  const lang = resolveLocalizedLang(language);
+  const panelCopy = profileKinetikPanelCopy(lang);
+  const isCjk = lang === "ja" || lang === "ko" || lang === "zh";
   const isMobile = layout === "mobile";
   const isFace = variant === "face";
-  const lang: "ja" | "en" = isJa ? "ja" : "en";
   const reduceMotion = useReducedMotion() === true;
   const showProSkin = isPro && isFace;
   /** Free の裏面はキャリア数字のみ（表のバッジ／タブを残さない） */
@@ -111,9 +114,7 @@ export default function ProfileCareerPanel({
 
   const scopeTitle =
     viewMode === "career"
-      ? isJa
-        ? "CAREER // ALL"
-        : "CAREER // ALL"
+      ? "CAREER // ALL"
       : board === "playoffs"
         ? `${seasonKey} PLAYOFFS`
         : `${seasonKey} SEASON`;
@@ -199,7 +200,7 @@ export default function ProfileCareerPanel({
                 type="button"
                 className="profile-edit-kinetik-metrics-scope-nav profile-edit-kinetik-metrics-scope-nav--prev"
                 onClick={cycleScope}
-                aria-label={isJa ? "前の統計ボード" : "Previous stats board"}
+                aria-label={panelCopy.prevBoardAria}
               >
                 <span
                   className="profile-edit-kinetik-metrics-scope-arrow profile-edit-kinetik-metrics-scope-arrow--left"
@@ -210,11 +211,7 @@ export default function ProfileCareerPanel({
                 type="button"
                 className="profile-edit-kinetik-metrics-scope-title profile-edit-kinetik-metrics-scope-title--breath"
                 onClick={cycleScope}
-                aria-label={
-                  isJa
-                    ? "CAREER / SEASON / PLAYOFF を切り替え"
-                    : "Switch Career / Season / Playoff"
-                }
+                aria-label={panelCopy.switchBoardAria}
               >
                 <span
                   className={[
@@ -233,7 +230,7 @@ export default function ProfileCareerPanel({
                 type="button"
                 className="profile-edit-kinetik-metrics-scope-nav profile-edit-kinetik-metrics-scope-nav--next"
                 onClick={cycleScope}
-                aria-label={isJa ? "次の統計ボード" : "Next stats board"}
+                aria-label={panelCopy.nextBoardAria}
               >
                 <span
                   className="profile-edit-kinetik-metrics-scope-arrow profile-edit-kinetik-metrics-scope-arrow--right"
@@ -245,7 +242,7 @@ export default function ProfileCareerPanel({
           {!isFace ? (
             <p
               className={[
-                isJa ? jp.className : "",
+                isCjk ? jp.className : "",
                 "mt-2 max-w-[520px] text-xs leading-relaxed text-slate-300/80 sm:text-[14px]",
               ]
                 .filter(Boolean)
@@ -312,7 +309,7 @@ export default function ProfileCareerPanel({
             {awards.length === 0 ? (
               <p
                 className={[
-                  isJa ? jp.className : "",
+                  isCjk ? jp.className : "",
                   "mt-1.5 text-sm text-white/35",
                 ]
                   .filter(Boolean)

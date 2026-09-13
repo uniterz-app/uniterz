@@ -9,41 +9,18 @@ import LegalPageLayoutNative from "../../legal/LegalPageLayoutNative";
 import SlantCtaNative from "../../../ui/SlantCtaNative";
 import { auth } from "../../../lib/firebase";
 import { useNativeUserLanguageFromAuth } from "../../../hooks/useNativeUserLanguage";
+import { resolveLocalizedLang } from "../../../../../../lib/i18n/localize";
+import { changePasswordUiCopy } from "../../../../../../lib/settings/changePasswordUiCopy";
 
 export default function ProfilePasswordScreenNative() {
   const navigation = useNavigation();
   const { language } = useNativeUserLanguageFromAuth();
-  const isJa = language === "ja";
+  const lang = resolveLocalizedLang(language);
+  const labels = changePasswordUiCopy(lang);
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
   const [confirm, setConfirm] = useState("");
   const [saving, setSaving] = useState(false);
-
-  const labels = isJa
-    ? {
-        title: "パスワード変更",
-        current: "現在のパスワード",
-        next: "新しいパスワード",
-        confirm: "新しいパスワード（確認）",
-        save: "変更",
-        saving: "変更中…",
-        ok: "パスワードを変更しました。",
-        err: "変更に失敗しました。",
-        minLen: "新しいパスワードは6文字以上にしてください。",
-        mismatch: "確認用パスワードが一致しません。",
-      }
-    : {
-        title: "Change Password",
-        current: "Current password",
-        next: "New password",
-        confirm: "Confirm new password",
-        save: "Update",
-        saving: "Updating…",
-        ok: "Password updated.",
-        err: "Update failed.",
-        minLen: "New password must be at least 6 characters.",
-        mismatch: "Confirmation does not match.",
-      };
 
   async function handleSave() {
     const user = auth.currentUser;
@@ -73,11 +50,7 @@ export default function ProfilePasswordScreenNative() {
   return (
     <LegalPageLayoutNative
       title="PASSWORD"
-      description={
-        isJa
-          ? "ログイン用パスワードを変更できます。"
-          : "Update the password you use to sign in."
-      }
+      description={labels.description}
     >
       <View style={styles.formCard}>
         <Text style={styles.label}>{labels.current}</Text>

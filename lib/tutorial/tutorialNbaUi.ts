@@ -41,7 +41,7 @@ export function buildTutorialDemoPick(): TutorialPredictPick {
 
 /** 予想前の試合カード（scheduled） */
 export function buildTutorialMatchCardProps(_opts?: {
-  language?: "ja" | "en";
+  language?: string | null;
 }): MatchCardProps {
   return {
     id: game.id,
@@ -104,7 +104,7 @@ export function buildTutorialMatchCardProps(_opts?: {
 
 /** リザルト詳細用（final）— 本番詳細オーバーレイと同じ MatchCard */
 export function buildTutorialFinalMatchCardProps(opts?: {
-  language?: "ja" | "en";
+  language?: string | null;
 }): MatchCardProps {
   const base = buildTutorialMatchCardProps(opts);
   const tip = new Date(Date.now() - 3 * 60 * 60 * 1000);

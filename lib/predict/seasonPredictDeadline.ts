@@ -11,7 +11,7 @@ export const SEASON_PREDICT_SUBMIT_DEADLINE_AT_MS = Date.parse(
 export const SEASON_PREDICT_SUBMIT_DEADLINE_WHEN = `${NBA_OPENING_NIGHT_DATE_KEY} 08:00 JST`;
 
 export const SEASON_PREDICT_SUBMIT_DEADLINE_LABEL_JA =
-  `開幕戦キックオフ前（${NBA_OPENING_NIGHT_DATE_KEY} 08:00 JST）`;
+  `開幕戦ティップオフ前（${NBA_OPENING_NIGHT_DATE_KEY} 08:00 JST）`;
 
 export const SEASON_PREDICT_SUBMIT_DEADLINE_LABEL_EN =
   `Before opening tip-off (${NBA_OPENING_NIGHT_DATE_KEY} 08:00 JST)`;
@@ -22,8 +22,8 @@ export function seasonPredictSubmitDeadlineLabel(
   return L(lang, {
     ja: SEASON_PREDICT_SUBMIT_DEADLINE_LABEL_JA,
     en: SEASON_PREDICT_SUBMIT_DEADLINE_LABEL_EN,
-    ko: `개막전 킥오프 전 (${NBA_OPENING_NIGHT_DATE_KEY} 08:00 JST)`,
-    zh: `开幕战开球前（${NBA_OPENING_NIGHT_DATE_KEY} 08:00 JST）`,
+    ko: `개막전 팁오프 전 (${NBA_OPENING_NIGHT_DATE_KEY} 08:00 JST)`,
+    zh: `开幕战跳球前（${NBA_OPENING_NIGHT_DATE_KEY} 08:00 JST）`,
     es: `Antes del salto inicial (${NBA_OPENING_NIGHT_DATE_KEY} 08:00 JST)`,
     pt: `Antes do tip-off de abertura (${NBA_OPENING_NIGHT_DATE_KEY} 08:00 JST)`,
     fr: `Avant le tip-off d’ouverture (${NBA_OPENING_NIGHT_DATE_KEY} 08:00 JST)`,

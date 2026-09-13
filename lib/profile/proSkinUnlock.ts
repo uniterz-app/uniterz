@@ -3,6 +3,7 @@
  * 表示順の正は `PROFILE_PLAN_PRO_ADOPTED_BG`。解放条件は milestone catalog。
  */
 
+import { L, resolveLocalizedLang } from "@/lib/i18n/localize";
 import {
   PROFILE_PLAN_PRO_ADOPTED_BG,
   type ProfilePlanProAdoptedEntry,
@@ -349,110 +350,244 @@ export function applyProSkinTitleCollections(
 
 function formatRankMetricLabel(
   metric: ProSkinRankMetric,
-  language: "ja" | "en"
+  language: string | null | undefined
 ): string {
-  const ja = language === "ja";
+  const lang = resolveLocalizedLang(language);
   switch (metric) {
     case "totalPoints":
-      return ja ? "総合" : "total points";
+      return L(lang, {
+        ja: "総合",
+        en: "total points",
+        ko: "종합",
+        zh: "总分",
+        es: "puntos totales",
+        pt: "pontos totais",
+        fr: "points totaux",
+      });
     case "totalUpset":
-      return ja ? "UPSET" : "upset";
+      return L(lang, {
+        ja: "UPSET",
+        en: "upset",
+        ko: "UPSET",
+        zh: "UPSET",
+        es: "upset",
+        pt: "upset",
+        fr: "upset",
+      });
     case "totalGoalScorerHits":
-      return ja ? "最多得点者" : "goal scorer";
+      return L(lang, {
+        ja: "最多得点者",
+        en: "goal scorer",
+        ko: "최다 득점",
+        zh: "最佳得分",
+        es: "máximo anotador",
+        pt: "cestinha",
+        fr: "meilleur marqueur",
+      });
     case "winRate":
-      return ja ? "勝率" : "win rate";
+      return L(lang, {
+        ja: "勝率",
+        en: "win rate",
+        ko: "승률",
+        zh: "胜率",
+        es: "win rate",
+        pt: "win rate",
+        fr: "win rate",
+      });
   }
+}
+
+function formatPeriodLabel(
+  period: "weekly" | "monthly",
+  language: string | null | undefined
+): string {
+  const lang = resolveLocalizedLang(language);
+  return period === "weekly"
+    ? L(lang, {
+        ja: "週間",
+        en: "weekly",
+        ko: "주간",
+        zh: "周",
+        es: "semanal",
+        pt: "semanal",
+        fr: "hebdo",
+      })
+    : L(lang, {
+        ja: "月間",
+        en: "monthly",
+        ko: "월간",
+        zh: "月",
+        es: "mensual",
+        pt: "mensal",
+        fr: "mensuel",
+      });
 }
 
 function formatPeriodRankCondition(
   period: "weekly" | "monthly",
   maxRank: number,
   metric: ProSkinRankMetric,
-  language: "ja" | "en"
+  language: string | null | undefined
 ): string {
-  const ja = language === "ja";
-  const periodLabel = period === "weekly" ? (ja ? "週間" : "weekly") : ja ? "月間" : "monthly";
-  const metricLabel = formatRankMetricLabel(metric, language);
+  const lang = resolveLocalizedLang(language);
+  const periodLabel = formatPeriodLabel(period, lang);
+  const metricLabel = formatRankMetricLabel(metric, lang);
   if (maxRank === 1) {
-    return ja
-      ? `${periodLabel}${metricLabel} 1位で解放`
-      : `Unlock at ${periodLabel} ${metricLabel} #1`;
+    return L(lang, {
+      ja: `${periodLabel}${metricLabel} 1位で解放`,
+      en: `Unlock at ${periodLabel} ${metricLabel} #1`,
+      ko: `${periodLabel} ${metricLabel} 1위로 해제`,
+      zh: `${periodLabel}${metricLabel} 第1名解锁`,
+      es: `Desbloquea en ${periodLabel} ${metricLabel} #1`,
+      pt: `Desbloqueie em ${periodLabel} ${metricLabel} #1`,
+      fr: `Débloquez au ${periodLabel} ${metricLabel} n°1`,
+    });
   }
-  return ja
-    ? `${periodLabel}${metricLabel} Top${maxRank} で解放`
-    : `Unlock at ${periodLabel} ${metricLabel} Top ${maxRank}`;
+  return L(lang, {
+    ja: `${periodLabel}${metricLabel} Top${maxRank} で解放`,
+    en: `Unlock at ${periodLabel} ${metricLabel} Top ${maxRank}`,
+    ko: `${periodLabel} ${metricLabel} Top${maxRank}로 해제`,
+    zh: `${periodLabel}${metricLabel} Top${maxRank} 解锁`,
+    es: `Desbloquea en ${periodLabel} ${metricLabel} Top ${maxRank}`,
+    pt: `Desbloqueie em ${periodLabel} ${metricLabel} Top ${maxRank}`,
+    fr: `Débloquez au ${periodLabel} ${metricLabel} Top ${maxRank}`,
+  });
 }
 
 export function formatProSkinUnlockCondition(
   rule: ProSkinUnlockRule,
-  language: "ja" | "en"
+  language: string | null | undefined
 ): string {
-  const ja = language === "ja";
+  const lang = resolveLocalizedLang(language);
   switch (rule.kind) {
     case "pro":
-      return ja ? "Pro で解放" : "Unlocked with Pro";
+      return L(lang, {
+        ja: "Pro で解放",
+        en: "Unlocked with Pro",
+        ko: "Pro로 해제",
+        zh: "Pro 解锁",
+        es: "Desbloqueado con Pro",
+        pt: "Desbloqueado com Pro",
+        fr: "Débloqué avec Pro",
+      });
     case "streak":
-      return ja
-        ? `連勝 ${rule.threshold} で解放`
-        : `Unlock at ${rule.threshold}-win streak`;
+      return L(lang, {
+        ja: `連勝 ${rule.threshold} で解放`,
+        en: `Unlock at ${rule.threshold}-win streak`,
+        ko: `연승 ${rule.threshold}으로 해제`,
+        zh: `连胜 ${rule.threshold} 解锁`,
+        es: `Desbloquea con ${rule.threshold} victorias seguidas`,
+        pt: `Desbloqueie com ${rule.threshold} vitórias seguidas`,
+        fr: `Débloquez avec ${rule.threshold} victoires d’affilée`,
+      });
     case "posts":
-      return ja
-        ? `予想 ${rule.threshold} 回で解放`
-        : `Unlock at ${rule.threshold} predictions`;
+      return L(lang, {
+        ja: `予想 ${rule.threshold} 回で解放`,
+        en: `Unlock at ${rule.threshold} predictions`,
+        ko: `예상 ${rule.threshold}회로 해제`,
+        zh: `预测 ${rule.threshold} 次解锁`,
+        es: `Desbloquea con ${rule.threshold} predicciones`,
+        pt: `Desbloqueie com ${rule.threshold} palpites`,
+        fr: `Débloquez avec ${rule.threshold} pronostics`,
+      });
     case "exactHits":
-      return ja
-        ? `パーフェクト予想 ${rule.threshold} で解放`
-        : `Unlock at ${rule.threshold} perfect hits`;
+      return L(lang, {
+        ja: `パーフェクト予想 ${rule.threshold} で解放`,
+        en: `Unlock at ${rule.threshold} perfect hits`,
+        ko: `퍼펙트 예상 ${rule.threshold}으로 해제`,
+        zh: `完美预测 ${rule.threshold} 次解锁`,
+        es: `Desbloquea con ${rule.threshold} aciertos perfectos`,
+        pt: `Desbloqueie com ${rule.threshold} acertos perfeitos`,
+        fr: `Débloquez avec ${rule.threshold} perfects`,
+      });
     case "weeklyRank":
       return formatPeriodRankCondition(
         "weekly",
         rule.maxRank,
         rankMetric(rule),
-        language
+        lang
       );
     case "monthlyRank":
       return formatPeriodRankCondition(
         "monthly",
         rule.maxRank,
         rankMetric(rule),
-        language
+        lang
       );
     case "referralCompleted":
-      return ja
-        ? `招待完了 ${rule.threshold} 人で解放`
-        : `Unlock at ${rule.threshold} completed invites`;
+      return L(lang, {
+        ja: `招待完了 ${rule.threshold} 人で解放`,
+        en: `Unlock at ${rule.threshold} completed invites`,
+        ko: `초대 완료 ${rule.threshold}명으로 해제`,
+        zh: `邀请完成 ${rule.threshold} 人解锁`,
+        es: `Desbloquea con ${rule.threshold} invitaciones completadas`,
+        pt: `Desbloqueie com ${rule.threshold} convites concluídos`,
+        fr: `Débloquez avec ${rule.threshold} invitations terminées`,
+      });
     case "periodWins": {
-      const periodLabel =
-        rule.period === "weekly" ? (ja ? "週間" : "weekly") : ja ? "月間" : "monthly";
-      const metricLabel = formatRankMetricLabel(rule.metric, language);
+      const periodLabel = formatPeriodLabel(rule.period, lang);
+      const metricLabel = formatRankMetricLabel(rule.metric, lang);
       const rankLabel =
         rule.maxRank === 1
-          ? ja
-            ? "1位"
-            : "#1"
-          : ja
-            ? `Top${rule.maxRank}`
-            : `Top ${rule.maxRank}`;
-      return ja
-        ? `${periodLabel}${metricLabel} ${rankLabel} を ${rule.wins} 回で解放`
-        : `Unlock after ${rule.wins}× ${periodLabel} ${metricLabel} ${rankLabel}`;
+          ? L(lang, {
+              ja: "1位",
+              en: "#1",
+              ko: "1위",
+              zh: "第1名",
+              es: "#1",
+              pt: "#1",
+              fr: "n°1",
+            })
+          : L(lang, {
+              ja: `Top${rule.maxRank}`,
+              en: `Top ${rule.maxRank}`,
+              ko: `Top${rule.maxRank}`,
+              zh: `Top${rule.maxRank}`,
+              es: `Top ${rule.maxRank}`,
+              pt: `Top ${rule.maxRank}`,
+              fr: `Top ${rule.maxRank}`,
+            });
+      return L(lang, {
+        ja: `${periodLabel}${metricLabel} ${rankLabel} を ${rule.wins} 回で解放`,
+        en: `Unlock after ${rule.wins}× ${periodLabel} ${metricLabel} ${rankLabel}`,
+        ko: `${periodLabel} ${metricLabel} ${rankLabel} ${rule.wins}회로 해제`,
+        zh: `${periodLabel}${metricLabel} ${rankLabel} 达成 ${rule.wins} 次解锁`,
+        es: `Desbloquea tras ${rule.wins}× ${periodLabel} ${metricLabel} ${rankLabel}`,
+        pt: `Desbloqueie após ${rule.wins}× ${periodLabel} ${metricLabel} ${rankLabel}`,
+        fr: `Débloquez après ${rule.wins}× ${periodLabel} ${metricLabel} ${rankLabel}`,
+      });
     }
     case "titleCollection":
-      return ja
-        ? "月間総合・UPSET・最多得点者の各1位スキンを集めて解放"
-        : "Unlock by collecting all monthly #1 metric skins";
+      return L(lang, {
+        ja: "月間総合・UPSET・最多得点者の各1位スキンを集めて解放",
+        en: "Unlock by collecting all monthly #1 metric skins",
+        ko: "월간 종합·UPSET·최다 득점 각 1위 스킨을 모아 해제",
+        zh: "集齐月度总分、UPSET、最佳得分各第1名皮肤解锁",
+        es: "Desbloquea reuniendo las skins de #1 mensual por métrica",
+        pt: "Desbloqueie reunindo as skins de #1 mensal por métrica",
+        fr: "Débloquez en collectant les skins n°1 mensuels par métrique",
+      });
   }
 }
 
 export function formatProSkinOwnerCount(
   count: number | null | undefined,
-  language: "ja" | "en"
+  language: string | null | undefined
 ): string {
+  const lang = resolveLocalizedLang(language);
   const n =
     typeof count === "number" && Number.isFinite(count)
       ? Math.max(0, Math.floor(count))
       : 0;
-  return language === "ja" ? `${n}人が保持中` : `${n} holding`;
+  return L(lang, {
+    ja: `${n}人が保持中`,
+    en: `${n} holding`,
+    ko: `${n}명이 보유 중`,
+    zh: `${n} 人持有中`,
+    es: `${n} en posesión`,
+    pt: `${n} com a skin`,
+    fr: `${n} en possession`,
+  });
 }
 
 export const PRO_SKIN_UNLOCK_SEEN_STORAGE_KEY = "uniterz.proSkin.unlockSeen.v1";

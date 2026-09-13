@@ -79,6 +79,10 @@ import ProfileBracketTabNative from "./ProfileBracketTabNative";
 import ProfileStatsTabNative from "./ProfileStatsTabNative";
 import ProfileReportDeliveryOverlayNative from "./reports/ProfileReportDeliveryOverlayNative";
 import ProfileProSkinUnlockOverlayNative from "./reports/ProfileProSkinUnlockOverlayNative";
+import { normalizeStoredPlanType } from "../../../../../lib/pro/planChangeDisplay";
+import {
+  canViewMonthlyReport,
+} from "../../../../../lib/reports/reportEntitlements";
 import { useProReportDeliveryOverlayNative } from "./reports/useProReportDeliveryOverlayNative";
 import { useProSkinUnlockOverlayNative } from "./reports/useProSkinUnlockOverlayNative";
 import { useNativeProfileByHandle } from "./useNativeProfileByHandle";
@@ -716,6 +720,11 @@ export default function ProfileHomeScreen({
   );
 
   const currentIsProView = profilePlanHook.isProView;
+  const viewerPlanType = normalizeStoredPlanType(myUserDoc?.planType);
+  const viewerCanViewMonthly = canViewMonthlyReport({
+    plan: profilePlanHook.myPlan,
+    planType: viewerPlanType,
+  });
   const reportOverlayEnabled =
     isMe &&
     myPlanReady &&
@@ -724,6 +733,7 @@ export default function ProfileHomeScreen({
     useProReportDeliveryOverlayNative({
       uid: myUid,
       enabled: reportOverlayEnabled,
+      canViewMonthly: viewerCanViewMonthly,
     });
   const skinUnlockEnabled = Boolean(isMe && myUid) && reportOverlay == null;
 
@@ -1327,6 +1337,7 @@ export default function ProfileHomeScreen({
           language={language}
           isProView={currentIsProView}
           myPlan={profilePlanHook.myPlan}
+          myPlanType={viewerPlanType}
           isMe={isMe}
           isMyPro={profilePlanHook.isMyPro}
           isTargetPro={profilePlanHook.isTargetPro}
@@ -1645,7 +1656,9 @@ export default function ProfileHomeScreen({
                           }}
                         >
                           <Text style={styles.modalOptionText}>
-                            {language === "ja" ? c.labelJa : c.labelEn}
+                            {resolveLocalizedLang(language) === "ja"
+                              ? c.labelJa
+                              : c.labelEn}
                           </Text>
                           {countryCode.trim() === c.code ? (
                             <MaterialCommunityIcons name="check" size={18} color="rgba(245,245,245,0.95)" />

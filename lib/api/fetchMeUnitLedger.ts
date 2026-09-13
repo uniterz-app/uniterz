@@ -12,7 +12,7 @@ async function authHeader(): Promise<Record<string, string>> {
 
 /** 自分の Unit 履歴（要ログイン） */
 export async function fetchMeUnitLedger(
-  language: "ja" | "en" = "ja"
+  language: string = "ja"
 ): Promise<UnitLedgerListPayload> {
   const headers = await authHeader();
   const res = await fetch(`/api/me/unit-ledger?lang=${language}`, {

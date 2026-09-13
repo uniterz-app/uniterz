@@ -283,7 +283,7 @@ export function MyRankCardNative({
                     points={progressPoints}
                     maxSnapshots={progressSnapshotLimit}
                     loading={rankProgressLoading}
-                    language={language === "ja" ? "ja" : "en"}
+                    language={language}
                     emptyHint={t.rankingProgressNoData}
                     numbersOnly
                     dense

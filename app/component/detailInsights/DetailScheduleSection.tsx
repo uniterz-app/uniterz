@@ -7,7 +7,7 @@ import {
   scheduleDifficultyTierColor,
   scheduleDifficultyTierLabel,
 } from "@/lib/nba/detailInsights/buildScheduleDifficulty";
-import { resolveLocalizedLang } from "@/lib/i18n/localize";
+import { L, resolveLocalizedLang } from "@/lib/i18n/localize";
 import {
   compactNbaCardNickname,
   getNbaTeamNicknameById,
@@ -55,7 +55,15 @@ export function DetailScheduleSection({
   const lang = resolveLocalizedLang(language ?? (isJa ? "ja" : "en"));
   const frame = hexToRgba(accent, 0.3);
   const line = hexToRgba(accent, 0.12);
-  const emptyCopy = isJa ? "データがありません" : "No data yet";
+  const emptyCopy = L(lang, {
+    ja: "データがありません",
+    en: "No data yet",
+    ko: "데이터가 없습니다",
+    zh: "暂无数据",
+    es: "Aún no hay datos",
+    pt: "Ainda sem dados",
+    fr: "Pas encore de données",
+  });
 
   if (!upcomingGames.length) {
     return (

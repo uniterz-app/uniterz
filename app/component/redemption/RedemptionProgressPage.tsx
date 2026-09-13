@@ -10,6 +10,8 @@ import ProfileCyberPage from "@/app/component/profile/ProfileCyberPage";
 import { nameOxanium } from "@/lib/fonts";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
+import { DATE_LOCALE } from "@/lib/i18n/language";
+import { resolveLocalizedLang } from "@/lib/i18n/localize";
 import {
   cancelMeRedemption,
   fetchMeRedemption,
@@ -22,6 +24,7 @@ import {
   redemptionStatusLabel,
 } from "@/lib/redemption/redemptionStatus";
 import { redemptionBatchScheduleCopy } from "@/lib/redemption/redemptionBatchScheduleCopy";
+import { redemptionProgressUiCopy } from "@/lib/redemption/redemptionUiCopy";
 import type { RedemptionRequest } from "@/lib/redemption/redemptionTypes";
 
 function pathBase() {
@@ -34,10 +37,10 @@ export default function RedemptionProgressPage() {
   const id = typeof params?.id === "string" ? params.id : "";
   const { fUser: user, status } = useFirebaseUser();
   const { language } = useUserLanguage(user?.uid ?? null);
-  const isJa = language === "ja";
-  const gateLang = isJa ? "ja" : "en";
+  const lang = resolveLocalizedLang(language);
+  const ui = redemptionProgressUiCopy(lang);
   const base = pathBase();
-  const batch = redemptionBatchScheduleCopy(gateLang);
+  const batch = redemptionBatchScheduleCopy(lang);
 
   const [request, setRequest] = useState<RedemptionRequest | null>(null);
   const [loading, setLoading] = useState(true);
@@ -100,34 +103,22 @@ export default function RedemptionProgressPage() {
     <ProfileCyberPage
       title="TRACK"
       eyebrow="UNIT EXCHANGE"
-      subtitle={
-        isJa
-          ? "申請から配送までの進捗。購入は月末まとめ（おおよそ25日前後）です。"
-          : "Track review through delivery. Purchase is batched near month-end (~25th)."
-      }
+      subtitle={ui.subtitle}
       contentClassName="max-w-lg space-y-4"
     >
       <Link
         href={`${base}/redeem`}
         className="text-[11px] text-cyan-300/80 hover:underline"
       >
-        ← {isJa ? "交換トップ" : "Redeem home"}
+        ← {ui.backHome}
       </Link>
 
-      <div className="rounded-[2px] border border-cyan-300/25 bg-cyan-400/5 px-3 py-2.5 text-[12px] leading-relaxed text-cyan-50/85">
-        {batch.detail}
-      </div>
-
       {loading ? (
-        <p className="text-[13px] text-white/45">
-          {isJa ? "読み込み中…" : "Loading…"}
-        </p>
+        <p className="text-[13px] text-white/45">{ui.loading}</p>
       ) : error ? (
         <p className="text-[13px] text-rose-300/80">{error}</p>
       ) : !request ? (
-        <p className="text-[13px] text-white/45">
-          {isJa ? "申請が見つかりません。" : "Request not found."}
-        </p>
+        <p className="text-[13px] text-white/45">{ui.notFound}</p>
       ) : (
         <>
           <div className="rounded-[2px] border border-white/10 bg-[rgba(4,9,16,0.97)] px-3 py-3">
@@ -135,7 +126,7 @@ export default function RedemptionProgressPage() {
               {request.productName}
             </p>
             <p className="mt-1 text-[12px] text-white/50">
-              {redemptionStatusLabel(request.status, gateLang)} ·{" "}
+              {redemptionStatusLabel(request.status, lang)} ·{" "}
               {request.unitsRequired} Unit
             </p>
             {request.status === "pending" ||
@@ -151,7 +142,7 @@ export default function RedemptionProgressPage() {
             ) : null}
             {request.trackingNumber ? (
               <p className="mt-2 text-[12px] text-cyan-200/90">
-                {isJa ? "追跡" : "Tracking"}: {request.trackingCarrier ?? "—"}{" "}
+                {ui.tracking}: {request.trackingCarrier ?? "—"}{" "}
                 {request.trackingNumber}
               </p>
             ) : null}
@@ -159,6 +150,16 @@ export default function RedemptionProgressPage() {
               <p className="mt-2 text-[12px] text-amber-100/80">
                 {request.adminNote}
               </p>
+            ) : null}
+            {request.imageUrl ? (
+              <div className="mt-3 overflow-hidden rounded-[2px] border border-white/15 bg-black/40">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={request.imageUrl}
+                  alt=""
+                  className="mx-auto max-h-52 w-full object-contain"
+                />
+              </div>
             ) : null}
           </div>
 
@@ -189,7 +190,7 @@ export default function RedemptionProgressPage() {
                       {String(i + 1).padStart(2, "0")}
                     </span>
                     <span className="text-[13px] text-white/85">
-                      {redemptionStatusLabel(step, gateLang)}
+                      {redemptionStatusLabel(step, lang)}
                     </span>
                   </li>
                 );
@@ -197,7 +198,7 @@ export default function RedemptionProgressPage() {
             </ol>
           ) : (
             <p className="rounded-[2px] border border-rose-300/30 bg-rose-400/10 px-3 py-3 text-[13px] text-rose-100/90">
-              {redemptionStatusLabel(request.status, gateLang)}
+              {redemptionStatusLabel(request.status, lang)}
             </p>
           )}
 
@@ -208,7 +209,7 @@ export default function RedemptionProgressPage() {
                 "text-[11px] font-bold uppercase tracking-[0.16em] text-white/55",
               ].join(" ")}
             >
-              {isJa ? "履歴" : "Timeline"}
+              {ui.timeline}
             </h2>
             <ul className="space-y-1.5">
               {[...request.timeline].reverse().map((ev, i) => (
@@ -218,14 +219,14 @@ export default function RedemptionProgressPage() {
                 >
                   <span className="w-16 shrink-0 tabular-nums text-white/35">
                     {ev.atMs
-                      ? new Date(ev.atMs).toLocaleDateString(
-                          isJa ? "ja-JP" : "en-US",
-                          { month: "short", day: "numeric" }
-                        )
+                      ? new Date(ev.atMs).toLocaleDateString(DATE_LOCALE[lang], {
+                          month: "short",
+                          day: "numeric",
+                        })
                       : "—"}
                   </span>
                   <span>
-                    {redemptionStatusLabel(ev.status, gateLang)}
+                    {redemptionStatusLabel(ev.status, lang)}
                     {ev.note ? ` — ${ev.note}` : ""}
                   </span>
                 </li>
@@ -244,7 +245,7 @@ export default function RedemptionProgressPage() {
                   "border border-cyan-300/40 bg-cyan-400/15 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-cyan-50 disabled:opacity-50",
                 ].join(" ")}
               >
-                {isJa ? "申請を送信" : "Submit draft"}
+                {ui.submitDraft}
               </button>
             ) : null}
             {canUserCancelRedemption(request.status) ? (
@@ -257,7 +258,7 @@ export default function RedemptionProgressPage() {
                   "border border-rose-300/35 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-rose-200/90 disabled:opacity-50",
                 ].join(" ")}
               >
-                {isJa ? "申請を取り消す" : "Cancel request"}
+                {ui.cancel}
               </button>
             ) : null}
           </div>

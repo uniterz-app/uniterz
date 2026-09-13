@@ -15,6 +15,7 @@ import {
   RANK_GAP_CHAMFER_CLIP,
   RANK_GAP_CYBER,
 } from "@/lib/rankings/rankGapDonut";
+import { rankShadowBandChromeCopy } from "@/lib/rankings/rankShadowBandChromeCopy";
 
 type Props = {
   analysis: RankShadowAnalysis;
@@ -33,7 +34,7 @@ function ShadowPriorBandRange({
   language: Language;
 }) {
   const numStyle = cyberRankNumStyle(priorRank, true);
-  const isJa = language === "ja";
+  const chrome = rankShadowBandChromeCopy(language);
 
   return (
     <div className="mt-1 flex justify-center origin-center scale-[0.82] sm:scale-[0.9]">
@@ -43,7 +44,7 @@ function ShadowPriorBandRange({
             " "
           )}
         >
-          {!isJa ? (
+          {chrome.showPrefix ? (
             <span
               className={[
                 nameOxanium.className,
@@ -55,7 +56,7 @@ function ShadowPriorBandRange({
                 display: "inline-block",
               }}
             >
-              Ranks
+              {chrome.ranksPrefix}
             </span>
           ) : null}
           <span
@@ -74,7 +75,7 @@ function ShadowPriorBandRange({
               filter: "none",
             }}
           >
-            {isJa ? "〜" : "–"}
+            {chrome.rangeSep}
           </span>
           <span
             className="tabular-nums leading-none"
@@ -82,7 +83,7 @@ function ShadowPriorBandRange({
           >
             {high}
           </span>
-          {isJa ? (
+          {chrome.showSuffix ? (
             <span
               className={[nameOxanium.className, "ml-0.5 text-[13px] font-bold"].join(
                 " "
@@ -93,7 +94,7 @@ function ShadowPriorBandRange({
                 display: "inline-block",
               }}
             >
-              位
+              {chrome.rankSuffix}
             </span>
           ) : null}
         </span>

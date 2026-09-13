@@ -932,12 +932,12 @@ const fr: Messages = {
 
   tutorial: {
     skip: "Passer",
-    skipConfirmTitle: "Skip the tutorial?",
+    skipConfirmTitle: "Passer le tutoriel ?",
     skipConfirmBody:
-      "Are you sure?\nYou can review it again anytime from Tutorial in the side menu.",
-    skipConfirmStay: "Keep going",
-    skipConfirmLeave: "Skip",
-    restartFromMenu: "Tutorial",
+      "Vous êtes sûr ?\nVous pourrez le revoir depuis Tutoriel dans le menu latéral.",
+    skipConfirmStay: "Continuer",
+    skipConfirmLeave: "Passer",
+    restartFromMenu: "Tutoriel",
     back: "Retour",
     next: "Suivant",
     seeGames: "Voir les matchs",
@@ -957,7 +957,7 @@ const fr: Messages = {
       tabGames: "Games",
       tabResult: "Results",
       tabRankings: "Rankings",
-      tabGroups: "Groups",
+      tabGroups: "Groupes",
       tabProfile: "Profile",
       welcomeTitle: "Welcome to UNITERZ",
       welcomeBody:
@@ -1032,8 +1032,8 @@ const fr: Messages = {
         "Outcomes land on the Results tab. Tap it below.",
       gotoRankingsTitle: "Open Rankings",
       gotoRankingsBody: "Next up is the Rankings tab. Tap it below.",
-      gotoGroupsTitle: "Open Groups",
-      gotoGroupsBody: "Next up is the Groups tab. Tap it below.",
+      gotoGroupsTitle: "Vers Groupes",
+      gotoGroupsBody: "Ensuite : **Groupes**. Onglet du bas ou Suivant.",
       gotoProfileTitle: "Open Profile",
       gotoProfileBody: "Next up is the Profile tab. Tap it below.",
       resultHitTitle: "HIT!",
@@ -1063,22 +1063,22 @@ const fr: Messages = {
       rankingsTitle: "Rankings",
       rankingsBody:
         "Hits earn points that decide your place. Switch periods and categories to track yourself.",
-      groupsTitle: "Groups (Leaderboards)",
+      groupsTitle: "Groupes",
       groupsBody:
-        "Create a group with friends and compete in a private ranking. Join with an invite code too.",
-      groupsMockName: "Night Owls",
-      groupsMockMeta: "8 members · You're #2 in the group",
+        "**Classements privés entre amis.** Rejoignez aussi via un code d’invitation.",
+      groupsMockName: "Hiboux de nuit",
+      groupsMockMeta: "8 membres · Vous êtes n°2 du groupe",
       profileTitle: "Profile",
       profileBody:
         "Your page shows stats, streaks, settings, and plans. Change avatar and display name here.",
       profileMockStats: "Hit rate · Streak · Total points",
       horizonFeatureTag: "Nouveau",
-      horizonSquadWhatTitle: "What is Squad Battle?",
+      horizonSquadWhatTitle: "Qu’est-ce que Squad Battle ?",
       horizonSquadWhatBody:
-        "Form a **squad of 3–5** and compete on **every member's average score** in a **limited-time event**.\nSeparate from **Groups** (friend boards) — this is its **own battlefield**.\nRuns about **once every two months** for **one month** of weekly and monthly ranks.",
-      horizonSquadHowTitle: "Joining a squad",
+        "Formez une **squad de 3–5** et rivalisez sur la **moyenne de tous les membres** lors d’un **événement limité**.\nC’est distinct des **Groupes** (classements entre amis) — un **champ de bataille à part**.\nEnviron **une fois tous les deux mois**, pendant **un mois** de classements hebdo et mensuels.",
+      horizonSquadHowTitle: "Rejoindre une squad",
       horizonSquadHowBody:
-        "From **Groups**, **apply** to an open squad or join with an **invite code**.\nDuring the event, **weekly (×4)** and **monthly (×1)** standings update.\n**All members** of top squads receive **UNIT**.",
+        "Depuis **Groupes**, **postulez** à une squad ouverte ou entrez avec un **code**.\nPendant l’événement, le **hebdo (×4)** et le **mensuel (×1)** se mettent à jour.\n**Tous les membres** des meilleures squads reçoivent des **UNIT**.",
       horizonUnitWhatTitle: "What is UNIT?",
       horizonUnitWhatBody:
         "The highlighted **coin** is your **UNIT balance**.\nUNITERZ **in-app currency** for **skins** and Profile looks.\nTap the coin to open your **history**.",

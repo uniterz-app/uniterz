@@ -6,7 +6,7 @@ import { nameOxanium } from "@/lib/fonts";
 
 type Props = {
   open: boolean;
-  language: "ja" | "en";
+  language: string | null | undefined;
   onClose: () => void;
   onSeePro: () => void;
 };
@@ -17,7 +17,7 @@ export default function NotificationProGateModal({
   onClose,
   onSeePro,
 }: Props) {
-  const copy = notificationProGateCopy(language);
+  const copy = notificationProGateCopy(language ?? "en");
   if (!open) return null;
 
   return (

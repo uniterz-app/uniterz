@@ -4,6 +4,7 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Image,
   Pressable,
   StyleSheet,
   Text,
@@ -76,19 +77,15 @@ export default function RedemptionProgressScreenNative() {
       title="TRACK"
       eyebrow="UNIT EXCHANGE"
       description={L(lang, {
-        ja: "購入は月末まとめ（おおよそ25日前後）。",
-        en: "Purchase is batched near month-end (~25th).",
-        ko: "구매는 월말 일괄(대략 25일 전후).",
-        zh: "采购为月末集中（约 25 日前后）。",
-        es: "La compra se agrupa a fin de mes (~día 25).",
-        pt: "A compra é em lote no fim do mês (~dia 25).",
-        fr: "Achat groupé en fin de mois (~25).",
+        ja: "申請から配送までの進捗を確認できます。",
+        en: "Track your request from review through delivery.",
+        ko: "신청부터 배송까지 진행을 확인할 수 있습니다.",
+        zh: "可查看从申请到配送的进度。",
+        es: "Sigue tu solicitud desde la revisión hasta la entrega.",
+        pt: "Acompanhe do pedido à entrega.",
+        fr: "Suivez de la revue à la livraison.",
       })}
     >
-      <View style={styles.batchCard}>
-        <Text style={styles.batchBody}>{batch.detail}</Text>
-      </View>
-
       {loading ? (
         <ActivityIndicator color="#67e8f9" />
       ) : error ? (
@@ -119,6 +116,12 @@ export default function RedemptionProgressScreenNative() {
             ) : null}
             {request.adminNote ? (
               <Text style={styles.note}>{request.adminNote}</Text>
+            ) : null}
+            {request.imageUrl ? (
+              <Image
+                source={{ uri: request.imageUrl }}
+                style={styles.productImage}
+              />
             ) : null}
           </View>
 
@@ -211,19 +214,6 @@ export default function RedemptionProgressScreenNative() {
 }
 
 const styles = StyleSheet.create({
-  batchCard: {
-    marginBottom: 12,
-    padding: 12,
-    borderRadius: 2,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "rgba(103,232,249,0.3)",
-    backgroundColor: "rgba(34,211,238,0.06)",
-  },
-  batchBody: {
-    fontSize: 12,
-    lineHeight: 18,
-    color: "rgba(236,254,255,0.85)",
-  },
   card: {
     marginBottom: 12,
     padding: 12,
@@ -237,6 +227,14 @@ const styles = StyleSheet.create({
   hint: { marginTop: 8, fontSize: 12, color: "rgba(165,243,252,0.85)" },
   track: { marginTop: 8, fontSize: 12, color: "rgba(165,243,252,0.9)" },
   note: { marginTop: 8, fontSize: 12, color: "rgba(253,230,138,0.85)" },
+  productImage: {
+    marginTop: 10,
+    width: "100%",
+    height: 180,
+    resizeMode: "contain",
+    backgroundColor: "rgba(0,0,0,0.35)",
+    borderRadius: 2,
+  },
   step: {
     flexDirection: "row",
     alignItems: "center",

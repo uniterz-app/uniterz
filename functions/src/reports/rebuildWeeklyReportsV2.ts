@@ -4,6 +4,7 @@ import { defineSecret } from "firebase-functions/params";
 import { buildWeeklyReportsCore } from "./buildWeeklyReportsCore";
 import { previousLabel, weekStartDateKeyET } from "../rankings/nbaPeriod";
 import { assertManualJobAuth } from "../http/assertManualJobAuth";
+import { notifyWeeklyReportPush } from "../notifications/notifyPushEvents";
 
 const INTERNAL_JOB_SECRET = defineSecret("INTERNAL_JOB_SECRET");
 
@@ -41,6 +42,14 @@ export const rebuildWeeklyReportsCronV2 = onSchedule(
     console.log(
       `[rebuildWeeklyReportsCronV2] status=final week=${final.weekLabel} written=${final.written}`
     );
+    try {
+      await notifyWeeklyReportPush({
+        uids: final.writtenUids,
+        weekLabel: final.weekLabel,
+      });
+    } catch (e) {
+      console.error("[rebuildWeeklyReportsCronV2] weekly push failed", e);
+    }
   }
 );
 

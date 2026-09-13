@@ -18,6 +18,7 @@ import {
   proLeagueGateCopy,
   type ProLeagueGateBullet,
 } from "../../../../../lib/rankings/proLeagueGateCopy";
+import { resolveLocalizedLang } from "../../../../../lib/i18n/localize";
 import { nativeBlurViewExtraProps } from "../../ui/nativeBlurProps";
 import { RankingListCardNative } from "./RankingsRankingCards";
 import ProCyberBadgeNative from "../profile/kinetik/ProCyberBadgeNative";
@@ -70,8 +71,7 @@ export function RankingsProLeagueTeaserNative({
   onPressSubscribe: () => void;
   onBackToPickUp?: () => void;
 }) {
-  const lang = language === "ja" ? "ja" : "en";
-  const copy = proLeagueGateCopy(lang);
+  const copy = proLeagueGateCopy(resolveLocalizedLang(language));
   const rows = useMemo(() => buildProLeagueTeaserRows(), []);
 
   return (

@@ -1,6 +1,5 @@
 /**
- * 商品交換の運用スケジュール文言（月末まとめ購入）
- * 4/1 申請 → 同月 25 日前後にまとめて購入、という体験を先に伝える。
+ * 商品交換の届き方・審査後の案内文言（申請・進捗・ハブ）
  */
 import {
   L,
@@ -19,40 +18,40 @@ export function redemptionBatchScheduleCopy(
   const lang = resolveLocalizedLang(language);
   return {
     short: L(lang, {
-      ja: "月末まとめ購入（おおよそ25日前後）",
-      en: "Monthly batch order (~25th)",
-      ko: "월말 일괄 구매(대략 25일 전후)",
-      zh: "月末集中采购（约 25 日前后）",
-      es: "Pedido mensual conjunto (~día 25)",
-      pt: "Pedido mensal em lote (~dia 25)",
-      fr: "Commande groupée mensuelle (~25)",
+      ja: "審査後に購入・直送",
+      en: "Purchase & ship after review",
+      ko: "심사 후 구매·직송",
+      zh: "审核后采购并直送",
+      es: "Compra y envío tras revisión",
+      pt: "Compra e envio após análise",
+      fr: "Achat et envoi après revue",
     }),
     detail: L(lang, {
-      ja: "交換申請はいつでも受け付けます。運営は配送料を抑えるため、その月の申請をまとめて月末（おおよそ25日前後）に購入・発送準備します。例: 4/1 の申請も、実際の購入は 4/25 前後になります。",
-      en: "You can apply any day. To keep shipping costs down, we review and purchase that month’s requests together near month-end (around the 25th). Example: an Apr 1 request is typically purchased around Apr 25.",
-      ko: "교환 신청은 언제든 가능합니다. 배송비를 낮추기 위해 그달 신청을 모아 월말(대략 25일 전후)에 구매·발송 준비합니다. 예: 4/1 신청도 실제 구매는 4/25 전후입니다.",
-      zh: "随时可提交兑换申请。为控制运费，当月申请会集中在月末（约 25 日前后）采购并发货准备。例：4/1 的申请通常约在 4/25 采购。",
-      es: "Puedes solicitar cualquier día. Para reducir envíos, revisamos y compramos las solicitudes del mes cerca de fin de mes (~día 25). Ej.: una del 1 abr. suele comprarse hacia el 25 abr.",
-      pt: "Você pode solicitar qualquer dia. Para reduzir frete, revisamos e compramos os pedidos do mês perto do fim (~dia 25). Ex.: um de 1º abr. costuma ser comprado por volta de 25 abr.",
-      fr: "Vous pouvez demander n’importe quel jour. Pour limiter les frais, nous achetons les demandes du mois vers fin de mois (~25). Ex. : une demande au 1er avr. est souvent achetée vers le 25 avr.",
+      ja: "交換申請はいつでも受け付けます。審査のあと、配送先の国・地域に対応する正規オンラインストア等から購入し、あなた宛に直送します。",
+      en: "You can apply any day. After review, we buy from an official online store for your shipping country/region when possible and ship direct to you.",
+      ko: "교환 신청은 언제든 가능합니다. 심사 후 배송국 공식 온라인 스토어 등에서 구매해 당신에게 직송합니다.",
+      zh: "随时可申请兑换。审核后，优先从配送国官方网店采购并直送到您。",
+      es: "Puedes solicitar cualquier día. Tras la revisión, compramos en la tienda online oficial de tu país cuando sea posible y enviamos directo a ti.",
+      pt: "Você pode solicitar qualquer dia. Após a análise, compramos na loja online oficial do seu país quando possível e enviamos direto a você.",
+      fr: "Vous pouvez demander n’importe quel jour. Après revue, nous achetons sur la boutique officielle de votre pays si possible et expédions directement.",
     }),
     pendingHint: L(lang, {
-      ja: "受付済み。月末のまとめ購入までお待ちください。",
-      en: "Received. Waiting for the month-end batch purchase.",
-      ko: "접수됨. 월말 일괄 구매까지 기다려 주세요.",
-      zh: "已受理。请等待月末集中采购。",
-      es: "Recibido. Esperando la compra conjunta de fin de mes.",
-      pt: "Recebido. Aguardando a compra em lote do fim do mês.",
-      fr: "Reçu. En attente de l’achat groupé de fin de mois.",
+      ja: "受付済み。審査完了までお待ちください。",
+      en: "Received. Waiting for review.",
+      ko: "접수됨. 심사 완료까지 기다려 주세요.",
+      zh: "已受理。请等待审核完成。",
+      es: "Recibido. Esperando la revisión.",
+      pt: "Recebido. Aguardando a análise.",
+      fr: "Reçu. En attente de revue.",
     }),
     approvedHint: L(lang, {
-      ja: "購入準備中。月末まとめ購入（おおよそ25日前後）の対象です。",
-      en: "Queued for the monthly batch purchase (~25th).",
-      ko: "구매 준비 중. 월말 일괄 구매(대략 25일 전후) 대상입니다.",
-      zh: "采购准备中。已纳入月末集中采购（约 25 日前后）。",
-      es: "En cola para la compra mensual (~día 25).",
-      pt: "Na fila da compra mensal (~dia 25).",
-      fr: "En file pour l’achat mensuel (~25).",
+      ja: "承認済み。購入・発送の準備に入ります。",
+      en: "Approved. Preparing purchase and shipment.",
+      ko: "승인됨. 구매·발송 준비에 들어갑니다.",
+      zh: "已批准。正在准备采购与发货。",
+      es: "Aprobado. Preparando compra y envío.",
+      pt: "Aprovado. Preparando compra e envio.",
+      fr: "Approuvé. Préparation de l’achat et de l’envoi.",
     }),
   };
 }

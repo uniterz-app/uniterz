@@ -15,6 +15,8 @@ import { createPortal } from "react-dom";
 import ProfileEditKinetikPanel from "@/app/component/profile/edit/ProfileEditKinetikPanel";
 import { PROFILE_EDIT_KINETIK_MOCK } from "@/app/component/profile/edit/profileEditKinetikTypes";
 import { nameOxanium, nameRajdhani } from "@/lib/fonts";
+import { L, resolveLocalizedLang } from "@/lib/i18n/localize";
+import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import { saveMeProSkin } from "@/lib/api/saveMeProSkin";
 import { fetchProSkinStatus } from "@/lib/api/fetchProSkinStatus";
 import {
@@ -39,6 +41,7 @@ import { PRO_SUBSCRIBE_PATH } from "@/lib/pro/proSkinRoutes";
 import { proSkinThumbPublicPath } from "@/lib/profile/proSkinStaticPreview";
 import { getUserDocDataCached } from "@/lib/user/userDocCache";
 import { auth } from "@/lib/firebase";
+import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import "@/app/component/profile/pro/profilePlanProBgPickerPreview.css";
 
 const CARD_LAYOUT_WIDTH = 400;
@@ -71,9 +74,9 @@ function categoryBadgeClass(category: ProfilePlanProAdoptedCategory): string {
   }
 }
 
-function panelProps() {
+function panelProps(language: string) {
   return {
-    language: "ja" as const,
+    language: resolveLocalizedLang(language),
     identity: {
       ...PROFILE_EDIT_KINETIK_MOCK.identity,
       displayName: "UNITERZ",
@@ -171,10 +174,12 @@ function SkinThumbnail({ entry }: { entry: ProfilePlanProAdoptedEntry }) {
 function ScaledCatalogCard({
   scale,
   variantId,
+  language,
   replaySeed = 0,
 }: {
   scale: number;
   variantId: ProfilePlanProBgVariant;
+  language: string;
   replaySeed?: number;
 }) {
   const islandRef = useRef<HTMLDivElement>(null);
@@ -216,7 +221,7 @@ function ScaledCatalogCard({
         <ProfileEditKinetikPanel
           key={`${variantId}:${replaySeed}`}
           layout="mobile"
-          {...panelProps()}
+          {...panelProps(language)}
           isPro
           planProBgVariant={variantId}
         />
@@ -232,6 +237,7 @@ function CatalogTile({
   isNew,
   owners,
   progress,
+  language,
   onSelect,
 }: {
   entry: ProSkinUnlockCatalogEntry;
@@ -247,6 +253,7 @@ function CatalogTile({
     | "referralCompletedCount"
     | "periodWins"
   >;
+  language: string;
   onSelect: () => void;
 }) {
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
@@ -255,10 +262,10 @@ function CatalogTile({
       onSelect();
     }
   };
-  const condition = formatProSkinUnlockCondition(entry.unlock, "ja");
+  const condition = formatProSkinUnlockCondition(entry.unlock, language);
   const bar =
     !unlocked && entry.unlock.kind !== "pro"
-      ? proSkinMilestoneProgressBar(entry.unlock, progress, "ja")
+      ? proSkinMilestoneProgressBar(entry.unlock, progress, language)
       : null;
 
   return (
@@ -300,7 +307,7 @@ function CatalogTile({
               categoryBadgeClass(entry.category),
             ].join(" ")}
           >
-            {profilePlanProAdoptedCategoryLabel(entry.category, "en")}
+            {profilePlanProAdoptedCategoryLabel(entry.category, language)}
           </span>
           {!unlocked ? (
             <span
@@ -349,7 +356,7 @@ function CatalogTile({
         >
           {condition}
           <span className="mx-1.5 text-white/20">·</span>
-          {formatProSkinOwnerCount(owners, "ja")}
+          {formatProSkinOwnerCount(owners, language)}
         </p>
       </div>
       <div className="profile-plan-pro-bg-picker-catalog-tile__card relative">
@@ -402,6 +409,9 @@ export default function ProfilePlanProSkinPicker({
 }: Props) {
   const router = useRouter();
   const pathname = usePathname() ?? "";
+  const { fUser } = useFirebaseUser();
+  const { language } = useUserLanguage(fUser?.uid ?? null);
+  const lang = resolveLocalizedLang(language);
   const isWeb =
     platform === "web" || (platform == null && pathname.startsWith("/web"));
   const isProduction = mode === "production";
@@ -659,6 +669,7 @@ export default function ProfilePlanProSkinPicker({
           isNew={noticeIds.has(entry.id)}
           owners={ownerCounts[entry.id] ?? 0}
           progress={milestoneProgress}
+          language={lang}
           onSelect={() => openOverlay(entry.id)}
         />
       ))}
@@ -709,7 +720,7 @@ export default function ProfilePlanProSkinPicker({
                 <ProfileEditKinetikPanel
                   key={`${overlayEntry.id}:${replayByVariant[overlayEntry.id] ?? 0}`}
                   layout="web"
-                  {...panelProps()}
+                  {...panelProps(lang)}
                   isPro
                   planProBgVariant={overlayEntry.id}
                 />
@@ -718,6 +729,7 @@ export default function ProfilePlanProSkinPicker({
               <ScaledCatalogCard
                 scale={openedScale}
                 variantId={overlayEntry.id}
+                language={lang}
                 replaySeed={replayByVariant[overlayEntry.id] ?? 0}
               />
             )}
@@ -734,8 +746,16 @@ export default function ProfilePlanProSkinPicker({
                     ].join(" ")}
                   >
                     {overlayEntry
-                      ? formatProSkinUnlockCondition(overlayEntry.unlock, "ja")
-                      : "未解放"}
+                      ? formatProSkinUnlockCondition(overlayEntry.unlock, lang)
+                      : L(lang, {
+                          ja: "未解放",
+                          en: "Locked",
+                          ko: "잠김",
+                          zh: "未解锁",
+                          es: "Bloqueada",
+                          pt: "Bloqueada",
+                          fr: "Verrouillée",
+                        })}
                   </p>
                 ) : null}
                 {!viewerIsPro ? (
@@ -745,7 +765,15 @@ export default function ProfilePlanProSkinPicker({
                       "w-full text-center text-[11px] font-bold tracking-[0.06em] text-cyan-100/80",
                     ].join(" ")}
                   >
-                    プレビューのみ · 適用には Pro が必要です
+                    {L(lang, {
+                      ja: "プレビューのみ · 適用には Pro が必要です",
+                      en: "Preview only · Pro required to apply",
+                      ko: "미리보기만 · 적용에는 Pro 필요",
+                      zh: "仅预览 · 应用需 Pro",
+                      es: "Solo vista previa · Pro para aplicar",
+                      pt: "Só prévia · Pro para aplicar",
+                      fr: "Aperçu seul · Pro requis",
+                    })}
                   </p>
                 ) : null}
                 {!viewerIsPro ? (
@@ -812,7 +840,7 @@ export default function ProfilePlanProSkinPicker({
                 "mt-2 text-center text-[10px] font-bold tracking-[0.06em] text-white/40",
               ].join(" ")}
             >
-              {formatProSkinOwnerCount(ownerCounts[overlayEntry.id] ?? 0, "ja")}
+              {formatProSkinOwnerCount(ownerCounts[overlayEntry.id] ?? 0, lang)}
             </p>
           ) : null}
           {saveError && isProduction ? (

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { cyberAlert } from "../../../components/cyberAlert";
 import {
   Linking,
@@ -18,6 +18,7 @@ import {
   type PredictionDeadlineMinutes,
   type PushNotificationPrefKey,
 } from "@/lib/notifications/pushNotificationPrefs";
+import { canViewMonthlyReport } from "@/lib/reports/reportEntitlements";
 import LegalPageLayoutNative from "../../legal/LegalPageLayoutNative";
 import ProCyberBadgeNative from "../kinetik/ProCyberBadgeNative";
 import NotificationProGateModalNative from "./NotificationProGateModalNative";
@@ -48,7 +49,7 @@ export default function NotificationSettingsScreenNative() {
   const { language } = useNativeUserLanguageFromAuth();
   const labels = notificationSettingsCopy(language);
   const gateLanguage = labels.lang;
-  const { isPro } = useNativeUserPlan(uid);
+  const { isPro, plan, planType } = useNativeUserPlan(uid);
   const { prefs, loading, updatePref, updateDeadlineMinutes } =
     usePushNotificationPrefsNative(uid);
   const [permission, setPermission] = useState<PermissionState>("unknown");
@@ -57,6 +58,13 @@ export default function NotificationSettingsScreenNative() {
 
   const osReady = permission === "granted";
   const controlsEnabled = Boolean(uid) && !loading && osReady;
+  const proRows = useMemo(() => {
+    const showMonthly =
+      !isPro || canViewMonthlyReport({ plan, planType });
+    return showMonthly
+      ? labels.proRows
+      : labels.proRows.filter((row) => row.key !== "monthlyReport");
+  }, [isPro, plan, planType, labels.proRows]);
 
   useEffect(() => {
     if (loading || !uid || isPro) return;
@@ -315,7 +323,7 @@ export default function NotificationSettingsScreenNative() {
         <Text style={styles.sectionHint}>
           {isPro ? labels.reviewHintPro : labels.reviewHintFree}
         </Text>
-        {renderSwitchRows(labels.proRows, !isPro)}
+        {renderSwitchRows(proRows, !isPro)}
       </View>
 
       <NotificationProGateModalNative

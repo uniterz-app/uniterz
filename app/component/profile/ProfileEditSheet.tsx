@@ -27,6 +27,7 @@ import {
   normalizeLanguage,
 } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
+import { resolveLocalizedLang } from "@/lib/i18n/localize";
 import { saveMeProfile } from "@/lib/api/saveMeProfile";
 import {
   isProfileGamblingTermsError,
@@ -261,7 +262,7 @@ export default function ProfileEditSheet({
           <option value="">{t(language).common.notSet}</option>
           {COUNTRY_OPTIONS.map((c) => (
             <option key={c.code} value={c.code}>
-              {language === "ja" ? c.labelJa : c.labelEn}
+              {resolveLocalizedLang(language) === "ja" ? c.labelJa : c.labelEn}
             </option>
           ))}
         </CyberAuthSelect>

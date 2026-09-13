@@ -6,6 +6,7 @@ import ProfileCyberPage from "@/app/component/profile/ProfileCyberPage";
 import ProfilePlanProSkinPicker from "@/app/component/profile/pro/ProfilePlanProSkinPicker";
 import { isAuthStateResolved, useFirebaseUser } from "@/lib/useFirebaseUser";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
+import { L, resolveLocalizedLang } from "@/lib/i18n/localize";
 import { parseUserPlanProBgVariant } from "@/lib/profile/profilePlanProBgVariantField";
 import type { ProfilePlanProBgVariant } from "@/lib/profile/profilePlanProBgVariants";
 import { getUserDocDataCached } from "@/lib/user/userDocCache";
@@ -52,11 +53,15 @@ export default function ProSkinPage({ platform }: Props) {
   return (
     <ProfileCyberPage
       title="SKIN"
-      subtitle={
-        language === "en"
-          ? "Choose a Pro profile background skin."
-          : "Pro プロフィール背景スキンを選べます。"
-      }
+      subtitle={L(resolveLocalizedLang(language), {
+        ja: "Pro プロフィール背景スキンを選べます。",
+        en: "Choose a Pro profile background skin.",
+        ko: "Pro 프로필 배경 스킨을 선택할 수 있습니다.",
+        zh: "可选择 Pro 个人资料背景皮肤。",
+        es: "Elige un skin de fondo Pro para el perfil.",
+        pt: "Escolha uma skin de fundo Pro para o perfil.",
+        fr: "Choisissez un skin de fond Pro pour le profil.",
+      })}
       edgeBack={fromTrial ? false : undefined}
       hideBack={fromTrial ? true : undefined}
       contentClassName={

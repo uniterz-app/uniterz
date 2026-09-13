@@ -26,6 +26,7 @@ import { matchCardTeamNameStyle } from "@/lib/games/teamDisplayTypography";
 import { NBA_TEAM_NAME_BY_ID } from "@/lib/nba-team-names";
 import { getMobileTeamName } from "@/lib/team-name-split-mobile";
 import type { Language } from "@/lib/i18n/language";
+import { L, resolveLocalizedLang } from "@/lib/i18n/localize";
 import { t } from "@/lib/i18n/t";
 import LiveGameStatsPanel from "@/app/component/games/live/LiveGameStatsPanel";
 import { useLiveGameStats } from "@/lib/games/useLiveGameStats";
@@ -137,7 +138,16 @@ function FormGameBoxOverlay({
   onClose: () => void;
 }) {
   const { report, loading } = useLiveGameStats(gameId, true);
-  const isJa = language === "ja";
+  const lang = resolveLocalizedLang(language);
+  const closeLabel = L(lang, {
+    ja: "閉じる",
+    en: "Close",
+    ko: "닫기",
+    zh: "关闭",
+    es: "Cerrar",
+    pt: "Fechar",
+    fr: "Fermer",
+  });
   return (
     <div
       className="fixed inset-0 z-[80] flex flex-col bg-black/92"
@@ -163,7 +173,7 @@ function FormGameBoxOverlay({
             "rounded-[2px] border border-white/25 px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-[0.1em] text-white/80",
           ].join(" ")}
         >
-          {isJa ? "閉じる" : "Close"}
+          {closeLabel}
         </button>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto px-2 py-3">
@@ -174,7 +184,15 @@ function FormGameBoxOverlay({
               "px-2 py-6 text-center text-[12px] font-bold text-white/45",
             ].join(" ")}
           >
-            {isJa ? "読み込み中…" : "Loading…"}
+            {L(lang, {
+              ja: "読み込み中…",
+              en: "Loading…",
+              ko: "불러오는 중…",
+              zh: "加载中…",
+              es: "Cargando…",
+              pt: "Carregando…",
+              fr: "Chargement…",
+            })}
           </p>
         ) : report ? (
           <LiveGameStatsPanel report={report} language={language} />
@@ -185,7 +203,15 @@ function FormGameBoxOverlay({
               "px-2 py-6 text-center text-[12px] font-bold text-white/45",
             ].join(" ")}
           >
-            {isJa ? "ボックススコアがありません" : "No box score yet"}
+            {L(lang, {
+              ja: "ボックススコアがありません",
+              en: "No box score yet",
+              ko: "박스스코어가 없습니다",
+              zh: "暂无技术统计",
+              es: "Aún no hay box score",
+              pt: "Ainda sem box score",
+              fr: "Pas encore de box score",
+            })}
           </p>
         )}
       </div>
@@ -206,8 +232,15 @@ function RecentFormGamesStrip({
   const [open, setOpen] = useState(false);
   const [boxGameId, setBoxGameId] = useState<string | null>(null);
   const rows = Math.max(left.length, right.length, 1);
-  const isJa = language === "ja";
-  const hint = isJa ? "タップ→BOXスコア" : "tap→box score";
+  const hint = L(resolveLocalizedLang(language), {
+    ja: "タップ→BOXスコア",
+    en: "tap→box score",
+    ko: "탭→박스스코어",
+    zh: "点按→技术统计",
+    es: "toca→box score",
+    pt: "toque→box score",
+    fr: "toucher→box score",
+  });
   return (
     <div className="border-t border-white/10 pt-2.5">
       <button

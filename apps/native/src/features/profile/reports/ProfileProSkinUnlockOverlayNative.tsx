@@ -43,7 +43,6 @@ export default function ProfileProSkinUnlockOverlayNative({
   onApplied,
 }: Props) {
   const lang = resolveLocalizedLang(language);
-  const skinLang = lang === "ja" ? ("ja" as const) : ("en" as const);
   const entries = resolveProSkinUnlockNoticeEntries(unlockedIds);
   const featured = entries[0] ?? null;
   const [heroSize, setHeroSize] = useState({ w: 0, h: 0 });
@@ -145,9 +144,9 @@ export default function ProfileProSkinUnlockOverlayNative({
                 ) : null}
               </Text>
               <Text style={styles.skinCond}>
-                {formatProSkinUnlockCondition(featured.unlock, skinLang)}
+                {formatProSkinUnlockCondition(featured.unlock, lang)}
                 {" · "}
-                {formatProSkinOwnerCount(owners, skinLang)}
+                {formatProSkinOwnerCount(owners, lang)}
               </Text>
               {moreCount > 0 ? (
                 <Text style={styles.moreText}>

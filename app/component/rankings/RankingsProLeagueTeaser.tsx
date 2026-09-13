@@ -23,13 +23,13 @@ import {
 } from "@/app/component/common/ProCyberBadge";
 import UniterzLogo from "@/app/component/units/UniterzLogo";
 import { buildProLeagueTeaserRows } from "@/lib/rankings/proLeagueTeaserMocks";
+import type { Language } from "@/lib/i18n/language";
 import {
   PRO_LEAGUE_GATE_CTA_HREF,
   proLeagueGateCopy,
   type ProLeagueGateBullet,
 } from "@/lib/rankings/proLeagueGateCopy";
 import { nameOxanium } from "@/lib/fonts";
-import type { Language } from "@/lib/i18n/language";
 
 type Props = {
   language?: Language;
@@ -77,8 +77,7 @@ export default function RankingsProLeagueTeaser({
   subscribeHref = PRO_LEAGUE_GATE_CTA_HREF,
   onBackToPickUp,
 }: Props) {
-  const lang = language === "ja" ? "ja" : "en";
-  const copy = proLeagueGateCopy(lang);
+  const copy = proLeagueGateCopy(language);
   const rows = useMemo(() => buildProLeagueTeaserRows(), []);
   const [ctaPressed, setCtaPressed] = useState(false);
 
@@ -127,7 +126,7 @@ export default function RankingsProLeagueTeaser({
               <ProCyberBadge
                 {...proBadgeStaticMotion}
                 premium
-                ariaLabel={lang === "ja" ? "Pro会員" : "Pro member"}
+                ariaLabel={copy.proMemberAria}
               />
             </span>
           </div>

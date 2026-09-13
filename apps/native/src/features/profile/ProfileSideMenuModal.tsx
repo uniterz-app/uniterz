@@ -26,7 +26,7 @@ import LogoutConfirmModalNative from "../../ui/LogoutConfirmModalNative";
 import { sideMenuLabelStyle } from "../../ui/cyberSideMenuNative";
 import ProCyberBadgeNative from "./kinetik/ProCyberBadgeNative";
 import { profileSideMenuLabels } from "./profileSideMenuCopy";
-import { resolveLocalizedLang } from "@/lib/i18n/localize";
+import { L, resolveLocalizedLang } from "@/lib/i18n/localize";
 
 type Lang = string;
 
@@ -351,11 +351,15 @@ export default function ProfileSideMenuModal({
                       style={styles.unitWallet}
                       onPress={() => openUserPage("unitLedger")}
                       accessibilityRole="button"
-                      accessibilityLabel={
-                        lang === "ja"
-                          ? `保有 Unit ${unitBalance.toLocaleString("ja-JP")} · 履歴を開く`
-                          : `${unitBalance.toLocaleString("en-US")} Units · Open history`
-                      }
+                      accessibilityLabel={L(lang, {
+                        ja: `保有 Unit ${unitBalance.toLocaleString("ja-JP")} · 履歴を開く`,
+                        en: `${unitBalance.toLocaleString("en-US")} Units · Open history`,
+                        ko: `보유 Unit ${unitBalance.toLocaleString("en-US")} · 기록 열기`,
+                        zh: `持有 Unit ${unitBalance.toLocaleString("en-US")} · 打开记录`,
+                        es: `${unitBalance.toLocaleString("en-US")} Units · Abrir historial`,
+                        pt: `${unitBalance.toLocaleString("en-US")} Units · Abrir histórico`,
+                        fr: `${unitBalance.toLocaleString("en-US")} Units · Ouvrir l’historique`,
+                      })}
                     >
                       <View style={styles.unitWalletMark}>
                         <MaterialCommunityIcons
@@ -790,7 +794,7 @@ export default function ProfileSideMenuModal({
             open={logoutOpen}
             onClose={() => setLogoutOpen(false)}
             onConfirm={() => void confirmLogout()}
-            language={lang === "ja" ? "ja" : "en"}
+            language={lang}
           />
 
           {settingsOverlay != null ? (

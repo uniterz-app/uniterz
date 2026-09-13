@@ -12,13 +12,14 @@ import {
   referralReferrerUnitsEarned,
 } from "@/lib/referral/referralRewards";
 import { buildReferralStampSlots } from "@/lib/referral/referralStampBoard";
+import { referralStampBoardCopy } from "@/lib/referral/referralStampCopy";
 import UniterzClearStamp, {
   type UniterzClearStampTone,
 } from "@/app/component/referral/UniterzClearStamp";
 
 type Props = {
   completedCount: number;
-  isJa: boolean;
+  language: string | null | undefined;
 };
 
 // Ledger background: thin hex-outline pattern (subtle, static).
@@ -179,7 +180,11 @@ function StampCell({
   );
 }
 
-export default function ReferralStampBoard({ completedCount, isJa }: Props) {
+export default function ReferralStampBoard({
+  completedCount,
+  language,
+}: Props) {
+  const copy = referralStampBoardCopy(language);
   const slots = useMemo(
     () => buildReferralStampSlots(completedCount),
     [completedCount]
@@ -238,7 +243,7 @@ export default function ReferralStampBoard({ completedCount, isJa }: Props) {
                 "text-[9px] font-bold uppercase tracking-[0.16em] text-cyan-200/70",
               ].join(" ")}
             >
-              {isJa ? "招待スタンプラリー" : "Invite stamp rally"}
+              {copy.eyebrow}
             </p>
             <h2
               className={[
@@ -247,7 +252,7 @@ export default function ReferralStampBoard({ completedCount, isJa }: Props) {
               ].join(" ")}
             >
               {renderReferralSkewedDigits(`${completedCount} / 10`)}
-              {isJa ? " 達成" : " locked"}
+              {copy.lockedSuffix}
             </h2>
           </div>
           <div className="text-right">
@@ -257,7 +262,7 @@ export default function ReferralStampBoard({ completedCount, isJa }: Props) {
                 "text-[8px] font-bold uppercase tracking-[0.12em] text-white/40",
               ].join(" ")}
             >
-              {isJa ? "獲得" : "Earned"}
+              {copy.earned}
             </p>
             <p
               className={[
@@ -278,7 +283,7 @@ export default function ReferralStampBoard({ completedCount, isJa }: Props) {
         <div
           className="grid grid-cols-5 gap-2 sm:gap-2.5"
           role="list"
-          aria-label={isJa ? "招待スタンプ 1から10" : "Invite stamps 1 to 10"}
+          aria-label={copy.stampsAria}
         >
           {slots.map((slot) => (
             <div key={slot.index} role="listitem">
@@ -293,17 +298,11 @@ export default function ReferralStampBoard({ completedCount, isJa }: Props) {
 
         <p className="text-[11px] leading-relaxed text-white/50">
           {next
-            ? isJa
-              ? `次のスタンプ目標: ${next.target} 人目（あと ${next.remaining}）· ボーナス +${next.bonusUnits} Unit`
-              : `Next stamp: #${next.target} (need ${next.remaining}) · bonus +${next.bonusUnits}`
-            : isJa
-              ? "10 枠すべて INVITE。マイルストーン上限到達"
-              : "All 10 slots INVITE. Milestone cap reached"}
+            ? copy.nextHint(next.target, next.remaining, next.bonusUnits)
+            : copy.completeHint}
         </p>
         <p className="text-[10px] text-white/35">
-          {isJa
-            ? `内訳: 基本 ${earned.base} + マイルストーン ${earned.milestones} · 3 LIME / 5 AMBER / 10 INK`
-            : `Base ${earned.base} + milestones ${earned.milestones} · 3 LIME / 5 AMBER / 10 INK`}
+          {copy.breakdown(earned.base, earned.milestones)}
         </p>
       </div>
     </section>

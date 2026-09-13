@@ -90,13 +90,13 @@ export function redemptionStatusLabel(
       });
     case "approved":
       return L(lang, {
-        ja: "月末購入待ち",
-        en: "Queued for batch order",
-        ko: "월말 구매 대기",
-        zh: "等待月末采购",
-        es: "En cola de pedido",
-        pt: "Na fila do lote",
-        fr: "En file d’achat",
+        ja: "購入準備中",
+        en: "Preparing purchase",
+        ko: "구매 준비 중",
+        zh: "采购准备中",
+        es: "Preparando compra",
+        pt: "Preparando compra",
+        fr: "Préparation achat",
       });
     case "ordered":
       return L(lang, {

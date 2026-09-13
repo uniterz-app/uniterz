@@ -12,6 +12,7 @@ import { fetchProfileSeasonStandings } from "@/lib/api/fetchSeasonStandings";
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
 import { CyberNoDataLabel } from "@/app/component/common/CyberNoDataLabel";
 import { CYBER_GLASS_PANEL } from "@/lib/ui/matchOverlayGlass";
+import { profileAwardsBracketCopy } from "@/lib/profile/profileAwardsBracketCopy";
 import type {
   NbaAwardCandidate,
   NbaSeasonAwardsPrediction,
@@ -20,7 +21,7 @@ import type { NbaSeasonStandingsPrediction } from "@/lib/predict/nbaSeasonStandi
 
 type Props = {
   uid?: string | null;
-  language?: "ja" | "en";
+  language?: string;
   /** 明示指定時は awards fetch せずこれを表示（プレビュー用） */
   prediction?: NbaSeasonAwardsPrediction | null;
   candidates?: NbaAwardCandidate[];
@@ -36,7 +37,7 @@ export default function ProfileAwardsTab({
   standings: standingsProp,
   className,
 }: Props) {
-  const isJa = language === "ja";
+  const copy = profileAwardsBracketCopy(language);
   const controlled =
     predictionProp !== undefined || standingsProp !== undefined;
   const [loading, setLoading] = useState(!controlled && Boolean(uid));
@@ -124,11 +125,7 @@ export default function ProfileAwardsTab({
           .join(" ")}
       >
         <CyberNoDataLabel variant="awards" />
-        <p className="text-sm text-white/45">
-          {isJa
-            ? "提出済みのシーズン予想がありません"
-            : "No season predictions submitted"}
-        </p>
+        <p className="text-sm text-white/45">{copy.noSeasonPredictions}</p>
       </div>
     );
   }

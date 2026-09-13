@@ -4,7 +4,6 @@
 import { Modal, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { BlurView } from "expo-blur";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import type { ComponentProps } from "react";
 import PredictOverlayChamferedFrameNative from "../features/games/PredictOverlayChamferedFrameNative";
 import UniterzLogoNative from "../features/profile/UniterzLogoNative";
 import { PREDICT_OVERLAY_CYBER_FORM_CUT } from "../features/games/matchListCyberClipPath";
@@ -13,32 +12,14 @@ import {
   ModalActionButtonNative,
   ModalActionRowNative,
 } from "../ui/ModalActionButtonNative";
+import { pushPermissionPrimerCopy } from "../../../../lib/notifications/pushPermissionPrimerCopy";
 
 type Props = {
   open: boolean;
-  language: "ja" | "en";
+  language: string;
   onAllow: () => void;
   onLater: () => void;
 };
-
-type Signal = {
-  icon: ComponentProps<typeof MaterialCommunityIcons>["name"];
-  label: string;
-};
-
-function signalsFor(isJa: boolean): Signal[] {
-  return isJa
-    ? [
-        { icon: "timer-outline", label: "試合開始・予想締切" },
-        { icon: "flag-checkered", label: "結果確定" },
-        { icon: "podium", label: "ランキング更新" },
-      ]
-    : [
-        { icon: "timer-outline", label: "Tip-off & deadlines" },
-        { icon: "flag-checkered", label: "Final results" },
-        { icon: "podium", label: "Ranking updates" },
-      ];
-}
 
 /** OS 通知許可ダイアログの前に表示する説明モーダル */
 export default function PushPermissionPrimerModalNative({
@@ -47,14 +28,7 @@ export default function PushPermissionPrimerModalNative({
   onAllow,
   onLater,
 }: Props) {
-  const isJa = language === "ja";
-  const title = isJa ? "ALERTS をオンにする" : "Turn on ALERTS";
-  const body = isJa
-    ? "予想した試合だけ。種類はあとから設定で変えられます。"
-    : "Only games you predicted. Change types anytime in Settings.";
-  const allowLabel = isJa ? "通知を許可" : "Allow";
-  const laterLabel = isJa ? "あとで" : "Not now";
-  const signals = signalsFor(isJa);
+  const t = pushPermissionPrimerCopy(language);
 
   return (
     <Modal
@@ -102,11 +76,11 @@ export default function PushPermissionPrimerModalNative({
               />
             </View>
 
-            <Text style={styles.title}>{title}</Text>
-            <Text style={styles.body}>{body}</Text>
+            <Text style={styles.title}>{t.title}</Text>
+            <Text style={styles.body}>{t.body}</Text>
 
             <View style={styles.signalPanel}>
-              {signals.map((s) => (
+              {t.signals.map((s) => (
                 <View key={s.label} style={styles.signalRow}>
                   <View style={styles.signalIcon}>
                     <MaterialCommunityIcons
@@ -123,12 +97,12 @@ export default function PushPermissionPrimerModalNative({
             <View style={styles.actions}>
               <ModalActionRowNative>
                 <ModalActionButtonNative
-                  label={laterLabel}
+                  label={t.later}
                   tone="ghost"
                   onPress={onLater}
                 />
                 <ModalActionButtonNative
-                  label={allowLabel}
+                  label={t.allow}
                   tone="primary"
                   onPress={onAllow}
                 />

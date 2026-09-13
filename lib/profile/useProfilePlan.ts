@@ -2,10 +2,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { auth, db } from "@/lib/firebase";
-import { doc } from "firebase/firestore";
+import { auth } from "@/lib/firebase";
 import { withTimeout } from "@/lib/async/withTimeout";
 import { getUserDocDataCached } from "@/lib/user/userDocCache";
+import {
+  normalizeStoredPlanType,
+  type StoredPlanType,
+} from "@/lib/pro/planChangeDisplay";
 
 type Params = {
   targetUid: string | null;
@@ -23,6 +26,7 @@ export function useProfilePlan({ targetUid, profilePlan }: Params) {
   const [myPlan, setMyPlan] = useState<string | null>(() =>
     isMe && profilePlan ? profilePlan : null
   );
+  const [myPlanType, setMyPlanType] = useState<StoredPlanType | null>(null);
   const [loadingPlan, setLoadingPlan] = useState(isMe && !profilePlan);
 
   useEffect(() => {
@@ -32,14 +36,7 @@ export function useProfilePlan({ targetUid, profilePlan }: Params) {
       if (!myUid) {
         if (!cancelled) {
           setMyPlan("free");
-          setLoadingPlan(false);
-        }
-        return;
-      }
-
-      if (isMe && profilePlan) {
-        if (!cancelled) {
-          setMyPlan(profilePlan);
+          setMyPlanType(null);
           setLoadingPlan(false);
         }
         return;
@@ -48,7 +45,6 @@ export function useProfilePlan({ targetUid, profilePlan }: Params) {
       try {
         if (!cancelled) setLoadingPlan(true);
 
-        const userDocRef = doc(db, "users", myUid);
         const data = await withTimeout(
           getUserDocDataCached(myUid),
           PLAN_FETCH_TIMEOUT_MS,
@@ -57,13 +53,15 @@ export function useProfilePlan({ targetUid, profilePlan }: Params) {
 
         if (!data) {
           if (!cancelled) {
-            setMyPlan("free");
+            setMyPlan(isMe && profilePlan ? profilePlan : "free");
+            setMyPlanType(null);
             setLoadingPlan(false);
           }
           return;
         }
 
         let nextPlan: "free" | "pro" = data.plan === "pro" ? "pro" : "free";
+        const nextType = normalizeStoredPlanType(data.planType);
 
         if (isMe) {
           const proUntilRaw = data.proUntil;
@@ -92,6 +90,7 @@ export function useProfilePlan({ targetUid, profilePlan }: Params) {
 
         if (!cancelled) {
           setMyPlan(nextPlan);
+          setMyPlanType(nextType);
           setLoadingPlan(false);
         }
       } catch {
@@ -122,6 +121,7 @@ export function useProfilePlan({ targetUid, profilePlan }: Params) {
     me,
     myUid,
     myPlan,
+    myPlanType,
     loadingPlan,
     isMe,
     isMyPro,

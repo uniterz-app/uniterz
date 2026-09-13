@@ -384,7 +384,7 @@ export default function NotificationDevScreenNative() {
 
       <PushPermissionPrimerModalNative
         open={primerOpen}
-        language={pushLang === "ja" ? "ja" : "en"}
+        language={pushLang}
         onAllow={() => setPrimerOpen(false)}
         onLater={() => setPrimerOpen(false)}
       />

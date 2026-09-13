@@ -32,6 +32,21 @@ export type ReportGateCopy = {
   cta: string | null;
 };
 
+export function reportGateProMemberAria(
+  language: string | null | undefined
+): string {
+  const lang = resolveLocalizedLang(language);
+  return L(lang, {
+    ja: "Pro会員",
+    en: "Pro member",
+    ko: "Pro 회원",
+    zh: "Pro 会员",
+    es: "Miembro Pro",
+    pt: "Membro Pro",
+    fr: "Membre Pro",
+  });
+}
+
 function freeBullets(lang: LocalizedLang): readonly ReportGateBullet[] {
   return [
     {

@@ -16,7 +16,6 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import LegalPageLayoutNative from "../../legal/LegalPageLayoutNative";
 import { useFirebaseUser } from "../../../auth/FirebaseUserProvider";
 import { useNativeUserLanguage } from "../../../hooks/useNativeUserLanguage";
-import { DATE_LOCALE } from "../../../../../../lib/i18n/language";
 import { L, resolveLocalizedLang } from "../../../../../../lib/i18n/localize";
 import type { ProfileStackParamList } from "../../../navigation/types";
 import { fetchMeRedemptionsNative } from "../redemptionApiNative";
@@ -27,7 +26,6 @@ import {
   redemptionExclusionsCopy,
   redemptionPriceCapLabel,
 } from "../../../../../../lib/redemption/redemptionCatalog";
-import { redemptionBatchScheduleCopy } from "../../../../../../lib/redemption/redemptionBatchScheduleCopy";
 import { redemptionStatusLabel } from "../../../../../../lib/redemption/redemptionStatus";
 import type {
   RedemptionCatalogItem,
@@ -50,9 +48,6 @@ export default function RedemptionHubScreenNative() {
   const { fUser } = useFirebaseUser();
   const { language } = useNativeUserLanguage(fUser?.uid);
   const lang = resolveLocalizedLang(language);
-  /** 価格上限ラベルは ja|en のみ */
-  const catalogLang = lang === "ja" ? ("ja" as const) : ("en" as const);
-  const batch = redemptionBatchScheduleCopy(lang);
 
   const [balance, setBalance] = useState(0);
   const [seasonUsed, setSeasonUsed] = useState(0);
@@ -94,20 +89,15 @@ export default function RedemptionHubScreenNative() {
       title="REDEEM"
       eyebrow="UNIT EXCHANGE"
       description={L(lang, {
-        ja: "保有 Unit で交換申請。月末まとめ購入（おおよそ25日前後）。",
-        en: "Redeem Units. Monthly batch purchase (~25th).",
-        ko: "보유 Unit으로 교환 신청. 월말 일괄 구매(대략 25일 전후).",
-        zh: "用持有 Unit 申请兑换。月末集中采购（约 25 日前后）。",
-        es: "Canjea Units. Compra conjunta de fin de mes (~día 25).",
-        pt: "Resgate Units. Compra em lote no fim do mês (~dia 25).",
-        fr: "Échangez des Units. Achat groupé de fin de mois (~25).",
+        ja: "保有 Unit で交換申請。審査後に購入・直送。",
+        en: "Redeem Units. Purchase and ship direct after review.",
+        ko: "보유 Unit으로 교환 신청. 심사 후 구매·직송.",
+        zh: "用持有 Unit 申请兑换。审核后采购并直送。",
+        es: "Canjea Units. Compra y envío directo tras revisión.",
+        pt: "Resgate Units. Compra e envio direto após análise.",
+        fr: "Échangez des Units. Achat et envoi direct après revue.",
       })}
     >
-      <View style={styles.batchCard}>
-        <Text style={styles.batchTitle}>{batch.short}</Text>
-        <Text style={styles.batchBody}>{batch.detail}</Text>
-      </View>
-
       <View style={styles.balanceCard}>
         <Text style={styles.balanceLabel}>Balance</Text>
         <Text style={styles.balanceValue}>
@@ -179,7 +169,7 @@ export default function RedemptionHubScreenNative() {
                 {redemptionCatalogBlurb(item, lang)}
               </Text>
               <Text style={styles.cardCap}>
-                {redemptionPriceCapLabel(item, catalogLang)}
+                {redemptionPriceCapLabel(item, lang)}
               </Text>
               <Pressable
                 onPress={() =>
@@ -239,27 +229,6 @@ export default function RedemptionHubScreenNative() {
 }
 
 const styles = StyleSheet.create({
-  batchCard: {
-    marginBottom: 12,
-    padding: 12,
-    borderRadius: 2,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "rgba(103,232,249,0.3)",
-    backgroundColor: "rgba(34,211,238,0.06)",
-  },
-  batchTitle: {
-    fontFamily: OX,
-    fontSize: 10,
-    fontWeight: "700",
-    letterSpacing: 1.2,
-    color: "rgba(165,243,252,0.85)",
-  },
-  batchBody: {
-    marginTop: 6,
-    fontSize: 12,
-    lineHeight: 18,
-    color: "rgba(236,254,255,0.85)",
-  },
   balanceCard: {
     marginBottom: 16,
     padding: 12,

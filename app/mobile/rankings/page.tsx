@@ -37,6 +37,7 @@ import type { RankingPhase } from "@/lib/rankings/rankingPhase";
 import type { PlayoffRoundKey } from "@/lib/rankings/playoffRound";
 import type { RankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
 import { t } from "@/lib/i18n/t";
+import { resolveLocalizedLang } from "@/lib/i18n/localize";
 import RankingsScheduleNotice from "@/app/component/rankings/RankingsScheduleNotice";
 import { CyberNoDataPage } from "@/app/component/common/CyberNoDataLabel";
 import { useSearchParams } from "next/navigation";
@@ -208,7 +209,7 @@ export default function MobileRankingsPage() {
   const language = sessionUser.language;
   const countryCode = sessionUser.countryCode;
   const m = t(language);
-  const langUi = language === "ja" ? "ja" : "en";
+  const langUi = resolveLocalizedLang(language);
 
   /** PRO LEAGUE は Pro 以外にはロック（API 403 もフォールバック） */
   const openProLocked =

@@ -31,8 +31,6 @@ export default function UnitLedgerScreenNative() {
   const { fUser } = useFirebaseUser();
   const { language } = useNativeUserLanguage(fUser?.uid);
   const lang = resolveLocalizedLang(language);
-  /** 台帳 API / 日付フォーマットは ja|en */
-  const catalogLang = lang === "ja" ? ("ja" as const) : ("en" as const);
 
   const [balance, setBalance] = useState(0);
   const [entries, setEntries] = useState<UnitLedgerEntry[]>([]);
@@ -47,7 +45,7 @@ export default function UnitLedgerScreenNative() {
     setLoading(true);
     setError(null);
     try {
-      const data = await fetchMeUnitLedgerNative(catalogLang);
+      const data = await fetchMeUnitLedgerNative(lang);
       setBalance(data.balance ?? 0);
       setEntries(Array.isArray(data.entries) ? data.entries : []);
     } catch (e) {
@@ -56,7 +54,7 @@ export default function UnitLedgerScreenNative() {
     } finally {
       setLoading(false);
     }
-  }, [fUser?.uid, catalogLang]);
+  }, [fUser?.uid, lang]);
 
   useEffect(() => {
     void load();
@@ -140,7 +138,7 @@ export default function UnitLedgerScreenNative() {
                 ]}
               >
                 <Text style={styles.date}>
-                  {formatUnitLedgerDate(row.createdAtMs, catalogLang)}
+                  {formatUnitLedgerDate(row.createdAtMs, lang)}
                 </Text>
                 <View style={styles.rowBody}>
                   <Text style={styles.title} numberOfLines={1}>
@@ -162,7 +160,7 @@ export default function UnitLedgerScreenNative() {
                         : null,
                   ]}
                 >
-                  {formatUnitLedgerAmount(row.amount, catalogLang)}
+                  {formatUnitLedgerAmount(row.amount, lang)}
                 </Text>
               </View>
             );

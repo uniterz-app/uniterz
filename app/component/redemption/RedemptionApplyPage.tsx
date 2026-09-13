@@ -8,8 +8,10 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import ProfileCyberPage from "@/app/component/profile/ProfileCyberPage";
 import { nameOxanium } from "@/lib/fonts";
+import { storage } from "@/lib/firebase";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
+import { L, resolveLocalizedLang } from "@/lib/i18n/localize";
 import {
   createMeRedemption,
   fetchMeRedemptions,
@@ -20,7 +22,6 @@ import {
   redemptionCatalogTitle,
   redemptionPriceCapShort,
 } from "@/lib/redemption/redemptionCatalog";
-import { redemptionBatchScheduleCopy } from "@/lib/redemption/redemptionBatchScheduleCopy";
 import type { RedemptionProductKind } from "@/lib/redemption/redemptionTypes";
 import { REDEMPTION_APPLY_CONSENT } from "@/lib/legal/unitRedemptionLegalCopy";
 import {
@@ -28,6 +29,13 @@ import {
   redemptionApplyErrorMessage,
   redemptionAvailableUnits,
 } from "@/lib/redemption/redemptionApplyGate";
+import {
+  REDEMPTION_PRODUCT_IMAGE_MAX_BYTES,
+  uploadRedemptionProductImage,
+} from "@/lib/redemption/uploadRedemptionProductImage";
+import { redemptionApplyFlowCopy } from "@/lib/redemption/redemptionApplyFlowCopy";
+import { redemptionApplyUiCopy } from "@/lib/redemption/redemptionUiCopy";
+import RedemptionApplyFlowModal from "@/app/component/redemption/RedemptionApplyFlowModal";
 
 function pathBase() {
   if (typeof window === "undefined") return "/mobile";
@@ -42,10 +50,10 @@ export default function RedemptionApplyPage() {
   const search = useSearchParams();
   const { fUser: user } = useFirebaseUser();
   const { language } = useUserLanguage(user?.uid ?? null);
-  const isJa = language === "ja";
-  const lang = isJa ? "ja" : "en";
+  const lang = resolveLocalizedLang(language);
+  const ui = redemptionApplyUiCopy(lang);
   const base = pathBase();
-  const batch = redemptionBatchScheduleCopy(lang);
+  const flowCopy = redemptionApplyFlowCopy(lang);
 
   const initialKind =
     normalizeRedemptionProductKind(search.get("kind")) ?? "tshirt";
@@ -58,6 +66,8 @@ export default function RedemptionApplyPage() {
   const [size, setSize] = useState("");
   const [color, setColor] = useState("");
   const [notes, setNotes] = useState("");
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [shippingName, setShippingName] = useState("");
   const [shippingPostalCode, setShippingPostalCode] = useState("");
   const [shippingAddress, setShippingAddress] = useState("");
@@ -71,6 +81,7 @@ export default function RedemptionApplyPage() {
   const [seasonUnitsUsed, setSeasonUnitsUsed] = useState(0);
   const [seasonCap, setSeasonCap] = useState(2000);
   const [walletReady, setWalletReady] = useState(false);
+  const [flowOpen, setFlowOpen] = useState(true);
 
   const selected = useMemo(
     () => REDEMPTION_CATALOG.find((x) => x.kind === productKind),
@@ -110,9 +121,39 @@ export default function RedemptionApplyPage() {
     };
   }, [user?.uid]);
 
+  useEffect(() => {
+    return () => {
+      if (imagePreview) URL.revokeObjectURL(imagePreview);
+    };
+  }, [imagePreview]);
+
+  function onPickImage(file: File | null) {
+    if (imagePreview) URL.revokeObjectURL(imagePreview);
+    if (!file) {
+      setImageFile(null);
+      setImagePreview(null);
+      return;
+    }
+    if (!file.type.startsWith("image/")) {
+      setError(ui.needImageFile);
+      return;
+    }
+    if (file.size > REDEMPTION_PRODUCT_IMAGE_MAX_BYTES) {
+      setError(ui.imageTooLarge);
+      return;
+    }
+    setError(null);
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
+  }
+
   async function submit(asDraft: boolean) {
     if (!asDraft && !consent) {
       setError(redemptionApplyErrorMessage("consent_required", lang));
+      return;
+    }
+    if (!asDraft && !imageFile) {
+      setError(redemptionApplyErrorMessage("image_required", lang));
       return;
     }
     if (!asDraft && selected) {
@@ -128,9 +169,22 @@ export default function RedemptionApplyPage() {
         return;
       }
     }
+    if (!user?.uid) {
+      setError(redemptionApplyErrorMessage("error", lang));
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
+      let imageUrl: string | undefined;
+      if (imageFile) {
+        imageUrl = await uploadRedemptionProductImage({
+          storage,
+          uid: user.uid,
+          data: imageFile,
+          contentType: imageFile.type || "image/jpeg",
+        });
+      }
       const req = await createMeRedemption(
         {
           productKind,
@@ -140,6 +194,7 @@ export default function RedemptionApplyPage() {
           size,
           color,
           notes,
+          imageUrl,
           shippingName,
           shippingPostalCode,
           shippingAddress,
@@ -161,42 +216,35 @@ export default function RedemptionApplyPage() {
     <ProfileCyberPage
       title="APPLY"
       eyebrow="UNIT EXCHANGE"
-      subtitle={
-        isJa
-          ? "希望商品と配送先を入力。購入は月末まとめ（おおよそ25日前後）です。"
-          : "Enter product and shipping details. Purchase is batched near month-end (~25th)."
-      }
+      subtitle={ui.subtitle}
       contentClassName="max-w-lg space-y-4"
     >
-      <Link
-        href={`${base}/redeem`}
-        className="text-[11px] text-cyan-300/80 hover:underline"
-      >
-        ← {isJa ? "カタログに戻る" : "Back to catalog"}
-      </Link>
+      <RedemptionApplyFlowModal
+        open={flowOpen}
+        language={lang}
+        onClose={() => setFlowOpen(false)}
+      />
 
-      <div className="rounded-[2px] border border-cyan-300/25 bg-cyan-400/5 px-3 py-3 text-[12px] leading-relaxed text-cyan-50/85">
-        <p
-          className={[
-            nameOxanium.className,
-            "text-[10px] font-bold uppercase tracking-[0.14em] text-cyan-200/80",
-          ].join(" ")}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <Link
+          href={`${base}/redeem`}
+          className="text-[11px] text-cyan-300/80 hover:underline"
         >
-          {batch.short}
-        </p>
-        <p className="mt-1.5">{batch.detail}</p>
+          ← {ui.backCatalog}
+        </Link>
+        <button
+          type="button"
+          onClick={() => setFlowOpen(true)}
+          className="text-[11px] text-cyan-200/75 underline-offset-2 hover:underline"
+        >
+          {flowCopy.reopen}
+        </button>
       </div>
 
       <div className="rounded-[2px] border border-white/10 bg-black/30 px-3 py-2.5 text-[12px] text-white/70">
-        <p>
-          {isJa
-            ? `利用可能 ${available.toLocaleString("ja-JP")} Unit（保有 ${balance.toLocaleString("ja-JP")} − 申請中 ${reservedUnits.toLocaleString("ja-JP")}）`
-            : `Available ${available.toLocaleString("en-US")} Units (held ${balance.toLocaleString("en-US")} − reserved ${reservedUnits.toLocaleString("en-US")})`}
-        </p>
+        <p>{ui.available(available, balance, reservedUnits)}</p>
         <p className="mt-1 text-white/45">
-          {isJa
-            ? `今シーズン交換 ${seasonUnitsUsed.toLocaleString("ja-JP")} / ${seasonCap.toLocaleString("ja-JP")} Unit`
-            : `Season used ${seasonUnitsUsed.toLocaleString("en-US")} / ${seasonCap.toLocaleString("en-US")} Units`}
+          {ui.seasonUsed(seasonUnitsUsed, seasonCap)}
         </p>
         {submitBlocked ? (
           <p className="mt-2 text-[12px] text-rose-300/90">
@@ -206,9 +254,7 @@ export default function RedemptionApplyPage() {
       </div>
 
       <label className="block space-y-1">
-        <span className="text-[11px] text-white/50">
-          {isJa ? "商品区分" : "Product tier"}
-        </span>
+        <span className="text-[11px] text-white/50">{ui.productTier}</span>
         <select
           className={fieldClass}
           value={productKind}
@@ -220,27 +266,27 @@ export default function RedemptionApplyPage() {
         >
           {REDEMPTION_CATALOG.map((item) => (
             <option key={item.kind} value={item.kind}>
-              {redemptionCatalogTitle(item, language)} ({item.unitsRequired}{" "}
-              Unit)
+              {redemptionCatalogTitle(item, lang)} ({item.unitsRequired} Unit)
             </option>
           ))}
         </select>
         {selected ? (
           <p className="text-[11px] text-white/40">
-            {isJa
-              ? `必要 ${selected.unitsRequired} Unit · 価格上限 ${redemptionPriceCapShort(selected, "ja")}`
-              : `${selected.unitsRequired} Units · Cap ${redemptionPriceCapShort(selected, "en")}`}
+            {ui.needUnits(
+              selected.unitsRequired,
+              redemptionPriceCapShort(selected, lang)
+            )}
           </p>
         ) : null}
       </label>
 
       {(
         [
-          [isJa ? "商品名" : "Product name", productName, setProductName],
-          [isJa ? "商品ページ URL" : "Product URL", productUrl, setProductUrl],
-          [isJa ? "販売店" : "Store", storeName, setStoreName],
-          [isJa ? "サイズ" : "Size", size, setSize],
-          [isJa ? "カラー" : "Color", color, setColor],
+          [ui.productName, productName, setProductName],
+          [ui.productUrl, productUrl, setProductUrl],
+          [ui.store, storeName, setStoreName],
+          [ui.size, size, setSize],
+          [ui.color, color, setColor],
         ] as const
       ).map(([label, value, set]) => (
         <label key={label} className="block space-y-1">
@@ -253,10 +299,37 @@ export default function RedemptionApplyPage() {
         </label>
       ))}
 
+      <div className="space-y-2">
+        <span className="text-[11px] text-white/50">{ui.productImage}</span>
+        <input
+          type="file"
+          accept="image/*"
+          className="block w-full text-[12px] text-white/70 file:mr-3 file:rounded-[2px] file:border file:border-cyan-300/35 file:bg-cyan-400/10 file:px-3 file:py-1.5 file:text-[11px] file:font-semibold file:text-cyan-100"
+          onChange={(e) => onPickImage(e.target.files?.[0] ?? null)}
+        />
+        {imagePreview ? (
+          <div className="relative h-40 w-full overflow-hidden rounded-[2px] border border-white/15 bg-black/40">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={imagePreview}
+              alt=""
+              className="h-full w-full object-contain"
+            />
+            <button
+              type="button"
+              onClick={() => onPickImage(null)}
+              className="absolute right-2 top-2 border border-white/25 bg-black/70 px-2 py-1 text-[10px] text-white/80"
+            >
+              {ui.removeImage}
+            </button>
+          </div>
+        ) : (
+          <p className="text-[11px] text-white/40">{ui.productImageHint}</p>
+        )}
+      </div>
+
       <label className="block space-y-1">
-        <span className="text-[11px] text-white/50">
-          {isJa ? "補足" : "Notes"}
-        </span>
+        <span className="text-[11px] text-white/50">{ui.notes}</span>
         <textarea
           className={fieldClass}
           rows={3}
@@ -271,20 +344,16 @@ export default function RedemptionApplyPage() {
           "pt-2 text-[11px] font-bold uppercase tracking-[0.16em] text-white/55",
         ].join(" ")}
       >
-        {isJa ? "配送先" : "Shipping"}
+        {ui.shipping}
       </h2>
 
       {(
         [
-          [isJa ? "氏名" : "Full name", shippingName, setShippingName],
-          [
-            isJa ? "郵便番号" : "Postal code",
-            shippingPostalCode,
-            setShippingPostalCode,
-          ],
-          [isJa ? "住所" : "Address", shippingAddress, setShippingAddress],
-          [isJa ? "電話" : "Phone", shippingPhone, setShippingPhone],
-          [isJa ? "国コード" : "Country", shippingCountry, setShippingCountry],
+          [ui.fullName, shippingName, setShippingName],
+          [ui.postalCode, shippingPostalCode, setShippingPostalCode],
+          [ui.address, shippingAddress, setShippingAddress],
+          [ui.phone, shippingPhone, setShippingPhone],
+          [ui.country, shippingCountry, setShippingCountry],
         ] as const
       ).map(([label, value, set]) => (
         <label key={label} className="block space-y-1">
@@ -305,15 +374,13 @@ export default function RedemptionApplyPage() {
           onChange={(e) => setConsent(e.target.checked)}
         />
         <span>
-          {isJa
-            ? REDEMPTION_APPLY_CONSENT.label.ja
-            : REDEMPTION_APPLY_CONSENT.label.en}{" "}
+          {L(lang, REDEMPTION_APPLY_CONSENT.label)}{" "}
           <Link href={`${base}/terms`} className="text-cyan-200/90 underline">
-            {isJa ? "利用規約" : "Terms"}
+            {ui.terms}
           </Link>
           {" / "}
           <Link href={`${base}/privacy`} className="text-cyan-200/90 underline">
-            {isJa ? "プライバシー" : "Privacy"}
+            {ui.privacy}
           </Link>
         </span>
       </label>
@@ -332,7 +399,7 @@ export default function RedemptionApplyPage() {
             "border border-cyan-300/40 bg-cyan-400/15 px-4 py-2 text-[11px] font-bold uppercase tracking-[0.12em] text-cyan-50 disabled:opacity-50",
           ].join(" ")}
         >
-          {isJa ? "申請する" : "Submit"}
+          {busy ? ui.submitting : ui.submit}
         </button>
         <button
           type="button"
@@ -343,7 +410,7 @@ export default function RedemptionApplyPage() {
             "border border-white/20 px-4 py-2 text-[11px] font-bold uppercase tracking-[0.12em] text-white/70 disabled:opacity-50",
           ].join(" ")}
         >
-          {isJa ? "下書き保存" : "Save draft"}
+          {ui.draft}
         </button>
       </div>
     </ProfileCyberPage>

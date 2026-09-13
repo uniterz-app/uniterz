@@ -6,6 +6,7 @@ import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
+import { L, resolveLocalizedLang } from "../../../../lib/i18n/localize";
 import { colors, cyberFilter, fonts } from "../theme/tokens";
 
 type Props = {
@@ -19,7 +20,7 @@ type Props = {
   /** フィルターボタン押下（Games 等） */
   onFilterPress?: () => void;
   filterActive?: boolean;
-  language?: "ja" | "en";
+  language?: string;
 };
 
 export default function CyberFilterBarNative({
@@ -31,7 +32,15 @@ export default function CyberFilterBarNative({
   filterActive = false,
   language = "ja",
 }: Props) {
-  const isJa = language === "ja";
+  const moreLabel = L(resolveLocalizedLang(language), {
+    ja: "詳細",
+    en: "More",
+    ko: "상세",
+    zh: "更多",
+    es: "Más",
+    pt: "Mais",
+    fr: "Plus",
+  });
 
   return (
     <View style={styles.wrap}>
@@ -53,7 +62,7 @@ export default function CyberFilterBarNative({
                 size={20}
                 color={colors.textSecondary}
               />
-              <Text style={styles.iconBtnLabel}>{isJa ? "詳細" : "More"}</Text>
+              <Text style={styles.iconBtnLabel}>{moreLabel}</Text>
             </Pressable>
           ) : null}
           {onFilterPress ? (

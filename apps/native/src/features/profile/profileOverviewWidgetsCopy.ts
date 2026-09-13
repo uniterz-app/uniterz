@@ -2,6 +2,7 @@
  * Overview 系ウィジェット（Streak / Result Drop / Summary / Affinity / PrevMonth / Mark / Bracket / Stats）7言語。
  */
 import { L, resolveLocalizedLang, type LocalizedLang } from "../../../../../lib/i18n/localize";
+import { profileAwardsBracketCopy } from "../../../../../lib/profile/profileAwardsBracketCopy";
 
 export type ProfileOverviewWidgetsLang = LocalizedLang;
 export const resolveProfileOverviewWidgetsLang = resolveLocalizedLang;
@@ -533,26 +534,10 @@ export function profileMarkListCopy(language: string | null | undefined) {
 }
 
 export function profileBracketTabCopy(language: string | null | undefined) {
-  const lang = resolveLocalizedLang(language);
+  const shared = profileAwardsBracketCopy(language);
   return {
-    signIn: L(lang, {
-      ja: "ログインが必要です",
-      en: "Sign in required",
-      ko: "로그인이 필요합니다",
-      zh: "需要登录",
-      es: "Inicia sesión",
-      pt: "Faça login",
-      fr: "Connexion requise",
-    }),
-    noBracket: L(lang, {
-      ja: "提出済みのプレーオフブラケットがありません",
-      en: "No playoff bracket submitted",
-      ko: "제출된 플레이오프 브래킷이 없습니다",
-      zh: "尚未提交季后赛对阵表",
-      es: "No hay bracket de playoffs enviado",
-      pt: "Nenhum bracket de playoffs enviado",
-      fr: "Aucun bracket playoffs soumis",
-    }),
+    signIn: shared.signInRequired,
+    noBracket: shared.noPlayoffBracket,
   };
 }
 

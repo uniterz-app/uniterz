@@ -21,7 +21,7 @@ const CYBER_CHAMFER_CLIP =
 type Props = {
   open: boolean;
   presetId: UnitEarnCelebratePresetId;
-  isJa?: boolean;
+  language?: string | null;
   replayKey?: number;
   onClose: () => void;
   onClaim: () => void;
@@ -31,7 +31,7 @@ type Props = {
 export default function UnitEarnCelebrateOverlay({
   open,
   presetId,
-  isJa = true,
+  language = "ja",
   replayKey = 0,
   onClose,
   onClaim,
@@ -39,7 +39,7 @@ export default function UnitEarnCelebrateOverlay({
 }: Props) {
   const [mounted, setMounted] = useState(false);
   const reduceMotion = useReducedMotion() === true;
-  const content = unitEarnCelebrateContent(presetId, isJa);
+  const content = unitEarnCelebrateContent(presetId, language);
 
   useEffect(() => {
     setMounted(true);

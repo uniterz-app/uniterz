@@ -1,5 +1,9 @@
 import { useEffect, useState } from "react";
 import { subscribeUserDocLive } from "../../../../lib/user/subscribeUserDocLive";
+import {
+  normalizeStoredPlanType,
+  type StoredPlanType,
+} from "@/lib/pro/planChangeDisplay";
 
 type Plan = "free" | "pro";
 
@@ -14,12 +18,14 @@ function proUntilFromData(data: Record<string, unknown> | null): Date | null {
 /** Web `useUserPlan` 相当 */
 export function useNativeUserPlan(uid?: string | null) {
   const [plan, setPlan] = useState<Plan>("free");
+  const [planType, setPlanType] = useState<StoredPlanType | null>(null);
   const [proUntil, setProUntil] = useState<Date | null>(null);
   const [loading, setLoading] = useState(Boolean(uid));
 
   useEffect(() => {
     if (!uid) {
       setPlan("free");
+      setPlanType(null);
       setProUntil(null);
       setLoading(false);
       return;
@@ -28,11 +34,13 @@ export function useNativeUserPlan(uid?: string | null) {
     return subscribeUserDocLive(uid, (data) => {
       if (!data) {
         setPlan("free");
+        setPlanType(null);
         setProUntil(null);
         setLoading(false);
         return;
       }
       setPlan(data.plan === "pro" ? "pro" : "free");
+      setPlanType(normalizeStoredPlanType(data.planType));
       setProUntil(proUntilFromData(data));
       setLoading(false);
     });
@@ -41,5 +49,5 @@ export function useNativeUserPlan(uid?: string | null) {
   const isPro =
     plan === "pro" && (!proUntil || proUntil.getTime() > Date.now());
 
-  return { plan, isPro, loading };
+  return { plan, planType, isPro, loading };
 }

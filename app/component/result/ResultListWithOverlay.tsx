@@ -864,7 +864,7 @@ export default function ResultListWithOverlay({
     if (post.id === TUTORIAL_RESULT_POST_ID) {
       setDetailGame(
         buildTutorialFinalMatchCardProps({
-          language: language === "ja" ? "ja" : "en",
+          language: resolveLocalizedLang(language),
         })
       );
       setMarket(buildTutorialResultMarket());

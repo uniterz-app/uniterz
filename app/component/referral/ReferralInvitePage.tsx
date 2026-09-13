@@ -23,65 +23,14 @@ import {
   REFERRAL_REFERRER_MAX_UNITS,
   REFERRAL_REFERRER_UNITS_PER_COMPLETED,
   emptyReferralInviteSummary,
-  type ReferralInviteProgressRow,
-  type ReferralInviteStatus,
   type ReferralInviteSummary,
 } from "@/lib/referral/referralRewards";
+import {
+  referralInviteProgressHint,
+  referralInviteScreenCopy,
+  referralInviteStatusLabel,
+} from "@/lib/referral/referralInviteCopy";
 import ReferralStampBoard from "@/app/component/referral/ReferralStampBoard";
-
-function statusLabel(status: ReferralInviteStatus, isJa: boolean): string {
-  if (isJa) {
-    switch (status) {
-      case "completed":
-        return "達成";
-      case "in_progress":
-        return "進行中";
-      case "under_review":
-        return "確認中";
-      case "registered":
-        return "登録済";
-      case "invalid":
-        return "無効";
-      case "fraud_rejected":
-        return "対象外";
-      case "withdrawn":
-        return "退会";
-      default:
-        return status;
-    }
-  }
-  switch (status) {
-    case "completed":
-      return "Done";
-    case "in_progress":
-      return "In progress";
-    case "under_review":
-      return "Review";
-    case "registered":
-      return "Registered";
-    case "invalid":
-      return "Invalid";
-    case "fraud_rejected":
-      return "Rejected";
-    case "withdrawn":
-      return "Left";
-    default:
-      return status;
-  }
-}
-
-function progressHint(row: ReferralInviteProgressRow, isJa: boolean): string {
-  if (row.status === "completed") {
-    return isJa ? "条件達成・付与済" : "Completed";
-  }
-  if (row.status === "in_progress" || row.status === "registered") {
-    const left = Math.max(0, 7 - row.activePredictDays);
-    return isJa
-      ? `予想投稿日数：${row.activePredictDays}／7日 / あと${left}日間の予想投稿で条件達成`
-      : `Predict days: ${row.activePredictDays}/7 · ${left} more day(s) to qualify`;
-  }
-  return statusLabel(row.status, isJa);
-}
 
 function qrImageUrl(data: string): string {
   return `https://api.qrserver.com/v1/create-qr-code/?size=168x168&margin=8&data=${encodeURIComponent(data)}`;
@@ -90,7 +39,7 @@ function qrImageUrl(data: string): string {
 export default function ReferralInvitePage() {
   const { fUser } = useFirebaseUser();
   const { language } = useUserLanguage(fUser?.uid ?? null);
-  const isJa = language === "ja";
+  const copy = referralInviteScreenCopy(language);
   const [summary, setSummary] = useState<ReferralInviteSummary>(() =>
     emptyReferralInviteSummary()
   );
@@ -149,17 +98,15 @@ export default function ReferralInvitePage() {
         await navigator.clipboard.writeText(text);
         flash(okMsg);
       } catch {
-        flash(isJa ? "コピーに失敗しました" : "Copy failed");
+        flash(copy.copyFailed);
       }
     },
-    [flash, isJa]
+    [flash, copy.copyFailed]
   );
 
   const share = useCallback(async () => {
-    const title = isJa ? "Uniterz に招待" : "Join me on Uniterz";
-    const text = isJa
-      ? `Uniterz でスポーツ予想しよう。招待コード: ${summary.inviteCode}`
-      : `Join me on Uniterz. Invite code: ${summary.inviteCode}`;
+    const title = copy.shareTitle;
+    const text = copy.shareTextOnly(summary.inviteCode);
     try {
       if (navigator.share) {
         await navigator.share({ title, text, url: summary.inviteUrl });
@@ -167,22 +114,18 @@ export default function ReferralInvitePage() {
       }
       await copyText(
         `${text}\n${summary.inviteUrl}`,
-        isJa ? "招待文をコピーしました" : "Invite text copied"
+        copy.inviteTextCopied
       );
     } catch {
       /* cancelled */
     }
-  }, [copyText, isJa, summary.inviteCode, summary.inviteUrl]);
+  }, [copy, copyText, summary.inviteCode, summary.inviteUrl]);
 
   return (
     <ProfileCyberPage
       title="INVITE"
       eyebrow="PROFILE"
-      subtitle={
-        isJa
-          ? "友達を招待して Unit を獲得。友達はコード入力で 30 Unit、あなたは相手が7日間予想すると受け取れます。"
-          : "Invite friends for Units. They get 30 Units when they enter your code; you earn after they predict on 7 days."
-      }
+      subtitle={copy.description}
       contentClassName="max-w-lg space-y-4 pb-8"
     >
       {loading ? (
@@ -192,7 +135,7 @@ export default function ReferralInvitePage() {
             "text-[10px] font-bold uppercase tracking-[0.12em] text-white/40",
           ].join(" ")}
         >
-          {isJa ? "読み込み中…" : "Loading…"}
+          {copy.loading}
         </p>
       ) : null}
       {toast ? (
@@ -215,7 +158,7 @@ export default function ReferralInvitePage() {
               "text-[11px] font-extrabold uppercase tracking-[0.16em] text-cyan-200/90",
             ].join(" ")}
           >
-            {isJa ? "招待を送る" : "Send invite"}
+            {copy.sendInvite}
           </h2>
           <p
             className={[
@@ -236,7 +179,7 @@ export default function ReferralInvitePage() {
                   "mb-1 text-[9px] font-bold uppercase tracking-[0.14em] text-white/40",
                 ].join(" ")}
               >
-                {isJa ? "招待コード" : "Invite code"}
+                {copy.inviteCode}
               </p>
               <div className="flex items-stretch gap-2">
                 <code
@@ -250,17 +193,14 @@ export default function ReferralInvitePage() {
                 <button
                   type="button"
                   onClick={() =>
-                    void copyText(
-                      summary.inviteCode,
-                      isJa ? "コードをコピーしました" : "Code copied"
-                    )
+                    void copyText(summary.inviteCode, copy.codeCopied)
                   }
                   className={[
                     nameOxanium.className,
                     "shrink-0 border border-amber-300/30 bg-amber-300/10 px-3 text-[10px] font-extrabold uppercase tracking-[0.1em] text-amber-100/90",
                   ].join(" ")}
                 >
-                  {isJa ? "コピー" : "Copy"}
+                  {copy.copy}
                 </button>
               </div>
             </div>
@@ -272,7 +212,7 @@ export default function ReferralInvitePage() {
                   "mb-1 text-[9px] font-bold uppercase tracking-[0.14em] text-white/40",
                 ].join(" ")}
               >
-                {isJa ? "招待リンク" : "Invite link"}
+                {copy.inviteLink}
               </p>
               <div className="flex items-stretch gap-2">
                 <p className="min-w-0 flex-1 truncate border border-white/12 bg-white/[0.03] px-3 py-2.5 text-[11px] text-cyan-200/85">
@@ -281,17 +221,14 @@ export default function ReferralInvitePage() {
                 <button
                   type="button"
                   onClick={() =>
-                    void copyText(
-                      summary.inviteUrl,
-                      isJa ? "リンクをコピーしました" : "Link copied"
-                    )
+                    void copyText(summary.inviteUrl, copy.linkCopied)
                   }
                   className={[
                     nameOxanium.className,
                     "shrink-0 border border-white/15 bg-white/[0.06] px-3 text-[10px] font-extrabold uppercase tracking-[0.1em] text-white/75",
                   ].join(" ")}
                 >
-                  {isJa ? "コピー" : "Copy"}
+                  {copy.copy}
                 </button>
               </div>
             </div>
@@ -325,7 +262,7 @@ export default function ReferralInvitePage() {
             "w-full border border-cyan-300/50 bg-cyan-300/15 px-3 py-3 text-[12px] font-extrabold uppercase tracking-[0.16em] text-cyan-50",
           ].join(" ")}
         >
-          {isJa ? "招待を共有" : "Share invite"}
+          {copy.shareInvite}
         </button>
       </section>
 
@@ -337,27 +274,27 @@ export default function ReferralInvitePage() {
             "text-[11px] font-extrabold uppercase tracking-[0.16em] text-white/70",
           ].join(" ")}
         >
-          {isJa ? "報酬" : "Rewards"}
+          {copy.rewards}
         </h2>
         <div className="grid grid-cols-2 gap-2">
           {[
             {
-              label: isJa ? "あなた" : "You",
+              label: copy.you,
               value: `+${REFERRAL_REFERRER_UNITS_PER_COMPLETED}`,
-              hint: isJa ? "1人達成ごと" : "per clear",
+              hint: copy.perClear,
             },
             {
-              label: isJa ? "友達" : "Friend",
+              label: copy.friend,
               value: `+${REFERRAL_INVITEE_UNITS}`,
-              hint: isJa ? "1回のみ" : "once",
+              hint: copy.once,
             },
             {
-              label: isJa ? "区切り" : "Bonus",
+              label: copy.bonus,
               value: `+${REFERRAL_MILESTONES[0].bonusUnits}/+${REFERRAL_MILESTONES[1].bonusUnits}/+${REFERRAL_MILESTONES[2].bonusUnits}`,
               hint: "3 / 5 / 10",
             },
             {
-              label: isJa ? "上限" : "Cap",
+              label: copy.cap,
               value: String(REFERRAL_REFERRER_MAX_UNITS),
               hint: `${REFERRAL_REFERRER_MAX_COMPLETED} invites`,
             },
@@ -392,9 +329,7 @@ export default function ReferralInvitePage() {
           ))}
         </div>
         <p className="text-[11px] leading-relaxed text-white/40">
-          {isJa
-            ? "あなたへの付与は、友達が異なる7日に有効予想を投稿したあと。友達本人はコード入力時に 30 Unit を受け取ります。"
-            : "You earn after they post on 7 different days. They get 30 Units when they enter your code."}
+          {copy.grantNote}
         </p>
       </section>
 
@@ -402,11 +337,11 @@ export default function ReferralInvitePage() {
       <section className="grid grid-cols-2 gap-2">
         {[
           {
-            label: isJa ? "進行中" : "Active",
+            label: copy.active,
             value: String(summary.inProgressCount),
           },
           {
-            label: isJa ? "確認中" : "Review",
+            label: copy.review,
             value: String(summary.underReviewCount),
           },
         ].map((c) => (
@@ -436,7 +371,7 @@ export default function ReferralInvitePage() {
 
       <ReferralStampBoard
         completedCount={summary.completedCount}
-        isJa={isJa}
+        language={language}
       />
 
       <section className="space-y-2">
@@ -446,7 +381,7 @@ export default function ReferralInvitePage() {
             "text-[11px] font-extrabold uppercase tracking-[0.16em] text-white/70",
           ].join(" ")}
         >
-          {isJa ? "招待の進捗" : "Invite progress"}
+          {copy.inviteProgress}
         </h2>
         <ul className="divide-y divide-white/[0.06] overflow-hidden rounded-[2px] border border-white/12">
           {summary.rows.map((row) => (
@@ -477,11 +412,11 @@ export default function ReferralInvitePage() {
                       : "text-cyan-200/75",
                   ].join(" ")}
                 >
-                  {statusLabel(row.status, isJa)}
+                  {referralInviteStatusLabel(row.status, copy.lang)}
                 </span>
               </div>
               <p className="mt-1 text-[11px] leading-relaxed text-white/45">
-                {progressHint(row, isJa)}
+                {referralInviteProgressHint(row, language)}
               </p>
             </li>
           ))}

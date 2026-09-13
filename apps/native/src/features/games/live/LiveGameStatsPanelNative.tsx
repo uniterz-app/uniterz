@@ -1,6 +1,7 @@
 /** Web `LiveGameStatsPanel` 相当 */
 import { StyleSheet, Text, View } from "react-native";
 import type { LiveGameStatsReport } from "../../../../../../lib/games/liveGameStats";
+import { L, resolveLocalizedLang } from "../../../../../../lib/i18n/localize";
 import { getTeamPrimaryColor } from "../../../../../../lib/team-colors";
 import { LiveMarkPill } from "../LiveMarkPill";
 import {
@@ -16,7 +17,7 @@ import LiveGameSectionTitleNative from "./LiveGameSectionTitleNative";
 
 type Props = {
   report: LiveGameStatsReport;
-  language?: "ja" | "en";
+  language?: string;
   /** オーバーレイで MatchCard がスコアを出すとき、スコアヘッダーを省略 */
   omitScoreHeader?: boolean;
 };
@@ -31,7 +32,7 @@ export default function LiveGameStatsPanelNative({
   const awayColor =
     getTeamPrimaryColor("nba", report.away.teamId) ?? "#b388ff";
   const isLive = report.phase === "live";
-  const isEn = language === "en";
+  const lang = resolveLocalizedLang(language);
   const periodText =
     !isLive && /^final$/i.test(report.periodLabel.trim())
       ? ""
@@ -39,7 +40,15 @@ export default function LiveGameStatsPanelNative({
   const liveStatusText = [periodText, report.clock ?? ""]
     .filter(Boolean)
     .join(" ");
-  const finalLabel = isEn ? "Final" : "試合終了";
+  const finalLabel = L(lang, {
+    ja: "試合終了",
+    en: "Final",
+    ko: "종료",
+    zh: "已结束",
+    es: "Final",
+    pt: "Encerrado",
+    fr: "Terminé",
+  });
   const hasLineScore = Boolean(report.lineScore?.periods.length);
 
   return (

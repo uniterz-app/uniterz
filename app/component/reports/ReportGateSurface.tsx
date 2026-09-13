@@ -22,16 +22,18 @@ import {
 import {
   reportGateCopy,
   reportGateCtaHref,
+  reportGateProMemberAria,
   type ReportGateBulletIcon,
 } from "@/lib/reports/reportGateCopy";
 import type { ReportGateKind } from "@/lib/reports/reportGateTypes";
+import { resolveLocalizedLang } from "@/lib/i18n/localize";
 import {
   ProCyberBadge,
   proBadgeStaticMotion,
 } from "@/app/component/common/ProCyberBadge";
 import { jp, nameOxanium } from "@/lib/fonts";
 
-type Lang = "ja" | "en";
+type Lang = string;
 
 const BULLET_ICONS: Record<ReportGateBulletIcon, typeof Trophy> = {
   result: Trophy,
@@ -107,12 +109,14 @@ export default function ReportGateSurface({
   onCtaClick,
 }: Props) {
   const copy = reportGateCopy(kind, language);
+  const lang = resolveLocalizedLang(language);
+  const isCjk = lang === "ja" || lang === "ko" || lang === "zh";
   const href = ctaHref === undefined ? reportGateCtaHref(kind) : ctaHref;
   const showBlur = BLUR_KINDS.includes(kind) && preview != null;
   const period = gatePeriod(kind);
   const frame = REPORT_FRAME[period];
-  const titleFont = language === "en" ? nameOxanium.className : jp.className;
-  const bodyFont = language === "en" ? nameOxanium.className : jp.className;
+  const titleFont = isCjk ? jp.className : nameOxanium.className;
+  const bodyFont = isCjk ? jp.className : nameOxanium.className;
   const bulletTone =
     period === "monthly"
       ? {
@@ -169,7 +173,7 @@ export default function ReportGateSurface({
           <ProCyberBadge
             {...proBadgeStaticMotion}
             premium
-            ariaLabel={language === "ja" ? "Pro会員" : "Pro member"}
+            ariaLabel={reportGateProMemberAria(language)}
           />
         </span>
       </div>
@@ -213,7 +217,7 @@ export default function ReportGateSurface({
                   <div className="min-w-0 flex-1">
                     <p
                       className={[
-                        language === "en" ? nameOxanium.className : jp.className,
+                        isCjk ? jp.className : nameOxanium.className,
                         "text-[11px] font-bold tracking-[0.04em]",
                         bulletTone.title,
                       ].join(" ")}
@@ -222,7 +226,7 @@ export default function ReportGateSurface({
                     </p>
                     <p
                       className={[
-                        language === "en" ? nameOxanium.className : jp.className,
+                        isCjk ? jp.className : nameOxanium.className,
                         "mt-0.5 break-words text-[11px] leading-snug text-white/78",
                       ].join(" ")}
                     >

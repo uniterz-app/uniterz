@@ -69,6 +69,10 @@ import BadgeDetailModal from "@/app/web/badges/BadgeDetailModal";
 
 import { useProfilePlan } from "@/lib/profile/useProfilePlan";
 import {
+  canViewMonthlyReport,
+  canViewWeeklyReport,
+} from "@/lib/reports/reportEntitlements";
+import {
   useProfileBadges,
   type ResolvedBadge,
 } from "@/lib/profile/useProfileBadges";
@@ -101,6 +105,7 @@ import {
   isProfileVisualLite,
 } from "@/lib/profile/profileVisualEffects";
 import { useProfileViewCount } from "@/lib/profile/useProfileViewCount";
+import { profileAwardsBracketCopy } from "@/lib/profile/profileAwardsBracketCopy";
 export default function WebProfileViewV2(props: ProfileViewPropsV2) {
   const { profile, tab, setTab, summary, summaryRanks, metricValueDeltas, targetUid, statsLoading } =
     props;
@@ -108,9 +113,11 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
 
   const resolvedUid = typeof targetUid === "string" ? targetUid : null;
   const { language } = useUserLanguage(resolvedUid);
+  const awardsBracketCopy = profileAwardsBracketCopy(language);
 
   const {
     myPlan,
+    myPlanType,
     loadingPlan,
     isMe,
     isMyPro,
@@ -130,12 +137,29 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
     profile.profileViewCount
   );
 
+  const viewerCanViewWeekly = canViewWeeklyReport({
+    plan: myPlan,
+    planType: myPlanType,
+  });
+  const viewerCanViewMonthly = canViewMonthlyReport({
+    plan: myPlan,
+    planType: myPlanType,
+  });
+  const canViewReport =
+    currentIsProView ||
+    (isMe ? viewerCanViewWeekly : isMyPro && isTargetPro);
+  const canViewMonthly =
+    isMe
+      ? viewerCanViewMonthly
+      : isMyPro && isTargetPro && viewerCanViewMonthly;
+
   const reportOverlayEnabled =
     Boolean(isMe && !loadingPlan && (currentIsProView || myPlan === "pro"));
   const { active: reportOverlay, dismiss: dismissReportOverlay } =
     useProReportDeliveryOverlay({
       uid: resolvedUid,
       enabled: reportOverlayEnabled,
+      canViewMonthly: viewerCanViewMonthly,
     });
   const skinUnlockEnabled =
     Boolean(isMe && resolvedUid) && reportOverlay == null;
@@ -359,15 +383,14 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
           <ProfileMonthlyReportPanel
             uid={resolvedUid}
             language={language}
-            canViewReport={
-              currentIsProView || (isMe ? myPlan === "pro" : isMyPro && isTargetPro)
-            }
+            canViewReport={canViewReport}
+            canViewMonthly={canViewMonthly}
             showUpgrade={isMe && !currentIsProView && myPlan !== "pro"}
           />
         ) : tab === "awards" ? (
           <ProfileAwardsTab
             uid={resolvedUid}
-            language={language === "ja" ? "ja" : "en"}
+            language={language}
           />
         ) : tab === "bracket" ? (
           playoffBracketLoading ? (
@@ -378,9 +401,7 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
             <div className="rounded-2xl border border-white/10 bg-[rgba(5,8,20,0.55)] px-6 py-6 text-center">
               <CyberNoDataLabel variant="bracket" />
               <p className="mt-2 text-sm text-white/45">
-                {language === "ja"
-                  ? "提出済みのプレーオフブラケットがありません"
-                  : "No playoff bracket submitted"}
+                {awardsBracketCopy.noPlayoffBracket}
               </p>
             </div>
           ) : (
@@ -448,7 +469,7 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
       {reportOverlay ? (
         <ProfileReportDeliveryOverlay
           active={reportOverlay}
-          language={language === "ja" ? "ja" : "en"}
+          language={language}
           onDismiss={dismissReportOverlay}
         />
       ) : null}
@@ -456,7 +477,7 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
       {skinUnlockIds && skinUnlockIds.length > 0 ? (
         <ProfileProSkinUnlockOverlay
           unlockedIds={skinUnlockIds}
-          language={language === "ja" ? "ja" : "en"}
+          language={language}
           preview={skinUnlockPreview}
           platform="web"
           ownerCounts={skinUnlockOwnerCounts}

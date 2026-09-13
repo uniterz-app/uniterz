@@ -25,6 +25,7 @@ import {
   formatPercentileDisplay,
   percentileTierTextClass,
 } from "@/app/component/pro/analysis/percentileDisplay";
+import { radarAxisLabel, radarChartCopy } from "@/lib/pro/radarChartCopy";
 import { summaryMetricNumClass } from "@/lib/fonts";
 import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
 import {
@@ -33,15 +34,11 @@ import {
 } from "@/lib/ui/profileCardEdgeGlow";
 
 /** 上から時計回り（Recharts startAngle=90 の並びに合わせる） */
-const AXIS_ROWS: {
-  key: RadarAxisKey;
-  labelJa: string;
-  labelEn: string;
-}[] = [
-  { key: "winRate", labelJa: "勝率", labelEn: "Win rate" },
-  { key: "volume", labelJa: "投稿量", labelEn: "Volume" },
-  { key: "upset", labelJa: "Upset", labelEn: "Upset" },
-  { key: "streak", labelJa: "耐性", labelEn: "Stamina" },
+const AXIS_KEYS: readonly RadarAxisKey[] = [
+  "winRate",
+  "volume",
+  "upset",
+  "streak",
 ];
 
 /** 評価ブロックの 0–10 数値用（S/M/W ごとに色分け・サイバー系グロー） */
@@ -134,7 +131,7 @@ function easeOutCubic(t: number): number {
 
 function zeroEvalScores(): Record<RadarAxisKey, number> {
   return Object.fromEntries(
-    AXIS_ROWS.map((r) => [r.key, 0])
+    AXIS_KEYS.map((key) => [key, 0])
   ) as Record<RadarAxisKey, number>;
 }
 
@@ -177,8 +174,8 @@ function useRadarEvalScoresReveal(
         const u = Math.min(1, (now - t0) / RADAR_EVAL_COUNT_UP_MS);
         const e = easeOutCubic(u);
         const next = {} as Record<RadarAxisKey, number>;
-        for (const r of AXIS_ROWS) {
-          next[r.key] = targets[r.key] * e;
+        for (const key of AXIS_KEYS) {
+          next[key] = targets[key] * e;
         }
         setScores(next);
         if (u < 1) {
@@ -326,6 +323,7 @@ export default function RadarChart({
   axisLevels,
   language = "ja",
 }: RadarChartProps) {
+  const copy = radarChartCopy(language);
   const cyberDefIds = useMemo(() => {
     const s =
       typeof crypto !== "undefined" && "randomUUID" in crypto
@@ -478,7 +476,7 @@ ${spokeDelays}
   const evalTargets = useMemo(
     () =>
       Object.fromEntries(
-        AXIS_ROWS.map((r) => [r.key, value[r.key]])
+        AXIS_KEYS.map((key) => [key, value[key]])
       ) as Record<RadarAxisKey, number>,
     [
       value.winRate,
@@ -498,13 +496,13 @@ ${spokeDelays}
 
   const data = useMemo(
     () =>
-      AXIS_ROWS.map((row) => ({
-        key: row.key,
-        label: language === "en" ? row.labelEn : row.labelJa,
-        value: value[row.key],
+      AXIS_KEYS.map((key) => ({
+        key,
+        label: radarAxisLabel(copy.lang, key),
+        value: value[key],
       })),
     [
-      language,
+      copy.lang,
       value.winRate,
       value.volume,
       value.upset,
@@ -663,9 +661,9 @@ ${spokeDelays}
       <div className="relative z-1">
       <div className="mb-0 flex items-start justify-between gap-3 lg:mb-3 lg:gap-4">
         <div className="min-w-0 space-y-0.5 leading-tight">
-          <div className="text-[11px] text-white/60 lg:text-sm">分析バランス</div>
+          <div className="text-[11px] text-white/60 lg:text-sm">{copy.eyebrow}</div>
           <div className="text-sm font-semibold text-white lg:text-base">
-            レーダーチャート
+            {copy.title}
           </div>
         </div>
 
@@ -674,7 +672,7 @@ ${spokeDelays}
           onClick={() => setOpenInfo((v) => !v)}
           className="rounded-full border border-white/15 bg-white/5 px-3 py-1 text-[11px] font-semibold text-white/80 transition hover:bg-white/10 lg:text-xs"
         >
-          {openInfo ? "説明を閉じる" : "説明を見る"}
+          {openInfo ? copy.closeInfo : copy.openInfo}
         </button>
       </div>
 
@@ -710,14 +708,10 @@ ${spokeDelays}
           ) : (
             <div className="flex h-full flex-col items-center justify-center gap-2 px-4 text-center">
               <p className="text-sm font-medium text-white/85">
-                {language === "en"
-                  ? "Radar chart (this month)"
-                  : "レーダーチャート（当月）"}
+                {copy.ineligibleTitle}
               </p>
               <p className="max-w-sm text-xs leading-relaxed text-white/55">
-                {language === "en"
-                  ? "You need at least 10 settled posts this month to compare on the same basis as other active users."
-                  : "当月の確定投稿が10件以上あると、その月のアクティブユーザー同士の相対位置としてレーダーが表示されます。"}
+                {copy.ineligibleBody}
               </p>
             </div>
           )}
@@ -728,11 +722,11 @@ ${spokeDelays}
             {/* モバイル: チャート下に 軸名 → 数値 → パーセンタイル */}
             <div className="-mt-1 w-full space-y-0.5 lg:hidden">
               <div className="grid grid-cols-5 gap-x-0.5 text-center">
-                {AXIS_ROWS.map((row) => {
-                  const label = language === "en" ? row.labelEn : row.labelJa;
+                {AXIS_KEYS.map((key) => {
+                  const label = copy.axisLabel(key);
                   return (
                     <div
-                      key={row.key}
+                      key={key}
                       title={label}
                       className="min-w-0 px-0.5 text-[9px] font-semibold leading-tight text-white/80 sm:text-[10px]"
                     >
@@ -742,11 +736,11 @@ ${spokeDelays}
                 })}
               </div>
               <div className="grid grid-cols-5 gap-x-0.5 text-center">
-                {AXIS_ROWS.map((row) => {
-                  const lv = axisLevels![row.key];
+                {AXIS_KEYS.map((key) => {
+                  const lv = axisLevels![key];
                   return (
                     <div
-                      key={row.key}
+                      key={key}
                       className="flex min-w-0 flex-col items-center gap-0.5 px-0.5"
                     >
                       <span
@@ -754,22 +748,19 @@ ${spokeDelays}
                           evalShowNumbers ? "opacity-100" : "opacity-0"
                         }`}
                       >
-                        {evalScores[row.key].toFixed(1)}
+                        {evalScores[key].toFixed(1)}
                       </span>
                     </div>
                   );
                 })}
               </div>
               <div className="grid grid-cols-5 gap-x-0.5 text-center">
-                {AXIS_ROWS.map((row) => {
-                  const pct = approxPercentileFromRadar10(evalScores[row.key]);
-                  const disp = formatPercentileDisplay(
-                    pct,
-                    language === "ja" ? "ja" : "en"
-                  );
+                {AXIS_KEYS.map((key) => {
+                  const pct = approxPercentileFromRadar10(evalScores[key]);
+                  const disp = formatPercentileDisplay(pct, language);
                   return (
                     <div
-                      key={`pct-${row.key}`}
+                      key={`pct-${key}`}
                       className={`flex min-w-0 flex-col items-center px-0.5 transition-opacity duration-300 ${
                         evalShowLetters ? "opacity-100" : "opacity-0"
                       }`}
@@ -785,25 +776,20 @@ ${spokeDelays}
                 })}
               </div>
               <p className="mt-0 pt-0.5 text-center text-[9px] leading-snug text-white/40">
-                {language === "en"
-                  ? "“Top/Bottom %” is a 10% step estimate from the 0–10 score (10+ post cohort)."
-                  : "「上位/下位%」は 0–10 スコアからの概算です（10投稿以上コホート）。"}
+                {copy.percentileHint}
               </p>
             </div>
 
             {/* デスクトップ: 右縦並び */}
             <div className="hidden min-w-0 flex-1 flex-col justify-center gap-1.5 border-white/10 lg:flex lg:border-l lg:pl-4">
-              {AXIS_ROWS.map((row) => {
-                const lv = axisLevels![row.key];
-                const label = language === "en" ? row.labelEn : row.labelJa;
-                const pct = approxPercentileFromRadar10(evalScores[row.key]);
-                const disp = formatPercentileDisplay(
-                  pct,
-                  language === "ja" ? "ja" : "en"
-                );
+              {AXIS_KEYS.map((key) => {
+                const lv = axisLevels![key];
+                const label = copy.axisLabel(key);
+                const pct = approxPercentileFromRadar10(evalScores[key]);
+                const disp = formatPercentileDisplay(pct, language);
                 return (
                   <div
-                    key={row.key}
+                    key={key}
                     className="flex min-w-0 items-start justify-between gap-2 text-xs sm:text-sm"
                   >
                     <span className="min-w-0 truncate pt-0.5 text-white/75">
@@ -815,7 +801,7 @@ ${spokeDelays}
                           evalShowNumbers ? "opacity-100" : "opacity-0"
                         }`}
                       >
-                        {evalScores[row.key].toFixed(1)}
+                        {evalScores[key].toFixed(1)}
                       </span>
                       <span
                         className={`text-sm font-semibold transition-opacity duration-300 sm:text-base ${
@@ -829,9 +815,7 @@ ${spokeDelays}
                 );
               })}
               <p className="mt-0.5 text-[9px] leading-snug text-white/40 sm:text-[10px]">
-                {language === "en"
-                  ? "“Top/Bottom %” is a 10% step estimate from the 0–10 score (10+ post cohort)."
-                  : "「上位/下位%」は 0–10 スコアからの概算です（10投稿以上コホート）。"}
+                {copy.percentileHint}
               </p>
             </div>
           </>
@@ -840,67 +824,43 @@ ${spokeDelays}
 
       {openInfo && (
         <div className="mt-3 rounded-xl border border-white/10 bg-white/3 p-3">
-          {language === "en" ? (
-            <>
-              <div className="space-y-1.5 text-[11px] leading-relaxed text-white/65 lg:text-[13px]">
-                <p>
-                  <span className="font-semibold text-white/80">Win rate: </span>
-                  Relative standing among users with 10+ settled posts this
-                  month.
-                </p>
-                <p>
-                  <span className="font-semibold text-white/80">Volume: </span>
-                  Post count in your main league vs others in the cohort who
-                  posted in that league.
-                </p>
-                <p>
-                  <span className="font-semibold text-white/80">Upset: </span>
-                  How you stack up on upset points in that cohort.
-                </p>
-                <p>
-                  <span className="font-semibold text-white/80">Stamina: </span>
-                  Derived from max win/lose streaks; higher means steadier
-                  month-to-month rhythm within the cohort.
-                </p>
-              </div>
-              <p className="mt-2 text-[11px] leading-relaxed text-white/70 lg:text-[13px]">
-                Values are 0–10 percentile buckets (10% steps) within the
-                monthly active cohort. A larger shape means stronger relative
-                balance.
-              </p>
-            </>
-          ) : (
-            <>
-              <div className="space-y-1.5 text-[11px] leading-relaxed text-white/65 lg:text-[13px]">
-                <p>
-                  <span className="font-semibold text-white/80">勝率：</span>
-                  当月・確定投稿10件以上のユーザー同士での相対位置です。
-                </p>
-                <p>
-                  <span className="font-semibold text-white/80">投稿量：</span>
-                  主戦場リーグの投稿数を、そのリーグで投稿した同母集団ユーザーと比較した相対です。
-                </p>
-                <p>
-                  <span className="font-semibold text-white/80">Upset：</span>
-                  Upset
-                  得点の合計を、同母集団内で比較した相対です。
-                </p>
-                <p>
-                  <span className="font-semibold text-white/80">耐性：</span>
-                  連勝・連敗のパターンから算出した指標を同母集団内で比較した相対です。
-                </p>
-              </div>
-              <p className="mt-2 text-[11px] leading-relaxed text-white/70 lg:text-[13px]">
-                各軸は 0–10（パーセンタイルを10段階に丸めた値）で、当月10投稿以上のユーザーを母集団としています。外側に広がるほど、その月の中でバランスよく強い位置です。
-              </p>
-            </>
-          )}
+          <div className="space-y-1.5 text-[11px] leading-relaxed text-white/65 lg:text-[13px]">
+            <p>
+              <span className="font-semibold text-white/80">
+                {copy.axisInfoLabels.winRate}
+                {copy.lang === "ja" || copy.lang === "zh" ? "：" : ": "}
+              </span>
+              {copy.axisInfo.winRate}
+            </p>
+            <p>
+              <span className="font-semibold text-white/80">
+                {copy.axisInfoLabels.volume}
+                {copy.lang === "ja" || copy.lang === "zh" ? "：" : ": "}
+              </span>
+              {copy.axisInfo.volume}
+            </p>
+            <p>
+              <span className="font-semibold text-white/80">
+                {copy.axisInfoLabels.upset}
+                {copy.lang === "ja" || copy.lang === "zh" ? "：" : ": "}
+              </span>
+              {copy.axisInfo.upset}
+            </p>
+            <p>
+              <span className="font-semibold text-white/80">
+                {copy.axisInfoLabels.streak}
+                {copy.lang === "ja" || copy.lang === "zh" ? "：" : ": "}
+              </span>
+              {copy.axisInfo.streak}
+            </p>
+          </div>
+          <p className="mt-2 text-[11px] leading-relaxed text-white/70 lg:text-[13px]">
+            {copy.infoFooter}
+          </p>
 
           {eligible && value.upsetValid === false && (
             <p className="mt-2 text-[11px] leading-relaxed text-white/50 lg:text-[13px]">
-              {language === "en"
-                ? "Upset is shown but may be noisy: fewer than 5 upset opportunities this month."
-                : "Upset は当月の波乱対象試合が5試合未満のため、解釈に注意が必要です。"}
+              {copy.upsetNoisy}
             </p>
           )}
         </div>

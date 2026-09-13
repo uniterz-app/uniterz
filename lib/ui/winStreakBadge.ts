@@ -1,5 +1,5 @@
 import type { Language } from "@/lib/i18n/language";
-import { t } from "@/lib/i18n/t";
+import { resultWinStreakBadgeLabel } from "@/lib/result/resultWinStreakBadgeLabel";
 import {
   resultStreakBadgeClass,
   resultStreakBadgeIconClass,
@@ -44,11 +44,8 @@ export function getWinStreakBadge(
   });
   if (!className) return null;
 
-  const m = t(language);
-  const label =
-    language === "en"
-      ? `${v} ${m.results.winStreakLabel}`
-      : `${v}${m.results.winStreakLabel}`;
+  const label = resultWinStreakBadgeLabel(language, v);
+  if (!label) return null;
 
   return {
     label,

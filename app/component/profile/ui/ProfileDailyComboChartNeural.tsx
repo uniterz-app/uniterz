@@ -8,6 +8,7 @@ import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { nameOxanium, nameRajdhani } from "@/lib/fonts";
 import { t } from "@/lib/i18n/t";
 import type { Language } from "@/lib/i18n/language";
+import { profileDailyComboChartCopy } from "@/lib/profile/profileDailyComboChartCopy";
 import type { RankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
 import { formatMetricDecimals } from "@/lib/format/metricDecimals";
 import "./profileDailyComboChart.css";
@@ -218,6 +219,7 @@ export default function ProfileDailyComboChartNeural({
   const narrowViewport = useNarrowViewport(layout === "mobile");
   const isCompactChart = layout === "mobile" || narrowViewport || visualEffectsLite;
   const msg = t(language);
+  const chartCopy = profileDailyComboChartCopy(language);
   const isWcTrend = false;
   const rows = useMemo(() => (Array.isArray(data) ? data : []), [data]);
   const chartRows = useMemo(() => buildCumulative(rows), [rows]);
@@ -268,7 +270,7 @@ export default function ProfileDailyComboChartNeural({
 
   const legendLabels = {
     bars: `${msg.profile.postsCount} / ${msg.profile.correctPicks}`,
-    line: `${language === "ja" ? "累積 " : "Cumulative "}${msg.profile.totalPoints}`,
+    line: `${chartCopy.cumulativePrefix}${msg.profile.totalPoints}`,
   };
 
   const W = 640;
@@ -555,7 +557,7 @@ export default function ProfileDailyComboChartNeural({
                     )}
                   </span>
                   <span className={["dcc-neural__stat-unit", nameOxanium.className].join(" ")}>
-                    {language === "ja" ? "試合" : "matches"}
+                    {chartCopy.matchUnit}
                   </span>
                 </div>
               </div>

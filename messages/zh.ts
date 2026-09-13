@@ -914,12 +914,12 @@ const zh: Messages = {
 
   tutorial: {
     skip: "跳过",
-    skipConfirmTitle: "Skip the tutorial?",
+    skipConfirmTitle: "要跳过教程吗？",
     skipConfirmBody:
-      "Are you sure?\nYou can review it again anytime from Tutorial in the side menu.",
-    skipConfirmStay: "Keep going",
-    skipConfirmLeave: "Skip",
-    restartFromMenu: "Tutorial",
+      "确定要跳过吗？\n之后可从侧边菜单的「教程」再次查看。",
+    skipConfirmStay: "继续",
+    skipConfirmLeave: "跳过",
+    restartFromMenu: "教程",
     back: "返回",
     next: "下一步",
     seeGames: "查看比赛",
@@ -939,7 +939,7 @@ const zh: Messages = {
       tabGames: "Games",
       tabResult: "Results",
       tabRankings: "Rankings",
-      tabGroups: "Groups",
+      tabGroups: "小组",
       tabProfile: "Profile",
       welcomeTitle: "Welcome to UNITERZ",
       welcomeBody:
@@ -1014,8 +1014,8 @@ const zh: Messages = {
         "Outcomes land on the Results tab. Tap it below.",
       gotoRankingsTitle: "Open Rankings",
       gotoRankingsBody: "Next up is the Rankings tab. Tap it below.",
-      gotoGroupsTitle: "Open Groups",
-      gotoGroupsBody: "Next up is the Groups tab. Tap it below.",
+      gotoGroupsTitle: "前往小组",
+      gotoGroupsBody: "接下来是 **小组**。点下方标签或「下一步」继续。",
       gotoProfileTitle: "Open Profile",
       gotoProfileBody: "Next up is the Profile tab. Tap it below.",
       resultHitTitle: "HIT!",
@@ -1045,22 +1045,22 @@ const zh: Messages = {
       rankingsTitle: "Rankings",
       rankingsBody:
         "Hits earn points that decide your place. Switch periods and categories to track yourself.",
-      groupsTitle: "Groups (Leaderboards)",
+      groupsTitle: "小组",
       groupsBody:
-        "Create a group with friends and compete in a private ranking. Join with an invite code too.",
-      groupsMockName: "Night Owls",
-      groupsMockMeta: "8 members · You're #2 in the group",
+        "**和朋友的专属排行榜。** 也可通过邀请码加入。",
+      groupsMockName: "夜枭",
+      groupsMockMeta: "8 名成员 · 你在小组内第 2 名",
       profileTitle: "Profile",
       profileBody:
         "Your page shows stats, streaks, settings, and plans. Change avatar and display name here.",
       profileMockStats: "Hit rate · Streak · Total points",
       horizonFeatureTag: "新功能",
-      horizonSquadWhatTitle: "What is Squad Battle?",
+      horizonSquadWhatTitle: "什么是小队对战？",
       horizonSquadWhatBody:
-        "Form a **squad of 3–5** and compete on **every member's average score** in a **limited-time event**.\nSeparate from **Groups** (friend boards) — this is its **own battlefield**.\nRuns about **once every two months** for **one month** of weekly and monthly ranks.",
-      horizonSquadHowTitle: "Joining a squad",
+        "**3〜5 人组成一支小队**，用**全员平均分**与其他队伍对决的**限时活动**。\n与**小组**（朋友排行榜）是**另一场专属对战**。\n大约**每两个月一次**，持续**一个月**，比拼周榜与月榜。",
+      horizonSquadHowTitle: "如何加入小队",
       horizonSquadHowBody:
-        "From **Groups**, **apply** to an open squad or join with an **invite code**.\nDuring the event, **weekly (×4)** and **monthly (×1)** standings update.\n**All members** of top squads receive **UNIT**.",
+        "在**小组**标签中，向有空位的小队**申请加入**，或用**邀请码**进入。\n活动期间会更新**周榜（通常 4 次）**与**月榜（1 次）**。\n**靠前小队的全员**都会获得 **UNIT**。",
       horizonUnitWhatTitle: "What is UNIT?",
       horizonUnitWhatBody:
         "The highlighted **coin** is your **UNIT balance**.\nUNITERZ **in-app currency** for **skins** and Profile looks.\nTap the coin to open your **history**.",

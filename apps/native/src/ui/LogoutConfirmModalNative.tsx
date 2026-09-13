@@ -12,12 +12,13 @@ import {
 } from "../features/profile/profileShellGridNative";
 import Svg, { Defs, Pattern, Rect, Path as SvgPath } from "react-native-svg";
 import { useId } from "react";
+import { logoutConfirmUiCopy } from "../../../../lib/settings/logoutConfirmUiCopy";
 
 type Props = {
   open: boolean;
   onClose: () => void;
   onConfirm: () => void;
-  language?: "ja" | "en";
+  language?: string;
   /** 親 Modal 内に重ねる（RN の二重 Modal 回避） */
   embedded?: boolean;
 };
@@ -101,12 +102,11 @@ export default function LogoutConfirmModalNative({
   language = "ja",
   embedded = false,
 }: Props) {
-  const isJa = language === "ja";
   const gridPatternId = useId().replace(/[^a-zA-Z0-9_]/g, "_");
-
-  const title = isJa ? "ログアウトしますか？" : "Are you sure you want to log out?";
-  const cancelLabel = isJa ? "キャンセル" : "Cancel";
-  const confirmLabel = isJa ? "ログアウト" : "Log out";
+  const copy = logoutConfirmUiCopy(language);
+  const title = copy.title;
+  const cancelLabel = copy.cancel;
+  const confirmLabel = copy.confirm;
 
   if (!open) return null;
 

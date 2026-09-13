@@ -16,6 +16,7 @@ import {
   type ReportGatePreviewMode,
   isReportGatePreviewMode,
 } from "@/lib/reports/reportGateTypes";
+import { reportGatePreviewCopy } from "@/lib/reports/reportGatePreviewCopy";
 import { weeklyReportPreviewClimbed } from "@/lib/reports/weeklyReportPreviewMocks";
 import { monthlyReportPreviewTop10 } from "@/lib/reports/monthlyReportPreviewMocks";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
@@ -31,20 +32,10 @@ const MonthlyReportView = dynamic(
   { ssr: false }
 );
 
-const MODE_LABEL: Record<ReportGatePreviewMode, { ja: string; en: string }> = {
-  live: { ja: "ライブ（ゲートなし）", en: "Live (no gate)" },
-  free: { ja: "Free ロック", en: "Free lock" },
-  waitingMonday: { ja: "月曜待ち", en: "Waiting Monday" },
-  waitingMonth: { ja: "月初待ち", en: "Waiting month" },
-  insufficientPicks: { ja: "予想不足", en: "Not enough picks" },
-  monthlyLocked: { ja: "月次ロック", en: "Monthly lock" },
-};
-
 export default function ReportGatePreviewPage() {
   const { fUser } = useFirebaseUser();
   const { language } = useUserLanguage(fUser?.uid ?? null);
-  const lang = language === "ja" ? "ja" : "en";
-  const isJa = lang === "ja";
+  const copy = reportGatePreviewCopy(language);
   const [mode, setMode] = useState<ReportGatePreviewMode>("free");
 
   useEffect(() => {
@@ -61,11 +52,7 @@ export default function ReportGatePreviewPage() {
   return (
     <ProfileCyberPage
       title="REPORT GATE"
-      subtitle={
-        isJa
-          ? "ブラー＋説明＋CTA／空状態の見た目確認。Pro でも切替で全パターンを見られます。"
-          : "Blur + copy + CTA / empty states. Force any gate even on Pro."
-      }
+      subtitle={copy.subtitle}
       contentClassName="max-w-lg px-3 py-4 sm:px-4"
     >
       <div className="mb-3 flex flex-wrap gap-1.5">
@@ -83,7 +70,7 @@ export default function ReportGatePreviewPage() {
                   : "border-white/12 bg-white/3 text-white/55 hover:border-white/25 hover:text-white/80",
               ].join(" ")}
             >
-              {MODE_LABEL[key][lang]}
+              {copy.modeLabel(key)}
             </button>
           );
         })}
@@ -95,33 +82,28 @@ export default function ReportGatePreviewPage() {
           "mb-3 text-[10px] font-bold uppercase tracking-[0.14em] text-white/40",
         ].join(" ")}
       >
-        {isJa ? `MODE · ${mode}` : `MODE · ${mode}`}
-        {` · ?gate=${mode}`}
+        {`MODE · ${mode} · ?gate=${mode}`}
       </p>
 
       {gateKind == null ? (
         <div className="space-y-3">
-          <p className="text-xs text-white/55">
-            {isJa
-              ? "ゲートなし。実レポートがそのまま見えます（ここでは週次モック）。"
-              : "No gate. Full report as Pro would see it (weekly mock here)."}
-          </p>
+          <p className="text-xs text-white/55">{copy.liveHint}</p>
           <WeeklyReportView report={weekly} language={language} />
         </div>
       ) : gateKind === "monthlyLocked" ? (
         <ReportGateSurface
           kind={gateKind}
-          language={lang}
+          language={language}
           preview={<MonthlyReportView report={monthly} language={language} />}
         />
       ) : gateKind === "free" ? (
         <ReportGateSurface
           kind={gateKind}
-          language={lang}
+          language={language}
           preview={<WeeklyReportView report={weekly} language={language} />}
         />
       ) : (
-        <ReportGateSurface kind={gateKind} language={lang} />
+        <ReportGateSurface kind={gateKind} language={language} />
       )}
     </ProfileCyberPage>
   );

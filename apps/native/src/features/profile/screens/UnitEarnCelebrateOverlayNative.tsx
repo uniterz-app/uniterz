@@ -32,7 +32,7 @@ const PANEL_EASE = Easing.bezier(0.22, 1, 0.36, 1);
 type Props = {
   open: boolean;
   presetId: UnitEarnCelebratePresetId;
-  isJa?: boolean;
+  language?: string | null;
   replayKey?: number;
   onClose: () => void;
   onClaim: () => void;
@@ -42,14 +42,14 @@ type Props = {
 export default function UnitEarnCelebrateOverlayNative({
   open,
   presetId,
-  isJa = true,
+  language = "ja",
   replayKey = 0,
   onClose,
   onClaim,
   onViewHistory,
 }: Props) {
   const reduceMotion = useReducedMotion() ?? false;
-  const content = unitEarnCelebrateContent(presetId, isJa);
+  const content = unitEarnCelebrateContent(presetId, language);
 
   const heroScale = useSharedValue(1);
   const heroY = useSharedValue(0);

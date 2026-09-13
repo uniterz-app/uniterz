@@ -3,6 +3,7 @@
 import { nameOxanium, nameRajdhani } from "@/lib/fonts";
 import type { ProfilePlanProMetricLayoutVariant } from "@/lib/profile/profilePlanProMetricLayoutVariants";
 import { KINETIK_UPSET_METRIC_LABEL } from "@/lib/profile/kinetikMetricDisplay";
+import { profileKinetikPanelCopy } from "@/lib/profile/profileKinetikPanelCopy";
 import {
   KINETIK_CYAN,
   KINETIK_GREEN,
@@ -113,31 +114,28 @@ type MetricItem = {
 
 function buildMetrics(
   data: ProfilePlanProMetricShowcaseData,
-  isJa: boolean
+  language: string | null | undefined
 ): MetricItem[] {
+  const copy = profileKinetikPanelCopy(language);
   const rankLabel =
     data.totalPointsRank != null
-      ? isJa
-        ? `${data.totalPointsRank}位`
-        : `#${data.totalPointsRank}`
+      ? copy.rankLabel(data.totalPointsRank)
       : undefined;
 
   return [
     {
       key: "win",
-      label: isJa ? "勝率" : "WIN RATE",
-      sub: isJa ? "%" : "%",
+      label: copy.winRateLabel,
+      sub: "%",
       value: `${data.winRate.toFixed(1)}%`,
       accent: "green",
       segs: data.winSegs,
-      footnote: isJa
-        ? `投稿 ${data.posts} · 的中 ${data.hits}`
-        : `${data.hits} hits · ${data.posts} posts`,
+      footnote: copy.winRateFootnote(data.posts, data.hits),
     },
     {
       key: "pts",
-      label: isJa ? "総合得点" : "TOTAL PTS",
-      sub: isJa ? "累計" : "CUM",
+      label: copy.totalPtsLabel,
+      sub: copy.cumulativeSub,
       value: data.totalPoints.toLocaleString(),
       unit: "PTS",
       accent: "magenta",
@@ -146,16 +144,16 @@ function buildMetrics(
     },
     {
       key: "scorer",
-      label: isJa ? "最多得点者" : "TOP SCORER",
-      sub: isJa ? "累計" : "CUM",
+      label: copy.topScorerLabel,
+      sub: copy.cumulativeSub,
       value: String(Math.round(data.goalScorerHits ?? 0)),
-      unit: isJa ? "試合" : "MTCH",
+      unit: copy.matchUnitShort,
       accent: "cyan",
     },
     {
       key: "upset",
       label: KINETIK_UPSET_METRIC_LABEL,
-      sub: isJa ? "累計" : "CUM",
+      sub: copy.cumulativeSub,
       value: data.upset.toFixed(1),
       unit: "PTS",
       accent: "red",
@@ -433,7 +431,7 @@ function TerminalVariant({
 type Props = {
   variant: ProfilePlanProMetricLayoutVariant;
   data: ProfilePlanProMetricShowcaseData;
-  language?: "ja" | "en";
+  language?: string | null;
   layout?: Layout;
 };
 
@@ -444,7 +442,7 @@ export default function ProfilePlanProMetricsVariant({
   language = "ja",
   layout = "mobile",
 }: Props) {
-  const metrics = buildMetrics(data, language === "ja");
+  const metrics = buildMetrics(data, language);
 
   switch (variant) {
     case "bento":

@@ -66,6 +66,9 @@ import {
 } from "@/lib/profile/useNbaKinetikMonthlyStats";
 import RankingsPeriodLabelNav from "@/app/component/rankings/RankingsPeriodLabelNav";
 import { currentRankingPeriodLabel } from "@/lib/rankings/rankingPeriod";
+import { profileKinetikPanelCopy } from "@/lib/profile/profileKinetikPanelCopy";
+import type { Language } from "@/lib/i18n/language";
+import { resolveLocalizedLang } from "@/lib/i18n/localize";
 
 type Accent = "green" | "magenta" | "cyan" | "red";
 
@@ -217,8 +220,9 @@ function MetricCard({
   rankBelowSegBar?: boolean;
   reduceUiMotion?: boolean;
   isPlanPro?: boolean;
-  language?: "ja" | "en";
+  language?: Language;
 }) {
+  void language;
   const reduceMotion = reduceUiMotion || useReducedMotion() === true;
   const useCount = countFormat != null && countTarget != null;
   const countedValue = useKinetikMetricCountUp(
@@ -651,49 +655,28 @@ function ProfileUnitVault({
   );
 }
 
-function getKinetikMetricCopy(
-  isJa: boolean,
+function buildKinetikMetricUi(
+  language: string | null | undefined,
   scope: ReturnType<typeof getKinetikMetricsScopeHint>
 ) {
-  const { unitHint, windowJa, windowEn } = scope;
+  const copy = profileKinetikPanelCopy(language);
+  const windowLabel = scope.window;
   return {
-    dayDeltaTitle: isJa ? "前日比" : "Day-over-day",
-    ptsUnit: "pts",
-    matchUnit: isJa ? "試合" : "matches",
+    ...copy,
+    ptsUnit: "pts" as const,
     winRateUnitHint: "%",
-    cumulativeUnitHint: unitHint,
-    metricsInfoAria: isJa ? "統計項目の説明" : "Stats metric help",
-    winRateTooltip: isJa
-      ? "確定試合の的中率。100% = 全試合的中。"
-      : "Hit rate on settled picks. 100% = all picks correct.",
-    totalPointsTooltip: isJa
-      ? `勝者的中・アップセット・ボーナス等を合算した${windowJa}の総合得点。`
-      : `Combined score from wins, upsets, and bonuses for ${windowEn}.`,
-    goalScorerTooltip: isJa
-      ? `最多得点者予想が的中した試合数。${windowJa}の合計。`
-      : `Correct top-scorer picks for ${windowEn}.`,
-    upsetTooltip: isJa
-      ? `アップセットが起きた試合で少数派を当てたときだけ加点。${windowJa}の合計。`
-      : `Bonus points when you picked the minority side on an upset (${windowEn}).`,
-    shareProfile: isJa ? "プロフィールを共有" : "Share profile",
-    shareCopied: isJa ? "コピー済" : "Copied",
-    proMember: isJa ? "Pro 会員" : "Pro member",
+    cumulativeUnitHint: scope.unitHint,
+    winRateTooltip: copy.winRateTooltip,
+    totalPointsTooltip: copy.totalPointsTooltip(windowLabel),
+    goalScorerTooltip: copy.goalScorerTooltip(windowLabel),
+    upsetTooltip: copy.upsetTooltip(windowLabel),
+    metricsInfoMessage: copy.metricsInfoMessage({
+      winRate: copy.winRateTooltip,
+      totalPoints: copy.totalPointsTooltip(windowLabel),
+      goalScorer: copy.goalScorerTooltip(windowLabel),
+      upset: copy.upsetTooltip(windowLabel),
+    }),
   };
-}
-
-function buildKinetikMetricsInfoMessage(
-  copy: ReturnType<typeof getKinetikMetricCopy>,
-  opts: { isJa: boolean }
-): string {
-  const { isJa } = opts;
-  const goalScorerLabel = isJa ? "最多得点者" : "Top scorer";
-
-  return [
-    `${isJa ? "勝率" : "Win rate"} — ${copy.winRateTooltip}`,
-    `${isJa ? "総合得点" : "Total points"} — ${copy.totalPointsTooltip}`,
-    `${goalScorerLabel} — ${copy.goalScorerTooltip}`,
-    `${KINETIK_UPSET_METRIC_LABEL} — ${copy.upsetTooltip}`,
-  ].join("\n\n");
 }
 
 function MetricsGridSkeleton({ layout }: { layout: "web" | "mobile" }) {
@@ -736,7 +719,7 @@ type Props = {
   layout: "web" | "mobile";
   identity?: ProfileEditTronIdentity;
   stats?: ProfileEditKinetikStats;
-  language?: "ja" | "en";
+  language?: Language;
   editable?: boolean;
   canOpenMenu?: boolean;
   onOpenMenu?: () => void;
@@ -829,11 +812,12 @@ export default function ProfileEditKinetikPanel({
   unitBalance = null,
 }: Props) {
   const router = useRouter();
-  const isJa = language === "ja";
+  const panelCopy = profileKinetikPanelCopy(language);
+  const langJaEn = resolveLocalizedLang(language) === "ja" ? "ja" : "en";
   const showNbaMetricsTabs = metricsTab != null && !!onMetricsTabChange;
   const scopeHint = getKinetikMetricsScopeHint(
     metricsTab ?? "total",
-    isJa ? "ja" : "en",
+    language,
     metricsTab === "weekly" || metricsTab === "monthly"
       ? {
           windowLabel: metricsWindowLabel,
@@ -846,14 +830,14 @@ export default function ProfileEditKinetikPanel({
   const reduceUiMotion =
     useReducedMotion() === true || visualEffects === "lite";
   const planProBgAccentReady = true;
-  const metricCopy = getKinetikMetricCopy(isJa, scopeHint);
+  const metricCopy = buildKinetikMetricUi(language, scopeHint);
 
   /** 自分プロフィールのみ: 残高増分 → 中央カウント → 金庫へ加算 */
   const unitEarn = useUnitEarnOverlay({
     balance: unitBalance ?? null,
     enabled: editable && unitBalance != null,
     storageKey: shareHandle?.trim() || "me",
-    language: isJa ? "ja" : "en",
+    language,
   });
   /** 金庫加算カウント中は背景ループを止め続ける（オーバーレイ退出後も） */
   const [vaultSettling, setVaultSettling] = useState(false);
@@ -875,9 +859,7 @@ export default function ProfileEditKinetikPanel({
     isPro &&
     showProfilePlanProEffects(isPro) &&
     useReducedMotion() !== true;
-  const metricsInfoMessage = buildKinetikMetricsInfoMessage(metricCopy, {
-    isJa,
-  });
+  const metricsInfoMessage = metricCopy.metricsInfoMessage;
   const metricsInfoControl = (
     <span className="profile-edit-kinetik-metrics-info shrink-0">
       <ProfileMetricInfoTip
@@ -892,17 +874,9 @@ export default function ProfileEditKinetikPanel({
   const [badgeDetail, setBadgeDetail] = useState<ResolvedBadge | null>(null);
   const memberSinceLabel = formatProfileMemberSince(memberSinceMs, language);
   const profileViewCountAria =
-    profileViewCount == null
-      ? null
-      : isJa
-        ? `プロフィール閲覧数 ${profileViewCount.toLocaleString("ja-JP")}`
-        : `${profileViewCount.toLocaleString("en-US")} profile views`;
+    profileViewCount == null ? null : panelCopy.viewsAria(profileViewCount);
   const unitBalanceAria =
-    unitBalance == null
-      ? null
-      : isJa
-        ? `保有 Unit ${unitBalance.toLocaleString("ja-JP")}`
-        : `${unitBalance.toLocaleString("en-US")} Units`;
+    unitBalance == null ? null : panelCopy.unitsAria(unitBalance);
   const shareTargetHandle = shareHandle?.trim() || identity.handle?.trim() || "";
 
   const handleShareProfile = useCallback(async () => {
@@ -982,9 +956,7 @@ export default function ProfileEditKinetikPanel({
     const pendingMark = "—";
     const sectionWinRateFootnote = valuesPending
       ? pendingMark
-      : isJa
-        ? `投稿 ${sectionStats.posts} · 的中 ${sectionStats.hits}`
-        : `${sectionStats.hits} hits · ${sectionStats.posts} posts`;
+      : panelCopy.winRateFootnote(sectionStats.posts, sectionStats.hits);
     const sectionWinSegs = valuesPending
       ? 0
       : kinetikWinRateSegs(sectionStats.winRate);
@@ -996,9 +968,7 @@ export default function ProfileEditKinetikPanel({
         );
     const sectionTotalPointsRankLabel =
       !valuesPending && sectionRank.totalPointsRank != null
-        ? isJa
-          ? `${sectionRank.totalPointsRank}位`
-          : `#${sectionRank.totalPointsRank}`
+        ? panelCopy.rankLabel(sectionRank.totalPointsRank)
         : undefined;
     const sectionPtsSegmentsReady =
       !valuesPending &&
@@ -1050,7 +1020,7 @@ export default function ProfileEditKinetikPanel({
         ].join(" ")}
       >
         <MetricCard
-          label={isJa ? "勝率" : "WIN RATE"}
+          label={panelCopy.winRateLabel}
           countTarget={sectionStats.winRate}
           countFormat="percent"
           countDecimals={1}
@@ -1069,7 +1039,7 @@ export default function ProfileEditKinetikPanel({
           language={language}
         />
         <MetricCard
-          label={isJa ? "総合得点" : "TOTAL PTS"}
+          label={panelCopy.totalPtsLabel}
           countTarget={sectionStats.totalPoints}
           countFormat="locale"
           valuesPending={valuesPending}
@@ -1096,7 +1066,7 @@ export default function ProfileEditKinetikPanel({
           language={language}
         />
         <MetricCard
-          label={isJa ? "最多得点者" : "TOP SCORER"}
+          label={panelCopy.topScorerLabel}
           countTarget={Math.max(0, Math.round(sectionStats.goalScorerHits ?? 0))}
           countFormat="int"
           valuesPending={valuesPending}
@@ -1158,7 +1128,7 @@ export default function ProfileEditKinetikPanel({
         <div className={periodTabWrapClass}>
           <CyberSlantedTabBar
             fill
-            aria-label={isJa ? "累計 / 週次 / 月次" : "Total / Week / Month"}
+            aria-label={panelCopy.metricsTabsAria}
           >
             <CyberSlantedTab
               role="tab"
@@ -1195,7 +1165,7 @@ export default function ProfileEditKinetikPanel({
                 }
                 availableLabels={metricsPeriodLabels}
                 onChange={onMetricsWindowLabelChange}
-                language={isJa ? "ja" : "en"}
+                language={language}
               />
             </div>
           ) : metricsTab !== "total" && scopeHint.unitHint ? (
@@ -1215,7 +1185,7 @@ export default function ProfileEditKinetikPanel({
                 <ProfileEditKinetikHeaderTabs
                   rankBadge={rankBadge}
                   winStreak={activeWinStreak}
-                  language={language}
+                  language={langJaEn}
                   compact={layout === "mobile"}
                 />
               </div>
@@ -1240,7 +1210,7 @@ export default function ProfileEditKinetikPanel({
                 <ProfileEditKinetikHeaderTabs
                   rankBadge={rankBadge}
                   winStreak={activeWinStreak}
-                  language={language}
+                  language={langJaEn}
                   compact={layout === "mobile"}
                 />
               </div>
@@ -1270,9 +1240,7 @@ export default function ProfileEditKinetikPanel({
         balance={vaultDisplayBalance}
         ariaLabel={
           openUnitLedger
-            ? isJa
-              ? `${unitBalanceAria} · 履歴を開く`
-              : `${unitBalanceAria} · Open history`
+            ? panelCopy.unitsOpenHistoryAria(unitBalanceAria)
             : unitBalanceAria
         }
         corner
@@ -1311,7 +1279,7 @@ export default function ProfileEditKinetikPanel({
             type="button"
             className="profile-edit-kinetik-metrics-scope-nav profile-edit-kinetik-metrics-scope-nav--prev"
             onClick={onToggleMetricsScope}
-            aria-label={isJa ? "前の統計ボード" : "Previous stats board"}
+            aria-label={panelCopy.prevBoardAria}
           >
             <span
               className="profile-edit-kinetik-metrics-scope-arrow profile-edit-kinetik-metrics-scope-arrow--left"
@@ -1322,11 +1290,7 @@ export default function ProfileEditKinetikPanel({
             type="button"
             className="profile-edit-kinetik-metrics-scope-title profile-edit-kinetik-metrics-scope-title--breath"
             onClick={onToggleMetricsScope}
-            aria-label={
-              isJa
-                ? "SEASON / PLAYOFF を切り替え"
-                : "Switch Season / Playoff stats"
-            }
+            aria-label={panelCopy.seasonPlayoffSwitchAria}
           >
             <ProfileEditKinetikGlitchTitle compact={layout === "mobile"}>
               {metricsSectionTitle}
@@ -1336,7 +1300,7 @@ export default function ProfileEditKinetikPanel({
             type="button"
             className="profile-edit-kinetik-metrics-scope-nav profile-edit-kinetik-metrics-scope-nav--next"
             onClick={onToggleMetricsScope}
-            aria-label={isJa ? "次の統計ボード" : "Next stats board"}
+            aria-label={panelCopy.nextBoardAria}
           >
             <span
               className="profile-edit-kinetik-metrics-scope-arrow profile-edit-kinetik-metrics-scope-arrow--right"
@@ -1384,7 +1348,7 @@ export default function ProfileEditKinetikPanel({
                     streak={activeWinStreak}
                     accentKey={menuAccent}
                     isPlanPro={isPro}
-                    language={language}
+                    language={langJaEn}
                     photoURL={identity.photoURL}
                     displayName={identity.displayName}
                     editable={editable}
@@ -1470,7 +1434,7 @@ export default function ProfileEditKinetikPanel({
           title={unitEarn.active.title}
           subtitle={unitEarn.active.subtitle}
           rank={unitEarn.active.rank}
-          language={isJa ? "ja" : "en"}
+          language={language}
           onAbsorb={unitEarn.markAbsorbed}
           onDone={unitEarn.dismiss}
         />
@@ -1508,7 +1472,7 @@ export default function ProfileEditKinetikPanel({
                 streak={activeWinStreak}
                 accentKey={menuAccent}
                 isPlanPro={isPro}
-                language={language}
+                language={langJaEn}
                 photoURL={identity.photoURL}
                 displayName={identity.displayName}
                 editable={editable}
@@ -1583,7 +1547,7 @@ export default function ProfileEditKinetikPanel({
                 streak={activeWinStreak}
                 accentKey={menuAccent}
                 isPlanPro={isPro}
-                language={language}
+                language={langJaEn}
                 photoURL={identity.photoURL}
                 displayName={identity.displayName}
                 editable={editable}
@@ -1665,7 +1629,7 @@ export default function ProfileEditKinetikPanel({
         title={unitEarn.active.title}
         subtitle={unitEarn.active.subtitle}
         rank={unitEarn.active.rank}
-        language={isJa ? "ja" : "en"}
+        language={language}
         onAbsorb={unitEarn.markAbsorbed}
         onDone={unitEarn.dismiss}
       />

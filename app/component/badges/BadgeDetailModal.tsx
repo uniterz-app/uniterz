@@ -12,6 +12,7 @@ import {
   formatBadgeParticipantCount,
   readBadgeParticipantCount,
 } from "@/lib/badges/badgeCohort";
+import { badgeDetailModalCopy } from "@/lib/badges/badgeDetailModalCopy";
 import { resolveBadgeCopy } from "@/lib/badges/resolveBadgeCopy";
 import VelvetTuftField from "./VelvetTuftField";
 import "./badgeDetailModal.css";
@@ -64,7 +65,7 @@ export default function BadgeDetailModal({
   const awardedMs = resolveAwardedMs(badge);
   const participantCount = readBadgeParticipantCount(badge);
   const portalRoot = useDocumentBody();
-  const isJa = language === "ja";
+  const ui = badgeDetailModalCopy(language);
   const copy = resolveBadgeCopy(badge, language);
 
   useLayoutEffect(() => {
@@ -123,9 +124,7 @@ export default function BadgeDetailModal({
         </div>
 
         <div className="badge-detail-modal__copy">
-          <p className="badge-detail-modal__kicker">
-            {isJa ? "バッジ" : "Badge"}
-          </p>
+          <p className="badge-detail-modal__kicker">{ui.kicker}</p>
 
           <h2
             id="badge-detail-modal-title"
@@ -143,29 +142,26 @@ export default function BadgeDetailModal({
               {awardedMs != null ? (
                 <p className="badge-detail-modal__meta-row">
                   <span className="badge-detail-modal__meta-label">
-                    {m.badges?.grantedAt ?? (isJa ? "付与日" : "Granted")}
+                    {m.badges?.grantedAt ?? ui.grantedAt}
                   </span>
                   <span className="badge-detail-modal__meta-value" aria-hidden>
                     ·
                   </span>
                   <span className="badge-detail-modal__meta-value">
-                    {new Date(awardedMs).toLocaleDateString(DATE_LOCALE[language])}
+                    {new Date(awardedMs).toLocaleDateString(DATE_LOCALE[ui.lang])}
                   </span>
                 </p>
               ) : null}
               {participantCount != null ? (
                 <p className="badge-detail-modal__meta-row">
                   <span className="badge-detail-modal__meta-label">
-                    {badgeParticipantLabel(isJa ? "ja" : "en")}
+                    {badgeParticipantLabel(ui.lang)}
                   </span>
                   <span className="badge-detail-modal__meta-value" aria-hidden>
                     ·
                   </span>
                   <span className="badge-detail-modal__meta-value">
-                    {formatBadgeParticipantCount(
-                      participantCount,
-                      isJa ? "ja" : "en",
-                    )}
+                    {formatBadgeParticipantCount(participantCount, ui.lang)}
                   </span>
                 </p>
               ) : null}

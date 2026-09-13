@@ -66,6 +66,17 @@ export function redemptionApplyErrorMessage(
       fr: "Le consentement est requis pour envoyer.",
     });
   }
+  if (key === "image_required") {
+    return L(lang, {
+      ja: "商品画像（スクショ）を添付してください。",
+      en: "Please attach a product screenshot.",
+      ko: "상품 이미지(스크린샷)를 첨부해 주세요.",
+      zh: "请附上商品截图。",
+      es: "Adjunta una captura del producto.",
+      pt: "Anexe uma captura do produto.",
+      fr: "Joignez une capture du produit.",
+    });
+  }
   if (!key || key === "error") {
     return L(lang, {
       ja: "申請に失敗しました。",

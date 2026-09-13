@@ -20,6 +20,7 @@ import Animated, {
 import type { Language } from "../../../../../lib/i18n/language";
 import { t as i18nT } from "../../../../../lib/i18n/t";
 import { L, resolveLocalizedLang } from "../../../../../lib/i18n/localize";
+import { resultWinStreakBadgeLabel } from "../../../../../lib/result/resultWinStreakBadgeLabel";
 import { resolvePostListLeague } from "../../../../../lib/leagues";
 import { resolveResultBadgeDisplay } from "../../../../../lib/result/resultBadge";
 import { isResultPostLiveGame, isResultPostMatchStarted } from "../../../../../lib/result/resultLiveGame";
@@ -150,28 +151,19 @@ function isRedUpset(v: unknown): boolean {
 
 type StreakBadge = { label: string; tone: "silver" | "platinum" | "gold" };
 
-function getStreakBadge(activeWinStreak: unknown, isJa: boolean): StreakBadge | null {
+function getStreakBadge(
+  activeWinStreak: unknown,
+  language: string | null | undefined
+): StreakBadge | null {
   const v =
     typeof activeWinStreak === "number" && Number.isFinite(activeWinStreak)
       ? Math.floor(activeWinStreak)
       : 0;
-  if (v < 3) return null;
-  if (v >= 7) {
-    return {
-      label: isJa ? `${v}連勝` : `${v} Win Streak`,
-      tone: "gold",
-    };
-  }
-  if (v >= 5) {
-    return {
-      label: isJa ? `${v}連勝` : `${v} Win Streak`,
-      tone: "platinum",
-    };
-  }
-  return {
-    label: isJa ? `${v}連勝` : `${v} Win Streak`,
-    tone: "silver",
-  };
+  const label = resultWinStreakBadgeLabel(language, v);
+  if (!label) return null;
+  if (v >= 7) return { label, tone: "gold" };
+  if (v >= 5) return { label, tone: "platinum" };
+  return { label, tone: "silver" };
 }
 
 type ResultBadge = "hit" | "perfect" | "upset" | "miss" | "streak" | null;
@@ -236,7 +228,6 @@ function ResultPostCardNativeInner({
   tutorialTargetId?: string;
 }) {
   const loc = resolveLocalizedLang(language);
-  const isJa = loc === "ja";
   const resultCopy = i18nT(loc).results;
   const [cornerFabOpen, setCornerFabOpen] = useState(false);
   const captureRef = useRef<View>(null);
@@ -422,7 +413,7 @@ function ResultPostCardNativeInner({
   const activeWinStreak =
     toInt((stats?.pointsV3Detail as { activeWinStreak?: number } | undefined)?.activeWinStreak) ??
     0;
-  const streakBadge = getStreakBadge(activeWinStreak, isJa);
+  const streakBadge = getStreakBadge(activeWinStreak, loc);
   const {
     frameBadge: badge,
     outcomeBadge,

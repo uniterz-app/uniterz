@@ -50,6 +50,7 @@ import {
   isRankingsCategoryParam,
 } from "@/lib/navigation/rankingsProfileFrom";
 import { t } from "@/lib/i18n/t";
+import { resolveLocalizedLang } from "@/lib/i18n/localize";
 import RankingsScheduleNotice from "@/app/component/rankings/RankingsScheduleNotice";
 import { CyberNoDataPage } from "@/app/component/common/CyberNoDataLabel";
 import type { RankingsCategory } from "@/app/component/rankings/RankingsCategoryTabs";
@@ -169,7 +170,7 @@ export default function WebRankingsShell() {
   const countryCode = sessionUser.countryCode;
 
   const m = t(language);
-  const langUi = language === "ja" ? "ja" : "en";
+  const langUi = resolveLocalizedLang(language);
 
   /** PRO LEAGUE は Pro 以外にはロック（API 403 もフォールバック） */
   const openProLocked =

@@ -17,8 +17,8 @@ import {
   readBadgeParticipantCount,
 } from "../../../../../lib/badges/badgeCohort";
 import { resolveBadgeCopy } from "../../../../../lib/badges/resolveBadgeCopy";
+import { badgeDetailModalCopy } from "../../../../../lib/badges/badgeDetailModalCopy";
 import { DATE_LOCALE } from "../../../../../lib/i18n/language";
-import { L, resolveLocalizedLang } from "../../../../../lib/i18n/localize";
 
 type Props = {
   visible: boolean;
@@ -78,19 +78,11 @@ export default function ProfileBadgeDetailModal({
   language,
   onClose,
 }: Props) {
-  const lang = resolveLocalizedLang(language);
+  const ui = badgeDetailModalCopy(language);
+  const lang = ui.lang;
   if (!badge) return null;
 
   const copy = resolveBadgeCopy(badge, lang);
-  const awardedLabel = L(lang, {
-    ja: "付与日",
-    en: "Granted",
-    ko: "부여일",
-    zh: "授予日",
-    es: "Otorgada",
-    pt: "Concedida",
-    fr: "Attribuée",
-  });
   const participantCount = readBadgeParticipantCount(badge);
 
   return (
@@ -107,17 +99,7 @@ export default function ProfileBadgeDetailModal({
           </View>
 
           <View style={styles.copy}>
-            <Text style={styles.kicker}>
-              {L(lang, {
-                ja: "バッジ",
-                en: "Badge",
-                ko: "배지",
-                zh: "徽章",
-                es: "Insignia",
-                pt: "Medalha",
-                fr: "Badge",
-              })}
-            </Text>
+            <Text style={styles.kicker}>{ui.kicker}</Text>
             <Text style={styles.title}>{copy.title}</Text>
             {copy.description ? <Text style={styles.desc}>{copy.description}</Text> : null}
 
@@ -125,7 +107,7 @@ export default function ProfileBadgeDetailModal({
               <View style={styles.metaBlock}>
                 {badge.grantedAt ? (
                   <View style={styles.metaRow}>
-                    <Text style={styles.metaLabel}>{awardedLabel}</Text>
+                    <Text style={styles.metaLabel}>{ui.grantedAt}</Text>
                     <Text style={styles.metaDot}>·</Text>
                     <Text style={styles.metaValue}>
                       {badge.grantedAt.toLocaleDateString(DATE_LOCALE[lang])}

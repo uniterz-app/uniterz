@@ -63,6 +63,7 @@ export function navigateFromPushNotificationData(data: PushNotificationData) {
           params: { screen: "ProfileHome" },
         });
         return;
+      case "weekly_report":
       case "monthly_report":
         navigationRef.navigate("Main", {
           screen: "ProfileTab",

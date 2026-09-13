@@ -14,7 +14,7 @@ import {
   rankingPeriodWeekdayMon0,
 } from "@/lib/rankings/rankingPeriodClock";
 import { weeklyReportDocId } from "@/lib/reports/parseWeeklyReportDoc";
-import { resolveLocalizedLang } from "@/lib/i18n/localize";
+import { L, resolveLocalizedLang } from "@/lib/i18n/localize";
 
 export type ReportDeliveryKind = "weekly" | "monthly";
 
@@ -154,7 +154,16 @@ export function formatReportPeriodLabel(
   const lang = resolveLocalizedLang(language);
   if (kind === "monthly") {
     const [y, m] = periodKey.split("-");
-    return lang === "ja" ? `${y}年${Number(m)}月` : `${y}.${m}`;
+    const monthNum = Number(m);
+    return L(lang, {
+      ja: `${y}年${monthNum}月`,
+      en: `${y}.${m}`,
+      ko: `${y}년 ${monthNum}월`,
+      zh: `${y}年${monthNum}月`,
+      es: `${y}.${m}`,
+      pt: `${y}.${m}`,
+      fr: `${y}.${m}`,
+    });
   }
   const end = addDaysToDateKey(periodKey, 6);
   const md = (k: string) => {

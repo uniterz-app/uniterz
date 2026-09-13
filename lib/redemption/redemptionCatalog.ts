@@ -131,26 +131,45 @@ export function normalizeRedemptionProductKind(
   return null;
 }
 
-/** カタログ行の価格上限ラベル（言語別） */
+/** カタログ行の価格上限ラベル（ja=円、その他=USD・文言は7言語） */
 export function redemptionPriceCapLabel(
   item: Pick<RedemptionCatalogItem, "priceCapJpy" | "priceCapUsd">,
-  language: "ja" | "en"
+  language: string | null | undefined
 ): string {
-  if (language === "en") {
-    return `Price cap $${item.priceCapUsd.toLocaleString("en-US")}`;
+  const lang = resolveLocalizedLang(language);
+  if (lang === "ja") {
+    return L(lang, {
+      ja: `価格上限 ${item.priceCapJpy.toLocaleString("ja-JP")} 円`,
+      en: `Price cap ¥${item.priceCapJpy.toLocaleString("en-US")}`,
+      ko: `가격 상한 ¥${item.priceCapJpy.toLocaleString("en-US")}`,
+      zh: `价格上限 ¥${item.priceCapJpy.toLocaleString("en-US")}`,
+      es: `Tope ¥${item.priceCapJpy.toLocaleString("en-US")}`,
+      pt: `Teto ¥${item.priceCapJpy.toLocaleString("en-US")}`,
+      fr: `Plafond ¥${item.priceCapJpy.toLocaleString("en-US")}`,
+    });
   }
-  return `価格上限 ${item.priceCapJpy.toLocaleString("ja-JP")} 円`;
+  const usd = item.priceCapUsd.toLocaleString("en-US");
+  return L(lang, {
+    ja: `価格上限 $${usd}`,
+    en: `Price cap $${usd}`,
+    ko: `가격 상한 $${usd}`,
+    zh: `价格上限 $${usd}`,
+    es: `Tope $${usd}`,
+    pt: `Teto $${usd}`,
+    fr: `Plafond $${usd}`,
+  });
 }
 
 /** 申請フォーム等の短い上限表示 */
 export function redemptionPriceCapShort(
   item: Pick<RedemptionCatalogItem, "priceCapJpy" | "priceCapUsd">,
-  language: "ja" | "en"
+  language: string | null | undefined
 ): string {
-  if (language === "en") {
-    return `$${item.priceCapUsd.toLocaleString("en-US")}`;
+  const lang = resolveLocalizedLang(language);
+  if (lang === "ja") {
+    return `${item.priceCapJpy.toLocaleString("ja-JP")} 円`;
   }
-  return `${item.priceCapJpy.toLocaleString("ja-JP")} 円`;
+  return `$${item.priceCapUsd.toLocaleString("en-US")}`;
 }
 
 /** 対象外の案内（カタログ注意書き）— chrome は 7言語 */
@@ -203,13 +222,13 @@ export function redemptionDisclaimerCopy(
 ): string {
   const lang = resolveLocalizedLang(language);
   return L(lang, {
-    ja: "UNITERZ は NBA およびその関連団体とは無関係の独立したサービスです。商品は運営が正規販売店から購入し、ユーザーへお届けします。",
-    en: "UNITERZ is an independent service and is not affiliated with the NBA or its partners. Products are purchased by the operator from authorized retailers and shipped to you.",
-    ko: "UNITERZ는 NBA 및 관련 단체와 무관한 독립 서비스입니다. 상품은 운영자가 공식 판매점에서 구매해 배송합니다.",
-    zh: "UNITERZ 为独立服务，与 NBA 及其关联机构无关。商品由运营方从正规零售商采购并寄送给您。",
-    es: "UNITERZ es un servicio independiente y no está afiliado a la NBA ni a sus socios. Compramos en tiendas autorizadas y te enviamos el producto.",
-    pt: "UNITERZ é um serviço independente e não é afiliado à NBA ou parceiros. Compramos em lojas autorizadas e enviamos a você.",
-    fr: "UNITERZ est un service indépendant, non affilié à la NBA ni à ses partenaires. Nous achetons chez des revendeurs agréés et vous livrons.",
+    ja: "UNITERZ は NBA およびその関連団体とは無関係の独立したサービスです。商品は運営が、配送先の国・地域に対応する正規オンラインストア等から購入し、ユーザーへお届けします。送料・関税等は原則運営負担です。",
+    en: "UNITERZ is an independent service and is not affiliated with the NBA or its partners. Products are purchased by the operator from authorized online stores for your shipping country/region when possible, and shipped to you. Shipping and duties are generally borne by the operator.",
+    ko: "UNITERZ는 NBA 및 관련 단체와 무관한 독립 서비스입니다. 상품은 배송국 공식 온라인 스토어 등에서 운영이 구매해 직송합니다. 배송비·관세 등은 원칙 운영 부담입니다.",
+    zh: "UNITERZ 为独立服务，与 NBA 及其关联机构无关。商品由运营方优先从配送国官方网店采购并直送。运费与关税等原则上由运营承担。",
+    es: "UNITERZ es un servicio independiente y no está afiliado a la NBA ni a sus socios. Compramos en la tienda online oficial de tu país cuando es posible y enviamos directo. Envío y aranceles suelen ir a nuestro cargo.",
+    pt: "UNITERZ é um serviço independente e não é afiliado à NBA ou parceiros. Compramos na loja online oficial do seu país quando possível e enviamos direto. Frete e taxas geralmente são nossos.",
+    fr: "UNITERZ est un service indépendant, non affilié à la NBA ni à ses partenaires. Nous achetons sur la boutique officielle de votre pays si possible et expédions directement. Frais d’envoi et droits sont en général à notre charge.",
   });
 }
 
@@ -231,8 +250,8 @@ export const REDEMPTION_EXCLUSIONS_EN = [
 
 /** @deprecated 互換 — 新規は redemptionDisclaimerCopy */
 export const REDEMPTION_DISCLAIMER_JA =
-  "UNITERZ は NBA およびその関連団体とは無関係の独立したサービスです。商品は運営が正規販売店から購入し、ユーザーへお届けします。";
+  "UNITERZ は NBA およびその関連団体とは無関係の独立したサービスです。商品は運営が、配送先の国・地域に対応する正規オンラインストア等から購入し、ユーザーへお届けします。送料・関税等は原則運営負担です。";
 
 /** @deprecated 互換 — 新規は redemptionDisclaimerCopy */
 export const REDEMPTION_DISCLAIMER_EN =
-  "UNITERZ is an independent service and is not affiliated with the NBA or its partners. Products are purchased by the operator from authorized retailers and shipped to you.";
+  "UNITERZ is an independent service and is not affiliated with the NBA or its partners. Products are purchased by the operator from authorized online stores for your shipping country/region when possible, and shipped to you. Shipping and duties are generally borne by the operator.";

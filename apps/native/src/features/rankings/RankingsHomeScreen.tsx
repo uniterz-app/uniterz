@@ -39,6 +39,7 @@ import type { MainTabParamList, RankingsStackParamList } from "../../navigation/
 import { navigateToPublicProfileNative } from "../../navigation/navigateToPublicProfileNative";
 import { warmPublicProfileFromRankingRowNative } from "../profile/warmPublicProfileNative";
 import type { Language } from "../../../../../lib/i18n/language";
+import { resolveLocalizedLang } from "../../../../../lib/i18n/localize";
 import { getRankingsScheduleNoticeText } from "../../../../../lib/rankings/getRankingsScheduleNoticeText";
 import BracketLeaderboardSectionNative from "./BracketLeaderboardSectionNative";
 import SideMenuDrawerNative from "../../ui/SideMenuDrawerNative";
@@ -653,7 +654,7 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
 
       <TutorialLiveHostNative
         page="rankings"
-        language={(language === "ja" ? "ja" : "en") as Language}
+        language={resolveLocalizedLang(language)}
       />
     </View>
   );

@@ -1,5 +1,5 @@
 /**
- * Pro Skin 画面 chrome（7言語）。カタログ条件文は ja|en API のまま。
+ * Pro Skin 画面 chrome（7言語）。
  */
 import { L, resolveLocalizedLang } from "../../../../../lib/i18n/localize";
 
@@ -8,10 +8,8 @@ export function proSkinScreenCopy(
   viewerIsPro: boolean
 ) {
   const lang = resolveLocalizedLang(language);
-  const catalogLang = lang === "ja" ? ("ja" as const) : ("en" as const);
   return {
     lang,
-    catalogLang,
     subtitle: viewerIsPro
       ? L(lang, {
           ja: "上段は Pro ですぐ使えるスキン。下段はマイルストーン達成で解放されます。",

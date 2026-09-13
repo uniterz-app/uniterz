@@ -16,6 +16,7 @@ import CyberHelpMark from "@/app/component/common/CyberHelpMark";
 import { RankingsPageTitleCyber } from "@/app/component/rankings/RankingsPageTitleCyber";
 import { GAMES_CYBER_EASE } from "@/app/component/games/cyberMotion";
 import ProfileMenuEdgeHandle from "@/app/component/profile/ui/ProfileMenuEdgeHandle";
+import { hasCjkOrHangulScript } from "@/lib/rankings/rankingJaTextSize";
 
 /** はてな説明カード本体（オーバーレイ内） */
 function CyberHelpPanel({
@@ -169,7 +170,7 @@ function CyberHelpOverlay({
 }
 
 function titleHasCjk(title: string): boolean {
-  return /[\u3040-\u30ff\u3400-\u9fff]/.test(title);
+  return hasCjkOrHangulScript(title);
 }
 
 export type CyberSubpageHeaderProps = {

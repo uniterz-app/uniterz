@@ -20,7 +20,15 @@ export function DetailChipExplainModal({
   onClose,
 }: Props) {
   const lang = resolveLocalizedLang(language);
-  const isJa = lang === "ja";
+  const closeLabel = L(lang, {
+    ja: "閉じる",
+    en: "Close",
+    ko: "닫기",
+    zh: "关闭",
+    es: "Cerrar",
+    pt: "Fechar",
+    fr: "Fermer",
+  });
   useEffect(() => {
     if (!open) return;
     const prev = document.body.style.overflow;
@@ -47,7 +55,7 @@ export function DetailChipExplainModal({
       <button
         type="button"
         className="absolute inset-0 bg-black/70"
-        aria-label={isJa ? "閉じる" : "Close"}
+        aria-label={closeLabel}
         onClick={onClose}
       />
       <div
@@ -67,7 +75,7 @@ export function DetailChipExplainModal({
             onClick={onClose}
             className="shrink-0 text-[11px] font-bold uppercase tracking-wide text-white/45"
           >
-            {isJa ? "閉じる" : "Close"}
+            {closeLabel}
           </button>
         </div>
         <p className="whitespace-pre-line text-[13px] leading-relaxed text-white/78">

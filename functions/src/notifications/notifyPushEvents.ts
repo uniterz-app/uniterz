@@ -62,7 +62,59 @@ export async function notifyRankingUpdatedPush(uids: string[]): Promise<void> {
   );
 }
 
-/** 月次レポート確定後 — Pro ユーザーへ（prefs.monthlyReport） */
+/** 週次レポート確定後 — Pro ユーザーへ（prefs.weeklyReport） */
+export async function notifyWeeklyReportPush(input: {
+  uids: string[];
+  weekLabel: string;
+}): Promise<void> {
+  const unique = [...new Set(input.uids.filter(Boolean))];
+  if (unique.length === 0) return;
+
+  const { getFirestore } = await import("firebase-admin/firestore");
+  const { canViewWeeklyReport } = await import("../reports/reportEntitlements");
+  const db = getFirestore();
+  const eligibleUids: string[] = [];
+  for (let i = 0; i < unique.length; i += 80) {
+    const chunk = unique.slice(i, i + 80);
+    const refs = chunk.map((uid) => db.collection("users").doc(uid));
+    const snaps = await db.getAll(...refs);
+    for (const snap of snaps) {
+      if (!snap.exists) continue;
+      const data = snap.data() ?? {};
+      if (
+        canViewWeeklyReport({
+          plan: data.plan,
+          planType: data.planType,
+        })
+      ) {
+        eligibleUids.push(snap.id);
+      }
+    }
+  }
+  if (eligibleUids.length === 0) return;
+
+  const targets = eligibleUids.map((uid) => ({
+    uid,
+    data: {
+      type: "weekly_report" as const,
+      weekLabel: input.weekLabel,
+    },
+  }));
+
+  const result = await sendExpoPushToUids({
+    type: "weekly_report",
+    targets,
+    matchup: {
+      detail: input.weekLabel,
+    },
+  });
+
+  console.log(
+    `[notifyWeeklyReportPush] week=${input.weekLabel} sent=${result.sent} targets=${targets.length}`
+  );
+}
+
+/** 月次レポート確定後 — Monthly/Season Pro へ（prefs.monthlyReport）。Weekly プランは除外 */
 export async function notifyMonthlyReportPush(input: {
   uids: string[];
   monthKey: string;
@@ -71,21 +123,29 @@ export async function notifyMonthlyReportPush(input: {
   if (unique.length === 0) return;
 
   const { getFirestore } = await import("firebase-admin/firestore");
+  const { canViewMonthlyReport } = await import("../reports/reportEntitlements");
   const db = getFirestore();
-  const proUids: string[] = [];
+  const eligibleUids: string[] = [];
   for (let i = 0; i < unique.length; i += 80) {
     const chunk = unique.slice(i, i + 80);
     const refs = chunk.map((uid) => db.collection("users").doc(uid));
     const snaps = await db.getAll(...refs);
     for (const snap of snaps) {
       if (!snap.exists) continue;
-      const plan = String(snap.data()?.plan ?? "free").toLowerCase();
-      if (plan === "pro") proUids.push(snap.id);
+      const data = snap.data() ?? {};
+      if (
+        canViewMonthlyReport({
+          plan: data.plan,
+          planType: data.planType,
+        })
+      ) {
+        eligibleUids.push(snap.id);
+      }
     }
   }
-  if (proUids.length === 0) return;
+  if (eligibleUids.length === 0) return;
 
-  const targets = proUids.map((uid) => ({
+  const targets = eligibleUids.map((uid) => ({
     uid,
     data: {
       type: "monthly_report" as const,

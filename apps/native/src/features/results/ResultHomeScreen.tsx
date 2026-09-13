@@ -16,7 +16,6 @@ import Animated, {
   useReducedMotion,
 } from "react-native-reanimated";
 import { useFirebaseUser } from "../../auth/FirebaseUserProvider";
-import type { Language } from "../../../../../lib/i18n/language";
 import { t as i18nT } from "../../../../../lib/i18n/t";
 import {
   L,
@@ -733,7 +732,7 @@ export default function ResultHomeScreen({
     <View style={styles.tutorialHostLayer} pointerEvents="box-none">
       <TutorialLiveHostNative
         page="results"
-        language={(language === "ja" ? "ja" : "en") as Language}
+        language={resolveLocalizedLang(language)}
       />
     </View>
     </View>

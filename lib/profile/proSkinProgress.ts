@@ -2,6 +2,7 @@
  * Pro Skin マイルストーン進捗（users.proSkinProgress）。
  * 2026-27 以降のみ。GET は users 1 read でバー表示・解放判定に使う。
  */
+import { L, resolveLocalizedLang } from "@/lib/i18n/localize";
 import {
   PRO_SKIN_PERIOD_WIN_MILESTONES,
   PRO_SKIN_REFERRAL_MILESTONES,
@@ -160,10 +161,10 @@ export function proSkinMilestoneProgressBar(
     | "referralCompletedCount"
     | "periodWins"
   >,
-  language: "ja" | "en" = "ja"
+  language: string | null | undefined = "ja"
 ): ProSkinMilestoneBar | null {
   if (!proSkinUnlockRuleHasProgressBar(rule)) return null;
-  const ja = language === "ja";
+  const lang = resolveLocalizedLang(language);
   let current = 0;
   let target = 1;
   let unit = "";
@@ -171,22 +172,54 @@ export function proSkinMilestoneProgressBar(
     case "streak":
       current = progress.maxWinStreak;
       target = rule.threshold;
-      unit = ja ? "連勝" : "streak";
+      unit = L(lang, {
+        ja: "連勝",
+        en: "streak",
+        ko: "연승",
+        zh: "连胜",
+        es: "racha",
+        pt: "sequência",
+        fr: "série",
+      });
       break;
     case "posts":
       current = progress.posts;
       target = rule.threshold;
-      unit = ja ? "予想" : "picks";
+      unit = L(lang, {
+        ja: "予想",
+        en: "picks",
+        ko: "예상",
+        zh: "预测",
+        es: "picks",
+        pt: "palpites",
+        fr: "pronos",
+      });
       break;
     case "exactHits":
       current = progress.exactHits;
       target = rule.threshold;
-      unit = ja ? "Perfect" : "perfect";
+      unit = L(lang, {
+        ja: "Perfect",
+        en: "perfect",
+        ko: "퍼펙트",
+        zh: "完美",
+        es: "perfect",
+        pt: "perfect",
+        fr: "perfect",
+      });
       break;
     case "referralCompleted":
       current = progress.referralCompletedCount;
       target = rule.threshold;
-      unit = ja ? "招待" : "invites";
+      unit = L(lang, {
+        ja: "招待",
+        en: "invites",
+        ko: "초대",
+        zh: "邀请",
+        es: "invites",
+        pt: "convites",
+        fr: "invites",
+      });
       break;
     case "periodWins": {
       const key = proSkinPeriodWinCounterKey({
@@ -196,7 +229,15 @@ export function proSkinMilestoneProgressBar(
       });
       current = progress.periodWins[key] ?? 0;
       target = rule.wins;
-      unit = ja ? "回" : "wins";
+      unit = L(lang, {
+        ja: "回",
+        en: "wins",
+        ko: "회",
+        zh: "次",
+        es: "veces",
+        pt: "vezes",
+        fr: "fois",
+      });
       break;
     }
   }
@@ -220,7 +261,7 @@ export function proSkinMilestoneBarForId(
     | "referralCompletedCount"
     | "periodWins"
   >,
-  language: "ja" | "en" = "ja"
+  language: string | null | undefined = "ja"
 ): ProSkinMilestoneBar | null {
   const entry = getProSkinUnlockEntry(id);
   if (!entry) return null;

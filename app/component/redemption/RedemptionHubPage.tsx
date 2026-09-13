@@ -10,18 +10,17 @@ import ProfileCyberPage from "@/app/component/profile/ProfileCyberPage";
 import { nameOxanium } from "@/lib/fonts";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
+import { resolveLocalizedLang } from "@/lib/i18n/localize";
 import { fetchMeRedemptions } from "@/lib/api/fetchMeRedemptions";
 import {
-  REDEMPTION_DISCLAIMER_EN,
-  REDEMPTION_DISCLAIMER_JA,
-  REDEMPTION_EXCLUSIONS_EN,
-  REDEMPTION_EXCLUSIONS_JA,
   redemptionCatalogBlurb,
   redemptionCatalogTitle,
+  redemptionDisclaimerCopy,
+  redemptionExclusionsCopy,
   redemptionPriceCapLabel,
 } from "@/lib/redemption/redemptionCatalog";
 import { redemptionCatalogImageSrc } from "@/lib/redemption/redemptionCatalogImages";
-import { redemptionBatchScheduleCopy } from "@/lib/redemption/redemptionBatchScheduleCopy";
+import { redemptionHubUiCopy } from "@/lib/redemption/redemptionUiCopy";
 import { redemptionStatusLabel } from "@/lib/redemption/redemptionStatus";
 import type {
   RedemptionCatalogItem,
@@ -36,9 +35,9 @@ function pathBase() {
 export default function RedemptionHubPage() {
   const { fUser: user, status } = useFirebaseUser();
   const { language } = useUserLanguage(user?.uid ?? null);
-  const isJa = language === "ja";
+  const lang = resolveLocalizedLang(language);
+  const ui = redemptionHubUiCopy(lang);
   const base = pathBase();
-  const batch = redemptionBatchScheduleCopy(isJa ? "ja" : "en");
 
   const [balance, setBalance] = useState(0);
   const [seasonUsed, setSeasonUsed] = useState(0);
@@ -79,25 +78,9 @@ export default function RedemptionHubPage() {
     <ProfileCyberPage
       title="REDEEM"
       eyebrow="UNIT EXCHANGE"
-      subtitle={
-        isJa
-          ? "保有 Unit で NBA 関連商品と交換申請。月末にまとめて購入し配送します。"
-          : "Redeem Units for NBA merchandise. We purchase in a monthly batch to reduce shipping."
-      }
+      subtitle={ui.subtitle}
       contentClassName="max-w-lg space-y-5"
     >
-      <div className="rounded-[2px] border border-cyan-300/25 bg-cyan-400/5 px-3 py-3 text-[12px] leading-relaxed text-cyan-50/85">
-        <p
-          className={[
-            nameOxanium.className,
-            "text-[10px] font-bold uppercase tracking-[0.14em] text-cyan-200/80",
-          ].join(" ")}
-        >
-          {batch.short}
-        </p>
-        <p className="mt-1.5">{batch.detail}</p>
-      </div>
-
       <div className="rounded-[2px] border border-amber-300/25 bg-[rgba(8,10,14,0.92)] px-3 py-3">
         <p
           className={[
@@ -119,14 +102,8 @@ export default function RedemptionHubPage() {
           </span>
         </p>
         <p className="mt-2 text-[11px] text-white/50">
-          {isJa
-            ? `今シーズン交換 ${seasonUsed.toLocaleString("ja-JP")} / ${seasonCap.toLocaleString("ja-JP")} Unit`
-            : `Season used ${seasonUsed.toLocaleString("en-US")} / ${seasonCap.toLocaleString("en-US")} Units`}
-          {!unitsLive
-            ? isJa
-              ? " · 現在は申請プレビュー（Unit ロックは弁護士確認後）"
-              : " · Preview mode (Unit lock after legal review)"
-            : null}
+          {ui.seasonLine(seasonUsed, seasonCap)}
+          {!unitsLive ? ui.previewNote : null}
         </p>
         <div className="mt-3 flex flex-wrap gap-2">
           <Link
@@ -136,7 +113,7 @@ export default function RedemptionHubPage() {
               "border border-cyan-300/40 bg-cyan-400/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-cyan-100",
             ].join(" ")}
           >
-            {isJa ? "交換申請" : "Apply"}
+            {ui.apply}
           </Link>
           <Link
             href={`${base}/units`}
@@ -145,7 +122,7 @@ export default function RedemptionHubPage() {
               "border border-white/20 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-white/70",
             ].join(" ")}
           >
-            {isJa ? "Unit 履歴" : "Unit history"}
+            {ui.history}
           </Link>
         </div>
       </div>
@@ -157,7 +134,7 @@ export default function RedemptionHubPage() {
             "text-[11px] font-bold uppercase tracking-[0.16em] text-white/55",
           ].join(" ")}
         >
-          {isJa ? "カタログ" : "Catalog"}
+          {ui.catalog}
         </h2>
         <ul className="space-y-2">
           {catalog.map((item) => (
@@ -179,7 +156,7 @@ export default function RedemptionHubPage() {
                 <div className="min-w-0 flex-1">
                   <div className="flex items-start justify-between gap-2">
                     <p className="text-[14px] font-semibold text-white/90">
-                      {redemptionCatalogTitle(item, language)}
+                      {redemptionCatalogTitle(item, lang)}
                     </p>
                     <p
                       className={[
@@ -194,16 +171,16 @@ export default function RedemptionHubPage() {
                     </p>
                   </div>
                   <p className="mt-0.5 text-[11px] text-white/45">
-                    {redemptionCatalogBlurb(item, language)}
+                    {redemptionCatalogBlurb(item, lang)}
                   </p>
                   <p className="mt-1 text-[11px] text-white/40">
-                    {redemptionPriceCapLabel(item, isJa ? "ja" : "en")}
+                    {redemptionPriceCapLabel(item, lang)}
                   </p>
                   <Link
                     href={`${base}/redeem/apply?kind=${item.kind}`}
                     className="mt-2 inline-block text-[11px] font-semibold text-cyan-300/90 underline-offset-2 hover:underline"
                   >
-                    {isJa ? "この区分で申請" : "Apply with this tier"}
+                    {ui.applyWithTier}
                   </Link>
                 </div>
               </div>
@@ -219,14 +196,12 @@ export default function RedemptionHubPage() {
             "text-[11px] font-bold uppercase tracking-[0.16em] text-white/55",
           ].join(" ")}
         >
-          {isJa ? "対象外" : "Not eligible"}
+          {ui.notEligible}
         </h2>
         <ul className="list-disc space-y-1 pl-4 text-[12px] text-white/50">
-          {(isJa ? REDEMPTION_EXCLUSIONS_JA : REDEMPTION_EXCLUSIONS_EN).map(
-            (line) => (
-              <li key={line}>{line}</li>
-            )
-          )}
+          {redemptionExclusionsCopy(lang).map((line) => (
+            <li key={line}>{line}</li>
+          ))}
         </ul>
       </section>
 
@@ -237,18 +212,14 @@ export default function RedemptionHubPage() {
             "text-[11px] font-bold uppercase tracking-[0.16em] text-white/55",
           ].join(" ")}
         >
-          {isJa ? "申請一覧" : "Your requests"}
+          {ui.requests}
         </h2>
         {loading ? (
-          <p className="text-[13px] text-white/45">
-            {isJa ? "読み込み中…" : "Loading…"}
-          </p>
+          <p className="text-[13px] text-white/45">{ui.loading}</p>
         ) : error ? (
           <p className="text-[13px] text-rose-300/80">{error}</p>
         ) : requests.length === 0 ? (
-          <p className="text-[13px] text-white/45">
-            {isJa ? "まだ申請がありません。" : "No requests yet."}
-          </p>
+          <p className="text-[13px] text-white/45">{ui.noRequests}</p>
         ) : (
           <ul className="overflow-hidden rounded-[2px] border border-white/10 bg-[rgba(4,9,16,0.97)]">
             {requests.map((row, index) => (
@@ -268,15 +239,12 @@ export default function RedemptionHubPage() {
                       {row.productName}
                     </p>
                     <p className="mt-0.5 text-[11px] text-white/45">
-                      {redemptionStatusLabel(
-                        row.status,
-                        isJa ? "ja" : "en"
-                      )}{" "}
-                      · {row.unitsRequired} Unit
+                      {redemptionStatusLabel(row.status, lang)} ·{" "}
+                      {row.unitsRequired} Unit
                     </p>
                   </div>
                   <span className="shrink-0 text-[11px] text-cyan-300/80">
-                    {isJa ? "進捗" : "Track"} →
+                    {ui.track} →
                   </span>
                 </Link>
               </li>
@@ -286,7 +254,7 @@ export default function RedemptionHubPage() {
       </section>
 
       <p className="border border-white/10 bg-black/40 px-3 py-2 text-[11px] leading-relaxed text-white/45">
-        {isJa ? REDEMPTION_DISCLAIMER_JA : REDEMPTION_DISCLAIMER_EN}
+        {redemptionDisclaimerCopy(lang)}
       </p>
     </ProfileCyberPage>
   );

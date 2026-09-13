@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { nameOxanium } from "@/lib/fonts";
-import { resolveLocalizedLang } from "@/lib/i18n/localize";
+import { L, resolveLocalizedLang } from "@/lib/i18n/localize";
 import {
   searchNbaStatsIndex,
   type NbaStatsSearchHit,
@@ -22,7 +22,7 @@ export default function NbaStatsSearchBar({
   language = "ja",
   onSelect,
 }: Props) {
-  const isJa = resolveLocalizedLang(language) === "ja";
+  const lang = resolveLocalizedLang(language);
   const [query, setQuery] = useState("");
   // 検索対象の kind 側だけ取得する。パネルが既に読んだ bundle は共有キャッシュから来る
   const { bundle: teamBundle } = useLeagueTeamStatsBundle({
@@ -41,12 +41,33 @@ export default function NbaStatsSearchBar({
   );
   const placeholder =
     kind === "team"
-      ? isJa
-        ? "チームを検索（Lakers / LAL）"
-        : "Search teams (Lakers / LAL)"
-      : isJa
-        ? "選手を検索（Luka / Curry）"
-        : "Search players (Luka / Curry)";
+      ? L(lang, {
+          ja: "チームを検索（Lakers / LAL）",
+          en: "Search teams (Lakers / LAL)",
+          ko: "팀 검색 (Lakers / LAL)",
+          zh: "搜索球队（Lakers / LAL）",
+          es: "Buscar equipos (Lakers / LAL)",
+          pt: "Buscar times (Lakers / LAL)",
+          fr: "Rechercher équipes (Lakers / LAL)",
+        })
+      : L(lang, {
+          ja: "選手を検索（Luka / Curry）",
+          en: "Search players (Luka / Curry)",
+          ko: "선수 검색 (Luka / Curry)",
+          zh: "搜索球员（Luka / Curry）",
+          es: "Buscar jugadores (Luka / Curry)",
+          pt: "Buscar jogadores (Luka / Curry)",
+          fr: "Rechercher joueurs (Luka / Curry)",
+        });
+  const noMatches = L(lang, {
+    ja: "該当なし",
+    en: "No matches",
+    ko: "결과 없음",
+    zh: "无匹配",
+    es: "Sin coincidencias",
+    pt: "Sem resultados",
+    fr: "Aucune correspondance",
+  });
 
   return (
     <div className="relative">
@@ -67,7 +88,7 @@ export default function NbaStatsSearchBar({
             <p
               className={`${nameOxanium.className} px-3 py-3 text-[11px] font-bold uppercase tracking-[0.12em] text-white/40`}
             >
-              {isJa ? "該当なし" : "No matches"}
+              {noMatches}
             </p>
           ) : (
             hits.map((hit) => (

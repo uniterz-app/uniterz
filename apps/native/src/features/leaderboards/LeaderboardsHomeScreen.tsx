@@ -10,7 +10,7 @@ import { navigateToPublicProfileNative } from "../../navigation/navigateToPublic
 import { useNativeMyRankingUser } from "../rankings/useNativeMyRankingUser";
 import RankingsCommunityPanelNative from "./RankingsCommunityPanelNative";
 import TutorialLiveHostNative from "../tutorial/TutorialLiveHostNative";
-import type { Language } from "../../../../../lib/i18n/language";
+import { resolveLocalizedLang } from "../../../../../lib/i18n/localize";
 
 type Props = { bottomReserveY?: number };
 
@@ -54,7 +54,7 @@ export default function LeaderboardsHomeScreen({ bottomReserveY = 0 }: Props) {
       </ScrollView>
       <TutorialLiveHostNative
         page="groups"
-        language={(language === "ja" ? "ja" : "en") as Language}
+        language={resolveLocalizedLang(language)}
       />
     </View>
   );

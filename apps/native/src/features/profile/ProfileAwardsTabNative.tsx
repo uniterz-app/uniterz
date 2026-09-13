@@ -14,7 +14,7 @@ import type {
 import type { NbaSeasonStandingsPrediction } from "../../../../../lib/predict/nbaSeasonStandingsPredict";
 import { fetchProfileSeasonAwardsNative } from "./seasonAwardsApiNative";
 import { fetchProfileSeasonStandingsNative } from "./seasonStandingsApiNative";
-import { L, resolveLocalizedLang } from "@/lib/i18n/localize";
+import { profileAwardsBracketCopy } from "@/lib/profile/profileAwardsBracketCopy";
 
 type Props = {
   uid: string | undefined;
@@ -32,7 +32,7 @@ export default function ProfileAwardsTabNative({
   candidates: candidatesProp,
   standings: standingsProp,
 }: Props) {
-  const lang = resolveLocalizedLang(language);
+  const copy = profileAwardsBracketCopy(language);
   const controlled =
     predictionProp !== undefined || standingsProp !== undefined;
   const [loading, setLoading] = useState(!controlled && Boolean(uid));
@@ -99,17 +99,7 @@ export default function ProfileAwardsTabNative({
 
   if (!uid) {
     return (
-      <Text style={styles.muted}>
-        {L(lang, {
-          ja: "ログインが必要です",
-          en: "Sign in required",
-          ko: "로그인이 필요합니다",
-          zh: "需要登录",
-          es: "Inicia sesión",
-          pt: "Faça login",
-          fr: "Connexion requise",
-        })}
-      </Text>
+      <Text style={styles.muted}>{copy.signInRequired}</Text>
     );
   }
 
@@ -125,17 +115,7 @@ export default function ProfileAwardsTabNative({
     return (
       <View style={styles.noDataBox}>
         <Text style={styles.noDataBebas}>NO DATA</Text>
-        <Text style={styles.muted}>
-          {L(lang, {
-            ja: "提出済みのシーズン予想がありません",
-            en: "No season predictions submitted",
-            ko: "제출된 시즌 예측이 없습니다",
-            zh: "尚无已提交的赛季预测",
-            es: "No hay predicciones de temporada",
-            pt: "Nenhuma previsão de temporada",
-            fr: "Aucune prédiction de saison",
-          })}
-        </Text>
+        <Text style={styles.muted}>{copy.noSeasonPredictions}</Text>
       </View>
     );
   }

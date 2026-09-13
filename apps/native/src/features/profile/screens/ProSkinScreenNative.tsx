@@ -58,6 +58,7 @@ import { db } from "../../../lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import { CYBER_TAB_CYAN } from "../../../ui/cyberSideMenuNative";
 import { useBottomTabBarInsets } from "../../../navigation/useBottomTabBarInsets";
+import { resolveLocalizedLang } from "../../../../../../lib/i18n/localize";
 import { proSkinScreenCopy } from "../proSkinScreenCopy";
 
 const COLS = 2;
@@ -85,9 +86,9 @@ function categoryBadgeColors(category: ProfilePlanProAdoptedCategory): {
   }
 }
 
-function previewPanelProps(language: "ja" | "en") {
+function previewPanelProps(language: string) {
   return {
-    language,
+    language: resolveLocalizedLang(language),
     identity: {
       ...PROFILE_EDIT_KINETIK_MOCK.identity,
       displayName: "UNITERZ",
@@ -166,7 +167,7 @@ function SkinThumbNative({
   unlocked: boolean;
   isNew: boolean;
   owners: number;
-  language: "ja" | "en";
+  language: string;
   progress: {
     posts: number;
     exactHits: number;
@@ -221,7 +222,7 @@ function SkinThumbNative({
         <View style={styles.tileBadgeRow}>
           <View style={[styles.tileCatBadge, { backgroundColor: cat.bg }]}>
             <Text style={[styles.tileCatText, { color: cat.text }]} numberOfLines={1}>
-              {profilePlanProAdoptedCategoryLabel(entry.category, "en")}
+              {profilePlanProAdoptedCategoryLabel(entry.category, language)}
             </Text>
           </View>
           <View
@@ -508,7 +509,7 @@ export default function ProSkinScreenNative() {
                 unlocked={unlockedIds.has(item.id)}
                 isNew={noticeIds.has(item.id)}
                 owners={ownerCounts[item.id] ?? 0}
-                language={copy.catalogLang}
+                language={copy.lang}
                 progress={milestoneProgress}
                 onPress={() => openOverlay(item.id)}
               />
@@ -553,12 +554,12 @@ export default function ProSkinScreenNative() {
                   <Text style={styles.overlayCondition} numberOfLines={2}>
                     {formatProSkinUnlockCondition(
                       overlayEntry.unlock,
-                      copy.catalogLang
+                      copy.lang
                     )}
                     {" · "}
                     {formatProSkinOwnerCount(
                       ownerCounts[overlayEntry.id] ?? 0,
-                      copy.catalogLang
+                      copy.lang
                     )}
                   </Text>
                 </View>
@@ -573,7 +574,7 @@ export default function ProSkinScreenNative() {
                 <View style={styles.openPreview} pointerEvents="none">
                   <ProfileKinetikPanelNative
                     key={`${overlayEntry.id}:${replayByVariant[overlayEntry.id] ?? 0}`}
-                    {...previewPanelProps(copy.catalogLang)}
+                    {...previewPanelProps(copy.lang)}
                     planProBgVariant={overlayEntry.id}
                   />
                 </View>

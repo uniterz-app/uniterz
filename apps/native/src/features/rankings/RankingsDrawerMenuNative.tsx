@@ -11,6 +11,7 @@ import {
 } from "../../ui/cyberSideMenuNative";
 import type { NbaRankingBoard } from "../../../../../lib/rankings/rankingDivision";
 import { rankingsTexts } from "./rankingsTexts";
+import { resolveLocalizedLang } from "../../../../../lib/i18n/localize";
 
 type League = "nba";
 
@@ -50,7 +51,7 @@ export default function RankingsDrawerMenuNative({
   onOpenSquadBattlePreview,
 }: Props) {
   const t = rankingsTexts(language);
-  const labelStyle = sideMenuLabelStyle(language === "ja" ? "ja" : "en");
+  const labelStyle = sideMenuLabelStyle(resolveLocalizedLang(language));
   const nbaClusterActive = league === "nba";
   const regularActive =
     league === "nba" && (nbaBoard === "regular" || nbaBoard === "open");

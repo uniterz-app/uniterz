@@ -4,6 +4,10 @@
 
 import type { Firestore } from "firebase-admin/firestore";
 import {
+  resolveLocalizedLang,
+  type LocalizedLang,
+} from "@/lib/i18n/localize";
+import {
   formatUnitLedgerAmount,
   normalizeUnitLedgerReason,
   unitLedgerReasonDetail,
@@ -30,9 +34,9 @@ function createdAtMsFromDoc(data: Record<string, unknown>): number {
 export async function loadUnitLedgerForUid(
   db: Firestore,
   uid: string,
-  opts?: { limit?: number; language?: "ja" | "en" }
+  opts?: { limit?: number; language?: LocalizedLang | string }
 ): Promise<{ balance: number; entries: UnitLedgerEntry[] }> {
-  const language = opts?.language === "ja" ? "ja" : "en";
+  const language = resolveLocalizedLang(opts?.language);
   const limit = Math.min(100, Math.max(1, opts?.limit ?? 50));
 
   const userSnap = await db.collection("users").doc(uid).get();

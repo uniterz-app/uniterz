@@ -29,13 +29,12 @@ export default function ProfileReportDeliveryOverlay({
   onDismiss,
 }: Props) {
   const lang = resolveLocalizedLang(language);
-  const catalogLang = lang === "ja" ? ("ja" as const) : ("en" as const);
   const kind = active.candidate.kind;
   const title = kind === "weekly" ? "WEEKLY REPORT" : "MONTHLY REPORT";
   const period = formatReportPeriodLabel(
     kind,
     active.candidate.periodKey,
-    catalogLang
+    lang
   );
 
   if (typeof document === "undefined") return null;

@@ -9,6 +9,8 @@ import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, auth, storage } from "@/lib/firebase";
 import { ensureUserSlug } from "@/lib/ensureSlug";
 import { COUNTRY_OPTIONS, FLAG_SRC } from "@/lib/rankings/country";
+import { countryName } from "@/lib/i18n/t";
+import { normalizeLanguage } from "@/lib/i18n/language";
 import CyberAuthField from "./CyberAuthField";
 import CyberAuthSelect from "./CyberAuthSelect";
 import AuthFormBranding from "./AuthFormBranding";
@@ -188,11 +190,15 @@ export default function OnboardingForm({ variant }: Props) {
         }}
       >
         <option value="">{t.countryNotSet}</option>
-        {COUNTRY_OPTIONS.map((c) => (
-          <option key={c.code} value={c.code}>
-            {language === "ja" ? c.labelJa : c.labelEn}
-          </option>
-        ))}
+        {COUNTRY_OPTIONS.map((c) => {
+          const lang = normalizeLanguage(language) ?? "en";
+          const named = countryName(lang, c.code);
+          return (
+            <option key={c.code} value={c.code}>
+              {named && named !== c.code ? named : c.labelEn}
+            </option>
+          );
+        })}
       </CyberAuthSelect>
       <p className="mt-1 font-[family-name:var(--font-geist-sans)] text-xs leading-relaxed text-white/60">
         {t.countryHint}

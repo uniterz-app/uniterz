@@ -7,6 +7,7 @@ export const PUSH_NOTIFICATION_PREF_KEYS = [
   "unitReward",
   "injuryStatus",
   "proInsightUpdate",
+  "weeklyReport",
   "monthlyReport",
 ] as const;
 
@@ -44,6 +45,7 @@ export const DEFAULT_PUSH_NOTIFICATION_PREFS: PushNotificationPrefs = {
   /** Pro 系は明示 ON */
   injuryStatus: false,
   proInsightUpdate: false,
+  weeklyReport: true,
   monthlyReport: true,
   predictionDeadlineMinutes: 30,
 };
@@ -62,6 +64,7 @@ export const PRO_PREGAME_ALERT_PREF_KEYS = [
 /** 送信も UI も Pro 限定（月次レポート含む） */
 export const PRO_ONLY_PREF_KEYS = [
   ...PRO_PREGAME_ALERT_PREF_KEYS,
+  "weeklyReport",
   "monthlyReport",
 ] as const satisfies readonly PushNotificationPrefKey[];
 
@@ -88,6 +91,8 @@ export function prefKeyForPushType(
       return "predictionDeadline";
     case "pro_insight_update":
       return "proInsightUpdate";
+    case "weekly_report":
+      return "weeklyReport";
     case "monthly_report":
       return "monthlyReport";
     case "game_start":
@@ -137,6 +142,10 @@ export function parsePushNotificationPrefs(raw: unknown): PushNotificationPrefs 
     proInsightUpdate: boolOr(
       "proInsightUpdate",
       DEFAULT_PUSH_NOTIFICATION_PREFS.proInsightUpdate
+    ),
+    weeklyReport: boolOr(
+      "weeklyReport",
+      DEFAULT_PUSH_NOTIFICATION_PREFS.weeklyReport
     ),
     monthlyReport: boolOr(
       "monthlyReport",

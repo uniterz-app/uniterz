@@ -157,22 +157,22 @@ export function buildPushNotificationCopy(
         }),
         body: matchup
           ? L(lang, {
-              ja: `${matchup} — 結論が変わりました`,
-              en: `${matchup} — conclusion changed`,
-              ko: `${matchup} — 결론이 바뀌었습니다`,
-              zh: `${matchup} — 结论已变化`,
-              es: `${matchup} — cambió la conclusión`,
-              pt: `${matchup} — a conclusão mudou`,
-              fr: `${matchup} — la conclusion a changé`,
+              ja: `${matchup} — 重要読みが変わりました`,
+              en: `${matchup} — key takes changed`,
+              ko: `${matchup} — 중요 해석이 바뀌었습니다`,
+              zh: `${matchup} — 重要解读已变化`,
+              es: `${matchup} — cambiaron las lecturas clave`,
+              pt: `${matchup} — leituras-chave mudaram`,
+              fr: `${matchup} — lectures clés modifiées`,
             })
           : L(lang, {
-              ja: "重要結論が変わりました。試合を開いて確認してください",
-              en: "The conclusion changed. Open the match",
-              ko: "중요 결론이 바뀌었습니다. 경기를 열어 확인하세요",
-              zh: "重要结论已变化。请打开比赛查看",
-              es: "Cambió la conclusión. Abre el partido",
-              pt: "A conclusão mudou. Abra a partida",
-              fr: "La conclusion a changé. Ouvrez le match",
+              ja: "重要読みが変わりました。試合を開いて確認してください",
+              en: "Key Insight takes changed. Open the match",
+              ko: "중요 해석이 바뀌었습니다. 경기를 열어 확인하세요",
+              zh: "重要解读已变化。请打开比赛查看",
+              es: "Cambiaron las lecturas clave. Abre el partido",
+              pt: "Leituras-chave mudaram. Abra a partida",
+              fr: "Les lectures clés ont changé. Ouvrez le match",
             }),
       };
 
@@ -195,6 +195,28 @@ export function buildPushNotificationCopy(
           es: "Ya puedes ver tu informe de tips del mes",
           pt: "Você já pode ver o relatório de tips do mês",
           fr: "Votre rapport de tips du mois est disponible",
+        }),
+      };
+
+    case "weekly_report":
+      return {
+        title: L(lang, {
+          ja: "週次レポートが届きました",
+          en: "Weekly report is ready",
+          ko: "주간 리포트가 도착했습니다",
+          zh: "周报已送达",
+          es: "Tu informe semanal está listo",
+          pt: "Seu relatório semanal chegou",
+          fr: "Votre rapport hebdomadaire est prêt",
+        }),
+        body: L(lang, {
+          ja: "先週の予想レポートを確認できます",
+          en: "Your weekly prediction report is ready",
+          ko: "지난주 예측 리포트를 확인할 수 있습니다",
+          zh: "可查看上周预测报告",
+          es: "Ya puedes ver tu informe de tips de la semana",
+          pt: "Você já pode ver o relatório de tips da semana",
+          fr: "Votre rapport de tips de la semaine est disponible",
         }),
       };
 

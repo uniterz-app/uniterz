@@ -24,7 +24,8 @@ import SlantCtaNative from "../../ui/SlantCtaNative";
 import { LEAGUES } from "../../../../../lib/leagues";
 import { hideNativeBootSplash } from "../../bootstrap/nativeBootSplash";
 import { resolveDeviceLocalizedLang } from "../../i18n/resolveDeviceAppLanguage";
-import { LANGUAGE_NATIVE_NAMES } from "../../../../../lib/i18n/language";
+import { LANGUAGE_NATIVE_NAMES, type Language } from "../../../../../lib/i18n/language";
+import { countryName } from "../../../../../lib/i18n/t";
 import {
   LOCALIZED_UI_LANGUAGES,
   type LocalizedLang,
@@ -69,8 +70,10 @@ function isImagePickerNativeMissingError(e: unknown): boolean {
 function countryRowLabel(code: string, appLang: LocalizedLang): string {
   const trimmed = code.trim();
   if (!trimmed) return "";
+  const named = countryName(appLang as Language, trimmed);
+  if (named && named !== trimmed) return named;
   const row = COUNTRY_OPTIONS.find((c) => c.code === trimmed);
-  return row ? (appLang === "ja" ? row.labelJa : row.labelEn) : trimmed;
+  return row?.labelEn ?? trimmed;
 }
 
 type PickerKind = "language" | "country" | null;
@@ -485,7 +488,7 @@ export default function OnboardingScreenNative() {
                               ) : null}
                             </View>
                             <Text style={styles.pickerOptionText}>
-                              {language === "ja" ? c.labelJa : c.labelEn}
+                              {countryRowLabel(c.code, language)}
                             </Text>
                           </View>
                           {selected ? (
