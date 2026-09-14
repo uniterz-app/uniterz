@@ -4,11 +4,12 @@ import {
   RESULT_HIT_CYBER_CLIP,
   resultStreakFrameTokens,
 } from "@/lib/result/resultGlass";
+import { showWinStreakSweep } from "@/lib/ui/winStreakBadge";
 
 type Props = {
   activeWinStreak: unknown;
   className?: string;
-  /** 枠を走る走査光（lite 閲覧ではオフ） */
+  /** 枠を走る走査光（lite 閲覧ではオフ）。7 連勝以上のみ実際に描画 */
   showSweep?: boolean;
 };
 
@@ -20,6 +21,7 @@ export default function ResultStreakCyberFrame({
 }: Props) {
   const tokens = resultStreakFrameTokens(activeWinStreak);
   if (!tokens) return null;
+  const sweepOn = showSweep && showWinStreakSweep(activeWinStreak);
 
   return (
     <>
@@ -50,7 +52,7 @@ export default function ResultStreakCyberFrame({
         aria-hidden
       />
 
-      {showSweep ? (
+      {sweepOn ? (
         <div
           className={[
             "pointer-events-none absolute inset-0 z-[11] overflow-hidden",

@@ -558,6 +558,7 @@ export default function ResultDetailBody({
           language={language}
           face={cardFace}
           showDetailTab={false}
+          pickup={cardFace.isPickup}
         />
       </div>
 

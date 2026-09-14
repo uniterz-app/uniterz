@@ -160,8 +160,8 @@ function getStreakBadge(
       : 0;
   const label = resultWinStreakBadgeLabel(language, v);
   if (!label) return null;
-  if (v >= 7) return { label, tone: "gold" };
-  if (v >= 5) return { label, tone: "platinum" };
+  if (v >= 10) return { label, tone: "gold" };
+  if (v >= 7) return { label, tone: "platinum" };
   return { label, tone: "silver" };
 }
 
@@ -498,9 +498,9 @@ function ResultPostCardNativeInner({
   const frameStyle =
     badge === "upset"
       ? styles.cardFrameUpset
-      : badge === "streak" && activeWinStreak >= 7
+      : badge === "streak" && activeWinStreak >= 10
         ? styles.cardFrameStreakGold
-        : badge === "streak" && activeWinStreak >= 5
+        : badge === "streak" && activeWinStreak >= 7
           ? styles.cardFrameStreakPlatinum
           : badge === "streak"
             ? styles.cardFrameStreakSilver
@@ -552,18 +552,21 @@ function ResultPostCardNativeInner({
         : null,
     [leagueKey, post.prediction]
   );
-  // 一覧は matchup-detail を叩かない。game キャッシュにあれば名前だけ補完。
+  // 一覧は matchup-detail を叩かない。game キャッシュがあれば名前・PICK UP を補完。
+  const gameFromCache = useMemo(
+    () =>
+      peekGameDocCacheForResult(
+        typeof post.gameId === "string" ? post.gameId : null
+      ),
+    [post.gameId]
+  );
   const scorerFromGame = useMemo(() => {
-    if (!nbaScorerPick || nbaScorerPick.name) return null;
-    const game = peekGameDocCacheForResult(
-      typeof post.gameId === "string" ? post.gameId : null
-    );
-    if (!game) return null;
+    if (!nbaScorerPick || nbaScorerPick.name || !gameFromCache) return null;
     return {
-      topScorerCandidates: game.topScorerCandidates,
-      leadingScorers: game.leadingScorers,
+      topScorerCandidates: gameFromCache.topScorerCandidates,
+      leadingScorers: gameFromCache.leadingScorers,
     };
-  }, [nbaScorerPick, post.gameId]);
+  }, [nbaScorerPick, gameFromCache]);
 
   const faceModel = useMemo(
     () =>
@@ -581,7 +584,15 @@ function ResultPostCardNativeInner({
                 },
               }
             : {}),
-          ...(gameRoundMeta ? { gameMeta: gameRoundMeta } : {}),
+          gameMeta: {
+            ...(gameRoundMeta ?? {}),
+            ...(gameFromCache
+              ? {
+                  isPickup: gameFromCache.isPickup,
+                  pickupWeekKey: gameFromCache.pickupWeekKey,
+                }
+              : {}),
+          },
           ...(scorerFromGame?.topScorerCandidates
             ? { topScorerCandidates: scorerFromGame.topScorerCandidates }
             : {}),
@@ -590,7 +601,7 @@ function ResultPostCardNativeInner({
             : {}),
         }
       ),
-    [post, gameMarket, gameRoundMeta, scorerFromGame]
+    [post, gameMarket, gameRoundMeta, gameFromCache, scorerFromGame]
   );
 
   const cornerCluster = showCornerControl ? (
@@ -694,6 +705,7 @@ function ResultPostCardNativeInner({
                 face={faceModel}
                 frameGlow
                 showDetailTab
+                pickup={faceModel.isPickup}
                 live={showLiveMark && !pauseListFx}
                 deferJerseys
                 animateDraw={!reduceMotionList && entranceEnabled && !pauseListFx}

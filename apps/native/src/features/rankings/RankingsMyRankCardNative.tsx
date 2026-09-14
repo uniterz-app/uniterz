@@ -111,8 +111,10 @@ export function MyRankCardNative({
     !hideRankProgress &&
     metric === "totalScore" &&
     (displayTier != null || rankProgress !== undefined);
-  const showEstimatedUnits =
-    proTier && estimatedUnits != null && !loading && !statsPending;
+  /** loading 解除まで帯を出さないと初回だけ高さが跳ねて線枠がズレる */
+  const showEstimatedUnitsBand = proTier && estimatedUnits != null;
+  const estimatedUnitsPending =
+    showEstimatedUnitsBand && (!!loading || statsPending);
   const progressSnapshotLimit = resolveMyRankProgressSnapshotLimit({
     displayTier,
     isPro,
@@ -149,7 +151,9 @@ export function MyRankCardNative({
           fr: "Selon les rangs actuels · final en fin de période",
         });
   const estimatedBreakdown =
-    estimatedUnits && estimatedUnits.lines.length > 0
+    estimatedUnitsPending
+      ? null
+      : estimatedUnits && estimatedUnits.lines.length > 0
       ? estimatedUnits.lines
           .map((line) => {
             const label = periodRankingUnitMetricLabel(
@@ -292,15 +296,25 @@ export function MyRankCardNative({
                 </View>
               ) : null}
 
-              {showEstimatedUnits && estimatedUnits ? (
+              {showEstimatedUnitsBand && estimatedUnits ? (
                 <View style={myRankLocalStyles.estUnitsBand}>
                   <View style={myRankLocalStyles.estUnitsRow}>
                     <View style={myRankLocalStyles.estUnitsLeft}>
                       <Text style={myRankLocalStyles.estUnitsLabel}>
                         {estimatedUnitsLabel}
                       </Text>
-                      {estimatedBreakdown ? (
-                        <Text style={myRankLocalStyles.estUnitsBreakdown} numberOfLines={2}>
+                      {estimatedUnits.period === "monthly" ? (
+                        <Text
+                          style={myRankLocalStyles.estUnitsBreakdown}
+                          numberOfLines={2}
+                        >
+                          {estimatedBreakdown ?? " "}
+                        </Text>
+                      ) : estimatedBreakdown ? (
+                        <Text
+                          style={myRankLocalStyles.estUnitsBreakdown}
+                          numberOfLines={2}
+                        >
                           {estimatedBreakdown}
                         </Text>
                       ) : null}
@@ -308,7 +322,9 @@ export function MyRankCardNative({
                     </View>
                     <View style={myRankLocalStyles.estUnitsValueRow}>
                       <Text style={myRankLocalStyles.estUnitsValue}>
-                        +{estimatedUnits.total.toLocaleString("en-US")}
+                        {estimatedUnitsPending
+                          ? "···"
+                          : `+${estimatedUnits.total.toLocaleString("en-US")}`}
                       </Text>
                       <Text style={myRankLocalStyles.estUnitsUnit}>Unit</Text>
                     </View>
@@ -331,6 +347,7 @@ const myRankLocalStyles = StyleSheet.create({
     borderTopColor: "rgba(255,255,255,0.08)",
     paddingHorizontal: 10,
     paddingVertical: 8,
+    minHeight: 52,
   },
   estUnitsRow: {
     flexDirection: "row",
@@ -352,6 +369,7 @@ const myRankLocalStyles = StyleSheet.create({
   },
   estUnitsBreakdown: {
     marginTop: 2,
+    minHeight: 12,
     fontFamily: "Oxanium_700Bold",
     fontSize: 8,
     fontWeight: "600",

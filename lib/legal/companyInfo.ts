@@ -17,7 +17,7 @@ export const COMPANY_ADDRESS =
 export const COMPANY_ADDRESS_FULL = `〒${COMPANY_POSTAL_CODE} ${COMPANY_ADDRESS}`;
 
 export const COMPANY_ADDRESS_EN =
-  "Wizard Bldg. 402, 1-4-3 Asama-cho, Nishi-ku, Yokohama-shi, Kanagawa 220-0073, Japan";
+  "402 Wizard Building, 1-4-3 Asama-cho, Nishi-ku, Yokohama, Kanagawa 220-0073, Japan";
 export const COMPANY_ADDRESS_FULL_EN = COMPANY_ADDRESS_EN;
 
 export const COMPANY_WEB_URL = "https://uniterz.app";

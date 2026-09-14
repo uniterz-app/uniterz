@@ -18,10 +18,12 @@ import PlayerDetailPreviewScreenNative from "../../games/playerDetail/PlayerDeta
 import TeamDetailPreviewScreenNative from "../../games/teamDetail/TeamDetailPreviewScreenNative";
 import LiveGameStatsPreviewScreenNative from "../../games/live/LiveGameStatsPreviewScreenNative";
 import ProLeagueTeaserPreviewScreenNative from "../../rankings/ProLeagueTeaserPreviewScreenNative";
+import StreakFramePreviewScreenNative from "../../rankings/StreakFramePreviewScreenNative";
 import ProInsightGatePreviewScreenNative from "../../games/predict/ProInsightGatePreviewScreenNative";
 import ProInsightNarrativePreviewScreenNative from "../../games/predict/ProInsightNarrativePreviewScreenNative";
 import MatchupTeamStatsPreviewScreenNative from "../../games/predict/MatchupTeamStatsPreviewScreenNative";
 import ResultDetailPreviewScreenNative from "../../results/ResultDetailPreviewScreenNative";
+import ResultPickupPreviewScreenNative from "../../results/ResultPickupPreviewScreenNative";
 import type { ProfileStackParamList } from "../../../navigation/types";
 import { resolveLocalizedLang } from "@/lib/i18n/localize";
 
@@ -248,6 +250,32 @@ export function ProLeagueTeaserPreviewScreenWrapper() {
       language={resolveLocalizedLang(language) === "ja" ? "ja" : "en"}
       onClose={() => navigation.goBack()}
       onPressSubscribe={() => navigation.navigate("ProSubscribe")}
+    />
+  );
+}
+
+export function StreakFramePreviewScreenWrapper() {
+  const navigation =
+    useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
+  const { fUser } = useFirebaseUser();
+  const { language } = useNativeUserLanguage(fUser?.uid);
+  return (
+    <StreakFramePreviewScreenNative
+      language={language}
+      onClose={() => navigation.goBack()}
+    />
+  );
+}
+
+export function ResultPickupPreviewScreenWrapper() {
+  const navigation =
+    useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
+  const { fUser } = useFirebaseUser();
+  const { language } = useNativeUserLanguage(fUser?.uid);
+  return (
+    <ResultPickupPreviewScreenNative
+      language={language}
+      onClose={() => navigation.goBack()}
     />
   );
 }

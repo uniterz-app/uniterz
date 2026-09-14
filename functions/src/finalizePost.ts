@@ -101,6 +101,9 @@ export async function finalizePost({
     ...(isWc ? { matchGoalScorers } : {}),
     ...pkScorePatch,
 
+    /** 一覧が games を読まずに左辺 PICK UP を出せるよう埋め込み */
+    isPickup,
+
     marketMeta: {
       majoritySide: market.majoritySide,
       majorityRatio: market.majorityRatio,

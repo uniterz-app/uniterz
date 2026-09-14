@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { type LayoutChangeEvent, StyleSheet, View } from "react-native";
 import { resultStreakTier } from "../../../../../lib/result/resultGlass";
 import { resultStreakBorderSweepVariant } from "../../../../../lib/result/resultFrameBorderSweep";
+import { showWinStreakSweep } from "../../../../../lib/ui/winStreakBadge";
 import { useScreenActiveNative } from "../../hooks/useScreenActiveNative";
 import { useNearViewportNative } from "../games/ScrollVisibilityNative";
 import ResultCyberFrameBorderSweepNative from "./ResultCyberFrameBorderSweepNative";
@@ -24,8 +25,8 @@ type Props = {
 /** Web `ResultStreakCyberFrame` */
 export default function ResultStreakCyberFrameNative({
   activeWinStreak,
-  /** 一覧は GPU 負荷のため false（Predict オーバーレイ等のみ true） */
-  showSweep = false,
+  /** 走査光。7 連勝未満は内部で描画しない */
+  showSweep = true,
   shellContext = "default",
   effectsActive = true,
 }: Props) {
@@ -35,6 +36,7 @@ export default function ResultStreakCyberFrameNative({
   const { near, onLayout: onNearLayout } = useNearViewportNative(hostRef, true);
   const [size, setSize] = useState({ w: 0, h: 0 });
   const showFx = effectsActive && screenActive && near;
+  const sweepOn = showSweep && showWinStreakSweep(activeWinStreak);
 
   function onLayout(e: LayoutChangeEvent) {
     onNearLayout();
@@ -69,7 +71,7 @@ export default function ResultStreakCyberFrameNative({
       ) : null}
 
       {showFx &&
-      showSweep &&
+      sweepOn &&
       shellContext !== "predictOverlay" &&
       size.w > 0 &&
       size.h > 0 ? (

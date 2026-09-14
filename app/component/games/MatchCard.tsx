@@ -601,6 +601,7 @@ const isMobile = prefix === "/mobile" || prefix.startsWith("/m/");
       },
       gameMeta: {
         roundLabel: displayedRoundLabel || roundLabel,
+        isPickup,
       },
       ...(topScorerCandidates?.length
         ? { topScorerCandidates }
@@ -616,6 +617,7 @@ const isMobile = prefix === "/mobile" || prefix.startsWith("/m/");
     displayedRoundLabel,
     roundLabel,
     topScorerCandidates,
+    isPickup,
   ]);
   const predictedScore =
     resultPost?.prediction?.score != null

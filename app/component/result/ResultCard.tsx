@@ -186,16 +186,18 @@ function ResultCardPresentationImpl({
         : null,
     [normalizedLeague, post.prediction]
   );
-  // 一覧は matchup-detail を叩かない。games キャッシュにあれば名前だけ補完。
+  // 一覧は matchup-detail を叩かない。games キャッシュがあれば名前・PICK UP を補完。
+  const gameFromCache = useMemo(
+    () => peekGameDocCacheForResult(post.gameId),
+    [post.gameId]
+  );
   const scorerFromGame = useMemo(() => {
-    if (!nbaScorerPick || nbaScorerPick.name) return null;
-    const game = peekGameDocCacheForResult(post.gameId);
-    if (!game) return null;
+    if (!nbaScorerPick || nbaScorerPick.name || !gameFromCache) return null;
     return {
-      topScorerCandidates: game.topScorerCandidates,
-      leadingScorers: game.leadingScorers,
+      topScorerCandidates: gameFromCache.topScorerCandidates,
+      leadingScorers: gameFromCache.leadingScorers,
     };
-  }, [nbaScorerPick, post.gameId]);
+  }, [nbaScorerPick, gameFromCache]);
 
   const faceModel = useMemo(
     () =>
@@ -210,7 +212,15 @@ function ResultCardPresentationImpl({
                 },
               }
             : {}),
-          ...(gameRoundMeta ? { gameMeta: gameRoundMeta } : {}),
+          gameMeta: {
+            ...(gameRoundMeta ?? {}),
+            ...(gameFromCache
+              ? {
+                  isPickup: gameFromCache.isPickup,
+                  pickupWeekKey: gameFromCache.pickupWeekKey,
+                }
+              : {}),
+          },
           ...(scorerFromGame?.topScorerCandidates
             ? { topScorerCandidates: scorerFromGame.topScorerCandidates }
             : {}),
@@ -219,7 +229,7 @@ function ResultCardPresentationImpl({
             : {}),
         }
       ),
-    [post, gameMarket, gameRoundMeta, scorerFromGame]
+    [post, gameMarket, gameRoundMeta, gameFromCache, scorerFromGame]
   );
 
   const cornerMenu = showCornerControl ? (

@@ -187,6 +187,8 @@ function RectShell({
   badge,
   paint: paintProp,
   topLabel,
+  leftLabel,
+  pickup = false,
   onOpenDetail,
   showDetailTab = false,
   strokeEnd,
@@ -199,6 +201,9 @@ function RectShell({
   badge: OutcomeBadge;
   paint?: { color: string; glow: string };
   topLabel?: string;
+  /** ピックアップ時の左辺縦ラベル（`PICK UP`） */
+  leftLabel?: string;
+  pickup?: boolean;
   onOpenDetail?: () => void;
   /** true: カード右下に ›（詳細へ） */
   showDetailTab?: boolean;
@@ -235,6 +240,8 @@ function RectShell({
   const shell = (
     <MatchListLineFrameNative
       topLabel={topLabel}
+      leftLabel={leftLabel}
+      pickup={pickup}
       paint={paint}
       strokeEnd={strokeEnd}
       animateDraw={animateDraw}
@@ -676,6 +683,8 @@ function Plan1Card({
   showDetailTab = false,
   frameGlow = true,
   bare = false,
+  pickup = false,
+  leftLabel,
   tutorialMetricsTargetId,
   strokeEnd,
   animateDraw = false,
@@ -693,6 +702,8 @@ function Plan1Card({
   showDetailTab?: boolean;
   frameGlow?: boolean;
   bare?: boolean;
+  pickup?: boolean;
+  leftLabel?: string;
   tutorialMetricsTargetId?: string;
   strokeEnd?: SharedValue<number>;
   animateDraw?: boolean;
@@ -706,6 +717,7 @@ function Plan1Card({
     ? RESULT_LINE_FRAME_PAINT[badge]
     : RESULT_PENDING_LINE_FRAME_PAINT;
   const shellBadge: OutcomeBadge = badge ?? "miss";
+  const pickupLeft = leftLabel ?? (pickup ? "PICK UP" : undefined);
   const body = (
     <View style={styles.pad}>
       <TopBar
@@ -743,6 +755,8 @@ function Plan1Card({
     return (
       <MatchListLineFrameNative
         topLabel={sample.roundLabel}
+        leftLabel={pickupLeft}
+        pickup={pickup}
         paint={paint}
         strokeEnd={strokeEnd}
         animateDraw={animateDraw}
@@ -758,6 +772,8 @@ function Plan1Card({
       badge={shellBadge}
       paint={paint}
       topLabel={sample.roundLabel}
+      leftLabel={pickupLeft}
+      pickup={pickup}
       onOpenDetail={onOpenDetail}
       showDetailTab={showDetailTab}
       frameGlow={frameGlow}
@@ -783,6 +799,9 @@ export function ResultCardDesignFaceNative({
   bare = false,
   frameGlow = false,
   showDetailTab = false,
+  /** マッチ同様・左辺 `PICK UP` */
+  pickup = false,
+  leftLabel,
   onOpenDetail,
   tutorialMetricsTargetId,
   strokeEnd,
@@ -819,10 +838,13 @@ export function ResultCardDesignFaceNative({
     winStreak: number;
     outcomeBadge?: OutcomeBadge | null;
     scoreRel?: ScoreRelKind;
+    isPickup?: boolean;
   };
   bare?: boolean;
   frameGlow?: boolean;
   showDetailTab?: boolean;
+  pickup?: boolean;
+  leftLabel?: string;
   onOpenDetail?: () => void;
   /** チュートリアル穴（Upset / Score 行） */
   tutorialMetricsTargetId?: string;
@@ -896,6 +918,7 @@ export function ResultCardDesignFaceNative({
   const resolvedScoreRel = settledFromFace
     ? (scoreRel ?? face?.scoreRel ?? "none")
     : "none";
+  const resolvedPickup = pickup || face?.isPickup === true;
 
   return (
     <Plan1Card
@@ -908,6 +931,8 @@ export function ResultCardDesignFaceNative({
       onOpenDetail={onOpenDetail}
       frameGlow={frameGlow}
       bare={bare}
+      pickup={resolvedPickup}
+      leftLabel={leftLabel}
       tutorialMetricsTargetId={tutorialMetricsTargetId}
       strokeEnd={strokeEnd}
       animateDraw={animateDraw}

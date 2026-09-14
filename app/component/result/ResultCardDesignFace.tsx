@@ -105,6 +105,8 @@ type Props = {
   onOpen?: (e: MouseEvent<HTMLDivElement>) => void;
   /** 開始〜確定まで。判定前カードの LIVE 表示 */
   live?: boolean;
+  /** 明示上書き。省略時は face.isPickup */
+  pickup?: boolean;
 };
 
 export default function ResultCardDesignFace({
@@ -115,6 +117,7 @@ export default function ResultCardDesignFace({
   drawDelaySec = 0,
   onOpen,
   live = false,
+  pickup: pickupProp,
 }: Props) {
   const reduceMotion = useReducedMotion();
   const copy = resultCardFaceCopy(language);
@@ -127,6 +130,7 @@ export default function ResultCardDesignFace({
   const paint = badge
     ? RESULT_LINE_FRAME_PAINT[badge]
     : RESULT_PENDING_LINE_FRAME_PAINT;
+  const isPickup = pickupProp ?? face.isPickup === true;
   const league = normalizeLeague(face.league);
   const homeJerseyPrimary =
     getTeamJerseyPrimaryColor(league, face.homeTeamId) ?? "#EF4444";
@@ -187,6 +191,8 @@ export default function ResultCardDesignFace({
     <div className={styles.wrap}>
       <MatchListLineFrame
       topLabel={face.roundLabel}
+      leftLabel={isPickup ? "PICK UP" : undefined}
+      pickup={isPickup}
       paint={paint}
       animateDraw={shouldDraw}
       drawDelaySec={drawDelaySec}

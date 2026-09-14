@@ -93,6 +93,8 @@ type Props = {
     | "resultDetailPreview"
     | "leagueStatsPreview"
     | "proLeagueTeaserPreview"
+    | "streakFramePreview"
+    | "resultPickupPreview"
     | "proInsightGatePreview"
     | "proInsightNarrativePreview"
     | "matchupTeamStatsPreview"
@@ -261,6 +263,8 @@ export default function ProfileSideMenuModal({
       | "resultDetailPreview"
       | "leagueStatsPreview"
       | "proLeagueTeaserPreview"
+      | "streakFramePreview"
+      | "resultPickupPreview"
       | "proInsightGatePreview"
       | "proInsightNarrativePreview"
       | "matchupTeamStatsPreview"
@@ -678,6 +682,22 @@ export default function ProfileSideMenuModal({
                           onPress={() => openUserPage("proLeagueTeaserPreview")}
                         >
                           PRO LEAGUE ゲート
+                        </SideMenuItemButtonNative>
+                        <SideMenuItemButtonNative
+                          icon="flash-outline"
+                          dense
+                          labelStyle={labelStyle}
+                          onPress={() => openUserPage("streakFramePreview")}
+                        >
+                          連勝フレーム光
+                        </SideMenuItemButtonNative>
+                        <SideMenuItemButtonNative
+                          icon="bookmark-outline"
+                          dense
+                          labelStyle={labelStyle}
+                          onPress={() => openUserPage("resultPickupPreview")}
+                        >
+                          リザルト PICK UP
                         </SideMenuItemButtonNative>
                         <SideMenuItemButtonNative
                           icon="lightbulb-on-outline"

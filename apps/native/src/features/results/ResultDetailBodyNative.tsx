@@ -592,6 +592,7 @@ export default function ResultDetailBodyNative({
             badge={cardBadge}
             scoreRel={scoreRel}
             face={cardFace}
+            pickup={cardFace.isPickup}
             live={
               cardFace.resultHome == null &&
               cardFace.resultAway == null &&

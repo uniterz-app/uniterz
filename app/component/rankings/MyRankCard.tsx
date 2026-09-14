@@ -619,8 +619,9 @@ export default function MyRankCard({
     !hideRankProgress &&
     metric === "totalScore" &&
     (displayTier != null || rankProgress !== undefined);
-  const showEstimatedUnits =
-    proTier && estimatedUnits != null && !loading && !statsPending;
+  /** loading 解除まで帯を出さないと初回だけ高さが跳ねて線枠がズレる */
+  const showEstimatedUnitsBand = proTier && estimatedUnits != null;
+  const estimatedUnitsPending = showEstimatedUnitsBand && (loading || statsPending);
   const progressSnapshotLimit = resolveMyRankProgressSnapshotLimit({
     displayTier,
     isPro,
@@ -658,7 +659,9 @@ export default function MyRankCard({
           fr: "Selon les rangs actuels · final en fin de période",
         });
   const estimatedBreakdown =
-    estimatedUnits && estimatedUnits.lines.length > 0
+    estimatedUnitsPending
+      ? null
+      : estimatedUnits && estimatedUnits.lines.length > 0
       ? estimatedUnits.lines
           .map((line) => {
             const label = periodRankingUnitMetricLabel(
@@ -893,9 +896,9 @@ export default function MyRankCard({
             </div>
           ) : null}
 
-          {showEstimatedUnits && estimatedUnits ? (
+          {showEstimatedUnitsBand && estimatedUnits ? (
             <div
-              className="border-t px-2.5 py-2"
+              className="min-h-[52px] border-t px-2.5 py-2"
               style={{ borderColor: "rgba(255,255,255,0.08)" }}
             >
               <div className="flex items-center justify-between gap-2">
@@ -908,7 +911,16 @@ export default function MyRankCard({
                   >
                     {estimatedUnitsLabel}
                   </p>
-                  {estimatedBreakdown ? (
+                  {estimatedUnits.period === "monthly" ? (
+                    <p
+                      className={[
+                        nameOxanium.className,
+                        "mt-0.5 min-h-[12px] truncate text-[8px] font-semibold uppercase tracking-[0.08em] text-white/40",
+                      ].join(" ")}
+                    >
+                      {estimatedBreakdown ?? "\u00a0"}
+                    </p>
+                  ) : estimatedBreakdown ? (
                     <p
                       className={[
                         nameOxanium.className,
@@ -934,7 +946,9 @@ export default function MyRankCard({
                   ].join(" ")}
                   style={{ color: GOLD, transform: "skewX(-12deg)" }}
                 >
-                  +{estimatedUnits.total.toLocaleString("en-US")}
+                  {estimatedUnitsPending
+                    ? "···"
+                    : `+${estimatedUnits.total.toLocaleString("en-US")}`}
                   <span
                     className="ml-1.5 text-[11px] font-extrabold uppercase tracking-[0.1em]"
                     style={{ color: "rgba(255,214,90,0.78)" }}

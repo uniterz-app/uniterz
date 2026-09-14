@@ -9,6 +9,11 @@
 
 import { INFO_EMAIL, SUPPORT_EMAIL } from "@/lib/contact/companyEmails";
 import {
+  COMPANY_ADDRESS,
+  COMPANY_LEGAL_NAME,
+  COMPANY_REPRESENTATIVE,
+} from "@/lib/legal/companyInfo";
+import {
   TOKUSHOHO_HEADING,
   TOKUSHOHO_LEAD,
   TOKUSHOHO_ROWS,
@@ -51,9 +56,9 @@ export const officialSite = {
     { id: "contact", label: "Contact" },
   ],
   company: {
-    name: "株式会社UNITERZ",
-    address: "神奈川県横浜市西区浅間町1-4-3 ウィザードビル402",
-    representative: "神谷陸登",
+    name: COMPANY_LEGAL_NAME,
+    address: COMPANY_ADDRESS,
+    representative: COMPANY_REPRESENTATIVE,
     founded: "準備中",
     corporateNumber: "取得後に追加",
     business: "スポーツ予想アプリケーションの企画・開発・運営",

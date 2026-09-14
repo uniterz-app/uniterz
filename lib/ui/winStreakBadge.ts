@@ -14,15 +14,18 @@ export type WinStreakBadgeStyle = {
   iconClassName: string;
 };
 
-/** プロフィールヒーロー等：枠を走る光スイープ（リザルトカード連勝と同型） */
+/** プロフィールヒーロー等：枠を走る光スイープ（リザルトカード連勝と同型・7連勝〜） */
 export function showWinStreakSweep(activeWinStreak: unknown): boolean {
-  return normalizeWinStreak(activeWinStreak) >= 5;
+  return normalizeWinStreak(activeWinStreak) >= 7;
 }
 
-/** 5連勝以上のカード／ヒーロー外枠（ResultCard 連勝 frame と同等） */
+/** 5–6 オレンジ / 7–9 強めの赤寄り / 10+ さらに強い赤 */
 export function getWinStreakShellFrameClass(activeWinStreak: unknown): string {
   const v = normalizeWinStreak(activeWinStreak);
   if (v < 5) return "";
+  if (v >= 10) {
+    return "border border-red-400 ring-2 ring-red-400/80 shadow-[0_0_26px_rgba(239,68,68,0.55)]";
+  }
   if (v >= 7) {
     return "border border-red-400 ring-2 ring-red-400/70 shadow-[0_0_22px_rgba(239,68,68,0.45)]";
   }

@@ -160,6 +160,8 @@ export function buildResultDetailViewFromLoad(
           playoffRound: game.playoffRound,
           seasonRound: game.seasonRound,
           seasonPhase: game.seasonPhase,
+          isPickup: game.isPickup,
+          pickupWeekKey: game.pickupWeekKey,
         }
       : null,
     viewer,

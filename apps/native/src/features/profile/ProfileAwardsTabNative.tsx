@@ -15,6 +15,11 @@ import type { NbaSeasonStandingsPrediction } from "../../../../../lib/predict/nb
 import { fetchProfileSeasonAwardsNative } from "./seasonAwardsApiNative";
 import { fetchProfileSeasonStandingsNative } from "./seasonStandingsApiNative";
 import { profileAwardsBracketCopy } from "@/lib/profile/profileAwardsBracketCopy";
+import { PROFILE_CHART_CYBER } from "./profileOverviewChartCyberTheme";
+import {
+  profileOverviewChartEmptyHintStyle,
+  profileOverviewChartNoDataStyle,
+} from "./profileOverviewChartShell";
 
 type Props = {
   uid: string | undefined;
@@ -113,9 +118,9 @@ export default function ProfileAwardsTabNative({
 
   if (!prediction && !standings) {
     return (
-      <View style={styles.noDataBox}>
-        <Text style={styles.noDataBebas}>NO DATA</Text>
-        <Text style={styles.muted}>{copy.noSeasonPredictions}</Text>
+      <View style={styles.noDataBox} accessibilityRole="text">
+        <Text style={styles.noData}>NO DATA</Text>
+        <Text style={styles.noDataHint}>{copy.noSeasonPredictions}</Text>
       </View>
     );
   }
@@ -154,19 +159,19 @@ const styles = StyleSheet.create({
   },
   noDataBox: {
     marginTop: 16,
-    paddingVertical: 28,
+    minHeight: 180,
+    paddingVertical: 36,
     paddingHorizontal: 16,
-    borderRadius: 16,
+    borderRadius: 2,
+    backgroundColor: PROFILE_CHART_CYBER.rankPlotInnerBg,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
-    backgroundColor: "rgba(255,255,255,0.04)",
+    borderColor: PROFILE_CHART_CYBER.glassBorder,
     alignItems: "center",
-    gap: 8,
+    justifyContent: "center",
   },
-  noDataBebas: {
-    fontFamily: "BebasNeue_400Regular",
-    fontSize: 36,
-    letterSpacing: 4,
-    color: "rgba(255,255,255,0.55)",
+  noData: profileOverviewChartNoDataStyle,
+  noDataHint: {
+    ...profileOverviewChartEmptyHintStyle,
+    maxWidth: 260,
   },
 });

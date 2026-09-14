@@ -172,6 +172,10 @@ export type ProfileStackParamList = {
   ResultDetailPreview: undefined;
   /** __DEV__ Free → PRO LEAGUE ゲート（ティーザー） */
   ProLeagueTeaserPreview: undefined;
+  /** __DEV__ 連勝枠の光（1位エッジ vs conic） */
+  StreakFramePreview: undefined;
+  /** __DEV__ リザルト左辺 PICK UP */
+  ResultPickupPreview: undefined;
   ProInsightGatePreview: undefined;
   /** __DEV__ 新 Pro Insight ナラティブ UI（HOME/AWAY 短文） */
   ProInsightNarrativePreview: undefined;

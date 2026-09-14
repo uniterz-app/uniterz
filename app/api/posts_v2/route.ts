@@ -30,6 +30,7 @@ import {
   readLiveMarketCounts,
 } from "@/lib/predict/liveGameMarket";
 import { consumeUidActionRateLimit } from "@/lib/security/consumeUidRateLimit";
+import { isNbaPickupGame } from "@/lib/nba/isPickupGame";
 
 /* ========= 型 ========= */
 type Status = "scheduled" | "live" | "final";
@@ -360,6 +361,11 @@ export async function POST(req: Request) {
           ? g.roundLabel.trim()
           : null,
       wcStage: resolveWcStageFromGame(g) ?? g?.wcStage ?? null,
+      /** 一覧カード左辺 PICK UP（games を都度読まない） */
+      isPickup: isNbaPickupGame(g),
+      ...(typeof g?.pickupWeekKey === "string" && g.pickupWeekKey.trim()
+        ? { pickupWeekKey: g.pickupWeekKey.trim() }
+        : {}),
       home: g?.home ?? null,
       away: g?.away ?? null,
       status: (g?.status as Status) || "scheduled",

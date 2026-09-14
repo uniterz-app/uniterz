@@ -106,6 +106,7 @@ import {
 } from "@/lib/profile/profileVisualEffects";
 import { useProfileViewCount } from "@/lib/profile/useProfileViewCount";
 import { profileAwardsBracketCopy } from "@/lib/profile/profileAwardsBracketCopy";
+import { PROFILE_CHART_CYBER } from "@/lib/profile/profileOverviewChartCyberTheme";
 export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -416,9 +417,17 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
               <CandleChartLoader />
             </div>
           ) : !playoffDisplayData ? (
-            <div className="mt-4 rounded-2xl border border-white/10 bg-[rgba(5,8,20,0.55)] px-6 py-6 text-center">
-              <CyberNoDataLabel variant="bracket" />
-              <p className="mt-2 text-sm text-white/45">
+            <div
+              role="status"
+              className="mt-4 grid min-h-[180px] place-items-center px-4 py-10 text-center"
+              style={{
+                borderRadius: 2,
+                background: PROFILE_CHART_CYBER.rankPlotInnerBg,
+                boxShadow: `inset 0 0 0 1px ${PROFILE_CHART_CYBER.glassBorder}`,
+              }}
+            >
+              <CyberNoDataLabel variant="progress" />
+              <p className="mt-2 max-w-[260px] text-center text-[11px] leading-snug text-white/40">
                 {awardsBracketCopy.noPlayoffBracket}
               </p>
             </div>

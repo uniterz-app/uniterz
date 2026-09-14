@@ -11,6 +11,7 @@ import { fetchProfileSeasonAwards } from "@/lib/api/fetchSeasonAwards";
 import { fetchProfileSeasonStandings } from "@/lib/api/fetchSeasonStandings";
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
 import { CyberNoDataLabel } from "@/app/component/common/CyberNoDataLabel";
+import { PROFILE_CHART_CYBER } from "@/lib/profile/profileOverviewChartCyberTheme";
 import { CYBER_GLASS_PANEL } from "@/lib/ui/matchOverlayGlass";
 import { profileAwardsBracketCopy } from "@/lib/profile/profileAwardsBracketCopy";
 import type {
@@ -117,15 +118,23 @@ export default function ProfileAwardsTab({
   if (!prediction && !standings) {
     return (
       <div
+        role="status"
         className={[
-          "mt-4 space-y-2 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-7 text-center",
+          "mt-4 grid min-h-[180px] place-items-center px-4 py-10 text-center",
           className,
         ]
           .filter(Boolean)
           .join(" ")}
+        style={{
+          borderRadius: 2,
+          background: PROFILE_CHART_CYBER.rankPlotInnerBg,
+          boxShadow: `inset 0 0 0 1px ${PROFILE_CHART_CYBER.glassBorder}`,
+        }}
       >
-        <CyberNoDataLabel variant="awards" />
-        <p className="text-sm text-white/45">{copy.noSeasonPredictions}</p>
+        <CyberNoDataLabel variant="progress" />
+        <p className="mt-2 max-w-[260px] text-center text-[11px] leading-snug text-white/40">
+          {copy.noSeasonPredictions}
+        </p>
       </div>
     );
   }

@@ -497,6 +497,24 @@ function ProfileStackScreen() {
         ) : null}
         {__DEV__ ? (
           <ProfileStack.Screen
+            name="StreakFramePreview"
+            getComponent={() =>
+              require("../features/profile/screens/ProfileStackWrappers")
+                .StreakFramePreviewScreenWrapper
+            }
+          />
+        ) : null}
+        {__DEV__ ? (
+          <ProfileStack.Screen
+            name="ResultPickupPreview"
+            getComponent={() =>
+              require("../features/profile/screens/ProfileStackWrappers")
+                .ResultPickupPreviewScreenWrapper
+            }
+          />
+        ) : null}
+        {__DEV__ ? (
+          <ProfileStack.Screen
             name="ProInsightGatePreview"
             getComponent={() =>
               require("../features/profile/screens/ProfileStackWrappers")

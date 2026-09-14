@@ -70,6 +70,7 @@ export function MyRankCardFrame({
         flush
         closedTop
         animateDraw={draw}
+        fadeContent={false}
         paint={paint}
       >
         {proSpec ? null : (

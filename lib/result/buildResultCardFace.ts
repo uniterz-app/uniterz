@@ -25,6 +25,7 @@ import type { GamePointsSummaryV1 } from "@/lib/results/gamePointsSummary";
 import { getTeamAlias } from "@/lib/team-alias";
 import { splitTeamNameByLeague } from "@/lib/team-name-split";
 import { TEAM_SHORT } from "@/lib/team-short";
+import { isResultPostPickup } from "@/lib/result/isResultPostPickup";
 
 function toNum(v: unknown, fallback = 0): number {
   return typeof v === "number" && Number.isFinite(v) ? v : fallback;
@@ -131,6 +132,8 @@ export type ResultCardFaceModel = {
   badges: ResultBadgeDisplay;
   scoreRel: ResultScoreRelKind;
   breakdown: ResultSettlementBreakdown;
+  /** ピックアップ試合（左辺 PICK UP）。post / stats / game 補完 */
+  isPickup: boolean;
 };
 
 function asMarketPct(v: unknown): number | undefined {
@@ -235,6 +238,8 @@ export type ResultCardFaceGameMeta = {
   playoffRound?: unknown;
   seasonRound?: unknown;
   seasonPhase?: unknown;
+  isPickup?: unknown;
+  pickupWeekKey?: unknown;
 };
 
 export function buildResultCardFaceModel(
@@ -342,5 +347,6 @@ export function buildResultCardFaceModel(
     badges,
     scoreRel,
     breakdown,
+    isPickup: isResultPostPickup(post, options?.gameMeta ?? null),
   };
 }

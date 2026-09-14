@@ -1783,6 +1783,10 @@ export default function ProfileHomeScreen({
           navigation.navigate("LeagueStatsPreview");
         else if (page === "proLeagueTeaserPreview" && __DEV__)
           navigation.navigate("ProLeagueTeaserPreview");
+        else if (page === "streakFramePreview" && __DEV__)
+          navigation.navigate("StreakFramePreview");
+        else if (page === "resultPickupPreview" && __DEV__)
+          navigation.navigate("ResultPickupPreview");
         else if (page === "proInsightGatePreview" && __DEV__)
           navigation.navigate("ProInsightGatePreview");
         else if (page === "proInsightNarrativePreview" && __DEV__)

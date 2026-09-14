@@ -664,6 +664,7 @@ export function PredictMatchPreview({
           language={language === "ja" ? "ja" : "en"}
           face={resultFace}
           showDetailTab={false}
+          pickup={resultFace.isPickup}
           live={resultFaceLive}
           tutorialMetricsTargetId="result-detail-metrics"
         />
@@ -1190,6 +1191,11 @@ export default function PredictModal({
         : {}),
       gameMeta: {
         roundLabel: matchPreview.roundLabel,
+        isPickup: (predictData?.subjectGame as { isPickup?: unknown } | undefined)
+          ?.isPickup,
+        pickupWeekKey: (
+          predictData?.subjectGame as { pickupWeekKey?: unknown } | undefined
+        )?.pickupWeekKey,
       },
       ...(nbaTopScorerCandidates.length > 0
         ? { topScorerCandidates: nbaTopScorerCandidates }
@@ -1216,7 +1222,7 @@ export default function PredictModal({
     myPostId,
     predictData?.gameId,
     predictData?.league,
-    predictData?.subjectGame?.leadingScorers,
+    predictData?.subjectGame,
     goalScorerPick,
     resultPostStats,
     nbaTopScorerCandidates,
