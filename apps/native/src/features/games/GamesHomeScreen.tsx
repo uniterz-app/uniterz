@@ -107,6 +107,7 @@ import {
   writePredictNextGameModalSkip,
 } from "./predictNextGameModalPrefs";
 import { scheduleAfterPredictModalDismissed } from "./scheduleAfterPredictModalDismissed";
+import { requestPushPermissionPrimerAfterPredict } from "../../notifications/requestPushPermissionPrimerNative";
 import {
   GameCardListEmpty,
   GameCardListRow,
@@ -2304,15 +2305,28 @@ export default function GamesHomeScreen({
       setSelectedGame(null);
 
       scheduleAfterPredictModalDismissed(() => {
-        if (isEditing) {
-          cyberAlert(t.updateDone, t.updateDoneOnly);
-        } else if (skipNextModal) {
-          cyberAlert(t.postDone, t.postDoneOnly);
-        } else if (nextGame) {
-          setNextGameAfterPost(nextGame);
-        } else {
-          cyberAlert(t.postDone, t.postDoneOnly);
+        const continueAfterPostUi = () => {
+          if (isEditing) {
+            cyberAlert(t.updateDone, t.updateDoneOnly);
+          } else if (skipNextModal) {
+            cyberAlert(t.postDone, t.postDoneOnly);
+          } else if (nextGame) {
+            setNextGameAfterPost(nextGame);
+          } else {
+            cyberAlert(t.postDone, t.postDoneOnly);
+          }
+        };
+
+        // 新規投稿の直後だけ通知プリマー（編集・チュートリアルは出さない）
+        if (
+          !isEditing &&
+          !tutorialActive &&
+          gameId !== TUTORIAL_NBA_GAME_ID
+        ) {
+          requestPushPermissionPrimerAfterPredict(continueAfterPostUi);
+          return;
         }
+        continueAfterPostUi();
       });
     } catch (error: unknown) {
       const msg =
