@@ -1,6 +1,7 @@
 /** Web `composeBrandedRankCard` 相当 — PNG 内に URL を控えめに表示（区切り線なし） */
 import { StyleSheet, Text, View } from "react-native";
 import { formatShareLinkDisplay } from "../../../../../lib/share/shareAppUrls";
+import { SHARE_CAPTURE_BG } from "./shareImageNative";
 
 type Props = {
   url: string;
@@ -25,10 +26,11 @@ export default function ShareLinkCaptureFooterNative({
 
 const styles = StyleSheet.create({
   wrap: {
-    backgroundColor: "transparent",
+    /** 透明だと写真アプリで白落ちし URL が消える */
+    backgroundColor: SHARE_CAPTURE_BG,
     paddingHorizontal: 12,
-    paddingTop: 4,
-    paddingBottom: 10,
+    paddingTop: 8,
+    paddingBottom: 12,
     alignItems: "center",
   },
   wrapHidden: {
@@ -37,11 +39,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 0,
     opacity: 0,
     overflow: "hidden",
+    backgroundColor: "transparent",
   },
   text: {
-    fontSize: 10,
-    letterSpacing: 0.3,
-    color: "rgba(140,240,255,0.55)",
+    fontSize: 11,
+    letterSpacing: 0.35,
+    color: "rgba(165,243,252,0.88)",
     includeFontPadding: false,
   },
 });

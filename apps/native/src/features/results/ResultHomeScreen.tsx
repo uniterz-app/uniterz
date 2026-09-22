@@ -127,9 +127,6 @@ import {
   type ResultStatRowEntranceMeta,
 } from "./useResultHomeEntrance";
 import { useTeamRecordLineNative } from "../games/useTeamRecordLineNative";
-import { shareResultCardNative } from "./shareResultCardNative";
-import ShareLinkCaptureFooterNative from "../share/ShareLinkCaptureFooterNative";
-import { buildResultShareUrl, getShareAppOrigin } from "../../../../../lib/share/shareAppUrls";
 
 const JERSEY_SIZE_RESULT = MOBILE_RESULT_JERSEY_SIZE;
 

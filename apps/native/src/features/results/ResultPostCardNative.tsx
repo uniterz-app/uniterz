@@ -3,14 +3,12 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState, memo } from "react";
 import {
-  Platform,
   Pressable,
   StyleSheet,
   Text,
   View,
   type ViewStyle,
 } from "react-native";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
 import Animated, {
   interpolate,
   useAnimatedStyle,
@@ -52,6 +50,18 @@ import MatchPkResultLineNative from "../games/MatchPkResultLineNative";
 import { useTeamRecordLineNative } from "../games/useTeamRecordLineNative";
 import CornerMenuClusterNative from "../../ui/CornerMenuClusterNative";
 import CyberChamferButtonNative from "../../ui/CyberChamferButtonNative";
+import ShareLinkCaptureFooterNative from "../share/ShareLinkCaptureFooterNative";
+import {
+  captureViewAsPngNative,
+  SHARE_CAPTURE_BG,
+  shareImageUriNative,
+} from "../share/shareImageNative";
+import {
+  buildResultShareUrl,
+  getShareAppOrigin,
+} from "../../../../../lib/share/shareAppUrls";
+import { buildResultCardShareCaption } from "../../../../../lib/result/shareResultCardCaption";
+import { cyberAlert } from "../../components/cyberAlert";
 import { registerTutorialTarget, notifyTutorialTargetsChanged } from "../tutorial/tutorialMeasureNative";
 import type { PostWithMillis } from "./nativeResultModel";
 import { canDismissResultListPostNow } from "./nativeResultModel";
@@ -229,6 +239,7 @@ function ResultPostCardNativeInner({
   const loc = resolveLocalizedLang(language);
   const resultCopy = i18nT(loc).results;
   const [cornerFabOpen, setCornerFabOpen] = useState(false);
+  const [sharing, setSharing] = useState(false);
   const captureRef = useRef<View>(null);
 
   useEffect(() => {
@@ -278,14 +289,19 @@ function ResultPostCardNativeInner({
       !isPredictionFinalized &&
       onRequestPredictEdit
   );
-  const hasCornerActions =
-    !isMatchStarted &&
-    !isPredictionFinalized &&
-    (hasCornerTrash || hasCornerEdit);
+  /** 共有は常時。編集・削除は条件付き */
+  const showCornerControl = true;
 
   useEffect(() => {
-    if (isMatchStarted || isPredictionFinalized) setCornerFabOpen(false);
-  }, [isMatchStarted, isPredictionFinalized]);
+    if (isMatchStarted || isPredictionFinalized) {
+      if (!hasCornerTrash && !hasCornerEdit) setCornerFabOpen(false);
+    }
+  }, [
+    isMatchStarted,
+    isPredictionFinalized,
+    hasCornerTrash,
+    hasCornerEdit,
+  ]);
 
   /** Web ResultCard の isLiveGame と同じ：開始〜確定まで LIVE */
   const showLiveMark = isResultPostLiveGame(
@@ -512,7 +528,6 @@ function ResultPostCardNativeInner({
                 ? styles.cardFrameMiss
                 : null;
 
-  const showCornerControl = hasCornerActions;
   const shellOverflowStyle =
     cornerFabOpen && showCornerControl ? styles.cardShellOverflowVisible : null;
 
@@ -604,27 +619,92 @@ function ResultPostCardNativeInner({
     [post, gameMarket, gameRoundMeta, gameFromCache, scorerFromGame]
   );
 
+  const shareLinkUrl = buildResultShareUrl(post.id, getShareAppOrigin());
+
+  const waitNextPaint = () =>
+    new Promise<void>((resolve) => {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => resolve());
+      });
+    });
+
+  const requestShare = useCallback(async () => {
+    if (sharing) return;
+    setCornerFabOpen(false);
+    setSharing(true);
+    try {
+      const caption = buildResultCardShareCaption({
+        language: loc,
+        homeName: faceModel.homeName,
+        awayName: faceModel.awayName,
+        predictedHome: faceModel.predHome,
+        predictedAway: faceModel.predAway,
+        finalHome: faceModel.resultHome,
+        finalAway: faceModel.resultAway,
+        totalPoints: faceModel.totalPoints,
+        postId: null,
+        appBaseUrl: getShareAppOrigin(),
+      });
+      await waitNextPaint();
+      const uri = await captureViewAsPngNative(captureRef);
+      const result = await shareImageUriNative(uri, {
+        caption,
+        linkUrl: shareLinkUrl,
+      });
+      if (result === "failed") {
+        cyberAlert("", resultCopy.shareResultCardFailed);
+      }
+    } catch {
+      cyberAlert("", resultCopy.shareResultCardFailed);
+    } finally {
+      setSharing(false);
+    }
+  }, [
+    faceModel.awayName,
+    faceModel.homeName,
+    faceModel.predAway,
+    faceModel.predHome,
+    faceModel.resultAway,
+    faceModel.resultHome,
+    faceModel.totalPoints,
+    loc,
+    resultCopy.shareResultCardFailed,
+    shareLinkUrl,
+    sharing,
+  ]);
+
   const cornerCluster = showCornerControl ? (
-        <View style={styles.rightActionCluster} pointerEvents="box-none">
+        <View style={styles.leftActionCluster} pointerEvents="box-none">
           <CornerMenuClusterNative
             open={cornerFabOpen}
             onToggle={() => setCornerFabOpen((v) => !v)}
             menuLabel={resultCopy.openActions}
-            horizontalFlyout="left"
+            horizontalFlyout="right"
             size="xs"
             dim={26}
             menuFrameWhite
             sideFlyout={
-              hasCornerEdit ? (
+              <>
                 <CyberChamferButtonNative
                   size="xs"
                   dim={26}
                   embedded
-                  variant="edit"
-                  onPress={requestPredictEdit}
-                  accessibilityLabel={resultCopy.editPredictionAriaLabel}
+                  variant="share"
+                  onPress={() => void requestShare()}
+                  accessibilityLabel={resultCopy.shareMyResult}
+                  disabled={sharing}
                 />
-              ) : null
+                {hasCornerEdit ? (
+                  <CyberChamferButtonNative
+                    size="xs"
+                    dim={26}
+                    embedded
+                    variant="edit"
+                    onPress={requestPredictEdit}
+                    accessibilityLabel={resultCopy.editPredictionAriaLabel}
+                  />
+                ) : null}
+              </>
             }
             bottomFlyout={
               hasCornerTrash ? (
@@ -694,6 +774,7 @@ function ResultPostCardNativeInner({
             <View
               ref={captureRef}
               collapsable={false}
+              style={sharing ? styles.captureSurface : undefined}
               onLayout={
                 tutorialTargetId
                   ? () => notifyTutorialTargetsChanged()
@@ -704,14 +785,18 @@ function ResultPostCardNativeInner({
                 language={language}
                 face={faceModel}
                 frameGlow
-                showDetailTab
+                showDetailTab={!sharing}
                 pickup={faceModel.isPickup}
-                live={showLiveMark && !pauseListFx}
+                live={showLiveMark && !pauseListFx && !sharing}
                 deferJerseys
-                animateDraw={!reduceMotionList && entranceEnabled && !pauseListFx}
+                animateDraw={!reduceMotionList && entranceEnabled && !pauseListFx && !sharing}
                 drawDelayMs={listEnterIndex * RESULT_CARD_STAGGER_MS}
                 motion={faceMotion}
                 detailSpineStyle={detailSpinePressStyle}
+              />
+              <ShareLinkCaptureFooterNative
+                url={shareLinkUrl}
+                visible={sharing}
               />
             </View>
             {cornerCluster}
@@ -723,7 +808,6 @@ function ResultPostCardNativeInner({
 
   return (
     <Animated.View
-      ref={tutorialTargetId ? captureRef : undefined}
       collapsable={false}
       onLayout={
         tutorialTargetId
@@ -760,7 +844,11 @@ function ResultPostCardNativeInner({
         }}
       >
       <View style={styles.cardCaptureWrap}>
-      <View collapsable={false}>
+      <View
+        ref={captureRef}
+        collapsable={false}
+        style={sharing ? styles.captureSurface : undefined}
+      >
       <MatchListLineFrameNative
         topLabel={roundLabel}
         paint={lineFramePaint}
@@ -1026,6 +1114,7 @@ function ResultPostCardNativeInner({
         ) : null}
       </ResultGlassShellNative>
       </MatchListLineFrameNative>
+      <ShareLinkCaptureFooterNative url={shareLinkUrl} visible={sharing} />
       </View>
 
       {cornerCluster}
@@ -1154,12 +1243,15 @@ const styles = StyleSheet.create({
     position: "relative",
     overflow: "visible",
   },
-  /** 右上：キックオフ前のみ。修正（左）／削除（下）。
-   * LineFrame の marginTop:14 + 枠内 inset（Web `right-2.5 top-7`） */
-  rightActionCluster: {
+  /** 共有キャプチャ時 — 透明を白落ちさせない */
+  captureSurface: {
+    backgroundColor: SHARE_CAPTURE_BG,
+  },
+  /** 左上：線枠内側。フライアウトは右へ展開 */
+  leftActionCluster: {
     position: "absolute",
     top: 28,
-    right: 10,
+    left: 10,
     zIndex: 60,
     overflow: "visible",
   },

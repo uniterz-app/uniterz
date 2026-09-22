@@ -2,6 +2,47 @@
 
 export const DEFAULT_SHARE_APP_ORIGIN = "https://uniterz.app";
 
+/**
+ * App Store 商品ページ。
+ * 公開後に `https://apps.apple.com/.../idXXXX` を入れる
+ * （または EXPO_PUBLIC_APP_STORE_URL / NEXT_PUBLIC_APP_STORE_URL）。
+ * 空の間は共有文に付けない。ダミー URL は書かない。
+ */
+export const APP_STORE_SHARE_URL = "";
+
+/** 共有本文末尾に付ける App Store URL（未設定なら null） */
+export function getAppStoreShareUrl(): string | null {
+  const fromEnv =
+    (typeof process !== "undefined" &&
+      (process.env.EXPO_PUBLIC_APP_STORE_URL?.trim() ||
+        process.env.NEXT_PUBLIC_APP_STORE_URL?.trim())) ||
+    "";
+  const raw = (fromEnv || APP_STORE_SHARE_URL).trim();
+  return raw || null;
+}
+
+/**
+ * 共有本文: キャプション + ディープリンク +（公開後）App Store URL。
+ * rank / result / profile の OS 共有・SNS Intent はここを通す。
+ */
+export function buildShareOutboundMessage(
+  caption: string,
+  deepLinkUrl?: string | null
+): string {
+  let message = caption.trim();
+
+  const pushUnique = (url: string | null | undefined) => {
+    const u = url?.trim();
+    if (!u) return;
+    if (message.includes(u)) return;
+    message = message ? `${message}\n${u}` : u;
+  };
+
+  pushUnique(deepLinkUrl);
+  pushUnique(getAppStoreShareUrl());
+  return message;
+}
+
 function isLocalDevOrigin(raw: string): boolean {
   try {
     const url = raw.includes("://") ? raw : `https://${raw}`;

@@ -89,11 +89,6 @@ export default function ResultCardOverlayFooter({
             {homePct.toFixed(1)}%
           </span>
           <div className={styles.biasPctHeaderMidCol}>
-            <span
-              className={`${styles.biasPctHeaderMid} ${nameOxanium.className}`}
-            >
-              — {copy.marketBias} —
-            </span>
             {showCount ? (
               <span
                 className={`${styles.biasCount} ${nameOxanium.className}`}

@@ -1,5 +1,7 @@
 import type { Language } from "@/lib/i18n/language";
 
+import { buildSnsTextShareUrls } from "@/lib/share/snsShareUrls";
+
 export type InviteShareResult =
   | "shared"
   | "cancelled"
@@ -96,17 +98,11 @@ export function buildCommunityInviteShareUrls(
   options: BuildInviteShareTextOptions
 ): CommunityInviteShareUrls {
   const text = buildCommunityInviteShareText(options);
-  const appUrl = getAppUrl();
-
-  const urlPart = appUrl ? `&url=${encodeURIComponent(appUrl)}` : "";
-  const lineAppUrl = `line://msg/text/${encodeURIComponent(text)}`;
-  const lineUrl = `https://social-plugins.line.me/lineit/share?text=${encodeURIComponent(
-    text
-  )}${urlPart}`;
-
-  const xUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(
-    text
-  )}${appUrl ? `&url=${encodeURIComponent(appUrl)}` : ""}`;
-
-  return { lineAppUrl, lineUrl, xUrl, text };
+  const urls = buildSnsTextShareUrls({ caption: text, url: getAppUrl() });
+  return {
+    lineAppUrl: urls.lineAppUrl,
+    lineUrl: urls.lineUrl,
+    xUrl: urls.xUrl,
+    text: urls.text,
+  };
 }

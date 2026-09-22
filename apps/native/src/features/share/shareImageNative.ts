@@ -1,6 +1,8 @@
 import type { RefObject } from "react";
 import { Platform, Share, type View } from "react-native";
 import { captureRef } from "react-native-view-shot";
+import { buildShareOutboundMessage } from "../../../../../lib/share/shareAppUrls";
+import { copyTextNative } from "../leaderboards/copyTextNative";
 
 export type ShareImageNativeResult =
   | "shared"
@@ -10,7 +12,7 @@ export type ShareImageNativeResult =
 
 export type ShareImageNativeOptions = {
   caption: string;
-  /** 投稿キャプション・SNS テキストに付ける HTTPS リンク */
+  /** 投稿キャプション・SNS テキストに付ける HTTPS リンク（ディープリンク） */
   linkUrl?: string;
 };
 
@@ -20,10 +22,12 @@ function isShareCancelled(error: unknown): boolean {
   return msg.includes("cancel") || msg.includes("dismiss");
 }
 
-function buildShareMessage({ caption, linkUrl }: ShareImageNativeOptions): string {
-  if (!linkUrl) return caption;
-  if (caption.includes(linkUrl)) return caption;
-  return `${caption}\n${linkUrl}`;
+/** file:// を確実に付ける（iOS Share が画像扱いしやすい） */
+function normalizeFileUri(uri: string): string {
+  const trimmed = uri.trim();
+  if (!trimmed) return trimmed;
+  if (/^[a-z][a-z0-9+.-]*:/i.test(trimmed)) return trimmed;
+  return `file://${trimmed}`;
 }
 
 /** View を PNG ファイル URI にキャプチャ */
@@ -39,29 +43,39 @@ export async function captureViewAsPngNative(
     format: "png",
     quality: 1,
     result: "tmpfile",
+    useRenderInContext: false,
   });
 
   if (!uri) {
     throw new Error("Empty capture uri");
   }
 
-  return uri;
+  return normalizeFileUri(uri);
 }
 
-/** キャプチャ済み PNG + リンク付きテキストを OS 共有シートへ */
+/** SNS 共有 PNG 用の不透明背景（画面のダーク面と揃える） */
+export const SHARE_CAPTURE_BG = "#05080e";
+
+/**
+ * キャプチャ済み PNG を OS 共有へ。
+ * 文面はクリップボードにも載せ、受け取り側がメッセージを捨てたとき貼れるようにする。
+ */
 export async function shareImageUriNative(
   imageUri: string,
   options: ShareImageNativeOptions
 ): Promise<ShareImageNativeResult> {
-  const message = buildShareMessage(options);
+  const message = buildShareOutboundMessage(options.caption, options.linkUrl);
+  const fileUri = normalizeFileUri(imageUri);
+
+  await copyTextNative(message);
 
   try {
     const payload =
       Platform.OS === "ios"
-        ? { message, url: imageUri }
+        ? { url: fileUri, message }
         : {
             message,
-            url: imageUri,
+            url: fileUri,
             title: message.split("\n")[0]?.slice(0, 80) ?? "Uniterz",
           };
 

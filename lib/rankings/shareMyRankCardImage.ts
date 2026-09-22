@@ -1,5 +1,6 @@
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
+import { buildSnsTextShareUrls } from "@/lib/share/snsShareUrls";
 import type { Options } from "html-to-image/lib/types";
 
 export type ShareRankCardResult = "shared" | "cancelled" | "unsupported" | "failed";
@@ -55,15 +56,7 @@ export function buildRankCardShareCaption(ctx: RankCardShareContext): string {
 export function buildRankCardShareUrls(language: Language, shareText?: string) {
   const caption =
     shareText ?? buildRankCardShareCaption({ language });
-  const appUrl = getAppUrl();
-  const lineText = appUrl ? `${caption}\n${appUrl}` : caption;
-  const urlPart = appUrl ? `&url=${encodeURIComponent(appUrl)}` : "";
-  return {
-    text: caption,
-    lineAppUrl: `line://msg/text/${encodeURIComponent(lineText)}`,
-    lineUrl: `https://social-plugins.line.me/lineit/share?text=${encodeURIComponent(caption)}${urlPart}`,
-    xUrl: `https://twitter.com/intent/tweet?text=${encodeURIComponent(caption)}${urlPart}`,
-  };
+  return buildSnsTextShareUrls({ caption, url: getAppUrl() });
 }
 
 export function isMobileShareContext(): boolean {

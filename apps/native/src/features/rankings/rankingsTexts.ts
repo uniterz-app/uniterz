@@ -54,6 +54,8 @@ export function rankingsTexts(language: string | null | undefined) {
     roundTabsLabel: m.roundTabsLabel,
     metricTabsLabel: m.metricTabsLabel,
     shareMyRank: m.shareMyRank,
+    shareRankCardTitle: m.shareRankCardTitle,
+    shareRankCardHint: m.shareRankCardHint,
     shareRankCardFailed: m.shareRankCardFailed,
     rankingProgressNoData: t(lang).profile.rankingProgressNoData,
     rankGapViewGap: m.rankGap.viewGap,

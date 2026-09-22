@@ -331,11 +331,7 @@ export default function ResultCardDesignFace({
                 >
                   {face.marketHomePct.toFixed(1)}%
                 </span>
-                <span
-                  className={`${styles.biasPctHeaderMid} ${nameOxanium.className}`}
-                >
-                  — {copy.marketBias} —
-                </span>
+                <span className={styles.biasPctHeaderMid} aria-hidden />
                 <span
                   className={`${styles.biasPctHeaderNum} ${styles.biasPctHeaderNumAway} ${nameOxanium.className}`}
                   style={{ color: awayAccent }}

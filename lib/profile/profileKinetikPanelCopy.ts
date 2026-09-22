@@ -219,6 +219,15 @@ export function profileKinetikPanelCopy(language: string | null | undefined) {
       pt: "Compartilhar perfil",
       fr: "Partager le profil",
     }),
+    shareSheetHint: L(lang, {
+      ja: "LINE · X · Instagram などにすぐ送れます",
+      en: "Send quickly to LINE, X, Instagram, and more",
+      ko: "LINE · X · Instagram 등으로 바로 보낼 수 있습니다",
+      zh: "可快速分享到 LINE、X、Instagram 等",
+      es: "Envía rápido a LINE, X, Instagram y más",
+      pt: "Envie rápido para LINE, X, Instagram e mais",
+      fr: "Envoyez vite vers LINE, X, Instagram, etc.",
+    }),
     shareCopied: L(lang, {
       ja: "コピー済",
       en: "Copied",

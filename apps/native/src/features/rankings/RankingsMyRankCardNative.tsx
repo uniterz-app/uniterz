@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { cyberAlert } from "../../components/cyberAlert";
-import { StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import type { MyRankMiniMetric } from "../../../../../app/component/rankings/MyRankCard";
 import type { MobileMetric } from "../../../../../lib/rankings/rankingMetrics";
 import type { RankTierGapHint } from "../../../../../lib/rankings/rankTierMilestone";
@@ -16,12 +17,17 @@ import {
   type MyRankStatsSource,
 } from "../../../../../lib/rankings/myRankCardFocus";
 import { L, resolveLocalizedLang } from "../../../../../lib/i18n/localize";
+import { buildRankCardShareCaption } from "../../../../../lib/rankings/shareMyRankCardImage";
 import { rankingsTexts, type RankingsLanguage } from "./rankingsTexts";
 import { CyberRankingListRowNative } from "./CyberRankingListRowNative";
 import { MyRankCardFrameNative, resolveMyRankFrameTone } from "./MyRankCardFrameNative";
 import { rankingsUiStyles as styles } from "./rankingsUiStyles";
-import { shareMyRankCardNative } from "./shareRankCardNative";
 import ShareLinkCaptureFooterNative from "../share/ShareLinkCaptureFooterNative";
+import {
+  captureViewAsPngNative,
+  SHARE_CAPTURE_BG,
+  shareImageUriNative,
+} from "../share/shareImageNative";
 import { buildRankingsShareUrl, getShareAppOrigin } from "../../../../../lib/share/shareAppUrls";
 
 export type MyRankCardShareState = {
@@ -178,35 +184,58 @@ export function MyRankCardNative({
   const [sharing, setSharing] = useState(false);
   const captureRef = useRef<View>(null);
 
-  const canShare = !loading && !statsPending && rank != null && !sharing;
-  const shareLinkUrl = buildRankingsShareUrl();
+  /** Pro なら順位未確定（--）でもカード画像は共有可 */
+  const canShare = !freeTier && !loading && !statsPending && !sharing;
+  const shareLinkUrl = buildRankingsShareUrl(getShareAppOrigin());
+
+  const waitNextPaint = () =>
+    new Promise<void>((resolve) => {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => resolve());
+      });
+    });
 
   const handleShare = useCallback(async () => {
     if (!canShare) return;
     setSharing(true);
     try {
-      const result = await shareMyRankCardNative(captureRef, {
-        language: loc === "ja" ? "ja" : "en",
+      const caption = buildRankCardShareCaption({
+        language: loc,
         rank,
         leagueLabel,
         totalEntries,
-        appBaseUrl: getShareAppOrigin(),
+      });
+      await waitNextPaint();
+      const uri = await captureViewAsPngNative(captureRef);
+      const result = await shareImageUriNative(uri, {
+        caption,
+        linkUrl: shareLinkUrl,
       });
       if (result === "failed") {
         cyberAlert("", t.shareRankCardFailed);
       }
+    } catch {
+      cyberAlert("", t.shareRankCardFailed);
     } finally {
       setSharing(false);
     }
-  }, [canShare, loc, leagueLabel, rank, t.shareRankCardFailed, totalEntries]);
+  }, [
+    canShare,
+    loc,
+    leagueLabel,
+    rank,
+    shareLinkUrl,
+    t.shareRankCardFailed,
+    totalEntries,
+  ]);
 
   useEffect(() => {
     onShareStateChange?.({
-      canShare: freeTier ? false : canShare,
+      canShare,
       sharing,
       share: () => void handleShare(),
     });
-  }, [canShare, sharing, handleShare, onShareStateChange, freeTier]);
+  }, [canShare, sharing, handleShare, onShareStateChange]);
 
   /** 読み込み中も枠は維持（Pick Up→PRO 切替の unmount フラッシュ防止） */
   const rankPending = loading || statsPending;
@@ -247,9 +276,40 @@ export function MyRankCardNative({
   }
 
   return (
-    <View style={[styles.myRankOuter, mobileWide ? styles.myRankOuterWide : null]}>
+    <View
+      style={[
+        styles.myRankOuter,
+        mobileWide ? styles.myRankOuterWide : null,
+        canShare || sharing ? styles.myRankOuterWithShareEar : null,
+      ]}
+    >
       <View style={styles.myRankCaptureWrap}>
-        <View ref={captureRef} collapsable={false}>
+        {canShare || sharing ? (
+          <Pressable
+            onPress={() => void handleShare()}
+            disabled={!canShare}
+            style={({ pressed }) => [
+              styles.myRankShareEar,
+              proTier ? styles.myRankShareEarPro : styles.myRankShareEarCyan,
+              pressed && { opacity: 0.85 },
+              !canShare && { opacity: 0.45 },
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel={t.shareMyRank}
+            hitSlop={6}
+          >
+            <MaterialCommunityIcons
+              name="share-variant"
+              size={14}
+              color={proTier ? "rgba(232,198,106,0.95)" : "rgba(0,245,255,0.95)"}
+            />
+          </Pressable>
+        ) : null}
+        <View
+          ref={captureRef}
+          collapsable={false}
+          style={sharing ? { backgroundColor: SHARE_CAPTURE_BG } : undefined}
+        >
           <MyRankCardFrameNative
             tone={frameTone}
             proSpec={proTier}

@@ -449,16 +449,14 @@ function BiasSegFace({
 
 function MarketBias({
   sample,
-  ja,
   animate = false,
   revealDelayMs = 0,
 }: {
   sample: Sample;
-  ja: boolean;
+  ja?: boolean;
   animate?: boolean;
   revealDelayMs?: number;
 }) {
-  const copy = resultCardFaceCopy(ja ? "ja" : "en");
   const homeSegs = Math.max(
     0,
     Math.min(BIAS_SEGS, Math.round((sample.marketHomePct / 100) * BIAS_SEGS))
@@ -486,9 +484,7 @@ function MarketBias({
         <Text style={[styles.biasPctHeaderNum, { color: sample.homeAccent }]}>
           {sample.marketHomePct.toFixed(1)}%
         </Text>
-        <Text style={styles.biasPctHeaderMid}>
-          — {copy.marketBias} —
-        </Text>
+        <View style={styles.biasPctHeaderMid} />
         <Text
           style={[
             styles.biasPctHeaderNum,

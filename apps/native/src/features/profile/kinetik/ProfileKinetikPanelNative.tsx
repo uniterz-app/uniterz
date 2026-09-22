@@ -9,7 +9,7 @@ import {
 } from "react";
 import { cyberAlert } from "../../../components/cyberAlert";
 import {
-  Image, Platform, Pressable, ScrollView, Share, StyleSheet, Text, useWindowDimensions, View, type StyleProp, type ViewStyle,
+  Image, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View, type StyleProp, type ViewStyle,
 } from "react-native";
 import UnitEarnOverlayNative from "../UnitEarnOverlayNative";
 import { useUnitEarnOverlayNative } from "../useUnitEarnOverlayNative";
@@ -76,7 +76,8 @@ import {
 import { currentRankingPeriodLabel } from "../../../../../../lib/rankings/rankingPeriod";
 import { rankingFlagImageUri } from "../../rankings/rankingFlagUri";
 import { getUniterzApiBaseUrl } from "../../games/submitPredictionApi";
-import { buildProfileShareUrl } from "../../../../../../lib/share/shareAppUrls";
+import { buildProfileShareUrl, getShareAppOrigin } from "../../../../../../lib/share/shareAppUrls";
+import { shareViaOsNative } from "../../share/openSnsShareNative";
 import type { ResolvedBadgeNative } from "../useNativeProfileBadges";
 import {
   KINETIK_METRIC_GOLD,
@@ -1299,16 +1300,18 @@ export default function ProfileKinetikPanelNative({
 
   const handleShareProfile = useCallback(async () => {
     if (!shareTargetHandle) return;
-    const base = getUniterzApiBaseUrl();
+    const base = getShareAppOrigin() || getUniterzApiBaseUrl();
     const url = buildProfileShareUrl(shareTargetHandle, base);
     const title = identity.displayName;
     const text = copy.shareText(title);
-    try {
-      await Share.share({ message: `${text}\n${url}`, url, title });
+    const result = await shareViaOsNative({
+      caption: text,
+      linkUrl: url,
+      title,
+    });
+    if (result === "shared") {
       setShareCopied(true);
       setTimeout(() => setShareCopied(false), 2200);
-    } catch {
-      /* cancelled */
     }
   }, [copy, identity.displayName, shareTargetHandle]);
 

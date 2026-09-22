@@ -139,9 +139,6 @@ export function ResultCardMarketBiasNative({
           {homePct.toFixed(1)}%
         </Text>
         <View style={styles.biasPctHeaderMidCol}>
-          <Text style={styles.biasPctHeaderMid}>
-            — {copy.marketBias} —
-          </Text>
           {showCount ? (
             <Text style={styles.biasCount}>
               {countLabel}
