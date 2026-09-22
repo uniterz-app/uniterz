@@ -22,13 +22,11 @@ import { rankingsTexts, type RankingsLanguage } from "./rankingsTexts";
 import { CyberRankingListRowNative } from "./CyberRankingListRowNative";
 import { MyRankCardFrameNative, resolveMyRankFrameTone } from "./MyRankCardFrameNative";
 import { rankingsUiStyles as styles } from "./rankingsUiStyles";
-import ShareLinkCaptureFooterNative from "../share/ShareLinkCaptureFooterNative";
 import {
   captureViewAsPngNative,
   SHARE_CAPTURE_BG,
   shareImageUriNative,
 } from "../share/shareImageNative";
-import { buildRankingsShareUrl, getShareAppOrigin } from "../../../../../lib/share/shareAppUrls";
 
 export type MyRankCardShareState = {
   canShare: boolean;
@@ -184,9 +182,12 @@ export function MyRankCardNative({
   const [sharing, setSharing] = useState(false);
   const captureRef = useRef<View>(null);
 
-  /** Pro なら順位未確定（--）でもカード画像は共有可 */
-  const canShare = !freeTier && !loading && !statsPending && !sharing;
-  const shareLinkUrl = buildRankingsShareUrl(getShareAppOrigin());
+  /**
+   * 共有耳はカード本体と同じタイミングで出す（loading 待ちで遅らせない）。
+   * 押下は共有処理中だけ止める。順位未確定（--）でも画像共有可。
+   */
+  const showShareEar = !freeTier;
+  const canShare = showShareEar && !sharing;
 
   const waitNextPaint = () =>
     new Promise<void>((resolve) => {
@@ -209,7 +210,6 @@ export function MyRankCardNative({
       const uri = await captureViewAsPngNative(captureRef);
       const result = await shareImageUriNative(uri, {
         caption,
-        linkUrl: shareLinkUrl,
       });
       if (result === "failed") {
         cyberAlert("", t.shareRankCardFailed);
@@ -224,7 +224,6 @@ export function MyRankCardNative({
     loc,
     leagueLabel,
     rank,
-    shareLinkUrl,
     t.shareRankCardFailed,
     totalEntries,
   ]);
@@ -280,11 +279,11 @@ export function MyRankCardNative({
       style={[
         styles.myRankOuter,
         mobileWide ? styles.myRankOuterWide : null,
-        canShare || sharing ? styles.myRankOuterWithShareEar : null,
+        showShareEar ? styles.myRankOuterWithShareEar : null,
       ]}
     >
       <View style={styles.myRankCaptureWrap}>
-        {canShare || sharing ? (
+        {showShareEar ? (
           <Pressable
             onPress={() => void handleShare()}
             disabled={!canShare}
@@ -392,8 +391,6 @@ export function MyRankCardNative({
                 </View>
               ) : null}
             </View>
-
-            <ShareLinkCaptureFooterNative url={shareLinkUrl} visible={sharing} />
           </MyRankCardFrameNative>
         </View>
       </View>

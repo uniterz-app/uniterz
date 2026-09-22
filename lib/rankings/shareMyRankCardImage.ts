@@ -56,7 +56,8 @@ export function buildRankCardShareCaption(ctx: RankCardShareContext): string {
 export function buildRankCardShareUrls(language: Language, shareText?: string) {
   const caption =
     shareText ?? buildRankCardShareCaption({ language });
-  return buildSnsTextShareUrls({ caption, url: getAppUrl() });
+  /** ランキング一覧 URL は汎用すぎるので付けない（App Store は buildShareOutboundMessage 側） */
+  return buildSnsTextShareUrls({ caption });
 }
 
 export function isMobileShareContext(): boolean {

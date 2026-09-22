@@ -1194,8 +1194,8 @@ export default function ProfileKinetikPanelNative({
   rankingLeague: _rankingLeague = "nba",
   statsPending = false,
   style,
-  metricsPeriod: _metricsPeriod,
-  onMetricsPeriodChange: _onMetricsPeriodChange,
+  metricsPeriod = "season",
+  onMetricsPeriodChange,
   metricsTab,
   onMetricsTabChange,
   metricsWindowLabel = null,
@@ -1212,6 +1212,20 @@ export default function ProfileKinetikPanelNative({
   const copy = profileKinetikPanelCopy(language);
   const lang = copy.lang;
   const showNbaMetricsTabs = metricsTab != null && !!onMetricsTabChange;
+  const canGoMetricsPrev =
+    !!onToggleMetricsScope && metricsPeriod === "playoffs";
+  const canGoMetricsNext =
+    !!onToggleMetricsScope && metricsPeriod === "season";
+  const goMetricsPrev = () => {
+    if (!canGoMetricsPrev) return;
+    if (onMetricsPeriodChange) onMetricsPeriodChange("season");
+    else onToggleMetricsScope?.();
+  };
+  const goMetricsNext = () => {
+    if (!canGoMetricsNext) return;
+    if (onMetricsPeriodChange) onMetricsPeriodChange("playoffs");
+    else onToggleMetricsScope?.();
+  };
   const scopeHint = getKinetikMetricsScopeHint(
     metricsTab ?? "total",
     lang,
@@ -1670,25 +1684,39 @@ export default function ProfileKinetikPanelNative({
         >
           {onToggleMetricsScope ? (
             <>
+              {canGoMetricsPrev ? (
+                <Pressable
+                  style={[styles.scopeNavBtn, styles.scopeNavBtnLeft]}
+                  onPress={goMetricsPrev}
+                  hitSlop={8}
+                >
+                  <MetricsScopeArrowNative direction="left" planPro={isPro} />
+                </Pressable>
+              ) : null}
               <Pressable
-                style={[styles.scopeNavBtn, styles.scopeNavBtnLeft]}
-                onPress={onToggleMetricsScope}
-                hitSlop={8}
+                style={styles.metricsTitlePressPicker}
+                onPress={
+                  canGoMetricsNext
+                    ? goMetricsNext
+                    : canGoMetricsPrev
+                      ? goMetricsPrev
+                      : undefined
+                }
+                disabled={!canGoMetricsNext && !canGoMetricsPrev}
               >
-                <MetricsScopeArrowNative direction="left" planPro={isPro} />
-              </Pressable>
-              <Pressable style={styles.metricsTitlePressPicker} onPress={onToggleMetricsScope}>
                 <Text style={styles.metricsTitle} numberOfLines={1}>
                   {metricsHeaderTitle}
                 </Text>
               </Pressable>
-              <Pressable
-                style={[styles.scopeNavBtn, styles.scopeNavBtnRight]}
-                onPress={onToggleMetricsScope}
-                hitSlop={8}
-              >
-                <MetricsScopeArrowNative direction="right" planPro={isPro} />
-              </Pressable>
+              {canGoMetricsNext ? (
+                <Pressable
+                  style={[styles.scopeNavBtn, styles.scopeNavBtnRight]}
+                  onPress={goMetricsNext}
+                  hitSlop={8}
+                >
+                  <MetricsScopeArrowNative direction="right" planPro={isPro} />
+                </Pressable>
+              ) : null}
             </>
           ) : (
             <Text style={styles.metricsTitle} numberOfLines={1}>

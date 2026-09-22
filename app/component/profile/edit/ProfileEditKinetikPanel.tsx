@@ -801,8 +801,8 @@ export default function ProfileEditKinetikPanel({
   rankingLeague: _rankingLeague = "nba",
   visualEffects = "full",
   statsPending = false,
-  metricsPeriod: _metricsPeriod,
-  onMetricsPeriodChange: _onMetricsPeriodChange,
+  metricsPeriod = "season",
+  onMetricsPeriodChange,
   metricsTab,
   onMetricsTabChange,
   metricsWindowLabel = null,
@@ -815,6 +815,20 @@ export default function ProfileEditKinetikPanel({
   const panelCopy = profileKinetikPanelCopy(language);
   const langJaEn = resolveLocalizedLang(language) === "ja" ? "ja" : "en";
   const showNbaMetricsTabs = metricsTab != null && !!onMetricsTabChange;
+  const canGoMetricsPrev =
+    !!onToggleMetricsScope && metricsPeriod === "playoffs";
+  const canGoMetricsNext =
+    !!onToggleMetricsScope && metricsPeriod === "season";
+  const goMetricsPrev = () => {
+    if (!canGoMetricsPrev) return;
+    if (onMetricsPeriodChange) onMetricsPeriodChange("season");
+    else onToggleMetricsScope?.();
+  };
+  const goMetricsNext = () => {
+    if (!canGoMetricsNext) return;
+    if (onMetricsPeriodChange) onMetricsPeriodChange("playoffs");
+    else onToggleMetricsScope?.();
+  };
   const scopeHint = getKinetikMetricsScopeHint(
     metricsTab ?? "total",
     language,
@@ -1275,38 +1289,49 @@ export default function ProfileEditKinetikPanel({
     >
       {onToggleMetricsScope ? (
         <>
-          <button
-            type="button"
-            className="profile-edit-kinetik-metrics-scope-nav profile-edit-kinetik-metrics-scope-nav--prev"
-            onClick={onToggleMetricsScope}
-            aria-label={panelCopy.prevBoardAria}
-          >
-            <span
-              className="profile-edit-kinetik-metrics-scope-arrow profile-edit-kinetik-metrics-scope-arrow--left"
-              aria-hidden
-            />
-          </button>
+          {canGoMetricsPrev ? (
+            <button
+              type="button"
+              className="profile-edit-kinetik-metrics-scope-nav profile-edit-kinetik-metrics-scope-nav--prev"
+              onClick={goMetricsPrev}
+              aria-label={panelCopy.prevBoardAria}
+            >
+              <span
+                className="profile-edit-kinetik-metrics-scope-arrow profile-edit-kinetik-metrics-scope-arrow--left"
+                aria-hidden
+              />
+            </button>
+          ) : null}
           <button
             type="button"
             className="profile-edit-kinetik-metrics-scope-title profile-edit-kinetik-metrics-scope-title--breath"
-            onClick={onToggleMetricsScope}
+            onClick={
+              canGoMetricsNext
+                ? goMetricsNext
+                : canGoMetricsPrev
+                  ? goMetricsPrev
+                  : undefined
+            }
+            disabled={!canGoMetricsNext && !canGoMetricsPrev}
             aria-label={panelCopy.seasonPlayoffSwitchAria}
           >
             <ProfileEditKinetikGlitchTitle compact={layout === "mobile"}>
               {metricsSectionTitle}
             </ProfileEditKinetikGlitchTitle>
           </button>
-          <button
-            type="button"
-            className="profile-edit-kinetik-metrics-scope-nav profile-edit-kinetik-metrics-scope-nav--next"
-            onClick={onToggleMetricsScope}
-            aria-label={panelCopy.nextBoardAria}
-          >
-            <span
-              className="profile-edit-kinetik-metrics-scope-arrow profile-edit-kinetik-metrics-scope-arrow--right"
-              aria-hidden
-            />
-          </button>
+          {canGoMetricsNext ? (
+            <button
+              type="button"
+              className="profile-edit-kinetik-metrics-scope-nav profile-edit-kinetik-metrics-scope-nav--next"
+              onClick={goMetricsNext}
+              aria-label={panelCopy.nextBoardAria}
+            >
+              <span
+                className="profile-edit-kinetik-metrics-scope-arrow profile-edit-kinetik-metrics-scope-arrow--right"
+                aria-hidden
+              />
+            </button>
+          ) : null}
         </>
       ) : (
         <div className="profile-edit-kinetik-metrics-scope-title profile-edit-kinetik-metrics-scope-title--static">

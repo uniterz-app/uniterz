@@ -17,8 +17,12 @@ import { PROFILE_PLAN_PRO_BG_DEFAULT } from "@/lib/profile/profilePlanProBgVaria
 import {
   buildUserCareerBoardRows,
   buildUserCareerSummaryRows,
+  canAdvanceCareerScope,
+  canRetreatCareerScope,
   careerBoardsForSeason,
   defaultCareerBoardForSeason,
+  nextCareerScope,
+  prevCareerScope,
   type UserCareerDoc,
 } from "@/lib/profile/userCareer";
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
@@ -117,29 +121,39 @@ export default function ProfileCareerPanel({
         ? `${seasonKey} PLAYOFFS`
         : `${seasonKey} SEASON`;
 
-  const cycleScope = () => {
-    if (viewMode === "career") {
-      const nextKey =
-        seasonKeys[seasonKeys.length - 1] ?? CURRENT_NBA_SEASON_KEY;
-      setViewMode("season");
-      setSeasonKey(nextKey);
-      setBoard(defaultCareerBoardForSeason(nextKey));
-      return;
-    }
-    const boards = careerBoardsForSeason(seasonKey);
-    const boardIdx = boards.indexOf(board);
-    if (boardIdx >= 0 && boardIdx < boards.length - 1) {
-      setBoard(boards[boardIdx + 1]!);
-      return;
-    }
-    const idx = seasonKeys.indexOf(seasonKey);
-    if (idx >= 0 && idx < seasonKeys.length - 1) {
-      const nextKey = seasonKeys[idx + 1]!;
-      setSeasonKey(nextKey);
-      setBoard(defaultCareerBoardForSeason(nextKey));
-      return;
-    }
-    setViewMode("career");
+  const canGoNext = canAdvanceCareerScope({
+    viewMode,
+    seasonKey,
+    board,
+    seasonKeys,
+  });
+  const canGoPrev = canRetreatCareerScope({ viewMode });
+
+  const goNext = () => {
+    const next = nextCareerScope({
+      viewMode,
+      seasonKey,
+      board,
+      seasonKeys,
+      fallbackSeasonKey: CURRENT_NBA_SEASON_KEY,
+    });
+    if (!next) return;
+    setViewMode(next.viewMode);
+    setSeasonKey(next.seasonKey);
+    setBoard(next.board);
+  };
+
+  const goPrev = () => {
+    const prev = prevCareerScope({
+      viewMode,
+      seasonKey,
+      board,
+      seasonKeys,
+    });
+    if (!prev) return;
+    setViewMode(prev.viewMode);
+    setSeasonKey(prev.seasonKey);
+    setBoard(prev.board);
   };
 
   const body = (
@@ -194,21 +208,24 @@ export default function ProfileCareerPanel({
                   : "",
               ].join(" ")}
             >
-              <button
-                type="button"
-                className="profile-edit-kinetik-metrics-scope-nav profile-edit-kinetik-metrics-scope-nav--prev"
-                onClick={cycleScope}
-                aria-label={panelCopy.prevBoardAria}
-              >
-                <span
-                  className="profile-edit-kinetik-metrics-scope-arrow profile-edit-kinetik-metrics-scope-arrow--left"
-                  aria-hidden
-                />
-              </button>
+              {canGoPrev ? (
+                <button
+                  type="button"
+                  className="profile-edit-kinetik-metrics-scope-nav profile-edit-kinetik-metrics-scope-nav--prev"
+                  onClick={goPrev}
+                  aria-label={panelCopy.prevBoardAria}
+                >
+                  <span
+                    className="profile-edit-kinetik-metrics-scope-arrow profile-edit-kinetik-metrics-scope-arrow--left"
+                    aria-hidden
+                  />
+                </button>
+              ) : null}
               <button
                 type="button"
                 className="profile-edit-kinetik-metrics-scope-title profile-edit-kinetik-metrics-scope-title--breath"
-                onClick={cycleScope}
+                onClick={canGoNext ? goNext : canGoPrev ? goPrev : undefined}
+                disabled={!canGoNext && !canGoPrev}
                 aria-label={panelCopy.switchBoardAria}
               >
                 <span
@@ -224,17 +241,19 @@ export default function ProfileCareerPanel({
                   {scopeTitle}
                 </span>
               </button>
-              <button
-                type="button"
-                className="profile-edit-kinetik-metrics-scope-nav profile-edit-kinetik-metrics-scope-nav--next"
-                onClick={cycleScope}
-                aria-label={panelCopy.nextBoardAria}
-              >
-                <span
-                  className="profile-edit-kinetik-metrics-scope-arrow profile-edit-kinetik-metrics-scope-arrow--right"
-                  aria-hidden
-                />
-              </button>
+              {canGoNext ? (
+                <button
+                  type="button"
+                  className="profile-edit-kinetik-metrics-scope-nav profile-edit-kinetik-metrics-scope-nav--next"
+                  onClick={goNext}
+                  aria-label={panelCopy.nextBoardAria}
+                >
+                  <span
+                    className="profile-edit-kinetik-metrics-scope-arrow profile-edit-kinetik-metrics-scope-arrow--right"
+                    aria-hidden
+                  />
+                </button>
+              ) : null}
             </div>
           ) : null}
           {!isFace ? (

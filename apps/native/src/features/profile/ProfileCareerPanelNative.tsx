@@ -13,8 +13,12 @@ import type { ProfilePlanProBgVariant } from "../../../../../lib/profile/profile
 import {
   buildUserCareerBoardRows,
   buildUserCareerSummaryRows,
+  canAdvanceCareerScope,
+  canRetreatCareerScope,
   careerBoardsForSeason,
   defaultCareerBoardForSeason,
+  nextCareerScope,
+  prevCareerScope,
   type UserCareerDoc,
 } from "../../../../../lib/profile/userCareer";
 import { CURRENT_NBA_SEASON_KEY } from "../../../../../lib/rankings/nbaSeason";
@@ -120,29 +124,39 @@ export default function ProfileCareerPanelNative({
         ? `${seasonKey} PLAYOFFS`
         : `${seasonKey} SEASON`;
 
-  const cycleScope = () => {
-    if (viewMode === "career") {
-      const nextKey =
-        seasonKeys[seasonKeys.length - 1] ?? CURRENT_NBA_SEASON_KEY;
-      setViewMode("season");
-      setSeasonKey(nextKey);
-      setBoard(defaultCareerBoardForSeason(nextKey));
-      return;
-    }
-    const boards = careerBoardsForSeason(seasonKey);
-    const boardIdx = boards.indexOf(board);
-    if (boardIdx >= 0 && boardIdx < boards.length - 1) {
-      setBoard(boards[boardIdx + 1]!);
-      return;
-    }
-    const idx = seasonKeys.indexOf(seasonKey);
-    if (idx >= 0 && idx < seasonKeys.length - 1) {
-      const nextKey = seasonKeys[idx + 1]!;
-      setSeasonKey(nextKey);
-      setBoard(defaultCareerBoardForSeason(nextKey));
-      return;
-    }
-    setViewMode("career");
+  const canGoNext = canAdvanceCareerScope({
+    viewMode,
+    seasonKey,
+    board,
+    seasonKeys,
+  });
+  const canGoPrev = canRetreatCareerScope({ viewMode });
+
+  const goNext = () => {
+    const next = nextCareerScope({
+      viewMode,
+      seasonKey,
+      board,
+      seasonKeys,
+      fallbackSeasonKey: CURRENT_NBA_SEASON_KEY,
+    });
+    if (!next) return;
+    setViewMode(next.viewMode);
+    setSeasonKey(next.seasonKey);
+    setBoard(next.board);
+  };
+
+  const goPrev = () => {
+    const prev = prevCareerScope({
+      viewMode,
+      seasonKey,
+      board,
+      seasonKeys,
+    });
+    if (!prev) return;
+    setViewMode(prev.viewMode);
+    setSeasonKey(prev.seasonKey);
+    setBoard(prev.board);
   };
 
   const content = (
@@ -171,26 +185,29 @@ export default function ProfileCareerPanelNative({
       )}
       {isFace ? (
         <View style={styles.scopeHeader}>
-          <Pressable
-            style={[styles.scopeNavBtn, styles.scopeNavBtnLeft]}
-            onPress={cycleScope}
-            hitSlop={8}
-            accessibilityRole="button"
-            accessibilityLabel={copy.prevBoard}
-          >
-            <View
-              style={[
-                styles.scopeArrow,
-                styles.scopeArrowLeft,
-                showProSkin ? styles.scopeArrowPro : null,
-              ]}
-            />
-          </Pressable>
+          {canGoPrev ? (
+            <Pressable
+              style={[styles.scopeNavBtn, styles.scopeNavBtnLeft]}
+              onPress={goPrev}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel={copy.prevBoard}
+            >
+              <View
+                style={[
+                  styles.scopeArrow,
+                  styles.scopeArrowLeft,
+                  showProSkin ? styles.scopeArrowPro : null,
+                ]}
+              />
+            </Pressable>
+          ) : null}
           <Pressable
             style={styles.scopeTitlePress}
-            onPress={cycleScope}
+            onPress={canGoNext ? goNext : canGoPrev ? goPrev : undefined}
+            disabled={!canGoNext && !canGoPrev}
             accessibilityRole="button"
-accessibilityLabel={copy.switchBoard}
+            accessibilityLabel={copy.switchBoard}
           >
             <Text
               style={[
@@ -203,21 +220,23 @@ accessibilityLabel={copy.switchBoard}
               {scopeTitle}
             </Text>
           </Pressable>
-          <Pressable
-            style={[styles.scopeNavBtn, styles.scopeNavBtnRight]}
-            onPress={cycleScope}
-            hitSlop={8}
-            accessibilityRole="button"
-            accessibilityLabel={copy.nextBoard}
-          >
-            <View
-              style={[
-                styles.scopeArrow,
-                styles.scopeArrowRight,
-                showProSkin ? styles.scopeArrowPro : null,
-              ]}
-            />
-          </Pressable>
+          {canGoNext ? (
+            <Pressable
+              style={[styles.scopeNavBtn, styles.scopeNavBtnRight]}
+              onPress={goNext}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel={copy.nextBoard}
+            >
+              <View
+                style={[
+                  styles.scopeArrow,
+                  styles.scopeArrowRight,
+                  showProSkin ? styles.scopeArrowPro : null,
+                ]}
+              />
+            </Pressable>
+          ) : null}
         </View>
       ) : null}
       {!isFace ? (

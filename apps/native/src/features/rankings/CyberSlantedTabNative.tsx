@@ -1,9 +1,9 @@
 /**
  * Web `CyberSlantedTab` / `CyberSlantedTabBar` 相当。
  *
- * 選択態（シアン既定）: 焼き込み PNG（矩形）。Web と同様に skewX(-14deg)。
- * 選択態（テーマ色）: 塗り + 黒スキャン横線 + 外周ブルーム（Web の accent / scan / box-shadow）。
- * シアン既定は shadow / BlurMask で光を再発明しない。
+ * 選択: シアン / PRO 紫 / PRO 金は同一 glow 寸法の焼き込み PNG + skewX(-14deg)。
+ * それ以外の theme は runtime shadow（GLOW_PAD 込みで Pick Up に寄せる）。
+ * 非選択: 透明 + 枠（skew）。光は付けない。
  */
 import { createContext, useContext, type ReactNode } from "react";
 import {
@@ -38,6 +38,8 @@ export type CyberSlantedTabThemeNative = {
 
 /** 1枚素材。左右中央の3分割だと継ぎ目が縦線になって見える */
 const ACTIVE_STRETCH = require("../../../assets/cyber-slanted-tab/active-stretch.png") as ImageSourcePropType;
+const ACTIVE_STRETCH_VIOLET = require("../../../assets/cyber-slanted-tab/active-stretch-violet.png") as ImageSourcePropType;
+const ACTIVE_STRETCH_GOLD = require("../../../assets/cyber-slanted-tab/active-stretch-gold.png") as ImageSourcePropType;
 
 const GLOW_PAD = tabMeta.glowPadPx1x;
 /**
@@ -46,6 +48,13 @@ const GLOW_PAD = tabMeta.glowPadPx1x;
  */
 const BODY_H_COMPACT = 30;
 const BODY_H_NORMAL = 34;
+
+/** Pick Up シアンと同寸の焼き込み（PRO 紫・金も同じ glow） */
+const BAKED_ACTIVE_BY_ACCENT: Record<string, ImageSourcePropType> = {
+  [CYBER_TAB_CYAN.toUpperCase()]: ACTIVE_STRETCH,
+  "#C084FC": ACTIVE_STRETCH_VIOLET,
+  "#F6C344": ACTIVE_STRETCH_GOLD,
+};
 
 const CyberSlantedTabFillContext = createContext(false);
 
@@ -59,7 +68,7 @@ type TabProps = {
   fontWeight?: "500" | "600" | "700";
   /**
    * Web の theme 相当。
-   * 既定（シアン）は焼き込み PNG。accent がシアン以外のときだけ塗りを theme に合わせる。
+   * シアン / PRO 紫 / 金は焼き込み。それ以外は runtime 塗り。
    */
   theme?: CyberSlantedTabThemeNative;
   accessibilityRole?: "tab";
@@ -76,12 +85,15 @@ function chromeImageHeight(bodyH: number): number {
 
 function resolveTabTheme(theme?: CyberSlantedTabThemeNative) {
   const accent = theme?.accent ?? CYBER_TAB_CYAN;
+  const bakedSource =
+    BAKED_ACTIVE_BY_ACCENT[accent.toUpperCase()] ?? null;
   return {
     accent,
     inactiveText: theme?.inactiveText ?? accent,
     activeText: theme?.activeText ?? TAB_ACTIVE_TEXT,
     inactiveBorder: theme?.inactiveBorder ?? accent,
-    useBakedActive: accent.toUpperCase() === CYBER_TAB_CYAN.toUpperCase(),
+    /** 焼き込みがある色は Pick Up と同寸の光。無い色だけ runtime shadow */
+    bakedActiveSource: bakedSource,
   };
 }
 
@@ -114,7 +126,13 @@ function ScanOverlay({ height }: { height: number }) {
 }
 
 /** 選択: 焼き込み1枚を横ストレッチし、Web と同じ skew で傾ける */
-function ActiveTabChrome({ bodyH }: { bodyH: number }) {
+function ActiveTabChrome({
+  bodyH,
+  source = ACTIVE_STRETCH,
+}: {
+  bodyH: number;
+  source?: ImageSourcePropType;
+}) {
   const imageH = chromeImageHeight(bodyH);
   return (
     <View
@@ -122,7 +140,7 @@ function ActiveTabChrome({ bodyH }: { bodyH: number }) {
       style={[styles.chromeSkew, { height: imageH, width: "100%" }]}
     >
       <Image
-        source={ACTIVE_STRETCH}
+        source={source}
         style={{ width: "100%", height: imageH }}
         resizeMode="stretch"
       />
@@ -131,8 +149,8 @@ function ActiveTabChrome({ bodyH }: { bodyH: number }) {
 }
 
 /**
- * 選択: theme 塗り（シアン以外）。
- * Web の accent 背景 + scan + box-shadow に相当。
+ * 選択: 焼き込みが無い theme 色のフォールバック。
+ * Pick Up 焼き込みと同寸（GLOW_PAD + 二重 shadow ≈ 10px / 22px）。
  */
 function ActiveTabChromeThemed({
   bodyH,
@@ -141,30 +159,45 @@ function ActiveTabChromeThemed({
   bodyH: number;
   accent: string;
 }) {
+  const imageH = chromeImageHeight(bodyH);
   return (
     <View
       pointerEvents="none"
-      style={[
-        styles.themedActiveGlow,
-        {
-          height: bodyH,
-          width: "100%",
-          shadowColor: accent,
-        },
-      ]}
+      style={[styles.chromeSkew, { height: imageH, width: "100%" }]}
     >
       <View
         style={[
-          styles.themedActiveChrome,
+          styles.themedGlowOuter,
           {
+            marginTop: GLOW_PAD,
             height: bodyH,
-            width: "100%",
-            backgroundColor: accent,
-            overflow: "hidden",
+            shadowColor: accent,
           },
         ]}
       >
-        <ScanOverlay height={bodyH} />
+        <View
+          style={[
+            styles.themedGlowInner,
+            {
+              height: bodyH,
+              shadowColor: accent,
+            },
+          ]}
+        >
+          <View
+            style={[
+              styles.themedActiveChrome,
+              {
+                height: bodyH,
+                width: "100%",
+                backgroundColor: accent,
+                overflow: "hidden",
+              },
+            ]}
+          >
+            <ScanOverlay height={bodyH} />
+          </View>
+        </View>
       </View>
     </View>
   );
@@ -225,7 +258,7 @@ export function CyberSlantedTabNative({
     >
       <View style={[styles.tabFrame, { height: bodyH }]} pointerEvents="box-none">
         {active ? (
-          resolved.useBakedActive ? (
+          resolved.bakedActiveSource ? (
             <View
               pointerEvents="none"
               style={[
@@ -238,10 +271,24 @@ export function CyberSlantedTabNative({
                 },
               ]}
             >
-              <ActiveTabChrome bodyH={bodyH} />
+              <ActiveTabChrome
+                bodyH={bodyH}
+                source={resolved.bakedActiveSource}
+              />
             </View>
           ) : (
-            <View style={styles.inactiveSlot} pointerEvents="none">
+            <View
+              pointerEvents="none"
+              style={[
+                styles.chromeHost,
+                {
+                  top: -GLOW_PAD,
+                  left: -GLOW_PAD,
+                  right: -GLOW_PAD,
+                  height: imageH,
+                },
+              ]}
+            >
               <ActiveTabChromeThemed bodyH={bodyH} accent={resolved.accent} />
             </View>
           )
@@ -406,15 +453,29 @@ const styles = StyleSheet.create({
   },
   themedActiveChrome: {
     borderWidth: 0,
-    transform: [{ skewX: SKEW }],
   },
-  /** Web theme.activeShadow（0 0 10px / 0 0 22px）相当 — テーマ色のみ */
-  themedActiveGlow: {
+  /** Pick Up 焼き込み相当 — 外側 ≈ Web 22px / 内側 ≈ 10px */
+  themedGlowOuter: {
+    width: "100%",
+    ...Platform.select({
+      ios: {
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.28,
+        shadowRadius: 11,
+      },
+      android: {
+        elevation: 4,
+      },
+      default: {},
+    }),
+  },
+  themedGlowInner: {
+    width: "100%",
     ...Platform.select({
       ios: {
         shadowOffset: { width: 0, height: 0 },
         shadowOpacity: 0.55,
-        shadowRadius: 11,
+        shadowRadius: 5,
       },
       android: {
         elevation: 6,
