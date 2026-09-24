@@ -27,6 +27,11 @@ export type RankCardImagePayload = {
 const TRANSPARENT_PIXEL =
   "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
 
+function getAppUrl(): string | undefined {
+  if (typeof process === "undefined") return undefined;
+  return process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "");
+}
+
 /** 共有 PNG 生成時に除外する要素（data-capture-skip / data-share-exclude） */
 export function shouldIncludeInRankCardCapture(el: Node): boolean {
   if (!(el instanceof HTMLElement)) return true;
