@@ -77,7 +77,6 @@ import {
   estimatePeriodRankingUnits,
   periodUnitRanksFromByMetric,
 } from "../../../../../lib/rankings/estimatePeriodRankingUnits";
-import { applyRankingScoreMock } from "../../../../../lib/rankings/rankingScoreMocks";
 
 type Props = {
   bottomReserveY: number;
@@ -145,10 +144,7 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
     : usePeriodBoard
       ? periodBulk
       : standardBulk;
-  const byMetric = useMemo(
-    () => applyRankingScoreMock(byMetricRaw, myUid) ?? byMetricRaw,
-    [byMetricRaw, myUid]
-  );
+  const byMetric = byMetricRaw;
   const { user } = useNativeMyRankingUser(myUid);
   const language = user.language;
   const t = rankingsTexts(language);

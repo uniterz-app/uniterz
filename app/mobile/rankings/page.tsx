@@ -84,7 +84,6 @@ import {
 } from "@/lib/rankings/rankingDivision";
 import { usePeriodRankingsBulk } from "@/lib/rankings/usePeriodRankingsBulk";
 import { useOpenSeasonRankingsBulk } from "@/lib/rankings/useOpenSeasonRankingsBulk";
-import { applyRankingScoreMock } from "@/lib/rankings/rankingScoreMocks";
 import { PRO_LEAGUE_TAB_THEME } from "@/lib/rankings/proLeagueAtmosphere";
 import TutorialLiveHost from "@/app/component/tutorial/TutorialLiveHost";
 
@@ -205,10 +204,7 @@ export default function MobileRankingsPage() {
     : usePeriodBoard
       ? periodBulk
       : seasonBulk;
-  const byMetric = useMemo(
-    () => applyRankingScoreMock(byMetricRaw, myUid) ?? byMetricRaw,
-    [byMetricRaw, myUid]
-  );
+  const byMetric = byMetricRaw;
 
   const { user: sessionUser } = useRankingSessionUser(myUid);
   const language = sessionUser.language;
