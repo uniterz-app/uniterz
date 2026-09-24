@@ -1171,36 +1171,37 @@ export default function NbaPlayerDetailPanel({
       }),
     [detail, rosterPlayer, teammates]
   );
-  const currentSalary = detail.contract?.seasons[0] ?? null;
+  const contract = detail.contract;
+  const currentSalary = contract?.seasons[0] ?? null;
   const isTwoWay =
-    detail.contract?.contractType?.toLowerCase().includes("two-way") ||
-    detail.contract?.contractType?.toLowerCase().includes("2-way") ||
+    contract?.contractType?.toLowerCase().includes("two-way") ||
+    contract?.contractType?.toLowerCase().includes("2-way") ||
     detail.position?.toLowerCase().includes("two-way") ||
     detail.position?.toLowerCase().includes("2-way") ||
     Boolean(
-      detail.contract?.notes?.some(
+      contract?.notes?.some(
         (n) =>
           n.toLowerCase().includes("two-way") || n.toLowerCase().includes("2-way")
       )
     );
   const isExhibit10 =
     !isTwoWay &&
-    (detail.contract?.contractType?.toLowerCase().includes("exhibit 10") ||
-      detail.contract?.contractType?.toLowerCase().includes("exhibit10") ||
+    (contract?.contractType?.toLowerCase().includes("exhibit 10") ||
+      contract?.contractType?.toLowerCase().includes("exhibit10") ||
       Boolean(
-        detail.contract?.notes?.some((n) =>
+        contract?.notes?.some((n) =>
           n.toLowerCase().includes("exhibit 10")
         )
       ));
-  const deadSalary = detail.contract?.deadSalary ?? null;
+  const deadSalary = contract?.deadSalary ?? null;
   const hasDeadSalary = (deadSalary?.salary ?? 0) > 0;
   const isContractExpired =
-    !detail.contract ||
-    detail.contract.seasons.length === 0 ||
-    detail.contract.yearsRemaining <= 0 ||
-    detail.contract.contractStatus?.toLowerCase().includes("expired");
+    !contract ||
+    contract.seasons.length === 0 ||
+    contract.yearsRemaining <= 0 ||
+    contract.contractStatus?.toLowerCase().includes("expired");
   const showActiveContract =
-    Boolean(detail.contract) && !isContractExpired && Boolean(currentSalary);
+    Boolean(contract) && !isContractExpired && Boolean(currentSalary);
   const deadStretchYears = deadSalary
     ? deadSalaryStretchSeasonYears(deadSalary)
     : [];
@@ -1665,7 +1666,7 @@ export default function NbaPlayerDetailPanel({
       />
       <section className="space-y-3">
         <h2 className={SECTION_HEADING_CLASS}>CONTRACT</h2>
-        {showActiveContract && currentSalary ? (
+        {showActiveContract && currentSalary && contract ? (
             <div
               className="space-y-2 border bg-black/45 p-3.5"
               style={{ borderColor: hexToRgba(uiAccent, 0.3) }}
@@ -1714,13 +1715,13 @@ export default function NbaPlayerDetailPanel({
                 ) : null}
               </div>
               <p className={`${nameOxanium.className} text-[11px] font-bold uppercase tracking-wide text-white/60`}>
-                {detail.contract.contractType}
+                {contract.contractType}
                 {" · "}
-                {isJa ? "残" : "REM"} {detail.contract.yearsRemaining} YR
+                {isJa ? "残" : "REM"} {contract.yearsRemaining} YR
                 {" · "}
-                FA {detail.contract.freeAgencyYear}
-                {detail.contract.freeAgencyType
-                  ? ` ${detail.contract.freeAgencyType}`
+                FA {contract.freeAgencyYear}
+                {contract.freeAgencyType
+                  ? ` ${contract.freeAgencyType}`
                   : ""}
               </p>
               <p
@@ -1728,18 +1729,18 @@ export default function NbaPlayerDetailPanel({
                 style={{ color: uiAccent }}
               >
                 {isJa ? "総額" : "TOTAL"}{" "}
-                {formatSalaryUsd(detail.contract.totalValue)}
+                {formatSalaryUsd(contract.totalValue)}
                 {"  ·  "}
                 {isJa ? "残保証" : "GUAR."}{" "}
-                {formatSalaryUsd(detail.contract.remainingGuaranteed)}
+                {formatSalaryUsd(contract.remainingGuaranteed)}
               </p>
               <div className="mt-1">
-                {detail.contract.seasons.map((s, i) => (
+                {contract.seasons.map((s, i) => (
                   <div
                     key={s.season}
                     className="flex items-center gap-2.5 py-1.5"
                     style={
-                      i < detail.contract!.seasons.length - 1
+                      i < contract.seasons.length - 1
                         ? {
                             borderBottom: `1px solid ${hexToRgba(uiAccent, 0.12)}`,
                           }
@@ -1775,12 +1776,12 @@ export default function NbaPlayerDetailPanel({
                   </div>
                 ))}
               </div>
-              {detail.contract.notes.length > 0 ? (
+              {contract.notes.length > 0 ? (
                 <p
                   className={`${nameOxanium.className} text-[11px] leading-tight`}
                   style={{ color: hexToRgba(uiAccent, 0.55) }}
                 >
-                  {detail.contract.notes[0]}
+                  {contract.notes[0]}
                 </p>
               ) : null}
               {deadSalaryInner ? (
@@ -1796,7 +1797,7 @@ export default function NbaPlayerDetailPanel({
           >
             <div className="space-y-1.5">{deadSalaryInner}</div>
           </div>
-        ) : detail.contract?.contractStatus?.toLowerCase().includes("expired") || (!detail.contract && !currentSalary) ? (
+        ) : contract?.contractStatus?.toLowerCase().includes("expired") || (!contract && !currentSalary) ? (
           <div
             className="space-y-2 border bg-black/45 p-3.5"
             style={{ borderColor: hexToRgba(uiAccent, 0.3) }}
@@ -1812,9 +1813,9 @@ export default function NbaPlayerDetailPanel({
               </div>
             </div>
             <p className={`${nameOxanium.className} text-[11px] font-bold uppercase tracking-wide text-white/60`}>
-              {detail.contract?.contractType || "Free Agent"}
-              {detail.contract?.freeAgencyYear ? ` · FA ${detail.contract.freeAgencyYear}` : ""}
-              {detail.contract?.freeAgencyType ? ` ${detail.contract.freeAgencyType}` : ""}
+              {contract?.contractType || "Free Agent"}
+              {contract?.freeAgencyYear ? ` · FA ${contract.freeAgencyYear}` : ""}
+              {contract?.freeAgencyType ? ` ${contract.freeAgencyType}` : ""}
             </p>
           </div>
         ) : (

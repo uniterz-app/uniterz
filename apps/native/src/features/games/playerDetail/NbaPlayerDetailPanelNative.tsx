@@ -1466,36 +1466,37 @@ export default function NbaPlayerDetailPanelNative({
     [detail, rosterPlayer, teammates]
   );
   const bottomPad = Math.max(12, insets.bottom);
-  const currentSalary = detail.contract?.seasons[0] ?? null;
+  const contract = detail.contract;
+  const currentSalary = contract?.seasons[0] ?? null;
   const isTwoWay =
-    detail.contract?.contractType?.toLowerCase().includes("two-way") ||
-    detail.contract?.contractType?.toLowerCase().includes("2-way") ||
+    contract?.contractType?.toLowerCase().includes("two-way") ||
+    contract?.contractType?.toLowerCase().includes("2-way") ||
     detail.position?.toLowerCase().includes("two-way") ||
     detail.position?.toLowerCase().includes("2-way") ||
     Boolean(
-      detail.contract?.notes?.some(
+      contract?.notes?.some(
         (n) =>
           n.toLowerCase().includes("two-way") || n.toLowerCase().includes("2-way")
       )
     );
   const isExhibit10 =
     !isTwoWay &&
-    (detail.contract?.contractType?.toLowerCase().includes("exhibit 10") ||
-      detail.contract?.contractType?.toLowerCase().includes("exhibit10") ||
+    (contract?.contractType?.toLowerCase().includes("exhibit 10") ||
+      contract?.contractType?.toLowerCase().includes("exhibit10") ||
       Boolean(
-        detail.contract?.notes?.some((n) =>
+        contract?.notes?.some((n) =>
           n.toLowerCase().includes("exhibit 10")
         )
       ));
-  const deadSalary = detail.contract?.deadSalary ?? null;
+  const deadSalary = contract?.deadSalary ?? null;
   const hasDeadSalary = (deadSalary?.salary ?? 0) > 0;
   const isContractExpired =
-    !detail.contract ||
-    detail.contract.seasons.length === 0 ||
-    detail.contract.yearsRemaining <= 0 ||
-    detail.contract.contractStatus?.toLowerCase().includes("expired");
+    !contract ||
+    contract.seasons.length === 0 ||
+    contract.yearsRemaining <= 0 ||
+    contract.contractStatus?.toLowerCase().includes("expired");
   const showActiveContract =
-    Boolean(detail.contract) && !isContractExpired && Boolean(currentSalary);
+    Boolean(contract) && !isContractExpired && Boolean(currentSalary);
   const deadStretchYears = deadSalary
     ? deadSalaryStretchSeasonYears(deadSalary)
     : [];
@@ -1668,7 +1669,7 @@ export default function NbaPlayerDetailPanelNative({
           </Text>
           <View style={styles.advTitleLine} />
         </View>
-        {showActiveContract && currentSalary ? (
+        {showActiveContract && currentSalary && contract ? (
             <View
               style={[styles.contractCard, { borderColor: frameColor }]}
             >
@@ -1739,39 +1740,39 @@ export default function NbaPlayerDetailPanelNative({
               </View>
               <View style={styles.contractMetaRow}>
                 <Text style={styles.contractMeta}>
-                  {detail.contract.contractType}
+                  {contract.contractType}
                 </Text>
                 <Text style={styles.contractMetaDot}>
                   ·
                 </Text>
                 <Text style={styles.contractMeta}>
-                  {chrome.rem} {detail.contract.yearsRemaining} YR
+                  {chrome.rem} {contract.yearsRemaining} YR
                 </Text>
                 <Text style={styles.contractMetaDot}>
                   ·
                 </Text>
                 <Text style={styles.contractMeta}>
-                  FA {detail.contract.freeAgencyYear}
-                  {detail.contract.freeAgencyType
-                    ? ` ${detail.contract.freeAgencyType}`
+                  FA {contract.freeAgencyYear}
+                  {contract.freeAgencyType
+                    ? ` ${contract.freeAgencyType}`
                     : ""}
                 </Text>
               </View>
               <Text style={[styles.contractTotal, { color: accent }]}>
                 {chrome.total}{" "}
-                {formatSalaryUsd(detail.contract.totalValue)}
+                {formatSalaryUsd(contract.totalValue)}
                 {"  ·  "}
                 {chrome.guar}{" "}
-                {formatSalaryUsd(detail.contract.remainingGuaranteed)}
+                {formatSalaryUsd(contract.remainingGuaranteed)}
               </Text>
 
               <View style={styles.contractSeasonList}>
-                {detail.contract.seasons.map((s, i) => (
+                {contract.seasons.map((s, i) => (
                   <View
                     key={s.season}
                     style={[
                       styles.contractSeasonRow,
-                      i < detail.contract!.seasons.length - 1
+                      i < contract.seasons.length - 1
                         ? {
                             borderBottomWidth: StyleSheet.hairlineWidth,
                             borderBottomColor: hexToRgba(accent, 0.12),
@@ -1803,11 +1804,11 @@ export default function NbaPlayerDetailPanelNative({
                   </View>
                 ))}
               </View>
-              {detail.contract.notes.length > 0 ? (
+              {contract.notes.length > 0 ? (
                 <Text
                   style={[styles.contractNote, { color: hexToRgba(accent, 0.55) }]}
                 >
-                  {detail.contract.notes[0]}
+                  {contract.notes[0]}
                 </Text>
               ) : null}
               {hasDeadSalary && deadSalary ? (
