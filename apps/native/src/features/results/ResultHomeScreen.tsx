@@ -22,7 +22,6 @@ import {
   resolveLocalizedLang,
 } from "../../../../../lib/i18n/localize";
 import { useNativeUserLanguageFromAuth } from "../../hooks/useNativeUserLanguage";
-import TutorialLiveHostNative from "../tutorial/TutorialLiveHostNative";
 import { BlocksPulseLoader } from "../../components/BlocksPulseLoader";
 import { colors, spacing, typography } from "../../theme/tokens";
 import { getTeamAlias, splitTeamNameByLeague } from "../../utils/teamName";
@@ -58,6 +57,7 @@ import { canDismissResultListPostNow, mergeResultDayPostsByKickoff } from "./nat
 import ResultListFiltersNative, {
   type ResultFilterState,
 } from "./ResultListFiltersNative";
+import TutorialLiveHostNative from "../tutorial/TutorialLiveHostNative";
 import {
   DEFAULT_RESULT_LIST_FILTERS,
   isDefaultResultListFilters,
@@ -717,21 +717,19 @@ export default function ResultHomeScreen({
         />
       )}
     </View>
-    <ResultDetailScreen
-      visible={detailPostId != null}
-      postId={detailPostId}
-      language={language}
-      warmPost={detailWarmPost}
-      warmMarket={detailWarmMarket}
-      warmRoundMeta={detailWarmRoundMeta}
-      onClose={onCloseResultDetail}
-    />
-    <View style={styles.tutorialHostLayer} pointerEvents="box-none">
+      <ResultDetailScreen
+        visible={detailPostId != null}
+        postId={detailPostId}
+        language={language}
+        warmPost={detailWarmPost}
+        warmMarket={detailWarmMarket}
+        warmRoundMeta={detailWarmRoundMeta}
+        onClose={onCloseResultDetail}
+      />
       <TutorialLiveHostNative
         page="results"
         language={resolveLocalizedLang(language)}
       />
-    </View>
     </View>
     </ScrollVisibilityProvider>
   );

@@ -1,13 +1,32 @@
 /**
- * Web `TutorialLiveHost` 相当 — Rankings / Groups / Profile / Results 上のライブコーチ
+ * Web `TutorialLiveHost` 相当 — 各タブ初訪問ヒント（連鎖なし）
  */
 import { useCallback, useEffect, useState } from "react";
+import {
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import type { MainTabParamList } from "../../navigation/types";
 import type { Language } from "../../../../../lib/i18n/language";
 import { t as i18nT } from "../../../../../lib/i18n/t";
 import TutorialLiveCoachNative from "./TutorialLiveCoachNative";
+import PredictionScoringRulesBodyNative from "../games/PredictionScoringRulesBodyNative";
+import PredictOverlaySubmitButtonNative from "../games/PredictOverlaySubmitButtonNative";
+import { toNativeGamesLanguage } from "../games/gamesI18n";
+import {
+  resolveScoringRulesLang,
+  scoringRulesCopy,
+} from "../../../../../lib/predict/scoringRulesCopy";
+import {
+  MATCH_CARD_DISPLAY_FONT,
+  MATCH_CARD_METRIC_FONT,
+} from "../games/matchCardTypography";
 import {
   readTutorialLivePhaseNative,
   writeTutorialLivePhaseNative,
@@ -15,8 +34,11 @@ import {
   type TutorialLivePhase,
 } from "./tutorialLivePhaseNative";
 import { clearTutorialLivePickNative } from "./tutorialLivePickNative";
-import { formatTutorialLiveProgress } from "../../../../../lib/tutorial/tutorialLiveProgress";
 import { markAppTutorialSeenNative } from "./tutorialSeenNative";
+import {
+  fetchAppTutorialSeenNative,
+  readAppTutorialSeenNative,
+} from "./tutorialSeenNative";
 import { useFirebaseUser } from "../../auth/FirebaseUserProvider";
 import {
   getTutorialHorizonSubstepNative,
@@ -35,14 +57,43 @@ import {
   horizonStepHost,
 } from "../../../../../lib/tutorial/tutorialHorizonSteps";
 import { tutorialSkipConfirmProps } from "../../../../../lib/tutorial/tutorialSkipConfirmProps";
-import { subscribeTutorialRestartNative, requestTutorialClearedNative } from "./tutorialRestartEventsNative";
+import {
+  subscribeTutorialRestartNative,
+  requestTutorialClearedNative,
+} from "./tutorialRestartEventsNative";
 import { setTutorialWelcomeAudienceNative } from "./tutorialWelcomeAudienceNative";
+import {
+  markTutorialPageTipSeenNative,
+  readTutorialPageTipSeenNative,
+  type TutorialPageTipId,
+} from "./tutorialPageTipsNative";
 
-type HostSurface = "results" | "rankings" | "groups" | "profile" | "games";
+type HostSurface = "rankings" | "groups" | "profile" | "games" | "results";
 
 type Props = {
   page: HostSurface;
   language: Language;
+};
+
+const PAGE_TO_TIP: Record<
+  HostSurface,
+  "rankings" | "groups" | "profile" | "results" | null
+> = {
+  games: null,
+  results: "results",
+  rankings: "rankings",
+  groups: "groups",
+  profile: "profile",
+};
+
+const PAGE_TO_PHASE: Record<
+  "rankings" | "groups" | "profile" | "results",
+  TutorialLivePhase
+> = {
+  rankings: "rankings",
+  groups: "groups",
+  profile: "profile",
+  results: "results",
 };
 
 export default function TutorialLiveHostNative({ page, language }: Props) {
@@ -52,8 +103,10 @@ export default function TutorialLiveHostNative({ page, language }: Props) {
   const m = i18nT(language);
   const skipConfirm = tutorialSkipConfirmProps(m.tutorial);
   const [phase, setPhase] = useState<TutorialLivePhase | null>(null);
-  /** 新機能紹介: 各機能2ステップ（概要→使い方） */
   const [horizonFeatureStep, setHorizonFeatureStep] = useState(0);
+  const [scoringRulesOpen, setScoringRulesOpen] = useState(false);
+  const [rankingsTipStep, setRankingsTipStep] = useState(0);
+  const [profileTipStep, setProfileTipStep] = useState(0);
 
   const syncPhaseFromStore = useCallback(async () => {
     const p = await readTutorialLivePhaseNative();
@@ -64,7 +117,6 @@ export default function TutorialLiveHostNative({ page, language }: Props) {
     }
   }, []);
 
-  /** タブはマウント維持のため、フォーカスのたびにフェーズを取り直す */
   useFocusEffect(
     useCallback(() => {
       let cancelled = false;
@@ -76,18 +128,44 @@ export default function TutorialLiveHostNative({ page, language }: Props) {
         if (p === "horizon") {
           setHorizonFeatureStep(getTutorialHorizonSubstepNative());
         }
+
+        const uid = fUser?.uid;
+        const tip = PAGE_TO_TIP[page];
+        if (!uid || !tip) return;
+        if (await readAppTutorialSeenNative(uid)) return;
+        if (await readTutorialPageTipSeenNative(uid, tip)) return;
+        const seen = await fetchAppTutorialSeenNative(uid);
+        if (cancelled || seen) return;
+        if (await readTutorialPageTipSeenNative(uid, tip)) return;
+        const existing = await readTutorialLivePhaseNative();
+        if (
+          existing === "welcome" ||
+          existing === "gamesPickup" ||
+          existing === "horizon" ||
+          existing === "games" ||
+          existing === "gamesStats"
+        ) {
+          return;
+        }
+        const phaseForTip = PAGE_TO_PHASE[tip];
+        if (existing === phaseForTip) return;
+        await writeTutorialLivePhaseNative(phaseForTip);
+        if (!cancelled) {
+          setPhase(phaseForTip);
+          if (tip === "rankings") setRankingsTipStep(0);
+          if (tip === "profile") setProfileTipStep(0);
+        }
       })();
       return () => {
         cancelled = true;
       };
-    }, [])
+    }, [fUser?.uid, page])
   );
 
   useEffect(() => {
     void syncPhaseFromStore();
   }, [syncPhaseFromStore]);
 
-  /** DEV 再開: 他タブのコーチを即消し（古い Modal / オーバーレイ残留防止） */
   useEffect(() => {
     return subscribeTutorialRestartNative(() => {
       setPhase(null);
@@ -97,7 +175,6 @@ export default function TutorialLiveHostNative({ page, language }: Props) {
     });
   }, []);
 
-  /** 同じ画面に居たままフェーズが変わったとき（welcome 追い抜き→horizon） */
   useEffect(() => {
     return subscribeTutorialLivePhaseNative((p) => {
       setPhase(p && p !== "done" ? p : null);
@@ -107,7 +184,6 @@ export default function TutorialLiveHostNative({ page, language }: Props) {
     });
   }, []);
 
-  /** Games 側 STATS ステップの戻る、などサブステップ同期 */
   useEffect(() => {
     return subscribeTutorialHorizonSubstepNative(() => {
       setHorizonFeatureStep(getTutorialHorizonSubstepNative());
@@ -122,7 +198,7 @@ export default function TutorialLiveHostNative({ page, language }: Props) {
     []
   );
 
-  const finish = useCallback(() => {
+  const finishAll = useCallback(() => {
     void markAppTutorialSeenNative(fUser?.uid ?? null);
     void writeTutorialLivePhaseNative(null);
     setTutorialLiveTrackNative(null);
@@ -132,8 +208,14 @@ export default function TutorialLiveHostNative({ page, language }: Props) {
     requestTutorialClearedNative();
   }, [fUser?.uid]);
 
-  const progressLabelFor = (p: TutorialLivePhase) =>
-    formatTutorialLiveProgress(m.tutorial.practice.progressLabel, p);
+  const dismissPageTip = useCallback(
+    async (tip: TutorialPageTipId) => {
+      await markTutorialPageTipSeenNative(fUser?.uid, tip);
+      await writeTutorialLivePhaseNative(null);
+      setPhase(null);
+    },
+    [fUser?.uid]
+  );
 
   const advanceHorizonStep = useCallback(
     (next: number, prevHost: ReturnType<typeof horizonStepHost>) => {
@@ -148,62 +230,91 @@ export default function TutorialLiveHostNative({ page, language }: Props) {
 
   if (!phase) return null;
 
+  const scoringRules = scoringRulesCopy(resolveScoringRulesLang(language));
+  const scoringModal = (
+    <Modal
+      visible={scoringRulesOpen}
+      transparent
+      animationType="fade"
+      onRequestClose={() => setScoringRulesOpen(false)}
+    >
+      <View style={scoringStyles.backdrop}>
+        <Pressable
+          style={StyleSheet.absoluteFillObject}
+          onPress={() => setScoringRulesOpen(false)}
+          accessibilityRole="button"
+          accessibilityLabel={m.common.close}
+        />
+        <View style={scoringStyles.sheet}>
+          <View style={scoringStyles.header}>
+            <Text style={scoringStyles.headerTitle}>SCORING RULES</Text>
+            <Text style={scoringStyles.headerHint}>{scoringRules.headerHint}</Text>
+          </View>
+          <ScrollView
+            style={scoringStyles.scroll}
+            contentContainerStyle={scoringStyles.scrollContent}
+            showsVerticalScrollIndicator={false}
+          >
+            <PredictionScoringRulesBodyNative
+              language={toNativeGamesLanguage(language)}
+              league="nba"
+            />
+          </ScrollView>
+          <View style={scoringStyles.footer}>
+            <PredictOverlaySubmitButtonNative
+              label={m.common.close}
+              enabled
+              onPress={() => setScoringRulesOpen(false)}
+            />
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+
+  if (page === "rankings" && phase === "rankings") {
+    const p = m.tutorial.practice;
+    const step0 = rankingsTipStep === 0;
+    return (
+      <>
+        <TutorialLiveCoachNative
+          open
+          title={step0 ? p.rankingsTitle : p.rankingsBoardsTitle}
+          body={step0 ? p.rankingsBody : p.rankingsBoardsBody}
+          skipLabel={m.tutorial.skip}
+          nextLabel={step0 ? m.tutorial.next : m.common.ok}
+          backLabel={step0 ? undefined : m.tutorial.back}
+          altNextLabel={step0 ? p.rankingsScoreHelpCta : undefined}
+          target={step0 ? null : "rankings-division"}
+          allowInteractBehind={step0}
+          {...skipConfirm}
+          onSkip={() => void dismissPageTip("rankings")}
+          onAltNext={
+            step0 ? () => setScoringRulesOpen(true) : undefined
+          }
+          onBack={step0 ? undefined : () => setRankingsTipStep(0)}
+          onNext={() => {
+            if (step0) setRankingsTipStep(1);
+            else void dismissPageTip("rankings");
+          }}
+        />
+        {scoringModal}
+      </>
+    );
+  }
+
   if (page === "results" && phase === "results") {
     return (
       <TutorialLiveCoachNative
         open
         title={m.tutorial.practice.resultsTitle}
         body={m.tutorial.practice.resultsBody}
-        nextLabel={m.tutorial.next}
         skipLabel={m.tutorial.skip}
-        backLabel={m.tutorial.back}
-        target="result-card"
-        progressLabel={progressLabelFor("results")}
-        onNext={() => {
-          void (async () => {
-            await setPhaseAndStore("rankings");
-            navigation.navigate("RankingsTab", { screen: "RankingsHome" });
-          })();
-        }}
-        onBack={() => {
-          void (async () => {
-            await setPhaseAndStore("games");
-            navigation.navigate("GamesTab", { screen: "GamesHome" });
-          })();
-        }}
-        {...skipConfirm}
-        onSkip={finish}
-      />
-    );
-  }
-
-  if (page === "rankings" && phase === "rankings") {
-    return (
-      <TutorialLiveCoachNative
-        open
-        title={m.tutorial.practice.rankingsTitle}
-        body={m.tutorial.practice.rankingsBody}
-        skipLabel={m.tutorial.skip}
-        nextLabel={m.tutorial.next}
-        backLabel={m.tutorial.back}
+        nextLabel={m.common.ok}
         allowInteractBehind
-        progressLabel={progressLabelFor("rankings")}
         {...skipConfirm}
-        onSkip={finish}
-        onBack={() => {
-          void (async () => {
-            await setPhaseAndStore("results");
-            navigation.navigate("ResultTab", { screen: "ResultHome" });
-          })();
-        }}
-        onNext={() => {
-          void (async () => {
-            await setPhaseAndStore("groups");
-            navigation.navigate("LeaderboardsTab", {
-              screen: "LeaderboardsHome",
-            });
-          })();
-        }}
+        onSkip={() => void dismissPageTip("results")}
+        onNext={() => void dismissPageTip("results")}
       />
     );
   }
@@ -215,27 +326,55 @@ export default function TutorialLiveHostNative({ page, language }: Props) {
         title={m.tutorial.practice.groupsTitle}
         body={m.tutorial.practice.groupsBody}
         skipLabel={m.tutorial.skip}
-        nextLabel={m.tutorial.next}
-        backLabel={m.tutorial.back}
+        nextLabel={m.common.ok}
         target="groups-create"
         allowInteractBehind
-        progressLabel={progressLabelFor("groups")}
         {...skipConfirm}
-        onSkip={finish}
-        onBack={() => {
-          void (async () => {
-            await setPhaseAndStore("rankings");
-            navigation.navigate("RankingsTab", { screen: "RankingsHome" });
-          })();
-        }}
+        onSkip={() => void dismissPageTip("groups")}
+        onNext={() => void dismissPageTip("groups")}
+      />
+    );
+  }
+
+  if (page === "profile" && phase === "profile") {
+    const p = m.tutorial.practice;
+    const featureSteps = buildHorizonFeatureSteps(p);
+    if (profileTipStep === 0) {
+      return (
+        <TutorialLiveCoachNative
+          open
+          title={p.profileTitle}
+          body={p.profileBody}
+          skipLabel={m.tutorial.skip}
+          nextLabel={m.tutorial.next}
+          allowInteractBehind
+          {...skipConfirm}
+          onSkip={() => void dismissPageTip("profile")}
+          onNext={() => setProfileTipStep(1)}
+        />
+      );
+    }
+    const fi = Math.min(profileTipStep - 1, featureSteps.length - 1);
+    const step = featureSteps[fi]!;
+    const isLast = fi >= featureSteps.length - 1;
+    return (
+      <TutorialLiveCoachNative
+        open
+        title={step.title}
+        body={step.body}
+        skipLabel={m.tutorial.skip}
+        nextLabel={isLast ? m.common.ok : m.tutorial.next}
+        backLabel={m.tutorial.back}
+        target={step.target}
+        visual={step.visual}
+        accentTone="feature"
+        allowInteractBehind={!step.target}
+        {...skipConfirm}
+        onSkip={() => void dismissPageTip("profile")}
+        onBack={() => setProfileTipStep(profileTipStep - 1)}
         onNext={() => {
-          void (async () => {
-            await setPhaseAndStore("profile");
-            navigation.navigate("ProfileTab", {
-              screen: "ProfileHome",
-              params: {},
-            });
-          })();
+          if (!isLast) setProfileTipStep(profileTipStep + 1);
+          else void dismissPageTip("profile");
         }}
       />
     );
@@ -249,9 +388,7 @@ export default function TutorialLiveHostNative({ page, language }: Props) {
     const step = featureSteps[stepIndex]!;
     const isLast = horizonFeatureStep >= featureSteps.length - 1;
     const featureProgress = horizonFeatureProgressLabel(
-      getTutorialLiveTrackNative() === "features"
-        ? null
-        : progressLabelFor("horizon"),
+      getTutorialLiveTrackNative() === "features" ? null : null,
       p.horizonFeatureTag,
       horizonFeatureStep
     );
@@ -262,13 +399,13 @@ export default function TutorialLiveHostNative({ page, language }: Props) {
         title={step.title}
         body={step.body}
         skipLabel={m.tutorial.skip}
-        nextLabel={isLast ? p.finishCta : m.tutorial.next}
+        nextLabel={isLast ? m.common.ok : m.tutorial.next}
         backLabel={m.tutorial.back}
         visual={step.visual}
         progressLabel={featureProgress}
         accentTone="feature"
         {...skipConfirm}
-        onSkip={finish}
+        onSkip={finishAll}
         onBack={() => {
           if (horizonFeatureStep > 0) {
             advanceHorizonStep(
@@ -277,13 +414,8 @@ export default function TutorialLiveHostNative({ page, language }: Props) {
             );
             return;
           }
-          if (getTutorialLiveTrackNative() === "features") {
-            void setPhaseAndStore("welcome");
-            navigation.navigate("GamesTab", { screen: "GamesHome" });
-            return;
-          }
-          void setPhaseAndStore("profile");
-          navigation.navigate("ProfileTab", { screen: "ProfileHome", params: {} });
+          void setPhaseAndStore("welcome");
+          navigation.navigate("GamesTab", { screen: "GamesHome" });
         }}
         onNext={() => {
           if (!isLast) {
@@ -293,39 +425,8 @@ export default function TutorialLiveHostNative({ page, language }: Props) {
             );
             return;
           }
-          finish();
+          finishAll();
           navigation.navigate("GamesTab", { screen: "GamesHome" });
-        }}
-      />
-    );
-  }
-
-  if (page === "profile" && phase === "profile") {
-    return (
-      <TutorialLiveCoachNative
-        open
-        title={m.tutorial.practice.profileTitle}
-        body={m.tutorial.practice.profileBody}
-        skipLabel={m.tutorial.skip}
-        nextLabel={m.tutorial.next}
-        backLabel={m.tutorial.back}
-        allowInteractBehind
-        progressLabel={progressLabelFor("profile")}
-        {...skipConfirm}
-        onSkip={finish}
-        onBack={() => {
-          void (async () => {
-            await setPhaseAndStore("groups");
-            navigation.navigate("LeaderboardsTab", {
-              screen: "LeaderboardsHome",
-            });
-          })();
-        }}
-        onNext={() => {
-          setTutorialLiveTrackNative("full");
-          setHorizonFeatureStep(0);
-          setTutorialHorizonSubstepNative(0);
-          void setPhaseAndStore("horizon");
         }}
       />
     );
@@ -339,9 +440,7 @@ export default function TutorialLiveHostNative({ page, language }: Props) {
     const step = featureSteps[stepIndex]!;
     const isLast = horizonFeatureStep >= featureSteps.length - 1;
     const featureProgress = horizonFeatureProgressLabel(
-      getTutorialLiveTrackNative() === "features"
-        ? null
-        : progressLabelFor("horizon"),
+      null,
       p.horizonFeatureTag,
       horizonFeatureStep
     );
@@ -352,14 +451,14 @@ export default function TutorialLiveHostNative({ page, language }: Props) {
         title={step.title}
         body={step.body}
         skipLabel={m.tutorial.skip}
-        nextLabel={isLast ? p.finishCta : m.tutorial.next}
+        nextLabel={isLast ? m.common.ok : m.tutorial.next}
         backLabel={m.tutorial.back}
         target={step.target}
         visual={step.visual}
         progressLabel={featureProgress}
         accentTone="feature"
         {...skipConfirm}
-        onSkip={finish}
+        onSkip={finishAll}
         onBack={() => {
           if (horizonFeatureStep > 0) {
             advanceHorizonStep(
@@ -368,12 +467,8 @@ export default function TutorialLiveHostNative({ page, language }: Props) {
             );
             return;
           }
-          if (getTutorialLiveTrackNative() === "features") {
-            void setPhaseAndStore("gamesStats");
-            navigation.navigate("GamesTab", { screen: "GamesHome" });
-            return;
-          }
-          void setPhaseAndStore("profile");
+          void setPhaseAndStore("welcome");
+          navigation.navigate("GamesTab", { screen: "GamesHome" });
         }}
         onNext={() => {
           if (!isLast) {
@@ -383,7 +478,7 @@ export default function TutorialLiveHostNative({ page, language }: Props) {
             );
             return;
           }
-          finish();
+          finishAll();
           navigation.navigate("GamesTab", { screen: "GamesHome" });
         }}
       />
@@ -392,3 +487,55 @@ export default function TutorialLiveHostNative({ page, language }: Props) {
 
   return null;
 }
+
+const scoringStyles = StyleSheet.create({
+  backdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.75)",
+    justifyContent: "center",
+    paddingHorizontal: 14,
+    paddingVertical: 24,
+  },
+  sheet: {
+    maxHeight: "88%",
+    borderWidth: 1,
+    borderColor: "rgba(0,245,255,0.22)",
+    backgroundColor: "#05080c",
+    overflow: "hidden",
+  },
+  header: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "baseline",
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 12,
+  },
+  headerTitle: {
+    fontFamily: MATCH_CARD_DISPLAY_FONT,
+    fontSize: 22,
+    lineHeight: 24,
+    fontWeight: "400",
+    letterSpacing: 1.4,
+    color: "rgba(255,255,255,0.96)",
+  },
+  headerHint: {
+    fontFamily: MATCH_CARD_METRIC_FONT,
+    fontSize: 11,
+    color: "rgba(255,255,255,0.55)",
+  },
+  scroll: {
+    flexGrow: 0,
+    flexShrink: 1,
+  },
+  scrollContent: {
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+  },
+  footer: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 16,
+  },
+});

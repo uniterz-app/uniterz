@@ -920,7 +920,7 @@ const ko: Messages = {
     skip: "건너뛰기",
     skipConfirmTitle: "튜토리얼을 건너뛸까요?",
     skipConfirmBody:
-      "정말 건너뛸까요?\n나중에 사이드 메뉴의 「튜토리얼」에서 다시 확인할 수 있어요.",
+      "정말 건너뛸까요?\n나중에 사이드 메뉴의 「튜토리얼」에서 각 탭 힌트를 다시 볼 수 있어요.",
     skipConfirmStay: "계속하기",
     skipConfirmLeave: "건너뛰기",
     restartFromMenu: "튜토리얼",
@@ -947,23 +947,23 @@ const ko: Messages = {
       tabProfile: "Profile",
       welcomeTitle: "Welcome to UNITERZ",
       welcomeBody:
-        "경기를 예측해 포인트를 쌓고 **랭킹**을 겨루는 앱입니다. 각 화면 안내, 또는 새 기능만 고르세요.",
+        "경기를 예측해 포인트를 쌓고 **랭킹**을 겨루는 앱입니다.\n각 탭을 처음 열 때 짧은 힌트가 나옵니다. 픽업부터 시작하세요.",
       welcomeReturningBody:
-        "각 화면 안내, 또는 **새 기능만** 고르세요.",
-      welcomeFullCta: "화면 안내",
+        "각 탭의 짧은 힌트를 다시 보거나, UNIT·커리어 등 **새 기능만** 안내받을 수 있어요.",
+      welcomeFullCta: "힌트 보기",
       welcomeFeaturesCta: "새 기능만",
       gamesTitle: "경기",
       gamesBody:
         "오늘의 경기가 여기에 나옵니다. **카드를 탭**하면 예측 화면이 열립니다. 승패는 스코어에서 자동입니다.",
       gamesPickupTitle: "픽업 게임",
       gamesPickupBody:
-        "주마다 고른 경기입니다. **Pick Up 랭킹**은 이 경기 예측만 반영됩니다. 승률 랭킹은 픽업의 **65% 이상**을 예측한 사람이 대상입니다.",
+        "주마다 고른 경기입니다. **노란 테두리**와 왼쪽 **PICK UP**이 표시입니다. **Pick Up 랭킹**은 이 경기 예측만 반영됩니다. **예측하기**를 눌러 첫 예측을 해보세요.",
       gamesStatsTitle: "STANDING / STATS",
       gamesStatsBody:
         "오른쪽 **STANDING** 과 **STATS** 에서 순위와 팀/선수 스탯을 엽니다. 오른쪽 끝에서 스와이프해도 같습니다.",
       resultsTitle: "결과",
       resultsBody:
-        "**예상한 순간부터** 여기에 카드가 뜹니다. 경기 후에는 맞춰 보기 — **큰 숫자가 결과, 아래가 내 예측.** 오른쪽 위가 HIT / MISS입니다.",
+        "예측한 경기 카드가 모입니다. 경기 후 결과 확인용. **이 경기에서 얻은 스코어**가 표시됩니다. 오른쪽 위는 HIT / MISS. **카드를 탭**하면 상세를 볼 수 있습니다.",
       tapTitle: "Tap the match card",
       tapBody:
         "This is a mock NBA game. Tap the glowing card to start predicting. No real data is affected.",
@@ -1046,9 +1046,13 @@ const ko: Messages = {
       resultDetailMoreBody:
         "Scroll for score distribution and more detail. Same layout in the real app.",
       yourPickLabel: "Your pick",
-      rankingsTitle: "Rankings",
+      rankingsTitle: "랭킹",
       rankingsBody:
-        "Hits earn points that decide your place. Switch periods and categories to track yourself.",
+        "예측 **스코어**로 순위가 나열됩니다. 승률은 픽업의 **65% 이상**을 예측한 사람이 대상입니다.",
+      rankingsScoreHelpCta: "스코어 계산 방식 보기",
+      rankingsBoardsTitle: "Pick Up과 PRO LEAGUE",
+      rankingsBoardsBody:
+        "**Pick Up** … 지정 경기만의 랭킹(전원 참가).\n**PRO LEAGUE** … 전 경기 무차별급 랭킹. **PRO USER** 전용.",
       groupsTitle: "그룹",
       groupsBody:
         "**친구만의 순위표.** 초대 코드로도 참여할 수 있어요.",
@@ -1070,7 +1074,7 @@ const ko: Messages = {
         "The highlighted **coin** is your **UNIT balance**.\nUNITERZ **in-app currency** for **skins** and Profile looks.\nTap the coin to open your **history**.",
       horizonUnitHowTitle: "Earning UNIT",
       horizonUnitHowBody:
-        "Earn from **weekly/monthly rankings** and **Squad Battle** rewards.\nWhen you earn, a celebration plays on Profile and the balance updates here.\nSave UNIT to **redeem** skins and items.",
+        "**주간·월간 랭킹**, **스쿼드 배틀**, **친구 초대** 보상 등으로 얻습니다.\n모은 UNIT은 **유니폼**이나 **모자** 등과 **교환**할 수 있습니다.",
       horizonCareerWhatTitle: "What is Career?",
       horizonCareerWhatBody:
         "Your predictor **track record** — like a résumé.\nSee **hit rate, streaks, season ranks**, and **long-term stats**.\nSpot growth that short-term rankings alone won't show.",

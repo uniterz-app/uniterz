@@ -131,6 +131,10 @@ import {
   markAppTutorialSeenNative,
   readAppTutorialSeenNative,
 } from "../tutorial/tutorialSeenNative";
+import {
+  markTutorialPageTipSeenNative,
+  readTutorialPageTipSeenNative,
+} from "../tutorial/tutorialPageTipsNative";
 import { tutorialSkipConfirmProps } from "../../../../../lib/tutorial/tutorialSkipConfirmProps";
 import {
   getTutorialLivePhaseNativeMemory,
@@ -144,10 +148,8 @@ import { setTutorialHorizonSubstepNative } from "../tutorial/tutorialHorizonSubs
 import {
   hydrateTutorialLiveTrackNative,
   setTutorialLiveTrackNative,
-  getTutorialLiveTrackNative,
 } from "../tutorial/tutorialLiveTrackNative";
 import { setTutorialWelcomeHandoffNative } from "../tutorial/tutorialWelcomeHandoffNative";
-import { formatTutorialGamesSubstepProgress } from "../../../../../lib/tutorial/tutorialLiveProgress";
 import { tutorialSelectPredictToolsTab } from "../tutorial/tutorialPredictToolsBridgeNative";
 import { TUTORIAL_NBA_GAME_ID } from "../../../../../lib/tutorial/tutorialNbaRawGame";
 import { setTutorialWelcomeChromeHidden, setTutorialWelcomeBrandHidden } from "../../../../../lib/tutorial/tutorialWelcomeChrome";
@@ -167,8 +169,6 @@ import {
 import {
   isTutorialGamesSubstep,
   isTutorialOnGamesHome,
-  nextTutorialGamesSubstep,
-  prevTutorialGamesSubstep,
 } from "../../../../../lib/tutorial/tutorialGamesSubsteps";
 import { t as i18nT } from "../../../../../lib/i18n/t";
 import {
@@ -794,20 +794,20 @@ export default function GamesHomeScreen({
   ]);
   const leagueHeaderLabel = LEAGUE_HEADER_LABEL.nba;
 
-  /** 初回チュートリアル — 本番 Games 画面上で進行 */
+  /** 初回: welcome → ピックアップ説明のみ（他タブは各ページ初訪問時） */
   useEffect(() => {
     const uid = fUser?.uid;
     if (!uid || authStatus === "loading") return;
     let cancelled = false;
     void (async () => {
-      // 既読は uid 単位。端末共通キーだと別アカウントでスキップされる
       const localSeen = await readAppTutorialSeenNative(uid);
       if (cancelled || localSeen) return;
+      if (await readTutorialPageTipSeenNative(uid, "games")) return;
       const seen = await fetchAppTutorialSeenNative(uid);
       if (cancelled || seen) return;
+      if (await readTutorialPageTipSeenNative(uid, "games")) return;
       const existing = await readTutorialLivePhaseNative();
       if (
-        existing === "results" ||
         existing === "rankings" ||
         existing === "groups" ||
         existing === "profile" ||
@@ -815,7 +815,10 @@ export default function GamesHomeScreen({
       ) {
         return;
       }
-      const start: TutorialLivePhase = existing ?? "welcome";
+      const start: TutorialLivePhase =
+        existing === "gamesPickup" || existing === "welcome"
+          ? existing
+          : "welcome";
       const audience = await ensureTutorialWelcomeFirstNative();
       await writeTutorialLivePhaseNative(start);
       if (!cancelled) {
@@ -2438,11 +2441,19 @@ export default function GamesHomeScreen({
                 }
                 if (dest === "features") {
                   setTutorialLiveTrackNative("features");
-                  setTutorialPhaseAndStore("gamesPickup");
+                  setTutorialHorizonSubstepNative(0);
+                  void (async () => {
+                    await writeTutorialLivePhaseNative("horizon");
+                    setTutorialPhase("horizon");
+                    tabNavigation.navigate("ProfileTab", {
+                      screen: "ProfileHome",
+                      params: {},
+                    });
+                  })();
                   return;
                 }
                 setTutorialLiveTrackNative("full");
-                setTutorialPhaseAndStore("games");
+                setTutorialPhaseAndStore("gamesPickup");
               }
             : undefined
         }
@@ -2471,11 +2482,19 @@ export default function GamesHomeScreen({
                 }}
                 onNext={() => {
                   setTutorialLiveTrackNative("full");
-                  setTutorialPhaseAndStore("games");
+                  setTutorialPhaseAndStore("gamesPickup");
                 }}
                 onAltNext={() => {
                   setTutorialLiveTrackNative("features");
-                  setTutorialPhaseAndStore("gamesPickup");
+                  setTutorialHorizonSubstepNative(0);
+                  void (async () => {
+                    await writeTutorialLivePhaseNative("horizon");
+                    setTutorialPhase("horizon");
+                    tabNavigation.navigate("ProfileTab", {
+                      screen: "ProfileHome",
+                      params: {},
+                    });
+                  })();
                 }}
               />
             )
@@ -2730,96 +2749,36 @@ export default function GamesHomeScreen({
 
       <TutorialLiveCoachNative
         open={isTutorialGamesSubstep(tutorialPhase)}
-        title={
-          tutorialPhase === "gamesPickup"
-            ? tutorialCopy.tutorial.practice.gamesPickupTitle
-            : tutorialPhase === "gamesStats"
-              ? tutorialCopy.tutorial.practice.gamesStatsTitle
-              : tutorialCopy.tutorial.practice.gamesTitle
-        }
-        body={
-          tutorialPhase === "gamesPickup"
-            ? tutorialCopy.tutorial.practice.gamesPickupBody
-            : tutorialPhase === "gamesStats"
-              ? tutorialCopy.tutorial.practice.gamesStatsBody
-              : tutorialCopy.tutorial.practice.gamesBody
-        }
+        title={tutorialCopy.tutorial.practice.gamesPickupTitle}
+        body={tutorialCopy.tutorial.practice.gamesPickupBody}
         skipLabel={tutorialCopy.tutorial.skip}
-        nextLabel={tutorialCopy.tutorial.next}
+        nextLabel={tutorialCopy.common.ok}
         backLabel={tutorialCopy.tutorial.back}
         target={
-          tutorialPhase === "gamesStats"
-            ? "games-stats-edge"
-            : tutorialPhase === "gamesPickup" && filteredGames.length > 0
-              ? "match-pickup-label"
-              : null
+          tutorialPhase === "gamesPickup" && filteredGames.length > 0
+            ? "match-pickup-label"
+            : null
         }
         visual={
-          tutorialPhase === "gamesStats"
-            ? null
-            : tutorialPhase === "gamesPickup"
-              ? filteredGames.length === 0
-                ? "matchCard"
-                : null
-              : filteredGames.length === 0
-                ? "matchCard"
-                : null
+          tutorialPhase === "gamesPickup" && filteredGames.length === 0
+            ? "matchCard"
+            : null
         }
-        progressLabel={
-          !isTutorialGamesSubstep(tutorialPhase)
-            ? null
-            : formatTutorialGamesSubstepProgress(
-                tutorialCopy.tutorial.practice.progressLabel,
-                tutorialPhase
-              )
-        }
-        accentTone={
-          tutorialPhase === "gamesPickup" ||
-          (getTutorialLiveTrackNative() === "features" &&
-            tutorialPhase === "gamesStats")
-            ? "feature"
-            : "cyan"
-        }
+        accentTone="feature"
         {...skipConfirm}
-        onSkip={completeTutorialFully}
+        onSkip={() => {
+          void markTutorialPageTipSeenNative(fUser?.uid, "games");
+          completeTutorialFully();
+        }}
         onBack={() => {
           if (!isTutorialGamesSubstep(tutorialPhase)) return;
-          if (
-            getTutorialLiveTrackNative() === "features" &&
-            tutorialPhase === "gamesPickup"
-          ) {
-            setWelcomeIntroSession(beginTutorialWelcomeIntroSession());
-            setTutorialPhaseAndStore("welcome");
-            return;
-          }
-          const prev = prevTutorialGamesSubstep(tutorialPhase);
-          if (prev === "welcome") {
-            setWelcomeIntroSession(beginTutorialWelcomeIntroSession());
-          }
-          setTutorialPhaseAndStore(prev);
+          setWelcomeIntroSession(beginTutorialWelcomeIntroSession());
+          setTutorialPhaseAndStore("welcome");
         }}
         onNext={() => {
           if (!isTutorialGamesSubstep(tutorialPhase)) return;
-          if (
-            getTutorialLiveTrackNative() === "features" &&
-            tutorialPhase === "gamesStats"
-          ) {
-            setTutorialHorizonSubstepNative(0);
-            void (async () => {
-              await writeTutorialLivePhaseNative("horizon");
-              setTutorialPhase("horizon");
-              tabNavigation.navigate("ProfileTab", {
-                screen: "ProfileHome",
-                params: {},
-              });
-            })();
-            return;
-          }
-          const next = nextTutorialGamesSubstep(tutorialPhase);
-          setTutorialPhaseAndStore(next);
-          if (next === "results") {
-            tabNavigation.navigate("ResultTab", { screen: "ResultHome" });
-          }
+          void markTutorialPageTipSeenNative(fUser?.uid, "games");
+          setTutorialPhaseAndStore(null);
         }}
       />
       {nextGameAfterPost && nextGameAfterPostDisplay ? (

@@ -944,7 +944,7 @@ const en: Messages = {
     skip: "Skip",
     skipConfirmTitle: "Skip the tutorial?",
     skipConfirmBody:
-      "Are you sure?\nYou can review it again anytime from Tutorial in the side menu.",
+      "Are you sure?\nYou can review the short tab tips again anytime from Tutorial in the side menu.",
     skipConfirmStay: "Keep going",
     skipConfirmLeave: "Skip",
     restartFromMenu: "Tutorial",
@@ -974,23 +974,23 @@ const en: Messages = {
       tabProfile: "Profile",
       welcomeTitle: "Welcome to UNITERZ",
       welcomeBody:
-        "Predict games, earn points, and climb the **rankings**. Take a tour of each screen, or jump to new features only.",
+        "Predict games, earn points, and climb the **rankings**.\nShort tips appear the first time you open each tab. Start with Pick Up.",
       welcomeReturningBody:
-        "Take a tour of each screen, or jump to **new features** only.",
-      welcomeFullCta: "Show me around",
+        "Replay the short tab tips, or jump to **new features** only (UNIT, career, and more).",
+      welcomeFullCta: "Show tips",
       welcomeFeaturesCta: "New features only",
       gamesTitle: "Games",
       gamesBody:
         "Today's matches live here. **Tap a card** to open the pick screen. Winner is set from the scores.",
       gamesPickupTitle: "Pick-up games",
       gamesPickupBody:
-        "Games chosen each week. **Pick Up rankings** count only these picks. Win-rate rankings need picks on **65%+** of pick-up games so far.",
+        "Games chosen each week. Look for the **yellow frame** and the **PICK UP** mark. **Pick Up rankings** count only these picks. Tap **Predict** and try your first pick.",
       gamesStatsTitle: "STANDING / STATS",
       gamesStatsBody:
         "**STANDING** and **STATS** on the right edge open standings and team/player stats. Swiping from the right edge works too.",
       resultsTitle: "Results",
       resultsBody:
-        "Your pick **shows up here as soon as you submit**. After the game, it becomes the recap — **big numbers = final, below = your pick.** Top-right is HIT / MISS.",
+        "Cards for games you predicted. After tip-off they become the recap. Each card shows the **score you earned** for that game. Top-right is HIT / MISS. **Tap a card** for the full detail.",
       tapTitle: "Tap the glowing card",
       tapBody:
         "**Mock game** — won't affect live data. Tap the card to start.",
@@ -1066,7 +1066,11 @@ const en: Messages = {
       yourPickLabel: "Your pick",
       rankingsTitle: "Rankings",
       rankingsBody:
-        "**Hit points set your place.**\nSwitch period or metrics.\n**Updates daily at 16:00 JST.**",
+        "Players ordered by prediction **score**. Win rate needs picks on **65%+** of pick-up games so far.",
+      rankingsScoreHelpCta: "How score is calculated",
+      rankingsBoardsTitle: "Pick Up & PRO LEAGUE",
+      rankingsBoardsBody:
+        "**Pick Up** … ranking from featured games only (everyone).\n**PRO LEAGUE** … open ranking across all games. **PRO USER** only.",
       groupsTitle: "Groups",
       groupsBody: "**Private boards with friends.** Join via invite code too.",
       groupsMockName: "Night Owls",
@@ -1087,7 +1091,7 @@ const en: Messages = {
         "The highlighted **coin** is your **UNIT balance**.\nUNITERZ **in-app currency** you can **redeem** for **jerseys**, **hats**, and more.\nTap the coin to open your **history**.",
       horizonUnitHowTitle: "Earning UNIT",
       horizonUnitHowBody:
-        "Earn from **weekly/monthly rankings** and **Squad Battle** rewards.\nSave UNIT to **redeem** jerseys, hats, and more.",
+        "Earn from **weekly/monthly rankings**, **Squad Battle**, and **friend invites**.\nSave UNIT to **redeem** jerseys, hats, and more.",
       horizonCareerWhatTitle: "What is Career?",
       horizonCareerWhatBody:
         "Your predictor **track record** — like a résumé.\nSee **hit rate, streaks, season ranks**, and **long-term stats**.\nSpot growth that short-term rankings alone won't show.",

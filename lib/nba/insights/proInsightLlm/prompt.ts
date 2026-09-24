@@ -1,5 +1,5 @@
 /**
- * Pro Insight LLM プロンプト（7言語一括 · 固有名は英語固定）。
+ * Pro Insight LLM プロンプト（9言語一括 · 固有名は英語固定）。
  * 文章ルールはここ + fact.hintEn が正。モデルは自由作文しない。
  * 選定ルールの正: docs/pro-insight-generation-rules.md
  */
@@ -15,7 +15,7 @@ Global rules:
 - Do NOT pick a winner or recommend a score/bet.
 - Team names: use nicknames from teamAbbrev (HEAT, RAPTORS, LAKERS). Never nba-* ids or city codes (MIA/TOR).
 - Player names stay English (e.g. B.Ingram). Status words stay English in EVERY language: write "OUT", "questionable", "doubtful" literally — never translate to 疑わしい / 不确定 etc.
-- Write all 7 languages for each item: ja, en, ko, zh, es, pt, fr.
+- Write all 9 languages for each item: ja, en, ko, zh, es, pt, fr, de, ar.
 - Keep each body to 1–2 short sentences. Prefer hintEn as the meaning skeleton; translate faithfully.
 - evidence: one compact line that includes BOTH sides when present (e.g. "HEAT ftaRate #1 · RAPTORS oppPtsPaint #27" or "when-out 6-4 · 126.5-125"). Never a lone "#1".
 - Defense wording: follow hintEn tone only. Tier1 uses "vulnerable" / JA "脆い". Tier2 uses "gives up a lot of" / JA "多く許す". Tier3 uses "clearest favorable matchup" / JA "いちばん相性が良い". Never write SOFT / ソフト / 柔らかい. Never write "looks strong" / JA "強そうです" — use "looks like a good matchup" / JA "相性が良さそうです".
@@ -63,8 +63,8 @@ Output shape:
       "kind": "MATCHUP" | "SCHEDULE" | "CONTEXT" | "INJURY IMPACT",
       "items": [
         {
-          "body": { "ja": "...", "en": "...", "ko": "...", "zh": "...", "es": "...", "pt": "...", "fr": "..." },
-          "evidence": [ { "ja": "...", "en": "...", "ko": "...", "zh": "...", "es": "...", "pt": "...", "fr": "..." } ]
+          "body": { "ja": "...", "en": "...", "ko": "...", "zh": "...", "es": "...", "pt": "...", "fr": "...", "de": "...", "ar": "..." },
+          "evidence": [ { "ja": "...", "en": "...", "ko": "...", "zh": "...", "es": "...", "pt": "...", "fr": "...", "de": "...", "ar": "..." } ]
         }
       ]
     }

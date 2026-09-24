@@ -11,6 +11,7 @@ import {
   CyberSlantedTabBarNative,
   CyberSlantedTabNative,
 } from "./CyberSlantedTabNative";
+import TutorialTargetNative from "../tutorial/TutorialTargetNative";
 
 export function RankingsDivisionTabsNative({
   division,
@@ -24,22 +25,24 @@ export function RankingsDivisionTabsNative({
   const t = rankingsTexts(language);
 
   return (
-    <CyberSlantedTabBarNative fill>
-      <CyberSlantedTabNative
-        label={t.divisionStandard}
-        active={division === "standard"}
-        fill
-        compact
-        onPress={() => onChange("standard")}
-      />
-      <CyberSlantedTabNative
-        label={t.divisionOpen}
-        active={division === "open"}
-        fill
-        compact
-        theme={PRO_LEAGUE_DIVISION_TAB_THEME}
-        onPress={() => onChange("open")}
-      />
-    </CyberSlantedTabBarNative>
+    <TutorialTargetNative id="rankings-division">
+      <CyberSlantedTabBarNative fill>
+        <CyberSlantedTabNative
+          label={t.divisionStandard}
+          active={division === "standard"}
+          fill
+          compact
+          onPress={() => onChange("standard")}
+        />
+        <CyberSlantedTabNative
+          label={t.divisionOpen}
+          active={division === "open"}
+          fill
+          compact
+          theme={PRO_LEAGUE_DIVISION_TAB_THEME}
+          onPress={() => onChange("open")}
+        />
+      </CyberSlantedTabBarNative>
+    </TutorialTargetNative>
   );
 }

@@ -230,7 +230,7 @@ type Props = {
   /** welcome の二択など */
   altNextLabel?: string;
   onAltNext?: () => void;
-  /** welcome「画面を案内」/「新機能だけ」: カメラ前進の開始 */
+  /** welcome「ヒントを見る」/「新機能だけ」: カメラ前進の開始 */
   onWelcomeFlyStart?: (dest: TutorialWelcomeFlyDest) => void;
   /**
    * welcome を試合ページと同じカメラに載せる。
@@ -377,6 +377,7 @@ export default function TutorialLiveCoachNative({
     isWelcomeBriefing ||
     isResultDetailTarget ||
     target === "profile-career-tab" ||
+    target === "rankings-division" ||
     (!calloutPinnedBottom && (!target || aboveTabBar || !hole));
 
   useEffect(() => {
@@ -1122,7 +1123,7 @@ export default function TutorialLiveCoachNative({
                           isWelcomeBriefing ? styles.titleWelcome : null,
                         ]}
                       >
-                        {title}
+                        <TutorialRichBodyNative text={title} />
                       </Text>
                     </WelcomeFloatNative>
                   ) : null}
@@ -1162,7 +1163,19 @@ export default function TutorialLiveCoachNative({
                         </WelcomeFloatNative>
                       ) : null}
                     </View>
-                  ) : onBack || (onNext && nextLabel) ? (
+                  ) : onBack || (onNext && nextLabel) || (onAltNext && altNextLabel) ? (
+                    <View style={styles.ctaCol}>
+                      {onAltNext && altNextLabel ? (
+                        <Pressable
+                          onPress={onAltNext}
+                          accessibilityRole="button"
+                          accessibilityLabel={altNextLabel}
+                          hitSlop={8}
+                        >
+                          <Text style={styles.altLink}>{altNextLabel}</Text>
+                        </Pressable>
+                      ) : null}
+                      {onBack || (onNext && nextLabel) ? (
                     <CyberSlantedTabBarNative fill style={styles.ctaSegBar}>
                       {onBack && backLabel ? (
                         <CyberSlantedTabNative
@@ -1197,6 +1210,8 @@ export default function TutorialLiveCoachNative({
                         />
                       ) : null}
                     </CyberSlantedTabBarNative>
+                      ) : null}
+                    </View>
                   ) : null}
                 </>
               )}
@@ -1502,6 +1517,18 @@ const styles = StyleSheet.create({
   },
   ctaCol: {
     flexDirection: "column",
+    alignItems: "center",
+    gap: 10,
+    marginTop: 4,
+  },
+  altLink: {
+    fontSize: 12,
+    fontWeight: "600",
+    letterSpacing: 0.4,
+    color: "rgba(165,243,252,0.92)",
+    textDecorationLine: "underline",
+    textAlign: "center",
+    paddingHorizontal: 8,
   },
   welcomeCtaCol: {
     marginTop: 8,

@@ -15,7 +15,7 @@ import { colors } from "../theme/tokens";
 import { useNativeNavTabNotificationBadges } from "./useNativeNavTabNotificationBadges";
 import NavBarChamferShellNative from "./NavBarChamferShellNative";
 /** `useBottomTabBarInsets` の pill 底オフセットと同じ式（コンテンツ余白と揃える） */
-const TAB_BAR_BOTTOM_GAP = 10;
+const TAB_BAR_BOTTOM_GAP = 2;
 import { useFirebaseUser } from "../auth/FirebaseUserProvider";
 import {
   loadProfileUserDocNative,
@@ -57,9 +57,9 @@ const TAB_ICONS: Record<
 /** リザルトのみカスタム画像。他は従来アイコン */
 const RESULT_ICON = require("../../assets/navbar/result.png") as number;
 
-const ICON_SIZE = 23;
+const ICON_SIZE = 26;
 /** リザルト（カスタム画像）のみ大きく */
-const RESULT_ICON_SIZE = 32;
+const RESULT_ICON_SIZE = 36;
 
 
 /** フルスクリーン DEV など、タブバーを出さないネスト画面 */
@@ -155,7 +155,7 @@ export default function AppTabBar({ state, descriptors, navigation }: BottomTabB
                         : { elevation: 6 }),
                     }
                   : {
-                      transform: [{ scale: 0.92 }],
+                      transform: [{ scale: 0.96 }],
                       opacity: 0.9,
                     };
 
@@ -366,27 +366,27 @@ const styles = StyleSheet.create({
   pillMax: { width: "100%", maxWidth: 960 },
   row: {
     flexDirection: "row",
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
   },
   tabButton: {
     flex: 1,
-    minHeight: 42,
+    minHeight: 48,
     alignItems: "center",
     justifyContent: "center",
   },
   tabButtonActive: {},
   iconWrap: {
-    width: 34,
-    height: 34,
+    width: 38,
+    height: 38,
     alignItems: "center",
     justifyContent: "center",
   },
   dot: {
     position: "absolute",
-    top: 2,
-    right: 2,
+    top: 1,
+    right: 1,
     width: 10,
     height: 10,
     borderRadius: 5,

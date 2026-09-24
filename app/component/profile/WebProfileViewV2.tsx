@@ -392,6 +392,7 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
           <ProfileAwardsTab
             uid={resolvedUid}
             language={language}
+            isMe={isMe}
           />
         ) : tab === "bracket" ? (
           playoffBracketLoading ? (

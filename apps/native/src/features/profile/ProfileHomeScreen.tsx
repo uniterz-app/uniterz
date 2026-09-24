@@ -378,6 +378,20 @@ export default function ProfileHomeScreen({
     tabNavigation,
   ]);
 
+  const navigateToSeasonPredict = useCallback(
+    (mode: "awards" | "standings") => {
+      tabNavigation.navigate({
+        name: "GamesTab",
+        params: {
+          screen: "SeasonPredict",
+          params: { mode },
+        },
+        merge: true,
+      });
+    },
+    [tabNavigation]
+  );
+
   const [badgeModalOpen, setBadgeModalOpen] = useState(false);
   const [selectedBadge, setSelectedBadge] = useState<ResolvedBadgeNative | null>(null);
 
@@ -1359,7 +1373,13 @@ export default function ProfileHomeScreen({
           isTargetPro={profilePlanHook.isTargetPro}
         />
       ) : tab === "awards" ? (
-        <ProfileAwardsTabNative uid={targetUid} language={language} />
+        <ProfileAwardsTabNative
+          uid={targetUid}
+          language={language}
+          isMe={isMe}
+          onSubmitAwards={() => navigateToSeasonPredict("awards")}
+          onSubmitStandings={() => navigateToSeasonPredict("standings")}
+        />
       ) : (
         <ProfileBracketTabNative uid={targetUid} language={language} />
       )}

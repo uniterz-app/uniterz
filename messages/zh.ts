@@ -920,7 +920,7 @@ const zh: Messages = {
     skip: "跳过",
     skipConfirmTitle: "要跳过教程吗？",
     skipConfirmBody:
-      "确定要跳过吗？\n之后可从侧边菜单的「教程」再次查看。",
+      "确定要跳过吗？\n之后可从侧边菜单的「教程」再次查看各页短提示。",
     skipConfirmStay: "继续",
     skipConfirmLeave: "跳过",
     restartFromMenu: "教程",
@@ -947,23 +947,23 @@ const zh: Messages = {
       tabProfile: "Profile",
       welcomeTitle: "Welcome to UNITERZ",
       welcomeBody:
-        "命中得分、冲击**排行榜**。可选完整画面导览，或只看新功能。",
+        "命中得分、冲击**排行榜**。\n首次打开各页时会有短提示。先从精选比赛开始。",
       welcomeReturningBody:
-        "可选完整画面导览，或只看**新功能**。",
-      welcomeFullCta: "浏览各画面",
+        "可再看各页短提示，或只看 UNIT、生涯等**新功能**。",
+      welcomeFullCta: "查看提示",
       welcomeFeaturesCta: "只看新功能",
       gamesTitle: "比赛",
       gamesBody:
         "这里列出今日赛程。**点按卡片**即可打开预测。胜负由比分自动决定。",
       gamesPickupTitle: "精选比赛",
       gamesPickupBody:
-        "每周指定的比赛。**Pick Up 排行榜**只统计这些预测。命中率榜需预测目前精选赛的 **65% 以上**。",
+        "每周指定的比赛。认准**黄色边框**和左侧 **PICK UP**。**Pick Up 排行榜**只统计这些预测。点 **预测**，试着完成第一次预测。",
       gamesStatsTitle: "STANDING / STATS",
       gamesStatsBody:
         "右侧 **STANDING** 与 **STATS** 可查看排名和球队/球员数据。从右缘滑动也能打开。",
       resultsTitle: "结果",
       resultsBody:
-        "**提交预测后立刻**出现在这里。赛后变成对答案 — **大数字是赛果，下方是你的预测。** 右上角为 HIT / MISS。",
+        "你预测过的比赛会出现在这里。赛后变成复盘。每张卡片显示**本场获得的得分**。右上是 HIT / MISS。**点卡片**可看详情。",
       tapTitle: "Tap the match card",
       tapBody:
         "This is a mock NBA game. Tap the glowing card to start predicting. No real data is affected.",
@@ -1046,9 +1046,13 @@ const zh: Messages = {
       resultDetailMoreBody:
         "Scroll for score distribution and more detail. Same layout in the real app.",
       yourPickLabel: "Your pick",
-      rankingsTitle: "Rankings",
+      rankingsTitle: "排行榜",
       rankingsBody:
-        "Hits earn points that decide your place. Switch periods and categories to track yourself.",
+        "按预测**得分**排序。命中率榜需预测目前精选赛的 **65% 以上**。",
+      rankingsScoreHelpCta: "查看得分计算方式",
+      rankingsBoardsTitle: "Pick Up 与 PRO LEAGUE",
+      rankingsBoardsBody:
+        "**Pick Up** … 仅指定比赛的排名（全员可参加）。\n**PRO LEAGUE** … 全部比赛的无差别级排名。仅限 **PRO USER**。",
       groupsTitle: "小组",
       groupsBody:
         "**和朋友的专属排行榜。** 也可通过邀请码加入。",
@@ -1070,7 +1074,7 @@ const zh: Messages = {
         "The highlighted **coin** is your **UNIT balance**.\nUNITERZ **in-app currency** for **skins** and Profile looks.\nTap the coin to open your **history**.",
       horizonUnitHowTitle: "Earning UNIT",
       horizonUnitHowBody:
-        "Earn from **weekly/monthly rankings** and **Squad Battle** rewards.\nWhen you earn, a celebration plays on Profile and the balance updates here.\nSave UNIT to **redeem** skins and items.",
+        "可通过**周/月排行榜**、**小队对战**、**邀请好友**等奖励获得。\n攒下的 UNIT 可**兑换**球衣、帽子等。",
       horizonCareerWhatTitle: "What is Career?",
       horizonCareerWhatBody:
         "Your predictor **track record** — like a résumé.\nSee **hit rate, streaks, season ranks**, and **long-term stats**.\nSpot growth that short-term rankings alone won't show.",

@@ -4,7 +4,7 @@ import {
   type LocalizedLang,
 } from "../../../../../lib/i18n/localize";
 
-/** Games UI が対応する 7 言語（ja + en + ko/zh/es/pt/fr） */
+/** Games UI が対応する 9 言語（Language と同じ） */
 export type GamesLanguage = LocalizedLang;
 
 /** 任意の language 文字列を GamesLanguage に正規化（未知は en） */

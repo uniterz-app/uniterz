@@ -938,7 +938,7 @@ const fr: Messages = {
     skip: "Passer",
     skipConfirmTitle: "Passer le tutoriel ?",
     skipConfirmBody:
-      "Vous êtes sûr ?\nVous pourrez le revoir depuis Tutoriel dans le menu latéral.",
+      "Vous êtes sûr ?\nVous pourrez revoir les astuces courtes depuis Tutoriel dans le menu latéral.",
     skipConfirmStay: "Continuer",
     skipConfirmLeave: "Passer",
     restartFromMenu: "Tutoriel",
@@ -965,23 +965,23 @@ const fr: Messages = {
       tabProfile: "Profile",
       welcomeTitle: "Welcome to UNITERZ",
       welcomeBody:
-        "Pronostique, gagne des points et grimpe au **classement**. Tour des écrans, ou seulement les nouveautés.",
+        "Pronostique, gagne des points et grimpe au **classement**.\nDe courtes astuces s’affichent à la 1re visite de chaque onglet. Commence par Pick Up.",
       welcomeReturningBody:
-        "Tour des écrans, ou seulement les **nouveautés**.",
-      welcomeFullCta: "Voir le guide",
+        "Revois les astuces courtes, ou seulement les **nouveautés** (UNIT, carrière, etc.).",
+      welcomeFullCta: "Voir les astuces",
       welcomeFeaturesCta: "Nouveautés seulement",
       gamesTitle: "Matchs",
       gamesBody:
         "Les matchs du jour sont ici. **Touche une carte** pour ouvrir le pronostic. Le vainqueur suit le score.",
       gamesPickupTitle: "Matchs Pick Up",
       gamesPickupBody:
-        "Matchs choisis chaque semaine. Le **classement Pick Up** ne compte que ces pronostics. Le classement de réussite exige **65 %+** des Pick Up déjà joués.",
+        "Matchs choisis chaque semaine. Repère le **cadre jaune** et la marque **PICK UP**. Le **classement Pick Up** ne compte que ces pronostics. Appuie sur **Pronostiquer** et tente ton premier pick.",
       gamesStatsTitle: "STANDING / STATS",
       gamesStatsBody:
         "**STANDING** et **STATS** à droite ouvrent classements et stats équipes/joueurs. Un swipe depuis le bord droit marche aussi.",
       resultsTitle: "Résultats",
       resultsBody:
-        "Ton pick **apparaît ici dès l’envoi**. Après le match, c’est le bilan — **grands chiffres = score final, en dessous = ton pick.** En haut à droite : HIT / MISS.",
+        "Les cartes des matchs que tu as pronostiqués. Après le match, le récap. Chaque carte montre le **score gagné** sur ce match. En haut à droite : HIT / MISS. **Touche une carte** pour le détail.",
       tapTitle: "Tap the match card",
       tapBody:
         "This is a mock NBA game. Tap the glowing card to start predicting. No real data is affected.",
@@ -1064,9 +1064,13 @@ const fr: Messages = {
       resultDetailMoreBody:
         "Scroll for score distribution and more detail. Same layout in the real app.",
       yourPickLabel: "Your pick",
-      rankingsTitle: "Rankings",
+      rankingsTitle: "Classement",
       rankingsBody:
-        "Hits earn points that decide your place. Switch periods and categories to track yourself.",
+        "Classés par **score** de pronostic. La réussite exige **65 %+** des Pick Up déjà joués.",
+      rankingsScoreHelpCta: "Comment le score est calculé",
+      rankingsBoardsTitle: "Pick Up et PRO LEAGUE",
+      rankingsBoardsBody:
+        "**Pick Up** … classement des matchs vedettes seulement (tout le monde).\n**PRO LEAGUE** … classement ouvert sur tous les matchs. **PRO USER** uniquement.",
       groupsTitle: "Groupes",
       groupsBody:
         "**Classements privés entre amis.** Rejoignez aussi via un code d’invitation.",
@@ -1088,7 +1092,7 @@ const fr: Messages = {
         "The highlighted **coin** is your **UNIT balance**.\nUNITERZ **in-app currency** for **skins** and Profile looks.\nTap the coin to open your **history**.",
       horizonUnitHowTitle: "Earning UNIT",
       horizonUnitHowBody:
-        "Earn from **weekly/monthly rankings** and **Squad Battle** rewards.\nWhen you earn, a celebration plays on Profile and the balance updates here.\nSave UNIT to **redeem** skins and items.",
+        "Gagne via les récompenses des **classements hebdo/mensuels**, **Squad Battle** et **invitations d’amis**.\nÉchange tes UNIT contre des **maillots**, **casquettes**, etc.",
       horizonCareerWhatTitle: "What is Career?",
       horizonCareerWhatBody:
         "Your predictor **track record** — like a résumé.\nSee **hit rate, streaks, season ranks**, and **long-term stats**.\nSpot growth that short-term rankings alone won't show.",

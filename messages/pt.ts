@@ -933,7 +933,7 @@ const pt: Messages = {
     skip: "Pular",
     skipConfirmTitle: "Pular o tutorial?",
     skipConfirmBody:
-      "Tem certeza?\nVocê pode rever depois em Tutorial no menu lateral.",
+      "Tem certeza?\nVocê pode rever as dicas curtas depois em Tutorial no menu lateral.",
     skipConfirmStay: "Continuar",
     skipConfirmLeave: "Pular",
     restartFromMenu: "Tutorial",
@@ -960,23 +960,23 @@ const pt: Messages = {
       tabProfile: "Profile",
       welcomeTitle: "Welcome to UNITERZ",
       welcomeBody:
-        "Preveja jogos, some pontos e suba no **ranking**. Tour de cada tela, ou só as novidades.",
+        "Preveja jogos, some pontos e suba no **ranking**.\nDicas curtas aparecem na 1ª visita a cada aba. Comece pelo Pick Up.",
       welcomeReturningBody:
-        "Tour de cada tela, ou só as **novidades**.",
-      welcomeFullCta: "Ver o guia",
+        "Veja de novo as dicas curtas, ou só as **novidades** (UNIT, carreira, etc.).",
+      welcomeFullCta: "Ver dicas",
       welcomeFeaturesCta: "Só novidades",
       gamesTitle: "Jogos",
       gamesBody:
         "Os jogos de hoje ficam aqui. **Toque no card** para abrir o palpite. O vencedor sai do placar.",
       gamesPickupTitle: "Jogos Pick Up",
       gamesPickupBody:
-        "Jogos escolhidos a cada semana. O **ranking Pick Up** conta só esses palpites. O ranking de acerto pede palpites em **65%+** dos Pick Up até agora.",
+        "Jogos escolhidos a cada semana. Procure a **moldura amarela** e a marca **PICK UP**. O **ranking Pick Up** conta só esses palpites. Toque em **Prever** e faça seu primeiro palpite.",
       gamesStatsTitle: "STANDING / STATS",
       gamesStatsBody:
         "**STANDING** e **STATS** à direita abrem standings e stats de times/jogadores. Também dá para deslizar pela borda direita.",
       resultsTitle: "Resultados",
       resultsBody:
-        "Seu palpite **aparece aqui assim que você envia**. Depois do jogo vira o recap — **números grandes = placar, abaixo = seu palpite.** Canto superior: HIT / MISS.",
+        "Cartões dos jogos que você palpitou. Depois do jogo vira o recap. Cada cartão mostra o **score ganho** naquele jogo. Canto superior direito: HIT / MISS. **Toque no cartão** para ver o detalhe.",
       tapTitle: "Tap the match card",
       tapBody:
         "This is a mock NBA game. Tap the glowing card to start predicting. No real data is affected.",
@@ -1059,9 +1059,13 @@ const pt: Messages = {
       resultDetailMoreBody:
         "Scroll for score distribution and more detail. Same layout in the real app.",
       yourPickLabel: "Your pick",
-      rankingsTitle: "Rankings",
+      rankingsTitle: "Ranking",
       rankingsBody:
-        "Hits earn points that decide your place. Switch periods and categories to track yourself.",
+        "Ordenados pelo **score** das previsões. O ranking de acerto pede palpites em **65%+** dos Pick Up até agora.",
+      rankingsScoreHelpCta: "Como o score é calculado",
+      rankingsBoardsTitle: "Pick Up e PRO LEAGUE",
+      rankingsBoardsBody:
+        "**Pick Up** … ranking só dos jogos em destaque (todos).\n**PRO LEAGUE** … ranking aberto em todos os jogos. Só **PRO USER**.",
       groupsTitle: "Grupos",
       groupsBody:
         "**Rankings privados com amigos.** Você também pode entrar com um código.",
@@ -1083,7 +1087,7 @@ const pt: Messages = {
         "The highlighted **coin** is your **UNIT balance**.\nUNITERZ **in-app currency** for **skins** and Profile looks.\nTap the coin to open your **history**.",
       horizonUnitHowTitle: "Earning UNIT",
       horizonUnitHowBody:
-        "Earn from **weekly/monthly rankings** and **Squad Battle** rewards.\nWhen you earn, a celebration plays on Profile and the balance updates here.\nSave UNIT to **redeem** skins and items.",
+        "Ganhe com recompensas de **rankings semanais/mensais**, **Squad Battle** e **convite de amigos**.\nTroque UNIT por **camisas**, **bonés** e mais.",
       horizonCareerWhatTitle: "What is Career?",
       horizonCareerWhatBody:
         "Your predictor **track record** — like a résumé.\nSee **hit rate, streaks, season ranks**, and **long-term stats**.\nSpot growth that short-term rankings alone won't show.",

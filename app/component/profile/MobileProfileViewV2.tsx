@@ -410,6 +410,7 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
           <ProfileAwardsTab
             uid={resolvedUid}
             language={language}
+            isMe={isMe}
           />
         ) : tab === "bracket" ? (
           playoffBracketLoading ? (

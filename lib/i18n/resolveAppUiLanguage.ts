@@ -33,7 +33,7 @@ export function resolveAppUiLanguage(): AppUiLanguage {
   return "en";
 }
 
-/** 未ログイン画面でも 7 言語コピーを出したいとき（ja|en に潰さない） */
+/** 未ログイン画面でも 9 言語コピーを出したいとき（ja|en に潰さない） */
 export function resolveAppUiLocalizedLang(): LocalizedLang {
   for (const raw of localeCandidates()) {
     const tag = String(raw || "").trim();

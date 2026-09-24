@@ -1,25 +1,17 @@
 /**
- * 試合タブ内の案内（一覧 → ピックアップ → STATS）
+ * 試合タブ内の案内 — ピックアップ説明のみ（簡略化）
  */
 
 import type { TutorialLivePhase } from "@/lib/tutorial/tutorialLivePhase";
 
-export const TUTORIAL_GAMES_SUBSTEPS = [
-  "games",
-  "gamesPickup",
-  "gamesStats",
-] as const;
+export const TUTORIAL_GAMES_SUBSTEPS = ["gamesPickup"] as const;
 
 export type TutorialGamesSubstep = (typeof TUTORIAL_GAMES_SUBSTEPS)[number];
 
 export function isTutorialGamesSubstep(
   phase: TutorialLivePhase | null | undefined
 ): phase is TutorialGamesSubstep {
-  return (
-    phase === "games" ||
-    phase === "gamesPickup" ||
-    phase === "gamesStats"
-  );
+  return phase === "gamesPickup";
 }
 
 /** 試合タブ上にコーチを出すフェーズ（welcome 含む） */
@@ -29,18 +21,15 @@ export function isTutorialOnGamesHome(
   return phase === "welcome" || isTutorialGamesSubstep(phase);
 }
 
+/** ピックアップ完了 → ツアー連鎖なし（呼び出し側で phase クリア） */
 export function nextTutorialGamesSubstep(
-  phase: TutorialGamesSubstep
-): TutorialLivePhase {
-  if (phase === "games") return "gamesPickup";
-  if (phase === "gamesPickup") return "gamesStats";
-  return "results";
+  _phase: TutorialGamesSubstep
+): TutorialLivePhase | null {
+  return null;
 }
 
 export function prevTutorialGamesSubstep(
-  phase: TutorialGamesSubstep
+  _phase: TutorialGamesSubstep
 ): TutorialLivePhase {
-  if (phase === "gamesStats") return "gamesPickup";
-  if (phase === "gamesPickup") return "games";
   return "welcome";
 }

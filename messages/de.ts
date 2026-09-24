@@ -935,7 +935,7 @@ const de: Messages = {
     skip: "Überspringen",
     skipConfirmTitle: "Skip the tutorial?",
     skipConfirmBody:
-      "Are you sure?\nYou can review it again anytime from Tutorial in the side menu.",
+      "Are you sure?\nYou can review the short tab tips again anytime from Tutorial in the side menu.",
     skipConfirmStay: "Keep going",
     skipConfirmLeave: "Skip",
     restartFromMenu: "Tutorial",
@@ -962,23 +962,23 @@ const de: Messages = {
       tabProfile: "Profile",
       welcomeTitle: "Welcome to UNITERZ",
       welcomeBody:
-        "Tippe Spiele, sammle Punkte und steige im **Ranking**. Rundgang durch die Screens, oder nur neue Features.",
+        "Tippe Spiele, sammle Punkte und steige im **Ranking**.\nKurze Tipps erscheinen beim ersten Besuch jedes Tabs. Starte mit Pick Up.",
       welcomeReturningBody:
-        "Rundgang durch die Screens, oder nur **neue Features**.",
-      welcomeFullCta: "Einführung ansehen",
+        "Kurze Tab-Tipps nochmal, oder nur **neue Features** (UNIT, Karriere usw.).",
+      welcomeFullCta: "Tipps zeigen",
       welcomeFeaturesCta: "Nur neue Features",
       gamesTitle: "Spiele",
       gamesBody:
         "Hier liegen die heutigen Spiele. **Tippe eine Karte**, um die Prognose zu öffnen. Der Sieger folgt aus dem Score.",
       gamesPickupTitle: "Pick-up-Spiele",
       gamesPickupBody:
-        "Wöchentlich ausgewählte Spiele. Das **Pick-Up-Ranking** zählt nur diese Tipps. Fürs Trefferquoten-Ranking brauchst du Tipps auf **65 %+** der bisherigen Pick-ups.",
+        "Wöchentlich ausgewählte Spiele. Erkennbar am **gelben Rahmen** und dem **PICK UP**-Label. Das **Pick-Up-Ranking** zählt nur diese Tipps. Tippe auf **Tippen** und mach deinen ersten Pick.",
       gamesStatsTitle: "STANDING / STATS",
       gamesStatsBody:
         "**STANDING** und **STATS** rechts öffnen Tabelle und Team-/Spielerstatistiken. Wischen vom rechten Rand geht auch.",
       resultsTitle: "Results",
       resultsBody:
-        "Dein Tipp **erscheint hier sofort nach dem Absenden**. Nach dem Spiel wird es der Abgleich — **große Zahlen = Endstand, darunter dein Tipp.** Oben rechts: HIT / MISS.",
+        "Karten zu deinen Tipps. Nach dem Spiel der Recap. Jede Karte zeigt den **Score**, den du für dieses Spiel bekommen hast. Oben rechts HIT / MISS. **Tippe eine Karte** für Details.",
       tapTitle: "Tap the match card",
       tapBody:
         "This is a mock NBA game. Tap the glowing card to start predicting. No real data is affected.",
@@ -1061,9 +1061,13 @@ const de: Messages = {
       resultDetailMoreBody:
         "Scroll for score distribution and more detail. Same layout in the real app.",
       yourPickLabel: "Your pick",
-      rankingsTitle: "Rankings",
+      rankingsTitle: "Ranking",
       rankingsBody:
-        "Hits earn points that decide your place. Switch periods and categories to track yourself.",
+        "Sortiert nach Vorhersage-**Score**. Fürs Trefferquoten-Ranking brauchst du Tipps auf **65 %+** der bisherigen Pick-ups.",
+      rankingsScoreHelpCta: "So wird der Score berechnet",
+      rankingsBoardsTitle: "Pick Up & PRO LEAGUE",
+      rankingsBoardsBody:
+        "**Pick Up** … Ranking nur aus Featured-Spielen (alle).\n**PRO LEAGUE** … offenes Ranking über alle Spiele. Nur **PRO USER**.",
       groupsTitle: "Groups (Leaderboards)",
       groupsBody:
         "Create a group with friends and compete in a private ranking. Join with an invite code too.",
@@ -1085,7 +1089,7 @@ const de: Messages = {
         "The highlighted **coin** is your **UNIT balance**.\nUNITERZ **in-app currency** for **skins** and Profile looks.\nTap the coin to open your **history**.",
       horizonUnitHowTitle: "Earning UNIT",
       horizonUnitHowBody:
-        "Earn from **weekly/monthly rankings** and **Squad Battle** rewards.\nWhen you earn, a celebration plays on Profile and the balance updates here.\nSave UNIT to **redeem** skins and items.",
+        "Verdienen über Belohnungen aus **Wochen-/Monatsrankings**, **Squad Battle** und **Freundes-Einladungen**.\nUNIT gegen **Trikots**, **Caps** usw. **einlösen**.",
       horizonCareerWhatTitle: "What is Career?",
       horizonCareerWhatBody:
         "Your predictor **track record** — like a résumé.\nSee **hit rate, streaks, season ranks**, and **long-term stats**.\nSpot growth that short-term rankings alone won't show.",

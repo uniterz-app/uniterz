@@ -10,6 +10,10 @@ import {
   APP_TUTORIAL_PULSE_LS_KEY,
   APP_TUTORIAL_READ_ID,
 } from "../../../../../lib/tutorial/tutorialSeen";
+import {
+  clearTutorialPageTipsSeenNative,
+  markAllTutorialPageTipsSeenNative,
+} from "./tutorialPageTipsNative";
 
 function seenStorageKey(uid: string): string {
   return `${APP_TUTORIAL_LS_KEY}:${uid}`;
@@ -47,6 +51,7 @@ export async function markAppTutorialSeenLocalNative(
     await clearLegacyUnscopedKeys();
     await AsyncStorage.setItem(seenStorageKey(uid), "1");
     await AsyncStorage.removeItem(pulseStorageKey(uid));
+    await markAllTutorialPageTipsSeenNative(uid);
   } catch {
     /* ignore */
   }
@@ -135,6 +140,7 @@ export async function clearAppTutorialSeenNative(
         pulseStorageKey(uid),
       ]);
     }
+    await clearTutorialPageTipsSeenNative(uid);
   } catch {
     /* ignore */
   }

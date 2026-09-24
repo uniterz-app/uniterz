@@ -91,7 +91,7 @@ export const TUTORIAL_WELCOME_GLOW_DELAY_MS = Math.round(
 );
 export const TUTORIAL_WELCOME_GLOW_S = 0.58;
 export const TUTORIAL_WELCOME_GLOW_MS = Math.round(TUTORIAL_WELCOME_GLOW_S * 1000);
-/** welcome「画面を案内」: 1本のカメラが世界へ前進し、モーダル面を通過する */
+/** welcome「ヒントを見る」: 1本のカメラが世界へ前進し、モーダル面を通過する */
 export const TUTORIAL_WELCOME_FLY_S = 0.96;
 export const TUTORIAL_WELCOME_FLY_MS = Math.round(TUTORIAL_WELCOME_FLY_S * 1000);
 export const TUTORIAL_WELCOME_FLY_EASE = [0.42, 0, 0.18, 1] as const;

@@ -1,9 +1,16 @@
 /**
  * Web プロフィール「アワード」タブ相当。
  * 提出済みシーズン予想（アワード + 順位）を表示。
+ * 締切前かつ自分プロフィールなら未提出分の提出導線を出す。
  */
 import { useEffect, useState } from "react";
-import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import NbaSeasonAwardsViewPanelNative from "../games/predict/season/NbaSeasonAwardsViewPanelNative";
 import NbaSeasonStandingsViewPanelNative from "../games/predict/season/NbaSeasonStandingsViewPanelNative";
 import { CURRENT_NBA_SEASON_KEY } from "../../../../../lib/rankings/nbaSeason";
@@ -15,6 +22,7 @@ import type { NbaSeasonStandingsPrediction } from "../../../../../lib/predict/nb
 import { fetchProfileSeasonAwardsNative } from "./seasonAwardsApiNative";
 import { fetchProfileSeasonStandingsNative } from "./seasonStandingsApiNative";
 import { profileAwardsBracketCopy } from "@/lib/profile/profileAwardsBracketCopy";
+import { isSeasonPredictSubmitOpen } from "@/lib/predict/seasonPredictDeadline";
 import { PROFILE_CHART_CYBER } from "./profileOverviewChartCyberTheme";
 import {
   profileOverviewChartEmptyHintStyle,
@@ -24,6 +32,10 @@ import {
 type Props = {
   uid: string | undefined;
   language: string;
+  /** 自分のプロフィールのときだけ提出 CTA を出す */
+  isMe?: boolean;
+  onSubmitAwards?: () => void;
+  onSubmitStandings?: () => void;
   /** 明示指定時は fetch せずこれを表示（プレビュー用） */
   prediction?: NbaSeasonAwardsPrediction | null;
   candidates?: NbaAwardCandidate[];
@@ -33,6 +45,9 @@ type Props = {
 export default function ProfileAwardsTabNative({
   uid,
   language,
+  isMe = false,
+  onSubmitAwards,
+  onSubmitStandings,
   prediction: predictionProp,
   candidates: candidatesProp,
   standings: standingsProp,
@@ -40,6 +55,8 @@ export default function ProfileAwardsTabNative({
   const copy = profileAwardsBracketCopy(language);
   const controlled =
     predictionProp !== undefined || standingsProp !== undefined;
+  const canOfferSubmit =
+    isMe && isSeasonPredictSubmitOpen() && !controlled;
   const [loading, setLoading] = useState(!controlled && Boolean(uid));
   const [prediction, setPrediction] = useState<NbaSeasonAwardsPrediction | null>(
     predictionProp ?? null
@@ -120,7 +137,26 @@ export default function ProfileAwardsTabNative({
     return (
       <View style={styles.noDataBox} accessibilityRole="text">
         <Text style={styles.noData}>NO DATA</Text>
-        <Text style={styles.noDataHint}>{copy.noSeasonPredictions}</Text>
+        <Text style={styles.noDataHint}>
+          {canOfferSubmit ? copy.submitOpenHint : copy.noSeasonPredictions}
+        </Text>
+        {canOfferSubmit ? (
+          <View style={styles.ctaCol}>
+            {onSubmitAwards ? (
+              <SubmitButton
+                label={copy.submitAwardsCta}
+                onPress={onSubmitAwards}
+              />
+            ) : null}
+            {onSubmitStandings ? (
+              <SubmitButton
+                label={copy.submitStandingsCta}
+                onPress={onSubmitStandings}
+                outline
+              />
+            ) : null}
+          </View>
+        ) : null}
       </View>
     );
   }
@@ -129,14 +165,75 @@ export default function ProfileAwardsTabNative({
     <View style={styles.wrap}>
       {standings ? (
         <NbaSeasonStandingsViewPanelNative prediction={standings} />
+      ) : canOfferSubmit && onSubmitStandings ? (
+        <MissingSubmitCard
+          hint={copy.missingStandingsHint}
+          ctaLabel={copy.submitStandingsCta}
+          onPress={onSubmitStandings}
+        />
       ) : null}
       {prediction ? (
         <NbaSeasonAwardsViewPanelNative
           prediction={prediction}
           catalog={candidates.length > 0 ? candidates : undefined}
         />
+      ) : canOfferSubmit && onSubmitAwards ? (
+        <MissingSubmitCard
+          hint={copy.missingAwardsHint}
+          ctaLabel={copy.submitAwardsCta}
+          onPress={onSubmitAwards}
+        />
       ) : null}
     </View>
+  );
+}
+
+function MissingSubmitCard({
+  hint,
+  ctaLabel,
+  onPress,
+}: {
+  hint: string;
+  ctaLabel: string;
+  onPress: () => void;
+}) {
+  return (
+    <View style={styles.missingCard}>
+      <Text style={styles.missingHint}>{hint}</Text>
+      <SubmitButton label={ctaLabel} onPress={onPress} />
+    </View>
+  );
+}
+
+function SubmitButton({
+  label,
+  onPress,
+  outline = false,
+}: {
+  label: string;
+  onPress: () => void;
+  outline?: boolean;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      style={({ pressed }) => [
+        styles.ctaBtn,
+        outline ? styles.ctaBtnOutline : styles.ctaBtnSolid,
+        pressed ? { opacity: 0.88 } : null,
+      ]}
+    >
+      <Text
+        style={[
+          styles.ctaBtnText,
+          outline ? styles.ctaBtnTextOutline : styles.ctaBtnTextSolid,
+        ]}
+      >
+        {label}
+      </Text>
+    </Pressable>
   );
 }
 
@@ -172,6 +269,55 @@ const styles = StyleSheet.create({
   noData: profileOverviewChartNoDataStyle,
   noDataHint: {
     ...profileOverviewChartEmptyHintStyle,
-    maxWidth: 260,
+    maxWidth: 280,
+  },
+  ctaCol: {
+    marginTop: 16,
+    width: "100%",
+    maxWidth: 300,
+    gap: 8,
+  },
+  missingCard: {
+    paddingVertical: 20,
+    paddingHorizontal: 14,
+    borderRadius: 2,
+    backgroundColor: PROFILE_CHART_CYBER.rankPlotInnerBg,
+    borderWidth: 1,
+    borderColor: PROFILE_CHART_CYBER.glassBorder,
+    alignItems: "center",
+    gap: 12,
+  },
+  missingHint: {
+    ...profileOverviewChartEmptyHintStyle,
+    maxWidth: 280,
+  },
+  ctaBtn: {
+    width: "100%",
+    paddingVertical: 11,
+    paddingHorizontal: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  ctaBtnSolid: {
+    borderWidth: 2,
+    borderColor: "#00F5FF",
+    backgroundColor: "#00F5FF",
+  },
+  ctaBtnOutline: {
+    borderWidth: 1,
+    borderColor: "rgba(0,245,255,0.7)",
+    backgroundColor: "transparent",
+  },
+  ctaBtnText: {
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
+  },
+  ctaBtnTextSolid: {
+    color: "#050508",
+  },
+  ctaBtnTextOutline: {
+    color: "#7DFAFF",
   },
 });

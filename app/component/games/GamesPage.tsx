@@ -68,20 +68,21 @@ import {
   readAppTutorialSeenLocal,
 } from "@/lib/tutorial/tutorialSeen";
 import {
+  markTutorialPageTipSeen,
+  readTutorialPageTipSeen,
+} from "@/lib/tutorial/tutorialPageTips";
+import {
   TUTORIAL_LIVE_PHASE_EVENT,
   readTutorialLivePhase,
   writeTutorialLivePhase,
   type TutorialLivePhase,
 } from "@/lib/tutorial/tutorialLivePhase";
-import { formatTutorialGamesSubstepProgress } from "@/lib/tutorial/tutorialLiveProgress";
 import {
   isTutorialGamesSubstep,
   isTutorialOnGamesHome,
-  nextTutorialGamesSubstep,
-  prevTutorialGamesSubstep,
 } from "@/lib/tutorial/tutorialGamesSubsteps";
 import { clearTutorialLivePick } from "@/lib/tutorial/tutorialLivePick";
-import { writeTutorialLiveTrack, readTutorialLiveTrack } from "@/lib/tutorial/tutorialLiveTrack";
+import { writeTutorialLiveTrack } from "@/lib/tutorial/tutorialLiveTrack";
 import { writeTutorialHorizonSubstep } from "@/lib/tutorial/tutorialHorizonSubstep";
 import { writeTutorialWelcomeHandoff, tutorialProfileHref } from "@/lib/tutorial/tutorialWelcomeHandoff";
 import { setTutorialWelcomeChromeHidden, setTutorialWelcomeBrandHidden } from "@/lib/tutorial/tutorialWelcomeChrome";
@@ -258,19 +259,19 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
     router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
   }, [searchParams, router, pathname]);
 
-  /** 初回チュートリアル — 本番 Games 画面上で進行 */
+  /** 初回: welcome → ピックアップ説明のみ（他タブは各ページ初訪問時） */
   useEffect(() => {
     const uid = user?.uid;
     if (!uid) return;
-    // 既読は uid 単位。端末共通キーだと別アカウントでスキップされる
     if (readAppTutorialSeenLocal(uid)) return;
+    if (readTutorialPageTipSeen(uid, "games")) return;
     let cancelled = false;
     void (async () => {
       const seen = await fetchAppTutorialSeen(uid);
       if (cancelled || seen) return;
+      if (readTutorialPageTipSeen(uid, "games")) return;
       const existing = readTutorialLivePhase();
       if (
-        existing === "results" ||
         existing === "rankings" ||
         existing === "groups" ||
         existing === "profile" ||
@@ -278,7 +279,10 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
       ) {
         return;
       }
-      const start: TutorialLivePhase = existing ?? "welcome";
+      const start: TutorialLivePhase =
+        existing === "gamesPickup" || existing === "welcome"
+          ? existing
+          : "welcome";
       const audience = ensureTutorialWelcomeFirst();
       writeTutorialLivePhase(start);
       setTutorialPhase(start);
@@ -1324,11 +1328,13 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
                 }
                 if (dest === "features") {
                   writeTutorialLiveTrack("features");
-                  setTutorialPhaseAndStore("gamesPickup");
+                  writeTutorialHorizonSubstep(0);
+                  setTutorialPhaseAndStore("horizon");
+                  router.push(tutorialProfileHref(pathname));
                   return;
                 }
                 writeTutorialLiveTrack("full");
-                setTutorialPhaseAndStore("games");
+                setTutorialPhaseAndStore("gamesPickup");
               }
             : undefined
         }
@@ -1357,11 +1363,13 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
                 }}
                 onNext={() => {
                   writeTutorialLiveTrack("full");
-                  setTutorialPhaseAndStore("games");
+                  setTutorialPhaseAndStore("gamesPickup");
                 }}
                 onAltNext={() => {
                   writeTutorialLiveTrack("features");
-                  setTutorialPhaseAndStore("gamesPickup");
+                  writeTutorialHorizonSubstep(0);
+                  setTutorialPhaseAndStore("horizon");
+                  router.push(tutorialProfileHref(pathname));
                 }}
               />
             )
@@ -1577,86 +1585,27 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
       {isTutorialGamesSubstep(tutorialPhase) ? (
         <TutorialLiveCoach
           open
-          title={
-            tutorialPhase === "gamesPickup"
-              ? m.tutorial.practice.gamesPickupTitle
-              : tutorialPhase === "gamesStats"
-                ? m.tutorial.practice.gamesStatsTitle
-                : m.tutorial.practice.gamesTitle
-          }
-          body={
-            tutorialPhase === "gamesPickup"
-              ? m.tutorial.practice.gamesPickupBody
-              : tutorialPhase === "gamesStats"
-                ? m.tutorial.practice.gamesStatsBody
-                : m.tutorial.practice.gamesBody
-          }
+          title={m.tutorial.practice.gamesPickupTitle}
+          body={m.tutorial.practice.gamesPickupBody}
           skipLabel={m.tutorial.skip}
-          nextLabel={m.tutorial.next}
+          nextLabel={m.common.ok}
           backLabel={m.tutorial.back}
-          target={
-            tutorialPhase === "gamesStats"
-              ? "games-stats-edge"
-              : tutorialPhase === "gamesPickup" && filteredGames.length > 0
-                ? "match-pickup-label"
-                : null
-          }
-          visual={
-            tutorialPhase === "gamesStats"
-              ? null
-              : tutorialPhase === "gamesPickup"
-                ? filteredGames.length === 0
-                  ? "matchCard"
-                  : null
-                : filteredGames.length === 0
-                  ? "matchCard"
-                  : null
-          }
-          progressLabel={formatTutorialGamesSubstepProgress(
-            m.tutorial.practice.progressLabel,
-            tutorialPhase
-          )}
-          accentTone={
-            tutorialPhase === "gamesPickup" ||
-            (readTutorialLiveTrack() === "features" &&
-              tutorialPhase === "gamesStats")
-              ? "feature"
-              : "cyan"
-          }
+          target={filteredGames.length > 0 ? "match-pickup-label" : null}
+          visual={filteredGames.length === 0 ? "matchCard" : null}
+          accentTone="feature"
           {...skipConfirm}
-          onSkip={completeTutorialFully}
+          onSkip={() => {
+            markTutorialPageTipSeen(user?.uid, "games");
+            completeTutorialFully();
+          }}
           onBack={() => {
-            if (
-              readTutorialLiveTrack() === "features" &&
-              tutorialPhase === "gamesPickup"
-            ) {
-              setWelcomeIntroSession(beginTutorialWelcomeIntroSession());
-              setTutorialPhaseAndStore("welcome");
-              return;
-            }
-            const prev = prevTutorialGamesSubstep(tutorialPhase);
-            if (prev === "welcome") {
-              setWelcomeIntroSession(beginTutorialWelcomeIntroSession());
-            }
-            setTutorialPhaseAndStore(prev);
+            setWelcomeIntroSession(beginTutorialWelcomeIntroSession());
+            setTutorialPhaseAndStore("welcome");
           }}
           onNext={() => {
-            if (
-              readTutorialLiveTrack() === "features" &&
-              tutorialPhase === "gamesStats"
-            ) {
-              writeTutorialHorizonSubstep(0);
-              setTutorialPhaseAndStore("horizon");
-              router.push(tutorialProfileHref(pathname));
-              return;
-            }
-            const next = nextTutorialGamesSubstep(tutorialPhase);
-            setTutorialPhaseAndStore(next);
-            if (next === "results") {
-              router.push(
-                pathname?.startsWith("/web") ? "/web/result" : "/mobile/result"
-              );
-            }
+            markTutorialPageTipSeen(user?.uid, "games");
+            setTutorialPhaseAndStore(null);
+            setAppTutorialBlockingEvents(false);
           }}
         />
       ) : null}

@@ -1,5 +1,5 @@
 /**
- * 7言語コピーの組み立てヘルパー。
+ * 9言語コピーの組み立てヘルパー。
  * 文を「基本 + 接尾」で連結するテンプレ生成（Pro Insight など）で使う。
  */
 import { LOCALIZED_UI_LANGUAGES, type LocalizedLang } from "@/lib/i18n/localize";

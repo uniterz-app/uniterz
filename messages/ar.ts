@@ -939,7 +939,7 @@ const ar: Messages = {
     skip: "تخطّي",
     skipConfirmTitle: "Skip the tutorial?",
     skipConfirmBody:
-      "Are you sure?\nYou can review it again anytime from Tutorial in the side menu.",
+      "Are you sure?\nYou can review the short tab tips again anytime from Tutorial in the side menu.",
     skipConfirmStay: "Keep going",
     skipConfirmLeave: "Skip",
     restartFromMenu: "Tutorial",
@@ -966,23 +966,23 @@ const ar: Messages = {
       tabProfile: "Profile",
       welcomeTitle: "Welcome to UNITERZ",
       welcomeBody:
-        "توقّع المباريات، اجمع النقاط، وتنافس على **التصنيف**. جولة لكل الشاشات، أو الميزات الجديدة فقط.",
+        "توقّع المباريات، اجمع النقاط، وتنافس على **التصنيف**.\nتظهر تلميحات قصيرة عند أول زيارة لكل تبويب. ابدأ بـ Pick Up.",
       welcomeReturningBody:
-        "جولة لكل الشاشات، أو **الميزات الجديدة** فقط.",
-      welcomeFullCta: "شرح الشاشات",
+        "أعد تلميحات التبويبات القصيرة، أو **الميزات الجديدة** فقط (UNIT، المسيرة، وغيرها).",
+      welcomeFullCta: "عرض التلميحات",
       welcomeFeaturesCta: "الميزات الجديدة فقط",
       gamesTitle: "المباريات",
       gamesBody:
         "مباريات اليوم هنا. **اضغط البطاقة** لفتح شاشة التوقع. الفائز يُحدَّد من النتيجة.",
       gamesPickupTitle: "مباريات البيك أب",
       gamesPickupBody:
-        "مباريات تُختار أسبوعياً. **ترتيب Pick Up** يحسب هذه التوقعات فقط. ترتيب نسبة التوفيق يتطلب توقع **65%+** من مباريات البيك أب حتى الآن.",
+        "مباريات تُختار أسبوعياً. ابحث عن **الإطار الأصفر** وعلامة **PICK UP**. **ترتيب Pick Up** يحسب هذه التوقعات فقط. اضغط **توقّع** وجرّب أول توقع لك.",
       gamesStatsTitle: "STANDING / STATS",
       gamesStatsBody:
         "**STANDING** و **STATS** على اليمين يفتحان الترتيب وإحصائيات الفرق واللاعبين. يمكنك أيضاً السحب من الحافة اليمنى.",
       resultsTitle: "النتائج",
       resultsBody:
-        "توقعك **يظهر هنا فور الإرسال**. بعد المباراة تصبح مراجعة — **الأرقام الكبيرة = النتيجة، وأسفلها توقعك.** أعلى اليمين HIT / MISS.",
+        "بطاقات المباريات التي توقّعتها. بعد المباراة تصبح المراجعة. تعرض كل بطاقة **النقاط التي حصلت عليها** في تلك المباراة. أعلى اليمين HIT / MISS. **اضغط البطاقة** لعرض التفاصيل.",
       tapTitle: "Tap the match card",
       tapBody:
         "This is a mock NBA game. Tap the glowing card to start predicting. No real data is affected.",
@@ -1065,9 +1065,13 @@ const ar: Messages = {
       resultDetailMoreBody:
         "Scroll for score distribution and more detail. Same layout in the real app.",
       yourPickLabel: "Your pick",
-      rankingsTitle: "Rankings",
+      rankingsTitle: "التصنيف",
       rankingsBody:
-        "Hits earn points that decide your place. Switch periods and categories to track yourself.",
+        "مرتّبون حسب **نقاط** التوقع. نسبة التوفيق تتطلب توقع **65%+** من مباريات البيك أب حتى الآن.",
+      rankingsScoreHelpCta: "كيف تُحسب النتيجة",
+      rankingsBoardsTitle: "Pick Up و PRO LEAGUE",
+      rankingsBoardsBody:
+        "**Pick Up** … ترتيب المباريات المميزة فقط (للجميع).\n**PRO LEAGUE** … ترتيب مفتوح لكل المباريات. **PRO USER** فقط.",
       groupsTitle: "Groups (Leaderboards)",
       groupsBody:
         "Create a group with friends and compete in a private ranking. Join with an invite code too.",
@@ -1089,7 +1093,7 @@ const ar: Messages = {
         "The highlighted **coin** is your **UNIT balance**.\nUNITERZ **in-app currency** for **skins** and Profile looks.\nTap the coin to open your **history**.",
       horizonUnitHowTitle: "Earning UNIT",
       horizonUnitHowBody:
-        "Earn from **weekly/monthly rankings** and **Squad Battle** rewards.\nWhen you earn, a celebration plays on Profile and the balance updates here.\nSave UNIT to **redeem** skins and items.",
+        "تُكتسب من مكافآت **الترتيب الأسبوعي/الشهري** و**معركة السكواد** و**دعوة الأصدقاء**.\nاستبدل UNIT بـ**قمصان** و**قبعات** وغيرها.",
       horizonCareerWhatTitle: "What is Career?",
       horizonCareerWhatBody:
         "Your predictor **track record** — like a résumé.\nSee **hit rate, streaks, season ranks**, and **long-term stats**.\nSpot growth that short-term rankings alone won't show.",

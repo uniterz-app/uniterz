@@ -14,7 +14,17 @@ import {
   PRO_INSIGHT_NARRATIVE_SECTION_KINDS,
 } from "@/lib/predict/proInsightNarrativeTypes";
 
-const LANGS = ["ja", "en", "ko", "zh", "es", "pt", "fr"] as const;
+const LANGS = [
+  "ja",
+  "en",
+  "ko",
+  "zh",
+  "es",
+  "pt",
+  "fr",
+  "de",
+  "ar",
+] as const;
 
 const BANNED: readonly RegExp[] = [
   /勝て[るなよ]/,
