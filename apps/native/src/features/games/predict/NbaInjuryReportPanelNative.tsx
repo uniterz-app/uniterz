@@ -61,12 +61,15 @@ function InjuryCard({
           {playerName}
         </Text>
         <View
+          collapsable={false}
+          renderToHardwareTextureAndroid
           style={[
             styles.statusBadge,
             {
               borderColor: colors.accent,
               backgroundColor: "rgba(255,255,255,0.06)",
             },
+            Platform.OS === "android" ? { opacity: 0.999 } : null,
           ]}
         >
           <Text style={[styles.statusBadgeText, { color: colors.accent }]}>
@@ -261,9 +264,11 @@ const styles = StyleSheet.create({
   },
   statusBadge: {
     borderWidth: 1,
-    borderRadius: 2,
+    borderRadius: 0,
+    overflow: "hidden",
     paddingHorizontal: 5,
     paddingVertical: 1,
+    transform: [{ skewX: "-6deg" }],
   },
   statusBadgeText: {
     fontFamily: OXANIUM,
@@ -271,6 +276,8 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     letterSpacing: 0.5,
     textTransform: "uppercase",
+    includeFontPadding: false,
+    transform: [{ skewX: "6deg" }],
   },
   detail: {
     fontSize: 11,

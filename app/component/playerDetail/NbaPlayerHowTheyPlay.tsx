@@ -1,6 +1,6 @@
 "use client";
 
-/** チーム詳細 `HowTheyPlayBoard` 相当 — プレイヤーの PERFORMANCE + HOW THEY PLAY */
+/** チーム詳細 `HowTheyPlayBoard` 相当 — プレイヤーの HOW THEY PLAY（RATINGS 含む） */
 import { useMemo, useState } from "react";
 import { nameOxanium } from "@/lib/fonts";
 import { L, type LocalizedLang } from "@/lib/i18n/localize";
@@ -247,7 +247,8 @@ export default function NbaPlayerHowTheyPlay({
     () => getPlayerHowTheyPlay(playerId, { leaders, teamStats, detail }),
     [playerId, leaders, teamStats, detail]
   );
-  const [tab, setTab] = useState<PlayerHowTheyPlayTab>("fourFactors");
+  const [tab, setTab] = useState<PlayerHowTheyPlayTab>("ratings");
+  const [ratingId, setRatingId] = useState("per");
   const [factorId, setFactorId] = useState("efg_pct");
   const [defenseId, setDefenseId] = useState("matchup_fg_pct");
   const [hustleId, setHustleId] = useState("deflections");
@@ -258,49 +259,6 @@ export default function NbaPlayerHowTheyPlay({
 
   return (
     <div className="space-y-4">
-      <section className="space-y-2.5">
-        <SectionTitle title="PERFORMANCE METRICS" accent={accent} />
-        <div
-          className="grid grid-cols-3 overflow-hidden border bg-black/50"
-          style={{ borderColor: frame }}
-        >
-          {board.ratings.map((row, i) => {
-            const col = i % 3;
-            const lastRow = Math.floor((board.ratings.length - 1) / 3);
-            const rowI = Math.floor(i / 3);
-            return (
-              <div
-                key={row.id}
-                className="px-2.5 py-3"
-                style={{
-                  borderRight: col < 2 ? `1px solid ${line}` : undefined,
-                  borderBottom: rowI < lastRow ? `1px solid ${line}` : undefined,
-                }}
-              >
-                <div className="flex items-center justify-between gap-1">
-                  <span className={`${nameOxanium.className} text-[9px] font-bold uppercase tracking-wider text-white/40`}>
-                    {row.short}
-                  </span>
-                  <RankTag
-                    rank={row.cell.rank}
-                    accent={accent}
-                    className={`${nameOxanium.className} text-[12px] font-extrabold tabular-nums`}
-                  />
-                </div>
-                <p
-                  className={`${nameOxanium.className} mt-1 text-[18px] font-extrabold tabular-nums`}
-                  style={{ transform: "skewX(-8deg)" }}
-                >
-                  {row.cell.display}
-                </p>
-              </div>
-            );
-          })}
-        </div>
-      </section>
-
-      <div className="h-px" style={{ backgroundColor: hexToRgba(accent, 0.2) }} />
-
       <section className="space-y-2.5">
         <SectionTitle title="HOW THEY PLAY" accent={accent} />
         <div className="grid grid-cols-3 gap-1">
@@ -316,6 +274,16 @@ export default function NbaPlayerHowTheyPlay({
         <p className={`${nameOxanium.className} text-[11px] leading-snug text-[#00F5FF]/70`}>
           {L(lang, tabMeta.hint)}
         </p>
+
+        {tab === "ratings" ? (
+          <HintRow
+            rows={board.ratings}
+            selectedId={ratingId}
+            onSelect={setRatingId}
+            accent={accent}
+            lang={lang}
+          />
+        ) : null}
 
         {tab === "fourFactors" ? (
           <HintRow

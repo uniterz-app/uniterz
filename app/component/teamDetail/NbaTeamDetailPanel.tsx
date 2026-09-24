@@ -1347,13 +1347,17 @@ function PayrollCard({
             ) : (
               slices.map((s) => {
                 const isTw = s.isTwoWay === true && active.key === CURRENT_NBA_SEASON_KEY;
+                const isE10 =
+                  s.isNonGuaranteed === true &&
+                  !isTw &&
+                  active.key === CURRENT_NBA_SEASON_KEY;
                 const displaySalary = isTw
                   ? nbaTwoWaySalaryForSeason(active.key)
                   : s.displaySalary != null && s.displaySalary > 0
                     ? s.displaySalary
                     : s.salary;
                 const capPct =
-                  !isTw && s.salary > 0 && active.salaryCap > 0
+                  !isTw && !isE10 && s.salary > 0 && active.salaryCap > 0
                     ? ((s.salary / active.salaryCap) * 100).toFixed(1)
                     : null;
                 return (
@@ -1408,6 +1412,11 @@ function PayrollCard({
                       {isTw ? (
                         <span className="text-[9px] font-extrabold px-1 py-0.2 rounded-[2px] bg-white/10 text-white/60">
                           TW
+                        </span>
+                      ) : null}
+                      {isE10 ? (
+                        <span className="text-[9px] font-extrabold px-1 py-0.2 rounded-[2px] bg-white/10 text-white/60">
+                          E10
                         </span>
                       ) : null}
                       {displaySalary > 0 ? formatSalaryUsd(displaySalary) : "—"}
@@ -1482,6 +1491,28 @@ function PayrollCard({
                 </span>
                 <span className="text-[10px] text-white/55 font-medium leading-tight">
                   {isJa ? "双方合意オプション（球団・選手両方）" : "Mutual Option (Both agree)"}
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span
+                  className={`${nameOxanium.className} shrink-0 text-[8px] font-extrabold px-1.5 py-0.5 rounded-[2px] tracking-wider bg-white/10 text-white/60`}
+                  style={{ transform: "skewX(-8deg)" }}
+                >
+                  TW
+                </span>
+                <span className="text-[10px] text-white/55 font-medium leading-tight">
+                  {isJa ? "Two-Way 契約" : "Two-Way contract"}
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span
+                  className={`${nameOxanium.className} shrink-0 text-[8px] font-extrabold px-1.5 py-0.5 rounded-[2px] tracking-wider bg-white/10 text-white/60`}
+                  style={{ transform: "skewX(-8deg)" }}
+                >
+                  E10
+                </span>
+                <span className="text-[10px] text-white/55 font-medium leading-tight">
+                  {isJa ? "Exhibit 10（非保証キャンプ）" : "Exhibit 10 (non-guaranteed camp)"}
                 </span>
               </div>
             </div>

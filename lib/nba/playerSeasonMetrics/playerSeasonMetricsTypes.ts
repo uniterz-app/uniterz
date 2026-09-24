@@ -10,7 +10,10 @@ export const NBA_PLAYER_SEASON_METRICS_PLAYERS_SUB = "players";
 
 export type NbaPlayerSeasonMetricCell = {
   value: number;
-  /** 1-indexed。出場資格を満たした母集団内の順位 */
+  /**
+   * 1-indexed。出場資格を満たした母集団内の順位。
+   * `0` = 資格外（値だけ詳細に出す。順位 UI は出さない）。
+   */
   rank: number;
 };
 

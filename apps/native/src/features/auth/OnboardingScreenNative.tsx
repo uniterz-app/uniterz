@@ -5,7 +5,6 @@ import {
   Image,
   KeyboardAvoidingView,
   Modal,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -18,6 +17,7 @@ import { signOut } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { auth, db, storage } from "../../lib/firebase";
+import { keyboardAvoidingBehavior } from "../../ui/keyboardAvoidingBehaviorNative";
 import AuthFormShellNative from "./AuthFormShellNative";
 import { AUTH_LANDING } from "./authLandingPalette";
 import SlantCtaNative from "../../ui/SlantCtaNative";
@@ -269,7 +269,7 @@ export default function OnboardingScreenNative() {
   return (
     <KeyboardAvoidingView
       style={styles.root}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      behavior={keyboardAvoidingBehavior}
     >
       <AuthFormShellNative title="WELCOME">
         <Text style={styles.desc}>{t.desc}</Text>

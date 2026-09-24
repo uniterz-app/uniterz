@@ -9,8 +9,8 @@
  *
  * データ:
  * - SEASON + PER GAME → season
- * - SEASON + TOTAL → season を出場数で積算（レート系はそのまま）
- * - PLAYOFFS → 未接続のため UI では非表示（`NBA_LEAGUE_STATS_PHASES`）
+ * - SEASON + TOTAL → season を出場数で積算（整数。レート系はそのまま）
+ * - PLAYOFFS + PER GAME / TOTAL → playoffs
  */
 
 import {
@@ -34,9 +34,8 @@ import {
 export type NbaLeagueStatsPhase = "season" | "playoffs";
 export type NbaLeagueStatsMode = "per_game" | "total" | "last10";
 
-/** playoffs スナップショットが来るまで season のみ */
 export const NBA_LEAGUE_STATS_PHASES =
-  ["season"] as const satisfies readonly NbaLeagueStatsPhase[];
+  ["season", "playoffs"] as const satisfies readonly NbaLeagueStatsPhase[];
 
 export function phaseTabLabel(phase: NbaLeagueStatsPhase): string {
   return phase === "season" ? "SEASON" : "PLAYOFFS";
@@ -116,49 +115,56 @@ function playerMetricScalesWithGames(metric: NbaPlayerLeaderMetricId): boolean {
   return def?.kind === "perGame" || def?.kind === "minutes";
 }
 
-/** Team 表用: phase/mode → 表示行（last10 モードは per_game に落とす） */
-export function resolveLeagueTeamStatRows(input: {
-  phase: NbaLeagueStatsPhase;
-  mode: NbaLeagueStatsMode;
-  season: readonly NbaLeagueTeamStatRow[];
-  last10: readonly NbaLeagueTeamStatRow[];
-}): NbaLeagueTeamStatRow[] {
-  const mode = coerceTeamModeForPhase(input.phase, input.mode);
-  if (input.phase === "playoffs") return [];
-  if (mode === "per_game") return [...input.season];
-  return input.season.map((row) => {
+function scaleTeamRowsForTotal(
+  rows: readonly NbaLeagueTeamStatRow[]
+): NbaLeagueTeamStatRow[] {
+  return rows.map((row) => {
     const gp = teamGamesPlayed(row);
     if (gp <= 0) return { ...row };
     const next: NbaLeagueTeamStatRow = { ...row };
     for (const key of TEAM_COUNTING_METRICS) {
       const v = metricValue(row, key);
-      (next as unknown as Record<string, number>)[key] =
-        Math.round(v * gp * 10) / 10;
+      (next as unknown as Record<string, number>)[key] = Math.round(v * gp);
     }
     return next;
   });
 }
 
-/** Player 表用: phase/mode → 表示行 */
+/** Team 表用: phase/mode → 表示行（Last 10 タブは廃止） */
+export function resolveLeagueTeamStatRows(input: {
+  phase: NbaLeagueStatsPhase;
+  mode: NbaLeagueStatsMode;
+  season: readonly NbaLeagueTeamStatRow[];
+  playoffs?: readonly NbaLeagueTeamStatRow[];
+}): NbaLeagueTeamStatRow[] {
+  const mode = coerceTeamModeForPhase(input.phase, input.mode);
+  const source =
+    input.phase === "playoffs" ? (input.playoffs ?? []) : input.season;
+  if (mode === "per_game") return [...source];
+  return scaleTeamRowsForTotal(source);
+}
+
+/** Player 表用: phase/mode → 表示行（Last 10 タブは廃止） */
 export function resolvePlayerStatLeaderRows(input: {
   phase: NbaLeagueStatsPhase;
   mode: NbaLeagueStatsMode;
   metric: NbaPlayerLeaderMetricId;
   season: readonly NbaPlayerStatLeaderRow[];
-  last10: readonly NbaPlayerStatLeaderRow[];
+  playoffs?: readonly NbaPlayerStatLeaderRow[];
 }): NbaPlayerStatLeaderRow[] {
   const mode = coercePlayerModeForPhase(input.phase, input.mode);
-  if (input.phase === "playoffs") return [];
-  const source = mode === "last10" ? input.last10 : input.season;
+  const source =
+    input.phase === "playoffs" ? (input.playoffs ?? []) : input.season;
   if (mode !== "total" || !playerMetricScalesWithGames(input.metric)) {
     return [...source];
   }
   return source.map((row) => {
     const gp = row.gamesPlayed;
     if (gp <= 0) return { ...row };
+    // per-game × GP の近似。得点・リバ等は整数、MIN も整数で出す
     return {
       ...row,
-      value: Math.round(row.value * gp * 10) / 10,
+      value: Math.round(row.value * gp),
     };
   });
 }

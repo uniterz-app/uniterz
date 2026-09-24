@@ -121,7 +121,7 @@ import { resolveTutorialPickupGameId } from "../../../../../lib/tutorial/tutoria
 import TutorialLiveCoachNative from "../tutorial/TutorialLiveCoachNative";
 import TutorialWelcomeWorldCameraNative from "../tutorial/TutorialWelcomeWorldCameraNative";
 import TutorialLiveHostNative from "../tutorial/TutorialLiveHostNative";
-import { prefetchRankingsLogoGlb } from "../rankings/rankingsLogoGlbCache";
+import { scheduleAndroidOwnProfileTabWarm } from "../profile/scheduleAndroidOwnProfileTabWarm";
 import { registerTutorialScrollHost } from "../tutorial/tutorialMeasureNative";
 import {
   clearTutorialLivePickNative,
@@ -578,8 +578,11 @@ export default function GamesHomeScreen({
   const mainScrollRef = useRef<FlatList<Record<string, unknown>> | null>(null);
   const mainScrollYRef = useRef(0);
   const didInitPreferredLeagueRef = useRef(false);
-  /** preferredLeague（と表示名・言語）確定まで games フェッチを止める */
-  const [preferredLeagueReady, setPreferredLeagueReady] = useState(false);
+  /**
+   * リーグは実質 NBA 固定（wc は後段で寄せる）。
+   * false 始まりだと Android で Firestore getDoc 待ちのあいだスケルトンが伸びる。
+   */
+  const [preferredLeagueReady, setPreferredLeagueReady] = useState(true);
   const skipAutoAdvanceRef = useRef(false);
   const tutorialNearestFetchRef = useRef<number | null>(null);
   const suppressAutoAdvanceForTodayRef = useRef(false);
@@ -758,6 +761,19 @@ export default function GamesHomeScreen({
   );
   const showInitialSkeleton =
     (!preferredLeagueReady || loading) && !hasWindowData;
+
+  /**
+   * Android: Games 初回が落ち着いたら lazy ProfileTab を裏マウント＋データ warm。
+   * ナビ「マイページ」初回を、他人プロフィール（push）に近い体感へ寄せる。
+   */
+  useEffect(() => {
+    if (showInitialSkeleton) return;
+    return scheduleAndroidOwnProfileTabWarm({
+      uid: fUser?.uid,
+      tabNavigation,
+    });
+  }, [showInitialSkeleton, fUser?.uid, tabNavigation]);
+
   const filterActive = useMemo(
     () => gamesFilterIsActive(gamesFilter),
     [gamesFilter]
@@ -787,8 +803,6 @@ export default function GamesHomeScreen({
       // 既読は uid 単位。端末共通キーだと別アカウントでスキップされる
       const localSeen = await readAppTutorialSeenNative(uid);
       if (cancelled || localSeen) return;
-      /** welcome 前に GLB を温める（ロゴ表示遅れ対策） */
-      prefetchRankingsLogoGlb();
       const seen = await fetchAppTutorialSeenNative(uid);
       if (cancelled || seen) return;
       const existing = await readTutorialLivePhaseNative();
@@ -1359,15 +1373,19 @@ export default function GamesHomeScreen({
       setPredictionWaitExpired(false);
       return;
     }
-    const t = setTimeout(() => setPredictionWaitExpired(true), 1200);
+    /** Android は Firestore が遅く、一覧を 1.2s 隠すと「初回が遅い」に直結する */
+    const waitMs = Platform.OS === "android" ? 380 : 1200;
+    const t = setTimeout(() => setPredictionWaitExpired(true), waitMs);
     return () => clearTimeout(t);
   }, [missingRemotePredictionIds]);
   /**
    * 未取得の予想を青で先塗りしない。ただしチュートリアル中やプレビュー試合、
    * 1.2s 超過では一覧を隠さない（穴が測れず案内が中央モーダルのまま固まる）。
+   * Android は Firestore が遅く一覧隠しが初回遅延に直結するため、待たずに出す。
    */
   const predictionPaintPending = Boolean(
-    !tutorialActive &&
+    Platform.OS !== "android" &&
+      !tutorialActive &&
       missingRemotePredictionIds.length > 0 &&
       !predictionWaitExpired
   );
@@ -3500,6 +3518,10 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     fontFamily: "Oxanium_600SemiBold",
     maxWidth: "100%",
+  },
+  teamNameSkew: {
+    maxWidth: "100%",
+    alignItems: "center",
     transform: [{ skewX: "-6deg" }],
   },
   teamNameMainWc: {

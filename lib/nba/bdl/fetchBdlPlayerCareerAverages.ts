@@ -70,7 +70,16 @@ export async function fetchBdlPlayerCareerAverageForSeason(input: {
 export type BdlPlayerBasicInfo = {
   id: number;
   draftYear: number | null;
+  draftRound: number | null;
+  draftNumber: number | null;
   position: string;
+  firstName: string;
+  lastName: string;
+  jerseyNumber: string | null;
+  height: string | null;
+  weight: string | null;
+  country: string | null;
+  college: string | null;
 };
 
 export async function fetchBdlPlayerBasicInfo(
@@ -79,8 +88,17 @@ export async function fetchBdlPlayerBasicInfo(
   const res = await bdlNbaGetJson<
     BdlListResponse<{
       id?: number;
+      first_name?: string;
+      last_name?: string;
       draft_year?: number | null;
+      draft_round?: number | null;
+      draft_number?: number | null;
       position?: string | null;
+      jersey_number?: string | number | null;
+      height?: string | null;
+      weight?: string | null;
+      country?: string | null;
+      college?: string | null;
     }>
   >("/nba/v1/players", { "player_ids[]": bdlPlayerId });
   const p = Array.isArray(res.data) ? res.data[0] : null;
@@ -89,9 +107,31 @@ export async function fetchBdlPlayerBasicInfo(
     typeof p.draft_year === "number" && Number.isFinite(p.draft_year)
       ? p.draft_year
       : null;
+  const draftRound =
+    typeof p.draft_round === "number" && Number.isFinite(p.draft_round)
+      ? Math.trunc(p.draft_round)
+      : null;
+  const draftNumber =
+    typeof p.draft_number === "number" && Number.isFinite(p.draft_number)
+      ? Math.trunc(p.draft_number)
+      : null;
+  const jerseyRaw = p.jersey_number;
+  const jerseyNumber =
+    jerseyRaw == null || String(jerseyRaw).trim() === ""
+      ? null
+      : String(jerseyRaw).replace(/^#/, "").trim();
   return {
     id: p.id,
     draftYear: draft,
+    draftRound,
+    draftNumber,
     position: String(p.position ?? "").trim() || "—",
+    firstName: String(p.first_name ?? "").trim(),
+    lastName: String(p.last_name ?? "").trim(),
+    jerseyNumber,
+    height: String(p.height ?? "").trim() || null,
+    weight: String(p.weight ?? "").trim() || null,
+    country: String(p.country ?? "").trim() || null,
+    college: String(p.college ?? "").trim() || null,
   };
 }

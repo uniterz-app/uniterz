@@ -4,6 +4,7 @@ import { spacing } from "../theme/tokens";
 /** 下部タブピル分のコンテンツ余白（各 Home 画面の bottomReserveY） */
 export function useBottomTabBarInsets() {
   const insets = useSafeAreaInsets();
+  /** AppTabBar の `TAB_BAR_BOTTOM_GAP` と揃える */
   const tabBarBottomOffset = 10;
   const pillBottomFromScreenBottom = tabBarBottomOffset + insets.bottom;
   const bottomContentReserveY = pillBottomFromScreenBottom + 8 + 42 + 8 + 14;

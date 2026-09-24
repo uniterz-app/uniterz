@@ -27,18 +27,20 @@ export type BdlLeaderRow = {
 export async function fetchBdlPlayerLeaders(input: {
   seasonYear: number;
   statType: NbaPlayerLeaderBdlStatType;
+  seasonType?: "regular" | "playoffs";
 }): Promise<BdlLeaderRow[]> {
+  const seasonType = input.seasonType === "playoffs" ? "playoffs" : "regular";
   let rows: BdlLeaderRow[];
   try {
     rows = await bdlNbaGetAllPages<BdlLeaderRow>(`/nba/v1/leaders`, {
       season: input.seasonYear,
-      season_type: "regular",
+      season_type: seasonType,
       stat_type: input.statType,
     });
   } catch {
     rows = await bdlNbaGetAllPages<BdlLeaderRow>(`/v1/leaders`, {
       season: input.seasonYear,
-      season_type: "regular",
+      season_type: seasonType,
       stat_type: input.statType,
     });
   }

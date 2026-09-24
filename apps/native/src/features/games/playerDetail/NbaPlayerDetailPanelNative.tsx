@@ -94,11 +94,11 @@ import { useLeagueTeamStatsBundle } from "../../../../../../lib/nba/useLeagueTea
 import { usePlayerStatLeadersBundle } from "../../../../../../lib/nba/usePlayerStatLeadersBundle";
 import { useNbaPlayerDetailLiveOverlay } from "../../../../../../lib/nba/playerDetail/useNbaPlayerDetailLiveOverlay";
 import { buildPlayerDetailInsights } from "../../../../../../lib/nba/detailInsights/buildPlayerDetailInsights";
+import { useNbaTeamRosterSlice } from "../../../../../../lib/nba/detailInsights/useNbaTeamRosterSlice";
 import {
   DetailIdentityChipRowNative,
   DetailInsightSummaryNative,
 } from "../detailInsights/DetailInsightBlocksNative";
-import { DetailUsageStripNative } from "../detailInsights/DetailUsageStripNative";
 import { DetailRoleChangeSectionNative } from "../detailInsights/DetailRoleChangeSectionNative";
 import { DetailConsistencySectionNative } from "../detailInsights/DetailConsistencySectionNative";
 import { formatNbaPlayerDisplayName } from "@/lib/nba/formatNbaPlayerListName";
@@ -253,7 +253,14 @@ function PlayerIdCard({ detail }: { detail: NbaPlayerDetailPreview }) {
             label="PHYSIQUE"
             value={formatPhysique(detail.height, detail.weight)}
           />
-          <IdMetaCell label="TEAM" value={detail.teamAbbr} />
+          <IdMetaCell
+            label="TEAM"
+            value={
+              detail.availability.status === "retired"
+                ? "RETIRED"
+                : detail.teamAbbr
+            }
+          />
           <IdMetaCell
             label="COUNTRY"
             value={detail.country ?? "—"}
@@ -375,9 +382,11 @@ function ZoneStatLabel({
 function ShotZoneHeatmap({
   zones,
   accent,
+  seasonLabel,
 }: {
   zones: NbaPlayerShotZone[];
   accent: string;
+  seasonLabel: string;
 }) {
   if (zones.length === 0) {
     return (
@@ -438,11 +447,7 @@ function ShotZoneHeatmap({
         </Text>
         <View style={styles.advTitleLine} />
       </View>
-      <Text style={styles.heatSeason}>
-        {nbaSeasonStatsReady()
-          ? `${CURRENT_NBA_SEASON_KEY} SEASON`
-          : "PRESEASON"}
-      </Text>
+      <Text style={styles.heatSeason}>{seasonLabel}</Text>
       <View
         style={[
           styles.heatCourtFrame,
@@ -1375,7 +1380,11 @@ function AvailabilityBanner({
         ) : null}
       </View>
       <Text style={styles.availReason}>
-        {injuryReasonLabel(availability.reason, isJa ? "ja" : "en")}
+        {availability.status === "retired"
+          ? isJa
+            ? "今季ロスター外。キャリアとアワードを表示します。"
+            : "Not on this season's roster. Showing career and awards."
+          : injuryReasonLabel(availability.reason, isJa ? "ja" : "en")}
       </Text>
     </View>
   );
@@ -1432,9 +1441,20 @@ export default function NbaPlayerDetailPanelNative({
     base,
     leaders,
   });
+  const { players: teammates } = useNbaTeamRosterSlice({
+    teamId: detail.teamId,
+    apiBaseUrl,
+  });
+  const rosterPlayer =
+    teammates.find((p) => String(p.id) === String(detail.playerId)) ?? null;
   const playerInsights = useMemo(
-    () => buildPlayerDetailInsights({ detail, rosterPlayer: null }),
-    [detail]
+    () =>
+      buildPlayerDetailInsights({
+        detail,
+        rosterPlayer,
+        teammates,
+      }),
+    [detail, rosterPlayer, teammates]
   );
   const bottomPad = Math.max(12, insets.bottom);
   const currentSalary = detail.contract?.seasons[0] ?? null;
@@ -1451,14 +1471,14 @@ export default function NbaPlayerDetailPanelNative({
     );
   const isContractExpired =
     !detail.contract ||
-    detail.contract.contractStatus?.toLowerCase().includes("expired") ||
-    detail.contract.yearsRemaining <= 0 ||
     detail.contract.seasons.length === 0 ||
-    (detail.contract.seasons.every((s) => s.baseSalary <= 0) && !isTwoWay);
+    detail.contract.yearsRemaining <= 0 ||
+    detail.contract.contractStatus?.toLowerCase().includes("expired");
   const accent = getTeamUiAccentColor("nba", detail.teamId);
   const dividerColor = hexToRgba(accent, 0.22);
   const frameColor = hexToRgba(accent, 0.35);
   const displayAge = resolvePlayerDisplayAge(detail);
+  const isRetired = detail.availability.status === "retired";
 
   return (
     <ScrollView
@@ -1480,7 +1500,7 @@ export default function NbaPlayerDetailPanelNative({
 
         <View style={[styles.divider, { backgroundColor: dividerColor }]} />
 
-        {playerInsights.summary ? (
+        {!isRetired && playerInsights.summary ? (
           <>
             <DetailInsightSummaryNative
               text={
@@ -1492,7 +1512,7 @@ export default function NbaPlayerDetailPanelNative({
             <View style={{ height: 10 }} />
           </>
         ) : null}
-        {playerInsights.roles.length > 0 ? (
+        {!isRetired && playerInsights.roles.length > 0 ? (
           <>
             <DetailIdentityChipRowNative
               chips={playerInsights.roles}
@@ -1503,10 +1523,6 @@ export default function NbaPlayerDetailPanelNative({
             <View style={{ height: 10 }} />
           </>
         ) : null}
-        <DetailUsageStripNative
-          cells={playerInsights.usageStrip}
-          accent={accent}
-        />
 
         <View style={[styles.divider, { backgroundColor: dividerColor }]} />
 
@@ -1515,6 +1531,8 @@ export default function NbaPlayerDetailPanelNative({
           isJa={isJa}
         />
 
+        {!isRetired ? (
+          <>
         <SeasonMetricsGrid
           metrics={detail.seasonMetrics}
           season={detail.season}
@@ -1579,6 +1597,8 @@ export default function NbaPlayerDetailPanelNative({
             />
           </>
         ) : null}
+          </>
+        ) : null}
 
         <View style={[styles.divider, { backgroundColor: dividerColor }]} />
         <SeasonHistorySection
@@ -1588,8 +1608,20 @@ export default function NbaPlayerDetailPanelNative({
           accent={accent}
         />
 
+        {!isRetired ? (
+          <>
         <View style={[styles.divider, { backgroundColor: dividerColor }]} />
-        <ShotZoneHeatmap zones={detail.shotZones} accent={accent} />
+        <ShotZoneHeatmap
+          zones={detail.shotZones}
+          accent={accent}
+          seasonLabel={
+            detail.asOfLabel.match(/(\d{4}-\d{2})/)?.[1]
+              ? `${detail.asOfLabel.match(/(\d{4}-\d{2})/)![1]} SEASON`
+              : nbaSeasonStatsReady()
+                ? `${CURRENT_NBA_SEASON_KEY} SEASON`
+                : "PRESEASON"
+          }
+        />
 
         <View style={[styles.divider, { backgroundColor: dividerColor }]} />
         {playerInsights.consistency ? (
@@ -1755,6 +1787,9 @@ export default function NbaPlayerDetailPanelNative({
           <PlayerDetailSectionNoDataNative accent={accent} />
         )}
 
+          </>
+        ) : null}
+
         <View style={[styles.divider, { backgroundColor: dividerColor }]} />
 
         <View style={styles.advTitleRow}>
@@ -1802,7 +1837,17 @@ export default function NbaPlayerDetailPanelNative({
             }
             accent={accent}
           />
-          <InfoRow label="TEAM" value={detail.teamName} accent={accent} />
+          <InfoRow
+            label={
+              detail.availability.status === "retired"
+                ? isJa
+                  ? "最終所属"
+                  : "LAST TEAM"
+                : "TEAM"
+            }
+            value={detail.teamName}
+            accent={accent}
+          />
           <InfoRow
             label={chrome.history}
             value={formatTeamHistory(detail.teamHistory)}

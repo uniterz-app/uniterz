@@ -434,13 +434,13 @@ export function proSubscribeTrialMicroNote(
   lang: LocalizedLang | string
 ): string {
   return L(asLang(lang), {
-    ja: "※ 初回のみ。iOS は App Store のサブスク管理から解約できます。プレビューでは決済しません。",
-    en: "※ First time only. On iOS, cancel in App Store subscriptions. Preview does not charge.",
-    ko: "※ 최초 1회만. iOS는 App Store 구독 관리에서 해지할 수 있습니다. 프리뷰에서는 결제되지 않습니다.",
-    zh: "※ 仅限首次。iOS 可在 App Store 订阅管理中取消。预览不会实际扣款。",
-    es: "※ Solo la primera vez. En iOS, cancela en suscripciones de App Store. La vista previa no cobra.",
-    pt: "※ Só na 1ª vez. No iOS, cancele nas assinaturas da App Store. A prévia não cobra.",
-    fr: "※ 1re fois seulement. Sur iOS, annulez dans les abonnements App Store. L’aperçu ne débite pas.",
+    ja: "※ 初回のみ。App Store / Google Play のサブスク管理から解約できます。プレビューでは決済しません。",
+    en: "※ First time only. Cancel in App Store / Google Play subscriptions. Preview does not charge.",
+    ko: "※ 최초 1회만. App Store / Google Play 구독 관리에서 해지할 수 있습니다. 프리뷰에서는 결제되지 않습니다.",
+    zh: "※ 仅限首次。可在 App Store / Google Play 订阅管理中取消。预览不会实际扣款。",
+    es: "※ Solo la primera vez. Cancela en las suscripciones de App Store / Google Play. La vista previa no cobra.",
+    pt: "※ Só na 1ª vez. Cancele nas assinaturas da App Store / Google Play. A prévia não cobra.",
+    fr: "※ 1re fois seulement. Annulez dans les abonnements App Store / Google Play. L’aperçu ne débite pas.",
   });
 }
 

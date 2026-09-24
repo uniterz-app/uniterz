@@ -1,6 +1,6 @@
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
-import { useFonts } from "expo-font";
+import { useFonts, loadAsync as loadFontsAsync } from "expo-font";
 import { MaterialCommunityIcons, MaterialIcons } from "@expo/vector-icons";
 import { Oxanium_600SemiBold, Oxanium_700Bold, Oxanium_800ExtraBold } from "@expo-google-fonts/oxanium";
 import { BebasNeue_400Regular } from "@expo-google-fonts/bebas-neue";
@@ -32,47 +32,54 @@ import MaintenanceGateNative from "./src/components/MaintenanceGateNative";
 import CyberAlertProvider from "./src/components/CyberAlertProvider";
 import { APP_MESH_BG_FALLBACK } from "../../lib/app/appMeshBackground";
 import { ensureNativeSplashHeld } from "./src/bootstrap/nativeBootSplash";
-import { prefetchRankingsLogoGlb } from "./src/features/rankings/rankingsLogoGlbCache";
 import { initNativeObservability } from "./src/observability/initNativeObservability";
 
 ensureNativeSplashHeld();
-/** チュートリアル welcome / ランキング背景の 3D ロゴを起動直後から温める */
-prefetchRankingsLogoGlb();
 initNativeObservability();
 
+/**
+ * Games / タブバー初回に必要な最小セット。
+ * NotoSansJP はパッケージが大きく Android で特に遅いので後読み。
+ */
+const CRITICAL_FONTS = {
+  ...MaterialCommunityIcons.font,
+  ...MaterialIcons.font,
+  BebasNeue_400Regular,
+  Montserrat_900Black_Italic,
+  Oxanium_600SemiBold,
+  Oxanium_700Bold,
+  Oxanium_800ExtraBold,
+};
+
+const DEFERRED_FONTS = {
+  AlfaSlabOne_400Regular,
+  Rajdhani_700Bold,
+  Michroma_400Regular,
+  Orbitron_700Bold,
+  Orbitron_800ExtraBold,
+  Audiowide_400Regular,
+  ChakraPetch_700Bold,
+  Exo2_800ExtraBold,
+  NotoSansJP_400Regular,
+  NotoSansJP_600SemiBold,
+  NotoSansJP_700Bold,
+};
+
 export default function App() {
-  /**
-   * 見出しフォント + アイコンフォントを起動ゲートで先読み。
-   * MCI / MaterialIcons が未ロードだと空の Text になり、ナビ・サイドメニューが消えて見える。
-   */
-  const [fontsLoaded] = useFonts({
-    ...MaterialCommunityIcons.font,
-    ...MaterialIcons.font,
-    BebasNeue_400Regular,
-    Montserrat_900Black_Italic,
-    Oxanium_600SemiBold,
-    Oxanium_700Bold,
-    Oxanium_800ExtraBold,
-    AlfaSlabOne_400Regular,
-    Rajdhani_700Bold,
-    Michroma_400Regular,
-    Orbitron_700Bold,
-    Orbitron_800ExtraBold,
-    Audiowide_400Regular,
-    ChakraPetch_700Bold,
-    Exo2_800ExtraBold,
-    NotoSansJP_400Regular,
-    NotoSansJP_600SemiBold,
-    NotoSansJP_700Bold,
-  });
+  const [criticalFontsLoaded] = useFonts(CRITICAL_FONTS);
 
   useEffect(() => {
     ensureNativeSplashHeld();
   }, []);
 
+  useEffect(() => {
+    if (!criticalFontsLoaded) return;
+    void loadFontsAsync(DEFERRED_FONTS).catch(() => {});
+  }, [criticalFontsLoaded]);
+
   useNativeShareDeepLinks();
 
-  if (!fontsLoaded) return null;
+  if (!criticalFontsLoaded) return null;
 
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: APP_MESH_BG_FALLBACK }}>
@@ -103,7 +110,7 @@ export default function App() {
               }}
             >
               <RootNavigator />
-              <StatusBar style="light" />
+              <StatusBar style="light" translucent backgroundColor="transparent" />
               <TutorialRestartCoverNative />
             </NavigationContainer>
           </AppShellNative>

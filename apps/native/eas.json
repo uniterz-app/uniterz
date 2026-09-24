@@ -6,24 +6,54 @@
   "build": {
     "development": {
       "developmentClient": true,
-      "distribution": "internal"
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "APP_VARIANT": "preview",
+        "EXPO_PUBLIC_FIREBASE_API_KEY": "AIzaSyCnXM5tHrMhqOHTfqWGH2cobYb95x91kzY",
+        "EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN": "matchpik-7dbb1.firebaseapp.com",
+        "EXPO_PUBLIC_FIREBASE_PROJECT_ID": "matchpik-7dbb1",
+        "EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET": "matchpik-7dbb1.firebasestorage.app",
+        "EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID": "993533705061",
+        "EXPO_PUBLIC_FIREBASE_APP_ID": "1:993533705061:web:378b74b68db05441b77f8c",
+        "EXPO_PUBLIC_APP_URL": "https://uniterz.app",
+        "EXPO_PUBLIC_UNITERZ_API_BASE_URL": "https://uniterz.app"
+      }
     },
     "preview": {
       "distribution": "internal",
-      "ios": {
-        "bundleIdentifier": "app.uniterz.mobile.dev"
-      },
       "android": {
-        "applicationId": "app.uniterz.mobile.dev"
+        "buildType": "apk"
+      },
+      "env": {
+        "APP_VARIANT": "preview",
+        "EXPO_PUBLIC_FIREBASE_API_KEY": "AIzaSyCnXM5tHrMhqOHTfqWGH2cobYb95x91kzY",
+        "EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN": "matchpik-7dbb1.firebaseapp.com",
+        "EXPO_PUBLIC_FIREBASE_PROJECT_ID": "matchpik-7dbb1",
+        "EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET": "matchpik-7dbb1.firebasestorage.app",
+        "EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID": "993533705061",
+        "EXPO_PUBLIC_FIREBASE_APP_ID": "1:993533705061:web:378b74b68db05441b77f8c",
+        "EXPO_PUBLIC_APP_URL": "https://uniterz.app",
+        "EXPO_PUBLIC_UNITERZ_API_BASE_URL": "https://uniterz.app"
       }
     },
     "production": {
       "autoIncrement": true,
-      "ios": {
-        "bundleIdentifier": "app.uniterz.mobile"
-      },
       "android": {
-        "applicationId": "app.uniterz.mobile"
+        "buildType": "app-bundle"
+      },
+      "env": {
+        "APP_VARIANT": "production",
+        "EXPO_PUBLIC_FIREBASE_API_KEY": "AIzaSyCnXM5tHrMhqOHTfqWGH2cobYb95x91kzY",
+        "EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN": "matchpik-7dbb1.firebaseapp.com",
+        "EXPO_PUBLIC_FIREBASE_PROJECT_ID": "matchpik-7dbb1",
+        "EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET": "matchpik-7dbb1.firebasestorage.app",
+        "EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID": "993533705061",
+        "EXPO_PUBLIC_FIREBASE_APP_ID": "1:993533705061:web:378b74b68db05441b77f8c",
+        "EXPO_PUBLIC_APP_URL": "https://uniterz.app",
+        "EXPO_PUBLIC_UNITERZ_API_BASE_URL": "https://uniterz.app"
       }
     }
   },

@@ -59,7 +59,8 @@ export function resolveMarketBiasFallback(
 
 /**
  * games ドキュメントから表示用の市場偏りを組む。
- * 優先: 投稿1件+自分の勝者 → marketPickCounts → marketBias/market → 自分の勝者 → 50/50。
+ * 優先: 投稿1件+自分の勝者 → marketPickCounts → marketBias/market → 50/50。
+ * 予想0件のときは偏りを出さない（下書き選択や stale market で 0/100 にしない）。
  */
 export function resolveGameMarketBiasDisplay(
   game?: Record<string, unknown> | null,
@@ -75,6 +76,11 @@ export function resolveGameMarketBiasDisplay(
     options.predictionCount >= 0
       ? Math.floor(options.predictionCount)
       : null;
+
+  // 総予想0 → 中立。モーダル下書きの winner や空の market で 0%/100% にしない
+  if (predictionCount === 0) {
+    return { homePct: 50, awayPct: 50 };
+  }
 
   // 1票しかないとき 50/50 はあり得ない（CDN 未更新の既定値を上書き）
   if (
@@ -92,39 +98,40 @@ export function resolveGameMarketBiasDisplay(
       return liveGameMarketFromCounts(counts).marketBias;
     }
 
-    const bias =
-      game.marketBias !== null && typeof game.marketBias === "object"
-        ? (game.marketBias as Record<string, unknown>)
-        : null;
-    const market =
-      game.market !== null && typeof game.market === "object"
-        ? (game.market as Record<string, unknown>)
-        : null;
-    const home =
-      asMarketPct(bias?.homePct) ??
-      asMarketPct(market?.homePct) ??
-      asMarketPct(market?.homeRate) ??
-      asMarketPct(game.homePct);
-    const away =
-      asMarketPct(bias?.awayPct) ??
-      asMarketPct(market?.awayPct) ??
-      asMarketPct(market?.awayRate) ??
-      asMarketPct(game.awayPct);
-    if (home != null || away != null) {
-      const h = home ?? 0;
-      const a = away ?? 0;
-      if (h + a > 0) {
-        return {
-          homePct: clampPct(h),
-          awayPct: clampPct(a),
-        };
+    // pick counts が無いのに rate だけあるケースは、総数が分かっていて 0 超のときだけ採用
+    if (predictionCount == null || predictionCount > 0) {
+      const bias =
+        game.marketBias !== null && typeof game.marketBias === "object"
+          ? (game.marketBias as Record<string, unknown>)
+          : null;
+      const market =
+        game.market !== null && typeof game.market === "object"
+          ? (game.market as Record<string, unknown>)
+          : null;
+      const home =
+        asMarketPct(bias?.homePct) ??
+        asMarketPct(market?.homePct) ??
+        asMarketPct(market?.homeRate) ??
+        asMarketPct(game.homePct);
+      const away =
+        asMarketPct(bias?.awayPct) ??
+        asMarketPct(market?.awayPct) ??
+        asMarketPct(market?.awayRate) ??
+        asMarketPct(game.awayPct);
+      if (home != null || away != null) {
+        const h = home ?? 0;
+        const a = away ?? 0;
+        if (h + a > 0) {
+          return {
+            homePct: clampPct(h),
+            awayPct: clampPct(a),
+          };
+        }
       }
     }
   }
 
-  if (winner === "home") return { homePct: 100, awayPct: 0 };
-  if (winner === "away") return { homePct: 0, awayPct: 100 };
-
+  // 下書き選択だけでは偏らせない（投稿済み1票は上の predictionCount===1 で処理）
   return { homePct: 50, awayPct: 50 };
 }
 

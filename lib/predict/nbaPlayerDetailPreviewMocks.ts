@@ -30,6 +30,7 @@ export type NbaPlayerSeasonMetricId =
   | "fg3m"
   | "fg3a"
   | "ft_pct"
+  | "fta"
   | "plus_minus";
 
 /** 詳細のシーズン平均グリッドに出す順（リーグ BASIC の試投を含む） */
@@ -49,6 +50,7 @@ export const NBA_PLAYER_DETAIL_SEASON_SHOWN: readonly NbaPlayerSeasonMetricId[] 
     "fg3m",
     "fg3a",
     "ft_pct",
+    "fta",
   ];
 
 export type NbaPlayerSeasonMetric = {
@@ -229,6 +231,7 @@ export type NbaPlayerDetailPreview = {
     fga: number;
     fg3m: number;
     fg3a: number;
+    fta: number;
   };
   /** PTS / REB / AST ハイライト用（リーグ順位つき） */
   headlineMetrics: NbaPlayerSeasonMetric[];
@@ -294,7 +297,12 @@ export type NbaPlayerAward = {
 };
 
 /** 予想向けの簡易出場ステータス */
-export type NbaPlayerAvailabilityStatus = "active" | "out" | "gtd";
+export type NbaPlayerAvailabilityStatus =
+  | "active"
+  | "out"
+  | "gtd"
+  /** 今季ロスターにいない（引退・FA 等）。詳細は開ける */
+  | "retired";
 
 export type NbaPlayerAvailability = {
   status: NbaPlayerAvailabilityStatus;
@@ -338,6 +346,7 @@ const METRIC_DEFS: Array<{
   { id: "fg3m", short: "3PM", higherIsBetter: true, kind: "perGame" },
   { id: "fg3a", short: "3PA", higherIsBetter: true, kind: "perGame" },
   { id: "ft_pct", short: "FT%", higherIsBetter: true, kind: "pct" },
+  { id: "fta", short: "FTA", higherIsBetter: true, kind: "perGame" },
 ];
 
 type SeedProfile = {
@@ -399,6 +408,7 @@ const LUKA: SeedProfile = {
     fga: 22.4,
     fg3m: 3.4,
     fg3a: 9.8,
+    fta: 7.6,
   },
   ranks: {
     pts: 4,
@@ -414,6 +424,7 @@ const LUKA: SeedProfile = {
     fg3m: 18,
     fg3a: 12,
     ft_pct: 110,
+    fta: 9,
     plus_minus: 35,
   },
   advanced: {
@@ -546,6 +557,7 @@ const CURRY: SeedProfile = {
     fga: 19.2,
     fg3m: 4.6,
     fg3a: 11.2,
+    fta: 4.8,
   },
   ranks: {
     pts: 8,
@@ -561,6 +573,7 @@ const CURRY: SeedProfile = {
     fg3m: 2,
     fg3a: 3,
     ft_pct: 3,
+    fta: 55,
     plus_minus: 22,
   },
   advanced: {
@@ -653,6 +666,7 @@ const JOKIC: SeedProfile = {
     fga: 18.1,
     fg3m: 1.8,
     fg3a: 4.3,
+    fta: 6.1,
   },
   ranks: {
     pts: 3,
@@ -668,6 +682,7 @@ const JOKIC: SeedProfile = {
     fg3m: 84,
     fg3a: 90,
     ft_pct: 95,
+    fta: 22,
     plus_minus: 4,
   },
   advanced: {
@@ -828,6 +843,7 @@ export function formatAvailabilityStatus(
 ): string {
   if (status === "active") return isJa ? "出場" : "ACTIVE";
   if (status === "out") return isJa ? "欠場" : "OUT";
+  if (status === "retired") return isJa ? "引退 / ロスター外" : "RETIRED / OFF ROSTER";
   return isJa ? "試合時判断" : "GAME-TIME DECISION";
 }
 
@@ -836,6 +852,7 @@ export function availabilityStatusColor(
 ): string {
   if (status === "active") return "#2DFF6E";
   if (status === "out") return "#FF2D78";
+  if (status === "retired") return "#94A3B8";
   return "#F5C518";
 }
 
@@ -1195,6 +1212,8 @@ function seasonValue(
       return season.fg3a;
     case "ft_pct":
       return season.ftPct;
+    case "fta":
+      return season.fta;
     case "plus_minus":
       return season.plusMinus;
   }
@@ -1249,11 +1268,12 @@ function deriveShotVolume(
   pts: number,
   fg3Pct: number,
   rnd: () => number
-): { fga: number; fg3m: number; fg3a: number } {
+): { fga: number; fg3m: number; fg3a: number; fta: number } {
   const fga = round1(Math.max(3.5, pts * 0.7 + rnd() * 3.5));
   const fg3a = round1(Math.max(0.3, fga * (0.22 + rnd() * 0.38)));
   const fg3m = round1(fg3a * Math.max(0.2, fg3Pct));
-  return { fga, fg3m, fg3a };
+  const fta = round1(Math.max(0.8, pts * 0.18 + rnd() * 2.2));
+  return { fga, fg3m, fg3a, fta };
 }
 
 function round3(n: number): number {
@@ -1687,6 +1707,7 @@ function zeroSeasonBlock(): NbaPlayerDetailPreview["season"] {
     fga: 0,
     fg3m: 0,
     fg3a: 0,
+    fta: 0,
   };
 }
 
@@ -1823,6 +1844,7 @@ export type NbaPlayerRecentWindowAvg = {
   fg3m: number;
   fg3a: number;
   ftPct: number;
+  fta: number;
 };
 
 /** シーズン平均グリッドと同じ id の生値 */
@@ -1864,6 +1886,8 @@ export function playerDetailRecentRawValue(
       return avg.fg3a;
     case "ft_pct":
       return avg.ftPct;
+    case "fta":
+      return avg.fta;
     case "plus_minus":
       return avg.plusMinus;
   }
@@ -1911,5 +1935,6 @@ export function averageRecentGameLogs(
     fgPct: fga > 0 ? fgm / fga : 0,
     fg3Pct: fg3a > 0 ? fg3m / fg3a : 0,
     ftPct: fta > 0 ? ftm / fta : 0,
+    fta: r1(fta),
   };
 }

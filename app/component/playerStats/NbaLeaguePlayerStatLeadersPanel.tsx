@@ -36,6 +36,8 @@ import { nbaDailyStatsUpdateFootnote } from "@/lib/nba/nbaStatsUpdateSchedule";
 import { isNbaLeagueStatsPreseason } from "@/lib/nba/leagueStatsPreseason";
 import { leagueStatsTableEmptyCopy } from "@/lib/nba/leagueStatsEmptyState";
 import NbaLeagueStatsTableEmpty from "@/app/component/stats/NbaLeagueStatsTableEmpty";
+import NbaLeagueStatsSeasonNav from "@/app/component/stats/NbaLeagueStatsSeasonNav";
+import { nbaLeagueStatsDefaultSeasonKey } from "@/lib/nba/nbaLeagueStatsSeasonNav";
 
 type SortDir = "desc" | "asc";
 
@@ -102,8 +104,10 @@ export default function NbaLeaguePlayerStatLeadersPanel({
 }: Props) {
   const lang = resolveLocalizedLang(language);
   const isJa = lang === "ja";
-  const { bundle, loading } = usePlayerStatLeadersBundle();
-  const isPreseason = isNbaLeagueStatsPreseason();
+  const [seasonKey, setSeasonKey] = useState(nbaLeagueStatsDefaultSeasonKey);
+  const { bundle, loading } = usePlayerStatLeadersBundle({ season: seasonKey });
+  const hasSeasonRows = (bundle.season.pts?.length ?? 0) > 0;
+  const isPreseason = isNbaLeagueStatsPreseason() && !hasSeasonRows;
   const updateFootnote = nbaDailyStatsUpdateFootnote(lang, bundle.asOfLabel, {
     preseason: isPreseason,
   });
@@ -144,7 +148,7 @@ export default function NbaLeaguePlayerStatLeadersPanel({
       mode,
       metric,
       season: bundle.season[metric] ?? [],
-      last10: bundle.last10[metric] ?? [],
+      playoffs: bundle.playoffs?.[metric] ?? [],
     });
     return sortDir === "asc" ? [...list].reverse() : list;
   }, [bundle, phase, mode, metric, sortDir]);
@@ -165,6 +169,10 @@ export default function NbaLeaguePlayerStatLeadersPanel({
         >
           {updateFootnote}
         </p>
+        <NbaLeagueStatsSeasonNav
+          seasonKey={seasonKey}
+          onSeasonChange={setSeasonKey}
+        />
                 <div className="space-y-1.5">
           <CyberSlantedTabBar fill>
             {NBA_LEAGUE_STATS_PHASES.map((p) => (

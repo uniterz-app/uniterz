@@ -71,8 +71,9 @@ export function playerCardName(player: {
   const upperLast = last.toUpperCase();
   const id = player.id != null ? String(player.id).trim() : "";
 
-  // 長い定番名のみ通称（SGA / NAW / KCP）。他は C.HOLMGREN 形式
+  // 長い定番名のみ通称（SGA / Giannis / NAW / KCP）。他は C.HOLMGREN 形式
   if (id === "175") return "SGA";
+  if (id === "15") return "GIANNIS";
   if (id === "666400") return "NAW";
   if (id === "81") return "KCP";
   if (
@@ -81,6 +82,12 @@ export function playerCardName(player: {
     (upperFirst === "SHAI" && upperLast === "ALEXANDER")
   ) {
     return "SGA";
+  }
+  if (
+    upperFirst === "GIANNIS" &&
+    (upperLast.includes("ANTETOKOUNMPO") || upperLast === "ANTETOKOUNMPO")
+  ) {
+    return "GIANNIS";
   }
   if (
     (upperFirst === "NICKEIL" && upperLast.includes("ALEXANDER-WALKER")) ||

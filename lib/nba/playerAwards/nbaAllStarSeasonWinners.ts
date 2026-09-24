@@ -433,6 +433,34 @@ const NBA_ALL_STAR_BY_PLAYER: Readonly<Record<string, AllStarPlayerSeasons>> = {
     playerName: "Jamal Murray",
     seasons: ["2025-26"],
   },
+  "17896040": {
+    playerName: "Jalen Johnson",
+    seasons: ["2025-26"],
+  },
+  "38017694": {
+    playerName: "Jalen Duren",
+    seasons: ["2025-26"],
+  },
+  "38017685": {
+    playerName: "Chet Holmgren",
+    seasons: ["2025-26"],
+  },
+  "3547242": {
+    playerName: "Deni Avdija",
+    seasons: ["2025-26"],
+  },
+  "38017703": {
+    playerName: "Jalen Williams",
+    seasons: ["2024-25"],
+  },
+  "458": {
+    playerName: "Fred VanVleet",
+    seasons: ["2021-22"],
+  },
+  "104": {
+    playerName: "Mike Conley",
+    seasons: ["2020-21"],
+  },
   "380": {
     playerName: "Norman Powell",
     seasons: ["2025-26"],
@@ -448,6 +476,37 @@ const NBA_ALL_STAR_BY_PLAYER: Readonly<Record<string, AllStarPlayerSeasons>> = {
   "297": {
     playerName: "Lauri Markkanen",
     seasons: ["2022-23"],
+  },
+  "79": {
+    playerName: "Jimmy Butler",
+    seasons: [
+      "2014-15",
+      "2015-16",
+      "2016-17",
+      "2017-18",
+      "2019-20",
+      "2021-22",
+    ],
+  },
+  "3547239": {
+    playerName: "LaMelo Ball",
+    seasons: ["2021-22"],
+  },
+  "666581": {
+    playerName: "Darius Garland",
+    seasons: ["2021-22", "2024-25"],
+  },
+  "334": {
+    playerName: "Dejounte Murray",
+    seasons: ["2021-22"],
+  },
+  "9": {
+    playerName: "Jarrett Allen",
+    seasons: ["2021-22"],
+  },
+  "17896076": {
+    playerName: "Evan Mobley",
+    seasons: ["2024-25"],
   },
 };
 

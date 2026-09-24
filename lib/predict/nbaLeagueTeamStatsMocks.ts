@@ -91,6 +91,8 @@ export type NbaLeagueTeamStatRow = NbaLeagueTeamStatCoreRow &
 
 export type NbaLeagueTeamStatsBundle = {
   season: NbaLeagueTeamStatRow[];
+  /** プレーオフ（未 ingest 時は空） */
+  playoffs: NbaLeagueTeamStatRow[];
   last10: NbaLeagueTeamStatRow[];
   asOfLabel: string;
 };
@@ -561,6 +563,9 @@ export function enrichLeagueTeamStatsBundle(
       season: bundle.season.map((row) =>
         attachMockLeagueTeamAdvanced(coreFromRow(row), "season")
       ),
+      playoffs: (bundle.playoffs ?? []).map((row) =>
+        attachMockLeagueTeamAdvanced(coreFromRow(row), "season")
+      ),
       last10: bundle.last10.map((row) =>
         attachMockLeagueTeamAdvanced(coreFromRow(row), "last10")
       ),
@@ -569,6 +574,9 @@ export function enrichLeagueTeamStatsBundle(
   return {
     asOfLabel: bundle.asOfLabel,
     season: bundle.season.map((row) => ensureRowAdvanced(row, "season")),
+    playoffs: (bundle.playoffs ?? []).map((row) =>
+      ensureRowAdvanced(row, "season")
+    ),
     last10: bundle.last10.map((row) => ensureRowAdvanced(row, "last10")),
   };
 }
@@ -679,6 +687,7 @@ export function getNbaLeagueTeamStatsMock(): NbaLeagueTeamStatsBundle {
   cacheVer = MOCK_CACHE_KEY;
   cached = {
     season: buildWindow("season"),
+    playoffs: buildWindow("season"),
     last10: buildWindow("last10"),
     asOfLabel: "MOCK · 2025-26",
   };
@@ -708,7 +717,14 @@ export function formatMetricValue(
     return `${(value * 100).toFixed(1)}%`;
   }
   if (metric === "diff" || metric === "netrtg") {
-    return `${value > 0 ? "+" : ""}${value.toFixed(1)}`;
+    const body =
+      Math.abs(value - Math.round(value)) < 1e-9
+        ? String(Math.round(value))
+        : value.toFixed(1);
+    return `${value > 0 ? "+" : ""}${body}`;
+  }
+  if (Math.abs(value - Math.round(value)) < 1e-9) {
+    return String(Math.round(value));
   }
   return value.toFixed(1);
 }

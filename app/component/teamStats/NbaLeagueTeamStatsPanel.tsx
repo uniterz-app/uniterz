@@ -13,6 +13,7 @@ import { nbaDailyStatsUpdateFootnote } from "@/lib/nba/nbaStatsUpdateSchedule";
 import { isNbaLeagueStatsPreseason } from "@/lib/nba/leagueStatsPreseason";
 import { leagueStatsTableEmptyCopy } from "@/lib/nba/leagueStatsEmptyState";
 import NbaLeagueStatsTableEmpty from "@/app/component/stats/NbaLeagueStatsTableEmpty";
+import NbaLeagueStatsSeasonNav from "@/app/component/stats/NbaLeagueStatsSeasonNav";
 import {
   CyberSlantedTab,
   CyberSlantedTabBar,
@@ -27,6 +28,7 @@ import {
   type NbaLeagueStatsMode,
   type NbaLeagueStatsPhase,
 } from "@/lib/nba/leagueStatsTableTabs";
+import { nbaLeagueStatsDefaultSeasonKey } from "@/lib/nba/nbaLeagueStatsSeasonNav";
 
 import {
   formatMetricValue,
@@ -279,8 +281,10 @@ export default function NbaLeagueTeamStatsPanel({
   const lang = resolveLocalizedLang(language);
   const isJa = lang === "ja";
   const reduceMotion = useReducedMotion();
-  const { bundle, loading } = useLeagueTeamStatsBundle();
-  const isPreseason = isNbaLeagueStatsPreseason();
+  const [seasonKey, setSeasonKey] = useState(nbaLeagueStatsDefaultSeasonKey);
+  const { bundle, loading } = useLeagueTeamStatsBundle({ season: seasonKey });
+  const hasSeasonRows = bundle.season.length > 0;
+  const isPreseason = isNbaLeagueStatsPreseason() && !hasSeasonRows;
   const updateFootnote = nbaDailyStatsUpdateFootnote(lang, bundle.asOfLabel, {
     preseason: isPreseason,
   });
@@ -325,7 +329,7 @@ export default function NbaLeagueTeamStatsPanel({
       phase,
       mode,
       season: bundle.season,
-      last10: bundle.last10,
+      playoffs: bundle.playoffs,
     });
     return sortLeagueTeamRows(base, metric, sortDir);
   }, [bundle, phase, mode, metric, sortDir]);
@@ -362,6 +366,13 @@ export default function NbaLeagueTeamStatsPanel({
         >
           {updateFootnote}
         </p>
+        <NbaLeagueStatsSeasonNav
+          seasonKey={seasonKey}
+          onSeasonChange={(next) => {
+            setSeasonKey(next);
+            setPicked([]);
+          }}
+        />
                 <div className="space-y-1.5">
           <CyberSlantedTabBar fill>
             {NBA_LEAGUE_STATS_PHASES.map((p) => (

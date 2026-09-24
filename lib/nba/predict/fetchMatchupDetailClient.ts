@@ -24,6 +24,16 @@ function root(base: string | null | undefined): string {
   return (base ?? "").replace(/\/$/, "");
 }
 
+/** 空ロスターを sticky キャッシュしない（シーズン切替直後の空レスポンス毒化防止） */
+function matchupDetailHasRosterPlayers(
+  payload: NbaMatchupDetailApiPayload
+): boolean {
+  return (
+    (payload.rosterHome?.players?.length ?? 0) > 0 ||
+    (payload.rosterAway?.players?.length ?? 0) > 0
+  );
+}
+
 export function matchupDetailCacheKey(
   apiBaseUrl: string | null | undefined,
   season: string,
@@ -76,7 +86,15 @@ export async function fetchMatchupDetailBundle(
     homeTeamId,
     awayTeamId
   );
-  return cache.load(key, () => fetchOnce(options));
+  const existing = cache.peek(key);
+  if (existing && !matchupDetailHasRosterPlayers(existing)) {
+    cache.invalidate(key);
+  }
+  const value = await cache.load(key, () => fetchOnce(options));
+  if (!matchupDetailHasRosterPlayers(value)) {
+    cache.invalidate(key);
+  }
+  return value;
 }
 
 export function peekMatchupDetailBundle(
@@ -86,7 +104,7 @@ export function peekMatchupDetailBundle(
   const awayTeamId = String(options.awayTeamId ?? "").trim();
   const season = (options.season ?? CURRENT_NBA_SEASON_KEY).trim();
   if (!homeTeamId || !awayTeamId) return null;
-  return cache.peek(
+  const hit = cache.peek(
     matchupDetailCacheKey(
       options.apiBaseUrl,
       season,
@@ -94,4 +112,6 @@ export function peekMatchupDetailBundle(
       awayTeamId
     )
   );
+  if (hit && !matchupDetailHasRosterPlayers(hit)) return null;
+  return hit;
 }

@@ -16,17 +16,21 @@ export type BdlTeamSeasonAverageRow = {
   stats: Record<string, number | string | null | undefined>;
 };
 
+export type BdlTeamSeasonType = "regular" | "playoffs";
+
 export async function fetchBdlTeamSeasonAverages(input: {
   seasonYear: number;
   category?: string;
   type: string;
+  seasonType?: BdlTeamSeasonType;
 }): Promise<BdlTeamSeasonAverageRow[]> {
   const category = input.category ?? "general";
+  const seasonType = input.seasonType === "playoffs" ? "playoffs" : "regular";
   const rows = await bdlNbaGetAllPages<BdlTeamSeasonAverageRow>(
     `/nba/v1/team_season_averages/${category}`,
     {
       season: input.seasonYear,
-      season_type: "regular",
+      season_type: seasonType,
       type: input.type,
     }
   );

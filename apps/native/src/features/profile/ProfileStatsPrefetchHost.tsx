@@ -65,7 +65,24 @@ export default function ProfileStatsPrefetchHost() {
       prefetchNativeProfileSettledTodayResults(uid);
     });
 
-    return () => task.cancel();
+    /** Android は Games 描画が長く idle が来ないことがある — タイムアウトでも温める */
+    const fallback = setTimeout(() => {
+      if (warmedUidRef.current === uid) return;
+      warmedUidRef.current = uid;
+      void loadProfileUserDocNative(uid).then((loaded) => {
+        if (!loaded?.exists) return;
+        seedNativeProfileStatsFromUserDoc(uid, loaded.data);
+        hydrateMarksFromUserDoc(uid, loaded.data);
+      });
+      void prefetchNativeProfileStats(uid);
+      void prefetchNativeProfileBadges(uid);
+      prefetchNativeProfileSettledTodayResults(uid);
+    }, 900);
+
+    return () => {
+      task.cancel();
+      clearTimeout(fallback);
+    };
   }, [fUser?.uid, status]);
 
   return null;

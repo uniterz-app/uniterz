@@ -907,13 +907,17 @@ function PayrollSection({
           ) : (
           slices.map((s) => {
             const isTw = s.isTwoWay === true && active.key === CURRENT_NBA_SEASON_KEY;
+            const isE10 =
+              s.isNonGuaranteed === true &&
+              !isTw &&
+              active.key === CURRENT_NBA_SEASON_KEY;
             const displaySalary = isTw
               ? nbaTwoWaySalaryForSeason(active.key)
               : s.displaySalary != null && s.displaySalary > 0
                 ? s.displaySalary
                 : s.salary;
             const capPct =
-              !isTw && s.salary > 0 && active.salaryCap > 0
+              !isTw && !isE10 && s.salary > 0 && active.salaryCap > 0
                 ? ((s.salary / active.salaryCap) * 100).toFixed(1)
                 : null;
             return (
@@ -969,9 +973,26 @@ function PayrollSection({
                         paddingHorizontal: 3,
                         paddingVertical: 1,
                         borderRadius: 2,
+                        overflow: "hidden",
                       }}
                     >
                       TW
+                    </Text>
+                  ) : null}
+                  {isE10 ? (
+                    <Text
+                      style={{
+                        fontSize: 9,
+                        fontWeight: "800",
+                        color: "rgba(255,255,255,0.6)",
+                        backgroundColor: "rgba(255,255,255,0.1)",
+                        paddingHorizontal: 3,
+                        paddingVertical: 1,
+                        borderRadius: 2,
+                        overflow: "hidden",
+                      }}
+                    >
+                      E10
                     </Text>
                   ) : null}
                   <Text style={styles.payrollLineSalary}>
@@ -1045,6 +1066,38 @@ function PayrollSection({
               </Text>
               <Text style={styles.payrollLegendText}>
                 {ui.mutualOption}
+              </Text>
+            </View>
+            <View style={styles.payrollLegendItem}>
+              <Text
+                style={[
+                  styles.payrollLegendBadge,
+                  {
+                    color: "rgba(255,255,255,0.6)",
+                    backgroundColor: "rgba(255,255,255,0.1)",
+                  },
+                ]}
+              >
+                TW
+              </Text>
+              <Text style={styles.payrollLegendText}>
+                {ui.twoWayContract}
+              </Text>
+            </View>
+            <View style={styles.payrollLegendItem}>
+              <Text
+                style={[
+                  styles.payrollLegendBadge,
+                  {
+                    color: "rgba(255,255,255,0.6)",
+                    backgroundColor: "rgba(255,255,255,0.1)",
+                  },
+                ]}
+              >
+                E10
+              </Text>
+              <Text style={styles.payrollLegendText}>
+                {ui.exhibit10Contract}
               </Text>
             </View>
           </View>

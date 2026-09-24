@@ -1,10 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import {
-  CURRENT_NBA_SEASON_KEY,
-  previousNbaSeasonKey,
-} from "@/lib/rankings/nbaSeason";
+import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
 import {
   NBA_PLAYER_STAT_LEADER_METRICS,
   type NbaPlayerLeaderMetricId,
@@ -24,9 +21,6 @@ import type {
   NbaPlayerStatLeadersSnapshotSource,
 } from "@/lib/nba/playerStatLeaders/playerStatLeadersTypes";
 import { trackAppEvent } from "@/lib/observability/trackAppEvent";
-
-/** TEMP: フォント確認用に前季データを表示。確認後に false へ戻す */
-const TEMP_USE_PREVIOUS_SEASON_FOR_STATS_PREVIEW = false;
 
 function emptyPlayerLeadersBoard(): Record<
   NbaPlayerLeaderMetricId,
@@ -49,6 +43,7 @@ function emptyPlayerLeadersBoard(): Record<
 
 const EMPTY_BUNDLE: NbaPlayerStatLeadersBundle = {
   season: emptyPlayerLeadersBoard(),
+  playoffs: emptyPlayerLeadersBoard(),
   last10: emptyPlayerLeadersBoard(),
   asOfLabel: "UNAVAILABLE",
 };
@@ -67,6 +62,7 @@ export type UsePlayerStatLeadersBundleOptions = {
 
 export type UsePlayerStatLeadersBundleState = {
   bundle: NbaPlayerStatLeadersBundle;
+  season: string;
   source: NbaPlayerStatLeadersSnapshotSource;
   updatedAt: string | null;
   loading: boolean;
@@ -76,12 +72,14 @@ export type UsePlayerStatLeadersBundleState = {
 
 type Resolved = {
   bundle: NbaPlayerStatLeadersBundle;
+  season: string;
   source: NbaPlayerStatLeadersSnapshotSource;
   updatedAt: string | null;
 };
 
 const EMPTY_RESOLVED: Resolved = {
   bundle: EMPTY_BUNDLE,
+  season: CURRENT_NBA_SEASON_KEY,
   source: "empty",
   updatedAt: null,
 };
@@ -89,6 +87,7 @@ const EMPTY_RESOLVED: Resolved = {
 function resolvePayload(data: NbaPlayerStatLeadersApiPayload): Resolved {
   return {
     bundle: data.bundle,
+    season: data.season,
     source: data.source,
     updatedAt: data.updatedAt,
   };
@@ -97,11 +96,7 @@ function resolvePayload(data: NbaPlayerStatLeadersApiPayload): Resolved {
 export function usePlayerStatLeadersBundle(
   options: UsePlayerStatLeadersBundleOptions = {}
 ): UsePlayerStatLeadersBundleState {
-  const season =
-    options.season ??
-    (TEMP_USE_PREVIOUS_SEASON_FOR_STATS_PREVIEW
-      ? previousNbaSeasonKey(CURRENT_NBA_SEASON_KEY)
-      : CURRENT_NBA_SEASON_KEY);
+  const season = options.season ?? CURRENT_NBA_SEASON_KEY;
   const enabled = options.enabled ?? true;
   const key = nbaSnapshotCacheKey(options.apiBaseUrl, season);
 
@@ -169,6 +164,7 @@ export function usePlayerStatLeadersBundle(
 
   return {
     bundle: resolved.bundle,
+    season: resolved.season,
     source: resolved.source,
     updatedAt: resolved.updatedAt,
     loading,

@@ -134,6 +134,11 @@ export const gameCardListStyles = StyleSheet.create({
     textTransform: "uppercase",
     fontFamily: "Oxanium_600SemiBold",
     maxWidth: "100%",
+  },
+  /** Android は Text の skew が効かないため View 側で傾ける */
+  teamNameSkew: {
+    maxWidth: "100%",
+    alignItems: "center",
     transform: [{ skewX: "-6deg" }],
   },
   teamRecordText: {
@@ -302,7 +307,6 @@ export const gameCardListStyles = StyleSheet.create({
     textTransform: "uppercase",
     fontFamily: "Oxanium_600SemiBold",
     maxWidth: "100%",
-    transform: [{ skewX: "-6deg" }],
   },
   lineFrameTeamColumn: {
     flex: 1,

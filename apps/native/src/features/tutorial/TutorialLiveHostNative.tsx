@@ -37,7 +37,6 @@ import {
 import { tutorialSkipConfirmProps } from "../../../../../lib/tutorial/tutorialSkipConfirmProps";
 import { subscribeTutorialRestartNative, requestTutorialClearedNative } from "./tutorialRestartEventsNative";
 import { setTutorialWelcomeAudienceNative } from "./tutorialWelcomeAudienceNative";
-import { prefetchRankingsLogoGlb } from "../rankings/rankingsLogoGlbCache";
 
 type HostSurface = "results" | "rankings" | "groups" | "profile" | "games";
 
@@ -55,10 +54,6 @@ export default function TutorialLiveHostNative({ page, language }: Props) {
   const [phase, setPhase] = useState<TutorialLivePhase | null>(null);
   /** 新機能紹介: 各機能2ステップ（概要→使い方） */
   const [horizonFeatureStep, setHorizonFeatureStep] = useState(0);
-
-  useEffect(() => {
-    prefetchRankingsLogoGlb();
-  }, []);
 
   const syncPhaseFromStore = useCallback(async () => {
     const p = await readTutorialLivePhaseNative();

@@ -8,7 +8,6 @@ import {
   HOW_THEY_PLAY_SCORING_LABELS,
   HOW_THEY_PLAY_TRACKING_HINTS,
 } from "@/lib/predict/nbaHowTheyPlayHints";
-import { nbaSeasonStatsReady } from "@/lib/predict/nbaSeasonStatsReady";
 import { getNbaPlayerDetailPreview } from "@/lib/predict/nbaPlayerDetailPreviewMocks";
 import type { NbaPlayerDetailPreview } from "@/lib/predict/nbaPlayerDetailPreviewMocks";
 import {
@@ -30,11 +29,16 @@ import {
 
 
 function emptyLeadersBundle(): NbaPlayerStatLeadersBundle {
-  return { season: {} as NbaPlayerStatLeadersBundle["season"], last10: {} as NbaPlayerStatLeadersBundle["last10"], asOfLabel: "UNAVAILABLE" };
+  return {
+    season: {} as NbaPlayerStatLeadersBundle["season"],
+    playoffs: {} as NbaPlayerStatLeadersBundle["playoffs"],
+    last10: {} as NbaPlayerStatLeadersBundle["last10"],
+    asOfLabel: "UNAVAILABLE",
+  };
 }
 
 function emptyTeamBundle(): NbaLeagueTeamStatsBundle {
-  return { season: [], last10: [], asOfLabel: "UNAVAILABLE" };
+  return { season: [], playoffs: [], last10: [], asOfLabel: "UNAVAILABLE" };
 }
 
 /**
@@ -56,6 +60,7 @@ export function isPlayerDetailSalaryRankShown(rank: number): boolean {
 }
 
 export type PlayerHowTheyPlayTab =
+  | "ratings"
   | "fourFactors"
   | "scoring"
   | "playtype"
@@ -70,6 +75,19 @@ export const PLAYER_HOW_THEY_PLAY_TABS: readonly {
   short: string;
   hint: UiStrings;
 }[] = [
+  {
+    id: "ratings",
+    short: "RATINGS",
+    hint: {
+      ja: "PER・TS%・USG%・ORTG/DRTG。総合レーティング。",
+      en: "PER, TS%, USG%, ORtg/DRtg. Core efficiency ratings.",
+      ko: "PER·TS%·USG%·ORTG/DRTG. 핵심 레이팅.",
+      zh: "PER、真实命中率、使用率、攻防效率。核心评级。",
+      es: "PER, TS%, USG%, ORtg/DRtg. Ratings principales.",
+      pt: "PER, TS%, USG%, ORtg/DRtg. Ratings principais.",
+      fr: "PER, TS%, USG%, ORtg/DRtg. Ratings clés.",
+    },
+  },
   {
     id: "fourFactors",
     short: "4FCT",
@@ -395,7 +413,6 @@ export function getPlayerHowTheyPlay(
   playerId: string,
   input: PlayerHowTheyPlayInput = {}
 ): PlayerHowTheyPlay {
-  if (!nbaSeasonStatsReady()) return emptyPlayerHowTheyPlay();
   const leaders = input.leaders ?? emptyLeadersBundle();
   const teamStats = input.teamStats ?? emptyTeamBundle();
   const detail = input.detail ?? getNbaPlayerDetailPreview(playerId);
@@ -505,13 +522,32 @@ export function getPlayerHowTheyPlay(
   ].sort((a, b) => b.freq.value - a.freq.value);
 
   const gp = Math.max(1, detail.season.gamesPlayed);
-  const zonePts = (ids: Array<(typeof detail.shotZones)[number]["id"]>, ptsPerMake: number) => {
+  const zonePts = (
+    ids: Array<(typeof detail.shotZones)[number]["id"]>,
+    ptsPerMake: number
+  ) => {
     const total = ids.reduce((acc, id) => {
       const zone = detail.shotZones.find((z) => z.id === id);
       if (!zone) return acc;
       return acc + zone.fgPct * zone.fga * ptsPerMake;
     }, 0);
     return howPtsCell(total / gp);
+  };
+  /** シーズンメトリクスの PTS を優先。shotZones 未 ingest だと 0.0 になるのを避ける */
+  const shotLocationPts = (
+    metric: NbaPlayerAdvancedLeaderMetric,
+    zoneIds: Array<(typeof detail.shotZones)[number]["id"]>,
+    ptsPerMake: number
+  ) => {
+    const fromMetric = c(metric);
+    if (Number.isFinite(fromMetric.value)) {
+      return howPtsCell(fromMetric.value);
+    }
+    const hasZone = zoneIds.some((id) =>
+      detail.shotZones.some((z) => z.id === id)
+    );
+    if (!hasZone) return { value: Number.NaN, display: "—" };
+    return zonePts(zoneIds, ptsPerMake);
   };
 
   const shooting: PlayerShotRow[] = [
@@ -528,7 +564,7 @@ export function getPlayerHowTheyPlay(
         fr: "FG% ZONE RESTREINTE",
       },
       cell: c("restricted_fg_pct"),
-      pts: zonePts(["restricted"], 2),
+      pts: shotLocationPts("restricted_pts", ["restricted"], 2),
     },
     {
       id: "c3",
@@ -543,7 +579,11 @@ export function getPlayerHowTheyPlay(
         fr: "3 PTS DE COIN %",
       },
       cell: c("corner3_pct"),
-      pts: zonePts(["left_corner_3", "right_corner_3"], 3),
+      pts: shotLocationPts(
+        "corner3_pts",
+        ["left_corner_3", "right_corner_3"],
+        3
+      ),
     },
   ];
 

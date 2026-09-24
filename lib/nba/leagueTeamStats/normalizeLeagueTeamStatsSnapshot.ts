@@ -124,11 +124,15 @@ export function bundleFromFirestoreData(
   if (!season || !last10) return null;
   // season が空ならスナップショット未完成扱い（mock/empty フォールバックへ）
   if (season.length === 0) return null;
+  // 旧スナップショットは playoffs 無し → 空配列
+  const playoffs =
+    data.playoffs == null ? [] : parseRows(data.playoffs, "season");
+  if (!playoffs) return null;
   const asOfLabel =
     typeof data.asOfLabel === "string" && data.asOfLabel.trim()
       ? data.asOfLabel.trim()
       : "—";
-  return { season, last10, asOfLabel };
+  return { season, playoffs, last10, asOfLabel };
 }
 
 export function mockLeagueTeamStatsBundle(): NbaLeagueTeamStatsBundle {
@@ -170,6 +174,7 @@ export function resolveLeagueTeamStatsEmptyFallback(
   return {
     bundle: {
       season: [],
+      playoffs: [],
       last10: [],
       asOfLabel: preseason
         ? preseasonLeagueStatsAsOfLabel(seasonKey)

@@ -24,7 +24,7 @@ export async function loadLeagueTeamStatsSnapshot(
   db: Firestore,
   seasonKey: string
 ): Promise<NbaLeagueTeamStatsApiPayload> {
-  // 前期フォールバックしない。今季 doc が無ければ empty。
+  // 明示シーズンのみ読む。表示用の前期切替は resolveNbaStatsDisplaySeasonKey。
   const snap = await db
     .collection(NBA_LEAGUE_TEAM_STATS_COLLECTION)
     .doc(seasonKey)
@@ -93,6 +93,7 @@ export async function writeLeagueTeamStatsSnapshot(
 ): Promise<void> {
   await db.collection(NBA_LEAGUE_TEAM_STATS_COLLECTION).doc(seasonKey).set({
     season: bundle.season.map(teamRowForFirestore),
+    playoffs: (bundle.playoffs ?? []).map(teamRowForFirestore),
     last10: bundle.last10.map(teamRowForFirestore),
     asOfLabel: bundle.asOfLabel.replace(/^MOCK · /, "SNAPSHOT · "),
     source,

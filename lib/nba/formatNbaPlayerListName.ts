@@ -9,6 +9,8 @@ const NAME_SUFFIX = /^(jr\.?|sr\.?|ii|iii|iv|v)$/i;
 const NBA_PLAYER_LIST_ALIAS_BY_ID: Record<string, string> = {
   // Shai Gilgeous-Alexander
   "175": "SGA",
+  // Giannis Antetokounmpo
+  "15": "Giannis",
   // Nickeil Alexander-Walker
   "666400": "NAW",
   // Kentavious Caldwell-Pope
@@ -19,6 +21,9 @@ const NBA_PLAYER_LIST_ALIAS_BY_NAME: Record<string, string> = {
   "shai gilgeous-alexander": "SGA",
   "s. gilgeous-alexander": "SGA",
   "s gilgeous-alexander": "SGA",
+  "giannis antetokounmpo": "Giannis",
+  "g. antetokounmpo": "Giannis",
+  "g antetokounmpo": "Giannis",
   "nickeil alexander-walker": "NAW",
   "n. alexander-walker": "NAW",
   "n alexander-walker": "NAW",

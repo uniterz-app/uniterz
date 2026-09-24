@@ -26,9 +26,9 @@ export const TOKUSHOHO_HEADING = {
 
 export function tokushohoLead(lang: CompanyLang): string {
   if (lang === "en") {
-    return `Unless otherwise specified, terms in this notice follow Article 2 (Definitions) and other provisions of the Uniterz Terms of Use (${TERMS_URL}) (the "Terms"). Prices are planned tax-included amounts on the Japan App Store; the purchase screen display prevails.`;
+    return `Unless otherwise specified, terms in this notice follow Article 2 (Definitions) and other provisions of the Uniterz Terms of Use (${TERMS_URL}) (the "Terms"). Prices are planned Japan tax-included amounts (App Store / Google Play); the purchase screen display prevails.`;
   }
-  return `本表記内の用語は特に指定がない場合、Uniterz利用規約（${TERMS_URL}。以下「本規約」といいます。）第2条（定義）その他の本規約上の条項に従うものとします。料金は日本の App Store における税込予定価格であり、購入画面の表示が優先します。`;
+  return `本表記内の用語は特に指定がない場合、Uniterz利用規約（${TERMS_URL}。以下「本規約」といいます。）第2条（定義）その他の本規約上の条項に従うものとします。料金は日本における税込予定価格（App Store / Google Play）であり、購入画面の表示が優先します。`;
 }
 
 /** @deprecated 日本語固定。新規は `tokushohoLead("ja")` */

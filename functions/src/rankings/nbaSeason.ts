@@ -28,6 +28,37 @@ export function previousNbaSeasonKey(seasonKey: string): string {
   return `${prevStart}-${String((prevStart + 1) % 100).padStart(2, "0")}`;
 }
 
+/** リーグ表の年切替で出す最古シーズン（含む）。Next と同期 */
+export const NBA_LEAGUE_STATS_OLDEST_SEASON_KEY = "2020-21";
+
+export function nbaLeagueStatsSeasonLookbackCount(
+  fromSeasonKey: string = CURRENT_NBA_SEASON_KEY,
+  oldestSeasonKey: string = NBA_LEAGUE_STATS_OLDEST_SEASON_KEY
+): number {
+  const fromStart = Number.parseInt(fromSeasonKey.slice(0, 4), 10);
+  const oldestStart = Number.parseInt(oldestSeasonKey.slice(0, 4), 10);
+  if (!Number.isFinite(fromStart) || !Number.isFinite(oldestStart)) return 1;
+  return Math.max(1, fromStart - oldestStart + 1);
+}
+
+/** @deprecated 名前互換。実体は `nbaLeagueStatsSeasonLookbackCount()` */
+export const NBA_LEAGUE_STATS_SEASON_LOOKBACK =
+  nbaLeagueStatsSeasonLookbackCount();
+
+export function nbaSeasonKeysLookingBack(
+  fromSeasonKey: string = CURRENT_NBA_SEASON_KEY,
+  count: number = nbaLeagueStatsSeasonLookbackCount(fromSeasonKey)
+): string[] {
+  const n = Math.max(1, Math.floor(count));
+  const out: string[] = [];
+  let key = fromSeasonKey.trim() || CURRENT_NBA_SEASON_KEY;
+  for (let i = 0; i < n; i++) {
+    out.push(key);
+    key = previousNbaSeasonKey(key);
+  }
+  return out;
+}
+
 /** cumulative_ranking_snapshots の doc id（例: s2026-27_totalPoints） */
 export function nbaSeasonSnapshotDocId(
   seasonKey: string,

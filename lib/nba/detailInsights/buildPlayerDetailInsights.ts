@@ -3,27 +3,23 @@ import type {
   PlayerDetailInsights,
   PlayerDetailSummary,
   PlayerRoleChangeSignal,
-  PlayerUsageStripCell,
 } from "@/lib/nba/detailInsights/detailInsightTypes";
 import { enrichInsightChip } from "@/lib/nba/detailInsights/detailChipCopy";
 import {
   buildPlayerRoleChips,
   type PlayerRoleInput,
 } from "@/lib/nba/detailInsights/playerRoleCandidates";
-import {
-  formatPlayerAdvancedLeaderValue,
-} from "@/lib/predict/nbaPlayerStatLeadersAdvanced";
 import type {
   NbaPlayerDetailPreview,
   NbaPlayerGameLog,
 } from "@/lib/predict/nbaPlayerDetailPreviewMocks";
-import type { NbaPlayerLeaderMetricId } from "@/lib/predict/nbaPlayerStatLeadersMocks";
 import type { NbaRosterPlayer } from "@/lib/predict/nbaRoster";
-import { isPlayerAdvancedLeaderMetric } from "@/lib/predict/nbaPlayerStatLeadersMocks";
 
 export type BuildPlayerDetailInsightsInput = {
   detail: NbaPlayerDetailPreview;
   rosterPlayer?: NbaRosterPlayer | null;
+  /** 所属チーム全員（1st/2nd/3rd option のチーム内 PPG 判定用） */
+  teammates?: NbaRosterPlayer[] | null;
 };
 
 function avgLogs(
@@ -92,38 +88,6 @@ function buildPlayerSummary(
 
   if (!ja.length) return null;
   return { linesJa: ja.join(""), linesEn: en.join("") };
-}
-
-const USAGE_STRIP_KEYS: Array<{
-  key: NbaPlayerLeaderMetricId;
-  label: string;
-}> = [
-  { key: "usg", label: "USG%" },
-  { key: "drives", label: "DRIVES" },
-  { key: "paint_touches", label: "PAINT" },
-  { key: "fga", label: "FGA" },
-  { key: "fg3a", label: "3PA" },
-  { key: "fta", label: "FTA" },
-];
-
-function buildUsageStrip(
-  detail: NbaPlayerDetailPreview
-): PlayerUsageStripCell[] {
-  return USAGE_STRIP_KEYS.map(({ key, label }) => {
-    const cell = detail.leaderMetrics[key];
-    if (!cell) {
-      return { key, label, display: "—", rank: null };
-    }
-    const display = isPlayerAdvancedLeaderMetric(key)
-      ? formatPlayerAdvancedLeaderValue(key, cell.value)
-      : String(Math.round(cell.value * 10) / 10);
-    return {
-      key,
-      label,
-      display,
-      rank: cell.rank >= 1 ? cell.rank : null,
-    };
-  });
 }
 
 function buildRoleChanges(detail: NbaPlayerDetailPreview): {
@@ -240,8 +204,10 @@ export function buildPlayerDetailInsights(
 ): PlayerDetailInsights {
   const roleInput: PlayerRoleInput = {
     leaderMetrics: input.detail.leaderMetrics,
-    position: input.rosterPlayer?.position ?? "",
+    position: input.rosterPlayer?.position ?? input.detail.position ?? "",
     rosterPlayer: input.rosterPlayer,
+    teammates: input.teammates,
+    playerId: input.detail.playerId,
     seasonMin: input.detail.season.min,
   };
 
@@ -252,7 +218,6 @@ export function buildPlayerDetailInsights(
   return {
     summary: buildPlayerSummary(input, topRoleId),
     roles,
-    usageStrip: buildUsageStrip(input.detail),
     roleChanges: roleChanges.signals,
     roleChangeDetailJa: roleChanges.detailJa,
     roleChangeDetailEn: roleChanges.detailEn,

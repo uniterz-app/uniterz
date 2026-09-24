@@ -30,8 +30,8 @@ useNbaPlayerDetailLiveOverlay()
 
 | セクション | スナップショット | 状態 |
 |---|---|---|
-| Hero / バイオ | team-rosters | ✅ 日次 |
-| Injury | team-injuries | ✅ 専用 cron（16/23/試合前） |
+| Hero / バイオ | team-rosters | ✅ 日次 · **ロスター外は RETIRED / OFF ROSTER**（leaders・career から名前・最終所属） |
+| Injury | team-injuries | ✅ 専用 cron（16/23/試合前）· ロスター外は出さない |
 | シーズン平均 + 順位 | seasonMetrics + leaders | ✅ 日次 |
 | HOW THEY PLAY | leaders + league-team-stats | ✅ |
 | Home/Away · Vs Opponent | player-game-logs | ✅ **空なら非表示** |
@@ -73,5 +73,7 @@ useNbaPlayerDetailLiveOverlay()
 
 | 日付 | 内容 |
 |---|---|
+| 2026-09-24 | ロスター外は Hero / Career / Awards / More のみ · 氏名はリーグ表+awards から補完 · career RS/PO ingest |
+| 2026-09-24 | ロスター外（引退・FA）でも詳細を開ける · RETIRED バッジ · leaders/career から身元補完 |
 | 2026-09-01 | PREVIEW 除去 · 本 doc 作成 |
 | 2026-09-01 | 監査 — 合成 API 接続済みと確認 |

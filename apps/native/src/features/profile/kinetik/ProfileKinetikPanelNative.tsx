@@ -9,7 +9,7 @@ import {
 } from "react";
 import { cyberAlert } from "../../../components/cyberAlert";
 import {
-  Image, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View, type StyleProp, type ViewStyle,
+  Image, InteractionManager, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View, type StyleProp, type ViewStyle,
 } from "react-native";
 import UnitEarnOverlayNative from "../UnitEarnOverlayNative";
 import { useUnitEarnOverlayNative } from "../useUnitEarnOverlayNative";
@@ -1284,6 +1284,31 @@ export default function ProfileKinetikPanelNative({
   });
   const goldMonogramSkin = planProBgVariant === "wave-gold-monogram";
   const hasProSkin = isPro && planProBgVariant != null;
+  /**
+   * Android: Pro Skin（巨大 SVG → view-shot 焼き）は初回遷移を塞ぐ。
+   * カード本体を先に出し、背景は次フレーム以降で載せる。
+   */
+  const [proSkinPaintReady, setProSkinPaintReady] = useState(
+    () => Platform.OS !== "android"
+  );
+  useEffect(() => {
+    if (!hasProSkin || Platform.OS !== "android") {
+      setProSkinPaintReady(true);
+      return;
+    }
+    setProSkinPaintReady(false);
+    let cancelled = false;
+    const enable = () => {
+      if (!cancelled) setProSkinPaintReady(true);
+    };
+    const task = InteractionManager.runAfterInteractions(enable);
+    const t = setTimeout(enable, 420);
+    return () => {
+      cancelled = true;
+      task.cancel();
+      clearTimeout(t);
+    };
+  }, [hasProSkin, planProBgVariant, accountUid]);
   const proFrameTheme = isPro ? kinetikPlanProFrameTheme(profileAccent) : null;
   const panelBorder = kinetikPanelBorderColor(profileAccent);
   const flipEar = useProfileKinetikFlipEar();
@@ -1501,7 +1526,7 @@ export default function ProfileKinetikPanelNative({
       {flipEar ? (
         <ProfileKinetikFlipEarTopEdgesNative borderColor={panelBorder} />
       ) : null}
-      {hasProSkin && frameSize.width > 0 ? (
+      {hasProSkin && proSkinPaintReady && frameSize.width > 0 ? (
         <ProfilePlanProBackgroundNative
           width={frameSize.width}
           height={frameSize.height}

@@ -11,11 +11,7 @@ import type {
   NbaPlayerStatLeadersFirestoreDoc,
   NbaPlayerStatLeadersSnapshotSource,
 } from "./playerStatLeadersTypes";
-import {
-  buildLast10LeadersFromGameLogs,
-  last10BoardHasRows,
-  listPlayerGameLogsForLeaders,
-} from "./buildLast10LeadersFromGameLogs";
+import { listPlayerGameLogsForLeaders } from "./buildLast10LeadersFromGameLogs";
 import {
   buildSeasonCountLeadersFromGameLogs,
   seasonCountBoardHasRows,
@@ -63,7 +59,7 @@ export async function loadPlayerStatLeadersSnapshot(
   db: Firestore,
   seasonKey: string
 ): Promise<NbaPlayerStatLeadersApiPayload> {
-  // 開幕後は前期フォールバックしない（今季が空なら empty）。
+  // 明示シーズンのみ読む。表示用の前期切替は resolveNbaStatsDisplaySeasonKey。
   const snap = await db
     .collection(NBA_LEAGUE_PLAYER_STATS_COLLECTION)
     .doc(seasonKey)
@@ -146,8 +142,8 @@ export async function mergeLast10IntoPlayerStatLeadersSnapshot(
 }
 
 /**
- * 試合ログから last10 + シーズン回数ボードを再集計して leaders スナップショットへ書く。
- * リーグ ingest / プレイヤー game-logs ingest の両方から呼ぶ。
+ * 試合ログからシーズン回数ボードを再集計して leaders スナップショットへ書く。
+ * リーグ表の last10 は出さない（空のまま）。
  */
 export async function rebuildPlayerLast10FromGameLogs(
   db: Firestore,
@@ -155,11 +151,9 @@ export async function rebuildPlayerLast10FromGameLogs(
   serverTimestamp: unknown
 ): Promise<{ playerCount: number; merged: boolean }> {
   const players = await listPlayerGameLogsForLeaders(db, seasonKey);
-  const last10 = buildLast10LeadersFromGameLogs(players);
   const seasonCounts = buildSeasonCountLeadersFromGameLogs(players);
-  const hasLast10 = last10BoardHasRows(last10);
   const hasCounts = seasonCountBoardHasRows(seasonCounts);
-  if (!hasLast10 && !hasCounts) {
+  if (!hasCounts) {
     return { playerCount: players.length, merged: false };
   }
 
@@ -178,35 +172,41 @@ export async function rebuildPlayerLast10FromGameLogs(
     return { playerCount: players.length, merged: false };
   }
 
-  let asOfLabel = resolved.bundle.asOfLabel;
+  let asOfLabel = resolved.bundle.asOfLabel.replace(
+    /\s*·\s*last10[^·]*/gi,
+    ""
+  );
   const season = { ...resolved.bundle.season };
-  let last10Board = resolved.bundle.last10;
-
-  if (hasLast10) {
-    last10Board = last10;
-    asOfLabel = /last10/i.test(asOfLabel)
-      ? asOfLabel
-          .replace(/last10[^·]*|pending/gi, "last10 from game logs")
-          .replace(/\s+/g, " ")
-      : `${asOfLabel} · last10 from game logs`;
+  for (const id of Object.keys(seasonCounts) as Array<
+    keyof typeof seasonCounts
+  >) {
+    season[id] = seasonCounts[id];
   }
-  if (hasCounts) {
-    for (const id of Object.keys(seasonCounts) as Array<
-      keyof typeof seasonCounts
-    >) {
-      season[id] = seasonCounts[id];
-    }
-    if (!/count/i.test(asOfLabel)) {
-      asOfLabel = `${asOfLabel} · count from game logs`;
-    }
+  if (!/count/i.test(asOfLabel)) {
+    asOfLabel = `${asOfLabel} · count from game logs`;
   }
 
   await writePlayerStatLeadersSnapshot(
     db,
     key,
-    { ...resolved.bundle, season, last10: last10Board, asOfLabel },
+    {
+      ...resolved.bundle,
+      season,
+      last10: emptyPlayerLeadersBoardFromBundle(resolved.bundle.last10),
+      asOfLabel,
+    },
     resolved.source === "empty" ? "firestore" : resolved.source,
     serverTimestamp
   );
   return { playerCount: players.length, merged: true };
+}
+
+function emptyPlayerLeadersBoardFromBundle(
+  template: NbaPlayerStatLeadersBundle["last10"]
+): NbaPlayerStatLeadersBundle["last10"] {
+  const out = { ...template };
+  for (const key of Object.keys(out) as Array<keyof typeof out>) {
+    out[key] = [];
+  }
+  return out;
 }

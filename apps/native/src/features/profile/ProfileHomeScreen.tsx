@@ -16,13 +16,14 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { keyboardAvoidingBehavior } from "../../ui/keyboardAvoidingBehaviorNative";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { signOut, updateProfile } from "firebase/auth";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
@@ -667,8 +668,16 @@ export default function ProfileHomeScreen({
     const enable = () => {
       if (!cancelled) setHeavyReady(true);
     };
+    /**
+     * タブ遷移の spring 中は InteractionManager が長引く（Android で顕著）。
+     * ヒーロー＋タブは出しているので Overview も早めに載せる。
+     */
+    const delayMs = Platform.OS === "android" ? 16 : 48;
     const task = InteractionManager.runAfterInteractions(enable);
-    const t = setTimeout(enable, 48);
+    const t = setTimeout(enable, delayMs);
+    if (Platform.OS === "android") {
+      requestAnimationFrame(enable);
+    }
     return () => {
       cancelled = true;
       task.cancel();
@@ -1446,7 +1455,7 @@ export default function ProfileHomeScreen({
           <View style={styles.profileModalLayer}>
             <KeyboardAvoidingView
               style={styles.profileModalFill}
-              behavior={Platform.OS === "ios" ? "padding" : undefined}
+              behavior={keyboardAvoidingBehavior}
             >
               {/* 他サブページと同様: ヘッダー固定 / 本文のみスクロール */}
               <CyberSubpageHeaderNative

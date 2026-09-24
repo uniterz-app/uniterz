@@ -1,5 +1,6 @@
 import { InteractionManager } from "react-native";
 import * as SplashScreen from "expo-splash-screen";
+import { NATIVE_SPLASH_VIDEO_ENABLED } from "../features/splash/video/splashVideoColdStart";
 
 let preventCalled = false;
 /** 動画ゲートが OS スプラッシュ解除を握っている間 true */
@@ -9,6 +10,11 @@ let splashVideoGateActive = false;
 export function ensureNativeSplashHeld() {
   if (preventCalled) return;
   preventCalled = true;
+  if (!NATIVE_SPLASH_VIDEO_ENABLED) {
+    /** 動画オフ時は握らずすぐ消す（フォント待ちの黒画面を伸ばさない） */
+    void SplashScreen.hideAsync().catch(() => {});
+    return;
+  }
   void SplashScreen.preventAutoHideAsync().catch(() => {});
   try {
     SplashScreen.setOptions({ fade: true, duration: 420 });

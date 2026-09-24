@@ -173,21 +173,21 @@ function buildRow(
 }
 
 /**
- * BDL team season averages → リーグ Team Stats bundle。
- * last10 は BDL に専用口がないため空（あとで試合集計）。
- *
+ * BDL team season averages → 1 フェーズ分の行。
  * HOW THEY PLAY 用に scoring / misc / hustle / tracking も取得する。
  * team shooting/by_zone は BDL 400 のため rimFgPct / corner3Pct は未配線。
  */
-export async function buildLeagueTeamStatsBundleFromBdl(input: {
-  seasonKey: string;
+async function buildLeagueTeamStatRowsFromBdl(input: {
   seasonYear: number;
-}): Promise<NbaLeagueTeamStatsBundle> {
+  seasonType: "regular" | "playoffs";
+}): Promise<NbaLeagueTeamStatRow[]> {
+  const seasonType = input.seasonType;
   const playtypeFetches = BDL_TEAM_PLAYTYPE_TYPES.map((type) =>
     fetchBdlTeamSeasonAverages({
       seasonYear: input.seasonYear,
       category: "playtype",
       type,
+      seasonType,
     }).then((rows) => ["playtype", type, indexByAppTeamId(rows)] as const)
   );
 
@@ -196,6 +196,7 @@ export async function buildLeagueTeamStatsBundleFromBdl(input: {
       seasonYear: input.seasonYear,
       category: "tracking",
       type,
+      seasonType,
     }).then((rows) => ["tracking", type, indexByAppTeamId(rows)] as const)
   );
 
@@ -213,37 +214,45 @@ export async function buildLeagueTeamStatsBundleFromBdl(input: {
     fetchBdlTeamSeasonAverages({
       seasonYear: input.seasonYear,
       type: "base",
+      seasonType,
     }),
     fetchBdlTeamSeasonAverages({
       seasonYear: input.seasonYear,
       type: "advanced",
+      seasonType,
     }),
     fetchBdlTeamSeasonAverages({
       seasonYear: input.seasonYear,
       type: "opponent",
+      seasonType,
     }),
     fetchBdlTeamSeasonAverages({
       seasonYear: input.seasonYear,
       type: "scoring",
+      seasonType,
     }),
     fetchBdlTeamSeasonAverages({
       seasonYear: input.seasonYear,
       type: "misc",
+      seasonType,
     }),
     fetchBdlTeamSeasonAverages({
       seasonYear: input.seasonYear,
       category: "hustle",
       type: "base",
+      seasonType,
     }),
     fetchBdlTeamSeasonAverages({
       seasonYear: input.seasonYear,
       category: "clutch",
       type: "base",
+      seasonType,
     }),
     fetchBdlTeamSeasonAverages({
       seasonYear: input.seasonYear,
       category: "clutch",
       type: "advanced",
+      seasonType,
     }),
     ...playtypeFetches,
     ...trackingFetches,
@@ -271,7 +280,7 @@ export async function buildLeagueTeamStatsBundleFromBdl(input: {
     trackingIndexed.map(([, type, map]) => [type, map])
   );
 
-  const season: NbaLeagueTeamStatRow[] = [];
+  const rows: NbaLeagueTeamStatRow[] = [];
   for (const teamId of baseMap.keys()) {
     const playtypeByType: Record<string, BdlTeamSeasonAverageRow | undefined> =
       {};
@@ -298,14 +307,36 @@ export async function buildLeagueTeamStatsBundleFromBdl(input: {
       clutchAdvMap.get(teamId),
       playtypeByType
     );
-    if (row) season.push(row);
+    if (row) rows.push(row);
   }
 
-  season.sort((a, b) => b.netrtg - a.netrtg);
+  rows.sort((a, b) => b.netrtg - a.netrtg);
+  return rows;
+}
+
+/**
+ * BDL → リーグ Team Stats bundle（regular + playoffs）。
+ * last10 は BDL に専用口がないため空（あとで試合集計）。
+ */
+export async function buildLeagueTeamStatsBundleFromBdl(input: {
+  seasonKey: string;
+  seasonYear: number;
+}): Promise<NbaLeagueTeamStatsBundle> {
+  const [season, playoffs] = await Promise.all([
+    buildLeagueTeamStatRowsFromBdl({
+      seasonYear: input.seasonYear,
+      seasonType: "regular",
+    }),
+    buildLeagueTeamStatRowsFromBdl({
+      seasonYear: input.seasonYear,
+      seasonType: "playoffs",
+    }).catch(() => [] as NbaLeagueTeamStatRow[]),
+  ]);
 
   return {
     season,
+    playoffs,
     last10: [],
-    asOfLabel: `BDL · ${input.seasonKey} · season (last10 pending)`,
+    asOfLabel: `BDL · ${input.seasonKey} · season+playoffs`,
   };
 }

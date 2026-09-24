@@ -15,6 +15,7 @@ import type { NbaTeamPayrollDocTeam } from "./teamPayrollTypes";
 import type { NbaRosterPlayer } from "@/lib/predict/nbaRoster";
 import { curatedOptionForPlayerSeason } from "./nbaCuratedPlayerOptions";
 import { playerIdsAreAliases } from "@/lib/nba/playerIdAliases";
+import { isCuratedTwoWayPlayer } from "@/lib/nba/contracts/nbaTwoWayPlayersBySeason";
 
 function resolvePayrollLineOption(
   playerId: string,
@@ -562,26 +563,28 @@ export function buildSynchronizedTeamPayrollLines(
         }
       }
 
-      // 今季 (2026-27) のみ Two-Way 判定を適用。将来季は Two-Way 適用なし
-      // BDL active に TW フラグがなく、team contracts も TW を返さないことが多い。
-      // → ロスターにいるが標準契約行に突合できない選手を TW とみなす。
-      // （標準契約は ID / エイリアス / フルネーム完全一致で先に付く。突合漏れで偽 TW にしない）
+      // 今季: Two-Way は curated（BDL は TW/Exhibit を返さない）。
+      // 標準年俸なし + curated 外 → Exhibit 10 / non-guaranteed。
       if (isCurrentSeason) {
         const explicitTwoWay =
           (p.position ?? "").toLowerCase().includes("two-way") ||
           (p.position ?? "").toLowerCase().includes("2-way") ||
           (p.position ?? "").toLowerCase() === "tw" ||
           p.isTwoWay === true ||
-          existingLine?.isTwoWay === true;
+          existingLine?.isTwoWay === true ||
+          isCuratedTwoWayPlayer(pId, seasonKey);
         const noStandardSalary = rawSalary <= 0 && rawBase <= 0;
-        const isTwoWay =
-          !forcedStandardContract && (explicitTwoWay || noStandardSalary);
+        const isTwoWay = !forcedStandardContract && explicitTwoWay;
+        const isNonGuaranteed =
+          !forcedStandardContract && !isTwoWay && noStandardSalary;
 
-        const salary = isTwoWay ? 0 : rawSalary;
-        const baseSalary = isTwoWay ? 0 : rawBase;
-        const capHit = isTwoWay ? 0 : rawCap;
-        // 標準契約年俸なし & TW でもない → ペイロールに載せない
-        if (salary <= 0 && baseSalary <= 0 && !isTwoWay) continue;
+        const salary = isTwoWay || isNonGuaranteed ? 0 : rawSalary;
+        const baseSalary = isTwoWay || isNonGuaranteed ? 0 : rawBase;
+        const capHit = isTwoWay || isNonGuaranteed ? 0 : rawCap;
+        // 標準契約年俸なし & TW/非保証でもない → ペイロールに載せない
+        if (salary <= 0 && baseSalary <= 0 && !isTwoWay && !isNonGuaranteed) {
+          continue;
+        }
 
         const key = pId || displayName;
         lineMap.set(key, {
@@ -592,7 +595,8 @@ export function buildSynchronizedTeamPayrollLines(
           capHit,
           share: 0,
           isTwoWay,
-          option: isTwoWay ? null : option,
+          isNonGuaranteed,
+          option: isTwoWay || isNonGuaranteed ? null : option,
         });
       } else {
         // 将来季: BDL実契約 (salary > 0) のある選手のみ追加
@@ -617,20 +621,31 @@ export function buildSynchronizedTeamPayrollLines(
       const displayName = l.name;
 
       if (isCurrentSeason) {
-        const isTwoWay = l.isTwoWay === true;
-        const sal = isTwoWay ? 0 : (l.salary > 0 ? l.salary : 0);
-        if (sal <= 0 && !isTwoWay) continue;
+        const isTwoWay =
+          l.isTwoWay === true || isCuratedTwoWayPlayer(l.playerId, seasonKey);
+        const isNonGuaranteed =
+          !isTwoWay &&
+          (l.isNonGuaranteed === true ||
+            ((l.salary || 0) <= 0 && (l.baseSalary || 0) <= 0));
+        const sal =
+          isTwoWay || isNonGuaranteed ? 0 : l.salary > 0 ? l.salary : 0;
+        if (sal <= 0 && !isTwoWay && !isNonGuaranteed) continue;
 
         const key = l.playerId || displayName;
         const existing = lineMap.get(key);
-        if (!existing || sal > existing.salary || (!existing.isTwoWay && isTwoWay)) {
+        if (
+          !existing ||
+          sal > existing.salary ||
+          (!existing.isTwoWay && isTwoWay)
+        ) {
           lineMap.set(key, {
             ...l,
             name: displayName,
             salary: sal,
             share: 0,
             isTwoWay,
-            option: isTwoWay ? null : (l.option ?? null),
+            isNonGuaranteed,
+            option: isTwoWay || isNonGuaranteed ? null : (l.option ?? null),
           });
         }
       } else {
@@ -655,14 +670,15 @@ export function buildSynchronizedTeamPayrollLines(
   const result = Array.from(lineMap.values());
   // 表示年俸（base 優先）降順。2-Way は末尾、同額は名前昇順
   const cash = (l: NbaTeamPayrollLine) =>
-    l.isTwoWay
+    l.isTwoWay || l.isNonGuaranteed
       ? 0
       : l.baseSalary != null && l.baseSalary > 0
         ? l.baseSalary
         : l.salary;
   result.sort((a, b) => {
-    if (a.isTwoWay && !b.isTwoWay) return 1;
-    if (!a.isTwoWay && b.isTwoWay) return -1;
+    const aEdge = a.isTwoWay || a.isNonGuaranteed ? 1 : 0;
+    const bEdge = b.isTwoWay || b.isNonGuaranteed ? 1 : 0;
+    if (aEdge !== bEdge) return aEdge - bEdge;
     return cash(b) - cash(a) || a.name.localeCompare(b.name);
   });
   return result;

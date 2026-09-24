@@ -619,8 +619,8 @@ export const NBA_DRAFT_PICK_VIA_TRADE: Record<string, DraftPickViaTrade> = {
     viaTradeEn: "Acquired via 2025 IND–MEM trade",
   },
   "lac-2027-1-swap-multi": {
-    viaTradeJa: "2023年 James Harden のトレードで取得",
-    viaTradeEn: "via 2023 James Harden trade",
+    viaTradeJa: "2026年 Kawhi Leonard のトレードで TOR スワップ権を確定",
+    viaTradeEn: "TOR swap confirmed via 2026 Kawhi Leonard trade",
   },
   "lac-2027-2-own-out": {
     viaTradeJa: "2025年 LAC–MIA 取引で放出",
@@ -670,21 +670,21 @@ export const NBA_DRAFT_PICK_VIA_TRADE: Record<string, DraftPickViaTrade> = {
     viaTradeJa: "2025年 LAC–UTA スワップ取引で取得",
     viaTradeEn: "via 2025 LAC–UTA swap",
   },
-  "lac-2030-2-tor-pending": {
-    viaTradeJa: "2025年 LAC–UTA 取引で獲得",
-    viaTradeEn: "Acquired via 2025 LAC–UTA trade",
+  "lac-2030-2-tor": {
+    viaTradeJa: "2026年 Kawhi Leonard のトレードで獲得",
+    viaTradeEn: "Acquired via 2026 Kawhi Leonard trade",
   },
-  "lac-2031-1-tor-pending": {
-    viaTradeJa: "2019年 Kawhi Leonard のトレードで獲得",
-    viaTradeEn: "Acquired via 2019 Kawhi Leonard trade",
+  "lac-2031-1-tor": {
+    viaTradeJa: "2026年 Kawhi Leonard のトレードで獲得",
+    viaTradeEn: "Acquired via 2026 Kawhi Leonard trade",
   },
-  "lac-2033-1-tor-pending": {
-    viaTradeJa: "2019年 Kawhi Leonard のトレードで獲得",
-    viaTradeEn: "Acquired via 2019 Kawhi Leonard trade",
+  "lac-2033-1-tor": {
+    viaTradeJa: "2026年 Kawhi Leonard のトレードで獲得",
+    viaTradeEn: "Acquired via 2026 Kawhi Leonard trade",
   },
-  "lac-2033-2-tor-pending": {
-    viaTradeJa: "2019年 Kawhi Leonard のトレードで獲得",
-    viaTradeEn: "Acquired via 2019 Kawhi Leonard trade",
+  "lac-2033-2-tor": {
+    viaTradeJa: "2026年 Kawhi Leonard のトレードで獲得",
+    viaTradeEn: "Acquired via 2026 Kawhi Leonard trade",
   },
   "lal-2027-1-own-prot": {
     viaTradeJa: "2023年 D'Angelo Russell のトレードで放出",
@@ -1429,12 +1429,12 @@ export const NBA_DRAFT_PICK_VIA_TRADE: Record<string, DraftPickViaTrade> = {
     viaTradeEn: "via 2023 James Harden trade",
   },
   "tor-2030-2-own-out": {
-    viaTradeJa: "2019年 Kawhi Leonard のトレードで放出",
-    viaTradeEn: "Sent out via 2019 Kawhi Leonard trade",
+    viaTradeJa: "2026年 Kawhi Leonard のトレードで放出",
+    viaTradeEn: "Sent out via 2026 Kawhi Leonard trade",
   },
   "tor-2031-1-own-out": {
-    viaTradeJa: "2019年 Kawhi Leonard のトレードで放出",
-    viaTradeEn: "Sent out via 2019 Kawhi Leonard trade",
+    viaTradeJa: "2026年 Kawhi Leonard のトレードで放出",
+    viaTradeEn: "Sent out via 2026 Kawhi Leonard trade",
   },
   "tor-2031-2-own-out": {
     viaTradeJa: "2025年 TOR–NOP 放出後、2026年 MEM–NOP で MEM へ移動",
@@ -1445,12 +1445,12 @@ export const NBA_DRAFT_PICK_VIA_TRADE: Record<string, DraftPickViaTrade> = {
     viaTradeEn: "Sent out via 2026 TOR–BKN trade",
   },
   "tor-2033-1-own-out": {
-    viaTradeJa: "2019年 Kawhi Leonard のトレードで放出",
-    viaTradeEn: "Sent out via 2019 Kawhi Leonard trade",
+    viaTradeJa: "2026年 Kawhi Leonard のトレードで放出",
+    viaTradeEn: "Sent out via 2026 Kawhi Leonard trade",
   },
   "tor-2033-2-own-out": {
-    viaTradeJa: "2019年 Kawhi Leonard のトレードで放出",
-    viaTradeEn: "Sent out via 2019 Kawhi Leonard trade",
+    viaTradeJa: "2026年 Kawhi Leonard のトレードで放出",
+    viaTradeEn: "Sent out via 2026 Kawhi Leonard trade",
   },
   "uta-2027-1-2nd-best-uta-cle-min": {
     viaTradeJa: "2022年 Donovan Mitchell のトレードで取得",

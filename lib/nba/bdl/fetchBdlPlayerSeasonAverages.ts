@@ -11,15 +11,19 @@ export type BdlPlayerSeasonAverageRow = {
   stats: Record<string, number | string | null | undefined>;
 };
 
+export type BdlPlayerSeasonType = "regular" | "playoffs";
+
 export async function fetchBdlPlayerSeasonAverages(input: {
   seasonYear: number;
   category?: string;
   type?: string;
+  seasonType?: BdlPlayerSeasonType;
 }): Promise<BdlPlayerSeasonAverageRow[]> {
   const category = input.category ?? "general";
+  const seasonType = input.seasonType === "playoffs" ? "playoffs" : "regular";
   const query: Record<string, string | number | undefined | null> = {
     season: input.seasonYear,
-    season_type: "regular",
+    season_type: seasonType,
   };
   if (input.type != null && input.type !== "") {
     query.type = input.type;

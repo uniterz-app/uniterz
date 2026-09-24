@@ -183,7 +183,7 @@ export const NBA_SCORING_CHAMP_SEASON_WINNERS: readonly NbaPlayerAwardSeasonWinn
     { seasonKey: "2018-19", playerId: "192", playerName: "James Harden" },
     { seasonKey: "2019-20", playerId: "192", playerName: "James Harden" },
     { seasonKey: "2020-21", playerId: "115", playerName: "Stephen Curry" },
-    { seasonKey: "2021-22", playerId: "490", playerName: "Trae Young" },
+    { seasonKey: "2021-22", playerId: "145", playerName: "Joel Embiid" },
     { seasonKey: "2022-23", playerId: "145", playerName: "Joel Embiid" },
     { seasonKey: "2023-24", playerId: "132", playerName: "Luka Doncic" },
     { seasonKey: "2024-25", playerId: "175", playerName: "Shai Gilgeous-Alexander" },
@@ -204,7 +204,7 @@ export const NBA_AST_CHAMP_SEASON_WINNERS: readonly NbaPlayerAwardSeasonWinner[]
     { seasonKey: "2018-19", playerId: "472", playerName: "Russell Westbrook" },
     { seasonKey: "2019-20", playerId: "237", playerName: "LeBron James" },
     { seasonKey: "2020-21", playerId: "472", playerName: "Russell Westbrook" },
-    { seasonKey: "2021-22", playerId: "490", playerName: "Trae Young" },
+    { seasonKey: "2021-22", playerId: "367", playerName: "Chris Paul" },
     { seasonKey: "2022-23", playerId: "192", playerName: "James Harden" },
     { seasonKey: "2023-24", playerId: "3547245", playerName: "Tyrese Haliburton" },
     { seasonKey: "2024-25", playerId: "490", playerName: "Trae Young" },
@@ -230,7 +230,7 @@ export const NBA_REB_CHAMP_SEASON_WINNERS: readonly NbaPlayerAwardSeasonWinner[]
     { seasonKey: "2022-23", playerId: "406", playerName: "Domantas Sabonis" },
     { seasonKey: "2023-24", playerId: "406", playerName: "Domantas Sabonis" },
     { seasonKey: "2024-25", playerId: "406", playerName: "Domantas Sabonis" },
-    { seasonKey: "2025-26", playerId: "1028025344", playerName: "Donovan Clingan" },
+    { seasonKey: "2025-26", playerId: "246", playerName: "Nikola Jokic" },
   ] as const;
 
 /**
@@ -245,12 +245,12 @@ export const NBA_STL_CHAMP_SEASON_WINNERS: readonly NbaPlayerAwardSeasonWinner[]
     { seasonKey: "2010-11", playerId: "367", playerName: "Chris Paul" },
     { seasonKey: "2011-12", playerId: "367", playerName: "Chris Paul" },
     { seasonKey: "2012-13", playerId: "367", playerName: "Chris Paul" },
-    { seasonKey: "2014-15", playerId: "115", playerName: "Stephen Curry" },
+    { seasonKey: "2014-15", playerId: "274", playerName: "Kawhi Leonard" },
     { seasonKey: "2015-16", playerId: "115", playerName: "Stephen Curry" },
     { seasonKey: "2017-18", playerId: "357", playerName: "Victor Oladipo" },
     { seasonKey: "2018-19", playerId: "172", playerName: "Paul George" },
     { seasonKey: "2019-20", playerId: "417", playerName: "Ben Simmons" },
-    { seasonKey: "2020-21", playerId: "304", playerName: "T.J. McConnell" },
+    { seasonKey: "2020-21", playerId: "79", playerName: "Jimmy Butler" },
     { seasonKey: "2021-22", playerId: "334", playerName: "Dejounte Murray" },
     { seasonKey: "2022-23", playerId: "18", playerName: "OG Anunoby" },
     { seasonKey: "2023-24", playerId: "161", playerName: "De'Aaron Fox" },
@@ -272,7 +272,7 @@ export const NBA_BLK_CHAMP_SEASON_WINNERS: readonly NbaPlayerAwardSeasonWinner[]
     { seasonKey: "2018-19", playerId: "452", playerName: "Myles Turner" },
     { seasonKey: "2020-21", playerId: "452", playerName: "Myles Turner" },
     { seasonKey: "2021-22", playerId: "231", playerName: "Jaren Jackson Jr." },
-    { seasonKey: "2022-23", playerId: "283", playerName: "Brook Lopez" },
+    { seasonKey: "2022-23", playerId: "231", playerName: "Jaren Jackson Jr." },
     { seasonKey: "2023-24", playerId: "56677822", playerName: "Victor Wembanyama" },
     { seasonKey: "2024-25", playerId: "56677822", playerName: "Victor Wembanyama" },
     { seasonKey: "2025-26", playerId: "56677822", playerName: "Victor Wembanyama" },
@@ -392,6 +392,8 @@ export const NBA_ALL_NBA_2ND_SEASON_WINNERS: readonly NbaPlayerAwardSeasonWinner
     { seasonKey: "2004-05", playerId: "237", playerName: "LeBron James" },
     // 2006-07
     { seasonKey: "2006-07", playerId: "237", playerName: "LeBron James" },
+    // 2010-11
+    { seasonKey: "2010-11", playerId: "472", playerName: "Russell Westbrook" },
     // 2011-12
     { seasonKey: "2011-12", playerId: "472", playerName: "Russell Westbrook" },
     // 2012-13
@@ -400,7 +402,6 @@ export const NBA_ALL_NBA_2ND_SEASON_WINNERS: readonly NbaPlayerAwardSeasonWinner
     { seasonKey: "2013-14", playerId: "115", playerName: "Stephen Curry" },
     // 2014-15
     { seasonKey: "2014-15", playerId: "472", playerName: "Russell Westbrook" },
-    { seasonKey: "2014-15", playerId: "228", playerName: "Kyrie Irving" },
     // 2015-16
     { seasonKey: "2015-16", playerId: "140", playerName: "Kevin Durant" },
     { seasonKey: "2015-16", playerId: "185", playerName: "Draymond Green" },
@@ -475,13 +476,14 @@ export const NBA_ALL_NBA_3RD_SEASON_WINNERS: readonly NbaPlayerAwardSeasonWinner
     // 2010-11
     { seasonKey: "2010-11", playerId: "219", playerName: "Al Horford" },
     // 2012-13
-    { seasonKey: "2012-13", playerId: "278", playerName: "Damian Lillard" },
     { seasonKey: "2012-13", playerId: "192", playerName: "James Harden" },
+    { seasonKey: "2012-13", playerId: "172", playerName: "Paul George" },
     // 2013-14
     { seasonKey: "2013-14", playerId: "172", playerName: "Paul George" },
     { seasonKey: "2013-14", playerId: "278", playerName: "Damian Lillard" },
     // 2014-15
     { seasonKey: "2014-15", playerId: "443", playerName: "Klay Thompson" },
+    { seasonKey: "2014-15", playerId: "228", playerName: "Kyrie Irving" },
     // 2015-16
     { seasonKey: "2015-16", playerId: "172", playerName: "Paul George" },
     { seasonKey: "2015-16", playerId: "443", playerName: "Klay Thompson" },
@@ -565,7 +567,6 @@ export const NBA_ALL_DEF_1ST_SEASON_WINNERS: readonly NbaPlayerAwardSeasonWinner
     // 2014-15
     { seasonKey: "2014-15", playerId: "185", playerName: "Draymond Green" },
     { seasonKey: "2014-15", playerId: "274", playerName: "Kawhi Leonard" },
-    { seasonKey: "2014-15", playerId: "79", playerName: "Jimmy Butler" },
     // 2015-16
     { seasonKey: "2015-16", playerId: "274", playerName: "Kawhi Leonard" },
     { seasonKey: "2015-16", playerId: "185", playerName: "Draymond Green" },
@@ -587,6 +588,7 @@ export const NBA_ALL_DEF_1ST_SEASON_WINNERS: readonly NbaPlayerAwardSeasonWinner
     { seasonKey: "2019-20", playerId: "15", playerName: "Giannis Antetokounmpo" },
     { seasonKey: "2019-20", playerId: "117", playerName: "Anthony Davis" },
     { seasonKey: "2019-20", playerId: "176", playerName: "Rudy Gobert" },
+    { seasonKey: "2019-20", playerId: "420", playerName: "Marcus Smart" },
     // 2020-21
     { seasonKey: "2020-21", playerId: "15", playerName: "Giannis Antetokounmpo" },
     { seasonKey: "2020-21", playerId: "176", playerName: "Rudy Gobert" },
@@ -615,7 +617,7 @@ export const NBA_ALL_DEF_1ST_SEASON_WINNERS: readonly NbaPlayerAwardSeasonWinner
     { seasonKey: "2024-25", playerId: "185", playerName: "Draymond Green" },
     { seasonKey: "2024-25", playerId: "38017677", playerName: "Dyson Daniels" },
     { seasonKey: "2024-25", playerId: "56677825", playerName: "Amen Thompson" },
-    // Luguentz Dort も 1st（BDL id 未確定のため省略可）
+    { seasonKey: "2024-25", playerId: "666541", playerName: "Luguentz Dort" },
     // 2025-26
     { seasonKey: "2025-26", playerId: "56677822", playerName: "Victor Wembanyama" },
     { seasonKey: "2025-26", playerId: "38017685", playerName: "Chet Holmgren" },
@@ -634,11 +636,15 @@ export const NBA_ALL_DEF_2ND_SEASON_WINNERS: readonly NbaPlayerAwardSeasonWinner
     { seasonKey: "2007-08", playerId: "367", playerName: "Chris Paul" },
     // 2012-13
     { seasonKey: "2012-13", playerId: "104", playerName: "Mike Conley" },
+    { seasonKey: "2012-13", playerId: "172", playerName: "Paul George" },
     // 2013-14
     { seasonKey: "2013-14", playerId: "237", playerName: "LeBron James" },
+    { seasonKey: "2013-14", playerId: "79", playerName: "Jimmy Butler" },
+    { seasonKey: "2013-14", playerId: "274", playerName: "Kawhi Leonard" },
     // 2014-15
     { seasonKey: "2014-15", playerId: "117", playerName: "Anthony Davis" },
     { seasonKey: "2014-15", playerId: "367", playerName: "Chris Paul" },
+    { seasonKey: "2014-15", playerId: "79", playerName: "Jimmy Butler" },
     // 2015-16
     { seasonKey: "2015-16", playerId: "172", playerName: "Paul George" },
     { seasonKey: "2015-16", playerId: "79", playerName: "Jimmy Butler" },
@@ -650,6 +656,7 @@ export const NBA_ALL_DEF_2ND_SEASON_WINNERS: readonly NbaPlayerAwardSeasonWinner
     { seasonKey: "2017-18", playerId: "185", playerName: "Draymond Green" },
     { seasonKey: "2017-18", playerId: "219", playerName: "Al Horford" },
     { seasonKey: "2017-18", playerId: "334", playerName: "Dejounte Murray" },
+    { seasonKey: "2017-18", playerId: "145", playerName: "Joel Embiid" },
     // 2018-19
     { seasonKey: "2018-19", playerId: "145", playerName: "Joel Embiid" },
     { seasonKey: "2018-19", playerId: "185", playerName: "Draymond Green" },
@@ -689,6 +696,7 @@ export const NBA_ALL_DEF_2ND_SEASON_WINNERS: readonly NbaPlayerAwardSeasonWinner
     { seasonKey: "2024-25", playerId: "231", playerName: "Jaren Jackson Jr." },
     { seasonKey: "2024-25", playerId: "38017703", playerName: "Jalen Williams" },
     { seasonKey: "2024-25", playerId: "493", playerName: "Ivica Zubac" },
+    { seasonKey: "2024-25", playerId: "56677850", playerName: "Toumani Camara" },
     // 2025-26
     { seasonKey: "2025-26", playerId: "4", playerName: "Bam Adebayo" },
     { seasonKey: "2025-26", playerId: "18", playerName: "OG Anunoby" },
@@ -707,7 +715,7 @@ export const NBA_ALL_ROOKIE_1ST_SEASON_WINNERS: readonly NbaPlayerAwardSeasonWin
     { seasonKey: "2007-08", playerId: "140", playerName: "Kevin Durant" },
     { seasonKey: "2007-08", playerId: "219", playerName: "Al Horford" },
     { seasonKey: "2008-09", playerId: "472", playerName: "Russell Westbrook" },
-    { seasonKey: "2008-09", playerId: "285", playerName: "Kevin Love" },
+    { seasonKey: "2008-09", playerId: "283", playerName: "Brook Lopez" },
     { seasonKey: "2009-10", playerId: "115", playerName: "Stephen Curry" },
     { seasonKey: "2011-12", playerId: "228", playerName: "Kyrie Irving" },
     { seasonKey: "2011-12", playerId: "443", playerName: "Klay Thompson" },
@@ -715,26 +723,25 @@ export const NBA_ALL_ROOKIE_1ST_SEASON_WINNERS: readonly NbaPlayerAwardSeasonWin
     { seasonKey: "2012-13", playerId: "278", playerName: "Damian Lillard" },
     { seasonKey: "2012-13", playerId: "117", playerName: "Anthony Davis" },
     { seasonKey: "2012-13", playerId: "37", playerName: "Bradley Beal" },
-    { seasonKey: "2012-13", playerId: "137", playerName: "Andre Drummond" },
     { seasonKey: "2013-14", playerId: "191", playerName: "Tim Hardaway Jr." },
     { seasonKey: "2014-15", playerId: "475", playerName: "Andrew Wiggins" },
-    { seasonKey: "2014-15", playerId: "54", playerName: "Bojan Bogdanovic" },
+    { seasonKey: "2014-15", playerId: "100", playerName: "Jordan Clarkson" },
     { seasonKey: "2015-16", playerId: "447", playerName: "Karl-Anthony Towns" },
     { seasonKey: "2015-16", playerId: "378", playerName: "Kristaps Porzingis" },
-    { seasonKey: "2015-16", playerId: "405", playerName: "D'Angelo Russell" },
     { seasonKey: "2015-16", playerId: "57", playerName: "Devin Booker" },
+    { seasonKey: "2015-16", playerId: "246", playerName: "Nikola Jokic" },
     { seasonKey: "2016-17", playerId: "65", playerName: "Malcolm Brogdon" },
     { seasonKey: "2016-17", playerId: "145", playerName: "Joel Embiid" },
     { seasonKey: "2016-17", playerId: "210", playerName: "Buddy Hield" },
-    { seasonKey: "2016-17", playerId: "335", playerName: "Jamal Murray" },
     { seasonKey: "2017-18", playerId: "434", playerName: "Jayson Tatum" },
     { seasonKey: "2017-18", playerId: "322", playerName: "Donovan Mitchell" },
     { seasonKey: "2017-18", playerId: "265", playerName: "Kyle Kuzma" },
-    { seasonKey: "2017-18", playerId: "101", playerName: "John Collins" },
+    { seasonKey: "2017-18", playerId: "297", playerName: "Lauri Markkanen" },
     { seasonKey: "2018-19", playerId: "132", playerName: "Luka Doncic" },
     { seasonKey: "2018-19", playerId: "490", playerName: "Trae Young" },
     { seasonKey: "2018-19", playerId: "22", playerName: "Deandre Ayton" },
     { seasonKey: "2018-19", playerId: "231", playerName: "Jaren Jackson Jr." },
+    { seasonKey: "2018-19", playerId: "24", playerName: "Marvin Bagley III" },
     { seasonKey: "2019-20", playerId: "666786", playerName: "Ja Morant" },
     { seasonKey: "2019-20", playerId: "666969", playerName: "Zion Williamson" },
     { seasonKey: "2020-21", playerId: "3547239", playerName: "LaMelo Ball" },
@@ -748,18 +755,18 @@ export const NBA_ALL_ROOKIE_1ST_SEASON_WINNERS: readonly NbaPlayerAwardSeasonWin
     { seasonKey: "2022-23", playerId: "38017683", playerName: "Paolo Banchero" },
     { seasonKey: "2022-23", playerId: "38017703", playerName: "Jalen Williams" },
     { seasonKey: "2022-23", playerId: "38017686", playerName: "Benedict Mathurin" },
-    { seasonKey: "2022-23", playerId: "38017682", playerName: "Jaden Ivey" },
+    { seasonKey: "2022-23", playerId: "38017688", playerName: "Keegan Murray" },
     { seasonKey: "2022-23", playerId: "38017705", playerName: "Walker Kessler" },
     { seasonKey: "2023-24", playerId: "56677822", playerName: "Victor Wembanyama" },
     { seasonKey: "2023-24", playerId: "38017685", playerName: "Chet Holmgren" },
     { seasonKey: "2023-24", playerId: "56677823", playerName: "Brandon Miller" },
     { seasonKey: "2023-24", playerId: "56677785", playerName: "Jaime Jaquez Jr." },
-    { seasonKey: "2023-24", playerId: "56677825", playerName: "Amen Thompson" },
+    { seasonKey: "2023-24", playerId: "56677858", playerName: "Brandin Podziemski" },
     { seasonKey: "2024-25", playerId: "1028025261", playerName: "Stephon Castle" },
     { seasonKey: "2024-25", playerId: "1028028405", playerName: "Alex Sarr" },
     { seasonKey: "2024-25", playerId: "1028025754", playerName: "Zach Edey" },
     { seasonKey: "2024-25", playerId: "1028039105", playerName: "Jaylen Wells" },
-    { seasonKey: "2024-25", playerId: "1028027567", playerName: "Yves Missi" },
+    { seasonKey: "2024-25", playerId: "1028028244", playerName: "Zaccharie Risacher" },
     { seasonKey: "2025-26", playerId: "1057262088", playerName: "Cooper Flagg" },
     { seasonKey: "2025-26", playerId: "1057263194", playerName: "Kon Knueppel" },
     { seasonKey: "2025-26", playerId: "1057261935", playerName: "VJ Edgecombe" },
@@ -770,12 +777,11 @@ export const NBA_ALL_ROOKIE_1ST_SEASON_WINNERS: readonly NbaPlayerAwardSeasonWin
 /**
  * All-Rookie Second Team（現役のみ）。
  * First と重複する記載・「ではなく」注記は整理済み。
- * 2016-17 Second は First と同じ並びだったためスキップ。
  */
 export const NBA_ALL_ROOKIE_2ND_SEASON_WINNERS: readonly NbaPlayerAwardSeasonWinner[] =
   [
     // 2008-09
-    { seasonKey: "2008-09", playerId: "283", playerName: "Brook Lopez" },
+    { seasonKey: "2008-09", playerId: "285", playerName: "Kevin Love" },
     { seasonKey: "2008-09", playerId: "178", playerName: "Eric Gordon" },
     // 2009-10
     { seasonKey: "2009-10", playerId: "192", playerName: "James Harden" },
@@ -784,24 +790,34 @@ export const NBA_ALL_ROOKIE_2ND_SEASON_WINNERS: readonly NbaPlayerAwardSeasonWin
     { seasonKey: "2010-11", playerId: "172", playerName: "Paul George" },
     // 2012-13
     { seasonKey: "2012-13", playerId: "185", playerName: "Draymond Green" },
+    { seasonKey: "2012-13", playerId: "137", playerName: "Andre Drummond" },
     // 2013-14
     { seasonKey: "2013-14", playerId: "358", playerName: "Kelly Olynyk" },
     { seasonKey: "2013-14", playerId: "3", playerName: "Steven Adams" },
+    { seasonKey: "2013-14", playerId: "15", playerName: "Giannis Antetokounmpo" },
     // 2014-15
-    { seasonKey: "2014-15", playerId: "246", playerName: "Nikola Jokic" },
-    { seasonKey: "2014-15", playerId: "100", playerName: "Jordan Clarkson" },
-    // 2017-18（Mitchell ではなく Lonzo 等）
+    { seasonKey: "2014-15", playerId: "54", playerName: "Bojan Bogdanovic" },
+    { seasonKey: "2014-15", playerId: "268", playerName: "Zach LaVine" },
+    // 2015-16
+    { seasonKey: "2015-16", playerId: "405", playerName: "D'Angelo Russell" },
+    { seasonKey: "2015-16", playerId: "452", playerName: "Myles Turner" },
+    // 2016-17
+    { seasonKey: "2016-17", playerId: "335", playerName: "Jamal Murray" },
+    { seasonKey: "2016-17", playerId: "70", playerName: "Jaylen Brown" },
+    { seasonKey: "2016-17", playerId: "227", playerName: "Brandon Ingram" },
+    // 2017-18
     { seasonKey: "2017-18", playerId: "27", playerName: "Lonzo Ball" },
-    // 2018-19（Ayton は First のため除外）
+    { seasonKey: "2017-18", playerId: "101", playerName: "John Collins" },
+    // 2018-19
     { seasonKey: "2018-19", playerId: "175", playerName: "Shai Gilgeous-Alexander" },
-    { seasonKey: "2018-19", playerId: "9", playerName: "Jarrett Allen" },
     { seasonKey: "2018-19", playerId: "399", playerName: "Mitchell Robinson" },
     { seasonKey: "2018-19", playerId: "413", playerName: "Collin Sexton" },
+    { seasonKey: "2018-19", playerId: "221", playerName: "Kevin Huerter" },
     // 2019-20
     { seasonKey: "2019-20", playerId: "666956", playerName: "Coby White" },
     { seasonKey: "2019-20", playerId: "666609", playerName: "Rui Hachimura" },
     { seasonKey: "2019-20", playerId: "666950", playerName: "P.J. Washington" },
-    { seasonKey: "2019-20", playerId: "666923", playerName: "Matisse Thybulle" },
+    { seasonKey: "2019-20", playerId: "666633", playerName: "Tyler Herro" },
     // 2020-21（Patrick Williams は First のため除外）
     { seasonKey: "2020-21", playerId: "3547267", playerName: "Isaiah Stewart" },
     { seasonKey: "2020-21", playerId: "3547287", playerName: "Desmond Bane" },
@@ -809,22 +825,28 @@ export const NBA_ALL_ROOKIE_2ND_SEASON_WINNERS: readonly NbaPlayerAwardSeasonWin
     // 2021-22（Jalen Green は First のため除外）
     { seasonKey: "2021-22", playerId: "17896024", playerName: "Herbert Jones" },
     { seasonKey: "2021-22", playerId: "17896065", playerName: "Josh Giddey" },
-    { seasonKey: "2021-22", playerId: "1630538", playerName: "Bones Hyland" },
+    { seasonKey: "2021-22", playerId: "17896031", playerName: "Nah'Shon Hyland" },
     { seasonKey: "2021-22", playerId: "17895983", playerName: "Ayo Dosunmu" },
-    // 2022-23（Ivey / Jalen Williams は First のため除外）
+    // 2022-23
     { seasonKey: "2022-23", playerId: "38017699", playerName: "Jeremy Sochan" },
-    { seasonKey: "2022-23", playerId: "38017690", playerName: "Shaedon Sharpe" },
-    { seasonKey: "2022-23", playerId: "38017728", playerName: "Jake LaRavia" },
-    // 2023-24（Miller / Amen / Jaquez は First のため除外）
-    { seasonKey: "2023-24", playerId: "56677844", playerName: "Bilal Coulibaly" },
+    { seasonKey: "2022-23", playerId: "38017682", playerName: "Jaden Ivey" },
+    { seasonKey: "2022-23", playerId: "38017694", playerName: "Jalen Duren" },
+    { seasonKey: "2022-23", playerId: "38017695", playerName: "Tari Eason" },
+    { seasonKey: "2022-23", playerId: "38017684", playerName: "Jabari Smith Jr." },
+    // 2023-24
+    { seasonKey: "2023-24", playerId: "56677825", playerName: "Amen Thompson" },
     { seasonKey: "2023-24", playerId: "56677834", playerName: "Keyonte George" },
-    // 2024-25（Missi は First のため除外）
+    { seasonKey: "2023-24", playerId: "56677840", playerName: "Dereck Lively II" },
+    { seasonKey: "2023-24", playerId: "56677833", playerName: "Cason Wallace" },
+    { seasonKey: "2023-24", playerId: "56677830", playerName: "GG Jackson" },
+    // 2024-25
     { seasonKey: "2024-25", playerId: "1028029127", playerName: "Kel'el Ware" },
     { seasonKey: "2024-25", playerId: "1028025177", playerName: "Matas Buzelis" },
     { seasonKey: "2024-25", playerId: "1028025344", playerName: "Donovan Clingan" },
-    { seasonKey: "2024-25", playerId: "1642264", playerName: "Bub Carrington" },
+    { seasonKey: "2024-25", playerId: "1028025235", playerName: "Bub Carrington" },
+    { seasonKey: "2024-25", playerId: "1028027567", playerName: "Yves Missi" },
     // 2025-26
-    { seasonKey: "2025-26", playerId: "1642875", playerName: "Ace Bailey" },
+    { seasonKey: "2025-26", playerId: "1057260888", playerName: "Ace Bailey" },
     { seasonKey: "2025-26", playerId: "1057267077", playerName: "Jeremiah Fears" },
     { seasonKey: "2025-26", playerId: "1057268940", playerName: "Collin Murray-Boyles" },
     { seasonKey: "2025-26", playerId: "1057274415", playerName: "Derik Queen" },
@@ -889,8 +911,9 @@ const SEASON_WINNERS_BY_AWARD: Partial<
 };
 
 /**
- * All-Star は回数リストで受領（シーズン行ではない）。
- * 現役のみ。引退勢（Rose / Wall / Kemba / Hayward 等）は除外。
+ * All-Star 回数リスト（ヘッダー用）。
+ * キャリア表チップは `nbaAllStarSeasonWinners` のシーズン行が正。
+ * シーズン行がある選手はそちらの行数を優先し、ここは未配線分の補完。
  */
 export const NBA_ALL_STAR_COUNTS: readonly {
   playerId: string;
@@ -899,70 +922,73 @@ export const NBA_ALL_STAR_COUNTS: readonly {
 }[] = [
   { playerId: "237", playerName: "LeBron James", count: 22 },
   { playerId: "140", playerName: "Kevin Durant", count: 16 },
-  { playerId: "115", playerName: "Stephen Curry", count: 12 },
   { playerId: "367", playerName: "Chris Paul", count: 12 },
+  { playerId: "115", playerName: "Stephen Curry", count: 12 },
   { playerId: "192", playerName: "James Harden", count: 11 },
-  { playerId: "15", playerName: "Giannis Antetokounmpo", count: 10 },
   { playerId: "117", playerName: "Anthony Davis", count: 10 },
+  { playerId: "15", playerName: "Giannis Antetokounmpo", count: 10 },
+  { playerId: "278", playerName: "Damian Lillard", count: 9 },
   { playerId: "228", playerName: "Kyrie Irving", count: 9 },
+  { playerId: "172", playerName: "Paul George", count: 9 },
   { playerId: "472", playerName: "Russell Westbrook", count: 9 },
   { playerId: "246", playerName: "Nikola Jokic", count: 8 },
-  { playerId: "145", playerName: "Joel Embiid", count: 8 },
-  { playerId: "172", playerName: "Paul George", count: 8 },
-  { playerId: "278", playerName: "Damian Lillard", count: 8 },
-  { playerId: "274", playerName: "Kawhi Leonard", count: 7 },
   { playerId: "322", playerName: "Donovan Mitchell", count: 7 },
+  { playerId: "145", playerName: "Joel Embiid", count: 7 },
+  { playerId: "274", playerName: "Kawhi Leonard", count: 7 },
   { playerId: "125", playerName: "DeMar DeRozan", count: 6 },
-  { playerId: "286", playerName: "Kyle Lowry", count: 6 },
   { playerId: "434", playerName: "Jayson Tatum", count: 6 },
-  { playerId: "132", playerName: "Luka Doncic", count: 6 },
+  { playerId: "79", playerName: "Jimmy Butler", count: 6 },
   { playerId: "447", playerName: "Karl-Anthony Towns", count: 6 },
-  { playerId: "443", playerName: "Klay Thompson", count: 5 },
+  { playerId: "286", playerName: "Kyle Lowry", count: 6 },
+  { playerId: "132", playerName: "Luka Doncic", count: 6 },
   { playerId: "219", playerName: "Al Horford", count: 5 },
   { playerId: "57", playerName: "Devin Booker", count: 5 },
   { playerId: "70", playerName: "Jaylen Brown", count: 5 },
+  { playerId: "443", playerName: "Klay Thompson", count: 5 },
+  { playerId: "3547238", playerName: "Anthony Edwards", count: 4 },
   { playerId: "185", playerName: "Draymond Green", count: 4 },
   { playerId: "416", playerName: "Pascal Siakam", count: 4 },
-  { playerId: "3547238", playerName: "Anthony Edwards", count: 4 },
   { playerId: "175", playerName: "Shai Gilgeous-Alexander", count: 4 },
-  { playerId: "37", playerName: "Bradley Beal", count: 3 },
-  { playerId: "387", playerName: "Julius Randle", count: 3 },
-  { playerId: "666786", playerName: "Ja Morant", count: 3 },
-  { playerId: "73", playerName: "Jalen Brunson", count: 3 },
-  { playerId: "406", playerName: "Domantas Sabonis", count: 3 },
-  { playerId: "315", playerName: "Khris Middleton", count: 3 },
+  { playerId: "490", playerName: "Trae Young", count: 4 },
   { playerId: "4", playerName: "Bam Adebayo", count: 3 },
+  { playerId: "37", playerName: "Bradley Beal", count: 3 },
+  { playerId: "406", playerName: "Domantas Sabonis", count: 3 },
+  { playerId: "73", playerName: "Jalen Brunson", count: 3 },
+  { playerId: "387", playerName: "Julius Randle", count: 3 },
+  { playerId: "315", playerName: "Khris Middleton", count: 3 },
   { playerId: "176", playerName: "Rudy Gobert", count: 3 },
-  { playerId: "666969", playerName: "Zion Williamson", count: 2 },
-  { playerId: "490", playerName: "Trae Young", count: 2 },
+  { playerId: "17896062", playerName: "Alperen Sengun", count: 2 },
+  { playerId: "137", playerName: "Andre Drummond", count: 2 },
   { playerId: "227", playerName: "Brandon Ingram", count: 2 },
+  { playerId: "17896075", playerName: "Cade Cunningham", count: 2 },
+  { playerId: "666581", playerName: "Darius Garland", count: 2 },
+  { playerId: "161", playerName: "De'Aaron Fox", count: 2 },
+  { playerId: "666786", playerName: "Ja Morant", count: 2 },
   { playerId: "231", playerName: "Jaren Jackson Jr.", count: 2 },
+  { playerId: "214", playerName: "Jrue Holiday", count: 2 },
+  { playerId: "460", playerName: "Nikola Vucevic", count: 2 },
+  { playerId: "17896055", playerName: "Scottie Barnes", count: 2 },
   { playerId: "3547245", playerName: "Tyrese Haliburton", count: 2 },
   { playerId: "3547254", playerName: "Tyrese Maxey", count: 2 },
-  { playerId: "17896055", playerName: "Scottie Barnes", count: 2 },
   { playerId: "56677822", playerName: "Victor Wembanyama", count: 2 },
-  { playerId: "17896062", playerName: "Alperen Sengun", count: 2 },
-  { playerId: "17896075", playerName: "Cade Cunningham", count: 2 },
   { playerId: "268", playerName: "Zach LaVine", count: 2 },
-  { playerId: "460", playerName: "Nikola Vucevic", count: 2 },
-  { playerId: "137", playerName: "Andre Drummond", count: 2 },
-  { playerId: "214", playerName: "Jrue Holiday", count: 2 },
-  { playerId: "161", playerName: "De'Aaron Fox", count: 2 },
+  { playerId: "666969", playerName: "Zion Williamson", count: 2 },
+  { playerId: "475", playerName: "Andrew Wiggins", count: 1 },
+  { playerId: "38017685", playerName: "Chet Holmgren", count: 1 },
+  { playerId: "334", playerName: "Dejounte Murray", count: 1 },
+  { playerId: "3547242", playerName: "Deni Avdija", count: 1 },
+  { playerId: "17896076", playerName: "Evan Mobley", count: 1 },
+  { playerId: "458", playerName: "Fred VanVleet", count: 1 },
   { playerId: "38017694", playerName: "Jalen Duren", count: 1 },
   { playerId: "17896040", playerName: "Jalen Johnson", count: 1 },
-  { playerId: "38017685", playerName: "Chet Holmgren", count: 1 },
   { playerId: "38017703", playerName: "Jalen Williams", count: 1 },
-  { playerId: "3547242", playerName: "Deni Avdija", count: 1 },
   { playerId: "335", playerName: "Jamal Murray", count: 1 },
-  { playerId: "380", playerName: "Norman Powell", count: 1 },
-  { playerId: "458", playerName: "Fred VanVleet", count: 1 },
-  { playerId: "22", playerName: "Deandre Ayton", count: 1 },
-  { playerId: "475", playerName: "Andrew Wiggins", count: 1 },
+  { playerId: "9", playerName: "Jarrett Allen", count: 1 },
   { playerId: "378", playerName: "Kristaps Porzingis", count: 1 },
+  { playerId: "3547239", playerName: "LaMelo Ball", count: 1 },
   { playerId: "297", playerName: "Lauri Markkanen", count: 1 },
   { playerId: "104", playerName: "Mike Conley", count: 1 },
-  { playerId: "61", playerName: "Mikal Bridges", count: 1 },
-  { playerId: "182", playerName: "Jerami Grant", count: 1 },
+  { playerId: "380", playerName: "Norman Powell", count: 1 },
 ] as const;
 
 const DIRECT_COUNTS_BY_AWARD: Partial<
@@ -1007,6 +1033,13 @@ export function buildNbaPlayerAwardCountsByPlayerId(): Record<
         const playerId = String(row.playerId).trim();
         if (!playerId || !(row.count > 0)) continue;
         if (!byPlayer[playerId]) byPlayer[playerId] = {};
+        /** All-Star: シーズン行があれば行数を正（DIRECT で上書きしない） */
+        if (
+          awardId === "all_star" &&
+          (byPlayer[playerId]!.all_star ?? 0) > 0
+        ) {
+          continue;
+        }
         byPlayer[playerId]![awardId] = row.count;
       }
     }

@@ -6,6 +6,7 @@
  */
 import type { Firestore } from "firebase-admin/firestore";
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
+import { resolveNbaStatsDisplaySeasonKey, resolveNbaRosterInjuryDisplaySeasonKey } from "@/lib/nba/resolveNbaStatsDisplaySeason";
 import { loadMatchupRosters } from "@/lib/nba/teamRosters/loadTeamRostersSnapshot";
 import { loadTeamInjuriesSnapshot } from "@/lib/nba/teamInjuries/loadTeamInjuriesSnapshot";
 import { loadTeamGameLog } from "@/lib/nba/teamGameLog/loadTeamGameLog";
@@ -62,15 +63,25 @@ export async function loadMatchupDetailBundle(
 ): Promise<NbaMatchupDetailApiPayload> {
   const homeTeamId = String(opts.homeTeamId ?? "").trim();
   const awayTeamId = String(opts.awayTeamId ?? "").trim();
-  const season = (opts.seasonKey ?? CURRENT_NBA_SEASON_KEY).trim();
+  const preferred = opts.seasonKey ?? CURRENT_NBA_SEASON_KEY;
+  const [statsDisplay, liveDisplay] = await Promise.all([
+    resolveNbaStatsDisplaySeasonKey(db, preferred),
+    resolveNbaRosterInjuryDisplaySeasonKey(db, preferred),
+  ]);
+  const statsSeason = statsDisplay.seasonKey;
+  const liveSeason = liveDisplay.seasonKey;
+  /** 直近フォームはカレンダー今季。前期フォールバック時に空 log と矛盾しない */
+  const formSeason = statsDisplay.fromPriorSeason
+    ? statsDisplay.calendarSeasonKey
+    : statsSeason;
 
   const [rosterPayload, injurySnap, leaguePayload, homeLogPayload, awayLogPayload] =
     await Promise.all([
-      loadMatchupRosters(db, season, homeTeamId, awayTeamId),
-      loadTeamInjuriesSnapshot(db, season),
-      loadLeagueTeamStatsSnapshot(db, season),
-      loadTeamGameLog(db, season, homeTeamId),
-      loadTeamGameLog(db, season, awayTeamId),
+      loadMatchupRosters(db, liveSeason, homeTeamId, awayTeamId),
+      loadTeamInjuriesSnapshot(db, liveSeason),
+      loadLeagueTeamStatsSnapshot(db, statsSeason),
+      loadTeamGameLog(db, formSeason, homeTeamId),
+      loadTeamGameLog(db, formSeason, awayTeamId),
     ]);
 
   const roster = buildMatchupRosterReport(
@@ -109,7 +120,7 @@ export async function loadMatchupDetailBundle(
 
   return {
     ok: true,
-    season,
+    season: statsSeason,
     homeTeamId,
     awayTeamId,
     rosterHome: rosterPayload.home,

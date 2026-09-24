@@ -92,6 +92,7 @@ export type NbaPlayerStatLeaderRow = {
 
 export type NbaPlayerStatLeadersBundle = {
   season: Record<NbaPlayerLeaderMetricId, NbaPlayerStatLeaderRow[]>;
+  playoffs: Record<NbaPlayerLeaderMetricId, NbaPlayerStatLeaderRow[]>;
   last10: Record<NbaPlayerLeaderMetricId, NbaPlayerStatLeaderRow[]>;
   asOfLabel: string;
 };
@@ -607,9 +608,18 @@ function formatValue(metric: NbaPlayerLeaderMetricId, value: number) {
   }
   const def = NBA_PLAYER_STAT_LEADER_METRICS.find((m) => m.id === metric)!;
   if (def.kind === "pct") return `${(value * 100).toFixed(1)}%`;
-  if (def.kind === "eff") return value.toFixed(1);
-  if (def.kind === "minutes") return value.toFixed(1);
-  return value.toFixed(1);
+  if (def.kind === "eff") return formatPlainNumber(value, 1);
+  if (def.kind === "minutes") return formatPlainNumber(value, 1);
+  return formatPlainNumber(value, 1);
+}
+
+/** TOTAL（整数）のとき `.0` を出さない */
+function formatPlainNumber(value: number, decimals: number): string {
+  if (!Number.isFinite(value)) return "—";
+  if (Math.abs(value - Math.round(value)) < 1e-9) {
+    return String(Math.round(value));
+  }
+  return value.toFixed(decimals);
 }
 
 const FIRST = [
@@ -825,6 +835,7 @@ export function getNbaPlayerStatLeadersMock(): NbaPlayerStatLeadersBundle {
   cacheVer = MOCK_CACHE_KEY;
   cached = {
     season: buildLeadersBundle("season"),
+    playoffs: buildLeadersBundle("season"),
     last10: buildLeadersBundle("last10"),
     asOfLabel: "MOCK · BDL leaders · 2025-26",
   };

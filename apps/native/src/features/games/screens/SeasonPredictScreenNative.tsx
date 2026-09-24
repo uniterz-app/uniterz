@@ -6,7 +6,6 @@ import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
-  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -18,6 +17,7 @@ import { cyberAlert } from "../../../components/cyberAlert";
 import GamesNbaSubpageShellNative from "../GamesNbaSubpageShellNative";
 import type { GamesStackParamList } from "../../../navigation/types";
 import { useBottomTabBarInsets } from "../../../navigation/useBottomTabBarInsets";
+import { keyboardAvoidingBehavior } from "../../../ui/keyboardAvoidingBehaviorNative";
 import NbaSeasonStandingsPredictPanelNative from "../predict/season/NbaSeasonStandingsPredictPanelNative";
 import NbaSeasonStandingsViewPanelNative from "../predict/season/NbaSeasonStandingsViewPanelNative";
 import NbaSeasonStandingsMarketPanelNative from "../predict/season/NbaSeasonStandingsMarketPanelNative";
@@ -347,7 +347,7 @@ export default function SeasonPredictScreenNative() {
   return (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      behavior={keyboardAvoidingBehavior}
     >
     <GamesNbaSubpageShellNative
       eyebrow="NBA · SEASON"

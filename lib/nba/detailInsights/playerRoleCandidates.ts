@@ -1,5 +1,8 @@
 /**
  * PLAYER ROLE — 候補プール evaluate
+ *
+ * 1st/2nd/3rd option は所属チーム内の得点責任（PPG 順位）。
+ * リーグ全体の USG 帯では切らない。
  */
 import type {
   DetailInsightChip,
@@ -8,7 +11,6 @@ import type {
 import {
   isBigPosition,
   playerMetricRank,
-  rankInRange,
   scoreFromBottomRank,
   scoreFromHighRank,
   scoreFromLowRank,
@@ -24,6 +26,9 @@ export type PlayerRoleInput = {
   >;
   position: string;
   rosterPlayer?: NbaRosterPlayer | null;
+  /** 所属チームのロスター（option 判定用） */
+  teammates?: NbaRosterPlayer[] | null;
+  playerId?: string | null;
   seasonMin: number;
 };
 
@@ -42,30 +47,75 @@ function r(
   return playerMetricRank(metrics, id);
 }
 
+/** 出場が薄い選手を除き、チーム内 PPG 上位で option 順位を付ける */
+export function teamScoringOptionRank(
+  playerId: string | null | undefined,
+  teammates: NbaRosterPlayer[] | null | undefined
+): number | null {
+  const want = String(playerId ?? "").trim();
+  if (!want || !teammates?.length) return null;
+
+  const pool = teammates
+    .filter((p) => {
+      const mpg = Number(p.mpg) || 0;
+      const gp = Number(p.gp) || 0;
+      // 回転の核だけ（深ベンチ除外）
+      return mpg >= 15 || (mpg >= 12 && gp >= 20);
+    })
+    .slice()
+    .sort(
+      (a, b) =>
+        (Number(b.ppg) || 0) - (Number(a.ppg) || 0) ||
+        (Number(b.mpg) || 0) - (Number(a.mpg) || 0) ||
+        String(a.id).localeCompare(String(b.id))
+    );
+
+  const idx = pool.findIndex((p) => String(p.id) === want);
+  return idx >= 0 ? idx + 1 : null;
+}
+
+function optionChipFromTeamRank(
+  teamRank: number | null
+): ScoredChipCandidate | null {
+  if (teamRank === 1) {
+    return chip({
+      id: "first_option",
+      label: "1ST OPTION",
+      category: "usage",
+      exclusiveGroup: "usage_tier",
+      tieBreak: 90,
+      score: 20,
+    });
+  }
+  if (teamRank === 2) {
+    return chip({
+      id: "second_option",
+      label: "2ND OPTION",
+      category: "usage",
+      exclusiveGroup: "usage_tier",
+      tieBreak: 80,
+      score: 16,
+    });
+  }
+  if (teamRank === 3) {
+    return chip({
+      id: "third_option",
+      label: "3RD OPTION",
+      category: "usage",
+      exclusiveGroup: "usage_tier",
+      tieBreak: 70,
+      score: 12,
+    });
+  }
+  return null;
+}
+
 const CANDIDATES: CandidateEval[] = [
   {
-    evaluate: ({ leaderMetrics }) => {
-      const usg = r(leaderMetrics, "usg");
-      const pts = r(leaderMetrics, "pts");
-      if (!rankInRange(usg, 1, 8) || pts == null || pts > 12) return null;
-      return chip({ id: "first_option", label: "1ST OPTION", category: "usage", exclusiveGroup: "usage_tier", tieBreak: 90, score: scoreFromHighRank(usg!) });
-    },
-  },
-  {
-    evaluate: ({ leaderMetrics }) => {
-      const usg = r(leaderMetrics, "usg");
-      const pts = r(leaderMetrics, "pts");
-      if (!rankInRange(usg, 9, 16) || pts == null || pts > 18) return null;
-      return chip({ id: "second_option", label: "2ND OPTION", category: "usage", exclusiveGroup: "usage_tier", tieBreak: 80, score: scoreFromHighRank(16 - (usg! - 8)) });
-    },
-  },
-  {
-    evaluate: ({ leaderMetrics }) => {
-      const usg = r(leaderMetrics, "usg");
-      const pts = r(leaderMetrics, "pts");
-      if (!rankInRange(usg, 17, 22) || pts == null || pts > 22) return null;
-      return chip({ id: "third_option", label: "3RD OPTION", category: "usage", exclusiveGroup: "usage_tier", tieBreak: 70, score: 6 });
-    },
+    evaluate: (input) =>
+      optionChipFromTeamRank(
+        teamScoringOptionRank(input.playerId, input.teammates)
+      ),
   },
   {
     evaluate: ({ leaderMetrics }) => {
@@ -75,23 +125,48 @@ const CANDIDATES: CandidateEval[] = [
       const pnrOk = pnr != null && pnr <= 10;
       const astOk = ast != null && ast <= 10 && usg != null && usg <= 18;
       if (!pnrOk && !astOk) return null;
-      const score = Math.max(pnrOk ? scoreFromHighRank(pnr!) : 0, astOk ? scoreFromHighRank(ast!) : 0);
-      return chip({ id: "primary_handler", label: "PRIMARY HANDLER", category: "offense_style", exclusiveGroup: "creator", tieBreak: 75, score });
+      const score = Math.max(
+        pnrOk ? scoreFromHighRank(pnr!) : 0,
+        astOk ? scoreFromHighRank(ast!) : 0
+      );
+      return chip({
+        id: "primary_handler",
+        label: "PRIMARY HANDLER",
+        category: "offense_style",
+        exclusiveGroup: "creator",
+        tieBreak: 75,
+        score,
+      });
     },
   },
   {
     evaluate: ({ leaderMetrics }) => {
       const ast = r(leaderMetrics, "ast");
       const usg = r(leaderMetrics, "usg");
-      if (ast == null || ast > 14 || usg == null || usg < 14 || usg > 22) return null;
-      return chip({ id: "secondary_creator", label: "SECONDARY CREATOR", category: "offense_style", exclusiveGroup: "creator", tieBreak: 65, score: scoreFromHighRank(ast) });
+      if (ast == null || ast > 14 || usg == null || usg < 14 || usg > 22)
+        return null;
+      return chip({
+        id: "secondary_creator",
+        label: "SECONDARY CREATOR",
+        category: "offense_style",
+        exclusiveGroup: "creator",
+        tieBreak: 65,
+        score: scoreFromHighRank(ast),
+      });
     },
   },
   {
     evaluate: ({ leaderMetrics }) => {
       const astPct = r(leaderMetrics, "ast_pct");
       if (astPct == null || astPct > 10) return null;
-      return chip({ id: "playmaker", label: "PLAYMAKER", category: "offense_style", exclusiveGroup: "creator", tieBreak: 64, score: scoreFromHighRank(astPct) });
+      return chip({
+        id: "playmaker",
+        label: "PLAYMAKER",
+        category: "offense_style",
+        exclusiveGroup: "creator",
+        tieBreak: 64,
+        score: scoreFromHighRank(astPct),
+      });
     },
   },
   {
@@ -99,15 +174,30 @@ const CANDIDATES: CandidateEval[] = [
       const spot = r(leaderMetrics, "spotup_freq");
       const usg = r(leaderMetrics, "usg");
       if (spot == null || spot > 10 || usg == null || usg < 14) return null;
-      return chip({ id: "spot_up", label: "SPOT-UP SHOOTER", category: "offense_style", exclusiveGroup: "shooter_type", tieBreak: 60, score: scoreFromHighRank(spot) });
+      return chip({
+        id: "spot_up",
+        label: "SPOT-UP SHOOTER",
+        category: "offense_style",
+        exclusiveGroup: "shooter_type",
+        tieBreak: 60,
+        score: scoreFromHighRank(spot),
+      });
     },
   },
   {
     evaluate: ({ leaderMetrics }) => {
       const fg3a = r(leaderMetrics, "fg3a");
       const usg = r(leaderMetrics, "usg");
-      if (fg3a == null || fg3a > 12 || usg == null || usg < 14 || usg > 24) return null;
-      return chip({ id: "floor_spacer", label: "FLOOR SPACER", category: "offense_style", exclusiveGroup: "shooter_type", tieBreak: 58, score: scoreFromHighRank(fg3a) });
+      if (fg3a == null || fg3a > 12 || usg == null || usg < 14 || usg > 24)
+        return null;
+      return chip({
+        id: "floor_spacer",
+        label: "FLOOR SPACER",
+        category: "offense_style",
+        exclusiveGroup: "shooter_type",
+        tieBreak: 58,
+        score: scoreFromHighRank(fg3a),
+      });
     },
   },
   {
@@ -116,22 +206,42 @@ const CANDIDATES: CandidateEval[] = [
       const stl = r(leaderMetrics, "stl");
       const mfg = r(leaderMetrics, "matchup_fg_pct");
       const defRank = mfg ?? stl;
-      if (fg3a == null || fg3a > 12 || defRank == null || defRank > 12) return null;
-      return chip({ id: "three_d", label: "3&D WING", category: "offense_style", exclusiveGroup: "shooter_type", tieBreak: 62, score: scoreFromHighRank(fg3a) + scoreFromLowRank(defRank) });
+      if (fg3a == null || fg3a > 12 || defRank == null || defRank > 12)
+        return null;
+      return chip({
+        id: "three_d",
+        label: "3&D WING",
+        category: "offense_style",
+        exclusiveGroup: "shooter_type",
+        tieBreak: 62,
+        score: scoreFromHighRank(fg3a) + scoreFromLowRank(defRank),
+      });
     },
   },
   {
     evaluate: ({ leaderMetrics }) => {
       const rim = r(leaderMetrics, "restricted_fg_pct");
       if (rim == null || rim > 10) return null;
-      return chip({ id: "rim_runner", label: "RIM RUNNER", category: "offense_style", tieBreak: 55, score: scoreFromHighRank(rim) });
+      return chip({
+        id: "rim_runner",
+        label: "RIM RUNNER",
+        category: "offense_style",
+        tieBreak: 55,
+        score: scoreFromHighRank(rim),
+      });
     },
   },
   {
     evaluate: ({ leaderMetrics }) => {
       const drives = r(leaderMetrics, "drives");
       if (drives == null || drives > 10) return null;
-      return chip({ id: "slasher", label: "SLASHER", category: "offense_style", tieBreak: 54, score: scoreFromHighRank(drives) });
+      return chip({
+        id: "slasher",
+        label: "SLASHER",
+        category: "offense_style",
+        tieBreak: 54,
+        score: scoreFromHighRank(drives),
+      });
     },
   },
   {
@@ -139,21 +249,39 @@ const CANDIDATES: CandidateEval[] = [
       const paint = r(leaderMetrics, "paint_touches");
       const rim = r(leaderMetrics, "restricted_fg_pct");
       if (paint == null || paint > 10 || rim == null || rim > 12) return null;
-      return chip({ id: "paint_finisher", label: "PAINT FINISHER", category: "offense_style", tieBreak: 53, score: scoreFromHighRank(paint) });
+      return chip({
+        id: "paint_finisher",
+        label: "PAINT FINISHER",
+        category: "offense_style",
+        tieBreak: 53,
+        score: scoreFromHighRank(paint),
+      });
     },
   },
   {
     evaluate: ({ leaderMetrics }) => {
       const post = r(leaderMetrics, "post_freq");
       if (post == null || post > 10) return null;
-      return chip({ id: "post_scorer", label: "POST SCORER", category: "offense_style", tieBreak: 52, score: scoreFromHighRank(post) });
+      return chip({
+        id: "post_scorer",
+        label: "POST SCORER",
+        category: "offense_style",
+        tieBreak: 52,
+        score: scoreFromHighRank(post),
+      });
     },
   },
   {
     evaluate: ({ leaderMetrics }) => {
       const cut = r(leaderMetrics, "cut_freq");
       if (cut == null || cut > 10) return null;
-      return chip({ id: "cutter", label: "CUTTER", category: "offense_style", tieBreak: 51, score: scoreFromHighRank(cut) });
+      return chip({
+        id: "cutter",
+        label: "CUTTER",
+        category: "offense_style",
+        tieBreak: 51,
+        score: scoreFromHighRank(cut),
+      });
     },
   },
   {
@@ -162,21 +290,40 @@ const CANDIDATES: CandidateEval[] = [
       const hnd = r(leaderMetrics, "handoff_freq");
       const best = off != null && hnd != null ? Math.min(off, hnd) : off ?? hnd;
       if (best == null || best > 10) return null;
-      return chip({ id: "off_ball_mover", label: "OFF-BALL MOVER", category: "offense_style", tieBreak: 50, score: scoreFromHighRank(best) });
+      return chip({
+        id: "off_ball_mover",
+        label: "OFF-BALL MOVER",
+        category: "offense_style",
+        tieBreak: 50,
+        score: scoreFromHighRank(best),
+      });
     },
   },
   {
     evaluate: ({ leaderMetrics }) => {
       const trans = r(leaderMetrics, "trans_freq");
       if (trans == null || trans > 10) return null;
-      return chip({ id: "transition_threat", label: "TRANSITION", category: "offense_style", tieBreak: 49, score: scoreFromHighRank(trans) });
+      return chip({
+        id: "transition_threat",
+        label: "TRANSITION",
+        category: "offense_style",
+        tieBreak: 49,
+        score: scoreFromHighRank(trans),
+      });
     },
   },
   {
     evaluate: ({ leaderMetrics }) => {
       const fga = r(leaderMetrics, "fga");
       if (fga == null || fga > 10) return null;
-      return chip({ id: "volume_scorer", label: "VOLUME SCORER", category: "offense_style", exclusiveGroup: "scorer_type", tieBreak: 48, score: scoreFromHighRank(fga) });
+      return chip({
+        id: "volume_scorer",
+        label: "VOLUME SCORER",
+        category: "offense_style",
+        exclusiveGroup: "scorer_type",
+        tieBreak: 48,
+        score: scoreFromHighRank(fga),
+      });
     },
   },
   {
@@ -184,14 +331,27 @@ const CANDIDATES: CandidateEval[] = [
       const ts = r(leaderMetrics, "ts_pct");
       const usg = r(leaderMetrics, "usg");
       if (ts == null || ts > 10 || usg == null || usg < 12) return null;
-      return chip({ id: "efficient_scorer", label: "EFFICIENT", category: "offense_style", exclusiveGroup: "scorer_type", tieBreak: 47, score: scoreFromHighRank(ts) });
+      return chip({
+        id: "efficient_scorer",
+        label: "EFFICIENT",
+        category: "offense_style",
+        exclusiveGroup: "scorer_type",
+        tieBreak: 47,
+        score: scoreFromHighRank(ts),
+      });
     },
   },
   {
     evaluate: ({ leaderMetrics }) => {
       const ftr = r(leaderMetrics, "fta_rate");
       if (ftr == null || ftr > 10) return null;
-      return chip({ id: "ft_magnet", label: "FT MAGNET", category: "offense_style", tieBreak: 46, score: scoreFromHighRank(ftr) });
+      return chip({
+        id: "ft_magnet",
+        label: "FT MAGNET",
+        category: "offense_style",
+        tieBreak: 46,
+        score: scoreFromHighRank(ftr),
+      });
     },
   },
   {
@@ -200,7 +360,13 @@ const CANDIDATES: CandidateEval[] = [
       const cp = r(leaderMetrics, "clutch_pts");
       const best = cu ?? cp;
       if (best == null || best > 10) return null;
-      return chip({ id: "closer", label: "CLOSER", category: "offense_style", tieBreak: 45, score: scoreFromHighRank(best) });
+      return chip({
+        id: "closer",
+        label: "CLOSER",
+        category: "offense_style",
+        tieBreak: 45,
+        score: scoreFromHighRank(best),
+      });
     },
   },
   {
@@ -209,7 +375,14 @@ const CANDIDATES: CandidateEval[] = [
       const stl = r(leaderMetrics, "stl");
       const best = mfg ?? stl;
       if (best == null || best > 12) return null;
-      return chip({ id: "pao_defender", label: "POA DEFENDER", category: "defense", exclusiveGroup: "defense_type", tieBreak: 44, score: scoreFromLowRank(best) });
+      return chip({
+        id: "pao_defender",
+        label: "POA DEFENDER",
+        category: "defense",
+        exclusiveGroup: "defense_type",
+        tieBreak: 44,
+        score: scoreFromLowRank(best),
+      });
     },
   },
   {
@@ -218,22 +391,47 @@ const CANDIDATES: CandidateEval[] = [
       const lt6 = r(leaderMetrics, "opp_lt6_pct");
       const best = blk ?? lt6;
       if (best == null || best > 10) return null;
-      return chip({ id: "rim_protector", label: "RIM PROTECTOR", category: "defense", exclusiveGroup: "defense_type", tieBreak: 43, score: scoreFromLowRank(best) });
+      return chip({
+        id: "rim_protector",
+        label: "RIM PROTECTOR",
+        category: "defense",
+        exclusiveGroup: "defense_type",
+        tieBreak: 43,
+        score: scoreFromLowRank(best),
+      });
     },
   },
   {
     evaluate: ({ leaderMetrics, seasonMin }) => {
       const drtg = r(leaderMetrics, "drtg");
       const min = r(leaderMetrics, "min");
-      if (drtg == null || drtg > 10 || ((min == null || min > 15) && seasonMin < 24)) return null;
-      return chip({ id: "def_anchor", label: "DEF ANCHOR", category: "defense", exclusiveGroup: "defense_type", tieBreak: 42, score: scoreFromLowRank(drtg) });
+      if (
+        drtg == null ||
+        drtg > 10 ||
+        ((min == null || min > 15) && seasonMin < 24)
+      )
+        return null;
+      return chip({
+        id: "def_anchor",
+        label: "DEF ANCHOR",
+        category: "defense",
+        exclusiveGroup: "defense_type",
+        tieBreak: 42,
+        score: scoreFromLowRank(drtg),
+      });
     },
   },
   {
     evaluate: ({ leaderMetrics }) => {
       const reb = r(leaderMetrics, "reb_pct");
       if (reb == null || reb > 10) return null;
-      return chip({ id: "glass_cleaner", label: "GLASS CLEANER", category: "defense", tieBreak: 41, score: scoreFromHighRank(reb) });
+      return chip({
+        id: "glass_cleaner",
+        label: "GLASS CLEANER",
+        category: "defense",
+        tieBreak: 41,
+        score: scoreFromHighRank(reb),
+      });
     },
   },
   {
@@ -243,21 +441,41 @@ const CANDIDATES: CandidateEval[] = [
       const lb = r(leaderMetrics, "loose_balls");
       const ranks = [def, chg, lb].filter((x): x is number => x != null);
       if (!ranks.length || Math.min(...ranks) > 10) return null;
-      return chip({ id: "hustle_energy", label: "HUSTLE", category: "defense", tieBreak: 40, score: scoreFromHighRank(Math.min(...ranks)) });
+      return chip({
+        id: "hustle_energy",
+        label: "HUSTLE",
+        category: "defense",
+        tieBreak: 40,
+        score: scoreFromHighRank(Math.min(...ranks)),
+      });
     },
   },
   {
     evaluate: ({ leaderMetrics, position }) => {
       const fg3a = r(leaderMetrics, "fg3a");
       if (!isBigPosition(position) || fg3a == null || fg3a > 15) return null;
-      return chip({ id: "stretch_big", label: "STRETCH BIG", category: "big", exclusiveGroup: "big_type", tieBreak: 39, score: scoreFromHighRank(fg3a) });
+      return chip({
+        id: "stretch_big",
+        label: "STRETCH BIG",
+        category: "big",
+        exclusiveGroup: "big_type",
+        tieBreak: 39,
+        score: scoreFromHighRank(fg3a),
+      });
     },
   },
   {
     evaluate: ({ leaderMetrics }) => {
       const roll = r(leaderMetrics, "pnr_roll_freq");
       if (roll == null || roll > 10) return null;
-      return chip({ id: "roll_man", label: "ROLL MAN", category: "big", exclusiveGroup: "big_type", tieBreak: 38, score: scoreFromHighRank(roll) });
+      return chip({
+        id: "roll_man",
+        label: "ROLL MAN",
+        category: "big",
+        exclusiveGroup: "big_type",
+        tieBreak: 38,
+        score: scoreFromHighRank(roll),
+      });
     },
   },
   {
@@ -265,9 +483,17 @@ const CANDIDATES: CandidateEval[] = [
       const usg = r(leaderMetrics, "usg");
       const min = r(leaderMetrics, "min");
       if (!isBigPosition(position)) return null;
-      const minRank = min ?? (seasonMin >= 28 ? 10 : seasonMin >= 20 ? 18 : 25);
+      const minRank =
+        min ?? (seasonMin >= 28 ? 10 : seasonMin >= 20 ? 18 : 25);
       if (minRank < 18 || usg == null || usg < 20) return null;
-      return chip({ id: "backup_big", label: "BACKUP BIG", category: "big", exclusiveGroup: "big_type", tieBreak: 37, score: 8 });
+      return chip({
+        id: "backup_big",
+        label: "BACKUP BIG",
+        category: "big",
+        exclusiveGroup: "big_type",
+        tieBreak: 37,
+        score: 8,
+      });
     },
   },
   {
@@ -275,21 +501,54 @@ const CANDIDATES: CandidateEval[] = [
       const ast = r(leaderMetrics, "ast");
       const usg = r(leaderMetrics, "usg");
       const ts = r(leaderMetrics, "ts_pct");
-      if (ast == null || ast > 18 || usg == null || usg < 22 || ts == null || ts > 12) return null;
-      return chip({ id: "connector", label: "CONNECTOR", category: "offense_style", tieBreak: 36, score: 7 });
+      if (
+        ast == null ||
+        ast > 18 ||
+        usg == null ||
+        usg < 22 ||
+        ts == null ||
+        ts > 12
+      )
+        return null;
+      return chip({
+        id: "connector",
+        label: "CONNECTOR",
+        category: "offense_style",
+        tieBreak: 36,
+        score: 7,
+      });
     },
   },
   {
     evaluate: ({ rosterPlayer }) => {
-      if (!rosterPlayer || rosterPlayer.starter !== false || rosterPlayer.mpg < 24) return null;
-      return chip({ id: "sixth_man", label: "SIXTH MAN", category: "usage", exclusiveGroup: "bench_role", tieBreak: 85, score: 14 });
+      if (
+        !rosterPlayer ||
+        rosterPlayer.starter !== false ||
+        rosterPlayer.mpg < 24
+      )
+        return null;
+      return chip({
+        id: "sixth_man",
+        label: "SIXTH MAN",
+        category: "usage",
+        exclusiveGroup: "bench_role",
+        tieBreak: 85,
+        score: 14,
+      });
     },
   },
   {
     evaluate: ({ leaderMetrics }) => {
       const usg = r(leaderMetrics, "usg");
       if (usg == null || usg < 26) return null;
-      return chip({ id: "low_usage", label: "LOW-USAGE", category: "usage", exclusiveGroup: "bench_role", tieBreak: 10, score: scoreFromBottomRank(usg) });
+      return chip({
+        id: "low_usage",
+        label: "LOW-USAGE",
+        category: "usage",
+        exclusiveGroup: "bench_role",
+        tieBreak: 10,
+        score: scoreFromBottomRank(usg),
+      });
     },
   },
 ];

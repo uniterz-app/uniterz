@@ -101,7 +101,11 @@ function collectPlayers(
   bundle: NbaPlayerStatLeadersBundle
 ): Record<string, CompactPlayer> {
   const players: Record<string, CompactPlayer> = {};
-  for (const window of [bundle.season, bundle.last10] as const) {
+  for (const window of [
+    bundle.season,
+    bundle.playoffs ?? emptyPlayerBoardFallback(),
+    bundle.last10,
+  ] as const) {
     for (const rows of Object.values(window)) {
       for (const row of rows) {
         if (!players[row.playerId]) {
@@ -115,6 +119,13 @@ function collectPlayers(
     }
   }
   return players;
+}
+
+function emptyPlayerBoardFallback(): Record<
+  NbaPlayerLeaderMetricId,
+  NbaPlayerStatLeaderRow[]
+> {
+  return {} as Record<NbaPlayerLeaderMetricId, NbaPlayerStatLeaderRow[]>;
 }
 
 function compactBoard(
@@ -136,12 +147,14 @@ export function compactPlayerStatLeadersBundle(
 ): {
   players: Record<string, CompactPlayer>;
   season: Record<string, CompactEntry[]>;
+  playoffs: Record<string, CompactEntry[]>;
   last10: Record<string, CompactEntry[]>;
   asOfLabel: string;
 } {
   return {
     players: collectPlayers(bundle),
     season: compactBoard(bundle.season),
+    playoffs: compactBoard(bundle.playoffs ?? emptyPlayerBoardFallback()),
     last10: compactBoard(bundle.last10),
     asOfLabel: bundle.asOfLabel,
   };
@@ -155,11 +168,23 @@ export function bundleFromFirestoreData(
   const season = parseBoard(data.season, players);
   const last10 = parseBoard(data.last10, players);
   if (!season || !last10) return null;
+  // 旧スナップショットは playoffs 無し
+  let playoffs: Record<NbaPlayerLeaderMetricId, NbaPlayerStatLeaderRow[]>;
+  if (data.playoffs == null) {
+    playoffs = {} as Record<NbaPlayerLeaderMetricId, NbaPlayerStatLeaderRow[]>;
+    for (const key of Object.keys(season) as NbaPlayerLeaderMetricId[]) {
+      playoffs[key] = [];
+    }
+  } else {
+    const parsed = parseBoard(data.playoffs, players);
+    if (!parsed) return null;
+    playoffs = parsed;
+  }
   const asOfLabel =
     typeof data.asOfLabel === "string" && data.asOfLabel.trim()
       ? data.asOfLabel.trim()
       : "—";
-  return { season, last10, asOfLabel };
+  return { season, playoffs, last10, asOfLabel };
 }
 
 export function mockPlayerStatLeadersBundle(): NbaPlayerStatLeadersBundle {
@@ -221,6 +246,7 @@ export function resolvePlayerStatLeadersEmptyFallback(
   return {
     bundle: {
       season: empty,
+      playoffs: emptyPlayerLeadersBoard(),
       last10: emptyPlayerLeadersBoard(),
       asOfLabel: preseason
         ? preseasonLeagueStatsAsOfLabel(seasonKey)

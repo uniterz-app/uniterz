@@ -7,6 +7,9 @@ import {
   companyAddress,
   companyLegalName,
   companyRepresentative,
+  COMPANY_CORPORATE_NUMBER,
+  COMPANY_FOUNDED,
+  COMPANY_FOUNDED_EN,
   COMPANY_WEB_URL,
 } from "@/lib/legal/companyInfo";
 import LegalPageLayoutNative from "./LegalPageLayoutNative";
@@ -26,6 +29,8 @@ export default function ElectronicNoticeScreenNative() {
         { label: "Company", value: companyLegalName("en") },
         { label: "Address", value: companyAddress("en") },
         { label: "Representative", value: companyRepresentative("en") },
+        { label: "Founded", value: COMPANY_FOUNDED_EN },
+        { label: "Corporate number", value: COMPANY_CORPORATE_NUMBER },
         { label: "Method of notice", value: "Electronic notice" },
         { label: "Notice URL", value: NOTICE_URL },
         {
@@ -37,6 +42,8 @@ export default function ElectronicNoticeScreenNative() {
         { label: "会社名", value: companyLegalName("ja") },
         { label: "所在地", value: companyAddress("ja") },
         { label: "代表者", value: companyRepresentative("ja") },
+        { label: "設立", value: COMPANY_FOUNDED },
+        { label: "法人番号", value: COMPANY_CORPORATE_NUMBER },
         { label: "公告の方法", value: "電子公告" },
         { label: "公告掲載 URL", value: NOTICE_URL },
         { label: "公告事項", value: "現在、公告すべき事項はありません。" },

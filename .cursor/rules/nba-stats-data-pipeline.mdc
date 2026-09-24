@@ -23,6 +23,16 @@ BDL（サーバーのみ）
 - 公開 API がリクエストのたびに BDL をライブ取得する（例外なし）
 - チームペイロールの「今季1行」から複数年契約をでっち上げる
 
+## 表示シーズン（オフ／プレ）
+
+カレンダー今季にリーグ表 or プレイヤーリーダーが **1 件も無い** あいだは、公開スタッツ UI（リーグ表・チーム／プレイヤー詳細のスタッツ切片・マッチアップ統計）は前期を表示する（`resolveNbaStatsDisplaySeasonKey`）。
+
+**ロスター／injury／契約／ペイロール** は別解決（`resolveNbaRosterInjuryDisplaySeasonKey`）: 今季スナップショットがあれば今季を優先。スタッツが前期でも開幕前のロスター・injury は今季を出す。
+
+**チーム詳細の FORM / 連勝 / W–L / seed**（`gameLog` + `standings`）と **マッチアップ直近フォーム** は、スタッツが前期フォールバック中でも **カレンダー今季** を読む（開幕前は 0-0・連勝なし）。指標切片・strength / ace-out / shapes は前期のまま。
+
+今季スタッツが 1 件でも入ったらスタッツ側も今季へ切替。ingest は明示シーズンのみ（自動切替しない）。
+
 ## プレイヤー詳細で必要なスナップショット
 
 | データ | Firestore | ingest | 公開 API |
@@ -70,14 +80,18 @@ BDL（サーバーのみ）
 - Next `POST /api/admin/nba-stats-daily-ingest`（`mode: "daily"`）
 - 中身: rosters → games → league-stats → **team-game-logs** → **standings** → **team-season-records** → **team-shape-records** → shot-zones → **player-game-logs-incremental**（直近 box 出場者）
 - **injury** は日次から分離 → Firebase `runNbaInjuryBaseline16Cron`（16:00 · 試合日）/ `runNbaInjuryBaseline23Cron`（23:00）/ `runNbaInjuryPregameCron`（10分毎 · T-3h/1h/30m 窓）→ `POST /api/admin/nba-injury-ingest`
-- `mode: "heavy"` でプレイヤー試合ログ全件も（タイムアウト注意）。試合ログ書き込み後に leaders last10 を game logs から再集計（追加 BDL なし）
+- `mode: "heavy"` でプレイヤー試合ログ全件も（タイムアウト注意）。試合ログ書き込み後に leaders のシーズン回数ボードを game logs から再集計（追加 BDL なし。リーグ表 last10 は書かない）
 - 週次 Firebase cron `runNbaStatsWeeklyIngestCron` — **月曜 10:00 JST** → `POST /api/admin/nba-stats-weekly-ingest`（payroll + contracts）。キャリアは手動
 - チーム league-stats は scoring / hustle / tracking / clutch / playtype 込み（HOW THEY PLAY）。team by_zone は BDL 不可 → リーグ表 RIM/C3 非表示・チーム詳細 SHOT 枠なし
-- 公開 API の前期フォールバックはしない。Team リーグ表に Last 10 タブは出さない（マッチアップ FORM / Pro Insight のみ box 由来）
+- 公開スタッツの表示シーズンは上記「表示シーズン」に従う（今季空→前期。BDL ライブは禁止のまま）
+- リーグ表は年切替（`2020-21`〜今季・◀▶）+ SEASON / PLAYOFFS。playoffs は ingest で BDL `season_type=playoffs` を同梱。過去分は `lookbackSeasons`（今季→2020-21）で一括 ingest
+- Player リーダーの所属タグは `/nba/v1/stats` のそのシーズン出場分（現役ロスターは使わない）
+- リーグ表に Last 10 タブは出さない（マッチアップ FORM / Pro Insight のみ box 由来）
+- リーグ表 API は `?season=` 明示時に前期フォールバックしない（年ナビと表示季がズレない）
 - ロスターに bio（height/weight/college/country/draft*）を載せ、プレイヤー詳細はシード bio を使わない
 - 詳細 overlay は `?team=` / `?player=` でレスポンスを絞る
 - プレイヤー詳細の venue / vs-opp はデータ未配線のためセクション非表示（空 NO DATA を出さない）
-- リーグ表 PLAYOFFS タブはデータ未接続のため非表示（`NBA_LEAGUE_STATS_PHASES`）
+- Team RIM/C3 は team by_zone が BDL 400 のため非表示（レギュラー／プレーオフ共通）
 
 ## ライブ試合（スコア + liveStats）
 

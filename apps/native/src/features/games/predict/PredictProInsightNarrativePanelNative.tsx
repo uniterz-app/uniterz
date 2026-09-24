@@ -3,7 +3,7 @@
  * HOME/AWAY 分割なし（被る事実は1回だけ）。
  */
 import { useMemo } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { Platform, StyleSheet, Text, View } from "react-native";
 import type {
   ProInsightNarrativeBrief,
   ProInsightNarrativeKind,
@@ -71,13 +71,40 @@ export default function PredictProInsightNarrativePanelNative({
         <View style={styles.proBadgeWrap}>
           <ProCyberBadgeNative premium />
         </View>
-        <Text style={[styles.matchTeam, { color: awayColor }]} numberOfLines={1}>
-          {awayNick}
-        </Text>
-        <Text style={styles.matchVs}>vs</Text>
-        <Text style={[styles.matchTeam, { color: homeColor }]} numberOfLines={1}>
-          {homeNick}
-        </Text>
+        <View
+          collapsable={false}
+          renderToHardwareTextureAndroid
+          style={[
+            styles.matchTeamSkew,
+            Platform.OS === "android" ? { opacity: 0.999 } : null,
+          ]}
+        >
+          <Text style={[styles.matchTeam, { color: awayColor }]} numberOfLines={1}>
+            {awayNick}
+          </Text>
+        </View>
+        <View
+          collapsable={false}
+          renderToHardwareTextureAndroid
+          style={[
+            styles.matchVsSkew,
+            Platform.OS === "android" ? { opacity: 0.999 } : null,
+          ]}
+        >
+          <Text style={styles.matchVs}>vs</Text>
+        </View>
+        <View
+          collapsable={false}
+          renderToHardwareTextureAndroid
+          style={[
+            styles.matchTeamSkew,
+            Platform.OS === "android" ? { opacity: 0.999 } : null,
+          ]}
+        >
+          <Text style={[styles.matchTeam, { color: homeColor }]} numberOfLines={1}>
+            {homeNick}
+          </Text>
+        </View>
       </View>
 
       {note ? <Text style={styles.sampleNote}>{note}</Text> : null}
@@ -93,7 +120,15 @@ export default function PredictProInsightNarrativePanelNative({
                 si < brief.sections.length - 1 ? styles.sectionBorder : null,
               ]}
             >
-              <View style={[styles.kindWrap, { borderColor: accent }]}>
+              <View
+                collapsable={false}
+                renderToHardwareTextureAndroid
+                style={[
+                  styles.kindWrap,
+                  { borderColor: accent },
+                  Platform.OS === "android" ? { opacity: 0.999 } : null,
+                ]}
+              >
                 <Text style={[styles.kind, { color: accent }]}>
                   {section.kind}
                 </Text>
@@ -101,7 +136,16 @@ export default function PredictProInsightNarrativePanelNative({
               <View style={styles.items}>
                 {section.items.map((item, ii) => (
                   <View key={`${section.kind}-${ii}`} style={styles.item}>
-                    <Text style={styles.body}>{t(item.body, language)}</Text>
+                    <View
+                      collapsable={false}
+                      renderToHardwareTextureAndroid
+                      style={[
+                        styles.bodySkew,
+                        Platform.OS === "android" ? { opacity: 0.999 } : null,
+                      ]}
+                    >
+                      <Text style={styles.body}>{t(item.body, language)}</Text>
+                    </View>
                     {item.evidence.length > 0 ? (
                       <View style={styles.evidenceList}>
                         {item.evidence.map((ev, j) => (
@@ -141,6 +185,11 @@ const styles = StyleSheet.create({
     flexShrink: 0,
     transform: [{ scale: 0.92 }],
   },
+  matchTeamSkew: {
+    flexShrink: 1,
+    maxWidth: "42%",
+    transform: [{ skewX: "-8deg" }],
+  },
   matchTeam: {
     flexShrink: 1,
     fontFamily: MATCH_CARD_TEAM_NAME_FONT,
@@ -148,6 +197,9 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     letterSpacing: 1.2,
     textTransform: "uppercase",
+  },
+  matchVsSkew: {
+    flexShrink: 0,
     transform: [{ skewX: "-8deg" }],
   },
   matchVs: {
@@ -157,7 +209,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.6,
     color: "rgba(255,255,255,0.45)",
     textTransform: "lowercase",
-    transform: [{ skewX: "-8deg" }],
   },
   sampleNote: {
     fontFamily: JP_600,
@@ -181,6 +232,8 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
     backgroundColor: "#000",
     borderWidth: 1,
+    borderRadius: 0,
+    overflow: "hidden",
     paddingHorizontal: 8,
     paddingVertical: 2,
     transform: [{ skewX: "-6deg" }],
@@ -190,6 +243,9 @@ const styles = StyleSheet.create({
     fontSize: 10,
     letterSpacing: 1.6,
     textTransform: "uppercase",
+    includeFontPadding: false,
+    /** 枠の skew を相殺して字形の潰れを防ぐ */
+    transform: [{ skewX: "6deg" }],
   },
   items: {
     gap: 10,
@@ -197,12 +253,14 @@ const styles = StyleSheet.create({
   item: {
     gap: 4,
   },
+  bodySkew: {
+    transform: [{ skewX: "-4deg" }],
+  },
   body: {
     fontFamily: JP_600,
     fontSize: 13,
     lineHeight: 19,
     color: "rgba(255,255,255,0.9)",
-    transform: [{ skewX: "-4deg" }],
   },
   evidenceList: {
     gap: 2,

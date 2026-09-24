@@ -34,6 +34,7 @@ const SEASON_TO_LEADER: Partial<
   fg3m: "fg3m",
   fg3a: "fg3a",
   ft_pct: "ft_pct",
+  fta: "fta",
 };
 
 const RANK_HIDDEN = 999;
@@ -53,8 +54,14 @@ export function findPlayerInLeaders(
   bundle: NbaPlayerStatLeadersBundle,
   playerId: string
 ): NbaPlayerStatLeaderRow | null {
-  for (const window of [bundle.season, bundle.last10] as const) {
+  const windows = [
+    bundle.season,
+    bundle.playoffs ?? {},
+    bundle.last10,
+  ] as const;
+  for (const window of windows) {
     for (const rows of Object.values(window)) {
+      if (!Array.isArray(rows)) continue;
       const hit = rows.find((r) => r.playerId === playerId);
       if (hit) return hit;
     }
@@ -84,8 +91,11 @@ function leaderValue(
 }
 
 /**
- * 詳細の氏名・所属・順位・値をリーダー表から上書き。
+ * 詳細の氏名・順位・値をリーダー表から上書き。
  * 値は Top30 に載っている指標だけ差し替え。載っていない指標はロスター平均を残す。
+ *
+ * 所属はロスター優先。leaders の teamId はスタッツ表示季の所属なので、
+ * オフ／前期フォールバックやトレード直後に現所属を潰してしまう。
  */
 export function overlayPlayerDetailWithLeaders(
   detail: NbaPlayerDetailPreview,
@@ -95,11 +105,14 @@ export function overlayPlayerDetailWithLeaders(
   const nameParts = fromLeaders
     ? splitPlayerName(fromLeaders.playerName)
     : { firstName: detail.firstName, lastName: detail.lastName };
-  const teamId = fromLeaders?.teamId ?? detail.teamId;
-  const conference =
-    fromLeaders?.conference ??
-    nbaConferenceForTeam(teamId) ??
-    detail.conference;
+  const rosterTeamId = detail.teamId.trim();
+  const teamId =
+    rosterTeamId || fromLeaders?.teamId || detail.teamId;
+  const conference = rosterTeamId
+    ? (nbaConferenceForTeam(teamId) ?? detail.conference)
+    : (fromLeaders?.conference ??
+      nbaConferenceForTeam(teamId) ??
+      detail.conference);
 
   const season = { ...detail.season };
   const gp = fromLeaders?.gamesPlayed;
@@ -125,6 +138,7 @@ export function overlayPlayerDetailWithLeaders(
   patchSeason("fga", "fga");
   patchSeason("fg3m", "fg3m");
   patchSeason("fg3a", "fg3a");
+  patchSeason("fta", "fta");
 
   const seasonMetrics = detail.seasonMetrics.map((m) => {
     const leaderId = SEASON_TO_LEADER[m.id];

@@ -4,17 +4,16 @@
  * - 全選手 averages を取り、資格で絞ってから各チップ上位 30
  * - FG% / FT% / 3P% / TS% / eFG% 等: NBA.com Statistical Minimums（決め本数）
  * - counting / その他 Advanced: チーム試合数の 70% 出場
- * - last10 はここでは空。league / game-logs ingest が Firestore 試合ログから埋める
+ * - 所属チームは `/nba/v1/stats` のそのシーズン出場分（現役ロスターは使わない）
+ * - last10 はリーグ表に出さないため常に空
  */
-import {
-  fetchBdlActivePlayerTeamMap,
-  type BdlPlayerTeamRef,
-} from "@/lib/nba/bdl/fetchBdlActivePlayers";
+import type { BdlPlayerTeamRef } from "@/lib/nba/bdl/fetchBdlActivePlayers";
 import {
   fetchBdlPlayerSeasonAverages,
   type BdlPlayerSeasonAverageRow,
 } from "@/lib/nba/bdl/fetchBdlPlayerSeasonAverages";
 import { fetchBdlPlayerLeaders } from "@/lib/nba/bdl/fetchBdlPlayerLeaders";
+import { fetchBdlSeasonPlayerTeamMap } from "@/lib/nba/bdl/fetchBdlSeasonPlayerTeamMap";
 import { fetchBdlTeamSeasonAverages } from "@/lib/nba/bdl/fetchBdlTeamSeasonAverages";
 import {
   appTeamIdFromBdlAbbreviation,
@@ -108,11 +107,13 @@ function teamGamesOfPlayerWl(stats: Record<string, number>): number {
 }
 
 async function fetchTeamGamesByAppTeamId(
-  seasonYear: number
+  seasonYear: number,
+  seasonType: "regular" | "playoffs" = "regular"
 ): Promise<Map<string, number>> {
   const rows = await fetchBdlTeamSeasonAverages({
     seasonYear,
     type: "base",
+    seasonType,
   });
   const out = new Map<string, number>();
   for (const row of rows) {
@@ -179,19 +180,29 @@ type PlayerMetricsAccum = Map<
   }
 >;
 
-/** 全出場選手に value+rank を書き、リーグ表用に Top N だけ返す */
+/** リーダーボード行 + 公式資格フラグ（資格外は詳細用に値だけ残す） */
+type MetricBoardRow = NbaPlayerStatLeaderRow & { qualifies: boolean };
+
+/**
+ * 全選手に value を書き、公式資格者だけに rank（1-index）を付ける。
+ * リーグ表用には資格者の Top N だけ返す。資格外の rank は 0。
+ */
 function commitBoard(
   accum: PlayerMetricsAccum,
   metric: NbaPlayerLeaderMetricId,
-  rows: NbaPlayerStatLeaderRow[],
+  rows: MetricBoardRow[],
   higherIsBetter: boolean,
   limit: number = LEADER_BOARD_LIMIT
 ): NbaPlayerStatLeaderRow[] {
-  const ordered = [...rows].sort((a, b) =>
+  const orderedAll = [...rows].sort((a, b) =>
     higherIsBetter ? b.value - a.value : a.value - b.value
   );
-  for (let i = 0; i < ordered.length; i += 1) {
-    const row = ordered[i]!;
+  const orderedQualified = orderedAll.filter((r) => r.qualifies);
+  const rankById = new Map<string, number>();
+  for (let i = 0; i < orderedQualified.length; i += 1) {
+    rankById.set(orderedQualified[i]!.playerId, i + 1);
+  }
+  for (const row of orderedAll) {
     let bag = accum.get(row.playerId);
     if (!bag) {
       bag = {
@@ -204,9 +215,19 @@ function commitBoard(
       bag.teamId = row.teamId;
       bag.gamesPlayed = Math.max(bag.gamesPlayed, row.gamesPlayed);
     }
-    bag.metrics[metric] = { value: row.value, rank: i + 1 };
+    bag.metrics[metric] = {
+      value: row.value,
+      rank: rankById.get(row.playerId) ?? 0,
+    };
   }
-  return ordered.slice(0, limit);
+  return orderedQualified.slice(0, limit);
+}
+
+function nonPctQualifies(p: { teamGames: number; gp: number }): boolean {
+  return qualifiesForNonPctLeaders({
+    teamGamesPlayed: p.teamGames,
+    gamesPlayed: p.gp,
+  });
 }
 
 async function sleep(ms: number) {
@@ -217,6 +238,7 @@ async function averages(input: {
   seasonYear: number;
   category?: string;
   type?: string;
+  seasonType?: "regular" | "playoffs";
 }): Promise<BdlPlayerSeasonAverageRow[]> {
   try {
     return await fetchBdlPlayerSeasonAverages(input);
@@ -227,120 +249,81 @@ async function averages(input: {
 
 export type BuildPlayerStatLeadersFromBdlResult = {
   bundle: NbaPlayerStatLeadersBundle;
-  /** 詳細用。出場資格を満たした全選手の value+rank */
+  /** 詳細用。値は全出場選手。rank は公式資格者のみ（資格外は 0） */
   playerMetrics: NbaPlayerSeasonMetricsWrite[];
 };
+
+function playerNameFromAverageRow(
+  row: BdlPlayerSeasonAverageRow | undefined,
+  fallbackId: string
+): string {
+  if (!row?.player) return `Player ${fallbackId}`;
+  const first = row.player.first_name?.trim() ?? "";
+  const last = row.player.last_name?.trim() ?? "";
+  return `${first} ${last}`.trim() || `Player ${fallbackId}`;
+}
 
 export async function buildPlayerStatLeadersBundleFromBdl(input: {
   seasonKey: string;
   seasonYear: number;
+  /** playoffs 単独ビルド可。metrics は regular 時のみ意味がある */
+  seasonType?: "regular" | "playoffs";
 }): Promise<BuildPlayerStatLeadersFromBdlResult> {
+  const seasonType = input.seasonType === "playoffs" ? "playoffs" : "regular";
   const season = emptyBoard();
   const playerMetricsAccum: PlayerMetricsAccum = new Map();
-  const [teamMap, teamGamesByTeamId] = await Promise.all([
-    fetchBdlActivePlayerTeamMap(),
-    fetchTeamGamesByAppTeamId(input.seasonYear),
-  ]);
+  /** averages と並行。`/nba/v1/stats` のページングが重い */
+  const seasonTeamMapP = fetchBdlSeasonPlayerTeamMap({
+    seasonYear: input.seasonYear,
+    seasonType,
+  });
+  const teamGamesP = fetchTeamGamesByAppTeamId(input.seasonYear, seasonType);
 
-  const baseRows = await averages({ seasonYear: input.seasonYear, type: "base" });
+  const avg = (extra: {
+    category?: string;
+    type?: string;
+  }) =>
+    averages({
+      seasonYear: input.seasonYear,
+      seasonType,
+      ...extra,
+    });
+
+  const baseRows = await avg({ type: "base" });
   await sleep(120);
-  const advRows = await averages({
-    seasonYear: input.seasonYear,
-    type: "advanced",
-  });
+  const advRows = await avg({ type: "advanced" });
   await sleep(120);
-  const scoringRows = await averages({
-    seasonYear: input.seasonYear,
-    type: "scoring",
-  });
+  const scoringRows = await avg({ type: "scoring" });
   await sleep(120);
-  const miscRows = await averages({
-    seasonYear: input.seasonYear,
-    type: "misc",
-  });
+  const miscRows = await avg({ type: "misc" });
   await sleep(120);
-  const hustleRows = await averages({
-    seasonYear: input.seasonYear,
-    category: "hustle",
-  });
+  const hustleRows = await avg({ category: "hustle" });
   await sleep(120);
-  const drivesRows = await averages({
-    seasonYear: input.seasonYear,
-    category: "tracking",
-    type: "Drives",
-  });
+  const drivesRows = await avg({ category: "tracking", type: "Drives" });
   await sleep(120);
-  const catchRows = await averages({
-    seasonYear: input.seasonYear,
-    category: "tracking",
-    type: "CatchShoot",
-  });
+  const catchRows = await avg({ category: "tracking", type: "CatchShoot" });
   await sleep(120);
-  const pullRows = await averages({
-    seasonYear: input.seasonYear,
-    category: "tracking",
-    type: "PullUpShot",
-  });
+  const pullRows = await avg({ category: "tracking", type: "PullUpShot" });
   await sleep(120);
-  const paintRows = await averages({
-    seasonYear: input.seasonYear,
-    category: "tracking",
-    type: "PaintTouch",
-  });
+  const paintRows = await avg({ category: "tracking", type: "PaintTouch" });
   await sleep(120);
-  const speedRows = await averages({
-    seasonYear: input.seasonYear,
-    category: "tracking",
-    type: "SpeedDistance",
-  });
+  const speedRows = await avg({ category: "tracking", type: "SpeedDistance" });
   await sleep(120);
-  const passingRows = await averages({
-    seasonYear: input.seasonYear,
-    category: "tracking",
-    type: "Passing",
-  });
+  const passingRows = await avg({ category: "tracking", type: "Passing" });
   await sleep(120);
-  const clutchBaseRows = await averages({
-    seasonYear: input.seasonYear,
-    category: "clutch",
-    type: "base",
-  });
+  const clutchBaseRows = await avg({ category: "clutch", type: "base" });
   await sleep(120);
-  const clutchAdvRows = await averages({
-    seasonYear: input.seasonYear,
-    category: "clutch",
-    type: "advanced",
-  });
+  const clutchAdvRows = await avg({ category: "clutch", type: "advanced" });
   await sleep(120);
-  const shootingZoneRows = await averages({
-    seasonYear: input.seasonYear,
-    category: "shooting",
-    type: "by_zone",
-  });
+  const shootingZoneRows = await avg({ category: "shooting", type: "by_zone" });
   await sleep(120);
-  const defOverallRows = await averages({
-    seasonYear: input.seasonYear,
-    category: "defense",
-    type: "overall",
-  });
+  const defOverallRows = await avg({ category: "defense", type: "overall" });
   await sleep(120);
-  const def2pRows = await averages({
-    seasonYear: input.seasonYear,
-    category: "defense",
-    type: "2_pointers",
-  });
+  const def2pRows = await avg({ category: "defense", type: "2_pointers" });
   await sleep(120);
-  const def3pRows = await averages({
-    seasonYear: input.seasonYear,
-    category: "defense",
-    type: "3_pointers",
-  });
+  const def3pRows = await avg({ category: "defense", type: "3_pointers" });
   await sleep(120);
-  const defLt6Rows = await averages({
-    seasonYear: input.seasonYear,
-    category: "defense",
-    type: "less_than_6ft",
-  });
+  const defLt6Rows = await avg({ category: "defense", type: "less_than_6ft" });
 
   const playtypeTypes = [
     "Isolation",
@@ -359,15 +342,14 @@ export async function buildPlayerStatLeadersBundleFromBdl(input: {
     await sleep(120);
     playtypeByType.set(
       pt,
-      indexRows(
-        await averages({
-          seasonYear: input.seasonYear,
-          category: "playtype",
-          type: pt,
-        })
-      )
+      indexRows(await avg({ category: "playtype", type: pt }))
     );
   }
+
+  const [seasonTeamMap, teamGamesByTeamId] = await Promise.all([
+    seasonTeamMapP,
+    teamGamesP,
+  ]);
 
   const baseBy = indexRows(baseRows);
   const advBy = indexRows(advRows);
@@ -388,11 +370,27 @@ export async function buildPlayerStatLeadersBundleFromBdl(input: {
   const def3pBy = indexRows(def3pRows);
   const defLt6By = indexRows(defLt6Rows);
 
+  const playerIds = new Set<string>([...baseBy.keys(), ...advBy.keys()]);
   const merged: MergedPlayer[] = [];
-  for (const [playerId, ref] of teamMap) {
+  for (const playerId of playerIds) {
     const base = toStats(baseBy.get(playerId));
     const advanced = toStats(advBy.get(playerId));
     if (!Object.keys(base).length && !Object.keys(advanced).length) continue;
+    const seasonRef = seasonTeamMap.get(playerId);
+    if (!seasonRef?.teamId) continue;
+    const nameFromAvg = playerNameFromAverageRow(
+      baseBy.get(playerId) ?? advBy.get(playerId),
+      playerId
+    );
+    const ref: BdlPlayerTeamRef = {
+      playerId,
+      playerName:
+        seasonRef.playerName.startsWith("Player ") && nameFromAvg
+          ? nameFromAvg
+          : seasonRef.playerName || nameFromAvg,
+      teamId: seasonRef.teamId,
+      bdlTeamId: seasonRef.bdlTeamId,
+    };
     const gp = Math.max(
       0,
       Math.round(n(base, "gp") ?? n(advanced, "gp") ?? 0)
@@ -453,20 +451,13 @@ export async function buildPlayerStatLeadersBundleFromBdl(input: {
   ];
 
   for (const metric of counting) {
-    const rows: NbaPlayerStatLeaderRow[] = [];
+    const rows: MetricBoardRow[] = [];
     for (const p of merged) {
-      if (
-        !qualifiesForNonPctLeaders({
-          teamGamesPlayed: p.teamGames,
-          gamesPlayed: p.gp,
-        })
-      ) {
-        continue;
-      }
       const v = metric.value(p);
       if (v == null) continue;
       const row = rowOf(p, v);
-      if (row) rows.push(row);
+      if (!row) continue;
+      rows.push({ ...row, qualifies: nonPctQualifies(p) });
     }
     season[metric.id] = commitBoard(
       playerMetricsAccum,
@@ -478,22 +469,21 @@ export async function buildPlayerStatLeadersBundleFromBdl(input: {
   }
 
   {
-    const rows: NbaPlayerStatLeaderRow[] = [];
+    const rows: MetricBoardRow[] = [];
     for (const p of merged) {
       const fgm =
         n(p.advanced, "fgm") ?? makesTotal(n(p.base, "fgm"), p.gp);
       const pct = n(p.base, "fg_pct") ?? n(p.advanced, "fg_pct");
-      if (pct == null) continue;
-      if (
-        !qualifiesForFgPctLeaders({
+      if (pct == null || fgm == null) continue;
+      const row = rowOf(p, pct);
+      if (!row) continue;
+      rows.push({
+        ...row,
+        qualifies: qualifiesForFgPctLeaders({
           teamGamesPlayed: p.teamGames,
           fieldGoalsMade: fgm,
-        })
-      ) {
-        continue;
-      }
-      const row = rowOf(p, pct);
-      if (row) rows.push(row);
+        }),
+      });
     }
     season.fg_pct = commitBoard(
       playerMetricsAccum,
@@ -505,21 +495,20 @@ export async function buildPlayerStatLeadersBundleFromBdl(input: {
   }
 
   {
-    const rows: NbaPlayerStatLeaderRow[] = [];
+    const rows: MetricBoardRow[] = [];
     for (const p of merged) {
       const ftm = makesTotal(n(p.base, "ftm"), p.gp);
       const pct = n(p.base, "ft_pct");
-      if (pct == null) continue;
-      if (
-        !qualifiesForFtPctLeaders({
+      if (pct == null || ftm == null) continue;
+      const row = rowOf(p, pct);
+      if (!row) continue;
+      rows.push({
+        ...row,
+        qualifies: qualifiesForFtPctLeaders({
           teamGamesPlayed: p.teamGames,
           freeThrowsMade: ftm,
-        })
-      ) {
-        continue;
-      }
-      const row = rowOf(p, pct);
-      if (row) rows.push(row);
+        }),
+      });
     }
     season.ft_pct = commitBoard(
       playerMetricsAccum,
@@ -531,21 +520,20 @@ export async function buildPlayerStatLeadersBundleFromBdl(input: {
   }
 
   {
-    const rows: NbaPlayerStatLeaderRow[] = [];
+    const rows: MetricBoardRow[] = [];
     for (const p of merged) {
       const fg3m = makesTotal(n(p.base, "fg3m"), p.gp);
       const pct = n(p.base, "fg3_pct");
-      if (pct == null) continue;
-      if (
-        !qualifiesForFg3PctLeaders({
+      if (pct == null || fg3m == null) continue;
+      const row = rowOf(p, pct);
+      if (!row) continue;
+      rows.push({
+        ...row,
+        qualifies: qualifiesForFg3PctLeaders({
           teamGamesPlayed: p.teamGames,
           threesMade: fg3m,
-        })
-      ) {
-        continue;
-      }
-      const row = rowOf(p, pct);
-      if (row) rows.push(row);
+        }),
+      });
     }
     season.fg3_pct = commitBoard(
       playerMetricsAccum,
@@ -562,21 +550,21 @@ export async function buildPlayerStatLeadersBundleFromBdl(input: {
       statType: "eff",
     });
     const byId = new Map(merged.map((p) => [p.ref.playerId, p] as const));
-    const rows: NbaPlayerStatLeaderRow[] = [];
+    const rows: MetricBoardRow[] = [];
     for (const r of effLeaders) {
       const p = byId.get(String(r.player.id));
       if (!p) continue;
       const gp = Math.max(p.gp, Math.round(r.games_played ?? 0));
-      if (
-        !qualifiesForNonPctLeaders({
+      const row = rowOf(p, Number(r.value) || 0);
+      if (!row) continue;
+      rows.push({
+        ...row,
+        gamesPlayed: gp,
+        qualifies: qualifiesForNonPctLeaders({
           teamGamesPlayed: p.teamGames,
           gamesPlayed: gp,
-        })
-      ) {
-        continue;
-      }
-      const row = rowOf(p, Number(r.value) || 0);
-      if (row) rows.push(row);
+        }),
+      });
     }
     season.eff = commitBoard(
       playerMetricsAccum,
@@ -590,7 +578,7 @@ export async function buildPlayerStatLeadersBundleFromBdl(input: {
   }
 
   /**
-   * Advanced も BASIC と同じく「全選手 → NBA 出場資格 → 上位 30」。
+   * Advanced も BASIC と同じく「全選手 → 値は詳細へ / 資格者だけ順位・Top30」。
    * 試投%系（TS% / eFG% / C&S FG% / Pull-up FG%）は FG% と同型の決め本数。
    */
   const fillAdv = (
@@ -605,32 +593,26 @@ export async function buildPlayerStatLeadersBundleFromBdl(input: {
   ) => {
     const limit = opts?.limit ?? LEADER_BOARD_LIMIT;
     const shootingPct = opts?.shootingPct === true;
-    const rows: NbaPlayerStatLeaderRow[] = [];
+    const rows: MetricBoardRow[] = [];
     for (const p of merged) {
-      if (shootingPct) {
-        const fgm =
-          n(p.advanced, "fgm") ?? makesTotal(n(p.base, "fgm"), p.gp);
-        if (
-          fgm == null ||
-          !qualifiesForFgPctLeaders({
-            teamGamesPlayed: p.teamGames,
-            fieldGoalsMade: fgm,
-          })
-        ) {
-          continue;
-        }
-      } else if (
-        !qualifiesForNonPctLeaders({
-          teamGamesPlayed: p.teamGames,
-          gamesPlayed: p.gp,
-        })
-      ) {
-        continue;
-      }
       const v = pick(p);
       if (v == null) continue;
       const row = rowOf(p, v);
-      if (row) rows.push(row);
+      if (!row) continue;
+      let qualifies = false;
+      if (shootingPct) {
+        const fgm =
+          n(p.advanced, "fgm") ?? makesTotal(n(p.base, "fgm"), p.gp);
+        qualifies =
+          fgm != null &&
+          qualifiesForFgPctLeaders({
+            teamGamesPlayed: p.teamGames,
+            fieldGoalsMade: fgm,
+          });
+      } else {
+        qualifies = nonPctQualifies(p);
+      }
+      rows.push({ ...row, qualifies });
     }
     season[metric] = commitBoard(
       playerMetricsAccum,
@@ -779,16 +761,8 @@ export async function buildPlayerStatLeadersBundleFromBdl(input: {
 
   // PER: BDL に無いので box から近似 → リーグ平均 15 に正規化
   {
-    const raws: { p: MergedPlayer; raw: number }[] = [];
+    const raws: { p: MergedPlayer; raw: number; qualifies: boolean }[] = [];
     for (const p of merged) {
-      if (
-        !qualifiesForNonPctLeaders({
-          teamGamesPlayed: p.teamGames,
-          gamesPlayed: p.gp,
-        })
-      ) {
-        continue;
-      }
       const min = n(p.base, "min");
       if (min == null || min < 5) continue;
       const stl = n(p.base, "stl") ?? 0;
@@ -818,17 +792,17 @@ export async function buildPlayerStatLeadersBundleFromBdl(input: {
           tov * 53.897) /
         min;
       if (!Number.isFinite(raw)) continue;
-      raws.push({ p, raw });
+      raws.push({ p, raw, qualifies: nonPctQualifies(p) });
     }
     const mean =
       raws.length > 0
         ? raws.reduce((s, x) => s + x.raw, 0) / raws.length
         : 0;
     const scale = mean > 0 ? 15 / mean : 1;
-    const rows: NbaPlayerStatLeaderRow[] = [];
-    for (const { p, raw } of raws) {
+    const rows: MetricBoardRow[] = [];
+    for (const { p, raw, qualifies } of raws) {
       const row = rowOf(p, Math.round(raw * scale * 10) / 10);
-      if (row) rows.push(row);
+      if (row) rows.push({ ...row, qualifies });
     }
     season.per = commitBoard(
       playerMetricsAccum,
@@ -849,16 +823,8 @@ export async function buildPlayerStatLeadersBundleFromBdl(input: {
 
   // RIM% / C3%: ゾーン試投で絞る（全体 FG/3P 決め本数はゾーンに厳しすぎる）
   {
-    const rows: NbaPlayerStatLeaderRow[] = [];
+    const rows: MetricBoardRow[] = [];
     for (const p of merged) {
-      if (
-        !qualifiesForNonPctLeaders({
-          teamGamesPlayed: p.teamGames,
-          gamesPlayed: p.gp,
-        })
-      ) {
-        continue;
-      }
       const fgaPg = n(
         p.shootingZone,
         "restricted_area_fga",
@@ -866,13 +832,16 @@ export async function buildPlayerStatLeadersBundleFromBdl(input: {
       );
       const fga = makesTotal(fgaPg, p.gp);
       const need = Math.ceil((50 * Math.min(82, Math.max(0, p.teamGames))) / 82);
-      if (fga < need) continue;
       const pct = rate(
         n(p.shootingZone, "restricted_area_fg_pct", "restricted_fg_pct")
       );
       if (pct == null) continue;
       const row = rowOf(p, pct);
-      if (row) rows.push(row);
+      if (!row) continue;
+      rows.push({
+        ...row,
+        qualifies: nonPctQualifies(p) && fga != null && fga >= need,
+      });
     }
     season.restricted_fg_pct = commitBoard(
       playerMetricsAccum,
@@ -891,26 +860,21 @@ export async function buildPlayerStatLeadersBundleFromBdl(input: {
     return fgm == null ? null : Math.round(fgm * 2 * 10) / 10;
   });
   {
-    const rows: NbaPlayerStatLeaderRow[] = [];
+    const rows: MetricBoardRow[] = [];
     for (const p of merged) {
-      if (
-        !qualifiesForNonPctLeaders({
-          teamGamesPlayed: p.teamGames,
-          gamesPlayed: p.gp,
-        })
-      ) {
-        continue;
-      }
       const fgaPg = n(p.shootingZone, "corner_3_fga", "corner3_fga");
       const fga = makesTotal(fgaPg, p.gp);
       const need = Math.ceil((25 * Math.min(82, Math.max(0, p.teamGames))) / 82);
-      if (fga < need) continue;
       const pct = rate(
         n(p.shootingZone, "corner_3_fg_pct", "corner3_fg_pct")
       );
       if (pct == null) continue;
       const row = rowOf(p, pct);
-      if (row) rows.push(row);
+      if (!row) continue;
+      rows.push({
+        ...row,
+        qualifies: nonPctQualifies(p) && fga != null && fga >= need,
+      });
     }
     season.corner3_pct = commitBoard(
       playerMetricsAccum,
@@ -943,20 +907,23 @@ export async function buildPlayerStatLeadersBundleFromBdl(input: {
   );
 
   const playerMetrics: NbaPlayerSeasonMetricsWrite[] = [];
-  for (const [playerId, bag] of playerMetricsAccum) {
-    playerMetrics.push({
-      playerId,
-      teamId: bag.teamId,
-      gamesPlayed: bag.gamesPlayed,
-      metrics: bag.metrics,
-    });
+  if (seasonType === "regular") {
+    for (const [playerId, bag] of playerMetricsAccum) {
+      playerMetrics.push({
+        playerId,
+        teamId: bag.teamId,
+        gamesPlayed: bag.gamesPlayed,
+        metrics: bag.metrics,
+      });
+    }
   }
 
   return {
     bundle: {
-      season,
+      season: seasonType === "regular" ? season : emptyBoard(),
+      playoffs: seasonType === "playoffs" ? season : emptyBoard(),
       last10: emptyBoard(),
-      asOfLabel: `BDL · ${input.seasonKey} · NBA mins · season (last10 from game logs pending)`,
+      asOfLabel: `BDL · ${input.seasonKey} · ${seasonType}`,
     },
     playerMetrics,
   };

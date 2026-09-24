@@ -125,6 +125,12 @@ function ScanOverlay({ height }: { height: number }) {
   );
 }
 
+/** Android で skew レイヤが潰されないよう GPU に載せる（見た目の数値は変えない） */
+const androidSkewHost =
+  Platform.OS === "android"
+    ? ({ collapsable: false, renderToHardwareTextureAndroid: true, opacity: 0.999 } as const)
+    : null;
+
 /** 選択: 焼き込み1枚を横ストレッチし、Web と同じ skew で傾ける */
 function ActiveTabChrome({
   bodyH,
@@ -137,6 +143,7 @@ function ActiveTabChrome({
   return (
     <View
       pointerEvents="none"
+      {...androidSkewHost}
       style={[styles.chromeSkew, { height: imageH, width: "100%" }]}
     >
       <Image
@@ -166,6 +173,7 @@ function ActiveTabChromeThemed({
       style={[styles.chromeSkew, { height: imageH, width: "100%" }]}
     >
       <View
+        {...androidSkewHost}
         style={[
           styles.themedGlowOuter,
           {
@@ -214,6 +222,7 @@ function InactiveTabChrome({
   return (
     <View
       pointerEvents="none"
+      {...androidSkewHost}
       style={[
         styles.inactiveChrome,
         { height: bodyH, width: "100%", borderColor },
@@ -301,23 +310,29 @@ export function CyberSlantedTabNative({
           </View>
         )}
         <View pointerEvents="none" style={styles.labelLayer}>
-          <Text
-            numberOfLines={1}
-            maxFontSizeMultiplier={1.1}
-            style={[
-              styles.tabText,
-              {
-                fontSize,
-                fontWeight,
-                lineHeight: Math.round(fontSize * 1.2),
-                letterSpacing,
-                color: active ? resolved.activeText : resolved.inactiveText,
-              },
-              !jaLabel ? styles.tabTextUpper : null,
-            ]}
-          >
-            {label}
-          </Text>
+          {/**
+           * Android は Text の skewX が効かないため View に載せる
+           *（試合カードチーム名と同じ）。角度・サイズは据え置き。
+           */}
+          <View {...androidSkewHost} style={styles.labelSkew}>
+            <Text
+              numberOfLines={1}
+              maxFontSizeMultiplier={1.1}
+              style={[
+                styles.tabText,
+                {
+                  fontSize,
+                  fontWeight,
+                  lineHeight: Math.round(fontSize * 1.2),
+                  letterSpacing,
+                  color: active ? resolved.activeText : resolved.inactiveText,
+                },
+                !jaLabel ? styles.tabTextUpper : null,
+              ]}
+            >
+              {label}
+            </Text>
+          </View>
         </View>
       </View>
     </Pressable>
@@ -490,11 +505,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     zIndex: 2,
   },
+  labelSkew: {
+    transform: [{ skewX: "-6deg" }],
+  },
   tabText: {
     fontFamily: METRIC_FONT,
     textAlign: "center",
     fontWeight: "700",
-    transform: [{ skewX: "-6deg" }],
   },
   tabTextUpper: {
     textTransform: "uppercase",

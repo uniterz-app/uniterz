@@ -170,6 +170,21 @@ export function useNbaTeamDetailLiveOverlay(options: Options): {
       next = applyStandingsToTeamDetailPreview(next, standingsRow);
     }
 
+    // 連勝・直近フォームは game log を正。standings の壊れ streak（L8 等）を上書き。
+    // 今季 final 0 なら連勝なし（開幕前）。
+    if (gameLog) {
+      const hasFinals =
+        gameLog.finalCount > 0 || gameLog.recentGames.length > 0;
+      next = {
+        ...next,
+        streak: hasFinals ? { ...gameLog.streak } : { kind: "W", count: 0 },
+        last10Record: hasFinals
+          ? { ...gameLog.last10Record }
+          : { wins: 0, losses: 0 },
+        recentGames: hasFinals ? gameLog.recentGames : [],
+      };
+    }
+
     return next;
   }, [
     base,

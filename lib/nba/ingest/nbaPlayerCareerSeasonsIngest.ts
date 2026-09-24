@@ -186,6 +186,8 @@ export async function ingestNbaPlayerCareerSeasonsFromBdl(
         const position =
           target.position !== "—" ? target.position : info?.position || null;
         const teamId = target.teamId || null;
+        const playerName =
+          `${info?.firstName ?? ""} ${info?.lastName ?? ""}`.trim() || null;
 
         const [regular, playoffs] = await Promise.all([
           buildBoard({
@@ -211,6 +213,16 @@ export async function ingestNbaPlayerCareerSeasonsFromBdl(
         await writePlayerCareerSeasonsSnapshot(db, {
           playerId: target.playerId,
           teamId,
+          playerName,
+          position: info?.position ?? position,
+          jerseyNumber: info?.jerseyNumber ?? null,
+          height: info?.height ?? null,
+          weight: info?.weight ?? null,
+          country: info?.country ?? null,
+          college: info?.college ?? null,
+          draftYear: info?.draftYear ?? null,
+          draftRound: info?.draftRound ?? null,
+          draftNumber: info?.draftNumber ?? null,
           asOfSeasonKey: seasonKey,
           regular,
           playoffs,

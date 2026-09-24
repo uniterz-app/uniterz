@@ -1274,5 +1274,8 @@ export function formatPlayerAdvancedLeaderValue(
   if (kind === "pct") return `${(value * 100).toFixed(1)}%`;
   if (kind === "ppp") return value.toFixed(2);
   if (kind === "ratio") return value.toFixed(2);
+  if (Math.abs(value - Math.round(value)) < 1e-9) {
+    return String(Math.round(value));
+  }
   return value.toFixed(1);
 }

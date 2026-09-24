@@ -22,6 +22,7 @@ import {
   CyberSlantedTabNative,
 } from "../../rankings/CyberSlantedTabNative";
 import { MATCH_CARD_DISPLAY_FONT, MATCH_CARD_TEAM_NAME_FONT } from "../matchCardTypography";
+import { RANK_DISPLAY_FONT } from "../../rankings/rankingsUiTheme";
 import type { GamesLanguage } from "../gamesI18n";
 import { getGamesTexts } from "../gamesI18n";
 import LiveGameStatsPanelNative from "../live/LiveGameStatsPanelNative";
@@ -836,9 +837,11 @@ const styles = StyleSheet.create({
   metaDown: { color: "rgba(255,138,180,0.9)" },
   metaFlat: { color: "rgba(255,255,255,0.4)" },
   rankBeside: {
-    fontFamily: OXANIUM,
-    fontSize: 15,
-    fontWeight: "800",
+    // Web `nameBebas` — スタッツ数値（Oxanium）と差別化
+    fontFamily: RANK_DISPLAY_FONT,
+    fontSize: 12,
+    fontWeight: "400",
+    letterSpacing: 0.4,
     fontVariant: ["tabular-nums"],
     transform: [{ skewX: "-6deg" }],
   },

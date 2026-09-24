@@ -28,6 +28,7 @@ export type NbaStatsSearchBundles = {
 
 const EMPTY_TEAM_BUNDLE: NbaLeagueTeamStatsBundle = {
   season: [],
+  playoffs: [],
   last10: [],
   asOfLabel: "UNAVAILABLE",
 };

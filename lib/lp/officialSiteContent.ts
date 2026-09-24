@@ -3,13 +3,15 @@
  * 法人名・所在地などはここだけ直せば運営会社ページ / Footer / JSON-LD に反映される。
  *
  * 法務表現は弁護士レビュー（適法に実装可能、との結論）の範囲に限定する。
- * 法人情報の未確定項目は「準備中」のまま公開する。
- * Pro 料金は iOS（App Store）の税込予定価格。地域・ストアで異なる場合がある。
+ * 事業者情報の正は `lib/legal/companyInfo.ts`。
+ * Pro 料金は日本における税込予定価格（App Store / Google Play）。地域・ストアで異なる場合がある。
  */
 
 import { INFO_EMAIL, SUPPORT_EMAIL } from "@/lib/contact/companyEmails";
 import {
   COMPANY_ADDRESS,
+  COMPANY_CORPORATE_NUMBER,
+  COMPANY_FOUNDED,
   COMPANY_LEGAL_NAME,
   COMPANY_REPRESENTATIVE,
 } from "@/lib/legal/companyInfo";
@@ -41,7 +43,12 @@ export const officialSite = {
   electronicNoticeHref: "/web/electronic-notice",
   appStore: {
     status: "comingSoon" as const,
-    label: "Coming Soon on iOS",
+    label: "Coming Soon on iOS & Android",
+    href: null,
+  },
+  playStore: {
+    status: "comingSoon" as const,
+    label: "Coming Soon on Google Play",
     href: null,
   },
   sns: {
@@ -59,11 +66,11 @@ export const officialSite = {
     name: COMPANY_LEGAL_NAME,
     address: COMPANY_ADDRESS,
     representative: COMPANY_REPRESENTATIVE,
-    founded: "準備中",
-    corporateNumber: "取得後に追加",
+    founded: COMPANY_FOUNDED,
+    corporateNumber: COMPANY_CORPORATE_NUMBER,
     business: "スポーツ予想アプリケーションの企画・開発・運営",
     service: "Uniterz",
-    note: "設立日、法人番号は確定後に更新します。",
+    note: "Uniterz を運営する株式会社UNITERZの会社概要です。",
   },
 } as const;
 
@@ -293,7 +300,7 @@ export const officialPro = {
   revenue:
     "収益は Pro のサブスクリプション（予定）です。予想への参加課金や、Unit の販売は行いません。",
   priceNote:
-    "表示は iOS（App Store）の税込予定価格です。地域やストアによって異なる場合があります。自動更新の解約は App Store のサブスクリプション管理から行います。",
+    "表示は日本における税込予定価格です（App Store / Google Play）。地域やストアによって異なる場合があります。自動更新の解約は、購入したストアのサブスクリプション管理から行います。",
   sameRules:
     "スコアの計算方法、ランキングへの参加条件、Unit の付与条件および付与量、商品交換の条件は、Free と Pro で同一です。",
   plans: [
@@ -456,7 +463,7 @@ export const officialLegal = {
   items: [
     "サービス設計にあたり、弁護士に相談しています。",
     "利用規約およびプライバシーポリシーは、法的確認を行ったうえで公開しています。",
-    "特定商取引法に基づく表記を掲載しています。法人情報は確定後に更新します。",
+    "特定商取引法に基づく表記を掲載しています。",
   ],
   links: [
     { label: "利用規約", href: "/mobile/terms" },
@@ -532,11 +539,11 @@ export const officialFaq = {
     },
     {
       q: "Pro の料金は？",
-      a: "iOS（App Store）の税込予定価格は、Weekly ¥280 / 7日、Monthly ¥780 / 月、Season Pass ¥5,000（対象シーズン終了までの買い切り）です。月次レポートは Monthly と Season Pass のみです。地域やストアによって異なる場合があります。",
+      a: "日本における税込予定価格は、Weekly ¥280 / 7日、Monthly ¥780 / 月、Season Pass ¥5,000（対象シーズン終了までの買い切り）です（App Store / Google Play）。月次レポートは Monthly と Season Pass のみです。地域やストアによって異なる場合があります。",
     },
     {
       q: "Pro の解約は？",
-      a: "購入したストアのサブスクリプション管理画面から行います。アプリを削除しても定期購入は解約されません。解約後も、支払済みの期間が終わるまでは Pro を利用できます。",
+      a: "購入したストア（App Store / Google Play）のサブスクリプション管理画面から行います。アプリを削除しても定期購入は解約されません。解約後も、支払済みの期間が終わるまでは Pro を利用できます。",
     },
     {
       q: "NBA の公式サービス？",
@@ -544,11 +551,11 @@ export const officialFaq = {
     },
     {
       q: "いつリリース？",
-      a: "iOS 向けに公開準備中です。公開日は決まり次第、このページで案内します。",
+      a: "iOS / Android 向けに公開準備中です。公開日は決まり次第、このページで案内します。",
     },
     {
       q: "対応端末は？",
-      a: "まずは iOS を予定しています。その他の端末は未定です。",
+      a: "iOS および Android アプリを予定しています。あわせて対応する Web 版も利用できます。対応 OS の詳細は公開時および各ストアページに表示します。",
     },
   ],
 } as const;

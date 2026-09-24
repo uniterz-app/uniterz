@@ -41,18 +41,19 @@ function resolveMetrics(
     if (!v || typeof v !== "object") continue;
     const cell = v as Record<string, unknown>;
     const value = cell.value;
-    const rank = cell.rank;
     if (typeof value !== "number" || !Number.isFinite(value)) continue;
-    if (typeof rank !== "number" || !Number.isFinite(rank) || rank < 1) continue;
-    out[k as NbaPlayerLeaderMetricId] = {
-      value,
-      rank: Math.round(rank),
-    };
+    const rankRaw = cell.rank;
+    const rank =
+      typeof rankRaw === "number" && Number.isFinite(rankRaw)
+        ? Math.max(0, Math.round(rankRaw))
+        : 0;
+    out[k as NbaPlayerLeaderMetricId] = { value, rank };
   }
   return out;
 }
 
-const WRITE_BATCH = 400;
+/** 1 選手あたり指標が多いのでバッチを小さめに（Transaction too big 回避） */
+const WRITE_BATCH = 50;
 
 /** リーグ表 ingest から全選手分をバッチ書き込み */
 export async function writePlayerSeasonMetricsSnapshots(

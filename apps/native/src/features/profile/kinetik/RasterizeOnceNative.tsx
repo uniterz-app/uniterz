@@ -4,11 +4,12 @@
  * サムネ一括焼き用に同時キャプチャは最大 8 件。
  */
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Image, InteractionManager, PixelRatio, View } from "react-native";
+import { Image, InteractionManager, Platform, PixelRatio, View } from "react-native";
 import { captureRef } from "react-native-view-shot";
 
 const MAX_CACHE = 48;
-const MAX_CAPTURE = 8;
+/** Android は同時焼きが多いとタブ遷移中に固まる */
+const MAX_CAPTURE = Platform.OS === "android" ? 2 : 8;
 const cache = new Map<string, string>();
 const inflight = new Map<string, Promise<string | null>>();
 let liveCaptures = 0;
@@ -168,6 +169,8 @@ export default function RasterizeOnceNative({
     const task = InteractionManager.runAfterInteractions(() => {
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
+          /** Android の captureRef はメインスレッドを奪うので初回描画後に遅らせる */
+          const delayMs = Platform.OS === "android" ? 520 : 48;
           timeoutId = setTimeout(() => {
             if (cancelled) return;
             const node = hostRef.current;
@@ -184,7 +187,7 @@ export default function RasterizeOnceNative({
               if (cancelled) return;
               finish(next);
             });
-          }, 48);
+          }, delayMs);
         });
       });
     });

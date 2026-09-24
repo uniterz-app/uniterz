@@ -78,17 +78,9 @@ export type PlayerConsistencyInsight = {
   volatility: "stable" | "mixed" | "volatile";
 };
 
-export type PlayerUsageStripCell = {
-  key: string;
-  label: string;
-  display: string;
-  rank: number | null;
-};
-
 export type PlayerDetailInsights = {
   summary: PlayerDetailSummary | null;
   roles: DetailInsightChip[];
-  usageStrip: PlayerUsageStripCell[];
   roleChanges: PlayerRoleChangeSignal[];
   roleChangeDetailJa: string | null;
   roleChangeDetailEn: string | null;

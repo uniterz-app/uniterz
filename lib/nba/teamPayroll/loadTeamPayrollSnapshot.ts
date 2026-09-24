@@ -44,6 +44,7 @@ function resolveLines(raw: unknown): NbaTeamPayrollLine[] {
     const salary = isFiniteNumber(row.salary) ? row.salary : 0;
     const share = isFiniteNumber(row.share) ? row.share : 0;
     const isTwoWay = row.isTwoWay === true;
+    const isNonGuaranteed = row.isNonGuaranteed === true;
     const optionRaw = String(row.option ?? "").trim().toUpperCase();
     const option =
       optionRaw === "PO" || optionRaw.includes("PLAYER")
@@ -64,6 +65,7 @@ function resolveLines(raw: unknown): NbaTeamPayrollLine[] {
       ...(capHit != null ? { capHit } : {}),
       share,
       isTwoWay,
+      ...(isNonGuaranteed ? { isNonGuaranteed: true } : {}),
       option,
     });
   }

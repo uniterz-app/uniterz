@@ -17,6 +17,7 @@ import {
 import Animated, { useReducedMotion } from "react-native-reanimated";
 import { BlurView } from "expo-blur";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { keyboardAvoidingBehavior } from "../../ui/keyboardAvoidingBehaviorNative";
 import { useIsFocused, useNavigation } from "@react-navigation/native";
 import type { NavigationProp, ParamListBase } from "@react-navigation/native";
 import { BlocksPulseLoader } from "../../components/BlocksPulseLoader";
@@ -285,36 +286,68 @@ export default function ResultDetailScreen({
     >
       {layersVisible ? (
         <>
-          <Animated.View
-            entering={backdropEnter}
-            exiting={backdropExit}
-            style={StyleSheet.absoluteFillObject}
-            pointerEvents="box-none"
-          >
-            {(Platform.OS === "ios" || Platform.OS === "android") && (
+          {Platform.OS === "android" ? (
+            <View style={StyleSheet.absoluteFillObject} pointerEvents="box-none">
               <BlurView
-                intensity={Platform.OS === "ios" ? 28 : 22}
+                intensity={64}
                 tint="dark"
                 {...nativeBlurViewExtraProps()}
                 style={StyleSheet.absoluteFillObject}
               />
-            )}
-            <View style={styles.backdropDim} pointerEvents="none" />
-            <Pressable
+              <View style={styles.backdropDim} pointerEvents="none" />
+              <View style={styles.backdropFrostAndroid} pointerEvents="none" />
+              <Animated.View
+                entering={backdropEnter}
+                exiting={backdropExit}
+                style={StyleSheet.absoluteFillObject}
+                pointerEvents="box-none"
+              >
+                <Pressable
+                  style={StyleSheet.absoluteFillObject}
+                  onPress={scheduleCloseAfterExitAnimation}
+                  accessibilityRole="button"
+                  accessibilityLabel={L(loc, {
+                    ja: "詳細を閉じる",
+                    en: "Close detail",
+                    ko: "상세 닫기",
+                    zh: "关闭详情",
+                    es: "Cerrar detalle",
+                    pt: "Fechar detalhe",
+                    fr: "Fermer le détail",
+                  })}
+                />
+              </Animated.View>
+            </View>
+          ) : (
+            <Animated.View
+              entering={backdropEnter}
+              exiting={backdropExit}
               style={StyleSheet.absoluteFillObject}
-              onPress={scheduleCloseAfterExitAnimation}
-              accessibilityRole="button"
-              accessibilityLabel={L(loc, {
-                ja: "詳細を閉じる",
-                en: "Close detail",
-                ko: "상세 닫기",
-                zh: "关闭详情",
-                es: "Cerrar detalle",
-                pt: "Fechar detalhe",
-                fr: "Fermer le détail",
-              })}
-            />
-          </Animated.View>
+              pointerEvents="box-none"
+            >
+              <BlurView
+                intensity={28}
+                tint="dark"
+                {...nativeBlurViewExtraProps()}
+                style={StyleSheet.absoluteFillObject}
+              />
+              <View style={styles.backdropDim} pointerEvents="none" />
+              <Pressable
+                style={StyleSheet.absoluteFillObject}
+                onPress={scheduleCloseAfterExitAnimation}
+                accessibilityRole="button"
+                accessibilityLabel={L(loc, {
+                  ja: "詳細を閉じる",
+                  en: "Close detail",
+                  ko: "상세 닫기",
+                  zh: "关闭详情",
+                  es: "Cerrar detalle",
+                  pt: "Fechar detalhe",
+                  fr: "Fermer le détail",
+                })}
+              />
+            </Animated.View>
+          )}
 
           <Animated.View
             entering={sheetEnter}
@@ -323,7 +356,7 @@ export default function ResultDetailScreen({
             pointerEvents="box-none"
           >
             <KeyboardAvoidingView
-              behavior={Platform.OS === "ios" ? "padding" : undefined}
+              behavior={keyboardAvoidingBehavior}
               style={[
                 styles.kav,
                 {
@@ -427,8 +460,14 @@ const styles = StyleSheet.create({
   },
   backdropDim: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.35)",
-  },  kav: {
+    backgroundColor:
+      Platform.OS === "android" ? "rgba(0,0,0,0.72)" : "rgba(0,0,0,0.35)",
+  },
+  backdropFrostAndroid: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(8,10,18,0.28)",
+  },
+  kav: {
     flex: 1,
     zIndex: 1,
     justifyContent: "flex-start",

@@ -17,6 +17,7 @@ import { resolveTutorialPickupGameId } from "../../../../../lib/tutorial/tutoria
 import MatchCardListCtaNative, {
   type MatchCardListCtaVariant,
 } from "./MatchCardListCtaNative";
+import MatchCardTeamNameNative from "./MatchCardTeamNameNative";
 import MatchCardEntryScanNative from "./MatchCardEntryScanNative";
 import {
   useGameCardListRowEntrance,
@@ -314,9 +315,9 @@ export const GameCardListRow = memo(function GameCardListRow(props: GameCardList
                     </Animated.View>
                   </View>
                   <View style={styles.teamBottomGroup}>
-                    <Text style={styles.lineFrameTeamName} numberOfLines={1}>
+                    <MatchCardTeamNameNative textStyle={styles.lineFrameTeamName}>
                       {homeCompact}
-                    </Text>
+                    </MatchCardTeamNameNative>
                     <Text style={styles.teamRecordText}>
                       {homeRecordLabel ?? "(0-0-0)"}
                     </Text>
@@ -434,9 +435,9 @@ export const GameCardListRow = memo(function GameCardListRow(props: GameCardList
                     </Animated.View>
                   </View>
                   <View style={styles.teamBottomGroup}>
-                    <Text style={styles.lineFrameTeamName} numberOfLines={1}>
+                    <MatchCardTeamNameNative textStyle={styles.lineFrameTeamName}>
                       {awayCompact}
-                    </Text>
+                    </MatchCardTeamNameNative>
                     <Text style={styles.teamRecordText}>
                       {awayRecordLabel ?? "(0-0-0)"}
                     </Text>
@@ -490,9 +491,9 @@ export const GameCardListRow = memo(function GameCardListRow(props: GameCardList
                     </Animated.View>
                   </View>
                   <View style={styles.teamBottomGroup}>
-                    <Text style={styles.teamNameMain} numberOfLines={1}>
+                    <MatchCardTeamNameNative textStyle={styles.teamNameMain}>
                       {homeCompact}
-                    </Text>
+                    </MatchCardTeamNameNative>
                     <Text style={styles.teamRecordText}>
                       {homeRecordLabel ?? "(0-0-0)"}
                     </Text>
@@ -610,9 +611,9 @@ export const GameCardListRow = memo(function GameCardListRow(props: GameCardList
                     </Animated.View>
                   </View>
                   <View style={styles.teamBottomGroup}>
-                    <Text style={styles.teamNameMain} numberOfLines={1}>
+                    <MatchCardTeamNameNative textStyle={styles.teamNameMain}>
                       {awayCompact}
-                    </Text>
+                    </MatchCardTeamNameNative>
                     <Text style={styles.teamRecordText}>
                       {awayRecordLabel ?? "(0-0-0)"}
                     </Text>

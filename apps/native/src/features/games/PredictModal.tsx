@@ -12,6 +12,7 @@ import {
   OVERLAY_RESULT_STAT_VALUE_W,
 } from "../results/resultMobileUiNative";
 import { nativeBlurViewExtraProps } from "../../ui/nativeBlurProps";
+import { keyboardAvoidingBehavior } from "../../ui/keyboardAvoidingBehaviorNative";
 import MatchCardOverlayMarketBarNative from "./MatchCardOverlayMarketBarNative";
 import type { GamesLanguage, GamesTexts } from "./gamesI18n";
 import { PredictToolTabContent } from "./PredictToolTabContent";
@@ -787,13 +788,19 @@ function GlassPanel({
     >
       {(Platform.OS === "ios" || Platform.OS === "android") && (
         <BlurView
-          intensity={Platform.OS === "ios" ? 24 : 20}
+          intensity={Platform.OS === "ios" ? 24 : 44}
           tint="dark"
           {...nativeBlurViewExtraProps()}
           style={StyleSheet.absoluteFillObject}
         />
       )}
-      <View style={s.glassPanelTint} pointerEvents="none" />
+      <View
+        style={[
+          s.glassPanelTint,
+          Platform.OS === "android" ? s.glassPanelTintAndroid : null,
+        ]}
+        pointerEvents="none"
+      />
       {showGrid ? <ToolPanelGridOverlay /> : null}
       <View
         style={
@@ -1350,27 +1357,54 @@ export default function PredictModal({
         >
           {layersVisible ? (
             <>
-          <Animated.View
-            entering={backdropEnter}
-            exiting={backdropExit}
-            style={StyleSheet.absoluteFillObject}
-            pointerEvents="box-none"
-          >
-            {(Platform.OS === "ios" || Platform.OS === "android") && (
+          {/**
+           * Android: Reanimated の Animated.View 内だと BlurView がサンプリングできないことがある。
+           * Blur は静置し、dim / タップだけアニメする。
+           */}
+          {Platform.OS === "android" ? (
+            <View style={StyleSheet.absoluteFillObject} pointerEvents="box-none">
               <BlurView
-                intensity={Platform.OS === "ios" ? 28 : 22}
+                intensity={64}
                 tint="dark"
                 {...nativeBlurViewExtraProps()}
                 style={StyleSheet.absoluteFillObject}
               />
-            )}
-            <View style={s.backdropDim} pointerEvents="none" />
-            <Pressable
+              <View style={s.backdropDim} pointerEvents="none" />
+              <View style={s.backdropFrostAndroid} pointerEvents="none" />
+              <Animated.View
+                entering={backdropEnter}
+                exiting={backdropExit}
+                style={StyleSheet.absoluteFillObject}
+                pointerEvents="box-none"
+              >
+                <Pressable
+                  style={StyleSheet.absoluteFillObject}
+                  onPress={scheduleCloseAfterExitAnimation}
+                  accessibilityRole="button"
+                />
+              </Animated.View>
+            </View>
+          ) : (
+            <Animated.View
+              entering={backdropEnter}
+              exiting={backdropExit}
               style={StyleSheet.absoluteFillObject}
-              onPress={scheduleCloseAfterExitAnimation}
-              accessibilityRole="button"
-            />
-          </Animated.View>
+              pointerEvents="box-none"
+            >
+              <BlurView
+                intensity={28}
+                tint="dark"
+                {...nativeBlurViewExtraProps()}
+                style={StyleSheet.absoluteFillObject}
+              />
+              <View style={s.backdropDim} pointerEvents="none" />
+              <Pressable
+                style={StyleSheet.absoluteFillObject}
+                onPress={scheduleCloseAfterExitAnimation}
+                accessibilityRole="button"
+              />
+            </Animated.View>
+          )}
           <Animated.View
             entering={sheetEnter}
             exiting={sheetExit}
@@ -1378,7 +1412,7 @@ export default function PredictModal({
             pointerEvents="box-none"
           >
             <KeyboardAvoidingView
-              behavior={Platform.OS === "ios" ? "padding" : undefined}
+              behavior={keyboardAvoidingBehavior}
               style={[
                 s.kav,
                 {
@@ -2206,7 +2240,13 @@ const s = StyleSheet.create({
   },
   backdropDim: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.35)",
+    backgroundColor:
+      Platform.OS === "android" ? "rgba(0,0,0,0.72)" : "rgba(0,0,0,0.35)",
+  },
+  /** blur が弱い端末向けの追加フロスト（文字と背景の重なり防止） */
+  backdropFrostAndroid: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(8,10,18,0.28)",
   },
   kav: {
     flex: 1,
@@ -2297,6 +2337,10 @@ const s = StyleSheet.create({
   glassPanelTint: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(255,255,255,0.035)",
+  },
+  /** Android は blur が弱くなりやすいのでガラス下地を少し濃くする */
+  glassPanelTintAndroid: {
+    backgroundColor: "rgba(5,8,16,0.68)",
   },
   toolGridLayer: {
     ...StyleSheet.absoluteFillObject,

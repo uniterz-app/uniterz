@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { COMPANY_FOUNDED_ISO } from "@/lib/legal/companyInfo";
 import { officialSite } from "@/lib/lp/officialSiteContent";
 import OfficialLpPage from "./_components/OfficialLpPage";
 import "./official-lp.css";
@@ -16,6 +17,8 @@ export default function OfficialLandingPage() {
     name: officialSite.company.name,
     url: "https://uniterz.app",
     email: officialSite.infoEmail,
+    foundingDate: COMPANY_FOUNDED_ISO,
+    taxID: officialSite.company.corporateNumber,
     description:
       "スポーツ予想アプリケーション Uniterz の企画・開発・運営。現金を賭けるサービスではありません。",
     makesOffer: {
@@ -24,7 +27,7 @@ export default function OfficialLandingPage() {
         "@type": "SoftwareApplication",
         name: officialSite.productName,
         applicationCategory: "SportsApplication",
-        operatingSystem: "iOS",
+        operatingSystem: "iOS, Android",
       },
     },
   };

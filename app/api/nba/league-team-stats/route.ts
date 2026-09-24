@@ -8,19 +8,24 @@ import {
   loadLeagueTeamStatsSnapshot,
   normalizeLeagueTeamStatsSeasonKey,
 } from "@/lib/nba/leagueTeamStats/loadLeagueTeamStatsSnapshot";
+import { resolveNbaStatsDisplaySeasonKey } from "@/lib/nba/resolveNbaStatsDisplaySeason";
 
 /**
  * GET /api/nba/league-team-stats?season=2025-26
  * 認証不要。Firestore 共有スナップショット。
- * 未作成時: 開発のみ mock、本番は empty（偽スタッツを出さない）。
- * 実データ書き込みは ingest / seed（ゲート B）。
+ *
+ * - `season` 明示時: そのキーだけ読む（空なら empty。前期へ落とさない）
+ * - `season` 未指定: 今季データ無ければ前期へフォールバック
  */
 export async function GET(req: Request) {
   try {
     const url = new URL(req.url);
-    const season = normalizeLeagueTeamStatsSeasonKey(
-      url.searchParams.get("season")
-    );
+    const db = getAdminDb();
+    const rawSeason = url.searchParams.get("season");
+    const hasExplicitSeason = rawSeason != null && rawSeason.trim() !== "";
+    const season = hasExplicitSeason
+      ? normalizeLeagueTeamStatsSeasonKey(rawSeason)
+      : (await resolveNbaStatsDisplaySeasonKey(db, null)).seasonKey;
 
     const cached = unstable_cache(
       async () => loadLeagueTeamStatsSnapshot(getAdminDb(), season),

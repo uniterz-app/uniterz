@@ -26,6 +26,13 @@ export const PRIVACY_POLICY_URL = "https://uniterz.app/mobile/privacy";
 export const TERMS_URL = "https://uniterz.app/mobile/terms";
 export const TOKUSHOHO_URL = "https://uniterz.app/mobile/law";
 
+/** 設立日（登記）。法人番号指定日は 2026-08-19 */
+export const COMPANY_FOUNDED = "2026年8月14日";
+export const COMPANY_FOUNDED_EN = "August 14, 2026";
+export const COMPANY_FOUNDED_ISO = "2026-08-14";
+/** 国税庁公表の法人番号（13桁） */
+export const COMPANY_CORPORATE_NUMBER = "9020001170030";
+
 /** 住所誤り等による再配達・再送料（税込・全国一律） */
 export const REDELIVERY_SHIPPING_FEE_JPY = 770;
 

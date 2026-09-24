@@ -23,5 +23,6 @@ export type NbaPlayerStatLeadersFirestoreDoc = {
   updatedAt?: { toDate(): Date };
   players?: unknown;
   season?: unknown;
+  playoffs?: unknown;
   last10?: unknown;
 };

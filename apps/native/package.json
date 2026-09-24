@@ -3,16 +3,16 @@
   "version": "1.0.0",
   "main": "index.ts",
   "scripts": {
-    "start": "expo start",
-    "start:dev": "expo start --dev-client --clear",
-    "start:lan": "expo start --dev-client --host lan",
-    "start:tunnel": "expo start --dev-client --tunnel",
+    "start": "APP_VARIANT=preview expo start",
+    "start:dev": "APP_VARIANT=preview expo start --dev-client --clear",
+    "start:lan": "APP_VARIANT=preview expo start --dev-client --host lan",
+    "start:tunnel": "APP_VARIANT=preview expo start --dev-client --tunnel",
     "android": "expo run:android",
     "android:dev": "expo run:android",
     "ios": "expo run:ios",
     "ios:dev": "expo run:ios",
     "ios:pod": "pod install --project-directory=ios",
-    "postinstall": "node scripts/patch-rniap-podspec.mjs",
+    "postinstall": "node scripts/patch-rniap-podspec.mjs && node scripts/patch-expo-simulator-prerequisite.mjs && node scripts/patch-expo-dev-launcher-uiscene.mjs",
     "web": "expo start --web"
   },
   "dependencies": {

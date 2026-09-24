@@ -195,7 +195,10 @@ export default function MainTabNavigator() {
               component={GamesStackScreen}
               listeners={({ navigation }) => ({
                 blur: () => {
-                  resetGamesStackInBackgroundNative(navigation);
+                  /** Profile 初回マウントと JS 競合しないよう次フレームへ */
+                  requestAnimationFrame(() => {
+                    resetGamesStackInBackgroundNative(navigation);
+                  });
                 },
               })}
             />

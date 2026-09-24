@@ -14,6 +14,7 @@ export type NbaLeagueTeamStatsApiPayload = {
 
 export type NbaLeagueTeamStatsFirestoreDoc = {
   season: unknown;
+  playoffs?: unknown;
   last10: unknown;
   asOfLabel?: unknown;
   updatedAt?: { toDate(): Date };

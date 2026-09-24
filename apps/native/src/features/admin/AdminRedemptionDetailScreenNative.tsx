@@ -4,7 +4,6 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   KeyboardAvoidingView,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -17,6 +16,7 @@ import type { RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { doc, getDoc } from "firebase/firestore";
 import { cyberAlert } from "../../components/cyberAlert";
+import { keyboardAvoidingBehavior } from "../../ui/keyboardAvoidingBehaviorNative";
 import MobilePageShell from "../profile/mobileScreens/MobilePageShell";
 import { db } from "../../lib/firebase";
 import { useFirebaseUser } from "../../auth/FirebaseUserProvider";
@@ -114,7 +114,7 @@ export default function AdminRedemptionDetailScreenNative() {
     >
       <KeyboardAvoidingView
         style={styles.flex}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={keyboardAvoidingBehavior}
       >
         <ScrollView contentContainerStyle={styles.pad} keyboardShouldPersistTaps="handled">
           {loading ? (

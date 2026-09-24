@@ -6,6 +6,7 @@
  */
 import type { Firestore } from "firebase-admin/firestore";
 import { CURRENT_NBA_SEASON_KEY, previousNbaSeasonKey } from "@/lib/rankings/nbaSeason";
+import { resolveNbaStatsDisplaySeasonKey, resolveNbaRosterInjuryDisplaySeasonKey } from "@/lib/nba/resolveNbaStatsDisplaySeason";
 import { loadTeamRosterSlice } from "@/lib/nba/teamRosters/loadTeamRostersSnapshot";
 import { buildMatchupRosterReport } from "@/lib/nba/teamRosters/buildMatchupRosterReport";
 import { loadTeamPayroll } from "@/lib/nba/teamPayroll/loadTeamPayrollSnapshot";
@@ -136,7 +137,22 @@ export async function loadTeamDetailBundle(
   opts: { teamId: string; seasonKey?: string }
 ): Promise<NbaTeamDetailApiPayload> {
   const teamId = String(opts.teamId ?? "").trim();
-  const season = (opts.seasonKey ?? CURRENT_NBA_SEASON_KEY).trim();
+  const preferred = opts.seasonKey ?? CURRENT_NBA_SEASON_KEY;
+  const [statsDisplay, liveDisplay] = await Promise.all([
+    resolveNbaStatsDisplaySeasonKey(db, preferred),
+    resolveNbaRosterInjuryDisplaySeasonKey(db, preferred),
+  ]);
+  const statsSeason = statsDisplay.seasonKey;
+  const liveSeason = liveDisplay.seasonKey;
+  /**
+   * FORM / 連勝 / シーズン W–L / seed は「カレンダー今季」を正にする。
+   * スタッツ表示が前期フォールバックのとき、standings だけ前期を読むと
+   * game log 空（L10 0-0）なのに FREEZE L8・45-37 が残る。
+   * リーグ指標・strength / ace-out / shapes は引き続き statsSeason。
+   */
+  const formSeason = statsDisplay.fromPriorSeason
+    ? statsDisplay.calendarSeasonKey
+    : statsSeason;
 
   const [
     rosterSlice,
@@ -148,14 +164,14 @@ export async function loadTeamDetailBundle(
     aceOutPayload,
     shapes,
   ] = await Promise.all([
-    loadTeamRosterSlice(db, season, teamId),
-    loadTeamPayroll(db, season, teamId),
-    loadTeamGameLog(db, season, teamId),
-    loadNbaConferenceStandings(db, season),
-    loadTeamInjury(db, season, teamId),
-    loadTeamSeasonRecordsApiPayload(db, season),
-    loadTeamAceOutRecordsApiPayload(db, season),
-    loadShapeEdgesWithPriorFallback(db, season, teamId),
+    loadTeamRosterSlice(db, liveSeason, teamId),
+    loadTeamPayroll(db, liveSeason, teamId),
+    loadTeamGameLog(db, formSeason, teamId),
+    loadNbaConferenceStandings(db, formSeason),
+    loadTeamInjury(db, liveSeason, teamId),
+    loadTeamSeasonRecordsApiPayload(db, statsSeason),
+    loadTeamAceOutRecordsApiPayload(db, statsSeason),
+    loadShapeEdgesWithPriorFallback(db, statsSeason, teamId),
   ]);
 
   let rosterBlock: NbaRosterTeamBlock | null = null;
@@ -202,7 +218,7 @@ export async function loadTeamDetailBundle(
 
   return {
     ok: true,
-    season,
+    season: statsSeason,
     teamId,
     rosterBlock,
     payroll: payrollPayload.payroll,

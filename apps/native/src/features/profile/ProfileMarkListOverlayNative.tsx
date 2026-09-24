@@ -102,15 +102,19 @@ type Props = {
   onClose: () => void;
   onOpenProfile: (row: MarkListRow) => void;
   onUnmark: (targetUid: string) => void;
+  /** 退場アニメ完了（親が Modal を外す用） */
+  onExitComplete?: () => void;
 };
 
 const AVATAR = 32;
 /** 右端 BACK タブと背景の覗き窓 */
 const SHEET_RIGHT_GAP = 28;
-/** 退場: シート / 背景・BACK。Modal 解除は最大に合わせる */
+/** 退場: シート / 背景・BACK。Modal 解除はアニメ完了＋余裕 */
 const EXIT_SHEET_MS = 140;
 const EXIT_FADE_MS = 110;
 const EXIT_MS = EXIT_SHEET_MS;
+/** Android は Modal visible=false で transform が瞬間リセットされリストがフラッシュする */
+const EXIT_UNMOUNT_BUFFER_MS = Platform.OS === "android" ? 64 : 32;
 
 function MarkListSheetBody({
   visible,
@@ -122,6 +126,7 @@ function MarkListSheetBody({
   onClose,
   onOpenProfile,
   onUnmark,
+  onExitComplete,
 }: Props) {
   const insets = useSafeAreaInsets();
   const copy = profileMarkListCopy(language);
@@ -135,6 +140,8 @@ function MarkListSheetBody({
   );
   const slide = useRef(new Animated.Value(-sheetWidth - 24)).current;
   const backdrop = useRef(new Animated.Value(0)).current;
+  const onExitCompleteRef = useRef(onExitComplete);
+  onExitCompleteRef.current = onExitComplete;
 
   useEffect(() => {
     if (visible) {
@@ -169,7 +176,9 @@ function MarkListSheetBody({
         easing: Easing.in(Easing.cubic),
         useNativeDriver: true,
       }),
-    ]).start();
+    ]).start(({ finished }) => {
+      if (finished) onExitCompleteRef.current?.();
+    });
   }, [visible, slide, backdrop, sheetWidth]);
 
   useEffect(() => {
@@ -404,21 +413,41 @@ function MarkListSheetBody({
 
 export default function ProfileMarkListOverlayNative(props: Props) {
   const [mounted, setMounted] = useState(props.visible);
+  const visibleRef = useRef(props.visible);
+  visibleRef.current = props.visible;
 
   useEffect(() => {
-    if (props.visible) {
-      setMounted(true);
-      return;
-    }
-    const t = setTimeout(() => setMounted(false), EXIT_MS);
-    return () => clearTimeout(t);
+    if (props.visible) setMounted(true);
   }, [props.visible]);
 
-  if (!mounted && !props.visible) return null;
+  const handleExitComplete = () => {
+    // 退場中に再度開かれたら外さない
+    if (visibleRef.current) return;
+    // Android: Modal を visible=false にせず、描画ごと外す（transform リセット防止）
+    requestAnimationFrame(() => {
+      if (!visibleRef.current) setMounted(false);
+    });
+  };
+
+  // アニメコールバック欠落の保険
+  useEffect(() => {
+    if (props.visible) return;
+    if (!mounted) return;
+    const t = setTimeout(
+      () => {
+        if (!visibleRef.current) setMounted(false);
+      },
+      EXIT_MS + EXIT_UNMOUNT_BUFFER_MS
+    );
+    return () => clearTimeout(t);
+  }, [props.visible, mounted]);
+
+  if (!mounted) return null;
 
   return (
     <Modal
-      visible={mounted}
+      // mounted 中は常に true。false にすると Android でシートが一瞬フル表示される
+      visible
       transparent
       animationType="none"
       statusBarTranslucent
@@ -428,7 +457,7 @@ export default function ProfileMarkListOverlayNative(props: Props) {
       onRequestClose={props.onClose}
     >
       <SafeAreaProvider initialMetrics={initialWindowMetrics}>
-        <MarkListSheetBody {...props} />
+        <MarkListSheetBody {...props} onExitComplete={handleExitComplete} />
       </SafeAreaProvider>
     </Modal>
   );

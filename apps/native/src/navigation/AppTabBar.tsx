@@ -10,9 +10,12 @@ import {
   StyleSheet,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors } from "../theme/tokens";
 import { useNativeNavTabNotificationBadges } from "./useNativeNavTabNotificationBadges";
 import NavBarChamferShellNative from "./NavBarChamferShellNative";
+/** `useBottomTabBarInsets` の pill 底オフセットと同じ式（コンテンツ余白と揃える） */
+const TAB_BAR_BOTTOM_GAP = 10;
 import { useFirebaseUser } from "../auth/FirebaseUserProvider";
 import {
   loadProfileUserDocNative,
@@ -78,7 +81,9 @@ function focusedLeafRouteName(
 
 /** mobile Web NavBar と色味を揃えたカスタムタブバー */
 export default function AppTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
+  const insets = useSafeAreaInsets();
   const pillSidePad = Math.max(0, (Dimensions.get("window").width * (1 - 0.94)) / 2);
+  const pillBottom = TAB_BAR_BOTTOM_GAP + insets.bottom;
   /** 連打で navigate が積み上がるのを抑える */
   const lastPressAtRef = useRef(0);
   const { fUser } = useFirebaseUser();
@@ -121,7 +126,7 @@ export default function AppTabBar({ state, descriptors, navigation }: BottomTabB
           {
             left: pillSidePad,
             right: pillSidePad,
-            bottom: 10,
+            bottom: pillBottom,
             opacity: chromeOp,
           },
         ]}
@@ -168,11 +173,18 @@ export default function AppTabBar({ state, descriptors, navigation }: BottomTabB
 
                   const activeTabName = state.routes[state.index]?.name;
 
+                  /**
+                   * Games スタック reset は同期で重い（特に Android）。
+                   * Profile など遷移先の初回マウントと競合させない。
+                   */
                   if (
                     activeTabName === "GamesTab" &&
                     route.name !== "GamesTab"
                   ) {
-                    resetGamesStackInBackgroundNative(navigation);
+                    const nav = navigation;
+                    requestAnimationFrame(() => {
+                      resetGamesStackInBackgroundNative(nav);
+                    });
                   }
 
                   if (route.name === "GamesTab") {
@@ -197,6 +209,15 @@ export default function AppTabBar({ state, descriptors, navigation }: BottomTabB
 
                 const warmProfileTab = () => {
                   if (route.name !== "ProfileTab" || !myUid) return;
+                  /**
+                   * lazy ProfileTab を pressIn で先マウント。
+                   * 指を離して navigate する頃には JS バンドル評価が進んでいる。
+                   */
+                  const preload = (
+                    navigation as { preload?: (name: string) => void }
+                  ).preload;
+                  preload?.("ProfileTab");
+
                   const peek = peekProfileUserDocNative(myUid);
                   if (peek) seedNativeProfileStatsFromUserDoc(myUid, peek);
                   void prefetchNativeProfileStats(myUid);

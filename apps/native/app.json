@@ -1,12 +1,12 @@
 {
   "expo": {
     "name": "UNITERZ",
-    "slug": "native",
+    "slug": "uniterz",
     "scheme": "uniterz",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash-icon.png",
@@ -15,7 +15,7 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "app.uniterz.mobile",
+      "bundleIdentifier": "com.uniterz.app",
       "buildNumber": "1",
       "associatedDomains": [
         "applinks:uniterz.app",
@@ -44,8 +44,9 @@
         "backgroundColor": "#0a1418"
       },
       "edgeToEdgeEnabled": true,
+      "softwareKeyboardLayoutMode": "resize",
       "predictiveBackGestureEnabled": false,
-      "package": "app.uniterz.mobile",
+      "package": "com.uniterz.app",
       "versionCode": 1,
       "intentFilters": [
         {
@@ -92,7 +93,14 @@
         }
       ],
       "expo-asset",
-      "expo-video"
+      "expo-video",
+      [
+        "react-native-iap",
+        {
+          "paymentProvider": "Play Store"
+        }
+      ],
+      "./plugins/withPlayBillingSdkVersion.js"
     ],
     "web": {
       "favicon": "./assets/favicon.png"
@@ -100,6 +108,9 @@
     "extra": {
       "privacyPolicyUrl": "https://uniterz.app/mobile/privacy",
       "termsOfServiceUrl": "https://uniterz.app/mobile/terms",
+      "eas": {
+        "projectId": "f5595b90-9704-42b0-8578-bc3585e9de14"
+      },
       "storeAgeRating": {
         "iosMinimum": "12+",
         "androidContentRating": "Everyone",

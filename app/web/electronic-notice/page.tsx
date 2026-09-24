@@ -1,4 +1,9 @@
 import type { Metadata } from "next";
+import {
+  COMPANY_CORPORATE_NUMBER,
+  COMPANY_FOUNDED,
+  COMPANY_WEB_URL,
+} from "@/lib/legal/companyInfo";
 import { officialSite } from "@/lib/lp/officialSiteContent";
 import OfficialLpLogo from "@/app/lp-official/_components/OfficialLpLogo";
 import OfficialLpBackTab from "@/app/lp-official/_components/OfficialLpBackTab";
@@ -10,7 +15,7 @@ export const metadata: Metadata = {
     "株式会社UNITERZの電子公告ページです。会社法の規定に基づき、公告事項を掲載します。",
 };
 
-const NOTICE_URL = "https://www.uniterz.app/web/electronic-notice";
+const NOTICE_URL = `${COMPANY_WEB_URL}/web/electronic-notice`;
 
 export default function WebElectronicNoticePage() {
   return (
@@ -45,6 +50,14 @@ export default function WebElectronicNoticePage() {
             <div>
               <dt>代表者</dt>
               <dd>{officialSite.company.representative}</dd>
+            </div>
+            <div>
+              <dt>設立</dt>
+              <dd>{COMPANY_FOUNDED}</dd>
+            </div>
+            <div>
+              <dt>法人番号</dt>
+              <dd>{COMPANY_CORPORATE_NUMBER}</dd>
             </div>
             <div>
               <dt>公告の方法</dt>

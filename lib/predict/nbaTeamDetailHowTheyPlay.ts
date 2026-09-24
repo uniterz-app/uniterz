@@ -20,7 +20,6 @@ import {
   type NbaLeagueTeamStatRow,
   type NbaLeagueTeamStatsBundle,
 } from "@/lib/predict/nbaLeagueTeamStatsMocks";
-import { nbaSeasonStatsReady } from "@/lib/predict/nbaSeasonStatsReady";
 
 export type TeamHowTheyPlayTab =
   | "fourFactors"
@@ -499,8 +498,6 @@ export function getTeamHowTheyPlay(
   teamId: string,
   bundle: NbaLeagueTeamStatsBundle
 ): TeamHowTheyPlay {
-  if (!nbaSeasonStatsReady()) return emptyTeamHowTheyPlay();
-
   const rows = bundle.season;
   const team = rows.find((r) => r.teamId === teamId);
   if (!team) return emptyTeamHowTheyPlay();

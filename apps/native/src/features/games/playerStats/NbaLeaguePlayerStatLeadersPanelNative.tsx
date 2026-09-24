@@ -24,6 +24,7 @@ import { nbaDailyStatsUpdateFootnote } from "../../../../../../lib/nba/nbaStatsU
 import { isNbaLeagueStatsPreseason } from "../../../../../../lib/nba/leagueStatsPreseason";
 import { leagueStatsTableEmptyCopy } from "../../../../../../lib/nba/leagueStatsEmptyState";
 import NbaLeagueStatsTableEmptyNative from "../stats/NbaLeagueStatsTableEmptyNative";
+import NbaLeagueStatsSeasonNavNative from "../NbaLeagueStatsSeasonNavNative";
 import {
   coercePlayerModeForPhase,
   modeTabLabel,
@@ -34,6 +35,7 @@ import {
   type NbaLeagueStatsMode,
   type NbaLeagueStatsPhase,
 } from "../../../../../../lib/nba/leagueStatsTableTabs";
+import { nbaLeagueStatsDefaultSeasonKey } from "../../../../../../lib/nba/nbaLeagueStatsSeasonNav";
 
 import { getUniterzApiBaseUrl } from "../submitPredictionApi";
 import {
@@ -109,10 +111,13 @@ export default function NbaLeaguePlayerStatLeadersPanelNative({
   const { width: screenW } = useWindowDimensions();
   const railW = Math.round(screenW * 0.22);
   const { bottomContentReserveY } = useBottomTabBarInsets();
+  const [seasonKey, setSeasonKey] = useState(nbaLeagueStatsDefaultSeasonKey);
   const { bundle, loading, error } = usePlayerStatLeadersBundle({
     apiBaseUrl: getUniterzApiBaseUrl(),
+    season: seasonKey,
   });
-  const isPreseason = isNbaLeagueStatsPreseason();
+  const hasSeasonRows = (bundle.season.pts?.length ?? 0) > 0;
+  const isPreseason = isNbaLeagueStatsPreseason() && !hasSeasonRows;
   const updateFootnote = nbaDailyStatsUpdateFootnote(lang, bundle.asOfLabel, {
     preseason: isPreseason,
   });
@@ -153,7 +158,7 @@ export default function NbaLeaguePlayerStatLeadersPanelNative({
       mode,
       metric,
       season: bundle.season[metric] ?? [],
-      last10: bundle.last10[metric] ?? [],
+      playoffs: bundle.playoffs?.[metric] ?? [],
     });
     return sortDir === "asc" ? [...list].reverse() : list;
   }, [bundle, phase, mode, metric, sortDir]);
@@ -176,6 +181,10 @@ export default function NbaLeaguePlayerStatLeadersPanelNative({
             {chrome.loadFailed(error)}
           </Text>
         ) : null}
+        <NbaLeagueStatsSeasonNavNative
+          seasonKey={seasonKey}
+          onSeasonChange={setSeasonKey}
+        />
                 <View style={styles.tabBlock}>
           <CyberSlantedTabBarNative fill>
             {NBA_LEAGUE_STATS_PHASES.map((p) => (

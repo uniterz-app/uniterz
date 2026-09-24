@@ -387,6 +387,11 @@ export type NbaTeamPayrollLine = {
   share: number;
   /** 2-Way 契約フラグ（サラリーキャップ非算入） */
   isTwoWay?: boolean;
+  /**
+   * 標準年俸なしの非保証（Exhibit 10 / キャンプ等）。
+   * `$0` を Two-Way とみなさない（枠は最大3・BDL 明示のみ TW）。
+   */
+  isNonGuaranteed?: boolean;
   /** Player Option (PO) / Team Option (TO) などのオプション種別 */
   option?: "PO" | "TO" | "MO" | null;
 };
@@ -821,12 +826,12 @@ function last10RowHasData(row: NbaLeagueTeamStatRow | undefined): boolean {
  */
 export function getNbaTeamDetailPreview(
   teamId?: string,
-  bundle: NbaLeagueTeamStatsBundle = { season: [], last10: [], asOfLabel: "" }
+  bundle: NbaLeagueTeamStatsBundle = { season: [], playoffs: [], last10: [], asOfLabel: "" }
 ): NbaTeamDetailPreview {
   const resolvedId =
     teamId ||
     defaultTeamDetailPreviewTeamId(
-      bundle.season.length > 0 ? bundle : { season: [], last10: [], asOfLabel: "" }
+      bundle.season.length > 0 ? bundle : { season: [], playoffs: [], last10: [], asOfLabel: "" }
     ) ||
     "nba-lakers";
 
@@ -925,6 +930,8 @@ export type NbaTeamPayrollSlice = {
   share: number;
   color: string;
   isTwoWay?: boolean;
+  /** Exhibit 10 / キャンプ非保証 */
+  isNonGuaranteed?: boolean;
   option?: "PO" | "TO" | "MO" | null;
 };
 
@@ -944,24 +951,27 @@ export function payrollDisplaySlices(
       : PAYROLL_SEG_FALLBACK[(i - 1) % PAYROLL_SEG_FALLBACK.length]!;
 
   const lineCash = (l: NbaTeamPayrollLine): number => {
-    if (l.isTwoWay === true) return 0;
+    if (l.isTwoWay === true || l.isNonGuaranteed === true) return 0;
     if (l.baseSalary != null && l.baseSalary > 0) return l.baseSalary;
     return l.salary;
   };
 
-  // 契約がある選手（cap または base > 0）または 2-Way のみ
+  // 契約がある選手（cap または base > 0）または 2-Way / 非保証
   const activeLines = lines
     .filter(
       (l) =>
         l.salary > 0 ||
         (l.baseSalary != null && l.baseSalary > 0) ||
-        l.isTwoWay === true
+        l.isTwoWay === true ||
+        l.isNonGuaranteed === true
     )
     .slice()
     .sort((a, b) => {
-      const aTw = a.isTwoWay === true ? 1 : 0;
-      const bTw = b.isTwoWay === true ? 1 : 0;
-      if (aTw !== bTw) return aTw - bTw;
+      const aEdge =
+        a.isTwoWay === true || a.isNonGuaranteed === true ? 1 : 0;
+      const bEdge =
+        b.isTwoWay === true || b.isNonGuaranteed === true ? 1 : 0;
+      if (aEdge !== bEdge) return aEdge - bEdge;
       return lineCash(b) - lineCash(a) || a.name.localeCompare(b.name);
     });
 
@@ -970,7 +980,7 @@ export function payrollDisplaySlices(
     label: l.name,
     salary: l.salary,
     displaySalary:
-      l.isTwoWay === true
+      l.isTwoWay === true || l.isNonGuaranteed === true
         ? undefined
         : l.baseSalary != null && l.baseSalary > 0
           ? l.baseSalary
@@ -978,6 +988,7 @@ export function payrollDisplaySlices(
     share: l.share,
     color: colorAt(i),
     isTwoWay: l.isTwoWay === true,
+    isNonGuaranteed: l.isNonGuaranteed === true,
     option: l.option ?? null,
   });
 

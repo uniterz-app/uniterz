@@ -5,7 +5,7 @@ export function readAppleIapPrivateKey(): string | null {
 }
 
 export function appleIapBundleId(): string {
-  return process.env.APPLE_IAP_BUNDLE_ID?.trim() || "app.uniterz.mobile";
+  return process.env.APPLE_IAP_BUNDLE_ID?.trim() || "com.uniterz.app";
 }
 
 export function appleIapAppAppleId(): number | undefined {

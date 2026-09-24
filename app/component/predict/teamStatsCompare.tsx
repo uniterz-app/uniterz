@@ -5,7 +5,7 @@ import {
   CyberSlantedSegBar,
   type CyberSegAccent,
 } from "@/app/component/rankings/CyberSlantedSegBar";
-import { nameOxanium, resultStatsMetricNumClass } from "@/lib/fonts";
+import { nameBebas, nameOxanium, resultStatsMetricNumClass } from "@/lib/fonts";
 
 export const ROW_STAGGER = 0.045;
 export const BAR_DURATION = 0.42;
@@ -417,21 +417,24 @@ export function SymmetricalCompareRow({
           "text-[10px] text-white/45 md:text-[11px]",
         ].join(" ");
 
+  // 順位は Bebas（スタッツ数値 Oxanium と差別化）。compact はやや小さめ
   const rankSizeClass = compactHud
-    ? "text-[14px] font-extrabold md:text-[15px]"
+    ? "text-[12px] md:text-[13px]"
     : emphasizedMetrics
-      ? "text-[11px] md:text-[13px]"
-      : "text-[10px] md:text-[11px]";
+      ? "text-[10px] md:text-[12px]"
+      : "text-[9px] md:text-[10px]";
   const rankBelowLineClass = compactHud
-    ? [resultStatsMetricNumClass, rankSizeClass, "text-white/55"].join(" ")
+    ? [nameBebas.className, rankSizeClass, "tabular-nums tracking-wide text-white/55"].join(
+        " "
+      )
     : emphasizedMetrics
       ? [
-          resultStatsMetricNumClass,
-          "text-[11px] text-white/55 md:text-[13px]",
+          nameBebas.className,
+          "tabular-nums tracking-wide text-[10px] text-white/55 md:text-[12px]",
         ].join(" ")
       : [
-          resultStatsMetricNumClass,
-          "text-[10px] text-white/52 md:text-[11px]",
+          nameBebas.className,
+          "tabular-nums tracking-wide text-[9px] text-white/52 md:text-[10px]",
         ].join(" ");
   const leftRankClass = rankBelowLineClass;
   const rightRankClass = rankBelowLineClass;

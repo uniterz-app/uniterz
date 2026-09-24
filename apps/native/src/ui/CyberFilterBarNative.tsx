@@ -8,6 +8,7 @@ import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
 import { L, resolveLocalizedLang } from "../../../../lib/i18n/localize";
 import { colors, cyberFilter, fonts } from "../theme/tokens";
+import { nativeBlurViewExtraProps } from "./nativeBlurProps";
 
 type Props = {
   /** 折りたたみ可能な詳細フィルター */
@@ -46,7 +47,12 @@ export default function CyberFilterBarNative({
     <View style={styles.wrap}>
       <View style={styles.bar}>
         {(Platform.OS === "ios" || Platform.OS === "android") && (
-          <BlurView intensity={24} tint="dark" style={StyleSheet.absoluteFillObject} />
+          <BlurView
+            intensity={24}
+            tint="dark"
+            style={StyleSheet.absoluteFillObject}
+            {...nativeBlurViewExtraProps()}
+          />
         )}
         <LinearGradient
           colors={[colors.filterBarBg, "rgba(10,14,24,0.65)"]}

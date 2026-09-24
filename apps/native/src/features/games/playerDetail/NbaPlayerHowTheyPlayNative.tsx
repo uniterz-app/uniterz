@@ -1,4 +1,4 @@
-/** Web `NbaPlayerHowTheyPlay` 相当 — PERFORMANCE + HOW THEY PLAY */
+/** Web `NbaPlayerHowTheyPlay` 相当 — HOW THEY PLAY（RATINGS 含む） */
 import { useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { CyberSlantedSegBarNative } from "../../rankings/CyberSlantedSegBarNative";
@@ -200,7 +200,8 @@ export default function NbaPlayerHowTheyPlayNative({
     () => getPlayerHowTheyPlay(playerId, { leaders, teamStats, detail }),
     [playerId, leaders, teamStats, detail]
   );
-  const [tab, setTab] = useState<PlayerHowTheyPlayTab>("fourFactors");
+  const [tab, setTab] = useState<PlayerHowTheyPlayTab>("ratings");
+  const [ratingId, setRatingId] = useState("per");
   const [factorId, setFactorId] = useState("efg_pct");
   const [defenseId, setDefenseId] = useState("matchup_fg_pct");
   const [hustleId, setHustleId] = useState("deflections");
@@ -211,44 +212,6 @@ export default function NbaPlayerHowTheyPlayNative({
 
   return (
     <View style={styles.wrap}>
-      <View style={styles.titleRow}>
-        <Text style={[styles.title, { color: hexToRgba(accent, 0.75) }]}>
-          PERFORMANCE METRICS
-        </Text>
-        <View
-          style={[styles.titleLine, { backgroundColor: hexToRgba(accent, 0.35) }]}
-        />
-      </View>
-      <View style={[styles.ratingGrid, { borderColor: frame }]}>
-        {board.ratings.map((row, i) => {
-          const col = i % 3;
-          const lastRow = Math.floor((board.ratings.length - 1) / 3);
-          const rowI = Math.floor(i / 3);
-          return (
-            <View
-              key={row.id}
-              style={[
-                styles.ratingCell,
-                col < 2
-                  ? { borderRightWidth: StyleSheet.hairlineWidth, borderRightColor: line }
-                  : null,
-                rowI < lastRow
-                  ? { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: line }
-                  : null,
-              ]}
-            >
-              <View style={styles.clutchTop}>
-                <Text style={styles.clutchShort}>{row.short}</Text>
-                <RankTag rank={row.cell.rank} accent={accent} style={styles.clutchRank} />
-              </View>
-              <Text style={styles.clutchVal}>{row.cell.display}</Text>
-            </View>
-          );
-        })}
-      </View>
-
-      <View style={[styles.sectionRule, { backgroundColor: hexToRgba(accent, 0.2) }]} />
-
       <View style={styles.titleRow}>
         <Text style={[styles.title, { color: hexToRgba(accent, 0.75) }]}>
           HOW THEY PLAY
@@ -279,6 +242,19 @@ export default function NbaPlayerHowTheyPlayNative({
       <Text style={styles.tabHint}>
         {nbaLocalizedText(lang, tabMeta.hint)}
       </Text>
+
+      {tab === "ratings" ? (
+        <HintList
+          rows={board.ratings}
+          selectedId={ratingId}
+          onSelect={setRatingId}
+          accent={accent}
+          lang={lang}
+          noData={chrome.noData}
+          line={line}
+          frame={frame}
+        />
+      ) : null}
 
       {tab === "fourFactors" ? (
         <HintList

@@ -34,10 +34,16 @@ export async function GET(req: Request) {
       seasonKey: season,
     });
 
+    const hasRoster =
+      (payload.rosterHome?.players?.length ?? 0) > 0 ||
+      (payload.rosterAway?.players?.length ?? 0) > 0;
+    // ロスター欠落時は短 TTL（シーズン切替で空が CDN に残らないように）
+    const cacheSource = hasRoster ? payload.source : "empty";
+
     return NextResponse.json(payload, {
       headers: {
         "Cache-Control": nbaStatsSnapshotCacheControl({
-          source: payload.source,
+          source: cacheSource,
           updatedAt: payload.updatedAt
             ? new Date(payload.updatedAt)
             : null,

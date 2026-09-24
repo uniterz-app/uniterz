@@ -121,6 +121,24 @@ export function nbaTeamDetailUiCopy(language: string | null | undefined) {
       pt: "Opção mútua (ambos concordam)",
       fr: "Option mutuelle (accord des deux)",
     }),
+    twoWayContract: L(lang, {
+      ja: "Two-Way 契約",
+      en: "Two-Way contract",
+      ko: "투웨이 계약",
+      zh: "双向合同",
+      es: "Contrato Two-Way",
+      pt: "Contrato Two-Way",
+      fr: "Contrat Two-Way",
+    }),
+    exhibit10Contract: L(lang, {
+      ja: "Exhibit 10（非保証キャンプ）",
+      en: "Exhibit 10 (non-guaranteed camp)",
+      ko: "Exhibit 10 (비보장 캠프)",
+      zh: "Exhibit 10（非保障训练营）",
+      es: "Exhibit 10 (campamento no garantizado)",
+      pt: "Exhibit 10 (campo não garantido)",
+      fr: "Exhibit 10 (camp non garanti)",
+    }),
     ...nbaDraftAssetsUiCopy(lang),
   };
 }

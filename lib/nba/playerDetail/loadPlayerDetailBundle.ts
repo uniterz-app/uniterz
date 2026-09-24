@@ -4,6 +4,7 @@
  */
 import type { Firestore } from "firebase-admin/firestore";
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
+import { resolveNbaStatsDisplaySeasonKey, resolveNbaRosterInjuryDisplaySeasonKey } from "@/lib/nba/resolveNbaStatsDisplaySeason";
 import { loadPlayerRosterHit } from "@/lib/nba/teamRosters/loadTeamRostersSnapshot";
 import { loadTeamInjury } from "@/lib/nba/teamInjuries/loadTeamInjuriesSnapshot";
 import { loadPlayerContract } from "@/lib/nba/playerDetail/loadPlayerContract";
@@ -18,6 +19,16 @@ import type { NbaPlayerCareerSeasonsApiPayload } from "@/lib/nba/playerCareerSea
 import type { NbaPlayerGameLogsApiPayload } from "@/lib/nba/playerGameLogs/playerGameLogsTypes";
 import type { NbaPlayerShotZonesApiPayload } from "@/lib/nba/playerShotZones/playerShotZonesTypes";
 import type { NbaPlayerSeasonMetricsApiPayload } from "@/lib/nba/playerSeasonMetrics/playerSeasonMetricsTypes";
+import { loadOffRosterIdentityFromLeagueStats } from "@/lib/nba/playerDetail/loadOffRosterIdentityFromLeagueStats";
+import type { OffRosterPlayerIdentity } from "@/lib/nba/playerDetail/resolveOffRosterPlayerIdentity";
+import { loadTeamPayroll } from "@/lib/nba/teamPayroll/loadTeamPayrollSnapshot";
+import {
+  contractFromPayrollLine,
+  contractFromRosterPresence,
+  isUsablePlayerContract,
+} from "@/lib/nba/playerDetail/applyPlayerDetailLiveSlices";
+import { playerIdLookupSet } from "@/lib/nba/playerIdAliases";
+import { isCuratedTwoWayPlayer } from "@/lib/nba/contracts/nbaTwoWayPlayersBySeason";
 import type { NbaStatsSnapshotSource } from "@/lib/nba/nbaStatsSnapshotCacheControl";
 
 export type NbaPlayerDetailApiPayload = {
@@ -31,6 +42,8 @@ export type NbaPlayerDetailApiPayload = {
   gameLogs: NbaPlayerGameLogsApiPayload;
   shotZones: NbaPlayerShotZonesApiPayload;
   seasonMetrics: NbaPlayerSeasonMetricsApiPayload;
+  /** ロスター外の氏名・最終所属（リーグ表 players から） */
+  offRosterIdentity: OffRosterPlayerIdentity | null;
   source: NbaStatsSnapshotSource;
   updatedAt: string | null;
 };
@@ -55,25 +68,132 @@ export async function loadPlayerDetailBundle(
   opts: { playerId: string; seasonKey?: string }
 ): Promise<NbaPlayerDetailApiPayload> {
   const playerId = String(opts.playerId ?? "").trim();
-  const season = (opts.seasonKey ?? CURRENT_NBA_SEASON_KEY).trim();
+  const preferred = opts.seasonKey ?? CURRENT_NBA_SEASON_KEY;
+  const [statsDisplay, liveDisplay] = await Promise.all([
+    resolveNbaStatsDisplaySeasonKey(db, preferred),
+    resolveNbaRosterInjuryDisplaySeasonKey(db, preferred),
+  ]);
+  const statsSeason = statsDisplay.seasonKey;
+  const liveSeason = liveDisplay.seasonKey;
 
-  const roster = await loadPlayerRosterHit(db, season, playerId);
+  const roster = await loadPlayerRosterHit(db, liveSeason, playerId);
   const teamId = roster.hit?.teamId ?? "";
+  const offRoster = !roster.hit;
 
-  const [injury, contract, careerSeasons, gameLogs, shotZones, seasonMetrics] =
-    await Promise.all([
-      teamId
-        ? loadTeamInjury(db, season, teamId)
-        : Promise.resolve(null as NbaTeamInjuryApiPayload | null),
-      loadPlayerContract(db, { playerId, seasonKey: season }),
-      loadPlayerCareerSeasons(db, {
+  const [
+    injury,
+    contractRaw,
+    careerSeasons,
+    gameLogs,
+    shotZones,
+    seasonMetrics,
+    offRosterIdentity,
+    payroll,
+  ] = await Promise.all([
+    teamId
+      ? loadTeamInjury(db, liveSeason, teamId)
+      : Promise.resolve(null as NbaTeamInjuryApiPayload | null),
+    offRoster
+      ? Promise.resolve({
+          ok: true as const,
+          season: liveSeason,
+          playerId,
+          contract: null,
+          source: "empty" as const,
+          updatedAt: null,
+        } satisfies NbaPlayerContractApiPayload)
+      : loadPlayerContract(db, { playerId, seasonKey: liveSeason }),
+    loadPlayerCareerSeasons(db, {
+      playerId,
+      seasonKey: liveSeason,
+    }),
+    offRoster
+      ? Promise.resolve({
+          ok: true as const,
+          season: statsSeason,
+          playerId,
+          gameLogs: [],
+          source: "empty" as const,
+          updatedAt: null,
+        } satisfies NbaPlayerGameLogsApiPayload)
+      : loadPlayerGameLogs(db, { playerId, seasonKey: statsSeason }),
+    offRoster
+      ? Promise.resolve({
+          ok: true as const,
+          season: statsSeason,
+          playerId,
+          shotZones: [],
+          source: "empty" as const,
+          updatedAt: null,
+        } satisfies NbaPlayerShotZonesApiPayload)
+      : loadPlayerShotZones(db, { playerId, seasonKey: statsSeason }),
+    offRoster
+      ? Promise.resolve({
+          ok: true as const,
+          season: statsSeason,
+          playerId,
+          teamId: null,
+          gamesPlayed: 0,
+          metrics: {},
+          source: "empty" as const,
+          updatedAt: null,
+        } satisfies NbaPlayerSeasonMetricsApiPayload)
+      : loadPlayerSeasonMetricsSnapshot(db, statsSeason, playerId),
+    offRoster
+      ? loadOffRosterIdentityFromLeagueStats(db, playerId)
+      : Promise.resolve(null),
+    teamId
+      ? loadTeamPayroll(db, liveSeason, teamId)
+      : Promise.resolve(null),
+  ]);
+
+  let contract = contractRaw;
+  const curatedTw =
+    Boolean(roster.hit) && isCuratedTwoWayPlayer(playerId, liveSeason);
+  if (
+    roster.hit &&
+    (curatedTw || !isUsablePlayerContract(contractRaw.contract))
+  ) {
+    const aliases = new Set(playerIdLookupSet(playerId));
+    const line =
+      payroll?.payroll?.lines.find((l) =>
+        aliases.has(String(l.playerId ?? "").trim())
+      ) ?? null;
+    if (line || curatedTw) {
+      const resolvedLine = line ?? {
         playerId,
-        seasonKey: season,
-      }),
-      loadPlayerGameLogs(db, { playerId, seasonKey: season }),
-      loadPlayerShotZones(db, { playerId, seasonKey: season }),
-      loadPlayerSeasonMetricsSnapshot(db, season, playerId),
-    ]);
+        name: `${roster.hit.player.firstName} ${roster.hit.player.lastName}`.trim(),
+        salary: 0,
+        share: 0,
+        isTwoWay: true,
+        isNonGuaranteed: false,
+      };
+      contract = {
+        ok: true,
+        season: liveSeason,
+        playerId,
+        contract: contractFromPayrollLine(resolvedLine, teamId, liveSeason),
+        source:
+          line && payroll?.source === "firestore"
+            ? "firestore"
+            : roster.source,
+        updatedAt: (line ? payroll?.updatedAt : null) ?? roster.updatedAt,
+      };
+    } else {
+      contract = {
+        ok: true,
+        season: liveSeason,
+        playerId,
+        contract: contractFromRosterPresence(
+          teamId,
+          roster.hit.player,
+          liveSeason
+        ),
+        source: roster.source,
+        updatedAt: roster.updatedAt,
+      };
+    }
+  }
 
   const sources = [
     roster.source,
@@ -90,7 +210,7 @@ export async function loadPlayerDetailBundle(
 
   return {
     ok: true,
-    season,
+    season: statsSeason,
     playerId,
     roster,
     injury,
@@ -99,6 +219,7 @@ export async function loadPlayerDetailBundle(
     gameLogs,
     shotZones,
     seasonMetrics,
+    offRosterIdentity,
     source,
     updatedAt: newestIso(
       roster.updatedAt,

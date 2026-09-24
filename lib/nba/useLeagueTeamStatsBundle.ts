@@ -1,10 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import {
-  CURRENT_NBA_SEASON_KEY,
-  previousNbaSeasonKey,
-} from "@/lib/rankings/nbaSeason";
+import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
 import { enrichLeagueTeamStatsBundle } from "@/lib/predict/nbaLeagueTeamStatsMocks";
 import { fetchLeagueTeamStats } from "@/lib/nba/leagueTeamStats/fetchLeagueTeamStatsClient";
 import { nbaSnapshotCacheKey } from "@/lib/nba/snapshotFetchCache";
@@ -16,11 +13,9 @@ import { leagueTeamStatsSnapshotCache as cache } from "@/lib/nba/leagueTeamStats
 import type { NbaLeagueTeamStatsBundle } from "@/lib/predict/nbaLeagueTeamStatsMocks";
 import { trackAppEvent } from "@/lib/observability/trackAppEvent";
 
-/** TEMP: フォント確認用に前季データを表示。確認後に false へ戻す */
-const TEMP_USE_PREVIOUS_SEASON_FOR_STATS_PREVIEW = false;
-
 const EMPTY_BUNDLE: NbaLeagueTeamStatsBundle = {
   season: [],
+  playoffs: [],
   last10: [],
   asOfLabel: "UNAVAILABLE",
 };
@@ -37,6 +32,8 @@ export type UseLeagueTeamStatsBundleOptions = {
 
 export type UseLeagueTeamStatsBundleState = {
   bundle: NbaLeagueTeamStatsBundle;
+  /** API が実際に返したシーズンキー（フォールバック後） */
+  season: string;
   source: NbaLeagueTeamStatsSnapshotSource;
   updatedAt: string | null;
   loading: boolean;
@@ -46,6 +43,7 @@ export type UseLeagueTeamStatsBundleState = {
 
 type Resolved = {
   bundle: NbaLeagueTeamStatsBundle;
+  season: string;
   source: NbaLeagueTeamStatsSnapshotSource;
   updatedAt: string | null;
 };
@@ -53,6 +51,7 @@ type Resolved = {
 function resolvePayload(data: NbaLeagueTeamStatsApiPayload): Resolved {
   return {
     bundle: enrichLeagueTeamStatsBundle(data.bundle, data.source),
+    season: data.season,
     source: data.source,
     updatedAt: data.updatedAt,
   };
@@ -60,6 +59,7 @@ function resolvePayload(data: NbaLeagueTeamStatsApiPayload): Resolved {
 
 const EMPTY_RESOLVED: Resolved = {
   bundle: EMPTY_BUNDLE,
+  season: CURRENT_NBA_SEASON_KEY,
   source: "empty",
   updatedAt: null,
 };
@@ -67,11 +67,7 @@ const EMPTY_RESOLVED: Resolved = {
 export function useLeagueTeamStatsBundle(
   options: UseLeagueTeamStatsBundleOptions = {}
 ): UseLeagueTeamStatsBundleState {
-  const season =
-    options.season ??
-    (TEMP_USE_PREVIOUS_SEASON_FOR_STATS_PREVIEW
-      ? previousNbaSeasonKey(CURRENT_NBA_SEASON_KEY)
-      : CURRENT_NBA_SEASON_KEY);
+  const season = options.season ?? CURRENT_NBA_SEASON_KEY;
   const enabled = options.enabled ?? true;
   const key = nbaSnapshotCacheKey(options.apiBaseUrl, season);
 
@@ -136,6 +132,7 @@ export function useLeagueTeamStatsBundle(
 
   return {
     bundle: resolved.bundle,
+    season: resolved.season,
     source: resolved.source,
     updatedAt: resolved.updatedAt,
     loading,
