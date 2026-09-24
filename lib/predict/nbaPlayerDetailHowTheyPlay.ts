@@ -52,7 +52,7 @@ export function isPlayerDetailRankShown(rank: number): boolean {
 }
 
 /**
- * 年俸リーグ順位（BDL contracts `rank`）。
+ * 年俸リーグ順位（Firestore baseSalary 降順の再計算結果）。
  * Top30 制限はしない（#31 以降も表示。無い/0 だけ隠す）。
  */
 export function isPlayerDetailSalaryRankShown(rank: number): boolean {

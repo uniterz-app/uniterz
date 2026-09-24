@@ -197,6 +197,47 @@ function salaryFromAggregate(a: BdlPlayerContractAggregate | null): number {
   return 0;
 }
 
+/**
+ * ノート例: "Non-guaranteed, $1,000,000 guaranteed Opening Night, fully guaranteed 1/10/27"
+ * → 1000000。金額が無い Non-guaranteed は呼び出し側で 0。
+ */
+function parseGuaranteedDollarFromNotes(notes: readonly string[]): number | null {
+  for (const raw of notes) {
+    const n = String(raw ?? "");
+    const moneyMatch = n.match(
+      /\$\s*([\d,]+(?:\.\d+)?)\s*(million|m)?\s*guaranteed/i
+    );
+    if (moneyMatch) {
+      let v = Number(String(moneyMatch[1]).replace(/,/g, ""));
+      if (!Number.isFinite(v) || v <= 0) continue;
+      if (moneyMatch[2]) v = Math.round(v * 1_000_000);
+      return Math.round(v);
+    }
+  }
+  return null;
+}
+
+/** 残保証: BDL total_guaranteed → ノート金額 → 非保証なら 0 → それ以外は残年俸合計 */
+function resolveRemainingGuaranteed(input: {
+  displayAgg: BdlPlayerContractAggregate | null;
+  notes: readonly string[];
+  remainingSalarySum: number;
+}): number {
+  const cap = Math.max(0, input.remainingSalarySum);
+  const fromAgg =
+    pickNum(input.displayAgg, "total_guaranteed", "totalGuaranteed") ||
+    pickNum(input.displayAgg, "guaranteed_at_signing", "guaranteedAtSigning");
+  if (fromAgg > 0) return Math.min(fromAgg, cap || fromAgg);
+
+  const fromNotes = parseGuaranteedDollarFromNotes(input.notes);
+  if (fromNotes != null) return Math.min(fromNotes, cap || fromNotes);
+
+  const joined = input.notes.join(" ");
+  if (/non-?guaranteed/i.test(joined)) return 0;
+
+  return cap;
+}
+
 function pushNotes(target: string[], agg: BdlPlayerContractAggregate | null) {
   if (!agg) return;
   const signed = pickStr(agg, "signed_using", "signedUsing");
@@ -280,14 +321,15 @@ function synthesizeSeason(
   template?: NbaPlayerContractSeason | null
 ): NbaPlayerContractSeason | null {
   const amount =
-    salary > 0 ? salary : template?.capHit || template?.baseSalary || 0;
+    salary > 0 ? salary : template?.baseSalary || template?.capHit || 0;
   if (amount <= 0) return null;
   const teamId = template?.teamId || fallbackTeamId?.trim() || "nba-unknown";
   const teamAbbr = template?.teamAbbr || TEAM_SHORT[teamId] || "NBA";
   return {
     season: year,
     baseSalary: amount,
-    capHit: amount,
+    /** 合成行は cap 行が無いので年俸と同額（実 cap hit は seasonFromRow 側） */
+    capHit: template?.capHit && template.season === year ? template.capHit : amount,
     salaryRank: 0,
     teamId,
     teamAbbr,
@@ -481,6 +523,7 @@ export function mapBdlToPlayerContractSummary(
       salaryFromAggregate(covering) ||
       salaryFromAggregate(currentAgg) ||
       salaryFromAggregate(farthestAgg) ||
+      rowTemplate?.baseSalary ||
       rowTemplate?.capHit ||
       0;
     const synth = synthesizeSeason(
@@ -494,8 +537,9 @@ export function mapBdlToPlayerContractSummary(
 
   if (seasons.length === 0) return null;
 
+  /** 総額・平均は表示年俸（base）と揃える。cap hit はチームキャップ用に seasons 内に残す */
   const remainingSum = seasons.reduce(
-    (sum, s) => sum + (s.capHit || s.baseSalary),
+    (sum, s) => sum + (s.baseSalary || s.capHit),
     0
   );
   const yearsRemaining = seasons.length;
@@ -511,6 +555,12 @@ export function mapBdlToPlayerContractSummary(
   if (farthestAgg && farthestAgg !== currentAgg) {
     pushNotes(notes, farthestAgg);
   }
+
+  const remainingGuaranteed = resolveRemainingGuaranteed({
+    displayAgg,
+    notes,
+    remainingSalarySum: remainingSum,
+  });
 
   // ノーツおよびルーキー契約規定から各年次の Option (PO / TO / MO) を補完
   // ※延長契約（UPCOMING EXTENSION）がある場合は、延長期間にはルーキーTOを適用しない
@@ -567,7 +617,7 @@ export function mapBdlToPlayerContractSummary(
         ? Math.round(remainingSum / yearsRemaining)
         : salaryFromAggregate(displayAgg),
     totalValue: remainingSum,
-    remainingGuaranteed: remainingSum,
+    remainingGuaranteed,
     notes,
     seasons,
     draftRound: activeAgg?.player?.draft_round ?? null,

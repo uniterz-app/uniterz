@@ -329,6 +329,10 @@ const NBA_ALL_STAR_BY_PLAYER: Readonly<Record<string, AllStarPlayerSeasons>> = {
     playerName: "Pascal Siakam",
     seasons: ["2019-20", "2022-23", "2024-25", "2025-26"],
   },
+  "417": {
+    playerName: "Ben Simmons",
+    seasons: ["2018-19", "2019-20", "2020-21"],
+  },
   "3547238": {
     playerName: "Anthony Edwards",
     seasons: ["2022-23", "2023-24", "2024-25", "2025-26"],

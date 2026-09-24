@@ -1,10 +1,13 @@
 /**
  * 年俸リーグ順位の正:
  * BDL contracts `rank` は欠番・0 が多いので使わない。
- * Firestore の capHit/baseSalary をシーズン年ごとに降順ソートして 1..N。
+ * Firestore の **baseSalary**（なければ capHit）をシーズン年ごとに降順ソートして 1..N。
  *
- * - 同チーム・同額の重複行は小さい playerId だけを順位対象（壊れた二重 ID 対策）
- * - 順位対象外は salaryRank=0（UI は非表示）
+ * - 同額は小さい playerId を上位（一意な # を全員に付与）
+ * - 年俸 0 のみ salaryRank=0（UI は非表示）
+ *
+ * 以前の「同チーム・同額は最小 ID のみ」除外は、ミニマム複数人や誤チーム突合で
+ * 正当な選手（例: DeRozan）の順位が消えるため廃止。
  */
 import type { DocumentReference, Firestore } from "firebase-admin/firestore";
 import { FieldValue } from "firebase-admin/firestore";
@@ -25,8 +28,9 @@ export type RecomputePlayerSalaryRanksResult = {
   seasonYears: number[];
 };
 
+/** UI の今季年俸と揃える: base 優先 */
 function salaryForRank(row: NbaPlayerContractSeason): number {
-  const n = Number(row.capHit || row.baseSalary || 0);
+  const n = Number(row.baseSalary || row.capHit || 0);
   return Number.isFinite(n) && n > 0 ? n : 0;
 }
 
@@ -41,13 +45,9 @@ function comparePlayerId(a: string, b: string): number {
   return a.localeCompare(b);
 }
 
-function dedupeKey(year: number, teamId: string, salary: number): string {
-  return `${year}|${teamId}|${salary}`;
-}
-
 /**
  * 各シーズン年について年俸降順で 1..N。
- * 同額は playerId 昇順。同チーム同額の重複 ID は最小 ID のみランク対象。
+ * 同額は playerId 昇順でタイブレーク（全員に順位を付ける）。
  */
 export async function recomputePlayerSalaryRanks(
   db: Firestore,
@@ -95,35 +95,23 @@ export async function recomputePlayerSalaryRanks(
   for (const year of seasonYears) {
     type Cand = {
       playerId: string;
-      teamId: string;
       salary: number;
       idx: number;
     };
-    const cands: Cand[] = [];
+    const rows: Cand[] = [];
     for (let i = 0; i < entries.length; i += 1) {
       const e = entries[i]!;
       const seasonRow = e.seasons.find((s) => s.season === year);
       if (!seasonRow) continue;
       const salary = salaryForRank(seasonRow);
       if (salary <= 0) continue;
-      cands.push({
+      rows.push({
         playerId: e.playerId,
-        teamId: String(seasonRow.teamId || ""),
         salary,
         idx: i,
       });
     }
 
-    // 同チーム・同額の重複は最小 playerId のみ残す
-    const bestByDedupe = new Map<string, Cand>();
-    for (const c of cands) {
-      const key = dedupeKey(year, c.teamId, c.salary);
-      const prev = bestByDedupe.get(key);
-      if (!prev || comparePlayerId(c.playerId, prev.playerId) < 0) {
-        bestByDedupe.set(key, c);
-      }
-    }
-    const rows = [...bestByDedupe.values()];
     rows.sort((a, b) => {
       if (b.salary !== a.salary) return b.salary - a.salary;
       return comparePlayerId(a.playerId, b.playerId);
