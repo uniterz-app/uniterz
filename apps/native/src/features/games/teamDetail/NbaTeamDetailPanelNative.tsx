@@ -48,6 +48,8 @@ import {
   resolveApronStatus,
 } from "../../../../../../lib/nba/teamPayroll/mapBdlToTeamPayroll";
 import { CURRENT_NBA_SEASON_KEY } from "../../../../../../lib/rankings/nbaSeason";
+import { getNbaTeamFranchiseInfo } from "../../../../../../lib/nba/teamFranchise/nbaTeamFranchiseInfo";
+import { nbaTeamFranchiseUiCopy } from "../../../../../../lib/nba/teamFranchise/nbaTeamFranchiseUiCopy";
 import { CyberSlantedSegBarNative } from "../../rankings/CyberSlantedSegBarNative";
 import { METRIC_FONT } from "../../rankings/rankingsUiTheme";
 import {
@@ -201,6 +203,81 @@ function SectionHeader({
           { backgroundColor: hexToRgba(accent, 0.35) },
         ]}
       />
+    </View>
+  );
+}
+
+function TeamInformationSectionNative({
+  teamId,
+  accent,
+  language,
+}: {
+  teamId: string;
+  accent: string;
+  language: string | null | undefined;
+}) {
+  const info = getNbaTeamFranchiseInfo(teamId);
+  if (!info) return null;
+  const copy = nbaTeamFranchiseUiCopy(language);
+  const frame = hexToRgba(accent, 0.3);
+  const rows: { label: string; value: string; colors?: boolean }[] = [
+    { label: copy.city, value: info.city },
+    { label: copy.arena, value: info.arena },
+    { label: copy.conference, value: copy.conferenceLabel(info.conference) },
+    { label: copy.division, value: copy.divisionLabel(info) },
+    {
+      label: copy.headCoach,
+      value: copy.personWithSince(info.headCoach, info.headCoachSinceYear),
+    },
+    {
+      label: copy.generalManager,
+      value: copy.personWithSince(
+        info.generalManager,
+        info.generalManagerSinceYear
+      ),
+    },
+    { label: copy.owner, value: info.owner },
+    { label: copy.founded, value: String(info.foundedYear) },
+    { label: copy.formerNames, value: copy.formerNamesValue(info) },
+    { label: copy.championships, value: String(info.championships) },
+    { label: copy.lastTitle, value: copy.lastTitleValue(info) },
+    {
+      label: copy.mascot,
+      value: info.mascot?.trim() ? info.mascot : copy.none,
+    },
+    { label: copy.colors, value: "", colors: true },
+  ];
+
+  return (
+    <View style={styles.franchiseWrap}>
+      <SectionHeader title={copy.sectionTitle} accent={accent} />
+      <View style={[styles.franchiseCard, { borderColor: frame }]}>
+        {rows.map((row) => (
+          <View key={row.label} style={styles.franchiseRow}>
+            <Text style={styles.franchiseLabel}>{row.label}</Text>
+            {row.colors ? (
+              <View style={styles.franchiseColorRow}>
+                <View
+                  style={[
+                    styles.franchiseColorSwatch,
+                    { backgroundColor: info.colors.primary },
+                  ]}
+                />
+                {info.colors.secondary ? (
+                  <View
+                    style={[
+                      styles.franchiseColorSwatch,
+                      { backgroundColor: info.colors.secondary },
+                    ]}
+                  />
+                ) : null}
+              </View>
+            ) : (
+              <Text style={styles.franchiseValue}>{row.value}</Text>
+            )}
+          </View>
+        ))}
+      </View>
     </View>
   );
 }
@@ -1924,6 +2001,14 @@ export default function NbaTeamDetailPanelNative({
           />
         </View>
 
+        <View style={[styles.divider, { backgroundColor: dividerColor }]} />
+
+        <TeamInformationSectionNative
+          teamId={detail.teamId}
+          accent={accent}
+          language={language}
+        />
+
         <Text
           style={[styles.footerAsOf, { color: "rgba(255,255,255,0.4)" }]}
         >
@@ -3181,5 +3266,51 @@ const styles = StyleSheet.create({
     letterSpacing: 1.4,
     textTransform: "uppercase",
     textAlign: "center",
+  },
+  franchiseWrap: {
+    gap: 12,
+  },
+  franchiseCard: {
+    borderWidth: 1,
+    backgroundColor: "rgba(0,0,0,0.4)",
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    gap: 10,
+  },
+  franchiseRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  franchiseLabel: {
+    fontFamily: METRIC_FONT,
+    flexShrink: 0,
+    color: "rgba(255,255,255,0.5)",
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
+  },
+  franchiseValue: {
+    fontFamily: METRIC_FONT,
+    flex: 1,
+    minWidth: 0,
+    color: "rgba(255,255,255,0.9)",
+    fontSize: 13,
+    fontWeight: "600",
+    lineHeight: 18,
+    textAlign: "right",
+  },
+  franchiseColorRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  franchiseColorSwatch: {
+    width: 16,
+    height: 16,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.25)",
   },
 });

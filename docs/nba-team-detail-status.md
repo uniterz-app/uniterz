@@ -31,6 +31,7 @@ useNbaTeamDetailLiveOverlay()
 | SPLITS HOME/AWAY · VS E/W | ✅ team-game-log |
 | **VS .500+ / SUB-.500** | ✅ team-season-records（**日次 ingest**） |
 | PAYROLL · ROSTER | ✅ |
+| **TEAM INFORMATION** | ✅ 手 curated · HC/GM/オーナーは移籍都度更新（`nbaTeamFranchiseInfo.ts` · asOf `NBA_TEAM_FRANCHISE_INFO_AS_OF`） |
 | **DRAFT ASSETS** | ✅ 手 curated · **トレード都度更新**（`nbaDraftCapitalData.ts`） |
 
 ### チーム詳細 UI に出さない（確定）
@@ -49,6 +50,7 @@ useNbaTeamDetailLiveOverlay()
 | team-rosters · injuries · game-logs · league-stats | ✅ | |
 | team-payroll | | ✅ 月曜 |
 | draft capital | 手更新（トレード時） | |
+| franchise info（HC/GM/オーナー等） | 手更新（人事時） | |
 
 ---
 
@@ -56,6 +58,7 @@ useNbaTeamDetailLiveOverlay()
 
 | 日付 | 内容 |
 |---|---|
+| 2026-09-24 | TEAM INFORMATION を ROSTER 下に追加（静的フランチャイズ · カラーは四角ブロック） |
 | 2026-09-01 | PREVIEW 除去 · レガシー redirect · team-season-records を日次 ingest に追加 |
 | 2026-09-01 | ユーザー確定: DRAFT 完了 · ace-out/opponent/SHOT は詳細 UI 非表示 |
 | 2026-09-01 | 初版 |

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { Flame, Snowflake } from "lucide-react";
@@ -38,6 +38,8 @@ import {
   resolveApronStatus,
 } from "@/lib/nba/teamPayroll/mapBdlToTeamPayroll";
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
+import { getNbaTeamFranchiseInfo } from "@/lib/nba/teamFranchise/nbaTeamFranchiseInfo";
+import { nbaTeamFranchiseUiCopy } from "@/lib/nba/teamFranchise/nbaTeamFranchiseUiCopy";
 import type { NbaRosterTeamBlock } from "@/lib/predict/nbaRoster";
 import {
   formatStreakLabel,
@@ -206,6 +208,96 @@ function SectionTitle({
         style={{ backgroundColor: hexToRgba(accent, 0.35) }}
       />
     </div>
+  );
+}
+
+function TeamInformationSection({
+  teamId,
+  accent,
+  language,
+}: {
+  teamId: string;
+  accent: string;
+  language: string | null | undefined;
+}) {
+  const info = getNbaTeamFranchiseInfo(teamId);
+  if (!info) return null;
+  const copy = nbaTeamFranchiseUiCopy(language);
+  const frame = hexToRgba(accent, 0.3);
+  const rows: { label: string; value: ReactNode }[] = [
+    { label: copy.city, value: info.city },
+    { label: copy.arena, value: info.arena },
+    { label: copy.conference, value: copy.conferenceLabel(info.conference) },
+    { label: copy.division, value: copy.divisionLabel(info) },
+    {
+      label: copy.headCoach,
+      value: copy.personWithSince(info.headCoach, info.headCoachSinceYear),
+    },
+    {
+      label: copy.generalManager,
+      value: copy.personWithSince(
+        info.generalManager,
+        info.generalManagerSinceYear
+      ),
+    },
+    { label: copy.owner, value: info.owner },
+    { label: copy.founded, value: String(info.foundedYear) },
+    { label: copy.formerNames, value: copy.formerNamesValue(info) },
+    { label: copy.championships, value: String(info.championships) },
+    { label: copy.lastTitle, value: copy.lastTitleValue(info) },
+    {
+      label: copy.mascot,
+      value: info.mascot?.trim() ? info.mascot : copy.none,
+    },
+    {
+      label: copy.colors,
+      value: (
+        <span className="inline-flex items-center gap-2">
+          <span
+            className="inline-block h-4 w-4 border border-white/25"
+            style={{ backgroundColor: info.colors.primary }}
+            title={info.colors.primary}
+          />
+          {info.colors.secondary ? (
+            <span
+              className="inline-block h-4 w-4 border border-white/25"
+              style={{ backgroundColor: info.colors.secondary }}
+              title={info.colors.secondary}
+            />
+          ) : null}
+        </span>
+      ),
+    },
+  ];
+
+  return (
+    <section className="space-y-3">
+      <SectionTitle title={copy.sectionTitle} accent={accent} />
+      <div
+        className="border bg-black/40 px-3.5 py-3"
+        style={{ borderColor: frame }}
+      >
+        <dl className="space-y-2.5">
+          {rows.map((row) => (
+            <div
+              key={row.label}
+              className="flex items-start justify-between gap-3"
+            >
+              <dt
+                className={`${nameOxanium.className} shrink-0 text-[11px] font-bold uppercase tracking-[0.12em] text-white/50`}
+              >
+                {row.label}
+              </dt>
+              <dd
+                className={`${nameOxanium.className} min-w-0 text-right text-[13px] font-semibold leading-snug text-white/90`}
+              >
+                {row.value}
+              </dd>
+            </div>
+          ))}
+        </dl>
+      </div>
+    </section>
   );
 }
 
@@ -2306,6 +2398,17 @@ export default function NbaTeamDetailPanel({
           />
         </div>
       </section>
+
+      <div
+        className="h-px"
+        style={{ backgroundColor: hexToRgba(accent, 0.22) }}
+      />
+
+      <TeamInformationSection
+        teamId={detail.teamId}
+        accent={accent}
+        language={language}
+      />
 
       <p
         className={`${nameOxanium.className} text-center text-[9px] font-bold uppercase tracking-[0.14em]`}
