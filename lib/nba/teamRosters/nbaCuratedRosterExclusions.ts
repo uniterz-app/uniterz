@@ -20,9 +20,10 @@ export function isCuratedRosterExcluded(
   return list.includes(id);
 }
 
-export function filterCuratedRosterExcludedPlayers<T extends { id?: string }>(
-  seasonKey: string,
-  players: readonly T[]
-): T[] {
-  return players.filter((p) => !isCuratedRosterExcluded(seasonKey, String(p.id ?? "")));
+export function filterCuratedRosterExcludedPlayers<
+  T extends { id?: string | number }
+>(seasonKey: string, players: readonly T[]): T[] {
+  return players.filter(
+    (p) => !isCuratedRosterExcluded(seasonKey, String(p.id ?? ""))
+  );
 }
