@@ -805,7 +805,29 @@ function PayrollSection({
       sourceLines,
       sKey
     );
-    const totalSalary = linesRaw.reduce((s, l) => s + l.salary, 0);
+    const activeFromLines = linesRaw.reduce((s, l) => s + l.salary, 0);
+    const deadLines =
+      index === 0
+        ? payroll.deadLines ?? []
+        : futureYearData?.deadLines ?? [];
+    const deadMoney =
+      index === 0
+        ? payroll.deadMoney ??
+          deadLines.reduce((s, d) => s + d.salary, 0)
+        : futureYearData?.deadMoney ??
+          deadLines.reduce((s, d) => s + d.salary, 0);
+    const activeSalary =
+      index === 0 && payroll.activeSalary != null
+        ? payroll.activeSalary
+        : futureYearData?.activeSalary != null
+          ? futureYearData.activeSalary
+          : activeFromLines;
+    const totalSalary =
+      index === 0 && payroll.totalSalary > 0
+        ? payroll.totalSalary
+        : futureYearData != null && futureYearData.committedSalary > 0
+          ? futureYearData.committedSalary
+          : activeSalary + deadMoney;
     const lines =
       totalSalary > 0
         ? linesRaw.map((l) => ({ ...l, share: l.salary / totalSalary }))
@@ -816,6 +838,9 @@ function PayrollSection({
       label: sKey,
       isCurrent: index === 0,
       totalSalary,
+      activeSalary,
+      deadMoney,
+      deadLines,
       salaryCap: capInfo.salaryCap,
       taxLine: capInfo.taxLine,
       firstApron: capInfo.firstApron,
@@ -835,6 +860,11 @@ function PayrollSection({
   const active = seasonsList[selectedSeasonIdx] ?? seasonsList[0];
   const overCap = active.capSpace < 0;
   const slices = payrollDisplaySlices(active.lines, accent);
+  const deadBarShare =
+    active.deadMoney > 0 && active.totalSalary > 0
+      ? active.deadMoney / active.totalSalary
+      : 0;
+  const DEAD_BAR = "rgba(255,255,255,0.22)";
 
   return (
     <View style={styles.payrollWrap}>
@@ -888,6 +918,13 @@ function PayrollSection({
             <Text style={styles.payrollSalary}>
               {formatSalaryUsd(active.totalSalary)}
             </Text>
+            {active.deadMoney > 0 ? (
+              <Text style={styles.payrollActiveDeadMeta}>
+                {ui.activeSalaryLabel} {formatSalaryUsd(active.activeSalary)}
+                {" · "}
+                {ui.deadMoneyLabel} {formatSalaryUsd(active.deadMoney)}
+              </Text>
+            ) : null}
           </View>
           {active.leagueRank != null && (
             <View style={styles.payrollRankBlock}>
@@ -973,6 +1010,17 @@ function PayrollSection({
                 }}
               />
             ))}
+            {deadBarShare > 0 ? (
+              <View
+                key="dead-money"
+                style={{
+                  flexGrow: Math.max(deadBarShare, 0.02),
+                  flexBasis: 0,
+                  height: "100%",
+                  backgroundColor: DEAD_BAR,
+                }}
+              />
+            ) : null}
           </View>
         </View>
 
@@ -1091,6 +1139,66 @@ function PayrollSection({
           )}
         </View>
 
+        {active.deadLines.length > 0 ? (
+          <View style={styles.payrollDeadWrap}>
+            <Text style={styles.payrollBreakdownTitle}>
+              {ui.deadMoneySection}
+            </Text>
+            {active.deadLines.map((d) => {
+              const capPct =
+                d.salary > 0 && active.salaryCap > 0
+                  ? ((d.salary / active.salaryCap) * 100).toFixed(1)
+                  : null;
+              const note = lang === "ja" ? d.noteJa : d.noteEn;
+              return (
+                <View key={d.playerId} style={styles.payrollLineRow}>
+                  <View
+                    style={[styles.payrollSwatch, { backgroundColor: DEAD_BAR }]}
+                  />
+                  <View style={{ flex: 1, gap: 2 }}>
+                    <Text style={[styles.payrollLineName, { color: "rgba(255,255,255,0.8)" }]} numberOfLines={1}>
+                      {d.name}
+                    </Text>
+                    {note ? (
+                      <Text style={styles.payrollDeadNote} numberOfLines={1}>
+                        {note}
+                      </Text>
+                    ) : null}
+                  </View>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
+                    <Text
+                      style={{
+                        fontSize: 9,
+                        fontWeight: "800",
+                        color: "rgba(255,255,255,0.6)",
+                        backgroundColor: "rgba(255,255,255,0.1)",
+                        paddingHorizontal: 3,
+                        paddingVertical: 1,
+                        borderRadius: 2,
+                        overflow: "hidden",
+                      }}
+                    >
+                      {ui.deadSalaryBadge}
+                    </Text>
+                    <Text style={[styles.payrollLineSalary, { color: "rgba(255,255,255,0.65)" }]}>
+                      {formatSalaryUsd(d.salary)}
+                    </Text>
+                  </View>
+                  <View style={styles.payrollCapPctBlock}>
+                    {capPct !== null ? (
+                      <Text style={[styles.payrollCapPct, { color: "rgba(255,255,255,0.7)" }]}>
+                        {capPct}% <Text style={styles.payrollCapPctSub}>CAP</Text>
+                      </Text>
+                    ) : (
+                      <Text style={[styles.payrollCapPctSub, { color: "rgba(255,255,255,0.35)" }]}>—</Text>
+                    )}
+                  </View>
+                </View>
+              );
+            })}
+          </View>
+        ) : null}
+
         {/* Option Badges & Contract Legend */}
         <View style={styles.payrollLegendWrap}>
           <Text style={styles.payrollLegendTitle}>
@@ -1175,6 +1283,22 @@ function PayrollSection({
               </Text>
               <Text style={styles.payrollLegendText}>
                 {ui.exhibit10Contract}
+              </Text>
+            </View>
+            <View style={styles.payrollLegendItem}>
+              <Text
+                style={[
+                  styles.payrollLegendBadge,
+                  {
+                    color: "rgba(255,255,255,0.6)",
+                    backgroundColor: "rgba(255,255,255,0.1)",
+                  },
+                ]}
+              >
+                {ui.deadSalaryBadge}
+              </Text>
+              <Text style={styles.payrollLegendText}>
+                {ui.deadSalaryLegend}
               </Text>
             </View>
           </View>
@@ -2261,6 +2385,28 @@ const styles = StyleSheet.create({
     fontVariant: ["tabular-nums"],
     transform: [{ skewX: "-8deg" }],
   },
+  payrollActiveDeadMeta: {
+    fontFamily: METRIC_FONT,
+    color: "rgba(255,255,255,0.5)",
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 0.8,
+    textTransform: "uppercase",
+    marginTop: 2,
+    transform: [{ skewX: "-6deg" }],
+  },
+  payrollDeadWrap: {
+    gap: 8,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(255,255,255,0.1)",
+    paddingTop: 10,
+  },
+  payrollDeadNote: {
+    fontFamily: METRIC_FONT,
+    color: "rgba(255,255,255,0.35)",
+    fontSize: 9,
+    fontWeight: "700",
+  },
   payrollRank: {
     fontFamily: METRIC_FONT,
     fontSize: 22,
@@ -3204,7 +3350,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     backgroundColor: "rgba(0,0,0,0.4)",
     paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingVertical: 12,
   },
   edgeCopy: {
     flex: 1,
@@ -3219,7 +3365,7 @@ const styles = StyleSheet.create({
   },
   edgeKind: {
     fontFamily: METRIC_FONT,
-    fontSize: 8,
+    fontSize: 10,
     fontWeight: "700",
     letterSpacing: 1.2,
     textTransform: "uppercase",
@@ -3227,7 +3373,7 @@ const styles = StyleSheet.create({
   edgeLabel: {
     fontFamily: METRIC_FONT,
     color: "rgba(255,255,255,0.85)",
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: "700",
     letterSpacing: 0.8,
     textTransform: "uppercase",
@@ -3236,7 +3382,7 @@ const styles = StyleSheet.create({
   edgeCondition: {
     fontFamily: METRIC_FONT,
     color: "rgba(255,255,255,0.45)",
-    fontSize: 9,
+    fontSize: 11,
     fontWeight: "700",
     letterSpacing: 0.4,
   },
@@ -3247,14 +3393,14 @@ const styles = StyleSheet.create({
   edgeWhen: {
     fontFamily: METRIC_FONT,
     color: "#fff",
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: "800",
     fontVariant: ["tabular-nums"],
     transform: [{ skewX: "-8deg" }],
   },
   edgeDelta: {
     fontFamily: METRIC_FONT,
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: "700",
     fontVariant: ["tabular-nums"],
   },

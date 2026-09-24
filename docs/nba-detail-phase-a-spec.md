@@ -405,15 +405,15 @@ metric / position / roster 欠損 → その候補スキップ。
 
 ### 3.6 CONSISTENCY（game logs ≥ 5）
 
-**今季全体（logs 全件）**
+**直近 10 試合 vs シーズン平均**（game logs ≥ 5 · season GP ≥ 1）
 
 | 行 | 計算 |
 |---|---|
-| 20+ PTS games | count(pts ≥ 20) / GP |
-| 10+ REB | count(reb ≥ 10) / GP |
-| 5+ AST | count(ast ≥ 5) / GP |
+| PTS > AVG | count(L10 pts > season pts) / L10 |
+| REB > AVG | count(L10 reb > season reb) / L10 |
+| AST > AVG | count(L10 ast > season ast) / L10 |
 
-**直近 10 試合**
+**得点のばらつき（同じ L10）**
 
 | 行 | 計算 |
 |---|---|
@@ -424,9 +424,10 @@ metric / position / roster 欠損 → その候補スキップ。
 表示例:
 
 ```
-20+ PTS   12/58 (21%)
-10+ REB    3/58 (5%)
-L10 PTS   8–31 · STABLE
+PTS > AVG   6/10 (60%)
+REB > AVG   4/10 (40%)
+AST > AVG   7/10 (70%)
+L10 PTS   LOW 8 · HIGH 31 · STABLE
 ```
 
 ---

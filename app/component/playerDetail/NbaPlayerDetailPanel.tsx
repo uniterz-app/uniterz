@@ -17,11 +17,13 @@ import {
   formatAvailabilityStatus,
   formatCareerSeasonLabel,
   formatContractSeasonLabel,
+  deadSalaryStretchSeasonYears,
   formatFgLine,
   formatMetricDisplay,
   formatPhysique,
   formatSalaryUsd,
   formatTeamHistory,
+  getNbaPlayerDetailDevMock,
   getNbaPlayerDetailPreview,
   isPlayerDetailLast10AboveSeason,
   NBA_PLAYER_DETAIL_SEASON_SHOWN,
@@ -93,6 +95,8 @@ import { nbaSeasonStatsReady } from "@/lib/predict/nbaSeasonStatsReady";
 type Props = {
   playerId?: string;
   language?: string;
+  /** `/dev` 用。Firestore 空でもシードで SHOT CHART 等を表示 */
+  useDevMock?: boolean;
 };
 
 function formatDraftHero(
@@ -1063,7 +1067,7 @@ function GameLogs({
           GAME LOGS (LAST {logs.length})
         </span>
         <span
-          className={`${nameOxanium.className} text-[13px] font-extrabold tabular-nums text-white`}
+          className={`${nameOxanium.className} text-[14px] font-extrabold tabular-nums text-white`}
         >
           {wins}-{losses}
         </span>
@@ -1090,7 +1094,7 @@ function GameLogs({
           {logs.map((log, i) => (
             <div
               key={log.gameId}
-              className="flex items-center gap-1.5 px-2 py-2.5 text-[13px]"
+              className="flex items-center gap-1.5 px-2 py-2.5 text-[14px]"
               style={
                 i < logs.length - 1
                   ? { borderBottom: `1px solid ${hexToRgba(accent, 0.12)}` }
@@ -1112,14 +1116,14 @@ function GameLogs({
                 {Math.round(log.min)}m
               </span>
               <span
-                className={`${nameOxanium.className} w-8 shrink-0 text-right text-[15px] font-extrabold tabular-nums text-white`}
+                className={`${nameOxanium.className} w-8 shrink-0 text-right font-extrabold tabular-nums text-white`}
               >
                 {log.pts}
               </span>
               <span className="w-12 shrink-0 text-right tabular-nums text-white/70">
                 {log.reb}/{log.ast}
               </span>
-              <span className="w-14 shrink-0 text-right text-[12px] tabular-nums text-white/55">
+              <span className="w-14 shrink-0 text-right tabular-nums text-white/55">
                 {formatFgLine(log.fgm, log.fga)}
               </span>
             </div>
@@ -1134,19 +1138,24 @@ function GameLogs({
 export default function NbaPlayerDetailPanel({
   playerId,
   language = "ja",
+  useDevMock = false,
 }: Props) {
   const lang = resolveLocalizedLang(language);
   const isJa = lang === "ja";
   const { bundle: leaders } = usePlayerStatLeadersBundle();
   const { bundle: teamStats } = useLeagueTeamStatsBundle();
   const base = useMemo(
-    () => getNbaPlayerDetailPreview(playerId),
-    [playerId]
+    () =>
+      useDevMock
+        ? getNbaPlayerDetailDevMock(playerId)
+        : getNbaPlayerDetailPreview(playerId),
+    [playerId, useDevMock]
   );
   const { detail, hasFetchError } = useNbaPlayerDetailLiveOverlay({
     playerId,
     base,
     leaders,
+    skipLiveFetch: useDevMock,
   });
   const { players: teammates } = useNbaTeamRosterSlice({
     teamId: detail.teamId,
@@ -1174,11 +1183,27 @@ export default function NbaPlayerDetailPanel({
           n.toLowerCase().includes("two-way") || n.toLowerCase().includes("2-way")
       )
     );
+  const isExhibit10 =
+    !isTwoWay &&
+    (detail.contract?.contractType?.toLowerCase().includes("exhibit 10") ||
+      detail.contract?.contractType?.toLowerCase().includes("exhibit10") ||
+      Boolean(
+        detail.contract?.notes?.some((n) =>
+          n.toLowerCase().includes("exhibit 10")
+        )
+      ));
+  const deadSalary = detail.contract?.deadSalary ?? null;
+  const hasDeadSalary = (deadSalary?.salary ?? 0) > 0;
   const isContractExpired =
     !detail.contract ||
     detail.contract.seasons.length === 0 ||
     detail.contract.yearsRemaining <= 0 ||
     detail.contract.contractStatus?.toLowerCase().includes("expired");
+  const showActiveContract =
+    Boolean(detail.contract) && !isContractExpired && Boolean(currentSalary);
+  const deadStretchYears = deadSalary
+    ? deadSalaryStretchSeasonYears(deadSalary)
+    : [];
   const fullName = formatNbaPlayerDisplayName(
     detail.firstName,
     detail.lastName,
@@ -1190,6 +1215,46 @@ export default function NbaPlayerDetailPanel({
   const jerseySecondary = getTeamJerseySecondaryColor("nba", detail.teamId);
   /** 暗い背景上の文字・順位・見出し用（ウルブズ紺など低輝度を持ち上げる） */
   const uiAccent = getTeamUiAccentColor("nba", detail.teamId);
+
+  const deadSalaryInner =
+    hasDeadSalary && deadSalary ? (
+      <>
+        <p
+          className={`${nameOxanium.className} text-[9px] font-bold uppercase tracking-[0.12em] text-white/45`}
+        >
+          DEAD SALARY · {deadSalary.teamAbbr}
+        </p>
+        <div className="space-y-1">
+          {deadStretchYears.map((y) => (
+            <div key={y} className="flex items-center gap-2.5 py-0.5">
+              <span
+                className={`${nameOxanium.className} w-12 text-[12px] font-bold tracking-wide text-white/45`}
+              >
+                {formatContractSeasonLabel(y)}
+              </span>
+              <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded-[2px] bg-white/10 text-white/60">
+                DEAD SALARY
+              </span>
+              <span
+                className={`${nameOxanium.className} flex-1 text-[14px] font-extrabold tabular-nums text-white/85`}
+              >
+                {formatSalaryUsd(deadSalary.salary)}
+              </span>
+            </div>
+          ))}
+        </div>
+        <p
+          className={`${nameOxanium.className} text-[11px] leading-tight`}
+          style={{ color: hexToRgba(uiAccent, 0.55) }}
+        >
+          {isJa
+            ? deadSalary.noteJa ??
+              `${deadSalary.teamAbbr} が保有するキャップ負担（ロスター外）`
+            : deadSalary.noteEn ??
+              `Cap hit still on ${deadSalary.teamAbbr}'s books (off roster)`}
+        </p>
+      </>
+    ) : null;
   const seasonShown = NBA_PLAYER_DETAIL_SEASON_SHOWN.map(
     (id) => detail.seasonMetrics.find((m) => m.id === id)
   ).filter((m): m is NonNullable<typeof m> => Boolean(m));
@@ -1584,6 +1649,7 @@ export default function NbaPlayerDetailPanel({
           <DetailConsistencySection
             data={playerInsights.consistency}
             accent={uiAccent}
+            language={lang}
           />
           <div
             className="h-px"
@@ -1599,7 +1665,7 @@ export default function NbaPlayerDetailPanel({
       />
       <section className="space-y-3">
         <h2 className={SECTION_HEADING_CLASS}>CONTRACT</h2>
-        {detail.contract && !isContractExpired && currentSalary ? (
+        {showActiveContract && currentSalary ? (
             <div
               className="space-y-2 border bg-black/45 p-3.5"
               style={{ borderColor: hexToRgba(uiAccent, 0.3) }}
@@ -1608,6 +1674,9 @@ export default function NbaPlayerDetailPanel({
                 <div>
                   <p className={`${nameOxanium.className} text-[9px] font-bold uppercase tracking-[0.14em] text-white/40`}>
                     {isJa ? "今季年俸" : "THIS SEASON"}
+                    {currentSalary.teamAbbr
+                      ? ` · ${currentSalary.teamAbbr}`
+                      : ""}
                   </p>
                   <p className={`${nameOxanium.className} flex items-center gap-1.5 text-[26px] font-extrabold`}>
                     {currentSalary.baseSalary > 0 ? (
@@ -1618,6 +1687,13 @@ export default function NbaPlayerDetailPanel({
                           TW
                         </span>
                         {formatSalaryUsd(nbaTwoWaySalaryForSeason(CURRENT_NBA_SEASON_KEY))}
+                      </>
+                    ) : isExhibit10 ? (
+                      <>
+                        <span className="text-[11px] font-extrabold px-1.5 py-0.5 rounded-[2px] bg-white/10 text-white/70">
+                          E10
+                        </span>
+                        —
                       </>
                     ) : (
                       "—"
@@ -1682,6 +1758,8 @@ export default function NbaPlayerDetailPanel({
                         ? formatSalaryUsd(s.baseSalary)
                         : isTwoWay
                         ? "TW"
+                        : isExhibit10
+                        ? "E10"
                         : "—"}
                     </span>
                     {s.option ? (
@@ -1705,7 +1783,19 @@ export default function NbaPlayerDetailPanel({
                   {detail.contract.notes[0]}
                 </p>
               ) : null}
+              {deadSalaryInner ? (
+                <div className="mt-2 space-y-1.5 border-t border-white/10 pt-2.5">
+                  {deadSalaryInner}
+                </div>
+              ) : null}
             </div>
+        ) : hasDeadSalary ? (
+          <div
+            className="space-y-2 border bg-black/45 p-3.5"
+            style={{ borderColor: hexToRgba(uiAccent, 0.3) }}
+          >
+            <div className="space-y-1.5">{deadSalaryInner}</div>
+          </div>
         ) : detail.contract?.contractStatus?.toLowerCase().includes("expired") || (!detail.contract && !currentSalary) ? (
           <div
             className="space-y-2 border bg-black/45 p-3.5"

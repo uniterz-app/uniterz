@@ -327,7 +327,13 @@ export type NbaTeamFuturePayrollYear = {
   taxLine: number;
   firstApron: number;
   secondApron: number;
+  /** キャップ総額（Active + Dead） */
   committedSalary: number;
+  /** Active のみ（Dead 除く） */
+  activeSalary?: number;
+  /** Dead / ストレッチ合計 */
+  deadMoney?: number;
+  deadLines?: NbaTeamPayrollDeadLine[];
   capSpace: number;
   taxSpace: number;
   firstApronSpace: number;
@@ -338,9 +344,16 @@ export type NbaTeamFuturePayrollYear = {
 };
 
 export type NbaTeamPayroll = {
-  /** 総年俸 */
+  /**
+   * キャップ総額（Active 年俸合計 + Dead Money）。
+   * リーグ順位・エプロン判定の正。
+   */
   totalSalary: number;
-  /** リーグ内ペイロール順位（1=最高） */
+  /** Active ロスター年俸合計（Dead を含まない） */
+  activeSalary?: number;
+  /** Dead Money 合計 */
+  deadMoney?: number;
+  /** リーグ内ペイロール順位（1=キャップ総額最高） */
   leagueRank: number;
   /** サラリーキャップ概算 */
   salaryCap: number;
@@ -364,10 +377,21 @@ export type NbaTeamPayroll = {
   taxBill: number;
   /** 保証額合計 */
   guaranteed: number;
-  /** 選手別内訳（年俸降順） */
+  /** 選手別内訳（年俸降順・Active） */
   lines: NbaTeamPayrollLine[];
+  /** デッドマネー内訳 */
+  deadLines?: NbaTeamPayrollDeadLine[];
   /** 将来シーズン別ペイロール */
   futureYears?: NbaTeamFuturePayrollYear[];
+};
+
+export type NbaTeamPayrollDeadLine = {
+  playerId: string;
+  name: string;
+  /** キャップヒット */
+  salary: number;
+  noteJa?: string;
+  noteEn?: string;
 };
 
 export type NbaTeamPayrollLine = {

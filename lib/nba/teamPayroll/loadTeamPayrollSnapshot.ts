@@ -17,6 +17,7 @@ import type {
   NbaApronStatus,
   NbaTeamFuturePayrollYear,
   NbaTeamPayroll,
+  NbaTeamPayrollDeadLine,
   NbaTeamPayrollLine,
 } from "@/lib/predict/nbaTeamDetailPreviewMocks";
 
@@ -72,6 +73,35 @@ function resolveLines(raw: unknown): NbaTeamPayrollLine[] {
   return out;
 }
 
+function resolveDeadLines(raw: unknown): NbaTeamPayrollDeadLine[] {
+  if (!Array.isArray(raw)) return [];
+  const out: NbaTeamPayrollDeadLine[] = [];
+  for (const item of raw) {
+    if (!item || typeof item !== "object") continue;
+    const row = item as Record<string, unknown>;
+    const playerId = String(row.playerId ?? "").trim();
+    const name = String(row.name ?? "").trim();
+    const salary = isFiniteNumber(row.salary) ? row.salary : 0;
+    if (!playerId || !name || salary <= 0) continue;
+    const noteJa =
+      typeof row.noteJa === "string" && row.noteJa.trim()
+        ? row.noteJa.trim()
+        : undefined;
+    const noteEn =
+      typeof row.noteEn === "string" && row.noteEn.trim()
+        ? row.noteEn.trim()
+        : undefined;
+    out.push({
+      playerId,
+      name,
+      salary,
+      ...(noteJa ? { noteJa } : {}),
+      ...(noteEn ? { noteEn } : {}),
+    });
+  }
+  return out;
+}
+
 function resolveFutureYears(raw: unknown): NbaTeamFuturePayrollYear[] | undefined {
   if (!Array.isArray(raw) || raw.length === 0) return undefined;
   const out: NbaTeamFuturePayrollYear[] = [];
@@ -81,6 +111,16 @@ function resolveFutureYears(raw: unknown): NbaTeamFuturePayrollYear[] | undefine
     const seasonKey = String(row.seasonKey ?? "").trim();
     if (!seasonKey) continue;
     const lines = resolveLines(row.lines);
+    const deadLines = resolveDeadLines(row.deadLines);
+    const activeSalary = isFiniteNumber(row.activeSalary)
+      ? row.activeSalary
+      : lines.reduce((s, l) => s + l.salary, 0);
+    const deadMoney = isFiniteNumber(row.deadMoney)
+      ? row.deadMoney
+      : deadLines.reduce((s, l) => s + l.salary, 0);
+    const committedSalary = isFiniteNumber(row.committedSalary)
+      ? row.committedSalary
+      : activeSalary + deadMoney;
     out.push({
       seasonKey,
       seasonYear: isFiniteNumber(row.seasonYear) ? row.seasonYear : 0,
@@ -88,11 +128,16 @@ function resolveFutureYears(raw: unknown): NbaTeamFuturePayrollYear[] | undefine
       taxLine: isFiniteNumber(row.taxLine) ? row.taxLine : 0,
       firstApron: isFiniteNumber(row.firstApron) ? row.firstApron : 0,
       secondApron: isFiniteNumber(row.secondApron) ? row.secondApron : 0,
-      committedSalary: isFiniteNumber(row.committedSalary) ? row.committedSalary : 0,
+      committedSalary,
+      activeSalary,
+      deadMoney,
+      ...(deadLines.length > 0 ? { deadLines } : {}),
       capSpace: isFiniteNumber(row.capSpace) ? row.capSpace : 0,
       taxSpace: isFiniteNumber(row.taxSpace) ? row.taxSpace : 0,
       firstApronSpace: isFiniteNumber(row.firstApronSpace) ? row.firstApronSpace : 0,
-      secondApronSpace: isFiniteNumber(row.secondApronSpace) ? row.secondApronSpace : 0,
+      secondApronSpace: isFiniteNumber(row.secondApronSpace)
+        ? row.secondApronSpace
+        : 0,
       apronStatus: (row.apronStatus as NbaApronStatus) ?? "under_cap",
       playerCount: isFiniteNumber(row.playerCount) ? row.playerCount : lines.length,
       lines,
@@ -111,9 +156,16 @@ function resolvePayrollTeam(
   if (!raw || typeof raw !== "object") return null;
   const row = raw as Record<string, unknown>;
   const lines = resolveLines(row.lines);
+  const deadLines = resolveDeadLines(row.deadLines);
+  const activeSalary = isFiniteNumber(row.activeSalary)
+    ? row.activeSalary
+    : lines.reduce((s, l) => s + l.salary, 0);
+  const deadMoney = isFiniteNumber(row.deadMoney)
+    ? row.deadMoney
+    : deadLines.reduce((s, l) => s + l.salary, 0);
   const totalSalary = isFiniteNumber(row.totalSalary)
     ? row.totalSalary
-    : lines.reduce((s, l) => s + l.salary, 0);
+    : activeSalary + deadMoney;
   const capInfo = nbaSalaryCapLinesForSeason(seasonKey);
   const salaryCap = isFiniteNumber(row.salaryCap) && row.salaryCap > 0 ? row.salaryCap : (fallbackCap > 0 ? fallbackCap : capInfo.salaryCap);
   const taxLine = isFiniteNumber(row.taxLine) && row.taxLine > 0 ? row.taxLine : (fallbackTax > 0 ? fallbackTax : capInfo.taxLine);
@@ -145,6 +197,8 @@ function resolvePayrollTeam(
 
   const payroll: NbaTeamPayroll = {
     totalSalary,
+    activeSalary,
+    deadMoney,
     leagueRank: isFiniteNumber(row.leagueRank) ? row.leagueRank : 30,
     salaryCap,
     taxLine,
@@ -158,6 +212,7 @@ function resolvePayrollTeam(
     taxBill: isFiniteNumber(row.taxBill) ? row.taxBill : 0,
     guaranteed: isFiniteNumber(row.guaranteed) ? row.guaranteed : totalSalary,
     lines,
+    deadLines: deadLines.length > 0 ? deadLines : undefined,
     futureYears,
   };
   return {

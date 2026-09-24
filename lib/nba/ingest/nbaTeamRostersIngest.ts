@@ -28,6 +28,7 @@ import {
   CURRENT_NBA_SEASON_KEY,
   previousNbaSeasonKey,
 } from "@/lib/rankings/nbaSeason";
+import { filterCuratedRosterExcludedPlayers } from "@/lib/nba/teamRosters/nbaCuratedRosterExclusions";
 
 export const NBA_TEAM_ROSTERS_INGEST_READY = true;
 
@@ -100,7 +101,10 @@ export async function ingestNbaTeamRostersFromBdl(
   const teams: Record<string, NbaTeamRosterDocTeam> = {};
   for (const [teamId, snap] of byTeam) {
     const players = sortRosterPlayersByMpg(
-      mergeSeasonAveragesOntoRosterPlayers(snap.players, averagesMap)
+      filterCuratedRosterExcludedPlayers(
+        seasonKey,
+        mergeSeasonAveragesOntoRosterPlayers(snap.players, averagesMap)
+      )
     );
     teams[teamId] = {
       teamId: snap.teamId,

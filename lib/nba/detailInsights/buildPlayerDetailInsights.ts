@@ -159,38 +159,45 @@ function buildConsistency(detail: NbaPlayerDetailPreview): PlayerConsistencyInsi
   const logs = detail.gameLogs;
   if (logs.length < 5) return null;
 
-  const gp = logs.length;
-  const count20 = logs.filter((g) => g.pts >= 20).length;
-  const count10reb = logs.filter((g) => g.reb >= 10).length;
-  const count5ast = logs.filter((g) => g.ast >= 5).length;
+  const seasonPts = detail.season.pts;
+  const seasonReb = detail.season.reb;
+  const seasonAst = detail.season.ast;
+  if (
+    detail.season.gamesPlayed <= 0 ||
+    ![seasonPts, seasonReb, seasonAst].every((n) => Number.isFinite(n))
+  ) {
+    return null;
+  }
 
   const last10 = logs.slice(0, Math.min(10, logs.length));
+  const n = last10.length;
+  const above = (
+    pick: (g: (typeof last10)[number]) => number,
+    avg: number
+  ) => last10.filter((g) => pick(g) > avg).length;
+
+  const abovePts = above((g) => g.pts, seasonPts);
+  const aboveReb = above((g) => g.reb, seasonReb);
+  const aboveAst = above((g) => g.ast, seasonAst);
+
   const ptsVals = last10.map((g) => g.pts);
   const sd = stdev(ptsVals);
   let volatility: PlayerConsistencyInsight["volatility"] = "mixed";
   if (sd < 4) volatility = "stable";
   else if (sd >= 7) volatility = "volatile";
 
+  const row = (label: string, count: number) => ({
+    label,
+    count,
+    games: n,
+    pct: Math.round((count / n) * 100),
+  });
+
   return {
     milestones: [
-      {
-        label: "20+ PTS",
-        count: count20,
-        games: gp,
-        pct: Math.round((count20 / gp) * 100),
-      },
-      {
-        label: "10+ REB",
-        count: count10reb,
-        games: gp,
-        pct: Math.round((count10reb / gp) * 100),
-      },
-      {
-        label: "5+ AST",
-        count: count5ast,
-        games: gp,
-        pct: Math.round((count5ast / gp) * 100),
-      },
+      row("PTS > AVG", abovePts),
+      row("REB > AVG", aboveReb),
+      row("AST > AVG", aboveAst),
     ],
     last10PtsMin: Math.min(...ptsVals),
     last10PtsMax: Math.max(...ptsVals),

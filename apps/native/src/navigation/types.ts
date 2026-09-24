@@ -63,6 +63,8 @@ export type GamesStackParamList = {
   PlayerDetailPreview:
     | {
         playerId?: string;
+        /** Profile DEV — シードモックで SHOT CHART 等を表示 */
+        useDevMock?: boolean;
         /** 予想オーバーレイから開いた → goBack でモーダル再表示 */
         returnToPredictOverlay?: boolean;
         predictToolsTab?: "insight" | "injuries" | "stats" | "roster";
@@ -165,7 +167,7 @@ export type ProfileStackParamList = {
   /** __DEV__ Team Detail 再構築プレビュー */
   TeamDetailPreview: { teamId?: string } | undefined;
   /** __DEV__ Player Detail 叩き台プレビュー */
-  PlayerDetailPreview: { playerId?: string } | undefined;
+  PlayerDetailPreview: { playerId?: string; useDevMock?: boolean } | undefined;
   /** __DEV__ ライブ試合スタッツ（Team / Box Score） */
   LiveGameStatsPreview: undefined;
   /** __DEV__ リザルト詳細（TOP SCORER / 得点上位） */

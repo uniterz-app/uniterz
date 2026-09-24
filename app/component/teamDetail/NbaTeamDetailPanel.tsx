@@ -346,19 +346,19 @@ function TeamShapeEdgesSection({
           return (
             <div
               key={`${edge.kind}-${edge.shapeId}`}
-              className="flex items-center justify-between gap-3 border bg-black/40 px-3 py-2.5"
+              className="flex items-center justify-between gap-3 border bg-black/40 px-3 py-3"
               style={{ borderColor: frame }}
             >
               <div className="min-w-0 flex-1 space-y-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <span
-                    className={`${nameOxanium.className} text-[8px] font-bold uppercase tracking-[0.12em]`}
+                    className={`${nameOxanium.className} text-[10px] font-bold uppercase tracking-[0.12em]`}
                     style={{ color: kindColor }}
                   >
                     {kindLabel}
                   </span>
                   <p
-                    className={`${nameOxanium.className} truncate text-[11px] font-bold uppercase tracking-[0.08em] text-white/85`}
+                    className={`${nameOxanium.className} truncate text-[13px] font-bold uppercase tracking-[0.08em] text-white/85`}
                   >
                     {resolveTeamShapeLabel(edge.shapeId, lang, {
                       ja: edge.labelJa,
@@ -367,7 +367,7 @@ function TeamShapeEdgesSection({
                   </p>
                 </div>
                 <p
-                  className={`${nameOxanium.className} text-[9px] font-bold tracking-wide text-white/45`}
+                  className={`${nameOxanium.className} text-[11px] font-bold tracking-wide text-white/45`}
                 >
                   {resolveTeamShapeCondition(edge.shapeId, lang, {
                     ja: edge.conditionJa,
@@ -377,13 +377,13 @@ function TeamShapeEdgesSection({
               </div>
               <div className="shrink-0 text-right">
                 <p
-                  className={`${nameOxanium.className} text-[16px] font-extrabold tabular-nums`}
+                  className={`${nameOxanium.className} text-[18px] font-extrabold tabular-nums`}
                   style={{ transform: "skewX(-8deg)" }}
                 >
                   {edge.when}
                 </p>
                 <p
-                  className={`${nameOxanium.className} text-[10px] font-bold tabular-nums`}
+                  className={`${nameOxanium.className} text-[12px] font-bold tabular-nums`}
                   style={{ color: kindColor }}
                 >
                   {shapeDeltaPpLabel(edge.deltaWinPct)}
@@ -1250,7 +1250,29 @@ function PayrollCard({
       sourceLines,
       sKey
     );
-    const totalSalary = linesRaw.reduce((s, l) => s + l.salary, 0);
+    const activeFromLines = linesRaw.reduce((s, l) => s + l.salary, 0);
+    const deadLines =
+      index === 0
+        ? payroll.deadLines ?? []
+        : futureYearData?.deadLines ?? [];
+    const deadMoney =
+      index === 0
+        ? payroll.deadMoney ??
+          deadLines.reduce((s, d) => s + d.salary, 0)
+        : futureYearData?.deadMoney ??
+          deadLines.reduce((s, d) => s + d.salary, 0);
+    const activeSalary =
+      index === 0 && payroll.activeSalary != null
+        ? payroll.activeSalary
+        : futureYearData?.activeSalary != null
+          ? futureYearData.activeSalary
+          : activeFromLines;
+    const totalSalary =
+      index === 0 && payroll.totalSalary > 0
+        ? payroll.totalSalary
+        : futureYearData != null && futureYearData.committedSalary > 0
+          ? futureYearData.committedSalary
+          : activeSalary + deadMoney;
     const lines =
       totalSalary > 0
         ? linesRaw.map((l) => ({ ...l, share: l.salary / totalSalary }))
@@ -1261,6 +1283,9 @@ function PayrollCard({
       label: sKey,
       isCurrent: index === 0,
       totalSalary,
+      activeSalary,
+      deadMoney,
+      deadLines,
       salaryCap: capInfo.salaryCap,
       taxLine: capInfo.taxLine,
       firstApron: capInfo.firstApron,
@@ -1280,6 +1305,11 @@ function PayrollCard({
   const active = seasonsList[selectedSeasonIdx] ?? seasonsList[0];
   const overCap = active.capSpace < 0;
   const slices = payrollDisplaySlices(active.lines, accent);
+  const deadBarShare =
+    active.deadMoney > 0 && active.totalSalary > 0
+      ? active.deadMoney / active.totalSalary
+      : 0;
+  const DEAD_BAR = "rgba(255,255,255,0.22)";
 
   return (
     <section className="space-y-2.5">
@@ -1329,8 +1359,8 @@ function PayrollCard({
                 >
                   {active.isCurrent
                     ? isJa
-                      ? `総年俸 (${active.label})`
-                      : `TOTAL SALARY (${active.label})`
+                      ? `キャップ総額 (${active.label})`
+                      : `CAP TOTAL (${active.label})`
                     : isJa
                     ? `確定年俸 (${active.label})`
                     : `COMMITTED (${active.label})`}
@@ -1343,6 +1373,16 @@ function PayrollCard({
               >
                 {formatSalaryUsd(active.totalSalary)}
               </p>
+              {active.deadMoney > 0 ? (
+                <p
+                  className={`${nameOxanium.className} mt-1 text-[10px] font-bold uppercase tracking-[0.1em] text-white/50`}
+                  style={{ transform: "skewX(-6deg)" }}
+                >
+                  Active {formatSalaryUsd(active.activeSalary)}
+                  <span className="text-white/30"> · </span>
+                  DEAD SALARY {formatSalaryUsd(active.deadMoney)}
+                </p>
+              ) : null}
             </div>
             {active.leagueRank != null && (
               <div className="text-right">
@@ -1429,6 +1469,17 @@ function PayrollCard({
                   }}
                 />
               ))}
+              {deadBarShare > 0 ? (
+                <div
+                  key="dead-money"
+                  title="DEAD SALARY"
+                  style={{
+                    flexGrow: Math.max(deadBarShare, 0.02),
+                    flexBasis: 0,
+                    backgroundColor: DEAD_BAR,
+                  }}
+                />
+              ) : null}
             </div>
           </div>
           <div className="space-y-2">
@@ -1531,6 +1582,77 @@ function PayrollCard({
             )}
           </div>
 
+          {active.deadLines.length > 0 ? (
+            <div className="space-y-2 border-t border-white/10 pt-2.5">
+              <p
+                className={`${nameOxanium.className} text-[9px] font-bold uppercase tracking-[0.12em] text-white/45`}
+                style={{ transform: "skewX(-6deg)" }}
+              >
+                DEAD SALARY
+              </p>
+              {active.deadLines.map((d) => {
+                const capPct =
+                  d.salary > 0 && active.salaryCap > 0
+                    ? ((d.salary / active.salaryCap) * 100).toFixed(1)
+                    : null;
+                const note = isJa ? d.noteJa : d.noteEn;
+                return (
+                  <div key={d.playerId} className="flex items-center gap-2.5 py-0.5">
+                    <span
+                      className="h-2.5 w-2.5 shrink-0 rounded-[1px]"
+                      style={{
+                        backgroundColor: DEAD_BAR,
+                        transform: "skewX(-12deg)",
+                      }}
+                    />
+                    <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                      <span
+                        className={`${nameOxanium.className} truncate text-[14px] font-extrabold text-white/80`}
+                        style={{ transform: "skewX(-8deg)" }}
+                      >
+                        {d.name}
+                      </span>
+                      {note ? (
+                        <span
+                          className={`${nameOxanium.className} truncate text-[9px] font-bold text-white/35`}
+                          style={{ transform: "skewX(-6deg)" }}
+                        >
+                          {note}
+                        </span>
+                      ) : null}
+                    </div>
+                    <span
+                      className={`${nameOxanium.className} flex items-center gap-1 text-[13px] font-bold tabular-nums text-white/65`}
+                      style={{ transform: "skewX(-8deg)" }}
+                    >
+                      <span className="text-[9px] font-extrabold px-1 py-0.2 rounded-[2px] bg-white/10 text-white/60">
+                        DEAD SALARY
+                      </span>
+                      {formatSalaryUsd(d.salary)}
+                    </span>
+                    <span
+                      className={`${nameOxanium.className} w-16 text-right text-[13px] font-extrabold tabular-nums text-white/70`}
+                      style={{ transform: "skewX(-8deg)" }}
+                    >
+                      {capPct !== null ? (
+                        <>
+                          {capPct}%{" "}
+                          <span className="text-[9px] text-white/45 font-bold">
+                            CAP
+                          </span>
+                        </>
+                      ) : (
+                        <span className="text-[10px] text-white/35 font-bold">
+                          —
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          ) : null}
+
           {/* Option Badges & Contract Legend */}
           <div className="border-t border-white/10 pt-2.5 mt-3 space-y-1.5">
             <p
@@ -1605,6 +1727,19 @@ function PayrollCard({
                 </span>
                 <span className="text-[10px] text-white/55 font-medium leading-tight">
                   {isJa ? "Exhibit 10（非保証キャンプ）" : "Exhibit 10 (non-guaranteed camp)"}
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span
+                  className={`${nameOxanium.className} shrink-0 text-[8px] font-extrabold px-1.5 py-0.5 rounded-[2px] tracking-wider bg-white/10 text-white/60`}
+                  style={{ transform: "skewX(-8deg)" }}
+                >
+                  DEAD SALARY
+                </span>
+                <span className="text-[10px] text-white/55 font-medium leading-tight">
+                  {isJa
+                    ? "ロスター外でも残るキャップ負担（ウェーブ／ストレッチ）"
+                    : "Cap hit still on the books after waive / stretch"}
                 </span>
               </div>
             </div>

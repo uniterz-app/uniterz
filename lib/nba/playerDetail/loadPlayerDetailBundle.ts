@@ -29,7 +29,13 @@ import {
 } from "@/lib/nba/playerDetail/applyPlayerDetailLiveSlices";
 import { playerIdLookupSet } from "@/lib/nba/playerIdAliases";
 import { isCuratedTwoWayPlayer } from "@/lib/nba/contracts/nbaTwoWayPlayersBySeason";
+import {
+  curatedDeadSalaryForPlayer,
+  isCuratedExhibit10Player,
+} from "@/lib/nba/teamPayroll/nbaCuratedDeadMoney";
+import { TEAM_SHORT } from "@/lib/team-short";
 import type { NbaStatsSnapshotSource } from "@/lib/nba/nbaStatsSnapshotCacheControl";
+import type { NbaPlayerContractSummary } from "@/lib/predict/nbaPlayerDetailPreviewMocks";
 
 export type NbaPlayerDetailApiPayload = {
   ok: true;
@@ -94,14 +100,17 @@ export async function loadPlayerDetailBundle(
       ? loadTeamInjury(db, liveSeason, teamId)
       : Promise.resolve(null as NbaTeamInjuryApiPayload | null),
     offRoster
-      ? Promise.resolve({
-          ok: true as const,
-          season: liveSeason,
-          playerId,
-          contract: null,
-          source: "empty" as const,
-          updatedAt: null,
-        } satisfies NbaPlayerContractApiPayload)
+      ? loadPlayerContract(db, { playerId, seasonKey: liveSeason }).catch(
+          () =>
+            ({
+              ok: true as const,
+              season: liveSeason,
+              playerId,
+              contract: null,
+              source: "empty" as const,
+              updatedAt: null,
+            }) satisfies NbaPlayerContractApiPayload
+        )
       : loadPlayerContract(db, { playerId, seasonKey: liveSeason }),
     loadPlayerCareerSeasons(db, {
       playerId,
@@ -150,23 +159,25 @@ export async function loadPlayerDetailBundle(
   let contract = contractRaw;
   const curatedTw =
     Boolean(roster.hit) && isCuratedTwoWayPlayer(playerId, liveSeason);
+  const curatedE10 =
+    Boolean(roster.hit) && isCuratedExhibit10Player(playerId, liveSeason);
   if (
     roster.hit &&
-    (curatedTw || !isUsablePlayerContract(contractRaw.contract))
+    (curatedTw || curatedE10 || !isUsablePlayerContract(contractRaw.contract))
   ) {
     const aliases = new Set(playerIdLookupSet(playerId));
     const line =
       payroll?.payroll?.lines.find((l) =>
         aliases.has(String(l.playerId ?? "").trim())
       ) ?? null;
-    if (line || curatedTw) {
+    if (line || curatedTw || curatedE10) {
       const resolvedLine = line ?? {
         playerId,
         name: `${roster.hit.player.firstName} ${roster.hit.player.lastName}`.trim(),
         salary: 0,
         share: 0,
-        isTwoWay: true,
-        isNonGuaranteed: false,
+        isTwoWay: curatedTw,
+        isNonGuaranteed: curatedE10 || !curatedTw,
       };
       contract = {
         ok: true,
@@ -191,6 +202,29 @@ export async function loadPlayerDetailBundle(
         ),
         source: roster.source,
         updatedAt: roster.updatedAt,
+      };
+    }
+  }
+
+  if (contract.contract) {
+    contract = {
+      ...contract,
+      contract: attachCuratedDeadSalary(
+        contract.contract,
+        liveSeason,
+        playerId
+      ),
+    };
+  } else {
+    const deadOnly = buildDeadOnlyContractShell(liveSeason, playerId);
+    if (deadOnly) {
+      contract = {
+        ok: true,
+        season: liveSeason,
+        playerId,
+        contract: deadOnly,
+        source: "firestore",
+        updatedAt: null,
       };
     }
   }
@@ -230,5 +264,67 @@ export async function loadPlayerDetailBundle(
       shotZones.updatedAt,
       seasonMetrics.updatedAt
     ),
+  };
+}
+
+function attachCuratedDeadSalary(
+  contract: NbaPlayerContractSummary,
+  seasonKey: string,
+  playerId: string
+): NbaPlayerContractSummary {
+  const hit = curatedDeadSalaryForPlayer(seasonKey, playerId);
+  if (!hit) {
+    if (contract.deadSalary == null) return contract;
+    const { deadSalary: _drop, ...rest } = contract;
+    return rest;
+  }
+  const startYear = Number.parseInt(seasonKey.slice(0, 4), 10);
+  return {
+    ...contract,
+    deadSalary: {
+      teamId: hit.teamId,
+      teamAbbr: TEAM_SHORT[hit.teamId] ?? "NBA",
+      salary: hit.line.capHit,
+      season: Number.isFinite(startYear) ? startYear : 0,
+      ...(hit.line.throughSeasonKey
+        ? { throughSeasonKey: hit.line.throughSeasonKey }
+        : {}),
+      ...(hit.line.noteJa ? { noteJa: hit.line.noteJa } : {}),
+      ...(hit.line.noteEn ? { noteEn: hit.line.noteEn } : {}),
+    },
+  };
+}
+
+/** 現行契約なし・デッドのみ（オフロスターのストレッチ等） */
+function buildDeadOnlyContractShell(
+  seasonKey: string,
+  playerId: string
+): NbaPlayerContractSummary | null {
+  const hit = curatedDeadSalaryForPlayer(seasonKey, playerId);
+  if (!hit) return null;
+  const startYear = Number.parseInt(seasonKey.slice(0, 4), 10);
+  return {
+    contractType: "—",
+    contractStatus: "Dead Salary",
+    contractYears: 0,
+    yearsRemaining: 0,
+    freeAgencyYear: 0,
+    freeAgencyType: null,
+    averageSalary: 0,
+    totalValue: 0,
+    remainingGuaranteed: 0,
+    notes: [],
+    seasons: [],
+    deadSalary: {
+      teamId: hit.teamId,
+      teamAbbr: TEAM_SHORT[hit.teamId] ?? "NBA",
+      salary: hit.line.capHit,
+      season: Number.isFinite(startYear) ? startYear : 0,
+      ...(hit.line.throughSeasonKey
+        ? { throughSeasonKey: hit.line.throughSeasonKey }
+        : {}),
+      ...(hit.line.noteJa ? { noteJa: hit.line.noteJa } : {}),
+      ...(hit.line.noteEn ? { noteEn: hit.line.noteEn } : {}),
+    },
   };
 }

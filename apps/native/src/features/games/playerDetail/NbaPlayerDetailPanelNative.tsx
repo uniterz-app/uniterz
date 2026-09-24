@@ -25,11 +25,13 @@ import {
   formatPhysique,
   formatSalaryUsd,
   formatContractSeasonLabel,
+  deadSalaryStretchSeasonYears,
   formatCareerSeasonLabel,
   formatAvailabilityStatus,
   availabilityStatusColor,
   resolvePlayerDisplayAge,
   formatTeamHistory,
+  getNbaPlayerDetailDevMock,
   getNbaPlayerDetailPreview,
   isPlayerDetailLast10AboveSeason,
   NBA_PLAYER_DETAIL_SEASON_SHOWN,
@@ -109,6 +111,8 @@ import { nbaPlayerDetailChrome } from "./nbaPlayerDetailChromeCopy";
 type Props = {
   language: "ja" | "en";
   playerId?: string;
+  /** Profile DEV メニュー用。Firestore 空でもシードで SHOT CHART 等を表示 */
+  useDevMock?: boolean;
 };
 
 const FORM_WIN = "#00F5FF";
@@ -1424,6 +1428,7 @@ function InfoRow({
 export default function NbaPlayerDetailPanelNative({
   language,
   playerId,
+  useDevMock = false,
 }: Props) {
   const chrome = nbaPlayerDetailChrome(language);
   const isJa = chrome.catalogJa;
@@ -1432,14 +1437,18 @@ export default function NbaPlayerDetailPanelNative({
   const { bundle: leaders } = usePlayerStatLeadersBundle({ apiBaseUrl });
   const { bundle: teamStats } = useLeagueTeamStatsBundle({ apiBaseUrl });
   const base = useMemo(
-    () => getNbaPlayerDetailPreview(playerId),
-    [playerId]
+    () =>
+      useDevMock
+        ? getNbaPlayerDetailDevMock(playerId)
+        : getNbaPlayerDetailPreview(playerId),
+    [playerId, useDevMock]
   );
   const { detail, hasFetchError } = useNbaPlayerDetailLiveOverlay({
     playerId,
     apiBaseUrl,
     base,
     leaders,
+    skipLiveFetch: useDevMock,
   });
   const { players: teammates } = useNbaTeamRosterSlice({
     teamId: detail.teamId,
@@ -1469,11 +1478,27 @@ export default function NbaPlayerDetailPanelNative({
           n.toLowerCase().includes("two-way") || n.toLowerCase().includes("2-way")
       )
     );
+  const isExhibit10 =
+    !isTwoWay &&
+    (detail.contract?.contractType?.toLowerCase().includes("exhibit 10") ||
+      detail.contract?.contractType?.toLowerCase().includes("exhibit10") ||
+      Boolean(
+        detail.contract?.notes?.some((n) =>
+          n.toLowerCase().includes("exhibit 10")
+        )
+      ));
+  const deadSalary = detail.contract?.deadSalary ?? null;
+  const hasDeadSalary = (deadSalary?.salary ?? 0) > 0;
   const isContractExpired =
     !detail.contract ||
     detail.contract.seasons.length === 0 ||
     detail.contract.yearsRemaining <= 0 ||
     detail.contract.contractStatus?.toLowerCase().includes("expired");
+  const showActiveContract =
+    Boolean(detail.contract) && !isContractExpired && Boolean(currentSalary);
+  const deadStretchYears = deadSalary
+    ? deadSalaryStretchSeasonYears(deadSalary)
+    : [];
   const accent = getTeamUiAccentColor("nba", detail.teamId);
   const dividerColor = hexToRgba(accent, 0.22);
   const frameColor = hexToRgba(accent, 0.35);
@@ -1629,6 +1654,7 @@ export default function NbaPlayerDetailPanelNative({
             <DetailConsistencySectionNative
               data={playerInsights.consistency}
               accent={accent}
+              language={language}
             />
             <View style={[styles.divider, { backgroundColor: dividerColor }]} />
           </>
@@ -1642,7 +1668,7 @@ export default function NbaPlayerDetailPanelNative({
           </Text>
           <View style={styles.advTitleLine} />
         </View>
-        {detail.contract && !isContractExpired && currentSalary ? (
+        {showActiveContract && currentSalary ? (
             <View
               style={[styles.contractCard, { borderColor: frameColor }]}
             >
@@ -1650,6 +1676,9 @@ export default function NbaPlayerDetailPanelNative({
                 <View style={styles.contractSalaryBlock}>
                   <Text style={styles.contractLabel}>
                     {chrome.thisSeason}
+                    {currentSalary.teamAbbr
+                      ? ` · ${currentSalary.teamAbbr}`
+                      : ""}
                   </Text>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
                     {currentSalary.baseSalary > 0 ? (
@@ -1667,6 +1696,7 @@ export default function NbaPlayerDetailPanelNative({
                             paddingHorizontal: 4,
                             paddingVertical: 1,
                             borderRadius: 2,
+                            overflow: "hidden",
                           }}
                         >
                           TW
@@ -1674,6 +1704,24 @@ export default function NbaPlayerDetailPanelNative({
                         <Text style={styles.contractSalary}>
                           {formatSalaryUsd(nbaTwoWaySalaryForSeason(CURRENT_NBA_SEASON_KEY))}
                         </Text>
+                      </>
+                    ) : isExhibit10 ? (
+                      <>
+                        <Text
+                          style={{
+                            fontSize: 10,
+                            fontWeight: "800",
+                            color: "rgba(255,255,255,0.7)",
+                            backgroundColor: "rgba(255,255,255,0.1)",
+                            paddingHorizontal: 4,
+                            paddingVertical: 1,
+                            borderRadius: 2,
+                            overflow: "hidden",
+                          }}
+                        >
+                          E10
+                        </Text>
+                        <Text style={styles.contractSalary}>—</Text>
                       </>
                     ) : (
                       <Text style={styles.contractSalary}>—</Text>
@@ -1739,6 +1787,8 @@ export default function NbaPlayerDetailPanelNative({
                         ? formatSalaryUsd(s.baseSalary)
                         : isTwoWay
                         ? "TW"
+                        : isExhibit10
+                        ? "E10"
                         : "—"}
                     </Text>
                     {s.option ? (
@@ -1760,7 +1810,88 @@ export default function NbaPlayerDetailPanelNative({
                   {detail.contract.notes[0]}
                 </Text>
               ) : null}
+              {hasDeadSalary && deadSalary ? (
+                <View style={styles.contractDeadWrap}>
+                  <Text style={styles.contractLabel}>
+                    {chrome.deadSalaryBadge} · {deadSalary.teamAbbr}
+                  </Text>
+                  {deadStretchYears.map((y) => (
+                    <View key={y} style={styles.contractSeasonRow}>
+                      <Text style={styles.contractSeasonYear}>
+                        {formatContractSeasonLabel(y)}
+                      </Text>
+                      <Text
+                        style={{
+                          fontSize: 9,
+                          fontWeight: "800",
+                          color: "rgba(255,255,255,0.6)",
+                          backgroundColor: "rgba(255,255,255,0.1)",
+                          paddingHorizontal: 4,
+                          paddingVertical: 1,
+                          borderRadius: 2,
+                          overflow: "hidden",
+                          marginRight: 6,
+                        }}
+                      >
+                        {chrome.deadSalaryBadge}
+                      </Text>
+                      <Text style={[styles.contractSeasonSalary, { color: "rgba(255,255,255,0.85)", flex: 1 }]}>
+                        {formatSalaryUsd(deadSalary.salary)}
+                      </Text>
+                    </View>
+                  ))}
+                  <Text
+                    style={[styles.contractNote, { color: hexToRgba(accent, 0.55) }]}
+                  >
+                    {isJa
+                      ? deadSalary.noteJa ??
+                        chrome.deadSalaryHeldBy(deadSalary.teamAbbr)
+                      : deadSalary.noteEn ??
+                        chrome.deadSalaryHeldBy(deadSalary.teamAbbr)}
+                  </Text>
+                </View>
+              ) : null}
             </View>
+        ) : hasDeadSalary && deadSalary ? (
+          <View style={[styles.contractCard, { borderColor: frameColor }]}>
+            <Text style={styles.contractLabel}>
+              {chrome.deadSalaryBadge} · {deadSalary.teamAbbr}
+            </Text>
+            {deadStretchYears.map((y) => (
+              <View key={y} style={styles.contractSeasonRow}>
+                <Text style={styles.contractSeasonYear}>
+                  {formatContractSeasonLabel(y)}
+                </Text>
+                <Text
+                  style={{
+                    fontSize: 9,
+                    fontWeight: "800",
+                    color: "rgba(255,255,255,0.6)",
+                    backgroundColor: "rgba(255,255,255,0.1)",
+                    paddingHorizontal: 4,
+                    paddingVertical: 1,
+                    borderRadius: 2,
+                    overflow: "hidden",
+                    marginRight: 6,
+                  }}
+                >
+                  {chrome.deadSalaryBadge}
+                </Text>
+                <Text style={[styles.contractSeasonSalary, { color: "rgba(255,255,255,0.85)", flex: 1 }]}>
+                  {formatSalaryUsd(deadSalary.salary)}
+                </Text>
+              </View>
+            ))}
+            <Text
+              style={[styles.contractNote, { color: hexToRgba(accent, 0.55) }]}
+            >
+              {isJa
+                ? deadSalary.noteJa ??
+                  chrome.deadSalaryHeldBy(deadSalary.teamAbbr)
+                : deadSalary.noteEn ??
+                  chrome.deadSalaryHeldBy(deadSalary.teamAbbr)}
+            </Text>
+          </View>
         ) : detail.contract?.contractStatus?.toLowerCase().includes("expired") || (!detail.contract && !currentSalary) ? (
           <View
             style={[styles.contractCard, { borderColor: frameColor }]}
@@ -2017,7 +2148,7 @@ const styles = StyleSheet.create({
   formRecord: {
     fontFamily: METRIC_FONT,
     color: "#FFFFFF",
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: "800",
     fontVariant: ["tabular-nums"],
     transform: [{ skewX: "-8deg" }],
@@ -2045,20 +2176,20 @@ const styles = StyleSheet.create({
     width: 44,
     fontFamily: METRIC_FONT,
     color: "rgba(255,255,255,0.4)",
-    fontSize: 13,
+    fontSize: 14,
   },
   gameVs: {
     flex: 1,
     fontFamily: METRIC_FONT,
     color: "rgba(255,255,255,0.88)",
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: "700",
     minWidth: 52,
   },
   gameResult: {
     width: 18,
     fontFamily: METRIC_FONT,
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: "800",
     textAlign: "center",
     transform: [{ skewX: "-8deg" }],
@@ -2068,7 +2199,7 @@ const styles = StyleSheet.create({
     textAlign: "right",
     fontFamily: METRIC_FONT,
     color: "rgba(255,255,255,0.7)",
-    fontSize: 13,
+    fontSize: 14,
     fontVariant: ["tabular-nums"],
     transform: [{ skewX: "-8deg" }],
   },
@@ -2077,7 +2208,7 @@ const styles = StyleSheet.create({
     textAlign: "right",
     fontFamily: METRIC_FONT,
     color: "#FFFFFF",
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: "800",
     fontVariant: ["tabular-nums"],
     transform: [{ skewX: "-8deg" }],
@@ -2087,7 +2218,7 @@ const styles = StyleSheet.create({
     textAlign: "right",
     fontFamily: METRIC_FONT,
     color: "rgba(255,255,255,0.55)",
-    fontSize: 12,
+    fontSize: 14,
     fontVariant: ["tabular-nums"],
   },
   win: { color: FORM_WIN },
@@ -2607,6 +2738,13 @@ const styles = StyleSheet.create({
     fontFamily: METRIC_FONT,
     fontSize: 11,
     lineHeight: 15,
+  },
+  contractDeadWrap: {
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: "rgba(255,255,255,0.1)",
+    gap: 6,
   },
   infoCard: {
     marginTop: 10,

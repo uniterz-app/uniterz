@@ -36,6 +36,11 @@ type Options = {
   season?: string;
   base: NbaPlayerDetailPreview;
   leaders: NbaPlayerStatLeadersBundle;
+  /**
+   * `/dev` · Profile DEV メニュー用。
+   * Firestore を叩かず `base`（シードモック）をそのまま返す。
+   */
+  skipLiveFetch?: boolean;
 };
 
 export function useNbaPlayerDetailLiveOverlay(options: Options): {
@@ -48,13 +53,14 @@ export function useNbaPlayerDetailLiveOverlay(options: Options): {
   const apiBaseUrl = options.apiBaseUrl;
   const base = options.base;
   const leaders = options.leaders;
+  const skipLiveFetch = options.skipLiveFetch === true;
 
   const [bundle, setBundle] = useState<NbaPlayerDetailApiPayload | null>(null);
   const [failed, setFailed] = useState(false);
-  const [loading, setLoading] = useState(!!playerId);
+  const [loading, setLoading] = useState(!!playerId && !skipLiveFetch);
 
   useEffect(() => {
-    if (!playerId) {
+    if (skipLiveFetch || !playerId) {
       setBundle(null);
       setFailed(false);
       setLoading(false);
@@ -84,9 +90,12 @@ export function useNbaPlayerDetailLiveOverlay(options: Options): {
     })();
 
     return () => ac.abort();
-  }, [playerId, season, apiBaseUrl]);
+  }, [playerId, season, apiBaseUrl, skipLiveFetch]);
 
   const detail = useMemo((): NbaPlayerDetailPreview => {
+    if (skipLiveFetch) {
+      return applyCuratedPlayerAwardsToPlayerDetail(base, playerId);
+    }
     let next = base;
     const awardName = resolveOffRosterPlayerNameFromAwards(playerId);
     if (!bundle) {
@@ -207,7 +216,7 @@ export function useNbaPlayerDetailLiveOverlay(options: Options): {
       next = { ...next, asOfLabel: bundle.roster.averagesSeasonKey };
     }
     return next;
-  }, [base, playerId, bundle, leaders]);
+  }, [base, playerId, bundle, leaders, skipLiveFetch]);
 
   return {
     detail,

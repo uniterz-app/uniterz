@@ -92,6 +92,7 @@ type Props = {
     | "liveGameStatsPreview"
     | "resultDetailPreview"
     | "leagueStatsPreview"
+    | "playerDetailPreview"
     | "proLeagueTeaserPreview"
     | "streakFramePreview"
     | "resultPickupPreview"
@@ -262,6 +263,7 @@ export default function ProfileSideMenuModal({
       | "liveGameStatsPreview"
       | "resultDetailPreview"
       | "leagueStatsPreview"
+      | "playerDetailPreview"
       | "proLeagueTeaserPreview"
       | "streakFramePreview"
       | "resultPickupPreview"
@@ -674,6 +676,14 @@ export default function ProfileSideMenuModal({
                           onPress={() => openUserPage("leagueStatsPreview")}
                         >
                           リーグスタッツ（左レール）
+                        </SideMenuItemButtonNative>
+                        <SideMenuItemButtonNative
+                          icon="account-box-outline"
+                          dense
+                          labelStyle={labelStyle}
+                          onPress={() => openUserPage("playerDetailPreview")}
+                        >
+                          プレイヤー詳細（ショット）
                         </SideMenuItemButtonNative>
                         <SideMenuItemButtonNative
                           icon="sword-cross"

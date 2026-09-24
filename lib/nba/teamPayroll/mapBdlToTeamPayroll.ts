@@ -14,6 +14,12 @@ import type {
 import type { NbaTeamPayrollDocTeam } from "./teamPayrollTypes";
 import type { NbaRosterPlayer } from "@/lib/predict/nbaRoster";
 import { curatedOptionForPlayerSeason } from "./nbaCuratedPlayerOptions";
+import { isCuratedRosterExcluded } from "@/lib/nba/teamRosters/nbaCuratedRosterExclusions";
+import {
+  curatedDeadMoneyForTeam,
+  isCuratedExhibit10Player,
+} from "./nbaCuratedDeadMoney";
+import type { NbaTeamPayrollDeadLine } from "@/lib/predict/nbaTeamDetailPreviewMocks";
 import { playerIdsAreAliases } from "@/lib/nba/playerIdAliases";
 import { isCuratedTwoWayPlayer } from "@/lib/nba/contracts/nbaTwoWayPlayersBySeason";
 
@@ -477,6 +483,7 @@ export function buildSynchronizedTeamPayrollLines(
   if (Array.isArray(rosterPlayers) && rosterPlayers.length > 0) {
     for (const p of rosterPlayers) {
       const pId = String(p.id ?? "").trim();
+      if (!pId || isCuratedRosterExcluded(seasonKey, pId)) continue;
       const first = (p.firstName ?? "").trim();
       const last = (p.lastName ?? "").trim();
       const upperFirst = first.toUpperCase();
@@ -565,18 +572,24 @@ export function buildSynchronizedTeamPayrollLines(
 
       // 今季: Two-Way は curated（BDL は TW/Exhibit を返さない）。
       // 標準年俸なし + curated 外 → Exhibit 10 / non-guaranteed。
+      // curated E10（キャンプ等）は BDL に旧年俸が残っていても $0。
       if (isCurrentSeason) {
+        const forceExhibit10 = isCuratedExhibit10Player(pId, seasonKey);
         const explicitTwoWay =
-          (p.position ?? "").toLowerCase().includes("two-way") ||
-          (p.position ?? "").toLowerCase().includes("2-way") ||
-          (p.position ?? "").toLowerCase() === "tw" ||
-          p.isTwoWay === true ||
-          existingLine?.isTwoWay === true ||
-          isCuratedTwoWayPlayer(pId, seasonKey);
-        const noStandardSalary = rawSalary <= 0 && rawBase <= 0;
-        const isTwoWay = !forcedStandardContract && explicitTwoWay;
+          !forceExhibit10 &&
+          ((p.position ?? "").toLowerCase().includes("two-way") ||
+            (p.position ?? "").toLowerCase().includes("2-way") ||
+            (p.position ?? "").toLowerCase() === "tw" ||
+            p.isTwoWay === true ||
+            existingLine?.isTwoWay === true ||
+            isCuratedTwoWayPlayer(pId, seasonKey));
+        const noStandardSalary =
+          forceExhibit10 || (rawSalary <= 0 && rawBase <= 0);
+        const isTwoWay = !forcedStandardContract && !forceExhibit10 && explicitTwoWay;
         const isNonGuaranteed =
-          !forcedStandardContract && !isTwoWay && noStandardSalary;
+          !forcedStandardContract &&
+          !isTwoWay &&
+          (forceExhibit10 || noStandardSalary);
 
         const salary = isTwoWay || isNonGuaranteed ? 0 : rawSalary;
         const baseSalary = isTwoWay || isNonGuaranteed ? 0 : rawBase;
@@ -739,13 +752,25 @@ export function buildTeamPayrollFromLines(
     seasonKey?: string;
   }
 ): NbaTeamPayrollDocTeam {
-  const totalSalary = linesIn.reduce((s, l) => s + l.salary, 0);
+  const { salaryCap, taxLine, leagueRank } = opts;
+  const seasonKey = opts.seasonKey ?? "2025-26";
+  const activeSalary = linesIn.reduce((s, l) => s + l.salary, 0);
+  const deadLines: NbaTeamPayrollDeadLine[] = curatedDeadMoneyForTeam(
+    seasonKey,
+    teamId
+  ).map((d) => ({
+    playerId: d.playerId,
+    name: d.name,
+    salary: d.capHit,
+    noteJa: d.noteJa,
+    noteEn: d.noteEn,
+  }));
+  const deadMoney = deadLines.reduce((s, d) => s + d.salary, 0);
+  const totalSalary = activeSalary + deadMoney;
   const lines =
     totalSalary > 0
       ? linesIn.map((l) => ({ ...l, share: l.salary / totalSalary }))
       : linesIn;
-  const { salaryCap, taxLine, leagueRank } = opts;
-  const seasonKey = opts.seasonKey ?? "2025-26";
   const capInfo = nbaSalaryCapLinesForSeason(seasonKey);
   const firstApron = opts.firstApron ?? capInfo.firstApron;
   const secondApron = opts.secondApron ?? capInfo.secondApron;
@@ -761,6 +786,8 @@ export function buildTeamPayrollFromLines(
 
   const payroll: NbaTeamPayroll = {
     totalSalary,
+    activeSalary,
+    deadMoney,
     leagueRank,
     salaryCap,
     taxLine,
@@ -774,6 +801,7 @@ export function buildTeamPayrollFromLines(
     taxBill: estimateTaxBill(totalSalary, taxLine),
     guaranteed: totalSalary,
     lines,
+    ...(deadLines.length > 0 ? { deadLines } : {}),
     futureYears,
   };
   return { teamId, ...payroll };
@@ -822,10 +850,14 @@ export function buildTeamPayrollsBundleFromMultiYearContracts(
     }
   }
 
-  const totals = Array.from(rawByTeam.entries()).map(([teamId, lines]) => ({
-    teamId,
-    total: lines.reduce((s, l) => s + l.salary, 0),
-  }));
+  const totals = Array.from(rawByTeam.entries()).map(([teamId, lines]) => {
+    const active = lines.reduce((s, l) => s + l.salary, 0);
+    const dead = curatedDeadMoneyForTeam(baseSeasonKey, teamId).reduce(
+      (s, d) => s + d.capHit,
+      0
+    );
+    return { teamId, total: active + dead, active, dead };
+  });
   totals.sort((a, b) => b.total - a.total || a.teamId.localeCompare(b.teamId));
 
   const rankByTeam = new Map<string, number>();
@@ -836,7 +868,19 @@ export function buildTeamPayrollsBundleFromMultiYearContracts(
   for (const teamId of allTeamIds) {
     const lines = rawByTeam.get(teamId) ?? [];
     const leagueRank = rankByTeam.get(teamId) ?? 30;
-    const totalSalary = lines.reduce((s, l) => s + l.salary, 0);
+    const activeSalary = lines.reduce((s, l) => s + l.salary, 0);
+    const deadLines: NbaTeamPayrollDeadLine[] = curatedDeadMoneyForTeam(
+      baseSeasonKey,
+      teamId
+    ).map((d) => ({
+      playerId: d.playerId,
+      name: d.name,
+      salary: d.capHit,
+      noteJa: d.noteJa,
+      noteEn: d.noteEn,
+    }));
+    const deadMoney = deadLines.reduce((s, d) => s + d.salary, 0);
+    const totalSalary = activeSalary + deadMoney;
     const finalizedLines = lines.map((l) => {
       const opt = resolvePayrollLineOption(
         l.playerId,
@@ -847,7 +891,7 @@ export function buildTeamPayrollsBundleFromMultiYearContracts(
       return {
         ...l,
         share: totalSalary > 0 ? l.salary / totalSalary : 0,
-        option: l.isTwoWay ? null : opt,
+        option: l.isTwoWay || l.isNonGuaranteed ? null : opt,
       };
     });
 
@@ -881,23 +925,39 @@ export function buildTeamPayrollsBundleFromMultiYearContracts(
         : futureLinesRaw.filter((l) => l.salary > 0);
       
       const futureLinesWithSalary = syncedFutureLines.filter((l) => l.salary > 0);
-      const committedSalary = futureLinesWithSalary.reduce((s, l) => s + l.salary, 0);
-      const futureLines = committedSalary > 0
-        ? futureLinesWithSalary.map((l) => {
-            const opt = resolvePayrollLineOption(
-              l.playerId,
-              y,
-              playerOptionMap,
-              l.option
-            );
-            return {
-              ...l,
-              share: l.salary / committedSalary,
-              isTwoWay: false,
-              option: opt,
-            };
-          })
-        : [];
+      const activeSalaryFuture = futureLinesWithSalary.reduce(
+        (s, l) => s + l.salary,
+        0
+      );
+      const deadLinesFuture: NbaTeamPayrollDeadLine[] = curatedDeadMoneyForTeam(
+        seasonKey,
+        teamId
+      ).map((d) => ({
+        playerId: d.playerId,
+        name: d.name,
+        salary: d.capHit,
+        noteJa: d.noteJa,
+        noteEn: d.noteEn,
+      }));
+      const deadMoneyFuture = deadLinesFuture.reduce((s, d) => s + d.salary, 0);
+      const committedSalary = activeSalaryFuture + deadMoneyFuture;
+      const futureLines =
+        committedSalary > 0
+          ? futureLinesWithSalary.map((l) => {
+              const opt = resolvePayrollLineOption(
+                l.playerId,
+                y,
+                playerOptionMap,
+                l.option
+              );
+              return {
+                ...l,
+                share: l.salary / committedSalary,
+                isTwoWay: false,
+                option: opt,
+              };
+            })
+          : [];
 
       const fApronStatus = resolveApronStatus(committedSalary, capInfo);
 
@@ -909,6 +969,9 @@ export function buildTeamPayrollsBundleFromMultiYearContracts(
         firstApron: capInfo.firstApron,
         secondApron: capInfo.secondApron,
         committedSalary,
+        activeSalary: activeSalaryFuture,
+        deadMoney: deadMoneyFuture,
+        ...(deadLinesFuture.length > 0 ? { deadLines: deadLinesFuture } : {}),
         capSpace: capInfo.salaryCap - committedSalary,
         taxSpace: capInfo.taxLine - committedSalary,
         firstApronSpace: capInfo.firstApron - committedSalary,
@@ -921,6 +984,8 @@ export function buildTeamPayrollsBundleFromMultiYearContracts(
 
     const payroll: NbaTeamPayroll = {
       totalSalary,
+      activeSalary,
+      deadMoney,
       leagueRank,
       salaryCap,
       taxLine,
@@ -934,6 +999,7 @@ export function buildTeamPayrollsBundleFromMultiYearContracts(
       taxBill: estimateTaxBill(totalSalary, taxLine),
       guaranteed: totalSalary,
       lines: finalizedLines,
+      ...(deadLines.length > 0 ? { deadLines } : {}),
       futureYears,
     };
 

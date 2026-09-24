@@ -62,6 +62,25 @@ export function nbaPlayerDetailChrome(language: string | null | undefined) {
       pt: "ESTA TEMPORADA",
       fr: "CETTE SAISON",
     }),
+    deadSalaryBadge: L(lang, {
+      ja: "DEAD SALARY",
+      en: "DEAD SALARY",
+      ko: "DEAD SALARY",
+      zh: "DEAD SALARY",
+      es: "DEAD SALARY",
+      pt: "DEAD SALARY",
+      fr: "DEAD SALARY",
+    }),
+    deadSalaryHeldBy: (teamAbbr: string) =>
+      L(lang, {
+        ja: `${teamAbbr} が保有するキャップ負担（ロスター外）`,
+        en: `Cap hit still on ${teamAbbr}'s books (off roster)`,
+        ko: `${teamAbbr}가 보유하는 캡 부담 (로스터 외)`,
+        zh: `${teamAbbr} 仍计入的帽薪（不在名册）`,
+        es: `Impacto de tope en libros de ${teamAbbr} (fuera de roster)`,
+        pt: `Impacto de teto nos livros de ${teamAbbr} (fora do roster)`,
+        fr: `Impact cap encore sur ${teamAbbr} (hors roster)`,
+      }),
     rem: L(lang, {
       ja: "残",
       en: "REM",

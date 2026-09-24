@@ -157,6 +157,23 @@ export type NbaPlayerContractSummary = {
   draftYear?: number | null;
   /** 残シーズン（昇順） */
   seasons: NbaPlayerContractSeason[];
+  /**
+   * 他チームに残るデッドサラリー（ウェーブ／ストレッチ）。
+   * 現行契約（例: Exhibit 10）とは別枠。
+   */
+  deadSalary?: NbaPlayerDeadSalary | null;
+};
+
+/** プレイヤー詳細 CONTRACT の DEAD SALARY 枠 */
+export type NbaPlayerDeadSalary = {
+  teamId: string;
+  teamAbbr: string;
+  salary: number;
+  /** シーズン開始年（例: 2026） */
+  season: number;
+  throughSeasonKey?: string;
+  noteJa?: string;
+  noteEn?: string;
 };
 
 /** 2027 → "27-28" */
@@ -164,6 +181,22 @@ export function formatContractSeasonLabel(seasonStart: number): string {
   const a = String(seasonStart).slice(-2);
   const b = String(seasonStart + 1).slice(-2);
   return `${a}-${b}`;
+}
+
+/** DEAD SALARY のストレッチ年（同額）一覧 */
+export function deadSalaryStretchSeasonYears(
+  dead: Pick<NbaPlayerDeadSalary, "season" | "throughSeasonKey">
+): number[] {
+  const start = Math.trunc(dead.season);
+  if (!Number.isFinite(start) || start <= 0) return [];
+  const throughRaw = dead.throughSeasonKey?.trim() ?? "";
+  const through = throughRaw
+    ? Number.parseInt(throughRaw.slice(0, 4), 10)
+    : start;
+  const end = Number.isFinite(through) && through >= start ? through : start;
+  const out: number[] = [];
+  for (let y = start; y <= end; y += 1) out.push(y);
+  return out;
 }
 
 /** BDL shooting by_zone 相当の簡易ゾーン */
@@ -1825,6 +1858,64 @@ export function getNbaPlayerDetailPreview(
 ): NbaPlayerDetailPreview {
   // bio / 名前はシードや乱数にしない。roster overlay が埋めるまで空。
   return zeroPlayerDetailSeasonStats(blankPlayerIdentity(playerId));
+}
+
+/**
+ * __DEV__ / `/dev/player-detail-preview` 用。
+ * Firestore が空でもショットチャート等を見られるようシードを返す。
+ * ライブ overlay があれば上書き（shotZones 空ならシードが残る）。
+ */
+export function getNbaPlayerDetailDevMock(
+  playerId?: string
+): NbaPlayerDetailPreview {
+  const seed = resolveSeed(playerId);
+  const rnd = mulberry32(hashSeed(`${seed.playerId}:metrics:v1`));
+  const metrics = buildMetrics(seed.season, seed.ranks, rnd);
+  const headlineIds: NbaPlayerSeasonMetricId[] = ["pts", "reb", "ast"];
+  const headlineMetrics = headlineIds
+    .map((id) => metrics.find((m) => m.id === id))
+    .filter((m): m is NbaPlayerSeasonMetric => Boolean(m));
+
+  return {
+    playerId: seed.playerId,
+    uidLabel: formatPlayerUid(seed.playerId),
+    firstName: seed.firstName,
+    lastName: seed.lastName,
+    jerseyNumber: seed.jerseyNumber,
+    position: seed.position,
+    experienceYears: seed.experienceYears,
+    height: seed.height,
+    weight: seed.weight,
+    college: seed.college,
+    country: seed.country,
+    draftYear: seed.draftYear,
+    draftRound: seed.draftRound,
+    draftNumber: seed.draftNumber,
+    teamId: seed.teamId,
+    teamAbbr: TEAM_SHORT[seed.teamId] ?? "NBA",
+    teamName: NBA_TEAM_NAME_BY_ID[seed.teamId] ?? seed.teamId,
+    conference: conferenceForTeam(seed.teamId),
+    season: seed.season,
+    headlineMetrics,
+    seasonMetrics: metrics,
+    advancedMetrics: buildAdvancedMetrics(seed.playerId, seed.advanced),
+    careerSeasons: buildCareerSeasons(seed),
+    shotZones: buildShotZones(seed.playerId, seed.shotZones),
+    gameLogs: buildGameLogs(seed.playerId, seed.teamId, seed.season),
+    contract: seed.contract,
+    awards: seed.awards,
+    availability: seed.availability,
+    birthDate: seed.birthDate,
+    teamHistory: seed.teamHistory,
+    venueSplits: buildVenueSplits(seed.playerId, seed.season),
+    vsOpponentSamples: buildVsOpponentSamples(
+      seed.playerId,
+      seed.teamId,
+      seed.season
+    ),
+    leaderMetrics: {},
+    asOfLabel: "DEV MOCK",
+  };
 }
 
 export type NbaPlayerRecentWindowAvg = {

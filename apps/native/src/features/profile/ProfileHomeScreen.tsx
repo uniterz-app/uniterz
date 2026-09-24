@@ -1810,6 +1810,11 @@ export default function ProfileHomeScreen({
           navigation.navigate("ResultDetailPreview");
         else if (page === "leagueStatsPreview" && __DEV__)
           navigation.navigate("LeagueStatsPreview");
+        else if (page === "playerDetailPreview" && __DEV__)
+          navigation.navigate("PlayerDetailPreview", {
+            playerId: "132",
+            useDevMock: true,
+          });
         else if (page === "proLeagueTeaserPreview" && __DEV__)
           navigation.navigate("ProLeagueTeaserPreview");
         else if (page === "streakFramePreview" && __DEV__)

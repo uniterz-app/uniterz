@@ -210,6 +210,7 @@ export function PlayerDetailPreviewScreenWrapper() {
       language={resolveLocalizedLang(language) === "ja" ? "ja" : "en"}
       onClose={() => navigation.goBack()}
       playerId={route.params?.playerId}
+      useDevMock={route.params?.useDevMock === true}
     />
   );
 }

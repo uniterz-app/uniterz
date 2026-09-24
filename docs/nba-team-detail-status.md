@@ -30,7 +30,7 @@ useNbaTeamDetailLiveOverlay()
 | Hero · INJURIES · METRICS · HOW THEY PLAY · Form/Logs/H2H/Upcoming | ✅ API |
 | SPLITS HOME/AWAY · VS E/W | ✅ team-game-log |
 | **VS .500+ / SUB-.500** | ✅ team-season-records（**日次 ingest**） |
-| PAYROLL · ROSTER | ✅ |
+| PAYROLL · ROSTER | ✅ Active+Dead キャップ総額順位 · curated dead（例: ATL Carter）· E10 $0 |
 | **TEAM INFORMATION** | ✅ 手 curated · HC/GM/オーナーは移籍都度更新（`nbaTeamFranchiseInfo.ts` · asOf `NBA_TEAM_FRANCHISE_INFO_AS_OF`） |
 | **DRAFT ASSETS** | ✅ 手 curated · **トレード都度更新**（`nbaDraftCapitalData.ts`） |
 
@@ -58,6 +58,7 @@ useNbaTeamDetailLiveOverlay()
 
 | 日付 | 内容 |
 |---|---|
+| 2026-09-24 | PAYROLL: キャップ総額（Active+Dead）順位 · デッドマネー枠 · curated E10 |
 | 2026-09-24 | TEAM INFORMATION を ROSTER 下に追加（静的フランチャイズ · カラーは四角ブロック） |
 | 2026-09-01 | PREVIEW 除去 · レガシー redirect · team-season-records を日次 ingest に追加 |
 | 2026-09-01 | ユーザー確定: DRAFT 完了 · ace-out/opponent/SHOT は詳細 UI 非表示 |

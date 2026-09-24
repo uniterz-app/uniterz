@@ -284,7 +284,10 @@ export function applyPlayerContractToPlayerDetail(
   detail: NbaPlayerDetailPreview,
   contract: NbaPlayerContractSummary | null | undefined
 ): NbaPlayerDetailPreview {
-  if (!contract || contract.seasons.length === 0) return detail;
+  if (!contract) return detail;
+  const hasSeasons = contract.seasons.length > 0;
+  const hasDead = (contract.deadSalary?.salary ?? 0) > 0;
+  if (!hasSeasons && !hasDead) return detail;
   return { ...detail, contract };
 }
 
