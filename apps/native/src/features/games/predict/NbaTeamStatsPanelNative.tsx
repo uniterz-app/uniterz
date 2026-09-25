@@ -279,7 +279,11 @@ function FormGameBoxOverlay({
               })}
             </Text>
           ) : report ? (
-            <LiveGameStatsPanelNative report={report} language={language} />
+            <LiveGameStatsPanelNative
+              report={report}
+              language={language}
+              onOpenTeamDetail={onOpenTeamDetail}
+            />
           ) : (
             <Text style={styles.boxOverlayEmpty}>
               {L(lang, {

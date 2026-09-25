@@ -95,6 +95,7 @@ type Props = {
     | "playerDetailPreview"
     | "proLeagueTeaserPreview"
     | "streakFramePreview"
+    | "teamAbbrBadgePreview"
     | "resultPickupPreview"
     | "proInsightGatePreview"
     | "proInsightNarrativePreview"
@@ -266,6 +267,7 @@ export default function ProfileSideMenuModal({
       | "playerDetailPreview"
       | "proLeagueTeaserPreview"
       | "streakFramePreview"
+      | "teamAbbrBadgePreview"
       | "resultPickupPreview"
       | "proInsightGatePreview"
       | "proInsightNarrativePreview"
@@ -700,6 +702,14 @@ export default function ProfileSideMenuModal({
                           onPress={() => openUserPage("streakFramePreview")}
                         >
                           連勝フレーム光
+                        </SideMenuItemButtonNative>
+                        <SideMenuItemButtonNative
+                          icon="tag-outline"
+                          dense
+                          labelStyle={labelStyle}
+                          onPress={() => openUserPage("teamAbbrBadgePreview")}
+                        >
+                          TeamAbbrBadge
                         </SideMenuItemButtonNative>
                         <SideMenuItemButtonNative
                           icon="bookmark-outline"

@@ -1,7 +1,7 @@
 /** Web `LiveGameLineScorePanel` 相当 */
 import { StyleSheet, Text, View } from "react-native";
 import type { LiveGameStatsReport } from "../../../../../../lib/games/liveGameStats";
-import { getTeamPrimaryColor } from "../../../../../../lib/team-colors";
+import { matchupTeamUiAccent } from "../../../../../../lib/team-colors";
 import { METRIC_FONT } from "../../rankings/rankingsUiTheme";
 
 type Props = {
@@ -21,10 +21,21 @@ export default function LiveGameLineScorePanelNative({
   const ls = report.lineScore;
   if (!ls || ls.periods.length === 0) return null;
 
-  const homeColor =
-    getTeamPrimaryColor("nba", report.home.teamId) ?? "#e8edf5";
-  const awayColor =
-    getTeamPrimaryColor("nba", report.away.teamId) ?? "#e8edf5";
+  const homeColor = matchupTeamUiAccent(
+    "nba",
+    report.home.teamId,
+    report.home.teamId,
+    report.away.teamId
+  );
+  const awayColor = matchupTeamUiAccent(
+    "nba",
+    report.away.teamId,
+    report.home.teamId,
+    report.away.teamId
+  );
+
+  const homeWins = report.home.score > report.away.score;
+  const awayWins = report.away.score > report.home.score;
 
   const body = (
     <>
@@ -42,24 +53,64 @@ export default function LiveGameLineScorePanelNative({
         <Text style={[styles.abbr, { color: homeColor }]} numberOfLines={1}>
           {report.home.abbr}
         </Text>
-        {ls.home.map((v, i) => (
-          <Text key={`h-${ls.periods[i]}`} style={styles.periodCell}>
-            {cell(v)}
-          </Text>
-        ))}
-        <Text style={styles.totalCell}>{report.home.score}</Text>
+        {ls.home.map((v, i) => {
+          const opp = ls.away[i];
+          const wins =
+            v != null && opp != null && Number.isFinite(v) && Number.isFinite(opp)
+              ? v > opp
+              : false;
+          return (
+            <Text
+              key={`h-${ls.periods[i]}`}
+              style={[
+                styles.periodCell,
+                { color: wins ? homeColor : "rgba(255,255,255,0.88)" },
+              ]}
+            >
+              {cell(v)}
+            </Text>
+          );
+        })}
+        <Text
+          style={[
+            styles.totalCell,
+            { color: homeWins ? homeColor : "#fff" },
+          ]}
+        >
+          {report.home.score}
+        </Text>
       </View>
 
       <View style={styles.row}>
         <Text style={[styles.abbr, { color: awayColor }]} numberOfLines={1}>
           {report.away.abbr}
         </Text>
-        {ls.away.map((v, i) => (
-          <Text key={`a-${ls.periods[i]}`} style={styles.periodCell}>
-            {cell(v)}
-          </Text>
-        ))}
-        <Text style={styles.totalCell}>{report.away.score}</Text>
+        {ls.away.map((v, i) => {
+          const opp = ls.home[i];
+          const wins =
+            v != null && opp != null && Number.isFinite(v) && Number.isFinite(opp)
+              ? v > opp
+              : false;
+          return (
+            <Text
+              key={`a-${ls.periods[i]}`}
+              style={[
+                styles.periodCell,
+                { color: wins ? awayColor : "rgba(255,255,255,0.88)" },
+              ]}
+            >
+              {cell(v)}
+            </Text>
+          );
+        })}
+        <Text
+          style={[
+            styles.totalCell,
+            { color: awayWins ? awayColor : "#fff" },
+          ]}
+        >
+          {report.away.score}
+        </Text>
       </View>
     </>
   );
@@ -73,7 +124,7 @@ const styles = StyleSheet.create({
   card: {
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.22)",
-    backgroundColor: "transparent",
+    backgroundColor: "#000",
     paddingHorizontal: 12,
     paddingVertical: 10,
   },
@@ -109,27 +160,25 @@ const styles = StyleSheet.create({
   },
   headTotal: {
     flex: 0,
-    width: 40,
+    width: 44,
     color: "rgba(255,255,255,0.55)",
   },
   periodCell: {
     flex: 1,
     textAlign: "center",
     fontFamily: METRIC_FONT,
-    fontSize: 15,
+    fontSize: 18,
     fontWeight: "800",
     fontVariant: ["tabular-nums"],
-    color: "rgba(255,255,255,0.88)",
     transform: [{ skewX: "-6deg" }],
   },
   totalCell: {
-    width: 40,
+    width: 44,
     textAlign: "center",
     fontFamily: METRIC_FONT,
-    fontSize: 16,
+    fontSize: 19,
     fontWeight: "800",
     fontVariant: ["tabular-nums"],
-    color: "#fff",
     transform: [{ skewX: "-6deg" }],
   },
 });

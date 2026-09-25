@@ -176,6 +176,20 @@ function ResultStackScreen() {
           }
           options={publicProfileScreenOptions}
         />
+        <ResultStack.Screen
+          name="TeamDetailPreview"
+          getComponent={() =>
+            require("../features/results/ResultStackWrappers")
+              .ResultTeamDetailPreviewScreenWrapper
+          }
+        />
+        <ResultStack.Screen
+          name="PlayerDetailPreview"
+          getComponent={() =>
+            require("../features/results/ResultStackWrappers")
+              .ResultPlayerDetailPreviewScreenWrapper
+          }
+        />
       </ResultStack.Navigator>
     </NativeStackBackdrop>
   );
@@ -501,6 +515,15 @@ function ProfileStackScreen() {
             getComponent={() =>
               require("../features/profile/screens/ProfileStackWrappers")
                 .StreakFramePreviewScreenWrapper
+            }
+          />
+        ) : null}
+        {__DEV__ ? (
+          <ProfileStack.Screen
+            name="TeamAbbrBadgePreview"
+            getComponent={() =>
+              require("../features/profile/screens/ProfileStackWrappers")
+                .TeamAbbrBadgePreviewScreenWrapper
             }
           />
         ) : null}

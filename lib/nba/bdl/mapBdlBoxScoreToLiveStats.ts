@@ -16,6 +16,7 @@ import {
 } from "@/lib/nba/bdl/bdlNbaTeamIdMap";
 import type {
   LiveGameBoxPlayer,
+  LiveGameLineScore,
   LiveGameStatsDoc,
 } from "@/lib/games/liveGameStats";
 
@@ -198,6 +199,86 @@ function clockFromBox(
   return t;
 }
 
+function periodScore(v: unknown): number | null {
+  if (v === null || v === undefined || v === "") return null;
+  if (typeof v === "number" && Number.isFinite(v)) return v;
+  if (typeof v === "string" && v.trim()) {
+    const x = Number(v);
+    if (Number.isFinite(x)) return x;
+  }
+  return null;
+}
+
+/**
+ * BDL games / box_scores の `home_q1`…`visitor_ot3` → liveStats.lineScore。
+ * 四半期がすべて未設定なら null（2022 以前など）。
+ */
+export function lineScoreFromBdlPeriodFields(
+  raw: {
+    home_q1?: number | null;
+    home_q2?: number | null;
+    home_q3?: number | null;
+    home_q4?: number | null;
+    home_ot1?: number | null;
+    home_ot2?: number | null;
+    home_ot3?: number | null;
+    visitor_q1?: number | null;
+    visitor_q2?: number | null;
+    visitor_q3?: number | null;
+    visitor_q4?: number | null;
+    visitor_ot1?: number | null;
+    visitor_ot2?: number | null;
+    visitor_ot3?: number | null;
+  } | null | undefined
+): LiveGameLineScore | null {
+  if (!raw) return null;
+  const homeQ = [
+    periodScore(raw.home_q1),
+    periodScore(raw.home_q2),
+    periodScore(raw.home_q3),
+    periodScore(raw.home_q4),
+  ];
+  const awayQ = [
+    periodScore(raw.visitor_q1),
+    periodScore(raw.visitor_q2),
+    periodScore(raw.visitor_q3),
+    periodScore(raw.visitor_q4),
+  ];
+  if (homeQ.every((v) => v == null) && awayQ.every((v) => v == null)) {
+    return null;
+  }
+
+  const periods = ["Q1", "Q2", "Q3", "Q4"];
+  const home = [...homeQ];
+  const away = [...awayQ];
+
+  const ots: Array<{ label: string; home: number | null; away: number | null }> = [
+    {
+      label: "OT1",
+      home: periodScore(raw.home_ot1),
+      away: periodScore(raw.visitor_ot1),
+    },
+    {
+      label: "OT2",
+      home: periodScore(raw.home_ot2),
+      away: periodScore(raw.visitor_ot2),
+    },
+    {
+      label: "OT3",
+      home: periodScore(raw.home_ot3),
+      away: periodScore(raw.visitor_ot3),
+    },
+  ];
+  for (const ot of ots) {
+    if (ot.home == null && ot.away == null) break;
+    periods.push(ot.label === "OT1" ? "OT" : ot.label);
+    home.push(ot.home);
+    away.push(ot.away);
+  }
+
+  return { periods, home, away };
+}
+
 export type MappedLiveBoxScore = {
   bdlGameId: number | null;
   date: string | null;
@@ -251,7 +332,7 @@ export function mapBdlBoxScoreToLiveStats(
     clock,
     homeScore,
     awayScore,
-    lineScore: null,
+    lineScore: lineScoreFromBdlPeriodFields(box),
     teamStats: {
       home: aggregateTeamStats(homeRaw),
       away: aggregateTeamStats(awayRaw),

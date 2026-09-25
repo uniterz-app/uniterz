@@ -97,7 +97,6 @@ export default function NbaSeasonAwardsMarketPanel({
                         <TeamAbbrBadge
                           abbr={row.teamAbbr}
                           teamId={teamId ?? undefined}
-                          size="sm"
                         />
                       ) : null}
                     </div>

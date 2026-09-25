@@ -1,5 +1,6 @@
 "use client";
 
+import TeamAbbrBadge from "@/app/component/games/TeamAbbrBadge";
 import {
   NBA_SEASON_AWARD_DEFS,
   awardCandidateLabel,
@@ -11,12 +12,6 @@ import {
   AWARDS_PREVIEW_PLAYERS,
 } from "@/lib/predict/nbaSeasonAwardsPreviewMocks";
 import { nameOxanium } from "@/lib/fonts";
-import { nbaTeamIdFromBracketCode } from "@/lib/nba-bracket-code";
-import {
-  contrastingInkOnHex,
-  getTeamJerseyPrimaryColor,
-  softenTeamUiColor,
-} from "@/lib/team-colors";
 
 type Props = {
   prediction: NbaSeasonAwardsPrediction;
@@ -32,36 +27,6 @@ function resolveCandidate(
 ): NbaAwardCandidate | null {
   if (!id) return null;
   return catalog.find((c) => c.id === id) ?? null;
-}
-
-function TeamAbbrBadge({ abbr }: { abbr: string }) {
-  const teamId = nbaTeamIdFromBracketCode(abbr);
-  const fill = teamId
-    ? softenTeamUiColor(getTeamJerseyPrimaryColor("nba", teamId))
-    : "#5B8CFF";
-  const ink = contrastingInkOnHex(fill);
-
-  return (
-    <span
-      className={[
-        nameOxanium.className,
-        "relative grid h-[22px] min-w-[2.35rem] shrink-0 place-items-center overflow-hidden px-2 text-[9px] font-black uppercase tracking-[0.08em]",
-      ].join(" ")}
-      style={{
-        backgroundColor: fill,
-        backgroundImage:
-          "repeating-linear-gradient(0deg, rgba(0,0,0,0.28) 0px, rgba(0,0,0,0.28) 1px, transparent 1px, transparent 3px)",
-        color: ink,
-        transform: "skewX(-14deg)",
-        boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.2)",
-      }}
-      aria-hidden
-    >
-      <span style={{ transform: "skewX(14deg)" }}>
-        {abbr.slice(0, 3).toUpperCase()}
-      </span>
-    </span>
-  );
 }
 
 /** 提出済みアワード予想 — YOUR AWARDS・1行レイアウト（単一カード） */
@@ -136,7 +101,7 @@ export default function NbaSeasonAwardsViewPanel({
                   {picked.teamAbbr ? (
                     <TeamAbbrBadge abbr={picked.teamAbbr} />
                   ) : (
-                    <span className="h-[22px] w-[2.35rem] shrink-0" aria-hidden />
+                    <span className="h-[22px] w-[2.5rem] shrink-0" aria-hidden />
                   )}
                 </>
               ) : (

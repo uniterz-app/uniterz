@@ -92,6 +92,10 @@ export type ResultStackParamList = {
   ResultHome: { reopenDetailPostId?: string } | undefined;
   ResultDetail: { postId: string };
   PublicProfile: PublicProfileParams;
+  /** リザルト詳細 TEAM STATS からのチーム詳細 */
+  TeamDetailPreview: { teamId?: string } | undefined;
+  /** チーム詳細からの選手詳細 */
+  PlayerDetailPreview: { playerId?: string } | undefined;
 };
 
 export type RankingsStackParamList = {
@@ -176,6 +180,8 @@ export type ProfileStackParamList = {
   ProLeagueTeaserPreview: undefined;
   /** __DEV__ 連勝枠の光（1位エッジ vs conic） */
   StreakFramePreview: undefined;
+  /** __DEV__ TeamAbbrBadge サイバー案 */
+  TeamAbbrBadgePreview: undefined;
   /** __DEV__ リザルト左辺 PICK UP */
   ResultPickupPreview: undefined;
   ProInsightGatePreview: undefined;

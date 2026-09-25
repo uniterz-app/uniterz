@@ -31,6 +31,21 @@ export type BdlGame = {
   postponed?: boolean;
   home_team_score?: number | null;
   visitor_team_score?: number | null;
+  /** 2023 season+ — Q / OT 得点（未実施は null） */
+  home_q1?: number | null;
+  home_q2?: number | null;
+  home_q3?: number | null;
+  home_q4?: number | null;
+  home_ot1?: number | null;
+  home_ot2?: number | null;
+  home_ot3?: number | null;
+  visitor_q1?: number | null;
+  visitor_q2?: number | null;
+  visitor_q3?: number | null;
+  visitor_q4?: number | null;
+  visitor_ot1?: number | null;
+  visitor_ot2?: number | null;
+  visitor_ot3?: number | null;
   datetime?: string | null;
   ist_stage?: string | null;
   /** レスポンスに無い場合あり。ingest 側でクエリ種別を渡す */

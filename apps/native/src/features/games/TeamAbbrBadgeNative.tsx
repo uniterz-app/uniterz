@@ -1,8 +1,7 @@
-/** Web `NbaSeasonAwardsViewPanel` の TeamAbbrBadge 相当 */
+/** Web `TeamAbbrBadge` 相当 — OUTLINE GLOW（サイズ統一） */
 import { StyleSheet, Text, View } from "react-native";
 import { nbaTeamIdFromBracketCode } from "../../../../../lib/nba-bracket-code";
 import {
-  contrastingInkOnHex,
   getTeamJerseyPrimaryColor,
   softenTeamUiColor,
 } from "../../../../../lib/team-colors";
@@ -16,7 +15,7 @@ type Props = {
   teamId?: string | null;
   /** 同系色対決時など、塗りを上書き */
   fillColor?: string | null;
-  /** `sm` = アワード市場など密な行向け */
+  /** @deprecated サイズは統一。無視される */
   size?: "md" | "sm";
 };
 
@@ -24,7 +23,6 @@ export default function TeamAbbrBadgeNative({
   abbr,
   teamId,
   fillColor,
-  size = "md",
 }: Props) {
   const resolvedAbbr = (
     abbr?.trim() ||
@@ -44,54 +42,50 @@ export default function TeamAbbrBadgeNative({
     : id
       ? softenTeamUiColor(getTeamJerseyPrimaryColor("nba", id))
       : "#5B8CFF";
-  const ink = contrastingInkOnHex(fill);
-  const sm = size === "sm";
 
   return (
     <View
       style={[
-        sm ? styles.badgeSkewSm : styles.badgeSkew,
-        { backgroundColor: fill },
+        styles.badgeSkew,
+        {
+          borderColor: fill,
+          shadowColor: fill,
+        },
       ]}
     >
       <View style={styles.badgeScan} pointerEvents="none">
-        {Array.from({ length: sm ? 6 : 8 }, (_, i) => (
+        {Array.from({ length: 7 }, (_, i) => (
           <View
             key={i}
-            style={[styles.badgeScanLine, { top: 1 + i * (sm ? 2.5 : 3) }]}
+            style={[
+              styles.badgeScanLine,
+              {
+                top: 1 + i * 3,
+                backgroundColor: `${fill}33`,
+              },
+            ]}
           />
         ))}
       </View>
-      <Text
-        style={[
-          sm ? styles.badgeTextSm : styles.badgeText,
-          { color: ink },
-        ]}
-      >
-        {resolvedAbbr}
-      </Text>
+      <Text style={[styles.badgeText, { color: fill }]}>{resolvedAbbr}</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   badgeSkew: {
-    minWidth: 38,
+    width: 40,
     height: 22,
-    paddingHorizontal: 8,
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
+    backgroundColor: "transparent",
+    borderWidth: 1.5,
     transform: [{ skewX: "-14deg" }],
-  },
-  badgeSkewSm: {
-    minWidth: 28,
-    height: 16,
-    paddingHorizontal: 5,
-    alignItems: "center",
-    justifyContent: "center",
-    overflow: "hidden",
-    transform: [{ skewX: "-14deg" }],
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.85,
+    shadowRadius: 6,
+    elevation: 4,
   },
   badgeScan: {
     ...StyleSheet.absoluteFillObject,
@@ -101,7 +95,6 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 1,
-    backgroundColor: "rgba(0,0,0,0.28)",
   },
   badgeText: {
     fontFamily: OX,
@@ -109,13 +102,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
     textTransform: "uppercase",
     /** 枠 -14deg + 文字 +8deg → 選手名と同じ -6deg */
-    transform: [{ skewX: "8deg" }],
-  },
-  badgeTextSm: {
-    fontFamily: OX,
-    fontSize: 7,
-    letterSpacing: 0.5,
-    textTransform: "uppercase",
     transform: [{ skewX: "8deg" }],
   },
 });

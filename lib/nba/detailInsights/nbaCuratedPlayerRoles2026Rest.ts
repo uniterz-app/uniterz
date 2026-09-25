@@ -1543,9 +1543,10 @@ export const NBA_CURATED_PLAYER_ROLES_2026_REST: Readonly<
     {
       "playerId": "666609",
       "name": "Rui Hachimura",
-      "hierarchy": "third_option",
+      "hierarchy": "starter",
       "roles": [
-        "three_d_wing",
+        "midrange_scorer",
+        "floor_spacer",
         "spot_up_shooter"
       ]
     },
@@ -3907,9 +3908,9 @@ export const NBA_CURATED_PLAYER_ROLES_2026_REST: Readonly<
       "name": "Keegan Murray",
       "hierarchy": "third_option",
       "roles": [
-        "slashing_wing",
+        "three_d_wing",
         "spot_up_shooter",
-        "rebounder"
+        "floor_spacer"
       ]
     },
     {

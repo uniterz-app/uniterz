@@ -1478,6 +1478,12 @@ export default function PredictModal({
                         report={liveStatsReport}
                         language={language === "ja" ? "ja" : "en"}
                         omitScoreHeader
+                        onOpenTeamDetail={onOpenTeamDetail}
+                        onOpenPlayerDetail={
+                          onOpenPlayerDetail
+                            ? (playerId) => onOpenPlayerDetail(playerId)
+                            : undefined
+                        }
                       />
                     ) : (
                       <LiveGameStatsPlaceholderNative

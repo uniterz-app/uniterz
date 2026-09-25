@@ -126,6 +126,44 @@ export default function ResultDetailScreen({
       });
     });
 
+  const openTeamDetail = useCallback(
+    (teamId: string) => {
+      const id = teamId.trim();
+      if (!id) return;
+      const nav = navigation as NavigationProp<ParamListBase> & {
+        push?: (name: string, params: { teamId: string }) => void;
+      };
+      if (typeof nav.push === "function") {
+        nav.push("TeamDetailPreview", { teamId: id });
+        return;
+      }
+      navigation.navigate(
+        "TeamDetailPreview" as never,
+        { teamId: id } as never
+      );
+    },
+    [navigation]
+  );
+
+  const openPlayerDetail = useCallback(
+    (playerId: string) => {
+      const id = playerId.trim();
+      if (!id) return;
+      const nav = navigation as NavigationProp<ParamListBase> & {
+        push?: (name: string, params: { playerId: string }) => void;
+      };
+      if (typeof nav.push === "function") {
+        nav.push("PlayerDetailPreview", { playerId: id });
+        return;
+      }
+      navigation.navigate(
+        "PlayerDetailPreview" as never,
+        { playerId: id } as never
+      );
+    },
+    [navigation]
+  );
+
   const reset = useCallback(() => {
     setView(null);
     setMissing(false);
@@ -409,6 +447,8 @@ export default function ResultDetailScreen({
                         language={language}
                         view={view}
                         onOpenProfile={openProfile}
+                        onOpenTeamDetail={openTeamDetail}
+                        onOpenPlayerDetail={openPlayerDetail}
                         sections={sections}
                       />
                     </Animated.View>

@@ -29,6 +29,7 @@ import { METRIC_FONT } from "../../rankings/rankingsUiTheme";
 
 type Props = {
   report: LiveGameStatsReport;
+  onOpenPlayerDetail?: (playerId: string) => void;
 };
 
 function hexToRgba(hex: string, alpha: number): string {
@@ -104,10 +105,12 @@ function TeamBoxCard({
   block,
   defaultOpen,
   mode,
+  onOpenPlayerDetail,
 }: {
   block: LiveGameBoxTeam;
   defaultOpen: boolean;
   mode: LiveGameBoxScoreMode;
+  onOpenPlayerDetail?: (playerId: string) => void;
 }) {
   const [open, setOpen] = useState(defaultOpen);
   const teamPrimary = getTeamJerseyPrimaryColor("nba", block.teamId);
@@ -122,7 +125,7 @@ function TeamBoxCard({
     <View style={[styles.card, { borderColor: border }]}>
       <Pressable
         onPress={() => setOpen((v) => !v)}
-        style={[
+        style={({ pressed }) => [
           styles.header,
           open
             ? {
@@ -130,6 +133,7 @@ function TeamBoxCard({
                 borderBottomColor: divider,
               }
             : null,
+          pressed ? styles.headerPressed : null,
         ]}
       >
         <JerseyMarkSvg
@@ -173,8 +177,8 @@ function TeamBoxCard({
             </View>
             {players.map((p) => {
               const values = liveGameBoxColumnValues(p, mode);
-              return (
-                <View key={p.playerId} style={styles.tableRow}>
+              const rowInner = (
+                <>
                   <View style={styles.identityCol}>
                     <View style={[styles.jersey, { borderColor: teamPrimary }]}>
                       <Text style={[styles.jerseyNum, { color: teamPrimary }]}>
@@ -201,6 +205,27 @@ function TeamBoxCard({
                       </Text>
                     );
                   })}
+                </>
+              );
+              if (onOpenPlayerDetail && p.playerId) {
+                return (
+                  <Pressable
+                    key={p.playerId}
+                    onPress={() => onOpenPlayerDetail(p.playerId)}
+                    style={({ pressed }) => [
+                      styles.tableRow,
+                      pressed ? styles.tableRowPressed : null,
+                    ]}
+                    accessibilityRole="button"
+                    accessibilityLabel={playerCardName(p)}
+                  >
+                    {rowInner}
+                  </Pressable>
+                );
+              }
+              return (
+                <View key={p.playerId} style={styles.tableRow}>
+                  {rowInner}
                 </View>
               );
             })}
@@ -211,7 +236,10 @@ function TeamBoxCard({
   );
 }
 
-export default function LiveGameBoxScorePanelNative({ report }: Props) {
+export default function LiveGameBoxScorePanelNative({
+  report,
+  onOpenPlayerDetail,
+}: Props) {
   const allPlayers = useMemo(
     () => [...report.box.home.players, ...report.box.away.players],
     [report.box.home.players, report.box.away.players]
@@ -226,8 +254,18 @@ export default function LiveGameBoxScorePanelNative({ report }: Props) {
         onChange={setMode}
         advancedAvailable={advancedAvailable}
       />
-      <TeamBoxCard block={report.box.home} defaultOpen mode={mode} />
-      <TeamBoxCard block={report.box.away} defaultOpen={false} mode={mode} />
+      <TeamBoxCard
+        block={report.box.home}
+        defaultOpen
+        mode={mode}
+        onOpenPlayerDetail={onOpenPlayerDetail}
+      />
+      <TeamBoxCard
+        block={report.box.away}
+        defaultOpen={false}
+        mode={mode}
+        onOpenPlayerDetail={onOpenPlayerDetail}
+      />
     </View>
   );
 }
@@ -266,7 +304,7 @@ const styles = StyleSheet.create({
   card: {
     overflow: "hidden",
     borderWidth: 1,
-    backgroundColor: "transparent",
+    backgroundColor: "#000",
   },
   header: {
     flexDirection: "row",
@@ -274,6 +312,9 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingHorizontal: 10,
     paddingVertical: 8,
+  },
+  headerPressed: {
+    backgroundColor: "rgba(255,255,255,0.06)",
   },
   headerText: { flex: 1, minWidth: 0 },
   headerTop: {
@@ -284,7 +325,7 @@ const styles = StyleSheet.create({
   },
   sideTag: {
     fontFamily: METRIC_FONT,
-    fontSize: 8,
+    fontSize: 10,
     fontWeight: "800",
     letterSpacing: 1,
     textTransform: "uppercase",
@@ -296,8 +337,8 @@ const styles = StyleSheet.create({
   teamName: {
     flexShrink: 1,
     fontFamily: METRIC_FONT,
-    fontSize: 12,
-    fontWeight: "800",
+    fontSize: 14,
+    fontWeight: "700",
     letterSpacing: 0.6,
     textTransform: "uppercase",
     color: "#fff",
@@ -317,17 +358,20 @@ const styles = StyleSheet.create({
     borderBottomColor: "rgba(255,255,255,0.06)",
     paddingVertical: 6,
   },
+  tableRowPressed: {
+    backgroundColor: "rgba(255,255,255,0.14)",
+  },
   identityCol: {
     width: 176,
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: 5,
     paddingRight: 6,
     borderRightWidth: StyleSheet.hairlineWidth,
     borderRightColor: "rgba(255,255,255,0.08)",
   },
   thJersey: {
-    width: 28,
+    width: 26,
     textAlign: "center",
     fontFamily: METRIC_FONT,
     fontSize: 9,
@@ -364,39 +408,40 @@ const styles = StyleSheet.create({
     color: "rgba(255,255,255,0.4)",
   },
   jersey: {
-    width: 28,
-    height: 28,
+    width: 26,
+    height: 26,
     borderWidth: 1,
     alignItems: "center",
     justifyContent: "center",
   },
   jerseyNum: {
     fontFamily: METRIC_FONT,
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "800",
     fontVariant: ["tabular-nums"],
   },
   playerName: {
     maxWidth: 96,
     fontFamily: METRIC_FONT,
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: "700",
-    letterSpacing: 0.3,
+    letterSpacing: 0.2,
     textTransform: "uppercase",
     color: "#fff",
     transform: [{ skewX: "-6deg" }],
   },
   pos: {
     fontFamily: METRIC_FONT,
-    fontSize: 11,
+    fontSize: 12,
     color: "rgba(255,255,255,0.55)",
+    transform: [{ skewX: "-6deg" }],
   },
   stat: {
     width: 40,
     textAlign: "center",
     fontFamily: METRIC_FONT,
     fontSize: 14,
-    fontWeight: "800",
+    fontWeight: "700",
     fontVariant: ["tabular-nums"],
     transform: [{ skewX: "-6deg" }],
   },

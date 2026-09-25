@@ -5,10 +5,13 @@
  */
 import { useMemo } from "react";
 import { Check, X } from "lucide-react";
+import dynamic from "next/dynamic";
 import { useNbaTopScorerCandidates } from "@/lib/nba/useNbaTopScorerCandidates";
 import Link from "next/link";
 import ResultCardDesignFace from "@/app/component/result/ResultCardDesignFace";
 import ResultDetailScoreDonut from "@/app/component/result/ResultDetailScoreDonut";
+import LiveGameStatsPlaceholder from "@/app/component/games/live/LiveGameStatsPlaceholder";
+import { useLiveGameStats } from "@/lib/games/useLiveGameStats";
 import {
   ProCyberBadge,
   proBadgeStaticMotion,
@@ -31,6 +34,11 @@ import type { ResultTopScorerMarketView } from "@/lib/result/resultTopScorerMark
 import type { GamePointsTopEntryV1 } from "@/lib/results/gamePointsTop";
 import { profilePathKeyFromRow } from "@/lib/profile/profilePathKey";
 import { warmPublicProfileFromListEntry } from "@/app/component/profile/useProfile";
+
+const LiveGameStatsPanel = dynamic(
+  () => import("@/app/component/games/live/LiveGameStatsPanel"),
+  { ssr: false }
+);
 
 const ACCENT = "#00F5FF";
 
@@ -83,7 +91,7 @@ function SectionCard({
 }) {
   return (
     <div
-      className="flex flex-col gap-2 border bg-transparent px-2.5 py-2"
+      className="flex flex-col gap-2 border bg-black px-2.5 py-2"
       style={{ borderColor: frameColor }}
     >
       {children}
@@ -284,11 +292,13 @@ function MatchStatsPanel({
 
 function TopScoresPanel({
   ja,
+  frameColor,
   entries,
   language,
   gamesRoutePrefix,
 }: {
   ja: boolean;
+  frameColor: string;
   entries: GamePointsTopEntryV1[];
   language: Language;
   gamesRoutePrefix: "/web" | "/mobile";
@@ -299,7 +309,7 @@ function TopScoresPanel({
   return (
     <div className="flex flex-col gap-2.5">
       <SectionHeader title={ja ? "得点上位" : "TOP SCORES"} accent={ACCENT} />
-      <div>
+      <SectionCard frameColor={frameColor}>
         {entries.map((entry) => {
           const profileKey = profilePathKeyFromRow({
             uid: entry.uid,
@@ -363,7 +373,7 @@ function TopScoresPanel({
             </Link>
           );
         })}
-      </div>
+      </SectionCard>
     </div>
   );
 }
@@ -508,6 +518,8 @@ type Props = {
   gamesRoutePrefix?: "/web" | "/mobile";
   contentPaddingBottom?: number;
   sections?: ResultDetailBodySections;
+  onOpenTeamDetail?: (teamId: string) => void;
+  onOpenPlayerDetail?: (playerId: string) => void;
 };
 
 /** Web 新リザルト詳細 — Native `ResultDetailBodyNative` と同じ構成 */
@@ -517,11 +529,18 @@ export default function ResultDetailBody({
   gamesRoutePrefix = "/mobile",
   contentPaddingBottom = 24,
   sections = "full",
+  onOpenTeamDetail,
+  onOpenPlayerDetail,
 }: Props) {
   const ja = language === "ja";
   const frameColor = hexToRgba(ACCENT, 0.4);
   const dividerColor = hexToRgba(ACCENT, 0.22);
   const matchStats = view.matchStats;
+  const cardAndLiveStats = sections === "cardAndLiveStats";
+  const nbaGameId =
+    String(view.card.league ?? "").toLowerCase() === "nba"
+      ? view.card.gameId || null
+      : null;
   const needScorerName = Boolean(
     !view.card.topScorer &&
       view.card.topScorerPlayerId &&
@@ -543,6 +562,10 @@ export default function ResultDetailBody({
     if (!hit?.name) return view.card;
     return { ...view.card, topScorer: hit.name };
   }, [topScorerCandidates, view.card]);
+  const { report: liveStatsReport, loading: liveStatsLoading } = useLiveGameStats(
+    nbaGameId,
+    Boolean(nbaGameId)
+  );
 
   return (
     <div
@@ -562,7 +585,28 @@ export default function ResultDetailBody({
         />
       </div>
 
-      {sections === "full" ? (
+      {cardAndLiveStats ? (
+        <>
+          <div
+            className="my-4 h-px"
+            style={{ backgroundColor: dividerColor }}
+          />
+          {liveStatsReport ? (
+            <LiveGameStatsPanel
+              report={liveStatsReport}
+              language={language}
+              omitScoreHeader
+              onOpenTeamDetail={onOpenTeamDetail}
+              onOpenPlayerDetail={onOpenPlayerDetail}
+            />
+          ) : (
+            <LiveGameStatsPlaceholder
+              language={language}
+              loading={liveStatsLoading}
+            />
+          )}
+        </>
+      ) : (
         <>
           {matchStats ? (
             <>
@@ -587,6 +631,7 @@ export default function ResultDetailBody({
               />
               <TopScoresPanel
                 ja={ja}
+                frameColor={frameColor}
                 entries={view.topEntries}
                 language={language}
                 gamesRoutePrefix={gamesRoutePrefix}
@@ -603,8 +648,31 @@ export default function ResultDetailBody({
             frameColor={frameColor}
             breakdown={view.breakdown}
           />
+
+          {nbaGameId && (liveStatsReport || liveStatsLoading) ? (
+            <>
+              <div
+                className="my-4 h-px"
+                style={{ backgroundColor: dividerColor }}
+              />
+              {liveStatsReport ? (
+                <LiveGameStatsPanel
+                  report={liveStatsReport}
+                  language={language}
+                  omitScoreHeader
+                  onOpenTeamDetail={onOpenTeamDetail}
+                  onOpenPlayerDetail={onOpenPlayerDetail}
+                />
+              ) : (
+                <LiveGameStatsPlaceholder
+                  language={language}
+                  loading={liveStatsLoading}
+                />
+              )}
+            </>
+          ) : null}
         </>
-      ) : null}
+      )}
     </div>
   );
 }

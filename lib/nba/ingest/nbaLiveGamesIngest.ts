@@ -12,6 +12,7 @@ import {
 } from "@/lib/nba/bdl/fetchBdlBoxScores";
 import {
   bdlBoxMatchKey,
+  lineScoreFromBdlPeriodFields,
   mapBdlBoxScoreToLiveStats,
   type MappedLiveBoxScore,
 } from "@/lib/nba/bdl/mapBdlBoxScoreToLiveStats";
@@ -173,6 +174,12 @@ export async function ingestNbaLiveGamesFromBdl(
       continue;
     }
     const box = findMappedBox(g, byGameId, byTeams);
+    if (box && !box.liveStats.lineScore) {
+      const fromGame = lineScoreFromBdlPeriodFields(g);
+      if (fromGame) {
+        box.liveStats = { ...box.liveStats, lineScore: fromGame };
+      }
+    }
     const liveStats = box
       ? normalizeLiveGameStatsDoc(box.liveStats)
       : null;

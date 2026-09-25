@@ -20,12 +20,16 @@ type Props = {
   language?: string;
   /** オーバーレイで MatchCard がスコアを出すとき、スコアヘッダーを省略 */
   omitScoreHeader?: boolean;
+  onOpenTeamDetail?: (teamId: string) => void;
+  onOpenPlayerDetail?: (playerId: string) => void;
 };
 
 export default function LiveGameStatsPanelNative({
   report,
   language = "ja",
   omitScoreHeader = false,
+  onOpenTeamDetail,
+  onOpenPlayerDetail,
 }: Props) {
   const homeColor =
     getTeamPrimaryColor("nba", report.home.teamId) ?? "#5cf0b5";
@@ -110,7 +114,10 @@ export default function LiveGameStatsPanelNative({
 
       <View style={styles.section}>
         <LiveGameSectionTitleNative title="Team Stats" />
-        <LiveGameTeamStatsPanelNative report={report} />
+        <LiveGameTeamStatsPanelNative
+          report={report}
+          onOpenTeamDetail={onOpenTeamDetail}
+        />
       </View>
 
       <View style={styles.section}>
@@ -120,7 +127,10 @@ export default function LiveGameStatsPanelNative({
 
       <View style={styles.section}>
         <LiveGameSectionTitleNative title="Box Score" />
-        <LiveGameBoxScorePanelNative report={report} />
+        <LiveGameBoxScorePanelNative
+          report={report}
+          onOpenPlayerDetail={onOpenPlayerDetail}
+        />
       </View>
     </View>
   );

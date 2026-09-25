@@ -1,10 +1,9 @@
 "use client";
 
-/** Native `TeamAbbrBadgeNative` / Awards パネル相当 */
+/** Native `TeamAbbrBadgeNative` / Awards パネル相当 — OUTLINE GLOW */
 import { nameOxanium } from "@/lib/fonts";
 import { nbaTeamIdFromBracketCode } from "@/lib/nba-bracket-code";
 import {
-  contrastingInkOnHex,
   getTeamJerseyPrimaryColor,
   softenTeamUiColor,
 } from "@/lib/team-colors";
@@ -15,7 +14,7 @@ type Props = {
   teamId?: string | null;
   /** 同系色対決時など、塗りを上書き（未指定ならチーム primary） */
   fillColor?: string | null;
-  /** `sm` = アワード市場など密な行向け */
+  /** @deprecated サイズは統一。無視される */
   size?: "md" | "sm";
   className?: string;
 };
@@ -24,7 +23,6 @@ export default function TeamAbbrBadge({
   abbr,
   teamId,
   fillColor,
-  size = "md",
   className = "",
 }: Props) {
   const resolvedAbbr = (
@@ -45,26 +43,26 @@ export default function TeamAbbrBadge({
     : id
       ? softenTeamUiColor(getTeamJerseyPrimaryColor("nba", id))
       : "#5B8CFF";
-  const ink = contrastingInkOnHex(fill);
-  const sm = size === "sm";
 
   return (
     <span
       className={[
         nameOxanium.className,
-        "relative grid shrink-0 place-items-center overflow-hidden font-black uppercase",
-        sm
-          ? "h-[16px] min-w-[1.7rem] px-1 text-[7px] tracking-[0.06em]"
-          : "h-[22px] min-w-[2.35rem] px-2 text-[9px] tracking-[0.08em]",
+        "relative grid h-[22px] w-[2.5rem] shrink-0 place-items-center overflow-hidden border-[1.5px] bg-transparent text-[9px] font-black uppercase tracking-[0.08em]",
         className,
       ].join(" ")}
       style={{
-        backgroundColor: fill,
-        backgroundImage:
-          "repeating-linear-gradient(0deg, rgba(0,0,0,0.28) 0px, rgba(0,0,0,0.28) 1px, transparent 1px, transparent 3px)",
-        color: ink,
+        borderColor: fill,
+        color: fill,
         transform: "skewX(-14deg)",
-        boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.2)",
+        boxShadow: `0 0 8px ${fill}99, 0 0 2px ${fill}cc`,
+        backgroundImage: `repeating-linear-gradient(
+          0deg,
+          ${fill}33 0px,
+          ${fill}33 1px,
+          transparent 1px,
+          transparent 3px
+        )`,
       }}
       aria-hidden
     >

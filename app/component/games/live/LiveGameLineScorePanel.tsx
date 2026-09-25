@@ -2,7 +2,7 @@
 
 import type { LiveGameStatsReport } from "@/lib/games/liveGameStats";
 import { nameOxanium } from "@/lib/fonts";
-import { getTeamPrimaryColor } from "@/lib/team-colors";
+import { matchupTeamUiAccent } from "@/lib/team-colors";
 
 type Props = {
   report: LiveGameStatsReport;
@@ -22,12 +22,23 @@ export default function LiveGameLineScorePanel({
   const ls = report.lineScore;
   if (!ls || ls.periods.length === 0) return null;
 
-  const homeColor =
-    getTeamPrimaryColor("nba", report.home.teamId) ?? "#e8edf5";
-  const awayColor =
-    getTeamPrimaryColor("nba", report.away.teamId) ?? "#e8edf5";
+  const homeColor = matchupTeamUiAccent(
+    "nba",
+    report.home.teamId,
+    report.home.teamId,
+    report.away.teamId
+  );
+  const awayColor = matchupTeamUiAccent(
+    "nba",
+    report.away.teamId,
+    report.home.teamId,
+    report.away.teamId
+  );
 
-  const colTemplate = `minmax(2.75rem,auto) repeat(${ls.periods.length}, minmax(0,1fr)) minmax(2.5rem,auto)`;
+  const homeWins = report.home.score > report.away.score;
+  const awayWins = report.away.score > report.home.score;
+
+  const colTemplate = `minmax(2.75rem,auto) repeat(${ls.periods.length}, minmax(0,1fr)) minmax(2.75rem,auto)`;
 
   const body = (
     <>
@@ -70,24 +81,37 @@ export default function LiveGameLineScorePanel({
         >
           {report.home.abbr}
         </span>
-        {ls.home.map((v, i) => (
-          <span
-            key={`h-${ls.periods[i]}`}
-            className={[
-              nameOxanium.className,
-              "text-center text-[15px] font-extrabold tabular-nums text-white/88",
-            ].join(" ")}
-            style={{ transform: "skewX(-6deg)" }}
-          >
-            {cell(v)}
-          </span>
-        ))}
+        {ls.home.map((v, i) => {
+          const opp = ls.away[i];
+          const wins =
+            v != null && opp != null && Number.isFinite(v) && Number.isFinite(opp)
+              ? v > opp
+              : false;
+          return (
+            <span
+              key={`h-${ls.periods[i]}`}
+              className={[
+                nameOxanium.className,
+                "text-center text-[18px] font-extrabold tabular-nums",
+              ].join(" ")}
+              style={{
+                color: wins ? homeColor : "rgba(255,255,255,0.88)",
+                transform: "skewX(-6deg)",
+              }}
+            >
+              {cell(v)}
+            </span>
+          );
+        })}
         <span
           className={[
             nameOxanium.className,
-            "text-center text-[16px] font-extrabold tabular-nums text-white",
+            "text-center text-[19px] font-extrabold tabular-nums",
           ].join(" ")}
-          style={{ transform: "skewX(-6deg)" }}
+          style={{
+            color: homeWins ? homeColor : "#fff",
+            transform: "skewX(-6deg)",
+          }}
         >
           {report.home.score}
         </span>
@@ -106,24 +130,37 @@ export default function LiveGameLineScorePanel({
         >
           {report.away.abbr}
         </span>
-        {ls.away.map((v, i) => (
-          <span
-            key={`a-${ls.periods[i]}`}
-            className={[
-              nameOxanium.className,
-              "text-center text-[15px] font-extrabold tabular-nums text-white/88",
-            ].join(" ")}
-            style={{ transform: "skewX(-6deg)" }}
-          >
-            {cell(v)}
-          </span>
-        ))}
+        {ls.away.map((v, i) => {
+          const opp = ls.home[i];
+          const wins =
+            v != null && opp != null && Number.isFinite(v) && Number.isFinite(opp)
+              ? v > opp
+              : false;
+          return (
+            <span
+              key={`a-${ls.periods[i]}`}
+              className={[
+                nameOxanium.className,
+                "text-center text-[18px] font-extrabold tabular-nums",
+              ].join(" ")}
+              style={{
+                color: wins ? awayColor : "rgba(255,255,255,0.88)",
+                transform: "skewX(-6deg)",
+              }}
+            >
+              {cell(v)}
+            </span>
+          );
+        })}
         <span
           className={[
             nameOxanium.className,
-            "text-center text-[16px] font-extrabold tabular-nums text-white",
+            "text-center text-[19px] font-extrabold tabular-nums",
           ].join(" ")}
-          style={{ transform: "skewX(-6deg)" }}
+          style={{
+            color: awayWins ? awayColor : "#fff",
+            transform: "skewX(-6deg)",
+          }}
         >
           {report.away.score}
         </span>
@@ -138,11 +175,10 @@ export default function LiveGameLineScorePanel({
       className="overflow-hidden border px-3 py-2.5"
       style={{
         borderColor: "rgba(255,255,255,0.22)",
-        backgroundColor: "transparent",
+        backgroundColor: "#000",
       }}
     >
       {body}
     </div>
   );
 }
-

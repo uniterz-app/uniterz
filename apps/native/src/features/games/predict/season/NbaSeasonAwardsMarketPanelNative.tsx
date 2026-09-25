@@ -62,7 +62,6 @@ export default function NbaSeasonAwardsMarketPanelNative({
                         <TeamAbbrBadgeNative
                           abbr={row.teamAbbr}
                           teamId={teamId ?? undefined}
-                          size="sm"
                         />
                       ) : null}
                     </View>

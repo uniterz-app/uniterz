@@ -21,6 +21,8 @@ type Props = {
    * ラインスコアは残す。
    */
   omitScoreHeader?: boolean;
+  onOpenTeamDetail?: (teamId: string) => void;
+  onOpenPlayerDetail?: (playerId: string) => void;
 };
 
 export default function LiveGameStatsPanel({
@@ -28,6 +30,8 @@ export default function LiveGameStatsPanel({
   language = "ja",
   className = "",
   omitScoreHeader = false,
+  onOpenTeamDetail,
+  onOpenPlayerDetail,
 }: Props) {
   const homeColor =
     getTeamPrimaryColor("nba", report.home.teamId) ?? "#5cf0b5";
@@ -124,7 +128,10 @@ export default function LiveGameStatsPanel({
 
       <section className="space-y-2.5">
         <LiveGameSectionTitle title="Team Stats" />
-        <LiveGameTeamStatsPanel report={report} />
+        <LiveGameTeamStatsPanel
+          report={report}
+          onOpenTeamDetail={onOpenTeamDetail}
+        />
       </section>
 
       <section className="space-y-2.5">
@@ -134,7 +141,10 @@ export default function LiveGameStatsPanel({
 
       <section className="space-y-2.5">
         <LiveGameSectionTitle title="Box Score" />
-        <LiveGameBoxScorePanel report={report} />
+        <LiveGameBoxScorePanel
+          report={report}
+          onOpenPlayerDetail={onOpenPlayerDetail}
+        />
       </section>
     </div>
   );

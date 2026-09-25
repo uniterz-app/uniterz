@@ -5,7 +5,8 @@ import {
   type LiveGameStatsReport,
 } from "../../../../../../lib/games/liveGameStats";
 import { playerCardName } from "../../../../../../lib/predict/nbaRoster";
-import { getTeamPrimaryColor } from "../../../../../../lib/team-colors";
+import { matchupTeamUiAccent } from "../../../../../../lib/team-colors";
+import TeamAbbrBadgeNative from "../TeamAbbrBadgeNative";
 import { METRIC_FONT } from "../../rankings/rankingsUiTheme";
 
 const FRAME = "rgba(255,255,255,0.22)";
@@ -22,8 +23,12 @@ export default function LiveGameLeadersPanelNative({ report }: Props) {
   return (
     <View style={styles.frame}>
       {leaders.map((L, i) => {
-        const accent =
-          getTeamPrimaryColor("nba", L.teamId) ?? "#e8edf5";
+        const fillColor = matchupTeamUiAccent(
+          "nba",
+          L.teamId,
+          report.home.teamId,
+          report.away.teamId
+        );
         const last = i === leaders.length - 1;
         return (
           <View
@@ -34,7 +39,11 @@ export default function LiveGameLeadersPanelNative({ report }: Props) {
             <Text style={styles.name} numberOfLines={1}>
               {playerCardName(L)}
             </Text>
-            <Text style={[styles.abbr, { color: accent }]}>{L.teamAbbr}</Text>
+            <TeamAbbrBadgeNative
+              abbr={L.teamAbbr}
+              teamId={L.teamId}
+              fillColor={fillColor}
+            />
             <Text style={styles.value}>{L.value}</Text>
           </View>
         );
@@ -47,7 +56,7 @@ const styles = StyleSheet.create({
   frame: {
     borderWidth: 1,
     borderColor: FRAME,
-    backgroundColor: "transparent",
+    backgroundColor: "#000",
     overflow: "hidden",
   },
   row: {
@@ -64,7 +73,7 @@ const styles = StyleSheet.create({
   label: {
     width: 36,
     fontFamily: METRIC_FONT,
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: "700",
     letterSpacing: 1.2,
     textTransform: "uppercase",
@@ -74,25 +83,18 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
     fontFamily: METRIC_FONT,
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: "700",
     letterSpacing: 0.4,
     textTransform: "uppercase",
     color: "#fff",
     transform: [{ skewX: "-6deg" }],
   },
-  abbr: {
-    fontFamily: METRIC_FONT,
-    fontSize: 11,
-    fontWeight: "800",
-    letterSpacing: 0.8,
-    textTransform: "uppercase",
-  },
   value: {
-    minWidth: 36,
+    minWidth: 40,
     textAlign: "right",
     fontFamily: METRIC_FONT,
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: "800",
     fontVariant: ["tabular-nums"],
     color: "#fff",

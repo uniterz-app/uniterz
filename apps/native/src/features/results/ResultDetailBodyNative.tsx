@@ -269,6 +269,7 @@ function MatchStatsPanel({
 
 function Top10Panel({
   ja,
+  frameColor,
   entries,
   onOpenProfile,
 }: {
@@ -282,7 +283,10 @@ function Top10Panel({
   return (
     <View style={styles.sectionBlock}>
       <SectionHeader title={ja ? "得点上位" : "TOP SCORES"} accent={ACCENT} />
-      <View>
+      <WeeklyReportCardShell
+        hideGrid
+        style={[styles.sectionCard, { borderColor: frameColor }]}
+      >
         {entries.map((row) => {
           const profileKey = profilePathKeyFromRow({
             uid: row.uid,
@@ -321,7 +325,7 @@ function Top10Panel({
             />
           );
         })}
-      </View>
+      </WeeklyReportCardShell>
     </View>
   );
 }
@@ -494,6 +498,8 @@ type Props = {
   language: Language;
   view: ResultDetailViewModel;
   onOpenProfile?: (handle: string, warm?: OpenPublicProfileWarm) => void;
+  onOpenTeamDetail?: (teamId: string) => void;
+  onOpenPlayerDetail?: (playerId: string) => void;
   /** ScrollView の contentContainerStyle に足す余白 */
   contentPaddingBottom?: number;
   /**
@@ -508,6 +514,8 @@ export default function ResultDetailBodyNative({
   language,
   view,
   onOpenProfile,
+  onOpenTeamDetail,
+  onOpenPlayerDetail,
   contentPaddingBottom = 24,
   sections = "full",
 }: Props) {
@@ -547,7 +555,7 @@ export default function ResultDetailBodyNative({
   const screenActive = useScreenActiveNative();
   const { report: liveStatsReport, loading: liveStatsLoading } = useLiveGameStats(
     nbaGameId,
-    Boolean(nbaGameId) && cardAndLiveStats,
+    Boolean(nbaGameId),
     {
       apiBaseUrl: getUniterzApiBaseUrl(),
       loadGameDoc: loadGameDocForLiveStats,
@@ -611,6 +619,8 @@ export default function ResultDetailBodyNative({
               report={liveStatsReport}
               language={ja ? "ja" : "en"}
               omitScoreHeader
+              onOpenTeamDetail={onOpenTeamDetail}
+              onOpenPlayerDetail={onOpenPlayerDetail}
             />
           ) : (
             <LiveGameStatsPlaceholderNative
@@ -651,6 +661,26 @@ export default function ResultDetailBodyNative({
             frameColor={frameColor}
             breakdown={view.breakdown}
           />
+
+          {nbaGameId && (liveStatsReport || liveStatsLoading) ? (
+            <>
+              <View style={[styles.divider, { backgroundColor: dividerColor }]} />
+              {liveStatsReport ? (
+                <LiveGameStatsPanelNative
+                  report={liveStatsReport}
+                  language={ja ? "ja" : "en"}
+                  omitScoreHeader
+                  onOpenTeamDetail={onOpenTeamDetail}
+                  onOpenPlayerDetail={onOpenPlayerDetail}
+                />
+              ) : (
+                <LiveGameStatsPlaceholderNative
+                  language={ja ? "ja" : "en"}
+                  loading={liveStatsLoading}
+                />
+              )}
+            </>
+          ) : null}
         </>
       )}
     </View>
@@ -694,7 +724,7 @@ const styles = StyleSheet.create({
   },
   sectionCard: {
     borderWidth: 1,
-    backgroundColor: "transparent",
+    backgroundColor: "#000",
     paddingHorizontal: 10,
     paddingVertical: 8,
     gap: 8,

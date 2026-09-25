@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import HalftoneJerseyMark from "@/app/component/games/HalftoneJerseyMark";
 import {
@@ -22,9 +23,11 @@ import {
   getTeamJerseySecondaryColor,
 } from "@/lib/team-colors";
 import { nameOxanium } from "@/lib/fonts";
+import { nbaPlayerDetailPreviewHref } from "@/lib/predict/nbaTeamDetailHref";
 
 type Props = {
   report: LiveGameStatsReport;
+  onOpenPlayerDetail?: (playerId: string) => void;
 };
 
 function hexToRgba(hex: string, alpha: number): string {
@@ -66,10 +69,10 @@ function IdentityCell({
       <div
         className={[
           nameOxanium.className,
-          "sticky left-0 z-[2] flex w-[11rem] shrink-0 items-center gap-1.5 border-r border-white/[0.08] bg-[rgba(12,14,20,0.98)] py-1.5 pr-1.5 text-[9px] font-bold uppercase tracking-[0.12em] text-white/40",
+          "sticky left-0 z-[2] flex w-[9.75rem] shrink-0 items-center gap-1 border-r border-white/[0.08] bg-black py-1 pr-1 text-[7px] font-bold uppercase tracking-[0.12em] text-white/40",
         ].join(" ")}
       >
-        <span className="w-7 text-center">#</span>
+        <span className="w-6 text-center">#</span>
         <span className="min-w-0">Player</span>
         <span className="ml-0.5">Pos</span>
       </div>
@@ -80,11 +83,11 @@ function IdentityCell({
   const asRoster: Pick<NbaRosterPlayer, "firstName" | "lastName"> = p;
 
   return (
-    <div className="sticky left-0 z-[1] flex w-[11rem] shrink-0 items-center gap-1.5 border-r border-white/[0.08] bg-[rgba(8,10,16,0.98)] py-2 pr-1.5">
+    <div className="sticky left-0 z-[1] flex w-[9.75rem] shrink-0 items-center gap-1 border-r border-white/[0.08] bg-black py-1.5 pr-1">
       <span
         className={[
           nameOxanium.className,
-          "relative grid h-7 w-7 shrink-0 place-items-center overflow-hidden border bg-transparent text-[11px] font-extrabold tabular-nums",
+          "relative grid h-6 w-6 shrink-0 place-items-center overflow-hidden border bg-transparent text-[9px] font-extrabold tabular-nums",
         ].join(" ")}
         style={{ borderColor: accent, color: accent }}
       >
@@ -103,11 +106,11 @@ function IdentityCell({
         />
         <span className="relative z-[1]">{p.jerseyNumber}</span>
       </span>
-      <div className="flex min-w-0 items-center gap-1">
+      <div className="flex min-w-0 items-center gap-0.5">
         <p
           className={[
             nameOxanium.className,
-            "max-w-[6rem] truncate text-[13px] font-bold uppercase tracking-[0.03em] text-white",
+            "max-w-[5.25rem] truncate text-[11px] font-bold uppercase tracking-[0.03em] text-white",
           ].join(" ")}
           style={{ transform: "skewX(-6deg)" }}
         >
@@ -116,7 +119,7 @@ function IdentityCell({
         <p
           className={[
             nameOxanium.className,
-            "shrink-0 text-[11px] text-white/55",
+            "shrink-0 text-[10px] text-white/55",
           ].join(" ")}
         >
           {p.position}
@@ -140,11 +143,11 @@ function StatsCells({
       <div
         className={[
           nameOxanium.className,
-          "flex items-center gap-2 py-1.5 text-[11px] font-bold uppercase tracking-[0.12em] text-white/40",
+          "flex items-center gap-1.5 py-1 text-[9px] font-bold uppercase tracking-[0.12em] text-white/40",
         ].join(" ")}
       >
         {columns.map((c) => (
-          <span key={c.key} className="w-10 shrink-0 text-center">
+          <span key={c.key} className="w-9 shrink-0 text-center">
             {c.label}
           </span>
         ))}
@@ -153,7 +156,7 @@ function StatsCells({
   }
 
   return (
-    <div className="flex items-center gap-2 py-2">
+    <div className="flex items-center gap-1.5 py-1.5">
       {(values ?? []).map((v, i) => {
         const col = columns[i];
         if (!col) return null;
@@ -162,7 +165,7 @@ function StatsCells({
             key={col.key}
             className={[
               nameOxanium.className,
-              "w-10 shrink-0 text-center text-[14px] font-extrabold tabular-nums",
+              "w-9 shrink-0 text-center text-[12px] tabular-nums",
               col.emphasis ? "text-white" : "text-white/78",
             ].join(" ")}
             style={{ transform: "skewX(-6deg)" }}
@@ -175,14 +178,19 @@ function StatsCells({
   );
 }
 
+const PLAYER_ROW_CLASS =
+  "flex items-center border-b border-white/[0.06] last:border-b-0 transition-colors active:bg-white/15";
+
 function TeamBoxCard({
   block,
   defaultOpen,
   mode,
+  onOpenPlayerDetail,
 }: {
   block: LiveGameBoxTeam;
   defaultOpen: boolean;
   mode: LiveGameBoxScoreMode;
+  onOpenPlayerDetail?: (playerId: string) => void;
 }) {
   const [open, setOpen] = useState(defaultOpen);
   const teamPrimary = getTeamJerseyPrimaryColor("nba", block.teamId);
@@ -195,14 +203,14 @@ function TeamBoxCard({
 
   return (
     <section
-      className="overflow-hidden border bg-transparent"
+      className="overflow-hidden border bg-black"
       style={{ borderColor: border }}
     >
       <button
         type="button"
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center gap-2 px-2.5 py-2 text-left transition-colors hover:bg-white/[0.03]"
+        className="flex w-full items-center gap-2 px-2.5 py-2 text-left transition-colors hover:bg-white/[0.03] active:bg-white/[0.08]"
         style={{ borderBottom: open ? `1px solid ${divider}` : undefined }}
       >
         <HalftoneJerseyMark
@@ -216,7 +224,7 @@ function TeamBoxCard({
             <span
               className={[
                 nameOxanium.className,
-                "rounded-[2px] border bg-transparent px-1.5 py-0.5 text-[8px] font-extrabold uppercase tracking-[0.12em]",
+                "rounded-[2px] border bg-transparent px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-[0.12em]",
               ].join(" ")}
               style={{ borderColor: teamPrimary, color: teamPrimary }}
             >
@@ -225,7 +233,7 @@ function TeamBoxCard({
             <p
               className={[
                 nameOxanium.className,
-                "min-w-0 truncate text-[12px] font-extrabold uppercase tracking-[0.06em] text-white",
+                "min-w-0 truncate text-[14px] font-bold uppercase leading-tight text-white",
               ].join(" ")}
             >
               {block.teamName}
@@ -261,18 +269,48 @@ function TeamBoxCard({
               <IdentityCell accent={teamPrimary} header />
               <StatsCells columns={columns} header />
             </div>
-            {players.map((p) => (
-              <div
-                key={p.playerId}
-                className="flex items-center border-b border-white/[0.06] last:border-b-0"
-              >
-                <IdentityCell player={p} accent={teamPrimary} />
-                <StatsCells
-                  columns={columns}
-                  values={liveGameBoxColumnValues(p, mode)}
-                />
-              </div>
-            ))}
+            {players.map((p) => {
+              const cells = (
+                <>
+                  <IdentityCell player={p} accent={teamPrimary} />
+                  <StatsCells
+                    columns={columns}
+                    values={liveGameBoxColumnValues(p, mode)}
+                  />
+                </>
+              );
+              if (onOpenPlayerDetail && p.playerId) {
+                return (
+                  <button
+                    key={p.playerId}
+                    type="button"
+                    className={["w-full text-left", PLAYER_ROW_CLASS].join(" ")}
+                    onClick={() => onOpenPlayerDetail(p.playerId)}
+                  >
+                    {cells}
+                  </button>
+                );
+              }
+              if (p.playerId) {
+                return (
+                  <Link
+                    key={p.playerId}
+                    href={nbaPlayerDetailPreviewHref(p.playerId)}
+                    className={PLAYER_ROW_CLASS}
+                  >
+                    {cells}
+                  </Link>
+                );
+              }
+              return (
+                <div
+                  key={p.playerId || playerCardName(p)}
+                  className={PLAYER_ROW_CLASS}
+                >
+                  {cells}
+                </div>
+              );
+            })}
           </div>
         </div>
       ) : null}
@@ -321,7 +359,10 @@ function BoxScoreModeToggle({
   );
 }
 
-export default function LiveGameBoxScorePanel({ report }: Props) {
+export default function LiveGameBoxScorePanel({
+  report,
+  onOpenPlayerDetail,
+}: Props) {
   const allPlayers = useMemo(
     () => [...report.box.home.players, ...report.box.away.players],
     [report.box.home.players, report.box.away.players]
@@ -337,8 +378,18 @@ export default function LiveGameBoxScorePanel({ report }: Props) {
         advancedAvailable={advancedAvailable}
       />
       <div className="space-y-3">
-        <TeamBoxCard block={report.box.home} defaultOpen mode={mode} />
-        <TeamBoxCard block={report.box.away} defaultOpen={false} mode={mode} />
+        <TeamBoxCard
+          block={report.box.home}
+          defaultOpen
+          mode={mode}
+          onOpenPlayerDetail={onOpenPlayerDetail}
+        />
+        <TeamBoxCard
+          block={report.box.away}
+          defaultOpen={false}
+          mode={mode}
+          onOpenPlayerDetail={onOpenPlayerDetail}
+        />
       </div>
     </div>
   );

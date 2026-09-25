@@ -19,6 +19,7 @@ import {
   useReducedMotion,
   type Variants,
 } from "framer-motion";
+import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   ArrowRight,
@@ -58,6 +59,7 @@ const ResultDetail = dynamic(
 import ResultDetailBody from "@/app/component/result/ResultDetailBody";
 import { buildResultDetailViewModel } from "@/lib/result/buildResultDetailView";
 import type { ResultDetailViewModel } from "@/lib/result/buildResultDetailView";
+import { nbaTeamDetailPreviewHref, nbaPlayerDetailPreviewHref } from "@/lib/predict/nbaTeamDetailHref";
 import {
   buildResultDetailViewFromLoad,
   buildWarmResultDetailViewFromPost,
@@ -310,6 +312,7 @@ export default function ResultListWithOverlay({
   postsCacheCapped = false,
   viewerUid = null,
 }: Props) {
+  const router = useRouter();
   const [openPostId, setOpenPostId] = useState<string | null>(null);
   const [detailGame, setDetailGame] = useState<MatchCardProps | null>(null);
   const [market, setMarket] = useState<MarketData | null>(null);
@@ -712,6 +715,26 @@ export default function ResultListWithOverlay({
     setTopEntries([]);
     setResultDetailView(null);
   }, []);
+
+  const openTeamDetailFromResult = useCallback(
+    (teamId: string) => {
+      const id = teamId.trim();
+      if (!id) return;
+      close();
+      router.push(nbaTeamDetailPreviewHref(id));
+    },
+    [close, router]
+  );
+
+  const openPlayerDetailFromResult = useCallback(
+    (playerId: string) => {
+      const id = playerId.trim();
+      if (!id) return;
+      close();
+      router.push(nbaPlayerDetailPreviewHref(id));
+    },
+    [close, router]
+  );
 
   const dismissPostFromList = useCallback(
     async (post: PostWithMillis): Promise<boolean> => {
@@ -2066,6 +2089,8 @@ export default function ResultListWithOverlay({
                               language={language}
                               view={resultDetailView}
                               gamesRoutePrefix={gamesRoutePrefix}
+                              onOpenTeamDetail={openTeamDetailFromResult}
+                              onOpenPlayerDetail={openPlayerDetailFromResult}
                             />
                           ) : (
                             <div className="flex min-h-[28vh] items-center justify-center px-4 py-10">
