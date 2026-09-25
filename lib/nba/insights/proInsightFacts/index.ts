@@ -37,6 +37,12 @@ export {
   type ScheduleNextGame,
   type HighMinutePlayer,
 } from "@/lib/nba/insights/proInsightFacts/buildScheduleFacts";
+export {
+  applyInsightExtrasToFactCandidates,
+  enrichScheduleFactsWithInsightExtras,
+  buildInsightExtrasContextCandidates,
+  resolveInsightExtrasForPhase,
+} from "@/lib/nba/insights/proInsightFacts/applyInsightExtrasFacts";
 export { highMinutePlayersFromRecentGames } from "@/lib/nba/insights/proInsightFacts/highMinutePlayersFromLiveStats";
 export {
   buildContextFactCandidates,

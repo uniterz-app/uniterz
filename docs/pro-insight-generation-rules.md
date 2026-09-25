@@ -1,16 +1,16 @@
 # Pro Insight — 生成前ルール（正）
 
-LLM の前に **ファクト選定** で落とす。文章は `hintEn` + プロンプトテンプレに従うだけ。
+LLM の前に **ファクト選定** で落とす。文章は `hintEn` + プロンプトに従い、**ゲート例と同じ「読み」トーン**（スタッツ読み上げ禁止）。
 
-最終更新: 2026-09-12
+最終更新: 2026-09-26
 
 ---
 
 ## 層
 
 1. **選定**（コード）— 何を話すか。関係ない・片方自慢・偽 soft は出さない  
-2. **骨格**（`hintEn`）— 英語1〜2文の意味  
-3. **翻訳**（LLM）— 7言語。数字・名前・status（OUT/questionable）を変えない  
+2. **骨格**（`hintEn`）— 英語1〜2文の **解釈**（順位は metrics/evidence）  
+3. **翻訳**（LLM）— 9言語。数字・名前・status（OUT/questionable）を変えない。本文は解釈、evidence に数字
 
 ---
 
@@ -20,14 +20,15 @@ LLM の前に **ファクト選定** で落とす。文章は `hintEn` + プロ�
 
 | 段 | いつ | 攻撃 | 相手穴 | 相手側文言 |
 |---|---|---|---|---|
-| Tier1 | 先に検索 | rank **1–6** | rank **25–30** | EN **vulnerable** / JA **脆い** · 攻め側 EN **looks like a good matchup** / JA **相性が良さそうです**（強そうです禁止） |
-| Tier2 | Tier1 が **0本** のときだけ | rank **1–8** | rank **23–30** | EN **gives up a lot on {skill} defense** / JA **{守備}を多く許す** · 同様に相性表現 |
-| Tier3 | Tier2 も **0本** | gap=`oppRank−myRank` 最大の **1本**（攻撃 rank ≤ 12） | EN **clearest favorable matchup … vs {skill} defense** / JA **いちばん相性が良い** |
+| Tier1 | 先に検索 | rank **1–6** | rank **25–30** | EN **looks vulnerable** / JA **脆い** · 締め **edge {TEAM} {where}** / JA **{TEAM} 有利**（強そうです禁止） |
+| Tier2 | Tier1 が **0本** のときだけ | rank **1–8** | rank **23–30** | EN **give up a lot {where}** / JA **{where}を多く許す** · 同様に有利表現 |
+| Tier3 | Tier2 も **0本** | gap=`oppRank−myRank` 最大の **1本**（攻撃 rank ≤ 12） | EN **clearest read tonight …** / JA **いちばん読みやすい**（または相性が良い） |
 | 空 | Tier3 も不可 | — | MATCHUP 出さない |
 
 - 片方自慢は出さない  
 - **SOFT / ソフト / 柔らかい** は MATCHUP で使わない  
 - Cap: Tier1/2 は試合最大2本。Tier3 は1本  
+- **文体:** ゲート例（`proInsightGateSampleBrief`）と同じく **読み**。順位は evidence、本文は解釈（「#4 vs #26 で相性が良さそうです」禁止）
 
 ### 欠場（MATCHUP）
 
@@ -99,13 +100,14 @@ LLM の前に **ファクト選定** で落とす。文章は `hintEn` + プロ�
 
 ### 低
 
-`home_after_b2b`, `single_game_road_trip`, `soft_landing`, `home_stand`（3〜）, `minutes_36plus`, `altitude`
+`home_after_b2b`, `single_game_road_trip`, `soft_landing`, `home_stand`（3〜）, `minutes_36plus`, `altitude`, `dense_3in4` / `dense_4in5`（今夜過密＋シーズン同条件 W–L）
 
 ### データ
 
 - 会場 TZ: [`lib/nba/nbaTeamVenueTz.ts`](../lib/nba/nbaTeamVenueTz.ts)（静的 IANA）
 - 終了時刻: `games.finalAt`（live ingest で final 初回のみ）。無ければ late_* は出さない
 - min36: 直前試合 `liveStats` box
+- **シーズン実績の付与:** `nbaTeamInsightExtras`（B2B / rest 帯 / 高地 / 過密）。今夜の SCHEDULE kind が立ったときだけ metrics + hintEn に Mark を足す。opening は前季、early/full は今季（空なら前季）
 
 ---
 
@@ -123,9 +125,12 @@ LLM の前に **ファクト選定** で落とす。文章は `hintEn` + プロ�
 | `home_loss_streak` / `away_loss_streak` | 今夜会場側の連敗 ≥3 | 17 |
 | `recent_margin_profile` | 直近≤10・サンプル≥4。接戦≤5 / 大差≥15。勝ちor負けの過半が接戦or大差 | 16–17 |
 | `vs_band_top6` | **今夜相手**がカンファ 1–6 のときだけ vsConfTop6 が極端 | 16 |
+| `multi_year_h2h` | `nbaTeamInsightExtras.h2hMultiYear` · ≥4試合（ホーム視点） | 15 |
 | `vs_band_under500` | 相手勝率 <.500 かつ vsUnder500 が極端 | 15 |
+| `vs_division` | 今夜同ディビジョンかつ vsDivision が極端 | 14 |
 | `rating_last10_tilt` | season vs last10 の NET/ORTG/DRTG \|Δ\|≥3（チーム1本）。last10 は box 推定 poss 優先、無ければ pace 代理 | 14+ |
 | `clutch_form` | clutchNet vs season NET \|Δ\|≥3 | 13 |
+| `clutch_close5` | 点差≤5 のシーズン W–L が極端（extras） | 12 |
 | `three_last10_hot` | last10 3P% ≥.38 かつ season より +.04（liveStats box 由来） | 12 |
 | `vs_band_over500` | 相手 ≥.500・非 top6・vsOver500 極端 | 12 |
 | `recent_sos_soft` | 直近相手平均 ≤.45 | 11 |
@@ -146,6 +151,7 @@ LLM の前に **ファクト選定** で落とす。文章は `hintEn` + プロ�
 - last10 ORTG/DRTG/NET: `liveStats.box` から Dean Oliver 推定 poss（FGA+0.44×FTA−OREB+TOV）。box が無い試合は PPG÷season pace 代理。追加 BDL **$0**
 - last10 3P%: `games.liveStats` box（`m-a` プール）または teamStats.fg3。無ければ kind 不出
 - Pro Insight 生成時も recent games で last10 の空レーティング/3P を補完
+- extras: `nbaTeamInsightExtras`（多年 H2H · vsDivision · clutchClose5）。チーム詳細 UI には出さない
 
 ---
 

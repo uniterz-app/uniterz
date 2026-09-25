@@ -8,6 +8,7 @@
 import type { DetailInsightChip } from "@/lib/nba/detailInsights/detailInsightTypes";
 import { enrichInsightChips } from "@/lib/nba/detailInsights/detailChipCopy";
 import { NBA_CURATED_PLAYER_ROLES_2026_REST } from "./nbaCuratedPlayerRoles2026Rest";
+import { NBA_CURATED_PLAYER_ROLES_2026_ROOKIES } from "./nbaCuratedPlayerRoles2026Rookies";
 import {
   HIERARCHY_LABEL,
   MAX_ROLE_TAGS,
@@ -28,13 +29,27 @@ export type NbaCuratedPlayerRole = {
   note?: string;
 };
 
+/** チーム別に配列を連結（後勝ち上書きしない） */
+function mergeRoleTeamMaps(
+  ...maps: Array<Readonly<Record<string, readonly NbaCuratedPlayerRole[]>>>
+): Record<string, NbaCuratedPlayerRole[]> {
+  const out: Record<string, NbaCuratedPlayerRole[]> = {};
+  for (const map of maps) {
+    for (const [teamId, list] of Object.entries(map)) {
+      out[teamId] = [...(out[teamId] ?? []), ...list];
+    }
+  }
+  return out;
+}
+
 /**
  * seasonKey → teamId → players。
  */
 export const NBA_CURATED_PLAYER_ROLES: Readonly<
   Record<string, Readonly<Record<string, readonly NbaCuratedPlayerRole[]>>>
 > = {
-  "2026-27": {
+  "2026-27": mergeRoleTeamMaps(
+    {
     /**
      * Boston Celtics — 1チーム目（新辞書・精度確認）。
      * 序列1 + 役割2〜4。0mpg 深ベンチは未ラベル。
@@ -330,8 +345,10 @@ export const NBA_CURATED_PLAYER_ROLES: Readonly<
       },
       // 0mpg — 未登録
     ],
-    ...NBA_CURATED_PLAYER_ROLES_2026_REST,
-  },
+    },
+    NBA_CURATED_PLAYER_ROLES_2026_REST,
+    NBA_CURATED_PLAYER_ROLES_2026_ROOKIES
+  ),
 };
 
 function assertCurated(entry: NbaCuratedPlayerRole): void {

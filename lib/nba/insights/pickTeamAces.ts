@@ -151,29 +151,44 @@ export async function pickTeamAcesForIngest(
     }
   });
 
-  const byTeam = new Map<string, AceCandidate>();
+  const byTeam = new Map<string, AceCandidate[]>();
   for (const row of lookup) {
     const rows = statsByPlayerId[row.playerId] ?? [];
     const teamId = primaryTeamIdFromStatRows(rows);
     if (!teamId) continue;
-    const prev = byTeam.get(teamId);
-    if (!prev || row.ppg > prev.ppg || (row.ppg === prev.ppg && row.gp > prev.gp)) {
-      byTeam.set(teamId, {
-        teamId,
-        playerId: row.playerId,
-        playerName: row.name,
-        ppg: row.ppg,
-        gp: row.gp,
-        source: "auto",
-      });
-    }
+    const list = byTeam.get(teamId) ?? [];
+    const cand: AceCandidate = {
+      teamId,
+      playerId: row.playerId,
+      playerName: row.name,
+      ppg: row.ppg,
+      gp: row.gp,
+      source: "auto",
+    };
+    list.push(cand);
+    list.sort((a, b) => b.ppg - a.ppg || b.gp - a.gp);
+    // 主エース + 2人目（キー選手欠場用）
+    byTeam.set(teamId, list.slice(0, 2));
   }
 
-  let aces: AceCandidate[] = [...byTeam.values()];
-  if (aces.length < 28) {
-    aces = (await fillMissingAcesFromRosters(db, seasonKey, aces, { minGp })).map(
-      (a) => ({ ...a, source: a.source ?? "auto" })
+  let aces: AceCandidate[] = [...byTeam.values()].flat();
+  if (byTeam.size < 28) {
+    const primaryOnly = [...byTeam.values()]
+      .map((list) => list[0])
+      .filter((a): a is AceCandidate => Boolean(a));
+    const filled = await fillMissingAcesFromRosters(
+      db,
+      seasonKey,
+      primaryOnly,
+      { minGp }
     );
+    const have = new Set(aces.map((a) => `${a.teamId}:${a.playerId}`));
+    for (const a of filled) {
+      const key = `${a.teamId}:${a.playerId}`;
+      if (have.has(key)) continue;
+      aces.push({ ...a, source: a.source ?? "auto" });
+      have.add(key);
+    }
   }
 
   // curated キー選手をマージ（同 team に複数可）

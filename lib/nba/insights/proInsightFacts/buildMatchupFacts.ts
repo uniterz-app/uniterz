@@ -124,6 +124,58 @@ function defendSkillPhrase(def: ClashDef): string {
   }
 }
 
+/** 攻めの読み（順位は evidence 側。body は解釈） */
+function attackSkillPhrase(def: ClashDef): string {
+  switch (def.kind) {
+    case "paint":
+      return "paint scoring";
+    case "fb":
+      return "fast-break scoring";
+    case "off_tov":
+      return "points off turnovers";
+    case "second":
+      return "second-chance points";
+    case "three":
+      return "three-point volume";
+    case "glass":
+      return "offensive rebounding";
+    case "tov":
+      return "ball security";
+    case "fta":
+      return "getting to the line";
+    default:
+      return skillWord(def);
+  }
+}
+
+/** 「どこで有利か」の締め */
+function edgeWherePhrase(def: ClashDef): string {
+  switch (def.kind) {
+    case "paint":
+      return "in the paint";
+    case "fb":
+      return "in transition";
+    case "off_tov":
+      return "off turnovers";
+    case "second":
+      return "on second chances";
+    case "three":
+      return "on the perimeter";
+    case "glass":
+      return "on the boards";
+    case "tov":
+      return "in the turnover battle";
+    case "fta":
+      return "at the free-throw line";
+    default:
+      return `on ${skillWord(def)}`;
+  }
+}
+
+/**
+ * MATCHUP hintEn — ゲート例と同じく「読み」。
+ * 順位数字は metrics / evidence に任せ、本文は解釈だけ。
+ */
 function strengthHintEn(input: {
   tier: ClashTier;
   attackAbbr: string;
@@ -132,18 +184,20 @@ function strengthHintEn(input: {
   myRank: number;
   oppRank: number;
 }): string {
-  const defendSkill = defendSkillPhrase(input.def);
-  if (input.tier === 1) {
-    return `${input.attackAbbr} ${input.def.label} (#${input.myRank}) looks like a good matchup against ${input.defendAbbr}'s vulnerable ${defendSkill} (#${input.oppRank}).`;
+  const attack = attackSkillPhrase(input.def);
+  const where = edgeWherePhrase(input.def);
+  const { attackAbbr, defendAbbr, tier } = input;
+  if (tier === 1) {
+    return `${attackAbbr} lean on ${attack}. ${defendAbbr}'s defense looks vulnerable there — edge ${attackAbbr} ${where}.`;
   }
-  if (input.tier === 2) {
-    return `${input.attackAbbr} ${input.def.label} (#${input.myRank}) looks like a good matchup against a ${input.defendAbbr} side that gives up a lot on ${defendSkill} (#${input.oppRank}).`;
+  if (tier === 2) {
+    return `${attackAbbr} lean on ${attack}. ${defendAbbr} give up a lot ${where} — edge ${attackAbbr}.`;
   }
-  return `Clearest favorable matchup: ${input.attackAbbr} ${input.def.label} (#${input.myRank}) vs ${input.defendAbbr} ${defendSkill} (#${input.oppRank}).`;
+  return `Clearest read tonight: ${attackAbbr} ${attack} vs a soft spot in ${defendAbbr}'s defense — edge ${attackAbbr} ${where}.`;
 }
 
 function weakenSuffix(injury: NbaTeamInjuryEntry): string {
-  return ` ${shortName(injury)} is ${injuryStatus(injury)} — treat as uncertain edge.`;
+  return ` ${shortName(injury)} is ${injuryStatus(injury)}, so that edge is less certain.`;
 }
 
 function amplifySuffix(input: {
@@ -154,12 +208,12 @@ function amplifySuffix(input: {
   const st = injuryStatus(input.injury);
   const name = shortName(input.injury);
   if (input.tier === 1) {
-    return ` Even more vulnerable with ${name} ${st}.`;
+    return ` With ${name} ${st}, that hole opens wider.`;
   }
   if (input.tier === 2) {
-    return ` Even weaker on ${input.skill} with ${name} ${st}.`;
+    return ` With ${name} ${st}, they give up even more on ${input.skill}.`;
   }
-  return ` Edge widens with ${name} ${st}.`;
+  return ` With ${name} ${st}, the edge widens.`;
 }
 
 function appendAceMetrics(input: {

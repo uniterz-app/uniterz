@@ -25,8 +25,10 @@ import type { NbaTeamInjuryEntry } from "@/lib/predict/nbaTeamDetailPreviewMocks
 import type { NbaTeamAceOutRecordsBundle } from "@/lib/nba/insights/aceOutRecordTypes";
 import type { NbaTeamSeasonRecordsBundle } from "@/lib/nba/insights/priorSeasonRecordTypes";
 import type { NbaTeamShapeRecordsBundle } from "@/lib/nba/teamShapes/teamShapeTypes";
+import type { NbaTeamInsightExtrasBundle } from "@/lib/nba/insights/teamInsightExtraTypes";
 import type { NbaPlayerStatLeadersBundle } from "@/lib/predict/nbaPlayerStatLeadersMocks";
 import type { ProBriefPhase } from "@/lib/predict/predictProBrief";
+import { applyInsightExtrasToFactCandidates } from "@/lib/nba/insights/proInsightFacts/applyInsightExtrasFacts";
 
 const SECTION_ORDER: ProInsightFactSection[] = [
   "MATCHUP",
@@ -67,6 +69,10 @@ export type AssembleProInsightFactsInput = {
   mpgByPlayerId?: Record<string, number> | null;
   /** 条件付き得意／苦手形（中盤以降に効く） */
   shapeRecords?: NbaTeamShapeRecordsBundle | null;
+  /** B2B/rest/過密/高地/多年H2H 等（Firestoreのみ・UI非表示） */
+  insightExtras?: NbaTeamInsightExtrasBundle | null;
+  /** opening / 今季空のとき */
+  priorInsightExtras?: NbaTeamInsightExtrasBundle | null;
 };
 
 /**
@@ -187,7 +193,7 @@ export function assembleProInsightFactPack(
     }
   }
 
-  const schedule = buildScheduleFactCandidates({
+  const scheduleRaw = buildScheduleFactCandidates({
     phase: input.phase,
     homeTeamId: input.homeTeamId,
     awayTeamId: input.awayTeamId,
@@ -199,6 +205,19 @@ export function assembleProInsightFactPack(
     awayNextGame: input.awayNextGame,
     highMinutePlayers: input.highMinutePlayers,
   });
+
+  const { scheduleFacts: schedule, extraFacts: extrasFacts } =
+    applyInsightExtrasToFactCandidates({
+      phase: input.phase,
+      homeTeamId: input.homeTeamId,
+      awayTeamId: input.awayTeamId,
+      tipAtMs: input.tipAtMs,
+      homePriorGames: input.homePriorGames ?? [],
+      awayPriorGames: input.awayPriorGames ?? [],
+      scheduleFacts: scheduleRaw,
+      seasonExtras: input.insightExtras,
+      priorExtras: input.priorInsightExtras,
+    });
 
   const context = buildContextFactCandidates({
     phase: input.phase,
@@ -231,7 +250,13 @@ export function assembleProInsightFactPack(
     matchupWeakeningByTeam,
   });
 
-  const candidates = [...matchup, ...schedule, ...context, ...injury];
+  const candidates = [
+    ...matchup,
+    ...schedule,
+    ...context,
+    ...extrasFacts,
+    ...injury,
+  ];
   const sections = rankAndPackFacts(candidates);
   const fingerprint = fingerprintProInsightFacts(sections, {
     homeTeamId: input.homeTeamId,

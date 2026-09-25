@@ -28,4 +28,7 @@ export const NBA_ACE_OUT_CURATED_BY_TEAM: Readonly<
   "nba-nuggets": [
     { playerId: "246", playerName: "Nikola Jokic", preferAsAce: true },
   ],
+  "nba-knicks": [
+    { playerId: "447", playerName: "Karl-Anthony Towns" },
+  ],
 };

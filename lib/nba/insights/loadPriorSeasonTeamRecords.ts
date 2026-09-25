@@ -140,6 +140,21 @@ function bundleFromFirestore(
   };
 }
 
+export async function loadTeamSeasonRecordsSnapshot(
+  db: Firestore,
+  seasonKey: string
+): Promise<NbaTeamSeasonRecordsBundle | null> {
+  const snap = await db
+    .collection(NBA_TEAM_SEASON_RECORDS_COLLECTION)
+    .doc(seasonKey.trim())
+    .get();
+  if (!snap.exists) return null;
+  return bundleFromFirestore(
+    seasonKey.trim(),
+    snap.data() as Record<string, unknown>
+  );
+}
+
 async function saveBundle(
   db: Firestore,
   built: NbaTeamSeasonRecordsBundle,

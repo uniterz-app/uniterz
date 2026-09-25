@@ -19,6 +19,7 @@ import { loadOrBuildTeamSeasonRecords } from "@/lib/nba/insights/loadPriorSeason
 import { loadTeamShapeRecordsBundle } from "@/lib/nba/teamShapes/loadTeamShapeRecords";
 import type { NbaTeamShapeRecordsBundle } from "@/lib/nba/teamShapes/teamShapeTypes";
 import { loadAceOutRecordsBundle } from "@/lib/nba/insights/ingestNbaTeamAceOutRecords";
+import { loadTeamInsightExtrasSnapshot } from "@/lib/nba/insights/ingestNbaTeamInsightExtras";
 import { loadPlayerStatLeadersSnapshot } from "@/lib/nba/playerStatLeaders/loadPlayerStatLeadersSnapshot";
 import { loadNbaConferenceStandings } from "@/lib/nba/standings/loadNbaConferenceStandings";
 import { loadTeamRostersSnapshot } from "@/lib/nba/teamRosters/loadTeamRostersSnapshot";
@@ -442,6 +443,23 @@ export async function submitProInsightNarrativeBatch(
     /* optional */
   }
 
+  let priorInsightExtras = null as Awaited<
+    ReturnType<typeof loadTeamInsightExtrasSnapshot>
+  >;
+  let seasonInsightExtras = null as Awaited<
+    ReturnType<typeof loadTeamInsightExtrasSnapshot>
+  >;
+  try {
+    priorInsightExtras = await loadTeamInsightExtrasSnapshot(db, priorKey);
+  } catch {
+    /* optional */
+  }
+  try {
+    seasonInsightExtras = await loadTeamInsightExtrasSnapshot(db, seasonKey);
+  } catch {
+    /* optional */
+  }
+
   let playerLeaders = null as Awaited<
     ReturnType<typeof loadPlayerStatLeadersSnapshot>
   >["bundle"] | null;
@@ -662,6 +680,8 @@ export async function submitProInsightNarrativeBatch(
           priorMpgByPlayerId
         ),
         shapeRecords,
+        insightExtras: seasonInsightExtras,
+        priorInsightExtras: priorInsightExtras,
       });
 
       prepared.push({ gameId: game.id, pack, injuryFingerprint });
@@ -1193,6 +1213,23 @@ export async function patchProInsightNarrativesIfInjuryChanged(
     /* optional */
   }
 
+  let priorInsightExtras = null as Awaited<
+    ReturnType<typeof loadTeamInsightExtrasSnapshot>
+  >;
+  let seasonInsightExtras = null as Awaited<
+    ReturnType<typeof loadTeamInsightExtrasSnapshot>
+  >;
+  try {
+    priorInsightExtras = await loadTeamInsightExtrasSnapshot(db, priorKey);
+  } catch {
+    /* optional */
+  }
+  try {
+    seasonInsightExtras = await loadTeamInsightExtrasSnapshot(db, seasonKey);
+  } catch {
+    /* optional */
+  }
+
   let playerLeaders = null as Awaited<
     ReturnType<typeof loadPlayerStatLeadersSnapshot>
   >["bundle"] | null;
@@ -1408,6 +1445,8 @@ export async function patchProInsightNarrativesIfInjuryChanged(
           priorMpgByPlayerId
         ),
         shapeRecords,
+        insightExtras: seasonInsightExtras,
+        priorInsightExtras: priorInsightExtras,
       });
 
       const brief = await generateProInsightNarrativeForGameChat(pack);

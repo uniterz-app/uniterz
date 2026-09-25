@@ -741,8 +741,14 @@ export function selectScheduleFactsDifferentialFirst(
     if (list.length === 1) differential.push(list[0]!);
   }
 
-  // altitude / home_stand / minutes when asymmetric
-  for (const kind of ["altitude", "home_stand", "minutes_36plus"]) {
+  // altitude / home_stand / minutes / dense when asymmetric
+  for (const kind of [
+    "altitude",
+    "home_stand",
+    "minutes_36plus",
+    "dense_3in4",
+    "dense_4in5",
+  ]) {
     const list = byKind.get(kind) ?? [];
     if (list.length === 1) differential.push(...list);
   }
