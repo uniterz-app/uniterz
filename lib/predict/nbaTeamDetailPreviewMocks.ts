@@ -962,7 +962,7 @@ export type NbaTeamPayrollSlice = {
 /**
  * ペイロール積み上げバー / リスト用スライス。
  * `topN` 省略時は全員表示（OTHER なし）。数値を渡すと上位 N + OTHER。
- * 並びは表示年俸（base 優先、なければ cap）の降順。TW は末尾。
+ * 並び: 標準契約（表示年俸降順）→ Two-Way → Exhibit 10。
  */
 export function payrollDisplaySlices(
   lines: NbaTeamPayrollLine[],
@@ -980,6 +980,13 @@ export function payrollDisplaySlices(
     return l.salary;
   };
 
+  /** 0 = 標準 · 1 = TW · 2 = E10 */
+  const lineTier = (l: NbaTeamPayrollLine): number => {
+    if (l.isTwoWay === true) return 1;
+    if (l.isNonGuaranteed === true) return 2;
+    return 0;
+  };
+
   // 契約がある選手（cap または base > 0）または 2-Way / 非保証
   const activeLines = lines
     .filter(
@@ -991,11 +998,8 @@ export function payrollDisplaySlices(
     )
     .slice()
     .sort((a, b) => {
-      const aEdge =
-        a.isTwoWay === true || a.isNonGuaranteed === true ? 1 : 0;
-      const bEdge =
-        b.isTwoWay === true || b.isNonGuaranteed === true ? 1 : 0;
-      if (aEdge !== bEdge) return aEdge - bEdge;
+      const tierDiff = lineTier(a) - lineTier(b);
+      if (tierDiff !== 0) return tierDiff;
       return lineCash(b) - lineCash(a) || a.name.localeCompare(b.name);
     });
 

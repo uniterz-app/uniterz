@@ -1549,23 +1549,23 @@ function PayrollCard({
                       ) : null}
                     </div>
                     <span
-                      className={`${nameOxanium.className} flex items-center gap-1 text-[13px] font-bold tabular-nums text-white/75`}
+                      className={`${nameOxanium.className} w-8 shrink-0 text-center text-[9px] font-extrabold tracking-wide`}
                       style={{ transform: "skewX(-8deg)" }}
                     >
-                      {isTw ? (
-                        <span className="text-[9px] font-extrabold px-1 py-0.2 rounded-[2px] bg-white/10 text-white/60">
-                          TW
+                      {isTw || isE10 ? (
+                        <span className="inline-block rounded-[2px] bg-white/10 px-1 py-0.5 text-white/60">
+                          {isTw ? "TW" : "E10"}
                         </span>
                       ) : null}
-                      {isE10 ? (
-                        <span className="text-[9px] font-extrabold px-1 py-0.2 rounded-[2px] bg-white/10 text-white/60">
-                          E10
-                        </span>
-                      ) : null}
+                    </span>
+                    <span
+                      className={`${nameOxanium.className} w-[3.25rem] shrink-0 text-right text-[13px] font-bold tabular-nums text-white/75`}
+                      style={{ transform: "skewX(-8deg)" }}
+                    >
                       {displaySalary > 0 ? formatSalaryUsd(displaySalary) : "—"}
                     </span>
                     <span
-                      className={`${nameOxanium.className} w-16 text-right text-[13px] font-extrabold tabular-nums text-white`}
+                      className={`${nameOxanium.className} w-16 shrink-0 text-right text-[13px] font-extrabold tabular-nums text-white`}
                       style={{ transform: "skewX(-8deg)" }}
                     >
                       {capPct !== null ? (

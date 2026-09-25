@@ -1087,43 +1087,16 @@ function PayrollSection({
                     </Text>
                   ) : null}
                 </View>
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
-                  {isTw ? (
-                    <Text
-                      style={{
-                        fontSize: 9,
-                        fontWeight: "800",
-                        color: "rgba(255,255,255,0.6)",
-                        backgroundColor: "rgba(255,255,255,0.1)",
-                        paddingHorizontal: 3,
-                        paddingVertical: 1,
-                        borderRadius: 2,
-                        overflow: "hidden",
-                      }}
-                    >
-                      TW
+                <View style={styles.payrollContractBadgeSlot}>
+                  {isTw || isE10 ? (
+                    <Text style={styles.payrollContractBadge}>
+                      {isTw ? "TW" : "E10"}
                     </Text>
                   ) : null}
-                  {isE10 ? (
-                    <Text
-                      style={{
-                        fontSize: 9,
-                        fontWeight: "800",
-                        color: "rgba(255,255,255,0.6)",
-                        backgroundColor: "rgba(255,255,255,0.1)",
-                        paddingHorizontal: 3,
-                        paddingVertical: 1,
-                        borderRadius: 2,
-                        overflow: "hidden",
-                      }}
-                    >
-                      E10
-                    </Text>
-                  ) : null}
-                  <Text style={styles.payrollLineSalary}>
-                    {displaySalary > 0 ? formatSalaryUsd(displaySalary) : "—"}
-                  </Text>
                 </View>
+                <Text style={styles.payrollLineSalary}>
+                  {displaySalary > 0 ? formatSalaryUsd(displaySalary) : "—"}
+                </Text>
                 <View style={styles.payrollCapPctBlock}>
                   {capPct !== null ? (
                     <Text style={styles.payrollCapPct}>
@@ -2495,7 +2468,27 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
     transform: [{ skewX: "-8deg" }],
   },
+  payrollContractBadgeSlot: {
+    width: 32,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  payrollContractBadge: {
+    fontFamily: METRIC_FONT,
+    fontSize: 9,
+    fontWeight: "800",
+    color: "rgba(255,255,255,0.6)",
+    backgroundColor: "rgba(255,255,255,0.1)",
+    paddingHorizontal: 3,
+    paddingVertical: 1,
+    borderRadius: 2,
+    overflow: "hidden",
+    letterSpacing: 0.4,
+    transform: [{ skewX: "-8deg" }],
+  },
   payrollLineSalary: {
+    width: 52,
+    textAlign: "right",
     fontFamily: METRIC_FONT,
     color: "rgba(255,255,255,0.75)",
     fontSize: 13,

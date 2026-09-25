@@ -681,17 +681,18 @@ export function buildSynchronizedTeamPayrollLines(
   }
 
   const result = Array.from(lineMap.values());
-  // 表示年俸（base 優先）降順。2-Way は末尾、同額は名前昇順
+  // 標準（表示年俸降順）→ Two-Way → Exhibit 10。同グループは名前昇順
   const cash = (l: NbaTeamPayrollLine) =>
     l.isTwoWay || l.isNonGuaranteed
       ? 0
       : l.baseSalary != null && l.baseSalary > 0
         ? l.baseSalary
         : l.salary;
+  const tier = (l: NbaTeamPayrollLine) =>
+    l.isTwoWay ? 1 : l.isNonGuaranteed ? 2 : 0;
   result.sort((a, b) => {
-    const aEdge = a.isTwoWay || a.isNonGuaranteed ? 1 : 0;
-    const bEdge = b.isTwoWay || b.isNonGuaranteed ? 1 : 0;
-    if (aEdge !== bEdge) return aEdge - bEdge;
+    const tierDiff = tier(a) - tier(b);
+    if (tierDiff !== 0) return tierDiff;
     return cash(b) - cash(a) || a.name.localeCompare(b.name);
   });
   return result;
