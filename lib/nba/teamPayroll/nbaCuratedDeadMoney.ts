@@ -1,9 +1,10 @@
 /**
- * チームペイロールのデッドサラリー（ウェーブ／ストレッチ等）。
+ * チームペイロールのデッドサラリー（waive / stretch 等）。
  * BDL は Active 契約行にしか載せないことが多いので curated で補完する。
  *
  * ストレッチは `throughSeasonKey` まで **同額** を各シーズンに載せる。
  * `throughSeasonKey` なし = その登録シーズンのみ。
+ * 理由ラベルは UI 上英語（WAIVE / STRETCH）で統一。
  */
 export type NbaCuratedDeadMoneyLine = {
   playerId: string;
@@ -26,10 +27,11 @@ function throughNote(
   throughSeasonKey: string | undefined
 ): Pick<NbaCuratedDeadMoneyLine, "noteJa" | "noteEn" | "throughSeasonKey"> {
   if (!throughSeasonKey) return {};
+  const note = `STRETCH thru ${throughSeasonKey}`;
   return {
     throughSeasonKey,
-    noteJa: `ストレッチ 〜${throughSeasonKey}`,
-    noteEn: `Stretch through ${throughSeasonKey}`,
+    noteJa: note,
+    noteEn: note,
   };
 }
 
@@ -41,14 +43,14 @@ export const NBA_CURATED_DEAD_MONEY: Readonly<
   Record<string, Readonly<Record<string, readonly NbaCuratedDeadMoneyLine[]>>>
 > = {
   "2026-27": {
-    /** Devin Carter: SAC→ATL 後にウェーブ。2026-27 ルーキースケールが ATL デッド */
+    /** Devin Carter: SAC→ATL 後に waive。2026-27 ルーキースケールが ATL デッド */
     "nba-hawks": [
       {
         playerId: "1028025242",
         name: "D.CARTER",
         capHit: 5_158_080,
-        noteJa: "ウェーブ（ルーキースケール残）",
-        noteEn: "Waived (rookie-scale remainder)",
+        noteJa: "WAIVE (rookie scale)",
+        noteEn: "WAIVE (rookie scale)",
       },
     ],
     "nba-suns": [
@@ -68,8 +70,8 @@ export const NBA_CURATED_DEAD_MONEY: Readonly<
         playerId: "38017663",
         name: "E.LIDDELL",
         capHit: 706_898,
-        noteJa: "2026-27のみ",
-        noteEn: "2026-27 only",
+        noteJa: "2026-27 ONLY",
+        noteEn: "2026-27 ONLY",
       },
     ],
     "nba-bucks": [
@@ -91,8 +93,8 @@ export const NBA_CURATED_DEAD_MONEY: Readonly<
         playerId: "81",
         name: "K.CALDWELL-POPE",
         capHit: 17_744_971,
-        noteJa: "ウェーブ",
-        noteEn: "Waived",
+        noteJa: "WAIVE",
+        noteEn: "WAIVE",
       },
       {
         playerId: "3547251",
@@ -104,8 +106,8 @@ export const NBA_CURATED_DEAD_MONEY: Readonly<
         playerId: "3547163",
         name: "M.DIAKITE",
         capHit: 464_050,
-        noteJa: "2026-27のみ",
-        noteEn: "2026-27 only",
+        noteJa: "2026-27 ONLY",
+        noteEn: "2026-27 ONLY",
       },
     ],
     "nba-mavericks": [
@@ -113,8 +115,8 @@ export const NBA_CURATED_DEAD_MONEY: Readonly<
         playerId: "443",
         name: "K.THOMPSON",
         capHit: 7_660_317,
-        noteJa: "ウェーブ",
-        noteEn: "Waived",
+        noteJa: "WAIVE",
+        noteEn: "WAIVE",
       },
       {
         playerId: "306",
@@ -134,8 +136,8 @@ export const NBA_CURATED_DEAD_MONEY: Readonly<
         playerId: "229",
         name: "J.ISAAC",
         capHit: 8_000_000,
-        noteJa: "ウェーブ",
-        noteEn: "Waived",
+        noteJa: "WAIVE",
+        noteEn: "WAIVE",
       },
     ],
     "nba-bulls": [
@@ -143,8 +145,8 @@ export const NBA_CURATED_DEAD_MONEY: Readonly<
         playerId: "1057389374",
         name: "K.JONES",
         capHit: 1_075_459,
-        noteJa: "ウェーブ",
-        noteEn: "Waived",
+        noteJa: "WAIVE",
+        noteEn: "WAIVE",
       },
     ],
     "nba-cavaliers": [
@@ -152,8 +154,8 @@ export const NBA_CURATED_DEAD_MONEY: Readonly<
         playerId: "404",
         name: "R.RUBIO",
         capHit: 424_672,
-        noteJa: "2026-27のみ",
-        noteEn: "2026-27 only",
+        noteJa: "2026-27 ONLY",
+        noteEn: "2026-27 ONLY",
       },
     ],
     "nba-blazers": [

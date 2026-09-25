@@ -5,10 +5,7 @@ import type {
   PlayerRoleChangeSignal,
 } from "@/lib/nba/detailInsights/detailInsightTypes";
 import { enrichInsightChip } from "@/lib/nba/detailInsights/detailChipCopy";
-import {
-  buildPlayerRoleChips,
-  type PlayerRoleInput,
-} from "@/lib/nba/detailInsights/playerRoleCandidates";
+import { findCuratedPlayerRole, buildCuratedPlayerRoleChips } from "@/lib/nba/detailInsights/nbaCuratedPlayerRoles";
 import type {
   NbaPlayerDetailPreview,
   NbaPlayerGameLog,
@@ -18,7 +15,7 @@ import type { NbaRosterPlayer } from "@/lib/predict/nbaRoster";
 export type BuildPlayerDetailInsightsInput = {
   detail: NbaPlayerDetailPreview;
   rosterPlayer?: NbaRosterPlayer | null;
-  /** 所属チーム全員（1st/2nd/3rd option のチーム内 PPG 判定用） */
+  /** 所属チーム全員（旧 auto OPTION 用。curated 移行中は未使用） */
   teammates?: NbaRosterPlayer[] | null;
 };
 
@@ -35,11 +32,10 @@ function roleLabelJa(id: string): string {
     first_option: "1st option",
     second_option: "2nd option",
     third_option: "3rd option",
-    primary_handler: "primary handler",
-    spot_up: "spot-up shooter",
-    three_d: "3&D wing",
-    closer: "closer",
-    playmaker: "playmaker",
+    franchise_player: "franchise player",
+    sixth_man: "sixth man",
+    volume_scorer: "volume scorer",
+    three_d_wing: "3&D wing",
   };
   return map[id] ?? id.replace(/_/g, " ");
 }
@@ -209,16 +205,12 @@ function buildConsistency(detail: NbaPlayerDetailPreview): PlayerConsistencyInsi
 export function buildPlayerDetailInsights(
   input: BuildPlayerDetailInsightsInput
 ): PlayerDetailInsights {
-  const roleInput: PlayerRoleInput = {
-    leaderMetrics: input.detail.leaderMetrics,
-    position: input.rosterPlayer?.position ?? input.detail.position ?? "",
-    rosterPlayer: input.rosterPlayer,
-    teammates: input.teammates,
-    playerId: input.detail.playerId,
-    seasonMin: input.detail.season.min,
-  };
-
-  const roles = buildPlayerRoleChips(roleInput);
+  // ROLE は curated のみ（自動判定しない。未登録は空）
+  const curated = findCuratedPlayerRole(
+    input.detail.playerId,
+    input.detail.teamId
+  );
+  const roles = buildCuratedPlayerRoleChips(curated);
   const topRoleId = roles[0]?.id ?? null;
   const roleChanges = buildRoleChanges(input.detail);
 

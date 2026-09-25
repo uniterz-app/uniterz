@@ -103,10 +103,10 @@ export function nbaTeamDetailUiCopy(language: string | null | undefined) {
       fr: "DEAD SALARY",
     }),
     deadSalaryLegend: L(lang, {
-      ja: "ロスター外でも残るキャップ負担（ウェーブ／ストレッチ）",
+      ja: "ロスター外でも残るキャップ負担（WAIVE / STRETCH）",
       en: "Cap hit still on the books after waive / stretch",
-      ko: "로스터 밖이어도 남는 캡 부담 (웨이브 / 스트레치)",
-      zh: "不在名册仍计入帽薪（裁员 / 摊销）",
+      ko: "로스터 밖이어도 남는 캡 부담 (WAIVE / STRETCH)",
+      zh: "不在名册仍计入帽薪（WAIVE / STRETCH）",
       es: "Impacto de tope que queda tras waivers / stretch",
       pt: "Impacto de teto que resta após waive / stretch",
       fr: "Impact cap qui reste après waive / stretch",

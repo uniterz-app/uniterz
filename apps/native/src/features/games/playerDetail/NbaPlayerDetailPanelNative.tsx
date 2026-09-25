@@ -1545,6 +1545,7 @@ export default function NbaPlayerDetailPanelNative({
               accent={accent}
               title="ROLE"
               language={language}
+              layout="wrap"
             />
             <View style={{ height: 10 }} />
           </>

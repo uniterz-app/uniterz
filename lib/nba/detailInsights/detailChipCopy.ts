@@ -1,9 +1,33 @@
 /** TEAM IDENTITY / ROLE / ROLE CHANGE — チップタップ時の説明文（7言語） */
 import { type UiStrings } from "@/lib/i18n/ui";
+import {
+  HIERARCHY_TAGS,
+  ROLE_TAGS,
+} from "@/lib/nba/detailInsights/nbaPlayerRoleTaxonomy";
 
 export type DetailChipCopy = {
   hint: UiStrings;
 };
+
+function taxonomyHintFallback(id: string): DetailChipCopy | null {
+  const hit =
+    HIERARCHY_TAGS.find((t) => t.id === id) ??
+    ROLE_TAGS.find((t) => t.id === id);
+  if (!hit) return null;
+  const ja = hit.meaningJa;
+  const en = `${hit.label} — ${hit.meaningJa}`;
+  return {
+    hint: {
+      ja,
+      en,
+      ko: ja,
+      zh: ja,
+      es: en,
+      pt: en,
+      fr: en,
+    },
+  };
+}
 
 const COPY: Record<string, DetailChipCopy> = {
   // — Team identity —
@@ -702,6 +726,127 @@ const COPY: Record<string, DetailChipCopy> = {
       fr: "Joueur de rôle à faible usage : peu de ballons.",
     },
   },
+  screener: {
+    hint: {
+      ja: "スクリーンを多くセットする。PnR / オフボールの壁役。",
+      en: "Screener — sets a high volume of on-ball and off-ball screens.",
+      ko: "스크린을 많이 서는 역할. 픽앤롤·오프볼 스크린.",
+      zh: "大量掩护。挡拆与无球掩护的墙。",
+      es: "Pone muchos bloqueos, con y sin balón.",
+      pt: "Monta muitos bloqueios, com e sem bola.",
+      fr: "Pose beaucoup d’écrans, avec et sans ballon.",
+    },
+  },
+  popper: {
+    hint: {
+      ja: "PnR からポップして外で狙うビッグ。",
+      en: "Popper — big who pops to the perimeter out of the pick-and-roll.",
+      ko: "픽앤롤에서 팝아웃해 외곽을 노리는 빅맨.",
+      zh: "挡拆后外弹投篮的内线。",
+      es: "Sale al perímetro tras el bloqueo (pop).",
+      pt: "Abre para a linha de 3 após o bloqueio (pop).",
+      fr: "S’écarte à 3 pts après l’écran (pop).",
+    },
+  },
+  wing_stopper: {
+    hint: {
+      ja: "相手ウィングを抑える守備役。",
+      en: "Wing stopper — primary defender on opposing wings.",
+      ko: "상대 윙을 막는 수비 역할.",
+      zh: "主防对方侧翼的防守人。",
+      es: "Defensor de aleros rivales.",
+      pt: "Defensor principal de alas adversários.",
+      fr: "Défenseur principal des ailiers adverses.",
+    },
+  },
+  switchable: {
+    hint: {
+      ja: "ポジションをまたいでスイッチできる守備万能型。",
+      en: "Switchable defender — covers multiple positions on switches.",
+      ko: "여러 포지션을 스위치로 막을 수 있는 만능 수비.",
+      zh: "可换防多个位置的万金油防守者。",
+      es: "Defensor versátil en cambios de marca.",
+      pt: "Defensor versátil em switches.",
+      fr: "Défenseur polyvalent sur les switches.",
+    },
+  },
+  microwave: {
+    hint: {
+      ja: "ベンチから短時間で得点を量産するスコアラー。",
+      en: "Microwave scorer — heats up quickly off the bench.",
+      ko: "벤치에서 짧은 시간에 득점을 몰아넣는 스코어러.",
+      zh: "替补上场短时间爆发得分。",
+      es: "Anotador express desde el banquillo.",
+      pt: "Pontuador que esquenta rápido saindo do banco.",
+      fr: "Scoreur qui s’enflamme vite depuis le banc.",
+    },
+  },
+  energy: {
+    hint: {
+      ja: "エナジー・ハッスルで流れを変える補足役。",
+      en: "Energy guy — changes the game with effort and activity.",
+      ko: "에너지와 허슬로 흐름을 바꾸는 역할.",
+      zh: "用拼劲与活动量改变节奏。",
+      es: "Aporta energía y cambia el ritmo del partido.",
+      pt: "Traz energia e muda o ritmo do jogo.",
+      fr: "Apporte de l’énergie et change le rythme du match.",
+    },
+  },
+  developing_three_d: {
+    hint: {
+      ja: "まだ完成途上の 3&D。外と守備のベースを伸ばしている段階。",
+      en: "Developing 3&D — building perimeter shooting and wing defense.",
+      ko: "아직 성장 중인 3&D. 외곽 슈팅과 윙 수비를 키우는 단계.",
+      zh: "成长中的 3&D。正在打磨外线投篮与侧翼防守。",
+      es: "3&D en desarrollo: construye tiro y defensa de alero.",
+      pt: "3&D em desenvolvimento: construindo arremesso e defesa de ala.",
+      fr: "3&D en construction : développe tir et défense d’ailier.",
+    },
+  },
+  catch_and_shoot: {
+    hint: {
+      ja: "キャッチ＆シュート（C&S）。受けて即打つスペシャリスト。",
+      en: "Catch-and-shoot (C&S) specialist.",
+      ko: "캐치앤슈트(C&S). 받아서 바로 쏘는 스페셜리스트.",
+      zh: "接球就投（C&S）专精。",
+      es: "Especialista en catch-and-shoot (C&S).",
+      pt: "Especialista em catch-and-shoot (C&S).",
+      fr: "Spécialiste du catch-and-shoot (C&S).",
+    },
+  },
+  defense_wing: {
+    hint: {
+      ja: "守備寄りのウィング。相手ウィング・ガードを抑える。",
+      en: "Defense wing — wing defender first.",
+      ko: "수비형 윙. 상대 윙·가드를 막는 역할.",
+      zh: "防守型侧翼。主防对方侧翼与后卫。",
+      es: "Alero defensivo: prioriza parar aleros y bases rivales.",
+      pt: "Ala defensivo: prioriza marcar alas e armadores.",
+      fr: "Ailier défensif : priorité à la défense des ailiers/meneurs.",
+    },
+  },
+  energy_wing: {
+    hint: {
+      ja: "エナジーで走るウィング。トランジション・セカンドアクション。",
+      en: "Energy wing — activity, transition, and second efforts.",
+      ko: "에너지로 뛰는 윙. 트랜지션과 세컨드 액션.",
+      zh: "拼劲型侧翼。转换与二次机会。",
+      es: "Alero de energía: transición y segundos esfuerzos.",
+      pt: "Ala de energia: transição e segundos esforços.",
+      fr: "Ailier énergie : transition et seconds efforts.",
+    },
+  },
+  o_board: {
+    hint: {
+      ja: "オフェンスリバウンドが強い。セカンドチャンスを作る。",
+      en: "Offensive rebounder — creates second-chance looks.",
+      ko: "공격 리바운드가 강함. 세컨드 찬스를 만듦.",
+      zh: "进攻篮板强。制造二次进攻机会。",
+      es: "Reboteador ofensivo: genera segundas oportunidades.",
+      pt: "Reboteador ofensivo: cria second chances.",
+      fr: "Rebondeur offensif : crée des secondes chances.",
+    },
+  },
 
   // — Role change signals —
   min_up: {
@@ -773,19 +918,19 @@ const COPY: Record<string, DetailChipCopy> = {
 };
 
 export function getDetailChipCopy(id: string): DetailChipCopy | null {
-  return COPY[id] ?? null;
+  return COPY[id] ?? taxonomyHintFallback(id);
 }
 
-/** カタログに無い ID は label から自動生成の説明を出す */
+/** カタログに無い ID は label から短い説明を出す */
 function fallbackHint(label: string): UiStrings {
   return {
-    ja: `${label} — 今季スタッツから自動判定。`,
-    en: `${label} — Auto-tagged from season stats.`,
-    ko: `${label} — 이번 시즌 스탯으로 자동 판정.`,
-    zh: `${label} — 依据本季数据自动判定。`,
-    es: `${label} — Etiquetado automático según stats de la temporada.`,
-    pt: `${label} — Marcado automaticamente pelas stats da temporada.`,
-    fr: `${label} — Étiqueté automatiquement d’après les stats de la saison.`,
+    ja: `${label}`,
+    en: `${label}`,
+    ko: `${label}`,
+    zh: `${label}`,
+    es: `${label}`,
+    pt: `${label}`,
+    fr: `${label}`,
   };
 }
 

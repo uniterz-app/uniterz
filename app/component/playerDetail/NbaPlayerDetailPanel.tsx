@@ -1392,6 +1392,7 @@ export default function NbaPlayerDetailPanel({
           accent={uiAccent}
           title="ROLE"
           language={lang}
+          layout="wrap"
         />
       ) : null}
 

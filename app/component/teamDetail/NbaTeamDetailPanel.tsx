@@ -1738,7 +1738,7 @@ function PayrollCard({
                 </span>
                 <span className="text-[10px] text-white/55 font-medium leading-tight">
                   {isJa
-                    ? "ロスター外でも残るキャップ負担（ウェーブ／ストレッチ）"
+                    ? "ロスター外でも残るキャップ負担（WAIVE / STRETCH）"
                     : "Cap hit still on the books after waive / stretch"}
                 </span>
               </div>

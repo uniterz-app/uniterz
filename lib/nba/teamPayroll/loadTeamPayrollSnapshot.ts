@@ -13,6 +13,7 @@ import {
   nbaSalaryCapLinesForSeason,
   resolveApronStatus,
 } from "./mapBdlToTeamPayroll";
+import { curatedDeadMoneyForTeam } from "./nbaCuratedDeadMoney";
 import type {
   NbaApronStatus,
   NbaTeamFuturePayrollYear,
@@ -102,7 +103,33 @@ function resolveDeadLines(raw: unknown): NbaTeamPayrollDeadLine[] {
   return out;
 }
 
-function resolveFutureYears(raw: unknown): NbaTeamFuturePayrollYear[] | undefined {
+/** curated 側の英語ラベルを優先（旧スナップショットの日本語 note を上書き） */
+function overlayCuratedDeadNotes(
+  seasonKey: string,
+  teamId: string,
+  deadLines: NbaTeamPayrollDeadLine[]
+): NbaTeamPayrollDeadLine[] {
+  if (deadLines.length === 0) return deadLines;
+  const curated = curatedDeadMoneyForTeam(seasonKey, teamId);
+  if (curated.length === 0) return deadLines;
+  const byId = new Map(
+    curated.map((d) => [String(d.playerId).trim(), d] as const)
+  );
+  return deadLines.map((line) => {
+    const hit = byId.get(String(line.playerId).trim());
+    if (!hit) return line;
+    return {
+      ...line,
+      ...(hit.noteJa ? { noteJa: hit.noteJa } : {}),
+      ...(hit.noteEn ? { noteEn: hit.noteEn } : {}),
+    };
+  });
+}
+
+function resolveFutureYears(
+  raw: unknown,
+  teamId: string
+): NbaTeamFuturePayrollYear[] | undefined {
   if (!Array.isArray(raw) || raw.length === 0) return undefined;
   const out: NbaTeamFuturePayrollYear[] = [];
   for (const item of raw) {
@@ -111,7 +138,11 @@ function resolveFutureYears(raw: unknown): NbaTeamFuturePayrollYear[] | undefine
     const seasonKey = String(row.seasonKey ?? "").trim();
     if (!seasonKey) continue;
     const lines = resolveLines(row.lines);
-    const deadLines = resolveDeadLines(row.deadLines);
+    const deadLines = overlayCuratedDeadNotes(
+      seasonKey,
+      teamId,
+      resolveDeadLines(row.deadLines)
+    );
     const activeSalary = isFiniteNumber(row.activeSalary)
       ? row.activeSalary
       : lines.reduce((s, l) => s + l.salary, 0);
@@ -156,7 +187,11 @@ function resolvePayrollTeam(
   if (!raw || typeof raw !== "object") return null;
   const row = raw as Record<string, unknown>;
   const lines = resolveLines(row.lines);
-  const deadLines = resolveDeadLines(row.deadLines);
+  const deadLines = overlayCuratedDeadNotes(
+    seasonKey,
+    teamId,
+    resolveDeadLines(row.deadLines)
+  );
   const activeSalary = isFiniteNumber(row.activeSalary)
     ? row.activeSalary
     : lines.reduce((s, l) => s + l.salary, 0);
@@ -178,7 +213,7 @@ function resolvePayrollTeam(
   const secondApronSpace = isFiniteNumber(row.secondApronSpace) ? row.secondApronSpace : secondApron - totalSalary;
   const apronStatus = (row.apronStatus as NbaApronStatus) ?? resolveApronStatus(totalSalary, { salaryCap, taxLine, firstApron, secondApron });
 
-  const rawFutureYears = resolveFutureYears(row.futureYears);
+  const rawFutureYears = resolveFutureYears(row.futureYears, teamId);
   const futureYears =
     rawFutureYears && rawFutureYears.length > 0
       ? rawFutureYears.map((fy) => {

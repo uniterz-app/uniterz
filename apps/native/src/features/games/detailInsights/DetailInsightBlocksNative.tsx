@@ -23,40 +23,46 @@ export function DetailIdentityChipRowNative({
   accent,
   title,
   language = "en",
+  layout = "scroll",
 }: {
   chips: DetailInsightChip[];
   accent: string;
   title?: string;
   language?: string;
+  /** wrap = 横並びで折り返し（ROLE用・2段想定）。既定は横スクロール1行 */
+  layout?: "scroll" | "wrap";
 }) {
   const [explain, setExplain] = useState<DetailChipExplainPayload | null>(
     null
   );
 
   if (!chips.length) return null;
+
+  const chipEl = (chip: DetailInsightChip) => (
+    <Pressable
+      key={chip.id}
+      onPress={() => setExplain({ label: chip.label, hint: chip.hint })}
+      style={[styles.chip, { borderColor: accent }]}
+    >
+      <Text style={[styles.chipText, { color: accent }]}>{chip.label}</Text>
+    </Pressable>
+  );
+
   return (
     <>
       <View style={styles.wrap}>
         {title ? <Text style={styles.title}>{title}</Text> : null}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.row}
-        >
-          {chips.map((chip) => (
-            <Pressable
-              key={chip.id}
-              onPress={() =>
-                setExplain({ label: chip.label, hint: chip.hint })
-              }
-              style={[styles.chip, { borderColor: accent }]}
-            >
-              <Text style={[styles.chipText, { color: accent }]}>
-                {chip.label}
-              </Text>
-            </Pressable>
-          ))}
-        </ScrollView>
+        {layout === "wrap" ? (
+          <View style={styles.wrapRow}>{chips.map(chipEl)}</View>
+        ) : (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.row}
+          >
+            {chips.map(chipEl)}
+          </ScrollView>
+        )}
       </View>
       <DetailChipExplainModalNative
         visible={explain != null}
@@ -86,7 +92,13 @@ const styles = StyleSheet.create({
     color: "rgba(255,255,255,0.45)",
     textTransform: "uppercase",
   },
-  row: { gap: 8, paddingRight: 4 },
+  row: { gap: 8, paddingRight: 4, flexDirection: "row", alignItems: "center" },
+  wrapRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    alignItems: "center",
+  },
   chip: {
     borderWidth: 1,
     borderRadius: 999,
