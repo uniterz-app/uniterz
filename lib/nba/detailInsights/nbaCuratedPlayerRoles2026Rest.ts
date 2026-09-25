@@ -178,7 +178,7 @@ export const NBA_CURATED_PLAYER_ROLES_2026_REST: Readonly<
         "defensive_anchor",
         "switch_defender",
         "short_roll_playmaker",
-        "midrange_scorer"
+        "dho_hub"
       ]
     },
     {
@@ -629,8 +629,9 @@ export const NBA_CURATED_PLAYER_ROLES_2026_REST: Readonly<
       "hierarchy": "third_option",
       "roles": [
         "primary_playmaker",
-        "secondary_playmaker",
-        "multi_position_defender"
+        "multi_position_defender",
+        "energy_wing",
+        "hustle_player"
       ]
     },
     {
@@ -661,7 +662,7 @@ export const NBA_CURATED_PLAYER_ROLES_2026_REST: Readonly<
       "roles": [
         "slashing_wing",
         "secondary_playmaker",
-        "rebounder"
+        "rim_pressure"
       ]
     },
     {
@@ -1693,7 +1694,7 @@ export const NBA_CURATED_PLAYER_ROLES_2026_REST: Readonly<
       "roles": [
         "slashing_wing",
         "secondary_playmaker",
-        "rebounder"
+        "transition_threat"
       ]
     },
     {
@@ -2181,7 +2182,9 @@ export const NBA_CURATED_PLAYER_ROLES_2026_REST: Readonly<
       "hierarchy": "starter",
       "roles": [
         "secondary_handler",
-        "spot_up_shooter"
+        "spot_up_shooter",
+        "poa_defender",
+        "perimeter_defender"
       ]
     },
     {
@@ -2221,7 +2224,8 @@ export const NBA_CURATED_PLAYER_ROLES_2026_REST: Readonly<
       "roles": [
         "guard_defender",
         "poa_defender",
-        "connector"
+        "connector",
+        "hustle_player"
       ]
     },
     {
@@ -2276,7 +2280,7 @@ export const NBA_CURATED_PLAYER_ROLES_2026_REST: Readonly<
     {
       "playerId": "38017694",
       "name": "Jalen Duren",
-      "hierarchy": "second_option",
+      "hierarchy": "high_end_starter",
       "roles": [
         "roll_man",
         "paint_finisher",
@@ -2296,7 +2300,7 @@ export const NBA_CURATED_PLAYER_ROLES_2026_REST: Readonly<
     {
       "playerId": "101",
       "name": "John Collins",
-      "hierarchy": "third_option",
+      "hierarchy": "role_player",
       "roles": [
         "backup_big",
         "paint_finisher",
@@ -2585,7 +2589,7 @@ export const NBA_CURATED_PLAYER_ROLES_2026_REST: Readonly<
         "primary_handler",
         "primary_playmaker",
         "deep_range_shooter",
-        "transition_threat"
+        "pull_up_shooter"
       ]
     },
     {
@@ -3166,7 +3170,7 @@ export const NBA_CURATED_PLAYER_ROLES_2026_REST: Readonly<
       "roles": [
         "three_d_wing",
         "spot_up_shooter",
-        "rebounder"
+        "poa_defender"
       ]
     },
     {
@@ -3255,7 +3259,8 @@ export const NBA_CURATED_PLAYER_ROLES_2026_REST: Readonly<
       "roles": [
         "rebounder",
         "paint_finisher",
-        "screen_setter"
+        "screen_setter",
+        "rim_protector"
       ]
     },
     {
@@ -3587,7 +3592,7 @@ export const NBA_CURATED_PLAYER_ROLES_2026_REST: Readonly<
     {
       "playerId": "18677986",
       "name": "Trey Murphy III",
-      "hierarchy": "first_option",
+      "hierarchy": "second_option",
       "roles": [
         "slashing_wing",
         "secondary_playmaker",
@@ -3617,7 +3622,7 @@ export const NBA_CURATED_PLAYER_ROLES_2026_REST: Readonly<
     {
       "playerId": "666969",
       "name": "Zion Williamson",
-      "hierarchy": "second_option",
+      "hierarchy": "first_option",
       "roles": [
         "physical_wing",
         "rim_pressure",

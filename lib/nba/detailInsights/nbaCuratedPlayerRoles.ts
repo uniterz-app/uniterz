@@ -9,6 +9,7 @@ import type { DetailInsightChip } from "@/lib/nba/detailInsights/detailInsightTy
 import { enrichInsightChips } from "@/lib/nba/detailInsights/detailChipCopy";
 import { NBA_CURATED_PLAYER_ROLES_2026_REST } from "./nbaCuratedPlayerRoles2026Rest";
 import { NBA_CURATED_PLAYER_ROLES_2026_ROOKIES } from "./nbaCuratedPlayerRoles2026Rookies";
+import { NBA_CURATED_PLAYER_ROLES_2026_FILL } from "./nbaCuratedPlayerRoles2026Fill";
 import {
   HIERARCHY_LABEL,
   MAX_ROLE_TAGS,
@@ -223,7 +224,7 @@ export const NBA_CURATED_PLAYER_ROLES: Readonly<
           "primary_playmaker",
           "decision_maker",
           "advantage_creator",
-          "slashing_wing",
+          "transition_threat",
         ],
       },
       {
@@ -347,7 +348,8 @@ export const NBA_CURATED_PLAYER_ROLES: Readonly<
     ],
     },
     NBA_CURATED_PLAYER_ROLES_2026_REST,
-    NBA_CURATED_PLAYER_ROLES_2026_ROOKIES
+    NBA_CURATED_PLAYER_ROLES_2026_ROOKIES,
+    NBA_CURATED_PLAYER_ROLES_2026_FILL
   ),
 };
 

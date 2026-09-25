@@ -135,6 +135,7 @@ export type NbaRoleTagId =
   | "utility_player"
   | "culture_guy"
   | "spark_plug"
+  | "microwave"
   | "dirty_work"
   | "transition_threat"
   | "cutter"
@@ -278,6 +279,7 @@ export const ROLE_TAGS: readonly TagMeta[] = [
   { id: "utility_player", label: "Utility Player", meaningJa: "便利屋", groupJa: "エナジー・ロール系" },
   { id: "culture_guy", label: "Culture Guy", meaningJa: "カルチャー要員", groupJa: "エナジー・ロール系" },
   { id: "spark_plug", label: "Spark Plug", meaningJa: "流れを変える選手", groupJa: "エナジー・ロール系" },
+  { id: "microwave", label: "Microwave", meaningJa: "短時間で得点を量産するタイプ", groupJa: "エナジー・ロール系" },
   { id: "dirty_work", label: "Dirty Work", meaningJa: "泥仕事役", groupJa: "エナジー・ロール系" },
   { id: "transition_threat", label: "Transition Threat", meaningJa: "速攻要員", groupJa: "エナジー・ロール系" },
   { id: "cutter", label: "Cutter", meaningJa: "カッター", groupJa: "エナジー・ロール系" },
