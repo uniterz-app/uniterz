@@ -16,6 +16,10 @@ import {
 } from "@/lib/profile/profilePlanProBeastPattern";
 import { isProfilePlanProBeastBgVariant } from "@/lib/profile/profilePlanProBeastBgVariants";
 import {
+  getProfilePlanProDustRankTextureCssUrl,
+  isProfilePlanProDustTextureVariant,
+} from "@/lib/profile/profilePlanProDustTextures";
+import {
   getProfilePlanProFormHudUrl,
   getProfilePlanProFormSkinUrl,
 } from "@/lib/profile/profilePlanProFormPattern";
@@ -84,6 +88,17 @@ export default function RankingListProSkinFx({
   }
 
   if (isProfilePlanProBeastBgVariant(variant)) {
+    if (isProfilePlanProDustTextureVariant(variant)) {
+      return (
+        <div className={rootClass} aria-hidden>
+          <SkinLayer
+            className="ranking-list-pro-skin-fx__skin"
+            backgroundImage={getProfilePlanProDustRankTextureCssUrl(variant)}
+          />
+          <div className="ranking-list-pro-skin-fx__wash" />
+        </div>
+      );
+    }
     return (
       <div className={rootClass} aria-hidden>
         <SkinLayer

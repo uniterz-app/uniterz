@@ -45,8 +45,16 @@ export default function NbaFavoriteLimitModalNative({
   const [pickedId, setPickedId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!open) setPickedId(null);
-  }, [open]);
+    if (!open) {
+      setPickedId(null);
+      return;
+    }
+    if (players.length === 1) {
+      setPickedId(players[0]!.playerId);
+    } else {
+      setPickedId(null);
+    }
+  }, [open, players]);
 
   return (
     <Modal
@@ -73,18 +81,20 @@ export default function NbaFavoriteLimitModalNative({
           <View style={styles.header}>
             <Text style={styles.eyebrow}>FAVORITES</Text>
             <Text style={styles.title}>
-              {isJa ? "誰を外しますか？" : "Who do you want to replace?"}
+              {isJa ? "入れ替えますか？" : "Replace favorite?"}
             </Text>
             <Text style={styles.sub}>
               {isJa
-                ? `お気に入りは最大${NBA_FAVORITE_MAX_PLAYERS}人です${
+                ? `お気に入り選手は${NBA_FAVORITE_MAX_PLAYERS}人までです${
                     incomingLabel
-                      ? `。「${incomingLabel}」を追加するには1人外してください。`
+                      ? `。「${incomingLabel}」に入れ替える選手を選んでください。`
                       : "。"
                   }`
-                : `You can favorite up to ${NBA_FAVORITE_MAX_PLAYERS} players${
+                : `You can favorite ${NBA_FAVORITE_MAX_PLAYERS} player${
+                    NBA_FAVORITE_MAX_PLAYERS === 1 ? "" : "s"
+                  }${
                     incomingLabel
-                      ? `. Pick one to replace with ${incomingLabel}.`
+                      ? `. Pick who to replace with ${incomingLabel}.`
                       : "."
                   }`}
             </Text>

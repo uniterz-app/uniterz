@@ -4,7 +4,12 @@
  * 初回マウントで下から浮き上がる入場。
  */
 import { useEffect, useMemo, useState } from "react";
-import { Image, LayoutChangeEvent, StyleSheet, View } from "react-native";
+import {
+  Image,
+  LayoutChangeEvent,
+  StyleSheet,
+  View,
+} from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { SvgXml } from "react-native-svg";
 import Animated, {
@@ -32,6 +37,8 @@ import {
   PROFILE_PLAN_PRO_BEAST_CANVAS,
 } from "../../../../../lib/profile/profilePlanProBeastPattern";
 import { isProfilePlanProBeastBgVariant } from "../../../../../lib/profile/profilePlanProBeastBgVariants";
+import { isProfilePlanProDustTextureVariant } from "../../../../../lib/profile/profilePlanProDustTextures";
+import { PROFILE_PLAN_PRO_DUST_RANK_TEXTURE_SOURCES } from "../profile/kinetik/profilePlanProDustTextureSourcesNative";
 import {
   getProfilePlanProFormHudSvg,
   getProfilePlanProFormSkinSvg,
@@ -395,6 +402,36 @@ export default function RankingListProSkinFxNative({
           resizeMode="stretch"
           pointerEvents="none"
         />
+      </Animated.View>
+    );
+  }
+
+  if (isProfilePlanProDustTextureVariant(variant)) {
+    const source = PROFILE_PLAN_PRO_DUST_RANK_TEXTURE_SOURCES[variant];
+    const skinOp = intensity === "medium" ? 1 : 0.78;
+    return (
+      <Animated.View
+        pointerEvents="none"
+        style={[styles.root, riseStyle]}
+        onLayout={onLayout}
+      >
+        {w > 0 && h > 0 ? (
+          <>
+            <Image
+              source={source}
+              style={{
+                position: "absolute",
+                left: 0,
+                top: 0,
+                width: w,
+                height: h,
+                opacity: skinOp,
+              }}
+              resizeMode="stretch"
+            />
+            <Wash intensity={intensity} />
+          </>
+        ) : null}
       </Animated.View>
     );
   }

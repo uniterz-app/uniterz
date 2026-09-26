@@ -180,6 +180,8 @@ export type ProfileStackParamList = {
   ProLeagueTeaserPreview: undefined;
   /** __DEV__ 連勝枠の光（1位エッジ vs conic） */
   StreakFramePreview: undefined;
+  /** __DEV__ Dust Pro Skin（Powder / Film） */
+  DustProSkinPreview: undefined;
   /** __DEV__ TeamAbbrBadge サイバー案 */
   TeamAbbrBadgePreview: undefined;
   /** __DEV__ リザルト左辺 PICK UP */

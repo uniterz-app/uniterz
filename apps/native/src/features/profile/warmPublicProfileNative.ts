@@ -33,7 +33,7 @@ export type WarmPublicProfileNativeInput = {
   displayName?: string | null;
   photoURL?: string | null;
   plan?: "free" | "pro" | string | null;
-  /** 既知の Pro Skin（未確定は渡さない → titanium を出さない） */
+  /** 既知の Pro Skin（未確定は渡さない → デフォルトを出さない） */
   planProBgVariant?: ProfilePlanProBgVariant | string | null;
   countryCode?: string | null;
   posts?: number | null;

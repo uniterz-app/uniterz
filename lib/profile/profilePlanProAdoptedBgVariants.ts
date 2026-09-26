@@ -148,13 +148,13 @@ export const PROFILE_PLAN_PRO_ADOPTED_CATEGORIES: readonly ProfilePlanProAdopted
         fr: "Matière",
       },
       description: {
-        ja: "チタン・装甲・回路レースなど、素材・ブランド柄。",
-        en: "Titanium, armor plate, and circuit-lace motifs.",
-        ko: "티타늄·장갑판·회로 레이스 등 소재·브랜드 패턴.",
-        zh: "钛金属、装甲板、电路蕾丝等材质与品牌纹样。",
-        es: "Titanio, placas de blindaje y motivos de circuito.",
-        pt: "Titânio, placas de blindagem e motivos de circuito.",
-        fr: "Titane, plaques de blindage et motifs de circuits.",
+        ja: "ダスト・装甲・回路レースなど、素材・ブランド柄。",
+        en: "Dust, armor plate, and circuit-lace motifs.",
+        ko: "더스트·장갑판·회로 레이스 등 소재·브랜드 패턴.",
+        zh: "粉尘、装甲板、电路蕾丝等材质与品牌纹样。",
+        es: "Polvo, placas de blindaje y motivos de circuito.",
+        pt: "Poeira, placas de blindagem e motivos de circuito.",
+        fr: "Poussière, plaques de blindage et motifs de circuits.",
       },
     },
     {
@@ -199,15 +199,16 @@ type AdoptedSpec = {
   family: ProfilePlanProAdoptedFamily;
 };
 
-/** 採用カタログ — 解放カタログ順（即解放14 → マイルストーン21）。詳細は `proSkinUnlock.ts` */
+/** 採用カタログ — 解放カタログ順（即解放15 → マイルストーン21）。詳細は `proSkinUnlock.ts` */
 const ADOPTED_SPECS: readonly AdoptedSpec[] = [
-  // Pro 即解放 ×14
+  // Pro 即解放 ×15
   { id: "atmos", category: "cyber", family: "atmos" },
   { id: "parallax", category: "cyber", family: "atmos" },
   { id: "wave-riot-shard", category: "cyber", family: "wave" },
   { id: "wave-uniterz-logo", category: "material", family: "wave" },
   { id: "wave-mono-hex", category: "cyber", family: "wave" },
-  { id: "beast-titanium", category: "material", family: "beast" },
+  { id: "beast-dust", category: "material", family: "beast" },
+  { id: "beast-dust-ash", category: "material", family: "beast" },
   { id: "beast-panther", category: "beast", family: "beast" },
   { id: "beast-crocodile", category: "reptile", family: "beast" },
   { id: "scale-mamba", category: "reptile", family: "scale" },

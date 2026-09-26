@@ -107,6 +107,8 @@ import {
   type ProfilePlanProBgVariant,
 } from "../../../../../lib/profile/profilePlanProBgVariants";
 import { peekOwnProfileSeedNative, seedOwnProfileFromUserDocNative } from "./seedOwnProfileFromUserDocNative";
+import { useMyNbaFavoritesNative } from "./useMyNbaFavoritesNative";
+import { parseNbaFavorites } from "../../../../../lib/profile/nbaFavorites";
 import { hydrateMarksFromUserDoc } from "./marksFirestoreNative";
 import TutorialLiveHostNative from "../tutorial/TutorialLiveHostNative";
 import TutorialWelcomeWorldCameraNative from "../tutorial/TutorialWelcomeWorldCameraNative";
@@ -494,6 +496,17 @@ export default function ProfileHomeScreen({
 
   /** 自分プロフィールは routeHandle 無し。plan hook の getDoc より先に確定できる */
   const isMe = !isPublicProfileView && !!myUid && myUid === targetUid;
+  const myNbaFavorites = useMyNbaFavoritesNative();
+
+  /** 詳細で星を変えたあと、プロフィールのローカル state が古いまま残らないようにライブ同期 */
+  useEffect(() => {
+    if (isPublicProfileView) return;
+    const fav = myNbaFavorites.favorites;
+    setFavoriteNbaTeamId(fav.favoriteNbaTeamId);
+    setFavoriteNbaTeamFanSinceSeason(fav.favoriteNbaTeamFanSinceSeason);
+    setFavoriteNbaPlayers(fav.favoriteNbaPlayers);
+  }, [isPublicProfileView, myNbaFavorites.favorites]);
+
   const targetMarked = isMarked(targetUid);
   const onPressMark = useCallback(async () => {
     if (!myUid) return;
@@ -992,6 +1005,10 @@ export default function ProfileHomeScreen({
         setPlanProBgVariant(parseUserPlanProBgVariant(data.planProBgVariant));
         setPlan(data.plan === "pro" ? "pro" : "free");
         setUnitBalance(parseUserUnitBalance(data));
+        const fav = parseNbaFavorites(data);
+        setFavoriteNbaTeamId(fav.favoriteNbaTeamId);
+        setFavoriteNbaTeamFanSinceSeason(fav.favoriteNbaTeamFanSinceSeason);
+        setFavoriteNbaPlayers(fav.favoriteNbaPlayers);
       });
       return () => {
         alive = false;
@@ -1845,6 +1862,8 @@ export default function ProfileHomeScreen({
           navigation.navigate("ProLeagueTeaserPreview");
         else if (page === "streakFramePreview" && __DEV__)
           navigation.navigate("StreakFramePreview");
+        else if (page === "dustProSkinPreview" && __DEV__)
+          navigation.navigate("DustProSkinPreview");
         else if (page === "teamAbbrBadgePreview" && __DEV__)
           navigation.navigate("TeamAbbrBadgePreview");
         else if (page === "resultPickupPreview" && __DEV__)

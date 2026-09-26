@@ -105,6 +105,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import type { ProfilePlanProBgVariant } from "../../../../../../lib/profile/profilePlanProBgVariants";
 import { isProfilePlanProScaleBgVariant } from "../../../../../../lib/profile/profilePlanProScaleBgVariants";
 import { isProfilePlanProBeastBgVariant } from "../../../../../../lib/profile/profilePlanProBeastBgVariants";
+import { isProfilePlanProDustTextureVariant } from "../../../../../../lib/profile/profilePlanProDustTextures";
 import { isProfilePlanProCosmosBgVariant } from "../../../../../../lib/profile/profilePlanProCosmosBgVariants";
 import { isProfilePlanProFormBgVariant } from "../../../../../../lib/profile/profilePlanProFormBgVariants";
 import { isProfilePlanProNeoBgVariant } from "../../../../../../lib/profile/profilePlanProNeoBgVariants";
@@ -1527,6 +1528,11 @@ export default function ProfileKinetikPanelNative({
             }
           : null,
         isPro ? styles.frameOuterPlanPro : null,
+        isPro &&
+        planProBgVariant != null &&
+        isProfilePlanProDustTextureVariant(planProBgVariant)
+          ? styles.frameOuterDust
+          : null,
         style,
       ]}
       onLayout={(e) => {
@@ -1898,6 +1904,10 @@ const styles = StyleSheet.create({
   frameOuterPlanPro: {
     backgroundColor: "rgba(3,8,13,0.14)",
     minHeight: 520,
+  },
+  /** Dust 素材マップ — 透過で後ろのドット地が見えないよう黒ベース */
+  frameOuterDust: {
+    backgroundColor: "#000000",
   },
   planProAmbient: {
     ...StyleSheet.absoluteFillObject,

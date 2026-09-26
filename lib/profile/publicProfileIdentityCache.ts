@@ -17,7 +17,7 @@ export type PublicProfileIdentitySeed = {
   photoURL: string;
   plan: "free" | "pro";
   /**
-   * Pro Skin。null = 未確定（デフォルト titanium を出さない）。
+   * Pro Skin。null = 未確定（デフォルトを出さない）。
    * fromUserDoc 後は必ず確定値（不正値は呼び出し側で DEFAULT 化）。
    */
   planProBgVariant: ProfilePlanProBgVariant | null;

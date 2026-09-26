@@ -4,6 +4,10 @@
  */
 
 import type { ProfilePlanProBeastBgVariant } from "./profilePlanProBeastBgVariants";
+import {
+  getProfilePlanProDustTextureCssUrl,
+  isProfilePlanProDustTextureVariant,
+} from "./profilePlanProDustTextures";
 
 const CANVAS_W = 300;
 const CANVAS_H = 430;
@@ -403,6 +407,22 @@ const PALETTES: Record<ProfilePlanProBeastBgVariant, BeastPalette> = {
     hudPrimary: "rgba(90,90,98,",
     hudSecondary: "rgba(42,42,48,",
     opacityMul: 1.55,
+  },
+  "beast-dust": {
+    strokes: ["196,168,130", "168,140,108", "140,116,88", "212,188,150"],
+    fills: ["18,16,14", "28,24,20", "10,10,10"],
+    accent: ["220,200,168", "186,162,128", "150,128,100"],
+    hudPrimary: "rgba(186,162,128,",
+    hudSecondary: "rgba(120,100,80,",
+    opacityMul: 1.55,
+  },
+  "beast-dust-ash": {
+    strokes: ["180,180,180", "140,140,140", "100,100,100", "210,210,210"],
+    fills: ["16,16,16", "24,24,24", "8,8,8"],
+    accent: ["230,230,230", "160,160,160"],
+    hudPrimary: "rgba(160,160,160,",
+    hudSecondary: "rgba(100,100,100,",
+    opacityMul: 1.45,
   },
 };
 
@@ -4376,6 +4396,233 @@ function buildTessera(_p: BeastPalette): string {
   return wrapSvg(parts.join(""));
 }
 
+/* ─── Dust family: 参照写真の柄を SVG で忠実再現（写真貼り付けなし） ─── */
+
+/** Powder 写真 — 左寄り密度の粉雲 */
+function dustPowderField(nx: number, ny: number): number {
+  const blobs = [
+    { x: 0.34, y: 0.4, rx: 0.22, ry: 0.2, w: 1.35 },
+    { x: 0.48, y: 0.36, rx: 0.2, ry: 0.18, w: 1.05 },
+    { x: 0.42, y: 0.52, rx: 0.24, ry: 0.22, w: 0.95 },
+    { x: 0.58, y: 0.48, rx: 0.2, ry: 0.24, w: 0.7 },
+    { x: 0.28, y: 0.58, rx: 0.16, ry: 0.16, w: 0.55 },
+    { x: 0.62, y: 0.32, rx: 0.14, ry: 0.14, w: 0.4 },
+    { x: 0.7, y: 0.58, rx: 0.16, ry: 0.2, w: 0.35 },
+  ];
+  let d = 0;
+  for (const b of blobs) {
+    const u = (nx - b.x) / b.rx;
+    const v = (ny - b.y) / b.ry;
+    d += b.w * Math.exp(-(u * u + v * v));
+  }
+  return Math.min(1.65, d);
+}
+
+/** Film 端の侵食強度 0=中央 1=端 */
+function dustFilmEdge(nx: number, ny: number): number {
+  const dx = Math.min(nx, 1 - nx);
+  const dy = Math.min(ny, 1 - ny);
+  const m = Math.min(dx / 0.14, dy / 0.12);
+  return Math.max(0, 1 - m);
+}
+
+/** A — Powder: 黒地に砂色粉雲（参照写真） */
+function buildDust(p: BeastPalette): string {
+  const parts: string[] = [];
+  parts.push(
+    `<rect width="${CANVAS_W}" height="${CANVAS_H}" fill="#000000"/>`
+  );
+
+  // 密度の高い核の淡いグロー（写真の明るい塊）
+  for (let i = 0; i < 14; i += 1) {
+    const nx = 0.22 + hash01(i, 1) * 0.4;
+    const ny = 0.28 + hash01(i, 2) * 0.4;
+    const field = dustPowderField(nx, ny);
+    if (field < 0.55) continue;
+    const cx = nx * CANVAS_W;
+    const cy = ny * CANVAS_H;
+    const rx = 18 + hash01(i, 3) * 36 * field;
+    const ry = 14 + hash01(i, 4) * 30 * field;
+    parts.push(
+      `<ellipse cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" rx="${rx.toFixed(1)}" ry="${ry.toFixed(1)}" fill="rgba(${pick(p.accent, i, 1)},${beastOp(0.035 + field * 0.04).toFixed(3)})"/>`
+    );
+  }
+
+  // 本体: 超細かい粒 — 密度場に沿って散布
+  for (let i = 0; i < 3200; i += 1) {
+    const nx = hash01(i * 2.71, 1.13);
+    const ny = hash01(i * 3.37, 4.91);
+    const field = dustPowderField(nx, ny);
+    const gate = field * 0.92 + 0.04;
+    if (hash01(i, 0.37) > gate) continue;
+
+    const x = nx * CANVAS_W + (hash01(i, 8) - 0.5) * 1.2;
+    const y = ny * CANVAS_H + (hash01(i, 9) - 0.5) * 1.2;
+    const bright = field > 0.85 && hash01(i, 2) > 0.35;
+    const mid = field > 0.4;
+    const col = bright
+      ? pick(p.accent, i, 1)
+      : mid
+        ? pick(p.strokes, i, 2)
+        : pick(p.fills, i, 3);
+    const r = bright
+      ? 0.35 + hash01(i, 3) * 0.9
+      : 0.2 + hash01(i, 3) * (0.35 + field * 0.55);
+    const op = beastOp(
+      bright
+        ? 0.12 + hash01(i, 4) * 0.14
+        : 0.04 + field * 0.1 + hash01(i, 5) * 0.05
+    );
+    parts.push(
+      `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r.toFixed(2)}" fill="rgba(${col},${op.toFixed(3)})"/>`
+    );
+  }
+
+  // 外周の飛び散り（写真のスパーク）
+  for (let i = 0; i < 380; i += 1) {
+    const nx = hash01(i * 4.1, 6.2);
+    const ny = hash01(i * 5.3, 1.8);
+    const field = dustPowderField(nx, ny);
+    if (field > 0.35) continue;
+    if (hash01(i, 0.2) > 0.22) continue;
+    const x = nx * CANVAS_W;
+    const y = ny * CANVAS_H;
+    parts.push(
+      `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(0.25 + hash01(i, 1) * 0.55).toFixed(2)}" fill="rgba(${pick(p.accent, i, 1)},${beastOp(0.06 + hash01(i, 2) * 0.08).toFixed(3)})"/>`
+    );
+  }
+
+  return wrapSvg(parts.join(""));
+}
+
+/** B — Film: 黒板煤 + 細い傷 + 端のボロボロクリーム枠（参照写真） */
+function buildDustAsh(p: BeastPalette): string {
+  const parts: string[] = [];
+  // 下地 = 写真のセピア枠
+  parts.push(
+    `<rect width="${CANVAS_W}" height="${CANVAS_H}" fill="#cfc3a8"/>`
+  );
+  for (let i = 0; i < 80; i += 1) {
+    const nx = hash01(i, 1);
+    const ny = hash01(i, 2);
+    const cx = nx * CANVAS_W;
+    const cy = ny * CANVAS_H;
+    const rx = 10 + hash01(i, 3) * 40;
+    const ry = 8 + hash01(i, 4) * 32;
+    parts.push(
+      `<ellipse cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" rx="${rx.toFixed(1)}" ry="${ry.toFixed(1)}" fill="rgba(${hash01(i, 5) > 0.5 ? "180,168,140" : "210,198,170"},${(0.12 + hash01(i, 6) * 0.2).toFixed(3)})"/>`
+    );
+  }
+
+  // 中央の黒い面 — 端をギザギザに食い込ませる
+  const blackBlobs: string[] = [];
+  for (let i = 0; i < 70; i += 1) {
+    const nx = 0.08 + hash01(i * 1.7, 2.1) * 0.84;
+    const ny = 0.07 + hash01(i * 2.2, 3.4) * 0.86;
+    const edge = dustFilmEdge(nx, ny);
+    // 端付近は欠けやすい
+    if (edge > 0.55 && hash01(i, 0.4) > 0.45) continue;
+    const cx = nx * CANVAS_W;
+    const cy = ny * CANVAS_H;
+    const rx = 22 + hash01(i, 5) * 48 - edge * 18;
+    const ry = 18 + hash01(i, 6) * 42 - edge * 14;
+    const rot = ((hash01(i, 7) - 0.5) * 50).toFixed(1);
+    blackBlobs.push(
+      `<ellipse cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" rx="${Math.max(8, rx).toFixed(1)}" ry="${Math.max(7, ry).toFixed(1)}" fill="#050505" transform="rotate(${rot} ${cx.toFixed(1)} ${cy.toFixed(1)})"/>`
+    );
+  }
+  parts.push(...blackBlobs);
+
+  // 端の繊維・欠け（黒→クリームのギザ）
+  for (let i = 0; i < 90; i += 1) {
+    const side = Math.floor(hash01(i, 1) * 4);
+    let cx = 0;
+    let cy = 0;
+    if (side === 0) {
+      cx = hash01(i, 2) * CANVAS_W;
+      cy = hash01(i, 3) * 28;
+    } else if (side === 1) {
+      cx = hash01(i, 2) * CANVAS_W;
+      cy = CANVAS_H - hash01(i, 3) * 28;
+    } else if (side === 2) {
+      cx = hash01(i, 2) * 26;
+      cy = hash01(i, 3) * CANVAS_H;
+    } else {
+      cx = CANVAS_W - hash01(i, 2) * 26;
+      cy = hash01(i, 3) * CANVAS_H;
+    }
+    const rx = 4 + hash01(i, 4) * 14;
+    const ry = 3 + hash01(i, 5) * 12;
+    const cream = hash01(i, 6) > 0.4;
+    parts.push(
+      `<ellipse cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" rx="${rx.toFixed(1)}" ry="${ry.toFixed(1)}" fill="${cream ? "rgba(210,198,170,0.85)" : "#050505"}"/>`
+    );
+  }
+
+  // 白グレーの煤粒（中央やや濃い）
+  for (let i = 0; i < 2400; i += 1) {
+    const nx = hash01(i * 3.05, 2.2);
+    const ny = hash01(i * 2.88, 5.4);
+    const edge = dustFilmEdge(nx, ny);
+    if (edge > 0.72 && hash01(i, 0.3) > 0.25) continue;
+    const cx = (nx - 0.5) * 1.15;
+    const cy = (ny - 0.48) * 1.15;
+    const center = Math.exp(-(cx * cx * 2.2 + cy * cy * 2.0));
+    if (hash01(i, 0.5) > 0.35 + center * 0.65) continue;
+
+    const x = nx * CANVAS_W;
+    const y = ny * CANVAS_H;
+    const bright = hash01(i, 4) > 0.78;
+    const r = 0.2 + hash01(i, 3) * (bright ? 0.85 : 0.55);
+    const col = bright ? "230,230,230" : pick(p.strokes, i, 1);
+    const op = beastOp(
+      bright ? 0.1 + hash01(i, 5) * 0.1 : 0.035 + center * 0.07 + hash01(i, 6) * 0.04
+    );
+    parts.push(
+      `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r.toFixed(2)}" fill="rgba(${col},${op.toFixed(3)})"/>`
+    );
+  }
+
+  // 髪の毛みたいな傷（写真どおり斜め）
+  const scratches: Array<[number, number, number, number, number]> = [
+    [0.12, 0.18, 0.42, 0.48, 0.09],
+    [0.55, 0.22, 0.78, 0.4, 0.07],
+    [0.2, 0.55, 0.38, 0.72, 0.06],
+    [0.62, 0.58, 0.88, 0.7, 0.08],
+    [0.3, 0.35, 0.55, 0.42, 0.05],
+  ];
+  for (let s = 0; s < scratches.length; s += 1) {
+    const [x1n, y1n, x2n, y2n, opBase] = scratches[s]!;
+    const x1 = x1n * CANVAS_W + (hash01(s, 1) - 0.5) * 8;
+    const y1 = y1n * CANVAS_H + (hash01(s, 2) - 0.5) * 8;
+    const x2 = x2n * CANVAS_W + (hash01(s, 3) - 0.5) * 8;
+    const y2 = y2n * CANVAS_H + (hash01(s, 4) - 0.5) * 8;
+    const mx = (x1 + x2) / 2 + (hash01(s, 5) - 0.5) * 10;
+    const my = (y1 + y2) / 2 + (hash01(s, 6) - 0.5) * 10;
+    parts.push(
+      `<path d="M${x1.toFixed(1)} ${y1.toFixed(1)} Q${mx.toFixed(1)} ${my.toFixed(1)} ${x2.toFixed(1)} ${y2.toFixed(1)}" fill="none" stroke="rgba(235,235,235,${beastOp(opBase).toFixed(3)})" stroke-width="${(0.35 + hash01(s, 7) * 0.35).toFixed(2)}" stroke-linecap="round"/>`
+    );
+  }
+  for (let i = 0; i < 10; i += 1) {
+    const nx = 0.15 + hash01(i, 1) * 0.7;
+    const ny = 0.15 + hash01(i, 2) * 0.7;
+    if (dustFilmEdge(nx, ny) > 0.55) continue;
+    const x = nx * CANVAS_W;
+    const y = ny * CANVAS_H;
+    const ang = (hash01(i, 3) - 0.5) * Math.PI;
+    const len = 12 + hash01(i, 4) * 40;
+    parts.push(
+      `<line x1="${x.toFixed(1)}" y1="${y.toFixed(1)}" x2="${(x + Math.cos(ang) * len).toFixed(1)}" y2="${(y + Math.sin(ang) * len).toFixed(1)}" stroke="rgba(220,220,220,${beastOp(0.04 + hash01(i, 5) * 0.05).toFixed(3)})" stroke-width="${(0.25 + hash01(i, 6) * 0.3).toFixed(2)}" stroke-linecap="round"/>`
+    );
+  }
+
+  return wrapSvg(parts.join(""));
+}
+
+function isDustFamilyVariant(variant: ProfilePlanProBeastBgVariant): boolean {
+  return variant === "beast-dust" || variant === "beast-dust-ash";
+}
+
 function dotGrid(
   x0: number,
   y0: number,
@@ -4397,6 +4644,10 @@ function dotGrid(
 }
 
 function buildHudSvg(variant: ProfilePlanProBeastBgVariant): string {
+  /** Dust は模様・HUD を出さない（粉感だけ） */
+  if (isDustFamilyVariant(variant)) {
+    return wrapSvg("");
+  }
   const { hudPrimary, hudSecondary } = PALETTES[variant];
   const g: string[] = [];
 
@@ -4519,6 +4770,10 @@ function buildSkinSvg(variant: ProfilePlanProBeastBgVariant): string {
         return buildShard(p);
       case "beast-tessera":
         return buildTessera(p);
+      case "beast-dust":
+        return buildDust(p);
+      case "beast-dust-ash":
+        return buildDustAsh(p);
       default:
         return wrapSvg("");
     }
@@ -4531,28 +4786,31 @@ function buildSkinSvg(variant: ProfilePlanProBeastBgVariant): string {
 export function getProfilePlanProBeastSkinSvg(
   variant: ProfilePlanProBeastBgVariant
 ): string {
-  return cachedSvg(`beast:skin:svg:${variant}:v43`, () => buildSkinSvg(variant));
+  return cachedSvg(`beast:skin:svg:${variant}:v45`, () => buildSkinSvg(variant));
 }
 
 /** 微細 HUD（Native SvgXml 用） */
 export function getProfilePlanProBeastHudSvg(
   variant: ProfilePlanProBeastBgVariant
 ): string {
-  return cachedSvg(`beast:hud:svg:${variant}:v43`, () => buildHudSvg(variant));
+  return cachedSvg(`beast:hud:svg:${variant}:v45`, () => buildHudSvg(variant));
 }
 
 /** 疎な獣皮 / 宝石レイヤー */
 export function getProfilePlanProBeastSkinUrl(
   variant: ProfilePlanProBeastBgVariant
 ): string {
-  return cachedUrl(`beast:skin:${variant}:v43`, () => buildSkinSvg(variant));
+  if (isProfilePlanProDustTextureVariant(variant)) {
+    return getProfilePlanProDustTextureCssUrl(variant);
+  }
+  return cachedUrl(`beast:skin:${variant}:v45`, () => buildSkinSvg(variant));
 }
 
 /** 微細 HUD */
 export function getProfilePlanProBeastHudUrl(
   variant: ProfilePlanProBeastBgVariant
 ): string {
-  return cachedUrl(`beast:hud:${variant}:v43`, () => buildHudSvg(variant));
+  return cachedUrl(`beast:hud:${variant}:v45`, () => buildHudSvg(variant));
 }
 
 export const PROFILE_PLAN_PRO_BEAST_CANVAS = {

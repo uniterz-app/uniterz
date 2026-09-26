@@ -166,6 +166,34 @@
   filter: contrast(1.16) saturate(0.85) brightness(0.98);
 }
 
+/* Dust — カード縦横に stretch（端を切らない素材マップ） */
+.profile-kinetik-panel:has(.profile-plan-pro-bg--beast-dust),
+.profile-edit-kinetik-card:has(.profile-plan-pro-bg--beast-dust),
+.profile-kinetik-panel:has(.profile-plan-pro-bg--beast-dust-ash),
+.profile-edit-kinetik-card:has(.profile-plan-pro-bg--beast-dust-ash) {
+  background: #000000;
+  --kinetik-frame: rgba(168, 140, 108, 0.35);
+  --kinetik-frame-strong: rgba(212, 188, 150, 0.5);
+  --kinetik-frame-dim: rgba(80, 64, 48, 0.26);
+  box-shadow:
+    0 10px 36px rgba(0, 0, 0, 0.75),
+    0 0 0 1px var(--kinetik-frame);
+}
+
+.profile-plan-pro-bg--beast-dust .profile-plan-pro-bg__beast-skin,
+.profile-plan-pro-bg--beast-dust-ash .profile-plan-pro-bg__beast-skin {
+  /* globals の幅ロック + min-height:100% と同じ — パネル全面に 1 枚 stretch */
+  background-size: 100% 100% !important;
+  background-position: center top !important;
+  background-repeat: no-repeat !important;
+  filter: none;
+}
+
+.profile-plan-pro-bg--beast-dust .profile-plan-pro-bg__beast-hud,
+.profile-plan-pro-bg--beast-dust-ash .profile-plan-pro-bg__beast-hud {
+  display: none;
+}
+
 
 .profile-plan-pro-bg--beast-behelit .profile-plan-pro-bg__beast-skin,
 .profile-plan-pro-bg--beast-berserker .profile-plan-pro-bg__beast-skin {

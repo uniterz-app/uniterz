@@ -41,6 +41,11 @@ export default function NbaFavoriteLimitModal({
       setPickedId(null);
       return;
     }
+    if (players.length === 1) {
+      setPickedId(players[0]!.playerId);
+    } else {
+      setPickedId(null);
+    }
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     const onKey = (e: KeyboardEvent) => {
@@ -51,7 +56,7 @@ export default function NbaFavoriteLimitModal({
       document.body.style.overflow = prev;
       window.removeEventListener("keydown", onKey);
     };
-  }, [open, busy, onClose]);
+  }, [open, busy, onClose, players]);
 
   if (!open || typeof document === "undefined") return null;
 
@@ -80,16 +85,20 @@ export default function NbaFavoriteLimitModal({
             className={`${nameOxanium.className} mt-1 text-[15px] font-extrabold text-white`}
             style={{ transform: "skewX(-8deg)" }}
           >
-            {isJa ? "誰を外しますか？" : "Who do you want to replace?"}
+            {isJa ? "入れ替えますか？" : "Replace favorite?"}
           </h2>
           <p className="mt-1.5 text-[12px] leading-relaxed text-white/55">
             {isJa
-              ? `お気に入りは最大${NBA_FAVORITE_MAX_PLAYERS}人です${
-                  incomingLabel ? `。「${incomingLabel}」を追加するには1人外してください。` : "。"
-                }`
-              : `You can favorite up to ${NBA_FAVORITE_MAX_PLAYERS} players${
+              ? `お気に入り選手は${NBA_FAVORITE_MAX_PLAYERS}人までです${
                   incomingLabel
-                    ? `. Pick one to replace with ${incomingLabel}.`
+                    ? `。「${incomingLabel}」に入れ替える選手を選んでください。`
+                    : "。"
+                }`
+              : `You can favorite ${NBA_FAVORITE_MAX_PLAYERS} player${
+                  NBA_FAVORITE_MAX_PLAYERS === 1 ? "" : "s"
+                }${
+                  incomingLabel
+                    ? `. Pick who to replace with ${incomingLabel}.`
                     : "."
                 }`}
           </p>

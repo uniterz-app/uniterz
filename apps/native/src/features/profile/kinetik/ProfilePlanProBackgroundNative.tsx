@@ -65,6 +65,11 @@ import {
   type ProfilePlanProBeastBgVariant,
 } from "../../../../../../lib/profile/profilePlanProBeastBgVariants";
 import {
+  isProfilePlanProDustTextureVariant,
+  type ProfilePlanProDustTextureId,
+} from "../../../../../../lib/profile/profilePlanProDustTextures";
+import { PROFILE_PLAN_PRO_DUST_TEXTURE_SOURCES } from "./profilePlanProDustTextureSourcesNative";
+import {
   getProfilePlanProCosmosHudSvg,
   getProfilePlanProCosmosSkinSvg,
   PROFILE_PLAN_PRO_COSMOS_CANVAS,
@@ -620,6 +625,16 @@ function BeastLayers({
   variant: ProfilePlanProBeastBgVariant;
   shouldAnimate: boolean;
 }) {
+  if (isProfilePlanProDustTextureVariant(variant)) {
+    return (
+      <DustMaterialLayers
+        width={width}
+        height={height}
+        variant={variant}
+        shouldAnimate={shouldAnimate}
+      />
+    );
+  }
   return (
     <SvgSkinHudLayers
       width={width}
@@ -631,6 +646,91 @@ function BeastLayers({
       shouldAnimate={shouldAnimate}
       variantKey={variant}
     />
+  );
+}
+
+/** Dust — 他 beast と同じ artH 敷き（パネル下端まで stretch） */
+function DustMaterialLayers({
+  width,
+  height,
+  variant,
+  shouldAnimate,
+}: {
+  width: number;
+  height: number;
+  variant: ProfilePlanProDustTextureId;
+  shouldAnimate: boolean;
+}) {
+  const enter = useSharedValue(shouldAnimate ? 0 : 1);
+  const hasEnteredRef = useRef(false);
+  const enteredVariantRef = useRef<string | null>(null);
+  const source = PROFILE_PLAN_PRO_DUST_TEXTURE_SOURCES[variant];
+  /** SvgSkinHudLayers と同じ: 幅基準の canvas 比とパネル高さの大きい方 */
+  const artH = Math.max(
+    height,
+    width *
+      (PROFILE_PLAN_PRO_BEAST_CANVAS.height /
+        PROFILE_PLAN_PRO_BEAST_CANVAS.width)
+  );
+
+  useEffect(() => {
+    if (enteredVariantRef.current !== variant) {
+      enteredVariantRef.current = variant;
+      hasEnteredRef.current = false;
+    }
+    if (!shouldAnimate) {
+      cancelAnimation(enter);
+      enter.value = 1;
+      hasEnteredRef.current = true;
+      return;
+    }
+    if (hasEnteredRef.current) {
+      enter.value = 1;
+      return;
+    }
+    hasEnteredRef.current = true;
+    enter.value = 0;
+    enter.value = withTiming(1, {
+      duration: PROFILE_PLAN_PRO_BG.atmosEnterMs,
+      easing: Easing.out(Easing.cubic),
+    });
+    return () => cancelAnimation(enter);
+  }, [enter, shouldAnimate, variant]);
+
+  const layerStyle = useAnimatedStyle(() => ({
+    opacity: enter.value,
+    transform: [
+      {
+        translateY:
+          (1 - enter.value) * PROFILE_PLAN_PRO_BG.atmosEnterYOffsetPx,
+      },
+    ],
+  }));
+
+  return (
+    <Animated.View
+      style={[
+        { position: "absolute", top: 0, left: 0, width, height: artH },
+        layerStyle,
+      ]}
+      pointerEvents="none"
+    >
+      <View
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          width,
+          height: artH,
+          backgroundColor: "#000000",
+        }}
+      />
+      <Image
+        source={source}
+        style={{ width, height: artH }}
+        resizeMode="stretch"
+      />
+    </Animated.View>
   );
 }
 

@@ -16,7 +16,7 @@ export function parseUserPlanProBgVariant(
 
 /**
  * 採用スキンとして確定できるときだけ返す。
- * 未確定時にデフォルト（titanium）を当てない（他人プロフィールのチラつき防止）。
+ * 未確定時にデフォルト（Dust）を当てない（他人プロフィールのチラつき防止）。
  */
 export function tryParseUserPlanProBgVariant(
   raw: unknown
@@ -35,7 +35,7 @@ export function parseEquippedProSkinFromUserDoc(data: {
 }): ProfilePlanProBgVariant | undefined {
   if (data.plan !== "pro") return undefined;
   /**
-   * 以前は proSkinUnlockedIds に無い装備をデフォルト（titanium）へ落としていた。
+   * 以前は proSkinUnlockedIds に無い装備をデフォルトへ落としていた。
    * マイルストーン解放のリスト遅延・欠落と装備値のズレで、プロフィールは
    * Jagged Plate なのにランキングだけチタン、という不整合が起きていた。
    * 装備フィールドが採用スキンならそれを返す（保存 API 側で所持検証済み）。

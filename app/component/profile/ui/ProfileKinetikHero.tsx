@@ -28,6 +28,8 @@ import {
   type ProfileKinetikMetricsTab,
 } from "@/lib/profile/useNbaKinetikMonthlyStats";
 import { listRankingPeriodLabels } from "@/lib/rankings/rankingPeriod";
+import { useMyNbaFavorites } from "@/lib/profile/useMyNbaFavorites";
+import { nbaFavoritesEqual } from "@/lib/profile/nbaFavorites";
 import { preferredNbaKinetikPeriod, CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
 import { useUserCareer } from "@/lib/profile/useUserCareer";
 
@@ -206,6 +208,26 @@ export default function ProfileKinetikHero({
       : windowLoading && !windowData;
   const careerPending = careerDocLoading && !career;
 
+  const { favorites: liveFavorites } = useMyNbaFavorites();
+  const profileFavorites = useMemo(
+    () => ({
+      favoriteNbaTeamId: profile.favoriteNbaTeamId,
+      favoriteNbaTeamFanSinceSeason: profile.favoriteNbaTeamFanSinceSeason,
+      favoriteNbaPlayers: profile.favoriteNbaPlayers,
+    }),
+    [
+      profile.favoriteNbaTeamId,
+      profile.favoriteNbaTeamFanSinceSeason,
+      profile.favoriteNbaPlayers,
+    ]
+  );
+  const nbaFavorites = useMemo(() => {
+    if (!isMe) return profileFavorites;
+    return nbaFavoritesEqual(liveFavorites, profileFavorites)
+      ? profileFavorites
+      : liveFavorites;
+  }, [isMe, liveFavorites, profileFavorites]);
+
   return (
     <div
       className={
@@ -244,12 +266,7 @@ export default function ProfileKinetikHero({
             metricValueDeltas={null}
             rankingLeague="nba"
             visualEffects={visualEffects}
-            nbaFavorites={{
-              favoriteNbaTeamId: profile.favoriteNbaTeamId,
-              favoriteNbaTeamFanSinceSeason:
-                profile.favoriteNbaTeamFanSinceSeason,
-              favoriteNbaPlayers: profile.favoriteNbaPlayers,
-            }}
+            nbaFavorites={nbaFavorites}
             metricsPeriod={metricsPeriod}
             onMetricsPeriodChange={setMetricsPeriod}
             metricsTab={metricsTab}

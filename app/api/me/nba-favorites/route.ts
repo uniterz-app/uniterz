@@ -45,7 +45,7 @@ type Body =
 
 /**
  * 本人の NBA お気に入りをトグル保存（Admin merge）。
- * チーム最大 1・選手最大 3。公開プロフィールフィールド。
+ * チーム最大 1・選手最大 1。公開プロフィールフィールド。
  */
 export async function POST(req: Request) {
   try {

@@ -37,7 +37,7 @@ export type NativeProfileByHandleState = {
   language: LocalizedLang;
   countryCode: string;
   plan: "free" | "pro";
-  /** null = Pro Skin 未確定（デフォルト titanium を出さない） */
+  /** null = Pro Skin 未確定（デフォルトを出さない） */
   planProBgVariant: ProfilePlanProBgVariant | null;
   currentStreak: number;
   maxStreak: number;

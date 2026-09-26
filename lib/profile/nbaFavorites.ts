@@ -10,7 +10,7 @@ import {
   previousNbaSeasonKey,
 } from "@/lib/rankings/nbaSeason";
 
-export const NBA_FAVORITE_MAX_PLAYERS = 3;
+export const NBA_FAVORITE_MAX_PLAYERS = 1;
 
 /** ファン歴ピッカーの最古（含む）— 3ポイントライン導入付近 */
 export const NBA_FAN_SINCE_OLDEST_START_YEAR = 1979;

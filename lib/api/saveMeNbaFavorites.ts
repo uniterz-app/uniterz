@@ -3,6 +3,7 @@
 import { auth } from "@/lib/firebase";
 import type { NbaFavorites } from "@/lib/profile/nbaFavorites";
 import { invalidateUserDocCache } from "@/lib/user/userDocCache";
+import { invalidateAllProfileCache } from "@/app/component/profile/useProfile";
 
 export type ToggleNbaFavoriteTeamPayload = {
   action: "toggleTeam";
@@ -72,5 +73,6 @@ export async function saveMeNbaFavorites(
     throw new Error("missing favorites");
   }
   invalidateUserDocCache(user.uid);
+  invalidateAllProfileCache();
   return { favorites: data.favorites };
 }

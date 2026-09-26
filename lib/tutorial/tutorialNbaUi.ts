@@ -394,7 +394,7 @@ export function buildTutorialProfile(): Profile {
     currentStreak: 1,
     maxStreak: 1,
     plan: "free",
-    planProBgVariant: "beast-titanium",
+    planProBgVariant: "beast-dust",
     countryCode: "JP",
     memberSinceMs: Date.now(),
     unitBalance: 0,

@@ -6,7 +6,10 @@ import {
   formatNbaFavoritePlayerInitialLast,
   type NbaFavorites,
 } from "@/lib/profile/nbaFavorites";
-import { getNbaTeamFullNameById } from "@/lib/nba-team-names";
+import {
+  compactNbaCardNickname,
+  getNbaTeamNicknameById,
+} from "@/lib/nba-team-names";
 import { nameOxanium } from "@/lib/fonts";
 
 type Props = {
@@ -16,9 +19,8 @@ type Props = {
 };
 
 /**
- * プロフィールカード用お気に入り（縦積み・フッター左半分向け）。
- * FAVORITES 見出し / チーム行 / 選手は縦積み（名前 + badge）
- * 選手バッジは列揃え（最長名に合わせて左クラスタ）
+ * プロフィールカード用お気に入り（チーム1・選手1・横並び）。
+ * FAVORITES 見出しは中央。
  */
 export default function ProfileNbaFavoritesRow({
   favorites,
@@ -26,13 +28,16 @@ export default function ProfileNbaFavoritesRow({
   className,
 }: Props) {
   const teamId = favorites.favoriteNbaTeamId;
-  const players = favorites.favoriteNbaPlayers;
-  if (!teamId && players.length === 0) return null;
+  const player = favorites.favoriteNbaPlayers[0] ?? null;
+  if (!teamId && !player) return null;
 
   const fanSince = formatNbaFanSinceInline(
     favorites.favoriteNbaTeamFanSinceSeason,
     language
   );
+  const teamLabel = teamId
+    ? compactNbaCardNickname(getNbaTeamNicknameById(teamId), teamId)
+    : "";
 
   return (
     <div
@@ -40,20 +45,20 @@ export default function ProfileNbaFavoritesRow({
       aria-label="Favorites"
     >
       <p
-        className={`${nameOxanium.className} mb-1.5 text-[11px] font-extrabold uppercase tracking-[0.18em] text-white/75`}
+        className={`${nameOxanium.className} mb-1.5 text-center text-[13px] font-extrabold uppercase tracking-[0.18em] text-white/75`}
         style={{ transform: "skewX(-8deg)" }}
       >
         FAVORITES
       </p>
-      <div className="flex flex-col items-stretch gap-1.5">
+      <div className="flex w-full min-w-0 items-center justify-center gap-3">
         {teamId ? (
-          <div className="flex w-fit max-w-full min-w-0 items-baseline gap-1.5">
+          <div className="flex min-w-0 max-w-[50%] items-baseline gap-1.5">
             <span
               className={`${nameOxanium.className} inline-block min-w-0 truncate text-[11px] font-extrabold uppercase tracking-[0.04em] text-white/85`}
               style={{ transform: "skewX(-8deg)" }}
-              title={getNbaTeamFullNameById(teamId)}
+              title={teamLabel}
             >
-              {getNbaTeamFullNameById(teamId)}
+              {teamLabel}
             </span>
             {fanSince ? (
               <span
@@ -65,26 +70,23 @@ export default function ProfileNbaFavoritesRow({
             ) : null}
           </div>
         ) : null}
-        {players.length > 0 ? (
-          <div className="grid w-fit max-w-full grid-cols-[auto_auto] items-center gap-x-1.5 gap-y-1.5">
-            {players.map((p) => {
-              const label = formatNbaFavoritePlayerInitialLast(p.displayName);
-              return (
-                <div key={p.playerId} className="contents" title={p.displayName}>
-                  <span
-                    className={`${nameOxanium.className} inline-block min-w-0 truncate text-[11px] font-extrabold uppercase tracking-[0.06em] text-white/85`}
-                    style={{ transform: "skewX(-8deg)" }}
-                  >
-                    {label}
-                  </span>
-                  {p.teamId ? (
-                    <TeamAbbrBadge teamId={p.teamId} />
-                  ) : (
-                    <span aria-hidden className="h-[22px] w-[2.5rem]" />
-                  )}
-                </div>
-              );
-            })}
+        {teamId && player ? (
+          <span className="shrink-0 text-white/25" aria-hidden>
+            ·
+          </span>
+        ) : null}
+        {player ? (
+          <div
+            className="flex min-w-0 max-w-[50%] items-center gap-1.5"
+            title={player.displayName}
+          >
+            <span
+              className={`${nameOxanium.className} inline-block min-w-0 truncate text-[11px] font-extrabold uppercase tracking-[0.06em] text-white/85`}
+              style={{ transform: "skewX(-8deg)" }}
+            >
+              {formatNbaFavoritePlayerInitialLast(player.displayName)}
+            </span>
+            {player.teamId ? <TeamAbbrBadge teamId={player.teamId} /> : null}
           </div>
         ) : null}
       </div>

@@ -1,7 +1,6 @@
 /**
- * Web `ProfileNbaFavoritesRow` 相当 — 縦積み・フッター寄り。
- * FAVORITES / チームフルネーム + ファン歴 / 選手 A.EDWARDS + badge
- * 選手バッジは列揃え（最長名に合わせて左クラスタ）
+ * Web `ProfileNbaFavoritesRow` 相当 — チーム1・選手1・横並び。
+ * FAVORITES 見出しは中央。
  */
 import { StyleSheet, Text, View } from "react-native";
 import {
@@ -9,11 +8,13 @@ import {
   formatNbaFavoritePlayerInitialLast,
   type NbaFavorites,
 } from "../../../../../../lib/profile/nbaFavorites";
-import { getNbaTeamFullNameById } from "../../../../../../lib/nba-team-names";
+import {
+  compactNbaCardNickname,
+  getNbaTeamNicknameById,
+} from "../../../../../../lib/nba-team-names";
 import TeamAbbrBadgeNative from "../../games/TeamAbbrBadgeNative";
 
 const OXANIUM_EXTRA = "Oxanium_800ExtraBold";
-const PLAYER_ROW_H = 22;
 
 type Props = {
   favorites: NbaFavorites;
@@ -25,22 +26,25 @@ export default function ProfileNbaFavoritesRowNative({
   language = "ja",
 }: Props) {
   const teamId = favorites.favoriteNbaTeamId;
-  const players = favorites.favoriteNbaPlayers;
-  if (!teamId && players.length === 0) return null;
+  const player = favorites.favoriteNbaPlayers[0] ?? null;
+  if (!teamId && !player) return null;
 
   const fanSince = formatNbaFanSinceInline(
     favorites.favoriteNbaTeamFanSinceSeason,
     language
   );
+  const teamLabel = teamId
+    ? compactNbaCardNickname(getNbaTeamNicknameById(teamId), teamId)
+    : "";
 
   return (
     <View style={styles.wrap} accessibilityLabel="Favorites">
       <Text style={styles.heading}>FAVORITES</Text>
-      <View style={styles.col}>
+      <View style={styles.row}>
         {teamId ? (
-          <View style={styles.teamRow}>
+          <View style={styles.teamCluster}>
             <Text style={styles.teamName} numberOfLines={1}>
-              {getNbaTeamFullNameById(teamId)}
+              {teamLabel}
             </Text>
             {fanSince ? (
               <Text style={styles.fanSince} numberOfLines={1}>
@@ -49,26 +53,15 @@ export default function ProfileNbaFavoritesRowNative({
             ) : null}
           </View>
         ) : null}
-        {players.length > 0 ? (
-          <View style={styles.playersGrid}>
-            <View style={styles.playerNamesCol}>
-              {players.map((p) => (
-                <View key={p.playerId} style={styles.playerNameCell}>
-                  <Text style={styles.playerName} numberOfLines={1}>
-                    {formatNbaFavoritePlayerInitialLast(p.displayName)}
-                  </Text>
-                </View>
-              ))}
-            </View>
-            <View style={styles.playerBadgesCol}>
-              {players.map((p) => (
-                <View key={p.playerId} style={styles.playerBadgeCell}>
-                  {p.teamId ? (
-                    <TeamAbbrBadgeNative teamId={p.teamId} />
-                  ) : null}
-                </View>
-              ))}
-            </View>
+        {teamId && player ? <Text style={styles.dot}>·</Text> : null}
+        {player ? (
+          <View style={styles.playerCluster}>
+            <Text style={styles.playerName} numberOfLines={1}>
+              {formatNbaFavoritePlayerInitialLast(player.displayName)}
+            </Text>
+            {player.teamId ? (
+              <TeamAbbrBadgeNative teamId={player.teamId} />
+            ) : null}
           </View>
         ) : null}
       </View>
@@ -84,20 +77,26 @@ const styles = StyleSheet.create({
     marginBottom: 6,
     color: "rgba(255,255,255,0.75)",
     fontFamily: OXANIUM_EXTRA,
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: "800",
     letterSpacing: 1.8,
     textTransform: "uppercase",
+    textAlign: "center",
     transform: [{ skewX: "-8deg" }],
   },
-  col: {
-    gap: 6,
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    maxWidth: "100%",
   },
-  teamRow: {
+  teamCluster: {
     flexDirection: "row",
     alignItems: "baseline",
-    alignSelf: "flex-start",
-    maxWidth: "100%",
+    flexShrink: 1,
+    minWidth: 0,
+    maxWidth: "48%",
     gap: 6,
   },
   teamName: {
@@ -121,30 +120,22 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     transform: [{ skewX: "-8deg" }],
   },
-  playersGrid: {
-    flexDirection: "row",
-    alignSelf: "flex-start",
-    maxWidth: "100%",
-    gap: 6,
+  dot: {
+    color: "rgba(255,255,255,0.25)",
+    fontSize: 12,
+    flexShrink: 0,
   },
-  playerNamesCol: {
+  playerCluster: {
+    flexDirection: "row",
+    alignItems: "center",
     flexShrink: 1,
     minWidth: 0,
+    maxWidth: "48%",
     gap: 6,
-  },
-  playerBadgesCol: {
-    flexShrink: 0,
-    gap: 6,
-  },
-  playerNameCell: {
-    height: PLAYER_ROW_H,
-    justifyContent: "center",
-  },
-  playerBadgeCell: {
-    height: PLAYER_ROW_H,
-    justifyContent: "center",
   },
   playerName: {
+    flexShrink: 1,
+    minWidth: 0,
     color: "rgba(255,255,255,0.85)",
     fontFamily: OXANIUM_EXTRA,
     fontSize: 11,

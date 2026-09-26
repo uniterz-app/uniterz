@@ -53,7 +53,10 @@ export type ProfilePlanProBeastBgVariant =
   | "beast-reticle"
   | "beast-facet"
   | "beast-shard"
-  | "beast-tessera";
+  | "beast-tessera"
+  /** Dust / Ash（参照写真の素材マップ） */
+  | "beast-dust"
+  | "beast-dust-ash";
 
 export type ProfilePlanProBeastBgMeta = {
   id: ProfilePlanProBeastBgVariant;
@@ -523,6 +526,24 @@ export const PROFILE_PLAN_PRO_BEAST_BG_VARIANTS: ProfilePlanProBeastBgMeta[] = [
     swatch:
       "linear-gradient(160deg, #000000, #1a1a1e 40%, #3a3a42 55%, #0a0a0c 78%, #000000)",
   },
+  {
+    id: "beast-dust",
+    label: "Dust",
+    tag: "ダスト",
+    description:
+      "粉噴霧の素材マップ。やや暗めの粒。",
+    swatch:
+      "linear-gradient(150deg, #000000, #12100c 40%, #8a705866 58%, #050505)",
+  },
+  {
+    id: "beast-dust-ash",
+    label: "Ash",
+    tag: "アッシュ",
+    description:
+      "フィルム煤・傷の素材マップ。",
+    swatch:
+      "linear-gradient(155deg, #cfc3a8 0%, #050505 12%, #121212 50%, #cfc3a8 100%)",
+  },
 ];
 
 /** Round 3 のみ（比較ナビ用） */
@@ -589,6 +610,12 @@ export const PROFILE_PLAN_PRO_BEAST_BG_ROUND7: ProfilePlanProBeastBgVariant[] = 
   /** 既存参考 */
   "beast-crown",
   "beast-constellation",
+];
+
+/** Round 8 — Dust / Ash */
+export const PROFILE_PLAN_PRO_BEAST_BG_ROUND8: ProfilePlanProBeastBgVariant[] = [
+  "beast-dust",
+  "beast-dust-ash",
 ];
 
 export const PROFILE_PLAN_PRO_BEAST_BG_DEFAULT: ProfilePlanProBeastBgVariant =

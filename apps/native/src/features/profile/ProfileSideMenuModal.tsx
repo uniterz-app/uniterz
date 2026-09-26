@@ -95,6 +95,7 @@ type Props = {
     | "playerDetailPreview"
     | "proLeagueTeaserPreview"
     | "streakFramePreview"
+    | "dustProSkinPreview"
     | "teamAbbrBadgePreview"
     | "resultPickupPreview"
     | "proInsightGatePreview"
@@ -267,6 +268,7 @@ export default function ProfileSideMenuModal({
       | "playerDetailPreview"
       | "proLeagueTeaserPreview"
       | "streakFramePreview"
+      | "dustProSkinPreview"
       | "teamAbbrBadgePreview"
       | "resultPickupPreview"
       | "proInsightGatePreview"
@@ -702,6 +704,14 @@ export default function ProfileSideMenuModal({
                           onPress={() => openUserPage("streakFramePreview")}
                         >
                           連勝フレーム光
+                        </SideMenuItemButtonNative>
+                        <SideMenuItemButtonNative
+                          icon="texture-box"
+                          dense
+                          labelStyle={labelStyle}
+                          onPress={() => openUserPage("dustProSkinPreview")}
+                        >
+                          Dust Pro Skin
                         </SideMenuItemButtonNative>
                         <SideMenuItemButtonNative
                           icon="tag-outline"
