@@ -399,6 +399,9 @@ export function buildTutorialProfile(): Profile {
     memberSinceMs: Date.now(),
     unitBalance: 0,
     profileViewCount: null,
+    favoriteNbaTeamId: null,
+    favoriteNbaTeamFanSinceSeason: null,
+    favoriteNbaPlayers: [],
   };
 }
 

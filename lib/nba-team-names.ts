@@ -54,6 +54,11 @@ export function getNbaTeamNicknameById(teamId: string): string {
   return cleaned || full;
 }
 
+/** フルチーム名（例: Minnesota Timberwolves） */
+export function getNbaTeamFullNameById(teamId: string): string {
+  return NBA_TEAM_NAME_BY_ID[teamId] ?? getNbaTeamNicknameById(teamId);
+}
+
 /**
  * マッチカード / dense HUD 用の短いニックネーム。
  * 例: Timberwolves → T-Wolves、Trail Blazers → Blazers

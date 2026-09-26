@@ -244,6 +244,12 @@ export default function ProfileKinetikHero({
             metricValueDeltas={null}
             rankingLeague="nba"
             visualEffects={visualEffects}
+            nbaFavorites={{
+              favoriteNbaTeamId: profile.favoriteNbaTeamId,
+              favoriteNbaTeamFanSinceSeason:
+                profile.favoriteNbaTeamFanSinceSeason,
+              favoriteNbaPlayers: profile.favoriteNbaPlayers,
+            }}
             metricsPeriod={metricsPeriod}
             onMetricsPeriodChange={setMetricsPeriod}
             metricsTab={metricsTab}

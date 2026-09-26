@@ -19,6 +19,10 @@ import { peekUserDocMemory } from "../../../../../lib/user/userDocMemoryCache";
 import { looksLikeFirestoreUid } from "../../../../../lib/profile/profilePathKey";
 import { seedNativeProfileStatsFromUserDoc } from "./useNativeProfileStats";
 import type { ProfilePlanProBgVariant } from "../../../../../lib/profile/profilePlanProBgVariants";
+import {
+  parseNbaFavorites,
+  type NbaFavoritePlayer,
+} from "../../../../../lib/profile/nbaFavorites";
 
 export type NativeProfileByHandleState = {
   loading: boolean;
@@ -41,6 +45,9 @@ export type NativeProfileByHandleState = {
   /** 保有 Unit（公開） */
   unitBalance: number;
   profileViewCount: number | null;
+  favoriteNbaTeamId: string | null;
+  favoriteNbaTeamFanSinceSeason: string | null;
+  favoriteNbaPlayers: NbaFavoritePlayer[];
 };
 
 const idleState: NativeProfileByHandleState = {
@@ -61,6 +68,9 @@ const idleState: NativeProfileByHandleState = {
   memberSinceMs: null,
   unitBalance: 0,
   profileViewCount: null,
+  favoriteNbaTeamId: null,
+  favoriteNbaTeamFanSinceSeason: null,
+  favoriteNbaPlayers: [],
 };
 
 function mapUserDoc(
@@ -75,6 +85,7 @@ function mapUserDoc(
         ? data.avatarUrl.trim()
         : "";
   const plan: "free" | "pro" = data.plan === "pro" ? "pro" : "free";
+  const favorites = parseNbaFavorites(data);
 
   return {
     loading: false,
@@ -103,6 +114,9 @@ function mapUserDoc(
     memberSinceMs: parseMemberSinceMs(data),
     unitBalance: parseUserUnitBalance(data),
     profileViewCount: parseUserProfileViewCount(data),
+    favoriteNbaTeamId: favorites.favoriteNbaTeamId,
+    favoriteNbaTeamFanSinceSeason: favorites.favoriteNbaTeamFanSinceSeason,
+    favoriteNbaPlayers: favorites.favoriteNbaPlayers,
   };
 }
 

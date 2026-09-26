@@ -12,6 +12,7 @@ import {
 } from "@/lib/i18n/localize";
 import { matchCardTeamNameStyle } from "@/lib/games/teamDisplayTypography";
 import HalftoneJerseyMark from "@/app/component/games/HalftoneJerseyMark";
+import NbaFavoriteStarButton from "@/app/component/nba/NbaFavoriteStarButton";
 import { CyberSlantedSegBar } from "@/app/component/rankings/CyberSlantedSegBar";
 import { NbaTeamRosterCard } from "@/app/component/predict/NbaRosterPanel";
 import {
@@ -2289,11 +2290,18 @@ export default function NbaTeamDetailPanel({
                 {detail.nickEn.toUpperCase()}
               </p>
             </div>
-            <TeamHeroStreakBadge
-              streak={detail.streak}
-              last10={last10}
-              isJa={isJa}
-            />
+            <div className="flex shrink-0 flex-col items-end gap-2">
+              <NbaFavoriteStarButton
+                kind="team"
+                teamId={detail.teamId}
+                language={isJa ? "ja" : "en"}
+              />
+              <TeamHeroStreakBadge
+                streak={detail.streak}
+                last10={last10}
+                isJa={isJa}
+              />
+            </div>
           </div>
         </div>
         <div className="flex gap-2">

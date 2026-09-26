@@ -448,6 +448,16 @@ export default function ProfileHomeScreen({
   const [unitBalance, setUnitBalance] = useState<number | null>(
     () => (ownSeedAtMount ? ownSeedAtMount.unitBalance : null)
   );
+  const [favoriteNbaTeamId, setFavoriteNbaTeamId] = useState<string | null>(
+    () => ownSeedAtMount?.favoriteNbaTeamId ?? null
+  );
+  const [favoriteNbaTeamFanSinceSeason, setFavoriteNbaTeamFanSinceSeason] =
+    useState<string | null>(
+      () => ownSeedAtMount?.favoriteNbaTeamFanSinceSeason ?? null
+    );
+  const [favoriteNbaPlayers, setFavoriteNbaPlayers] = useState(
+    () => ownSeedAtMount?.favoriteNbaPlayers ?? []
+  );
 
   const [saving, setSaving] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -892,6 +902,9 @@ export default function ProfileHomeScreen({
         setPlanProBgVariant(warm.planProBgVariant);
         setMemberSinceMs(warm.memberSinceMs);
         setUnitBalance(warm.unitBalance);
+        setFavoriteNbaTeamId(warm.favoriteNbaTeamId);
+        setFavoriteNbaTeamFanSinceSeason(warm.favoriteNbaTeamFanSinceSeason);
+        setFavoriteNbaPlayers(warm.favoriteNbaPlayers);
         if (warm.profileViewCount != null) {
           setProfileViewCountMemory(myUid, warm.profileViewCount);
           setProfileViewCount(warm.profileViewCount);
@@ -930,6 +943,9 @@ export default function ProfileHomeScreen({
         setPlanProBgVariant(seed.planProBgVariant);
         setMemberSinceMs(seed.memberSinceMs);
         setUnitBalance(seed.unitBalance);
+        setFavoriteNbaTeamId(seed.favoriteNbaTeamId);
+        setFavoriteNbaTeamFanSinceSeason(seed.favoriteNbaTeamFanSinceSeason);
+        setFavoriteNbaPlayers(seed.favoriteNbaPlayers);
         if (seed.profileViewCount != null) {
           setProfileViewCountMemory(myUid, seed.profileViewCount);
           setProfileViewCount(seed.profileViewCount);
@@ -1026,6 +1042,11 @@ export default function ProfileHomeScreen({
     setPlanProBgVariant(profileByHandle.planProBgVariant);
     setMemberSinceMs(profileByHandle.memberSinceMs);
     setUnitBalance(profileByHandle.unitBalance);
+    setFavoriteNbaTeamId(profileByHandle.favoriteNbaTeamId);
+    setFavoriteNbaTeamFanSinceSeason(
+      profileByHandle.favoriteNbaTeamFanSinceSeason
+    );
+    setFavoriteNbaPlayers(profileByHandle.favoriteNbaPlayers);
     if (profileByHandle.profileViewCount != null) {
       const uid = profileByHandle.targetUid;
       if (uid) setProfileViewCountMemory(uid, profileByHandle.profileViewCount);
@@ -1345,6 +1366,11 @@ export default function ProfileHomeScreen({
           targetUid={targetUid ?? null}
           profileViewCount={profileViewCount}
           unitBalance={unitBalance}
+          nbaFavorites={{
+            favoriteNbaTeamId,
+            favoriteNbaTeamFanSinceSeason,
+            favoriteNbaPlayers,
+          }}
           onOpenUnitLedger={
             isMe ? () => navigation.navigate("UnitLedger") : undefined
           }

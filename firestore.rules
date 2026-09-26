@@ -101,7 +101,8 @@ service cloud.firestore {
           'createdAt', 'updatedAt', 'counts',
           'handle', 'username', 'slug',
           'language', 'locale', 'timeZone', 'countryCode', 'preferredLeague',
-          'onboardingCompletedAt'
+          'onboardingCompletedAt',
+          'favoriteNbaTeamId', 'favoriteNbaTeamFanSinceSeason', 'favoriteNbaPlayers'
         ])
         && !('plan' in request.resource.data)
         && !('planType' in request.resource.data)
@@ -149,7 +150,8 @@ service cloud.firestore {
           'updatedAt',
           'handle', 'username', 'slug',
           'language', 'locale', 'timeZone', 'countryCode', 'preferredLeague',
-          'onboardingCompletedAt'
+          'onboardingCompletedAt',
+          'favoriteNbaTeamId', 'favoriteNbaTeamFanSinceSeason', 'favoriteNbaPlayers'
         ])
         && (!('handle' in resource.data) || !('handle' in request.resource.data)
             || request.resource.data.handle == resource.data.handle)

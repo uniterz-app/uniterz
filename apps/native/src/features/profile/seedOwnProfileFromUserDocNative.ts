@@ -9,6 +9,10 @@ import {
 import { parseUserPlanProBgVariant } from "../../../../../lib/profile/profilePlanProBgVariantField";
 import type { ProfilePlanProBgVariant } from "../../../../../lib/profile/profilePlanProBgVariants";
 import { peekProfileUserDocNative } from "./profileUserDocCacheNative";
+import {
+  parseNbaFavorites,
+  type NbaFavoritePlayer,
+} from "../../../../../lib/profile/nbaFavorites";
 
 export type OwnProfileSeedNative = {
   displayName: string;
@@ -23,6 +27,9 @@ export type OwnProfileSeedNative = {
   memberSinceMs: number | null;
   unitBalance: number;
   profileViewCount: number | null;
+  favoriteNbaTeamId: string | null;
+  favoriteNbaTeamFanSinceSeason: string | null;
+  favoriteNbaPlayers: NbaFavoritePlayer[];
   data: Record<string, unknown>;
 };
 
@@ -38,6 +45,7 @@ export function seedOwnProfileFromUserDocNative(
         ? data.avatarUrl.trim()
         : "";
   const authPhoto = authPhotoURL?.trim() ?? "";
+  const favorites = parseNbaFavorites(data);
   return {
     displayName: displayName || handle,
     handle,
@@ -52,6 +60,9 @@ export function seedOwnProfileFromUserDocNative(
     memberSinceMs: parseMemberSinceMs(data),
     unitBalance: parseUserUnitBalance(data),
     profileViewCount: parseUserProfileViewCount(data),
+    favoriteNbaTeamId: favorites.favoriteNbaTeamId,
+    favoriteNbaTeamFanSinceSeason: favorites.favoriteNbaTeamFanSinceSeason,
+    favoriteNbaPlayers: favorites.favoriteNbaPlayers,
     data,
   };
 }

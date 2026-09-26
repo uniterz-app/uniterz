@@ -91,6 +91,7 @@ import {
 import { METRIC_FONT } from "../../rankings/rankingsUiTheme";
 import { profileOverviewChartNoDataStyle } from "../../profile/profileOverviewChartShell";
 import JerseyMarkSvg from "../JerseyMarkSvg";
+import NbaFavoriteStarButtonNative from "../NbaFavoriteStarButtonNative";
 import NbaPlayerHowTheyPlayNative from "./NbaPlayerHowTheyPlayNative";
 import { useLeagueTeamStatsBundle } from "../../../../../../lib/nba/useLeagueTeamStatsBundle";
 import { usePlayerStatLeadersBundle } from "../../../../../../lib/nba/usePlayerStatLeadersBundle";
@@ -231,7 +232,13 @@ function IdMetaCell({
   );
 }
 
-function PlayerIdCard({ detail }: { detail: NbaPlayerDetailPreview }) {
+function PlayerIdCard({
+  detail,
+  language,
+}: {
+  detail: NbaPlayerDetailPreview;
+  language: "ja" | "en";
+}) {
   const fullName = formatNbaPlayerDisplayName(
     detail.firstName,
     detail.lastName,
@@ -241,43 +248,58 @@ function PlayerIdCard({ detail }: { detail: NbaPlayerDetailPreview }) {
   const countryIso2 = nbaCountryNameToIso2(detail.country);
   return (
     <View style={[styles.idCard, { borderColor: accent }]}>
-      <JerseyHeroMark
-        teamId={detail.teamId}
-        jerseyNumber={detail.jerseyNumber}
-        accent={accent}
-      />
-      <View style={styles.idBody}>
+      <View style={[styles.idNameRow, { borderBottomColor: accent }]}>
         <Text style={styles.idName} numberOfLines={1}>
           {fullName}
         </Text>
-        <View style={styles.idMetaGrid}>
-          <IdMetaCell label="POSITION" value={detail.position} />
-          <IdMetaCell label="EXP" value={`${detail.experienceYears} YRS`} />
-          <IdMetaCell
-            label="PHYSIQUE"
-            value={formatPhysique(detail.height, detail.weight)}
-          />
-          <IdMetaCell
-            label="TEAM"
-            value={
-              detail.availability.status === "retired"
-                ? "RETIRED"
-                : detail.teamAbbr
-            }
-          />
-          <IdMetaCell
-            label="COUNTRY"
-            value={detail.country ?? "—"}
-            flagIso2={countryIso2}
-          />
-          <IdMetaCell
-            label="DRAFT"
-            value={formatDraftHero(
-              detail.draftYear,
-              detail.draftRound,
-              detail.draftNumber
-            )}
-          />
+        <NbaFavoriteStarButtonNative
+          kind="player"
+          playerId={String(detail.playerId)}
+          displayName={formatNbaPlayerDisplayName(
+            detail.firstName,
+            detail.lastName,
+            detail.playerId
+          )}
+          teamId={detail.teamId}
+          language={language}
+        />
+      </View>
+      <View style={styles.idCardBody}>
+        <JerseyHeroMark
+          teamId={detail.teamId}
+          jerseyNumber={detail.jerseyNumber}
+          accent={accent}
+        />
+        <View style={styles.idBody}>
+          <View style={styles.idMetaGrid}>
+            <IdMetaCell label="POSITION" value={detail.position} />
+            <IdMetaCell label="EXP" value={`${detail.experienceYears} YRS`} />
+            <IdMetaCell
+              label="PHYSIQUE"
+              value={formatPhysique(detail.height, detail.weight)}
+            />
+            <IdMetaCell
+              label="TEAM"
+              value={
+                detail.availability.status === "retired"
+                  ? "RETIRED"
+                  : detail.teamAbbr
+              }
+            />
+            <IdMetaCell
+              label="COUNTRY"
+              value={detail.country ?? "—"}
+              flagIso2={countryIso2}
+            />
+            <IdMetaCell
+              label="DRAFT"
+              value={formatDraftHero(
+                detail.draftYear,
+                detail.draftRound,
+                detail.draftNumber
+              )}
+            />
+          </View>
         </View>
       </View>
     </View>
@@ -1522,7 +1544,7 @@ export default function NbaPlayerDetailPanelNative({
           </Text>
         ) : null}
 
-        <PlayerIdCard detail={detail} />
+        <PlayerIdCard detail={detail} language={isJa ? "ja" : "en"} />
 
         <View style={[styles.divider, { backgroundColor: dividerColor }]} />
 
@@ -2014,11 +2036,32 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   idCard: {
-    flexDirection: "row",
     borderWidth: 1,
     backgroundColor: "#050808",
     overflow: "hidden",
+  },
+  idCardBody: {
+    flexDirection: "row",
     minHeight: 132,
+  },
+  idNameRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+  },
+  idName: {
+    flex: 1,
+    minWidth: 0,
+    fontFamily: METRIC_FONT,
+    color: "#FFFFFF",
+    fontSize: 20,
+    fontWeight: "800",
+    letterSpacing: 0.6,
+    transform: [{ skewX: "-8deg" }],
   },
   avatarBox: {
     width: 112,
@@ -2075,14 +2118,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 8,
   },
-  idName: {
-    fontFamily: METRIC_FONT,
-    color: "#FFFFFF",
-    fontSize: 20,
-    fontWeight: "800",
-    letterSpacing: 0.6,
-    transform: [{ skewX: "-8deg" }],
-  },
   idMetaGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -2096,7 +2131,7 @@ const styles = StyleSheet.create({
   idMetaLabel: {
     fontFamily: METRIC_FONT,
     color: "rgba(255,255,255,0.38)",
-    fontSize: 8,
+    fontSize: 9,
     fontWeight: "700",
     letterSpacing: 1.1,
     textTransform: "uppercase",
@@ -2117,7 +2152,7 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     fontFamily: METRIC_FONT,
     color: "#FFFFFF",
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: "800",
     letterSpacing: 0.3,
     transform: [{ skewX: "-6deg" }],

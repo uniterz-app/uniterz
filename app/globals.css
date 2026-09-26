@@ -7538,8 +7538,8 @@ body::before {
 }
 
 .profile-edit-kinetik-footer-ref--identity {
-  padding: 4px 6px 5px 5px;
-  font-size: 8px;
+  padding: 5px 7px 6px 6px;
+  font-size: 10px;
   letter-spacing: 0.045em;
   font-variant-numeric: tabular-nums;
 }
@@ -8527,8 +8527,8 @@ html.unit-earn-settling .profile-edit-kinetik-panel [class*="profile-plan-pro"] 
 
 @media (min-width: 640px) {
   .profile-edit-kinetik-footer-ref--identity {
-    padding: 5px 7px 6px 6px;
-    font-size: 8.5px;
+    padding: 5px 8px 6px 7px;
+    font-size: 10.5px;
     letter-spacing: 0.05em;
   }
 
@@ -8539,8 +8539,8 @@ html.unit-earn-settling .profile-edit-kinetik-panel [class*="profile-plan-pro"] 
 }
 
 .profile-edit-kinetik-card--web .profile-edit-kinetik-footer-ref--identity {
-  padding: 5px 8px 6px 7px;
-  font-size: 9px;
+  padding: 6px 9px 7px 8px;
+  font-size: 11px;
   letter-spacing: 0.05em;
 }
 

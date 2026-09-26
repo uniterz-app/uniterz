@@ -78,17 +78,11 @@ export function formatNbaPlayerListName(
   return `${initial}.${last}`;
 }
 
-/** 詳細ヘッダーなど。通称があれば通称、なければフルネーム。 */
+/** プレイヤー詳細ヒーロー用。通称は使わずフルネーム。 */
 export function formatNbaPlayerDisplayName(
   firstName: string,
   lastName: string,
-  playerId?: string | null
+  _playerId?: string | null
 ): string {
-  const full = `${firstName} ${lastName}`.trim();
-  if (playerId && NBA_PLAYER_LIST_ALIAS_BY_ID[playerId]) {
-    return NBA_PLAYER_LIST_ALIAS_BY_ID[playerId]!;
-  }
-  const alias = NBA_PLAYER_LIST_ALIAS_BY_NAME[normalizeNameKey(full)];
-  if (alias) return alias;
-  return full;
+  return `${firstName} ${lastName}`.trim();
 }

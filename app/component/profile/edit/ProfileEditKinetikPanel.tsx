@@ -28,6 +28,7 @@ import ProfileEditKinetikHeaderTabs from "./ProfileEditKinetikHeaderTabs";
 import ProfileEditKinetikGlitchTitle from "./ProfileEditKinetikGlitchTitle";
 import ProfileEditKinetikBadgeRow from "./ProfileEditKinetikBadgeRow";
 import BadgeDetailModal from "@/app/component/badges/BadgeDetailModal";
+import ProfileNbaFavoritesRow from "@/app/component/profile/ui/ProfileNbaFavoritesRow";
 import ProfileMetricInfoTip from "./ProfileMetricInfoTip";
 import ProfileKinetikPanelFrame from "@/app/component/profile/ui/ProfileKinetikPanelFrame";
 import type { ProfilePlanProBgVariant } from "@/lib/profile/profilePlanProBgVariants";
@@ -772,6 +773,16 @@ type Props = {
   profileViewCount?: number | null;
   /** 保有 Unit（公開） */
   unitBalance?: number | null;
+  /** お気に入り NBA チーム / 選手（プロフィールカード表示） */
+  nbaFavorites?: {
+    favoriteNbaTeamId: string | null;
+    favoriteNbaTeamFanSinceSeason: string | null;
+    favoriteNbaPlayers: Array<{
+      playerId: string;
+      displayName: string;
+      teamId: string;
+    }>;
+  } | null;
 };
 
 export default function ProfileEditKinetikPanel({
@@ -810,6 +821,7 @@ export default function ProfileEditKinetikPanel({
   metricsPeriodLabels = [],
   profileViewCount = null,
   unitBalance = null,
+  nbaFavorites = null,
 }: Props) {
   const router = useRouter();
   const panelCopy = profileKinetikPanelCopy(language);
@@ -1430,6 +1442,13 @@ export default function ProfileEditKinetikPanel({
                 />
               )}
               <div className="mt-auto pt-4">
+                {nbaFavorites ? (
+                  <ProfileNbaFavoritesRow
+                    favorites={nbaFavorites}
+                    language={langJaEn}
+                    className="mb-2.5"
+                  />
+                ) : null}
                 <ProfileKinetikIdentityJoinIdRow
                   memberSinceLabel={memberSinceLabel}
                   systemId={identity.systemId}
@@ -1553,6 +1572,13 @@ export default function ProfileEditKinetikPanel({
           </div>
 
           <div className="mt-auto pt-3">
+            {nbaFavorites ? (
+              <ProfileNbaFavoritesRow
+                favorites={nbaFavorites}
+                language={langJaEn}
+                className="mb-2"
+              />
+            ) : null}
             <ProfileKinetikIdentityJoinIdRow
               memberSinceLabel={memberSinceLabel}
               systemId={identity.systemId}
@@ -1633,6 +1659,13 @@ export default function ProfileEditKinetikPanel({
 
       {!isPro ? (
         <div className="mt-3">
+          {nbaFavorites ? (
+            <ProfileNbaFavoritesRow
+              favorites={nbaFavorites}
+              language={langJaEn}
+              className="mb-2"
+            />
+          ) : null}
           <ProfileKinetikIdentityJoinIdRow
             memberSinceLabel={memberSinceLabel}
             systemId={identity.systemId}

@@ -57,6 +57,7 @@ import {
   MATCH_CARD_BRACKET_TEXT,
 } from "../matchCardTypography";
 import JerseyMarkSvg from "../JerseyMarkSvg";
+import NbaFavoriteStarButtonNative from "../NbaFavoriteStarButtonNative";
 import { NbaTeamRosterCardNative } from "../predict/NbaRosterPanelNative";
 import NbaTeamHowTheyPlayNative from "./NbaTeamHowTheyPlayNative";
 import {
@@ -1861,11 +1862,18 @@ export default function NbaTeamDetailPanelNative({
                 {detail.nickEn.toUpperCase()}
               </Text>
             </View>
-            <TeamHeroStreakBadgeNative
-              streak={detail.streak}
-              last10={last10}
-              isJa={isJa}
-            />
+            <View style={styles.headerSideCol}>
+              <NbaFavoriteStarButtonNative
+                kind="team"
+                teamId={detail.teamId}
+                language={isJa ? "ja" : "en"}
+              />
+              <TeamHeroStreakBadgeNative
+                streak={detail.streak}
+                last10={last10}
+                isJa={isJa}
+              />
+            </View>
           </View>
 
           <View style={styles.recordRankRow}>
@@ -2149,6 +2157,10 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
     gap: 2,
+  },
+  headerSideCol: {
+    alignItems: "flex-end",
+    gap: 8,
   },
   confSeed: {
     fontFamily: METRIC_FONT,

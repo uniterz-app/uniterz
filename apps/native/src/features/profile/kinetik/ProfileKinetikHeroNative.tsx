@@ -60,6 +60,15 @@ export type ProfileKinetikHeroNativeProps = {
   onPressMark?: () => void;
   /** 過去週/月ナビ。呼び出し元の Pro */
   callerIsPro?: boolean;
+  nbaFavorites?: {
+    favoriteNbaTeamId: string | null;
+    favoriteNbaTeamFanSinceSeason: string | null;
+    favoriteNbaPlayers: Array<{
+      playerId: string;
+      displayName: string;
+      teamId: string;
+    }>;
+  } | null;
 };
 
 function toSummaryInput(summary?: ProfileSummaryNative | null) {
@@ -123,6 +132,7 @@ export default function ProfileKinetikHeroNative({
   markCount = 0,
   onPressMark,
   callerIsPro = false,
+  nbaFavorites = null,
 }: ProfileKinetikHeroNativeProps) {
   const [metricsPeriod, setMetricsPeriod] =
     useState<ProfileKinetikMetricsPeriod>(() => preferredNbaKinetikPeriod());
@@ -248,6 +258,10 @@ export default function ProfileKinetikHeroNative({
       maxStreak: winStreak,
       unitBalance: unitBalance ?? 0,
       profileViewCount: profileViewCount ?? null,
+      favoriteNbaTeamId: nbaFavorites?.favoriteNbaTeamId ?? null,
+      favoriteNbaTeamFanSinceSeason:
+        nbaFavorites?.favoriteNbaTeamFanSinceSeason ?? null,
+      favoriteNbaPlayers: nbaFavorites?.favoriteNbaPlayers ?? [],
     }),
     [
       avatarUrl,
@@ -256,6 +270,7 @@ export default function ProfileKinetikHeroNative({
       displayName,
       handle,
       memberSinceMs,
+      nbaFavorites,
       plan,
       planProBgVariant,
       profileViewCount,
@@ -337,6 +352,7 @@ export default function ProfileKinetikHeroNative({
           profileViewCount={profileViewCount}
           unitBalance={unitBalance}
           onOpenUnitLedger={isMe ? onOpenUnitLedger : undefined}
+          nbaFavorites={nbaFavorites}
           shareHandle={handle}
           metricValueDeltas={null}
           rankingLeague="nba"

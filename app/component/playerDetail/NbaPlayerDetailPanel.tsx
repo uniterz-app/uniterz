@@ -6,6 +6,7 @@ import { nameOxanium } from "@/lib/fonts";
 import { resolveLocalizedLang } from "@/lib/i18n/localize";
 import HalftoneJerseyMark from "@/app/component/games/HalftoneJerseyMark";
 import CountryFlag from "@/app/component/games/CountryFlag";
+import NbaFavoriteStarButton from "@/app/component/nba/NbaFavoriteStarButton";
 import {
   getTeamJerseyPrimaryColor,
   getTeamJerseySecondaryColor,
@@ -1293,88 +1294,106 @@ export default function NbaPlayerDetailPanel({
         </div>
       ) : null}
 
-      {/* ID CARD */}
+      {/* ID CARD — 名前は枠内最上段 */}
       <div
-        className="flex min-h-[148px] overflow-hidden border bg-[#050808]"
+        className="overflow-hidden border bg-[#050808]"
         style={{ borderColor: jerseyPrimary }}
       >
         <div
-          className="relative flex w-[112px] shrink-0 items-center justify-center border-r bg-[#0a0a0c]"
-          style={{
-            borderRightColor: jerseyPrimary,
-            backgroundImage: `repeating-linear-gradient(28deg, ${jerseyPrimary}48 0 1px, transparent 1px 10px)`,
-          }}
+          className="flex min-w-0 items-center justify-between gap-2 border-b px-3 py-2.5"
+          style={{ borderBottomColor: jerseyPrimary }}
         >
-          <div className="relative h-[72px] w-[72px]">
-            <HalftoneJerseyMark
-              accent={jerseyPrimary}
-              accentEnd={jerseySecondary}
-              className="h-[72px] w-[72px]"
-              glow="soft"
-            />
-            <span
-              className={`${nameOxanium.className} pointer-events-none absolute inset-x-0 top-[28px] text-center font-black leading-none text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.55)] ${
-                jerseyNum.length >= 3 ? "text-[15px]" : "text-[22px]"
-              }`}
-              style={{ transform: "skewX(-6deg)" }}
-            >
-              {jerseyNum}
-            </span>
-          </div>
-        </div>
-        <div className="relative flex min-w-0 flex-1 flex-col justify-center gap-2 px-3 py-3">
           <h1
-            className={`${nameOxanium.className} truncate text-[20px] font-extrabold tracking-wide text-white`}
+            className={`${nameOxanium.className} min-w-0 truncate text-[20px] font-extrabold tracking-wide text-white`}
             style={{ transform: "skewX(-8deg)" }}
           >
             {fullName}
           </h1>
-          <div className="grid grid-cols-2 gap-x-2 gap-y-1.5">
-            {(
-              [
-                ["POSITION", detail.position],
-                ["EXP", `${detail.experienceYears} YRS`],
-                ["PHYSIQUE", formatPhysique(detail.height, detail.weight)],
-                ["TEAM", isRetired ? "RETIRED" : detail.teamAbbr],
-                ["COUNTRY", detail.country ?? "—"],
+          <NbaFavoriteStarButton
+            kind="player"
+            playerId={String(detail.playerId)}
+            displayName={formatNbaPlayerDisplayName(
+              detail.firstName,
+              detail.lastName,
+              detail.playerId
+            )}
+            teamId={detail.teamId}
+            language={isJa ? "ja" : "en"}
+          />
+        </div>
+        <div className="flex min-h-[132px]">
+          <div
+            className="relative flex w-[112px] shrink-0 items-center justify-center border-r bg-[#0a0a0c]"
+            style={{
+              borderRightColor: jerseyPrimary,
+              backgroundImage: `repeating-linear-gradient(28deg, ${jerseyPrimary}48 0 1px, transparent 1px 10px)`,
+            }}
+          >
+            <div className="relative h-[72px] w-[72px]">
+              <HalftoneJerseyMark
+                accent={jerseyPrimary}
+                accentEnd={jerseySecondary}
+                className="h-[72px] w-[72px]"
+                glow="soft"
+              />
+              <span
+                className={`${nameOxanium.className} pointer-events-none absolute inset-x-0 top-[28px] text-center font-black leading-none text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.55)] ${
+                  jerseyNum.length >= 3 ? "text-[15px]" : "text-[22px]"
+                }`}
+                style={{ transform: "skewX(-6deg)" }}
+              >
+                {jerseyNum}
+              </span>
+            </div>
+          </div>
+          <div className="relative flex min-w-0 flex-1 flex-col justify-center gap-2 px-3 py-3">
+            <div className="grid grid-cols-2 gap-x-2 gap-y-1.5">
+              {(
                 [
-                  "DRAFT",
-                  formatDraftHero(
-                    detail.draftYear,
-                    detail.draftRound,
-                    detail.draftNumber
-                  ),
-                ],
-              ] as const
-            ).map(([label, value]) => {
-              const countryIso =
-                label === "COUNTRY"
-                  ? nbaCountryNameToIso2(detail.country)
-                  : null;
-              return (
-                <div key={label}>
-                  <p
-                    className={`${nameOxanium.className} text-[8px] font-bold uppercase tracking-[0.12em] text-white/40`}
-                  >
-                    {label}
-                  </p>
-                  <p
-                    className={`${nameOxanium.className} flex items-center gap-1.5 truncate text-[12px] font-extrabold text-white`}
-                    style={{ transform: "skewX(-6deg)" }}
-                  >
-                    <span className="truncate">{value}</span>
-                    {countryIso ? (
-                      <CountryFlag
-                        iso2={countryIso.toLowerCase()}
-                        variant="profileInline"
-                        alt={detail.country ?? undefined}
-                        className="shrink-0"
-                      />
-                    ) : null}
-                  </p>
-                </div>
-              );
-            })}
+                  ["POSITION", detail.position],
+                  ["EXP", `${detail.experienceYears} YRS`],
+                  ["PHYSIQUE", formatPhysique(detail.height, detail.weight)],
+                  ["TEAM", isRetired ? "RETIRED" : detail.teamAbbr],
+                  ["COUNTRY", detail.country ?? "—"],
+                  [
+                    "DRAFT",
+                    formatDraftHero(
+                      detail.draftYear,
+                      detail.draftRound,
+                      detail.draftNumber
+                    ),
+                  ],
+                ] as const
+              ).map(([label, value]) => {
+                const countryIso =
+                  label === "COUNTRY"
+                    ? nbaCountryNameToIso2(detail.country)
+                    : null;
+                return (
+                  <div key={label}>
+                    <p
+                      className={`${nameOxanium.className} text-[9px] font-bold uppercase tracking-[0.12em] text-white/40`}
+                    >
+                      {label}
+                    </p>
+                    <p
+                      className={`${nameOxanium.className} flex items-center gap-1.5 truncate text-[13px] font-extrabold text-white`}
+                      style={{ transform: "skewX(-6deg)" }}
+                    >
+                      <span className="truncate">{value}</span>
+                      {countryIso ? (
+                        <CountryFlag
+                          iso2={countryIso.toLowerCase()}
+                          variant="profileInline"
+                          alt={detail.country ?? undefined}
+                          className="shrink-0"
+                        />
+                      ) : null}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>

@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import UnitEarnOverlayNative from "../UnitEarnOverlayNative";
 import { useUnitEarnOverlayNative } from "../useUnitEarnOverlayNative";
+import ProfileNbaFavoritesRowNative from "./ProfileNbaFavoritesRowNative";
 import { unitVaultUiBalance } from "../../../../../../lib/units/unitVaultDisplay";
 import { UNIT_EARN_VAULT_COUNT_MS, unitEarnCountDisplayValue } from "../../../../../../lib/units/unitEarnMotion";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
@@ -1169,6 +1170,15 @@ export type ProfileKinetikPanelNativeProps = {
   marked?: boolean;
   markCount?: number;
   onPressMark?: () => void;
+  nbaFavorites?: {
+    favoriteNbaTeamId: string | null;
+    favoriteNbaTeamFanSinceSeason: string | null;
+    favoriteNbaPlayers: Array<{
+      playerId: string;
+      displayName: string;
+      teamId: string;
+    }>;
+  } | null;
 };
 
 export default function ProfileKinetikPanelNative({
@@ -1208,6 +1218,7 @@ export default function ProfileKinetikPanelNative({
   marked = false,
   markCount: _markCount = 0,
   onPressMark,
+  nbaFavorites = null,
 }: ProfileKinetikPanelNativeProps) {
   const copy = profileKinetikPanelCopy(language);
   const lang = copy.lang;
@@ -1819,6 +1830,14 @@ export default function ProfileKinetikPanelNative({
       </View>
 
       <View style={styles.cardFooterMeta}>
+        {nbaFavorites ? (
+          <View style={styles.favoritesFooter}>
+            <ProfileNbaFavoritesRowNative
+              favorites={nbaFavorites}
+              language={lang}
+            />
+          </View>
+        ) : null}
         <KinetikIdentityJoinIdRowNative
           memberSinceLabel={memberSinceLabel}
           idLabel={profileIdLabel}
@@ -2058,6 +2077,10 @@ const styles = StyleSheet.create({
     alignItems: "stretch",
     zIndex: 1,
   },
+  favoritesFooter: {
+    marginBottom: 8,
+    alignSelf: "stretch",
+  },
   identityIdPress: {
     alignSelf: "flex-start",
     maxWidth: "100%",
@@ -2077,7 +2100,7 @@ const styles = StyleSheet.create({
     alignSelf: "stretch",
     width: "100%",
     maxWidth: "100%",
-    height: 22,
+    height: 26,
   },
   footerMark: {
     marginLeft: "auto",
@@ -2124,22 +2147,22 @@ const styles = StyleSheet.create({
     minHeight: 22,
   },
   footerRefIdentity: {
-    paddingTop: 4,
-    paddingRight: 6,
-    paddingBottom: 5,
-    paddingLeft: 5,
-    minHeight: 22,
-    height: 22,
+    paddingTop: 5,
+    paddingRight: 7,
+    paddingBottom: 6,
+    paddingLeft: 6,
+    minHeight: 26,
+    height: 26,
     justifyContent: "center",
   },
   footerRefTextIdentity: {
     fontFamily: FOOTER_REF_FONT,
-    fontSize: 8,
+    fontSize: 10,
     fontWeight: "500",
     letterSpacing: 0.45,
     textTransform: "uppercase",
     color: "rgba(255,255,255,0.78)",
-    lineHeight: 10,
+    lineHeight: 12,
     includeFontPadding: false,
     fontVariant: ["tabular-nums"],
   },
