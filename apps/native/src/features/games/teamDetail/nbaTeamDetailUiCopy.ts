@@ -18,7 +18,6 @@ export const resolveNbaTeamDetailUiLang = resolveLocalizedLang;
 export function nbaTeamDetailUiCopy(language: string | null | undefined) {
   const lang = resolveLocalizedLang(language);
   return {
-    lang,
     noData: L(lang, {
       ja: "データがありません",
       en: "No data yet",

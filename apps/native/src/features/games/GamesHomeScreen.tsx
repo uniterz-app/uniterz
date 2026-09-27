@@ -1420,7 +1420,7 @@ export default function GamesHomeScreen({
       const found: ScheduleMyPostsMap = {};
       if (need.length === 0) return found;
       const snaps = [];
-      const IN_LIMIT = 10;
+      const IN_LIMIT = 30;
       for (let i = 0; i < need.length; i += IN_LIMIT) {
         const chunk = need.slice(i, i + IN_LIMIT);
         snaps.push(

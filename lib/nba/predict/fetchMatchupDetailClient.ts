@@ -97,6 +97,15 @@ export async function fetchMatchupDetailBundle(
   return value;
 }
 
+/** カード押下開始時など。結果は共有キャッシュに載り、予想ツールがそのまま使う */
+export function prefetchMatchupDetailBundle(
+  options: FetchMatchupDetailOptions
+): void {
+  if (!options.homeTeamId?.trim() || !options.awayTeamId?.trim()) return;
+  if (peekMatchupDetailBundle(options)) return;
+  void fetchMatchupDetailBundle(options).catch(() => {});
+}
+
 export function peekMatchupDetailBundle(
   options: FetchMatchupDetailOptions
 ): NbaMatchupDetailApiPayload | null {

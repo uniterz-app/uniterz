@@ -71,6 +71,7 @@ import {
 } from "@/lib/team-colors";
 import { normalizeLeague, type League } from "@/lib/leagues";
 import { auth } from "@/lib/firebase";
+import { prefetchMatchupDetailBundle } from "@/lib/nba/predict/fetchMatchupDetailClient";
 import EventPill from "@/app/component/common/EventPill";
 import { getGameEventTag } from "@/lib/events/eventRules";
 import { displayNbaRoundLabel } from "@/lib/games/displayNbaRoundLabel";
@@ -1219,6 +1220,16 @@ const mergedPreKickoffScoreClass = [
     if (isGameStarted) return;
   };
 
+  /** 押下開始で予想ツール（INJURY / STATS / ROSTER）を先読み。開いたときは共有キャッシュから即表示 */
+  const prefetchPredictTools = () => {
+    if (league !== "nba" || !onOpenPredict || !auth.currentUser) return;
+    if (!home.teamId || !away.teamId) return;
+    prefetchMatchupDetailBundle({
+      homeTeamId: home.teamId,
+      awayTeamId: away.teamId,
+    });
+  };
+
   const handleOpenPredict = (e: React.MouseEvent | React.KeyboardEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -1311,18 +1322,22 @@ const mergedPreKickoffScoreClass = [
     !inPredictOverlay &&
     (Boolean(onOpenPredict) || Boolean(effectiveFullCardLinkHref));
 
-  const fullCardPressHandlers =
-    useFullCardHitLayer && !reduceMotion
-      ? {
-          onPointerDown: () => setFullCardPressed(true),
+  const fullCardPressHandlers = !useFullCardHitLayer
+    ? {}
+    : reduceMotion
+      ? { onPointerDown: prefetchPredictTools }
+      : {
+          onPointerDown: () => {
+            prefetchPredictTools();
+            setFullCardPressed(true);
+          },
           onPointerUp: () => setFullCardPressed(false),
           onPointerLeave: () => setFullCardPressed(false),
           onPointerCancel: () => setFullCardPressed(false),
           onTouchStart: () => setFullCardPressed(true),
           onTouchEnd: () => setFullCardPressed(false),
           onTouchCancel: () => setFullCardPressed(false),
-        }
-      : {};
+        };
 
   const cardShellPressScale =
     useFullCardHitLayer && fullCardPressed && !reduceMotion ? 0.99 : 1;
@@ -2487,6 +2502,7 @@ const card = (
           ) : (
             <button
               type="button"
+              onPointerDown={prefetchPredictTools}
               onClick={handleOpenPredict}
               disabled={Boolean(isPredicted && !onOpenPredict)}
               className={[

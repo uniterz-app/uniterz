@@ -436,6 +436,12 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#fff",
   },
+  inputPlaceholder: {
+    fontFamily: OX,
+    fontSize: 15,
+    fontWeight: "700",
+    color: "rgba(255,255,255,0.25)",
+  },
   dropdown: {
     marginTop: 4,
     maxHeight: 220,

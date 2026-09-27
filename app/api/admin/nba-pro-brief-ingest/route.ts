@@ -15,6 +15,7 @@ import {
   submitProInsightNarrativeBatch,
 } from "@/lib/nba/insights/proInsightLlm/ingestProInsightNarrativeBatch";
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
+import { revalidateMatchupInsightCache } from "@/lib/nba/predict/matchupInsightCache";
 
 type RouteMode =
   | NbaProBriefIngestMode
@@ -76,10 +77,14 @@ export async function POST(req: Request) {
                 : "full";
 
     const db = getAdminDb();
+    const respond = (result: { ok: boolean }) => {
+      revalidateMatchupInsightCache();
+      return NextResponse.json(result, { status: result.ok ? 200 : 207 });
+    };
 
     if (mode === "batch_poll") {
       const result = await pollProInsightNarrativeBatches(db);
-      return NextResponse.json(result, { status: result.ok ? 200 : 207 });
+      return respond(result);
     }
 
     if (mode === "batch_submit") {
@@ -95,7 +100,7 @@ export async function POST(req: Request) {
         includePreseason: body.includePreseason === true,
         syncChat: body.syncChat === true,
       });
-      return NextResponse.json(result, { status: result.ok ? 200 : 207 });
+      return respond(result);
     }
 
     if (mode === "narrative_patch") {
@@ -105,7 +110,7 @@ export async function POST(req: Request) {
           ? body.gameIds.filter((x) => typeof x === "string" && x.trim())
           : undefined,
       });
-      return NextResponse.json(result, { status: result.ok ? 200 : 207 });
+      return respond(result);
     }
 
     const result = await ingestNbaProBriefs(db, {
@@ -121,7 +126,7 @@ export async function POST(req: Request) {
       rebuildPriorRecords: body.rebuildPriorRecords === true,
     });
 
-    return NextResponse.json(result, { status: result.ok ? 200 : 207 });
+    return respond(result);
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
     return NextResponse.json({ ok: false, error: message }, { status: 500 });

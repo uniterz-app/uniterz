@@ -28,6 +28,8 @@ import {
 import TutorialCardTapHintNative from "../tutorial/TutorialCardTapHintNative";
 import { MATCH_CARD_DISPLAY_FONT } from "./matchCardTypography";
 import { displayNbaRoundLabel } from "../../../../../lib/games/displayNbaRoundLabel";
+import { prefetchMatchupDetailBundle } from "../../../../../lib/nba/predict/fetchMatchupDetailClient";
+import { getUniterzApiBaseUrl } from "./submitPredictionApi";
 function matchRoundSideCode(roundLabel: string): string {
   const u = roundLabel.toUpperCase();
   if (u.includes("PLAYOFF") || u.includes("プレーオフ")) return "PO";
@@ -258,6 +260,13 @@ export const GameCardListRow = memo(function GameCardListRow(props: GameCardList
         void openPredictModal(game);
       }}
       onPressIn={() => {
+        if (leagueKey === "nba" && homeTeamId && awayTeamId) {
+          prefetchMatchupDetailBundle({
+            homeTeamId,
+            awayTeamId,
+            apiBaseUrl: getUniterzApiBaseUrl(),
+          });
+        }
         ent.pressed.value = reduceMotion
           ? 1
           : withTiming(1, { duration: 90 });

@@ -28,7 +28,13 @@ export async function loadGameKickoffLock(
   if (!id) return { ok: false, error: "game_not_found" };
   const snap = await db.collection("games").doc(id).get();
   if (!snap.exists) return { ok: false, error: "game_not_found" };
-  const g = snap.data() ?? {};
+  return gameKickoffLockFromData(snap.data() ?? {});
+}
+
+/** 同一リクエストで読んだ games ドキュメントから判定する（再読しない） */
+export function gameKickoffLockFromData(
+  g: Record<string, unknown>
+): GameKickoffLockResult {
   const startAtMillis =
     toMillis(g.startAtJst) ?? toMillis(g.startAt) ?? null;
   if (startAtMillis == null) return { ok: false, error: "invalid_startAt" };

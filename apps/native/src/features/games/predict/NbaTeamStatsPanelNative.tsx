@@ -224,10 +224,12 @@ function FormGameBoxOverlay({
   gameId,
   language,
   onClose,
+  onOpenTeamDetail,
 }: {
   gameId: string;
   language: GamesLanguage;
   onClose: () => void;
+  onOpenTeamDetail?: (teamId: string) => void;
 }) {
   const lang = resolveLocalizedLang(language);
   const { report, loading } = useLiveGameStats(gameId, true, {
@@ -307,10 +309,12 @@ function RecentFormGamesStrip({
   left,
   right,
   language,
+  onOpenTeamDetail,
 }: {
   left: NbaTeamFormGame[];
   right: NbaTeamFormGame[];
   language: GamesLanguage;
+  onOpenTeamDetail?: (teamId: string) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [boxGameId, setBoxGameId] = useState<string | null>(null);
@@ -384,6 +388,7 @@ function RecentFormGamesStrip({
           gameId={boxGameId}
           language={language}
           onClose={() => setBoxGameId(null)}
+          onOpenTeamDetail={onOpenTeamDetail}
         />
       ) : null}
     </View>
@@ -712,6 +717,7 @@ export default function NbaTeamStatsPanelNative({
             left={formLeft}
             right={formRight}
             language={language}
+            onOpenTeamDetail={onOpenTeamDetail}
           />
         ) : null}
       </View>

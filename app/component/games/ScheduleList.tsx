@@ -512,8 +512,8 @@ export default function ScheduleList({
 
       try {
         const chunks: string[][] = [];
-        for (let i = 0; i < need.length; i += 10) {
-          chunks.push(need.slice(i, i + 10));
+        for (let i = 0; i < need.length; i += 30) {
+          chunks.push(need.slice(i, i + 30));
         }
 
         const snaps = await Promise.all(

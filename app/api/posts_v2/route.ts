@@ -22,7 +22,7 @@ import { touchReferralPredictDay } from "@/lib/referral/touchReferralPredictDay"
 import { settleReferralRelationWithRetries } from "@/lib/referral/settleReferralRelation";
 import {
   deterministicPostV2Id,
-  loadGameKickoffLock,
+  gameKickoffLockFromData,
 } from "@/lib/predict/gameKickoffLock";
 import {
   applyLiveMarketDelta,
@@ -185,11 +185,13 @@ export async function POST(req: Request) {
     let authorHandle: string | null = null;
     let referredByUid: string | null = null;
     let referralSettled = false;
+    let userFlags: Record<string, unknown> | null = null;
 
     try {
       const userDoc = await adminDb.collection("users").doc(uid).get();
       if (userDoc.exists) {
         const u = userDoc.data() || {};
+        userFlags = u;
         authorDisplayName = u.displayName || authorDisplayName;
         authorPhotoURL = u.photoURL || u.avatarUrl || null;
         authorHandle = u.handle || u.username || u.slug || null;
@@ -246,7 +248,7 @@ export async function POST(req: Request) {
     const startAtMillis = startAtTs.toMillis();
     const startAtIso = new Date(startAtMillis).toISOString();
 
-    const lock = await loadGameKickoffLock(adminDb, parsed.gameId);
+    const lock = gameKickoffLockFromData(g);
     if (!lock.ok) {
       return NextResponse.json(
         { ok: false, error: lock.error },
@@ -334,13 +336,6 @@ export async function POST(req: Request) {
     }
 
     const postId = deterministicPostV2Id(uid, parsed.gameId);
-    const existingById = await adminDb.collection("posts").doc(postId).get();
-    if (existingById.exists) {
-      return NextResponse.json(
-        { ok: false, error: "duplicate", existingId: postId },
-        { status: 409 }
-      );
-    }
 
     const data = {
       schemaVersion: 2,
@@ -434,7 +429,11 @@ export async function POST(req: Request) {
         console.error("[POST /api/posts_v2] predictorUids", predErr);
       }
       const leagueFlagPatch = resultLeagueFlagPatchForPost(league);
-      if (leagueFlagPatch) {
+      const flagsAlreadySet =
+        leagueFlagPatch != null &&
+        userFlags != null &&
+        Object.keys(leagueFlagPatch).every((k) => userFlags?.[k] === true);
+      if (leagueFlagPatch && !flagsAlreadySet) {
         try {
           await adminDb
             .collection("users")
