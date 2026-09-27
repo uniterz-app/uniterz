@@ -19,11 +19,7 @@ import { L, resolveLocalizedLang } from "@/lib/i18n/localize";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import { saveMeProSkin } from "@/lib/api/saveMeProSkin";
 import { fetchProSkinStatus } from "@/lib/api/fetchProSkinStatus";
-import {
-  profilePlanProAdoptedCategoryLabel,
-  type ProfilePlanProAdoptedCategory,
-  type ProfilePlanProAdoptedEntry,
-} from "@/lib/profile/profilePlanProAdoptedBgVariants";
+import type { ProfilePlanProAdoptedEntry } from "@/lib/profile/profilePlanProAdoptedBgVariants";
 import {
   formatProSkinOwnerCount,
   formatProSkinUnlockCondition,
@@ -62,23 +58,6 @@ type Props = {
 
 function formatSkinNo(index: number): string {
   return `No.${index + 1}`;
-}
-
-function categoryBadgeClass(category: ProfilePlanProAdoptedCategory): string {
-  switch (category) {
-    case "cyber":
-      return "bg-cyan-400/15 text-cyan-200/90";
-    case "reptile":
-      return "bg-orange-400/15 text-orange-200/90";
-    case "beast":
-      return "bg-fuchsia-400/15 text-fuchsia-200/90";
-    case "material":
-      return "bg-slate-400/15 text-slate-200/90";
-    case "geometry":
-      return "bg-emerald-400/15 text-emerald-200/90";
-    case "cosmos":
-      return "bg-indigo-400/15 text-indigo-200/90";
-  }
 }
 
 function panelProps(language: string) {
@@ -308,15 +287,6 @@ function CatalogTile({
           ) : null}
         </div>
         <div className="profile-plan-pro-bg-picker-catalog-tile__group-row flex flex-wrap items-center gap-1.5">
-          <span
-            className={[
-              nameOxanium.className,
-              "rounded px-1.5 py-0.5 text-[8px] font-extrabold uppercase tracking-[0.1em]",
-              categoryBadgeClass(entry.category),
-            ].join(" ")}
-          >
-            {profilePlanProAdoptedCategoryLabel(entry.category, language)}
-          </span>
           {!unlocked ? (
             <span
               className={[

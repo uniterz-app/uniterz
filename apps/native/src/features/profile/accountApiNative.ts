@@ -1,7 +1,10 @@
 /**
  * Web `saveMeProSkin` / `deleteMeAccount` の Native 版
  */
-import type { ProfilePlanProBgVariant } from "../../../../../lib/profile/profilePlanProBgVariants";
+import {
+  PROFILE_PLAN_PRO_BG_DEFAULT,
+  type ProfilePlanProBgVariant,
+} from "../../../../../lib/profile/profilePlanProBgVariants";
 import { auth } from "../../lib/firebase";
 import { getUniterzApiBaseUrl } from "../games/submitPredictionApi";
 
@@ -140,7 +143,7 @@ export async function fetchProSkinStatusNative(): Promise<{
   }
   return {
     unlockedIds: data.unlockedIds ?? [],
-    savedId: data.savedId ?? "beast-dust",
+    savedId: data.savedId ?? PROFILE_PLAN_PRO_BG_DEFAULT,
     isPro: data.progress?.isPro === true,
     progress: {
       posts: data.progress?.posts ?? 0,

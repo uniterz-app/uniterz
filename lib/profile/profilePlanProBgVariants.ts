@@ -48,8 +48,8 @@ export type ProfilePlanProBgVariant =
   | ProfilePlanProFuturisticBgVariant
   | ProfilePlanProWaveBgVariant;
 
-/** 本番 PRO プロフィール背景 — 確定: Dust */
-export const PROFILE_PLAN_PRO_BG_DEFAULT: ProfilePlanProBgVariant = "beast-dust";
+/** 本番 PRO プロフィール背景 — 確定: Atmos */
+export const PROFILE_PLAN_PRO_BG_DEFAULT: ProfilePlanProBgVariant = "atmos";
 
 export type ProfilePlanProBgVariantMeta = {
   id: ProfilePlanProBgVariant;

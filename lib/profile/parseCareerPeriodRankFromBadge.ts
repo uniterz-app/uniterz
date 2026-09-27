@@ -1,5 +1,7 @@
 /** user_badges の badgeId から週/月 / プレーイン・PO の順位を復元 */
 
+import { splitRankingBadgeId } from "@/lib/badges/rankingBadgeId";
+
 export type CareerPeriodRankFromBadge = {
   period: "weekly" | "monthly";
   label: string;
@@ -26,8 +28,8 @@ const PO_ALL_BADGE_RE =
 export function parseCareerPeriodRankFromBadgeId(
   badgeId: string
 ): CareerPeriodRankFromBadge | null {
-  const id = badgeId.trim();
-  if (!id) return null;
+  if (!badgeId.trim()) return null;
+  const id = splitRankingBadgeId(badgeId).body;
 
   const monthly = MONTHLY_BADGE_RE.exec(id);
   if (monthly) {
@@ -106,7 +108,7 @@ export function badgeMetricCountsForCareerPeriodRank(metricSlug: string): boolea
 export function parseCareerPeriodRankFromBadgeIdFiltered(
   badgeId: string
 ): CareerPeriodRankFromBadge | null {
-  const id = badgeId.trim();
+  const id = splitRankingBadgeId(badgeId).body;
   const monthly = MONTHLY_BADGE_RE.exec(id);
   if (monthly) {
     const metric = monthly[3] ?? "";

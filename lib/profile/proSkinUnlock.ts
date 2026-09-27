@@ -1,5 +1,5 @@
 /**
- * Pro Skin 解放ルール — 即解放11 / マイルストーン46。
+ * Pro Skin 解放ルール — 即解放11 / マイルストーン45。
  * 表示順の正は `PROFILE_PLAN_PRO_ADOPTED_BG`。解放条件は milestone catalog。
  */
 
@@ -14,6 +14,7 @@ import {
   PRO_SKIN_PERIOD_WIN_MILESTONES,
   PRO_SKIN_RANK_MILESTONES,
   PRO_SKIN_REFERRAL_MILESTONES,
+  PRO_SKIN_SEASON_RANK_MILESTONES,
   PRO_SKIN_STREAK_RUN_MILESTONES,
   PRO_SKIN_THRESHOLD_MILESTONES,
   PRO_SKIN_UNLOCK_FROM_SEASON_KEY as CATALOG_FROM_SEASON,
@@ -30,6 +31,7 @@ export type ProSkinUnlockKind =
   | "monthlyRank"
   | "referralCompleted"
   | "periodWins"
+  | "seasonRank"
   | "titleCollection";
 
 export type ProSkinRankMetric =
@@ -61,6 +63,12 @@ export type ProSkinUnlockRule =
       metric: ProSkinRankMetric;
       maxRank: number;
       wins: number;
+    }
+  | {
+      /** RS 累計（standard 総合）の最終順位。grant でのみ解放 */
+      kind: "seasonRank";
+      maxRank: number;
+      metric: ProSkinRankMetric;
     }
   | {
       kind: "titleCollection";
@@ -219,6 +227,13 @@ const UNLOCK_RULE_BY_ID: Map<ProfilePlanProBgVariant, ProSkinUnlockRule> =
         wins: row.wins,
       });
     }
+    for (const row of PRO_SKIN_SEASON_RANK_MILESTONES) {
+      m.set(row.id as ProfilePlanProBgVariant, {
+        kind: "seasonRank",
+        maxRank: row.maxRank,
+        metric: row.metric,
+      });
+    }
     return m;
   })();
 
@@ -301,6 +316,8 @@ export function isProSkinUnlockRuleMet(
       });
       return (progress.periodWins[key] ?? 0) >= rule.wins;
     }
+    case "seasonRank":
+      return false;
     case "titleCollection":
       if (!unlockedIds) return false;
       return rule.requires.every((id) => unlockedIds.has(id));
@@ -584,6 +601,27 @@ export function formatProSkinUnlockCondition(
         fr: `Débloquez après ${rule.wins}× ${periodLabel} ${metricLabel} ${rankLabel}`,
       });
     }
+    case "seasonRank":
+      if (rule.maxRank === 1) {
+        return L(lang, {
+          ja: "レギュラーシーズン総合 1位で解放",
+          en: "Unlock at regular season #1",
+          ko: "정규시즌 종합 1위로 해제",
+          zh: "常规赛总分第1名解锁",
+          es: "Desbloquea con el #1 de temporada regular",
+          pt: "Desbloqueie com o #1 da temporada regular",
+          fr: "Débloquez au n°1 de la saison régulière",
+        });
+      }
+      return L(lang, {
+        ja: `レギュラーシーズン総合 Top${rule.maxRank} で解放`,
+        en: `Unlock at regular season Top ${rule.maxRank}`,
+        ko: `정규시즌 종합 Top${rule.maxRank}로 해제`,
+        zh: `常规赛总分 Top${rule.maxRank} 解锁`,
+        es: `Desbloquea en el Top ${rule.maxRank} de temporada regular`,
+        pt: `Desbloqueie no Top ${rule.maxRank} da temporada regular`,
+        fr: `Débloquez dans le Top ${rule.maxRank} de la saison régulière`,
+      });
     case "titleCollection":
       return L(lang, {
         ja: "月間総合・UPSET・最多得点者の各1位スキンを集めて解放",

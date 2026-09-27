@@ -2,15 +2,16 @@
  * Pro Skin マイルストーン定義の単一ソース。
  * Functions へは `npm run sync:pro-skin-milestone-catalog` で同期する。
  *
- * 構成: 即解放 11 / マイルストーン 46
+ * 構成: 即解放 11 / マイルストーン 45
  *
  * 系統ごとに世界観を揃える（低い段は柄、高い段は宇宙写真）
  * - 連勝 = 紅・炎 / パーフェクト = 蒼・氷 / 予想数 = 地球→冥王星の旅
- * - 順位1回 = 称号（幾何・金属） / 順位回数 = 深宇宙 / 招待 = 金
+ * - 順位1回 = 称号（幾何・金属） / 順位回数 = 深宇宙 / RS 最終順位 = 銀河 / 招待 = 金
  *
  * - 閾値系・連勝回数系 → NBA settle
  * - 順位1回系 → period snapshot 確定後 grant（earnedIds）
  * - 順位回数系 → 同 grant で wins 加算 → 閾値到達で解放
+ * - RS 最終順位系 → RS 全試合 final 後の season snapshot から grant（earnedIds）
  * - 招待系 → referral settle で completedCount 到達時に解放
  */
 export const PRO_SKIN_UNLOCK_FROM_SEASON_KEY = "2026-27";
@@ -126,21 +127,15 @@ export const PRO_SKIN_STREAK_RUN_LENGTHS: readonly number[] = [
 /** 週/月順位 1回達成 = 称号（standard ボード） */
 export const PRO_SKIN_RANK_MILESTONES: readonly ProSkinRankMilestone[] = [
   { id: "beast-tessera", period: "weekly", metric: "totalPoints", maxRank: 10 },
+  { id: "beast-jagarmor", period: "weekly", metric: "totalPoints", maxRank: 3 },
   { id: "form-isocubes", period: "weekly", metric: "totalPoints", maxRank: 1 },
-  { id: "beast-jagarmor", period: "weekly", metric: "totalUpset", maxRank: 1 },
-  { id: "wave-obsidian-warp", period: "weekly", metric: "winRate", maxRank: 1 },
   {
-    id: "wave-neon-ridge",
-    period: "weekly",
-    metric: "totalGoalScorerHits",
-    maxRank: 1,
-  },
-  {
-    id: "beast-circuitlace",
+    id: "wave-obsidian-warp",
     period: "monthly",
     metric: "totalPoints",
     maxRank: 10,
   },
+  { id: "wave-neon-ridge", period: "monthly", metric: "totalPoints", maxRank: 3 },
   {
     id: "beast-facet",
     period: "monthly",
@@ -181,15 +176,8 @@ export const PRO_SKIN_PERIOD_WIN_MILESTONES: readonly ProSkinPeriodWinMilestone[
       id: "beast-crab",
       period: "weekly",
       metric: "totalPoints",
-      maxRank: 1,
+      maxRank: 3,
       wins: 3,
-    },
-    {
-      id: "beast-pillars",
-      period: "weekly",
-      metric: "totalPoints",
-      maxRank: 1,
-      wins: 5,
     },
     {
       id: "beast-southernring",
@@ -198,35 +186,31 @@ export const PRO_SKIN_PERIOD_WIN_MILESTONES: readonly ProSkinPeriodWinMilestone[
       maxRank: 10,
       wins: 3,
     },
-    {
-      id: "beast-andromeda",
-      period: "monthly",
-      metric: "totalPoints",
-      maxRank: 10,
-      wins: 5,
-    },
-    {
-      id: "beast-galaxy",
-      period: "monthly",
-      metric: "totalPoints",
-      maxRank: 1,
-      wins: 3,
-    },
-    {
-      id: "beast-milkyway",
-      period: "monthly",
-      metric: "totalPoints",
-      maxRank: 10,
-      wins: 10,
-    },
-    {
-      id: "beast-deepfield",
-      period: "monthly",
-      metric: "totalPoints",
-      maxRank: 1,
-      wins: 5,
-    },
   ] as const;
+
+/**
+ * レギュラーシーズン累計（standard 総合）の最終順位 = 銀河。
+ * RS 最終日確定後に 1 回だけ grant。上位は下位段もまとめて解放（rank <= maxRank）。
+ */
+export type ProSkinSeasonRankMilestone = {
+  id: string;
+  metric: "totalPoints";
+  maxRank: number;
+};
+
+export const PRO_SKIN_SEASON_RANK_MILESTONES: readonly ProSkinSeasonRankMilestone[] =
+  [
+    { id: "beast-galaxy", metric: "totalPoints", maxRank: 50 },
+    { id: "beast-deepfield", metric: "totalPoints", maxRank: 20 },
+    { id: "beast-milkyway", metric: "totalPoints", maxRank: 10 },
+    { id: "beast-andromeda", metric: "totalPoints", maxRank: 5 },
+    { id: "beast-pillars", metric: "totalPoints", maxRank: 1 },
+  ] as const;
+
+/** RS 最終順位 grant の冪等ロック */
+export function proSkinSeasonRankGrantLockDocPath(seasonKey: string): string {
+  return `meta/proSkinPeriodGrants/locks/season_${seasonKey.replace(/\//g, "_")}`;
+}
 
 /** periodWins カウンタのキー（users.proSkinProgress.periodWins） */
 export function proSkinPeriodWinCounterKey(opts: {

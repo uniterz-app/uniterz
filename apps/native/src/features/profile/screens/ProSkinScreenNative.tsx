@@ -37,10 +37,6 @@ import { useFirebaseUser } from "../../../auth/FirebaseUserProvider";
 import { cyberAlert } from "../../../components/cyberAlert";
 import { useNativeUserLanguageFromAuth } from "../../../hooks/useNativeUserLanguage";
 import type { ProfileStackParamList } from "../../../navigation/types";
-import {
-  profilePlanProAdoptedCategoryLabel,
-  type ProfilePlanProAdoptedCategory,
-} from "../../../../../../lib/profile/profilePlanProAdoptedBgVariants";
 import { profilePlanProAdoptedSkinSwatch } from "../../../../../../lib/profile/profilePlanProAdoptedSkinSwatch";
 import { parseCssLinearGradientColors } from "../../../../../../lib/profile/parseCssLinearGradientColors";
 import {
@@ -67,26 +63,6 @@ const GAP = 10;
 
 function thumbPreviewHeight(width: number) {
   return Math.max(84, Math.min(108, Math.round(width / 2.05)));
-}
-
-function categoryBadgeColors(category: ProfilePlanProAdoptedCategory): {
-  bg: string;
-  text: string;
-} {
-  switch (category) {
-    case "cyber":
-      return { bg: "rgba(34,211,238,0.15)", text: "rgba(165,243,252,0.9)" };
-    case "reptile":
-      return { bg: "rgba(251,146,60,0.15)", text: "rgba(254,215,170,0.9)" };
-    case "beast":
-      return { bg: "rgba(232,121,249,0.15)", text: "rgba(245,208,254,0.9)" };
-    case "material":
-      return { bg: "rgba(148,163,184,0.15)", text: "rgba(226,232,240,0.9)" };
-    case "geometry":
-      return { bg: "rgba(52,211,153,0.15)", text: "rgba(167,243,208,0.9)" };
-    case "cosmos":
-      return { bg: "rgba(129,140,248,0.15)", text: "rgba(199,210,254,0.9)" };
-  }
 }
 
 function previewPanelProps(language: string) {
@@ -182,7 +158,6 @@ function SkinThumbNative({
   onPress: () => void;
 }) {
   const height = thumbPreviewHeight(width);
-  const cat = categoryBadgeColors(entry.category);
   const condition = formatProSkinUnlockCondition(entry.unlock, language);
   const swatchColors = parseCssLinearGradientColors(
     profilePlanProAdoptedSkinSwatch(entry)
@@ -224,11 +199,6 @@ function SkinThumbNative({
           ) : null}
         </View>
         <View style={styles.tileBadgeRow}>
-          <View style={[styles.tileCatBadge, { backgroundColor: cat.bg }]}>
-            <Text style={[styles.tileCatText, { color: cat.text }]} numberOfLines={1}>
-              {profilePlanProAdoptedCategoryLabel(entry.category, language)}
-            </Text>
-          </View>
           <View
             style={[
               styles.tileLockBadge,
@@ -923,17 +893,6 @@ const styles = StyleSheet.create({
   tileTagText: {
     fontSize: 10,
     color: "rgba(255,255,255,0.45)",
-  },
-  tileCatBadge: {
-    alignSelf: "flex-start",
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-  },
-  tileCatText: {
-    fontSize: 8,
-    fontWeight: "800",
-    letterSpacing: 1,
-    textTransform: "uppercase",
   },
   tileBadgeRow: {
     flexDirection: "row",

@@ -1,9 +1,11 @@
 /**
- * Web 相当なし — DEV 用マイルストーン Pro Skin 一覧（解放条件順）。
+ * Web 相当なし — DEV 用マイルストーン Pro Skin（各ラインの代表 5 種 + 解放画面プレビュー）。
  * Profile サイドメニュー DEV → Milestone Pro Skin
  */
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { useState } from "react";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import MobilePageShell from "../mobileScreens/MobilePageShell";
+import ProfileProSkinUnlockOverlayNative from "../reports/ProfileProSkinUnlockOverlayNative";
 import ProfileKinetikPanelNative from "./ProfileKinetikPanelNative";
 import ProSkinImageCreditNative from "./ProSkinImageCreditNative";
 import { CyberRankingListRowNative } from "../../rankings/CyberRankingListRowNative";
@@ -31,8 +33,16 @@ type PreviewEntry = {
   heading: string;
 };
 
+const PREVIEW_IDS: readonly string[] = [
+  "beast-corona",
+  "beast-nova",
+  "beast-pluto",
+  "beast-regalia",
+  "beast-deepfield",
+];
+
 function previewEntries(language: string): PreviewEntry[] {
-  return PRO_SKIN_UNLOCK_CATALOG.filter((e) => e.unlock.kind !== "pro").map(
+  return PRO_SKIN_UNLOCK_CATALOG.filter((e) => PREVIEW_IDS.includes(e.id)).map(
     (e) => ({
       id: e.id as ProfilePlanProBeastBgVariant,
       heading: formatProSkinUnlockCondition(e.unlock, language),
@@ -84,8 +94,11 @@ export default function MilestoneProSkinPreviewScreenNative({
   const lang = resolveLocalizedLang(language);
   const ja = lang === "ja";
   const entries = previewEntries(lang);
+  const [unlockPreviewId, setUnlockPreviewId] =
+    useState<ProfilePlanProBeastBgVariant | null>(null);
 
   return (
+    <>
     <MobilePageShell
       title="Milestone"
       eyebrow={`DEV · MILESTONE ×${entries.length}`}
@@ -135,11 +148,30 @@ export default function MilestoneProSkinPreviewScreenNative({
                 language={lang}
                 style={styles.credit}
               />
+              <Pressable
+                style={styles.unlockBtn}
+                onPress={() => setUnlockPreviewId(id)}
+              >
+                <Text style={styles.unlockBtnText}>
+                  {ja ? "解放画面を見る" : "Preview unlock"}
+                </Text>
+              </Pressable>
             </View>
           );
         })}
       </ScrollView>
     </MobilePageShell>
+    {unlockPreviewId ? (
+      <ProfileProSkinUnlockOverlayNative
+        unlockedIds={[unlockPreviewId]}
+        language={language}
+        preview
+        visible
+        ownerCounts={{ [unlockPreviewId]: 128 }}
+        onDismiss={() => setUnlockPreviewId(null)}
+      />
+    ) : null}
+    </>
   );
 }
 
@@ -172,6 +204,20 @@ const styles = StyleSheet.create({
   },
   credit: {
     marginTop: 6,
+  },
+  unlockBtn: {
+    marginTop: 10,
+    alignSelf: "flex-start",
+    borderWidth: 1,
+    borderColor: "rgba(0,245,255,0.5)",
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+  },
+  unlockBtnText: {
+    fontFamily: OXANIUM_800,
+    fontSize: 11,
+    letterSpacing: 1.2,
+    color: "#00F5FF",
   },
   rankWrap: {
     marginTop: 10,

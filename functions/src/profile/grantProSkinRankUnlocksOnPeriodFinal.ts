@@ -100,7 +100,7 @@ export function isNbaPeriodFinalForProSkinGrants(
   return true;
 }
 
-function isProUser(user: Record<string, unknown>): boolean {
+export function isProUser(user: Record<string, unknown>): boolean {
   if (user.plan !== "pro") return false;
   const until = user.proUntil as
     | { toMillis?: () => number; seconds?: number; _seconds?: number }
@@ -123,7 +123,7 @@ function isProUser(user: Record<string, unknown>): boolean {
   return ms > Date.now();
 }
 
-async function incrementHolderCounts(
+export async function incrementHolderCounts(
   newlyBySkin: Map<string, number>
 ): Promise<void> {
   if (newlyBySkin.size === 0) return;

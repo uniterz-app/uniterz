@@ -1,5 +1,7 @@
 /**
- * ランキングスナップショットからバッジの参加者数（母数）を読む。
+ * ランキングスナップショットからバッジの参加者数を読む。
+ * 参加者 = その回・その部門で 1 回以上投稿した人数（snapshot.participantCount）。
+ * participantCount の無い旧スナップショットは totalCount / count で代用する。
  */
 
 import type { Firestore } from "firebase-admin/firestore";
@@ -9,13 +11,17 @@ import {
   type BadgeCohortSource,
 } from "../badgeCohort";
 
-const PLAYOFFS_ARCHIVE = "2025-26-playoffs";
+function readPositiveInt(raw: unknown): number | null {
+  const n = typeof raw === "number" ? raw : Number(raw);
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : null;
+}
 
 function readCount(data: Record<string, unknown> | undefined): number | null {
   if (!data) return null;
-  const raw = data.totalCount ?? data.count;
-  const n = typeof raw === "number" ? raw : Number(raw);
-  if (Number.isFinite(n) && n > 0) return Math.floor(n);
+  const participants = readPositiveInt(data.participantCount);
+  if (participants != null) return participants;
+  const legacy = readPositiveInt(data.totalCount ?? data.count);
+  if (legacy != null) return legacy;
   const ranks = data.ranks;
   if (ranks && typeof ranks === "object") {
     const size = Object.keys(ranks as Record<string, unknown>).length;
@@ -24,11 +30,18 @@ function readCount(data: Record<string, unknown> | undefined): number | null {
   return null;
 }
 
+/** po_2026_* → 2025-26-playoffs */
+function playoffsArchiveId(year: number): string | null {
+  if (!Number.isFinite(year) || year < 2000) return null;
+  const start = year - 1;
+  return `${start}-${String(year % 100).padStart(2, "0")}-playoffs`;
+}
+
 function sourceKey(src: BadgeCohortSource): string {
   if (src.kind === "period") {
-    return `period:${src.period}:${src.label}:${src.metric}`;
+    return `period:${src.division}:${src.period}:${src.label}:${src.metric}`;
   }
-  return `cum:${src.docIds.join(",")}`;
+  return `cum:${src.year}:${src.docIds.join(",")}`;
 }
 
 async function countStatsField(
@@ -52,17 +65,21 @@ async function loadCumulativeCount(
   db: Firestore,
   src: Extract<BadgeCohortSource, { kind: "cumulative" }>,
 ): Promise<number | null> {
+  // その年のアーカイブを優先（live doc は新シーズンで上書きされるため）
+  const archiveId = playoffsArchiveId(src.year);
+  const archiveRefs = archiveId
+    ? src.docIds.map((id) =>
+        db
+          .collection("cumulative_ranking_snapshots_archive")
+          .doc(archiveId)
+          .collection("docs")
+          .doc(id),
+      )
+    : [];
   const liveRefs = src.docIds.map((id) =>
     db.collection("cumulative_ranking_snapshots").doc(id),
   );
-  const archiveRefs = src.docIds.map((id) =>
-    db
-      .collection("cumulative_ranking_snapshots_archive")
-      .doc(PLAYOFFS_ARCHIVE)
-      .collection("docs")
-      .doc(id),
-  );
-  const snaps = await db.getAll(...liveRefs, ...archiveRefs);
+  const snaps = await db.getAll(...archiveRefs, ...liveRefs);
   for (const snap of snaps) {
     if (!snap.exists) continue;
     const count = readCount(snap.data() as Record<string, unknown>);
@@ -80,7 +97,7 @@ async function loadPeriodCount(
     .collection("period_ranking_snapshots")
     .doc(
       periodRankingSnapshotDocId({
-        division: "standard",
+        division: src.division,
         period: src.period,
         label: src.label,
         metric: src.metric,

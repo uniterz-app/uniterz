@@ -223,7 +223,7 @@ type AdoptedSpec = {
   family: ProfilePlanProAdoptedFamily;
 };
 
-/** 採用カタログ — 解放カタログ順（即解放11 → マイルストーン46）。詳細は `proSkinMilestoneCatalog.ts` */
+/** 採用カタログ — 解放カタログ順（即解放11 → マイルストーン45）。詳細は `proSkinMilestoneCatalog.ts` */
 const ADOPTED_SPECS: readonly AdoptedSpec[] = [
   // Pro 即解放 ×11
   { id: "atmos", name: "Atmos", category: "cyber", family: "atmos" },
@@ -266,11 +266,10 @@ const ADOPTED_SPECS: readonly AdoptedSpec[] = [
   { id: "beast-pluto", name: "Pluto", category: "cosmos", family: "beast" },
   // 順位 1回 = 称号
   { id: "beast-tessera", name: "Tessera", category: "geometry", family: "beast" },
-  { id: "form-isocubes", name: "Cubes", category: "geometry", family: "form" },
   { id: "beast-jagarmor", name: "Jagged", category: "material", family: "beast" },
+  { id: "form-isocubes", name: "Cubes", category: "geometry", family: "form" },
   { id: "wave-obsidian-warp", name: "Obsidian", category: "geometry", family: "wave" },
   { id: "wave-neon-ridge", name: "Neon Ridge", category: "cyber", family: "wave" },
-  { id: "beast-circuitlace", name: "Circuit", category: "material", family: "beast" },
   { id: "beast-facet", name: "Facet", category: "beast", family: "beast" },
   { id: "beast-thunder", name: "Thunder", category: "beast", family: "beast" },
   { id: "beast-starborne", name: "Starborne", category: "beast", family: "beast" },
@@ -279,12 +278,13 @@ const ADOPTED_SPECS: readonly AdoptedSpec[] = [
   { id: "beast-startrail", name: "Star Trail", category: "cosmos", family: "beast" },
   { id: "beast-nebula", name: "Cone", category: "cosmos", family: "beast" },
   { id: "beast-crab", name: "Crab", category: "cosmos", family: "beast" },
-  { id: "beast-pillars", name: "Pillars", category: "cosmos", family: "beast" },
   { id: "beast-southernring", name: "Southern Ring", category: "cosmos", family: "beast" },
-  { id: "beast-andromeda", name: "Andromeda", category: "cosmos", family: "beast" },
+  // RS 最終順位 = 銀河
   { id: "beast-galaxy", name: "Galaxy", category: "cosmos", family: "beast" },
-  { id: "beast-milkyway", name: "Galactic Core", category: "cosmos", family: "beast" },
   { id: "beast-deepfield", name: "Deep Field", category: "cosmos", family: "beast" },
+  { id: "beast-milkyway", name: "Galactic Core", category: "cosmos", family: "beast" },
+  { id: "beast-andromeda", name: "Andromeda", category: "cosmos", family: "beast" },
+  { id: "beast-pillars", name: "Pillars", category: "cosmos", family: "beast" },
   // 招待 = 金
   { id: "beast-viper", name: "Viper", category: "reptile", family: "beast" },
   { id: "wave-gold-monogram", name: "Monogram", category: "material", family: "wave" },

@@ -509,13 +509,14 @@ export type LiveTop20Payload = {
 /** NBA 現行シーズンの live フォールバック */
 export async function loadNbaSeasonTop20RowsLive(
   metric: Metric,
-  postedTodayUids?: Set<string>
+  postedTodayUids?: Set<string>,
+  seasonKey: string = CURRENT_NBA_SEASON_KEY
 ): Promise<LiveTop20Payload> {
   const snap = await db().collection("cumulative_stats").get();
   const baseRows: BaseRow[] = snap.docs
     .map((doc) => {
       const d = doc.data();
-      const r = nbaSeasonRankingSlice(d);
+      const r = nbaSeasonRankingSlice(d, seasonKey);
       return {
         uid: doc.id,
         displayName: d.displayName ?? "user",
@@ -723,6 +724,7 @@ export async function buildCumulativeRankingSnapshot(
             metric,
             rows: enriched,
             totalCount,
+            participantCount: baseRows.length,
             updatedAt: FieldValue.serverTimestamp(),
             rankDeltaBasisDateKey: yesterdayKey,
           },
@@ -767,6 +769,7 @@ export async function buildCumulativeRankingSnapshot(
           rows: top20,
           ranks,
           totalCount: sortedFull.length,
+          participantCount: openBaseRows.length,
           updatedAt: FieldValue.serverTimestamp(),
           rankDeltaBasisDateKey: yesterdayKey,
         },

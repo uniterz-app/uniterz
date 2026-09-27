@@ -16,7 +16,7 @@ export function parseUserPlanProBgVariant(
 
 /**
  * 採用スキンとして確定できるときだけ返す。
- * 未確定時にデフォルト（Dust）を当てない（他人プロフィールのチラつき防止）。
+ * 未確定時にデフォルト（Atmos）を当てない（他人プロフィールのチラつき防止）。
  */
 export function tryParseUserPlanProBgVariant(
   raw: unknown
