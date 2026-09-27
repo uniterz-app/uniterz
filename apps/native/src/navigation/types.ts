@@ -184,6 +184,7 @@ export type ProfileStackParamList = {
   DustProSkinPreview: undefined;
   /** __DEV__ マイルストーン Pro Skin 一覧（解放条件順） */
   MilestoneProSkinPreview: undefined;
+  CandidateProSkinPreview: undefined;
   /** __DEV__ TeamAbbrBadge サイバー案 */
   TeamAbbrBadgePreview: undefined;
   /** __DEV__ リザルト左辺 PICK UP */

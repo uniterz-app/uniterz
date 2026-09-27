@@ -1960,6 +1960,8 @@ export default function ProfileHomeScreen({
           navigation.navigate("DustProSkinPreview");
         else if (page === "milestoneProSkinPreview" && __DEV__)
           navigation.navigate("MilestoneProSkinPreview");
+        else if (page === "candidateProSkinPreview" && __DEV__)
+          navigation.navigate("CandidateProSkinPreview");
         else if (page === "teamAbbrBadgePreview" && __DEV__)
           navigation.navigate("TeamAbbrBadgePreview");
         else if (page === "resultPickupPreview" && __DEV__)

@@ -97,6 +97,7 @@ type Props = {
     | "streakFramePreview"
     | "dustProSkinPreview"
     | "milestoneProSkinPreview"
+    | "candidateProSkinPreview"
     | "teamAbbrBadgePreview"
     | "resultPickupPreview"
     | "proInsightGatePreview"
@@ -271,6 +272,7 @@ export default function ProfileSideMenuModal({
       | "streakFramePreview"
       | "dustProSkinPreview"
       | "milestoneProSkinPreview"
+      | "candidateProSkinPreview"
       | "teamAbbrBadgePreview"
       | "resultPickupPreview"
       | "proInsightGatePreview"
@@ -722,6 +724,14 @@ export default function ProfileSideMenuModal({
                           onPress={() => openUserPage("milestoneProSkinPreview")}
                         >
                           Milestone Pro Skin
+                        </SideMenuItemButtonNative>
+                        <SideMenuItemButtonNative
+                          icon="texture-box"
+                          dense
+                          labelStyle={labelStyle}
+                          onPress={() => openUserPage("candidateProSkinPreview")}
+                        >
+                          Candidate Pro Skin
                         </SideMenuItemButtonNative>
                         <SideMenuItemButtonNative
                           icon="tag-outline"

@@ -188,6 +188,18 @@ const CREDITS: Record<string, ProSkinImageCredit> = {
     sourceUrl:
       "https://commons.wikimedia.org/wiki/File:Center_of_the_Milky_Way_Galaxy_IV_%E2%80%93_Composite.jpg",
   },
+  "beast-shoals": {
+    credit: "NASA Earth Observatory / USGS Landsat",
+    license: "Public domain",
+    sourceUrl:
+      "https://commons.wikimedia.org/wiki/File:Great_Bahama_Bank_2020.jpeg",
+  },
+  "beast-uranus": {
+    credit: "NASA, ESA, CSA, STScI",
+    license: "CC BY 4.0",
+    sourceUrl:
+      "https://commons.wikimedia.org/wiki/File:Uranus_Wide_(NIRCam_Image)_(2023-150).png",
+  },
 };
 
 export function proSkinImageCredit(id: string): ProSkinImageCredit | null {

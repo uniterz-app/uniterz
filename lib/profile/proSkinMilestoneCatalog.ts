@@ -2,10 +2,10 @@
  * Pro Skin マイルストーン定義の単一ソース。
  * Functions へは `npm run sync:pro-skin-milestone-catalog` で同期する。
  *
- * 構成: 即解放 11 / マイルストーン 45
+ * 構成: 即解放 11 / マイルストーン 47
  *
  * 系統ごとに世界観を揃える（低い段は柄、高い段は宇宙写真）
- * - 連勝 = 紅・炎 / パーフェクト = 蒼・氷 / 予想数 = 地球→冥王星の旅
+ * - 連勝 = 紅・炎 / パーフェクト = 蒼（結晶→地球の海→氷の衛星→氷の巨星→新星） / 予想数 = 地球→冥王星の旅
  * - 順位1回 = 称号（幾何・金属） / 順位回数 = 深宇宙 / RS 最終順位 = 銀河 / 招待 = 金
  *
  * - 閾値系・連勝回数系 → NBA settle
@@ -94,12 +94,14 @@ export const PRO_SKIN_THRESHOLD_MILESTONES: readonly ProSkinThresholdMilestone[]
     { id: "beast-flame", kind: "streak", threshold: 15 },
     { id: "beast-solar", kind: "streak", threshold: 20 },
     { id: "beast-corona", kind: "streak", threshold: 25 },
-    { id: "beast-shard", kind: "exactHits", threshold: 5 },
-    { id: "beast-europa", kind: "exactHits", threshold: 10 },
+    { id: "beast-shard", kind: "exactHits", threshold: 1 },
+    { id: "beast-shoals", kind: "exactHits", threshold: 3 },
+    { id: "beast-europa", kind: "exactHits", threshold: 5 },
+    { id: "beast-uranus", kind: "exactHits", threshold: 10 },
     { id: "beast-neptune", kind: "exactHits", threshold: 15 },
     { id: "beast-nova", kind: "exactHits", threshold: 20 },
-    { id: "beast-lena", kind: "posts", threshold: 50 },
-    { id: "beast-hurricane", kind: "posts", threshold: 100 },
+    { id: "beast-lena", kind: "posts", threshold: 100 },
+    { id: "beast-hurricane", kind: "posts", threshold: 150 },
     { id: "beast-nightearth", kind: "posts", threshold: 200 },
     { id: "beast-aurora", kind: "posts", threshold: 300 },
     { id: "beast-lunar", kind: "posts", threshold: 400 },

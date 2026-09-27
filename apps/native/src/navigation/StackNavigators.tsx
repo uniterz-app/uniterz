@@ -538,6 +538,15 @@ function ProfileStackScreen() {
         ) : null}
         {__DEV__ ? (
           <ProfileStack.Screen
+            name="CandidateProSkinPreview"
+            getComponent={() =>
+              require("../features/profile/screens/ProfileStackWrappers")
+                .CandidateProSkinPreviewScreenWrapper
+            }
+          />
+        ) : null}
+        {__DEV__ ? (
+          <ProfileStack.Screen
             name="TeamAbbrBadgePreview"
             getComponent={() =>
               require("../features/profile/screens/ProfileStackWrappers")

@@ -223,7 +223,7 @@ type AdoptedSpec = {
   family: ProfilePlanProAdoptedFamily;
 };
 
-/** 採用カタログ — 解放カタログ順（即解放11 → マイルストーン45）。詳細は `proSkinMilestoneCatalog.ts` */
+/** 採用カタログ — 解放カタログ順（即解放11 → マイルストーン47）。詳細は `proSkinMilestoneCatalog.ts` */
 const ADOPTED_SPECS: readonly AdoptedSpec[] = [
   // Pro 即解放 ×11
   { id: "atmos", name: "Atmos", category: "cyber", family: "atmos" },
@@ -247,9 +247,11 @@ const ADOPTED_SPECS: readonly AdoptedSpec[] = [
   { id: "beast-helix", name: "Helix", category: "cosmos", family: "beast" },
   { id: "beast-solar", name: "Solar", category: "cosmos", family: "beast" },
   { id: "beast-corona", name: "Corona", category: "cosmos", family: "beast" },
-  // パーフェクト = 蒼・氷
+  // パーフェクト = 蒼（結晶 → 地球の海 → 氷の衛星 → 氷の巨星 → 新星）
   { id: "beast-shard", name: "Azure Shard", category: "beast", family: "beast" },
+  { id: "beast-shoals", name: "Shoals", category: "cosmos", family: "beast" },
   { id: "beast-europa", name: "Europa", category: "cosmos", family: "beast" },
+  { id: "beast-uranus", name: "Uranus", category: "cosmos", family: "beast" },
   { id: "beast-neptune", name: "Neptune", category: "cosmos", family: "beast" },
   { id: "beast-nova", name: "Nova", category: "cosmos", family: "beast" },
   // 予想数 = 地球→冥王星の旅

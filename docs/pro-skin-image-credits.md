@@ -50,6 +50,8 @@ Hubble / Webb で ESA が共同クレジットの画像（蒼星・灰星雲・�
 | `beast-southernring` | [JWST Southern Ring Nebula](https://commons.wikimedia.org/wiki/File:JWST_SouthernRingNebula.png) | Public domain | NASA, ESA, CSA, STScI |
 | `beast-deepfield` | [Hubble Ultra Deep Field (WFC3 IR)](https://commons.wikimedia.org/wiki/File:Hubble-ultra-deep-field-20091208-WFC3-IR-full.jpg) | Public domain | NASA |
 | `beast-milkyway` | [Center of the Milky Way Galaxy IV – Composite](https://commons.wikimedia.org/wiki/File:Center_of_the_Milky_Way_Galaxy_IV_%E2%80%93_Composite.jpg) | Public domain（ESA 連名のためアプリ内は CC BY 表記） | NASA/JPL-Caltech/ESA/CXC/STScI |
+| `beast-shoals` | [Great Bahama Bank 2020](https://commons.wikimedia.org/wiki/File:Great_Bahama_Bank_2020.jpeg) | Public domain | NASA Earth Observatory / USGS Landsat |
+| `beast-uranus` | [Uranus Wide (NIRCam Image) (2023-150)](https://commons.wikimedia.org/wiki/File:Uranus_Wide_(NIRCam_Image)_(2023-150).png) | Public domain（ESA 連名のためアプリ内は CC BY 表記） | NASA, ESA, CSA, STScI |
 
 ## 手続き生成（元画像なし）
 

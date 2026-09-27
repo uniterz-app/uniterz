@@ -44,6 +44,8 @@ export const PROFILE_PLAN_PRO_DUST_TEXTURE_SOURCES: Record<
   "beast-southernring": require("../../../../assets/pro-skins/textures/southernring-v3.webp"),
   "beast-deepfield": require("../../../../assets/pro-skins/textures/deepfield-v3.webp"),
   "beast-milkyway": require("../../../../assets/pro-skins/textures/milkyway-v3.webp"),
+  "beast-shoals": require("../../../../assets/pro-skins/textures/shoals-v3.webp"),
+  "beast-uranus": require("../../../../assets/pro-skins/textures/uranus-v3.webp"),
 };
 
 export const PROFILE_PLAN_PRO_DUST_RANK_TEXTURE_SOURCES: Record<
@@ -81,6 +83,8 @@ export const PROFILE_PLAN_PRO_DUST_RANK_TEXTURE_SOURCES: Record<
   "beast-southernring": require("../../../../assets/pro-skins/textures/southernring-rank-v3.webp"),
   "beast-deepfield": require("../../../../assets/pro-skins/textures/deepfield-rank-v3.webp"),
   "beast-milkyway": require("../../../../assets/pro-skins/textures/milkyway-rank-v3.webp"),
+  "beast-shoals": require("../../../../assets/pro-skins/textures/shoals-rank-v3.webp"),
+  "beast-uranus": require("../../../../assets/pro-skins/textures/uranus-rank-v3.webp"),
 };
 
 export { DUST_CARD_TEXTURE_SIZE, DUST_RANK_TEXTURE_SIZE };

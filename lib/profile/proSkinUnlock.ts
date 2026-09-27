@@ -1,5 +1,5 @@
 /**
- * Pro Skin 解放ルール — 即解放11 / マイルストーン45。
+ * Pro Skin 解放ルール — 即解放11 / マイルストーン47。
  * 表示順の正は `PROFILE_PLAN_PRO_ADOPTED_BG`。解放条件は milestone catalog。
  */
 

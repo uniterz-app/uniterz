@@ -34,7 +34,9 @@ export type ProfilePlanProDustTextureId =
   | "beast-andromeda"
   | "beast-southernring"
   | "beast-deepfield"
-  | "beast-milkyway";
+  | "beast-milkyway"
+  | "beast-shoals"
+  | "beast-uranus";
 
 const DUST_PUBLIC_PATHS: Record<ProfilePlanProDustTextureId, string> = {
   "beast-dust": "/pro-skins/textures/dust-powder-v4.webp",
@@ -68,6 +70,8 @@ const DUST_PUBLIC_PATHS: Record<ProfilePlanProDustTextureId, string> = {
   "beast-southernring": "/pro-skins/textures/southernring-v3.webp",
   "beast-deepfield": "/pro-skins/textures/deepfield-v3.webp",
   "beast-milkyway": "/pro-skins/textures/milkyway-v3.webp",
+  "beast-shoals": "/pro-skins/textures/shoals-v3.webp",
+  "beast-uranus": "/pro-skins/textures/uranus-v3.webp",
 };
 
 /** ランキング行用横長帯 */
@@ -103,6 +107,8 @@ const DUST_RANK_PUBLIC_PATHS: Record<ProfilePlanProDustTextureId, string> = {
   "beast-southernring": "/pro-skins/textures/southernring-rank-v3.webp",
   "beast-deepfield": "/pro-skins/textures/deepfield-rank-v3.webp",
   "beast-milkyway": "/pro-skins/textures/milkyway-rank-v3.webp",
+  "beast-shoals": "/pro-skins/textures/shoals-rank-v3.webp",
+  "beast-uranus": "/pro-skins/textures/uranus-rank-v3.webp",
 };
 
 export const DUST_CARD_TEXTURE_SIZE = { w: 1080, h: 1548 } as const;

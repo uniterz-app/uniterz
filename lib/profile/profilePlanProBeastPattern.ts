@@ -453,6 +453,8 @@ const PALETTES: Record<ProfilePlanProBeastBgVariant, BeastPalette> = {
   "beast-southernring": photoPalette("200,130,90"),
   "beast-deepfield": photoPalette("190,160,120"),
   "beast-milkyway": photoPalette("170,90,200"),
+  "beast-shoals": photoPalette("60,200,180"),
+  "beast-uranus": photoPalette("140,170,240"),
 };
 
 /** 写真素材マップ系は SVG を描かないので、HUD 用の色だけ持つ */

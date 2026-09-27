@@ -86,7 +86,10 @@ export type ProfilePlanProBeastBgVariant =
   | "beast-andromeda"
   | "beast-southernring"
   | "beast-deepfield"
-  | "beast-milkyway";
+  | "beast-milkyway"
+  /** パーフェクト 3 / 10 */
+  | "beast-shoals"
+  | "beast-uranus";
 
 export type ProfilePlanProBeastBgMeta = {
   id: ProfilePlanProBeastBgVariant;
@@ -806,6 +809,22 @@ export const PROFILE_PLAN_PRO_BEAST_BG_VARIANTS: ProfilePlanProBeastBgMeta[] = [
     swatch:
       "linear-gradient(150deg, #04020a, #281040 40%, #c0404066 58%, #3050c044, #020104)",
   },
+  {
+    id: "beast-shoals",
+    label: "Shoals",
+    tag: "バハマの浅瀬",
+    description: "Landsat が撮ったグレートバハマバンクの砂紋。ターコイズの潮流。",
+    swatch:
+      "linear-gradient(150deg, #01060a, #06343a 40%, #30c0a066 58%, #010406)",
+  },
+  {
+    id: "beast-uranus",
+    label: "Uranus",
+    tag: "天王星",
+    description: "Webb NIRCam の天王星と環。青い星々の広視野。",
+    swatch:
+      "linear-gradient(150deg, #010104, #0a1024 40%, #90b0f066 58%, #010102)",
+  },
 ];
 
 /** Round 3 のみ（比較ナビ用） */
@@ -921,6 +940,13 @@ export const PROFILE_PLAN_PRO_BEAST_BG_ROUND11: ProfilePlanProBeastBgVariant[] =
   "beast-andromeda",
   "beast-southernring",
 ];
+
+/** Round 12 — パーフェクト 3 / 10 追加分（蒼） */
+export const PROFILE_PLAN_PRO_BEAST_BG_ROUND12: ProfilePlanProBeastBgVariant[] = [
+  "beast-shoals",
+  "beast-uranus",
+];
+
 
 export const PROFILE_PLAN_PRO_BEAST_BG_DEFAULT: ProfilePlanProBeastBgVariant =
   "beast-panther";
