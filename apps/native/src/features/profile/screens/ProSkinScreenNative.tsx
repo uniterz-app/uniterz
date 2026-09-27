@@ -27,6 +27,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import MobilePageShell from "../mobileScreens/MobilePageShell";
 import ProfileKinetikPanelNative from "../kinetik/ProfileKinetikPanelNative";
+import ProSkinImageCreditNative from "../kinetik/ProSkinImageCreditNative";
 import { PRO_SKIN_THUMB_SOURCES } from "../proSkinStaticAssets.generated";
 import {
   fetchProSkinStatusNative,
@@ -83,6 +84,8 @@ function categoryBadgeColors(category: ProfilePlanProAdoptedCategory): {
       return { bg: "rgba(148,163,184,0.15)", text: "rgba(226,232,240,0.9)" };
     case "geometry":
       return { bg: "rgba(52,211,153,0.15)", text: "rgba(167,243,208,0.9)" };
+    case "cosmos":
+      return { bg: "rgba(129,140,248,0.15)", text: "rgba(199,210,254,0.9)" };
   }
 }
 
@@ -172,6 +175,7 @@ function SkinThumbNative({
     posts: number;
     exactHits: number;
     maxWinStreak: number;
+    streakRuns: Record<string, number>;
     referralCompletedCount: number;
     periodWins: Record<string, number>;
   };
@@ -323,6 +327,7 @@ export default function ProSkinScreenNative() {
     posts: 0,
     exactHits: 0,
     maxWinStreak: 0,
+    streakRuns: {} as Record<string, number>,
     referralCompletedCount: 0,
     periodWins: {} as Record<string, number>,
   });
@@ -375,6 +380,7 @@ export default function ProSkinScreenNative() {
           posts: status.progress?.posts ?? 0,
           exactHits: status.progress?.exactHits ?? 0,
           maxWinStreak: status.progress?.maxWinStreak ?? 0,
+          streakRuns: status.progress?.streakRuns ?? {},
           referralCompletedCount:
             status.progress?.referralCompletedCount ?? 0,
           periodWins: status.progress?.periodWins ?? {},
@@ -578,6 +584,11 @@ export default function ProSkinScreenNative() {
                     planProBgVariant={overlayEntry.id}
                   />
                 </View>
+                <ProSkinImageCreditNative
+                  variant={overlayEntry.id}
+                  language={copy.lang}
+                  style={styles.overlayCredit}
+                />
                 {!overlayUnlocked ? (
                   <View style={styles.lockedBanner}>
                     <MaterialCommunityIcons
@@ -1031,6 +1042,9 @@ const styles = StyleSheet.create({
     fontSize: 10,
     lineHeight: 14,
     color: "rgba(255,255,255,0.45)",
+  },
+  overlayCredit: {
+    marginTop: 8,
   },
   lockedBanner: {
     marginTop: 10,

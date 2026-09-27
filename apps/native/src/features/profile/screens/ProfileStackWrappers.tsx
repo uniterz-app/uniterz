@@ -20,6 +20,7 @@ import LiveGameStatsPreviewScreenNative from "../../games/live/LiveGameStatsPrev
 import ProLeagueTeaserPreviewScreenNative from "../../rankings/ProLeagueTeaserPreviewScreenNative";
 import StreakFramePreviewScreenNative from "../../rankings/StreakFramePreviewScreenNative";
 import DustProSkinPreviewScreenNative from "../kinetik/DustProSkinPreviewScreenNative";
+import MilestoneProSkinPreviewScreenNative from "../kinetik/MilestoneProSkinPreviewScreenNative";
 import TeamAbbrBadgePreviewScreenNative from "../../games/TeamAbbrBadgePreviewScreenNative";
 import ProInsightGatePreviewScreenNative from "../../games/predict/ProInsightGatePreviewScreenNative";
 import ProInsightNarrativePreviewScreenNative from "../../games/predict/ProInsightNarrativePreviewScreenNative";
@@ -277,6 +278,19 @@ export function DustProSkinPreviewScreenWrapper() {
   const { language } = useNativeUserLanguage(fUser?.uid);
   return (
     <DustProSkinPreviewScreenNative
+      language={language}
+      onClose={() => navigation.goBack()}
+    />
+  );
+}
+
+export function MilestoneProSkinPreviewScreenWrapper() {
+  const navigation =
+    useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
+  const { fUser } = useFirebaseUser();
+  const { language } = useNativeUserLanguage(fUser?.uid);
+  return (
+    <MilestoneProSkinPreviewScreenNative
       language={language}
       onClose={() => navigation.goBack()}
     />

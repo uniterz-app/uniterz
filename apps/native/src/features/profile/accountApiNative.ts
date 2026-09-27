@@ -92,6 +92,7 @@ export async function fetchProSkinStatusNative(): Promise<{
     posts: number;
     exactHits: number;
     maxWinStreak: number;
+    streakRuns: Record<string, number>;
     referralCompletedCount: number;
     periodWins: Record<string, number>;
   };
@@ -120,6 +121,7 @@ export async function fetchProSkinStatusNative(): Promise<{
       posts?: number;
       exactHits?: number;
       maxWinStreak?: number;
+      streakRuns?: Record<string, number>;
       referralCompletedCount?: number;
       periodWins?: Record<string, number>;
     };
@@ -144,6 +146,10 @@ export async function fetchProSkinStatusNative(): Promise<{
       posts: data.progress?.posts ?? 0,
       exactHits: data.progress?.exactHits ?? 0,
       maxWinStreak: data.progress?.maxWinStreak ?? 0,
+      streakRuns:
+        data.progress?.streakRuns && typeof data.progress.streakRuns === "object"
+          ? data.progress.streakRuns
+          : {},
       referralCompletedCount: data.progress?.referralCompletedCount ?? 0,
       periodWins:
         data.progress?.periodWins && typeof data.progress.periodWins === "object"

@@ -1,5 +1,5 @@
 /**
- * Pro Skin 解放ルール — 即解放15 / マイルストーン21。
+ * Pro Skin 解放ルール — 即解放11 / マイルストーン46。
  * 表示順の正は `PROFILE_PLAN_PRO_ADOPTED_BG`。解放条件は milestone catalog。
  */
 
@@ -14,6 +14,7 @@ import {
   PRO_SKIN_PERIOD_WIN_MILESTONES,
   PRO_SKIN_RANK_MILESTONES,
   PRO_SKIN_REFERRAL_MILESTONES,
+  PRO_SKIN_STREAK_RUN_MILESTONES,
   PRO_SKIN_THRESHOLD_MILESTONES,
   PRO_SKIN_UNLOCK_FROM_SEASON_KEY as CATALOG_FROM_SEASON,
   proSkinPeriodWinCounterKey,
@@ -22,6 +23,7 @@ import {
 export type ProSkinUnlockKind =
   | "pro"
   | "streak"
+  | "streakRuns"
   | "posts"
   | "exactHits"
   | "weeklyRank"
@@ -39,6 +41,7 @@ export type ProSkinRankMetric =
 export type ProSkinUnlockRule =
   | { kind: "pro" }
   | { kind: "streak"; threshold: number }
+  | { kind: "streakRuns"; streak: number; runs: number }
   | { kind: "posts"; threshold: number }
   | { kind: "exactHits"; threshold: number }
   | {
@@ -68,6 +71,10 @@ export type ProSkinUnlockRule =
 export type ProSkinUnlockProgress = {
   /** 対象シーズン内の最大連勝（users 通算や前シーズンは使わない） */
   maxWinStreak: number;
+  /**
+   * 対象シーズン内で連勝が N に届いた回数。キー: 連勝長（"5" / "10"）
+   */
+  streakRuns: Record<string, number>;
   /** 対象シーズン内の予想数 */
   posts: number;
   /** 対象シーズン内のパーフェクト予想 */
@@ -120,6 +127,7 @@ export function emptyProSkinUnlockProgress(
     posts: 0,
     exactHits: 0,
     maxWinStreak: 0,
+    streakRuns: {},
     weeklyRanks: { ...EMPTY_PRO_SKIN_RANK_MAP },
     monthlyRanks: { ...EMPTY_PRO_SKIN_RANK_MAP },
     referralCompletedCount: 0,
@@ -164,7 +172,7 @@ export function userDataIsPro(userData: Record<string, unknown> | null | undefin
   return ms > Date.now();
 }
 
-/** Pro 即解放 ×14 */
+/** Pro 即解放 */
 const PRO_IMMEDIATE_IDS = new Set<ProfilePlanProBgVariant>(
   PRO_IMMEDIATE_SKIN_IDS
 );
@@ -180,6 +188,13 @@ const UNLOCK_RULE_BY_ID: Map<ProfilePlanProBgVariant, ProSkinUnlockRule> =
       m.set(row.id as ProfilePlanProBgVariant, {
         kind: row.kind,
         threshold: row.threshold,
+      });
+    }
+    for (const row of PRO_SKIN_STREAK_RUN_MILESTONES) {
+      m.set(row.id as ProfilePlanProBgVariant, {
+        kind: "streakRuns",
+        streak: row.streak,
+        runs: row.runs,
       });
     }
     for (const row of PRO_SKIN_RANK_MILESTONES) {
@@ -260,6 +275,8 @@ export function isProSkinUnlockRuleMet(
       return true;
     case "streak":
       return progress.maxWinStreak >= rule.threshold;
+    case "streakRuns":
+      return (progress.streakRuns[String(rule.streak)] ?? 0) >= rule.runs;
     case "posts":
       return progress.posts >= rule.threshold;
     case "exactHits":
@@ -479,6 +496,16 @@ export function formatProSkinUnlockCondition(
         es: `Desbloquea con ${rule.threshold} victorias seguidas`,
         pt: `Desbloqueie com ${rule.threshold} vitórias seguidas`,
         fr: `Débloquez avec ${rule.threshold} victoires d’affilée`,
+      });
+    case "streakRuns":
+      return L(lang, {
+        ja: `${rule.streak}連勝を ${rule.runs} 回で解放`,
+        en: `Unlock after ${rule.runs}× ${rule.streak}-win streaks`,
+        ko: `${rule.streak}연승 ${rule.runs}회로 해제`,
+        zh: `${rule.streak}连胜达成 ${rule.runs} 次解锁`,
+        es: `Desbloquea tras ${rule.runs}× rachas de ${rule.streak}`,
+        pt: `Desbloqueie após ${rule.runs}× sequências de ${rule.streak}`,
+        fr: `Débloquez après ${rule.runs}× séries de ${rule.streak}`,
       });
     case "posts":
       return L(lang, {

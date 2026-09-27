@@ -182,6 +182,8 @@ export type ProfileStackParamList = {
   StreakFramePreview: undefined;
   /** __DEV__ Dust Pro Skin（Powder / Film） */
   DustProSkinPreview: undefined;
+  /** __DEV__ マイルストーン Pro Skin 一覧（解放条件順） */
+  MilestoneProSkinPreview: undefined;
   /** __DEV__ TeamAbbrBadge サイバー案 */
   TeamAbbrBadgePreview: undefined;
   /** __DEV__ リザルト左辺 PICK UP */

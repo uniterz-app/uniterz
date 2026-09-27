@@ -20,6 +20,7 @@ import {
 import { isProfilePlanProMoodBgVariant } from "@/lib/profile/profilePlanProMoodBgVariants";
 import { isProfilePlanProNovaBgVariant } from "@/lib/profile/profilePlanProNovaBgVariants";
 import { isProfilePlanProBeastBgVariant } from "@/lib/profile/profilePlanProBeastBgVariants";
+import { isProfilePlanProDustTextureVariant } from "@/lib/profile/profilePlanProDustTextures";
 import {
   getProfilePlanProBeastHudUrl,
   getProfilePlanProBeastSkinUrl,
@@ -213,6 +214,7 @@ export default function ProfilePlanProBackgroundFx({
     `profile-plan-pro-bg--${variant}`,
     isScale ? "profile-plan-pro-bg--scale" : "",
     isBeast ? "profile-plan-pro-bg--beast" : "",
+    isProfilePlanProDustTextureVariant(variant) ? "profile-plan-pro-bg--photo" : "",
     isCosmos ? "profile-plan-pro-bg--cosmos" : "",
     isLab ? "profile-plan-pro-bg--lab" : "",
     isWave ? "profile-plan-pro-bg--wave" : "",

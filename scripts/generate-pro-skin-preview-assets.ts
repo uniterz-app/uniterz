@@ -26,6 +26,10 @@ import {
 } from "../lib/profile/profilePlanProAtmosBg.ts";
 import { PROFILE_UNITERZ_LOGO_SCATTER } from "../lib/profile/profilePlanProUniterzLogoScatter.ts";
 import { UNITERZ_LOGO_ASSET } from "../lib/units/uniterzLogoAsset.ts";
+import {
+  getProfilePlanProDustTexturePublicPath,
+  isProfilePlanProDustTextureVariant,
+} from "../lib/profile/profilePlanProDustTextures.ts";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
@@ -256,6 +260,18 @@ async function renderVariant(
   w: number,
   h: number
 ): Promise<Buffer> {
+  if (isProfilePlanProDustTextureVariant(entry.id)) {
+    const file = path.join(
+      ROOT,
+      "public",
+      getProfilePlanProDustTexturePublicPath(entry.id)
+    );
+    return sharp(file)
+      .resize(w, h, { fit: "cover", position: "centre" })
+      .webp({ quality: WEBP_QUALITY })
+      .toBuffer();
+  }
+
   const swatch = profilePlanProAdoptedSkinSwatch(entry);
   const colors = parseCssLinearGradientColors(swatch);
   const base = sharp(Buffer.from(gradientSvg([...colors], w, h))).png();

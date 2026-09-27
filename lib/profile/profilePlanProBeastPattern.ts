@@ -424,7 +424,48 @@ const PALETTES: Record<ProfilePlanProBeastBgVariant, BeastPalette> = {
     hudSecondary: "rgba(100,100,100,",
     opacityMul: 1.45,
   },
+  "beast-startrail": photoPalette("140,170,220"),
+  "beast-nova": photoPalette("80,190,215"),
+  "beast-lavaflow": photoPalette("210,210,210"),
+  "beast-marscrust": photoPalette("170,170,170"),
+  "beast-lunar": photoPalette("190,190,190"),
+  "beast-nebula": photoPalette("170,170,170"),
+  "beast-galaxy": photoPalette("170,90,220"),
+  "beast-solar": photoPalette("200,120,50"),
+  "beast-jovian": photoPalette("190,160,90"),
+  "beast-rings": photoPalette("190,190,190"),
+  "beast-europa": photoPalette("150,180,190"),
+  "beast-dunes": photoPalette("180,90,60"),
+  "beast-aurora": photoPalette("80,200,140"),
+  "beast-flame": photoPalette("200,90,90"),
+  "beast-pluto": photoPalette("170,170,170"),
+  "beast-saturn": photoPalette("200,180,120"),
+  "beast-nightearth": photoPalette("220,170,80"),
+  "beast-corona": photoPalette("200,150,50"),
+  "beast-crab": photoPalette("110,180,180"),
+  "beast-helix": photoPalette("200,110,80"),
+  "beast-pillars": photoPalette("190,140,90"),
+  "beast-neptune": photoPalette("70,110,210"),
+  "beast-io": photoPalette("190,180,90"),
+  "beast-lena": photoPalette("120,150,110"),
+  "beast-hurricane": photoPalette("170,180,190"),
+  "beast-andromeda": photoPalette("140,160,220"),
+  "beast-southernring": photoPalette("200,130,90"),
+  "beast-deepfield": photoPalette("190,160,120"),
+  "beast-milkyway": photoPalette("170,90,200"),
 };
+
+/** 写真素材マップ系は SVG を描かないので、HUD 用の色だけ持つ */
+function photoPalette(rgb: string): BeastPalette {
+  return {
+    strokes: [rgb],
+    fills: ["10,10,10"],
+    accent: [rgb],
+    hudPrimary: `rgba(${rgb},`,
+    hudSecondary: `rgba(${rgb},`,
+    opacityMul: 1,
+  };
+}
 
 function hash01(a: number, b: number): number {
   const n = Math.sin(a * 12.9898 + b * 78.233) * 43758.5453;
@@ -4620,7 +4661,7 @@ function buildDustAsh(p: BeastPalette): string {
 }
 
 function isDustFamilyVariant(variant: ProfilePlanProBeastBgVariant): boolean {
-  return variant === "beast-dust" || variant === "beast-dust-ash";
+  return isProfilePlanProDustTextureVariant(variant);
 }
 
 function dotGrid(

@@ -166,6 +166,29 @@
   filter: contrast(1.16) saturate(0.85) brightness(0.98);
 }
 
+/* 写真素材マップ（宇宙スキン等）— カード縦横に stretch、HUD なし */
+.profile-kinetik-panel:has(.profile-plan-pro-bg--photo),
+.profile-edit-kinetik-card:has(.profile-plan-pro-bg--photo) {
+  background: #000000;
+  --kinetik-frame: rgba(255, 255, 255, 0.2);
+  --kinetik-frame-strong: rgba(255, 255, 255, 0.36);
+  --kinetik-frame-dim: rgba(255, 255, 255, 0.1);
+  box-shadow:
+    0 10px 36px rgba(0, 0, 0, 0.75),
+    0 0 0 1px var(--kinetik-frame);
+}
+
+.profile-plan-pro-bg--photo .profile-plan-pro-bg__beast-skin {
+  background-size: 100% 100% !important;
+  background-position: center top !important;
+  background-repeat: no-repeat !important;
+  filter: none;
+}
+
+.profile-plan-pro-bg--photo .profile-plan-pro-bg__beast-hud {
+  display: none;
+}
+
 /* Dust — カード縦横に stretch（端を切らない素材マップ） */
 .profile-kinetik-panel:has(.profile-plan-pro-bg--beast-dust),
 .profile-edit-kinetik-card:has(.profile-plan-pro-bg--beast-dust),

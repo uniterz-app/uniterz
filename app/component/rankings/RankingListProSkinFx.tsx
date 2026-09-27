@@ -69,6 +69,9 @@ export default function RankingListProSkinFx({
     "ranking-list-pro-skin-fx",
     `ranking-list-pro-skin-fx--${intensity}`,
     `ranking-list-pro-skin-fx--${variant}`,
+    isProfilePlanProDustTextureVariant(variant)
+      ? "ranking-list-pro-skin-fx--photo"
+      : "",
   ].join(" ");
 
   if (isProfilePlanProScaleBgVariant(variant)) {

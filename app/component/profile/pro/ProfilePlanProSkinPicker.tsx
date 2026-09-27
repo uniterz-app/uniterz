@@ -34,6 +34,11 @@ import {
   type ProSkinUnlockProgress,
 } from "@/lib/profile/proSkinUnlock";
 import { proSkinMilestoneProgressBar } from "@/lib/profile/proSkinProgress";
+import {
+  formatProSkinImageCreditLine,
+  proSkinImageCredit,
+  proSkinImageLicenseUrl,
+} from "@/lib/profile/proSkinImageCredits";
 import { profilePlanProAdoptedSkinSwatch } from "@/lib/profile/profilePlanProAdoptedSkinSwatch";
 import type { ProfilePlanProBgVariant } from "@/lib/profile/profilePlanProBgVariants";
 import { PROFILE_PLAN_PRO_CLASS } from "@/lib/profile/profilePlanVisual";
@@ -71,6 +76,8 @@ function categoryBadgeClass(category: ProfilePlanProAdoptedCategory): string {
       return "bg-slate-400/15 text-slate-200/90";
     case "geometry":
       return "bg-emerald-400/15 text-emerald-200/90";
+    case "cosmos":
+      return "bg-indigo-400/15 text-indigo-200/90";
   }
 }
 
@@ -250,6 +257,7 @@ function CatalogTile({
     | "posts"
     | "exactHits"
     | "maxWinStreak"
+    | "streakRuns"
     | "referralCompletedCount"
     | "periodWins"
   >;
@@ -441,6 +449,7 @@ export default function ProfilePlanProSkinPicker({
       | "posts"
       | "exactHits"
       | "maxWinStreak"
+    | "streakRuns"
       | "referralCompletedCount"
       | "periodWins"
     >
@@ -448,6 +457,7 @@ export default function ProfilePlanProSkinPicker({
     posts: 0,
     exactHits: 0,
     maxWinStreak: 0,
+    streakRuns: {},
     referralCompletedCount: 0,
     periodWins: {},
   });
@@ -509,6 +519,7 @@ export default function ProfilePlanProSkinPicker({
           posts: status.progress?.posts ?? 0,
           exactHits: status.progress?.exactHits ?? 0,
           maxWinStreak: status.progress?.maxWinStreak ?? 0,
+          streakRuns: status.progress?.streakRuns ?? {},
           referralCompletedCount:
             status.progress?.referralCompletedCount ?? 0,
           periodWins: status.progress?.periodWins ?? {},
@@ -555,6 +566,13 @@ export default function ProfilePlanProSkinPicker({
   const overlayIndex = overlayEntry
     ? PRO_SKIN_UNLOCK_CATALOG.findIndex((e) => e.id === overlayEntry.id)
     : -1;
+
+  const overlayCredit = overlayEntry
+    ? proSkinImageCredit(overlayEntry.id)
+    : null;
+  const overlayLicenseUrl = overlayCredit
+    ? proSkinImageLicenseUrl(overlayCredit)
+    : null;
 
   const overlayUnlocked =
     !isProduction || (overlayId != null && unlockedIds.has(overlayId));
@@ -841,6 +859,31 @@ export default function ProfilePlanProSkinPicker({
               ].join(" ")}
             >
               {formatProSkinOwnerCount(ownerCounts[overlayEntry.id] ?? 0, lang)}
+            </p>
+          ) : null}
+          {overlayCredit ? (
+            <p className="mt-1.5 text-center text-[9px] leading-snug text-white/35">
+              <a
+                href={overlayCredit.sourceUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline-offset-2 hover:underline"
+              >
+                {formatProSkinImageCreditLine(overlayCredit, lang)}
+              </a>
+              {overlayLicenseUrl ? (
+                <>
+                  {" "}
+                  <a
+                    href={overlayLicenseUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline underline-offset-2"
+                  >
+                    (license)
+                  </a>
+                </>
+              ) : null}
             </p>
           ) : null}
           {saveError && isProduction ? (

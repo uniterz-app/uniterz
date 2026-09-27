@@ -1958,6 +1958,8 @@ export default function ProfileHomeScreen({
           navigation.navigate("StreakFramePreview");
         else if (page === "dustProSkinPreview" && __DEV__)
           navigation.navigate("DustProSkinPreview");
+        else if (page === "milestoneProSkinPreview" && __DEV__)
+          navigation.navigate("MilestoneProSkinPreview");
         else if (page === "teamAbbrBadgePreview" && __DEV__)
           navigation.navigate("TeamAbbrBadgePreview");
         else if (page === "resultPickupPreview" && __DEV__)

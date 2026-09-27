@@ -96,6 +96,7 @@ type Props = {
     | "proLeagueTeaserPreview"
     | "streakFramePreview"
     | "dustProSkinPreview"
+    | "milestoneProSkinPreview"
     | "teamAbbrBadgePreview"
     | "resultPickupPreview"
     | "proInsightGatePreview"
@@ -269,6 +270,7 @@ export default function ProfileSideMenuModal({
       | "proLeagueTeaserPreview"
       | "streakFramePreview"
       | "dustProSkinPreview"
+      | "milestoneProSkinPreview"
       | "teamAbbrBadgePreview"
       | "resultPickupPreview"
       | "proInsightGatePreview"
@@ -712,6 +714,14 @@ export default function ProfileSideMenuModal({
                           onPress={() => openUserPage("dustProSkinPreview")}
                         >
                           Dust Pro Skin
+                        </SideMenuItemButtonNative>
+                        <SideMenuItemButtonNative
+                          icon="texture-box"
+                          dense
+                          labelStyle={labelStyle}
+                          onPress={() => openUserPage("milestoneProSkinPreview")}
+                        >
+                          Milestone Pro Skin
                         </SideMenuItemButtonNative>
                         <SideMenuItemButtonNative
                           icon="tag-outline"

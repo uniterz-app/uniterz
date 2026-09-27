@@ -191,6 +191,7 @@ export async function loadProSkinUnlockProgressFromSeasonStats(
     posts,
     exactHits,
     maxWinStreak,
+    streakRuns: {},
     weeklyRanks: { ...EMPTY_PRO_SKIN_RANK_MAP },
     monthlyRanks: { ...EMPTY_PRO_SKIN_RANK_MAP },
     referralCompletedCount: readReferralCompletedCount(userData),
@@ -266,6 +267,7 @@ export function isProSkinIdUnlockedForUser(
   }
   if (
     entry.unlock.kind === "streak" ||
+    entry.unlock.kind === "streakRuns" ||
     entry.unlock.kind === "posts" ||
     entry.unlock.kind === "exactHits" ||
     entry.unlock.kind === "referralCompleted" ||

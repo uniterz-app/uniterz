@@ -1,5 +1,5 @@
 /**
- * Dust 素材テクスチャ — Native require
+ * 写真素材マップ系テクスチャ — Native require
  * 他 beast と同じ 300:430 を artH stretch（card 1080×1548 / rank 1600×320）
  */
 import type { ImageSourcePropType } from "react-native";
@@ -13,16 +13,74 @@ export const PROFILE_PLAN_PRO_DUST_TEXTURE_SOURCES: Record<
   ProfilePlanProDustTextureId,
   ImageSourcePropType
 > = {
-  "beast-dust": require("../../../../assets/pro-skins/textures/dust-powder-v3.webp"),
-  "beast-dust-ash": require("../../../../assets/pro-skins/textures/dust-film-v3.webp"),
+  "beast-dust": require("../../../../assets/pro-skins/textures/dust-powder-v4.webp"),
+  "beast-dust-ash": require("../../../../assets/pro-skins/textures/dust-film-v4.webp"),
+  "beast-startrail": require("../../../../assets/pro-skins/textures/startrail-v3.webp"),
+  "beast-nova": require("../../../../assets/pro-skins/textures/nova-v3.webp"),
+  "beast-lavaflow": require("../../../../assets/pro-skins/textures/lavaflow-v3.webp"),
+  "beast-marscrust": require("../../../../assets/pro-skins/textures/marscrust-v3.webp"),
+  "beast-lunar": require("../../../../assets/pro-skins/textures/lunar-v3.webp"),
+  "beast-nebula": require("../../../../assets/pro-skins/textures/nebula-v3.webp"),
+  "beast-galaxy": require("../../../../assets/pro-skins/textures/galaxy-v3.webp"),
+  "beast-solar": require("../../../../assets/pro-skins/textures/solar-v3.webp"),
+  "beast-jovian": require("../../../../assets/pro-skins/textures/jovian-v3.webp"),
+  "beast-rings": require("../../../../assets/pro-skins/textures/rings-v3.webp"),
+  "beast-europa": require("../../../../assets/pro-skins/textures/europa-v3.webp"),
+  "beast-dunes": require("../../../../assets/pro-skins/textures/dunes-v3.webp"),
+  "beast-aurora": require("../../../../assets/pro-skins/textures/aurora-v3.webp"),
+  "beast-flame": require("../../../../assets/pro-skins/textures/flame-v3.webp"),
+  "beast-pluto": require("../../../../assets/pro-skins/textures/pluto-v3.webp"),
+  "beast-saturn": require("../../../../assets/pro-skins/textures/saturn-v3.webp"),
+  "beast-nightearth": require("../../../../assets/pro-skins/textures/nightearth-v3.webp"),
+  "beast-corona": require("../../../../assets/pro-skins/textures/corona-v3.webp"),
+  "beast-crab": require("../../../../assets/pro-skins/textures/crab-v3.webp"),
+  "beast-helix": require("../../../../assets/pro-skins/textures/helix-v3.webp"),
+  "beast-pillars": require("../../../../assets/pro-skins/textures/pillars-v3.webp"),
+  "beast-neptune": require("../../../../assets/pro-skins/textures/neptune-v3.webp"),
+  "beast-io": require("../../../../assets/pro-skins/textures/io-v3.webp"),
+  "beast-lena": require("../../../../assets/pro-skins/textures/lena-v3.webp"),
+  "beast-hurricane": require("../../../../assets/pro-skins/textures/hurricane-v3.webp"),
+  "beast-andromeda": require("../../../../assets/pro-skins/textures/andromeda-v3.webp"),
+  "beast-southernring": require("../../../../assets/pro-skins/textures/southernring-v3.webp"),
+  "beast-deepfield": require("../../../../assets/pro-skins/textures/deepfield-v3.webp"),
+  "beast-milkyway": require("../../../../assets/pro-skins/textures/milkyway-v3.webp"),
 };
 
 export const PROFILE_PLAN_PRO_DUST_RANK_TEXTURE_SOURCES: Record<
   ProfilePlanProDustTextureId,
   ImageSourcePropType
 > = {
-  "beast-dust": require("../../../../assets/pro-skins/textures/dust-powder-rank-v3.webp"),
-  "beast-dust-ash": require("../../../../assets/pro-skins/textures/dust-film-rank-v3.webp"),
+  "beast-dust": require("../../../../assets/pro-skins/textures/dust-powder-rank-v4.webp"),
+  "beast-dust-ash": require("../../../../assets/pro-skins/textures/dust-film-rank-v4.webp"),
+  "beast-startrail": require("../../../../assets/pro-skins/textures/startrail-rank-v3.webp"),
+  "beast-nova": require("../../../../assets/pro-skins/textures/nova-rank-v3.webp"),
+  "beast-lavaflow": require("../../../../assets/pro-skins/textures/lavaflow-rank-v3.webp"),
+  "beast-marscrust": require("../../../../assets/pro-skins/textures/marscrust-rank-v3.webp"),
+  "beast-lunar": require("../../../../assets/pro-skins/textures/lunar-rank-v3.webp"),
+  "beast-nebula": require("../../../../assets/pro-skins/textures/nebula-rank-v3.webp"),
+  "beast-galaxy": require("../../../../assets/pro-skins/textures/galaxy-rank-v3.webp"),
+  "beast-solar": require("../../../../assets/pro-skins/textures/solar-rank-v3.webp"),
+  "beast-jovian": require("../../../../assets/pro-skins/textures/jovian-rank-v3.webp"),
+  "beast-rings": require("../../../../assets/pro-skins/textures/rings-rank-v3.webp"),
+  "beast-europa": require("../../../../assets/pro-skins/textures/europa-rank-v3.webp"),
+  "beast-dunes": require("../../../../assets/pro-skins/textures/dunes-rank-v3.webp"),
+  "beast-aurora": require("../../../../assets/pro-skins/textures/aurora-rank-v3.webp"),
+  "beast-flame": require("../../../../assets/pro-skins/textures/flame-rank-v3.webp"),
+  "beast-pluto": require("../../../../assets/pro-skins/textures/pluto-rank-v3.webp"),
+  "beast-saturn": require("../../../../assets/pro-skins/textures/saturn-rank-v3.webp"),
+  "beast-nightearth": require("../../../../assets/pro-skins/textures/nightearth-rank-v3.webp"),
+  "beast-corona": require("../../../../assets/pro-skins/textures/corona-rank-v3.webp"),
+  "beast-crab": require("../../../../assets/pro-skins/textures/crab-rank-v3.webp"),
+  "beast-helix": require("../../../../assets/pro-skins/textures/helix-rank-v3.webp"),
+  "beast-pillars": require("../../../../assets/pro-skins/textures/pillars-rank-v3.webp"),
+  "beast-neptune": require("../../../../assets/pro-skins/textures/neptune-rank-v3.webp"),
+  "beast-io": require("../../../../assets/pro-skins/textures/io-rank-v3.webp"),
+  "beast-lena": require("../../../../assets/pro-skins/textures/lena-rank-v3.webp"),
+  "beast-hurricane": require("../../../../assets/pro-skins/textures/hurricane-rank-v3.webp"),
+  "beast-andromeda": require("../../../../assets/pro-skins/textures/andromeda-rank-v3.webp"),
+  "beast-southernring": require("../../../../assets/pro-skins/textures/southernring-rank-v3.webp"),
+  "beast-deepfield": require("../../../../assets/pro-skins/textures/deepfield-rank-v3.webp"),
+  "beast-milkyway": require("../../../../assets/pro-skins/textures/milkyway-rank-v3.webp"),
 };
 
 export { DUST_CARD_TEXTURE_SIZE, DUST_RANK_TEXTURE_SIZE };

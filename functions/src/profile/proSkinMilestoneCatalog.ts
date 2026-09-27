@@ -3,9 +3,13 @@
  * Pro Skin マイルストーン定義の単一ソース。
  * Functions へは `npm run sync:pro-skin-milestone-catalog` で同期する。
  *
- * 構成: 即解放 15 / マイルストーン 21
+ * 構成: 即解放 11 / マイルストーン 46
  *
- * - 閾値系 → NBA settle
+ * 系統ごとに世界観を揃える（低い段は柄、高い段は宇宙写真）
+ * - 連勝 = 紅・炎 / パーフェクト = 蒼・氷 / 予想数 = 地球→冥王星の旅
+ * - 順位1回 = 称号（幾何・金属） / 順位回数 = 深宇宙 / 招待 = 金
+ *
+ * - 閾値系・連勝回数系 → NBA settle
  * - 順位1回系 → period snapshot 確定後 grant（earnedIds）
  * - 順位回数系 → 同 grant で wins 加算 → 閾値到達で解放
  * - 招待系 → referral settle で completedCount 到達時に解放
@@ -15,20 +19,16 @@ export const PRO_SKIN_UNLOCK_FROM_SEASON_KEY = "2026-27";
 /** Pro 加入だけで解放（CAREER のマイルストーン数からは除外） */
 export const PRO_IMMEDIATE_SKIN_IDS = [
   "atmos",
-  "parallax",
   "wave-riot-shard",
   "wave-uniterz-logo",
   "wave-mono-hex",
   "beast-dust",
   "beast-dust-ash",
-  "beast-panther",
   "beast-crocodile",
   "scale-mamba",
   "scale-python",
-  "form-hexveil",
   "scale-diamondback",
   "beast-shark",
-  "form-diamondgrid",
 ] as const;
 
 /**
@@ -56,6 +56,16 @@ export type ProSkinRankMilestone = {
   maxRank: number;
 };
 
+/**
+ * 「N 連勝を X 回」。連勝が N に届いた瞬間を 1 回と数える（同一シーズン）。
+ * 途切れて再び N に届けば 2 回目。1 回の連勝が 2N まで伸びても 1 回。
+ */
+export type ProSkinStreakRunMilestone = {
+  id: string;
+  streak: number;
+  runs: number;
+};
+
 /** 招待完了人数（referralStats.completedCount） */
 export type ProSkinReferralMilestone = {
   id: string;
@@ -75,36 +85,62 @@ export type ProSkinPeriodWinMilestone = {
   wins: number;
 };
 
-/**
- * 努力・精度（連勝 / Perfect / 予想）
- * Crimson Shard / Signal Mosaic はマイルストーン（スクショ指定）
- */
+/** 連勝（紅・炎）/ パーフェクト（蒼・氷）/ 予想数（地球→冥王星の旅） */
 export const PRO_SKIN_THRESHOLD_MILESTONES: readonly ProSkinThresholdMilestone[] =
   [
     { id: "wave-crimson-shard", kind: "streak", threshold: 5 },
-    { id: "beast-viper", kind: "streak", threshold: 7 },
-    { id: "scale-king", kind: "streak", threshold: 10 },
-    { id: "scale-dragon", kind: "streak", threshold: 15 },
-    { id: "wave-signal-mosaic", kind: "exactHits", threshold: 5 },
-    { id: "beast-shard", kind: "exactHits", threshold: 10 },
-    { id: "beast-circuitlace", kind: "posts", threshold: 100 },
-    { id: "beast-eclipse", kind: "posts", threshold: 150 },
-    { id: "beast-tessera", kind: "posts", threshold: 200 },
+    { id: "beast-eclipse", kind: "streak", threshold: 7 },
+    { id: "beast-lavaflow", kind: "streak", threshold: 10 },
+    { id: "beast-flame", kind: "streak", threshold: 15 },
+    { id: "beast-solar", kind: "streak", threshold: 20 },
+    { id: "beast-corona", kind: "streak", threshold: 25 },
+    { id: "beast-shard", kind: "exactHits", threshold: 5 },
+    { id: "beast-europa", kind: "exactHits", threshold: 10 },
+    { id: "beast-neptune", kind: "exactHits", threshold: 15 },
+    { id: "beast-nova", kind: "exactHits", threshold: 20 },
+    { id: "beast-lena", kind: "posts", threshold: 50 },
+    { id: "beast-hurricane", kind: "posts", threshold: 100 },
+    { id: "beast-nightearth", kind: "posts", threshold: 200 },
+    { id: "beast-aurora", kind: "posts", threshold: 300 },
+    { id: "beast-lunar", kind: "posts", threshold: 400 },
+    { id: "beast-marscrust", kind: "posts", threshold: 500 },
+    { id: "beast-dunes", kind: "posts", threshold: 600 },
+    { id: "beast-jovian", kind: "posts", threshold: 700 },
+    { id: "beast-rings", kind: "posts", threshold: 800 },
+    { id: "beast-saturn", kind: "posts", threshold: 900 },
+    { id: "beast-pluto", kind: "posts", threshold: 1000 },
   ] as const;
 
-/** 週/月順位 1回達成（standard ボード） */
+/** 連勝回数（紅・炎） */
+export const PRO_SKIN_STREAK_RUN_MILESTONES: readonly ProSkinStreakRunMilestone[] =
+  [
+    { id: "wave-ember-hex", streak: 5, runs: 2 },
+    { id: "beast-io", streak: 5, runs: 3 },
+    { id: "beast-helix", streak: 10, runs: 2 },
+  ] as const;
+
+/** streakRuns カウンタで追う連勝長（重複なし昇順） */
+export const PRO_SKIN_STREAK_RUN_LENGTHS: readonly number[] = [
+  ...new Set(PRO_SKIN_STREAK_RUN_MILESTONES.map((r) => r.streak)),
+].sort((a, b) => a - b);
+
+/** 週/月順位 1回達成 = 称号（standard ボード） */
 export const PRO_SKIN_RANK_MILESTONES: readonly ProSkinRankMilestone[] = [
+  { id: "beast-tessera", period: "weekly", metric: "totalPoints", maxRank: 10 },
+  { id: "form-isocubes", period: "weekly", metric: "totalPoints", maxRank: 1 },
+  { id: "beast-jagarmor", period: "weekly", metric: "totalUpset", maxRank: 1 },
+  { id: "wave-obsidian-warp", period: "weekly", metric: "winRate", maxRank: 1 },
   {
-    id: "wave-chem-ink",
+    id: "wave-neon-ridge",
+    period: "weekly",
+    metric: "totalGoalScorerHits",
+    maxRank: 1,
+  },
+  {
+    id: "beast-circuitlace",
     period: "monthly",
     metric: "totalPoints",
     maxRank: 10,
-  },
-  {
-    id: "form-isocubes",
-    period: "weekly",
-    metric: "totalPoints",
-    maxRank: 1,
   },
   {
     id: "beast-facet",
@@ -112,62 +148,81 @@ export const PRO_SKIN_RANK_MILESTONES: readonly ProSkinRankMilestone[] = [
     metric: "totalGoalScorerHits",
     maxRank: 1,
   },
-  {
-    id: "beast-thunder",
-    period: "monthly",
-    metric: "totalUpset",
-    maxRank: 1,
-  },
-  {
-    id: "beast-starborne",
-    period: "monthly",
-    metric: "winRate",
-    maxRank: 1,
-  },
-  {
-    id: "beast-regalia",
-    period: "monthly",
-    metric: "totalPoints",
-    maxRank: 1,
-  },
+  { id: "beast-thunder", period: "monthly", metric: "totalUpset", maxRank: 1 },
+  { id: "beast-starborne", period: "monthly", metric: "winRate", maxRank: 1 },
+  { id: "beast-regalia", period: "monthly", metric: "totalPoints", maxRank: 1 },
 ] as const;
 
-/** Wave — 招待完了人数 */
+/** 招待完了人数 = 金 */
 export const PRO_SKIN_REFERRAL_MILESTONES: readonly ProSkinReferralMilestone[] =
   [
-    { id: "wave-cyan-grid", completedCount: 5 },
+    { id: "beast-viper", completedCount: 5 },
     { id: "wave-gold-monogram", completedCount: 10 },
+    { id: "scale-dragon", completedCount: 20 },
   ] as const;
 
-/**
- * Wave / Beast — 週/月条件の累計回数
- */
+/** 週/月条件の累計回数 = 深宇宙 */
 export const PRO_SKIN_PERIOD_WIN_MILESTONES: readonly ProSkinPeriodWinMilestone[] =
   [
     {
-      id: "wave-neon-ridge",
-      period: "monthly",
+      id: "beast-startrail",
+      period: "weekly",
       metric: "totalPoints",
       maxRank: 10,
       wins: 3,
     },
     {
-      id: "beast-jagarmor",
-      period: "monthly",
+      id: "beast-nebula",
+      period: "weekly",
       metric: "totalPoints",
       maxRank: 10,
       wins: 5,
     },
     {
-      id: "wave-ember-hex",
+      id: "beast-crab",
       period: "weekly",
       metric: "totalPoints",
       maxRank: 1,
       wins: 3,
     },
     {
-      id: "wave-obsidian-warp",
+      id: "beast-pillars",
       period: "weekly",
+      metric: "totalPoints",
+      maxRank: 1,
+      wins: 5,
+    },
+    {
+      id: "beast-southernring",
+      period: "monthly",
+      metric: "totalPoints",
+      maxRank: 10,
+      wins: 3,
+    },
+    {
+      id: "beast-andromeda",
+      period: "monthly",
+      metric: "totalPoints",
+      maxRank: 10,
+      wins: 5,
+    },
+    {
+      id: "beast-galaxy",
+      period: "monthly",
+      metric: "totalPoints",
+      maxRank: 1,
+      wins: 3,
+    },
+    {
+      id: "beast-milkyway",
+      period: "monthly",
+      metric: "totalPoints",
+      maxRank: 10,
+      wins: 10,
+    },
+    {
+      id: "beast-deepfield",
+      period: "monthly",
       metric: "totalPoints",
       maxRank: 1,
       wins: 5,

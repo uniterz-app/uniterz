@@ -529,6 +529,15 @@ function ProfileStackScreen() {
         ) : null}
         {__DEV__ ? (
           <ProfileStack.Screen
+            name="MilestoneProSkinPreview"
+            getComponent={() =>
+              require("../features/profile/screens/ProfileStackWrappers")
+                .MilestoneProSkinPreviewScreenWrapper
+            }
+          />
+        ) : null}
+        {__DEV__ ? (
+          <ProfileStack.Screen
             name="TeamAbbrBadgePreview"
             getComponent={() =>
               require("../features/profile/screens/ProfileStackWrappers")
