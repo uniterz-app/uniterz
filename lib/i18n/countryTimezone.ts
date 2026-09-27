@@ -87,8 +87,41 @@ export const FALLBACK_TIMEZONE_BY_LANGUAGE: Record<Language, string> = {
   pt: "America/Sao_Paulo",
 };
 
+export function isValidTimeZone(tz: unknown): tz is string {
+  if (typeof tz !== "string" || !tz.trim()) return false;
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: tz });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** 端末（ブラウザ / OS）の IANA タイムゾーン。取れなければ null */
+export function getDeviceTimeZone(): string | null {
+  try {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    return isValidTimeZone(tz) ? tz : null;
+  } catch {
+    return null;
+  }
+}
+
 /**
- * ユーザーのタイムゾーンを解決する。
+ * 試合時刻・日付の表示用タイムゾーン。
+ * 手動設定（users.displayTimeZone）→ 端末 → 登録国 → 言語 の順。
+ */
+export function resolveDisplayTimeZone(input: {
+  displayTimeZone: string | null | undefined;
+  countryCode: string | null | undefined;
+  language: Language;
+}): string {
+  if (isValidTimeZone(input.displayTimeZone)) return input.displayTimeZone;
+  return getDeviceTimeZone() ?? resolveUserTimezone(input.countryCode, input.language);
+}
+
+/**
+ * 国コードからの代表タイムゾーン（端末 TZ が取れないときのフォールバック）。
  * 国コードがあればそれを優先、なければ言語から推定。
  */
 export function resolveUserTimezone(

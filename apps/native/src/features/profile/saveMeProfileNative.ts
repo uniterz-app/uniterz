@@ -18,6 +18,8 @@ export type SaveMeProfileNativePayload = {
   language: Language;
   countryCode: string | null;
   photoCropY?: number;
+  /** 表示 TZ の手動設定。null で自動（端末）。未指定なら既存値を維持 */
+  displayTimeZone?: string | null;
   completeOnboarding?: boolean;
   preferredLeague?: PreferredLeague;
 };

@@ -90,10 +90,11 @@ export default function NbaPredictToolsTabs({
   const m = t(language).predict;
   const loadingLabel = t(language).common.loading;
   const { fUser } = useAuth();
-  const { countryCode } = useUserLanguage(fUser?.uid ?? null);
+  const { countryCode, timeZone } = useUserLanguage(fUser?.uid ?? null);
   const insightPendingText = formatProInsightFirstReadyPending({
     language,
     countryCode,
+    timeZone,
     tipAtMs,
   });
   const searchParams = useSearchParams();

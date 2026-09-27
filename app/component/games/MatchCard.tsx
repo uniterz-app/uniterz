@@ -61,7 +61,6 @@ import {
 } from "./cyberMotion";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import type { Language } from "@/lib/i18n/language";
-import { resolveUserTimezone } from "@/lib/i18n/countryTimezone";
 import { t } from "@/lib/i18n/t";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import {
@@ -435,14 +434,13 @@ function MatchCardView({
   const router = useRouter();
 
   const { fUser: user } = useFirebaseUser();
-  const { countryCode } = useUserLanguage(user?.uid ?? null);
+  const { timeZone: userTimeZone } = useUserLanguage(user?.uid ?? null);
   const m = t(language);
   const displayedRoundLabel = displayNbaRoundLabel(
     roundLabel,
     language === "ja"
   );
-  const displayTimeZone =
-    timeZoneProp ?? resolveUserTimezone(countryCode, language);
+  const displayTimeZone = timeZoneProp ?? userTimeZone;
 
   const [navigating, setNavigating] = useState(false);
   // Full-area tap: scale the whole card shell (transparent overlay alone shows no motion).

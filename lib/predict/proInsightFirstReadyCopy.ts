@@ -95,10 +95,13 @@ const COPY: Record<Language, (time: string) => string> = {
 export function formatProInsightFirstReadyPending(input: {
   language: Language;
   countryCode?: string | null;
+  /** 表示 TZ（`useUserLanguage().timeZone`）。省略時は登録国ベース */
+  timeZone?: string | null;
   tipAtMs?: number | null;
 }): string {
   const language = input.language;
-  const timeZone = resolveUserTimezone(input.countryCode, language);
+  const timeZone =
+    input.timeZone || resolveUserTimezone(input.countryCode, language);
   const atMs = proInsightFirstReadyAtMs(input.tipAtMs);
   const time = formatLocalClock(atMs, timeZone, language);
   return (COPY[language] ?? COPY.en)(time);

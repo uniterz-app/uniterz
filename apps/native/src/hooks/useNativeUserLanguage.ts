@@ -12,9 +12,12 @@ export function useNativeUserLanguage(uid: string | null | undefined): {
   language: Language;
   ready: boolean;
   countryCode: string | null;
+  displayTimeZone: string | null;
+  timeZone: string;
 } {
-  const { language, loading, countryCode } = useNativeUserLanguageCore(uid);
-  return { language, ready: !loading, countryCode };
+  const { language, loading, countryCode, displayTimeZone, timeZone } =
+    useNativeUserLanguageCore(uid);
+  return { language, ready: !loading, countryCode, displayTimeZone, timeZone };
 }
 
 export function useNativeUserLanguageFromAuth() {

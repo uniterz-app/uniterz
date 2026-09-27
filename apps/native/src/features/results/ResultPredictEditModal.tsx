@@ -59,6 +59,7 @@ import {
   writeEditModeHintShown,
 } from "../games/predictEditModeHintPrefs";
 import { useFirebaseUser } from "../../auth/FirebaseUserProvider";
+import { useNativeLanguage } from "../../i18n/NativeLanguageProvider";
 import {
   isPostPredictionEditableForViewer,
   type PostWithMillis,
@@ -180,6 +181,7 @@ export default function ResultPredictEditModal({
 }: Props) {
   const { fUser } = useFirebaseUser();
   const { isPro: isProUser } = useNativeUserPlan(fUser?.uid);
+  const { timeZone: displayTimeZone } = useNativeLanguage();
   const t = useMemo(() => getGamesTexts(language), [language]);
 
   const [phase, setPhase] = useState<Phase>("idle");
@@ -419,7 +421,7 @@ export default function ResultPredictEditModal({
     const awayName = resolveGameTeamName(g.away, g.awayTeamName, "AWAY");
     const homeCompact = toCompactTeamName(g.league, homeName);
     const awayCompact = toCompactTeamName(g.league, awayName);
-    const centerBlock = getGameCardCenterBlock(g, language);
+    const centerBlock = getGameCardCenterBlock(g, language, displayTimeZone);
     const seriesLabel = resolveNativeSeriesLabel(g, peerGames);
     const seriesPair = resolveNativeSeriesPair(g, peerGames);
     const roundLabelRaw = g.roundLabel;
@@ -445,7 +447,7 @@ export default function ResultPredictEditModal({
       homeSide: g.home,
       awaySide: g.away,
     };
-  }, [game, language, peerGames]);
+  }, [game, language, peerGames, displayTimeZone]);
 
   const predictOverlayMarketBar = useMemo(() => {
     if (!game?.id) return null;
@@ -479,13 +481,13 @@ export default function ResultPredictEditModal({
     if (!game) return null;
     if (resolveGameStatus(game) !== "scheduled") return null;
     const startAt = resolveGameStartAt(game);
-    const kickoffValue = formatKickoffTime(startAt, language);
+    const kickoffValue = formatKickoffTime(startAt, displayTimeZone);
     const gameId = String(game.id ?? "");
     const broadcastLabels =
       selectedLeague === "wc" ? resolveWcBroadcastLabels(gameId, game) : [];
     if (!startAt && broadcastLabels.length === 0) return null;
     return { kickoffValue, broadcastLabels };
-  }, [game, selectedLeague, language]);
+  }, [game, selectedLeague, displayTimeZone]);
 
   const wcGoalScorerPreview = useMemo(() => {
     if (!game || selectedLeague !== "wc" || !post) return null;
@@ -768,12 +770,8 @@ export default function ResultPredictEditModal({
   );
 }
 
-function formatKickoffTime(
-  startAt: Date | null,
-  language: GamesLanguage
-): string {
+function formatKickoffTime(startAt: Date | null, timeZone: string): string {
   if (!startAt) return "--:--";
-  const timeZone = language === "ja" ? "Asia/Tokyo" : "America/New_York";
   const parts = new Intl.DateTimeFormat("en-GB", {
     timeZone,
     hour: "2-digit",
@@ -802,7 +800,8 @@ function isEffectiveLive(game: Record<string, unknown>): boolean {
 /** `GamesHomeScreen` と同一の中央ブロック解決 */
 function getGameCardCenterBlock(
   game: Record<string, unknown>,
-  language: GamesLanguage
+  language: GamesLanguage,
+  timeZone: string
 ): GameCardCenterBlock {
   const status = resolveGameStatus(game);
   const score = resolveGameScore(game);
@@ -827,7 +826,7 @@ function getGameCardCenterBlock(
   }
   return {
     variant: "time",
-    time: formatKickoffTime(startAt, language),
+    time: formatKickoffTime(startAt, timeZone),
   };
 }
 

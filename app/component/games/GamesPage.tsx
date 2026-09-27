@@ -45,7 +45,6 @@ import { loadPlayoffBracket } from "@/lib/playoff-bracket-firestore";
 import { getCurrentPlayoffSeason } from "@/lib/playoff-bracket-config";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
-import { resolveUserTimezone } from "@/lib/i18n/countryTimezone";
 import { t } from "@/lib/i18n/t";
 import {
   getTodayKeyInTimeZone,
@@ -60,6 +59,13 @@ import {
   GAMES_SCHEDULE_SHELL_DURATION_SEC,
 } from "./cyberMotion";
 import { fetchMonthHasGames } from "@/lib/games/fetchMonthHasGames";
+import {
+  adjacentMonthsHaveGameDays,
+  firstGameDayKeyInMonth,
+  gameDaysFromKeys,
+} from "@/lib/games/gameDayIndex";
+import { useGameDayIndex } from "@/lib/games/useGameDayIndex";
+import { GAME_SCHEDULE_SEASON } from "@/lib/games/gameScheduleSeason";
 import { setAppTutorialBlockingEvents } from "@/lib/tutorial/tutorialBlockingEvents";
 import { tutorialSkipConfirmProps } from "@/lib/tutorial/tutorialSkipConfirmProps";
 import {
@@ -201,14 +207,9 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
   const deepLinkOpenPredictGameId = searchParams.get("openPredict");
 
   const { fUser: user } = useFirebaseUser();
-  const { language, countryCode } = useUserLanguage(user?.uid ?? null);
+  const { language, timeZone: dayTimeZone } = useUserLanguage(user?.uid ?? null);
   const m = t(language);
   const skipConfirm = tutorialSkipConfirmProps(m.tutorial);
-  /** 登録国の代表 TZ。未登録時は言語フォールバック（ja→JST 等） */
-  const dayTimeZone = useMemo(
-    () => resolveUserTimezone(countryCode, language),
-    [countryCode, language]
-  );
   const isMobileRoute = Boolean(
     pathname?.startsWith("/mobile") || pathname?.startsWith("/m/")
   );
@@ -425,10 +426,27 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
   ]);
 
   /* =========================
-     Game days（アンカー日の暦日±5日を取得しストリップ用。端で+2延長）
+     Game days（カード用はアンカー日の暦日±5日。ストリップはシーズン全試合日インデックス）
   ========================= */
-  const { gameDays, monthRows, peerRowsForSeriesInference, loading: loadingDays } =
-    useGameDays(league, dayTimeZone, anchorForGameDays);
+  const {
+    gameDays: windowGameDays,
+    monthRows,
+    peerRowsForSeriesInference,
+    loading: loadingDays,
+  } = useGameDays(league, dayTimeZone, anchorForGameDays);
+
+  const seasonGameDayKeys = useGameDayIndex({
+    league,
+    season: GAME_SCHEDULE_SEASON,
+    timeZone: dayTimeZone,
+  });
+  const gameDays = useMemo(
+    () =>
+      seasonGameDayKeys
+        ? gameDaysFromKeys(seasonGameDayKeys, dayTimeZone)
+        : windowGameDays,
+    [seasonGameDayKeys, windowGameDays, dayTimeZone]
+  );
 
   const { teams, nameById } = useScheduleTeams(league);
 
@@ -700,6 +718,19 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
       setAdjacentMonthHasGames({ prev: false, next: false, loading: false });
       return;
     }
+    if (seasonGameDayKeys) {
+      const adj = adjacentMonthsHaveGameDays(
+        seasonGameDayKeys,
+        selected,
+        dayTimeZone
+      );
+      setAdjacentMonthHasGames((s) =>
+        !s.loading && s.prev === adj.prev && s.next === adj.next
+          ? s
+          : { ...adj, loading: false }
+      );
+      return;
+    }
     let cancelled = false;
     setAdjacentMonthHasGames((s) => ({ ...s, loading: true }));
     const prevAnchor = shiftCalendarMonthStart(selected, -1, dayTimeZone);
@@ -733,7 +764,22 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
     return () => {
       cancelled = true;
     };
-  }, [selected, league, dayTimeZone]);
+  }, [selected, league, dayTimeZone, seasonGameDayKeys]);
+
+  const moveToAdjacentMonth = useCallback(
+    (delta: -1 | 1) => {
+      if (!selected) return;
+      const monthStart = shiftCalendarMonthStart(selected, delta, dayTimeZone);
+      const firstKey = seasonGameDayKeys
+        ? firstGameDayKeyInMonth(seasonGameDayKeys, monthStart, dayTimeZone)
+        : null;
+      const firstDay = firstKey
+        ? parseDateKeyInTimeZone(firstKey, dayTimeZone)
+        : null;
+      setSelectedAndSync(firstDay ?? monthStart);
+    },
+    [selected, dayTimeZone, seasonGameDayKeys, setSelectedAndSync]
+  );
 
   /* =========================
      today へ戻す（試合のある日のみ。今日以降で最も近い日、なければ最終日）
@@ -1276,18 +1322,14 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
         if (adjacentMonthHasGames.loading || !adjacentMonthHasGames.prev) {
           return;
         }
-        setSelectedAndSync(
-          shiftCalendarMonthStart(selected, -1, dayTimeZone),
-        );
+        moveToAdjacentMonth(-1);
       }}
       onNext={() => {
         if (!selected) return;
         if (adjacentMonthHasGames.loading || !adjacentMonthHasGames.next) {
           return;
         }
-        setSelectedAndSync(
-          shiftCalendarMonthStart(selected, 1, dayTimeZone),
-        );
+        moveToAdjacentMonth(1);
       }}
       onCenterDoubleClick={moveToToday}
       canPrev={adjacentMonthHasGames.prev}

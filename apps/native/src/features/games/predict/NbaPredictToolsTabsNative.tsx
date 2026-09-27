@@ -95,10 +95,11 @@ export default function NbaPredictToolsTabsNative({
 }: Props) {
   const t = getGamesTexts(language);
   const loadingLabel = t.predictToolLoading;
-  const { countryCode } = useNativeUserLanguageFromAuth();
+  const { countryCode, timeZone } = useNativeUserLanguageFromAuth();
   const insightPendingText = formatProInsightFirstReadyPending({
     language: language as Language,
     countryCode,
+    timeZone,
     tipAtMs,
   });
   const [tab, setTab] = useState<NbaPredictToolsTab | null>("injuries");

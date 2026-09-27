@@ -28,6 +28,13 @@ import {
 } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
 import { resolveLocalizedLang } from "@/lib/i18n/localize";
+import { getDeviceTimeZone } from "@/lib/i18n/countryTimezone";
+import {
+  buildTimeZoneOptions,
+  timeZoneCityLabel,
+  timeZoneOptionLabel,
+} from "@/lib/i18n/timeZoneOptions";
+import { timeZoneSettingCopy } from "@/lib/i18n/timeZoneSettingCopy";
 import { saveMeProfile } from "@/lib/api/saveMeProfile";
 import {
   isProfileGamblingTermsError,
@@ -57,6 +64,10 @@ export default function ProfileEditSheet({
     guessLanguageFromNavigator()
   );
   const [countryCode, setCountryCode] = useState("");
+  /** "" は自動（端末） */
+  const [displayTimeZone, setDisplayTimeZone] = useState("");
+  const [deviceTimeZone] = useState(() => getDeviceTimeZone());
+  const [timeZoneOptions] = useState(() => buildTimeZoneOptions());
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [currentPhotoURL, setCurrentPhotoURL] = useState<string | null>(null);
   const [cropY, setCropY] = useState(50);
@@ -81,6 +92,9 @@ export default function ProfileEditSheet({
         const norm = normalizeLanguage(d.language);
         setLanguage(norm ?? guessLanguageFromNavigator());
         setCountryCode(typeof d.countryCode === "string" ? d.countryCode : "");
+        setDisplayTimeZone(
+          typeof d.displayTimeZone === "string" ? d.displayTimeZone : ""
+        );
         if (typeof d.photoCropY === "number") setCropY(d.photoCropY);
       }
       setReady(true);
@@ -135,6 +149,7 @@ export default function ProfileEditSheet({
         photoURL: photoURL || "",
         language,
         countryCode: countryCode || null,
+        displayTimeZone: displayTimeZone || null,
         photoCropY: cropY,
       });
       onSaved?.();
@@ -266,6 +281,40 @@ export default function ProfileEditSheet({
             </option>
           ))}
         </CyberAuthSelect>
+      </div>
+
+      <div className="space-y-1.5">
+        <label className="text-xs font-medium text-white/75">
+          {timeZoneSettingCopy(language).label}
+        </label>
+        <CyberAuthSelect
+          angular
+          tone="mono"
+          selectProps={{
+            value: displayTimeZone,
+            onChange: (e) => setDisplayTimeZone(e.target.value),
+          }}
+        >
+          <option value="">
+            {timeZoneSettingCopy(language).auto(
+              deviceTimeZone ? timeZoneCityLabel(deviceTimeZone) : null
+            )}
+          </option>
+          {displayTimeZone &&
+          !timeZoneOptions.some((o) => o.timeZone === displayTimeZone) ? (
+            <option value={displayTimeZone}>
+              {timeZoneOptionLabel(displayTimeZone)}
+            </option>
+          ) : null}
+          {timeZoneOptions.map((o) => (
+            <option key={o.timeZone} value={o.timeZone}>
+              {o.label}
+            </option>
+          ))}
+        </CyberAuthSelect>
+        <p className="text-[11px] leading-snug text-white/45">
+          {timeZoneSettingCopy(language).hint}
+        </p>
       </div>
 
       <button

@@ -5,7 +5,10 @@ import { revalidateTag } from "next/cache";
 import { FieldValue } from "firebase-admin/firestore";
 import { getAdminAuth, getAdminDb } from "@/lib/firebaseAdmin";
 import { normalizeLanguage } from "@/lib/i18n/language";
-import { FALLBACK_TIMEZONE_BY_LANGUAGE } from "@/lib/i18n/countryTimezone";
+import {
+  FALLBACK_TIMEZONE_BY_LANGUAGE,
+  isValidTimeZone,
+} from "@/lib/i18n/countryTimezone";
 import {
   assertProfileTextsFreeOfGamblingTerms,
   isProfileGamblingTermsError,
@@ -93,6 +96,17 @@ export async function POST(req: Request) {
 
     if (photoCropY !== undefined) {
       patch.photoCropY = photoCropY;
+    }
+    /** キーがあるときだけ更新（旧クライアントは送らない）。null は自動（端末） */
+    if ("displayTimeZone" in body) {
+      const raw = body.displayTimeZone;
+      if (raw === null || raw === "") {
+        patch.displayTimeZone = FieldValue.delete();
+      } else if (isValidTimeZone(raw)) {
+        patch.displayTimeZone = raw;
+      } else {
+        return NextResponse.json({ error: "invalid timeZone" }, { status: 400 });
+      }
     }
     if (completeOnboarding) {
       patch.onboardingCompletedAt = FieldValue.serverTimestamp();

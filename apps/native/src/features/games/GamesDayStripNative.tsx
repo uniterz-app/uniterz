@@ -68,6 +68,14 @@ export default function GamesDayStripNative({
       let x: number;
       if (layout) {
         x = Math.max(0, layout.x + layout.width / 2 - windowWidth / 2);
+      } else if (slotWidth != null) {
+        x = Math.max(
+          0,
+          DAY_STRIP_H_PAD +
+            idx * (slotWidth + DAY_STRIP_GAP_PX) +
+            slotWidth / 2 -
+            windowWidth / 2
+        );
       } else {
         x = Math.max(
           0,
@@ -82,7 +90,7 @@ export default function GamesDayStripNative({
         scrollingByCode.current = false;
       }, animated ? 120 : 50);
     },
-    [windowWidth]
+    [slotWidth, windowWidth]
   );
 
   useEffect(() => {
@@ -147,8 +155,15 @@ export default function GamesDayStripNative({
     chipLayouts.current.set(index, { x, width });
   }, []);
 
+  /** シーズン全日を並べるため、選択日からの距離で stagger（先頭から順だと数秒かかる） */
+  const selectedIndex = Math.max(
+    0,
+    dates.findIndex((d) => toDateKeyInTimeZone(d, timeZone) === selectedKey)
+  );
   const dayStripChipEnter = (chipIndex: number) =>
-    reduceMotion || !entranceEnabled ? undefined : gamesDayStripChipEnter(chipIndex);
+    reduceMotion || !entranceEnabled
+      ? undefined
+      : gamesDayStripChipEnter(Math.min(Math.abs(chipIndex - selectedIndex), 6));
 
   function handleChipPress(day: Date) {
     scrollingByCode.current = true;

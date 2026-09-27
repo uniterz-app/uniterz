@@ -223,27 +223,29 @@ export default function DayStrip({
 
   const dayStripContainer = {
     hidden: {},
-    show: {
-      transition: {
-        staggerChildren: reduceMotion ? 0 : 0.028,
-        delayChildren: reduceMotion ? 0 : 0.04,
-      },
-    },
+    show: {},
   };
+
+  /** シーズン全日を並べるため、選択日からの距離で stagger（先頭から順だと数秒かかる） */
+  const selectedIndex = Math.max(
+    0,
+    dates.findIndex((d) => toDateKeyInTimeZone(d, timeZone) === selectedKey)
+  );
 
   const dayStripItem = {
     hidden: reduceMotion
       ? { opacity: 1, y: 0, scale: 1 }
       : { opacity: 0, y: 12, scale: 0.93 },
-    show: {
+    show: (distance: number) => ({
       opacity: 1,
       y: 0,
       scale: 1,
       transition: {
         duration: reduceMotion ? 0 : 0.28,
+        delay: reduceMotion ? 0 : 0.04 + Math.min(distance, 6) * 0.028,
         ease: DAY_STRIP_EASE,
       },
-    },
+    }),
   };
 
   return (
@@ -283,6 +285,7 @@ export default function DayStrip({
               ].join(" ")}
               style={basis}
               variants={dayStripItem}
+              custom={Math.abs(i - selectedIndex)}
             >
               <motion.button
                 ref={(el) => {

@@ -4,6 +4,7 @@ import { bdlSeasonYearFromSeasonKey } from "@/lib/nba/bdl/bdlNbaEnv";
 import { fetchBdlGames } from "@/lib/nba/bdl/fetchBdlGames";
 import { mapBdlGameToNbaGameDoc } from "@/lib/nba/bdl/mapBdlGameToNbaGameDoc";
 import { ingestNbaTeamGameLogsFromGames } from "@/lib/nba/ingest/nbaTeamGameLogsIngest";
+import { writeGameDayIndexFromGames } from "@/lib/games/server/gameDayIndexAdmin";
 
 export type IngestNbaGamesResult = {
   ok: true;
@@ -15,6 +16,10 @@ export type IngestNbaGamesResult = {
   skipped: number;
   dryRun: boolean;
   sampleIds: string[];
+  /** 日付ストリップ用 `gameDayIndex` の distinct 開始時刻数 */
+  gameDayIndex?: {
+    startCount: number;
+  };
   /** games 書き込み後に組んだチーム詳細用スナップショット */
   teamGameLogs?: {
     teamCount: number;
@@ -97,6 +102,15 @@ export async function ingestNbaGamesFromBdl(
     written = 0;
   }
 
+  let gameDayIndex: IngestNbaGamesResult["gameDayIndex"];
+  if (!dryRun) {
+    const idx = await writeGameDayIndexFromGames(db, {
+      league: "nba",
+      season: seasonKey,
+    });
+    gameDayIndex = { startCount: idx.startCount };
+  }
+
   let teamGameLogs: IngestNbaGamesResult["teamGameLogs"];
   if (!dryRun && rebuildTeamGameLogs) {
     const logs = await ingestNbaTeamGameLogsFromGames(db, { seasonKey });
@@ -116,6 +130,7 @@ export async function ingestNbaGamesFromBdl(
     skipped,
     dryRun,
     sampleIds: mapped.slice(0, 8).map((g) => g.id),
+    gameDayIndex,
     teamGameLogs,
   };
 }

@@ -25,12 +25,17 @@ import {
 import { LinearGradient } from "expo-linear-gradient";
 import { colors, radius, spacing, typography } from "../../theme/tokens";
 import { toDateKeyInTimeZone } from "../../utils/date";
-import { resolveUserTimezone } from "../../../../../lib/i18n/countryTimezone";
 import {
   parseDateKeyInTimeZone,
   shiftCalendarMonthStart,
 } from "../../../../../lib/time/zonedTime";
 import { fetchMonthHasGames } from "../../../../../lib/games/fetchMonthHasGames";
+import {
+  adjacentMonthsHaveGameDays,
+  firstGameDayKeyInMonth,
+} from "../../../../../lib/games/gameDayIndex";
+import { useGameDayIndex } from "../../../../../lib/games/useGameDayIndex";
+import { GAME_SCHEDULE_SEASON } from "../../../../../lib/games/gameScheduleSeason";
 import {
   fetchNearestGameDayToLocalDay,
   pickNearestDateKey,
@@ -728,13 +733,8 @@ export default function GamesHomeScreen({
   const [myPredictionsReloadNonce, setMyPredictionsReloadNonce] = useState(0);
   const [countdownNowMs, setCountdownNowMs] = useState(() => Date.now());
   const [userDisplayName, setUserDisplayName] = useState("");
-  const { language, countryCode } = useNativeUserLanguageFromAuth();
+  const { language, timeZone: dayTimeZone } = useNativeUserLanguageFromAuth();
   const gamesLanguage = useMemo(() => toNativeGamesLanguage(language), [language]);
-  /** 登録国の代表 TZ。未登録時は言語フォールバック */
-  const dayTimeZone = useMemo(
-    () => resolveUserTimezone(countryCode, language),
-    [countryCode, language]
-  );
   /** ロード完了直後の日付チップのみ入場アニメ（窓移動での再マウント連打を防ぐ） */
   const [dayStripEntranceEnabled, setDayStripEntranceEnabled] = useState(true);
   const {
@@ -778,14 +778,22 @@ export default function GamesHomeScreen({
     () => gamesFilterIsActive(gamesFilter),
     [gamesFilter]
   );
+  /** シーズン全試合日（取得前・失敗時は取得済み窓の試合日） */
+  const seasonGameDayKeys = useGameDayIndex({
+    league: selectedLeague,
+    season: GAME_SCHEDULE_SEASON,
+    timeZone: dayTimeZone,
+    apiBaseUrl: getUniterzApiBaseUrl(),
+  });
   const dateKeysForDayStrip = useMemo(() => {
-    if (!filterActive) return dateKeysWithGames;
+    if (!filterActive) return seasonGameDayKeys ?? dateKeysWithGames;
     return sortedUniqueDateKeysFromRows(
       applyNativeGamesFilter(peerGamesForSeries, gamesFilter, teamNameById),
       dayTimeZone
     );
   }, [
     filterActive,
+    seasonGameDayKeys,
     dateKeysWithGames,
     peerGamesForSeries,
     gamesFilter,
@@ -1125,6 +1133,19 @@ export default function GamesHomeScreen({
   });
 
   useEffect(() => {
+    if (seasonGameDayKeys) {
+      const adj = adjacentMonthsHaveGameDays(
+        seasonGameDayKeys,
+        selectedDate,
+        dayTimeZone
+      );
+      setAdjacentMonthHasGames((s) =>
+        !s.loading && s.prev === adj.prev && s.next === adj.next
+          ? s
+          : { ...adj, loading: false }
+      );
+      return;
+    }
     let cancelled = false;
     setAdjacentMonthHasGames((s) => ({ ...s, loading: true }));
     const prevAnchor = shiftCalendarMonthStart(selectedDate, -1, dayTimeZone);
@@ -1160,7 +1181,7 @@ export default function GamesHomeScreen({
     return () => {
       cancelled = true;
     };
-  }, [selectedDate, selectedLeague]);
+  }, [selectedDate, selectedLeague, seasonGameDayKeys, dayTimeZone]);
   const selectedLeagueOption = useMemo(
     () => LEAGUE_OPTIONS.find((option) => option.id === selectedLeague) ?? LEAGUE_OPTIONS[0],
     [selectedLeague]
@@ -1633,8 +1654,11 @@ export default function GamesHomeScreen({
       (game) => resolveGameStatus(game as Record<string, unknown>) === "final"
     );
     if (!allFinished) return;
-    setSelectedDate((prev) => addDays(prev, 1));
-  }, [loading, games, selectedDate, setSelectedDate, today]);
+    const currentKey = toDateKeyInTimeZone(selectedDate, dayTimeZone);
+    const nextKey = dateKeysForDayStrip.find((k) => k > currentKey);
+    const nextDay = nextKey ? parseDateKeyInTimeZone(nextKey, dayTimeZone) : null;
+    setSelectedDate(nextDay ?? addDays(selectedDate, 1));
+  }, [loading, games, selectedDate, setSelectedDate, today, dateKeysForDayStrip, dayTimeZone]);
 
   /**
    * チュートリアルは専用試合を持たない。
@@ -1719,18 +1743,26 @@ export default function GamesHomeScreen({
     if (pick) setSelectedDate(pick);
   }
 
-  function goPrevMonth() {
+  function moveToAdjacentMonth(delta: -1 | 1) {
     skipAutoAdvanceRef.current = true;
     suppressAutoAdvanceForTodayRef.current = true;
     if (adjacentMonthHasGames.loading) return;
-    setSelectedDate(shiftCalendarMonthStart(selectedDate, -1, dayTimeZone));
+    const monthStart = shiftCalendarMonthStart(selectedDate, delta, dayTimeZone);
+    const firstKey = seasonGameDayKeys
+      ? firstGameDayKeyInMonth(seasonGameDayKeys, monthStart, dayTimeZone)
+      : null;
+    const firstDay = firstKey
+      ? parseDateKeyInTimeZone(firstKey, dayTimeZone)
+      : null;
+    setSelectedDate(firstDay ?? monthStart);
+  }
+
+  function goPrevMonth() {
+    moveToAdjacentMonth(-1);
   }
 
   function goNextMonth() {
-    skipAutoAdvanceRef.current = true;
-    suppressAutoAdvanceForTodayRef.current = true;
-    if (adjacentMonthHasGames.loading) return;
-    setSelectedDate(shiftCalendarMonthStart(selectedDate, 1, dayTimeZone));
+    moveToAdjacentMonth(1);
   }
 
   function goPrevGameDay() {

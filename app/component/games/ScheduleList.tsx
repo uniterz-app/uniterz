@@ -42,7 +42,6 @@ import type { PredictionPostV2 } from "@/types/prediction-post-v2";
 import type { NbaTopScorerPick } from "@/lib/nba/topScorer";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
-import { resolveUserTimezone } from "@/lib/i18n/countryTimezone";
 import { t } from "@/lib/i18n/t";
 import { L, resolveLocalizedLang } from "@/lib/i18n/localize";
 import { CyberNoDataPage } from "@/app/component/common/CyberNoDataLabel";
@@ -237,12 +236,10 @@ export default function ScheduleList({
     pathname?.startsWith("/mobile") || pathname?.startsWith("/m/");
 
   const { fUser: user } = useFirebaseUser();
-  const { language, countryCode } = useUserLanguage(user?.uid ?? null);
-  const m = t(language);
-  const kickoffTimeZone = useMemo(
-    () => resolveUserTimezone(countryCode, language),
-    [countryCode, language]
+  const { language, timeZone: kickoffTimeZone } = useUserLanguage(
+    user?.uid ?? null
   );
+  const m = t(language);
 
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   const scrollYRef = useRef(0);

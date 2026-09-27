@@ -51,6 +51,7 @@ BDL（サーバーのみ）
 | **エース欠場時 W–L** | `nbaTeamAceOutRecords/{season}` | `nba-team-ace-out-ingest`（BDL leaders pts + season stats で所属チーム確定 × min>0） | `/api/nba/team-ace-out-records` |
 | **得意形／苦手形（条件付き W–L）** | `nbaTeamShapeRecords/{season}` | 日次 `nba-stats-daily-ingest`（`team-shape-records`）/ `nba-team-shapes-ingest`（`games.liveStats.box`） | `/api/nba/team-shape-records` |
 | **チーム詳細寄せ** | （上の合成） | — | `/api/nba/team-detail`（roster+payroll+log+standings行+injury+strength+ace-out+shapes。CDN 1 URL） |
+| **試合日インデックス（日付ストリップ）** | `gameDayIndex/{league}__{season}`（distinct 開始 ms） | `nba-games-ingest` 末尾（日次 `games` ステップ） | `/api/games/days`（CDN 1h。ストリップは全試合日、カードは `/api/games/window` ±5 日） |
 | **試合カード予想ツール寄せ** | （上の合成） | — | `/api/nba/matchup-detail`（injury+roster+stats。Insight は別 `/api/nba/matchup-insight`） |
 
 ## 運用順（プレイヤー詳細）

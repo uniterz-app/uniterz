@@ -31,6 +31,14 @@ import { auth, storage } from "../../lib/firebase";
 import { colors, radius, spacing, typography } from "../../theme/tokens";
 import { useFirebaseUser } from "../../auth/FirebaseUserProvider";
 import { getUniterzApiBaseUrl } from "../games/submitPredictionApi";
+import { useNativeLanguage } from "../../i18n/NativeLanguageProvider";
+import { getDeviceTimeZone } from "../../../../../lib/i18n/countryTimezone";
+import {
+  buildTimeZoneOptions,
+  timeZoneCityLabel,
+  timeZoneOptionLabel,
+} from "../../../../../lib/i18n/timeZoneOptions";
+import { timeZoneSettingCopy } from "../../../../../lib/i18n/timeZoneSettingCopy";
 import { useNativeProfileStats, seedNativeProfileStatsFromUserDoc } from "./useNativeProfileStats";
 import { prefetchNativeProfileSettledTodayResults } from "./useNativeProfileSettledTodayResults";
 import {
@@ -306,6 +314,7 @@ export default function ProfileHomeScreen({
   const returnFromSettingsToMenu = useCallback(() => {
     setLangModalOpen(false);
     setCountryModalOpen(false);
+    setTzModalOpen(false);
     // 同一 Modal 内オーバーレイを外すだけ。サイドメニューはそのまま残る
     setSettingsOpen(false);
   }, []);
@@ -465,15 +474,26 @@ export default function ProfileHomeScreen({
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [langModalOpen, setLangModalOpen] = useState(false);
   const [countryModalOpen, setCountryModalOpen] = useState(false);
+  const [tzModalOpen, setTzModalOpen] = useState(false);
+  const { displayTimeZone: savedDisplayTimeZone } = useNativeLanguage();
+  /** "" は自動（端末） */
+  const [displayTimeZone, setDisplayTimeZone] = useState("");
+  const deviceTimeZone = useMemo(() => getDeviceTimeZone(), []);
+  const timeZoneOptions = useMemo(() => buildTimeZoneOptions(), []);
+
+  useEffect(() => {
+    if (settingsOpen) setDisplayTimeZone(savedDisplayTimeZone ?? "");
+  }, [settingsOpen, savedDisplayTimeZone]);
 
   const handleSettingsRequestClose = useCallback(() => {
-    if (langModalOpen || countryModalOpen) {
+    if (langModalOpen || countryModalOpen || tzModalOpen) {
       setLangModalOpen(false);
       setCountryModalOpen(false);
+      setTzModalOpen(false);
       return;
     }
     returnFromSettingsToMenu();
-  }, [langModalOpen, countryModalOpen, returnFromSettingsToMenu]);
+  }, [langModalOpen, countryModalOpen, tzModalOpen, returnFromSettingsToMenu]);
 
   /** プロフィール保存成功 — システム Alert の代わりにサイバーガラストースト */
   const lang = resolveLocalizedLang(language);
@@ -1178,6 +1198,7 @@ export default function ProfileHomeScreen({
         photoURL: safePhoto,
         language,
         countryCode: countryCode.trim() || null,
+        displayTimeZone: displayTimeZone || null,
       });
       onSaved?.();
       setSettingsOpen(false);
@@ -1615,6 +1636,7 @@ export default function ProfileHomeScreen({
                       style={({ pressed }) => [styles.selectRow, pressed && styles.selectRowPressed]}
                       onPress={() => {
                         setCountryModalOpen(false);
+                        setTzModalOpen(false);
                         setLangModalOpen(true);
                       }}
                       disabled={saving || uploadingAvatar}
@@ -1636,6 +1658,7 @@ export default function ProfileHomeScreen({
                       style={({ pressed }) => [styles.selectRow, pressed && styles.selectRowPressed]}
                       onPress={() => {
                         setLangModalOpen(false);
+                        setTzModalOpen(false);
                         setCountryModalOpen(true);
                       }}
                       disabled={saving || uploadingAvatar}
@@ -1655,6 +1678,37 @@ export default function ProfileHomeScreen({
                     </Pressable>
                   </View>
 
+                  <View style={styles.fieldBlock}>
+                    <Text style={styles.fieldLabel}>
+                      {timeZoneSettingCopy(language).label}
+                    </Text>
+                    <Pressable
+                      style={({ pressed }) => [styles.selectRow, pressed && styles.selectRowPressed]}
+                      onPress={() => {
+                        setLangModalOpen(false);
+                        setCountryModalOpen(false);
+                        setTzModalOpen(true);
+                      }}
+                      disabled={saving || uploadingAvatar}
+                    >
+                      <Text style={styles.selectRowText} numberOfLines={1}>
+                        {displayTimeZone
+                          ? timeZoneOptionLabel(displayTimeZone)
+                          : timeZoneSettingCopy(language).auto(
+                              deviceTimeZone ? timeZoneCityLabel(deviceTimeZone) : null
+                            )}
+                      </Text>
+                      <MaterialCommunityIcons
+                        name="chevron-down"
+                        size={20}
+                        color="rgba(226,232,240,0.65)"
+                      />
+                    </Pressable>
+                    <Text style={styles.fieldHint}>
+                      {timeZoneSettingCopy(language).hint}
+                    </Text>
+                  </View>
+
                   <SlantCtaNative
                     label={saving || uploadingAvatar ? t.saving : t.save}
                     variant="accent"
@@ -1665,7 +1719,7 @@ export default function ProfileHomeScreen({
                 </View>
               </ScrollView>
             </KeyboardAvoidingView>
-            {(langModalOpen || countryModalOpen) && (
+            {(langModalOpen || countryModalOpen || tzModalOpen) && (
               <View style={styles.profileInlinePickerRoot} pointerEvents="box-none">
                 <Pressable
                   accessibilityRole="button"
@@ -1674,9 +1728,49 @@ export default function ProfileHomeScreen({
                   onPress={() => {
                     setLangModalOpen(false);
                     setCountryModalOpen(false);
+                    setTzModalOpen(false);
                   }}
                 />
-                {langModalOpen ? (
+                {tzModalOpen ? (
+                  <View style={styles.modalSheetTall}>
+                    <Text style={styles.modalSheetTitle}>
+                      {timeZoneSettingCopy(language).label}
+                    </Text>
+                    <ScrollView style={styles.modalScroll} keyboardShouldPersistTaps="handled">
+                      <Pressable
+                        style={({ pressed }) => [styles.modalOption, pressed && styles.modalOptionPressed]}
+                        onPress={() => {
+                          setDisplayTimeZone("");
+                          setTzModalOpen(false);
+                        }}
+                      >
+                        <Text style={styles.modalOptionText}>
+                          {timeZoneSettingCopy(language).auto(
+                            deviceTimeZone ? timeZoneCityLabel(deviceTimeZone) : null
+                          )}
+                        </Text>
+                        {!displayTimeZone ? (
+                          <MaterialCommunityIcons name="check" size={18} color="rgba(245,245,245,0.95)" />
+                        ) : null}
+                      </Pressable>
+                      {timeZoneOptions.map((o) => (
+                        <Pressable
+                          key={o.timeZone}
+                          style={({ pressed }) => [styles.modalOption, pressed && styles.modalOptionPressed]}
+                          onPress={() => {
+                            setDisplayTimeZone(o.timeZone);
+                            setTzModalOpen(false);
+                          }}
+                        >
+                          <Text style={styles.modalOptionText}>{o.label}</Text>
+                          {displayTimeZone === o.timeZone ? (
+                            <MaterialCommunityIcons name="check" size={18} color="rgba(245,245,245,0.95)" />
+                          ) : null}
+                        </Pressable>
+                      ))}
+                    </ScrollView>
+                  </View>
+                ) : langModalOpen ? (
                   <View style={styles.modalSheetTall}>
                     <Text style={styles.modalSheetTitle}>{t.langLabel}</Text>
                     <ScrollView
@@ -2288,6 +2382,11 @@ const styles = StyleSheet.create({
     color: "rgba(255,255,255,0.7)",
     fontSize: 12,
     fontWeight: "600",
+  },
+  fieldHint: {
+    color: "rgba(255,255,255,0.45)",
+    fontSize: 11,
+    lineHeight: 15,
   },
   /** Web プロフィール編集の角ばり入力に相当 */
   fieldInput: {
