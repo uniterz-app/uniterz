@@ -6,6 +6,10 @@ import { requireAdminUid } from "@/lib/admin/requireAdminUid";
 import { checkJobSecret } from "@/lib/security/assertJobSecret";
 import { ingestNbaGamesFromBdl } from "@/lib/nba/ingest/nbaGamesIngest";
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
+import {
+  revalidateGameDayIndexCache,
+  revalidateGamesWindowCache,
+} from "@/lib/games/server/revalidateGamesCaches";
 
 /**
  * POST /api/admin/nba-games-ingest
@@ -33,6 +37,10 @@ export async function POST(req: Request) {
       seasonKey,
       dryRun: body.dryRun === true,
     });
+    if (body.dryRun !== true) {
+      revalidateGamesWindowCache("nba");
+      revalidateGameDayIndexCache("nba", seasonKey);
+    }
 
     return NextResponse.json(result);
   } catch (e: unknown) {

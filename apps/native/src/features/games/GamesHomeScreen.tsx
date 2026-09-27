@@ -1653,7 +1653,10 @@ export default function GamesHomeScreen({
     const allFinished = games.every(
       (game) => resolveGameStatus(game as Record<string, unknown>) === "final"
     );
-    if (!allFinished) return;
+    if (!allFinished) {
+      suppressAutoAdvanceForTodayRef.current = true;
+      return;
+    }
     const currentKey = toDateKeyInTimeZone(selectedDate, dayTimeZone);
     const nextKey = dateKeysForDayStrip.find((k) => k > currentKey);
     const nextDay = nextKey ? parseDateKeyInTimeZone(nextKey, dayTimeZone) : null;

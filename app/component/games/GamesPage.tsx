@@ -931,8 +931,11 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
   useLayoutEffect(() => {
     if (!selected) return;
     if (toDateKeyInTimeZone(selected, dayTimeZone) !== todayKey) return;
-    if (!allFinished) return;
     if (didAutoAdvance.current[league]) return;
+    if (!allFinished) {
+      if ((games?.length ?? 0) > 0) didAutoAdvance.current[league] = true;
+      return;
+    }
     if (!nextGameDay) return;
 
     didAutoAdvance.current[league] = true;
@@ -940,6 +943,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
   }, [
     selected,
     todayKey,
+    games,
     allFinished,
     nextGameDay,
     league,
@@ -954,6 +958,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
     if (!allFinished) return;
     if (didAutoAdvance.current[league]) return;
     if (nextGameDay) return;
+    if (seasonGameDayKeys && !hasAnyListFilter) return;
 
     let cancelled = false;
     fetchNextGameDayAfterLocalDay({
@@ -978,6 +983,8 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
     todayKey,
     allFinished,
     nextGameDay,
+    seasonGameDayKeys,
+    hasAnyListFilter,
     league,
     dayTimeZone,
     setSelectedAndSync,

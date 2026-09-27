@@ -78,6 +78,7 @@ export async function fetchNextGameDayAfterLocalDay(params: {
       apiBaseUrl: params.apiBaseUrl,
       signal: params.signal,
       includePeers: false,
+      limit: 1,
     });
     const key = earliestDateKeyFromRows(payload.rows, params.timeZone);
     if (key) return parseDateKeyInTimeZone(key, params.timeZone);

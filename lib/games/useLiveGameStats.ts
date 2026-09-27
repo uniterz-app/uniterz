@@ -93,20 +93,17 @@ export function useLiveGameStats(
 
       let next: LiveGameStatsReport | null = null;
       try {
-        if (apiBase) {
-          const path = `/api/games/live-stats?gameId=${encodeURIComponent(gameId)}`;
-          const url = `${apiBase}${path}`;
-          const res = await fetch(url, {
-            cache: "no-store",
-            signal: abort.signal,
-          });
-          if (res.ok) {
-            const json = (await res.json().catch(() => null)) as {
-              ok?: boolean;
-              report?: LiveGameStatsReport | null;
-            } | null;
-            next = json?.ok ? json.report ?? null : null;
-          }
+        const path = `/api/games/live-stats?gameId=${encodeURIComponent(gameId)}`;
+        const res = await fetch(`${apiBase}${path}`, {
+          cache: "no-store",
+          signal: abort.signal,
+        });
+        if (res.ok) {
+          const json = (await res.json().catch(() => null)) as {
+            ok?: boolean;
+            report?: LiveGameStatsReport | null;
+          } | null;
+          next = json?.ok ? json.report ?? null : null;
         }
       } catch (err) {
         if (err instanceof DOMException && err.name === "AbortError") return;

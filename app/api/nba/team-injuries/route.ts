@@ -2,7 +2,7 @@ export const runtime = "nodejs";
 
 import { NextResponse } from "next/server";
 import { getAdminDb } from "@/lib/firebaseAdmin";
-import { nbaStatsSnapshotCacheControl } from "@/lib/nba/nbaStatsSnapshotCacheControl";
+import { nbaInjurySnapshotCacheControl } from "@/lib/nba/nbaStatsSnapshotCacheControl";
 import {
   loadTeamInjuriesSnapshot,
   loadTeamInjury,
@@ -28,12 +28,7 @@ export async function GET(req: Request) {
       const payload = await loadTeamInjury(db, season, team);
       return NextResponse.json(payload, {
         headers: {
-          "Cache-Control": nbaStatsSnapshotCacheControl({
-            source: payload.source,
-            updatedAt: payload.updatedAt
-              ? new Date(payload.updatedAt)
-              : null,
-          }),
+          "Cache-Control": nbaInjurySnapshotCacheControl({ source: payload.source }),
         },
       });
     }
@@ -41,10 +36,7 @@ export async function GET(req: Request) {
     const payload = await loadTeamInjuriesSnapshot(db, season);
     return NextResponse.json(payload, {
       headers: {
-        "Cache-Control": nbaStatsSnapshotCacheControl({
-          source: payload.source,
-          updatedAt: payload.updatedAt ? new Date(payload.updatedAt) : null,
-        }),
+        "Cache-Control": nbaInjurySnapshotCacheControl({ source: payload.source }),
       },
     });
   } catch (e: unknown) {

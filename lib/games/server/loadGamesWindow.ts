@@ -17,6 +17,7 @@ import {
   toDateKeyInTimeZone,
 } from "@/lib/time/zonedTime";
 import { serializeGameDoc } from "@/lib/games/gameDocJson";
+import { planGamesWindowLiveRefresh } from "@/lib/games/gamesWindowLiveRefresh";
 import { mergePlayoffSeriesPeersForWindowGamesAdmin } from "@/lib/games/server/playoffSeriesPeersAdmin";
 
 export {
@@ -135,9 +136,9 @@ export async function loadGamesWindow(
     serializeGameDoc(String(r.id ?? ""), r as Record<string, unknown>)
   );
 
-  const hasLive = windowRows.some((r) =>
-    isLiveGameRow(r as Record<string, unknown>)
-  );
+  const hasLive =
+    windowRows.some((r) => isLiveGameRow(r as Record<string, unknown>)) ||
+    planGamesWindowLiveRefresh(windowRows, Date.now()).active;
 
   return {
     ok: true,
@@ -156,7 +157,7 @@ export async function loadGamesWindow(
 /** CDN / オリジン共有キャッシュ用 Cache-Control */
 export function gamesWindowCacheControl(hasLive: boolean): string {
   if (hasLive) {
-    return "public, s-maxage=15, stale-while-revalidate=30";
+    return "public, s-maxage=30, stale-while-revalidate=30";
   }
   return "public, s-maxage=60, stale-while-revalidate=300";
 }

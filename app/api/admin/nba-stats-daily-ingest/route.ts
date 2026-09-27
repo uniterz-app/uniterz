@@ -10,6 +10,10 @@ import {
   type NbaStatsDailyIngestMode,
 } from "@/lib/nba/ingest/nbaStatsDailyIngest";
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
+import {
+  revalidateGameDayIndexCache,
+  revalidateGamesWindowCache,
+} from "@/lib/games/server/revalidateGamesCaches";
 
 /**
  * POST /api/admin/nba-stats-daily-ingest
@@ -45,6 +49,8 @@ export async function POST(req: Request) {
       mode: body.mode === "heavy" ? "heavy" : "daily",
       playerGameLogMaxPlayers: body.playerGameLogMaxPlayers,
     });
+    revalidateGamesWindowCache("nba");
+    revalidateGameDayIndexCache("nba", seasonKey);
 
     return NextResponse.json(result, { status: result.ok ? 200 : 207 });
   } catch (e: unknown) {

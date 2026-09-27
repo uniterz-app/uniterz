@@ -10,6 +10,12 @@ import {
 import { fetchGamesWindowShared } from "../../../../../lib/games/fetchGamesWindowShared";
 import { GAME_SCHEDULE_SEASON } from "../../../../../lib/games/gameScheduleSeason";
 import { GAMES_WINDOW_PLUS_MINUS_DEFAULT } from "../../../../../lib/games/gamesWindowConstants";
+import { snapGamesWindowAnchorKey } from "../../../../../lib/games/gamesWindowRange";
+import {
+  GAMES_WINDOW_LIVE_REFRESH_MS,
+  planGamesWindowLiveRefresh,
+} from "../../../../../lib/games/gamesWindowLiveRefresh";
+import { useScreenActiveNative } from "../../hooks/useScreenActiveNative";
 import {
   buildGamesWindowRowsCacheKey,
   findCoveringGamesWindowRows,
@@ -222,7 +228,10 @@ export function useTodayGames(options: UseTodayGamesOptions = {}) {
 
   /** 非 WC: Web `useGameDays` と同じアンカー日キー。WC は固定窓 */
   const fetchWindowKey = useMemo(
-    () => (selectedLeague === "wc" ? "wc-page-window-v1" : dateKey),
+    () =>
+      selectedLeague === "wc"
+        ? "wc-page-window-v1"
+        : snapGamesWindowAnchorKey(dateKey),
     [selectedLeague, dateKey]
   );
 
@@ -385,12 +394,13 @@ export function useTodayGames(options: UseTodayGamesOptions = {}) {
         try {
           const payload = await fetchGamesWindowShared({
             league: selectedLeague,
-            anchorDateKey: dateKey,
+            anchorDateKey: fetchWindowKey,
             timeZone: timeZone,
             plusMinus: GAME_DAYS_PLUS_MINUS,
             apiBaseUrl: apiBase,
             season: GAME_SCHEDULE_SEASON,
             signal: ac.signal,
+            force: forceRefresh,
           });
           if (!alive) return;
           rows = payload.rows as NativeGameRow[];
@@ -471,6 +481,93 @@ export function useTodayGames(options: UseTodayGamesOptions = {}) {
       ac.abort();
     };
   }, [enabled, fetchWindowKey, selectedDate, selectedLeague, refreshNonce, dateKey, timeZone]);
+
+  /** Web `useGameDays` 相当: 開始済み・未終了の試合がある間だけ 60 秒ごとに窓を取り直す */
+  const screenActive = useScreenActiveNative();
+  const [liveWakeTick, setLiveWakeTick] = useState(0);
+  const liveRowsSeenRef = useRef<NativeGameRow[] | null>(null);
+  const liveRowsAtRef = useRef(0);
+  useEffect(() => {
+    if (!enabled || !screenActive || selectedLeague === "wc") return;
+    const bounds = windowBoundsRef.current;
+    if (!bounds || bounds.windowKey !== fetchWindowKey) return;
+    if (windowRows.length === 0) return;
+    const plan = planGamesWindowLiveRefresh(windowRows, Date.now());
+
+    if (!plan.active) {
+      if (plan.wakeAtMs == null) return;
+      const wake = setTimeout(
+        () => setLiveWakeTick((n) => n + 1),
+        Math.max(1_000, plan.wakeAtMs - Date.now() + 30_000)
+      );
+      return () => clearTimeout(wake);
+    }
+
+    const apiBase = getUniterzApiBaseUrl();
+    if (!apiBase) return;
+    let alive = true;
+    const cacheKey = buildGamesWindowRowsCacheKey({
+      league: selectedLeague,
+      timeZone,
+      windowKey: fetchWindowKey,
+      plusMinus: GAME_DAYS_PLUS_MINUS,
+    });
+
+    const refetch = async () => {
+      try {
+        const payload = await fetchGamesWindowShared({
+          league: selectedLeague,
+          anchorDateKey: fetchWindowKey,
+          timeZone,
+          plusMinus: GAME_DAYS_PLUS_MINUS,
+          apiBaseUrl: apiBase,
+          season: GAME_SCHEDULE_SEASON,
+          force: true,
+        });
+        if (!alive || windowBoundsRef.current?.windowKey !== fetchWindowKey) {
+          return;
+        }
+        const rows = payload.rows as NativeGameRow[];
+        const peerRows = (payload.peerRows.length
+          ? payload.peerRows
+          : payload.rows) as NativeGameRow[];
+        writeGamesWindowRowsCache(cacheKey, {
+          rows,
+          peerRows,
+          windowKey: fetchWindowKey,
+          startKey: payload.range.startKey || bounds.startKey,
+          endKey: payload.range.endKey || bounds.endKey,
+        });
+        setWindowRows(rows);
+        setPeerRowsForSeries(peerRows);
+      } catch {
+        /* 次の周期で再試行 */
+      }
+    };
+
+    if (liveRowsSeenRef.current !== windowRows) {
+      liveRowsSeenRef.current = windowRows;
+      liveRowsAtRef.current = Date.now();
+    } else if (Date.now() - liveRowsAtRef.current >= GAMES_WINDOW_LIVE_REFRESH_MS) {
+      void refetch();
+    }
+    const interval = setInterval(
+      () => void refetch(),
+      GAMES_WINDOW_LIVE_REFRESH_MS
+    );
+    return () => {
+      alive = false;
+      clearInterval(interval);
+    };
+  }, [
+    enabled,
+    screenActive,
+    selectedLeague,
+    fetchWindowKey,
+    timeZone,
+    windowRows,
+    liveWakeTick,
+  ]);
 
   useEffect(() => {
     if (loading) return;

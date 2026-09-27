@@ -5,6 +5,7 @@ import { getAdminDb } from "@/lib/firebaseAdmin";
 import { requireAdminUid } from "@/lib/admin/requireAdminUid";
 import { checkJobSecret } from "@/lib/security/assertJobSecret";
 import { ingestNbaLiveGamesFromBdl } from "@/lib/nba/ingest/nbaLiveGamesIngest";
+import { revalidateGamesWindowCache } from "@/lib/games/server/revalidateGamesCaches";
 
 /**
  * POST /api/admin/nba-live-games-ingest
@@ -28,6 +29,7 @@ export async function POST(req: Request) {
       dryRun: body.dryRun === true,
       dates: Array.isArray(body.dates) ? body.dates : undefined,
     });
+    if (result.gamesUpdated > 0) revalidateGamesWindowCache("nba");
 
     return NextResponse.json(result);
   } catch (e: unknown) {

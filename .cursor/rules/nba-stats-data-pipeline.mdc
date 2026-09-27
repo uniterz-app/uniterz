@@ -98,5 +98,6 @@ BDL（サーバーのみ）
 
 - Firebase cron `runNbaLiveGamesIngestCron` — **オフシーズンは停止**（index から export なし）。シーズン中は毎分 tick だが **`shouldRunNbaLiveGamesIngest`（Firestore）でライブ枠の試合があるときだけ** Next/BDL を叩く
 - Next `POST /api/admin/nba-live-games-ingest` → `games/{id}` の status/score + `liveStats`（手動 POST はオフシーズンでも可）
-- 公開 `GET /api/games/live-stats` は Firestore のみ。クライアントポーリング 60 秒
+- 公開 `GET /api/games/live-stats` は Firestore のみ（`unstable_cache` 60 秒）。クライアントポーリング 60 秒
+- `/api/games/window` は `unstable_cache` 5 分 + tag `games-window:nba` を live / games / daily ingest の書き込み後に `revalidateTag`（ライブ中は毎分、非ライブ時は Firestore 読みほぼゼロ）。一覧は開始済み未終了の試合がある間だけ 60 秒で取り直す
 - BDL: `/nba/v1/games?dates[]=` + `/nba/v1/box_scores` / `box_scores/live`（GOAT 等 Box Scores 付きプラン）

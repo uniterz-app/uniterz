@@ -11,6 +11,12 @@ import {
 import { toDateOrNull } from "@/lib/games/transform";
 import { fetchGamesWindowShared } from "@/lib/games/fetchGamesWindowShared";
 import { GAMES_WINDOW_PLUS_MINUS_DEFAULT } from "@/lib/games/gamesWindowConstants";
+import { GAME_SCHEDULE_SEASON } from "@/lib/games/gameScheduleSeason";
+import { snapGamesWindowAnchorKey } from "@/lib/games/gamesWindowRange";
+import {
+  GAMES_WINDOW_LIVE_REFRESH_MS,
+  planGamesWindowLiveRefresh,
+} from "@/lib/games/gamesWindowLiveRefresh";
 import {
   buildGamesWindowRowsCacheKey,
   findCoveringGamesWindowRows,
@@ -56,9 +62,13 @@ export function useGameDays(
 ) {
   const league = normalizeLeague(rawLeague);
 
-  const anchorDateKey = useMemo(
+  const selectedDateKey = useMemo(
     () => toDateKeyInTimeZone(windowAnchor, timeZone),
     [windowAnchor, timeZone],
+  );
+  const anchorDateKey = useMemo(
+    () => snapGamesWindowAnchorKey(selectedDateKey),
+    [selectedDateKey],
   );
 
   /** WC はアンカー日と無関係に固定窓の 1 クエリ。それ以外は ±5 日でアンカー依存 */
@@ -98,7 +108,7 @@ export function useGameDays(
         const covering = findCoveringGamesWindowRows({
           league,
           timeZone,
-          selectedDateKey: anchorDateKey,
+          selectedDateKey,
           plusMinus: GAME_DAYS_PLUS_MINUS,
         });
         if (covering) {
@@ -137,6 +147,7 @@ export function useGameDays(
           anchorDateKey,
           timeZone,
           plusMinus: GAME_DAYS_PLUS_MINUS,
+          season: GAME_SCHEDULE_SEASON,
         });
 
         if (!alive) return;
@@ -169,6 +180,71 @@ export function useGameDays(
       alive = false;
     };
   }, [fetchDepsKey]);
+
+  /** 開始済み・未終了の試合がある間だけ 60 秒ごとに窓を取り直す（タブ裏では止める） */
+  const [liveWakeTick, setLiveWakeTick] = useState(0);
+  useEffect(() => {
+    if (league === "wc" || rows.length === 0) return;
+    const plan = planGamesWindowLiveRefresh(rows, Date.now());
+    if (!plan.active) {
+      if (plan.wakeAtMs == null) return;
+      const wake = setTimeout(
+        () => setLiveWakeTick((n) => n + 1),
+        Math.max(1_000, plan.wakeAtMs - Date.now() + 30_000)
+      );
+      return () => clearTimeout(wake);
+    }
+
+    let alive = true;
+
+    const cacheKey = buildGamesWindowRowsCacheKey({
+      league,
+      timeZone,
+      windowKey: anchorDateKey,
+      plusMinus: GAME_DAYS_PLUS_MINUS,
+    });
+
+    const refetch = async () => {
+      if (typeof document !== "undefined" && document.hidden) return;
+      try {
+        const payload = await fetchGamesWindowShared({
+          league,
+          anchorDateKey,
+          timeZone,
+          plusMinus: GAME_DAYS_PLUS_MINUS,
+          season: GAME_SCHEDULE_SEASON,
+          force: true,
+        });
+        if (!alive) return;
+        const peerRows = payload.peerRows.length ? payload.peerRows : payload.rows;
+        writeGamesWindowRowsCache(cacheKey, {
+          rows: payload.rows,
+          peerRows,
+          startKey: payload.range.startKey,
+          endKey: payload.range.endKey,
+          windowKey: anchorDateKey,
+        });
+        setRows(payload.rows);
+        setPeerRowsForSeriesInference(peerRows);
+      } catch {
+        /* 次の周期で再試行 */
+      }
+    };
+
+    const interval = setInterval(
+      () => void refetch(),
+      GAMES_WINDOW_LIVE_REFRESH_MS
+    );
+    const onVisible = () => {
+      if (!document.hidden) void refetch();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      alive = false;
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [rows, league, timeZone, anchorDateKey, liveWakeTick]);
 
   const displayRows = useMemo(() => rows, [rows]);
   const displayPeerRows = useMemo(
