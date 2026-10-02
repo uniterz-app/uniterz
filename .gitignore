@@ -56,3 +56,6 @@ serviceAccount.json
 # GitHub 100MB 制限超の LP 動画（ローカル・デプロイ先に配置）
 public/lp/LP3.mp4
 .tmp-venv-assets/
+
+# 作業用一時ファイル（バックアップ・調査スクリプト）
+.tmp/

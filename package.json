@@ -67,14 +67,14 @@
     "@tanstack/react-virtual": "^3.13.12",
     "axios": "^1.13.2",
     "clsx": "^2.1.1",
-    "firebase": "^12.3.0",
+    "firebase": "^12.19.0",
     "firebase-admin": "^13.5.0",
     "flag-icons": "^7.5.0",
     "framer-motion": "^12.35.1",
     "gsap": "^3.14.2",
     "html-to-image": "^1.11.13",
     "lucide-react": "^0.545.0",
-    "next": "^16.0.7",
+    "next": "^16.3.8",
     "next-pwa": "^5.6.0",
     "postprocessing": "^6.38.3",
     "prop-types": "^15.8.1",
@@ -87,7 +87,8 @@
     "sonner": "^2.0.7",
     "stripe": "^20.1.2",
     "three": "^0.183.2",
-    "three-csg-ts": "^3.2.0"
+    "three-csg-ts": "^3.2.0",
+    "uuid": "^11.1.1"
   },
   "devDependencies": {
     "@svgr/webpack": "^8.1.0",

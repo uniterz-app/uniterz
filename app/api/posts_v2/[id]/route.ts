@@ -19,6 +19,7 @@ import {
   type ParsedPredictionPayload,
 } from "@/lib/predict/parsePredictionPayload";
 import { FieldValue } from "firebase-admin/firestore";
+import { clientErrorResponse } from "@/lib/security/clientErrorResponse";
 import { loadGameKickoffLock } from "@/lib/predict/gameKickoffLock";
 import {
   parseMarketSide,
@@ -136,10 +137,7 @@ export async function GET(req: NextRequest, ctx: any) {
     }
     return NextResponse.json(payload);
   } catch (e: any) {
-    return NextResponse.json(
-      { ok: false, error: e?.message },
-      { status: e?.status ?? 500 }
-    );
+    return clientErrorResponse(e);
   }
 }
 
@@ -330,10 +328,7 @@ export async function PATCH(req: NextRequest, ctx: any) {
 
     return NextResponse.json({ ok: true });
   } catch (e: any) {
-    return NextResponse.json(
-      { ok: false, error: e?.message },
-      { status: e?.status ?? 500 }
-    );
+    return clientErrorResponse(e);
   }
 }
 
@@ -360,9 +355,6 @@ export async function DELETE(req: NextRequest, ctx: any) {
     return NextResponse.json({ ok: true });
   } catch (e: any) {
     console.error("DELETE ERROR:", e);
-    return NextResponse.json(
-      { ok: false, error: e?.message },
-      { status: e?.status ?? 500 }
-    );
+    return clientErrorResponse(e);
   }
 }

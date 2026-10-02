@@ -18,6 +18,7 @@ import {
   progressFromUserDocOnly,
   readProSkinOwnerCounts,
 } from "@/lib/profile/proSkinUnlockServer";
+import { consumeUidActionRateLimit } from "@/lib/security/consumeUidRateLimit";
 
 async function requireUid(req: Request): Promise<string> {
   const authz =
@@ -150,6 +151,15 @@ export async function POST(req: Request) {
         { error: "skin locked", condition: formatProSkinUnlockCondition(entry.unlock, "ja") },
         { status: 403 }
       );
+    }
+
+    if (parseUserPlanProBgVariant(userData.planProBgVariant) === variant) {
+      return NextResponse.json({ ok: true, planProBgVariant: variant });
+    }
+
+    const rate = await consumeUidActionRateLimit(db, uid, "me_pro_skin_apply", 60);
+    if (!rate.ok) {
+      return NextResponse.json({ error: "rate_limited" }, { status: 429 });
     }
 
     await userRef.set(

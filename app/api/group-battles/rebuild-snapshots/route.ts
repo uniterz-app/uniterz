@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
  * ヘッダ `x-internal-job-secret` または `x-group-battle-admin-secret`。
  */
 export async function POST(req: Request) {
-  if (!checkJobSecret(req)) {
+  if (!checkJobSecret(req, { allowGroupBattleSecret: true })) {
     return jsonErr("forbidden", 403);
   }
 

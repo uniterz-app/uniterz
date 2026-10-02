@@ -3,26 +3,48 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ----- 管理者（Custom Claim `admin` 優先。UID は移行フォールバック）
+    // ----- 管理者（Custom Claim `admin` のみ）
     function isAdmin() {
-      return request.auth != null
-        && (request.auth.token.admin == true
-            || request.auth.uid in [
-              "ynh0i1lJklWra1393TNbnxcKo5f2",
-              "Rb3vF67NTLeCxSvrR15brCbiQSD2"
-            ]);
+      return request.auth != null && request.auth.token.admin == true;
     }
 
-    /** WC knockout bracket — sync with lib/wc/wc-knockout-config submissionClosesAtIso (M73 kickoff). */
-    function wcBracketSubmissionOpenForSeason(season) {
-      return season != "2025-26"
-        || request.time < timestamp.date(2026, 6, 28) + duration.time(19, 0, 0, 0);
-    }
-
-    /** Playoff bracket submission deadline (request.time is UTC). 2026-04-19 02:00 JST = 2026-04-18 17:00 UTC. Sync with lib/playoff-bracket-config submissionClosesAtIso. */
+    /**
+     * Playoff bracket submission deadline (request.time is UTC). 未登録シーズンは拒否。
+     * 新シーズンは lib/playoff-bracket-config の submissionClosesAtIso と同時にここへ追加する。
+     * 2026-04-19 02:00 JST = 2026-04-18 17:00 UTC.
+     */
     function playoffBracketSubmissionOpenForSeason(season) {
-      return season != "2026"
-        || request.time < timestamp.date(2026, 4, 18) + duration.time(17, 0, 0, 0);
+      return season == "2026"
+        && request.time < timestamp.date(2026, 4, 18) + duration.time(17, 0, 0, 0);
+    }
+
+    /** ensureUserSlug（lib/ensureSlug.ts genSlug）と同じ 8 文字 */
+    function isGeneratedSlug(s) {
+      return s is string && s.matches('^[a-hjkmnp-z0-9]{8}$');
+    }
+
+    /** handle / username / slug は本人が確保した slugs/{id} と一致する値のみ */
+    function ownsSlug(s) {
+      return isGeneratedSlug(s)
+        && existsAfter(/databases/$(database)/documents/slugs/$(s))
+        && getAfter(/databases/$(database)/documents/slugs/$(s)).data.uid == request.auth.uid;
+    }
+
+    function identityFieldOk(field) {
+      return !(field in request.resource.data)
+        || (field in resource.data && request.resource.data[field] == resource.data[field])
+        || ownsSlug(request.resource.data[field]);
+    }
+
+    function identityFieldOkOnCreate(field) {
+      return !(field in request.resource.data) || ownsSlug(request.resource.data[field]);
+    }
+
+    /** 他人の予想は決着後または試合開始後のみ（本人は常に） */
+    function postReadable() {
+      return (request.auth != null && resource.data.authorUid == request.auth.uid)
+        || resource.data.settledAt != null
+        || resource.data.startAt <= request.time;
     }
 
     /**
@@ -132,6 +154,13 @@ service cloud.firestore {
         && !('referralSettledAt' in request.resource.data)
         && !('email' in request.resource.data)
         && !('notificationPrefs' in request.resource.data)
+        && (!('createdAt' in request.resource.data)
+            || request.resource.data.createdAt == request.time)
+        && (!('counts' in request.resource.data)
+            || request.resource.data.counts == { 'posts': 0 })
+        && identityFieldOkOnCreate('handle')
+        && identityFieldOkOnCreate('username')
+        && identityFieldOkOnCreate('slug')
         && (!('language' in request.resource.data)
             || isSupportedLanguage(request.resource.data.language))
         && (!('displayName' in request.resource.data)
@@ -159,6 +188,9 @@ service cloud.firestore {
             || request.resource.data.username == resource.data.username)
         && (!('slug' in resource.data) || !('slug' in request.resource.data)
             || request.resource.data.slug == resource.data.slug)
+        && identityFieldOk('handle')
+        && identityFieldOk('username')
+        && identityFieldOk('slug')
         && (!('displayName' in request.resource.data)
             || (request.resource.data.displayName is string
                 && request.resource.data.displayName.size() <= 50
@@ -173,7 +205,8 @@ service cloud.firestore {
         && (!('language' in request.resource.data)
             || isSupportedLanguage(request.resource.data.language));
 
-      allow delete: if request.auth != null && request.auth.uid == userId;
+      // 退会は DELETE /api/me/account（墓標化）のみ
+      allow delete: if false;
 
       // 課金・招待コード等 — 本人 read のみ、クライアント write 不可
       match /secure/{docId} {
@@ -207,9 +240,10 @@ service cloud.firestore {
         allow create, update, delete: if false;
       }
 
-      // Native プッシュトークン — クライアント直接書き込み可（API 経由推奨）
+      // Native プッシュトークン — 書き込みは POST/DELETE /api/me/push-token のみ
       match /pushTokens/{tokenId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
+        allow read: if request.auth != null && request.auth.uid == userId;
+        allow write: if false;
       }
 
       // MARK リスト — 本人のみ。フォロワー数は持たない
@@ -233,7 +267,10 @@ service cloud.firestore {
         allow read: if request.auth != null && request.auth.uid == userId;
         allow create: if request.auth != null
           && request.auth.uid == fromUid
-          && fromUid != userId;
+          && fromUid != userId
+          && request.resource.data.keys().hasOnly(['fromUid', 'createdAtMs'])
+          && request.resource.data.fromUid == fromUid
+          && request.resource.data.createdAtMs is number;
         allow update: if false;
         allow delete: if request.auth != null && request.auth.uid == fromUid;
       }
@@ -260,6 +297,7 @@ service cloud.firestore {
     match /slugs/{slugId} {
       allow read: if true;
       allow create: if request.auth != null
+        && isGeneratedSlug(slugId)
         && request.resource.data.keys().hasOnly(['uid'])
         && request.resource.data.uid == request.auth.uid
         && !exists(/databases/$(database)/documents/slugs/$(slugId));
@@ -271,19 +309,18 @@ service cloud.firestore {
     // likes/saves: PredictionPostCardV2
     // ========================================================================
     match /posts/{postId} {
-      allow read: if true;
+      allow read: if postReadable();
       allow create, update, delete: if false;
 
+      // いいね / 保存は API（Admin SDK）経由。本人の行だけ読める
       match /likes/{likeUid} {
-        allow read: if request.auth != null;
-        allow create, update: if request.auth != null && request.auth.uid == likeUid;
-        allow delete: if request.auth != null && request.auth.uid == likeUid;
+        allow read: if request.auth != null && request.auth.uid == likeUid;
+        allow write: if false;
       }
 
       match /saves/{saveUid} {
-        allow read: if request.auth != null;
-        allow create, update: if request.auth != null && request.auth.uid == saveUid;
-        allow delete: if request.auth != null && request.auth.uid == saveUid;
+        allow read: if request.auth != null && request.auth.uid == saveUid;
+        allow write: if false;
       }
     }
 
@@ -473,16 +510,30 @@ service cloud.firestore {
       allow read: if true;
 
       allow create: if request.auth != null
+        && request.resource.data.keys().hasOnly([
+          'uid', 'season', 'bracket', 'championPick', 'isSubmitted', 'submittedAt',
+          'totalScore', 'winnerPoints', 'gamesPoints', 'alive', 'firstMissSeriesId'
+        ])
         && request.resource.data.uid == request.auth.uid
         && request.resource.data.season is string
         && request.resource.data.bracket is map
+        && request.resource.data.isSubmitted == true
+        && request.resource.data.submittedAt == request.time
+        && request.resource.data.totalScore == 0
+        && request.resource.data.winnerPoints == 0
+        && request.resource.data.gamesPoints == 0
+        && request.resource.data.alive == true
+        && request.resource.data.firstMissSeriesId == null
         && docId == request.resource.data.season + '_' + request.auth.uid
         && playoffBracketSubmissionOpenForSeason(request.resource.data.season);
 
       allow update: if request.auth != null
         && resource.data.uid == request.auth.uid
         && docId == resource.data.season + '_' + request.auth.uid
-        && playoffBracketSubmissionOpenForSeason(resource.data.season);
+        && playoffBracketSubmissionOpenForSeason(resource.data.season)
+        && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['bracket', 'championPick'])
+        && request.resource.data.bracket is map;
 
       allow delete: if request.auth != null
         && resource.data.uid == request.auth.uid
@@ -508,27 +559,10 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // 2025-26 WC は締切済み・クライアント実装も撤去済み。読取のみ
     match /wcBrackets/{docId} {
       allow read: if true;
-
-      allow create: if request.auth != null
-        && request.resource.data.uid == request.auth.uid
-        && request.resource.data.season is string
-        && request.resource.data.bracket is map
-        && request.resource.data.isSubmitted == true
-        && docId == request.resource.data.season + '_' + request.auth.uid
-        && wcBracketSubmissionOpenForSeason(request.resource.data.season);
-
-      allow update: if request.auth != null
-        && resource.data.uid == request.auth.uid
-        && docId == resource.data.season + '_' + request.auth.uid
-        && wcBracketSubmissionOpenForSeason(resource.data.season)
-        && request.resource.data.uid == resource.data.uid
-        && request.resource.data.season == resource.data.season
-        && request.resource.data.isSubmitted == true
-        && request.resource.data.bracket is map;
-
-      allow delete: if false;
+      allow write: if false;
     }
 
     match /wcBracketRescoreTasks/{taskId} {

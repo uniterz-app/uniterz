@@ -13,7 +13,7 @@ type Ctx = { params: Promise<{ battleId: string }> };
  * final スナップショットに対する Unit 冪等付与（運営/ジョブ）。
  */
 export async function POST(req: Request, ctx: Ctx) {
-  if (!checkJobSecret(req)) {
+  if (!checkJobSecret(req, { allowGroupBattleSecret: true })) {
     return jsonErr("forbidden", 403);
   }
 

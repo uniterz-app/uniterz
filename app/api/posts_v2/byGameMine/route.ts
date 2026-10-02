@@ -3,6 +3,7 @@
 export const runtime = "nodejs";
 
 import { NextResponse } from "next/server";
+import { clientErrorResponse } from "@/lib/security/clientErrorResponse";
 import { getAdminDb, getAdminAuth } from "@/lib/firebaseAdmin";
 
 async function requireUid(req: Request): Promise<string> {
@@ -76,9 +77,6 @@ export async function GET(req: Request) {
       { status: 200 }
     );
   } catch (e: any) {
-    return NextResponse.json(
-      { ok: false, error: e?.message ?? "server error" },
-      { status: e?.message === "unauthorized" ? 401 : 500 }
-    );
+    return clientErrorResponse(e, "GET /api/posts_v2/byGameMine");
   }
 }

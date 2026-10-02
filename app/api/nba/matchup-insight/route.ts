@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { clientErrorResponse } from "@/lib/security/clientErrorResponse";
 import { unstable_cache } from "next/cache";
 import { getAdminDb } from "@/lib/firebaseAdmin";
 import type { PredictProBrief } from "@/lib/predict/predictProBrief";
@@ -124,7 +125,6 @@ export async function GET(req: Request) {
       },
     });
   } catch (e) {
-    const message = e instanceof Error ? e.message : String(e);
-    return NextResponse.json({ ok: false, error: message }, { status: 500 });
+    return clientErrorResponse(e, "GET /api/nba/matchup-insight");
   }
 }

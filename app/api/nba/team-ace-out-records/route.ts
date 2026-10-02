@@ -2,6 +2,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
+import { clientErrorResponse } from "@/lib/security/clientErrorResponse";
 import { getAdminDb } from "@/lib/firebaseAdmin";
 import { loadTeamAceOutRecordsApiPayload } from "@/lib/nba/insights/loadAceOutRecordsApi";
 import {
@@ -26,7 +27,6 @@ export async function GET(req: Request) {
       },
     });
   } catch (e) {
-    const message = e instanceof Error ? e.message : String(e);
-    return NextResponse.json({ ok: false, error: message }, { status: 500 });
+    return clientErrorResponse(e, "GET /api/nba/team-ace-out-records");
   }
 }

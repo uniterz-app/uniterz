@@ -37,7 +37,9 @@ export async function POST(req: Request) {
     const uid = await requireUidFromRequest(req);
     const body = (await req.json().catch(() => ({}))) as { ids?: unknown };
     const ids = Array.isArray(body.ids)
-      ? body.ids.filter((id): id is string => typeof id === "string")
+      ? body.ids
+          .filter((id): id is string => typeof id === "string")
+          .slice(0, 50)
       : [];
     const db = getAdminDb();
     const claimed = await claimPendingUnitEarns(db, uid, ids);

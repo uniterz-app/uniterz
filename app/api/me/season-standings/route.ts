@@ -61,7 +61,7 @@ export async function POST(req: Request) {
         ? body.season.trim()
         : CURRENT_NBA_SEASON_KEY;
 
-    if (!isSeasonPredictSubmitOpen()) {
+    if (season !== CURRENT_NBA_SEASON_KEY || !isSeasonPredictSubmitOpen()) {
       return NextResponse.json(
         { error: seasonPredictSubmitLockedMessage("ja") },
         { status: 403 }

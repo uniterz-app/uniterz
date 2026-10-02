@@ -15,7 +15,14 @@ export async function requireAdminUid(req: Request): Promise<string> {
     throw err;
   }
   const auth = getAdminAuth();
-  const decoded = await auth.verifyIdToken(token);
+  let decoded: Awaited<ReturnType<typeof auth.verifyIdToken>>;
+  try {
+    decoded = await auth.verifyIdToken(token, true);
+  } catch {
+    const err = new Error("unauthorized");
+    (err as Error & { status?: number }).status = 401;
+    throw err;
+  }
   const claims = decoded as unknown as Record<string, unknown>;
 
   if (hasAdminClaim(claims)) {

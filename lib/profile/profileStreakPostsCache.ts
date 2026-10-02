@@ -6,6 +6,7 @@ import {
   limit,
   orderBy,
   query,
+  Timestamp,
   where,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -90,6 +91,7 @@ async function fetchSettledPostsRaw(
       collection(db, "posts"),
       where("authorUid", "==", uid),
       where("schemaVersion", "==", 2),
+      where("settledAt", ">", Timestamp.fromMillis(0)),
       orderBy("settledAt", "desc"),
       limit(fetchLimit)
     );

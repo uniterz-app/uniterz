@@ -14,6 +14,7 @@ import {
   isProfileGamblingTermsError,
 } from "@/lib/profile/profileGamblingTerms";
 import { isPreferredLeague } from "@/lib/user/preferredLeague";
+import { consumeUidActionRateLimit } from "@/lib/security/consumeUidRateLimit";
 
 async function requireUid(req: Request): Promise<string> {
   const authz =
@@ -61,8 +62,12 @@ export async function POST(req: Request) {
       }
       throw e;
     }
-    const photoURL =
-      typeof body.photoURL === "string" ? body.photoURL.slice(0, 4096) : "";
+    const rawPhotoURL =
+      typeof body.photoURL === "string" ? body.photoURL.trim() : "";
+    if (rawPhotoURL && !/^https:\/\//i.test(rawPhotoURL)) {
+      return NextResponse.json({ error: "invalid photoURL" }, { status: 400 });
+    }
+    const photoURL = rawPhotoURL.slice(0, 4096);
 
     let countryCode: string | null = null;
     if (body.countryCode === null || body.countryCode === "") {
@@ -115,7 +120,23 @@ export async function POST(req: Request) {
       patch.preferredLeague = preferredLeague;
     }
 
-    await getAdminDb().doc(`users/${uid}`).set(patch, { merge: true });
+    const db = getAdminDb();
+    const rate = await consumeUidActionRateLimit(db, uid, "me_profile_update", 60);
+    if (!rate.ok) {
+      return NextResponse.json({ error: "rate_limited" }, { status: 429 });
+    }
+
+    const before = (await db.doc(`users/${uid}`).get()).data() ?? {};
+    await db.doc(`users/${uid}`).set(patch, { merge: true });
+
+    const rankingChromeChanged =
+      String(before.displayName ?? "") !== displayName ||
+      String(before.photoURL ?? "") !== photoURL ||
+      (before.countryCode ?? null) !== countryCode ||
+      (photoCropY !== undefined && before.photoCropY !== photoCropY);
+    if (!rankingChromeChanged) {
+      return NextResponse.json({ ok: true });
+    }
 
     // ランキング行 chrome（国旗・名前・Skin）を CDN から外す
     const {

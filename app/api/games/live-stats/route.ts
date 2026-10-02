@@ -2,6 +2,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
+import { clientErrorResponse } from "@/lib/security/clientErrorResponse";
 import { unstable_cache } from "next/cache";
 import { getAdminDb } from "@/lib/firebaseAdmin";
 import {
@@ -68,10 +69,6 @@ export async function GET(req: Request) {
       { headers: { "Cache-Control": cacheControl } }
     );
   } catch (e: unknown) {
-    const err = e as { message?: string };
-    return NextResponse.json(
-      { ok: false, error: err?.message ?? "error" },
-      { status: 500 }
-    );
+    return clientErrorResponse(e, "GET /api/games/live-stats");
   }
 }

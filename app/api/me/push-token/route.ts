@@ -55,6 +55,13 @@ export async function POST(req: Request) {
     const ref = db.doc(`users/${uid}/pushTokens/${docId}`);
     const existing = await ref.get();
 
+    const ownerRef = db.doc(`pushTokenOwners/${docId}`);
+    const prevOwner = String((await ownerRef.get()).data()?.uid ?? "");
+    if (prevOwner && prevOwner !== uid) {
+      await db.doc(`users/${prevOwner}/pushTokens/${docId}`).delete();
+    }
+    await ownerRef.set({ uid, updatedAt: FieldValue.serverTimestamp() });
+
     await ref.set(
       {
         expoPushToken,
@@ -94,6 +101,10 @@ export async function DELETE(req: Request) {
     const db = getAdminDb();
     const docId = tokenDocId(expoPushToken);
     await db.doc(`users/${uid}/pushTokens/${docId}`).delete();
+    const ownerRef = db.doc(`pushTokenOwners/${docId}`);
+    if (String((await ownerRef.get()).data()?.uid ?? "") === uid) {
+      await ownerRef.delete();
+    }
 
     return NextResponse.json({ ok: true });
   } catch (err) {

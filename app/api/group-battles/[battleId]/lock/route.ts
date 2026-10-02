@@ -18,7 +18,7 @@ export const dynamic = "force-dynamic";
 type Ctx = { params: Promise<{ battleId: string }> };
 
 export async function POST(req: Request, ctx: Ctx) {
-  if (!checkJobSecret(req)) {
+  if (!checkJobSecret(req, { allowGroupBattleSecret: true })) {
     return jsonErr("forbidden", 403);
   }
 

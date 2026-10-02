@@ -20,6 +20,8 @@ export type PlayoffBracketConfig = {
 
 /* =========================
    Season Configs
+   新シーズン追加時は firestore.rules の playoffBracketSubmissionOpenForSeason にも
+   同じ締切を追加してデプロイする（未登録シーズンは提出拒否）。
 ========================= */
 
 export const PLAYOFF_BRACKET_CONFIGS: Record<string, PlayoffBracketConfig> = {
