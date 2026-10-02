@@ -1,13 +1,4 @@
-import {
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  limit,
-  query,
-  where,
-  type Firestore,
-} from "firebase/firestore";
+import { doc, getDoc, type Firestore } from "firebase/firestore";
 import { looksLikeFirestoreUid } from "./profilePathKey";
 import {
   peekUserDocMemoryEntry,
@@ -62,24 +53,9 @@ async function userDocByUid(
   return asPublicProfileDoc(snap.id, data);
 }
 
-async function userDocByField(
-  db: Firestore,
-  field: "handle" | "slug" | "username",
-  value: string
-): Promise<{ id: string; data: Record<string, unknown> } | null> {
-  const snap = await getDocs(
-    query(collection(db, "users"), where(field, "==", value), limit(1))
-  );
-  if (snap.empty) return null;
-  const d = snap.docs[0]!;
-  const data = d.data() as Record<string, unknown>;
-  setUserDocMemory(d.id, { exists: true, data });
-  return asPublicProfileDoc(d.id, data);
-}
-
 /**
  * プロフィール URL / カード ID から users ドキュメントを解決する。
- * カードの `ID: @XXXX` は slug（小文字）で、ハンドルとは別フィールドのことがある。
+ * handle / slug / username はすべて `slugs/{key}` → uid で引く（users の list はルールで不可）。
  * uid 解決は `userDocMemoryCache` を共有（二重 getDoc を避ける）。
  */
 export async function fetchUserDocByRouteKey(
@@ -102,13 +78,6 @@ export async function fetchUserDocByRouteKey(
     if (typeof uid !== "string" || !uid.trim()) continue;
     const found = await userDocByUid(db, uid.trim());
     if (found) return found;
-  }
-
-  for (const value of candidates) {
-    for (const field of ["slug", "username", "handle"] as const) {
-      const found = await userDocByField(db, field, value);
-      if (found) return found;
-    }
   }
 
   if (!looksLikeFirestoreUid(key)) {

@@ -5,7 +5,7 @@ service firebase.storage {
 
     /** Firestore の isAdmin と同じ（Custom Claim `admin` のみ） */
     function isAdmin() {
-      return request.auth != null && request.auth.token.admin == true;
+      return request.auth != null && request.auth.token.get('admin', false) == true;
     }
 
     /** ラスタ画像のみ（SVG / HTML 等の公開ホスティングを防ぐ） */

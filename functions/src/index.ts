@@ -3,8 +3,8 @@
 import { setGlobalOptions } from "firebase-functions/v2/options";
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import { FieldValue } from "firebase-admin/firestore";
-import { admin } from "./firebase";
-import * as functions from "firebase-functions";
+import { db as adminDb } from "./firebase";
+import * as functions from "firebase-functions/v1";
 
 import { buildCumulativeStats } from "./rankings/buildCumulativeStats";
 import { buildCumulativeRankingSnapshot } from "./rankings/buildCumulativeRankingSnapshot";
@@ -286,7 +286,7 @@ export const notifyPregameAlertPushCron = onSchedule(
  * 上書き set だと displayName / handle を消してしまう。
  */
 export const onUserCreate = functions.auth.user().onCreate(async (user) => {
-  const db = admin.firestore();
+  const db = adminDb;
 
   await db.collection("users").doc(user.uid).set(
     {

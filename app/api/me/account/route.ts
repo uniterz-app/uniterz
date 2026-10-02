@@ -4,17 +4,28 @@ import { NextResponse } from "next/server";
 import { FieldValue } from "firebase-admin/firestore";
 import { getAdminAuth, getAdminDb } from "@/lib/firebaseAdmin";
 
-async function requireUid(req: Request): Promise<string> {
+/** 削除は直前の再認証（パスワード再入力）を必須にする */
+const RECENT_AUTH_MAX_AGE_SEC = 5 * 60;
+
+async function requireRecentlyAuthenticatedUid(req: Request): Promise<string> {
   const authz =
     req.headers.get("authorization") ?? req.headers.get("Authorization");
   const token = authz?.startsWith("Bearer ") ? authz.slice(7) : null;
   if (!token) throw new Error("unauthorized");
+  let decoded;
   try {
-    const decoded = await getAdminAuth().verifyIdToken(token, true);
-    return decoded.uid;
+    decoded = await getAdminAuth().verifyIdToken(token, true);
   } catch {
     throw new Error("unauthorized");
   }
+  const nowSec = Math.floor(Date.now() / 1000);
+  if (
+    typeof decoded.auth_time !== "number" ||
+    nowSec - decoded.auth_time > RECENT_AUTH_MAX_AGE_SEC
+  ) {
+    throw new Error("recent login required");
+  }
+  return decoded.uid;
 }
 
 /**
@@ -23,7 +34,7 @@ async function requireUid(req: Request): Promise<string> {
  */
 export async function DELETE(req: Request) {
   try {
-    const uid = await requireUid(req);
+    const uid = await requireRecentlyAuthenticatedUid(req);
     const db = getAdminDb();
     const auth = getAdminAuth();
     const userRef = db.doc(`users/${uid}`);
@@ -124,6 +135,9 @@ export async function DELETE(req: Request) {
     const msg = e instanceof Error ? e.message : "server error";
     if (msg === "unauthorized") {
       return NextResponse.json({ error: msg }, { status: 401 });
+    }
+    if (msg === "recent login required") {
+      return NextResponse.json({ error: msg }, { status: 403 });
     }
     console.error("DELETE /api/me/account:", e);
     return NextResponse.json({ error: "internal" }, { status: 500 });

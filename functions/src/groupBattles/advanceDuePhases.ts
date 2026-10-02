@@ -4,7 +4,7 @@
  */
 
 import { FieldValue, getFirestore, type Firestore } from "firebase-admin/firestore";
-import { admin } from "../firebase";
+import { adminApp } from "../firebase";
 
 const COLLECTION = "group_battles";
 /** Next `GROUP_BATTLE_FINALIZE_GRACE_DAYS` と揃える */
@@ -99,7 +99,7 @@ async function cancelPendingJoinActivity(
 export async function advanceDueGroupBattlePhases(): Promise<{
   advanced: number;
 }> {
-  const db = getFirestore(admin.app());
+  const db = getFirestore(adminApp);
   const now = Date.now();
   const snap = await db.collection(COLLECTION).limit(80).get();
   let advanced = 0;

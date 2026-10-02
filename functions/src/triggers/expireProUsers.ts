@@ -1,8 +1,6 @@
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
-import { admin } from "../firebase";
-
-const db = admin.firestore();
+import { db } from "../firebase";
 
 /**
  * Pro期限切れユーザーを Free に戻す Cron

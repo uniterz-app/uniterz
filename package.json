@@ -106,5 +106,14 @@
     "ts-node": "^10.9.2",
     "tsx": "^4.20.6",
     "typescript": "^5.9.3"
+  },
+  "overrides": {
+    "@grpc/grpc-js": "^1.14.5",
+    "d3-color": "^3.1.0",
+    "serialize-javascript": "^7.0.3",
+    "uuid": "$uuid",
+    "localtunnel": {
+      "axios": "$axios"
+    }
   }
 }

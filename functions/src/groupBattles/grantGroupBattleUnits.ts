@@ -3,7 +3,7 @@
  */
 
 import { FieldValue, getFirestore } from "firebase-admin/firestore";
-import { admin } from "../firebase";
+import { adminApp } from "../firebase";
 
 function unitsForRank(table: number[], rank: number): number | null {
   if (rank < 1) return null;
@@ -17,7 +17,7 @@ export async function grantGroupBattleUnits(input: {
   period: "weekly" | "monthly";
   label: string;
 }): Promise<{ granted: number; skipped: number }> {
-  const db = getFirestore(admin.app());
+  const db = getFirestore(adminApp);
   const battleSnap = await db.collection("group_battles").doc(input.battleId).get();
   if (!battleSnap.exists) throw new Error("battle_not_found");
   const battle = battleSnap.data()!;
@@ -110,7 +110,7 @@ export async function grantGroupBattleUnits(input: {
 
 /** final スナップを走査して未付与分を付与 */
 export async function grantAllFinalGroupBattleUnits(): Promise<number> {
-  const db = getFirestore(admin.app());
+  const db = getFirestore(adminApp);
   const snap = await db
     .collection("group_battle_period_snapshots")
     .where("status", "==", "final")

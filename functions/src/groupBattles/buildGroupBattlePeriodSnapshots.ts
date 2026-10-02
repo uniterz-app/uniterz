@@ -4,7 +4,7 @@
  */
 
 import { FieldValue, getFirestore } from "firebase-admin/firestore";
-import { admin } from "../firebase";
+import { adminApp } from "../firebase";
 import { addDaysToDateKey, dateKeyJST } from "../rankings/nbaPeriod";
 
 const COLLECTION = "group_battles";
@@ -81,7 +81,7 @@ async function buildOne(
   endKey: string,
   todayKey: string
 ) {
-  const db = getFirestore(admin.app());
+  const db = getFirestore(adminApp);
   const squadSnap = await db
     .collection(COLLECTION)
     .doc(battleId)
@@ -180,7 +180,7 @@ async function buildOne(
 }
 
 export async function buildGroupBattlePeriodSnapshots(): Promise<number> {
-  const db = getFirestore(admin.app());
+  const db = getFirestore(adminApp);
   const todayKey = dateKeyJST(new Date());
   const snap = await db
     .collection(COLLECTION)
