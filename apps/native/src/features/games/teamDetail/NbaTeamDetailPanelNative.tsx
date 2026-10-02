@@ -2,7 +2,6 @@
 import { useMemo, useState } from "react";
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View, type StyleProp, type TextStyle } from "react-native";
 import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   getTeamJerseyPrimaryColor,
@@ -23,11 +22,6 @@ import {
   type NbaTeamStreak,
   type NbaTeamUpcomingGame,
 } from "../../../../../../lib/predict/nbaTeamDetailPreviewMocks";
-import {
-  recentFormRecord,
-  teamStreakBadgeLabel,
-  teamStreakBadgeTheme,
-} from "../../../../../../lib/predict/nbaTeamDetailForm";
 import {
   formatSalaryUsd,
 } from "../../../../../../lib/predict/nbaPlayerDetailPreviewMocks";
@@ -306,52 +300,6 @@ function FormChip({
       ]}
     >
       <Text style={styles.formChipText}>{result}</Text>
-    </View>
-  );
-}
-
-function TeamHeroStreakBadgeNative({
-  streak,
-  last10,
-  isJa,
-}: {
-  streak: NbaTeamStreak;
-  last10: { wins: number; losses: number };
-  isJa: boolean;
-}) {
-  const badge = teamStreakBadgeLabel(streak, isJa);
-  const theme = teamStreakBadgeTheme(streak);
-
-  return (
-    <View style={styles.heroStreakWrap}>
-      <View
-        style={[
-          styles.heroStreakBadge,
-          {
-            borderColor: theme.borderColor,
-            backgroundColor: theme.backgroundColor,
-          },
-        ]}
-      >
-        {theme.showFireIcon ? (
-          <MaterialCommunityIcons name="fire" size={14} color={theme.tagColor} />
-        ) : theme.showColdIcon ? (
-          <MaterialCommunityIcons
-            name="snowflake"
-            size={14}
-            color={theme.tagColor}
-          />
-        ) : null}
-        <Text style={[styles.heroStreakTag, { color: theme.tagColor }]}>
-          {badge.tag}
-        </Text>
-        <Text style={[styles.heroStreakValue, { color: theme.headlineColor }]}>
-          {badge.headline}
-        </Text>
-      </View>
-      <Text style={styles.heroStreakL10}>
-        L10 {last10.wins}-{last10.losses}
-      </Text>
     </View>
   );
 }
@@ -1825,7 +1773,6 @@ export default function NbaTeamDetailPanelNative({
       : "WESTERN CONFERENCE";
 
   const winPctText = detail.season.winPct.toFixed(3).replace(/^0/, "");
-  const last10 = recentFormRecord(detail.recentGames);
   return (
     <ScrollView
       style={styles.root}
@@ -1868,11 +1815,6 @@ export default function NbaTeamDetailPanelNative({
                 kind="team"
                 teamId={detail.teamId}
                 language={isJa ? "ja" : "en"}
-              />
-              <TeamHeroStreakBadgeNative
-                streak={detail.streak}
-                last10={last10}
-                isJa={isJa}
               />
             </View>
           </View>
@@ -2200,40 +2142,6 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     marginBottom: 2,
     transform: [{ skewX: "-6deg" }],
-  },
-  heroStreakWrap: {
-    alignItems: "flex-end",
-    gap: 4,
-    flexShrink: 0,
-  },
-  heroStreakBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    borderWidth: 1,
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-  },
-  heroStreakTag: {
-    fontFamily: METRIC_FONT,
-    fontSize: 9,
-    fontWeight: "700",
-    letterSpacing: 1.2,
-    textTransform: "uppercase",
-  },
-  heroStreakValue: {
-    fontFamily: METRIC_FONT,
-    fontSize: 15,
-    fontWeight: "800",
-    fontVariant: ["tabular-nums"],
-    transform: [{ skewX: "-8deg" }],
-  },
-  heroStreakL10: {
-    fontFamily: METRIC_FONT,
-    color: "rgba(255,255,255,0.45)",
-    fontSize: 10,
-    fontWeight: "700",
-    fontVariant: ["tabular-nums"],
   },
   recordRankRow: {
     flexDirection: "row",

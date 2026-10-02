@@ -3,7 +3,7 @@
  * Two-Way は Hoops Rumors tracker 等の curated。
  * Exhibit 10 = ロスター在籍 + 標準年俸なし + この表に無い。
  *
- * 出典: Hoops Rumors 2026/27 Two-Way Contract Tracker（2026-09-21 更新）
+ * 出典: Hoops Rumors 2026/27 Two-Way Contract Tracker（2026-10-01 更新）
  * playerId は BDL / ロスター ID。
  */
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
@@ -39,7 +39,6 @@ export const NBA_TWO_WAY_PLAYERS_BY_SEASON: Readonly<
     { playerId: "1057848244", teamId: "nba-mavericks", name: "John Poulakidas" },
     { playerId: "1091465199", teamId: "nba-mavericks", name: "Tobi Lawal" },
     { playerId: "56677839", teamId: "nba-mavericks", name: "Jett Howard" },
-    { playerId: "1028038474", teamId: "nba-nuggets", name: "K.J. Simpson" },
     { playerId: "1091464608", teamId: "nba-nuggets", name: "Bryce Hopkins" },
     { playerId: "56677831", teamId: "nba-nuggets", name: "Cam Whitmore" },
     { playerId: "1057847894", teamId: "nba-nuggets", name: "Ryan Nembhard" },
@@ -51,18 +50,17 @@ export const NBA_TWO_WAY_PLAYERS_BY_SEASON: Readonly<
     { playerId: "1097894227", teamId: "nba-warriors", name: "Graham Ike" },
     { playerId: "1092195008", teamId: "nba-rockets", name: "Quadir Copeland" },
     { playerId: "1058921044", teamId: "nba-rockets", name: "Sean Pedulla" },
-    { playerId: "1094642691", teamId: "nba-rockets", name: "Rafael Castro" },
     { playerId: "56677849", teamId: "nba-pacers", name: "Kobe Brown" },
     { playerId: "56677862", teamId: "nba-pacers", name: "Jalen Slawson" },
     { playerId: "1091466792", teamId: "nba-pacers", name: "Braden Smith" },
     { playerId: "1091475805", teamId: "nba-clippers", name: "Nick Martinelli" },
-    { playerId: "1028256970", teamId: "nba-clippers", name: "Jamarion Sharp" },
     { playerId: "56677582", teamId: "nba-clippers", name: "Jalen Pickett" },
     { playerId: "1057847504", teamId: "nba-lakers", name: "Chris Mañon" },
     { playerId: "1091906694", teamId: "nba-lakers", name: "AK Okereke" },
     { playerId: "1092732494", teamId: "nba-lakers", name: "Arthur Kaluma" },
     { playerId: "1057396260", teamId: "nba-grizzlies", name: "Javon Small" },
     { playerId: "1057394959", teamId: "nba-grizzlies", name: "Jahmai Mashack" },
+    { playerId: "1098740501", teamId: "nba-grizzlies", name: "Carson Cooper" },
     { playerId: "1091904403", teamId: "nba-heat", name: "Tre Donaldson" },
     { playerId: "1057846206", teamId: "nba-heat", name: "Vladislav Goldin" },
     { playerId: "1028125584", teamId: "nba-heat", name: "Keshad Johnson" },
@@ -73,6 +71,10 @@ export const NBA_TWO_WAY_PLAYERS_BY_SEASON: Readonly<
     { playerId: "1028045812", teamId: "nba-timberwolves", name: "Enrique Freeman" },
     { playerId: "1091481720", teamId: "nba-pelicans", name: "Jaron Pierre Jr." },
     { playerId: "1094002723", teamId: "nba-pelicans", name: "Malik Dia" },
+    { playerId: "1060111739", teamId: "nba-pelicans", name: "Julian Reese" },
+    { playerId: "1028047255", teamId: "nba-knicks", name: "Kevin McCullar Jr." },
+    { playerId: "1091465898", teamId: "nba-knicks", name: "Tyler Nickel" },
+    { playerId: "1059276748", teamId: "nba-knicks", name: "Jaden Akins" },
     { playerId: "1057392335", teamId: "nba-thunder", name: "Brooks Barnhizer" },
     { playerId: "1091904395", teamId: "nba-thunder", name: "Josh Dix" },
     { playerId: "1091466034", teamId: "nba-thunder", name: "Otega Oweh" },

@@ -3,7 +3,6 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { Flame, Snowflake } from "lucide-react";
 import { nameOxanium } from "@/lib/fonts";
 import {
   L,
@@ -104,11 +103,6 @@ import {
   getTeamHowTheyPlay,
   type TeamHowTheyPlayTab,
 } from "@/lib/predict/nbaTeamDetailHowTheyPlay";
-import {
-  recentFormRecord,
-  teamStreakBadgeLabel,
-  teamStreakBadgeTheme,
-} from "@/lib/predict/nbaTeamDetailForm";
 import { playerCardName } from "@/lib/predict/nbaRoster";
 
 type Props = {
@@ -672,67 +666,6 @@ function RecentForm({
         </div>
       )}
       <DetailTrendTable trends={trends} />
-    </div>
-  );
-}
-
-function TeamHeroStreakBadge({
-  streak,
-  last10,
-  isJa,
-}: {
-  streak: NbaTeamStreak;
-  last10: { wins: number; losses: number };
-  isJa: boolean;
-}) {
-  const badge = teamStreakBadgeLabel(streak, isJa);
-  const theme = teamStreakBadgeTheme(streak);
-
-  return (
-    <div
-      className="flex shrink-0 flex-col items-end gap-1"
-      aria-label={
-        isJa
-          ? `直近 ${last10.wins}勝${last10.losses}敗、${badge.headline}`
-          : `Last 10: ${last10.wins}-${last10.losses}, ${badge.headline}`
-      }
-    >
-      <div
-        className="flex items-center gap-1.5 border px-2 py-1"
-        style={{
-          borderColor: theme.borderColor,
-          backgroundColor: theme.backgroundColor,
-        }}
-      >
-        {theme.showFireIcon ? (
-          <Flame
-            className="h-3.5 w-3.5"
-            style={{ color: theme.tagColor }}
-            aria-hidden
-          />
-        ) : theme.showColdIcon ? (
-          <Snowflake
-            className="h-3.5 w-3.5"
-            style={{ color: theme.tagColor }}
-            aria-hidden
-          />
-        ) : null}
-        <span
-          className={`${nameOxanium.className} text-[9px] font-bold uppercase tracking-[0.14em]`}
-          style={{ color: theme.tagColor }}
-        >
-          {badge.tag}
-        </span>
-        <span
-          className={`${nameOxanium.className} text-[15px] font-extrabold tabular-nums`}
-          style={{ color: theme.headlineColor, transform: "skewX(-8deg)" }}
-        >
-          {badge.headline}
-        </span>
-      </div>
-      <span className={`${nameOxanium.className} text-[10px] font-bold tabular-nums text-white/45`}>
-        L10 {last10.wins}-{last10.losses}
-      </span>
     </div>
   );
 }
@@ -2443,7 +2376,6 @@ export default function NbaTeamDetailPanel({
       : "WESTERN CONFERENCE";
   const seasonMetrics = detail.metrics.season;
   const byId = new Map(seasonMetrics.map((m) => [m.id, m]));
-  const last10 = recentFormRecord(detail.recentGames);
   return (
     <div className="space-y-4 pb-24 text-white">
       {hasFetchError ? (
@@ -2495,11 +2427,6 @@ export default function NbaTeamDetailPanel({
                 kind="team"
                 teamId={detail.teamId}
                 language={isJa ? "ja" : "en"}
-              />
-              <TeamHeroStreakBadge
-                streak={detail.streak}
-                last10={last10}
-                isJa={isJa}
               />
             </div>
           </div>
