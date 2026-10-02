@@ -116,7 +116,7 @@ export default function ProfilePageBaseV2({ handle, variant = "web" }: Props) {
     profileDailyTrendSeedComplete: !overview.loading,
     profileRankTrendSeed: overview.rankTrend,
     profileRankTrendSeedComplete: !overview.loading,
-    profileLast20Seed: overview.loading ? null : overview.last20,
+    profileLast20Seed: overview.loading ? undefined : overview.last20,
     profileStatsContext,
   };
 
@@ -146,7 +146,7 @@ export type ProfileViewPropsV2 = {
   /** cumulative profileCharts.rankTrend */
   profileRankTrendSeed?: { dateKey: string; rank: number }[] | null;
   profileRankTrendSeedComplete?: boolean;
-  /** cumulative profileCharts.last20 */
+  /** cumulative profileCharts.last20（undefined = ロード中、null = 未書き込み） */
   profileLast20Seed?: ProfileChartsLast20Point[] | null;
   profileStatsContext: {
     rankingLeague: RankingLeagueSource;

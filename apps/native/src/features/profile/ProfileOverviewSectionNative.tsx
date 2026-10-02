@@ -19,10 +19,11 @@ import ProfileRankTrendChartNative from "./ProfileRankTrendChartNative";
 import ProfileStreakTrackerNative from "./ProfileStreakTrackerNative";
 import ProfileSettledTodayResultsNative from "./ProfileSettledTodayResultsNative";
 import { profileOverviewChartShellStyle } from "./profileOverviewChartShell";
+import { resolveLocalizedLang } from "../../../../../lib/i18n/localize";
 
 type Props = {
   targetUid: string;
-  language: "ja" | "en";
+  language: string;
   profileStatsContext: ProfileStatsStreakContext;
   currentIsProView: boolean;
   /** カード取得済みなどで段階開始してよい */
@@ -33,6 +34,7 @@ type Props = {
   rankTrendLoading: boolean;
   streakPoints: StreakTrackerPointNative[];
   streakLoading: boolean;
+  streakUnavailable?: boolean;
 };
 
 export default function ProfileOverviewSectionNative({
@@ -47,6 +49,7 @@ export default function ProfileOverviewSectionNative({
   rankTrendLoading,
   streakPoints,
   streakLoading,
+  streakUnavailable = false,
 }: Props) {
   /** 4ブロック同時マウント。入場アニメの index だけ Result Drop を先頭にする */
   const overviewStage = useProfileOverviewStage(stageReady, {
@@ -55,6 +58,7 @@ export default function ProfileOverviewSectionNative({
   });
   const entranceKey = targetUid;
   const ready = overviewStage >= 4;
+  const chartLang = resolveLocalizedLang(language) === "ja" ? "ja" : "en";
 
   if (!ready) {
     return (
@@ -82,7 +86,7 @@ export default function ProfileOverviewSectionNative({
         <ProfileRankTrendChartNative
           data={rankTrend}
           loading={rankTrendLoading && rankTrend.length === 0}
-          language={language}
+          language={chartLang}
         />
       </ProfileOverviewEntranceBlock>
 
@@ -91,6 +95,7 @@ export default function ProfileOverviewSectionNative({
         <ProfileStreakTrackerNative
           points={streakPoints}
           loading={streakLoading}
+          unavailable={streakUnavailable}
           language={language}
         />
       </ProfileOverviewEntranceBlock>
@@ -105,7 +110,7 @@ export default function ProfileOverviewSectionNative({
           <ProfileDailyTrendChartNative
             key={`dailyTrend:${targetUid}:${profileOverviewSeasonKey()}:season:${dailyChartData.map((r) => r.date).join(",")}`}
             data={dailyChartData}
-            language={language}
+            language={chartLang}
             allowAll={currentIsProView}
             rankingLeague={profileStatsContext.rankingLeague}
             range="30d"

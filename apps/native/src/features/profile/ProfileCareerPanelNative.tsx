@@ -2,19 +2,23 @@
  * Web `ProfileCareerPanel` 相当 — 予想者の履歴書（公開）。
  * face + Pro のときは表カードと同じ Pro スキン背景を載せる。
  */
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { useReducedMotion } from "react-native-reanimated";
 import {
   aggregateCareerAwardsFromBadges,
   type ProfileCareerBadgeLike,
 } from "../../../../../lib/profile/profileCareerStats";
 import type { ProfilePlanProBgVariant } from "../../../../../lib/profile/profilePlanProBgVariants";
-import { PROFILE_PLAN_PRO_BG_DEFAULT } from "../../../../../lib/profile/profilePlanProBgVariants";
 import {
   buildUserCareerBoardRows,
   buildUserCareerSummaryRows,
+  canAdvanceCareerScope,
+  canRetreatCareerScope,
+  careerBoardsForSeason,
+  defaultCareerBoardForSeason,
+  nextCareerScope,
+  prevCareerScope,
   type UserCareerDoc,
 } from "../../../../../lib/profile/userCareer";
 import { CURRENT_NBA_SEASON_KEY } from "../../../../../lib/rankings/nbaSeason";
@@ -30,12 +34,14 @@ import {
   profileOverviewChartSubtitleStyle,
   profileOverviewChartTitleStyle,
 } from "./profileOverviewChartShell";
+import { profileCareerPanelCopy } from "./profileOverviewWidgetsCopy";
+import { resolveLocalizedLang } from "../../../../../lib/i18n/localize";
 
 const RAJDHANI = "Rajdhani_600SemiBold";
 const OXANIUM = "Oxanium_700Bold";
 
 type Props = {
-  language: "ja" | "en";
+  language: string;
   career?: UserCareerDoc | null;
   badges?: readonly ProfileCareerBadgeLike[];
   loading?: boolean;
@@ -43,7 +49,9 @@ type Props = {
   /** section: overview / face: カード裏面 */
   variant?: "section" | "face";
   isPro?: boolean;
-  planProBgVariant?: ProfilePlanProBgVariant;
+  planProBgVariant?: ProfilePlanProBgVariant | null;
+  /** false のあいだは Pro 背景を載せない（フリップ前・表面表示中） */
+  proSkinActive?: boolean;
 };
 
 type CareerRow = { key: string; label: string; value: string };
@@ -56,12 +64,13 @@ export default function ProfileCareerPanelNative({
   loadError = null,
   variant = "section",
   isPro = false,
-  planProBgVariant = PROFILE_PLAN_PRO_BG_DEFAULT,
+  planProBgVariant = null,
+  proSkinActive = true,
 }: Props) {
-  const isJa = language === "ja";
+  const copy = profileCareerPanelCopy(language);
+  const lang = resolveLocalizedLang(language);
   const isFace = variant === "face";
-  const showProSkin = isPro && isFace;
-  const reduceMotion = useReducedMotion() === true;
+  const showProSkin = isPro && isFace && proSkinActive && planProBgVariant != null;
   const flipEar = useProfileKinetikFlipEar();
   const [frameSize, setFrameSize] = useState({ width: 0, height: 0 });
   const faceBorder = showProSkin
@@ -78,46 +87,35 @@ export default function ProfileCareerPanelNative({
   const [seasonKey, setSeasonKey] = useState<string>(
     () => seasonKeys[seasonKeys.length - 1] ?? CURRENT_NBA_SEASON_KEY
   );
-  const [board, setBoard] = useState<"regular" | "playoffs">("regular");
-
-  const copy = useMemo(
-    () =>
-      isJa
-        ? {
-            title: "CAREER",
-            sheetTitle: "CAREER // SHEET",
-            desc: "予想者としての履歴書。長期成績は信頼の証明になる。",
-            awards: "Awards",
-            seasonAllTime: "All-Time",
-            dossier: "PREDICTOR DOSSIER",
-          }
-        : {
-            title: "CAREER",
-            sheetTitle: "CAREER // SHEET",
-            desc: "Your résumé as a predictor. Long-term records build trust.",
-            awards: "Awards",
-            seasonAllTime: "All-Time",
-            dossier: "PREDICTOR DOSSIER",
-          },
-    [isJa]
+  const [board, setBoard] = useState<"regular" | "playoffs">(() =>
+    defaultCareerBoardForSeason(
+      seasonKeys[seasonKeys.length - 1] ?? CURRENT_NBA_SEASON_KEY
+    )
   );
 
+  useEffect(() => {
+    const boards = careerBoardsForSeason(seasonKey);
+    if (!boards.includes(board)) {
+      setBoard(defaultCareerBoardForSeason(seasonKey));
+    }
+  }, [seasonKey, board]);
+
   const awards = useMemo(
-    () => aggregateCareerAwardsFromBadges(badges, language),
-    [badges, language]
+    () => aggregateCareerAwardsFromBadges(badges, lang),
+    [badges, lang]
   );
 
   const rows: CareerRow[] = useMemo(() => {
     if (!career) return [];
     if (viewMode === "career") {
-      return buildUserCareerSummaryRows(career.summary, language);
+      return buildUserCareerSummaryRows(career.summary, lang);
     }
     const chapter = career.seasons[seasonKey];
     const boardStats =
       board === "playoffs" ? chapter?.playoffs : chapter?.regular;
     if (!boardStats) return [];
-    return buildUserCareerBoardRows(boardStats, language);
-  }, [career, viewMode, seasonKey, board, language]);
+    return buildUserCareerBoardRows(boardStats, lang);
+  }, [career, viewMode, seasonKey, board, lang]);
 
   const scopeTitle =
     viewMode === "career"
@@ -126,24 +124,39 @@ export default function ProfileCareerPanelNative({
         ? `${seasonKey} PLAYOFFS`
         : `${seasonKey} SEASON`;
 
-  const cycleScope = () => {
-    if (viewMode === "career") {
-      setViewMode("season");
-      setBoard("regular");
-      setSeasonKey(seasonKeys[seasonKeys.length - 1] ?? CURRENT_NBA_SEASON_KEY);
-      return;
-    }
-    if (board === "regular") {
-      setBoard("playoffs");
-      return;
-    }
-    const idx = seasonKeys.indexOf(seasonKey);
-    if (idx >= 0 && idx < seasonKeys.length - 1) {
-      setSeasonKey(seasonKeys[idx + 1]!);
-      setBoard("regular");
-      return;
-    }
-    setViewMode("career");
+  const canGoNext = canAdvanceCareerScope({
+    viewMode,
+    seasonKey,
+    board,
+    seasonKeys,
+  });
+  const canGoPrev = canRetreatCareerScope({ viewMode });
+
+  const goNext = () => {
+    const next = nextCareerScope({
+      viewMode,
+      seasonKey,
+      board,
+      seasonKeys,
+      fallbackSeasonKey: CURRENT_NBA_SEASON_KEY,
+    });
+    if (!next) return;
+    setViewMode(next.viewMode);
+    setSeasonKey(next.seasonKey);
+    setBoard(next.board);
+  };
+
+  const goPrev = () => {
+    const prev = prevCareerScope({
+      viewMode,
+      seasonKey,
+      board,
+      seasonKeys,
+    });
+    if (!prev) return;
+    setViewMode(prev.viewMode);
+    setSeasonKey(prev.seasonKey);
+    setBoard(prev.board);
   };
 
   const content = (
@@ -172,28 +185,29 @@ export default function ProfileCareerPanelNative({
       )}
       {isFace ? (
         <View style={styles.scopeHeader}>
-          <Pressable
-            style={[styles.scopeNavBtn, styles.scopeNavBtnLeft]}
-            onPress={cycleScope}
-            hitSlop={8}
-            accessibilityRole="button"
-            accessibilityLabel={isJa ? "前の統計ボード" : "Previous stats board"}
-          >
-            <View
-              style={[
-                styles.scopeArrow,
-                styles.scopeArrowLeft,
-                showProSkin ? styles.scopeArrowPro : null,
-              ]}
-            />
-          </Pressable>
+          {canGoPrev ? (
+            <Pressable
+              style={[styles.scopeNavBtn, styles.scopeNavBtnLeft]}
+              onPress={goPrev}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel={copy.prevBoard}
+            >
+              <View
+                style={[
+                  styles.scopeArrow,
+                  styles.scopeArrowLeft,
+                  showProSkin ? styles.scopeArrowPro : null,
+                ]}
+              />
+            </Pressable>
+          ) : null}
           <Pressable
             style={styles.scopeTitlePress}
-            onPress={cycleScope}
+            onPress={canGoNext ? goNext : canGoPrev ? goPrev : undefined}
+            disabled={!canGoNext && !canGoPrev}
             accessibilityRole="button"
-            accessibilityLabel={
-              isJa ? "CAREER / SEASON / PLAYOFF を切り替え" : "Switch Career / Season / Playoff"
-            }
+            accessibilityLabel={copy.switchBoard}
           >
             <Text
               style={[
@@ -206,21 +220,23 @@ export default function ProfileCareerPanelNative({
               {scopeTitle}
             </Text>
           </Pressable>
-          <Pressable
-            style={[styles.scopeNavBtn, styles.scopeNavBtnRight]}
-            onPress={cycleScope}
-            hitSlop={8}
-            accessibilityRole="button"
-            accessibilityLabel={isJa ? "次の統計ボード" : "Next stats board"}
-          >
-            <View
-              style={[
-                styles.scopeArrow,
-                styles.scopeArrowRight,
-                showProSkin ? styles.scopeArrowPro : null,
-              ]}
-            />
-          </Pressable>
+          {canGoNext ? (
+            <Pressable
+              style={[styles.scopeNavBtn, styles.scopeNavBtnRight]}
+              onPress={goNext}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel={copy.nextBoard}
+            >
+              <View
+                style={[
+                  styles.scopeArrow,
+                  styles.scopeArrowRight,
+                  showProSkin ? styles.scopeArrowPro : null,
+                ]}
+              />
+            </Pressable>
+          ) : null}
         </View>
       ) : null}
       {!isFace ? (
@@ -238,13 +254,7 @@ export default function ProfileCareerPanelNative({
         <View style={styles.skeleton} />
       ) : rows.length === 0 ? (
         <Text style={styles.emptyAward}>
-          {loadError
-            ? isJa
-              ? "CAREER を取得できませんでした"
-              : "Couldn’t load CAREER"
-            : isJa
-              ? "CAREER データがまだありません"
-              : "No CAREER data yet"}
+          {loadError ? copy.loadError : copy.empty}
         </Text>
       ) : (
         <>
@@ -320,7 +330,7 @@ export default function ProfileCareerPanelNative({
                   onPress={() => {
                     setViewMode("season");
                     setSeasonKey(opt);
-                    setBoard("regular");
+                    setBoard(defaultCareerBoardForSeason(opt));
                   }}
                   style={[
                     styles.seasonPill,
@@ -371,7 +381,8 @@ export default function ProfileCareerPanelNative({
             <ProfilePlanProBackgroundNative
               width={frameSize.width}
               height={frameSize.height}
-              animate={!reduceMotion}
+              /** 裏は静的表示（enter / ループなし）。表の Rasterize キャッシュを再利用しやすい */
+              animate={false}
               variant={planProBgVariant}
               accentReady
             />
@@ -513,11 +524,11 @@ const styles = StyleSheet.create({
     color: "rgba(255,255,255,0.78)",
   },
   scopeTitleText: {
-    fontFamily: RAJDHANI,
-    fontSize: 16,
-    letterSpacing: 1.6,
+    fontFamily: OXANIUM,
+    fontSize: 15,
+    letterSpacing: 1.4,
     textTransform: "uppercase",
-    fontWeight: "600",
+    fontWeight: "700",
     color: "rgba(255,255,255,0.95)",
   },
   titlePro: {
@@ -568,9 +579,9 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.58)",
   },
   label: {
-    fontFamily: RAJDHANI,
+    fontFamily: OXANIUM,
     fontSize: 9,
-    letterSpacing: 1.8,
+    letterSpacing: 1.6,
     textTransform: "uppercase",
     color: "rgba(255,255,255,0.55)",
   },
@@ -586,6 +597,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     letterSpacing: 0.4,
     color: "rgba(255,255,255,0.9)",
+    fontVariant: ["tabular-nums"],
+    transform: [{ skewX: "-12deg" }],
+    alignSelf: "flex-start",
   },
   valuePro: {
     color: "#ffffff",

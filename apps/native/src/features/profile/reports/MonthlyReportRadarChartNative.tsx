@@ -17,6 +17,8 @@ export const MONTHLY_RADAR_ORDER: MonthlyReportRadarAxisKey[] = [
 
 const RADAR_ACCENT = "#22d3ee";
 const GRID = "rgba(148,163,184,0.28)";
+/** CONSISTENCY が端で欠けない左右余白 */
+const LABEL_PAD_X = 38;
 
 type Props = {
   radar: MonthlyReportRadar;
@@ -62,7 +64,8 @@ export default function MonthlyReportRadarChartNative({
   size = 280,
 }: Props) {
   const n = MONTHLY_RADAR_ORDER.length;
-  const cx = size / 2;
+  const svgW = size + LABEL_PAD_X * 2;
+  const cx = svgW / 2;
   const cy = size * 0.52;
   const outerR = size * 0.32;
   const labelR = outerR + size * 0.11;
@@ -72,15 +75,22 @@ export default function MonthlyReportRadarChartNative({
       const v = clamp100(radar[key]);
       const p = pointAt(cx, cy, (v / 100) * outerR, i, n);
       const labelPt = pointAt(cx, cy, labelR, i, n);
-      return { key, value: v, x: p.x, y: p.y, lx: labelPt.x, ly: labelPt.y };
+      return {
+        key,
+        value: v,
+        x: p.x,
+        y: p.y,
+        lx: labelPt.x,
+        ly: labelPt.y,
+      };
     });
   }, [radar, cx, cy, outerR, labelR, n]);
 
   const dataPolygon = dataPoints.map((p) => `${p.x},${p.y}`).join(" ");
 
   return (
-    <View style={[styles.wrap, { width: size, height: size }]}>
-      <Svg width={size} height={size}>
+    <View style={[styles.wrap, { width: svgW, height: size }]}>
+      <Svg width={svgW} height={size}>
         {[0.25, 0.5, 0.75, 1].map((t) => (
           <Polygon
             key={t}

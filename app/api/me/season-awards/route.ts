@@ -3,7 +3,12 @@ import { requireUidFromRequest } from "@/lib/communities/serverAuth";
 import { getAdminDb } from "@/lib/firebaseAdmin";
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
 import {
+  isSeasonPredictSubmitOpen,
+  seasonPredictSubmitLockedMessage,
+} from "@/lib/predict/seasonPredictDeadline";
+import {
   loadSeasonAwardsDoc,
+  loadSeasonAwardsSubmitCatalog,
   resolveSeasonAwardsForSubmit,
   upsertSeasonAwardsDoc,
 } from "@/lib/predict/seasonAwardsServer";
@@ -41,7 +46,7 @@ export async function GET(req: Request) {
   }
 }
 
-/** 完全提出（本人1通 upsert。締切未設定のため再提出可） */
+/** 完全提出（本人1通 upsert。開幕戦ティップオフ後は 403） */
 export async function POST(req: Request) {
   try {
     const uid = await requireUidFromRequest(req);
@@ -58,9 +63,22 @@ export async function POST(req: Request) {
         ? body.season.trim()
         : CURRENT_NBA_SEASON_KEY;
 
+    if (!isSeasonPredictSubmitOpen()) {
+      return NextResponse.json(
+        { error: seasonPredictSubmitLockedMessage("ja") },
+        { status: 403 }
+      );
+    }
+
+    const catalogPack = await loadSeasonAwardsSubmitCatalog(
+      getAdminDb(),
+      season
+    );
     const resolved = resolveSeasonAwardsForSubmit({
       season,
       picksRaw: body.picks,
+      catalog: catalogPack.catalog,
+      kindSets: catalogPack.kindSets,
     });
     if (!resolved.ok) {
       return NextResponse.json({ error: resolved.error }, { status: 400 });

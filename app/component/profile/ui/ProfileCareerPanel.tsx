@@ -1,12 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { useReducedMotion } from "framer-motion";
+import { useEffect, useMemo, useState } from "react";
 import ProfileEditKinetikGlitchTitle from "@/app/component/profile/edit/ProfileEditKinetikGlitchTitle";
 import ProfileKinetikPanelFrame from "@/app/component/profile/ui/ProfileKinetikPanelFrame";
 import { jp, nameOxanium, nameRajdhani } from "@/lib/fonts";
 import type { Language } from "@/lib/i18n/language";
+import { resolveLocalizedLang } from "@/lib/i18n/localize";
 import { t } from "@/lib/i18n/t";
+import { profileKinetikPanelCopy } from "@/lib/profile/profileKinetikPanelCopy";
 import {
   aggregateCareerAwardsFromBadges,
   type ProfileCareerBadgeLike,
@@ -16,6 +17,12 @@ import { PROFILE_PLAN_PRO_BG_DEFAULT } from "@/lib/profile/profilePlanProBgVaria
 import {
   buildUserCareerBoardRows,
   buildUserCareerSummaryRows,
+  canAdvanceCareerScope,
+  canRetreatCareerScope,
+  careerBoardsForSeason,
+  defaultCareerBoardForSeason,
+  nextCareerScope,
+  prevCareerScope,
   type UserCareerDoc,
 } from "@/lib/profile/userCareer";
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
@@ -56,11 +63,11 @@ export default function ProfileCareerPanel({
   planProBgVariant = PROFILE_PLAN_PRO_BG_DEFAULT,
 }: Props) {
   const msg = t(language);
-  const isJa = language === "ja";
+  const lang = resolveLocalizedLang(language);
+  const panelCopy = profileKinetikPanelCopy(lang);
+  const isCjk = lang === "ja" || lang === "ko" || lang === "zh";
   const isMobile = layout === "mobile";
   const isFace = variant === "face";
-  const lang: "ja" | "en" = isJa ? "ja" : "en";
-  const reduceMotion = useReducedMotion() === true;
   const showProSkin = isPro && isFace;
   /** Free の裏面はキャリア数字のみ（表のバッジ／タブを残さない） */
   const showFaceExtras = !isFace || isPro;
@@ -75,7 +82,18 @@ export default function ProfileCareerPanel({
   const [seasonKey, setSeasonKey] = useState<string>(
     () => seasonKeys[seasonKeys.length - 1] ?? CURRENT_NBA_SEASON_KEY
   );
-  const [board, setBoard] = useState<"regular" | "playoffs">("regular");
+  const [board, setBoard] = useState<"regular" | "playoffs">(() =>
+    defaultCareerBoardForSeason(
+      seasonKeys[seasonKeys.length - 1] ?? CURRENT_NBA_SEASON_KEY
+    )
+  );
+
+  useEffect(() => {
+    const boards = careerBoardsForSeason(seasonKey);
+    if (!boards.includes(board)) {
+      setBoard(defaultCareerBoardForSeason(seasonKey));
+    }
+  }, [seasonKey, board]);
 
   const awards = useMemo(
     () => aggregateCareerAwardsFromBadges(badges, lang),
@@ -98,31 +116,44 @@ export default function ProfileCareerPanel({
 
   const scopeTitle =
     viewMode === "career"
-      ? isJa
-        ? "CAREER // ALL"
-        : "CAREER // ALL"
+      ? "CAREER // ALL"
       : board === "playoffs"
         ? `${seasonKey} PLAYOFFS`
         : `${seasonKey} SEASON`;
 
-  const cycleScope = () => {
-    if (viewMode === "career") {
-      setViewMode("season");
-      setBoard("regular");
-      setSeasonKey(seasonKeys[seasonKeys.length - 1] ?? CURRENT_NBA_SEASON_KEY);
-      return;
-    }
-    if (board === "regular") {
-      setBoard("playoffs");
-      return;
-    }
-    const idx = seasonKeys.indexOf(seasonKey);
-    if (idx >= 0 && idx < seasonKeys.length - 1) {
-      setSeasonKey(seasonKeys[idx + 1]!);
-      setBoard("regular");
-      return;
-    }
-    setViewMode("career");
+  const canGoNext = canAdvanceCareerScope({
+    viewMode,
+    seasonKey,
+    board,
+    seasonKeys,
+  });
+  const canGoPrev = canRetreatCareerScope({ viewMode });
+
+  const goNext = () => {
+    const next = nextCareerScope({
+      viewMode,
+      seasonKey,
+      board,
+      seasonKeys,
+      fallbackSeasonKey: CURRENT_NBA_SEASON_KEY,
+    });
+    if (!next) return;
+    setViewMode(next.viewMode);
+    setSeasonKey(next.seasonKey);
+    setBoard(next.board);
+  };
+
+  const goPrev = () => {
+    const prev = prevCareerScope({
+      viewMode,
+      seasonKey,
+      board,
+      seasonKeys,
+    });
+    if (!prev) return;
+    setViewMode(prev.viewMode);
+    setSeasonKey(prev.seasonKey);
+    setBoard(prev.board);
   };
 
   const body = (
@@ -177,32 +208,31 @@ export default function ProfileCareerPanel({
                   : "",
               ].join(" ")}
             >
-              <button
-                type="button"
-                className="profile-edit-kinetik-metrics-scope-nav profile-edit-kinetik-metrics-scope-nav--prev"
-                onClick={cycleScope}
-                aria-label={isJa ? "前の統計ボード" : "Previous stats board"}
-              >
-                <span
-                  className="profile-edit-kinetik-metrics-scope-arrow profile-edit-kinetik-metrics-scope-arrow--left"
-                  aria-hidden
-                />
-              </button>
+              {canGoPrev ? (
+                <button
+                  type="button"
+                  className="profile-edit-kinetik-metrics-scope-nav profile-edit-kinetik-metrics-scope-nav--prev"
+                  onClick={goPrev}
+                  aria-label={panelCopy.prevBoardAria}
+                >
+                  <span
+                    className="profile-edit-kinetik-metrics-scope-arrow profile-edit-kinetik-metrics-scope-arrow--left"
+                    aria-hidden
+                  />
+                </button>
+              ) : null}
               <button
                 type="button"
                 className="profile-edit-kinetik-metrics-scope-title profile-edit-kinetik-metrics-scope-title--breath"
-                onClick={cycleScope}
-                aria-label={
-                  isJa
-                    ? "CAREER / SEASON / PLAYOFF を切り替え"
-                    : "Switch Career / Season / Playoff"
-                }
+                onClick={canGoNext ? goNext : canGoPrev ? goPrev : undefined}
+                disabled={!canGoNext && !canGoPrev}
+                aria-label={panelCopy.switchBoardAria}
               >
                 <span
                   className={[
-                    nameRajdhani.className,
-                    "font-semibold tracking-[0.14em] text-white/95",
-                    isFace || isMobile ? "text-base" : "text-lg sm:text-xl",
+                    nameOxanium.className,
+                    "font-bold tracking-[0.14em] text-white/95",
+                    isFace || isMobile ? "text-[15px]" : "text-lg sm:text-xl",
                     showProSkin
                       ? "drop-shadow-[0_0_12px_rgba(34,211,238,0.28)]"
                       : "",
@@ -211,23 +241,25 @@ export default function ProfileCareerPanel({
                   {scopeTitle}
                 </span>
               </button>
-              <button
-                type="button"
-                className="profile-edit-kinetik-metrics-scope-nav profile-edit-kinetik-metrics-scope-nav--next"
-                onClick={cycleScope}
-                aria-label={isJa ? "次の統計ボード" : "Next stats board"}
-              >
-                <span
-                  className="profile-edit-kinetik-metrics-scope-arrow profile-edit-kinetik-metrics-scope-arrow--right"
-                  aria-hidden
-                />
-              </button>
+              {canGoNext ? (
+                <button
+                  type="button"
+                  className="profile-edit-kinetik-metrics-scope-nav profile-edit-kinetik-metrics-scope-nav--next"
+                  onClick={goNext}
+                  aria-label={panelCopy.nextBoardAria}
+                >
+                  <span
+                    className="profile-edit-kinetik-metrics-scope-arrow profile-edit-kinetik-metrics-scope-arrow--right"
+                    aria-hidden
+                  />
+                </button>
+              ) : null}
             </div>
           ) : null}
           {!isFace ? (
             <p
               className={[
-                isJa ? jp.className : "",
+                isCjk ? jp.className : "",
                 "mt-2 max-w-[520px] text-xs leading-relaxed text-slate-300/80 sm:text-[14px]",
               ]
                 .filter(Boolean)
@@ -259,10 +291,10 @@ export default function ProfileCareerPanel({
               >
                 <dt
                   className={[
-                    nameRajdhani.className,
+                    nameOxanium.className,
                     showProSkin
-                      ? "text-[9px] font-semibold uppercase tracking-[0.18em] text-white/75 [text-shadow:0_1px_3px_rgba(0,0,0,0.85)]"
-                      : "text-[9px] font-semibold uppercase tracking-[0.18em] text-white/55",
+                      ? "text-[9px] font-semibold uppercase tracking-[0.16em] text-white/75 [text-shadow:0_1px_3px_rgba(0,0,0,0.85)]"
+                      : "text-[9px] font-semibold uppercase tracking-[0.16em] text-white/55",
                   ].join(" ")}
                 >
                   {row.label}
@@ -270,9 +302,10 @@ export default function ProfileCareerPanel({
                 <dd
                   className={[
                     nameOxanium.className,
+                    "profile-metric-card__value mt-1 inline-block origin-bottom-left truncate text-[1.02rem] font-bold tabular-nums tracking-tight",
                     showProSkin
-                      ? "mt-1 truncate text-[1.02rem] font-semibold tabular-nums tracking-wide text-white [text-shadow:0_1px_4px_rgba(0,0,0,0.9)]"
-                      : "mt-1 truncate text-[1.02rem] font-semibold tabular-nums tracking-wide text-white/90",
+                      ? "text-white [text-shadow:0_1px_4px_rgba(0,0,0,0.9)]"
+                      : "text-white/90",
                   ].join(" ")}
                 >
                   {row.value}
@@ -294,7 +327,7 @@ export default function ProfileCareerPanel({
             {awards.length === 0 ? (
               <p
                 className={[
-                  isJa ? jp.className : "",
+                  isCjk ? jp.className : "",
                   "mt-1.5 text-sm text-white/35",
                 ]
                   .filter(Boolean)
@@ -345,7 +378,7 @@ export default function ProfileCareerPanel({
                   onClick={() => {
                     setViewMode("season");
                     setSeasonKey(opt);
-                    setBoard("regular");
+                    setBoard(defaultCareerBoardForSeason(opt));
                   }}
                   className={[
                     nameRajdhani.className,
@@ -371,7 +404,7 @@ export default function ProfileCareerPanel({
       <ProfileKinetikPanelFrame
         as="div"
         isPlanPro={isPro}
-        animatePlanProBg={isPro && !reduceMotion}
+        animatePlanProBg={false}
         planProBgVariant={planProBgVariant}
         proMobileStage={isPro && isMobile}
         web={layout === "web"}

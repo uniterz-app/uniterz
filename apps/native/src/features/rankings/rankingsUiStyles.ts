@@ -182,6 +182,10 @@ export const rankingsUiStyles = StyleSheet.create({
     marginBottom: 0,
     marginTop: 2,
   },
+  myRankOuterWithShareEar: {
+    /** CAREER 耳と同じく天辺から上に出す分の余白 */
+    marginTop: 22,
+  },
   myRankOuterWide: {
     marginHorizontal: -4,
     width: "100%",
@@ -202,25 +206,27 @@ export const rankingsUiStyles = StyleSheet.create({
   },
   myRankCaptureWrap: {
     position: "relative",
+    overflow: "visible",
   },
-  myRankShareBtn: {
+  /** CAREER 耳タブと同型 — カード天辺に乗せる共有 */
+  myRankShareEar: {
     position: "absolute",
-    top: 10,
-    right: 86,
-    zIndex: 4,
-    width: 42,
-    height: 42,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  myRankShareBtnInner: {
-    width: 30,
-    height: 30,
+    top: -21,
+    right: 12,
+    zIndex: 8,
+    width: 40,
+    height: 22,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: "rgba(34,211,238,0.35)",
-    backgroundColor: "rgba(34,211,238,0.08)",
+    borderBottomWidth: 0,
+    backgroundColor: "transparent",
+  },
+  myRankShareEarCyan: {
+    borderColor: "rgba(0,245,255,0.72)",
+  },
+  myRankShareEarPro: {
+    borderColor: "rgba(232,198,106,0.85)",
   },
   myRankCard: {
     borderRadius: 0,

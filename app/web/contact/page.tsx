@@ -3,6 +3,7 @@
 
 import LegalPageLayout from "@/app/component/settings/LegalPageLayout";
 import ContactForm from "@/app/component/support/ContactForm";
+import { SUPPORT_EMAIL } from "@/lib/contact/companyEmails";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import { t } from "@/lib/i18n/t";
@@ -20,10 +21,11 @@ export default function WebContactPage() {
       description={m.support.contactDescription}
       updatedAt={updatedAt}
     >
-      <section className="space-y-3 text-xs text-slate-100/80 mb-5">
+      <section className="mb-5 space-y-3 text-xs text-white/75">
         <p>
           {m.support.contactEmailBefore}{" "}
-          <span className="text-sky-300 font-semibold">support@uniterz.app</span>{m.support.contactEmailAfter}
+          <span className="font-semibold text-white">{SUPPORT_EMAIL}</span>
+          {m.support.contactEmailAfter}
         </p>
       </section>
 

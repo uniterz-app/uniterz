@@ -21,8 +21,13 @@ import {
   gamesFilterHelpButtonLabel,
   gamesFilterHelpParagraphs,
 } from "../../../../../lib/games/gamesFilterHelp";
-import jaMessages from "../../../../../messages/ja";
-import enMessages from "../../../../../messages/en";
+import CyberHelpMarkNative from "../../ui/CyberHelpMarkNative";
+import { t } from "../../../../../lib/i18n/t";
+import {
+  normalizeLanguage,
+  type Language,
+} from "../../../../../lib/i18n/language";
+import { L, resolveLocalizedLang } from "../../../../../lib/i18n/localize";
 import type { League } from "../../../../../lib/leagues";
 import {
   getTeamPrimaryColor,
@@ -32,7 +37,6 @@ import {
 } from "../../../../../lib/team-colors";
 import {
   MATCH_CARD_BRACKET_LETTER_SPACING_15,
-  MATCH_CARD_BRACKET_TEXT,
 } from "./matchCardTypography";
 
 const OXANIUM_BOLD = Platform.select({
@@ -44,7 +48,7 @@ const OXANIUM_BOLD = Platform.select({
 type Props = {
   visible: boolean;
   onClose: () => void;
-  language: "ja" | "en";
+  language: Language | string;
   teams: ScheduleTeamOption[];
   onApply: (filter: GamesFilterState) => void;
   initial: GamesFilterState;
@@ -74,7 +78,8 @@ export default function GamesTeamFilterPanelNative({
   initial,
   league,
 }: Props) {
-  const isJa = language === "ja";
+  const lang = normalizeLanguage(language) ?? "en";
+  const localized = resolveLocalizedLang(language);
   const insets = useSafeAreaInsets();
   const [state, setState] = useState(initial);
   const [q, setQ] = useState("");
@@ -120,20 +125,36 @@ export default function GamesTeamFilterPanelNative({
   const helpParagraphs = useMemo(
     () =>
       gamesFilterHelpParagraphs({
-        language,
+        language: lang,
         selectedIds: state.selectedTeamIds,
         teams,
         matchMode: state.matchMode,
       }),
-    [language, state.selectedTeamIds, state.matchMode, teams],
+    [lang, state.selectedTeamIds, state.matchMode, teams],
   );
-  const helpButtonLabel = gamesFilterHelpButtonLabel(language);
+  const helpButtonLabel = gamesFilterHelpButtonLabel(lang);
 
-  const m = isJa ? jaMessages : enMessages;
+  const m = t(lang);
   const labels = {
-    kicker: isJa ? "FILTER // 試合" : "FILTER // SCHEDULE",
+    kicker: L(localized, {
+      ja: "FILTER // 試合",
+      en: "FILTER // SCHEDULE",
+      ko: "FILTER // 경기",
+      zh: "FILTER // 赛程",
+      es: "FILTER // PARTIDOS",
+      pt: "FILTER // JOGOS",
+      fr: "FILTER // MATCHS",
+    }),
     title: m.games.filterSchedule,
-    teamSearch: isJa ? "チーム検索" : "TEAM SEARCH",
+    teamSearch: L(localized, {
+      ja: "チーム検索",
+      en: "TEAM SEARCH",
+      ko: "팀 검색",
+      zh: "搜索球队",
+      es: "BUSCAR EQUIPO",
+      pt: "BUSCAR TIME",
+      fr: "RECHERCHER ÉQUIPE",
+    }),
     marginRange: m.games.marginRange,
     marginMin: m.games.marginMin,
     marginMax: m.games.marginMax,
@@ -199,16 +220,12 @@ export default function GamesTeamFilterPanelNative({
                   accessibilityRole="button"
                   accessibilityState={{ expanded: helpOpen }}
                   accessibilityLabel={helpButtonLabel}
-                  style={[styles.helpBtn, helpOpen && styles.helpBtnActive]}
+                  style={({ pressed }) => [
+                    styles.helpBtn,
+                    pressed && styles.helpBtnPressed,
+                  ]}
                 >
-                  <MaterialCommunityIcons
-                    name="help-circle-outline"
-                    size={15}
-                    color={helpOpen ? "#050505" : "rgba(255,255,255,0.82)"}
-                  />
-                  <Text style={[styles.helpBtnText, helpOpen && styles.helpBtnTextActive]}>
-                    {helpButtonLabel}
-                  </Text>
+                  <CyberHelpMarkNative active={helpOpen} />
                 </Pressable>
                 <Pressable
                   onPress={onClose}
@@ -249,7 +266,7 @@ export default function GamesTeamFilterPanelNative({
                         onPress={() => toggleTeam(id)}
                       >
                         <FilterTeamFlagNative teamId={id} />
-                        <Text style={[styles.selectedChipText, MATCH_CARD_BRACKET_TEXT]} numberOfLines={1}>
+                        <Text style={styles.selectedChipText} numberOfLines={1}>
                           {name}
                         </Text>
                         <MaterialCommunityIcons
@@ -351,8 +368,6 @@ export default function GamesTeamFilterPanelNative({
                       <Text
                         style={[
                           styles.teamName,
-                          MATCH_CARD_BRACKET_TEXT,
-                          { letterSpacing: MATCH_CARD_BRACKET_LETTER_SPACING_15 },
                           sel && styles.teamNameSelected,
                         ]}
                         numberOfLines={1}
@@ -506,20 +521,14 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   helpBtn: {
-    minHeight: 36,
-    minWidth: 72,
-    flexDirection: "row",
+    width: 36,
+    height: 36,
     alignItems: "center",
     justifyContent: "center",
-    gap: 4,
-    paddingHorizontal: 10,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.2)",
-    backgroundColor: "transparent",
   },
-  helpBtnActive: {
-    borderColor: "#fff",
-    backgroundColor: "#fff",
+  helpBtnPressed: {
+    opacity: 0.88,
+    transform: [{ scale: 0.98 }],
   },
   closeBtn: {
     width: 36,
@@ -528,14 +537,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.2)",
-  },
-  helpBtnText: {
-    color: "rgba(255,255,255,0.82)",
-    fontSize: 11,
-    fontWeight: "600",
-  },
-  helpBtnTextActive: {
-    color: "#050505",
   },
   helpPanel: {
     gap: 8,
@@ -614,9 +615,11 @@ const styles = StyleSheet.create({
   selectedChipText: {
     color: "#fff",
     fontSize: 13,
-    fontWeight: "400",
+    fontFamily: "Oxanium_600SemiBold",
+    fontWeight: "600",
     maxWidth: 200,
     letterSpacing: MATCH_CARD_BRACKET_LETTER_SPACING_15,
+    transform: [{ skewX: "-6deg" }],
   },
   modeBtnActive: {
     backgroundColor: "#fff",
@@ -734,11 +737,15 @@ const styles = StyleSheet.create({
   teamName: {
     flex: 1,
     color: "rgba(255,255,255,0.88)",
-    fontSize: 16,
+    fontSize: 15,
+    fontFamily: "Oxanium_600SemiBold",
+    fontWeight: "600",
+    letterSpacing: MATCH_CARD_BRACKET_LETTER_SPACING_15,
+    /** Web `matchCardTeamNameStyle` と同じ傾き */
+    transform: [{ skewX: "-6deg" }],
   },
   teamNameSelected: {
     color: "#fff",
-    fontWeight: "600",
   },
   emptyTeams: {
     textAlign: "center",

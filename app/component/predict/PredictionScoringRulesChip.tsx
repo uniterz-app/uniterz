@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
 import { leagueScoringSport } from "@/lib/scoring/leagueScoringSport";
-import { nameOxanium } from "@/lib/fonts";
+import CyberHelpMark from "@/app/component/common/CyberHelpMark";
 import PredictionScoringRulesModal from "@/app/component/predict/PredictionScoringRulesModal";
 
 type Props = {
@@ -32,18 +32,15 @@ export default function PredictionScoringRulesChip({
         type="button"
         onClick={() => setOpen(true)}
         className={[
-          nameOxanium.className,
-          "inline-flex shrink-0 items-center justify-center border border-cyan-400/45 bg-cyan-500/10",
-          "font-extrabold text-cyan-100/95 transition",
-          "hover:border-cyan-300/60 hover:bg-cyan-500/16 active:scale-[0.98]",
-          size === "web" ? "h-8 w-8 text-[13px]" : "h-7 w-7 text-[12px]",
+          "inline-flex shrink-0 items-center justify-center transition",
+          "hover:opacity-95 active:scale-[0.98]",
           className,
         ].join(" ")}
         aria-label={m.predict.scoringRulesChip}
         aria-haspopup="dialog"
         aria-expanded={open}
       >
-        ?
+        <CyberHelpMark size={size === "web" ? "md" : "sm"} active={open} />
       </button>
 
       {open && typeof document !== "undefined"

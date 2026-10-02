@@ -26,6 +26,7 @@ import {
   type ProIapPlan,
 } from "./iapProductIds";
 import { auth } from "../../lib/firebase";
+import { invalidateProfileUserDocNative } from "../profile/profileUserDocCacheNative";
 
 const API_BASE = process.env.EXPO_PUBLIC_UNITERZ_API_BASE_URL?.replace(/\/$/, "") ?? "";
 
@@ -56,10 +57,17 @@ export function useNativeIap() {
         transactionReceipt: purchase.transactionReceipt,
         purchaseToken: purchase.purchaseToken,
         transactionId: purchase.transactionId,
+        signedTransactionInfo:
+          typeof (purchase as { signedTransactionInfo?: string })
+            .signedTransactionInfo === "string"
+            ? (purchase as { signedTransactionInfo?: string }).signedTransactionInfo
+            : undefined,
       }),
     });
     if (!res.ok) throw new Error("verify failed");
     await finishTransaction({ purchase, isConsumable: false });
+    const uid = user.uid;
+    if (uid) invalidateProfileUserDocNative(uid);
   }, []);
 
   useEffect(() => {

@@ -7,10 +7,6 @@ import { getAdminDb } from "@/lib/firebaseAdmin";
 import { withFirestoreTransientRetry } from "@/lib/firebase/isTransientFirestoreError";
 import { resolveUidByHandleCached } from "@/lib/profile/resolveUidByHandleCached";
 import type { ProfileDailyTrendRow } from "@/lib/profile/profileDailyTrendRow";
-import {
-  ensureProfileChartsBundle,
-  isProfileChartsComplete,
-} from "@/lib/profile/ensureProfileChartsBundle";
 import { parseProfileChartsBundle } from "@/lib/profile/profileChartsBundle";
 import {
   resolveNbaProfileSummaryLive,
@@ -31,6 +27,7 @@ import {
   isValidPeriodLabel,
 } from "@/lib/rankings/rankingPeriod";
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
+import { PROFILE_CHARTS_SUBCOL } from "@/lib/profile/profileChartsStorage";
 import { fetchProfileSummaryRanks } from "@/lib/rankings/server/fetchProfileSummaryRanks";
 import { assertProUser } from "@/lib/rankings/server/fetchRankGapAnalysis";
 import {
@@ -42,6 +39,12 @@ import {
   loadPriorSnapshotMetrics,
 } from "@/lib/rankings/server/loadMyRankMetricValueDeltas";
 import type { MyRankMetricValueDeltas } from "@/lib/rankings/myRankMetricValueDeltas";
+import { requireUidFromRequest } from "@/lib/communities/serverAuth";
+import {
+  consumeRateLimit,
+  RATE_LIMIT_RULES,
+  rateLimitSubjectFromRequest,
+} from "@/lib/security/rateLimit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -100,6 +103,20 @@ function parsePartsParam(raw: string | null): Set<StatsPart> | null {
 
 async function buildUserStatsResponse(req: Request) {
   const adminDb = getAdminDb();
+  const limit = await consumeRateLimit(
+    adminDb,
+    RATE_LIMIT_RULES.profilePublicRead,
+    rateLimitSubjectFromRequest(req)
+  );
+  if (!limit.allowed) {
+    return NextResponse.json(
+      { ok: false, error: "rate_limited" },
+      {
+        status: 429,
+        headers: { "Retry-After": String(limit.retryAfterSec) },
+      }
+    );
+  }
   const { searchParams } = new URL(req.url);
   const uidParam = searchParams.get("uid")?.trim() ?? "";
   const handleParam = searchParams.get("handle")?.trim() ?? "";
@@ -174,12 +191,23 @@ async function buildUserStatsResponse(req: Request) {
   const needCumulative =
     !wantWindow && (wantPhase || wantRanks || wantTrend || wantRankTrend);
 
-  const [statsSnap, cumulativeSnap] = await Promise.all([
+  const wantNbaCharts =
+    rankingLeague === "nba" && (wantTrend || wantRankTrend);
+
+  const [statsSnap, cumulativeSnap, chartsSnap] = await Promise.all([
     wantStats
       ? adminDb.collection("user_stats_v2").doc(uid).get()
       : Promise.resolve(null),
     needCumulative
       ? adminDb.collection("cumulative_stats").doc(uid).get()
+      : Promise.resolve(null),
+    wantNbaCharts
+      ? adminDb
+          .collection("cumulative_stats")
+          .doc(uid)
+          .collection(PROFILE_CHARTS_SUBCOL)
+          .doc(CURRENT_NBA_SEASON_KEY)
+          .get()
       : Promise.resolve(null),
   ]);
 
@@ -188,41 +216,24 @@ async function buildUserStatsResponse(req: Request) {
     ? (cumulativeSnap.data() as Record<string, unknown>)
     : null;
 
-  /** NBA overview: 揃った profileCharts があれば日次30+履歴 read をスキップ */
-  let chartsBundle =
-    rankingLeague === "nba" && (wantTrend || wantRankTrend)
-      ? parseProfileChartsBundle(cumulative, CURRENT_NBA_SEASON_KEY)
-      : null;
-  if (
-    rankingLeague === "nba" &&
-    (wantTrend || wantRankTrend) &&
-    !isProfileChartsComplete(chartsBundle)
-  ) {
-    const ensured = await ensureProfileChartsBundle(uid, {
-      seasonKey: CURRENT_NBA_SEASON_KEY,
-    });
-    chartsBundle = {
-      v: ensured.v,
-      seasonKey: ensured.seasonKey,
-      dailyTrend: ensured.dailyTrend,
-      rankTrend: ensured.rankTrend,
-      last20: ensured.last20,
-    };
-  }
+  /** NBA overview: profileCharts subcol を正。欠けていてもソースへは行かない */
+  const chartsBundle = wantNbaCharts
+    ? chartsSnap?.exists
+      ? parseProfileChartsBundle(
+          { profileCharts: chartsSnap.data() },
+          CURRENT_NBA_SEASON_KEY
+        )
+      : parseProfileChartsBundle(cumulative, CURRENT_NBA_SEASON_KEY)
+    : null;
 
   const [last30Snaps, rankTrendPoints] = await Promise.all([
     wantTrend &&
-    !(
-      rankingLeague === "nba" &&
-      isProfileChartsComplete(chartsBundle) &&
-      (nbaScope ?? "season") === "season"
-    )
+    !(rankingLeague === "nba" && (nbaScope ?? "season") === "season")
       ? fetchLast30DailySnapshots(adminDb, uid)
       : Promise.resolve([] as Awaited<
           ReturnType<typeof fetchLast30DailySnapshots>
         >),
-    wantRankTrend &&
-    !(rankingLeague === "nba" && isProfileChartsComplete(chartsBundle))
+    wantRankTrend && rankingLeague !== "nba"
       ? buildRankPlayoffTrendPoints(uid, {
           rankingLeague,
         })
@@ -230,18 +241,14 @@ async function buildUserStatsResponse(req: Request) {
   ]);
 
   const dailyTrend: ProfileDailyTrendRow[] = wantTrend
-    ? rankingLeague === "nba" &&
-      isProfileChartsComplete(chartsBundle) &&
-      (nbaScope ?? "season") === "season"
-      ? chartsBundle.dailyTrend
+    ? rankingLeague === "nba" && (nbaScope ?? "season") === "season"
+      ? (chartsBundle?.dailyTrend ?? [])
       : buildDailyTrendFromDailySnaps(last30Snaps, dailyTrendCtx)
     : [];
 
   const rankTrendFromCharts: RankPlayoffTrendPoint[] | null =
-    wantRankTrend &&
-    rankingLeague === "nba" &&
-    isProfileChartsComplete(chartsBundle)
-      ? chartsBundle.rankTrend.map((p) => ({
+    wantRankTrend && rankingLeague === "nba"
+      ? (chartsBundle?.rankTrend ?? []).map((p) => ({
           dateKey: p.dateKey,
           rank: p.rank,
         }))
@@ -254,9 +261,8 @@ async function buildUserStatsResponse(req: Request) {
   let monthlySummaryRanks: SummaryRanks | null = null;
   if (wantWindow && windowLabel && (wantPhase || wantRanks)) {
     /**
-     * 過去（現行以外の week/month ラベル指定）は Pro ユーザーのみ許可。
-     * UI 側は `profile.plan === "pro"` のみラベルナビを出すため、
-     * API まで合わせて抜け道を塞ぐ。
+     * 過去（現行以外の week/month ラベル指定）は **呼び出し元** の Pro のみ。
+     * UI のラベルナビも callerIsPro に合わせる。
      */
     const isNonCurrentWindow =
       requestedWindowLabelValid &&
@@ -264,7 +270,16 @@ async function buildUserStatsResponse(req: Request) {
       requestedWindowLabel !== currentWindowLabel;
 
     if (isNonCurrentWindow) {
-      const isPro = await assertProUser(uid);
+      let callerUid: string;
+      try {
+        callerUid = await requireUidFromRequest(req);
+      } catch {
+        return NextResponse.json(
+          { ok: false, error: "unauthorized" },
+          { status: 401 }
+        );
+      }
+      const isPro = await assertProUser(callerUid);
       if (!isPro) {
         return NextResponse.json(
           { ok: false, error: "pro_required" },
@@ -395,9 +410,9 @@ export async function GET(req: Request) {
   try {
     return await withFirestoreTransientRetry(() => buildUserStatsResponse(req));
   } catch (e: unknown) {
-    const message = e instanceof Error ? e.message : "unexpected error";
+    console.error("[api/profile/user-stats]", e);
     return NextResponse.json(
-      { ok: false, error: message },
+      { ok: false, error: "internal" },
       { status: 500 }
     );
   }

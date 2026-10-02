@@ -1,9 +1,28 @@
+import type { UiStrings } from "@/lib/i18n/ui";
 import {
   NBA_EAST_TEAM_IDS,
   NBA_WEST_TEAM_IDS,
   type NbaConferenceId as NbaConf,
 } from "@/lib/nba/nbaConferenceTeams";
 import { TEAM_SHORT } from "@/lib/team-short";
+import {
+  NBA_LEAGUE_ADVANCED_CATEGORIES,
+  type NbaLeagueAdvancedCategory,
+} from "@/lib/predict/nbaLeagueStatBoard";
+import {
+  buildPlayerAdvancedMetricValue,
+  formatPlayerAdvancedLeaderValue,
+  NBA_PLAYER_ADVANCED_LEADER_METRICS,
+  playerAdvancedMetricDef,
+  playerAdvancedMetricsForCategory,
+  type NbaPlayerAdvancedLeaderMetric,
+} from "@/lib/predict/nbaPlayerStatLeadersAdvanced";
+import {
+  isPlayerCountLeaderMetric,
+  NBA_PLAYER_COUNT_LEADER_METRICS,
+  playerCountMetricDef,
+  type NbaPlayerCountLeaderMetric,
+} from "@/lib/predict/nbaPlayerCountLeaderMetrics";
 
 /**
  * BallDontLie `GET /v1/leaders` の `stat_type` と同一 ID。
@@ -30,8 +49,13 @@ export type NbaPlayerLeaderBdlStatType =
   | "fta"
   | "ftm";
 
-/** @deprecated 命名互換 — 実体は BDL stat_type */
-export type NbaPlayerStatLeaderMetric = NbaPlayerLeaderBdlStatType;
+export type NbaPlayerLeaderMetricId =
+  | NbaPlayerLeaderBdlStatType
+  | NbaPlayerAdvancedLeaderMetric
+  | NbaPlayerCountLeaderMetric;
+
+/** @deprecated 命名互換 — 実体は leaders / advanced 指標 ID */
+export type NbaPlayerStatLeaderMetric = NbaPlayerLeaderMetricId;
 
 export const NBA_BDL_PLAYER_LEADER_STAT_TYPES: readonly NbaPlayerLeaderBdlStatType[] =
   [
@@ -67,8 +91,9 @@ export type NbaPlayerStatLeaderRow = {
 };
 
 export type NbaPlayerStatLeadersBundle = {
-  season: Record<NbaPlayerLeaderBdlStatType, NbaPlayerStatLeaderRow[]>;
-  last10: Record<NbaPlayerLeaderBdlStatType, NbaPlayerStatLeaderRow[]>;
+  season: Record<NbaPlayerLeaderMetricId, NbaPlayerStatLeaderRow[]>;
+  playoffs: Record<NbaPlayerLeaderMetricId, NbaPlayerStatLeaderRow[]>;
+  last10: Record<NbaPlayerLeaderMetricId, NbaPlayerStatLeaderRow[]>;
   asOfLabel: string;
 };
 
@@ -83,8 +108,7 @@ export type NbaPlayerStatLeaderMetricDef = {
   label: string;
   short: string;
   higherIsBetter: boolean;
-  hintJa: string;
-  hintEn: string;
+  hint: UiStrings;
   kind: NbaPlayerStatLeaderMetricKind;
   /** 指標チップ行に出す（全 stat_type は bundle に保持） */
   showInChipBar: boolean;
@@ -97,8 +121,15 @@ export const NBA_PLAYER_STAT_LEADER_METRICS: readonly NbaPlayerStatLeaderMetricD
       label: "Points per Game",
       short: "PTS",
       higherIsBetter: true,
-      hintJa: "1試合あたりの得点（PPG）。",
-      hintEn: "Points per game.",
+      hint: {
+        ja: "1試合あたりの得点（PPG）。",
+        en: "Points per game.",
+        ko: "경기당 득점(PPG).",
+        zh: "场均得分（PPG）。",
+        es: "Puntos por partido.",
+        pt: "Pontos por jogo.",
+        fr: "Points par match.",
+      },
       kind: "perGame",
       showInChipBar: true,
     },
@@ -107,8 +138,15 @@ export const NBA_PLAYER_STAT_LEADER_METRICS: readonly NbaPlayerStatLeaderMetricD
       label: "Rebounds per Game",
       short: "REB",
       higherIsBetter: true,
-      hintJa: "1試合あたりのリバウンド。",
-      hintEn: "Rebounds per game.",
+      hint: {
+        ja: "1試合あたりのリバウンド。",
+        en: "Rebounds per game.",
+        ko: "경기당 리바운드.",
+        zh: "场均篮板。",
+        es: "Rebotes por partido.",
+        pt: "Rebotes por jogo.",
+        fr: "Rebonds par match.",
+      },
       kind: "perGame",
       showInChipBar: true,
     },
@@ -117,8 +155,15 @@ export const NBA_PLAYER_STAT_LEADER_METRICS: readonly NbaPlayerStatLeaderMetricD
       label: "Assists per Game",
       short: "AST",
       higherIsBetter: true,
-      hintJa: "1試合あたりのアシスト。",
-      hintEn: "Assists per game.",
+      hint: {
+        ja: "1試合あたりのアシスト。",
+        en: "Assists per game.",
+        ko: "경기당 어시스트.",
+        zh: "场均助攻。",
+        es: "Asistencias por partido.",
+        pt: "Assistências por jogo.",
+        fr: "Passes décisives par match.",
+      },
       kind: "perGame",
       showInChipBar: true,
     },
@@ -127,8 +172,15 @@ export const NBA_PLAYER_STAT_LEADER_METRICS: readonly NbaPlayerStatLeaderMetricD
       label: "Offensive Rebounds per Game",
       short: "ORB",
       higherIsBetter: true,
-      hintJa: "1試合あたりのオフェンスリバウンド。",
-      hintEn: "Offensive rebounds per game.",
+      hint: {
+        ja: "1試合あたりのオフェンスリバウンド。",
+        en: "Offensive rebounds per game.",
+        ko: "경기당 공격 리바운드.",
+        zh: "场均进攻篮板。",
+        es: "Rebotes ofensivos por partido.",
+        pt: "Rebotes ofensivos por jogo.",
+        fr: "Rebonds offensifs par match.",
+      },
       kind: "perGame",
       showInChipBar: true,
     },
@@ -137,8 +189,15 @@ export const NBA_PLAYER_STAT_LEADER_METRICS: readonly NbaPlayerStatLeaderMetricD
       label: "Defensive Rebounds per Game",
       short: "DRB",
       higherIsBetter: true,
-      hintJa: "1試合あたりのディフェンスリバウンド。",
-      hintEn: "Defensive rebounds per game.",
+      hint: {
+        ja: "1試合あたりのディフェンスリバウンド。",
+        en: "Defensive rebounds per game.",
+        ko: "경기당 수비 리바운드.",
+        zh: "场均防守篮板。",
+        es: "Rebotes defensivos por partido.",
+        pt: "Rebotes defensivos por jogo.",
+        fr: "Rebonds défensifs par match.",
+      },
       kind: "perGame",
       showInChipBar: true,
     },
@@ -147,8 +206,15 @@ export const NBA_PLAYER_STAT_LEADER_METRICS: readonly NbaPlayerStatLeaderMetricD
       label: "Steals per Game",
       short: "STL",
       higherIsBetter: true,
-      hintJa: "1試合あたりのスティール。",
-      hintEn: "Steals per game.",
+      hint: {
+        ja: "1試合あたりのスティール。",
+        en: "Steals per game.",
+        ko: "경기당 스틸.",
+        zh: "场均抢断。",
+        es: "Robos por partido.",
+        pt: "Roubos de bola por jogo.",
+        fr: "Interceptions par match.",
+      },
       kind: "perGame",
       showInChipBar: true,
     },
@@ -157,8 +223,15 @@ export const NBA_PLAYER_STAT_LEADER_METRICS: readonly NbaPlayerStatLeaderMetricD
       label: "Blocks per Game",
       short: "BLK",
       higherIsBetter: true,
-      hintJa: "1試合あたりのブロック。",
-      hintEn: "Blocks per game.",
+      hint: {
+        ja: "1試合あたりのブロック。",
+        en: "Blocks per game.",
+        ko: "경기당 블록.",
+        zh: "场均盖帽。",
+        es: "Tapones por partido.",
+        pt: "Bloqueios por jogo.",
+        fr: "Contres par match.",
+      },
       kind: "perGame",
       showInChipBar: true,
     },
@@ -167,8 +240,32 @@ export const NBA_PLAYER_STAT_LEADER_METRICS: readonly NbaPlayerStatLeaderMetricD
       label: "3PM per Game",
       short: "3PM",
       higherIsBetter: true,
-      hintJa: "1試合あたりの3PM。",
-      hintEn: "Made threes per game.",
+      hint: {
+        ja: "1試合あたりの3PM。",
+        en: "Made threes per game.",
+        ko: "경기당 3점 성공.",
+        zh: "场均三分命中数。",
+        es: "Triples anotados por partido.",
+        pt: "Bolas de 3 convertidas por jogo.",
+        fr: "Paniers à 3 pts réussis par match.",
+      },
+      kind: "perGame",
+      showInChipBar: true,
+    },
+    {
+      id: "fg3a",
+      label: "3PA per Game",
+      short: "3PA",
+      higherIsBetter: true,
+      hint: {
+        ja: "1試合あたりの3PA。打ちまくりが見える。",
+        en: "Three-point attempts per game.",
+        ko: "경기당 3점 시도. 외곽 시도량이 보임.",
+        zh: "场均三分出手数。看得出出手意愿。",
+        es: "Triples intentados por partido.",
+        pt: "Tentativas de 3 por jogo.",
+        fr: "Tirs à 3 pts tentés par match.",
+      },
       kind: "perGame",
       showInChipBar: true,
     },
@@ -177,8 +274,15 @@ export const NBA_PLAYER_STAT_LEADER_METRICS: readonly NbaPlayerStatLeaderMetricD
       label: "3-Point %",
       short: "3P%",
       higherIsBetter: true,
-      hintJa: "3P%。",
-      hintEn: "Three-point percentage.",
+      hint: {
+        ja: "3P%。",
+        en: "Three-point percentage.",
+        ko: "3점 성공률.",
+        zh: "三分命中率。",
+        es: "Porcentaje de triples.",
+        pt: "Aproveitamento de 3 pontos.",
+        fr: "Pourcentage à 3 points.",
+      },
       kind: "pct",
       showInChipBar: true,
     },
@@ -187,9 +291,33 @@ export const NBA_PLAYER_STAT_LEADER_METRICS: readonly NbaPlayerStatLeaderMetricD
       label: "Field Goal %",
       short: "FG%",
       higherIsBetter: true,
-      hintJa: "FG%。",
-      hintEn: "Field goal percentage.",
+      hint: {
+        ja: "FG%。",
+        en: "Field goal percentage.",
+        ko: "야투 성공률.",
+        zh: "投篮命中率。",
+        es: "Porcentaje de tiros de campo.",
+        pt: "Aproveitamento de arremessos.",
+        fr: "Pourcentage aux tirs.",
+      },
       kind: "pct",
+      showInChipBar: true,
+    },
+    {
+      id: "fga",
+      label: "FGA per Game",
+      short: "FGA",
+      higherIsBetter: true,
+      hint: {
+        ja: "1試合あたりの FGA。打ちまくりが見える。",
+        en: "Field goal attempts per game.",
+        ko: "경기당 야투 시도. 시도량이 보임.",
+        zh: "场均投篮出手数。看得出出手意愿。",
+        es: "Tiros de campo intentados por partido.",
+        pt: "Tentativas de arremesso por jogo.",
+        fr: "Tirs tentés par match.",
+      },
+      kind: "perGame",
       showInChipBar: true,
     },
     {
@@ -197,8 +325,15 @@ export const NBA_PLAYER_STAT_LEADER_METRICS: readonly NbaPlayerStatLeaderMetricD
       label: "Free Throw %",
       short: "FT%",
       higherIsBetter: true,
-      hintJa: "FT%。",
-      hintEn: "Free throw percentage.",
+      hint: {
+        ja: "FT%。",
+        en: "Free throw percentage.",
+        ko: "자유투 성공률.",
+        zh: "罚球命中率。",
+        es: "Porcentaje de tiros libres.",
+        pt: "Aproveitamento de lances livres.",
+        fr: "Pourcentage aux lancers francs.",
+      },
       kind: "pct",
       showInChipBar: true,
     },
@@ -207,8 +342,15 @@ export const NBA_PLAYER_STAT_LEADER_METRICS: readonly NbaPlayerStatLeaderMetricD
       label: "Turnovers per Game",
       short: "TOV",
       higherIsBetter: true,
-      hintJa: "1試合あたりのターンオーバー（多い順）。",
-      hintEn: "Turnovers per game (most turnovers).",
+      hint: {
+        ja: "1試合あたりのターンオーバー（多い順）。",
+        en: "Turnovers per game (most turnovers).",
+        ko: "경기당 턴오버(많은 순).",
+        zh: "场均失误（由多到少）。",
+        es: "Pérdidas por partido (de más a menos).",
+        pt: "Turnovers por jogo (do maior para o menor).",
+        fr: "Pertes de balle par match (des plus nombreuses).",
+      },
       kind: "perGame",
       showInChipBar: true,
     },
@@ -217,8 +359,15 @@ export const NBA_PLAYER_STAT_LEADER_METRICS: readonly NbaPlayerStatLeaderMetricD
       label: "Minutes per Game",
       short: "MIN",
       higherIsBetter: true,
-      hintJa: "1試合あたりの出場時間。",
-      hintEn: "Minutes per game.",
+      hint: {
+        ja: "1試合あたりの出場時間。",
+        en: "Minutes per game.",
+        ko: "경기당 출전 시간.",
+        zh: "场均出场时间。",
+        es: "Minutos por partido.",
+        pt: "Minutos por jogo.",
+        fr: "Minutes par match.",
+      },
       kind: "minutes",
       showInChipBar: true,
     },
@@ -227,38 +376,32 @@ export const NBA_PLAYER_STAT_LEADER_METRICS: readonly NbaPlayerStatLeaderMetricD
       label: "Efficiency",
       short: "EFF",
       higherIsBetter: true,
-      hintJa: "EFF（NBA 効率値。高いほど良い）。",
-      hintEn: "NBA efficiency rating.",
+      hint: {
+        ja: "EFF（NBA 効率値。高いほど良い）。",
+        en: "NBA efficiency rating.",
+        ko: "EFF(NBA 효율 지표. 높을수록 좋음).",
+        zh: "EFF（NBA 效率值，越高越好）。",
+        es: "EFF: índice de eficiencia NBA.",
+        pt: "EFF: índice de eficiência da NBA.",
+        fr: "EFF : indice d’efficacité NBA.",
+      },
       kind: "eff",
       showInChipBar: true,
-    },
-    {
-      id: "fg3a",
-      label: "3PA per Game",
-      short: "3PA",
-      higherIsBetter: true,
-      hintJa: "1試合あたりの3PA。",
-      hintEn: "Three-point attempts per game.",
-      kind: "perGame",
-      showInChipBar: false,
-    },
-    {
-      id: "fga",
-      label: "FGA per Game",
-      short: "FGA",
-      higherIsBetter: true,
-      hintJa: "1試合あたりの FGA。",
-      hintEn: "Field goal attempts per game.",
-      kind: "perGame",
-      showInChipBar: false,
     },
     {
       id: "fgm",
       label: "FGM per Game",
       short: "FGM",
       higherIsBetter: true,
-      hintJa: "1試合あたりの FGM。",
-      hintEn: "Field goals made per game.",
+      hint: {
+        ja: "1試合あたりの FGM。",
+        en: "Field goals made per game.",
+        ko: "경기당 야투 성공.",
+        zh: "场均投篮命中数。",
+        es: "Tiros de campo anotados por partido.",
+        pt: "Arremessos convertidos por jogo.",
+        fr: "Tirs réussis par match.",
+      },
       kind: "perGame",
       showInChipBar: false,
     },
@@ -267,8 +410,15 @@ export const NBA_PLAYER_STAT_LEADER_METRICS: readonly NbaPlayerStatLeaderMetricD
       label: "FTA per Game",
       short: "FTA",
       higherIsBetter: true,
-      hintJa: "1試合あたりの FTA。",
-      hintEn: "Free throw attempts per game.",
+      hint: {
+        ja: "1試合あたりの FTA。",
+        en: "Free throw attempts per game.",
+        ko: "경기당 자유투 시도.",
+        zh: "场均罚球出手数。",
+        es: "Tiros libres intentados por partido.",
+        pt: "Tentativas de lance livre por jogo.",
+        fr: "Lancers francs tentés par match.",
+      },
       kind: "perGame",
       showInChipBar: false,
     },
@@ -277,8 +427,15 @@ export const NBA_PLAYER_STAT_LEADER_METRICS: readonly NbaPlayerStatLeaderMetricD
       label: "FTM per Game",
       short: "FTM",
       higherIsBetter: true,
-      hintJa: "1試合あたりの FTM。",
-      hintEn: "Free throws made per game.",
+      hint: {
+        ja: "1試合あたりの FTM。",
+        en: "Free throws made per game.",
+        ko: "경기당 자유투 성공.",
+        zh: "场均罚球命中数。",
+        es: "Tiros libres anotados por partido.",
+        pt: "Lances livres convertidos por jogo.",
+        fr: "Lancers francs réussis par match.",
+      },
       kind: "perGame",
       showInChipBar: false,
     },
@@ -299,6 +456,114 @@ export const NBA_PLAYER_STAT_LEADER_METRIC_ROWS: readonly (
   }
   return rows;
 })();
+
+export type NbaPlayerLeaderBoardMetricDef = {
+  id: NbaPlayerLeaderMetricId;
+  label: string;
+  short: string;
+  higherIsBetter: boolean;
+  hint: UiStrings;
+};
+
+export function playerBoardMetricsForCategory(
+  category: NbaLeagueAdvancedCategory
+): NbaPlayerLeaderBoardMetricDef[] {
+  return playerAdvancedMetricsForCategory(category).map((m) => ({
+    id: m.id,
+    label: m.label,
+    short: m.short,
+    higherIsBetter: m.higherIsBetter,
+    hint: m.hint,
+  }));
+}
+
+export type NbaPlayerRailGroup = {
+  id: string;
+  short: string;
+  metrics: readonly NbaPlayerLeaderBoardMetricDef[];
+};
+
+/** 左レール。BASIC の下に COUNT / RATINGS / 4FCT … */
+export function leaguePlayerRailGroups(): NbaPlayerRailGroup[] {
+  return [
+    {
+      id: "basic",
+      short: "BASIC",
+      metrics: NBA_PLAYER_STAT_LEADER_CHIP_METRICS.map((m) => ({
+        id: m.id,
+        label: m.label,
+        short: m.short,
+        higherIsBetter: m.higherIsBetter,
+        hint: m.hint,
+      })),
+    },
+    {
+      id: "count",
+      short: "COUNT",
+      metrics: NBA_PLAYER_COUNT_LEADER_METRICS.map((m) => ({
+        id: m.id,
+        label: m.label,
+        short: m.short,
+        higherIsBetter: m.higherIsBetter,
+        hint: m.hint,
+      })),
+    },
+    ...NBA_LEAGUE_ADVANCED_CATEGORIES.map((c) => ({
+      id: c.id,
+      short: c.short,
+      metrics: playerBoardMetricsForCategory(c.id),
+    })),
+  ].filter((g) => g.metrics.length > 0);
+}
+
+/**
+ * Last 10 は試合ログ由来の box 指標（advanced は season のみ）。
+ */
+const PLAYER_LAST10_METRIC_IDS = new Set<NbaPlayerLeaderMetricId>([
+  "pts",
+  "reb",
+  "oreb",
+  "dreb",
+  "ast",
+  "stl",
+  "blk",
+  "fg3m",
+  "fg3_pct",
+  "fg_pct",
+  "ft_pct",
+  "tov",
+  "min",
+  "eff",
+  "fg3a",
+  "fga",
+  "fgm",
+  "fta",
+  "ftm",
+]);
+
+export function leaguePlayerRailGroupsForMode(
+  mode: "per_game" | "total" | "last10"
+): NbaPlayerRailGroup[] {
+  if (mode !== "last10") return leaguePlayerRailGroups();
+  const basic = NBA_PLAYER_STAT_LEADER_CHIP_METRICS.filter((m) =>
+    PLAYER_LAST10_METRIC_IDS.has(m.id)
+  ).map((m) => ({
+    id: m.id as NbaPlayerLeaderMetricId,
+    label: m.label,
+    short: m.short,
+    higherIsBetter: m.higherIsBetter,
+    hint: m.hint,
+  }));
+  return [{ id: "basic", short: "BASIC", metrics: basic }];
+}
+
+export function isPlayerAdvancedLeaderMetric(
+  id: NbaPlayerLeaderMetricId
+): id is NbaPlayerAdvancedLeaderMetric {
+  return NBA_PLAYER_ADVANCED_LEADER_METRICS.some((m) => m.id === id);
+}
+
+export { isPlayerCountLeaderMetric };
 
 const PCT_METRICS = new Set<NbaPlayerLeaderBdlStatType>([
   "fg3_pct",
@@ -334,12 +599,27 @@ function pick<T>(arr: readonly T[], rnd: () => number): T {
   return arr[Math.floor(rnd() * arr.length)]!;
 }
 
-function formatValue(metric: NbaPlayerLeaderBdlStatType, value: number) {
+function formatValue(metric: NbaPlayerLeaderMetricId, value: number) {
+  if (isPlayerCountLeaderMetric(metric)) {
+    return String(Math.round(value));
+  }
+  if (isPlayerAdvancedLeaderMetric(metric)) {
+    return formatPlayerAdvancedLeaderValue(metric, value);
+  }
   const def = NBA_PLAYER_STAT_LEADER_METRICS.find((m) => m.id === metric)!;
   if (def.kind === "pct") return `${(value * 100).toFixed(1)}%`;
-  if (def.kind === "eff") return value.toFixed(1);
-  if (def.kind === "minutes") return value.toFixed(1);
-  return value.toFixed(1);
+  if (def.kind === "eff") return formatPlainNumber(value, 1);
+  if (def.kind === "minutes") return formatPlainNumber(value, 1);
+  return formatPlainNumber(value, 1);
+}
+
+/** TOTAL（整数）のとき `.0` を出さない */
+function formatPlainNumber(value: number, decimals: number): string {
+  if (!Number.isFinite(value)) return "—";
+  if (Math.abs(value - Math.round(value)) < 1e-9) {
+    return String(Math.round(value));
+  }
+  return value.toFixed(decimals);
 }
 
 const FIRST = [
@@ -421,9 +701,12 @@ function buildPlayerPool() {
 }
 
 function buildMetricValue(
-  metric: NbaPlayerLeaderBdlStatType,
+  metric: NbaPlayerLeaderMetricId,
   rnd: () => number
 ): number {
+  if (isPlayerAdvancedLeaderMetric(metric)) {
+    return buildPlayerAdvancedMetricValue(metric, rnd);
+  }
   switch (metric) {
     case "pts":
       return Math.round((12 + rnd() * 20) * 10) / 10;
@@ -474,23 +757,48 @@ function buildLeadersBundle(window: "season" | "last10") {
   const seasonBoost = window === "season" ? 1 : 0.98;
   const last10Noise = window === "last10";
 
-  const leaders: Partial<
-    Record<NbaPlayerLeaderBdlStatType, NbaPlayerStatLeaderRow[]>
-  > = {};
+  const leaders: Partial<Record<NbaPlayerLeaderMetricId, NbaPlayerStatLeaderRow[]>> =
+    {};
 
-  for (const m of NBA_PLAYER_STAT_LEADER_METRICS) {
-    const metricId = m.id;
+  const allDefs: Array<{
+    id: NbaPlayerLeaderMetricId;
+    higherIsBetter: boolean;
+  }> = [
+    ...NBA_PLAYER_STAT_LEADER_METRICS.map((m) => ({
+      id: m.id as NbaPlayerLeaderMetricId,
+      higherIsBetter: m.higherIsBetter,
+    })),
+    ...NBA_PLAYER_COUNT_LEADER_METRICS.map((m) => ({
+      id: m.id as NbaPlayerLeaderMetricId,
+      higherIsBetter: m.higherIsBetter,
+    })),
+    ...NBA_PLAYER_ADVANCED_LEADER_METRICS.map((m) => ({
+      id: m.id,
+      higherIsBetter: m.higherIsBetter,
+    })),
+  ];
+
+  for (const def of allDefs) {
+    const metricId = def.id;
     const rows: NbaPlayerStatLeaderRow[] = [];
     for (let i = 0; i < players.length; i += 1) {
       const p = players[i]!;
       const rnd = mulberry32(
         hashSeed(`${p.playerId}:${metricId}:${window}:bdl-v1`)
       );
-      const base = buildMetricValue(metricId, rnd);
+      const base = isPlayerCountLeaderMetric(metricId)
+        ? Math.round(1 + rnd() * (metricId === "triple_doubles" ? 8 : 28))
+        : buildMetricValue(metricId, rnd);
       const noise = last10Noise ? (rnd() - 0.5) * 0.06 : 0;
-      const scaled = PCT_METRICS.has(metricId)
-        ? pct(Math.min(0.999, Math.max(0.001, base * seasonBoost + noise)))
-        : base * seasonBoost + (last10Noise ? (rnd() - 0.5) * 0.85 : 0);
+      const isPct =
+        (isPlayerAdvancedLeaderMetric(metricId) &&
+          playerAdvancedMetricDef(metricId).kind === "pct") ||
+        PCT_METRICS.has(metricId as NbaPlayerLeaderBdlStatType);
+      const scaled = isPlayerCountLeaderMetric(metricId)
+        ? base
+        : isPct
+          ? pct(Math.min(0.999, Math.max(0.001, base * seasonBoost + noise)))
+          : base * seasonBoost + (last10Noise ? (rnd() - 0.5) * 0.85 : 0);
       const gpRnd = mulberry32(
         hashSeed(`${p.playerId}:gp:${window}:bdl-v1`)
       );
@@ -508,7 +816,6 @@ function buildLeadersBundle(window: "season" | "last10") {
       });
     }
 
-    const def = m;
     const sorted = [...rows].sort((a, b) => {
       if (a.value === b.value) return a.playerName.localeCompare(b.playerName);
       return def.higherIsBetter ? b.value - a.value : a.value - b.value;
@@ -516,18 +823,19 @@ function buildLeadersBundle(window: "season" | "last10") {
     leaders[metricId] = sorted.slice(0, 30);
   }
 
-  return leaders as Record<NbaPlayerLeaderBdlStatType, NbaPlayerStatLeaderRow[]>;
+  return leaders as Record<NbaPlayerLeaderMetricId, NbaPlayerStatLeaderRow[]>;
 }
 
 let cached: NbaPlayerStatLeadersBundle | null = null;
 let cacheVer: string | null = null;
-const MOCK_CACHE_KEY = "v4-bdl-leaders-gp";
+const MOCK_CACHE_KEY = "v8-player-playtype-freq";
 
 export function getNbaPlayerStatLeadersMock(): NbaPlayerStatLeadersBundle {
   if (cached && cacheVer === MOCK_CACHE_KEY) return cached;
   cacheVer = MOCK_CACHE_KEY;
   cached = {
     season: buildLeadersBundle("season"),
+    playoffs: buildLeadersBundle("season"),
     last10: buildLeadersBundle("last10"),
     asOfLabel: "MOCK · BDL leaders · 2025-26",
   };
@@ -535,15 +843,41 @@ export function getNbaPlayerStatLeadersMock(): NbaPlayerStatLeadersBundle {
 }
 
 export function playerLeaderMetricDef(
-  id: NbaPlayerLeaderBdlStatType
-): NbaPlayerStatLeaderMetricDef {
+  id: NbaPlayerLeaderMetricId
+): NbaPlayerLeaderBoardMetricDef {
+  if (isPlayerCountLeaderMetric(id)) {
+    const found = playerCountMetricDef(id);
+    return {
+      id: found.id,
+      label: found.label,
+      short: found.short,
+      higherIsBetter: found.higherIsBetter,
+      hint: found.hint,
+    };
+  }
+  if (isPlayerAdvancedLeaderMetric(id)) {
+    const found = playerAdvancedMetricDef(id);
+    return {
+      id: found.id,
+      label: found.label,
+      short: found.short,
+      higherIsBetter: found.higherIsBetter,
+      hint: found.hint,
+    };
+  }
   const found = NBA_PLAYER_STAT_LEADER_METRICS.find((m) => m.id === id);
-  if (!found) throw new Error(`unknown player leader stat_type ${id}`);
-  return found;
+  if (!found) throw new Error(`unknown player leader metric ${id}`);
+  return {
+    id: found.id,
+    label: found.label,
+    short: found.short,
+    higherIsBetter: found.higherIsBetter,
+    hint: found.hint,
+  };
 }
 
 export function formatPlayerLeaderValue(
-  metric: NbaPlayerLeaderBdlStatType,
+  metric: NbaPlayerLeaderMetricId,
   value: number
 ) {
   return formatValue(metric, value);

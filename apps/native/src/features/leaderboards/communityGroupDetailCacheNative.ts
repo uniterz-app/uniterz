@@ -46,12 +46,27 @@ export function getCachedCommunityGroupDetail(groupId: string): CommunityGroupDe
     cache.delete(groupId);
     return null;
   }
+  /** Pro なのにスキン欠落の古いキャッシュは捨てる（チタン固定の残骸） */
+  if (
+    hit.rows.some(
+      (r) => r.plan === "pro" && typeof r.planProBgVariant !== "string"
+    )
+  ) {
+    cache.delete(groupId);
+    return null;
+  }
   return hit;
 }
 
 export function invalidateCommunityGroupDetail(groupId: string) {
   cache.delete(groupId);
   inflight.delete(groupId);
+}
+
+/** 一覧・詳細のスキン反映漏れを避けるため detail キャッシュを捨てる */
+export function invalidateAllCommunityGroupDetails() {
+  cache.clear();
+  inflight.clear();
 }
 
 export async function fetchCommunityGroupDetail(
@@ -69,22 +84,20 @@ export async function fetchCommunityGroupDetail(
     if (!h) return null;
 
     try {
-      const [sRes, lRes] = await Promise.all([
-        fetch(communityApiUrl(`/api/communities/${groupId}/summary`), {
-          headers: { Authorization: h },
-        }),
-        fetch(communityApiUrl(`/api/communities/${groupId}/leaderboard`), {
-          headers: { Authorization: h },
-        }),
-      ]);
-      const sJson = await sRes.json().catch(() => ({}));
+      // Web 同様、leaderboard が group を同梱するので 1 往復
+      const lRes = await fetch(
+        communityApiUrl(`/api/communities/${groupId}/leaderboard`),
+        { headers: { Authorization: h } }
+      );
       const lJson = await lRes.json().catch(() => ({}));
-      if (!sRes.ok || !sJson?.ok || !sJson.group) return null;
+      if (!lRes.ok || !lJson?.ok || !lJson.group) return null;
 
+      const summary = lJson.group as CommunityGroupSummary;
       const entry: CommunityGroupDetailCacheEntry = {
-        summary: sJson.group as CommunityGroupSummary,
-        rows: lRes.ok && lJson?.ok ? (lJson.rows ?? []) : [],
-        metric: (sJson.group as CommunityGroupSummary).rankingMetric,
+        summary,
+        rows: lJson.rows ?? [],
+        metric: (lJson.rankingMetric as CommunityGroupSummary["rankingMetric"]) ??
+          summary.rankingMetric,
         fetchedAt: Date.now(),
       };
       prefetchCommunityHeaderImageNative(entry.summary.headerImageUrl);

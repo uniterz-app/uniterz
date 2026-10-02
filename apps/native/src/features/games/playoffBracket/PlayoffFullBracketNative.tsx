@@ -31,7 +31,7 @@ export type PlayoffFullBracketNativeProps = {
   champion?: TeamSlot;
   bracket?: BracketLike;
   results?: BracketLike;
-  hitLegend?: { language: "ja" | "en" };
+  hitLegend?: { language: string };
 };
 
 const DESIGN_W = 504;

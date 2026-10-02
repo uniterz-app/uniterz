@@ -1,8 +1,10 @@
 {
-  "version": 3,
+  "version": 4,
   "scale": 3,
   "skewDeg": -14,
   "cyan": "#00F5FF",
+  "violet": "#C084FC",
+  "gold": "#F6C344",
   "bodyHeightPx1x": 26,
   "bodyHeightNormalPx1x": 32,
   "glowPadPx1x": 12,
@@ -19,5 +21,10 @@
   "fontWeight": 700,
   "assetShape": "rect",
   "displayAsset": "active-stretch.png",
-  "note": "Web CyberSlantedTab active compact 焼き込み（矩形+発光+横線）。表示は active-stretch 1枚を横ストレッチし RN で skewX(-14deg)。3分割は継ぎ目用に残すが表示には使わない。Web CSS は未変更。"
+  "themedAssets": {
+    "#00F5FF": "active-stretch.png",
+    "#C084FC": "active-stretch-violet.png",
+    "#F6C344": "active-stretch-gold.png"
+  },
+  "note": "選択態は色違いでも同一 glow 寸法の焼き込み。表示は stretch 1枚 + RN skewX(-14deg)。"
 }

@@ -1,4 +1,7 @@
-export type PushLanguage = "ja" | "en";
+import type { LocalizedLang } from "@/lib/i18n/localize";
+import { resolveLocalizedLang } from "@/lib/i18n/localize";
+
+export type PushLanguage = LocalizedLang;
 
 export type PushMatchupInput = {
   homeLabel: string;
@@ -9,38 +12,39 @@ export type PushMatchupInput = {
   awayScore?: number;
 };
 
-function resolvePushSideLabel(
-  label: string,
-  _teamId: string | undefined,
-  language: PushLanguage
-): string {
-  const trimmed = label.trim() || "?";
-  return language === "en" ? trimmed.toUpperCase() : trimmed;
+/** チーム名は英語固定のまま。区切りだけ言語寄せ。 */
+function matchupSeparator(language: LocalizedLang): string {
+  switch (language) {
+    case "ja":
+      return " 対 ";
+    case "zh":
+      return " 对 ";
+    case "ko":
+      return " vs ";
+    default:
+      return " · ";
+  }
 }
 
-/** OS 通知用 — 言語ごとの対戦表記（フォントは OS 任せ、字義・区切りをブランド寄せ） */
+/** OS 通知用 — 対戦表記（チーム名は入力のまま／英語固定想定） */
 export function formatPushMatchupLabel(
   input: PushMatchupInput,
-  language: PushLanguage
+  language: LocalizedLang | string
 ): string {
-  const home = resolvePushSideLabel(input.homeLabel, input.homeTeamId, language);
-  const away = resolvePushSideLabel(input.awayLabel, input.awayTeamId, language);
+  const lang = resolveLocalizedLang(language);
+  const home = input.homeLabel.trim() || "?";
+  const away = input.awayLabel.trim() || "?";
+  const sep = matchupSeparator(lang);
 
   if (
     typeof input.homeScore === "number" &&
     typeof input.awayScore === "number"
   ) {
-    const score = `${input.homeScore}–${input.awayScore}`;
-    return language === "ja"
-      ? `${home} ${input.homeScore}-${input.awayScore} ${away}`
-      : `${home} ${score} ${away}`;
+    // 結果通知ではスコアを渡さない想定。他用途向けに残す。
+    return `${home} ${input.homeScore}-${input.awayScore} ${away}`;
   }
 
-  if (language === "ja") {
-    return `${home} 対 ${away}`;
-  }
-
-  return `${home} · ${away}`;
+  return `${home}${sep}${away}`;
 }
 
 export function resolvePushTeamId(side: unknown): string | undefined {

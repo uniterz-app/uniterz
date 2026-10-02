@@ -2,6 +2,7 @@ import { adminDb } from "@/lib/firebaseAdmin";
 import { grantGroupBattleUnitsForSnapshot } from "@/lib/groupBattles/server/grantUnits";
 import type { GroupBattlePeriod } from "@/lib/groupBattles/types";
 import { jsonErr, jsonOk } from "@/lib/groupBattles/server/http";
+import { checkJobSecret } from "@/lib/security/assertJobSecret";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -12,9 +13,7 @@ type Ctx = { params: Promise<{ battleId: string }> };
  * final スナップショットに対する Unit 冪等付与（運営/ジョブ）。
  */
 export async function POST(req: Request, ctx: Ctx) {
-  const secret = process.env.GROUP_BATTLE_ADMIN_SECRET?.trim();
-  const header = req.headers.get("x-group-battle-admin-secret")?.trim();
-  if (!secret || !header || header !== secret) {
+  if (!checkJobSecret(req)) {
     return jsonErr("forbidden", 403);
   }
 

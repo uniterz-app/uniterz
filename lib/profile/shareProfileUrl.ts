@@ -1,8 +1,10 @@
+import { profileKinetikPanelCopy } from "@/lib/profile/profileKinetikPanelCopy";
+
 export type ShareProfileOpts = {
   handle: string;
   displayName: string;
   variant: "web" | "mobile";
-  language: "ja" | "en";
+  language: string | null | undefined;
 };
 
 export function buildProfileShareUrl(
@@ -19,10 +21,9 @@ export function buildProfileShareUrl(
 export async function shareProfileUrl(opts: ShareProfileOpts): Promise<boolean> {
   const url = buildProfileShareUrl(opts.handle, opts.variant);
   const title = opts.displayName;
-  const text =
-    opts.language === "ja"
-      ? `${opts.displayName} のプロフィール`
-      : `${opts.displayName}'s profile`;
+  const text = profileKinetikPanelCopy(opts.language).shareText(
+    opts.displayName
+  );
 
   if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
     try {

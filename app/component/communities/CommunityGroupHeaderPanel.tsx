@@ -6,7 +6,9 @@ import {
   metricLabel,
   communityRankingPeriodValue,
   rankingTeamsLabel,
+  gamesScopeLabel,
 } from "@/lib/communities/labels";
+import type { CommunityPeriodType } from "@/lib/communities/types";
 import type { CommunityGroupSummary } from "@/app/component/communities/communityGroupDetailCache";
 import { nameOxanium, jp } from "@/lib/fonts";
 import { MATCH_LIST_CYBER_CARD_CLASS, MATCH_LIST_CYBER_GRID_CLASS } from "@/lib/ui/matchListCardCyber";
@@ -33,7 +35,6 @@ function ConditionChip({
   value,
   accent = "cyan",
   wide = false,
-  overlay = false,
 }: {
   label: string;
   value: string;
@@ -41,12 +42,12 @@ function ConditionChip({
   wide?: boolean;
   overlay?: boolean;
 }) {
-  const hair =
+  const border =
     accent === "amber"
-      ? "bg-amber-400/85 shadow-[0_0_8px_rgba(251,191,36,0.55)]"
+      ? "border-amber-400/70"
       : accent === "emerald"
-        ? "bg-emerald-400/85 shadow-[0_0_8px_rgba(52,211,153,0.55)]"
-        : "bg-[#00F5FF]/85 shadow-[0_0_8px_rgba(0,245,255,0.55)]";
+        ? "border-emerald-400/70"
+        : "border-[#00F5FF]/70";
   const labelColor =
     accent === "amber"
       ? "text-amber-200/80"
@@ -57,14 +58,11 @@ function ConditionChip({
   return (
     <div
       className={[
-        "relative flex min-h-[52px] overflow-hidden border",
-        overlay
-          ? "border-cyan-400/20 bg-black"
-          : "border-cyan-400/16 bg-black",
+        "relative flex min-h-[52px] overflow-hidden border bg-black",
+        border,
         wide ? "col-span-2 w-full" : "min-w-0 w-full",
       ].join(" ")}
     >
-      <span className={["absolute inset-x-0 top-0 h-px", hair].join(" ")} aria-hidden />
       <div className="flex flex-1 flex-col justify-center gap-0.5 px-2.5 py-2">
         <span
           className={[
@@ -144,8 +142,19 @@ export default function CommunityGroupHeaderPanel({
     {
       key: "period",
       label: labels.period,
-      value: communityRankingPeriodValue(summary.rankingStartDateKey, language),
+      value: communityRankingPeriodValue(summary.rankingStartDateKey, language, {
+        periodType: summary.periodType as CommunityPeriodType,
+        rankingEndDateKey: summary.rankingEndDateKey,
+        rankingPeriodMonthKey: summary.rankingPeriodMonthKey,
+        rankingSeasonKey: summary.rankingSeasonKey,
+      }),
       accent: "cyan",
+    },
+    {
+      key: "scope",
+      label: language === "en" ? "Games" : "対象試合",
+      value: gamesScopeLabel(summary.rankingGamesScope ?? "all", language),
+      accent: "amber",
     },
   ];
 
@@ -201,7 +210,6 @@ export default function CommunityGroupHeaderPanel({
                 value={item.value}
                 accent={item.accent}
                 wide={item.wide}
-                overlay={overlay}
               />
             ))}
           </div>

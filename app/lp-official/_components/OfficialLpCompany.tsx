@@ -8,6 +8,7 @@ const FIELDS = [
   { label: "法人番号", value: officialSite.company.corporateNumber },
   { label: "事業内容", value: officialSite.company.business },
   { label: "運営サービス", value: officialSite.company.service },
+  { label: "代表メール", value: officialSite.infoEmail },
 ] as const;
 
 export default function OfficialLpCompany() {

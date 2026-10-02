@@ -10,13 +10,14 @@ import {
 } from "@/app/component/games/cyberMotion";
 import {
   interruptedRoundedRectStrokeHalves,
+  MATCH_LINE_FRAME_STROKE,
   MATCH_LINE_FRAME_TOP_GAP_START_INSET,
   matchLineFrameLabelMaxWidth,
   matchLineFramePaint,
 } from "@/lib/games/matchListLineFrame";
 import MatchPickupSideLabel from "@/app/component/games/MatchPickupSideLabel";
 
-const STROKE = 1.5;
+const STROKE = MATCH_LINE_FRAME_STROKE;
 const LABEL_GAP_PAD = 16;
 const MIN_TICK_GAP = 12;
 /** Native `MatchListLineFrameNative` — 下辺 CTA 幅のプローブ文字列 */

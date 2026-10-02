@@ -14,6 +14,8 @@ export type NbaTopScorerCandidate = NbaTopScorerPick & {
   name: string;
   /** シーズン平均得点（PPG）。UI は高い順に並べる */
   ppg?: number | null;
+  /** 出場試合数 */
+  gp?: number | null;
   position?: string | null;
   jerseyNumber?: string | null;
 };
@@ -32,7 +34,9 @@ export function normalizeNbaTopScorerPick(
   const playerId = String((raw as NbaTopScorerPick).playerId ?? "").trim();
   const teamId = String((raw as NbaTopScorerPick).teamId ?? "").trim();
   if (!playerId || !teamId) return null;
-  const nameRaw = (raw as NbaTopScorerPick).name;
+  const nameRaw =
+    (raw as NbaTopScorerPick).name ??
+    (raw as { playerName?: unknown }).playerName;
   const name =
     nameRaw == null || String(nameRaw).trim() === ""
       ? null
@@ -54,10 +58,15 @@ export function normalizeNbaTopScorerCandidates(
     const positionRaw = (row as NbaTopScorerCandidate).position;
     const jerseyRaw = (row as NbaTopScorerCandidate).jerseyNumber;
     const ppgRaw = Number((row as NbaTopScorerCandidate).ppg);
+    const gpRaw = Number(
+      (row as NbaTopScorerCandidate).gp ??
+        (row as { gamesPlayed?: unknown }).gamesPlayed
+    );
     out.push({
       ...pick,
       name,
       ppg: Number.isFinite(ppgRaw) ? ppgRaw : null,
+      gp: Number.isFinite(gpRaw) ? gpRaw : null,
       position:
         positionRaw == null || positionRaw === ""
           ? null

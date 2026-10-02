@@ -1,20 +1,16 @@
 "use client";
 
 import type { CSSProperties, InputHTMLAttributes } from "react";
-import { matchScoreClass, nameBebas, nameOxanium } from "@/lib/fonts";
-import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
-import type { League } from "@/lib/leagues";
+import { nameBebas, nameOxanium } from "@/lib/fonts";
 import { NBA_TEAM_NAME_BY_ID } from "@/lib/nba-team-names";
-import {
-  getTeamJerseyPrimaryColor,
-  softenTeamUiColor,
-} from "@/lib/team-colors";
 import { getMobileTeamName } from "@/lib/team-name-split-mobile";
 import { PREDICT_OVERLAY_SCORE_INPUT_CLASS } from "@/lib/ui/predictOverlayCyber";
 
-/** 試合カードのチーム名（Bebas + skewX(-6deg)）と揃える */
+/** Score prediction パネルのチーム名 — マッチカードと同系（Oxanium SemiBold） */
 const overlayTeamNameStyle: CSSProperties = {
-  ...bracketMarketTeamTypography(true),
+  fontFamily: nameOxanium.style.fontFamily,
+  fontWeight: 600,
+  letterSpacing: "0.05em",
   transform: "skewX(-6deg)",
   color: "#F8FAFC",
 };
@@ -39,35 +35,6 @@ type Props = {
   away: Omit<SideField, "side">;
   className?: string;
 };
-
-function hexToRgba(hex: string, alpha: number): string {
-  const raw = hex.replace("#", "");
-  if (raw.length !== 6) return `rgba(0,245,255,${alpha})`;
-  const r = Number.parseInt(raw.slice(0, 2), 16);
-  const g = Number.parseInt(raw.slice(2, 4), 16);
-  const b = Number.parseInt(raw.slice(4, 6), 16);
-  return `rgba(${r},${g},${b},${alpha})`;
-}
-
-function inferLeague(teamId: string): League {
-  if (teamId.startsWith("nba-")) return "nba";
-  if (teamId.startsWith("wc-")) return "wc";
-  if (teamId.startsWith("pl-")) return "pl";
-  if (teamId.startsWith("bj-") || teamId.startsWith("b1-")) return "bj";
-  return "j1";
-}
-
-function sideAccent(
-  teamId: string | null | undefined,
-  side: "home" | "away"
-): string {
-  if (teamId) {
-    return softenTeamUiColor(
-      getTeamJerseyPrimaryColor(inferLeague(teamId), teamId)
-    );
-  }
-  return side === "home" ? "#00F5FF" : "#B388FF";
-}
 
 /** HUD 用英語チーム名（例: LAKERS）。NBA は nickname のみ。 */
 function englishHudTeamName(
@@ -99,8 +66,6 @@ function ScoreField({
   disabled,
   inputProps,
 }: SideField) {
-  const primary = sideAccent(teamId, side);
-  const border = hexToRgba(primary, 0.55);
   const sideLabel = side === "home" ? "HOME" : "AWAY";
   const teamName = englishHudTeamName(teamId, label);
   const title = `${sideLabel}: ${teamName}`;
@@ -117,8 +82,8 @@ function ScoreField({
       </span>
       <span
         className={[
-          nameBebas.className,
-          "truncate px-0.5 text-[15px] font-bold uppercase leading-tight md:text-[18px]",
+          nameOxanium.className,
+          "truncate px-0.5 text-[13px] font-semibold uppercase leading-tight md:text-[14px]",
         ].join(" ")}
         style={overlayTeamNameStyle}
         title={title}
@@ -127,9 +92,9 @@ function ScoreField({
       </span>
 
       <span
-        className="relative block overflow-hidden transition-[border-color] duration-150 group-focus-within:brightness-110"
+        className="relative block overflow-hidden bg-black transition-[border-color] duration-150 group-focus-within:border-white/85"
         style={{
-          border: `1px solid ${border}`,
+          border: "1px solid rgba(255,255,255,0.85)",
           borderRadius: 0,
           background: "#000",
         }}
@@ -145,12 +110,13 @@ function ScoreField({
           aria-label={title}
           className={[
             PREDICT_OVERLAY_SCORE_INPUT_CLASS,
-            matchScoreClass,
-            "relative z-[1] w-full bg-transparent px-3 py-2.5 text-center text-[18px] font-black leading-none outline-none md:text-[20px]",
+            nameBebas.className,
+            "relative z-[1] w-full bg-transparent px-3 py-2.5 text-center text-[18px] font-normal uppercase leading-none tracking-[0.08em] outline-none md:text-[18px]",
           ].join(" ")}
           style={{
-            caretColor: primary,
-            color: "#F0FDFF",
+            caretColor: "#ffffff",
+            color: "#ffffff",
+            transform: "skewX(-6deg)",
           }}
           {...inputProps}
         />

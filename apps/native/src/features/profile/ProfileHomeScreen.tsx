@@ -4,6 +4,7 @@ import {
   CommonActions,
   StackActions,
   useFocusEffect,
+  useIsFocused,
   useNavigation,
 } from "@react-navigation/native";
 import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
@@ -11,28 +12,36 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import {
   ActivityIndicator,
   Image,
+  InteractionManager,
   KeyboardAvoidingView,
-  Modal,
   Platform,
   Pressable,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { keyboardAvoidingBehavior } from "../../ui/keyboardAvoidingBehaviorNative";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { signOut, updateProfile } from "firebase/auth";
-import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
-import { auth, db, storage } from "../../lib/firebase";
+import { auth, storage } from "../../lib/firebase";
 import { colors, radius, spacing, typography } from "../../theme/tokens";
 import { useFirebaseUser } from "../../auth/FirebaseUserProvider";
 import { getUniterzApiBaseUrl } from "../games/submitPredictionApi";
-import { useNativeProfileStats, seedNativeProfileStatsFromUserDoc } from "./useNativeProfileStats";
+import { useNativeLanguage } from "../../i18n/NativeLanguageProvider";
+import { getDeviceTimeZone } from "../../../../../lib/i18n/countryTimezone";
 import {
-  invalidateProfileUserDocNative,
+  buildTimeZoneOptions,
+  timeZoneCityLabel,
+  timeZoneOptionLabel,
+} from "../../../../../lib/i18n/timeZoneOptions";
+import { timeZoneSettingCopy } from "../../../../../lib/i18n/timeZoneSettingCopy";
+import { useNativeProfileStats, seedNativeProfileStatsFromUserDoc } from "./useNativeProfileStats";
+import { prefetchNativeProfileSettledTodayResults } from "./useNativeProfileSettledTodayResults";
+import {
   loadProfileUserDocNative,
   peekProfileUserDocNative,
 } from "./profileUserDocCacheNative";
@@ -43,6 +52,8 @@ import {
   useNativeProfilePlan,
 } from "./useNativeProfilePlan";
 import { useNativeAnnouncementsUnread } from "./useNativeAnnouncementsUnread";
+import { useNativeAdminInboxUnread } from "./useNativeAdminInboxUnread";
+import { useIsAdminNative } from "../admin/useIsAdminNative";
 import { useNativeProfileBadges, type ResolvedBadgeNative } from "./useNativeProfileBadges";
 import { useBottomTabBarInsets } from "../../navigation/useBottomTabBarInsets";
 import ProfileKinetikHeroNative from "./kinetik/ProfileKinetikHeroNative";
@@ -50,11 +61,25 @@ import ProfileSideMenuModal from "./ProfileSideMenuModal";
 import ProfileMenuEdgeHandleNative from "./ProfileMenuEdgeHandleNative";
 import ProfileBackEdgeHandleNative from "./ProfileBackEdgeHandleNative";
 import ProfileBadgeDetailModal from "./ProfileBadgeDetailModal";
+import ProfileMarkListOverlayNative from "./ProfileMarkListOverlayNative";
+import type { MarkListRow } from "./ProfileMarkListOverlayNative";
+import {
+  consumeMarkListResume,
+  requestMarkListResume,
+} from "./markListResumeNative";
+import {
+  consumeSideMenuResume,
+  requestSideMenuResume,
+} from "./sideMenuResumeNative";
+import { useProfileMarksNative } from "./useProfileMarksNative";
+import { maxMarksForPlan } from "../../../../../lib/marks/markTypes";
+import { useNativeUserPlan } from "../../hooks/useNativeUserPlan";
+import { navigateToPublicProfileNative } from "../../navigation/navigateToPublicProfileNative";
 import { CyberSubpageHeaderNative } from "../../ui/CyberSubpageShellNative";
 import type { MainTabParamList, ProfileStackParamList } from "../../navigation/types";
 import GamesPageBackgroundNative from "../background/GamesPageBackgroundNative";
 import { APP_MESH_BG_FALLBACK } from "../../../../../lib/app/appMeshBackground";
-import PredictOverlaySubmitButtonNative from "../games/PredictOverlaySubmitButtonNative";
+import SlantCtaNative from "../../ui/SlantCtaNative";
 import {
   CyberSlantedTabBarNative,
   CyberSlantedTabNative,
@@ -64,9 +89,12 @@ import ProfileBracketTabNative from "./ProfileBracketTabNative";
 import ProfileStatsTabNative from "./ProfileStatsTabNative";
 import ProfileReportDeliveryOverlayNative from "./reports/ProfileReportDeliveryOverlayNative";
 import ProfileProSkinUnlockOverlayNative from "./reports/ProfileProSkinUnlockOverlayNative";
+import { normalizeStoredPlanType } from "../../../../../lib/pro/planChangeDisplay";
+import {
+  canViewMonthlyReport,
+} from "../../../../../lib/reports/reportEntitlements";
 import { useProReportDeliveryOverlayNative } from "./reports/useProReportDeliveryOverlayNative";
 import { useProSkinUnlockOverlayNative } from "./reports/useProSkinUnlockOverlayNative";
-import { consumeProSkinUnlockPreviewOnProfile } from "./reports/proSkinUnlockPreviewArm";
 import { useNativeProfileByHandle } from "./useNativeProfileByHandle";
 import ProfileOverviewSectionNative from "./ProfileOverviewSectionNative";
 import { BlocksPulseLoader } from "../../components/BlocksPulseLoader";
@@ -75,16 +103,21 @@ import {
   isProfileGamblingTermsError,
   profileGamblingTermsUserMessage,
 } from "../../../../../lib/profile/profileGamblingTerms";
+import { saveMeProfileNative } from "./saveMeProfileNative";
 import { COUNTRY_OPTIONS } from "../../../../../lib/rankings/country";
 import type { ProfileStatsStreakContext } from "../../../../../lib/profile/profileStreakScope";
-import { parseUserUnitBalance } from "../../../../../lib/profile/parseUserProfileFields";
+import { parseUserProfileViewCount, parseUserUnitBalance } from "../../../../../lib/profile/parseUserProfileFields";
 import { parseUserPlanProBgVariant } from "../../../../../lib/profile/profilePlanProBgVariantField";
+import { peekPublicProfileIdentity } from "../../../../../lib/profile/publicProfileIdentityCache";
 import { currentSeasonWinStreak } from "../../../../../lib/profile/currentSeasonWinStreak";
 import {
   PROFILE_PLAN_PRO_BG_DEFAULT,
   type ProfilePlanProBgVariant,
 } from "../../../../../lib/profile/profilePlanProBgVariants";
 import { peekOwnProfileSeedNative, seedOwnProfileFromUserDocNative } from "./seedOwnProfileFromUserDocNative";
+import { useMyNbaFavoritesNative } from "./useMyNbaFavoritesNative";
+import { parseNbaFavorites } from "../../../../../lib/profile/nbaFavorites";
+import { hydrateMarksFromUserDoc } from "./marksFirestoreNative";
 import TutorialLiveHostNative from "../tutorial/TutorialLiveHostNative";
 import TutorialWelcomeWorldCameraNative from "../tutorial/TutorialWelcomeWorldCameraNative";
 import TutorialLiveCoachNative from "../tutorial/TutorialLiveCoachNative";
@@ -105,13 +138,28 @@ import { requestTutorialClearedNative } from "../tutorial/tutorialRestartEventsN
 import { setTutorialWelcomeAudienceNative } from "../tutorial/tutorialWelcomeAudienceNative";
 import { tutorialSkipConfirmProps } from "../../../../../lib/tutorial/tutorialSkipConfirmProps";
 import { t as i18nT } from "../../../../../lib/i18n/t";
-import type { Language } from "../../../../../lib/i18n/language";
+import {
+  LANGUAGE_NATIVE_NAMES,
+  type Language,
+} from "../../../../../lib/i18n/language";
+import {
+  LOCALIZED_UI_LANGUAGES,
+  L,
+  resolveLocalizedLang,
+  type LocalizedLang,
+} from "../../../../../lib/i18n/localize";
+import { profileSettingsSheetCopy } from "./profileSettingsSheetCopy";
+import { profileMarkToastCopy } from "./referralInviteCopy";
 import { TUTORIAL_WELCOME_LAND_HOLD_MS } from "../../../../../lib/tutorial/tutorialMotion";
 import { setTutorialRestartCover } from "../../../../../lib/tutorial/tutorialRestartCover";
 import {
   fetchProfileViewCountNative,
   recordProfileViewNative,
 } from "./profileViewsApiNative";
+import {
+  peekProfileViewCountMemory,
+  setProfileViewCountMemory,
+} from "../../../../../lib/profile/profileViewCountMemory";
 
 type ProfileTab = "overview" | "report" | "awards" | "bracket";
 
@@ -130,9 +178,13 @@ const PROFILE_TAB_ORDER: ProfileTab[] = [
   "bracket",
 ];
 
-function profileCountryRowLabel(code: string, appLang: "ja" | "en"): string {
+function profileCountryRowLabel(
+  code: string,
+  appLang: LocalizedLang,
+  notSetLabel: string
+): string {
   const trimmed = code.trim();
-  if (!trimmed) return appLang === "ja" ? "未設定" : "Not set";
+  if (!trimmed) return notSetLabel;
   const row = COUNTRY_OPTIONS.find((c) => c.code === trimmed);
   return row ? (appLang === "ja" ? row.labelJa : row.labelEn) : trimmed;
 }
@@ -145,10 +197,13 @@ export default function ProfileHomeScreen({
   fromLeaderboards = false,
   fromWeeklyReport = false,
   fromResultDetail = false,
+  fromMarkList = false,
+  fromUserSearch = false,
   resultDetailPostId,
   leaderboardsGroupId,
   openSettingsOnMount = false,
   openReportTabOnMount = false,
+  openMarkListOnMount = false,
 }: {
   bottomReserveY?: number;
   onSaved?: () => void;
@@ -162,16 +217,34 @@ export default function ProfileHomeScreen({
   fromWeeklyReport?: boolean;
   /** リザルト詳細から遷移してきた他人プロフィール */
   fromResultDetail?: boolean;
+  /** MARK LIST から遷移してきた他人プロフィール */
+  fromMarkList?: boolean;
+  /** ユーザー検索から遷移してきた他人プロフィール */
+  fromUserSearch?: boolean;
   /** リザルト詳細へ戻るときの投稿 ID */
   resultDetailPostId?: string;
   leaderboardsGroupId?: string;
   openSettingsOnMount?: boolean;
   openReportTabOnMount?: boolean;
+  openMarkListOnMount?: boolean;
 }) {
   const { fUser, status } = useFirebaseUser();
   const myUid = fUser?.uid;
+  const { isPro: myIsPro } = useNativeUserPlan(myUid);
+  const maxMarks = maxMarksForPlan(myIsPro);
+  const {
+    marks: markRows,
+    loading: marksLoading,
+    markCount,
+    markedByCount,
+    isMarked,
+    addMark,
+    removeMark,
+    refresh: refreshMarks,
+  } = useProfileMarksNative(myUid, maxMarks);
   const publicRouteKey = routeHandle?.trim() ?? "";
   const isPublicProfileView = publicRouteKey.length > 0;
+  const isFocused = useIsFocused();
   const profileByHandle = useNativeProfileByHandle(
     isPublicProfileView ? publicRouteKey : null
   );
@@ -180,9 +253,12 @@ export default function ProfileHomeScreen({
 
   const [tab, setTab] = useState<ProfileTab>("overview");
   const [settingsOpen, setSettingsOpen] = useState(false);
-  /** メニューへ戻るときは fade せず即閉じる */
-  const [settingsAnim, setSettingsAnim] = useState<"fade" | "none">("fade");
   const [menuOpen, setMenuOpen] = useState(false);
+  /** stack 画面 BACK 復帰時は入場アニメなしでメニューを出す */
+  const [menuInstantOpen, setMenuInstantOpen] = useState(false);
+  const [markListOpen, setMarkListOpen] = useState(false);
+  /** チャート等の重いブロックは1フレ後。ヒーロー＋タブを先に出す */
+  const [heavyReady, setHeavyReady] = useState(false);
   const [welcomeFlyActive, setWelcomeFlyActive] = useState(
     () =>
       !isPublicProfileView &&
@@ -193,8 +269,6 @@ export default function ProfileHomeScreen({
   const welcomeLandTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
     null
   );
-  /** 設定 Modal を閉じたあとサイドメニューを開く（iOS は onDismiss 待ち） */
-  const reopenMenuAfterSettingsRef = useRef(false);
   const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
   const tabNavigation = useNavigation<BottomTabNavigationProp<MainTabParamList>>();
   const { topContentPadY } = useBottomTabBarInsets();
@@ -203,7 +277,9 @@ export default function ProfileHomeScreen({
     (fromRankings ||
       fromLeaderboards ||
       fromWeeklyReport ||
-      fromResultDetail);
+      fromResultDetail ||
+      fromMarkList ||
+      fromUserSearch);
 
   const dismissPublicProfileRoute = useCallback(() => {
     const state = navigation.getState();
@@ -229,56 +305,48 @@ export default function ProfileHomeScreen({
       fromLeaderboards: undefined,
       fromWeeklyReport: undefined,
       fromResultDetail: undefined,
+      fromMarkList: undefined,
       resultDetailPostId: undefined,
       leaderboardsGroupId: undefined,
     });
   }, [navigation]);
 
-  /** iOS は Modal 同時表示不可。閉じ完了（onDismiss）後にメニューを開く */
-  const openMenuAfterSettingsClosed = useCallback(() => {
-    if (!reopenMenuAfterSettingsRef.current) return;
-    reopenMenuAfterSettingsRef.current = false;
-    setSettingsAnim("fade");
-    setMenuOpen(true);
-  }, []);
-
   const returnFromSettingsToMenu = useCallback(() => {
     setLangModalOpen(false);
     setCountryModalOpen(false);
-    reopenMenuAfterSettingsRef.current = true;
-    setSettingsAnim("none");
-    // animationType を none に切り替えてから閉じる
-    requestAnimationFrame(() => {
-      setSettingsOpen(false);
-      // Android は onDismiss が無いのでここで再開
-      if (Platform.OS !== "ios") {
-        setTimeout(() => openMenuAfterSettingsClosed(), 50);
-      }
-    });
-  }, [openMenuAfterSettingsClosed]);
-
-  const openSettingsFromMenu = useCallback(() => {
-    reopenMenuAfterSettingsRef.current = false;
-    setMenuOpen(false);
-    // メニュー Modal が閉じたあと設定を開く
-    const delay = Platform.OS === "ios" ? 320 : 60;
-    setTimeout(() => {
-      setSettingsAnim("fade");
-      setSettingsOpen(true);
-    }, delay);
+    setTzModalOpen(false);
+    // 同一 Modal 内オーバーレイを外すだけ。サイドメニューはそのまま残る
+    setSettingsOpen(false);
   }, []);
 
-  // iOS onDismiss が発火しない場合のフォールバック
-  useEffect(() => {
-    if (settingsOpen) return;
-    if (!reopenMenuAfterSettingsRef.current) return;
-    const id = setTimeout(() => {
-      openMenuAfterSettingsClosed();
-    }, Platform.OS === "ios" ? 380 : 0);
-    return () => clearTimeout(id);
-  }, [settingsOpen, openMenuAfterSettingsClosed]);
+  const openSettingsFromMenu = useCallback(() => {
+    setSettingsOpen(true);
+  }, []);
 
   const returnToPreviousScreen = useCallback(() => {
+    if (fromMarkList) {
+      // navigate(openMarkList) だとスタック再アニメ＋detach 再アタッチで重い。goBack + 再開フラグ。
+      requestMarkListResume();
+      if (navigation.canGoBack()) {
+        navigation.goBack();
+        return;
+      }
+      tabNavigation.navigate("ProfileTab", {
+        screen: "ProfileHome",
+        params: { openMarkList: true },
+      });
+      return;
+    }
+    if (fromUserSearch) {
+      if (navigation.canGoBack()) {
+        navigation.goBack();
+        return;
+      }
+      tabNavigation.navigate("ProfileTab", {
+        screen: "UserSearch",
+      });
+      return;
+    }
     if (fromResultDetail) {
       if (navigation.canGoBack()) {
         navigation.goBack();
@@ -311,6 +379,8 @@ export default function ProfileHomeScreen({
   }, [
     dismissPublicProfileRoute,
     fromLeaderboards,
+    fromMarkList,
+    fromUserSearch,
     fromResultDetail,
     fromWeeklyReport,
     leaderboardsGroupId,
@@ -318,6 +388,20 @@ export default function ProfileHomeScreen({
     resultDetailPostId,
     tabNavigation,
   ]);
+
+  const navigateToSeasonPredict = useCallback(
+    (mode: "awards" | "standings") => {
+      tabNavigation.navigate({
+        name: "GamesTab",
+        params: {
+          screen: "SeasonPredict",
+          params: { mode },
+        },
+        merge: true,
+      });
+    },
+    [tabNavigation]
+  );
 
   const [badgeModalOpen, setBadgeModalOpen] = useState(false);
   const [selectedBadge, setSelectedBadge] = useState<ResolvedBadgeNative | null>(null);
@@ -328,30 +412,46 @@ export default function ProfileHomeScreen({
     return peekOwnProfileSeedNative(myUid);
   }, [isPublicProfileView, myUid]);
 
+  const publicIdentityAtMount = useMemo(() => {
+    if (!isPublicProfileView) return null;
+    return peekPublicProfileIdentity(publicRouteKey);
+  }, [isPublicProfileView, publicRouteKey]);
+
   const [profileLoading, setProfileLoading] = useState(
     () => !isPublicProfileView && !ownSeedAtMount
   );
   const [displayName, setDisplayName] = useState(
-    () => ownSeedAtMount?.displayName ?? ""
+    () =>
+      ownSeedAtMount?.displayName ?? publicIdentityAtMount?.displayName ?? ""
   );
-  const [bio, setBio] = useState(() => ownSeedAtMount?.bio ?? "");
-  const [handle, setHandle] = useState(() => ownSeedAtMount?.handle ?? "");
+  const [bio, setBio] = useState(
+    () => ownSeedAtMount?.bio ?? publicIdentityAtMount?.bio ?? ""
+  );
+  const [handle, setHandle] = useState(
+    () => ownSeedAtMount?.handle ?? publicIdentityAtMount?.handle ?? ""
+  );
   const [avatarUrl, setAvatarUrl] = useState(
-    () => ownSeedAtMount?.avatarUrl ?? ""
+    () =>
+      ownSeedAtMount?.avatarUrl ?? publicIdentityAtMount?.photoURL ?? ""
   );
-  const [language, setLanguage] = useState<"ja" | "en">(
-    () => ownSeedAtMount?.language ?? "ja"
+  const [language, setLanguage] = useState<LocalizedLang>(() =>
+    resolveLocalizedLang(ownSeedAtMount?.language)
   );
   const [countryCode, setCountryCode] = useState(
-    () => ownSeedAtMount?.countryCode ?? ""
+    () =>
+      ownSeedAtMount?.countryCode ?? publicIdentityAtMount?.countryCode ?? ""
   );
   const [plan, setPlan] = useState<"free" | "pro">(
-    () => ownSeedAtMount?.plan ?? "free"
+    () => ownSeedAtMount?.plan ?? publicIdentityAtMount?.plan ?? "free"
   );
-  const [planProBgVariant, setPlanProBgVariant] =
-    useState<ProfilePlanProBgVariant>(
-      () => ownSeedAtMount?.planProBgVariant ?? PROFILE_PLAN_PRO_BG_DEFAULT
-    );
+  const [planProBgVariant, setPlanProBgVariant] = useState<
+    ProfilePlanProBgVariant | null
+  >(() => {
+    if (isPublicProfileView) {
+      return publicIdentityAtMount?.planProBgVariant ?? null;
+    }
+    return ownSeedAtMount?.planProBgVariant ?? PROFILE_PLAN_PRO_BG_DEFAULT;
+  });
   const [memberSinceMs, setMemberSinceMs] = useState<number | null>(
     () => ownSeedAtMount?.memberSinceMs ?? null
   );
@@ -359,15 +459,52 @@ export default function ProfileHomeScreen({
   const [unitBalance, setUnitBalance] = useState<number | null>(
     () => (ownSeedAtMount ? ownSeedAtMount.unitBalance : null)
   );
+  const [favoriteNbaTeamId, setFavoriteNbaTeamId] = useState<string | null>(
+    () => ownSeedAtMount?.favoriteNbaTeamId ?? null
+  );
+  const [favoriteNbaTeamFanSinceSeason, setFavoriteNbaTeamFanSinceSeason] =
+    useState<string | null>(
+      () => ownSeedAtMount?.favoriteNbaTeamFanSinceSeason ?? null
+    );
+  const [favoriteNbaPlayers, setFavoriteNbaPlayers] = useState(
+    () => ownSeedAtMount?.favoriteNbaPlayers ?? []
+  );
 
   const [saving, setSaving] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [langModalOpen, setLangModalOpen] = useState(false);
   const [countryModalOpen, setCountryModalOpen] = useState(false);
-  /** プロフィール保存成功 — システム Alert の代わりにサイバーガラストースト */
-  const isJa = language === "ja";
+  const [tzModalOpen, setTzModalOpen] = useState(false);
+  const { displayTimeZone: savedDisplayTimeZone } = useNativeLanguage();
+  /** "" は自動（端末） */
+  const [displayTimeZone, setDisplayTimeZone] = useState("");
+  const deviceTimeZone = useMemo(() => getDeviceTimeZone(), []);
+  const timeZoneOptions = useMemo(() => buildTimeZoneOptions(), []);
 
-  const externalBackLabel = isJa ? "戻る" : "Back";
+  useEffect(() => {
+    if (settingsOpen) setDisplayTimeZone(savedDisplayTimeZone ?? "");
+  }, [settingsOpen, savedDisplayTimeZone]);
+
+  const handleSettingsRequestClose = useCallback(() => {
+    if (langModalOpen || countryModalOpen || tzModalOpen) {
+      setLangModalOpen(false);
+      setCountryModalOpen(false);
+      setTzModalOpen(false);
+      return;
+    }
+    returnFromSettingsToMenu();
+  }, [langModalOpen, countryModalOpen, tzModalOpen, returnFromSettingsToMenu]);
+
+  /** プロフィール保存成功 — システム Alert の代わりにサイバーガラストースト */
+  const lang = resolveLocalizedLang(language);
+  const sheet = useMemo(() => profileSettingsSheetCopy(language), [language]);
+  const markToast = useMemo(() => profileMarkToastCopy(language), [language]);
+
+  const externalBackLabel = fromMarkList
+    ? sheet.backToMarkList
+    : fromUserSearch
+      ? sheet.backToUserSearch
+      : sheet.back;
 
   const renderProfileBackHandle = () =>
     showExternalBack ? (
@@ -379,6 +516,82 @@ export default function ProfileHomeScreen({
 
   /** 自分プロフィールは routeHandle 無し。plan hook の getDoc より先に確定できる */
   const isMe = !isPublicProfileView && !!myUid && myUid === targetUid;
+  const myNbaFavorites = useMyNbaFavoritesNative();
+
+  /** 詳細で星を変えたあと、プロフィールのローカル state が古いまま残らないようにライブ同期 */
+  useEffect(() => {
+    if (isPublicProfileView) return;
+    const fav = myNbaFavorites.favorites;
+    setFavoriteNbaTeamId(fav.favoriteNbaTeamId);
+    setFavoriteNbaTeamFanSinceSeason(fav.favoriteNbaTeamFanSinceSeason);
+    setFavoriteNbaPlayers(fav.favoriteNbaPlayers);
+  }, [isPublicProfileView, myNbaFavorites.favorites]);
+
+  const targetMarked = isMarked(targetUid);
+  const onPressMark = useCallback(async () => {
+    if (!myUid) return;
+    const otherUid = targetUid?.trim() ?? "";
+    if (isMe || otherUid === myUid) {
+      setMenuOpen(false);
+      setMarkListOpen(true);
+      return;
+    }
+    if (!otherUid) {
+      cyberAlert("", markToast.waitLoad);
+      return;
+    }
+    if (isMarked(otherUid)) {
+      const result = await removeMark(otherUid);
+      if (result && "ok" in result && !result.ok) {
+        cyberAlert("", markToast.unmarkFailed);
+      }
+      return;
+    }
+    const markedName = displayName.trim() || handle.trim() || "User";
+    const result = await addMark({
+      targetUid: otherUid,
+      handle: handle.trim(),
+      displayName: markedName,
+      photoURL: avatarUrl.trim() || null,
+    });
+    if (!result.ok) {
+      const msg =
+        result.error === "cap"
+          ? myIsPro
+            ? markToast.capPro(maxMarks)
+            : markToast.capFree(maxMarks)
+          : result.error === "empty"
+            ? markToast.waitLoad
+            : markToast.markFailed;
+      cyberAlert("", msg);
+      return;
+    }
+    cyberAlert(
+      markToast.markedTitle,
+      markToast.markedBody(markedName),
+      [
+        {
+          text: markToast.viewList,
+          onPress: () => setMarkListOpen(true),
+        },
+        { text: "OK", style: "cancel" },
+      ],
+      { variant: "success" }
+    );
+  }, [
+    addMark,
+    avatarUrl,
+    displayName,
+    handle,
+    isMe,
+    isMarked,
+    markToast,
+    maxMarks,
+    myIsPro,
+    myUid,
+    removeMark,
+    targetUid,
+  ]);
   const [myPlanReady, setMyPlanReady] = useState(() => !!ownSeedAtMount);
   /** users/{uid} — Pro Skin overlay 等への共有（重複 read 回避） */
   const [myUserDoc, setMyUserDoc] = useState<
@@ -394,19 +607,52 @@ export default function ProfileHomeScreen({
     myPlanOverrideReady: isMe ? myPlanReady : false,
     deferOwnFetch: isMe,
   });
-  const [profileViewCount, setProfileViewCount] = useState<number | null>(null);
+  const [profileViewCount, setProfileViewCount] = useState<number | null>(() =>
+    ownSeedAtMount?.profileViewCount ??
+    (targetUid ? peekProfileViewCountMemory(targetUid) : null)
+  );
 
   useEffect(() => {
     let cancelled = false;
-    setProfileViewCount(null);
-    if (status !== "ready" || !targetUid) return;
+    if (status !== "ready" || !targetUid) {
+      if (!targetUid) setProfileViewCount(null);
+      return;
+    }
+
+    if (!isPublicProfileView && myUserDoc === undefined) return;
+
+    const denorm = isPublicProfileView
+      ? profileByHandle.profileViewCount
+      : parseUserProfileViewCount(myUserDoc);
+
+    if (denorm != null) {
+      setProfileViewCountMemory(targetUid, denorm);
+      setProfileViewCount(denorm);
+      if (myUid && !isMe) {
+        void recordProfileViewNative(targetUid)
+          .then((counted) => {
+            if (!counted) return;
+            setProfileViewCount((prev) => {
+              const count = (prev ?? denorm) + 1;
+              setProfileViewCountMemory(targetUid, count);
+              return count;
+            });
+          })
+          .catch(() => undefined);
+      }
+      return;
+    }
+
+    const cached = peekProfileViewCountMemory(targetUid);
+    setProfileViewCount(cached);
 
     void (async () => {
       try {
         if (myUid && !isMe) {
-          await recordProfileViewNative(targetUid).catch(() => undefined);
+          void recordProfileViewNative(targetUid).catch(() => undefined);
         }
         const count = await fetchProfileViewCountNative(targetUid);
+        setProfileViewCountMemory(targetUid, count);
         if (!cancelled) setProfileViewCount(count);
       } catch {
         // 閲覧数取得の失敗でプロフィール表示を壊さない。
@@ -416,7 +662,15 @@ export default function ProfileHomeScreen({
     return () => {
       cancelled = true;
     };
-  }, [isMe, myUid, status, targetUid]);
+  }, [
+    isMe,
+    isPublicProfileView,
+    myUid,
+    myUserDoc,
+    profileByHandle.profileViewCount,
+    status,
+    targetUid,
+  ]);
 
   useEffect(() => {
     if (openSettingsOnMount && isMe) {
@@ -430,10 +684,70 @@ export default function ProfileHomeScreen({
     }
   }, [openReportTabOnMount, isMe]);
 
+  useEffect(() => {
+    if (!openMarkListOnMount || isPublicProfileView) return;
+    setMarkListOpen(true);
+    navigation.setParams({ openMarkList: undefined });
+  }, [isPublicProfileView, navigation, openMarkListOnMount]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (isPublicProfileView) return;
+      if (!consumeMarkListResume()) return;
+      setMarkListOpen(true);
+    }, [isPublicProfileView])
+  );
+
+  /** サイドメニューから stack 画面へ飛んだあと、BACK で戻ったらメニューを即開き */
+  useFocusEffect(
+    useCallback(() => {
+      if (isPublicProfileView) return;
+      if (!consumeSideMenuResume()) return;
+      setMenuInstantOpen(true);
+      setMenuOpen(true);
+    }, [isPublicProfileView])
+  );
+
+  useEffect(() => {
+    if (!markListOpen || isPublicProfileView) return;
+    if (markRows.length > 0 || marksLoading) return;
+    void refreshMarks({ silent: true });
+  }, [
+    isPublicProfileView,
+    markListOpen,
+    markRows.length,
+    marksLoading,
+    refreshMarks,
+  ]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const enable = () => {
+      if (!cancelled) setHeavyReady(true);
+    };
+    /**
+     * タブ遷移の spring 中は InteractionManager が長引く（Android で顕著）。
+     * ヒーロー＋タブは出しているので Overview も早めに載せる。
+     */
+    const delayMs = Platform.OS === "android" ? 16 : 48;
+    const task = InteractionManager.runAfterInteractions(enable);
+    const t = setTimeout(enable, delayMs);
+    if (Platform.OS === "android") {
+      requestAnimationFrame(enable);
+    }
+    return () => {
+      cancelled = true;
+      task.cancel();
+      clearTimeout(t);
+    };
+  }, []);
+
   const { unreadCount: menuUnreadCount, readIds: announcementReadIds } =
     useNativeAnnouncementsUnread(myUid, status === "ready" && !!myUid, {
       enabled: isMe,
     });
+  const { isAdmin: isAdminUser } = useIsAdminNative();
+  const adminInbox = useNativeAdminInboxUnread(Boolean(isMe && isAdminUser));
   const { resolvedBadges } = useNativeProfileBadges(isMe ? myUid : targetUid);
 
   /** プロフィールは NBA のみ（W杯経路は使わない） */
@@ -451,6 +765,12 @@ export default function ProfileHomeScreen({
     authReady
   );
 
+  /** Result Drop を charts と並列開始（Overview マウント待ちしない） */
+  useEffect(() => {
+    if (!authReady || !targetUid) return;
+    prefetchNativeProfileSettledTodayResults(targetUid, profileStatsContext);
+  }, [authReady, targetUid, profileStatsContext]);
+
   useEffect(() => {
     if (isPublicProfileView || !myUid || myUserDoc == null) return;
     seedNativeProfileStatsFromUserDoc(myUid, myUserDoc);
@@ -467,15 +787,17 @@ export default function ProfileHomeScreen({
   });
   const streakBundle = useNativeStreakTracker(
     targetUid,
-    tab === "overview" &&
-      !!targetUid &&
-      authReady &&
-      (statsBundle.last20 != null || !statsBundle.loading),
+    tab === "overview" && !!targetUid && authReady,
     profileStatsContext,
-    { seedLast20: statsBundle.last20 }
+    { seedLast20: statsBundle.loading ? undefined : statsBundle.last20 }
   );
 
   const currentIsProView = profilePlanHook.isProView;
+  const viewerPlanType = normalizeStoredPlanType(myUserDoc?.planType);
+  const viewerCanViewMonthly = canViewMonthlyReport({
+    plan: profilePlanHook.myPlan,
+    planType: viewerPlanType,
+  });
   const reportOverlayEnabled =
     isMe &&
     myPlanReady &&
@@ -484,19 +806,12 @@ export default function ProfileHomeScreen({
     useProReportDeliveryOverlayNative({
       uid: myUid,
       enabled: reportOverlayEnabled,
+      canViewMonthly: viewerCanViewMonthly,
     });
   const skinUnlockEnabled = Boolean(isMe && myUid) && reportOverlay == null;
-  const [forceSkinUnlockPreview, setForceSkinUnlockPreview] = useState(false);
-  useFocusEffect(
-    useCallback(() => {
-      if (consumeProSkinUnlockPreviewOnProfile()) {
-        setForceSkinUnlockPreview(true);
-      }
-    }, [])
-  );
 
   const tutorialCopy = useMemo(
-    () => i18nT((language === "en" ? "en" : "ja") as Language),
+    () => i18nT(language as Language),
     [language]
   );
   const tutorialSkipConfirm = tutorialSkipConfirmProps(tutorialCopy.tutorial);
@@ -564,13 +879,8 @@ export default function ProfileHomeScreen({
   } = useProSkinUnlockOverlayNative({
     uid: myUid,
     enabled: skinUnlockEnabled,
-    forcePreview: forceSkinUnlockPreview,
     userDoc: isMe ? myUserDoc : null,
   });
-  const dismissSkinUnlockAndClearForce = useCallback(() => {
-    setForceSkinUnlockPreview(false);
-    dismissSkinUnlock();
-  }, [dismissSkinUnlock]);
 
   const currentStreak = useMemo(() => {
     if (isPublicProfileView) {
@@ -599,82 +909,7 @@ export default function ProfileHomeScreen({
   const secondaryIdLine =
     handle.trim() || fUser?.email?.trim() || fUser?.uid?.slice(0, 12) || "";
 
-  const t = useMemo(
-    () =>
-      isJa
-        ? {
-            playoffsTitle: "2026 NBA PLAYOFFS STATS",
-            apiMissing:
-              "EXPO_PUBLIC_UNITERZ_API_BASE_URL を .env に設定し、Next.js を起動してください。",
-            bracketSoon:
-              "プレーオフブラケットは Web 版と同様の表示を順次対応します。",
-            statsSoon: "詳細分析（Pro）は Web 版でご利用いただけます。",
-            settingsTitle: "プロフィール設定",
-            settingsSubtitle: "アイコン・名前・自己紹介・使用言語・国を編集できます",
-            settingsClose: "閉じる",
-            nameLabel: "名前",
-            namePlaceholder: "名前",
-            bio: "自己紹介",
-            bioPlaceholder: "自己紹介",
-            langLabel: "使用言語",
-            countryLabel: "住んでいる国（任意）",
-            countryNotSet: "未設定",
-            save: "変更を保存",
-            saving: "保存中…",
-            logout: "ログアウト",
-            invalidTitle: "入力不正",
-            invalidName: "名前は50文字以内で入力してください。",
-            savedTitle: "保存完了",
-            savedBody: "プロフィールを更新しました。",
-            saveErrorTitle: "保存エラー",
-            saveErrorBody: "プロフィール更新に失敗しました。",
-            pickPhotoTitle: "写真へのアクセス",
-            pickPhotoDenied: "プロフィール写真を選ぶには、写真ライブラリへのアクセスを許可してください。",
-            uploadAvatarFail: "画像のアップロードに失敗しました。通信状況を確認して再度お試しください。",
-            imagePickerNativeTitle: "写真の選択を使えません",
-            imagePickerNativeHint:
-              "expo-image-picker を組み込んだ開発ビルドが必要です。apps/native で `npx expo run:ios` または `npx expo run:android` を実行してアプリを再ビルドしてください。",
-            changePhotoA11y: "プロフィール写真を変更",
-            proBadge: "PRO",
-            streakLabel: "連勝",
-          }
-        : {
-            playoffsTitle: "2026 NBA PLAYOFFS STATS",
-            apiMissing:
-              "Set EXPO_PUBLIC_UNITERZ_API_BASE_URL and run the Next.js app.",
-            bracketSoon: "Playoff bracket view will match the web app in a future update.",
-            statsSoon: "Pro analysis is available on the web app.",
-            settingsTitle: "Profile Settings",
-            settingsSubtitle: "Edit your icon, name, bio, language, and country.",
-            settingsClose: "Close",
-            nameLabel: "Name",
-            namePlaceholder: "Name",
-            bio: "Bio",
-            bioPlaceholder: "Bio",
-            langLabel: "App Language",
-            countryLabel: "Country (optional)",
-            countryNotSet: "Not set",
-            save: "Save Changes",
-            saving: "Saving…",
-            logout: "Log out",
-            invalidTitle: "Invalid input",
-            invalidName: "Name must be 50 characters or fewer.",
-            savedTitle: "Saved",
-            savedBody: "Profile has been updated.",
-            saveErrorTitle: "Save error",
-            saveErrorBody: "Failed to update profile.",
-            pickPhotoTitle: "Photo access",
-            pickPhotoDenied: "Allow photo library access to choose a profile picture.",
-            uploadAvatarFail: "Could not upload the image. Check your connection and try again.",
-            imagePickerNativeTitle: "Photo picker unavailable",
-            imagePickerNativeHint:
-              "Rebuild the native app with expo-image-picker linked. From apps/native run `npx expo run:ios` or `npx expo run:android`.",
-            changePhotoA11y: "Change profile photo",
-            proBadge: "PRO",
-            streakLabel: "Streak",
-          },
-    [isJa]
-  );
+  const t = sheet;
 
   useEffect(() => {
     if (isPublicProfileView) return;
@@ -700,7 +935,15 @@ export default function ProfileHomeScreen({
         setPlanProBgVariant(warm.planProBgVariant);
         setMemberSinceMs(warm.memberSinceMs);
         setUnitBalance(warm.unitBalance);
+        setFavoriteNbaTeamId(warm.favoriteNbaTeamId);
+        setFavoriteNbaTeamFanSinceSeason(warm.favoriteNbaTeamFanSinceSeason);
+        setFavoriteNbaPlayers(warm.favoriteNbaPlayers);
+        if (warm.profileViewCount != null) {
+          setProfileViewCountMemory(myUid, warm.profileViewCount);
+          setProfileViewCount(warm.profileViewCount);
+        }
         seedNativeProfileStatsFromUserDoc(myUid, warm.data);
+        hydrateMarksFromUserDoc(myUid, warm.data);
         setProfileLoading(false);
         setMyPlanReady(true);
       } else {
@@ -733,14 +976,22 @@ export default function ProfileHomeScreen({
         setPlanProBgVariant(seed.planProBgVariant);
         setMemberSinceMs(seed.memberSinceMs);
         setUnitBalance(seed.unitBalance);
+        setFavoriteNbaTeamId(seed.favoriteNbaTeamId);
+        setFavoriteNbaTeamFanSinceSeason(seed.favoriteNbaTeamFanSinceSeason);
+        setFavoriteNbaPlayers(seed.favoriteNbaPlayers);
+        if (seed.profileViewCount != null) {
+          setProfileViewCountMemory(myUid, seed.profileViewCount);
+          setProfileViewCount(seed.profileViewCount);
+        }
         if (snapExists) {
           seedNativeProfileStatsFromUserDoc(myUid, data);
+          hydrateMarksFromUserDoc(myUid, data);
         }
         // 期限解決を待たずカードを出す（空→埋めで伸びない）
         setProfileLoading(false);
 
         const resolvedPlan = snapExists
-          ? await resolveAndExpireMyPlan(myUid, data)
+          ? resolveAndExpireMyPlan(myUid, data)
           : "free";
         if (!alive) return;
         setPlan(resolvedPlan);
@@ -774,6 +1025,10 @@ export default function ProfileHomeScreen({
         setPlanProBgVariant(parseUserPlanProBgVariant(data.planProBgVariant));
         setPlan(data.plan === "pro" ? "pro" : "free");
         setUnitBalance(parseUserUnitBalance(data));
+        const fav = parseNbaFavorites(data);
+        setFavoriteNbaTeamId(fav.favoriteNbaTeamId);
+        setFavoriteNbaTeamFanSinceSeason(fav.favoriteNbaTeamFanSinceSeason);
+        setFavoriteNbaPlayers(fav.favoriteNbaPlayers);
       });
       return () => {
         alive = false;
@@ -824,6 +1079,16 @@ export default function ProfileHomeScreen({
     setPlanProBgVariant(profileByHandle.planProBgVariant);
     setMemberSinceMs(profileByHandle.memberSinceMs);
     setUnitBalance(profileByHandle.unitBalance);
+    setFavoriteNbaTeamId(profileByHandle.favoriteNbaTeamId);
+    setFavoriteNbaTeamFanSinceSeason(
+      profileByHandle.favoriteNbaTeamFanSinceSeason
+    );
+    setFavoriteNbaPlayers(profileByHandle.favoriteNbaPlayers);
+    if (profileByHandle.profileViewCount != null) {
+      const uid = profileByHandle.targetUid;
+      if (uid) setProfileViewCountMemory(uid, profileByHandle.profileViewCount);
+      setProfileViewCount(profileByHandle.profileViewCount);
+    }
     setProfileLoading(false);
   }, [isPublicProfileView, profileByHandle]);
 
@@ -927,25 +1192,24 @@ export default function ProfileHomeScreen({
           photoURL: safePhoto || null,
         });
       }
-      await setDoc(
-        doc(db, "users", myUid),
-        {
-          displayName: safeName,
-          bio: safeBio,
-          photoURL: safePhoto || null,
-          language,
-          countryCode: countryCode.trim() || null,
-          updatedAt: serverTimestamp(),
-        },
-        { merge: true }
-      );
-      invalidateProfileUserDocNative(myUid);
+      await saveMeProfileNative({
+        displayName: safeName,
+        bio: safeBio,
+        photoURL: safePhoto,
+        language,
+        countryCode: countryCode.trim() || null,
+        displayTimeZone: displayTimeZone || null,
+      });
       onSaved?.();
       setSettingsOpen(false);
       cyberAlert(t.savedTitle, t.savedBody);
     } catch (error: unknown) {
-      const msg = error instanceof Error ? error.message : t.saveErrorBody;
-      cyberAlert(t.saveErrorTitle, msg);
+      if (isProfileGamblingTermsError(error)) {
+        cyberAlert(t.invalidTitle, profileGamblingTermsUserMessage(language));
+      } else {
+        const msg = error instanceof Error ? error.message : t.saveErrorBody;
+        cyberAlert(t.saveErrorTitle, msg);
+      }
     } finally {
       setSaving(false);
     }
@@ -978,6 +1242,9 @@ export default function ProfileHomeScreen({
   }
 
   function renderOverview() {
+    if (!heavyReady) {
+      return <View style={{ height: 120 }} />;
+    }
     if (!apiConfigured) {
       return (
         <Text style={styles.warnText}>{t.apiMissing}</Text>
@@ -995,13 +1262,25 @@ export default function ProfileHomeScreen({
           <Text style={styles.errorText}>{statsBundle.error}</Text>
           <Text style={styles.warnText}>
             {isFirestoreTransient
-              ? isJa
-                ? "Firestore への接続が一時的に切れました。しばらくしてから画面を引き下げて再読み込みしてください。"
-                : "Firestore connection dropped temporarily. Pull to refresh in a moment."
+              ? L(lang, {
+                  ja: "Firestore への接続が一時的に切れました。しばらくしてから画面を引き下げて再読み込みしてください。",
+                  en: "Firestore connection dropped temporarily. Pull to refresh in a moment.",
+                  ko: "Firestore 연결이 잠시 끊겼습니다. 잠시 후 당겨서 새로고침하세요.",
+                  zh: "Firestore 连接暂时中断。请稍后下拉刷新。",
+                  es: "Se perdió la conexión a Firestore. Desliza para actualizar en un momento.",
+                  pt: "Conexão com Firestore caiu temporariamente. Puxe para atualizar em breve.",
+                  fr: "Connexion Firestore interrompue. Tirez pour actualiser dans un instant.",
+                })
               : isTimeout
-                ? isJa
-                  ? "Next.js（npm run dev）が起動しているか、EXPO_PUBLIC_UNITERZ_API_BASE_URL がシミュレータなら http://127.0.0.1:3000 になっているか確認してください。"
-                  : "Check that Next.js (npm run dev) is running and EXPO_PUBLIC_UNITERZ_API_BASE_URL is http://127.0.0.1:3000 for the iOS Simulator."
+                ? L(lang, {
+                    ja: "Next.js（npm run dev）が起動しているか、EXPO_PUBLIC_UNITERZ_API_BASE_URL がシミュレータなら http://127.0.0.1:3000 になっているか確認してください。",
+                    en: "Check that Next.js (npm run dev) is running and EXPO_PUBLIC_UNITERZ_API_BASE_URL is http://127.0.0.1:3000 for the iOS Simulator.",
+                    ko: "Next.js(npm run dev) 실행 여부와 EXPO_PUBLIC_UNITERZ_API_BASE_URL이 시뮬레이터에서 http://127.0.0.1:3000인지 확인하세요.",
+                    zh: "请确认 Next.js（npm run dev）已启动，且模拟器中 EXPO_PUBLIC_UNITERZ_API_BASE_URL 为 http://127.0.0.1:3000。",
+                    es: "Comprueba que Next.js (npm run dev) esté en marcha y EXPO_PUBLIC_UNITERZ_API_BASE_URL sea http://127.0.0.1:3000 en el simulador.",
+                    pt: "Verifique se o Next.js (npm run dev) está rodando e EXPO_PUBLIC_UNITERZ_API_BASE_URL é http://127.0.0.1:3000 no simulador.",
+                    fr: "Vérifiez que Next.js (npm run dev) tourne et que EXPO_PUBLIC_UNITERZ_API_BASE_URL est http://127.0.0.1:3000 sur le simulateur.",
+                  })
                 : t.apiMissing}
           </Text>
         </View>
@@ -1033,6 +1312,7 @@ export default function ProfileHomeScreen({
         rankTrendLoading={statsBundle.rankTrendLoading}
         streakPoints={streakBundle.points}
         streakLoading={streakBundle.loading}
+        streakUnavailable={streakBundle.unavailable}
       />
     );
   }
@@ -1069,7 +1349,7 @@ export default function ProfileHomeScreen({
         >
 
           <Text style={styles.errorText}>
-            {isJa ? "ユーザーが見つかりません" : "User not found"}
+            {t.userNotFound}
           </Text>
         </ScrollView>
         {renderProfileBackHandle()}
@@ -1077,14 +1357,108 @@ export default function ProfileHomeScreen({
     );
   }
 
+  const profileScroll = (
+    <ScrollView
+      style={styles.scroll}
+      contentContainerStyle={[
+        styles.scrollContent,
+        {
+          paddingTop: topContentPadY,
+          paddingBottom:
+            spacing.lg + bottomReserveY + (tab === "report" ? 48 : 0),
+        },
+      ]}
+      keyboardShouldPersistTaps="handled"
+      showsVerticalScrollIndicator={false}
+    >
+      {isPublicProfileView || !profileLoading ? (
+        <ProfileKinetikHeroNative
+          displayName={displayName.trim() || handle.trim()}
+          handle={handle.trim()}
+          avatarUrl={
+            avatarUrl.trim() ||
+            (!isPublicProfileView ? fUser?.photoURL?.trim() : "") ||
+            ""
+          }
+          bio={bio}
+          countryCode={countryCode}
+          plan={currentIsProView ? "pro" : plan}
+          callerIsPro={profilePlanHook.isMyPro}
+          planProBgVariant={planProBgVariant}
+          language={language}
+          memberSinceMs={memberSinceMs}
+          summary={statsBundle.summary}
+          summaryRanks={statsBundle.summaryRanks}
+          profileStatsContext={profileStatsContext}
+          winStreak={currentStreak}
+          statsLoading={statsBundle.loading && !statsBundle.summary}
+          metricValueDeltas={statsBundle.metricValueDeltas}
+          isMe={isMe}
+          onOpenMenu={() => setMenuOpen(true)}
+          menuUnreadCount={menuUnreadCount}
+          badges={resolvedBadges}
+          onBadgePress={(badge) => {
+            setSelectedBadge(badge);
+            setBadgeModalOpen(true);
+          }}
+          targetUid={targetUid ?? null}
+          profileViewCount={profileViewCount}
+          unitBalance={unitBalance}
+          nbaFavorites={{
+            favoriteNbaTeamId,
+            favoriteNbaTeamFanSinceSeason,
+            favoriteNbaPlayers,
+          }}
+          onOpenUnitLedger={
+            isMe ? () => navigation.navigate("UnitLedger") : undefined
+          }
+          markMode={
+            isMe || (!!myUid && myUid === targetUid) ? "list" : "toggle"
+          }
+          marked={targetMarked}
+          markCount={markCount}
+          onPressMark={myUid && !isMe ? onPressMark : undefined}
+        />
+      ) : null}
+
+      {renderTabs()}
+
+      {tab === "overview" ? (
+        renderOverview()
+      ) : tab === "report" ? (
+        <ProfileStatsTabNative
+          uid={targetUid}
+          language={language}
+          isProView={currentIsProView}
+          myPlan={profilePlanHook.myPlan}
+          myPlanType={viewerPlanType}
+          isMe={isMe}
+          isMyPro={profilePlanHook.isMyPro}
+          isTargetPro={profilePlanHook.isTargetPro}
+        />
+      ) : tab === "awards" ? (
+        <ProfileAwardsTabNative
+          uid={targetUid}
+          language={language}
+          isMe={isMe}
+          onSubmitAwards={() => navigateToSeasonPredict("awards")}
+          onSubmitStandings={() => navigateToSeasonPredict("standings")}
+        />
+      ) : (
+        <ProfileBracketTabNative uid={targetUid} language={language} />
+      )}
+    </ScrollView>
+  );
+
   return (
     <View style={styles.screenRoot}>
-    <TutorialWelcomeWorldCameraNative
-      active={welcomeFlyActive}
-      flying={welcomeFlying}
-      onFlyComplete={goWelcomeFeaturesHorizon}
-      overlay={
-        welcomeFlyActive ? (
+    {/* チュートリアル飛行中だけカメラ。通常はラップ無しで初回描画を軽くする */}
+    {welcomeFlyActive ? (
+      <TutorialWelcomeWorldCameraNative
+        active={welcomeFlyActive}
+        flying={welcomeFlying}
+        onFlyComplete={goWelcomeFeaturesHorizon}
+        overlay={
           <TutorialLiveCoachNative
             open
             embedInCamera
@@ -1101,113 +1475,71 @@ export default function ProfileHomeScreen({
             onNext={goWelcomeFeaturesHorizon}
             onAltNext={goWelcomeFeaturesHorizon}
           />
-        ) : null
-      }
-    >
-    <ScrollView
-      style={styles.scroll}
-      contentContainerStyle={[
-        styles.scrollContent,
-        { paddingTop: topContentPadY, paddingBottom: spacing.lg + bottomReserveY + (tab === "report" ? 48 : 0) },
-      ]}
-      keyboardShouldPersistTaps="handled"
-      showsVerticalScrollIndicator={false}
-    >
-      {isPublicProfileView || !profileLoading ? (
-      <ProfileKinetikHeroNative
-        displayName={displayName.trim() || handle.trim()}
-        handle={handle.trim()}
-        avatarUrl={
-          avatarUrl.trim() ||
-          (!isPublicProfileView ? fUser?.photoURL?.trim() : "") ||
-          ""
         }
-        bio={bio}
-        countryCode={countryCode}
-        plan={currentIsProView ? "pro" : plan}
-        planProBgVariant={planProBgVariant}
-        language={language}
-        memberSinceMs={memberSinceMs}
-        summary={statsBundle.summary}
-        summaryRanks={statsBundle.summaryRanks}
-        profileStatsContext={profileStatsContext}
-        winStreak={currentStreak}
-        statsLoading={statsBundle.loading && !statsBundle.summary}
-        metricValueDeltas={statsBundle.metricValueDeltas}
-        isMe={isMe}
-        onOpenMenu={() => setMenuOpen(true)}
-        menuUnreadCount={menuUnreadCount}
-        badges={resolvedBadges}
-        onBadgePress={(badge) => {
-          setSelectedBadge(badge);
-          setBadgeModalOpen(true);
-        }}
-        targetUid={targetUid ?? null}
-        profileViewCount={profileViewCount}
-        unitBalance={unitBalance}
-        onOpenUnitLedger={
-          isMe ? () => navigation.navigate("UnitLedger") : undefined
-        }
-      />
-      ) : null}
-
-      {renderTabs()}
-
-      {tab === "overview" ? (
-        renderOverview()
-      ) : tab === "report" ? (
-        <ProfileStatsTabNative
-          uid={targetUid}
-          language={language}
-          isProView={currentIsProView}
-          myPlan={profilePlanHook.myPlan}
-          isMe={isMe}
-          isMyPro={profilePlanHook.isMyPro}
-          isTargetPro={profilePlanHook.isTargetPro}
-        />
-      ) : tab === "awards" ? (
-        <ProfileAwardsTabNative uid={targetUid} language={language} />
-      ) : (
-        <ProfileBracketTabNative uid={targetUid} language={language} />
-      )}
-    </ScrollView>
-    </TutorialWelcomeWorldCameraNative>
+      >
+        {profileScroll}
+      </TutorialWelcomeWorldCameraNative>
+    ) : (
+      profileScroll
+    )}
 
     {isMe ? (
-      <ProfileMenuEdgeHandleNative
-        onOpen={() => setMenuOpen(true)}
-        unreadCount={menuUnreadCount}
-        hidden={menuOpen || welcomeFlyActive}
-      />
+      <>
+        <ProfileMenuEdgeHandleNative
+          onOpen={() => setMenuOpen(true)}
+          unreadCount={menuUnreadCount}
+          adminUnreadCount={adminInbox.total}
+          hidden={menuOpen || markListOpen || welcomeFlyActive}
+        />
+        <ProfileMenuEdgeHandleNative
+          variant="mark"
+          label="MARK"
+          onOpen={() => setMarkListOpen(true)}
+          hidden={menuOpen || markListOpen || welcomeFlyActive}
+        />
+      </>
     ) : null}
 
     {renderProfileBackHandle()}
 
-    <Modal
-      visible={settingsOpen}
-      transparent
-      animationType={settingsAnim}
-      onRequestClose={() => {
-        if (langModalOpen || countryModalOpen) {
-          setLangModalOpen(false);
-          setCountryModalOpen(false);
-          return;
-        }
-        returnFromSettingsToMenu();
+    <ProfileSideMenuModal
+      visible={menuOpen && isMe}
+      instantOpen={menuInstantOpen}
+      onInstantOpenConsumed={() => setMenuInstantOpen(false)}
+      onClose={() => {
+        setSettingsOpen(false);
+        setMenuOpen(false);
       }}
-      onDismiss={() => {
-        // iOS: Modal が完全に閉じたあとサイドメニューを開く
-        openMenuAfterSettingsClosed();
-      }}
-      {...(Platform.OS === "ios" ? ({ presentationStyle: "overFullScreen" } as const) : {})}
-    >
+      language={language}
+      apiBase={apiBase}
+      unreadAnnouncements={menuUnreadCount}
+      adminInbox={adminInbox}
+      uid={fUser?.uid ?? null}
+      isAdmin={isAdminUser}
+      plan={plan}
+      displayName={
+        displayName.trim() ||
+        fUser?.displayName?.trim() ||
+        ""
+      }
+      handle={handle.trim()}
+      avatarUrl={
+        avatarUrl.trim() ||
+        fUser?.photoURL?.trim() ||
+        ""
+      }
+      unitBalance={unitBalance ?? undefined}
+      onOpenProfileSettings={openSettingsFromMenu}
+      onSettingsRequestClose={handleSettingsRequestClose}
+      settingsOverlay={
+        settingsOpen ? (
       <View style={styles.profileModalRoot}>
         <GamesPageBackgroundNative lite />
         <SafeAreaView style={styles.profileModalSafe}>
           <View style={styles.profileModalLayer}>
             <KeyboardAvoidingView
               style={styles.profileModalFill}
-              behavior={Platform.OS === "ios" ? "padding" : undefined}
+              behavior={keyboardAvoidingBehavior}
             >
               {/* 他サブページと同様: ヘッダー固定 / 本文のみスクロール */}
               <CyberSubpageHeaderNative
@@ -1220,7 +1552,7 @@ export default function ProfileHomeScreen({
               />
               <ProfileBackEdgeHandleNative
                 onPress={returnFromSettingsToMenu}
-                accessibilityLabel={isJa ? "戻る" : "Back"}
+                accessibilityLabel={t.back}
               />
               <ScrollView
                 style={styles.profileModalFill}
@@ -1304,12 +1636,13 @@ export default function ProfileHomeScreen({
                       style={({ pressed }) => [styles.selectRow, pressed && styles.selectRowPressed]}
                       onPress={() => {
                         setCountryModalOpen(false);
+                        setTzModalOpen(false);
                         setLangModalOpen(true);
                       }}
                       disabled={saving || uploadingAvatar}
                     >
                       <Text style={styles.selectRowText}>
-                        {language === "ja" ? "日本語" : "English"}
+                        {LANGUAGE_NATIVE_NAMES[language]}
                       </Text>
                       <MaterialCommunityIcons
                         name="chevron-down"
@@ -1325,12 +1658,17 @@ export default function ProfileHomeScreen({
                       style={({ pressed }) => [styles.selectRow, pressed && styles.selectRowPressed]}
                       onPress={() => {
                         setLangModalOpen(false);
+                        setTzModalOpen(false);
                         setCountryModalOpen(true);
                       }}
                       disabled={saving || uploadingAvatar}
                     >
                       <Text style={styles.selectRowText} numberOfLines={1}>
-                        {profileCountryRowLabel(countryCode, language)}
+                        {profileCountryRowLabel(
+                          countryCode,
+                          language,
+                          t.countryNotSet
+                        )}
                       </Text>
                       <MaterialCommunityIcons
                         name="chevron-down"
@@ -1340,16 +1678,48 @@ export default function ProfileHomeScreen({
                     </Pressable>
                   </View>
 
-                  <PredictOverlaySubmitButtonNative
-                    label={t.save}
-                    disabledLabel={t.saving}
-                    enabled={!saving && !uploadingAvatar}
+                  <View style={styles.fieldBlock}>
+                    <Text style={styles.fieldLabel}>
+                      {timeZoneSettingCopy(language).label}
+                    </Text>
+                    <Pressable
+                      style={({ pressed }) => [styles.selectRow, pressed && styles.selectRowPressed]}
+                      onPress={() => {
+                        setLangModalOpen(false);
+                        setCountryModalOpen(false);
+                        setTzModalOpen(true);
+                      }}
+                      disabled={saving || uploadingAvatar}
+                    >
+                      <Text style={styles.selectRowText} numberOfLines={1}>
+                        {displayTimeZone
+                          ? timeZoneOptionLabel(displayTimeZone)
+                          : timeZoneSettingCopy(language).auto(
+                              deviceTimeZone ? timeZoneCityLabel(deviceTimeZone) : null
+                            )}
+                      </Text>
+                      <MaterialCommunityIcons
+                        name="chevron-down"
+                        size={20}
+                        color="rgba(226,232,240,0.65)"
+                      />
+                    </Pressable>
+                    <Text style={styles.fieldHint}>
+                      {timeZoneSettingCopy(language).hint}
+                    </Text>
+                  </View>
+
+                  <SlantCtaNative
+                    label={saving || uploadingAvatar ? t.saving : t.save}
+                    variant="accent"
+                    square
                     onPress={() => void handleSaveProfile()}
+                    disabled={saving || uploadingAvatar}
                   />
                 </View>
               </ScrollView>
             </KeyboardAvoidingView>
-            {(langModalOpen || countryModalOpen) && (
+            {(langModalOpen || countryModalOpen || tzModalOpen) && (
               <View style={styles.profileInlinePickerRoot} pointerEvents="box-none">
                 <Pressable
                   accessibilityRole="button"
@@ -1358,35 +1728,80 @@ export default function ProfileHomeScreen({
                   onPress={() => {
                     setLangModalOpen(false);
                     setCountryModalOpen(false);
+                    setTzModalOpen(false);
                   }}
                 />
-                {langModalOpen ? (
-                  <View style={styles.modalSheet}>
+                {tzModalOpen ? (
+                  <View style={styles.modalSheetTall}>
+                    <Text style={styles.modalSheetTitle}>
+                      {timeZoneSettingCopy(language).label}
+                    </Text>
+                    <ScrollView style={styles.modalScroll} keyboardShouldPersistTaps="handled">
+                      <Pressable
+                        style={({ pressed }) => [styles.modalOption, pressed && styles.modalOptionPressed]}
+                        onPress={() => {
+                          setDisplayTimeZone("");
+                          setTzModalOpen(false);
+                        }}
+                      >
+                        <Text style={styles.modalOptionText}>
+                          {timeZoneSettingCopy(language).auto(
+                            deviceTimeZone ? timeZoneCityLabel(deviceTimeZone) : null
+                          )}
+                        </Text>
+                        {!displayTimeZone ? (
+                          <MaterialCommunityIcons name="check" size={18} color="rgba(245,245,245,0.95)" />
+                        ) : null}
+                      </Pressable>
+                      {timeZoneOptions.map((o) => (
+                        <Pressable
+                          key={o.timeZone}
+                          style={({ pressed }) => [styles.modalOption, pressed && styles.modalOptionPressed]}
+                          onPress={() => {
+                            setDisplayTimeZone(o.timeZone);
+                            setTzModalOpen(false);
+                          }}
+                        >
+                          <Text style={styles.modalOptionText}>{o.label}</Text>
+                          {displayTimeZone === o.timeZone ? (
+                            <MaterialCommunityIcons name="check" size={18} color="rgba(245,245,245,0.95)" />
+                          ) : null}
+                        </Pressable>
+                      ))}
+                    </ScrollView>
+                  </View>
+                ) : langModalOpen ? (
+                  <View style={styles.modalSheetTall}>
                     <Text style={styles.modalSheetTitle}>{t.langLabel}</Text>
-                    <Pressable
-                      style={({ pressed }) => [styles.modalOption, pressed && styles.modalOptionPressed]}
-                      onPress={() => {
-                        setLanguage("ja");
-                        setLangModalOpen(false);
-                      }}
+                    <ScrollView
+                      style={styles.modalScroll}
+                      keyboardShouldPersistTaps="handled"
                     >
-                      <Text style={styles.modalOptionText}>日本語</Text>
-                      {language === "ja" ? (
-                        <MaterialCommunityIcons name="check" size={18} color="rgba(147,197,253,0.95)" />
-                      ) : null}
-                    </Pressable>
-                    <Pressable
-                      style={({ pressed }) => [styles.modalOption, pressed && styles.modalOptionPressed]}
-                      onPress={() => {
-                        setLanguage("en");
-                        setLangModalOpen(false);
-                      }}
-                    >
-                      <Text style={styles.modalOptionText}>English</Text>
-                      {language === "en" ? (
-                        <MaterialCommunityIcons name="check" size={18} color="rgba(147,197,253,0.95)" />
-                      ) : null}
-                    </Pressable>
+                      {LOCALIZED_UI_LANGUAGES.map((code) => (
+                        <Pressable
+                          key={code}
+                          style={({ pressed }) => [
+                            styles.modalOption,
+                            pressed && styles.modalOptionPressed,
+                          ]}
+                          onPress={() => {
+                            setLanguage(code);
+                            setLangModalOpen(false);
+                          }}
+                        >
+                          <Text style={styles.modalOptionText}>
+                            {LANGUAGE_NATIVE_NAMES[code]}
+                          </Text>
+                          {language === code ? (
+                            <MaterialCommunityIcons
+                              name="check"
+                              size={18}
+                              color="rgba(245,245,245,0.95)"
+                            />
+                          ) : null}
+                        </Pressable>
+                      ))}
+                    </ScrollView>
                   </View>
                 ) : (
                   <View style={styles.modalSheetTall}>
@@ -1401,7 +1816,7 @@ export default function ProfileHomeScreen({
                       >
                         <Text style={styles.modalOptionText}>{t.countryNotSet}</Text>
                         {!countryCode.trim() ? (
-                          <MaterialCommunityIcons name="check" size={18} color="rgba(147,197,253,0.95)" />
+                          <MaterialCommunityIcons name="check" size={18} color="rgba(245,245,245,0.95)" />
                         ) : null}
                       </Pressable>
                       {COUNTRY_OPTIONS.map((c) => (
@@ -1414,10 +1829,12 @@ export default function ProfileHomeScreen({
                           }}
                         >
                           <Text style={styles.modalOptionText}>
-                            {language === "ja" ? c.labelJa : c.labelEn}
+                            {resolveLocalizedLang(language) === "ja"
+                              ? c.labelJa
+                              : c.labelEn}
                           </Text>
                           {countryCode.trim() === c.code ? (
-                            <MaterialCommunityIcons name="check" size={18} color="rgba(147,197,253,0.95)" />
+                            <MaterialCommunityIcons name="check" size={18} color="rgba(245,245,245,0.95)" />
                           ) : null}
                         </Pressable>
                       ))}
@@ -1429,33 +1846,17 @@ export default function ProfileHomeScreen({
           </View>
         </SafeAreaView>
       </View>
-    </Modal>
-
-    <ProfileSideMenuModal
-      visible={menuOpen && isMe}
-      onClose={() => setMenuOpen(false)}
-      language={language}
-      apiBase={apiBase}
-      unreadAnnouncements={menuUnreadCount}
-      uid={fUser?.uid ?? null}
-      plan={plan}
-      displayName={
-        displayName.trim() ||
-        fUser?.displayName?.trim() ||
-        ""
+        ) : null
       }
-      handle={handle.trim()}
-      avatarUrl={
-        avatarUrl.trim() ||
-        fUser?.photoURL?.trim() ||
-        ""
-      }
-      unitBalance={unitBalance ?? undefined}
-      onOpenProfileSettings={openSettingsFromMenu}
       onOpenInApp={(page) => {
+        if (page !== "restartTutorial") {
+          requestSideMenuResume();
+        }
+        setSettingsOpen(false);
         setMenuOpen(false);
         if (page === "badges") navigation.navigate("Badges");
         else if (page === "invite") navigation.navigate("Invite");
+        else if (page === "userSearch") navigation.navigate("UserSearch");
         else if (page === "unitLedger") navigation.navigate("UnitLedger");
         else if (page === "redeem") navigation.navigate("Redeem");
         else if (page === "announcements") navigation.navigate("Announcements");
@@ -1468,9 +1869,18 @@ export default function ProfileHomeScreen({
         else if (page === "terms") navigation.navigate("Terms");
         else if (page === "contact") navigation.navigate("Contact");
         else if (page === "privacy") navigation.navigate("Privacy");
+        else if (page === "commercialLaw") navigation.navigate("CommercialLaw");
         else if (page === "password") navigation.navigate("ProfilePassword");
         else if (page === "notifications") navigation.navigate("NotificationSettings");
         else if (page === "featureRequest") navigation.navigate("FeatureRequest");
+        else if (page === "adminFeatureInbox")
+          navigation.navigate("AdminInbox", { kind: "feature" });
+        else if (page === "adminContactInbox")
+          navigation.navigate("AdminInbox", { kind: "inbox" });
+        else if (page === "adminRedemptions")
+          navigation.navigate("AdminRedemptions");
+        else if (page === "adminGroupBattles")
+          navigation.navigate("AdminGroupBattles");
         else if (page === "electronicNotice") navigation.navigate("ElectronicNotice");
         else if (page === "notificationDev" && __DEV__) navigation.navigate("NotificationDev");
         else if (page === "restartTutorial") {
@@ -1523,53 +1933,45 @@ export default function ProfileHomeScreen({
             pulseTutorialRestartNative();
           })();
         }
-        else if (page === "seasonPreview" && __DEV__) navigation.navigate("SeasonPredictPreview");
-        else if (page === "futuristicBgPreview" && __DEV__)
-          navigation.navigate("FuturisticBgPreview");
-        else if (page === "titleSkinPreview" && __DEV__)
-          navigation.navigate("TitleSkinPreview");
-        else if (page === "waveProSkinPreview" && __DEV__)
-          navigation.navigate("WaveProSkinPreview");
-        else if (page === "rankingListProSkinPreview" && __DEV__)
-          navigation.navigate("RankingListProSkinPreview");
-        else if (page === "proSkinUnlockPreview" && __DEV__)
-          navigation.navigate("ProSkinUnlockPreview");
-        else if (page === "referralStampCelebratePreview" && __DEV__)
-          navigation.navigate("ReferralStampCelebratePreview");
-        else if (page === "unitEarnCelebratePreview" && __DEV__)
-          navigation.navigate("UnitEarnCelebratePreview");
-        else if (page === "careerFlipButtonPreview" && __DEV__)
-          navigation.navigate("CareerFlipButtonPreview");
-        else if (page === "careerPlacementPreview" && __DEV__)
-          navigation.navigate("CareerPlacementPreview");
-        else if (page === "unitEarnModalDesignPreview" && __DEV__)
-          navigation.navigate("UnitEarnModalDesignPreview");
-        else if (page === "unitEarnOverlayAnimPreview" && __DEV__)
-          navigation.navigate("UnitEarnOverlayAnimPreview");
-        else if (page === "unitEarnOverlayFontPreview" && __DEV__)
-          navigation.navigate("UnitEarnOverlayFontPreview");
-        else if (page === "uniterzLogoTypePreview" && __DEV__)
-          navigation.navigate("UniterzLogoTypePreview");
-        else if (page === "uniterzProBadgePreview" && __DEV__)
-          navigation.navigate("UniterzProBadgePreview");
-        else if (page === "proBadgeComparePreview" && __DEV__)
-          navigation.navigate("ProBadgeComparePreview");
-        else if (page === "resultCardDesignPreview" && __DEV__)
-          navigation.navigate("ResultCardDesignPreview");
-        else if (page === "resultBadgeDesignPreview" && __DEV__)
-          navigation.navigate("ResultBadgeDesignPreview");
-        else if (page === "resultStampDesignPreview" && __DEV__)
-          navigation.navigate("ResultStampDesignPreview");
-        else if (page === "resultStreakTagDesignPreview" && __DEV__)
-          navigation.navigate("ResultStreakTagDesignPreview");
-        else if (page === "navBarDesignPreview" && __DEV__)
-          navigation.navigate("NavBarDesignPreview");
-        else if (page === "splashLogoPreview" && __DEV__)
-          navigation.navigate("SplashLogoPreview");
+        else if (page === "seasonPreview" && __DEV__)
+          navigation.navigate("SeasonPredictPreview");
+        else if (page === "weeklyReportPreview" && __DEV__)
+          navigation.navigate("MonthlyReportPreview", { tab: "weekly" });
+        else if (page === "monthlyReportPreview" && __DEV__)
+          navigation.navigate("MonthlyReportPreview", { tab: "monthly" });
+        else if (page === "squadBattlePreview" && __DEV__)
+          navigation.navigate("SquadBattlePreview");
         else if (page === "liveGameStatsPreview" && __DEV__)
           navigation.navigate("LiveGameStatsPreview");
-        else if (page === "profileKinetikMetricsPreview" && __DEV__)
-          navigation.navigate("ProfileKinetikMetricsPreview");
+        else if (page === "resultDetailPreview" && __DEV__)
+          navigation.navigate("ResultDetailPreview");
+        else if (page === "leagueStatsPreview" && __DEV__)
+          navigation.navigate("LeagueStatsPreview");
+        else if (page === "playerDetailPreview" && __DEV__)
+          navigation.navigate("PlayerDetailPreview", {
+            playerId: "132",
+            useDevMock: true,
+          });
+        else if (page === "proLeagueTeaserPreview" && __DEV__)
+          navigation.navigate("ProLeagueTeaserPreview");
+        else if (page === "streakFramePreview" && __DEV__)
+          navigation.navigate("StreakFramePreview");
+        else if (page === "dustProSkinPreview" && __DEV__)
+          navigation.navigate("DustProSkinPreview");
+        else if (page === "milestoneProSkinPreview" && __DEV__)
+          navigation.navigate("MilestoneProSkinPreview");
+        else if (page === "candidateProSkinPreview" && __DEV__)
+          navigation.navigate("CandidateProSkinPreview");
+        else if (page === "teamAbbrBadgePreview" && __DEV__)
+          navigation.navigate("TeamAbbrBadgePreview");
+        else if (page === "resultPickupPreview" && __DEV__)
+          navigation.navigate("ResultPickupPreview");
+        else if (page === "proInsightGatePreview" && __DEV__)
+          navigation.navigate("ProInsightGatePreview");
+        else if (page === "proInsightNarrativePreview" && __DEV__)
+          navigation.navigate("ProInsightNarrativePreview");
+        else if (page === "matchupTeamStatsPreview" && __DEV__)
+          navigation.navigate("MatchupTeamStatsPreview");
       }}
     />
     <ProfileBadgeDetailModal
@@ -1579,6 +1981,36 @@ export default function ProfileHomeScreen({
       onClose={() => {
         setBadgeModalOpen(false);
         setSelectedBadge(null);
+      }}
+    />
+    <ProfileMarkListOverlayNative
+      visible={markListOpen}
+      language={language}
+      marks={markRows}
+      loading={marksLoading}
+      maxMarks={maxMarks}
+      markedByCount={markedByCount}
+      onClose={() => setMarkListOpen(false)}
+      onOpenProfile={(row: MarkListRow) => {
+        const handle = row.handle.trim();
+        if (!handle) return;
+        // 横スライド Modal を即閉じて自プロフィールを見せない
+        navigateToPublicProfileNative(navigation, {
+          handle,
+          fromMarkList: true,
+          warm: {
+            uid: row.targetUid,
+            handle,
+            displayName: row.displayName,
+            photoURL: row.photoURL,
+            plan: row.isPro ? "pro" : "free",
+            planProBgVariant: row.planProBgVariant,
+          },
+        });
+        setMarkListOpen(false);
+      }}
+      onUnmark={(uid) => {
+        void removeMark(uid);
       }}
     />
     {reportOverlay ? (
@@ -1591,21 +2023,21 @@ export default function ProfileHomeScreen({
     {skinUnlockIds && skinUnlockIds.length > 0 ? (
       <ProfileProSkinUnlockOverlayNative
         unlockedIds={skinUnlockIds}
-        language={language === "ja" ? "ja" : "en"}
+        language={language}
         preview={skinUnlockPreview}
         visible
         ownerCounts={skinUnlockOwnerCounts}
-        onDismiss={dismissSkinUnlockAndClearForce}
+        onDismiss={dismissSkinUnlock}
         onApplied={(id) => {
           setPlanProBgVariant(id);
         }}
       />
     ) : null}
-    {!isPublicProfileView ? (
+    {!isPublicProfileView && isFocused ? (
       <View style={styles.tutorialHostLayer} pointerEvents="box-none">
         <TutorialLiveHostNative
           page="profile"
-          language={(language === "en" ? "en" : "ja") as Language}
+          language={language as Language}
         />
       </View>
     ) : null}
@@ -1955,6 +2387,11 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "600",
   },
+  fieldHint: {
+    color: "rgba(255,255,255,0.45)",
+    fontSize: 11,
+    lineHeight: 15,
+  },
   /** Web プロフィール編集の角ばり入力に相当 */
   fieldInput: {
     minHeight: 40,
@@ -1975,8 +2412,8 @@ const styles = StyleSheet.create({
     minHeight: 40,
     borderRadius: 0,
     borderWidth: 1,
-    borderColor: "rgba(0, 245, 255, 0.28)",
-    backgroundColor: "rgba(0,0,0,0.35)",
+    borderColor: "rgba(255, 255, 255, 0.38)",
+    backgroundColor: "rgba(0,0,0,0.55)",
     paddingHorizontal: 12,
     paddingVertical: 8,
     flexDirection: "row",
@@ -2003,8 +2440,8 @@ const styles = StyleSheet.create({
     zIndex: 1,
     borderRadius: 0,
     borderWidth: 1,
-    borderColor: "rgba(0, 245, 255, 0.28)",
-    backgroundColor: "rgba(15,23,42,0.98)",
+    borderColor: "rgba(255, 255, 255, 0.32)",
+    backgroundColor: "rgba(8,8,10,0.98)",
     paddingVertical: 8,
     overflow: "hidden",
   },
@@ -2014,8 +2451,8 @@ const styles = StyleSheet.create({
     maxHeight: 480,
     borderRadius: 0,
     borderWidth: 1,
-    borderColor: "rgba(0, 245, 255, 0.28)",
-    backgroundColor: "rgba(15,23,42,0.98)",
+    borderColor: "rgba(255, 255, 255, 0.32)",
+    backgroundColor: "rgba(8,8,10,0.98)",
     paddingVertical: 8,
     overflow: "hidden",
   },

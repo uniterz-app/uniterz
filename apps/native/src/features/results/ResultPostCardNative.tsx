@@ -1,16 +1,14 @@
 /**
  * Web `ResultCard` mobile dense 相当。リザルト一覧・プロフィール Result Drop 共用。
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, memo } from "react";
 import {
-  Platform,
   Pressable,
   StyleSheet,
   Text,
   View,
   type ViewStyle,
 } from "react-native";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
 import Animated, {
   interpolate,
   useAnimatedStyle,
@@ -19,13 +17,14 @@ import Animated, {
 } from "react-native-reanimated";
 import type { Language } from "../../../../../lib/i18n/language";
 import { t as i18nT } from "../../../../../lib/i18n/t";
+import { L, resolveLocalizedLang } from "../../../../../lib/i18n/localize";
+import { resultWinStreakBadgeLabel } from "../../../../../lib/result/resultWinStreakBadgeLabel";
 import { resolvePostListLeague } from "../../../../../lib/leagues";
 import { resolveResultBadgeDisplay } from "../../../../../lib/result/resultBadge";
 import { isResultPostLiveGame, isResultPostMatchStarted } from "../../../../../lib/result/resultLiveGame";
 import { resolvePkScoreFromResultPost } from "../../../../../lib/games/pkScore";
-import { buildResultShareUrl, getShareAppOrigin } from "../../../../../lib/share/shareAppUrls";
 import { getTeamAlias, splitTeamNameByLeague } from "../../utils/teamName";
-import JerseyMarkAdaptive from "../games/JerseyMarkAdaptive";
+import DeferredJerseyMarkNative from "../games/DeferredJerseyMarkNative";
 import CountryFlagNative from "../games/CountryFlagNative";
 import {
   isWcKnockoutGame,
@@ -52,8 +51,18 @@ import { useTeamRecordLineNative } from "../games/useTeamRecordLineNative";
 import CornerMenuClusterNative from "../../ui/CornerMenuClusterNative";
 import CyberChamferButtonNative from "../../ui/CyberChamferButtonNative";
 import ShareLinkCaptureFooterNative from "../share/ShareLinkCaptureFooterNative";
-import { registerTutorialTarget, notifyTutorialTargetsChanged } from "../tutorial/tutorialMeasureNative";
+import {
+  captureViewAsPngNative,
+  SHARE_CAPTURE_BG,
+  shareImageUriNative,
+} from "../share/shareImageNative";
+import {
+  buildResultShareUrl,
+  getShareAppOrigin,
+} from "../../../../../lib/share/shareAppUrls";
+import { buildResultCardShareCaption } from "../../../../../lib/result/shareResultCardCaption";
 import { cyberAlert } from "../../components/cyberAlert";
+import { registerTutorialTarget, notifyTutorialTargetsChanged } from "../tutorial/tutorialMeasureNative";
 import type { PostWithMillis } from "./nativeResultModel";
 import { canDismissResultListPostNow } from "./nativeResultModel";
 import ResultGlassShellNative from "./ResultGlassShellNative";
@@ -88,11 +97,11 @@ import {
   useResultPostCardEntrance,
   type ResultStatRowEntranceMeta,
 } from "./useResultHomeEntrance";
-import { shareResultCardNative } from "./shareResultCardNative";
 import { buildResultCardFaceModel } from "../../../../../lib/result/buildResultCardFace";
+import { normalizeNbaTopScorerPick } from "../../../../../lib/nba/topScorer";
+import { peekGameDocCacheForResult } from "../../../../../lib/result/resultDetailFirestoreCache";
 import {
   ResultCardDesignFaceNative,
-  RESULT_CARD_DETAIL_SPINE,
 } from "./ResultCardDesignPreviewScreenNative";
 import { useResultFaceMatchEntrance } from "./useResultFaceMatchEntrance";
 
@@ -151,28 +160,19 @@ function isRedUpset(v: unknown): boolean {
 
 type StreakBadge = { label: string; tone: "silver" | "platinum" | "gold" };
 
-function getStreakBadge(activeWinStreak: unknown, isEn: boolean): StreakBadge | null {
+function getStreakBadge(
+  activeWinStreak: unknown,
+  language: string | null | undefined
+): StreakBadge | null {
   const v =
     typeof activeWinStreak === "number" && Number.isFinite(activeWinStreak)
       ? Math.floor(activeWinStreak)
       : 0;
-  if (v < 3) return null;
-  if (v >= 7) {
-    return {
-      label: isEn ? `${v} Win Streak` : `${v}連勝`,
-      tone: "gold",
-    };
-  }
-  if (v >= 5) {
-    return {
-      label: isEn ? `${v} Win Streak` : `${v}連勝`,
-      tone: "platinum",
-    };
-  }
-  return {
-    label: isEn ? `${v} Win Streak` : `${v}連勝`,
-    tone: "silver",
-  };
+  const label = resultWinStreakBadgeLabel(language, v);
+  if (!label) return null;
+  if (v >= 10) return { label, tone: "gold" };
+  if (v >= 7) return { label, tone: "platinum" };
+  return { label, tone: "silver" };
 }
 
 type ResultBadge = "hit" | "perfect" | "upset" | "miss" | "streak" | null;
@@ -189,7 +189,7 @@ function getMobileTeamName(
   return [l1, l2].filter(Boolean).join(" ");
 }
 
-export default function ResultPostCardNative({
+function ResultPostCardNativeInner({
   post,
   language,
   nowMs,
@@ -202,11 +202,12 @@ export default function ResultPostCardNative({
   onRequestPredictEdit,
   pkScore: pkScoreProp = null,
   gameMarket = null,
+  gameRoundMeta = null,
   compactSpacing = false,
   tutorialTargetId,
 }: {
   post: PostWithMillis;
-  language: "ja" | "en";
+  language: import("../../../../../lib/i18n/language").Language;
   nowMs: number;
   viewerUid: string | null;
   /** 一覧入場のスタッガー（試合一覧と同じ「浮き出し」入場） */
@@ -223,13 +224,20 @@ export default function ResultPostCardNative({
   /** プロフィール等 — カード下マージンを抑える */
   compactSpacing?: boolean;
   pkScore?: { home: number; away: number } | null;
-  /** games.market 補完（marketMeta 未埋め込みの確定投稿向け） */
+  /** games.marketBias / market 補完（marketMeta 未埋め込みの投稿向け） */
   gameMarket?: { homeRate: number; awayRate: number } | null;
+  /** games.roundLabel / playoffRound 補完（旧投稿の MATCH 落ち向け） */
+  gameRoundMeta?: {
+    roundLabel?: string | null;
+    playoffRound?: string | null;
+    seasonRound?: string | number | null;
+    seasonPhase?: string | null;
+  } | null;
   /** チュートリアル穴測定（外枠マージンを含めないカード実寸） */
   tutorialTargetId?: string;
 }) {
-  const isEn = language === "en";
-  const resultCopy = i18nT(language).results;
+  const loc = resolveLocalizedLang(language);
+  const resultCopy = i18nT(loc).results;
   const [cornerFabOpen, setCornerFabOpen] = useState(false);
   const [sharing, setSharing] = useState(false);
   const captureRef = useRef<View>(null);
@@ -281,14 +289,19 @@ export default function ResultPostCardNative({
       !isPredictionFinalized &&
       onRequestPredictEdit
   );
-  const hasCornerActions =
-    !isMatchStarted && (hasCornerTrash || hasCornerEdit);
-  const canShare =
-    Boolean(viewerUid && authorUid === viewerUid) && !sharing;
+  /** 共有は常時。編集・削除は条件付き */
+  const showCornerControl = true;
 
   useEffect(() => {
-    if (isMatchStarted) setCornerFabOpen(false);
-  }, [isMatchStarted]);
+    if (isMatchStarted || isPredictionFinalized) {
+      if (!hasCornerTrash && !hasCornerEdit) setCornerFabOpen(false);
+    }
+  }, [
+    isMatchStarted,
+    isPredictionFinalized,
+    hasCornerTrash,
+    hasCornerEdit,
+  ]);
 
   /** Web ResultCard の isLiveGame と同じ：開始〜確定まで LIVE */
   const showLiveMark = isResultPostLiveGame(
@@ -394,57 +407,6 @@ export default function ResultPostCardNative({
   const hasFinal = typeof rh === "number" && typeof ra === "number";
   const pkScore =
     pkScoreProp ?? resolvePkScoreFromResultPost(post as Record<string, unknown>);
-  const showShareInMenu = canShare;
-
-  const shareLinkUrl = useMemo(
-    () => buildResultShareUrl(post.id),
-    [post.id]
-  );
-
-  const handleShareResult = useCallback(async () => {
-    if (!canShare) return;
-    setCornerFabOpen(false);
-    setSharing(true);
-    await new Promise<void>((resolve) => {
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => resolve());
-      });
-    });
-    try {
-      const pointsV3 = toNumber(stats?.pointsV3, NaN);
-      const shareOutcome = await shareResultCardNative(captureRef, {
-        language,
-        homeName,
-        awayName,
-        predictedHome: hasPredictedScore ? ph : null,
-        predictedAway: hasPredictedScore ? pa : null,
-        finalHome: hasFinal ? rh : null,
-        finalAway: hasFinal ? ra : null,
-        totalPoints: hasFinal && Number.isFinite(pointsV3) ? pointsV3 : null,
-        postId: post.id,
-        appBaseUrl: getShareAppOrigin(),
-      });
-      if (shareOutcome === "failed") {
-        cyberAlert("", resultCopy.shareResultCardFailed);
-      }
-    } finally {
-      setSharing(false);
-    }
-  }, [
-    awayName,
-    canShare,
-    hasFinal,
-    hasPredictedScore,
-    homeName,
-    language,
-    pa,
-    ph,
-    post.id,
-    ra,
-    resultCopy.shareResultCardFailed,
-    rh,
-    stats?.pointsV3,
-  ]);
 
   const wcMatchGoalScorers = useMemo(() => {
     if (!isWcCard || !hasFinal) return [];
@@ -466,7 +428,7 @@ export default function ResultPostCardNative({
   const activeWinStreak =
     toInt((stats?.pointsV3Detail as { activeWinStreak?: number } | undefined)?.activeWinStreak) ??
     0;
-  const streakBadge = getStreakBadge(activeWinStreak, isEn);
+  const streakBadge = getStreakBadge(activeWinStreak, loc);
   const {
     frameBadge: badge,
     outcomeBadge,
@@ -541,15 +503,20 @@ export default function ResultPostCardNative({
     drawDelayMs: listEnterIndex * RESULT_CARD_STAGGER_MS,
   });
   const detailSpinePressStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(entrance.pressed.value, [0, 1], [1, 0.85]),
+    opacity: interpolate(entrance.pressed.value, [0, 1], [0.88, 1]),
+    transform: [
+      {
+        translateX: interpolate(entrance.pressed.value, [0, 1], [0, 2]),
+      },
+    ],
   }));
 
   const frameStyle =
     badge === "upset"
       ? styles.cardFrameUpset
-      : badge === "streak" && activeWinStreak >= 7
+      : badge === "streak" && activeWinStreak >= 10
         ? styles.cardFrameStreakGold
-        : badge === "streak" && activeWinStreak >= 5
+        : badge === "streak" && activeWinStreak >= 7
           ? styles.cardFrameStreakPlatinum
           : badge === "streak"
             ? styles.cardFrameStreakSilver
@@ -561,8 +528,6 @@ export default function ResultPostCardNative({
                 ? styles.cardFrameMiss
                 : null;
 
-  const showCornerControl =
-    (!isMatchStarted && hasCornerActions) || canShare;
   const shellOverflowStyle =
     cornerFabOpen && showCornerControl ? styles.cardShellOverflowVisible : null;
 
@@ -585,10 +550,38 @@ export default function ResultPostCardNative({
         elevation: (frameStyle as ViewStyle).elevation,
       }
     : null;
-  const roundLabel = roundLabelFromPost(post as unknown as Record<string, unknown>);
+  const roundLabel = roundLabelFromPost(
+    post as unknown as Record<string, unknown>,
+    gameRoundMeta
+  );
   const lineFramePaint = resultOutcomeLineFramePaint(
     badge === "streak" ? "streak" : badge
   );
+
+  const nbaScorerPick = useMemo(
+    () =>
+      leagueKey === "nba"
+        ? normalizeNbaTopScorerPick(
+            (post.prediction as { goalScorer?: unknown } | undefined)?.goalScorer
+          )
+        : null,
+    [leagueKey, post.prediction]
+  );
+  // 一覧は matchup-detail を叩かない。game キャッシュがあれば名前・PICK UP を補完。
+  const gameFromCache = useMemo(
+    () =>
+      peekGameDocCacheForResult(
+        typeof post.gameId === "string" ? post.gameId : null
+      ),
+    [post.gameId]
+  );
+  const scorerFromGame = useMemo(() => {
+    if (!nbaScorerPick || nbaScorerPick.name || !gameFromCache) return null;
+    return {
+      topScorerCandidates: gameFromCache.topScorerCandidates,
+      leadingScorers: gameFromCache.leadingScorers,
+    };
+  }, [nbaScorerPick, gameFromCache]);
 
   const faceModel = useMemo(
     () =>
@@ -597,20 +590,140 @@ export default function ResultPostCardNative({
           ...(post as Record<string, unknown>),
           id: post.id,
         },
-        gameMarket
-          ? {
-              market: {
-                homeRate: gameMarket.homeRate,
-                awayRate: gameMarket.awayRate,
-              },
-            }
-          : undefined
+        {
+          ...(gameMarket
+            ? {
+                market: {
+                  homeRate: gameMarket.homeRate,
+                  awayRate: gameMarket.awayRate,
+                },
+              }
+            : {}),
+          gameMeta: {
+            ...(gameRoundMeta ?? {}),
+            ...(gameFromCache
+              ? {
+                  isPickup: gameFromCache.isPickup,
+                  pickupWeekKey: gameFromCache.pickupWeekKey,
+                }
+              : {}),
+          },
+          ...(scorerFromGame?.topScorerCandidates
+            ? { topScorerCandidates: scorerFromGame.topScorerCandidates }
+            : {}),
+          ...(scorerFromGame?.leadingScorers
+            ? { leadingScorers: scorerFromGame.leadingScorers }
+            : {}),
+        }
       ),
-    [post, gameMarket]
+    [post, gameMarket, gameRoundMeta, gameFromCache, scorerFromGame]
   );
 
-  /** 新カード面（WC 以外の確定済み）。未確定・WC は従来カード */
-  if (!isWcCard && hasFinal) {
+  const shareLinkUrl = buildResultShareUrl(post.id, getShareAppOrigin());
+
+  const waitNextPaint = () =>
+    new Promise<void>((resolve) => {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => resolve());
+      });
+    });
+
+  const requestShare = useCallback(async () => {
+    if (sharing) return;
+    setCornerFabOpen(false);
+    setSharing(true);
+    try {
+      const caption = buildResultCardShareCaption({
+        language: loc,
+        homeName: faceModel.homeName,
+        awayName: faceModel.awayName,
+        predictedHome: faceModel.predHome,
+        predictedAway: faceModel.predAway,
+        finalHome: faceModel.resultHome,
+        finalAway: faceModel.resultAway,
+        totalPoints: faceModel.totalPoints,
+        postId: null,
+        appBaseUrl: getShareAppOrigin(),
+      });
+      await waitNextPaint();
+      const uri = await captureViewAsPngNative(captureRef);
+      const result = await shareImageUriNative(uri, {
+        caption,
+        linkUrl: shareLinkUrl,
+      });
+      if (result === "failed") {
+        cyberAlert("", resultCopy.shareResultCardFailed);
+      }
+    } catch {
+      cyberAlert("", resultCopy.shareResultCardFailed);
+    } finally {
+      setSharing(false);
+    }
+  }, [
+    faceModel.awayName,
+    faceModel.homeName,
+    faceModel.predAway,
+    faceModel.predHome,
+    faceModel.resultAway,
+    faceModel.resultHome,
+    faceModel.totalPoints,
+    loc,
+    resultCopy.shareResultCardFailed,
+    shareLinkUrl,
+    sharing,
+  ]);
+
+  const cornerCluster = showCornerControl ? (
+        <View style={styles.leftActionCluster} pointerEvents="box-none">
+          <CornerMenuClusterNative
+            open={cornerFabOpen}
+            onToggle={() => setCornerFabOpen((v) => !v)}
+            menuLabel={resultCopy.openActions}
+            horizontalFlyout="right"
+            size="xs"
+            dim={26}
+            menuFrameWhite
+            sideFlyout={
+              <>
+                <CyberChamferButtonNative
+                  size="xs"
+                  dim={26}
+                  embedded
+                  variant="share"
+                  onPress={() => void requestShare()}
+                  accessibilityLabel={resultCopy.shareMyResult}
+                  disabled={sharing}
+                />
+                {hasCornerEdit ? (
+                  <CyberChamferButtonNative
+                    size="xs"
+                    dim={26}
+                    embedded
+                    variant="edit"
+                    onPress={requestPredictEdit}
+                    accessibilityLabel={resultCopy.editPredictionAriaLabel}
+                  />
+                ) : null}
+              </>
+            }
+            bottomFlyout={
+              hasCornerTrash ? (
+                <CyberChamferButtonNative
+                  size="xs"
+                  dim={26}
+                  embedded
+                  variant="delete"
+                  onPress={requestDeletePost}
+                  accessibilityLabel={resultCopy.removeFromList}
+                />
+              ) : null
+            }
+          />
+        </View>
+      ) : null;
+
+  /** 新カード面（WC 以外）。判定前も含む */
+  if (!isWcCard) {
     return (
       <Animated.View
         collapsable={false}
@@ -629,9 +742,16 @@ export default function ResultPostCardNative({
           collapsable={false}
           delayPressIn={0}
           accessibilityRole="button"
-          accessibilityLabel={isEn ? "Open result detail" : "リザルト詳細を開く"}
+          accessibilityLabel={L(loc, {
+            ja: "リザルト詳細を開く",
+            en: "Open result detail",
+            ko: "결과 상세 열기",
+            zh: "打开结果详情",
+            es: "Abrir detalle del resultado",
+            pt: "Abrir detalhe do resultado",
+            fr: "Ouvrir le détail du résultat",
+          })}
           style={styles.resultCardPressable}
-          hitSlop={{ right: RESULT_CARD_DETAIL_SPINE.width - 1 }}
           onPressIn={() => {
             entrance.pressed.value = reduceMotionList
               ? 1
@@ -642,12 +762,19 @@ export default function ResultPostCardNative({
               ? 0
               : withTiming(0, { duration: 160 });
           }}
-          onPress={() => onOpenDetail(post.id)}
+          onPress={() => {
+            if (cornerFabOpen) {
+              setCornerFabOpen(false);
+              return;
+            }
+            onOpenDetail(post.id);
+          }}
         >
           <View style={styles.cardCaptureWrap}>
             <View
               ref={captureRef}
               collapsable={false}
+              style={sharing ? styles.captureSurface : undefined}
               onLayout={
                 tutorialTargetId
                   ? () => notifyTutorialTargetsChanged()
@@ -658,14 +785,21 @@ export default function ResultPostCardNative({
                 language={language}
                 face={faceModel}
                 frameGlow
-                showDetailTab
-                animateDraw={!reduceMotionList && entranceEnabled && !pauseListFx}
+                showDetailTab={!sharing}
+                pickup={faceModel.isPickup}
+                live={showLiveMark && !pauseListFx && !sharing}
+                deferJerseys
+                animateDraw={!reduceMotionList && entranceEnabled && !pauseListFx && !sharing}
                 drawDelayMs={listEnterIndex * RESULT_CARD_STAGGER_MS}
                 motion={faceMotion}
                 detailSpineStyle={detailSpinePressStyle}
               />
+              <ShareLinkCaptureFooterNative
+                url={shareLinkUrl}
+                visible={sharing}
+              />
             </View>
-            <ShareLinkCaptureFooterNative url={shareLinkUrl} visible={sharing} />
+            {cornerCluster}
           </View>
         </AnimatedResultCardPressable>
       </Animated.View>
@@ -674,7 +808,6 @@ export default function ResultPostCardNative({
 
   return (
     <Animated.View
-      ref={tutorialTargetId ? captureRef : undefined}
       collapsable={false}
       onLayout={
         tutorialTargetId
@@ -711,7 +844,11 @@ export default function ResultPostCardNative({
         }}
       >
       <View style={styles.cardCaptureWrap}>
-      <View collapsable={false}>
+      <View
+        ref={captureRef}
+        collapsable={false}
+        style={sharing ? styles.captureSurface : undefined}
+      >
       <MatchListLineFrameNative
         topLabel={roundLabel}
         paint={lineFramePaint}
@@ -751,7 +888,7 @@ export default function ResultPostCardNative({
             stackBadges={stackBadges}
             streakBadge={streakBadge}
             activeWinStreak={activeWinStreak}
-            showLiveMark={showLiveMark}
+            showLiveMark={showLiveMark && !pauseListFx}
             hitBadgeSubtle
           />
         </Animated.View>
@@ -774,10 +911,11 @@ export default function ResultPostCardNative({
                     <View
                       style={{ transform: [{ scaleX: JERSEY_WIDTH_SCALE }] }}
                     >
-                      <JerseyMarkAdaptive
+                      <DeferredJerseyMarkNative
                         accent={homeJersey.primary}
                         accentEnd={homeJersey.secondary}
                         size={JERSEY_SIZE_RESULT}
+                        density="coarse"
                       />
                     </View>
                   )}
@@ -825,10 +963,11 @@ export default function ResultPostCardNative({
                     <View
                       style={{ transform: [{ scaleX: JERSEY_WIDTH_SCALE }] }}
                     >
-                      <JerseyMarkAdaptive
+                      <DeferredJerseyMarkNative
                         accent={awayJersey.primary}
                         accentEnd={awayJersey.secondary}
                         size={JERSEY_SIZE_RESULT}
+                        density="coarse"
                       />
                     </View>
                   )}
@@ -911,7 +1050,7 @@ export default function ResultPostCardNative({
           <View style={styles.statBlock}>
             {wcGoalScorer ? (
               <WcGoalScorerResultRowNative
-                label={isEn ? "Goal scorer" : "ゴールする選手"}
+                label={resultCopy.wcGoalScorerLabel}
                 info={wcGoalScorer}
               />
             ) : null}
@@ -920,6 +1059,8 @@ export default function ResultPostCardNative({
                 label={resultCopy.nbaTopScorerResultLabel}
                 info={nbaTopScorer}
                 compact
+                homeTeamId={home?.teamId}
+                awayTeamId={away?.teamId}
               />
             ) : null}
             {statRows.map((row, rowIndex) => {
@@ -957,71 +1098,93 @@ export default function ResultPostCardNative({
               );
             })}
           </View>
-          <ShareLinkCaptureFooterNative url={shareLinkUrl} visible={sharing} />
           </View>
         </Animated.View>
-        {!pauseListFx && badge === "hit" ? <ResultHitCyberFrameNative /> : null}
-        {!pauseListFx && badge === "perfect" ? <ResultPerfectCyberFrameNative /> : null}
+        {!pauseListFx && badge === "hit" ? (
+          <ResultHitCyberFrameNative effectsActive={!pauseListFx} />
+        ) : null}
+        {!pauseListFx && badge === "perfect" ? (
+          <ResultPerfectCyberFrameNative effectsActive={!pauseListFx} />
+        ) : null}
         {!pauseListFx && badge === "streak" ? (
-          <ResultStreakCyberFrameNative activeWinStreak={activeWinStreak} />
+          <ResultStreakCyberFrameNative
+            activeWinStreak={activeWinStreak}
+            effectsActive={!pauseListFx}
+          />
         ) : null}
       </ResultGlassShellNative>
       </MatchListLineFrameNative>
+      <ShareLinkCaptureFooterNative url={shareLinkUrl} visible={sharing} />
       </View>
 
-      {showCornerControl ? (
-        <View style={styles.leftActionCluster} pointerEvents="box-none">
-          <CornerMenuClusterNative
-            open={cornerFabOpen}
-            onToggle={() => setCornerFabOpen((v) => !v)}
-            menuLabel={isEn ? "Open actions" : "操作メニュー"}
-            horizontalFlyout="right"
-            sideFlyout={
-              <>
-                {showShareInMenu ? (
-                  <CyberChamferButtonNative
-                    size="xs"
-                    embedded
-                    variant="share"
-                    onPress={() => {
-                      setCornerFabOpen(false);
-                      void handleShareResult();
-                    }}
-                    disabled={!canShare || sharing}
-                    accessibilityLabel={resultCopy.shareMyResult}
-                  />
-                ) : null}
-                {hasCornerActions && hasCornerEdit ? (
-                  <CyberChamferButtonNative
-                    size="xs"
-                    embedded
-                    variant="edit"
-                    onPress={requestPredictEdit}
-                    accessibilityLabel={isEn ? "Edit prediction" : "予想を修正"}
-                  />
-                ) : null}
-              </>
-            }
-            bottomFlyout={
-              hasCornerActions && hasCornerTrash ? (
-                <CyberChamferButtonNative
-                  size="xs"
-                  embedded
-                  variant="delete"
-                  onPress={requestDeletePost}
-                  accessibilityLabel={isEn ? "Remove from list" : "一覧から除外"}
-                />
-              ) : null
-            }
-          />
-        </View>
-      ) : null}
+      {cornerCluster}
       </View>
       </AnimatedResultCardPressable>
     </Animated.View>
   );
 }
 
+function clockSensitiveKey(
+  post: PostWithMillis,
+  nowMs: number
+): string {
+  const status = typeof post.status === "string" ? post.status : "";
+  if (status === "final") return "final";
+  return [
+    isResultPostMatchStarted(
+      {
+        status,
+        startAtMillis:
+          typeof post.startAtMillis === "number" ? post.startAtMillis : null,
+      },
+      nowMs
+    )
+      ? "1"
+      : "0",
+    isResultPostLiveGame(
+      {
+        status,
+        startAtMillis:
+          typeof post.startAtMillis === "number" ? post.startAtMillis : null,
+      },
+      nowMs
+    )
+      ? "1"
+      : "0",
+    canDismissResultListPostNow(post, nowMs) ? "1" : "0",
+  ].join("|");
+}
+
+const ResultPostCardNative = memo(
+  ResultPostCardNativeInner,
+  (prev, next) => {
+    if (prev.post !== next.post) return false;
+    if (prev.language !== next.language) return false;
+    if (prev.viewerUid !== next.viewerUid) return false;
+    if (prev.listEnterIndex !== next.listEnterIndex) return false;
+    if (prev.entranceEnabled !== next.entranceEnabled) return false;
+    if (prev.siblingOverlayOpen !== next.siblingOverlayOpen) return false;
+    if (prev.compactSpacing !== next.compactSpacing) return false;
+    if (prev.tutorialTargetId !== next.tutorialTargetId) return false;
+    if (prev.pkScore !== next.pkScore) return false;
+    if (prev.gameMarket !== next.gameMarket) return false;
+    if (prev.gameRoundMeta !== next.gameRoundMeta) return false;
+    if (prev.onOpenDetail !== next.onOpenDetail) return false;
+    if (prev.onRequestDeleteConfirm !== next.onRequestDeleteConfirm) return false;
+    if (prev.onRequestPredictEdit !== next.onRequestPredictEdit) return false;
+    if (prev.nowMs !== next.nowMs) {
+      if (
+        clockSensitiveKey(prev.post, prev.nowMs) !==
+        clockSensitiveKey(next.post, next.nowMs)
+      ) {
+        return false;
+      }
+    }
+    return true;
+  }
+);
+
+export default ResultPostCardNative;
 
 const styles = StyleSheet.create({
   listRowOuter: {
@@ -1080,11 +1243,15 @@ const styles = StyleSheet.create({
     position: "relative",
     overflow: "visible",
   },
-  /** 左上：Web mobile `CyberMenuButton` + 右／下フライアウト */
+  /** 共有キャプチャ時 — 透明を白落ちさせない */
+  captureSurface: {
+    backgroundColor: SHARE_CAPTURE_BG,
+  },
+  /** 左上：線枠内側。フライアウトは右へ展開 */
   leftActionCluster: {
     position: "absolute",
-    top: 6,
-    left: 8,
+    top: 28,
+    left: 10,
     zIndex: 60,
     overflow: "visible",
   },
@@ -1197,13 +1364,16 @@ const styles = StyleSheet.create({
   },
   teamName: {
     marginTop: 4,
-    fontSize: 15,
-    fontWeight: "700",
+    fontSize: 13,
+    fontWeight: "600",
     color: "rgba(248,250,252,0.95)",
-    letterSpacing: 1.04,
-    fontFamily: MATCH_CARD_DISPLAY_FONT,
+    letterSpacing: 0.6,
+    fontFamily: "Oxanium_600SemiBold",
     textAlign: "center",
     width: "100%",
+    textTransform: "uppercase",
+    includeFontPadding: false,
+    transform: [{ skewX: "-6deg" }],
   },
   teamRecordText: {
     marginTop: 2,

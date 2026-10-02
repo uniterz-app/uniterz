@@ -43,21 +43,49 @@ export function CommunityModalBackdropNative({
   onClose,
   children,
   cardStyle,
+  /**
+   * true: 親 Modal（グループ詳細オーバーレイ等）の中に absolute で重ねる。
+   * RN は親 Modal の外に出した別 Modal が裏に回ることがある。
+   */
+  embedded = false,
 }: {
   visible: boolean;
   onClose: () => void;
   children: ReactNode;
   cardStyle?: ViewStyle;
+  embedded?: boolean;
 }) {
-  return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={styles.backdrop}>
-        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityRole="button" />
-        <View style={[styles.card, cardStyle]}>
-          <RankingsShellGridOverlay borderRadius={0} />
-          <View style={styles.cardInner}>{children}</View>
-        </View>
+  if (!visible) return null;
+
+  const body = (
+    <View style={styles.backdrop} pointerEvents="box-none">
+      <Pressable
+        style={StyleSheet.absoluteFill}
+        onPress={onClose}
+        accessibilityRole="button"
+      />
+      <View style={[styles.card, cardStyle]}>
+        <RankingsShellGridOverlay borderRadius={0} />
+        <View style={styles.cardInner}>{children}</View>
       </View>
+    </View>
+  );
+
+  if (embedded) {
+    return (
+      <View
+        style={styles.embeddedRoot}
+        pointerEvents="box-none"
+        accessibilityViewIsModal
+      >
+        {body}
+      </View>
+    );
+  }
+
+  return (
+    <Modal visible transparent animationType="fade" onRequestClose={onClose}>
+      {body}
     </Modal>
   );
 }
@@ -99,6 +127,11 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.7)",
     justifyContent: "center",
     padding: 16,
+  },
+  embeddedRoot: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 100,
+    elevation: 100,
   },
   card: {
     borderRadius: 0,

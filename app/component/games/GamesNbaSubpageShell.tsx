@@ -11,9 +11,15 @@ type Props = {
   title: string;
   /** 短い説明（右上 ? から表示） */
   subtitle?: string;
+  /** 右上はてな押下（指定時は既定の説明オーバーレイの代わり） */
+  onHelpPress?: () => void;
   children: ReactNode;
   /** 本文ラッパークラス（ブラケットは幅を広げる） */
   contentClassName?: string;
+  /**
+   * UNITERZ 棚を隠す。試合からのアワード / 順位予想は Games と同じ棚を残す。
+   */
+  hideBrandShelf?: boolean;
 };
 
 /**
@@ -24,8 +30,10 @@ export default function GamesNbaSubpageShell({
   eyebrow = "NBA · 2026-27",
   title,
   subtitle,
+  onHelpPress,
   children,
   contentClassName,
+  hideBrandShelf = false,
 }: Props) {
   const router = useRouter();
   const pathname = usePathname() ?? "";
@@ -35,14 +43,18 @@ export default function GamesNbaSubpageShell({
   const resolvedContentClassName =
     contentClassName ??
     (isMobile ? "max-w-lg" : "max-w-6xl px-4 py-5 md:px-6");
+  const titleInBrandShelf = title === "AWARDS" || title === "STANDINGS";
 
   return (
     <CyberSubpageShell
       eyebrow={eyebrow}
       title={title}
       subtitle={subtitle}
+      onHelpPress={onHelpPress}
       contentClassName={resolvedContentClassName}
-      onBack={() => router.push(`${gamesHref}?menu=1`)}
+      hideBrandShelf={hideBrandShelf}
+      titleInBrandShelf={titleInBrandShelf}
+      onBack={() => router.push(gamesHref)}
     >
       {children}
     </CyberSubpageShell>

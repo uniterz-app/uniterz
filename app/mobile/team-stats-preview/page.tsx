@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 export default function MobileTeamStatsPreviewRedirect() {
   const router = useRouter();
   useEffect(() => {
-    router.replace("/mobile/stats-preview");
+    router.replace("/mobile/stats-preview?tab=team");
   }, [router]);
   return null;
 }

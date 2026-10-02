@@ -7,13 +7,16 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
-import { createPortal } from "react-dom";
+import {
+  useEffect,
+  useState,
+  type ButtonHTMLAttributes,
+  type ComponentProps,
+} from "react";
 import {
   Bell,
   CalendarRange,
   ChartNoAxesColumn,
-  ChevronLeft,
   FileText,
   Image,
   Lightbulb,
@@ -22,6 +25,7 @@ import {
   Swords,
 } from "lucide-react";
 import { ProCyberBadge } from "@/app/component/common/ProCyberBadge";
+import UniterzLogo from "@/app/component/units/UniterzLogo";
 import { CyberScanlineText } from "@/app/component/rankings/CyberRankingListParts";
 import {
   PRO_SUBSCRIBE_PREVIEW_PLANS,
@@ -30,14 +34,46 @@ import {
   type ProSubscribePreviewPlan,
   type ProSubscribePreviewPlanId,
 } from "@/lib/pro/proSubscribePreviewPlans";
-import { PRO_SKIN_PATH } from "@/lib/pro/proSkinRoutes";
+import {
+  PRO_LEGAL_PATHS_MOBILE,
+  PRO_LEGAL_PATHS_WEB,
+  PRO_SUBSCRIBE_PLAN_DIFF_ROWS,
+  planDiffCellLabel,
+  planDiffColLabel,
+  planDiffRowLabel,
+  planDiffTitle,
+  proLegalLinkLabel,
+  proSubscribeAfterTrialNote,
+  proSubscribeBuyPreviewLabel,
+  proSubscribeBuyWithoutTrialLabel,
+  proSubscribeCancelInTrialValue,
+  proSubscribeFreeThenPrefix,
+  proSubscribeIncludedTitle,
+  proSubscribeLead,
+  proSubscribeNoTrialMicroNote,
+  proSubscribeProcessingLabel,
+  proSubscribeStartTrialLabel,
+  proSubscribeSuccessTitle,
+  proSubscribeTrialMicroNote,
+  proSubscribeTrialModalPoints,
+  proSubscribeTrialModalSelected,
+  proSubscribeTrialModalTitle,
+  proSubscribeTryProSkinLabel,
+  purchaseDisclaimer,
+  seasonPassBlurb,
+  seasonPassTargetLabel,
+  trialConditionLines,
+  trialConditionsTitle,
+  type ProLegalLinkKind,
+} from "@/lib/pro/proSubscribePurchaseCopy";
+import { proSkinHref } from "@/lib/pro/proSkinRoutes";
 import { PRO_SUBSCRIBE_SUCCESS_MOTION as SM } from "@/lib/pro/proSubscribeSuccessMotion";
 import { PRO_SUCCESS_ACCENT } from "@/lib/pro/proSuccessAccent";
 import { jp, nameOxanium } from "@/lib/fonts";
-import type { Language } from "@/lib/i18n/language";
-import { setAppBrandShelfHidden } from "@/lib/ui/appBrandShelfVisibility";
+import { DATE_LOCALE, type Language } from "@/lib/i18n/language";
+import { L, resolveLocalizedLang, type LocalizedLang } from "@/lib/i18n/localize";
+import { acquireAppBrandShelfHidden, setAppBrandShelfHidden } from "@/lib/ui/appBrandShelfVisibility";
 import { motion, useReducedMotion } from "framer-motion";
-import cn from "clsx";
 
 type Phase = "plans" | "purchasing" | "success";
 type CheckoutKind = "trial" | "paid";
@@ -60,12 +96,93 @@ const FEATURE_ICONS: Record<
 type Props = {
   language?: Language;
   className?: string;
-  /** カード左上の戻る。未指定時は非表示 */
-  onBack?: () => void;
-  backAriaLabel?: string;
-  /** カード右上はてな。未指定時は非表示 */
-  helpText?: string;
+  /** トライアル成功画面中は true（親で BACK タブを隠す用） */
+  onTrialSuccessChange?: (active: boolean) => void;
 };
+
+/** 押し込みフィードバック（モバイルでも :active より確実） */
+function PressAnimButton({
+  className,
+  pressedClassName = "scale-[0.94] brightness-110",
+  disabled,
+  children,
+  ...rest
+}: ButtonHTMLAttributes<HTMLButtonElement> & {
+  pressedClassName?: string;
+}) {
+  const [pressed, setPressed] = useState(false);
+  const on = pressed && !disabled;
+  return (
+    <button
+      {...rest}
+      disabled={disabled}
+      onPointerDown={(e) => {
+        if (!disabled) setPressed(true);
+        rest.onPointerDown?.(e);
+      }}
+      onPointerUp={(e) => {
+        setPressed(false);
+        rest.onPointerUp?.(e);
+      }}
+      onPointerLeave={(e) => {
+        setPressed(false);
+        rest.onPointerLeave?.(e);
+      }}
+      onPointerCancel={(e) => {
+        setPressed(false);
+        rest.onPointerCancel?.(e);
+      }}
+      className={[
+        className,
+        "transition-[transform,filter,background-color,opacity,box-shadow] duration-150 ease-out",
+        on ? pressedClassName : "scale-100",
+      ]
+        .filter(Boolean)
+        .join(" ")}
+    >
+      {children}
+    </button>
+  );
+}
+
+function PressAnimLink({
+  className,
+  pressedClassName = "scale-[0.94] brightness-110",
+  children,
+  ...rest
+}: ComponentProps<typeof Link> & { pressedClassName?: string }) {
+  const [pressed, setPressed] = useState(false);
+  return (
+    <Link
+      {...rest}
+      onPointerDown={(e) => {
+        setPressed(true);
+        rest.onPointerDown?.(e);
+      }}
+      onPointerUp={(e) => {
+        setPressed(false);
+        rest.onPointerUp?.(e);
+      }}
+      onPointerLeave={(e) => {
+        setPressed(false);
+        rest.onPointerLeave?.(e);
+      }}
+      onPointerCancel={(e) => {
+        setPressed(false);
+        rest.onPointerCancel?.(e);
+      }}
+      className={[
+        className,
+        "transition-[transform,filter,background-color,opacity,box-shadow] duration-150 ease-out",
+        pressed ? pressedClassName : "scale-100",
+      ]
+        .filter(Boolean)
+        .join(" ")}
+    >
+      {children}
+    </Link>
+  );
+}
 
 function trialAvailableFor(planId: ProSubscribePreviewPlanId): boolean {
   return planId === "weekly" || planId === "monthly";
@@ -131,48 +248,40 @@ function PlanScanLabel({
 export default function ProSubscribePreview({
   language = "ja",
   className,
-  onBack,
-  backAriaLabel = "戻る",
-  helpText,
+  onTrialSuccessChange,
 }: Props) {
   const pathname = usePathname() ?? "";
-  const skinPickerHref = pathname.startsWith("/web")
-    ? PRO_SKIN_PATH.web
-    : PRO_SKIN_PATH.mobile;
-  const ja = language === "ja";
+  const isWeb = pathname.startsWith("/web");
+  const skinPickerHref = proSkinHref(isWeb ? "web" : "mobile");
+  const legalPaths = isWeb ? PRO_LEGAL_PATHS_WEB : PRO_LEGAL_PATHS_MOBILE;
+  const lang = resolveLocalizedLang(language);
+  const seasonLabel = seasonPassTargetLabel(lang);
+  const seasonBlurb = seasonPassBlurb(lang);
   const [planId, setPlanId] = useState<ProSubscribePreviewPlanId | null>(null);
   const [phase, setPhase] = useState<Phase>("plans");
   const [checkoutKind, setCheckoutKind] = useState<CheckoutKind>("paid");
   const [trialModalOpen, setTrialModalOpen] = useState(false);
-  const [helpOpen, setHelpOpen] = useState(false);
-  const [helpMounted, setHelpMounted] = useState(false);
   const selected = planId ? proSubscribePreviewPlanById(planId) : null;
 
   useEffect(() => {
-    setHelpMounted(true);
-  }, []);
-
-  useEffect(() => {
-    const hide = phase === "success";
-    setAppBrandShelfHidden(hide);
-    return () => {
-      if (hide) setAppBrandShelfHidden(false);
-    };
+    if (phase !== "success") return;
+    return acquireAppBrandShelfHidden();
   }, [phase]);
 
   useEffect(() => {
-    if (!helpOpen) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setHelpOpen(false);
-    };
-    window.addEventListener("keydown", onKey);
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    const trialSuccess = phase === "success" && checkoutKind === "trial";
+    onTrialSuccessChange?.(trialSuccess);
     return () => {
-      window.removeEventListener("keydown", onKey);
-      document.body.style.overflow = prev;
+      onTrialSuccessChange?.(false);
     };
-  }, [helpOpen]);
+  }, [phase, checkoutKind, onTrialSuccessChange]);
+
+  // 離脱時に forceHidden が残ってヘッダー消えたままになるのを防ぐ
+  useEffect(() => {
+    return () => {
+      setAppBrandShelfHidden(false);
+    };
+  }, []);
 
   function togglePlan(id: ProSubscribePreviewPlanId) {
     setPlanId((prev) => (prev === id ? null : id));
@@ -193,13 +302,6 @@ export default function ProSubscribePreview({
     window.setTimeout(() => setPhase("success"), 900);
   }
 
-  function reset() {
-    setPhase("plans");
-    setPlanId(null);
-    setCheckoutKind("paid");
-    setTrialModalOpen(false);
-  }
-
   if (phase === "success" && selected && planId) {
     return (
       <div
@@ -212,14 +314,19 @@ export default function ProSubscribePreview({
       >
         <div className="-translate-y-5 sm:-translate-y-6">
           <SuccessPanel
-            ja={ja}
+            lang={lang}
             planId={planId}
-            planLabel={ja ? selected.labelJa : selected.labelEn}
-            price={ja ? selected.priceJa : selected.priceEn}
-            period={ja ? selected.periodJa : selected.periodEn}
+            planLabel={selected.label}
+            price={selected.price}
+            period={
+              planId === "season" ? seasonLabel : L(lang, selected.period)
+            }
             trial={checkoutKind === "trial"}
-            skinPickerHref={skinPickerHref}
-            onAgain={reset}
+            skinPickerHref={
+              checkoutKind === "trial"
+                ? proSkinHref(isWeb ? "web" : "mobile", { fromTrial: true })
+                : skinPickerHref
+            }
           />
         </div>
       </div>
@@ -237,55 +344,6 @@ export default function ProSubscribePreview({
         ].join(" ")}
       >
         <header className="mb-5">
-          {(onBack || helpText) && (
-            <div className="mb-3 flex items-center justify-between gap-2">
-              {onBack ? (
-                <button
-                  type="button"
-                  onClick={onBack}
-                  className="flex h-10 w-10 shrink-0 items-center justify-center border border-[rgba(0,245,255,0.28)] bg-[rgba(0,245,255,0.06)] text-cyan-100 transition hover:border-[rgba(0,245,255,0.5)] hover:bg-[rgba(0,245,255,0.12)] active:scale-95"
-                  style={{
-                    clipPath:
-                      "polygon(6px 0%, 100% 0%, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0% 100%, 0% 6px)",
-                  }}
-                  aria-label={backAriaLabel}
-                >
-                  <ChevronLeft className="h-5 w-5" strokeWidth={2.4} />
-                </button>
-              ) : (
-                <span className="h-10 w-10 shrink-0" aria-hidden />
-              )}
-              {helpText ? (
-                <button
-                  type="button"
-                  onClick={() => setHelpOpen(true)}
-                  className="flex h-10 w-10 shrink-0 items-center justify-center border border-[rgba(0,245,255,0.22)] bg-[rgba(0,245,255,0.05)] transition hover:border-[rgba(0,245,255,0.45)] hover:bg-[rgba(0,245,255,0.1)]"
-                  style={{
-                    clipPath:
-                      "polygon(6px 0%, 100% 0%, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0% 100%, 0% 6px)",
-                  }}
-                  aria-label={ja ? "説明" : "Info"}
-                  aria-expanded={helpOpen}
-                >
-                  <span
-                    className={cn(
-                      nameOxanium.className,
-                      "text-[17px] font-black italic leading-none tracking-wide text-cyan-200/90"
-                    )}
-                    style={{
-                      textShadow:
-                        "0 0 6px rgba(0,245,255,0.55), 0 0 14px rgba(0,245,255,0.28)",
-                    }}
-                    aria-hidden
-                  >
-                    ?
-                  </span>
-                </button>
-              ) : (
-                <span className="h-10 w-10 shrink-0" aria-hidden />
-              )}
-            </div>
-          )}
           <div className="text-center">
             <div className="mb-3 flex justify-center">
               <ProCyberBadge ariaLabel="UNITERZ Pro" />
@@ -304,12 +362,12 @@ export default function ProSubscribePreview({
                 "mt-2 text-[12px] leading-relaxed text-white/50",
               ].join(" ")}
             >
-              {ja
-                ? "プランをタップして、できることを確認。もう一度タップで閉じます。"
-                : "Tap a plan to see what’s included. Tap again to close."}
+              {proSubscribeLead(lang)}
             </p>
           </div>
         </header>
+
+        <PlanDiffTable lang={lang} />
 
         {/* モバイル縦並び: タップでそのカード直下に機能が開閉 */}
         <div className="flex flex-col gap-2.5">
@@ -341,26 +399,26 @@ export default function ProSubscribePreview({
                 >
                   <div className="flex items-center justify-between gap-2">
                     <PlanScanLabel
-                      label={ja ? plan.labelJa : plan.labelEn}
+                      label={plan.label}
                       accent={accent.fill}
                     />
                     <div className="flex shrink-0 items-center gap-1.5">
-                      {(plan.badgeJa || plan.recommended) && (
+                      {(plan.badge || plan.recommended) && (
                         <span
                           className={[
                             nameOxanium.className,
                             "inline-flex h-[18px] items-center rounded-[2px] px-1.5 text-[8px] font-extrabold uppercase leading-none tracking-[0.08em]",
-                            plan.badgeJa === "7日無料"
+                            plan.badgeHighlight
                               ? "text-[#120e08]"
                               : "border border-white/20 bg-black/40 text-white/70",
                           ].join(" ")}
                           style={
-                            plan.badgeJa === "7日無料"
+                            plan.badgeHighlight
                               ? { background: accent.fill }
                               : undefined
                           }
                         >
-                          {ja ? plan.badgeJa : plan.badgeEn}
+                          {plan.badge ? L(lang, plan.badge) : ""}
                         </span>
                       )}
                       <span
@@ -384,7 +442,7 @@ export default function ProSubscribePreview({
                         "text-[22px] font-black tabular-nums leading-none text-white",
                       ].join(" ")}
                     >
-                      {ja ? plan.priceJa : plan.priceEn}
+                      {plan.price}
                     </CyberScanlineText>
                     <span
                       className={[
@@ -392,7 +450,9 @@ export default function ProSubscribePreview({
                         "text-[10px] font-bold tracking-wide text-white/45",
                       ].join(" ")}
                     >
-                      {ja ? plan.periodJa : plan.periodEn}
+                      {plan.id === "season"
+                        ? seasonLabel
+                        : L(lang, plan.period)}
                     </span>
                   </div>
                   <p
@@ -401,7 +461,7 @@ export default function ProSubscribePreview({
                       "mt-2 text-[11px] leading-snug text-white/45",
                     ].join(" ")}
                   >
-                    {ja ? plan.blurbJa : plan.blurbEn}
+                    {plan.id === "season" ? seasonBlurb : L(lang, plan.blurb)}
                   </p>
                 </button>
 
@@ -409,27 +469,27 @@ export default function ProSubscribePreview({
                   <section
                     className="mt-0 border border-t-0 bg-black/35 px-3 py-3"
                     style={{ borderColor: accent.border }}
-                    aria-label={ja ? "このプランでできること" : "Included"}
+                    aria-label={proSubscribeIncludedTitle(lang)}
                   >
                     <p
                       className={[
                         nameOxanium.className,
-                        "mb-2.5 text-[9px] font-extrabold uppercase tracking-[0.16em]",
+                        "mb-2.5 text-[11px] font-extrabold uppercase tracking-[0.14em]",
                       ].join(" ")}
                       style={{ color: accent.fill }}
                     >
-                      {ja ? "このプランでできること" : "Included"}
+                      {proSubscribeIncludedTitle(lang)}
                     </p>
                     <ul className="space-y-2.5">
                       {plan.features.map((f) => {
                         const Icon = FEATURE_ICONS[f.icon];
                         return (
                           <li
-                            key={f.titleEn}
+                            key={f.icon}
                             className="flex items-start gap-2.5"
                           >
                             <span
-                              className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-[2px] border"
+                              className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-[2px] border"
                               style={{
                                 borderColor: `${accent.fill}73`,
                                 background: `${accent.fill}26`,
@@ -437,24 +497,24 @@ export default function ProSubscribePreview({
                               }}
                               aria-hidden
                             >
-                              <Icon className="h-3 w-3" strokeWidth={2.4} />
+                              <Icon className="h-3.5 w-3.5" strokeWidth={2.4} />
                             </span>
                             <div className="min-w-0 flex-1">
                               <p
                                 className={[
                                   nameOxanium.className,
-                                  "text-[11px] font-extrabold tracking-[0.04em] text-white/90",
+                                  "text-[12px] font-extrabold tracking-[0.04em] text-white/90",
                                 ].join(" ")}
                               >
-                                {ja ? f.titleJa : f.titleEn}
+                                {L(lang, f.title)}
                               </p>
                               <p
                                 className={[
                                   jp.className,
-                                  "mt-0.5 text-[11px] leading-snug text-white/50",
+                                  "mt-0.5 text-[12px] leading-snug text-white/50",
                                 ].join(" ")}
                               >
-                                {ja ? f.detailJa : f.detailEn}
+                                {L(lang, f.detail)}
                               </p>
                             </div>
                           </li>
@@ -464,85 +524,71 @@ export default function ProSubscribePreview({
 
                     {trialAvailableFor(plan.id) ? (
                       <div className="mt-4 space-y-2 border-t border-white/10 pt-3.5">
-                        <button
+                        <PressAnimButton
                           type="button"
                           disabled={phase === "purchasing"}
                           onClick={() => setTrialModalOpen(true)}
+                          pressedClassName="scale-[0.94] brightness-105"
                           className={[
                             nameOxanium.className,
-                            "w-full rounded-[2px] py-3.5 text-[13px] font-extrabold uppercase tracking-[0.12em] transition",
+                            "w-full rounded-[2px] py-3.5 text-[13px] font-extrabold uppercase tracking-[0.12em]",
                             phase === "purchasing"
                               ? "cursor-wait bg-white/10 text-white/50"
-                              : "bg-amber-300 text-[#120e08] hover:brightness-110 active:scale-[0.99]",
+                              : "bg-amber-300 text-[#120e08] hover:brightness-110",
                           ].join(" ")}
                         >
                           {phase === "purchasing"
-                            ? ja
-                              ? "処理中…"
-                              : "Processing…"
-                            : ja
-                              ? "7日間無料で試す"
-                              : "Start 7-day free trial"}
-                        </button>
+                            ? proSubscribeProcessingLabel(lang)
+                            : proSubscribeStartTrialLabel(lang)}
+                        </PressAnimButton>
                         <p
                           className={[
                             jp.className,
                             "text-center text-[11px] leading-relaxed text-white/50",
                           ].join(" ")}
                         >
-                          {plan.id === "weekly"
-                            ? ja
-                              ? "お試し後は週額 ¥280。期間中の解約で課金なし。"
-                              : "Then ¥280/week. Cancel during trial — no charge."
-                            : ja
-                              ? "お試し後は月額 ¥780。期間中の解約で課金なし。"
-                              : "Then ¥780/month. Cancel during trial — no charge."}
+                          {proSubscribeAfterTrialNote(
+                            lang,
+                            plan.id === "weekly" ? "weekly" : "monthly"
+                          )}
                         </p>
-                        <button
+                        <PressAnimButton
                           type="button"
                           disabled={phase === "purchasing"}
                           onClick={startPaid}
+                          pressedClassName="scale-[0.96] text-white/85"
                           className={[
                             nameOxanium.className,
-                            "w-full py-2 text-[10px] font-bold uppercase tracking-[0.14em] text-white/45 transition hover:text-white/70",
+                            "w-full py-2 text-[10px] font-bold uppercase tracking-[0.14em] text-white/45 hover:text-white/70",
                           ].join(" ")}
                         >
-                          {ja
-                            ? `お試しなしで${plan.labelJa}を購入`
-                            : `Buy ${plan.labelEn} (no trial)`}
-                        </button>
+                          {proSubscribeBuyWithoutTrialLabel(lang, plan.label)}
+                        </PressAnimButton>
                         <p className="text-center text-[10px] leading-relaxed text-white/35">
-                          {ja
-                            ? "※ 初回のみ。iOS は App Store のサブスク管理から解約できます。プレビューでは決済しません。"
-                            : "※ First time only. On iOS, cancel in App Store subscriptions. Preview does not charge."}
+                          {proSubscribeTrialMicroNote(lang)}
                         </p>
                       </div>
                     ) : (
                       <div className="mt-4 space-y-2 border-t border-white/10 pt-3.5">
-                        <button
+                        <PressAnimButton
                           type="button"
                           disabled={phase === "purchasing"}
                           onClick={startPaid}
+                          pressedClassName="scale-[0.94] brightness-105"
                           className={[
                             nameOxanium.className,
-                            "w-full rounded-[2px] py-3.5 text-[13px] font-extrabold uppercase tracking-[0.12em] transition",
+                            "w-full rounded-[2px] py-3.5 text-[13px] font-extrabold uppercase tracking-[0.12em]",
                             phase === "purchasing"
                               ? "cursor-wait bg-white/10 text-white/50"
-                              : "bg-amber-300 text-[#120e08] hover:brightness-110 active:scale-[0.99]",
+                              : "bg-amber-300 text-[#120e08] hover:brightness-110",
                           ].join(" ")}
                         >
                           {phase === "purchasing"
-                            ? ja
-                              ? "処理中…"
-                              : "Processing…"
-                            : ja
-                              ? `${plan.labelJa} を購入（プレビュー）`
-                              : `Buy ${plan.labelEn} (preview)`}
-                        </button>
+                            ? proSubscribeProcessingLabel(lang)
+                            : proSubscribeBuyPreviewLabel(lang, plan.label)}
+                        </PressAnimButton>
                         <p className="text-center text-[10px] leading-relaxed text-white/35">
-                          {ja
-                            ? "※ 7日無料は Weekly / Monthly のみ。価格・特典は仮。決済は走りません。"
-                            : "※ 7-day trial is Weekly / Monthly only. Prices are draft. No real charge."}
+                          {proSubscribeNoTrialMicroNote(lang)}
                         </p>
                       </div>
                     )}
@@ -552,99 +598,178 @@ export default function ProSubscribePreview({
             );
           })}
         </div>
+
+        <PurchaseFootnotes lang={lang} legalPaths={legalPaths} />
       </div>
 
       {trialModalOpen && selected ? (
         <TrialExplainModal
-          ja={ja}
+          lang={lang}
           plan={selected}
           onClose={() => setTrialModalOpen(false)}
           onConfirm={confirmTrialFromModal}
         />
       ) : null}
+    </div>
+  );
+}
 
-      {helpMounted && helpText && helpOpen
-        ? createPortal(
-            <div className="fixed inset-0 z-[1000040] flex items-center justify-center p-4">
-              <button
-                type="button"
-                aria-label={ja ? "閉じる" : "Close"}
-                className="absolute inset-0 bg-[#020609]/78"
-                onClick={() => setHelpOpen(false)}
-              />
-              <div
-                role="dialog"
-                aria-modal="true"
-                className="relative z-[1] w-full max-w-md overflow-hidden rounded-sm border border-[rgba(0,245,255,0.32)] bg-[#050b14] px-5 py-4 shadow-[0_0_40px_rgba(0,245,255,0.14)]"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <p
+function PlanDiffTable({ lang }: { lang: LocalizedLang }) {
+  const cols = ["weekly", "monthly", "season"] as const;
+  return (
+    <section
+      className="mb-4 overflow-hidden rounded-[2px] border border-white/12 bg-black/30"
+      aria-label={planDiffTitle(lang)}
+    >
+      <p
+        className={[
+          nameOxanium.className,
+          "border-b border-white/10 px-3 py-2 text-[9px] font-extrabold uppercase tracking-[0.16em] text-amber-200/85",
+        ].join(" ")}
+      >
+        {planDiffTitle(lang)}
+      </p>
+      <div className="grid grid-cols-[minmax(0,1.2fr)_repeat(3,minmax(0,0.9fr))] gap-px bg-white/10">
+        <div className="bg-[#0a0e16] px-2 py-2" />
+        {cols.map((col) => (
+          <div
+            key={col}
+            className={[
+              nameOxanium.className,
+              "bg-[#0a0e16] px-1.5 py-2 text-center text-[8px] font-extrabold uppercase tracking-[0.06em] text-white/55",
+            ].join(" ")}
+          >
+            {planDiffColLabel(col, lang)}
+          </div>
+        ))}
+        {PRO_SUBSCRIBE_PLAN_DIFF_ROWS.map((row) => (
+          <div key={row.id} className="contents">
+            <div
+              className={[
+                jp.className,
+                "bg-[#080c14] px-2 py-2.5 text-[11px] leading-snug text-white/70",
+              ].join(" ")}
+            >
+              {planDiffRowLabel(row, lang)}
+            </div>
+            {cols.map((col) => {
+              const cell = row[col];
+              const on = cell === "yes";
+              return (
+                <div
+                  key={`${row.id}-${col}`}
                   className={[
                     nameOxanium.className,
-                    "text-center text-[10px] font-bold uppercase tracking-[0.28em] text-cyan-300/85",
+                    "bg-[#080c14] px-1.5 py-2.5 text-center text-[10px] font-extrabold tracking-[0.04em]",
+                    on ? "text-amber-200" : "text-white/30",
                   ].join(" ")}
                 >
-                  Info
-                </p>
-                <p
-                  className={[
-                    jp.className,
-                    "mt-3 text-center text-[13px] leading-relaxed text-white/75",
-                  ].join(" ")}
-                >
-                  {helpText}
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setHelpOpen(false)}
-                  className={[
-                    nameOxanium.className,
-                    "mt-4 w-full border border-[rgba(0,245,255,0.28)] bg-[rgba(0,245,255,0.06)] py-2.5 text-[11px] font-bold uppercase tracking-[0.14em] text-cyan-100",
-                  ].join(" ")}
-                >
-                  {ja ? "閉じる" : "Close"}
-                </button>
-              </div>
-            </div>,
-            document.body
-          )
-        : null}
+                  {planDiffCellLabel(cell, lang)}
+                </div>
+              );
+            })}
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function PurchaseFootnotes({
+  lang,
+  legalPaths,
+}: {
+  lang: LocalizedLang;
+  legalPaths: typeof PRO_LEGAL_PATHS_MOBILE | typeof PRO_LEGAL_PATHS_WEB;
+}) {
+  const links: ProLegalLinkKind[] = ["terms", "privacy", "tokushoho"];
+  return (
+    <div className="mt-5 space-y-3.5 border-t border-white/10 pt-4">
+      <section aria-label={trialConditionsTitle(lang)}>
+        <p
+          className={[
+            nameOxanium.className,
+            "text-[9px] font-extrabold uppercase tracking-[0.16em] text-cyan-200/80",
+          ].join(" ")}
+        >
+          {trialConditionsTitle(lang)}
+        </p>
+        <ul className="mt-2 space-y-1.5">
+          {trialConditionLines(lang).map((line) => (
+            <li
+              key={line}
+              className={[
+                jp.className,
+                "text-[11px] leading-snug text-white/50",
+              ].join(" ")}
+            >
+              · {line}
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <p
+        className={[
+          jp.className,
+          "text-center text-[11px] leading-relaxed text-white/40",
+        ].join(" ")}
+      >
+        {purchaseDisclaimer(lang)}
+      </p>
+
+      <nav
+        className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1"
+        aria-label={L(lang, {
+          ja: "規約",
+          en: "Legal",
+          ko: "약관",
+          zh: "条款",
+          es: "Legal",
+          pt: "Jurídico",
+          fr: "Mentions légales",
+        })}
+      >
+        {links.map((kind, i) => (
+          <span key={kind} className="inline-flex items-center gap-2">
+            {i > 0 ? (
+              <span className="text-white/25" aria-hidden>
+                |
+              </span>
+            ) : null}
+            <Link
+              href={legalPaths[kind]}
+              className={[
+                jp.className,
+                "text-[11px] text-cyan-200/75 underline-offset-2 hover:text-cyan-100 hover:underline",
+              ].join(" ")}
+            >
+              {proLegalLinkLabel(kind, lang)}
+            </Link>
+          </span>
+        ))}
+      </nav>
     </div>
   );
 }
 
 function TrialExplainModal({
-  ja,
+  lang,
   plan,
   onClose,
   onConfirm,
 }: {
-  ja: boolean;
+  lang: LocalizedLang;
   plan: ProSubscribePreviewPlan;
   onClose: () => void;
   onConfirm: () => void;
 }) {
-  const afterPrice = ja
-    ? `${plan.priceJa}${plan.periodJa}`
-    : `${plan.priceEn}${plan.periodEn}`;
-
-  const points = ja
-    ? [
-        "7日間無料で Pro を試せます。",
-        "期間中に解約すれば、お金はかかりません。",
-        `解約しなければ、自動で有料の ${plan.labelJa}（${afterPrice}）に切り替わります。`,
-        "Weekly と Monthly の変更は、いつでもできます。",
-      ]
-    : [
-        "Try Pro free for 7 days.",
-        "Cancel during the trial and you won’t be charged.",
-        `Unless you cancel, it switches to paid ${plan.labelEn} (${afterPrice}).`,
-        "You can switch Weekly ⇔ Monthly anytime.",
-      ];
+  const afterPrice = `${plan.price}${L(lang, plan.period)}`;
+  const points = proSubscribeTrialModalPoints(lang, plan.label, afterPrice);
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 px-3 pb-6 pt-10 sm:items-center sm:pb-10"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-3 py-10"
       role="dialog"
       aria-modal="true"
       aria-labelledby="trial-explain-title"
@@ -665,12 +790,10 @@ function TrialExplainModal({
             "text-center text-[14px] font-extrabold uppercase tracking-[0.14em] text-white",
           ].join(" ")}
         >
-          {ja ? "お試しの前に" : "Before you start"}
+          {proSubscribeTrialModalTitle(lang)}
         </p>
         <p className={[jp.className, "mt-2 text-center text-[12px] text-white/50"].join(" ")}>
-          {ja
-            ? `選択中: ${plan.labelJa} · 7日間無料`
-            : `Selected: ${plan.labelEn} · 7-day free`}
+          {proSubscribeTrialModalSelected(lang, plan.label)}
         </p>
 
         <ul className="mt-4 space-y-3 border border-white/10 bg-black/30 px-3.5 py-3.5">
@@ -685,26 +808,36 @@ function TrialExplainModal({
           ))}
         </ul>
 
-        <button
+        <PressAnimButton
           type="button"
           onClick={onConfirm}
+          pressedClassName="scale-[0.94] brightness-105"
           className={[
             nameOxanium.className,
             "mt-4 w-full rounded-[2px] bg-amber-300 py-3 text-[12px] font-extrabold uppercase tracking-[0.12em] text-[#120e08]",
           ].join(" ")}
         >
           OK · GET PRO
-        </button>
-        <button
+        </PressAnimButton>
+        <PressAnimButton
           type="button"
           onClick={onClose}
+          pressedClassName="scale-[0.96] text-white/70"
           className={[
             nameOxanium.className,
             "mt-2 w-full py-2 text-[10px] font-bold uppercase tracking-[0.14em] text-white/40",
           ].join(" ")}
         >
-          {ja ? "もどる" : "Back"}
-        </button>
+          {L(lang, {
+            ja: "もどる",
+            en: "Back",
+            ko: "뒤로",
+            zh: "返回",
+            es: "Atrás",
+            pt: "Voltar",
+            fr: "Retour",
+          })}
+        </PressAnimButton>
       </div>
     </div>
   );
@@ -712,43 +845,38 @@ function TrialExplainModal({
 
 /** 成功カード — Trial=シアン / 有料アップグレード=グリーン */
 function SuccessPanel({
-  ja,
+  lang,
   planId,
   planLabel,
   price,
   period,
   trial,
   skinPickerHref,
-  onAgain,
 }: {
-  ja: boolean;
+  lang: LocalizedLang;
   planId: ProSubscribePreviewPlanId;
   planLabel: string;
   price: string;
   period: string;
   trial: boolean;
   skinPickerHref: string;
-  onAgain: () => void;
 }) {
   const A = trial ? PRO_SUCCESS_ACCENT.trial : PRO_SUCCESS_ACCENT.billing;
-  const started = new Date().toLocaleDateString(ja ? "ja-JP" : "en-US", {
+  const dateLocale = DATE_LOCALE[lang];
+  const started = new Date().toLocaleDateString(dateLocale, {
     year: "numeric",
     month: "short",
     day: "numeric",
   });
   const trialEnd = new Date();
   trialEnd.setDate(trialEnd.getDate() + 7);
-  const trialEndLabel = trialEnd.toLocaleDateString(ja ? "ja-JP" : "en-US", {
+  const trialEndLabel = trialEnd.toLocaleDateString(dateLocale, {
     year: "numeric",
     month: "short",
     day: "numeric",
   });
 
-  const title = trial
-    ? ja
-      ? "Pro お試し開始"
-      : "Pro trial started"
-    : "Upgrade to Pro";
+  const title = proSubscribeSuccessTitle(lang, trial);
 
   const statusLine = trial
     ? `7DAY_TRIAL // ${planLabel.toUpperCase()}`
@@ -941,33 +1069,27 @@ function SuccessPanel({
             >
               <div className="relative flex flex-col items-center gap-2.5 overflow-hidden px-1 py-0.5">
                 <ProCyberBadge ariaLabel="UNITERZ Pro" premium />
-                <p
-                  className={[
-                    nameOxanium.className,
-                    "text-[20px] font-semibold tracking-[0.22em]",
-                  ].join(" ")}
-                  style={{ color: A.title }}
-                >
-                  UNITERZ
-                </p>
-                {motionOn ? (
-                  <motion.span
-                    aria-hidden
-                    className="pointer-events-none absolute inset-y-[-30%] left-0 w-[38%] skew-x-[-18deg] mix-blend-screen"
-                    style={{
-                      background:
-                        "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.1) 30%, rgba(255,255,255,0.92) 50%, rgba(186,250,255,0.5) 64%, transparent 100%)",
-                    }}
-                    initial={{ x: "-130%", opacity: 0 }}
-                    animate={{ x: "280%", opacity: [0, 1, 1, 0] }}
-                    transition={{
-                      delay: SM.brandSheenDelayMs / 1000,
-                      duration: SM.brandSheenMs / 1000,
-                      ease: [0.22, 0.61, 0.36, 1],
-                      times: [0, 0.12, 0.78, 1],
-                    }}
-                  />
-                ) : null}
+                <div className="relative w-[168px] max-w-full">
+                  <UniterzLogo width="100%" title="UNITERZ" />
+                  {motionOn ? (
+                    <motion.span
+                      aria-hidden
+                      className="pointer-events-none absolute inset-y-[-30%] left-0 w-[38%] skew-x-[-18deg] mix-blend-screen"
+                      style={{
+                        background:
+                          "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.1) 30%, rgba(255,255,255,0.92) 50%, rgba(186,250,255,0.5) 64%, transparent 100%)",
+                      }}
+                      initial={{ x: "-130%", opacity: 0 }}
+                      animate={{ x: "280%", opacity: [0, 1, 1, 0] }}
+                      transition={{
+                        delay: SM.brandSheenDelayMs / 1000,
+                        duration: SM.brandSheenMs / 1000,
+                        ease: [0.22, 0.61, 0.36, 1],
+                        times: [0, 0.12, 0.78, 1],
+                      }}
+                    />
+                  ) : null}
+                </div>
               </div>
               <div
                 className="h-px w-14"
@@ -995,7 +1117,7 @@ function SuccessPanel({
                   textShadow: `0 0 8px rgba(${A.mainRgb},0.35)`,
                 }}
               >
-                {trial ? (ja ? "無料 → その後 " : "FREE → THEN ") : ""}
+                {trial ? proSubscribeFreeThenPrefix(lang) : ""}
                 {price}
                 {trial ? period : ""}
               </p>
@@ -1012,7 +1134,7 @@ function SuccessPanel({
                   <MetaRow
                     accent={A}
                     label="CHARGE"
-                    value={ja ? "期間中解約で課金なし" : "Cancel in trial = ¥0"}
+                    value={proSubscribeCancelInTrialValue(lang)}
                   />
                 </>
               ) : (
@@ -1024,12 +1146,12 @@ function SuccessPanel({
             </div>
 
             <div className="relative mt-3 grid gap-2">
-              <Link
+              <PressAnimLink
                 href={skinPickerHref}
+                pressedClassName="scale-[0.94] brightness-110"
                 className={[
                   nameOxanium.className,
                   "flex w-full items-center justify-center border-2 bg-transparent py-3 text-center text-[11px] font-extrabold uppercase tracking-[0.14em]",
-                  "transition active:scale-[0.99]",
                 ].join(" ")}
                 style={{
                   borderColor: A.main,
@@ -1037,23 +1159,8 @@ function SuccessPanel({
                   boxShadow: `0 0 16px rgba(${A.mainRgb},0.18)`,
                 }}
               >
-                {ja ? "Pro Skinを試す" : "Try Pro Skin"}
-              </Link>
-              <button
-                type="button"
-                onClick={onAgain}
-                className={[
-                  nameOxanium.className,
-                  "w-full border py-2.5 text-[10px] font-bold uppercase tracking-[0.14em]",
-                  "transition",
-                ].join(" ")}
-                style={{
-                  borderColor: A.borderSoft,
-                  color: A.soft,
-                }}
-              >
-                {ja ? "プラン選択に戻る" : "Back to plans"}
-              </button>
+                {proSubscribeTryProSkinLabel(lang)}
+              </PressAnimLink>
             </div>
 
             <p

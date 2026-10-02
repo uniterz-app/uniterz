@@ -1,6 +1,6 @@
 "use client";
 
-import NbaStandingsPanel from "@/app/component/standings/NbaStandingsPanel";
+import NbaLeagueStandingsPanel from "@/app/component/standings/NbaLeagueStandingsPanel";
 
 export default function WebStandingsPage() {
   return (
@@ -8,7 +8,7 @@ export default function WebStandingsPage() {
       <h1 className="mb-4 text-lg font-semibold tracking-wide text-white/90">
         スタンディング
       </h1>
-      <NbaStandingsPanel />
+      <NbaLeagueStandingsPanel language="ja" />
     </main>
   );
 }

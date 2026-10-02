@@ -58,7 +58,7 @@ export function MyRankCardFrameNative({
         key={drawKey ?? "my-rank-frame"}
         flush
         closedTop
-        fadeContent
+        fadeContent={false}
         animateDraw={animateDraw && !reduced}
         paint={paint}
       >

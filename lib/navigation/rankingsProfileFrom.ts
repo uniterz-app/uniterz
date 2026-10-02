@@ -8,6 +8,14 @@ import {
   type RankingLeagueSource,
 } from "@/lib/rankings/rankingLeagueSource";
 import { isWcRankingStage, type WcRankingStage } from "@/lib/rankings/wcRankingStage";
+import {
+  isRankingPeriod,
+  type RankingPeriod,
+} from "@/lib/rankings/rankingPeriod";
+import {
+  isNbaRankingBoard,
+  type NbaRankingBoard,
+} from "@/lib/rankings/rankingDivision";
 
 /** プロフィール URL：ランキングから来た印 */
 export const PROFILE_FROM_PARAM = "from";
@@ -36,6 +44,8 @@ export const RANKINGS_TAB_WC_STAGE_PARAM = "rankWcStage";
 export const RANKINGS_TAB_CATEGORY_PARAM = "rankCategory";
 /** NBA: Season / Weekly / Monthly */
 export const RANKINGS_TAB_PERIOD_PARAM = "rankPeriod";
+/** NBA: Regular / Playoffs / PRO LEAGUE board */
+export const RANKINGS_TAB_BOARD_PARAM = "rankBoard";
 /** WC ブラケット入力オーバーレイを開く（rankCategory=bracket と併用） */
 export const RANKINGS_WC_BRACKET_INPUT_PARAM = "wcBracketInput";
 
@@ -113,6 +123,10 @@ export type RankingsReturnTab = {
   wcStage?: WcRankingStage;
   /** グループ内ランキングから遷移（オーバーレイ等 pathname に group が無い場合） */
   groupId?: string;
+  /** NBA: Season / Weekly / Monthly */
+  rankingPeriod?: RankingPeriod;
+  /** NBA: Regular / Playoffs / PRO LEAGUE */
+  nbaBoard?: NbaRankingBoard;
 };
 
 /**
@@ -158,6 +172,12 @@ export function profileHrefWithRankingsReturn(
   if (tab.wcStage && isWcRankingStage(tab.wcStage)) {
     q.set(RANKINGS_TAB_WC_STAGE_PARAM, tab.wcStage);
   }
+  if (tab.rankingPeriod && isRankingPeriod(tab.rankingPeriod)) {
+    q.set(RANKINGS_TAB_PERIOD_PARAM, tab.rankingPeriod);
+  }
+  if (tab.nbaBoard && isNbaRankingBoard(tab.nbaBoard)) {
+    q.set(RANKINGS_TAB_BOARD_PARAM, tab.nbaBoard);
+  }
   return `${path}?${q.toString()}`;
 }
 
@@ -168,12 +188,16 @@ export function buildRankingsPathQuery(sp: URLSearchParams): string {
   const r = sp.get(RANKINGS_TAB_ROUND_PARAM);
   const league = sp.get(RANKINGS_TAB_LEAGUE_PARAM);
   const wcStage = sp.get(RANKINGS_TAB_WC_STAGE_PARAM);
+  const period = sp.get(RANKINGS_TAB_PERIOD_PARAM);
+  const board = sp.get(RANKINGS_TAB_BOARD_PARAM);
   const q = new URLSearchParams();
   if (isMobileMetricParam(m)) q.set(RANKINGS_TAB_METRIC_PARAM, m);
   if (isRankingPhase(ph)) q.set(RANKINGS_TAB_PHASE_PARAM, ph);
   if (isPlayoffRoundKey(r)) q.set(RANKINGS_TAB_ROUND_PARAM, r);
   if (isRankingLeagueSource(league)) q.set(RANKINGS_TAB_LEAGUE_PARAM, league);
   if (isWcRankingStage(wcStage)) q.set(RANKINGS_TAB_WC_STAGE_PARAM, wcStage);
+  if (isRankingPeriod(period)) q.set(RANKINGS_TAB_PERIOD_PARAM, period);
+  if (isNbaRankingBoard(board)) q.set(RANKINGS_TAB_BOARD_PARAM, board);
   return q.toString();
 }
 

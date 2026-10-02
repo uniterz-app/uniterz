@@ -1,11 +1,12 @@
 "use client";
 
+import { useRouter } from "next/navigation";
+import { type KeyboardEvent } from "react";
 import {
   injuryDetailLabel,
-  injuryStatusLabel,
+  injuryStatusShortLabel,
   injuryStatusTone,
   playerCardName,
-  playerInitials,
   sortInjuryEntries,
   type InjuryStatusTone,
   type NbaInjuryCardRow,
@@ -13,16 +14,25 @@ import {
   type NbaInjuryReport,
   type NbaInjuryTeamReport,
 } from "@/lib/predict/nbaInjuryReport";
+import {
+  injuryReportCountLabel,
+  injuryReportUiCopy,
+  resolveInjuryReportUiLang,
+} from "@/lib/predict/injuryReportUiCopy";
 import { NBA_TEAM_NAME_BY_ID } from "@/lib/nba-team-names";
 import { getMobileTeamName } from "@/lib/team-name-split-mobile";
-import { nameBebas, nameOxanium } from "@/lib/fonts";
+import { nameOxanium } from "@/lib/fonts";
 import { matchCardTeamNameStyle } from "@/lib/games/teamDisplayTypography";
 import type { Language } from "@/lib/i18n/language";
+import { nbaPlayerDetailPreviewHref } from "@/lib/predict/nbaTeamDetailHref";
+import { stashPredictTeamDetailReturn } from "@/lib/predict/predictTeamDetailReturn";
 
 type Props = {
   report: NbaInjuryReport;
   language: Language;
   className?: string;
+  fromPredictGameId?: string;
+  predictReturnMode?: "overlay" | "route";
 };
 
 /** 参考デザイン準拠のステータスカラー */
@@ -148,121 +158,96 @@ function toCardRows(team: NbaInjuryTeamReport): NbaInjuryCardRow[] {
 function InjuryStatusCard({
   row,
   language,
+  onPress,
 }: {
   row: NbaInjuryCardRow;
   language: Language;
+  onPress?: (row: NbaInjuryCardRow) => void;
 }) {
   const tone = injuryStatusTone(row.status);
   const colors = TONE[tone];
   const expected = (row.returnDate ?? "—").toUpperCase();
-  // 負傷詳細の翻訳辞書は ja のみ。他言語は英語表記にフォールバック
-  const detail = injuryDetailLabel(row, language === "ja" ? "ja" : "en");
+  const detail = injuryDetailLabel(row, language);
   const name = playerCardName(row.player);
-  const initials = playerInitials(row.player);
-  const statusText = injuryStatusLabel(row.status);
-  /** 列でチームが分かるので、角バッジはポジション（無ければ —） */
-  const cornerTag = row.player.position?.trim() || "—";
+  const statusShort = injuryStatusShortLabel(row.status);
+
+  const cardClass =
+    "relative min-w-0 w-full cursor-pointer select-none overflow-hidden bg-[rgba(8,10,14,0.92)] text-left transition duration-150 ease-out hover:brightness-110 active:scale-[0.98] active:brightness-125 rounded-[2px] p-2.5";
+  const cardStyle = {
+    border: `1px solid ${colors.border}`,
+  } as const;
+
+  const handleCardPress = () => onPress?.(row);
+
+  const handleCardKeyDown = (e: KeyboardEvent<HTMLElement>) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      handleCardPress();
+    }
+  };
+
+  const inner = (
+    <div className="flex flex-col gap-1">
+      <div className="flex items-center justify-between gap-1.5">
+        <span
+          className={[
+            nameOxanium.className,
+            "truncate text-left text-[13px] font-bold uppercase tracking-[0.02em] text-white",
+          ].join(" ")}
+          style={{ transform: "skewX(-6deg)" }}
+        >
+          {name}
+        </span>
+        <span
+          className={[
+            nameOxanium.className,
+            "shrink-0 rounded-[2px] border px-1.5 py-0.5 text-[9px] font-extrabold uppercase leading-none tracking-[0.04em]",
+          ].join(" ")}
+          style={{
+            borderColor: colors.accent,
+            backgroundColor: colors.badgeBg + "33",
+            color: colors.accent,
+          }}
+        >
+          {statusShort}
+        </span>
+      </div>
+
+      {detail ? (
+        <p
+          className={[
+            "truncate leading-tight text-white/65",
+            language === "ja"
+              ? "text-[11px] font-semibold tracking-[0.01em]"
+              : "text-[10px] font-semibold uppercase tracking-[0.03em]",
+          ].join(" ")}
+        >
+          {detail}
+        </p>
+      ) : null}
+
+      <p
+        className={[
+          nameOxanium.className,
+          "text-[10px] font-bold uppercase tracking-[0.02em]",
+        ].join(" ")}
+        style={{ color: colors.accent }}
+      >
+        ↳ {expected}
+      </p>
+    </div>
+  );
 
   return (
     <article
-      className="relative min-w-0 overflow-hidden bg-[rgba(8,10,14,0.92)]"
-      style={{
-        border: `1px solid ${colors.border}`,
-        clipPath:
-          "polygon(0 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%)",
-      }}
+      role={onPress ? "button" : undefined}
+      tabIndex={onPress ? 0 : undefined}
+      onClick={onPress ? handleCardPress : undefined}
+      onKeyDown={onPress ? handleCardKeyDown : undefined}
+      className={cardClass}
+      style={cardStyle}
     >
-      <span
-        aria-hidden
-        className="pointer-events-none absolute bottom-0 right-0"
-        style={{
-          width: 8,
-          height: 8,
-          background: colors.accent,
-          clipPath: "polygon(100% 0, 0 100%, 100% 100%)",
-        }}
-      />
-
-      <div className="flex items-stretch gap-2 px-2 py-2 pr-1.5 md:gap-1.5 md:px-1.5 md:py-1.5 md:pr-1">
-        {/* イニシャル四角はデスクトップのみ（モバイルは名前行に集約） */}
-        <div className="relative hidden h-9 w-9 shrink-0 border border-white/18 bg-[#14181f] md:block">
-          <span
-            className={[
-              nameOxanium.className,
-              "grid h-full w-full place-items-center text-[11px] font-bold leading-none tracking-tight text-white",
-            ].join(" ")}
-          >
-            {initials}
-          </span>
-          <span
-            className={[
-              nameOxanium.className,
-              "absolute bottom-0 right-0 grid min-w-[16px] place-items-center px-[2px] py-px text-[6px] font-extrabold leading-none tracking-wide text-[#050508]",
-            ].join(" ")}
-            style={{
-              background: colors.badgeBg,
-              border: `1px solid ${colors.accent}`,
-            }}
-          >
-            {cornerTag}
-          </span>
-        </div>
-
-        <div className="min-w-0 flex-1 self-center">
-          <p
-            className={[
-              nameOxanium.className,
-              "truncate text-[12px] font-bold uppercase leading-none tracking-[0.03em] text-white md:text-[11px]",
-            ].join(" ")}
-          >
-            {name}
-            {row.player.position?.trim() ? (
-              <span className="ml-1 text-[11px] font-semibold text-white/35 md:text-[10px] md:hidden">
-                · {row.player.position.trim()}
-              </span>
-            ) : null}
-          </p>
-          <p
-            className={[
-              "mt-0.5 truncate leading-tight text-white/45",
-              language === "ja"
-                ? "text-[9px] font-semibold tracking-[0.02em] md:text-[8px]"
-                : "text-[8px] font-semibold uppercase tracking-[0.06em] md:text-[7px]",
-            ].join(" ")}
-          >
-            {detail}
-          </p>
-          <p
-            className={[
-              nameOxanium.className,
-              "mt-0.5 truncate text-[9px] font-bold uppercase leading-tight tracking-[0.05em] md:text-[8px]",
-            ].join(" ")}
-            style={{ color: colors.accent }}
-          >
-            EXP: {expected}
-          </p>
-        </div>
-
-        <div className="flex shrink-0 items-stretch gap-1">
-          <span aria-hidden className="my-0.5 w-px shrink-0 self-stretch bg-white/18" />
-          <div className="flex w-[52px] flex-col items-center justify-center gap-0.5 pl-0.5 pr-0.5 md:w-[46px]">
-            <StatusIcon
-              tone={tone}
-              color={colors.accent}
-              className="h-5 w-5 md:h-[18px] md:w-[18px]"
-            />
-            <span
-              className={[
-                nameOxanium.className,
-                "max-w-full text-center text-[7px] font-extrabold uppercase leading-[1.05] tracking-[0.01em] md:text-[6px]",
-              ].join(" ")}
-              style={{ color: colors.accent }}
-            >
-              {statusText}
-            </span>
-          </div>
-        </div>
-      </div>
+      {inner}
     </article>
   );
 }
@@ -276,40 +261,56 @@ function columnTeamLabel(team: NbaInjuryTeamReport): string {
 function TeamInjuryColumn({
   team,
   language,
+  onPlayerPress,
 }: {
   team: NbaInjuryTeamReport;
   language: Language;
+  onPlayerPress?: (row: NbaInjuryCardRow) => void;
 }) {
   const rows = toCardRows(team);
   const label = columnTeamLabel(team);
+  const ui = injuryReportUiCopy(resolveInjuryReportUiLang(language));
+  const countLabel = injuryReportCountLabel(rows.length, language);
 
   return (
     <section className="min-w-0">
-      <header className="mb-1.5 px-0.5 text-center">
+      <header className="mb-1.5 flex items-end justify-between gap-2 px-0.5">
         <p
           className={[
-            nameBebas.className,
-            "truncate text-[15px] font-bold uppercase leading-tight text-white md:text-[18px]",
+            nameOxanium.className,
+            "min-w-0 flex-1 truncate text-center text-[15px] font-bold uppercase leading-tight text-white md:text-[18px]",
           ].join(" ")}
           style={matchCardTeamNameStyle(true)}
         >
           {label}
         </p>
+        <span
+          className={[
+            nameOxanium.className,
+            "shrink-0 text-[9px] font-bold uppercase tracking-wide text-white/40",
+          ].join(" ")}
+        >
+          {countLabel}
+        </span>
       </header>
 
       {rows.length === 0 ? (
         <p className="border border-white/10 bg-[rgba(8,10,14,0.92)] px-2 py-3.5 text-center text-[10px] text-white/35 md:px-1.5 md:py-3 md:text-[9px]">
-          {language === "ja" ? "怪我人なし" : "No injuries"}
+          {ui.noInjuries}
         </p>
       ) : (
         <div className="flex flex-col gap-2 md:gap-1.5">
-          {rows.map((row) => (
-            <InjuryStatusCard
-              key={`${row.side}-${row.player.id}-${row.status}-${row.returnDate ?? ""}`}
-              row={row}
-              language={language}
-            />
-          ))}
+          {rows.map((row) => {
+            const rowKey = `${row.side}-${row.player.id}-${row.status}`;
+            return (
+              <InjuryStatusCard
+                key={`${rowKey}-${row.returnDate ?? ""}`}
+                row={row}
+                language={language}
+                onPress={onPlayerPress}
+              />
+            );
+          })}
         </div>
       )}
     </section>
@@ -321,13 +322,55 @@ export default function NbaInjuryReportPanel({
   report,
   language,
   className,
+  fromPredictGameId,
+  predictReturnMode,
 }: Props) {
+  const router = useRouter();
+  const resolvedReturnMode =
+    predictReturnMode ?? (fromPredictGameId ? "overlay" : "route");
+
+  const openPlayerDetail = (row: NbaInjuryCardRow) => {
+    if (fromPredictGameId) {
+      stashPredictTeamDetailReturn({
+        gameId: fromPredictGameId,
+        predictToolsTab: "injuries",
+        returnMode: resolvedReturnMode,
+      });
+    }
+    router.push(
+      nbaPlayerDetailPreviewHref(String(row.player.id), {
+        fromPredict: fromPredictGameId,
+        predictToolsTab: fromPredictGameId ? "injuries" : undefined,
+      })
+    );
+  };
+
+  const ui = injuryReportUiCopy(resolveInjuryReportUiLang(language));
+
   return (
-    <div
-      className={["grid grid-cols-2 gap-2", className].filter(Boolean).join(" ")}
-    >
-      <TeamInjuryColumn team={report.home} language={language} />
-      <TeamInjuryColumn team={report.away} language={language} />
+    <div className={className}>
+      <div className="grid grid-cols-2 gap-2">
+        <TeamInjuryColumn
+          team={report.home}
+          language={language}
+          onPlayerPress={openPlayerDetail}
+        />
+        <TeamInjuryColumn
+          team={report.away}
+          language={language}
+          onPlayerPress={openPlayerDetail}
+        />
+      </div>
+      {report.asOfLabel ? (
+        <p
+          className={[
+            nameOxanium.className,
+            "mt-2 text-center text-[9px] font-bold uppercase tracking-wide text-white/35",
+          ].join(" ")}
+        >
+          {ui.updated} · {report.asOfLabel}
+        </p>
+      ) : null}
     </div>
   );
 }

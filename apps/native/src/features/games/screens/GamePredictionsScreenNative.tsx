@@ -12,6 +12,7 @@ import { colors, fonts, radius, spacing } from "../../../theme/tokens";
 import { useNativeGameDocument } from "../useNativeGameDocument";
 import GameMarketDistributionNative from "../GameMarketDistributionNative";
 import { getGamesTexts, toNativeGamesLanguage } from "../gamesI18n";
+import { L } from "@/lib/i18n/localize";
 import { useFirebaseUser } from "../../../auth/FirebaseUserProvider";
 import { db } from "../../../lib/firebase";
 import {
@@ -78,20 +79,16 @@ export default function GamePredictionsScreenNative() {
   const status = game ? resolveGameStatus(game) : "scheduled";
 
   const title = useMemo(() => {
-    if (!game) return language === "ja" ? "コミュニティ予想" : "Community picks";
+    if (!game) return t.communityPredictions;
     return `${awayName} vs ${homeName}`;
-  }, [game, homeName, awayName, language]);
+  }, [game, homeName, awayName, t.communityPredictions]);
 
   const statusLabel =
     status === "final"
-      ? language === "ja"
-        ? "終了"
-        : "Final"
+      ? t.final
       : status === "live"
       ? "LIVE"
-      : language === "ja"
-      ? "予定"
-      : "Scheduled";
+      : t.scheduled;
 
   const centerScore =
     score && (score.home != null || score.away != null)
@@ -106,7 +103,15 @@ export default function GamePredictionsScreenNative() {
         </View>
       ) : notFound || !game ? (
         <Text style={styles.muted}>
-          {language === "ja" ? "試合が見つかりません" : "Game not found"}
+          {L(language, {
+            ja: "試合が見つかりません",
+            en: "Game not found",
+            ko: "경기를 찾을 수 없습니다",
+            zh: "未找到比赛",
+            es: "Partido no encontrado",
+            pt: "Jogo não encontrado",
+            fr: "Match introuvable",
+          })}
         </Text>
       ) : (
         <View style={styles.body}>
@@ -115,7 +120,7 @@ export default function GamePredictionsScreenNative() {
               onPress={() => navigation.goBack()}
               style={styles.inlineBack}
               accessibilityRole="button"
-              accessibilityLabel={language === "ja" ? "戻る" : "Back"}
+              accessibilityLabel={t.close}
             >
               <MaterialCommunityIcons name="arrow-left" size={27} color="rgba(148,163,184,0.92)" />
             </Pressable>

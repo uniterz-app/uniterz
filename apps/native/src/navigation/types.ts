@@ -59,8 +59,19 @@ export type GamesStackParamList = {
         returnToPredictGameId?: string;
       }
     | undefined;
-  /** Player Stats からの選手詳細（モック） */
-  PlayerDetailPreview: { playerId?: string } | undefined;
+  /** Player Stats / 予想 ROSTER からの選手詳細（モック） */
+  PlayerDetailPreview:
+    | {
+        playerId?: string;
+        /** Profile DEV — シードモックで SHOT CHART 等を表示 */
+        useDevMock?: boolean;
+        /** 予想オーバーレイから開いた → goBack でモーダル再表示 */
+        returnToPredictOverlay?: boolean;
+        predictToolsTab?: "insight" | "injuries" | "stats" | "roster";
+        /** @deprecated returnToPredictOverlay を優先 */
+        returnToPredictGameId?: string;
+      }
+    | undefined;
 };
 
 /** 他人プロフィール。Profile / Rankings / Leaderboards / Result 各スタックで共用 */
@@ -72,26 +83,37 @@ export type PublicProfileParams = {
   fromWeeklyReport?: boolean;
   fromResultDetail?: boolean;
   resultDetailPostId?: string;
+  fromMarkList?: boolean;
+  /** ユーザー検索から遷移してきた他人プロフィール */
+  fromUserSearch?: boolean;
 };
 
 export type ResultStackParamList = {
   ResultHome: { reopenDetailPostId?: string } | undefined;
   ResultDetail: { postId: string };
   PublicProfile: PublicProfileParams;
+  /** リザルト詳細 TEAM STATS からのチーム詳細 */
+  TeamDetailPreview: { teamId?: string } | undefined;
+  /** チーム詳細からの選手詳細 */
+  PlayerDetailPreview: { playerId?: string } | undefined;
 };
 
 export type RankingsStackParamList = {
   RankingsHome: undefined;
+  /** SQUAD BATTLE 本番 */
+  SquadBattle: { mode?: "production" | "preview" } | undefined;
   /** SQUAD BATTLE UI プレビュー（モック） */
-  SquadBattlePreview: undefined;
+  SquadBattlePreview: { mode?: "production" | "preview" } | undefined;
   PublicProfile: PublicProfileParams;
 };
 
 export type LeaderboardsStackParamList = {
   LeaderboardsHome: { reopenGroupId?: string } | undefined;
   CommunityDetail: { groupId: string };
+  /** SQUAD BATTLE 本番 */
+  SquadBattle: { mode?: "production" | "preview" } | undefined;
   /** SQUAD BATTLE UI プレビュー（モック） */
-  SquadBattlePreview: undefined;
+  SquadBattlePreview: { mode?: "production" | "preview" } | undefined;
   PublicProfile: PublicProfileParams;
 };
 
@@ -113,15 +135,18 @@ export type ProfileStackParamList = {
         openSettings?: boolean;
         /** Report タブを開く（月次プッシュ等） */
         openReportTab?: boolean;
+        /** MARK LIST から他人プロフィールへ行った戻り */
+        openMarkList?: boolean;
       }
     | undefined;
   ProfileSettings: undefined;
   NotificationSettings: undefined;
   ProfilePassword: undefined;
-  ProSkin: undefined;
+  ProSkin: { fromTrial?: boolean } | undefined;
   DeleteAccount: undefined;
   PublicProfile: PublicProfileParams;
   Badges: undefined;
+  UserSearch: undefined;
   Invite: undefined;
   UnitLedger: undefined;
   Redeem: undefined;
@@ -133,70 +158,42 @@ export type ProfileStackParamList = {
   ProSubscribe: undefined;
   ProSubscribePreview: undefined;
   SeasonPredictPreview: undefined;
+  /** __DEV__ SQUAD BATTLE 全画面プレビュー */
+  SquadBattlePreview: undefined;
   /** __DEV__ 週間/月間レポート UI プレビュー（mock） */
   MonthlyReportPreview: { tab?: "weekly" | "monthly"; caseKey?: string } | undefined;
-  /** __DEV__ Pro futuristic 背景プレビュー */
-  FuturisticBgPreview: undefined;
-  /** __DEV__ 称号 Pro Skin（金冠 / 雷 / 星）プレビュー */
-  TitleSkinPreview: undefined;
-  /** __DEV__ Pro Skin Wave9 プレビュー */
-  WaveProSkinPreview: undefined;
-  /** __DEV__ ランキング行 Pro Skin プレビュー */
-  RankingListProSkinPreview: undefined;
-  /** __DEV__ Pro Skin マイルストーン解放モーダル */
-  ProSkinUnlockPreview: undefined;
-  /** __DEV__ 招待達成スタンプ演出 */
-  ReferralStampCelebratePreview: undefined;
-  /** __DEV__ Unit 獲得演出 */
-  UnitEarnCelebratePreview: undefined;
-  /** __DEV__ CAREER フリップボタン見た目案 */
-  CareerFlipButtonPreview: undefined;
-  /** __DEV__ CAREER 情報の載せ場所案 */
-  CareerPlacementPreview: undefined;
-  /** __DEV__ Unit 獲得モーダル見た目案 A〜D */
-  UnitEarnModalDesignPreview: undefined;
-  /** __DEV__ Unit 獲得オーバーレイ入場アニメ案 */
-  UnitEarnOverlayAnimPreview: undefined;
-  /** __DEV__ Unit 獲得オーバーレイフォント案 */
-  UnitEarnOverlayFontPreview: undefined;
-  /** __DEV__ UNITERZ ウェスタン調ロゴ文字 3案 */
-  UniterzLogoTypePreview: undefined;
-  /** __DEV__ 課金 PRO タグ案 */
-  UniterzProBadgePreview: undefined;
-  /** __DEV__ 現行 vs 旧 Pro バッジ比較 */
-  ProBadgeComparePreview: undefined;
-  /** __DEV__ リザルトカード見た目案 */
-  ResultCardDesignPreview: undefined;
-  /** __DEV__ リザルト右上バッジ見た目案 */
-  ResultBadgeDesignPreview: undefined;
-  /** __DEV__ リザルト右上スタンプ見た目案 */
-  ResultStampDesignPreview: undefined;
-  /** __DEV__ リザルト左上連勝タグ見た目案 */
-  ResultStreakTagDesignPreview: undefined;
-  /** __DEV__ リザルト詳細デザイン用プレビュー */
-  ResultDetailDesignPreview: undefined;
-  /** __DEV__ サイバーロゴスプラッシュ */
-  SplashLogoPreview: undefined;
   /** __DEV__ リーグ Team Stats（30 チーム表） */
   TeamStatsPreview: undefined;
+  /** __DEV__ リーグ STATS ハブ（Team / Player、現行チップ型） */
+  LeagueStatsPreview: undefined;
   /** __DEV__ リーグ Player Stats（指標トップリーダー） */
   PlayerStatsPreview: undefined;
   /** __DEV__ Team Detail 再構築プレビュー */
   TeamDetailPreview: { teamId?: string } | undefined;
   /** __DEV__ Player Detail 叩き台プレビュー */
-  PlayerDetailPreview: { playerId?: string } | undefined;
+  PlayerDetailPreview: { playerId?: string; useDevMock?: boolean } | undefined;
   /** __DEV__ ライブ試合スタッツ（Team / Box Score） */
   LiveGameStatsPreview: undefined;
-  /** __DEV__ 試合一覧カード現行デザイン */
-  MatchCardDesignPreview: undefined;
-  /** __DEV__ プロフィール 2x2 メトリクス Free / Pro 現行 */
-  ProfileKinetikMetricsPreview: undefined;
-  /** __DEV__ 下部ナビ見た目案 */
-  NavBarDesignPreview: undefined;
-  /** __DEV__ LP 用ランキング画面（総合スコアモック） */
-  LpRankingPreview: undefined;
-  /** __DEV__ ランキングリスト見た目案 */
-  RankingListDesignPreview: undefined;
+  /** __DEV__ リザルト詳細（TOP SCORER / 得点上位） */
+  ResultDetailPreview: undefined;
+  /** __DEV__ Free → PRO LEAGUE ゲート（ティーザー） */
+  ProLeagueTeaserPreview: undefined;
+  /** __DEV__ 連勝枠の光（1位エッジ vs conic） */
+  StreakFramePreview: undefined;
+  /** __DEV__ Dust Pro Skin（Powder / Film） */
+  DustProSkinPreview: undefined;
+  /** __DEV__ マイルストーン Pro Skin 一覧（解放条件順） */
+  MilestoneProSkinPreview: undefined;
+  CandidateProSkinPreview: undefined;
+  /** __DEV__ TeamAbbrBadge サイバー案 */
+  TeamAbbrBadgePreview: undefined;
+  /** __DEV__ リザルト左辺 PICK UP */
+  ResultPickupPreview: undefined;
+  ProInsightGatePreview: undefined;
+  /** __DEV__ 新 Pro Insight ナラティブ UI（HOME/AWAY 短文） */
+  ProInsightNarrativePreview: undefined;
+  /** __DEV__ 予想マッチアップ Team Stats + LAST 5 */
+  MatchupTeamStatsPreview: undefined;
   ProSuccess: { plan?: "weekly" | "monthly" | "season" } | undefined;
   PlanChange: undefined;
   PlanChangeComplete: undefined;
@@ -210,6 +207,14 @@ export type ProfileStackParamList = {
   ElectronicNotice: undefined;
   Contact: undefined;
   FeatureRequest: undefined;
+  /** 管理者: 機能リクエスト / 問い合わせ一覧 */
+  AdminInbox: { kind: "feature" | "inbox" };
+  AdminInboxDetail: { id: string; kind?: "feature" | "inbox" };
+  /** 管理者: 商品交換申請 */
+  AdminRedemptions: undefined;
+  AdminRedemptionDetail: { id: string };
+  /** 管理者: グループバトル開催 */
+  AdminGroupBattles: undefined;
   CommunityGuidelines: undefined;
   Landing: undefined;
   /** __DEV__ 通知動作確認 */
@@ -222,6 +227,8 @@ export type AuthStackParamList = {
   Signup: { inviteCode?: string } | undefined;
   ResetPassword: undefined;
   Onboarding: undefined;
+  Terms: undefined;
+  Privacy: undefined;
 };
 
 export type RootStackParamList = {

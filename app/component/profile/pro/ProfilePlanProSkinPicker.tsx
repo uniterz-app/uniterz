@@ -14,15 +14,12 @@ import {
 import { createPortal } from "react-dom";
 import ProfileEditKinetikPanel from "@/app/component/profile/edit/ProfileEditKinetikPanel";
 import { PROFILE_EDIT_KINETIK_MOCK } from "@/app/component/profile/edit/profileEditKinetikTypes";
-import ProfilePlanProBackgroundFx from "@/app/component/profile/ui/ProfilePlanProBackgroundFx";
 import { nameOxanium, nameRajdhani } from "@/lib/fonts";
+import { L, resolveLocalizedLang } from "@/lib/i18n/localize";
+import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import { saveMeProSkin } from "@/lib/api/saveMeProSkin";
 import { fetchProSkinStatus } from "@/lib/api/fetchProSkinStatus";
-import {
-  profilePlanProAdoptedCategoryLabel,
-  type ProfilePlanProAdoptedCategory,
-  type ProfilePlanProAdoptedEntry,
-} from "@/lib/profile/profilePlanProAdoptedBgVariants";
+import type { ProfilePlanProAdoptedEntry } from "@/lib/profile/profilePlanProAdoptedBgVariants";
 import {
   formatProSkinOwnerCount,
   formatProSkinUnlockCondition,
@@ -33,12 +30,19 @@ import {
   type ProSkinUnlockProgress,
 } from "@/lib/profile/proSkinUnlock";
 import { proSkinMilestoneProgressBar } from "@/lib/profile/proSkinProgress";
+import {
+  formatProSkinImageCreditLine,
+  proSkinImageCredit,
+  proSkinImageLicenseUrl,
+} from "@/lib/profile/proSkinImageCredits";
 import { profilePlanProAdoptedSkinSwatch } from "@/lib/profile/profilePlanProAdoptedSkinSwatch";
 import type { ProfilePlanProBgVariant } from "@/lib/profile/profilePlanProBgVariants";
 import { PROFILE_PLAN_PRO_CLASS } from "@/lib/profile/profilePlanVisual";
 import { PRO_SUBSCRIBE_PATH } from "@/lib/pro/proSkinRoutes";
+import { proSkinThumbPublicPath } from "@/lib/profile/proSkinStaticPreview";
 import { getUserDocDataCached } from "@/lib/user/userDocCache";
 import { auth } from "@/lib/firebase";
+import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import "@/app/component/profile/pro/profilePlanProBgPickerPreview.css";
 
 const CARD_LAYOUT_WIDTH = 400;
@@ -56,24 +60,9 @@ function formatSkinNo(index: number): string {
   return `No.${index + 1}`;
 }
 
-function categoryBadgeClass(category: ProfilePlanProAdoptedCategory): string {
-  switch (category) {
-    case "cyber":
-      return "bg-cyan-400/15 text-cyan-200/90";
-    case "reptile":
-      return "bg-orange-400/15 text-orange-200/90";
-    case "beast":
-      return "bg-fuchsia-400/15 text-fuchsia-200/90";
-    case "material":
-      return "bg-slate-400/15 text-slate-200/90";
-    case "geometry":
-      return "bg-emerald-400/15 text-emerald-200/90";
-  }
-}
-
-function panelProps() {
+function panelProps(language: string) {
   return {
-    language: "ja" as const,
+    language: resolveLocalizedLang(language),
     identity: {
       ...PROFILE_EDIT_KINETIK_MOCK.identity,
       displayName: "UNITERZ",
@@ -139,11 +128,13 @@ function SkinThumbnail({ entry }: { entry: ProfilePlanProAdoptedEntry }) {
         ].join(" ")}
         style={{ background: swatch }}
       >
-        {/* 一覧で模様が見えるよう、全スキンで本番 FX をサムネ描画（アニメなし） */}
-        <ProfilePlanProBackgroundFx
-          variant={entry.id}
-          animate={false}
-          web
+        {/* カタログは静止 WebP。確認オーバーレイは本番 Kinetik カード */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={proSkinThumbPublicPath(entry.id)}
+          alt=""
+          className="profile-plan-pro-bg-picker-skin-thumb__img"
+          draggable={false}
         />
         <span
           className="profile-kinetik-frame-corner profile-kinetik-frame-corner--tl"
@@ -169,10 +160,12 @@ function SkinThumbnail({ entry }: { entry: ProfilePlanProAdoptedEntry }) {
 function ScaledCatalogCard({
   scale,
   variantId,
+  language,
   replaySeed = 0,
 }: {
   scale: number;
   variantId: ProfilePlanProBgVariant;
+  language: string;
   replaySeed?: number;
 }) {
   const islandRef = useRef<HTMLDivElement>(null);
@@ -214,7 +207,7 @@ function ScaledCatalogCard({
         <ProfileEditKinetikPanel
           key={`${variantId}:${replaySeed}`}
           layout="mobile"
-          {...panelProps()}
+          {...panelProps(language)}
           isPro
           planProBgVariant={variantId}
         />
@@ -230,6 +223,7 @@ function CatalogTile({
   isNew,
   owners,
   progress,
+  language,
   onSelect,
 }: {
   entry: ProSkinUnlockCatalogEntry;
@@ -242,9 +236,11 @@ function CatalogTile({
     | "posts"
     | "exactHits"
     | "maxWinStreak"
+    | "streakRuns"
     | "referralCompletedCount"
     | "periodWins"
   >;
+  language: string;
   onSelect: () => void;
 }) {
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
@@ -253,10 +249,10 @@ function CatalogTile({
       onSelect();
     }
   };
-  const condition = formatProSkinUnlockCondition(entry.unlock, "ja");
+  const condition = formatProSkinUnlockCondition(entry.unlock, language);
   const bar =
     !unlocked && entry.unlock.kind !== "pro"
-      ? proSkinMilestoneProgressBar(entry.unlock, progress, "ja")
+      ? proSkinMilestoneProgressBar(entry.unlock, progress, language)
       : null;
 
   return (
@@ -291,15 +287,6 @@ function CatalogTile({
           ) : null}
         </div>
         <div className="profile-plan-pro-bg-picker-catalog-tile__group-row flex flex-wrap items-center gap-1.5">
-          <span
-            className={[
-              nameOxanium.className,
-              "rounded px-1.5 py-0.5 text-[8px] font-extrabold uppercase tracking-[0.1em]",
-              categoryBadgeClass(entry.category),
-            ].join(" ")}
-          >
-            {profilePlanProAdoptedCategoryLabel(entry.category, "en")}
-          </span>
           {!unlocked ? (
             <span
               className={[
@@ -347,7 +334,7 @@ function CatalogTile({
         >
           {condition}
           <span className="mx-1.5 text-white/20">·</span>
-          {formatProSkinOwnerCount(owners, "ja")}
+          {formatProSkinOwnerCount(owners, language)}
         </p>
       </div>
       <div className="profile-plan-pro-bg-picker-catalog-tile__card relative">
@@ -400,6 +387,9 @@ export default function ProfilePlanProSkinPicker({
 }: Props) {
   const router = useRouter();
   const pathname = usePathname() ?? "";
+  const { fUser } = useFirebaseUser();
+  const { language } = useUserLanguage(fUser?.uid ?? null);
+  const lang = resolveLocalizedLang(language);
   const isWeb =
     platform === "web" || (platform == null && pathname.startsWith("/web"));
   const isProduction = mode === "production";
@@ -415,11 +405,11 @@ export default function ProfilePlanProSkinPicker({
     null
   );
   const [overlayMounted, setOverlayMounted] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [replayByVariant, setReplayByVariant] = useState<
     Partial<Record<ProfilePlanProBgVariant, number>>
   >({});
-  const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
   const [unlockedIds, setUnlockedIds] = useState<Set<string>>(() =>
     new Set(PRO_SKIN_UNLOCK_CATALOG.map((e) => e.id))
   );
@@ -429,6 +419,7 @@ export default function ProfilePlanProSkinPicker({
       | "posts"
       | "exactHits"
       | "maxWinStreak"
+    | "streakRuns"
       | "referralCompletedCount"
       | "periodWins"
     >
@@ -436,6 +427,7 @@ export default function ProfilePlanProSkinPicker({
     posts: 0,
     exactHits: 0,
     maxWinStreak: 0,
+    streakRuns: {},
     referralCompletedCount: 0,
     periodWins: {},
   });
@@ -497,6 +489,7 @@ export default function ProfilePlanProSkinPicker({
           posts: status.progress?.posts ?? 0,
           exactHits: status.progress?.exactHits ?? 0,
           maxWinStreak: status.progress?.maxWinStreak ?? 0,
+          streakRuns: status.progress?.streakRuns ?? {},
           referralCompletedCount:
             status.progress?.referralCompletedCount ?? 0,
           periodWins: status.progress?.periodWins ?? {},
@@ -543,6 +536,13 @@ export default function ProfilePlanProSkinPicker({
   const overlayIndex = overlayEntry
     ? PRO_SKIN_UNLOCK_CATALOG.findIndex((e) => e.id === overlayEntry.id)
     : -1;
+
+  const overlayCredit = overlayEntry
+    ? proSkinImageCredit(overlayEntry.id)
+    : null;
+  const overlayLicenseUrl = overlayCredit
+    ? proSkinImageLicenseUrl(overlayCredit)
+    : null;
 
   const overlayUnlocked =
     !isProduction || (overlayId != null && unlockedIds.has(overlayId));
@@ -657,6 +657,7 @@ export default function ProfilePlanProSkinPicker({
           isNew={noticeIds.has(entry.id)}
           owners={ownerCounts[entry.id] ?? 0}
           progress={milestoneProgress}
+          language={lang}
           onSelect={() => openOverlay(entry.id)}
         />
       ))}
@@ -707,7 +708,7 @@ export default function ProfilePlanProSkinPicker({
                 <ProfileEditKinetikPanel
                   key={`${overlayEntry.id}:${replayByVariant[overlayEntry.id] ?? 0}`}
                   layout="web"
-                  {...panelProps()}
+                  {...panelProps(lang)}
                   isPro
                   planProBgVariant={overlayEntry.id}
                 />
@@ -716,6 +717,7 @@ export default function ProfilePlanProSkinPicker({
               <ScaledCatalogCard
                 scale={openedScale}
                 variantId={overlayEntry.id}
+                language={lang}
                 replaySeed={replayByVariant[overlayEntry.id] ?? 0}
               />
             )}
@@ -732,8 +734,16 @@ export default function ProfilePlanProSkinPicker({
                     ].join(" ")}
                   >
                     {overlayEntry
-                      ? formatProSkinUnlockCondition(overlayEntry.unlock, "ja")
-                      : "未解放"}
+                      ? formatProSkinUnlockCondition(overlayEntry.unlock, lang)
+                      : L(lang, {
+                          ja: "未解放",
+                          en: "Locked",
+                          ko: "잠김",
+                          zh: "未解锁",
+                          es: "Bloqueada",
+                          pt: "Bloqueada",
+                          fr: "Verrouillée",
+                        })}
                   </p>
                 ) : null}
                 {!viewerIsPro ? (
@@ -743,7 +753,15 @@ export default function ProfilePlanProSkinPicker({
                       "w-full text-center text-[11px] font-bold tracking-[0.06em] text-cyan-100/80",
                     ].join(" ")}
                   >
-                    プレビューのみ · 適用には Pro が必要です
+                    {L(lang, {
+                      ja: "プレビューのみ · 適用には Pro が必要です",
+                      en: "Preview only · Pro required to apply",
+                      ko: "미리보기만 · 적용에는 Pro 필요",
+                      zh: "仅预览 · 应用需 Pro",
+                      es: "Solo vista previa · Pro para aplicar",
+                      pt: "Só prévia · Pro para aplicar",
+                      fr: "Aperçu seul · Pro requis",
+                    })}
                   </p>
                 ) : null}
                 {!viewerIsPro ? (
@@ -810,7 +828,32 @@ export default function ProfilePlanProSkinPicker({
                 "mt-2 text-center text-[10px] font-bold tracking-[0.06em] text-white/40",
               ].join(" ")}
             >
-              {formatProSkinOwnerCount(ownerCounts[overlayEntry.id] ?? 0, "ja")}
+              {formatProSkinOwnerCount(ownerCounts[overlayEntry.id] ?? 0, lang)}
+            </p>
+          ) : null}
+          {overlayCredit ? (
+            <p className="mt-1.5 text-center text-[9px] leading-snug text-white/35">
+              <a
+                href={overlayCredit.sourceUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline-offset-2 hover:underline"
+              >
+                {formatProSkinImageCreditLine(overlayCredit, lang)}
+              </a>
+              {overlayLicenseUrl ? (
+                <>
+                  {" "}
+                  <a
+                    href={overlayLicenseUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline underline-offset-2"
+                  >
+                    (license)
+                  </a>
+                </>
+              ) : null}
             </p>
           ) : null}
           {saveError && isProduction ? (
@@ -828,11 +871,12 @@ export default function ProfilePlanProSkinPicker({
         "profile-plan-pro-bg-picker-preview-page text-white",
         isWeb
           ? isProduction
-            ? "pb-10"
+            ? ""
             : "min-h-screen bg-[#03080d] px-4 py-6 md:px-8 md:py-8 pb-16"
           : [
-              "min-h-screen bg-[#03080d] px-3 py-6 sm:px-4 md:px-8",
-              isProduction ? "pb-16" : "pb-28",
+              isProduction
+                ? "px-3 py-4 sm:px-4 md:px-8"
+                : "min-h-screen bg-[#03080d] px-3 py-6 sm:px-4 md:px-8 pb-28",
             ].join(" "),
       ].join(" ")}
     >

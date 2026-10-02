@@ -12,7 +12,7 @@ import {
 const GLYPH_ACCENT = "#ccff00";
 const GLYPH_FILL = "rgba(204, 255, 0, 0.12)";
 
-function RankingsDefaultAvatarGlyphNative({ size }: { size: number }) {
+export function RankingsDefaultAvatarGlyphNative({ size }: { size: number }) {
   const glyphSize = Math.max(12, Math.round(size * 0.62));
   return (
     <View

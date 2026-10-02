@@ -1,5 +1,6 @@
 /**
- * under_review → completed + Unit 付与（Admin・単一 transaction・冪等）
+ * under_review → completed + 紹介者 Unit 付与（Admin・単一 transaction・冪等）
+ * 被招待者 30 Unit は bind 時に付与済み（ledger 冪等で二重付与しない）。
  * docs/referral-design.md §2 / §6 / §22
  */
 import { FieldValue, type Firestore } from "firebase-admin/firestore";

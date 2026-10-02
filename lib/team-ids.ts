@@ -69,6 +69,7 @@ export const TEAM_IDS: Record<string, string> = {
 "Houston Rockets": "nba-rockets",
 "Indiana Pacers": "nba-pacers",
 "LA Clippers": "nba-clippers",
+"Los Angeles Clippers": "nba-clippers",
 "Los Angeles Lakers": "nba-lakers",
 "Memphis Grizzlies": "nba-grizzlies",
 "Miami Heat": "nba-heat",

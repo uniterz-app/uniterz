@@ -2,10 +2,17 @@ import { useEffect, useMemo, useState } from "react";
 import { normalizeLeague } from "../../../../../lib/leagues";
 import type { TeamNameById } from "../../../../../lib/games/gameTeamFilter";
 import { fetchTeamsByLeagueShared } from "../../../../../lib/games/fetchTeamsByLeagueShared";
+import { NBA_TEAM_NAME_BY_ID } from "../../../../../lib/nba-team-names";
 import { getUniterzApiBaseUrl } from "./submitPredictionApi";
 import type { SupportedLeague } from "./useTodayGames";
 
 export type ScheduleTeamOption = { id: string; name: string };
+
+function displayTeamName(id: string, raw: Record<string, unknown>): string {
+  const fromMap = NBA_TEAM_NAME_BY_ID[id];
+  if (fromMap) return fromMap;
+  return String(raw.name ?? raw.shortName ?? id);
+}
 
 const SCHEDULE_TEAMS_TTL_MS = 30 * 60 * 1000;
 const scheduleTeamsCache = new Map<
@@ -36,10 +43,10 @@ export function useScheduleTeamsNative(rawLeague: SupportedLeague) {
     void fetchTeamsByLeagueShared({ league, apiBaseUrl: apiBase })
       .then((rows) => {
         if (!alive) return;
-        const next: ScheduleTeamOption[] = rows.map((d) => ({
-          id: String(d.id),
-          name: String(d.name ?? d.shortName ?? d.id),
-        }));
+        const next: ScheduleTeamOption[] = rows.map((d) => {
+          const id = String(d.id);
+          return { id, name: displayTeamName(id, d) };
+        });
         scheduleTeamsCache.set(league, { teams: next, savedAt: Date.now() });
         setTeams(next);
       })

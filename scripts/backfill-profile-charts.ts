@@ -78,7 +78,10 @@ async function writeEmpty(uid: string): Promise<void> {
 async function ensureViaApi(uid: string): Promise<boolean> {
   if (DRY_RUN) return true;
   const url = `${API_BASE}/api/profile/ensure-overview-charts?uid=${encodeURIComponent(uid)}&seasonKey=${SEASON_KEY}`;
-  const res = await fetch(url, { cache: "no-store" });
+  const secret = process.env.INTERNAL_JOB_SECRET?.trim();
+  const headers: HeadersInit = {};
+  if (secret) headers["x-internal-job-secret"] = secret;
+  const res = await fetch(url, { cache: "no-store", headers });
   if (!res.ok) {
     const text = await res.text().catch(() => "");
     console.warn(`ensure fail ${uid}: ${res.status} ${text.slice(0, 120)}`);

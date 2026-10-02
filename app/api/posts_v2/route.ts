@@ -9,6 +9,7 @@ import { normalizeLeague, type League } from "@/lib/leagues";
 import { parsePredictionPayload } from "@/lib/predict/parsePredictionPayload";
 import {
   normalizeNbaTopScorerCandidates,
+  normalizeNbaTopScorerPick,
   validateNbaTopScorerPickForGame,
 } from "@/lib/nba/topScorer";
 import {
@@ -21,8 +22,15 @@ import { touchReferralPredictDay } from "@/lib/referral/touchReferralPredictDay"
 import { settleReferralRelationWithRetries } from "@/lib/referral/settleReferralRelation";
 import {
   deterministicPostV2Id,
-  loadGameKickoffLock,
+  gameKickoffLockFromData,
 } from "@/lib/predict/gameKickoffLock";
+import {
+  applyLiveMarketDelta,
+  parseMarketSide,
+  readLiveMarketCounts,
+} from "@/lib/predict/liveGameMarket";
+import { consumeUidActionRateLimit } from "@/lib/security/consumeUidRateLimit";
+import { isNbaPickupGame } from "@/lib/nba/isPickupGame";
 
 /* ========= 型 ========= */
 type Status = "scheduled" | "live" | "final";
@@ -159,16 +167,31 @@ export async function POST(req: Request) {
 
     const adminDb = getAdminDb();
 
+    const rate = await consumeUidActionRateLimit(
+      adminDb,
+      uid,
+      "posts_v2",
+      120
+    );
+    if (!rate.ok) {
+      return NextResponse.json(
+        { ok: false, error: "rate_limited" },
+        { status: 429 }
+      );
+    }
+
     let authorDisplayName = "ユーザー";
     let authorPhotoURL: string | null = null;
     let authorHandle: string | null = null;
     let referredByUid: string | null = null;
     let referralSettled = false;
+    let userFlags: Record<string, unknown> | null = null;
 
     try {
       const userDoc = await adminDb.collection("users").doc(uid).get();
       if (userDoc.exists) {
         const u = userDoc.data() || {};
+        userFlags = u;
         authorDisplayName = u.displayName || authorDisplayName;
         authorPhotoURL = u.photoURL || u.avatarUrl || null;
         authorHandle = u.handle || u.username || u.slug || null;
@@ -225,7 +248,7 @@ export async function POST(req: Request) {
     const startAtMillis = startAtTs.toMillis();
     const startAtIso = new Date(startAtMillis).toISOString();
 
-    const lock = await loadGameKickoffLock(adminDb, parsed.gameId);
+    const lock = gameKickoffLockFromData(g);
     if (!lock.ok) {
       return NextResponse.json(
         { ok: false, error: lock.error },
@@ -248,7 +271,10 @@ export async function POST(req: Request) {
       (g.awayTeamId as string | undefined) ??
       null;
     const rawGoalScorer = predictionParsed.rawGoalScorer;
-    const goalScorerPick = normalizeWcGoalScorerPick(rawGoalScorer);
+    const goalScorerPick =
+      league === "nba"
+        ? normalizeNbaTopScorerPick(rawGoalScorer)
+        : normalizeWcGoalScorerPick(rawGoalScorer);
     const allowsGoalScorer = league === "wc" || league === "nba";
     if (allowsGoalScorer && rawGoalScorer != null && !goalScorerPick) {
       return NextResponse.json(
@@ -310,13 +336,6 @@ export async function POST(req: Request) {
     }
 
     const postId = deterministicPostV2Id(uid, parsed.gameId);
-    const existingById = await adminDb.collection("posts").doc(postId).get();
-    if (existingById.exists) {
-      return NextResponse.json(
-        { ok: false, error: "duplicate", existingId: postId },
-        { status: 409 }
-      );
-    }
 
     const data = {
       schemaVersion: 2,
@@ -329,8 +348,19 @@ export async function POST(req: Request) {
       gameId: parsed.gameId,
       league,
       seasonPhase: g?.seasonPhase ?? null,
+      /** プレーオフは playoffRound（cf 等）。seasonRound は互換のため同値 */
+      playoffRound: g?.playoffRound ?? null,
       seasonRound: g?.playoffRound ?? g?.seasonRound ?? null,
+      roundLabel:
+        typeof g?.roundLabel === "string" && g.roundLabel.trim()
+          ? g.roundLabel.trim()
+          : null,
       wcStage: resolveWcStageFromGame(g) ?? g?.wcStage ?? null,
+      /** 一覧カード左辺 PICK UP（games を都度読まない） */
+      isPickup: isNbaPickupGame(g),
+      ...(typeof g?.pickupWeekKey === "string" && g.pickupWeekKey.trim()
+        ? { pickupWeekKey: g.pickupWeekKey.trim() }
+        : {}),
       home: g?.home ?? null,
       away: g?.away ?? null,
       status: (g?.status as Status) || "scheduled",
@@ -371,18 +401,39 @@ export async function POST(req: Request) {
         throw createErr;
       }
       try {
-        await adminDb.doc(`games/${parsed.gameId}`).set(
-          {
-            predictorUids: FieldValue.arrayUnion(uid),
-            predictorCount: FieldValue.increment(1),
-          },
-          { merge: true }
-        );
+        const gameRef = adminDb.doc(`games/${parsed.gameId}`);
+        const side = parseMarketSide(prediction.winner);
+        await adminDb.runTransaction(async (tx) => {
+          const gameSnap = await tx.get(gameRef);
+          const gameData = (gameSnap.data() ?? {}) as Record<string, unknown>;
+          const patch = side
+            ? applyLiveMarketDelta(readLiveMarketCounts(gameData), side, 1)
+            : null;
+          tx.set(
+            gameRef,
+            {
+              predictorUids: FieldValue.arrayUnion(uid),
+              predictorCount: FieldValue.increment(1),
+              ...(patch
+                ? {
+                    marketPickCounts: patch.marketPickCounts,
+                    market: patch.market,
+                    marketBias: patch.marketBias,
+                  }
+                : {}),
+            },
+            { merge: true }
+          );
+        });
       } catch (predErr) {
         console.error("[POST /api/posts_v2] predictorUids", predErr);
       }
       const leagueFlagPatch = resultLeagueFlagPatchForPost(league);
-      if (leagueFlagPatch) {
+      const flagsAlreadySet =
+        leagueFlagPatch != null &&
+        userFlags != null &&
+        Object.keys(leagueFlagPatch).every((k) => userFlags?.[k] === true);
+      if (leagueFlagPatch && !flagsAlreadySet) {
         try {
           await adminDb
             .collection("users")

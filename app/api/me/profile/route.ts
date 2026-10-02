@@ -5,7 +5,10 @@ import { revalidateTag } from "next/cache";
 import { FieldValue } from "firebase-admin/firestore";
 import { getAdminAuth, getAdminDb } from "@/lib/firebaseAdmin";
 import { normalizeLanguage } from "@/lib/i18n/language";
-import { FALLBACK_TIMEZONE_BY_LANGUAGE } from "@/lib/i18n/countryTimezone";
+import {
+  FALLBACK_TIMEZONE_BY_LANGUAGE,
+  isValidTimeZone,
+} from "@/lib/i18n/countryTimezone";
 import {
   assertProfileTextsFreeOfGamblingTerms,
   isProfileGamblingTermsError,
@@ -94,6 +97,17 @@ export async function POST(req: Request) {
     if (photoCropY !== undefined) {
       patch.photoCropY = photoCropY;
     }
+    /** キーがあるときだけ更新（旧クライアントは送らない）。null は自動（端末） */
+    if ("displayTimeZone" in body) {
+      const raw = body.displayTimeZone;
+      if (raw === null || raw === "") {
+        patch.displayTimeZone = FieldValue.delete();
+      } else if (isValidTimeZone(raw)) {
+        patch.displayTimeZone = raw;
+      } else {
+        return NextResponse.json({ error: "invalid timeZone" }, { status: 400 });
+      }
+    }
     if (completeOnboarding) {
       patch.onboardingCompletedAt = FieldValue.serverTimestamp();
     }
@@ -103,8 +117,16 @@ export async function POST(req: Request) {
 
     await getAdminDb().doc(`users/${uid}`).set(patch, { merge: true });
 
-    // 累積ランキング API（unstable_cache）が users.countryCode の更新より古い JSON を返さないようにする
+    // ランキング行 chrome（国旗・名前・Skin）を CDN から外す
+    const {
+      bumpRankingUiGeneration,
+      clearRankingSnapshotGenerationMemCache,
+    } = await import("@/lib/rankings/server/loadRankingSnapshotGeneration");
+    await bumpRankingUiGeneration();
+    clearRankingSnapshotGenerationMemCache();
     revalidateTag("cumulative-ranking", {});
+    revalidateTag("period-ranking", {});
+    revalidateTag("ranking-ui", {});
 
     return NextResponse.json({ ok: true });
   } catch (e: unknown) {
@@ -113,6 +135,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: msg }, { status: 401 });
     }
     console.error("POST /api/me/profile:", e);
-    return NextResponse.json({ error: msg }, { status: 500 });
+    return NextResponse.json({ error: "internal" }, { status: 500 });
   }
 }

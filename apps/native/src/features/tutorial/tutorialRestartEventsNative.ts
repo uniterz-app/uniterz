@@ -14,7 +14,6 @@ import { beginTutorialWelcomeIntroSession } from "../../../../../lib/tutorial/tu
 import { markTutorialWelcomeReturningNative } from "./tutorialWelcomeAudienceNative";
 import { clearTutorialLivePickNative } from "./tutorialLivePickNative";
 import { TUTORIAL_NBA_GAME_ID } from "../../../../../lib/tutorial/tutorialNbaRawGame";
-import { prefetchRankingsLogoGlb } from "../rankings/rankingsLogoGlbCache";
 import { armTutorialTabTransitionQuiet } from "../../../../../lib/tutorial/tutorialTabTransitionQuiet";
 
 export const TUTORIAL_RESTART_TOKEN_KEY = "uniterz:tutorialLiveRestartAt:v1";
@@ -80,7 +79,6 @@ export async function prepareTutorialRestartNative(
   beginTutorialWelcomeIntroSession();
   markTutorialWelcomeReturningNative();
   setTutorialWelcomeChromeHidden(true);
-  prefetchRankingsLogoGlb();
   await clearAppTutorialSeenNative(uid);
   await clearTutorialLivePickNative();
   if (uid) {

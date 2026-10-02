@@ -82,7 +82,7 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: msg }, { status: 401 });
     }
     console.error("GET /api/me/pro-skin:", e);
-    return NextResponse.json({ error: msg }, { status: 500 });
+    return NextResponse.json({ error: "internal" }, { status: 500 });
   }
 }
 
@@ -160,6 +160,15 @@ export async function POST(req: Request) {
       { merge: true }
     );
 
+    const { bumpRankingUiGeneration } = await import(
+      "@/lib/rankings/server/loadRankingSnapshotGeneration"
+    );
+    const { revalidateTag } = await import("next/cache");
+    await bumpRankingUiGeneration();
+    revalidateTag("cumulative-ranking", {});
+    revalidateTag("period-ranking", {});
+    revalidateTag("ranking-ui", {});
+
     return NextResponse.json({ ok: true, planProBgVariant: variant });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : "server error";
@@ -167,6 +176,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: msg }, { status: 401 });
     }
     console.error("POST /api/me/pro-skin:", e);
-    return NextResponse.json({ error: msg }, { status: 500 });
+    return NextResponse.json({ error: "internal" }, { status: 500 });
   }
 }

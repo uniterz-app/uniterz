@@ -6,7 +6,11 @@ import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { t } from "../../../../../lib/i18n/t";
-import type { Language } from "../../../../../lib/i18n/language";
+import {
+  L,
+  resolveLocalizedLang,
+  type LocalizedLang,
+} from "../../../../../lib/i18n/localize";
 import {
   formatRankTierGapForHud,
   type RankTierGapHint,
@@ -18,7 +22,7 @@ const CYAN = "#00F5FF";
 type Props = {
   visible: boolean;
   onClose: () => void;
-  language: "ja" | "en";
+  language: LocalizedLang;
   currentRank: number | null;
   myTotalPoints: number;
   totalEntries?: number | null;
@@ -34,12 +38,11 @@ export default function RankGapModalNative({
   totalEntries,
   rankTierGap,
 }: Props) {
-  const lang: Language = language === "en" ? "en" : "ja";
+  const lang = resolveLocalizedLang(language);
   const m = t(lang).rankings.rankGap;
-  const isJa = lang === "ja";
 
   const hud = rankTierGap
-    ? formatRankTierGapForHud(rankTierGap, lang === "en" ? "en" : "ja")
+    ? formatRankTierGapForHud(rankTierGap, lang === "ja" ? "ja" : "en")
     : null;
 
   const isGap = rankTierGap?.kind === "gap";
@@ -141,7 +144,15 @@ export default function RankGapModalNative({
                 <View style={styles.insideBadge}>
                   <MaterialCommunityIcons name="shield-star" size={16} color={GOLD} />
                   <Text style={styles.insideText}>
-                    {isJa ? "既に順位帯圏内" : "Inside the target band"}
+                    {L(lang, {
+                      ja: "既に順位帯圏内",
+                      en: "Inside the target band",
+                      ko: "이미 순위대 권내",
+                      zh: "已在目标档位内",
+                      es: "Ya dentro de la banda objetivo",
+                      pt: "Já dentro da faixa alvo",
+                      fr: "Déjà dans la bande cible",
+                    })}
                   </Text>
                 </View>
               )}
@@ -151,9 +162,15 @@ export default function RankGapModalNative({
           )}
 
           <Text style={styles.footnote}>
-            {isJa
-              ? "得点内訳・上位帯との比較は日次データが溜まると表示されます。"
-              : "Points breakdown and cohort comparison unlock as daily data accumulates."}
+            {L(lang, {
+              ja: "得点内訳・上位帯との比較は日次データが溜まると表示されます。",
+              en: "Points breakdown and cohort comparison unlock as daily data accumulates.",
+              ko: "점수 내역·상위 대 비교는 일별 데이터가 쌓이면 표시됩니다.",
+              zh: "得分明细与同档对比会在每日数据积累后显示。",
+              es: "El desglose y la comparación de banda se desbloquean con datos diarios.",
+              pt: "O detalhe e a comparação de faixa liberam com dados diários.",
+              fr: "Le détail et la comparaison de bande s’affichent avec les données quotidiennes.",
+            })}
           </Text>
         </View>
       </View>

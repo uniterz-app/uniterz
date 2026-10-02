@@ -101,6 +101,6 @@ export async function PATCH(req: Request, ctx: Ctx) {
     if (status === 404)
       return NextResponse.json({ ok: false, error: msg }, { status: 404 });
     console.error("[communities/update]", e);
-    return NextResponse.json({ ok: false, error: msg }, { status: 500 });
+    return NextResponse.json({ ok: false, error: "internal" }, { status: 500 });
   }
 }

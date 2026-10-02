@@ -17,7 +17,7 @@ type Props = {
   eyebrow?: string;
   /** Web ルート `AppPageBackground` を背面に見せる */
   appBackground?: boolean;
-  /** ページ面の塗り（既定は `#0A1118`） */
+  /** ページ面の塗り（既定はメッシュと同系の近黒） */
   backgroundColor?: string;
   /**
    * MainTab の UNITERZ ブランド棚の下で使うとき true（既定）。
@@ -72,7 +72,7 @@ export default function MobilePageShell({
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: "#0A1118",
+    backgroundColor: "#070708",
   },
   rootAppBackground: {
     backgroundColor: "transparent",

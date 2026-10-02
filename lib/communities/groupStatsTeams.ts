@@ -14,8 +14,20 @@ function emptyAgg(): MemberAgg {
   };
 }
 
-function addMarkerToAgg(agg: MemberAgg, marker: Record<string, unknown>) {
-  if (marker.countedForRanking === false) return;
+function markerMatchesGamesScope(
+  marker: Record<string, unknown>,
+  gamesScope: "all" | "pickup"
+): boolean {
+  if (gamesScope === "pickup") return marker.countedForPickup === true;
+  return marker.countedForRanking !== false;
+}
+
+function addMarkerToAgg(
+  agg: MemberAgg,
+  marker: Record<string, unknown>,
+  gamesScope: "all" | "pickup" = "all"
+) {
+  if (!markerMatchesGamesScope(marker, gamesScope)) return;
   agg.totalPosts += Number(marker.posts ?? 0);
   agg.totalWins += Number(marker.wins ?? 0);
   agg.totalPoints += Number(marker.pointsSumV3 ?? 0);
@@ -46,9 +58,10 @@ function markerAtMs(marker: Record<string, unknown>): number | null {
 
 function markerCountsForLeague(
   marker: Record<string, unknown>,
-  league: CommunityLeague
+  league: CommunityLeague,
+  gamesScope: "all" | "pickup" = "all"
 ): boolean {
-  if (marker.countedForRanking === false) return false;
+  if (!markerMatchesGamesScope(marker, gamesScope)) return false;
   if (league === "all") return true;
   return markerLeagueKey(marker) === league;
 }
@@ -85,16 +98,20 @@ function emptyMapForUids(uids: string[]): Map<string, MemberAgg> {
 }
 
 /** チーム絞り込み: applied_posts マーカーから重複なく合算（リーグ条件も適用） */
+/** チーム絞り込み: applied_posts マーカーから重複なく合算（リーグ条件も適用）
+ * rankingTeamIds 空 = チーム条件なし（pickup×プレーオフ等）
+ */
 async function aggregateTeamsFromAppliedPosts(
   db: Firestore,
   uids: string[],
   dateKeys: string[],
   league: CommunityLeague,
   rankingTeamIds: string[],
-  sinceMs?: number | null
+  sinceMs?: number | null,
+  gamesScope: "all" | "pickup" = "all"
 ): Promise<Map<string, MemberAgg>> {
   const map = emptyMapForUids(uids);
-  if (uids.length === 0 || dateKeys.length === 0 || rankingTeamIds.length === 0) {
+  if (uids.length === 0 || dateKeys.length === 0) {
     return map;
   }
 
@@ -112,8 +129,8 @@ async function aggregateTeamsFromAppliedPosts(
             const marker = doc.data() as Record<string, unknown>;
             if (sinceMs != null && !markerCountsSince(marker, sinceMs)) continue;
             if (!markerInvolvesAnyTeam(marker, rankingTeamIds)) continue;
-            if (!markerCountsForLeague(marker, league)) continue;
-            addMarkerToAgg(agg, marker);
+            if (!markerCountsForLeague(marker, league, gamesScope)) continue;
+            addMarkerToAgg(agg, marker, gamesScope);
           }
         })
       );
@@ -133,12 +150,9 @@ export async function aggregateFromDailyTeams(
   dateKeys: string[],
   league: CommunityLeague,
   rankingTeamIds: string[],
-  firstDaySinceMs?: number | null
+  firstDaySinceMs?: number | null,
+  gamesScope: "all" | "pickup" = "all"
 ): Promise<Map<string, MemberAgg>> {
-  if (rankingTeamIds.length === 0) {
-    return emptyMapForUids(uids);
-  }
-
   if (dateKeys.length === 0) return emptyMapForUids(uids);
 
   const [firstKey, ...restKeys] = dateKeys;
@@ -152,7 +166,9 @@ export async function aggregateFromDailyTeams(
       uids,
       dateKeys,
       league,
-      rankingTeamIds
+      rankingTeamIds,
+      null,
+      gamesScope
     );
   }
 
@@ -163,7 +179,8 @@ export async function aggregateFromDailyTeams(
     [firstKey],
     league,
     rankingTeamIds,
-    firstDaySinceMs
+    firstDaySinceMs,
+    gamesScope
   );
   mergeMemberAggs(map, partial);
 
@@ -173,7 +190,9 @@ export async function aggregateFromDailyTeams(
       uids,
       restKeys,
       league,
-      rankingTeamIds
+      rankingTeamIds,
+      null,
+      gamesScope
     );
     mergeMemberAggs(map, rest);
   }

@@ -12,6 +12,8 @@ import {
   resolveNbaRankingBucketKeys,
 } from "../rankings/nbaSeason";
 import {
+  PRO_SKIN_STREAK_RUN_LENGTHS,
+  PRO_SKIN_STREAK_RUN_MILESTONES,
   PRO_SKIN_THRESHOLD_MILESTONES,
   PRO_SKIN_UNLOCK_FROM_SEASON_KEY,
 } from "./proSkinMilestoneCatalog";
@@ -124,6 +126,10 @@ export async function syncProSkinProgressOnNbaSettle(opts: {
     const lastExactHit = prevRaw?.lastExactHit === true;
     const sameSeason = prevSeason === nbaSeasonKey;
     const prevPeriodWins = sameSeason ? parsePeriodWins(prevRaw?.periodWins) : {};
+    const prevStreakRuns = sameSeason ? parsePeriodWins(prevRaw?.streakRuns) : {};
+    const prevActiveWinStreak = sameSeason
+      ? safeInt(prevRaw?.lastActiveWinStreak)
+      : 0;
 
     const isCorrection = lastPostId === opts.postId;
     if (isCorrection && lastExactHit === opts.exactHit) return;
@@ -145,6 +151,18 @@ export async function syncProSkinProgressOnNbaSettle(opts: {
     let maxWinStreak = prevMaxWinStreak;
     const streak = Math.max(0, Math.floor(opts.activeWinStreak || 0));
     if (streak > maxWinStreak) maxWinStreak = streak;
+
+    /** 連勝が N を「今回跨いだ」ときだけ +1（訂正 settle では数えない） */
+    const streakRuns: Record<string, number> = { ...prevStreakRuns };
+    const activeWinStreak = isCorrection ? prevActiveWinStreak : streak;
+    if (!isCorrection) {
+      for (const len of PRO_SKIN_STREAK_RUN_LENGTHS) {
+        if (prevActiveWinStreak < len && streak >= len) {
+          const key = String(len);
+          streakRuns[key] = (streakRuns[key] ?? 0) + 1;
+        }
+      }
+    }
 
     const isPro = isProUser(user);
     const unlocked = new Set<string>(
@@ -182,6 +200,16 @@ export async function syncProSkinProgressOnNbaSettle(opts: {
           if (!prevOk) liveNoticeIds.push(row.id);
         }
       }
+      for (const row of PRO_SKIN_STREAK_RUN_MILESTONES) {
+        const key = String(row.streak);
+        const prevOk = (prevStreakRuns[key] ?? 0) >= row.runs;
+        const nowOk = (streakRuns[key] ?? 0) >= row.runs;
+        if (nowOk) {
+          if (!prevHeld.has(row.id)) newlyUnlockedIds.push(row.id);
+          unlocked.add(row.id);
+          if (!prevOk) liveNoticeIds.push(row.id);
+        }
+      }
     }
 
     const held = new Set<string>([...prevHeld, ...unlocked]);
@@ -191,6 +219,8 @@ export async function syncProSkinProgressOnNbaSettle(opts: {
         posts,
         exactHits,
         maxWinStreak,
+        streakRuns,
+        lastActiveWinStreak: activeWinStreak,
         periodWins: prevPeriodWins,
         updatedAtMs: Date.now(),
         lastPostId: opts.postId,

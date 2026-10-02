@@ -16,8 +16,12 @@ import {
   sanitizeSquadName,
   squadMembersCol,
   squadsCol,
+  cancelPendingJoinRequestsTx,
+  getPendingJoinRequestsTx,
 } from "@/lib/groupBattles/server/firestore";
+import { squadInviteCodeWriteFields } from "@/lib/groupBattles/server/inviteCodeWrite";
 import { jsonErr, jsonOk, mapAuthError } from "@/lib/groupBattles/server/http";
+import { consumeRateLimit, RATE_LIMIT_RULES } from "@/lib/security/rateLimit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -41,6 +45,16 @@ export async function POST(req: Request, ctx: Ctx) {
     const acceptRules = Boolean(body?.acceptRules);
     if (!acceptRules) return jsonErr("rules_required", 400);
 
+    // 作成→解散の繰り返しで空スクワッドを量産されないようにする
+    const limit = await consumeRateLimit(
+      adminDb,
+      RATE_LIMIT_RULES.squadCreate,
+      uid
+    );
+    if (!limit.allowed) {
+      return jsonErr("rate_limited", 429, { retryAfterSec: limit.retryAfterSec });
+    }
+
     let invitePlain = "";
     let hash = "";
     for (let attempt = 0; attempt < 8; attempt++) {
@@ -63,14 +77,20 @@ export async function POST(req: Request, ctx: Ctx) {
       const memSnap = await tx.get(memRef);
       if (memSnap.exists) throw new Error("already_in_squad");
 
+      const pendingSnap = await getPendingJoinRequestsTx(
+        tx,
+        adminDb,
+        battleId,
+        uid
+      );
+
       tx.set(squadRef, {
         name,
         ownerUid: uid,
         memberUids: [uid],
         memberCount: 1,
         status: "forming",
-        inviteCodeHash: hash,
-        inviteCodeLast4: invitePlain.slice(-4),
+        ...squadInviteCodeWriteFields(invitePlain),
         rulesAcceptedAt: now,
         rulesAcceptedByUid: uid,
         createdAt: now,
@@ -86,6 +106,7 @@ export async function POST(req: Request, ctx: Ctx) {
         { updatedAt: now },
         { merge: true }
       );
+      cancelPendingJoinRequestsTx(tx, pendingSnap);
     });
 
     return jsonOk({

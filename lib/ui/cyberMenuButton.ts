@@ -1,4 +1,4 @@
-/** 角切り・黄枠のハンバーガーボタン（globals.css `.cyber-menu-btn`） */
+/** 黄枠ハンバーガーボタン（globals.css `.cyber-menu-btn` — 直角四角） */
 export const CYBER_MENU_BTN_CLASS = "cyber-menu-btn";
 
 /** 試合ヘッダー共通高さ（globals.css `.games-header-control-h`） */
@@ -6,7 +6,7 @@ export const GAMES_HEADER_CONTROL_H_CLASS = "games-header-control-h";
 
 export type CyberMenuButtonSize = "xs" | "sm" | "md" | "lg";
 
-/** 角切りボタンのアクション種別 */
+/** 角切りボタンのアクション種別（枠は直角四角） */
 export type CyberChamferAction = "menu" | "close" | "edit" | "delete" | "share";
 
 export const CYBER_CHAMFER_ACTION_CLASS: Record<CyberChamferAction, string> = {
@@ -72,12 +72,12 @@ export function predictOverlayCornerButtonClasses(
 
 /** リザルトカード FAB フライアウト（修正 / ゴミ箱）— 親基準の absolute（cyber-menu-btn の relative を上書き） */
 export function resultCardFlyoutButtonClasses(
-  isMobile: boolean,
+  _isMobile: boolean,
   action: Extract<CyberChamferAction, "edit" | "delete">
 ): string {
   return [
-    cyberChamferButtonClasses(isMobile ? "xs" : "sm", action),
-    isMobile ? "size-7" : "size-8",
+    cyberChamferButtonClasses("xs", action),
+    "size-[26px]",
     "!absolute",
   ].join(" ");
 }

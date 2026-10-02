@@ -116,10 +116,29 @@ export function GamesPlayerDetailPreviewScreenWrapper() {
     useRoute<RouteProp<GamesStackParamList, "PlayerDetailPreview">>();
   const { fUser } = useFirebaseUser();
   const { language } = useNativeUserLanguage(fUser?.uid);
+  const returnToPredictOverlay = route.params?.returnToPredictOverlay;
+  const returnToPredictGameId = route.params?.returnToPredictGameId?.trim();
+  const predictToolsTab = route.params?.predictToolsTab;
+
+  const handleClose = () => {
+    if (returnToPredictOverlay) {
+      navigation.goBack();
+      return;
+    }
+    if (returnToPredictGameId) {
+      navigation.navigate("GamesHome", {
+        openPredictGameId: returnToPredictGameId,
+        openPredictNbaToolsTab: predictToolsTab ?? "roster",
+      });
+      return;
+    }
+    navigation.goBack();
+  };
+
   return (
     <PlayerDetailPreviewScreenNative
       language={language === "ja" ? "ja" : "en"}
-      onClose={() => navigation.goBack()}
+      onClose={handleClose}
       playerId={route.params?.playerId}
     />
   );

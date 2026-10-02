@@ -80,3 +80,13 @@ export function countTieGroups(rows: ReadonlyArray<GroupBattleRankRow>): number 
   }
   return ties;
 }
+
+/** RANK UI 用 — 平均スコアは小数1桁（設計どおり） */
+export function formatGroupBattleAvgPoints(value: number): string {
+  const n = Math.round(Number(value) * 10) / 10;
+  if (!Number.isFinite(n)) return "0.0";
+  return n.toLocaleString("en-US", {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  });
+}

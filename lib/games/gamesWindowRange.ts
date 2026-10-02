@@ -6,7 +6,10 @@ import {
   parseDateKeyInTimeZone,
   toDateKeyInTimeZone,
 } from "@/lib/time/zonedTime";
-import { GAMES_WINDOW_EDGE_TRIGGER_DAYS } from "@/lib/games/gamesWindowConstants";
+import {
+  GAMES_WINDOW_ANCHOR_STEP_DAYS,
+  GAMES_WINDOW_EDGE_TRIGGER_DAYS,
+} from "@/lib/games/gamesWindowConstants";
 
 export function shiftDateKeyInTimeZone(
   dateKey: string,
@@ -18,6 +21,23 @@ export function shiftDateKeyInTimeZone(
   const d = new Date(base.getTime());
   d.setDate(d.getDate() + dayDelta);
   return toDateKeyInTimeZone(d, timeZone);
+}
+
+/**
+ * 窓アンカーを 7 日グリッド（1970-01-01 起点の暦日番号）に丸める。
+ * 選択日ごとに URL が変わらず CDN / unstable_cache を全ユーザーで共有できる。
+ * pm=5 なら選択日の前後に最低 2 日は残る。
+ */
+export function snapGamesWindowAnchorKey(dateKey: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateKey);
+  if (!m) return dateKey;
+  const dayMs = 86_400_000;
+  const dayNum = Math.floor(
+    Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])) / dayMs
+  );
+  const snapped = Math.round(dayNum / GAMES_WINDOW_ANCHOR_STEP_DAYS) *
+    GAMES_WINDOW_ANCHOR_STEP_DAYS;
+  return new Date(snapped * dayMs).toISOString().slice(0, 10);
 }
 
 /** selected が end（半開）の trigger 日以内なら前方延長が必要 */

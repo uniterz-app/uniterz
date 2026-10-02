@@ -4,11 +4,16 @@
 import { useMemo } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import type { StyleMapPoint } from "./profileAnalysisUtils";
+import {
+  analysisStyleMapUi,
+  buildAnalysisStyleComment,
+} from "./profileAnalysisStyleMapCopy";
+import { resolveLocalizedLang } from "@/lib/i18n/localize";
 import { colors, radius } from "../../theme/tokens";
 
 type Props = {
   points: StyleMapPoint[];
-  language: "ja" | "en";
+  language: string;
 };
 
 const clamp = (v: number, min = -1, max = 1) => Math.min(max, Math.max(min, v));
@@ -24,92 +29,28 @@ function winRateToSize(winRate: number) {
   return 26;
 }
 
-function buildStyleComment(p: StyleMapPoint, isJa: boolean) {
-  const x = p.homeAwayBias;
-  const y = -p.marketBias;
-  const winPct = Math.round(p.winRate * 100);
-  const DEAD = 0.12;
-
-  if (isJa) {
-    let axisLabel = "バランス";
-    let typeLabel = "バランス型";
-    let tendency = "条件に強い偏りはありません。";
-    if (x > DEAD && y > DEAD) {
-      axisLabel = "Home × 順当";
-      typeLabel = "セオリー重視タイプ";
-      tendency = "ホーム有利や市場評価を素直に信頼し、王道条件を重視する傾向があります。";
-    } else if (x > DEAD && y < -DEAD) {
-      axisLabel = "Home × 逆張り";
-      typeLabel = "文脈判断タイプ";
-      tendency = "ホーム条件でも状況次第で市場と逆の判断を行う柔軟さがあります。";
-    } else if (x < -DEAD && y > DEAD) {
-      axisLabel = "Away × 順当";
-      typeLabel = "条件反転タイプ";
-      tendency = "アウェイ条件を織り込んだ上で、順当な期待値を丁寧に評価しています。";
-    } else if (x < -DEAD && y < -DEAD) {
-      axisLabel = "Away × 逆張り";
-      typeLabel = "高リスク選好タイプ";
-      tendency = "不利条件や市場逆張りを積極的に取りにいく攻撃的な判断傾向があります。";
-    }
-    let performance = "勝率は平均的なレンジに収まっています。";
-    if (winPct >= 66) performance = "勝率が高く、現在の分析スタイルは明確に機能しています。";
-    else if (winPct < 50) performance = "勝率が低めで、判断軸の調整余地があります。";
-    return {
-      title: `あなたは ${axisLabel} の ${typeLabel} です`,
-      body: `${tendency} 現在の勝率は ${winPct}%。${performance}`,
-    };
-  }
-
-  let axisLabel = "Balanced";
-  let typeLabel = "balanced style";
-  let tendency = "No strong bias in your picks.";
-  if (x > DEAD && y > DEAD) {
-    axisLabel = "Home × favorite";
-    typeLabel = "theory-first type";
-    tendency = "You tend to trust home edges and market favorites.";
-  } else if (x > DEAD && y < -DEAD) {
-    axisLabel = "Home × contrarian";
-    typeLabel = "context-driven type";
-    tendency = "You flex against the market even on home spots.";
-  } else if (x < -DEAD && y > DEAD) {
-    axisLabel = "Away × favorite";
-    typeLabel = "condition-aware type";
-    tendency = "You weigh away spots while still respecting favorites.";
-  } else if (x < -DEAD && y < -DEAD) {
-    axisLabel = "Away × contrarian";
-    typeLabel = "high-risk type";
-    tendency = "You chase underdogs and away spots aggressively.";
-  }
-  let performance = "Win rate sits in an average range.";
-  if (winPct >= 66) performance = "Win rate is strong and your style is working.";
-  else if (winPct < 50) performance = "Win rate is low; your axes may need tuning.";
-  return {
-    title: `You are a ${axisLabel} ${typeLabel}`,
-    body: `${tendency} Current win rate: ${winPct}%. ${performance}`,
-  };
-}
-
 export default function ProfileAnalysisStyleMapNative({ points, language }: Props) {
-  const isJa = language === "ja";
+  const lang = resolveLocalizedLang(language);
+  const ui = analysisStyleMapUi(lang);
   const lastIndex = points.length - 1;
   const latest = points[lastIndex];
   const comment = useMemo(
-    () => (latest ? buildStyleComment(latest, isJa) : null),
-    [latest, isJa]
+    () => (latest ? buildAnalysisStyleComment(latest, lang) : null),
+    [latest, lang]
   );
 
   if (!points.length || !latest || !comment) return null;
 
   return (
     <View style={styles.card}>
-      <Text style={styles.title}>{isJa ? "あなたの分析スタイル" : "Your analysis style"}</Text>
+      <Text style={styles.title}>{ui.title}</Text>
       <View style={styles.map}>
         <View style={styles.gridH} />
         <View style={styles.gridV} />
         <Text style={[styles.axisLabel, styles.axisLeft]}>Away</Text>
         <Text style={[styles.axisLabel, styles.axisRight]}>Home</Text>
-        <Text style={[styles.axisLabel, styles.axisTop]}>{isJa ? "順当" : "Favorite"}</Text>
-        <Text style={[styles.axisLabel, styles.axisBottom]}>{isJa ? "逆張り" : "Underdog"}</Text>
+        <Text style={[styles.axisLabel, styles.axisTop]}>{ui.favorite}</Text>
+        <Text style={[styles.axisLabel, styles.axisBottom]}>{ui.underdog}</Text>
         {points.map((p, i) => {
           const x = clamp(p.homeAwayBias);
           const y = clamp(-p.marketBias);
@@ -138,11 +79,7 @@ export default function ProfileAnalysisStyleMapNative({ points, language }: Prop
         <Text style={styles.commentTitle}>{comment.title}</Text>
         <Text style={styles.commentBody}>{comment.body}</Text>
       </View>
-      <Text style={styles.footnote}>
-        {isJa
-          ? "横軸：Away ←→ Home / 縦軸：順当 ←→ 逆張り\n点の大きさ：勝率（40–85%・6段階）"
-          : "X: Away ←→ Home / Y: Favorite ←→ Underdog\nDot size: win rate (40–85%, 6 tiers)"}
-      </Text>
+      <Text style={styles.footnote}>{ui.footnote}</Text>
     </View>
   );
 }

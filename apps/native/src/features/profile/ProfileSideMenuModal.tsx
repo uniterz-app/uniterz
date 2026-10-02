@@ -1,17 +1,18 @@
 /**
  * Web `SideMenuDrawer` + `SettingsMenu`（モバイル相当）に準拠したサイドメニュー。
  */
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { cyberAlert } from "../../components/cyberAlert";
 import {
-  Animated, Dimensions, Easing, Image, Linking, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View,
+  Animated, Dimensions, Easing, Image, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BlurView } from "expo-blur";
 import { signOut } from "firebase/auth";
 import { auth } from "../../lib/firebase";
-import { ADMIN_UID } from "../../../../../lib/constants";
+import type { AdminInboxCounts } from "../../../../../lib/admin/subscribeAdminInboxUnread";
+import { EMPTY_ADMIN_INBOX } from "../../../../../lib/admin/subscribeAdminInboxUnread";
 import type { ProfileMobileOverlayKind } from "./mobileScreens/profileMobileOverlayTypes";
 import { nativeBlurViewExtraProps } from "../../ui/nativeBlurProps";
 import { setTutorialRestartCover } from "../../../../../lib/tutorial/tutorialRestartCover";
@@ -24,19 +25,32 @@ import SideMenuItemButtonNative, {
 import LogoutConfirmModalNative from "../../ui/LogoutConfirmModalNative";
 import { sideMenuLabelStyle } from "../../ui/cyberSideMenuNative";
 import ProCyberBadgeNative from "./kinetik/ProCyberBadgeNative";
+import { profileSideMenuLabels } from "./profileSideMenuCopy";
+import { L, resolveLocalizedLang } from "@/lib/i18n/localize";
 
-type Lang = "ja" | "en";
+type Lang = string;
 
 type Props = {
   visible: boolean;
   onClose: () => void;
   language: Lang;
+  /** true のあいだは入場アニメなしで開いた状態を出す（BACK 復帰用） */
+  instantOpen?: boolean;
+  onInstantOpenConsumed?: () => void;
+  /**
+   * プロフィール編集など。同一 Modal 内に重ねる（二重 Modal 回避・メニューはそのまま残す）。
+   */
+  settingsOverlay?: ReactNode;
+  onSettingsRequestClose?: () => void;
   /** Web アプリのオリジン（末尾スラッシュなし） */
   apiBase: string | null;
   unreadAnnouncements: number;
+  adminInbox?: AdminInboxCounts;
   onOpenProfileSettings: () => void;
-  /** ログイン中 UID（管理メニュー表示判定） */
+  /** ログイン中 UID（ログアウト可否など） */
   uid: string | null | undefined;
+  /** 管理メニュー表示（Custom Claim / session API） */
+  isAdmin?: boolean;
   /** Firestore users.plan と同期した表示用 */
   plan: "free" | "pro";
   /** 表示名（最下部アイデンティティ） */
@@ -51,6 +65,7 @@ type Props = {
   onOpenInApp: (page:
     | "badges"
     | "invite"
+    | "userSearch"
     | "unitLedger"
     | "redeem"
     | "announcements"
@@ -63,6 +78,7 @@ type Props = {
     | "terms"
     | "contact"
     | "privacy"
+    | "commercialLaw"
     | "password"
     | "notifications"
     | "featureRequest"
@@ -70,46 +86,44 @@ type Props = {
     | "notificationDev"
     | "restartTutorial"
     | "seasonPreview"
-    | "futuristicBgPreview"
-    | "titleSkinPreview"
-    | "waveProSkinPreview"
-    | "rankingListProSkinPreview"
-    | "proSkinUnlockPreview"
-    | "referralStampCelebratePreview"
-    | "unitEarnCelebratePreview"
-    | "careerFlipButtonPreview"
-    | "careerPlacementPreview"
-    | "unitEarnModalDesignPreview"
-    | "unitEarnOverlayAnimPreview"
-    | "unitEarnOverlayFontPreview"
-    | "uniterzLogoTypePreview"
-    | "uniterzProBadgePreview"
-    | "proBadgeComparePreview"
-    | "resultCardDesignPreview"
-    | "resultBadgeDesignPreview"
-    | "resultStampDesignPreview"
-    | "resultStreakTagDesignPreview"
-    | "navBarDesignPreview"
-    | "splashLogoPreview"
+    | "weeklyReportPreview"
+    | "monthlyReportPreview"
+    | "squadBattlePreview"
     | "liveGameStatsPreview"
-    | "profileKinetikMetricsPreview") => void;
+    | "resultDetailPreview"
+    | "leagueStatsPreview"
+    | "playerDetailPreview"
+    | "proLeagueTeaserPreview"
+    | "streakFramePreview"
+    | "dustProSkinPreview"
+    | "milestoneProSkinPreview"
+    | "candidateProSkinPreview"
+    | "teamAbbrBadgePreview"
+    | "resultPickupPreview"
+    | "proInsightGatePreview"
+    | "proInsightNarrativePreview"
+    | "matchupTeamStatsPreview"
+    | "adminFeatureInbox"
+    | "adminContactInbox"
+    | "adminRedemptions"
+    | "adminGroupBattles") => void;
 };
 
 const PANEL_W = Math.min(288, Math.max(248, Math.round(Dimensions.get("window").width * 0.44)));
-
-function openUrl(url: string) {
-  void Linking.openURL(url).catch(() => {});
-}
-
 
 export default function ProfileSideMenuModal({
   visible,
   onClose,
   language,
-  apiBase,
+  instantOpen = false,
+  onInstantOpenConsumed,
+  settingsOverlay = null,
+  onSettingsRequestClose,
   unreadAnnouncements,
+  adminInbox = EMPTY_ADMIN_INBOX,
   onOpenProfileSettings,
   uid,
+  isAdmin = false,
   plan,
   displayName = "",
   handle = "",
@@ -117,10 +131,12 @@ export default function ProfileSideMenuModal({
   unitBalance = 0,
   onOpenInApp,
 }: Props) {
-  const isJa = language === "ja";
-  const labelStyle = sideMenuLabelStyle(language);
+  const lang = resolveLocalizedLang(language);
+  const labelStyle = sideMenuLabelStyle(lang);
+  const labels = profileSideMenuLabels(lang);
   const identityName =
-    displayName.trim() || (isJa ? "ユーザー" : "User");
+    displayName.trim() || labels.userFallback;
+
   const identityInitial = identityName.charAt(0).toUpperCase() || "?";
   const planLabel = plan === "pro" ? "PRO" : "FREE";
   const identitySub = handle.trim()
@@ -139,16 +155,47 @@ export default function ProfileSideMenuModal({
     [insets.top, insets.bottom]
   );
 
-  const isAdmin = uid != null && uid === ADMIN_UID;
-
   useEffect(() => {
     if (!visible) {
       setLogoutOpen(false);
     }
   }, [visible]);
 
-  useEffect(() => {
+  /** BACK 復帰の即開きは ref で一度だけ。instantOpen→false で spring 再入場しない */
+  const pendingInstantOpenRef = useRef(false);
+  const onInstantOpenConsumedRef = useRef(onInstantOpenConsumed);
+  onInstantOpenConsumedRef.current = onInstantOpenConsumed;
+  /** visible セッション中に effect が再走っても入場を繰り返さない */
+  const openSessionRef = useRef(false);
+
+  useLayoutEffect(() => {
+    if (instantOpen) {
+      pendingInstantOpenRef.current = true;
+    }
+  }, [instantOpen]);
+
+  useLayoutEffect(() => {
     if (visible) {
+      const wantInstant =
+        pendingInstantOpenRef.current || instantOpen;
+      if (openSessionRef.current) {
+        // コールバック参照変化などでの再実行 — 既に開いているので触らない
+        if (wantInstant) {
+          pendingInstantOpenRef.current = false;
+          onInstantOpenConsumedRef.current?.();
+        }
+        return;
+      }
+      openSessionRef.current = true;
+      if (wantInstant) {
+        pendingInstantOpenRef.current = false;
+        backdropOpacity.setValue(1);
+        slide.setValue(0);
+        onInstantOpenConsumedRef.current?.();
+        return;
+      }
+      slide.setValue(PANEL_W + 24);
+      backdropOpacity.setValue(0);
       Animated.parallel([
         Animated.timing(backdropOpacity, {
           toValue: 1,
@@ -163,101 +210,37 @@ export default function ProfileSideMenuModal({
           useNativeDriver: true,
         }),
       ]).start();
-    } else {
-      Animated.parallel([
-        Animated.timing(backdropOpacity, {
-          toValue: 0,
-          duration: 180,
-          useNativeDriver: true,
-        }),
-        Animated.timing(slide, {
-          toValue: PANEL_W + 24,
-          duration: 240,
-          easing: Easing.in(Easing.cubic),
-          useNativeDriver: true,
-        }),
-      ]).start();
-    }
-  }, [visible, slide, backdropOpacity]);
-
-  const labels = isJa
-    ? {
-        main: "メイン",
-        subscription: "サブスクリプション",
-        support: "サポート",
-        admin: "管理",
-        profile: "プロフィール編集",
-        badges: "バッジパレット",
-        invite: "招待",
-        unitHistory: "Unit 履歴",
-        unitRedeem: "商品交換",
-        announcements: "お知らせ",
-        plan: "プランの確認",
-        proSkin: "Pro Skin",
-        help: "ヘルプ",
-        guidelines: "ガイドライン",
-        terms: "利用規約",
-        contact: "お問い合わせ",
-        privacy: "プライバシーポリシー",
-        password: "パスワード変更",
-        notifications: "通知設定",
-        featureRequest: "機能リクエスト",
-        electronicNotice: "電子公告",
-        deleteAccount: "アカウント削除",
-        logout: "ログアウト",
-        needBase: "Web の URL（EXPO_PUBLIC_UNITERZ_API_BASE_URL）が未設定です。",
-        adminDash: "管理ダッシュボード",
-        grantBadges: "バッジ付与",
-        annManage: "お知らせ管理",
-        annNew: "お知らせ作成",
-        gameImport: "試合インポート",
-        planApproval: "プラン承認",
-      }
-    : {
-        main: "MAIN",
-        subscription: "SUBSCRIPTION",
-        support: "SUPPORT",
-        admin: "ADMIN",
-        profile: "Edit Profile",
-        badges: "Badge Palette",
-        invite: "Invite",
-        unitHistory: "Unit History",
-        unitRedeem: "Redeem Units",
-        announcements: "Announcements",
-        plan: "Plan Status",
-        proSkin: "Pro Skin",
-        help: "Help",
-        guidelines: "Community Guidelines",
-        terms: "Terms of Service",
-        contact: "Contact",
-        privacy: "Privacy Policy",
-        password: "Change Password",
-        notifications: "Notifications",
-        featureRequest: "Feature Request",
-        electronicNotice: "Electronic Notice",
-        deleteAccount: "Delete Account",
-        logout: "Log out",
-        needBase: "Set EXPO_PUBLIC_UNITERZ_API_BASE_URL to open web pages.",
-        adminDash: "Admin Dashboard",
-        grantBadges: "Grant Badges",
-        annManage: "Manage Announcements",
-        annNew: "Create Announcement",
-        gameImport: "Game Import",
-        planApproval: "Plan Approval",
-      };
-
-  function web(path: string) {
-    if (!apiBase) {
-      cyberAlert("", labels.needBase);
       return;
     }
-    openUrl(`${apiBase}${path}`);
-  }
+    openSessionRef.current = false;
+    // 設定への退避（instant 予約あり）は退場アニメなし。開位置のまま隠す
+    if (pendingInstantOpenRef.current || instantOpen) {
+      backdropOpacity.setValue(1);
+      slide.setValue(0);
+      return;
+    }
+    Animated.parallel([
+      Animated.timing(backdropOpacity, {
+        toValue: 0,
+        duration: 180,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slide, {
+        toValue: PANEL_W + 24,
+        duration: 240,
+        easing: Easing.in(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [visible, instantOpen, slide, backdropOpacity]);
+
+
 
   function openUserPage(
     page:
       | "badges"
       | "invite"
+      | "userSearch"
       | "unitLedger"
       | "redeem"
       | "announcements"
@@ -270,6 +253,7 @@ export default function ProfileSideMenuModal({
       | "terms"
       | "contact"
       | "privacy"
+      | "commercialLaw"
       | "password"
       | "notifications"
       | "featureRequest"
@@ -277,29 +261,27 @@ export default function ProfileSideMenuModal({
       | "notificationDev"
       | "restartTutorial"
       | "seasonPreview"
-      | "futuristicBgPreview"
-      | "titleSkinPreview"
-      | "waveProSkinPreview"
-      | "rankingListProSkinPreview"
-      | "proSkinUnlockPreview"
-      | "referralStampCelebratePreview"
-      | "unitEarnCelebratePreview"
-      | "careerFlipButtonPreview"
-    | "careerPlacementPreview"
-      | "unitEarnModalDesignPreview"
-      | "unitEarnOverlayAnimPreview"
-      | "unitEarnOverlayFontPreview"
-      | "uniterzLogoTypePreview"
-    | "uniterzProBadgePreview"
-    | "proBadgeComparePreview"
-      | "resultCardDesignPreview"
-      | "resultBadgeDesignPreview"
-      | "resultStampDesignPreview"
-      | "resultStreakTagDesignPreview"
-      | "navBarDesignPreview"
-      | "splashLogoPreview"
+      | "weeklyReportPreview"
+      | "monthlyReportPreview"
+      | "squadBattlePreview"
       | "liveGameStatsPreview"
-      | "profileKinetikMetricsPreview"
+      | "resultDetailPreview"
+      | "leagueStatsPreview"
+      | "playerDetailPreview"
+      | "proLeagueTeaserPreview"
+      | "streakFramePreview"
+      | "dustProSkinPreview"
+      | "milestoneProSkinPreview"
+      | "candidateProSkinPreview"
+      | "teamAbbrBadgePreview"
+      | "resultPickupPreview"
+      | "proInsightGatePreview"
+      | "proInsightNarrativePreview"
+      | "matchupTeamStatsPreview"
+      | "adminFeatureInbox"
+      | "adminContactInbox"
+      | "adminRedemptions"
+      | "adminGroupBattles"
   ) {
     if (page === "restartTutorial") {
       setTutorialRestartCover(true);
@@ -315,7 +297,7 @@ export default function ProfileSideMenuModal({
     try {
       await signOut(auth);
     } catch {
-      cyberAlert("", isJa ? "ログアウトに失敗しました。" : "Failed to log out.");
+      cyberAlert("", labels.logoutFailed);
     }
   }
 
@@ -329,6 +311,10 @@ export default function ProfileSideMenuModal({
         onRequestClose={() => {
           if (logoutOpen) {
             setLogoutOpen(false);
+            return;
+          }
+          if (settingsOverlay != null) {
+            onSettingsRequestClose?.();
             return;
           }
           onClose();
@@ -345,7 +331,12 @@ export default function ProfileSideMenuModal({
               />
             )}
             <View style={styles.backdropDim} pointerEvents="none" />
-            <Pressable style={StyleSheet.absoluteFillObject} onPress={onClose} accessibilityRole="button" />
+            <Pressable
+              style={StyleSheet.absoluteFillObject}
+              onPress={onClose}
+              accessibilityRole="button"
+              disabled={settingsOverlay != null}
+            />
           </Animated.View>
 
           <Animated.View
@@ -376,11 +367,15 @@ export default function ProfileSideMenuModal({
                       style={styles.unitWallet}
                       onPress={() => openUserPage("unitLedger")}
                       accessibilityRole="button"
-                      accessibilityLabel={
-                        isJa
-                          ? `保有 Unit ${unitBalance.toLocaleString("ja-JP")} · 履歴を開く`
-                          : `${unitBalance.toLocaleString("en-US")} Units · Open history`
-                      }
+                      accessibilityLabel={L(lang, {
+                        ja: `保有 Unit ${unitBalance.toLocaleString("ja-JP")} · 履歴を開く`,
+                        en: `${unitBalance.toLocaleString("en-US")} Units · Open history`,
+                        ko: `보유 Unit ${unitBalance.toLocaleString("en-US")} · 기록 열기`,
+                        zh: `持有 Unit ${unitBalance.toLocaleString("en-US")} · 打开记录`,
+                        es: `${unitBalance.toLocaleString("en-US")} Units · Abrir historial`,
+                        pt: `${unitBalance.toLocaleString("en-US")} Units · Abrir histórico`,
+                        fr: `${unitBalance.toLocaleString("en-US")} Units · Ouvrir l’historique`,
+                      })}
                     >
                       <View style={styles.unitWalletMark}>
                         <MaterialCommunityIcons
@@ -415,6 +410,13 @@ export default function ProfileSideMenuModal({
                       {labels.profile}
                     </SideMenuItemButtonNative>
                     <SideMenuItemButtonNative
+                      icon="magnify"
+                      labelStyle={labelStyle}
+                      onPress={() => openUserPage("userSearch")}
+                    >
+                      {labels.userSearch}
+                    </SideMenuItemButtonNative>
+                    <SideMenuItemButtonNative
                       icon="trophy-outline"
                       labelStyle={labelStyle}
                       onPress={() => openUserPage("badges")}
@@ -445,7 +447,7 @@ export default function ProfileSideMenuModal({
                     <SideMenuItemButtonNative
                       icon="bullhorn-outline"
                       labelStyle={labelStyle}
-                      trailing={<SideMenuUnreadBadgeNative count={unreadAnnouncements} />}
+                      trailing={<SideMenuUnreadBadgeNative count={unreadAnnouncements} tone="announce" />}
                       onPress={() => openUserPage("announcements")}
                     >
                       {labels.announcements}
@@ -485,7 +487,7 @@ export default function ProfileSideMenuModal({
                       labelStyle={labelStyle}
                       onPress={() => openUserPage("restartTutorial")}
                     >
-                      {language === "ja" ? "チュートリアル" : "Tutorial"}
+                      {labels.tutorial}
                     </SideMenuItemButtonNative>
                     <SideMenuItemButtonNative
                       icon="help-circle-outline"
@@ -518,6 +520,14 @@ export default function ProfileSideMenuModal({
                       onPress={() => openUserPage("privacy")}
                     >
                       {labels.privacy}
+                    </SideMenuItemButtonNative>
+                    <SideMenuItemButtonNative
+                      icon="scale-balance"
+                      dense
+                      labelStyle={labelStyle}
+                      onPress={() => openUserPage("commercialLaw")}
+                    >
+                      {labels.commercialLaw}
                     </SideMenuItemButtonNative>
                     <SideMenuItemButtonNative
                       icon="key-outline"
@@ -558,46 +568,50 @@ export default function ProfileSideMenuModal({
                       <CyberSideMenuSectionTitleNative>{labels.admin}</CyberSideMenuSectionTitleNative>
                       <View style={styles.itemGroup}>
                         <SideMenuItemButtonNative
-                          icon="view-dashboard-outline"
+                          icon="lightbulb-on-outline"
                           labelStyle={labelStyle}
-                          onPress={() => web("/admin")}
+                          trailing={
+                            <SideMenuUnreadBadgeNative
+                              count={adminInbox.feature}
+                              tone="admin"
+                            />
+                          }
+                          onPress={() => openUserPage("adminFeatureInbox")}
                         >
-                          {labels.adminDash}
+                          {labels.adminFeatureRequests}
                         </SideMenuItemButtonNative>
                         <SideMenuItemButtonNative
-                          icon="ribbon"
+                          icon="email-outline"
                           labelStyle={labelStyle}
-                          onPress={() => web("/admin/badges")}
+                          trailing={
+                            <SideMenuUnreadBadgeNative
+                              count={adminInbox.inbox}
+                              tone="admin"
+                            />
+                          }
+                          onPress={() => openUserPage("adminContactInbox")}
                         >
-                          {labels.grantBadges}
+                          {labels.adminContacts}
                         </SideMenuItemButtonNative>
                         <SideMenuItemButtonNative
-                          icon="newspaper-variant-outline"
+                          icon="shopping-outline"
                           labelStyle={labelStyle}
-                          onPress={() => web("/admin/announcements")}
+                          trailing={
+                            <SideMenuUnreadBadgeNative
+                              count={adminInbox.redemptions}
+                              tone="admin"
+                            />
+                          }
+                          onPress={() => openUserPage("adminRedemptions")}
                         >
-                          {labels.annManage}
+                          {labels.adminRedemptions}
                         </SideMenuItemButtonNative>
                         <SideMenuItemButtonNative
-                          icon="plus-box-outline"
+                          icon="account-group-outline"
                           labelStyle={labelStyle}
-                          onPress={() => web("/admin/announcements/new")}
+                          onPress={() => openUserPage("adminGroupBattles")}
                         >
-                          {labels.annNew}
-                        </SideMenuItemButtonNative>
-                        <SideMenuItemButtonNative
-                          icon="database-import-outline"
-                          labelStyle={labelStyle}
-                          onPress={() => web("/admin/games-import")}
-                        >
-                          {labels.gameImport}
-                        </SideMenuItemButtonNative>
-                        <SideMenuItemButtonNative
-                          icon="clipboard-check-multiple-outline"
-                          labelStyle={labelStyle}
-                          onPress={() => web("/admin/plans")}
-                        >
-                          {labels.planApproval}
+                          {labels.adminGroupBattles}
                         </SideMenuItemButtonNative>
                       </View>
                     </>
@@ -624,210 +638,28 @@ export default function ProfileSideMenuModal({
                           シーズン予想プレビュー
                         </SideMenuItemButtonNative>
                         <SideMenuItemButtonNative
-                          icon="palette-outline"
+                          icon="file-chart-outline"
                           dense
                           labelStyle={labelStyle}
-                          onPress={() => openUserPage("futuristicBgPreview")}
+                          onPress={() => openUserPage("weeklyReportPreview")}
                         >
-                          Futuristic BG プレビュー
+                          週間レポート
                         </SideMenuItemButtonNative>
                         <SideMenuItemButtonNative
-                          icon="crown-outline"
+                          icon="radar"
                           dense
                           labelStyle={labelStyle}
-                          onPress={() => openUserPage("titleSkinPreview")}
+                          onPress={() => openUserPage("monthlyReportPreview")}
                         >
-                          称号スキン プレビュー
+                          月間レポート
                         </SideMenuItemButtonNative>
                         <SideMenuItemButtonNative
-                          icon="palette-swatch-outline"
+                          icon="account-group-outline"
                           dense
                           labelStyle={labelStyle}
-                          onPress={() => openUserPage("waveProSkinPreview")}
+                          onPress={() => openUserPage("squadBattlePreview")}
                         >
-                          Wave 13 スキンプレビュー
-                        </SideMenuItemButtonNative>
-                        <SideMenuItemButtonNative
-                          icon="format-list-bulleted"
-                          dense
-                          labelStyle={labelStyle}
-                          onPress={() => openUserPage("rankingListProSkinPreview")}
-                        >
-                          ランキング行 Pro Skin
-                        </SideMenuItemButtonNative>
-                        <SideMenuItemButtonNative
-                          icon="lock-open-variant-outline"
-                          dense
-                          labelStyle={labelStyle}
-                          onPress={() => openUserPage("proSkinUnlockPreview")}
-                        >
-                          Skin解放モーダル
-                        </SideMenuItemButtonNative>
-                        <SideMenuItemButtonNative
-                          icon="stamper"
-                          dense
-                          labelStyle={labelStyle}
-                          onPress={() =>
-                            openUserPage("referralStampCelebratePreview")
-                          }
-                        >
-                          招待スタンプ演出
-                        </SideMenuItemButtonNative>
-                        <SideMenuItemButtonNative
-                          icon="circle-multiple-outline"
-                          dense
-                          labelStyle={labelStyle}
-                          onPress={() =>
-                            openUserPage("unitEarnCelebratePreview")
-                          }
-                        >
-                          Unit 獲得演出
-                        </SideMenuItemButtonNative>
-                        <SideMenuItemButtonNative
-                          icon="rotate-3d-variant"
-                          dense
-                          labelStyle={labelStyle}
-                          onPress={() =>
-                            openUserPage("careerFlipButtonPreview")
-                          }
-                        >
-                          CAREER フリップ配置案
-                        </SideMenuItemButtonNative>
-                        <SideMenuItemButtonNative
-                          icon="view-column-outline"
-                          dense
-                          labelStyle={labelStyle}
-                          onPress={() =>
-                            openUserPage("careerPlacementPreview")
-                          }
-                        >
-                          CAREER 載せ場所案
-                        </SideMenuItemButtonNative>
-                        <SideMenuItemButtonNative
-                          icon="view-dashboard-outline"
-                          dense
-                          labelStyle={labelStyle}
-                          onPress={() =>
-                            openUserPage("unitEarnModalDesignPreview")
-                          }
-                        >
-                          Unit 獲得モーダル案
-                        </SideMenuItemButtonNative>
-                        <SideMenuItemButtonNative
-                          icon="movie-open-outline"
-                          dense
-                          labelStyle={labelStyle}
-                          onPress={() =>
-                            openUserPage("unitEarnOverlayAnimPreview")
-                          }
-                        >
-                          Unit 獲得アニメ案
-                        </SideMenuItemButtonNative>
-                        <SideMenuItemButtonNative
-                          icon="format-letter-case"
-                          dense
-                          labelStyle={labelStyle}
-                          onPress={() =>
-                            openUserPage("unitEarnOverlayFontPreview")
-                          }
-                        >
-                          Unit 獲得フォント案
-                        </SideMenuItemButtonNative>
-                        <SideMenuItemButtonNative
-                          icon="format-font"
-                          dense
-                          labelStyle={labelStyle}
-                          onPress={() =>
-                            openUserPage("uniterzLogoTypePreview")
-                          }
-                        >
-                          UNITERZ Logo
-                        </SideMenuItemButtonNative>
-                        <SideMenuItemButtonNative
-                          icon="shield-star-outline"
-                          dense
-                          labelStyle={labelStyle}
-                          onPress={() =>
-                            openUserPage("uniterzProBadgePreview")
-                          }
-                        >
-                          UNITERZ PRO バッジ
-                        </SideMenuItemButtonNative>
-                        <SideMenuItemButtonNative
-                          icon="compare"
-                          dense
-                          labelStyle={labelStyle}
-                          onPress={() =>
-                            openUserPage("proBadgeComparePreview")
-                          }
-                        >
-                          Pro バッジ比較
-                        </SideMenuItemButtonNative>
-                        <SideMenuItemButtonNative
-                          icon="card-bulleted-outline"
-                          dense
-                          labelStyle={labelStyle}
-                          onPress={() =>
-                            openUserPage("resultCardDesignPreview")
-                          }
-                        >
-                          リザルトカード案
-                        </SideMenuItemButtonNative>
-                        <SideMenuItemButtonNative
-                          icon="bookmark-outline"
-                          dense
-                          labelStyle={labelStyle}
-                          onPress={() =>
-                            openUserPage("resultBadgeDesignPreview")
-                          }
-                        >
-                          リザルトバッジ案
-                        </SideMenuItemButtonNative>
-                        <SideMenuItemButtonNative
-                          icon="certificate-outline"
-                          dense
-                          labelStyle={labelStyle}
-                          onPress={() =>
-                            openUserPage("resultStampDesignPreview")
-                          }
-                        >
-                          リザルトスタンプ案
-                        </SideMenuItemButtonNative>
-                        <SideMenuItemButtonNative
-                          icon="fire"
-                          dense
-                          labelStyle={labelStyle}
-                          onPress={() =>
-                            openUserPage("resultStreakTagDesignPreview")
-                          }
-                        >
-                          連勝タグ案
-                        </SideMenuItemButtonNative>
-                        <SideMenuItemButtonNative
-                          icon="view-grid-outline"
-                          dense
-                          labelStyle={labelStyle}
-                          onPress={() =>
-                            openUserPage("profileKinetikMetricsPreview")
-                          }
-                        >
-                          プロフィール 2x2 案
-                        </SideMenuItemButtonNative>
-                        <SideMenuItemButtonNative
-                          icon="tab"
-                          dense
-                          labelStyle={labelStyle}
-                          onPress={() => openUserPage("navBarDesignPreview")}
-                        >
-                          Nav Bar 案
-                        </SideMenuItemButtonNative>
-                        <SideMenuItemButtonNative
-                          icon="flash-outline"
-                          dense
-                          labelStyle={labelStyle}
-                          onPress={() => openUserPage("splashLogoPreview")}
-                        >
-                          スプラッシュ Logo
+                          SQUAD BATTLE
                         </SideMenuItemButtonNative>
                         <SideMenuItemButtonNative
                           icon="scoreboard-outline"
@@ -836,6 +668,114 @@ export default function ProfileSideMenuModal({
                           onPress={() => openUserPage("liveGameStatsPreview")}
                         >
                           ライブ試合スタッツ
+                        </SideMenuItemButtonNative>
+                        <SideMenuItemButtonNative
+                          icon="card-account-details-outline"
+                          dense
+                          labelStyle={labelStyle}
+                          onPress={() => openUserPage("resultDetailPreview")}
+                        >
+                          リザルト詳細（TOP SCORER）
+                        </SideMenuItemButtonNative>
+                        <SideMenuItemButtonNative
+                          icon="table-large"
+                          dense
+                          labelStyle={labelStyle}
+                          onPress={() => openUserPage("leagueStatsPreview")}
+                        >
+                          リーグスタッツ（左レール）
+                        </SideMenuItemButtonNative>
+                        <SideMenuItemButtonNative
+                          icon="account-box-outline"
+                          dense
+                          labelStyle={labelStyle}
+                          onPress={() => openUserPage("playerDetailPreview")}
+                        >
+                          プレイヤー詳細（ショット）
+                        </SideMenuItemButtonNative>
+                        <SideMenuItemButtonNative
+                          icon="sword-cross"
+                          dense
+                          labelStyle={labelStyle}
+                          onPress={() => openUserPage("proLeagueTeaserPreview")}
+                        >
+                          PRO LEAGUE ゲート
+                        </SideMenuItemButtonNative>
+                        <SideMenuItemButtonNative
+                          icon="flash-outline"
+                          dense
+                          labelStyle={labelStyle}
+                          onPress={() => openUserPage("streakFramePreview")}
+                        >
+                          連勝フレーム光
+                        </SideMenuItemButtonNative>
+                        <SideMenuItemButtonNative
+                          icon="texture-box"
+                          dense
+                          labelStyle={labelStyle}
+                          onPress={() => openUserPage("dustProSkinPreview")}
+                        >
+                          Dust Pro Skin
+                        </SideMenuItemButtonNative>
+                        <SideMenuItemButtonNative
+                          icon="texture-box"
+                          dense
+                          labelStyle={labelStyle}
+                          onPress={() => openUserPage("milestoneProSkinPreview")}
+                        >
+                          Milestone Pro Skin
+                        </SideMenuItemButtonNative>
+                        <SideMenuItemButtonNative
+                          icon="texture-box"
+                          dense
+                          labelStyle={labelStyle}
+                          onPress={() => openUserPage("candidateProSkinPreview")}
+                        >
+                          Candidate Pro Skin
+                        </SideMenuItemButtonNative>
+                        <SideMenuItemButtonNative
+                          icon="tag-outline"
+                          dense
+                          labelStyle={labelStyle}
+                          onPress={() => openUserPage("teamAbbrBadgePreview")}
+                        >
+                          TeamAbbrBadge
+                        </SideMenuItemButtonNative>
+                        <SideMenuItemButtonNative
+                          icon="bookmark-outline"
+                          dense
+                          labelStyle={labelStyle}
+                          onPress={() => openUserPage("resultPickupPreview")}
+                        >
+                          リザルト PICK UP
+                        </SideMenuItemButtonNative>
+                        <SideMenuItemButtonNative
+                          icon="lightbulb-on-outline"
+                          dense
+                          labelStyle={labelStyle}
+                          onPress={() => openUserPage("proInsightGatePreview")}
+                        >
+                          PRO INSIGHT ゲート
+                        </SideMenuItemButtonNative>
+                        <SideMenuItemButtonNative
+                          icon="text-box-outline"
+                          dense
+                          labelStyle={labelStyle}
+                          onPress={() =>
+                            openUserPage("proInsightNarrativePreview")
+                          }
+                        >
+                          PRO INSIGHT 新UI
+                        </SideMenuItemButtonNative>
+                        <SideMenuItemButtonNative
+                          icon="chart-timeline-variant"
+                          dense
+                          labelStyle={labelStyle}
+                          onPress={() =>
+                            openUserPage("matchupTeamStatsPreview")
+                          }
+                        >
+                          マッチアップ STATS + LAST 5
                         </SideMenuItemButtonNative>
                       </View>
                     </>
@@ -934,8 +874,14 @@ export default function ProfileSideMenuModal({
             open={logoutOpen}
             onClose={() => setLogoutOpen(false)}
             onConfirm={() => void confirmLogout()}
-            language={language}
+            language={lang}
           />
+
+          {settingsOverlay != null ? (
+            <View style={styles.settingsOverlayHost} pointerEvents="box-none">
+              {settingsOverlay}
+            </View>
+          ) : null}
         </View>
       </Modal>
     </>
@@ -946,6 +892,10 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
     flexDirection: "row",
+  },
+  settingsOverlayHost: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 80,
   },
   backdropWrap: {
     ...StyleSheet.absoluteFillObject,

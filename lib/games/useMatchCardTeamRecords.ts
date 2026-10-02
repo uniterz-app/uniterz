@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { nbaRegularSeasonWinsLosses } from "@/lib/nbaRegularSeasonRecord";
+import { normalizeLeague } from "@/lib/leagues";
+import { loadNbaStandingsTeamRecordsShared } from "@/lib/nba/standings/loadNbaStandingsTeamRecordsShared";
 import { footballWinsLossesDraws } from "@/lib/teamRecordDisplay";
 
 export type MatchCardTeamRecord = {
@@ -11,6 +12,8 @@ export type MatchCardTeamRecord = {
   losses: number;
   draws?: number;
   rank?: number;
+  /** BDL standings + game logs（古→新） */
+  recentForm?: ("W" | "L")[];
   lastGames?: { at?: unknown; isWin?: boolean }[];
 };
 
@@ -20,6 +23,8 @@ export function useMatchCardTeamRecords(
   teamIds: readonly string[]
 ): Record<string, MatchCardTeamRecord> {
   const [map, setMap] = useState<Record<string, MatchCardTeamRecord>>({});
+  const normalizedLeague = normalizeLeague(league);
+  const isNba = normalizedLeague === "nba";
 
   useEffect(() => {
     let alive = true;
@@ -34,6 +39,12 @@ export function useMatchCardTeamRecords(
 
     void (async () => {
       try {
+        if (isNba) {
+          const next = await loadNbaStandingsTeamRecordsShared({ teamIds: ids });
+          if (alive) setMap(next);
+          return;
+        }
+
         const chunks: string[][] = [];
         for (let i = 0; i < ids.length; i += 10) {
           chunks.push(ids.slice(i, i + 10));
@@ -52,29 +63,16 @@ export function useMatchCardTeamRecords(
           for (const docSnap of snap.docs) {
             const d = docSnap.data() as Record<string, unknown>;
             const teamId = docSnap.id;
-            const isNbaTeam = String(d.league ?? "") === "nba";
-            if (isNbaTeam) {
-              const wl = nbaRegularSeasonWinsLosses(d);
-              next[teamId] = {
-                wins: wl.wins,
-                losses: wl.losses,
-                rank: typeof d.rank === "number" ? d.rank : undefined,
-                lastGames: Array.isArray(d.lastGames)
-                  ? (d.lastGames as MatchCardTeamRecord["lastGames"])
-                  : [],
-              };
-            } else {
-              const wl = footballWinsLossesDraws(d);
-              next[teamId] = {
-                wins: wl.wins,
-                losses: wl.losses,
-                draws: wl.draws,
-                rank: typeof d.rank === "number" ? d.rank : undefined,
-                lastGames: Array.isArray(d.lastGames)
-                  ? (d.lastGames as MatchCardTeamRecord["lastGames"])
-                  : [],
-              };
-            }
+            const wl = footballWinsLossesDraws(d);
+            next[teamId] = {
+              wins: wl.wins,
+              losses: wl.losses,
+              draws: wl.draws,
+              rank: typeof d.rank === "number" ? d.rank : undefined,
+              lastGames: Array.isArray(d.lastGames)
+                ? (d.lastGames as MatchCardTeamRecord["lastGames"])
+                : [],
+            };
           }
         }
         setMap(next);
@@ -86,7 +84,7 @@ export function useMatchCardTeamRecords(
     return () => {
       alive = false;
     };
-  }, [league, teamIds.join("|")]);
+  }, [isNba, teamIds.join("|")]);
 
   return map;
 }

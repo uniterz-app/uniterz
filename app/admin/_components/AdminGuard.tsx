@@ -2,28 +2,38 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { useFirebaseUser } from "@/lib/useFirebaseUser";
-import { ADMIN_UID } from "@/lib/constants";
+import { useIsAdmin } from "@/lib/admin/useIsAdmin";
 
-export default function AdminGuard({ children }: { children: React.ReactNode }) {
-  const { fUser, status } = useFirebaseUser();
+export default function AdminGuard({
+  children,
+  fallbackHref = "/",
+}: {
+  children: React.ReactNode;
+  fallbackHref?: string;
+}) {
+  const { isAdmin, loading } = useIsAdmin();
   const router = useRouter();
 
   useEffect(() => {
-    if (status === "loading") return;
-    const ok = fUser && fUser.uid === ADMIN_UID;
-    if (!ok) {
-      router.replace("/"); // 非管理者はトップへ
+    if (loading) return;
+    if (!isAdmin) {
+      router.replace(fallbackHref);
     }
-  }, [fUser, status, router]);
+  }, [isAdmin, loading, router, fallbackHref]);
 
-  if (status === "loading") {
+  if (loading) {
     return (
       <div className="min-h-[60svh] grid place-items-center text-white/60">
         認証確認中…
       </div>
     );
   }
-  // いったん描画、useEffectで非管理者はリダイレクト
+  if (!isAdmin) {
+    return (
+      <div className="min-h-[60svh] grid place-items-center text-white/60">
+        権限がありません
+      </div>
+    );
+  }
   return <>{children}</>;
 }

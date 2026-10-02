@@ -6,6 +6,7 @@ import {
   FieldValue,
   Timestamp,
   type Firestore,
+  type QuerySnapshot,
   type Transaction,
 } from "firebase-admin/firestore";
 import {
@@ -28,6 +29,7 @@ import type {
   SquadStatus,
 } from "@/lib/groupBattles/types";
 import { periodSnapshotDocId } from "@/lib/groupBattles/dailyPoints";
+import { openInviteCode } from "@/lib/security/sealInviteCode";
 
 export function battleRef(db: Firestore, battleId: string) {
   return db.collection(GROUP_BATTLE_COLLECTION).doc(battleId);
@@ -141,6 +143,11 @@ export function parseSquadDoc(
       data.inviteCodeHash == null ? null : String(data.inviteCodeHash),
     inviteCodeLast4:
       data.inviteCodeLast4 == null ? null : String(data.inviteCodeLast4),
+    inviteCodePlain:
+      openInviteCode(data.inviteCodeEnc) ??
+      (typeof data.inviteCodePlain === "string" && data.inviteCodePlain.trim()
+        ? data.inviteCodePlain.trim()
+        : null),
     rulesAcceptedAtMs: data.rulesAcceptedAt
       ? tsMs(data.rulesAcceptedAt)
       : null,
@@ -148,6 +155,42 @@ export function parseSquadDoc(
       data.rulesAcceptedByUid == null
         ? null
         : String(data.rulesAcceptedByUid),
+  };
+}
+
+/** API 応答用。ハッシュは常に隠す。平文コードはオーナーのみ。 */
+export function serializeSquadForClient(
+  squad: GroupBattleSquadDoc & { id: string },
+  opts: { viewerUid: string; includeInvitePlain?: boolean }
+): Omit<
+  GroupBattleSquadDoc & { id: string },
+  "inviteCodeHash" | "inviteCodePlain"
+> & {
+  inviteCodeHash: null;
+  inviteCodePlain: string | null;
+  inviteCode?: string | null;
+} {
+  const isOwner = opts.viewerUid === squad.ownerUid;
+  const plain =
+    opts.includeInvitePlain !== false &&
+    isOwner &&
+    typeof squad.inviteCodePlain === "string" &&
+    squad.inviteCodePlain.trim()
+      ? squad.inviteCodePlain.trim()
+      : null;
+  return {
+    id: squad.id,
+    name: squad.name,
+    ownerUid: squad.ownerUid,
+    memberUids: squad.memberUids,
+    memberCount: squad.memberCount,
+    status: squad.status,
+    inviteCodeLast4: squad.inviteCodeLast4 ?? null,
+    inviteCodeHash: null,
+    inviteCodePlain: plain,
+    inviteCode: plain,
+    rulesAcceptedAtMs: squad.rulesAcceptedAtMs ?? null,
+    rulesAcceptedByUid: squad.rulesAcceptedByUid ?? null,
   };
 }
 
@@ -225,6 +268,35 @@ export async function countPendingApplications(
   return snap.size;
 }
 
+/** トランザクション内 — 書き込みより前に呼ぶ */
+export function getPendingJoinRequestsTx(
+  tx: Transaction,
+  db: Firestore,
+  battleId: string,
+  applicantUid: string
+) {
+  return tx.get(
+    joinRequestsCol(db, battleId)
+      .where("applicantUid", "==", applicantUid)
+      .where("status", "==", "pending")
+  );
+}
+
+/** 所属が決まった申請者の、残りの pending 申請を cancelled にする */
+export function cancelPendingJoinRequestsTx(
+  tx: Transaction,
+  pendingSnap: QuerySnapshot,
+  exceptRequestId?: string | null
+): void {
+  for (const doc of pendingSnap.docs) {
+    if (exceptRequestId && doc.id === exceptRequestId) continue;
+    tx.update(doc.ref, {
+      status: "cancelled",
+      resolvedAt: FieldValue.serverTimestamp(),
+    });
+  }
+}
+
 export function deriveSquadStatusAfterMemberChange(
   memberCount: number,
   rulesAccepted: boolean
@@ -272,7 +344,44 @@ export async function lockEligibleSquads(
     updatedAt: FieldValue.serverTimestamp(),
   });
   await batch.commit();
+  await cancelPendingJoinActivity(db, battleId);
   return { locked, rejected };
+}
+
+/** ロック後に残る pending 申請・招待を一括キャンセル */
+export async function cancelPendingJoinActivity(
+  db: Firestore,
+  battleId: string
+): Promise<{ requests: number; invites: number }> {
+  const [reqSnap, invSnap] = await Promise.all([
+    joinRequestsCol(db, battleId).where("status", "==", "pending").get(),
+    squadInvitesCol(db, battleId).where("status", "==", "pending").get(),
+  ]);
+
+  const CHUNK = 400;
+  let requests = 0;
+  let invites = 0;
+  type DocSnap = (typeof reqSnap.docs)[number];
+
+  const cancelDocs = async (docs: DocSnap[], kind: "requests" | "invites") => {
+    for (let i = 0; i < docs.length; i += CHUNK) {
+      const slice = docs.slice(i, i + CHUNK);
+      const b = db.batch();
+      for (const d of slice) {
+        b.update(d.ref, {
+          status: "cancelled",
+          resolvedAt: FieldValue.serverTimestamp(),
+        });
+      }
+      await b.commit();
+      if (kind === "requests") requests += slice.length;
+      else invites += slice.length;
+    }
+  };
+
+  await cancelDocs(reqSnap.docs, "requests");
+  await cancelDocs(invSnap.docs, "invites");
+  return { requests, invites };
 }
 
 export function parseSnapshotDoc(

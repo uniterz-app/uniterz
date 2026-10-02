@@ -20,11 +20,6 @@ export default function TeamStatsPreviewScreenNative({
     <MobilePageShell
       title={isJa ? "TEAM STATS" : "TEAM STATS"}
       eyebrow="STATS"
-      subtitle={
-        isJa
-          ? "共有 API から取得（未 seed 時はモック）。"
-          : "Loaded via shared API (mock until seeded)."
-      }
       appBackground
       onClose={onClose}
     >
@@ -35,10 +30,12 @@ export default function TeamStatsPreviewScreenNative({
           onSelect={(hit) => onSelectTeam(hit.id)}
         />
       </View>
-      <NbaLeagueTeamStatsPanelNative
-        language={language}
-        onSelectTeam={onSelectTeam}
-      />
+      <View style={{ flex: 1 }}>
+        <NbaLeagueTeamStatsPanelNative
+          language={language}
+          onSelectTeam={onSelectTeam}
+        />
+      </View>
     </MobilePageShell>
   );
 }

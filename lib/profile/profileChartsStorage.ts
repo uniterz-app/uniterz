@@ -1,6 +1,6 @@
 /**
- * profileCharts — cumulative_stats 親 doc から subcollection へ分割。
- * Phase: dual-read / dual-write（親 nested フィールドは移行期間のみ）。
+ * profileCharts — cumulative_stats/{uid}/profileCharts/{season} が正。
+ * 親 nested は移行期の読みフォールバックのみ。
  */
 import { doc, getDoc, type Firestore } from "firebase/firestore";
 import {

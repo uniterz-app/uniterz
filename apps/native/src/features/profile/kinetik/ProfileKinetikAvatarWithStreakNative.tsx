@@ -1,26 +1,13 @@
-import { useEffect } from "react";
 import { Image, StyleSheet, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import Animated, {
-  Easing,
-  cancelAnimation,
-  useAnimatedStyle,
-  useReducedMotion,
-  useSharedValue,
-  withRepeat,
-  withTiming,
-} from "react-native-reanimated";
 import Svg, { Circle, Polygon } from "react-native-svg";
 import type { KinetikMenuAccentKey } from "../../../../../../app/component/profile/edit/kinetikRankBadge";
 import {
-  KINETIK_STREAK_VARIANT,
   getKinetikStreakTier,
   isKinetikWinStreakActive,
-  type KinetikStreakTier,
 } from "../../../../../../app/component/profile/edit/kinetikStreakFx";
 import {
   KINETIK_AVATAR_MOBILE,
-  kinetikMarchDurationMs,
   resolveKinetikAvatarColors,
 } from "./kinetikAvatarNativeMetrics";
 
@@ -114,159 +101,20 @@ function EdgeCorner({
   );
 }
 
-const GHOST_MARCH_DURATION_MS = 3400;
-
-function EdgeMarchOverlay({
-  corner,
-  marchColor,
-  durationMs,
-  ghost = false,
-}: {
-  corner: "tl" | "br";
-  marchColor: string;
-  durationMs: number;
-  ghost?: boolean;
-}) {
-  const reduceMotion = useReducedMotion();
-  const progress = useSharedValue(0);
-  const isTl = corner === "tl";
-  const hostSize = M.size * M.marchScale;
-  const bandLen = hostSize * 1.4;
-  const lineThick = 2;
-  const duration = ghost ? GHOST_MARCH_DURATION_MS : durationMs;
-
-  useEffect(() => {
-    if (reduceMotion) {
-      cancelAnimation(progress);
-      progress.value = 0;
-      return;
-    }
-    progress.value = 0;
-    progress.value = withRepeat(
-      withTiming(1, { duration, easing: Easing.linear }),
-      -1,
-      false
-    );
-    return () => cancelAnimation(progress);
-  }, [duration, progress, reduceMotion]);
-
-  const hStyle = useAnimatedStyle(() => {
-    const t = progress.value;
-    if (isTl) {
-      return {
-        transform: [{ translateX: -bandLen * 0.14 + t * bandLen * 0.34 }],
-      };
-    }
-    return {
-      transform: [{ translateX: bandLen * 0.14 - t * bandLen * 0.34 }],
-    };
-  });
-
-  const vStyle = useAnimatedStyle(() => {
-    const t = progress.value;
-    if (isTl) {
-      return {
-        transform: [{ translateY: -bandLen * 0.14 + t * bandLen * 0.34 }],
-      };
-    }
-    return {
-      transform: [{ translateY: bandLen * 0.14 - t * bandLen * 0.34 }],
-    };
-  });
-
-  return (
-    <View
-      pointerEvents="none"
-      style={[
-        styles.marchHost,
-        isTl ? styles.marchTl : styles.marchBr,
-        { width: hostSize, height: hostSize, opacity: ghost ? 0.35 : 0.85 },
-      ]}
-    >
-      <Animated.View
-        style={[
-          styles.marchBandH,
-          isTl ? styles.marchBandHTl : styles.marchBandHBr,
-          { width: bandLen, height: lineThick },
-          hStyle,
-        ]}
-      >
-        <LinearGradient
-          colors={["transparent", marchColor, "transparent"]}
-          locations={[0, 0.45, 0.9]}
-          start={isTl ? { x: 0, y: 0.5 } : { x: 1, y: 0.5 }}
-          end={isTl ? { x: 1, y: 0.5 } : { x: 0, y: 0.5 }}
-          style={StyleSheet.absoluteFillObject}
-        />
-      </Animated.View>
-      <Animated.View
-        style={[
-          styles.marchBandV,
-          isTl ? styles.marchBandVTl : styles.marchBandVBr,
-          { width: lineThick, height: bandLen },
-          vStyle,
-        ]}
-      >
-        <LinearGradient
-          colors={["transparent", marchColor, "transparent"]}
-          locations={[0, 0.45, 0.9]}
-          start={isTl ? { x: 0.5, y: 0 } : { x: 0.5, y: 1 }}
-          end={isTl ? { x: 0.5, y: 1 } : { x: 0.5, y: 0 }}
-          style={StyleSheet.absoluteFillObject}
-        />
-      </Animated.View>
-    </View>
-  );
-}
-
-function StreakFxOverlays({
-  variant,
-  tier,
-  marchColor,
-}: {
-  variant: typeof KINETIK_STREAK_VARIANT;
-  tier: KinetikStreakTier;
-  marchColor: string;
-}) {
-  if (tier <= 0 || variant !== "edge-march") return null;
-  const durationMs = kinetikMarchDurationMs(tier);
-
-  return (
-    <>
-      <EdgeMarchOverlay corner="tl" marchColor={marchColor} durationMs={durationMs} />
-      <EdgeMarchOverlay corner="br" marchColor={marchColor} durationMs={durationMs} />
-      {tier >= 3 ? (
-        <>
-          <EdgeMarchOverlay
-            corner="tl"
-            marchColor={marchColor}
-            durationMs={durationMs}
-            ghost
-          />
-          <EdgeMarchOverlay
-            corner="br"
-            marchColor={marchColor}
-            durationMs={durationMs}
-            ghost
-          />
-        </>
-      ) : null}
-    </>
-  );
-}
-
 export default function ProfileKinetikAvatarWithStreakNative({
   streak,
   accentKey = "default",
   isPlanPro = false,
   photoURL,
-  displayName,
+  displayName: _displayName,
 }: {
   streak: number;
   accentKey?: KinetikMenuAccentKey;
   isPlanPro?: boolean;
   photoURL?: string | null;
   displayName: string;
+  /** 互換: 常時 march はしない */
+  motionPaused?: boolean;
 }) {
   const streakActive = isKinetikWinStreakActive(streak);
   const streakTier = getKinetikStreakTier(streak);
@@ -306,14 +154,6 @@ export default function ProfileKinetikAvatarWithStreakNative({
             )}
           </View>
         </View>
-
-        {streakActive ? (
-          <StreakFxOverlays
-            variant={KINETIK_STREAK_VARIANT}
-            tier={streakTier}
-            marchColor={colors.march}
-          />
-        ) : null}
       </View>
     </View>
   );
@@ -378,21 +218,4 @@ const styles = StyleSheet.create({
     opacity: 0.35,
     backgroundColor: "rgba(0,0,0,0.15)",
   },
-  marchHost: {
-    position: "absolute",
-    zIndex: 4,
-    overflow: "hidden",
-  },
-  marchTl: { left: 0, top: 0 },
-  marchBr: { right: 0, bottom: 0 },
-  marchBandH: {
-    position: "absolute",
-  },
-  marchBandHTl: { left: 0, top: 0 },
-  marchBandHBr: { right: 0, bottom: 0 },
-  marchBandV: {
-    position: "absolute",
-  },
-  marchBandVTl: { left: 0, top: 0 },
-  marchBandVBr: { right: 0, bottom: 0 },
 });

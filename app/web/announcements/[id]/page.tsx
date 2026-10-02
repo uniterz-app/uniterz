@@ -187,7 +187,7 @@ export default function WebAnnouncementDetailPage() {
                 {formatDate(postedAtTs)}
               </span>
             </div>
-            <div className="mt-4 rounded-2xl border border-white/10 overflow-hidden shadow-[0_16px_60px_rgba(0,0,0,0.35)] bg-[#120818]/90">
+            <div className="mt-4 rounded-none border border-white/10 overflow-hidden shadow-[0_16px_60px_rgba(0,0,0,0.35)] bg-[#120818]/90">
               <EventNoticeBody
                 event={syntheticContent}
                 heroHeight={320}
@@ -203,7 +203,7 @@ export default function WebAnnouncementDetailPage() {
                 alt={title}
                 width={1440}
                 height={810}
-                className="w-full h-[320px] object-cover rounded-2xl border border-white/10 shadow-[0_16px_60px_rgba(0,0,0,0.35)]"
+                className="w-full h-[320px] object-cover rounded-none border border-white/10 shadow-[0_16px_60px_rgba(0,0,0,0.35)]"
                 priority
               />
             )}

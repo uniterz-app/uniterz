@@ -5,6 +5,8 @@
 import { useMemo } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import type { RankingPeriod } from "../../../../../lib/rankings/rankingPeriod";
+import { rankingPeriodCalendarNote } from "../../../../../lib/rankings/rankingPeriodCalendarCopy";
+import { L, resolveLocalizedLang } from "../../../../../lib/i18n/localize";
 import type { RankingsLanguage } from "./rankingsTexts";
 import { METRIC_FONT } from "./rankingsUiTheme";
 
@@ -31,24 +33,24 @@ function formatLabel(
     return `${Number(m1)}/${Number(d1)} – ${Number(m2)}/${Number(d2)}`;
   }
   const [y, m] = label.split("-").map(Number);
-  if (language === "en") {
-    const months = [
-      "Jan",
-      "Feb",
-      "Mar",
-      "Apr",
-      "May",
-      "Jun",
-      "Jul",
-      "Aug",
-      "Sep",
-      "Oct",
-      "Nov",
-      "Dec",
-    ];
-    return `${months[m - 1]} ${y}`;
+  if (language === "ja") {
+    return `${y}年${m}月`;
   }
-  return `${y}年${m}月`;
+  const months = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
+  return `${months[m - 1]} ${y}`;
 }
 
 export function RankingsPeriodLabelNavNative({
@@ -56,7 +58,7 @@ export function RankingsPeriodLabelNavNative({
   activeLabel,
   availableLabels,
   onChange,
-  language = "ja",
+  language = "en",
 }: {
   period: Exclude<RankingPeriod, "season">;
   activeLabel: string | null;
@@ -64,6 +66,7 @@ export function RankingsPeriodLabelNavNative({
   onChange: (label: string | null) => void;
   language?: RankingsLanguage;
 }) {
+  const loc = resolveLocalizedLang(language);
   const { prevLabel, nextLabel, display } = useMemo(() => {
     if (!activeLabel || availableLabels.length === 0) {
       return { prevLabel: null, nextLabel: null, display: null };
@@ -78,77 +81,100 @@ export function RankingsPeriodLabelNavNative({
     return {
       prevLabel: prev,
       nextLabel: next,
-      display: formatLabel(period, activeLabel, language),
+      display: formatLabel(period, activeLabel, loc),
     };
-  }, [activeLabel, availableLabels, period, language]);
+  }, [activeLabel, availableLabels, period, loc]);
+
+  const calendarNote = useMemo(
+    () => rankingPeriodCalendarNote(period, loc),
+    [period, loc]
+  );
 
   if (!display) return null;
 
   const isCurrent = activeLabel === availableLabels[0];
+  const nowLabel = L(loc, {
+    ja: "今",
+    en: "Now",
+    ko: "지금",
+    zh: "现在",
+    es: "Ahora",
+    pt: "Agora",
+    fr: "Maintenant",
+  });
 
   return (
-    <View style={styles.row}>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="previous period"
-        disabled={!prevLabel}
-        onPress={() => prevLabel && onChange(prevLabel)}
-        hitSlop={8}
-        style={({ pressed }) => [
-          styles.chevronBtn,
-          !prevLabel ? styles.chevronDisabled : null,
-          pressed && prevLabel ? styles.chevronPressed : null,
-        ]}
-      >
-        <Text style={styles.chevron}>‹</Text>
-      </Pressable>
-
-      <Text style={styles.label} numberOfLines={1}>
-        {display}
-      </Text>
-
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="next period"
-        disabled={!nextLabel}
-        onPress={() =>
-          nextLabel &&
-          onChange(nextLabel === availableLabels[0] ? null : nextLabel)
-        }
-        hitSlop={8}
-        style={({ pressed }) => [
-          styles.chevronBtn,
-          !nextLabel ? styles.chevronDisabled : null,
-          pressed && nextLabel ? styles.chevronPressed : null,
-        ]}
-      >
-        <Text style={styles.chevron}>›</Text>
-      </Pressable>
-
-      {!isCurrent ? (
+    <View style={styles.wrap}>
+      <View style={styles.row}>
         <Pressable
           accessibilityRole="button"
-          onPress={() => onChange(null)}
-          hitSlop={6}
+          accessibilityLabel="previous period"
+          disabled={!prevLabel}
+          onPress={() => prevLabel && onChange(prevLabel)}
+          hitSlop={8}
           style={({ pressed }) => [
-            styles.nowBtn,
-            pressed ? styles.nowBtnPressed : null,
+            styles.chevronBtn,
+            !prevLabel ? styles.chevronDisabled : null,
+            pressed && prevLabel ? styles.chevronPressed : null,
           ]}
         >
-          <Text style={styles.nowText}>{language === "en" ? "Now" : "今"}</Text>
+          <Text style={styles.chevron}>‹</Text>
         </Pressable>
-      ) : null}
+
+        <Text style={styles.label} numberOfLines={1}>
+          {display}
+        </Text>
+
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="next period"
+          disabled={!nextLabel}
+          onPress={() =>
+            nextLabel &&
+            onChange(nextLabel === availableLabels[0] ? null : nextLabel)
+          }
+          hitSlop={8}
+          style={({ pressed }) => [
+            styles.chevronBtn,
+            !nextLabel ? styles.chevronDisabled : null,
+            pressed && nextLabel ? styles.chevronPressed : null,
+          ]}
+        >
+          <Text style={styles.chevron}>›</Text>
+        </Pressable>
+
+        {!isCurrent ? (
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => onChange(null)}
+            hitSlop={6}
+            style={({ pressed }) => [
+              styles.nowBtn,
+              pressed ? styles.nowBtnPressed : null,
+            ]}
+          >
+            <Text style={styles.nowText}>{nowLabel}</Text>
+          </Pressable>
+        ) : null}
+      </View>
+      <Text style={styles.note} numberOfLines={2}>
+        {calendarNote}
+      </Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  wrap: {
+    alignItems: "center",
+    gap: 4,
+    paddingVertical: 4,
+  },
   row: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 12,
-    paddingVertical: 4,
   },
   chevronBtn: {
     paddingHorizontal: 8,
@@ -191,6 +217,15 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 1,
     textTransform: "uppercase",
+    fontFamily: METRIC_FONT,
+  },
+  note: {
+    maxWidth: 320,
+    paddingHorizontal: 12,
+    textAlign: "center",
+    color: "rgba(255,255,255,0.4)",
+    fontSize: 10,
+    lineHeight: 14,
     fontFamily: METRIC_FONT,
   },
 });

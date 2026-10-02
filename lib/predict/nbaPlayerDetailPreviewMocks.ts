@@ -5,7 +5,11 @@ import {
   type NbaConferenceId,
 } from "@/lib/nba/nbaConferenceTeams";
 import { lookupTeamDetailRosterPlayer } from "@/lib/predict/nbaTeamDetailPreviewMocks";
+import { nbaSeasonStatsReady } from "@/lib/predict/nbaSeasonStatsReady";
 import type { NbaRosterPlayer } from "@/lib/predict/nbaRoster";
+import type { NbaPlayerLeaderMetricId } from "@/lib/predict/nbaPlayerStatLeadersMocks";
+import type { NbaPlayerSeasonMetricCell } from "@/lib/nba/playerSeasonMetrics/playerSeasonMetricsTypes";
+import type { UiStrings } from "@/lib/i18n/ui";
 
 /**
  * Player Detail 叩き台モック。
@@ -21,9 +25,33 @@ export type NbaPlayerSeasonMetricId =
   | "tov"
   | "min"
   | "fg_pct"
+  | "fga"
   | "fg3_pct"
+  | "fg3m"
+  | "fg3a"
   | "ft_pct"
+  | "fta"
   | "plus_minus";
+
+/** 詳細のシーズン平均グリッドに出す順（リーグ BASIC の試投を含む） */
+export const NBA_PLAYER_DETAIL_SEASON_SHOWN: readonly NbaPlayerSeasonMetricId[] =
+  [
+    "pts",
+    "reb",
+    "ast",
+    "stl",
+    "blk",
+    "tov",
+    "min",
+    "plus_minus",
+    "fg_pct",
+    "fga",
+    "fg3_pct",
+    "fg3m",
+    "fg3a",
+    "ft_pct",
+    "fta",
+  ];
 
 export type NbaPlayerSeasonMetric = {
   id: NbaPlayerSeasonMetricId;
@@ -44,6 +72,10 @@ export type NbaPlayerGameLog = {
   min: number;
   pts: number;
   reb: number;
+  /** BDL stats に oreb があるときのみ */
+  oreb?: number;
+  /** BDL stats に dreb があるときのみ */
+  dreb?: number;
   ast: number;
   stl: number;
   blk: number;
@@ -66,7 +98,8 @@ export type NbaPlayerCareerSeasonRow = {
   teamAbbr: string;
   position: string;
   games: number;
-  gamesStarted: number;
+  /** null = BDL から確定できない（UI は "—"） */
+  gamesStarted: number | null;
   min: number;
   fgm: number;
   fga: number;
@@ -101,8 +134,8 @@ export type NbaPlayerContractSeason = {
   salaryRank: number;
   teamId: string;
   teamAbbr: string;
-  /** Player / Team option など */
-  option?: "PO" | "TO" | null;
+  /** Player / Team / Mutual option など */
+  option?: "PO" | "TO" | "MO" | null;
 };
 
 export type NbaPlayerContractSummary = {
@@ -120,8 +153,27 @@ export type NbaPlayerContractSummary = {
   /** 残契約の保証額合計（概算） */
   remainingGuaranteed: number;
   notes: string[];
+  draftRound?: number | null;
+  draftYear?: number | null;
   /** 残シーズン（昇順） */
   seasons: NbaPlayerContractSeason[];
+  /**
+   * 他チームに残るデッドサラリー（ウェーブ／ストレッチ）。
+   * 現行契約（例: Exhibit 10）とは別枠。
+   */
+  deadSalary?: NbaPlayerDeadSalary | null;
+};
+
+/** プレイヤー詳細 CONTRACT の DEAD SALARY 枠 */
+export type NbaPlayerDeadSalary = {
+  teamId: string;
+  teamAbbr: string;
+  salary: number;
+  /** シーズン開始年（例: 2026） */
+  season: number;
+  throughSeasonKey?: string;
+  noteJa?: string;
+  noteEn?: string;
 };
 
 /** 2027 → "27-28" */
@@ -129,6 +181,22 @@ export function formatContractSeasonLabel(seasonStart: number): string {
   const a = String(seasonStart).slice(-2);
   const b = String(seasonStart + 1).slice(-2);
   return `${a}-${b}`;
+}
+
+/** DEAD SALARY のストレッチ年（同額）一覧 */
+export function deadSalaryStretchSeasonYears(
+  dead: Pick<NbaPlayerDeadSalary, "season" | "throughSeasonKey">
+): number[] {
+  const start = Math.trunc(dead.season);
+  if (!Number.isFinite(start) || start <= 0) return [];
+  const throughRaw = dead.throughSeasonKey?.trim() ?? "";
+  const through = throughRaw
+    ? Number.parseInt(throughRaw.slice(0, 4), 10)
+    : start;
+  const end = Number.isFinite(through) && through >= start ? through : start;
+  const out: number[] = [];
+  for (let y = start; y <= end; y += 1) out.push(y);
+  return out;
 }
 
 /** BDL shooting by_zone 相当の簡易ゾーン */
@@ -156,8 +224,7 @@ export type NbaPlayerAdvancedMetric = {
   value: number;
   display: string;
   leagueRank: number;
-  hintJa: string;
-  hintEn: string;
+  hint: UiStrings;
 };
 
 export type NbaPlayerDetailPreview = {
@@ -194,6 +261,10 @@ export type NbaPlayerDetailPreview = {
     fg3Pct: number;
     ftPct: number;
     plusMinus: number;
+    fga: number;
+    fg3m: number;
+    fg3a: number;
+    fta: number;
   };
   /** PTS / REB / AST ハイライト用（リーグ順位つき） */
   headlineMetrics: NbaPlayerSeasonMetric[];
@@ -218,10 +289,17 @@ export type NbaPlayerDetailPreview = {
   birthDate: string | null;
   /** 所属履歴（古い順。現所属を含む） */
   teamHistory: NbaPlayerTeamStint[];
-  /** ホーム / アウェイ別（今季平均） */
+  /** ホーム / アウェイ別（今季出場試合の平均） */
   venueSplits: NbaPlayerVenueSplit[];
-  /** 対戦相手別サンプル（BDL game logs 相当・プレビュー） */
+  /** 対戦相手別（今季出場試合の平均） */
   vsOpponentSamples: NbaPlayerVsOpponentSample[];
+  /**
+   * 今季メトリクス（value + リーグ順位）。リーグ表 Top30 と別スナップショット。
+   * How They Play / 詳細順位の正。無いときは leaders Top30 にフォールバック。
+   */
+  leaderMetrics: Partial<
+    Record<NbaPlayerLeaderMetricId, NbaPlayerSeasonMetricCell>
+  >;
   asOfLabel: string;
 };
 
@@ -252,7 +330,12 @@ export type NbaPlayerAward = {
 };
 
 /** 予想向けの簡易出場ステータス */
-export type NbaPlayerAvailabilityStatus = "active" | "out" | "gtd";
+export type NbaPlayerAvailabilityStatus =
+  | "active"
+  | "out"
+  | "gtd"
+  /** 今季ロスターにいない（引退・FA 等）。詳細は開ける */
+  | "retired";
 
 export type NbaPlayerAvailability = {
   status: NbaPlayerAvailabilityStatus;
@@ -284,15 +367,19 @@ const METRIC_DEFS: Array<{
   { id: "blk", short: "BLK", higherIsBetter: true, kind: "perGame" },
   { id: "tov", short: "TOV", higherIsBetter: false, kind: "perGame" },
   { id: "min", short: "MIN", higherIsBetter: true, kind: "minutes" },
-  { id: "fg_pct", short: "FG%", higherIsBetter: true, kind: "pct" },
-  { id: "fg3_pct", short: "3P%", higherIsBetter: true, kind: "pct" },
-  { id: "ft_pct", short: "FT%", higherIsBetter: true, kind: "pct" },
   {
     id: "plus_minus",
     short: "+/-",
     higherIsBetter: true,
     kind: "plusMinus",
   },
+  { id: "fg_pct", short: "FG%", higherIsBetter: true, kind: "pct" },
+  { id: "fga", short: "FGA", higherIsBetter: true, kind: "perGame" },
+  { id: "fg3_pct", short: "3P%", higherIsBetter: true, kind: "pct" },
+  { id: "fg3m", short: "3PM", higherIsBetter: true, kind: "perGame" },
+  { id: "fg3a", short: "3PA", higherIsBetter: true, kind: "perGame" },
+  { id: "ft_pct", short: "FT%", higherIsBetter: true, kind: "pct" },
+  { id: "fta", short: "FTA", higherIsBetter: true, kind: "perGame" },
 ];
 
 type SeedProfile = {
@@ -351,6 +438,10 @@ const LUKA: SeedProfile = {
     fg3Pct: 0.348,
     ftPct: 0.782,
     plusMinus: 4.1,
+    fga: 22.4,
+    fg3m: 3.4,
+    fg3a: 9.8,
+    fta: 7.6,
   },
   ranks: {
     pts: 4,
@@ -361,8 +452,12 @@ const LUKA: SeedProfile = {
     tov: 8,
     min: 3,
     fg_pct: 72,
+    fga: 4,
     fg3_pct: 95,
+    fg3m: 18,
+    fg3a: 12,
     ft_pct: 110,
+    fta: 9,
     plus_minus: 35,
   },
   advanced: {
@@ -436,7 +531,6 @@ const LUKA: SeedProfile = {
   awards: [
     { id: "mvp", label: "MVP", count: 2 },
     { id: "fmvp", label: "Finals MVP", count: 1 },
-    { id: "champion", label: "Champion", count: 3 },
     { id: "all_star", label: "All-Star", count: 8 },
     { id: "all_nba_1st", label: "All-NBA First Team", count: 4 },
     { id: "all_def", label: "All-Defensive", count: 5 },
@@ -493,6 +587,10 @@ const CURRY: SeedProfile = {
     fg3Pct: 0.411,
     ftPct: 0.923,
     plusMinus: 5.2,
+    fga: 19.2,
+    fg3m: 4.6,
+    fg3a: 11.2,
+    fta: 4.8,
   },
   ranks: {
     pts: 8,
@@ -503,8 +601,12 @@ const CURRY: SeedProfile = {
     tov: 40,
     min: 45,
     fg_pct: 88,
+    fga: 12,
     fg3_pct: 12,
+    fg3m: 2,
+    fg3a: 3,
     ft_pct: 3,
+    fta: 55,
     plus_minus: 22,
   },
   advanced: {
@@ -546,7 +648,6 @@ const CURRY: SeedProfile = {
   awards: [
     { id: "mvp", label: "MVP", count: 2 },
     { id: "fmvp", label: "Finals MVP", count: 1 },
-    { id: "champion", label: "Champion", count: 4 },
     { id: "all_star", label: "All-Star", count: 11 },
     { id: "all_nba_1st", label: "All-NBA First Team", count: 4 },
     { id: "roy", label: "ROY", count: 0 },
@@ -595,6 +696,10 @@ const JOKIC: SeedProfile = {
     fg3Pct: 0.418,
     ftPct: 0.817,
     plusMinus: 9.4,
+    fga: 18.1,
+    fg3m: 1.8,
+    fg3a: 4.3,
+    fta: 6.1,
   },
   ranks: {
     pts: 3,
@@ -605,8 +710,12 @@ const JOKIC: SeedProfile = {
     tov: 18,
     min: 8,
     fg_pct: 6,
+    fga: 16,
     fg3_pct: 28,
+    fg3m: 84,
+    fg3a: 90,
     ft_pct: 95,
+    fta: 22,
     plus_minus: 4,
   },
   advanced: {
@@ -655,7 +764,6 @@ const JOKIC: SeedProfile = {
   awards: [
     { id: "mvp", label: "MVP", count: 3 },
     { id: "fmvp", label: "Finals MVP", count: 1 },
-    { id: "champion", label: "Champion", count: 1 },
     { id: "all_star", label: "All-Star", count: 7 },
     { id: "all_nba_1st", label: "All-NBA First Team", count: 4 },
   ],
@@ -715,7 +823,7 @@ function mulberry32(seed: number) {
   };
 }
 
-function formatMetricDisplay(
+export function formatMetricDisplay(
   id: NbaPlayerSeasonMetricId,
   value: number
 ): string {
@@ -763,11 +871,13 @@ export function formatPhysique(height: string, weight: string): string {
 }
 
 export function formatAvailabilityStatus(
-  status: NbaPlayerAvailabilityStatus
+  status: NbaPlayerAvailabilityStatus,
+  isJa = false
 ): string {
-  if (status === "active") return "ACTIVE";
-  if (status === "out") return "OUT";
-  return "GAME-TIME DECISION";
+  if (status === "active") return isJa ? "出場" : "ACTIVE";
+  if (status === "out") return isJa ? "欠場" : "OUT";
+  if (status === "retired") return isJa ? "引退 / ロスター外" : "RETIRED / OFF ROSTER";
+  return isJa ? "試合時判断" : "GAME-TIME DECISION";
 }
 
 export function availabilityStatusColor(
@@ -775,6 +885,7 @@ export function availabilityStatusColor(
 ): string {
   if (status === "active") return "#2DFF6E";
   if (status === "out") return "#FF2D78";
+  if (status === "retired") return "#94A3B8";
   return "#F5C518";
 }
 
@@ -795,6 +906,50 @@ export function ageFromBirthDate(
     (asOf.getMonth() + 1 === mo && asOf.getDate() < d);
   if (beforeBirthday) age -= 1;
   return age >= 0 && age < 80 ? age : null;
+}
+
+/**
+ * 表示用年齢。BDL に生年月日は無いので:
+ * 1) シード birthDate
+ * 2) キャリア行の age（最新シーズン基準。古い行しか無いときは差分で繰り上げ）
+ *
+ * 注意: regular は ingest で新しい順。末尾から拾うとルーキー年になる。
+ */
+export function resolvePlayerDisplayAge(detail: {
+  birthDate?: string | null;
+  careerSeasons?: {
+    regular: Array<{ age?: number | null; seasonStart?: number | null }>;
+  };
+}): number | null {
+  const fromBirth = ageFromBirthDate(detail.birthDate);
+  if (fromBirth != null) return fromBirth;
+
+  const regular = detail.careerSeasons?.regular ?? [];
+  let latestSeasonStart = Number.NEGATIVE_INFINITY;
+  let best: { seasonStart: number; age: number } | null = null;
+
+  for (const row of regular) {
+    const seasonStart = Number(row.seasonStart);
+    if (Number.isFinite(seasonStart) && seasonStart > latestSeasonStart) {
+      latestSeasonStart = seasonStart;
+    }
+    const age = row.age;
+    if (age == null || !Number.isFinite(age) || age <= 0) continue;
+    if (
+      !Number.isFinite(seasonStart) ||
+      seasonStart <= 0 ||
+      (best != null && seasonStart <= best.seasonStart)
+    ) {
+      continue;
+    }
+    best = { seasonStart, age: Math.round(age) };
+  }
+
+  if (!best) return null;
+  if (!Number.isFinite(latestSeasonStart)) return best.age;
+  const yearsForward = Math.max(0, latestSeasonStart - best.seasonStart);
+  const projected = best.age + yearsForward;
+  return projected > 0 && projected < 80 ? projected : best.age;
 }
 
 /** `1999-02-28` → `1999.02.28` */
@@ -981,38 +1136,52 @@ function buildShotZones(
 const ADVANCED_METRIC_DEFS: Array<{
   id: NbaPlayerAdvancedMetricId;
   short: string;
-  hintJa: string;
-  hintEn: string;
+  hint: UiStrings;
   kind: "per" | "pct";
   fallbackValue: number;
 }> = [
   {
     id: "per",
     short: "PER",
-    hintJa:
-      "得点・リバ・パス等を1分あたりの貢献度にまとめた指標。平均≈15。高いほど個人の影響力は大きいが、勝ち負けだけを示す数値ではない。",
-    hintEn:
-      "Per-minute box-score impact (pts, reb, ast…). Avg ≈15. Higher = bigger individual impact, not wins alone.",
+    hint: {
+      ja: "得点・リバ・パス等を1分あたりの貢献度にまとめた指標。平均≈15。高いほど個人の影響力は大きいが、勝ち負けだけを示す数値ではない。",
+      en: "Per-minute box-score impact (pts, reb, ast…). Avg ≈15. Higher = bigger individual impact, not wins alone.",
+      ko: "득점·리바운드·어시스트 등을 분당 기여도로 합친 지표. 평균 ≈15. 높을수록 개인 영향력이 크지만 승패만을 뜻하진 않는다.",
+      zh: "把得分、篮板、助攻等折算成每分钟贡献的指标。平均约 15。越高个人影响力越大，但不等于胜负。",
+      es: "Impacto de box score por minuto (pts, reb, ast…). Media ≈15. Más alto = mayor impacto individual, no solo victorias.",
+      pt: "Impacto de box score por minuto (pts, reb, ast…). Média ≈15. Maior = mais impacto individual, não só vitórias.",
+      fr: "Impact statistique par minute (pts, reb, pd…). Moyenne ≈15. Plus haut = plus d’impact individuel, pas seulement des victoires.",
+    },
     kind: "per",
     fallbackValue: 18,
   },
   {
     id: "ts_pct",
     short: "TS%",
-    hintJa:
-      "2P・3P・FTをまとめたシュート成功率。高いほど、投げた1本あたりの得点が増える。",
-    hintEn:
-      "Shooting efficiency across 2P, 3P, and FT. Higher = more points per shot taken.",
+    hint: {
+      ja: "2P・3P・FTをまとめたシュート成功率。高いほど、投げた1本あたりの得点が増える。",
+      en: "Shooting efficiency across 2P, 3P, and FT. Higher = more points per shot taken.",
+      ko: "2점·3점·자유투를 합친 슛 효율. 높을수록 슛 1개당 득점이 많다.",
+      zh: "综合两分、三分与罚球的投篮效率。越高表示每次出手得分越多。",
+      es: "Eficiencia de tiro juntando 2P, 3P y TL. Más alto = más puntos por tiro.",
+      pt: "Eficiência de arremesso somando 2P, 3P e LL. Maior = mais pontos por tentativa.",
+      fr: "Efficacité au tir combinant 2P, 3P et LF. Plus haut = plus de points par tir.",
+    },
     kind: "pct",
     fallbackValue: 0.56,
   },
   {
     id: "usg",
     short: "USG",
-    hintJa:
-      "出場中に攻撃をどれだけ使ったか。高い＝エース役・ボール使用が多い。",
-    hintEn:
-      "Share of offense while on court. Higher = star role, more touches.",
+    hint: {
+      ja: "出場中に攻撃をどれだけ使ったか。高い＝エース役・ボール使用が多い。",
+      en: "Share of offense while on court. Higher = star role, more touches.",
+      ko: "코트에 있을 때 공격을 얼마나 소화했는지. 높을수록 에이스 역할·볼 소유가 많다.",
+      zh: "在场时占用了多少进攻回合。越高＝核心角色、持球更多。",
+      es: "Cuota de ataque mientras juega. Más alto = rol de estrella, más balón.",
+      pt: "Fatia do ataque enquanto está em quadra. Maior = papel de estrela, mais bola.",
+      fr: "Part de l’attaque assumée sur le terrain. Plus haut = rôle de star, plus de ballons.",
+    },
     kind: "pct",
     fallbackValue: 0.24,
   },
@@ -1040,8 +1209,7 @@ function buildAdvancedMetrics(
           ? `${(value * 100).toFixed(1)}%`
           : value.toFixed(1),
       leagueRank,
-      hintJa: def.hintJa,
-      hintEn: def.hintEn,
+      hint: def.hint,
     };
   });
 }
@@ -1067,10 +1235,18 @@ function seasonValue(
       return season.min;
     case "fg_pct":
       return season.fgPct;
+    case "fga":
+      return season.fga;
     case "fg3_pct":
       return season.fg3Pct;
+    case "fg3m":
+      return season.fg3m;
+    case "fg3a":
+      return season.fg3a;
     case "ft_pct":
       return season.ftPct;
+    case "fta":
+      return season.fta;
     case "plus_minus":
       return season.plusMinus;
   }
@@ -1119,6 +1295,18 @@ function ageInSeason(birthDate: string, seasonStart: number): number {
 
 function round1(n: number): number {
   return Math.round(n * 10) / 10;
+}
+
+function deriveShotVolume(
+  pts: number,
+  fg3Pct: number,
+  rnd: () => number
+): { fga: number; fg3m: number; fg3a: number; fta: number } {
+  const fga = round1(Math.max(3.5, pts * 0.7 + rnd() * 3.5));
+  const fg3a = round1(Math.max(0.3, fga * (0.22 + rnd() * 0.38)));
+  const fg3m = round1(fg3a * Math.max(0.2, fg3Pct));
+  const fta = round1(Math.max(0.8, pts * 0.18 + rnd() * 2.2));
+  return { fga, fg3m, fg3a, fta };
 }
 
 function round3(n: number): number {
@@ -1350,6 +1538,7 @@ function seedFromRosterPlayer(
     fg3Pct: player.fg3Pct ?? 0.35,
     ftPct: player.ftPct ?? 0.75,
     plusMinus: Math.round(((rnd() - 0.45) * 10) * 10) / 10,
+    ...deriveShotVolume(player.ppg, player.fg3Pct ?? 0.35, rnd),
   };
   return {
     playerId,
@@ -1436,19 +1625,22 @@ function resolveSeed(playerId?: string): SeedProfile {
     const lastNames = ["Williams", "Thompson", "Henderson", "Holmgren", "Banchero"];
     const first = firstNames[Math.floor(rnd() * firstNames.length)]!;
     const last = lastNames[Math.floor(rnd() * lastNames.length)]!;
+    const pts = Math.round((12 + rnd() * 18) * 10) / 10;
+    const fg3Pct = 0.3 + rnd() * 0.15;
     const season = {
       gamesPlayed: Math.round(40 + rnd() * 30),
       min: Math.round((22 + rnd() * 16) * 10) / 10,
-      pts: Math.round((12 + rnd() * 18) * 10) / 10,
+      pts,
       reb: Math.round((3 + rnd() * 9) * 10) / 10,
       ast: Math.round((2 + rnd() * 8) * 10) / 10,
       stl: Math.round((0.4 + rnd() * 1.6) * 10) / 10,
       blk: Math.round((0.2 + rnd() * 1.8) * 10) / 10,
       tov: Math.round((1 + rnd() * 2.5) * 10) / 10,
       fgPct: 0.42 + rnd() * 0.14,
-      fg3Pct: 0.3 + rnd() * 0.15,
+      fg3Pct,
       ftPct: 0.72 + rnd() * 0.22,
       plusMinus: Math.round(((rnd() - 0.45) * 10) * 10) / 10,
+      ...deriveShotVolume(pts, fg3Pct, rnd),
     };
     const salary = Math.round(8_000_000 + rnd() * 35_000_000);
     return {
@@ -1528,7 +1720,152 @@ function resolveSeed(playerId?: string): SeedProfile {
 }
 
 /** 既定は Luka。`playerId` で Curry / Jokic 等に切替可 */
+
+const RANK_HIDDEN = 999;
+
+function zeroSeasonBlock(): NbaPlayerDetailPreview["season"] {
+  return {
+    gamesPlayed: 0,
+    min: 0,
+    pts: 0,
+    reb: 0,
+    ast: 0,
+    stl: 0,
+    blk: 0,
+    tov: 0,
+    fgPct: 0,
+    fg3Pct: 0,
+    ftPct: 0,
+    plusMinus: 0,
+    fga: 0,
+    fg3m: 0,
+    fg3a: 0,
+    fta: 0,
+  };
+}
+
+export function metricsFromSeason(
+  season: NbaPlayerDetailPreview["season"],
+  ranks: Partial<Record<NbaPlayerSeasonMetricId, number>> = {}
+): NbaPlayerSeasonMetric[] {
+  return METRIC_DEFS.map((def) => {
+    const value = seasonValue(season, def.id);
+    return {
+      id: def.id,
+      short: def.short,
+      value,
+      display: formatMetricDisplay(def.id, value),
+      leagueRank: ranks[def.id] ?? RANK_HIDDEN,
+      higherIsBetter: def.higherIsBetter,
+    };
+  });
+}
+
+function zeroAdvancedMetrics(): NbaPlayerAdvancedMetric[] {
+  return ADVANCED_METRIC_DEFS.map((def) => ({
+    id: def.id,
+    short: def.short,
+    value: 0,
+    display: String(def.id).includes("pct") ? "0.0%" : "0.0",
+    leagueRank: RANK_HIDDEN,
+    hint: def.hint,
+  }));
+}
+
+function activeAvailability(): NbaPlayerAvailability {
+  return { status: "active", reason: null, returnEstimate: null };
+}
+
+/** シーズン数値・ログ・スプリットを 0/空に（チーム詳細と同型） */
+export function zeroPlayerDetailSeasonStats(
+  detail: NbaPlayerDetailPreview
+): NbaPlayerDetailPreview {
+  const season = zeroSeasonBlock();
+  const seasonMetrics = metricsFromSeason(season);
+  const headlineIds: NbaPlayerSeasonMetricId[] = ["pts", "reb", "ast"];
+  const headlineMetrics = headlineIds
+    .map((id) => seasonMetrics.find((m) => m.id === id))
+    .filter((m): m is NbaPlayerSeasonMetric => Boolean(m));
+  return {
+    ...detail,
+    season,
+    headlineMetrics,
+    seasonMetrics,
+    advancedMetrics: zeroAdvancedMetrics(),
+    careerSeasons: { regular: [], playoffs: [] },
+    shotZones: [],
+    gameLogs: [],
+    contract: null,
+    awards: [],
+    availability: activeAvailability(),
+    venueSplits: [],
+    vsOpponentSamples: [],
+    leaderMetrics: {},
+    asOfLabel: nbaSeasonStatsReady()
+      ? detail.asOfLabel || "2026-27"
+      : "PRESEASON · 2026-27",
+  };
+}
+
+function blankPlayerIdentity(playerId?: string): NbaPlayerDetailPreview {
+  const id = (playerId ?? "").trim() || "0";
+  const season = zeroSeasonBlock();
+  const seasonMetrics = metricsFromSeason(season);
+  const headlineIds: NbaPlayerSeasonMetricId[] = ["pts", "reb", "ast"];
+  const headlineMetrics = headlineIds
+    .map((metricId) => seasonMetrics.find((m) => m.id === metricId))
+    .filter((m): m is NbaPlayerSeasonMetric => Boolean(m));
+  return {
+    playerId: id,
+    uidLabel: formatPlayerUid(id),
+    firstName: "—",
+    lastName: "—",
+    jerseyNumber: "—",
+    position: "—",
+    experienceYears: 0,
+    height: "—",
+    weight: "—",
+    college: null,
+    country: null,
+    draftYear: null,
+    draftRound: null,
+    draftNumber: null,
+    teamId: "",
+    teamAbbr: "NBA",
+    teamName: "—",
+    conference: "west",
+    season,
+    headlineMetrics,
+    seasonMetrics,
+    advancedMetrics: zeroAdvancedMetrics(),
+    careerSeasons: { regular: [], playoffs: [] },
+    shotZones: [],
+    gameLogs: [],
+    contract: null,
+    awards: [],
+    availability: activeAvailability(),
+    birthDate: null,
+    teamHistory: [],
+    venueSplits: [],
+    vsOpponentSamples: [],
+    leaderMetrics: {},
+    asOfLabel: nbaSeasonStatsReady() ? "2026-27" : "PRESEASON · 2026-27",
+  };
+}
+
 export function getNbaPlayerDetailPreview(
+  playerId?: string
+): NbaPlayerDetailPreview {
+  // bio / 名前はシードや乱数にしない。roster overlay が埋めるまで空。
+  return zeroPlayerDetailSeasonStats(blankPlayerIdentity(playerId));
+}
+
+/**
+ * __DEV__ / `/dev/player-detail-preview` 用。
+ * Firestore が空でもショットチャート等を見られるようシードを返す。
+ * ライブ overlay があれば上書き（shotZones 空ならシードが残る）。
+ */
+export function getNbaPlayerDetailDevMock(
   playerId?: string
 ): NbaPlayerDetailPreview {
   const seed = resolveSeed(playerId);
@@ -1576,7 +1913,8 @@ export function getNbaPlayerDetailPreview(
       seed.teamId,
       seed.season
     ),
-    asOfLabel: "AS OF PREVIEW · MOCK",
+    leaderMetrics: {},
+    asOfLabel: "DEV MOCK",
   };
 }
 
@@ -1586,11 +1924,75 @@ export type NbaPlayerRecentWindowAvg = {
   pts: number;
   reb: number;
   ast: number;
+  stl: number;
+  blk: number;
+  tov: number;
+  min: number;
+  plusMinus: number;
   fgPct: number;
+  fga: number;
   fg3Pct: number;
+  fg3m: number;
+  fg3a: number;
+  ftPct: number;
+  fta: number;
 };
 
-/** Game logs 先頭から直近 N 試合の簡易平均 */
+/** シーズン平均グリッドと同じ id の生値 */
+export function playerDetailSeasonRawValue(
+  season: NbaPlayerDetailPreview["season"],
+  id: NbaPlayerSeasonMetricId
+): number {
+  return seasonValue(season, id);
+}
+
+export function playerDetailRecentRawValue(
+  avg: NbaPlayerRecentWindowAvg,
+  id: NbaPlayerSeasonMetricId
+): number {
+  switch (id) {
+    case "pts":
+      return avg.pts;
+    case "reb":
+      return avg.reb;
+    case "ast":
+      return avg.ast;
+    case "stl":
+      return avg.stl;
+    case "blk":
+      return avg.blk;
+    case "tov":
+      return avg.tov;
+    case "min":
+      return avg.min;
+    case "fg_pct":
+      return avg.fgPct;
+    case "fga":
+      return avg.fga;
+    case "fg3_pct":
+      return avg.fg3Pct;
+    case "fg3m":
+      return avg.fg3m;
+    case "fg3a":
+      return avg.fg3a;
+    case "ft_pct":
+      return avg.ftPct;
+    case "fta":
+      return avg.fta;
+    case "plus_minus":
+      return avg.plusMinus;
+  }
+}
+
+/** LAST 10 がシーズン平均より数値が高い（ハイライト用） */
+export function isPlayerDetailLast10AboveSeason(
+  last10: number,
+  season: number
+): boolean {
+  return Number.isFinite(last10) && Number.isFinite(season) && last10 > season;
+}
+
+/** Game logs 先頭から直近 N 試合の平均（詳細グリッドと同指標） */
 export function averageRecentGameLogs(
   logs: NbaPlayerGameLog[],
   window: number
@@ -1604,13 +2006,26 @@ export function averageRecentGameLogs(
   const fga = sum((g) => g.fga);
   const fg3m = sum((g) => g.fg3m);
   const fg3a = sum((g) => g.fg3a);
+  const ftm = sum((g) => g.ftm);
+  const fta = sum((g) => g.fta);
+  const r1 = (v: number) => Math.round((v / n) * 10) / 10;
   return {
     window,
     games: n,
-    pts: Math.round((sum((g) => g.pts) / n) * 10) / 10,
-    reb: Math.round((sum((g) => g.reb) / n) * 10) / 10,
-    ast: Math.round((sum((g) => g.ast) / n) * 10) / 10,
+    pts: r1(sum((g) => g.pts)),
+    reb: r1(sum((g) => g.reb)),
+    ast: r1(sum((g) => g.ast)),
+    stl: r1(sum((g) => g.stl)),
+    blk: r1(sum((g) => g.blk)),
+    tov: r1(sum((g) => g.tov)),
+    min: r1(sum((g) => g.min)),
+    plusMinus: r1(sum((g) => g.plusMinus)),
+    fga: r1(fga),
+    fg3m: r1(fg3m),
+    fg3a: r1(fg3a),
     fgPct: fga > 0 ? fgm / fga : 0,
     fg3Pct: fg3a > 0 ? fg3m / fg3a : 0,
+    ftPct: fta > 0 ? ftm / fta : 0,
+    fta: r1(fta),
   };
 }

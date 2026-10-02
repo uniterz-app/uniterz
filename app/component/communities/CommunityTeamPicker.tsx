@@ -1,9 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type CSSProperties } from "react";
 import type { ScheduleTeamOption } from "@/lib/games/useScheduleTeams";
 import type { Language } from "@/lib/i18n/language";
 import { MAX_RANKING_TEAM_IDS } from "@/lib/communities/rankingTeams";
+import { nameOxanium } from "@/lib/fonts";
+import { matchCardTeamNameStyle } from "@/lib/games/teamDisplayTypography";
 
 type Props = {
   teams: ScheduleTeamOption[];
@@ -21,6 +23,12 @@ export default function CommunityTeamPicker({
   isWeb = false,
 }: Props) {
   const [q, setQ] = useState("");
+
+  /** Games フィルターと同系: Oxanium SemiBold（カード Bold より細め） */
+  const teamNameFont: CSSProperties = {
+    ...matchCardTeamNameStyle(!isWeb),
+    fontWeight: 600,
+  };
 
   const labels = useMemo(
     () =>
@@ -161,7 +169,14 @@ export default function CommunityTeamPicker({
                 >
                   {on ? "✓" : ""}
                 </span>
-                <span className="min-w-0 truncate">{t.name}</span>
+                <span
+                  className={["min-w-0 truncate", nameOxanium.className].join(
+                    " "
+                  )}
+                  style={teamNameFont}
+                >
+                  {t.name}
+                </span>
               </button>
             );
           })

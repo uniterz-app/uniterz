@@ -17,12 +17,17 @@ import {
 import Animated, { useReducedMotion } from "react-native-reanimated";
 import { BlurView } from "expo-blur";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { keyboardAvoidingBehavior } from "../../ui/keyboardAvoidingBehaviorNative";
 import { useIsFocused, useNavigation } from "@react-navigation/native";
 import type { NavigationProp, ParamListBase } from "@react-navigation/native";
 import { BlocksPulseLoader } from "../../components/BlocksPulseLoader";
 import { useFirebaseUser } from "../../auth/FirebaseUserProvider";
 import { navigateToPublicProfileNative } from "../../navigation/navigateToPublicProfileNative";
+import type { OpenPublicProfileWarm } from "../../navigation/navigateToPublicProfileNative";
 import { useBottomTabBarInsets } from "../../navigation/useBottomTabBarInsets";
+import type { Language } from "../../../../../lib/i18n/language";
+import { t } from "../../../../../lib/i18n/t";
+import { L, resolveLocalizedLang } from "../../../../../lib/i18n/localize";
 import ProfileBackEdgeHandleNative from "../profile/ProfileBackEdgeHandleNative";
 import {
   PREDICT_MODAL_EXIT_COMPLETION_MS,
@@ -36,6 +41,7 @@ import { nativeBlurViewExtraProps } from "../../ui/nativeBlurProps";
 import { spacing } from "../../theme/tokens";
 import {
   buildResultDetailViewFromLoad,
+  buildWarmResultDetailViewFromPost,
   loadResultPostDetailNative,
 } from "./loadResultPostDetailNative";
 import ResultDetailBodyNative, {
@@ -61,16 +67,29 @@ export default function ResultDetailScreen({
   sections = "full",
   /** true: RN Modal を使わず親ツリーに載せる（チュートリアルコーチが前面に出る） */
   embedInParent = false,
+  /** 一覧から渡すと初回描画を即時化（裏で正式 load） */
+  warmPost = null,
+  warmMarket = null,
+  warmRoundMeta = null,
 }: {
   visible: boolean;
   postId: string | null;
-  language: "ja" | "en";
+  language: Language;
   onClose: () => void;
-  onOpenProfile?: (handle: string) => void;
+  onOpenProfile?: (handle: string, warm?: OpenPublicProfileWarm) => void;
   sections?: ResultDetailBodySections;
   embedInParent?: boolean;
+  warmPost?: (Record<string, unknown> & { id: string }) | null;
+  warmMarket?: { homeRate: number; awayRate: number } | null;
+  warmRoundMeta?: {
+    roundLabel?: string | null;
+    playoffRound?: string | null;
+    seasonRound?: string | number | null;
+    seasonPhase?: string | null;
+  } | null;
 }) {
-  const isEn = language === "en";
+  const loc = resolveLocalizedLang(language);
+  const common = t(loc).common;
   const reduceMotion = useReducedMotion() ?? false;
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavigationProp<ParamListBase>>();
@@ -97,14 +116,53 @@ export default function ResultDetailScreen({
 
   const openProfile =
     onOpenProfile ??
-    ((handle: string) => {
+    ((handle: string, warm?: OpenPublicProfileWarm) => {
       const detailPostId = postId?.trim() ?? "";
       navigateToPublicProfileNative(navigation, {
         handle,
         fromResultDetail: true,
         ...(detailPostId ? { resultDetailPostId: detailPostId } : {}),
+        ...(warm ? { warm } : {}),
       });
     });
+
+  const openTeamDetail = useCallback(
+    (teamId: string) => {
+      const id = teamId.trim();
+      if (!id) return;
+      const nav = navigation as NavigationProp<ParamListBase> & {
+        push?: (name: string, params: { teamId: string }) => void;
+      };
+      if (typeof nav.push === "function") {
+        nav.push("TeamDetailPreview", { teamId: id });
+        return;
+      }
+      navigation.navigate(
+        "TeamDetailPreview" as never,
+        { teamId: id } as never
+      );
+    },
+    [navigation]
+  );
+
+  const openPlayerDetail = useCallback(
+    (playerId: string) => {
+      const id = playerId.trim();
+      if (!id) return;
+      const nav = navigation as NavigationProp<ParamListBase> & {
+        push?: (name: string, params: { playerId: string }) => void;
+      };
+      if (typeof nav.push === "function") {
+        nav.push("PlayerDetailPreview", { playerId: id });
+        return;
+      }
+      navigation.navigate(
+        "PlayerDetailPreview" as never,
+        { playerId: id } as never
+      );
+    },
+    [navigation]
+  );
 
   const reset = useCallback(() => {
     setView(null);
@@ -166,19 +224,37 @@ export default function ResultDetailScreen({
       return;
     }
     let alive = true;
-    setLoading(true);
     setMissing(false);
+
+    const viewer = {
+      uid: fUser?.uid ?? null,
+      handle: null as string | null,
+      displayName: fUser?.displayName ?? null,
+      photoURL: fUser?.photoURL ?? null,
+      isPro: false,
+    };
+
+    // 一覧の投稿で先に描画（詳細の posts getDoc を待たない）
+    if (
+      warmPost &&
+      warmPost.id === postId &&
+      postId !== RESULT_DETAIL_DESIGN_PREVIEW_POST_ID &&
+      postId !== TUTORIAL_RESULT_POST_ID
+    ) {
+      setView(
+        buildWarmResultDetailViewFromPost(warmPost, {
+          market: warmMarket,
+          gameMeta: warmRoundMeta,
+          viewer,
+        })
+      );
+      setLoading(false);
+    } else {
+      setLoading(true);
+    }
 
     void (async () => {
       try {
-        const viewer = {
-          uid: fUser?.uid ?? null,
-          handle: null as string | null,
-          displayName: fUser?.displayName ?? null,
-          photoURL: fUser?.photoURL ?? null,
-          isPro: false,
-        };
-
         if (postId === RESULT_DETAIL_DESIGN_PREVIEW_POST_ID) {
           if (!alive) return;
           setView(buildResultDetailDesignPreviewView(viewer));
@@ -216,10 +292,6 @@ export default function ResultDetailScreen({
           return;
         }
         setView(buildResultDetailViewFromLoad(loaded, viewer));
-      } catch {
-        if (!alive) return;
-        setMissing(true);
-        setView(null);
       } finally {
         if (alive) setLoading(false);
       }
@@ -228,7 +300,9 @@ export default function ResultDetailScreen({
     return () => {
       alive = false;
     };
-  }, [postId, reset, fUser?.uid, fUser?.displayName, fUser?.photoURL]);
+    // warmPost / warmMarket は postId 切替時の先出し描画用。identity 変化で再取得しない
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
+  }, [postId, fUser?.uid, fUser?.displayName, fUser?.photoURL, reset]);
 
   useEffect(() => {
     if (!modalChromeVisible) return;
@@ -250,28 +324,68 @@ export default function ResultDetailScreen({
     >
       {layersVisible ? (
         <>
-          <Animated.View
-            entering={backdropEnter}
-            exiting={backdropExit}
-            style={StyleSheet.absoluteFillObject}
-            pointerEvents="box-none"
-          >
-            {(Platform.OS === "ios" || Platform.OS === "android") && (
+          {Platform.OS === "android" ? (
+            <View style={StyleSheet.absoluteFillObject} pointerEvents="box-none">
               <BlurView
-                intensity={Platform.OS === "ios" ? 28 : 22}
+                intensity={64}
                 tint="dark"
                 {...nativeBlurViewExtraProps()}
                 style={StyleSheet.absoluteFillObject}
               />
-            )}
-            <View style={styles.backdropDim} pointerEvents="none" />
-            <Pressable
+              <View style={styles.backdropDim} pointerEvents="none" />
+              <View style={styles.backdropFrostAndroid} pointerEvents="none" />
+              <Animated.View
+                entering={backdropEnter}
+                exiting={backdropExit}
+                style={StyleSheet.absoluteFillObject}
+                pointerEvents="box-none"
+              >
+                <Pressable
+                  style={StyleSheet.absoluteFillObject}
+                  onPress={scheduleCloseAfterExitAnimation}
+                  accessibilityRole="button"
+                  accessibilityLabel={L(loc, {
+                    ja: "詳細を閉じる",
+                    en: "Close detail",
+                    ko: "상세 닫기",
+                    zh: "关闭详情",
+                    es: "Cerrar detalle",
+                    pt: "Fechar detalhe",
+                    fr: "Fermer le détail",
+                  })}
+                />
+              </Animated.View>
+            </View>
+          ) : (
+            <Animated.View
+              entering={backdropEnter}
+              exiting={backdropExit}
               style={StyleSheet.absoluteFillObject}
-              onPress={scheduleCloseAfterExitAnimation}
-              accessibilityRole="button"
-              accessibilityLabel={isEn ? "Close detail" : "詳細を閉じる"}
-            />
-          </Animated.View>
+              pointerEvents="box-none"
+            >
+              <BlurView
+                intensity={28}
+                tint="dark"
+                {...nativeBlurViewExtraProps()}
+                style={StyleSheet.absoluteFillObject}
+              />
+              <View style={styles.backdropDim} pointerEvents="none" />
+              <Pressable
+                style={StyleSheet.absoluteFillObject}
+                onPress={scheduleCloseAfterExitAnimation}
+                accessibilityRole="button"
+                accessibilityLabel={L(loc, {
+                  ja: "詳細を閉じる",
+                  en: "Close detail",
+                  ko: "상세 닫기",
+                  zh: "关闭详情",
+                  es: "Cerrar detalle",
+                  pt: "Fechar detalhe",
+                  fr: "Fermer le détail",
+                })}
+              />
+            </Animated.View>
+          )}
 
           <Animated.View
             entering={sheetEnter}
@@ -280,7 +394,7 @@ export default function ResultDetailScreen({
             pointerEvents="box-none"
           >
             <KeyboardAvoidingView
-              behavior={Platform.OS === "ios" ? "padding" : undefined}
+              behavior={keyboardAvoidingBehavior}
               style={[
                 styles.kav,
                 {
@@ -308,14 +422,22 @@ export default function ResultDetailScreen({
                   ) : missing || !view ? (
                     <View style={styles.centerFill}>
                       <Text style={styles.missingTitle}>
-                        {isEn ? "Post not found" : "投稿が見つかりません"}
+                        {L(loc, {
+                          ja: "投稿が見つかりません",
+                          en: "Post not found",
+                          ko: "게시물을 찾을 수 없습니다",
+                          zh: "未找到帖子",
+                          es: "Publicación no encontrada",
+                          pt: "Publicação não encontrada",
+                          fr: "Publication introuvable",
+                        })}
                       </Text>
                       <Pressable
                         onPress={scheduleCloseAfterExitAnimation}
                         style={styles.primaryBtn}
                       >
                         <Text style={styles.primaryBtnText}>
-                          {isEn ? "Close" : "閉じる"}
+                          {common.close}
                         </Text>
                       </Pressable>
                     </View>
@@ -325,6 +447,8 @@ export default function ResultDetailScreen({
                         language={language}
                         view={view}
                         onOpenProfile={openProfile}
+                        onOpenTeamDetail={openTeamDetail}
+                        onOpenPlayerDetail={openPlayerDetail}
                         sections={sections}
                       />
                     </Animated.View>
@@ -334,7 +458,7 @@ export default function ResultDetailScreen({
             </KeyboardAvoidingView>
             <ProfileBackEdgeHandleNative
               onPress={scheduleCloseAfterExitAnimation}
-              accessibilityLabel={isEn ? "Back" : "戻る"}
+              accessibilityLabel={common.back}
             />
           </Animated.View>
         </>
@@ -376,7 +500,12 @@ const styles = StyleSheet.create({
   },
   backdropDim: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.35)",
+    backgroundColor:
+      Platform.OS === "android" ? "rgba(0,0,0,0.72)" : "rgba(0,0,0,0.35)",
+  },
+  backdropFrostAndroid: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(8,10,18,0.28)",
   },
   kav: {
     flex: 1,

@@ -2,9 +2,11 @@
  * Pro Skin マイルストーン進捗（users.proSkinProgress）。
  * 2026-27 以降のみ。GET は users 1 read でバー表示・解放判定に使う。
  */
+import { L, resolveLocalizedLang } from "@/lib/i18n/localize";
 import {
   PRO_SKIN_PERIOD_WIN_MILESTONES,
   PRO_SKIN_REFERRAL_MILESTONES,
+  PRO_SKIN_STREAK_RUN_MILESTONES,
   PRO_SKIN_THRESHOLD_MILESTONES,
   proSkinPeriodWinCounterKey,
 } from "@/lib/profile/proSkinMilestoneCatalog";
@@ -24,6 +26,10 @@ export type ProSkinProgressSnapshot = {
   exactHits: number;
   /** 対象シーズン内の最大連勝 */
   maxWinStreak: number;
+  /** 連勝が N に届いた回数（キー: "5" / "10"） */
+  streakRuns?: Record<string, number>;
+  /** 直近 settle 時点の現在連勝（streakRuns の跨ぎ判定用） */
+  lastActiveWinStreak?: number;
   /**
    * 週/月条件の累計達成回数。
    * キー: proSkinPeriodWinCounterKey（例 weekly_totalPoints_1）
@@ -60,6 +66,7 @@ export function emptyProSkinProgressSnapshot(
     posts: 0,
     exactHits: 0,
     maxWinStreak: 0,
+    streakRuns: {},
     periodWins: {},
   };
 }
@@ -77,6 +84,8 @@ export function parseProSkinProgressSnapshot(
     posts: safeInt(o.posts),
     exactHits: safeInt(o.exactHits),
     maxWinStreak: safeInt(o.maxWinStreak),
+    streakRuns: parsePeriodWins(o.streakRuns),
+    lastActiveWinStreak: safeInt(o.lastActiveWinStreak),
     periodWins: parsePeriodWins(o.periodWins),
     updatedAtMs: safeInt(o.updatedAtMs) || undefined,
     lastPostId: typeof o.lastPostId === "string" ? o.lastPostId : undefined,
@@ -96,6 +105,7 @@ export function progressFromProSkinSnapshot(
       posts: 0,
       exactHits: 0,
       maxWinStreak: 0,
+      streakRuns: {},
       weeklyRanks: { ...EMPTY_PRO_SKIN_RANK_MAP },
       monthlyRanks: { ...EMPTY_PRO_SKIN_RANK_MAP },
       referralCompletedCount: Math.max(0, Math.floor(referralCompletedCount)),
@@ -108,6 +118,7 @@ export function progressFromProSkinSnapshot(
     posts: snap.posts,
     exactHits: snap.exactHits,
     maxWinStreak: snap.maxWinStreak,
+    streakRuns: { ...(snap.streakRuns ?? {}) },
     weeklyRanks: { ...EMPTY_PRO_SKIN_RANK_MAP },
     monthlyRanks: { ...EMPTY_PRO_SKIN_RANK_MAP },
     referralCompletedCount: Math.max(0, Math.floor(referralCompletedCount)),
@@ -131,10 +142,12 @@ export function proSkinUnlockRuleHasProgressBar(
 ): rule is Extract<
   ProSkinUnlockRule,
   | { kind: "streak" | "posts" | "exactHits" | "referralCompleted" }
+  | { kind: "streakRuns" }
   | { kind: "periodWins" }
 > {
   return (
     rule.kind === "streak" ||
+    rule.kind === "streakRuns" ||
     rule.kind === "posts" ||
     rule.kind === "exactHits" ||
     rule.kind === "referralCompleted" ||
@@ -157,13 +170,14 @@ export function proSkinMilestoneProgressBar(
     | "posts"
     | "exactHits"
     | "maxWinStreak"
+    | "streakRuns"
     | "referralCompletedCount"
     | "periodWins"
   >,
-  language: "ja" | "en" = "ja"
+  language: string | null | undefined = "ja"
 ): ProSkinMilestoneBar | null {
   if (!proSkinUnlockRuleHasProgressBar(rule)) return null;
-  const ja = language === "ja";
+  const lang = resolveLocalizedLang(language);
   let current = 0;
   let target = 1;
   let unit = "";
@@ -171,22 +185,67 @@ export function proSkinMilestoneProgressBar(
     case "streak":
       current = progress.maxWinStreak;
       target = rule.threshold;
-      unit = ja ? "連勝" : "streak";
+      unit = L(lang, {
+        ja: "連勝",
+        en: "streak",
+        ko: "연승",
+        zh: "连胜",
+        es: "racha",
+        pt: "sequência",
+        fr: "série",
+      });
+      break;
+    case "streakRuns":
+      current = progress.streakRuns[String(rule.streak)] ?? 0;
+      target = rule.runs;
+      unit = L(lang, {
+        ja: `${rule.streak}連勝`,
+        en: `${rule.streak}-streaks`,
+        ko: `${rule.streak}연승`,
+        zh: `${rule.streak}连胜`,
+        es: `rachas de ${rule.streak}`,
+        pt: `sequências de ${rule.streak}`,
+        fr: `séries de ${rule.streak}`,
+      });
       break;
     case "posts":
       current = progress.posts;
       target = rule.threshold;
-      unit = ja ? "予想" : "picks";
+      unit = L(lang, {
+        ja: "予想",
+        en: "picks",
+        ko: "예상",
+        zh: "预测",
+        es: "picks",
+        pt: "palpites",
+        fr: "pronos",
+      });
       break;
     case "exactHits":
       current = progress.exactHits;
       target = rule.threshold;
-      unit = ja ? "Perfect" : "perfect";
+      unit = L(lang, {
+        ja: "Perfect",
+        en: "perfect",
+        ko: "퍼펙트",
+        zh: "完美",
+        es: "perfect",
+        pt: "perfect",
+        fr: "perfect",
+      });
       break;
     case "referralCompleted":
       current = progress.referralCompletedCount;
       target = rule.threshold;
-      unit = ja ? "招待" : "invites";
+      unit = L(lang, {
+        ja: "招待",
+        en: "invites",
+        ko: "초대",
+        zh: "邀请",
+        es: "invites",
+        pt: "convites",
+        fr: "invites",
+      });
       break;
     case "periodWins": {
       const key = proSkinPeriodWinCounterKey({
@@ -196,7 +255,15 @@ export function proSkinMilestoneProgressBar(
       });
       current = progress.periodWins[key] ?? 0;
       target = rule.wins;
-      unit = ja ? "回" : "wins";
+      unit = L(lang, {
+        ja: "回",
+        en: "wins",
+        ko: "회",
+        zh: "次",
+        es: "veces",
+        pt: "vezes",
+        fr: "fois",
+      });
       break;
     }
   }
@@ -217,10 +284,11 @@ export function proSkinMilestoneBarForId(
     | "posts"
     | "exactHits"
     | "maxWinStreak"
+    | "streakRuns"
     | "referralCompletedCount"
     | "periodWins"
   >,
-  language: "ja" | "en" = "ja"
+  language: string | null | undefined = "ja"
 ): ProSkinMilestoneBar | null {
   const entry = getProSkinUnlockEntry(id);
   if (!entry) return null;
@@ -245,6 +313,11 @@ export function listThresholdUnlockIdsFromProgress(
       progress.exactHits >= row.threshold
     ) {
       out.push(id);
+    }
+  }
+  for (const row of PRO_SKIN_STREAK_RUN_MILESTONES) {
+    if ((progress.streakRuns[String(row.streak)] ?? 0) >= row.runs) {
+      out.push(row.id as ProfilePlanProBgVariant);
     }
   }
   for (const row of PRO_SKIN_REFERRAL_MILESTONES) {

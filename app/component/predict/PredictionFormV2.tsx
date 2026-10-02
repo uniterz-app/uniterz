@@ -69,7 +69,7 @@ import {
   writePredictNextGameModalSkip,
 } from "@/lib/predict/nextGameModalPrefs";
 import { matchScoreClass, nameBebas, nameOxanium } from "@/lib/fonts";
-import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
+import { matchCardTeamNameStyle } from "@/lib/games/teamDisplayTypography";
 import { PREDICT_OVERLAY_FORM_PANEL } from "@/lib/ui/matchOverlayGlass";
 import {
   PREDICT_OVERLAY_CYBER_DECK_CLASS,
@@ -84,8 +84,9 @@ import { TUTORIAL_CYAN } from "@/lib/tutorial/tutorialMotion";
 import PredictOverlayScoreFields from "@/app/component/predict/PredictOverlayScoreFields";
 import { useUserPlan } from "@/hooks/useUserPlan";
 import { usePredictionPostDistribution } from "@/lib/hooks/usePredictionPostDistribution";
-import { loadResultPostDetailClient } from "@/lib/result/loadResultPostDetailClient";
+import { loadResultPostDocClient } from "@/lib/result/loadResultPostDetailClient";
 import { mergeGameIntoResultPost } from "@/lib/result/mergeGameIntoResultPost";
+import { invalidateResultPostsListCache } from "@/lib/result/resultPostsListCache";
 import type { PredictionPostV2 } from "@/types/prediction-post-v2";
 
 /* ======================
@@ -139,6 +140,10 @@ type Props = {
   /** 自分の勝者予想（市場棒グラフマーカー用） */
   onUserPredictionWinnerChange?: (
     winner: "home" | "away" | "draw" | null
+  ) => void;
+  /** オーバーレイ MatchCard の TOP SCORER 行用 */
+  onOverlayGoalScorerChange?: (
+    pick: import("@/lib/nba/topScorer").NbaTopScorerPick | null
   ) => void;
   /** 親 MatchCard の修正メニューから編集を起動（nonce が増えたときだけ反映） */
   predictEditTriggerNonce?: number;
@@ -195,6 +200,7 @@ export default function PredictionFormV2({
   overlayExistingPostId = null,
   onExistingResultPostChange,
   onUserPredictionWinnerChange,
+  onOverlayGoalScorerChange,
   predictEditTriggerNonce = 0,
   onPredictEditEnd,
   overlayUnifiedForm = false,
@@ -348,7 +354,9 @@ export default function PredictionFormV2({
   const homeLabel = getMobileTeamLabel(game.league, homeL1, homeL2);
   const awayLabel = getMobileTeamLabel(game.league, awayL1, awayL2);
   const predictTeamNameTy = {
-    ...bracketMarketTeamTypography(isMobile),
+    fontFamily: nameOxanium.style.fontFamily,
+    fontWeight: 600,
+    letterSpacing: "0.05em",
     transform: "skewX(-6deg)",
   };
 
@@ -465,13 +473,12 @@ export default function PredictionFormV2({
           if (alive) setExistingSnapshot(null);
           return;
         }
-        const detail = await loadResultPostDetailClient(effectivePostId);
+        const post = await loadResultPostDocClient(effectivePostId);
         if (!alive) return;
-        if (!detail.ok || detail.post.authorUid !== me.uid) {
+        if (!post || post.authorUid !== me.uid) {
           setExistingSnapshot(null);
           return;
         }
-        const post = detail.post;
         const editable =
           typeof post.startAtMillis === "number" &&
           Date.now() < post.startAtMillis;
@@ -606,6 +613,15 @@ export default function PredictionFormV2({
     );
   }, [onUserPredictionWinnerChange, existingResultPost]);
 
+  useEffect(() => {
+    if (!onOverlayGoalScorerChange) return;
+    if (!isNba) {
+      onOverlayGoalScorerChange(null);
+      return;
+    }
+    onOverlayGoalScorerChange(normalizeNbaTopScorerPick(goalScorerPick));
+  }, [onOverlayGoalScorerChange, isNba, goalScorerPick]);
+
   useLayoutEffect(() => {
     if (!hideMarketTab && toolsTab === "market") {
       setMarketChartKey((k) => k + 1);
@@ -666,6 +682,11 @@ export default function PredictionFormV2({
     return { home: h, away: a };
   }, [scoreHome, scoreAway]);
 
+  /**
+   * モックには落とさない。候補は実際に賭ける対象なので、作り物の選手を出すと
+   * ロスターに居ない選手を選べてしまい採点で絶対に当たらない。
+   * 未設定なら空 → ピッカーは「候補なし」を出す。
+   */
   const nbaTopScorerCandidates = useMemo(
     () =>
       normalizeNbaTopScorerCandidates(
@@ -698,9 +719,9 @@ export default function PredictionFormV2({
 
   const scoreInputClass = [
     overlayEmbedded
-      ? `${PREDICT_OVERLAY_SCORE_INPUT_CLASS} w-full text-left font-black outline-none`
+      ? `${PREDICT_OVERLAY_SCORE_INPUT_CLASS} w-full text-left font-bold outline-none`
       : "w-full rounded-xl border border-white/15 bg-white/[0.10] text-left text-white placeholder-white/35 outline-none transition focus:border-cyan-300/40 focus:bg-white/[0.12]",
-    matchScoreClass,
+    overlayEmbedded ? nameOxanium.className : matchScoreClass,
     // iOS Safari: 16px 未満だとフォーカス時に自動ズームする
     isMobile ? "px-3.5 py-2.5 text-base" : "px-4 py-3 text-base",
     overlayEmbedded ? "" : "w-full",
@@ -934,6 +955,7 @@ export default function PredictionFormV2({
 
       toast.success(m.predict.predictionSubmitted);
       onPostCreated?.({ id: json.id ?? "(local)", at: new Date() });
+      invalidateResultPostsListCache(me.uid);
 
       setWinner(null);
       setPkWinner(null);
@@ -1142,6 +1164,11 @@ export default function PredictionFormV2({
                 awayTeamId={game.away.teamId}
                 homeTeamName={homeSafe.name}
                 awayTeamName={awaySafe.name}
+                tipAtMs={
+                  game.startAtJst instanceof Date
+                    ? game.startAtJst.getTime()
+                    : null
+                }
                 fromPredictGameId={gameId}
                 predictReturnMode={inOverlay ? "overlay" : "route"}
               />
@@ -1522,7 +1549,10 @@ export default function PredictionFormV2({
                 size={isMobile ? "mobile" : "web"}
                 className="absolute right-1 top-1 z-10"
               />
-              <div className="relative z-1 min-w-0 pr-9 text-sm font-semibold text-white/88">
+              <div
+                className={`${nameBebas.className} relative z-1 min-w-0 pr-9 text-[18px] font-bold uppercase leading-none text-white`}
+                style={matchCardTeamNameStyle(true)}
+              >
                 {m.predict.scorePrediction}
                 {isKnockout ? (
                   <span className="ml-0.5 align-super text-[10px] font-bold text-amber-300/90">
@@ -1584,7 +1614,7 @@ export default function PredictionFormV2({
                 <div className="relative z-1 grid grid-cols-2 gap-3">
                   <div>
                     <div
-                      className={`${nameBebas.className} mb-2 text-[15px] font-bold uppercase leading-tight text-white/88 md:text-[18px]`}
+                      className={`${nameOxanium.className} mb-2 text-[13px] font-semibold uppercase leading-tight text-white/88 md:text-[14px]`}
                       style={predictTeamNameTy}
                     >
                       {homeLabel}
@@ -1601,7 +1631,7 @@ export default function PredictionFormV2({
 
                   <div>
                     <div
-                      className={`${nameBebas.className} mb-2 text-[15px] font-bold uppercase leading-tight text-white/88 md:text-[18px]`}
+                      className={`${nameOxanium.className} mb-2 text-[13px] font-semibold uppercase leading-tight text-white/88 md:text-[14px]`}
                       style={predictTeamNameTy}
                     >
                       {awayLabel}

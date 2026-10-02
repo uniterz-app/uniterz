@@ -2,21 +2,38 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
-import { getNbaLeagueTeamStatsMock } from "@/lib/predict/nbaLeagueTeamStatsMocks";
+import { enrichLeagueTeamStatsBundle } from "@/lib/predict/nbaLeagueTeamStatsMocks";
 import { fetchLeagueTeamStats } from "@/lib/nba/leagueTeamStats/fetchLeagueTeamStatsClient";
+import { nbaSnapshotCacheKey } from "@/lib/nba/snapshotFetchCache";
 import type {
   NbaLeagueTeamStatsApiPayload,
   NbaLeagueTeamStatsSnapshotSource,
 } from "@/lib/nba/leagueTeamStats/leagueTeamStatsTypes";
+import { leagueTeamStatsSnapshotCache as cache } from "@/lib/nba/leagueTeamStats/leagueTeamStatsSnapshotCache";
 import type { NbaLeagueTeamStatsBundle } from "@/lib/predict/nbaLeagueTeamStatsMocks";
+import { trackAppEvent } from "@/lib/observability/trackAppEvent";
 
+const EMPTY_BUNDLE: NbaLeagueTeamStatsBundle = {
+  season: [],
+  playoffs: [],
+  last10: [],
+  asOfLabel: "UNAVAILABLE",
+};
+
+/**
+ * リーグチーム表スナップショット。STATS ハブと予想 STATS タブで season 単位に共有する。
+ */
 export type UseLeagueTeamStatsBundleOptions = {
   apiBaseUrl?: string | null;
   season?: string;
+  /** false のときは取得しない（未選択タブの先読みを止める） */
+  enabled?: boolean;
 };
 
 export type UseLeagueTeamStatsBundleState = {
   bundle: NbaLeagueTeamStatsBundle;
+  /** API が実際に返したシーズンキー（フォールバック後） */
+  season: string;
   source: NbaLeagueTeamStatsSnapshotSource;
   updatedAt: string | null;
   loading: boolean;
@@ -24,57 +41,102 @@ export type UseLeagueTeamStatsBundleState = {
   reload: () => void;
 };
 
+type Resolved = {
+  bundle: NbaLeagueTeamStatsBundle;
+  season: string;
+  source: NbaLeagueTeamStatsSnapshotSource;
+  updatedAt: string | null;
+};
+
+function resolvePayload(data: NbaLeagueTeamStatsApiPayload): Resolved {
+  return {
+    bundle: enrichLeagueTeamStatsBundle(data.bundle, data.source),
+    season: data.season,
+    source: data.source,
+    updatedAt: data.updatedAt,
+  };
+}
+
+const EMPTY_RESOLVED: Resolved = {
+  bundle: EMPTY_BUNDLE,
+  season: CURRENT_NBA_SEASON_KEY,
+  source: "empty",
+  updatedAt: null,
+};
+
 export function useLeagueTeamStatsBundle(
   options: UseLeagueTeamStatsBundleOptions = {}
 ): UseLeagueTeamStatsBundleState {
   const season = options.season ?? CURRENT_NBA_SEASON_KEY;
-  const [bundle, setBundle] = useState<NbaLeagueTeamStatsBundle>(() =>
-    getNbaLeagueTeamStatsMock()
+  const enabled = options.enabled ?? true;
+  const key = nbaSnapshotCacheKey(options.apiBaseUrl, season);
+
+  const cached = enabled ? cache.peek(key) : null;
+  const [resolved, setResolved] = useState<Resolved>(() =>
+    cached ? resolvePayload(cached) : EMPTY_RESOLVED
   );
-  const [source, setSource] =
-    useState<NbaLeagueTeamStatsSnapshotSource>("mock");
-  const [updatedAt, setUpdatedAt] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(enabled && !cached);
   const [error, setError] = useState<string | null>(null);
   const [tick, setTick] = useState(0);
 
-  const reload = useCallback(() => setTick((t) => t + 1), []);
+  const reload = useCallback(() => {
+    cache.invalidate(key);
+    setTick((t) => t + 1);
+  }, [key]);
 
   useEffect(() => {
-    let cancelled = false;
-    const ac = new AbortController();
-
-    async function run() {
-      setLoading(true);
-      setError(null);
-      try {
-        const data: NbaLeagueTeamStatsApiPayload = await fetchLeagueTeamStats({
-          apiBaseUrl: options.apiBaseUrl,
-          season,
-          signal: ac.signal,
-        });
-        if (cancelled) return;
-        setBundle(data.bundle);
-        setSource(data.source);
-        setUpdatedAt(data.updatedAt);
-      } catch (e) {
-        if (cancelled || ac.signal.aborted) return;
-        const msg = e instanceof Error ? e.message : "load failed";
-        setError(msg);
-        setBundle(getNbaLeagueTeamStatsMock());
-        setSource("mock");
-        setUpdatedAt(null);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
+    if (!enabled) {
+      setLoading(false);
+      return;
     }
 
-    void run();
+    const hit = cache.peek(key);
+    if (hit) {
+      setResolved(resolvePayload(hit));
+      setLoading(false);
+      setError(null);
+      return;
+    }
+
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+
+    cache
+      .load(key, () =>
+        fetchLeagueTeamStats({
+          apiBaseUrl: options.apiBaseUrl,
+          season,
+        })
+      )
+      .then(async (data) => {
+        if (cancelled) return;
+        setResolved(resolvePayload(data));
+        if (data.source === "empty") {
+          trackAppEvent({ name: "stats_empty", props: { kind: "team", season } });
+        }
+      })
+      .catch((e: unknown) => {
+        if (cancelled) return;
+        setError(e instanceof Error ? e.message : "load failed");
+        setResolved(EMPTY_RESOLVED);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
     return () => {
       cancelled = true;
-      ac.abort();
     };
-  }, [options.apiBaseUrl, season, tick]);
+  }, [enabled, key, options.apiBaseUrl, season, tick]);
 
-  return { bundle, source, updatedAt, loading, error, reload };
+  return {
+    bundle: resolved.bundle,
+    season: resolved.season,
+    source: resolved.source,
+    updatedAt: resolved.updatedAt,
+    loading,
+    error,
+    reload,
+  };
 }

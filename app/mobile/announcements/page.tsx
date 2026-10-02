@@ -161,7 +161,7 @@ export default function AnnouncementsPage() {
             {[...Array(3)].map((_, i) => (
               <div
                 key={i}
-                className="rounded-2xl overflow-hidden bg-white/5 border border-white/10"
+                className="rounded-none overflow-hidden bg-white/5 border border-white/10"
               >
                 <div className="h-44 w-full skeleton-scan bg-white/10" />
                 <div className="p-3 space-y-2">
@@ -199,7 +199,7 @@ export default function AnnouncementsPage() {
               >
                 <div
                   className={[
-                    "relative rounded-2xl overflow-hidden mb-5 border border-white/10 bg-white/5",
+                    "relative rounded-none overflow-hidden mb-5 border border-white/10 bg-white/5",
                     "transition-transform duration-150 active:scale-[0.99]",
                     "hover:shadow-[0_0_40px_rgba(0,229,255,0.10),0_0_80px_rgba(164,77,255,0.06)]",
                   ].join(" ")}

@@ -16,6 +16,7 @@ import {
   resolvePkScore,
 } from "@uniterz/shared";
 import { splitTeamNameByLeague, getTeamAlias } from "../../utils/teamName";
+import { compactNbaCardNickname } from "../../../../../lib/nba-team-names";
 import PredictModal, {
   type PredictModalMatchPreview,
   type PredictModalScheduleMeta,
@@ -32,6 +33,9 @@ import {
 } from "../games/legacyWcNativeShims";
 import type { NativeGameRow, SupportedLeague } from "../games/useTodayGames";
 import { getGamesTexts, type GamesLanguage } from "../games/gamesI18n";
+import { t as i18nT } from "../../../../../lib/i18n/t";
+import { L, resolveLocalizedLang } from "../../../../../lib/i18n/localize";
+import { DATE_LOCALE } from "../../../../../lib/i18n/language";
 import type { GameCardCenterBlock } from "../games/gameCardCenterTypes";
 import { BlocksPulseLoader } from "../../components/BlocksPulseLoader";
 import { resolveTeamJerseyPalette } from "../games/teamColors";
@@ -48,13 +52,14 @@ import {
   buildClientPredictionPayload,
   validateClientPrediction,
 } from "../../../../../lib/predict/clientPredictionSubmit";
-import { resolveMarketBiasFallback } from "../../../../../lib/predict/gameMarketDistribution";
+import { resolveMarketBiasFallback, readGamePredictorCount } from "../../../../../lib/predict/gameMarketDistribution";
 import { scheduleAfterPredictModalDismissed } from "../games/scheduleAfterPredictModalDismissed";
 import {
   readEditModeHintShown,
   writeEditModeHintShown,
 } from "../games/predictEditModeHintPrefs";
 import { useFirebaseUser } from "../../auth/FirebaseUserProvider";
+import { useNativeLanguage } from "../../i18n/NativeLanguageProvider";
 import {
   isPostPredictionEditableForViewer,
   type PostWithMillis,
@@ -145,9 +150,7 @@ function toCompactTeamName(leagueRaw: unknown, rawName: string): string {
   const toUnifiedLabel = (value: string) => normalize(value).toLocaleUpperCase("en-US");
   if (league === "pl") return toUnifiedLabel(getTeamAlias(rawName) ?? rawName);
   if (league === "nba") {
-    const normalized = normalize(rawName);
-    const nbaLabel = normalized.split(" ").filter(Boolean).slice(-1)[0] ?? normalized;
-    return toUnifiedLabel(nbaLabel);
+    return toUnifiedLabel(compactNbaCardNickname(normalize(rawName)));
   }
   if (league === "bj" || league === "j1") {
     const [line1, line2] = splitTeamNameByLeague(
@@ -178,6 +181,7 @@ export default function ResultPredictEditModal({
 }: Props) {
   const { fUser } = useFirebaseUser();
   const { isPro: isProUser } = useNativeUserPlan(fUser?.uid);
+  const { timeZone: displayTimeZone } = useNativeLanguage();
   const t = useMemo(() => getGamesTexts(language), [language]);
 
   const [phase, setPhase] = useState<Phase>("idle");
@@ -387,7 +391,7 @@ export default function ResultPredictEditModal({
 
   const formatGameDateMs = useCallback(
     (ms: number) =>
-      new Date(ms).toLocaleString(language === "en" ? "en-US" : "ja-JP", {
+      new Date(ms).toLocaleString(DATE_LOCALE[resolveLocalizedLang(language)], {
         timeZone: "Asia/Tokyo",
       }),
     [language]
@@ -417,7 +421,7 @@ export default function ResultPredictEditModal({
     const awayName = resolveGameTeamName(g.away, g.awayTeamName, "AWAY");
     const homeCompact = toCompactTeamName(g.league, homeName);
     const awayCompact = toCompactTeamName(g.league, awayName);
-    const centerBlock = getGameCardCenterBlock(g, language);
+    const centerBlock = getGameCardCenterBlock(g, language, displayTimeZone);
     const seriesLabel = resolveNativeSeriesLabel(g, peerGames);
     const seriesPair = resolveNativeSeriesPair(g, peerGames);
     const roundLabelRaw = g.roundLabel;
@@ -443,7 +447,7 @@ export default function ResultPredictEditModal({
       homeSide: g.home,
       awaySide: g.away,
     };
-  }, [game, language, peerGames]);
+  }, [game, language, peerGames, displayTimeZone]);
 
   const predictOverlayMarketBar = useMemo(() => {
     if (!game?.id) return null;
@@ -469,20 +473,21 @@ export default function ResultPredictEditModal({
       awayLabel: toCompactTeamName(game.league, awayName),
       compact: selectedLeague === "wc",
       userPredictionWinner: winner ?? pred?.winner ?? null,
+      predictionCount: readGamePredictorCount(game) ?? (post ? 1 : undefined),
     };
-  }, [game, post?.prediction, selectedLeague, winner]);
+  }, [game, post, selectedLeague, winner]);
 
   const predictScheduleMeta = useMemo((): PredictModalScheduleMeta | null => {
     if (!game) return null;
     if (resolveGameStatus(game) !== "scheduled") return null;
     const startAt = resolveGameStartAt(game);
-    const kickoffValue = formatKickoffTime(startAt, language);
+    const kickoffValue = formatKickoffTime(startAt, displayTimeZone);
     const gameId = String(game.id ?? "");
     const broadcastLabels =
       selectedLeague === "wc" ? resolveWcBroadcastLabels(gameId, game) : [];
     if (!startAt && broadcastLabels.length === 0) return null;
     return { kickoffValue, broadcastLabels };
-  }, [game, selectedLeague, language]);
+  }, [game, selectedLeague, displayTimeZone]);
 
   const wcGoalScorerPreview = useMemo(() => {
     if (!game || selectedLeague !== "wc" || !post) return null;
@@ -655,19 +660,20 @@ export default function ResultPredictEditModal({
       await onUpdated();
       handleClose();
       scheduleAfterPredictModalDismissed(() => {
-        cyberAlert(
-          language === "en" ? "Done" : "完了",
-          language === "en" ? "Prediction updated." : "予想を更新しました。"
-        );
+        const loc = resolveLocalizedLang(language);
+        const common = i18nT(loc).common;
+        const results = i18nT(loc).results;
+        cyberAlert(common.done, results.updateDone);
       });
     } catch (err) {
+      const loc = resolveLocalizedLang(language);
+      const common = i18nT(loc).common;
+      const results = i18nT(loc).results;
       const msg =
         err instanceof PredictionApiError
           ? err.message
-          : language === "en"
-            ? "Could not update."
-            : "更新に失敗しました。";
-      cyberAlert(language === "en" ? "Error" : "エラー", msg);
+          : results.updateFailed;
+      cyberAlert(common.error, msg);
     } finally {
       setPredictSubmitting(false);
     }
@@ -710,13 +716,11 @@ export default function ResultPredictEditModal({
         <Pressable style={styles.loadingRoot} onPress={handleClose}>
           <View style={styles.errorCard}>
             <Text style={styles.errorText}>
-              {language === "en"
-                ? "Could not load this match."
-                : "試合データを読み込めませんでした。"}
+              {i18nT(resolveLocalizedLang(language)).results.loadMatchError}
             </Text>
             <Pressable style={styles.errorBtn} onPress={handleClose}>
               <Text style={styles.errorBtnLabel}>
-                {language === "en" ? "Close" : "閉じる"}
+                {i18nT(resolveLocalizedLang(language)).common.close}
               </Text>
             </Pressable>
           </View>
@@ -766,12 +770,8 @@ export default function ResultPredictEditModal({
   );
 }
 
-function formatKickoffTime(
-  startAt: Date | null,
-  language: GamesLanguage
-): string {
+function formatKickoffTime(startAt: Date | null, timeZone: string): string {
   if (!startAt) return "--:--";
-  const timeZone = language === "en" ? "America/New_York" : "Asia/Tokyo";
   const parts = new Intl.DateTimeFormat("en-GB", {
     timeZone,
     hour: "2-digit",
@@ -800,7 +800,8 @@ function isEffectiveLive(game: Record<string, unknown>): boolean {
 /** `GamesHomeScreen` と同一の中央ブロック解決 */
 function getGameCardCenterBlock(
   game: Record<string, unknown>,
-  language: GamesLanguage
+  language: GamesLanguage,
+  timeZone: string
 ): GameCardCenterBlock {
   const status = resolveGameStatus(game);
   const score = resolveGameScore(game);
@@ -808,7 +809,7 @@ function getGameCardCenterBlock(
   const liveUi = isEffectiveLive(game);
   if (status === "final" && score) {
     const ot = resolveFinalMetaOt(game);
-    const sub = `${language === "en" ? "Final" : "試合終了"}${
+    const sub = `${i18nT(resolveLocalizedLang(language)).results.final}${
       ot ? " (OT)" : ""
     }`;
     const pkScore = resolvePkScore(game);
@@ -825,7 +826,7 @@ function getGameCardCenterBlock(
   }
   return {
     variant: "time",
-    time: formatKickoffTime(startAt, language),
+    time: formatKickoffTime(startAt, timeZone),
   };
 }
 

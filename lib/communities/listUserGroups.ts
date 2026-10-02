@@ -14,6 +14,7 @@ import {
   fetchGroupMemberPreviews,
   type GroupMemberPreview,
 } from "./memberPreviews";
+import { parseStoredMemberPreviews } from "./refreshGroupMemberPreviews";
 import { sanitizeHeaderImagePositionY } from "./headerImagePosition";
 
 export type ListedCommunityGroup = {
@@ -147,7 +148,24 @@ export async function listUserGroups(
     groups.map(async (g) => {
       const gd = groupById.get(g.id)?.data();
       const ownerUid = String(gd?.ownerUid ?? "");
-      g.memberPreviews = await fetchGroupMemberPreviews(db, g.id, ownerUid);
+      const stored = parseStoredMemberPreviews(gd?.memberPreviews);
+      if (stored) {
+        g.memberPreviews = stored;
+        return;
+      }
+      // 未 denormalize の古い group だけフル scan（初回後に書く）
+      try {
+        const { refreshGroupMemberPreviews } = await import(
+          "./refreshGroupMemberPreviews"
+        );
+        g.memberPreviews = await refreshGroupMemberPreviews(
+          db,
+          g.id,
+          ownerUid
+        );
+      } catch {
+        g.memberPreviews = await fetchGroupMemberPreviews(db, g.id, ownerUid);
+      }
     })
   );
 

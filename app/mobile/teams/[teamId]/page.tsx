@@ -1,173 +1,24 @@
-// app/mobile/(with-nav)/team/[teamId]/page.tsx
-
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
-import { useParams } from "next/navigation";
-import { doc, getDoc, Timestamp } from "firebase/firestore";
+import { useEffect } from "react";
+import { useParams, useRouter } from "next/navigation";
 
-import { db } from "@/lib/firebase";
-import TeamDetailView from "@/app/component/team/TeamDetailView";
-import { NBA_TEAM_NAME_BY_ID } from "@/lib/nba-team-names";
-import { teamColorsNBA } from "@/lib/teams-nba";
-import { TEAM_SHORT } from "@/lib/team-short";
-import { lastGameAtMillis } from "@/lib/teamLastGameAt";
-import { nbaRegularSeasonWinsLosses } from "@/lib/nbaRegularSeasonRecord";
-
-const FALLBACK_COLORS = {
-  primary: "#555555",
-  secondary: "#999999",
-  orange: "#EF3B24",
-};
-
-// 1/24 形式
-function toMD(v: any): string {
-  const d: Date | null =
-    v instanceof Date
-      ? v
-      : v instanceof Timestamp
-      ? v.toDate()
-      : typeof v?.toDate === "function"
-      ? v.toDate()
-      : typeof v === "number"
-      ? new Date(v)
-      : null;
-
-  if (!d || Number.isNaN(d.getTime())) return "--/--";
-  return `${d.getMonth() + 1}/${d.getDate()}`;
-}
-
-export default function TeamPage() {
-  const params = useParams();
-  const teamId = params.teamId as string;
-
-  const [team, setTeam] = useState<any | null>(null);
+/** @deprecated `/mobile/team-detail-preview` へリダイレクト */
+export default function LegacyTeamDetailRedirectPage() {
+  const params = useParams<{ teamId: string }>();
+  const router = useRouter();
 
   useEffect(() => {
-    if (!teamId) return;
+    const raw = params?.teamId;
+    const teamId = typeof raw === "string" ? raw.trim() : "";
+    if (teamId) {
+      router.replace(
+        `/mobile/team-detail-preview?teamId=${encodeURIComponent(teamId)}`
+      );
+      return;
+    }
+    router.replace("/mobile/games");
+  }, [params?.teamId, router]);
 
-    const run = async () => {
-      const snap = await getDoc(doc(db, "teams", teamId));
-      if (!snap.exists()) return;
-
-      const d: any = snap.data();
-
-      const gp = d.gamesPlayed ?? 0;
-      const homeGames = d.homeGames ?? 0;
-      const awayGames = d.awayGames ?? 0;
-
-      // ✅ lastGames -> last10.games
-      const lastGamesRaw = Array.isArray(d.lastGames) ? d.lastGames : [];
-
-      const last10Games = lastGamesRaw
-        .slice()
-        .sort((a: any, b: any) => lastGameAtMillis(b) - lastGameAtMillis(a))
-        .slice(0, 10)
-        .map((g: any) => {
-          const oppTeamId = (g.oppTeamId ?? "") as string;
-          const rawTs = g.playedAt ?? g.at;
-
-          return {
-            date: toMD(rawTs),
-            sortAtMs: lastGameAtMillis(g),
-            vs: TEAM_SHORT[oppTeamId] ?? oppTeamId ?? "UNK",
-            home: g.homeAway === "home",
-            score: `${g.teamScore ?? 0}-${g.oppScore ?? 0}`,
-            result: g.isWin ? "W" : "L",
-          };
-        })
-        .reverse(); // 古い→新しい表示（今のUIに合わせる）
-
-      const w10 = last10Games.filter((x: any) => x.result === "W").length;
-      const l10 = last10Games.filter((x: any) => x.result === "L").length;
-
-      const homeWins = d.homeWins ?? 0;
-      const awayWins = d.awayWins ?? 0;
-      const rs = nbaRegularSeasonWinsLosses({
-        wins: d.wins ?? 0,
-        losses: d.losses ?? 0,
-        homeGames,
-        homeWins,
-        awayGames,
-        awayWins,
-        cupFinalWins: d.cupFinalWins ?? 0,
-        cupFinalLosses: d.cupFinalLosses ?? 0,
-      });
-      const rsTotal = rs.wins + rs.losses;
-      const rsWinRate = rsTotal > 0 ? (rs.wins / rsTotal) * 100 : 0;
-
-      const teamDetail = {
-        id: teamId,
-        name: NBA_TEAM_NAME_BY_ID[teamId] ?? d.name ?? teamId,
-        conference: d.conference,
-        rank: d.rank,
-
-        wins: rs.wins,
-        losses: rs.losses,
-        winRate: rsWinRate,
-
-        avgPointsFor: gp > 0 ? (d.pointsForTotal ?? 0) / gp : 0,
-        avgPointsAgainst: gp > 0 ? (d.pointsAgainstTotal ?? 0) / gp : 0,
-
-        avgForRank: d.ppgRank ?? null,
-        avgAgainstRank: d.papgRank ?? null,
-        ppgRank: typeof d.ppgRank === "number" ? d.ppgRank : null,
-        papgRank: typeof d.papgRank === "number" ? d.papgRank : null,
-
-        // ✅ home/away 平均得点・平均失点
-        homeAway: {
-          home: {
-            wins: homeWins,
-            losses: Math.max(0, homeGames - homeWins),
-            avgFor: homeGames > 0 ? (d.homePointsForTotal ?? 0) / homeGames : 0,
-            avgAgainst:
-              homeGames > 0 ? (d.homePointsAgainstTotal ?? 0) / homeGames : 0,
-          },
-          away: {
-            wins: awayWins,
-            losses: Math.max(0, awayGames - awayWins),
-            avgFor: awayGames > 0 ? (d.awayPointsForTotal ?? 0) / awayGames : 0,
-            avgAgainst:
-              awayGames > 0 ? (d.awayPointsAgainstTotal ?? 0) / awayGames : 0,
-          },
-        },
-
-        clutch: {
-          wins: d.closeWins ?? 0,
-          losses: Math.max(0, (d.closeGames ?? 0) - (d.closeWins ?? 0)),
-        },
-
-        conferenceRecord: {
-          vsEast: {
-            wins: d.vsEastWins ?? 0,
-            losses: Math.max(0, (d.vsEastGames ?? 0) - (d.vsEastWins ?? 0)),
-          },
-          vsWest: {
-            wins: d.vsWestWins ?? 0,
-            losses: Math.max(0, (d.vsWestGames ?? 0) - (d.vsWestWins ?? 0)),
-          },
-        },
-
-        // ✅ Last 10
-        last10: {
-          wins: w10,
-          losses: l10,
-          games: last10Games,
-        },
-
-        colors: teamColorsNBA[teamId] ?? FALLBACK_COLORS,
-      };
-
-      setTeam(teamDetail);
-    };
-
-    run();
-  }, [teamId]);
-
-  if (!team) return null;
-  return (
-    <Suspense fallback={null}>
-      <TeamDetailView team={team} />
-    </Suspense>
-  );
+  return null;
 }

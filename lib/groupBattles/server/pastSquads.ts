@@ -50,6 +50,13 @@ export async function loadUserMemberSummaries(
           ? d.displayName.trim()
           : "User",
       handle: handleRaw || null,
+      plan: d.plan === "pro" ? "pro" : "free",
+      photoURL:
+        typeof d.photoURL === "string" && d.photoURL.trim()
+          ? d.photoURL.trim()
+          : typeof d.avatarUrl === "string" && d.avatarUrl.trim()
+            ? d.avatarUrl.trim()
+            : null,
     });
   }
   return out;

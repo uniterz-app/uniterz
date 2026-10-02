@@ -5,6 +5,7 @@
  */
 import { FieldValue, type Firestore } from "firebase-admin/firestore";
 import { findUidByInviteCodeAdmin } from "./ensureUserInviteCodeAdmin";
+import { grantReferralInviteeUnitsOnBind } from "./grantReferralInviteeUnitsOnBind";
 import {
   isValidReferralInviteCodeFormat,
   normalizeReferralInviteCode,
@@ -210,6 +211,20 @@ export async function bindReferralOnSignupAdmin(
       return { ok: false, error: "already_bound", inviteCode: code };
     }
     throw e;
+  }
+
+  // 被招待者は bind 時点で無条件 30 Unit（紹介者は 7 日予想後の settle）
+  const grant = await grantReferralInviteeUnitsOnBind(
+    db,
+    inviteeUid,
+    referrerUid
+  );
+  if (!grant.ok) {
+    console.warn(
+      "[bindReferralOnSignupAdmin] invitee unit grant failed",
+      inviteeUid,
+      grant.error
+    );
   }
 
   return {

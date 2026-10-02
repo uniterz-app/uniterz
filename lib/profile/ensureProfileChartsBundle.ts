@@ -1,6 +1,6 @@
 /**
- * cumulative_stats.profileCharts を正とする overview チャート集計。
- * 欠けている部品だけソースから組み立てて書き戻し、以降のクライアント多重 read を無くす。
+ * profileCharts subcollection をソースから組み立てて書き戻す。
+ * プロフィール画面のホットパスからは呼ばない（backfill / force 用）。
  */
 import { getAdminDb } from "@/lib/firebaseAdmin";
 import type {
@@ -21,7 +21,6 @@ import {
   type ProfileChartsLast20Point,
   type ProfileChartsRankPoint,
 } from "@/lib/profile/profileChartsBundle";
-import { profileChartsNestedFields } from "@/lib/profile/profileChartsStorage";
 import type { ProfileDailyTrendRow } from "@/lib/profile/profileDailyTrendRow";
 import {
   profileOverviewDateKeysEndingAt,
@@ -46,7 +45,8 @@ export type CompleteProfileChartsBundle = {
   seasonKey: string;
   dailyTrend: ProfileDailyTrendRow[];
   rankTrend: ProfileChartsRankPoint[];
-  last20: ProfileChartsLast20Point[];
+  /** null = 未書き込み（posts 補完しない） */
+  last20: ProfileChartsLast20Point[] | null;
   builtAtMs: number;
 };
 
@@ -194,18 +194,16 @@ async function writeCompleteBundle(
 ): Promise<void> {
   const adminDb = getAdminDb();
   const builtAtMs = bundle.builtAtMs;
-  const chartsPayload = {
+  const chartsPayload: Record<string, unknown> = {
     v: bundle.v,
     seasonKey: bundle.seasonKey,
     dailyTrend: bundle.dailyTrend,
     rankTrend: bundle.rankTrend,
-    last20: bundle.last20,
     builtAtMs,
   };
-  await adminDb.collection("cumulative_stats").doc(uid).set(
-    profileChartsNestedFields({ ...bundle, builtAtMs }),
-    { merge: true }
-  );
+  if (Array.isArray(bundle.last20)) {
+    chartsPayload.last20 = bundle.last20;
+  }
   await adminDb
     .collection("cumulative_stats")
     .doc(uid)
@@ -265,7 +263,7 @@ export async function ensureProfileChartsBundle(
       const allEmpty =
         parsed.dailyTrend.length === 0 &&
         parsed.rankTrend.length === 0 &&
-        parsed.last20.length === 0;
+        (parsed.last20?.length ?? 0) === 0;
       if (!(PROFILE_OVERVIEW_USE_PREVIOUS_SEASON && allEmpty)) {
         return {
           v: PROFILE_CHARTS_BUNDLE_VERSION,
@@ -302,7 +300,8 @@ export async function ensureProfileChartsBundle(
 
     const needDaily = options?.forceRebuild || parsed?.dailyTrend == null;
     const needRank = options?.forceRebuild || parsed?.rankTrend == null;
-    const needLast20 = options?.forceRebuild || parsed?.last20 == null;
+    /** last20 は settle 書き込みが正。force 以外で posts に行かない */
+    const needLast20 = Boolean(options?.forceRebuild);
 
     const [dailyTrend, rankTrend, last20] = await Promise.all([
       needDaily
@@ -313,7 +312,7 @@ export async function ensureProfileChartsBundle(
         : Promise.resolve(parsed!.rankTrend!),
       needLast20
         ? buildLast20(safeUid, seasonKey)
-        : Promise.resolve(parsed!.last20!),
+        : Promise.resolve(parsed?.last20 ?? null),
     ]);
 
     const bundle: CompleteProfileChartsBundle = {

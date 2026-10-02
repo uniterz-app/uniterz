@@ -11,10 +11,8 @@ import { metricNum } from "@/lib/rankings/metric";
 import { useRankCountUp } from "@/lib/hooks/useCountUpRanking";
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
-import {
-  ProCyberBadge,
-  proBadgeStaticMotion,
-} from "@/app/component/common/ProCyberBadge";
+import { RankingNameBadges } from "@/app/component/common/RankingNameBadges";
+import { proBadgeStaticMotion } from "@/app/component/common/ProCyberBadge";
 import { profileHrefWithRankingsReturn } from "@/lib/navigation/rankingsProfileFrom";
 import { profilePathKeyFromRow } from "@/lib/profile/profilePathKey";
 import { primeProfileCacheFromRankingRow } from "@/app/component/profile/useProfile";
@@ -23,6 +21,8 @@ import type { RankingPhase } from "@/lib/rankings/rankingPhase";
 import type { PlayoffRoundKey } from "@/lib/rankings/playoffRound";
 import type { RankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
 import type { WcRankingStage } from "@/lib/rankings/wcRankingStage";
+import type { RankingPeriod } from "@/lib/rankings/rankingPeriod";
+import type { NbaRankingBoard } from "@/lib/rankings/rankingDivision";
 import {
   CyberRankingListRow,
   CyberRankingScore,
@@ -42,6 +42,8 @@ export default function TopPodium({
   playoffRound,
   rankingLeague,
   wcStage,
+  rankingPeriod,
+  nbaBoard,
   participantCount,
   onTopCountDone,
   countUpEnabled = true,
@@ -57,6 +59,8 @@ export default function TopPodium({
   playoffRound?: PlayoffRoundKey;
   rankingLeague?: RankingLeagueSource;
   wcStage?: WcRankingStage;
+  rankingPeriod?: RankingPeriod;
+  nbaBoard?: NbaRankingBoard;
   participantCount?: number | null;
   onTopCountDone?: () => void;
   /** false = スコアを即表示（プロフィールから戻ったとき等） */
@@ -179,6 +183,8 @@ export default function TopPodium({
               rankingLeague,
               wcStage,
               groupId: groupReturnGroupId,
+              rankingPeriod,
+              nbaBoard,
             }
           );
 
@@ -273,13 +279,12 @@ export default function TopPodium({
                     ) : null
                   }
                   nameExtra={
-                    row.plan === "pro" ? (
-                      <ProCyberBadge
-                        {...proBadgeStaticMotion}
-                        compact
-                        ariaLabel={t(language).common.proMember}
-                      />
-                    ) : null
+                    <RankingNameBadges
+                      {...proBadgeStaticMotion}
+                      compact
+                      isPro={row.plan === "pro"}
+                      proLabel={t(language).common.proMember}
+                    />
                   }
                   rankDeltaPlaces={row.rankDeltaPlaces}
                   language={language}

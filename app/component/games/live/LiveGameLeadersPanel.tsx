@@ -1,12 +1,13 @@
 "use client";
 
+import TeamAbbrBadge from "@/app/component/games/TeamAbbrBadge";
 import {
   deriveLiveGameLeaders,
   type LiveGameStatsReport,
 } from "@/lib/games/liveGameStats";
 import { playerCardName } from "@/lib/predict/nbaRoster";
 import { nameOxanium } from "@/lib/fonts";
-import { getTeamPrimaryColor } from "@/lib/team-colors";
+import { matchupTeamUiAccent } from "@/lib/team-colors";
 
 type Props = {
   report: LiveGameStatsReport;
@@ -23,16 +24,20 @@ export default function LiveGameLeadersPanel({ report }: Props) {
   return (
     <div
       className="overflow-hidden border"
-      style={{ borderColor: FRAME, backgroundColor: "transparent" }}
+      style={{ borderColor: FRAME, backgroundColor: "#000" }}
     >
       {leaders.map((L, i) => {
-        const accent =
-          getTeamPrimaryColor("nba", L.teamId) ?? "#e8edf5";
+        const fillColor = matchupTeamUiAccent(
+          "nba",
+          L.teamId,
+          report.home.teamId,
+          report.away.teamId
+        );
         const last = i === leaders.length - 1;
         return (
           <div
             key={L.key}
-            className="grid grid-cols-[3.25rem_minmax(0,1fr)_auto_2.75rem] items-center gap-2 px-3 py-2.5"
+            className="grid grid-cols-[3.25rem_minmax(0,1fr)_auto_3rem] items-center gap-2 px-3 py-2.5"
             style={
               last ? undefined : { borderBottom: `1px solid ${ROW_LINE}` }
             }
@@ -40,7 +45,7 @@ export default function LiveGameLeadersPanel({ report }: Props) {
             <p
               className={[
                 nameOxanium.className,
-                "text-[10px] font-bold uppercase tracking-[0.14em] text-white/40",
+                "text-[11px] font-bold uppercase tracking-[0.14em] text-white/40",
               ].join(" ")}
             >
               {L.label}
@@ -48,25 +53,21 @@ export default function LiveGameLeadersPanel({ report }: Props) {
             <p
               className={[
                 nameOxanium.className,
-                "min-w-0 truncate text-[13px] font-bold uppercase tracking-[0.04em] text-white",
+                "min-w-0 truncate text-[14px] font-bold uppercase tracking-[0.04em] text-white",
               ].join(" ")}
               style={{ transform: "skewX(-6deg)" }}
             >
               {playerCardName(L)}
             </p>
+            <TeamAbbrBadge
+              abbr={L.teamAbbr}
+              teamId={L.teamId}
+              fillColor={fillColor}
+            />
             <p
               className={[
                 nameOxanium.className,
-                "text-[11px] font-extrabold uppercase tracking-[0.08em]",
-              ].join(" ")}
-              style={{ color: accent }}
-            >
-              {L.teamAbbr}
-            </p>
-            <p
-              className={[
-                nameOxanium.className,
-                "text-right text-[16px] font-extrabold tabular-nums text-white",
+                "text-right text-[18px] font-extrabold tabular-nums text-white",
               ].join(" ")}
               style={{ transform: "skewX(-6deg)" }}
             >

@@ -1,28 +1,35 @@
-/**
- * users/{uid} → プロフィールカード初回描画用シード（peek / load 共通）。
- */
+import { resolveLocalizedLang, type LocalizedLang } from "../../../../../lib/i18n/localize";
 import { auth } from "../../lib/firebase";
 import { parseMemberSinceMs } from "../../../../../lib/profile/parseMemberSinceMs";
 import {
   parseUserProfileFields,
+  parseUserProfileViewCount,
   parseUserUnitBalance,
 } from "../../../../../lib/profile/parseUserProfileFields";
 import { parseUserPlanProBgVariant } from "../../../../../lib/profile/profilePlanProBgVariantField";
 import type { ProfilePlanProBgVariant } from "../../../../../lib/profile/profilePlanProBgVariants";
 import { peekProfileUserDocNative } from "./profileUserDocCacheNative";
+import {
+  parseNbaFavorites,
+  type NbaFavoritePlayer,
+} from "../../../../../lib/profile/nbaFavorites";
 
 export type OwnProfileSeedNative = {
   displayName: string;
   handle: string;
   bio: string;
   avatarUrl: string;
-  language: "ja" | "en";
+  language: LocalizedLang;
   countryCode: string;
   /** 期限解決前の表示用（resolveAndExpireMyPlan で後から確定） */
   plan: "free" | "pro";
   planProBgVariant: ProfilePlanProBgVariant;
   memberSinceMs: number | null;
   unitBalance: number;
+  profileViewCount: number | null;
+  favoriteNbaTeamId: string | null;
+  favoriteNbaTeamFanSinceSeason: string | null;
+  favoriteNbaPlayers: NbaFavoritePlayer[];
   data: Record<string, unknown>;
 };
 
@@ -38,17 +45,24 @@ export function seedOwnProfileFromUserDocNative(
         ? data.avatarUrl.trim()
         : "";
   const authPhoto = authPhotoURL?.trim() ?? "";
+  const favorites = parseNbaFavorites(data);
   return {
     displayName: displayName || handle,
     handle,
     bio: typeof data.bio === "string" ? data.bio : "",
     avatarUrl: fromFirestorePhoto || authPhoto,
-    language: data.language === "en" ? "en" : "ja",
+    language: resolveLocalizedLang(
+      typeof data.language === "string" ? data.language : null
+    ),
     countryCode: typeof data.countryCode === "string" ? data.countryCode : "",
     plan: data.plan === "pro" ? "pro" : "free",
     planProBgVariant: parseUserPlanProBgVariant(data.planProBgVariant),
     memberSinceMs: parseMemberSinceMs(data),
     unitBalance: parseUserUnitBalance(data),
+    profileViewCount: parseUserProfileViewCount(data),
+    favoriteNbaTeamId: favorites.favoriteNbaTeamId,
+    favoriteNbaTeamFanSinceSeason: favorites.favoriteNbaTeamFanSinceSeason,
+    favoriteNbaPlayers: favorites.favoriteNbaPlayers,
     data,
   };
 }

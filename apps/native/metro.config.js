@@ -81,6 +81,19 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
       return { type: "sourceFile", filePath };
     }
   }
+  // Expo が @/ を apps/native 相対の ./lib/... に書き換えたあとのフォールバック
+  if (
+    typeof moduleName === "string" &&
+    (moduleName === "./lib" ||
+      moduleName.startsWith("./lib/") ||
+      moduleName.startsWith("lib/"))
+  ) {
+    const sub = moduleName.replace(/^\.\//, "");
+    const filePath = resolveSourceFile(path.join(workspaceRoot, sub));
+    if (filePath) {
+      return { type: "sourceFile", filePath };
+    }
+  }
   // カスタム resolveRequest からビルトインへ渡す（無限再帰を避ける）
   return metroResolve(
     { ...context, resolveRequest: metroResolve },

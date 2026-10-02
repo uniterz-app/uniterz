@@ -4,7 +4,9 @@ import {
   FREE_MAX_MEMBERSHIPS,
   FREE_MAX_OWNED_GROUPS,
 } from "../../../../../lib/communities/limitValues";
+import { getUniterzApiBaseUrl } from "../games/submitPredictionApi";
 
+/** @deprecated Prefer communityApiUrl — 生の env は実機で 127.0.0.1 のまま不通になる */
 export const COMMUNITY_API_BASE =
   process.env.EXPO_PUBLIC_UNITERZ_API_BASE_URL?.replace(/\/$/, "") ?? "";
 
@@ -57,6 +59,10 @@ export type CommunityGroupSummary = {
   periodType: string;
   rankingLeague: CommunityLeague;
   rankingTeamIds: string[];
+  rankingGamesScope?: "all" | "pickup";
+  rankingPeriodMonthKey?: string | null;
+  rankingEndDateKey?: string | null;
+  rankingSeasonKey?: string | null;
   archived: boolean;
   isOwner: boolean;
   inviteCode: string | null;
@@ -70,6 +76,8 @@ export type CommunityGroupLeaderboardRow = {
   handle: string | null;
   photoURL: string | null;
   plan?: "free" | "pro";
+  /** Pro Skin（users.planProBgVariant） */
+  planProBgVariant?: string;
   countryCode?: string;
   totalPosts?: number;
   totalWins?: number;
@@ -111,7 +119,8 @@ export async function communityAuthHeader(getIdToken: () => Promise<string>): Pr
 }
 
 export function communityApiUrl(path: string): string {
-  const base = COMMUNITY_API_BASE;
+  /** 実機 __DEV__ では Metro LAN IP に書き換え（Games の getUniterzApiBaseUrl と同じ） */
+  const base = (getUniterzApiBaseUrl() ?? COMMUNITY_API_BASE).replace(/\/$/, "");
   if (!base) return path;
   return `${base}${path.startsWith("/") ? path : `/${path}`}`;
 }

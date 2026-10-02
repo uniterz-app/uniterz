@@ -9,10 +9,11 @@ import {
 } from "react";
 import { cyberAlert } from "../../../components/cyberAlert";
 import {
-  Image, Platform, Pressable, ScrollView, Share, StyleSheet, Text, useWindowDimensions, View, type StyleProp, type ViewStyle,
+  Image, InteractionManager, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View, type StyleProp, type ViewStyle,
 } from "react-native";
 import UnitEarnOverlayNative from "../UnitEarnOverlayNative";
 import { useUnitEarnOverlayNative } from "../useUnitEarnOverlayNative";
+import ProfileNbaFavoritesRowNative from "./ProfileNbaFavoritesRowNative";
 import { unitVaultUiBalance } from "../../../../../../lib/units/unitVaultDisplay";
 import { UNIT_EARN_VAULT_COUNT_MS, unitEarnCountDisplayValue } from "../../../../../../lib/units/unitEarnMotion";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
@@ -23,10 +24,10 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withDelay,
-  withRepeat,
   withSequence,
   withTiming,
 } from "react-native-reanimated";
+import { useScreenActiveNative } from "../../../hooks/useScreenActiveNative";
 import type { ProfileEditKinetikStats } from "../../../../../../app/component/profile/edit/profileEditKinetikTypes";
 import type { ProfileEditTronIdentity } from "../../../../../../app/component/profile/edit/profileEditTronTypes";
 import {
@@ -38,7 +39,6 @@ import {
 } from "../../../../../../app/component/profile/edit/kinetikRankBadge";
 import {
   proBridgeBadgeEnterDelayMs,
-  proBridgeBadgeFloatDelayMs,
   resolveProBridgeBadgeLayout,
   shouldProBridgeBadgeNudgeScroll,
   shouldProBridgeBadgeScroll,
@@ -77,7 +77,8 @@ import {
 import { currentRankingPeriodLabel } from "../../../../../../lib/rankings/rankingPeriod";
 import { rankingFlagImageUri } from "../../rankings/rankingFlagUri";
 import { getUniterzApiBaseUrl } from "../../games/submitPredictionApi";
-import { buildProfileShareUrl } from "../../../../../../lib/share/shareAppUrls";
+import { buildProfileShareUrl, getShareAppOrigin } from "../../../../../../lib/share/shareAppUrls";
+import { shareViaOsNative } from "../../share/openSnsShareNative";
 import type { ResolvedBadgeNative } from "../useNativeProfileBadges";
 import {
   KINETIK_METRIC_GOLD,
@@ -88,6 +89,8 @@ import {
   kinetikPlanProFrameTheme,
   type KinetikMetricAccent,
 } from "./profileKinetikNativeTheme";
+import { profileKinetikPanelCopy } from "../profileKinetikPanelCopy";
+import { resolveLocalizedLang } from "../../../../../../lib/i18n/localize";
 import ProCyberBadgeNative from "./ProCyberBadgeNative";
 import ProfileKinetikAvatarWithStreakNative from "./ProfileKinetikAvatarWithStreakNative";
 import ResultImpactStreakTagNative from "../../results/ResultImpactStreakTagNative";
@@ -99,12 +102,10 @@ import {
   useProfileKinetikFlipEar,
 } from "./ProfileKinetikFlipEarNative";
 import { LinearGradient } from "expo-linear-gradient";
-import {
-  PROFILE_PLAN_PRO_BG_DEFAULT,
-  type ProfilePlanProBgVariant,
-} from "../../../../../../lib/profile/profilePlanProBgVariants";
+import type { ProfilePlanProBgVariant } from "../../../../../../lib/profile/profilePlanProBgVariants";
 import { isProfilePlanProScaleBgVariant } from "../../../../../../lib/profile/profilePlanProScaleBgVariants";
 import { isProfilePlanProBeastBgVariant } from "../../../../../../lib/profile/profilePlanProBeastBgVariants";
+import { isProfilePlanProDustTextureVariant } from "../../../../../../lib/profile/profilePlanProDustTextures";
 import { isProfilePlanProCosmosBgVariant } from "../../../../../../lib/profile/profilePlanProCosmosBgVariants";
 import { isProfilePlanProFormBgVariant } from "../../../../../../lib/profile/profilePlanProFormBgVariants";
 import { isProfilePlanProNeoBgVariant } from "../../../../../../lib/profile/profilePlanProNeoBgVariants";
@@ -202,7 +203,7 @@ function KinetikMetricCardNative({
   rankBelowSegBar?: boolean;
   compact?: boolean;
   isPlanPro?: boolean;
-  language?: "ja" | "en";
+  language?: string;
 }) {
   const reduceMotion = useReducedMotion() === true;
   const useCount = countFormat != null && countTarget != null;
@@ -356,7 +357,7 @@ function KinetikSlantTabNative({
   rankTier?: KinetikRankBadgeTier;
   streakTier?: 1 | 2 | 3 | 4;
   explanation?: string;
-  language: "ja" | "en";
+  language: string;
   onPress?: () => void;
 }) {
   const rankTheme = rankTier ? KINETIK_SLANT_TAB_RANK[rankTier] : null;
@@ -430,9 +431,10 @@ function KinetikHeaderTabsNative({
 }: {
   rankBadge: KinetikRankBadgeResult | null;
   winStreak: number;
-  language: "ja" | "en";
+  language: string;
 }) {
-  const streakLabel = formatKinetikWinStreakLabel(winStreak, language);
+  const lang = resolveLocalizedLang(language);
+  const streakLabel = formatKinetikWinStreakLabel(winStreak, lang);
   if (!rankBadge && !streakLabel) return null;
 
   const showTagExplanation = useCallback(
@@ -450,11 +452,11 @@ function KinetikHeaderTabsNative({
           label={rankBadge.label}
           variant="filled"
           rankTier={rankBadge.tier}
-          explanation={getKinetikRankBadgeExplanation(rankBadge, language)}
-          language={language}
+          explanation={getKinetikRankBadgeExplanation(rankBadge, lang)}
+          language={lang}
           onPress={() =>
             showTagExplanation(
-              getKinetikRankBadgeExplanation(rankBadge, language)
+              getKinetikRankBadgeExplanation(rankBadge, lang)
             )
           }
         />
@@ -464,7 +466,7 @@ function KinetikHeaderTabsNative({
           accessibilityRole="button"
           accessibilityLabel={streakLabel}
           onPress={() =>
-            showTagExplanation(getKinetikWinStreakExplanation(winStreak, language))
+            showTagExplanation(getKinetikWinStreakExplanation(winStreak, lang))
           }
           style={({ pressed }) => [pressed ? { opacity: 0.85 } : null]}
         >
@@ -491,19 +493,15 @@ function KinetikHeaderHatch() {
   );
 }
 
-const PRO_BRIDGE_FLOAT_PHASE_STAGGER = 5;
 const PRO_BRIDGE_BADGE_GAP = 10;
 /** Web `profile-kinetik-badge-enter` — cubic-bezier(0.22, 1, 0.36, 1) */
 const BADGE_ENTER_EASE = Easing.bezier(0.22, 1, 0.36, 1);
-/** Web `profile-kinetik-badge-float` 3.4s の片道 */
-const BADGE_FLOAT_HALF_MS = 1700;
-/** Web float 振幅（-6px）＋盾型など先端が枠いっぱいのバッジ用バッファ */
+/** 旧 float 振幅ぶんの余白。盾型バッジが枠に触れないように残す */
 const BADGE_FLOAT_TRAVEL_PX = 6;
 const BADGE_FLOAT_TOP_CLEARANCE_PX = BADGE_FLOAT_TRAVEL_PX + 8;
 
 /**
- * Web と同じく入場ラッパーとフロート本体を分離する。
- * 同一 transform に合成すると入場後も scale/translate が干渉して動きが崩れる。
+ * Pro バッジ入場のみ（常時 float はしない）。
  */
 function KinetikBadgeProBridgeWrapNative({
   index,
@@ -511,22 +509,18 @@ function KinetikBadgeProBridgeWrapNative({
   children,
 }: {
   index: number;
-  /** Unit 獲得演出中など — フロートを止めて負荷を下げる */
   paused?: boolean;
   children: ReactNode;
 }) {
   const reduceMotion = useReducedMotion();
   const enter = useSharedValue(reduceMotion ? 1 : 0);
-  const floatY = useSharedValue(0);
   const enteredRef = useRef(false);
 
   useEffect(() => {
     cancelAnimation(enter);
-    cancelAnimation(floatY);
 
     if (reduceMotion || paused) {
       enter.value = 1;
-      floatY.value = 0;
       enteredRef.current = true;
       return;
     }
@@ -534,10 +528,6 @@ function KinetikBadgeProBridgeWrapNative({
     const enterDelayMs = enteredRef.current
       ? 0
       : proBridgeBadgeEnterDelayMs(index);
-    const floatDelayMs = enteredRef.current
-      ? 0
-      : proBridgeBadgeFloatDelayMs(index) +
-        (index % PRO_BRIDGE_FLOAT_PHASE_STAGGER) * 80;
 
     if (!enteredRef.current) {
       enter.value = 0;
@@ -550,25 +540,10 @@ function KinetikBadgeProBridgeWrapNative({
       enter.value = 1;
     }
 
-    floatY.value = 0;
-    /** Web: `animation: profile-kinetik-badge-float 3.4s ease-in-out infinite` */
-    floatY.value = withDelay(
-      floatDelayMs,
-      withRepeat(
-        withTiming(-BADGE_FLOAT_TRAVEL_PX, {
-          duration: BADGE_FLOAT_HALF_MS,
-          easing: Easing.inOut(Easing.ease),
-        }),
-        -1,
-        true
-      )
-    );
-
     return () => {
       cancelAnimation(enter);
-      cancelAnimation(floatY);
     };
-  }, [enter, floatY, index, paused, reduceMotion]);
+  }, [enter, index, paused, reduceMotion]);
 
   const enterStyle = useAnimatedStyle(() => {
     const enterT = enter.value;
@@ -582,13 +557,9 @@ function KinetikBadgeProBridgeWrapNative({
     };
   });
 
-  const floatStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: floatY.value }],
-  }));
-
   return (
     <Animated.View style={[styles.badgeEnterWrap, enterStyle]}>
-      <Animated.View style={[styles.badgeFloatWrap, floatStyle]}>{children}</Animated.View>
+      {children}
     </Animated.View>
   );
 }
@@ -819,12 +790,6 @@ function KinetikIdentityIdChipNative({
   );
 }
 
-/** Web の Unit コインアニメ秒数（CSS keyframes と揃える） */
-const UNIT_COIN_GLOW_HALF_MS = 1400;
-const UNIT_COIN_SHEEN_CYCLE_MS = 3600;
-const UNIT_COIN_SHEEN_SWEEP_MS = 580;
-const UNIT_COIN_SHEEN_HOLD_MS = Math.round(UNIT_COIN_SHEEN_CYCLE_MS * 0.55);
-
 function formatVaultBalance(n: number): string {
   return Math.max(0, Math.floor(n)).toLocaleString("en-US");
 }
@@ -853,7 +818,6 @@ const KinetikUnitVaultNative = forwardRef<
     onPress,
     absorbPulse = false,
     countUpEnabled = true,
-    effectsPaused = false,
     onCountBusyChange,
   },
   ref
@@ -932,9 +896,6 @@ const KinetikUnitVaultNative = forwardRef<
   /** 復帰マウントで入場アニメをやり直さない（獲得演出の硬さ対策） */
   const enter = useSharedValue(1);
   const absorb = useSharedValue(1);
-  const glow = useSharedValue(0);
-  const sheenX = useSharedValue(-1.4);
-  const sheenOpacity = useSharedValue(0);
 
   useEffect(() => {
     if (!absorbPulse || reduceMotion) {
@@ -953,100 +914,9 @@ const KinetikUnitVaultNative = forwardRef<
     );
   }, [absorb, absorbPulse, reduceMotion]);
 
-  useEffect(() => {
-    cancelAnimation(glow);
-    cancelAnimation(sheenX);
-    cancelAnimation(sheenOpacity);
-
-    if (reduceMotion || effectsPaused) {
-      glow.value = 0;
-      sheenX.value = -1.4;
-      sheenOpacity.value = 0;
-      return;
-    }
-
-    /** タブ復帰直後はレイアウトが落ち着いてからループ開始 */
-    const settleId = setTimeout(() => {
-      /** Web: `profile-unit-coin-glow 2.8s` */
-      glow.value = withRepeat(
-        withSequence(
-          withTiming(1, {
-            duration: UNIT_COIN_GLOW_HALF_MS,
-            easing: Easing.inOut(Easing.ease),
-          }),
-          withTiming(0, {
-            duration: UNIT_COIN_GLOW_HALF_MS,
-            easing: Easing.inOut(Easing.ease),
-          })
-        ),
-        -1,
-        false
-      );
-
-      /** Web: `profile-unit-coin-sheen 3.6s` */
-      sheenX.value = -1.4;
-      sheenOpacity.value = 0;
-      sheenX.value = withRepeat(
-        withSequence(
-          withDelay(
-            UNIT_COIN_SHEEN_HOLD_MS,
-            withTiming(2.2, {
-              duration: UNIT_COIN_SHEEN_SWEEP_MS,
-              easing: Easing.inOut(Easing.ease),
-            })
-          ),
-          withTiming(-1.4, { duration: 0 })
-        ),
-        -1,
-        false
-      );
-      sheenOpacity.value = withRepeat(
-        withSequence(
-          withDelay(UNIT_COIN_SHEEN_HOLD_MS, withTiming(0.85, { duration: 80 })),
-          withTiming(0, {
-            duration: UNIT_COIN_SHEEN_SWEEP_MS - 80,
-            easing: Easing.in(Easing.ease),
-          }),
-          withTiming(0, { duration: 0 })
-        ),
-        -1,
-        false
-      );
-    }, 480);
-
-    return () => {
-      clearTimeout(settleId);
-      cancelAnimation(glow);
-      cancelAnimation(sheenX);
-      cancelAnimation(sheenOpacity);
-    };
-  }, [effectsPaused, glow, reduceMotion, sheenOpacity, sheenX]);
-
   const rootStyle = useAnimatedStyle(() => ({
     opacity: enter.value,
     transform: [{ scale: absorb.value }],
-  }));
-
-  const discStyle = useAnimatedStyle(() => {
-    const g = glow.value;
-    return {
-      transform: [{ scale: 1 + g * 0.05 }],
-      shadowOpacity: 0.38 + g * 0.37,
-      shadowRadius: 6 + g * 6,
-    };
-  });
-
-  const sheenStyle = useAnimatedStyle(() => ({
-    opacity: sheenOpacity.value,
-    transform: [
-      { translateX: sheenX.value * disc },
-      { rotate: "18deg" },
-    ],
-  }));
-
-  const valueGlowStyle = useAnimatedStyle(() => ({
-    textShadowRadius: 6 + glow.value * 6,
-    textShadowColor: `rgba(246,195,68,${0.4 + glow.value * 0.32})`,
   }));
 
   return (
@@ -1066,11 +936,10 @@ const KinetikUnitVaultNative = forwardRef<
           ]}
           hitSlop={6}
         >
-          <Animated.View
+          <View
             style={[
               styles.unitVaultDisc,
               { width: disc, height: disc, borderRadius: disc / 2 },
-              discStyle,
             ]}
           >
             <LinearGradient
@@ -1078,10 +947,6 @@ const KinetikUnitVaultNative = forwardRef<
               start={{ x: 0.15, y: 0 }}
               end={{ x: 0.85, y: 1 }}
               style={StyleSheet.absoluteFillObject}
-            />
-            <Animated.View
-              pointerEvents="none"
-              style={[styles.unitVaultSheen, { height: disc * 1.4, top: -disc * 0.2 }, sheenStyle]}
             />
             <View
               style={[
@@ -1101,16 +966,15 @@ const KinetikUnitVaultNative = forwardRef<
               />
               <Text style={[styles.unitVaultU, corner ? styles.unitVaultUCorner : null]}>U</Text>
             </View>
-          </Animated.View>
-          <Animated.Text
+          </View>
+          <Text
             style={[
               styles.unitVaultValue,
               corner ? styles.unitVaultValueCorner : null,
-              valueGlowStyle,
             ]}
           >
             {label}
-          </Animated.Text>
+          </Text>
         </Pressable>
       </Animated.View>
     </View>
@@ -1124,6 +988,7 @@ function KinetikIdentityJoinIdRowNative({
   copiedLabel,
   shareLabel,
   onShare,
+  markToggle,
 }: {
   memberSinceLabel: string | null;
   idLabel: string;
@@ -1131,6 +996,11 @@ function KinetikIdentityJoinIdRowNative({
   copiedLabel: string;
   shareLabel: string;
   onShare: () => void;
+  markToggle?: {
+    marked: boolean;
+    onPress: () => void;
+    accessibilityLabel: string;
+  } | null;
 }) {
   return (
     <View style={styles.identityJoinIdRow}>
@@ -1163,6 +1033,24 @@ function KinetikIdentityJoinIdRowNative({
           importantForAccessibility="no-hide-descendants"
         />
       )}
+      {markToggle ? (
+        <Pressable
+          onPress={markToggle.onPress}
+          style={[
+            styles.footerMark,
+            markToggle.marked ? styles.footerMarkOn : styles.footerMarkOff,
+          ]}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel={markToggle.accessibilityLabel}
+        >
+          <MaterialCommunityIcons
+            name={markToggle.marked ? "bookmark-check" : "bookmark-plus-outline"}
+            size={14}
+            color={markToggle.marked ? "#050508" : "#a5f3fc"}
+          />
+        </Pressable>
+      ) : null}
     </View>
   );
 }
@@ -1171,25 +1059,31 @@ function KinetikViewCountChipNative({
   viewCount,
   viewCountAriaLabel,
   underAvatar,
+  language,
 }: {
   viewCount: number;
   viewCountAriaLabel: string | null;
   underAvatar?: boolean;
+  language: string;
 }) {
+  const copy = profileKinetikPanelCopy(language);
   return (
-    <View
+    <Pressable
+      onPress={() => cyberAlert(copy.viewsTitle, copy.viewsBody)}
       style={[
         styles.viewCountChip,
         underAvatar ? styles.viewCountChipUnderAvatar : null,
       ]}
-      accessibilityRole="text"
+      hitSlop={8}
+      accessibilityRole="button"
       accessibilityLabel={viewCountAriaLabel ?? undefined}
+      accessibilityHint={copy.viewsHint}
     >
       <MaterialCommunityIcons name="eye" size={12} color="#00F5FF" />
       <Text style={styles.viewCountNum}>
         {viewCount.toLocaleString("en-US")}
       </Text>
-    </View>
+    </Pressable>
   );
 }
 
@@ -1230,52 +1124,17 @@ function MetricsScopeArrowNative({
   );
 }
 
-function MetricsScopeTitleBreathingNative({
-  children,
-  animate,
-}: {
-  children: string;
-  animate: boolean;
-}) {
-  const reduceMotion = useReducedMotion();
-  const opacity = useSharedValue(0.85);
-
-  useEffect(() => {
-    if (!animate || reduceMotion) {
-      opacity.value = 0.88;
-      return;
-    }
-    opacity.value = withRepeat(
-      withSequence(
-        withTiming(0.96, { duration: 1800, easing: Easing.inOut(Easing.ease) }),
-        withTiming(0.76, { duration: 1800, easing: Easing.inOut(Easing.ease) })
-      ),
-      -1,
-      false
-    );
-  }, [animate, opacity, reduceMotion]);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    opacity: opacity.value,
-  }));
-
-  return (
-    <Animated.Text style={[styles.metricsTitle, animatedStyle]} numberOfLines={1}>
-      {children}
-    </Animated.Text>
-  );
-}
-
 export type ProfileKinetikPanelNativeProps = {
   identity: ProfileEditTronIdentity;
   stats: ProfileEditKinetikStats;
-  language: "ja" | "en";
+  language: string;
   bio?: string | null;
   countryCode?: string | null;
   memberSinceMs?: number | null;
   isPro?: boolean;
-  /** Pro Skin（users.planProBgVariant） */
-  planProBgVariant?: ProfilePlanProBgVariant;
+  accountUid?: string | null;
+  /** Pro Skin（users.planProBgVariant）。null = 未確定（デフォルトを出さない） */
+  planProBgVariant?: ProfilePlanProBgVariant | null;
   winStreak?: number;
   totalPointsRank?: number | null;
   totalPointsRankDenominator?: number | null;
@@ -1307,6 +1166,20 @@ export type ProfileKinetikPanelNativeProps = {
   unitBalance?: number | null;
   /** 自分のプロフィール時: Unit 履歴を開く */
   onOpenUnitLedger?: () => void;
+  /** MARK: 自分は一覧、他人はトグル */
+  markMode?: "list" | "toggle";
+  marked?: boolean;
+  markCount?: number;
+  onPressMark?: () => void;
+  nbaFavorites?: {
+    favoriteNbaTeamId: string | null;
+    favoriteNbaTeamFanSinceSeason: string | null;
+    favoriteNbaPlayers: Array<{
+      playerId: string;
+      displayName: string;
+      teamId: string;
+    }>;
+  } | null;
 };
 
 export default function ProfileKinetikPanelNative({
@@ -1317,7 +1190,8 @@ export default function ProfileKinetikPanelNative({
   countryCode = null,
   memberSinceMs = null,
   isPro = false,
-  planProBgVariant = PROFILE_PLAN_PRO_BG_DEFAULT,
+  accountUid = null,
+  planProBgVariant = null,
   winStreak,
   totalPointsRank: totalPointsRankProp,
   totalPointsRankDenominator: totalPointsRankDenominatorProp,
@@ -1331,8 +1205,8 @@ export default function ProfileKinetikPanelNative({
   rankingLeague: _rankingLeague = "nba",
   statsPending = false,
   style,
-  metricsPeriod: _metricsPeriod,
-  onMetricsPeriodChange: _onMetricsPeriodChange,
+  metricsPeriod = "season",
+  onMetricsPeriodChange,
   metricsTab,
   onMetricsTabChange,
   metricsWindowLabel = null,
@@ -1341,12 +1215,32 @@ export default function ProfileKinetikPanelNative({
   profileViewCount = null,
   unitBalance = null,
   onOpenUnitLedger,
+  markMode,
+  marked = false,
+  markCount: _markCount = 0,
+  onPressMark,
+  nbaFavorites = null,
 }: ProfileKinetikPanelNativeProps) {
-  const isJa = language === "ja";
+  const copy = profileKinetikPanelCopy(language);
+  const lang = copy.lang;
   const showNbaMetricsTabs = metricsTab != null && !!onMetricsTabChange;
+  const canGoMetricsPrev =
+    !!onToggleMetricsScope && metricsPeriod === "playoffs";
+  const canGoMetricsNext =
+    !!onToggleMetricsScope && metricsPeriod === "season";
+  const goMetricsPrev = () => {
+    if (!canGoMetricsPrev) return;
+    if (onMetricsPeriodChange) onMetricsPeriodChange("season");
+    else onToggleMetricsScope?.();
+  };
+  const goMetricsNext = () => {
+    if (!canGoMetricsNext) return;
+    if (onMetricsPeriodChange) onMetricsPeriodChange("playoffs");
+    else onToggleMetricsScope?.();
+  };
   const scopeHint = getKinetikMetricsScopeHint(
     metricsTab ?? "total",
-    isJa ? "ja" : "en",
+    lang,
     metricsTab === "weekly" || metricsTab === "monthly"
       ? {
           windowLabel: metricsWindowLabel,
@@ -1364,7 +1258,7 @@ export default function ProfileKinetikPanelNative({
     balance: unitBalance ?? null,
     enabled: !!onOpenUnitLedger && unitBalance != null,
     storageKey: shareHandle?.trim() || "me",
-    language: isJa ? "ja" : "en",
+    language: lang,
   });
   /** 金庫加算中はバッジ／コイン常時ループを止め続ける */
   const [vaultSettling, setVaultSettling] = useState(false);
@@ -1372,6 +1266,9 @@ export default function ProfileKinetikPanelNative({
     setVaultSettling(busy);
   }, []);
   const earnFxPaused = unitEarn.active != null || vaultSettling;
+  const screenActive = useScreenActiveNative();
+  /** 獲得演出中・裏タブでは常時ループを止める */
+  const uiMotionPaused = earnFxPaused || !screenActive;
   /** hook 側でモック / プレビュー加算済み（1000→1250）まで解決済み */
   const vaultDisplayBalance =
     unitEarn.vaultBalance ?? unitVaultUiBalance(unitBalance);
@@ -1386,7 +1283,7 @@ export default function ProfileKinetikPanelNative({
     totalPointsRank: activeTotalPointsRank,
     totalPointsRankDenominator: activeRankDenominator,
     rankDeltaPlaces: activeRankDelta,
-    language,
+    language: lang,
   });
   const menuAccent = resolveKinetikMenuAccent({
     totalPointsRank: activeTotalPointsRank,
@@ -1398,66 +1295,85 @@ export default function ProfileKinetikPanelNative({
     rankBadge,
   });
   const goldMonogramSkin = planProBgVariant === "wave-gold-monogram";
+  const hasProSkin = isPro && planProBgVariant != null;
+  /**
+   * Android: Pro Skin（巨大 SVG → view-shot 焼き）は初回遷移を塞ぐ。
+   * カード本体を先に出し、背景は次フレーム以降で載せる。
+   */
+  const [proSkinPaintReady, setProSkinPaintReady] = useState(
+    () => Platform.OS !== "android"
+  );
+  useEffect(() => {
+    if (!hasProSkin || Platform.OS !== "android") {
+      setProSkinPaintReady(true);
+      return;
+    }
+    setProSkinPaintReady(false);
+    let cancelled = false;
+    const enable = () => {
+      if (!cancelled) setProSkinPaintReady(true);
+    };
+    const task = InteractionManager.runAfterInteractions(enable);
+    const t = setTimeout(enable, 420);
+    return () => {
+      cancelled = true;
+      task.cancel();
+      clearTimeout(t);
+    };
+  }, [hasProSkin, planProBgVariant, accountUid]);
   const proFrameTheme = isPro ? kinetikPlanProFrameTheme(profileAccent) : null;
   const panelBorder = kinetikPanelBorderColor(profileAccent);
   const flipEar = useProfileKinetikFlipEar();
   const reduceMotion = useReducedMotion();
   const { width: windowW } = useWindowDimensions();
   /**
-   * 獲得演出中は Pro 背景ループも止める（SvgSkinHud は再開時に入場をやり直さない）。
-   * バッジ／金庫の常時ループも earnFxPaused で止める。
+   * Pro 背景は常時ループしない（ProfilePlanProBackground 側）。
+   * ここは入場許可フラグのみ。裏タブ・獲得演出中は止める。
    */
   const animatePlanProBg =
-    isPro && reduceMotion !== true && !earnFxPaused;
+    isPro && reduceMotion !== true && !earnFxPaused && screenActive;
   const [frameSize, setFrameSize] = useState(() => ({
     width: Math.max(0, windowW - 24),
     height: isPro ? 520 : 0,
   }));
-  const memberSinceLabel = formatProfileMemberSince(memberSinceMs, language);
+  const memberSinceLabel = formatProfileMemberSince(memberSinceMs, lang);
   const profileViewCountAria =
-    profileViewCount == null
-      ? null
-      : isJa
-        ? `プロフィール閲覧数 ${profileViewCount.toLocaleString("ja-JP")}`
-        : `${profileViewCount.toLocaleString("en-US")} profile views`;
+    profileViewCount == null ? null : copy.viewsAria(profileViewCount);
   const unitBalanceAria =
-    unitBalance == null
-      ? null
-      : isJa
-        ? `保有 Unit ${unitBalance.toLocaleString("ja-JP")}`
-        : `${unitBalance.toLocaleString("en-US")} Units`;
+    unitBalance == null ? null : copy.unitsAria(unitBalance);
   const shareTargetHandle = shareHandle?.trim() || identity.handle?.trim() || "";
   const profileFlagUri = countryCode?.trim()
     ? rankingFlagImageUri(countryCode.trim())
     : null;
   const profileIdLabel = identity.systemId.trim();
-  const shareProfileLabel = isJa ? "プロフィールを共有" : "Share profile";
-  const shareCopiedLabel = isJa ? "コピー済" : "Copied";
+  const shareProfileLabel = copy.shareProfile;
+  const shareCopiedLabel = copy.shareCopied;
 
   const handleShareProfile = useCallback(async () => {
     if (!shareTargetHandle) return;
-    const base = getUniterzApiBaseUrl();
+    const base = getShareAppOrigin() || getUniterzApiBaseUrl();
     const url = buildProfileShareUrl(shareTargetHandle, base);
     const title = identity.displayName;
-    const text =
-      language === "ja" ? `${title} のプロフィール` : `${title}'s profile`;
-    try {
-      await Share.share({ message: `${text}\n${url}`, url, title });
+    const text = copy.shareText(title);
+    const result = await shareViaOsNative({
+      caption: text,
+      linkUrl: url,
+      title,
+    });
+    if (result === "shared") {
       setShareCopied(true);
       setTimeout(() => setShareCopied(false), 2200);
-    } catch {
-      /* cancelled */
     }
-  }, [identity.displayName, language, shareTargetHandle]);
+  }, [copy, identity.displayName, shareTargetHandle]);
 
   const metricCopy = useMemo(
     () => ({
       ptsUnit: "pts",
-      matchUnit: isJa ? "試合" : "matches",
+      matchUnit: copy.matchUnit,
       cumulativeUnitHint: scopeHint.unitHint,
       winRateUnitHint: "%",
     }),
-    [isJa, scopeHint.unitHint]
+    [copy.matchUnit, scopeHint.unitHint]
   );
 
   const metricsHeaderTitle = metricsTitle ?? "NBA // 26-27";
@@ -1474,14 +1390,10 @@ export default function ProfileKinetikPanelNative({
     const pendingMark = "—";
     const sectionWinRateFootnote = valuesPending
       ? pendingMark
-      : isJa
-        ? `投稿 ${sectionStats.posts} · 的中 ${sectionStats.hits}`
-        : `${sectionStats.hits} hits · ${sectionStats.posts} posts`;
+      : copy.winRateFootnote(sectionStats.posts, sectionStats.hits);
     const sectionTotalPointsRankLabel =
       !valuesPending && sectionRank.totalPointsRank != null
-        ? isJa
-          ? `${sectionRank.totalPointsRank}位`
-          : `#${sectionRank.totalPointsRank}`
+        ? copy.rankLabel(sectionRank.totalPointsRank)
         : undefined;
     const sectionPtsSegmentsReady =
       !valuesPending &&
@@ -1492,7 +1404,7 @@ export default function ProfileKinetikPanelNative({
     return (
       <View style={styles.metricsGrid}>
         <KinetikMetricCardNative
-          label={isJa ? "勝率" : "WIN RATE"}
+          label={copy.winRateLabel}
           countTarget={sectionStats.winRate}
           countFormat="percent"
           countDecimals={1}
@@ -1516,7 +1428,7 @@ export default function ProfileKinetikPanelNative({
           isPlanPro={isPro}
         />
         <KinetikMetricCardNative
-          label={isJa ? "総合得点" : "TOTAL PTS"}
+          label={copy.totalPtsLabel}
           countTarget={sectionStats.totalPoints}
           countFormat="locale"
           valuesPending={valuesPending}
@@ -1550,7 +1462,7 @@ export default function ProfileKinetikPanelNative({
               : profileMetricDeltaTone(sectionDeltas?.totalPoints ?? null)
           }
           isPlanPro={isPro}
-          language={language}
+          language={lang}
         />
         <KinetikMetricCardNative
           label={KINETIK_UPSET_METRIC_LABEL}
@@ -1578,7 +1490,7 @@ export default function ProfileKinetikPanelNative({
           isPlanPro={isPro}
         />
         <KinetikMetricCardNative
-          label={isJa ? "最多得点者" : "TOP SCORER"}
+          label={copy.topScorerLabel}
           countTarget={Math.max(0, Math.round(sectionStats.goalScorerHits ?? 0))}
           countFormat="int"
           valuesPending={valuesPending}
@@ -1616,6 +1528,11 @@ export default function ProfileKinetikPanelNative({
             }
           : null,
         isPro ? styles.frameOuterPlanPro : null,
+        isPro &&
+        planProBgVariant != null &&
+        isProfilePlanProDustTextureVariant(planProBgVariant)
+          ? styles.frameOuterDust
+          : null,
         style,
       ]}
       onLayout={(e) => {
@@ -1626,7 +1543,7 @@ export default function ProfileKinetikPanelNative({
       {flipEar ? (
         <ProfileKinetikFlipEarTopEdgesNative borderColor={panelBorder} />
       ) : null}
-      {isPro && frameSize.width > 0 ? (
+      {hasProSkin && proSkinPaintReady && frameSize.width > 0 ? (
         <ProfilePlanProBackgroundNative
           width={frameSize.width}
           height={frameSize.height}
@@ -1638,7 +1555,7 @@ export default function ProfileKinetikPanelNative({
       ) : null}
 
       {/* Web 同様 — atmos / scale / beast / cosmos / form / neo / lab / wave では ambient を載せない */}
-      {isPro &&
+      {hasProSkin &&
       planProBgVariant !== "atmos" &&
       !isProfilePlanProScaleBgVariant(planProBgVariant) &&
       !isProfilePlanProBeastBgVariant(planProBgVariant) &&
@@ -1672,6 +1589,7 @@ export default function ProfileKinetikPanelNative({
               streak={activeWinStreak}
               accentKey={menuAccent}
               isPlanPro={isPro}
+              motionPaused={uiMotionPaused}
             />
             <View style={styles.avatarViews}>
               {profileViewCount != null ? (
@@ -1679,6 +1597,7 @@ export default function ProfileKinetikPanelNative({
                   viewCount={profileViewCount}
                   viewCountAriaLabel={profileViewCountAria}
                   underAvatar
+                  language={language}
                 />
               ) : (
                 <View style={styles.viewCountChipSlot} />
@@ -1687,7 +1606,29 @@ export default function ProfileKinetikPanelNative({
           </View>
           <View style={styles.headerMeta}>
             <KinetikHeaderHatch />
-            <View style={styles.headerIdentity}>
+            {onPressMark && markMode === "list" ? (
+              <Pressable
+                onPress={onPressMark}
+                style={styles.markBtn}
+                hitSlop={10}
+                accessibilityRole="button"
+                accessibilityLabel={copy.markList}
+              >
+                <MaterialCommunityIcons
+                  name="crosshairs"
+                  size={18}
+                  color="#a5f3fc"
+                />
+              </Pressable>
+            ) : null}
+            <View
+              style={[
+                styles.headerIdentity,
+                markMode === "list" && onPressMark
+                  ? { paddingRight: 28 }
+                  : null,
+              ]}
+            >
               <View style={styles.nameRow}>
                 <Text
                   style={[styles.displayName, isPro ? styles.displayNamePro : null]}
@@ -1705,16 +1646,14 @@ export default function ProfileKinetikPanelNative({
                         balance={vaultDisplayBalance}
                         ariaLabel={
                           onOpenUnitLedger
-                            ? isJa
-                              ? `${unitBalanceAria} · 履歴を開く`
-                              : `${unitBalanceAria} · Open history`
+                            ? copy.unitsOpenHistoryAria(unitBalanceAria)
                             : unitBalanceAria
                         }
                         corner
                         onPress={onOpenUnitLedger}
                         absorbPulse={unitEarn.active != null && unitEarn.absorbed}
                         countUpEnabled={!unitEarn.active || unitEarn.absorbed}
-                        effectsPaused={earnFxPaused}
+                        effectsPaused={uiMotionPaused}
                         onCountBusyChange={onVaultCountBusyChange}
                       />
                     </TutorialTargetNative>
@@ -1730,15 +1669,17 @@ export default function ProfileKinetikPanelNative({
                 )}
               </View>
               {profileFlagUri ? (
-                <View
-                  style={styles.nameFlagBelow}
-                  accessibilityLabel={countryCode ?? undefined}
-                >
-                  <Image
-                    source={{ uri: profileFlagUri }}
-                    style={styles.nameFlagBelowImg}
-                    resizeMode="cover"
-                  />
+                <View style={styles.markFlagRow}>
+                  <View
+                    style={styles.headerFlag}
+                    accessibilityLabel={countryCode ?? undefined}
+                  >
+                    <Image
+                      source={{ uri: profileFlagUri }}
+                      style={styles.headerFlagImg}
+                      resizeMode="cover"
+                    />
+                  </View>
                 </View>
               ) : null}
             </View>
@@ -1764,7 +1705,7 @@ export default function ProfileKinetikPanelNative({
               badges={badges}
               onBadgePress={onBadgePress}
               variant="proBridge"
-              motionPaused={earnFxPaused}
+              motionPaused={uiMotionPaused}
             />
           ) : null}
         </View>
@@ -1772,7 +1713,7 @@ export default function ProfileKinetikPanelNative({
         <KinetikBadgeRowNative
           badges={badges}
           onBadgePress={onBadgePress}
-          motionPaused={earnFxPaused}
+          motionPaused={uiMotionPaused}
         />
       )}
 
@@ -1785,25 +1726,39 @@ export default function ProfileKinetikPanelNative({
         >
           {onToggleMetricsScope ? (
             <>
+              {canGoMetricsPrev ? (
+                <Pressable
+                  style={[styles.scopeNavBtn, styles.scopeNavBtnLeft]}
+                  onPress={goMetricsPrev}
+                  hitSlop={8}
+                >
+                  <MetricsScopeArrowNative direction="left" planPro={isPro} />
+                </Pressable>
+              ) : null}
               <Pressable
-                style={[styles.scopeNavBtn, styles.scopeNavBtnLeft]}
-                onPress={onToggleMetricsScope}
-                hitSlop={8}
+                style={styles.metricsTitlePressPicker}
+                onPress={
+                  canGoMetricsNext
+                    ? goMetricsNext
+                    : canGoMetricsPrev
+                      ? goMetricsPrev
+                      : undefined
+                }
+                disabled={!canGoMetricsNext && !canGoMetricsPrev}
               >
-                <MetricsScopeArrowNative direction="left" planPro={isPro} />
-              </Pressable>
-              <Pressable style={styles.metricsTitlePressPicker} onPress={onToggleMetricsScope}>
-                <MetricsScopeTitleBreathingNative animate>
+                <Text style={styles.metricsTitle} numberOfLines={1}>
                   {metricsHeaderTitle}
-                </MetricsScopeTitleBreathingNative>
+                </Text>
               </Pressable>
-              <Pressable
-                style={[styles.scopeNavBtn, styles.scopeNavBtnRight]}
-                onPress={onToggleMetricsScope}
-                hitSlop={8}
-              >
-                <MetricsScopeArrowNative direction="right" planPro={isPro} />
-              </Pressable>
+              {canGoMetricsNext ? (
+                <Pressable
+                  style={[styles.scopeNavBtn, styles.scopeNavBtnRight]}
+                  onPress={goMetricsNext}
+                  hitSlop={8}
+                >
+                  <MetricsScopeArrowNative direction="right" planPro={isPro} />
+                </Pressable>
+              ) : null}
             </>
           ) : (
             <Text style={styles.metricsTitle} numberOfLines={1}>
@@ -1853,7 +1808,7 @@ export default function ProfileKinetikPanelNative({
                 }
                 availableLabels={metricsPeriodLabels}
                 onChange={onMetricsWindowLabelChange}
-                language={isJa ? "ja" : "en"}
+                language={lang}
               />
             ) : metricsTab !== "total" && scopeHint.unitHint ? (
               <Text style={styles.metricsPeriodHint}>{scopeHint.unitHint}</Text>
@@ -1881,6 +1836,14 @@ export default function ProfileKinetikPanelNative({
       </View>
 
       <View style={styles.cardFooterMeta}>
+        {nbaFavorites ? (
+          <View style={styles.favoritesFooter}>
+            <ProfileNbaFavoritesRowNative
+              favorites={nbaFavorites}
+              language={lang}
+            />
+          </View>
+        ) : null}
         <KinetikIdentityJoinIdRowNative
           memberSinceLabel={memberSinceLabel}
           idLabel={profileIdLabel}
@@ -1888,6 +1851,15 @@ export default function ProfileKinetikPanelNative({
           copiedLabel={shareCopiedLabel}
           shareLabel={shareProfileLabel}
           onShare={handleShareProfile}
+          markToggle={
+            onPressMark && markMode === "toggle"
+              ? {
+                  marked,
+                  onPress: onPressMark,
+                  accessibilityLabel: marked ? copy.marked : copy.mark,
+                }
+              : null
+          }
         />
       </View>
 
@@ -1900,7 +1872,7 @@ export default function ProfileKinetikPanelNative({
         title={unitEarn.active.title}
         subtitle={unitEarn.active.subtitle}
         rank={unitEarn.active.rank}
-        language={isJa ? "ja" : "en"}
+        language={lang}
         vaultRef={unitVaultRef}
         onAbsorb={unitEarn.markAbsorbed}
         onDone={unitEarn.dismiss}
@@ -1932,6 +1904,10 @@ const styles = StyleSheet.create({
   frameOuterPlanPro: {
     backgroundColor: "rgba(3,8,13,0.14)",
     minHeight: 520,
+  },
+  /** Dust 素材マップ — 透過で後ろのドット地が見えないよう黒ベース */
+  frameOuterDust: {
+    backgroundColor: "#000000",
   },
   planProAmbient: {
     ...StyleSheet.absoluteFillObject,
@@ -1989,6 +1965,26 @@ const styles = StyleSheet.create({
   },
   headerIdentity: {
     minWidth: 0,
+  },
+  markBtn: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    zIndex: 4,
+    width: 28,
+    height: 28,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  headerFlag: {
+    width: 30,
+    height: 20,
+    borderRadius: 1,
+    overflow: "hidden",
+  },
+  headerFlagImg: {
+    width: "100%",
+    height: "100%",
   },
   headerHatch: {
     position: "absolute",
@@ -2077,26 +2073,23 @@ const styles = StyleSheet.create({
     height: 28,
     opacity: 0,
   },
-  nameFlagBelow: {
+  markFlagRow: {
     marginTop: 6,
-    width: 22,
-    height: 15,
-    borderRadius: 1,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "rgba(255,255,255,0.28)",
-    overflow: "hidden",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
     alignSelf: "flex-start",
-  },
-  nameFlagBelowImg: {
-    width: "100%",
-    height: "100%",
   },
   cardFooterMeta: {
     marginTop: "auto",
     paddingTop: 12,
     alignSelf: "stretch",
-    alignItems: "flex-start",
+    alignItems: "stretch",
     zIndex: 1,
+  },
+  favoritesFooter: {
+    marginBottom: 8,
+    alignSelf: "stretch",
   },
   identityIdPress: {
     alignSelf: "flex-start",
@@ -2104,18 +2097,38 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   identityIdPressInline: {
-    alignSelf: "flex-start",
+    alignSelf: "stretch",
     marginTop: 0,
     flexShrink: 0,
+    justifyContent: "center",
   },
   identityJoinIdRow: {
     flexDirection: "row",
-    alignItems: "flex-end",
+    alignItems: "center",
     justifyContent: "flex-start",
     gap: 8,
-    alignSelf: "flex-start",
+    alignSelf: "stretch",
+    width: "100%",
     maxWidth: "100%",
-    minHeight: 22,
+    height: 26,
+  },
+  footerMark: {
+    marginLeft: "auto",
+    width: 22,
+    height: 22,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderRadius: 1,
+    flexShrink: 0,
+  },
+  footerMarkOff: {
+    borderColor: "rgba(165,243,252,0.7)",
+    backgroundColor: "rgba(0,245,255,0.08)",
+  },
+  footerMarkOn: {
+    borderColor: "#00F5FF",
+    backgroundColor: "#00F5FF",
   },
   footerJoinSlot: {
     minWidth: 72,
@@ -2144,20 +2157,23 @@ const styles = StyleSheet.create({
     minHeight: 22,
   },
   footerRefIdentity: {
-    paddingTop: 4,
-    paddingRight: 6,
-    paddingBottom: 4,
-    paddingLeft: 5,
-    minHeight: 20,
+    paddingTop: 5,
+    paddingRight: 7,
+    paddingBottom: 6,
+    paddingLeft: 6,
+    minHeight: 26,
+    height: 26,
+    justifyContent: "center",
   },
   footerRefTextIdentity: {
     fontFamily: FOOTER_REF_FONT,
-    fontSize: 8,
+    fontSize: 10,
     fontWeight: "500",
     letterSpacing: 0.45,
     textTransform: "uppercase",
     color: "rgba(255,255,255,0.78)",
-    lineHeight: 10,
+    lineHeight: 12,
+    includeFontPadding: false,
     fontVariant: ["tabular-nums"],
   },
   /** Web `.profile-edit-kinetik-view-count` 相当 */
@@ -2736,10 +2752,6 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
   },
-  footerFlagRef: {
-    flexShrink: 0,
-  },
-  footerFlag: { width: 18, height: 13, borderRadius: 1 },
   footerRef: {
     borderLeftWidth: 1,
     borderBottomWidth: 1,

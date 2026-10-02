@@ -1,11 +1,12 @@
 /**
  * Web `ProSkinPage` / `ProfilePlanProSkinPicker`（production）相当
- * — カタログ + 模様タップでオーバーレイ確認
+ * — カタログ + 模様タップでオーバーレイ確認（本番 Kinetik カード）
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
+  Image,
   Modal,
   Platform,
   Pressable,
@@ -17,14 +18,17 @@ import {
 } from "react-native";
 import {
   useNavigation,
+  useRoute,
   type NavigationProp,
+  type RouteProp,
 } from "@react-navigation/native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import MobilePageShell from "../mobileScreens/MobilePageShell";
-import ProfilePlanProBackgroundNative from "../kinetik/ProfilePlanProBackgroundNative";
 import ProfileKinetikPanelNative from "../kinetik/ProfileKinetikPanelNative";
+import ProSkinImageCreditNative from "../kinetik/ProSkinImageCreditNative";
+import { PRO_SKIN_THUMB_SOURCES } from "../proSkinStaticAssets.generated";
 import {
   fetchProSkinStatusNative,
   saveMeProSkinNative,
@@ -33,10 +37,6 @@ import { useFirebaseUser } from "../../../auth/FirebaseUserProvider";
 import { cyberAlert } from "../../../components/cyberAlert";
 import { useNativeUserLanguageFromAuth } from "../../../hooks/useNativeUserLanguage";
 import type { ProfileStackParamList } from "../../../navigation/types";
-import {
-  profilePlanProAdoptedCategoryLabel,
-  type ProfilePlanProAdoptedCategory,
-} from "../../../../../../lib/profile/profilePlanProAdoptedBgVariants";
 import { profilePlanProAdoptedSkinSwatch } from "../../../../../../lib/profile/profilePlanProAdoptedSkinSwatch";
 import { parseCssLinearGradientColors } from "../../../../../../lib/profile/parseCssLinearGradientColors";
 import {
@@ -50,35 +50,24 @@ import {
 import { proSkinMilestoneProgressBar } from "../../../../../../lib/profile/proSkinProgress";
 import { parseUserPlanProBgVariant } from "../../../../../../lib/profile/profilePlanProBgVariantField";
 import type { ProfilePlanProBgVariant } from "../../../../../../lib/profile/profilePlanProBgVariants";
+import { PROFILE_EDIT_KINETIK_MOCK } from "../../../../../../app/component/profile/edit/profileEditKinetikTypes";
 import { db } from "../../../lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
-import { PROFILE_EDIT_KINETIK_MOCK } from "../../../../../../app/component/profile/edit/profileEditKinetikTypes";
 import { CYBER_TAB_CYAN } from "../../../ui/cyberSideMenuNative";
+import { useBottomTabBarInsets } from "../../../navigation/useBottomTabBarInsets";
+import { resolveLocalizedLang } from "../../../../../../lib/i18n/localize";
+import { proSkinScreenCopy } from "../proSkinScreenCopy";
 
 const COLS = 2;
 const GAP = 10;
 
-function categoryBadgeColors(category: ProfilePlanProAdoptedCategory): {
-  bg: string;
-  text: string;
-} {
-  switch (category) {
-    case "cyber":
-      return { bg: "rgba(34,211,238,0.15)", text: "rgba(165,243,252,0.9)" };
-    case "reptile":
-      return { bg: "rgba(251,146,60,0.15)", text: "rgba(254,215,170,0.9)" };
-    case "beast":
-      return { bg: "rgba(232,121,249,0.15)", text: "rgba(245,208,254,0.9)" };
-    case "material":
-      return { bg: "rgba(148,163,184,0.15)", text: "rgba(226,232,240,0.9)" };
-    case "geometry":
-      return { bg: "rgba(52,211,153,0.15)", text: "rgba(167,243,208,0.9)" };
-  }
+function thumbPreviewHeight(width: number) {
+  return Math.max(84, Math.min(108, Math.round(width / 2.05)));
 }
 
-function previewPanelProps(language: "ja" | "en") {
+function previewPanelProps(language: string) {
   return {
-    language,
+    language: resolveLocalizedLang(language),
     identity: {
       ...PROFILE_EDIT_KINETIK_MOCK.identity,
       displayName: "UNITERZ",
@@ -91,7 +80,7 @@ function previewPanelProps(language: "ja" | "en") {
       posts: 71,
       hits: 45,
       totalPoints: 350,
-      scorePrecision: 8,
+      exactHits: 0,
       upset: 9,
     },
     winStreak: 0,
@@ -99,7 +88,7 @@ function previewPanelProps(language: "ja" | "en") {
     totalPointsRankDenominator: 800,
     rankDeltaPlaces: 0,
     bio: "PREVIEW",
-    metricsTitle: "NBA // PLAYOFFS STATS",
+    metricsTitle: "NBA // SEASON STATS",
     countryCode: "JP",
     memberSinceMs: new Date("2025-12-01T00:00:00+09:00").getTime(),
     shareHandle: "mpj",
@@ -120,6 +109,26 @@ function ThumbCorners() {
   );
 }
 
+function SkinThumbPatternNative({
+  variant,
+  width,
+  height,
+}: {
+  variant: ProfilePlanProBgVariant;
+  width: number;
+  height: number;
+}) {
+  const source = PRO_SKIN_THUMB_SOURCES[variant];
+  if (source == null) return null;
+  return (
+    <Image
+      source={source}
+      style={{ width, height }}
+      resizeMode="cover"
+    />
+  );
+}
+
 function SkinThumbNative({
   entry,
   width,
@@ -137,18 +146,18 @@ function SkinThumbNative({
   unlocked: boolean;
   isNew: boolean;
   owners: number;
-  language: "ja" | "en";
+  language: string;
   progress: {
     posts: number;
     exactHits: number;
     maxWinStreak: number;
+    streakRuns: Record<string, number>;
     referralCompletedCount: number;
     periodWins: Record<string, number>;
   };
   onPress: () => void;
 }) {
-  const height = Math.max(84, Math.min(108, Math.round(width / 2.05)));
-  const cat = categoryBadgeColors(entry.category);
+  const height = thumbPreviewHeight(width);
   const condition = formatProSkinUnlockCondition(entry.unlock, language);
   const swatchColors = parseCssLinearGradientColors(
     profilePlanProAdoptedSkinSwatch(entry)
@@ -190,11 +199,6 @@ function SkinThumbNative({
           ) : null}
         </View>
         <View style={styles.tileBadgeRow}>
-          <View style={[styles.tileCatBadge, { backgroundColor: cat.bg }]}>
-            <Text style={[styles.tileCatText, { color: cat.text }]} numberOfLines={1}>
-              {profilePlanProAdoptedCategoryLabel(entry.category, "en")}
-            </Text>
-          </View>
           <View
             style={[
               styles.tileLockBadge,
@@ -228,46 +232,32 @@ function SkinThumbNative({
         </Text>
       </View>
       <View style={[styles.tilePreview, { height }]} collapsable={false}>
-        {/* フォールバック用 swatch（FX 未対応時も空にしない） */}
         <LinearGradient
           colors={swatchColors}
           start={{ x: 0.1, y: 0 }}
           end={{ x: 0.9, y: 1 }}
           style={StyleSheet.absoluteFillObject}
         />
-        {/* 一覧で模様が見えるよう本番背景をサムネ描画（FlatList 仮想化で同時描画は少数） */}
-        <View style={StyleSheet.absoluteFillObject} pointerEvents="none">
-          <ProfilePlanProBackgroundNative
-            width={width}
-            height={height}
-            variant={entry.id}
-            animate={false}
-          />
-        </View>
+        <SkinThumbPatternNative
+          variant={entry.id}
+          width={width}
+          height={height}
+        />
         <ThumbCorners />
         {!unlocked ? (
-          <View style={styles.tileLockOverlay} pointerEvents="none">
-            <MaterialCommunityIcons
-              name="lock"
-              size={18}
-              color="rgba(253,230,138,0.95)"
-            />
-            <Text style={styles.tileLockOverlayText}>
-              {entry.unlock.kind === "pro" ? "PRO" : "MILESTONE"}
-            </Text>
-            {bar ? (
-              <View style={styles.tileProgressWrap}>
-                <View style={styles.tileProgressTrack}>
-                  <View
-                    style={[
-                      styles.tileProgressFill,
-                      { width: `${Math.round(bar.ratio * 100)}%` },
-                    ]}
-                  />
-                </View>
-                <Text style={styles.tileProgressLabel}>{bar.label}</Text>
-              </View>
-            ) : null}
+          <View style={styles.tileDim} pointerEvents="none" />
+        ) : null}
+        {bar ? (
+          <View style={styles.tileProgressWrap}>
+            <View style={styles.tileProgressTrack}>
+              <View
+                style={[
+                  styles.tileProgressFill,
+                  { width: `${Math.round(bar.ratio * 100)}%` },
+                ]}
+              />
+            </View>
+            <Text style={styles.tileProgressLabel}>{bar.label}</Text>
           </View>
         ) : null}
       </View>
@@ -278,10 +268,12 @@ function SkinThumbNative({
 export default function ProSkinScreenNative() {
   const navigation =
     useNavigation<NavigationProp<ProfileStackParamList>>();
+  const route = useRoute<RouteProp<ProfileStackParamList, "ProSkin">>();
+  const fromTrial = route.params?.fromTrial === true;
   const insets = useSafeAreaInsets();
+  const { bottomContentReserveY } = useBottomTabBarInsets();
   const { fUser } = useFirebaseUser();
   const { language } = useNativeUserLanguageFromAuth();
-  const isJa = language === "ja";
   const { width: winW, height: winH } = useWindowDimensions();
   const contentW = Math.min(420, winW - 24);
   const tileW = Math.floor((contentW - GAP) / COLS);
@@ -305,11 +297,13 @@ export default function ProSkinScreenNative() {
     posts: 0,
     exactHits: 0,
     maxWinStreak: 0,
+    streakRuns: {} as Record<string, number>,
     referralCompletedCount: 0,
     periodWins: {} as Record<string, number>,
   });
   const [viewerIsPro, setViewerIsPro] = useState(false);
   const [noticeIds, setNoticeIds] = useState<Set<string>>(() => new Set());
+  const copy = proSkinScreenCopy(language, viewerIsPro);
 
   useEffect(() => {
     if (!fUser) {
@@ -356,6 +350,7 @@ export default function ProSkinScreenNative() {
           posts: status.progress?.posts ?? 0,
           exactHits: status.progress?.exactHits ?? 0,
           maxWinStreak: status.progress?.maxWinStreak ?? 0,
+          streakRuns: status.progress?.streakRuns ?? {},
           referralCompletedCount:
             status.progress?.referralCompletedCount ?? 0,
           periodWins: status.progress?.periodWins ?? {},
@@ -395,22 +390,14 @@ export default function ProSkinScreenNative() {
     overlayId != null && overlayUnlocked && overlayId !== savedId;
   const canConfirm = Boolean(overlayId) && !saving && hasUnsavedChange;
   const confirmLabel = saving
-    ? isJa
-      ? "保存中…"
-      : "Saving…"
+    ? copy.saving
     : !viewerIsPro
       ? "GET PRO"
       : !overlayUnlocked
-        ? isJa
-          ? "未解放"
-          : "Locked"
+        ? copy.locked
         : hasUnsavedChange
-          ? isJa
-            ? "このスキンを適用"
-            : "Apply skin"
-          : isJa
-            ? "適用済み"
-            : "Applied";
+          ? copy.applySkin
+          : copy.applied;
 
   const goGetPro = useCallback(() => {
     navigation.navigate("ProSubscribe");
@@ -434,16 +421,12 @@ export default function ProSkinScreenNative() {
       navigation.navigate("ProfileHome");
     } catch (e) {
       const msg =
-        e instanceof Error
-          ? e.message
-          : isJa
-            ? "保存に失敗しました。"
-            : "Save failed.";
+        e instanceof Error ? e.message : copy.saveFailed;
       setSaveError(msg);
       cyberAlert("", msg);
       setSaving(false);
     }
-  }, [hasUnsavedChange, isJa, navigation, overlayId, saving]);
+  }, [copy.saveFailed, hasUnsavedChange, navigation, overlayId, saving]);
 
   const openOverlay = useCallback((id: ProfilePlanProBgVariant) => {
     setSaveError(null);
@@ -457,16 +440,9 @@ export default function ProSkinScreenNative() {
   return (
     <MobilePageShell
       title="SKIN"
-      subtitle={
-        isJa
-          ? viewerIsPro
-            ? "上段は Pro ですぐ使えるスキン。下段はマイルストーン達成で解放されます。"
-            : "プレビューは無料で見られます。適用するには Pro プランが必要です。"
-          : viewerIsPro
-            ? "Top skins unlock with Pro. Milestone skins unlock as you progress."
-            : "Preview is free. Upgrade to Pro to apply a skin."
-      }
+      subtitle={copy.subtitle}
       appBackground
+      edgeBack={!fromTrial}
       onClose={() => navigation.goBack()}
     >
       <View style={styles.pageBg}>
@@ -476,32 +452,29 @@ export default function ProSkinScreenNative() {
           </View>
         ) : (
           <FlatList
+            style={styles.list}
             data={PRO_SKIN_UNLOCK_CATALOG as ProSkinUnlockCatalogEntry[]}
             keyExtractor={(item) => item.id}
             numColumns={COLS}
             columnWrapperStyle={styles.row}
             contentContainerStyle={[
               styles.listContent,
-              { width: contentW, alignSelf: "center" },
+              {
+                width: contentW,
+                alignSelf: "center",
+                paddingBottom: bottomContentReserveY + 16,
+              },
             ]}
             showsVerticalScrollIndicator={false}
-            initialNumToRender={6}
-            maxToRenderPerBatch={4}
-            windowSize={5}
+            initialNumToRender={8}
+            maxToRenderPerBatch={8}
+            windowSize={7}
             removeClippedSubviews={Platform.OS === "android"}
             ListHeaderComponent={
               <View style={styles.headerBlock}>
                 <Text style={styles.eyebrow}>Pro Skin</Text>
                 <Text style={styles.pageTitle}>Choose Pro Skin</Text>
-                <Text style={styles.desc}>
-                  {isJa
-                    ? viewerIsPro
-                      ? "上段は Pro ですぐ使えるスキン。下段はマイルストーン達成で解放されます。"
-                      : "プレビューは無料で見られます。適用するには Pro プランが必要です。"
-                    : viewerIsPro
-                      ? "Top skins unlock with Pro. Milestone skins unlock as you progress."
-                      : "Preview is free. Upgrade to Pro to apply a skin."}
-                </Text>
+                <Text style={styles.desc}>{copy.subtitle}</Text>
               </View>
             }
             renderItem={({ item }) => (
@@ -512,7 +485,7 @@ export default function ProSkinScreenNative() {
                 unlocked={unlockedIds.has(item.id)}
                 isNew={noticeIds.has(item.id)}
                 owners={ownerCounts[item.id] ?? 0}
-                language={language === "ja" ? "ja" : "en"}
+                language={copy.lang}
                 progress={milestoneProgress}
                 onPress={() => openOverlay(item.id)}
               />
@@ -532,7 +505,7 @@ export default function ProSkinScreenNative() {
             style={styles.overlayBackdrop}
             onPress={closeOverlay}
             accessibilityRole="button"
-            accessibilityLabel={isJa ? "閉じる" : "Close"}
+            accessibilityLabel={copy.closeA11y}
           />
           {overlayEntry ? (
             <View
@@ -557,12 +530,12 @@ export default function ProSkinScreenNative() {
                   <Text style={styles.overlayCondition} numberOfLines={2}>
                     {formatProSkinUnlockCondition(
                       overlayEntry.unlock,
-                      isJa ? "ja" : "en"
+                      copy.lang
                     )}
                     {" · "}
                     {formatProSkinOwnerCount(
                       ownerCounts[overlayEntry.id] ?? 0,
-                      isJa ? "ja" : "en"
+                      copy.lang
                     )}
                   </Text>
                 </View>
@@ -577,10 +550,15 @@ export default function ProSkinScreenNative() {
                 <View style={styles.openPreview} pointerEvents="none">
                   <ProfileKinetikPanelNative
                     key={`${overlayEntry.id}:${replayByVariant[overlayEntry.id] ?? 0}`}
-                    {...previewPanelProps(language === "ja" ? "ja" : "en")}
+                    {...previewPanelProps(copy.lang)}
                     planProBgVariant={overlayEntry.id}
                   />
                 </View>
+                <ProSkinImageCreditNative
+                  variant={overlayEntry.id}
+                  language={copy.lang}
+                  style={styles.overlayCredit}
+                />
                 {!overlayUnlocked ? (
                   <View style={styles.lockedBanner}>
                     <MaterialCommunityIcons
@@ -590,12 +568,8 @@ export default function ProSkinScreenNative() {
                     />
                     <Text style={styles.lockedBannerText}>
                       {!viewerIsPro
-                        ? isJa
-                          ? "プレビューのみ · 適用には Pro が必要です"
-                          : "Preview only · Pro required to apply"
-                        : isJa
-                          ? "このスキンはまだ解放されていません"
-                          : "This skin is still locked"}
+                        ? copy.lockedPreviewOnly
+                        : copy.lockedStill}
                     </Text>
                   </View>
                 ) : null}
@@ -626,9 +600,7 @@ export default function ProSkinScreenNative() {
                       onPress={closeOverlay}
                       style={styles.cancelBtn}
                     >
-                      <Text style={styles.cancelBtnText}>
-                        {isJa ? "キャンセル" : "Cancel"}
-                      </Text>
+                      <Text style={styles.cancelBtnText}>{copy.cancel}</Text>
                     </Pressable>
                   </>
                 ) : overlayUnlocked ? (
@@ -671,9 +643,7 @@ export default function ProSkinScreenNative() {
                       onPress={closeOverlay}
                       style={styles.cancelBtn}
                     >
-                      <Text style={styles.cancelBtnText}>
-                        {isJa ? "キャンセル" : "Cancel"}
-                      </Text>
+                      <Text style={styles.cancelBtnText}>{copy.cancel}</Text>
                     </Pressable>
                   </>
                 ) : (
@@ -682,7 +652,7 @@ export default function ProSkinScreenNative() {
                     style={[styles.confirmBtn, styles.confirmBtnOff, styles.confirmBtnGrow]}
                   >
                     <Text style={[styles.confirmBtnText, styles.confirmBtnTextOff]}>
-                      {isJa ? "閉じる" : "Close"}
+                      {copy.close}
                     </Text>
                   </Pressable>
                 )}
@@ -702,15 +672,19 @@ const styles = StyleSheet.create({
   pageBg: {
     flex: 1,
     backgroundColor: "#03080d",
+    overflow: "hidden",
   },
   loading: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
   },
+  list: {
+    flex: 1,
+    zIndex: 1,
+  },
   listContent: {
     paddingTop: 12,
-    paddingBottom: 48,
   },
   row: {
     gap: GAP,
@@ -920,17 +894,6 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: "rgba(255,255,255,0.45)",
   },
-  tileCatBadge: {
-    alignSelf: "flex-start",
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-  },
-  tileCatText: {
-    fontSize: 8,
-    fontWeight: "800",
-    letterSpacing: 1,
-    textTransform: "uppercase",
-  },
   tileBadgeRow: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -986,6 +949,11 @@ const styles = StyleSheet.create({
     backgroundColor: "#060809",
     overflow: "hidden",
   },
+  tileDim: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(3,8,13,0.45)",
+    zIndex: 2,
+  },
   tileLockOverlay: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 3,
@@ -1001,10 +969,14 @@ const styles = StyleSheet.create({
     color: "rgba(253,230,138,0.9)",
   },
   tileProgressWrap: {
-    marginTop: 4,
-    width: "84%",
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 6,
+    zIndex: 4,
     alignItems: "center",
     gap: 3,
+    paddingHorizontal: 10,
   },
   tileProgressTrack: {
     height: 5,
@@ -1029,6 +1001,9 @@ const styles = StyleSheet.create({
     fontSize: 10,
     lineHeight: 14,
     color: "rgba(255,255,255,0.45)",
+  },
+  overlayCredit: {
+    marginTop: 8,
   },
   lockedBanner: {
     marginTop: 10,

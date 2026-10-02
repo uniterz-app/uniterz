@@ -1,5 +1,6 @@
 import { StyleSheet, View } from "react-native";
 import Animated from "react-native-reanimated";
+import type { Language } from "../../../../../lib/i18n/language";
 import GamesDayStripNative from "./GamesDayStripNative";
 import GamesMonthHeaderNative from "./GamesMonthHeaderNative";
 import {
@@ -11,7 +12,7 @@ type Props = {
   dates: Date[];
   selectedDate: Date;
   timeZone: string;
-  language: "ja" | "en";
+  language: Language | string;
   onSelectDate: (date: Date) => void;
   onPrevMonth: () => void;
   onNextMonth: () => void;

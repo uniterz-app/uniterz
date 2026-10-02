@@ -13,24 +13,38 @@ import {
   pruneStaleGroupMirrors,
 } from "@/lib/communities/limits";
 import {
-  normalizeRankingForPeriod,
-  parseCommunityLeague,
-  parseCommunityMetric,
   parseCommunityPeriod,
+  type CommunityPeriodType,
 } from "@/lib/communities/types";
+import { parseCommunityGamesScope } from "@/lib/communities/communityGamesScope";
 import {
   parseRankingTeamIds,
   validateRankingTeamIds,
 } from "@/lib/communities/rankingTeams";
 import {
+  parseRankingEndDateKey,
+  parseRankingPeriodMonthKey,
+  parseRankingSeasonKey,
+} from "@/lib/communities/resolveCommunityDateKeys";
+import {
   sanitizeGroupDescription,
   sanitizeHeaderImageUrl,
 } from "@/lib/communities/validate";
 import { DEFAULT_HEADER_IMAGE_POSITION_Y } from "@/lib/communities/headerImagePosition";
-import { TIMEZONE_JST, toDateKeyInTimeZone } from "@/lib/time/zonedTime";
+import { TIMEZONE_JST, toDateKeyInTimeZone, getZonedYMD } from "@/lib/time/zonedTime";
+import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+function pad2(n: number) {
+  return String(n).padStart(2, "0");
+}
+
+function currentMonthKeyJst(now = new Date()): string {
+  const { year, month } = getZonedYMD(now, TIMEZONE_JST);
+  return `${year}-${pad2(month)}`;
+}
 
 export async function POST(req: Request) {
   try {
@@ -46,27 +60,21 @@ export async function POST(req: Request) {
 
     const description = sanitizeGroupDescription(body?.description);
     const headerImageUrl = sanitizeHeaderImageUrl(body?.headerImageUrl);
-    let rankingMetric = parseCommunityMetric(body?.rankingMetric);
-    const rankingLeague = parseCommunityLeague(body?.rankingLeague);
-    const rankingTeamIds = parseRankingTeamIds(body?.rankingTeamIds);
-    const teamValidation = validateRankingTeamIds(rankingTeamIds, rankingLeague);
-    if (!teamValidation.ok) {
+    const rankingMetric = "totalPoints" as const;
+    const rankingLeague = "nba" as const;
+    const periodType: CommunityPeriodType = parseCommunityPeriod(
+      body?.periodType
+    );
+    const rankingGamesScope = parseCommunityGamesScope(body?.rankingGamesScope);
+    const teamParsed = parseRankingTeamIds(body?.rankingTeamIds);
+    const teamOk = validateRankingTeamIds(teamParsed, rankingLeague);
+    if (!teamOk.ok) {
       return NextResponse.json(
-        { ok: false, error: teamValidation.error },
+        { ok: false, error: teamOk.error },
         { status: 400 }
       );
     }
-    if (rankingLeague === "all" && rankingTeamIds.length > 0) {
-      return NextResponse.json(
-        { ok: false, error: "teams_require_specific_league" },
-        { status: 400 }
-      );
-    }
-    const periodType = parseCommunityPeriod("from_now");
-    ({ metric: rankingMetric } = normalizeRankingForPeriod(
-      rankingMetric,
-      periodType
-    ));
+    const rankingTeamIds = teamOk.ids;
 
     const rankingStartInstant = new Date();
     const rankingStartAt = Timestamp.fromDate(rankingStartInstant);
@@ -74,6 +82,26 @@ export async function POST(req: Request) {
       rankingStartInstant,
       TIMEZONE_JST
     );
+
+    const rankingSeasonKey = parseRankingSeasonKey(
+      body?.rankingSeasonKey ?? CURRENT_NBA_SEASON_KEY
+    );
+    const rankingPeriodMonthKey =
+      periodType === "calendar_month"
+        ? parseRankingPeriodMonthKey(body?.rankingPeriodMonthKey) ??
+          currentMonthKeyJst(rankingStartInstant)
+        : null;
+    const rankingEndDateKey =
+      periodType === "from_now"
+        ? parseRankingEndDateKey(body?.rankingEndDateKey)
+        : null;
+
+    if (periodType === "calendar_month" && !rankingPeriodMonthKey) {
+      return NextResponse.json(
+        { ok: false, error: "invalid_period_month" },
+        { status: 400 }
+      );
+    }
 
     const plan = await getEffectivePlan(adminDb, uid);
     const maxOwned = maxOwnedGroupsForPlan(plan);
@@ -103,6 +131,18 @@ export async function POST(req: Request) {
       if (!clash.empty) continue;
 
       const groupRef = adminDb.collection("groups").doc();
+      const rankingFields = {
+        rankingMetric,
+        periodType,
+        rankingLeague,
+        rankingTeamIds,
+        rankingGamesScope,
+        rankingStartDateKey,
+        rankingStartAt,
+        rankingSeasonKey,
+        rankingPeriodMonthKey,
+        rankingEndDateKey,
+      };
       const batch = adminDb.batch();
       batch.set(groupRef, {
         name,
@@ -112,14 +152,16 @@ export async function POST(req: Request) {
         /** オーナー向け表示用（summary API で owner のみ返却） */
         inviteCode: invitePlain,
         memberCount: 1,
+        memberPreviews: [
+          {
+            uid,
+            photoURL: null,
+            role: "owner" as const,
+          },
+        ],
         headerImageUrl: headerImageUrl ?? null,
         headerImagePositionY: DEFAULT_HEADER_IMAGE_POSITION_Y,
-        rankingMetric,
-        periodType,
-        rankingLeague,
-        rankingTeamIds,
-        rankingStartDateKey,
-        rankingStartAt,
+        ...rankingFields,
         createdAt: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
       });
@@ -139,18 +181,22 @@ export async function POST(req: Request) {
         periodType,
         rankingLeague,
         rankingTeamIds,
+        rankingGamesScope,
         joinedAt: FieldValue.serverTimestamp(),
       });
       await batch.commit();
+
+      void import("@/lib/communities/refreshGroupMemberPreviews")
+        .then(({ refreshGroupMemberPreviews }) =>
+          refreshGroupMemberPreviews(adminDb, groupRef.id, uid)
+        )
+        .catch(() => {});
 
       return NextResponse.json({
         ok: true,
         groupId: groupRef.id,
         inviteCode: invitePlain,
-        rankingMetric,
-        periodType,
-        rankingLeague,
-        rankingTeamIds,
+        ...rankingFields,
         group: {
           id: groupRef.id,
           name,
@@ -161,6 +207,11 @@ export async function POST(req: Request) {
           periodType,
           rankingLeague,
           rankingTeamIds,
+          rankingGamesScope,
+          rankingPeriodMonthKey,
+          rankingEndDateKey,
+          rankingSeasonKey,
+          rankingStartDateKey,
           role: "owner",
         },
       });
@@ -179,6 +230,6 @@ export async function POST(req: Request) {
       );
     }
     console.error("[communities/create]", e);
-    return NextResponse.json({ ok: false, error: msg }, { status: 500 });
+    return NextResponse.json({ ok: false, error: "internal" }, { status: 500 });
   }
 }

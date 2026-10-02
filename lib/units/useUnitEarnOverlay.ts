@@ -69,7 +69,7 @@ export function useUnitEarnOverlay(opts: {
   balance: number | null | undefined;
   enabled: boolean;
   storageKey: string;
-  language?: "ja" | "en";
+  language?: string | null | undefined;
 }): {
   active: UnitEarnActive | null;
   /** 金庫に渡す表示残高（モック / プレビュー加算済み込み） */

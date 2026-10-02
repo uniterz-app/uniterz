@@ -8,10 +8,8 @@ import { metricNum } from "@/lib/rankings/metric";
 import { useRankCountUp } from "@/lib/hooks/useCountUpRanking";
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
-import {
-  ProCyberBadge,
-  proBadgeStaticMotion,
-} from "@/app/component/common/ProCyberBadge";
+import { RankingNameBadges } from "@/app/component/common/RankingNameBadges";
+import { proBadgeStaticMotion } from "@/app/component/common/ProCyberBadge";
 import { profileHrefWithRankingsReturn } from "@/lib/navigation/rankingsProfileFrom";
 import { profilePathKeyFromRow } from "@/lib/profile/profilePathKey";
 import { primeProfileCacheFromRankingRow } from "@/app/component/profile/useProfile";
@@ -26,19 +24,12 @@ import {
 } from "@/app/component/rankings/CyberRankingListParts";
 import { cyberMetricTag } from "@/lib/rankings/cyberRankVisual";
 import { markRankingsCountUpIntroPlayed } from "@/lib/rankings/rankingsCountUpIntro";
-import { parseUserPlanProBgVariant } from "@/lib/profile/profilePlanProBgVariantField";
-import type { ProfilePlanProBgVariant } from "@/lib/profile/profilePlanProBgVariants";
+import { rankingRowProSkinVariant } from "@/lib/rankings/rankingRowProSkinVariant";
+import type { RankingPeriod } from "@/lib/rankings/rankingPeriod";
+import type { NbaRankingBoard } from "@/lib/rankings/rankingDivision";
 
 export type RankingCardSize = "default" | "compact";
 export type RankingCardShellTone = "default" | "subtle";
-
-function rankingRowProSkinVariant(
-  plan: string | undefined,
-  raw: string | undefined
-): ProfilePlanProBgVariant | null {
-  if (plan !== "pro") return null;
-  return parseUserPlanProBgVariant(raw);
-}
 
 export default function RankingCard({
   row: r,
@@ -48,6 +39,8 @@ export default function RankingCard({
   playoffRound,
   rankingLeague,
   wcStage,
+  rankingPeriod,
+  nbaBoard,
   participantCount,
   onCountDone,
   language = "ja",
@@ -64,6 +57,8 @@ export default function RankingCard({
   playoffRound?: PlayoffRoundKey;
   rankingLeague?: RankingLeagueSource;
   wcStage?: WcRankingStage;
+  rankingPeriod?: RankingPeriod;
+  nbaBoard?: NbaRankingBoard;
   /** 総合スコア順位の母数（ティアタグ seed 用） */
   participantCount?: number | null;
   onCountDone?: () => void;
@@ -97,6 +92,8 @@ export default function RankingCard({
     rankingLeague: statsLeague,
     wcStage: statsContext.wcStage,
     groupId: groupReturnGroupId,
+    rankingPeriod,
+    nbaBoard,
   });
 
   const warmProfileRoute = useCallback(() => {
@@ -176,13 +173,12 @@ export default function RankingCard({
         proSkinVariant={proSkinVariant}
         proSkinIntensity="medium"
         nameExtra={
-          r.plan === "pro" ? (
-            <ProCyberBadge
-              {...proBadgeStaticMotion}
-              compact
-              ariaLabel={t(language).common.proMember}
-            />
-          ) : null
+          <RankingNameBadges
+            {...proBadgeStaticMotion}
+            compact
+            isPro={r.plan === "pro"}
+            proLabel={t(language).common.proMember}
+          />
         }
         rankDeltaPlaces={r.rankDeltaPlaces}
         language={language}

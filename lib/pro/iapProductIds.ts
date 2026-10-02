@@ -68,9 +68,9 @@ export function stubProUntilForPlan(plan: ProIapPlan, now = new Date()): Date {
     d.setMonth(d.getMonth() + 1);
     return ensureProUntilCoversFirstWeeklyReport(d, now);
   }
-  // Season Pass: 当年 or 翌年の 6/30（NBA シーズン終了の簡易スタブ）
-  const endYear = d.getMonth() >= 6 ? d.getFullYear() + 1 : d.getFullYear();
-  return new Date(endYear, 5, 30, 23, 59, 59);
+  // Season Pass: 当年 or 翌年の 7/31（法務 `SEASON_PASS_END_MONTH_DAY` と揃える）
+  const endYear = d.getMonth() >= 7 ? d.getFullYear() + 1 : d.getFullYear();
+  return new Date(endYear, 6, 31, 23, 59, 59);
 }
 
 export function proPlanDisplayName(

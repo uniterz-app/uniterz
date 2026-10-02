@@ -91,6 +91,50 @@ function groupDelayMs(rowIndex: number, group: number) {
   return listStagger + GAMES_LIST_CARDS_LEAD_IN_MS + group * GAMES_CYBER_GROUP_GAP_MS;
 }
 
+/**
+ * 線枠パス描画の開始遅延。
+ * Canvas 計測後に枠側で描く `animateDraw` 用（親 SharedValue だと Canvas 未準備で消える）。
+ */
+export function gameCardLineFrameDrawDelayMs(
+  rowIndex: number,
+  entranceVariant: GameCardEntranceVariant = "full"
+): number {
+  if (entranceVariant === "light") {
+    return (
+      Math.min(
+        rowIndex * GAMES_DAY_SWITCH_ROW_STAGGER_MS,
+        GAMES_DAY_SWITCH_ROW_STAGGER_CAP_MS
+      ) + GAMES_LINE_FRAME_DRAW_DELAY_AFTER_SHELL_MS
+    );
+  }
+  return (
+    groupDelayMs(rowIndex, ENTRY_GROUP_SHELL) +
+    GAMES_LINE_FRAME_DRAW_DELAY_AFTER_SHELL_MS
+  );
+}
+
+/**
+ * 線枠描画アニメ対象。
+ * - page: 先頭3枚
+ * - daySwitch: その日の全カード（日付切替でもパスが出る）
+ */
+export function gameCardShouldAnimateLineFrameDraw(params: {
+  enteringAnimationEnabled: boolean;
+  reduceMotion: boolean;
+  entranceVariant?: GameCardEntranceVariant;
+  rowIndex: number;
+}): boolean {
+  const {
+    enteringAnimationEnabled,
+    reduceMotion,
+    entranceVariant = "full",
+    rowIndex,
+  } = params;
+  if (!enteringAnimationEnabled || reduceMotion) return false;
+  if (entranceVariant === "light") return true;
+  return rowIndex < GAMES_PAGE_RICH_CARD_COUNT;
+}
+
 /** Web `MatchCard` entryGroupProps: スライド + ロックオン明滅 */
 function runGroupEnter(
   opacity: { value: number },
@@ -174,7 +218,8 @@ function computeEntranceBaseline({
   if (entranceVariant === "light") {
     return {
       ...visible,
-      shellOpacity: 0,
+      /** 0 だと再マウント中ずっと空に見え、日付切替が「遅い」と感じる */
+      shellOpacity: 0.22,
       shellTranslateY: GAMES_DAY_SWITCH_ROW_FROM_Y,
       footerGlow: showPredictPrimaryGlow ? 0 : 0,
     };
@@ -318,7 +363,7 @@ export function useGameCardListRowEntrance(params: GameCardListRowEntranceParams
         rowIndex * GAMES_DAY_SWITCH_ROW_STAGGER_MS,
         GAMES_DAY_SWITCH_ROW_STAGGER_CAP_MS
       );
-      shellOpacity.value = 0;
+      shellOpacity.value = 0.22;
       shellTranslateY.value = GAMES_DAY_SWITCH_ROW_FROM_Y;
       shellOpacity.value = withDelay(
         delayMs,

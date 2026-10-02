@@ -3,6 +3,7 @@
 import type { CSSProperties, ReactNode } from "react";
 import { nameBebas, nameOxanium, nameRajdhani, jp } from "@/lib/fonts";
 import { PRO_LEAGUE_ATMOSPHERE } from "@/lib/rankings/proLeagueAtmosphere";
+import { hasCjkOrHangulScript } from "@/lib/rankings/rankingJaTextSize";
 
 export type RankingsTitleCyberVariant =
   | "horizon-chrome"
@@ -115,7 +116,7 @@ export function RankingsPageTitleCyber({
 }: Props) {
   const mainSize =
     size === "sm" ? "text-[22px] sm:text-[26px]" : "text-[26px] sm:text-[32px]";
-  const isJa = /[\u3040-\u30ff\u3400-\u9fff]/.test(title);
+  const usesCjkTitle = hasCjkOrHangulScript(title);
 
   if (variant === "hud-stack") {
     return (
@@ -170,7 +171,7 @@ export function RankingsPageTitleCyber({
     return (
       <ChromeTitle
         className={[
-          isJa ? jp.className : nameBebas.className,
+          usesCjkTitle ? jp.className : nameBebas.className,
           "font-black italic",
           mainSize,
           "tracking-[0.12em]",

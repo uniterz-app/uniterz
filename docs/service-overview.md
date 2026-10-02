@@ -84,6 +84,7 @@ Pro 会員には、予想の参考となる詳細データや分析情報を提�
 | [`legal-counsel-kickoff-brief.md`](legal-counsel-kickoff-brief.md) | **弁護士初回面談ブリーフ**（事前送付・当日用） |
 | [`pro-billing-design.md`](pro-billing-design.md) | Pro 課金設計 |
 | [`pro-subscription-plan.md`](pro-subscription-plan.md) | Pro プラン（機能詳細） |
+| [`preseason-checklist.md`](preseason-checklist.md) | プレシーズン確認チェックリスト（紹介・ランキング・Insight・判定・Box 等） |
 
 ---
 

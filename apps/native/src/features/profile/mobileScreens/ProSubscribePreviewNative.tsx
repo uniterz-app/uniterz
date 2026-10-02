@@ -1,10 +1,11 @@
 /**
- * Web `ProSubscribePreview`（`/mobile/pro/subscribe`）相当。
+ * Web `ProSubscribePreview`（`/mobile/pro/subscribe`）本番 Get Pro 相当。
  * プラン選択アコーディオン → お試しモーダル → 模擬購入 → 成功。
  */
 import type { ComponentProps } from "react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
+  Linking,
   Modal,
   Platform,
   Pressable,
@@ -25,7 +26,12 @@ import Animated, {
   withSequence,
   withTiming,
 } from "react-native-reanimated";
+import { useFocusEffect } from "@react-navigation/native";
 import ProCyberBadgeNative from "../kinetik/ProCyberBadgeNative";
+import ProfileBackEdgeHandleNative from "../ProfileBackEdgeHandleNative";
+import UniterzLogoNative from "../UniterzLogoNative";
+import { useNativeIap } from "../../billing/useNativeIap";
+import { useBottomTabBarInsets } from "../../../navigation/useBottomTabBarInsets";
 import {
   PRO_SUBSCRIBE_PREVIEW_PLANS,
   proSubscribePreviewPlanById,
@@ -33,9 +39,51 @@ import {
   type ProSubscribePreviewPlan,
   type ProSubscribePreviewPlanId,
 } from "../../../../../../lib/pro/proSubscribePreviewPlans";
+import {
+  PRO_SUBSCRIBE_PLAN_DIFF_ROWS,
+  planDiffCellLabel,
+  planDiffColLabel,
+  planDiffRowLabel,
+  planDiffTitle,
+  proLegalLinkLabel,
+  proSubscribeAfterTrialNote,
+  proSubscribeBackLabel,
+  proSubscribeBuyPreviewLabel,
+  proSubscribeBuyWithoutTrialLabel,
+  proSubscribeCancelInTrialValue,
+  proSubscribeChooseSkinLabel,
+  proSubscribeFreeThenPrefix,
+  proSubscribeIncludedTitle,
+  proSubscribeLead,
+  proSubscribeNoTrialMicroNote,
+  proSubscribeProcessingLabel,
+  proSubscribeStartTrialLabel,
+  proSubscribeSuccessTitle,
+  proSubscribeTrialMicroNote,
+  proSubscribeTrialModalPoints,
+  proSubscribeTrialModalSelected,
+  proSubscribeTrialModalTitle,
+  purchaseDisclaimer,
+  restorePurchasesLabel,
+  seasonPassBlurb,
+  seasonPassTargetLabel,
+  trialConditionLines,
+  trialConditionsTitle,
+  type ProLegalLinkKind,
+} from "../../../../../../lib/pro/proSubscribePurchaseCopy";
+import { DATE_LOCALE } from "../../../../../../lib/i18n/language";
+import { L, resolveLocalizedLang } from "../../../../../../lib/i18n/localize";
+import {
+  PRIVACY_POLICY_URL,
+  TERMS_URL,
+  TOKUSHOHO_URL,
+} from "../../../../../../lib/legal/companyInfo";
 import { PRO_SUBSCRIBE_SUCCESS_MOTION as SM } from "../../../../../../lib/pro/proSubscribeSuccessMotion";
 import { PRO_SUCCESS_ACCENT } from "../../../../../../lib/pro/proSuccessAccent";
-import { setAppBrandShelfHidden } from "../../../../../../lib/ui/appBrandShelfVisibility";
+import {
+  acquireAppBrandShelfHidden,
+  setAppBrandShelfHidden,
+} from "../../../../../../lib/ui/appBrandShelfVisibility";
 import { OXANIUM_700, OXANIUM_800 } from "../reports/reportThemeNative";
 
 const successCardEntering = new Keyframe({
@@ -91,11 +139,9 @@ const FEATURE_ICONS: Record<
 };
 
 type Props = {
-  language: "ja" | "en";
+  language: string;
   onClose: () => void;
-  onOpenSkin?: () => void;
-  /** カード右上はてな。未指定なら既定の Pro 説明 */
-  helpText?: string;
+  onOpenSkin?: (opts?: { fromTrial?: boolean }) => void;
 };
 
 const PLAN_ACCENT: Record<
@@ -145,28 +191,31 @@ export default function ProSubscribePreviewNative({
   language,
   onClose,
   onOpenSkin,
-  helpText,
 }: Props) {
-  const ja = language === "ja";
-  const infoText =
-    helpText ??
-    (ja
-      ? "スキンやプレミアム機能を使える Pro プランです。"
-      : "Upgrade to Pro for skins and premium features.");
+  const lang = resolveLocalizedLang(language);
+  const seasonLabel = seasonPassTargetLabel(lang);
+  const seasonBlurbText = seasonPassBlurb(lang);
   const [planId, setPlanId] = useState<ProSubscribePreviewPlanId | null>(null);
   const [phase, setPhase] = useState<Phase>("plans");
   const [checkoutKind, setCheckoutKind] = useState<CheckoutKind>("paid");
   const [trialModalOpen, setTrialModalOpen] = useState(false);
-  const [helpOpen, setHelpOpen] = useState(false);
   const selected = planId ? proSubscribePreviewPlanById(planId) : null;
+  const { ready: iapReady, purchasing: iapBusy, restore } = useNativeIap();
+  const { bottomContentReserveY } = useBottomTabBarInsets();
+  const scrollPadBottom = bottomContentReserveY + 24;
+
+  useFocusEffect(
+    useCallback(() => {
+      if (phase !== "success") return;
+      return acquireAppBrandShelfHidden();
+    }, [phase])
+  );
 
   useEffect(() => {
-    const hide = phase === "success";
-    setAppBrandShelfHidden(hide);
     return () => {
-      if (hide) setAppBrandShelfHidden(false);
+      setAppBrandShelfHidden(false);
     };
-  }, [phase]);
+  }, []);
 
   function togglePlan(id: ProSubscribePreviewPlanId) {
     setPlanId((prev) => (prev === id ? null : id));
@@ -187,31 +236,35 @@ export default function ProSubscribePreviewNative({
     setTimeout(() => setPhase("success"), 900);
   }
 
-  function reset() {
-    setPhase("plans");
-    setPlanId(null);
-    setCheckoutKind("paid");
-    setTrialModalOpen(false);
-  }
-
   if (phase === "success" && selected && planId) {
     return (
       <View style={styles.root}>
         <ScrollView
-          contentContainerStyle={[styles.pad, styles.padSuccess]}
+          contentContainerStyle={[
+            styles.pad,
+            styles.padSuccess,
+            { paddingBottom: scrollPadBottom },
+          ]}
           showsVerticalScrollIndicator={false}
         >
           <SuccessPanel
-            ja={ja}
+            lang={lang}
             planId={planId}
-            planLabel={ja ? selected.labelJa : selected.labelEn}
-            price={ja ? selected.priceJa : selected.priceEn}
-            period={ja ? selected.periodJa : selected.periodEn}
+            planLabel={selected.label}
+            price={selected.price}
+            period={
+              planId === "season" ? seasonLabel : L(lang, selected.period)
+            }
             trial={checkoutKind === "trial"}
-            onAgain={reset}
             onOpenSkin={onOpenSkin}
           />
         </ScrollView>
+        {checkoutKind === "trial" ? null : (
+          <ProfileBackEdgeHandleNative
+            onPress={onClose}
+            accessibilityLabel={proSubscribeBackLabel(lang)}
+          />
+        )}
       </View>
     );
   }
@@ -219,48 +272,17 @@ export default function ProSubscribePreviewNative({
   return (
     <View style={styles.root}>
       <ScrollView
-        contentContainerStyle={styles.pad}
+        contentContainerStyle={[styles.pad, { paddingBottom: scrollPadBottom }]}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.card}>
-            <View style={styles.cardToolbar}>
-              <Pressable
-                onPress={onClose}
-                style={({ pressed }) => [
-                  styles.toolBtn,
-                  pressed && styles.toolBtnPressed,
-                ]}
-                accessibilityRole="button"
-                accessibilityLabel={ja ? "戻る" : "Back"}
-              >
-                <MaterialCommunityIcons
-                  name="chevron-left"
-                  size={22}
-                  color="#ecfeff"
-                />
-              </Pressable>
-              <Pressable
-                onPress={() => setHelpOpen(true)}
-                style={({ pressed }) => [
-                  styles.toolBtn,
-                  pressed && styles.toolBtnPressed,
-                ]}
-                accessibilityRole="button"
-                accessibilityLabel={ja ? "説明" : "Info"}
-              >
-                <Text style={styles.helpGlyph}>?</Text>
-              </Pressable>
-            </View>
-
             <View style={styles.header}>
               <ProCyberBadgeNative premium />
               <Text style={styles.h1}>Get Pro</Text>
-              <Text style={styles.lead}>
-                {ja
-                  ? "プランをタップして、できることを確認。もう一度タップで閉じます。"
-                  : "Tap a plan to see what’s included. Tap again to close."}
-              </Text>
+              <Text style={styles.lead}>{proSubscribeLead(lang)}</Text>
             </View>
+
+            <PlanDiffTableNative lang={lang} />
 
             <View style={styles.planList}>
               {PRO_SUBSCRIBE_PREVIEW_PLANS.map((plan) => {
@@ -290,27 +312,27 @@ export default function ProSubscribePreviewNative({
                     >
                       <View style={styles.planTopRow}>
                         <PlanScanLabel
-                          label={ja ? plan.labelJa : plan.labelEn}
+                          label={plan.label}
                           accent={accent.fill}
                         />
                         <View style={styles.planTopRight}>
-                          {plan.badgeJa || plan.recommended ? (
+                          {plan.badge || plan.recommended ? (
                             <View
                               style={[
                                 styles.planBadge,
-                                plan.badgeJa === "7日無料"
+                                plan.badgeHighlight
                                   ? { backgroundColor: accent.fill }
                                   : styles.planBadgeMuted,
                               ]}
                             >
                               <Text
                                 style={
-                                  plan.badgeJa === "7日無料"
+                                  plan.badgeHighlight
                                     ? styles.planBadgeAccentText
                                     : styles.planBadgeMutedText
                                 }
                               >
-                                {ja ? plan.badgeJa : plan.badgeEn}
+                                {plan.badge ? L(lang, plan.badge) : ""}
                               </Text>
                             </View>
                           ) : null}
@@ -328,15 +350,17 @@ export default function ProSubscribePreviewNative({
                       </View>
 
                       <View style={styles.priceRow}>
-                        <Text style={styles.price}>
-                          {ja ? plan.priceJa : plan.priceEn}
-                        </Text>
+                        <Text style={styles.price}>{plan.price}</Text>
                         <Text style={styles.period}>
-                          {ja ? plan.periodJa : plan.periodEn}
+                          {plan.id === "season"
+                            ? seasonLabel
+                            : L(lang, plan.period)}
                         </Text>
                       </View>
                       <Text style={styles.blurb}>
-                        {ja ? plan.blurbJa : plan.blurbEn}
+                        {plan.id === "season"
+                          ? seasonBlurbText
+                          : L(lang, plan.blurb)}
                       </Text>
                     </Pressable>
 
@@ -348,10 +372,10 @@ export default function ProSubscribePreviewNative({
                         ]}
                       >
                         <Text style={[styles.includedTitle, { color: accent.fill }]}>
-                          {ja ? "このプランでできること" : "Included"}
+                          {proSubscribeIncludedTitle(lang)}
                         </Text>
                         {plan.features.map((f) => (
-                          <View key={f.titleEn} style={styles.featureRow}>
+                          <View key={f.icon} style={styles.featureRow}>
                             <View
                               style={[
                                 styles.featureIcon,
@@ -363,16 +387,16 @@ export default function ProSubscribePreviewNative({
                             >
                               <MaterialCommunityIcons
                                 name={FEATURE_ICONS[f.icon]}
-                                size={12}
+                                size={14}
                                 color={accent.fill}
                               />
                             </View>
                             <View style={styles.featureCopy}>
                               <Text style={styles.featureTitle}>
-                                {ja ? f.titleJa : f.titleEn}
+                                {L(lang, f.title)}
                               </Text>
                               <Text style={styles.featureDetail}>
-                                {ja ? f.detailJa : f.detailEn}
+                                {L(lang, f.detail)}
                               </Text>
                             </View>
                           </View>
@@ -383,9 +407,12 @@ export default function ProSubscribePreviewNative({
                             <Pressable
                               disabled={phase === "purchasing"}
                               onPress={() => setTrialModalOpen(true)}
-                              style={[
+                              style={({ pressed }) => [
                                 styles.primaryBtn,
                                 phase === "purchasing" && styles.primaryBtnDisabled,
+                                pressed &&
+                                  phase !== "purchasing" &&
+                                  styles.primaryBtnPressed,
                               ]}
                             >
                               <Text
@@ -396,38 +423,44 @@ export default function ProSubscribePreviewNative({
                                 ]}
                               >
                                 {phase === "purchasing"
-                                  ? ja
-                                    ? "処理中…"
-                                    : "Processing…"
-                                  : ja
-                                    ? "7日間無料で試す"
-                                    : "Start 7-day free trial"}
+                                  ? proSubscribeProcessingLabel(lang)
+                                  : proSubscribeStartTrialLabel(lang)}
                               </Text>
                             </Pressable>
                             <Text style={styles.afterTrial}>
-                              {plan.id === "weekly"
-                                ? ja
-                                  ? "お試し後は週額 ¥280。期間中の解約で課金なし。"
-                                  : "Then ¥280/week. Cancel during trial — no charge."
-                                : ja
-                                  ? "お試し後は月額 ¥780。期間中の解約で課金なし。"
-                                  : "Then ¥780/month. Cancel during trial — no charge."}
+                              {proSubscribeAfterTrialNote(
+                                lang,
+                                plan.id === "weekly" ? "weekly" : "monthly"
+                              )}
                             </Text>
                             <Pressable
                               disabled={phase === "purchasing"}
                               onPress={startPaid}
-                              style={styles.secondaryBtn}
+                              style={({ pressed }) => [
+                                styles.secondaryBtn,
+                                pressed &&
+                                  phase !== "purchasing" &&
+                                  styles.secondaryBtnPressed,
+                              ]}
                             >
-                              <Text style={styles.secondaryBtnText}>
-                                {ja
-                                  ? `お試しなしで${plan.labelJa}を購入`
-                                  : `Buy ${plan.labelEn} (no trial)`}
-                              </Text>
+                              {({ pressed }) => (
+                                <Text
+                                  style={[
+                                    styles.secondaryBtnText,
+                                    pressed &&
+                                      phase !== "purchasing" &&
+                                      styles.secondaryBtnTextPressed,
+                                  ]}
+                                >
+                                  {proSubscribeBuyWithoutTrialLabel(
+                                    lang,
+                                    plan.label
+                                  )}
+                                </Text>
+                              )}
                             </Pressable>
                             <Text style={styles.micro}>
-                              {ja
-                                ? "※ 初回のみ。iOS は App Store のサブスク管理から解約できます。プレビューでは決済しません。"
-                                : "※ First time only. On iOS, cancel in App Store subscriptions. Preview does not charge."}
+                              {proSubscribeTrialMicroNote(lang)}
                             </Text>
                           </View>
                         ) : (
@@ -435,9 +468,12 @@ export default function ProSubscribePreviewNative({
                             <Pressable
                               disabled={phase === "purchasing"}
                               onPress={startPaid}
-                              style={[
+                              style={({ pressed }) => [
                                 styles.primaryBtn,
                                 phase === "purchasing" && styles.primaryBtnDisabled,
+                                pressed &&
+                                  phase !== "purchasing" &&
+                                  styles.primaryBtnPressed,
                               ]}
                             >
                               <Text
@@ -448,18 +484,15 @@ export default function ProSubscribePreviewNative({
                                 ]}
                               >
                                 {phase === "purchasing"
-                                  ? ja
-                                    ? "処理中…"
-                                    : "Processing…"
-                                  : ja
-                                    ? `${plan.labelJa} を購入（プレビュー）`
-                                    : `Buy ${plan.labelEn} (preview)`}
+                                  ? proSubscribeProcessingLabel(lang)
+                                  : proSubscribeBuyPreviewLabel(
+                                      lang,
+                                      plan.label
+                                    )}
                               </Text>
                             </Pressable>
                             <Text style={styles.micro}>
-                              {ja
-                                ? "※ 7日無料は Weekly / Monthly のみ。価格・特典は仮。決済は走りません。"
-                                : "※ 7-day trial is Weekly / Monthly only. Prices are draft. No real charge."}
+                              {proSubscribeNoTrialMicroNote(lang)}
                             </Text>
                           </View>
                         )}
@@ -469,8 +502,19 @@ export default function ProSubscribePreviewNative({
                 );
               })}
             </View>
+
+            <PurchaseFootnotesNative
+              lang={lang}
+              restoreDisabled={!iapReady || iapBusy}
+              onRestore={() => void restore()}
+            />
           </View>
       </ScrollView>
+
+      <ProfileBackEdgeHandleNative
+        onPress={onClose}
+        accessibilityLabel={proSubscribeBackLabel(lang)}
+      />
 
       <Modal
         visible={trialModalOpen && selected != null}
@@ -480,82 +524,138 @@ export default function ProSubscribePreviewNative({
       >
         {selected ? (
           <TrialExplainModal
-            ja={ja}
+            lang={lang}
             plan={selected}
             onClose={() => setTrialModalOpen(false)}
             onConfirm={confirmTrial}
           />
         ) : null}
       </Modal>
+    </View>
+  );
+}
 
-      <Modal
-        visible={helpOpen}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setHelpOpen(false)}
-      >
-        <View style={styles.helpBackdrop}>
-          <Pressable
-            style={StyleSheet.absoluteFill}
-            onPress={() => setHelpOpen(false)}
-          />
-          <View style={styles.helpCard}>
-            <Text style={styles.helpLabel}>INFO</Text>
-            <Text style={styles.helpBody}>{infoText}</Text>
+const LEGAL_URLS: Record<ProLegalLinkKind, string> = {
+  terms: TERMS_URL,
+  privacy: PRIVACY_POLICY_URL,
+  tokushoho: TOKUSHOHO_URL,
+};
+
+function PlanDiffTableNative({
+  lang,
+}: {
+  lang: import("@/lib/i18n/localize").LocalizedLang;
+}) {
+  const cols = ["weekly", "monthly", "season"] as const;
+  return (
+    <View style={styles.diffWrap} accessibilityLabel={planDiffTitle(lang)}>
+      <Text style={styles.diffTitle}>{planDiffTitle(lang)}</Text>
+      <View style={styles.diffHeadRow}>
+        <View style={styles.diffLabelCol} />
+        {cols.map((col) => (
+          <Text key={col} style={styles.diffHeadCell}>
+            {planDiffColLabel(col, lang)}
+          </Text>
+        ))}
+      </View>
+      {PRO_SUBSCRIBE_PLAN_DIFF_ROWS.map((row) => (
+        <View key={row.id} style={styles.diffRow}>
+          <Text style={styles.diffLabel}>{planDiffRowLabel(row, lang)}</Text>
+          {cols.map((col) => {
+            const cell = row[col];
+            const on = cell === "yes";
+            return (
+              <Text
+                key={`${row.id}-${col}`}
+                style={[styles.diffCell, on ? styles.diffCellOn : null]}
+              >
+                {planDiffCellLabel(cell, lang)}
+              </Text>
+            );
+          })}
+        </View>
+      ))}
+    </View>
+  );
+}
+
+function PurchaseFootnotesNative({
+  lang,
+  restoreDisabled,
+  onRestore,
+}: {
+  lang: import("@/lib/i18n/localize").LocalizedLang;
+  restoreDisabled: boolean;
+  onRestore: () => void;
+}) {
+  const links: ProLegalLinkKind[] = ["terms", "privacy", "tokushoho"];
+  return (
+    <View style={styles.footnotes}>
+      <Text style={styles.footnoteSectionTitle}>
+        {trialConditionsTitle(lang)}
+      </Text>
+      {trialConditionLines(lang).map((line) => (
+        <Text key={line} style={styles.footnoteLine}>
+          · {line}
+        </Text>
+      ))}
+      <Text style={styles.disclaimer}>{purchaseDisclaimer(lang)}</Text>
+      <View style={styles.legalRow}>
+        {links.map((kind, i) => (
+          <View key={kind} style={styles.legalItem}>
+            {i > 0 ? <Text style={styles.legalSep}>|</Text> : null}
             <Pressable
-              onPress={() => setHelpOpen(false)}
-              style={styles.helpClose}
+              onPress={() => void Linking.openURL(LEGAL_URLS[kind])}
+              accessibilityRole="link"
+              accessibilityLabel={proLegalLinkLabel(kind, lang)}
             >
-              <Text style={styles.helpCloseText}>
-                {ja ? "閉じる" : "Close"}
+              <Text style={styles.legalLink}>
+                {proLegalLinkLabel(kind, lang)}
               </Text>
             </Pressable>
           </View>
-        </View>
-      </Modal>
+        ))}
+      </View>
+      <Pressable
+        onPress={onRestore}
+        disabled={restoreDisabled}
+        style={({ pressed }) => [
+          styles.restoreBtn,
+          restoreDisabled && styles.restoreBtnDisabled,
+          pressed && !restoreDisabled && styles.restoreBtnPressed,
+        ]}
+        accessibilityRole="button"
+        accessibilityLabel={restorePurchasesLabel(lang)}
+      >
+        <Text style={styles.restoreTxt}>{restorePurchasesLabel(lang)}</Text>
+      </Pressable>
     </View>
   );
 }
 
 function TrialExplainModal({
-  ja,
+  lang,
   plan,
   onClose,
   onConfirm,
 }: {
-  ja: boolean;
+  lang: import("@/lib/i18n/localize").LocalizedLang;
   plan: ProSubscribePreviewPlan;
   onClose: () => void;
   onConfirm: () => void;
 }) {
-  const afterPrice = ja
-    ? `${plan.priceJa}${plan.periodJa}`
-    : `${plan.priceEn}${plan.periodEn}`;
-  const points = ja
-    ? [
-        "7日間無料で Pro を試せます。",
-        "期間中に解約すれば、お金はかかりません。",
-        `解約しなければ、自動で有料の ${plan.labelJa}（${afterPrice}）に切り替わります。`,
-        "Weekly と Monthly の変更は、いつでもできます。",
-      ]
-    : [
-        "Try Pro free for 7 days.",
-        "Cancel during the trial and you won’t be charged.",
-        `Unless you cancel, it switches to paid ${plan.labelEn} (${afterPrice}).`,
-        "You can switch Weekly ⇔ Monthly anytime.",
-      ];
+  const afterPrice = `${plan.price}${L(lang, plan.period)}`;
+  const points = proSubscribeTrialModalPoints(lang, plan.label, afterPrice);
 
   return (
     <View style={styles.modalBackdrop}>
       <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
       <View style={styles.modalCard}>
         <Text style={styles.modalTitle}>
-          {ja ? "お試しの前に" : "Before you start"}
+          {proSubscribeTrialModalTitle(lang)}
         </Text>
         <Text style={styles.modalSub}>
-          {ja
-            ? `選択中: ${plan.labelJa} · 7日間無料`
-            : `Selected: ${plan.labelEn} · 7-day free`}
+          {proSubscribeTrialModalSelected(lang, plan.label)}
         </Text>
         <View style={styles.modalPoints}>
           {points.map((text) => (
@@ -565,11 +665,33 @@ function TrialExplainModal({
             </View>
           ))}
         </View>
-        <Pressable onPress={onConfirm} style={styles.modalConfirm}>
+        <Pressable
+          onPress={onConfirm}
+          style={({ pressed }) => [
+            styles.modalConfirm,
+            pressed && styles.modalConfirmPressed,
+          ]}
+        >
           <Text style={styles.modalConfirmText}>OK · GET PRO</Text>
         </Pressable>
-        <Pressable onPress={onClose} style={styles.modalBack}>
-          <Text style={styles.modalBackText}>{ja ? "もどる" : "Back"}</Text>
+        <Pressable
+          onPress={onClose}
+          style={({ pressed }) => [
+            styles.modalBack,
+            pressed && styles.modalBackPressed,
+          ]}
+        >
+          <Text style={styles.modalBackText}>
+            {L(lang, {
+              ja: "もどる",
+              en: "Back",
+              ko: "뒤로",
+              zh: "返回",
+              es: "Atrás",
+              pt: "Voltar",
+              fr: "Retour",
+            })}
+          </Text>
         </Pressable>
       </View>
     </View>
@@ -594,42 +716,36 @@ function MetaRow({
 }
 
 function SuccessPanel({
-  ja,
+  lang,
   planId,
   planLabel,
   price,
   period,
   trial,
-  onAgain,
   onOpenSkin,
 }: {
-  ja: boolean;
+  lang: import("@/lib/i18n/localize").LocalizedLang;
   planId: ProSubscribePreviewPlanId;
   planLabel: string;
   price: string;
   period: string;
   trial: boolean;
-  onAgain: () => void;
-  onOpenSkin?: () => void;
+  onOpenSkin?: (opts?: { fromTrial?: boolean }) => void;
 }) {
   const A = trial ? PRO_SUCCESS_ACCENT.trial : PRO_SUCCESS_ACCENT.billing;
-  const started = new Date().toLocaleDateString(ja ? "ja-JP" : "en-US", {
+  const started = new Date().toLocaleDateString(DATE_LOCALE[lang], {
     year: "numeric",
     month: "short",
     day: "numeric",
   });
   const end = new Date();
   end.setDate(end.getDate() + 7);
-  const trialEndLabel = end.toLocaleDateString(ja ? "ja-JP" : "en-US", {
+  const trialEndLabel = end.toLocaleDateString(DATE_LOCALE[lang], {
     year: "numeric",
     month: "short",
     day: "numeric",
   });
-  const title = trial
-    ? ja
-      ? "Pro お試し開始"
-      : "Pro trial started"
-    : "Upgrade to Pro";
+  const title = proSubscribeSuccessTitle(lang, trial);
   const statusLine = trial
     ? `7DAY_TRIAL // ${planLabel.toUpperCase()}`
     : `ACTIVE // ${planLabel.toUpperCase()}`;
@@ -757,35 +873,35 @@ function SuccessPanel({
             >
               <View style={styles.successBrandCluster}>
                 <ProCyberBadgeNative premium />
-                <Text style={[styles.successBrand, { color: A.title }]}>
-                  UNITERZ
-                </Text>
-                {!reduceMotion ? (
-                  <Animated.View
-                    pointerEvents="none"
-                    style={[styles.successBrandSheen, sheenStyle]}
-                  >
-                    <LinearGradient
-                      colors={[
-                        "transparent",
-                        "rgba(255,255,255,0.12)",
-                        "rgba(255,255,255,0.9)",
-                        "rgba(186,250,255,0.55)",
-                        "transparent",
-                      ]}
-                      start={{ x: 0, y: 0.5 }}
-                      end={{ x: 1, y: 0.5 }}
-                      style={StyleSheet.absoluteFillObject}
-                    />
-                  </Animated.View>
-                ) : null}
+                <View style={styles.successBrandLogo}>
+                  <UniterzLogoNative width={168} />
+                  {!reduceMotion ? (
+                    <Animated.View
+                      pointerEvents="none"
+                      style={[styles.successBrandSheen, sheenStyle]}
+                    >
+                      <LinearGradient
+                        colors={[
+                          "transparent",
+                          "rgba(255,255,255,0.12)",
+                          "rgba(255,255,255,0.9)",
+                          "rgba(186,250,255,0.55)",
+                          "transparent",
+                        ]}
+                        start={{ x: 0, y: 0.5 }}
+                        end={{ x: 1, y: 0.5 }}
+                        style={StyleSheet.absoluteFillObject}
+                      />
+                    </Animated.View>
+                  ) : null}
+                </View>
               </View>
               <View style={[styles.successHair, { backgroundColor: A.main }]} />
               <Text style={[styles.successStatus, { color: A.muted }]}>
                 {statusLine}
               </Text>
               <Text style={[styles.successPrice, { color: A.main }]}>
-                {trial ? (ja ? "無料 → その後 " : "FREE → THEN ") : ""}
+                {trial ? proSubscribeFreeThenPrefix(lang) : ""}
                 {price}
                 {trial ? period : ""}
               </Text>
@@ -799,7 +915,7 @@ function SuccessPanel({
                   <MetaRow
                     accent={A}
                     label="CHARGE"
-                    value={ja ? "期間中解約で課金なし" : "Cancel in trial = ¥0"}
+                    value={proSubscribeCancelInTrialValue(lang)}
                   />
                 </>
               ) : (
@@ -811,22 +927,15 @@ function SuccessPanel({
             </View>
 
             <Pressable
-              style={[
+              style={({ pressed }) => [
                 styles.successPrimary,
                 { backgroundColor: A.main },
+                pressed && styles.successPrimaryPressed,
               ]}
-              onPress={onOpenSkin}
+              onPress={() => onOpenSkin?.({ fromTrial: trial })}
             >
               <Text style={[styles.successPrimaryText, { color: A.ink }]}>
-                {ja ? "Pro Skin を選ぶ" : "Choose Pro Skin"}
-              </Text>
-            </Pressable>
-            <Pressable
-              onPress={onAgain}
-              style={[styles.successSecondary, { borderColor: A.borderSoft }]}
-            >
-              <Text style={[styles.successSecondaryText, { color: A.soft }]}>
-                {ja ? "プラン選択に戻る" : "Back to plans"}
+                {proSubscribeChooseSkinLabel(lang)}
               </Text>
             </Pressable>
           </View>
@@ -849,7 +958,6 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     justifyContent: "center",
     paddingTop: 0,
-    paddingBottom: 24,
   },
   card: {
     borderRadius: 2,
@@ -859,81 +967,140 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 16,
   },
-  cardToolbar: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 12,
-  },
-  toolBtn: {
-    width: 40,
-    height: 40,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: "rgba(0,245,255,0.28)",
-    backgroundColor: "rgba(0,245,255,0.06)",
-  },
-  toolBtnPressed: {
-    borderColor: "rgba(0,245,255,0.5)",
-    backgroundColor: "rgba(0,245,255,0.12)",
-  },
-  helpGlyph: {
-    fontFamily: OXANIUM_800,
-    fontSize: 17,
-    fontWeight: "900",
-    fontStyle: "italic",
-    color: "rgba(165,243,252,0.9)",
-  },
   header: {
     alignItems: "center",
-    marginBottom: 20,
+    marginBottom: 16,
     gap: 8,
   },
-  helpBackdrop: {
-    flex: 1,
-    backgroundColor: "rgba(2,6,9,0.78)",
-    justifyContent: "center",
-    paddingHorizontal: 16,
-  },
-  helpCard: {
+  diffWrap: {
+    marginBottom: 14,
     borderWidth: 1,
-    borderColor: "rgba(0,245,255,0.32)",
-    backgroundColor: "#050b14",
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    borderColor: "rgba(255,255,255,0.12)",
+    backgroundColor: "rgba(0,0,0,0.3)",
+    overflow: "hidden",
   },
-  helpLabel: {
-    fontFamily: OXANIUM_700,
-    fontSize: 10,
-    fontWeight: "700",
-    letterSpacing: 2.8,
-    color: "rgba(103,232,249,0.85)",
-    textAlign: "center",
+  diffTitle: {
+    fontFamily: OXANIUM_800,
+    fontSize: 9,
+    fontWeight: "800",
+    letterSpacing: 1.6,
     textTransform: "uppercase",
+    color: "rgba(253,230,138,0.85)",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "rgba(255,255,255,0.1)",
   },
-  helpBody: {
-    marginTop: 12,
-    fontSize: 13,
-    lineHeight: 20,
-    color: "rgba(255,255,255,0.75)",
+  diffHeadRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "rgba(255,255,255,0.08)",
+  },
+  diffLabelCol: {
+    flex: 1.2,
+  },
+  diffHeadCell: {
+    flex: 0.9,
+    fontFamily: OXANIUM_800,
+    fontSize: 8,
+    fontWeight: "800",
+    letterSpacing: 0.6,
+    textTransform: "uppercase",
+    color: "rgba(255,255,255,0.55)",
     textAlign: "center",
   },
-  helpClose: {
-    marginTop: 16,
-    borderWidth: 1,
-    borderColor: "rgba(0,245,255,0.28)",
-    backgroundColor: "rgba(0,245,255,0.06)",
+  diffRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 8,
     paddingVertical: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "rgba(255,255,255,0.06)",
+  },
+  diffLabel: {
+    flex: 1.2,
+    fontSize: 11,
+    lineHeight: 15,
+    color: "rgba(255,255,255,0.7)",
+  },
+  diffCell: {
+    flex: 0.9,
+    fontFamily: OXANIUM_800,
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 0.4,
+    textAlign: "center",
+    color: "rgba(255,255,255,0.3)",
+  },
+  diffCellOn: {
+    color: "#fde68a",
+  },
+  footnotes: {
+    marginTop: 18,
+    paddingTop: 16,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: "rgba(255,255,255,0.1)",
+    gap: 6,
+  },
+  footnoteSectionTitle: {
+    fontFamily: OXANIUM_800,
+    fontSize: 9,
+    fontWeight: "800",
+    letterSpacing: 1.6,
+    textTransform: "uppercase",
+    color: "rgba(165,243,252,0.8)",
+    marginBottom: 4,
+  },
+  footnoteLine: {
+    fontSize: 11,
+    lineHeight: 16,
+    color: "rgba(255,255,255,0.5)",
+  },
+  disclaimer: {
+    marginTop: 10,
+    fontSize: 11,
+    lineHeight: 16,
+    textAlign: "center",
+    color: "rgba(255,255,255,0.4)",
+  },
+  legalRow: {
+    marginTop: 8,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  legalItem: {
+    flexDirection: "row",
     alignItems: "center",
   },
-  helpCloseText: {
-    fontFamily: OXANIUM_700,
+  legalSep: {
+    marginHorizontal: 8,
+    color: "rgba(255,255,255,0.25)",
     fontSize: 11,
-    fontWeight: "700",
-    letterSpacing: 1.4,
-    color: "#ecfeff",
-    textTransform: "uppercase",
+  },
+  legalLink: {
+    fontSize: 11,
+    color: "rgba(165,243,252,0.75)",
+  },
+  restoreBtn: {
+    marginTop: 12,
+    alignItems: "center",
+    paddingVertical: 10,
+  },
+  restoreBtnDisabled: {
+    opacity: 0.4,
+  },
+  restoreBtnPressed: {
+    opacity: 0.75,
+  },
+  restoreTxt: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "rgba(34,211,238,0.85)",
   },
   h1: {
     fontFamily: OXANIUM_800,
@@ -1040,6 +1207,7 @@ const styles = StyleSheet.create({
     color: "#ffffff",
   },
   period: {
+    flexShrink: 1,
     fontFamily: OXANIUM_700,
     fontSize: 10,
     fontWeight: "700",
@@ -1061,9 +1229,9 @@ const styles = StyleSheet.create({
   },
   includedTitle: {
     fontFamily: OXANIUM_800,
-    fontSize: 9,
+    fontSize: 11,
     fontWeight: "800",
-    letterSpacing: 1.6,
+    letterSpacing: 1.4,
     textTransform: "uppercase",
     marginBottom: 10,
   },
@@ -1074,8 +1242,8 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   featureIcon: {
-    width: 20,
-    height: 20,
+    width: 24,
+    height: 24,
     marginTop: 1,
     borderRadius: 2,
     borderWidth: 1,
@@ -1088,15 +1256,15 @@ const styles = StyleSheet.create({
   },
   featureTitle: {
     fontFamily: OXANIUM_800,
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "800",
     letterSpacing: 0.4,
     color: "rgba(255,255,255,0.9)",
   },
   featureDetail: {
     marginTop: 2,
-    fontSize: 11,
-    lineHeight: 16,
+    fontSize: 12,
+    lineHeight: 17,
     color: "rgba(255,255,255,0.5)",
   },
   inlineCta: {
@@ -1111,6 +1279,10 @@ const styles = StyleSheet.create({
     backgroundColor: "#fcd34d",
     paddingVertical: 14,
     alignItems: "center",
+  },
+  primaryBtnPressed: {
+    transform: [{ scale: 0.94 }],
+    opacity: 0.92,
   },
   primaryBtnDisabled: {
     backgroundColor: "rgba(255,255,255,0.1)",
@@ -1136,6 +1308,10 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     alignItems: "center",
   },
+  secondaryBtnPressed: {
+    transform: [{ scale: 0.96 }],
+    opacity: 0.85,
+  },
   secondaryBtnText: {
     fontFamily: OXANIUM_700,
     fontSize: 10,
@@ -1143,6 +1319,9 @@ const styles = StyleSheet.create({
     letterSpacing: 1.4,
     color: "rgba(255,255,255,0.45)",
     textTransform: "uppercase",
+  },
+  secondaryBtnTextPressed: {
+    color: "rgba(255,255,255,0.85)",
   },
   micro: {
     textAlign: "center",
@@ -1153,10 +1332,9 @@ const styles = StyleSheet.create({
   modalBackdrop: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.7)",
-    justifyContent: "flex-end",
+    justifyContent: "center",
     paddingHorizontal: 12,
-    paddingBottom: 24,
-    paddingTop: 40,
+    paddingVertical: 40,
   },
   modalCard: {
     borderRadius: 2,
@@ -1214,6 +1392,10 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     alignItems: "center",
   },
+  modalConfirmPressed: {
+    transform: [{ scale: 0.94 }],
+    opacity: 0.92,
+  },
   modalConfirmText: {
     fontFamily: OXANIUM_800,
     fontSize: 12,
@@ -1226,6 +1408,10 @@ const styles = StyleSheet.create({
     marginTop: 8,
     paddingVertical: 8,
     alignItems: "center",
+  },
+  modalBackPressed: {
+    transform: [{ scale: 0.96 }],
+    opacity: 0.75,
   },
   modalBackText: {
     fontFamily: OXANIUM_700,
@@ -1388,6 +1574,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     overflow: "hidden",
   },
+  successBrandLogo: {
+    position: "relative",
+    width: 168,
+    maxWidth: "100%",
+    overflow: "hidden",
+    alignItems: "center",
+  },
   successBrandSheen: {
     position: "absolute",
     top: -14,
@@ -1395,13 +1588,6 @@ const styles = StyleSheet.create({
     left: 0,
     width: 56,
     zIndex: 4,
-  },
-  successBrand: {
-    fontFamily: OXANIUM_700,
-    fontSize: 20,
-    fontWeight: "600",
-    letterSpacing: 4.4,
-    color: "#ecfeff",
   },
   successHair: {
     width: 56,
@@ -1458,6 +1644,10 @@ const styles = StyleSheet.create({
     backgroundColor: "#00F5FF",
     paddingVertical: 12,
     alignItems: "center",
+  },
+  successPrimaryPressed: {
+    transform: [{ scale: 0.94 }],
+    opacity: 0.9,
   },
   successPrimaryText: {
     fontFamily: OXANIUM_800,

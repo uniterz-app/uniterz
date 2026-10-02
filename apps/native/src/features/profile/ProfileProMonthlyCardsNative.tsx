@@ -4,6 +4,7 @@
 import { StyleSheet, Text, View } from "react-native";
 import ResultMarketDonutSvg, { type DonutSegment } from "../results/ResultMarketDonutSvg";
 import { colors, radius } from "../../theme/tokens";
+import { profileProMonthlyCardsCopy } from "./profileChartCopy";
 
 const COLOR_HOME = "#22d3ee";
 const COLOR_AWAY = "#e879f9";
@@ -19,7 +20,7 @@ type HomeAwayProps = {
   awayRate: number;
   homeShare: number;
   awayShare: number;
-  language: "ja" | "en";
+  language: string;
 };
 
 export function ProfileHomeAwayCardNative({
@@ -29,7 +30,7 @@ export function ProfileHomeAwayCardNative({
   awayShare,
   language,
 }: HomeAwayProps) {
-  const isJa = language === "ja";
+  const copy = profileProMonthlyCardsCopy(language);
   const homePct = Math.round(clamp01(homeRate) * 100);
   const awayPct = Math.round(clamp01(awayRate) * 100);
   const homeWinHigher = homePct > awayPct;
@@ -50,11 +51,11 @@ export function ProfileHomeAwayCardNative({
 
   return (
     <View style={styles.card}>
-      <Text style={styles.cardTitle}>{isJa ? "Home / Away 分析" : "Home / Away"}</Text>
+      <Text style={styles.cardTitle}>{copy.homeAwayTitle}</Text>
       <View style={styles.metricRow}>
         <View style={styles.metricBox}>
           <Text style={[styles.metricLabel, styles.metricLabelHome]}>
-            {isJa ? "Home勝率" : "Home win rate"}
+            {copy.homeWinRate}
           </Text>
           <Text style={[styles.metricValue, homeWinHigher && styles.metricValueHighlight]}>
             {homePct}
@@ -63,7 +64,7 @@ export function ProfileHomeAwayCardNative({
         </View>
         <View style={styles.metricBox}>
           <Text style={[styles.metricLabel, styles.metricLabelAway]}>
-            {isJa ? "Away勝率" : "Away win rate"}
+            {copy.awayWinRate}
           </Text>
           <Text style={[styles.metricValue, awayWinHigher && styles.metricValueHighlight]}>
             {awayPct}
@@ -72,19 +73,15 @@ export function ProfileHomeAwayCardNative({
         </View>
       </View>
 
-      <Text style={styles.subTitle}>{isJa ? "Home / Away 比率" : "Home / Away share"}</Text>
+      <Text style={styles.subTitle}>{copy.homeAwayShare}</Text>
       <View style={styles.donutRow}>
         <ResultMarketDonutSvg segments={segments} size={120} thickness={28} drawDelayMs={0} />
         <View style={styles.legend}>
-          <LegendRow color={COLOR_HOME} label={isJa ? "Home 投稿比" : "Home picks"} pct={homeSharePct} />
-          <LegendRow color={COLOR_AWAY} label={isJa ? "Away 投稿比" : "Away picks"} pct={awaySharePct} />
+          <LegendRow color={COLOR_HOME} label={copy.homePicks} pct={homeSharePct} />
+          <LegendRow color={COLOR_AWAY} label={copy.awayPicks} pct={awaySharePct} />
         </View>
       </View>
-      <Text style={styles.footnote}>
-        {isJa
-          ? "※ 勝率はホーム／アウェーそれぞれの的中率。比率は投稿の内訳です。"
-          : "Win rate is hit rate per side; share is pick distribution."}
-      </Text>
+      <Text style={styles.footnote}>{copy.homeAwayFootnote}</Text>
     </View>
   );
 }
@@ -94,7 +91,7 @@ type MarketBiasProps = {
   contrarianWinRate: number;
   favorableShare: number;
   contrarianShare: number;
-  language: "ja" | "en";
+  language: string;
 };
 
 export function ProfileMarketBiasCardNative({
@@ -104,7 +101,7 @@ export function ProfileMarketBiasCardNative({
   contrarianShare,
   language,
 }: MarketBiasProps) {
-  const isJa = language === "ja";
+  const copy = profileProMonthlyCardsCopy(language);
   const favWinPct = Math.round(clamp01(favorableWinRate) * 100);
   const conWinPct = Math.round(clamp01(contrarianWinRate) * 100);
   const favorableWinHigher = favWinPct > conWinPct;
@@ -125,11 +122,11 @@ export function ProfileMarketBiasCardNative({
 
   return (
     <View style={styles.card}>
-      <Text style={styles.cardTitle}>{isJa ? "マーケットバイアス" : "Market bias"}</Text>
+      <Text style={styles.cardTitle}>{copy.marketTitle}</Text>
       <View style={styles.metricRow}>
         <View style={styles.metricBox}>
           <Text style={[styles.metricLabel, styles.metricLabelHome]}>
-            {isJa ? "順当勝率" : "Favorite win rate"}
+            {copy.favWinRate}
           </Text>
           <Text style={[styles.metricValue, favorableWinHigher && styles.metricValueHighlight]}>
             {favWinPct}
@@ -138,7 +135,7 @@ export function ProfileMarketBiasCardNative({
         </View>
         <View style={styles.metricBox}>
           <Text style={[styles.metricLabel, styles.metricLabelAway]}>
-            {isJa ? "逆張り勝率" : "Underdog win rate"}
+            {copy.dogWinRate}
           </Text>
           <Text style={[styles.metricValue, contrarianWinHigher && styles.metricValueHighlight]}>
             {conWinPct}
@@ -147,18 +144,18 @@ export function ProfileMarketBiasCardNative({
         </View>
       </View>
 
-      <Text style={styles.subTitle}>{isJa ? "順当 / 逆張り 比率" : "Favorite / underdog share"}</Text>
+      <Text style={styles.subTitle}>{copy.marketShare}</Text>
       <View style={styles.donutRow}>
         <ResultMarketDonutSvg segments={segments} size={120} thickness={28} drawDelayMs={0} />
         <View style={styles.legend}>
           <LegendRow
             color={COLOR_CONTRARIAN}
-            label={isJa ? "逆張り投稿比" : "Underdog picks"}
+            label={copy.dogPicks}
             pct={conSharePct}
           />
           <LegendRow
             color={COLOR_FAVORABLE}
-            label={isJa ? "順当投稿比" : "Favorite picks"}
+            label={copy.favPicks}
             pct={favSharePct}
           />
         </View>

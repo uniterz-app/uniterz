@@ -5,6 +5,7 @@
  */
 import {
   buildResultCardFaceModel,
+  type ResultCardFaceGameMeta,
   type ResultCardFaceMarketInput,
   type ResultCardFaceModel,
 } from "@/lib/result/buildResultCardFace";
@@ -58,6 +59,7 @@ export function buildResultDetailViewModel(
     leadingScorers?: unknown;
     topScorerCandidates?: unknown;
     topScorerMarket?: ResultTopScorerMarketView | null;
+    gameMeta?: ResultCardFaceGameMeta | null;
     /** ログイン中ユーザー（Top10 の "You" 置換用） */
     viewer?: {
       uid?: string | null;
@@ -74,6 +76,7 @@ export function buildResultDetailViewModel(
     pointsSummary: summary,
     leadingScorers: options?.leadingScorers,
     topScorerCandidates: options?.topScorerCandidates,
+    gameMeta: options?.gameMeta,
   });
 
   const topRaw = summary?.top ?? [];

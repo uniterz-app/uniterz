@@ -63,7 +63,7 @@ export function useUnitEarnOverlayNative(opts: {
   balance: number | null | undefined;
   enabled: boolean;
   storageKey: string;
-  language?: "ja" | "en";
+  language?: string | null;
 }): {
   active: UnitEarnActive | null;
   vaultBalance: number | null;

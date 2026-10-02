@@ -27,11 +27,16 @@
   --spacing-27: 6.75rem;
 }
 
+/* 共通ヘッダーの出し入れでページが上にアンカーされないようにする */
+html {
+  overflow-anchor: none;
+}
+
 /* -------------------------------
    任意：色のユーティリティ
 -------------------------------- */
 :root {
-  --color-app-bg: #050508;
+  --color-app-bg: #070708;
   --color-card-bg: #334155;
   /* Fixed bottom NavBar: offset + pill height (~56–64px) + home indicator */
   --bottom-nav-clearance: calc(12px + 72px + env(safe-area-inset-bottom, 0px));
@@ -54,10 +59,10 @@
 
 /* アプリ全体メッシュ背景（タイルサイズは lib/app/appMeshBackground.ts と揃える） */
 .app-mesh-page-tile {
-  background-color: #050508;
+  background-color: #070708;
   background-image: url("/bg/app-mesh.png");
   background-repeat: repeat;
-  background-size: 56px 32px;
+  background-size: 128px 128px;
 }
 
 /* -------------------------------
@@ -804,9 +809,10 @@
 }
 
 .predict-overlay-score-input::placeholder {
-  color: rgba(232, 253, 255, 0.28);
-  font-weight: 800;
-  letter-spacing: 0.02em;
+  color: rgba(255, 255, 255, 0.35);
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .predict-overlay-score-input:hover:not(:focus):not(:disabled) {
@@ -826,7 +832,7 @@
 /* 旧レイアウト互換: ScoreFields 外でクラス単体利用時 */
 .predict-overlay-score-input--framed {
   border-radius: 0;
-  border: 1px solid rgba(0, 245, 255, 0.28);
+  border: 1px solid rgba(255, 255, 255, 0.55);
   background: #000;
 }
 
@@ -840,19 +846,13 @@
   /* clip / 枠 / 色は `.cyber-menu-btn--close` に委譲 */
 }
 
-/* 角切り黄枠 — ハンバーガー / 共有（基準 `#facc15`）。×=シアン / ペン=アンバーは別クラス */
+/* 直角四角枠 — ハンバーガー / 共有（基準 `#facc15`）。×=シアン / ペン=アンバーは別クラス */
 .cyber-menu-btn,
 .predict-overlay-menu-btn {
   position: relative;
-  overflow: hidden;
-  clip-path: polygon(
-    5px 0%,
-    100% 0%,
-    100% calc(100% - 5px),
-    calc(100% - 5px) 100%,
-    0% 100%,
-    0% 5px
-  );
+  overflow: visible;
+  clip-path: none;
+  border-radius: 0;
   border: 1px solid rgba(250, 204, 21, 0.42);
   background: rgba(4, 10, 18, 0.84);
   color: rgba(250, 204, 21, 0.95);
@@ -865,6 +865,7 @@
     background 0.2s ease,
     box-shadow 0.2s ease,
     color 0.2s ease;
+  box-sizing: border-box;
 }
 
 .cyber-menu-btn:hover,
@@ -975,6 +976,32 @@
     inset 0 1px 0 rgba(248, 113, 113, 0.2);
 }
 
+/* 白枠 — リザルトカード等 */
+.cyber-menu-btn.cyber-menu-btn--white {
+  border-color: rgba(255, 255, 255, 0.55);
+  color: rgba(255, 255, 255, 0.92);
+  box-shadow:
+    0 0 14px rgba(255, 255, 255, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+
+.cyber-menu-btn.cyber-menu-btn--white::before {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.5) 50%,
+    transparent 100%
+  );
+}
+
+.cyber-menu-btn.cyber-menu-btn--white:hover {
+  border-color: rgba(255, 255, 255, 0.78);
+  color: #ffffff;
+  box-shadow:
+    0 0 18px rgba(255, 255, 255, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22);
+}
+
 /* 角切り紫枠 — 絞り込みバー・パネル（試合・リザルト共通） */
 .cyber-filter-bar {
   position: relative;
@@ -1063,20 +1090,14 @@
   max-width: 2.5rem !important;
 }
 
-/* 試合ヘッダー絞り込み：バーガー（.cyber-menu-btn）と同じ clip / 影 / 高さ */
+/* 試合ヘッダー絞り込み：バーガー（.cyber-menu-btn）と同じ直角枠 / 影 / 高さ */
 .cyber-filter-bar.games-header-control-h,
 .cyber-filter-bar.cyber-filter-bar--header.games-header-control-h {
   padding-top: 0 !important;
   padding-bottom: 0 !important;
   line-height: 1 !important;
-  clip-path: polygon(
-    5px 0%,
-    100% 0%,
-    100% calc(100% - 5px),
-    calc(100% - 5px) 100%,
-    0% 100%,
-    0% 5px
-  );
+  clip-path: none;
+  border-radius: 0;
   border-color: rgba(0, 245, 255, 0.34);
   background: rgba(4, 10, 18, 0.84);
   backdrop-filter: blur(6px);
@@ -1630,64 +1651,39 @@
   color: #050505;
 }
 
-/* 予想オーバーレイ — 送信 CTA（試合カード CTA と同じ直角・シアン） */
+/* 予想オーバーレイ — 送信 CTA（ソリッド塗り・ガラスなし） */
 .predict-overlay-submit-btn {
   position: relative;
   overflow: hidden;
   border-radius: 0;
-  border: 1px solid rgba(0, 245, 255, 0.52);
-  background: linear-gradient(
-    180deg,
-    rgba(0, 245, 255, 0.34) 0%,
-    rgba(0, 190, 230, 0.44) 46%,
-    rgba(0, 110, 155, 0.54) 100%
-  );
-  box-shadow:
-    0 0 22px rgba(0, 245, 255, 0.28),
-    0 0 8px rgba(34, 211, 238, 0.22),
-    inset 0 1px 0 rgba(255, 255, 255, 0.22);
-  color: rgba(224, 255, 255, 0.98);
-  text-shadow: 0 0 14px rgba(0, 245, 255, 0.45);
+  border: 1px solid #00f5ff;
+  background: #00f5ff;
+  box-shadow: none;
+  color: #050508;
+  text-shadow: none;
   transition:
-    box-shadow 0.2s ease,
-    border-color 0.2s ease,
-    filter 0.2s ease,
-    transform 0.15s ease;
+    filter 0.15s ease,
+    transform 0.15s ease,
+    opacity 0.15s ease;
 }
 
 .predict-overlay-submit-btn:hover:not(:disabled) {
-  border-color: rgba(0, 245, 255, 0.68);
-  background: linear-gradient(
-    180deg,
-    rgba(0, 245, 255, 0.4) 0%,
-    rgba(0, 200, 235, 0.5) 46%,
-    rgba(0, 120, 165, 0.58) 100%
-  );
-  box-shadow:
-    0 0 28px rgba(0, 245, 255, 0.36),
-    0 0 10px rgba(34, 211, 238, 0.28),
-    inset 0 1px 0 rgba(255, 255, 255, 0.26);
+  filter: brightness(1.06);
 }
 
 .predict-overlay-submit-btn:active:not(:disabled) {
   transform: scale(0.98);
-  filter: brightness(1.05);
+  filter: brightness(0.96);
 }
 
 .predict-overlay-submit-btn--disabled {
   cursor: not-allowed;
-  border-color: rgba(148, 163, 184, 0.2);
-  background: linear-gradient(
-    180deg,
-    rgba(148, 163, 184, 0.07) 0%,
-    rgba(71, 85, 105, 0.13) 52%,
-    rgba(51, 65, 85, 0.17) 100%
-  );
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.05),
-    0 0 8px rgba(0, 0, 0, 0.18);
-  color: rgba(255, 255, 255, 0.36);
+  border-color: rgba(148, 163, 184, 0.28);
+  background: rgba(71, 85, 105, 0.35);
+  box-shadow: none;
+  color: rgba(255, 255, 255, 0.42);
   text-shadow: none;
+  filter: none;
 }
 
 /* 試合一覧 MatchCard — 直角シェル（角切りなし） */
@@ -7542,8 +7538,8 @@ body::before {
 }
 
 .profile-edit-kinetik-footer-ref--identity {
-  padding: 4px 6px 5px 5px;
-  font-size: 8px;
+  padding: 5px 7px 6px 6px;
+  font-size: 10px;
   letter-spacing: 0.045em;
   font-variant-numeric: tabular-nums;
 }
@@ -8048,6 +8044,7 @@ html.unit-earn-settling .profile-edit-kinetik-panel [class*="profile-plan-pro"] 
   min-height: 0;
   padding: 7px 0 !important;
   margin: 0 !important;
+  overflow: visible !important;
   border: 1px solid rgba(250, 204, 21, 0.55) !important;
   border-right: none !important;
   border-left: 1px solid rgba(250, 204, 21, 0.55) !important;
@@ -8079,6 +8076,8 @@ html.unit-earn-settling .profile-edit-kinetik-panel [class*="profile-plan-pro"] 
 }
 
 .profile-menu-edge-handle--back {
+  /* 中央付近だと誤タップしやすい → 画面下から約 1/3（上から ~67%） */
+  top: 67% !important;
   border-color: rgba(248, 250, 252, 0.42) !important;
   border-left-color: rgba(248, 250, 252, 0.42) !important;
   background: rgba(8, 10, 14, 0.94) !important;
@@ -8111,6 +8110,67 @@ html.unit-earn-settling .profile-edit-kinetik-panel [class*="profile-plan-pro"] 
   z-index: 100010 !important;
 }
 
+.profile-menu-edge-handle--inline {
+  position: relative !important;
+  top: auto !important;
+  right: auto !important;
+  transform: none !important;
+  z-index: 2 !important;
+}
+
+.games-right-edge-tabs {
+  position: fixed !important;
+  right: 0;
+  top: 46%;
+  transform: translateY(-50%);
+  z-index: 35;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  pointer-events: none;
+}
+
+.games-right-edge-tabs .profile-menu-edge-handle {
+  pointer-events: auto;
+}
+
+.games-right-edge-tabs__standing {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 8px);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.games-right-edge-tabs__standing .profile-menu-edge-handle {
+  pointer-events: auto;
+  z-index: 1 !important;
+}
+
+.games-right-edge-tabs__stats {
+  position: relative;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.games-right-edge-tabs__stats .profile-menu-edge-handle {
+  pointer-events: auto;
+  z-index: 3 !important;
+}
+
+.games-right-edge-tabs--fade {
+  transition: opacity 1.45s cubic-bezier(0.37, 0, 0.18, 1);
+}
+
+.games-right-edge-tabs--hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.games-right-edge-tabs--hidden .profile-menu-edge-handle {
+  pointer-events: none;
+}
+
 .profile-menu-edge-handle__ch {
   display: block;
   font-family: "Oxanium", ui-sans-serif, system-ui, sans-serif;
@@ -8138,12 +8198,22 @@ html.unit-earn-settling .profile-edit-kinetik-panel [class*="profile-plan-pro"] 
   height: 14px;
   padding: 0 3px;
   border-radius: 999px;
-  background: #ef4444;
-  color: #fff;
+  background: #00F5FF;
+  color: #050508;
   font-size: 8px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   line-height: 1;
+}
+
+.profile-menu-edge-handle__badge--admin {
+  background: #ef4444;
+  color: #fff;
+  z-index: 2;
+}
+
+.profile-menu-edge-handle__badge--lower {
+  top: 10px;
 }
 
 /* サイドメニュー先頭の Unit ウォレット */
@@ -8457,8 +8527,8 @@ html.unit-earn-settling .profile-edit-kinetik-panel [class*="profile-plan-pro"] 
 
 @media (min-width: 640px) {
   .profile-edit-kinetik-footer-ref--identity {
-    padding: 5px 7px 6px 6px;
-    font-size: 8.5px;
+    padding: 5px 8px 6px 7px;
+    font-size: 10.5px;
     letter-spacing: 0.05em;
   }
 
@@ -8469,8 +8539,8 @@ html.unit-earn-settling .profile-edit-kinetik-panel [class*="profile-plan-pro"] 
 }
 
 .profile-edit-kinetik-card--web .profile-edit-kinetik-footer-ref--identity {
-  padding: 5px 8px 6px 7px;
-  font-size: 9px;
+  padding: 6px 9px 7px 8px;
+  font-size: 11px;
   letter-spacing: 0.05em;
 }
 
@@ -8481,6 +8551,36 @@ html.unit-earn-settling .profile-edit-kinetik-panel [class*="profile-plan-pro"] 
 
 .profile-edit-kinetik-identity-join-id {
   max-width: 100%;
+}
+
+.profile-edit-kinetik-header-flag {
+  display: inline-flex;
+  align-self: flex-start;
+  margin-top: 6px;
+  height: 16px;
+  width: 21.333px;
+  overflow: hidden;
+  border-radius: 1px;
+}
+
+.profile-edit-kinetik-header-flag img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+@media (min-width: 640px) {
+  .profile-edit-kinetik-header-flag {
+    height: 18px;
+    width: 24px;
+  }
+}
+
+.profile-edit-kinetik-card--web .profile-edit-kinetik-header-flag {
+  height: 19px;
+  width: 25.333px;
 }
 
 .profile-edit-kinetik-identity-meta {

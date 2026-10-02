@@ -23,6 +23,8 @@ export type SaveMeProfilePayload = {
   countryCode: string | null;
   /** 未指定なら Firestore の既存値を維持 */
   photoCropY?: number;
+  /** 表示 TZ の手動設定。null で自動（端末）。未指定なら既存値を維持 */
+  displayTimeZone?: string | null;
   /** true のとき onboardingCompletedAt をサーバー時刻で付与 */
   completeOnboarding?: boolean;
   /** オンボーディングで選択したメインリーグ（nba / wc） */

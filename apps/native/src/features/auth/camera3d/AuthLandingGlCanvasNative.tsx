@@ -22,6 +22,8 @@ import {
   type SplashProgressRef,
 } from "../../splash/legacy/camera3d/SplashProgressContextNative";
 import AuthFieldSceneNative from "./AuthFieldSceneNative";
+import AuthHexTunnelSceneNative from "./AuthHexTunnelSceneNative";
+import { AUTH_LANDING_FIELD_VARIANT } from "./authLandingFieldVariant";
 import AuthLandingCameraRigNative from "./AuthLandingCameraRigNative";
 import { AUTH_LANDING } from "../authLandingPalette";
 
@@ -118,7 +120,11 @@ const AuthLandingGlCanvasView = memo(function AuthLandingGlCanvasView({
                 progressRef.current = t;
               }}
             />
-            <AuthFieldSceneNative />
+            {AUTH_LANDING_FIELD_VARIANT === "hexTunnel" ? (
+              <AuthHexTunnelSceneNative />
+            ) : (
+              <AuthFieldSceneNative />
+            )}
           </Suspense>
         </Canvas>
       </SplashProgressCtx.Provider>

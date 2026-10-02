@@ -11,7 +11,7 @@ import CandleChartLoader from "@/app/component/common/CandleChartLoader";
 import { toast } from "@/app/component/ui/toast";
 import { copyTextToClipboard } from "@/lib/clipboard/copyText";
 import { shareCommunityInvite } from "@/lib/communities/inviteShare";
-import type { CommunityMetric } from "@/lib/communities/types";
+import type { CommunityMetric, CommunityPeriodType } from "@/lib/communities/types";
 import { formatCommunityCompetitionLine } from "@/lib/communities/competitionDisplay";
 import { communityRankingPeriodValue } from "@/lib/communities/labels";
 import type { Language } from "@/lib/i18n/language";
@@ -334,7 +334,15 @@ export default function CommunityGroupDetailView({
 
   const onLeave = useCallback(async () => {
     const h = await authHeader();
-    if (!h) return;
+    if (!h) {
+      toast.error(
+        commMsg(language, {
+          en: "Sign in required.",
+          ja: "ログインが必要です。",
+        })
+      );
+      return;
+    }
     const ok = window.confirm(
       commMsg(language, {
         en: "Leave this group?",
@@ -652,7 +660,12 @@ export default function CommunityGroupDetailView({
             },
             language
           )}{" "}
-          · {communityRankingPeriodValue(summary.rankingStartDateKey, language)}
+          · {communityRankingPeriodValue(summary.rankingStartDateKey, language, {
+            periodType: summary.periodType as CommunityPeriodType,
+            rankingEndDateKey: summary.rankingEndDateKey,
+            rankingPeriodMonthKey: summary.rankingPeriodMonthKey,
+            rankingSeasonKey: summary.rankingSeasonKey,
+          })}
         </p>
         {summary.archived ? (
           <p className="mt-2 text-sm text-amber-200/90">{t.ended}</p>

@@ -9,6 +9,11 @@ import {
   normalizeNbaSeasonPhase,
   resolveNbaRankingBucketKeys,
 } from "./rankings/nbaSeason";
+import {
+  applyLiveMarketDelta,
+  parseMarketSide,
+  readLiveMarketCounts,
+} from "./liveGameMarket";
 
 function normalizeLeague(raw?: string | null): string | null {
   if (!raw) return null;
@@ -130,15 +135,30 @@ export const onPostDeletedV2 = onDocumentDeleted(
 
     if (uid && gameId) {
       try {
-        await getFirestore()
-          .doc(`games/${gameId}`)
-          .set(
+        const side = parseMarketSide(before?.prediction?.winner);
+        const gameRef = getFirestore().doc(`games/${gameId}`);
+        await getFirestore().runTransaction(async (tx) => {
+          const gameSnap = await tx.get(gameRef);
+          const gameData = (gameSnap.data() ?? {}) as Record<string, unknown>;
+          const patch = side
+            ? applyLiveMarketDelta(readLiveMarketCounts(gameData), side, -1)
+            : null;
+          tx.set(
+            gameRef,
             {
               predictorUids: FieldValue.arrayRemove(uid),
               predictorCount: FieldValue.increment(-1),
+              ...(patch
+                ? {
+                    marketPickCounts: patch.marketPickCounts,
+                    market: patch.market,
+                    marketBias: patch.marketBias,
+                  }
+                : {}),
             },
             { merge: true }
           );
+        });
       } catch (e) {
         console.error("[onPostDeletedV2] predictorUids remove", e);
       }

@@ -126,7 +126,7 @@ export function buildPredictModalMergedFinalPreview(
 
   const breakdown = extractResultSettlementBreakdown(stats);
   const metricValues = buildResultStatMetricValues(breakdown);
-  const resultsCopy = i18nT((language === "en" ? "en" : "ja") as Language).results;
+  const resultsCopy = i18nT((language === "ja" ? "ja" : "en") as Language).results;
 
   const labelFor = (key: "upsetPoints" | "pointsV3") => {
     if (key === "upsetPoints") return resultsCopy.upsetPointsLabel;

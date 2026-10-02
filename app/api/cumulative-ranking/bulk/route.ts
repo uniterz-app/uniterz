@@ -16,7 +16,9 @@ import {
   buildNbaOpenSeasonRankingFromCumulative,
   readNbaOpenSeasonRankingSnapshots,
 } from "@/lib/rankings/server/readNbaOpenSeasonRanking";
+import { rankingFunctionUrl } from "@/lib/rankings/server/rankingFunctionUrl";
 import { getAdminAuth } from "@/lib/firebaseAdmin";
+import { mergeUserPlansIntoBulkByMetric } from "@/lib/rankings/mergeUserPlanIntoRankingPayload";
 
 export const runtime = "nodejs";
 
@@ -145,13 +147,19 @@ export async function GET(req: Request) {
         snapshotGeneration
       );
 
+      const byMetric =
+        typeof structuredClone === "function"
+          ? structuredClone(payload.byMetric)
+          : (JSON.parse(JSON.stringify(payload.byMetric)) as typeof payload.byMetric);
+      await mergeUserPlansIntoBulkByMetric(byMetric);
+
       return NextResponse.json(
         {
           ok: true,
           division: "open",
           wcStage: null,
           snapshotGeneration,
-          byMetric: payload.byMetric,
+          byMetric,
           myMetricValueDeltas: null,
         },
         {
@@ -195,11 +203,7 @@ export async function GET(req: Request) {
       );
     }
 
-    const baseUrl =
-      process.env.CUMULATIVE_RANKING_FUNCTION_URL ??
-      process.env.NEXT_PUBLIC_CUMULATIVE_RANKING_FUNCTION_URL;
-
-    if (!baseUrl) {
+    if (!rankingFunctionUrl()) {
       return NextResponse.json(
         { ok: false, error: "CUMULATIVE_RANKING_FUNCTION_URL is not set" },
         { status: 500 }
@@ -218,6 +222,12 @@ export async function GET(req: Request) {
         ? structuredClone(listSource)
         : (JSON.parse(JSON.stringify(listSource)) as typeof listSource);
 
+    if (data.byMetric && typeof data.byMetric === "object") {
+      await mergeUserPlansIntoBulkByMetric(
+        data.byMetric as Record<string, { rows?: unknown[]; myRow?: unknown | null }>
+      );
+    }
+
     const cacheControl = `public, max-age=0, s-maxage=${CUMULATIVE_RANKING_REVALIDATE_SEC}, stale-while-revalidate=${CUMULATIVE_RANKING_REVALIDATE_SEC * 4}`;
 
     return NextResponse.json(
@@ -234,7 +244,7 @@ export async function GET(req: Request) {
       }
     );
   } catch (e: unknown) {
-    const message = e instanceof Error ? e.message : "unexpected error";
-    return NextResponse.json({ ok: false, error: message }, { status: 500 });
+    console.error("[api/cumulative-ranking/bulk]", e);
+    return NextResponse.json({ ok: false, error: "internal" }, { status: 500 });
   }
 }

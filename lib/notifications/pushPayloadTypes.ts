@@ -13,6 +13,7 @@ export type PushNotificationType =
   | "pregame_digest"
   /** PRO INSIGHT の重要更新（結論変化時のみ） */
   | "pro_insight_update"
+  | "weekly_report"
   | "monthly_report"
   /** 期間ランキング等の Unit 付与 */
   | "unit_reward";
@@ -21,6 +22,7 @@ export type PushNotificationData = {
   type: PushNotificationType;
   gameId?: string;
   postId?: string;
+  weekLabel?: string;
   monthKey?: string;
   amount?: string;
   period?: string;
@@ -36,6 +38,7 @@ const PUSH_TYPES = new Set<PushNotificationType>([
   "prediction_deadline",
   "pregame_digest",
   "pro_insight_update",
+  "weekly_report",
   "monthly_report",
   "unit_reward",
 ]);
@@ -55,6 +58,10 @@ export function parsePushNotificationData(
   const postId =
     typeof raw.postId === "string" && raw.postId.trim() !== ""
       ? raw.postId.trim()
+      : undefined;
+  const weekLabel =
+    typeof raw.weekLabel === "string" && raw.weekLabel.trim() !== ""
+      ? raw.weekLabel.trim()
       : undefined;
   const monthKey =
     typeof raw.monthKey === "string" && raw.monthKey.trim() !== ""
@@ -76,6 +83,7 @@ export function parsePushNotificationData(
     type: type as PushNotificationType,
     gameId,
     postId,
+    weekLabel,
     monthKey,
     amount,
     period,

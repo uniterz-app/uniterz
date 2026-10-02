@@ -6,11 +6,12 @@
  */
 import { useRef, useState } from "react";
 import { nameOxanium } from "@/lib/fonts";
+import { unitEarnPlayButtonCopy } from "@/lib/units/unitEarnUiCopy";
 
 type Props = {
   onPlay: () => void;
   disabled?: boolean;
-  language?: "ja" | "en";
+  language?: string | null;
   /** 画面下部の固定配置 */
   floating?: boolean;
   className?: string;
@@ -29,8 +30,7 @@ export default function UnitEarnPlayButton({
   floating = false,
   className = "",
 }: Props) {
-  const isJa = language === "ja";
-  const label = isJa ? "Unit獲得を再生" : "Play unit earn";
+  const label = unitEarnPlayButtonCopy(language).label;
   const [pending, setPending] = useState(false);
   const lockedRef = useRef(false);
 

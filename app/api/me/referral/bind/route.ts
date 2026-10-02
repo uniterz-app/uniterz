@@ -8,6 +8,7 @@ export const runtime = "nodejs";
 /**
  * サインアップ直後の招待コード紐づけ（Admin）。
  * 解決できないコードは永続化しない（打ち間違いロック防止）。
+ * 入力タイミングは登録〜24h（サインアップ / WELCOME）のみ。設定画面からの後付けはしない。
  */
 export async function POST(req: Request) {
   try {

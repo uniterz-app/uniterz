@@ -14,6 +14,7 @@ import {
   CyberSlantedTabBar,
 } from "@/app/component/rankings/CyberSlantedTab";
 import type {
+  NbaTeamFormGame,
   NbaTeamStatSide,
   NbaTeamStatsBundle,
 } from "@/lib/predict/nbaTeamStatsPreviewMocks";
@@ -25,10 +26,17 @@ import { matchCardTeamNameStyle } from "@/lib/games/teamDisplayTypography";
 import { NBA_TEAM_NAME_BY_ID } from "@/lib/nba-team-names";
 import { getMobileTeamName } from "@/lib/team-name-split-mobile";
 import type { Language } from "@/lib/i18n/language";
+import { L, resolveLocalizedLang } from "@/lib/i18n/localize";
 import { t } from "@/lib/i18n/t";
+import LiveGameStatsPanel from "@/app/component/games/live/LiveGameStatsPanel";
+import { useLiveGameStats } from "@/lib/games/useLiveGameStats";
 
 type WindowId = "season" | "last10";
 
+/**
+ * LAST 10 は box / スコアから導けるセット
+ *（NET/ORTG/DRTG/PACE + FG%/3P%）。
+ */
 type Props = {
   data: NbaTeamStatsBundle;
   /** Pro: SZN± 差分 + #順位（LAST 10） */
@@ -60,139 +68,252 @@ function teamLabel(teamId: string, fallback: string): string {
   return fallback.toUpperCase();
 }
 
-function FormResultChip({
-  result,
-  index,
-  total,
-}: {
-  result: "W" | "L";
-  index: number;
-  total: number;
-}) {
-  const win = result === "W";
-  const fill = win ? "#00F5FF" : "#FF2D78";
-  const last = total > 0 && index === total - 1;
-  /** 古い→新しい：0.34 → 1.0 */
-  const t = total <= 1 ? 1 : index / (total - 1);
-  const opacity = 0.34 + t * 0.66;
-  const glow = win ? "rgba(0,245,255," : "rgba(255,45,120,";
+const FORM_WIN = "#F5C518";
+const FORM_LOSS = "#FF2D78";
 
-  return (
-    <span
-      className={[
-        nameOxanium.className,
-        "relative inline-grid h-[15px] w-full min-w-0 flex-1 place-items-center overflow-visible",
-        "text-[7px] font-black leading-none text-[#050508] md:h-[17px] md:text-[8px]",
-        last ? "z-[1]" : "",
-      ].join(" ")}
-      style={{
-        background: fill,
-        opacity,
-        transform: "skewX(-12deg)",
-        boxShadow: last
-          ? `0 0 0 1px rgba(255,255,255,0.92), 0 0 10px ${glow}0.72)`
-          : `0 0 6px ${glow}${0.18 + t * 0.2})`,
-      }}
-      aria-label={
-        last
-          ? win
-            ? "Win, most recent"
-            : "Loss, most recent"
-          : win
-            ? "Win"
-            : "Loss"
-      }
-    >
-      <span
-        aria-hidden
-        className="pointer-events-none absolute inset-0 overflow-hidden"
-        style={{
-          backgroundImage: `repeating-linear-gradient(
-            0deg,
-            transparent,
-            transparent 2px,
-            rgba(0, 0, 0, 0.16) 2px,
-            rgba(0, 0, 0, 0.16) 3px
-          )`,
-        }}
-      />
-      <span className="relative z-[1]" style={{ transform: "skewX(12deg)" }}>
-        {result}
+function FormGameLine({
+  game,
+  align,
+  onOpen,
+}: {
+  game: NbaTeamFormGame;
+  align: "left" | "right";
+  onOpen?: (gameId: string) => void;
+}) {
+  const venue = game.home ? "vs" : "@";
+  const win = game.result === "W";
+  const endAlign = align === "right";
+  const canOpen = Boolean(game.gameId && onOpen);
+  const body = (
+    <>
+      <span className="shrink-0 tabular-nums text-[12px] text-white/45 md:text-[13px]">
+        {game.dateLabel}
       </span>
-    </span>
+      <span className="shrink-0 text-white/55">{venue}</span>
+      <span
+        className="min-w-0 truncate text-[13px] text-white/90 md:text-[14px]"
+        style={{ transform: "skewX(-6deg)" }}
+      >
+        {game.oppAbbr}
+      </span>
+      <span className="shrink-0 tabular-nums text-white/85">
+        {game.teamScore}-{game.oppScore}
+      </span>
+      <span
+        className="w-4 shrink-0 text-center text-[14px] font-extrabold md:text-[15px]"
+        style={{ color: win ? FORM_WIN : FORM_LOSS }}
+      >
+        {game.result}
+      </span>
+    </>
+  );
+  const className = [
+    nameOxanium.className,
+    "flex min-w-0 items-center gap-1.5 py-1.5 text-[13px] font-bold leading-none md:gap-2 md:text-[14px]",
+    endAlign ? "justify-end" : "justify-start",
+    canOpen ? "cursor-pointer hover:bg-white/[0.04] active:bg-white/[0.07]" : "",
+  ].join(" ");
+  if (canOpen && game.gameId && onOpen) {
+    return (
+      <button
+        type="button"
+        onClick={() => onOpen(game.gameId!)}
+        className={["w-full", className].join(" ")}
+        aria-label={`Box score ${game.oppAbbr}`}
+      >
+        {body}
+      </button>
+    );
+  }
+  return <div className={className}>{body}</div>;
+}
+
+function FormGameBoxOverlay({
+  gameId,
+  language,
+  onClose,
+}: {
+  gameId: string;
+  language: Language;
+  onClose: () => void;
+}) {
+  const { report, loading } = useLiveGameStats(gameId, true);
+  const lang = resolveLocalizedLang(language);
+  const closeLabel = L(lang, {
+    ja: "閉じる",
+    en: "Close",
+    ko: "닫기",
+    zh: "关闭",
+    es: "Cerrar",
+    pt: "Fechar",
+    fr: "Fermer",
+  });
+  return (
+    <div
+      className="fixed inset-0 z-[80] flex flex-col bg-black/92"
+      role="dialog"
+      aria-modal
+      aria-label="Box score"
+    >
+      <div className="flex items-center justify-between gap-3 border-b border-white/10 px-3 py-3">
+        <p
+          className={[
+            nameOxanium.className,
+            "text-[13px] font-bold uppercase tracking-[0.12em] text-white/70",
+          ].join(" ")}
+          style={{ transform: "skewX(-6deg)" }}
+        >
+          BOX SCORE
+        </p>
+        <button
+          type="button"
+          onClick={onClose}
+          className={[
+            nameOxanium.className,
+            "rounded-[2px] border border-white/25 px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-[0.1em] text-white/80",
+          ].join(" ")}
+        >
+          {closeLabel}
+        </button>
+      </div>
+      <div className="min-h-0 flex-1 overflow-y-auto px-2 py-3">
+        {loading && !report ? (
+          <p
+            className={[
+              nameOxanium.className,
+              "px-2 py-6 text-center text-[12px] font-bold text-white/45",
+            ].join(" ")}
+          >
+            {L(lang, {
+              ja: "読み込み中…",
+              en: "Loading…",
+              ko: "불러오는 중…",
+              zh: "加载中…",
+              es: "Cargando…",
+              pt: "Carregando…",
+              fr: "Chargement…",
+            })}
+          </p>
+        ) : report ? (
+          <LiveGameStatsPanel report={report} language={language} />
+        ) : (
+          <p
+            className={[
+              nameOxanium.className,
+              "px-2 py-6 text-center text-[12px] font-bold text-white/45",
+            ].join(" ")}
+          >
+            {L(lang, {
+              ja: "ボックススコアがありません",
+              en: "No box score yet",
+              ko: "박스스코어가 없습니다",
+              zh: "暂无技术统计",
+              es: "Aún no hay box score",
+              pt: "Ainda sem box score",
+              fr: "Pas encore de box score",
+            })}
+          </p>
+        )}
+      </div>
+    </div>
   );
 }
 
-function FormResultsStrip({
+/** 表下: 各チーム直近 ≤5 試合。初期折りたたみ。行タップで BOX */
+function RecentFormGamesStrip({
   left,
   right,
+  language,
 }: {
-  left: Array<"W" | "L">;
-  right: Array<"W" | "L">;
+  left: NbaTeamFormGame[];
+  right: NbaTeamFormGame[];
+  language: Language;
 }) {
-  const leftWins = left.filter((r) => r === "W").length;
-  const rightWins = right.filter((r) => r === "W").length;
-
+  const [open, setOpen] = useState(false);
+  const [boxGameId, setBoxGameId] = useState<string | null>(null);
+  const rows = Math.max(left.length, right.length, 1);
+  const hint = L(resolveLocalizedLang(language), {
+    ja: "タップ→BOXスコア",
+    en: "tap→box score",
+    ko: "탭→박스스코어",
+    zh: "点按→技术统计",
+    es: "toca→box score",
+    pt: "toque→box score",
+    fr: "toucher→box score",
+  });
   return (
-    <div className="border-b border-white/8 py-1.5 last:border-b-0">
-      <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-x-0.5 gap-y-0.5 md:gap-x-1.5">
-        {/* HOME: セグメント同様・中央（右）→外側（左）＝古い→新しい */}
-        <div className="flex min-w-0 flex-row-reverse gap-px">
-          {left.map((r, i) => (
-            <FormResultChip
-              key={`l-${i}`}
-              result={r}
-              index={i}
-              total={left.length}
-            />
-          ))}
+    <div className="border-t border-white/10 pt-2.5">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="mb-1.5 flex w-full flex-col items-center gap-0.5"
+      >
+        <span
+          className={[
+            nameOxanium.className,
+            "inline-flex items-center gap-1.5 text-[13px] font-bold uppercase tracking-[0.14em] text-white/55 md:text-[14px]",
+          ].join(" ")}
+        >
+          <span style={{ transform: "skewX(-6deg)" }}>LAST 5</span>
+          <span
+            aria-hidden
+            className="text-[10px] text-white/40"
+            style={{ transform: open ? "rotate(180deg)" : undefined }}
+          >
+            ▼
+          </span>
+        </span>
+        <span
+          className={[
+            nameOxanium.className,
+            "text-[10px] font-bold tracking-[0.06em] text-white/45 md:text-[11px]",
+          ].join(" ")}
+          style={{ transform: "skewX(-6deg)" }}
+        >
+          {hint}
+        </span>
+      </button>
+      {open ? (
+        <div className="grid grid-cols-[minmax(0,1fr)_1px_minmax(0,1fr)] items-start gap-x-3">
+          <div className="flex min-w-0 flex-col">
+            {Array.from({ length: rows }, (_, i) =>
+              left[i] ? (
+                <FormGameLine
+                  key={`l-${i}`}
+                  game={left[i]}
+                  align="right"
+                  onOpen={setBoxGameId}
+                />
+              ) : (
+                <div key={`l-${i}`} className="h-[30px]" />
+              )
+            )}
+          </div>
+          <div className="self-stretch bg-white" aria-hidden />
+          <div className="flex min-w-0 flex-col">
+            {Array.from({ length: rows }, (_, i) =>
+              right[i] ? (
+                <FormGameLine
+                  key={`r-${i}`}
+                  game={right[i]}
+                  align="left"
+                  onOpen={setBoxGameId}
+                />
+              ) : (
+                <div key={`r-${i}`} className="h-[30px]" />
+              )
+            )}
+          </div>
         </div>
-        <div
-          className={[
-            nameOxanium.className,
-            "w-14 shrink-0 px-0 text-center text-[8px] font-bold uppercase tracking-[0.1em] text-white/70 md:w-16 md:text-[10px] md:tracking-[0.12em]",
-          ].join(" ")}
-        >
-          L10
-        </div>
-        {/* AWAY: 中央（左）→外側（右）＝古い→新しい */}
-        <div className="flex min-w-0 gap-px">
-          {right.map((r, i) => (
-            <FormResultChip
-              key={`r-${i}`}
-              result={r}
-              index={i}
-              total={right.length}
-            />
-          ))}
-        </div>
-
-        <p
-          className={[
-            nameOxanium.className,
-            "text-right text-[11px] font-extrabold tabular-nums tracking-wide text-white/65 md:text-[12px]",
-          ].join(" ")}
-        >
-          {leftWins}-{left.length - leftWins}
-        </p>
-        <p
-          className={[
-            nameOxanium.className,
-            "w-14 shrink-0 px-0 text-center text-[7px] font-extrabold uppercase tracking-[0.04em] text-white/40 md:w-16 md:text-[8px] md:tracking-[0.06em]",
-          ].join(" ")}
-          title="Oldest near center → newest outward"
-        >
-          ←NEW→
-        </p>
-        <p
-          className={[
-            nameOxanium.className,
-            "text-left text-[11px] font-extrabold tabular-nums tracking-wide text-white/65 md:text-[12px]",
-          ].join(" ")}
-        >
-          {rightWins}-{right.length - rightWins}
-        </p>
-      </div>
+      ) : null}
+      {boxGameId ? (
+        <FormGameBoxOverlay
+          gameId={boxGameId}
+          language={language}
+          onClose={() => setBoxGameId(null)}
+        />
+      ) : null}
     </div>
   );
 }
@@ -225,7 +346,8 @@ function sideProExtras(
 }
 
 /**
- * NBA 予想ツール — Team Stats（SEASON / LAST10 + Pro 差分）
+ * NBA 予想ツール — Team Stats（対戦比較）
+ * NET / ORTG / DRTG / PACE + FG%/3P%。SEASON は今試合の HOME vs ROAD。LAST10 は W/L。
  */
 export default function NbaTeamStatsPanel({
   data,
@@ -262,19 +384,19 @@ export default function NbaTeamStatsPanel({
   const l10Rh = last10Home.ranks;
   const l10Ra = last10Away.ranks;
 
-  const [ppgL, ppgR] = barPctMaxNorm(home.ppg, away.ppg);
-  const [papgL, papgR] = barPctMinPaNorm(home.papg, away.papg);
-  const [diffL, diffR] = barPctDiffNorm(home.diff, away.diff);
+  const [netL, netR] = barPctDiffNorm(home.netrtg, away.netrtg);
   const [ortgL, ortgR] = barPctMaxNorm(home.ortg, away.ortg);
   const [drtgL, drtgR] = barPctMinPaNorm(home.drtg, away.drtg);
-  const [netL, netR] = barPctDiffNorm(home.netrtg, away.netrtg);
   const [paceL, paceR] = barPctMaxNorm(home.pace, away.pace);
+  const fmtPct = (n: number) => `${(n <= 1 ? n * 100 : n).toFixed(1)}`;
+  const pct = (n: number | undefined) =>
+    typeof n === "number" && Number.isFinite(n) ? n : 0;
+  const [fgL, fgR] = barPctMaxNorm(pct(home.fgPct), pct(away.fgPct));
+  const [fg3L, fg3R] = barPctMaxNorm(pct(home.fg3Pct), pct(away.fg3Pct));
 
   const showSplit = windowId === "season";
-  const homeHomePct = winPct(home.homeW, home.homeL);
-  const awayHomePct = winPct(away.homeW, away.homeL);
-  const homeAwayPct = winPct(home.awayW, home.awayL);
-  const awayAwayPct = winPct(away.awayW, away.awayL);
+  const homeSitePct = winPct(home.homeW, home.homeL);
+  const awaySitePct = winPct(away.awayW, away.awayL);
 
   type RowSide = {
     primary: string;
@@ -377,20 +499,20 @@ export default function NbaTeamStatsPanel({
 
   const coreRows = [
     metricRow(
-      "ppg",
-      "PPG",
-      home.ppg,
-      away.ppg,
-      ppgL,
-      ppgR,
-      home.ppg > away.ppg,
-      away.ppg > home.ppg,
-      (n) => n.toFixed(1),
-      seasonHome.ppg,
-      seasonAway.ppg,
-      last10Home.ppg,
-      last10Away.ppg,
-      "ppg"
+      "netrtg",
+      "NETRTG",
+      home.netrtg,
+      away.netrtg,
+      netL,
+      netR,
+      home.netrtg > away.netrtg,
+      away.netrtg > home.netrtg,
+      fmtDiff,
+      seasonHome.netrtg,
+      seasonAway.netrtg,
+      last10Home.netrtg,
+      last10Away.netrtg,
+      "netrtg"
     ),
     metricRow(
       "ortg",
@@ -409,22 +531,6 @@ export default function NbaTeamStatsPanel({
       "ortg"
     ),
     metricRow(
-      "papg",
-      "PAPG",
-      home.papg,
-      away.papg,
-      papgL,
-      papgR,
-      home.papg < away.papg,
-      away.papg < home.papg,
-      (n) => n.toFixed(1),
-      seasonHome.papg,
-      seasonAway.papg,
-      last10Home.papg,
-      last10Away.papg,
-      "papg"
-    ),
-    metricRow(
       "drtg",
       "DRTG",
       home.drtg,
@@ -439,38 +545,6 @@ export default function NbaTeamStatsPanel({
       last10Home.drtg,
       last10Away.drtg,
       "drtg"
-    ),
-    metricRow(
-      "diff",
-      "DIFF",
-      home.diff,
-      away.diff,
-      diffL,
-      diffR,
-      home.diff > away.diff,
-      away.diff > home.diff,
-      fmtDiff,
-      seasonHome.diff,
-      seasonAway.diff,
-      last10Home.diff,
-      last10Away.diff,
-      "diff"
-    ),
-    metricRow(
-      "netrtg",
-      "NETRTG",
-      home.netrtg,
-      away.netrtg,
-      netL,
-      netR,
-      home.netrtg > away.netrtg,
-      away.netrtg > home.netrtg,
-      fmtDiff,
-      seasonHome.netrtg,
-      seasonAway.netrtg,
-      last10Home.netrtg,
-      last10Away.netrtg,
-      "netrtg"
     ),
     metricRow(
       "pace",
@@ -488,91 +562,88 @@ export default function NbaTeamStatsPanel({
       last10Away.pace,
       "pace"
     ),
+    metricRow(
+      "fgPct",
+      "FG%",
+      pct(home.fgPct),
+      pct(away.fgPct),
+      fgL,
+      fgR,
+      pct(home.fgPct) > pct(away.fgPct),
+      pct(away.fgPct) > pct(home.fgPct),
+      fmtPct,
+      pct(seasonHome.fgPct),
+      pct(seasonAway.fgPct),
+      pct(last10Home.fgPct),
+      pct(last10Away.fgPct),
+      "fgPct"
+    ),
+    metricRow(
+      "fg3Pct",
+      "3P%",
+      pct(home.fg3Pct),
+      pct(away.fg3Pct),
+      fg3L,
+      fg3R,
+      pct(home.fg3Pct) > pct(away.fg3Pct),
+      pct(away.fg3Pct) > pct(home.fg3Pct),
+      fmtPct,
+      pct(seasonHome.fg3Pct),
+      pct(seasonAway.fg3Pct),
+      pct(last10Home.fg3Pct),
+      pct(last10Away.fg3Pct),
+      "fg3Pct"
+    ),
   ];
 
+  /** 今試合の条件: ホームの HOME 成績 vs アウェイの ROAD 成績 */
   const splitRows = showSplit
     ? [
         {
-          key: "home",
-          label: "HOME",
+          key: "site",
+          label: "H/R",
           left: {
-            primary: `${Math.round(homeHomePct)}%`,
+            primary: `${Math.round(homeSitePct)}%`,
             rank: null,
             rankBelow: null,
-            barPct: Math.round(Math.min(100, Math.max(0, homeHomePct))),
+            barPct: Math.round(Math.min(100, Math.max(0, homeSitePct))),
             leagueRank: null,
             recordBelow: `${home.homeW}-${home.homeL}`,
             proMeta: null,
             proMetaTone: "flat" as const,
           },
           right: {
-            primary: `${Math.round(awayHomePct)}%`,
+            primary: `${Math.round(awaySitePct)}%`,
             rank: null,
             rankBelow: null,
-            barPct: Math.round(Math.min(100, Math.max(0, awayHomePct))),
-            leagueRank: null,
-            recordBelow: `${away.homeW}-${away.homeL}`,
-            proMeta: null,
-            proMetaTone: "flat" as const,
-          },
-          leftWin: homeHomePct > awayHomePct,
-          rightWin: awayHomePct > homeHomePct,
-        },
-        {
-          key: "away",
-          label: "AWAY",
-          left: {
-            primary: `${Math.round(homeAwayPct)}%`,
-            rank: null,
-            rankBelow: null,
-            barPct: Math.round(Math.min(100, Math.max(0, homeAwayPct))),
-            leagueRank: null,
-            recordBelow: `${home.awayW}-${home.awayL}`,
-            proMeta: null,
-            proMetaTone: "flat" as const,
-          },
-          right: {
-            primary: `${Math.round(awayAwayPct)}%`,
-            rank: null,
-            rankBelow: null,
-            barPct: Math.round(Math.min(100, Math.max(0, awayAwayPct))),
+            barPct: Math.round(Math.min(100, Math.max(0, awaySitePct))),
             leagueRank: null,
             recordBelow: `${away.awayW}-${away.awayL}`,
             proMeta: null,
             proMetaTone: "flat" as const,
           },
-          leftWin: homeAwayPct > awayAwayPct,
-          rightWin: awayAwayPct > homeAwayPct,
+          leftWin: homeSitePct > awaySitePct,
+          rightWin: awaySitePct > homeSitePct,
         },
       ]
     : [];
 
-  const homeFormW = home.formW ?? 0;
-  const homeFormL = home.formL ?? 0;
-  const awayFormW = away.formW ?? 0;
-  const awayFormL = away.formL ?? 0;
   const formLeft =
-    home.formResults ??
-    (homeFormW + homeFormL > 0
-      ? Array.from({ length: homeFormW + homeFormL }, (_, i) =>
-          i < homeFormL ? ("L" as const) : ("W" as const)
-        )
-      : []);
+    data.season.home.recentFormGames ??
+    data.last10.home.recentFormGames ??
+    [];
   const formRight =
-    away.formResults ??
-    (awayFormW + awayFormL > 0
-      ? Array.from({ length: awayFormW + awayFormL }, (_, i) =>
-          i < awayFormL ? ("L" as const) : ("W" as const)
-        )
-      : []);
-  const showFormStrip = windowId === "last10" && (formLeft.length > 0 || formRight.length > 0);
+    data.season.away.recentFormGames ??
+    data.last10.away.recentFormGames ??
+    [];
+  const showRecentForm = formLeft.length > 0 || formRight.length > 0;
 
   const rows = [...coreRows, ...splitRows];
 
   return (
     <div
       className={[
-        "relative z-[1] rounded-[2px] bg-[rgba(6,10,16,0.96)] px-1 py-1",
+        "relative z-[1] rounded-none border border-[rgba(0,245,255,0.32)] bg-[rgba(0,14,20,0.55)] px-1.5 py-2",
         className,
       ]
         .filter(Boolean)
@@ -608,14 +679,14 @@ export default function NbaTeamStatsPanel({
         {t(language).predict.teamStatsMoreHint}
       </p>
 
-      <header className="mb-1.5 grid grid-cols-2 gap-2 px-0.5">
+      <header className="mb-1.5 grid grid-cols-[minmax(0,1fr)_4rem_minmax(0,1fr)] items-center px-0.5">
         {home.teamId ? (
           <Link
             href={teamDetailHref(home.teamId)}
             onClick={stashReturnBeforeTeamNav}
             className={[
               nameBebas.className,
-              "truncate text-center text-[15px] font-bold uppercase leading-tight text-cyan-200",
+              "truncate text-center text-[14px] font-bold uppercase leading-tight text-cyan-200",
             ].join(" ")}
             style={matchCardTeamNameStyle(true)}
           >
@@ -625,20 +696,21 @@ export default function NbaTeamStatsPanel({
           <p
             className={[
               nameBebas.className,
-              "truncate text-center text-[15px] font-bold uppercase leading-tight text-white",
+              "truncate text-center text-[14px] font-bold uppercase leading-tight text-white",
             ].join(" ")}
             style={matchCardTeamNameStyle(true)}
           >
             {teamLabel(home.teamId, home.teamName)}
           </p>
         )}
+        <span aria-hidden className="w-16 shrink-0" />
         {away.teamId ? (
           <Link
             href={teamDetailHref(away.teamId)}
             onClick={stashReturnBeforeTeamNav}
             className={[
               nameBebas.className,
-              "truncate text-center text-[15px] font-bold uppercase leading-tight text-violet-200",
+              "truncate text-center text-[14px] font-bold uppercase leading-tight text-violet-200",
             ].join(" ")}
             style={matchCardTeamNameStyle(true)}
           >
@@ -648,7 +720,7 @@ export default function NbaTeamStatsPanel({
           <p
             className={[
               nameBebas.className,
-              "truncate text-center text-[15px] font-bold uppercase leading-tight text-white",
+              "truncate text-center text-[14px] font-bold uppercase leading-tight text-white",
             ].join(" ")}
             style={matchCardTeamNameStyle(true)}
           >
@@ -681,8 +753,8 @@ export default function NbaTeamStatsPanel({
             compactHud
           />
         ))}
-        {showFormStrip ? (
-          <FormResultsStrip left={formLeft} right={formRight} />
+        {showRecentForm ? (
+          <RecentFormGamesStrip left={formLeft} right={formRight} language={language ?? "ja"} />
         ) : null}
       </section>
     </div>

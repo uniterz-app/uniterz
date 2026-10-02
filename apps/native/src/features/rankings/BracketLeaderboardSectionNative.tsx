@@ -1,15 +1,26 @@
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { colors, fonts } from "../../theme/tokens";
+import { L, resolveLocalizedLang } from "../../../../../lib/i18n/localize";
 
-type Props = { language: "ja" | "en" };
+type Props = { language: import("./rankingsTexts").RankingsLanguage };
 
 /** BracketLeaderboardSection 相当 */
 export default function BracketLeaderboardSectionNative({ language }: Props) {
-  const isJa = language === "ja";
+  const lang = resolveLocalizedLang(language);
 
   return (
     <View style={styles.root}>
-      <Text style={styles.title}>{isJa ? "Bracket リーダーボード" : "Bracket Leaderboard"}</Text>
+      <Text style={styles.title}>
+        {L(lang, {
+          ja: "Bracket リーダーボード",
+          en: "Bracket Leaderboard",
+          ko: "Bracket 리더보드",
+          zh: "对阵图排行榜",
+          es: "Clasificación Bracket",
+          pt: "Leaderboard Bracket",
+          fr: "Classement Bracket",
+        })}
+      </Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row}>
         {[1, 2, 3, 4, 5].map((rank) => (
           <View key={rank} style={styles.card}>
@@ -20,9 +31,15 @@ export default function BracketLeaderboardSectionNative({ language }: Props) {
         ))}
       </ScrollView>
       <Text style={styles.note}>
-        {isJa
-          ? "ブラケット予想の精度で競うリーダーボード"
-          : "Compete on bracket prediction accuracy"}
+        {L(lang, {
+          ja: "ブラケット予想の精度で競うリーダーボード",
+          en: "Compete on bracket prediction accuracy",
+          ko: "브래킷 예측 정확도로 겨루는 리더보드",
+          zh: "以对阵图预测准确度竞技的排行榜",
+          es: "Compite por precisión de predicciones de bracket",
+          pt: "Dispute pela precisão das previsões de chave",
+          fr: "Compétition sur la précision des brackets",
+        })}
       </Text>
     </View>
   );

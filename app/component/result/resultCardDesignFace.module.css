@@ -6,60 +6,50 @@
   overflow: visible;
 }
 
-/* Native `rectShellWrapWithDetail` — タブのはみ出し分をヒット領域に含める */
-.wrapWithDetail {
-  padding-right: 17px;
-}
-
-.detailSpine {
-  position: absolute;
-  top: 80px;
-  right: -17px;
-  z-index: 24;
-  display: flex;
-  width: 18px;
-  height: 80px;
-  align-items: center;
-  justify-content: center;
-  /* はみ出し領域でもクリックを受け取り、親の onOpen へバブルさせる */
-  pointer-events: auto;
-  background: #070b12;
-  border-style: solid;
-  border-left-width: 0;
-}
-
-.detailSpineTextCol {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 1px;
-}
-
-.detailSpineChar {
-  font-size: 8px;
-  font-weight: 700;
-  line-height: 9px;
-  letter-spacing: 0;
-  text-align: center;
-  text-transform: uppercase;
-  color: rgba(226, 232, 240, 0.72);
-}
-
 .body {
   position: relative;
   z-index: 1;
 }
 
+.detailHint {
+  position: absolute;
+  right: 8px;
+  bottom: 6px;
+  z-index: 6;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  pointer-events: none;
+  padding: 3px 7px;
+  border: 1px solid rgba(0, 245, 255, 0.55);
+  background: rgba(0, 245, 255, 0.08);
+}
+
+.detailHintLabel {
+  font-size: 8px;
+  font-weight: 800;
+  line-height: 10px;
+  letter-spacing: 0.11em;
+  color: rgba(0, 245, 255, 0.88);
+}
+
+.detailHintChevron {
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 14px;
+  color: rgba(0, 245, 255, 0.95);
+  margin-top: -1px;
+}
+
 .pad {
-  padding: 10px 10px 12px;
+  padding: 18px 10px 14px;
 }
 
 .layerDivider {
   width: 100%;
   height: 1px;
-  margin-top: 4px;
-  margin-bottom: 6px;
+  margin-top: 10px;
+  margin-bottom: 10px;
   background: rgba(255, 255, 255, 0.1);
 }
 
@@ -115,6 +105,7 @@
   flex-direction: column;
   align-items: center;
   gap: 3px;
+  padding-top: 16px;
 }
 
 .homeAwayLabel {
@@ -128,9 +119,9 @@
   margin-top: 4px;
   width: 100%;
   text-align: center;
-  font-size: 15px;
-  font-weight: 400;
-  letter-spacing: 1.04px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.6px;
   text-transform: uppercase;
   color: rgba(248, 250, 252, 0.95);
 }
@@ -145,7 +136,8 @@
   flex: 1;
   flex-direction: column;
   align-items: center;
-  padding-top: 4px;
+  /* 判定前の「あなたの予想」＋数字をユニフォーム寄りに少し下げる */
+  padding-top: 20px;
   gap: 2px;
 }
 
@@ -156,6 +148,13 @@
   letter-spacing: 2.2px;
   text-transform: uppercase;
   color: rgba(248, 250, 252, 0.75);
+}
+
+.finalStatusJa {
+  font-size: 10px;
+  letter-spacing: 0.6px;
+  text-transform: none;
+  color: rgba(226, 232, 240, 0.55);
 }
 
 .finalScore {
@@ -172,6 +171,17 @@
   font-weight: 900;
   font-style: italic;
   color: rgba(255, 255, 255, 0.7);
+}
+
+/** 判定前 — 予想スコアを本番スコアと同じサイズでアンバー表示 */
+.predScoreMain {
+  font-size: 22px;
+  font-weight: 900;
+  font-style: italic;
+  line-height: 24px;
+  letter-spacing: -0.5px;
+  color: rgba(253, 224, 71, 0.95);
+  text-shadow: 0 0 12px rgba(251, 191, 36, 0.32);
 }
 
 .predCaption {
@@ -198,7 +208,7 @@
 
 .biasRoot {
   width: 100%;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
 }
 
 .biasPctHeader {
@@ -215,11 +225,22 @@
   font-size: 14px;
   font-weight: 800;
   letter-spacing: 0.4px;
+  transform: skewX(-6deg);
 }
 
 .biasPctHeaderNumAway {
   margin-right: -6px;
   text-align: right;
+}
+
+.biasPctHeaderMidCol {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-width: 0;
 }
 
 .biasPctHeaderMid {
@@ -230,6 +251,24 @@
   letter-spacing: 1.2px;
   text-transform: uppercase;
   color: rgba(0, 245, 255, 0.55);
+}
+
+.biasPctHeaderMidCol .biasPctHeaderMid {
+  flex: none;
+  width: 100%;
+}
+
+.biasCount {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  color: rgba(226, 232, 240, 0.55);
+}
+
+.biasCountNum {
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: rgba(248, 250, 252, 0.88);
 }
 
 .biasBarInner {
@@ -261,6 +300,7 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
+  padding-top: 2px;
 }
 
 .splitRow {
@@ -337,7 +377,8 @@
 }
 
 .scorerBlock {
-  margin-bottom: 4px;
+  margin: 0;
+  padding: 3px 0;
 }
 
 .scorerValueRow {
@@ -347,13 +388,13 @@
 }
 
 .scorerLabel {
-  width: 78px;
+  width: 88px;
   flex-shrink: 0;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 1.1px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.8px;
   text-transform: uppercase;
-  color: rgba(148, 163, 184, 0.75);
+  color: rgba(248, 250, 252, 0.92);
 }
 
 .scorerNameWrap {
@@ -374,16 +415,16 @@
   text-align: center;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 15px;
-  font-weight: 400;
-  letter-spacing: 0.8px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
   text-transform: uppercase;
   color: #f8fafc;
 }
 
 .scorerHitCluster {
   display: flex;
-  width: 78px;
+  width: 88px;
   flex-shrink: 0;
   align-items: center;
   justify-content: flex-end;

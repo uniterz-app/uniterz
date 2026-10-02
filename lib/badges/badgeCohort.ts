@@ -1,7 +1,18 @@
 /**
  * ランキングバッジ ID → 参加者数の参照先。
- * 付与対象の「その回のランキング母数」を引く。
+ * 参加者 = その回・その部門で 1 回以上投稿した人数（順位表の掲載条件や付与人数ではない）。
  */
+
+import { DATE_LOCALE } from "@/lib/i18n/language";
+import {
+  rankingBadgeSnapshotDivision,
+  splitRankingBadgeId,
+} from "@/lib/badges/rankingBadgeId";
+import {
+  L,
+  resolveLocalizedLang,
+  type LocalizedLang,
+} from "@/lib/i18n/localize";
 
 export type BadgePeriodMetric =
   | "totalPoints"
@@ -12,6 +23,8 @@ export type BadgePeriodMetric =
 export type BadgeCohortSource =
   | {
       kind: "cumulative";
+      /** バッジの年（po_2026_* → 2026）。アーカイブ doc の特定用 */
+      year: number;
       /** 優先順。存在する最初の doc を使う */
       docIds: string[];
       /** スナップショットが無いときの cumulative_stats count() 用 */
@@ -19,6 +32,7 @@ export type BadgeCohortSource =
     }
   | {
       kind: "period";
+      division: "standard" | "open";
       period: "weekly" | "monthly";
       label: string;
       metric: BadgePeriodMetric;
@@ -67,14 +81,21 @@ function poRoundSnapshotIds(round: string): string[] {
 export function resolveBadgeCohortSource(
   badgeId: string,
 ): BadgeCohortSource | null {
-  const id = badgeId.trim();
-  if (!id) return null;
+  if (!badgeId.trim()) return null;
+  const { division: badgeDivision, body: id } = splitRankingBadgeId(badgeId);
+  const division = rankingBadgeSnapshotDivision(badgeDivision);
 
   const weekly = WEEKLY_RE.exec(id);
   if (weekly) {
     const metric = periodMetricFromSlug(weekly[2] ?? "");
     if (!metric) return null;
-    return { kind: "period", period: "weekly", label: weekly[1]!, metric };
+    return {
+      kind: "period",
+      division,
+      period: "weekly",
+      label: weekly[1]!,
+      metric,
+    };
   }
 
   const monthly = MONTHLY_RE.exec(id);
@@ -83,23 +104,31 @@ export function resolveBadgeCohortSource(
     if (!metric) return null;
     return {
       kind: "period",
+      division,
       period: "monthly",
       label: `${monthly[1]}-${monthly[2]}`,
       metric,
     };
   }
 
-  if (PLAYIN_RE.test(id)) {
+  // プレーイン / PO / WC の累計スナップショットは部門を持たない（Pick Up 相当のみ）
+  if (division === "open") return null;
+
+  const playin = PLAYIN_RE.exec(id);
+  if (playin) {
     return {
       kind: "cumulative",
+      year: Number(playin[1]),
       docIds: ["play_in_totalPoints", "playin_totalPoints"],
       statsField: "rankingByPhase.play_in.totalPosts",
     };
   }
 
-  if (PO_ALL_RE.test(id)) {
+  const poAll = PO_ALL_RE.exec(id);
+  if (poAll) {
     return {
       kind: "cumulative",
+      year: Number(poAll[1]),
       docIds: ["playoffs_totalPoints"],
       statsField: "rankingByPhase.playoffs.totalPosts",
     };
@@ -118,6 +147,7 @@ export function resolveBadgeCohortSource(
             : "finals";
     return {
       kind: "cumulative",
+      year: Number(poRound[1]),
       docIds: poRoundSnapshotIds(round),
       statsField: `rankingByPlayoffRound.${key}.totalPosts`,
     };
@@ -132,7 +162,7 @@ export function resolveBadgeCohortSource(
         : stage === "overall"
           ? ["wc_overall_totalPoints", "wc_totalPoints"]
           : ["wc_group_totalPoints", "wc_qualifying_totalPoints"];
-    return { kind: "cumulative", docIds: ids };
+    return { kind: "cumulative", year: Number(wc[1]), docIds: ids };
   }
 
   return null;
@@ -140,15 +170,27 @@ export function resolveBadgeCohortSource(
 
 export function formatBadgeParticipantCount(
   count: number,
-  language: "ja" | "en",
+  language: LocalizedLang | string,
 ): string {
+  const lang = resolveLocalizedLang(language);
   const n = Math.floor(count);
-  if (language === "ja") return `${n.toLocaleString("ja-JP")}人`;
-  return n.toLocaleString("en-US");
+  const formatted = n.toLocaleString(DATE_LOCALE[lang]);
+  if (lang === "ja") return `${formatted}人`;
+  if (lang === "ko") return `${formatted}명`;
+  if (lang === "zh") return `${formatted}人`;
+  return formatted;
 }
 
-export function badgeParticipantLabel(language: "ja" | "en"): string {
-  return language === "ja" ? "参加者" : "Participants";
+export function badgeParticipantLabel(language: LocalizedLang | string): string {
+  return L(resolveLocalizedLang(language), {
+    ja: "参加者",
+    en: "Participants",
+    ko: "참가자",
+    zh: "参与者",
+    es: "Participantes",
+    pt: "Participantes",
+    fr: "Participants",
+  });
 }
 
 export function readBadgeParticipantCount(badge: {

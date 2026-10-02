@@ -1,30 +1,39 @@
 import { onRequest } from "firebase-functions/v2/https";
 import { onSchedule } from "firebase-functions/v2/scheduler";
+import { defineSecret } from "firebase-functions/params";
 import { buildWeeklyReportsCore } from "./buildWeeklyReportsCore";
-import { previousLabel, weekStartDateKeyJST } from "../rankings/nbaPeriod";
+import { previousLabel, weekStartDateKeyET } from "../rankings/nbaPeriod";
+import { assertManualJobAuth } from "../http/assertManualJobAuth";
+import { notifyWeeklyReportPush } from "../notifications/notifyPushEvents";
 
-function isMondayJst(now: Date): boolean {
-  return new Date(now.getTime() + 9 * 60 * 60 * 1000).getUTCDay() === 1;
+const INTERNAL_JOB_SECRET = defineSecret("INTERNAL_JOB_SECRET");
+
+function isMondayET(now: Date): boolean {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York",
+    weekday: "short",
+  }).formatToParts(now);
+  return parts.find((p) => p.type === "weekday")?.value === "Mon";
 }
 
 /**
- * 月曜 08:30 JST のみ: 先週の週間レポートを final 確定する。
+ * Eastern 月曜 08:30 のみ: 先週の週間レポートを final 確定する。
  * （進行中 live 日次更新は廃止。確定週だけを履歴に残す）
  */
 export const rebuildWeeklyReportsCronV2 = onSchedule(
   {
     schedule: "30 8 * * 1",
-    timeZone: "Asia/Tokyo",
+    timeZone: "America/New_York",
     memory: "1GiB",
     timeoutSeconds: 540,
   },
   async () => {
     const now = new Date();
-    if (!isMondayJst(now)) {
-      console.log("[rebuildWeeklyReportsCronV2] skip: not Monday JST");
+    if (!isMondayET(now)) {
+      console.log("[rebuildWeeklyReportsCronV2] skip: not Monday ET");
       return;
     }
-    const currentWeek = weekStartDateKeyJST(now);
+    const currentWeek = weekStartDateKeyET(now);
     const final = await buildWeeklyReportsCore({
       weekLabel: previousLabel("weekly", currentWeek),
       status: "final",
@@ -33,22 +42,32 @@ export const rebuildWeeklyReportsCronV2 = onSchedule(
     console.log(
       `[rebuildWeeklyReportsCronV2] status=final week=${final.weekLabel} written=${final.written}`
     );
+    try {
+      await notifyWeeklyReportPush({
+        uids: final.writtenUids,
+        weekLabel: final.weekLabel,
+      });
+    } catch (e) {
+      console.error("[rebuildWeeklyReportsCronV2] weekly push failed", e);
+    }
   }
 );
 
 /**
  * 手動 / Cursor 用 HTTP。
  * GET/POST ?weekLabel=2026-10-19&status=final&limit=50
- * status 省略時は final。live は後方互換の手動再生成用のみ。
+ * 要ヘッダ: x-internal-job-secret（Secret: INTERNAL_JOB_SECRET）
  */
 export const rebuildWeeklyReportsManualV2 = onRequest(
   {
     region: "asia-northeast1",
     memory: "1GiB",
     timeoutSeconds: 540,
+    secrets: [INTERNAL_JOB_SECRET],
   },
   async (req, res) => {
     try {
+      assertManualJobAuth(req);
       const weekLabel =
         typeof req.query.weekLabel === "string"
           ? req.query.weekLabel
@@ -79,6 +98,17 @@ export const rebuildWeeklyReportsManualV2 = onRequest(
       );
       res.status(200).json(result);
     } catch (e) {
+      const status =
+        e instanceof Error &&
+        typeof (e as Error & { status?: number }).status === "number"
+          ? (e as Error & { status: number }).status
+          : 500;
+      if (status === 403 || status === 503) {
+        res.status(status).json({
+          error: e instanceof Error ? e.message : String(e),
+        });
+        return;
+      }
       console.error("[rebuildWeeklyReportsManualV2]", e);
       res.status(500).json({
         error: e instanceof Error ? e.message : String(e),

@@ -1,20 +1,37 @@
 import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-
-type Section = {
-  id: string;
-  title: string;
-  content: string;
-};
+import type {
+  HelpScoringSectionCopy,
+  HelpTextBlock,
+} from "../../../../../lib/settings/helpFaqsCopy";
 
 type Props = {
-  sections: Section[];
+  sections: readonly HelpScoringSectionCopy[];
   defaultOpenId?: string;
   intro?: string;
 };
 
-/** Web `ScoringLogicSections` 相当 */
-export default function HelpScoringLogicNative({ sections, defaultOpenId, intro }: Props) {
+function ScoringBlocks({ blocks }: { blocks: readonly HelpTextBlock[] }) {
+  return (
+    <View style={styles.blocks}>
+      {blocks.map((block, index) => (
+        <Text
+          key={`${block.kind}-${index}`}
+          style={block.kind === "heading" ? styles.heading : styles.sectionText}
+        >
+          {block.text}
+        </Text>
+      ))}
+    </View>
+  );
+}
+
+/** Web `ScoringLogicSections` 相当 — 四角・白黒 */
+export default function HelpScoringLogicNative({
+  sections,
+  defaultOpenId,
+  intro,
+}: Props) {
   const [openId, setOpenId] = useState<string | null>(defaultOpenId ?? null);
 
   return (
@@ -33,7 +50,7 @@ export default function HelpScoringLogicNative({ sections, defaultOpenId, intro 
             </Pressable>
             {open ? (
               <View style={styles.sectionBody}>
-                <Text style={styles.sectionText}>{section.content}</Text>
+                <ScoringBlocks blocks={section.blocks} />
               </View>
             ) : null}
           </View>
@@ -52,10 +69,10 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   section: {
-    borderRadius: 12,
+    borderRadius: 0,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
-    backgroundColor: "rgba(255,255,255,0.03)",
+    borderColor: "rgba(255,255,255,0.2)",
+    backgroundColor: "#000000",
     overflow: "hidden",
   },
   sectionHeader: {
@@ -72,15 +89,22 @@ const styles = StyleSheet.create({
     color: "rgba(255,255,255,0.9)",
   },
   toggle: {
-    fontSize: 12,
-    color: "rgba(103,232,249,0.8)",
+    fontSize: 14,
+    color: "rgba(255,255,255,0.7)",
     marginLeft: 8,
   },
   sectionBody: {
     borderTopWidth: 1,
-    borderTopColor: "rgba(255,255,255,0.1)",
+    borderTopColor: "rgba(255,255,255,0.15)",
     paddingHorizontal: 12,
     paddingVertical: 10,
+  },
+  blocks: { gap: 8 },
+  heading: {
+    fontSize: 14,
+    lineHeight: 22,
+    fontWeight: "600",
+    color: "rgba(255,255,255,0.92)",
   },
   sectionText: {
     fontSize: 14,

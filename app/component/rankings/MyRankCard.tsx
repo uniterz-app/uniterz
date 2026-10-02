@@ -18,10 +18,8 @@ import {
   type ReactNode,
 } from "react";
 import { RankingsAvatarCircle } from "@/app/component/rankings/RankingsAvatarCircle";
-import {
-  ProCyberBadge,
-  proBadgeStaticMotion,
-} from "@/app/component/common/ProCyberBadge";
+import { RankingNameBadges } from "@/app/component/common/RankingNameBadges";
+import { proBadgeStaticMotion } from "@/app/component/common/ProCyberBadge";
 import { RankDeltaBadge } from "@/app/component/rankings/RankDeltaBadge";
 import { FLAG_SRC } from "@/lib/rankings/country";
 import { dateKeyJST } from "@/lib/rankings/rankSnapshotDate";
@@ -48,6 +46,7 @@ import {
 } from "@/lib/rankings/myRankRankingProgress";
 import type { EstimatedPeriodUnits } from "@/lib/rankings/estimatePeriodRankingUnits";
 import { periodRankingUnitMetricLabel } from "@/lib/units/periodRankingUnitRewards";
+import { L, resolveLocalizedLang } from "@/lib/i18n/localize";
 
 export type { MyRankProgressPoint };
 
@@ -65,6 +64,8 @@ type Props = {
   value: number;
   displayName: string;
   photoURL?: string | null;
+  uid?: string | null;
+  handle?: string | null;
   totalPosts?: number;
   loading?: boolean;
   statsScramble?: boolean;
@@ -292,7 +293,7 @@ function RankMetaStrip({
           "inline-block shrink-0 font-bold uppercase tracking-[0.14em] tabular-nums leading-none",
         ].join(" ")}
         style={{
-          color: "rgba(255,255,255,0.42)",
+          color: "rgba(255,255,255,0.78)",
           fontSize: metaSize,
           transform: "skewX(-12deg)",
         }}
@@ -306,7 +307,7 @@ function RankMetaStrip({
             "inline-block min-w-0 truncate font-bold uppercase tracking-[0.12em] tabular-nums leading-none",
           ].join(" ")}
           style={{
-            color: "rgba(0,245,255,0.55)",
+            color: "rgba(0,245,255,0.88)",
             fontSize: metaSize,
             transform: "skewX(-12deg)",
           }}
@@ -466,6 +467,8 @@ export default function MyRankCard({
   value,
   displayName,
   photoURL,
+  uid = null,
+  handle = null,
   totalPosts,
   loading = false,
   statsScramble = false,
@@ -499,6 +502,8 @@ export default function MyRankCard({
 
   const freeTier = displayTier === "free";
   const proTier = displayTier === "pro";
+  void uid;
+  void handle;
 
   const frameTone = resolveMyRankCardFrameTone(
     displayTier != null ? null : rankDeltaPlaces
@@ -614,39 +619,68 @@ export default function MyRankCard({
     !hideRankProgress &&
     metric === "totalScore" &&
     (displayTier != null || rankProgress !== undefined);
-  const showEstimatedUnits =
-    proTier && estimatedUnits != null && !loading && !statsPending;
+  /** loading 解除まで帯を出さないと初回だけ高さが跳ねて線枠がズレる */
+  const showEstimatedUnitsBand = proTier && estimatedUnits != null;
+  const estimatedUnitsPending = showEstimatedUnitsBand && (loading || statsPending);
   const progressSnapshotLimit = resolveMyRankProgressSnapshotLimit({
     displayTier,
     isPro,
   });
   const progressPoints = rankProgress ?? [];
 
-  const estimatedUnitsLabel =
-    language === "en" ? "EST. UNITS" : "推定獲得 UNIT";
+  const loc = resolveLocalizedLang(language);
+  const estimatedUnitsLabel = L(loc, {
+    ja: "推定獲得 UNIT",
+    en: "EST. UNITS",
+    ko: "예상 UNIT",
+    zh: "预计 UNIT",
+    es: "UNIT EST.",
+    pt: "UNIT EST.",
+    fr: "UNIT EST.",
+  });
   const estimatedUnitsHint =
     estimatedUnits?.period === "monthly"
-      ? language === "en"
-        ? "Sum of 4 metrics · current ranks · final after period ends"
-        : "4指標合計（総合・勝率・Upset・得点者）· 現順位ベース"
-      : language === "en"
-        ? "Based on current ranks · final after period ends"
-        : "現順位ベース · 期間確定後に付与";
+      ? L(loc, {
+          ja: "4指標合計（総合・勝率・Upset・得点者）· 現順位ベース",
+          en: "Sum of 4 metrics · current ranks · final after period ends",
+          ko: "4지표 합계 · 현재 순위 기준 · 기간 종료 후 확정",
+          zh: "四项合计 · 按当前排名 · 周期结束后结算",
+          es: "Suma de 4 métricas · rangos actuales · final al cerrar el periodo",
+          pt: "Soma de 4 métricas · ranks atuais · final após o período",
+          fr: "Somme de 4 métriques · rangs actuels · final en fin de période",
+        })
+      : L(loc, {
+          ja: "現順位ベース · 期間確定後に付与",
+          en: "Based on current ranks · final after period ends",
+          ko: "현재 순위 기준 · 기간 종료 후 지급",
+          zh: "按当前排名 · 周期结束后发放",
+          es: "Según rangos actuales · final al cerrar el periodo",
+          pt: "Com base nos ranks atuais · final após o período",
+          fr: "Selon les rangs actuels · final en fin de période",
+        });
   const estimatedBreakdown =
-    estimatedUnits && estimatedUnits.lines.length > 0
+    estimatedUnitsPending
+      ? null
+      : estimatedUnits && estimatedUnits.lines.length > 0
       ? estimatedUnits.lines
           .map((line) => {
             const label = periodRankingUnitMetricLabel(
               line.metric,
-              language === "en" ? "en" : "ja"
+              loc === "ja" ? "ja" : "en"
             );
             return `${label} #${line.rank} +${line.units}`;
           })
           .join(" · ")
       : estimatedUnits?.period === "monthly"
-        ? language === "en"
-          ? "Overall + Win% + Upset + Scorer"
-          : "総合 + 勝率 + Upset + 得点者"
+        ? L(loc, {
+            ja: "総合 + 勝率 + Upset + 得点者",
+            en: "Overall + Win% + Upset + Scorer",
+            ko: "종합 + 승률 + Upset + 득점자",
+            zh: "总分 + 胜率 + Upset + 得分手",
+            es: "General + Win% + Upset + Scorer",
+            pt: "Geral + Win% + Upset + Scorer",
+            fr: "Global + Win% + Upset + Scorer",
+          })
         : null;
 
   const outerPad =
@@ -654,13 +688,11 @@ export default function MyRankCard({
       ? (ui.outerPadWide as string)
       : (ui.outerPad as string);
 
-  /** 読み込み枠でパスを一度描くと、データ到着後にサイズが変わって再描画される */
-  if (!ready || statsPending) {
-    return null;
-  }
+  void outerPad;
 
   if (freeTier) {
-    const listRank = rank != null && rank >= 1 ? rank : 99;
+    const hasRank = !loading && !statsPending && rank != null && rank >= 1;
+    const listRank = hasRank ? rank! : 99;
     const freeInner = (
       <CyberRankingListRow
         rank={listRank}
@@ -675,6 +707,8 @@ export default function MyRankCard({
         scoreLayout={layout === "web" ? "web" : "stack"}
         hideAccentBar
         rankOverline={m.rankings.yourRank}
+        rankDisplayValue={hasRank ? undefined : "--"}
+        rankMuted={!hasRank}
         scoreSlot={
           <CyberRankingScore
             rank={listRank}
@@ -804,6 +838,8 @@ export default function MyRankCard({
               scoreLayout={layout === "web" ? "web" : "stack"}
               hideAccentBar
               rankDeltaPlaces={
+                !loading &&
+                !statsPending &&
                 typeof rankDeltaPlaces === "number" &&
                 Number.isFinite(rankDeltaPlaces)
                   ? rankDeltaPlaces
@@ -811,17 +847,20 @@ export default function MyRankCard({
               }
               language={language}
               rankDisplayValue={
-                rank != null && rank >= 1 ? undefined : "--"
+                !loading && !statsPending && rank != null && rank >= 1
+                  ? undefined
+                  : "--"
               }
-              rankMuted={!(rank != null && rank >= 1)}
+              rankMuted={
+                loading || statsPending || !(rank != null && rank >= 1)
+              }
               nameExtra={
-                showProBadge ? (
-                  <ProCyberBadge
-                    {...proBadgeStaticMotion}
-                    emphasized
-                    ariaLabel={m.common.proMember}
-                  />
-                ) : null
+                <RankingNameBadges
+                  {...proBadgeStaticMotion}
+                  emphasized
+                  isPro={showProBadge}
+                  proLabel={m.common.proMember}
+                />
               }
               scoreSlot={
                 <CyberRankingScore
@@ -830,7 +869,11 @@ export default function MyRankCard({
                   counted={value}
                   compact={layout === "mobile"}
                   scoreLayout={layout === "web" ? "web" : "stack"}
-                  plainWhite={!(rank != null && rank >= 1)}
+                  plainWhite={
+                    loading ||
+                    statsPending ||
+                    !(rank != null && rank >= 1)
+                  }
                 />
               }
               bare
@@ -853,9 +896,9 @@ export default function MyRankCard({
             </div>
           ) : null}
 
-          {showEstimatedUnits && estimatedUnits ? (
+          {showEstimatedUnitsBand && estimatedUnits ? (
             <div
-              className="border-t px-2.5 py-2"
+              className="min-h-[52px] border-t px-2.5 py-2"
               style={{ borderColor: "rgba(255,255,255,0.08)" }}
             >
               <div className="flex items-center justify-between gap-2">
@@ -868,7 +911,16 @@ export default function MyRankCard({
                   >
                     {estimatedUnitsLabel}
                   </p>
-                  {estimatedBreakdown ? (
+                  {estimatedUnits.period === "monthly" ? (
+                    <p
+                      className={[
+                        nameOxanium.className,
+                        "mt-0.5 min-h-[12px] truncate text-[8px] font-semibold uppercase tracking-[0.08em] text-white/40",
+                      ].join(" ")}
+                    >
+                      {estimatedBreakdown ?? "\u00a0"}
+                    </p>
+                  ) : estimatedBreakdown ? (
                     <p
                       className={[
                         nameOxanium.className,
@@ -894,7 +946,9 @@ export default function MyRankCard({
                   ].join(" ")}
                   style={{ color: GOLD, transform: "skewX(-12deg)" }}
                 >
-                  +{estimatedUnits.total.toLocaleString("en-US")}
+                  {estimatedUnitsPending
+                    ? "···"
+                    : `+${estimatedUnits.total.toLocaleString("en-US")}`}
                   <span
                     className="ml-1.5 text-[11px] font-extrabold uppercase tracking-[0.1em]"
                     style={{ color: "rgba(255,214,90,0.78)" }}

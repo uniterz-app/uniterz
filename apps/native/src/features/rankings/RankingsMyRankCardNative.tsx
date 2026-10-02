@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { cyberAlert } from "../../components/cyberAlert";
-import { StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import type { MyRankMiniMetric } from "../../../../../app/component/rankings/MyRankCard";
 import type { MobileMetric } from "../../../../../lib/rankings/rankingMetrics";
 import type { RankTierGapHint } from "../../../../../lib/rankings/rankTierMilestone";
@@ -15,13 +16,17 @@ import {
   deriveMyRankListAvgRow,
   type MyRankStatsSource,
 } from "../../../../../lib/rankings/myRankCardFocus";
+import { L, resolveLocalizedLang } from "../../../../../lib/i18n/localize";
+import { buildRankCardShareCaption } from "../../../../../lib/rankings/shareMyRankCardImage";
 import { rankingsTexts, type RankingsLanguage } from "./rankingsTexts";
 import { CyberRankingListRowNative } from "./CyberRankingListRowNative";
 import { MyRankCardFrameNative, resolveMyRankFrameTone } from "./MyRankCardFrameNative";
 import { rankingsUiStyles as styles } from "./rankingsUiStyles";
-import { shareMyRankCardNative } from "./shareRankCardNative";
-import ShareLinkCaptureFooterNative from "../share/ShareLinkCaptureFooterNative";
-import { buildRankingsShareUrl, getShareAppOrigin } from "../../../../../lib/share/shareAppUrls";
+import {
+  captureViewAsPngNative,
+  SHARE_CAPTURE_BG,
+  shareImageUriNative,
+} from "../share/shareImageNative";
 
 export type MyRankCardShareState = {
   canShare: boolean;
@@ -35,6 +40,8 @@ export function MyRankCardNative({
   value,
   displayName,
   photoURL,
+  uid = null,
+  handle = null,
   totalPosts,
   totalEntries,
   loading,
@@ -60,6 +67,8 @@ export function MyRankCardNative({
   value: number;
   displayName: string;
   photoURL?: string | null;
+  uid?: string | null;
+  handle?: string | null;
   totalPosts?: number;
   totalEntries?: number | null;
   loading?: boolean;
@@ -94,6 +103,8 @@ export function MyRankCardNative({
   const statsPending = !!statsScramble;
   void miniMetrics;
   void rankTierGap;
+  void uid;
+  void handle;
 
   const posts =
     typeof totalPosts === "number" ? totalPosts : (statsSource?.totalPosts ?? 0);
@@ -104,79 +115,133 @@ export function MyRankCardNative({
     !hideRankProgress &&
     metric === "totalScore" &&
     (displayTier != null || rankProgress !== undefined);
-  const showEstimatedUnits =
-    proTier && estimatedUnits != null && !loading && !statsPending;
+  /** loading 解除まで帯を出さないと初回だけ高さが跳ねて線枠がズレる */
+  const showEstimatedUnitsBand = proTier && estimatedUnits != null;
+  const estimatedUnitsPending =
+    showEstimatedUnitsBand && (!!loading || statsPending);
   const progressSnapshotLimit = resolveMyRankProgressSnapshotLimit({
     displayTier,
     isPro,
   });
   const progressPoints = rankProgress ?? [];
-  const estimatedUnitsLabel =
-    language === "en" ? "EST. UNITS" : "推定獲得 UNIT";
+  const loc = resolveLocalizedLang(language);
+  const estimatedUnitsLabel = L(loc, {
+    ja: "推定獲得 UNIT",
+    en: "EST. UNITS",
+    ko: "예상 UNIT",
+    zh: "预计 UNIT",
+    es: "UNIT EST.",
+    pt: "UNIT EST.",
+    fr: "UNIT EST.",
+  });
   const estimatedUnitsHint =
     estimatedUnits?.period === "monthly"
-      ? language === "en"
-        ? "Sum of 4 metrics · current ranks · final after period ends"
-        : "4指標合計（総合・勝率・Upset・得点者）· 現順位ベース"
-      : language === "en"
-        ? "Based on current ranks · final after period ends"
-        : "現順位ベース · 期間確定後に付与";
+      ? L(loc, {
+          ja: "4指標合計（総合・勝率・Upset・得点者）· 現順位ベース",
+          en: "Sum of 4 metrics · current ranks · final after period ends",
+          ko: "4지표 합계 · 현재 순위 기준 · 기간 종료 후 확정",
+          zh: "四项合计 · 按当前排名 · 周期结束后结算",
+          es: "Suma de 4 métricas · rangos actuales · final al cerrar el periodo",
+          pt: "Soma de 4 métricas · ranks atuais · final após o período",
+          fr: "Somme de 4 métriques · rangs actuels · final en fin de période",
+        })
+      : L(loc, {
+          ja: "現順位ベース · 期間確定後に付与",
+          en: "Based on current ranks · final after period ends",
+          ko: "현재 순위 기준 · 기간 종료 후 지급",
+          zh: "按当前排名 · 周期结束后发放",
+          es: "Según rangos actuales · final al cerrar el periodo",
+          pt: "Com base nos ranks atuais · final após o período",
+          fr: "Selon les rangs actuels · final en fin de période",
+        });
   const estimatedBreakdown =
-    estimatedUnits && estimatedUnits.lines.length > 0
+    estimatedUnitsPending
+      ? null
+      : estimatedUnits && estimatedUnits.lines.length > 0
       ? estimatedUnits.lines
           .map((line) => {
             const label = periodRankingUnitMetricLabel(
               line.metric,
-              language === "en" ? "en" : "ja"
+              loc === "ja" ? "ja" : "en"
             );
             return `${label} #${line.rank} +${line.units}`;
           })
           .join(" · ")
       : estimatedUnits?.period === "monthly"
-        ? language === "en"
-          ? "Overall + Win% + Upset + Scorer"
-          : "総合 + 勝率 + Upset + 得点者"
+        ? L(loc, {
+            ja: "総合 + 勝率 + Upset + 得点者",
+            en: "Overall + Win% + Upset + Scorer",
+            ko: "종합 + 승률 + Upset + 득점자",
+            zh: "总分 + 胜率 + Upset + 得分手",
+            es: "General + Win% + Upset + Scorer",
+            pt: "Geral + Win% + Upset + Scorer",
+            fr: "Global + Win% + Upset + Scorer",
+          })
         : null;
 
   const [sharing, setSharing] = useState(false);
   const captureRef = useRef<View>(null);
 
-  const canShare = !loading && !statsPending && rank != null && !sharing;
-  const shareLinkUrl = buildRankingsShareUrl();
+  /**
+   * 共有耳はカード本体と同じタイミングで出す（loading 待ちで遅らせない）。
+   * 押下は共有処理中だけ止める。順位未確定（--）でも画像共有可。
+   */
+  const showShareEar = !freeTier;
+  const canShare = showShareEar && !sharing;
+
+  const waitNextPaint = () =>
+    new Promise<void>((resolve) => {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => resolve());
+      });
+    });
 
   const handleShare = useCallback(async () => {
     if (!canShare) return;
     setSharing(true);
     try {
-      const result = await shareMyRankCardNative(captureRef, {
-        language: language === "en" ? "en" : "ja",
+      const caption = buildRankCardShareCaption({
+        language: loc,
         rank,
         leagueLabel,
         totalEntries,
-        appBaseUrl: getShareAppOrigin(),
+      });
+      await waitNextPaint();
+      const uri = await captureViewAsPngNative(captureRef);
+      const result = await shareImageUriNative(uri, {
+        caption,
       });
       if (result === "failed") {
         cyberAlert("", t.shareRankCardFailed);
       }
+    } catch {
+      cyberAlert("", t.shareRankCardFailed);
     } finally {
       setSharing(false);
     }
-  }, [canShare, language, leagueLabel, rank, t.shareRankCardFailed, totalEntries]);
+  }, [
+    canShare,
+    loc,
+    leagueLabel,
+    rank,
+    t.shareRankCardFailed,
+    totalEntries,
+  ]);
 
   useEffect(() => {
     onShareStateChange?.({
-      canShare: freeTier ? false : canShare,
+      canShare,
       sharing,
       share: () => void handleShare(),
     });
-  }, [canShare, sharing, handleShare, onShareStateChange, freeTier]);
+  }, [canShare, sharing, handleShare, onShareStateChange]);
 
-  if (loading || statsPending) {
-    return null;
-  }
+  /** 読み込み中も枠は維持（Pick Up→PRO 切替の unmount フラッシュ防止） */
+  const rankPending = loading || statsPending;
+  const hasRank = !rankPending && rank != null && rank >= 1;
 
   if (freeTier) {
-    const listRank = rank != null && rank >= 1 ? rank : 99;
+    const listRank = hasRank ? rank! : 99;
     return (
       <View style={[styles.myRankOuter, mobileWide ? styles.myRankOuterWide : null]}>
         <MyRankCardFrameNative
@@ -200,6 +265,8 @@ export function MyRankCardNative({
               hideAccentBar
               rankOverline={t.yourRank}
               plainWhiteScore
+              rankDisplayValue={hasRank ? undefined : "--"}
+              rankMuted={!hasRank}
             />
           </View>
         </MyRankCardFrameNative>
@@ -208,9 +275,40 @@ export function MyRankCardNative({
   }
 
   return (
-    <View style={[styles.myRankOuter, mobileWide ? styles.myRankOuterWide : null]}>
+    <View
+      style={[
+        styles.myRankOuter,
+        mobileWide ? styles.myRankOuterWide : null,
+        showShareEar ? styles.myRankOuterWithShareEar : null,
+      ]}
+    >
       <View style={styles.myRankCaptureWrap}>
-        <View ref={captureRef} collapsable={false}>
+        {showShareEar ? (
+          <Pressable
+            onPress={() => void handleShare()}
+            disabled={!canShare}
+            style={({ pressed }) => [
+              styles.myRankShareEar,
+              proTier ? styles.myRankShareEarPro : styles.myRankShareEarCyan,
+              pressed && { opacity: 0.85 },
+              !canShare && { opacity: 0.45 },
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel={t.shareMyRank}
+            hitSlop={6}
+          >
+            <MaterialCommunityIcons
+              name="share-variant"
+              size={14}
+              color={proTier ? "rgba(232,198,106,0.95)" : "rgba(0,245,255,0.95)"}
+            />
+          </Pressable>
+        ) : null}
+        <View
+          ref={captureRef}
+          collapsable={false}
+          style={sharing ? { backgroundColor: SHARE_CAPTURE_BG } : undefined}
+        >
           <MyRankCardFrameNative
             tone={frameTone}
             proSpec={proTier}
@@ -220,7 +318,7 @@ export function MyRankCardNative({
             {/* 上段: リスト行と同じ配置 / 下段: Pro 専用 */}
             <View style={styles.myRankProStack}>
                 <CyberRankingListRowNative
-                  rank={rank != null && rank >= 1 ? rank : 99}
+                  rank={hasRank ? rank! : 99}
                   displayName={displayName.trim() || "?"}
                   photoURL={photoURL}
                   metric={metric}
@@ -230,6 +328,7 @@ export function MyRankCardNative({
                   language={language}
                   isPro={showProBadge}
                   rankDeltaPlaces={
+                    !rankPending &&
                     typeof rankDeltaPlaces === "number" &&
                     Number.isFinite(rankDeltaPlaces)
                       ? rankDeltaPlaces
@@ -237,11 +336,9 @@ export function MyRankCardNative({
                   }
                   hideAccentBar
                   bare
-                  rankDisplayValue={
-                    rank != null && rank >= 1 ? undefined : "--"
-                  }
-                  rankMuted={!(rank != null && rank >= 1)}
-                  plainWhiteScore={!(rank != null && rank >= 1)}
+                  rankDisplayValue={hasRank ? undefined : "--"}
+                  rankMuted={!hasRank}
+                  plainWhiteScore={!hasRank}
                 />
 
               {showRankingProgress ? (
@@ -250,7 +347,7 @@ export function MyRankCardNative({
                     points={progressPoints}
                     maxSnapshots={progressSnapshotLimit}
                     loading={rankProgressLoading}
-                    language={language === "en" ? "en" : "ja"}
+                    language={language}
                     emptyHint={t.rankingProgressNoData}
                     numbersOnly
                     dense
@@ -258,15 +355,25 @@ export function MyRankCardNative({
                 </View>
               ) : null}
 
-              {showEstimatedUnits && estimatedUnits ? (
+              {showEstimatedUnitsBand && estimatedUnits ? (
                 <View style={myRankLocalStyles.estUnitsBand}>
                   <View style={myRankLocalStyles.estUnitsRow}>
                     <View style={myRankLocalStyles.estUnitsLeft}>
                       <Text style={myRankLocalStyles.estUnitsLabel}>
                         {estimatedUnitsLabel}
                       </Text>
-                      {estimatedBreakdown ? (
-                        <Text style={myRankLocalStyles.estUnitsBreakdown} numberOfLines={2}>
+                      {estimatedUnits.period === "monthly" ? (
+                        <Text
+                          style={myRankLocalStyles.estUnitsBreakdown}
+                          numberOfLines={2}
+                        >
+                          {estimatedBreakdown ?? " "}
+                        </Text>
+                      ) : estimatedBreakdown ? (
+                        <Text
+                          style={myRankLocalStyles.estUnitsBreakdown}
+                          numberOfLines={2}
+                        >
                           {estimatedBreakdown}
                         </Text>
                       ) : null}
@@ -274,7 +381,9 @@ export function MyRankCardNative({
                     </View>
                     <View style={myRankLocalStyles.estUnitsValueRow}>
                       <Text style={myRankLocalStyles.estUnitsValue}>
-                        +{estimatedUnits.total.toLocaleString("en-US")}
+                        {estimatedUnitsPending
+                          ? "···"
+                          : `+${estimatedUnits.total.toLocaleString("en-US")}`}
                       </Text>
                       <Text style={myRankLocalStyles.estUnitsUnit}>Unit</Text>
                     </View>
@@ -282,8 +391,6 @@ export function MyRankCardNative({
                 </View>
               ) : null}
             </View>
-
-            <ShareLinkCaptureFooterNative url={shareLinkUrl} visible={sharing} />
           </MyRankCardFrameNative>
         </View>
       </View>
@@ -297,6 +404,7 @@ const myRankLocalStyles = StyleSheet.create({
     borderTopColor: "rgba(255,255,255,0.08)",
     paddingHorizontal: 10,
     paddingVertical: 8,
+    minHeight: 52,
   },
   estUnitsRow: {
     flexDirection: "row",
@@ -318,6 +426,7 @@ const myRankLocalStyles = StyleSheet.create({
   },
   estUnitsBreakdown: {
     marginTop: 2,
+    minHeight: 12,
     fontFamily: "Oxanium_700Bold",
     fontSize: 8,
     fontWeight: "600",

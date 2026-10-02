@@ -1,11 +1,31 @@
 /**
  * Web `RankingListProSkinFx` 相当 — ランキング行用 Pro Skin（cover + wash）
+ * SVG は 1 回焼いて Image に差し替える（同じスキンの行は使い回し）。
+ * 初回マウントで下から浮き上がる入場。
  */
-import { useMemo, useState } from "react";
-import { Image, LayoutChangeEvent, StyleSheet, View } from "react-native";
+import { useEffect, useMemo, useState } from "react";
+import {
+  Image,
+  LayoutChangeEvent,
+  StyleSheet,
+  View,
+} from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { SvgXml } from "react-native-svg";
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withDelay,
+  withTiming,
+} from "react-native-reanimated";
 import type { ProfilePlanProBgVariant } from "../../../../../lib/profile/profilePlanProBgVariants";
+import RasterizeOnceNative, {
+  peekProSkinRaster,
+  proSkinRasterCacheKey,
+  subscribeProSkinRaster,
+} from "../profile/kinetik/RasterizeOnceNative";
 import {
   getProfilePlanProAtmosHexSvg,
   getProfilePlanProAtmosHudSvg,
@@ -17,6 +37,8 @@ import {
   PROFILE_PLAN_PRO_BEAST_CANVAS,
 } from "../../../../../lib/profile/profilePlanProBeastPattern";
 import { isProfilePlanProBeastBgVariant } from "../../../../../lib/profile/profilePlanProBeastBgVariants";
+import { isProfilePlanProDustTextureVariant } from "../../../../../lib/profile/profilePlanProDustTextures";
+import { PROFILE_PLAN_PRO_DUST_RANK_TEXTURE_SOURCES } from "../profile/kinetik/profilePlanProDustTextureSourcesNative";
 import {
   getProfilePlanProFormHudSvg,
   getProfilePlanProFormSkinSvg,
@@ -168,14 +190,48 @@ export default function RankingListProSkinFxNative({
   intensity = "medium",
 }: Props) {
   const [{ w, h }, setSize] = useState({ w: 0, h: 0 });
+  const [, setRasterTick] = useState(0);
+  const reduced = useReducedMotion() ?? false;
+  const rise = useSharedValue(reduced ? 1 : 0);
+
+  useEffect(() => subscribeProSkinRaster(() => setRasterTick((n) => n + 1)), []);
+
+  useEffect(() => {
+    if (reduced) {
+      rise.value = 1;
+      return;
+    }
+    rise.value = 0;
+    rise.value = withDelay(
+      30,
+      withTiming(1, {
+        duration: 560,
+        easing: Easing.out(Easing.cubic),
+      })
+    );
+  }, [variant, intensity, reduced, rise]);
+
+  const riseStyle = useAnimatedStyle(() => ({
+    opacity: rise.value,
+    transform: [
+      { translateY: (1 - rise.value) * 14 },
+      { scale: 1.04 - rise.value * 0.04 },
+    ],
+  }));
 
   const onLayout = (e: LayoutChangeEvent) => {
     const { width, height } = e.nativeEvent.layout;
     if (width !== w || height !== h) setSize({ w: width, h: height });
   };
 
+  const cacheKey =
+    w > 0 && h > 0
+      ? proSkinRasterCacheKey(`rank:${variant}:${intensity}`, w, h)
+      : "";
+  const cached = cacheKey ? peekProSkinRaster(cacheKey) : null;
+
   const layers = useMemo(() => {
-    if (w <= 0 || h <= 0) return null;
+    if (cached || w <= 0 || h <= 0) return null;
 
     if (isProfilePlanProScaleBgVariant(variant)) {
       return (
@@ -335,12 +391,68 @@ export default function RankingListProSkinFxNative({
         <Wash intensity={intensity} />
       </>
     );
-  }, [variant, intensity, w, h]);
+  }, [cached, variant, intensity, w, h]);
+
+  if (cached) {
+    return (
+      <Animated.View style={[styles.root, riseStyle]} pointerEvents="none">
+        <Image
+          source={{ uri: cached }}
+          style={StyleSheet.absoluteFillObject}
+          resizeMode="stretch"
+          pointerEvents="none"
+        />
+      </Animated.View>
+    );
+  }
+
+  if (isProfilePlanProDustTextureVariant(variant)) {
+    const source = PROFILE_PLAN_PRO_DUST_RANK_TEXTURE_SOURCES[variant];
+    const skinOp = intensity === "medium" ? 1 : 0.78;
+    return (
+      <Animated.View
+        pointerEvents="none"
+        style={[styles.root, riseStyle]}
+        onLayout={onLayout}
+      >
+        {w > 0 && h > 0 ? (
+          <>
+            <Image
+              source={source}
+              style={{
+                position: "absolute",
+                left: 0,
+                top: 0,
+                width: w,
+                height: h,
+                opacity: skinOp,
+              }}
+              resizeMode="stretch"
+            />
+            <Wash intensity={intensity} />
+          </>
+        ) : null}
+      </Animated.View>
+    );
+  }
 
   return (
-    <View pointerEvents="none" style={styles.root} onLayout={onLayout}>
-      {layers}
-    </View>
+    <Animated.View
+      pointerEvents="none"
+      style={[styles.root, riseStyle]}
+      onLayout={onLayout}
+    >
+      {w > 0 && h > 0 ? (
+        <RasterizeOnceNative
+          cacheKey={cacheKey}
+          width={w}
+          height={h}
+          pixelRatio={1}
+        >
+          {layers}
+        </RasterizeOnceNative>
+      ) : null}
+    </Animated.View>
   );
 }
 

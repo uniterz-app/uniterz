@@ -158,5 +158,13 @@ export type PredictionPostV2 = {
 
     rankingReady?: boolean;
     rankingFactor?: 0 | 1;
+    /** finalize: オープンランキング対象 */
+    countedForRanking?: boolean;
+    /** finalize: ピックアップランキング対象 */
+    countedForPickup?: boolean;
   } | null;
+
+  /** ピックアップ試合（作成時・finalize 埋め込み） */
+  isPickup?: boolean;
+  pickupWeekKey?: string | null;
 };

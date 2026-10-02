@@ -1,4 +1,4 @@
-/** Web `LiveGameBoxScorePanel` 相当 — チーム色グラデ枠 */
+/** Web `LiveGameBoxScorePanel` 相当 — チーム色グラデ枠 + BASIC/ADVANCED */
 import { useMemo, useState } from "react";
 import {
   Pressable,
@@ -15,30 +15,21 @@ import type {
   LiveGameStatsReport,
 } from "../../../../../../lib/games/liveGameStats";
 import {
+  liveGameBoxColumnValues,
+  liveGameBoxColumns,
+  liveGameBoxHasAdvancedData,
+  type LiveGameBoxScoreMode,
+} from "../../../../../../lib/games/liveGameBoxScoreColumns";
+import {
   getTeamJerseyPrimaryColor,
   getTeamJerseySecondaryColor,
 } from "../../../../../../lib/team-colors";
 import JerseyMarkSvg from "../JerseyMarkSvg";
 import { METRIC_FONT } from "../../rankings/rankingsUiTheme";
 
-const BOX_COLS = [
-  { key: "min", label: "MIN" },
-  { key: "pts", label: "PTS" },
-  { key: "reb", label: "REB" },
-  { key: "ast", label: "AST" },
-  { key: "stl", label: "STL" },
-  { key: "blk", label: "BLK" },
-  { key: "tov", label: "TO" },
-  { key: "fg", label: "FG" },
-  { key: "fg3", label: "3P" },
-  { key: "ft", label: "FT" },
-  { key: "pm", label: "+/-" },
-] as const;
-
-const EMPHASIS = new Set(["pts", "fg", "fg3"]);
-
 type Props = {
   report: LiveGameStatsReport;
+  onOpenPlayerDetail?: (playerId: string) => void;
 };
 
 function hexToRgba(hex: string, alpha: number): string {
@@ -66,29 +57,60 @@ function sortBoxPlayers(players: LiveGameBoxPlayer[]): LiveGameBoxPlayer[] {
   });
 }
 
-function boxValues(p: LiveGameBoxPlayer): string[] {
-  const pm = p.plusMinus;
-  return [
-    String(p.min),
-    String(p.pts),
-    String(p.reb),
-    String(p.ast),
-    String(p.stl),
-    String(p.blk),
-    String(p.tov),
-    p.fg,
-    p.fg3,
-    p.ft,
-    pm > 0 ? `+${pm}` : String(pm),
+function BoxScoreModeToggle({
+  mode,
+  onChange,
+  advancedAvailable,
+}: {
+  mode: LiveGameBoxScoreMode;
+  onChange: (mode: LiveGameBoxScoreMode) => void;
+  advancedAvailable: boolean;
+}) {
+  const tabs: { id: LiveGameBoxScoreMode; label: string }[] = [
+    { id: "basic", label: "BASIC" },
+    { id: "advanced", label: "ADVANCED" },
   ];
+  return (
+    <View style={styles.modeRow}>
+      {tabs.map((tab) => {
+        const active = mode === tab.id;
+        const disabled = tab.id === "advanced" && !advancedAvailable;
+        return (
+          <Pressable
+            key={tab.id}
+            disabled={disabled}
+            onPress={() => onChange(tab.id)}
+            style={[
+              styles.modeBtn,
+              active ? styles.modeBtnActive : styles.modeBtnIdle,
+              disabled ? styles.modeBtnDisabled : null,
+            ]}
+          >
+            <Text
+              style={[
+                styles.modeBtnText,
+                active ? styles.modeBtnTextActive : styles.modeBtnTextIdle,
+              ]}
+            >
+              {tab.label}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
 }
 
 function TeamBoxCard({
   block,
   defaultOpen,
+  mode,
+  onOpenPlayerDetail,
 }: {
   block: LiveGameBoxTeam;
   defaultOpen: boolean;
+  mode: LiveGameBoxScoreMode;
+  onOpenPlayerDetail?: (playerId: string) => void;
 }) {
   const [open, setOpen] = useState(defaultOpen);
   const teamPrimary = getTeamJerseyPrimaryColor("nba", block.teamId);
@@ -97,12 +119,13 @@ function TeamBoxCard({
   const divider = hexToRgba(teamPrimary, 0.22);
   const sideLabel = block.side === "home" ? "HOME" : "AWAY";
   const players = useMemo(() => sortBoxPlayers(block.players), [block.players]);
+  const columns = liveGameBoxColumns(mode);
 
   return (
     <View style={[styles.card, { borderColor: border }]}>
       <Pressable
         onPress={() => setOpen((v) => !v)}
-        style={[
+        style={({ pressed }) => [
           styles.header,
           open
             ? {
@@ -110,6 +133,7 @@ function TeamBoxCard({
                 borderBottomColor: divider,
               }
             : null,
+          pressed ? styles.headerPressed : null,
         ]}
       >
         <JerseyMarkSvg
@@ -145,16 +169,16 @@ function TeamBoxCard({
                 <Text style={styles.thPlayer}>Player</Text>
                 <Text style={styles.thPos}>Pos</Text>
               </View>
-              {BOX_COLS.map((c) => (
+              {columns.map((c) => (
                 <Text key={c.key} style={styles.thStat}>
                   {c.label}
                 </Text>
               ))}
             </View>
             {players.map((p) => {
-              const values = boxValues(p);
-              return (
-                <View key={p.playerId} style={styles.tableRow}>
+              const values = liveGameBoxColumnValues(p, mode);
+              const rowInner = (
+                <>
                   <View style={styles.identityCol}>
                     <View style={[styles.jersey, { borderColor: teamPrimary }]}>
                       <Text style={[styles.jerseyNum, { color: teamPrimary }]}>
@@ -166,19 +190,42 @@ function TeamBoxCard({
                     </Text>
                     <Text style={styles.pos}>{p.position}</Text>
                   </View>
-                  {values.map((v, i) => (
-                    <Text
-                      key={BOX_COLS[i]!.key}
-                      style={[
-                        styles.stat,
-                        EMPHASIS.has(BOX_COLS[i]!.key)
-                          ? styles.statEmphasis
-                          : styles.statMuted,
-                      ]}
-                    >
-                      {v}
-                    </Text>
-                  ))}
+                  {values.map((v, i) => {
+                    const col = columns[i];
+                    if (!col) return null;
+                    return (
+                      <Text
+                        key={col.key}
+                        style={[
+                          styles.stat,
+                          col.emphasis ? styles.statEmphasis : styles.statMuted,
+                        ]}
+                      >
+                        {v}
+                      </Text>
+                    );
+                  })}
+                </>
+              );
+              if (onOpenPlayerDetail && p.playerId) {
+                return (
+                  <Pressable
+                    key={p.playerId}
+                    onPress={() => onOpenPlayerDetail(p.playerId)}
+                    style={({ pressed }) => [
+                      styles.tableRow,
+                      pressed ? styles.tableRowPressed : null,
+                    ]}
+                    accessibilityRole="button"
+                    accessibilityLabel={playerCardName(p)}
+                  >
+                    {rowInner}
+                  </Pressable>
+                );
+              }
+              return (
+                <View key={p.playerId} style={styles.tableRow}>
+                  {rowInner}
                 </View>
               );
             })}
@@ -189,21 +236,75 @@ function TeamBoxCard({
   );
 }
 
-export default function LiveGameBoxScorePanelNative({ report }: Props) {
+export default function LiveGameBoxScorePanelNative({
+  report,
+  onOpenPlayerDetail,
+}: Props) {
+  const allPlayers = useMemo(
+    () => [...report.box.home.players, ...report.box.away.players],
+    [report.box.home.players, report.box.away.players]
+  );
+  const advancedAvailable = liveGameBoxHasAdvancedData(allPlayers);
+  const [mode, setMode] = useState<LiveGameBoxScoreMode>("basic");
+
   return (
     <View style={styles.stack}>
-      <TeamBoxCard block={report.box.home} defaultOpen />
-      <TeamBoxCard block={report.box.away} defaultOpen={false} />
+      <BoxScoreModeToggle
+        mode={mode}
+        onChange={setMode}
+        advancedAvailable={advancedAvailable}
+      />
+      <TeamBoxCard
+        block={report.box.home}
+        defaultOpen
+        mode={mode}
+        onOpenPlayerDetail={onOpenPlayerDetail}
+      />
+      <TeamBoxCard
+        block={report.box.away}
+        defaultOpen={false}
+        mode={mode}
+        onOpenPlayerDetail={onOpenPlayerDetail}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  stack: { gap: 12 },
+  stack: { gap: 10 },
+  modeRow: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: 6,
+  },
+  modeBtn: {
+    borderWidth: 1,
+    borderRadius: 2,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  modeBtnActive: {
+    borderColor: "#00F5FF",
+    backgroundColor: "#00F5FF",
+  },
+  modeBtnIdle: {
+    borderColor: "rgba(255,255,255,0.25)",
+    backgroundColor: "transparent",
+  },
+  modeBtnDisabled: { opacity: 0.35 },
+  modeBtnText: {
+    fontFamily: METRIC_FONT,
+    fontSize: 9,
+    fontWeight: "800",
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
+  },
+  modeBtnTextActive: { color: "#050508" },
+  modeBtnTextIdle: { color: "rgba(255,255,255,0.55)" },
   card: {
     overflow: "hidden",
     borderWidth: 1,
-    backgroundColor: "transparent",
+    backgroundColor: "#000",
   },
   header: {
     flexDirection: "row",
@@ -211,6 +312,9 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingHorizontal: 10,
     paddingVertical: 8,
+  },
+  headerPressed: {
+    backgroundColor: "rgba(255,255,255,0.06)",
   },
   headerText: { flex: 1, minWidth: 0 },
   headerTop: {
@@ -221,7 +325,7 @@ const styles = StyleSheet.create({
   },
   sideTag: {
     fontFamily: METRIC_FONT,
-    fontSize: 8,
+    fontSize: 10,
     fontWeight: "800",
     letterSpacing: 1,
     textTransform: "uppercase",
@@ -233,8 +337,8 @@ const styles = StyleSheet.create({
   teamName: {
     flexShrink: 1,
     fontFamily: METRIC_FONT,
-    fontSize: 12,
-    fontWeight: "800",
+    fontSize: 14,
+    fontWeight: "700",
     letterSpacing: 0.6,
     textTransform: "uppercase",
     color: "#fff",
@@ -254,17 +358,20 @@ const styles = StyleSheet.create({
     borderBottomColor: "rgba(255,255,255,0.06)",
     paddingVertical: 6,
   },
+  tableRowPressed: {
+    backgroundColor: "rgba(255,255,255,0.14)",
+  },
   identityCol: {
     width: 176,
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: 5,
     paddingRight: 6,
     borderRightWidth: StyleSheet.hairlineWidth,
     borderRightColor: "rgba(255,255,255,0.08)",
   },
   thJersey: {
-    width: 28,
+    width: 26,
     textAlign: "center",
     fontFamily: METRIC_FONT,
     fontSize: 9,
@@ -301,39 +408,40 @@ const styles = StyleSheet.create({
     color: "rgba(255,255,255,0.4)",
   },
   jersey: {
-    width: 28,
-    height: 28,
+    width: 26,
+    height: 26,
     borderWidth: 1,
     alignItems: "center",
     justifyContent: "center",
   },
   jerseyNum: {
     fontFamily: METRIC_FONT,
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "800",
     fontVariant: ["tabular-nums"],
   },
   playerName: {
     maxWidth: 96,
     fontFamily: METRIC_FONT,
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: "700",
-    letterSpacing: 0.3,
+    letterSpacing: 0.2,
     textTransform: "uppercase",
     color: "#fff",
     transform: [{ skewX: "-6deg" }],
   },
   pos: {
     fontFamily: METRIC_FONT,
-    fontSize: 11,
+    fontSize: 12,
     color: "rgba(255,255,255,0.55)",
+    transform: [{ skewX: "-6deg" }],
   },
   stat: {
     width: 40,
     textAlign: "center",
     fontFamily: METRIC_FONT,
     fontSize: 14,
-    fontWeight: "800",
+    fontWeight: "700",
     fontVariant: ["tabular-nums"],
     transform: [{ skewX: "-6deg" }],
   },

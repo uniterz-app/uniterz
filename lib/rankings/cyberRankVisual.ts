@@ -135,6 +135,6 @@ export function cyberMetricTag(metric: MobileMetric, lang: Language): string {
   if (metric === "exactHits") return "EXACT";
   if (metric === "upsetScore") return upsetShortLabel(lang).toUpperCase();
   if (metric === "streak") return streakShortLabel(lang).toUpperCase();
-  if (metric === "goalScorerHits") return "GOALS";
+  if (metric === "goalScorerHits") return "SCORER";
   return "STAT";
 }

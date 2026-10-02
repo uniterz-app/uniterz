@@ -8,6 +8,11 @@ import { Canvas, Circle, Group, Path, Skia } from "@shopify/react-native-skia";
 import Svg, { Line as SvgLine } from "react-native-svg";
 import type { MyRankProgressPoint } from "../../../../../lib/rankings/myRankRankingProgress";
 import { PROFILE_CHART_CYBER } from "../../../../../lib/profile/profileOverviewChartCyberTheme";
+import {
+  DATE_LOCALE,
+  normalizeLanguage,
+} from "../../../../../lib/i18n/language";
+import { resolveLocalizedLang } from "../../../../../lib/i18n/localize";
 
 /** Web 固定ラベル */
 export const MY_RANK_RANKING_PROGRESS_TITLE = "RANKING PROGRESS · TOTAL PTS";
@@ -46,11 +51,14 @@ const DOT_R = 10;
 /** 先頭/末尾ドットが枠や Y ラベルに食い込まないよう、系列の内側インセット */
 const SERIES_INSET = DOT_R + 4;
 
-function formatAxisDate(dateKey: string, language: "ja" | "en"): string {
+function formatAxisDate(dateKey: string, language: string): string {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateKey.trim());
   if (!m) return dateKey;
   const d = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])));
-  return new Intl.DateTimeFormat(language === "ja" ? "ja-JP" : "en-US", {
+  const lang = resolveLocalizedLang(language);
+  const locale =
+    DATE_LOCALE[normalizeLanguage(lang) ?? "en"] ?? DATE_LOCALE.en;
+  return new Intl.DateTimeFormat(locale, {
     month: "numeric",
     day: "numeric",
   }).format(d);
@@ -60,7 +68,7 @@ type Props = {
   points: MyRankProgressPoint[];
   maxSnapshots: number;
   loading?: boolean;
-  language: "ja" | "en";
+  language: string;
   emptyHint: string;
   layout?: "mobile" | "web";
   /** 順位ドットの変動のみ（タイトル・軸ラベルなし） */

@@ -50,7 +50,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontFamily: METRIC_FONT,
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: "700",
     letterSpacing: 1.6,
     textTransform: "uppercase",

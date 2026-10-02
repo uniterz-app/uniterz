@@ -1,6 +1,9 @@
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
-import { buildResultShareUrl } from "@/lib/share/shareAppUrls";
+import {
+  buildResultShareUrl,
+  buildShareOutboundMessage,
+} from "@/lib/share/shareAppUrls";
 
 export type ResultCardShareContext = {
   language: Language;
@@ -51,12 +54,9 @@ export function buildResultCardShareCaption(ctx: ResultCardShareContext): string
     parts.push(r.shareResultTotal.replace("{pts}", pts));
   }
 
-  let caption = `${parts.join(isJa ? " · " : " · ")} #Uniterz`;
-
+  const caption = `${parts.join(isJa ? " · " : " · ")} #Uniterz`;
   const url = ctx.postId
     ? buildResultShareUrl(ctx.postId, ctx.appBaseUrl)
     : undefined;
-  if (url) caption += `\n${url}`;
-
-  return caption;
+  return buildShareOutboundMessage(caption, url);
 }

@@ -62,7 +62,7 @@ export function readProSkinHeldIds(userData: Record<string, unknown>): Set<strin
   ]);
 }
 
-/** users.proSkinRankEarnedIds — 期間確定時に Free/Pro 共通で積む薄い権利 */
+/** users.proSkinRankEarnedIds — 期間／RS 確定時に Free/Pro 共通で積む薄い権利 */
 export function readProSkinRankEarnedIds(raw: unknown): Set<string> {
   const out = new Set<string>();
   if (!Array.isArray(raw)) return out;
@@ -72,7 +72,8 @@ export function readProSkinRankEarnedIds(raw: unknown): Set<string> {
     if (
       entry &&
       (entry.unlock.kind === "weeklyRank" ||
-        entry.unlock.kind === "monthlyRank")
+        entry.unlock.kind === "monthlyRank" ||
+        entry.unlock.kind === "seasonRank")
     ) {
       out.add(id);
     }
@@ -128,7 +129,8 @@ export function sanitizePersistedUnlockIds(
         entry.unlock.kind === "monthlyRank" ||
         entry.unlock.kind === "titleCollection" ||
         entry.unlock.kind === "referralCompleted" ||
-        entry.unlock.kind === "periodWins"
+        entry.unlock.kind === "periodWins" ||
+        entry.unlock.kind === "seasonRank"
       ) {
         kept.add(id);
       }
@@ -191,6 +193,7 @@ export async function loadProSkinUnlockProgressFromSeasonStats(
     posts,
     exactHits,
     maxWinStreak,
+    streakRuns: {},
     weeklyRanks: { ...EMPTY_PRO_SKIN_RANK_MAP },
     monthlyRanks: { ...EMPTY_PRO_SKIN_RANK_MAP },
     referralCompletedCount: readReferralCompletedCount(userData),
@@ -266,6 +269,7 @@ export function isProSkinIdUnlockedForUser(
   }
   if (
     entry.unlock.kind === "streak" ||
+    entry.unlock.kind === "streakRuns" ||
     entry.unlock.kind === "posts" ||
     entry.unlock.kind === "exactHits" ||
     entry.unlock.kind === "referralCompleted" ||

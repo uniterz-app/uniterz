@@ -30,6 +30,17 @@ export function parseUserUnitBalance(data: Record<string, unknown>): number {
   return Number.isFinite(n) ? Math.max(0, Math.floor(n)) : 0;
 }
 
+/** Firestore `users.profileViewCount` — 未同期は null（API にフォールバック） */
+export function parseUserProfileViewCount(
+  data: Record<string, unknown> | null | undefined
+): number | null {
+  if (!data) return null;
+  const raw = data.profileViewCount;
+  const n = typeof raw === "number" ? raw : Number(raw);
+  if (!Number.isFinite(n)) return null;
+  return Math.max(0, Math.floor(n));
+}
+
 /** URL ルートキー（ハンドル or uid）を表示に混ぜないためのフォールバック */
 export function profileDisplayFromUser(
   user: {

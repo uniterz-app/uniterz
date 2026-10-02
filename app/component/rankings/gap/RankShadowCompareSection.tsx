@@ -85,8 +85,23 @@ function rowUnit(
   unitPt: string,
   language: Language
 ): string {
-  if (id === "rank") return language === "en" ? "places" : "位";
-  if (id === "exactHits") return language === "en" ? "hits" : "回";
+  if (id === "rank") {
+    if (language === "ja") return "位";
+    if (language === "ko") return "위";
+    if (language === "zh") return "名";
+    if (language === "es") return "puestos";
+    if (language === "pt") return "posições";
+    if (language === "fr") return "places";
+    return "places";
+  }
+  if (id === "exactHits") {
+    if (language === "ja") return "回";
+    if (language === "ko") return "회";
+    if (language === "zh") return "次";
+    if (language === "es" || language === "pt") return "aciertos";
+    if (language === "fr") return "réussites";
+    return "hits";
+  }
   return unitPt;
 }
 

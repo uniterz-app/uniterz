@@ -14,9 +14,17 @@ export function canBuildLiveSnapshots(phase: GroupBattlePhase): boolean {
   );
 }
 
-/** Unit 付与可能なフェーズ */
+/**
+ * Unit 付与可能なフェーズ。
+ * 週間スナップは battle 中に final 化するため CF と同様 battle/settling も許可。
+ */
 export function canGrantUnits(phase: GroupBattlePhase): boolean {
-  return phase === "final" || phase === "closed";
+  return (
+    phase === "battle" ||
+    phase === "settling" ||
+    phase === "final" ||
+    phase === "closed"
+  );
 }
 
 export function isRecruitingPhase(phase: GroupBattlePhase): boolean {

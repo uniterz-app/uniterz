@@ -7,14 +7,24 @@ import { profilePathKeyFromRow } from "../../../../../lib/profile/profilePathKey
 import { primePublicProfileIdentity } from "../../../../../lib/profile/publicProfileIdentityCache";
 import { seedProfileHeroFromUserDoc } from "../../../../../lib/profile/seedProfileHeroFromUserDoc";
 import { fetchUserDocByRouteKey } from "../../../../../lib/profile/fetchUserDocByRouteKey";
+import {
+  parseUserPlanProBgVariant,
+  tryParseUserPlanProBgVariant,
+} from "../../../../../lib/profile/profilePlanProBgVariantField";
+import type { ProfilePlanProBgVariant } from "../../../../../lib/profile/profilePlanProBgVariants";
+import { peekUserDocMemory } from "../../../../../lib/user/userDocMemoryCache";
 import { db } from "../../lib/firebase";
-import { loadProfileUserDocNative } from "./profileUserDocCacheNative";
+import {
+  loadProfileUserDocNative,
+  peekProfileUserDocNative,
+} from "./profileUserDocCacheNative";
 import { prefetchNativeProfileBadges } from "./useNativeProfileBadges";
 import {
   prefetchNativeProfileStats,
   primeNativeProfileStatsFromRankingRow,
   seedNativeProfileStatsFromUserDoc,
 } from "./useNativeProfileStats";
+import { prefetchNativeProfileSettledTodayResults } from "./useNativeProfileSettledTodayResults";
 
 export type WarmPublicProfileNativeInput = {
   routeKey: string;
@@ -23,6 +33,8 @@ export type WarmPublicProfileNativeInput = {
   displayName?: string | null;
   photoURL?: string | null;
   plan?: "free" | "pro" | string | null;
+  /** 既知の Pro Skin（未確定は渡さない → デフォルトを出さない） */
+  planProBgVariant?: ProfilePlanProBgVariant | string | null;
   countryCode?: string | null;
   posts?: number | null;
   /** ランキング行があるとき（グループ期間集計は skipStatsPrime） */
@@ -39,6 +51,27 @@ function warmFromUserDoc(uid: string, data: Record<string, unknown>): void {
   seedProfileHeroFromUserDoc(uid, data);
   void prefetchNativeProfileBadges(uid);
   void prefetchNativeProfileStats(uid);
+  prefetchNativeProfileSettledTodayResults(uid);
+}
+
+function resolveWarmSkin(input: {
+  plan: "free" | "pro" | string | null | undefined;
+  planProBgVariant?: unknown;
+  rankingRow?: RankingRowWithCountry | null;
+  uid: string;
+}): ProfilePlanProBgVariant | null {
+  if (input.plan !== "pro" && input.rankingRow?.plan !== "pro") return null;
+  const fromInput = tryParseUserPlanProBgVariant(input.planProBgVariant);
+  if (fromInput) return fromInput;
+  const fromRow = tryParseUserPlanProBgVariant(
+    input.rankingRow?.planProBgVariant
+  );
+  if (fromRow) return fromRow;
+  if (!input.uid) return null;
+  const mem =
+    peekUserDocMemory(input.uid) ?? peekProfileUserDocNative(input.uid);
+  if (!mem || mem.plan !== "pro") return null;
+  return tryParseUserPlanProBgVariant(mem.planProBgVariant);
 }
 
 /**
@@ -69,6 +102,12 @@ export function warmPublicProfileNative(
     (typeof row?.countryCode === "string" ? row.countryCode : null);
   const posts =
     input.posts ?? (typeof row?.posts === "number" ? row.posts : null);
+  const planProBgVariant = resolveWarmSkin({
+    plan,
+    planProBgVariant: input.planProBgVariant,
+    rankingRow: row,
+    uid,
+  });
 
   primePublicProfileIdentity({
     routeKey,
@@ -77,6 +116,7 @@ export function warmPublicProfileNative(
     displayName,
     photoURL,
     plan,
+    planProBgVariant,
     countryCode,
     posts,
   });
@@ -86,6 +126,8 @@ export function warmPublicProfileNative(
   }
 
   if (uid) {
+    // Result Drop は users 待ちせず並列開始（同一キーは inflight / resolved で共有）
+    prefetchNativeProfileSettledTodayResults(uid);
     void (async () => {
       const loaded = await loadProfileUserDocNative(uid);
       if (!loaded?.exists) return;
@@ -107,6 +149,9 @@ export function warmPublicProfileNative(
             ? loaded.data.photoURL
             : photoURL,
         plan: loaded.data.plan === "pro" ? "pro" : "free",
+        planProBgVariant: parseUserPlanProBgVariant(
+          loaded.data.planProBgVariant
+        ),
         countryCode:
           typeof loaded.data.countryCode === "string"
             ? loaded.data.countryCode
@@ -143,6 +188,9 @@ export function warmPublicProfileNative(
           ? docSnap.data.photoURL
           : photoURL,
       plan: docSnap.data.plan === "pro" ? "pro" : "free",
+      planProBgVariant: parseUserPlanProBgVariant(
+        docSnap.data.planProBgVariant
+      ),
       countryCode:
         typeof docSnap.data.countryCode === "string"
           ? docSnap.data.countryCode

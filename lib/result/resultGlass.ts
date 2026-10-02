@@ -39,15 +39,16 @@ export function isResultCyberClipFrameBadge(badge: ResultCardBadge): boolean {
   );
 }
 
-/** winStreakBadge と同じ3段階（3–4: シルバー / 5–6: プラチナ / 7+: ゴールド） */
+/** 連勝フレーム／バッジ（3–6: シルバー / 7–9: プラチナ / 10+: ゴールド）。
+ * 枠の走査光（conic）は 7 連勝以上のみ（`showWinStreakSweep`）。 */
 export type ResultStreakTier = "silver" | "platinum" | "gold";
 
 export function resultStreakTier(
   activeWinStreak: unknown
 ): ResultStreakTier | null {
   const v = normalizeWinStreak(activeWinStreak);
-  if (v >= 7) return "gold";
-  if (v >= 5) return "platinum";
+  if (v >= 10) return "gold";
+  if (v >= 7) return "platinum";
   if (v >= 3) return "silver";
   return null;
 }

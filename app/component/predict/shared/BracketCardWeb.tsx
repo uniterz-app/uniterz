@@ -1,5 +1,6 @@
 "use client";
 
+import { nameOxanium } from "@/lib/fonts";
 import type { League } from "@/lib/leagues";
 import { getTeamPrimaryColor } from "@/lib/team-colors";
 import { TEAM_SHORT } from "@/lib/team-short";
@@ -209,7 +210,8 @@ export default function BracketCardWeb({
             top: "50%",
             transform: "translateY(-50%)",
             [side === "left" ? "left" : "right"]: -52 * SCALE,
-            fontFamily: "Oswald, Bebas Neue, sans-serif",
+            fontFamily: nameOxanium.style.fontFamily,
+            fontWeight: 700,
             fontSize: 20 * SCALE,
             letterSpacing: "0.03em",
             color: "#f8fbff",
@@ -230,9 +232,8 @@ export default function BracketCardWeb({
         }}
       >
         <div
-          className="font-bold tracking-[0.06em]"
+          className={`${nameOxanium.className} font-bold tracking-[0.06em]`}
           style={{
-            fontFamily: "Oswald, Bebas Neue, sans-serif",
             fontSize: 31 * SCALE,
           }}
         >
@@ -240,9 +241,8 @@ export default function BracketCardWeb({
         </div>
 
         <div
-          className="font-bold"
+          className={`${nameOxanium.className} font-bold`}
           style={{
-            fontFamily: "Oswald, Bebas Neue, sans-serif",
             fontSize: 24 * SCALE,
             opacity: 0.82,
           }}
@@ -251,11 +251,9 @@ export default function BracketCardWeb({
         </div>
 
         <div
-          className="leading-none"
+          className={`${nameOxanium.className} leading-none font-bold`}
           style={{
-            fontFamily: "Oswald, Bebas Neue, sans-serif",
             fontSize: 24 * SCALE,
-            fontWeight: 700,
             color: win4 ? "#ffd84d" : c.text,
             textShadow: win4
               ? `

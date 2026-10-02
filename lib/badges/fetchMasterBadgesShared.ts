@@ -4,6 +4,8 @@ export type MasterBadgeDto = {
   id: string;
   title: string;
   description: string;
+  titleEn?: string;
+  descriptionEn?: string;
   icon?: string;
   participantCount?: number;
 };

@@ -2,9 +2,9 @@
  * Web モバイル LP 相当 — 起動ランディング
  * 演出方針: スキャン/スクランブル/着弾系は使わない。
  * 「暗い地平 → 光の線 → ブランドが立ち上がる → CTA」のシネマティックな一幕。
- * 追加のセンス層: 地平の残光、短い whisper コピー、CTA レールの一閃。
+ * 追加のセンス層: 地平の残光、CTA レールの一閃。
  */
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Animated,
   Dimensions,
@@ -12,6 +12,7 @@ import {
   Pressable,
   StyleSheet,
   Text,
+  type LayoutChangeEvent,
   type TextStyle,
   View,
 } from "react-native";
@@ -19,11 +20,16 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Svg, { Defs, RadialGradient, Rect, Stop } from "react-native-svg";
 import type { AuthStackParamList } from "../../navigation/types";
-import { spacing } from "../../theme/tokens";
+import { fonts, spacing } from "../../theme/tokens";
 import AuthLandingBackgroundNative from "../auth/AuthLandingBackgroundNative";
 import { AUTH_LANDING } from "../auth/authLandingPalette";
 import { hideNativeBootSplash } from "../../bootstrap/nativeBootSplash";
+import UniterzLogoNative from "../profile/UniterzLogoNative";
+import SlantCtaNative from "../../ui/SlantCtaNative";
+
+const HERO_LOGO_WIDTH = 280;
 
 const BTN_SKEW = "-10deg";
 const BTN_UNSKEW = "10deg";
@@ -40,7 +46,7 @@ export type LandingScreenNativeProps = {
 type LandingSkewBtnProps = {
   label: string;
   labelStyle: TextStyle;
-  variant: "primary" | "ghost";
+  variant: "mono" | "monoGhost";
   onPress: () => void;
   onPressIn?: () => void;
   onPressOut?: () => void;
@@ -56,7 +62,6 @@ type LandingSkewBtnProps = {
 
 function LandingSkewBtn({
   label,
-  labelStyle,
   variant,
   onPress,
   onPressIn,
@@ -64,26 +69,7 @@ function LandingSkewBtn({
   enterOpacity,
   enterX,
   pressScale,
-  railSweep,
-  railPulse,
 }: LandingSkewBtnProps) {
-  const railY = railSweep.interpolate({
-    inputRange: [0, 1],
-    outputRange: [52, -8],
-  });
-  const railSweepOpacity = railSweep.interpolate({
-    inputRange: [0, 0.12, 0.65, 1],
-    outputRange: [0, 1, 1, 0],
-  });
-  const railPulseOpacity = railPulse.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0.35, 0.95],
-  });
-  const borderGlowOpacity = railPulse.interpolate({
-    inputRange: [0, 1],
-    outputRange: variant === "primary" ? [0.22, 0.55] : [0.1, 0.32],
-  });
-
   return (
     <Animated.View
       style={[
@@ -94,52 +80,13 @@ function LandingSkewBtn({
         },
       ]}
     >
-      <Pressable
-        style={styles.ctaBtnPressable}
+      <SlantCtaNative
+        label={label}
+        variant={variant}
         onPress={onPress}
         onPressIn={onPressIn}
         onPressOut={onPressOut}
-      >
-        <View
-          style={[
-            styles.ctaBtnBorder,
-            variant === "primary" ? styles.ctaBtnBorderPrimary : styles.ctaBtnBorderGhost,
-          ]}
-        >
-          <Animated.View
-            pointerEvents="none"
-            style={[
-              styles.ctaBtnGlow,
-              variant === "primary" ? styles.ctaBtnGlowPrimary : styles.ctaBtnGlowGhost,
-              { opacity: borderGlowOpacity },
-            ]}
-          />
-          <View
-            style={[
-              styles.ctaBtnFill,
-              variant === "primary" ? styles.ctaBtnFillPrimary : styles.ctaBtnFillGhost,
-            ]}
-          >
-            <Animated.View
-              style={[styles.btnRail, { opacity: railPulseOpacity }]}
-              pointerEvents="none"
-            />
-            <Animated.View
-              pointerEvents="none"
-              style={[
-                styles.btnRailSweep,
-                {
-                  opacity: railSweepOpacity,
-                  transform: [{ translateY: railY }],
-                },
-              ]}
-            />
-            <View style={styles.ctaLabelWrap}>
-              <Text style={labelStyle}>{label}</Text>
-            </View>
-          </View>
-        </View>
-      </Pressable>
+      />
     </Animated.View>
   );
 }
@@ -154,6 +101,13 @@ export default function LandingScreenNative({
   const insets = useSafeAreaInsets();
   const { height: windowHeight, width: windowWidth } = Dimensions.get("window");
   const contentWidth = Math.min(340, windowWidth - 40);
+  const [veilSize, setVeilSize] = useState({ w: 0, h: 0 });
+
+  const onVeilLayout = (event: LayoutChangeEvent) => {
+    const { width, height } = event.nativeEvent.layout;
+    if (Math.abs(width - veilSize.w) < 1 && Math.abs(height - veilSize.h) < 1) return;
+    setVeilSize({ w: width, h: height });
+  };
 
   /** 全体の暗幕（最初は黒く、徐々に背景が見える） */
   const curtain = useRef(new Animated.Value(1)).current;
@@ -171,8 +125,6 @@ export default function LandingScreenNative({
   /** サブコピー */
   const eyebrowOpacity = useRef(new Animated.Value(0)).current;
   const eyebrowY = useRef(new Animated.Value(8)).current;
-  /** 地平下の whisper */
-  const whisperOpacity = useRef(new Animated.Value(0)).current;
   /** CTA — 2ボタン個別入場 + レール脈動 */
   const primaryOpacity = useRef(new Animated.Value(0)).current;
   const primaryX = useRef(new Animated.Value(-28)).current;
@@ -253,24 +205,6 @@ export default function LandingScreenNative({
           useNativeDriver: true,
         }),
       ]),
-    ]).start();
-
-    // 地平の下に一言だけ — 出て、薄く残る
-    Animated.sequence([
-      Animated.delay(1680),
-      Animated.timing(whisperOpacity, {
-        toValue: 1,
-        duration: 640,
-        easing: easeOut,
-        useNativeDriver: true,
-      }),
-      Animated.delay(900),
-      Animated.timing(whisperOpacity, {
-        toValue: 0.38,
-        duration: 700,
-        easing: easeInOut,
-        useNativeDriver: true,
-      }),
     ]).start();
 
     // GET STARTED ← / LOG IN → スタッガー入場 → レール一閃 → 脈動開始
@@ -370,7 +304,6 @@ export default function LandingScreenNative({
     primaryRailSweep,
     primaryX,
     skipBootSplash,
-    whisperOpacity,
   ]);
 
   useEffect(() => {
@@ -563,6 +496,33 @@ export default function LandingScreenNative({
       >
         <View style={[styles.mainBlock, { width: contentWidth, transform: [{ translateY: blockShiftY }] }]}>
           <View style={styles.frameShell}>
+            <View pointerEvents="none" style={styles.readabilityVeil} onLayout={onVeilLayout}>
+              {hideBackground || veilSize.w <= 0 ? null : (
+                <Svg width={veilSize.w} height={veilSize.h}>
+                  <Defs>
+                    <RadialGradient
+                      id="landingHeroVeil"
+                      cx="50%"
+                      cy="48%"
+                      rx="74%"
+                      ry="62%"
+                    >
+                      <Stop offset="0" stopColor="#000000" stopOpacity="0.86" />
+                      <Stop offset="0.4" stopColor="#000000" stopOpacity="0.58" />
+                      <Stop offset="0.74" stopColor="#000000" stopOpacity="0.2" />
+                      <Stop offset="1" stopColor="#000000" stopOpacity="0" />
+                    </RadialGradient>
+                  </Defs>
+                  <Rect
+                    x="0"
+                    y="0"
+                    width={veilSize.w}
+                    height={veilSize.h}
+                    fill="url(#landingHeroVeil)"
+                  />
+                </Svg>
+              )}
+            </View>
             <View style={styles.heroBlock}>
               <Animated.Text
                 style={[
@@ -585,13 +545,13 @@ export default function LandingScreenNative({
                   },
                 ]}
               >
-                <Animated.Text
+                <Animated.View
                   pointerEvents="none"
-                  style={[styles.hero, styles.heroGlow, { opacity: brandGlowOpacity }]}
+                  style={[styles.heroGlow, { opacity: brandGlowOpacity }]}
                 >
-                  UNITERZ
-                </Animated.Text>
-                <Text style={styles.hero}>UNITERZ</Text>
+                  <UniterzLogoNative width={HERO_LOGO_WIDTH} />
+                </Animated.View>
+                <UniterzLogoNative width={HERO_LOGO_WIDTH} />
               </Animated.View>
 
               <View style={styles.horizonSlot}>
@@ -660,15 +620,11 @@ export default function LandingScreenNative({
                   ]}
                 />
               </View>
-
-              <Animated.Text style={[styles.whisper, { opacity: whisperOpacity }]}>
-                the field is open
-              </Animated.Text>
             </View>
 
             <View style={styles.ctaBlock}>
               <LandingSkewBtn
-                variant="primary"
+                variant="mono"
                 label="GET STARTED"
                 labelStyle={styles.ctaPrimaryLabel}
                 enterOpacity={primaryOpacity}
@@ -681,7 +637,7 @@ export default function LandingScreenNative({
                 onPressOut={primaryPress.out}
               />
               <LandingSkewBtn
-                variant="ghost"
+                variant="monoGhost"
                 label="LOG IN"
                 labelStyle={styles.ctaSecondaryLabel}
                 enterOpacity={ghostOpacity}
@@ -731,9 +687,18 @@ const styles = StyleSheet.create({
     paddingBottom: 28,
     gap: 36,
   },
+  readabilityVeil: {
+    position: "absolute",
+    left: -56,
+    right: -56,
+    top: -36,
+    bottom: -24,
+    zIndex: 0,
+  },
   heroBlock: {
     alignItems: "center",
     gap: 12,
+    zIndex: 1,
   },
   heroWrap: {
     alignItems: "center",
@@ -741,24 +706,19 @@ const styles = StyleSheet.create({
   },
   eyebrow: {
     color: AUTH_LANDING.muted,
-    fontSize: 11,
-    letterSpacing: 2.8,
+    fontFamily: fonts.metric,
+    fontSize: 12,
+    fontWeight: "800",
+    letterSpacing: 2.2,
     textTransform: "uppercase",
-    textAlign: "center",
-  },
-  hero: {
-    fontFamily: "BebasNeue_400Regular",
-    fontSize: 72,
-    letterSpacing: 7,
-    lineHeight: 72,
-    color: AUTH_LANDING.ink,
     textAlign: "center",
   },
   heroGlow: {
     position: "absolute",
-    textShadowColor: "rgba(0,245,255,0.75)",
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 32,
+    shadowColor: "rgba(0,245,255,0.75)",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 1,
+    shadowRadius: 32,
   },
   horizonSlot: {
     width: "78%",
@@ -807,19 +767,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 1,
     shadowRadius: 8,
   },
-  whisper: {
-    marginTop: 2,
-    fontSize: 10,
-    letterSpacing: 3.2,
-    textTransform: "lowercase",
-    color: AUTH_LANDING.muted,
-    textAlign: "center",
-    fontStyle: "italic",
-  },
   ctaBlock: {
     gap: 14,
     width: "100%",
     alignSelf: "stretch",
+    zIndex: 1,
   },
   ctaSkewWrap: {
     width: "100%",

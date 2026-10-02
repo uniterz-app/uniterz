@@ -5,6 +5,26 @@ import {
   pickCountryCodeFromUserDoc,
 } from "@/lib/results/mergeCountryIntoTopEntries";
 
+const COUNTRY_TTL_MS = 10 * 60 * 1000;
+
+type CountryCacheEntry = { at: number; code: string | null };
+const countryByUidCache = new Map<string, CountryCacheEntry>();
+
+async function loadCountryCode(
+  firestore: Firestore,
+  uid: string
+): Promise<string | null> {
+  const now = Date.now();
+  const hit = countryByUidCache.get(uid);
+  if (hit && now - hit.at < COUNTRY_TTL_MS) return hit.code;
+
+  const snap = await getDoc(doc(firestore, "users", uid));
+  const data = snap.exists() ? snap.data() : null;
+  const code = pickCountryCodeFromUserDoc(data?.countryCode);
+  countryByUidCache.set(uid, { at: Date.now(), code });
+  return code;
+}
+
 /** 既存 snapshot に国が無いとき users.countryCode を足す（得点は触らない） */
 export async function enrichTopEntriesCountryFromUsers(
   firestore: Firestore,
@@ -23,9 +43,7 @@ export async function enrichTopEntriesCountryFromUsers(
   const countryByUid = new Map<string, string | null>();
   await Promise.all(
     missing.map(async (uid) => {
-      const snap = await getDoc(doc(firestore, "users", uid));
-      const data = snap.exists() ? snap.data() : null;
-      countryByUid.set(uid, pickCountryCodeFromUserDoc(data?.countryCode));
+      countryByUid.set(uid, await loadCountryCode(firestore, uid));
     })
   );
   return mergeCountryIntoTopEntries(top, countryByUid);

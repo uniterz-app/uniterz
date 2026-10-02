@@ -24,8 +24,8 @@ const LABEL_CLASS: Record<CyberNoDataVariant, string> = {
   rankingsPro: `${nameBebas.className} rankings-pro-league-no-data text-center text-[28px] leading-none tracking-[0.25em]`,
   chart: `${nameOxanium.className} text-center text-[22px] font-bold leading-none tracking-[0.12em] text-white/35`,
   progress: `${nameBebas.className} text-center text-[16px] leading-none tracking-[0.12em] text-[rgba(148,163,184,0.55)]`,
-  awards: `${nameBebas.className} text-center text-[36px] leading-none tracking-[0.25em] text-white/55`,
-  bracket: `${nameBebas.className} text-center text-[32px] font-bold leading-none tracking-[0.25em] text-cyan-300/55`,
+  awards: `${nameOxanium.className} text-center text-[22px] font-bold leading-none tracking-[0.12em] text-white/35`,
+  bracket: `${nameOxanium.className} text-center text-[22px] font-bold leading-none tracking-[0.12em] text-white/35`,
 };
 
 const LABEL_STYLE: Partial<Record<CyberNoDataVariant, CSSProperties>> = {

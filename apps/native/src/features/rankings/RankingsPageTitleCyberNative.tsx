@@ -1,6 +1,10 @@
 import { Platform, StyleSheet, Text, View, type StyleProp, type ViewStyle } from "react-native";
 import { PRO_LEAGUE_ATMOSPHERE } from "../../../../../lib/rankings/proLeagueAtmosphere";
-import { RANKING_TITLE_FONT } from "./rankingsUiTheme";
+import { hasCjkOrHangulScript } from "../../../../../lib/rankings/rankingJaTextSize";
+import {
+  RANKING_NAME_FONT_JA,
+  RANKING_TITLE_FONT,
+} from "./rankingsUiTheme";
 
 type Props = {
   title: string;
@@ -23,6 +27,7 @@ export function RankingsPageTitleCyberNative({
 }: Props) {
   const fontSize = size === "md" ? 26 : size === "sm" ? 24 : 18;
   const pro = tone === "pro-league";
+  const usesCjkTitle = hasCjkOrHangulScript(title);
   return (
     <View
       style={[styles.wrap, embedded && styles.wrapEmbedded, style]}
@@ -31,6 +36,7 @@ export function RankingsPageTitleCyberNative({
       <Text
         style={[
           styles.title,
+          usesCjkTitle ? styles.titleCjk : null,
           pro ? styles.titlePro : null,
           { fontSize, paddingRight: Math.round(fontSize * 0.28) },
         ]}
@@ -74,6 +80,11 @@ const styles = StyleSheet.create({
       },
       default: {},
     }),
+  },
+  titleCjk: {
+    fontFamily: RANKING_NAME_FONT_JA,
+    letterSpacing: 2,
+    fontWeight: "700",
   },
   titlePro: {
     color: PRO_LEAGUE_ATMOSPHERE.titleNative,

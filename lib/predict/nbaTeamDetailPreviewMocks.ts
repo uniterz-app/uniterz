@@ -8,7 +8,6 @@ import type { NbaConferenceId } from "@/lib/nba/nbaConferenceTeams";
 import { TEAM_SHORT } from "@/lib/team-short";
 import { splitTeamNameByLeague } from "@/lib/team-name-split";
 import type { NbaRosterPlayer, NbaRosterTeamBlock } from "@/lib/predict/nbaRoster";
-import { playerCardName, sortRosterPlayers } from "@/lib/predict/nbaRoster";
 import {
   formatMetricValue,
   getNbaLeagueTeamStatsMock,
@@ -16,8 +15,12 @@ import {
   NBA_LEAGUE_TEAM_STAT_METRICS,
   type NbaLeagueTeamStatMetric,
   type NbaLeagueTeamStatRow,
+  type NbaLeagueTeamStatsBundle,
   type NbaLeagueTeamStatWindow,
 } from "@/lib/predict/nbaLeagueTeamStatsMocks";
+import { nbaSeasonStatsReady } from "@/lib/predict/nbaSeasonStatsReady";
+import { nbaConferenceForTeam } from "@/lib/nba/nbaConferenceTeams";
+import type { UiStrings } from "@/lib/i18n/ui";
 
 export type NbaTeamProfileLean = "offense" | "defense" | "balanced";
 
@@ -32,6 +35,8 @@ export type NbaTeamMetricWithRank = {
 
 export type NbaTeamRecentGame = {
   dateLabel: string;
+  /** Firestore `games/{id}`。あればボックススコアへ遷移可 */
+  gameId?: string;
   oppTeamId: string;
   oppAbbr: string;
   home: boolean;
@@ -53,6 +58,13 @@ export type NbaTeamUpcomingGame = {
 export type NbaTeamStreak = {
   kind: "W" | "L";
   count: number;
+};
+
+export type NbaTeamHeadToHeadEntry = {
+  oppTeamId: string;
+  oppAbbr: string;
+  wins: number;
+  losses: number;
 };
 
 export type NbaTeamRosterPreviewPlayer = {
@@ -111,9 +123,16 @@ export type NbaTeamDetailPreview = {
     home: { wins: number; losses: number };
     away: { wins: number; losses: number };
   };
-  /** 予想入力ロスターと同じ形 */
+  /** 相手の試合時点勝率による強弱スプリット（nbaTeamSeasonRecords） */
+  strengthSplit: {
+    vsOver500: { wins: number; losses: number };
+    vsUnder500: { wins: number; losses: number };
+  };
+  /** 相手別 W-L（game log overlay） */
+  headToHead: NbaTeamHeadToHeadEntry[];
+  /** 予想入力ロスターと同じ形（ライブは overlay で上書き） */
   rosterBlock: NbaRosterTeamBlock;
-  /** 今季チームペイロール（モック） */
+  /** 今季チームペイロール（ライブは overlay で上書き） */
   payroll: NbaTeamPayroll;
   asOfLabel: string;
 };
@@ -121,7 +140,13 @@ export type NbaTeamDetailPreview = {
 export type NbaTeamInjuryEntry = {
   playerId: string;
   name: string;
-  status: "out" | "gtd";
+  /** BDL 由来（Available 以外）。旧データは gtd → questionable として読む */
+  status:
+    | "out"
+    | "doubtful"
+    | "questionable"
+    | "probable"
+    | "day-to-day";
   reason: string | null;
   returnEstimate: string | null;
 };
@@ -143,8 +168,7 @@ export type NbaTeamOpponentAllowedMetricDef = {
   short: string;
   /** false = 高いほど良い（誘発 TOV など） */
   lowerIsBetter: boolean;
-  hintJa: string;
-  hintEn: string;
+  hint: UiStrings;
 };
 
 /** BallDontLie `general?type=opponent` / four-factors 相当の指標定義 */
@@ -154,64 +178,127 @@ export const NBA_TEAM_OPPONENT_ALLOWED_METRICS: readonly NbaTeamOpponentAllowedM
       id: "pts_allowed",
       short: "PTS",
       lowerIsBetter: true,
-      hintJa: "相手に許した平均得点。低いほど DF が良い。順位 #1 = 最少失点。",
-      hintEn: "Points allowed per game. Lower is better. Rank #1 = fewest allowed.",
+      hint: {
+        ja: "相手に許した平均得点。低いほど DF が良い。順位 #1 = 最少失点。",
+        en: "Points allowed per game. Lower is better. Rank #1 = fewest allowed.",
+        ko: "경기당 실점. 낮을수록 수비가 좋다. 1위 = 최소 실점.",
+        zh: "场均失分。越低防守越好。第 1 名＝失分最少。",
+        es: "Puntos permitidos por partido. Menos es mejor. #1 = menos permitidos.",
+        pt: "Pontos sofridos por jogo. Menor é melhor. #1 = menos sofridos.",
+        fr: "Points encaissés par match. Plus bas, mieux c’est. #1 = le moins encaissé.",
+      },
     },
     {
       id: "fg_pct_allowed",
       short: "FG%",
       lowerIsBetter: true,
-      hintJa: "相手の FG%。低いほどシュートを抑えられている。",
-      hintEn: "Opponent FG%. Lower means better shot defense.",
+      hint: {
+        ja: "相手の FG%。低いほどシュートを抑えられている。",
+        en: "Opponent FG%. Lower means better shot defense.",
+        ko: "상대 야투 성공률. 낮을수록 슛 수비가 좋다.",
+        zh: "对手投篮命中率。越低表示投篮防守越好。",
+        es: "FG% del rival. Menos indica mejor defensa al tiro.",
+        pt: "FG% do adversário. Menor indica melhor defesa de arremesso.",
+        fr: "FG% adverse. Plus bas = meilleure défense sur tir.",
+      },
     },
     {
       id: "fg3_pct_allowed",
       short: "3P%",
       lowerIsBetter: true,
-      hintJa: "相手の 3P%。低いほど外を抑えられている。",
-      hintEn: "Opponent 3P%. Lower means better perimeter defense.",
+      hint: {
+        ja: "相手の 3P%。低いほど外を抑えられている。",
+        en: "Opponent 3P%. Lower means better perimeter defense.",
+        ko: "상대 3점 성공률. 낮을수록 외곽 수비가 좋다.",
+        zh: "对手三分命中率。越低表示外线防守越好。",
+        es: "3P% del rival. Menos indica mejor defensa exterior.",
+        pt: "3P% do adversário. Menor indica melhor defesa de perímetro.",
+        fr: "3P% adverse. Plus bas = meilleure défense extérieure.",
+      },
     },
     {
       id: "ft_pct_allowed",
       short: "FT%",
       lowerIsBetter: true,
-      hintJa: "相手の FT%。低いほどフリースローを決められていない（運要素あり）。",
-      hintEn: "Opponent FT%. Lower is better (some luck).",
+      hint: {
+        ja: "相手の FT%。低いほどフリースローを決められていない（運要素あり）。",
+        en: "Opponent FT%. Lower is better (some luck).",
+        ko: "상대 자유투 성공률. 낮을수록 좋다(운 요소 있음).",
+        zh: "对手罚球命中率。越低越好（含运气成分）。",
+        es: "TL% del rival. Menos es mejor (hay algo de suerte).",
+        pt: "FT% do adversário. Menor é melhor (tem sorte envolvida).",
+        fr: "LF% adverse. Plus bas, mieux c’est (part de chance).",
+      },
     },
     {
       id: "reb_allowed",
       short: "REB",
       lowerIsBetter: true,
-      hintJa: "相手のリバウンド数。低いほどボードで負けていない。",
-      hintEn: "Opponent rebounds. Lower means better glass control.",
+      hint: {
+        ja: "相手のリバウンド数。低いほどボードで負けていない。",
+        en: "Opponent rebounds. Lower means better glass control.",
+        ko: "상대 리바운드. 낮을수록 보드 장악력이 좋다.",
+        zh: "对手篮板。越低表示篮板控制越好。",
+        es: "Rebotes del rival. Menos indica mejor control del rebote.",
+        pt: "Rebotes do adversário. Menor indica melhor domínio do garrafão.",
+        fr: "Rebonds adverses. Plus bas = meilleur contrôle du rebond.",
+      },
     },
     {
       id: "ast_allowed",
       short: "AST",
       lowerIsBetter: true,
-      hintJa: "相手のアシスト。低いほどパスを通されにくい。",
-      hintEn: "Opponent assists. Lower means less ball movement allowed.",
+      hint: {
+        ja: "相手のアシスト。低いほどパスを通されにくい。",
+        en: "Opponent assists. Lower means less ball movement allowed.",
+        ko: "상대 어시스트. 낮을수록 패스를 덜 허용한다.",
+        zh: "对手助攻。越低表示越少让对方传导球。",
+        es: "Asistencias del rival. Menos indica menos circulación permitida.",
+        pt: "Assistências do adversário. Menor indica menos circulação permitida.",
+        fr: "Passes décisives adverses. Plus bas = moins de circulation concédée.",
+      },
     },
     {
       id: "tov_forced",
       short: "TOV",
       lowerIsBetter: false,
-      hintJa: "相手のターンオーバー（誘発数）。高いほど DF がボールを奪えている。",
-      hintEn: "Opponent turnovers forced. Higher is better defense.",
+      hint: {
+        ja: "相手のターンオーバー（誘発数）。高いほど DF がボールを奪えている。",
+        en: "Opponent turnovers forced. Higher is better defense.",
+        ko: "유도한 상대 턴오버. 높을수록 수비가 좋다.",
+        zh: "迫使对手失误数。越高防守越好。",
+        es: "Pérdidas forzadas al rival. Más es mejor defensa.",
+        pt: "Erros forçados do adversário. Maior é melhor defesa.",
+        fr: "Ballons perdus provoqués. Plus haut = meilleure défense.",
+      },
     },
     {
       id: "oreb_allowed",
       short: "OREB",
       lowerIsBetter: true,
-      hintJa: "相手のオフェンスリバウンド。低いほどセカンドチャンスを許さない。",
-      hintEn: "Opponent offensive rebounds. Lower limits second chances.",
+      hint: {
+        ja: "相手のオフェンスリバウンド。低いほどセカンドチャンスを許さない。",
+        en: "Opponent offensive rebounds. Lower limits second chances.",
+        ko: "상대 공격 리바운드. 낮을수록 세컨드 찬스를 덜 준다.",
+        zh: "对手进攻篮板。越低越能限制二次进攻。",
+        es: "Rebotes ofensivos del rival. Menos limita las segundas opciones.",
+        pt: "Rebotes ofensivos do adversário. Menor limita as segundas chances.",
+        fr: "Rebonds offensifs adverses. Plus bas = moins de secondes chances.",
+      },
     },
     {
       id: "efg_pct_allowed",
       short: "EFG%",
       lowerIsBetter: true,
-      hintJa: "相手の eFG%（3P 加味）。低いほど総合的にシュートを抑えられている。",
-      hintEn: "Opponent eFG%. Lower means better overall shot defense.",
+      hint: {
+        ja: "相手の eFG%（3P 加味）。低いほど総合的にシュートを抑えられている。",
+        en: "Opponent eFG%. Lower means better overall shot defense.",
+        ko: "상대 eFG%(3점 가중). 낮을수록 전반적인 슛 수비가 좋다.",
+        zh: "对手 eFG%（计入三分）。越低表示整体投篮防守越好。",
+        es: "eFG% del rival. Menos indica mejor defensa al tiro en general.",
+        pt: "eFG% do adversário. Menor indica melhor defesa de arremesso no geral.",
+        fr: "eFG% adverse. Plus bas = meilleure défense globale sur tir.",
+      },
     },
   ] as const;
 
@@ -223,57 +310,115 @@ export type NbaTeamOpponentAllowedMetric = {
   leagueRank: number;
   /** true = 値が低いほど良い（許している量が少ない） */
   lowerIsBetter: boolean;
-  hintJa: string;
-  hintEn: string;
+  hint: UiStrings;
+};
+
+export type NbaApronStatus =
+  | "under_cap"
+  | "over_cap"
+  | "tax_payer"
+  | "first_apron"
+  | "second_apron";
+
+export type NbaTeamFuturePayrollYear = {
+  seasonKey: string;
+  seasonYear: number;
+  salaryCap: number;
+  taxLine: number;
+  firstApron: number;
+  secondApron: number;
+  /** キャップ総額（Active + Dead） */
+  committedSalary: number;
+  /** Active のみ（Dead 除く） */
+  activeSalary?: number;
+  /** Dead / ストレッチ合計 */
+  deadMoney?: number;
+  deadLines?: NbaTeamPayrollDeadLine[];
+  capSpace: number;
+  taxSpace: number;
+  firstApronSpace: number;
+  secondApronSpace: number;
+  apronStatus: NbaApronStatus;
+  playerCount: number;
+  lines: NbaTeamPayrollLine[];
 };
 
 export type NbaTeamPayroll = {
-  /** 総年俸 */
+  /**
+   * キャップ総額（Active 年俸合計 + Dead Money）。
+   * リーグ順位・エプロン判定の正。
+   */
   totalSalary: number;
-  /** リーグ内ペイロール順位（1=最高） */
+  /** Active ロスター年俸合計（Dead を含まない） */
+  activeSalary?: number;
+  /** Dead Money 合計 */
+  deadMoney?: number;
+  /** リーグ内ペイロール順位（1=キャップ総額最高） */
   leagueRank: number;
   /** サラリーキャップ概算 */
   salaryCap: number;
   /** ラグジュアリータックスライン */
   taxLine: number;
+  /** 1st エプロン */
+  firstApron?: number;
+  /** 2nd エプロン */
+  secondApron?: number;
+  /** エプロン超過ステータス */
+  apronStatus?: NbaApronStatus;
   /** キャップ余裕（マイナス=オーバー） */
   capSpace: number;
+  /** タックスラインまでの余裕（マイナス=超過） */
+  taxSpace?: number;
+  /** 1st エプロンまでの余裕（マイナス=超過） */
+  firstApronSpace?: number;
+  /** 2nd エプロンまでの余裕（マイナス=超過） */
+  secondApronSpace?: number;
   /** タックス概算（非課税なら 0） */
   taxBill: number;
   /** 保証額合計 */
   guaranteed: number;
-  /** 選手別内訳（年俸降順） */
+  /** 選手別内訳（年俸降順・Active） */
   lines: NbaTeamPayrollLine[];
+  /** デッドマネー内訳 */
+  deadLines?: NbaTeamPayrollDeadLine[];
+  /** 将来シーズン別ペイロール */
+  futureYears?: NbaTeamFuturePayrollYear[];
+};
+
+export type NbaTeamPayrollDeadLine = {
+  playerId: string;
+  name: string;
+  /** キャップヒット */
+  salary: number;
+  noteJa?: string;
+  noteEn?: string;
 };
 
 export type NbaTeamPayrollLine = {
   playerId: string;
   /** 表示名（例: L.DONCIC） */
   name: string;
+  /**
+   * キャップヒット（チーム総年俸・エプロン算入の正）。
+   * Two-Way は 0。
+   */
   salary: number;
-  /** 総年俸に占める割合 0–1 */
+  /** 現金年俸（base）。ミニマムで cap と分かれるとき用。無ければ salary と同じ扱い */
+  baseSalary?: number;
+  /** 明示 cap（salary と同値のことが多い） */
+  capHit?: number;
+  /** 総年俸に占める割合 0–1（cap ベース） */
   share: number;
+  /** 2-Way 契約フラグ（サラリーキャップ非算入） */
+  isTwoWay?: boolean;
+  /**
+   * 標準年俸なしの非保証（Exhibit 10 / キャンプ等）。
+   * `$0` を Two-Way とみなさない（枠は最大3・BDL 明示のみ TW）。
+   */
+  isNonGuaranteed?: boolean;
+  /** Player Option (PO) / Team Option (TO) などのオプション種別 */
+  option?: "PO" | "TO" | "MO" | null;
 };
-
-function hashSeed(s: string): number {
-  let h = 2166136261;
-  for (let i = 0; i < s.length; i += 1) {
-    h ^= s.charCodeAt(i);
-    h = Math.imul(h, 16777619);
-  }
-  return h >>> 0;
-}
-
-function mulberry32(seed: number) {
-  let a = seed >>> 0;
-  return () => {
-    a = (a + 0x6d2b79f5) >>> 0;
-    let t = a;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
 
 function leagueRanksForMetric(
   rows: NbaLeagueTeamStatRow[],
@@ -350,38 +495,6 @@ function resolveLean(
   };
 }
 
-function buildRecentGames(
-  teamId: string,
-  conference: NbaConferenceId
-): NbaTeamRecentGame[] {
-  const bundle = getNbaLeagueTeamStatsMock();
-  const pool = bundle.season.filter((r) => r.teamId !== teamId);
-  const rnd = mulberry32(hashSeed(`${teamId}:games:v1`));
-  const games: NbaTeamRecentGame[] = [];
-  for (let i = 0; i < 10; i += 1) {
-    const opp = pool[Math.floor(rnd() * pool.length)]!;
-    const home = rnd() > 0.45;
-    const win = rnd() > 0.42;
-    const teamScore = Math.round(104 + rnd() * 28);
-    const oppScore = win
-      ? teamScore - Math.round(3 + rnd() * 18)
-      : teamScore + Math.round(2 + rnd() * 16);
-    const month = 10 + Math.floor(i / 4);
-    const day = 2 + i * 3;
-    games.push({
-      dateLabel: `${month}/${day}`,
-      oppTeamId: opp.teamId,
-      oppAbbr: TEAM_SHORT[opp.teamId] ?? opp.teamId,
-      home,
-      teamScore,
-      oppScore,
-      result: win ? "W" : "L",
-      conferenceGame: opp.conference === conference,
-    });
-  }
-  return games;
-}
-
 /** games は古い→新しい。末尾から連続結果を数える */
 export function computeStreakFromGames(
   games: Array<{ result: "W" | "L" }>
@@ -401,40 +514,7 @@ export function formatStreakLabel(streak: NbaTeamStreak): string {
   return `${streak.kind}${streak.count}`;
 }
 
-function buildInjuries(
-  teamId: string,
-  roster: NbaRosterTeamBlock
-): NbaTeamInjuryEntry[] {
-  const rnd = mulberry32(hashSeed(`${teamId}:injuries:v1`));
-  const reasons = [
-    "Left ankle sprain",
-    "Right knee soreness",
-    "Hamstring strain",
-    "Lower back tightness",
-    "Shoulder impingement",
-  ];
-  const returns = ["Day-to-day", "Week-to-week", "2 weeks", "Re-evaluate"];
-  const pool = [...roster.players].sort((a, b) => b.mpg - a.mpg);
-  const count = 1 + Math.floor(rnd() * 3);
-  const out: NbaTeamInjuryEntry[] = [];
-  for (let i = 0; i < count && i < pool.length; i += 1) {
-    const p = pool[Math.floor(rnd() * pool.length)]!;
-    if (out.some((e) => e.playerId === String(p.id))) continue;
-    out.push({
-      playerId: String(p.id),
-      name: playerCardName(p),
-      status: rnd() > 0.45 ? "out" : "gtd",
-      reason: reasons[Math.floor(rnd() * reasons.length)]!,
-      returnEstimate: returns[Math.floor(rnd() * returns.length)]!,
-    });
-  }
-  return out.sort((a, b) => {
-    if (a.status !== b.status) return a.status === "out" ? -1 : 1;
-    return a.name.localeCompare(b.name);
-  });
-}
-
-/** BallDontLie `general?type=opponent` + four-factors 相当のモック */
+/** BallDontLie `general?type=opponent` + four-factors 相当 */
 type OppAllowedBox = {
   pts: number;
   fgPct: number;
@@ -449,41 +529,16 @@ type OppAllowedBox = {
 };
 
 function allowedBoxFromRow(row: NbaLeagueTeamStatRow): OppAllowedBox {
-  const rnd = mulberry32(hashSeed(`${row.teamId}:oppAllowed:v2`));
-  /** DRTG が高いほど相手に楽に得点・高効率を許しやすい */
-  const pressure = (row.drtg - 110) / 12;
-  const j = () => (rnd() - 0.5) * 2;
-  const fgPct = Math.max(
-    0.42,
-    Math.min(0.52, 0.465 + pressure * 0.025 + j() * 0.01)
-  );
-  const fg3Pct = Math.max(
-    0.32,
-    Math.min(0.42, 0.36 + pressure * 0.02 + j() * 0.012)
-  );
-  const ftPct = Math.max(
-    0.72,
-    Math.min(0.82, 0.775 + pressure * 0.01 + j() * 0.015)
-  );
-  const efgPct = Math.max(
-    0.48,
-    Math.min(0.58, fgPct + fg3Pct * 0.5 * 0.35 + j() * 0.008)
-  );
-  const reb = Math.max(40, Math.min(50, 44.5 + pressure * 1.2 + j() * 1.5));
-  const oreb = Math.max(8.5, Math.min(14, 11.2 + pressure * 0.8 + j() * 0.9));
-  const ast = Math.max(22, Math.min(30, 26 + pressure * 1.4 + j() * 1.2));
-  /** 良い DF は相手 TOV を増やしやすい */
-  const tov = Math.max(11, Math.min(17, 14.2 - pressure * 1.1 + j() * 1.0));
   return {
     pts: row.papg,
-    fgPct: Math.round(fgPct * 1000) / 1000,
-    fg3Pct: Math.round(fg3Pct * 1000) / 1000,
-    ftPct: Math.round(ftPct * 1000) / 1000,
-    reb: Math.round(reb * 10) / 10,
-    ast: Math.round(ast * 10) / 10,
-    tov: Math.round(tov * 10) / 10,
-    oreb: Math.round(oreb * 10) / 10,
-    efgPct: Math.round(efgPct * 1000) / 1000,
+    fgPct: row.oppFgPct,
+    fg3Pct: row.oppFg3Pct,
+    ftPct: row.oppFtPct,
+    reb: row.oppReb,
+    ast: row.oppAst,
+    tov: row.oppTov,
+    oreb: row.oppOreb,
+    efgPct: row.oppEfgPct,
   };
 }
 
@@ -501,8 +556,11 @@ function rankByValue(
 }
 
 /** BallDontLie opponent averages 相当（9 指標） */
-function buildOpponentStats(teamId: string): NbaTeamOpponentAllowedMetric[] {
-  const season = getNbaLeagueTeamStatsMock().season;
+function buildOpponentStats(
+  teamId: string,
+  bundle: NbaLeagueTeamStatsBundle
+): NbaTeamOpponentAllowedMetric[] {
+  const season = bundle.season;
   const team = season.find((r) => r.teamId === teamId);
   if (!team) return [];
 
@@ -543,8 +601,7 @@ function buildOpponentStats(teamId: string): NbaTeamOpponentAllowedMetric[] {
       display,
       leagueRank: rank,
       lowerIsBetter: def.lowerIsBetter,
-      hintJa: def.hintJa,
-      hintEn: def.hintEn,
+      hint: def.hint,
     };
   };
 
@@ -576,134 +633,11 @@ function buildOpponentStats(teamId: string): NbaTeamOpponentAllowedMetric[] {
   ];
 }
 
-function buildUpcomingGames(
-  teamId: string,
-  conference: NbaConferenceId
-): NbaTeamUpcomingGame[] {
-  const bundle = getNbaLeagueTeamStatsMock();
-  const pool = bundle.season.filter((r) => r.teamId !== teamId);
-  const rnd = mulberry32(hashSeed(`${teamId}:upcoming:v1`));
-  const tips = ["19:00", "19:30", "20:00", "22:00", "13:00"];
-  const games: NbaTeamUpcomingGame[] = [];
-  for (let i = 0; i < 4; i += 1) {
-    const opp = pool[Math.floor(rnd() * pool.length)]!;
-    const home = rnd() > 0.48;
-    const month = 3 + Math.floor(i / 3);
-    const day = 8 + i * 2;
-    games.push({
-      dateLabel: `${month}/${day}`,
-      tipLabel: tips[Math.floor(rnd() * tips.length)]!,
-      oppTeamId: opp.teamId,
-      oppAbbr: TEAM_SHORT[opp.teamId] ?? opp.teamId,
-      home,
-      conferenceGame: opp.conference === conference,
-    });
-  }
-  return games;
-}
-
-function buildConferenceSplit(teamId: string) {
-  const rnd = mulberry32(hashSeed(`${teamId}:confSplit:v1`));
-  const veW = Math.round(8 + rnd() * 12);
-  const veL = Math.round(6 + rnd() * 12);
-  const vwW = Math.round(7 + rnd() * 12);
-  const vwL = Math.round(6 + rnd() * 12);
-  return {
-    vsEast: { wins: veW, losses: veL },
-    vsWest: { wins: vwW, losses: vwL },
-  };
-}
-
-function buildHomeAwaySplit(teamId: string) {
-  const rnd = mulberry32(hashSeed(`${teamId}:homeAway:v1`));
-  const hW = Math.round(12 + rnd() * 18);
-  const hL = Math.round(6 + rnd() * 14);
-  const aW = Math.round(10 + rnd() * 16);
-  const aL = Math.round(8 + rnd() * 16);
-  return {
-    home: { wins: hW, losses: hL },
-    away: { wins: aW, losses: aL },
-  };
-}
-
-const ROSTER_NAMES = [
-  ["JAMES", "HUGHES", "G"],
-  ["MICHAEL", "CLARK", "F"],
-  ["DAVID", "HARRIS", "C"],
-  ["JOHN", "LEWIS", "G"],
-  ["ROBERT", "WALKER", "F"],
-  ["WILLIAM", "YOUNG", "G"],
-  ["THOMAS", "ALLEN", "F"],
-  ["CHARLES", "KING", "C"],
-  ["OSCAR", "PRICE", "G"],
-  ["SAM", "FOSTER", "F"],
-] as const;
-
-function buildRosterBlock(
-  teamId: string,
-  teamName: string,
-  seed: number
-): NbaRosterTeamBlock {
-  const rnd = mulberry32(hashSeed(`${teamId}:roster:v2`));
-  const players: NbaRosterPlayer[] = ROSTER_NAMES.map(([first, last, pos], i) => {
-    const starter = i < 5;
-    const mpg = Math.round((starter ? 28 + rnd() * 10 : 12 + rnd() * 14) * 10) / 10;
-    const ppg = Math.round((starter ? 12 + rnd() * 18 : 4 + rnd() * 10) * 10) / 10;
-    return {
-      id: `${teamId}-p${i + 1}`,
-      firstName: first,
-      lastName: last,
-      position: pos,
-      jerseyNumber: String(i + 1),
-      starter,
-      gp: Math.round(40 + rnd() * 30),
-      mpg,
-      ppg,
-      rpg: Math.round((2 + rnd() * 10) * 10) / 10,
-      apg: Math.round((1 + rnd() * 8) * 10) / 10,
-      fgPct: 0.4 + rnd() * 0.18,
-      fg3Pct: 0.3 + rnd() * 0.15,
-      ftPct: 0.7 + rnd() * 0.22,
-      fgm: Math.round((3 + rnd() * 7) * 10) / 10,
-      fga: Math.round((8 + rnd() * 12) * 10) / 10,
-      fg3m: Math.round((0.5 + rnd() * 3.5) * 10) / 10,
-      fg3a: Math.round((2 + rnd() * 8) * 10) / 10,
-      ftm: Math.round((1 + rnd() * 5) * 10) / 10,
-      fta: Math.round((1.5 + rnd() * 6) * 10) / 10,
-      spg: Math.round((0.3 + rnd() * 1.8) * 10) / 10,
-      bpg: Math.round((0.2 + rnd() * 2) * 10) / 10,
-      tpg: Math.round((0.8 + rnd() * 3) * 10) / 10,
-      dimmed: !starter && rnd() > 0.55,
-    };
-  });
-  const sorted = sortRosterPlayers(players);
-  const activeCount = sorted.filter((p) => !p.dimmed).length;
-  return {
-    teamId,
-    teamName,
-    side: "home",
-    seed,
-    activeCount,
-    rosterCount: sorted.length,
-    players: sorted,
-  };
-}
-
-/** Team Detail ロスター行 → Player Detail プレビュー用（ID から同一モック選手を復元） */
+/** Team Detail ロスター行 → Player Detail プレビュー用（ライブ roster から復元） */
 export function lookupTeamDetailRosterPlayer(
-  playerId: string
+  _playerId: string
 ): { player: NbaRosterPlayer; teamId: string } | null {
-  const match = /^(.+)-p(\d+)$/.exec(playerId);
-  if (!match) return null;
-  const teamId = match[1]!;
-  const block = buildRosterBlock(
-    teamId,
-    NBA_TEAM_NAME_BY_ID[teamId] ?? teamId,
-    1
-  );
-  const player = block.players.find((p) => String(p.id) === playerId);
-  if (!player) return null;
-  return { player, teamId };
+  return null;
 }
 
 function conferenceRankAmong(
@@ -719,44 +653,241 @@ function conferenceRankAmong(
 }
 
 /** プレビュー既定チーム（NET 上位寄りを選ぶ） */
-export function defaultTeamDetailPreviewTeamId(): string {
-  const season = getNbaLeagueTeamStatsMock().season;
+export function defaultTeamDetailPreviewTeamId(
+  bundle: NbaLeagueTeamStatsBundle = getNbaLeagueTeamStatsMock()
+): string {
+  const season = bundle.season;
   const sorted = [...season].sort((a, b) => b.netrtg - a.netrtg);
   return sorted[2]?.teamId ?? sorted[0]?.teamId ?? "nba-lakers";
 }
 
-export function getNbaTeamDetailPreview(
-  teamId: string = defaultTeamDetailPreviewTeamId()
-): NbaTeamDetailPreview {
-  const bundle = getNbaLeagueTeamStatsMock();
-  const seasonRow = bundle.season.find((r) => r.teamId === teamId);
-  const last10Row = bundle.last10.find((r) => r.teamId === teamId);
-  if (!seasonRow || !last10Row) {
-    throw new Error(`team detail preview: unknown team ${teamId}`);
-  }
 
-  const seasonMetrics = buildMetrics(bundle.season, teamId);
-  const last10Metrics = buildMetrics(bundle.last10, teamId);
-  const lean = resolveLean(seasonMetrics);
-  const recentGames = buildRecentGames(teamId, seasonRow.conference);
-  const l10Wins = recentGames.filter((g) => g.result === "W").length;
-  const [cityEn, nickEn] = splitTeamNameByLeague("nba", seasonRow.teamName);
+const EMPTY_WL = { wins: 0, losses: 0 } as const;
+
+function emptyConferenceSplit() {
+  return {
+    vsEast: { ...EMPTY_WL },
+    vsWest: { ...EMPTY_WL },
+  };
+}
+
+function emptyHomeAwaySplit() {
+  return {
+    home: { ...EMPTY_WL },
+    away: { ...EMPTY_WL },
+  };
+}
+
+function emptyStrengthSplit() {
+  return {
+    vsOver500: { ...EMPTY_WL },
+    vsUnder500: { ...EMPTY_WL },
+  };
+}
+
+function emptyRosterBlock(teamId: string, teamName: string): NbaRosterTeamBlock {
+  return {
+    teamId,
+    teamName,
+    side: "home",
+    seed: null,
+    activeCount: 0,
+    rosterCount: 0,
+    players: [],
+  };
+}
+
+function emptyPayroll(): NbaTeamPayroll {
+  return {
+    totalSalary: 0,
+    leagueRank: 30,
+    salaryCap: 154_647_000,
+    taxLine: 187_895_000,
+    firstApron: 195_945_000,
+    secondApron: 207_824_000,
+    apronStatus: "under_cap",
+    capSpace: 154_647_000,
+    taxSpace: 187_895_000,
+    firstApronSpace: 195_945_000,
+    secondApronSpace: 207_824_000,
+    taxBill: 0,
+    guaranteed: 0,
+    lines: [],
+    futureYears: [],
+  };
+}
+
+function zeroMetricDefs(teamId: string): NbaTeamMetricWithRank[] {
+  // buildMetrics([], id) returns []; keep a zero skeleton from defs if available
+  const rows = buildMetrics([], teamId);
+  if (rows.length > 0) return rows;
+  return NBA_LEAGUE_TEAM_STAT_METRICS.map((def) => ({
+    id: def.id,
+    short: def.short,
+    value: 0,
+    display: formatMetricValue(def.id, 0),
+    leagueRank: 30,
+    higherIsBetter: def.higherIsBetter,
+  }));
+}
+
+/**
+ * ライブのリーグ表が空／当該チーム無し（開幕前 empty など）のとき
+ * モックで骨組みを組む。見つからなければ throw せず最小プレビューを返す。
+ */
+function resolveTeamDetailBundle(
+  teamId: string,
+  bundle: NbaLeagueTeamStatsBundle
+): {
+  working: NbaLeagueTeamStatsBundle;
+  seasonRow: NbaLeagueTeamStatRow;
+} | null {
+  // モックリーグ表には落とさない。ライブに当該チームがあるときだけ使う。
+  const fromLive = bundle.season.find((r) => r.teamId === teamId);
+  if (!fromLive) return null;
+  return { working: bundle, seasonRow: fromLive };
+}
+
+function zeroTeamDetailSeasonStats(
+  detail: NbaTeamDetailPreview
+): NbaTeamDetailPreview {
+  const zeroMetrics = (
+    rows: NbaTeamMetricWithRank[]
+  ): NbaTeamMetricWithRank[] =>
+    rows.map((m) => ({
+      ...m,
+      value: 0,
+      display: formatMetricValue(m.id, 0),
+      leagueRank: 30,
+    }));
+  const emptyRecord = { wins: 0, losses: 0 };
+  return {
+    ...detail,
+    season: { wins: 0, losses: 0, winPct: 0 },
+    last10Record: { wins: 0, losses: 0 },
+    streak: { kind: "W", count: 0 },
+    recentGames: [],
+    upcomingGames: [],
+    injuries: [],
+    metrics: {
+      season: zeroMetrics(detail.metrics.season),
+      last10: zeroMetrics(detail.metrics.last10),
+    },
+    opponentStats: detail.opponentStats.map((m) => ({
+      ...m,
+      value: 0,
+      display: m.id.includes("pct") ? "0.0%" : "0.0",
+      leagueRank: 30,
+    })),
+    conferenceSplit: {
+      vsEast: { ...emptyRecord },
+      vsWest: { ...emptyRecord },
+    },
+    homeAwaySplit: {
+      home: { ...emptyRecord },
+      away: { ...emptyRecord },
+    },
+    strengthSplit: {
+      vsOver500: { ...emptyRecord },
+      vsUnder500: { ...emptyRecord },
+    },
+    headToHead: [],
+    asOfLabel: "PRESEASON · 2026-27",
+  };
+}
+
+function buildMinimalTeamDetailPreview(
+  teamId: string
+): NbaTeamDetailPreview {
+  const teamName = NBA_TEAM_NAME_BY_ID[teamId] ?? teamId;
+  const conference = nbaConferenceForTeam(teamId) ?? "west";
+  const [cityEn, nickEn] = splitTeamNameByLeague("nba", teamName);
   const divisionId: NbaDivisionId =
     NBA_TEAM_US_GEO[teamId]?.division ?? "pacific";
   const divLabel = NBA_DIVISION_LABEL[divisionId];
-
-  const confRank = conferenceRankAmong(
-    bundle.season,
-    teamId,
-    seasonRow.conference
-  );
-  const teamName = NBA_TEAM_NAME_BY_ID[teamId] ?? seasonRow.teamName;
-  const rosterBlock = buildRosterBlock(teamId, teamName, confRank);
-
+  const rosterBlock = emptyRosterBlock(teamId, teamName);
+  const emptyMetrics = zeroMetricDefs(teamId);
+  const lean = resolveLean(emptyMetrics);
   return {
     teamId,
     teamName,
     teamAbbr: TEAM_SHORT[teamId] ?? teamId,
+    cityEn: cityEn || teamName,
+    nickEn: nickEn || getMobileTeamNameFallback(teamName),
+    conference,
+    conferenceRank: 15,
+    divisionId,
+    divisionLabelJa: divLabel.ja,
+    divisionLabelEn: divLabel.en,
+    season: { wins: 0, losses: 0, winPct: 0 },
+    last10Record: { wins: 0, losses: 0 },
+    streak: { kind: "W", count: 0 },
+    ...lean,
+    metrics: { season: emptyMetrics, last10: emptyMetrics },
+    recentGames: [],
+    upcomingGames: [],
+    injuries: [],
+    opponentStats: [],
+    conferenceSplit: emptyConferenceSplit(),
+    homeAwaySplit: emptyHomeAwaySplit(),
+    strengthSplit: emptyStrengthSplit(),
+    headToHead: [],
+    rosterBlock,
+    payroll: emptyPayroll(),
+    asOfLabel: "PRESEASON · 2026-27",
+  };
+}
+
+function last10RowHasData(row: NbaLeagueTeamStatRow | undefined): boolean {
+  if (!row) return false;
+  return row.wins + row.losses > 0 || row.ppg > 0;
+}
+
+/**
+ * チーム詳細プレビュー。
+ * ベースは 0 / 空。W–L / 順位は live overlay が BDL standings で上書き。
+ * ROSTER / PAYROLL / 試合ログ（form・H2H）/ injuries は各 API overlay。
+ */
+export function getNbaTeamDetailPreview(
+  teamId?: string,
+  bundle: NbaLeagueTeamStatsBundle = { season: [], playoffs: [], last10: [], asOfLabel: "" }
+): NbaTeamDetailPreview {
+  const resolvedId =
+    teamId ||
+    defaultTeamDetailPreviewTeamId(
+      bundle.season.length > 0 ? bundle : { season: [], playoffs: [], last10: [], asOfLabel: "" }
+    ) ||
+    "nba-lakers";
+
+  const resolved = resolveTeamDetailBundle(resolvedId, bundle);
+  if (!resolved || !nbaSeasonStatsReady()) {
+    const minimal = buildMinimalTeamDetailPreview(resolvedId);
+    return zeroTeamDetailSeasonStats(minimal);
+  }
+
+  const { working, seasonRow } = resolved;
+  const seasonMetrics = buildMetrics(working.season, resolvedId);
+  const lean = resolveLean(seasonMetrics.length ? seasonMetrics : zeroMetricDefs(resolvedId));
+  const [cityEn, nickEn] = splitTeamNameByLeague("nba", seasonRow.teamName);
+  const divisionId: NbaDivisionId =
+    NBA_TEAM_US_GEO[resolvedId]?.division ?? "pacific";
+  const divLabel = NBA_DIVISION_LABEL[divisionId];
+
+  const confRank = conferenceRankAmong(
+    working.season,
+    resolvedId,
+    seasonRow.conference
+  );
+  const teamName = NBA_TEAM_NAME_BY_ID[resolvedId] ?? seasonRow.teamName;
+  const last10Row = working.last10.find((r) => r.teamId === resolvedId);
+  const last10Metrics = last10RowHasData(last10Row)
+    ? buildMetrics(working.last10, resolvedId)
+    : zeroMetricDefs(resolvedId);
+
+  return {
+    teamId: resolvedId,
+    teamName,
+    teamAbbr: TEAM_SHORT[resolvedId] ?? resolvedId,
     cityEn: cityEn || seasonRow.teamName,
     nickEn: nickEn || getMobileTeamNameFallback(seasonRow.teamName),
     conference: seasonRow.conference,
@@ -769,76 +900,29 @@ export function getNbaTeamDetailPreview(
       losses: seasonRow.losses,
       winPct: seasonRow.winPct,
     },
-    last10Record: { wins: l10Wins, losses: 10 - l10Wins },
-    streak: computeStreakFromGames(recentGames),
+    // 試合ログ / form / splits / last10 勝敗は overlay が games から埋める（無ければ 0）
+    last10Record: { wins: 0, losses: 0 },
+    streak: { kind: "W", count: 0 },
     ...lean,
-    metrics: { season: seasonMetrics, last10: last10Metrics },
-    recentGames,
-    upcomingGames: buildUpcomingGames(teamId, seasonRow.conference),
-    injuries: buildInjuries(teamId, rosterBlock),
-    opponentStats: buildOpponentStats(teamId),
-    conferenceSplit: buildConferenceSplit(teamId),
-    homeAwaySplit: buildHomeAwaySplit(teamId),
-    rosterBlock,
-    payroll: buildPayroll(teamId, rosterBlock),
-    asOfLabel: bundle.asOfLabel,
+    metrics: {
+      season: seasonMetrics.length ? seasonMetrics : zeroMetricDefs(resolvedId),
+      last10: last10Metrics.length ? last10Metrics : zeroMetricDefs(resolvedId),
+    },
+    recentGames: [],
+    upcomingGames: [],
+    // injury は live overlay が上書き（無ければ no-data UI）
+    injuries: [],
+    opponentStats: buildOpponentStats(resolvedId, working),
+    conferenceSplit: emptyConferenceSplit(),
+    homeAwaySplit: emptyHomeAwaySplit(),
+    strengthSplit: emptyStrengthSplit(),
+    headToHead: [],
+    rosterBlock: emptyRosterBlock(resolvedId, teamName),
+    payroll: emptyPayroll(),
+    asOfLabel: working.asOfLabel,
   };
 }
 
-function buildPayroll(
-  teamId: string,
-  roster: NbaRosterTeamBlock
-): NbaTeamPayroll {
-  const rnd = mulberry32(hashSeed(`${teamId}:payroll:v2`));
-  const salaryCap = 140_588_000;
-  const taxLine = 170_814_000;
-  /** おおよそ $120M–$220M */
-  const totalSalary = Math.round(120_000_000 + rnd() * 100_000_000);
-  const guaranteed = Math.round(totalSalary * (0.88 + rnd() * 0.1));
-  const capSpace = salaryCap - totalSalary;
-  const overTax = Math.max(0, totalSalary - taxLine);
-  const taxBill =
-    overTax <= 0
-      ? 0
-      : Math.round(overTax * (1.5 + Math.min(2, overTax / 20_000_000)));
-  const leagueRank = Math.max(1, Math.min(30, Math.round(1 + rnd() * 29)));
-
-  const rosterPlayers = [...roster.players].sort((a, b) => {
-    if (a.starter !== b.starter) return a.starter ? -1 : 1;
-    return b.ppg - a.ppg;
-  });
-  const weights = rosterPlayers.map((p, i) => {
-    const base = p.starter ? 1.35 - i * 0.08 : 0.55 - (i - 5) * 0.035;
-    return Math.max(0.08, base + rnd() * 0.12);
-  });
-  const weightSum = weights.reduce((a, b) => a + b, 0) || 1;
-  let allocated = 0;
-  const lines: NbaTeamPayrollLine[] = rosterPlayers.map((p, i) => {
-    const isLast = i === rosterPlayers.length - 1;
-    const salary = isLast
-      ? Math.max(0, totalSalary - allocated)
-      : Math.round((totalSalary * weights[i]!) / weightSum);
-    allocated += salary;
-    return {
-      playerId: String(p.id),
-      name: playerCardName(p),
-      salary,
-      share: totalSalary > 0 ? salary / totalSalary : 0,
-    };
-  });
-  lines.sort((a, b) => b.salary - a.salary);
-
-  return {
-    totalSalary,
-    leagueRank,
-    salaryCap,
-    taxLine,
-    capSpace,
-    taxBill,
-    guaranteed,
-    lines,
-  };
-}
 
 function getMobileTeamNameFallback(full: string) {
   const parts = full.trim().split(/\s+/);
@@ -863,36 +947,94 @@ const PAYROLL_SEG_FALLBACK = [
 export type NbaTeamPayrollSlice = {
   key: string;
   label: string;
+  /** キャップヒット（チーム合計・%） */
   salary: number;
+  /** 行に出す現金年俸（無ければ salary） */
+  displaySalary?: number;
   share: number;
   color: string;
+  isTwoWay?: boolean;
+  /** Exhibit 10 / キャンプ非保証 */
+  isNonGuaranteed?: boolean;
+  option?: "PO" | "TO" | "MO" | null;
 };
 
-/** 上位 N + OTHER の積み上げバー用スライス */
+/**
+ * ペイロール積み上げバー / リスト用スライス。
+ * `topN` 省略時は全員表示（OTHER なし）。数値を渡すと上位 N + OTHER。
+ * 並び: 標準契約（表示年俸降順）→ Two-Way → Exhibit 10。
+ */
 export function payrollDisplaySlices(
   lines: NbaTeamPayrollLine[],
   accent: string,
-  topN = 5
+  topN?: number
 ): NbaTeamPayrollSlice[] {
-  const top = lines.slice(0, topN);
-  const rest = lines.slice(topN);
-  const otherSalary = rest.reduce((s, l) => s + l.salary, 0);
-  const otherShare = rest.reduce((s, l) => s + l.share, 0);
-  const slices: NbaTeamPayrollSlice[] = top.map((l, i) => ({
+  const colorAt = (i: number) =>
+    i === 0
+      ? accent
+      : PAYROLL_SEG_FALLBACK[(i - 1) % PAYROLL_SEG_FALLBACK.length]!;
+
+  const lineCash = (l: NbaTeamPayrollLine): number => {
+    if (l.isTwoWay === true || l.isNonGuaranteed === true) return 0;
+    if (l.baseSalary != null && l.baseSalary > 0) return l.baseSalary;
+    return l.salary;
+  };
+
+  /** 0 = 標準 · 1 = TW · 2 = E10 */
+  const lineTier = (l: NbaTeamPayrollLine): number => {
+    if (l.isTwoWay === true) return 1;
+    if (l.isNonGuaranteed === true) return 2;
+    return 0;
+  };
+
+  // 契約がある選手（cap または base > 0）または 2-Way / 非保証
+  const activeLines = lines
+    .filter(
+      (l) =>
+        l.salary > 0 ||
+        (l.baseSalary != null && l.baseSalary > 0) ||
+        l.isTwoWay === true ||
+        l.isNonGuaranteed === true
+    )
+    .slice()
+    .sort((a, b) => {
+      const tierDiff = lineTier(a) - lineTier(b);
+      if (tierDiff !== 0) return tierDiff;
+      return lineCash(b) - lineCash(a) || a.name.localeCompare(b.name);
+    });
+
+  const toSlice = (l: NbaTeamPayrollLine, i: number): NbaTeamPayrollSlice => ({
     key: l.playerId,
     label: l.name,
     salary: l.salary,
+    displaySalary:
+      l.isTwoWay === true || l.isNonGuaranteed === true
+        ? undefined
+        : l.baseSalary != null && l.baseSalary > 0
+          ? l.baseSalary
+          : l.salary,
     share: l.share,
-    color:
-      i === 0
-        ? accent
-        : PAYROLL_SEG_FALLBACK[(i - 1) % PAYROLL_SEG_FALLBACK.length]!,
-  }));
+    color: colorAt(i),
+    isTwoWay: l.isTwoWay === true,
+    isNonGuaranteed: l.isNonGuaranteed === true,
+    option: l.option ?? null,
+  });
+
+  if (topN == null || topN >= activeLines.length) {
+    return activeLines.map((l, i) => toSlice(l, i));
+  }
+
+  const top = activeLines.slice(0, topN);
+  const rest = activeLines.slice(topN);
+  const otherSalary = rest.reduce((s, l) => s + l.salary, 0);
+  const otherShare = rest.reduce((s, l) => s + l.share, 0);
+  const slices: NbaTeamPayrollSlice[] = top.map((l, i) => toSlice(l, i));
   if (otherSalary > 0) {
     slices.push({
       key: "other",
       label: "OTHER",
       salary: otherSalary,
+      displaySalary: otherSalary,
       share: otherShare,
       color: "rgba(255,255,255,0.22)",
     });

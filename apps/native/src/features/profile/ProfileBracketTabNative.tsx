@@ -5,19 +5,27 @@ import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { BlocksPulseLoader } from "../../components/BlocksPulseLoader";
 import PlayoffFullBracketNative from "../games/playoffBracket/PlayoffFullBracketNative";
 import { useNativePlayoffBracketView } from "../games/playoffBracket/useNativePlayoffBracketView";
+import { profileBracketTabCopy } from "./profileOverviewWidgetsCopy";
+import { resolveLocalizedLang } from "../../../../../lib/i18n/localize";
+import { PROFILE_CHART_CYBER } from "./profileOverviewChartCyberTheme";
+import {
+  profileOverviewChartEmptyHintStyle,
+  profileOverviewChartNoDataStyle,
+} from "./profileOverviewChartShell";
 
 type Props = {
   uid: string | undefined;
-  language: "ja" | "en";
+  language: string;
 };
 
 export default function ProfileBracketTabNative({ uid, language }: Props) {
-  const isJa = language === "ja";
+  const copy = profileBracketTabCopy(language);
+  const langJaEn = resolveLocalizedLang(language) === "ja" ? "ja" : "en";
   const { loading, display, savedBracket, score, season, officialResults, hasSubmitted } =
     useNativePlayoffBracketView(uid);
 
   if (!uid) {
-    return <Text style={styles.muted}>{isJa ? "ログインが必要です" : "Sign in required"}</Text>;
+    return <Text style={styles.muted}>{copy.signIn}</Text>;
   }
 
   if (loading) {
@@ -30,11 +38,9 @@ export default function ProfileBracketTabNative({ uid, language }: Props) {
 
   if (!hasSubmitted || !display) {
     return (
-      <View style={styles.noDataBox}>
-        <Text style={styles.noDataBebas}>NO DATA</Text>
-        <Text style={styles.muted}>
-          {isJa ? "提出済みのプレーオフブラケットがありません" : "No playoff bracket submitted"}
-        </Text>
+      <View style={styles.noDataBox} accessibilityRole="text">
+        <Text style={styles.noData}>NO DATA</Text>
+        <Text style={styles.noDataHint}>{copy.noBracket}</Text>
       </View>
     );
   }
@@ -56,7 +62,7 @@ export default function ProfileBracketTabNative({ uid, language }: Props) {
         champion={display.champion}
         bracket={savedBracket ?? undefined}
         results={officialResults ?? undefined}
-        hitLegend={{ language }}
+        hitLegend={{ language: langJaEn }}
       />
     </ScrollView>
   );
@@ -77,18 +83,19 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   noDataBox: {
-    padding: 24,
-    borderRadius: 16,
+    minHeight: 180,
+    paddingVertical: 36,
+    paddingHorizontal: 16,
+    borderRadius: 2,
+    backgroundColor: PROFILE_CHART_CYBER.rankPlotInnerBg,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
-    backgroundColor: "rgba(5,8,20,0.55)",
+    borderColor: PROFILE_CHART_CYBER.glassBorder,
     alignItems: "center",
+    justifyContent: "center",
   },
-  noDataBebas: {
-    fontSize: 32,
-    letterSpacing: 4,
-    color: "rgba(103,232,249,0.55)",
-    marginBottom: 8,
-    fontWeight: "700",
+  noData: profileOverviewChartNoDataStyle,
+  noDataHint: {
+    ...profileOverviewChartEmptyHintStyle,
+    maxWidth: 260,
   },
 });

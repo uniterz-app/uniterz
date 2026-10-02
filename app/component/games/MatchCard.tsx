@@ -8,6 +8,7 @@ import {
   joinTeamNameLines,
   splitTeamNameByLeague,
 } from "@/lib/team-name-split";
+import { compactNbaCardNickname } from "@/lib/nba-team-names";
 import { usePathname, useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useState, useMemo, useCallback, useEffect } from "react";
@@ -29,6 +30,7 @@ import {
   isResultUpsetFrameBadge,
   isResultCyberClipFrameBadge,
 } from "@/lib/result/resultGlass";
+import { matchCardRecentFormDisplay } from "@/lib/nba/standings/buildNbaStandingsTeamRecordMap";
 import { formatTeamRecordWithRank } from "@/lib/teamRecordDisplay";
 import ResultHitCyberFrame from "@/app/component/result/ResultHitCyberFrame";
 import ResultPerfectCyberFrame from "@/app/component/result/ResultPerfectCyberFrame";
@@ -36,8 +38,16 @@ import ResultStreakCyberFrame from "@/app/component/result/ResultStreakCyberFram
 import ResultUpsetCyberFrame from "@/app/component/result/ResultUpsetCyberFrame";
 import ResultOutcomeBadges from "@/app/component/result/ResultOutcomeBadges";
 import ResultStatsRows from "@/app/component/result/ResultStatsRows";
-import NbaTopScorerResultRow from "@/app/component/result/NbaTopScorerResultRow";
+import ResultCardOverlayFooter from "@/app/component/result/ResultCardOverlayFooter";
+import ResultCardDesignFace from "@/app/component/result/ResultCardDesignFace";
+import { buildResultCardFaceModel } from "@/lib/result/buildResultCardFace";
 import { resolveNbaTopScorerResultInfo } from "@/lib/result/resolveNbaTopScorerResult";
+import { extractResultSettlementBreakdown } from "@/lib/result/buildResultStatRows";
+import { parseStoredResultScoreRel } from "@/lib/result/resultScoreRelative";
+import {
+  resolveGameMarketBiasDisplay,
+} from "@/lib/predict/gameMarketDistribution";
+import type { NbaTopScorerPick } from "@/lib/nba/topScorer";
 import React from "react";
 import Soccer from "@/app/component/games/icons/Soccer";
 import { motion, useReducedMotion } from "framer-motion";
@@ -51,18 +61,20 @@ import {
 } from "./cyberMotion";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import type { Language } from "@/lib/i18n/language";
-import { TIMEZONE_ET, TIMEZONE_JST } from "@/lib/time/zonedTime";
 import { t } from "@/lib/i18n/t";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import {
   getTeamPrimaryColor,
   getTeamJerseyPrimaryColor,
   getTeamJerseySecondaryColor,
+  resolveMatchupUiAccents,
 } from "@/lib/team-colors";
 import { normalizeLeague, type League } from "@/lib/leagues";
 import { auth } from "@/lib/firebase";
+import { prefetchMatchupDetailBundle } from "@/lib/nba/predict/fetchMatchupDetailClient";
 import EventPill from "@/app/component/common/EventPill";
 import { getGameEventTag } from "@/lib/events/eventRules";
+import { displayNbaRoundLabel } from "@/lib/games/displayNbaRoundLabel";
 import MatchScoreLine from "@/app/component/games/MatchScoreLine";
 import {
   matchScoreClass,
@@ -137,8 +149,8 @@ export type MatchCardProps = {
   league: League;
   /** シーズン（例: "2025-26"）。WC 順位表・過去試合などに使用 */
   season?: string | null;
-  /** regular | play_in | playoffs; omitted/null = regular. */
-  seasonPhase?: "regular" | "play_in" | "playoffs" | null;
+  /** preseason | regular | play_in | playoffs; omitted/null = regular. */
+  seasonPhase?: "preseason" | "regular" | "play_in" | "playoffs" | null;
   venue?: string;
   roundLabel?: string;
   /** WC：ノックアウトステージ（R32 以降）か。引き分け予想・市場の引き分け表示を抑止する */
@@ -178,6 +190,8 @@ export type MatchCardProps = {
   homePct: number;
   awayPct: number;
 };
+  /** games.predictorCount — 市場バー右の投稿数 */
+  predictorCount?: number;
 showMarketBias?: boolean;
 /** @deprecated 一覧レイアウトは attachOverlayMarketBar を使う */
 inPredictOverlay?: boolean;
@@ -220,8 +234,12 @@ homeRecord?: {
   onClosePredictOverlay?: () => void;
   /** 親で言語を渡すと users/{uid} の購読をカード毎に増やさない */
   language?: Language;
+  /** キックオフ・日付表示用 IANA TZ（未指定時は国/言語から解決） */
+  timeZone?: string;
   /** NBA: 最多得点者予想の候補選手 */
   topScorerCandidates?: import("@/lib/nba/topScorer").NbaTopScorerCandidate[] | null;
+  /** 予想オーバーレイ：フォーム側の最多得点者ピック（投稿前のライブ反映） */
+  overlayGoalScorerPick?: NbaTopScorerPick | null;
   /** NBA ピックアップ試合。左辺に `PICK UP` を出す */
   isPickup?: boolean;
   /** 先頭カードの左辺 `PICK UP` をチュートリアル測定する */
@@ -270,8 +288,8 @@ function wcListNameTextClass(
   if (league === "wc" && isMobile && mobileDense) {
     return "text-[14px] font-bold leading-[1.12] md:text-[15px]";
   }
-  if (isMobile) return "text-[15px] font-bold md:text-[18px]";
-  return "text-base font-bold leading-tight md:text-xl lg:text-2xl";
+  if (isMobile) return "text-[13px] font-semibold md:text-[15px]";
+  return "text-base font-semibold leading-tight md:text-xl lg:text-2xl";
 }
 
 function wcListNameFontStyle(
@@ -296,22 +314,6 @@ function listKickoffCenterClass(
   return [scoreText, "leading-none", resultStatsMetricNumClass].join(" ");
 }
 
-const fmtKickoffDateTime = (
-  d: Date | null,
-  timeZone: string,
-  locale: string
-) =>
-  d
-    ? d.toLocaleString(locale, {
-        timeZone,
-        month: "numeric",
-        day: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: false,
-      })
-    : "--:--";
-
 function ordinal(n: number) {
   if (n % 100 >= 11 && n % 100 <= 13) return "th";
   switch (n % 10) {
@@ -325,19 +327,6 @@ function ordinal(n: number) {
 /** ResultMatchHeader の予想スコア数字と同じスタック */
 const RESULT_CARD_NUM_FONT =
   'Impact,"Anton","Arial Black",Inter,ui-sans-serif,system-ui,sans-serif';
-
-/** BracketCardWeb / BracketCardMobile のチーム短名と同じ系統 */
-function bracketMarketTeamNameStyle(isMobile: boolean): React.CSSProperties {
-  return isMobile
-    ? {
-        fontFamily: '"Bebas Neue", sans-serif',
-        letterSpacing: "0.08em",
-      }
-    : {
-        fontFamily: "Oswald, Bebas Neue, sans-serif",
-        letterSpacing: "0.06em",
-      };
-}
 
 /** ResultStatsCard「総合得点」等と同じ数値フォント（Oxanium） */
 function RecordWithRank({
@@ -414,6 +403,7 @@ function MatchCardView({
   showRecentForm = false,
   hideActions = false,
   marketBias,
+  predictorCount,
   showMarketBias = false,
   inPredictOverlay = false,
   attachOverlayMarketBar = false,
@@ -432,18 +422,26 @@ function MatchCardView({
   compact = false,
   resultPost = null,
   resultRatingBarsImmediate = false,
+  topScorerCandidates = null,
+  overlayGoalScorerPick = null,
   userPredictionWinner = null,
   onRequestPredictEdit,
   onClosePredictOverlay,
   language,
+  timeZone: timeZoneProp,
   isPickup = false,
   tutorialPickupLabelTarget,
 }: MatchCardProps & { language: Language }) {
   const router = useRouter();
 
   const { fUser: user } = useFirebaseUser();
+  const { timeZone: userTimeZone } = useUserLanguage(user?.uid ?? null);
   const m = t(language);
-  const displayTimeZone = language === "en" ? TIMEZONE_ET : TIMEZONE_JST;
+  const displayedRoundLabel = displayNbaRoundLabel(
+    roundLabel,
+    language === "ja"
+  );
+  const displayTimeZone = timeZoneProp ?? userTimeZone;
 
   const [navigating, setNavigating] = useState(false);
   // Full-area tap: scale the whole card shell (transparent overlay alone shows no motion).
@@ -481,16 +479,10 @@ const isMobile = prefix === "/mobile" || prefix.startsWith("/m/");
   /** ラウンドラベルから線がカードを包む（試合一覧 Native 線枠と同じ） */
   const useLineFrameShell = overlayCenterMode || mobileDense;
   const lineFrameLabels = useMemo(
-    () => resolveLineFrameLabels(roundLabel ?? "", isPickup, "left"),
-    [roundLabel, isPickup]
+    () => resolveLineFrameLabels(displayedRoundLabel, isPickup, "left"),
+    [displayedRoundLabel, isPickup]
   );
   const showMergedResult = Boolean(overlayCenterMode && resultPost);
-  /** 予想オーバーレイ：未開始試合のキックオフ・放送局（予想有無に関わらず） */
-  const showOverlayScheduleMeta = Boolean(
-    overlayCenterMode &&
-      status === "scheduled" &&
-      startAtJst
-  );
   const {
     badge: resultBadge,
     outcomeBadge: resultOutcomeBadge,
@@ -535,21 +527,113 @@ const isMobile = prefix === "/mobile" || prefix.startsWith("/m/");
         ? predictOverlayGlassBase
         : `${predictOverlayGlassBase} predict-overlay-cyber-card--bare`;
   const wcGoalScorerResult = null;
-  const nbaTopScorerResult = useMemo(
-    () => (resultPost ? resolveNbaTopScorerResultInfo(resultPost) : null),
+  const nbaOverlayFooter = showOverlayMarketBar && league === "nba";
+  const nbaTopScorerResult = useMemo(() => {
+    if (league !== "nba") return null;
+    const pickSource = overlayGoalScorerPick
+      ? {
+          league: "nba",
+          status: resultPost?.status ?? "scheduled",
+          prediction: { goalScorer: overlayGoalScorerPick },
+          stats: resultPost?.stats,
+        }
+      : resultPost;
+    if (!pickSource) return null;
+    return resolveNbaTopScorerResultInfo(pickSource, {
+      candidates: topScorerCandidates,
+    });
+  }, [league, overlayGoalScorerPick, resultPost, topScorerCandidates]);
+  const overlaySettlement = useMemo(
+    () =>
+      resultPost ? extractResultSettlementBreakdown(resultPost.stats) : null,
     [resultPost]
   );
+  const overlayScoreRel = useMemo(() => {
+    const rel = parseStoredResultScoreRel(
+      (resultPost?.stats as { scoreRel?: unknown } | undefined)?.scoreRel
+    );
+    return rel === "max" || rel === "top5" || rel === "top10" ? rel : null;
+  }, [resultPost]);
+  const overlayPredictionCount = useMemo(() => {
+    const stored =
+      typeof predictorCount === "number" &&
+      Number.isFinite(predictorCount) &&
+      predictorCount >= 0
+        ? Math.floor(predictorCount)
+        : undefined;
+    const hasMine = Boolean(myPostId || resultPost || userPredictionWinner);
+    if (stored != null) return Math.max(stored, hasMine ? 1 : 0);
+    return hasMine ? 1 : null;
+  }, [predictorCount, myPostId, resultPost, userPredictionWinner]);
+  const overlayMarketBiasDisplay = useMemo(
+    () =>
+      resolveGameMarketBiasDisplay(
+        {
+          marketBias: marketBias ?? undefined,
+          predictorCount: overlayPredictionCount ?? undefined,
+        } as Record<string, unknown>,
+        {
+          userWinner: userPredictionWinner,
+          predictionCount: overlayPredictionCount,
+        }
+      ),
+    [marketBias, overlayPredictionCount, userPredictionWinner]
+  );
+  /** WC 以外の予想済みオーバーレイはリザルト一覧・詳細と同じカード面にする */
+  const overlayResultFaceModel = useMemo(() => {
+    if (!showMergedResult || !resultPost || league === "wc") return null;
+    const prediction =
+      resultPost.prediction != null && typeof resultPost.prediction === "object"
+        ? { ...resultPost.prediction }
+        : {};
+    const postForFace = {
+      ...(resultPost as unknown as Record<string, unknown>),
+      id: resultPost.id,
+      prediction: overlayGoalScorerPick
+        ? { ...prediction, goalScorer: overlayGoalScorerPick }
+        : prediction,
+    };
+    return buildResultCardFaceModel(postForFace, {
+      market: {
+        homeRate: overlayMarketBiasDisplay.homePct,
+        awayRate: overlayMarketBiasDisplay.awayPct,
+      },
+      gameMeta: {
+        roundLabel: displayedRoundLabel || roundLabel,
+        isPickup,
+      },
+      ...(topScorerCandidates?.length
+        ? { topScorerCandidates }
+        : {}),
+    });
+  }, [
+    showMergedResult,
+    resultPost,
+    league,
+    overlayGoalScorerPick,
+    overlayMarketBiasDisplay.homePct,
+    overlayMarketBiasDisplay.awayPct,
+    displayedRoundLabel,
+    roundLabel,
+    topScorerCandidates,
+    isPickup,
+  ]);
   const predictedScore =
     resultPost?.prediction?.score != null
       ? resultPost.prediction.score
       : null;
   const hideMergedStatsSection =
     showMergedResult && resultPost?.status !== "final";
-  const kickoffLocale = language === "ja" ? "ja-JP" : "en-US";
-  const teamNameFont = {
-    ...bracketMarketTeamTypography(isMobile),
-    transform: "skewX(-6deg)",
-  };
+  const teamNameFont = (() => {
+    const base = bracketMarketTeamTypography(isMobile);
+    return {
+      ...base,
+      fontWeight: 600,
+      fontSize: isMobile ? 13 : undefined,
+      letterSpacing: isMobile ? "0.05em" : base.letterSpacing,
+      transform: "skewX(-6deg)",
+    };
+  })();
   /** letter-spacing は末尾にも余白が乗るため、中央揃え時の見た目ずれを補正 */
   const wcTeamNameFont: React.CSSProperties =
     league === "wc"
@@ -559,7 +643,7 @@ const isMobile = prefix === "/mobile" || prefix.startsWith("/m/");
         }
       : teamNameFont;
   const showPlayoffSeriesRow =
-    isPlayoffStyleGameCard(seasonPhase, roundLabel) &&
+    isPlayoffStyleGameCard(seasonPhase, displayedRoundLabel || roundLabel) &&
     seriesStanding != null;
   /** 共有要素遷移：外枠とヒーローグリッドに別名を付与（none は一覧の非参加カード用） */
   const vtBoundsName = forceViewTransitionNameNone
@@ -576,10 +660,10 @@ const isMobile = prefix === "/mobile" || prefix.startsWith("/m/");
         : scheduleSharedContentVtName(sharedTransitionBaseKey)
       : "";
 
-  // ▼ 追加：NBA × mobile のときは nickname（line2 のみ）
+  // ▼ 追加：NBA × mobile のときは nickname（line2 のみ）／長い名は短縮
   function getDisplayName(league: League, l1: string, l2: string): string {
     if (league === "nba" && isMobile) {
-      return l2 || l1; // ← NBA mobile → line2 だけ
+      return compactNbaCardNickname(l2 || l1);
     }
     return `${l1}\n${l2 || ""}`;
   }
@@ -590,9 +674,19 @@ const normalizedLeague = normalizeLeague(league);
 
 // ▼ Firestore からチーム成績（wins/losses）を取得
 function toLast5WL(
-  lastGames: { at?: any; isWin?: boolean }[] | undefined,
+  record:
+    | {
+        lastGames?: { at?: any; isWin?: boolean }[];
+        recentForm?: ("W" | "L")[];
+      }
+    | null
+    | undefined,
   latestSide: "left" | "right"
 ): ("W" | "L")[] {
+  const fromStandings = matchCardRecentFormDisplay(record?.recentForm, latestSide);
+  if (fromStandings.length > 0) return fromStandings;
+
+  const lastGames = record?.lastGames;
   if (!Array.isArray(lastGames)) return [];
 
   const sorted = [...lastGames]
@@ -609,12 +703,12 @@ function toLast5WL(
 }
 
 const homeForm = useMemo(
-  () => toLast5WL(homeRecord?.lastGames, "right"),
+  () => toLast5WL(homeRecord, "right"),
   [homeRecord]
 );
 
 const awayForm = useMemo(
-  () => toLast5WL(awayRecord?.lastGames, "left"),
+  () => toLast5WL(awayRecord, "left"),
   [awayRecord]
 );
 const homeColor = useMemo(
@@ -645,6 +739,13 @@ const awaySecondaryColor = useMemo(
   () => getTeamJerseySecondaryColor(normalizedLeague, away.teamId),
   [normalizedLeague, away.teamId]
 );
+const matchupAccents = useMemo(
+  () =>
+    resolveMatchupUiAccents(normalizedLeague, home.teamId, away.teamId),
+  [normalizedLeague, home.teamId, away.teamId]
+);
+const homeMarketColor = matchupAccents.homeAccent;
+const awayMarketColor = matchupAccents.awayAccent;
 const homeBiasPct = Math.max(0, Math.min(100, marketBias?.homePct ?? 68));
 const awayBiasPct = Math.max(0, Math.min(100, marketBias?.awayPct ?? 32));
 
@@ -700,9 +801,10 @@ const marketMajority = useMemo(() => {
   const teamText = dense ? "text-sm md:text-base" : "text-base md:text-xl";
   const recordText = dense ? "text-[12px]" : "text-sm";
   const lineFrameTeamNameClass =
-    "text-[17px] font-normal leading-[19px] tracking-[0.075em]";
+    "text-[13px] font-semibold leading-[15px] tracking-[0.05em]";
   const lineFrameTeamNameStyle: React.CSSProperties = {
     ...teamNameFont,
+    fontWeight: 600,
     transform: "skewX(-6deg)",
   };
   const Icon =
@@ -851,7 +953,7 @@ const renderOverlayPredictScore = () => {
         className={["mt-0.5 text-center", overlayPredictKickerClass].join(" ")}
         style={teamNameFont}
       >
-        {language === "ja" ? "あなたの予想" : "Your prediction"}
+        {m.results.pendingCallLabel}
       </div>
       <MatchScoreLine
         home={predictedScore.home}
@@ -889,8 +991,9 @@ const overlayScoreTextClass = isMobile
     : "text-4xl leading-none tracking-tight text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.75)] md:text-5xl lg:text-6xl";
 
 const mergedPreKickoffScoreClass = [
-  overlayScoreTextClass,
-  "text-cyan-50 drop-shadow-[0_0_22px_rgba(34,211,238,0.38)]",
+  isMobile
+    ? "text-[16px] font-black leading-none tracking-tight text-cyan-50 drop-shadow-[0_0_14px_rgba(34,211,238,0.32)]"
+    : "text-lg font-black leading-none tracking-tight text-cyan-50 drop-shadow-[0_0_16px_rgba(34,211,238,0.34)] md:text-xl",
 ].join(" ");
 
 
@@ -966,11 +1069,11 @@ const mergedPreKickoffScoreClass = [
       className={
         isMobile
           ? mobileDense
-            ? "flex min-h-[52px] flex-col items-center justify-center gap-1"
-            : "flex min-h-[56px] flex-col items-center justify-center gap-1"
+            ? "flex min-h-[40px] flex-col items-center justify-center gap-0.5"
+            : "flex min-h-[44px] flex-col items-center justify-center gap-0.5"
           : mobileDense
-            ? "flex min-h-[60px] flex-col items-center justify-center gap-1.5 md:min-h-[72px]"
-            : "flex min-h-[68px] flex-col items-center justify-center gap-1.5 md:min-h-[80px]"
+            ? "flex min-h-[48px] flex-col items-center justify-center gap-1 md:min-h-[56px]"
+            : "flex min-h-[52px] flex-col items-center justify-center gap-1 md:min-h-[60px]"
       }
     >
       <span
@@ -980,7 +1083,7 @@ const mergedPreKickoffScoreClass = [
           "drop-shadow-[0_0_12px_rgba(34,211,238,0.35)]",
         ].join(" ")}
       >
-        {m.results.myPrediction}
+        {m.results.pendingCallLabel}
       </span>
       <MatchScoreLine
         home={predictedScore.home}
@@ -1087,8 +1190,16 @@ const mergedPreKickoffScoreClass = [
     );
   }
 
-  const [homeL1, homeL2] = splitTeamNameByLeague(league, home.name);
-  const [awayL1, awayL2] = splitTeamNameByLeague(league, away.name);
+  const [homeL1, homeL2Raw] = splitTeamNameByLeague(league, home.name);
+  const [awayL1, awayL2Raw] = splitTeamNameByLeague(league, away.name);
+  const homeL2 =
+    league === "nba"
+      ? compactNbaCardNickname(homeL2Raw || homeL1, home.teamId)
+      : homeL2Raw;
+  const awayL2 =
+    league === "nba"
+      ? compactNbaCardNickname(awayL2Raw || awayL1, away.teamId)
+      : awayL2Raw;
 
   /** Same behavior as the predict CTA (schedule overlay when logged in). */
   const triggerOpenPredictLikeButton = () => {
@@ -1107,6 +1218,16 @@ const mergedPreKickoffScoreClass = [
     // オーバーレイなしの単体カード：従来どおり（予想済み・開始後は何もしない）
     if (myPostId) return;
     if (isGameStarted) return;
+  };
+
+  /** 押下開始で予想ツール（INJURY / STATS / ROSTER）を先読み。開いたときは共有キャッシュから即表示 */
+  const prefetchPredictTools = () => {
+    if (league !== "nba" || !onOpenPredict || !auth.currentUser) return;
+    if (!home.teamId || !away.teamId) return;
+    prefetchMatchupDetailBundle({
+      homeTeamId: home.teamId,
+      awayTeamId: away.teamId,
+    });
   };
 
   const handleOpenPredict = (e: React.MouseEvent | React.KeyboardEvent) => {
@@ -1133,6 +1254,59 @@ const mergedPreKickoffScoreClass = [
     makePredictionHref,
   ]);
 
+  /** 予想済み NBA 等: リザルトカード面と同一コンポーネント（MatchCard 独自中央は使わない） */
+  if (overlayResultFaceModel) {
+    return (
+      <div
+        className={[
+          "group/card relative w-full overflow-visible text-white",
+          className ?? "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
+      >
+        {showMergedPredictEdit && resultPost ? (
+          <div
+            className={[
+              "pointer-events-auto absolute z-[50]",
+              predictOverlayCornerAnchorClass(isMobile, "right"),
+            ].join(" ")}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              className={[
+                predictOverlayCornerButtonClasses(isMobile, "edit"),
+                "relative z-[52]",
+              ].join(" ")}
+              aria-label={m.results.editPredictionAriaLabel}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onRequestPredictEdit?.(resultPost);
+              }}
+            >
+              <Pencil
+                className={isMobile ? "h-2.5 w-2.5" : "h-[14px] w-[14px]"}
+                strokeWidth={2.2}
+                aria-hidden
+              />
+            </button>
+          </div>
+        ) : null}
+        <div data-tutorial-target="result-detail-card">
+          <ResultCardDesignFace
+            language={language}
+            face={overlayResultFaceModel}
+            showDetailTab={false}
+            animateDraw={false}
+            live={isLive}
+          />
+        </div>
+      </div>
+    );
+  }
+
   const skipFullCardLink = (() => {
     if (!fullCardLinkHref || !pathname) return false;
     const path = fullCardLinkHref.split("?")[0] ?? "";
@@ -1148,18 +1322,22 @@ const mergedPreKickoffScoreClass = [
     !inPredictOverlay &&
     (Boolean(onOpenPredict) || Boolean(effectiveFullCardLinkHref));
 
-  const fullCardPressHandlers =
-    useFullCardHitLayer && !reduceMotion
-      ? {
-          onPointerDown: () => setFullCardPressed(true),
+  const fullCardPressHandlers = !useFullCardHitLayer
+    ? {}
+    : reduceMotion
+      ? { onPointerDown: prefetchPredictTools }
+      : {
+          onPointerDown: () => {
+            prefetchPredictTools();
+            setFullCardPressed(true);
+          },
           onPointerUp: () => setFullCardPressed(false),
           onPointerLeave: () => setFullCardPressed(false),
           onPointerCancel: () => setFullCardPressed(false),
           onTouchStart: () => setFullCardPressed(true),
           onTouchEnd: () => setFullCardPressed(false),
           onTouchCancel: () => setFullCardPressed(false),
-        }
-      : {};
+        };
 
   const cardShellPressScale =
     useFullCardHitLayer && fullCardPressed && !reduceMotion ? 0.99 : 1;
@@ -1579,7 +1757,7 @@ const card = (
         />
       )}
       {(() => {
-  const tag = getGameEventTag(roundLabel);
+  const tag = getGameEventTag(displayedRoundLabel || roundLabel);
   if (!tag) return null;
 
   return (
@@ -1610,7 +1788,7 @@ const card = (
         ].join(" ")}
         {...entryGroupProps(ENTRY_GROUP_HEADER)}
       >
-        {!!roundLabel && !useLineFrameShell && (
+        {!!displayedRoundLabel && !useLineFrameShell && (
           <div
             className={[
               "mc-round text-center font-bold",
@@ -1636,7 +1814,7 @@ const card = (
                 : undefined
             }
           >
-            {roundLabel}
+            {displayedRoundLabel}
           </div>
         )}
 
@@ -1707,7 +1885,7 @@ const card = (
         mobileDense ? "mb-0 -mt-3" : "mb-1",
         "text-center font-bold uppercase opacity-85",
         isMobile
-          ? "text-xs md:text-sm"
+          ? "text-[13px] leading-[15px] md:text-sm"
           : "text-sm md:text-base lg:text-lg",
       ].join(" ")}
       style={teamNameFont}
@@ -1729,6 +1907,7 @@ const card = (
       className={teamMarkSizeJersey}
       enableDotReveal={jerseyDotRevealEnabled}
       dotRevealDelayMs={jerseyDotDelayMs}
+      density="coarse"
     />
   ) : (
     <Icon
@@ -1743,11 +1922,13 @@ const card = (
     className={[
       "mc-name text-center leading-tight",
       wcListNameShellClass(league, isMobile, mobileDense),
-      mobileDense
-        ? "-mt-0.5"
-        : inPredictOverlay
-          ? "mt-0.5"
-          : "mt-1.5",
+      showListLineFrame
+        ? "mt-1"
+        : mobileDense
+          ? "-mt-0.5"
+          : inPredictOverlay
+            ? "mt-0.5"
+            : "mt-1.5",
     ].join(" ")}
   >
   {isMobile ? (
@@ -1758,7 +1939,7 @@ const card = (
           className={
             showListLineFrame
               ? lineFrameTeamNameClass
-              : "text-[15px] font-bold md:text-[18px]"
+              : "text-[13px] font-semibold md:text-[15px]"
           }
           style={showListLineFrame ? lineFrameTeamNameStyle : teamNameFont}
         >
@@ -1771,7 +1952,7 @@ const card = (
             className={
               showListLineFrame
                 ? lineFrameTeamNameClass
-                : "text-[15px] font-bold md:text-[18px]"
+                : "text-[13px] font-semibold md:text-[15px]"
             }
             style={showListLineFrame ? lineFrameTeamNameStyle : teamNameFont}
           >
@@ -1781,7 +1962,7 @@ const card = (
             className={
               showListLineFrame
                 ? lineFrameTeamNameClass
-                : "text-[15px] font-bold md:text-[18px]"
+                : "text-[13px] font-semibold md:text-[15px]"
             }
             style={showListLineFrame ? lineFrameTeamNameStyle : teamNameFont}
           >
@@ -1972,7 +2153,7 @@ const card = (
         mobileDense ? "mb-0 -mt-3" : "mb-1",
         "text-center font-bold uppercase opacity-85",
         isMobile
-          ? "text-xs md:text-sm"
+          ? "text-[13px] leading-[15px] md:text-sm"
           : "text-sm md:text-base lg:text-lg",
       ].join(" ")}
       style={teamNameFont}
@@ -1995,6 +2176,7 @@ const card = (
       className={teamMarkSizeJersey}
       enableDotReveal={jerseyDotRevealEnabled}
       dotRevealDelayMs={jerseyDotDelayMs}
+      density="coarse"
     />
   ) : (
     <Icon
@@ -2009,11 +2191,13 @@ const card = (
     className={[
       "mc-name text-center leading-tight",
       wcListNameShellClass(league, isMobile, mobileDense),
-      mobileDense
-        ? "-mt-0.5"
-        : inPredictOverlay
-          ? "mt-0.5"
-          : "mt-1.5",
+      showListLineFrame
+        ? "mt-1"
+        : mobileDense
+          ? "-mt-0.5"
+          : inPredictOverlay
+            ? "mt-0.5"
+            : "mt-1.5",
     ].join(" ")}
   >
   {isMobile ? (
@@ -2024,7 +2208,7 @@ const card = (
           className={
             showListLineFrame
               ? lineFrameTeamNameClass
-              : "text-[15px] font-bold md:text-[18px]"
+              : "text-[13px] font-semibold md:text-[15px]"
           }
           style={showListLineFrame ? lineFrameTeamNameStyle : teamNameFont}
         >
@@ -2037,7 +2221,7 @@ const card = (
             className={
               showListLineFrame
                 ? lineFrameTeamNameClass
-                : "text-[15px] font-bold md:text-[18px]"
+                : "text-[13px] font-semibold md:text-[15px]"
             }
             style={showListLineFrame ? lineFrameTeamNameStyle : teamNameFont}
           >
@@ -2047,7 +2231,7 @@ const card = (
             className={
               showListLineFrame
                 ? lineFrameTeamNameClass
-                : "text-[15px] font-bold md:text-[18px]"
+                : "text-[13px] font-semibold md:text-[15px]"
             }
             style={showListLineFrame ? lineFrameTeamNameStyle : teamNameFont}
           >
@@ -2141,47 +2325,11 @@ const card = (
 
       </div>
 
-      {showOverlayScheduleMeta ? (
-        <motion.div
-          className={[
-            "flex w-full flex-wrap items-center justify-center gap-x-3 gap-y-1 px-3 text-center",
-            wcBroadcastCompact ? "mt-0.5 py-1 md:px-4" : "mt-1.5 py-1.5 md:px-4",
-          ].join(" ")}
-          initial={entryTransition ? { opacity: 0, y: 8 } : false}
-          animate={entryTransition ? { opacity: 1, y: 0 } : undefined}
-          transition={entryTransition ? entryTransition(6) : undefined}
-        >
-          {startAtJst ? (
-            <span className="inline-flex items-baseline gap-1.5">
-              <span
-                className={[
-                  "shrink-0 font-semibold text-white/45",
-                  wcBroadcastCompact ? "text-xs md:text-sm" : "text-sm md:text-base",
-                ].join(" ")}
-                style={teamNameFont}
-              >
-                {m.games.kickoffAt}
-              </span>
-              <span
-                className={[
-                  "font-bold tabular-nums tracking-wide text-white/90",
-                  wcBroadcastCompact ? "text-xs md:text-sm" : "text-sm md:text-base",
-                ].join(" ")}
-                style={teamNameFont}
-              >
-                {fmtKickoffDateTime(startAtJst, displayTimeZone, kickoffLocale)}
-              </span>
-            </span>
-          ) : null}
-        </motion.div>
-      ) : null}
-
-      {showOverlayMarketBar ? (
+      {showOverlayMarketBar && !nbaOverlayFooter ? (
         <motion.div
           className={[
             "w-full px-3 md:px-4",
-            (showWcBroadcastRow && showDividerLine) ||
-              showOverlayScheduleMeta
+            showWcBroadcastRow && showDividerLine
               ? "pb-1.5 pt-0.5"
               : "pb-1.5 pt-1",
           ].join(" ")}
@@ -2197,8 +2345,8 @@ const card = (
             score={score}
             language={language}
             fallbackMarketBias={marketBias}
-            homeColor={homeColor}
-            awayColor={awayColor}
+            homeColor={homeMarketColor}
+            awayColor={awayMarketColor}
             homeLabel={
               league === "nba"
                 ? (homeL2 || homeL1 || "HOME").trim()
@@ -2211,11 +2359,45 @@ const card = (
             }
             compact={wcBroadcastCompact}
             userPredictionWinner={userPredictionWinner}
+            predictionCount={predictorCount}
           />
         </motion.div>
       ) : null}
 
-      {showMergedResult && resultPost ? (
+      {nbaOverlayFooter ? (
+        <motion.div
+          data-tutorial-target="predict-market"
+          className={[
+            "w-full px-2.5",
+            "pb-1.5 pt-1",
+          ].join(" ")}
+          initial={entryTransition ? { opacity: 0, y: 6 } : false}
+          animate={entryTransition ? { opacity: 1, y: 0 } : undefined}
+          transition={entryTransition ? entryTransition(7) : undefined}
+        >
+          <ResultCardOverlayFooter
+            language={language}
+            homePct={overlayMarketBiasDisplay.homePct}
+            awayPct={overlayMarketBiasDisplay.awayPct}
+            homeAccent={homeMarketColor}
+            awayAccent={awayMarketColor}
+            topScorer={nbaTopScorerResult?.playerName}
+            topScorerHit={nbaTopScorerResult?.hit ?? null}
+            settled={resultPost?.status === "final"}
+            upsetPoints={
+              overlaySettlement?.hadUpsetGame
+                ? overlaySettlement.upsetPoints
+                : null
+            }
+            totalPoints={overlaySettlement?.pointsV3 ?? null}
+            scoreRel={overlayScoreRel}
+            predictionCount={overlayPredictionCount}
+            predictionCountLabel={m.predict.totalPredictions}
+          />
+        </motion.div>
+      ) : null}
+
+      {showMergedResult && resultPost && !nbaOverlayFooter ? (
         <motion.div
           data-tutorial-target="result-detail-stats"
           className="w-full px-3 pb-2 pt-0.5 md:px-4 md:pb-2.5"
@@ -2223,19 +2405,12 @@ const card = (
           animate={entryTransition ? { opacity: 1, y: 0 } : undefined}
           transition={entryTransition ? entryTransition(8) : undefined}
         >
-          {(!hideMergedStatsSection || nbaTopScorerResult) && (
+          {!hideMergedStatsSection && (
             <div className="mb-1.5" aria-hidden>
               <div className={RESULT_HAIRLINE} />
             </div>
           )}
           <div className={mobileDense ? "space-y-1.5" : "space-y-2"}>
-            {nbaTopScorerResult ? (
-              <NbaTopScorerResultRow
-                label={m.results.nbaTopScorerResultLabel}
-                info={nbaTopScorerResult}
-                compact={isMobile}
-              />
-            ) : null}
             {!hideMergedStatsSection ? (
               <ResultStatsRows
                 post={resultPost}
@@ -2243,7 +2418,7 @@ const card = (
                 isMobile={isMobile}
                 comfortable
                 ratingBarsImmediate={resultRatingBarsImmediate}
-                rowIndexOffset={nbaTopScorerResult ? 1 : 0}
+                rowIndexOffset={0}
               />
             ) : null}
           </div>
@@ -2327,6 +2502,7 @@ const card = (
           ) : (
             <button
               type="button"
+              onPointerDown={prefetchPredictTools}
               onClick={handleOpenPredict}
               disabled={Boolean(isPredicted && !onOpenPredict)}
               className={[
@@ -2369,6 +2545,15 @@ const card = (
         inPredictOverlay || attachOverlayMarketBar ? "predict-round" : undefined
       }
       leftLabelTutorialTarget={tutorialPickupLabelTarget}
+      animateDraw={Boolean(
+        showListLineFrame && showContentEntry && !reduceMotion
+      )}
+      drawDelaySec={
+        showListLineFrame && showContentEntry && entryTransition
+          ? entryTransition(ENTRY_GROUP_SHELL).delay
+          : 0
+      }
+      fadeContent={false}
     >
       {card}
     </MatchListLineFrame>

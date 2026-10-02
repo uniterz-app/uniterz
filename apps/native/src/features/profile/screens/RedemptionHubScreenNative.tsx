@@ -16,16 +16,16 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import LegalPageLayoutNative from "../../legal/LegalPageLayoutNative";
 import { useFirebaseUser } from "../../../auth/FirebaseUserProvider";
 import { useNativeUserLanguage } from "../../../hooks/useNativeUserLanguage";
+import { L, resolveLocalizedLang } from "../../../../../../lib/i18n/localize";
 import type { ProfileStackParamList } from "../../../navigation/types";
 import { fetchMeRedemptionsNative } from "../redemptionApiNative";
 import {
-  REDEMPTION_DISCLAIMER_EN,
-  REDEMPTION_DISCLAIMER_JA,
-  REDEMPTION_EXCLUSIONS_EN,
-  REDEMPTION_EXCLUSIONS_JA,
+  redemptionCatalogBlurb,
+  redemptionCatalogTitle,
+  redemptionDisclaimerCopy,
+  redemptionExclusionsCopy,
   redemptionPriceCapLabel,
 } from "../../../../../../lib/redemption/redemptionCatalog";
-import { redemptionBatchScheduleCopy } from "../../../../../../lib/redemption/redemptionBatchScheduleCopy";
 import { redemptionStatusLabel } from "../../../../../../lib/redemption/redemptionStatus";
 import type {
   RedemptionCatalogItem,
@@ -47,8 +47,7 @@ export default function RedemptionHubScreenNative() {
     useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
   const { fUser } = useFirebaseUser();
   const { language } = useNativeUserLanguage(fUser?.uid);
-  const isJa = language === "ja";
-  const batch = redemptionBatchScheduleCopy(isJa ? "ja" : "en");
+  const lang = resolveLocalizedLang(language);
 
   const [balance, setBalance] = useState(0);
   const [seasonUsed, setSeasonUsed] = useState(0);
@@ -89,17 +88,16 @@ export default function RedemptionHubScreenNative() {
     <LegalPageLayoutNative
       title="REDEEM"
       eyebrow="UNIT EXCHANGE"
-      description={
-        isJa
-          ? "保有 Unit で交換申請。月末まとめ購入（おおよそ25日前後）。"
-          : "Redeem Units. Monthly batch purchase (~25th)."
-      }
+      description={L(lang, {
+        ja: "保有 Unit で交換申請。審査後に購入・直送。",
+        en: "Redeem Units. Purchase and ship direct after review.",
+        ko: "보유 Unit으로 교환 신청. 심사 후 구매·직송.",
+        zh: "用持有 Unit 申请兑换。审核后采购并直送。",
+        es: "Canjea Units. Compra y envío directo tras revisión.",
+        pt: "Resgate Units. Compra e envio direto após análise.",
+        fr: "Échangez des Units. Achat et envoi direct après revue.",
+      })}
     >
-      <View style={styles.batchCard}>
-        <Text style={styles.batchTitle}>{batch.short}</Text>
-        <Text style={styles.batchBody}>{batch.detail}</Text>
-      </View>
-
       <View style={styles.balanceCard}>
         <Text style={styles.balanceLabel}>Balance</Text>
         <Text style={styles.balanceValue}>
@@ -107,13 +105,25 @@ export default function RedemptionHubScreenNative() {
           <Text style={styles.balanceUnit}> UNIT</Text>
         </Text>
         <Text style={styles.meta}>
-          {isJa
-            ? `今シーズン ${seasonUsed} / ${seasonCap} Unit`
-            : `Season ${seasonUsed} / ${seasonCap} Units`}
+          {L(lang, {
+            ja: `今シーズン ${seasonUsed} / ${seasonCap} Unit`,
+            en: `Season ${seasonUsed} / ${seasonCap} Units`,
+            ko: `이번 시즌 ${seasonUsed} / ${seasonCap} Unit`,
+            zh: `本赛季 ${seasonUsed} / ${seasonCap} Unit`,
+            es: `Temporada ${seasonUsed} / ${seasonCap} Units`,
+            pt: `Temporada ${seasonUsed} / ${seasonCap} Units`,
+            fr: `Saison ${seasonUsed} / ${seasonCap} Units`,
+          })}
           {!unitsLive
-            ? isJa
-              ? " · プレビュー（Unit ロックは弁護士後）"
-              : " · Preview (lock after legal)"
+            ? L(lang, {
+                ja: " · プレビュー（Unit ロックは弁護士後）",
+                en: " · Preview (lock after legal)",
+                ko: " · 미리보기(Unit 잠금은 법률 검토 후)",
+                zh: " · 预览（Unit 锁定待法务后）",
+                es: " · Vista previa (bloqueo Unit tras legal)",
+                pt: " · Prévia (bloqueio Unit após jurídico)",
+                fr: " · Aperçu (verrou Unit après juridique)",
+              })
             : ""}
         </Text>
         <View style={styles.rowBtns}>
@@ -122,7 +132,7 @@ export default function RedemptionHubScreenNative() {
             onPress={() => navigation.navigate("RedeemApply", {})}
           >
             <Text style={styles.primaryBtnText}>
-              {isJa ? "交換申請" : "Apply"}
+              {L(lang, { ja: "交換申請", en: "Apply", ko: "교환 신청", zh: "申请兑换", es: "Solicitar", pt: "Solicitar", fr: "Demander" })}
             </Text>
           </Pressable>
           <Pressable
@@ -130,13 +140,13 @@ export default function RedemptionHubScreenNative() {
             onPress={() => navigation.navigate("UnitLedger")}
           >
             <Text style={styles.ghostBtnText}>
-              {isJa ? "Unit 履歴" : "History"}
+              {L(lang, { ja: "Unit 履歴", en: "History", ko: "Unit 기록", zh: "Unit 记录", es: "Historial", pt: "Histórico", fr: "Historique" })}
             </Text>
           </Pressable>
         </View>
       </View>
 
-      <Text style={styles.section}>{isJa ? "カタログ" : "Catalog"}</Text>
+      <Text style={styles.section}>{L(lang, { ja: "カタログ", en: "Catalog", ko: "카탈로그", zh: "目录", es: "Catálogo", pt: "Catálogo", fr: "Catalogue" })}</Text>
       {catalog.map((item) => (
         <View key={item.kind} style={styles.card}>
           <View style={styles.cardRow}>
@@ -151,15 +161,15 @@ export default function RedemptionHubScreenNative() {
             <View style={styles.cardBody}>
               <View style={styles.cardTitleRow}>
                 <Text style={styles.cardTitle}>
-                  {isJa ? item.titleJa : item.titleEn}
+                  {redemptionCatalogTitle(item, lang)}
                 </Text>
                 <Text style={styles.units}>{item.unitsRequired} U</Text>
               </View>
               <Text style={styles.cardMeta}>
-                {isJa ? item.blurbJa : item.blurbEn}
+                {redemptionCatalogBlurb(item, lang)}
               </Text>
               <Text style={styles.cardCap}>
-                {redemptionPriceCapLabel(item, isJa ? "ja" : "en")}
+                {redemptionPriceCapLabel(item, lang)}
               </Text>
               <Pressable
                 onPress={() =>
@@ -167,7 +177,7 @@ export default function RedemptionHubScreenNative() {
                 }
               >
                 <Text style={styles.link}>
-                  {isJa ? "この区分で申請" : "Apply with this tier"}
+                  {L(lang, { ja: "この区分で申請", en: "Apply with this tier", ko: "이 구분으로 신청", zh: "用此档申请", es: "Solicitar con este nivel", pt: "Solicitar com este nível", fr: "Demander avec ce niveau" })}
                 </Text>
               </Pressable>
             </View>
@@ -175,23 +185,21 @@ export default function RedemptionHubScreenNative() {
         </View>
       ))}
 
-      <Text style={styles.section}>{isJa ? "対象外" : "Not eligible"}</Text>
-      {(isJa ? REDEMPTION_EXCLUSIONS_JA : REDEMPTION_EXCLUSIONS_EN).map(
-        (line) => (
+      <Text style={styles.section}>{L(lang, { ja: "対象外", en: "Not eligible", ko: "대상 제외", zh: "不适用", es: "No elegible", pt: "Não elegível", fr: "Non éligible" })}</Text>
+      {redemptionExclusionsCopy(lang).map((line) => (
           <Text key={line} style={styles.bullet}>
             · {line}
           </Text>
-        )
-      )}
+        ))}
 
-      <Text style={styles.section}>{isJa ? "申請一覧" : "Requests"}</Text>
+      <Text style={styles.section}>{L(lang, { ja: "申請一覧", en: "Requests", ko: "신청 목록", zh: "申请列表", es: "Solicitudes", pt: "Pedidos", fr: "Demandes" })}</Text>
       {loading ? (
         <ActivityIndicator color="#67e8f9" />
       ) : error ? (
         <Text style={styles.error}>{error}</Text>
       ) : requests.length === 0 ? (
         <Text style={styles.muted}>
-          {isJa ? "まだ申請がありません。" : "No requests yet."}
+          {L(lang, { ja: "まだ申請がありません。", en: "No requests yet.", ko: "아직 신청이 없습니다.", zh: "还没有申请。", es: "Aún no hay solicitudes.", pt: "Ainda sem pedidos.", fr: "Pas encore de demandes." })}
         </Text>
       ) : (
         requests.map((row) => (
@@ -206,7 +214,7 @@ export default function RedemptionHubScreenNative() {
               {row.productName}
             </Text>
             <Text style={styles.cardMeta}>
-              {redemptionStatusLabel(row.status, isJa ? "ja" : "en")} ·{" "}
+              {redemptionStatusLabel(row.status, lang)} ·{" "}
               {row.unitsRequired} Unit
             </Text>
           </Pressable>
@@ -214,34 +222,13 @@ export default function RedemptionHubScreenNative() {
       )}
 
       <Text style={styles.disclaimer}>
-        {isJa ? REDEMPTION_DISCLAIMER_JA : REDEMPTION_DISCLAIMER_EN}
+        {redemptionDisclaimerCopy(lang)}
       </Text>
     </LegalPageLayoutNative>
   );
 }
 
 const styles = StyleSheet.create({
-  batchCard: {
-    marginBottom: 12,
-    padding: 12,
-    borderRadius: 2,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "rgba(103,232,249,0.3)",
-    backgroundColor: "rgba(34,211,238,0.06)",
-  },
-  batchTitle: {
-    fontFamily: OX,
-    fontSize: 10,
-    fontWeight: "700",
-    letterSpacing: 1.2,
-    color: "rgba(165,243,252,0.85)",
-  },
-  batchBody: {
-    marginTop: 6,
-    fontSize: 12,
-    lineHeight: 18,
-    color: "rgba(236,254,255,0.85)",
-  },
   balanceCard: {
     marginBottom: 16,
     padding: 12,

@@ -20,6 +20,9 @@ import {
   normalizeReferralInviteCode,
   pickReferralInviteCodeFromSearch,
 } from "@/lib/referral/referralInviteCode";
+import { authFormCopy } from "@/lib/auth/authFormCopy";
+import { resolveAppUiLocalizedLang } from "@/lib/i18n/resolveAppUiLanguage";
+import { referralBindUserMessage } from "@/lib/referral/referralBindErrorCopy";
 
 type SignupFormProps = {
   variant?: "web" | "mobile";
@@ -34,6 +37,7 @@ export default function SignupForm({ variant = "web" }: SignupFormProps) {
   const [pressed, setPressed] = useState(false);
 
   const router = useRouter();
+  const uiLang = useMemo(() => resolveAppUiLocalizedLang(), []);
 
   const loginBase = variant === "mobile" ? "/mobile/login" : "/web/login";
   const [loginHref, setLoginHref] = useState(loginBase);
@@ -50,22 +54,22 @@ export default function SignupForm({ variant = "web" }: SignupFormProps) {
   const bodySans =
     "font-[family-name:var(--font-geist-sans)] text-sm leading-relaxed text-white/85";
 
-  const ui = useMemo(
-    () => ({
+  const ui = useMemo(() => {
+    const copy = authFormCopy(uiLang);
+    return {
       title: "CREATE ACCOUNT",
       emailPlaceholder: "Email Address",
       passwordPlaceholder: "Password",
       invitePlaceholder: "Invite code (optional)",
-      inviteHint: "友達からコードをもらった場合のみ入力",
+      inviteHint: copy.inviteHint,
       signupCta: "SIGN UP",
-      alreadyLead: "すでにアカウントをお持ちの方は",
+      alreadyLead: copy.alreadyLead,
       loginText: "Login",
       signupFailed: "Signup failed",
       showPw: "Show password",
       hidePw: "Hide password",
-    }),
-    []
-  );
+    };
+  }, [uiLang]);
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -96,7 +100,11 @@ export default function SignupForm({ variant = "web" }: SignupFormProps) {
         try {
           await bindMeReferral(code);
         } catch (bindErr) {
-          console.warn("referral bind skipped:", bindErr);
+          const errCode =
+            bindErr instanceof Error ? bindErr.message : String(bindErr ?? "");
+          const msg = referralBindUserMessage(errCode, uiLang);
+          if (msg) alert(msg);
+          else console.warn("referral bind skipped:", bindErr);
         }
       }
 

@@ -14,6 +14,25 @@ export const GROUP_BATTLE_INVITE_MAX_PER_TARGET = 2;
 /** 期間終了後、final 化するまでの猶予日数（個人ランキングと揃える） */
 export const GROUP_BATTLE_FINALIZE_GRACE_DAYS = 2;
 
+/** final 到達後、closed にするまでの余裕日数（Unit 付与ジョブ用） */
+export const GROUP_BATTLE_CLOSE_AFTER_FINAL_DAYS = 1;
+
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+/** battleEnd から settling → final へ進める時刻 */
+export function groupBattleSettlingToFinalAtMs(battleEndAtMs: number): number {
+  return battleEndAtMs + GROUP_BATTLE_FINALIZE_GRACE_DAYS * MS_PER_DAY;
+}
+
+/** battleEnd から final → closed へ進める時刻 */
+export function groupBattleFinalToClosedAtMs(battleEndAtMs: number): number {
+  return (
+    battleEndAtMs +
+    (GROUP_BATTLE_FINALIZE_GRACE_DAYS + GROUP_BATTLE_CLOSE_AFTER_FINAL_DAYS) *
+      MS_PER_DAY
+  );
+}
+
 export const GROUP_BATTLE_TIE_RULE = "same_rank_same_unit" as const;
 
 export const GROUP_BATTLE_COLLECTION = "group_battles";
@@ -32,18 +51,18 @@ export const GROUP_BATTLE_SEASON_PHASES = [
     key: "battle" as const,
     label: "BATTLE",
     period: "約1ヶ月",
-    desc: "全員の総合スコア平均で競う。週間×4 + 月間×1",
+    desc: "Pick Up 試合の平均スコア。週間×4 + 月間×1",
   },
   {
     key: "reward" as const,
     label: "REWARD",
     period: "結果確定後",
-    desc: "週間・月間の上位グループ全員に Unit を配布",
+    desc: "週間1位は全員 30 Unit、月間1位は全員 150 Unit。上位20まで順位に応じて獲得",
   },
 ] as const;
 
 /** 初回イントロのルール1行（正: 3〜5人・平均スコア） */
 export const GROUP_BATTLE_INTRO_TAGLINE =
-  "3〜5人のスクワッドで、メンバー全員の総合スコア平均を競う。約2ヶ月に1回の期間限定バトル。";
+  "3〜5人のスクワッドで、Pick Up 試合のスコア平均を競う。約2ヶ月に1回の期間限定バトル。";
 
-export const GROUP_BATTLE_HELP_TEXT = `3〜5人のスクワッドで、メンバー全員の総合スコア平均を競います。所属できるグループは1大会につき1つまで。空き枠があるグループに申請し、承認されると参加できます。募集中は招待コードでも参加可能。同時申請は最大${GROUP_BATTLE_MAX_PENDING_APPLICATIONS}件。約2ヶ月に1回開催。募集は開催約1〜2週間前から → メンバー確定後は入れ替え不可 → 1ヶ月間バトル（週間ランキング原則4回 + 月間1回）→ 結果確定後に週間・月間の上位グループ全員へ Unit を配布。過去のスクワッドから同じ顔ぶれを再招集できます。`;
+export const GROUP_BATTLE_HELP_TEXT = `3〜5人のスクワッドで、メンバー全員のスコア平均を競います。対象は Pick Up 試合のみ（PRO LEAGUE の全試合スコアは使いません）。所属できるグループは1大会につき1つまで。空き枠があるグループに申請し、承認されると参加できます。募集中は招待コードでも参加可能。同時申請は最大${GROUP_BATTLE_MAX_PENDING_APPLICATIONS}件。約2ヶ月に1回開催。募集は開催約1〜2週間前から → メンバー確定後は入れ替え不可 → 1ヶ月間バトル（週間ランキング原則4回 + 月間1回）→ 結果確定後に週間1位はメンバー全員へ 30 Unit、月間1位は 150 Unit。上位20グループまで順位に応じた Unit を確定メンバー全員へ同額配布。過去のスクワッドから同じ顔ぶれを再招集できます。`;

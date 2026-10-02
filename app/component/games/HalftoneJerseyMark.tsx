@@ -3,6 +3,7 @@
 import clsx from "clsx";
 import { useMemo } from "react";
 import DotJerseyCanvas from "@/app/component/games/DotJerseyCanvas";
+import type { JerseyDotDensity } from "@/lib/jersey/jerseyDensity";
 
 export type HalftoneJerseyMarkProps = {
   /** チーム主色（グラデーション開始側） */
@@ -22,6 +23,8 @@ export type HalftoneJerseyMarkProps = {
    * `hologram` 指定時は無視して none。
    */
   glow?: "default" | "soft" | "none";
+  /** ドット密度。既定 coarse（一覧・詳細とも） */
+  density?: JerseyDotDensity;
 };
 
 type Rgb = { r: number; g: number; b: number };
@@ -78,6 +81,7 @@ export default function HalftoneJerseyMark({
   dotRevealDelayMs = 0,
   hologram = false,
   glow = "default",
+  density = "coarse",
 }: HalftoneJerseyMarkProps) {
   const glowFilter = useMemo(() => {
     if (hologram || glow === "none") return "none";
@@ -107,6 +111,7 @@ export default function HalftoneJerseyMark({
         accentEnd={accentEnd}
         enableDotReveal={enableDotReveal}
         dotRevealDelayMs={dotRevealDelayMs}
+        density={density}
       />
     </div>
   );

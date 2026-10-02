@@ -302,7 +302,7 @@ function GroupFilledSlotMobile({
       onFocus={onPrefetchGroup}
       className="group/slot relative flex w-full overflow-hidden border border-[rgba(0,245,255,0.16)] text-left transition-[filter,transform] duration-150 hover:brightness-110 active:scale-[0.995]"
       style={{
-        background: hasBgImage ? COMMUNITY_GROUP_SLOT_CARD_BG : "rgba(2,8,18,0.72)",
+        background: hasBgImage ? COMMUNITY_GROUP_SLOT_CARD_BG : "rgba(0,0,0,0.86)",
       }}
     >
       <SlotCardImageBackground
@@ -356,7 +356,7 @@ function GroupFilledSlotWeb({
         clipPath: NOTCH_CLIP,
         background: hasBgImage
           ? COMMUNITY_GROUP_SLOT_CARD_BG
-          : "linear-gradient(145deg, rgba(34,211,238,0.06) 0%, rgba(2,8,18,0.78) 42%, rgba(0,0,0,0.28) 100%)",
+          : "linear-gradient(145deg, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.82) 42%, rgba(0,0,0,0.7) 100%)",
         border: isOwner
           ? "1px solid rgba(251,191,36,0.28)"
           : "1px solid rgba(0,245,255,0.18)",

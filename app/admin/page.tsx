@@ -27,24 +27,24 @@ export default function AdminHomePage() {
     <AdminGuard>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card
-          href="/admin/announcements"
-          title="お知らせ管理"
-          desc="一覧・ピン留め・公開/非公開・作成/編集"
+          href="/admin/contacts?kind=feature"
+          title="機能リクエスト"
+          desc="ユーザーからの要望・改善案"
         />
         <Card
-          href="/admin/announcements/new"
-          title="お知らせを作成"
-          desc="新規作成（画像アップロード・本文編集）"
-        />
-        <Card
-          href="/admin/games-import"
-          title="試合データ インポート"
-          desc="JSONプレビュー → Firestoreへ一括書込み"
+          href="/admin/contacts?kind=inbox"
+          title="問い合わせ"
+          desc="不具合・通報・その他のお問い合わせ"
         />
         <Card
           href="/admin/redemptions"
           title="商品交換申請"
           desc="審査・購入・追跡番号の更新"
+        />
+        <Card
+          href="/admin/group-battles"
+          title="Squad Battle 開催"
+          desc="募集・対戦期間を決めて大会作成・フェーズ進行"
         />
       </div>
     </AdminGuard>

@@ -1,11 +1,16 @@
 /**
- * Admin: users.inviteCode を確保（一意マップ inviteCodes/{code}）
+ * Admin: 招待コードを確保（一意マップ inviteCodes/{code} + secure/referral）。
+ * 公開 users ルートには書かない。
  */
 import { FieldValue, type Firestore } from "firebase-admin/firestore";
 import {
   generateReferralInviteCode,
   normalizeReferralInviteCode,
 } from "./referralInviteCode";
+import {
+  readUserInviteCodeSecure,
+  writeUserInviteCodeSecure,
+} from "./userReferralSecure";
 
 const CODES = "inviteCodes";
 
@@ -13,14 +18,9 @@ export async function ensureUserInviteCodeAdmin(
   db: Firestore,
   uid: string
 ): Promise<string> {
-  const userRef = db.collection("users").doc(uid);
-  const snap = await userRef.get();
-  const existing = normalizeReferralInviteCode(
-    String(snap.data()?.inviteCode ?? "")
-  );
-  if (existing) {
-    // 旧データ互換: マップが無ければ埋める（衝突時はユーザーのコードを優先しないでマップを正とする）
-    const mapRef = db.collection(CODES).doc(existing);
+  const fromSecure = await readUserInviteCodeSecure(db, uid);
+  if (fromSecure) {
+    const mapRef = db.collection(CODES).doc(fromSecure);
     const mapSnap = await mapRef.get();
     if (!mapSnap.exists) {
       await mapRef.set(
@@ -28,7 +28,25 @@ export async function ensureUserInviteCodeAdmin(
         { merge: true }
       );
     }
-    return existing;
+    return fromSecure;
+  }
+
+  const userRef = db.collection("users").doc(uid);
+  const snap = await userRef.get();
+  const legacy = normalizeReferralInviteCode(
+    String(snap.data()?.inviteCode ?? "")
+  );
+  if (legacy) {
+    await writeUserInviteCodeSecure(db, uid, legacy);
+    const mapRef = db.collection(CODES).doc(legacy);
+    const mapSnap = await mapRef.get();
+    if (!mapSnap.exists) {
+      await mapRef.set(
+        { uid, createdAt: FieldValue.serverTimestamp() },
+        { merge: true }
+      );
+    }
+    return legacy;
   }
 
   for (let i = 0; i < 8; i++) {
@@ -38,9 +56,14 @@ export async function ensureUserInviteCodeAdmin(
       const created = await db.runTransaction(async (tx) => {
         const mapSnap = await tx.get(mapRef);
         if (mapSnap.exists) return null;
-        const userSnap = await tx.get(userRef);
+        const secureRef = db
+          .collection("users")
+          .doc(uid)
+          .collection("secure")
+          .doc("referral");
+        const secureSnap = await tx.get(secureRef);
         const again = normalizeReferralInviteCode(
-          String(userSnap.data()?.inviteCode ?? "")
+          String(secureSnap.data()?.inviteCode ?? "")
         );
         if (again) return again;
         tx.set(mapRef, {
@@ -48,8 +71,17 @@ export async function ensureUserInviteCodeAdmin(
           createdAt: FieldValue.serverTimestamp(),
         });
         tx.set(
-          userRef,
+          secureRef,
           { inviteCode: code, updatedAt: FieldValue.serverTimestamp() },
+          { merge: true }
+        );
+        // ルートに残っていたら消す
+        tx.set(
+          userRef,
+          {
+            inviteCode: FieldValue.delete(),
+            updatedAt: FieldValue.serverTimestamp(),
+          },
           { merge: true }
         );
         return code;
@@ -89,6 +121,7 @@ export async function findUidByInviteCodeAdmin(
       .collection(CODES)
       .doc(code)
       .set({ uid, createdAt: FieldValue.serverTimestamp() }, { merge: true });
+    await writeUserInviteCodeSecure(db, uid, code);
   }
   return uid;
 }

@@ -24,8 +24,12 @@ import Animated, {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import JerseyMarkAdaptive from "../games/JerseyMarkAdaptive";
+import DeferredJerseyMarkNative from "../games/DeferredJerseyMarkNative";
 import MatchListLineFrameNative from "../games/MatchListLineFrameNative";
-import { resultOutcomeLineFramePaint } from "@/lib/games/matchListLineFrame";
+import { resultOutcomeLineFramePaint, resultPendingLineFramePaint } from "@/lib/games/matchListLineFrame";
+import { resultCardFaceCopy } from "../../../../../lib/result/resultCardFaceCopy";
+import { normalizeLeague } from "../../../../../lib/leagues";
+import { resolveMatchupUiAccents } from "../../../../../lib/team-colors";
 import { resolveTeamJerseyPalette } from "../games/teamColors";
 import {
   registerTutorialTarget,
@@ -40,7 +44,7 @@ import {
   MATCH_CARD_SCORE_FONT,
 } from "../games/matchCardTypography";
 import { RESULT_CYBER_FRAME_STROKE_WIDTH } from "./resultCyberFrameNativeMetrics";
-import { streakTagTone } from "@/lib/result/streakTagTone";
+import ResultImpactStreakTagNative from "./ResultImpactStreakTagNative";
 import { useBottomTabBarInsets } from "../../navigation/useBottomTabBarInsets";
 import {
   ImpactTag,
@@ -73,6 +77,9 @@ type Sample = {
   topScorerHit: boolean;
   /** 3以上で左上に W{n} タグ */
   winStreak: number;
+  /** false = 判定前。プレビューは省略時 true */
+  settled?: boolean;
+  live?: boolean;
 };
 
 const SAMPLE: Sample = {
@@ -133,6 +140,9 @@ const RESULT_LINE_FRAME_PAINT = {
   miss: resultOutcomeLineFramePaint("miss")!,
 } as const;
 
+const RESULT_PENDING_LINE_FRAME_PAINT = resultPendingLineFramePaint();
+const LIVE_TONE = "#00F5FF";
+
 const STREAK_OPTS = [0, 3, 5, 7, 10] as const;
 
 const BADGE_OPTS: OutcomeBadge[] = ["hit", "perfect", "upset", "miss"];
@@ -165,19 +175,20 @@ function hexWithAlpha(hex: string, alphaHex: string): string {
   return `${n}${alphaHex}`;
 }
 
-/** 右辺 DETAIL タブ（背表紙タブ型・ニュートラル枠） */
+/** @deprecated DETAIL 背表紙タブは廃止。互換のため残す */
 export const RESULT_CARD_DETAIL_SPINE = {
-  width: 18,
-  height: 80,
-  top: 80,
+  width: 0,
+  height: 0,
+  top: 0,
 } as const;
 
-const DETAIL_SPINE = RESULT_CARD_DETAIL_SPINE;
-
-/** プレビュー用・直角長方形シェル（角切りなし）+ 任意で右辺 DETAIL */
+/** プレビュー用・直角長方形シェル（角切りなし）+ 任意で詳細ヒント › */
 function RectShell({
   badge,
+  paint: paintProp,
   topLabel,
+  leftLabel,
+  pickup = false,
   onOpenDetail,
   showDetailTab = false,
   strokeEnd,
@@ -188,8 +199,13 @@ function RectShell({
   children,
 }: {
   badge: OutcomeBadge;
+  paint?: { color: string; glow: string };
   topLabel?: string;
+  /** ピックアップ時の左辺縦ラベル（`PICK UP`） */
+  leftLabel?: string;
+  pickup?: boolean;
   onOpenDetail?: () => void;
+  /** true: カード右下に ›（詳細へ） */
   showDetailTab?: boolean;
   /** 線枠グローは MatchListLineFrame。elevation は Skia を覆うので使わない */
   frameGlow?: boolean;
@@ -197,53 +213,42 @@ function RectShell({
   animateDraw?: boolean;
   drawDelayMs?: number;
   motion?: ResultFaceMatchEntranceStyles;
-  /** 親 Pressable の押下と連動させる DETAIL タブ見た目 */
+  /** 親 Pressable の押下と連動させる › ヒント見た目 */
   detailSpineStyle?: object;
   children: ReactNode;
 }) {
-  const paint = RESULT_LINE_FRAME_PAINT[badge];
-  const stroke = RESULT_CYBER_FRAME_STROKE_WIDTH;
-  const detailTab = Boolean(showDetailTab);
+  const paint = paintProp ?? RESULT_LINE_FRAME_PAINT[badge];
+  const showHint = Boolean(showDetailTab);
   const inner = (
     <View style={styles.rectShell}>
-      <View style={styles.rectBody}>{children}</View>
+      <View style={styles.rectBody}>
+        {children}
+        {showHint ? (
+          <Animated.View
+            pointerEvents="none"
+            style={[styles.detailHint, detailSpineStyle]}
+            accessibilityElementsHidden
+            importantForAccessibility="no-hide-descendants"
+          >
+            <Text style={styles.detailHintLabel}>DETAIL</Text>
+            <Text style={styles.detailHintChevron}>›</Text>
+          </Animated.View>
+        ) : null}
+      </View>
     </View>
   );
   const shell = (
-    <>
-      <MatchListLineFrameNative
-        topLabel={topLabel}
-        paint={paint}
-        strokeEnd={strokeEnd}
-        animateDraw={animateDraw}
-        drawDelayMs={drawDelayMs}
-      >
-        {detailTab ? (
-          <Animated.View
-            pointerEvents="none"
-            style={[
-              styles.detailSpine,
-              {
-                borderWidth: stroke,
-                borderLeftWidth: 0,
-                borderColor: paint.color,
-              },
-              motion?.headerGroupStyle,
-              detailSpineStyle,
-            ]}
-          >
-            <View style={styles.detailSpineTextCol}>
-              {"DETAIL".split("").map((ch) => (
-                <Text key={ch} style={styles.detailSpineChar}>
-                  {ch}
-                </Text>
-              ))}
-            </View>
-          </Animated.View>
-        ) : null}
-        {inner}
-      </MatchListLineFrameNative>
-    </>
+    <MatchListLineFrameNative
+      topLabel={topLabel}
+      leftLabel={leftLabel}
+      pickup={pickup}
+      paint={paint}
+      strokeEnd={strokeEnd}
+      animateDraw={animateDraw}
+      drawDelayMs={drawDelayMs}
+    >
+      {inner}
+    </MatchListLineFrameNative>
   );
   if (!onOpenDetail) {
     return <View style={styles.rectShellWrap}>{shell}</View>;
@@ -256,7 +261,6 @@ function RectShell({
       onPress={onOpenDetail}
       style={({ pressed }) => [
         styles.rectShellWrap,
-        detailTab ? styles.rectShellWrapWithDetail : null,
         pressed ? styles.cardPressed : null,
       ]}
     >
@@ -268,25 +272,29 @@ function RectShell({
 function TopBar({
   sample,
   badge,
+  live,
   motion,
 }: {
   sample: Sample;
-  badge: OutcomeBadge;
+  badge: OutcomeBadge | null;
+  live?: boolean;
   motion?: ResultFaceMatchEntranceStyles;
 }) {
-  const showStreak = sample.winStreak >= 3;
+  const showStreak = sample.settled !== false && sample.winStreak >= 3;
+  if (!showStreak && !badge) return null;
   return (
     <Animated.View style={[styles.topBar, motion?.headerGroupStyle]}>
       <View style={styles.topLeftSlot}>
         {showStreak ? (
-          <ImpactTag
-            label={`W${sample.winStreak}`}
-            color={streakTagTone(sample.winStreak).accent}
-          />
+          <ResultImpactStreakTagNative winStreak={sample.winStreak} />
         ) : null}
       </View>
       <View style={styles.topBadgeSlot}>
-        <ImpactOutcomeBadge kind={badge} />
+        {badge ? (
+          <ImpactOutcomeBadge kind={badge} />
+        ) : live ? (
+          <ImpactTag label="LIVE" color={LIVE_TONE} />
+        ) : null}
       </View>
     </Animated.View>
   );
@@ -305,20 +313,35 @@ function MatchBlock({
   sample,
   ja,
   motion,
+  deferJerseys = false,
 }: {
   sample: Sample;
   ja: boolean;
   motion?: ResultFaceMatchEntranceStyles;
+  /** 一覧: 画面近傍まで Skia ジャージを遅延（熱対策） */
+  deferJerseys?: boolean;
 }) {
+  const copy = resultCardFaceCopy(ja ? "ja" : "en");
+  const settled = sample.settled !== false;
+  const live = sample.live === true;
+  const statusLabel = settled
+    ? "FINAL"
+    : live
+      ? "LIVE"
+      : copy.pendingCall;
+  const mainHome = settled ? sample.resultHome : sample.predHome;
+  const mainAway = settled ? sample.resultAway : sample.predAway;
+  const Jersey = deferJerseys ? DeferredJerseyMarkNative : JerseyMarkAdaptive;
   return (
     <Animated.View style={[styles.matchRow, motion?.teamsGroupStyle]}>
       <View style={styles.matchSide}>
         <Text style={styles.homeAwayLabel}>HOME</Text>
         <Animated.View style={motion?.homeJerseyStyle}>
-          <JerseyMarkAdaptive
+          <Jersey
             accent={sample.homeJersey.primary}
             accentEnd={sample.homeJersey.secondary}
             size={42}
+            density="coarse"
           />
         </Animated.View>
         <View style={styles.skewWrap}>
@@ -328,30 +351,43 @@ function MatchBlock({
 
       <Animated.View style={[styles.matchCenter, motion?.centerBlockStyle]}>
         <View style={styles.skewWrap}>
-          <Text style={styles.finalStatus}>FINAL</Text>
+          <Text
+            style={[
+              styles.finalStatus,
+              live && !settled ? styles.liveStatus : null,
+              !settled && !live && ja ? styles.finalStatusJa : null,
+            ]}
+          >
+            {statusLabel}
+          </Text>
         </View>
-        <Text style={styles.finalScore}>
-          {sample.resultHome}
-          <Text style={styles.finalDash}> — </Text>
-          {sample.resultAway}
+        <Text style={settled ? styles.finalScore : styles.predScoreMain}>
+          {mainHome}
+          <Text style={settled ? styles.finalDash : styles.predDash}> — </Text>
+          {mainAway}
         </Text>
-        <Text style={styles.predCaption}>
-          {ja ? "あなたの予想" : "YOUR CALL"}
-        </Text>
-        <Text style={styles.predScore}>
-          {sample.predHome}
-          <Text style={styles.predDash}> — </Text>
-          {sample.predAway}
-        </Text>
+        {settled ? (
+          <>
+            <Text style={styles.predCaption}>
+              {copy.pendingCall}
+            </Text>
+            <Text style={styles.predScore}>
+              {sample.predHome}
+              <Text style={styles.predDash}> — </Text>
+              {sample.predAway}
+            </Text>
+          </>
+        ) : null}
       </Animated.View>
 
       <View style={styles.matchSide}>
         <Text style={styles.homeAwayLabel}>AWAY</Text>
         <Animated.View style={motion?.awayJerseyStyle}>
-          <JerseyMarkAdaptive
+          <Jersey
             accent={sample.awayJersey.primary}
             accentEnd={sample.awayJersey.secondary}
             size={42}
+            density="coarse"
           />
         </Animated.View>
         <View style={styles.skewWrap}>
@@ -413,18 +449,17 @@ function BiasSegFace({
 
 function MarketBias({
   sample,
-  ja,
   animate = false,
   revealDelayMs = 0,
 }: {
   sample: Sample;
-  ja: boolean;
+  ja?: boolean;
   animate?: boolean;
   revealDelayMs?: number;
 }) {
   const homeSegs = Math.max(
-    1,
-    Math.round((sample.marketHomePct / 100) * BIAS_SEGS)
+    0,
+    Math.min(BIAS_SEGS, Math.round((sample.marketHomePct / 100) * BIAS_SEGS))
   );
   const progress = useSharedValue(animate ? 0 : BIAS_SEGS);
 
@@ -449,14 +484,12 @@ function MarketBias({
         <Text style={[styles.biasPctHeaderNum, { color: sample.homeAccent }]}>
           {sample.marketHomePct.toFixed(1)}%
         </Text>
-        <Text style={styles.biasPctHeaderMid}>
-          — {ja ? "市場の偏り" : "MARKET BIAS"} —
-        </Text>
+        <View style={styles.biasPctHeaderMid} />
         <Text
           style={[
             styles.biasPctHeaderNum,
             styles.biasPctHeaderNumAway,
-            { color: "#E8ECF0" },
+            { color: sample.awayAccent },
           ]}
         >
           {sample.marketAwayPct.toFixed(1)}%
@@ -472,8 +505,8 @@ function MarketBias({
                 key={i}
                 index={i}
                 progress={progress}
-                accent={home ? sample.homeAccent : "#9CA3AF"}
-                targetOp={home ? 0.95 : 0.55}
+                accent={home ? sample.homeAccent : sample.awayAccent}
+                targetOp={home ? 0.95 : 0.85}
                 animate={animate}
               />
             );
@@ -491,7 +524,8 @@ function TopScorerRow({
   sample: Sample;
   scorerIcon: ScorerIconId;
 }) {
-  if (!sample.topScorer) return null;
+  if (!sample.topScorer || sample.topScorer === "—") return null;
+  const settled = sample.settled !== false;
   const scorerHit = sample.topScorerHit;
   const iconName =
     SCORER_ICONS.find((i) => i.id === scorerIcon)?.name ?? "check";
@@ -500,7 +534,9 @@ function TopScorerRow({
   return (
     <View style={styles.scorerBlock}>
       <View style={styles.scorerValueRow}>
-        <Text style={styles.scorerLabel}>TOP SCORER</Text>
+        <View style={styles.skewWrap}>
+          <Text style={styles.scorerLabel}>TOP SCORER</Text>
+        </View>
         <View style={styles.scorerNameWrap}>
           <View style={styles.scorerNameSkew}>
             <Text style={styles.scorerName} numberOfLines={1}>
@@ -508,21 +544,25 @@ function TopScorerRow({
             </Text>
           </View>
         </View>
-        <View style={styles.scorerHitCluster}>
-          <MaterialCommunityIcons
-            name={scorerHit ? iconName : "close"}
-            size={14}
-            color={iconColor}
-          />
-          <Text
-            style={[
-              styles.scorerHit,
-              scorerHit ? styles.scorerHitOn : styles.scorerHitOff,
-            ]}
-          >
-            {scorerHit ? "HIT" : "MISS"}
-          </Text>
-        </View>
+        {settled ? (
+          <View style={styles.scorerHitCluster}>
+            <MaterialCommunityIcons
+              name={scorerHit ? iconName : "close"}
+              size={14}
+              color={iconColor}
+            />
+            <Text
+              style={[
+                styles.scorerHit,
+                scorerHit ? styles.scorerHitOn : styles.scorerHitOff,
+              ]}
+            >
+              {scorerHit ? "HIT" : "MISS"}
+            </Text>
+          </View>
+        ) : (
+          <View style={styles.scorerHitCluster} />
+        )}
       </View>
     </View>
   );
@@ -538,15 +578,17 @@ function UpsetScoreD({
   ja: boolean;
   scoreRel: ScoreRelKind;
 }) {
-  const hasUpset = sample.upsetPoints != null;
+  const copy = resultCardFaceCopy(ja ? "ja" : "en");
+  const settled = sample.settled !== false;
+  const hasUpset = settled && sample.upsetPoints != null;
   const upsetValue = hasUpset ? sample.upsetPoints!.toFixed(1) : "--";
-  const rel = scoreRelText(scoreRel);
+  const rel = settled ? scoreRelText(scoreRel) : null;
   const relHot = scoreRel === "max" || scoreRel === "top5";
 
   return (
     <View style={styles.splitRow}>
       <View style={[styles.splitSide, !hasUpset && styles.splitSideMuted]}>
-        <Text style={styles.splitLabel}>{ja ? "アップセット" : "UPSET"}</Text>
+        <Text style={styles.splitLabel}>{copy.upset}</Text>
         <View style={styles.skewWrap}>
           <Text
             style={[
@@ -562,10 +604,10 @@ function UpsetScoreD({
       </View>
       <View style={styles.splitRule} />
       <View style={styles.splitSide}>
-        <Text style={styles.splitLabel}>{ja ? "スコア" : "SCORE"}</Text>
+        <Text style={styles.splitLabel}>{copy.score}</Text>
         <View style={styles.skewWrap}>
           <Text style={[styles.splitValue, styles.splitValueScore]}>
-            {sample.totalPoints.toFixed(1)}
+            {settled ? sample.totalPoints.toFixed(1) : "--"}
           </Text>
         </View>
         {rel ? (
@@ -637,15 +679,18 @@ function Plan1Card({
   showDetailTab = false,
   frameGlow = true,
   bare = false,
+  pickup = false,
+  leftLabel,
   tutorialMetricsTargetId,
   strokeEnd,
   animateDraw = false,
   drawDelayMs = 0,
   motion,
   detailSpineStyle,
+  deferJerseys = false,
 }: {
   sample: Sample;
-  badge: OutcomeBadge;
+  badge: OutcomeBadge | null;
   ja: boolean;
   scorerIcon: ScorerIconId;
   scoreRel: ScoreRelKind;
@@ -653,17 +698,36 @@ function Plan1Card({
   showDetailTab?: boolean;
   frameGlow?: boolean;
   bare?: boolean;
+  pickup?: boolean;
+  leftLabel?: string;
   tutorialMetricsTargetId?: string;
   strokeEnd?: SharedValue<number>;
   animateDraw?: boolean;
   drawDelayMs?: number;
   motion?: ResultFaceMatchEntranceStyles;
   detailSpineStyle?: object;
+  deferJerseys?: boolean;
 }) {
+  const settled = sample.settled !== false;
+  const paint = settled && badge
+    ? RESULT_LINE_FRAME_PAINT[badge]
+    : RESULT_PENDING_LINE_FRAME_PAINT;
+  const shellBadge: OutcomeBadge = badge ?? "miss";
+  const pickupLeft = leftLabel ?? (pickup ? "PICK UP" : undefined);
   const body = (
     <View style={styles.pad}>
-      <TopBar sample={sample} badge={badge} motion={motion} />
-      <MatchBlock sample={sample} ja={ja} motion={motion} />
+      <TopBar
+        sample={sample}
+        badge={badge}
+        live={sample.live === true}
+        motion={motion}
+      />
+      <MatchBlock
+        sample={sample}
+        ja={ja}
+        motion={motion}
+        deferJerseys={deferJerseys}
+      />
       <Animated.View style={[styles.layerDivider, motion?.dividerStyle]} />
       <Animated.View style={motion?.footerGroupStyle}>
         <MarketBias
@@ -687,7 +751,9 @@ function Plan1Card({
     return (
       <MatchListLineFrameNative
         topLabel={sample.roundLabel}
-        paint={RESULT_LINE_FRAME_PAINT[badge]}
+        leftLabel={pickupLeft}
+        pickup={pickup}
+        paint={paint}
         strokeEnd={strokeEnd}
         animateDraw={animateDraw}
         drawDelayMs={drawDelayMs}
@@ -699,8 +765,11 @@ function Plan1Card({
 
   return (
     <RectShell
-      badge={badge}
+      badge={shellBadge}
+      paint={paint}
       topLabel={sample.roundLabel}
+      leftLabel={pickupLeft}
+      pickup={pickup}
       onOpenDetail={onOpenDetail}
       showDetailTab={showDetailTab}
       frameGlow={frameGlow}
@@ -726,6 +795,9 @@ export function ResultCardDesignFaceNative({
   bare = false,
   frameGlow = false,
   showDetailTab = false,
+  /** マッチ同様・左辺 `PICK UP` */
+  pickup = false,
+  leftLabel,
   onOpenDetail,
   tutorialMetricsTargetId,
   strokeEnd,
@@ -733,9 +805,11 @@ export function ResultCardDesignFaceNative({
   drawDelayMs = 0,
   motion,
   detailSpineStyle,
+  live = false,
+  deferJerseys = false,
 }: {
-  language: "ja" | "en";
-  badge?: OutcomeBadge;
+  language: import("../../../../../lib/i18n/language").Language;
+  badge?: OutcomeBadge | null;
   scoreRel?: ScoreRelKind;
   sample?: Sample;
   /** 共有 `buildResultCardFaceModel` 出力 */
@@ -760,10 +834,13 @@ export function ResultCardDesignFaceNative({
     winStreak: number;
     outcomeBadge?: OutcomeBadge | null;
     scoreRel?: ScoreRelKind;
+    isPickup?: boolean;
   };
   bare?: boolean;
   frameGlow?: boolean;
   showDetailTab?: boolean;
+  pickup?: boolean;
+  leftLabel?: string;
   onOpenDetail?: () => void;
   /** チュートリアル穴（Upset / Score 行） */
   tutorialMetricsTargetId?: string;
@@ -772,7 +849,15 @@ export function ResultCardDesignFaceNative({
   drawDelayMs?: number;
   motion?: ResultFaceMatchEntranceStyles;
   detailSpineStyle?: object;
+  /** 開始〜確定まで。判定前カードの LIVE 表示 */
+  live?: boolean;
+  /** 一覧: 画面近傍まで Skia ジャージ遅延 */
+  deferJerseys?: boolean;
 }) {
+  const settledFromFace =
+    face != null
+      ? face.resultHome != null && face.resultAway != null
+      : sample?.settled !== false;
   const resolved: Sample = face
     ? (() => {
         const homeJersey = resolveTeamJerseyPalette(
@@ -784,6 +869,11 @@ export function ResultCardDesignFaceNative({
           face.league ?? "nba",
           { teamId: face.awayTeamId, name: face.awayName },
           SAMPLE.awayJersey.primary
+        );
+        const matchupAccents = resolveMatchupUiAccents(
+          normalizeLeague(face.league ?? "nba"),
+          face.homeTeamId,
+          face.awayTeamId
         );
         return {
           ...SAMPLE,
@@ -798,8 +888,8 @@ export function ResultCardDesignFaceNative({
             primary: awayJersey.primary,
             secondary: awayJersey.secondary,
           },
-          homeAccent: homeJersey.primary,
-          awayAccent: awayJersey.primary,
+          homeAccent: matchupAccents.homeAccent,
+          awayAccent: matchupAccents.awayAccent,
           predHome: face.predHome,
           predAway: face.predAway,
           resultHome: face.resultHome ?? 0,
@@ -812,20 +902,24 @@ export function ResultCardDesignFaceNative({
           topScorer: face.topScorer,
           topScorerHit: face.topScorerHit === true,
           winStreak: face.winStreak,
+          settled: settledFromFace,
+          live,
         };
       })()
-    : (sample ?? { ...SAMPLE, upsetPoints: 2.4 });
+    : { ...(sample ?? { ...SAMPLE, upsetPoints: 2.4 }), live: sample?.live ?? live };
 
-  const resolvedBadge =
-    badge ??
-    face?.outcomeBadge ??
-    "hit";
-  const resolvedScoreRel = scoreRel ?? face?.scoreRel ?? "none";
+  const resolvedBadge: OutcomeBadge | null = settledFromFace
+    ? (badge ?? face?.outcomeBadge ?? "hit")
+    : null;
+  const resolvedScoreRel = settledFromFace
+    ? (scoreRel ?? face?.scoreRel ?? "none")
+    : "none";
+  const resolvedPickup = pickup || face?.isPickup === true;
 
   return (
     <Plan1Card
       sample={resolved}
-      badge={resolvedBadge === null ? "miss" : resolvedBadge}
+      badge={resolvedBadge}
       ja={language === "ja"}
       scorerIcon="check"
       scoreRel={resolvedScoreRel}
@@ -833,12 +927,15 @@ export function ResultCardDesignFaceNative({
       onOpenDetail={onOpenDetail}
       frameGlow={frameGlow}
       bare={bare}
+      pickup={resolvedPickup}
+      leftLabel={leftLabel}
       tutorialMetricsTargetId={tutorialMetricsTargetId}
       strokeEnd={strokeEnd}
       animateDraw={animateDraw}
       drawDelayMs={drawDelayMs}
       motion={motion}
       detailSpineStyle={detailSpineStyle}
+      deferJerseys={deferJerseys}
     />
   );
 }
@@ -1083,44 +1180,42 @@ const styles = StyleSheet.create({
     width: "100%",
     overflow: "visible",
   },
-  /** DETAIL タブのはみ出し分をヒット領域に含める */
-  rectShellWrapWithDetail: {
-    paddingRight: DETAIL_SPINE.width - 1,
-  },
   cardPressed: {
     opacity: 0.96,
     transform: [{ scale: 0.99 }],
   },
-  detailSpine: {
+  detailHint: {
     position: "absolute",
-    top: DETAIL_SPINE.top,
-    /** カード幅は変えず、タブだけ右に出す */
-    right: -(DETAIL_SPINE.width - 1),
-    zIndex: 24,
-    width: DETAIL_SPINE.width,
-    height: DETAIL_SPINE.height,
+    right: 8,
+    bottom: 6,
+    zIndex: 6,
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#070b12",
-    borderColor: "rgba(148,163,184,0.35)",
+    gap: 3,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderWidth: StyleSheet.hairlineWidth * 2,
+    borderColor: "rgba(0,245,255,0.55)",
+    backgroundColor: "rgba(0,245,255,0.08)",
   },
-  detailSpinePressed: { opacity: 0.85 },
-  detailSpineDisabled: { opacity: 0.45 },
-  detailSpineTextCol: {
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 1,
-  },
-  detailSpineChar: {
+  detailHintLabel: {
     fontFamily: MATCH_CARD_METRIC_FONT,
     fontSize: 8,
-    fontWeight: "700",
-    lineHeight: 9,
-    letterSpacing: 0,
-    textTransform: "uppercase",
+    fontWeight: "800",
+    lineHeight: 10,
+    letterSpacing: 1.1,
     includeFontPadding: false,
-    color: "rgba(226,232,240,0.72)",
-    textAlign: "center",
+    color: "rgba(0,245,255,0.88)",
+  },
+  detailHintChevron: {
+    fontFamily: MATCH_CARD_METRIC_FONT,
+    fontSize: 14,
+    fontWeight: "700",
+    lineHeight: 14,
+    letterSpacing: 0,
+    includeFontPadding: false,
+    color: "rgba(0,245,255,0.95)",
+    marginTop: -1,
   },
   rectShell: {
     width: "100%",
@@ -1140,15 +1235,15 @@ const styles = StyleSheet.create({
 
   pad: {
     paddingHorizontal: 10,
-    paddingTop: 10,
-    paddingBottom: 12,
+    paddingTop: 18,
+    paddingBottom: 14,
   },
   layerDivider: {
     height: StyleSheet.hairlineWidth,
     width: "100%",
     backgroundColor: "rgba(255,255,255,0.1)",
-    marginTop: 4,
-    marginBottom: 6,
+    marginTop: 10,
+    marginBottom: 10,
   },
 
   topBar: {
@@ -1171,21 +1266,27 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginBottom: 0,
   },
-  matchSide: { width: 92, alignItems: "center", gap: 3 },
+  matchSide: {
+    width: 92,
+    alignItems: "center",
+    gap: 3,
+    /** 中央の予想スコアより少し下にユニフォーム＋チーム名を置く */
+    paddingTop: 16,
+  },
   homeAwayLabel: {
     fontFamily: MATCH_CARD_METRIC_FONT,
     fontSize: 9,
-    fontWeight: "700",
+    fontWeight: "800",
     letterSpacing: 1.4,
     color: "rgba(226,232,240,0.45)",
   },
-  /** 本番 teamName — Bebas */
+  /** 本番 teamName — マッチカードと同じ Oxanium SemiBold */
   teamNameSlant: {
     marginTop: 4,
-    fontFamily: MATCH_CARD_DISPLAY_FONT,
-    fontSize: 15,
-    fontWeight: "400",
-    letterSpacing: 1.04,
+    fontFamily: "Oxanium_600SemiBold",
+    fontSize: 13,
+    fontWeight: "600",
+    letterSpacing: 0.6,
     color: "rgba(248,250,252,0.95)",
     textAlign: "center",
     width: "100%",
@@ -1199,7 +1300,8 @@ const styles = StyleSheet.create({
   matchCenter: {
     flex: 1,
     alignItems: "center",
-    paddingTop: 4,
+    /** 判定前の「あなたの予想」＋数字をユニフォーム寄りに少し下げる */
+    paddingTop: 20,
     gap: 2,
   },
   /** FINAL — 得点の上 */
@@ -1212,6 +1314,16 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     includeFontPadding: false,
     marginBottom: 2,
+  },
+  finalStatusJa: {
+    fontFamily: MATCH_CARD_METRIC_FONT,
+    fontSize: 10,
+    letterSpacing: 0.6,
+    textTransform: "none",
+    color: "rgba(226,232,240,0.55)",
+  },
+  liveStatus: {
+    color: LIVE_TONE,
   },
   /** 本番スコア — Montserrat Black Italic */
   finalScore: {
@@ -1233,6 +1345,18 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: "rgba(226,232,240,0.45)",
   },
+  predScoreMain: {
+    fontFamily: MATCH_CARD_SCORE_FONT,
+    fontSize: 22,
+    lineHeight: 24,
+    fontWeight: "900",
+    color: "rgba(253,224,71,0.95)",
+    fontVariant: ["tabular-nums"],
+    letterSpacing: -0.5,
+    textShadowColor: "rgba(251,191,36,0.32)",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 12,
+  },
   predScore: {
     fontFamily: MATCH_CARD_SCORE_FONT,
     fontSize: 15,
@@ -1252,7 +1376,7 @@ const styles = StyleSheet.create({
     color: "rgba(253,224,71,0.95)",
   },
 
-  biasRoot: { width: "100%", marginBottom: 4 },
+  biasRoot: { width: "100%", marginBottom: 6 },
   biasPctHeader: {
     flexDirection: "row",
     alignItems: "center",
@@ -1267,6 +1391,7 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     letterSpacing: 0.4,
     minWidth: 48,
+    transform: [{ skewX: "-6deg" }],
   },
   biasPctHeaderNumAway: {
     marginRight: -6,
@@ -1302,7 +1427,7 @@ const styles = StyleSheet.create({
     transformOrigin: "left center",
   },
 
-  statBlock: { gap: 6, paddingTop: 0 },
+  statBlock: { gap: 6, paddingTop: 2 },
 
   /** D split + relative */
   splitRow: {
@@ -1361,17 +1486,19 @@ const styles = StyleSheet.create({
   },
 
   scorerBlock: {
-    marginBottom: 4,
+    marginBottom: 0,
+    paddingVertical: 3,
   },
   scorerLabel: {
-    fontFamily: MATCH_CARD_METRIC_FONT,
-    fontSize: 11,
-    fontWeight: "700",
-    letterSpacing: 1.1,
-    color: "rgba(148,163,184,0.75)",
+    fontFamily: "Oxanium_600SemiBold",
+    fontSize: 12,
+    fontWeight: "600",
+    letterSpacing: 0.8,
+    color: "rgba(248,250,252,0.92)",
     textTransform: "uppercase",
     flexShrink: 0,
-    width: 78,
+    width: 88,
+    includeFontPadding: false,
   },
   scorerValueRow: {
     flexDirection: "row",
@@ -1389,10 +1516,10 @@ const styles = StyleSheet.create({
     maxWidth: "100%",
   },
   scorerName: {
-    fontFamily: MATCH_CARD_DISPLAY_FONT,
-    fontSize: 15,
-    fontWeight: "400",
-    letterSpacing: 0.8,
+    fontFamily: "Oxanium_600SemiBold",
+    fontSize: 12,
+    fontWeight: "600",
+    letterSpacing: 0.5,
     color: "#F8FAFC",
     textTransform: "uppercase",
     textAlign: "center",
@@ -1403,7 +1530,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 5,
     flexShrink: 0,
-    width: 78,
+    width: 88,
     justifyContent: "flex-end",
   },
   scorerHit: {

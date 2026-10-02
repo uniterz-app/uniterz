@@ -1,12 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import type { RankingDivision } from "@/lib/rankings/rankingDivision";
 import type { RankingPeriod } from "@/lib/rankings/rankingPeriod";
 import type { BulkMetricPayload } from "@/lib/rankings/useCumulativeRankingsBulk";
 import { mergePeriodPersonalOverlay } from "@/lib/rankings/mergePeriodPersonalOverlay";
+import {
+  appendRankingSnapshotGenerationParam,
+  fetchRankingSnapshotGeneration,
+} from "@/lib/rankings/rankingSnapshotGenerationClient";
 
 type PeriodBulkResult = {
   byMetric: Record<string, BulkMetricPayload>;
@@ -14,6 +18,7 @@ type PeriodBulkResult = {
   availableLabels: string[];
   activeLabel: string | null;
   proRequired: boolean;
+  snapshotGeneration: string | null;
 };
 
 const emptyResult: PeriodBulkResult = {
@@ -22,9 +27,11 @@ const emptyResult: PeriodBulkResult = {
   availableLabels: [],
   activeLabel: null,
   proRequired: false,
+  snapshotGeneration: null,
 };
 
-const PERIOD_CACHE_TTL_MS = 10 * 60 * 1000;
+/** 世代キー付きなので長めでも安全（16:00 で key が変わる） */
+const PERIOD_CACHE_TTL_MS = 12 * 60 * 60 * 1000;
 const PERSONAL_CACHE_TTL_MS = 60 * 1000;
 
 type PeriodCacheEntry = { at: number; value: PeriodBulkResult };
@@ -41,21 +48,31 @@ const personalInflight = new Map<
   Promise<Record<string, BulkMetricPayload>>
 >();
 
+/** Pro Skin / プロフィール更新後にクライアント一覧メモリを捨てる */
+export function clearPeriodRankingsClientCache(): void {
+  periodCache.clear();
+  periodInflight.clear();
+  personalCache.clear();
+  personalInflight.clear();
+}
+
 function periodCacheKey(
   period: string,
   label: string | null,
-  division: RankingDivision
+  division: RankingDivision,
+  generation: string
 ): string {
-  return `${period}|${label ?? "current"}|${division}`;
+  return `${period}|${label ?? "current"}|${division}|${generation}`;
 }
 
 function personalCacheKey(
   uid: string,
   period: string,
   label: string | null,
-  division: RankingDivision
+  division: RankingDivision,
+  generation: string
 ): string {
-  return `${uid}|${periodCacheKey(period, label, division)}`;
+  return `${uid}|${periodCacheKey(period, label, division, generation)}`;
 }
 
 async function fetchPeriodPersonalOverlay(opts: {
@@ -77,7 +94,7 @@ async function fetchPeriodPersonalOverlay(opts: {
   const base = (opts.apiBaseUrl ?? "").replace(/\/$/, "");
   const res = await fetch(`${base}/api/period-ranking/bulk?${params}`, {
     headers: { Authorization: `Bearer ${token}` },
-    cache: "no-store",
+    cache: "default",
   });
   if (!res.ok) return {};
   const json = (await res.json()) as {
@@ -112,7 +129,11 @@ export function usePeriodRankingsBulk(
     return onAuthStateChanged(auth, (u) => setUid(u?.uid ?? null));
   }, []);
 
-  const loadShared = useCallback(async () => {
+  /**
+   * Pick Up ↔ PRO LEAGUE 切替で、旧 division の byMetric が1フレ残ると
+   * Pro クロムに Pickup 順位が出る。描画前に必ず捨てる。
+   */
+  useLayoutEffect(() => {
     if (!period) {
       setByMetric({});
       setSharedByMetric({});
@@ -124,22 +145,22 @@ export function usePeriodRankingsBulk(
       setListReady(true);
       return;
     }
+    setListReady(false);
+    setPersonalPending(false);
+    setByMetric({});
+    setSharedByMetric({});
+    setProRequired(false);
+  }, [period, label, division]);
 
-    const key = periodCacheKey(period, label, division);
+  const loadShared = useCallback(async (): Promise<PeriodBulkResult> => {
+    if (!period) return emptyResult;
+
+    const generation = await fetchRankingSnapshotGeneration();
+    const key = periodCacheKey(period, label, division, generation);
     const cached = periodCache.get(key);
     if (cached && Date.now() - cached.at < PERIOD_CACHE_TTL_MS) {
-      setSharedByMetric(cached.value.byMetric);
-      setByMetric(cached.value.byMetric);
-      setRange(cached.value.range);
-      setAvailableLabels(cached.value.availableLabels);
-      setActiveLabel(cached.value.activeLabel);
-      setProRequired(cached.value.proRequired);
-      setListReady(true);
-      return;
+      return cached.value;
     }
-
-    setListReady(false);
-    setProRequired(false);
 
     const pending = periodInflight.get(key);
     const run =
@@ -153,11 +174,12 @@ export function usePeriodRankingsBulk(
           const params = new URLSearchParams({ period });
           if (label) params.set("label", label);
           if (division === "open") params.set("division", "open");
+          appendRankingSnapshotGenerationParam(params, generation);
           const res = await fetch(`/api/period-ranking/bulk?${params}`, {
             headers: token
               ? { Authorization: `Bearer ${token}` }
               : undefined,
-            cache: division === "open" ? "no-store" : "force-cache",
+            cache: "force-cache",
           });
           const json = (await res.json()) as {
             ok?: boolean;
@@ -166,6 +188,7 @@ export function usePeriodRankingsBulk(
             byMetric?: Record<string, BulkMetricPayload>;
             range?: PeriodBulkResult["range"];
             availableLabels?: string[];
+            snapshotGeneration?: string;
           };
           if (res.status === 403 && json?.error === "pro_required") {
             return { ...emptyResult, proRequired: true };
@@ -179,6 +202,7 @@ export function usePeriodRankingsBulk(
             availableLabels: json.availableLabels ?? [],
             activeLabel: json.label ?? null,
             proRequired: false,
+            snapshotGeneration: generation,
           };
         } catch {
           return emptyResult;
@@ -189,23 +213,29 @@ export function usePeriodRankingsBulk(
 
     if (!pending) periodInflight.set(key, run);
 
-    try {
-      const value = await run;
-      periodCache.set(key, { at: Date.now(), value });
+    const value = await run;
+    periodCache.set(key, { at: Date.now(), value });
+    return value;
+  }, [period, label, division]);
+
+  useEffect(() => {
+    if (!period) return;
+    let cancelled = false;
+    void (async () => {
+      const value = await loadShared();
+      if (cancelled) return;
       setSharedByMetric(value.byMetric);
       setByMetric(value.byMetric);
       setRange(value.range);
       setAvailableLabels(value.availableLabels);
       setActiveLabel(value.activeLabel);
       setProRequired(value.proRequired);
-    } finally {
       setListReady(true);
-    }
-  }, [period, label, division]);
-
-  useEffect(() => {
-    void loadShared();
-  }, [loadShared]);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [loadShared, period]);
 
   /** 一覧のあと — top50 外の My Rank を personalOnly で重ねる */
   useEffect(() => {
@@ -219,9 +249,12 @@ export function usePeriodRankingsBulk(
     }
 
     let cancelled = false;
-    const key = personalCacheKey(uid, period, label, division);
 
     void (async () => {
+      const generation = await fetchRankingSnapshotGeneration();
+      if (cancelled) return;
+      const key = personalCacheKey(uid, period, label, division, generation);
+
       const hit = personalCache.get(key);
       if (hit && Date.now() - hit.at < PERSONAL_CACHE_TTL_MS) {
         if (cancelled) return;

@@ -52,11 +52,13 @@ async function writeSeen(uid: string, ids: Set<string>): Promise<void> {
 export function useProReportDeliveryOverlayNative(opts: {
   uid: string | null | undefined;
   enabled: boolean;
+  /** false のとき月次候補をスキップ（Weekly プラン） */
+  canViewMonthly?: boolean;
 }): {
   active: ActiveReportOverlayNative | null;
   dismiss: () => void;
 } {
-  const { uid, enabled } = opts;
+  const { uid, enabled, canViewMonthly = true } = opts;
   const [queue, setQueue] = useState<ActiveReportOverlayNative[]>([]);
   const [index, setIndex] = useState(0);
 
@@ -69,7 +71,9 @@ export function useProReportDeliveryOverlayNative(opts: {
 
     let cancelled = false;
     void (async () => {
-      const candidates = buildReportDeliveryCandidates(uid);
+      const candidates = buildReportDeliveryCandidates(uid).filter(
+        (c) => canViewMonthly || c.kind !== "monthly"
+      );
       if (candidates.length === 0) {
         if (!cancelled) {
           setQueue([]);
@@ -131,7 +135,7 @@ export function useProReportDeliveryOverlayNative(opts: {
     return () => {
       cancelled = true;
     };
-  }, [enabled, uid]);
+  }, [enabled, uid, canViewMonthly]);
 
   const active = queue[index] ?? null;
 

@@ -28,6 +28,29 @@ const gameDocInflight = new Map<
   Promise<{ exists: boolean; data: Record<string, unknown> | null }>
 >();
 
+/** 一覧の market/PK バッチ取得結果を詳細用キャッシュへ載せる */
+export function primeGameDocCacheForResult(
+  gameId: string,
+  data: Record<string, unknown> | null,
+  exists: boolean = data != null
+): void {
+  const safeId = gameId.trim();
+  if (!safeId) return;
+  gameDocCache.set(safeId, { at: Date.now(), exists, data });
+}
+
+/** 同期 peek（TTL 内）。一覧カードの名前解決用。未ヒットは null */
+export function peekGameDocCacheForResult(
+  gameId: string | null | undefined
+): Record<string, unknown> | null {
+  const safeId = (gameId ?? "").trim();
+  if (!safeId) return null;
+  const hit = gameDocCache.get(safeId);
+  if (!hit || !hit.exists || !hit.data) return null;
+  if (Date.now() - hit.at >= GAME_DOC_TTL_MS) return null;
+  return hit.data;
+}
+
 export async function getCachedGameDocForResult(
   gameId: string,
   firestore: Firestore

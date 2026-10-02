@@ -11,11 +11,12 @@ import {
   View,
 } from "react-native";
 import { fonts } from "../../theme/tokens";
+import { unitEarnPlayButtonCopy } from "./unitEarnCopy";
 
 type Props = {
   onPlay: () => void;
   disabled?: boolean;
-  language?: "ja" | "en";
+  language?: string | null;
 };
 
 export default function UnitEarnPlayButtonNative({
@@ -23,8 +24,7 @@ export default function UnitEarnPlayButtonNative({
   disabled = false,
   language = "ja",
 }: Props) {
-  const isJa = language === "ja";
-  const label = isJa ? "Unit獲得を再生" : "Play unit earn";
+  const label = unitEarnPlayButtonCopy(language).label;
   const [pending, setPending] = useState(false);
   const lockedRef = useRef(false);
 

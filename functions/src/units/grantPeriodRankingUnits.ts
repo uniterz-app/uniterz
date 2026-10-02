@@ -1,12 +1,15 @@
 /**
  * 個人ランキング（週総合 / 月総合+部門）Unit 冪等付与。
- * period_ranking_snapshots（standard）確定後に実行。
+ * period_ranking_snapshots（standard）確定後に、別 cron（16:10 JST）から実行。
+ * 実付与は ET 月曜（週）／ET 毎月1日（月）のみ。
  * 同順位は同量（competition）。タイブレークなし。
  */
 import { FieldValue, getFirestore } from "firebase-admin/firestore";
 import {
   addDaysToDateKey,
   dateKeyJST,
+  isEasternMonday,
+  isEasternMonthStart,
   monthLabelJST,
   PERIOD_FINALIZE_GRACE_DAYS,
   previousLabel,
@@ -46,7 +49,11 @@ function periodStandardSnapshotDocId(
   return `nba_${period}_${label}_${metric}`;
 }
 
-/** Pro Skin 付与と同じ猶予（期間終了 + grace 後のみ true） */
+/**
+ * 進行中でない過去期間なら true。
+ * grace=0: 新しい週／月に入った時点で前期間は確定（スナップショット後に付与可）。
+ * grace≥1: 開始日から grace 日以内は前期間の付与を待つ。
+ */
 export function isNbaPeriodFinalForUnitGrants(
   period: NbaRankingPeriod,
   labelKey: string,
@@ -56,6 +63,7 @@ export function isNbaPeriodFinalForUnitGrants(
   if (period === "weekly") {
     const current = weekStartDateKeyJST(now);
     if (labelKey >= current) return false;
+    if (PERIOD_FINALIZE_GRACE_DAYS <= 0) return true;
     if (
       todayKey <= addDaysToDateKey(current, PERIOD_FINALIZE_GRACE_DAYS) &&
       labelKey === previousLabel("weekly", current)
@@ -66,6 +74,7 @@ export function isNbaPeriodFinalForUnitGrants(
   }
   const current = monthLabelJST(now);
   if (labelKey >= current) return false;
+  if (PERIOD_FINALIZE_GRACE_DAYS <= 0) return true;
   if (
     todayKey <=
       addDaysToDateKey(`${current}-01`, PERIOD_FINALIZE_GRACE_DAYS) &&
@@ -76,13 +85,22 @@ export function isNbaPeriodFinalForUnitGrants(
   return true;
 }
 
+/** Pro Skin 付与と同じ 4 セグメント doc パス（奇数セグメントは Firestore が拒否する） */
+function periodUnitGrantLockPath(
+  period: PeriodRankingUnitPeriod,
+  labelKey: string
+): string {
+  const id = `${period}_${labelKey}`.replace(/\//g, "_");
+  return `meta/periodRankingUnitGrants/locks/${id}`;
+}
+
 async function claimPeriodUnitGrant(opts: {
   period: PeriodRankingUnitPeriod;
   labelKey: string;
 }): Promise<boolean> {
   const db = getFirestore();
   const grantRef = db.doc(
-    `meta/periodRankingUnitGrants/${opts.period}_${opts.labelKey}`
+    periodUnitGrantLockPath(opts.period, opts.labelKey)
   );
   return db.runTransaction(async (tx) => {
     const snap = await tx.get(grantRef);
@@ -152,9 +170,7 @@ export async function grantPeriodRankingUnitsForPeriod(opts: {
   if (!claimed) return { granted: false, ledgerWrites: 0, skipped: 0 };
 
   const db = getFirestore();
-  const grantRef = db.doc(
-    `meta/periodRankingUnitGrants/${opts.period}_${opts.labelKey}`
-  );
+  const grantRef = db.doc(periodUnitGrantLockPath(opts.period, opts.labelKey));
   const reason = periodRankingUnitLedgerReason(opts.period);
   const metrics = periodRankingUnitMetricsForPeriod(opts.period);
 
@@ -354,22 +370,42 @@ export async function grantPeriodRankingUnitsForPeriod(opts: {
   }
 }
 
+/**
+ * 確定済み前週・前月への Unit 付与。
+ * 既定は Eastern の月曜（週次）/ 毎月1日（月次）だけ実行。
+ * force で手動リトライ可。
+ */
 export async function grantPeriodRankingUnitsAfterPeriodSnapshots(
-  now: Date = new Date()
+  now: Date = new Date(),
+  opts?: { force?: boolean }
 ): Promise<void> {
+  const force = opts?.force === true;
+  const runWeekly = force || isEasternMonday(now);
+  const runMonthly = force || isEasternMonthStart(now);
+  if (!runWeekly && !runMonthly) {
+    console.log(
+      "[grantPeriodRankingUnits] skip: not ET Monday or month start"
+    );
+    return;
+  }
+
   const weekCurrent = weekStartDateKeyJST(now);
   const weekPrev = previousLabel("weekly", weekCurrent);
   const monthCurrent = monthLabelJST(now);
   const monthPrev = previousLabel("monthly", monthCurrent);
 
-  await grantPeriodRankingUnitsForPeriod({
-    period: "weekly",
-    labelKey: weekPrev,
-    now,
-  });
-  await grantPeriodRankingUnitsForPeriod({
-    period: "monthly",
-    labelKey: monthPrev,
-    now,
-  });
+  if (runWeekly) {
+    await grantPeriodRankingUnitsForPeriod({
+      period: "weekly",
+      labelKey: weekPrev,
+      now,
+    });
+  }
+  if (runMonthly) {
+    await grantPeriodRankingUnitsForPeriod({
+      period: "monthly",
+      labelKey: monthPrev,
+      now,
+    });
+  }
 }

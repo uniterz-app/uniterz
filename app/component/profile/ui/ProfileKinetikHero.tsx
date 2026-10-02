@@ -28,7 +28,9 @@ import {
   type ProfileKinetikMetricsTab,
 } from "@/lib/profile/useNbaKinetikMonthlyStats";
 import { listRankingPeriodLabels } from "@/lib/rankings/rankingPeriod";
-import { preferredNbaKinetikPeriod } from "@/lib/rankings/nbaSeason";
+import { useMyNbaFavorites } from "@/lib/profile/useMyNbaFavorites";
+import { nbaFavoritesEqual } from "@/lib/profile/nbaFavorites";
+import { preferredNbaKinetikPeriod, CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
 import { useUserCareer } from "@/lib/profile/useUserCareer";
 
 type Props = {
@@ -49,6 +51,8 @@ type Props = {
   visualEffects?: ProfileVisualEffects;
   targetUid?: string | null;
   profileViewCount?: number | null;
+  /** 過去週/月ナビ。呼び出し元の Pro（見ている相手ではない） */
+  callerIsPro?: boolean;
 };
 
 export default function ProfileKinetikHero({
@@ -67,6 +71,7 @@ export default function ProfileKinetikHero({
   visualEffects = "full",
   targetUid = null,
   profileViewCount = null,
+  callerIsPro = false,
 }: Props) {
   const [metricsPeriod, setMetricsPeriod] =
     useState<ProfileKinetikMetricsPeriod>(() => preferredNbaKinetikPeriod());
@@ -75,10 +80,32 @@ export default function ProfileKinetikHero({
   const [windowLabel, setWindowLabel] = useState<string | null>(null);
 
   const windowEnabled = metricsTab !== "total";
+  const fetchedBoard = preferredNbaKinetikPeriod();
+  const parentPeriodStats = useMemo(() => {
+    if (metricsTab !== "total" || !summary) return null;
+    if (metricsPeriod !== fetchedBoard) return null;
+    return {
+      summary,
+      summaryRanks: summaryRanks ?? {
+        totalPrecision: null,
+        totalUpset: null,
+        totalPoints: null,
+        totalPointsDenominator: null,
+        rankDeltaPlaces: null,
+      },
+      seasonKey: CURRENT_NBA_SEASON_KEY,
+    };
+  }, [metricsTab, metricsPeriod, summary, summaryRanks, fetchedBoard]);
+
+  const periodFetchEnabled =
+    metricsTab === "total" &&
+    Boolean(targetUid?.trim()) &&
+    parentPeriodStats == null;
+
   const { data: periodData, loading: periodLoading } = useNbaKinetikPeriodStats(
     targetUid,
     metricsPeriod,
-    metricsTab === "total"
+    periodFetchEnabled
   );
   const { data: windowData, loading: windowLoading } = useNbaKinetikWindowStats(
     targetUid,
@@ -91,7 +118,7 @@ export default function ProfileKinetikHero({
 
   const activeData =
     metricsTab === "total"
-      ? periodData
+      ? parentPeriodStats ?? periodData
       : windowData
         ? {
             summary: windowData.summary,
@@ -112,16 +139,17 @@ export default function ProfileKinetikHero({
   useEffect(() => {
     const otherBoard: ProfileKinetikMetricsPeriod =
       metricsPeriod === "season" ? "playoffs" : "season";
-    prefetchNbaKinetikPeriodStats(targetUid, otherBoard);
     if (metricsTab === "total") {
-      prefetchNbaKinetikPeriodStats(targetUid, metricsPeriod);
+      if (periodFetchEnabled) {
+        prefetchNbaKinetikPeriodStats(targetUid, metricsPeriod);
+      }
       return;
     }
     const otherTab: ProfileKinetikMetricsTab =
       metricsTab === "monthly" ? "weekly" : "monthly";
     prefetchNbaKinetikWindowStats(targetUid, metricsPeriod, otherTab);
     prefetchNbaKinetikWindowStats(targetUid, otherBoard, metricsTab);
-  }, [targetUid, metricsPeriod, metricsTab]);
+  }, [targetUid, metricsPeriod, metricsTab, periodFetchEnabled]);
 
   const periodLabels = useMemo(() => {
     if (metricsTab === "total") return [];
@@ -180,6 +208,26 @@ export default function ProfileKinetikHero({
       : windowLoading && !windowData;
   const careerPending = careerDocLoading && !career;
 
+  const { favorites: liveFavorites } = useMyNbaFavorites();
+  const profileFavorites = useMemo(
+    () => ({
+      favoriteNbaTeamId: profile.favoriteNbaTeamId,
+      favoriteNbaTeamFanSinceSeason: profile.favoriteNbaTeamFanSinceSeason,
+      favoriteNbaPlayers: profile.favoriteNbaPlayers,
+    }),
+    [
+      profile.favoriteNbaTeamId,
+      profile.favoriteNbaTeamFanSinceSeason,
+      profile.favoriteNbaPlayers,
+    ]
+  );
+  const nbaFavorites = useMemo(() => {
+    if (!isMe) return profileFavorites;
+    return nbaFavoritesEqual(liveFavorites, profileFavorites)
+      ? profileFavorites
+      : liveFavorites;
+  }, [isMe, liveFavorites, profileFavorites]);
+
   return (
     <div
       className={
@@ -212,11 +260,13 @@ export default function ProfileKinetikHero({
             countryCode={profile.countryCode}
             memberSinceMs={profile.memberSinceMs}
             isPro={profile.plan === "pro"}
+            accountUid={targetUid}
             planProBgVariant={profile.planProBgVariant}
             shareHandle={profile.handle}
             metricValueDeltas={null}
             rankingLeague="nba"
             visualEffects={visualEffects}
+            nbaFavorites={nbaFavorites}
             metricsPeriod={metricsPeriod}
             onMetricsPeriodChange={setMetricsPeriod}
             metricsTab={metricsTab}
@@ -225,9 +275,9 @@ export default function ProfileKinetikHero({
               metricsTab === "total" ? null : windowData?.label ?? windowLabel
             }
             onMetricsWindowLabelChange={
-              profile.plan === "pro" ? setWindowLabel : undefined
+              callerIsPro ? setWindowLabel : undefined
             }
-            metricsPeriodLabels={profile.plan === "pro" ? periodLabels : []}
+            metricsPeriodLabels={callerIsPro ? periodLabels : []}
             onToggleMetricsScope={() =>
               setMetricsPeriod((prev) =>
                 prev === "season" ? "playoffs" : "season"

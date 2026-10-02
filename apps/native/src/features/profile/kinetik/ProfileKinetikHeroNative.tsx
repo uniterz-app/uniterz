@@ -2,7 +2,7 @@
  * Web `ProfileKinetikHero` 相当 — Season/Playoff × Total/Week/Month。
  */
 import { useEffect, useMemo, useState } from "react";
-import type { ViewStyle } from "react-native";
+import { InteractionManager, type ViewStyle } from "react-native";
 import type { Profile } from "../../../../../../app/component/profile/useProfile";
 import { mapProfileToKinetikPanel } from "../../../../../../lib/profile/mapProfileToKinetikPanel";
 import type { ProfileStatsStreakContext } from "../../../../../../lib/profile/profileStreakScope";
@@ -35,9 +35,9 @@ export type ProfileKinetikHeroNativeProps = {
   bio: string;
   countryCode: string;
   plan: "free" | "pro";
-  planProBgVariant?: ProfilePlanProBgVariant;
+  planProBgVariant?: ProfilePlanProBgVariant | null;
   memberSinceMs?: number | null;
-  language: "ja" | "en";
+  language: string;
   summary?: ProfileSummaryNative | null;
   summaryRanks?: ProfileSummaryRanksNative | null;
   profileStatsContext: ProfileStatsStreakContext;
@@ -54,6 +54,21 @@ export type ProfileKinetikHeroNativeProps = {
   profileViewCount?: number | null;
   unitBalance?: number | null;
   onOpenUnitLedger?: () => void;
+  markMode?: "list" | "toggle";
+  marked?: boolean;
+  markCount?: number;
+  onPressMark?: () => void;
+  /** 過去週/月ナビ。呼び出し元の Pro */
+  callerIsPro?: boolean;
+  nbaFavorites?: {
+    favoriteNbaTeamId: string | null;
+    favoriteNbaTeamFanSinceSeason: string | null;
+    favoriteNbaPlayers: Array<{
+      playerId: string;
+      displayName: string;
+      teamId: string;
+    }>;
+  } | null;
 };
 
 function toSummaryInput(summary?: ProfileSummaryNative | null) {
@@ -94,7 +109,7 @@ export default function ProfileKinetikHeroNative({
   bio,
   countryCode,
   plan,
-  planProBgVariant = PROFILE_PLAN_PRO_BG_DEFAULT,
+  planProBgVariant = null,
   memberSinceMs = null,
   language,
   summary = null,
@@ -112,6 +127,12 @@ export default function ProfileKinetikHeroNative({
   profileViewCount = null,
   unitBalance = null,
   onOpenUnitLedger,
+  markMode,
+  marked = false,
+  markCount = 0,
+  onPressMark,
+  callerIsPro = false,
+  nbaFavorites = null,
 }: ProfileKinetikHeroNativeProps) {
   const [metricsPeriod, setMetricsPeriod] =
     useState<ProfileKinetikMetricsPeriod>(() => preferredNbaKinetikPeriod());
@@ -119,7 +140,27 @@ export default function ProfileKinetikHeroNative({
     useState<ProfileKinetikMetricsTab>("total");
   const [windowLabel, setWindowLabel] = useState<string | null>(null);
   const [careerFlipped, setCareerFlipped] = useState(false);
+  /** 一度マウントしたら保持（毎回の Pro Skin 再構築を避ける） */
+  const [careerMounted, setCareerMounted] = useState(false);
   const apiBase = useMemo(() => getUniterzApiBaseUrl() ?? undefined, []);
+
+  /** Pro のみ: 表の描画後に裏を温める（非表示の静的 Image。アニメは裏に付けない） */
+  useEffect(() => {
+    if (plan !== "pro" || planProBgVariant == null) return;
+    let cancelled = false;
+    let warmTimer: ReturnType<typeof setTimeout> | null = null;
+    const task = InteractionManager.runAfterInteractions(() => {
+      warmTimer = setTimeout(() => {
+        if (!cancelled) setCareerMounted(true);
+      }, 480);
+    });
+    return () => {
+      cancelled = true;
+      if (warmTimer) clearTimeout(warmTimer);
+      const cancel = (task as { cancel?: () => void }).cancel;
+      cancel?.();
+    };
+  }, [plan, planProBgVariant, targetUid]);
 
   const windowEnabled = metricsTab !== "total";
   const fetchedBoard = preferredNbaKinetikPeriod();
@@ -160,10 +201,11 @@ export default function ProfileKinetikHeroNative({
     windowLabel
   );
 
+  /** Web と同じくプロフィール表示時に prefetch（フリップ待ちを消す） */
   const { career, loading: careerDocLoading, error: careerError } =
     useUserCareerNative(targetUid, {
       apiBaseUrl: apiBase,
-      enabled: careerFlipped,
+      enabled: Boolean(targetUid?.trim()),
     });
 
   useEffect(() => {
@@ -174,7 +216,6 @@ export default function ProfileKinetikHeroNative({
     if (!targetUid?.trim() || statsLoading) return;
     const otherBoard: ProfileKinetikMetricsPeriod =
       metricsPeriod === "season" ? "playoffs" : "season";
-    prefetchNbaKinetikPeriodStats(targetUid, otherBoard, apiBase);
     if (metricsTab === "total") {
       if (periodFetchEnabled) {
         prefetchNbaKinetikPeriodStats(targetUid, metricsPeriod, apiBase);
@@ -210,12 +251,17 @@ export default function ProfileKinetikHeroNative({
       bio,
       countryCode: countryCode.trim() || null,
       plan,
-      planProBgVariant,
+      planProBgVariant: planProBgVariant ?? PROFILE_PLAN_PRO_BG_DEFAULT,
       memberSinceMs: memberSinceMs ?? null,
       counts: { posts: summary?.posts ?? 0 },
       currentStreak: winStreak,
       maxStreak: winStreak,
       unitBalance: unitBalance ?? 0,
+      profileViewCount: profileViewCount ?? null,
+      favoriteNbaTeamId: nbaFavorites?.favoriteNbaTeamId ?? null,
+      favoriteNbaTeamFanSinceSeason:
+        nbaFavorites?.favoriteNbaTeamFanSinceSeason ?? null,
+      favoriteNbaPlayers: nbaFavorites?.favoriteNbaPlayers ?? [],
     }),
     [
       avatarUrl,
@@ -224,8 +270,10 @@ export default function ProfileKinetikHeroNative({
       displayName,
       handle,
       memberSinceMs,
+      nbaFavorites,
       plan,
       planProBgVariant,
+      profileViewCount,
       summary?.posts,
       unitBalance,
       winStreak,
@@ -272,7 +320,10 @@ export default function ProfileKinetikHeroNative({
   return (
     <ProfileKinetikFlipShellNative
       language={language}
-      onFlipChange={setCareerFlipped}
+      onFlipChange={(next) => {
+        setCareerFlipped(next);
+        if (next) setCareerMounted(true);
+      }}
       front={
         <ProfileKinetikPanelNative
           style={style}
@@ -283,6 +334,7 @@ export default function ProfileKinetikHeroNative({
           countryCode={countryCode}
           memberSinceMs={memberSinceMs}
           isPro={plan === "pro"}
+          accountUid={targetUid}
           planProBgVariant={planProBgVariant}
           winStreak={mapped.winStreak}
           totalPointsRank={mapped.totalPointsRank}
@@ -300,6 +352,7 @@ export default function ProfileKinetikHeroNative({
           profileViewCount={profileViewCount}
           unitBalance={unitBalance}
           onOpenUnitLedger={isMe ? onOpenUnitLedger : undefined}
+          nbaFavorites={nbaFavorites}
           shareHandle={handle}
           metricValueDeltas={null}
           rankingLeague="nba"
@@ -312,27 +365,34 @@ export default function ProfileKinetikHeroNative({
             metricsTab === "total" ? null : windowData?.label ?? windowLabel
           }
           onMetricsWindowLabelChange={
-            plan === "pro" ? setWindowLabel : undefined
+            callerIsPro ? setWindowLabel : undefined
           }
-          metricsPeriodLabels={plan === "pro" ? periodLabels : []}
+          metricsPeriodLabels={callerIsPro ? periodLabels : []}
           onToggleMetricsScope={() =>
             setMetricsPeriod((prev) =>
               prev === "season" ? "playoffs" : "season"
             )
           }
+          markMode={markMode}
+          marked={marked}
+          markCount={markCount}
+          onPressMark={onPressMark}
         />
       }
       back={
-        <ProfileCareerPanelNative
-          language={language}
-          variant="face"
-          career={career}
-          badges={badges}
-          loading={careerPending}
-          loadError={careerError}
-          isPro={plan === "pro"}
-          planProBgVariant={planProBgVariant}
-        />
+        careerMounted ? (
+          <ProfileCareerPanelNative
+            language={language}
+            variant="face"
+            career={career}
+            badges={badges}
+            loading={careerPending}
+            loadError={careerError}
+            isPro={plan === "pro"}
+            planProBgVariant={planProBgVariant}
+            proSkinActive={careerMounted}
+          />
+        ) : null
       }
     />
   );

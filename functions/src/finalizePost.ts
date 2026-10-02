@@ -101,6 +101,9 @@ export async function finalizePost({
     ...(isWc ? { matchGoalScorers } : {}),
     ...pkScorePatch,
 
+    /** 一覧が games を読まずに左辺 PICK UP を出せるよう埋め込み */
+    isPickup,
+
     marketMeta: {
       majoritySide: market.majoritySide,
       majorityRatio: market.majorityRatio,
@@ -166,7 +169,13 @@ export async function finalizePost({
     updatedAt: FieldValue.serverTimestamp(),
 
     seasonPhase: game?.seasonPhase ?? null,
-    seasonRound: game?.seasonRound ?? null,
+    /** playoffRound 優先（finalize で seasonRound だけ消して MATCH になるのを防ぐ） */
+    playoffRound: game?.playoffRound ?? null,
+    seasonRound: game?.playoffRound ?? game?.seasonRound ?? null,
+    roundLabel:
+      typeof game?.roundLabel === "string" && game.roundLabel.trim()
+        ? game.roundLabel.trim()
+        : null,
     wcStage: null,
   });
 

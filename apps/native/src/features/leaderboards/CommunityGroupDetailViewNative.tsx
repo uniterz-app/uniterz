@@ -12,6 +12,7 @@ import {
   communityRowToRankingCardRow,
 } from "../../../../../lib/communities/leaderboardDisplayRow";
 import { warmPublicProfileFromRankingRowNative } from "../profile/warmPublicProfileNative";
+import type { OpenPublicProfileWarm } from "../../navigation/navigateToPublicProfileNative";
 import { SkeletonScanNative } from "../../components/SkeletonScanNative";
 import {
   RankingsCyberPanelNative,
@@ -47,7 +48,9 @@ type Props = {
   onSummaryLoaded?: (summary: CommunityGroupSummary) => void;
   onExitAction?: () => void;
   onRequestEndGroup?: (groupName: string) => void;
-  onOpenProfile?: (handle: string) => void;
+  /** 親 Modal 内では cyberAlert が裏に回るため、確認 UI を親に任せる */
+  onRequestLeave?: () => void;
+  onOpenProfile?: (handle: string, warm?: OpenPublicProfileWarm) => void;
   onImageUpdated?: () => void;
   /** ヘッダー画像編集中 — 親 ScrollView 制御用 */
   onHeaderImageEditingChange?: (editing: boolean) => void;
@@ -65,6 +68,7 @@ export default function CommunityGroupDetailViewNative({
   onSummaryLoaded,
   onExitAction,
   onRequestEndGroup,
+  onRequestLeave,
   onOpenProfile,
   onImageUpdated,
   onHeaderImageEditingChange,
@@ -207,10 +211,17 @@ export default function CommunityGroupDetailViewNative({
     await shareTextNative(t.shareInvite, message);
   }, [summary?.inviteCode, summary?.name, language, t.shareInvite]);
 
-  const onLeave = useCallback(async () => {
+  const onLeave = useCallback(() => {
+    if (onRequestLeave) {
+      onRequestLeave();
+      return;
+    }
+    // スタック画面など、親確認がない場合のフォールバック
     cyberAlert(
-      "",
       language === "en" ? "Leave this group?" : "このグループから退会しますか？",
+      language === "en"
+        ? "You will leave this group."
+        : "このグループから退会します。",
       [
         { text: language === "en" ? "Cancel" : "キャンセル", style: "cancel" },
         {
@@ -219,11 +230,20 @@ export default function CommunityGroupDetailViewNative({
           onPress: () => {
             void (async () => {
               const h = await communityAuthHeader(getIdToken);
-              if (!h) return;
-              const res = await fetch(communityApiUrl(`/api/communities/${groupId}/leave`), {
-                method: "POST",
-                headers: { Authorization: h },
-              });
+              if (!h) {
+                cyberAlert(
+                  "",
+                  language === "en" ? "Sign in required." : "ログインが必要です。"
+                );
+                return;
+              }
+              const res = await fetch(
+                communityApiUrl(`/api/communities/${groupId}/leave`),
+                {
+                  method: "POST",
+                  headers: { Authorization: h },
+                }
+              );
               const json = await res.json().catch(() => ({}));
               if (!res.ok || !json?.ok) {
                 cyberAlert("", String(json?.error ?? "failed"));
@@ -235,9 +255,10 @@ export default function CommunityGroupDetailViewNative({
             })();
           },
         },
-      ]
+      ],
+      { variant: "confirm" }
     );
-  }, [groupId, language, getIdToken, onExitAction]);
+  }, [groupId, language, getIdToken, onExitAction, onRequestLeave]);
 
   const handleHeaderImageUpdated = useCallback(
     (patch: { headerImageUrl?: string | null; headerImagePositionY?: number }) => {
@@ -254,7 +275,21 @@ export default function CommunityGroupDetailViewNative({
         // グループ行は期間集計のためカード全体スタッツには載せない
         skipStatsPrime: true,
       });
-      if (handle && onOpenProfile) onOpenProfile(handle);
+      if (!handle || !onOpenProfile) return;
+      onOpenProfile(handle, {
+        uid: row.uid,
+        handle: typeof row.handle === "string" ? row.handle : null,
+        displayName: row.displayName,
+        photoURL: typeof row.photoURL === "string" ? row.photoURL : null,
+        plan: row.plan === "pro" ? "pro" : "free",
+        planProBgVariant:
+          typeof row.planProBgVariant === "string"
+            ? row.planProBgVariant
+            : null,
+        countryCode:
+          typeof row.countryCode === "string" ? row.countryCode : null,
+        skipStatsPrime: true,
+      });
     },
     [onOpenProfile]
   );
@@ -358,7 +393,7 @@ export default function CommunityGroupDetailViewNative({
 
       {!summary?.isOwner && !summary?.archived ? (
         <Pressable
-          onPress={() => void onLeave()}
+          onPress={onLeave}
           style={({ pressed }) => [styles.leaveBtn, pressed && communityPressableTapStyle(true)]}
         >
           <Text style={styles.leaveText}>{t.leave}</Text>

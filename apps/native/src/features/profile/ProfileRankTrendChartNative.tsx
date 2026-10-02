@@ -23,6 +23,11 @@ import {
 import { BlocksPulseLoader } from "../../components/BlocksPulseLoader";
 import { PROFILE_CHART_CYBER } from "./profileOverviewChartCyberTheme";
 import ProfileRankPlotGridNative from "./ProfileRankPlotGridNative";
+import {
+  profileChartDateLocale,
+  profileRankTrendCopy,
+} from "./profileChartCopy";
+import { resolveLocalizedLang } from "../../../../../lib/i18n/localize";
 
 const LINE = PROFILE_CHART_CYBER.cyan;
 const LINE_GLOW = PROFILE_CHART_CYBER.cyanSoft;
@@ -74,7 +79,7 @@ const X_AXIS_LABEL_W = 28;
 type Props = {
   data: RankPlayoffTrendPointNative[];
   loading?: boolean;
-  language: "ja" | "en";
+  language: string;
   sectionTitle?: string;
   stackedSecondary?: boolean;
   frozen?: boolean;
@@ -90,15 +95,18 @@ function yearsInRows(rows: RankPlayoffTrendPointNative[]): Set<number> {
 }
 
 /** Web と同じ横軸ラベル */
-function formatAxisDate(dateKey: string, lang: "ja" | "en", showYear: boolean): string {
+function formatAxisDate(
+  dateKey: string,
+  lang: ReturnType<typeof resolveLocalizedLang>,
+  showYear: boolean
+): string {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dateKey).trim());
   if (!m) return dateKey;
   const y = Number(m[1]);
   const mo = Number(m[2]);
   const da = Number(m[3]);
   const d = new Date(Date.UTC(y, mo - 1, da));
-  const locale = lang === "ja" ? "ja-JP" : "en-US";
-  return new Intl.DateTimeFormat(locale, {
+  return new Intl.DateTimeFormat(profileChartDateLocale(lang), {
     ...(showYear ? { year: "numeric" as const } : {}),
     month: "numeric",
     day: "numeric",
@@ -216,7 +224,8 @@ export default function ProfileRankTrendChartNative({
   frozen = false,
 }: Props) {
   const [rowW, setRowW] = useState(0);
-  const isJa = language === "ja";
+  const copy = profileRankTrendCopy(language);
+  const lang = copy.lang;
   const onLayout = (e: LayoutChangeEvent) => {
     const w = e.nativeEvent.layout.width;
     if (w > 0 && Math.abs(w - rowW) > 0.5) setRowW(w);
@@ -372,17 +381,9 @@ export default function ProfileRankTrendChartNative({
     [chartRows.length, model.dots, plotInnerW]
   );
 
-  const title = "Ranking Progress";
-  const subtitle = frozen
-    ? isJa
-      ? "グループステージ終了 — 最終スナップショット"
-      : "Group stage complete — final snapshot"
-    : isJa
-      ? "最新10件のランキングの変動を表示"
-      : "Shows ranking changes over recent snapshots";
-  const emptyHint = isJa
-    ? "ランキングの日次スナップショットが溜まると表示されます"
-    : "Rank snapshots appear after scheduled updates.";
+  const title = copy.title;
+  const subtitle = frozen ? copy.subtitleFrozen : copy.subtitle;
+  const emptyHint = copy.emptyHint;
 
   const currentRankIsTop20 =
     trendSummary.currentRank != null &&
@@ -397,7 +398,7 @@ export default function ProfileRankTrendChartNative({
             <ChartHeader
               title={title}
               subtitle={subtitle}
-              isJa={isJa}
+              currentRankLabel={copy.currentRank}
               sectionTitle={sectionTitle}
               stackedSecondary={stackedSecondary}
             />
@@ -416,7 +417,7 @@ export default function ProfileRankTrendChartNative({
             <ChartHeader
               title={title}
               subtitle={subtitle}
-              isJa={isJa}
+              currentRankLabel={copy.currentRank}
               sectionTitle={sectionTitle}
               stackedSecondary={stackedSecondary}
             />
@@ -437,7 +438,7 @@ export default function ProfileRankTrendChartNative({
             <ChartHeader
               title={title}
               subtitle={subtitle}
-              isJa={isJa}
+              currentRankLabel={copy.currentRank}
               sectionTitle={sectionTitle}
               stackedSecondary={stackedSecondary}
             />
@@ -458,7 +459,7 @@ export default function ProfileRankTrendChartNative({
           <ChartHeader
             title={title}
             subtitle={subtitle}
-            isJa={isJa}
+            currentRankLabel={copy.currentRank}
             sectionTitle={sectionTitle}
             stackedSecondary={stackedSecondary}
             currentRank={trendSummary.currentRank}
@@ -469,7 +470,7 @@ export default function ProfileRankTrendChartNative({
             <View style={styles.chartRow}>
               <View style={[styles.yAxis, { height: CHART_H }]}>
                 <Text style={styles.yAxisRankLabel} pointerEvents="none">
-                  {isJa ? "ランク" : "Rank"}
+                  {copy.rankAxis}
                 </Text>
                 {model.yTicks.map((tick) => {
                   const yCenter =
@@ -580,7 +581,7 @@ export default function ProfileRankTrendChartNative({
                         ]}
                         numberOfLines={1}
                       >
-                        {formatAxisDate(row.dateKey, language, showYearOnXAxis)}
+                        {formatAxisDate(row.dateKey, lang, showYearOnXAxis)}
                       </Text>
                     );
                   })}
@@ -604,7 +605,7 @@ export default function ProfileRankTrendChartNative({
                           : styles.statsCyan,
                   ]}
                 >
-                  {isJa ? "最高ジャンプアップ" : "Best jump up"}
+                  {copy.bestJump}
                 </Text>
                 <View style={profileOverviewChartStatValueRowStyle}>
                   <Text
@@ -636,7 +637,7 @@ export default function ProfileRankTrendChartNative({
                           : styles.statsCyan,
                   ]}
                 >
-                  {isJa ? "最大ドロップ" : "Biggest drop"}
+                  {copy.biggestDrop}
                 </Text>
                 <View style={profileOverviewChartStatValueRowStyle}>
                   <Text
@@ -668,7 +669,7 @@ export default function ProfileRankTrendChartNative({
                           : styles.statsCyan,
                   ]}
                 >
-                  {isJa ? "純増減" : "Net"}
+                  {copy.net}
                 </Text>
                 <View style={profileOverviewChartStatValueRowStyle}>
                   <Text
@@ -703,14 +704,14 @@ export default function ProfileRankTrendChartNative({
 
 function ChartHeader({
   subtitle,
-  isJa,
+  currentRankLabel,
   sectionTitle,
   currentRank,
   currentRankIsTop20,
 }: {
   title: string;
   subtitle: string;
-  isJa: boolean;
+  currentRankLabel: string;
   sectionTitle?: string;
   stackedSecondary?: boolean;
   currentRank?: number | null;
@@ -739,7 +740,7 @@ function ChartHeader({
                 currentRankIsTop20 ? styles.currentRankLabelGold : undefined,
               ]}
             >
-              {isJa ? "現在の順位" : "Current rank"}
+              {currentRankLabel}
             </Text>
             <Text
               style={[

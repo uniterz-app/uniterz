@@ -11,7 +11,7 @@ export type MobileMetric =
   | "goalScorerHits";
 
 export const METRICS: { key: MobileMetric; label: string }[] = [
-  { key: "totalScore", label: "総合スコア" },
+  { key: "totalScore", label: "スコア" },
   { key: "winRate", label: "勝率" },
   { key: "exactHits", label: "完全的中" },
   { key: "upsetScore", label: "アップセットスコア" },

@@ -5,6 +5,7 @@ import { useMemo } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import Svg, { Circle, Line, Polygon } from "react-native-svg";
 import { colors } from "../../theme/tokens";
+import { L, resolveLocalizedLang, type LocalizedLang } from "@/lib/i18n/localize";
 
 type RadarAxisKey = "winRate" | "upset" | "volume" | "streak";
 
@@ -14,16 +15,48 @@ function score10ToLevel(score: number): "S" | "M" | "W" {
   return "W";
 }
 
-const AXES: Array<{ key: RadarAxisKey; ja: string; en: string }> = [
-  { key: "winRate", ja: "勝率", en: "Win rate" },
-  { key: "volume", ja: "投稿量", en: "Volume" },
-  { key: "upset", ja: "Upset", en: "Upset" },
-  { key: "streak", ja: "耐性", en: "Stamina" },
-];
+function axisLabel(key: RadarAxisKey, lang: LocalizedLang): string {
+  switch (key) {
+    case "winRate":
+      return L(lang, {
+        ja: "勝率",
+        en: "Win rate",
+        ko: "승률",
+        zh: "胜率",
+        es: "Win rate",
+        pt: "Win rate",
+        fr: "Win rate",
+      });
+    case "volume":
+      return L(lang, {
+        ja: "投稿量",
+        en: "Volume",
+        ko: "게시량",
+        zh: "预测量",
+        es: "Volumen",
+        pt: "Volume",
+        fr: "Volume",
+      });
+    case "upset":
+      return "Upset";
+    case "streak":
+      return L(lang, {
+        ja: "耐性",
+        en: "Stamina",
+        ko: "지구력",
+        zh: "耐力",
+        es: "Resistencia",
+        pt: "Resistência",
+        fr: "Endurance",
+      });
+  }
+}
+
+const AXIS_KEYS: RadarAxisKey[] = ["winRate", "volume", "upset", "streak"];
 
 type Props = {
   values: Partial<Record<RadarAxisKey, number>>;
-  language: "ja" | "en";
+  language: string;
   size?: number;
 };
 
@@ -40,26 +73,26 @@ function levelColor(lv: "S" | "M" | "W"): string {
 }
 
 export default function ProfileRadarChartNative({ values, language, size = 220 }: Props) {
-  const isJa = language === "ja";
+  const lang = resolveLocalizedLang(language);
   const center = size / 2;
   const radius = size * 0.34;
 
   const points = useMemo(() => {
-    return AXES.map((axis, i) => {
-      const angle = (Math.PI * 2 * i) / AXES.length - Math.PI / 2;
-      const v = clamp10(values[axis.key]);
+    return AXIS_KEYS.map((key, i) => {
+      const angle = (Math.PI * 2 * i) / AXIS_KEYS.length - Math.PI / 2;
+      const v = clamp10(values[key]);
       const r = (v / 10) * radius;
       return {
-        key: axis.key,
+        key,
         x: center + r * Math.cos(angle),
         y: center + r * Math.sin(angle),
         labelX: center + (radius + 22) * Math.cos(angle),
         labelY: center + (radius + 22) * Math.sin(angle),
         value: v,
-        label: isJa ? axis.ja : axis.en,
+        label: axisLabel(key, lang),
       };
     });
-  }, [values, center, radius, isJa]);
+  }, [values, center, radius, lang]);
 
   const polygon = points.map((p) => `${p.x},${p.y}`).join(" ");
 
@@ -82,8 +115,8 @@ export default function ProfileRadarChartNative({ values, language, size = 220 }
             key={`spoke-${i}`}
             x1={center}
             y1={center}
-            x2={center + radius * Math.cos((Math.PI * 2 * i) / AXES.length - Math.PI / 2)}
-            y2={center + radius * Math.sin((Math.PI * 2 * i) / AXES.length - Math.PI / 2)}
+            x2={center + radius * Math.cos((Math.PI * 2 * i) / AXIS_KEYS.length - Math.PI / 2)}
+            y2={center + radius * Math.sin((Math.PI * 2 * i) / AXIS_KEYS.length - Math.PI / 2)}
             stroke="rgba(34,211,238,0.2)"
             strokeWidth={1}
           />

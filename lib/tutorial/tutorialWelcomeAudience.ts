@@ -1,7 +1,7 @@
 /**
  * welcome の案内先。
- * first = 未プレイの初回（全体案内のみ）
- * returning = サイドメニューから再開（全体 / 新機能の二択）
+ * first = 未プレイの初回（ヒントを見る / 新機能）
+ * returning = サイドメニューから再開（同上・文言のみ returning）
  */
 
 export type TutorialWelcomeAudience = "first" | "returning";

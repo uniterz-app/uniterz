@@ -50,7 +50,13 @@ function cyberScoreColor(rank: number): string {
   return "rgba(255,255,255,0.96)";
 }
 
-function scoreFontSize(rank: number): number {
+function scoreFontSize(
+  rank: number,
+  compact = false,
+  scoreInline = false
+): number {
+  if (scoreInline) return rank <= 3 ? 20 : 17;
+  if (compact) return rank <= 3 ? 15 : 13;
   return rank <= 3 ? 23 : 19;
 }
 
@@ -64,15 +70,20 @@ function CyberRankingScoreNative({
   metric,
   counted,
   plainWhite = false,
+  compact = false,
+  scoreInline = false,
 }: {
   rank: number;
   metric: MobileMetric;
   counted: number;
   /** My Rank Free — 順位色ではなく白 */
   plainWhite?: boolean;
+  compact?: boolean;
+  /** 数字を大きくしつつ PTS と横並び */
+  scoreInline?: boolean;
 }) {
   const color = plainWhite ? "rgba(255,255,255,0.96)" : cyberScoreColor(rank);
-  const fontSize = scoreFontSize(rank);
+  const fontSize = scoreFontSize(rank, compact, scoreInline);
   const displayValue =
     metric === "winRate" || metric === "streak" || metric === "goalScorerHits"
       ? String(Math.round(counted))
@@ -105,9 +116,11 @@ const AVATAR_GLOW_PULSE_MS = 2000;
 function RankFirstAvatarGlowNative({
   children,
   reduceMotion,
+  compact = false,
 }: {
   children: ReactNode;
   reduceMotion: boolean;
+  compact?: boolean;
 }) {
   const pulse = useSharedValue(reduceMotion ? 0.55 : 0);
 
@@ -140,7 +153,14 @@ function RankFirstAvatarGlowNative({
   }));
 
   return (
-    <Animated.View style={[styles.avatarSquare, styles.avatarFirstGlow, glowStyle]}>
+    <Animated.View
+      style={[
+        styles.avatarSquare,
+        compact ? styles.avatarSquareCompact : null,
+        styles.avatarFirstGlow,
+        glowStyle,
+      ]}
+    >
       <Animated.View pointerEvents="none" style={[styles.avatarFirstHalo, haloStyle]} />
       {children}
     </Animated.View>
@@ -211,6 +231,8 @@ export function CyberRankingListRowNative({
   rankDisplayValue,
   rankMuted = false,
   nameExtra = null,
+  compact = false,
+  scoreInline = false,
 }: {
   rank: number;
   displayName: string;
@@ -251,16 +273,24 @@ export function CyberRankingListRowNative({
   rankMuted?: boolean;
   /** Web `nameExtra` — 指定時は isPro バッジの代わりにこれを出す */
   nameExtra?: ReactNode;
+  /** リザルト詳細の得点上位など — 行高を少し低く */
+  compact?: boolean;
+  /** スコア数字を大きくし、PTS 等を横並び */
+  scoreInline?: boolean;
 }) {
   const palette = cyberRankPalette(rank);
   const firstFrame = !bare && palette.firstPlaceFrame;
   const quietFrame = bare ? null : cyberRankQuietFrameColor(rank);
-  const metricTag = cyberMetricTag(metric, language === "ja" ? "ja" : "en");
+  const metricTag = cyberMetricTag(metric, language);
   const nameJa = hasJaScript(displayName);
-  const nameFontSize = rankingFontSizePx(15, displayName);
-  const tagFontSize = rankingFontSizePx(8, metricTag);
+  const nameFontSize = rankingFontSizePx(compact ? 13 : 15, displayName);
+  const tagFontSize = rankingFontSizePx(
+    scoreInline ? 9 : compact ? 7 : 8,
+    metricTag
+  );
   const dayDeltaText = formatListMetricDayDelta(metric, metricValueDelta);
-  const dayDeltaFontSize = rankingFontSizePx(10, dayDeltaText ?? "+0");
+  const dayDeltaFontSize = rankingFontSizePx(compact ? 9 : 10, dayDeltaText ?? "+0");
+  const avatarSize = compact ? 36 : 44;
   const { crownStyle } = useRankingsCrownEntrance(
     animateCrown && rank === 1,
     pageKey,
@@ -269,7 +299,13 @@ export function CyberRankingListRowNative({
   const elevateContent = Boolean(firstFrame || proSkinVariant);
 
   const body = (
-    <View style={[styles.article, bare ? styles.articleBare : null]}>
+    <View
+      style={[
+        styles.article,
+        compact ? styles.articleCompact : null,
+        bare ? styles.articleBare : null,
+      ]}
+    >
       {bare || proSkinVariant ? (
         proSkinVariant && !bare ? (
           <RankingListProSkinFxNative
@@ -300,11 +336,18 @@ export function CyberRankingListRowNative({
       <View
         style={[
           styles.rowInner,
-          firstFrame && styles.rowInnerFirst,
+          compact ? styles.rowInnerCompact : null,
+          firstFrame && (compact ? styles.rowInnerFirstCompact : styles.rowInnerFirst),
           elevateContent ? styles.contentAboveFx : null,
         ]}
       >
-        <View style={[styles.rankCol, rankOverline ? styles.rankColWithOverline : null]}>
+        <View
+          style={[
+            styles.rankCol,
+            compact ? styles.rankColCompact : null,
+            rankOverline ? styles.rankColWithOverline : null,
+          ]}
+        >
           {rankOverline ? (
             <Text style={styles.rankOverline} numberOfLines={1}>
               {rankOverline}
@@ -314,11 +357,12 @@ export function CyberRankingListRowNative({
             rank={rank}
             displayValue={rankDisplayValue}
             muted={rankMuted}
+            compact={compact}
           />
           <RankDeltaBadgeNative delta={rankDeltaPlaces} />
         </View>
 
-        <View style={styles.avatarCol}>
+        <View style={[styles.avatarCol, compact ? styles.avatarColCompact : null]}>
           {rank === 1 ? (
             <Animated.View
               style={[
@@ -327,20 +371,42 @@ export function CyberRankingListRowNative({
                 animateCrown ? crownStyle : null,
               ]}
             >
-              <MaterialCommunityIcons name="crown" size={14} color="#F4C542" />
-              <Text style={styles.plusLabel}>+++</Text>
+              <MaterialCommunityIcons
+                name="crown"
+                size={compact ? 12 : 14}
+                color="#F4C542"
+              />
+              <Text style={[styles.plusLabel, compact ? styles.plusLabelCompact : null]}>
+                +++
+              </Text>
             </Animated.View>
           ) : null}
           {firstFrame ? (
-            <RankFirstAvatarGlowNative reduceMotion={reduceMotion}>
+            <RankFirstAvatarGlowNative reduceMotion={reduceMotion} compact={compact}>
               <View style={styles.avatarCrop}>
-                <RankingsAvatarNative photoURL={photoURL} label={displayName} size={44} square />
+                <RankingsAvatarNative
+                  photoURL={photoURL}
+                  label={displayName}
+                  size={avatarSize}
+                  square
+                />
               </View>
             </RankFirstAvatarGlowNative>
           ) : (
-            <View style={[styles.avatarSquare, styles.avatarRestBorder]}>
+            <View
+              style={[
+                styles.avatarSquare,
+                compact ? styles.avatarSquareCompact : null,
+                styles.avatarRestBorder,
+              ]}
+            >
               <View style={styles.avatarCrop}>
-                <RankingsAvatarNative photoURL={photoURL} label={displayName} size={44} square />
+                <RankingsAvatarNative
+                  photoURL={photoURL}
+                  label={displayName}
+                  size={avatarSize}
+                  square
+                />
               </View>
             </View>
           )}
@@ -364,9 +430,13 @@ export function CyberRankingListRowNative({
             </Text>
             {nameExtra != null
               ? nameExtra
-              : isPro ? (
-                  <ProCyberBadgeNative compact={!bare} emphasized={bare} />
-                ) : null}
+              : (
+                  <>
+                    {isPro ? (
+                      <ProCyberBadgeNative compact emphasized={bare || compact} />
+                    ) : null}
+                  </>
+                )}
           </View>
           {hideListMeta ? (
             countryCode ? (
@@ -382,21 +452,60 @@ export function CyberRankingListRowNative({
           )}
         </View>
 
-        <View style={styles.scoreCol}>
-          {scoreSlot ?? (
-            <CyberRankingScoreNative
-              rank={rank}
-              metric={metric}
-              counted={counted}
-              plainWhite={plainWhiteScore}
-            />
+        <View
+          style={[styles.scoreCol, scoreInline ? styles.scoreColInline : null]}
+        >
+          {scoreInline ? (
+            <View style={styles.scoreInlineRow}>
+              {scoreSlot ?? (
+                <CyberRankingScoreNative
+                  rank={rank}
+                  metric={metric}
+                  counted={counted}
+                  plainWhite={plainWhiteScore}
+                  compact={compact}
+                  scoreInline
+                />
+              )}
+              <Text
+                style={[
+                  styles.metricTag,
+                  styles.metricTagInline,
+                  {
+                    fontSize: tagFontSize,
+                    fontFamily: rankingTagFont(metricTag),
+                  },
+                ]}
+                numberOfLines={1}
+              >
+                {metricTag}
+              </Text>
+            </View>
+          ) : (
+            <>
+              {scoreSlot ?? (
+                <CyberRankingScoreNative
+                  rank={rank}
+                  metric={metric}
+                  counted={counted}
+                  plainWhite={plainWhiteScore}
+                  compact={compact}
+                />
+              )}
+              <Text
+                style={[
+                  styles.metricTag,
+                  {
+                    fontSize: tagFontSize,
+                    fontFamily: rankingTagFont(metricTag),
+                  },
+                ]}
+                numberOfLines={1}
+              >
+                {metricTag}
+              </Text>
+            </>
           )}
-          <Text
-            style={[styles.metricTag, { fontSize: tagFontSize, fontFamily: rankingTagFont(metricTag) }]}
-            numberOfLines={1}
-          >
-            {metricTag}
-          </Text>
           {dayDeltaText ? (
             <Text style={[styles.dayDelta, { fontSize: dayDeltaFontSize }]}>
               {dayDeltaText}
@@ -432,6 +541,9 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     marginBottom: 3,
   },
+  articleCompact: {
+    minHeight: 56,
+  },
   articleBare: {
     marginBottom: 0,
     overflow: "visible",
@@ -457,10 +569,18 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     zIndex: 1,
   },
+  rowInnerCompact: {
+    gap: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+  },
   rowInnerFirst: {
     zIndex: 10,
     /** 王冠を absolute にした分の上余白 — 順位とアバター中心を揃えたまま確保 */
     paddingTop: 22,
+  },
+  rowInnerFirstCompact: {
+    paddingTop: 18,
   },
   rankCol: {
     width: 52,
@@ -468,6 +588,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 2,
+  },
+  rankColCompact: {
+    width: 42,
+    minHeight: 36,
   },
   rankColWithOverline: {
     height: undefined,
@@ -490,6 +614,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     position: "relative",
+  },
+  avatarColCompact: {
+    width: 36,
+    height: 36,
   },
   crownRow: {
     flexDirection: "row",
@@ -515,12 +643,19 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 6,
   },
+  plusLabelCompact: {
+    fontSize: 6,
+  },
   avatarSquare: {
     width: 44,
     height: 44,
     borderRadius: 4,
     borderWidth: 1,
     overflow: "visible",
+  },
+  avatarSquareCompact: {
+    width: 36,
+    height: 36,
   },
   avatarCrop: {
     width: "100%",
@@ -572,7 +707,7 @@ const styles = StyleSheet.create({
     opacity: 0.8,
   },
   volText: {
-    color: "rgba(255,255,255,0.42)",
+    color: "rgba(255,255,255,0.78)",
     fontSize: 11,
     fontWeight: "700",
     letterSpacing: 1.2,
@@ -580,7 +715,7 @@ const styles = StyleSheet.create({
   },
   avgText: {
     flexShrink: 1,
-    color: "rgba(0,245,255,0.55)",
+    color: "rgba(0,245,255,0.88)",
     fontSize: 11,
     fontWeight: "700",
     letterSpacing: 1,
@@ -593,6 +728,14 @@ const styles = StyleSheet.create({
     paddingLeft: 4,
     paddingTop: 1,
     overflow: "visible",
+  },
+  scoreColInline: {
+    minWidth: 88,
+  },
+  scoreInlineRow: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    gap: 5,
   },
   scoreMainSkew: {
     transform: [{ skewX: "-12deg" }],
@@ -609,6 +752,11 @@ const styles = StyleSheet.create({
     lineHeight: 14,
     includeFontPadding: false,
     textTransform: "uppercase",
+  },
+  metricTagInline: {
+    marginTop: 0,
+    letterSpacing: 1.4,
+    lineHeight: 12,
   },
   dayDelta: {
     marginTop: 2,

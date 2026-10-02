@@ -1,6 +1,6 @@
 /** Web `NbaRosterPanel` 相当（折りたたみ + 列ヘッダで昇降順ソート） */
 import { useMemo, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import {
   playerCardName,
   sortRosterPlayers,
@@ -13,16 +13,19 @@ import {
   injuryStatusTone,
 } from "../../../../../../lib/predict/nbaInjuryReport";
 import {
-  getTeamJerseyPrimaryColor,
+  getTeamRosterMarkColor,
+  getTeamUiAccentColor,
 } from "../../../../../../lib/team-colors";
+import { nbaConferenceForTeam } from "../../../../../../lib/nba/nbaConferenceTeams";
 import { NBA_TEAM_NAME_BY_ID } from "../../../../../../lib/nba-team-names";
 import { getMobileTeamName } from "../../../../../../lib/team-name-split-mobile";
 import { TEAM_SHORT } from "../../../../../../lib/team-short";
-import { MATCH_CARD_DISPLAY_FONT } from "../matchCardTypography";
+import { MATCH_CARD_TEAM_NAME_FONT } from "../matchCardTypography";
 
 type Props = {
   report: NbaRosterReport;
   injuryById?: Record<string, string>;
+  onPlayerPress?: (player: NbaRosterPlayer) => void;
 };
 
 const STAT_COLS = [
@@ -175,6 +178,11 @@ function IdentityRow({
       <Pressable
         onPress={() => onPress(player)}
         accessibilityRole="button"
+        android_ripple={
+          Platform.OS === "android"
+            ? { color: "rgba(255,255,255,0.14)" }
+            : undefined
+        }
         style={({ pressed }) => [
           styles.identityRow,
           player.dimmed && styles.dim,
@@ -193,8 +201,16 @@ function IdentityRow({
   );
 }
 
-function StatsRow({ values }: { values: string[] }) {
-  return (
+function StatsRow({
+  values,
+  onPress,
+  dimmed,
+}: {
+  values: string[];
+  onPress?: () => void;
+  dimmed?: boolean;
+}) {
+  const cells = (
     <View style={styles.statsRow}>
       {values.map((v, i) => (
         <Text
@@ -205,6 +221,27 @@ function StatsRow({ values }: { values: string[] }) {
         </Text>
       ))}
     </View>
+  );
+  if (!onPress) {
+    return (
+      <View style={dimmed ? styles.dim : null}>{cells}</View>
+    );
+  }
+  return (
+    <Pressable
+      onPress={onPress}
+      android_ripple={
+        Platform.OS === "android"
+          ? { color: "rgba(255,255,255,0.14)" }
+          : undefined
+      }
+      style={({ pressed }) => [
+        dimmed ? styles.dim : null,
+        pressed && styles.statsRowPressed,
+      ]}
+    >
+      {cells}
+    </Pressable>
   );
 }
 
@@ -229,7 +266,8 @@ function TeamRosterCard({
   const isDetail = mode === "detail";
   const [open, setOpen] = useState(defaultOpen || isDetail);
   const [sort, setSort] = useState<SortState>(null);
-  const primary = getTeamJerseyPrimaryColor("nba", block.teamId);
+  const primary = getTeamUiAccentColor("nba", block.teamId);
+  const markAccent = getTeamRosterMarkColor("nba", block.teamId);
   const players = useMemo(
     () => sortPlayersByCol(block.players, sort),
     [block.players, sort]
@@ -268,8 +306,8 @@ function TeamRosterCard({
         <View style={styles.headerMain}>
           <View style={styles.headerTitleRow}>
             {!isDetail ? (
-              <View style={[styles.sideBadge, { borderColor: primary }]}>
-                <Text style={[styles.sideBadgeText, { color: primary }]}>
+              <View style={[styles.sideBadge, { borderColor: markAccent }]}>
+                <Text style={[styles.sideBadgeText, { color: markAccent }]}>
                   {block.side === "home" ? "HOME" : "AWAY"}
                 </Text>
               </View>
@@ -284,7 +322,9 @@ function TeamRosterCard({
         </View>
         {block.seed != null ? (
           <View style={styles.seedWrap}>
-            <Text style={styles.seedLabel}>SEED</Text>
+            <Text style={styles.seedLabel}>
+              {nbaConferenceForTeam(block.teamId) === "west" ? "WEST" : "EAST"}
+            </Text>
             <Text style={[styles.seedNum, { color: primary }]}>#{block.seed}</Text>
           </View>
         ) : null}
@@ -307,7 +347,7 @@ function TeamRosterCard({
                 <IdentityRow
                   key={String(p.id)}
                   player={p}
-                  accent={primary}
+                  accent={markAccent}
                   injuryStatus={injuryById[String(p.id)]}
                   onPress={onPlayerPress}
                 />
@@ -345,9 +385,14 @@ function TeamRosterCard({
                   })}
                 </View>
                 {players.map((p) => (
-                  <View key={String(p.id)} style={p.dimmed ? styles.dim : null}>
-                    <StatsRow values={playerStats(p)} />
-                  </View>
+                  <StatsRow
+                    key={String(p.id)}
+                    values={playerStats(p)}
+                    dimmed={p.dimmed}
+                    onPress={
+                      onPlayerPress ? () => onPlayerPress(p) : undefined
+                    }
+                  />
                 ))}
               </View>
             </ScrollView>
@@ -391,14 +436,24 @@ export function NbaTeamRosterCardNative({
   );
 }
 
-export default function NbaRosterPanelNative({ report, injuryById = {} }: Props) {
+export default function NbaRosterPanelNative({
+  report,
+  injuryById = {},
+  onPlayerPress,
+}: Props) {
   return (
     <View style={styles.shell}>
-      <TeamRosterCard block={report.home} injuryById={injuryById} defaultOpen />
+      <TeamRosterCard
+        block={report.home}
+        injuryById={injuryById}
+        defaultOpen
+        onPlayerPress={onPlayerPress}
+      />
       <TeamRosterCard
         block={report.away}
         injuryById={injuryById}
         defaultOpen={false}
+        onPlayerPress={onPlayerPress}
       />
     </View>
   );
@@ -410,7 +465,7 @@ const styles = StyleSheet.create({
   shell: { gap: 10 },
   teamCard: {
     borderWidth: 1,
-    borderRadius: 8,
+    borderRadius: 0,
     backgroundColor: "rgba(8,10,16,0.94)",
     overflow: "hidden",
   },
@@ -419,60 +474,60 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
     paddingHorizontal: 10,
-    paddingVertical: 8,
+    paddingVertical: 12,
   },
   headerMain: { flex: 1, minWidth: 0 },
   headerTitleRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: 8,
   },
   sideBadge: {
     borderWidth: 1,
     borderRadius: 2,
-    paddingHorizontal: 5,
-    paddingVertical: 1,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
   },
   sideBadgeText: {
     fontFamily: OXANIUM,
-    fontSize: 9,
+    fontSize: 11,
     fontWeight: "800",
     letterSpacing: 1,
   },
   teamName: {
     flex: 1,
-    fontFamily: MATCH_CARD_DISPLAY_FONT,
-    fontSize: 15,
+    fontFamily: MATCH_CARD_TEAM_NAME_FONT,
+    fontSize: 14,
     lineHeight: 18,
-    fontWeight: "400",
+    fontWeight: "700",
     color: "#fff",
-    letterSpacing: 1.2,
+    letterSpacing: 0.8,
     textTransform: "uppercase",
     includeFontPadding: false,
     transform: [{ skewX: "-6deg" }],
   },
   availability: {
     fontFamily: OXANIUM,
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: "700",
     letterSpacing: 0.8,
-    marginTop: 4,
+    marginTop: 5,
   },
   seedWrap: { alignItems: "flex-end" },
   seedLabel: {
     fontFamily: OXANIUM,
-    fontSize: 9,
+    fontSize: 11,
     fontWeight: "600",
     letterSpacing: 1,
     color: "rgba(255,255,255,0.35)",
   },
   seedNum: {
     fontFamily: OXANIUM,
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: "900",
-    lineHeight: 22,
+    lineHeight: 26,
   },
-  chevron: { fontSize: 16 },
+  chevron: { fontSize: 18 },
   tableRow: {
     flexDirection: "row",
     borderTopWidth: 1,
@@ -505,7 +560,7 @@ const styles = StyleSheet.create({
     borderBottomColor: "rgba(255,255,255,0.06)",
   },
   identityRowPressed: {
-    backgroundColor: "rgba(255,255,255,0.06)",
+    backgroundColor: "rgba(255,255,255,0.16)",
   },
   jerseyBox: {
     width: 26,
@@ -585,6 +640,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderBottomWidth: 1,
     borderBottomColor: "rgba(255,255,255,0.06)",
+  },
+  statsRowPressed: {
+    backgroundColor: "rgba(255,255,255,0.16)",
   },
   statCell: {
     width: STAT_COL_W,

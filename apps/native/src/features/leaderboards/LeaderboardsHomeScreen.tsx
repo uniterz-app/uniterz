@@ -10,7 +10,7 @@ import { navigateToPublicProfileNative } from "../../navigation/navigateToPublic
 import { useNativeMyRankingUser } from "../rankings/useNativeMyRankingUser";
 import RankingsCommunityPanelNative from "./RankingsCommunityPanelNative";
 import TutorialLiveHostNative from "../tutorial/TutorialLiveHostNative";
-import type { Language } from "../../../../../lib/i18n/language";
+import { resolveLocalizedLang } from "../../../../../lib/i18n/localize";
 
 type Props = { bottomReserveY?: number };
 
@@ -37,9 +37,9 @@ export default function LeaderboardsHomeScreen({ bottomReserveY = 0 }: Props) {
             stackNavigation.setParams({ reopenGroupId: undefined });
           }}
           onOpenSquadBattle={() => {
-            stackNavigation.navigate("SquadBattlePreview");
+            stackNavigation.navigate("SquadBattle");
           }}
-          onOpenProfile={(handle, groupId) => {
+          onOpenProfile={(handle, groupId, warm) => {
             if (groupId) {
               stackNavigation.setParams({ reopenGroupId: groupId });
             }
@@ -47,13 +47,14 @@ export default function LeaderboardsHomeScreen({ bottomReserveY = 0 }: Props) {
               handle,
               fromLeaderboards: true,
               ...(groupId ? { leaderboardsGroupId: groupId } : {}),
+              ...(warm ? { warm } : {}),
             });
           }}
         />
       </ScrollView>
       <TutorialLiveHostNative
         page="groups"
-        language={(language === "en" ? "en" : "ja") as Language}
+        language={resolveLocalizedLang(language)}
       />
     </View>
   );

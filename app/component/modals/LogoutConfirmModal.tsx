@@ -35,7 +35,7 @@ export default function LogoutConfirmModal({
     "font-[family-name:var(--font-geist-sans)] text-sm leading-snug text-white/85 sm:text-[0.9375rem]";
 
   const baseBtn =
-    "flex flex-1 items-center justify-center rounded-[14px] border-0 px-3 py-3 transition-[transform,filter,opacity] duration-100 ease-out";
+    "flex flex-1 items-center justify-center rounded-none border-0 px-3 py-3 transition-[transform,filter,opacity] duration-100 ease-out";
 
   const tree = (
     <AnimatePresence>
@@ -58,7 +58,7 @@ export default function LogoutConfirmModal({
           >
             <div
               className={[
-                "relative isolate w-[90%] max-w-sm overflow-hidden rounded-2xl border border-white/12 p-6 text-white",
+                "relative isolate w-[90%] max-w-sm overflow-hidden rounded-none border border-white/12 p-6 text-white",
                 "bg-[linear-gradient(180deg,rgba(255,255,255,0.08)_0%,rgba(255,255,255,0.03)_42%,rgba(255,255,255,0.018)_100%),linear-gradient(180deg,rgba(5,8,20,0.80)_0%,rgba(5,8,20,0.80)_100%)]",
                 "backdrop-blur-xl",
                 "shadow-[0_18px_44px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.20),inset_0_-1px_0_rgba(255,255,255,0.05)]",
@@ -66,7 +66,7 @@ export default function LogoutConfirmModal({
               onClick={(e) => e.stopPropagation()}
             >
               <div
-                className="pointer-events-none absolute inset-0 z-0 rounded-2xl opacity-[0.32]"
+                className="pointer-events-none absolute inset-0 z-0 opacity-[0.32]"
                 style={PROFILE_SHELL_GRID_STYLE}
                 aria-hidden
               />
@@ -78,10 +78,14 @@ export default function LogoutConfirmModal({
                   transition={{ delay: 0.08, duration: 0.35 }}
                 >
                   {/* サインアップのメール欄 rightSlot と同系の枠 */}
-                  <div className={cyberFieldStyles.rightSlot} style={{ position: "relative", inset: "auto", transform: "none" }}>
+                  <div
+                    className={cyberFieldStyles.rightSlot}
+                    style={{ position: "relative", inset: "auto", transform: "none", borderRadius: 0 }}
+                  >
                     <div
                       className={cyberFieldStyles.rightSlotInner}
                       data-static="true"
+                      style={{ borderRadius: 0 }}
                     >
                       <LogOut className="size-[18px] text-red-400/95" aria-hidden strokeWidth={2.25} />
                     </div>

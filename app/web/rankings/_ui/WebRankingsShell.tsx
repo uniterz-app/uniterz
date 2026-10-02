@@ -22,8 +22,8 @@ import RankingsPeriodTabs from "@/app/component/rankings/RankingsPeriodTabs";
 import RankingsPeriodLabelNav from "@/app/component/rankings/RankingsPeriodLabelNav";
 import RankingsDivisionTabs from "@/app/component/rankings/RankingsDivisionTabs";
 import RankingsProLeagueTeaser from "@/app/component/rankings/RankingsProLeagueTeaser";
-import PlayoffRoundTabs from "@/app/component/rankings/PlayoffRoundTabs";
 import Header from "@/app/component/Header";
+import { acquireAppPageAtmosphere } from "@/lib/ui/appPageAtmosphere";
 import { useRankingSessionUser } from "@/lib/rankings/useRankingSessionUser";
 import { useWebRankings } from "../_lib/useWebRankings";
 import type { RankingPhase } from "@/lib/rankings/rankingPhase";
@@ -31,6 +31,7 @@ import type { PlayoffRoundKey } from "@/lib/rankings/playoffRound";
 import type { RankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
 import {
   divisionFromNbaBoard,
+  isNbaRankingBoard,
   type NbaRankingBoard,
   type RankingDivision,
 } from "@/lib/rankings/rankingDivision";
@@ -43,11 +44,13 @@ import {
   RANKINGS_TAB_METRIC_PARAM,
   RANKINGS_TAB_CATEGORY_PARAM,
   RANKINGS_TAB_PERIOD_PARAM,
+  RANKINGS_TAB_BOARD_PARAM,
   WEB_RANKINGS_SCROLL_KEY,
   isMobileMetricParam,
   isRankingsCategoryParam,
 } from "@/lib/navigation/rankingsProfileFrom";
 import { t } from "@/lib/i18n/t";
+import { resolveLocalizedLang } from "@/lib/i18n/localize";
 import RankingsScheduleNotice from "@/app/component/rankings/RankingsScheduleNotice";
 import { CyberNoDataPage } from "@/app/component/common/CyberNoDataLabel";
 import type { RankingsCategory } from "@/app/component/rankings/RankingsCategoryTabs";
@@ -167,7 +170,7 @@ export default function WebRankingsShell() {
   const countryCode = sessionUser.countryCode;
 
   const m = t(language);
-  const langUi = language === "en" ? "en" : "ja";
+  const langUi = resolveLocalizedLang(language);
 
   /** PRO LEAGUE は Pro 以外にはロック（API 403 もフォールバック） */
   const openProLocked =
@@ -185,6 +188,8 @@ export default function WebRankingsShell() {
     if (isRankingsCategoryParam(cat)) setCategory(cat);
     const period = searchParams.get(RANKINGS_TAB_PERIOD_PARAM);
     if (isRankingPeriod(period)) setRankingPeriod(period);
+    const board = searchParams.get(RANKINGS_TAB_BOARD_PARAM);
+    if (isNbaRankingBoard(board)) setNbaBoard(board);
     restoreScrollAfterListRef.current = isMobileMetricParam(
       searchParams.get(RANKINGS_TAB_METRIC_PARAM)
     );
@@ -210,6 +215,11 @@ export default function WebRankingsShell() {
   useEffect(() => {
     setPeriodLabel(null);
   }, [rankingPeriod, rankingLeague, nbaBoard]);
+
+  useEffect(() => {
+    if (nbaBoard !== "open") return;
+    return acquireAppPageAtmosphere("pro-league");
+  }, [nbaBoard]);
 
   useLayoutEffect(() => {
     if (!listReady || !restoreScrollAfterListRef.current) return;
@@ -418,14 +428,6 @@ export default function WebRankingsShell() {
             />
           ) : null}
 
-          {rankingLeague === "nba" && nbaBoard === "playoffs" ? (
-            <PlayoffRoundTabs
-              round={playoffRound}
-              onChange={setPlayoffRound}
-              language={language}
-            />
-          ) : null}
-
           {effectiveCategory === "playoffs" && !openProLocked ? (
             <MyRankCard
               rank={rankingHasNoEntries ? null : myRank}
@@ -433,9 +435,16 @@ export default function WebRankingsShell() {
               value={myValue}
               displayName={sessionUser.displayName || "You"}
               photoURL={sessionUser.photoURL || null}
+              uid={myUid}
+              handle={sessionUser.handle}
               totalPosts={myRow?.totalPosts}
               loading={cardLoading}
-              statsScramble={listReady && personalPending && !cardFast.myRow}
+              statsScramble={
+                listReady &&
+                personalPending &&
+                !cardFast.myRow &&
+                myRank == null
+              }
               animateRank={!skipCountUp}
               language={language}
               isPro={myRankCardTier === "pro"}
@@ -475,7 +484,13 @@ export default function WebRankingsShell() {
 
         {effectiveCategory === "playoffs" && !openProLocked ? (
           <>
-            <RankingsScheduleNotice language={language} className="px-1" />
+            <RankingsScheduleNotice
+              language={language}
+              countryCode={countryCode}
+              className="px-1"
+              showUnitRewards
+              rankingPeriod={rankingPeriod}
+            />
             <RankingsMetricRow
               metrics={visibleMetrics}
               metric={metric}
@@ -530,6 +545,8 @@ export default function WebRankingsShell() {
                   rankPhase={phase}
                   playoffRound={effectiveRound}
                   rankingLeague={rankingLeague}
+                  rankingPeriod={rankingPeriod}
+                  nbaBoard={nbaBoard}
                   participantCount={rankingListCount || null}
                   onTopCountDone={handleTopCountDone}
                   countUpEnabled={!skipCountUp}
@@ -559,6 +576,8 @@ export default function WebRankingsShell() {
                         rankPhase={phase}
                         playoffRound={effectiveRound}
                         rankingLeague={rankingLeague}
+                        rankingPeriod={rankingPeriod}
+                        nbaBoard={nbaBoard}
                         participantCount={rankingListCount || null}
                         language={language}
                         animateValue={!skipCountUp && i < 6}

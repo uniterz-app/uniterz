@@ -1,3 +1,6 @@
+import type { Language } from "../../../../../lib/i18n/language";
+import { normalizeLanguage } from "../../../../../lib/i18n/language";
+import { t } from "../../../../../lib/i18n/t";
 import type { PostWithMillis } from "./nativeResultModel";
 
 /** Web `ResultListWithOverlay` の predictionWinState と同等 */
@@ -70,8 +73,10 @@ export type NativeDayPointsHeader =
 export function dayPointsHeaderForNative(
   finalPosts: PostWithMillis[],
   pendingPosts: PostWithMillis[],
-  language: "ja" | "en"
+  language: Language | "ja" | "en"
 ): NativeDayPointsHeader {
+  const lang = normalizeLanguage(language) ?? "en";
+  const r = t(lang).results;
   if (finalPosts.length > 0 && finalPosts.every(hasPointsV3Recorded)) {
     const total = sumDayPointsV3(finalPosts);
     const fmt =
@@ -79,27 +84,16 @@ export function dayPointsHeaderForNative(
         ? String(Math.round(total))
         : total.toFixed(1);
     const { wins: hitWins, total: hitTotal } = countWinnerHits(finalPosts);
-    if (language === "en") {
-      return {
-        variant: "total",
-        value: fmt,
-        prefix: "total",
-        unit: "pts",
-        ...(hitTotal > 0 ? { hitWins, hitTotal } : {}),
-      };
-    }
     return {
       variant: "total",
       value: fmt,
-      prefix: "total",
-      unit: "pt",
+      prefix: r.dayTotalScore,
+      unit: r.dayTotalScorePts,
       ...(hitTotal > 0 ? { hitWins, hitTotal } : {}),
     };
   }
   if (finalPosts.length > 0 || pendingPosts.length > 0) {
-    return language === "en"
-      ? { variant: "pending", line: "Pending" }
-      : { variant: "pending", line: "得点未確定" };
+    return { variant: "pending", line: r.dayPending };
   }
   return null;
 }

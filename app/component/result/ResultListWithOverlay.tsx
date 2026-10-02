@@ -19,6 +19,7 @@ import {
   useReducedMotion,
   type Variants,
 } from "framer-motion";
+import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   ArrowRight,
@@ -30,10 +31,10 @@ import CandleChartLoader from "@/app/component/common/CandleChartLoader";
 import { CyberNoDataPage } from "@/app/component/common/CyberNoDataLabel";
 import { auth, db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
-import { getCachedGameDocForResult } from "@/lib/result/resultDetailFirestoreCache";
-import { SCHEDULE_MY_POST_DELETED_EVENT } from "@/lib/games/scheduleMyPostSyncEvents";
+import { notifyScheduleMyPostDeleted } from "@/lib/games/scheduleMyPostSyncEvents";
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
+import { resolveLocalizedLang } from "@/lib/i18n/localize";
 import { nameBebas } from "@/lib/fonts";
 import {
   cyberNoDataLabelStyle,
@@ -58,7 +59,12 @@ const ResultDetail = dynamic(
 import ResultDetailBody from "@/app/component/result/ResultDetailBody";
 import { buildResultDetailViewModel } from "@/lib/result/buildResultDetailView";
 import type { ResultDetailViewModel } from "@/lib/result/buildResultDetailView";
-import { resolveTopScorerMarketView } from "@/lib/result/buildTopScorerMarketEmbed";
+import { nbaTeamDetailPreviewHref, nbaPlayerDetailPreviewHref } from "@/lib/predict/nbaTeamDetailHref";
+import {
+  buildResultDetailViewFromLoad,
+  buildWarmResultDetailViewFromPost,
+  loadResultPostDetailClient,
+} from "@/lib/result/loadResultPostDetailClient";
 import {
   ResultDayPipeGroup,
   type ResultDayPointsHeader,
@@ -89,13 +95,9 @@ import {
   writeDismissedResultPostIds,
 } from "@/lib/result/resultListDismissedPostIds";
 import {
-  parseGamePointsDistributionV1,
-  rawPointsDistributionFromGameDoc,
   type GamePointsDistributionV1,
 } from "@/lib/results/gamePointsDistribution";
-import { resolveGamePointsSummary } from "@/lib/results/gamePointsSummary";
 import { resolveResultTopEntries } from "@/lib/results/resolveResultTopEntries";
-import { enrichTopEntriesCountryFromUsers } from "@/lib/results/enrichTopEntriesCountryFromUsers";
 import type { GamePointsTopEntryV1 } from "@/lib/results/gamePointsTop";
 import { LEAGUE_DISPLAY } from "@/lib/leagues";
 import {
@@ -119,7 +121,9 @@ import {
 } from "@/lib/games/useResultPostsPkScores";
 import {
   resolveResultPostGameMarket,
+  resolveResultPostGameRoundMeta,
   useResultPostsGameMarkets,
+  useResultPostsGameRoundMeta,
 } from "@/lib/games/useResultPostsGameMarkets";
 import { resolveWcTeamId } from "@/lib/legacyWcWebShims";
 import { toMatchCardProps } from "@/lib/games/transform";
@@ -127,11 +131,8 @@ import { MOBILE_PREDICT_OVERLAY_CARD_OUTER_CLASS, MOBILE_RESULT_CARD_OUTER_CLASS
 import {
   PREDICT_OVERLAY_BACKDROP,
   PREDICT_OVERLAY_FORM_PANEL,
+  RESULT_DETAIL_OVERLAY_BACKDROP,
 } from "@/lib/ui/matchOverlayGlass";
-import {
-  CYBER_FILTER_PANEL_CLASS,
-  cyberFilterBarClasses,
-} from "@/lib/ui/cyberFilterBar";
 import { fetchPlayoffSeriesPeerGames } from "@/lib/games/fetchPlayoffSeriesPeerGames";
 import { useMatchCardTeamRecords } from "@/lib/games/useMatchCardTeamRecords";
 
@@ -311,6 +312,7 @@ export default function ResultListWithOverlay({
   postsCacheCapped = false,
   viewerUid = null,
 }: Props) {
+  const router = useRouter();
   const [openPostId, setOpenPostId] = useState<string | null>(null);
   const [detailGame, setDetailGame] = useState<MatchCardProps | null>(null);
   const [market, setMarket] = useState<MarketData | null>(null);
@@ -689,6 +691,7 @@ export default function ResultListWithOverlay({
   );
   const pkFromGames = useResultPostsPkScores(visiblePostsFlat);
   const marketsFromGames = useResultPostsGameMarkets(visiblePostsFlat);
+  const roundMetaFromGames = useResultPostsGameRoundMeta(visiblePostsFlat);
 
   const selectedPost = useMemo(() => {
     if (!openPostId) return null;
@@ -712,6 +715,26 @@ export default function ResultListWithOverlay({
     setTopEntries([]);
     setResultDetailView(null);
   }, []);
+
+  const openTeamDetailFromResult = useCallback(
+    (teamId: string) => {
+      const id = teamId.trim();
+      if (!id) return;
+      close();
+      router.push(nbaTeamDetailPreviewHref(id));
+    },
+    [close, router]
+  );
+
+  const openPlayerDetailFromResult = useCallback(
+    (playerId: string) => {
+      const id = playerId.trim();
+      if (!id) return;
+      close();
+      router.push(nbaPlayerDetailPreviewHref(id));
+    },
+    [close, router]
+  );
 
   const dismissPostFromList = useCallback(
     async (post: PostWithMillis): Promise<boolean> => {
@@ -737,13 +760,10 @@ export default function ResultListWithOverlay({
       }
       if (!deleted) return false;
 
-      if (typeof window !== "undefined") {
-        window.dispatchEvent(
-          new CustomEvent(SCHEDULE_MY_POST_DELETED_EVENT, {
-            detail: { gameId: post.gameId },
-          })
-        );
-      }
+      notifyScheduleMyPostDeleted({
+        gameId: String(post.gameId ?? ""),
+        uid: user.uid,
+      });
 
       if (openPostId === post.id) close();
 
@@ -785,16 +805,31 @@ export default function ResultListWithOverlay({
     return () => document.removeEventListener("keydown", onKey);
   }, [deleteConfirmPost, deleteInProgress]);
 
-  const open = useCallback((post: PredictionPostV2 | PostWithMillis) => {
+  const open = useCallback(
+    (post: PredictionPostV2 | PostWithMillis) => {
       setOpenPostId(post.id);
       setDetailGame(null);
       setMarket(null);
       setPointsDistribution(null);
       setPointsDistributionLoading(false);
       setTopEntries([]);
-      setResultDetailView(null);
+      const warmMarket = resolveResultPostGameMarket(
+        post as PostWithMillis,
+        marketsFromGames
+      );
+      const warmRound = resolveResultPostGameRoundMeta(
+        post as PostWithMillis,
+        roundMetaFromGames
+      );
+      setResultDetailView(
+        buildWarmResultDetailViewFromPost(post as Record<string, unknown>, {
+          market: warmMarket,
+          gameMeta: warmRound,
+          viewer: viewerUid ? { uid: viewerUid } : null,
+        })
+      );
     },
-    []
+    [marketsFromGames, roundMetaFromGames, viewerUid]
   );
 
   const displayDetailResultPost = useMemo((): PredictionPostV2 | null => {
@@ -866,7 +901,7 @@ export default function ResultListWithOverlay({
     if (post.id === TUTORIAL_RESULT_POST_ID) {
       setDetailGame(
         buildTutorialFinalMatchCardProps({
-          language: language === "en" ? "en" : "ja",
+          language: resolveLocalizedLang(language),
         })
       );
       setMarket(buildTutorialResultMarket());
@@ -886,79 +921,59 @@ export default function ResultListWithOverlay({
       return;
     }
 
+    // 一覧カードから即時描画（Native warmPost 相当）
+    const warmMarket = resolveResultPostGameMarket(post, marketsFromGames);
+    const warmRound = resolveResultPostGameRoundMeta(post, roundMetaFromGames);
+    setResultDetailView(
+      buildWarmResultDetailViewFromPost(post as Record<string, unknown>, {
+        market: warmMarket,
+        gameMeta: warmRound,
+        viewer: viewerUid ? { uid: viewerUid } : null,
+      })
+    );
+
     let cancelled = false;
     setPointsDistributionLoading(true);
     (async () => {
       try {
-        const { exists, data: d } = await getCachedGameDocForResult(
-          post.gameId,
-          db
-        );
+        const loaded = await loadResultPostDetailClient(post.id);
         if (cancelled) return;
-        if (!exists || !d) {
-          if (!cancelled) {
-            setDetailGame(null);
-            setResultDetailView(null);
-            setMarket(null);
-            setPointsDistribution(null);
-            setTopEntries([]);
-          }
+        if (!loaded.ok) {
+          setDetailGame(null);
+          setMarket(null);
+          setPointsDistribution(null);
+          setTopEntries([]);
           return;
         }
-        const game = await buildMatchCardPropsForResultPost(
-          post,
-          d as Record<string, unknown>,
-          isMobile
+
+        setMarket(loaded.market);
+        setPointsDistribution(loaded.pointsDistribution);
+        setTopEntries(
+          resolveResultTopEntries({
+            pointsSummary: loaded.pointsSummary,
+            pointsDistribution: loaded.pointsDistribution,
+          })
         );
-        const marketRaw = d.market as Record<string, unknown> | undefined;
-        const pdRaw = rawPointsDistributionFromGameDoc(d);
-        const parsedDistribution = parseGamePointsDistributionV1(pdRaw);
-        const pointsSummary = resolveGamePointsSummary(
-          d as Record<string, unknown>
+        setResultDetailView(
+          buildResultDetailViewFromLoad(
+            loaded,
+            viewerUid ? { uid: viewerUid } : null
+          )
         );
-        if (!cancelled) {
-          setDetailGame(game);
-          const marketInput = marketRaw
-            ? {
-                homeRate: Number(marketRaw.homeRate ?? 0),
-                awayRate: Number(marketRaw.awayRate ?? 0),
-                drawRate:
-                  marketRaw.drawRate == null
-                    ? undefined
-                    : Number(marketRaw.drawRate),
-                total:
-                  marketRaw.total == null ? undefined : Number(marketRaw.total),
-              }
-            : null;
-          if (marketInput) setMarket(marketInput);
-          setPointsDistribution(parsedDistribution);
-          const rawTop = resolveResultTopEntries({
-            pointsSummary,
-            pointsDistribution: parsedDistribution,
-          });
-          const topWithCountry = await enrichTopEntriesCountryFromUsers(db, rawTop);
-          if (!cancelled) {
-            setTopEntries(topWithCountry);
-            const topScorerMarket = resolveTopScorerMarketView(
-              d as Record<string, unknown>,
-              post as Record<string, unknown>
-            );
-            setResultDetailView(
-              buildResultDetailViewModel(post as Record<string, unknown>, {
-                market: marketInput,
-                pointsSummary,
-                leadingScorers: (d as Record<string, unknown>).leadingScorers,
-                topScorerCandidates: (d as Record<string, unknown>).topScorerCandidates,
-                topScorerMarket,
-                viewer: viewerUid ? { uid: viewerUid } : null,
-              })
-            );
-          }
+
+        if (loaded.game) {
+          const game = await buildMatchCardPropsForResultPost(
+            post,
+            loaded.game,
+            isMobile
+          );
+          if (!cancelled) setDetailGame(game);
+        } else if (!cancelled) {
+          setDetailGame(null);
         }
       } catch {
         if (!cancelled) {
           setDetailGame(null);
-          setResultDetailView(null);
           setMarket(null);
           setPointsDistribution(null);
           setTopEntries([]);
@@ -971,6 +986,8 @@ export default function ResultListWithOverlay({
     return () => {
       cancelled = true;
     };
+    // markets / roundMeta は open() と初回 warm 用。identity 変化で再取得しない
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
   }, [openPostId, selectedPost, isMobile, language, viewerUid]);
 
   /** チュートリアルから詳細の開閉を依頼 */
@@ -1045,12 +1062,16 @@ export default function ResultListWithOverlay({
 
   const filterChipClass = (active: boolean) =>
     [
-      "rounded-xl border font-semibold tracking-wide transition-colors",
-      isMobile ? "px-2 py-1.5 text-[11px]" : "px-3 py-2 text-xs sm:text-sm",
+      "flex min-w-0 items-center justify-center rounded-none border-[0.5px] font-semibold tracking-wide transition-colors",
+      isMobile ? "px-1.5 py-2.5 text-[11px]" : "px-2 py-2.5 text-xs sm:text-sm",
       active
-        ? "border-cyan-200/35 bg-cyan-500/20 text-cyan-50 shadow-[0_0_14px_rgba(34,211,238,0.12)]"
-        : "border-white/12 bg-white/[0.04] text-white/70 hover:border-white/18 hover:text-white/90",
+        ? "border-white/85 bg-[#1A1A1A] text-white"
+        : "border-white/35 bg-[#0A0A0A] text-white/70 hover:border-white/55 hover:bg-[#141414] hover:text-white",
     ].join(" ");
+
+  const filterChipRowClass = "grid grid-cols-4 gap-2";
+  const filterChipCellClass = "min-w-0";
+  const filterChipCellSpan2Class = "col-span-2 min-w-0";
 
   const totalLoaded = grouped.reduce(
     (a, d) => a + d.pending.length + d.final.length,
@@ -1085,7 +1106,9 @@ export default function ResultListWithOverlay({
         className={[
           "relative z-20",
           isMobile ? "space-y-3" : "space-y-4",
+          openPostId ? "pointer-events-none select-none" : "",
         ].join(" ")}
+        aria-hidden={openPostId ? true : undefined}
       >
         {showResultLeagueTabs ? (
           <motion.div
@@ -1150,10 +1173,12 @@ export default function ResultListWithOverlay({
                 ? fc.filterFoldCollapse
                 : fc.filterFoldCollapsedLabel
             }
-            className={cyberFilterBarClasses(
-              !isDefaultResultListFilters(filters),
-              "flex w-full items-center justify-between gap-2 px-3 py-2.5 text-left"
-            )}
+            className={[
+              "flex w-full items-center justify-between gap-2 rounded-none border-[0.5px] bg-black px-3 py-2.5 text-left",
+              !isDefaultResultListFilters(filters)
+                ? "border-white/80"
+                : "border-white/35",
+            ].join(" ")}
             onClick={() => setFilterPanelOpen((o) => !o)}
           >
             <span className="flex items-center gap-2 text-[11px] font-semibold text-white sm:text-xs">
@@ -1169,7 +1194,7 @@ export default function ResultListWithOverlay({
                 : fc.filterFoldCollapsedLabel}
               {!isDefaultResultListFilters(filters) ? (
                 <span
-                  className="inline-block h-1.5 w-1.5 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.7)]"
+                  className="inline-block h-1.5 w-1.5 rounded-full bg-white"
                   aria-hidden
                 />
               ) : null}
@@ -1179,8 +1204,7 @@ export default function ResultListWithOverlay({
           {filterPanelOpen ? (
         <motion.div
           className={[
-            CYBER_FILTER_PANEL_CLASS,
-            "absolute left-0 right-0 top-full z-40 mt-2 max-h-[min(72vh,640px)] overflow-y-auto overflow-x-hidden overscroll-contain px-3 py-3 sm:px-4 sm:py-3.5",
+            "absolute left-0 right-0 top-full z-40 mt-2 max-h-[min(72vh,640px)] overflow-y-auto overflow-x-hidden overscroll-contain rounded-none border-[0.5px] border-white/55 bg-black px-3 py-3 sm:px-4 sm:py-3.5",
             isMobile ? "pb-2" : "pb-3",
           ].join(" ")}
           role="group"
@@ -1206,14 +1230,14 @@ export default function ResultListWithOverlay({
               ].join(" ")}
             >
               {fc.panelTitle ? (
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-white/50 sm:text-xs">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-white/55 sm:text-xs">
                   {fc.panelTitle}
                 </span>
               ) : null}
               {!isDefaultResultListFilters(filters) ? (
                 <button
                   type="button"
-                  className="rounded-lg border border-white/14 bg-white/6 px-2.5 py-1 text-[11px] font-semibold text-white/80 transition hover:border-cyan-400/30 hover:text-white"
+                  className="rounded-none border border-white/35 bg-[#111] px-2.5 py-1 text-[11px] font-semibold text-white transition hover:border-white/55 hover:bg-[#1a1a1a]"
                   onClick={() => {
                     setFilters({ ...DEFAULT_RESULT_LIST_FILTERS });
                     setDetailFiltersOpen(false);
@@ -1230,7 +1254,7 @@ export default function ResultListWithOverlay({
             <div className="mb-1.5 text-[10px] font-medium text-white/40 sm:text-[11px]">
               {fc.outcome}
             </div>
-            <div className="flex flex-wrap items-center gap-2">
+            <div className={filterChipRowClass}>
               {(["all", "win", "loss"] as const).map((k) => (
                 <motion.button
                   key={k}
@@ -1253,7 +1277,7 @@ export default function ResultListWithOverlay({
                   }
                   whileTap={prefersReducedMotion ? undefined : { scale: 0.96 }}
                   whileHover={prefersReducedMotion ? undefined : { scale: 1.02 }}
-                  className={filterChipClass(filters.outcome === k)}
+                  className={`${filterChipCellClass} ${filterChipClass(filters.outcome === k)}`}
                 >
                   {fc.outcomeOpt[k]}
                 </motion.button>
@@ -1267,7 +1291,7 @@ export default function ResultListWithOverlay({
                 className="h-3.5 w-3.5 shrink-0 text-cyan-400/75"
                 aria-hidden
               />
-              <div className="text-[10px] font-medium text-white/40 sm:text-[11px]">
+              <div className="text-[10px] font-medium text-cyan-300/45 sm:text-[11px]">
                 {fc.matchDaySection}
               </div>
             </div>
@@ -1424,12 +1448,12 @@ export default function ResultListWithOverlay({
             </button>
 
             {detailFiltersOpen ? (
-              <div className="mt-3 space-y-3 border-l-2 border-cyan-500/25 pl-3">
+              <div className="mt-3 space-y-3 border-l-2 border-white/20 pl-3">
           <div className="mb-3">
             <div className="mb-1.5 text-[10px] font-medium text-white/40 sm:text-[11px]">
               {fc.settlement}
             </div>
-            <div className="flex flex-wrap items-center gap-2">
+            <div className={filterChipRowClass}>
               {(["all", "pending", "final"] as const).map((k) => (
                 <motion.button
                   key={k}
@@ -1452,7 +1476,7 @@ export default function ResultListWithOverlay({
                   }
                   whileTap={prefersReducedMotion ? undefined : { scale: 0.96 }}
                   whileHover={prefersReducedMotion ? undefined : { scale: 1.02 }}
-                  className={filterChipClass(filters.settlement === k)}
+                  className={`${filterChipCellClass} ${filterChipClass(filters.settlement === k)}`}
                 >
                   {fc.settlementOpt[k]}
                 </motion.button>
@@ -1464,7 +1488,7 @@ export default function ResultListWithOverlay({
             <div className="mb-1.5 text-[10px] font-medium text-white/40 sm:text-[11px]">
               {fc.upsetScore}
             </div>
-            <div className="flex flex-wrap items-center gap-2">
+            <div className={filterChipRowClass}>
               {(["none", "upsetBonus"] as const).map((k) => (
                 <motion.button
                   key={k}
@@ -1487,7 +1511,7 @@ export default function ResultListWithOverlay({
                   }
                   whileTap={prefersReducedMotion ? undefined : { scale: 0.96 }}
                   whileHover={prefersReducedMotion ? undefined : { scale: 1.02 }}
-                  className={filterChipClass(filters.specialty === k)}
+                  className={`${filterChipCellSpan2Class} ${filterChipClass(filters.specialty === k)}`}
                 >
                   {fc.upsetOpt[k]}
                 </motion.button>
@@ -1499,7 +1523,7 @@ export default function ResultListWithOverlay({
             <div className="mb-1.5 text-[10px] font-medium text-white/40 sm:text-[11px]">
               {fc.totalScore}
             </div>
-            <div className="flex flex-wrap items-center gap-2">
+            <div className={filterChipRowClass}>
               {(["all", "high", "mid", "low"] as const).map((k) => (
                 <motion.button
                   key={`ts-${k}`}
@@ -1522,7 +1546,7 @@ export default function ResultListWithOverlay({
                   }
                   whileTap={prefersReducedMotion ? undefined : { scale: 0.96 }}
                   whileHover={prefersReducedMotion ? undefined : { scale: 1.02 }}
-                  className={filterChipClass(filters.pointsTier === k)}
+                  className={`${filterChipCellClass} ${filterChipClass(filters.pointsTier === k)}`}
                 >
                   {fc.tierOpt[k]}
                 </motion.button>
@@ -1620,6 +1644,10 @@ export default function ResultListWithOverlay({
                     post={post}
                     pkScore={resolveResultPostPkScore(post, pkFromGames)}
                     gameMarket={resolveResultPostGameMarket(post, marketsFromGames)}
+                    gameRoundMeta={resolveResultPostGameRoundMeta(
+                      post,
+                      roundMetaFromGames
+                    )}
                     onOpen={open}
                     language={language}
                     platform={platform}
@@ -1906,7 +1934,7 @@ export default function ResultListWithOverlay({
                     aria-modal="true"
                     aria-labelledby="result-delete-confirm-title"
                     className={[
-                      "relative w-full max-w-sm overflow-hidden rounded-2xl border border-white/18 p-5",
+                      "relative w-full max-w-sm overflow-hidden rounded-none border border-white/18 p-5",
                       "bg-linear-to-b from-white/12 via-cyan-950/25 to-zinc-950/50",
                       "shadow-[inset_0_1px_0_rgba(255,255,255,0.2),inset_0_-1px_0_rgba(0,0,0,0.25),0_28px_96px_rgba(0,0,0,0.55)]",
                       "ring-1 ring-cyan-400/25",
@@ -1935,7 +1963,7 @@ export default function ResultListWithOverlay({
                         type="button"
                         disabled={deleteInProgress}
                         className={[
-                          "group relative flex h-[2.9em] min-w-[8.5em] shrink-0 items-center justify-start gap-2 overflow-hidden rounded-[11px]",
+                          "group relative flex h-[2.9em] min-w-[8.5em] shrink-0 items-center justify-start gap-2 overflow-hidden rounded-none",
                           "border-2 border-cyan-400/55 bg-white/6 px-3",
                           "shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]",
                           "transition-all duration-500 ease-out",
@@ -1966,7 +1994,7 @@ export default function ResultListWithOverlay({
                         type="button"
                         disabled={deleteInProgress}
                         className={[
-                          "group relative flex h-[2.9em] min-w-[8.5em] shrink-0 items-center justify-end gap-2 overflow-hidden rounded-[11px]",
+                          "group relative flex h-[2.9em] min-w-[8.5em] shrink-0 items-center justify-end gap-2 overflow-hidden rounded-none",
                           "border-2 border-red-600 bg-white/6 px-3",
                           "shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_0_22px_rgba(220,38,38,0.45),0_0_40px_rgba(185,28,28,0.22)]",
                           "transition-all duration-500 ease-out",
@@ -2022,10 +2050,10 @@ export default function ResultListWithOverlay({
                     label="BACK"
                     tone="back"
                     overlay
-                    ariaLabel={language === "en" ? "Back" : "戻る"}
+                    ariaLabel={t(resolveLocalizedLang(language)).common.back}
                   />
                   <motion.div
-                    className={`absolute inset-0 z-0 ${PREDICT_OVERLAY_BACKDROP}`}
+                    className={`absolute inset-0 z-0 ${RESULT_DETAIL_OVERLAY_BACKDROP}`}
                     onClick={close}
                     aria-hidden
                   />
@@ -2055,23 +2083,26 @@ export default function ResultListWithOverlay({
                           PREDICT_OVERLAY_FORM_PANEL,
                         ].join(" ")}
                       >
-                        {detailGame && displayDetailResultPost ? (
-                          isMobile ? (
-                            resultDetailView ? (
-                              <ResultDetailBody
-                                language={language}
-                                view={resultDetailView}
-                                gamesRoutePrefix={gamesRoutePrefix}
-                              />
-                            ) : (
-                              <div className="flex min-h-[28vh] items-center justify-center px-4 py-10">
-                                <CandleChartLoader
-                                  label={m.results.loadingMatch}
-                                />
-                              </div>
-                            )
+                        {isMobile ? (
+                          resultDetailView ? (
+                            <ResultDetailBody
+                              language={language}
+                              view={resultDetailView}
+                              gamesRoutePrefix={gamesRoutePrefix}
+                              onOpenTeamDetail={openTeamDetailFromResult}
+                              onOpenPlayerDetail={openPlayerDetailFromResult}
+                            />
                           ) : (
-                            <>
+                            <div className="flex min-h-[28vh] items-center justify-center px-4 py-10">
+                              <CandleChartLoader
+                                label={m.results.loadingMatch}
+                              />
+                            </div>
+                          )
+                        ) : selectedPost &&
+                          detailGame &&
+                          displayDetailResultPost ? (
+                          <>
                               <MatchCard
                                 {...detailGame}
                                 {...overlayMatchCardRecords}
@@ -2115,7 +2146,6 @@ export default function ResultListWithOverlay({
                                 onRequestPredictEdit={requestPredictEditFromCard}
                               />
                             </>
-                          )
                         ) : (
                           <div className="flex min-h-[28vh] items-center justify-center px-4 py-10">
                             <CandleChartLoader label={m.results.loadingMatch} />

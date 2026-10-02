@@ -19,6 +19,33 @@ export async function loadUserCareerDoc(
   return parseUserCareerDoc(uid, snap.data());
 }
 
+/**
+ * 読み取り専用の career 解決。doc が無ければ既存ソースから組み立てて返すが、
+ * **書き込まない**。未認証の公開 GET から呼ぶ用。
+ */
+export async function loadOrBuildUserCareer(
+  db: Firestore,
+  uid: string
+): Promise<UserCareerDoc> {
+  const existing = await loadUserCareerDoc(db, uid);
+  if (existing) return existing;
+
+  const [cumSnap, userSnap] = await Promise.all([
+    db.collection("cumulative_stats").doc(uid).get(),
+    db.collection("users").doc(uid).get(),
+  ]);
+
+  return buildUserCareerFromSources({
+    uid,
+    cumulative: cumSnap.exists
+      ? (cumSnap.data() as Record<string, unknown>)
+      : null,
+    user: userSnap.exists ? (userSnap.data() as Record<string, unknown>) : null,
+    existing: null,
+    source: "ensure",
+  });
+}
+
 export async function ensureUserCareerDoc(
   db: Firestore,
   uid: string,

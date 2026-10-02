@@ -1,7 +1,16 @@
 import FloatingCloseButton from "@/app/component/common/FloatingCloseButton";
+import AdminGuard from "./_components/AdminGuard";
 
-export const metadata = { title: "Admin | Uniterz" };
+export const metadata = {
+  title: "Admin | Uniterz",
+  robots: { index: false, follow: false },
+};
 
+/**
+ * 管理画面は全ページここでガードする。
+ * 以前はページ単位に `AdminGuard` を置いていたため、announcements / badges /
+ * games-import / team-init が素通しだった。
+ */
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="relative z-10 min-h-[100svh] text-white">
@@ -12,10 +21,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             管理画面
           </h1>
           <p className="text-white/60 text-sm mt-1">
-            お知らせ・試合データ・各種承認などを管理します
+            機能リクエスト・問い合わせ・商品交換申請を確認します
           </p>
         </header>
-        {children}
+        <AdminGuard>{children}</AdminGuard>
       </div>
     </div>
   );

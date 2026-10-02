@@ -4,7 +4,7 @@
  */
 import { useEffect, useMemo, useState } from "react";
 import { auth, db } from "../../lib/firebase";
-import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
+import { doc, getDoc } from "firebase/firestore";
 import { withTimeout } from "../../../../../lib/async/withTimeout";
 
 type Params = {
@@ -26,12 +26,20 @@ type Params = {
 
 const PLAN_FETCH_TIMEOUT_MS = 12_000;
 
-/** Pro 期限切れなら free に落として Firestore も更新。解決後の plan を返す */
-export async function resolveAndExpireMyPlan(
-  myUid: string,
+/**
+ * Pro 期限切れなら表示上 free に倒す。
+ *
+ * Firestore は書き換えない: users の plan / proUntil / cancelAtPeriodEnd は
+ * ルールでクライアント書き込み禁止（以前の setDoc は毎回 permission-denied）。
+ * 実際のダウングレードは Functions の `expireProUsers` が行う。
+ */
+export function resolveAndExpireMyPlan(
+  _myUid: string,
   data: Record<string, unknown>
-): Promise<"free" | "pro"> {
-  let nextPlan = (typeof data.plan === "string" ? data.plan : "free") as string;
+): "free" | "pro" {
+  const plan = typeof data.plan === "string" ? data.plan : "free";
+  if (plan !== "pro") return "free";
+
   const proUntil = data.proUntil as { toMillis?: () => number } | undefined;
   const proUntilMs =
     proUntil && typeof proUntil.toMillis === "function"
@@ -40,25 +48,13 @@ export async function resolveAndExpireMyPlan(
   const cancelAtPeriodEnd = data.cancelAtPeriodEnd === true;
 
   if (
-    nextPlan === "pro" &&
     cancelAtPeriodEnd &&
     typeof proUntilMs === "number" &&
     Date.now() > proUntilMs
   ) {
-    await setDoc(
-      doc(db, "users", myUid),
-      {
-        plan: "free",
-        proUntil: null,
-        cancelAtPeriodEnd: false,
-        updatedAt: serverTimestamp(),
-      },
-      { merge: true }
-    );
-    nextPlan = "free";
+    return "free";
   }
-
-  return nextPlan === "pro" ? "pro" : "free";
+  return "pro";
 }
 
 export function useNativeProfilePlan({
@@ -123,7 +119,7 @@ export function useNativeProfilePlan({
           return;
         }
 
-        const nextPlan = await resolveAndExpireMyPlan(
+        const nextPlan = resolveAndExpireMyPlan(
           myUid,
           snap.data() as Record<string, unknown>
         );

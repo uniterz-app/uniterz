@@ -9,24 +9,39 @@ import { auth, storage } from "@/lib/firebase";
 import { jp, nameOxanium } from "@/lib/fonts";
 import { toast } from "@/app/component/ui/toast";
 import {
-  COMMUNITY_LEAGUES,
-  COMMUNITY_METRICS,
+  COMMUNITY_CREATE_LEAGUES,
+  COMMUNITY_CREATE_METRICS,
+  COMMUNITY_CREATE_PERIODS,
   type CommunityLeague,
   type CommunityMetric,
+  type CommunityPeriodType,
 } from "@/lib/communities/types";
-import { leagueLabel, metricLabel } from "@/lib/communities/labels";
+import {
+  gamesScopeLabel,
+  leagueLabel,
+  metricLabel,
+  periodLabel,
+} from "@/lib/communities/labels";
+import {
+  COMMUNITY_GAMES_SCOPES,
+  type CommunityGamesScope,
+} from "@/lib/communities/communityGamesScope";
+import {
+  communityCreateMonthKeysJST,
+  upcomingMonthEndDateKeysJST,
+} from "@/lib/communities/resolveCommunityDateKeys";
 import {
   FREE_MAX_MEMBERSHIPS,
   FREE_MAX_OWNED_GROUPS,
   PRO_MAX_MEMBERSHIPS,
   PRO_MAX_OWNED_GROUPS,
 } from "@/lib/communities/limitValues";
+import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
+import { useScheduleTeams } from "@/lib/games/useScheduleTeams";
 import CommunityTeamPicker from "@/app/component/communities/CommunityTeamPicker";
 import {
   communityCrtMono,
 } from "@/app/component/communities/CommunityCrtTheme";
-import { useScheduleTeams } from "@/lib/games/useScheduleTeams";
-import { LEAGUES, type League } from "@/lib/leagues";
 
 async function authHeader(): Promise<string | null> {
   const u = auth.currentUser;
@@ -42,7 +57,7 @@ export type CreatedGroupPayload = {
   memberCount: number;
   headerImageUrl: string | null;
   rankingMetric: CommunityMetric;
-  periodType: "from_now";
+  periodType: CommunityPeriodType;
   rankingLeague: CommunityLeague;
   rankingTeamIds: string[];
   role: string;
@@ -59,6 +74,8 @@ type Props = {
   ) => void;
 };
 
+const DEFAULT_MONTH_KEY = communityCreateMonthKeysJST()[0] ?? "";
+
 export default function CreateGroupModal({
   open,
   onClose,
@@ -71,17 +88,22 @@ export default function CreateGroupModal({
   const [headerFile, setHeaderFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [metric, setMetric] = useState<CommunityMetric>("totalPoints");
-  const [league, setLeague] = useState<CommunityLeague>("all");
+  const [league, setLeague] = useState<CommunityLeague>("nba");
   const [teamIds, setTeamIds] = useState<string[]>([]);
+  const [periodType, setPeriodType] =
+    useState<CommunityPeriodType>("from_now");
+  const [gamesScope, setGamesScope] = useState<CommunityGamesScope>("all");
+  const [periodMonthKey, setPeriodMonthKey] = useState(DEFAULT_MONTH_KEY);
+  const [endDateKey, setEndDateKey] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [mounted, setMounted] = useState(false);
   const submitLockRef = useRef(false);
   const isWeb = variant === "web";
   const reduceMotion = useReducedMotion();
-  const scheduleLeague: League =
-    league === "all" ? LEAGUES.NBA : (league as League);
-  const { teams } = useScheduleTeams(scheduleLeague);
-  const showTeamPicker = league !== "all";
+
+  const { teams } = useScheduleTeams(league === "nba" ? "nba" : "nba");
+  const monthKeys = useMemo(() => communityCreateMonthKeysJST(), []);
+  const endDateOptions = useMemo(() => upcomingMonthEndDateKeysJST(), []);
 
   useEffect(() => {
     setMounted(true);
@@ -92,6 +114,10 @@ export default function CreateGroupModal({
     submitLockRef.current = false;
     setBusy(false);
   }, [open]);
+
+  useEffect(() => {
+    setTeamIds([]);
+  }, [league]);
 
   useEffect(() => {
     if (!open) return;
@@ -144,13 +170,17 @@ export default function CreateGroupModal({
             header: "Header image",
             metric: "Compete on",
             league: "League",
-            teams: "Target teams",
+            period: "Period",
+            periodMonth: "Month",
+            periodEnd: "End date (optional)",
+            noEnd: "No end",
+            untilMonth: (mk: string) => `Until ${mk}`,
+            gamesScope: "Games",
+            teams: "Teams (optional)",
             scoringNote:
-              "Scores count from the day this group is created (JST). Past results are not included.",
+              "Ranking options (period, games, teams) are locked when the group is created. For “From group start”, scores count from the create day (JST); past results are not included.",
             cancel: "Cancel",
             submit: "Create",
-            streakNote:
-              "Win streak uses your account-wide streak, not only from group start.",
             planLimits: `Plan limits: Free users can create up to ${FREE_MAX_OWNED_GROUPS} groups and join up to ${FREE_MAX_MEMBERSHIPS} groups. Pro users can create up to ${PRO_MAX_OWNED_GROUPS} groups and join up to ${PRO_MAX_MEMBERSHIPS} groups.`,
           }
         : {
@@ -162,17 +192,30 @@ export default function CreateGroupModal({
             header: "ヘッダー画像",
             metric: "競う項目",
             league: "リーグ",
-            teams: "対象チーム",
+            period: "期間",
+            periodMonth: "対象月",
+            periodEnd: "終了日（任意）",
+            noEnd: "終了なし",
+            untilMonth: (mk: string) => `〜${mk}まで`,
+            gamesScope: "試合対象",
+            teams: "チーム（任意）",
             scoringNote:
-              "グループ作成日（JST）以降の予想だけが集計されます。過去の成績は含みません。",
+              "期間・試合対象・チームなどの集計設定は作成時に確定し、あとから変更できません。「グループ開始以降」の場合、作成日（JST）以降の予想だけが集計され、過去の成績は含みません。",
             cancel: "キャンセル",
             submit: "作成",
-            streakNote:
-              "連勝はアカウント全体の累計です（グループ開始日以降だけにはなりません）。",
             planLimits: `プラン上限: Free はグループを最大 ${FREE_MAX_OWNED_GROUPS} 件まで作成でき、最大 ${FREE_MAX_MEMBERSHIPS} 件まで参加できます。Pro はグループを最大 ${PRO_MAX_OWNED_GROUPS} 件まで作成でき、最大 ${PRO_MAX_MEMBERSHIPS} 件まで参加できます。`,
           },
     [language]
   );
+
+  const chipClass = (active: boolean) =>
+    [
+      "rounded-none border px-2.5 py-1.5 text-xs font-semibold",
+      jp.className,
+      active
+        ? "border-white bg-white text-black"
+        : "border-white/22 bg-black text-white/62",
+    ].join(" ");
 
   const onPickFile = useCallback((f: File | null) => {
     setHeaderFile(f);
@@ -182,8 +225,7 @@ export default function CreateGroupModal({
     });
   }, []);
 
-  const closeReset = useCallback(() => {
-    if (submitLockRef.current) return;
+  const resetFormFields = useCallback(() => {
     setName("");
     setDescription("");
     setHeaderFile(null);
@@ -192,10 +234,19 @@ export default function CreateGroupModal({
       return null;
     });
     setMetric("totalPoints");
-    setLeague("all");
+    setLeague("nba");
     setTeamIds([]);
+    setPeriodType("from_now");
+    setGamesScope("all");
+    setPeriodMonthKey(communityCreateMonthKeysJST()[0] ?? "");
+    setEndDateKey(null);
+  }, []);
+
+  const closeReset = useCallback(() => {
+    if (submitLockRef.current) return;
+    resetFormFields();
     onClose();
-  }, [onClose]);
+  }, [onClose, resetFormFields]);
 
   const releaseSubmitLock = useCallback(() => {
     submitLockRef.current = false;
@@ -243,18 +294,30 @@ export default function CreateGroupModal({
     }
 
     try {
+      const body: Record<string, unknown> = {
+        name: n,
+        description: description.trim() || null,
+        headerImageUrl,
+        rankingMetric: metric,
+        periodType,
+        rankingLeague: "nba",
+        rankingTeamIds: teamIds,
+        rankingGamesScope: gamesScope,
+      };
+      if (periodType === "calendar_month") {
+        body.rankingPeriodMonthKey = periodMonthKey;
+      }
+      if (periodType === "from_now" && endDateKey) {
+        body.rankingEndDateKey = endDateKey;
+      }
+      if (periodType === "nba_season" || periodType === "nba_playoffs") {
+        body.rankingSeasonKey = CURRENT_NBA_SEASON_KEY;
+      }
+
       const res = await fetch("/api/communities/create", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: h },
-        body: JSON.stringify({
-          name: n,
-          description: description.trim() || null,
-          headerImageUrl,
-          rankingMetric: metric,
-          periodType: "from_now",
-          rankingLeague: league,
-          rankingTeamIds: teamIds,
-        }),
+        body: JSON.stringify(body),
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok || !json?.ok) {
@@ -281,7 +344,7 @@ export default function CreateGroupModal({
       const payload: CreatedGroupPayload = created?.id
         ? {
             ...created,
-            periodType: "from_now",
+            periodType: created.periodType ?? periodType,
             role: created.role ?? "owner",
           }
         : {
@@ -291,22 +354,13 @@ export default function CreateGroupModal({
             memberCount: 1,
             headerImageUrl,
             rankingMetric: metric,
-            periodType: "from_now",
-            rankingLeague: league,
+            periodType,
+            rankingLeague: "nba",
             rankingTeamIds: teamIds,
             role: "owner",
           };
       onCreated(payload, inv || undefined);
-      setName("");
-      setDescription("");
-      setHeaderFile(null);
-      setPreview((prev) => {
-        if (prev) URL.revokeObjectURL(prev);
-        return null;
-      });
-      setMetric("totalPoints");
-      setLeague("all");
-      setTeamIds([]);
+      resetFormFields();
       onClose();
     } catch {
       releaseSubmitLock();
@@ -316,13 +370,17 @@ export default function CreateGroupModal({
     name,
     description,
     headerFile,
-    metric,
-    league,
-    teamIds,
     language,
+    metric,
+    periodType,
+    teamIds,
+    gamesScope,
+    periodMonthKey,
+    endDateKey,
     onCreated,
     onClose,
     releaseSubmitLock,
+    resetFormFields,
   ]);
 
   if (!open || !mounted) return null;
@@ -462,57 +520,130 @@ export default function CreateGroupModal({
           </p>
 
           <label className={labelClass}>{t.league}</label>
-          <select
-            value={league}
-            onChange={(e) => {
-              setLeague(e.target.value as CommunityLeague);
-              setTeamIds([]);
-            }}
-            className={fieldClass}
-          >
-            {COMMUNITY_LEAGUES.map((k) => (
-              <option key={k} value={k}>
-                {leagueLabel(k, language)}
-              </option>
-            ))}
-          </select>
+          <div className="flex flex-wrap gap-1.5">
+            {COMMUNITY_CREATE_LEAGUES.map((k) => {
+              const active = k === league;
+              return (
+                <button
+                  key={k}
+                  type="button"
+                  onClick={() => setLeague(k)}
+                  className={chipClass(active)}
+                >
+                  {leagueLabel(k, language)}
+                </button>
+              );
+            })}
+          </div>
 
-          {showTeamPicker && (
+          <label className={labelClass}>{t.metric}</label>
+          <div className="flex flex-wrap gap-1.5">
+            {COMMUNITY_CREATE_METRICS.map((k) => {
+              const active = k === metric;
+              return (
+                <button
+                  key={k}
+                  type="button"
+                  onClick={() => setMetric(k)}
+                  className={chipClass(active)}
+                >
+                  {metricLabel(k, language)}
+                </button>
+              );
+            })}
+          </div>
+
+          <label className={labelClass}>{t.period}</label>
+          <div className="flex flex-wrap gap-1.5">
+            {COMMUNITY_CREATE_PERIODS.map((k) => {
+              const active = k === periodType;
+              return (
+                <button
+                  key={k}
+                  type="button"
+                  onClick={() => setPeriodType(k)}
+                  className={chipClass(active)}
+                >
+                  {periodLabel(k, language)}
+                </button>
+              );
+            })}
+          </div>
+
+          {periodType === "calendar_month" && (
             <>
-              <label className={labelClass}>{t.teams}</label>
-              <CommunityTeamPicker
-                teams={teams}
-                selectedIds={teamIds}
-                onChange={setTeamIds}
-                language={language}
-                isWeb={isWeb}
-              />
+              <label className={labelClass}>{t.periodMonth}</label>
+              <div className="flex flex-wrap gap-1.5">
+                {monthKeys.map((mk) => {
+                  const active = mk === periodMonthKey;
+                  return (
+                    <button
+                      key={mk}
+                      type="button"
+                      onClick={() => setPeriodMonthKey(mk)}
+                      className={chipClass(active)}
+                    >
+                      {mk}
+                    </button>
+                  );
+                })}
+              </div>
             </>
           )}
 
-          <label className={labelClass}>{t.metric}</label>
-          <select
-            value={metric}
-            onChange={(e) => setMetric(e.target.value as CommunityMetric)}
-            className={fieldClass}
-          >
-            {COMMUNITY_METRICS.map((k) => (
-              <option key={k} value={k}>
-                {metricLabel(k, language)}
-              </option>
-            ))}
-          </select>
-
-          {metric === "activeWinStreak" && (
-            <p
-              className={[
-                "text-white/58",
-                isWeb ? "text-xs" : "text-[11px]",
-              ].join(" ")}
-            >
-              {t.streakNote}
-            </p>
+          {periodType === "from_now" && (
+            <>
+              <label className={labelClass}>{t.periodEnd}</label>
+              <div className="flex flex-wrap gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setEndDateKey(null)}
+                  className={chipClass(endDateKey === null)}
+                >
+                  {t.noEnd}
+                </button>
+                {endDateOptions.map(({ monthKey, endDateKey: edk }) => {
+                  const active = endDateKey === edk;
+                  return (
+                    <button
+                      key={edk}
+                      type="button"
+                      onClick={() => setEndDateKey(edk)}
+                      className={chipClass(active)}
+                    >
+                      {t.untilMonth(monthKey)}
+                    </button>
+                  );
+                })}
+              </div>
+            </>
           )}
+
+          <label className={labelClass}>{t.gamesScope}</label>
+          <div className="flex flex-wrap gap-1.5">
+            {COMMUNITY_GAMES_SCOPES.map((k) => {
+              const active = k === gamesScope;
+              return (
+                <button
+                  key={k}
+                  type="button"
+                  onClick={() => setGamesScope(k)}
+                  className={chipClass(active)}
+                >
+                  {gamesScopeLabel(k, language)}
+                </button>
+              );
+            })}
+          </div>
+
+          <label className={labelClass}>{t.teams}</label>
+          <CommunityTeamPicker
+            teams={teams}
+            selectedIds={teamIds}
+            onChange={setTeamIds}
+            language={language}
+            isWeb={isWeb}
+          />
             </div>
           </div>
 

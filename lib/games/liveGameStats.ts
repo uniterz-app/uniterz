@@ -48,6 +48,18 @@ export type LiveGameBoxPlayer = {
   fg3: string;
   ft: string;
   plusMinus: number;
+  /** box score 拡張（BDL box） */
+  oreb?: number;
+  dreb?: number;
+  pf?: number;
+  /** `/nba/v2/stats/advanced` — live ingest で merge */
+  tsPct?: number;
+  efgPct?: number;
+  usgPct?: number;
+  netR?: number;
+  ortg?: number;
+  drtg?: number;
+  pie?: number;
 };
 
 export type LiveGameBoxTeam = {
@@ -216,12 +228,27 @@ function str(v: unknown, fallback = ""): string {
   return typeof v === "string" ? v : fallback;
 }
 
+function optionalNum(v: unknown): number | undefined {
+  const n = typeof v === "string" ? Number(v) : v;
+  return typeof n === "number" && Number.isFinite(n) ? n : undefined;
+}
+
 function normalizeBoxPlayer(raw: unknown): LiveGameBoxPlayer | null {
   if (!raw || typeof raw !== "object") return null;
   const r = raw as Record<string, unknown>;
   const playerId = str(r.playerId).trim();
   const lastName = str(r.lastName).trim();
   if (!playerId || !lastName) return null;
+  const oreb = optionalNum(r.oreb);
+  const dreb = optionalNum(r.dreb);
+  const pf = optionalNum(r.pf);
+  const tsPct = optionalNum(r.tsPct);
+  const efgPct = optionalNum(r.efgPct);
+  const usgPct = optionalNum(r.usgPct);
+  const netR = optionalNum(r.netR);
+  const ortg = optionalNum(r.ortg);
+  const drtg = optionalNum(r.drtg);
+  const pie = optionalNum(r.pie);
   return {
     playerId,
     firstName: str(r.firstName).trim(),
@@ -240,6 +267,16 @@ function normalizeBoxPlayer(raw: unknown): LiveGameBoxPlayer | null {
     fg3: str(r.fg3, "0-0"),
     ft: str(r.ft, "0-0"),
     plusMinus: num(r.plusMinus),
+    ...(oreb != null ? { oreb } : {}),
+    ...(dreb != null ? { dreb } : {}),
+    ...(pf != null ? { pf } : {}),
+    ...(tsPct != null ? { tsPct } : {}),
+    ...(efgPct != null ? { efgPct } : {}),
+    ...(usgPct != null ? { usgPct } : {}),
+    ...(netR != null ? { netR } : {}),
+    ...(ortg != null ? { ortg } : {}),
+    ...(drtg != null ? { drtg } : {}),
+    ...(pie != null ? { pie } : {}),
   };
 }
 

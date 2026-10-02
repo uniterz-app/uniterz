@@ -1,0 +1,105 @@
+---
+description: NBA スタッツのデータ取得の正（ingest → Firestore → API）。クライアント/API の都度 BDL 禁止。
+alwaysApply: true
+---
+
+# NBA スタッツ — データ取得の正
+
+**二度手間禁止。** スタッツ系は最初からこの形にする。
+
+## 正パイプライン
+
+```
+BDL（サーバーのみ）
+  → admin ingest（/api/admin/nba-*-ingest）
+  → Firestore スナップショット
+  → 公開 API（/api/nba/*）は Firestore だけ読む
+  → Web / Native クライアントは公開 API だけ叩く
+```
+
+## 絶対やってはいけないこと
+
+- クライアントから BDL を直接叩く（`EXPO_PUBLIC_` に API キーを載せない）
+- 公開 API がリクエストのたびに BDL をライブ取得する（例外なし）
+- チームペイロールの「今季1行」から複数年契約をでっち上げる
+
+## 表示シーズン（オフ／プレ）
+
+カレンダー今季にリーグ表 or プレイヤーリーダーが **1 件も無い** あいだは、公開スタッツ UI（リーグ表・チーム／プレイヤー詳細のスタッツ切片・マッチアップ統計）は前期を表示する（`resolveNbaStatsDisplaySeasonKey`）。
+
+**ロスター／injury／契約／ペイロール** は別解決（`resolveNbaRosterInjuryDisplaySeasonKey`）: 今季スナップショットがあれば今季を優先。スタッツが前期でも開幕前のロスター・injury は今季を出す。
+
+**チーム詳細の FORM / 連勝 / W–L / seed**（`gameLog` + `standings`）と **マッチアップ直近フォーム** は、スタッツが前期フォールバック中でも **カレンダー今季** を読む（開幕前は 0-0・連勝なし）。指標切片・strength / ace-out / shapes は前期のまま。
+
+今季スタッツが 1 件でも入ったらスタッツ側も今季へ切替。ingest は明示シーズンのみ（自動切替しない）。
+
+## プレイヤー詳細で必要なスナップショット
+
+| データ | Firestore | ingest | 公開 API |
+|---|---|---|---|
+| ロスター | `nbaTeamRosters/{season}` | `nba-team-rosters-ingest`（BDL active players の height/weight/college/country/draft* も保持） | `/api/nba/team-rosters`（`?team=` / `?player=` でレスポンス絞り込み可） |
+| ペイロール（チーム今季） | `nbaTeamPayrolls/{season}` | `nba-team-payroll-ingest` | `/api/nba/team-payroll` |
+| **契約（複数年）** | `nbaPlayerContracts/{season}/players/{playerId}` | `nba-player-contracts-ingest`（末尾で年俸ソート→`salaryRank`。BDL `rank` は使わない） | `/api/nba/player-contract` |
+| **キャリア Season/Playoffs** | `nbaPlayerCareerSeasons/{playerId}` | `nba-player-career-seasons-ingest` | `/api/nba/player-career-seasons` |
+| **試合ログ（今季最大 82）** | `nbaPlayerGameLogs/{season}/players/{playerId}` | `nba-player-game-logs-ingest`（UI 表は直近 20、Home/Away・vs Opp はフル） | `/api/nba/player-game-logs` |
+| **ショットゾーン** | `nbaPlayerShotZones/{season}/players/{playerId}` | `nba-player-shot-zones-ingest`（リーグ by_zone 一括） | `/api/nba/player-shot-zones` |
+| **今季メトリクス（全順位）** | `nbaPlayerSeasonMetrics/{season}/players/{playerId}` | `nba-league-stats-ingest`（leaders と同梱。Top30 ボードとは別） | `/api/nba/player-detail`（個別 GET なし） |
+| **詳細寄せ** | （上の合成） | — | `/api/nba/player-detail`（roster+injury+contract+career+logs+zones+metrics） |
+| injury | `nbaTeamInjuries/{season}` | **専用** `nba-injury-ingest`（16:00 / 23:00 / 試合前窓） | `/api/nba/team-injuries` |
+| **カンファレンス順位** | `nbaStandings/{season}` | 日次 `nba-stats-daily-ingest`（`standings` ステップ）/ `nba-standings-ingest`（過去季は明示シーズンで一度だけ。L10・連勝は Firestore games 無しなら BDL レギュラー試合から。順位ページは今季＋過去 10 季を ◀▶） | `/api/nba/standings?season=` |
+| **チーム成績スプリット** | `nbaTeamSeasonRecords/{season}` | 日次 `nba-stats-daily-ingest`（`team-season-records` ステップ）/ pro-brief 内 build | `/api/nba/team-season-records` |
+| **エース欠場時 W–L** | `nbaTeamAceOutRecords/{season}` | `nba-team-ace-out-ingest`（BDL leaders pts + season stats で所属チーム確定 × min>0） | `/api/nba/team-ace-out-records` |
+| **得意形／苦手形（条件付き W–L）** | `nbaTeamShapeRecords/{season}` | 日次 `nba-stats-daily-ingest`（`team-shape-records`）/ `nba-team-shapes-ingest`（`games.liveStats.box`） | `/api/nba/team-shape-records` |
+| **前季最終所属** | `nbaPlayerSeasonFinalTeams/{season}` | `nba-team-offseason-moves-ingest`（無ければ BDL `/nba/v1/stats` 全ページの最終試合チーム。一度作れば固定・`refreshPriorFinalTeams` で再取得） | —（moves 内部用） |
+| **オフシーズン IN / OUT** | `nbaTeamOffseasonMoves/{season}` | 日次 `nba-stats-daily-ingest`（`team-offseason-moves`）/ `nba-team-offseason-moves-ingest`（前季最終所属 × 今季ロスター × payroll × curated デッド。トレード / FA は区別しない） | `/api/nba/team-detail` 同梱（今季 final ≤15 試合のみ） |
+| **チーム詳細寄せ** | （上の合成） | — | `/api/nba/team-detail`（roster+payroll+log+standings行+injury+strength+ace-out+shapes+offseason moves。CDN 1 URL） |
+| **試合日インデックス（日付ストリップ）** | `gameDayIndex/{league}__{season}`（distinct 開始 ms） | `nba-games-ingest` 末尾（日次 `games` ステップ） | `/api/games/days`（CDN 1h。ストリップは全試合日、カードは `/api/games/window` ±5 日） |
+| **試合カード予想ツール寄せ** | （上の合成） | — | `/api/nba/matchup-detail`（injury+roster+stats。Insight は別 `/api/nba/matchup-insight`） |
+
+## 運用順（プレイヤー詳細）
+
+1. rosters ingest  
+2. payroll ingest（チーム表用）  
+3. **player-contracts ingest**（複数年契約）  
+4. **player-career-seasons ingest**（キャリア表）  
+5. **player-game-logs ingest**（試合ログ）  
+6. **player-shot-zones ingest**（ショットゾーン）  
+7. 画面は公開 API のみ
+
+部分実行: ingest body に `playerIds: ["175"]` や `maxPlayers` を付けられる。
+
+## 新規エンドポイントを足すとき
+
+1. BDL fetch は `lib/nba/bdl/*`（サーバー専用）  
+2. map → Firestore write は `lib/nba/ingest/*` + `load*Snapshot`  
+3. 公開 GET は Firestore 読みだけ  
+4. この表に1行追加する  
+
+ライブ BDL を「とりあえず API」に置かない。
+
+## 日次定時（試合後スタッツ）
+
+- Firebase cron `runNbaStatsDailyIngestCron` — **毎日 18:00 JST**
+- Next `POST /api/admin/nba-stats-daily-ingest`（`mode: "daily"`）
+- 中身: rosters → **team-offseason-moves** → games → league-stats → **team-game-logs** → **standings** → **team-season-records** → **team-shape-records** → shot-zones → **player-game-logs-incremental**（直近 box 出場者）
+- **injury** は日次から分離 → Firebase `runNbaInjuryBaseline16Cron`（16:00 · 試合日）/ `runNbaInjuryBaseline23Cron`（23:00）/ `runNbaInjuryPregameCron`（10分毎 · T-3h/1h/30m 窓）→ `POST /api/admin/nba-injury-ingest`
+- `mode: "heavy"` でプレイヤー試合ログ全件も（タイムアウト注意）。試合ログ書き込み後に leaders のシーズン回数ボードを game logs から再集計（追加 BDL なし。リーグ表 last10 は書かない）
+- 週次 Firebase cron `runNbaStatsWeeklyIngestCron` — **月曜 10:00 JST** → `POST /api/admin/nba-stats-weekly-ingest`（payroll + contracts）。キャリアは手動
+- チーム league-stats は scoring / hustle / tracking / clutch / playtype 込み（HOW THEY PLAY）。team by_zone は BDL 不可 → リーグ表 RIM/C3 非表示・チーム詳細 SHOT 枠なし
+- 公開スタッツの表示シーズンは上記「表示シーズン」に従う（今季空→前期。BDL ライブは禁止のまま）
+- リーグ表は年切替（`2020-21`〜今季・◀▶）+ SEASON / PLAYOFFS。playoffs は ingest で BDL `season_type=playoffs` を同梱。過去分は `lookbackSeasons`（今季→2020-21）で一括 ingest
+- Player リーダーの所属タグは `/nba/v1/stats` のそのシーズン出場分（現役ロスターは使わない）
+- リーグ表に Last 10 タブは出さない（マッチアップ FORM / Pro Insight のみ box 由来）
+- リーグ表 API は `?season=` 明示時に前期フォールバックしない（年ナビと表示季がズレない）
+- ロスターに bio（height/weight/college/country/draft*）を載せ、プレイヤー詳細はシード bio を使わない
+- 詳細 overlay は `?team=` / `?player=` でレスポンスを絞る
+- プレイヤー詳細の venue / vs-opp はデータ未配線のためセクション非表示（空 NO DATA を出さない）
+- Team RIM/C3 は team by_zone が BDL 400 のため非表示（レギュラー／プレーオフ共通）
+
+## ライブ試合（スコア + liveStats）
+
+- Firebase cron `runNbaLiveGamesIngestCron` — **オフシーズンは停止**（index から export なし）。シーズン中は毎分 tick だが **`shouldRunNbaLiveGamesIngest`（Firestore）でライブ枠の試合があるときだけ** Next/BDL を叩く
+- Next `POST /api/admin/nba-live-games-ingest` → `games/{id}` の status/score + `liveStats`（手動 POST はオフシーズンでも可）
+- 公開 `GET /api/games/live-stats` は Firestore のみ（`unstable_cache` 60 秒）。クライアントポーリング 60 秒
+- `/api/games/window` は `unstable_cache` 5 分 + tag `games-window:nba` を live / games / daily ingest の書き込み後に `revalidateTag`（ライブ中は毎分、非ライブ時は Firestore 読みほぼゼロ）。一覧は開始済み未終了の試合がある間だけ 60 秒で取り直す
+- BDL: `/nba/v1/games?dates[]=` + `/nba/v1/box_scores` / `box_scores/live`（GOAT 等 Box Scores 付きプラン）

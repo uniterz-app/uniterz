@@ -11,6 +11,8 @@ import {
   YAxis,
 } from "recharts";
 import type { Language } from "@/lib/i18n/language";
+import { DATE_LOCALE, normalizeLanguage } from "@/lib/i18n/language";
+import { resolveLocalizedLang } from "@/lib/i18n/localize";
 import { t } from "@/lib/i18n/t";
 import { nameOxanium, resultStatsMetricNumClass } from "@/lib/fonts";
 import { CyberNoDataLabel } from "@/app/component/common/CyberNoDataLabel";
@@ -52,7 +54,10 @@ function formatAxisDate(dateKey: string, language: Language): string {
   const mo = Number(m[2]);
   const da = Number(m[3]);
   const d = new Date(Date.UTC(y, mo - 1, da));
-  return new Intl.DateTimeFormat(language === "ja" ? "ja-JP" : "en-US", {
+  const lang = resolveLocalizedLang(language);
+  const locale =
+    DATE_LOCALE[normalizeLanguage(lang) ?? "en"] ?? DATE_LOCALE.en;
+  return new Intl.DateTimeFormat(locale, {
     month: "numeric",
     day: "numeric",
   }).format(d);

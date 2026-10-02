@@ -2,10 +2,12 @@
  * NBA シーズンアワード予想 — 型・検索（本番は API 選手名簿接続後）
  *
  * 選手ピッカー仕様（確定）:
- * - 入力なし / フォーカス直後: 他ユーザーが多く選んでいる候補を最大 5 人（人気ピック）
- * - 入力あり: 前方一致サジェスト（N → NI → NIK …）。選手名簿は API 契約後に取得
- * - 採点は未定（ゲート D）
+ * - 入力なし / フォーカス直後: 運営指定の候補を最大 5 人（`seasonAwardsCuratedPopular`）
+ * - 入力あり: 前方一致サジェスト。名簿は team-rosters（全アクティブ選手）
+ * - 採点: `seasonPredictScoring`（確定）
  */
+import { L, type LocalizedLang } from "@/lib/i18n/localize";
+import type { UiStrings } from "@/lib/i18n/ui";
 
 export type NbaAwardId =
   | "mvp"
@@ -18,41 +20,124 @@ export type NbaAwardId =
 
 export type NbaAwardDef = {
   id: NbaAwardId;
+  /** MVP / DPOY … 言語非依存の略号 */
   labelEn: string;
-  labelJa: string;
+  /** 賞の正式名（7言語） */
+  name: UiStrings;
   /** coty はコーチ候補。それ以外は選手 */
   kind: "player" | "coach";
 };
 
 export const NBA_SEASON_AWARD_DEFS: readonly NbaAwardDef[] = [
-  { id: "mvp", labelEn: "MVP", labelJa: "最優秀選手", kind: "player" },
+  {
+    id: "mvp",
+    labelEn: "MVP",
+    name: {
+      ja: "最優秀選手",
+      en: "Most Valuable Player",
+      ko: "최우수 선수",
+      zh: "最有价值球员",
+      es: "Jugador Más Valioso",
+      pt: "Jogador Mais Valioso",
+      fr: "Meilleur Joueur",
+    },
+    kind: "player",
+  },
   {
     id: "dpoy",
     labelEn: "DPOY",
-    labelJa: "最優秀守備選手",
+    name: {
+      ja: "最優秀守備選手",
+      en: "Defensive Player of the Year",
+      ko: "최우수 수비 선수",
+      zh: "年度最佳防守球员",
+      es: "Mejor Defensor del Año",
+      pt: "Melhor Defensor do Ano",
+      fr: "Meilleur Défenseur de l’Année",
+    },
     kind: "player",
   },
-  { id: "roy", labelEn: "ROY", labelJa: "新人王", kind: "player" },
+  {
+    id: "roy",
+    labelEn: "ROY",
+    name: {
+      ja: "新人王",
+      en: "Rookie of the Year",
+      ko: "신인왕",
+      zh: "年度最佳新秀",
+      es: "Novato del Año",
+      pt: "Novato do Ano",
+      fr: "Meilleur Rookie de l’Année",
+    },
+    kind: "player",
+  },
   {
     id: "mip",
     labelEn: "MIP",
-    labelJa: "最も成長した選手",
+    name: {
+      ja: "最も成長した選手",
+      en: "Most Improved Player",
+      ko: "기량 발전상",
+      zh: "年度进步最快球员",
+      es: "Jugador Más Mejorado",
+      pt: "Jogador Que Mais Evoluiu",
+      fr: "Joueur Ayant le Plus Progressé",
+    },
     kind: "player",
   },
   {
     id: "sixth",
     labelEn: "6MOTY",
-    labelJa: "最優秀シックスマン",
+    name: {
+      ja: "最優秀シックスマン",
+      en: "Sixth Man of the Year",
+      ko: "최우수 식스맨",
+      zh: "年度最佳第六人",
+      es: "Mejor Sexto Hombre",
+      pt: "Melhor Sexto Homem",
+      fr: "Meilleur Sixième Homme",
+    },
     kind: "player",
   },
   {
     id: "coy",
     labelEn: "COY",
-    labelJa: "クラッチタイムで最も活躍した選手",
+    name: {
+      ja: "クラッチタイムで最も活躍した選手",
+      en: "Clutch Player of the Year",
+      ko: "최우수 클러치 선수",
+      zh: "年度最佳关键球员",
+      es: "Mejor Jugador Clutch del Año",
+      pt: "Melhor Jogador de Clutch",
+      fr: "Meilleur Joueur en Clutch",
+    },
     kind: "player",
   },
-  { id: "coty", labelEn: "COTY", labelJa: "最優秀コーチ", kind: "coach" },
+  {
+    id: "coty",
+    labelEn: "COTY",
+    name: {
+      ja: "最優秀コーチ",
+      en: "Coach of the Year",
+      ko: "최우수 감독",
+      zh: "年度最佳教练",
+      es: "Entrenador del Año",
+      pt: "Treinador do Ano",
+      fr: "Meilleur Entraîneur",
+    },
+    kind: "coach",
+  },
 ] as const;
+
+/** 賞の正式名を表示言語で返す */
+export function awardName(
+  lang: LocalizedLang,
+  award: NbaAwardId | { name: UiStrings }
+): string {
+  if (typeof award !== "string") return L(lang, award.name);
+  const def = NBA_SEASON_AWARD_DEFS.find((d) => d.id === award);
+  return def ? L(lang, def.name) : "";
+}
 
 export type NbaAwardCandidate = {
   id: string;
@@ -139,7 +224,7 @@ export function normalizeAwardQuery(q: string): string {
 export function filterAwardCandidatesByPrefix(
   candidates: readonly NbaAwardCandidate[],
   query: string,
-  limit = 12
+  limit = 500
 ): NbaAwardCandidate[] {
   const q = normalizeAwardQuery(query);
   if (!q) return [];
@@ -163,7 +248,7 @@ export function filterAwardCandidatesByPrefix(
   return scored.slice(0, limit).map((x) => x.c);
 }
 
-/** 入力なし時: 人気ピック最大 5（他ユーザー選択集計。本番は API） */
+/** 入力なし時: 運営指定の候補最大 5 */
 export const AWARD_POPULAR_PICK_LIMIT = 5;
 
 export function popularAwardPicks(
@@ -181,8 +266,7 @@ export function popularAwardPicks(
   return out;
 }
 
-/** プレビュー用仮採点（ゲート D で確定） */
-export const SEASON_AWARDS_SCORE_PREVIEW = {
-  exact: 25,
-  maxTotal: 25 * NBA_SEASON_AWARD_DEFS.length,
-} as const;
+export {
+  SEASON_AWARDS_SCORE,
+  SEASON_AWARDS_SCORE_PREVIEW,
+} from "@/lib/predict/seasonPredictScoring";

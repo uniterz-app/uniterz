@@ -16,8 +16,13 @@ function rawTeamIdFromSide(side: unknown): string | null {
 
 function normalizeSeasonPhase(
   raw: unknown
-): "regular" | "play_in" | "playoffs" | null {
-  if (raw === "regular" || raw === "play_in" || raw === "playoffs") {
+): "preseason" | "regular" | "play_in" | "playoffs" | null {
+  if (
+    raw === "preseason" ||
+    raw === "regular" ||
+    raw === "play_in" ||
+    raw === "playoffs"
+  ) {
     return raw;
   }
   return null;

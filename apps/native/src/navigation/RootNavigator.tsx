@@ -34,6 +34,18 @@ function AuthNavigator() {
         <AuthStack.Screen name="Signup" component={SignupScreenNative} />
         <AuthStack.Screen name="ResetPassword" component={ResetPasswordScreenNative} />
         <AuthStack.Screen name="Onboarding" component={OnboardingScreenNative} />
+        <AuthStack.Screen
+          name="Terms"
+          getComponent={() =>
+            require("../features/legal/TermsScreenNative").default
+          }
+        />
+        <AuthStack.Screen
+          name="Privacy"
+          getComponent={() =>
+            require("../features/legal/PrivacyScreenNative").default
+          }
+        />
       </AuthStack.Navigator>
     </NativeStackBackdrop>
   );

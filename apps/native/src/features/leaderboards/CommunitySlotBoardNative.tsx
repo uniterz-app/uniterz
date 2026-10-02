@@ -507,7 +507,7 @@ const styles = StyleSheet.create({
   filledSlot: {
     width: "100%",
     overflow: "hidden",
-    backgroundColor: "rgba(2,8,18,0.72)",
+    backgroundColor: "rgba(0,0,0,0.86)",
     borderWidth: 1,
   },
   filledClip: {

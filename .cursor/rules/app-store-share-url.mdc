@@ -1,0 +1,17 @@
+---
+description: App Store 公開時に共有文へ商品ページ URL を入れる（忘れ防止）
+alwaysApply: true
+---
+
+# App Store 共有 URL
+
+未公開のため `lib/share/shareAppUrls.ts` の `APP_STORE_SHARE_URL` は空。
+
+## App Store に公開したら必ず
+
+1. `APP_STORE_SHARE_URL` に `https://apps.apple.com/.../idXXXX` を入れる  
+   （または env `EXPO_PUBLIC_APP_STORE_URL` / `NEXT_PUBLIC_APP_STORE_URL`）
+2. LP `lib/lp/officialSiteContent.ts` の `appStore`（Coming Soon）も同じ URL に更新
+3. rank / result / profile 共有は `buildShareOutboundMessage` 経由で **自動付与**される。個別画面に足し直さない
+
+公開前にダミーの `apps.apple.com` を書かない。

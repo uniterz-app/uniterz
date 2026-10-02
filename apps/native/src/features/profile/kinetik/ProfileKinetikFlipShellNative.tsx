@@ -14,10 +14,10 @@ import Animated, {
 } from "react-native-reanimated";
 import { ProfileKinetikFlipEarProvider } from "./ProfileKinetikFlipEarNative";
 
-const FLIP_MS = 420;
+export const PROFILE_KINETIK_FLIP_MS = 420;
 
 type Props = {
-  language: "ja" | "en";
+  language: string;
   front: ReactNode;
   back: ReactNode;
   /** 裏面表示時に true — CAREER データの遅延読込用 */
@@ -44,7 +44,7 @@ export default function ProfileKinetikFlipShellNative({
       return;
     }
     progress.value = withTiming(next ? 1 : 0, {
-      duration: FLIP_MS,
+      duration: PROFILE_KINETIK_FLIP_MS,
       easing: Easing.out(Easing.cubic),
     });
   }, [flipped, onFlipChange, progress, reduceMotion]);

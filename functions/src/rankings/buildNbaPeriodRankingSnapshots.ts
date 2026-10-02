@@ -245,6 +245,12 @@ async function buildOne(range: NbaPeriodRange, todayKey: string): Promise<void> 
     (uid) => (aggByUidOpen.get(uid)?.posts ?? 0) >= minPosts
   );
   const uids = [...new Set([...uidsStandard, ...uidsOpen])];
+  const openPosterUids = [...aggByUidOpen.keys()].filter(
+    (uid) => (aggByUidOpen.get(uid)?.posts ?? 0) > 0
+  );
+  const standardParticipantCount = [...aggByUidStandard.values()].filter(
+    (agg) => agg.posts > 0
+  ).length;
 
   // 表示用プロフィール（cumulative_stats に集約済み）
   const profileByUid = new Map<
@@ -279,8 +285,9 @@ async function buildOne(range: NbaPeriodRange, todayKey: string): Promise<void> 
 
   // 無差別級は users.plan を正とする（cumulative_stats の古さを避ける）
   const proUidSet = new Set<string>();
-  for (let i = 0; i < uids.length; i += CHUNK) {
-    const slice = uids.slice(i, i + CHUNK);
+  const proCheckUids = [...new Set([...uids, ...openPosterUids])];
+  for (let i = 0; i < proCheckUids.length; i += CHUNK) {
+    const slice = proCheckUids.slice(i, i + CHUNK);
     const refs = slice.map((uid) => firestore.collection("users").doc(uid));
     const snaps = await firestore.getAll(...refs);
     const nowMs = Date.now();
@@ -329,6 +336,10 @@ async function buildOne(range: NbaPeriodRange, todayKey: string): Promise<void> 
     proUidSet.has(r.uid)
   );
 
+  const openParticipantCount = openPosterUids.filter((uid) =>
+    proUidSet.has(uid)
+  ).length;
+
   await writePeriodDivisionSnapshots({
     firestore,
     range,
@@ -336,6 +347,7 @@ async function buildOne(range: NbaPeriodRange, todayKey: string): Promise<void> 
     division: "standard",
     baseRows: standardBaseRows,
     winRateMin: winRateMinStandard,
+    participantCount: standardParticipantCount,
   });
   await writePeriodDivisionSnapshots({
     firestore,
@@ -344,10 +356,11 @@ async function buildOne(range: NbaPeriodRange, todayKey: string): Promise<void> 
     division: "open",
     baseRows: openBaseRows,
     winRateMin: winRateMinFallback,
+    participantCount: openParticipantCount,
   });
 
   console.log(
-    `[buildNbaPeriodRankingSnapshots] ${range.period} ${range.labelKey} standard=${standardBaseRows.length} open=${openBaseRows.length} winRateMinStandard=${winRateMinStandard}`
+    `[buildNbaPeriodRankingSnapshots] ${range.period} ${range.labelKey} standard=${standardBaseRows.length}/${standardParticipantCount} open=${openBaseRows.length}/${openParticipantCount} winRateMinStandard=${winRateMinStandard}`
   );
 }
 
@@ -358,8 +371,18 @@ async function writePeriodDivisionSnapshots(opts: {
   division: "standard" | "open";
   baseRows: Array<Omit<SnapshotRow, "rank" | "rankDeltaPlaces">>;
   winRateMin: number;
+  /** その期間・部門で 1 回以上投稿した人数（最低投稿数の足切り前） */
+  participantCount: number;
 }): Promise<void> {
-  const { firestore, range, todayKey, division, baseRows, winRateMin } = opts;
+  const {
+    firestore,
+    range,
+    todayKey,
+    division,
+    baseRows,
+    winRateMin,
+    participantCount,
+  } = opts;
 
   const metricRefs = PERIOD_METRICS.map((metric) =>
     firestore
@@ -429,6 +452,7 @@ async function writePeriodDivisionSnapshots(opts: {
       metric,
       range: { startKey: range.startKey, endKey: range.endKey },
       count: sorted.length,
+      participantCount,
       rows: rankedRows,
       ranks,
       // 圏外ユーザーの変動計算・翌日の基準引き継ぎ用
@@ -443,7 +467,8 @@ async function writePeriodDivisionSnapshots(opts: {
 
 /**
  * 現在の週・月のスナップショットを再構築する。
- * 期間開始直後（猶予日数内）は前期間も再集計して遅延精算を反映する。
+ * 新しい週／月の初日（grace=0）または猶予日内は前期間も最終集計する。
+ * Unit 付与は別 cron（snapshot の数分後）— grantPeriodRankingUnitsCron。
  */
 export async function buildNbaPeriodRankingSnapshots(
   now: Date = new Date()
@@ -453,6 +478,7 @@ export async function buildNbaPeriodRankingSnapshots(
 
   const weekLabel = weekStartDateKeyJST(now);
   targets.push(rangeForLabel("weekly", weekLabel, now));
+  // grace=0: 月曜だけ前週を最終スナップショット。grace≥1: 猶予日まで再集計。
   if (todayKey <= addGrace(weekLabel)) {
     targets.push(rangeForLabel("weekly", previousLabel("weekly", weekLabel), now));
   }
@@ -489,6 +515,18 @@ export async function buildNbaPeriodRankingSnapshots(
   }
 
   try {
+    const { grantProSkinSeasonRankUnlocks } = await import(
+      "../profile/grantProSkinSeasonRankUnlocks"
+    );
+    await grantProSkinSeasonRankUnlocks({ now });
+  } catch (err) {
+    console.error(
+      "[buildNbaPeriodRankingSnapshots] pro skin season rank grants failed",
+      err
+    );
+  }
+
+  try {
     const { syncUserCareerAfterPeriodSnapshots } = await import(
       "../profile/syncUserCareerAfterPeriodSnapshots"
     );
@@ -496,18 +534,6 @@ export async function buildNbaPeriodRankingSnapshots(
   } catch (err) {
     console.error(
       "[buildNbaPeriodRankingSnapshots] user_career period sync failed",
-      err
-    );
-  }
-
-  try {
-    const { grantPeriodRankingUnitsAfterPeriodSnapshots } = await import(
-      "../units/grantPeriodRankingUnits"
-    );
-    await grantPeriodRankingUnitsAfterPeriodSnapshots(now);
-  } catch (err) {
-    console.error(
-      "[buildNbaPeriodRankingSnapshots] period ranking unit grants failed",
       err
     );
   }

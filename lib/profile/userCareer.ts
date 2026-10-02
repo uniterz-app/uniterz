@@ -6,6 +6,8 @@
  * 期間確定 / settle 時に差分更新（表示時の横断スキャン禁止）。
  */
 
+import { resolveLocalizedLang } from "@/lib/i18n/localize";
+
 export const USER_CAREER_COLLECTION = "user_career";
 export const USER_CAREER_SCHEMA_VERSION = 1 as const;
 
@@ -27,6 +29,146 @@ export type UserCareerSeasonChapter = {
   regular: UserCareerBoardStats;
   playoffs: UserCareerBoardStats;
 };
+
+export type UserCareerBoardKey = "regular" | "playoffs";
+
+/**
+ * CAREER シーズン章で出すボード。
+ * 2025-26 はプレーオフのみ（レギュラーは出さない）。
+ */
+export function careerBoardsForSeason(
+  seasonKey: string
+): readonly UserCareerBoardKey[] {
+  if (seasonKey === "2025-26") return ["playoffs"];
+  return ["regular", "playoffs"];
+}
+
+export function defaultCareerBoardForSeason(
+  seasonKey: string
+): UserCareerBoardKey {
+  return careerBoardsForSeason(seasonKey)[0] ?? "playoffs";
+}
+
+/** CAREER スコープを右矢印でまだ進められるか（末尾なら false） */
+export function canAdvanceCareerScope(opts: {
+  viewMode: "career" | "season";
+  seasonKey: string;
+  board: UserCareerBoardKey;
+  seasonKeys: readonly string[];
+}): boolean {
+  if (opts.viewMode === "career") return true;
+  const boards = careerBoardsForSeason(opts.seasonKey);
+  const boardIdx = boards.indexOf(opts.board);
+  if (boardIdx >= 0 && boardIdx < boards.length - 1) return true;
+  const idx = opts.seasonKeys.indexOf(opts.seasonKey);
+  return idx >= 0 && idx < opts.seasonKeys.length - 1;
+}
+
+/** CAREER スコープを左矢印で戻れるか（先頭 CAREER なら false） */
+export function canRetreatCareerScope(opts: {
+  viewMode: "career" | "season";
+}): boolean {
+  return opts.viewMode !== "career";
+}
+
+/**
+ * 次の CAREER スコープ。末尾では null（ループしない）。
+ * CAREER → 最新シーズン → 同シーズンの次ボード → より新しいシーズン → 端。
+ */
+export function nextCareerScope(opts: {
+  viewMode: "career" | "season";
+  seasonKey: string;
+  board: UserCareerBoardKey;
+  seasonKeys: readonly string[];
+  fallbackSeasonKey: string;
+}): {
+  viewMode: "career" | "season";
+  seasonKey: string;
+  board: UserCareerBoardKey;
+} | null {
+  if (!canAdvanceCareerScope(opts)) return null;
+
+  if (opts.viewMode === "career") {
+    const nextKey =
+      opts.seasonKeys[opts.seasonKeys.length - 1] ?? opts.fallbackSeasonKey;
+    return {
+      viewMode: "season",
+      seasonKey: nextKey,
+      board: defaultCareerBoardForSeason(nextKey),
+    };
+  }
+
+  const boards = careerBoardsForSeason(opts.seasonKey);
+  const boardIdx = boards.indexOf(opts.board);
+  if (boardIdx >= 0 && boardIdx < boards.length - 1) {
+    return {
+      viewMode: "season",
+      seasonKey: opts.seasonKey,
+      board: boards[boardIdx + 1]!,
+    };
+  }
+
+  const idx = opts.seasonKeys.indexOf(opts.seasonKey);
+  if (idx >= 0 && idx < opts.seasonKeys.length - 1) {
+    const nextKey = opts.seasonKeys[idx + 1]!;
+    return {
+      viewMode: "season",
+      seasonKey: nextKey,
+      board: defaultCareerBoardForSeason(nextKey),
+    };
+  }
+
+  return null;
+}
+
+/**
+ * 前の CAREER スコープ。先頭では null。
+ * 同シーズンの前ボード → それ以外は CAREER（最新先頭は CAREER から入るため）。
+ * 途中シーズンにいるときだけ、一つ古いシーズンの末ボードへ。
+ */
+export function prevCareerScope(opts: {
+  viewMode: "career" | "season";
+  seasonKey: string;
+  board: UserCareerBoardKey;
+  seasonKeys: readonly string[];
+}): {
+  viewMode: "career" | "season";
+  seasonKey: string;
+  board: UserCareerBoardKey;
+} | null {
+  if (!canRetreatCareerScope(opts)) return null;
+
+  const boards = careerBoardsForSeason(opts.seasonKey);
+  const boardIdx = boards.indexOf(opts.board);
+  if (boardIdx > 0) {
+    return {
+      viewMode: "season",
+      seasonKey: opts.seasonKey,
+      board: boards[boardIdx - 1]!,
+    };
+  }
+
+  const idx = opts.seasonKeys.indexOf(opts.seasonKey);
+  const latestIdx = opts.seasonKeys.length - 1;
+  /** 最新シーズン先頭 = next が CAREER から入る位置 → CAREER へ */
+  if (idx === latestIdx || idx <= 0) {
+    return {
+      viewMode: "career",
+      seasonKey: opts.seasonKey,
+      board: opts.board,
+    };
+  }
+
+  const prevKey = opts.seasonKeys[idx - 1]!;
+  const prevBoards = careerBoardsForSeason(prevKey);
+  return {
+    viewMode: "season",
+    seasonKey: prevKey,
+    board:
+      prevBoards[prevBoards.length - 1] ??
+      defaultCareerBoardForSeason(prevKey),
+  };
+}
 
 /** 通算サマリー（CAREER 面の主表示） */
 export type UserCareerSummary = UserCareerBoardStats & {
@@ -301,27 +443,12 @@ export type UserCareerSummaryRow = {
   value: string;
 };
 
-export function userCareerSummaryLabels(language: "ja" | "en"): Record<
-  UserCareerSummaryRowKey,
-  string
-> {
-  if (language === "ja") {
-    return {
-      since: "Since",
-      predictions: "Predictions",
-      hits: "Hits",
-      exactHits: "Exact Hits",
-      winRate: "Win Rate",
-      maxWinStreak: "Max Win Streak",
-      bestWeeklyRank: "Best Weekly Rank",
-      bestMonthlyRank: "Best Monthly Rank",
-      weeklyTop10: "Weekly Top 10",
-      monthlyTop10: "Monthly Top 10",
-      bestGroupBattleRank: "Group Battle Best",
-      unlockedSkins: "Unlocked Skins",
-      lifetimeUnits: "Lifetime Units",
-    };
-  }
+export function userCareerSummaryLabels(
+  language: string | null | undefined
+): Record<UserCareerSummaryRowKey, string> {
+  const lang = resolveLocalizedLang(language);
+  // CAREER ボードは英語ラベル固定（Web と同型）。言語引数は API 互換・将来訳用。
+  void lang;
   return {
     since: "Since",
     predictions: "Predictions",
@@ -342,7 +469,7 @@ export function userCareerSummaryLabels(language: "ja" | "en"): Record<
 /** 通算サマリー行（表示順固定） */
 export function buildUserCareerSummaryRows(
   summary: UserCareerSummary,
-  language: "ja" | "en"
+  language: string | null | undefined
 ): UserCareerSummaryRow[] {
   const labels = userCareerSummaryLabels(language);
   return [
@@ -417,7 +544,7 @@ export function buildUserCareerSummaryRows(
 /** シーズン章用（スキン・Unit・GB・Since なし） */
 export function buildUserCareerBoardRows(
   board: UserCareerBoardStats,
-  language: "ja" | "en"
+  language: string | null | undefined
 ): UserCareerSummaryRow[] {
   const labels = userCareerSummaryLabels(language);
   const keys: UserCareerSummaryRowKey[] = [

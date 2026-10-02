@@ -37,7 +37,7 @@ export default function LiveGameSectionTitle({
   return (
     <div className={["flex items-center gap-2.5", className].filter(Boolean).join(" ")}>
       <h2
-        className={`${nameOxanium.className} text-[10px] font-bold uppercase tracking-[0.16em]`}
+        className={`${nameOxanium.className} text-[11px] font-bold uppercase tracking-[0.16em]`}
         style={{ color: hexToRgba(accent, 0.75) }}
       >
         {title}

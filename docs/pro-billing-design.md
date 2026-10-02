@@ -44,6 +44,8 @@ Weekly プランには月次レポートを含めない。
 
 価格は税込表示を基本とする。App Store、Google Play、海外地域では、ストアの価格帯、通貨、税金等によって表示価格が異なる場合がある。
 
+**海外向けの具体価格（初期案）:** [`pro-billing-overseas-prices.md`](pro-billing-overseas-prices.md) — Monthly は円換算おおむね ¥850 以下の強気版。
+
 ---
 
 ## 3. Season Pass
@@ -459,7 +461,7 @@ Pro 利用権は、購入した本人のアカウントにのみ適用する。
 - Weekly に月次レポートを含めない表示方法
 - 特定商取引法に基づく表示内容
 - 解約・返金条件
-- 海外ユーザー向け価格設定
+- 海外ユーザー向け価格設定 → 初期案は [`pro-billing-overseas-prices.md`](pro-billing-overseas-prices.md)
 - PRO INSIGHT の広告表現
 - Pro と Unit・商品交換制度が法的に分離されているか
 - 利用規約、プライバシーポリシーとの整合性
@@ -472,3 +474,4 @@ Pro 利用権は、購入した本人のアカウントにのみ適用する。
 | 日付 | 内容 |
 |---|---|
 | 2026-07-23 | 初版。Pro 課金設計を設計図として保管。Achievement Skin は解放共通・装着は Pro 加入中のみに確定 |
+| 2026-09-10 | 海外向け価格初期案を [`pro-billing-overseas-prices.md`](pro-billing-overseas-prices.md) に分離 |

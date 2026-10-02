@@ -10,9 +10,12 @@ import {
   StyleSheet,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors } from "../theme/tokens";
 import { useNativeNavTabNotificationBadges } from "./useNativeNavTabNotificationBadges";
 import NavBarChamferShellNative from "./NavBarChamferShellNative";
+/** `useBottomTabBarInsets` の pill 底オフセットと同じ式（コンテンツ余白と揃える） */
+const TAB_BAR_BOTTOM_GAP = 2;
 import { useFirebaseUser } from "../auth/FirebaseUserProvider";
 import {
   loadProfileUserDocNative,
@@ -30,6 +33,7 @@ import {
   subscribeTutorialWelcomeChromeHidden,
 } from "../../../../lib/tutorial/tutorialWelcomeChrome";
 import { TUTORIAL_WELCOME_CHROME_FADE_MS } from "../../../../lib/tutorial/tutorialMotion";
+import { resetGamesStackInBackgroundNative, openGamesTabHomeNative } from "./resetGamesTabHomeNative";
 
 /** Web NavBar `data-tutorial-target` 相当 */
 const TUTORIAL_TARGET_BY_ROUTE: Record<string, string> = {
@@ -53,13 +57,33 @@ const TAB_ICONS: Record<
 /** リザルトのみカスタム画像。他は従来アイコン */
 const RESULT_ICON = require("../../assets/navbar/result.png") as number;
 
-const ICON_SIZE = 23;
+const ICON_SIZE = 26;
 /** リザルト（カスタム画像）のみ大きく */
-const RESULT_ICON_SIZE = 32;
+const RESULT_ICON_SIZE = 36;
+
+
+/** フルスクリーン DEV など、タブバーを出さないネスト画面 */
+const TAB_BAR_HIDDEN_ROUTES = new Set<string>([]);
+
+function focusedLeafRouteName(
+  state: BottomTabBarProps["state"]
+): string | undefined {
+  let current: typeof state | undefined = state;
+  let name: string | undefined;
+  while (current?.routes && typeof current.index === "number") {
+    const route = current.routes[current.index];
+    if (!route) break;
+    name = route.name;
+    current = route.state as typeof state | undefined;
+  }
+  return name;
+}
 
 /** mobile Web NavBar と色味を揃えたカスタムタブバー */
 export default function AppTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
+  const insets = useSafeAreaInsets();
   const pillSidePad = Math.max(0, (Dimensions.get("window").width * (1 - 0.94)) / 2);
+  const pillBottom = TAB_BAR_BOTTOM_GAP + insets.bottom;
   /** 連打で navigate が積み上がるのを抑える */
   const lastPressAtRef = useRef(0);
   const { fUser } = useFirebaseUser();
@@ -80,11 +104,16 @@ export default function AppTabBar({ state, descriptors, navigation }: BottomTabB
   }, [chromeOp, welcomeChromeHidden]);
 
   const activeRouteName = state.routes[state.index]?.name ?? "";
+  const leafRouteName = focusedLeafRouteName(state);
   const { showRankingBadge, showResultBadge } =
     useNativeNavTabNotificationBadges({
       rankingTabActive: activeRouteName === "RankingsTab",
       resultTabActive: activeRouteName === "ResultTab",
     });
+
+  if (leafRouteName && TAB_BAR_HIDDEN_ROUTES.has(leafRouteName)) {
+    return null;
+  }
 
   return (
     <View
@@ -97,7 +126,7 @@ export default function AppTabBar({ state, descriptors, navigation }: BottomTabB
           {
             left: pillSidePad,
             right: pillSidePad,
-            bottom: 10,
+            bottom: pillBottom,
             opacity: chromeOp,
           },
         ]}
@@ -126,7 +155,7 @@ export default function AppTabBar({ state, descriptors, navigation }: BottomTabB
                         : { elevation: 6 }),
                     }
                   : {
-                      transform: [{ scale: 0.92 }],
+                      transform: [{ scale: 0.96 }],
                       opacity: 0.9,
                     };
 
@@ -141,6 +170,27 @@ export default function AppTabBar({ state, descriptors, navigation }: BottomTabB
                     canPreventDefault: true,
                   });
                     if (event.defaultPrevented) return;
+
+                  const activeTabName = state.routes[state.index]?.name;
+
+                  /**
+                   * Games スタック reset は同期で重い（特に Android）。
+                   * Profile など遷移先の初回マウントと競合させない。
+                   */
+                  if (
+                    activeTabName === "GamesTab" &&
+                    route.name !== "GamesTab"
+                  ) {
+                    const nav = navigation;
+                    requestAnimationFrame(() => {
+                      resetGamesStackInBackgroundNative(nav);
+                    });
+                  }
+
+                  if (route.name === "GamesTab") {
+                    openGamesTabHomeNative(navigation);
+                    return;
+                  }
 
                   if (route.name === "ProfileTab") {
                     navigation.navigate("ProfileTab", {
@@ -159,6 +209,15 @@ export default function AppTabBar({ state, descriptors, navigation }: BottomTabB
 
                 const warmProfileTab = () => {
                   if (route.name !== "ProfileTab" || !myUid) return;
+                  /**
+                   * lazy ProfileTab を pressIn で先マウント。
+                   * 指を離して navigate する頃には JS バンドル評価が進んでいる。
+                   */
+                  const preload = (
+                    navigation as { preload?: (name: string) => void }
+                  ).preload;
+                  preload?.("ProfileTab");
+
                   const peek = peekProfileUserDocNative(myUid);
                   if (peek) seedNativeProfileStatsFromUserDoc(myUid, peek);
                   void prefetchNativeProfileStats(myUid);
@@ -307,27 +366,27 @@ const styles = StyleSheet.create({
   pillMax: { width: "100%", maxWidth: 960 },
   row: {
     flexDirection: "row",
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
   },
   tabButton: {
     flex: 1,
-    minHeight: 42,
+    minHeight: 48,
     alignItems: "center",
     justifyContent: "center",
   },
   tabButtonActive: {},
   iconWrap: {
-    width: 34,
-    height: 34,
+    width: 38,
+    height: 38,
     alignItems: "center",
     justifyContent: "center",
   },
   dot: {
     position: "absolute",
-    top: 2,
-    right: 2,
+    top: 1,
+    right: 1,
     width: 10,
     height: 10,
     borderRadius: 5,

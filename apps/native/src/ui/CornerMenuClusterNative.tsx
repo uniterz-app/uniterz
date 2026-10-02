@@ -4,7 +4,9 @@
 import { type ReactNode } from "react";
 import { StyleSheet, View, type StyleProp, type ViewStyle } from "react-native";
 import Animated from "react-native-reanimated";
-import CyberMenuButton from "./CyberMenuButton";
+import CyberMenuButton, {
+  type CyberMenuButtonSize,
+} from "./CyberMenuButton";
 import {
   useCornerMenuBottomFlyoutMotion,
   useCornerMenuLeftFlyoutMotion,
@@ -14,12 +16,25 @@ import {
 /** メニューアンカーに対する横フライアウトの出る方向 */
 export type CornerMenuHorizontalFlyout = "left" | "right";
 
+const SIZE_PX: Record<CyberMenuButtonSize, number> = {
+  xs: 24,
+  sm: 28,
+  md: 36,
+  lg: 40,
+};
+
 type Props = {
   open: boolean;
   onToggle: () => void;
   menuLabel: string;
   /** 横フライアウト（共有・× 等）。左上配置は `right` */
   horizontalFlyout?: CornerMenuHorizontalFlyout;
+  /** 既定 xs。リザルト判定前カードは sm + dim */
+  size?: CyberMenuButtonSize;
+  /** size より優先（例: 30） */
+  dim?: number;
+  /** Web `.cyber-menu-btn--white` — 枠白 */
+  menuFrameWhite?: boolean;
   sideFlyout?: ReactNode;
   bottomFlyout?: ReactNode;
   style?: StyleProp<ViewStyle>;
@@ -30,6 +45,9 @@ export default function CornerMenuClusterNative({
   onToggle,
   menuLabel,
   horizontalFlyout = "right",
+  size = "xs",
+  dim,
+  menuFrameWhite = false,
   sideFlyout,
   bottomFlyout,
   style,
@@ -39,6 +57,8 @@ export default function CornerMenuClusterNative({
   const bottomFlyoutMotion = useCornerMenuBottomFlyoutMotion(open);
   const horizontalMotion =
     horizontalFlyout === "right" ? flyoutRightMotion : flyoutLeftMotion;
+  const buttonPx = dim ?? SIZE_PX[size];
+  const half = buttonPx / 2;
 
   return (
     <View style={[styles.hitArea, style]} pointerEvents="box-none">
@@ -47,6 +67,7 @@ export default function CornerMenuClusterNative({
           <Animated.View
             style={[
               horizontalFlyout === "right" ? styles.flyoutRight : styles.flyoutLeft,
+              { marginTop: -half },
               horizontalMotion,
             ]}
             pointerEvents={open ? "auto" : "none"}
@@ -56,7 +77,9 @@ export default function CornerMenuClusterNative({
         ) : null}
 
         <CyberMenuButton
-          size="xs"
+          size={size}
+          dim={dim}
+          frameWhite={menuFrameWhite}
           onPress={onToggle}
           accessibilityLabel={menuLabel}
           accessibilityState={{ expanded: open }}
@@ -64,7 +87,11 @@ export default function CornerMenuClusterNative({
 
         {bottomFlyout ? (
           <Animated.View
-            style={[styles.flyoutBottom, bottomFlyoutMotion]}
+            style={[
+              styles.flyoutBottom,
+              { marginLeft: -half },
+              bottomFlyoutMotion,
+            ]}
             pointerEvents={open ? "auto" : "none"}
           >
             {bottomFlyout}
@@ -94,7 +121,6 @@ const styles = StyleSheet.create({
     right: "100%",
     top: "50%",
     marginRight: 6,
-    marginTop: -14,
     flexDirection: "row",
     gap: 6,
     alignItems: "center",
@@ -106,7 +132,6 @@ const styles = StyleSheet.create({
     left: "100%",
     top: "50%",
     marginLeft: 6,
-    marginTop: -14,
     flexDirection: "row",
     gap: 6,
     alignItems: "center",
@@ -118,7 +143,6 @@ const styles = StyleSheet.create({
     top: "100%",
     left: "50%",
     marginTop: 6,
-    marginLeft: -14,
     zIndex: 55,
     alignItems: "center",
   },

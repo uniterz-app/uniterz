@@ -17,6 +17,11 @@ type SettledTodayCacheEntry = {
 const settledTodayCache = new Map<string, SettledTodayCacheEntry>();
 const SETTLED_TODAY_TIMEOUT_MS = 15_000;
 
+/** プロフィール Overview は NBA のみ */
+export const NATIVE_PROFILE_SETTLED_TODAY_CTX: ProfileStatsStreakContext = {
+  rankingLeague: "nba",
+};
+
 function todayCacheDateKey(): string {
   return toDateKeyInTimeZone(new Date(), TIMEZONE_JST);
 }
@@ -63,6 +68,18 @@ async function loadSettledTodayOnce(
 
   settledTodayCache.set(key, { posts: [], resolved: false, promise });
   return promise;
+}
+
+/** ランキング→プロフィール / idle 先読み。同一キーは inflight 共有（追加 read なし） */
+export function prefetchNativeProfileSettledTodayResults(
+  uid: string | null | undefined,
+  ctx: ProfileStatsStreakContext = NATIVE_PROFILE_SETTLED_TODAY_CTX
+): void {
+  const safeUid = typeof uid === "string" ? uid.trim() : "";
+  if (!safeUid) return;
+  const key = settledTodayCacheKey(safeUid, ctx, todayCacheDateKey());
+  if (settledTodayCache.get(key)?.resolved) return;
+  void loadSettledTodayOnce(safeUid, ctx, key);
 }
 
 export function useNativeProfileSettledTodayResults(

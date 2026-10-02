@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { cyberAlert } from "../../components/cyberAlert";
 import {
   Pressable,
@@ -16,17 +16,19 @@ import { auth, db } from "../../lib/firebase";
 import type { AuthStackParamList } from "../../navigation/types";
 import AuthFormShellNative from "./AuthFormShellNative";
 import { mapAuthErrorMessage } from "./authShared";
-import { spacing } from "../../theme/tokens";
+import SlantCtaNative from "../../ui/SlantCtaNative";
 import { bindMeReferralNative } from "../profile/referralApiNative";
 import { normalizeReferralInviteCode } from "../../../../../lib/referral/referralInviteCode";
-
-const BTN_SKEW = "-10deg";
-const BTN_UNSKEW = "10deg";
+import { authFormCopy } from "@/lib/auth/authFormCopy";
+import { resolveDeviceLocalizedLang } from "../../i18n/resolveDeviceAppLanguage";
+import { referralBindUserMessage } from "@/lib/referral/referralBindErrorCopy";
 
 export default function SignupScreenNative() {
   const navigation =
     useNavigation<NativeStackNavigationProp<AuthStackParamList>>();
   const route = useRoute<RouteProp<AuthStackParamList, "Signup">>();
+  const uiLang = useMemo(() => resolveDeviceLocalizedLang(), []);
+  const copy = useMemo(() => authFormCopy(uiLang), [uiLang]);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [inviteCode, setInviteCode] = useState(
@@ -38,11 +40,11 @@ export default function SignupScreenNative() {
     if (submitting) return;
     const normalized = email.trim().toLowerCase();
     if (!normalized || !password) {
-      cyberAlert("Missing input", "Please enter both email and password.");
+      cyberAlert(copy.missingInputTitle, copy.missingBoth);
       return;
     }
     if (password.length < 6) {
-      cyberAlert("Missing input", "Password must be at least 6 characters.");
+      cyberAlert(copy.missingInputTitle, copy.weakPassword);
       return;
     }
     setSubmitting(true);
@@ -67,12 +69,14 @@ export default function SignupScreenNative() {
       if (code) {
         try {
           await bindMeReferralNative(code);
-        } catch {
-          /* bind 失敗でもサインアップは継続 */
+        } catch (e: unknown) {
+          const errCode = e instanceof Error ? e.message : "";
+          const msg = referralBindUserMessage(errCode, uiLang);
+          if (msg) cyberAlert(copy.missingInputTitle, msg);
         }
       }
     } catch (e) {
-      cyberAlert("Authentication error", mapAuthErrorMessage(e, "signup"));
+      cyberAlert(copy.authErrorTitle, mapAuthErrorMessage(e, "signup"));
     } finally {
       setSubmitting(false);
     }
@@ -84,7 +88,7 @@ export default function SignupScreenNative() {
       footer={
         <View style={styles.footer}>
           <Text style={styles.helperText}>
-            すでにアカウントをお持ちの方は
+            {copy.alreadyLead}
             <Text
               style={styles.helperLinkInline}
               onPress={() => navigation.navigate("Login")}
@@ -96,7 +100,6 @@ export default function SignupScreenNative() {
       }
     >
       <View style={styles.field}>
-        <View style={styles.fieldRail} />
         <TextInput
           style={styles.input}
           placeholder="Email Address"
@@ -108,7 +111,6 @@ export default function SignupScreenNative() {
         />
       </View>
       <View style={styles.field}>
-        <View style={styles.fieldRail} />
         <TextInput
           style={styles.input}
           placeholder="Password (6+ characters)"
@@ -119,7 +121,6 @@ export default function SignupScreenNative() {
         />
       </View>
       <View style={styles.field}>
-        <View style={styles.fieldRail} />
         <TextInput
           style={styles.input}
           placeholder="Invite code (optional)"
@@ -131,26 +132,14 @@ export default function SignupScreenNative() {
         />
       </View>
       <Text style={styles.inviteHint}>
-        友達からコードをもらった場合のみ入力
+        {copy.inviteHint}
       </Text>
-      <View style={styles.ctaSkewWrap}>
-        <Pressable
-          style={styles.ctaPressable}
-          onPress={handleSignup}
-          disabled={submitting}
-        >
-          <View style={styles.ctaBorder}>
-            <View style={styles.ctaFill}>
-              <View style={styles.ctaRail} pointerEvents="none" />
-              <View style={styles.ctaLabelWrap}>
-                <Text style={styles.ctaLabel}>
-                  {submitting ? "Creating..." : "SIGN UP"}
-                </Text>
-              </View>
-            </View>
-          </View>
-        </Pressable>
-      </View>
+      <SlantCtaNative
+        display
+        label={submitting ? "Creating..." : "SIGN UP"}
+        onPress={handleSignup}
+        disabled={submitting}
+      />
     </AuthFormShellNative>
   );
 }
@@ -164,14 +153,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     position: "relative",
     overflow: "hidden",
-  },
-  fieldRail: {
-    position: "absolute",
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 2,
-    backgroundColor: "rgba(0,245,255,0.45)",
   },
   input: {
     paddingHorizontal: 16,
@@ -187,43 +168,6 @@ const styles = StyleSheet.create({
     color: "rgba(186,200,210,0.45)",
     fontSize: 11,
     lineHeight: 15,
-  },
-  ctaSkewWrap: {
-    width: "100%",
-    marginTop: 6,
-    transform: [{ skewX: BTN_SKEW }],
-  },
-  ctaPressable: { width: "100%" },
-  ctaBorder: {
-    width: "100%",
-    borderWidth: 1,
-    borderColor: "rgba(0,245,255,0.34)",
-    backgroundColor: "rgba(8,14,22,0.96)",
-    overflow: "hidden",
-  },
-  ctaFill: {
-    minHeight: 52,
-    justifyContent: "center",
-    paddingHorizontal: spacing.lg,
-    paddingVertical: 14,
-  },
-  ctaRail: {
-    position: "absolute",
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 2,
-    backgroundColor: "rgba(0,245,255,0.55)",
-  },
-  ctaLabelWrap: {
-    transform: [{ skewX: BTN_UNSKEW }],
-    alignItems: "center",
-  },
-  ctaLabel: {
-    fontFamily: "BebasNeue_400Regular",
-    fontSize: 24,
-    letterSpacing: 4,
-    color: "#e8eaed",
   },
   footer: { marginTop: 8, alignItems: "center" },
   helperText: {

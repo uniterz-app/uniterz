@@ -15,6 +15,7 @@ import CommunityGroupDetailCardNative, {
   communityGroupOverlayTopInset,
 } from "./CommunityGroupDetailCardNative";
 import ProfileBackEdgeHandleNative from "../profile/ProfileBackEdgeHandleNative";
+import type { OpenPublicProfileWarm } from "../../navigation/navigateToPublicProfileNative";
 
 type Props = {
   visible: boolean;
@@ -23,7 +24,11 @@ type Props = {
   language: Language;
   onClose: () => void;
   onRefreshList?: () => void;
-  onOpenProfile?: (handle: string, groupId: string) => void;
+  onOpenProfile?: (
+    handle: string,
+    groupId: string,
+    warm?: OpenPublicProfileWarm
+  ) => void;
   getIdToken: () => Promise<string>;
 };
 
@@ -43,6 +48,8 @@ export default function CommunityGroupOverlayNative({
   const [endConfirmOpen, setEndConfirmOpen] = useState(false);
   const [endConfirmName, setEndConfirmName] = useState("");
   const [endingGroup, setEndingGroup] = useState(false);
+  const [leaveConfirmOpen, setLeaveConfirmOpen] = useState(false);
+  const [leavingGroup, setLeavingGroup] = useState(false);
   const [headerImageEditing, setHeaderImageEditing] = useState(false);
   const [profileCoverHidden, setProfileCoverHidden] = useState(false);
 
@@ -53,7 +60,11 @@ export default function CommunityGroupOverlayNative({
   );
 
   useEffect(() => {
-    if (!visible) setProfileCoverHidden(false);
+    if (!visible) {
+      setProfileCoverHidden(false);
+      setEndConfirmOpen(false);
+      setLeaveConfirmOpen(false);
+    }
   }, [visible]);
 
   const confirmEndGroup = useCallback(async () => {
@@ -81,18 +92,56 @@ export default function CommunityGroupOverlayNative({
     }
   }, [groupId, language, onRefreshList, onClose, getIdToken]);
 
+  const confirmLeaveGroup = useCallback(async () => {
+    if (!groupId) return;
+    const h = await communityAuthHeader(getIdToken);
+    if (!h) {
+      cyberAlert("", language === "en" ? "Sign in required." : "ログインが必要です。");
+      return;
+    }
+    setLeavingGroup(true);
+    try {
+      const res = await fetch(communityApiUrl(`/api/communities/${groupId}/leave`), {
+        method: "POST",
+        headers: { Authorization: h },
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json?.ok) {
+        cyberAlert("", String(json?.error ?? "failed"));
+        return;
+      }
+      setLeaveConfirmOpen(false);
+      cyberAlert("", language === "en" ? "Left group." : "退会しました。");
+      invalidateCommunityGroupDetail(groupId);
+      onRefreshList?.();
+      onClose();
+    } finally {
+      setLeavingGroup(false);
+    }
+  }, [groupId, language, onRefreshList, onClose, getIdToken]);
+
   if (!visible || !groupId) return null;
 
   const modalVisible = visible && !profileCoverHidden;
   const backLabel = language === "en" ? "Back" : "戻る";
 
   return (
-    <>
       <Modal
         visible={modalVisible}
         animationType="slide"
         transparent={false}
-        onRequestClose={onClose}
+        onRequestClose={() => {
+          if (endingGroup || leavingGroup) return;
+          if (endConfirmOpen) {
+            setEndConfirmOpen(false);
+            return;
+          }
+          if (leaveConfirmOpen) {
+            setLeaveConfirmOpen(false);
+            return;
+          }
+          onClose();
+        }}
       >
         <SafeAreaProvider initialMetrics={initialWindowMetrics}>
           <View style={styles.overlay}>
@@ -125,11 +174,12 @@ export default function CommunityGroupOverlayNative({
                     setEndConfirmName(name);
                     setEndConfirmOpen(true);
                   }}
+                  onRequestLeave={() => setLeaveConfirmOpen(true)}
                   onImageUpdated={onRefreshList}
                   onHeaderImageEditingChange={setHeaderImageEditing}
-                  onOpenProfile={(handle) => {
+                  onOpenProfile={(handle, warm) => {
                     setProfileCoverHidden(true);
-                    onOpenProfile?.(handle, groupId);
+                    onOpenProfile?.(handle, groupId, warm);
                   }}
                 />
               </CommunityGroupDetailCardNative>
@@ -138,21 +188,76 @@ export default function CommunityGroupOverlayNative({
               onPress={onClose}
               accessibilityLabel={backLabel}
             />
+
+            <EndGroupConfirmModalNative
+              embedded
+              visible={endConfirmOpen}
+              groupName={endConfirmName || listPreview?.name}
+              language={language}
+              busy={endingGroup}
+              onCancel={() => {
+                if (!endingGroup) setEndConfirmOpen(false);
+              }}
+              onConfirm={() => void confirmEndGroup()}
+            />
+
+            <LeaveGroupConfirmModalNative
+              embedded
+              visible={leaveConfirmOpen}
+              groupName={endConfirmName || listPreview?.name}
+              language={language}
+              busy={leavingGroup}
+              onCancel={() => {
+                if (!leavingGroup) setLeaveConfirmOpen(false);
+              }}
+              onConfirm={() => void confirmLeaveGroup()}
+            />
           </View>
         </SafeAreaProvider>
       </Modal>
+  );
+}
 
-      <EndGroupConfirmModalNative
-        visible={endConfirmOpen}
-        groupName={endConfirmName || listPreview?.name}
-        language={language}
-        busy={endingGroup}
-        onCancel={() => {
-          if (!endingGroup) setEndConfirmOpen(false);
-        }}
-        onConfirm={() => void confirmEndGroup()}
-      />
-    </>
+function LeaveGroupConfirmModalNative({
+  visible,
+  groupName,
+  language,
+  busy,
+  onCancel,
+  onConfirm,
+  embedded = false,
+}: {
+  visible: boolean;
+  groupName?: string | null;
+  language: Language;
+  busy: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+  embedded?: boolean;
+}) {
+  const title = language === "en" ? "Leave this group?" : "このグループから退会しますか？";
+  const body =
+    language === "en"
+      ? `You will leave "${groupName ?? "this group"}".`
+      : `「${groupName ?? "このグループ"}」から退会します。`;
+
+  return (
+    <CommunityModalBackdropNative
+      embedded={embedded}
+      visible={visible}
+      onClose={busy ? () => {} : onCancel}
+    >
+      <Text style={modalStyles.title}>{title}</Text>
+      <Text style={modalStyles.body}>{body}</Text>
+      <View style={modalStyles.actions}>
+        <Pressable disabled={busy} onPress={onCancel} style={({ pressed }) => [modalStyles.cancelBtn, pressed && communityPressableTapStyle(true)]}>
+          <Text style={modalStyles.cancelText}>{language === "en" ? "Cancel" : "キャンセル"}</Text>
+        </Pressable>
+        <Pressable disabled={busy} onPress={onConfirm} style={({ pressed }) => [modalStyles.confirmBtn, pressed && communityPressableTapStyle(true)]}>
+          <Text style={modalStyles.confirmText}>{busy ? "…" : language === "en" ? "Leave" : "退会する"}</Text>
+        </Pressable>
+      </View>
+    </CommunityModalBackdropNative>
   );
 }
 
@@ -163,6 +268,7 @@ function EndGroupConfirmModalNative({
   busy,
   onCancel,
   onConfirm,
+  embedded = false,
 }: {
   visible: boolean;
   groupName?: string;
@@ -170,6 +276,7 @@ function EndGroupConfirmModalNative({
   busy: boolean;
   onCancel: () => void;
   onConfirm: () => void;
+  embedded?: boolean;
 }) {
   const title = language === "en" ? "End this group?" : "グループを終了しますか？";
   const body =
@@ -178,7 +285,11 @@ function EndGroupConfirmModalNative({
       : `「${groupName ?? "このグループ"}」を終了します。メンバーはアクティブなスロットから非表示になります。`;
 
   return (
-    <CommunityModalBackdropNative visible={visible} onClose={busy ? () => {} : onCancel}>
+    <CommunityModalBackdropNative
+      embedded={embedded}
+      visible={visible}
+      onClose={busy ? () => {} : onCancel}
+    >
       <Text style={modalStyles.title}>{title}</Text>
       <Text style={modalStyles.body}>{body}</Text>
       <View style={modalStyles.actions}>

@@ -28,6 +28,9 @@ export const MATCH_OVERLAY_GLASS_PANEL = CYBER_GLASS_PANEL;
 export const PREDICT_OVERLAY_BACKDROP =
   "bg-black/40 backdrop-blur-md backdrop-saturate-150";
 
+/** リザルト詳細オーバーレイ背面（予想と同じブラー） */
+export const RESULT_DETAIL_OVERLAY_BACKDROP = PREDICT_OVERLAY_BACKDROP;
+
 /** 予想オーバーレイ：方眼なし・backdrop-blur で背面をぼかすガラス面 */
 export const PREDICT_OVERLAY_BLUR_GLASS = `rounded-2xl ${CYBER_GLASS_SURFACE}`;
 

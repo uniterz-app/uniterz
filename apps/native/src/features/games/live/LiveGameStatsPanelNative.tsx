@@ -1,6 +1,7 @@
 /** Web `LiveGameStatsPanel` 相当 */
 import { StyleSheet, Text, View } from "react-native";
 import type { LiveGameStatsReport } from "../../../../../../lib/games/liveGameStats";
+import { L, resolveLocalizedLang } from "../../../../../../lib/i18n/localize";
 import { getTeamPrimaryColor } from "../../../../../../lib/team-colors";
 import { LiveMarkPill } from "../LiveMarkPill";
 import {
@@ -16,22 +17,26 @@ import LiveGameSectionTitleNative from "./LiveGameSectionTitleNative";
 
 type Props = {
   report: LiveGameStatsReport;
-  language?: "ja" | "en";
+  language?: string;
   /** オーバーレイで MatchCard がスコアを出すとき、スコアヘッダーを省略 */
   omitScoreHeader?: boolean;
+  onOpenTeamDetail?: (teamId: string) => void;
+  onOpenPlayerDetail?: (playerId: string) => void;
 };
 
 export default function LiveGameStatsPanelNative({
   report,
   language = "ja",
   omitScoreHeader = false,
+  onOpenTeamDetail,
+  onOpenPlayerDetail,
 }: Props) {
   const homeColor =
     getTeamPrimaryColor("nba", report.home.teamId) ?? "#5cf0b5";
   const awayColor =
     getTeamPrimaryColor("nba", report.away.teamId) ?? "#b388ff";
   const isLive = report.phase === "live";
-  const isEn = language === "en";
+  const lang = resolveLocalizedLang(language);
   const periodText =
     !isLive && /^final$/i.test(report.periodLabel.trim())
       ? ""
@@ -39,7 +44,15 @@ export default function LiveGameStatsPanelNative({
   const liveStatusText = [periodText, report.clock ?? ""]
     .filter(Boolean)
     .join(" ");
-  const finalLabel = isEn ? "Final" : "試合終了";
+  const finalLabel = L(lang, {
+    ja: "試合終了",
+    en: "Final",
+    ko: "종료",
+    zh: "已结束",
+    es: "Final",
+    pt: "Encerrado",
+    fr: "Terminé",
+  });
   const hasLineScore = Boolean(report.lineScore?.periods.length);
 
   return (
@@ -101,7 +114,10 @@ export default function LiveGameStatsPanelNative({
 
       <View style={styles.section}>
         <LiveGameSectionTitleNative title="Team Stats" />
-        <LiveGameTeamStatsPanelNative report={report} />
+        <LiveGameTeamStatsPanelNative
+          report={report}
+          onOpenTeamDetail={onOpenTeamDetail}
+        />
       </View>
 
       <View style={styles.section}>
@@ -111,7 +127,10 @@ export default function LiveGameStatsPanelNative({
 
       <View style={styles.section}>
         <LiveGameSectionTitleNative title="Box Score" />
-        <LiveGameBoxScorePanelNative report={report} />
+        <LiveGameBoxScorePanelNative
+          report={report}
+          onOpenPlayerDetail={onOpenPlayerDetail}
+        />
       </View>
     </View>
   );

@@ -18,6 +18,7 @@ const CANCEL_DY_PX = 40;
 export default function ProfileMenuEdgeHandle({
   onOpen,
   unreadCount = 0,
+  adminUnreadCount = 0,
   ariaLabel = "メニュー",
   /** サイドメニュー開中は非表示（ドロワーと文字が被らないようにする） */
   hidden = false,
@@ -31,9 +32,13 @@ export default function ProfileMenuEdgeHandle({
   overlay = false,
   /** チュートリアル穴測定（Web data-tutorial-target 相当） */
   tutorialTargetId,
+  /** 親レール内に置く（portal / 右端スワイプなし） */
+  inline = false,
 }: {
   onOpen: () => void;
   unreadCount?: number;
+  /** 管理の新着（問い合わせ・交換申請）。赤バッジ */
+  adminUnreadCount?: number;
   ariaLabel?: string;
   hidden?: boolean;
   fadeIn?: boolean;
@@ -41,6 +46,7 @@ export default function ProfileMenuEdgeHandle({
   tone?: "gold" | "back";
   overlay?: boolean;
   tutorialTargetId?: string;
+  inline?: boolean;
 }) {
   const [mounted, setMounted] = useState(false);
 
@@ -49,7 +55,7 @@ export default function ProfileMenuEdgeHandle({
   }, []);
 
   useEffect(() => {
-    if (hidden) return;
+    if (hidden || inline) return;
     let tracking = false;
     let startX = 0;
     let startY = 0;
@@ -90,18 +96,18 @@ export default function ProfileMenuEdgeHandle({
       document.removeEventListener("touchmove", onTouchMove);
       document.removeEventListener("touchend", onTouchEnd);
     };
-  }, [onOpen, hidden]);
+  }, [onOpen, hidden, inline]);
 
-  if (!mounted) return null;
+  if (!mounted && !inline) return null;
 
   const show = !hidden;
-
-  return createPortal(
+  const button = (
     <button
       type="button"
       className={cn(
         "profile-menu-edge-handle",
-        fadeIn && "profile-menu-edge-handle--fade",
+        inline && "profile-menu-edge-handle--inline",
+        fadeIn && !inline && "profile-menu-edge-handle--fade",
         !show && "profile-menu-edge-handle--hidden",
         tone === "back" && "profile-menu-edge-handle--back",
         overlay && "profile-menu-edge-handle--overlay"
@@ -134,12 +140,30 @@ export default function ProfileMenuEdgeHandle({
             {ch}
           </span>
         ))}
+      {adminUnreadCount > 0 ? (
+        <span
+          className="profile-menu-edge-handle__badge profile-menu-edge-handle__badge--admin"
+          aria-hidden
+        >
+          {adminUnreadCount > 9 ? "9+" : adminUnreadCount}
+        </span>
+      ) : null}
       {unreadCount > 0 ? (
-        <span className="profile-menu-edge-handle__badge" aria-hidden>
+        <span
+          className={[
+            "profile-menu-edge-handle__badge",
+            adminUnreadCount > 0
+              ? "profile-menu-edge-handle__badge--lower"
+              : "",
+          ].join(" ")}
+          aria-hidden
+        >
           {unreadCount > 9 ? "9+" : unreadCount}
         </span>
       ) : null}
-    </button>,
-    document.body
+    </button>
   );
+
+  if (inline) return button;
+  return createPortal(button, document.body);
 }

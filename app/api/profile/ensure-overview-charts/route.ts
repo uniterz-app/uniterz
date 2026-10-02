@@ -1,11 +1,12 @@
 /**
- * profileCharts が揃っていなければソースから埋めて cumulative_stats に書き戻す。
- * 欠け補完は公開可。force 再構築は本人 Bearer のみ（コスト爆弾防止）。
+ * 欠けた profileCharts をソースから埋めて cumulative_stats/profileCharts に書き戻す。
+ * プロフィール画面のホットパスからは呼ばない（backfill / force 再構築用）。
  */
 import { NextResponse } from "next/server";
 import { ensureProfileChartsBundle } from "@/lib/profile/ensureProfileChartsBundle";
 import { profileOverviewSeasonKey } from "@/lib/profile/profileOverviewSeason";
 import { requireUidFromRequest } from "@/lib/communities/serverAuth";
+import { checkJobSecret } from "@/lib/security/assertJobSecret";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -18,7 +19,8 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "uid required" }, { status: 400 });
     }
     const force = url.searchParams.get("force") === "1";
-    if (force) {
+    const jobOk = checkJobSecret(req);
+    if (!jobOk) {
       let caller: string;
       try {
         caller = await requireUidFromRequest(req);
@@ -46,7 +48,7 @@ export async function GET(req: Request) {
       builtAtMs: bundle.builtAtMs,
     });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "ensure failed";
-    return NextResponse.json({ error: msg }, { status: 500 });
+    console.error("[api/profile/ensure-overview-charts]", e);
+    return NextResponse.json({ error: "internal" }, { status: 500 });
   }
 }

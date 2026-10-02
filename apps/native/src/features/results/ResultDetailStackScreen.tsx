@@ -17,7 +17,7 @@ export default function ResultDetailStackScreen() {
     <ResultDetailScreen
       visible
       postId={postId}
-      language={language === "en" ? "en" : "ja"}
+      language={language}
       onClose={() => navigation.goBack()}
     />
   );

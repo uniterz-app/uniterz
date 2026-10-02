@@ -128,10 +128,18 @@ const styles = StyleSheet.create({
   wordmarkStack: {
     position: "relative",
     alignItems: "center",
-    shadowColor: "rgba(103,232,249,1)",
-    shadowOpacity: 0.22,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 0 },
+    ...Platform.select({
+      ios: {
+        shadowColor: "rgba(103,232,249,1)",
+        shadowOpacity: 0.22,
+        shadowRadius: 12,
+        shadowOffset: { width: 0, height: 0 },
+      },
+      android: {
+        elevation: 4,
+      },
+      default: {},
+    }),
   },
   brandExtrude: {
     position: "absolute",
@@ -148,8 +156,13 @@ const styles = StyleSheet.create({
     letterSpacing: WORDMARK_TRACKING,
     fontFamily: DISPLAY_FONT_FAMILY,
     includeFontPadding: false,
-    textShadowColor: "rgba(255,255,255,0.4)",
-    textShadowOffset: { width: 0, height: -1 },
-    textShadowRadius: 0,
+    ...Platform.select({
+      ios: {
+        textShadowColor: "rgba(255,255,255,0.4)",
+        textShadowOffset: { width: 0, height: -1 },
+        textShadowRadius: 0,
+      },
+      default: {},
+    }),
   },
 });

@@ -24,6 +24,8 @@ type Props = {
   language: GamesLanguage;
   t: GamesTexts;
   userPredictionWinner?: MarketKey | null;
+  /** games.predictorCount。無ければ分布 total */
+  predictionCount?: number;
 };
 
 const MARKET_BAR_SEGMENTS = 20;
@@ -395,6 +397,7 @@ export default function MatchCardOverlayMarketBarNative({
   language,
   t,
   userPredictionWinner = null,
+  predictionCount,
 }: Props) {
   const { isSoccer, total, homePct, awayPct, drawPct, fromFallback } =
     useGameMarketDistributionNative(gameId, league, fallbackMarketBias);
@@ -416,6 +419,15 @@ export default function MatchCardOverlayMarketBarNative({
 
   if (!hasData) return null;
 
+  const displayCount =
+    typeof predictionCount === "number" &&
+    Number.isFinite(predictionCount) &&
+    predictionCount >= 0
+      ? Math.floor(predictionCount)
+      : total > 0 && !fromFallback
+        ? total
+        : null;
+
   const marketBiasLabel = t.marketBias;
   const totalLabel = t.totalPredictions;
   const markerCenter =
@@ -435,7 +447,7 @@ export default function MatchCardOverlayMarketBarNative({
         >
           -{marketBiasLabel}-
         </Text>
-        {total > 0 && !fromFallback ? (
+        {displayCount != null ? (
           <Text
             style={[
               styles.totalText,
@@ -443,7 +455,7 @@ export default function MatchCardOverlayMarketBarNative({
             ]}
           >
             {totalLabel}
-            <Text style={styles.totalNum}>{total}</Text>
+            <Text style={styles.totalNum}>{displayCount}</Text>
           </Text>
         ) : null}
       </View>
@@ -536,7 +548,8 @@ const styles = StyleSheet.create({
   totalText: {
     position: "absolute",
     right: 0,
-    top: 0,
+    top: "50%",
+    marginTop: -7,
     fontFamily: MATCH_CARD_METRIC_FONT,
     color: "rgba(255,255,255,0.7)",
     fontSize: 11,

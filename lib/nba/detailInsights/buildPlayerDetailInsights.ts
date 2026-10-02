@@ -1,0 +1,238 @@
+import type {
+  PlayerConsistencyInsight,
+  PlayerDetailInsights,
+  PlayerDetailSummary,
+  PlayerRoleChangeSignal,
+} from "@/lib/nba/detailInsights/detailInsightTypes";
+import { enrichInsightChip } from "@/lib/nba/detailInsights/detailChipCopy";
+import { findCuratedPlayerRole, buildCuratedPlayerRoleChips } from "@/lib/nba/detailInsights/nbaCuratedPlayerRoles";
+import type {
+  NbaPlayerDetailPreview,
+  NbaPlayerGameLog,
+} from "@/lib/predict/nbaPlayerDetailPreviewMocks";
+import type { NbaRosterPlayer } from "@/lib/predict/nbaRoster";
+
+export type BuildPlayerDetailInsightsInput = {
+  detail: NbaPlayerDetailPreview;
+  rosterPlayer?: NbaRosterPlayer | null;
+  /** 所属チーム全員（旧 auto OPTION 用。curated 移行中は未使用） */
+  teammates?: NbaRosterPlayer[] | null;
+};
+
+function avgLogs(
+  logs: NbaPlayerGameLog[],
+  pick: (g: NbaPlayerGameLog) => number
+): number {
+  if (!logs.length) return 0;
+  return logs.reduce((a, g) => a + pick(g), 0) / logs.length;
+}
+
+function roleLabelJa(id: string): string {
+  const map: Record<string, string> = {
+    first_option: "1st option",
+    second_option: "2nd option",
+    third_option: "3rd option",
+    franchise_player: "franchise player",
+    sixth_man: "sixth man",
+    volume_scorer: "volume scorer",
+    three_d_wing: "3&D wing",
+  };
+  return map[id] ?? id.replace(/_/g, " ");
+}
+
+function buildPlayerSummary(
+  input: BuildPlayerDetailInsightsInput,
+  topRoleId: string | null
+): PlayerDetailSummary | null {
+  const { detail } = input;
+  const gp = detail.season.gamesPlayed;
+  if (gp <= 0 && !detail.gameLogs.length) return null;
+
+  const ja: string[] = [];
+  const en: string[] = [];
+
+  if (gp > 0) {
+    ja.push(
+      `今季${gp}試合 · 平均${detail.season.pts.toFixed(1)}/${detail.season.reb.toFixed(1)}/${detail.season.ast.toFixed(1)}。`
+    );
+    en.push(
+      `${gp} GP · ${detail.season.pts.toFixed(1)}/${detail.season.reb.toFixed(1)}/${detail.season.ast.toFixed(1)} avg.`
+    );
+  }
+
+  const logs = detail.gameLogs;
+  if (logs.length >= 5) {
+    const recent = logs.slice(0, 5);
+    const recentMin = avgLogs(recent, (g) => g.min);
+    const seasonMin = detail.season.min;
+    if (seasonMin > 0) {
+      const ratio = recentMin / seasonMin;
+      if (ratio >= 1.15) {
+        ja.push("直近5試合で出場時間が増加。");
+        en.push("Minutes up over the last 5 games.");
+      } else if (ratio <= 0.85) {
+        ja.push("直近5試合で出場時間が減少。");
+        en.push("Minutes down over the last 5 games.");
+      }
+    }
+  }
+
+  if (topRoleId) {
+    ja.push(`チームの${roleLabelJa(topRoleId)}タイプ。`);
+    en.push(`${roleLabelJa(topRoleId)} role profile.`);
+  }
+
+  if (!ja.length) return null;
+  return { linesJa: ja.join(""), linesEn: en.join("") };
+}
+
+function buildRoleChanges(detail: NbaPlayerDetailPreview): {
+  signals: PlayerRoleChangeSignal[];
+  detailJa: string | null;
+  detailEn: string | null;
+} {
+  const logs = detail.gameLogs;
+  if (logs.length < 8) {
+    return { signals: [], detailJa: null, detailEn: null };
+  }
+
+  const recent = logs.slice(0, 5);
+  const prior = logs.slice(5, 10);
+  const recentMin = avgLogs(recent, (g) => g.min);
+  const priorMin = avgLogs(prior, (g) => g.min);
+  const recentFga = avgLogs(recent, (g) => g.fga);
+  const priorFga = avgLogs(prior, (g) => g.fga);
+  const recentPts = avgLogs(recent, (g) => g.pts);
+  const priorPts = avgLogs(prior, (g) => g.pts);
+  const seasonMin = detail.season.min;
+
+  const signals: PlayerRoleChangeSignal[] = [];
+  const pushSignal = (id: string, label: string) => {
+    const enriched = enrichInsightChip({ id, label, category: "change", score: 0 });
+    signals.push({ id, label, hint: enriched.hint });
+  };
+  if (priorMin > 0 && recentMin >= priorMin * 1.15) {
+    pushSignal("min_up", "MIN ↑");
+  }
+  if (priorMin > 0 && recentMin <= priorMin * 0.85) {
+    pushSignal("min_down", "MIN ↓");
+  }
+  if (priorFga > 0 && recentFga >= priorFga * 1.2) {
+    pushSignal("fga_up", "FGA ↑");
+  }
+  if (priorPts > 0 && recentPts >= priorPts * 1.2) {
+    pushSignal("pts_up", "PTS ↑");
+  }
+
+  const last3Min = avgLogs(logs.slice(0, 3), (g) => g.min);
+  if (seasonMin >= 20 && last3Min >= seasonMin * 1.25) {
+    pushSignal("starter_push", "STARTER PUSH");
+  }
+  if (seasonMin > 0 && last3Min <= seasonMin * 0.75) {
+    pushSignal("bench_slide", "BENCH SLIDE");
+  }
+
+  const detailJa =
+    signals.length > 0
+      ? `直近5試合: ${recentMin.toFixed(1)}分 · ${recentPts.toFixed(1)}点 · ${recentFga.toFixed(1)}本（前5試合比）`
+      : null;
+  const detailEn =
+    signals.length > 0
+      ? `Last 5: ${recentMin.toFixed(1)} MIN · ${recentPts.toFixed(1)} PTS · ${recentFga.toFixed(1)} FGA vs prior 5`
+      : null;
+
+  return { signals: signals.slice(0, 3), detailJa, detailEn };
+}
+
+function stdev(values: number[]): number {
+  if (values.length <= 1) return 0;
+  const mean = values.reduce((a, b) => a + b, 0) / values.length;
+  const varSum = values.reduce((a, v) => a + (v - mean) ** 2, 0);
+  return Math.sqrt(varSum / values.length);
+}
+
+function buildConsistency(detail: NbaPlayerDetailPreview): PlayerConsistencyInsight | null {
+  const logs = detail.gameLogs;
+  if (logs.length < 5) return null;
+
+  const seasonPts = detail.season.pts;
+  const seasonReb = detail.season.reb;
+  const seasonAst = detail.season.ast;
+  if (
+    detail.season.gamesPlayed <= 0 ||
+    ![seasonPts, seasonReb, seasonAst].every((n) => Number.isFinite(n))
+  ) {
+    return null;
+  }
+
+  const last10 = logs.slice(0, Math.min(10, logs.length));
+  const n = last10.length;
+  const above = (
+    pick: (g: (typeof last10)[number]) => number,
+    avg: number
+  ) => last10.filter((g) => pick(g) > avg).length;
+
+  const abovePts = above((g) => g.pts, seasonPts);
+  const aboveReb = above((g) => g.reb, seasonReb);
+  const aboveAst = above((g) => g.ast, seasonAst);
+
+  const ptsVals = last10.map((g) => g.pts);
+  const sd = stdev(ptsVals);
+  let volatility: PlayerConsistencyInsight["volatility"] = "mixed";
+  if (sd < 4) volatility = "stable";
+  else if (sd >= 7) volatility = "volatile";
+
+  const row = (label: string, count: number) => ({
+    label,
+    count,
+    games: n,
+    pct: Math.round((count / n) * 100),
+  });
+
+  return {
+    milestones: [
+      row("PTS > AVG", abovePts),
+      row("REB > AVG", aboveReb),
+      row("AST > AVG", aboveAst),
+    ],
+    last10PtsMin: Math.min(...ptsVals),
+    last10PtsMax: Math.max(...ptsVals),
+    last10Stdev: Math.round(sd * 10) / 10,
+    volatility,
+  };
+}
+
+export function buildPlayerDetailInsights(
+  input: BuildPlayerDetailInsightsInput
+): PlayerDetailInsights {
+  // ROLE は curated のみ（自動判定しない。未登録は空）
+  const curated = findCuratedPlayerRole(
+    input.detail.playerId,
+    input.detail.teamId
+  );
+  const roles = buildCuratedPlayerRoleChips(curated);
+  const topRoleId = roles[0]?.id ?? null;
+  const roleChanges = buildRoleChanges(input.detail);
+
+  return {
+    summary: buildPlayerSummary(input, topRoleId),
+    roles,
+    roleChanges: roleChanges.signals,
+    roleChangeDetailJa: roleChanges.detailJa,
+    roleChangeDetailEn: roleChanges.detailEn,
+    consistency: buildConsistency(input.detail),
+  };
+}
+
+export function volatilityLabel(
+  v: PlayerConsistencyInsight["volatility"]
+): string {
+  switch (v) {
+    case "stable":
+      return "STABLE";
+    case "volatile":
+      return "VOLATILE";
+    default:
+      return "MIXED";
+  }
+}

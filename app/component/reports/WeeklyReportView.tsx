@@ -20,133 +20,35 @@ import {
   PROFILE_FROM_PARAM,
   PROFILE_FROM_REPORT_VALUE,
 } from "@/lib/navigation/rankingsProfileFrom";
+import type { LocalizedLang } from "@/lib/i18n/localize";
+import { REPORT_KUROKIN } from "@/lib/reports/reportChrome";
+import { weeklyReportUiCopy } from "@/lib/reports/weeklyReportUiCopy";
 import {
   INITIAL_REPORT_RIVALS,
   type WeeklyReport,
   type WeeklyReportComment,
-  type WeeklyReportCommentTone,
   type WeeklyReportDivision,
   type WeeklyReportRival,
 } from "@/lib/reports/weeklyReportTypes";
 
-type Lang = "ja" | "en";
+type Lang = LocalizedLang;
 
 /* ============================================================
- * copy（プレビュー段階のローカル辞書。本番配線時に messages/ へ移す）
+ * copy — 7言語は lib/reports/weeklyReportUiCopy.ts に集約
  * ============================================================ */
 
-const COPY = {
-  ja: {
-    title: "WEEKLY REPORT",
-    live: "LEGACY",
-    liveNote: "過去の進行中レポートです。いまは確定週のみ配信されます。",
-    heroRank: "順位",
-    heroScore: "スコア",
-    participants: (n: number) => `${n}人中`,
-    top: (p: string) => `TOP ${p}%`,
-    posts: "投稿",
-    wins: "勝",
-    losses: "敗",
-    firstWeekRank: "今週から参戦",
-    divisions: "部門成績",
-    divisionRank: (n: number) => `部門 #${n}`,
-    divisionUnranked: "圏外",
-    divisionReference: "参考記録",
-    divisionPostsToQualify: (n: number) => `あと${n}予想`,
-    overtaken: "抜いた相手",
-    overtakenBy: "抜かれた相手",
-    noOvertaken: "今週は誰も抜けなかった",
-    noOvertakenBy: "誰にも抜かれなかった",
-    moreRivals: (n: number) => `ほか ${n} 人`,
-    showMore: (n: number) => `もっと見る（${n}人）`,
-    showLess: "閉じる",
-    firstWeekBattle: "今週から参戦。抜いた・抜かれたは来週から表示されます。",
-    battleSummary: (passed: number, passedBy: number) =>
-      `今週は${passed}人を抜き、${passedBy}人に抜かれました`,
-    battleSection: "順位変動",
-    nowRank: (n: number) => `現在 #${n}`,
-    nextTarget: "次のターゲット",
-    targetGapLabel: "抜くまであと",
-    youAreTop: "あなたが首位。追われる側です。",
-    threat: "背後の脅威",
-    threatGapLabel: "背後に接近中",
-    noThreat: "背後に脅威なし",
-    proMember: "Pro会員",
-    commentTone: {
-      climbedBig: "圧巻の週。",
-      climbed: "確実に順位を上げた。",
-      held: "順位キープ。",
-      dropped: "後退した週。",
-      firstWeek: "初参戦の記録がここから始まる。来週は順位変動も表示される。",
-    } satisfies Record<WeeklyReportCommentTone, string>,
-    commentFactor: {
-      targetGap: (rank: number, name: string, pt: string) =>
-        `#${rank} ${name} まであと ${pt}pt。来週の数試合で届く。`,
-      overtakenBy: (name: string) => `${name} に抜かれたまま終わるか、抜き返すか。`,
-      divisionUp: (label: string) => `${label} の伸びが効いた。`,
-      divisionDown: (label: string) => `${label} が足を引っ張った。`,
-      lowVolume: (n: number) => `投稿 ${n} 件。まずは母数から。`,
-    },
-  },
-  en: {
-    title: "WEEKLY REPORT",
-    live: "LEGACY",
-    liveNote: "Legacy in-progress report. Weekly reports now ship as finals only.",
-    heroRank: "Rank",
-    heroScore: "Score",
-    participants: (n: number) => `of ${n}`,
-    top: (p: string) => `TOP ${p}%`,
-    posts: "picks",
-    wins: "W",
-    losses: "L",
-    firstWeekRank: "First week",
-    divisions: "Divisions",
-    divisionRank: (n: number) => `Div #${n}`,
-    divisionUnranked: "Unranked",
-    divisionReference: "Reference",
-    divisionPostsToQualify: (n: number) => `${n} more picks`,
-    overtaken: "Passed",
-    overtakenBy: "Passed by",
-    noOvertaken: "No one passed this week",
-    noOvertakenBy: "Nobody passed you",
-    moreRivals: (n: number) => `+${n} more`,
-    showMore: (n: number) => `Show all (+${n})`,
-    showLess: "Show less",
-    firstWeekBattle: "First week in. Battle log starts next week.",
-    battleSummary: (passed: number, passedBy: number) =>
-      `Passed ${passed}, passed by ${passedBy} this week`,
-    battleSection: "Rank Moves",
-    nowRank: (n: number) => `now #${n}`,
-    nextTarget: "Next Target",
-    targetGapLabel: "To pass",
-    youAreTop: "You lead the board.",
-    threat: "Closing In",
-    threatGapLabel: "Behind you",
-    noThreat: "No threat behind",
-    proMember: "Pro member",
-    commentTone: {
-      climbedBig: "A statement week.",
-      climbed: "A solid climb.",
-      held: "Held your ground.",
-      dropped: "A step back.",
-      firstWeek: "Your record starts here. Rank moves show next week.",
-    } satisfies Record<WeeklyReportCommentTone, string>,
-    commentFactor: {
-      targetGap: (rank: number, name: string, pt: string) =>
-        `${pt}pt to #${rank} ${name}. A few games away.`,
-      overtakenBy: (name: string) => `Passed by ${name}. Pass back next week.`,
-      divisionUp: (label: string) => `${label} carried the week.`,
-      divisionDown: (label: string) => `${label} held you back.`,
-      lowVolume: (n: number) => `${n} picks. Volume first.`,
-    },
-  },
-} as const;
+/** CJK は Noto Sans JP、それ以外はラテン系フォント */
+function bodyFontClass(lang: Lang, latinClassName: string): string {
+  return lang === "ja" || lang === "ko" || lang === "zh"
+    ? jp.className
+    : latinClassName;
+}
 
 /* ============================================================
  * theme — ランキング画面と同じ語彙 + 部門アクセント
  * ============================================================ */
 
-const PANEL_BG = "linear-gradient(170deg, rgba(14,20,32,0.98), rgba(6,10,16,1))";
+const PANEL_BG = REPORT_KUROKIN.bgGrad;
 
 /** 小さめのコーナーカット（部門セル・バトルパネル用） */
 const NOTCH_SM = "polygon(0 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%)";
@@ -172,10 +74,10 @@ const ACCENT = {
     glow: "rgba(52,211,153,0.32)",
   },
   gold: {
-    main: "#facc15",
-    border: "rgba(250,204,21,0.4)",
-    tint: "rgba(250,204,21,0.07)",
-    glow: "rgba(250,204,21,0.3)",
+    main: REPORT_KUROKIN.gold,
+    border: REPORT_KUROKIN.goldBorder,
+    tint: "rgba(232,198,106,0.07)",
+    glow: REPORT_KUROKIN.goldGlow,
   },
   orange: {
     main: "#fb923c",
@@ -194,11 +96,11 @@ const DIVISION_META: Record<
   upset: { label: "UPSET", accent: ACCENT.orange },
 };
 
-function slabStyle(accent: Accent, clip: string = NOTCH_SM): CSSProperties {
+function slabStyle(_accent?: Accent, clip: string = NOTCH_SM): CSSProperties {
   return {
-    border: `1px solid ${accent.border}`,
-    background: `linear-gradient(170deg, ${accent.tint}, rgba(6,10,16,0.98) 70%), ${PANEL_BG}`,
-    boxShadow: `inset 0 0 0 1px rgba(8,14,26,0.85), inset 0 0 16px ${accent.tint}`,
+    border: `1px solid ${REPORT_KUROKIN.goldBorder}`,
+    background: PANEL_BG,
+    boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.85)",
     clipPath: clip,
     WebkitClipPath: clip,
   };
@@ -294,18 +196,26 @@ function Avatar({
  * ============================================================ */
 
 function HeroBlock({ report, lang }: { report: WeeklyReport; lang: Lang }) {
-  const c = COPY[lang];
+  const c = weeklyReportUiCopy(lang);
   const delta = report.rankDeltaPlaces;
   const losses = Math.max(0, report.totalPosts - report.totalWins);
 
   return (
-    <RankingsCyberPanel>
+    <RankingsCyberPanel
+      subtle
+      accentRgb="rgba(0,0,0,0)"
+      shellStyle={{
+        border: `1px solid ${REPORT_KUROKIN.goldBorder}`,
+        background: PANEL_BG,
+        boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.9)",
+      }}
+    >
       <div className="relative z-10">
         {/* 左=順位 / 右=スコア。数字は同一テキスト行でベースライン共有 */}
         <div className="relative mt-1">
           <div
             className="pointer-events-none absolute inset-y-0 left-1/2 w-px -translate-x-1/2"
-            style={{ background: "rgba(34,211,238,0.16)" }}
+            style={{ background: REPORT_KUROKIN.hairline }}
             aria-hidden
           />
 
@@ -445,7 +355,7 @@ function HeroBlock({ report, lang }: { report: WeeklyReport; lang: Lang }) {
 }
 
 function DivisionsBlock({ report, lang }: { report: WeeklyReport; lang: Lang }) {
-  const c = COPY[lang];
+  const c = weeklyReportUiCopy(lang);
   return (
     <section>
       <SectionBadge>{c.divisions}</SectionBadge>
@@ -496,7 +406,7 @@ function DivisionsBlock({ report, lang }: { report: WeeklyReport; lang: Lang }) 
                 <div className="mt-1.5 space-y-0.5">
                   <p
                     className={[
-                      lang === "ja" ? jp.className : nameOxanium.className,
+                      bodyFontClass(lang, nameOxanium.className),
                       "text-[10px] font-semibold leading-none text-white/55",
                     ].join(" ")}
                   >
@@ -552,7 +462,7 @@ function RivalRow({
   lang: Lang;
   accent: Accent;
 }) {
-  const c = COPY[lang];
+  const c = weeklyReportUiCopy(lang);
   const pathname = usePathname() ?? "/mobile";
   const href = rivalProfileHref(pathname, rival);
   return (
@@ -606,7 +516,7 @@ function BattlePanel({
   emptyText: string;
   lang: Lang;
 }) {
-  const c = COPY[lang];
+  const c = weeklyReportUiCopy(lang);
   const CountIcon = countIcon === "up" ? ChevronUp : ArrowDown;
   const [expanded, setExpanded] = useState(false);
   const visible = expanded ? rivals : rivals.slice(0, INITIAL_REPORT_RIVALS);
@@ -635,9 +545,21 @@ function BattlePanel({
       </div>
       {rivals.length > 0 ? (
         <>
-          <ul className="mt-1 divide-y divide-white/6">
-            {visible.map((r) => (
-              <RivalRow key={r.uid} rival={r} lang={lang} accent={accent} />
+          <ul
+            className="mt-1"
+            style={{ borderColor: REPORT_KUROKIN.divider }}
+          >
+            {visible.map((r, i) => (
+              <div
+                key={r.uid}
+                style={
+                  i > 0
+                    ? { borderTop: `1px solid ${REPORT_KUROKIN.divider}` }
+                    : undefined
+                }
+              >
+                <RivalRow rival={r} lang={lang} accent={accent} />
+              </div>
             ))}
           </ul>
           {expanded && overflowCount > 0 ? (
@@ -681,7 +603,7 @@ function BattlePanel({
 }
 
 function BattleBlock({ report, lang }: { report: WeeklyReport; lang: Lang }) {
-  const c = COPY[lang];
+  const c = weeklyReportUiCopy(lang);
   const firstWeek = report.rankDeltaPlaces == null && report.prevRank == null;
 
   if (firstWeek && report.overtaken.length === 0 && report.overtakenBy.length === 0) {
@@ -698,7 +620,7 @@ function BattleBlock({ report, lang }: { report: WeeklyReport; lang: Lang }) {
         <SectionBadge>{c.battleSection}</SectionBadge>
         <p
           className={[
-            lang === "ja" ? jp.className : nameRajdhani.className,
+            bodyFontClass(lang, nameRajdhani.className),
             "mt-2 text-[13px] font-semibold leading-snug tracking-wide text-white/80",
           ].join(" ")}
         >
@@ -775,7 +697,7 @@ function GapValue({
 }
 
 function TargetThreatBlock({ report, lang }: { report: WeeklyReport; lang: Lang }) {
-  const c = COPY[lang];
+  const c = weeklyReportUiCopy(lang);
   const pathname = usePathname() ?? "/mobile";
 
   const rivalLine = (rival: WeeklyReportRival, accent: Accent) => (
@@ -850,7 +772,7 @@ function TargetThreatBlock({ report, lang }: { report: WeeklyReport; lang: Lang 
 
 /** 一言 = tone（総括）+ factor（一番効いた要因 or 次の一手）の合成 */
 function commentText(comment: WeeklyReportComment, lang: Lang): string {
-  const c = COPY[lang];
+  const c = weeklyReportUiCopy(lang);
   const tone = c.commentTone[comment.tone];
   const f = comment.factor;
   const factor =
@@ -865,7 +787,7 @@ function commentText(comment: WeeklyReportComment, lang: Lang): string {
             : f.kind === "lowVolume"
               ? c.commentFactor.lowVolume(f.posts)
               : null;
-  return factor ? `${tone}${lang === "en" ? " " : ""}${factor}` : tone;
+  return factor ? `${tone}${c.toneFactorSeparator}${factor}` : tone;
 }
 
 /* ============================================================
@@ -885,13 +807,14 @@ export default function WeeklyReportView({
   onSelectPeriod,
 }: {
   report: WeeklyReport;
-  language?: Lang;
+  language?: string;
   /** 過去週の切り替え。1件以下ならナビ非表示 */
   periods?: WeeklyReportPeriodOption[];
   selectedPeriodId?: string;
   onSelectPeriod?: (id: string) => void;
 }) {
-  const c = COPY[language];
+  const c = weeklyReportUiCopy(language);
+  const lang = c.lang;
   const periodList = periods ?? [];
   const selectedIdx = periodList.findIndex((p) => p.id === selectedPeriodId);
   const activeIdx = selectedIdx >= 0 ? selectedIdx : 0;
@@ -930,7 +853,7 @@ export default function WeeklyReportView({
             <button
               type="button"
               disabled={!canPrev}
-              aria-label={language === "ja" ? "前の週" : "Previous week"}
+              aria-label={c.prevWeek}
               onClick={() => {
                 if (!canPrev || !onSelectPeriod) return;
                 onSelectPeriod(periodList[activeIdx + 1]!.id);
@@ -938,7 +861,7 @@ export default function WeeklyReportView({
               className={[
                 "flex h-9 w-9 shrink-0 items-center justify-center rounded-md border transition",
                 canPrev
-                  ? "border-white/18 bg-white/5 text-white/80 hover:border-cyan-300/40 hover:text-cyan-100"
+                  ? "border-white/18 bg-white/5 text-white/80 hover:border-white/35 hover:text-white"
                   : "border-white/8 bg-transparent text-white/20",
               ].join(" ")}
             >
@@ -959,7 +882,7 @@ export default function WeeklyReportView({
             <button
               type="button"
               disabled={!canNext}
-              aria-label={language === "ja" ? "次の週" : "Next week"}
+              aria-label={c.nextWeek}
               onClick={() => {
                 if (!canNext || !onSelectPeriod) return;
                 onSelectPeriod(periodList[activeIdx - 1]!.id);
@@ -967,7 +890,7 @@ export default function WeeklyReportView({
               className={[
                 "flex h-9 w-9 shrink-0 items-center justify-center rounded-md border transition",
                 canNext
-                  ? "border-white/18 bg-white/5 text-white/80 hover:border-cyan-300/40 hover:text-cyan-100"
+                  ? "border-white/18 bg-white/5 text-white/80 hover:border-white/35 hover:text-white"
                   : "border-white/8 bg-transparent text-white/20",
               ].join(" ")}
             >
@@ -989,7 +912,7 @@ export default function WeeklyReportView({
                     nameOxanium.className,
                     "shrink-0 rounded-md border px-2.5 py-1.5 text-[11px] font-bold uppercase tracking-wide transition",
                     selected
-                      ? "border-cyan-400/55 bg-cyan-400/14 text-cyan-100"
+                      ? "border-white/28 bg-white/10 text-white"
                       : "border-white/12 bg-white/4 text-white/55 hover:border-white/25",
                   ].join(" ")}
                 >
@@ -1005,16 +928,16 @@ export default function WeeklyReportView({
         <p className="text-[11px] leading-relaxed text-white/45">{c.liveNote}</p>
       ) : null}
 
-      <HeroBlock report={report} lang={language} />
-      <DivisionsBlock report={report} lang={language} />
-      <BattleBlock report={report} lang={language} />
-      <TargetThreatBlock report={report} lang={language} />
+      <HeroBlock report={report} lang={lang} />
+      <DivisionsBlock report={report} lang={lang} />
+      <BattleBlock report={report} lang={lang} />
+      <TargetThreatBlock report={report} lang={lang} />
 
       <p
         className="px-3.5 py-3 text-[12.5px] leading-relaxed text-white/70"
         style={slabStyle(ACCENT.cyan)}
       >
-        {commentText(report.comment, language)}
+        {commentText(report.comment, lang)}
       </p>
     </div>
   );

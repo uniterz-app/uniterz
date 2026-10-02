@@ -4,6 +4,8 @@
  */
 
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
+import { L, resolveLocalizedLang } from "@/lib/i18n/localize";
+import { splitRankingBadgeId } from "@/lib/badges/rankingBadgeId";
 
 export type ProfileCareerAwardHonor = {
   /** 集約キー（metric + rank） */
@@ -71,9 +73,10 @@ const METRIC_LABEL_EN: Record<string, string> = {
   goal_scorer: "SCORER",
 };
 
-function metricLabel(metric: string, language: "ja" | "en"): string {
+function metricLabel(metric: string, language: string | null | undefined): string {
+  const lang = resolveLocalizedLang(language);
   const key = metric.toLowerCase();
-  const map = language === "ja" ? METRIC_LABEL_JA : METRIC_LABEL_EN;
+  const map = lang === "ja" ? METRIC_LABEL_JA : METRIC_LABEL_EN;
   if (map[key]) return map[key];
   return metric.replace(/_/g, " ").toUpperCase();
 }
@@ -83,32 +86,43 @@ function metricLabel(metric: string, language: "ja" | "en"): string {
  */
 export function aggregateCareerAwardsFromBadges(
   badges: readonly ProfileCareerBadgeLike[],
-  language: "ja" | "en"
+  language: string | null | undefined
 ): ProfileCareerAwardHonor[] {
-  const counts = new Map<string, { metric: string; rank: number; count: number }>();
+  const counts = new Map<
+    string,
+    { division: "pickup" | "pro"; metric: string; rank: number; count: number }
+  >();
 
   for (const badge of badges) {
-    const m = MONTHLY_BADGE_RE.exec(badge.id.trim());
+    const { division, body } = splitRankingBadgeId(badge.id);
+    const m = MONTHLY_BADGE_RE.exec(body);
     if (!m) continue;
     const metric = m[3] ?? "";
     const rank = Number(m[4]);
     if (!metric || !Number.isFinite(rank) || rank !== 1) continue;
-    const key = `${metric}:rank${rank}`;
+    const key = `${division}:${metric}:rank${rank}`;
     const prev = counts.get(key);
     if (prev) prev.count += 1;
-    else counts.set(key, { metric, rank, count: 1 });
+    else counts.set(key, { division, metric, rank, count: 1 });
   }
 
   return [...counts.values()]
     .sort((a, b) => b.count - a.count || a.metric.localeCompare(b.metric))
     .map((row) => {
       const metric = metricLabel(row.metric, language);
-      const label =
-        language === "ja"
-          ? `月間 ${metric} ${row.rank}位`
-          : `Monthly ${metric} #${row.rank}`;
+      const lang = resolveLocalizedLang(language);
+      const pro = row.division === "pro" ? "PRO LEAGUE " : "";
+      const label = L(lang, {
+        ja: `${pro}月間 ${metric} ${row.rank}位`,
+        en: `${pro}Monthly ${metric} #${row.rank}`,
+        ko: `${pro}월간 ${metric} ${row.rank}위`,
+        zh: `${pro}月度 ${metric} 第 ${row.rank}`,
+        es: `${pro}Mensual ${metric} #${row.rank}`,
+        pt: `${pro}Mensal ${metric} #${row.rank}`,
+        fr: `${pro}Mensuel ${metric} #${row.rank}`,
+      });
       return {
-        key: `${row.metric}:rank${row.rank}`,
+        key: `${row.division}:${row.metric}:rank${row.rank}`,
         label,
         count: row.count,
       };
@@ -138,7 +152,7 @@ export function formatCareerSinceDate(
 }
 
 export function buildProfileCareerStats(input: {
-  language: "ja" | "en";
+  language: string | null | undefined;
   posts?: number | null;
   winRate?: number | null;
   totalPointsRank?: number | null;

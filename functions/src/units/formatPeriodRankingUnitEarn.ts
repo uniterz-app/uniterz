@@ -3,10 +3,9 @@
  * （lib/units/formatPeriodRankingUnitEarn.ts と同趣旨）
  */
 
-import {
-  periodRankingUnitMetricLabel,
-  type PeriodRankingUnitMetric,
-  type PeriodRankingUnitPeriod,
+import type {
+  PeriodRankingUnitMetric,
+  PeriodRankingUnitPeriod,
 } from "./periodRankingUnitRewards";
 
 function isPeriodMetric(raw: string): raw is PeriodRankingUnitMetric {
@@ -16,6 +15,20 @@ function isPeriodMetric(raw: string): raw is PeriodRankingUnitMetric {
     raw === "totalUpset" ||
     raw === "totalGoalScorerHits"
   );
+}
+
+/** Functions は ja/en のみ（i18n パッケージに依存しない） */
+function periodMetricLabelJaEn(
+  metric: PeriodRankingUnitMetric,
+  language: "ja" | "en"
+): string {
+  const labels: Record<PeriodRankingUnitMetric, { ja: string; en: string }> = {
+    totalPoints: { ja: "総合", en: "Overall" },
+    winRate: { ja: "勝率", en: "Win%" },
+    totalUpset: { ja: "アップセット", en: "Upset" },
+    totalGoalScorerHits: { ja: "得点者", en: "Scorer" },
+  };
+  return labels[metric][language];
 }
 
 function formatLabel(
@@ -57,7 +70,7 @@ function formatTitle(
   const safeRank = Math.max(1, Math.floor(rank));
   const metricLabel =
     metric && isPeriodMetric(metric)
-      ? periodRankingUnitMetricLabel(metric, language)
+      ? periodMetricLabelJaEn(metric, language)
       : null;
   const isOverall = !metric || metric === "totalPoints";
 

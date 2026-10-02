@@ -39,11 +39,13 @@ const PredictionFormV2 = dynamic(() => import("../predict/PredictionFormV2"), {
   ssr: false,
 });
 import type { PredictionPostV2 } from "@/types/prediction-post-v2";
+import type { NbaTopScorerPick } from "@/lib/nba/topScorer";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import { t } from "@/lib/i18n/t";
+import { L, resolveLocalizedLang } from "@/lib/i18n/localize";
 import { CyberNoDataPage } from "@/app/component/common/CyberNoDataLabel";
-import { nbaRegularSeasonWinsLosses } from "@/lib/nbaRegularSeasonRecord";
+import { loadNbaStandingsTeamRecordsShared } from "@/lib/nba/standings/loadNbaStandingsTeamRecordsShared";
 import { footballWinsLossesDraws } from "@/lib/teamRecordDisplay";
 import { fetchWcTeamRecordMap } from "@/lib/legacyWcWebShims";
 import {
@@ -87,7 +89,7 @@ type TeamRecord = {
 const TEAM_RECORD_CACHE_KEY = "schedule_team_record_cache_v5";
 const TEAM_RECORD_CACHE_TTL_MS = 1000 * 60 * 30;
 /** in-memory は teamId 単体だと古い勝敗が残るためバージョン付きキー */
-const TEAM_RECORD_MEM_VER = 4;
+const TEAM_RECORD_MEM_VER = 5;
 function teamRecordMemKey(teamId: string) {
   return `${teamId}:v${TEAM_RECORD_MEM_VER}`;
 }
@@ -211,6 +213,8 @@ export default function ScheduleList({
     useState<PredictionPostV2 | null>(null);
   const [overlayUserPredictionWinner, setOverlayUserPredictionWinner] =
     useState<"home" | "away" | "draw" | null>(null);
+  const [overlayGoalScorerPick, setOverlayGoalScorerPick] =
+    useState<NbaTopScorerPick | null>(null);
   const [predictEditTriggerNonce, setPredictEditTriggerNonce] = useState(0);
   const [overlayLiveMarketBias, setOverlayLiveMarketBias] = useState<{
     homePct: number;
@@ -232,7 +236,9 @@ export default function ScheduleList({
     pathname?.startsWith("/mobile") || pathname?.startsWith("/m/");
 
   const { fUser: user } = useFirebaseUser();
-  const { language } = useUserLanguage(user?.uid ?? null);
+  const { language, timeZone: kickoffTimeZone } = useUserLanguage(
+    user?.uid ?? null
+  );
   const m = t(language);
 
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
@@ -506,8 +512,8 @@ export default function ScheduleList({
 
       try {
         const chunks: string[][] = [];
-        for (let i = 0; i < need.length; i += 10) {
-          chunks.push(need.slice(i, i + 10));
+        for (let i = 0; i < need.length; i += 30) {
+          chunks.push(need.slice(i, i + 30));
         }
 
         const snaps = await Promise.all(
@@ -618,6 +624,22 @@ export default function ScheduleList({
           }
           writeTeamRecordCacheToSession(nextSessionCache);
           if (alive) setTeamRecordMap(merged);
+        } else if (leagueAnimKey === "nba") {
+          const nbaMap = await loadNbaStandingsTeamRecordsShared({
+            teamIds,
+          });
+          if (!alive) return;
+          merged = { ...immediateMap };
+          nextSessionCache = { ...sessionCache };
+          for (const teamId of teamIds) {
+            const value = nbaMap[teamId];
+            if (!value) continue;
+            memoryTeamRecordCache.set(teamRecordMemKey(teamId), value);
+            nextSessionCache[teamId] = value;
+            merged[teamId] = value;
+          }
+          writeTeamRecordCacheToSession(nextSessionCache);
+          if (alive) setTeamRecordMap(merged);
         } else if (missingTeamIds.length > 0) {
           const chunks: string[][] = [];
           for (let i = 0; i < missingTeamIds.length; i += 10) {
@@ -641,27 +663,14 @@ export default function ScheduleList({
             snap.docs.forEach((docSnap) => {
               const d = docSnap.data() as any;
               const teamId = docSnap.id;
-              const isNbaTeam = String(d.league ?? "") === "nba";
-              let value: TeamRecord;
-
-              if (isNbaTeam) {
-                const wl = nbaRegularSeasonWinsLosses(d);
-                value = {
-                  wins: wl.wins,
-                  losses: wl.losses,
-                  rank: typeof d.rank === "number" ? d.rank : undefined,
-                  lastGames: Array.isArray(d.lastGames) ? d.lastGames : [],
-                };
-              } else {
-                const wl = footballWinsLossesDraws(d);
-                value = {
-                  wins: wl.wins,
-                  losses: wl.losses,
-                  draws: wl.draws,
-                  rank: typeof d.rank === "number" ? d.rank : undefined,
-                  lastGames: Array.isArray(d.lastGames) ? d.lastGames : [],
-                };
-              }
+              const wl = footballWinsLossesDraws(d);
+              const value: TeamRecord = {
+                wins: wl.wins,
+                losses: wl.losses,
+                draws: wl.draws,
+                rank: typeof d.rank === "number" ? d.rank : undefined,
+                lastGames: Array.isArray(d.lastGames) ? d.lastGames : [],
+              };
 
               memoryTeamRecordCache.set(teamRecordMemKey(teamId), value);
               nextSessionCache[teamId] = value;
@@ -739,6 +748,7 @@ export default function ScheduleList({
   useEffect(() => {
     setOverlayResultPost(null);
     setOverlayUserPredictionWinner(null);
+    setOverlayGoalScorerPick(null);
     setPredictEditTriggerNonce(0);
     setOverlayLiveMarketBias(null);
   }, [openGameId]);
@@ -792,7 +802,15 @@ export default function ScheduleList({
           label="BACK"
           tone="back"
           overlay
-          ariaLabel={language === "en" ? "Back" : "戻る"}
+          ariaLabel={L(resolveLocalizedLang(language), {
+            ja: "戻る",
+            en: "Back",
+            ko: "뒤로",
+            zh: "返回",
+            es: "Atrás",
+            pt: "Voltar",
+            fr: "Retour",
+          })}
         />
         <motion.div
           className={[
@@ -871,8 +889,10 @@ export default function ScheduleList({
                 <MatchCard
                   {...overlayGameProps}
                   language={language}
+                  timeZone={kickoffTimeZone}
                   resultPost={overlayResultPost}
                   userPredictionWinner={overlayUserPredictionWinner}
+                  overlayGoalScorerPick={overlayGoalScorerPick}
                   resultRatingBarsImmediate
                   marketBias={
                     overlayLiveMarketBias ?? overlayGameProps.marketBias
@@ -976,6 +996,7 @@ export default function ScheduleList({
                 }
                 onExistingResultPostChange={setOverlayResultPost}
                 onUserPredictionWinnerChange={setOverlayUserPredictionWinner}
+                onOverlayGoalScorerChange={setOverlayGoalScorerPick}
                 onPredictEditEnd={() => setPredictEditTriggerNonce(0)}
                 overlayScheduleGameIds={gameIds}
                 overlayScheduleGames={propsList}
@@ -1074,6 +1095,7 @@ export default function ScheduleList({
             : undefined
         }
         language={language}
+        timeZone={kickoffTimeZone}
         className={
           hideListCardForOverlay ? "invisible select-none" : undefined
         }

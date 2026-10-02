@@ -1,3 +1,4 @@
+import { L, resolveLocalizedLang } from "@/lib/i18n/localize";
 export type KinetikStreakVariant =
   | "rib-pulse"
   | "edge-march"
@@ -38,7 +39,7 @@ export function getKinetikStreakColorLabel(
 
 export function formatKinetikWinStreakLabel(
   streak: number,
-  language: "ja" | "en" = "ja"
+  _language: string | null | undefined = "ja"
 ): string {
   const n = Math.max(0, Math.floor(streak));
   if (!isKinetikWinStreakActive(n)) return "";
@@ -48,15 +49,19 @@ export function formatKinetikWinStreakLabel(
 /** 連勝タグタップ時に表示する説明文 */
 export function getKinetikWinStreakExplanation(
   streak: number,
-  language: "ja" | "en" = "ja"
+  language: string | null | undefined = "ja"
 ): string {
+  const lang = resolveLocalizedLang(language);
   const n = Math.max(0, Math.floor(streak));
-
-  if (language === "ja") {
-    return `${n}連勝（W${n}）\n\n今シーズン確定した予想が連続で的中しています。3連勝以上で表示され、連勝が伸びるほど色が変わります（3–4 鋼 / 5–6 シアン / 7–9 金 / 10+ 紅）。`;
-  }
-
-  return `${n} win streak (W${n})\n\nConfirmed picks have won ${n} games in a row this season. Shown at 3+ wins; color shifts as the streak grows (3–4 steel / 5–6 cyber / 7–9 gold / 10+ hot).`;
+  return L(lang, {
+    ja: `${n}連勝（W${n}）\n\n今シーズン確定した予想が連続で的中しています。3連勝以上で表示され、連勝が伸びるほど色が変わります（3–4 鋼 / 5–6 シアン / 7–9 金 / 10+ 紅）。`,
+    en: `${n} win streak (W${n})\n\nConfirmed picks have won ${n} games in a row this season. Shown at 3+ wins; color shifts as the streak grows (3–4 steel / 5–6 cyber / 7–9 gold / 10+ hot).`,
+    ko: `${n}연승（W${n}）\n\n이번 시즌 확정 예상이 연속 적중 중입니다. 3연승 이상 표시되며 연승이 늘수록 색이 바뀝니다（3–4 강 / 5–6 시안 / 7–9 금 / 10+ 홍）.`,
+    zh: `${n} 连胜（W${n}）\n\n本赛季已结算预测连续命中。3 连胜起显示，连胜越长颜色变化（3–4 钢 / 5–6 青 / 7–9 金 / 10+ 红）。`,
+    es: `${n} racha (W${n})\n\nPicks confirmados han ganado ${n} seguidos esta temporada. Se muestra desde 3; el color cambia con la racha (3–4 acero / 5–6 cian / 7–9 oro / 10+ rojo).`,
+    pt: `${n} sequência (W${n})\n\nPicks confirmados venceram ${n} seguidos nesta temporada. Aparece a partir de 3; a cor muda com a sequência (3–4 aço / 5–6 ciano / 7–9 ouro / 10+ vermelho).`,
+    fr: `${n} série (W${n})\n\nDes picks confirmés ont gagné ${n} d’affilée cette saison. Affiché dès 3 ; la couleur évolue (3–4 acier / 5–6 cyan / 7–9 or / 10+ rouge).`,
+  });
 }
 
 export const KINETIK_STREAK_VARIANTS: {

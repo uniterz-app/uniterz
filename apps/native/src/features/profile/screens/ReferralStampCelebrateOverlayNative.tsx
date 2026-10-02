@@ -21,10 +21,8 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import UniterzClearStampNative from "./UniterzClearStampNative";
-import {
-  REFERRAL_STAMP_CELEBRATE_MOTION_MS as M,
-  referralStampCelebrateContent,
-} from "../../../../../../lib/referral/referralStampCelebrate";
+import { REFERRAL_STAMP_CELEBRATE_MOTION_MS as M } from "../../../../../../lib/referral/referralStampCelebrate";
+import { referralStampCelebrateContentLocalized } from "../referralStampCopy";
 import type { ReferralStampToneId } from "../../../../../../lib/referral/referralStampBoard";
 import { CYBER_TAB_CYAN } from "../../../ui/cyberSideMenuNative";
 
@@ -46,6 +44,8 @@ function flashColorForTone(tone: ReferralStampToneId): string {
 type Props = {
   open: boolean;
   slotIndex: number;
+  language?: string;
+  /** @deprecated use language */
   isJa?: boolean;
   replayKey?: number;
   onClose: () => void;
@@ -55,13 +55,15 @@ type Props = {
 export default function ReferralStampCelebrateOverlayNative({
   open,
   slotIndex,
-  isJa = true,
+  language,
+  isJa,
   replayKey = 0,
   onClose,
   onViewStampRally,
 }: Props) {
   const reduceMotion = useReducedMotion() ?? false;
-  const content = referralStampCelebrateContent(slotIndex, isJa);
+  const resolvedLang = language ?? (isJa === false ? "en" : "ja");
+  const content = referralStampCelebrateContentLocalized(slotIndex, resolvedLang);
   const stampRotate = -10 - (content.slotIndex % 3);
 
   const scale = useSharedValue(1);

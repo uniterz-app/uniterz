@@ -10,7 +10,7 @@ import React, {
 } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import GamesSeasonPredictHeaderButtons from "./GamesSeasonPredictHeaderButtons";
-import ProfileMenuEdgeHandle from "@/app/component/profile/ui/ProfileMenuEdgeHandle";
+import GamesRightEdgeTabs from "@/app/component/games/GamesRightEdgeTabs";
 import {
   gamesHeaderFilterWrapClass,
   gamesHeaderMobileShellClass,
@@ -40,15 +40,13 @@ import type { League } from "@/lib/leagues";
 import { useUserPreferredLeague } from "@/lib/hooks/useUserPreferredLeague";
 import { preferredLeagueToGamesLeague } from "@/lib/user/preferredLeague";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { nbaOpeningNightDefaultDateKey } from "@/lib/games/nbaOpeningNightPreviewGames";
+import { nbaGamesDefaultDateKey } from "@/lib/games/nbaOpeningNightPreviewGames";
 import { loadPlayoffBracket } from "@/lib/playoff-bracket-firestore";
 import { getCurrentPlayoffSeason } from "@/lib/playoff-bracket-config";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import { t } from "@/lib/i18n/t";
 import {
-  TIMEZONE_ET,
-  TIMEZONE_JST,
   getTodayKeyInTimeZone,
   parseDateKeyInTimeZone,
   toDateKeyInTimeZone,
@@ -61,6 +59,13 @@ import {
   GAMES_SCHEDULE_SHELL_DURATION_SEC,
 } from "./cyberMotion";
 import { fetchMonthHasGames } from "@/lib/games/fetchMonthHasGames";
+import {
+  adjacentMonthsHaveGameDays,
+  firstGameDayKeyInMonth,
+  gameDaysFromKeys,
+} from "@/lib/games/gameDayIndex";
+import { useGameDayIndex } from "@/lib/games/useGameDayIndex";
+import { GAME_SCHEDULE_SEASON } from "@/lib/games/gameScheduleSeason";
 import { setAppTutorialBlockingEvents } from "@/lib/tutorial/tutorialBlockingEvents";
 import { tutorialSkipConfirmProps } from "@/lib/tutorial/tutorialSkipConfirmProps";
 import {
@@ -69,20 +74,21 @@ import {
   readAppTutorialSeenLocal,
 } from "@/lib/tutorial/tutorialSeen";
 import {
+  markTutorialPageTipSeen,
+  readTutorialPageTipSeen,
+} from "@/lib/tutorial/tutorialPageTips";
+import {
   TUTORIAL_LIVE_PHASE_EVENT,
   readTutorialLivePhase,
   writeTutorialLivePhase,
   type TutorialLivePhase,
 } from "@/lib/tutorial/tutorialLivePhase";
-import { formatTutorialGamesSubstepProgress } from "@/lib/tutorial/tutorialLiveProgress";
 import {
   isTutorialGamesSubstep,
   isTutorialOnGamesHome,
-  nextTutorialGamesSubstep,
-  prevTutorialGamesSubstep,
 } from "@/lib/tutorial/tutorialGamesSubsteps";
 import { clearTutorialLivePick } from "@/lib/tutorial/tutorialLivePick";
-import { writeTutorialLiveTrack, readTutorialLiveTrack } from "@/lib/tutorial/tutorialLiveTrack";
+import { writeTutorialLiveTrack } from "@/lib/tutorial/tutorialLiveTrack";
 import { writeTutorialHorizonSubstep } from "@/lib/tutorial/tutorialHorizonSubstep";
 import { writeTutorialWelcomeHandoff, tutorialProfileHref } from "@/lib/tutorial/tutorialWelcomeHandoff";
 import { setTutorialWelcomeChromeHidden, setTutorialWelcomeBrandHidden } from "@/lib/tutorial/tutorialWelcomeChrome";
@@ -201,27 +207,28 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
   const deepLinkOpenPredictGameId = searchParams.get("openPredict");
 
   const { fUser: user } = useFirebaseUser();
-  const { language } = useUserLanguage(user?.uid ?? null);
+  const { language, timeZone: dayTimeZone } = useUserLanguage(user?.uid ?? null);
   const m = t(language);
   const skipConfirm = tutorialSkipConfirmProps(m.tutorial);
-  const dayTimeZone = language === "en" ? TIMEZONE_ET : TIMEZONE_JST;
   const isMobileRoute = Boolean(
     pathname?.startsWith("/mobile") || pathname?.startsWith("/m/")
   );
-  const openingNightDefaultDay = useMemo(() => {
-    if (!isMobileRoute) return null;
-    return (
-      parseDateKeyInTimeZone(
-        nbaOpeningNightDefaultDateKey(dayTimeZone),
-        dayTimeZone
-      ) ?? null
-    );
-  }, [isMobileRoute, dayTimeZone]);
 
   /* =========================
      League
   ========================= */
   const [league, setLeague] = useState<League>("nba");
+
+  /** オフシーズンは今日窓が空なので、NBA はプレシーズン開始〜開幕前の既定アンカーにする */
+  const openingNightDefaultDay = useMemo(() => {
+    if (league !== "nba") return null;
+    return (
+      parseDateKeyInTimeZone(
+        nbaGamesDefaultDateKey(dayTimeZone),
+        dayTimeZone
+      ) ?? null
+    );
+  }, [dayTimeZone, league]);
   const [tutorialPhase, setTutorialPhase] =
     useState<TutorialLivePhase | null>(() => readTutorialLivePhase());
   const [welcomeWorldFly, setWelcomeWorldFly] = useState(false);
@@ -253,19 +260,19 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
     router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
   }, [searchParams, router, pathname]);
 
-  /** 初回チュートリアル — 本番 Games 画面上で進行 */
+  /** 初回: welcome → ピックアップ説明のみ（他タブは各ページ初訪問時） */
   useEffect(() => {
     const uid = user?.uid;
     if (!uid) return;
-    // 既読は uid 単位。端末共通キーだと別アカウントでスキップされる
     if (readAppTutorialSeenLocal(uid)) return;
+    if (readTutorialPageTipSeen(uid, "games")) return;
     let cancelled = false;
     void (async () => {
       const seen = await fetchAppTutorialSeen(uid);
       if (cancelled || seen) return;
+      if (readTutorialPageTipSeen(uid, "games")) return;
       const existing = readTutorialLivePhase();
       if (
-        existing === "results" ||
         existing === "rankings" ||
         existing === "groups" ||
         existing === "profile" ||
@@ -273,7 +280,10 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
       ) {
         return;
       }
-      const start: TutorialLivePhase = existing ?? "welcome";
+      const start: TutorialLivePhase =
+        existing === "gamesPickup" || existing === "welcome"
+          ? existing
+          : "welcome";
       const audience = ensureTutorialWelcomeFirst();
       writeTutorialLivePhase(start);
       setTutorialPhase(start);
@@ -416,10 +426,27 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
   ]);
 
   /* =========================
-     Game days（アンカー日の暦日±5日を取得しストリップ用。端で+2延長）
+     Game days（カード用はアンカー日の暦日±5日。ストリップはシーズン全試合日インデックス）
   ========================= */
-  const { gameDays, monthRows, peerRowsForSeriesInference, loading: loadingDays } =
-    useGameDays(league, dayTimeZone, anchorForGameDays);
+  const {
+    gameDays: windowGameDays,
+    monthRows,
+    peerRowsForSeriesInference,
+    loading: loadingDays,
+  } = useGameDays(league, dayTimeZone, anchorForGameDays);
+
+  const seasonGameDayKeys = useGameDayIndex({
+    league,
+    season: GAME_SCHEDULE_SEASON,
+    timeZone: dayTimeZone,
+  });
+  const gameDays = useMemo(
+    () =>
+      seasonGameDayKeys
+        ? gameDaysFromKeys(seasonGameDayKeys, dayTimeZone)
+        : windowGameDays,
+    [seasonGameDayKeys, windowGameDays, dayTimeZone]
+  );
 
   const { teams, nameById } = useScheduleTeams(league);
 
@@ -691,6 +718,19 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
       setAdjacentMonthHasGames({ prev: false, next: false, loading: false });
       return;
     }
+    if (seasonGameDayKeys) {
+      const adj = adjacentMonthsHaveGameDays(
+        seasonGameDayKeys,
+        selected,
+        dayTimeZone
+      );
+      setAdjacentMonthHasGames((s) =>
+        !s.loading && s.prev === adj.prev && s.next === adj.next
+          ? s
+          : { ...adj, loading: false }
+      );
+      return;
+    }
     let cancelled = false;
     setAdjacentMonthHasGames((s) => ({ ...s, loading: true }));
     const prevAnchor = shiftCalendarMonthStart(selected, -1, dayTimeZone);
@@ -724,7 +764,22 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
     return () => {
       cancelled = true;
     };
-  }, [selected, league, dayTimeZone]);
+  }, [selected, league, dayTimeZone, seasonGameDayKeys]);
+
+  const moveToAdjacentMonth = useCallback(
+    (delta: -1 | 1) => {
+      if (!selected) return;
+      const monthStart = shiftCalendarMonthStart(selected, delta, dayTimeZone);
+      const firstKey = seasonGameDayKeys
+        ? firstGameDayKeyInMonth(seasonGameDayKeys, monthStart, dayTimeZone)
+        : null;
+      const firstDay = firstKey
+        ? parseDateKeyInTimeZone(firstKey, dayTimeZone)
+        : null;
+      setSelectedAndSync(firstDay ?? monthStart);
+    },
+    [selected, dayTimeZone, seasonGameDayKeys, setSelectedAndSync]
+  );
 
   /* =========================
      today へ戻す（試合のある日のみ。今日以降で最も近い日、なければ最終日）
@@ -876,8 +931,11 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
   useLayoutEffect(() => {
     if (!selected) return;
     if (toDateKeyInTimeZone(selected, dayTimeZone) !== todayKey) return;
-    if (!allFinished) return;
     if (didAutoAdvance.current[league]) return;
+    if (!allFinished) {
+      if ((games?.length ?? 0) > 0) didAutoAdvance.current[league] = true;
+      return;
+    }
     if (!nextGameDay) return;
 
     didAutoAdvance.current[league] = true;
@@ -885,6 +943,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
   }, [
     selected,
     todayKey,
+    games,
     allFinished,
     nextGameDay,
     league,
@@ -899,6 +958,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
     if (!allFinished) return;
     if (didAutoAdvance.current[league]) return;
     if (nextGameDay) return;
+    if (seasonGameDayKeys && !hasAnyListFilter) return;
 
     let cancelled = false;
     fetchNextGameDayAfterLocalDay({
@@ -923,6 +983,8 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
     todayKey,
     allFinished,
     nextGameDay,
+    seasonGameDayKeys,
+    hasAnyListFilter,
     league,
     dayTimeZone,
     setSelectedAndSync,
@@ -1267,18 +1329,14 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
         if (adjacentMonthHasGames.loading || !adjacentMonthHasGames.prev) {
           return;
         }
-        setSelectedAndSync(
-          shiftCalendarMonthStart(selected, -1, dayTimeZone),
-        );
+        moveToAdjacentMonth(-1);
       }}
       onNext={() => {
         if (!selected) return;
         if (adjacentMonthHasGames.loading || !adjacentMonthHasGames.next) {
           return;
         }
-        setSelectedAndSync(
-          shiftCalendarMonthStart(selected, 1, dayTimeZone),
-        );
+        moveToAdjacentMonth(1);
       }}
       onCenterDoubleClick={moveToToday}
       canPrev={adjacentMonthHasGames.prev}
@@ -1319,11 +1377,13 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
                 }
                 if (dest === "features") {
                   writeTutorialLiveTrack("features");
-                  setTutorialPhaseAndStore("gamesPickup");
+                  writeTutorialHorizonSubstep(0);
+                  setTutorialPhaseAndStore("horizon");
+                  router.push(tutorialProfileHref(pathname));
                   return;
                 }
                 writeTutorialLiveTrack("full");
-                setTutorialPhaseAndStore("games");
+                setTutorialPhaseAndStore("gamesPickup");
               }
             : undefined
         }
@@ -1352,11 +1412,13 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
                 }}
                 onNext={() => {
                   writeTutorialLiveTrack("full");
-                  setTutorialPhaseAndStore("games");
+                  setTutorialPhaseAndStore("gamesPickup");
                 }}
                 onAltNext={() => {
                   writeTutorialLiveTrack("features");
-                  setTutorialPhaseAndStore("gamesPickup");
+                  writeTutorialHorizonSubstep(0);
+                  setTutorialPhaseAndStore("horizon");
+                  router.push(tutorialProfileHref(pathname));
                 }}
               />
             )
@@ -1476,7 +1538,21 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
         autoScrollOnInit={false}
         snapSelectOnScroll={isMobile}
         timeZone={dayTimeZone}
-        a11yLocale={language === "en" ? "en-US" : "ja-JP"}
+        a11yLocale={
+          language === "ja"
+            ? "ja-JP"
+            : language === "ko"
+              ? "ko-KR"
+              : language === "zh"
+                ? "zh-CN"
+                : language === "es"
+                  ? "es-ES"
+                  : language === "pt"
+                    ? "pt-BR"
+                    : language === "fr"
+                      ? "fr-FR"
+                      : "en-US"
+        }
         wideItemGap={isMobile}
         compactWebGap={!isMobile}
       />
@@ -1540,13 +1616,16 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
       </div>
       </TutorialWelcomeWorldCamera>
 
-      <ProfileMenuEdgeHandle
-        onOpen={() =>
+      <GamesRightEdgeTabs
+        onOpenStanding={() =>
+          router.push(isMobile ? "/mobile/standings" : "/dev/standings-preview")
+        }
+        onOpenStats={() =>
           router.push(isMobile ? "/mobile/stats-preview" : "/dev/stats-preview")
         }
-        ariaLabel={m.games.statsSection}
-        label="STATS"
-        tutorialTargetId="games-stats-edge"
+        standingAriaLabel="STANDING"
+        statsAriaLabel={m.games.statsSection}
+        statsTutorialTargetId="games-stats-edge"
         hidden={tutorialPhase === "welcome"}
         fadeIn
       />
@@ -1555,86 +1634,27 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
       {isTutorialGamesSubstep(tutorialPhase) ? (
         <TutorialLiveCoach
           open
-          title={
-            tutorialPhase === "gamesPickup"
-              ? m.tutorial.practice.gamesPickupTitle
-              : tutorialPhase === "gamesStats"
-                ? m.tutorial.practice.gamesStatsTitle
-                : m.tutorial.practice.gamesTitle
-          }
-          body={
-            tutorialPhase === "gamesPickup"
-              ? m.tutorial.practice.gamesPickupBody
-              : tutorialPhase === "gamesStats"
-                ? m.tutorial.practice.gamesStatsBody
-                : m.tutorial.practice.gamesBody
-          }
+          title={m.tutorial.practice.gamesPickupTitle}
+          body={m.tutorial.practice.gamesPickupBody}
           skipLabel={m.tutorial.skip}
-          nextLabel={m.tutorial.next}
+          nextLabel={m.common.ok}
           backLabel={m.tutorial.back}
-          target={
-            tutorialPhase === "gamesStats"
-              ? "games-stats-edge"
-              : tutorialPhase === "gamesPickup" && filteredGames.length > 0
-                ? "match-pickup-label"
-                : null
-          }
-          visual={
-            tutorialPhase === "gamesStats"
-              ? null
-              : tutorialPhase === "gamesPickup"
-                ? filteredGames.length === 0
-                  ? "matchCard"
-                  : null
-                : filteredGames.length === 0
-                  ? "matchCard"
-                  : null
-          }
-          progressLabel={formatTutorialGamesSubstepProgress(
-            m.tutorial.practice.progressLabel,
-            tutorialPhase
-          )}
-          accentTone={
-            tutorialPhase === "gamesPickup" ||
-            (readTutorialLiveTrack() === "features" &&
-              tutorialPhase === "gamesStats")
-              ? "feature"
-              : "cyan"
-          }
+          target={filteredGames.length > 0 ? "match-pickup-label" : null}
+          visual={filteredGames.length === 0 ? "matchCard" : null}
+          accentTone="feature"
           {...skipConfirm}
-          onSkip={completeTutorialFully}
+          onSkip={() => {
+            markTutorialPageTipSeen(user?.uid, "games");
+            completeTutorialFully();
+          }}
           onBack={() => {
-            if (
-              readTutorialLiveTrack() === "features" &&
-              tutorialPhase === "gamesPickup"
-            ) {
-              setWelcomeIntroSession(beginTutorialWelcomeIntroSession());
-              setTutorialPhaseAndStore("welcome");
-              return;
-            }
-            const prev = prevTutorialGamesSubstep(tutorialPhase);
-            if (prev === "welcome") {
-              setWelcomeIntroSession(beginTutorialWelcomeIntroSession());
-            }
-            setTutorialPhaseAndStore(prev);
+            setWelcomeIntroSession(beginTutorialWelcomeIntroSession());
+            setTutorialPhaseAndStore("welcome");
           }}
           onNext={() => {
-            if (
-              readTutorialLiveTrack() === "features" &&
-              tutorialPhase === "gamesStats"
-            ) {
-              writeTutorialHorizonSubstep(0);
-              setTutorialPhaseAndStore("horizon");
-              router.push(tutorialProfileHref(pathname));
-              return;
-            }
-            const next = nextTutorialGamesSubstep(tutorialPhase);
-            setTutorialPhaseAndStore(next);
-            if (next === "results") {
-              router.push(
-                pathname?.startsWith("/web") ? "/web/result" : "/mobile/result"
-              );
-            }
+            markTutorialPageTipSeen(user?.uid, "games");
+            setTutorialPhaseAndStore(null);
+            setAppTutorialBlockingEvents(false);
           }}
         />
       ) : null}

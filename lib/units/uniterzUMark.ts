@@ -1,7 +1,7 @@
 /**
  * 確定版 UNITERZ ロゴの U を、ワードマークのアーチを戻して直立させたマーク。
  * 原稿: `public/brand/uniterz-logo.svg` の letter-U。
- * 再生成: node scripts/generate-uniterz-u-mark.mjs
+ * 再生成: node scripts/generate-uniterz-u-mark.mjs / node scripts/generate-uniterz-logo-glb.mjs
  */
 
 export const UNITERZ_U_MARK_VIEWBOX = 1024 as const;
@@ -24,6 +24,7 @@ export const UNITERZ_U_MARK_ASSET = {
   webCyberPngCanvasPath: "/brand/uniterz-u-mark-cyber-1920x1080.png",
   webAppIconSvgPath: "/brand/uniterz-u-app-icon.svg",
   webAppIconPngPath: "/brand/uniterz-u-app-icon.png",
+  webGlbPath: "/logo/uniterz-u-mark.glb",
   width: 2048,
   height: 2048,
 } as const;

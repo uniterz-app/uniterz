@@ -31,23 +31,51 @@ export default function TokushohoPage() {
           <p className="olp-lead">{officialTokushoho.lead}</p>
           <p className="olp-price-note">最終更新: {TOKUSHOHO_UPDATED_AT}</p>
           <dl className="olp-dl">
-            {officialTokushoho.rows.map((row) => (
-              <div key={row.label}>
-                <dt>{row.label}</dt>
-                <dd>
-                  {row.label === "メールアドレス" ? (
-                    <a
-                      href={`mailto:${officialSite.supportEmail}`}
-                      className="text-[#4ff7f4] no-underline"
-                    >
-                      {row.value}
-                    </a>
-                  ) : (
-                    row.value
-                  )}
-                </dd>
-              </div>
-            ))}
+            {officialTokushoho.rows.map((row) => {
+              const isContactBlock = row.id === "contact";
+              return (
+                <div key={row.id}>
+                  <dt>{row.label}</dt>
+                  <dd className="whitespace-pre-line">
+                    {isContactBlock ? (
+                      <>
+                        {row.value.split("\n").map((line) => {
+                          if (line.startsWith("メールアドレス：")) {
+                            return (
+                              <span key={line}>
+                                メールアドレス：
+                                <a
+                                  href={`mailto:${officialSite.supportEmail}`}
+                                  className="text-[#4ff7f4] no-underline"
+                                >
+                                  {officialSite.supportEmail}
+                                </a>
+                                {"\n"}
+                              </span>
+                            );
+                          }
+                          return (
+                            <span key={line}>
+                              {line}
+                              {"\n"}
+                            </span>
+                          );
+                        })}
+                      </>
+                    ) : row.label === "メールアドレス" ? (
+                      <a
+                        href={`mailto:${officialSite.supportEmail}`}
+                        className="text-[#4ff7f4] no-underline"
+                      >
+                        {row.value}
+                      </a>
+                    ) : (
+                      row.value
+                    )}
+                  </dd>
+                </div>
+              );
+            })}
           </dl>
           <nav className="olp-legal-links" aria-label="関連ページ">
             <a href={officialSite.termsHref}>利用規約</a>

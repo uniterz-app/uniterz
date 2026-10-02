@@ -17,7 +17,7 @@ export default function OfficialLpContact() {
     const body = encodeURIComponent(
       `名前: ${name}\nメール: ${email}\n\n${message}`
     );
-    window.location.href = `mailto:${officialSite.supportEmail}?subject=${subject}&body=${body}`;
+    window.location.href = `mailto:${officialSite.infoEmail}?subject=${subject}&body=${body}`;
     setSentHint(true);
   };
 
@@ -28,8 +28,8 @@ export default function OfficialLpContact() {
           <p className="olp-h2-en olp-metric">{officialContact.heading}</p>
           <h2 className="olp-h2">{officialContact.headingJa}</h2>
           <p className="olp-lead">{officialContact.lead}</p>
-          <a href={`mailto:${officialSite.supportEmail}`} className="olp-mail">
-            {officialSite.supportEmail}
+          <a href={`mailto:${officialSite.infoEmail}`} className="olp-mail">
+            {officialSite.infoEmail}
           </a>
         </div>
 
@@ -51,7 +51,7 @@ export default function OfficialLpContact() {
           </button>
           {sentHint ? (
             <p className="m-0 text-[13px] text-[#8b97ad]">
-              メールアプリが開きます。開かない場合は {officialSite.supportEmail}{" "}
+              メールアプリが開きます。開かない場合は {officialSite.infoEmail}{" "}
               へ直接ご連絡ください。
             </p>
           ) : null}

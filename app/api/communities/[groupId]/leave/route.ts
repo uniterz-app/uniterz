@@ -32,6 +32,18 @@ export async function POST(req: Request, ctx: Ctx) {
     batch.delete(adminDb.doc(`users/${uid}/groups/${groupId}`));
     await batch.commit();
 
+    void import("@/lib/communities/refreshGroupMemberPreviews")
+      .then(({ refreshGroupMemberPreviews }) =>
+        refreshGroupMemberPreviews(
+          adminDb,
+          groupId,
+          String(d.ownerUid ?? "")
+        )
+      )
+      .catch((err) =>
+        console.warn("[communities/leave] memberPreviews refresh failed", err)
+      );
+
     return NextResponse.json({ ok: true });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : "error";
@@ -47,6 +59,6 @@ export async function POST(req: Request, ctx: Ctx) {
     if (status === 404)
       return NextResponse.json({ ok: false, error: msg }, { status: 404 });
     console.error("[communities/leave]", e);
-    return NextResponse.json({ ok: false, error: msg }, { status: 500 });
+    return NextResponse.json({ ok: false, error: "internal" }, { status: 500 });
   }
 }

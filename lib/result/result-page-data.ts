@@ -94,7 +94,7 @@ export function pruneDismissedResultListPostIds(
 
 /** リザルト一覧の日付見出し用 TZ（試合一覧の dayTimeZone と揃える） */
 export function resultListTimeZoneForLanguage(lang: Language): string {
-  return lang === "en" ? TIMEZONE_ET : TIMEZONE_JST;
+  return lang === "ja" ? TIMEZONE_JST : TIMEZONE_ET;
 }
 
 export function formatResultDateLabel(
@@ -102,7 +102,7 @@ export function formatResultDateLabel(
   lang: Language,
   timeZone?: string
 ): string {
-  if (!ms) return lang === "en" ? "Unknown" : "不明";
+  if (!ms) return lang === "ja" ? "不明" : "Unknown";
   const tz = timeZone ?? resultListTimeZoneForLanguage(lang);
   const { year, month, day } = getZonedYMD(new Date(ms), tz);
   return `${year}.${month}.${day}`;
@@ -336,7 +336,7 @@ export function flattenResultDayGroups(
 }
 
 /** リザルト一覧：初回取得件数 */
-export const RESULT_INITIAL_PAGE_SIZE = 15;
+export const RESULT_INITIAL_PAGE_SIZE = 10;
 /** リザルト一覧：スクロール追加取得件数 */
 export const RESULT_NEXT_PAGE_SIZE = 10;
 /** @deprecated 初回は RESULT_INITIAL_PAGE_SIZE、追加は RESULT_NEXT_PAGE_SIZE */

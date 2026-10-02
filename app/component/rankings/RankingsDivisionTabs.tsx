@@ -29,25 +29,27 @@ export default function RankingsDivisionTabs({
   const m = t(language).rankings;
 
   return (
-    <CyberSlantedTabBar
-      fill
-      aria-label={m.divisionTabsLabel ?? "Ranking division"}
-    >
-      <CyberSlantedTab
-        role="tab"
-        label={m.divisionStandard ?? "Pick Up"}
-        active={division === "standard"}
-        onClick={() => onChange("standard")}
-        compact
-      />
-      <CyberSlantedTab
-        role="tab"
-        label={m.divisionOpen ?? "PRO LEAGUE"}
-        active={division === "open"}
-        onClick={() => onChange("open")}
-        compact
-        theme={PRO_LEAGUE_DIVISION_TAB_THEME}
-      />
-    </CyberSlantedTabBar>
+    <div data-tutorial-target="rankings-division">
+      <CyberSlantedTabBar
+        fill
+        aria-label={m.divisionTabsLabel ?? "Ranking division"}
+      >
+        <CyberSlantedTab
+          role="tab"
+          label={m.divisionStandard ?? "Pick Up"}
+          active={division === "standard"}
+          onClick={() => onChange("standard")}
+          compact
+        />
+        <CyberSlantedTab
+          role="tab"
+          label={m.divisionOpen ?? "PRO LEAGUE"}
+          active={division === "open"}
+          onClick={() => onChange("open")}
+          compact
+          theme={PRO_LEAGUE_DIVISION_TAB_THEME}
+        />
+      </CyberSlantedTabBar>
+    </div>
   );
 }

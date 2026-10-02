@@ -53,7 +53,43 @@ export type ProfilePlanProBeastBgVariant =
   | "beast-reticle"
   | "beast-facet"
   | "beast-shard"
-  | "beast-tessera";
+  | "beast-tessera"
+  /** Dust / Ash（参照写真の素材マップ） */
+  | "beast-dust"
+  | "beast-dust-ash"
+  /** マイルストーン候補（写真素材マップ） — 連勝20 / Perfect15 / 予想300〜1000 */
+  | "beast-startrail"
+  | "beast-nova"
+  | "beast-lavaflow"
+  | "beast-marscrust"
+  | "beast-lunar"
+  | "beast-nebula"
+  | "beast-galaxy"
+  | "beast-solar"
+  | "beast-jovian"
+  | "beast-rings"
+  | "beast-europa"
+  | "beast-dunes"
+  | "beast-aurora"
+  | "beast-flame"
+  | "beast-pluto"
+  | "beast-saturn"
+  | "beast-nightearth"
+  | "beast-corona"
+  | "beast-crab"
+  | "beast-helix"
+  | "beast-pillars"
+  | "beast-neptune"
+  | "beast-io"
+  | "beast-lena"
+  | "beast-hurricane"
+  | "beast-andromeda"
+  | "beast-southernring"
+  | "beast-deepfield"
+  | "beast-milkyway"
+  /** パーフェクト 3 / 10 */
+  | "beast-shoals"
+  | "beast-uranus";
 
 export type ProfilePlanProBeastBgMeta = {
   id: ProfilePlanProBeastBgVariant;
@@ -523,6 +559,272 @@ export const PROFILE_PLAN_PRO_BEAST_BG_VARIANTS: ProfilePlanProBeastBgMeta[] = [
     swatch:
       "linear-gradient(160deg, #000000, #1a1a1e 40%, #3a3a42 55%, #0a0a0c 78%, #000000)",
   },
+  {
+    id: "beast-dust",
+    label: "Dust",
+    tag: "ダスト",
+    description:
+      "粉噴霧の素材マップ。やや暗めの粒。",
+    swatch:
+      "linear-gradient(150deg, #000000, #12100c 40%, #8a705866 58%, #050505)",
+  },
+  {
+    id: "beast-dust-ash",
+    label: "Ash",
+    tag: "アッシュ",
+    description:
+      "フィルム煤・傷の素材マップ。",
+    swatch:
+      "linear-gradient(155deg, #cfc3a8 0%, #050505 12%, #121212 50%, #cfc3a8 100%)",
+  },
+  {
+    id: "beast-startrail",
+    label: "Star Trail",
+    tag: "星跡",
+    description: "長時間露光で天の極を巡る星の軌跡。",
+    swatch:
+      "linear-gradient(150deg, #020308, #0a1224 40%, #6b8cc566 58%, #030306)",
+  },
+  {
+    id: "beast-nova",
+    label: "Azure Nova",
+    tag: "蒼星",
+    description: "シアンの星雲の縁で光る一つの星。",
+    swatch:
+      "linear-gradient(150deg, #010406, #06222c 40%, #3fb8d066 58%, #010305)",
+  },
+  {
+    id: "beast-lavaflow",
+    label: "Lava Flow",
+    tag: "溶岩流",
+    description: "縄状に流れて固まったパホイホイ溶岩。",
+    swatch:
+      "linear-gradient(150deg, #0a0a0a, #262626 40%, #9a9a9a66 58%, #080808)",
+  },
+  {
+    id: "beast-marscrust",
+    label: "Mars Crust",
+    tag: "火星",
+    description: "火星の脳状地形（ブレインテレイン）のうねり。",
+    swatch:
+      "linear-gradient(150deg, #0a0a0a, #2a2a2a 40%, #8a8a8a66 58%, #080808)",
+  },
+  {
+    id: "beast-lunar",
+    label: "Copernicus",
+    tag: "月面",
+    description: "月のコペルニクス・クレーター。",
+    swatch:
+      "linear-gradient(150deg, #0a0a0a, #2c2c2c 40%, #a0a0a066 58%, #080808)",
+  },
+  {
+    id: "beast-nebula",
+    label: "Cone Nebula",
+    tag: "灰星雲",
+    description: "暗く沈めたモノクロのコーン星雲。",
+    swatch:
+      "linear-gradient(150deg, #000000, #141414 40%, #9a9a9a55 58%, #000000)",
+  },
+  {
+    id: "beast-galaxy",
+    label: "Violet Galaxy",
+    tag: "紫銀河",
+    description: "くすんだ紫に沈めた星の海（Webb）。",
+    swatch:
+      "linear-gradient(150deg, #04020a, #1e0a3a 40%, #a040d066 58%, #2030a055, #020106)",
+  },
+  {
+    id: "beast-solar",
+    label: "Solar Granule",
+    tag: "太陽面",
+    description: "太陽表面の粒状斑。暗く沈めた琥珀色。",
+    swatch:
+      "linear-gradient(150deg, #0a0502, #3a1a06 40%, #c0702066 58%, #050201)",
+  },
+  {
+    id: "beast-jovian",
+    label: "Jovian Storm",
+    tag: "木星嵐",
+    description: "Voyager が撮った木星の大赤斑。沈めた黄土色。",
+    swatch:
+      "linear-gradient(150deg, #060504, #2a2018 40%, #a0907066 58%, #040302)",
+  },
+  {
+    id: "beast-rings",
+    label: "Saturn Rings",
+    tag: "土星環",
+    description: "土星の環のモノクロ縞。",
+    swatch:
+      "linear-gradient(150deg, #000000, #1a1a1a 40%, #b0b0b055 58%, #000000)",
+  },
+  {
+    id: "beast-europa",
+    label: "Europa Ice",
+    tag: "氷衛星",
+    description: "Galileo が撮ったエウロパの氷面と赤いひび。",
+    swatch:
+      "linear-gradient(150deg, #040608, #1a2a30 40%, #90a8b066 58%, #020304)",
+  },
+  {
+    id: "beast-dunes",
+    label: "Mars Dunes",
+    tag: "火星砂丘",
+    description: "HiRISE が撮った火星北極の砂丘群。沈めた赤茶。",
+    swatch:
+      "linear-gradient(150deg, #060403, #2a2016 40%, #8a705066 58%, #030201)",
+  },
+  {
+    id: "beast-aurora",
+    label: "Aurora",
+    tag: "極光",
+    description: "ISS から見たオーロラ。淡い緑の帯。",
+    swatch:
+      "linear-gradient(150deg, #010403, #0a2a1a 40%, #40b08066 58%, #010201)",
+  },
+  {
+    id: "beast-flame",
+    label: "Flame Nebula",
+    tag: "炎星雲",
+    description: "赤外線の炎星雲。抑えた赤とシアン。",
+    swatch:
+      "linear-gradient(150deg, #050203, #2a0e14 40%, #a0405066 58%, #020101)",
+  },
+  {
+    id: "beast-pluto",
+    label: "Pluto",
+    tag: "冥王星",
+    description: "冥王星の地表のモノクロ地形。",
+    swatch:
+      "linear-gradient(150deg, #000000, #181818 40%, #a0a0a055 58%, #000000)",
+  },
+  {
+    id: "beast-saturn",
+    label: "Saturn",
+    tag: "土星",
+    description: "土星本体と環。淡い金色。",
+    swatch:
+      "linear-gradient(150deg, #050403, #2a2418 40%, #b0a07066 58%, #030201)",
+  },
+  {
+    id: "beast-nightearth",
+    label: "Night Earth",
+    tag: "夜地球",
+    description: "宇宙から見た夜の地球の街明かり。",
+    swatch:
+      "linear-gradient(150deg, #010204, #0a1428 40%, #d0a04066 58%, #010102)",
+  },
+  {
+    id: "beast-corona",
+    label: "Solar Corona",
+    tag: "太陽冠",
+    description: "SDO が捉えた太陽コロナのループ。沈めた金。",
+    swatch:
+      "linear-gradient(150deg, #050301, #3a2606 40%, #c0902066 58%, #030201)",
+  },
+  {
+    id: "beast-crab",
+    label: "Crab Nebula",
+    tag: "蟹星雲",
+    description: "超新星残骸・かに星雲のフィラメント。",
+    swatch:
+      "linear-gradient(150deg, #020406, #0e2a2e 40%, #60a0a066 58%, #a0503044, #020203)",
+  },
+  {
+    id: "beast-helix",
+    label: "Helix Nebula",
+    tag: "神の目",
+    description: "らせん星雲の輪。赤と青の瞳。",
+    swatch:
+      "linear-gradient(150deg, #040203, #2a0e0a 40%, #b0503066 58%, #3060a044, #020101)",
+  },
+  {
+    id: "beast-pillars",
+    label: "Pillars of Creation",
+    tag: "創造の柱",
+    description: "Webb が撮った創造の柱。",
+    swatch:
+      "linear-gradient(150deg, #020306, #14182e 40%, #a0704066 58%, #020203)",
+  },
+  {
+    id: "beast-neptune",
+    label: "Neptune",
+    tag: "海王星",
+    description: "Voyager 2 が撮った海王星の青。",
+    swatch:
+      "linear-gradient(150deg, #010208, #081a50 40%, #3060c066 58%, #010104)",
+  },
+  {
+    id: "beast-io",
+    label: "Io",
+    tag: "火山衛星",
+    description: "Galileo が撮ったイオの火山地表。",
+    swatch:
+      "linear-gradient(150deg, #040402, #2a2a10 40%, #a0a04066 58%, #020201)",
+  },
+  {
+    id: "beast-lena",
+    label: "Lena Delta",
+    tag: "大河三角州",
+    description: "Landsat が撮ったレナ川デルタ。",
+    swatch:
+      "linear-gradient(150deg, #020402, #14261a 40%, #6040a066 58%, #020102)",
+  },
+  {
+    id: "beast-hurricane",
+    label: "Hurricane Eye",
+    tag: "台風の目",
+    description: "ISS から見たハリケーンの目。",
+    swatch:
+      "linear-gradient(150deg, #030406, #1a2028 40%, #a0a8b066 58%, #020203)",
+  },
+  {
+    id: "beast-andromeda",
+    label: "Andromeda",
+    tag: "アンドロメダ",
+    description: "紫外線で見たアンドロメダ銀河（GALEX）。",
+    swatch:
+      "linear-gradient(150deg, #020206, #101838 40%, #8090c066 58%, #010103)",
+  },
+  {
+    id: "beast-southernring",
+    label: "Southern Ring",
+    tag: "南の環",
+    description: "Webb が撮った南のリング星雲。",
+    swatch:
+      "linear-gradient(150deg, #030204, #2a1410 40%, #6090b066 58%, #b0603044, #020101)",
+  },
+  {
+    id: "beast-deepfield",
+    label: "Deep Field",
+    tag: "深宇宙の果て",
+    description: "Hubble ウルトラディープフィールド。無数の遠方銀河。",
+    swatch:
+      "linear-gradient(150deg, #010102, #0c0c14 40%, #c0906066 58%, #010101)",
+  },
+  {
+    id: "beast-milkyway",
+    label: "Galactic Core",
+    tag: "銀河系中心",
+    description: "赤外線・X 線・可視光で見た天の川銀河の中心。",
+    swatch:
+      "linear-gradient(150deg, #04020a, #281040 40%, #c0404066 58%, #3050c044, #020104)",
+  },
+  {
+    id: "beast-shoals",
+    label: "Shoals",
+    tag: "バハマの浅瀬",
+    description: "Landsat が撮ったグレートバハマバンクの砂紋。ターコイズの潮流。",
+    swatch:
+      "linear-gradient(150deg, #01060a, #06343a 40%, #30c0a066 58%, #010406)",
+  },
+  {
+    id: "beast-uranus",
+    label: "Uranus",
+    tag: "天王星",
+    description: "Webb NIRCam の天王星と環。青い星々の広視野。",
+    swatch:
+      "linear-gradient(150deg, #010104, #0a1024 40%, #90b0f066 58%, #010102)",
+  },
 ];
 
 /** Round 3 のみ（比較ナビ用） */
@@ -590,6 +892,61 @@ export const PROFILE_PLAN_PRO_BEAST_BG_ROUND7: ProfilePlanProBeastBgVariant[] = 
   "beast-crown",
   "beast-constellation",
 ];
+
+/** Round 8 — Dust / Ash */
+export const PROFILE_PLAN_PRO_BEAST_BG_ROUND8: ProfilePlanProBeastBgVariant[] = [
+  "beast-dust",
+  "beast-dust-ash",
+];
+
+/** Round 9 — マイルストーン候補（地上 → 月 → 宇宙の順に格が上がる） */
+export const PROFILE_PLAN_PRO_BEAST_BG_ROUND9: {
+  id: ProfilePlanProBeastBgVariant;
+  milestone: { ja: string; en: string };
+}[] = [
+  { id: "beast-startrail", milestone: { ja: "連勝 20", en: "Streak 20" } },
+  { id: "beast-nova", milestone: { ja: "パーフェクト 15", en: "Perfect 15" } },
+  { id: "beast-lavaflow", milestone: { ja: "予想 300", en: "Picks 300" } },
+  { id: "beast-marscrust", milestone: { ja: "予想 500", en: "Picks 500" } },
+  { id: "beast-lunar", milestone: { ja: "予想 700", en: "Picks 700" } },
+  { id: "beast-nebula", milestone: { ja: "予想 900", en: "Picks 900" } },
+  { id: "beast-galaxy", milestone: { ja: "予想 1000", en: "Picks 1000" } },
+];
+
+/** Round 10 — マイルストーン追加候補（割り当て未定） */
+export const PROFILE_PLAN_PRO_BEAST_BG_ROUND10: ProfilePlanProBeastBgVariant[] = [
+  "beast-solar",
+  "beast-jovian",
+  "beast-rings",
+  "beast-europa",
+  "beast-dunes",
+  "beast-aurora",
+  "beast-flame",
+  "beast-pluto",
+  "beast-saturn",
+  "beast-nightearth",
+];
+
+/** Round 11 — マイルストーン追加候補 2（割り当て未定） */
+export const PROFILE_PLAN_PRO_BEAST_BG_ROUND11: ProfilePlanProBeastBgVariant[] = [
+  "beast-corona",
+  "beast-crab",
+  "beast-helix",
+  "beast-pillars",
+  "beast-neptune",
+  "beast-io",
+  "beast-lena",
+  "beast-hurricane",
+  "beast-andromeda",
+  "beast-southernring",
+];
+
+/** Round 12 — パーフェクト 3 / 10 追加分（蒼） */
+export const PROFILE_PLAN_PRO_BEAST_BG_ROUND12: ProfilePlanProBeastBgVariant[] = [
+  "beast-shoals",
+  "beast-uranus",
+];
+
 
 export const PROFILE_PLAN_PRO_BEAST_BG_DEFAULT: ProfilePlanProBeastBgVariant =
   "beast-panther";

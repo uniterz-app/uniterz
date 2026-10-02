@@ -5,6 +5,10 @@ import { nameBebas, nameOxanium } from "@/lib/fonts";
 import { matchCardTeamNameStyle } from "@/lib/games/teamDisplayTypography";
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
+import {
+  resolveScoringRulesLang,
+  scoringRulesCopy,
+} from "@/lib/predict/scoringRulesCopy";
 import type { ScoringSport } from "@/lib/scoring/leagueScoringSport";
 import {
   PredictionScoringFullRulesBody,
@@ -32,7 +36,7 @@ export default function PredictionScoringRulesModal({
 }: Props) {
   const m = t(language);
   const isWeb = displaySize === "web";
-  const ja = language !== "en";
+  const rules = scoringRulesCopy(resolveScoringRulesLang(language));
 
   useEffect(() => {
     if (!open) return;
@@ -95,7 +99,7 @@ export default function PredictionScoringRulesModal({
                   isWeb ? "text-[10px]" : "text-[9px]",
                 ].join(" ")}
               >
-                {ja ? "採点ルール" : "How points are scored"}
+                {rules.headerHint}
               </span>
             </div>
 

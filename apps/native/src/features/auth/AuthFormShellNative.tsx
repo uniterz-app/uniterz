@@ -1,10 +1,12 @@
 /**
  * 認証画面共通シェル — Landing / AuthEntry と同世界観（カード枠なし）
+ * 背景の粒子帯は凍結＋中央を暗くして、WELCOME 下の説明文などが被っても読めるようにする。
  */
 import { ReactNode } from "react";
 import {
   Dimensions,
   Keyboard,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableWithoutFeedback,
@@ -14,6 +16,9 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { spacing } from "../../theme/tokens";
 import AuthLandingBackgroundNative from "./AuthLandingBackgroundNative";
+import AuthHexTunnelOverlayNative from "./camera3d/AuthHexTunnelOverlayNative";
+import { AUTH_LANDING_FIELD_VARIANT } from "./camera3d/authLandingFieldVariant";
+import UniterzLogoNative from "../profile/UniterzLogoNative";
 
 type Props = {
   title: string;
@@ -48,7 +53,23 @@ export default function AuthFormShellNative({ title, children, footer }: Props) 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
       <View style={styles.root}>
-        <AuthLandingBackgroundNative />
+        <AuthLandingBackgroundNative paused />
+        {AUTH_LANDING_FIELD_VARIANT === "hexTunnel" ? (
+          <AuthHexTunnelOverlayNative />
+        ) : null}
+        {/* 帯と文字の重なりを抑える暗幕（デザインはそのまま） */}
+        <LinearGradient
+          pointerEvents="none"
+          colors={[
+            "rgba(0,0,0,0.35)",
+            "rgba(0,0,0,0.72)",
+            "rgba(0,0,0,0.78)",
+            "rgba(0,0,0,0.72)",
+            "rgba(0,0,0,0.4)",
+          ]}
+          locations={[0, 0.28, 0.5, 0.72, 1]}
+          style={styles.readabilityScrim}
+        />
         <View
           style={[
             styles.screen,
@@ -58,13 +79,25 @@ export default function AuthFormShellNative({ title, children, footer }: Props) 
             },
           ]}
         >
-          <View style={[styles.form, { width: formWidth }]}>
-            <Text style={styles.brandWordmark}>UNITERZ</Text>
+          <ScrollView
+            style={{ width: formWidth }}
+            contentContainerStyle={styles.form}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+            bounces={false}
+          >
+            <View style={styles.logoWrap}>
+              <UniterzLogoNative width={220} />
+            </View>
             <HorizonRule />
-            <Text style={styles.title}>{title}</Text>
+            <View style={styles.titleWrap}>
+              <Text style={[styles.title, title.length > 12 && styles.titleLong]}>
+                {title}
+              </Text>
+            </View>
             {children}
             {footer}
-          </View>
+          </ScrollView>
         </View>
       </View>
     </TouchableWithoutFeedback>
@@ -74,25 +107,28 @@ export default function AuthFormShellNative({ title, children, footer }: Props) 
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: "#041418",
+    backgroundColor: "#000000",
+  },
+  readabilityScrim: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 1,
   },
   screen: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: spacing.lg,
-    zIndex: 2,
+    zIndex: 6,
   },
   form: {
     gap: 14,
+    flexGrow: 1,
+    justifyContent: "center",
+    paddingVertical: 8,
   },
-  brandWordmark: {
-    color: "#e6e4de",
-    fontFamily: "BebasNeue_400Regular",
-    textAlign: "center",
-    letterSpacing: 5,
-    fontSize: 34,
-    lineHeight: 34,
+  logoWrap: {
+    alignSelf: "center",
+    alignItems: "center",
   },
   horizonSlot: {
     alignSelf: "center",
@@ -108,13 +144,26 @@ const styles = StyleSheet.create({
     width: "100%",
     height: 1.5,
   },
+  titleWrap: {
+    alignSelf: "center",
+    alignItems: "center",
+    transform: [{ skewX: "-10deg" }],
+    marginBottom: 4,
+  },
   title: {
     fontFamily: "BebasNeue_400Regular",
-    fontSize: 26,
-    lineHeight: 30,
-    letterSpacing: 1.6,
+    fontSize: 22,
+    lineHeight: 26,
+    letterSpacing: 2.4,
     color: "rgba(248,250,252,0.95)",
     textAlign: "center",
-    marginBottom: 4,
+    textShadowColor: "rgba(0,0,0,0.85)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 6,
+  },
+  titleLong: {
+    fontSize: 18,
+    lineHeight: 22,
+    letterSpacing: 1.6,
   },
 });

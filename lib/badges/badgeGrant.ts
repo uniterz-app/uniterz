@@ -3,15 +3,17 @@
  *
  * 正本:
  *   user_badges/{uid}/badges/{badgeId}
- *     badgeId, grantedAt, meta.participantCount（付与時点のランキング母数）
+ *     badgeId, grantedAt, meta.participantCount（付与時点の参加者数）
+ *   badgeId は `pickup_` / `pro_` で部門を持つ（`rankingBadgeId.ts`）。付与は `grantRankingBadges`
  *   master_badges/{badgeId}.participantCount（同じ回の共有フォールバック）
  *
  * 表示優先順位: user_badges.meta → master_badges → （旧データ用）スナップショット推測
  */
 
 export type BadgeGrantMeta = {
-  /** その回のランキング参加者数（Top20 人数ではない） */
+  /** 付与時点の参加者数（その回・その部門で 1 回以上投稿した人数。付与人数ではない） */
   participantCount?: number;
+  division?: "pickup" | "pro";
   rank?: number;
   phase?: string;
   metric?: string;

@@ -3,10 +3,15 @@
 /**
  * Native `ResultDetailBodyNative` 相当 — リザルト詳細ボディ（カード面 + この試合 + Top10 + 内訳）。
  */
+import { useMemo } from "react";
 import { Check, X } from "lucide-react";
+import dynamic from "next/dynamic";
+import { useNbaTopScorerCandidates } from "@/lib/nba/useNbaTopScorerCandidates";
 import Link from "next/link";
 import ResultCardDesignFace from "@/app/component/result/ResultCardDesignFace";
 import ResultDetailScoreDonut from "@/app/component/result/ResultDetailScoreDonut";
+import LiveGameStatsPlaceholder from "@/app/component/games/live/LiveGameStatsPlaceholder";
+import { useLiveGameStats } from "@/lib/games/useLiveGameStats";
 import {
   ProCyberBadge,
   proBadgeStaticMotion,
@@ -29,6 +34,11 @@ import type { ResultTopScorerMarketView } from "@/lib/result/resultTopScorerMark
 import type { GamePointsTopEntryV1 } from "@/lib/results/gamePointsTop";
 import { profilePathKeyFromRow } from "@/lib/profile/profilePathKey";
 import { warmPublicProfileFromListEntry } from "@/app/component/profile/useProfile";
+
+const LiveGameStatsPanel = dynamic(
+  () => import("@/app/component/games/live/LiveGameStatsPanel"),
+  { ssr: false }
+);
 
 const ACCENT = "#00F5FF";
 
@@ -81,7 +91,7 @@ function SectionCard({
 }) {
   return (
     <div
-      className="flex flex-col gap-2.5 border bg-transparent px-3 py-3"
+      className="flex flex-col gap-2 border bg-black px-2.5 py-2"
       style={{ borderColor: frameColor }}
     >
       {children}
@@ -126,18 +136,18 @@ function MatchStatsPanel({
       <SectionHeader title={ja ? "この試合" : "THIS MATCH"} accent={ACCENT} />
       <SectionCard frameColor={frameColor}>
         <div className="flex items-stretch">
-          <div className="flex flex-1 flex-col items-center gap-1 py-1">
+          <div className="flex flex-1 flex-col items-center gap-0.5 py-0.5">
             <span
-              className={`${nameOxanium.className} text-[9px] font-bold uppercase tracking-[0.12em] text-slate-400/90`}
+              className={`${nameOxanium.className} text-[8px] font-bold uppercase tracking-[0.11em] text-slate-400/90`}
             >
               {ja ? "投稿数" : "POSTS"}
             </span>
             <span
-              className={`${matchScoreClass} text-[28px] font-black italic leading-none text-slate-50`}
+              className={`${matchScoreClass} text-[22px] font-black italic leading-none text-slate-50`}
             >
               {postCount}
             </span>
-            <span className="text-[9px] tracking-wide text-slate-400/70">
+            <span className="text-[8px] tracking-wide text-slate-400/70">
               {ja ? "この試合" : "This match"}
             </span>
           </div>
@@ -145,18 +155,18 @@ function MatchStatsPanel({
             className="mx-0 my-0.5 w-px"
             style={{ backgroundColor: hexToRgba(ACCENT, 0.22) }}
           />
-          <div className="flex flex-1 flex-col items-center gap-1 py-1">
+          <div className="flex flex-1 flex-col items-center gap-0.5 py-0.5">
             <span
-              className={`${nameOxanium.className} text-[9px] font-bold uppercase tracking-[0.12em] text-slate-400/90`}
+              className={`${nameOxanium.className} text-[8px] font-bold uppercase tracking-[0.11em] text-slate-400/90`}
             >
               {ja ? "中央値" : "MEDIAN"}
             </span>
             <span
-              className={`${matchScoreClass} text-[28px] font-black italic leading-none text-cyan-300`}
+              className={`${matchScoreClass} text-[22px] font-black italic leading-none text-cyan-300`}
             >
               {fmtPt(median)}
             </span>
-            <span className="text-[9px] tracking-wide text-slate-400/70">
+            <span className="text-[8px] tracking-wide text-slate-400/70">
               {ja ? "全投稿の中央" : "All posts"}
             </span>
           </div>
@@ -165,21 +175,21 @@ function MatchStatsPanel({
         {market && slices.length > 0 ? (
           <>
             <div
-              className="my-3.5 h-px"
+              className="my-2.5 h-px"
               style={{ backgroundColor: hexToRgba(ACCENT, 0.18) }}
             />
             <p
-              className={`${nameOxanium.className} mb-2.5 text-[10px] font-extrabold uppercase tracking-[0.14em] text-cyan-300/70`}
+              className={`${nameOxanium.className} mb-2 text-[9px] font-extrabold uppercase tracking-[0.14em] text-cyan-300/70`}
             >
               TOP SCORER
             </p>
-            <div className="flex items-start gap-3">
+            <div className="flex items-start gap-2.5">
               <ResultDetailScoreDonut
                 segments={donutSegments}
                 total={hitRate ?? slices[0]?.pct ?? 0}
                 totalLabel={ja ? "的中率%" : "HIT %"}
-                size={108}
-                thickness={14}
+                size={92}
+                thickness={12}
               />
               <div className="min-w-0 flex-1 space-y-2">
                 {slices.map((slice, i) => {
@@ -206,8 +216,13 @@ function MatchStatsPanel({
                           ) : null}
                         </div>
                         {showPoints ? (
-                          <span className="text-[10px] text-slate-400">
-                            {slice.points} PT
+                          <span
+                            className={`${nameOxanium.className} text-[15px] font-extrabold tabular-nums leading-none text-slate-100`}
+                          >
+                            {slice.points}
+                            <span className="ml-1 text-[11px] font-bold tracking-[0.08em] text-slate-400">
+                              PTS
+                            </span>
                           </span>
                         ) : null}
                       </div>
@@ -241,8 +256,13 @@ function MatchStatsPanel({
                 </p>
                 {myPickSlice?.points != null &&
                 Number.isFinite(myPickSlice.points) ? (
-                  <p className="text-[10px] text-slate-400">
-                    {myPickSlice.points} PT
+                  <p
+                    className={`${nameOxanium.className} text-[14px] font-extrabold tabular-nums leading-none text-slate-100`}
+                  >
+                    {myPickSlice.points}
+                    <span className="ml-1 text-[10px] font-bold tracking-[0.08em] text-slate-400">
+                      PTS
+                    </span>
                   </p>
                 ) : null}
               </div>
@@ -272,11 +292,13 @@ function MatchStatsPanel({
 
 function TopScoresPanel({
   ja,
+  frameColor,
   entries,
   language,
   gamesRoutePrefix,
 }: {
   ja: boolean;
+  frameColor: string;
   entries: GamePointsTopEntryV1[];
   language: Language;
   gamesRoutePrefix: "/web" | "/mobile";
@@ -287,7 +309,7 @@ function TopScoresPanel({
   return (
     <div className="flex flex-col gap-2.5">
       <SectionHeader title={ja ? "得点上位" : "TOP SCORES"} accent={ACCENT} />
-      <div>
+      <SectionCard frameColor={frameColor}>
         {entries.map((entry) => {
           const profileKey = profilePathKeyFromRow({
             uid: entry.uid,
@@ -313,6 +335,8 @@ function TopScoresPanel({
               metric="totalScore"
               metricTag={metricTag}
               countryCode={entry.countryCode}
+              compact
+              scoreLayout="web"
               hideListMeta
               showFirstPlaceFrame
               nameExtra={
@@ -330,6 +354,8 @@ function TopScoresPanel({
                   rank={entry.rank}
                   metric="totalScore"
                   counted={entry.points}
+                  compact
+                  scoreLayout="web"
                 />
               }
             />
@@ -347,7 +373,7 @@ function TopScoresPanel({
             </Link>
           );
         })}
-      </div>
+      </SectionCard>
     </div>
   );
 }
@@ -492,6 +518,8 @@ type Props = {
   gamesRoutePrefix?: "/web" | "/mobile";
   contentPaddingBottom?: number;
   sections?: ResultDetailBodySections;
+  onOpenTeamDetail?: (teamId: string) => void;
+  onOpenPlayerDetail?: (playerId: string) => void;
 };
 
 /** Web 新リザルト詳細 — Native `ResultDetailBodyNative` と同じ構成 */
@@ -501,11 +529,43 @@ export default function ResultDetailBody({
   gamesRoutePrefix = "/mobile",
   contentPaddingBottom = 24,
   sections = "full",
+  onOpenTeamDetail,
+  onOpenPlayerDetail,
 }: Props) {
   const ja = language === "ja";
   const frameColor = hexToRgba(ACCENT, 0.4);
   const dividerColor = hexToRgba(ACCENT, 0.22);
   const matchStats = view.matchStats;
+  const cardAndLiveStats = sections === "cardAndLiveStats";
+  const nbaGameId =
+    String(view.card.league ?? "").toLowerCase() === "nba"
+      ? view.card.gameId || null
+      : null;
+  const needScorerName = Boolean(
+    !view.card.topScorer &&
+      view.card.topScorerPlayerId &&
+      view.card.topScorerTeamId
+  );
+  const { candidates: topScorerCandidates } = useNbaTopScorerCandidates({
+    homeTeamId: view.card.homeTeamId,
+    awayTeamId: view.card.awayTeamId,
+    enabled: needScorerName,
+  });
+  const cardFace = useMemo(() => {
+    if (view.card.topScorer) return view.card;
+    const pid = view.card.topScorerPlayerId?.trim();
+    const tid = view.card.topScorerTeamId?.trim();
+    if (!pid || !tid) return view.card;
+    const hit = topScorerCandidates.find(
+      (c) => c.playerId === pid && c.teamId === tid
+    );
+    if (!hit?.name) return view.card;
+    return { ...view.card, topScorer: hit.name };
+  }, [topScorerCandidates, view.card]);
+  const { report: liveStatsReport, loading: liveStatsLoading } = useLiveGameStats(
+    nbaGameId,
+    Boolean(nbaGameId)
+  );
 
   return (
     <div
@@ -519,12 +579,34 @@ export default function ResultDetailBody({
       >
         <ResultCardDesignFace
           language={language}
-          face={view.card}
+          face={cardFace}
           showDetailTab={false}
+          pickup={cardFace.isPickup}
         />
       </div>
 
-      {sections === "full" ? (
+      {cardAndLiveStats ? (
+        <>
+          <div
+            className="my-4 h-px"
+            style={{ backgroundColor: dividerColor }}
+          />
+          {liveStatsReport ? (
+            <LiveGameStatsPanel
+              report={liveStatsReport}
+              language={language}
+              omitScoreHeader
+              onOpenTeamDetail={onOpenTeamDetail}
+              onOpenPlayerDetail={onOpenPlayerDetail}
+            />
+          ) : (
+            <LiveGameStatsPlaceholder
+              language={language}
+              loading={liveStatsLoading}
+            />
+          )}
+        </>
+      ) : (
         <>
           {matchStats ? (
             <>
@@ -549,6 +631,7 @@ export default function ResultDetailBody({
               />
               <TopScoresPanel
                 ja={ja}
+                frameColor={frameColor}
                 entries={view.topEntries}
                 language={language}
                 gamesRoutePrefix={gamesRoutePrefix}
@@ -565,8 +648,31 @@ export default function ResultDetailBody({
             frameColor={frameColor}
             breakdown={view.breakdown}
           />
+
+          {nbaGameId && (liveStatsReport || liveStatsLoading) ? (
+            <>
+              <div
+                className="my-4 h-px"
+                style={{ backgroundColor: dividerColor }}
+              />
+              {liveStatsReport ? (
+                <LiveGameStatsPanel
+                  report={liveStatsReport}
+                  language={language}
+                  omitScoreHeader
+                  onOpenTeamDetail={onOpenTeamDetail}
+                  onOpenPlayerDetail={onOpenPlayerDetail}
+                />
+              ) : (
+                <LiveGameStatsPlaceholder
+                  language={language}
+                  loading={liveStatsLoading}
+                />
+              )}
+            </>
+          ) : null}
         </>
-      ) : null}
+      )}
     </div>
   );
 }

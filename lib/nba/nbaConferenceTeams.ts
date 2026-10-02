@@ -35,3 +35,11 @@ export function isNbaConferenceTeam(
 ): boolean {
   return NBA_CONFERENCE_TEAM_IDS[conference].includes(teamId);
 }
+
+export function nbaConferenceForTeam(
+  teamId: string
+): NbaConferenceId | null {
+  if (NBA_EAST_TEAM_IDS.includes(teamId)) return "east";
+  if (NBA_WEST_TEAM_IDS.includes(teamId)) return "west";
+  return null;
+}

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireUidFromRequest } from "@/lib/communities/serverAuth";
 import { getAdminDb } from "@/lib/firebaseAdmin";
+import { resolveLocalizedLang } from "@/lib/i18n/localize";
 import { loadUnitLedgerForUid } from "@/lib/units/unitLedgerServer";
 
 export const runtime = "nodejs";
@@ -14,7 +15,7 @@ export async function GET(req: Request) {
   try {
     const uid = await requireUidFromRequest(req);
     const url = new URL(req.url);
-    const language = url.searchParams.get("lang") === "en" ? "en" : "ja";
+    const language = resolveLocalizedLang(url.searchParams.get("lang"));
     const limitRaw = Number(url.searchParams.get("limit") ?? "50");
     const limit = Number.isFinite(limitRaw) ? limitRaw : 50;
     const db = getAdminDb();

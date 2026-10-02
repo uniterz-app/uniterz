@@ -10,10 +10,8 @@ import type {
   MonthlyReportMetric,
   MonthlyReportMetricKey,
   MonthlyReportOutlook,
-  MonthlyReportRadarAxisKey,
   MonthlyReportTeam,
   MonthlyReportUnitGrant,
-  MonthlyReportUnitMetric,
   MonthlyReportUnitSource,
 } from "../../../../../../lib/reports/monthlyReportTypes";
 import { MONTHLY_REPORT_RADAR_STRENGTH_P } from "../../../../../../lib/reports/monthlyReportTypes";
@@ -46,182 +44,25 @@ import {
   PANEL_BG,
   REPORT_ACCENT,
   REPORT_FRAME,
+  REPORT_KUROKIN,
   fmtReportMonth,
   fmtReportPt,
   reportBodyFont,
   reportBodyFontSemibold,
 } from "./reportThemeNative";
 import { MonthlyReportCardShell } from "./reportCardShellNative";
-import { ReportIsometricGridOverlay } from "./reportGridOverlaysNative";
+import type { LocalizedLang } from "../../../../../../lib/i18n/localize";
+import {
+  monthlyReportUiCopy,
+  splitMonthlyRadarAxisHelp,
+  type MonthlyReportUiCopy,
+} from "../../../../../../lib/reports/monthlyReportUiCopy";
 
-type Lang = "ja" | "en";
+type Lang = LocalizedLang;
 
 /* ============================================================
- * copy（Web MonthlyReportView と同一・要点のみ）
+ * copy — 7言語は lib/reports/monthlyReportUiCopy.ts に集約
  * ============================================================ */
-
-const COPY = {
-  ja: {
-    title: "MONTHLY REPORT",
-    thisMonth: "今月の結果",
-    participants: (n: number) => `${n}人中`,
-    rankLabel: "RANK",
-    unitsLabel: "UNITS",
-    unitsEarnedLabel: "今月の獲得",
-    monthlyChange: "前月比",
-    typeLabel: "今月の分析タイプ",
-    numbers: "数字で見る今月",
-    unitsBreakdown: "獲得 Unit 内訳",
-    unitsBreakdownEmpty: "今月の Unit 付与はありません。",
-    unitsBreakdownTotal: "今月の合計",
-    unitsBreakdownExpand: "タップで内訳",
-    unitsBreakdownCollapse: "閉じる",
-    unitSource: {
-      personal_weekly: "個人・週間",
-      personal_monthly: "個人・月間",
-      group_weekly: "グループ・週間",
-      group_monthly: "グループ・月間",
-      invite: "招待",
-      metric_rank: "部門上位",
-      event: "イベント",
-    } satisfies Record<MonthlyReportUnitSource, string>,
-    unitMetric: {
-      totalPoints: "総合得点",
-      winRate: "勝率",
-      scorer: "SCORER",
-      upset: "UPSET",
-    } satisfies Record<MonthlyReportUnitMetric, string>,
-    unitRank: (n: number) => `#${n}`,
-    radar: "能力チャート",
-    habits: "予想のクセ",
-    habitsEmpty: "サンプルが足りず、今月のクセはまだ出せません。",
-    habitsMapHint: "横: Away ←→ Home / 縦: 順当 ←→ 逆張り · 点の大きさ=勝率",
-    homeAway: "Home / Away",
-    market: "順当 / 逆張り",
-    homeWr: "Home勝率",
-    awayWr: "Away勝率",
-    favWr: "順当勝率",
-    dogWr: "逆張り勝率",
-    homeShare: "Home",
-    awayShare: "Away",
-    favShare: "順当",
-    dogShare: "逆張り",
-    affinity: "チーム相性",
-    strong: "得意",
-    weak: "苦手",
-    highlights: "月間ハイライト",
-    bestPick: "ベスト予想",
-    myPick: "自分の予想",
-    bestDay: "ベストデー",
-    bestDayLine: (w: number, p: number) => `${p}試合 ${w}勝`,
-    streak: "最長連勝",
-    streakUnit: "連勝",
-    upset: "最大アップセット",
-    divisionTop10: (d: string, n: number) => `${d} 部門 #${n}`,
-    outlook: "今月のサマリー",
-    metric: {
-      posts: "予想数",
-      points: "総合得点",
-      winRate: "勝率",
-      goalScorerHits: "SCORER 的中",
-      upsetPoints: "UPSET pt",
-      units: "獲得 Unit",
-    } satisfies Record<MonthlyReportMetricKey, string>,
-    prevDelta: "前月比",
-    medianMark: "中央値",
-    youMark: "自分",
-    top10Mark: "上位10%",
-    vsMedian: "中央値より",
-    vsTop10: "上位10%より",
-    radarAxis: {
-      win: "WIN",
-      scorer: "SCORER",
-      upset: "UPSET",
-      activity: "ACTIVITY",
-      consistency: "CONSISTENCY",
-    } satisfies Record<MonthlyReportRadarAxisKey, string>,
-  },
-  en: {
-    title: "MONTHLY REPORT",
-    thisMonth: "This Month",
-    participants: (n: number) => `of ${n}`,
-    rankLabel: "RANK",
-    unitsLabel: "UNITS",
-    unitsEarnedLabel: "Earned",
-    monthlyChange: "MoM",
-    typeLabel: "Analysis Type",
-    numbers: "Month in Numbers",
-    unitsBreakdown: "Units Breakdown",
-    unitsBreakdownEmpty: "No Units granted this month.",
-    unitsBreakdownTotal: "Month total",
-    unitsBreakdownExpand: "Tap for details",
-    unitsBreakdownCollapse: "Hide",
-    unitSource: {
-      personal_weekly: "Personal · Weekly",
-      personal_monthly: "Personal · Monthly",
-      group_weekly: "Group · Weekly",
-      group_monthly: "Group · Monthly",
-      invite: "Invite",
-      metric_rank: "Metric top",
-      event: "Event",
-    } satisfies Record<MonthlyReportUnitSource, string>,
-    unitMetric: {
-      totalPoints: "Points",
-      winRate: "Win %",
-      scorer: "Scorer",
-      upset: "Upset",
-    } satisfies Record<MonthlyReportUnitMetric, string>,
-    unitRank: (n: number) => `#${n}`,
-    radar: "Ability Chart",
-    habits: "Habits",
-    habitsEmpty: "Not enough sample to surface habits this month.",
-    habitsMapHint: "X: Away ←→ Home / Y: Consensus ←→ Fade · Dot size = win rate",
-    homeAway: "Home / Away",
-    market: "Consensus / Fade",
-    homeWr: "Home win %",
-    awayWr: "Away win %",
-    favWr: "Consensus win %",
-    dogWr: "Fade win %",
-    homeShare: "Home",
-    awayShare: "Away",
-    favShare: "Consensus",
-    dogShare: "Fade",
-    affinity: "Team Affinity",
-    strong: "Strong",
-    weak: "Weak",
-    highlights: "Highlights",
-    bestPick: "Best Pick",
-    myPick: "Your pick",
-    bestDay: "Best Day",
-    bestDayLine: (w: number, p: number) => `${w}W of ${p}`,
-    streak: "Longest Streak",
-    streakUnit: "wins",
-    upset: "Biggest Upset",
-    divisionTop10: (d: string, n: number) => `${d} #${n}`,
-    outlook: "Month Summary",
-    metric: {
-      posts: "Picks",
-      points: "Total Points",
-      winRate: "Win %",
-      goalScorerHits: "Scorer hits",
-      upsetPoints: "Upset pts",
-      units: "Units",
-    } satisfies Record<MonthlyReportMetricKey, string>,
-    prevDelta: "vs last",
-    medianMark: "Median",
-    youMark: "You",
-    top10Mark: "Top 10%",
-    vsMedian: "vs med",
-    vsTop10: "vs top10%",
-    radarAxis: {
-      win: "WIN",
-      scorer: "SCORER",
-      upset: "UPSET",
-      activity: "ACTIVITY",
-      consistency: "CONSISTENCY",
-    } satisfies Record<MonthlyReportRadarAxisKey, string>,
-  },
-} as const;
 
 const RADAR_ORDER = MONTHLY_RADAR_ORDER;
 
@@ -258,7 +99,17 @@ const NUMBERS_METRIC_ORDER: MonthlyReportMetricKey[] = [
 function cellStyle(): ViewStyle {
   return {
     borderWidth: 1,
-    borderColor: REPORT_FRAME.monthly.border,
+    borderColor: REPORT_KUROKIN.goldBorder,
+    backgroundColor: PANEL_BG,
+    borderRadius: 3,
+    overflow: "hidden",
+  };
+}
+
+function listShellStyle(): ViewStyle {
+  return {
+    borderWidth: 1,
+    borderColor: REPORT_KUROKIN.goldBorder,
     backgroundColor: PANEL_BG,
     borderRadius: 3,
     overflow: "hidden",
@@ -337,7 +188,7 @@ function winRateToDotSize(winRate: number): number {
   return 24;
 }
 
-function unitGrantTitle(g: MonthlyReportUnitGrant, c: (typeof COPY)[Lang]): string {
+function unitGrantTitle(g: MonthlyReportUnitGrant, c: MonthlyReportUiCopy): string {
   if (g.label) return g.label;
   if (g.source === "metric_rank" && g.metric) {
     return `${c.unitSource.metric_rank} · ${c.unitMetric[g.metric]}`;
@@ -389,10 +240,10 @@ function SlantTag({
  * ============================================================ */
 
 function CoverBlock({ report, lang }: { report: MonthlyReport; lang: Lang }) {
-  const c = COPY[lang];
+  const c = monthlyReportUiCopy(lang);
   const delta = report.rankDeltaPlaces;
   const typeColor = ANALYSIS_TYPE_COLOR[report.analysisTypeId] ?? "#f8fafc";
-  const typeCopy = resolveMonthlyReportAnalysisTypeCopy(report.analysisTypeId);
+  const typeCopy = resolveMonthlyReportAnalysisTypeCopy(report.analysisTypeId, lang);
   const band = monthlyReportRankBandAccent(report.rank);
   const topPct = report.topPercent ?? computeTopPercentile(report.rank, report.participantCount);
   const tier = getKinetikRankBadgeTierFromTopPercent(topPct);
@@ -400,9 +251,15 @@ function CoverBlock({ report, lang }: { report: MonthlyReport; lang: Lang }) {
   return (
     <RankingsCyberPanelNative
       compact
-      style={[styles.coverPanel, { borderColor: REPORT_FRAME.monthly.border, backgroundColor: PANEL_BG }]}
+      style={[
+        styles.coverPanel,
+        {
+          borderColor: REPORT_KUROKIN.goldBorder,
+          backgroundColor: PANEL_BG,
+          borderWidth: 1,
+        },
+      ]}
     >
-      <ReportIsometricGridOverlay borderRadius={0} />
       <Text style={styles.microCenterLabel}>{c.thisMonth}</Text>
 
       <View style={styles.coverRow}>
@@ -486,7 +343,7 @@ function MetricRangeBar({
   /** you マーカーの色決定に使う順位 */
   youRankForColor: number | null;
 }) {
-  const c = COPY[lang];
+  const c = monthlyReportUiCopy(lang);
   const { value, median, top10 } = metric;
   if (median == null && top10 == null) return null;
 
@@ -507,7 +364,9 @@ function MetricRangeBar({
 
   // 塗り（rangeFill）はオレンジ。マーカー（you）は順位帯で色を変える。
   const YOU_COLOR =
-    youRankForColor != null ? monthlyReportRankBandAccent(youRankForColor).main : "#22d3ee";
+    youRankForColor != null
+      ? monthlyReportRankBandAccent(youRankForColor).main
+      : "#22d3ee";
   const FILL_COLOR = MARK_YOU;
 
   return (
@@ -515,16 +374,7 @@ function MetricRangeBar({
       <View style={styles.rangeTrack}>
         {/* “you” オレンジ塗りの内側だけにグリッドを描画 */}
         <View style={[styles.rangeYouFillClip, { width: `${youPct}%` }]}>
-            <View style={[styles.rangeFillSkew, { backgroundColor: FILL_COLOR }]}>
-            <View pointerEvents="none" style={styles.rangeGridOverlay}>
-              {[0, 1, 2].map((i) => (
-                <View
-                  key={i}
-                  style={[styles.rangeGridLine, { top: 2 + i * 2 }]}
-                />
-              ))}
-            </View>
-          </View>
+          <View style={[styles.rangeFillSkew, { backgroundColor: FILL_COLOR }]} />
         </View>
         {median != null ? (
           <View style={[styles.rangeTick, { left: `${toPct(median)}%`, backgroundColor: MARK_MEDIAN }]} />
@@ -584,7 +434,7 @@ function NumbersBlock({
   /** ユニット獲得順位（表紙右側の band） */
   unitsEarnedRank: number | null;
 }) {
-  const c = COPY[lang];
+  const c = monthlyReportUiCopy(lang);
   const ordered = sortNumbersMetrics(metrics);
   return (
     <View>
@@ -609,8 +459,8 @@ function NumbersBlock({
           <Text style={styles.legendText}>{c.top10Mark}</Text>
         </View>
       </View>
-      <View style={styles.metricList}>
-        {ordered.map((m) => {
+      <View style={[styles.metricList, listShellStyle()]}>
+        {ordered.map((m, i) => {
           const prev = formatMetricDelta(m, m.prevDelta);
           // Firestore 上では metrics.points の rank が null になりがち。
           // その場合でも「結局自分が何位か」を解決するため、フォールバック表示する。
@@ -621,7 +471,13 @@ function NumbersBlock({
 
           const showRank = showsMetricRank(m.key) && rankForTag != null;
           return (
-            <MonthlyReportCardShell key={m.key} style={[styles.metricCell, cellStyle()]}>
+            <View
+              key={m.key}
+              style={[
+                styles.metricCell,
+                i > 0 ? styles.listRowBorder : null,
+              ]}
+            >
               <View style={styles.metricHeaderRow}>
                 <View style={styles.metricHeaderLeft}>
                   <Text style={styles.metricLabel}>{c.metric[m.key]}</Text>
@@ -661,7 +517,7 @@ function NumbersBlock({
                 lang={lang}
                 youRankForColor={overallRank}
               />
-            </MonthlyReportCardShell>
+            </View>
           );
         })}
       </View>
@@ -682,7 +538,7 @@ function UnitsBreakdownBlock({
   entries: MonthlyReportUnitGrant[];
   lang: Lang;
 }) {
-  const c = COPY[lang];
+  const c = monthlyReportUiCopy(lang);
   const [open, setOpen] = useState(false);
   const sorted = useMemo(
     () =>
@@ -714,10 +570,11 @@ function UnitsBreakdownBlock({
           style={[
             styles.unitsHeaderCard,
             cellStyle(),
-            open && canExpand ? { borderColor: REPORT_FRAME.monthly.border } : null,
+            open && canExpand
+              ? { borderColor: REPORT_KUROKIN.goldBorder }
+              : null,
           ]}
         >
-          <ReportIsometricGridOverlay borderRadius={3} />
           <View style={styles.unitsHeaderRow}>
             <Text style={styles.unitsHeaderLabel}>{c.unitsBreakdownTotal}</Text>
             <View style={styles.unitsHeaderValueRow}>
@@ -737,18 +594,6 @@ function UnitsBreakdownBlock({
                   }}
                 />
               ))}
-              {/* 横線グリッド（レンジバーと同じ視点合わせ） */}
-              <View pointerEvents="none" style={styles.unitsBarGridOverlay}>
-                {[0, 1, 2].map((i) => (
-                  <View
-                    key={i}
-                    style={[
-                      styles.unitsBarGridLine,
-                      { top: 2 + i * 2 },
-                    ]}
-                  />
-                ))}
-              </View>
             </View>
           ) : (
             <Text style={[styles.emptyText, { fontFamily: reportBodyFont(lang) }]}>{c.unitsBreakdownEmpty}</Text>
@@ -770,11 +615,17 @@ function UnitsBreakdownBlock({
         </Pressable>
 
         {open && canExpand ? (
-          <View style={styles.unitGrantList}>
-            {sorted.map((g) => {
+          <View style={[styles.unitGrantList, listShellStyle()]}>
+            {sorted.map((g, i) => {
               const accent = UNIT_SOURCE_COLOR[g.source];
               return (
-                <MonthlyReportCardShell key={g.id} style={[styles.unitGrantRow, cellStyle()]}>
+                <View
+                  key={g.id}
+                  style={[
+                    styles.unitGrantRow,
+                    i > 0 ? styles.listRowBorder : null,
+                  ]}
+                >
                   <View style={[styles.unitGrantDot, { backgroundColor: accent }]} />
                   <View style={styles.unitGrantMain}>
                     <Text style={styles.unitGrantTitle} numberOfLines={1}>
@@ -786,7 +637,7 @@ function UnitsBreakdownBlock({
                     </Text>
                   </View>
                   <Text style={styles.unitGrantAmount}>+{g.amount}</Text>
-                </MonthlyReportCardShell>
+                </View>
               );
             })}
           </View>
@@ -801,8 +652,8 @@ function UnitsBreakdownBlock({
  * ============================================================ */
 
 function RadarBlock({ report, lang }: { report: MonthlyReport; lang: Lang }) {
-  const c = COPY[lang];
-  const typeCopy = resolveMonthlyReportAnalysisTypeCopy(report.analysisTypeId);
+  const c = monthlyReportUiCopy(lang);
+  const typeCopy = resolveMonthlyReportAnalysisTypeCopy(report.analysisTypeId, lang);
   const typeColor = ANALYSIS_TYPE_COLOR[report.analysisTypeId] ?? "#f8fafc";
   const typeLines = typeCopy.description
     .split("\n")
@@ -841,6 +692,33 @@ function RadarBlock({ report, lang }: { report: MonthlyReport; lang: Lang }) {
                   ]}
                 >
                   {v}
+                </Text>
+              </View>
+            );
+          })}
+        </View>
+
+        <View style={styles.radarAxisHelpList}>
+          {RADAR_ORDER.map((key, i) => {
+            const { title, body } = splitMonthlyRadarAxisHelp(
+              c.radarAxisHelp[key]
+            );
+            return (
+              <View
+                key={key}
+                style={[
+                  styles.radarAxisHelpRow,
+                  i === 0 ? { borderTopWidth: 0 } : null,
+                ]}
+              >
+                <Text style={styles.radarAxisHelpTitle}>{title}</Text>
+                <Text
+                  style={[
+                    styles.radarAxisHelpBody,
+                    { fontFamily: reportBodyFont(lang) },
+                  ]}
+                >
+                  {body}
                 </Text>
               </View>
             );
@@ -937,7 +815,7 @@ function HabitsRatePair({
   const rightHigher = rightPct > leftPct;
 
   return (
-    <MonthlyReportCardShell style={[styles.rateCard, cellStyle()]}>
+    <View style={styles.rateCardInner}>
       <Text style={styles.rateCardTitle}>{title}</Text>
       <View style={styles.rateCardRow}>
         <View style={styles.rateCardSide}>
@@ -962,12 +840,12 @@ function HabitsRatePair({
         leftColor={leftColor}
         rightColor={rightColor}
       />
-    </MonthlyReportCardShell>
+    </View>
   );
 }
 
 function HabitsBlock({ habits, lang }: { habits: MonthlyReportHabits | null; lang: Lang }) {
-  const c = COPY[lang];
+  const c = monthlyReportUiCopy(lang);
 
   if (!habits) {
     return (
@@ -999,10 +877,10 @@ function HabitsBlock({ habits, lang }: { habits: MonthlyReportHabits | null; lan
             <Text style={[styles.mapEdgeLabelSide, { left: 6 }]}>Away</Text>
             <Text style={[styles.mapEdgeLabelSide, { right: 6 }]}>Home</Text>
             <Text style={[styles.mapEdgeLabelTop, { top: 6 }]}>
-              {lang === "ja" ? "順当" : "CONSENSUS"}
+              {c.consensus}
             </Text>
             <Text style={[styles.mapEdgeLabelTop, { bottom: 6 }]}>
-              {lang === "ja" ? "逆張り" : "FADE"}
+              {c.fade}
             </Text>
             <View
               style={[
@@ -1024,31 +902,35 @@ function HabitsBlock({ habits, lang }: { habits: MonthlyReportHabits | null; lan
           <Text style={styles.mapHint}>{c.habitsMapHint}</Text>
         </MonthlyReportCardShell>
 
-        <View style={styles.rateGrid}>
-          <HabitsRatePair
-            title={c.homeAway}
-            leftLabel={c.homeWr}
-            rightLabel={c.awayWr}
-            leftShareLabel={c.homeShare}
-            rightShareLabel={c.awayShare}
-            leftRate={habits.home.winRate}
-            rightRate={habits.away.winRate}
-            leftColor={COLOR_HOME}
-            rightColor={COLOR_AWAY}
-            leftShare={habits.home.share}
-          />
-          <HabitsRatePair
-            title={c.market}
-            leftLabel={c.dogWr}
-            rightLabel={c.favWr}
-            leftShareLabel={c.dogShare}
-            rightShareLabel={c.favShare}
-            leftRate={habits.underdog.winRate}
-            rightRate={habits.favorite.winRate}
-            leftColor={COLOR_DOG}
-            rightColor={COLOR_FAV}
-            leftShare={habits.underdog.share}
-          />
+        <View style={[styles.rateGrid, listShellStyle()]}>
+          <View style={styles.rateGridHalf}>
+            <HabitsRatePair
+              title={c.homeAway}
+              leftLabel={c.homeWr}
+              rightLabel={c.awayWr}
+              leftShareLabel={c.homeShare}
+              rightShareLabel={c.awayShare}
+              leftRate={habits.home.winRate}
+              rightRate={habits.away.winRate}
+              leftColor={COLOR_HOME}
+              rightColor={COLOR_AWAY}
+              leftShare={habits.home.share}
+            />
+          </View>
+          <View style={[styles.rateGridHalf, styles.rateGridHalfBorder]}>
+            <HabitsRatePair
+              title={c.market}
+              leftLabel={c.dogWr}
+              rightLabel={c.favWr}
+              leftShareLabel={c.dogShare}
+              rightShareLabel={c.favShare}
+              leftRate={habits.underdog.winRate}
+              rightRate={habits.favorite.winRate}
+              leftColor={COLOR_DOG}
+              rightColor={COLOR_FAV}
+              leftShare={habits.underdog.share}
+            />
+          </View>
         </View>
       </View>
     </View>
@@ -1073,10 +955,13 @@ function TeamList({
     <MonthlyReportCardShell style={[styles.teamListCard, cellStyle()]}>
       <Text style={[styles.teamListTitle, { color: accent }]}>{title}</Text>
       <View style={styles.teamRows}>
-        {teams.map((t) => {
+        {teams.map((t, i) => {
           const color = getTeamPrimaryColor("nba", t.teamId);
           return (
-            <View key={t.teamId} style={styles.teamRow}>
+            <View
+              key={t.teamId}
+              style={[styles.teamRow, i > 0 ? styles.listRowBorder : null]}
+            >
               <Text style={[styles.teamAbbr, { color: color || "#fff" }]} numberOfLines={1}>
                 {t.abbr}
               </Text>
@@ -1100,7 +985,7 @@ function AffinityBlock({
   weak: MonthlyReportTeam[];
   lang: Lang;
 }) {
-  const c = COPY[lang];
+  const c = monthlyReportUiCopy(lang);
   return (
     <View>
       <SectionBadge>{c.affinity}</SectionBadge>
@@ -1117,13 +1002,13 @@ function AffinityBlock({
  * ============================================================ */
 
 function HighlightCard({ item, lang }: { item: MonthlyReportHighlight; lang: Lang }) {
-  const c = COPY[lang];
+  const c = monthlyReportUiCopy(lang);
 
   if (item.kind === "bestPick") {
     const homeColor = getTeamPrimaryColor("nba", item.home.teamId);
     const awayColor = getTeamPrimaryColor("nba", item.away.teamId);
     return (
-      <MonthlyReportCardShell style={[styles.highlightCardWide, cellStyle()]}>
+      <View style={styles.highlightCardWide}>
         <View style={styles.highlightHeaderRow}>
           <Text style={styles.highlightMeta}>
             {c.bestPick} · {item.dateKey.slice(5).replace("-", "/")}
@@ -1146,13 +1031,13 @@ function HighlightCard({ item, lang }: { item: MonthlyReportHighlight; lang: Lan
         <Text style={styles.bestPickMyPick}>
           {c.myPick} {item.myHome}–{item.myAway}
         </Text>
-      </MonthlyReportCardShell>
+      </View>
     );
   }
 
   if (item.kind === "bestDay") {
     return (
-      <MonthlyReportCardShell style={[styles.highlightCard, cellStyle()]}>
+      <View style={styles.highlightCard}>
         <Text style={styles.highlightMeta}>
           {c.bestDay} · {item.dateKey.slice(5).replace("-", "/")}
         </Text>
@@ -1161,13 +1046,13 @@ function HighlightCard({ item, lang }: { item: MonthlyReportHighlight; lang: Lan
           <Text style={styles.highlightUnit}>PT</Text>
         </View>
         <Text style={styles.highlightSub}>{c.bestDayLine(item.wins, item.posts)}</Text>
-      </MonthlyReportCardShell>
+      </View>
     );
   }
 
   if (item.kind === "winStreak") {
     return (
-      <MonthlyReportCardShell style={[styles.highlightCard, cellStyle()]}>
+      <View style={styles.highlightCard}>
         <View style={styles.highlightStreakLabelRow}>
           <MaterialCommunityIcons name="fire" size={14} color={REPORT_ACCENT.orange.main} />
           <Text style={styles.highlightMeta}>{c.streak}</Text>
@@ -1176,28 +1061,28 @@ function HighlightCard({ item, lang }: { item: MonthlyReportHighlight; lang: Lan
           <Text style={styles.highlightValueOrange}>{item.length}</Text>
           <Text style={styles.highlightUnit}>{c.streakUnit}</Text>
         </View>
-      </MonthlyReportCardShell>
+      </View>
     );
   }
 
   if (item.kind === "upset") {
     return (
-      <MonthlyReportCardShell style={[styles.highlightCard, cellStyle()]}>
+      <View style={styles.highlightCard}>
         <Text style={styles.highlightMeta}>
           {c.upset} · {item.dateKey.slice(5).replace("-", "/")}
         </Text>
         <Text style={[styles.highlightBody, { fontFamily: reportBodyFont(lang) }]}>{item.label}</Text>
         <Text style={styles.highlightValueOrange}>+{fmtReportPt(item.points)}pt</Text>
-      </MonthlyReportCardShell>
+      </View>
     );
   }
 
   const divLabel = item.division === "winRate" ? "WIN%" : item.division === "goalScorerHits" ? "SCORER" : "UPSET";
   return (
-    <MonthlyReportCardShell style={[styles.highlightCard, cellStyle()]}>
+    <View style={styles.highlightCard}>
       <Text style={styles.highlightMeta}>{c.divisionTop10(divLabel, item.rank)}</Text>
       <Text style={styles.highlightValueAmber}>#{item.rank}</Text>
-    </MonthlyReportCardShell>
+    </View>
   );
 }
 
@@ -1208,19 +1093,30 @@ function HighlightsBlock({
   highlights: MonthlyReportHighlight[];
   lang: Lang;
 }) {
-  const c = COPY[lang];
+  const c = monthlyReportUiCopy(lang);
   const primary = highlights.find((h) => h.kind === "bestPick") ?? null;
   const rest = highlights.filter((h) => h !== primary);
 
   return (
     <View>
       <SectionBadge>{c.highlights}</SectionBadge>
-      <View style={styles.highlightsRoot}>
+      <View style={[styles.highlightsRoot, listShellStyle()]}>
         {primary ? <HighlightCard item={primary} lang={lang} /> : null}
         {rest.length > 0 ? (
-          <View style={styles.highlightGrid}>
+          <View
+            style={[
+              styles.highlightGrid,
+              primary ? styles.listRowBorder : null,
+            ]}
+          >
             {rest.map((h, i) => (
-              <View key={`${h.kind}-${i}`} style={styles.highlightGridItem}>
+              <View
+                key={`${h.kind}-${i}`}
+                style={[
+                  styles.highlightGridItem,
+                  i > 0 ? styles.highlightGridItemBorder : null,
+                ]}
+              >
                 <HighlightCard item={h} lang={lang} />
               </View>
             ))}
@@ -1236,7 +1132,7 @@ function HighlightsBlock({
  * ============================================================ */
 
 function OutlookBlock({ outlook, lang }: { outlook: MonthlyReportOutlook; lang: Lang }) {
-  const c = COPY[lang];
+  const c = monthlyReportUiCopy(lang);
   const body = outlook.summary.trim();
   if (!body) return null;
 
@@ -1259,9 +1155,10 @@ export default function MonthlyReportViewNative({
   language = "ja",
 }: {
   report: MonthlyReport;
-  language?: Lang;
+  language?: string;
 }) {
-  const c = COPY[language];
+  const c = monthlyReportUiCopy(language);
+  const lang = c.lang;
 
   return (
     <View style={styles.root}>
@@ -1270,19 +1167,19 @@ export default function MonthlyReportViewNative({
         <Text style={styles.range}>{fmtReportMonth(report.monthKey)}</Text>
       </View>
 
-      <CoverBlock report={report} lang={language} />
+      <CoverBlock report={report} lang={lang} />
       <NumbersBlock
         metrics={report.metrics}
-        lang={language}
+        lang={lang}
         overallRank={report.rank}
         unitsEarnedRank={report.unitsEarnedRank}
       />
-      <UnitsBreakdownBlock total={report.unitsEarned} entries={report.unitsBreakdown} lang={language} />
-      <RadarBlock report={report} lang={language} />
-      <HabitsBlock habits={report.habits} lang={language} />
-      <AffinityBlock strong={report.teamAffinity.strong} weak={report.teamAffinity.weak} lang={language} />
-      <HighlightsBlock highlights={report.highlights} lang={language} />
-      <OutlookBlock outlook={report.outlook} lang={language} />
+      <UnitsBreakdownBlock total={report.unitsEarned} entries={report.unitsBreakdown} lang={lang} />
+      <RadarBlock report={report} lang={lang} />
+      <HabitsBlock habits={report.habits} lang={lang} />
+      <AffinityBlock strong={report.teamAffinity.strong} weak={report.teamAffinity.weak} lang={lang} />
+      <HighlightsBlock highlights={report.highlights} lang={lang} />
+      <OutlookBlock outlook={report.outlook} lang={lang} />
     </View>
   );
 }
@@ -1408,7 +1305,11 @@ const styles = StyleSheet.create({
     color: "rgba(255,255,255,0.45)",
     textTransform: "uppercase",
   },
-  metricList: { marginTop: 8, gap: 6 },
+  metricList: { marginTop: 8 },
+  listRowBorder: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: REPORT_KUROKIN.divider,
+  },
   metricCell: { paddingHorizontal: 14, paddingVertical: 12 },
   metricHeaderRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 },
   metricHeaderLeft: { flexDirection: "row", alignItems: "center", gap: 8, flexShrink: 1, minWidth: 0 },
@@ -1474,20 +1375,6 @@ const styles = StyleSheet.create({
     opacity: 0.85,
     transform: [{ skewX: "-14deg" }],
   },
-  rangeGridOverlay: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    top: 0,
-    bottom: 0,
-  },
-  rangeGridLine: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    height: 1,
-    backgroundColor: "rgba(255,255,255,0.10)",
-  },
   rangeTick: { position: "absolute", top: 0, bottom: 0, width: 1.5 },
   rangeYouMarker: {
     position: "absolute",
@@ -1540,20 +1427,6 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.08)",
     position: "relative",
   },
-  unitsBarGridOverlay: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    top: 0,
-    bottom: 0,
-  },
-  unitsBarGridLine: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    height: 1,
-    backgroundColor: "rgba(255,255,255,0.10)",
-  },
   unitsExpandRow: { marginTop: 8, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   unitsExpandText: {
     fontFamily: OXANIUM_800,
@@ -1562,7 +1435,7 @@ const styles = StyleSheet.create({
     color: "rgba(255,255,255,0.35)",
     textTransform: "uppercase",
   },
-  unitGrantList: { gap: 6 },
+  unitGrantList: {},
   unitGrantRow: { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 12, paddingVertical: 10 },
   unitGrantDot: { width: 10, height: 10, borderRadius: 2 },
   unitGrantMain: { flex: 1, minWidth: 0 },
@@ -1580,11 +1453,11 @@ const styles = StyleSheet.create({
   /* radar */
   radarPanel: {
     marginTop: 8,
-    paddingHorizontal: 10,
+    paddingHorizontal: 4,
     paddingTop: 12,
     paddingBottom: 16,
     gap: 8,
-    backgroundColor: "rgba(8,12,18,0.98)",
+    backgroundColor: REPORT_KUROKIN.bg,
   },
   radarStatsRow: {
     flexDirection: "row",
@@ -1616,6 +1489,36 @@ const styles = StyleSheet.create({
     fontSize: 18,
     letterSpacing: -0.2,
   },
+  radarAxisHelpList: {
+    marginTop: 10,
+    paddingTop: 0,
+    borderTopWidth: 1,
+    borderTopColor: REPORT_KUROKIN.divider,
+  },
+  radarAxisHelpRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+    paddingVertical: 8,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: REPORT_KUROKIN.divider,
+  },
+  radarAxisHelpTitle: {
+    width: 88,
+    fontFamily: OXANIUM_800,
+    fontSize: 8,
+    letterSpacing: 0.8,
+    color: "rgba(165,243,252,0.82)",
+    textTransform: "uppercase",
+    paddingTop: 2,
+  },
+  radarAxisHelpBody: {
+    flex: 1,
+    minWidth: 0,
+    fontSize: 11,
+    lineHeight: 16,
+    color: "rgba(255,255,255,0.55)",
+  },
   radarFooter: {
     marginTop: 10,
     paddingTop: 14,
@@ -1637,8 +1540,8 @@ const styles = StyleSheet.create({
     height: 168,
     borderRadius: 2,
     borderWidth: 1,
-    borderColor: REPORT_FRAME.monthly.border,
-    backgroundColor: "#050912",
+    borderColor: REPORT_KUROKIN.goldBorderSoft,
+    backgroundColor: REPORT_KUROKIN.bg,
     overflow: "hidden",
     position: "relative",
   },
@@ -1702,8 +1605,13 @@ const styles = StyleSheet.create({
     marginTop: 8,
     textTransform: "uppercase",
   },
-  rateGrid: { flexDirection: "row", gap: 6 },
-  rateCard: { flex: 1, paddingHorizontal: 10, paddingVertical: 10 },
+  rateGrid: { flexDirection: "row", marginTop: 0, overflow: "hidden" },
+  rateGridHalf: { flex: 1 },
+  rateGridHalfBorder: {
+    borderLeftWidth: StyleSheet.hairlineWidth,
+    borderLeftColor: REPORT_KUROKIN.divider,
+  },
+  rateCardInner: { paddingHorizontal: 10, paddingVertical: 10 },
   rateCardTitle: {
     fontFamily: OXANIUM_800,
     fontSize: 10,
@@ -1739,8 +1647,14 @@ const styles = StyleSheet.create({
   affinityRow: { flexDirection: "row", gap: 6, marginTop: 8 },
   teamListCard: { flex: 1, paddingHorizontal: 10, paddingVertical: 10 },
   teamListTitle: { fontFamily: OXANIUM_800, fontSize: 10, letterSpacing: 1.4, textTransform: "uppercase" },
-  teamRows: { marginTop: 10, gap: 8 },
-  teamRow: { flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: 6 },
+  teamRows: { marginTop: 4 },
+  teamRow: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    justifyContent: "space-between",
+    gap: 6,
+    paddingVertical: 8,
+  },
   teamAbbr: { fontFamily: BEBAS, fontSize: 17, letterSpacing: 0.4, flexShrink: 0, transform: [{ skewX: "-8deg" }] },
   teamMeta: {
     fontFamily: BEBAS,
@@ -1751,9 +1665,13 @@ const styles = StyleSheet.create({
   },
 
   /* highlights */
-  highlightsRoot: { marginTop: 8, gap: 6 },
-  highlightGrid: { flexDirection: "row", flexWrap: "wrap", gap: 6, alignItems: "stretch" },
-  highlightGridItem: { flexBasis: "48%", flexGrow: 1 },
+  highlightsRoot: { marginTop: 8, overflow: "hidden" },
+  highlightGrid: { flexDirection: "row", flexWrap: "wrap", alignItems: "stretch" },
+  highlightGridItem: { flexBasis: "50%", flexGrow: 1 },
+  highlightGridItemBorder: {
+    borderLeftWidth: StyleSheet.hairlineWidth,
+    borderLeftColor: REPORT_KUROKIN.divider,
+  },
   highlightCardWide: { paddingHorizontal: 14, paddingVertical: 12 },
   highlightCard: { flex: 1, paddingHorizontal: 12, paddingVertical: 10 },
   highlightHeaderRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 6 },
@@ -1791,7 +1709,12 @@ const styles = StyleSheet.create({
     color: "rgba(255,255,255,0.45)",
   },
   highlightValueRow: { flexDirection: "row", alignItems: "baseline", gap: 4, marginTop: 4 },
-  highlightValueCyan: { fontFamily: BEBAS, fontSize: 22, color: REPORT_ACCENT.cyan.main, transform: [{ skewX: "-8deg" }] },
+  highlightValueCyan: {
+    fontFamily: BEBAS,
+    fontSize: 22,
+    color: REPORT_ACCENT.cyan.main,
+    transform: [{ skewX: "-8deg" }],
+  },
   highlightValueOrange: { fontFamily: BEBAS, fontSize: 22, color: REPORT_ACCENT.orange.main, marginTop: 4, transform: [{ skewX: "-8deg" }] },
   highlightValueAmber: { fontFamily: BEBAS, fontSize: 22, color: "#fcd34d", marginTop: 4, transform: [{ skewX: "-8deg" }] },
   highlightUnit: {
@@ -1814,8 +1737,8 @@ const styles = StyleSheet.create({
   outlookCard: {
     marginTop: 8,
     borderWidth: 1,
-    borderColor: REPORT_FRAME.monthly.border,
-    backgroundColor: "rgba(8,14,22,0.96)",
+    borderColor: REPORT_KUROKIN.goldBorder,
+    backgroundColor: REPORT_KUROKIN.bg,
     borderRadius: 3,
     paddingHorizontal: 14,
     paddingVertical: 14,

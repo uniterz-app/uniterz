@@ -1,8 +1,8 @@
 /** Team Detail 再構築 — 参考ダッシュボード UI をそのまま再現（微調整前提） */
 import { useMemo, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View, type StyleProp, type TextStyle } from "react-native";
+import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   getTeamJerseyPrimaryColor,
@@ -13,9 +13,11 @@ import {
   formatStreakLabel,
   getNbaTeamDetailPreview,
   payrollDisplaySlices,
+  type NbaApronStatus,
+  type NbaTeamFuturePayrollYear,
+  type NbaTeamHeadToHeadEntry,
   type NbaTeamInjuryEntry,
   type NbaTeamMetricWithRank,
-  type NbaTeamOpponentAllowedMetric,
   type NbaTeamPayroll,
   type NbaTeamRecentGame,
   type NbaTeamStreak,
@@ -27,23 +29,76 @@ import {
   teamStreakBadgeTheme,
 } from "../../../../../../lib/predict/nbaTeamDetailForm";
 import {
-  availabilityStatusColor,
-  formatAvailabilityStatus,
   formatSalaryUsd,
 } from "../../../../../../lib/predict/nbaPlayerDetailPreviewMocks";
-import { CyberSlantedSegBarNative } from "../../rankings/CyberSlantedSegBarNative";
 import {
-  METRIC_FONT,
-} from "../../rankings/rankingsUiTheme";
+  formatInjuryReturnEstimate,
+  injuryReasonLabel,
+} from "../../../../../../lib/nba/teamInjuries/injuryReasonDisplay";
+import {
+  formatTeamInjuryStatus,
+  teamInjuryStatusColor,
+} from "../../../../../../lib/nba/teamInjuries/injuryStatusDisplay";
+import type { NbaTeamPayrollLine } from "../../../../../../lib/predict/nbaTeamDetailPreviewMocks";
+import {
+  buildFuturePayrollYearsFromLines,
+  buildSynchronizedTeamPayrollLines,
+  nbaSalaryCapLinesForSeason,
+  nbaTwoWaySalaryForSeason,
+  resolveApronStatus,
+} from "../../../../../../lib/nba/teamPayroll/mapBdlToTeamPayroll";
+import { CURRENT_NBA_SEASON_KEY } from "../../../../../../lib/rankings/nbaSeason";
+import { getNbaTeamFranchiseInfo } from "../../../../../../lib/nba/teamFranchise/nbaTeamFranchiseInfo";
+import { nbaTeamFranchiseUiCopy } from "../../../../../../lib/nba/teamFranchise/nbaTeamFranchiseUiCopy";
+import { CyberSlantedSegBarNative } from "../../rankings/CyberSlantedSegBarNative";
+import { METRIC_FONT } from "../../rankings/rankingsUiTheme";
 import {
   MATCH_CARD_BRACKET_LETTER_SPACING_12,
   MATCH_CARD_BRACKET_TEXT,
 } from "../matchCardTypography";
 import JerseyMarkSvg from "../JerseyMarkSvg";
+import NbaFavoriteStarButtonNative from "../NbaFavoriteStarButtonNative";
 import { NbaTeamRosterCardNative } from "../predict/NbaRosterPanelNative";
+import NbaTeamHowTheyPlayNative from "./NbaTeamHowTheyPlayNative";
+import { NbaTeamOffseasonMovesNative } from "./NbaTeamOffseasonMovesNative";
+import {
+  apronStatusLabel,
+  draftBadgeHeadline,
+  nbaTeamDetailUiCopy,
+  type NbaTeamDetailUiCopy,
+} from "./nbaTeamDetailUiCopy";
+import {
+  draftFlexibilityLabel,
+  draftPickBodyLines,
+  draftPickBodyText,
+} from "../../../../../../lib/nba/draftPicks/nbaDraftAssetsUiCopy";
+import { draftTextSegmentsWithTeamColors } from "../../../../../../lib/nba/draftPicks/draftTextTeamColors";
+import { useLeagueTeamStatsBundle } from "../../../../../../lib/nba/useLeagueTeamStatsBundle";
+import { useNbaTeamDetailLiveOverlay } from "../../../../../../lib/nba/teamDetail/useNbaTeamDetailLiveOverlay";
+import type { NbaTeamDetailShapeEdges } from "../../../../../../lib/nba/teamShapes/fetchTeamShapeEdgesClient";
+import {
+  resolveTeamShapeCondition,
+  resolveTeamShapeEdgeKindLabel,
+  resolveTeamShapeLabel,
+} from "../../../../../../lib/nba/teamShapes/shapeDefs";
+import { buildTeamDetailInsights } from "../../../../../../lib/nba/detailInsights/buildTeamDetailInsights";
+import {
+  DetailIdentityChipRowNative,
+  DetailInsightSummaryNative,
+} from "../detailInsights/DetailInsightBlocksNative";
+import { DetailTrendTableNative } from "../detailInsights/DetailTrendTableNative";
+import { DetailScheduleSectionNative } from "../detailInsights/DetailScheduleSectionNative";
+import type { DetailTrendDelta } from "../../../../../../lib/nba/detailInsights/detailInsightTypes";
+import { playerCardName, type NbaRosterTeamBlock } from "../../../../../../lib/predict/nbaRoster";
+import { getUniterzApiBaseUrl } from "../submitPredictionApi";
+import { getNbaTeamDraftCapital } from "../../../../../../lib/nba/draftPicks/nbaDraftCapitalData";
+import { resolveDraftPickOrigin } from "../../../../../../lib/nba/draftPicks/nbaDraftPickViaTrade";
+import type {
+  NbaDraftPickEntry,
+} from "../../../../../../lib/nba/draftPicks/draftPicksTypes";
 
 type Props = {
-  language: "ja" | "en";
+  language: string;
   teamId?: string;
   onSelectPlayer?: (playerId: string) => void;
 };
@@ -132,18 +187,6 @@ function RatingRow({
   );
 }
 
-function CornerMarks({ color }: { color: string }) {
-  const c = { borderColor: color };
-  return (
-    <>
-      <View style={[styles.corner, styles.cornerTL, c]} />
-      <View style={[styles.corner, styles.cornerTR, c]} />
-      <View style={[styles.corner, styles.cornerBL, c]} />
-      <View style={[styles.corner, styles.cornerBR, c]} />
-    </>
-  );
-}
-
 function SectionHeader({
   title,
   accent,
@@ -153,7 +196,7 @@ function SectionHeader({
 }) {
   return (
     <View style={styles.advTitleRow}>
-      <Text style={[styles.advTitle, { color: hexToRgba(accent, 0.75) }]}>
+      <Text style={[styles.advTitle, { color: "rgba(255,255,255,0.75)" }]}>
         {title}
       </Text>
       <View
@@ -162,6 +205,81 @@ function SectionHeader({
           { backgroundColor: hexToRgba(accent, 0.35) },
         ]}
       />
+    </View>
+  );
+}
+
+function TeamInformationSectionNative({
+  teamId,
+  accent,
+  language,
+}: {
+  teamId: string;
+  accent: string;
+  language: string | null | undefined;
+}) {
+  const info = getNbaTeamFranchiseInfo(teamId);
+  if (!info) return null;
+  const copy = nbaTeamFranchiseUiCopy(language);
+  const frame = hexToRgba(accent, 0.3);
+  const rows: { label: string; value: string; colors?: boolean }[] = [
+    { label: copy.city, value: info.city },
+    { label: copy.arena, value: info.arena },
+    { label: copy.conference, value: copy.conferenceLabel(info.conference) },
+    { label: copy.division, value: copy.divisionLabel(info) },
+    {
+      label: copy.headCoach,
+      value: copy.personWithSince(info.headCoach, info.headCoachSinceYear),
+    },
+    {
+      label: copy.generalManager,
+      value: copy.personWithSince(
+        info.generalManager,
+        info.generalManagerSinceYear
+      ),
+    },
+    { label: copy.owner, value: info.owner },
+    { label: copy.founded, value: String(info.foundedYear) },
+    { label: copy.formerNames, value: copy.formerNamesValue(info) },
+    { label: copy.championships, value: String(info.championships) },
+    { label: copy.lastTitle, value: copy.lastTitleValue(info) },
+    {
+      label: copy.mascot,
+      value: info.mascot?.trim() ? info.mascot : copy.none,
+    },
+    { label: copy.colors, value: "", colors: true },
+  ];
+
+  return (
+    <View style={styles.franchiseWrap}>
+      <SectionHeader title={copy.sectionTitle} accent={accent} />
+      <View style={[styles.franchiseCard, { borderColor: frame }]}>
+        {rows.map((row) => (
+          <View key={row.label} style={styles.franchiseRow}>
+            <Text style={styles.franchiseLabel}>{row.label}</Text>
+            {row.colors ? (
+              <View style={styles.franchiseColorRow}>
+                <View
+                  style={[
+                    styles.franchiseColorSwatch,
+                    { backgroundColor: info.colors.primary },
+                  ]}
+                />
+                {info.colors.secondary ? (
+                  <View
+                    style={[
+                      styles.franchiseColorSwatch,
+                      { backgroundColor: info.colors.secondary },
+                    ]}
+                  />
+                ) : null}
+              </View>
+            ) : (
+              <Text style={styles.franchiseValue}>{row.value}</Text>
+            )}
+          </View>
+        ))}
+      </View>
     </View>
   );
 }
@@ -242,44 +360,61 @@ function RecentFormSection({
   games,
   streak,
   accent,
+  ui,
+  trends = [],
 }: {
   games: NbaTeamRecentGame[];
   streak: NbaTeamStreak;
   accent: string;
+  ui: NbaTeamDetailUiCopy;
+  trends?: DetailTrendDelta[];
 }) {
   const results = games.slice(-10).map((g) => g.result);
   const wins = results.filter((r) => r === "W").length;
   const losses = results.length - wins;
   const streakLabel = formatStreakLabel(streak);
   const streakWin = streak.kind === "W";
+  const emptyCopy = ui.noData;
 
   return (
     <View style={styles.formSection}>
       <View style={styles.formHeadPress}>
         <Text
-          style={[styles.sectionTitleInline, { color: hexToRgba(accent, 0.75) }]}
+          style={[styles.sectionTitleInline, { color: "rgba(255,255,255,0.75)" }]}
         >
           RECENT FORM (LAST 10)
         </Text>
-        <Text
-          style={[
-            styles.streakBadge,
-            streakWin ? styles.streakWin : styles.streakLoss,
-          ]}
-        >
-          {streakLabel}
-        </Text>
+        {results.length > 0 ? (
+          <Text
+            style={[
+              styles.streakBadge,
+              streakWin ? styles.streakWin : styles.streakLoss,
+            ]}
+          >
+            {streakLabel}
+          </Text>
+        ) : null}
       </View>
-      <View style={styles.formBlock}>
-        <View style={styles.formChips}>
-          {results.map((r, i) => (
-            <FormChip key={`f-${i}`} result={r} index={i} total={results.length} />
-          ))}
+      {results.length === 0 ? (
+        <Text style={styles.injuryEmpty}>{emptyCopy}</Text>
+      ) : (
+        <View style={styles.formBlock}>
+          <View style={styles.formChips}>
+            {results.map((r, i) => (
+              <FormChip
+                key={`f-${i}`}
+                result={r}
+                index={i}
+                total={results.length}
+              />
+            ))}
+          </View>
+          <Text style={styles.formRecord}>
+            {wins}-{losses}
+          </Text>
         </View>
-        <Text style={styles.formRecord}>
-          {wins}-{losses}
-        </Text>
-      </View>
+      )}
+      <DetailTrendTableNative trends={trends} />
     </View>
   );
 }
@@ -287,61 +422,75 @@ function RecentFormSection({
 function GameLogsSection({
   games,
   accent,
+  ui,
 }: {
   games: NbaTeamRecentGame[];
   accent: string;
+  ui: NbaTeamDetailUiCopy;
 }) {
   const list = [...games].slice(-10).reverse();
   const frame = hexToRgba(accent, 0.3);
   const line = hexToRgba(accent, 0.12);
+  const emptyCopy = ui.noData;
   return (
     <View style={styles.schedSection}>
-      <SectionHeader title={`GAME LOGS (LAST ${list.length})`} accent={accent} />
+      <SectionHeader
+        title={list.length > 0 ? `GAME LOGS (LAST ${list.length})` : "GAME LOGS"}
+        accent={accent}
+      />
       <View style={[styles.gameList, { borderColor: frame }]}>
-        <View
-          style={[
-            styles.gameRow,
-            {
-              borderBottomWidth: StyleSheet.hairlineWidth,
-              borderBottomColor: line,
-            },
-          ]}
-        >
-          <Text style={[styles.gameDate, styles.gameHead]}>DATE</Text>
-          <Text style={[styles.gameVs, styles.gameHead]}>GAME</Text>
-          <Text style={[styles.gameScore, styles.gameHead]}>SCORE</Text>
-          <Text style={[styles.gameResult, styles.gameHead]}> </Text>
-        </View>
-        {list.map((g, i) => (
-          <View
-            key={`${g.dateLabel}-${g.oppAbbr}-${i}`}
-            style={[
-              styles.gameRow,
-              i < list.length - 1
-                ? {
-                    borderBottomWidth: StyleSheet.hairlineWidth,
-                    borderBottomColor: line,
-                  }
-                : null,
-            ]}
-          >
-            <Text style={styles.gameDate}>{g.dateLabel}</Text>
-            <Text style={styles.gameVs} numberOfLines={1}>
-              {g.home ? "vs" : "@"} {g.oppAbbr}
-            </Text>
-            <Text style={styles.gameScore}>
-              {g.teamScore}-{g.oppScore}
-            </Text>
-            <Text
+        {list.length === 0 ? (
+          <View style={styles.gameRow}>
+            <Text style={styles.injuryEmpty}>{emptyCopy}</Text>
+          </View>
+        ) : (
+          <>
+            <View
               style={[
-                styles.gameResult,
-                g.result === "W" ? styles.win : styles.loss,
+                styles.gameRow,
+                {
+                  borderBottomWidth: StyleSheet.hairlineWidth,
+                  borderBottomColor: line,
+                },
               ]}
             >
-              {g.result}
-            </Text>
-          </View>
-        ))}
+              <Text style={[styles.gameDate, styles.gameHead]}>DATE</Text>
+              <Text style={[styles.gameVs, styles.gameHead]}>GAME</Text>
+              <Text style={[styles.gameScore, styles.gameHead]}>SCORE</Text>
+              <Text style={[styles.gameResult, styles.gameHead]}> </Text>
+            </View>
+            {list.map((g, i) => (
+              <View
+                key={`${g.dateLabel}-${g.oppAbbr}-${i}`}
+                style={[
+                  styles.gameRow,
+                  i < list.length - 1
+                    ? {
+                        borderBottomWidth: StyleSheet.hairlineWidth,
+                        borderBottomColor: line,
+                      }
+                    : null,
+                ]}
+              >
+                <Text style={styles.gameDate}>{g.dateLabel}</Text>
+                <Text style={styles.gameVs} numberOfLines={1}>
+                  {g.home ? "vs" : "@"} {g.oppAbbr}
+                </Text>
+                <Text style={styles.gameScore}>
+                  {g.teamScore}-{g.oppScore}
+                </Text>
+                <Text
+                  style={[
+                    styles.gameResult,
+                    g.result === "W" ? styles.win : styles.loss,
+                  ]}
+                >
+                  {g.result}
+                </Text>
+              </View>
+            ))}
+          </>
+        )}
       </View>
     </View>
   );
@@ -350,12 +499,13 @@ function GameLogsSection({
 function InjuriesSection({
   injuries,
   accent,
-  isJa,
+  ui,
 }: {
   injuries: NbaTeamInjuryEntry[];
   accent: string;
-  isJa: boolean;
+  ui: NbaTeamDetailUiCopy;
 }) {
+  const lang = ui.lang;
   const frame = hexToRgba(accent, 0.35);
   return (
     <View style={styles.schedSection}>
@@ -364,12 +514,17 @@ function InjuriesSection({
         {injuries.length === 0 ? (
           <View style={styles.gameRow}>
             <Text style={styles.injuryEmpty}>
-              {isJa ? "欠場者なし" : "No injuries"}
+              {ui.noData}
             </Text>
           </View>
         ) : (
           injuries.map((inj, i) => {
-            const tone = availabilityStatusColor(inj.status);
+            const tone = teamInjuryStatusColor(inj.status);
+            const reasonLabel = injuryReasonLabel(inj.reason, lang);
+            const returnLabel = formatInjuryReturnEstimate(
+              inj.returnEstimate,
+              lang
+            );
             return (
               <View
                 key={inj.playerId}
@@ -386,21 +541,21 @@ function InjuriesSection({
                 <View style={styles.injuryTop}>
                   <Text style={styles.injuryName}>{inj.name}</Text>
                   <Text style={[styles.injuryStatus, { color: tone }]}>
-                    {formatAvailabilityStatus(inj.status)}
+                    {formatTeamInjuryStatus(inj.status, lang)}
                   </Text>
                 </View>
                 <View style={styles.injuryMeta}>
                   <Text style={styles.injuryReason} numberOfLines={1}>
-                    {inj.reason ?? "—"}
+                    {reasonLabel}
                   </Text>
-                  {inj.returnEstimate ? (
+                  {returnLabel ? (
                     <Text
                       style={[
                         styles.injuryReturn,
                         { color: hexToRgba(tone, 0.85) },
                       ]}
                     >
-                      {inj.returnEstimate.toUpperCase()}
+                      {returnLabel}
                     </Text>
                   ) : null}
                 </View>
@@ -413,58 +568,33 @@ function InjuriesSection({
   );
 }
 
-function OpponentStatsSection({
-  metrics,
+function HeadToHeadSection({
+  rows,
   accent,
-  isJa,
+  ui,
 }: {
-  metrics: NbaTeamOpponentAllowedMetric[];
+  rows: NbaTeamHeadToHeadEntry[];
   accent: string;
-  isJa: boolean;
+  ui: NbaTeamDetailUiCopy;
 }) {
-  const frame = hexToRgba(accent, 0.4);
-  const line = hexToRgba(accent, 0.22);
-  const [selectedId, setSelectedId] = useState(metrics[0]?.id ?? null);
-  const selected =
-    metrics.find((m) => m.id === selectedId) ?? metrics[0] ?? null;
-
+  const frame = hexToRgba(accent, 0.3);
+  const line = hexToRgba(accent, 0.12);
+  const emptyCopy = ui.noData;
   return (
     <View style={styles.schedSection}>
-      <SectionHeader title="OPPONENTS STATS" accent={accent} />
-      <Text style={styles.oppAllowedHint}>ALLOWED</Text>
-      <Text style={styles.oppAllowedCaption}>
-        {isJa
-          ? "順位が上（#1に近い）ほど DF が良い。"
-          : "Higher rank (closer to #1) = better defense."}
-      </Text>
-      <View style={[styles.oppAllowedGrid, { borderColor: frame }]}>
-        {metrics.map((m, i) => {
-          const col = i % 3;
-          const row = Math.floor(i / 3);
-          const lastRow = Math.floor((metrics.length - 1) / 3);
-          const active = selected?.id === m.id;
-          const isForcedTov = m.id === "tov_forced";
-          return (
-            <Pressable
-              key={m.id}
-              onPress={() => setSelectedId(m.id)}
-              accessibilityRole="button"
-              accessibilityState={{ selected: active }}
-              accessibilityLabel={
-                isForcedTov
-                  ? `${m.short}. #${m.leagueRank}. ${isJa ? "奪取・高いほど良" : "Forced, higher is better"}`
-                  : `${m.short}. #${m.leagueRank}`
-              }
+      <SectionHeader title="HEAD-TO-HEAD" accent={accent} />
+      <View style={[styles.gameList, { borderColor: frame }]}>
+        {rows.length === 0 ? (
+          <View style={styles.gameRow}>
+            <Text style={styles.injuryEmpty}>{emptyCopy}</Text>
+          </View>
+        ) : (
+          rows.map((row, i) => (
+            <View
+              key={row.oppTeamId}
               style={[
-                styles.oppAllowedCell,
-                active ? { backgroundColor: hexToRgba(accent, 0.08) } : null,
-                col < 2
-                  ? {
-                      borderRightWidth: StyleSheet.hairlineWidth,
-                      borderRightColor: line,
-                    }
-                  : null,
-                row < lastRow
+                styles.gameRow,
+                i < rows.length - 1
                   ? {
                       borderBottomWidth: StyleSheet.hairlineWidth,
                       borderBottomColor: line,
@@ -472,114 +602,19 @@ function OpponentStatsSection({
                   : null,
               ]}
             >
-              <View style={styles.oppAllowedTop}>
-                <Text style={styles.oppAllowedLabel}>{m.short}</Text>
-                <Text
-                  style={[
-                    styles.oppAllowedRank,
-                    {
-                      color:
-                        m.leagueRank <= 10
-                          ? accent
-                          : "rgba(255,255,255,0.35)",
-                    },
-                  ]}
-                >
-                  #{m.leagueRank}
-                </Text>
-              </View>
-              <Text style={styles.oppAllowedValue}>{m.display}</Text>
-              {isForcedTov ? (
-                <Text style={styles.oppAllowedTovBadge}>
-                  {isJa ? "奪取・高いほど良" : "Forced · higher is better"}
-                </Text>
-              ) : (
-                <View style={styles.oppAllowedBadgeSpacer} />
-              )}
-            </Pressable>
-          );
-        })}
-      </View>
-      {selected ? (
-        <Text style={styles.oppAllowedDetail}>
-          {isJa ? selected.hintJa : selected.hintEn}
-        </Text>
-      ) : null}
-    </View>
-  );
-}
-
-function UpcomingScheduleSection({
-  games,
-  accent,
-}: {
-  games: NbaTeamUpcomingGame[];
-  accent: string;
-}) {
-  if (games.length === 0) return null;
-  const frame = hexToRgba(accent, 0.3);
-  const line = hexToRgba(accent, 0.12);
-  return (
-    <View style={styles.schedSection}>
-      <SectionHeader title="UPCOMING" accent={accent} />
-      <View style={[styles.gameList, { borderColor: frame }]}>
-        {games.map((g, i) => (
-          <View
-            key={`${g.dateLabel}-${g.oppAbbr}-${i}`}
-            style={[
-              styles.gameRow,
-              i < games.length - 1
-                ? {
-                    borderBottomWidth: StyleSheet.hairlineWidth,
-                    borderBottomColor: line,
-                  }
-                : null,
-            ]}
-          >
-            <Text style={styles.gameDate}>{g.dateLabel}</Text>
-            <Text style={styles.gameVs} numberOfLines={1}>
-              {g.home ? "vs" : "@"} {g.oppAbbr}
-              {g.conferenceGame ? (
-                <Text style={[styles.confTag, { color: hexToRgba(accent, 0.55) }]}>
-                  {" "}
-                  · CONF
-                </Text>
-              ) : null}
-            </Text>
-            <Text style={[styles.schedTip, { color: hexToRgba(accent, 0.85) }]}>
-              {g.tipLabel}
-            </Text>
-          </View>
-        ))}
+              <Text style={[styles.gameVs, { flex: 1 }]}>{row.oppAbbr}</Text>
+              <Text style={styles.gameScore}>
+                {row.wins}-{row.losses}
+              </Text>
+            </View>
+          ))
+        )}
       </View>
     </View>
   );
 }
 
-/** 参考 ADVANCED METRICS 3×3（リーグ順位つき） */
-const ADVANCED_METRIC_IDS = [
-  "ppg",
-  "papg",
-  "pace",
-  "efgPct",
-  "fg3Pct",
-  "fg3a",
-  "netrtg",
-  "diff",
-  "tovPct",
-] as const;
 
-const ADVANCED_LABEL: Record<(typeof ADVANCED_METRIC_IDS)[number], string> = {
-  ppg: "PPG",
-  papg: "PAPG",
-  pace: "PACE",
-  efgPct: "EFG%",
-  fg3Pct: "3P%",
-  fg3a: "3PA",
-  netrtg: "NET",
-  diff: "DIFF",
-  tovPct: "TOV%",
-};
 
 function winPctLabel(wins: number, losses: number): string {
   const n = wins + losses;
@@ -615,190 +650,354 @@ function SplitCard({
   );
 }
 
-function rankTint(rank: number): string {
-  if (rank <= 6) return "rgba(110,231,183,0.95)";
-  if (rank <= 10) return "rgba(252,211,77,0.92)";
-  if (rank <= 20) return "rgba(255,255,255,0.45)";
-  return "rgba(252,165,165,0.75)";
+function shapeDeltaPpLabel(deltaWinPct: number): string {
+  const pp = Math.round(deltaWinPct * 100);
+  return `${pp > 0 ? "+" : ""}${pp}pp`;
 }
 
-/** 左からフェードするグラデ用の色（上位=緑 / 下位=赤） */
-function rankAccent(rank: number): {
-  glow: string;
-  clear: string;
-} {
-  if (rank <= 3) {
-    return {
-      glow: "rgba(92,240,181,0.22)",
-      clear: "rgba(92,240,181,0)",
-    };
-  }
-  if (rank <= 6) {
-    return {
-      glow: "rgba(92,240,181,0.14)",
-      clear: "rgba(92,240,181,0)",
-    };
-  }
-  if (rank <= 10) {
-    return {
-      glow: "rgba(252,211,77,0.12)",
-      clear: "rgba(252,211,77,0)",
-    };
-  }
-  if (rank <= 20) {
-    return {
-      glow: "rgba(255,255,255,0.04)",
-      clear: "rgba(255,255,255,0)",
-    };
-  }
-  if (rank <= 25) {
-    return {
-      glow: "rgba(252,165,165,0.12)",
-      clear: "rgba(252,165,165,0)",
-    };
-  }
-  return {
-    glow: "rgba(255,77,106,0.18)",
-    clear: "rgba(255,77,106,0)",
-  };
-}
-
-function AdvancedMetricsGrid({
-  metrics,
+function TeamShapeEdgesSectionNative({
+  shapeEdges,
   accent,
+  lang,
 }: {
-  metrics: NbaTeamMetricWithRank[];
+  shapeEdges: NbaTeamDetailShapeEdges | null;
   accent: string;
+  lang: import("../../../../../../lib/i18n/localize").LocalizedLang;
 }) {
-  const byId = new Map(metrics.map((m) => [m.id, m]));
-  const cells = ADVANCED_METRIC_IDS.map((id) => byId.get(id)).filter(
-    (m): m is NbaTeamMetricWithRank => Boolean(m)
-  );
-  const cellLine = hexToRgba(accent, 0.22);
-
+  if (!shapeEdges?.edges.length) return null;
+  const frame = hexToRgba(accent, 0.3);
   return (
-    <View style={styles.advWrap}>
-      <SectionHeader title="ADVANCED METRICS" accent={accent} />
-      <View
-        style={[styles.advGrid, { borderColor: hexToRgba(accent, 0.4) }]}
-      >
-        {cells.map((m, i) => {
-          const col = i % 3;
-          const row = Math.floor(i / 3);
-          const tint = rankAccent(m.leagueRank);
-          return (
-            <View
-              key={m.id}
-              style={[
-                styles.advCell,
-                col < 2
-                  ? { borderRightWidth: StyleSheet.hairlineWidth, borderRightColor: cellLine }
-                  : null,
-                row < 2
-                  ? { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: cellLine }
-                  : null,
-              ]}
-            >
-              <LinearGradient
-                colors={[tint.glow, tint.clear]}
-                start={{ x: 0, y: 0.5 }}
-                end={{ x: 1, y: 0.5 }}
-                style={StyleSheet.absoluteFillObject}
-                pointerEvents="none"
-              />
-              <View style={styles.advCellTop}>
-                <Text style={styles.advLabel}>
-                  {ADVANCED_LABEL[m.id as (typeof ADVANCED_METRIC_IDS)[number]] ??
-                    m.short}
+    <View style={styles.edgeSection}>
+      <View style={styles.advTitleRow}>
+        <Text style={[styles.advTitle, { color: "rgba(255,255,255,0.75)" }]}>
+          EDGE
+        </Text>
+        {shapeEdges.fromPriorSeason ? (
+          <View
+            style={[
+              styles.edgeSeasonBadge,
+              { borderColor: hexToRgba(accent, 0.35) },
+            ]}
+          >
+            <Text style={styles.edgeSeasonBadgeText}>{shapeEdges.season}</Text>
+          </View>
+        ) : null}
+        <View
+          style={[
+            styles.advTitleLine,
+            { backgroundColor: hexToRgba(accent, 0.35) },
+          ]}
+        />
+      </View>
+      {shapeEdges.edges.map((edge) => {
+        const strength = edge.kind === "strength";
+        const kindColor = strength ? "#00F5FF" : "#FF8A00";
+        const kindLabel = resolveTeamShapeEdgeKindLabel(edge.kind, lang);
+        return (
+          <View
+            key={`${edge.kind}-${edge.shapeId}`}
+            style={[styles.edgeRow, { borderColor: frame }]}
+          >
+            <View style={styles.edgeCopy}>
+              <View style={styles.edgeLabelRow}>
+                <Text style={[styles.edgeKind, { color: kindColor }]}>
+                  {kindLabel}
                 </Text>
-                <Text
-                  style={[
-                    styles.advRank,
-                    {
-                      color:
-                        m.leagueRank <= 10
-                          ? accent
-                          : rankTint(m.leagueRank),
-                    },
-                  ]}
-                >
-                  #{m.leagueRank}
+                <Text style={styles.edgeLabel} numberOfLines={1}>
+                  {resolveTeamShapeLabel(edge.shapeId, lang, {
+                    ja: edge.labelJa,
+                    en: edge.labelEn,
+                  })}
                 </Text>
               </View>
-              <Text style={styles.advValue}>{m.display}</Text>
+              <Text style={styles.edgeCondition} numberOfLines={2}>
+                {resolveTeamShapeCondition(edge.shapeId, lang, {
+                  ja: edge.conditionJa,
+                  en: edge.conditionEn,
+                })}
+              </Text>
             </View>
-          );
-        })}
-      </View>
+            <View style={styles.edgeStats}>
+              <Text style={styles.edgeWhen}>{edge.when}</Text>
+              <Text style={[styles.edgeDelta, { color: kindColor }]}>
+                {shapeDeltaPpLabel(edge.deltaWinPct)}
+              </Text>
+            </View>
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
+function ApronBadge({
+  status,
+  lang,
+}: {
+  status: NbaApronStatus;
+  lang: import("../../../../../../lib/i18n/localize").LocalizedLang;
+}) {
+  let label = apronStatusLabel(status, lang);
+  let color = "#00F5FF";
+  let bg = "rgba(0,245,255,0.12)";
+  let border = "rgba(0,245,255,0.45)";
+
+  switch (status) {
+    case "under_cap":
+      color = "#00F5FF";
+      bg = "rgba(0,245,255,0.12)";
+      border = "rgba(0,245,255,0.45)";
+      break;
+    case "over_cap":
+      color = "#D8D8D8";
+      bg = "rgba(255,255,255,0.08)";
+      border = "rgba(255,255,255,0.3)";
+      break;
+    case "tax_payer":
+      color = "#FFD000";
+      bg = "rgba(255,208,0,0.14)";
+      border = "rgba(255,208,0,0.5)";
+      break;
+    case "first_apron":
+      color = "#FF8A00";
+      bg = "rgba(255,138,0,0.16)";
+      border = "rgba(255,138,0,0.55)";
+      break;
+    case "second_apron":
+      color = "#FF2D78";
+      bg = "rgba(255,45,120,0.18)";
+      border = "rgba(255,45,120,0.6)";
+      break;
+  }
+
+  return (
+    <View style={[styles.apronBadge, { backgroundColor: bg, borderColor: border }]}>
+      <Text style={[styles.apronBadgeText, { color }]}>{label}</Text>
     </View>
   );
 }
 
 function PayrollSection({
   payroll,
+  rosterBlock,
   accent,
-  isJa,
+  ui,
 }: {
   payroll: NbaTeamPayroll;
+  rosterBlock?: NbaRosterTeamBlock | null;
   accent: string;
-  isJa: boolean;
+  ui: NbaTeamDetailUiCopy;
 }) {
+  const lang = ui.lang;
+  const [selectedSeasonIdx, setSelectedSeasonIdx] = useState(0);
   const frame = hexToRgba(accent, 0.45);
-  const overCap = payroll.capSpace < 0;
-  const slices = payrollDisplaySlices(payroll.lines, accent, 5);
+
+  const seasonKeys = ["2026-27", "2027-28", "2028-29", "2029-30", "2030-31"];
+
+  const seasonsList = seasonKeys.map((sKey, index) => {
+    const capInfo = nbaSalaryCapLinesForSeason(sKey);
+    const futureYearData =
+      index > 0
+        ? (payroll.futureYears ?? []).find((fy) => fy.seasonKey === sKey)
+        : null;
+
+    const sourceLines = futureYearData ? futureYearData.lines : payroll.lines;
+    const linesRaw = buildSynchronizedTeamPayrollLines(
+      rosterBlock?.players,
+      sourceLines,
+      sKey
+    );
+    const activeFromLines = linesRaw.reduce((s, l) => s + l.salary, 0);
+    const deadLines =
+      index === 0
+        ? payroll.deadLines ?? []
+        : futureYearData?.deadLines ?? [];
+    const deadMoney =
+      index === 0
+        ? payroll.deadMoney ??
+          deadLines.reduce((s, d) => s + d.salary, 0)
+        : futureYearData?.deadMoney ??
+          deadLines.reduce((s, d) => s + d.salary, 0);
+    const activeSalary =
+      index === 0 && payroll.activeSalary != null
+        ? payroll.activeSalary
+        : futureYearData?.activeSalary != null
+          ? futureYearData.activeSalary
+          : activeFromLines;
+    const totalSalary =
+      index === 0 && payroll.totalSalary > 0
+        ? payroll.totalSalary
+        : futureYearData != null && futureYearData.committedSalary > 0
+          ? futureYearData.committedSalary
+          : activeSalary + deadMoney;
+    const lines =
+      totalSalary > 0
+        ? linesRaw.map((l) => ({ ...l, share: l.salary / totalSalary }))
+        : linesRaw;
+
+    return {
+      key: sKey,
+      label: sKey,
+      isCurrent: index === 0,
+      totalSalary,
+      activeSalary,
+      deadMoney,
+      deadLines,
+      salaryCap: capInfo.salaryCap,
+      taxLine: capInfo.taxLine,
+      firstApron: capInfo.firstApron,
+      secondApron: capInfo.secondApron,
+      capSpace: capInfo.salaryCap - totalSalary,
+      taxSpace: capInfo.taxLine - totalSalary,
+      firstApronSpace: capInfo.firstApron - totalSalary,
+      secondApronSpace: capInfo.secondApron - totalSalary,
+      apronStatus: resolveApronStatus(totalSalary, capInfo),
+      taxBill: 0,
+      guaranteed: totalSalary,
+      lines,
+      leagueRank: index === 0 ? payroll.leagueRank : null,
+    };
+  });
+
+  const active = seasonsList[selectedSeasonIdx] ?? seasonsList[0];
+  const overCap = active.capSpace < 0;
+  const slices = payrollDisplaySlices(active.lines, accent);
+  const deadBarShare =
+    active.deadMoney > 0 && active.totalSalary > 0
+      ? active.deadMoney / active.totalSalary
+      : 0;
+  const DEAD_BAR = "rgba(255,255,255,0.22)";
 
   return (
     <View style={styles.payrollWrap}>
       <SectionHeader title="PAYROLL" accent={accent} />
-      <View style={[styles.payrollCard, { borderColor: frame }]}>
+
+      {/* Year Selection Tabs */}
+      <View style={styles.payrollYearTabsRow}>
+        {seasonsList.map((s, idx) => {
+          const isSelected = idx === selectedSeasonIdx;
+          return (
+            <Pressable
+              key={s.key}
+              onPress={() => setSelectedSeasonIdx(idx)}
+              style={[
+                styles.payrollYearTab,
+                isSelected && {
+                  borderColor: accent,
+                  backgroundColor: hexToRgba(accent, 0.18),
+                },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.payrollYearTabText,
+                  isSelected && { color: accent, fontWeight: "800" },
+                ]}
+              >
+                {s.label}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+
+      {/* Selected Season Detail Card with Animation */}
+      <Animated.View
+        key={active.key}
+        entering={FadeInDown.duration(200)}
+        style={[styles.payrollCard, { borderColor: frame }]}
+      >
         <View style={styles.payrollTop}>
           <View style={styles.payrollSalaryBlock}>
-            <Text style={styles.payrollLabel}>
-              {isJa ? "総年俸" : "TOTAL"}
-            </Text>
+            <View style={styles.payrollLabelWithBadge}>
+              <Text style={styles.payrollLabel}>
+                {active.isCurrent
+                  ? ui.totalSalary(active.label)
+                  : ui.committedSalary(active.label)}
+              </Text>
+              <ApronBadge status={active.apronStatus} lang={lang} />
+            </View>
             <Text style={styles.payrollSalary}>
-              {formatSalaryUsd(payroll.totalSalary)}
+              {formatSalaryUsd(active.totalSalary)}
             </Text>
+            {active.deadMoney > 0 ? (
+              <Text style={styles.payrollActiveDeadMeta}>
+                {ui.activeSalaryLabel} {formatSalaryUsd(active.activeSalary)}
+                {" · "}
+                {ui.deadMoneyLabel} {formatSalaryUsd(active.deadMoney)}
+              </Text>
+            ) : null}
           </View>
-          <View style={styles.payrollRankBlock}>
-            <Text style={styles.payrollLabel}>RANK</Text>
-            <Text style={[styles.payrollRank, { color: accent }]}>
-              #{payroll.leagueRank}
-            </Text>
-          </View>
+          {active.leagueRank != null && (
+            <View style={styles.payrollRankBlock}>
+              <Text style={styles.payrollLabel}>RANK</Text>
+              <Text style={[styles.payrollRank, { color: "#FFFFFF" }]}>
+                #{active.leagueRank}
+              </Text>
+            </View>
+          )}
         </View>
+
         <View style={styles.payrollMetaRow}>
           <Text style={styles.payrollMeta}>
-            CAP {formatSalaryUsd(payroll.salaryCap)}
+            CAP {formatSalaryUsd(active.salaryCap)}
           </Text>
-          <Text style={[styles.payrollMetaDot, { color: hexToRgba(accent, 0.45) }]}>
+          <Text style={[styles.payrollMetaDot, { color: "rgba(255,255,255,0.45)" }]}>
             ·
           </Text>
           <Text style={styles.payrollMeta}>
-            TAX LINE {formatSalaryUsd(payroll.taxLine)}
+            TAX LINE {formatSalaryUsd(active.taxLine)}
           </Text>
         </View>
-        <Text
-          style={[
-            styles.payrollSpace,
-            { color: overCap ? FORM_LOSS : POSITIVE_TEAL },
-          ]}
-        >
-          {isJa ? "キャップ余裕" : "CAP SPACE"}{" "}
-          {overCap ? "" : "+"}
-          {formatSalaryUsd(payroll.capSpace)}
-          {payroll.taxBill > 0
-            ? `  ·  TAX ${formatSalaryUsd(payroll.taxBill)}`
-            : ""}
-        </Text>
-        <Text style={[styles.payrollGuaranteed, { color: accent }]}>
-          {isJa ? "保証額" : "GUARANTEED"}{" "}
-          {formatSalaryUsd(payroll.guaranteed)}
-        </Text>
+
+        <View style={styles.payrollMetaRow}>
+          <Text style={[styles.payrollMeta, { color: "#FF8A00" }]}>
+            1ST APRON {formatSalaryUsd(active.firstApron)}
+          </Text>
+          <Text style={[styles.payrollMetaDot, { color: "rgba(255,255,255,0.45)" }]}>
+            ·
+          </Text>
+          <Text style={[styles.payrollMeta, { color: "#FF2D78" }]}>
+            2ND APRON {formatSalaryUsd(active.secondApron)}
+          </Text>
+        </View>
+
+        <View style={styles.payrollSpacesRow}>
+          {active.firstApronSpace != null && (
+            <Text
+              style={[
+                styles.payrollSpace,
+                {
+                  color:
+                    active.firstApronSpace < 0 ? FORM_LOSS : POSITIVE_TEAL,
+                },
+              ]}
+            >
+              {ui.apronSpace1st}{" "}
+              {active.firstApronSpace >= 0 ? "+" : ""}
+              {formatSalaryUsd(active.firstApronSpace)}
+            </Text>
+          )}
+          {active.secondApronSpace != null && (
+            <Text
+              style={[
+                styles.payrollSpace,
+                {
+                  color:
+                    active.secondApronSpace < 0 ? FORM_LOSS : POSITIVE_TEAL,
+                },
+              ]}
+            >
+              {ui.apronSpace2nd}{" "}
+              {active.secondApronSpace >= 0 ? "+" : ""}
+              {formatSalaryUsd(active.secondApronSpace)}
+            </Text>
+          )}
+        </View>
 
         {/* Player composition stacked bar */}
         <Text style={styles.payrollBreakdownTitle}>
-          {isJa ? "選手内訳" : "BY PLAYER"}
+          {ui.byPlayerCapPct(slices.length)}
         </Text>
         <View style={styles.payrollStackWrap}>
           <View style={styles.payrollStack}>
@@ -813,29 +1012,765 @@ function PayrollSection({
                 }}
               />
             ))}
+            {deadBarShare > 0 ? (
+              <View
+                key="dead-money"
+                style={{
+                  flexGrow: Math.max(deadBarShare, 0.02),
+                  flexBasis: 0,
+                  height: "100%",
+                  backgroundColor: DEAD_BAR,
+                }}
+              />
+            ) : null}
           </View>
         </View>
 
         <View style={styles.payrollLines}>
-          {slices.map((s) => (
-            <View key={s.key} style={styles.payrollLineRow}>
-              <View
-                style={[styles.payrollSwatch, { backgroundColor: s.color }]}
-              />
-              <Text style={styles.payrollLineName} numberOfLines={1}>
-                {s.label}
+          {slices.length === 0 ? (
+            <Text style={styles.injuryEmpty}>
+              {ui.noData}
+            </Text>
+          ) : (
+          slices.map((s) => {
+            const isTw = s.isTwoWay === true && active.key === CURRENT_NBA_SEASON_KEY;
+            const isE10 =
+              s.isNonGuaranteed === true &&
+              !isTw &&
+              active.key === CURRENT_NBA_SEASON_KEY;
+            const displaySalary = isTw
+              ? nbaTwoWaySalaryForSeason(active.key)
+              : s.displaySalary != null && s.displaySalary > 0
+                ? s.displaySalary
+                : s.salary;
+            const capPct =
+              !isTw && !isE10 && s.salary > 0 && active.salaryCap > 0
+                ? ((s.salary / active.salaryCap) * 100).toFixed(1)
+                : null;
+            return (
+              <View key={s.key} style={styles.payrollLineRow}>
+                <View
+                  style={[styles.payrollSwatch, { backgroundColor: s.color }]}
+                />
+                <View style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 4 }}>
+                  <Text style={styles.payrollLineName} numberOfLines={1}>
+                    {s.label}
+                  </Text>
+                  {s.option && active.key !== CURRENT_NBA_SEASON_KEY ? (
+                    <Text
+                      style={{
+                        fontSize: 8,
+                        fontWeight: "800",
+                        color:
+                          s.option === "TO"
+                            ? "#FFB800"
+                            : s.option === "PO"
+                            ? "#00F5FF"
+                            : "#C084FC",
+                        backgroundColor:
+                          s.option === "TO"
+                            ? "rgba(255,180,0,0.18)"
+                            : s.option === "PO"
+                            ? "rgba(0,245,255,0.18)"
+                            : "rgba(168,85,247,0.18)",
+                        paddingHorizontal: 4,
+                        paddingVertical: 1,
+                        borderRadius: 2,
+                        overflow: "hidden",
+                      }}
+                    >
+                      {s.option === "TO"
+                        ? "TEAM"
+                        : s.option === "PO"
+                        ? "PLAYER"
+                        : s.option === "MO"
+                        ? "MUTUAL"
+                        : s.option}
+                    </Text>
+                  ) : null}
+                </View>
+                <View style={styles.payrollContractBadgeSlot}>
+                  {isTw || isE10 ? (
+                    <Text style={styles.payrollContractBadge}>
+                      {isTw ? "TW" : "E10"}
+                    </Text>
+                  ) : null}
+                </View>
+                <Text style={styles.payrollLineSalary}>
+                  {displaySalary > 0 ? formatSalaryUsd(displaySalary) : "—"}
+                </Text>
+                <View style={styles.payrollCapPctBlock}>
+                  {capPct !== null ? (
+                    <Text style={styles.payrollCapPct}>
+                      {capPct}% <Text style={styles.payrollCapPctSub}>CAP</Text>
+                    </Text>
+                  ) : (
+                    <Text style={[styles.payrollCapPctSub, { color: "rgba(255,255,255,0.35)" }]}>—</Text>
+                  )}
+                </View>
+              </View>
+            );
+          })
+          )}
+        </View>
+
+        {active.deadLines.length > 0 ? (
+          <View style={styles.payrollDeadWrap}>
+            <Text style={styles.payrollBreakdownTitle}>
+              {ui.deadMoneySection}
+            </Text>
+            {active.deadLines.map((d) => {
+              const capPct =
+                d.salary > 0 && active.salaryCap > 0
+                  ? ((d.salary / active.salaryCap) * 100).toFixed(1)
+                  : null;
+              const note = lang === "ja" ? d.noteJa : d.noteEn;
+              return (
+                <View key={d.playerId} style={styles.payrollLineRow}>
+                  <View
+                    style={[styles.payrollSwatch, { backgroundColor: DEAD_BAR }]}
+                  />
+                  <View style={{ flex: 1, gap: 2 }}>
+                    <Text style={[styles.payrollLineName, { color: "rgba(255,255,255,0.8)" }]} numberOfLines={1}>
+                      {d.name}
+                    </Text>
+                    {note ? (
+                      <Text style={styles.payrollDeadNote} numberOfLines={1}>
+                        {note}
+                      </Text>
+                    ) : null}
+                  </View>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
+                    <Text
+                      style={{
+                        fontSize: 9,
+                        fontWeight: "800",
+                        color: "rgba(255,255,255,0.6)",
+                        backgroundColor: "rgba(255,255,255,0.1)",
+                        paddingHorizontal: 3,
+                        paddingVertical: 1,
+                        borderRadius: 2,
+                        overflow: "hidden",
+                      }}
+                    >
+                      {ui.deadSalaryBadge}
+                    </Text>
+                    <Text style={[styles.payrollLineSalary, { color: "rgba(255,255,255,0.65)" }]}>
+                      {formatSalaryUsd(d.salary)}
+                    </Text>
+                  </View>
+                  <View style={styles.payrollCapPctBlock}>
+                    {capPct !== null ? (
+                      <Text style={[styles.payrollCapPct, { color: "rgba(255,255,255,0.7)" }]}>
+                        {capPct}% <Text style={styles.payrollCapPctSub}>CAP</Text>
+                      </Text>
+                    ) : (
+                      <Text style={[styles.payrollCapPctSub, { color: "rgba(255,255,255,0.35)" }]}>—</Text>
+                    )}
+                  </View>
+                </View>
+              );
+            })}
+          </View>
+        ) : null}
+
+        {/* Option Badges & Contract Legend */}
+        <View style={styles.payrollLegendWrap}>
+          <Text style={styles.payrollLegendTitle}>
+            {ui.contractLegendTitle}
+          </Text>
+          <View style={styles.payrollLegendList}>
+            <View style={styles.payrollLegendItem}>
+              <Text
+                style={[
+                  styles.payrollLegendBadge,
+                  {
+                    color: "#FFB800",
+                    backgroundColor: "rgba(255,180,0,0.18)",
+                  },
+                ]}
+              >
+                TEAM
               </Text>
-              <Text style={styles.payrollLineSalary}>
-                {formatSalaryUsd(s.salary)}
-              </Text>
-              <Text style={[styles.payrollLineShare, { color: accent }]}>
-                {Math.round(s.share * 100)}%
+              <Text style={styles.payrollLegendText}>
+                {ui.teamOption}
               </Text>
             </View>
-          ))}
+            <View style={styles.payrollLegendItem}>
+              <Text
+                style={[
+                  styles.payrollLegendBadge,
+                  {
+                    color: "#00F5FF",
+                    backgroundColor: "rgba(0,245,255,0.18)",
+                  },
+                ]}
+              >
+                PLAYER
+              </Text>
+              <Text style={styles.payrollLegendText}>
+                {ui.playerOption}
+              </Text>
+            </View>
+            <View style={styles.payrollLegendItem}>
+              <Text
+                style={[
+                  styles.payrollLegendBadge,
+                  {
+                    color: "#C084FC",
+                    backgroundColor: "rgba(168,85,247,0.18)",
+                  },
+                ]}
+              >
+                MUTUAL
+              </Text>
+              <Text style={styles.payrollLegendText}>
+                {ui.mutualOption}
+              </Text>
+            </View>
+            <View style={styles.payrollLegendItem}>
+              <Text
+                style={[
+                  styles.payrollLegendBadge,
+                  {
+                    color: "rgba(255,255,255,0.6)",
+                    backgroundColor: "rgba(255,255,255,0.1)",
+                  },
+                ]}
+              >
+                TW
+              </Text>
+              <Text style={styles.payrollLegendText}>
+                {ui.twoWayContract}
+              </Text>
+            </View>
+            <View style={styles.payrollLegendItem}>
+              <Text
+                style={[
+                  styles.payrollLegendBadge,
+                  {
+                    color: "rgba(255,255,255,0.6)",
+                    backgroundColor: "rgba(255,255,255,0.1)",
+                  },
+                ]}
+              >
+                E10
+              </Text>
+              <Text style={styles.payrollLegendText}>
+                {ui.exhibit10Contract}
+              </Text>
+            </View>
+            <View style={styles.payrollLegendItem}>
+              <Text
+                style={[
+                  styles.payrollLegendBadge,
+                  {
+                    color: "rgba(255,255,255,0.6)",
+                    backgroundColor: "rgba(255,255,255,0.1)",
+                  },
+                ]}
+              >
+                {ui.deadSalaryBadge}
+              </Text>
+              <Text style={styles.payrollLegendText}>
+                {ui.deadSalaryLegend}
+              </Text>
+            </View>
+          </View>
+        </View>
+      </Animated.View>
+    </View>
+  );
+}
+
+function DraftTeamColoredTextNative({
+  text,
+  style,
+  baseColor = "rgba(255,255,255,0.88)",
+}: {
+  text: string;
+  style?: StyleProp<TextStyle>;
+  baseColor?: string;
+}) {
+  const segs = draftTextSegmentsWithTeamColors(text);
+  return (
+    <Text style={[{ color: baseColor }, style]}>
+      {segs.map((seg, i) => (
+        <Text
+          key={`${i}-${seg.text.slice(0, 16)}`}
+          style={seg.color ? { color: seg.color } : undefined}
+        >
+          {seg.text}
+        </Text>
+      ))}
+    </Text>
+  );
+}
+
+function DraftPicksSection({
+  teamId,
+  accent,
+  ui,
+}: {
+  teamId: string;
+  accent: string;
+  ui: NbaTeamDetailUiCopy;
+}) {
+  const draftCapital = useMemo(() => getNbaTeamDraftCapital(teamId), [teamId]);
+  const { summary } = draftCapital;
+  const frame = hexToRgba(accent, 0.45);
+
+  const [selectedPick, setSelectedPick] = useState<NbaDraftPickEntry | null>(null);
+
+  const flexColor =
+    summary.flexibility === "VERY HIGH" || summary.flexibility === "HIGH"
+      ? "#00F5FF"
+      : summary.flexibility === "MEDIUM"
+      ? "#5CF0B5"
+      : "#FF2D78";
+
+  return (
+    <View style={styles.payrollWrap}>
+      <SectionHeader
+        title={ui.draftAssetsTitle}
+        accent={accent}
+      />
+
+      {/* ① Summary (資産サマリー) */}
+      <View style={[styles.draftSummaryCardWrap, { borderColor: frame }]}>
+        {/* Header row with Flexibility */}
+        <View style={styles.draftSummaryHeaderRow}>
+          <Text style={styles.draftSummaryMainLabel}>
+            {ui.draftSummaryTitle}
+          </Text>
+          <View style={styles.draftFlexibilityWrap}>
+            <Text style={styles.draftFlexibilityLabel}>{ui.flex}</Text>
+            <View
+              style={[
+                styles.draftFlexibilityBadge,
+                {
+                  backgroundColor: hexToRgba(flexColor, 0.15),
+                  borderColor: hexToRgba(flexColor, 0.6),
+                },
+              ]}
+            >
+              <Text style={[styles.draftFlexibilityText, { color: flexColor }]}>
+                {draftFlexibilityLabel(ui.lang, summary.flexibility)}
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        {/* 4 Cards in 2x2 Grid */}
+        <View style={styles.draftSummaryGrid2x2}>
+          {/* 1st Round */}
+          <View style={styles.draftSummaryBox}>
+            <Text style={[styles.draftSummaryBoxLabel, { color: "#00F5FF" }]}>
+              {ui.firstRound}
+            </Text>
+            <View style={styles.draftSummaryBoxValRow}>
+              <Text style={styles.draftSummaryBoxVal}>{summary.total1st}</Text>
+              <Text style={styles.draftSummaryBoxUnit}>{ui.picksUnit}</Text>
+            </View>
+            <Text style={styles.draftSummaryBoxSub}>
+              {ui.guar}
+              <Text style={styles.draftSummaryBoxSubBold}>{summary.guaranteed1st}</Text>
+              {ui.cond}
+              <Text style={[styles.draftSummaryBoxSubBold, { color: "#FFB800" }]}>
+                {summary.conditional1st}
+              </Text>
+            </Text>
+          </View>
+
+          {/* 2nd Round */}
+          <View style={styles.draftSummaryBox}>
+            <Text style={styles.draftSummaryBoxLabel}>
+              {ui.secondRound}
+            </Text>
+            <View style={styles.draftSummaryBoxValRow}>
+              <Text style={styles.draftSummaryBoxVal}>{summary.total2nd}</Text>
+              <Text style={styles.draftSummaryBoxUnit}>{ui.picksUnit}</Text>
+            </View>
+            <Text style={styles.draftSummaryBoxSub}>
+              {ui.guar}
+              <Text style={styles.draftSummaryBoxSubBold}>{summary.guaranteed2nd}</Text>
+              {ui.cond}
+              <Text style={[styles.draftSummaryBoxSubBold, { color: "#FFB800" }]}>
+                {summary.conditional2nd}
+              </Text>
+            </Text>
+          </View>
+
+          {/* Swap Rights */}
+          <View style={styles.draftSummaryBox}>
+            <Text style={[styles.draftSummaryBoxLabel, { color: "#FFB800" }]}>
+              {ui.swapRights}
+            </Text>
+            <View style={styles.draftSummaryBoxValRow}>
+              <Text style={[styles.draftSummaryBoxVal, { color: "#FFB800" }]}>
+                {summary.swapRights}
+              </Text>
+              <Text style={styles.draftSummaryBoxUnit}>{ui.swapsUnit}</Text>
+            </View>
+            <Text style={styles.draftSummaryBoxSub}>
+              {ui.favorableSwap}
+            </Text>
+          </View>
+
+          {/* Outgoing */}
+          <View style={styles.draftSummaryBox}>
+            <Text style={[styles.draftSummaryBoxLabel, { color: "#FF2D78" }]}>
+              {ui.outgoing}
+            </Text>
+            <View style={styles.draftSummaryBoxValRow}>
+              <Text style={[styles.draftSummaryBoxVal, { color: "#FF2D78" }]}>
+                {summary.outgoingPicks}
+              </Text>
+              <Text style={styles.draftSummaryBoxUnit}>{ui.picksUnit}</Text>
+            </View>
+            <Text style={styles.draftSummaryBoxSub}>
+              {ui.tradedAway}
+            </Text>
+          </View>
         </View>
       </View>
+
+      {/* ② Year-by-Year Timeline (年別タイムライン) */}
+      <View style={[styles.draftListCard, { borderColor: frame }]}>
+        <View style={styles.draftTimelineHeaderRow}>
+          <Text style={styles.draftTimelineHeaderTitle}>
+            {ui.picksTimeline}
+          </Text>
+          <View style={styles.draftLegendRow}>
+            <View style={styles.draftLegendItem}>
+              <View style={[styles.draftLegendDot, { backgroundColor: "#00F5FF" }]} />
+              <Text style={styles.draftLegendText}>{ui.legendOwn}</Text>
+            </View>
+            <View style={styles.draftLegendItem}>
+              <View style={[styles.draftLegendDot, { backgroundColor: "#5CF0B5" }]} />
+              <Text style={styles.draftLegendText}>{ui.legendFrom}</Text>
+            </View>
+            <View style={styles.draftLegendItem}>
+              <View style={[styles.draftLegendDot, { backgroundColor: "#FFB800" }]} />
+              <Text style={styles.draftLegendText}>SWAP</Text>
+            </View>
+            <View style={styles.draftLegendItem}>
+              <View style={[styles.draftLegendDot, { backgroundColor: "#B388FF" }]} />
+              <Text style={styles.draftLegendText}>{ui.legendProt}</Text>
+            </View>
+            <View style={styles.draftLegendItem}>
+              <View style={[styles.draftLegendDot, { backgroundColor: "#FF2D78" }]} />
+              <Text style={styles.draftLegendText}>{ui.legendOut}</Text>
+            </View>
+            <View style={styles.draftLegendItem}>
+              <View style={[styles.draftLegendDot, { backgroundColor: "#FF503C" }]} />
+              <Text style={styles.draftLegendText}>{ui.legendForfeit}</Text>
+            </View>
+          </View>
+        </View>
+
+        {draftCapital.years.map((y) => {
+          return (
+            <View key={y.year} style={styles.draftYearRow}>
+              {/* Year Column */}
+              <View style={styles.draftYearCol}>
+                <Text style={styles.draftYearText}>{y.year}</Text>
+              </View>
+
+              {/* Picks Column */}
+              <View style={styles.draftPicksCol}>
+                {/* 1st Round */}
+                <View style={styles.draftRoundGroup}>
+                  <Text style={styles.draftRoundLabel}>1ST</Text>
+                  <View style={styles.draftChipsWrap}>
+                    {y.firstRound.length === 0 ? (
+                      <View style={[styles.draftChip, styles.draftChipNone]}>
+                        <Text style={styles.draftChipTextNone}>
+                          {ui.none}
+                        </Text>
+                      </View>
+                    ) : (
+                      y.firstRound.map((p) => {
+                        return renderNativePickChip(p, ui, () => setSelectedPick(p));
+                      })
+                    )}
+                  </View>
+                </View>
+
+                {/* 2nd Round */}
+                <View style={styles.draftRoundGroup}>
+                  <Text style={[styles.draftRoundLabel, { color: "rgba(255,255,255,0.4)" }]}>
+                    2ND
+                  </Text>
+                  <View style={styles.draftChipsWrap}>
+                    {y.secondRound.length === 0 ? (
+                      <View style={[styles.draftChip, styles.draftChipNone]}>
+                        <Text style={styles.draftChipTextNone}>
+                          {ui.none}
+                        </Text>
+                      </View>
+                    ) : (
+                      y.secondRound.map((p) => {
+                        return renderNativePickChip(p, ui, () => setSelectedPick(p));
+                      })
+                    )}
+                  </View>
+                </View>
+              </View>
+            </View>
+          );
+        })}
+      </View>
+
+      {/* ③ タップで開く詳細モーダル */}
+      <Modal
+        visible={!!selectedPick}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setSelectedPick(null)}
+      >
+        <Pressable
+          style={styles.modalBackdrop}
+          onPress={() => setSelectedPick(null)}
+        >
+          <Pressable
+            style={styles.draftModalCard}
+            onPress={(e) => e.stopPropagation()}
+          >
+            {selectedPick && (
+              <>
+                {/* Modal Header */}
+                <View style={styles.draftModalHeader}>
+                  <View style={styles.draftModalHeaderTitles}>
+                    <Text style={styles.draftModalSubTitle}>
+                      {selectedPick.year} NBA DRAFT •{" "}
+                      {selectedPick.round === 1 ? "1ST ROUND" : "2ND ROUND"}
+                    </Text>
+                    <DraftTeamColoredTextNative
+                      text={draftPickBodyText(
+                        ui.lang,
+                        selectedPick.detailsJa,
+                        selectedPick.detailsEn
+                      )}
+                      style={styles.draftModalMainTitle}
+                      baseColor="#FFFFFF"
+                    />
+                  </View>
+                  <Pressable
+                    hitSlop={8}
+                    onPress={() => setSelectedPick(null)}
+                    style={styles.draftModalCloseBtn}
+                  >
+                    <Text style={styles.draftModalCloseText}>✕</Text>
+                  </Pressable>
+                </View>
+
+                {/* Badge tags */}
+                <View style={styles.draftModalTagRow}>
+                  {selectedPick.badgeType && (
+                    <View style={styles.draftModalTagBadge}>
+                      <DraftTeamColoredTextNative
+                        text={draftBadgeHeadline(
+                          selectedPick.badgeType,
+                          ui,
+                          selectedPick
+                        )}
+                        style={styles.draftModalTagBadgeText}
+                        baseColor="rgba(255,255,255,0.9)"
+                      />
+                    </View>
+                  )}
+                  {selectedPick.protection && (
+                    <View style={styles.draftModalTagBadge}>
+                      <Text
+                        style={[
+                          styles.draftModalTagBadgeText,
+                          { color: "rgba(255,255,255,0.75)" },
+                        ]}
+                      >
+                        {selectedPick.protection}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+
+                {(() => {
+                  const origin = resolveDraftPickOrigin(selectedPick);
+                  const body = draftPickBodyText(
+                    ui.lang,
+                    origin.textJa,
+                    origin.textEn
+                  );
+                  return (
+                    <View style={styles.draftModalBodyBox}>
+                      <Text style={styles.draftModalBodyLabel}>
+                        {draftPickBodyText(
+                          ui.lang,
+                          origin.labelJa,
+                          origin.labelEn
+                        )}
+                      </Text>
+                      {body.length > 0 ? (
+                        <DraftTeamColoredTextNative
+                          text={body}
+                          style={styles.draftOriginBodyText}
+                        />
+                      ) : (
+                        <Text style={styles.draftOriginBodyText}>
+                          {ui.noOrigin}
+                        </Text>
+                      )}
+                    </View>
+                  );
+                })()}
+
+                {/* Conditions list */}
+                <View style={styles.draftModalBodyBox}>
+                  <Text style={styles.draftModalBodyLabel}>
+                    {ui.conditionsTitle}
+                  </Text>
+                  {(() => {
+                    const lines = draftPickBodyLines(
+                      ui.lang,
+                      selectedPick.conditionsJa,
+                      selectedPick.conditionsEn
+                    );
+                    if (lines.length > 0) {
+                      return lines.map((c, idx) => (
+                        <View key={idx} style={styles.draftConditionItem}>
+                          <Text style={styles.draftConditionBullet}>•</Text>
+                          <DraftTeamColoredTextNative
+                            text={c}
+                            style={styles.draftConditionText}
+                          />
+                        </View>
+                      ));
+                    }
+                    const fallback = draftPickBodyText(
+                      ui.lang,
+                      selectedPick.detailsJa,
+                      selectedPick.detailsEn
+                    );
+                    return fallback ? (
+                      <DraftTeamColoredTextNative
+                        text={fallback}
+                        style={styles.draftConditionText}
+                        baseColor="rgba(255,255,255,0.7)"
+                      />
+                    ) : (
+                      <Text style={styles.draftConditionText}>
+                        {ui.noExtraProtection}
+                      </Text>
+                    );
+                  })()}
+                </View>
+
+                {/* Close Button */}
+                <Pressable
+                  style={styles.draftModalActionBtn}
+                  onPress={() => setSelectedPick(null)}
+                >
+                  <Text style={styles.draftModalActionBtnText}>
+                    {ui.close}
+                  </Text>
+                </Pressable>
+              </>
+            )}
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
+  );
+}
+
+function renderNativePickChip(
+  p: NbaDraftPickEntry,
+  ui: NbaTeamDetailUiCopy,
+  onPress: () => void
+) {
+  const badgeType = p.badgeType ?? "own";
+  const isForfeited =
+    p.kind === "forfeited" || badgeType === "forfeited";
+  const isOutgoing =
+    !isForfeited &&
+    (p.kind === "outgoing" || p.isOutgoing || badgeType === "outgoing");
+  const isSwap = p.kind.startsWith("swap") || p.isSwap || badgeType === "swap";
+  const isProt = badgeType === "prot" || (p.protection && p.protection.toLowerCase() !== "unprotected");
+  const isFrom = badgeType === "from" || (!isSwap && !isProt && !isOutgoing && !isForfeited && !!p.fromTeamId);
+
+  let bg = "rgba(0,245,255,0.08)";
+  let border = "rgba(0,245,255,0.35)";
+  let color = "#00F5FF";
+  let tagBg = "rgba(0,245,255,0.2)";
+  let tagText = ui.tagOwn;
+
+  if (isForfeited) {
+    bg = "rgba(255,80,60,0.08)";
+    border = "rgba(255,80,60,0.4)";
+    color = "#FF503C";
+    tagBg = "rgba(255,80,60,0.22)";
+    tagText = ui.tagForfeit;
+  } else if (isOutgoing) {
+    bg = "rgba(255,45,120,0.06)";
+    border = "rgba(255,45,120,0.3)";
+    color = "#FF2D78";
+    tagBg = "rgba(255,45,120,0.2)";
+    tagText = ui.tagOut;
+  } else if (isSwap) {
+    bg = "rgba(255,184,0,0.08)";
+    border = "rgba(255,184,0,0.4)";
+    color = "#FFB800";
+    tagBg = "rgba(255,184,0,0.2)";
+    tagText = "SWAP";
+  } else if (isProt) {
+    bg = "rgba(179,136,255,0.08)";
+    border = "rgba(179,136,255,0.4)";
+    color = "#B388FF";
+    tagBg = "rgba(179,136,255,0.2)";
+    tagText = p.protectionTag ?? ui.tagProt;
+  } else if (isFrom) {
+    bg = "rgba(92,240,181,0.08)";
+    border = "rgba(92,240,181,0.4)";
+    color = "#5CF0B5";
+    tagBg = "rgba(92,240,181,0.2)";
+    tagText = p.fromTeamId ? `FROM ${p.fromTeamId}` : ui.tagFrom;
+  }
+
+  const label =
+    draftPickBodyText(ui.lang, p.shortLabelJa, p.shortLabelEn) ||
+    draftPickBodyText(ui.lang, p.detailsJa, p.detailsEn);
+
+  return (
+    <Pressable
+      key={p.id}
+      onPress={onPress}
+      style={[
+        styles.draftChip,
+        {
+          backgroundColor: bg,
+          borderColor: border,
+          opacity: isOutgoing || isForfeited ? 0.65 : 1,
+        },
+      ]}
+    >
+      <View style={[styles.draftKindTag, { backgroundColor: tagBg }]}>
+        <Text style={[styles.draftKindTagText, { color: color }]}>
+          {tagText}
+        </Text>
+      </View>
+      <Text
+        numberOfLines={1}
+        style={[
+          styles.draftChipText,
+          {
+            color: color,
+            textDecorationLine: isOutgoing || isForfeited ? "line-through" : "none",
+          },
+        ]}
+      >
+        {label}
+      </Text>
+    </Pressable>
   );
 }
 
@@ -844,9 +1779,34 @@ export default function NbaTeamDetailPanelNative({
   teamId,
   onSelectPlayer,
 }: Props) {
-  const isJa = language === "ja";
+  const ui = nbaTeamDetailUiCopy(language);
+  const lang = ui.lang;
+  const isJa = lang === "ja";
   const insets = useSafeAreaInsets();
-  const detail = useMemo(() => getNbaTeamDetailPreview(teamId), [teamId]);
+  const { bundle } = useLeagueTeamStatsBundle({
+    apiBaseUrl: getUniterzApiBaseUrl(),
+  });
+  const baseDetail = useMemo(
+    () => getNbaTeamDetailPreview(teamId, bundle),
+    [teamId, bundle]
+  );
+  const { detail, aceOut, shapeEdges, offseasonMoves, hasFetchError } =
+    useNbaTeamDetailLiveOverlay({
+      teamId: baseDetail.teamId,
+      apiBaseUrl: getUniterzApiBaseUrl(),
+      base: baseDetail,
+    });
+  const teamInsights = useMemo(
+    () =>
+      buildTeamDetailInsights({
+        detail,
+        seasonRows: bundle.season,
+        seasonRow: bundle.season.find((r) => r.teamId === detail.teamId),
+        last10Row: bundle.last10.find((r) => r.teamId === detail.teamId),
+        aceOut,
+      }),
+    [detail, bundle.season, bundle.last10, aceOut]
+  );
   const jerseyPrimary = getTeamJerseyPrimaryColor("nba", detail.teamId);
   const jerseySecondary = getTeamJerseySecondaryColor("nba", detail.teamId);
   /** 枠・文字用（暗いチーム色も読める） */
@@ -873,20 +1833,25 @@ export default function NbaTeamDetailPanelNative({
       showsVerticalScrollIndicator={false}
     >
       <View style={styles.panel}>
-        {/* HEADER */}
+        
+        {hasFetchError ? (
+          <Text style={{ color: "rgba(255,255,255,0.65)", fontSize: 11, fontWeight: "700", marginBottom: 8 }}>
+            {ui.fetchError}
+          </Text>
+        ) : null}
+{/* HEADER */}
         <View style={[styles.headerCard, { borderColor: accent }]}>
           <View style={styles.header}>
             <View style={styles.jerseyFrame}>
-              <CornerMarks color={accent} />
               <JerseyMarkSvg
                 accent={jerseyPrimary}
                 accentEnd={jerseySecondary}
-                size={44}
+                size={56}
               />
             </View>
             <View style={styles.headerText}>
               <Text
-                style={[styles.confSeed, { color: hexToRgba(accent, 0.85) }]}
+                style={[styles.confSeed, { color: "rgba(255,255,255,0.85)" }]}
                 numberOfLines={1}
               >
                 {confLine}
@@ -898,11 +1863,18 @@ export default function NbaTeamDetailPanelNative({
                 {detail.nickEn.toUpperCase()}
               </Text>
             </View>
-            <TeamHeroStreakBadgeNative
-              streak={detail.streak}
-              last10={last10}
-              isJa={isJa}
-            />
+            <View style={styles.headerSideCol}>
+              <NbaFavoriteStarButtonNative
+                kind="team"
+                teamId={detail.teamId}
+                language={isJa ? "ja" : "en"}
+              />
+              <TeamHeroStreakBadgeNative
+                streak={detail.streak}
+                last10={last10}
+                isJa={isJa}
+              />
+            </View>
           </View>
 
           <View style={styles.recordRankRow}>
@@ -914,7 +1886,7 @@ export default function NbaTeamDetailPanelNative({
                 <Text style={styles.recordRankPrimary}>
                   {detail.season.wins}-{detail.season.losses}
                 </Text>
-                <Text style={[styles.recordRankAccent, { color: accent }]}>
+                <Text style={[styles.recordRankAccent, { color: "#FFFFFF" }]}>
                   {winPctText}
                 </Text>
               </View>
@@ -924,7 +1896,7 @@ export default function NbaTeamDetailPanelNative({
             >
               <Text style={styles.recordRankLabel}>RANK</Text>
               <View style={styles.recordRankValues}>
-                <Text style={[styles.recordRankPrimary, { color: accent }]}>
+                <Text style={[styles.recordRankPrimary, { color: "#FFFFFF" }]}>
                   #{String(detail.conferenceRank).padStart(2, "0")}
                 </Text>
                 <Text style={styles.recordRankAccentMuted}>Seed</Text>
@@ -935,10 +1907,36 @@ export default function NbaTeamDetailPanelNative({
 
         <View style={[styles.divider, { backgroundColor: dividerColor }]} />
 
+        {teamInsights.summary ? (
+          <>
+            <DetailInsightSummaryNative
+              text={isJa ? teamInsights.summary.linesJa : teamInsights.summary.linesEn}
+            />
+            <View style={{ height: 10 }} />
+            <DetailIdentityChipRowNative
+              chips={teamInsights.identity}
+              accent={accent}
+              title="TEAM IDENTITY"
+              language={lang}
+            />
+            <View style={[styles.divider, { backgroundColor: dividerColor }]} />
+          </>
+        ) : teamInsights.identity.length > 0 ? (
+          <>
+            <DetailIdentityChipRowNative
+              chips={teamInsights.identity}
+              accent={accent}
+              title="TEAM IDENTITY"
+              language={lang}
+            />
+            <View style={[styles.divider, { backgroundColor: dividerColor }]} />
+          </>
+        ) : null}
+
         <InjuriesSection
           injuries={detail.injuries}
           accent={accent}
-          isJa={isJa}
+          ui={ui}
         />
 
         <View style={[styles.divider, { backgroundColor: dividerColor }]} />
@@ -977,14 +1975,11 @@ export default function NbaTeamDetailPanelNative({
 
         <View style={[styles.divider, { backgroundColor: dividerColor }]} />
 
-        <AdvancedMetricsGrid metrics={seasonMetrics} accent={accent} />
-
-        <View style={[styles.divider, { backgroundColor: dividerColor }]} />
-
-        <OpponentStatsSection
-          metrics={detail.opponentStats}
+        <NbaTeamHowTheyPlayNative
+          teamId={detail.teamId}
           accent={accent}
-          isJa={isJa}
+          language={language}
+          bundle={bundle}
         />
 
         <View style={[styles.divider, { backgroundColor: dividerColor }]} />
@@ -994,18 +1989,34 @@ export default function NbaTeamDetailPanelNative({
             games={detail.recentGames}
             streak={detail.streak}
             accent={accent}
+            ui={ui}
+            trends={teamInsights.trends}
           />
         </View>
 
         <View style={[styles.divider, { backgroundColor: dividerColor }]} />
 
-        <GameLogsSection games={detail.recentGames} accent={accent} />
+        <GameLogsSection
+          games={detail.recentGames}
+          accent={accent}
+          ui={ui}
+        />
 
         <View style={[styles.divider, { backgroundColor: dividerColor }]} />
 
-        <UpcomingScheduleSection
-          games={detail.upcomingGames}
+        <HeadToHeadSection
+          rows={detail.headToHead}
           accent={accent}
+          ui={ui}
+        />
+
+        <View style={[styles.divider, { backgroundColor: dividerColor }]} />
+
+        <DetailScheduleSectionNative
+          upcomingGames={detail.upcomingGames}
+          scheduleDifficulty={teamInsights.scheduleDifficulty}
+          accent={accent}
+          language={lang}
         />
 
         <View style={[styles.divider, { backgroundColor: dividerColor }]} />
@@ -1041,13 +2052,47 @@ export default function NbaTeamDetailPanelNative({
             accent={accent}
           />
         </View>
+        <View style={[styles.splitRow, { marginTop: 8 }]}>
+          <SplitCard
+            label="VS .500+"
+            wins={detail.strengthSplit.vsOver500.wins}
+            losses={detail.strengthSplit.vsOver500.losses}
+            accent={accent}
+          />
+          <SplitCard
+            label="VS SUB-.500"
+            wins={detail.strengthSplit.vsUnder500.wins}
+            losses={detail.strengthSplit.vsUnder500.losses}
+            accent={accent}
+          />
+        </View>
+
+        {shapeEdges?.edges.length ? (
+          <>
+            <View style={[styles.divider, { backgroundColor: dividerColor }]} />
+            <TeamShapeEdgesSectionNative
+              shapeEdges={shapeEdges}
+              accent={accent}
+              lang={lang}
+            />
+          </>
+        ) : null}
 
         <View style={[styles.divider, { backgroundColor: dividerColor }]} />
 
         <PayrollSection
           payroll={detail.payroll}
+          rosterBlock={detail.rosterBlock}
           accent={accent}
-          isJa={isJa}
+          ui={ui}
+        />
+
+        <View style={[styles.divider, { backgroundColor: dividerColor }]} />
+
+        <DraftPicksSection
+          teamId={detail.teamId}
+          accent={accent}
+          ui={ui}
         />
 
         <View style={[styles.divider, { backgroundColor: dividerColor }]} />
@@ -1062,10 +2107,30 @@ export default function NbaTeamDetailPanelNative({
           />
         </View>
 
+        <View style={[styles.divider, { backgroundColor: dividerColor }]} />
+
+        {offseasonMoves ? (
+          <>
+            <NbaTeamOffseasonMovesNative
+              moves={offseasonMoves}
+              accent={accent}
+              language={language}
+              onSelectPlayer={onSelectPlayer}
+            />
+            <View style={[styles.divider, { backgroundColor: dividerColor }]} />
+          </>
+        ) : null}
+
+        <TeamInformationSectionNative
+          teamId={detail.teamId}
+          accent={accent}
+          language={language}
+        />
+
         <Text
-          style={[styles.footerAsOf, { color: hexToRgba(accent, 0.4) }]}
+          style={[styles.footerAsOf, { color: "rgba(255,255,255,0.4)" }]}
         >
-          {detail.asOfLabel} · PREVIEW
+          {detail.asOfLabel}
         </Text>
       </View>
     </ScrollView>
@@ -1101,39 +2166,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  corner: {
-    position: "absolute",
-    width: 10,
-    height: 10,
-  },
-  cornerTL: {
-    top: 0,
-    left: 0,
-    borderTopWidth: 1.5,
-    borderLeftWidth: 1.5,
-  },
-  cornerTR: {
-    top: 0,
-    right: 0,
-    borderTopWidth: 1.5,
-    borderRightWidth: 1.5,
-  },
-  cornerBL: {
-    bottom: 0,
-    left: 0,
-    borderBottomWidth: 1.5,
-    borderLeftWidth: 1.5,
-  },
-  cornerBR: {
-    bottom: 0,
-    right: 0,
-    borderBottomWidth: 1.5,
-    borderRightWidth: 1.5,
-  },
   headerText: {
     flex: 1,
     minWidth: 0,
     gap: 2,
+  },
+  headerSideCol: {
+    alignItems: "flex-end",
+    gap: 8,
   },
   confSeed: {
     fontFamily: METRIC_FONT,
@@ -1155,7 +2195,7 @@ const styles = StyleSheet.create({
   nick: {
     ...MATCH_CARD_BRACKET_TEXT,
     color: "#FFFFFF",
-    fontSize: 26,
+    fontSize: 20,
     letterSpacing: MATCH_CARD_BRACKET_LETTER_SPACING_12,
     textTransform: "uppercase",
     marginBottom: 2,
@@ -1272,6 +2312,27 @@ const styles = StyleSheet.create({
   payrollWrap: {
     gap: 10,
   },
+  payrollYearTabsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+  },
+  payrollYearTab: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 2,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.12)",
+    backgroundColor: "rgba(8,8,12,0.4)",
+    transform: [{ skewX: "-8deg" }],
+  },
+  payrollYearTabText: {
+    fontFamily: METRIC_FONT,
+    color: "rgba(255,255,255,0.6)",
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 0.8,
+  },
   payrollCard: {
     borderWidth: 1,
     backgroundColor: "rgba(8,8,12,0.45)",
@@ -1284,8 +2345,27 @@ const styles = StyleSheet.create({
     alignItems: "flex-end",
     justifyContent: "space-between",
   },
-  payrollSalaryBlock: { gap: 2 },
+  payrollSalaryBlock: { gap: 2, flex: 1 },
   payrollRankBlock: { alignItems: "flex-end", gap: 2 },
+  payrollLabelWithBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    flexWrap: "wrap",
+  },
+  apronBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 2,
+    borderWidth: 1,
+    transform: [{ skewX: "-8deg" }],
+  },
+  apronBadgeText: {
+    fontFamily: METRIC_FONT,
+    fontSize: 8,
+    fontWeight: "800",
+    letterSpacing: 0.8,
+  },
   payrollLabel: {
     fontFamily: METRIC_FONT,
     color: "rgba(255,255,255,0.4)",
@@ -1302,6 +2382,28 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     fontVariant: ["tabular-nums"],
     transform: [{ skewX: "-8deg" }],
+  },
+  payrollActiveDeadMeta: {
+    fontFamily: METRIC_FONT,
+    color: "rgba(255,255,255,0.5)",
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 0.8,
+    textTransform: "uppercase",
+    marginTop: 2,
+    transform: [{ skewX: "-6deg" }],
+  },
+  payrollDeadWrap: {
+    gap: 8,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(255,255,255,0.1)",
+    paddingTop: 10,
+  },
+  payrollDeadNote: {
+    fontFamily: METRIC_FONT,
+    color: "rgba(255,255,255,0.35)",
+    fontSize: 9,
+    fontWeight: "700",
   },
   payrollRank: {
     fontFamily: METRIC_FONT,
@@ -1324,6 +2426,12 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
   },
   payrollMetaDot: { fontSize: 11 },
+  payrollSpacesRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    gap: 12,
+  },
   payrollSpace: {
     fontFamily: METRIC_FONT,
     fontSize: 12,
@@ -1361,45 +2469,471 @@ const styles = StyleSheet.create({
     transform: [{ skewX: "-14deg" }],
   },
   payrollLines: {
-    gap: 5,
-    marginTop: 2,
+    gap: 8,
+    marginTop: 4,
   },
   payrollLineRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 10,
+    paddingVertical: 2,
   },
   payrollSwatch: {
-    width: 8,
-    height: 8,
+    width: 10,
+    height: 10,
     borderRadius: 1,
     transform: [{ skewX: "-12deg" }],
   },
   payrollLineName: {
     flex: 1,
     fontFamily: METRIC_FONT,
-    color: "rgba(255,255,255,0.82)",
-    fontSize: 11,
-    fontWeight: "700",
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "800",
     letterSpacing: 0.3,
     transform: [{ skewX: "-8deg" }],
   },
-  payrollLineSalary: {
+  payrollContractBadgeSlot: {
+    width: 32,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  payrollContractBadge: {
     fontFamily: METRIC_FONT,
-    color: "rgba(255,255,255,0.7)",
-    fontSize: 11,
+    fontSize: 9,
+    fontWeight: "800",
+    color: "rgba(255,255,255,0.6)",
+    backgroundColor: "rgba(255,255,255,0.1)",
+    paddingHorizontal: 3,
+    paddingVertical: 1,
+    borderRadius: 2,
+    overflow: "hidden",
+    letterSpacing: 0.4,
+    transform: [{ skewX: "-8deg" }],
+  },
+  payrollLineSalary: {
+    width: 52,
+    textAlign: "right",
+    fontFamily: METRIC_FONT,
+    color: "rgba(255,255,255,0.75)",
+    fontSize: 13,
     fontWeight: "700",
     fontVariant: ["tabular-nums"],
     transform: [{ skewX: "-8deg" }],
   },
   payrollLineShare: {
-    width: 36,
+    width: 44,
     textAlign: "right",
     fontFamily: METRIC_FONT,
-    fontSize: 11,
+    color: "#FFFFFF",
+    fontSize: 13,
     fontWeight: "800",
     fontVariant: ["tabular-nums"],
     transform: [{ skewX: "-8deg" }],
+  },
+  payrollCapPctBlock: {
+    width: 62,
+    alignItems: "flex-end",
+  },
+  payrollCapPct: {
+    fontFamily: METRIC_FONT,
+    color: "#FFFFFF",
+    fontSize: 13,
+    fontWeight: "800",
+    fontVariant: ["tabular-nums"],
+    transform: [{ skewX: "-8deg" }],
+  },
+  payrollCapPctSub: {
+    fontSize: 9,
+    color: "rgba(255,255,255,0.45)",
+    fontWeight: "700",
+  },
+  payrollLegendWrap: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: "rgba(255,255,255,0.12)",
+    paddingTop: 10,
+    marginTop: 8,
+    gap: 6,
+  },
+  payrollLegendTitle: {
+    fontFamily: METRIC_FONT,
+    fontSize: 8,
+    fontWeight: "800",
+    color: "rgba(255,255,255,0.4)",
+    letterSpacing: 0.8,
+    textTransform: "uppercase",
+    transform: [{ skewX: "-6deg" }],
+  },
+  payrollLegendList: {
+    gap: 5,
+  },
+  payrollLegendItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  payrollLegendBadge: {
+    fontSize: 8,
+    fontWeight: "800",
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+    borderRadius: 2,
+    overflow: "hidden",
+  },
+  payrollLegendText: {
+    fontSize: 10,
+    color: "rgba(255,255,255,0.55)",
+    fontWeight: "500",
+    flex: 1,
+  },
+  draftSummaryCardWrap: {
+    borderWidth: 1,
+    backgroundColor: "rgba(8,8,12,0.6)",
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    gap: 10,
+  },
+  draftSummaryHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingBottom: 8,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(255,255,255,0.08)",
+  },
+  draftSummaryMainLabel: {
+    fontFamily: METRIC_FONT,
+    color: "rgba(255,255,255,0.5)",
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 0.8,
+    textTransform: "uppercase",
+  },
+  draftFlexibilityWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  draftFlexibilityLabel: {
+    fontFamily: METRIC_FONT,
+    color: "rgba(255,255,255,0.4)",
+    fontSize: 9,
+    fontWeight: "600",
+  },
+  draftFlexibilityBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderWidth: 1,
+    borderRadius: 2,
+    transform: [{ skewX: "-6deg" }],
+  },
+  draftFlexibilityText: {
+    fontFamily: METRIC_FONT,
+    fontSize: 9,
+    fontWeight: "800",
+  },
+  draftSummaryGrid2x2: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+  },
+  draftSummaryBox: {
+    width: "48.5%",
+    backgroundColor: "rgba(255,255,255,0.03)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.08)",
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+    borderRadius: 2,
+    gap: 3,
+  },
+  draftSummaryBoxLabel: {
+    fontFamily: METRIC_FONT,
+    color: "rgba(255,255,255,0.7)",
+    fontSize: 9,
+    fontWeight: "700",
+    letterSpacing: 0.6,
+    textTransform: "uppercase",
+  },
+  draftSummaryBoxValRow: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    gap: 3,
+  },
+  draftSummaryBoxVal: {
+    fontFamily: OXANIUM,
+    color: "#FFFFFF",
+    fontSize: 18,
+    fontWeight: "800",
+  },
+  draftSummaryBoxUnit: {
+    fontSize: 10,
+    fontWeight: "600",
+    color: "rgba(255,255,255,0.5)",
+  },
+  draftSummaryBoxSub: {
+    fontFamily: METRIC_FONT,
+    fontSize: 8.5,
+    color: "rgba(255,255,255,0.45)",
+  },
+  draftSummaryBoxSubBold: {
+    fontWeight: "800",
+    color: "#FFFFFF",
+  },
+  draftTimelineHeaderRow: {
+    flexDirection: "column",
+    gap: 6,
+    paddingBottom: 8,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(255,255,255,0.08)",
+  },
+  draftTimelineHeaderTitle: {
+    fontFamily: METRIC_FONT,
+    color: "rgba(255,255,255,0.5)",
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 0.8,
+    textTransform: "uppercase",
+  },
+  draftLegendRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  draftLegendItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+  },
+  draftLegendDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  draftLegendText: {
+    fontFamily: METRIC_FONT,
+    fontSize: 8,
+    color: "rgba(255,255,255,0.4)",
+    fontWeight: "700",
+  },
+  draftListCard: {
+    borderWidth: 1,
+    backgroundColor: "rgba(8,8,12,0.6)",
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    gap: 10,
+  },
+  draftYearRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+    paddingVertical: 8,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(255,255,255,0.06)",
+  },
+  draftYearCol: {
+    width: 44,
+    paddingTop: 2,
+  },
+  draftYearText: {
+    fontFamily: METRIC_FONT,
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "800",
+    transform: [{ skewX: "-6deg" }],
+  },
+  draftPicksCol: {
+    flex: 1,
+    gap: 6,
+  },
+  draftRoundGroup: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 6,
+  },
+  draftRoundLabel: {
+    fontFamily: METRIC_FONT,
+    color: "#00F5FF",
+    fontSize: 9,
+    fontWeight: "800",
+    width: 24,
+    paddingTop: 2,
+  },
+  draftChipsWrap: {
+    flex: 1,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 4,
+  },
+  draftChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 2,
+    borderWidth: 1,
+  },
+  draftKindTag: {
+    paddingHorizontal: 3,
+    paddingVertical: 1,
+    borderRadius: 1,
+  },
+  draftKindTagText: {
+    fontFamily: METRIC_FONT,
+    fontSize: 7.5,
+    fontWeight: "800",
+    letterSpacing: 0.5,
+  },
+  draftProtectionTag: {
+    backgroundColor: "rgba(255,255,255,0.08)",
+    paddingHorizontal: 3,
+    paddingVertical: 1,
+    borderRadius: 1,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(255,255,255,0.2)",
+  },
+  draftProtectionTagText: {
+    fontFamily: METRIC_FONT,
+    fontSize: 7.5,
+    fontWeight: "700",
+    color: "rgba(255,255,255,0.7)",
+  },
+  draftChipNone: {
+    backgroundColor: "rgba(255,255,255,0.03)",
+    borderColor: "rgba(255,255,255,0.1)",
+  },
+  draftChipText: {
+    fontFamily: METRIC_FONT,
+    fontSize: 10,
+    fontWeight: "700",
+    maxWidth: 160,
+  },
+  draftChipTextNone: {
+    fontFamily: METRIC_FONT,
+    fontSize: 9.5,
+    fontWeight: "600",
+    color: "rgba(255,255,255,0.3)",
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.8)",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 20,
+  },
+  draftModalCard: {
+    width: "100%",
+    maxWidth: 380,
+    backgroundColor: "#0C0D14",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.25)",
+    padding: 18,
+    borderRadius: 2,
+    gap: 14,
+  },
+  draftModalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(255,255,255,0.1)",
+    paddingBottom: 10,
+  },
+  draftModalHeaderTitles: {
+    flex: 1,
+    gap: 2,
+  },
+  draftModalSubTitle: {
+    fontFamily: METRIC_FONT,
+    color: "rgba(255,255,255,0.55)",
+    fontSize: 9.5,
+    fontWeight: "800",
+    letterSpacing: 0.8,
+    textTransform: "uppercase",
+  },
+  draftModalMainTitle: {
+    fontFamily: METRIC_FONT,
+    fontSize: 16,
+    fontWeight: "800",
+  },
+  draftModalCloseBtn: {
+    padding: 4,
+  },
+  draftModalCloseText: {
+    color: "rgba(255,255,255,0.5)",
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  draftModalTagRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+  },
+  draftModalTagBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 2,
+    backgroundColor: "rgba(255,255,255,0.08)",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(255,255,255,0.2)",
+  },
+  draftModalTagBadgeText: {
+    fontFamily: METRIC_FONT,
+    fontSize: 9,
+    fontWeight: "700",
+    textTransform: "uppercase",
+  },
+  draftModalBodyBox: {
+    backgroundColor: "rgba(255,255,255,0.02)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.08)",
+    padding: 10,
+    borderRadius: 2,
+    gap: 8,
+  },
+  draftModalBodyLabel: {
+    fontFamily: METRIC_FONT,
+    color: "rgba(255,255,255,0.4)",
+    fontSize: 9,
+    fontWeight: "700",
+    letterSpacing: 0.6,
+    textTransform: "uppercase",
+  },
+  draftOriginBodyText: {
+    fontSize: 12,
+    lineHeight: 17,
+  },
+  draftConditionItem: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 6,
+  },
+  draftConditionBullet: {
+    color: "rgba(255,255,255,0.4)",
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  draftConditionText: {
+    flex: 1,
+    fontSize: 11.5,
+    lineHeight: 16,
+  },
+  draftModalActionBtn: {
+    backgroundColor: "rgba(255,255,255,0.08)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.2)",
+    paddingVertical: 10,
+    alignItems: "center",
+    borderRadius: 2,
+  },
+  draftModalActionBtnText: {
+    fontFamily: METRIC_FONT,
+    color: "#FFFFFF",
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 0.6,
   },
   sectionTitleInline: {
     fontFamily: METRIC_FONT,
@@ -1483,10 +3017,10 @@ const styles = StyleSheet.create({
   schedTip: {
     fontFamily: METRIC_FONT,
     color: "rgba(0,245,255,0.75)",
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: "700",
     fontVariant: ["tabular-nums"],
-    minWidth: 44,
+    minWidth: 50,
     textAlign: "right",
     transform: [{ skewX: "-8deg" }],
   },
@@ -1499,7 +3033,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 10,
-    paddingVertical: 9,
+    paddingVertical: 11,
     gap: 6,
   },
   gameRowBorder: {
@@ -1507,36 +3041,36 @@ const styles = StyleSheet.create({
     borderBottomColor: "rgba(0,245,255,0.1)",
   },
   gameDate: {
-    width: 36,
+    width: 44,
     fontFamily: METRIC_FONT,
     color: "rgba(255,255,255,0.4)",
-    fontSize: 11,
+    fontSize: 13,
   },
   gameVs: {
     flex: 1,
     fontFamily: METRIC_FONT,
     color: "rgba(255,255,255,0.88)",
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: "700",
   },
   confTag: {
     color: "rgba(0,245,255,0.55)",
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: "700",
   },
   gameScore: {
-    width: 52,
+    width: 62,
     textAlign: "right",
     fontFamily: METRIC_FONT,
     color: "rgba(255,255,255,0.7)",
-    fontSize: 12,
+    fontSize: 14,
     fontVariant: ["tabular-nums"],
     transform: [{ skewX: "-8deg" }],
   },
   gameResult: {
-    width: 18,
+    width: 20,
     fontFamily: METRIC_FONT,
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: "800",
     textAlign: "right",
     transform: [{ skewX: "-8deg" }],
@@ -1545,7 +3079,7 @@ const styles = StyleSheet.create({
   loss: { color: FORM_LOSS },
   gameHead: {
     color: "rgba(255,255,255,0.38)",
-    fontSize: 9,
+    fontSize: 11,
     fontWeight: "700",
     letterSpacing: 0.8,
     textTransform: "uppercase",
@@ -1810,6 +3344,84 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
     transform: [{ skewX: "-8deg" }],
   },
+  edgeSection: {
+    gap: 8,
+  },
+  edgeSeasonBadge: {
+    borderWidth: 1,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  edgeSeasonBadgeText: {
+    fontFamily: METRIC_FONT,
+    color: "rgba(255,255,255,0.55)",
+    fontSize: 8,
+    fontWeight: "700",
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
+  },
+  edgeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+    borderWidth: 1,
+    backgroundColor: "rgba(0,0,0,0.4)",
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+  },
+  edgeCopy: {
+    flex: 1,
+    minWidth: 0,
+    gap: 4,
+  },
+  edgeLabelRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    gap: 8,
+  },
+  edgeKind: {
+    fontFamily: METRIC_FONT,
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
+  },
+  edgeLabel: {
+    fontFamily: METRIC_FONT,
+    color: "rgba(255,255,255,0.85)",
+    fontSize: 13,
+    fontWeight: "700",
+    letterSpacing: 0.8,
+    textTransform: "uppercase",
+    flexShrink: 1,
+  },
+  edgeCondition: {
+    fontFamily: METRIC_FONT,
+    color: "rgba(255,255,255,0.45)",
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 0.4,
+  },
+  edgeStats: {
+    alignItems: "flex-end",
+    gap: 2,
+  },
+  edgeWhen: {
+    fontFamily: METRIC_FONT,
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "800",
+    fontVariant: ["tabular-nums"],
+    transform: [{ skewX: "-8deg" }],
+  },
+  edgeDelta: {
+    fontFamily: METRIC_FONT,
+    fontSize: 12,
+    fontWeight: "700",
+    fontVariant: ["tabular-nums"],
+  },
   footerAsOf: {
     marginTop: 18,
     fontFamily: METRIC_FONT,
@@ -1818,5 +3430,51 @@ const styles = StyleSheet.create({
     letterSpacing: 1.4,
     textTransform: "uppercase",
     textAlign: "center",
+  },
+  franchiseWrap: {
+    gap: 12,
+  },
+  franchiseCard: {
+    borderWidth: 1,
+    backgroundColor: "rgba(0,0,0,0.4)",
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    gap: 10,
+  },
+  franchiseRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  franchiseLabel: {
+    fontFamily: METRIC_FONT,
+    flexShrink: 0,
+    color: "rgba(255,255,255,0.5)",
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
+  },
+  franchiseValue: {
+    fontFamily: METRIC_FONT,
+    flex: 1,
+    minWidth: 0,
+    color: "rgba(255,255,255,0.9)",
+    fontSize: 13,
+    fontWeight: "600",
+    lineHeight: 18,
+    textAlign: "right",
+  },
+  franchiseColorRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  franchiseColorSwatch: {
+    width: 16,
+    height: 16,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.25)",
   },
 });

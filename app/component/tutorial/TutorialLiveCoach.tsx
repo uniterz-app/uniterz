@@ -87,7 +87,7 @@ type Props = {
   /** welcome の二択など、次へと並べる副ボタン */
   altNextLabel?: string;
   onAltNext?: () => void;
-  /** welcome「画面を案内」/「新機能だけ」: カメラ前進の開始 */
+  /** welcome「ヒントを見る」/「新機能だけ」: カメラ前進の開始 */
   onWelcomeFlyStart?: (dest: TutorialWelcomeFlyDest) => void;
   /** welcome を試合ページと同じ 3D カメラに載せる。
    * true のとき Portal / 独自暗幕 / 独自 fly をしない。
@@ -356,7 +356,7 @@ export default function TutorialLiveCoach({
   const [focusRect, setFocusRect] = useState<Rect | null>(null);
   const [calloutBox, setCalloutBox] = useState<Rect | null>(null);
   const [skipConfirmOpen, setSkipConfirmOpen] = useState(false);
-  /** welcome「画面を案内」: カメラがモーダルを追い抜いている */
+  /** welcome「ヒントを見る」: カメラがモーダルを追い抜いている */
   const [welcomeFly, setWelcomeFly] = useState(false);
   const welcomeFlyRef = useRef(false);
   const onNextRef = useRef(onNext);
@@ -570,7 +570,8 @@ export default function TutorialLiveCoach({
     : !target ||
         target.startsWith("nav-") ||
         !hole ||
-        target === "profile-career-tab"
+        target === "profile-career-tab" ||
+        target === "rankings-division"
       ? CENTER_CALLOUT_STYLE
       : buildNearTargetCalloutStyle(hole, calloutBox?.height ?? CALLOUT_EST_H);
 
@@ -1003,7 +1004,11 @@ export default function TutorialLiveCoach({
                             : undefined
                         }
                       >
-                        {title}
+                        <TutorialRichBody
+                          text={title}
+                          as="span"
+                          boldClassName="font-bold text-white"
+                        />
                       </h2>
                     </WelcomeFloat>
                     ) : null}
@@ -1066,8 +1071,22 @@ export default function TutorialLiveCoach({
                           </WelcomeFloat>
                         ) : null}
                       </div>
-                    ) : onBack || (onNext && nextLabel) ? (
-                      <CyberSlantedTabBar fill aria-label="Tutorial actions" className="mt-1 py-1">
+                    ) : onBack || (onNext && nextLabel) || (onAltNext && altNextLabel) ? (
+                      <div className="mt-1 flex flex-col items-stretch gap-2">
+                        {onAltNext && altNextLabel ? (
+                          <button
+                            type="button"
+                            onClick={onAltNext}
+                            className={cn(
+                              nameRajdhani.className,
+                              "mx-auto text-center text-[12px] font-semibold tracking-wide text-cyan-200/90 underline underline-offset-2 decoration-cyan-400/50 transition hover:text-cyan-100"
+                            )}
+                          >
+                            {altNextLabel}
+                          </button>
+                        ) : null}
+                        {onBack || (onNext && nextLabel) ? (
+                      <CyberSlantedTabBar fill aria-label="Tutorial actions" className="py-1">
                         {onBack && backLabel ? (
                           <CyberSlantedTab
                             label={backLabel}
@@ -1101,6 +1120,8 @@ export default function TutorialLiveCoach({
                           />
                         ) : null}
                       </CyberSlantedTabBar>
+                        ) : null}
+                      </div>
                     ) : null}
                   </>
                 )}

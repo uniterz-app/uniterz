@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { Search, SlidersHorizontal, CircleHelp, X } from "lucide-react";
+import { Search, SlidersHorizontal, X } from "lucide-react";
 import cn from "clsx";
 import { gamesHeaderFilterButtonClasses } from "@/lib/ui/gamesHeaderBar";
 import type { ScheduleTeamOption } from "@/lib/games/useScheduleTeams";
@@ -14,6 +14,7 @@ import {
 import type { TeamFilterMatchMode } from "@/lib/games/gameTeamFilter";
 import { t } from "@/lib/i18n/t";
 import type { Language } from "@/lib/i18n/language";
+import { L, resolveLocalizedLang } from "@/lib/i18n/localize";
 import type { League } from "@/lib/leagues";
 import {
   getTeamPrimaryColor,
@@ -28,6 +29,7 @@ import {
   gamesFilterHelpParagraphs,
 } from "@/lib/games/gamesFilterHelp";
 import { nameOxanium } from "@/lib/fonts";
+import CyberHelpMark from "@/app/component/common/CyberHelpMark";
 
 const GAMES_FILTER_PANEL_CLASS = "games-filter-panel";
 
@@ -106,9 +108,32 @@ export default function GamesTeamFilterPanel({
   league,
 }: Props) {
   const m = t(language);
+  const loc = resolveLocalizedLang(language);
+  const filterKicker = L(loc, {
+    ja: "FILTER // 試合",
+    en: "FILTER // SCHEDULE",
+    ko: "FILTER // 경기",
+    zh: "FILTER // 赛程",
+    es: "FILTER // PARTIDOS",
+    pt: "FILTER // JOGOS",
+    fr: "FILTER // MATCHS",
+  });
+  const teamSearchLabel = L(loc, {
+    ja: "チーム検索",
+    en: "TEAM SEARCH",
+    ko: "팀 검색",
+    zh: "搜索球队",
+    es: "BUSCAR EQUIPO",
+    pt: "BUSCAR TIME",
+    fr: "RECHERCHER ÉQUIPE",
+  });
   const reduceMotion = useReducedMotion();
   const tabFont = bracketMarketTeamTypography(layoutMobile);
-  const teamNameFont = matchCardTeamNameStyle(layoutMobile);
+  /** 試合カードと同系だが、フィルター一覧は SemiBold で少し細く */
+  const teamNameFont: CSSProperties = {
+    ...matchCardTeamNameStyle(layoutMobile),
+    fontWeight: 600,
+  };
   /** モバイルで number/search 入力にフォーカスしたとき、16px 未満だと iOS がページを拡大するのを防ぐ */
   const filterInputTextClass = layoutMobile
     ? "text-[16px] leading-normal"
@@ -211,7 +236,7 @@ export default function GamesTeamFilterPanel({
         <div className="games-filter-panel-header md:px-5 md:pt-4">
           <div className="min-w-0 flex-1">
             <p className={nameOxanium.className + " games-filter-kicker"}>
-              {language === "ja" ? "FILTER // 試合" : "FILTER // SCHEDULE"}
+              {filterKicker}
             </p>
             <h2
               id="games-team-filter-title"
@@ -227,14 +252,10 @@ export default function GamesTeamFilterPanel({
               onClick={() => setHelpOpen((v) => !v)}
               aria-expanded={helpOpen}
               aria-controls="games-team-filter-help"
-              className={cn(
-                "games-filter-icon-btn",
-                helpOpen && "games-filter-icon-btn--active",
-              )}
-              style={tabFont}
+              aria-label={helpButtonLabel}
+              className="inline-flex shrink-0 items-center justify-center transition active:scale-[0.98]"
             >
-              <CircleHelp size={15} strokeWidth={2.2} aria-hidden />
-              <span>{helpButtonLabel}</span>
+              <CyberHelpMark active={helpOpen} />
             </button>
             <button
               type="button"
@@ -339,7 +360,7 @@ export default function GamesTeamFilterPanel({
         >
           <div className="games-filter-team-search-head">
             <p className="games-filter-section-label mb-2" style={tabFont}>
-              {language === "ja" ? "チーム検索" : "TEAM SEARCH"}
+              {teamSearchLabel}
             </p>
             <div className="relative">
               <Search
@@ -630,7 +651,7 @@ export default function GamesTeamFilterPanel({
                   : `≤${marginMax}`
             }
           >
-            {language === "ja"
+            {loc === "ja"
               ? marginMin != null && marginMax != null
                 ? `${marginMin}〜${marginMax}`
                 : marginMin != null

@@ -4,7 +4,7 @@ import { registerTutorialTarget } from "../tutorial/tutorialMeasureNative";
 import Animated, { useReducedMotion, withTiming } from "react-native-reanimated";
 import type { TeamRecordSnapshot } from "./teamRecordDisplay";
 import MatchTeamMarkNative from "./MatchTeamMarkNative";
-import type { GamesTexts } from "./gamesI18n";
+import type { GamesLanguage, GamesTexts } from "./gamesI18n";
 import type { GameCardCenterBlock } from "./gameCardCenterTypes";
 import { LiveMarkPill } from "./LiveMarkPill";
 import MatchPkResultLineNative from "./MatchPkResultLineNative";
@@ -17,19 +17,26 @@ import { resolveTutorialPickupGameId } from "../../../../../lib/tutorial/tutoria
 import MatchCardListCtaNative, {
   type MatchCardListCtaVariant,
 } from "./MatchCardListCtaNative";
+import MatchCardTeamNameNative from "./MatchCardTeamNameNative";
 import MatchCardEntryScanNative from "./MatchCardEntryScanNative";
 import {
   useGameCardListRowEntrance,
+  gameCardLineFrameDrawDelayMs,
+  gameCardShouldAnimateLineFrameDraw,
   type GameCardEntranceVariant,
 } from "./useGameCardListRowEntrance";
 import TutorialCardTapHintNative from "../tutorial/TutorialCardTapHintNative";
 import { MATCH_CARD_DISPLAY_FONT } from "./matchCardTypography";
+import { displayNbaRoundLabel } from "../../../../../lib/games/displayNbaRoundLabel";
+import { prefetchMatchupDetailBundle } from "../../../../../lib/nba/predict/fetchMatchupDetailClient";
+import { getUniterzApiBaseUrl } from "./submitPredictionApi";
 function matchRoundSideCode(roundLabel: string): string {
   const u = roundLabel.toUpperCase();
   if (u.includes("PLAYOFF") || u.includes("プレーオフ")) return "PO";
   if (u.includes("PLAY-IN") || u.includes("PLAY IN") || u.includes("プレーイン")) {
     return "PI";
   }
+  if (u.includes("PRESEASON") || u.includes("プレシーズン")) return "PS";
   return "RS";
 }
 
@@ -47,14 +54,14 @@ function resolveLineFrameLabels(
 
 type ScreenStyles = Record<string, ViewStyle | TextStyle | ImageStyle>;
 
-type GameCardListProps = {
+export type GameCardListProps = {
   games: Array<Record<string, unknown>>;
   /** false のときは日付切替などでカードの入場アニメを付けない（再マウント時のがたつき防止） */
   enteringAnimationEnabled?: boolean;
   /** `light` = 日付変更時の簡易入場（フル cyber reveal は初回・リーグ切替のみ） */
   entranceVariant?: GameCardEntranceVariant;
   predictedGameIds: Set<string>;
-  language: "ja" | "en";
+  language: GamesLanguage | string;
   t: GamesTexts;
   styles: ScreenStyles;
   openPredictModal: (game: Record<string, unknown>) => void | Promise<void>;
@@ -109,7 +116,7 @@ type GameCardListRowProps = GameCardListProps & {
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 /** 試合一覧行：Reanimated による depth reveal / bottom-up 入場 */
-const GameCardListRow = memo(function GameCardListRow(props: GameCardListRowProps) {
+export const GameCardListRow = memo(function GameCardListRow(props: GameCardListRowProps) {
   const {
     game,
     rowIndex,
@@ -184,7 +191,10 @@ const GameCardListRow = memo(function GameCardListRow(props: GameCardListRowProp
     null;
   const centerBlock = getGameCardCenterBlock(game);
   const roundLabelRaw = game.roundLabel;
-  const roundLabel = typeof roundLabelRaw === "string" ? roundLabelRaw.trim() : "";
+  const roundLabel = displayNbaRoundLabel(
+    typeof roundLabelRaw === "string" ? roundLabelRaw.trim() : "",
+    language === "ja"
+  );
   const isPickup = isNbaPickupGame(game);
   const frameLabels = resolveLineFrameLabels(roundLabel, isPickup, pickupMark);
   const registerPickupLabel =
@@ -229,15 +239,34 @@ const GameCardListRow = memo(function GameCardListRow(props: GameCardListRowProp
     showPredictPrimaryGlow,
   });
 
+  /** Canvas 準備後に枠側で描く。親 strokeEnd だとジャージ計測遅れでパスアニメが消える */
+  const lineFrameAnimateDraw =
+    useLineFrame &&
+    gameCardShouldAnimateLineFrameDraw({
+      enteringAnimationEnabled,
+      reduceMotion,
+      entranceVariant,
+      rowIndex,
+    });
+  const lineFrameDrawDelayMs = lineFrameAnimateDraw
+    ? gameCardLineFrameDrawDelayMs(rowIndex, entranceVariant)
+    : 0;
+
   return (
     <AnimatedPressable
       collapsable={false}
-      delayPressIn={0}
       android_ripple={Platform.OS === "android" ? { color: "rgba(255,255,255,0.06)" } : undefined}
       onPress={() => {
         void openPredictModal(game);
       }}
       onPressIn={() => {
+        if (leagueKey === "nba" && homeTeamId && awayTeamId) {
+          prefetchMatchupDetailBundle({
+            homeTeamId,
+            awayTeamId,
+            apiBaseUrl: getUniterzApiBaseUrl(),
+          });
+        }
         ent.pressed.value = reduceMotion
           ? 1
           : withTiming(1, { duration: 90 });
@@ -269,7 +298,8 @@ const GameCardListRow = memo(function GameCardListRow(props: GameCardListRowProp
           topLabel={frameLabels.top || undefined}
           leftLabel={frameLabels.left}
           bottomLabel={ctaDisplayLabel}
-          strokeEnd={ent.frameStrokeEnd}
+          animateDraw={lineFrameAnimateDraw}
+          drawDelayMs={lineFrameDrawDelayMs}
           leftLabelTutorialTarget={
             registerPickupLabel ? "match-pickup-label" : null
           }
@@ -294,9 +324,9 @@ const GameCardListRow = memo(function GameCardListRow(props: GameCardListRowProp
                     </Animated.View>
                   </View>
                   <View style={styles.teamBottomGroup}>
-                    <Text style={styles.lineFrameTeamName} numberOfLines={1}>
+                    <MatchCardTeamNameNative textStyle={styles.lineFrameTeamName}>
                       {homeCompact}
-                    </Text>
+                    </MatchCardTeamNameNative>
                     <Text style={styles.teamRecordText}>
                       {homeRecordLabel ?? "(0-0-0)"}
                     </Text>
@@ -414,9 +444,9 @@ const GameCardListRow = memo(function GameCardListRow(props: GameCardListRowProp
                     </Animated.View>
                   </View>
                   <View style={styles.teamBottomGroup}>
-                    <Text style={styles.lineFrameTeamName} numberOfLines={1}>
+                    <MatchCardTeamNameNative textStyle={styles.lineFrameTeamName}>
                       {awayCompact}
-                    </Text>
+                    </MatchCardTeamNameNative>
                     <Text style={styles.teamRecordText}>
                       {awayRecordLabel ?? "(0-0-0)"}
                     </Text>
@@ -470,9 +500,9 @@ const GameCardListRow = memo(function GameCardListRow(props: GameCardListRowProp
                     </Animated.View>
                   </View>
                   <View style={styles.teamBottomGroup}>
-                    <Text style={styles.teamNameMain} numberOfLines={1}>
+                    <MatchCardTeamNameNative textStyle={styles.teamNameMain}>
                       {homeCompact}
-                    </Text>
+                    </MatchCardTeamNameNative>
                     <Text style={styles.teamRecordText}>
                       {homeRecordLabel ?? "(0-0-0)"}
                     </Text>
@@ -590,9 +620,9 @@ const GameCardListRow = memo(function GameCardListRow(props: GameCardListRowProp
                     </Animated.View>
                   </View>
                   <View style={styles.teamBottomGroup}>
-                    <Text style={styles.teamNameMain} numberOfLines={1}>
+                    <MatchCardTeamNameNative textStyle={styles.teamNameMain}>
                       {awayCompact}
-                    </Text>
+                    </MatchCardTeamNameNative>
                     <Text style={styles.teamRecordText}>
                       {awayRecordLabel ?? "(0-0-0)"}
                     </Text>
@@ -623,6 +653,18 @@ const GameCardListRow = memo(function GameCardListRow(props: GameCardListRowProp
   );
 });
 
+export function GameCardListEmpty({ label }: { label: string }) {
+  return (
+    <View
+      accessibilityRole="text"
+      accessibilityLabel={label}
+      style={emptyStyles.wrap}
+    >
+      <Text style={emptyStyles.label}>NO DATA</Text>
+    </View>
+  );
+}
+
 export default function GameCardList(props: GameCardListProps) {
   const { games, t, styles, enteringAnimationEnabled = true, entranceVariant = "full" } = props;
   const tutorialPickupGameId = resolveTutorialPickupGameId(games);
@@ -630,15 +672,7 @@ export default function GameCardList(props: GameCardListProps) {
   return (
     <View style={styles.listArea}>
       <View style={styles.listContent}>
-        {games.length === 0 ? (
-          <View
-            accessibilityRole="text"
-            accessibilityLabel={t.noGames}
-            style={emptyStyles.wrap}
-          >
-            <Text style={emptyStyles.label}>NO DATA</Text>
-          </View>
-        ) : null}
+        {games.length === 0 ? <GameCardListEmpty label={t.noGames} /> : null}
         {games.map((game, idx) => {
           const rowKey = String(game.id ?? "") || `game-${idx}`;
           return (

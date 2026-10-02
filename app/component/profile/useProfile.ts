@@ -10,6 +10,7 @@ import { db } from "@/lib/firebase";
 import { fetchUserDocByRouteKey } from "@/lib/profile/fetchUserDocByRouteKey";
 import {
   parseUserProfileFields,
+  parseUserProfileViewCount,
   parseUserUnitBalance,
   profileDisplayFromUser,
 } from "@/lib/profile/parseUserProfileFields";
@@ -19,6 +20,10 @@ import type { ProfilePlanProBgVariant } from "@/lib/profile/profilePlanProBgVari
 import { parseUserPlanProBgVariant } from "@/lib/profile/profilePlanProBgVariantField";
 import { currentSeasonWinStreak } from "@/lib/profile/currentSeasonWinStreak";
 import { seedProfileHeroFromUserDoc } from "@/lib/profile/seedProfileHeroFromUserDoc";
+import {
+  parseNbaFavorites,
+  type NbaFavoritePlayer,
+} from "@/lib/profile/nbaFavorites";
 
 export type Profile = {
   displayName: string;
@@ -34,6 +39,11 @@ export type Profile = {
   memberSinceMs: number | null;
   /** 保有 Unit（公開表示） */
   unitBalance: number;
+  /** users.profileViewCount。未同期は null */
+  profileViewCount: number | null;
+  favoriteNbaTeamId: string | null;
+  favoriteNbaTeamFanSinceSeason: string | null;
+  favoriteNbaPlayers: NbaFavoritePlayer[];
 };
 
 type UserState = {
@@ -48,6 +58,10 @@ type UserState = {
   countryCode?: string | null;
   memberSinceMs?: number | null;
   unitBalance?: number;
+  profileViewCount?: number | null;
+  favoriteNbaTeamId?: string | null;
+  favoriteNbaTeamFanSinceSeason?: string | null;
+  favoriteNbaPlayers?: NbaFavoritePlayer[];
 } | null;
 
 type Counts = {
@@ -241,6 +255,15 @@ export function warmPublicProfileFromListEntry(input: {
           typeof data.countryCode === "string" ? data.countryCode : null,
         memberSinceMs: parseMemberSinceMs(data),
         unitBalance: parseUserUnitBalance(data),
+        profileViewCount: parseUserProfileViewCount(data),
+        ...(() => {
+          const fav = parseNbaFavorites(data);
+          return {
+            favoriteNbaTeamId: fav.favoriteNbaTeamId,
+            favoriteNbaTeamFanSinceSeason: fav.favoriteNbaTeamFanSinceSeason,
+            favoriteNbaPlayers: fav.favoriteNbaPlayers,
+          };
+        })(),
       },
     });
   })();
@@ -295,6 +318,8 @@ export function useProfile(handle: string) {
 
         seedProfileHeroFromUserDoc(docSnap.id, d);
 
+        const favorites = parseNbaFavorites(d);
+
         const nextState: ProfileLoadState = {
           loading: false,
           userDocReady: true,
@@ -317,6 +342,11 @@ export function useProfile(handle: string) {
             countryCode: parseCountryCode(d),
             memberSinceMs: parseMemberSinceMs(d),
             unitBalance: parseUserUnitBalance(d),
+            profileViewCount: parseUserProfileViewCount(d),
+            favoriteNbaTeamId: favorites.favoriteNbaTeamId,
+            favoriteNbaTeamFanSinceSeason:
+              favorites.favoriteNbaTeamFanSinceSeason,
+            favoriteNbaPlayers: favorites.favoriteNbaPlayers,
           },
         };
         writeProfileCache([decodedHandle, docSnap.id, userHandle], nextState);
@@ -357,6 +387,10 @@ export function useProfile(handle: string) {
       countryCode: u.countryCode ?? null,
       memberSinceMs: u.memberSinceMs ?? null,
       unitBalance: u.unitBalance ?? 0,
+      profileViewCount: u.profileViewCount ?? null,
+      favoriteNbaTeamId: u.favoriteNbaTeamId ?? null,
+      favoriteNbaTeamFanSinceSeason: u.favoriteNbaTeamFanSinceSeason ?? null,
+      favoriteNbaPlayers: u.favoriteNbaPlayers ?? [],
     };
   }, [user, decodedHandle, counts, loading]);
 

@@ -173,7 +173,7 @@ export default function MobileAnnouncementDetailPage() {
                 {formatDate(postedAtTs)}
               </span>
             </div>
-            <div className="rounded-xl border border-white/10 overflow-hidden shadow-[0_10px_40px_rgba(0,0,0,0.35)] bg-[#120818]/90">
+            <div className="rounded-none border border-white/10 overflow-hidden shadow-[0_10px_40px_rgba(0,0,0,0.35)] bg-[#120818]/90">
               <EventNoticeBody
                 event={syntheticContent}
                 heroHeight={192}
@@ -189,7 +189,7 @@ export default function MobileAnnouncementDetailPage() {
                 alt={title}
                 width={1200}
                 height={630}
-                className="w-full h-48 object-cover rounded-xl border border-white/10 shadow-[0_10px_40px_rgba(0,0,0,0.35)]"
+                className="w-full h-48 object-cover rounded-none border border-white/10 shadow-[0_10px_40px_rgba(0,0,0,0.35)]"
                 priority
               />
             )}

@@ -1,12 +1,15 @@
 "use client";
 
 import type { Language } from "@/lib/i18n/language";
+import { resolveLocalizedLang } from "@/lib/i18n/localize";
 import { t } from "@/lib/i18n/t";
 import ResultCard from "@/app/component/result/ResultCard";
 import { useProfileSettledTodayResults } from "@/lib/profile/useProfileSettledTodayResults";
 import {
   resolveResultPostGameMarket,
+  resolveResultPostGameRoundMeta,
   useResultPostsGameMarkets,
+  useResultPostsGameRoundMeta,
 } from "@/lib/games/useResultPostsGameMarkets";
 import type { ProfileStatsStreakContext } from "@/lib/profile/profileStreakScope";
 import CandleChartLoader from "@/app/component/common/CandleChartLoader";
@@ -41,6 +44,8 @@ export default function ProfileSettledTodayResults({
   visualEffects = "full",
 }: Props) {
   const msg = t(language);
+  const lang = resolveLocalizedLang(language);
+  const isCjk = lang === "ja" || lang === "ko" || lang === "zh";
   const isMobile = layout === "mobile";
   const visualEffectsLite = isProfileVisualLite(visualEffects);
   const { posts, loading } = useProfileSettledTodayResults(
@@ -56,6 +61,7 @@ export default function ProfileSettledTodayResults({
       ? posts.slice(0, MOBILE_SETTLED_TODAY_MAX)
       : posts;
   const marketsFromGames = useResultPostsGameMarkets(visiblePosts);
+  const roundMetaFromGames = useResultPostsGameRoundMeta(visiblePosts);
 
   return (
     <ProfileOverviewLineFrame title={title}>
@@ -63,7 +69,7 @@ export default function ProfileSettledTodayResults({
       <div>
           <p
             className={[
-              language === "ja" ? jp.className : "",
+              isCjk ? jp.className : "",
               "max-w-[520px] text-xs leading-relaxed text-slate-400 sm:text-[14px]",
             ]
               .filter(Boolean)
@@ -97,6 +103,10 @@ export default function ProfileSettledTodayResults({
                 gamesRoutePrefix={gamesRoutePrefix}
                 visualEffectsLite={visualEffectsLite}
                 gameMarket={resolveResultPostGameMarket(post, marketsFromGames)}
+                gameRoundMeta={resolveResultPostGameRoundMeta(
+                  post,
+                  roundMetaFromGames
+                )}
                 href={`${gamesRoutePrefix}/result/${post.id}`}
               />
             ))}

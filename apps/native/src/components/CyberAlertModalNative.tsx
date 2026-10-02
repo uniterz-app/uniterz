@@ -13,11 +13,13 @@ import {
 import { BlurView } from "expo-blur";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import PredictOverlayChamferedFrameNative from "../features/games/PredictOverlayChamferedFrameNative";
-import {
-  PREDICT_OVERLAY_CYBER_FORM_CUT,
-  PREDICT_OVERLAY_SUBMIT_BTN_CUT,
-} from "../features/games/matchListCyberClipPath";
+import UniterzLogoNative from "../features/profile/UniterzLogoNative";
+import { PREDICT_OVERLAY_CYBER_FORM_CUT } from "../features/games/matchListCyberClipPath";
 import { nativeBlurViewExtraProps } from "../ui/nativeBlurProps";
+import {
+  ModalActionButtonNative,
+  ModalActionRowNative,
+} from "../ui/ModalActionButtonNative";
 import type { CyberAlertButton, CyberAlertVariant } from "./cyberAlertTypes";
 
 type Props = {
@@ -62,7 +64,7 @@ function variantIcon(variant: CyberAlertVariant): ReactNode {
     <MaterialCommunityIcons
       name="information-outline"
       size={28}
-      color="rgba(56,189,248,0.55)"
+      color="rgba(0,245,255,0.72)"
     />
   );
 }
@@ -76,46 +78,8 @@ function AlertActionButton({
   tone: "primary" | "ghost" | "danger";
   onPress: () => void;
 }) {
-  const gradient =
-    tone === "primary"
-      ? ["rgba(0,245,255,0.22)", "rgba(0,150,190,0.34)", "rgba(0,90,120,0.42)"]
-      : tone === "danger"
-        ? ["rgba(248,113,113,0.18)", "rgba(190,60,60,0.28)", "rgba(120,40,40,0.34)"]
-        : ["rgba(15,23,42,0.92)", "rgba(10,16,28,0.94)", "rgba(8,12,20,0.96)"];
-  const border =
-    tone === "primary"
-      ? "rgba(0,245,255,0.38)"
-      : tone === "danger"
-        ? "rgba(248,113,113,0.42)"
-        : "rgba(100,116,139,0.35)";
-
   return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => [styles.actionPressable, pressed && styles.actionPressed]}
-    >
-      <PredictOverlayChamferedFrameNative
-        cut={PREDICT_OVERLAY_SUBMIT_BTN_CUT}
-        gradientColors={gradient}
-        gradientLocations={[0, 0.45, 1]}
-        borderColor={border}
-        shadowColor={tone === "primary" ? "#00f5ff" : "#000"}
-        shadowOpacity={tone === "primary" ? 0.14 : 0.08}
-        shadowRadius={tone === "primary" ? 16 : 6}
-        style={styles.actionFrame}
-        contentStyle={styles.actionContent}
-      >
-        <Text
-          style={[
-            styles.actionLabel,
-            tone === "primary" && styles.actionLabelPrimary,
-            tone === "danger" && styles.actionLabelDanger,
-          ]}
-        >
-          {label}
-        </Text>
-      </PredictOverlayChamferedFrameNative>
-    </Pressable>
+    <ModalActionButtonNative label={label} tone={tone} onPress={onPress} />
   );
 }
 
@@ -170,11 +134,7 @@ export default function CyberAlertModalNative({
         <Pressable style={styles.cardWrap} onPress={(e) => e.stopPropagation()}>
           <PredictOverlayChamferedFrameNative
             cut={PREDICT_OVERLAY_CYBER_FORM_CUT}
-            gradientColors={
-              isConfirm
-                ? ["rgba(22,16,8,0.97)", "rgba(10,8,5,0.98)"]
-                : ["rgba(8,12,20,0.96)", "rgba(5,8,14,0.98)"]
-            }
+            gradientColors={["#000000", "#000000"]}
             gradientLocations={[0, 1]}
             borderColor={frameBorder}
             shadowColor={frameShadow}
@@ -185,38 +145,31 @@ export default function CyberAlertModalNative({
           >
             <View style={styles.headerBrandRow} pointerEvents="none">
               <View style={styles.headerBrandLine} />
-              <Text style={styles.headerBrandLabel}>UNITERZ</Text>
+              <UniterzLogoNative width={112} />
               <View style={styles.headerBrandLine} />
             </View>
             <View style={styles.iconWrap}>{variantIcon(variant)}</View>
             <Text style={styles.title}>{displayTitle}</Text>
             {showMessage ? <Text style={styles.message}>{message}</Text> : null}
-            <View
-              style={[
-                styles.actions,
-                actionButtons.length > 1 && styles.actionsMulti,
-              ]}
-            >
-              {actionButtons.map((btn, index) => {
-                const tone =
-                  btn.style === "destructive"
-                    ? "danger"
-                    : btn.style === "cancel"
-                      ? "ghost"
-                      : "primary";
-                return (
-                  <View
-                    key={`${btn.text}-${index}`}
-                    style={actionButtons.length > 1 ? styles.actionCol : styles.actionFull}
-                  >
+            <View style={styles.actions}>
+              <ModalActionRowNative>
+                {actionButtons.map((btn, index) => {
+                  const tone =
+                    btn.style === "destructive"
+                      ? "danger"
+                      : btn.style === "cancel"
+                        ? "ghost"
+                        : "primary";
+                  return (
                     <AlertActionButton
+                      key={`${btn.text}-${index}`}
                       label={btn.text}
                       tone={tone}
                       onPress={() => onButtonPress(index)}
                     />
-                  </View>
-                );
-              })}
+                  );
+                })}
+              </ModalActionRowNative>
             </View>
           </PredictOverlayChamferedFrameNative>
         </Pressable>
@@ -265,21 +218,6 @@ const styles = StyleSheet.create({
     shadowColor: "#00f5ff",
     shadowOpacity: 0.65,
     shadowRadius: 8,
-  },
-  headerBrandLabel: {
-    fontFamily: Platform.select({
-      ios: "Oxanium_800ExtraBold",
-      android: "Oxanium_800ExtraBold",
-      default: "sans-serif",
-    }),
-    fontSize: 13,
-    fontWeight: "800",
-    letterSpacing: 4.8,
-    color: "rgba(0,245,255,0.88)",
-    textAlign: "center",
-    textShadowColor: "rgba(0,245,255,0.45)",
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 10,
   },
   iconWrap: {
     alignItems: "center",

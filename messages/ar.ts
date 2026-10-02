@@ -167,6 +167,7 @@ const ar: Messages = {
     last20Tracker: "Last20 Tracker",
     last20TrackerDesc: "سلاسل الانتصارات/الخسائر من آخر {n} توقعات محسومة",
     last20TrackerSubtitle: "آخر {n} مباريات",
+    last20TrackerUnavailable: "تعذر جلب البيانات",
     settledTodayResults: "Result Drop",
     settledTodayResultsDesc: "قائمة التحليلات المسوّاة اليوم",
     settledTodayEmpty: "لا توجد تحليلات مسوّاة اليوم بعد",
@@ -221,7 +222,7 @@ const ar: Messages = {
     divisionOpenTitle: "PRO LEAGUE",
     divisionOpenLockBody:
       "A Pro-only ranking across every game. Subscribe to Pro to join and view it.",
-    divisionOpenCta: "See Pro",
+    divisionOpenCta: "Explore Pro",
     divisionOpenModalDismiss: "Close",
     divisionOpenBackToPickUp: "Back to Pick Up",
     winStreak: "سلسلة الانتصارات",
@@ -246,6 +247,8 @@ const ar: Messages = {
     shareRankCardCopy: "نسخ الصورة",
     shareRankCardCopied: "تم نسخ الصورة",
     shareRankCardCopyFailed: "تعذّر النسخ",
+    shareCaptionCopy: "نسخ النص",
+    shareCaptionCopied: "تم نسخ النص",
     shareRankCardLine: "LINE",
     shareRankCardX: "X",
     shareRankCardInstagram: "Instagram",
@@ -429,6 +432,7 @@ const ar: Messages = {
     nbaTopScorerResultLabel: "Top scorer",
     upsetPointsLabel: "نقاط المفاجأة",
     totalPointsLabel: "إجمالي النقاط",
+    pendingCallLabel: "YOUR CALL",
     upsetPointsDesc: "مقياس منفصل (0–10) يُمنح فقط عندما تكون المباراة مفاجأة وتوقعت بشكل صحيح كأقلية. وإلا فهو 0.",
     totalPointsDesc: "نقاط أساسية يحددها الفائز الصحيح وقرب الفارق وقرب مجموع النقاط، بالإضافة إلى مكافأة المفاجأة وسلسلة الانتصارات.",
     helpPageLink: "اطّلع على منطق التسجيل في صفحة المساعدة",
@@ -445,6 +449,8 @@ const ar: Messages = {
     removeFromList: "إزالة من القائمة",
     openActions: "فتح الإجراءات",
     shareMyResult: "Share result card as image",
+    shareResultCardTitle: "Share result",
+    shareResultCardHint: "Send the image directly to Instagram, LINE, X, and more",
     shareResultPrediction: "Pred {score}",
     shareResultFinal: "Final {score}",
     shareResultTotal: "Total {pts} pts",
@@ -653,11 +659,13 @@ const ar: Messages = {
     helpAndGuide: "المساعدة والدليل",
     termsOfService: "شروط الخدمة",
     privacyPolicy: "سياسة الخصوصية",
+    commercialLaw: "إشعار المعاملات التجارية المحددة",
     communityGuidelines: "إرشادات المجتمع",
     contact: "اتصل بنا",
     featureRequest: "طلب ميزة",
     featureRequestTitle: "إرسال اقتراح",
     announcements: "الإعلانات",
+    notifications: "الإشعارات",
     news: "الأخبار",
     noAnnouncements: "لا توجد إعلانات حاليًا",
     unread: "غير مقروء",
@@ -697,12 +705,9 @@ const ar: Messages = {
     sectionSubscription: "الاشتراك",
     sectionSupport: "الدعم",
     sectionAdmin: "الإدارة",
-    adminDashboard: "لوحة الإدارة",
-    grantBadges: "منح الشارات",
-    manageAnnouncements: "إدارة الإعلانات",
-    createAnnouncement: "إنشاء إعلان",
-    gameImport: "استيراد المباريات",
-    planApproval: "الموافقة على الخطة",
+    adminFeatureRequests: "طلبات الميزات",
+    adminContacts: "الاستفسارات",
+    adminRedemptions: "طلبات استبدال المنتجات",
     helpDescription:
       "Uniterz هي لعبة خيالية قائمة على التوقعات الرياضية. تحقق من القواعد الأساسية وكيفية قراءة النتائج.",
     changePasswordDesc:
@@ -753,8 +758,8 @@ const ar: Messages = {
     drawAvailable: "تعادل",
     home: "مضيف",
     away: "زائر",
-    scorePrediction: "توقع النتيجة",
-    scorePlaceholder: "النقاط",
+    scorePrediction: "score prediction",
+    scorePlaceholder: "SCORE",
     cancelEditing: "إلغاء التعديل",
     editScoresCta: "تعديل",
     yourPrediction: "توقعك",
@@ -803,6 +808,8 @@ const ar: Messages = {
     nbaTopScorerBonusHint: "+2 if correct",
     nbaTopScorerClear: "Clear selection",
     nbaTopScorerEmpty: "Player list not ready yet",
+    nbaTopScorerMore: "{n} more",
+    nbaTopScorerLess: "Show less",
     scoringRulesChip: "قواعد التقييم",
     timing: {
       proInfoTitle: "Pro Info",
@@ -932,7 +939,7 @@ const ar: Messages = {
     skip: "تخطّي",
     skipConfirmTitle: "Skip the tutorial?",
     skipConfirmBody:
-      "Are you sure?\nYou can review it again anytime from Tutorial in the side menu.",
+      "Are you sure?\nYou can review the short tab tips again anytime from Tutorial in the side menu.",
     skipConfirmStay: "Keep going",
     skipConfirmLeave: "Skip",
     restartFromMenu: "Tutorial",
@@ -959,23 +966,23 @@ const ar: Messages = {
       tabProfile: "Profile",
       welcomeTitle: "Welcome to UNITERZ",
       welcomeBody:
-        "توقّع المباريات، اجمع النقاط، وتنافس على **التصنيف**. جولة لكل الشاشات، أو الميزات الجديدة فقط.",
+        "توقّع المباريات، اجمع النقاط، وتنافس على **التصنيف**.\nتظهر تلميحات قصيرة عند أول زيارة لكل تبويب. ابدأ بـ Pick Up.",
       welcomeReturningBody:
-        "جولة لكل الشاشات، أو **الميزات الجديدة** فقط.",
-      welcomeFullCta: "شرح الشاشات",
+        "أعد تلميحات التبويبات القصيرة، أو **الميزات الجديدة** فقط (UNIT، المسيرة، وغيرها).",
+      welcomeFullCta: "عرض التلميحات",
       welcomeFeaturesCta: "الميزات الجديدة فقط",
       gamesTitle: "المباريات",
       gamesBody:
         "مباريات اليوم هنا. **اضغط البطاقة** لفتح شاشة التوقع. الفائز يُحدَّد من النتيجة.",
       gamesPickupTitle: "مباريات البيك أب",
       gamesPickupBody:
-        "مباريات تُختار أسبوعياً. **ترتيب Pick Up** يحسب هذه التوقعات فقط. ترتيب نسبة التوفيق يتطلب توقع **65%+** من مباريات البيك أب حتى الآن.",
-      gamesStatsTitle: "STATS",
+        "مباريات تُختار أسبوعياً. ابحث عن **الإطار الأصفر** وعلامة **PICK UP**. **ترتيب Pick Up** يحسب هذه التوقعات فقط. اضغط **توقّع** وجرّب أول توقع لك.",
+      gamesStatsTitle: "STANDING / STATS",
       gamesStatsBody:
-        "تبويب **STATS** الأصفر على اليمين يفتح إحصائيات الفرق واللاعبين. يمكنك أيضاً السحب من الحافة اليمنى.",
+        "**STANDING** و **STATS** على اليمين يفتحان الترتيب وإحصائيات الفرق واللاعبين. يمكنك أيضاً السحب من الحافة اليمنى.",
       resultsTitle: "النتائج",
       resultsBody:
-        "بعد المباراة تظهر المراجعة هنا. **الأرقام الكبيرة = النتيجة، وأسفلها توقعك.** أعلى اليمين HIT / MISS.",
+        "بطاقات المباريات التي توقّعتها. بعد المباراة تصبح المراجعة. تعرض كل بطاقة **النقاط التي حصلت عليها** في تلك المباراة. أعلى اليمين HIT / MISS. **اضغط البطاقة** لعرض التفاصيل.",
       tapTitle: "Tap the match card",
       tapBody:
         "This is a mock NBA game. Tap the glowing card to start predicting. No real data is affected.",
@@ -1058,9 +1065,13 @@ const ar: Messages = {
       resultDetailMoreBody:
         "Scroll for score distribution and more detail. Same layout in the real app.",
       yourPickLabel: "Your pick",
-      rankingsTitle: "Rankings",
+      rankingsTitle: "التصنيف",
       rankingsBody:
-        "Hits earn points that decide your place. Switch periods and categories to track yourself.",
+        "مرتّبون حسب **نقاط** التوقع. نسبة التوفيق تتطلب توقع **65%+** من مباريات البيك أب حتى الآن.",
+      rankingsScoreHelpCta: "كيف تُحسب النتيجة",
+      rankingsBoardsTitle: "Pick Up و PRO LEAGUE",
+      rankingsBoardsBody:
+        "**Pick Up** … ترتيب المباريات المميزة فقط (للجميع).\n**PRO LEAGUE** … ترتيب مفتوح لكل المباريات. **PRO USER** فقط.",
       groupsTitle: "Groups (Leaderboards)",
       groupsBody:
         "Create a group with friends and compete in a private ranking. Join with an invite code too.",
@@ -1082,7 +1093,7 @@ const ar: Messages = {
         "The highlighted **coin** is your **UNIT balance**.\nUNITERZ **in-app currency** for **skins** and Profile looks.\nTap the coin to open your **history**.",
       horizonUnitHowTitle: "Earning UNIT",
       horizonUnitHowBody:
-        "Earn from **weekly/monthly rankings** and **Squad Battle** rewards.\nWhen you earn, a celebration plays on Profile and the balance updates here.\nSave UNIT to **redeem** skins and items.",
+        "تُكتسب من مكافآت **الترتيب الأسبوعي/الشهري** و**معركة السكواد** و**دعوة الأصدقاء**.\nاستبدل UNIT بـ**قمصان** و**قبعات** وغيرها.",
       horizonCareerWhatTitle: "What is Career?",
       horizonCareerWhatBody:
         "Your predictor **track record** — like a résumé.\nSee **hit rate, streaks, season ranks**, and **long-term stats**.\nSpot growth that short-term rankings alone won't show.",
@@ -1092,9 +1103,9 @@ const ar: Messages = {
       horizonStatsWhatTitle: "What is STATS?",
       horizonStatsWhatBody:
         "**Team and player stats** from the **Games** tab.\nUse for **pre-pick research** — scoring, efficiency, recent form.\nLinks to the live **STATS hub** backed by real data.",
-      horizonStatsHowTitle: "Opening STATS",
+      horizonStatsHowTitle: "Opening STANDING / STATS",
       horizonStatsHowBody:
-        "The highlighted **yellow STATS** tab opens it (or swipe from the right edge).\n**Tap STATS** to try it, or press **Start the app** below when you're ready.",
+        "**STANDING** and **STATS** on the right edge open them (or swipe from the right edge).\n**Tap either tab** to try it, or press **Start the app** below when you're ready.",
       doneTitle: "You're ready",
       doneBody:
         "That's the UNITERZ loop. Predict real games and climb the ranks.",

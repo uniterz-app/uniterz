@@ -1,7 +1,10 @@
 "use client";
 
 import { Check, X } from "lucide-react";
-import { getTeamPrimaryColor } from "@/lib/team-colors";
+import {
+  getTeamPrimaryColor,
+  matchupTeamUiAccent,
+} from "@/lib/team-colors";
 import { nameOxanium } from "@/lib/fonts";
 import type { NbaTopScorerResultInfo } from "@/lib/result/resolveNbaTopScorerResult";
 
@@ -10,6 +13,9 @@ type Props = {
   info: NbaTopScorerResultInfo;
   compact?: boolean;
   className?: string;
+  /** 同系色対決時のタグ色用 */
+  homeTeamId?: string | null;
+  awayTeamId?: string | null;
 };
 
 /** リザルト: 最多得点者予想行（選手名・チームタグ・的中マーク） */
@@ -18,8 +24,13 @@ export default function NbaTopScorerResultRow({
   info,
   compact = false,
   className = "",
+  homeTeamId = null,
+  awayTeamId = null,
 }: Props) {
-  const teamColor = getTeamPrimaryColor("nba", info.teamId) ?? "#e8edf5";
+  const teamColor =
+    homeTeamId && awayTeamId
+      ? matchupTeamUiAccent("nba", info.teamId, homeTeamId, awayTeamId)
+      : getTeamPrimaryColor("nba", info.teamId) ?? "#e8edf5";
 
   return (
     <div

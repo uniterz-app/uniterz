@@ -1,54 +1,137 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   sortNbaTopScorerCandidatesByPpg,
   type NbaTopScorerCandidate,
   type NbaTopScorerPick,
 } from "@/lib/nba/topScorer";
+import { useNbaTopScorerCandidates } from "@/lib/nba/useNbaTopScorerCandidates";
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
-import { matchScoreClass, nameBebas, nameOxanium } from "@/lib/fonts";
+import { nameBebas, nameOxanium, resultStatsMetricNumClass } from "@/lib/fonts";
 import { matchCardTeamNameStyle } from "@/lib/games/teamDisplayTypography";
-import { getTeamPrimaryColor } from "@/lib/team-colors";
-import { TEAM_SHORT } from "@/lib/team-short";
+import TeamAbbrBadge from "@/app/component/games/TeamAbbrBadge";
+import {
+  injuryStatusByPlayerId,
+  injuryStatusLabel,
+  injuryStatusTone,
+  type NbaInjuryReport,
+} from "@/lib/predict/nbaInjuryReport";
+import { useNbaMatchupInjuryReport } from "@/lib/nba/predict/useNbaMatchupInjuryReport";
+import { matchupTeamUiAccent } from "@/lib/team-colors";
+import { L, resolveLocalizedLang } from "@/lib/i18n/localize";
 
 type Props = {
   homeTeamId?: string | null;
   awayTeamId?: string | null;
   homeLabel: string;
   awayLabel: string;
-  candidates: NbaTopScorerCandidate[];
+  /** game に載っていれば優先。空なら対戦ロスターから PPG 順に組む */
+  candidates?: NbaTopScorerCandidate[];
   value: NbaTopScorerPick | null;
   onChange: (next: NbaTopScorerPick | null) => void;
   language: Language;
   isMobile?: boolean;
+  /** Native: getUniterzApiBaseUrl() */
+  apiBaseUrl?: string | null;
+  /** 渡されればそれを使う。無ければ injuries スナップショットを共有キャッシュから引く */
+  injuryReport?: NbaInjuryReport | null;
 };
+
+const INJURY_CHIP: Record<string, string> = {
+  out: "border-[#FF2D78]/70 bg-[#FF2D78]/20 text-[#FF8AB4]",
+  doubt: "border-[#FF8A3D]/70 bg-[#FF8A3D]/18 text-[#FFB07A]",
+  question: "border-[#F5C518]/70 bg-[#F5C518]/15 text-[#F5C518]",
+  probable: "border-[#00E5FF]/60 bg-[#00E5FF]/12 text-[#00E5FF]",
+  available: "border-[#2DFF6E]/50 bg-[#2DFF6E]/10 text-[#2DFF6E]",
+  neutral: "border-white/25 bg-white/8 text-white/60",
+};
+
+function InjuryChip({ status }: { status: string }) {
+  const tone = injuryStatusTone(status);
+  return (
+    <span
+      className={[
+        nameOxanium.className,
+        "mt-0.5 inline-flex w-fit rounded-[2px] border px-1 py-px text-[6px] font-extrabold uppercase tracking-[0.04em]",
+        INJURY_CHIP[tone] ?? INJURY_CHIP.neutral,
+      ].join(" ")}
+    >
+      {injuryStatusLabel(status)}
+    </span>
+  );
+}
+
+const TOP_N = 5;
+const playerNameSkew = { transform: "skewX(-6deg)" } as const;
+const rankCellSkew = { transform: "skewX(-10deg)" } as const;
+const metricCellSkew = { transform: "skewX(-6deg)" } as const;
 
 function fmtPpg(ppg: number | null | undefined): string {
   if (ppg == null || !Number.isFinite(ppg)) return "—";
   return ppg.toFixed(1);
 }
 
-function teamAbbr(teamId: string): string {
-  return (TEAM_SHORT[teamId] ?? teamId.slice(-3)).toUpperCase();
+function rankNumberClass(rank: number): string {
+  if (rank <= 6) return "text-emerald-300";
+  if (rank <= 10) return "text-amber-300";
+  return "text-red-300/80";
+}
+
+function isSamePick(
+  value: NbaTopScorerPick | null,
+  row: NbaTopScorerCandidate
+): boolean {
+  return value?.playerId === row.playerId && value?.teamId === row.teamId;
 }
 
 export default function NbaTopScorerPicker({
-  candidates,
+  homeTeamId,
+  awayTeamId,
+  candidates: candidatesProp,
   value,
   onChange,
   language,
-  isMobile = false,
+  apiBaseUrl,
+  injuryReport,
 }: Props) {
   const m = t(language).predict;
+  const lang = resolveLocalizedLang(language);
+  const { candidates, loading: candidatesLoading } = useNbaTopScorerCandidates({
+    homeTeamId,
+    awayTeamId,
+    override: candidatesProp,
+    apiBaseUrl,
+  });
   const sorted = useMemo(
     () => sortNbaTopScorerCandidatesByPpg(candidates),
     [candidates]
   );
+  // 予想ツールの INJURY タブと同じスナップショットキャッシュを共有するので追加リクエストにならない
+  const { report: liveInjury } = useNbaMatchupInjuryReport({
+    homeTeamId: homeTeamId ?? undefined,
+    awayTeamId: awayTeamId ?? undefined,
+    override: injuryReport,
+    apiBaseUrl,
+    enabled: sorted.length > 0,
+  });
+  const injuryById = useMemo(
+    () => (liveInjury ? injuryStatusByPlayerId(liveInjury) : {}),
+    [liveInjury]
+  );
+  const restCount = Math.max(0, sorted.length - TOP_N);
+  /** 初回は常に上位 5。選択が下位でも自動展開しない */
+  const [expanded, setExpanded] = useState(false);
+
+  useEffect(() => {
+    setExpanded(false);
+  }, [homeTeamId, awayTeamId]);
+
+  const visible = expanded ? sorted : sorted.slice(0, TOP_N);
 
   const onPick = (row: NbaTopScorerCandidate) => {
-    if (value?.playerId === row.playerId && value?.teamId === row.teamId) {
+    if (isSamePick(value, row)) {
       onChange(null);
       return;
     }
@@ -60,21 +143,13 @@ export default function NbaTopScorerPicker({
       <div className="mb-2 flex items-center justify-between gap-2">
         <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5">
           <div
-            className={[
-              nameBebas.className,
-              "shrink-0 font-bold uppercase leading-none text-white",
-              isMobile ? "text-[15px]" : "text-[18px]",
-            ].join(" ")}
+            className={`${nameBebas.className} shrink-0 text-[18px] font-bold uppercase leading-none text-white`}
             style={matchCardTeamNameStyle(true)}
           >
             {m.nbaTopScorerTitle}
           </div>
           <div
-            className={[
-              nameOxanium.className,
-              "shrink-0 font-bold uppercase tracking-[0.08em] text-white/50",
-              isMobile ? "text-[9px]" : "text-[10px]",
-            ].join(" ")}
+            className={`${nameOxanium.className} shrink-0 text-[10px] font-bold uppercase tracking-[0.08em] text-white/50`}
           >
             {m.nbaTopScorerBonusHint}
           </div>
@@ -83,91 +158,142 @@ export default function NbaTopScorerPicker({
           <button
             type="button"
             onClick={() => onChange(null)}
-            className={[
-              "shrink-0 text-white/45 underline-offset-2 hover:text-white/70 hover:underline",
-              isMobile ? "text-[10px]" : "text-[11px]",
-            ].join(" ")}
+            className="shrink-0 text-[11px] text-white/45 underline-offset-2 hover:text-white/70 hover:underline"
           >
             {m.nbaTopScorerClear}
           </button>
         ) : null}
       </div>
 
-      {sorted.length === 0 ? (
-        <p
-          className={[
-            "text-white/40",
-            isMobile ? "text-[11px]" : "text-xs",
-          ].join(" ")}
-        >
-          {m.nbaTopScorerEmpty}
+      {candidatesLoading && sorted.length === 0 ? (
+        <p className="text-[11px] text-white/40">
+          {L(lang, {
+            ja: "選手リストを読み込み中…",
+            en: "Loading players…",
+            ko: "선수 목록 불러오는 중…",
+            zh: "正在加载球员列表…",
+            es: "Cargando jugadores…",
+            pt: "Carregando jogadores…",
+            fr: "Chargement des joueurs…",
+          })}
         </p>
+      ) : sorted.length === 0 ? (
+        <p className="text-[11px] text-white/40">{m.nbaTopScorerEmpty}</p>
       ) : (
-        <div className="max-h-52 space-y-0.5 overflow-y-auto pr-0.5">
-          {sorted.map((row) => {
-            const selected =
-              value?.playerId === row.playerId &&
-              value?.teamId === row.teamId;
-            const teamColor =
-              getTeamPrimaryColor("nba", row.teamId) ?? "#e8edf5";
+        <div className="overflow-hidden rounded-none border border-[rgba(0,245,255,0.32)] bg-[rgba(4,16,24,0.45)]">
+          <div
+            className={`${nameOxanium.className} flex items-center border-b border-[rgba(0,245,255,0.12)] bg-[rgba(0,245,255,0.06)] px-2 py-2 text-[8px] font-bold uppercase tracking-[0.11em] text-white/42`}
+          >
+            <span className="w-[26px]">#</span>
+            <span className="min-w-0 flex-1">
+              {L(lang, {
+                ja: "選手",
+                en: "Player",
+                ko: "선수",
+                zh: "球员",
+                es: "Jugador",
+                pt: "Jogador",
+                fr: "Joueur",
+              })}
+            </span>
+            <span className="w-[46px]">
+              {L(lang, {
+                ja: "チーム",
+                en: "Team",
+                ko: "팀",
+                zh: "球队",
+                es: "Equipo",
+                pt: "Time",
+                fr: "Équipe",
+              })}
+            </span>
+            <span className="w-[28px] text-right">GP</span>
+            <span className="w-[52px] text-right text-[#00F5FF]">PTS</span>
+          </div>
+
+          {visible.map((row, index) => {
+            const rank = index + 1;
+            const selected = isSamePick(value, row);
+            const injuryStatus = injuryById[row.playerId];
             return (
               <button
                 key={`${row.teamId}-${row.playerId}`}
                 type="button"
                 onClick={() => onPick(row)}
                 className={[
-                  "flex w-full items-center justify-between gap-3 rounded-lg text-left transition",
-                  isMobile ? "px-2 py-1.5" : "px-2.5 py-2",
-                  selected
-                    ? "bg-cyan-500/22 ring-1 ring-cyan-400/35"
-                    : "hover:bg-white/6",
+                  "group relative flex w-full cursor-pointer items-center overflow-hidden border-t border-[rgba(0,245,255,0.08)] px-2 py-2.5 text-left transition duration-100 ease-out hover:bg-white/[0.03] active:scale-[0.985] motion-reduce:active:scale-100",
+                  selected ? "bg-cyan-500/16" : "",
                 ].join(" ")}
               >
-                <span className="flex min-w-0 items-center gap-1.5">
+                <span
+                  aria-hidden
+                  className="pointer-events-none absolute inset-0 bg-transparent transition-colors duration-75 group-active:bg-[rgba(0,245,255,0.16)]"
+                />
+                <span
+                  className={[
+                    resultStatsMetricNumClass,
+                    "w-[26px] text-[15px] font-black tabular-nums",
+                    rankNumberClass(rank),
+                  ].join(" ")}
+                  style={rankCellSkew}
+                >
+                  {rank}
+                </span>
+                <span className="flex min-w-0 flex-1 flex-col items-start justify-center pr-1">
                   <span
-                    className={[
-                      "min-w-0 truncate font-medium text-white/90",
-                      isMobile ? "text-xs leading-tight" : "text-sm",
-                    ].join(" ")}
+                    className={`${nameOxanium.className} w-full truncate text-[13px] font-bold uppercase tracking-[0.02em] text-white`}
+                    style={playerNameSkew}
                   >
                     {row.name}
                   </span>
-                  <span
-                    className={[
-                      nameOxanium.className,
-                      "shrink-0 rounded-[2px] border bg-transparent px-1.5 py-0.5 font-extrabold uppercase tracking-[0.12em]",
-                      isMobile ? "text-[7px]" : "text-[8px]",
-                    ].join(" ")}
-                    style={{
-                      borderColor: teamColor,
-                      color: teamColor,
-                    }}
-                  >
-                    {teamAbbr(row.teamId)}
-                  </span>
+                  {injuryStatus ? <InjuryChip status={injuryStatus} /> : null}
+                </span>
+                <span className="flex w-[46px] items-center">
+                  <TeamAbbrBadge
+                    teamId={row.teamId}
+                    fillColor={
+                      homeTeamId && awayTeamId
+                        ? matchupTeamUiAccent(
+                            "nba",
+                            row.teamId,
+                            homeTeamId,
+                            awayTeamId
+                          )
+                        : null
+                    }
+                  />
                 </span>
                 <span
-                  className={[
-                    matchScoreClass,
-                    "shrink-0 tabular-nums tracking-wide",
-                    isMobile ? "text-[11px]" : "text-xs",
-                    selected ? "text-cyan-100/90" : "text-white/55",
-                  ].join(" ")}
+                  className={`${nameOxanium.className} w-[28px] text-right text-[12px] font-bold tabular-nums text-white/55`}
+                  style={metricCellSkew}
+                >
+                  {row.gp ?? "—"}
+                </span>
+                <span
+                  className={`${nameOxanium.className} w-[52px] text-right text-[14px] font-extrabold tabular-nums text-[#00F5FF]`}
+                  style={metricCellSkew}
                 >
                   {fmtPpg(row.ppg)}
-                  <span
-                    className={[
-                      "ml-1 font-semibold uppercase",
-                      isMobile ? "text-[8px]" : "text-[9px]",
-                      selected ? "text-cyan-200/55" : "text-white/30",
-                    ].join(" ")}
-                  >
-                    PPG
-                  </span>
                 </span>
               </button>
             );
           })}
+
+          {restCount > 0 ? (
+            <button
+              type="button"
+              onClick={() => setExpanded((v) => !v)}
+              aria-expanded={expanded}
+              className={`${nameOxanium.className} flex w-full items-center justify-center gap-1.5 border-t border-[rgba(0,245,255,0.12)] py-2.5 text-[10px] font-extrabold uppercase tracking-[0.12em] text-[#00F5FF] transition duration-100 hover:bg-white/[0.04] active:scale-[0.98] active:bg-[rgba(0,245,255,0.16)]`}
+            >
+              <span aria-hidden className="text-[11px] leading-none">
+                {expanded ? "▲" : "▼"}
+              </span>
+              {expanded
+                ? m.nbaTopScorerLess
+                : m.nbaTopScorerMore.replace("{n}", String(restCount))}
+            </button>
+          ) : null}
         </div>
       )}
     </div>

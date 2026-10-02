@@ -19,7 +19,7 @@ import MobilePageShell from "@/app/component/common/MobilePageShell";
 type TabId = "team" | "player";
 
 type Props = {
-  language?: "ja" | "en";
+  language?: string;
   initialTab?: TabId;
   /** MobilePageShell 内では見出しを出さない */
   embedded?: boolean;
@@ -37,16 +37,7 @@ export default function LeagueStatsHubPanel({
 }: Props) {
   const router = useRouter();
   const [tab, setTab] = useState<TabId>(initialTab);
-  const isJa = language === "ja";
   const title = tab === "team" ? "TEAM STATS" : "PLAYER STATS";
-  const subtitle =
-    tab === "team"
-      ? isJa
-        ? "共有 API から取得（未 seed 時はモック）。"
-        : "Loaded via shared API (mock until seeded)."
-      : isJa
-        ? "指標トップリーダー（モック）"
-        : "Stat leaderboards (mock).";
 
   const body = (
     <div className="space-y-3 text-white">
@@ -125,7 +116,6 @@ export default function LeagueStatsHubPanel({
       <MobilePageShell
         title={title}
         eyebrow="STATS"
-        subtitle={subtitle}
         onClose={onClose ?? (() => router.back())}
       >
         {body}

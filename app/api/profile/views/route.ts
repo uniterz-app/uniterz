@@ -4,6 +4,10 @@ import { NextResponse } from "next/server";
 import { requireUidFromRequest } from "@/lib/communities/serverAuth";
 import { getAdminDb } from "@/lib/firebaseAdmin";
 import { dateKeyJST } from "@/lib/rankings/rankSnapshotDate";
+import {
+  consumeRateLimit,
+  RATE_LIMIT_RULES,
+} from "@/lib/security/rateLimit";
 
 export const runtime = "nodejs";
 
@@ -17,6 +21,12 @@ function isValidUid(value: unknown): value is string {
     value.trim().length <= 128 &&
     !value.includes("/")
   );
+}
+
+function readCount(raw: unknown): number {
+  return typeof raw === "number" && Number.isFinite(raw)
+    ? Math.max(0, Math.floor(raw))
+    : 0;
 }
 
 function unauthorizedResponse() {
@@ -42,11 +52,7 @@ export async function GET(req: Request) {
       .collection(VIEW_COUNTS_COLLECTION)
       .doc(uid)
       .get();
-    const raw = snap.data()?.count;
-    const count =
-      typeof raw === "number" && Number.isFinite(raw)
-        ? Math.max(0, Math.floor(raw))
-        : 0;
+    const count = readCount(snap.data()?.count);
     return NextResponse.json({ count, uid });
   } catch (error) {
     if (error instanceof Error && error.message === "unauthorized") {
@@ -61,6 +67,21 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const viewerUid = await requireUidFromRequest(req);
+    const db = getAdminDb();
+    const limit = await consumeRateLimit(
+      db,
+      RATE_LIMIT_RULES.profileView,
+      viewerUid
+    );
+    if (!limit.allowed) {
+      return NextResponse.json(
+        { error: "rate_limited" },
+        {
+          status: 429,
+          headers: { "Retry-After": String(limit.retryAfterSec) },
+        }
+      );
+    }
     const body = (await req.json().catch(() => null)) as {
       targetUid?: unknown;
     } | null;
@@ -73,7 +94,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ counted: false });
     }
 
-    const db = getAdminDb();
     const dateKey = dateKeyJST();
     const targetRef = db.collection("users").doc(targetUid);
     const eventRef = db
@@ -82,29 +102,36 @@ export async function POST(req: Request) {
     const countRef = db.collection(VIEW_COUNTS_COLLECTION).doc(targetUid);
 
     const counted = await db.runTransaction(async (tx) => {
-      const [targetSnap, eventSnap] = await Promise.all([
+      const [targetSnap, eventSnap, countSnap] = await Promise.all([
         tx.get(targetRef),
         tx.get(eventRef),
+        tx.get(countRef),
       ]);
       if (!targetSnap.exists) throw new Error("target_not_found");
-      if (eventSnap.exists) return false;
-
-      tx.create(eventRef, {
-        targetUid,
-        viewerUid,
-        dateKey,
-        createdAt: FieldValue.serverTimestamp(),
-      });
-      tx.set(
-        countRef,
-        {
-          uid: targetUid,
-          count: FieldValue.increment(1),
-          updatedAt: FieldValue.serverTimestamp(),
-        },
-        { merge: true }
-      );
-      return true;
+      const prev = readCount(countSnap.data()?.count);
+      const already = eventSnap.exists;
+      const next = prev + (already ? 0 : 1);
+      if (!already) {
+        tx.create(eventRef, {
+          targetUid,
+          viewerUid,
+          dateKey,
+          createdAt: FieldValue.serverTimestamp(),
+        });
+        tx.set(
+          countRef,
+          {
+            uid: targetUid,
+            count: next,
+            updatedAt: FieldValue.serverTimestamp(),
+          },
+          { merge: true }
+        );
+      }
+      if (readCount(targetSnap.data()?.profileViewCount) !== next) {
+        tx.update(targetRef, { profileViewCount: next });
+      }
+      return !already;
     });
 
     return NextResponse.json({ counted });

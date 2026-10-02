@@ -80,9 +80,8 @@ export async function POST(req: Request) {
   /* =====================
      user 特定
   ===================== */
-  const { resolveUidByStripeSubscriptionId } = await import(
-    "@/lib/billing/userBillingSecure"
-  );
+  const { resolveUidByStripeSubscriptionId, writeUserBillingSecure, userBillingSecureRef } =
+    await import("@/lib/billing/userBillingSecure");
   const uid = await resolveUidByStripeSubscriptionId(db, sub.id);
   if (!uid) {
     console.error("[SUBSCRIPTION] user not found:", sub.id);
@@ -91,6 +90,10 @@ export async function POST(req: Request) {
 
   const userDoc = await db.collection("users").doc(uid).get();
   const userData = userDoc.data() ?? {};
+  const billingSnap = await userBillingSecureRef(db, uid).get();
+  const billingData = billingSnap.data() ?? {};
+  const nextPlanType =
+    billingData.nextPlanType ?? userData.nextPlanType ?? null;
 
   /* =====================
      解約予約判定（Stripe仕様準拠）
@@ -118,19 +121,16 @@ export async function POST(req: Request) {
   /* =====================
      Firestore 更新
   ===================== */
-  const updateData: any = {
+  const updateData: Record<string, unknown> = {
     cancelAtPeriodEnd: hasCancelReservation,
     proUntil: Timestamp.fromMillis(proUntilSec * 1000),
     updatedAt: FieldValue.serverTimestamp(),
   };
 
   // 年額→月額の予約処理（既存ロジック完全維持）
-  if (
-    userData.planType === "annual" &&
-    userData.nextPlanType === "monthly"
-  ) {
+  if (userData.planType === "annual" && nextPlanType === "monthly") {
     updateData.planType = "annual";
-    updateData.nextPlanType = "monthly";
+    await writeUserBillingSecure(db, uid, { nextPlanType: "monthly" });
   }
 
   console.log("[SUBSCRIPTION] UPDATE:", updateData);

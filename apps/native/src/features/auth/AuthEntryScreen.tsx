@@ -32,14 +32,20 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFirebaseUser } from "../../auth/FirebaseUserProvider";
 import type { AuthStackParamList } from "../../navigation/types";
+import { resolveDeviceLocalizedLang } from "../../i18n/resolveDeviceAppLanguage";
+import { authFormCopy } from "@/lib/auth/authFormCopy";
 import AuthLandingBackgroundNative from "./AuthLandingBackgroundNative";
 import { AUTH_LANDING } from "./authLandingPalette";
+import AuthLegalConsentGateNative from "./AuthLegalConsentGateNative";
+import SlantCtaNative from "../../ui/SlantCtaNative";
+import UniterzLogoNative from "../profile/UniterzLogoNative";
+import ProfileBackEdgeHandleNative from "../profile/ProfileBackEdgeHandleNative";
 
-type AuthMode = "login" | "signup";
+type AuthMode = "login" | "signup" | "reset";
 
 export type AuthEntryScreenProps = {
   embedded?: boolean;
-  initialMode?: AuthMode;
+  initialMode?: Exclude<AuthMode, "reset">;
   interactive?: boolean;
   onBack?: () => void;
 };
@@ -47,7 +53,7 @@ export type AuthEntryScreenProps = {
 const BTN_SKEW = "-10deg";
 const BTN_UNSKEW = "10deg";
 
-function mapAuthErrorMessage(error: unknown, mode: AuthMode): string {
+function mapAuthErrorMessage(error: unknown, mode: Exclude<AuthMode, "reset">): string {
   const code = (error as FirebaseError | undefined)?.code ?? "";
   switch (code) {
     case "auth/invalid-credential":
@@ -111,11 +117,13 @@ export default function AuthEntryScreen({
   const initialMode = initialModeProp ?? routeInitial ?? "login";
 
   const { status, fUser } = useFirebaseUser();
+  const copy = useMemo(() => authFormCopy(resolveDeviceLocalizedLang()), []);
   const [mode, setMode] = useState<AuthMode>(initialMode);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [consentOpen, setConsentOpen] = useState(false);
   const buttonScale = useRef(new Animated.Value(1)).current;
   const enter = useRef(new Animated.Value(0)).current;
 
@@ -151,66 +159,68 @@ export default function AuthEntryScreen({
     }).start();
   };
 
-  const title = useMemo(() => (mode === "login" ? "LOGIN" : "CREATE ACCOUNT"), [mode]);
-  const cta = useMemo(() => (mode === "login" ? "LOG IN" : "SIGN UP"), [mode]);
+  const title = useMemo(
+    () =>
+      mode === "reset"
+        ? "RESET PASSWORD"
+        : mode === "signup"
+          ? "CREATE ACCOUNT"
+          : "LOGIN",
+    [mode]
+  );
+  const cta = useMemo(
+    () =>
+      mode === "reset"
+        ? "SEND RESET LINK"
+        : mode === "signup"
+          ? "SIGN UP"
+          : "LOG IN",
+    [mode]
+  );
   const submittingLabel = useMemo(
-    () => (mode === "login" ? "Logging in..." : "Creating..."),
+    () =>
+      mode === "reset"
+        ? "Sending..."
+        : mode === "login"
+          ? "Logging in..."
+          : "Creating...",
     [mode]
   );
 
   async function handleResetPassword() {
+    if (submitting) return;
     const normalizedEmail = email.trim().toLowerCase();
     if (!normalizedEmail) {
-      cyberAlert("Missing input", "Please enter your email address.");
+      cyberAlert(copy.missingInputTitle, copy.missingEmail);
       return;
     }
+    setSubmitting(true);
     try {
-      await Promise.race([
-        sendPasswordResetEmail(auth, normalizedEmail),
-        new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 10000)),
-      ]);
-      cyberAlert(
-        "Reset link sent",
-        "If this email is registered, we sent a reset link. Check spam if you don't see it."
-      );
-    } catch (e: any) {
-      const code = e?.code as string | undefined;
-      if (e?.message === "timeout") {
-        cyberAlert(
-          "Request timed out",
-          "In DevTools -> Network, check identitytoolkit / sendOobCode."
-        );
-        return;
-      }
-      if (code === "auth/user-not-found" || code === "auth/invalid-email") {
-        cyberAlert(
-          "Reset link sent",
-          "If this email is registered, we sent a reset link. Check spam if you don't see it."
-        );
-        return;
-      }
-      if (code === "auth/too-many-requests") {
-        cyberAlert("Error", "Too many attempts. Please try again later.");
-        return;
-      }
-      if (code === "auth/network-request-failed") {
-        cyberAlert("Error", "Network error. Check your connection.");
-        return;
-      }
-      cyberAlert("Error", "Failed to send. Please try again in a moment.");
+      await sendPasswordResetEmail(auth, normalizedEmail);
+      cyberAlert(copy.resetSentTitle, copy.resetSentBody);
+      setMode("login");
+    } catch {
+      cyberAlert(copy.resetSentTitle, copy.resetSentBody);
+      setMode("login");
+    } finally {
+      setSubmitting(false);
     }
   }
 
   async function handleSubmit() {
+    if (mode === "reset") {
+      await handleResetPassword();
+      return;
+    }
     if (submitting) return;
     const normalizedEmail = email.trim().toLowerCase();
 
     if (!normalizedEmail || !password) {
-      cyberAlert("Missing input", "Please enter both email and password.");
+      cyberAlert(copy.missingInputTitle, copy.missingBoth);
       return;
     }
     if (mode === "signup" && password.length < 6) {
-      cyberAlert("Missing input", "Password must be at least 6 characters.");
+      cyberAlert(copy.missingInputTitle, copy.weakPassword);
       return;
     }
 
@@ -233,7 +243,7 @@ export default function AuthEntryScreen({
         );
       }
     } catch (error: unknown) {
-      cyberAlert("Authentication error", mapAuthErrorMessage(error, mode));
+      cyberAlert(copy.authErrorTitle, mapAuthErrorMessage(error, mode));
     } finally {
       setSubmitting(false);
     }
@@ -242,6 +252,10 @@ export default function AuthEntryScreen({
   if (status === "ready" && fUser) return null;
 
   const handleBack = () => {
+    if (mode === "reset") {
+      setMode("login");
+      return;
+    }
     if (onBack) {
       onBack();
       return;
@@ -267,16 +281,10 @@ export default function AuthEntryScreen({
         {embedded ? null : <AuthLandingBackgroundNative />}
 
         {interactive ? (
-          <Pressable
-            style={[styles.backBtn, { top: insets.top + 8, left: spacing.md }]}
+          <ProfileBackEdgeHandleNative
             onPress={handleBack}
-            hitSlop={12}
-            accessibilityRole="button"
-            accessibilityLabel="Back to landing"
-          >
-            <MaterialCommunityIcons name="chevron-left" size={24} color={AUTH_LANDING.accentSoft} />
-            <Text style={styles.backLabel}>BACK</Text>
-          </Pressable>
+            accessibilityLabel={copy.backA11y}
+          />
         ) : null}
 
         <View
@@ -298,11 +306,24 @@ export default function AuthEntryScreen({
               },
             ]}
           >
-            <Text style={styles.brandWordmark}>UNITERZ</Text>
+            <View style={styles.logoWrap}>
+              <UniterzLogoNative width={220} />
+            </View>
             <HorizonRule />
-            <Text style={[styles.title, mode === "signup" ? styles.titleLong : styles.titleShort]}>
-              {title}
-            </Text>
+            <View style={styles.titleWrap}>
+              <Text
+                style={[
+                  styles.title,
+                  mode === "login" ? styles.titleShort : styles.titleLong,
+                ]}
+              >
+                {title}
+              </Text>
+            </View>
+
+            {mode === "reset" ? (
+              <Text style={styles.resetHint}>{copy.resetHint}</Text>
+            ) : null}
 
             <View style={[styles.field, styles.fieldEmail]}>
               <LinearGradient
@@ -312,7 +333,6 @@ export default function AuthEntryScreen({
                 style={styles.fieldTopGlow}
                 pointerEvents="none"
               />
-              <View style={[styles.fieldRail, styles.fieldRailCyan]} />
               <TextInput
                 style={styles.input}
                 placeholder="Email Address"
@@ -328,6 +348,7 @@ export default function AuthEntryScreen({
               </View>
             </View>
 
+            {mode === "reset" ? null : (
             <View style={[styles.field, styles.fieldPassword]}>
               <LinearGradient
                 colors={[AUTH_LANDING.accentLine, "transparent"]}
@@ -336,7 +357,6 @@ export default function AuthEntryScreen({
                 style={styles.fieldTopGlow}
                 pointerEvents="none"
               />
-              <View style={[styles.fieldRail, styles.fieldRailCyan]} />
               <TextInput
                 style={[styles.input, styles.inputWithRight]}
                 placeholder={mode === "signup" ? "Password (6+ characters)" : "Password"}
@@ -358,52 +378,56 @@ export default function AuthEntryScreen({
                 />
               </Pressable>
             </View>
+            )}
 
-            <View style={styles.ctaSkewWrap}>
-              <Animated.View style={{ transform: [{ scale: buttonScale }] }}>
-                <Pressable
-                  style={[styles.ctaPressable, submitting && styles.ctaDisabled]}
-                  onPress={handleSubmit}
-                  onPressIn={pressIn}
-                  onPressOut={pressOut}
-                  disabled={submitting}
-                >
-                  <View style={styles.ctaBorder}>
-                    <View style={styles.ctaFill}>
-                      <View style={styles.ctaRail} pointerEvents="none" />
-                      <View style={styles.ctaLabelWrap}>
-                        <Text style={styles.ctaLabel}>{submitting ? submittingLabel : cta}</Text>
-                      </View>
-                    </View>
-                  </View>
-                </Pressable>
-              </Animated.View>
-            </View>
+            <SlantCtaNative
+              display
+              label={submitting ? submittingLabel : cta}
+              onPress={handleSubmit}
+              disabled={submitting}
+            />
 
             {mode === "login" ? (
               <View style={styles.footer}>
                 <Text style={styles.helperText}>
-                  パスワードをお忘れの方は
-                  <Text style={styles.helperLinkInline} onPress={handleResetPassword}>
-                    こちら
+                  {copy.forgotLead}
+                  <Text
+                    style={styles.helperLinkInline}
+                    onPress={() => setMode("reset")}
+                  >
+                    {copy.forgotLink}
                   </Text>
                 </Text>
-                <Pressable onPress={() => setMode("signup")}>
+                <Pressable onPress={() => setConsentOpen(true)}>
                   <Text style={styles.helperLink}>CREATE ACCOUNT</Text>
                 </Pressable>
               </View>
-            ) : (
+            ) : mode === "signup" ? (
               <View style={styles.footer}>
                 <Text style={styles.helperText}>
-                  すでにアカウントをお持ちの方は
+                  {copy.alreadyLead}
                   <Text style={styles.helperLinkInline} onPress={() => setMode("login")}>
                     {" LOGIN"}
                   </Text>
                 </Text>
               </View>
+            ) : (
+              <View style={styles.footer}>
+                <Pressable onPress={() => setMode("login")}>
+                  <Text style={styles.helperLink}>BACK TO LOGIN</Text>
+                </Pressable>
+              </View>
             )}
           </Animated.View>
         </View>
+        <AuthLegalConsentGateNative
+          visible={consentOpen}
+          onClose={() => setConsentOpen(false)}
+          onAgree={() => {
+            setConsentOpen(false);
+            setMode("signup");
+          }}
+        />
       </View>
     </TouchableWithoutFeedback>
   );
@@ -417,21 +441,6 @@ const styles = StyleSheet.create({
   rootEmbedded: {
     backgroundColor: "transparent",
   },
-  backBtn: {
-    position: "absolute",
-    zIndex: 20,
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 6,
-    paddingRight: 10,
-  },
-  backLabel: {
-    color: AUTH_LANDING.accentSoft,
-    fontSize: 13,
-    fontWeight: "700",
-    letterSpacing: 1.6,
-    marginLeft: -2,
-  },
   screen: {
     flex: 1,
     alignItems: "center",
@@ -442,13 +451,9 @@ const styles = StyleSheet.create({
   form: {
     gap: 14,
   },
-  brandWordmark: {
-    color: AUTH_LANDING.ink,
-    fontFamily: "BebasNeue_400Regular",
-    textAlign: "center",
-    letterSpacing: 5,
-    fontSize: 34,
-    lineHeight: 34,
+  logoWrap: {
+    alignSelf: "center",
+    alignItems: "center",
   },
   horizonSlot: {
     alignSelf: "center",
@@ -475,21 +480,26 @@ const styles = StyleSheet.create({
     shadowOpacity: 1,
     shadowRadius: 6,
   },
+  titleWrap: {
+    alignSelf: "center",
+    alignItems: "center",
+    transform: [{ skewX: "-10deg" }],
+    marginBottom: 4,
+  },
   title: {
     color: "rgba(248,250,252,0.95)",
     fontFamily: "BebasNeue_400Regular",
     textAlign: "center",
-    marginBottom: 4,
   },
   titleShort: {
-    fontSize: 28,
-    letterSpacing: 2,
-    lineHeight: 32,
+    fontSize: 22,
+    letterSpacing: 2.4,
+    lineHeight: 26,
   },
   titleLong: {
-    fontSize: 24,
-    letterSpacing: 1.2,
-    lineHeight: 28,
+    fontSize: 18,
+    letterSpacing: 1.6,
+    lineHeight: 22,
   },
   field: {
     minHeight: 52,
@@ -511,16 +521,6 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 1.5,
-  },
-  fieldRail: {
-    position: "absolute",
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 2,
-  },
-  fieldRailCyan: {
-    backgroundColor: AUTH_LANDING.accentSoft,
   },
   input: {
     paddingHorizontal: 16,
@@ -609,6 +609,12 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     textAlign: "center",
   },
+  resetHint: {
+    color: "rgba(226,232,240,0.65)",
+    fontSize: 14,
+    textAlign: "center",
+    marginBottom: 2,
+  },
   helperLinkInline: {
     color: AUTH_LANDING.accentSoft,
     textDecorationLine: "underline",
@@ -617,7 +623,7 @@ const styles = StyleSheet.create({
     color: AUTH_LANDING.accentSoft,
     fontFamily: "BebasNeue_400Regular",
     fontSize: 18,
-    letterSpacing: 1.4,
-    textDecorationLine: "underline",
+    letterSpacing: 1.8,
+    transform: [{ skewX: "-10deg" }],
   },
 });

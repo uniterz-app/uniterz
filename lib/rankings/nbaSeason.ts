@@ -17,12 +17,82 @@ export function nbaSeasonKeyFromDateJST(d: Date): string {
 /** ランキング一覧・snapshotRanks が参照する現行シーズン（日付から自動導出） */
 export const CURRENT_NBA_SEASON_KEY = nbaSeasonKeyFromDateJST(new Date());
 
+/** `"2026-27"` → `"26-27"` */
+export function nbaSeasonShortLabel(seasonKey: string): string {
+  if (/^\d{4}-\d{2}$/.test(seasonKey)) {
+    return `${seasonKey.slice(2, 4)}-${seasonKey.slice(5)}`;
+  }
+  return seasonKey.replace(/^20/, "").replace("-20", "-");
+}
+
 /** `"2026-27"` → `"2025-26"`（オフシーズン表示フォールバック用） */
 export function previousNbaSeasonKey(seasonKey: string): string {
   const start = Number.parseInt(seasonKey.slice(0, 4), 10);
   if (!Number.isFinite(start)) return seasonKey;
   const prevStart = start - 1;
   return `${prevStart}-${String((prevStart + 1) % 100).padStart(2, "0")}`;
+}
+
+/** リーグ表の年切替で出す最古シーズン（含む） */
+export const NBA_LEAGUE_STATS_OLDEST_SEASON_KEY = "2020-21";
+
+/**
+ * 今季から最古までのシーズン数（今季含む）。
+ * 例: CURRENT=`2026-27`, oldest=`2020-21` → 7
+ */
+export function nbaLeagueStatsSeasonLookbackCount(
+  fromSeasonKey: string = CURRENT_NBA_SEASON_KEY,
+  oldestSeasonKey: string = NBA_LEAGUE_STATS_OLDEST_SEASON_KEY
+): number {
+  const fromStart = Number.parseInt(fromSeasonKey.slice(0, 4), 10);
+  const oldestStart = Number.parseInt(oldestSeasonKey.slice(0, 4), 10);
+  if (!Number.isFinite(fromStart) || !Number.isFinite(oldestStart)) return 1;
+  return Math.max(1, fromStart - oldestStart + 1);
+}
+
+/** @deprecated 名前互換。実体は `nbaLeagueStatsSeasonLookbackCount()` */
+export const NBA_LEAGUE_STATS_SEASON_LOOKBACK =
+  nbaLeagueStatsSeasonLookbackCount();
+
+/**
+ * 今季から遡るシーズンキー（新しい順）。
+ * 例: from=`2026-27`, count=7 → `2026-27` … `2020-21`
+ */
+export function nbaSeasonKeysLookingBack(
+  fromSeasonKey: string = CURRENT_NBA_SEASON_KEY,
+  count: number = nbaLeagueStatsSeasonLookbackCount(fromSeasonKey)
+): string[] {
+  const n = Math.max(1, Math.floor(count));
+  const out: string[] = [];
+  let key = fromSeasonKey.trim() || CURRENT_NBA_SEASON_KEY;
+  for (let i = 0; i < n; i++) {
+    out.push(key);
+    key = previousNbaSeasonKey(key);
+  }
+  return out;
+}
+
+/** リーグ表ナビ用: CURRENT から `2020-21` まで */
+export function nbaLeagueStatsSeasonKeys(
+  fromSeasonKey: string = CURRENT_NBA_SEASON_KEY
+): string[] {
+  return nbaSeasonKeysLookingBack(
+    fromSeasonKey,
+    nbaLeagueStatsSeasonLookbackCount(fromSeasonKey)
+  );
+}
+
+/** 順位表で遡れる過去シーズン数（今季は含まない） */
+export const NBA_STANDINGS_PAST_SEASON_COUNT = 10;
+
+/** 順位表ナビ用: CURRENT + 過去 10 シーズン（新しい順） */
+export function nbaStandingsSeasonKeys(
+  fromSeasonKey: string = CURRENT_NBA_SEASON_KEY
+): string[] {
+  return nbaSeasonKeysLookingBack(
+    fromSeasonKey,
+    NBA_STANDINGS_PAST_SEASON_COUNT + 1
+  );
 }
 
 /** cumulative_ranking_snapshots の doc id（例: s2026-27_totalPoints） */

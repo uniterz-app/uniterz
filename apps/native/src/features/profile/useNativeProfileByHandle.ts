@@ -1,11 +1,10 @@
-/**
- * Web `useProfile` の Firestore 解決（handle / uid → users ドキュメント）。
- */
+import { resolveLocalizedLang, type LocalizedLang } from "../../../../../lib/i18n/localize";
 import { useEffect, useMemo, useState } from "react";
 import { db } from "../../lib/firebase";
 import { fetchUserDocByRouteKey } from "../../../../../lib/profile/fetchUserDocByRouteKey";
 import {
   parseUserProfileFields,
+  parseUserProfileViewCount,
   parseUserUnitBalance,
 } from "../../../../../lib/profile/parseUserProfileFields";
 import { parseMemberSinceMs } from "../../../../../lib/profile/parseMemberSinceMs";
@@ -19,10 +18,11 @@ import {
 import { peekUserDocMemory } from "../../../../../lib/user/userDocMemoryCache";
 import { looksLikeFirestoreUid } from "../../../../../lib/profile/profilePathKey";
 import { seedNativeProfileStatsFromUserDoc } from "./useNativeProfileStats";
+import type { ProfilePlanProBgVariant } from "../../../../../lib/profile/profilePlanProBgVariants";
 import {
-  PROFILE_PLAN_PRO_BG_DEFAULT,
-  type ProfilePlanProBgVariant,
-} from "../../../../../lib/profile/profilePlanProBgVariants";
+  parseNbaFavorites,
+  type NbaFavoritePlayer,
+} from "../../../../../lib/profile/nbaFavorites";
 
 export type NativeProfileByHandleState = {
   loading: boolean;
@@ -34,15 +34,20 @@ export type NativeProfileByHandleState = {
   handle: string;
   bio: string;
   avatarUrl: string;
-  language: "ja" | "en";
+  language: LocalizedLang;
   countryCode: string;
   plan: "free" | "pro";
-  planProBgVariant: ProfilePlanProBgVariant;
+  /** null = Pro Skin 未確定（デフォルトを出さない） */
+  planProBgVariant: ProfilePlanProBgVariant | null;
   currentStreak: number;
   maxStreak: number;
   memberSinceMs: number | null;
   /** 保有 Unit（公開） */
   unitBalance: number;
+  profileViewCount: number | null;
+  favoriteNbaTeamId: string | null;
+  favoriteNbaTeamFanSinceSeason: string | null;
+  favoriteNbaPlayers: NbaFavoritePlayer[];
 };
 
 const idleState: NativeProfileByHandleState = {
@@ -57,11 +62,15 @@ const idleState: NativeProfileByHandleState = {
   language: "ja",
   countryCode: "",
   plan: "free",
-  planProBgVariant: PROFILE_PLAN_PRO_BG_DEFAULT,
+  planProBgVariant: null,
   currentStreak: 0,
   maxStreak: 0,
   memberSinceMs: null,
   unitBalance: 0,
+  profileViewCount: null,
+  favoriteNbaTeamId: null,
+  favoriteNbaTeamFanSinceSeason: null,
+  favoriteNbaPlayers: [],
 };
 
 function mapUserDoc(
@@ -75,6 +84,8 @@ function mapUserDoc(
       : typeof data.avatarUrl === "string" && data.avatarUrl.trim().length > 0
         ? data.avatarUrl.trim()
         : "";
+  const plan: "free" | "pro" = data.plan === "pro" ? "pro" : "free";
+  const favorites = parseNbaFavorites(data);
 
   return {
     loading: false,
@@ -85,10 +96,13 @@ function mapUserDoc(
     handle: typeof data.handle === "string" ? data.handle.trim() : handle,
     bio: typeof data.bio === "string" ? data.bio : "",
     avatarUrl: fromFirestorePhoto,
-    language: data.language === "en" ? "en" : "ja",
+    language: resolveLocalizedLang(
+      typeof data.language === "string" ? data.language : null
+    ),
     countryCode: typeof data.countryCode === "string" ? data.countryCode : "",
-    plan: data.plan === "pro" ? "pro" : "free",
-    planProBgVariant: parseUserPlanProBgVariant(data.planProBgVariant),
+    plan,
+    planProBgVariant:
+      plan === "pro" ? parseUserPlanProBgVariant(data.planProBgVariant) : null,
     currentStreak: currentSeasonWinStreak(
       data.currentStreak,
       data.streakSeasonKeyBasketball
@@ -99,6 +113,10 @@ function mapUserDoc(
         : 0,
     memberSinceMs: parseMemberSinceMs(data),
     unitBalance: parseUserUnitBalance(data),
+    profileViewCount: parseUserProfileViewCount(data),
+    favoriteNbaTeamId: favorites.favoriteNbaTeamId,
+    favoriteNbaTeamFanSinceSeason: favorites.favoriteNbaTeamFanSinceSeason,
+    favoriteNbaPlayers: favorites.favoriteNbaPlayers,
   };
 }
 
@@ -126,6 +144,7 @@ function seedFromCaches(decoded: string): NativeProfileByHandleState | null {
     bio: identity.bio,
     avatarUrl: identity.photoURL,
     plan: identity.plan,
+    planProBgVariant: identity.planProBgVariant,
     countryCode: identity.countryCode,
   };
 }
@@ -191,6 +210,7 @@ export function useNativeProfileByHandle(routeKey: string | undefined | null) {
           bio: mapped.bio,
           photoURL: mapped.avatarUrl,
           plan: mapped.plan,
+          planProBgVariant: mapped.planProBgVariant,
           countryCode: mapped.countryCode,
           fromUserDoc: true,
         });

@@ -1,7 +1,10 @@
 /** Web `NbaTopScorerResultRow` 相当 */
 import { StyleSheet, Text, View } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { getTeamPrimaryColor } from "../../../../../lib/team-colors";
+import {
+  getTeamPrimaryColor,
+  matchupTeamUiAccent,
+} from "../../../../../lib/team-colors";
 import type { NbaTopScorerResultInfo } from "../../../../../lib/result/resolveNbaTopScorerResult";
 import { MATCH_CARD_METRIC_FONT } from "../games/matchCardTypography";
 import {
@@ -13,14 +16,21 @@ type Props = {
   label: string;
   info: NbaTopScorerResultInfo;
   compact?: boolean;
+  homeTeamId?: string | null;
+  awayTeamId?: string | null;
 };
 
 export default function NbaTopScorerResultRowNative({
   label,
   info,
   compact = false,
+  homeTeamId = null,
+  awayTeamId = null,
 }: Props) {
-  const teamColor = getTeamPrimaryColor("nba", info.teamId) ?? "#e8edf5";
+  const teamColor =
+    homeTeamId && awayTeamId
+      ? matchupTeamUiAccent("nba", info.teamId, homeTeamId, awayTeamId)
+      : getTeamPrimaryColor("nba", info.teamId) ?? "#e8edf5";
   const markSize = compact ? 16 : 18;
 
   return (

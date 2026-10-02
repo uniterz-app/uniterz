@@ -1,8 +1,9 @@
 import { StyleSheet, Text, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
+import { playoffBracketHitLegendCopy } from "../stats/nbaStatsUiCopy";
 
 type Props = {
-  language: "ja" | "en";
+  language: string;
   compact?: boolean;
 };
 
@@ -37,26 +38,18 @@ function LegendCheck({ hitStatus, compact }: { hitStatus: LegendHit; compact?: b
 }
 
 export default function PlayoffBracketHitLegendNative({ language, compact = false }: Props) {
-  const isJa = language === "ja";
+  const copy = playoffBracketHitLegendCopy(language, compact);
   const labelStyle = compact ? styles.labelCompact : styles.label;
 
   return (
     <View style={styles.row}>
       <View style={styles.item}>
         <LegendCheck hitStatus="winner" compact={compact} />
-        <Text style={labelStyle}>
-          {isJa ? (compact ? "勝者のみ" : "勝者のみ的中") : "Winner correct"}
-        </Text>
+        <Text style={labelStyle}>{copy.winnerOnly}</Text>
       </View>
       <View style={styles.item}>
         <LegendCheck hitStatus="winnerAndGames" compact={compact} />
-        <Text style={labelStyle}>
-          {isJa
-            ? compact
-              ? "勝者＋試合数"
-              : "勝者＋試合数的中"
-            : "Winner + games"}
-        </Text>
+        <Text style={labelStyle}>{copy.winnerAndGames}</Text>
       </View>
     </View>
   );

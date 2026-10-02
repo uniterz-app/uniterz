@@ -1,9 +1,11 @@
-/** Web `NbaSeasonAwardsPredictPanel` 相当（人気5 + 前方一致サジェスト・名簿はモック） */
+/** Web `NbaSeasonAwardsPredictPanel` 相当（運営指定候補5 + ロスター全選手検索） */
 import { useMemo, useState } from "react";
-import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import type { UiStrings } from "../../../../../../../lib/i18n/ui";
 import {
   NBA_SEASON_AWARD_DEFS,
   awardCandidateLabel,
+  awardName,
   filterAwardCandidatesByPrefix,
   filledSeasonAwardsCount,
   isSeasonAwardsComplete,
@@ -11,12 +13,16 @@ import {
   type NbaAwardCandidate,
   type NbaAwardId,
   type NbaSeasonAwardsPrediction,
-  SEASON_AWARDS_SCORE_PREVIEW,
 } from "../../../../../../../lib/predict/nbaSeasonAwardsPredict";
+import { AWARDS_PREVIEW_COACHES } from "../../../../../../../lib/predict/nbaSeasonAwardsPreviewMocks";
+import { SEASON_AWARDS_CURATED_POPULAR } from "../../../../../../../lib/predict/seasonAwardsCuratedPopular";
+import { seasonAwardsCatalogForAward } from "../../../../../../../lib/predict/seasonAwardsCatalogFromRosters";
+import { useSeasonAwardsPlayerCatalog } from "../../../../../../../lib/predict/useSeasonAwardsPlayerCatalog";
 import {
-  awardsPreviewCatalog,
-  AWARDS_PREVIEW_POPULAR,
-} from "../../../../../../../lib/predict/nbaSeasonAwardsPreviewMocks";
+  seasonPredictAwardsPredictHint,
+  type SeasonPredictUiLang,
+} from "../../../../../../../lib/predict/seasonPredictUiCopy";
+import { getUniterzApiBaseUrl } from "../../submitPredictionApi";
 import {
   MATCH_CARD_BRACKET_LETTER_SPACING_12,
   MATCH_CARD_BRACKET_TEXT,
@@ -27,49 +33,72 @@ type Props = {
   onChange?: (next: NbaSeasonAwardsPrediction) => void;
   onSubmit?: () => void;
   submitDisabled?: boolean;
+  language?: SeasonPredictUiLang;
 };
 
 const OX = "Oxanium_700Bold";
 
-function findInCatalog(
-  id: string | null | undefined,
-  catalog: readonly NbaAwardCandidate[]
-): NbaAwardCandidate | null {
-  if (!id) return null;
-  return catalog.find((c) => c.id === id) ?? null;
+function awardSearchPlaceholder(
+  awardId: NbaAwardId,
+  kind: "player" | "coach"
+): string {
+  if (awardId === "roy") return "Rookie name…";
+  if (kind === "coach") return "Coach name…";
+  return "Player name…";
 }
 
 function AwardPickRow({
   awardId,
   labelEn,
-  labelJa,
+  name,
   kind,
+  selected,
   selectedId,
   onSelect,
+  language,
+  catalog,
 }: {
   awardId: NbaAwardId;
   labelEn: string;
-  labelJa: string;
+  name: UiStrings;
   kind: "player" | "coach";
+  selected: NbaAwardCandidate | null;
   selectedId: string | null | undefined;
   onSelect: (id: string | null) => void;
+  language: SeasonPredictUiLang;
+  catalog: readonly NbaAwardCandidate[];
 }) {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
-  const catalog = awardsPreviewCatalog(kind);
-  const selected = findInCatalog(selectedId, catalog);
+  const placeholder = awardSearchPlaceholder(awardId, kind);
 
   const suggestions = useMemo(() => {
+    if (selectedId) return [];
     const trimmed = query.trim();
-    if (!trimmed) return popularAwardPicks(AWARDS_PREVIEW_POPULAR[awardId], catalog);
+    if (!trimmed) {
+      // COTY: HC は知名度差が大きいので全30人を出す
+      if (awardId === "coty") return [...catalog];
+      return popularAwardPicks(
+        SEASON_AWARDS_CURATED_POPULAR[awardId],
+        catalog
+      );
+    }
     return filterAwardCandidatesByPrefix(catalog, trimmed);
-  }, [awardId, catalog, query]);
+  }, [awardId, catalog, query, selectedId]);
+
+  const clearSelection = () => {
+    onSelect(null);
+    setOpen(false);
+    setQuery("");
+  };
 
   return (
     <View style={styles.row}>
       <View style={styles.rowHead}>
         <Text style={styles.rowLabelEn}>{labelEn}</Text>
-        <Text style={styles.rowLabelJa}>{labelJa}</Text>
+        <Text style={styles.rowLabelFullName}>
+          {awardName(language, { name })}
+        </Text>
       </View>
 
       {selected ? (
@@ -78,23 +107,63 @@ function AwardPickRow({
             <Text style={styles.selectedName} numberOfLines={1}>
               {awardCandidateLabel(selected)}
             </Text>
-            {selected.teamAbbr ? <Text style={styles.selectedTeam}>{selected.teamAbbr}</Text> : null}
+            {selected.teamAbbr ? (
+              <Text style={styles.selectedTeam}>{selected.teamAbbr}</Text>
+            ) : null}
           </View>
           <Pressable
-            onPress={() => {
-              onSelect(null);
-              setQuery("");
-              setOpen(false);
-            }}
+            onPressIn={clearSelection}
+            hitSlop={{ top: 14, bottom: 14, left: 14, right: 14 }}
+            accessibilityRole="button"
+            accessibilityLabel="Clear"
+            style={({ pressed }) => [
+              styles.clearBtn,
+              pressed ? styles.clearBtnPressed : null,
+            ]}
           >
             <Text style={styles.clearText}>Clear</Text>
           </Pressable>
+        </View>
+      ) : awardId === "coty" ? (
+        <View>
+          <Pressable
+            onPress={() => setOpen((v) => !v)}
+            style={styles.input}
+            accessibilityRole="button"
+            accessibilityLabel="Select head coach"
+          >
+            <Text style={styles.inputPlaceholder}>
+              {open ? "Tap to close list…" : "Select head coach…"}
+            </Text>
+          </Pressable>
+          {open ? (
+            <View style={styles.coachList}>
+              <Text style={styles.dropdownTitle}>All head coaches · 30</Text>
+              {suggestions.map((c) => (
+                <Pressable
+                  key={c.id}
+                  style={styles.suggestion}
+                  onPress={() => {
+                    onSelect(c.id);
+                    setOpen(false);
+                  }}
+                >
+                  <Text style={styles.suggestionName} numberOfLines={1}>
+                    {awardCandidateLabel(c)}
+                  </Text>
+                  {c.teamAbbr ? (
+                    <Text style={styles.suggestionTeam}>{c.teamAbbr}</Text>
+                  ) : null}
+                </Pressable>
+              ))}
+            </View>
+          ) : null}
         </View>
       ) : (
         <View>
           <TextInput
             value={query}
-            placeholder={kind === "coach" ? "Coach name…" : "Player name…"}
+            placeholder={placeholder}
             placeholderTextColor="rgba(255,255,255,0.25)"
             autoCapitalize="none"
             autoCorrect={false}
@@ -104,33 +173,48 @@ function AwardPickRow({
               setQuery(t);
               setOpen(true);
             }}
+            onBlur={() => {
+              // 候補タップを先に処理させる
+              setTimeout(() => setOpen(false), 120);
+            }}
             style={styles.input}
           />
           {open ? (
             <View style={styles.dropdown}>
               <Text style={styles.dropdownTitle}>
-                {query.trim() ? `Suggestions · “${query.trim()}”` : "Popular picks · top 5"}
+                {query.trim()
+                  ? `Suggestions · “${query.trim()}”`
+                  : "Featured · top 5"}
               </Text>
-              {suggestions.length === 0 ? (
-                <Text style={styles.noMatch}>No matches</Text>
-              ) : (
-                suggestions.map((c) => (
-                  <Pressable
-                    key={c.id}
-                    style={styles.suggestion}
-                    onPress={() => {
-                      onSelect(c.id);
-                      setQuery("");
-                      setOpen(false);
-                    }}
-                  >
-                    <Text style={styles.suggestionName} numberOfLines={1}>
-                      {awardCandidateLabel(c)}
-                    </Text>
-                    {c.teamAbbr ? <Text style={styles.suggestionTeam}>{c.teamAbbr}</Text> : null}
-                  </Pressable>
-                ))
-              )}
+              <ScrollView
+                style={styles.dropdownScroll}
+                keyboardShouldPersistTaps="handled"
+                nestedScrollEnabled
+                showsVerticalScrollIndicator={false}
+              >
+                {suggestions.length === 0 ? (
+                  <Text style={styles.noMatch}>No matches</Text>
+                ) : (
+                  suggestions.map((c) => (
+                    <Pressable
+                      key={c.id}
+                      style={styles.suggestion}
+                      onPress={() => {
+                        onSelect(c.id);
+                        setQuery("");
+                        setOpen(false);
+                      }}
+                    >
+                      <Text style={styles.suggestionName} numberOfLines={1}>
+                        {awardCandidateLabel(c)}
+                      </Text>
+                      {c.teamAbbr ? (
+                        <Text style={styles.suggestionTeam}>{c.teamAbbr}</Text>
+                      ) : null}
+                    </Pressable>
+                  ))
+                )}
+              </ScrollView>
             </View>
           ) : null}
         </View>
@@ -144,35 +228,74 @@ export default function NbaSeasonAwardsPredictPanelNative({
   onChange,
   onSubmit,
   submitDisabled,
+  language = "ja",
 }: Props) {
   const filled = filledSeasonAwardsCount(value.picks);
   const total = NBA_SEASON_AWARD_DEFS.length;
   const allDone = isSeasonAwardsComplete(value);
+  const { players, loading } = useSeasonAwardsPlayerCatalog({
+    season: value.season,
+    apiBaseUrl: getUniterzApiBaseUrl(),
+  });
+  const catalogsByAward = useMemo(() => {
+    const out = {} as Record<NbaAwardId, readonly NbaAwardCandidate[]>;
+    for (const def of NBA_SEASON_AWARD_DEFS) {
+      out[def.id] = seasonAwardsCatalogForAward(
+        def.id,
+        players,
+        value.season,
+        AWARDS_PREVIEW_COACHES
+      );
+    }
+    return out;
+  }, [players, value.season]);
+  const candidateById = useMemo(() => {
+    const m = new Map<string, NbaAwardCandidate>();
+    for (const list of Object.values(catalogsByAward)) {
+      for (const c of list) m.set(c.id, c);
+    }
+    return m;
+  }, [catalogsByAward]);
 
   return (
     <View style={styles.card}>
       <View style={{ gap: 4, marginBottom: 12 }}>
         <Text style={styles.h2}>Season awards · {value.season}</Text>
         <Text style={styles.lead}>
-          フォーカス直後は他ユーザー人気ピック約 5 人。入力すると N → NI → NIK の前方一致。選手名簿は API
-          契約後に差し替え。採点は未定（仮 +{SEASON_AWARDS_SCORE_PREVIEW.exact}pt）。
+          {seasonPredictAwardsPredictHint(language)}
         </Text>
+        {loading ? (
+          <Text style={styles.loadingRoster}>Loading roster…</Text>
+        ) : null}
       </View>
 
       <View style={{ gap: 10 }}>
-        {NBA_SEASON_AWARD_DEFS.map((def) => (
-          <AwardPickRow
-            key={def.id}
-            awardId={def.id}
-            labelEn={def.labelEn}
-            labelJa={def.labelJa}
-            kind={def.kind}
-            selectedId={value.picks[def.id]}
-            onSelect={(id) =>
-              onChange?.({ ...value, picks: { ...value.picks, [def.id]: id } })
-            }
-          />
-        ))}
+        {NBA_SEASON_AWARD_DEFS.map((def) => {
+          const selectedId = value.picks[def.id];
+          return (
+            <AwardPickRow
+              key={def.id}
+              awardId={def.id}
+              labelEn={def.labelEn}
+              name={def.name}
+              kind={def.kind}
+              catalog={catalogsByAward[def.id] ?? []}
+              selected={
+                typeof selectedId === "string" && selectedId
+                  ? candidateById.get(selectedId) ?? null
+                  : null
+              }
+              selectedId={selectedId}
+              language={language}
+              onSelect={(id) =>
+                onChange?.({
+                  ...value,
+                  picks: { ...value.picks, [def.id]: id },
+                })
+              }
+            />
+          );
+        })}
       </View>
 
       {onSubmit ? (
@@ -226,14 +349,29 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
   },
   lead: { fontSize: 11, lineHeight: 16, color: "rgba(255,255,255,0.45)" },
+  loadingRoster: {
+    fontFamily: OX,
+    fontSize: 9,
+    fontWeight: "700",
+    letterSpacing: 1.2,
+    color: "rgba(255,255,255,0.3)",
+    textTransform: "uppercase",
+  },
   row: {
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.12)",
     backgroundColor: "rgba(255,255,255,0.02)",
     paddingHorizontal: 12,
     paddingVertical: 10,
+    overflow: "visible",
+    zIndex: 1,
   },
-  rowHead: { flexDirection: "row", alignItems: "baseline", gap: 8, marginBottom: 8 },
+  rowHead: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    gap: 8,
+    marginBottom: 8,
+  },
   rowLabelEn: {
     fontFamily: OX,
     fontSize: 11,
@@ -242,7 +380,7 @@ const styles = StyleSheet.create({
     color: "rgba(253,230,138,0.85)",
     textTransform: "uppercase",
   },
-  rowLabelJa: { fontSize: 11, color: "rgba(255,255,255,0.4)" },
+  rowLabelFullName: { fontSize: 11, color: "rgba(255,255,255,0.4)" },
   selectedBox: {
     flexDirection: "row",
     alignItems: "center",
@@ -269,6 +407,16 @@ const styles = StyleSheet.create({
     color: "rgba(255,255,255,0.35)",
     transform: [{ skewX: "-6deg" }],
   },
+  clearBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    minWidth: 52,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  clearBtnPressed: {
+    opacity: 0.55,
+  },
   clearText: {
     fontFamily: OX,
     fontSize: 9,
@@ -288,7 +436,24 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#fff",
   },
+  inputPlaceholder: {
+    fontFamily: OX,
+    fontSize: 15,
+    fontWeight: "700",
+    color: "rgba(255,255,255,0.25)",
+  },
   dropdown: {
+    marginTop: 4,
+    maxHeight: 220,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.12)",
+    backgroundColor: "rgba(6,10,16,0.98)",
+  },
+  dropdownScroll: {
+    flexGrow: 0,
+  },
+  /** COTY: 内側スクロールせず親ページで全部見せる（誤選択防止） */
+  coachList: {
     marginTop: 4,
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.12)",
@@ -306,7 +471,12 @@ const styles = StyleSheet.create({
     color: "rgba(255,255,255,0.35)",
     textTransform: "uppercase",
   },
-  noMatch: { paddingHorizontal: 10, paddingVertical: 12, fontSize: 11, color: "rgba(255,255,255,0.35)" },
+  noMatch: {
+    paddingHorizontal: 10,
+    paddingVertical: 12,
+    fontSize: 11,
+    color: "rgba(255,255,255,0.35)",
+  },
   suggestion: {
     flexDirection: "row",
     alignItems: "center",

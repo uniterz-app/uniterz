@@ -1,12 +1,12 @@
 {
   "expo": {
     "name": "UNITERZ",
-    "slug": "native",
+    "slug": "uniterz",
     "scheme": "uniterz",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash-icon.png",
@@ -15,7 +15,8 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.rikutokamiya.uniterz.dev",
+      "bundleIdentifier": "com.uniterz.app",
+      "buildNumber": "1",
       "associatedDomains": [
         "applinks:uniterz.app",
         "applinks:www.uniterz.app"
@@ -23,7 +24,18 @@
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "プロフィール写真を選ぶために、写真ライブラリへのアクセスを使います。",
         "NSCameraUsageDescription": "プロフィール写真を撮影するためにカメラを使います。",
-        "NSUserNotificationsUsageDescription": "試合開始・結果確定・ランキング更新などのお知らせをお届けするために通知を使います。"
+        "NSUserNotificationsUsageDescription": "試合開始・結果確定・ランキング更新などのお知らせをお届けするために通知を使います。",
+        "ITSAppUsesNonExemptEncryption": false
+      },
+      "privacyManifests": {
+        "NSPrivacyAccessedAPITypes": [
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryUserDefaults",
+            "NSPrivacyAccessedAPITypeReasons": [
+              "CA92.1"
+            ]
+          }
+        ]
       }
     },
     "android": {
@@ -32,8 +44,10 @@
         "backgroundColor": "#0a1418"
       },
       "edgeToEdgeEnabled": true,
+      "softwareKeyboardLayoutMode": "resize",
       "predictiveBackGestureEnabled": false,
-      "package": "com.anonymous.xnative",
+      "package": "com.uniterz.app",
+      "versionCode": 1,
       "intentFilters": [
         {
           "action": "VIEW",
@@ -50,12 +64,16 @@
               "pathPrefix": "/mobile"
             }
           ],
-          "category": ["BROWSABLE", "DEFAULT"]
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         }
       ],
       "permissions": [
         "android.permission.POST_NOTIFICATIONS"
-      ]
+      ],
+      "usesCleartextTraffic": true
     },
     "plugins": [
       [
@@ -74,10 +92,30 @@
           "cameraPermission": "プロフィール写真を撮影するためにカメラを使います。"
         }
       ],
-      "expo-asset"
+      "expo-asset",
+      "expo-video",
+      [
+        "react-native-iap",
+        {
+          "paymentProvider": "Play Store"
+        }
+      ],
+      "./plugins/withPlayBillingSdkVersion.js"
     ],
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "privacyPolicyUrl": "https://uniterz.app/mobile/privacy",
+      "termsOfServiceUrl": "https://uniterz.app/mobile/terms",
+      "eas": {
+        "projectId": "f5595b90-9704-42b0-8578-bc3585e9de14"
+      },
+      "storeAgeRating": {
+        "iosMinimum": "12+",
+        "androidContentRating": "Everyone",
+        "note": "App Store Connect / Play Console の年齢区分と揃える。競技予想アプリとして 12+ 想定。"
+      }
     }
   }
 }

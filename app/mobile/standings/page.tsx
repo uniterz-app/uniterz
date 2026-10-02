@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import MobilePageShell from "@/app/component/common/MobilePageShell";
-import NbaStandingsPanel from "@/app/component/standings/NbaStandingsPanel";
+import NbaLeagueStandingsPanel from "@/app/component/standings/NbaLeagueStandingsPanel";
 
 export default function MobileStandingsPage() {
   const router = useRouter();
@@ -13,7 +13,13 @@ export default function MobileStandingsPage() {
       title="STANDINGS"
       onClose={() => router.back()}
     >
-      <NbaStandingsPanel />
+      <NbaLeagueStandingsPanel
+        onSelectTeam={(teamId) =>
+          router.push(
+            `/mobile/team-detail-preview?teamId=${encodeURIComponent(teamId)}`
+          )
+        }
+      />
     </MobilePageShell>
   );
 }

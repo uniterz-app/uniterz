@@ -1,0 +1,336 @@
+/**
+ * チームペイロールのデッドサラリー（waive / stretch 等）。
+ * BDL は Active 契約行にしか載せないことが多いので curated で補完する。
+ *
+ * ストレッチは `throughSeasonKey` まで **同額** を各シーズンに載せる。
+ * `throughSeasonKey` なし = その登録シーズンのみ。
+ * 理由ラベルは UI 上英語（WAIVE / STRETCH）で統一。
+ */
+export type NbaCuratedDeadMoneyLine = {
+  playerId: string;
+  /** 表示名（例: D.CARTER） */
+  name: string;
+  /** ストレッチ年ごとのキャップヒット（同額） */
+  capHit: number;
+  /** デッドが続く最終シーズン（省略時は登録シーズンのみ） */
+  throughSeasonKey?: string;
+  noteJa?: string;
+  noteEn?: string;
+};
+
+function seasonStartYear(seasonKey: string): number {
+  const y = parseInt(String(seasonKey).split("-")[0] ?? "", 10);
+  return Number.isFinite(y) ? y : 0;
+}
+
+function throughNote(
+  throughSeasonKey: string | undefined
+): Pick<NbaCuratedDeadMoneyLine, "noteJa" | "noteEn" | "throughSeasonKey"> {
+  if (!throughSeasonKey) return {};
+  const note = `STRETCH thru ${throughSeasonKey}`;
+  return {
+    throughSeasonKey,
+    noteJa: note,
+    noteEn: note,
+  };
+}
+
+/**
+ * 登録シーズン → teamId → dead lines。
+ * ストレッチは `curatedDeadMoneyForTeam` が through まで同額で展開する。
+ */
+export const NBA_CURATED_DEAD_MONEY: Readonly<
+  Record<string, Readonly<Record<string, readonly NbaCuratedDeadMoneyLine[]>>>
+> = {
+  "2026-27": {
+    /** Devin Carter: SAC→ATL 後に waive。2026-27 ルーキースケールが ATL デッド */
+    "nba-hawks": [
+      {
+        playerId: "1028025242",
+        name: "D.CARTER",
+        capHit: 5_158_080,
+        noteJa: "WAIVE (rookie scale)",
+        noteEn: "WAIVE (rookie scale)",
+      },
+    ],
+    "nba-suns": [
+      {
+        playerId: "37",
+        name: "B.BEAL",
+        capHit: 19_383_010,
+        ...throughNote("2029-30"),
+      },
+      {
+        playerId: "666729",
+        name: "N.LITTLE",
+        capHit: 3_107_143,
+        ...throughNote("2029-30"),
+      },
+      {
+        playerId: "38017663",
+        name: "E.LIDDELL",
+        capHit: 706_898,
+        noteJa: "2026-27 ONLY",
+        noteEn: "2026-27 ONLY",
+      },
+    ],
+    "nba-bucks": [
+      {
+        playerId: "278",
+        name: "D.LILLARD",
+        capHit: 21_311_053,
+        ...throughNote("2029-30"),
+      },
+      {
+        playerId: "4197029",
+        name: "V.MICIC",
+        capHit: 666_667,
+        ...throughNote("2027-28"),
+      },
+    ],
+    "nba-grizzlies": [
+      {
+        playerId: "81",
+        name: "K.CALDWELL-POPE",
+        capHit: 17_744_971,
+        noteJa: "WAIVE",
+        noteEn: "WAIVE",
+      },
+      {
+        playerId: "3547251",
+        name: "C.ANTHONY",
+        capHit: 3_700_000,
+        ...throughNote("2027-28"),
+      },
+      {
+        playerId: "3547163",
+        name: "M.DIAKITE",
+        capHit: 464_050,
+        noteJa: "2026-27 ONLY",
+        noteEn: "2026-27 ONLY",
+      },
+      {
+        playerId: "405",
+        name: "D.RUSSELL",
+        capHit: 5_969_250,
+        noteJa: "WAIVE",
+        noteEn: "WAIVE",
+      },
+    ],
+    "nba-mavericks": [
+      {
+        playerId: "443",
+        name: "K.THOMPSON",
+        capHit: 7_660_317,
+        noteJa: "WAIVE",
+        noteEn: "WAIVE",
+      },
+      {
+        playerId: "306",
+        name: "J.MCGEE",
+        capHit: 2_208_856,
+        ...throughNote("2027-28"),
+      },
+      {
+        playerId: "56677859",
+        name: "O.PROSPER",
+        capHit: 1_002_360,
+        ...throughNote("2027-28"),
+      },
+    ],
+    "nba-magic": [
+      {
+        playerId: "229",
+        name: "J.ISAAC",
+        capHit: 8_000_000,
+        noteJa: "WAIVE",
+        noteEn: "WAIVE",
+      },
+    ],
+    "nba-bulls": [
+      {
+        playerId: "1057389374",
+        name: "K.JONES",
+        capHit: 1_075_459,
+        noteJa: "WAIVE",
+        noteEn: "WAIVE",
+      },
+    ],
+    "nba-cavaliers": [
+      {
+        playerId: "404",
+        name: "R.RUBIO",
+        capHit: 424_672,
+        noteJa: "2026-27 ONLY",
+        noteEn: "2026-27 ONLY",
+      },
+      {
+        playerId: "56677831",
+        name: "C.WHITMORE",
+        capHit: 1_819_437,
+        ...throughNote("2028-29"),
+      },
+    ],
+    "nba-blazers": [
+      {
+        playerId: "4197307",
+        name: "D.LOUZADA",
+        capHit: 268_032,
+        ...throughNote("2028-29"),
+      },
+    ],
+    "nba-nuggets": [
+      {
+        playerId: "455",
+        name: "J.VALANCIUNAS",
+        capHit: 666_667,
+        ...throughNote("2028-29"),
+      },
+    ],
+    "nba-kings": [
+      {
+        playerId: "125",
+        name: "D.DEROZAN",
+        capHit: 3_333_333,
+        ...throughNote("2028-29"),
+      },
+    ],
+    "nba-timberwolves": [
+      {
+        playerId: "666703",
+        name: "J.KONCHAR",
+        capHit: 2_055_000,
+        ...throughNote("2028-29"),
+      },
+    ],
+    "nba-hornets": [
+      {
+        playerId: "1028025639",
+        name: "R.DILLINGHAM",
+        capHit: 6_889_320,
+        noteJa: "WAIVE",
+        noteEn: "WAIVE",
+      },
+      {
+        playerId: "1057847894",
+        name: "R.NEMBHARD",
+        capHit: 2_150_917,
+        noteJa: "WAIVE",
+        noteEn: "WAIVE",
+      },
+    ],
+    "nba-pistons": [
+      {
+        playerId: "196",
+        name: "G.HARRIS",
+        capHit: 3_815_861,
+        noteJa: "WAIVE",
+        noteEn: "WAIVE",
+      },
+    ],
+    "nba-clippers": [
+      {
+        playerId: "1057382509",
+        name: "J.BROOME",
+        capHit: 2_150_917,
+        noteJa: "WAIVE",
+        noteEn: "WAIVE",
+      },
+    ],
+    "nba-pelicans": [
+      {
+        playerId: "173",
+        name: "T.GIBSON",
+        capHit: 148_828,
+        noteJa: "2026-27 ONLY",
+        noteEn: "2026-27 ONLY",
+      },
+    ],
+  },
+};
+
+/** ストレッチ: 登録シーズン〜through まで同額 */
+export function curatedDeadMoneyForTeam(
+  seasonKey: string,
+  teamId: string
+): readonly NbaCuratedDeadMoneyLine[] {
+  const key = seasonKey.trim();
+  const tid = teamId.trim();
+  const targetY = seasonStartYear(key);
+  if (!key || !tid || targetY <= 0) return [];
+
+  const out: NbaCuratedDeadMoneyLine[] = [];
+  const seen = new Set<string>();
+
+  for (const [startKey, byTeam] of Object.entries(NBA_CURATED_DEAD_MONEY)) {
+    const startY = seasonStartYear(startKey);
+    const lines = byTeam[tid] ?? [];
+    for (const line of lines) {
+      const throughKey = line.throughSeasonKey?.trim() || startKey;
+      const throughY = seasonStartYear(throughKey);
+      if (targetY < startY || targetY > throughY) continue;
+      const id = String(line.playerId ?? "").trim();
+      if (!id || seen.has(id)) continue;
+      seen.add(id);
+      out.push(line);
+    }
+  }
+
+  return out;
+}
+
+/** プレイヤー ID でデッドサラリー保有チームを探す（ストレッチ展開後） */
+export function curatedDeadSalaryForPlayer(
+  seasonKey: string,
+  playerId: string
+): {
+  teamId: string;
+  line: NbaCuratedDeadMoneyLine;
+} | null {
+  const id = String(playerId ?? "").trim();
+  const key = seasonKey.trim();
+  if (!id || !key) return null;
+
+  const teamIds = new Set<string>();
+  for (const byTeam of Object.values(NBA_CURATED_DEAD_MONEY)) {
+    for (const tid of Object.keys(byTeam)) teamIds.add(tid);
+  }
+  for (const teamId of teamIds) {
+    const hit = curatedDeadMoneyForTeam(key, teamId).find(
+      (d) => String(d.playerId) === id
+    );
+    if (hit) return { teamId, line: hit };
+  }
+  return null;
+}
+
+/**
+ * ロスターにいるが標準年俸を載せない選手（Exhibit 10 / キャンプ）。
+ * 旧所属のルーキースケール等が BDL に残っていても $0 にする。
+ */
+export const NBA_CURATED_EXHIBIT10_PLAYER_IDS: Readonly<
+  Record<string, readonly string[]>
+> = {
+  "2026-27": [
+    "1028025242", // Devin Carter — BOS キャンプ / E10（ATL がデッド保有）
+    "1081266162", // Hayden Gray — BOS E10
+    "1059992972", // Bez Mbeng — MIA（CHA waive → claim）E10
+    "38017707", // JD Davison — ORL E10
+    "464", // Lonnie Walker IV — DEN E9
+    "56677838", // Kobe Bufkin — NOP E9
+    "56677852", // Andre Jackson Jr. — TOR E10
+    "56677857", // Julian Phillips — HOU E10
+    "56677778", // Oscar Tshiebwe — HOU E10
+    "38017719", // Dalen Terry — GSW E9
+    "3547302", // Anthony Gill — WAS E9
+  ],
+};
+
+export function isCuratedExhibit10Player(
+  playerId: string | number | null | undefined,
+  seasonKey: string = "2026-27"
+): boolean {
+  const id = String(playerId ?? "").trim();
+  if (!id) return false;
+  return (NBA_CURATED_EXHIBIT10_PLAYER_IDS[seasonKey.trim()] ?? []).includes(id);
+}

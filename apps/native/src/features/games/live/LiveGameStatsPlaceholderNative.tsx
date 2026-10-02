@@ -1,28 +1,23 @@
 /** Web `LiveGameStatsPlaceholder` 相当 */
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import { METRIC_FONT } from "../../rankings/rankingsUiTheme";
+import { liveGameStatsPreviewCopy } from "../stats/nbaStatsUiCopy";
 
 type Props = {
-  language?: "ja" | "en";
+  language?: string;
   loading?: boolean;
 };
 
 export default function LiveGameStatsPlaceholderNative({
-  language = "ja",
+  language = "en",
   loading = false,
 }: Props) {
-  const isJa = language === "ja";
+  const copy = liveGameStatsPreviewCopy(language);
   return (
     <View style={styles.frame}>
       {loading ? <ActivityIndicator color="rgba(0,245,255,0.7)" /> : null}
       <Text style={styles.text}>
-        {loading
-          ? isJa
-            ? "スタッツを読み込み中…"
-            : "Loading stats…"
-          : isJa
-            ? "試合スタッツはまだありません"
-            : "Game stats not available yet"}
+        {loading ? copy.loading : copy.unavailable}
       </Text>
     </View>
   );

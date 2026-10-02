@@ -22,16 +22,18 @@ import {
 import {
   reportGateCopy,
   reportGateCtaHref,
+  reportGateProMemberAria,
   type ReportGateBulletIcon,
 } from "@/lib/reports/reportGateCopy";
 import type { ReportGateKind } from "@/lib/reports/reportGateTypes";
+import { resolveLocalizedLang } from "@/lib/i18n/localize";
 import {
   ProCyberBadge,
   proBadgeStaticMotion,
 } from "@/app/component/common/ProCyberBadge";
 import { jp, nameOxanium } from "@/lib/fonts";
 
-type Lang = "ja" | "en";
+type Lang = string;
 
 const BULLET_ICONS: Record<ReportGateBulletIcon, typeof Trophy> = {
   result: Trophy,
@@ -107,12 +109,14 @@ export default function ReportGateSurface({
   onCtaClick,
 }: Props) {
   const copy = reportGateCopy(kind, language);
+  const lang = resolveLocalizedLang(language);
+  const isCjk = lang === "ja" || lang === "ko" || lang === "zh";
   const href = ctaHref === undefined ? reportGateCtaHref(kind) : ctaHref;
   const showBlur = BLUR_KINDS.includes(kind) && preview != null;
   const period = gatePeriod(kind);
   const frame = REPORT_FRAME[period];
-  const titleFont = language === "en" ? nameOxanium.className : jp.className;
-  const bodyFont = language === "en" ? nameOxanium.className : jp.className;
+  const titleFont = isCjk ? jp.className : nameOxanium.className;
+  const bodyFont = isCjk ? jp.className : nameOxanium.className;
   const bulletTone =
     period === "monthly"
       ? {
@@ -169,7 +173,7 @@ export default function ReportGateSurface({
           <ProCyberBadge
             {...proBadgeStaticMotion}
             premium
-            ariaLabel={language === "ja" ? "Pro会員" : "Pro member"}
+            ariaLabel={reportGateProMemberAria(language)}
           />
         </span>
       </div>
@@ -195,7 +199,7 @@ export default function ReportGateSurface({
       </p>
       {cta ? <div className="flex justify-center">{cta}</div> : null}
       {copy.bullets && copy.bullets.length > 0 ? (
-        <div className={["w-full rounded-[2px] border px-3 py-2.5 text-left", bulletTone.panel].join(" ")}>
+        <div className={["w-full rounded-none border px-3 py-2.5 text-left", bulletTone.panel].join(" ")}>
           <ul className="list-none space-y-2">
             {copy.bullets.map((item) => {
               const Icon = BULLET_ICONS[item.icon];
@@ -203,7 +207,7 @@ export default function ReportGateSurface({
                 <li key={item.title} className="flex items-start gap-2.5">
                   <span
                     className={[
-                      "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-[2px] border",
+                      "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-none border",
                       bulletTone.icon,
                     ].join(" ")}
                     aria-hidden
@@ -213,7 +217,7 @@ export default function ReportGateSurface({
                   <div className="min-w-0 flex-1">
                     <p
                       className={[
-                        language === "en" ? nameOxanium.className : jp.className,
+                        isCjk ? jp.className : nameOxanium.className,
                         "text-[11px] font-bold tracking-[0.04em]",
                         bulletTone.title,
                       ].join(" ")}
@@ -222,7 +226,7 @@ export default function ReportGateSurface({
                     </p>
                     <p
                       className={[
-                        language === "en" ? nameOxanium.className : jp.className,
+                        isCjk ? jp.className : nameOxanium.className,
                         "mt-0.5 break-words text-[11px] leading-snug text-white/78",
                       ].join(" ")}
                     >
@@ -242,7 +246,7 @@ export default function ReportGateSurface({
     return (
       <div
         className={[
-          "relative overflow-hidden rounded-[3px] border bg-[rgba(5,5,8,0.98)] px-4 py-14",
+          "relative overflow-hidden rounded-none border bg-[rgba(5,5,8,0.98)] px-4 py-14",
           className ?? "",
         ].join(" ")}
         style={{ borderColor: frame.border }}
@@ -255,7 +259,7 @@ export default function ReportGateSurface({
   return (
     <div
       className={[
-        "relative isolate overflow-hidden rounded-[3px] border bg-[rgba(5,5,8,0.98)]",
+        "relative isolate overflow-hidden rounded-none border bg-[rgba(5,5,8,0.98)]",
         className ?? "",
       ].join(" ")}
       style={{ borderColor: frame.border }}

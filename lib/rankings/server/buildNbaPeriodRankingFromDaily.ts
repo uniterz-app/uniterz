@@ -15,7 +15,7 @@ import {
 import { mergeUserPlansIntoBulkByMetric } from "@/lib/rankings/mergeUserPlanIntoRankingPayload";
 import { countNbaPickupGamesSoFarAdmin } from "@/lib/rankings/server/countNbaPickupGamesSoFarAdmin";
 import { winRateMinPostsFromPickupCount } from "@/lib/units/periodRankingUnitRewards";
-import { getTodayKeyInTimeZone, TIMEZONE_JST } from "@/lib/time/zonedTime";
+import { rankingPeriodTodayKey } from "@/lib/rankings/rankingPeriodClock";
 
 type DailyInc = {
   posts?: number;
@@ -164,7 +164,7 @@ export async function buildNbaPeriodRankingBulk(opts: {
   const db = getAdminDb();
 
   if (opts.period === "monthly" && division === "standard") {
-    const todayKey = getTodayKeyInTimeZone(TIMEZONE_JST, opts.now ?? new Date());
+    const todayKey = rankingPeriodTodayKey(opts.now ?? new Date());
     const asOfKey = todayKey < range.endKey ? todayKey : range.endKey;
     const pickupSoFar = await countNbaPickupGamesSoFarAdmin({
       db,

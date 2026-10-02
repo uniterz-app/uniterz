@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { unstable_cache } from "next/cache";
 import { getAdminDb } from "@/lib/firebaseAdmin";
 import { normalizeLeague } from "@/lib/leagues";
+import { GAME_SCHEDULE_SEASON } from "@/lib/games/gameScheduleSeason";
+import { snapGamesWindowAnchorKey } from "@/lib/games/gamesWindowRange";
 import {
   GAMES_WINDOW_PLUS_MINUS_DEFAULT,
   gamesWindowCacheControl,
@@ -27,16 +29,22 @@ export async function GET(req: Request) {
     const timeZone = (url.searchParams.get("tz") ?? "Asia/Tokyo").trim();
     const fromDateKey = (url.searchParams.get("from") ?? "").trim();
     const toDateKey = (url.searchParams.get("to") ?? "").trim();
-    const anchorDateKey = (url.searchParams.get("anchor") ?? "").trim();
+    const rawAnchorDateKey = (url.searchParams.get("anchor") ?? "").trim();
     const pmRaw = url.searchParams.get("pm");
     const plusMinus = pmRaw
       ? Math.max(0, Math.min(31, Number(pmRaw) || GAMES_WINDOW_PLUS_MINUS_DEFAULT))
       : GAMES_WINDOW_PLUS_MINUS_DEFAULT;
+    const anchorDateKey =
+      plusMinus >= 3
+        ? snapGamesWindowAnchorKey(rawAnchorDateKey)
+        : rawAnchorDateKey;
     const limitRaw = url.searchParams.get("limit");
     const limitN = limitRaw
       ? Math.max(1, Math.min(500, Number(limitRaw) || 0))
       : undefined;
     const includePeers = url.searchParams.get("peers") !== "0";
+    const season =
+      (url.searchParams.get("season") ?? "").trim() || GAME_SCHEDULE_SEASON;
 
     const useRange = Boolean(fromDateKey && toDateKey);
     if (useRange) {
@@ -56,10 +64,12 @@ export async function GET(req: Request) {
       );
     }
 
+    // season をキーに含めないと、シーズン切替後も空レスポンスがキャッシュに残る
     const cacheKey = useRange
       ? [
           "games-window-range",
           league,
+          season,
           fromDateKey,
           toDateKey,
           timeZone,
@@ -69,6 +79,7 @@ export async function GET(req: Request) {
       : [
           "games-window",
           league,
+          season,
           anchorDateKey,
           timeZone,
           String(plusMinus),
@@ -86,6 +97,7 @@ export async function GET(req: Request) {
                 timeZone,
                 fromDateKey,
                 toDateKey,
+                season,
                 limit: limitN,
                 includePeers,
               }
@@ -94,14 +106,20 @@ export async function GET(req: Request) {
                 timeZone,
                 anchorDateKey,
                 plusMinus,
+                season,
                 limit: limitN,
                 includePeers,
               }
         ),
       cacheKey,
       {
-        revalidate: 20,
-        tags: ["games-window", `games-window:${league}`],
+        // ライブ中は nba-live-games-ingest が毎分 tag を捨てる。予想数・マーケットの遅延上限
+        revalidate: 300,
+        tags: [
+          "games-window",
+          `games-window:${league}`,
+          `games-window:${league}:${season}`,
+        ],
       }
     );
 
@@ -117,6 +135,6 @@ export async function GET(req: Request) {
       return NextResponse.json({ ok: false, error: msg }, { status: 400 });
     }
     console.error("[api/games/window]", e);
-    return NextResponse.json({ ok: false, error: msg }, { status: 500 });
+    return NextResponse.json({ ok: false, error: "internal" }, { status: 500 });
   }
 }

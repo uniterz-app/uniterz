@@ -4,6 +4,7 @@
 import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { colors, radius } from "../../theme/tokens";
+import { profilePrevMonthSummaryCopy } from "./profileOverviewWidgetsCopy";
 
 type MonthlyRaw = {
   posts?: number;
@@ -28,7 +29,7 @@ type Benchmarks = {
 };
 
 type Props = {
-  language: "ja" | "en";
+  language: string;
   monthKey: string;
   stats: Record<string, unknown>;
   olderStats: Record<string, unknown> | null;
@@ -67,7 +68,7 @@ export default function ProfilePrevMonthSummaryNative({
   olderStats,
   pointsSumBenchmarks = null,
 }: Props) {
-  const isJa = language === "ja";
+  const copy = profilePrevMonthSummaryCopy(language);
   const [benchOpen, setBenchOpen] = useState(false);
   const raw = readRaw(stats);
   const oldRaw = readRaw(olderStats);
@@ -77,9 +78,9 @@ export default function ProfilePrevMonthSummaryNative({
     return (
       <View style={styles.card}>
         <Text style={styles.title}>
-          {isJa ? `${monthKey} サマリー` : `${monthKey} summary`}
+          {copy.summaryTitle(monthKey)}
         </Text>
-        <Text style={styles.empty}>{isJa ? "投稿がありません" : "No posts this month"}</Text>
+        <Text style={styles.empty}>{copy.noPosts}</Text>
       </View>
     );
   }
@@ -121,12 +122,12 @@ export default function ProfilePrevMonthSummaryNative({
     <View style={styles.card}>
       {rank != null ? (
         <Text style={styles.rankBadge}>
-          {isJa ? `${rank}位` : `#${rank}`}
+          {copy.rank(rank)}
         </Text>
       ) : null}
 
       <Text style={[styles.title, rank != null && styles.titleWithRank]}>
-        {isJa ? `${monthKey} サマリー` : `${monthKey} summary`}
+        {copy.summaryTitle(monthKey)}
       </Text>
 
       <Pressable
@@ -134,41 +135,41 @@ export default function ProfilePrevMonthSummaryNative({
         onPress={() => hasBench && setBenchOpen((v) => !v)}
         style={styles.totalBlock}
       >
-        <Text style={styles.totalLabel}>{isJa ? "総合得点" : "Total points"}</Text>
+        <Text style={styles.totalLabel}>{copy.totalPoints}</Text>
         <View style={styles.totalRow}>
           <Text style={styles.totalValue}>{Math.round(pointsSum).toLocaleString()}</Text>
           <Text style={styles.totalUnit}>pts</Text>
           {momDelta ? (
             <View style={styles.momCol}>
-              <Text style={styles.momLabel}>{isJa ? "先月比" : "MoM"}</Text>
+              <Text style={styles.momLabel}>{copy.mom}</Text>
               <Text style={styles.momDelta}>{momDelta}</Text>
             </View>
           ) : null}
         </View>
         {hasBench ? (
           <Text style={styles.benchHint}>
-            {isJa ? "タップで母集団の基準を表示" : "Tap for cohort benchmarks"}
+            {copy.benchHint}
           </Text>
         ) : null}
       </Pressable>
 
       {hasBench && benchOpen ? (
         <View style={styles.benchBox}>
-          <BenchRow label={isJa ? "ユーザー平均" : "User avg"} value={pointsSumBenchmarks!.mean} />
-          <BenchRow label={isJa ? "中央値" : "Median"} value={pointsSumBenchmarks!.median} />
-          <BenchRow label={isJa ? "Top10境界" : "Top 10% line"} value={pointsSumBenchmarks!.p90} />
-          <BenchRow label={isJa ? "1位" : "1st"} value={pointsSumBenchmarks!.max} />
+          <BenchRow label={copy.userAvg} value={pointsSumBenchmarks!.mean} />
+          <BenchRow label={copy.median} value={pointsSumBenchmarks!.median} />
+          <BenchRow label={copy.top10} value={pointsSumBenchmarks!.p90} />
+          <BenchRow label={copy.first} value={pointsSumBenchmarks!.max} />
         </View>
       ) : null}
 
       <View style={styles.breakdownRow}>
-        <BreakdownCell label={isJa ? "基本点" : "Base"} value={basePoints} />
-        <BreakdownCell label={isJa ? "連勝ボーナス" : "Streak"} value={streakBonus} tone="sky" />
-        <BreakdownCell label={isJa ? "アップセット" : "Upset"} value={upsetBonus} tone="amber" />
+        <BreakdownCell label={copy.base} value={basePoints} />
+        <BreakdownCell label={copy.streak} value={streakBonus} tone="sky" />
+        <BreakdownCell label={copy.upset} value={upsetBonus} tone="amber" />
       </View>
 
       <MetricRow
-        label={isJa ? "投稿" : "Posts"}
+        label={copy.posts}
         value={String(posts)}
         delta={
           oldRaw.posts != null
@@ -177,7 +178,7 @@ export default function ProfilePrevMonthSummaryNative({
         }
       />
       <MetricRow
-        label={isJa ? "勝率" : "Win rate"}
+        label={copy.winRate}
         value={`${Math.round(winRate * 100)}%`}
         delta={
           oldRaw.winRate != null
@@ -189,12 +190,12 @@ export default function ProfilePrevMonthSummaryNative({
       />
       {upsetHit != null ? (
         <MetricRow
-          label={isJa ? "upset的中数" : "Upset hits"}
+          label={copy.upsetHits}
           value={String(upsetHit)}
         />
       ) : null}
       <MetricRow
-        label={isJa ? "upset得点合計" : "Upset points"}
+        label={copy.upsetPoints}
         value={upsetSum.toFixed(1)}
         delta={
           oldRaw.upsetPointsSum != null
@@ -207,7 +208,7 @@ export default function ProfilePrevMonthSummaryNative({
 
       {leagueLines.length > 0 ? (
         <View style={styles.leagueSection}>
-          <Text style={styles.leagueTitle}>{isJa ? "リーグ別投稿" : "Posts by league"}</Text>
+          <Text style={styles.leagueTitle}>{copy.byLeague}</Text>
           <View style={styles.leagueChips}>
             {leagueLines.map((line) => (
               <View key={line.key} style={styles.leagueChip}>

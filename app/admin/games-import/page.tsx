@@ -5,15 +5,12 @@ import { useEffect, useMemo, useState } from "react";
 import { auth, db } from "@/lib/firebase";
 import { TEAM_IDS } from "@/lib/team-ids";
 import { League, normalizeLeague } from "@/lib/leagues";
+import { useIsAdmin } from "@/lib/admin/useIsAdmin";
 import {
   Timestamp,
   doc,
   writeBatch,
 } from "firebase/firestore";
-
-/** 管理者 UID（.env になければデフォルトを使用） */
-const ADMIN_UID =
-  process.env.NEXT_PUBLIC_ADMIN_UID || "S6r5KyS9XcXds3Pm7koLzzELrvs2";
 
 /* =========================
    Types
@@ -29,7 +26,7 @@ type RawSide =
       teamId?: string;
     };
 
-type SeasonPhase = "regular" | "play_in" | "playoffs";
+type SeasonPhase = "preseason" | "regular" | "play_in" | "playoffs";
 type PlayoffRound = "r1" | "r2" | "cf" | "finals" | "overall";
 
 type RawGame = {
@@ -295,6 +292,7 @@ function chunk<T>(arr: T[], size: number) {
    Page Component
 ========================= */
 export default function GamesImportPage() {
+  const { isAdmin: authorized, loading: adminLoading } = useIsAdmin();
   const [uid, setUid] = useState<string | null>(null);
   const [input, setInput] = useState<string>("");
   const [rows, setRows] = useState<Preview[] | null>(null);
@@ -305,8 +303,6 @@ export default function GamesImportPage() {
     const unsub = auth.onAuthStateChanged((u) => setUid(u?.uid ?? null));
     return () => unsub();
   }, []);
-
-  const authorized = uid === ADMIN_UID;
 
   const parse = () => {
     try {
@@ -412,10 +408,12 @@ export default function GamesImportPage() {
         <div>
           現在のUID: <code className="text-lime-300">{uid ?? "(未ログイン)"}</code>
         </div>
-        <div>
-          許可UID: <code className="text-lime-300">{ADMIN_UID}</code>
+        <div className="text-white/50 text-sm mt-1">
+          管理者判定は Custom Claim（サーバ許可リスト）のみ。UID 一覧はクライアントに載せません。
         </div>
-        {authorized ? (
+        {adminLoading ? (
+          <div className="text-white/60 font-bold mt-1">認証確認中…</div>
+        ) : authorized ? (
           <div className="text-lime-400 font-bold mt-1">✅ 管理者として書き込み可能</div>
         ) : (
           <div className="text-red-400 font-bold mt-1">

@@ -1,4 +1,4 @@
-type SeasonPhase = "regular" | "play_in" | "playoffs" | null | undefined;
+type SeasonPhase = "preseason" | "regular" | "play_in" | "playoffs" | null | undefined;
 
 /** ホーム・アウェイそれぞれのシリーズ勝数（ベストオブシリーズの途中経過） */
 export type SeriesStanding = {

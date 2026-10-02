@@ -22,6 +22,11 @@ import { useFirebaseUser } from "../../../auth/FirebaseUserProvider";
 import { db } from "../../../lib/firebase";
 import type { ProfileStackParamList } from "../../../navigation/types";
 import { useBottomTabBarInsets } from "../../../navigation/useBottomTabBarInsets";
+import SlantCtaNative from "../../../ui/SlantCtaNative";
+import {
+  ModalActionButtonNative,
+  ModalActionRowNative,
+} from "../../../ui/ModalActionButtonNative";
 import { PRO_SUCCESS_ACCENT } from "../../../../../../lib/pro/proSuccessAccent";
 
 const A = PRO_SUCCESS_ACCENT.cancel;
@@ -108,15 +113,18 @@ export default function CancelPlanScreenNative() {
                 <Text style={styles.renewalStrong}> {proUntil}</Text>
               </Text>
 
-              <Pressable
-                style={styles.dangerBtn}
-                onPress={() => setConfirmOpen(true)}
-              >
-                <Text style={styles.dangerText}>解約する</Text>
-              </Pressable>
-              <Pressable style={styles.backBtn} onPress={() => navigation.goBack()}>
-                <Text style={styles.backText}>戻る</Text>
-              </Pressable>
+              <View style={{ gap: 10, marginTop: 8 }}>
+                <SlantCtaNative
+                  label="解約する"
+                  variant="danger"
+                  onPress={() => setConfirmOpen(true)}
+                />
+                <SlantCtaNative
+                  label="戻る"
+                  variant="ghost"
+                  onPress={() => navigation.goBack()}
+                />
+              </View>
             </View>
           </View>
         </View>
@@ -147,17 +155,18 @@ export default function CancelPlanScreenNative() {
                 <Text style={styles.renewalStrong}>{proUntil}</Text> までは
                 Pro機能をご利用いただけます。
               </Text>
-              <View style={styles.modalActions}>
-                <Pressable
-                  style={styles.modalCancel}
+              <ModalActionRowNative>
+                <ModalActionButtonNative
+                  label="キャンセル"
+                  tone="ghost"
                   onPress={() => setConfirmOpen(false)}
-                >
-                  <Text style={styles.backText}>キャンセル</Text>
-                </Pressable>
-                <Pressable style={styles.modalDanger} onPress={confirmCancel}>
-                  <Text style={styles.modalDangerText}>解約を確定</Text>
-                </Pressable>
-              </View>
+                />
+                <ModalActionButtonNative
+                  label="解約を確定"
+                  tone="danger"
+                  onPress={confirmCancel}
+                />
+              </ModalActionRowNative>
             </View>
           </Pressable>
         </Pressable>

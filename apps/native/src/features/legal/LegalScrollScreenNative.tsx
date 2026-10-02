@@ -1,6 +1,7 @@
 import { ReactNode } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import LegalPageLayoutNative from "./LegalPageLayoutNative";
+import { L, resolveLocalizedLang } from "../../../../../lib/i18n/localize";
 
 type Section = { title: string; body: string };
 
@@ -10,7 +11,7 @@ type Props = {
   updatedAt?: string;
   sections: Section[];
   children?: ReactNode;
-  language?: "ja" | "en";
+  language?: string;
 };
 
 export default function LegalScrollScreenNative({
@@ -21,7 +22,16 @@ export default function LegalScrollScreenNative({
   children,
   language = "ja",
 }: Props) {
-  const lastUpdatedLabel = language === "en" ? "Last updated: " : "最終更新: ";
+  const lang = resolveLocalizedLang(language);
+  const lastUpdatedLabel = L(lang, {
+    ja: "最終更新: ",
+    en: "Last updated: ",
+    ko: "최종 업데이트: ",
+    zh: "最后更新：",
+    es: "Última actualización: ",
+    pt: "Última atualização: ",
+    fr: "Dernière mise à jour : ",
+  });
 
   return (
     <LegalPageLayoutNative

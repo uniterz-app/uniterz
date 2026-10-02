@@ -5,6 +5,9 @@
  * Web `nameOxanium` は 600/700/800、`nameBebas` は 400、本文 JP は Noto Sans JP。
  */
 import { Platform, type TextStyle } from "react-native";
+import { REPORT_KUROKIN } from "../../../../../../lib/reports/reportChrome";
+
+export { REPORT_KUROKIN };
 
 const pick = (name: string) =>
   Platform.select({ ios: name, android: name, default: name });
@@ -46,19 +49,19 @@ export const AUDIOWIDE: TextStyle["fontFamily"] = pick("Audiowide_400Regular");
 export const CHAKRA_700: TextStyle["fontFamily"] = pick("ChakraPetch_700Bold");
 export const EXO2_800: TextStyle["fontFamily"] = pick("Exo2_800ExtraBold");
 
-export const PANEL_BG = "rgba(5,5,8,0.98)";
+export const PANEL_BG = REPORT_KUROKIN.bg;
 
-/** 週間＝シアン / 月間＝バイオレット。枠・グリッドの基調色 */
+/** 週間・月間とも黒背景・金枠。グリッド装飾は使わない */
 export const REPORT_FRAME = {
   weekly: {
-    main: "#22d3ee",
-    border: "rgba(34,211,238,0.40)",
-    grid: "rgba(34,211,238,0.28)",
+    main: REPORT_KUROKIN.gold,
+    border: REPORT_KUROKIN.goldBorder,
+    grid: "transparent",
   },
   monthly: {
-    main: "#a78bfa",
-    border: "rgba(167,139,250,0.40)",
-    grid: "rgba(167,139,250,0.28)",
+    main: REPORT_KUROKIN.gold,
+    border: REPORT_KUROKIN.goldBorder,
+    grid: "transparent",
   },
 } as const;
 
@@ -83,10 +86,10 @@ export const REPORT_ACCENT = {
     glow: "rgba(52,211,153,0.32)",
   },
   gold: {
-    main: "#facc15",
-    border: "rgba(250,204,21,0.4)",
-    tint: "rgba(250,204,21,0.07)",
-    glow: "rgba(250,204,21,0.3)",
+    main: REPORT_KUROKIN.gold,
+    border: REPORT_KUROKIN.goldBorder,
+    tint: "rgba(232,198,106,0.07)",
+    glow: REPORT_KUROKIN.goldGlow,
   },
   orange: {
     main: "#fb923c",
@@ -133,12 +136,20 @@ export function fmtReportMonth(monthKey: string): string {
   return `${y}.${m}`;
 }
 
-/** 通常本文: ja → Noto 400, en → Rajdhani */
-export function reportBodyFont(lang: "ja" | "en"): TextStyle["fontFamily"] {
-  return lang === "ja" ? JP_400 : RAJDHANI;
+import { resolveLocalizedLang } from "../../../../../../lib/i18n/localize";
+
+/** 通常本文: CJK → Noto 400, Latin → Rajdhani */
+export function reportBodyFont(
+  language: string | null | undefined
+): TextStyle["fontFamily"] {
+  const lang = resolveLocalizedLang(language);
+  return lang === "ja" || lang === "ko" || lang === "zh" ? JP_400 : RAJDHANI;
 }
 
 /** セミボールド本文（バトル要約・名前など） */
-export function reportBodyFontSemibold(lang: "ja" | "en"): TextStyle["fontFamily"] {
-  return lang === "ja" ? JP_600 : RAJDHANI;
+export function reportBodyFontSemibold(
+  language: string | null | undefined
+): TextStyle["fontFamily"] {
+  const lang = resolveLocalizedLang(language);
+  return lang === "ja" || lang === "ko" || lang === "zh" ? JP_600 : RAJDHANI;
 }

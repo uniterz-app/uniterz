@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
-import { useNavigation } from "@react-navigation/native";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useIsFocused, useNavigation } from "@react-navigation/native";
 import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import {
+  FlatList,
   Platform,
-  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -13,7 +13,7 @@ import {
   PRO_LEAGUE_ATMOSPHERE,
   PRO_LEAGUE_TAB_THEME,
 } from "../../../../../lib/rankings/proLeagueAtmosphere";
-import RankingsProLeagueMeshBackgroundNative from "./RankingsProLeagueMeshBackgroundNative";
+import { acquireAppPageAtmosphere } from "../../../../../lib/ui/appPageAtmosphere";
 import {
   type MobileMetric,
 } from "../../../../../lib/rankings/rankingMetrics";
@@ -39,6 +39,7 @@ import type { MainTabParamList, RankingsStackParamList } from "../../navigation/
 import { navigateToPublicProfileNative } from "../../navigation/navigateToPublicProfileNative";
 import { warmPublicProfileFromRankingRowNative } from "../profile/warmPublicProfileNative";
 import type { Language } from "../../../../../lib/i18n/language";
+import { resolveLocalizedLang } from "../../../../../lib/i18n/localize";
 import { getRankingsScheduleNoticeText } from "../../../../../lib/rankings/getRankingsScheduleNoticeText";
 import BracketLeaderboardSectionNative from "./BracketLeaderboardSectionNative";
 import SideMenuDrawerNative from "../../ui/SideMenuDrawerNative";
@@ -53,13 +54,13 @@ import { useNativeMyRankingUser } from "./useNativeMyRankingUser";
 import { rankingsTexts, type RankingsLanguage } from "./rankingsTexts";
 import {
   MyRankCardNative,
-  PlayoffRoundTabsNative,
   RankingListCardNative,
   RankingsMetricRowNative,
   RankingsTopPodiumNative,
 } from "./RankingsUiParts";
 import { RankingsPeriodTabsNative } from "./RankingsPeriodTabsNative";
 import { RankingsPeriodLabelNavNative } from "./RankingsPeriodLabelNavNative";
+import PeriodRankingUnitRewardsSheetNative from "./PeriodRankingUnitRewardsSheetNative";
 import RankingsListEntranceRowNative from "./RankingsListEntranceRowNative";
 import { useNativeMyRankProgress } from "./useNativeMyRankProgress";
 import { useNativeMyRankCardFast } from "./useNativeMyRankCardFast";
@@ -81,15 +82,18 @@ type Props = {
   bottomReserveY: number;
 };
 
-function scheduleNoticeForUser(language: RankingsLanguage): string {
-  const lang = (language === "en" ? "en" : "ja") as Language;
-  return getRankingsScheduleNoticeText(lang);
+function scheduleNoticeForUser(
+  language: RankingsLanguage,
+  countryCode: string | null,
+): string {
+  return getRankingsScheduleNoticeText(language as Language, countryCode);
 }
 
 export default function RankingsHomeScreen({ bottomReserveY }: Props) {
   const navigation = useNavigation<BottomTabNavigationProp<MainTabParamList>>();
   const stackNavigation =
     useNavigation<NativeStackNavigationProp<RankingsStackParamList>>();
+  const isFocused = useIsFocused();
   const { topContentPadY } = useBottomTabBarInsets();
   const [category, setCategory] = useState<"playoffs" | "bracket">("playoffs");
   const [round, setRound] = useState<PlayoffRoundKey>("overall");
@@ -129,12 +133,18 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
     rankingDivision
   );
 
-  const { listReady, personalPending, myUid, byMetric, ensureMetric } =
-    useOpenSeasonBoard
-      ? openSeasonBulk
-      : usePeriodBoard
-        ? periodBulk
-        : standardBulk;
+  const {
+    listReady,
+    personalPending,
+    myUid,
+    byMetric: byMetricRaw,
+    ensureMetric,
+  } = useOpenSeasonBoard
+    ? openSeasonBulk
+    : usePeriodBoard
+      ? periodBulk
+      : standardBulk;
+  const byMetric = byMetricRaw;
   const { user } = useNativeMyRankingUser(myUid);
   const language = user.language;
   const t = rankingsTexts(language);
@@ -349,26 +359,75 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
   const restRows = rows.slice(3);
   const listEntranceKey = `${rankingsLeague}-${category}-${metric}-${round}`;
 
-  const openProfile = (row: RankingRowWithCountry) => {
+  const openProfile = useCallback((row: RankingRowWithCountry) => {
     const key = warmPublicProfileFromRankingRowNative(row);
     if (!key) return;
     navigateToPublicProfileNative(stackNavigation, {
       handle: key,
       fromRankings: true,
+      warm: {
+        uid: row.uid,
+        handle: typeof row.handle === "string" ? row.handle : null,
+        displayName: row.displayName,
+        photoURL: typeof row.photoURL === "string" ? row.photoURL : null,
+        plan: row.plan === "pro" ? "pro" : "free",
+        planProBgVariant:
+          typeof row.planProBgVariant === "string"
+            ? row.planProBgVariant
+            : null,
+        countryCode:
+          typeof row.countryCode === "string" ? row.countryCode : null,
+      },
     });
-  };
+  }, [stackNavigation]);
 
-  return (
-    <View style={styles.root}>
-      {nbaBoard === "open" ? <RankingsProLeagueMeshBackgroundNative /> : null}
-      <ScrollView
-        style={styles.scrollLayer}
-        contentContainerStyle={[
-          styles.scrollContent,
-          { paddingTop: topContentPadY, paddingBottom: bottomReserveY + 16 },
+  useEffect(() => {
+    // タブは常時マウントのため、フォーカス中かつ PRO LEAGUE のときだけ背景を差し替える
+    if (nbaBoard !== "open" || !isFocused) return;
+    return acquireAppPageAtmosphere("pro-league");
+  }, [nbaBoard, isFocused]);
+
+  const showVirtualRestList =
+    category === "playoffs" &&
+    !openProLocked &&
+    listReady &&
+    !rankingHasNoEntries;
+
+  const listShellPro = nbaBoard === "open";
+
+  const renderRestRow = useCallback(
+    ({
+      item,
+      index,
+    }: {
+      item: RankingRowWithCountry;
+      index: number;
+    }) => (
+      <View
+        style={[
+          styles.listSectionMid,
+          listShellPro ? styles.listSectionProMid : null,
         ]}
-        showsVerticalScrollIndicator={false}
       >
+        <RankingsListEntranceRowNative
+          index={index + 3}
+          entranceKey={listEntranceKey}
+          staggerMs={58}
+        >
+          <RankingListCardNative
+            row={item}
+            rank={index + 4}
+            metric={metric}
+            language={language}
+            onPress={() => openProfile(item)}
+          />
+        </RankingsListEntranceRowNative>
+      </View>
+    ),
+    [metric, language, listEntranceKey, openProfile, listShellPro]
+  );
+
+  const listHeader = (
         <View style={styles.section}>
           {showNbaPeriodTabs ? (
             <RankingsDivisionTabsNative
@@ -403,10 +462,6 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
 
           {category === "playoffs" ? (
             <>
-              {rankingsLeague === "nba" && nbaBoard === "playoffs" ? (
-                <PlayoffRoundTabsNative round={round} onChange={setRound} language={language} />
-              ) : null}
-
               {openProLocked ? null : (
               <MyRankCardNative
                 rank={rankingHasNoEntries ? null : myRank}
@@ -414,11 +469,18 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
                 value={myValue}
                 displayName={user.displayName?.trim() ?? ""}
                 photoURL={user.photoURL || null}
+                uid={myUid}
+                handle={user.handle}
                 totalPosts={
                   typeof myRawRow?.totalPosts === "number" ? myRawRow.totalPosts : undefined
                 }
                 loading={cardLoading}
-                statsScramble={listReady && personalPending && !cardFast.myRow}
+                statsScramble={
+                  listReady &&
+                  personalPending &&
+                  !cardFast.myRow &&
+                  myRank == null
+                }
                 isPro={myRankCardTier === "pro"}
                 displayTier={myRankCardTier}
                 rankDeltaPlaces={rankingHasNoEntries ? null : myRankDeltaPlaces}
@@ -452,7 +514,6 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
               )}
             </>
           ) : null}
-        </View>
 
         {category === "bracket" ? (
             <BracketLeaderboardSectionNative language={language} />
@@ -470,9 +531,18 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
           />
         ) : category === "playoffs" ? (
           <>
-            <Text style={styles.scheduleNoticeInline} maxFontSizeMultiplier={1.1}>
-              {scheduleNoticeForUser(language)}
-            </Text>
+            <View style={styles.scheduleNoticeRow}>
+              <Text
+                style={[styles.scheduleNoticeInline, styles.scheduleNoticeText]}
+                maxFontSizeMultiplier={1.1}
+              >
+                {scheduleNoticeForUser(language, user.countryCode)}
+              </Text>
+              <PeriodRankingUnitRewardsSheetNative
+                language={language}
+                rankingPeriod={rankingPeriod}
+              />
+            </View>
             <View style={styles.metricRowWrap}>
               <RankingsMetricRowNative
                 metrics={metricItems}
@@ -514,8 +584,8 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
             ) : (
               <View
                 style={[
-                  styles.listSection,
-                  nbaBoard === "open" ? styles.listSectionPro : null,
+                  styles.listSectionTop,
+                  nbaBoard === "open" ? styles.listSectionProTop : null,
                 ]}
               >
                 <RankingsTopPodiumNative
@@ -525,29 +595,42 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
                   onPressProfile={openProfile}
                   entranceKey={listEntranceKey}
                 />
-                <View style={styles.restList}>
-                  {restRows.map((row, index) => (
-                    <RankingsListEntranceRowNative
-                      key={`${metric}-${row.uid}`}
-                      index={index + 3}
-                      entranceKey={listEntranceKey}
-                      staggerMs={58}
-                    >
-                      <RankingListCardNative
-                        row={row}
-                        rank={index + 4}
-                        metric={metric}
-                        language={language}
-                        onPress={() => openProfile(row)}
-                      />
-                    </RankingsListEntranceRowNative>
-                  ))}
-                </View>
               </View>
             )}
           </>
         ) : null}
-      </ScrollView>
+        </View>
+  );
+
+  return (
+    <View style={styles.root}>
+      <FlatList
+        style={styles.scrollLayer}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingTop: topContentPadY, paddingBottom: bottomReserveY + 16 },
+        ]}
+        showsVerticalScrollIndicator={false}
+        data={showVirtualRestList ? restRows : []}
+        keyExtractor={(row) => `${metric}-${row.uid}`}
+        ListHeaderComponent={listHeader}
+        renderItem={renderRestRow}
+        initialNumToRender={10}
+        maxToRenderPerBatch={8}
+        windowSize={7}
+        removeClippedSubviews={Platform.OS === "android"}
+        /** リスト枠の下辺・左右を rest 行に継承（見た目維持） */
+        ListFooterComponent={
+          showVirtualRestList ? (
+            <View
+              style={[
+                styles.listSectionBottom,
+                listShellPro ? styles.listSectionProBottom : null,
+              ]}
+            />
+          ) : null
+        }
+      />
       <ProfileMenuEdgeHandleNative
         onOpen={() => setMenuOpen(true)}
         label="MENU"
@@ -575,14 +658,14 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
           language={language}
           onOpenSquadBattlePreview={() => {
             setMenuOpen(false);
-            stackNavigation.navigate("SquadBattlePreview");
+            stackNavigation.navigate("SquadBattle");
           }}
         />
       </SideMenuDrawerNative>
 
       <TutorialLiveHostNative
         page="rankings"
-        language={(language === "en" ? "en" : "ja") as Language}
+        language={resolveLocalizedLang(language)}
       />
     </View>
   );
@@ -605,6 +688,21 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 10,
+  },
+  scheduleNoticeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 4,
+    marginTop: 10,
+    marginBottom: 2,
+  },
+  scheduleNoticeText: {
+    flex: 1,
+    minWidth: 0,
+    marginTop: 0,
+    marginBottom: 0,
+    paddingHorizontal: 0,
   },
   scheduleNoticeInline: {
     textAlign: "center",
@@ -680,6 +778,43 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.18)",
   },
   listSectionPro: {
+    borderColor: PRO_LEAGUE_ATMOSPHERE.panelBorder,
+    backgroundColor: PRO_LEAGUE_ATMOSPHERE.panelBg,
+  },
+  /** FlatList 分割用: 枠線を podium / mid / bottom で継ぐ（見た目は単一 listSection） */
+  listSectionTop: {
+    marginTop: 4,
+    overflow: "hidden",
+    borderTopWidth: 1,
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
+    borderBottomWidth: 0,
+    borderColor: "rgba(255,255,255,0.08)",
+    backgroundColor: "rgba(0,0,0,0.18)",
+  },
+  listSectionProTop: {
+    borderColor: PRO_LEAGUE_ATMOSPHERE.panelBorder,
+    backgroundColor: PRO_LEAGUE_ATMOSPHERE.panelBg,
+  },
+  listSectionMid: {
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
+    borderColor: "rgba(255,255,255,0.08)",
+    backgroundColor: "rgba(0,0,0,0.18)",
+  },
+  listSectionProMid: {
+    borderColor: PRO_LEAGUE_ATMOSPHERE.panelBorder,
+    backgroundColor: PRO_LEAGUE_ATMOSPHERE.panelBg,
+  },
+  listSectionBottom: {
+    borderBottomWidth: 1,
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
+    borderColor: "rgba(255,255,255,0.08)",
+    backgroundColor: "rgba(0,0,0,0.18)",
+    height: 0,
+  },
+  listSectionProBottom: {
     borderColor: PRO_LEAGUE_ATMOSPHERE.panelBorder,
     backgroundColor: PRO_LEAGUE_ATMOSPHERE.panelBg,
   },

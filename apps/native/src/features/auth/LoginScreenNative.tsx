@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { cyberAlert } from "../../components/cyberAlert";
 import {
   Pressable, StyleSheet, Text, TextInput, View,
@@ -10,13 +10,14 @@ import { auth } from "../../lib/firebase";
 import type { AuthStackParamList } from "../../navigation/types";
 import AuthFormShellNative from "./AuthFormShellNative";
 import { mapAuthErrorMessage } from "./authShared";
+import SlantCtaNative from "../../ui/SlantCtaNative";
 import { spacing } from "../../theme/tokens";
-
-const BTN_SKEW = "-10deg";
-const BTN_UNSKEW = "10deg";
+import { authFormCopy } from "@/lib/auth/authFormCopy";
+import { resolveDeviceLocalizedLang } from "../../i18n/resolveDeviceAppLanguage";
 
 export default function LoginScreenNative() {
   const navigation = useNavigation<NativeStackNavigationProp<AuthStackParamList>>();
+  const copy = useMemo(() => authFormCopy(resolveDeviceLocalizedLang()), []);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -25,14 +26,14 @@ export default function LoginScreenNative() {
     if (submitting) return;
     const normalized = email.trim().toLowerCase();
     if (!normalized || !password) {
-      cyberAlert("Missing input", "Please enter both email and password.");
+      cyberAlert(copy.missingInputTitle, copy.missingBoth);
       return;
     }
     setSubmitting(true);
     try {
       await signInWithEmailAndPassword(auth, normalized, password);
     } catch (e) {
-      cyberAlert("Authentication error", mapAuthErrorMessage(e, "login"));
+      cyberAlert(copy.authErrorTitle, mapAuthErrorMessage(e, "login"));
     } finally {
       setSubmitting(false);
     }
@@ -44,7 +45,7 @@ export default function LoginScreenNative() {
       footer={
         <View style={styles.footer}>
           <Pressable onPress={() => navigation.navigate("ResetPassword")}>
-            <Text style={styles.link}>パスワードをお忘れの方はこちら</Text>
+            <Text style={styles.link}>{copy.forgotCombined}</Text>
           </Pressable>
           <Pressable onPress={() => navigation.navigate("Signup")}>
             <Text style={styles.linkAccent}>CREATE ACCOUNT</Text>
@@ -53,7 +54,6 @@ export default function LoginScreenNative() {
       }
     >
       <View style={styles.field}>
-        <View style={styles.fieldRail} />
         <TextInput
           style={styles.input}
           placeholder="Email Address"
@@ -65,7 +65,6 @@ export default function LoginScreenNative() {
         />
       </View>
       <View style={styles.field}>
-        <View style={styles.fieldRail} />
         <TextInput
           style={styles.input}
           placeholder="Password"
@@ -75,18 +74,12 @@ export default function LoginScreenNative() {
           onChangeText={setPassword}
         />
       </View>
-      <View style={styles.ctaSkewWrap}>
-        <Pressable style={styles.ctaPressable} onPress={handleLogin} disabled={submitting}>
-          <View style={styles.ctaBorder}>
-            <View style={styles.ctaFill}>
-              <View style={styles.ctaRail} pointerEvents="none" />
-              <View style={styles.ctaLabelWrap}>
-                <Text style={styles.ctaLabel}>{submitting ? "Logging in..." : "LOG IN"}</Text>
-              </View>
-            </View>
-          </View>
-        </Pressable>
-      </View>
+      <SlantCtaNative
+        display
+        label={submitting ? "Logging in..." : "LOG IN"}
+        onPress={handleLogin}
+        disabled={submitting}
+      />
     </AuthFormShellNative>
   );
 }
@@ -101,14 +94,6 @@ const styles = StyleSheet.create({
     position: "relative",
     overflow: "hidden",
   },
-  fieldRail: {
-    position: "absolute",
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 2,
-    backgroundColor: "rgba(0,245,255,0.45)",
-  },
   input: {
     paddingHorizontal: 16,
     paddingVertical: 14,
@@ -116,50 +101,13 @@ const styles = StyleSheet.create({
     fontSize: 16,
     minHeight: 52,
   },
-  ctaSkewWrap: {
-    width: "100%",
-    marginTop: 6,
-    transform: [{ skewX: BTN_SKEW }],
-  },
-  ctaPressable: { width: "100%" },
-  ctaBorder: {
-    width: "100%",
-    borderWidth: 1,
-    borderColor: "rgba(0,245,255,0.34)",
-    backgroundColor: "rgba(8,14,22,0.96)",
-    overflow: "hidden",
-  },
-  ctaFill: {
-    minHeight: 52,
-    justifyContent: "center",
-    paddingHorizontal: spacing.lg,
-    paddingVertical: 14,
-  },
-  ctaRail: {
-    position: "absolute",
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 2,
-    backgroundColor: "rgba(0,245,255,0.55)",
-  },
-  ctaLabelWrap: {
-    transform: [{ skewX: BTN_UNSKEW }],
-    alignItems: "center",
-  },
-  ctaLabel: {
-    fontFamily: "BebasNeue_400Regular",
-    fontSize: 24,
-    letterSpacing: 4,
-    color: "#e8eaed",
-  },
   footer: { gap: spacing.sm, marginTop: spacing.xs, alignItems: "center" },
   link: { color: "rgba(226,232,240,0.72)", fontSize: 14 },
   linkAccent: {
     color: "rgba(0,245,255,0.85)",
     fontFamily: "BebasNeue_400Regular",
     fontSize: 18,
-    letterSpacing: 1.4,
-    textDecorationLine: "underline",
+    letterSpacing: 1.8,
+    transform: [{ skewX: "-10deg" }],
   },
 });

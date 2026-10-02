@@ -1,13 +1,19 @@
 /**
- * シーズンアワード予想 — Admin / API 用（Firestore + モック名簿検証）
+ * シーズンアワード予想 — Admin / API 用（Firestore ロスター + 手動コーチ名簿）
  */
 import type { Firestore } from "firebase-admin/firestore";
 import { FieldValue } from "firebase-admin/firestore";
+import { loadTeamRostersSnapshot } from "@/lib/nba/teamRosters/loadTeamRostersSnapshot";
 import {
   AWARDS_PREVIEW_COACHES,
   AWARDS_PREVIEW_PLAYERS,
-  awardsPreviewCatalog,
+  AWARDS_PREVIEW_ROOKIES,
 } from "@/lib/predict/nbaSeasonAwardsPreviewMocks";
+import {
+  filterRookieAwardCandidates,
+  flattenTeamRostersToAwardCandidates,
+  stripDraftYear,
+} from "@/lib/predict/seasonAwardsCatalogFromRosters";
 import {
   NBA_SEASON_AWARD_DEFS,
   isSeasonAwardsComplete,
@@ -29,6 +35,12 @@ export type SeasonAwardsDoc = {
   updatedAt?: unknown;
 };
 
+export type SeasonAwardsKindSets = {
+  player: Set<string>;
+  coach: Set<string>;
+  rookie: Set<string>;
+};
+
 export function seasonAwardsDocId(season: string, uid: string): string {
   return `${season}_${uid}`;
 }
@@ -43,9 +55,69 @@ export function seasonAwardsDocRef(
     .doc(seasonAwardsDocId(season, uid));
 }
 
-/** 提出検証用カタログ（ゲート B まではモック） */
+/** オフライン / テスト用フォールバック */
 export function seasonAwardsSubmitCatalog(): readonly NbaAwardCandidate[] {
-  return [...AWARDS_PREVIEW_PLAYERS, ...AWARDS_PREVIEW_COACHES];
+  const byId = new Map<string, NbaAwardCandidate>();
+  for (const c of [
+    ...AWARDS_PREVIEW_PLAYERS,
+    ...AWARDS_PREVIEW_ROOKIES,
+    ...AWARDS_PREVIEW_COACHES,
+  ]) {
+    byId.set(c.id, c);
+  }
+  return [...byId.values()];
+}
+
+function mockKindSets(): SeasonAwardsKindSets {
+  return {
+    player: new Set(AWARDS_PREVIEW_PLAYERS.map((c) => c.id)),
+    coach: new Set(AWARDS_PREVIEW_COACHES.map((c) => c.id)),
+    rookie: new Set(AWARDS_PREVIEW_ROOKIES.map((c) => c.id)),
+  };
+}
+
+/** Firestore ロスター + 手動コーチ名簿 */
+export async function loadSeasonAwardsSubmitCatalog(
+  db: Firestore,
+  season: string
+): Promise<{
+  catalog: readonly NbaAwardCandidate[];
+  kindSets: SeasonAwardsKindSets;
+  fromRoster: boolean;
+}> {
+  try {
+    const snap = await loadTeamRostersSnapshot(db, season);
+    const rosterPlayers = flattenTeamRostersToAwardCandidates(snap.bundle.teams);
+    if (rosterPlayers.length === 0) {
+      return {
+        catalog: seasonAwardsSubmitCatalog(),
+        kindSets: mockKindSets(),
+        fromRoster: false,
+      };
+    }
+    const rookies = filterRookieAwardCandidates(rosterPlayers, season);
+    const players = rosterPlayers.map(stripDraftYear);
+    const coaches = [...AWARDS_PREVIEW_COACHES];
+    const byId = new Map<string, NbaAwardCandidate>();
+    for (const c of [...players, ...rookies.map(stripDraftYear), ...coaches]) {
+      byId.set(c.id, c);
+    }
+    return {
+      catalog: [...byId.values()],
+      kindSets: {
+        player: new Set(players.map((c) => c.id)),
+        coach: new Set(coaches.map((c) => c.id)),
+        rookie: new Set(rookies.map((c) => c.id)),
+      },
+      fromRoster: true,
+    };
+  } catch {
+    return {
+      catalog: seasonAwardsSubmitCatalog(),
+      kindSets: mockKindSets(),
+      fromRoster: false,
+    };
+  }
 }
 
 function catalogById(
@@ -70,6 +142,7 @@ export function resolveSeasonAwardsForSubmit(input: {
   season: string;
   picksRaw: unknown;
   catalog?: readonly NbaAwardCandidate[];
+  kindSets?: SeasonAwardsKindSets;
 }): ResolveSeasonAwardsResult {
   const season = input.season.trim();
   if (!season || season.length > 32 || season.includes("/")) {
@@ -84,13 +157,7 @@ export function resolveSeasonAwardsForSubmit(input: {
 
   const fullCatalog = input.catalog ?? seasonAwardsSubmitCatalog();
   const byId = catalogById(fullCatalog);
-  const kindCatalog =
-    input.catalog == null
-      ? {
-          player: new Set(awardsPreviewCatalog("player").map((c) => c.id)),
-          coach: new Set(awardsPreviewCatalog("coach").map((c) => c.id)),
-        }
-      : null;
+  const kindCatalog = input.kindSets ?? mockKindSets();
   const candidates: NbaAwardCandidate[] = [];
   const seen = new Set<string>();
 
@@ -103,7 +170,9 @@ export function resolveSeasonAwardsForSubmit(input: {
     if (!c) {
       return { ok: false, error: `unknown_candidate:${def.id}` };
     }
-    if (kindCatalog && !kindCatalog[def.kind].has(id)) {
+    const allowed =
+      def.id === "roy" ? kindCatalog.rookie : kindCatalog[def.kind];
+    if (!allowed.has(id)) {
       return { ok: false, error: `kind_mismatch:${def.id}` };
     }
     if (!seen.has(c.id)) {

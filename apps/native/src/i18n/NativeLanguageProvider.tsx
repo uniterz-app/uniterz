@@ -6,21 +6,30 @@ import { useNativeUserLanguage } from "./useNativeUserLanguage";
 type NativeLanguageContextValue = {
   language: Language;
   countryCode: string | null;
+  /** 手動設定のみ。null は自動（端末） */
+  displayTimeZone: string | null;
+  /** 試合日付・時刻の表示 TZ */
+  timeZone: string;
   loading: boolean;
 };
 
 const NativeLanguageContext = createContext<NativeLanguageContextValue>({
   language: "ja",
   countryCode: null,
+  displayTimeZone: null,
+  timeZone: "Asia/Tokyo",
   loading: false,
 });
 
 export function NativeLanguageProvider({ children }: { children: ReactNode }) {
   const { fUser } = useFirebaseUser();
-  const { language, countryCode, loading } = useNativeUserLanguage(fUser?.uid);
+  const { language, countryCode, displayTimeZone, timeZone, loading } =
+    useNativeUserLanguage(fUser?.uid);
 
   return (
-    <NativeLanguageContext.Provider value={{ language, countryCode, loading }}>
+    <NativeLanguageContext.Provider
+      value={{ language, countryCode, displayTimeZone, timeZone, loading }}
+    >
       {children}
     </NativeLanguageContext.Provider>
   );

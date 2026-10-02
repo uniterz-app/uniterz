@@ -1,13 +1,17 @@
 import { useEffect, useState } from "react";
 import type { DocumentData } from "firebase/firestore";
 import { subscribeUserDocLive } from "../../../../../lib/user/subscribeUserDocLive";
+import {
+  resolveLocalizedLang,
+  type LocalizedLang,
+} from "../../../../../lib/i18n/localize";
 
 export type NativeMyRankingUser = {
   displayName: string;
   handle: string;
   photoURL: string;
   plan: "free" | "pro";
-  language: "ja" | "en";
+  language: LocalizedLang;
   countryCode: string | null;
 };
 
@@ -16,7 +20,7 @@ const EMPTY_USER: NativeMyRankingUser = {
   handle: "",
   photoURL: "",
   plan: "free",
-  language: "ja",
+  language: "en",
   countryCode: null,
 };
 
@@ -53,7 +57,7 @@ export function useNativeMyRankingUser(uid: string | null | undefined) {
         handle: d.handle?.trim() || "",
         photoURL: d.photoURL?.trim() || "",
         plan: d.plan === "pro" ? "pro" : "free",
-        language: d.language === "en" ? "en" : "ja",
+        language: resolveLocalizedLang(d.language),
         countryCode:
           typeof d.countryCode === "string" && d.countryCode.trim()
             ? d.countryCode.trim()

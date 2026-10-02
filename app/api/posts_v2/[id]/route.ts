@@ -5,6 +5,7 @@ import { NextResponse, NextRequest } from "next/server";
 import { getAdminDb, getAdminAuth } from "@/lib/firebaseAdmin";
 import {
   normalizeNbaTopScorerCandidates,
+  normalizeNbaTopScorerPick,
   validateNbaTopScorerPickForGame,
 } from "@/lib/nba/topScorer";
 import {
@@ -19,6 +20,11 @@ import {
 } from "@/lib/predict/parsePredictionPayload";
 import { FieldValue } from "firebase-admin/firestore";
 import { loadGameKickoffLock } from "@/lib/predict/gameKickoffLock";
+import {
+  parseMarketSide,
+  readLiveMarketCounts,
+  swapLiveMarketSide,
+} from "@/lib/predict/liveGameMarket";
 import { recomputeReferralActivePredictDays } from "@/lib/referral/recomputeReferralActivePredictDays";
 
 /* ========= 認証 ========= */
@@ -199,7 +205,10 @@ export async function PATCH(req: NextRequest, ctx: any) {
       }
 
       const rawGoalScorer = parsed.rawGoalScorer;
-      const goalScorerPick = normalizeWcGoalScorerPick(rawGoalScorer);
+      const goalScorerPick =
+        league === "nba"
+          ? normalizeNbaTopScorerPick(rawGoalScorer)
+          : normalizeWcGoalScorerPick(rawGoalScorer);
       const predRaw = body.prediction;
       const allowsGoalScorer = league === "wc" || league === "nba";
       const hasGoalScorerField =
@@ -272,6 +281,39 @@ export async function PATCH(req: NextRequest, ctx: any) {
         updates.comment = body.comment.slice(0, 2000);
       }
       await ref.update(updates);
+
+      const prevSide = parseMarketSide(
+        (data.prediction as { winner?: unknown } | undefined)?.winner
+      );
+      const nextSide = parseMarketSide(prediction.winner);
+      const gameId =
+        typeof data.gameId === "string" ? data.gameId.trim() : "";
+      if (gameId && prevSide && nextSide && prevSide !== nextSide) {
+        try {
+          const gameRef = getAdminDb().collection("games").doc(gameId);
+          await getAdminDb().runTransaction(async (tx) => {
+            const gameSnap = await tx.get(gameRef);
+            const gameData = (gameSnap.data() ?? {}) as Record<string, unknown>;
+            const patch = swapLiveMarketSide(
+              readLiveMarketCounts(gameData),
+              prevSide,
+              nextSide
+            );
+            tx.set(
+              gameRef,
+              {
+                marketPickCounts: patch.marketPickCounts,
+                market: patch.market,
+                marketBias: patch.marketBias,
+              },
+              { merge: true }
+            );
+          });
+        } catch (marketErr) {
+          console.error("[PATCH /api/posts_v2] live market", marketErr);
+        }
+      }
+
       return NextResponse.json({ ok: true });
     }
 

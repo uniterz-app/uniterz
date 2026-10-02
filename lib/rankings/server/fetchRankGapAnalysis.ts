@@ -13,6 +13,7 @@ import {
 } from "@/lib/rankings/readRankGapBonusSlice";
 import { resolveNextRankTierMilestone } from "@/lib/rankings/rankTierMilestone";
 import { fetchBulkFromFunctions } from "@/lib/rankings/server/fetchCumulativeRankingBulk";
+import { rankingFunctionUrl } from "@/lib/rankings/server/rankingFunctionUrl";
 import type { Language } from "@/lib/i18n/language";
 
 type RankingRowLite = {
@@ -90,9 +91,7 @@ export async function fetchRankGapAnalysis(input: {
   rankingLeague: RankingLeagueSource;
   language: Language;
 }): Promise<RankGapAnalysis | { ok: false; reason: string }> {
-  const baseUrl =
-    process.env.CUMULATIVE_RANKING_FUNCTION_URL ??
-    process.env.NEXT_PUBLIC_CUMULATIVE_RANKING_FUNCTION_URL;
+  const baseUrl = rankingFunctionUrl();
   if (!baseUrl) {
     return { ok: false, reason: "ranking_unavailable" };
   }
@@ -166,25 +165,4 @@ export async function fetchRankGapAnalysis(input: {
 }
 
 /** users.plan === "pro" かつ proUntil 未超過なら true */
-export async function assertProUser(uid: string): Promise<boolean> {
-  const snap = await getAdminDb().doc(`users/${uid}`).get();
-  if (!snap.exists) return false;
-  const data = snap.data() ?? {};
-  if (data.plan !== "pro") return false;
-  const until = data.proUntil as
-    | { toMillis?: () => number; seconds?: number }
-    | Date
-    | null
-    | undefined;
-  if (!until) return true;
-  let ms = 0;
-  if (until instanceof Date) {
-    ms = until.getTime();
-  } else if (typeof until.toMillis === "function") {
-    ms = until.toMillis();
-  } else if (typeof until.seconds === "number") {
-    ms = until.seconds * 1000;
-  }
-  if (!Number.isFinite(ms) || ms <= 0) return true;
-  return ms > Date.now();
-}
+export { assertProUser } from "@/lib/pro/assertProUser";

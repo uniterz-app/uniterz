@@ -12,6 +12,10 @@ import {
   serverTimestamp,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import {
+  clearTutorialPageTipsSeen,
+  markAllTutorialPageTipsSeen,
+} from "@/lib/tutorial/tutorialPageTips";
 
 export const APP_TUTORIAL_READ_ID = "appTutorial:v1";
 
@@ -60,6 +64,7 @@ export function clearAppTutorialSeenLocal(uid?: string | null): void {
     if (uid) window.localStorage.removeItem(seenStorageKey(uid));
     clearLegacyUnscopedKeys();
     if (uid) window.localStorage.removeItem(pulseStorageKey(uid));
+    clearTutorialPageTipsSeen(uid);
   } catch {
     /* ignore */
   }
@@ -71,6 +76,7 @@ export function markAppTutorialSeenLocal(uid: string): void {
     clearLegacyUnscopedKeys();
     window.localStorage.setItem(seenStorageKey(uid), "1");
     window.localStorage.removeItem(pulseStorageKey(uid));
+    markAllTutorialPageTipsSeen(uid);
   } catch {
     /* ignore */
   }

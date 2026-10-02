@@ -167,6 +167,7 @@ const de: Messages = {
     last20Tracker: "Last20 Tracker",
     last20TrackerDesc: "Sieges-/Niederlagenserien deiner letzten {n} Tipps",
     last20TrackerSubtitle: "Letzte {n} Spiele",
+    last20TrackerUnavailable: "Daten konnten nicht geladen werden",
     settledTodayResults: "Result Drop",
     settledTodayResultsDesc: "Heute abgerechnete Analysen",
     settledTodayEmpty: "Heute noch keine abgerechneten Analysen",
@@ -221,7 +222,7 @@ const de: Messages = {
     divisionOpenTitle: "PRO LEAGUE",
     divisionOpenLockBody:
       "A Pro-only ranking across every game. Subscribe to Pro to join and view it.",
-    divisionOpenCta: "See Pro",
+    divisionOpenCta: "Explore Pro",
     divisionOpenModalDismiss: "Close",
     divisionOpenBackToPickUp: "Back to Pick Up",
     winStreak: "Siegesserie",
@@ -246,6 +247,8 @@ const de: Messages = {
     shareRankCardCopy: "Bild kopieren",
     shareRankCardCopied: "Bild kopiert",
     shareRankCardCopyFailed: "Kopieren fehlgeschlagen",
+    shareCaptionCopy: "Text kopieren",
+    shareCaptionCopied: "Text kopiert",
     shareRankCardLine: "LINE",
     shareRankCardX: "X",
     shareRankCardInstagram: "Instagram",
@@ -429,6 +432,7 @@ const de: Messages = {
     nbaTopScorerResultLabel: "Top scorer",
     upsetPointsLabel: "Überraschungspunkte",
     totalPointsLabel: "Gesamtpunkte",
+    pendingCallLabel: "YOUR CALL",
     upsetPointsDesc: "Separater Wert (0–10), nur wenn das Spiel eine Überraschung war und du mit einer Minderheitsvorhersage richtig lagst. Sonst 0.",
     totalPointsDesc: "Basispunkte aus korrektem Gewinner, Differenznähe und Gesamtpunktenähe, plus Überraschungs- und Siegesserie-Bonus.",
     helpPageLink: "Punktelogik auf der Hilfe-Seite ansehen",
@@ -445,6 +449,8 @@ const de: Messages = {
     removeFromList: "Aus der Liste entfernen",
     openActions: "Aktionen öffnen",
     shareMyResult: "Ergebniskarte als Bild teilen",
+    shareResultCardTitle: "Ergebnis teilen",
+    shareResultCardHint: "Bild direkt an Instagram, LINE, X und mehr senden",
     shareResultPrediction: "Pred {score}",
     shareResultFinal: "Final {score}",
     shareResultTotal: "Total {pts} pts",
@@ -653,11 +659,13 @@ const de: Messages = {
     helpAndGuide: "Hilfe & Anleitung",
     termsOfService: "Nutzungsbedingungen",
     privacyPolicy: "Datenschutzrichtlinie",
+    commercialLaw: "Angaben nach dem Gesetz über den elektronischen Geschäftsverkehr",
     communityGuidelines: "Community-Richtlinien",
     contact: "Kontakt",
     featureRequest: "Funktionswunsch",
     featureRequestTitle: "Wunsch senden",
     announcements: "Ankündigungen",
+    notifications: "Benachrichtigungen",
     news: "Neuigkeiten",
     noAnnouncements: "Derzeit keine Ankündigungen",
     unread: "Ungelesen",
@@ -698,12 +706,9 @@ const de: Messages = {
     sectionSubscription: "Abonnement",
     sectionSupport: "Support",
     sectionAdmin: "Admin",
-    adminDashboard: "Admin-Dashboard",
-    grantBadges: "Abzeichen vergeben",
-    manageAnnouncements: "Ankündigungen verwalten",
-    createAnnouncement: "Ankündigung erstellen",
-    gameImport: "Spielimport",
-    planApproval: "Plangenehmigung",
+    adminFeatureRequests: "Funktionswünsche",
+    adminContacts: "Anfragen",
+    adminRedemptions: "Produkteinlösungen",
     helpDescription:
       "Uniterz ist ein Fantasy-Sportspiel basierend auf Sportvorhersagen. Hier kannst du die Grundregeln und die Punkteberechnung nachlesen.",
   },
@@ -752,8 +757,8 @@ const de: Messages = {
     drawAvailable: "UNENTSCHIEDEN",
     home: "Heim",
     away: "Auswärts",
-    scorePrediction: "Ergebnisprognose",
-    scorePlaceholder: "Punkte",
+    scorePrediction: "score prediction",
+    scorePlaceholder: "SCORE",
     cancelEditing: "Bearbeitung abbrechen",
     editScoresCta: "Korr.",
     yourPrediction: "Deine Vorhersage",
@@ -801,6 +806,8 @@ const de: Messages = {
     nbaTopScorerBonusHint: "+2 if correct",
     nbaTopScorerClear: "Clear selection",
     nbaTopScorerEmpty: "Player list not ready yet",
+    nbaTopScorerMore: "{n} more",
+    nbaTopScorerLess: "Show less",
     scoringRulesChip: "Bewertungsregeln",
     timing: {
       proInfoTitle: "Pro Info",
@@ -928,7 +935,7 @@ const de: Messages = {
     skip: "Überspringen",
     skipConfirmTitle: "Skip the tutorial?",
     skipConfirmBody:
-      "Are you sure?\nYou can review it again anytime from Tutorial in the side menu.",
+      "Are you sure?\nYou can review the short tab tips again anytime from Tutorial in the side menu.",
     skipConfirmStay: "Keep going",
     skipConfirmLeave: "Skip",
     restartFromMenu: "Tutorial",
@@ -955,23 +962,23 @@ const de: Messages = {
       tabProfile: "Profile",
       welcomeTitle: "Welcome to UNITERZ",
       welcomeBody:
-        "Tippe Spiele, sammle Punkte und steige im **Ranking**. Rundgang durch die Screens, oder nur neue Features.",
+        "Tippe Spiele, sammle Punkte und steige im **Ranking**.\nKurze Tipps erscheinen beim ersten Besuch jedes Tabs. Starte mit Pick Up.",
       welcomeReturningBody:
-        "Rundgang durch die Screens, oder nur **neue Features**.",
-      welcomeFullCta: "Einführung ansehen",
+        "Kurze Tab-Tipps nochmal, oder nur **neue Features** (UNIT, Karriere usw.).",
+      welcomeFullCta: "Tipps zeigen",
       welcomeFeaturesCta: "Nur neue Features",
       gamesTitle: "Spiele",
       gamesBody:
         "Hier liegen die heutigen Spiele. **Tippe eine Karte**, um die Prognose zu öffnen. Der Sieger folgt aus dem Score.",
       gamesPickupTitle: "Pick-up-Spiele",
       gamesPickupBody:
-        "Wöchentlich ausgewählte Spiele. Das **Pick-Up-Ranking** zählt nur diese Tipps. Fürs Trefferquoten-Ranking brauchst du Tipps auf **65 %+** der bisherigen Pick-ups.",
-      gamesStatsTitle: "STATS",
+        "Wöchentlich ausgewählte Spiele. Erkennbar am **gelben Rahmen** und dem **PICK UP**-Label. Das **Pick-Up-Ranking** zählt nur diese Tipps. Tippe auf **Tippen** und mach deinen ersten Pick.",
+      gamesStatsTitle: "STANDING / STATS",
       gamesStatsBody:
-        "Der gelbe **STATS**-Tab rechts öffnet Team- und Spielerstatistiken. Wischen vom rechten Rand geht auch.",
+        "**STANDING** und **STATS** rechts öffnen Tabelle und Team-/Spielerstatistiken. Wischen vom rechten Rand geht auch.",
       resultsTitle: "Results",
       resultsBody:
-        "Nach dem Spiel landet der Abgleich hier. **Große Zahlen = Endstand, darunter dein Tipp.** Oben rechts: HIT / MISS.",
+        "Karten zu deinen Tipps. Nach dem Spiel der Recap. Jede Karte zeigt den **Score**, den du für dieses Spiel bekommen hast. Oben rechts HIT / MISS. **Tippe eine Karte** für Details.",
       tapTitle: "Tap the match card",
       tapBody:
         "This is a mock NBA game. Tap the glowing card to start predicting. No real data is affected.",
@@ -1054,9 +1061,13 @@ const de: Messages = {
       resultDetailMoreBody:
         "Scroll for score distribution and more detail. Same layout in the real app.",
       yourPickLabel: "Your pick",
-      rankingsTitle: "Rankings",
+      rankingsTitle: "Ranking",
       rankingsBody:
-        "Hits earn points that decide your place. Switch periods and categories to track yourself.",
+        "Sortiert nach Vorhersage-**Score**. Fürs Trefferquoten-Ranking brauchst du Tipps auf **65 %+** der bisherigen Pick-ups.",
+      rankingsScoreHelpCta: "So wird der Score berechnet",
+      rankingsBoardsTitle: "Pick Up & PRO LEAGUE",
+      rankingsBoardsBody:
+        "**Pick Up** … Ranking nur aus Featured-Spielen (alle).\n**PRO LEAGUE** … offenes Ranking über alle Spiele. Nur **PRO USER**.",
       groupsTitle: "Groups (Leaderboards)",
       groupsBody:
         "Create a group with friends and compete in a private ranking. Join with an invite code too.",
@@ -1078,7 +1089,7 @@ const de: Messages = {
         "The highlighted **coin** is your **UNIT balance**.\nUNITERZ **in-app currency** for **skins** and Profile looks.\nTap the coin to open your **history**.",
       horizonUnitHowTitle: "Earning UNIT",
       horizonUnitHowBody:
-        "Earn from **weekly/monthly rankings** and **Squad Battle** rewards.\nWhen you earn, a celebration plays on Profile and the balance updates here.\nSave UNIT to **redeem** skins and items.",
+        "Verdienen über Belohnungen aus **Wochen-/Monatsrankings**, **Squad Battle** und **Freundes-Einladungen**.\nUNIT gegen **Trikots**, **Caps** usw. **einlösen**.",
       horizonCareerWhatTitle: "What is Career?",
       horizonCareerWhatBody:
         "Your predictor **track record** — like a résumé.\nSee **hit rate, streaks, season ranks**, and **long-term stats**.\nSpot growth that short-term rankings alone won't show.",
@@ -1088,9 +1099,9 @@ const de: Messages = {
       horizonStatsWhatTitle: "What is STATS?",
       horizonStatsWhatBody:
         "**Team and player stats** from the **Games** tab.\nUse for **pre-pick research** — scoring, efficiency, recent form.\nLinks to the live **STATS hub** backed by real data.",
-      horizonStatsHowTitle: "Opening STATS",
+      horizonStatsHowTitle: "Opening STANDING / STATS",
       horizonStatsHowBody:
-        "The highlighted **yellow STATS** tab opens it (or swipe from the right edge).\n**Tap STATS** to try it, or press **Start the app** below when you're ready.",
+        "**STANDING** and **STATS** on the right edge open them (or swipe from the right edge).\n**Tap either tab** to try it, or press **Start the app** below when you're ready.",
       doneTitle: "You're ready",
       doneBody:
         "That's the UNITERZ loop. Predict real games and climb the ranks.",

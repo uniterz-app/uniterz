@@ -69,6 +69,10 @@ import BadgeDetailModal from "@/app/web/badges/BadgeDetailModal";
 
 import { useProfilePlan } from "@/lib/profile/useProfilePlan";
 import {
+  canViewMonthlyReport,
+  canViewWeeklyReport,
+} from "@/lib/reports/reportEntitlements";
+import {
   useProfileBadges,
   type ResolvedBadge,
 } from "@/lib/profile/useProfileBadges";
@@ -82,6 +86,8 @@ import type { Language } from "@/lib/i18n/language";
 import { CYBER_GLASS_PANEL } from "@/lib/ui/matchOverlayGlass";
 import { CyberNoDataLabel } from "@/app/component/common/CyberNoDataLabel";
 import { useAnnouncementsUnread } from "@/lib/hooks/useAnnouncementsUnread";
+import { useAdminInboxUnread } from "@/lib/admin/useAdminInboxUnread";
+import { useIsAdmin } from "@/lib/admin/useIsAdmin";
 import {
   clearSideMenuOrigin,
   consumeOpenProfileSideMenu,
@@ -99,6 +105,8 @@ import {
   isProfileVisualLite,
 } from "@/lib/profile/profileVisualEffects";
 import { useProfileViewCount } from "@/lib/profile/useProfileViewCount";
+import { profileAwardsBracketCopy } from "@/lib/profile/profileAwardsBracketCopy";
+import { PROFILE_CHART_CYBER } from "@/lib/profile/profileOverviewChartCyberTheme";
 export default function WebProfileViewV2(props: ProfileViewPropsV2) {
   const { profile, tab, setTab, summary, summaryRanks, metricValueDeltas, targetUid, statsLoading } =
     props;
@@ -106,9 +114,11 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
 
   const resolvedUid = typeof targetUid === "string" ? targetUid : null;
   const { language } = useUserLanguage(resolvedUid);
+  const awardsBracketCopy = profileAwardsBracketCopy(language);
 
   const {
     myPlan,
+    myPlanType,
     loadingPlan,
     isMe,
     isMyPro,
@@ -123,7 +133,26 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
   const currentIsProView = forceProView || isProView;
   const visualEffects = profileVisualEffectsForViewer(isMe);
   const visualEffectsLite = isProfileVisualLite(visualEffects);
-  const { count: profileViewCount } = useProfileViewCount(resolvedUid);
+  const { count: profileViewCount } = useProfileViewCount(
+    resolvedUid,
+    profile.profileViewCount
+  );
+
+  const viewerCanViewWeekly = canViewWeeklyReport({
+    plan: myPlan,
+    planType: myPlanType,
+  });
+  const viewerCanViewMonthly = canViewMonthlyReport({
+    plan: myPlan,
+    planType: myPlanType,
+  });
+  const canViewReport =
+    currentIsProView ||
+    (isMe ? viewerCanViewWeekly : isMyPro && isTargetPro);
+  const canViewMonthly =
+    isMe
+      ? viewerCanViewMonthly
+      : isMyPro && isTargetPro && viewerCanViewMonthly;
 
   const reportOverlayEnabled =
     Boolean(isMe && !loadingPlan && (currentIsProView || myPlan === "pro"));
@@ -131,6 +160,7 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
     useProReportDeliveryOverlay({
       uid: resolvedUid,
       enabled: reportOverlayEnabled,
+      canViewMonthly: viewerCanViewMonthly,
     });
   const skinUnlockEnabled =
     Boolean(isMe && resolvedUid) && reportOverlay == null;
@@ -207,6 +237,8 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
   const { unreadCount: menuUnreadCount } = useAnnouncementsUnread({
     enabled: isMe,
   });
+  const { isAdmin } = useIsAdmin();
+  const adminInbox = useAdminInboxUnread(Boolean(isMe && isAdmin));
 
   const currentStreak = Math.max(
     0,
@@ -265,12 +297,14 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
         visualEffects={visualEffects}
         targetUid={resolvedUid}
         profileViewCount={profileViewCount}
+        callerIsPro={isMyPro}
       />
 
       {isMe ? (
         <ProfileMenuEdgeHandle
           onOpen={() => setDrawerOpen(true)}
           unreadCount={menuUnreadCount}
+          adminUnreadCount={adminInbox.total}
           hidden={drawerOpen || welcomeProfileFly}
         />
       ) : null}
@@ -350,15 +384,15 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
           <ProfileMonthlyReportPanel
             uid={resolvedUid}
             language={language}
-            canViewReport={
-              currentIsProView || (isMe ? myPlan === "pro" : isMyPro && isTargetPro)
-            }
+            canViewReport={canViewReport}
+            canViewMonthly={canViewMonthly}
             showUpgrade={isMe && !currentIsProView && myPlan !== "pro"}
           />
         ) : tab === "awards" ? (
           <ProfileAwardsTab
             uid={resolvedUid}
-            language={language === "ja" ? "ja" : "en"}
+            language={language}
+            isMe={isMe}
           />
         ) : tab === "bracket" ? (
           playoffBracketLoading ? (
@@ -366,12 +400,18 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
               <CandleChartLoader />
             </div>
           ) : !playoffDisplayData ? (
-            <div className="rounded-2xl border border-white/10 bg-[rgba(5,8,20,0.55)] px-6 py-6 text-center">
-              <CyberNoDataLabel variant="bracket" />
-              <p className="mt-2 text-sm text-white/45">
-                {language === "ja"
-                  ? "提出済みのプレーオフブラケットがありません"
-                  : "No playoff bracket submitted"}
+            <div
+              role="status"
+              className="grid min-h-[180px] place-items-center px-4 py-10 text-center"
+              style={{
+                borderRadius: 2,
+                background: PROFILE_CHART_CYBER.rankPlotInnerBg,
+                boxShadow: `inset 0 0 0 1px ${PROFILE_CHART_CYBER.glassBorder}`,
+              }}
+            >
+              <CyberNoDataLabel variant="progress" />
+              <p className="mt-2 max-w-[260px] text-center text-[11px] leading-snug text-white/40">
+                {awardsBracketCopy.noPlayoffBracket}
               </p>
             </div>
           ) : (
@@ -439,7 +479,7 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
       {reportOverlay ? (
         <ProfileReportDeliveryOverlay
           active={reportOverlay}
-          language={language === "ja" ? "ja" : "en"}
+          language={language}
           onDismiss={dismissReportOverlay}
         />
       ) : null}
@@ -447,7 +487,7 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
       {skinUnlockIds && skinUnlockIds.length > 0 ? (
         <ProfileProSkinUnlockOverlay
           unlockedIds={skinUnlockIds}
-          language={language === "ja" ? "ja" : "en"}
+          language={language}
           preview={skinUnlockPreview}
           platform="web"
           ownerCounts={skinUnlockOwnerCounts}

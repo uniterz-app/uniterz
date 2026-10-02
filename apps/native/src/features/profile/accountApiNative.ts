@@ -1,7 +1,10 @@
 /**
  * Web `saveMeProSkin` / `deleteMeAccount` の Native 版
  */
-import type { ProfilePlanProBgVariant } from "../../../../../lib/profile/profilePlanProBgVariants";
+import {
+  PROFILE_PLAN_PRO_BG_DEFAULT,
+  type ProfilePlanProBgVariant,
+} from "../../../../../lib/profile/profilePlanProBgVariants";
 import { auth } from "../../lib/firebase";
 import { getUniterzApiBaseUrl } from "../games/submitPredictionApi";
 
@@ -43,6 +46,26 @@ export async function saveMeProSkinNative(
   if (!res.ok) {
     throw new Error(data.condition ?? data.error ?? res.statusText);
   }
+
+  const { clearRankingSnapshotGenerationClientMem } = await import(
+    "../../../../../lib/rankings/rankingSnapshotGenerationClient"
+  );
+  const { clearPeriodRankingsClientCache } = await import(
+    "../rankings/useNativePeriodRankingsBulk"
+  );
+  const { clearNativeOpenSeasonRankingsClientCache } = await import(
+    "../rankings/useNativeOpenSeasonRankingsBulk"
+  );
+  const {
+    dispatchCumulativeRankingPatchMyProSkin,
+  } = await import("../../../../../lib/rankings/cumulativeRankingInvalidate");
+  clearRankingSnapshotGenerationClientMem();
+  clearPeriodRankingsClientCache();
+  clearNativeOpenSeasonRankingsClientCache();
+  const uid = auth.currentUser?.uid;
+  if (uid) {
+    dispatchCumulativeRankingPatchMyProSkin(uid, planProBgVariant);
+  }
 }
 
 /** Web `dismissMeProSkinNotices` 相当 */
@@ -72,6 +95,7 @@ export async function fetchProSkinStatusNative(): Promise<{
     posts: number;
     exactHits: number;
     maxWinStreak: number;
+    streakRuns: Record<string, number>;
     referralCompletedCount: number;
     periodWins: Record<string, number>;
   };
@@ -100,6 +124,7 @@ export async function fetchProSkinStatusNative(): Promise<{
       posts?: number;
       exactHits?: number;
       maxWinStreak?: number;
+      streakRuns?: Record<string, number>;
       referralCompletedCount?: number;
       periodWins?: Record<string, number>;
     };
@@ -118,12 +143,16 @@ export async function fetchProSkinStatusNative(): Promise<{
   }
   return {
     unlockedIds: data.unlockedIds ?? [],
-    savedId: data.savedId ?? "beast-titanium",
+    savedId: data.savedId ?? PROFILE_PLAN_PRO_BG_DEFAULT,
     isPro: data.progress?.isPro === true,
     progress: {
       posts: data.progress?.posts ?? 0,
       exactHits: data.progress?.exactHits ?? 0,
       maxWinStreak: data.progress?.maxWinStreak ?? 0,
+      streakRuns:
+        data.progress?.streakRuns && typeof data.progress.streakRuns === "object"
+          ? data.progress.streakRuns
+          : {},
       referralCompletedCount: data.progress?.referralCompletedCount ?? 0,
       periodWins:
         data.progress?.periodWins && typeof data.progress.periodWins === "object"

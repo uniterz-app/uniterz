@@ -9,12 +9,14 @@ import { hideNativeBootSplash } from "../../bootstrap/nativeBootSplash";
 import LandingScreenNative from "../legal/LandingScreenNative";
 import AuthEntryScreen from "./AuthEntryScreen";
 import AuthLandingBackgroundNative from "./AuthLandingBackgroundNative";
+import AuthHexTunnelOverlayNative from "./camera3d/AuthHexTunnelOverlayNative";
+import { AUTH_LANDING_FIELD_VARIANT } from "./camera3d/authLandingFieldVariant";
 import AuthLandingHudPassNative from "./AuthLandingHudPassNative";
 import AuthLandingWorldCameraNative from "./AuthLandingWorldCameraNative";
+import AuthLegalConsentGateNative from "./AuthLegalConsentGateNative";
 import AuthLandingGlCanvasNative, {
   isExpoGLNativeLinked,
 } from "./camera3d/AuthLandingGlCanvasNative";
-import { AUTH_LANDING } from "./authLandingPalette";
 
 type AuthMode = "login" | "signup";
 
@@ -22,6 +24,7 @@ export default function AuthLandingFlyShellNative() {
   const [flying, setFlying] = useState(false);
   const [landed, setLanded] = useState(false);
   const [mode, setMode] = useState<AuthMode>("login");
+  const [consentOpen, setConsentOpen] = useState(false);
   const [glOk, setGlOk] = useState(() => isExpoGLNativeLinked());
   const consoleOpacity = useRef(new Animated.Value(0)).current;
 
@@ -51,6 +54,15 @@ export default function AuthLandingFlyShellNative() {
     setFlying(false);
   }, []);
 
+  const handleGetStarted = useCallback(() => {
+    setConsentOpen(true);
+  }, []);
+
+  const handleConsentAgree = useCallback(() => {
+    setConsentOpen(false);
+    startFly("signup");
+  }, [startFly]);
+
   const handleFlyComplete = useCallback(() => {
     setLanded(true);
   }, []);
@@ -63,15 +75,21 @@ export default function AuthLandingFlyShellNative() {
     <LandingScreenNative
       hideBackground
       skipBootSplash
-      onGetStarted={() => startFly("signup")}
+      onGetStarted={handleGetStarted}
       onLogIn={() => startFly("login")}
     />
   );
 
+  const hexTunnel = AUTH_LANDING_FIELD_VARIANT === "hexTunnel";
+  const skipGl = hexTunnel || AUTH_LANDING_FIELD_VARIANT === "grainWave";
+  // 同意中・フォーム着地後は裏の帯シェーダを止める（見た目は最後のフレームを保持）
+  const fieldPaused = consentOpen || landed;
+
   if (!glOk) {
     return (
       <View style={styles.root}>
-        <AuthLandingBackgroundNative />
+        <AuthLandingBackgroundNative paused={fieldPaused} />
+        {hexTunnel ? <AuthHexTunnelOverlayNative /> : null}
         <AuthLandingWorldCameraNative
           active
           flying={flying}
@@ -85,17 +103,25 @@ export default function AuthLandingFlyShellNative() {
             onBack={handleBack}
           />
         </AuthLandingWorldCameraNative>
+        <AuthLegalConsentGateNative
+          visible={consentOpen}
+          onClose={() => setConsentOpen(false)}
+          onAgree={handleConsentAgree}
+        />
       </View>
     );
   }
 
   return (
     <View style={styles.root}>
-      <AuthLandingBackgroundNative />
-      <AuthLandingGlCanvasNative
-        flying={flying}
-        onUnavailable={handleGlUnavailable}
-      />
+      <AuthLandingBackgroundNative paused={fieldPaused} />
+      {hexTunnel ? <AuthHexTunnelOverlayNative /> : null}
+      {skipGl ? null : (
+        <AuthLandingGlCanvasNative
+          flying={flying}
+          onUnavailable={handleGlUnavailable}
+        />
+      )}
       <AuthLandingHudPassNative
         flying={flying}
         onFlyComplete={handleFlyComplete}
@@ -112,6 +138,11 @@ export default function AuthLandingFlyShellNative() {
           onBack={handleBack}
         />
       </Animated.View>
+      <AuthLegalConsentGateNative
+        visible={consentOpen}
+        onClose={() => setConsentOpen(false)}
+        onAgree={handleConsentAgree}
+      />
     </View>
   );
 }
@@ -119,7 +150,7 @@ export default function AuthLandingFlyShellNative() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: AUTH_LANDING.canvas,
+    backgroundColor: "#000000",
   },
   consoleLayer: {
     ...StyleSheet.absoluteFillObject,

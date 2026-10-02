@@ -4,7 +4,7 @@ import type { MobileMetric } from "../../../../../lib/rankings/rankingMetrics";
 import type { RankingRowWithCountry } from "../../../../../lib/rankings/rankingMetrics";
 import { getCountryCode } from "../../../../../lib/rankings/country";
 import { metricNum } from "../../../../../lib/rankings/metric";
-import { parseUserPlanProBgVariant } from "../../../../../lib/profile/profilePlanProBgVariantField";
+import { rankingRowProSkinVariant } from "../../../../../lib/rankings/rankingRowProSkinVariant";
 import { type RankingsLanguage } from "./rankingsTexts";
 import { CyberRankingListRowNative } from "./CyberRankingListRowNative";
 import RankingsPodiumEntranceRowNative from "./RankingsPodiumEntranceRowNative";
@@ -32,10 +32,10 @@ function RankingRowCard({
   const countryCode = getCountryCode(row);
   const { n } = metricNum(row, metric);
   const isPro = row.plan === "pro";
-  const proSkinVariant =
-    isPro && row.planProBgVariant
-      ? parseUserPlanProBgVariant(row.planProBgVariant)
-      : null;
+  const proSkinVariant = rankingRowProSkinVariant(
+    row.plan,
+    row.planProBgVariant
+  );
 
   return (
     <CyberRankingListRowNative

@@ -5,44 +5,40 @@ import NbaTopScorerPicker from "@/app/component/predict/nba/NbaTopScorerPicker";
 import {
   calcNbaTopScorerBonus,
   normalizeNbaLeadingScorers,
-  type NbaTopScorerCandidate,
   type NbaTopScorerPick,
 } from "@/lib/nba/topScorer";
-import { NBA_ROSTER_BY_PRESET } from "@/lib/predict/nbaRosterPreviewMocks";
-import { playerCardName } from "@/lib/predict/nbaRoster";
+import { topScorerCandidatesForMatchup } from "@/lib/predict/nbaTopScorerPreviewMocks";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import { auth } from "@/lib/firebase";
 import { t } from "@/lib/i18n/t";
 
-function candidatesFromRoster(): NbaTopScorerCandidate[] {
-  const report = NBA_ROSTER_BY_PRESET["both-teams-rich"]!;
-  const out: NbaTopScorerCandidate[] = [];
-  for (const side of [report.home, report.away]) {
-    for (const p of side.players) {
-      out.push({
-        playerId: String(p.id),
-        teamId: side.teamId,
-        name: playerCardName(p),
-        ppg: p.ppg,
-        position: p.position,
-        jerseyNumber: p.jerseyNumber ?? null,
-      });
-    }
-  }
-  return out;
-}
+const HOME_ID = "nba-pistons";
+const AWAY_ID = "nba-celtics";
 
 export default function NbaTopScorerPreviewPage() {
   const { language } = useUserLanguage(auth.currentUser?.uid ?? null);
   const m = t(language);
-  const candidates = useMemo(() => candidatesFromRoster(), []);
+  const candidates = useMemo(
+    () => topScorerCandidatesForMatchup(HOME_ID, AWAY_ID),
+    []
+  );
   const [pick, setPick] = useState<NbaTopScorerPick | null>(null);
 
   const demoLeaders = useMemo(
     () =>
       normalizeNbaLeadingScorers([
-        { playerId: "15", teamId: "nba-lakers", points: 32, name: "A.DAVIS" },
-        { playerId: "237", teamId: "nba-lakers", points: 28, name: "L.JAMES" },
+        {
+          playerId: "1628369",
+          teamId: AWAY_ID,
+          points: 34,
+          name: "J.TATUM",
+        },
+        {
+          playerId: "1630595",
+          teamId: HOME_ID,
+          points: 31,
+          name: "C.CUNNINGHAM",
+        },
       ]),
     []
   );
@@ -58,14 +54,14 @@ export default function NbaTopScorerPreviewPage() {
         NBA Top Scorer Preview
       </h1>
       <p className="mt-1 text-xs text-white/50">
-        試合ごとの最多得点者予想 · 的中 +2 · mock roster
+        Pistons vs Celtics · 最多得点者予想 · 的中 +2
       </p>
 
       <div className="mt-5">
         <NbaTopScorerPicker
-          homeTeamId="nba-lakers"
-          awayTeamId="nba-celtics"
-          homeLabel="Lakers"
+          homeTeamId={HOME_ID}
+          awayTeamId={AWAY_ID}
+          homeLabel="Pistons"
           awayLabel="Celtics"
           candidates={candidates}
           value={pick}

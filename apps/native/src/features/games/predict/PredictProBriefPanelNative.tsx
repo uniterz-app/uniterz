@@ -1,34 +1,44 @@
 /**
- * Web `PredictProBriefPanel` 相当 — タイトル + Pro バッジ + 左右比較
- * Free は ReportGate 同型の PRO INSIGHT ブラーゲート
+ * Web `PredictProBriefPanel` 相当 — HOME | AWAY 2カラム · Free ゲート CTA
  */
 import type { ComponentProps, ReactNode } from "react";
+import { useMemo } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { BlurView } from "expo-blur";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import {
   briefEdgeDetail,
   briefLineText,
+  briefPlayerDetail,
+  briefSampleNote,
+  splitBriefLineLead,
   type PredictProBrief,
   type ProBriefEdgeItem,
   type ProBriefLineItem,
+  type ProBriefPlayerItem,
   type ProBriefTeamCard,
 } from "../../../../../../lib/predict/predictProBrief";
+import { sanitizeProBriefForDisplay } from "../../../../../../lib/predict/validateProBrief";
 import {
   proInsightGateCopy,
   type ProInsightGateBulletIcon,
 } from "../../../../../../lib/predict/proInsightGateCopy";
+import { PRO_INSIGHT_GATE_SAMPLE_BRIEF } from "../../../../../../lib/predict/proInsightGateSampleBrief";
+import PredictProInsightNarrativePanelNative from "./PredictProInsightNarrativePanelNative";
+import { resolveLocalizedLang } from "../../../../../../lib/i18n/localize";
 import { getMobileTeamName } from "../../../../../../lib/team-name-split-mobile";
 import { NBA_TEAM_NAME_BY_ID } from "../../../../../../lib/nba-team-names";
 import { getTeamJerseyPrimaryColor } from "../../../../../../lib/team-colors";
-import { nativeBlurViewExtraProps } from "../../../ui/nativeBlurProps";
 import ProCyberBadgeNative from "../../profile/kinetik/ProCyberBadgeNative";
+import UniterzLogoNative from "../../profile/UniterzLogoNative";
 import {
+  OXANIUM_600,
   OXANIUM_700,
   OXANIUM_800,
+  JP_400,
 } from "../../profile/reports/reportThemeNative";
-import { MATCH_CARD_DISPLAY_FONT } from "../matchCardTypography";
+import { MATCH_CARD_TEAM_NAME_FONT } from "../matchCardTypography";
 import type { GamesLanguage } from "../gamesI18n";
+import { UNITERZ_PRO_BADGE_GOLD } from "../../../../../../lib/units/uniterzProBadge";
 
 type Props = {
   brief?: PredictProBrief | null;
@@ -37,17 +47,18 @@ type Props = {
   awayTeamId: string;
   homeTeamName: string;
   awayTeamName: string;
-  /** Free: タイトル下をぼかして CTA */
+  /** Free: 説明 + CTA + 下に実画面サンプル */
   locked?: boolean;
   onPressUpgrade?: () => void;
 };
 
-type SectionTone = "matchup" | "schedule" | "context";
+type SectionTone = "matchup" | "schedule" | "context" | "players";
 
 const EMPTY_CARD: ProBriefTeamCard = {
   edges: [],
   schedule: [],
   context: [],
+  players: [],
 };
 
 const BULLET_ICONS: Record<
@@ -57,8 +68,7 @@ const BULLET_ICONS: Record<
   matchup: "sword-cross",
   schedule: "calendar-range",
   context: "chart-timeline-variant",
-  edge: "scale-balance",
-  comment: "comment-text-outline",
+  injury: "heart-pulse",
 };
 
 function hexToRgba(hex: string, alpha: number): string {
@@ -80,17 +90,23 @@ function teamNick(teamId: string, fallback: string): string {
 
 function TitleWithBrandFontsNative({ title }: { title: string }) {
   return (
-    <>
-      {title.split(/(Pro)/).map((part, i) =>
-        part === "Pro" ? (
-          <Text key={i} style={styles.gateTitlePro}>
+    <View style={styles.gateTitleRow}>
+      {title.split(/(PRO INSIGHT|Pro)/).map((part, i) => {
+        if (!part) return null;
+        if (part === "PRO INSIGHT" || part === "Pro") {
+          return (
+            <Text key={i} style={[styles.gateTitle, styles.gateTitlePro]}>
+              {part}
+            </Text>
+          );
+        }
+        return (
+          <Text key={i} style={styles.gateTitle}>
             {part}
           </Text>
-        ) : (
-          <Text key={i}>{part}</Text>
-        )
-      )}
-    </>
+        );
+      })}
+    </View>
   );
 }
 
@@ -106,11 +122,15 @@ function SectionLabel({
       ? "rgba(110,231,183,0.9)"
       : tone === "schedule"
         ? "rgba(253,230,138,0.9)"
-        : "rgba(103,232,249,0.88)";
+        : tone === "context"
+          ? "rgba(103,232,249,0.88)"
+          : "rgba(196,181,253,0.9)";
   return (
-    <Text style={[styles.sectionLabel, { color }]} numberOfLines={1}>
-      {children}
-    </Text>
+    <View style={styles.sectionLabelWrap}>
+      <Text style={[styles.sectionLabel, { color }]} numberOfLines={1}>
+        {children}
+      </Text>
+    </View>
   );
 }
 
@@ -123,10 +143,14 @@ function EdgeBlock({
   language: GamesLanguage;
   align: "left" | "right";
 }) {
-  const lang = language === "ja" ? "ja" : "en";
+  const lang = resolveLocalizedLang(language);
   const end = align === "right";
   if (edges.length === 0) {
-    return <Text style={[styles.emptyLine, end && styles.textRight]}>—</Text>;
+    return (
+      <Text style={[styles.emptyLine, detailFont(lang), end && styles.textRight]}>
+        —
+      </Text>
+    );
   }
   return (
     <View style={styles.blockStack}>
@@ -135,14 +159,22 @@ function EdgeBlock({
         return (
           <View key={`e-${i}`} style={styles.edgeItem}>
             <Text
-              style={[styles.edgeLabel, end && styles.textRight]}
+              style={[
+                styles.itemLabel,
+                lang === "en" ? styles.itemLabelEn : null,
+                end && styles.textRight,
+              ]}
               numberOfLines={2}
             >
               {edge.label}
             </Text>
             {detail ? (
               <Text
-                style={[styles.edgeDetail, end && styles.textRight]}
+                style={[
+                  styles.itemDetail,
+                  detailFont(lang),
+                  end && styles.textRight,
+                ]}
                 numberOfLines={3}
               >
                 {detail}
@@ -166,25 +198,123 @@ function LineBlock({
   align: "left" | "right";
   tone: "schedule" | "context";
 }) {
-  const lang = language === "ja" ? "ja" : "en";
+  const lang = resolveLocalizedLang(language);
   const end = align === "right";
-  const lineStyle = tone === "schedule" ? styles.scheduleLine : styles.contextLine;
+  const detailTone =
+    tone === "schedule" ? styles.itemDetailSchedule : styles.itemDetailContext;
   if (items.length === 0) {
-    return <Text style={[styles.emptyLine, end && styles.textRight]}>—</Text>;
+    return (
+      <Text style={[styles.emptyLine, detailFont(lang), end && styles.textRight]}>
+        —
+      </Text>
+    );
   }
   return (
     <View style={styles.blockStack}>
-      {items.map((item, i) => (
-        <Text
-          key={`${tone}-${i}`}
-          style={[lineStyle, end && styles.textRight]}
-          numberOfLines={3}
-        >
-          {briefLineText(item, lang)}
-        </Text>
-      ))}
+      {items.map((item, i) => {
+        const { label, body } = splitBriefLineLead(briefLineText(item, lang));
+        return (
+          <View key={`${tone}-${i}`} style={styles.edgeItem}>
+            {label ? (
+              <>
+                <Text
+                  style={[
+                    styles.itemLabel,
+                    lang === "en" ? styles.itemLabelEn : null,
+                    end && styles.textRight,
+                  ]}
+                  numberOfLines={2}
+                >
+                  {label}
+                </Text>
+                <Text
+                  style={[
+                    styles.itemDetail,
+                    detailTone,
+                    detailFont(lang),
+                    end && styles.textRight,
+                  ]}
+                  numberOfLines={3}
+                >
+                  {body}
+                </Text>
+              </>
+            ) : (
+              <Text
+                style={[
+                  styles.itemDetail,
+                  detailTone,
+                  detailFont(lang),
+                  end && styles.textRight,
+                ]}
+                numberOfLines={3}
+              >
+                {body}
+              </Text>
+            )}
+          </View>
+        );
+      })}
     </View>
   );
+}
+
+function PlayerBlock({
+  players,
+  language,
+  align,
+}: {
+  players: ProBriefPlayerItem[];
+  language: GamesLanguage;
+  align: "left" | "right";
+}) {
+  const lang = resolveLocalizedLang(language);
+  const end = align === "right";
+  if (players.length === 0) {
+    return (
+      <Text style={[styles.emptyLine, detailFont(lang), end && styles.textRight]}>
+        —
+      </Text>
+    );
+  }
+  return (
+    <View style={styles.blockStack}>
+      {players.map((player, i) => {
+        const detail = briefPlayerDetail(player, lang);
+        const title = `${player.playerName} · ${player.label}`;
+        return (
+          <View key={`p-${player.playerId ?? i}`} style={styles.edgeItem}>
+            <Text
+              style={[
+                styles.itemLabel,
+                lang === "en" ? styles.itemLabelEn : null,
+                end && styles.textRight,
+              ]}
+              numberOfLines={2}
+            >
+              {title}
+            </Text>
+            {detail ? (
+              <Text
+                style={[
+                  styles.itemDetail,
+                  detailFont(lang),
+                  end && styles.textRight,
+                ]}
+                numberOfLines={3}
+              >
+                {detail}
+              </Text>
+            ) : null}
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
+function detailFont(lang: ReturnType<typeof resolveLocalizedLang>) {
+  return { fontFamily: lang === "ja" ? JP_400 : OXANIUM_600 };
 }
 
 function CompareSection({
@@ -200,11 +330,13 @@ function CompareSection({
 }) {
   return (
     <View style={styles.compareRow}>
-      <View style={[styles.compareSide, styles.compareSideLeft]}>{left}</View>
-      <View style={styles.compareLabelCol}>
+      <View style={styles.compareHead}>
         <SectionLabel tone={tone}>{label}</SectionLabel>
       </View>
-      <View style={[styles.compareSide, styles.compareSideRight]}>{right}</View>
+      <View style={styles.compareCols}>
+        <View style={[styles.compareSide, styles.compareSideLeft]}>{left}</View>
+        <View style={[styles.compareSide, styles.compareSideRight]}>{right}</View>
+      </View>
     </View>
   );
 }
@@ -212,9 +344,49 @@ function CompareSection({
 function PlaceholderBody() {
   return (
     <View style={styles.blockStack}>
-      <Text style={styles.edgeLabel}>······</Text>
-      <Text style={styles.edgeDetail}>······</Text>
-      <Text style={styles.scheduleLine}>······</Text>
+      <Text style={styles.itemLabel}>······</Text>
+      <Text style={[styles.itemDetail, { fontFamily: OXANIUM_600 }]}>······</Text>
+    </View>
+  );
+}
+
+function TitleRow({
+  homeNick,
+  awayNick,
+  homeColor,
+  awayColor,
+}: {
+  homeNick: string;
+  awayNick: string;
+  homeColor: string;
+  awayColor: string;
+}) {
+  return (
+    <View style={styles.titleRow}>
+      <View style={styles.titleSide}>
+        <Text style={[styles.sideTag, { color: hexToRgba(homeColor, 0.9) }]}>
+          HOME
+        </Text>
+        <Text style={[styles.titleNick, { color: homeColor }]} numberOfLines={1}>
+          {homeNick}
+        </Text>
+      </View>
+
+      <View style={styles.proBadgeWrap}>
+        <ProCyberBadgeNative premium />
+      </View>
+
+      <View style={[styles.titleSide, styles.titleSideAway]}>
+        <Text style={[styles.sideTag, { color: hexToRgba(awayColor, 0.9) }]}>
+          AWAY
+        </Text>
+        <Text
+          style={[styles.titleNick, styles.textRight, { color: awayColor }]}
+          numberOfLines={1}
+        >
+          {awayNick}
+        </Text>
+      </View>
     </View>
   );
 }
@@ -229,18 +401,23 @@ export default function PredictProBriefPanelNative({
   locked = false,
   onPressUpgrade,
 }: Props) {
-  const gateLang = language === "ja" ? "ja" : "en";
-  const gate = proInsightGateCopy(gateLang);
+  const gate = proInsightGateCopy(language);
   const homeNick = teamNick(homeTeamId, homeTeamName).toUpperCase();
   const awayNick = teamNick(awayTeamId, awayTeamName).toUpperCase();
   const homeColor = getTeamJerseyPrimaryColor("nba", homeTeamId);
   const awayColor = getTeamJerseyPrimaryColor("nba", awayTeamId);
-  const home = brief?.home ?? EMPTY_CARD;
-  const away = brief?.away ?? EMPTY_CARD;
-  const usePlaceholder = brief == null;
+  const safeBrief = useMemo(() => sanitizeProBriefForDisplay(brief), [brief]);
+  const displayBrief = safeBrief;
+  const home = displayBrief?.home ?? EMPTY_CARD;
+  const away = displayBrief?.away ?? EMPTY_CARD;
+  const homePlayers = home.players ?? [];
+  const awayPlayers = away.players ?? [];
+  const hasPlayers = homePlayers.length > 0 || awayPlayers.length > 0;
+  const usePlaceholder = displayBrief == null;
 
   const body = (
     <View style={styles.body}>
+      <View pointerEvents="none" style={styles.centerRule} />
       <CompareSection
         label="MATCHUP"
         tone="matchup"
@@ -248,14 +425,14 @@ export default function PredictProBriefPanelNative({
           usePlaceholder ? (
             <PlaceholderBody />
           ) : (
-            <EdgeBlock edges={home.edges} language={language} align="right" />
+            <EdgeBlock edges={home.edges} language={language} align="left" />
           )
         }
         right={
           usePlaceholder ? (
             <PlaceholderBody />
           ) : (
-            <EdgeBlock edges={away.edges} language={language} align="left" />
+            <EdgeBlock edges={away.edges} language={language} align="right" />
           )
         }
       />
@@ -269,7 +446,7 @@ export default function PredictProBriefPanelNative({
             <LineBlock
               items={home.schedule}
               language={language}
-              align="right"
+              align="left"
               tone="schedule"
             />
           )
@@ -281,7 +458,7 @@ export default function PredictProBriefPanelNative({
             <LineBlock
               items={away.schedule}
               language={language}
-              align="left"
+              align="right"
               tone="schedule"
             />
           )
@@ -297,7 +474,7 @@ export default function PredictProBriefPanelNative({
             <LineBlock
               items={home.context}
               language={language}
-              align="right"
+              align="left"
               tone="context"
             />
           )
@@ -309,78 +486,89 @@ export default function PredictProBriefPanelNative({
             <LineBlock
               items={away.context}
               language={language}
-              align="left"
+              align="right"
               tone="context"
             />
           )
         }
       />
+      {hasPlayers && !usePlaceholder ? (
+        <CompareSection
+          label="PLAYERS"
+          tone="players"
+          left={
+            <PlayerBlock
+              players={homePlayers}
+              language={language}
+              align="left"
+            />
+          }
+          right={
+            <PlayerBlock
+              players={awayPlayers}
+              language={language}
+              align="right"
+            />
+          }
+        />
+      ) : null}
     </View>
   );
 
   return (
     <View style={styles.shell}>
-      <View style={styles.titleRow}>
-        <View style={styles.titleSide}>
-          <Text style={[styles.sideTag, { color: hexToRgba(homeColor, 0.9) }]}>
-            HOME
-          </Text>
-          <Text
-            style={[styles.titleNick, { color: homeColor }]}
-            numberOfLines={1}
-          >
-            {homeNick}
-          </Text>
-        </View>
+      {!locked ? (
+        <TitleRow
+          homeNick={homeNick}
+          awayNick={awayNick}
+          homeColor={homeColor}
+          awayColor={awayColor}
+        />
+      ) : null}
 
-        <View style={styles.proBadgeWrap}>
-          <ProCyberBadgeNative premium />
-        </View>
-
-        <View style={[styles.titleSide, styles.titleSideAway]}>
-          <Text style={[styles.sideTag, { color: hexToRgba(awayColor, 0.9) }]}>
-            AWAY
-          </Text>
-          <Text
-            style={[styles.titleNick, styles.textRight, { color: awayColor }]}
-            numberOfLines={1}
-          >
-            {awayNick}
-          </Text>
-        </View>
-      </View>
+      {!locked &&
+      !usePlaceholder &&
+      (safeBrief?.sampleNoteJa || safeBrief?.sampleNoteEn) ? (
+        <Text style={styles.sampleNote}>
+          {briefSampleNote(safeBrief, language)}
+        </Text>
+      ) : null}
 
       {locked ? (
         <View style={styles.lockedHost}>
-          <View pointerEvents="none" style={styles.previewClip}>
-            {body}
-          </View>
-          <BlurView
-            intensity={36}
-            tint="dark"
-            style={StyleSheet.absoluteFillObject}
-            {...nativeBlurViewExtraProps()}
-          />
-          <View style={styles.lockedVeil} pointerEvents="none" />
-          <View style={styles.gateOverlay} pointerEvents="box-none">
+          <View style={styles.gateMessageWrap}>
             <View style={styles.gateMessage}>
               <View style={styles.gateCenter}>
-                <Text style={styles.gateEyebrow}>{gate.eyebrow}</Text>
-                <View style={styles.gateBadgeScale}>
-                  <ProCyberBadgeNative premium />
+                <View style={styles.gateEyebrowBlock}>
+                  <View style={styles.gateBrandLogo}>
+                    <UniterzLogoNative width={168} />
+                  </View>
+                  <View style={styles.gateBadgeScale}>
+                    <ProCyberBadgeNative premium />
+                  </View>
                 </View>
-                <Text style={styles.gateTitle}>
-                  <TitleWithBrandFontsNative title={gate.title} />
-                </Text>
+                <TitleWithBrandFontsNative title={gate.title} />
                 <Text style={styles.gateBody}>{gate.body}</Text>
                 {onPressUpgrade ? (
                   <Pressable
                     onPress={onPressUpgrade}
-                    style={styles.cta}
+                    style={({ pressed }) => [
+                      styles.cta,
+                      pressed ? styles.ctaPressed : null,
+                    ]}
                     accessibilityRole="button"
                     accessibilityLabel={gate.cta}
                   >
-                    <Text style={styles.ctaLabel}>{gate.cta}</Text>
+                    {({ pressed }) => (
+                      <Text
+                        style={[
+                          styles.ctaLabel,
+                          pressed ? styles.ctaLabelPressed : null,
+                        ]}
+                      >
+                        {gate.cta}
+                      </Text>
+                    )}
                   </Pressable>
                 ) : null}
               </View>
@@ -403,6 +591,17 @@ export default function PredictProBriefPanelNative({
               </View>
             </View>
           </View>
+
+          {/* ゲート下に実際の PRO INSIGHT 画面例（新 UI） */}
+          <View style={styles.exampleBlock} pointerEvents="none">
+            <Text style={styles.exampleLabel}>{gate.exampleLabel}</Text>
+            <PredictProInsightNarrativePanelNative
+              brief={PRO_INSIGHT_GATE_SAMPLE_BRIEF}
+              language={language}
+              homeTeamName={homeTeamName}
+              awayTeamName={awayTeamName}
+            />
+          </View>
         </View>
       ) : (
         body
@@ -414,8 +613,8 @@ export default function PredictProBriefPanelNative({
 const styles = StyleSheet.create({
   shell: {
     borderWidth: 1,
-    borderColor: "rgba(34,211,238,0.22)",
-    backgroundColor: "rgba(5,10,18,0.88)",
+    borderColor: UNITERZ_PRO_BADGE_GOLD.mid,
+    backgroundColor: "#000000",
     paddingHorizontal: 10,
     paddingVertical: 10,
     overflow: "hidden",
@@ -429,6 +628,13 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
     borderBottomWidth: 1,
     borderBottomColor: "rgba(255,255,255,0.12)",
+  },
+  sampleNote: {
+    fontFamily: OXANIUM_700,
+    fontSize: 10,
+    lineHeight: 14,
+    color: "rgba(253, 230, 138, 0.75)",
+    marginBottom: 8,
   },
   titleSide: {
     flex: 1,
@@ -444,9 +650,9 @@ const styles = StyleSheet.create({
     marginBottom: 3,
   },
   titleNick: {
-    fontFamily: MATCH_CARD_DISPLAY_FONT,
+    fontFamily: MATCH_CARD_TEAM_NAME_FONT,
     fontSize: 18,
-    fontWeight: "400",
+    fontWeight: "800",
     lineHeight: 20,
     letterSpacing: 1.44,
     textTransform: "uppercase",
@@ -460,35 +666,53 @@ const styles = StyleSheet.create({
     transform: [{ scale: 1.18 }],
   },
   body: {
+    position: "relative",
     gap: 0,
   },
+  centerRule: {
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    left: "50%",
+    width: 1,
+    marginLeft: -0.5,
+    backgroundColor: "rgba(0,245,255,0.38)",
+    zIndex: 0,
+  },
   compareRow: {
-    flexDirection: "row",
-    alignItems: "stretch",
-    gap: 6,
+    position: "relative",
+    zIndex: 1,
     paddingVertical: 10,
     borderBottomWidth: 1,
     borderBottomColor: "rgba(255,255,255,0.08)",
   },
+  compareHead: {
+    marginBottom: 8,
+    alignItems: "center",
+    zIndex: 1,
+  },
+  compareCols: {
+    flexDirection: "row",
+    alignItems: "stretch",
+    gap: 16,
+  },
   compareSide: {
     flex: 1,
     minWidth: 0,
-    justifyContent: "center",
-    paddingHorizontal: 2,
-    paddingVertical: 2,
+    justifyContent: "flex-start",
   },
   compareSideLeft: {},
   compareSideRight: {},
-  compareLabelCol: {
-    width: 72,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 2,
+  sectionLabelWrap: {
+    backgroundColor: "#000000",
+    paddingHorizontal: 8,
+    paddingVertical: 1,
+    transform: [{ skewX: "-6deg" }],
   },
   sectionLabel: {
     fontFamily: OXANIUM_800,
     fontSize: 10,
-    letterSpacing: 1.2,
+    letterSpacing: 1.8,
     textTransform: "uppercase",
     textAlign: "center",
   },
@@ -498,29 +722,29 @@ const styles = StyleSheet.create({
   edgeItem: {
     gap: 2,
   },
-  edgeLabel: {
+  /** 全セクション共通の見出し行（試合カード名と同傾き） */
+  itemLabel: {
     fontFamily: OXANIUM_800,
     fontSize: 13,
-    letterSpacing: 0.3,
-    textTransform: "uppercase",
+    letterSpacing: 0.4,
     color: "rgba(255,255,255,0.92)",
+    transform: [{ skewX: "-6deg" }],
   },
-  edgeDetail: {
+  itemLabelEn: {
+    textTransform: "uppercase",
+  },
+  /** 全セクション共通の本文（色だけ tone でわずかに分ける） */
+  itemDetail: {
     fontSize: 12,
     lineHeight: 16,
-    color: "rgba(255,255,255,0.5)",
+    letterSpacing: 0.2,
+    color: "rgba(255,255,255,0.72)",
   },
-  scheduleLine: {
-    fontSize: 13,
-    lineHeight: 18,
-    fontWeight: "500",
-    color: "rgba(255,251,235,0.85)",
+  itemDetailSchedule: {
+    color: "rgba(255,251,235,0.82)",
   },
-  contextLine: {
-    fontSize: 13,
-    lineHeight: 18,
-    fontWeight: "500",
-    color: "rgba(236,254,255,0.8)",
+  itemDetailContext: {
+    color: "rgba(236,254,255,0.82)",
   },
   emptyLine: {
     fontSize: 13,
@@ -531,23 +755,13 @@ const styles = StyleSheet.create({
   },
   lockedHost: {
     position: "relative",
-    overflow: "hidden",
-    minHeight: 320,
+    gap: 16,
   },
-  previewClip: {
-    opacity: 0.9,
-  },
-  lockedVeil: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(4,8,14,0.55)",
-  },
-  gateOverlay: {
-    ...StyleSheet.absoluteFillObject,
+  gateMessageWrap: {
     alignItems: "center",
-    justifyContent: "flex-start",
-    paddingTop: 24,
-    paddingBottom: 20,
-    paddingHorizontal: 8,
+    paddingTop: 8,
+    paddingBottom: 4,
+    paddingHorizontal: 4,
   },
   gateMessage: {
     width: "100%",
@@ -558,16 +772,25 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 10,
   },
-  gateEyebrow: {
-    fontFamily: OXANIUM_700,
-    fontSize: 10,
-    letterSpacing: 2,
-    textTransform: "uppercase",
-    color: "rgba(165,243,252,0.8)",
+  gateEyebrowBlock: {
+    alignItems: "center",
+    gap: 10,
+  },
+  gateBrandLogo: {
+    width: 168,
+    maxWidth: "72%",
+    alignItems: "center",
   },
   gateBadgeScale: {
     transform: [{ scale: 1.45 }],
     marginVertical: 4,
+  },
+  gateTitleRow: {
+    width: "100%",
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    alignItems: "center",
   },
   gateTitle: {
     fontSize: 17,
@@ -588,30 +811,62 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   cta: {
-    minWidth: 160,
-    minHeight: 40,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 2,
-    backgroundColor: "#00F5FF",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.35)",
+    minHeight: 44,
+    minWidth: 168,
     alignItems: "center",
     justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "rgba(252,211,77,0.75)",
+    backgroundColor: "#050508",
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    shadowColor: "#fbbf24",
+    shadowOpacity: 0.22,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 0 },
+  },
+  ctaPressed: {
+    transform: [{ scale: 0.94 }],
+    borderColor: "rgba(253,230,138,0.95)",
+    backgroundColor: "rgba(251,191,36,0.2)",
+    shadowOpacity: 0.4,
+    shadowRadius: 14,
   },
   ctaLabel: {
     fontFamily: OXANIUM_800,
-    fontSize: 12,
-    letterSpacing: 1.2,
-    textAlign: "center",
-    color: "#050508",
+    fontSize: 13,
+    fontWeight: "800",
+    letterSpacing: 1.4,
     textTransform: "uppercase",
+    color: "#fde68a",
+  },
+  ctaLabelPressed: {
+    color: "#fffbeb",
+  },
+  exampleBlock: {
+    gap: 8,
+    paddingTop: 4,
+  },
+  exampleLabel: {
+    fontFamily: OXANIUM_700,
+    fontSize: 10,
+    letterSpacing: 1.6,
+    textTransform: "uppercase",
+    color: "rgba(253,230,138,0.85)",
+    textAlign: "center",
+  },
+  exampleCard: {
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.14)",
+    backgroundColor: "rgba(0,0,0,0.55)",
+    paddingHorizontal: 8,
+    paddingVertical: 10,
   },
   bulletPanel: {
     borderWidth: 1,
     borderColor: "rgba(251,146,60,0.55)",
     backgroundColor: "rgba(249,115,22,0.07)",
-    borderRadius: 2,
+    borderRadius: 0,
     paddingHorizontal: 12,
     paddingVertical: 10,
     gap: 8,
@@ -625,7 +880,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
     width: 20,
     height: 20,
-    borderRadius: 2,
+    borderRadius: 0,
     borderWidth: 1,
     borderColor: "rgba(251,146,60,0.45)",
     backgroundColor: "rgba(249,115,22,0.15)",

@@ -31,7 +31,7 @@ import {
 
 export function useNativeResultPosts(
   uid: string | null | undefined,
-  language: "ja" | "en",
+  language: import("../../../../../lib/i18n/language").Language,
   options?: {
     league: ResultListLeagueTab | null;
     enabled?: boolean;
@@ -230,7 +230,7 @@ export function useNativeResultPosts(
     setHasFetchedOnce(false);
     setLoading(true);
     void loadPage({ reset: true });
-  }, [uid, language, league, fetchEnabled, loadPage, applyListEntry]);
+  }, [uid, league, fetchEnabled, loadPage, applyListEntry]);
 
   const grouped = useMemo(
     () => groupPostsByResultDay(posts, language),

@@ -41,3 +41,8 @@ export const CYBER_CHAMFER_DELETE_SHEEN = "rgba(248,113,113,0.42)";
 export const CYBER_CHAMFER_DELETE_STROKE_HOVER = "rgba(248,113,113,0.85)";
 
 export const CYBER_CHAMFER_DELETE_ICON_HOVER = "#fecaca";
+
+/** 白枠メニュー（リザルトカード等）— 枠のみ白、アイコンは黄のまま可 */
+export const CYBER_CHAMFER_WHITE_STROKE = "rgba(255,255,255,0.55)";
+
+export const CYBER_CHAMFER_WHITE_ICON = "rgba(255,255,255,0.92)";

@@ -2,15 +2,15 @@
  * 本番／DEV 共用 — リザルト詳細ボディ（カード面 + 中央値/最高 + Top10 + 内訳）。
  * `ResultDetailViewModel` をそのまま描画。
  */
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useReducedMotion } from "react-native-reanimated";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { doc, getDoc } from "firebase/firestore";
 import { db } from "../../lib/firebase";
 import { ResultCardDesignFaceNative } from "./ResultCardDesignPreviewScreenNative";
 import { useLiveGameStats } from "../../../../../lib/games/useLiveGameStats";
 import { getUniterzApiBaseUrl } from "../games/submitPredictionApi";
+import { useScreenActiveNative } from "../../hooks/useScreenActiveNative";
 import LiveGameStatsPanelNative from "../games/live/LiveGameStatsPanelNative";
 import LiveGameStatsPlaceholderNative from "../games/live/LiveGameStatsPlaceholderNative";
 import {
@@ -22,6 +22,7 @@ import { CyberRankingListRowNative } from "../rankings/CyberRankingListRowNative
 import { MATCH_CARD_SCORE_FONT } from "../games/matchCardTypography";
 import { METRIC_FONT } from "../rankings/rankingsUiTheme";
 import { CYBER_LIST_CYAN } from "../../../../../lib/rankings/cyberRankVisual";
+import type { Language } from "../../../../../lib/i18n/language";
 import { WeeklyReportCardShell } from "../profile/reports/reportCardShellNative";
 import { SCORE_BREAKDOWN_COLORS } from "../../../../../lib/result/resultScoreBreakdownColors";
 import type {
@@ -32,16 +33,18 @@ import type {
 import type { ResultTopScorerMarketView } from "../../../../../lib/result/resultTopScorerMarket";
 import type { GamePointsTopEntryV1 } from "../../../../../lib/results/gamePointsTop";
 import { profilePathKeyFromRow } from "../../../../../lib/profile/profilePathKey";
-import { warmPublicProfileNative } from "../profile/warmPublicProfileNative";
+import type { OpenPublicProfileWarm } from "../../navigation/navigateToPublicProfileNative";
+import { useNbaTopScorerCandidates } from "../../../../../lib/nba/useNbaTopScorerCandidates";
+import { getCachedGameDocForResult } from "../../../../../lib/result/resultDetailFirestoreCache";
 
 const ACCENT = "#00F5FF";
 
 async function loadGameDocForLiveStats(
   gameId: string
 ): Promise<Record<string, unknown> | null> {
-  const snap = await getDoc(doc(db, "games", gameId));
-  if (!snap.exists()) return null;
-  return { id: snap.id, ...snap.data() };
+  const { exists, data } = await getCachedGameDocForResult(gameId, db);
+  if (!exists || !data) return null;
+  return { id: gameId, ...data };
 }
 
 const TOP_SCORER_SLICE_COLORS = [
@@ -165,8 +168,8 @@ function MatchStatsPanel({
                 segments={donutSegments}
                 total={hitRate ?? slices[0]?.pct ?? 0}
                 totalLabel={ja ? "的中率%" : "HIT %"}
-                size={108}
-                thickness={14}
+                size={92}
+                thickness={12}
               />
               <View style={styles.topScorerLegend}>
                 {slices.map((slice, i) => {
@@ -200,7 +203,8 @@ function MatchStatsPanel({
                         </View>
                         {showPoints ? (
                           <Text style={styles.topScorerPoints}>
-                            {slice.points} PT
+                            {slice.points}
+                            <Text style={styles.topScorerPtsUnit}> PTS</Text>
                           </Text>
                         ) : null}
                       </View>
@@ -233,7 +237,8 @@ function MatchStatsPanel({
                 {myPickSlice?.points != null &&
                 Number.isFinite(myPickSlice.points) ? (
                   <Text style={styles.myPickPoints}>
-                    {myPickSlice.points} PT
+                    {myPickSlice.points}
+                    <Text style={styles.myPickPtsUnit}> PTS</Text>
                   </Text>
                 ) : null}
               </View>
@@ -264,20 +269,24 @@ function MatchStatsPanel({
 
 function Top10Panel({
   ja,
+  frameColor,
   entries,
   onOpenProfile,
 }: {
   ja: boolean;
   frameColor: string;
   entries: GamePointsTopEntryV1[];
-  onOpenProfile?: (handle: string) => void;
+  onOpenProfile?: (handle: string, warm?: OpenPublicProfileWarm) => void;
 }) {
   const reduceMotion = useReducedMotion() ?? false;
   if (entries.length === 0) return null;
   return (
     <View style={styles.sectionBlock}>
       <SectionHeader title={ja ? "得点上位" : "TOP SCORES"} accent={ACCENT} />
-      <View>
+      <WeeklyReportCardShell
+        hideGrid
+        style={[styles.sectionCard, { borderColor: frameColor }]}
+      >
         {entries.map((row) => {
           const profileKey = profilePathKeyFromRow({
             uid: row.uid,
@@ -295,29 +304,28 @@ function Top10Panel({
               language={ja ? "ja" : "en"}
               isPro={row.isPro}
               hideListMeta
+              compact
+              scoreInline
               animateCrown={row.rank === 1}
               reduceMotion={reduceMotion}
               onPress={
                 onOpenProfile && profileKey
                   ? () => {
-                      warmPublicProfileNative({
-                        routeKey: profileKey,
+                      onOpenProfile(profileKey, {
                         uid: row.uid,
                         handle: row.handle === "—" ? "" : row.handle,
                         displayName: row.displayName,
                         photoURL: row.photoURL,
                         plan: row.isPro ? "pro" : "free",
                         countryCode: row.countryCode,
-                        skipStatsPrime: true,
                       });
-                      onOpenProfile(profileKey);
                     }
                   : undefined
               }
             />
           );
         })}
-      </View>
+      </WeeklyReportCardShell>
     </View>
   );
 }
@@ -487,9 +495,11 @@ function ScoreBreakdownPanel({
 export type ResultDetailBodySections = "full" | "cardAndLiveStats";
 
 type Props = {
-  language: "ja" | "en";
+  language: Language;
   view: ResultDetailViewModel;
-  onOpenProfile?: (handle: string) => void;
+  onOpenProfile?: (handle: string, warm?: OpenPublicProfileWarm) => void;
+  onOpenTeamDetail?: (teamId: string) => void;
+  onOpenPlayerDetail?: (playerId: string) => void;
   /** ScrollView の contentContainerStyle に足す余白 */
   contentPaddingBottom?: number;
   /**
@@ -504,6 +514,8 @@ export default function ResultDetailBodyNative({
   language,
   view,
   onOpenProfile,
+  onOpenTeamDetail,
+  onOpenPlayerDetail,
   contentPaddingBottom = 24,
   sections = "full",
 }: Props) {
@@ -511,19 +523,43 @@ export default function ResultDetailBodyNative({
   const frameColor = hexToRgba(ACCENT, 0.4);
   const dividerColor = hexToRgba(ACCENT, 0.22);
   const matchStats = view.matchStats;
-  const cardBadge = view.card.outcomeBadge ?? "hit";
+  const cardBadge = view.card.outcomeBadge ?? undefined;
   const scoreRel = view.card.scoreRel;
   const cardAndLiveStats = sections === "cardAndLiveStats";
   const nbaGameId =
     String(view.card.league ?? "").toLowerCase() === "nba"
       ? view.card.gameId || null
       : null;
+  const needScorerName = Boolean(
+    !view.card.topScorer &&
+      view.card.topScorerPlayerId &&
+      view.card.topScorerTeamId
+  );
+  const { candidates: topScorerCandidates } = useNbaTopScorerCandidates({
+    homeTeamId: view.card.homeTeamId,
+    awayTeamId: view.card.awayTeamId,
+    enabled: needScorerName,
+    apiBaseUrl: getUniterzApiBaseUrl(),
+  });
+  const cardFace = useMemo(() => {
+    if (view.card.topScorer) return view.card;
+    const pid = view.card.topScorerPlayerId?.trim();
+    const tid = view.card.topScorerTeamId?.trim();
+    if (!pid || !tid) return view.card;
+    const hit = topScorerCandidates.find(
+      (c) => c.playerId === pid && c.teamId === tid
+    );
+    if (!hit?.name) return view.card;
+    return { ...view.card, topScorer: hit.name };
+  }, [topScorerCandidates, view.card]);
+  const screenActive = useScreenActiveNative();
   const { report: liveStatsReport, loading: liveStatsLoading } = useLiveGameStats(
     nbaGameId,
-    Boolean(nbaGameId) && cardAndLiveStats,
+    Boolean(nbaGameId),
     {
       apiBaseUrl: getUniterzApiBaseUrl(),
       loadGameDoc: loadGameDocForLiveStats,
+      paused: !screenActive,
     }
   );
   const cardTargetRef = useRef<View>(null);
@@ -563,7 +599,13 @@ export default function ResultDetailBodyNative({
             bare
             badge={cardBadge}
             scoreRel={scoreRel}
-            face={view.card}
+            face={cardFace}
+            pickup={cardFace.isPickup}
+            live={
+              cardFace.resultHome == null &&
+              cardFace.resultAway == null &&
+              Boolean(liveStatsReport)
+            }
             tutorialMetricsTargetId="result-detail-metrics"
           />
         </WeeklyReportCardShell>
@@ -577,6 +619,8 @@ export default function ResultDetailBodyNative({
               report={liveStatsReport}
               language={ja ? "ja" : "en"}
               omitScoreHeader
+              onOpenTeamDetail={onOpenTeamDetail}
+              onOpenPlayerDetail={onOpenPlayerDetail}
             />
           ) : (
             <LiveGameStatsPlaceholderNative
@@ -617,6 +661,26 @@ export default function ResultDetailBodyNative({
             frameColor={frameColor}
             breakdown={view.breakdown}
           />
+
+          {nbaGameId && (liveStatsReport || liveStatsLoading) ? (
+            <>
+              <View style={[styles.divider, { backgroundColor: dividerColor }]} />
+              {liveStatsReport ? (
+                <LiveGameStatsPanelNative
+                  report={liveStatsReport}
+                  language={ja ? "ja" : "en"}
+                  omitScoreHeader
+                  onOpenTeamDetail={onOpenTeamDetail}
+                  onOpenPlayerDetail={onOpenPlayerDetail}
+                />
+              ) : (
+                <LiveGameStatsPlaceholderNative
+                  language={ja ? "ja" : "en"}
+                  loading={liveStatsLoading}
+                />
+              )}
+            </>
+          ) : null}
         </>
       )}
     </View>
@@ -639,7 +703,7 @@ const styles = StyleSheet.create({
     marginVertical: 16,
   },
   sectionBlock: {
-    gap: 10,
+    gap: 8,
   },
   sectionTitleRow: {
     flexDirection: "row",
@@ -660,10 +724,10 @@ const styles = StyleSheet.create({
   },
   sectionCard: {
     borderWidth: 1,
-    backgroundColor: "transparent",
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    gap: 10,
+    backgroundColor: "#000",
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    gap: 8,
   },
   matchStatsRow: {
     flexDirection: "row",
@@ -672,8 +736,8 @@ const styles = StyleSheet.create({
   matchStatCell: {
     flex: 1,
     alignItems: "center",
-    gap: 4,
-    paddingVertical: 4,
+    gap: 2,
+    paddingVertical: 2,
   },
   matchStatRule: {
     width: 1,
@@ -681,15 +745,15 @@ const styles = StyleSheet.create({
   },
   matchStatLabel: {
     fontFamily: METRIC_FONT,
-    fontSize: 9,
+    fontSize: 8,
     fontWeight: "700",
-    letterSpacing: 1.2,
+    letterSpacing: 1.1,
     textTransform: "uppercase",
     color: "rgba(148,163,184,0.88)",
   },
   matchStatValue: {
     fontFamily: MATCH_CARD_SCORE_FONT,
-    fontSize: 28,
+    fontSize: 22,
     fontWeight: "900",
     fontStyle: "italic",
     color: "#F8FAFC",
@@ -699,22 +763,22 @@ const styles = StyleSheet.create({
   },
   matchStatSub: {
     fontFamily: METRIC_FONT,
-    fontSize: 9,
-    letterSpacing: 0.6,
+    fontSize: 8,
+    letterSpacing: 0.5,
     color: "rgba(148,163,184,0.7)",
   },
   topScorerRule: {
     height: StyleSheet.hairlineWidth,
-    marginTop: 14,
-    marginBottom: 12,
+    marginTop: 10,
+    marginBottom: 8,
   },
   topScorerSectionLabel: {
     fontFamily: METRIC_FONT,
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: "800",
-    letterSpacing: 1.4,
+    letterSpacing: 1.3,
     color: hexToRgba(ACCENT, 0.72),
-    marginBottom: 10,
+    marginBottom: 8,
   },
   topScorerRow: {
     flexDirection: "row",
@@ -757,11 +821,19 @@ const styles = StyleSheet.create({
   },
   topScorerPoints: {
     fontFamily: MATCH_CARD_SCORE_FONT,
-    fontSize: 13,
+    fontSize: 17,
     fontWeight: "800",
     fontStyle: "italic",
-    letterSpacing: 0.4,
-    color: "rgba(226,232,240,0.82)",
+    letterSpacing: 0.3,
+    color: "rgba(248,250,252,0.95)",
+  },
+  topScorerPtsUnit: {
+    fontFamily: METRIC_FONT,
+    fontSize: 11,
+    fontWeight: "700",
+    fontStyle: "normal",
+    letterSpacing: 0.8,
+    color: "rgba(148,163,184,0.85)",
   },
   topScorerPct: {
     fontFamily: MATCH_CARD_SCORE_FONT,
@@ -812,10 +884,19 @@ const styles = StyleSheet.create({
   },
   myPickPoints: {
     fontFamily: MATCH_CARD_SCORE_FONT,
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: "800",
     fontStyle: "italic",
-    color: "rgba(226,232,240,0.78)",
+    letterSpacing: 0.3,
+    color: "rgba(248,250,252,0.95)",
+  },
+  myPickPtsUnit: {
+    fontFamily: METRIC_FONT,
+    fontSize: 10,
+    fontWeight: "700",
+    fontStyle: "normal",
+    letterSpacing: 0.8,
+    color: "rgba(148,163,184,0.85)",
   },
   myPickHitCluster: {
     flexDirection: "row",

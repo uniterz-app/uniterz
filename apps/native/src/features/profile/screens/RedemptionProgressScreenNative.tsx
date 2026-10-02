@@ -4,6 +4,7 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Image,
   Pressable,
   StyleSheet,
   Text,
@@ -14,6 +15,8 @@ import type { RouteProp } from "@react-navigation/native";
 import LegalPageLayoutNative from "../../legal/LegalPageLayoutNative";
 import { useFirebaseUser } from "../../../auth/FirebaseUserProvider";
 import { useNativeUserLanguage } from "../../../hooks/useNativeUserLanguage";
+import { DATE_LOCALE } from "../../../../../../lib/i18n/language";
+import { L, resolveLocalizedLang } from "../../../../../../lib/i18n/localize";
 import type { ProfileStackParamList } from "../../../navigation/types";
 import {
   cancelMeRedemptionNative,
@@ -36,9 +39,8 @@ export default function RedemptionProgressScreenNative() {
   const id = route.params?.id ?? "";
   const { fUser } = useFirebaseUser();
   const { language } = useNativeUserLanguage(fUser?.uid);
-  const isJa = language === "ja";
-  const gateLang = isJa ? "ja" : "en";
-  const batch = redemptionBatchScheduleCopy(gateLang);
+  const lang = resolveLocalizedLang(language);
+  const batch = redemptionBatchScheduleCopy(lang);
 
   const [request, setRequest] = useState<RedemptionRequest | null>(null);
   const [loading, setLoading] = useState(true);
@@ -74,30 +76,30 @@ export default function RedemptionProgressScreenNative() {
     <LegalPageLayoutNative
       title="TRACK"
       eyebrow="UNIT EXCHANGE"
-      description={
-        isJa
-          ? "購入は月末まとめ（おおよそ25日前後）。"
-          : "Purchase is batched near month-end (~25th)."
-      }
+      description={L(lang, {
+        ja: "申請から配送までの進捗を確認できます。",
+        en: "Track your request from review through delivery.",
+        ko: "신청부터 배송까지 진행을 확인할 수 있습니다.",
+        zh: "可查看从申请到配送的进度。",
+        es: "Sigue tu solicitud desde la revisión hasta la entrega.",
+        pt: "Acompanhe do pedido à entrega.",
+        fr: "Suivez de la revue à la livraison.",
+      })}
     >
-      <View style={styles.batchCard}>
-        <Text style={styles.batchBody}>{batch.detail}</Text>
-      </View>
-
       {loading ? (
         <ActivityIndicator color="#67e8f9" />
       ) : error ? (
         <Text style={styles.error}>{error}</Text>
       ) : !request ? (
         <Text style={styles.muted}>
-          {isJa ? "申請が見つかりません。" : "Not found."}
+          {L(lang, { ja: "申請が見つかりません。", en: "Not found.", ko: "신청을 찾을 수 없습니다.", zh: "未找到申请。", es: "No encontrado.", pt: "Não encontrado.", fr: "Introuvable." })}
         </Text>
       ) : (
         <>
           <View style={styles.card}>
             <Text style={styles.title}>{request.productName}</Text>
             <Text style={styles.meta}>
-              {redemptionStatusLabel(request.status, gateLang)} ·{" "}
+              {redemptionStatusLabel(request.status, lang)} ·{" "}
               {request.unitsRequired} Unit
             </Text>
             {request.status === "pending" ||
@@ -114,6 +116,12 @@ export default function RedemptionProgressScreenNative() {
             ) : null}
             {request.adminNote ? (
               <Text style={styles.note}>{request.adminNote}</Text>
+            ) : null}
+            {request.imageUrl ? (
+              <Image
+                source={{ uri: request.imageUrl }}
+                style={styles.productImage}
+              />
             ) : null}
           </View>
 
@@ -134,27 +142,27 @@ export default function RedemptionProgressScreenNative() {
                       {String(i + 1).padStart(2, "0")}
                     </Text>
                     <Text style={styles.stepLabel}>
-                      {redemptionStatusLabel(step, gateLang)}
+                      {redemptionStatusLabel(step, lang)}
                     </Text>
                   </View>
                 );
               })
             : (
               <Text style={styles.bad}>
-                {redemptionStatusLabel(request.status, gateLang)}
+                {redemptionStatusLabel(request.status, lang)}
               </Text>
             )}
 
-          <Text style={styles.section}>{isJa ? "履歴" : "Timeline"}</Text>
+          <Text style={styles.section}>{L(lang, { ja: "履歴", en: "Timeline", ko: "이력", zh: "时间线", es: "Historial", pt: "Linha do tempo", fr: "Historique" })}</Text>
           {[...request.timeline].reverse().map((ev, i) => (
             <Text key={`${ev.status}-${ev.atMs}-${i}`} style={styles.timeline}>
               {ev.atMs
                 ? new Date(ev.atMs).toLocaleDateString(
-                    isJa ? "ja-JP" : "en-US",
+                    DATE_LOCALE[lang],
                     { month: "short", day: "numeric" }
                   )
                 : "—"}{" "}
-              · {redemptionStatusLabel(ev.status, gateLang)}
+              · {redemptionStatusLabel(ev.status, lang)}
               {ev.note ? ` — ${ev.note}` : ""}
             </Text>
           ))}
@@ -175,7 +183,7 @@ export default function RedemptionProgressScreenNative() {
                 }}
               >
                 <Text style={styles.primaryBtnText}>
-                  {isJa ? "申請を送信" : "Submit draft"}
+                  {L(lang, { ja: "申請を送信", en: "Submit draft", ko: "신청 제출", zh: "提交申请", es: "Enviar borrador", pt: "Enviar rascunho", fr: "Envoyer le brouillon" })}
                 </Text>
               </Pressable>
             ) : null}
@@ -194,7 +202,7 @@ export default function RedemptionProgressScreenNative() {
                 }}
               >
                 <Text style={styles.dangerBtnText}>
-                  {isJa ? "取り消す" : "Cancel"}
+                  {L(lang, { ja: "取り消す", en: "Cancel", ko: "취소", zh: "取消", es: "Cancelar", pt: "Cancelar", fr: "Annuler" })}
                 </Text>
               </Pressable>
             ) : null}
@@ -206,19 +214,6 @@ export default function RedemptionProgressScreenNative() {
 }
 
 const styles = StyleSheet.create({
-  batchCard: {
-    marginBottom: 12,
-    padding: 12,
-    borderRadius: 2,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "rgba(103,232,249,0.3)",
-    backgroundColor: "rgba(34,211,238,0.06)",
-  },
-  batchBody: {
-    fontSize: 12,
-    lineHeight: 18,
-    color: "rgba(236,254,255,0.85)",
-  },
   card: {
     marginBottom: 12,
     padding: 12,
@@ -232,6 +227,14 @@ const styles = StyleSheet.create({
   hint: { marginTop: 8, fontSize: 12, color: "rgba(165,243,252,0.85)" },
   track: { marginTop: 8, fontSize: 12, color: "rgba(165,243,252,0.9)" },
   note: { marginTop: 8, fontSize: 12, color: "rgba(253,230,138,0.85)" },
+  productImage: {
+    marginTop: 10,
+    width: "100%",
+    height: 180,
+    resizeMode: "contain",
+    backgroundColor: "rgba(0,0,0,0.35)",
+    borderRadius: 2,
+  },
   step: {
     flexDirection: "row",
     alignItems: "center",

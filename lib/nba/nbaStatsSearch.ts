@@ -1,19 +1,13 @@
 /**
  * STATS ハブ用: チーム / 選手の前方・部分一致検索。
- * 現状はモック索引（リーグ表 + リーダー表）。
+ * 索引はリーグ表 / リーダー表の共有スナップショットから切る（モックなし）。
  */
 import { TEAM_SHORT } from "@/lib/team-short";
 import { NBA_TEAM_NAME_BY_ID } from "@/lib/nba-team-names";
 import { getMobileTeamName } from "@/lib/team-name-split-mobile";
-import { getNbaLeagueTeamStatsMock } from "@/lib/predict/nbaLeagueTeamStatsMocks";
-import {
-  NBA_BDL_PLAYER_LEADER_STAT_TYPES,
-  getNbaPlayerStatLeadersMock,
-} from "@/lib/predict/nbaPlayerStatLeadersMocks";
-import {
-  getNbaPlayerDetailPreview,
-  listNbaPlayerDetailPreviewSeeds,
-} from "@/lib/predict/nbaPlayerDetailPreviewMocks";
+import { formatNbaPlayerListName } from "@/lib/nba/formatNbaPlayerListName";
+import type { NbaLeagueTeamStatsBundle } from "@/lib/predict/nbaLeagueTeamStatsMocks";
+import type { NbaPlayerStatLeadersBundle } from "@/lib/predict/nbaPlayerStatLeadersMocks";
 
 export type NbaStatsSearchKind = "team" | "player";
 
@@ -23,6 +17,20 @@ export type NbaStatsSearchHit = {
   name: string;
   abbr: string;
   teamId?: string;
+  /** 表示短縮前の氏名など、検索用に残す */
+  matchText?: string;
+};
+
+export type NbaStatsSearchBundles = {
+  team?: NbaLeagueTeamStatsBundle;
+  player?: NbaPlayerStatLeadersBundle;
+};
+
+const EMPTY_TEAM_BUNDLE: NbaLeagueTeamStatsBundle = {
+  season: [],
+  playoffs: [],
+  last10: [],
+  asOfLabel: "UNAVAILABLE",
 };
 
 function normalizeQuery(q: string): string {
@@ -50,74 +58,62 @@ function scoreMatch(hay: string, q: string): number {
   return 0;
 }
 
-let teamIndexCache: NbaStatsSearchHit[] | null = null;
-let playerIndexCache: NbaStatsSearchHit[] | null = null;
-
-export function listNbaTeamSearchIndex(): NbaStatsSearchHit[] {
-  if (teamIndexCache) return teamIndexCache;
-  const rows = getNbaLeagueTeamStatsMock().season;
-  teamIndexCache = rows.map((row) => {
+export function listNbaTeamSearchIndex(
+  bundle: NbaLeagueTeamStatsBundle = EMPTY_TEAM_BUNDLE
+): NbaStatsSearchHit[] {
+  return bundle.season.map((row) => {
     const nick = getMobileTeamName("nba", row.teamName);
     const abbr = TEAM_SHORT[row.teamId] ?? row.teamId.replace(/^nba-/i, "");
     const full = NBA_TEAM_NAME_BY_ID[row.teamId] ?? row.teamName;
     return {
-      kind: "team",
+      kind: "team" as const,
       id: row.teamId,
       name: nick || full,
       abbr: abbr.toUpperCase(),
     };
   });
-  return teamIndexCache;
 }
 
-export function listNbaPlayerSearchIndex(): NbaStatsSearchHit[] {
-  if (playerIndexCache) return playerIndexCache;
+export function listNbaPlayerSearchIndex(
+  leaders?: NbaPlayerStatLeadersBundle | null
+): NbaStatsSearchHit[] {
   const seen = new Map<string, NbaStatsSearchHit>();
+  if (!leaders) return [];
 
-  for (const seed of listNbaPlayerDetailPreviewSeeds()) {
-    const detail = getNbaPlayerDetailPreview(seed.playerId);
-    const abbr = TEAM_SHORT[detail.teamId] ?? detail.teamAbbr;
-    seen.set(seed.playerId, {
-      kind: "player",
-      id: seed.playerId,
-      name: `${detail.firstName} ${detail.lastName}`,
-      abbr: abbr.toUpperCase(),
-      teamId: detail.teamId,
-    });
-  }
-
-  const leaders = getNbaPlayerStatLeadersMock().season;
-  for (const statType of NBA_BDL_PLAYER_LEADER_STAT_TYPES) {
-    for (const row of leaders[statType]) {
+  for (const rows of Object.values(leaders.season)) {
+    for (const row of rows) {
       if (seen.has(row.playerId)) continue;
       seen.set(row.playerId, {
         kind: "player",
         id: row.playerId,
-        name: row.playerName,
+        name: formatNbaPlayerListName(row.playerName, row.playerId),
         abbr: (
           TEAM_SHORT[row.teamId] ?? row.teamId.replace(/^nba-/i, "")
         ).toUpperCase(),
         teamId: row.teamId,
+        matchText: row.playerName,
       });
     }
   }
 
-  playerIndexCache = [...seen.values()];
-  return playerIndexCache;
+  return [...seen.values()];
 }
 
 export function searchNbaStatsIndex(
   query: string,
   kind: NbaStatsSearchKind,
-  limit = 12
+  limit = 12,
+  bundles?: NbaStatsSearchBundles
 ): NbaStatsSearchHit[] {
   const q = normalizeQuery(query);
   if (q.length < 1) return [];
   const source =
-    kind === "team" ? listNbaTeamSearchIndex() : listNbaPlayerSearchIndex();
+    kind === "team"
+      ? listNbaTeamSearchIndex(bundles?.team)
+      : listNbaPlayerSearchIndex(bundles?.player);
   return source
     .map((hit) => {
-      const hay = haystack(hit.name, hit.abbr, hit.teamId, hit.id);
+      const hay = haystack(hit.name, hit.matchText, hit.abbr, hit.teamId, hit.id);
       return { hit, score: scoreMatch(hay, q) };
     })
     .filter((r) => r.score > 0)

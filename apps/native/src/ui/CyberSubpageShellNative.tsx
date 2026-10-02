@@ -2,7 +2,8 @@
  * Web `CyberSubpageShell` 相当。
  * 戻る（角切り）+ eyebrow + サイバー題名（中央）+ 説明は右上はてな（オーバーレイ）。
  */
-import { useLayoutEffect, useState, type ReactNode } from "react";
+import { useCallback, useState, type ReactNode } from "react";
+import { useFocusEffect } from "@react-navigation/native";
 import {
   Modal,
   Platform,
@@ -16,6 +17,11 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { acquireAppBrandShelfHidden } from "../../../../lib/ui/appBrandShelfVisibility";
+import {
+  acquireAppBrandWordmark,
+  isHeaderWordmark,
+} from "../../../../lib/ui/headerWordmark";
+import { uniterzBrandShelfOffsetTop } from "../features/UniterzBrandShelfNative";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import Animated, { useReducedMotion } from "react-native-reanimated";
 import { RankingsPageTitleCyberNative } from "../features/rankings/RankingsPageTitleCyberNative";
@@ -25,20 +31,7 @@ import {
   nbaSubpageTitleEntering,
 } from "../features/games/gamesNbaSubpageMotion";
 import ProfileBackEdgeHandleNative from "../features/profile/ProfileBackEdgeHandleNative";
-
-/** Web `CyberHelpMark` 相当 — グロー付き ? のみ */
-function CyberHelpMarkNative({ active }: { active: boolean }) {
-  return (
-    <View style={[styles.helpMark, active && styles.helpMarkActive]}>
-      <Text
-        style={[styles.helpGlyph, active && styles.helpGlyphActive]}
-        maxFontSizeMultiplier={1.1}
-      >
-        ?
-      </Text>
-    </View>
-  );
-}
+import CyberHelpMarkNative from "./CyberHelpMarkNative";
 
 /** Web `CyberHelpPanel` 相当 — オーバーレイ内カード */
 function CyberHelpPanelNative({
@@ -117,6 +110,10 @@ export type CyberSubpageHeaderNativeProps = {
   title: string;
   subtitle?: string;
   /**
+   * 右上はてな押下時。指定時は既定の subtitle オーバーレイの代わりに呼ぶ。
+   */
+  onHelpPress?: () => void;
+  /**
    * 右上はてなの左に置く追加アクション（例: プレビュー用バーガー）。
    * はてなと同じ 40px タップ領域を想定。
    */
@@ -136,6 +133,11 @@ export type CyberSubpageHeaderNativeProps = {
    * 既定は埋め込み以外 true。Settings モーダルなど SafeArea 済みは false。
    */
   hideBrandShelf?: boolean;
+  /**
+   * ページ名は上部ワードマーク（RESULT / RANKING と同じ）に出す。
+   * このバーのタイトルは出さない。
+   */
+  titleInBrandShelf?: boolean;
 };
 
 /** Web `CyberSubpageHeader` 相当 */
@@ -143,12 +145,14 @@ export function CyberSubpageHeaderNative({
   eyebrow = "PROFILE",
   title,
   subtitle,
+  onHelpPress,
   headerTrailing,
   onBack,
   edgeBack = true,
   hideBack,
   embedded = false,
   hideBrandShelf,
+  titleInBrandShelf = false,
 }: CyberSubpageHeaderNativeProps) {
   const useEdgeBack = hideBack ?? edgeBack;
   const hideShelf = hideBrandShelf ?? !embedded;
@@ -156,12 +160,62 @@ export function CyberSubpageHeaderNative({
   const [helpOpen, setHelpOpen] = useState(false);
   const reduceMotion = useReducedMotion();
   const motionOn = reduceMotion !== true;
-  const hasRightCluster = Boolean(subtitle || headerTrailing);
+  const showHelp = Boolean(subtitle || onHelpPress);
+  const hasRightCluster = Boolean(showHelp || headerTrailing);
 
-  useLayoutEffect(() => {
-    if (!hideShelf) return;
-    return acquireAppBrandShelfHidden();
-  }, [hideShelf]);
+  const openHelp = () => {
+    if (onHelpPress) {
+      onHelpPress();
+      return;
+    }
+    setHelpOpen(true);
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!hideShelf) return;
+      return acquireAppBrandShelfHidden();
+    }, [hideShelf])
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!titleInBrandShelf || !isHeaderWordmark(title)) return;
+      return acquireAppBrandWordmark(title);
+    }, [titleInBrandShelf, title])
+  );
+
+  if (titleInBrandShelf) {
+    if (!showHelp && !headerTrailing) return null;
+    return (
+      <View style={styles.shelfHelpRow}>
+        {headerTrailing}
+        {showHelp ? (
+          <>
+            <Pressable
+              onPress={openHelp}
+              accessibilityRole="button"
+              accessibilityLabel="説明"
+              accessibilityState={onHelpPress ? undefined : { expanded: helpOpen }}
+              style={({ pressed }) => [
+                styles.helpBtn,
+                pressed && styles.helpBtnPressed,
+              ]}
+            >
+              <CyberHelpMarkNative active={onHelpPress ? false : helpOpen} />
+            </Pressable>
+            {!onHelpPress && subtitle ? (
+              <CyberHelpOverlayNative
+                open={helpOpen}
+                text={subtitle}
+                onClose={() => setHelpOpen(false)}
+              />
+            ) : null}
+          </>
+        ) : null}
+      </View>
+    );
+  }
 
   const HeaderWrap = embedded ? View : Animated.View;
   const TitleWrap = embedded ? View : Animated.View;
@@ -200,7 +254,7 @@ export function CyberSubpageHeaderNative({
         <TitleWrap
           style={[
             styles.titleBlock,
-            headerTrailing && subtitle ? styles.titleBlockWide : null,
+            headerTrailing && showHelp ? styles.titleBlockWide : null,
           ]}
           pointerEvents="none"
           {...(!embedded && motionOn
@@ -215,18 +269,20 @@ export function CyberSubpageHeaderNative({
         {hasRightCluster ? (
           <View style={styles.rightCluster}>
             {headerTrailing}
-            {subtitle ? (
+            {showHelp ? (
               <Pressable
-                onPress={() => setHelpOpen(true)}
+                onPress={openHelp}
                 accessibilityRole="button"
                 accessibilityLabel="説明"
-                accessibilityState={{ expanded: helpOpen }}
+                accessibilityState={
+                  onHelpPress ? undefined : { expanded: helpOpen }
+                }
                 style={({ pressed }) => [
                   styles.helpBtn,
                   pressed && styles.helpBtnPressed,
                 ]}
               >
-                <CyberHelpMarkNative active={helpOpen} />
+                <CyberHelpMarkNative active={onHelpPress ? false : helpOpen} />
               </Pressable>
             ) : null}
           </View>
@@ -235,7 +291,7 @@ export function CyberSubpageHeaderNative({
         )}
       </View>
 
-      {subtitle ? (
+      {!onHelpPress && subtitle ? (
         <CyberHelpOverlayNative
           open={helpOpen}
           text={subtitle}
@@ -259,10 +315,13 @@ export default function CyberSubpageShellNative({
   eyebrow = "NBA · 2026-27",
   title,
   subtitle,
+  onHelpPress,
   headerTrailing,
   onBack,
   edgeBack = true,
   hideBack,
+  hideBrandShelf = true,
+  titleInBrandShelf = false,
   children,
   scroll = true,
   contentStyle,
@@ -271,6 +330,8 @@ export default function CyberSubpageShellNative({
   const useEdgeBack = hideBack ?? edgeBack;
   const reduceMotion = useReducedMotion();
   const motionOn = reduceMotion !== true;
+  const insets = useSafeAreaInsets();
+  const shelfPull = hideBrandShelf ? uniterzBrandShelfOffsetTop(insets.top) : 0;
 
   const body = scroll ? (
     <ScrollView
@@ -287,16 +348,31 @@ export default function CyberSubpageShellNative({
   );
 
   return (
-    <View style={styles.root}>
+    <View
+      style={[
+        styles.root,
+        hideBrandShelf
+          ? {
+              position: "absolute",
+              top: -shelfPull,
+              left: 0,
+              right: 0,
+              bottom: 0,
+            }
+          : null,
+      ]}
+    >
       <CyberSubpageHeaderNative
         eyebrow={eyebrow}
         title={title}
         subtitle={subtitle}
+        onHelpPress={onHelpPress}
         headerTrailing={headerTrailing}
         onBack={onBack}
         edgeBack={useEdgeBack}
         hideBack={useEdgeBack}
-        hideBrandShelf
+        hideBrandShelf={hideBrandShelf}
+        titleInBrandShelf={titleInBrandShelf}
       />
 
       <Animated.View
@@ -317,6 +393,14 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: "transparent",
+  },
+  shelfHelpRow: {
+    zIndex: 30,
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    paddingTop: 4,
   },
   headerWrap: {
     borderBottomWidth: StyleSheet.hairlineWidth,
@@ -360,55 +444,6 @@ const styles = StyleSheet.create({
   },
   helpBtnPressed: {
     opacity: 0.85,
-  },
-  helpMark: {
-    width: 28,
-    height: 28,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  helpMarkActive: {
-    transform: [{ scale: 1.06 }],
-  },
-  helpGlyph: {
-    fontFamily: Platform.select({
-      ios: "Oxanium_700Bold",
-      android: "Oxanium_700Bold",
-      default: "Oxanium_700Bold",
-    }),
-    fontSize: 18,
-    fontWeight: "900",
-    fontStyle: "italic",
-    color: "rgba(165, 243, 252, 0.92)",
-    ...Platform.select({
-      ios: {
-        textShadowColor: "rgba(0, 245, 255, 0.7)",
-        textShadowOffset: { width: 0, height: 0 },
-        textShadowRadius: 8,
-      },
-      android: {
-        textShadowColor: "rgba(0, 245, 255, 0.55)",
-        textShadowOffset: { width: 0, height: 0 },
-        textShadowRadius: 6,
-      },
-      default: {},
-    }),
-  },
-  helpGlyphActive: {
-    color: "#ecfeff",
-    ...Platform.select({
-      ios: {
-        textShadowColor: "rgba(0, 245, 255, 0.95)",
-        textShadowOffset: { width: 0, height: 0 },
-        textShadowRadius: 12,
-      },
-      android: {
-        textShadowColor: "rgba(0, 245, 255, 0.8)",
-        textShadowOffset: { width: 0, height: 0 },
-        textShadowRadius: 10,
-      },
-      default: {},
-    }),
   },
   titleBlock: {
     ...StyleSheet.absoluteFillObject,

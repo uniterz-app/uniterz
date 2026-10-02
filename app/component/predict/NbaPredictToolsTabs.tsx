@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import CandleChartLoader from "@/app/component/common/CandleChartLoader";
 import PredictProBriefPanel from "@/app/component/predict/PredictProBriefPanel";
+import PredictProInsightNarrativePanel from "@/app/component/predict/PredictProInsightNarrativePanel";
 import NbaInjuryReportPanel from "@/app/component/predict/NbaInjuryReportPanel";
 import NbaTeamStatsPanel from "@/app/component/predict/NbaTeamStatsPanel";
 import NbaRosterPanel from "@/app/component/predict/NbaRosterPanel";
@@ -11,14 +13,18 @@ import {
   CyberSlantedTabBar,
 } from "@/app/component/rankings/CyberSlantedTab";
 import type { PredictProBrief } from "@/lib/predict/predictProBrief";
-import { proBriefForMatchup } from "@/lib/predict/nbaProBriefPreviewMocks";
 import type { NbaInjuryReport } from "@/lib/predict/nbaInjuryReport";
-import { injuryReportForMatchup } from "@/lib/predict/nbaInjuryReportPreviewMocks";
 import type { NbaTeamStatsBundle } from "@/lib/predict/nbaTeamStatsPreviewMocks";
-import { teamStatsForMatchup } from "@/lib/predict/nbaTeamStatsPreviewMocks";
 import type { NbaRosterReport } from "@/lib/predict/nbaRoster";
+import { useNbaMatchupRoster } from "@/lib/nba/teamRosters/useNbaMatchupRoster";
+import { useNbaMatchupInjuryReport } from "@/lib/nba/predict/useNbaMatchupInjuryReport";
+import { useNbaMatchupTeamStats } from "@/lib/nba/predict/useNbaMatchupTeamStats";
+import { useNbaMatchupProBrief } from "@/lib/nba/predict/useNbaMatchupProBrief";
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
+import { useAuth } from "@/app/AuthProvider";
+import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
+import { formatProInsightFirstReadyPending } from "@/lib/predict/proInsightFirstReadyCopy";
 
 export type NbaPredictToolsTab = "insight" | "injuries" | "stats" | "roster";
 
@@ -35,6 +41,8 @@ type Props = {
   injuryReport?: NbaInjuryReport | null;
   teamStats?: NbaTeamStatsBundle | null;
   roster?: NbaRosterReport | null;
+  /** tip 時刻（現地換算用 · 試合前日 21:00 JST） */
+  tipAtMs?: number | null;
   /** 予想入力から STATS → チーム詳細へ行ったあと戻れるようにする */
   fromPredictGameId?: string;
   /** Games オーバーレイ vs /predict 専用ルート */
@@ -44,16 +52,24 @@ type Props = {
 
 function PendingPanel({ text }: { text: string }) {
   return (
-    <div className="rounded-lg border border-dashed border-white/12 bg-white/2 px-4 py-8 text-center text-xs leading-relaxed text-white/40">
+    <div className="border border-white/35 bg-transparent px-4 py-8 text-center text-xs leading-relaxed text-white/40">
       {text}
+    </div>
+  );
+}
+
+function LoadingPanel({ label }: { label: string }) {
+  return (
+    <div className="flex min-h-[120px] items-center justify-center py-6" role="status">
+      <CandleChartLoader className="scale-75" label={label} />
     </div>
   );
 }
 
 /**
  * NBA 予想フォームの情報タブ（本番）。
- * Insight (Pro) / Injury / Team Stats / Roster を常時タブで表示し、
- * データがまだ無いタブは準備中プレースホルダを出す。
+ * Insight (Pro) / Injury / Team Stats / Roster を常時タブで表示。
+ * Injury / Stats / Roster は対戦チームの Firestore 公開 API（モックフォールバックなし）。
  */
 export default function NbaPredictToolsTabs({
   language,
@@ -66,15 +82,32 @@ export default function NbaPredictToolsTabs({
   injuryReport = null,
   teamStats = null,
   roster = null,
+  tipAtMs = null,
   fromPredictGameId,
   predictReturnMode = "route",
   className = "",
 }: Props) {
   const m = t(language).predict;
+  const loadingLabel = t(language).common.loading;
+  const { fUser } = useAuth();
+  const { countryCode, timeZone } = useUserLanguage(fUser?.uid ?? null);
+  const insightPendingText = formatProInsightFirstReadyPending({
+    language,
+    countryCode,
+    timeZone,
+    tipAtMs,
+  });
   const searchParams = useSearchParams();
   const [tab, setTab] = useState<NbaPredictToolsTab | null>("injuries");
   const router = useRouter();
 
+  /**
+   * Injury / Stats / Roster はオーバーレイ表示と同時に取りに行く。
+   * タブ切替の一瞬だけ「データ準備中」と出さない（キャッシュがあれば即表示）。
+   */
+  const [visited, setVisited] = useState<Set<NbaPredictToolsTab>>(
+    () => new Set<NbaPredictToolsTab>(["injuries", "stats", "roster"])
+  );
   useEffect(() => {
     const pt = searchParams.get("predictTools");
     if (
@@ -88,11 +121,50 @@ export default function NbaPredictToolsTabs({
   }, [searchParams]);
   const selectTab = (next: NbaPredictToolsTab) => {
     setTab((cur) => (cur === next ? null : next));
+    setVisited((cur) => (cur.has(next) ? cur : new Set(cur).add(next)));
   };
-  const resolvedInjury =
-    injuryReport ?? injuryReportForMatchup(homeTeamId, awayTeamId);
-  const resolvedStats = teamStats ?? teamStatsForMatchup(homeTeamId, awayTeamId);
-  const resolvedBrief = brief ?? proBriefForMatchup(homeTeamId, awayTeamId);
+  useEffect(() => {
+    if (!tab) return;
+    setVisited((cur) => (cur.has(tab) ? cur : new Set(cur).add(tab)));
+  }, [tab]);
+
+  /**
+   * 本番: games.proInsightNarrative（試合共通）。Free はゲート。
+   * brief prop は旧互換プレビュー用（narrative 優先）。
+   */
+  const {
+    narrative: liveNarrative,
+    loading: briefLoading,
+  } = useNbaMatchupProBrief({
+    gameId: fromPredictGameId,
+    override: brief,
+    enabled: visited.has("insight") && isPro,
+  });
+
+  const { report: liveInjury, loading: injuryLoading } =
+    useNbaMatchupInjuryReport({
+      homeTeamId,
+      awayTeamId,
+      override: injuryReport,
+      enabled: visited.has("injuries"),
+      language: language === "ja" ? "ja" : "en",
+    });
+  const { stats: liveStats, loading: statsLoading } = useNbaMatchupTeamStats({
+    homeTeamId,
+    awayTeamId,
+    override: teamStats,
+    enabled: visited.has("stats"),
+  });
+  const { roster: liveRoster, loading: rosterLoading } = useNbaMatchupRoster({
+    homeTeamId,
+    awayTeamId,
+    override: roster,
+    enabled: visited.has("roster"),
+  });
+
+  const resolvedInjury = liveInjury;
+  const resolvedStats = liveStats;
+  const resolvedRoster = liveRoster;
 
   const openProSubscribe = () => {
     router.push("/mobile/pro/subscribe");
@@ -100,8 +172,11 @@ export default function NbaPredictToolsTabs({
 
   return (
     <div className={className} data-tutorial-target="predict-tools">
-      {/* 試合カードと同幅。skew 分だけ極小余白（大きくするとカードより狭く見える） */}
-      <div className="w-full min-w-0 overflow-visible px-0.5 pb-1.5 pt-0">
+      {/*
+        親（PredictionFormV2）が overflow-x-hidden のため、skew(-14deg) の先端が
+        端で四角く切れる。ランキング period タブ（px-3 + overflow-x-clip）と同じ横余白。
+      */}
+      <div className="w-full min-w-0 overflow-visible px-3 pb-1.5 pt-0">
         <CyberSlantedTabBar fill aria-label="NBA predict tools">
           <CyberSlantedTab
             role="tab"
@@ -109,7 +184,6 @@ export default function NbaPredictToolsTabs({
             active={tab === "insight"}
             onClick={() => selectTab("insight")}
             compact
-            fontWeight={900}
           />
           <CyberSlantedTab
             role="tab"
@@ -117,7 +191,6 @@ export default function NbaPredictToolsTabs({
             active={tab === "injuries"}
             onClick={() => selectTab("injuries")}
             compact
-            fontWeight={900}
           />
           <CyberSlantedTab
             role="tab"
@@ -125,7 +198,6 @@ export default function NbaPredictToolsTabs({
             active={tab === "stats"}
             onClick={() => selectTab("stats")}
             compact
-            fontWeight={900}
           />
           <CyberSlantedTab
             role="tab"
@@ -133,52 +205,76 @@ export default function NbaPredictToolsTabs({
             active={tab === "roster"}
             onClick={() => selectTab("roster")}
             compact
-            fontWeight={900}
           />
         </CyberSlantedTabBar>
       </div>
 
       {tab ? (
-      <div className="mt-1.5 min-h-30 px-0.5">
-        {tab === "insight" ? (
-          isPro && !resolvedBrief ? (
-            <PendingPanel text={m.panelDataPending} />
-          ) : (
-            <PredictProBriefPanel
-              brief={resolvedBrief}
-              language={language}
-              homeTeamId={homeTeamId ?? ""}
-              awayTeamId={awayTeamId ?? ""}
-              homeTeamName={homeTeamName}
-              awayTeamName={awayTeamName}
-              locked={!isPro}
-              onPressUpgrade={openProSubscribe}
-            />
-          )
-        ) : tab === "injuries" ? (
-          resolvedInjury ? (
-            <NbaInjuryReportPanel report={resolvedInjury} language={language} />
-          ) : (
-            <PendingPanel text={m.panelDataPending} />
-          )
-        ) : tab === "stats" ? (
-          resolvedStats ? (
-            <NbaTeamStatsPanel
-              data={resolvedStats}
-              isPro={isPro}
-              language={language}
+        <div className="mt-1.5 min-h-30 px-0.5">
+          {tab === "insight" ? (
+            !isPro ? (
+              <PredictProBriefPanel
+                brief={null}
+                language={language}
+                homeTeamId={homeTeamId ?? ""}
+                awayTeamId={awayTeamId ?? ""}
+                homeTeamName={homeTeamName}
+                awayTeamName={awayTeamName}
+                locked
+                onPressUpgrade={openProSubscribe}
+              />
+            ) : liveNarrative ? (
+              <PredictProInsightNarrativePanel
+                brief={liveNarrative}
+                language={language}
+                homeTeamName={homeTeamName}
+                awayTeamName={awayTeamName}
+              />
+            ) : briefLoading ? (
+              <LoadingPanel label={loadingLabel} />
+            ) : (
+              <PendingPanel text={insightPendingText} />
+            )
+          ) : tab === "injuries" ? (
+            resolvedInjury ? (
+              <NbaInjuryReportPanel
+                report={resolvedInjury}
+                language={language}
+                fromPredictGameId={fromPredictGameId}
+                predictReturnMode={predictReturnMode}
+              />
+            ) : injuryLoading ? (
+              <LoadingPanel label={loadingLabel} />
+            ) : (
+              <PendingPanel text={m.panelDataPending} />
+            )
+          ) : tab === "stats" ? (
+            resolvedStats ? (
+              <NbaTeamStatsPanel
+                data={resolvedStats}
+                isPro={isPro}
+                language={language}
+                fromPredictGameId={fromPredictGameId}
+                predictReturnMode={predictReturnMode}
+              />
+            ) : statsLoading ? (
+              <LoadingPanel label={loadingLabel} />
+            ) : (
+              <PendingPanel text={m.panelDataPending} />
+            )
+          ) : resolvedRoster ? (
+            <NbaRosterPanel
+              report={resolvedRoster}
+              injuryReport={resolvedInjury}
               fromPredictGameId={fromPredictGameId}
               predictReturnMode={predictReturnMode}
             />
+          ) : rosterLoading ? (
+            <LoadingPanel label={loadingLabel} />
           ) : (
             <PendingPanel text={m.panelDataPending} />
-          )
-        ) : roster ? (
-          <NbaRosterPanel report={roster} injuryReport={resolvedInjury} />
-        ) : (
-          <PendingPanel text={m.panelDataPending} />
-        )}
-      </div>
+          )}
+        </div>
       ) : null}
     </div>
   );

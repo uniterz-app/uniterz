@@ -14,6 +14,8 @@ type Props = {
   displayValue?: string;
   muted?: boolean;
   variant?: CyberRankNumVariant;
+  /** 1位でもサイズを変えない（表の列揃え） */
+  uniform?: boolean;
 };
 
 /** Web `.cyber-rank-num__scan` 相当 */
@@ -34,15 +36,26 @@ export function CyberRankNumberNative({
   displayValue,
   muted = false,
   variant = "list",
+  uniform = false,
 }: Props) {
   const label = displayValue ?? String(rank).padStart(2, "0");
+  const uniformSize =
+    variant === "tower" ? (compact ? 38 : 48) : compact ? 26 : 34;
   const resolvedStyle = muted
     ? {
-        fontSize: variant === "tower" ? (compact ? 38 : 48) : compact ? 26 : 34,
+        fontSize: uniformSize,
         color: "rgba(255,255,255,0.42)",
-        lineHeight: variant === "tower" ? (compact ? 42 : 52) : compact ? 30 : 38,
+        lineHeight: Math.ceil(uniformSize * 1.15),
       }
-    : nativeRankStyleFromWeb(rank, compact, variant);
+    : {
+        ...nativeRankStyleFromWeb(rank, compact, variant),
+        ...(uniform
+          ? {
+              fontSize: uniformSize,
+              lineHeight: Math.ceil(uniformSize * 1.15),
+            }
+          : {}),
+      };
 
   const numStyle = {
     ...styles.num,

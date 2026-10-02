@@ -13,6 +13,7 @@ import {
 import type { ProfileStatsStreakContext } from "@/lib/profile/profileStreakScope";
 import type { ProfileChartsLast20Point } from "@/lib/profile/profileChartsBundle";
 import type { Language } from "@/lib/i18n/language";
+import { resolveLocalizedLang } from "@/lib/i18n/localize";
 import { t } from "@/lib/i18n/t";
 import { jp, resultStatsMetricNumClass } from "@/lib/fonts";
 import CandleChartLoader from "@/app/component/common/CandleChartLoader";
@@ -32,7 +33,7 @@ type Props = {
   entranceReady?: boolean;
   layout?: Layout;
   profileStatsContext?: ProfileStatsStreakContext;
-  /** cumulative profileCharts.last20（null = 未取得） */
+  /** cumulative profileCharts.last20（undefined = ロード中、null = 未書き込み） */
   seedLast20?: ProfileChartsLast20Point[] | null;
 };
 
@@ -130,6 +131,8 @@ export default function StreakTrackerCard({
   seedLast20,
 }: Props) {
   const msg = t(language);
+  const lang = resolveLocalizedLang(language);
+  const isCjk = lang === "ja" || lang === "ko" || lang === "zh";
   const reduceMotion = useReducedMotion();
   const chartAnimationsOff = isProfileChartAnimationOff();
   const staticChart = reduceMotion || chartAnimationsOff;
@@ -142,7 +145,7 @@ export default function StreakTrackerCard({
     margin: "0px 0px -8% 0px",
   });
 
-  const { points, loading: streakLoading } = useProfileStreakTracker(
+  const { points, loading: streakLoading, unavailable } = useProfileStreakTracker(
     uid,
     profileStatsContext,
     { seedLast20 }
@@ -256,6 +259,7 @@ export default function StreakTrackerCard({
 
   const subtitle = msg.profile.last20TrackerDesc.replace("{n}", String(STREAK_TRACKER_LAST_N));
   const emptyHint = subtitle;
+  const unavailableHint = msg.profile.last20TrackerUnavailable;
 
   const statWinLabel = msg.profile.bestWStreak;
   const statLossLabel = msg.profile.bestLStreak;
@@ -278,7 +282,7 @@ export default function StreakTrackerCard({
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
               <p
                 className={[
-                  language === "ja" ? jp.className : "",
+                  isCjk ? jp.className : "",
                   "min-w-0 flex-1 text-xs leading-relaxed sm:text-[14px]",
                 ]
                   .filter(Boolean)
@@ -349,7 +353,7 @@ export default function StreakTrackerCard({
               className={[
                 "mt-1 max-w-36 leading-tight",
                 S.headerCaption,
-                language === "ja" ? jp.className : "",
+                isCjk ? jp.className : "",
               ]
                 .filter(Boolean)
                 .join(" ")}
@@ -373,14 +377,14 @@ export default function StreakTrackerCard({
               <div className={`grid place-items-center ${S.loadingEmptyH}`}>
                 <CandleChartLoader label={msg.common.loading} />
               </div>
-            ) : points.length === 0 ? (
+            ) : unavailable || points.length === 0 ? (
               <div
                 role="status"
                 className={`grid place-items-center px-4 text-center ${S.loadingEmptyH}`}
               >
                 <CyberNoDataLabel variant="chart" />
                 <p className="mt-2 max-w-[240px] text-center text-[10px] text-white/45 sm:text-xs">
-                  {emptyHint}
+                  {unavailable ? unavailableHint : emptyHint}
                 </p>
               </div>
             ) : !gateOpen ? (
@@ -578,9 +582,9 @@ export default function StreakTrackerCard({
                   <p
                     className={[
                       "leading-tight",
-                      language !== "ja"
-                        ? "text-[9px] font-semibold uppercase tracking-[0.12em]"
-                        : "text-[9px] font-medium",
+                      isCjk
+                        ? "text-[9px] font-medium"
+                        : "text-[9px] font-semibold uppercase tracking-[0.12em]",
                     ].join(" ")}
                     style={{ color: "rgba(168, 255, 42, 0.72)" }}
                   >
@@ -601,9 +605,9 @@ export default function StreakTrackerCard({
                   <p
                     className={[
                       "leading-tight",
-                      language !== "ja"
-                        ? "text-[9px] font-semibold uppercase tracking-[0.12em]"
-                        : "text-[9px] font-medium",
+                      isCjk
+                        ? "text-[9px] font-medium"
+                        : "text-[9px] font-semibold uppercase tracking-[0.12em]",
                     ].join(" ")}
                     style={{ color: "rgba(255, 43, 214, 0.72)" }}
                   >
@@ -624,9 +628,9 @@ export default function StreakTrackerCard({
                   <p
                     className={[
                       "leading-tight text-white/55",
-                      language !== "ja"
-                        ? "text-[9px] font-semibold uppercase tracking-[0.12em]"
-                        : "text-[9px] font-medium",
+                      isCjk
+                        ? "text-[9px] font-medium"
+                        : "text-[9px] font-semibold uppercase tracking-[0.12em]",
                     ].join(" ")}
                   >
                     {statRecordLabel}

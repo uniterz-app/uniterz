@@ -1,5 +1,6 @@
 /**
  * Web `.match-list-cyber-card` — 直角シェル（塗り・枠）。方眼は出さない。
+ * `cut === 0` は View + LinearGradient のみ（Skia なし）。角切り時だけ Skia Path。
  */
 import { type ReactNode, useMemo, useState } from "react";
 import {
@@ -57,10 +58,14 @@ export default function MatchListCyberClipNative({
   const borderColor = predicted
     ? "rgba(148,163,184,0.46)"
     : "rgba(0,245,255,0.16)";
+  const useSkia = cut > 0;
 
   const skiaPath = useMemo(
-    () => (size.w > 0 && size.h > 0 ? makeSkiaPath(size.w, size.h, cut) : null),
-    [size.w, size.h, cut]
+    () =>
+      useSkia && size.w > 0 && size.h > 0
+        ? makeSkiaPath(size.w, size.h, cut)
+        : null,
+    [useSkia, size.w, size.h, cut]
   );
 
   function onLayout(e: LayoutChangeEvent) {
@@ -81,7 +86,7 @@ export default function MatchListCyberClipNative({
           hasSize ? { width: size.w, height: size.h } : styles.frameMeasuring,
         ]}
       >
-        {hasSize && skiaPath ? (
+        {useSkia && hasSize && skiaPath ? (
           <Canvas
             style={{
               position: "absolute",
@@ -129,7 +134,7 @@ export default function MatchListCyberClipNative({
         <View style={styles.content}>{children}</View>
       </View>
 
-      {hasSize && skiaPath ? (
+      {useSkia && hasSize && skiaPath ? (
         <Animated.View
           pointerEvents="none"
           style={[
@@ -141,6 +146,16 @@ export default function MatchListCyberClipNative({
             <Path path={skiaPath} style="stroke" strokeWidth={1} color={borderColor} />
           </Canvas>
         </Animated.View>
+      ) : !useSkia ? (
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            StyleSheet.absoluteFillObject,
+            styles.staticStroke,
+            { borderColor },
+            strokeOpacityStyle,
+          ]}
+        />
       ) : null}
     </View>
   );
@@ -181,6 +196,11 @@ const styles = StyleSheet.create({
     top: 0,
     height: 1,
     backgroundColor: "rgba(0,245,255,0.12)",
+    zIndex: 2,
+  },
+  staticStroke: {
+    borderWidth: 1,
+    borderRadius: 0,
     zIndex: 2,
   },
 });

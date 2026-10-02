@@ -1,9 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement, type RefObject } from "react";
 import { cyberAlert } from "../../components/cyberAlert";
 import {
   Platform, Pressable, RefreshControl, SectionList, StyleSheet, Text, View, type ViewStyle,
+  type RefreshControlProps,
 } from "react-native";
-import { useNavigation, useFocusEffect, useRoute } from "@react-navigation/native";
+import { useNavigation, useFocusEffect, useRoute, useIsFocused } from "@react-navigation/native";
+import { useAppActiveNative } from "../../hooks/useAppActiveNative";
 import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RouteProp } from "@react-navigation/native";
@@ -14,16 +16,19 @@ import Animated, {
   useReducedMotion,
 } from "react-native-reanimated";
 import { useFirebaseUser } from "../../auth/FirebaseUserProvider";
-import type { Language } from "../../../../../lib/i18n/language";
-import TutorialLiveHostNative from "../tutorial/TutorialLiveHostNative";
-import { BlocksPulseLoader } from "../../components/BlocksPulseLoader";
+import { t as i18nT } from "../../../../../lib/i18n/t";
 import {
-  loadProfileUserDocNative,
-  peekProfileUserDocNative,
-} from "../profile/profileUserDocCacheNative";
+  L,
+  resolveLocalizedLang,
+} from "../../../../../lib/i18n/localize";
+import { useNativeUserLanguageFromAuth } from "../../hooks/useNativeUserLanguage";
+import { BlocksPulseLoader } from "../../components/BlocksPulseLoader";
 import { colors, spacing, typography } from "../../theme/tokens";
 import { getTeamAlias, splitTeamNameByLeague } from "../../utils/teamName";
-import JerseyMarkAdaptive from "../games/JerseyMarkAdaptive";
+import {
+  ScrollVisibilityProvider,
+  useScrollVisibilityOnScroll,
+} from "../games/ScrollVisibilityNative";
 import CountryFlagNative from "../games/CountryFlagNative";
 import { resolvePostListLeague, LEAGUES } from "../../../../../lib/leagues";
 import type { SectionList as SectionListType } from "react-native";
@@ -52,11 +57,13 @@ import { canDismissResultListPostNow, mergeResultDayPostsByKickoff } from "./nat
 import ResultListFiltersNative, {
   type ResultFilterState,
 } from "./ResultListFiltersNative";
+import TutorialLiveHostNative from "../tutorial/TutorialLiveHostNative";
 import {
   DEFAULT_RESULT_LIST_FILTERS,
   isDefaultResultListFilters,
   postMatchesResultListFilters,
 } from "../../../../../lib/result/resultListFilterMatch";
+import { peekResultPostsListCache } from "../../../../../lib/result/resultPostsListCache";
 import CornerMenuClusterNative from "../../ui/CornerMenuClusterNative";
 import CyberChamferButtonNative from "../../ui/CyberChamferButtonNative";
 import { useResultLeagueFlagsNative, type ResultListLeagueTab } from "./useResultLeagueFlagsNative";
@@ -89,6 +96,7 @@ import {
   deletePredictionPostApi,
   PredictionApiError,
 } from "../games/submitPredictionApi";
+import { notifyScheduleMyPostDeleted } from "../../../../../lib/games/scheduleMyPostSyncEvents";
 import ResultStatRatingBarNative from "./ResultStatRatingBarNative";
 import ResultDetailScreen from "./ResultDetailScreen";
 import ResultHitCyberFrameNative from "./ResultHitCyberFrameNative";
@@ -102,10 +110,11 @@ import {
 } from "../../../../../lib/games/useResultPostsPkScores";
 import {
   resolveResultPostGameMarket,
+  resolveResultPostGameRoundMeta,
   useResultPostsGameMarkets,
+  useResultPostsGameRoundMeta,
 } from "../../../../../lib/games/useResultPostsGameMarkets";
 import { resolvePkScoreFromResultPost } from "../../../../../lib/games/pkScore";
-import ResultDeleteConfirmModal from "./ResultDeleteConfirmModal";
 import ResultGlassShellNative from "./ResultGlassShellNative";
 import ResultPostCardNative from "./ResultPostCardNative";
 import { RESULT_CYBER_FRAME_STROKE_WIDTH } from "./resultCyberFrameNativeMetrics";
@@ -118,10 +127,6 @@ import {
   type ResultStatRowEntranceMeta,
 } from "./useResultHomeEntrance";
 import { useTeamRecordLineNative } from "../games/useTeamRecordLineNative";
-import { t as i18nT } from "../../../../../lib/i18n/t";
-import { shareResultCardNative } from "./shareResultCardNative";
-import ShareLinkCaptureFooterNative from "../share/ShareLinkCaptureFooterNative";
-import { buildResultShareUrl, getShareAppOrigin } from "../../../../../lib/share/shareAppUrls";
 
 const JERSEY_SIZE_RESULT = MOBILE_RESULT_JERSEY_SIZE;
 
@@ -179,8 +184,8 @@ function ResultListHeaderBlock({
             {filterActive ? <View style={styles.filterActiveDot} /> : null}
           </Pressable>
         </Animated.View>
+        {filterPanelOpen ? filterPanel : null}
       </View>
-      {filterPanelOpen ? filterPanel : null}
     </View>
   );
 }
@@ -273,6 +278,11 @@ export default function ResultHomeScreen({
   bottomReserveY?: number;
 }) {
   const { fUser } = useFirebaseUser();
+  const isFocused = useIsFocused();
+  const appActive = useAppActiveNative();
+  const [detailPostId, setDetailPostId] = useState<string | null>(null);
+  /** 詳細オープン中は一覧 tick / 再取得を止めて裏コストを落とす */
+  const listTickActive = isFocused && appActive && detailPostId == null;
   const tabNavigation = useNavigation<BottomTabNavigationProp<MainTabParamList>>();
   const stackNavigation =
     useNavigation<NativeStackNavigationProp<ResultStackParamList>>();
@@ -280,63 +290,46 @@ export default function ResultHomeScreen({
   const reopenDetailPostId = route.params?.reopenDetailPostId;
   const { topContentPadY } = useBottomTabBarInsets();
   const listTopPad = topContentPadY;
-  const [language, setLanguage] = useState<"ja" | "en">("ja");
+  const { language } = useNativeUserLanguageFromAuth();
   const [manualRefreshing, setManualRefreshing] = useState(false);
   const uid = fUser?.uid ?? null;
 
-  useEffect(() => {
-    let alive = true;
-    async function loadLang() {
-      if (!uid) return;
-      try {
-        const peek = peekProfileUserDocNative(uid);
-        if (peek) {
-          if (!alive) return;
-          setLanguage(peek.language === "en" ? "en" : "ja");
-        }
-        const loaded = await loadProfileUserDocNative(uid);
-        if (!alive) return;
-        setLanguage(loaded?.data?.language === "en" ? "en" : "ja");
-      } catch {
-        if (!alive) return;
-        setLanguage("ja");
-      }
-    }
-    void loadLang();
-    return () => {
-      alive = false;
+  const t = useMemo(() => {
+    const lang = resolveLocalizedLang(language);
+    const r = i18nT(lang).results;
+    const profile = i18nT(lang).profile;
+    return {
+      empty: profile.noStatsYet,
+      cacheHint: L(lang, {
+        ja: "古い投稿の一部は表示を省略しています。",
+        en: "Older posts may be omitted from this list.",
+        ko: "오래된 게시물 일부는 표시에서 생략됩니다.",
+        zh: "部分旧帖可能未在此列表中显示。",
+        es: "Algunas publicaciones antiguas pueden omitirse de esta lista.",
+        pt: "Algumas publicações antigas podem ser omitidas desta lista.",
+        fr: "Certaines publications anciennes peuvent être omises de cette liste.",
+      }),
+      pull: L(lang, {
+        ja: "引っ張って更新",
+        en: "Pull to refresh",
+        ko: "당겨서 새로고침",
+        zh: "下拉刷新",
+        es: "Desliza para actualizar",
+        pt: "Puxe para atualizar",
+        fr: "Tirez pour actualiser",
+      }),
+      filterFold: r.filterTitle,
+      filterClose: r.filterClose,
     };
-  }, [uid]);
-
-  const t = useMemo(
-    () =>
-      language === "ja"
-        ? {
-            empty: "まだ予想の投稿がありません。",
-            cacheHint: "古い投稿の一部は表示を省略しています。",
-            pull: "引っ張って更新",
-            filterFold: "絞り込み条件を指定",
-            filterClose: "閉じる",
-          }
-        : {
-            empty: "No predictions yet.",
-            cacheHint: "Older posts may be omitted from this list.",
-            pull: "Pull to refresh",
-            filterFold: "Specify filters",
-            filterClose: "Close",
-          },
-    [language]
-  );
+  }, [language]);
 
   const [listNowTick, setListNowTick] = useState(() => Date.now());
   useEffect(() => {
+    if (!listTickActive) return;
     const id = setInterval(() => setListNowTick(Date.now()), 30_000);
     return () => clearInterval(id);
-  }, []);
+  }, [listTickActive]);
 
-  const [detailPostId, setDetailPostId] = useState<string | null>(null);
-  const [deleteConfirmPost, setDeleteConfirmPost] = useState<PostWithMillis | null>(null);
-  const [deleteInProgress, setDeleteInProgress] = useState(false);
   const deleteSubmittingRef = useRef(false);
 
   useEffect(() => {
@@ -370,15 +363,18 @@ export default function ResultHomeScreen({
   const lastFocusRefreshAtRef = useRef(0);
 
   /** タブ再訪で再取得（精算直後の pending を残さない）。
-   * 連打で毎回 Firestore を叩かないよう最短間隔を空ける。
+   * 温かいキャッシュがあるときだけ 30s スロットル。予想投稿後の invalidate 直後は必ず取り直す。
    * refreshPosts を deps に入れると identity 変化でフォーカス中に無限再取得になる */
   useFocusEffect(
     useCallback(() => {
       const now = Date.now();
-      if (now - lastFocusRefreshAtRef.current < 30_000) return;
+      const hasWarmCache = Boolean(
+        uid && leagueTab && peekResultPostsListCache(uid, leagueTab)
+      );
+      if (hasWarmCache && now - lastFocusRefreshAtRef.current < 30_000) return;
       lastFocusRefreshAtRef.current = now;
       void refreshPostsRef.current();
-    }, [])
+    }, [uid, leagueTab])
   );
 
   const hasPendingSettlement = useMemo(
@@ -388,10 +384,10 @@ export default function ResultHomeScreen({
 
   /** 未精算カードがある間は定期再取得（Cloud Functions 精算完了を待つ） */
   useEffect(() => {
-    if (!hasPendingSettlement) return;
+    if (!hasPendingSettlement || !listTickActive) return;
     const id = setInterval(() => void refreshPostsRef.current(), 120_000);
     return () => clearInterval(id);
-  }, [hasPendingSettlement]);
+  }, [hasPendingSettlement, listTickActive]);
 
   const [resultFilters, setResultFilters] = useState<ResultFilterState>({
     ...DEFAULT_RESULT_LIST_FILTERS,
@@ -453,6 +449,30 @@ export default function ResultHomeScreen({
   );
   const pkFromGames = useResultPostsPkScores(visiblePostsFlat);
   const marketsFromGames = useResultPostsGameMarkets(visiblePostsFlat);
+  const roundMetaFromGames = useResultPostsGameRoundMeta(visiblePostsFlat);
+
+  const detailWarmPost = useMemo(() => {
+    if (!detailPostId) return null;
+    return visiblePostsFlat.find((p) => p.id === detailPostId) ?? null;
+  }, [detailPostId, visiblePostsFlat]);
+
+  const detailWarmMarket = useMemo(() => {
+    if (!detailWarmPost) return null;
+    return resolveResultPostGameMarket(detailWarmPost, marketsFromGames);
+  }, [detailWarmPost, marketsFromGames]);
+
+  const detailWarmRoundMeta = useMemo(() => {
+    if (!detailWarmPost) return null;
+    return resolveResultPostGameRoundMeta(detailWarmPost, roundMetaFromGames);
+  }, [detailWarmPost, roundMetaFromGames]);
+
+  const onOpenResultDetail = useCallback((id: string) => {
+    setDetailPostId(id);
+  }, []);
+
+  const onCloseResultDetail = useCallback(() => {
+    setDetailPostId(null);
+  }, []);
 
   /** 初回マウント時のみ一覧入場を有効化（スクロールで遅延マウントされた日付帯は除外） */
   const entranceArmed = useResultEntranceArmed();
@@ -537,33 +557,53 @@ export default function ResultHomeScreen({
     }
   }, [refreshPosts]);
 
-  const confirmDismissPostFromList = useCallback(async () => {
-    const post = deleteConfirmPost;
-    if (!post || deleteSubmittingRef.current) return;
-    if (!canDismissResultListPostNow(post, Date.now())) {
-      setDeleteConfirmPost(null);
-      return;
-    }
-    deleteSubmittingRef.current = true;
-    setDeleteInProgress(true);
-    try {
-      await deletePredictionPostApi(post.id);
-      removePostById(post.id);
-      setDeleteConfirmPost(null);
-    } catch (err) {
-      const msg =
-        err instanceof PredictionApiError
-          ? err.message
-          : language === "en"
-            ? "Could not delete."
-            : "削除に失敗しました。";
-      cyberAlert(language === "en" ? "Error" : "エラー", msg);
-    } finally {
-      deleteSubmittingRef.current = false;
-      setDeleteInProgress(false);
-    }
-  }, [deleteConfirmPost, language, removePostById]);
-
+  const requestDeleteConfirm = useCallback(
+    (post: PostWithMillis) => {
+      const loc = resolveLocalizedLang(language);
+      const common = i18nT(loc).common;
+      const results = i18nT(loc).results;
+      cyberAlert(
+        results.deletePostConfirm,
+        "",
+        [
+          { text: common.cancel, style: "cancel" },
+          {
+            text: common.delete,
+            style: "destructive",
+            onPress: () => {
+              void (async () => {
+                if (deleteSubmittingRef.current) return;
+                if (!canDismissResultListPostNow(post, Date.now())) return;
+                deleteSubmittingRef.current = true;
+                try {
+                  await deletePredictionPostApi(post.id);
+                  removePostById(post.id);
+                  const gameId =
+                    typeof post.gameId === "string" ? post.gameId.trim() : "";
+                  if (gameId) {
+                    notifyScheduleMyPostDeleted({
+                      gameId,
+                      uid,
+                    });
+                  }
+                } catch (err) {
+                  const msg =
+                    err instanceof PredictionApiError
+                      ? err.message
+                      : results.deleteFailed;
+                  cyberAlert(common.error, msg);
+                } finally {
+                  deleteSubmittingRef.current = false;
+                }
+              })();
+            },
+          },
+        ],
+        { variant: "confirm" }
+      );
+    },
+    [language, removePostById, uid]
+  );
   const listEmpty =
     hasFetchedOnce && !loading && filteredGrouped.length === 0 ? (
       <View style={styles.emptyNoDataWrap}>
@@ -583,8 +623,12 @@ export default function ResultHomeScreen({
   );
 
   return (
+    <ScrollVisibilityProvider margin={360}>
     <View style={styles.resultScreenWrap}>
-    <View style={styles.root}>
+    <View
+      style={styles.root}
+      pointerEvents={detailPostId != null ? "none" : "auto"}
+    >
       {showInitialSpinner ? (
         <View style={[styles.centered, { paddingTop: listTopPad, paddingBottom: bottomReserveY }]}>
           <BlocksPulseLoader />
@@ -595,24 +639,16 @@ export default function ResultHomeScreen({
           {listEmpty}
         </View>
       ) : (
-        <SectionList<PostWithMillis, SectionT>
-          ref={resultListRef}
+        <ResultSectionListWithVisibility
+          listRef={resultListRef}
           style={styles.listScroll}
           sections={sections}
-          keyExtractor={(item) => item.id}
-          stickySectionHeadersEnabled={false}
-          initialNumToRender={4}
-          maxToRenderPerBatch={4}
-          windowSize={7}
-          removeClippedSubviews={Platform.OS === "android"}
           contentContainerStyle={listContentWithBottomPad}
           ListHeaderComponent={listHeader}
           ListEmptyComponent={listEmpty}
-          scrollEnabled={tutorialListScrollEnabled}
-          bounces={tutorialListScrollEnabled}
-          scrollEventThrottle={16}
-          onScroll={(e) => {
-            resultScrollYRef.current = e.nativeEvent.contentOffset.y;
+          scrollEnabled={tutorialListScrollEnabled && detailPostId == null}
+          onScrollY={(y) => {
+            resultScrollYRef.current = y;
           }}
           ListFooterComponent={
             loading && sections.some((s) => s.data.length > 0) ? (
@@ -626,10 +662,11 @@ export default function ResultHomeScreen({
               refreshing={manualRefreshing}
               onRefresh={() => void onRefresh()}
               tintColor={colors.accent}
+              /** 詳細オープン中は一覧操作を止める */
+              enabled={detailPostId == null}
             />
           }
           onEndReached={() => loadMore()}
-          onEndReachedThreshold={0.4}
           renderSectionHeader={({ section }) => {
             const sid = `${section.dateLabel}:${section.baseFlatIndex}`;
             const isInitialHeader = initialSectionIdSet?.has(sid) ?? false;
@@ -655,6 +692,10 @@ export default function ResultHomeScreen({
                 post={item}
                 pkScore={resolveResultPostPkScore(item, pkFromGames)}
                 gameMarket={resolveResultPostGameMarket(item, marketsFromGames)}
+                gameRoundMeta={resolveResultPostGameRoundMeta(
+                  item,
+                  roundMetaFromGames
+                )}
                 language={language}
                 nowMs={listNowTick}
                 viewerUid={uid}
@@ -667,40 +708,98 @@ export default function ResultHomeScreen({
                     ? "result-card"
                     : undefined
                 }
-                onOpenDetail={(id) => {
-                  setDetailPostId(id);
-                }}
-                onRequestDeleteConfirm={setDeleteConfirmPost}
+                onOpenDetail={onOpenResultDetail}
+                onRequestDeleteConfirm={requestDeleteConfirm}
                 onRequestPredictEdit={openPredictEditFromResult}
               />
             );
           }}
-          SectionSeparatorComponent={null}
         />
       )}
     </View>
-    <ResultDetailScreen
-      visible={detailPostId != null}
-      postId={detailPostId}
-      language={language}
-      onClose={() => setDetailPostId(null)}
-    />
-    <ResultDeleteConfirmModal
-      visible={deleteConfirmPost != null}
-      isEn={language === "en"}
-      loading={deleteInProgress}
-      onCancel={() => {
-        if (!deleteInProgress) setDeleteConfirmPost(null);
-      }}
-      onConfirm={() => void confirmDismissPostFromList()}
-    />
-    <View style={styles.tutorialHostLayer} pointerEvents="box-none">
+      <ResultDetailScreen
+        visible={detailPostId != null}
+        postId={detailPostId}
+        language={language}
+        warmPost={detailWarmPost}
+        warmMarket={detailWarmMarket}
+        warmRoundMeta={detailWarmRoundMeta}
+        onClose={onCloseResultDetail}
+      />
       <TutorialLiveHostNative
         page="results"
-        language={(language === "en" ? "en" : "ja") as Language}
+        language={resolveLocalizedLang(language)}
       />
     </View>
-    </View>
+    </ScrollVisibilityProvider>
+  );
+}
+
+function ResultSectionListWithVisibility({
+  listRef,
+  style,
+  sections,
+  contentContainerStyle,
+  ListHeaderComponent,
+  ListEmptyComponent,
+  scrollEnabled,
+  onScrollY,
+  ListFooterComponent,
+  refreshControl,
+  onEndReached,
+  renderSectionHeader,
+  renderItem,
+}: {
+  listRef: RefObject<SectionListType<PostWithMillis, SectionT> | null>;
+  style: ViewStyle | ViewStyle[];
+  sections: SectionT[];
+  contentContainerStyle: object;
+  ListHeaderComponent: ReactElement | null;
+  ListEmptyComponent: ReactElement | null;
+  scrollEnabled: boolean;
+  onScrollY: (y: number) => void;
+  ListFooterComponent: ReactElement | null;
+  refreshControl: ReactElement<RefreshControlProps>;
+  onEndReached: () => void;
+  renderSectionHeader: (info: {
+    section: SectionT;
+  }) => ReactElement;
+  renderItem: (info: {
+    item: PostWithMillis;
+    index: number;
+    section: SectionT;
+  }) => ReactElement;
+}) {
+  const onVis = useScrollVisibilityOnScroll();
+  return (
+    <SectionList<PostWithMillis, SectionT>
+      ref={listRef}
+      style={style}
+      sections={sections}
+      keyExtractor={(item) => item.id}
+      stickySectionHeadersEnabled={false}
+      initialNumToRender={4}
+      maxToRenderPerBatch={4}
+      windowSize={7}
+      removeClippedSubviews={Platform.OS === "android"}
+      contentContainerStyle={contentContainerStyle}
+      ListHeaderComponent={ListHeaderComponent}
+      ListEmptyComponent={ListEmptyComponent}
+      scrollEnabled={scrollEnabled}
+      bounces={scrollEnabled}
+      scrollEventThrottle={16}
+      onScroll={(e) => {
+        onScrollY(e.nativeEvent.contentOffset.y);
+        onVis?.(e);
+      }}
+      ListFooterComponent={ListFooterComponent}
+      refreshControl={refreshControl}
+      onEndReached={onEndReached}
+      onEndReachedThreshold={0.4}
+      renderSectionHeader={renderSectionHeader}
+      renderItem={renderItem}
+      SectionSeparatorComponent={null}
+    />
   );
 }
 
@@ -751,11 +850,7 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: "rgba(34,211,238,0.95)",
-    shadowColor: "#22d3ee",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.7,
-    shadowRadius: 8,
+    backgroundColor: "#FFFFFF",
     marginLeft: "auto",
   },
   hint: {
@@ -929,47 +1024,28 @@ const styles = StyleSheet.create({
     paddingLeft: 4,
   },
   /**
-   * Web `ResultDayPipeGroup` pending と同型:
-   * `border-dashed border-fuchsia-500/50 bg-black/60 px-2.5 py-1.5 font-mono … text-fuchsia-300/80`
-   * `box-shadow:0_0_16px_-4px_rgba(217,70,239,0.4)` … 親が overflow:hidden のため外側シャドウはテキスト側のグローで代替
+   * 得点未確定ピル — 白黒・グローなし
    */
   pendingPill: {
     borderWidth: 1,
     borderStyle: "dashed",
-    borderColor: "rgba(217,70,239,0.55)",
+    borderColor: "rgba(255,255,255,0.45)",
     backgroundColor: "rgba(0,0,0,0.72)",
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 0,
-    ...Platform.select({
-      ios: {
-        shadowColor: "rgba(217,70,239,0.4)",
-        shadowOpacity: 1,
-        shadowRadius: 8,
-        shadowOffset: { width: 0, height: 0 },
-      },
-      android: {
-        elevation: 2,
-      },
-      default: {},
-    }),
   },
   pendingPillText: {
     fontSize: 11,
     fontWeight: "600",
-    /** Web `tracking-wide` 相当 */
     letterSpacing: 0.35,
-    /** Tailwind `text-fuchsia-300/80` に近い */
-    color: "rgba(240,171,252,0.82)",
+    color: "rgba(248,250,252,0.88)",
     backgroundColor: "transparent",
     fontFamily: Platform.select({
       ios: "Menlo",
       android: "monospace",
       default: "monospace",
     }),
-    textShadowColor: "rgba(217,70,239,0.55)",
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: Platform.OS === "ios" ? 10 : 6,
   },
   cornerTl: {
     position: "absolute",
@@ -1069,11 +1145,11 @@ const styles = StyleSheet.create({
   cardCaptureWrap: {
     position: "relative",
   },
-  /** 左上：Web mobile `CyberMenuButton` + 右／下フライアウト */
+  /** 左上：線枠 marginTop(14) の内側へ。枠線に乗らないよう少し下げる */
   leftActionCluster: {
     position: "absolute",
-    top: 6,
-    left: 8,
+    top: 24,
+    left: 10,
     zIndex: 60,
     overflow: "visible",
   },
@@ -1186,13 +1262,16 @@ const styles = StyleSheet.create({
   },
   teamName: {
     marginTop: 4,
-    fontSize: 15,
-    fontWeight: "700",
+    fontSize: 13,
+    fontWeight: "600",
     color: "rgba(248,250,252,0.95)",
-    letterSpacing: 1.04,
-    fontFamily: MATCH_CARD_DISPLAY_FONT,
+    letterSpacing: 0.6,
+    fontFamily: "Oxanium_600SemiBold",
     textAlign: "center",
     width: "100%",
+    textTransform: "uppercase",
+    includeFontPadding: false,
+    transform: [{ skewX: "-6deg" }],
   },
   teamRecordText: {
     marginTop: 2,

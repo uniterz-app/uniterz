@@ -2,6 +2,8 @@
  * Unit 商品交換 — 型・ステータス（docs/unit-redemption-design.md）
  */
 
+import type { UiStrings } from "@/lib/i18n/ui";
+
 export type RedemptionProductKind = "jersey" | "tshirt" | "cap";
 
 export type RedemptionRequestStatus =
@@ -26,6 +28,9 @@ export type RedemptionCatalogItem = {
   titleEn: string;
   blurbJa: string;
   blurbEn: string;
+  /** 7言語版。旧データには無いので任意 */
+  title?: UiStrings;
+  blurb?: UiStrings;
 };
 
 /** 申請フォーム入力 */

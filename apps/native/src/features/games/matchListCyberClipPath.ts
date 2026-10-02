@@ -15,8 +15,8 @@ export const PREDICT_OVERLAY_CYBER_FORM_CUT = 10;
 export const PREDICT_OVERLAY_SCORE_INPUT_CUT = 0;
 /** Web `.predict-overlay-submit-btn`（globals.css） */
 export const PREDICT_OVERLAY_SUBMIT_BTN_CUT = 8;
-/** Web `.predict-overlay-close-btn`（globals.css） */
-export const PREDICT_OVERLAY_CLOSE_BTN_CUT = 5;
+/** Web `.predict-overlay-close-btn` — 直角の四角（角切りなし） */
+export const PREDICT_OVERLAY_CLOSE_BTN_CUT = 0;
 /** Web / mobile `NavBar` ドック（`NAV_DOCK_CLIP` = 14px） */
 export const NAV_BAR_CHAMFER_CUT = 14;
 
@@ -65,7 +65,7 @@ export function chamferedRectPathD(width: number, height: number, cut: number): 
   ].join(" ");
 }
 
-/** 枠走査光用 — 内側へ inset px した全角 chamfer */
+/** 枠走査光用 — 内側へ inset px した全角 chamfer（cut=0 は直角矩形） */
 export function insetChamferedRectPathD(
   width: number,
   height: number,
@@ -80,7 +80,15 @@ export function insetChamferedRectPathD(
   const ih = h - p * 2;
   const ic = Math.max(0, cut - p);
   const c = Math.min(ic, iw / 2, ih / 2);
-  if (c <= 0) return "";
+  if (c <= 0) {
+    return [
+      `M ${p} ${p}`,
+      `L ${p + iw} ${p}`,
+      `L ${p + iw} ${p + ih}`,
+      `L ${p} ${p + ih}`,
+      "Z",
+    ].join(" ");
+  }
   return [
     `M ${p + c} ${p}`,
     `L ${p + iw - c} ${p}`,
@@ -94,7 +102,7 @@ export function insetChamferedRectPathD(
   ].join(" ");
 }
 
-/** Web `.predict-overlay-close-btn` — 左上・右下のみ角切り */
+/** Web `.predict-overlay-close-btn` — cut=0 は直角矩形 */
 export function predictOverlayCloseBtnPathD(
   width: number,
   height: number,
@@ -102,8 +110,11 @@ export function predictOverlayCloseBtnPathD(
 ): string {
   const w = Math.max(0, width);
   const h = Math.max(0, height);
-  const c = Math.min(cut, w / 2, h / 2);
-  if (c <= 0 || w <= 0 || h <= 0) return "";
+  if (w <= 0 || h <= 0) return "";
+  const c = Math.min(Math.max(0, cut), w / 2, h / 2);
+  if (c <= 0) {
+    return [`M 0 0`, `L ${w} 0`, `L ${w} ${h}`, `L 0 ${h}`, "Z"].join(" ");
+  }
   return [
     `M ${c} 0`,
     `L ${w} 0`,

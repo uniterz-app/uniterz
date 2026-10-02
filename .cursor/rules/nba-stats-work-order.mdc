@@ -1,0 +1,35 @@
+---
+description: NBA スタッツ画面の作業順。先回りで詳細・injury に進まない。
+alwaysApply: true
+---
+
+# NBA スタッツ — 作業順
+
+ユーザー確定。指示があるまでこの順を飛ばさない。MORE シートは採用しない。
+
+## 確定している UX（リーグ表）
+
+Team Stats / Player Leaders のリーグ表は **左レール**:
+
+- Season | Per Game / Total（Team Last 10 タブは廃止 — box 粒度のみのためマッチアップ FORM へ）
+- 左に BASIC / RATINGS / 4FCT … の親＋指標チップ
+- 選択チップはシアン塗り + 黒横線。非選択は透明
+- MORE シートは採用しない
+
+## これから（2026-09-02 更新）
+
+1. **試合データ**（BDL → Firestore `games` → `/api/games/window`）— 運用中
+2. **チーム詳細** — **完了** → [`docs/nba-team-detail-status.md`](../../docs/nba-team-detail-status.md)
+3. **プレイヤー詳細** — **完了** → [`docs/nba-player-detail-status.md`](../../docs/nba-player-detail-status.md)
+4. **injury** — **完了** → [`docs/nba-injury-status.md`](../../docs/nba-injury-status.md)
+5. チームスタッツ周辺の polish
+
+（2026-08-23 版: 2=チーム詳細「これから」→ 2026-09-01 監査で接続済みと判明、残ギャップを doc 化）
+
+詳細や injury を「ついで」で触らない。ユーザーが今の段を指定したときだけ進む。
+リーグ表のレール UX（Season/Playoffs + PER GAME 等）は進行中の前提として維持する。
+
+## データ取得（絶対）
+
+スタッツは **ingest → Firestore → API**。公開 API の都度 BDL は禁止。
+詳細: `.cursor/rules/nba-stats-data-pipeline.mdc`

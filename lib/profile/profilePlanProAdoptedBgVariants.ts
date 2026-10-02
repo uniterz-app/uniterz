@@ -2,10 +2,12 @@
  * PRO プロフィール背景 — 採用候補（決定ドラフト）
  * プレビュー: /dev/profile-plan-pro-adopted-preview
  *
- * `category` = ユーザー向けグループ（サイバー / 爬虫類 / 獣皮 / 素材 / 幾何学）
+ * `category` = ユーザー向けグループ（サイバー / 爬虫類 / 獣皮 / 素材 / 幾何学 / 宇宙）
  * `family`   = 実装系統（パターン生成の参照元）
  */
 
+import { L, resolveLocalizedLang } from "@/lib/i18n/localize";
+import type { UiStrings } from "@/lib/i18n/ui";
 import {
   PROFILE_PLAN_PRO_BEAST_BG_VARIANTS,
   type ProfilePlanProBeastBgMeta,
@@ -48,7 +50,8 @@ export type ProfilePlanProAdoptedCategory =
   | "reptile"
   | "beast"
   | "material"
-  | "geometry";
+  | "geometry"
+  | "cosmos";
 
 /** 実装系統（内部） */
 export type ProfilePlanProAdoptedFamily =
@@ -65,48 +68,137 @@ export type ProfilePlanProAdoptedGroup = ProfilePlanProAdoptedFamily;
 
 export type ProfilePlanProAdoptedCategoryMeta = {
   id: ProfilePlanProAdoptedCategory;
-  labelJa: string;
-  labelEn: string;
-  descriptionJa: string;
-  descriptionEn: string;
+  label: UiStrings;
+  description: UiStrings;
 };
 
 export const PROFILE_PLAN_PRO_ADOPTED_CATEGORIES: readonly ProfilePlanProAdoptedCategoryMeta[] =
   [
     {
       id: "cyber",
-      labelJa: "サイバー空間",
-      labelEn: "Cyber Space",
-      descriptionJa: "シアン格子・ネオン稜線など、線画サイバー HUD。",
-      descriptionEn: "Cyan grids, neon ridges, and line-art cyber HUD.",
+      label: {
+        ja: "サイバー空間",
+        en: "Cyber Space",
+        ko: "사이버 공간",
+        zh: "赛博空间",
+        es: "Ciberespacio",
+        pt: "Ciberespaço",
+        fr: "Cyberespace",
+      },
+      description: {
+        ja: "シアン格子・ネオン稜線など、線画サイバー HUD。",
+        en: "Cyan grids, neon ridges, and line-art cyber HUD.",
+        ko: "시안 격자와 네온 능선 등 선화 사이버 HUD.",
+        zh: "青色网格、霓虹棱线等线稿赛博 HUD。",
+        es: "Rejillas cian, crestas neón y HUD ciber lineal.",
+        pt: "Grades ciano, cristas neon e HUD cyber em linhas.",
+        fr: "Grilles cyan, crêtes néon et HUD cyber au trait.",
+      },
     },
     {
       id: "reptile",
-      labelJa: "爬虫類",
-      labelEn: "Reptile",
-      descriptionJa: "蛇・鱗・竜鱗・クロコなど、爬虫類モチーフのスキン。",
-      descriptionEn: "Snakes, scales, dragon plate, crocodile leather.",
+      label: {
+        ja: "爬虫類",
+        en: "Reptile",
+        ko: "파충류",
+        zh: "爬行动物",
+        es: "Reptil",
+        pt: "Réptil",
+        fr: "Reptile",
+      },
+      description: {
+        ja: "蛇・鱗・竜鱗・クロコなど、爬虫類モチーフのスキン。",
+        en: "Snakes, scales, dragon plate, crocodile leather.",
+        ko: "뱀·비늘·용린·크로코 등 파충류 모티브 스킨.",
+        zh: "蛇皮、鳞片、龙鳞、鳄鱼皮等爬行动物主题。",
+        es: "Serpientes, escamas, placa de dragón y piel de cocodrilo.",
+        pt: "Cobras, escamas, placa de dragão e couro de crocodilo.",
+        fr: "Serpents, écailles, plaques de dragon, cuir de crocodile.",
+      },
     },
     {
       id: "beast",
-      labelJa: "獣皮",
-      labelEn: "Beast Hide",
-      descriptionJa: "豹・鮫など、哺乳類・水生の肌理・ファー。",
-      descriptionEn: "Panther fur, shark skin, and other animal textures.",
+      label: {
+        ja: "獣皮",
+        en: "Beast Hide",
+        ko: "짐승 가죽",
+        zh: "兽皮",
+        es: "Piel de bestia",
+        pt: "Pele de fera",
+        fr: "Peau de bête",
+      },
+      description: {
+        ja: "豹・鮫など、哺乳類・水生の肌理・ファー。",
+        en: "Panther fur, shark skin, and other animal textures.",
+        ko: "표범·상어 등 포유류·수생 동물의 질감과 털.",
+        zh: "豹纹、鲨鱼皮等哺乳与水生动物的质感与毛发。",
+        es: "Pelaje de pantera, piel de tiburón y otras texturas animales.",
+        pt: "Pelo de pantera, pele de tubarão e outras texturas animais.",
+        fr: "Fourrure de panthère, peau de requin et autres textures animales.",
+      },
     },
     {
       id: "material",
-      labelJa: "素材",
-      labelEn: "Material",
-      descriptionJa: "チタン・装甲・回路レースなど、素材・ブランド柄。",
-      descriptionEn: "Titanium, armor plate, and circuit-lace motifs.",
+      label: {
+        ja: "素材",
+        en: "Material",
+        ko: "소재",
+        zh: "材质",
+        es: "Material",
+        pt: "Material",
+        fr: "Matière",
+      },
+      description: {
+        ja: "ダスト・装甲・回路レースなど、素材・ブランド柄。",
+        en: "Dust, armor plate, and circuit-lace motifs.",
+        ko: "더스트·장갑판·회로 레이스 등 소재·브랜드 패턴.",
+        zh: "粉尘、装甲板、电路蕾丝等材质与品牌纹样。",
+        es: "Polvo, placas de blindaje y motivos de circuito.",
+        pt: "Poeira, placas de blindagem e motivos de circuito.",
+        fr: "Poussière, plaques de blindage et motifs de circuits.",
+      },
     },
     {
       id: "geometry",
-      labelJa: "幾何学",
-      labelEn: "Geometry",
-      descriptionJa: "六角・立体格子など、幾何パターンのスキン。",
-      descriptionEn: "Hex grids, isometric cubes, and geometric patterns.",
+      label: {
+        ja: "幾何学",
+        en: "Geometry",
+        ko: "기하학",
+        zh: "几何",
+        es: "Geometría",
+        pt: "Geometria",
+        fr: "Géométrie",
+      },
+      description: {
+        ja: "六角・立体格子など、幾何パターンのスキン。",
+        en: "Hex grids, isometric cubes, and geometric patterns.",
+        ko: "육각 격자·입체 큐브 등 기하 패턴 스킨.",
+        zh: "六边形网格、立体方块等几何图案。",
+        es: "Rejillas hexagonales, cubos isométricos y patrones geométricos.",
+        pt: "Grades hexagonais, cubos isométricos e padrões geométricos.",
+        fr: "Grilles hexagonales, cubes isométriques et motifs géométriques.",
+      },
+    },
+    {
+      id: "cosmos",
+      label: {
+        ja: "宇宙",
+        en: "Cosmos",
+        ko: "우주",
+        zh: "宇宙",
+        es: "Cosmos",
+        pt: "Cosmos",
+        fr: "Cosmos",
+      },
+      description: {
+        ja: "地球・惑星・星雲・銀河の実写（NASA / ESA ほか）。",
+        en: "Real imagery of Earth, planets, nebulae, and galaxies (NASA / ESA and others).",
+        ko: "지구·행성·성운·은하 실사（NASA / ESA 등）.",
+        zh: "地球、行星、星云、星系实拍（NASA / ESA 等）。",
+        es: "Imágenes reales de la Tierra, planetas, nebulosas y galaxias.",
+        pt: "Imagens reais da Terra, planetas, nebulosas e galáxias.",
+        fr: "Images réelles de la Terre, des planètes, nébuleuses et galaxies.",
+      },
     },
   ] as const;
 
@@ -125,49 +217,80 @@ export type ProfilePlanProAdoptedEntry = {
 
 type AdoptedSpec = {
   id: ProfilePlanProBgVariant;
+  /** ユーザー向け表示名（英語 1〜2 語） */
+  name: string;
   category: ProfilePlanProAdoptedCategory;
   family: ProfilePlanProAdoptedFamily;
 };
 
-/** 採用カタログ — 解放カタログ順（即解放14 → マイルストーン21）。詳細は `proSkinUnlock.ts` */
+/** 採用カタログ — 解放カタログ順（即解放11 → マイルストーン47）。詳細は `proSkinMilestoneCatalog.ts` */
 const ADOPTED_SPECS: readonly AdoptedSpec[] = [
-  // Pro 即解放 ×14
-  { id: "atmos", category: "cyber", family: "atmos" },
-  { id: "parallax", category: "cyber", family: "atmos" },
-  { id: "wave-riot-shard", category: "cyber", family: "wave" },
-  { id: "wave-uniterz-logo", category: "material", family: "wave" },
-  { id: "wave-mono-hex", category: "cyber", family: "wave" },
-  { id: "beast-titanium", category: "material", family: "beast" },
-  { id: "beast-panther", category: "beast", family: "beast" },
-  { id: "beast-crocodile", category: "reptile", family: "beast" },
-  { id: "scale-mamba", category: "reptile", family: "scale" },
-  { id: "scale-python", category: "reptile", family: "scale" },
-  { id: "form-hexveil", category: "geometry", family: "form" },
-  { id: "scale-diamondback", category: "reptile", family: "scale" },
-  { id: "beast-shark", category: "beast", family: "beast" },
-  { id: "form-diamondgrid", category: "geometry", family: "form" },
-  // マイルストーン ×21（閾値 → 順位1回 → 招待 → 回数）
-  { id: "wave-crimson-shard", category: "cyber", family: "wave" },
-  { id: "beast-viper", category: "reptile", family: "beast" },
-  { id: "scale-king", category: "reptile", family: "scale" },
-  { id: "scale-dragon", category: "reptile", family: "scale" },
-  { id: "wave-signal-mosaic", category: "cyber", family: "wave" },
-  { id: "beast-shard", category: "beast", family: "beast" },
-  { id: "beast-circuitlace", category: "material", family: "beast" },
-  { id: "beast-eclipse", category: "beast", family: "beast" },
-  { id: "beast-tessera", category: "geometry", family: "beast" },
-  { id: "wave-chem-ink", category: "material", family: "wave" },
-  { id: "form-isocubes", category: "geometry", family: "form" },
-  { id: "beast-facet", category: "beast", family: "beast" },
-  { id: "beast-thunder", category: "beast", family: "beast" },
-  { id: "beast-starborne", category: "beast", family: "beast" },
-  { id: "beast-regalia", category: "beast", family: "beast" },
-  { id: "wave-cyan-grid", category: "cyber", family: "wave" },
-  { id: "wave-gold-monogram", category: "material", family: "wave" },
-  { id: "wave-neon-ridge", category: "cyber", family: "wave" },
-  { id: "beast-jagarmor", category: "material", family: "beast" },
-  { id: "wave-ember-hex", category: "geometry", family: "wave" },
-  { id: "wave-obsidian-warp", category: "geometry", family: "wave" },
+  // Pro 即解放 ×11
+  { id: "atmos", name: "Atmos", category: "cyber", family: "atmos" },
+  { id: "wave-riot-shard", name: "Riot Shard", category: "cyber", family: "wave" },
+  { id: "wave-uniterz-logo", name: "Uniterz", category: "material", family: "wave" },
+  { id: "wave-mono-hex", name: "Cyber Hex", category: "cyber", family: "wave" },
+  { id: "beast-dust", name: "Dust", category: "material", family: "beast" },
+  { id: "beast-dust-ash", name: "Ash", category: "material", family: "beast" },
+  { id: "beast-crocodile", name: "Onyx Croc", category: "reptile", family: "beast" },
+  { id: "scale-mamba", name: "Black Mamba", category: "reptile", family: "scale" },
+  { id: "scale-python", name: "Python", category: "reptile", family: "scale" },
+  { id: "scale-diamondback", name: "Diamondback", category: "reptile", family: "scale" },
+  { id: "beast-shark", name: "Shark", category: "beast", family: "beast" },
+  // 連勝 = 紅・炎
+  { id: "wave-crimson-shard", name: "Crimson Shard", category: "cyber", family: "wave" },
+  { id: "beast-eclipse", name: "Eclipse", category: "beast", family: "beast" },
+  { id: "wave-ember-hex", name: "Ember Hex", category: "geometry", family: "wave" },
+  { id: "beast-lavaflow", name: "Lava", category: "cosmos", family: "beast" },
+  { id: "beast-io", name: "Io", category: "cosmos", family: "beast" },
+  { id: "beast-flame", name: "Flame", category: "cosmos", family: "beast" },
+  { id: "beast-helix", name: "Helix", category: "cosmos", family: "beast" },
+  { id: "beast-solar", name: "Solar", category: "cosmos", family: "beast" },
+  { id: "beast-corona", name: "Corona", category: "cosmos", family: "beast" },
+  // パーフェクト = 蒼（結晶 → 地球の海 → 氷の衛星 → 氷の巨星 → 新星）
+  { id: "beast-shard", name: "Azure Shard", category: "beast", family: "beast" },
+  { id: "beast-shoals", name: "Shoals", category: "cosmos", family: "beast" },
+  { id: "beast-europa", name: "Europa", category: "cosmos", family: "beast" },
+  { id: "beast-uranus", name: "Uranus", category: "cosmos", family: "beast" },
+  { id: "beast-neptune", name: "Neptune", category: "cosmos", family: "beast" },
+  { id: "beast-nova", name: "Nova", category: "cosmos", family: "beast" },
+  // 予想数 = 地球→冥王星の旅
+  { id: "beast-lena", name: "Delta", category: "cosmos", family: "beast" },
+  { id: "beast-hurricane", name: "Cyclone", category: "cosmos", family: "beast" },
+  { id: "beast-nightearth", name: "Night Earth", category: "cosmos", family: "beast" },
+  { id: "beast-aurora", name: "Aurora", category: "cosmos", family: "beast" },
+  { id: "beast-lunar", name: "Lunar", category: "cosmos", family: "beast" },
+  { id: "beast-marscrust", name: "Mars", category: "cosmos", family: "beast" },
+  { id: "beast-dunes", name: "Dunes", category: "cosmos", family: "beast" },
+  { id: "beast-jovian", name: "Jupiter", category: "cosmos", family: "beast" },
+  { id: "beast-rings", name: "Rings", category: "cosmos", family: "beast" },
+  { id: "beast-saturn", name: "Saturn", category: "cosmos", family: "beast" },
+  { id: "beast-pluto", name: "Pluto", category: "cosmos", family: "beast" },
+  // 順位 1回 = 称号
+  { id: "beast-tessera", name: "Tessera", category: "geometry", family: "beast" },
+  { id: "beast-jagarmor", name: "Jagged", category: "material", family: "beast" },
+  { id: "form-isocubes", name: "Cubes", category: "geometry", family: "form" },
+  { id: "wave-obsidian-warp", name: "Obsidian", category: "geometry", family: "wave" },
+  { id: "wave-neon-ridge", name: "Neon Ridge", category: "cyber", family: "wave" },
+  { id: "beast-facet", name: "Facet", category: "beast", family: "beast" },
+  { id: "beast-thunder", name: "Thunder", category: "beast", family: "beast" },
+  { id: "beast-starborne", name: "Starborne", category: "beast", family: "beast" },
+  { id: "beast-regalia", name: "Regalia", category: "beast", family: "beast" },
+  // 順位回数 = 深宇宙
+  { id: "beast-startrail", name: "Star Trail", category: "cosmos", family: "beast" },
+  { id: "beast-nebula", name: "Cone", category: "cosmos", family: "beast" },
+  { id: "beast-crab", name: "Crab", category: "cosmos", family: "beast" },
+  { id: "beast-southernring", name: "Southern Ring", category: "cosmos", family: "beast" },
+  // RS 最終順位 = 銀河
+  { id: "beast-galaxy", name: "Galaxy", category: "cosmos", family: "beast" },
+  { id: "beast-deepfield", name: "Deep Field", category: "cosmos", family: "beast" },
+  { id: "beast-milkyway", name: "Galactic Core", category: "cosmos", family: "beast" },
+  { id: "beast-andromeda", name: "Andromeda", category: "cosmos", family: "beast" },
+  { id: "beast-pillars", name: "Pillars", category: "cosmos", family: "beast" },
+  // 招待 = 金
+  { id: "beast-viper", name: "Viper", category: "reptile", family: "beast" },
+  { id: "wave-gold-monogram", name: "Monogram", category: "material", family: "wave" },
+  { id: "scale-dragon", name: "Dragon", category: "reptile", family: "scale" },
 ];
 
 function bgMeta(id: ProfilePlanProBgVariant): ProfilePlanProBgVariantMeta | undefined {
@@ -283,10 +406,9 @@ export function profilePlanProAdoptedCategoryMeta(
 
 export function profilePlanProAdoptedCategoryLabel(
   category: ProfilePlanProAdoptedCategory,
-  language: "ja" | "en" = "en"
+  language: string = "en"
 ): string {
-  const meta = profilePlanProAdoptedCategoryMeta(category);
-  return language === "ja" ? meta.labelJa : meta.labelEn;
+  return L(resolveLocalizedLang(language), profilePlanProAdoptedCategoryMeta(category).label);
 }
 
 export const PROFILE_PLAN_PRO_ADOPTED_BG: readonly ProfilePlanProAdoptedEntry[] =
@@ -297,8 +419,8 @@ export const PROFILE_PLAN_PRO_ADOPTED_BG: readonly ProfilePlanProAdoptedEntry[] 
       category: spec.category,
       family: spec.family,
       group: spec.family,
-      label: meta.label,
-      tag: meta.tag,
+      label: spec.name,
+      tag: "",
       description: meta.description,
     };
   });

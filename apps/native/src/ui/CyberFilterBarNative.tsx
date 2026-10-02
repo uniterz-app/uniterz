@@ -6,7 +6,9 @@ import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
+import { L, resolveLocalizedLang } from "../../../../lib/i18n/localize";
 import { colors, cyberFilter, fonts } from "../theme/tokens";
+import { nativeBlurViewExtraProps } from "./nativeBlurProps";
 
 type Props = {
   /** 折りたたみ可能な詳細フィルター */
@@ -19,7 +21,7 @@ type Props = {
   /** フィルターボタン押下（Games 等） */
   onFilterPress?: () => void;
   filterActive?: boolean;
-  language?: "ja" | "en";
+  language?: string;
 };
 
 export default function CyberFilterBarNative({
@@ -31,13 +33,26 @@ export default function CyberFilterBarNative({
   filterActive = false,
   language = "ja",
 }: Props) {
-  const isJa = language === "ja";
+  const moreLabel = L(resolveLocalizedLang(language), {
+    ja: "詳細",
+    en: "More",
+    ko: "상세",
+    zh: "更多",
+    es: "Más",
+    pt: "Mais",
+    fr: "Plus",
+  });
 
   return (
     <View style={styles.wrap}>
       <View style={styles.bar}>
         {(Platform.OS === "ios" || Platform.OS === "android") && (
-          <BlurView intensity={24} tint="dark" style={StyleSheet.absoluteFillObject} />
+          <BlurView
+            intensity={24}
+            tint="dark"
+            style={StyleSheet.absoluteFillObject}
+            {...nativeBlurViewExtraProps()}
+          />
         )}
         <LinearGradient
           colors={[colors.filterBarBg, "rgba(10,14,24,0.65)"]}
@@ -53,7 +68,7 @@ export default function CyberFilterBarNative({
                 size={20}
                 color={colors.textSecondary}
               />
-              <Text style={styles.iconBtnLabel}>{isJa ? "詳細" : "More"}</Text>
+              <Text style={styles.iconBtnLabel}>{moreLabel}</Text>
             </Pressable>
           ) : null}
           {onFilterPress ? (
@@ -117,7 +132,7 @@ const styles = StyleSheet.create({
     gap: 4,
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 8,
+    borderRadius: 0,
   },
   iconBtnActive: {
     backgroundColor: "rgba(34,211,238,0.12)",
@@ -138,22 +153,22 @@ const styles = StyleSheet.create({
   chip: {
     paddingHorizontal: cyberFilter.chipPaddingH,
     paddingVertical: cyberFilter.chipPaddingV,
-    borderRadius: 999,
+    borderRadius: 0,
     borderWidth: 1,
-    borderColor: colors.borderSubtle,
-    backgroundColor: "rgba(15,23,42,0.4)",
+    borderColor: "rgba(255,255,255,0.16)",
+    backgroundColor: "rgba(255,255,255,0.04)",
   },
   chipActive: {
-    borderColor: colors.accentCyan,
-    backgroundColor: "rgba(34,211,238,0.12)",
+    borderColor: "rgba(255,255,255,0.72)",
+    backgroundColor: "rgba(255,255,255,0.12)",
   },
   chipLabel: {
     fontSize: 12,
     fontFamily: fonts.metric,
-    color: colors.textSecondary,
+    color: "rgba(255,255,255,0.62)",
     letterSpacing: 0.3,
   },
   chipLabelActive: {
-    color: colors.accentCyan,
+    color: "#FFFFFF",
   },
 });

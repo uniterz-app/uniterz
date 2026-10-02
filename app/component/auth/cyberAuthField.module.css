@@ -397,6 +397,61 @@
   border-radius: 0;
 }
 
+/* プロフィール編集の言語・国セレクト — 白黒 */
+.mono .white::before {
+  filter: brightness(1.2);
+  background-image: conic-gradient(
+    rgba(0, 0, 0, 0) 0%,
+    #f5f5f5,
+    rgba(0, 0, 0, 0) 8%,
+    rgba(0, 0, 0, 0) 50%,
+    #c8c8c8,
+    rgba(0, 0, 0, 0) 58%
+  );
+}
+
+.mono .border::before {
+  filter: brightness(1.1);
+  background-image: conic-gradient(
+    #111111,
+    #e8e8e8 5%,
+    #111111 14%,
+    #111111 50%,
+    #9a9a9a 60%,
+    #111111 64%
+  );
+}
+
+.mono .darkBorderBg::before {
+  background-image: conic-gradient(
+    rgba(0, 0, 0, 0),
+    #2a2a2a,
+    rgba(0, 0, 0, 0) 10%,
+    rgba(0, 0, 0, 0) 50%,
+    #1a1a1a,
+    rgba(0, 0, 0, 0) 60%
+  );
+}
+
+.mono .glow::before {
+  background-image: conic-gradient(
+    #000,
+    #d0d0d0 5%,
+    #000 38%,
+    #000 50%,
+    #888888 60%,
+    #000 87%
+  );
+}
+
+.mono .glow {
+  opacity: 0.22;
+}
+
+.mono .selectChevron {
+  color: rgba(245, 245, 245, 0.72);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .glow::before,
   .darkBorderBg::before,

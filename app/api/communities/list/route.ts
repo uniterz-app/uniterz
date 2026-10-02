@@ -41,6 +41,6 @@ export async function GET(req: Request) {
       );
     }
     console.error("[communities/list]", e);
-    return NextResponse.json({ ok: false, error: msg }, { status: 500 });
+    return NextResponse.json({ ok: false, error: "internal" }, { status: 500 });
   }
 }

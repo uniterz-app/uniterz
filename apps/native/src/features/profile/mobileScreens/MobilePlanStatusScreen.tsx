@@ -26,9 +26,17 @@ import {
   planPeriodLabel,
   type StoredPlanType,
 } from "../../billing/planChangeDisplay";
+import {
+  planChangeLoadingLabel,
+  planChangeStartedLabel,
+  planChangeTaxSuffix,
+  planChangeUpgradeCta,
+  planChangeScreenTitle,
+} from "@/lib/pro/planChangeUiCopy";
+import { L, resolveLocalizedLang } from "@/lib/i18n/localize";
 
 type Props = {
-  language: "ja" | "en";
+  language: string;
   uid: string | undefined;
   onClose: () => void;
   onUpgrade: () => void;
@@ -43,8 +51,7 @@ export default function MobilePlanStatusScreen({
   onUpgrade,
   onNavigate,
 }: Props) {
-  const isJa = language === "ja";
-  const lang = isJa ? "ja" : "en";
+  const lang = resolveLocalizedLang(language);
   const { bottomContentReserveY } = useBottomTabBarInsets();
   const [plan, setPlan] = useState<"free" | "pro">("free");
   const [planType, setPlanType] = useState<StoredPlanType | null>(null);
@@ -80,15 +87,21 @@ export default function MobilePlanStatusScreen({
     };
   }, [uid]);
 
-  const planHelp = isJa
-    ? "現在のプランと更新情報を確認できます。"
-    : "Check your current plan and renewal details.";
+  const planHelp = L(lang, {
+    ja: "現在のプランと更新情報を確認できます。",
+    en: "Check your current plan and renewal details.",
+    ko: "현재 플랜과 갱신 정보를 확인할 수 있습니다.",
+    zh: "可查看当前方案与续订信息。",
+    es: "Consulta tu plan actual y la renovación.",
+    pt: "Confira seu plano atual e a renovação.",
+    fr: "Consultez votre plan et le renouvellement.",
+  });
 
   if (loading) {
     return (
       <MobilePageShell title="PLAN" subtitle={planHelp} appBackground onClose={onClose}>
         <View style={styles.center}>
-          <CandleChartLoaderNative label={isJa ? "読み込み中" : "Loading"} />
+          <CandleChartLoaderNative label={planChangeLoadingLabel(lang)} />
         </View>
       </MobilePageShell>
     );
@@ -138,7 +151,7 @@ export default function MobilePlanStatusScreen({
               <Text style={styles.priceAmt}>{planCatalogPrice(currentIap, lang)}</Text>
               <Text style={styles.pricePeriod}>
                 {planPeriodLabel(currentIap, lang)}
-                {isJa ? "・税込み" : " · tax incl."}
+                {planChangeTaxSuffix(lang)}
               </Text>
             </View>
           ) : null}
@@ -146,7 +159,7 @@ export default function MobilePlanStatusScreen({
           <View style={styles.metaBlock}>
             {plan === "pro" && planStart ? (
               <Text style={styles.metaLine}>
-                {isJa ? "開始日" : "Started"}:{" "}
+                {planChangeStartedLabel(lang)}:{" "}
                 <Text style={styles.billingStrong}>
                   {formatPlanDate(planStart, lang)}
                 </Text>
@@ -164,17 +177,25 @@ export default function MobilePlanStatusScreen({
 
           {plan === "free" ? (
             <PlanSlantCtaNative
-              label={isJa ? "Pro にアップグレード" : "Upgrade to Pro"}
+              label={planChangeUpgradeCta(lang)}
               onPress={onUpgrade}
             />
           ) : (
             <View style={styles.actions}>
               <PlanSlantCtaNative
-                label={isJa ? "プラン変更" : "Change Plan"}
+                label={planChangeScreenTitle(lang)}
                 onPress={() => onNavigate?.("PlanChange")}
               />
               <PlanSlantCtaNative
-                label={isJa ? "解約" : "Cancel"}
+                label={L(lang, {
+                  ja: "解約",
+                  en: "Cancel",
+                  ko: "해지",
+                  zh: "取消订阅",
+                  es: "Cancelar",
+                  pt: "Cancelar",
+                  fr: "Résilier",
+                })}
                 variant="danger"
                 onPress={() => onNavigate?.("CancelPlan")}
               />

@@ -29,8 +29,19 @@ export type NbaRosterPlayer = {
   spg?: number;
   bpg?: number;
   tpg?: number;
+  plusMinus?: number;
   /** UI で一段薄い行（深ベンチ等） */
   dimmed?: boolean;
+  /** BDL active players 由来の bio（プレイヤー詳細用） */
+  height?: string | null;
+  weight?: string | null;
+  college?: string | null;
+  country?: string | null;
+  draftYear?: number | null;
+  draftRound?: number | null;
+  draftNumber?: number | null;
+  /** 2-Way 契約フラグ */
+  isTwoWay?: boolean;
 };
 
 export type NbaRosterTeamBlock = {
@@ -52,9 +63,45 @@ export type NbaRosterReport = {
 export function playerCardName(player: {
   firstName: string;
   lastName: string;
+  id?: number | string | null;
 }): string {
   const first = player.firstName?.trim() ?? "";
   const last = player.lastName?.trim() ?? "";
+  const upperFirst = first.toUpperCase();
+  const upperLast = last.toUpperCase();
+  const id = player.id != null ? String(player.id).trim() : "";
+
+  // 長い定番名のみ通称（SGA / Giannis / NAW / KCP）。他は C.HOLMGREN 形式
+  if (id === "175") return "SGA";
+  if (id === "15") return "GIANNIS";
+  if (id === "666400") return "NAW";
+  if (id === "81") return "KCP";
+  if (
+    (upperFirst === "SHAI" && upperLast.includes("GILGEOUS-ALEXANDER")) ||
+    upperLast === "GILGEOUS-ALEXANDER" ||
+    (upperFirst === "SHAI" && upperLast === "ALEXANDER")
+  ) {
+    return "SGA";
+  }
+  if (
+    upperFirst === "GIANNIS" &&
+    (upperLast.includes("ANTETOKOUNMPO") || upperLast === "ANTETOKOUNMPO")
+  ) {
+    return "GIANNIS";
+  }
+  if (
+    (upperFirst === "NICKEIL" && upperLast.includes("ALEXANDER-WALKER")) ||
+    upperLast === "ALEXANDER-WALKER"
+  ) {
+    return "NAW";
+  }
+  if (
+    (upperFirst === "KENTAVIOUS" && upperLast.includes("CALDWELL-POPE")) ||
+    upperLast === "CALDWELL-POPE"
+  ) {
+    return "KCP";
+  }
+
   if (first && last) {
     return `${first.charAt(0).toUpperCase()}.${last.toUpperCase()}`;
   }

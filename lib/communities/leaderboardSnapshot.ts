@@ -11,6 +11,7 @@ type RankedRow = {
   handle: string | null;
   photoURL: string | null;
   plan: "free" | "pro";
+  planProBgVariant?: string;
   countryCode: string | null;
   totalPosts: number;
   totalWins: number;
@@ -29,6 +30,10 @@ export type LeaderboardSnapshot = {
   periodType: CommunityPeriodType;
   rankingStartDateKey: string;
   rankingStartAtMs: number;
+  rankingGamesScope?: string;
+  rankingEndDateKey?: string;
+  rankingPeriodMonthKey?: string;
+  rankingSeasonKey?: string;
   memberCount: number;
   rows: RankedRow[];
   builtAtMs: number;
@@ -89,6 +94,10 @@ export async function readLeaderboardSnapshot(
     periodType: String(d.periodType ?? "from_now") as CommunityPeriodType,
     rankingStartDateKey: String(d.rankingStartDateKey ?? ""),
     rankingStartAtMs: Number(d.rankingStartAtMs ?? 0),
+    rankingGamesScope: String(d.rankingGamesScope ?? "all"),
+    rankingEndDateKey: String(d.rankingEndDateKey ?? ""),
+    rankingPeriodMonthKey: String(d.rankingPeriodMonthKey ?? ""),
+    rankingSeasonKey: String(d.rankingSeasonKey ?? ""),
     memberCount: Number(d.memberCount ?? 0),
     rows,
     builtAtMs: Number(d.builtAtMs ?? 0),
@@ -109,6 +118,10 @@ export async function writeLeaderboardSnapshot(
       periodType: snapshot.periodType,
       rankingStartDateKey: snapshot.rankingStartDateKey,
       rankingStartAtMs: snapshot.rankingStartAtMs,
+      rankingGamesScope: snapshot.rankingGamesScope ?? "all",
+      rankingEndDateKey: snapshot.rankingEndDateKey ?? "",
+      rankingPeriodMonthKey: snapshot.rankingPeriodMonthKey ?? "",
+      rankingSeasonKey: snapshot.rankingSeasonKey ?? "",
       memberCount: snapshot.memberCount,
       rows: snapshot.rows,
       builtAtMs: snapshot.builtAtMs,

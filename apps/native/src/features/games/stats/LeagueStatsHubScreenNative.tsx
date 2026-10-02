@@ -1,7 +1,7 @@
 /** STATS ハブ — 既定 Team Stats、タブで Player Stats 切替 */
 import { useState } from "react";
 import { StyleSheet, View } from "react-native";
-import MobilePageShell from "../../profile/mobileScreens/MobilePageShell";
+import GamesNbaSubpageShellNative from "../GamesNbaSubpageShellNative";
 import {
   CyberSlantedTabBarNative,
   CyberSlantedTabNative,
@@ -28,26 +28,16 @@ export default function LeagueStatsHubScreenNative({
   onSelectPlayer,
   initialTab = "team",
 }: Props) {
-  const isJa = language === "ja";
   const [tab, setTab] = useState<TabId>(initialTab);
-
   const title = tab === "team" ? "TEAM STATS" : "PLAYER STATS";
-  const subtitle =
-    tab === "team"
-      ? isJa
-        ? "共有 API から取得（未 seed 時はモック）。"
-        : "Loaded via shared API (mock until seeded)."
-      : isJa
-        ? "指標トップリーダー（モック）"
-        : "Stat leaderboards (mock).";
 
   return (
-    <MobilePageShell
+    <GamesNbaSubpageShellNative
       title={title}
       eyebrow="STATS"
-      subtitle={subtitle}
-      appBackground
-      onClose={onClose}
+      onBack={onClose}
+      scroll={false}
+      contentStyle={styles.shell}
     >
       <View style={styles.tabs}>
         <CyberSlantedTabBarNative fill>
@@ -92,11 +82,14 @@ export default function LeagueStatsHubScreenNative({
           />
         )}
       </View>
-    </MobilePageShell>
+    </GamesNbaSubpageShellNative>
   );
 }
 
 const styles = StyleSheet.create({
+  shell: {
+    flex: 1,
+  },
   tabs: {
     paddingHorizontal: 12,
     paddingTop: 4,

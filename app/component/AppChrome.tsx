@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { useSyncExternalStore } from "react";
+import { useLayoutEffect, useSyncExternalStore } from "react";
 import Header from "@/app/component/Header";
 import { isGuestLegalPath } from "@/lib/guestLegalPaths";
 import { isGuestPreviewPath } from "@/lib/guestPreviewPaths";
@@ -71,6 +71,22 @@ export default function AppChrome() {
       }}
     />
   ) : null;
+
+  useLayoutEffect(() => {
+    if (shouldHideAll) return;
+    const reset = () => {
+      window.scrollTo(0, 0);
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+    };
+    reset();
+    const raf = requestAnimationFrame(reset);
+    const t = window.setTimeout(reset, 50);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.clearTimeout(t);
+    };
+  }, [pathname, shouldHideHeader, shouldHideAll]);
 
   if (shouldHideAll) return cover;
 

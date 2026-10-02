@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
-import { doc, serverTimestamp, setDoc } from "firebase/firestore";
+import {
+  doc,
+  onSnapshot,
+  serverTimestamp,
+  setDoc,
+} from "firebase/firestore";
 import {
   DEFAULT_PUSH_NOTIFICATION_PREFS,
   parsePushNotificationPrefs,
@@ -7,10 +12,10 @@ import {
   type PushNotificationPrefKey,
   type PushNotificationPrefs,
 } from "@/lib/notifications/pushNotificationPrefs";
-import { subscribeUserDocLive } from "../../../../lib/user/subscribeUserDocLive";
+import { USER_PRIVATE_NOTIFICATION_PREFS_DOC } from "@/lib/user/userPrivatePaths";
 import { db } from "../lib/firebase";
-import type { DocumentData } from "firebase/firestore";
 
+/** Web `usePushNotificationPrefs` 相当 — private/notificationPrefs */
 export function usePushNotificationPrefsNative(uid: string | null | undefined) {
   const [prefs, setPrefs] = useState<PushNotificationPrefs>({
     ...DEFAULT_PUSH_NOTIFICATION_PREFS,
@@ -25,19 +30,40 @@ export function usePushNotificationPrefsNative(uid: string | null | undefined) {
     }
 
     setLoading(true);
-    return subscribeUserDocLive(uid, (data: DocumentData | null) => {
-      setPrefs(parsePushNotificationPrefs(data?.notificationPrefs));
-      setLoading(false);
-    });
+    const ref = doc(
+      db,
+      "users",
+      uid,
+      "private",
+      USER_PRIVATE_NOTIFICATION_PREFS_DOC
+    );
+    return onSnapshot(
+      ref,
+      (snap) => {
+        const raw = snap.exists() ? snap.data()?.prefs : undefined;
+        setPrefs(parsePushNotificationPrefs(raw));
+        setLoading(false);
+      },
+      () => {
+        setPrefs({ ...DEFAULT_PUSH_NOTIFICATION_PREFS });
+        setLoading(false);
+      }
+    );
   }, [uid]);
 
   const persistPrefs = useCallback(
     async (next: PushNotificationPrefs) => {
       if (!uid) return;
       await setDoc(
-        doc(db, "users", uid),
+        doc(
+          db,
+          "users",
+          uid,
+          "private",
+          USER_PRIVATE_NOTIFICATION_PREFS_DOC
+        ),
         {
-          notificationPrefs: next,
+          prefs: next,
           updatedAt: serverTimestamp(),
         },
         { merge: true }

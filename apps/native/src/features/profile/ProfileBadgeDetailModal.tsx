@@ -16,11 +16,14 @@ import {
   formatBadgeParticipantCount,
   readBadgeParticipantCount,
 } from "../../../../../lib/badges/badgeCohort";
+import { resolveBadgeCopy } from "../../../../../lib/badges/resolveBadgeCopy";
+import { badgeDetailModalCopy } from "../../../../../lib/badges/badgeDetailModalCopy";
+import { DATE_LOCALE } from "../../../../../lib/i18n/language";
 
 type Props = {
   visible: boolean;
   badge: ResolvedBadgeNative | null;
-  language: "ja" | "en";
+  language: string;
   onClose: () => void;
 };
 
@@ -75,11 +78,11 @@ export default function ProfileBadgeDetailModal({
   language,
   onClose,
 }: Props) {
-  const isJa = language === "ja";
+  const ui = badgeDetailModalCopy(language);
+  const lang = ui.lang;
   if (!badge) return null;
 
-  const awardedLabel = isJa ? "付与日" : "Granted";
-  const lang = isJa ? "ja" : "en";
+  const copy = resolveBadgeCopy(badge, lang);
   const participantCount = readBadgeParticipantCount(badge);
 
   return (
@@ -96,18 +99,18 @@ export default function ProfileBadgeDetailModal({
           </View>
 
           <View style={styles.copy}>
-            <Text style={styles.kicker}>{isJa ? "バッジ" : "Badge"}</Text>
-            <Text style={styles.title}>{badge.title}</Text>
-            {badge.description ? <Text style={styles.desc}>{badge.description}</Text> : null}
+            <Text style={styles.kicker}>{ui.kicker}</Text>
+            <Text style={styles.title}>{copy.title}</Text>
+            {copy.description ? <Text style={styles.desc}>{copy.description}</Text> : null}
 
             {badge.grantedAt || participantCount != null ? (
               <View style={styles.metaBlock}>
                 {badge.grantedAt ? (
                   <View style={styles.metaRow}>
-                    <Text style={styles.metaLabel}>{awardedLabel}</Text>
+                    <Text style={styles.metaLabel}>{ui.grantedAt}</Text>
                     <Text style={styles.metaDot}>·</Text>
                     <Text style={styles.metaValue}>
-                      {badge.grantedAt.toLocaleDateString(isJa ? "ja-JP" : "en-US")}
+                      {badge.grantedAt.toLocaleDateString(DATE_LOCALE[lang])}
                     </Text>
                   </View>
                 ) : null}
