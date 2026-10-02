@@ -47,14 +47,11 @@ function extremeWl(r: WlRecord, minGames: number): boolean {
   return pct >= 0.65 || pct <= 0.35 || Math.abs(r.wins - r.losses) >= 3;
 }
 
+/** 数字のシーズンは常に明示（開幕前は前季の数字なので「今季」と書かせない） */
 function seasonTag(
-  phase: ProBriefPhase,
-  usedPrior: boolean
+  bundle: NbaTeamInsightExtrasBundle
 ): { metric: string; hint: string } {
-  if (phase === "opening" || usedPrior) {
-    return { metric: "prior", hint: " last season" };
-  }
-  return { metric: "season", hint: "" };
+  return { metric: bundle.seasonKey, hint: ` in ${bundle.seasonKey}` };
 }
 
 export function resolveInsightExtrasForPhase(input: {
@@ -130,7 +127,7 @@ export function enrichScheduleFactsWithInsightExtras(input: {
   usedPrior: boolean;
 }): ProInsightFact[] {
   if (!input.bundle) return input.facts;
-  const tag = seasonTag(input.phase, input.usedPrior);
+  const tag = seasonTag(input.bundle);
 
   return input.facts.map((f) => {
     const teamId = f.teamIds[0];
@@ -208,7 +205,7 @@ export function buildInsightExtrasScheduleCandidates(input: {
   usedPrior: boolean;
 }): ProInsightFact[] {
   if (!input.bundle) return [];
-  const tag = seasonTag(input.phase, input.usedPrior);
+  const tag = seasonTag(input.bundle);
   const out: ProInsightFact[] = [];
 
   for (const side of [
@@ -279,7 +276,7 @@ export function buildInsightExtrasContextCandidates(input: {
   usedPrior: boolean;
 }): ProInsightFact[] {
   if (!input.bundle) return [];
-  const tag = seasonTag(input.phase, input.usedPrior);
+  const tag = seasonTag(input.bundle);
   const out: ProInsightFact[] = [];
   const homeAbbr = proInsightTeamAbbr(input.homeTeamId);
   const awayAbbr = proInsightTeamAbbr(input.awayTeamId);
@@ -292,7 +289,10 @@ export function buildInsightExtrasContextCandidates(input: {
     const games = fromHome ? wlTotal(fromHome.overall) : 0;
     if (fromHome && games >= MIN_H2H_GAMES) {
       const years = input.bundle.h2hSeasonKeys?.length ?? 0;
-      const yearBit = years > 1 ? `${years}-year` : "multi-year";
+      const keys = input.bundle.h2hSeasonKeys ?? [];
+      const span =
+        keys.length > 1 ? ` (${keys[keys.length - 1]}–${keys[0]})` : "";
+      const yearBit = `${years > 1 ? `${years}-year` : "multi-year"}${span}`;
       const atHome =
         wlTotal(fromHome.atHome) >= 2
           ? ` (${formatWl(fromHome.atHome)} at home)`

@@ -21,7 +21,10 @@ export function nbaLeagueStatsDefaultSeasonKey(
   return calendarSeasonKey;
 }
 
-export function nbaLeagueStatsSeasonNavState(seasonKey: string): {
+export function nbaLeagueStatsSeasonNavState(
+  seasonKey: string,
+  options: readonly string[] = nbaLeagueStatsSeasonOptions()
+): {
   seasonKey: string;
   label: string;
   index: number;
@@ -30,7 +33,6 @@ export function nbaLeagueStatsSeasonNavState(seasonKey: string): {
   newerKey: string | null;
   olderKey: string | null;
 } {
-  const options = nbaLeagueStatsSeasonOptions();
   const idx = Math.max(0, options.indexOf(seasonKey));
   const key = options[idx] ?? options[0]!;
   return {

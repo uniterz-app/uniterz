@@ -16,6 +16,7 @@ import type { NbaRosterTeamBlock } from "@/lib/predict/nbaRoster";
 import type { NbaTeamAceOutRecord } from "@/lib/nba/insights/aceOutRecordTypes";
 import type { NbaTeamStrengthSplit } from "@/lib/nba/insights/fetchTeamStrengthSplitClient";
 import type { NbaTeamDetailShapeEdges } from "@/lib/nba/teamShapes/fetchTeamShapeEdgesClient";
+import type { NbaTeamOffseasonMoves } from "@/lib/nba/offseasonMoves/offseasonMovesTypes";
 
 type Options = {
   teamId?: string;
@@ -60,6 +61,7 @@ export function useNbaTeamDetailLiveOverlay(options: Options): {
   detail: NbaTeamDetailPreview;
   aceOut: NbaTeamAceOutRecord | null;
   shapeEdges: NbaTeamDetailShapeEdges | null;
+  offseasonMoves: NbaTeamOffseasonMoves | null;
   loading: boolean;
   failures: NbaTeamDetailOverlayFailures;
   hasFetchError: boolean;
@@ -82,6 +84,8 @@ export function useNbaTeamDetailLiveOverlay(options: Options): {
   const [aceOut, setAceOut] = useState<NbaTeamAceOutRecord | null>(null);
   const [shapeEdges, setShapeEdges] =
     useState<NbaTeamDetailShapeEdges | null>(null);
+  const [offseasonMoves, setOffseasonMoves] =
+    useState<NbaTeamOffseasonMoves | null>(null);
   const [failures, setFailures] =
     useState<NbaTeamDetailOverlayFailures>(emptyFailures);
   const [loading, setLoading] = useState(!!teamId);
@@ -96,6 +100,7 @@ export function useNbaTeamDetailLiveOverlay(options: Options): {
       setStrengthSplit(null);
       setAceOut(null);
       setShapeEdges(null);
+      setOffseasonMoves(null);
       setFailures(emptyFailures());
       setLoading(false);
       return;
@@ -119,6 +124,7 @@ export function useNbaTeamDetailLiveOverlay(options: Options): {
         setStrengthSplit(payload.strengthSplit);
         setAceOut(payload.aceOut);
         setShapeEdges(payload.shapeEdges);
+        setOffseasonMoves(payload.offseasonMoves ?? null);
         setFailures(emptyFailures());
       })
       .catch(() => {
@@ -131,6 +137,7 @@ export function useNbaTeamDetailLiveOverlay(options: Options): {
         setStrengthSplit(null);
         setAceOut(null);
         setShapeEdges(null);
+        setOffseasonMoves(null);
         setFailures({
           roster: true,
           payroll: true,
@@ -204,5 +211,13 @@ export function useNbaTeamDetailLiveOverlay(options: Options): {
     failures.injuries ||
     failures.strengthSplit;
 
-  return { detail, aceOut, shapeEdges, loading, failures, hasFetchError };
+  return {
+    detail,
+    aceOut,
+    shapeEdges,
+    offseasonMoves,
+    loading,
+    failures,
+    hasFetchError,
+  };
 }

@@ -78,7 +78,7 @@ export const NBA_CURATED_DEAD_MONEY: Readonly<
       {
         playerId: "278",
         name: "D.LILLARD",
-        capHit: 22_516_603,
+        capHit: 21_311_053,
         ...throughNote("2029-30"),
       },
       {
@@ -108,6 +108,13 @@ export const NBA_CURATED_DEAD_MONEY: Readonly<
         capHit: 464_050,
         noteJa: "2026-27 ONLY",
         noteEn: "2026-27 ONLY",
+      },
+      {
+        playerId: "405",
+        name: "D.RUSSELL",
+        capHit: 5_969_250,
+        noteJa: "WAIVE",
+        noteEn: "WAIVE",
       },
     ],
     "nba-mavericks": [
@@ -157,13 +164,86 @@ export const NBA_CURATED_DEAD_MONEY: Readonly<
         noteJa: "2026-27 ONLY",
         noteEn: "2026-27 ONLY",
       },
+      {
+        playerId: "56677831",
+        name: "C.WHITMORE",
+        capHit: 1_819_437,
+        ...throughNote("2028-29"),
+      },
     ],
     "nba-blazers": [
       {
         playerId: "4197307",
         name: "D.LOUZADA",
         capHit: 268_032,
-        ...throughNote("2029-30"),
+        ...throughNote("2028-29"),
+      },
+    ],
+    "nba-nuggets": [
+      {
+        playerId: "455",
+        name: "J.VALANCIUNAS",
+        capHit: 666_667,
+        ...throughNote("2028-29"),
+      },
+    ],
+    "nba-kings": [
+      {
+        playerId: "125",
+        name: "D.DEROZAN",
+        capHit: 3_333_333,
+        ...throughNote("2028-29"),
+      },
+    ],
+    "nba-timberwolves": [
+      {
+        playerId: "666703",
+        name: "J.KONCHAR",
+        capHit: 2_055_000,
+        ...throughNote("2028-29"),
+      },
+    ],
+    "nba-hornets": [
+      {
+        playerId: "1028025639",
+        name: "R.DILLINGHAM",
+        capHit: 6_889_320,
+        noteJa: "WAIVE",
+        noteEn: "WAIVE",
+      },
+      {
+        playerId: "1057847894",
+        name: "R.NEMBHARD",
+        capHit: 2_150_917,
+        noteJa: "WAIVE",
+        noteEn: "WAIVE",
+      },
+    ],
+    "nba-pistons": [
+      {
+        playerId: "196",
+        name: "G.HARRIS",
+        capHit: 3_815_861,
+        noteJa: "WAIVE",
+        noteEn: "WAIVE",
+      },
+    ],
+    "nba-clippers": [
+      {
+        playerId: "1057382509",
+        name: "J.BROOME",
+        capHit: 2_150_917,
+        noteJa: "WAIVE",
+        noteEn: "WAIVE",
+      },
+    ],
+    "nba-pelicans": [
+      {
+        playerId: "173",
+        name: "T.GIBSON",
+        capHit: 148_828,
+        noteJa: "2026-27 ONLY",
+        noteEn: "2026-27 ONLY",
       },
     ],
   },
@@ -233,6 +313,16 @@ export const NBA_CURATED_EXHIBIT10_PLAYER_IDS: Readonly<
 > = {
   "2026-27": [
     "1028025242", // Devin Carter — BOS キャンプ / E10（ATL がデッド保有）
+    "1081266162", // Hayden Gray — BOS E10
+    "1059992972", // Bez Mbeng — MIA（CHA waive → claim）E10
+    "38017707", // JD Davison — ORL E10
+    "464", // Lonnie Walker IV — DEN E9
+    "56677838", // Kobe Bufkin — NOP E9
+    "56677852", // Andre Jackson Jr. — TOR E10
+    "56677857", // Julian Phillips — HOU E10
+    "56677778", // Oscar Tshiebwe — HOU E10
+    "38017719", // Dalen Terry — GSW E9
+    "3547302", // Anthony Gill — WAS E9
   ],
 };
 

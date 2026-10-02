@@ -9,13 +9,16 @@ const CYAN = "#00F5FF";
 type Props = {
   seasonKey: string;
   onSeasonChange: (seasonKey: string) => void;
+  /** 選べるシーズン（新しい順）。省略時はリーグ表の範囲 */
+  seasonKeys?: readonly string[];
 };
 
 export default function NbaLeagueStatsSeasonNavNative({
   seasonKey,
   onSeasonChange,
+  seasonKeys,
 }: Props) {
-  const nav = nbaLeagueStatsSeasonNavState(seasonKey);
+  const nav = nbaLeagueStatsSeasonNavState(seasonKey, seasonKeys);
 
   return (
     <View style={styles.row}>

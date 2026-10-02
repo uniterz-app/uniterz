@@ -25,6 +25,10 @@ type BdlStatRow = {
     id?: number;
     abbreviation?: string | null;
   } | null;
+  game?: {
+    id?: number;
+    date?: string | null;
+  } | null;
 };
 
 function parseMinutes(raw: string | number | null | undefined): number {
@@ -56,9 +60,98 @@ type PlayerAccum = {
 
 const MAX_PAGES = 450;
 
+/** `bdlNbaGetAllPages` の 50 ページ上限では足りないため専用ループ。 */
+async function forEachBdlSeasonStatRow(
+  seasonYear: number,
+  seasonType: "regular" | "playoffs",
+  onRow: (row: BdlStatRow) => void
+): Promise<void> {
+  let cursor: number | undefined;
+  for (let page = 0; page < MAX_PAGES; page += 1) {
+    const body = await bdlNbaGetJson<BdlListResponse<BdlStatRow>>(
+      "/nba/v1/stats",
+      {
+        "seasons[]": seasonYear,
+        season_type: seasonType,
+        per_page: 100,
+        ...(cursor != null ? { cursor } : {}),
+      }
+    );
+    const chunk = Array.isArray(body.data) ? body.data : [];
+    for (const row of chunk) onRow(row);
+    const next = body.meta?.next_cursor;
+    if (next == null || chunk.length === 0) break;
+    cursor = next;
+  }
+}
+
+function resolveRowTeamId(row: BdlStatRow): {
+  teamId: string;
+  bdlTeamId: number | null;
+} | null {
+  const abbr = String(row.team?.abbreviation ?? "")
+    .trim()
+    .toUpperCase();
+  if (!abbr) return null;
+  const bdlTeamId = typeof row.team?.id === "number" ? row.team.id : null;
+  const teamId =
+    (bdlTeamId != null ? rememberBdlTeamId(bdlTeamId, abbr) : null) ??
+    appTeamIdFromBdlAbbreviation(abbr);
+  return teamId ? { teamId, bdlTeamId } : null;
+}
+
+export type BdlSeasonFinalPlayerTeam = {
+  playerId: string;
+  firstName: string;
+  lastName: string;
+  teamId: string;
+  /** YYYY-MM-DD（BDL game.date 先頭 10 文字） */
+  lastGameDate: string | null;
+};
+
+/**
+ * シーズン最終所属（レギュラー + プレーオフで最後に box に載ったチーム）。
+ * DNP 行も含める（シーズン末に故障で出ていない選手も最終ロスターとして拾う）。
+ */
+export async function fetchBdlSeasonFinalPlayerTeamMap(input: {
+  seasonYear: number;
+}): Promise<Map<string, BdlSeasonFinalPlayerTeam>> {
+  type Last = BdlSeasonFinalPlayerTeam & { sortKey: string };
+  const byPlayer = new Map<string, Last>();
+
+  const onRow = (row: BdlStatRow) => {
+    const pid = row.player?.id;
+    if (pid == null) return;
+    const team = resolveRowTeamId(row);
+    if (!team) return;
+    const date = String(row.game?.date ?? "").slice(0, 10);
+    const gameId = typeof row.game?.id === "number" ? row.game.id : 0;
+    const sortKey = `${date || "0000-00-00"}#${String(gameId).padStart(12, "0")}`;
+    const playerId = String(pid);
+    const prev = byPlayer.get(playerId);
+    if (prev && prev.sortKey >= sortKey) return;
+    byPlayer.set(playerId, {
+      playerId,
+      firstName: row.player?.first_name?.trim() || prev?.firstName || "",
+      lastName: row.player?.last_name?.trim() || prev?.lastName || "",
+      teamId: team.teamId,
+      lastGameDate: date || null,
+      sortKey,
+    });
+  };
+
+  await forEachBdlSeasonStatRow(input.seasonYear, "regular", onRow);
+  await forEachBdlSeasonStatRow(input.seasonYear, "playoffs", onRow);
+
+  const out = new Map<string, BdlSeasonFinalPlayerTeam>();
+  for (const [id, { sortKey: _sortKey, ...rest }] of byPlayer) {
+    out.set(id, rest);
+  }
+  return out;
+}
+
 /**
  * 1 シーズン分の box 行をページングし、playerId → 所属チームを返す。
- * `bdlNbaGetAllPages` の 50 ページ上限では足りないため専用ループ。
  */
 export async function fetchBdlSeasonPlayerTeamMap(input: {
   seasonYear: number;
@@ -66,59 +159,43 @@ export async function fetchBdlSeasonPlayerTeamMap(input: {
 }): Promise<Map<string, BdlPlayerTeamRef>> {
   const seasonType = input.seasonType === "playoffs" ? "playoffs" : "regular";
   const byPlayer = new Map<string, PlayerAccum>();
-  let cursor: number | undefined;
 
-  for (let page = 0; page < MAX_PAGES; page += 1) {
-    const body = await bdlNbaGetJson<BdlListResponse<BdlStatRow>>(
-      "/nba/v1/stats",
-      {
-        "seasons[]": input.seasonYear,
-        season_type: seasonType,
-        per_page: 100,
-        ...(cursor != null ? { cursor } : {}),
+  await forEachBdlSeasonStatRow(input.seasonYear, seasonType, (row) => {
+    const pid = row.player?.id;
+    if (pid == null) return;
+    if (parseMinutes(row.min) <= 0) return;
+    const abbr = String(row.team?.abbreviation ?? "")
+      .trim()
+      .toUpperCase();
+    if (!abbr) return;
+    const playerId = String(pid);
+    let accum = byPlayer.get(playerId);
+    if (!accum) {
+      accum = {
+        first: row.player?.first_name?.trim() ?? "",
+        last: row.player?.last_name?.trim() ?? "",
+        byAbbr: new Map(),
+      };
+      byPlayer.set(playerId, accum);
+    } else {
+      if (!accum.first && row.player?.first_name) {
+        accum.first = row.player.first_name.trim();
       }
-    );
-    const chunk = Array.isArray(body.data) ? body.data : [];
-    for (const row of chunk) {
-      const pid = row.player?.id;
-      if (pid == null) continue;
-      if (parseMinutes(row.min) <= 0) continue;
-      const abbr = String(row.team?.abbreviation ?? "")
-        .trim()
-        .toUpperCase();
-      if (!abbr) continue;
-      const playerId = String(pid);
-      let accum = byPlayer.get(playerId);
-      if (!accum) {
-        accum = {
-          first: row.player?.first_name?.trim() ?? "",
-          last: row.player?.last_name?.trim() ?? "",
-          byAbbr: new Map(),
-        };
-        byPlayer.set(playerId, accum);
-      } else {
-        if (!accum.first && row.player?.first_name) {
-          accum.first = row.player.first_name.trim();
-        }
-        if (!accum.last && row.player?.last_name) {
-          accum.last = row.player.last_name.trim();
-        }
-      }
-      const bdlTeamId = typeof row.team?.id === "number" ? row.team.id : null;
-      const prev = accum.byAbbr.get(abbr);
-      if (prev) {
-        prev.games += 1;
-        if (prev.bdlTeamId == null && bdlTeamId != null) {
-          prev.bdlTeamId = bdlTeamId;
-        }
-      } else {
-        accum.byAbbr.set(abbr, { abbr, bdlTeamId, games: 1 });
+      if (!accum.last && row.player?.last_name) {
+        accum.last = row.player.last_name.trim();
       }
     }
-    const next = body.meta?.next_cursor;
-    if (next == null || chunk.length === 0) break;
-    cursor = next;
-  }
+    const bdlTeamId = typeof row.team?.id === "number" ? row.team.id : null;
+    const prev = accum.byAbbr.get(abbr);
+    if (prev) {
+      prev.games += 1;
+      if (prev.bdlTeamId == null && bdlTeamId != null) {
+        prev.bdlTeamId = bdlTeamId;
+      }
+    } else {
+      accum.byAbbr.set(abbr, { abbr, bdlTeamId, games: 1 });
+    }
+  });
 
   const out = new Map<string, BdlPlayerTeamRef>();
   for (const [playerId, accum] of byPlayer) {

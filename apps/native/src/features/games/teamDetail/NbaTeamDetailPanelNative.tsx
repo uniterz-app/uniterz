@@ -60,6 +60,7 @@ import JerseyMarkSvg from "../JerseyMarkSvg";
 import NbaFavoriteStarButtonNative from "../NbaFavoriteStarButtonNative";
 import { NbaTeamRosterCardNative } from "../predict/NbaRosterPanelNative";
 import NbaTeamHowTheyPlayNative from "./NbaTeamHowTheyPlayNative";
+import { NbaTeamOffseasonMovesNative } from "./NbaTeamOffseasonMovesNative";
 import {
   apronStatusLabel,
   draftBadgeHeadline,
@@ -1789,7 +1790,7 @@ export default function NbaTeamDetailPanelNative({
     () => getNbaTeamDetailPreview(teamId, bundle),
     [teamId, bundle]
   );
-  const { detail, aceOut, shapeEdges, hasFetchError } =
+  const { detail, aceOut, shapeEdges, offseasonMoves, hasFetchError } =
     useNbaTeamDetailLiveOverlay({
       teamId: baseDetail.teamId,
       apiBaseUrl: getUniterzApiBaseUrl(),
@@ -2107,6 +2108,18 @@ export default function NbaTeamDetailPanelNative({
         </View>
 
         <View style={[styles.divider, { backgroundColor: dividerColor }]} />
+
+        {offseasonMoves ? (
+          <>
+            <NbaTeamOffseasonMovesNative
+              moves={offseasonMoves}
+              accent={accent}
+              language={language}
+              onSelectPlayer={onSelectPlayer}
+            />
+            <View style={[styles.divider, { backgroundColor: dividerColor }]} />
+          </>
+        ) : null}
 
         <TeamInformationSectionNative
           teamId={detail.teamId}

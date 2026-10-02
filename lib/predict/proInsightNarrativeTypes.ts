@@ -25,6 +25,11 @@ export const PRO_INSIGHT_NARRATIVE_ITEM_CAPS: Record<
   "INJURY IMPACT": 2,
 };
 
+/** 根拠行を出す枠（SCHEDULE / CONTEXT は本文とほぼ同文になるため出さない） */
+export function proInsightShowsEvidence(kind: ProInsightNarrativeKind): boolean {
+  return kind === "MATCHUP" || kind === "INJURY IMPACT";
+}
+
 export type ProInsightNarrativeItem = {
   /** LLM 短文（ja/en 正。他言語は翻訳想定） */
   body: UiStrings;

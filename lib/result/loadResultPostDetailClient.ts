@@ -6,6 +6,7 @@ import {
   buildResultDetailViewFromLoad,
   buildWarmResultDetailViewFromPost,
   loadResultPostDetail,
+  loadResultPostDoc,
   type LoadResultPostDetailResult,
   type ResultPostDetailMarket,
 } from "@/lib/result/loadResultPostDetail";
@@ -22,4 +23,8 @@ export async function loadResultPostDetailClient(
   postId: string
 ): Promise<LoadResultPostDetailClientResult> {
   return loadResultPostDetail(postId, db);
+}
+
+export async function loadResultPostDocClient(postId: string) {
+  return loadResultPostDoc(postId, db);
 }

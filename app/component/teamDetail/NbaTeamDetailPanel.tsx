@@ -41,6 +41,17 @@ import {
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
 import { getNbaTeamFranchiseInfo } from "@/lib/nba/teamFranchise/nbaTeamFranchiseInfo";
 import { nbaTeamFranchiseUiCopy } from "@/lib/nba/teamFranchise/nbaTeamFranchiseUiCopy";
+import {
+  nbaOffseasonMovesUiCopy,
+  offseasonMoveIsLinkable,
+  offseasonMoveTag,
+  OFFSEASON_MOVES_COLLAPSED_ROWS,
+  type NbaOffseasonMovesUiCopy,
+} from "@/lib/nba/offseasonMoves/offseasonMovesUiCopy";
+import type {
+  NbaOffseasonMove,
+  NbaTeamOffseasonMoves,
+} from "@/lib/nba/offseasonMoves/offseasonMovesTypes";
 import type { NbaRosterTeamBlock } from "@/lib/predict/nbaRoster";
 import {
   formatStreakLabel,
@@ -298,6 +309,195 @@ function TeamInformationSection({
           ))}
         </dl>
       </div>
+    </section>
+  );
+}
+
+function OffseasonMovesColumn({
+  side,
+  moves,
+  expanded,
+  copy,
+  accent,
+  onPlayerClick,
+}: {
+  side: "in" | "out";
+  moves: NbaOffseasonMove[];
+  expanded: boolean;
+  copy: NbaOffseasonMovesUiCopy;
+  accent: string;
+  onPlayerClick: (playerId: string) => void;
+}) {
+  const headColor = side === "in" ? FORM_WIN : FORM_LOSS;
+  const rows = expanded
+    ? moves
+    : moves.slice(0, OFFSEASON_MOVES_COLLAPSED_ROWS);
+  return (
+    <div
+      className="min-w-0 flex-1 border bg-black/40"
+      style={{ borderColor: hexToRgba(accent, 0.3) }}
+    >
+      <div
+        className="flex items-baseline justify-between border-b px-2.5 py-1.5"
+        style={{ borderColor: hexToRgba(headColor, 0.35) }}
+      >
+        <span
+          className={`${nameOxanium.className} text-[12px] font-extrabold tracking-[0.16em]`}
+          style={{ color: headColor, transform: "skewX(-8deg)" }}
+        >
+          {side === "in" ? copy.incoming : copy.outgoing}
+        </span>
+        <span
+          className={`${nameOxanium.className} text-[11px] font-bold tabular-nums text-white/45`}
+        >
+          {moves.length}
+        </span>
+      </div>
+      {rows.length === 0 ? (
+        <p
+          className={`${nameOxanium.className} px-2.5 py-2 text-[11px] font-semibold text-white/40`}
+        >
+          {copy.empty}
+        </p>
+      ) : (
+        <ul>
+          {rows.map((move) => {
+            const tag = offseasonMoveTag(move, copy);
+            const linkable = offseasonMoveIsLinkable(move, side);
+            const body = (
+              <>
+                <span className="flex min-w-0 items-center gap-1">
+                  <span
+                    className={`${nameOxanium.className} inline-block truncate text-[13px] font-bold text-white/90`}
+                    style={{ transform: "skewX(-8deg)" }}
+                  >
+                    {playerCardName({
+                      firstName: move.firstName,
+                      lastName: move.lastName,
+                      id: move.playerId,
+                    })}
+                  </span>
+                  {move.isTwoWay ? (
+                    <span
+                      className={`${nameOxanium.className} shrink-0 text-[8px] font-bold text-white/40`}
+                    >
+                      {copy.twoWay}
+                    </span>
+                  ) : null}
+                </span>
+                <span className="flex items-center justify-between gap-1.5">
+                  <span
+                    className={`${nameOxanium.className} truncate text-[9px] font-bold uppercase tracking-[0.08em] text-white/50`}
+                  >
+                    {tag.label ? <span>{tag.label}</span> : null}
+                    {tag.label && tag.arrow ? " " : null}
+                    {tag.arrow && tag.otherTeamShort ? (
+                      <span>
+                        {tag.arrow}{" "}
+                        <span
+                          className="text-[11px]"
+                          style={{
+                            color: getTeamUiAccentColor(
+                              "nba",
+                              tag.otherTeamId
+                            ),
+                          }}
+                        >
+                          {tag.otherTeamShort}
+                        </span>
+                      </span>
+                    ) : null}
+                  </span>
+                  {move.salary ? (
+                    <span
+                      className={`${nameOxanium.className} shrink-0 text-[12px] font-bold tabular-nums text-white/70`}
+                    >
+                      {formatSalaryUsd(move.salary)}
+                    </span>
+                  ) : null}
+                </span>
+              </>
+            );
+            return (
+              <li
+                key={`${move.playerId}-${move.kind}`}
+                className="border-t border-white/5 first:border-t-0"
+              >
+                {linkable ? (
+                  <button
+                    type="button"
+                    className="flex w-full flex-col gap-0.5 px-2.5 py-1.5 text-left active:bg-white/5"
+                    onClick={() => onPlayerClick(move.playerId)}
+                  >
+                    {body}
+                  </button>
+                ) : (
+                  <div className="flex flex-col gap-0.5 px-2.5 py-1.5">
+                    {body}
+                  </div>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function OffseasonMovesSection({
+  moves,
+  accent,
+  language,
+  onPlayerClick,
+}: {
+  moves: NbaTeamOffseasonMoves;
+  accent: string;
+  language: string | null | undefined;
+  onPlayerClick: (playerId: string) => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const copy = nbaOffseasonMovesUiCopy(language);
+  const longest = Math.max(moves.incoming.length, moves.outgoing.length);
+  const collapsible = longest > OFFSEASON_MOVES_COLLAPSED_ROWS;
+  return (
+    <section className="space-y-2.5">
+      <SectionTitle title={copy.sectionTitle} accent={accent} />
+      <div className="flex items-start gap-2">
+        <OffseasonMovesColumn
+          side="in"
+          moves={moves.incoming}
+          expanded={expanded}
+          copy={copy}
+          accent={accent}
+          onPlayerClick={onPlayerClick}
+        />
+        <OffseasonMovesColumn
+          side="out"
+          moves={moves.outgoing}
+          expanded={expanded}
+          copy={copy}
+          accent={accent}
+          onPlayerClick={onPlayerClick}
+        />
+      </div>
+      {collapsible ? (
+        <button
+          type="button"
+          className={`${nameOxanium.className} w-full border py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-white/70`}
+          style={{ borderColor: hexToRgba(accent, 0.3) }}
+          onClick={() => setExpanded((v) => !v)}
+        >
+          {expanded ? copy.showLess : copy.showAll(longest)}
+        </button>
+      ) : null}
+      {moves.priorSeasonKey ? (
+        <p
+          className={`${nameOxanium.className} text-[9px] font-semibold leading-snug text-white/40`}
+        >
+          {copy.footnote(moves.priorSeasonKey)}
+        </p>
+      ) : null}
     </section>
   );
 }
@@ -2216,7 +2416,7 @@ export default function NbaTeamDetailPanel({
     () => getNbaTeamDetailPreview(teamId, bundle),
     [teamId, bundle]
   );
-  const { detail, aceOut, shapeEdges, hasFetchError } =
+  const { detail, aceOut, shapeEdges, offseasonMoves, hasFetchError } =
     useNbaTeamDetailLiveOverlay({
       teamId: baseDetail.teamId,
       base: baseDetail,
@@ -2546,6 +2746,25 @@ export default function NbaTeamDetailPanel({
         className="h-px"
         style={{ backgroundColor: hexToRgba(accent, 0.22) }}
       />
+
+      {offseasonMoves ? (
+        <>
+          <OffseasonMovesSection
+            moves={offseasonMoves}
+            accent={accent}
+            language={language}
+            onPlayerClick={(playerId) =>
+              router.push(
+                `/mobile/player-detail-preview?playerId=${encodeURIComponent(playerId)}`
+              )
+            }
+          />
+          <div
+            className="h-px"
+            style={{ backgroundColor: hexToRgba(accent, 0.22) }}
+          />
+        </>
+      ) : null}
 
       <TeamInformationSection
         teamId={detail.teamId}

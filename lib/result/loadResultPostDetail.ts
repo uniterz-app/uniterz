@@ -66,20 +66,28 @@ function marketFromGameDoc(
   return { homeRate, awayRate, drawRate, total };
 }
 
+/** posts 1 件のみ（games / users は読まない） */
+export async function loadResultPostDoc(
+  postId: string,
+  firestore: Firestore
+): Promise<(PredictionPostV2 & Record<string, unknown>) | null> {
+  const postSnap = await getDoc(doc(firestore, "posts", postId));
+  if (!postSnap.exists()) return null;
+  return {
+    id: postSnap.id,
+    ...postSnap.data(),
+  } as PredictionPostV2 & Record<string, unknown>;
+}
+
 /** posts + games（キャッシュ付き）。追加 BDL なし */
 export async function loadResultPostDetail(
   postId: string,
   firestore: Firestore
 ): Promise<LoadResultPostDetailResult> {
-  const postSnap = await getDoc(doc(firestore, "posts", postId));
-  if (!postSnap.exists()) {
+  const post = await loadResultPostDoc(postId, firestore);
+  if (!post) {
     return { ok: false, reason: "missing" };
   }
-
-  const post = {
-    id: postSnap.id,
-    ...postSnap.data(),
-  } as PredictionPostV2 & Record<string, unknown>;
 
   const gid = typeof post.gameId === "string" ? post.gameId.trim() : "";
   if (!gid) {

@@ -5,9 +5,10 @@
  * HOME/AWAY 分割なし（Native `PredictProInsightNarrativePanelNative` 相当）。
  */
 import { useMemo } from "react";
-import type {
-  ProInsightNarrativeBrief,
-  ProInsightNarrativeKind,
+import {
+  proInsightShowsEvidence,
+  type ProInsightNarrativeBrief,
+  type ProInsightNarrativeKind,
 } from "@/lib/predict/proInsightNarrativeTypes";
 import { L, resolveLocalizedLang } from "@/lib/i18n/localize";
 import type { UiStrings } from "@/lib/i18n/ui";
@@ -169,7 +170,8 @@ export default function PredictProInsightNarrativePanel({
                     >
                       {t(item.body, language)}
                     </p>
-                    {item.evidence.length > 0 ? (
+                    {proInsightShowsEvidence(section.kind) &&
+                    item.evidence.length > 0 ? (
                       <div className="flex flex-col gap-0.5">
                         {item.evidence.map((ev, j) => (
                           <p

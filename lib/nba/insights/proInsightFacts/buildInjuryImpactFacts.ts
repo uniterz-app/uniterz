@@ -46,7 +46,8 @@ function cleanStyleKind(kind: string): string {
   return kind
     .replace(/^clash_/, "")
     .replace(/^playtype_/, "")
-    .replace(/_weak$/, "");
+    .replace(/_(weak|amp)$/, "")
+    .replace(/_(near|edge)$/, "");
 }
 
 function formatSignedDelta(n: number): string {
@@ -126,7 +127,8 @@ function teamInjuryFacts(input: {
   leaders: NbaPlayerStatLeadersBundle | null | undefined;
   phase: ProBriefPhase;
   mpgByPlayerId?: Record<string, number> | null;
-  weakenedStyles: string[];
+  /** 型オーナーとして MATCHUP 候補に折り込まれた型（選手単位） */
+  stylesByPlayerId: Record<string, string[]>;
 }): ProInsightFact[] {
   const list = input.injuries.filter((i) =>
     isOutOrQuestionableInjury(i.status)
@@ -226,10 +228,13 @@ function teamInjuryFacts(input: {
       score += shape.scoreBoost;
     }
 
-    if (input.weakenedStyles.length > 0) {
+    const weakenedStyles = [
+      ...new Set((input.stylesByPlayerId[playerId] ?? []).map(cleanStyleKind)),
+    ];
+    if (weakenedStyles.length > 0) {
       metrics.push({
         key: "weakenedStyles",
-        value: input.weakenedStyles.slice(0, 3).join(","),
+        value: weakenedStyles.slice(0, 3).join(","),
         teamId: input.teamId,
       });
       score += 3;
@@ -281,11 +286,10 @@ export function buildInjuryImpactFactCandidates(input: {
   priorAceOutRecords?: NbaTeamAceOutRecordsBundle | null;
   playerLeaders?: NbaPlayerStatLeadersBundle | null;
   mpgByPlayerId?: Record<string, number> | null;
-  matchupWeakeningKinds?: string[];
-  matchupWeakeningByTeam?: Record<string, string[]>;
+  /** MATCHUP 候補で型オーナーとして折り込まれた型（playerId → kinds） */
+  matchupStylesByPlayerId?: Record<string, string[]>;
 }): ProInsightFact[] {
-  const byTeam = input.matchupWeakeningByTeam ?? {};
-  const fallback = (input.matchupWeakeningKinds ?? []).map(cleanStyleKind);
+  const stylesByPlayerId = input.matchupStylesByPlayerId ?? {};
 
   return [
     ...teamInjuryFacts({
@@ -296,9 +300,7 @@ export function buildInjuryImpactFactCandidates(input: {
       leaders: input.playerLeaders,
       phase: input.phase,
       mpgByPlayerId: input.mpgByPlayerId,
-      weakenedStyles: (byTeam[input.homeTeamId] ?? fallback).map(
-        cleanStyleKind
-      ),
+      stylesByPlayerId,
     }),
     ...teamInjuryFacts({
       teamId: input.awayTeamId,
@@ -308,7 +310,7 @@ export function buildInjuryImpactFactCandidates(input: {
       leaders: input.playerLeaders,
       phase: input.phase,
       mpgByPlayerId: input.mpgByPlayerId,
-      weakenedStyles: (byTeam[input.awayTeamId] ?? []).map(cleanStyleKind),
+      stylesByPlayerId,
     }),
   ];
 }

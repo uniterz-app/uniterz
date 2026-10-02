@@ -69,25 +69,103 @@ function mapBdlStandingsRow(row: BdlStandingsRow): NbaConferenceStandingsRow | n
   };
 }
 
+/** BDL が conference_rank を返さない季の公式最終シード（BDL season year → 1 位から） */
+const NBA_CURATED_FINAL_CONFERENCE_ORDER: Readonly<
+  Record<number, Readonly<Record<NbaConferenceId, readonly string[]>>>
+> = {
+  2020: {
+    east: [
+      "nba-76ers",
+      "nba-nets",
+      "nba-bucks",
+      "nba-knicks",
+      "nba-hawks",
+      "nba-heat",
+      "nba-celtics",
+      "nba-wizards",
+      "nba-pacers",
+      "nba-hornets",
+      "nba-bulls",
+      "nba-raptors",
+      "nba-cavaliers",
+      "nba-magic",
+      "nba-pistons",
+    ],
+    west: [
+      "nba-jazz",
+      "nba-suns",
+      "nba-nuggets",
+      "nba-clippers",
+      "nba-mavericks",
+      "nba-blazers",
+      "nba-lakers",
+      "nba-warriors",
+      "nba-grizzlies",
+      "nba-spurs",
+      "nba-pelicans",
+      "nba-kings",
+      "nba-timberwolves",
+      "nba-thunder",
+      "nba-rockets",
+    ],
+  },
+};
+
 export function buildConferenceStandingsBoardFromBdl(
   rows: BdlStandingsRow[]
 ): NbaConferenceStandingsBoard {
   const east: NbaConferenceStandingsRow[] = [];
   const west: NbaConferenceStandingsRow[] = [];
+  const confPctByTeam = new Map<string, number>();
 
   for (const row of rows) {
     const mapped = mapBdlStandingsRow(row);
     if (!mapped) continue;
+    const conf = parseWlRecord(row.conference_record);
+    const confGp = conf.wins + conf.losses;
+    confPctByTeam.set(mapped.teamId, confGp > 0 ? conf.wins / confGp : 0);
     if (mapped.conference === "east") east.push(mapped);
     else west.push(mapped);
   }
 
-  const sortSide = (side: NbaConferenceStandingsRow[]) =>
-    [...side].sort((a, b) => a.rank - b.rank || a.teamId.localeCompare(b.teamId));
+  const seasonYear = Number(rows[0]?.season);
+  const curatedOrder = Number.isFinite(seasonYear)
+    ? NBA_CURATED_FINAL_CONFERENCE_ORDER[seasonYear]
+    : undefined;
+
+  // BDL は季によって conference_rank が全件 0（例: 2020-21）。重複・欠番なら curated 公式順位 → 勝率→カンファ勝率で振り直す
+  const sortSide = (
+    side: NbaConferenceStandingsRow[],
+    conference: NbaConferenceId
+  ) => {
+    const ranksValid =
+      new Set(side.map((r) => r.rank)).size === side.length &&
+      side.every((r) => r.rank >= 1 && r.rank <= side.length);
+    if (ranksValid) {
+      return [...side].sort(
+        (a, b) => a.rank - b.rank || a.teamId.localeCompare(b.teamId)
+      );
+    }
+    const order = curatedOrder?.[conference];
+    if (order && side.every((r) => order.includes(r.teamId))) {
+      return [...side]
+        .sort((a, b) => order.indexOf(a.teamId) - order.indexOf(b.teamId))
+        .map((r, i) => ({ ...r, rank: i + 1 }));
+    }
+    return [...side]
+      .sort(
+        (a, b) =>
+          b.winPct - a.winPct ||
+          (confPctByTeam.get(b.teamId) ?? 0) -
+            (confPctByTeam.get(a.teamId) ?? 0) ||
+          a.teamId.localeCompare(b.teamId)
+      )
+      .map((r, i) => ({ ...r, rank: i + 1 }));
+  };
 
   const board = {
-    east: sortSide(east),
-    west: sortSide(west),
+    east: sortSide(east, "east"),
+    west: sortSide(west, "west"),
   };
 
   if (board.east.length === 0 && board.west.length === 0) {

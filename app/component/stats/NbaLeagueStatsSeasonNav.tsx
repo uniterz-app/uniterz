@@ -8,6 +8,8 @@ type Props = {
   seasonKey: string;
   onSeasonChange: (seasonKey: string) => void;
   className?: string;
+  /** 選べるシーズン（新しい順）。省略時はリーグ表の範囲 */
+  seasonKeys?: readonly string[];
 };
 
 /** Web リーグ表の年切替（◀ 25-26 ▶） */
@@ -15,8 +17,9 @@ export default function NbaLeagueStatsSeasonNav({
   seasonKey,
   onSeasonChange,
   className,
+  seasonKeys,
 }: Props) {
-  const nav = nbaLeagueStatsSeasonNavState(seasonKey);
+  const nav = nbaLeagueStatsSeasonNavState(seasonKey, seasonKeys);
 
   return (
     <div

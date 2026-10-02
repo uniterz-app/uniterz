@@ -6,7 +6,7 @@ import type { HighMinutePlayer } from "@/lib/nba/insights/proInsightFacts/buildS
 
 const MIN36 = 36;
 
-function teamIdFromSide(raw: unknown, fallback?: unknown): string {
+export function teamIdFromSide(raw: unknown, fallback?: unknown): string {
   if (raw && typeof raw === "object" && "teamId" in raw) {
     const id = String((raw as { teamId?: unknown }).teamId ?? "").trim();
     if (id) return id;
@@ -14,7 +14,7 @@ function teamIdFromSide(raw: unknown, fallback?: unknown): string {
   return String(fallback ?? "").trim();
 }
 
-function toMs(value: unknown): number | null {
+export function toMs(value: unknown): number | null {
   if (value == null) return null;
   if (typeof value === "number" && Number.isFinite(value)) return value;
   if (

@@ -24,10 +24,8 @@ const LANGS = [
 
 function normalizeStatusWords(text: string): string {
   return text
-    .replace(/は疑わしいため/g, " is questionable のため")
-    .replace(/が疑わしいため/g, " is questionable のため")
-    .replace(/は疑わしいです。?/g, " is questionable。")
-    .replace(/が疑わしいです。?/g, " is questionable。")
+    .replace(/[はが]疑わしいため/g, " が questionable のため")
+    .replace(/[はが]疑わしいです。?/g, " が questionable。")
     .replace(/疑わしい/g, "questionable")
     .replace(/不確定/g, "questionable")
     .replace(/不确定/g, "questionable")
@@ -45,7 +43,14 @@ function asUiStrings(raw: unknown): UiStrings | null {
   for (const lang of LANGS) {
     const v = o[lang];
     if (typeof v !== "string" || !v.trim()) return null;
-    out[lang] = normalizeStatusWords(v.trim());
+    const text = normalizeStatusWords(v.trim());
+    out[lang] =
+      lang === "ja"
+        ? text
+            .replace(/\s+is questionable/g, " が questionable")
+            .replace(/\s+is doubtful/g, " が doubtful")
+            .replace(/\s+is OUT/g, " が OUT")
+        : text;
   }
   return out as UiStrings;
 }

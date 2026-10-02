@@ -22,9 +22,16 @@ import {
   classifyClashTier,
   type ClashTier,
 } from "@/lib/nba/insights/proInsightFacts/clashScore";
-import { findStyleOwnerInjury } from "@/lib/nba/insights/proInsightFacts/clashStyleOwner";
+import {
+  findStyleOwnerInjury,
+  type StyleOwnerHit,
+  type StyleOwnerInjury,
+} from "@/lib/nba/insights/proInsightFacts/clashStyleOwner";
 import { MATCHUP_INJURY_MIN_MPG } from "@/lib/nba/insights/proInsightFacts/matchupInjuryMpg";
-import type { ProInsightFact } from "@/lib/nba/insights/proInsightFacts/types";
+import type {
+  ProInsightFact,
+  ProInsightMatchupOwner,
+} from "@/lib/nba/insights/proInsightFacts/types";
 import type { ProBriefPhase } from "@/lib/predict/predictProBrief";
 import type { NbaPlayerStatLeadersBundle } from "@/lib/predict/nbaPlayerStatLeadersMocks";
 import { proInsightTeamAbbr } from "@/lib/nba/insights/proInsightFacts/teamAbbr";
@@ -193,20 +200,55 @@ function strengthHintEn(input: {
   if (tier === 2) {
     return `${attackAbbr} lean on ${attack}. ${defendAbbr} give up a lot ${where} — edge ${attackAbbr}.`;
   }
-  return `Clearest read tonight: ${attackAbbr} ${attack} vs a soft spot in ${defendAbbr}'s defense — edge ${attackAbbr} ${where}.`;
+  return `Clearest read tonight: ${attackAbbr} ${attack} vs ${defendAbbr}'s ${defendSkillPhrase(input.def)} — edge ${attackAbbr} ${where}.`;
 }
 
-function weakenSuffix(injury: NbaTeamInjuryEntry): string {
-  return ` ${shortName(injury)} is ${injuryStatus(injury)}, so that edge is less certain.`;
+function ownerNote(owner: StyleOwnerHit): string {
+  return `team #${owner.teamRank} in ${owner.label}, ${owner.formatted}`;
+}
+
+function ownerMetrics(
+  owner: StyleOwnerHit,
+  teamId: string
+): ProInsightFact["metrics"] {
+  return [
+    {
+      key: `owner_${owner.metricId}`,
+      value: owner.formatted,
+      rank: null,
+      teamId,
+    },
+    {
+      key: `owner_${owner.metricId}TeamRank`,
+      value: `#${owner.teamRank}`,
+      rank: owner.teamRank,
+      teamId,
+    },
+  ];
+}
+
+function toMatchupOwner(hit: StyleOwnerInjury): ProInsightMatchupOwner {
+  return {
+    playerName: shortName(hit.injury),
+    status: injuryStatus(hit.injury) ?? "questionable",
+    metricId: hit.owner.metricId,
+    label: hit.owner.label,
+    formatted: hit.owner.formatted,
+    teamRank: hit.owner.teamRank,
+  };
+}
+
+function weakenSuffix(hit: StyleOwnerInjury): string {
+  return ` ${shortName(hit.injury)} (${ownerNote(hit.owner)}) is ${injuryStatus(hit.injury)}, so that edge is less certain.`;
 }
 
 function amplifySuffix(input: {
   tier: ClashTier;
-  injury: NbaTeamInjuryEntry;
+  hit: StyleOwnerInjury;
   skill: string;
 }): string {
-  const st = injuryStatus(input.injury);
-  const name = shortName(input.injury);
+  const st = injuryStatus(input.hit.injury);
+  const name = `${shortName(input.hit.injury)} (${ownerNote(input.hit.owner)})`;
   if (input.tier === 1) {
     return ` With ${name} ${st}, that hole opens wider.`;
   }
@@ -216,18 +258,19 @@ function amplifySuffix(input: {
   return ` With ${name} ${st}, the edge widens.`;
 }
 
+/** @returns 欠場時 W–L（ヒット時） */
 function appendAceMetrics(input: {
   metrics: ProInsightFact["metrics"];
   attackTeamId: string;
   injury: NbaTeamInjuryEntry;
   aceOut: NbaTeamAceOutRecordsBundle | null | undefined;
-}): void {
+}): string | null {
   const aceHit = findAceOutForInjuryWithTeam(
     input.aceOut,
     input.attackTeamId,
     input.injury
   );
-  if (!aceHit) return;
+  if (!aceHit) return null;
   const deltas = aceOutOffDefDeltas(aceHit.player, aceHit.team);
   if (deltas) {
     if (Math.abs(deltas.off) >= 1) {
@@ -247,12 +290,14 @@ function appendAceMetrics(input: {
       });
     }
   }
+  const wl = `${aceHit.player.whenOut.wins}-${aceHit.player.whenOut.losses}`;
   input.metrics.push({
     key: "aceOutWl",
-    value: `${aceHit.player.whenOut.wins}-${aceHit.player.whenOut.losses}`,
+    value: wl,
     rank: null,
     teamId: input.attackTeamId,
   });
+  return wl;
 }
 
 function materializeClashFact(input: {
@@ -268,20 +313,24 @@ function materializeClashFact(input: {
   const defendAbbr = proInsightTeamAbbr(hit.defendTeamId);
   const skill = defendSkillPhrase(hit.def);
 
-  const attackInjury = findStyleOwnerInjury({
+  const attackOwner = findStyleOwnerInjury({
     kind: hit.def.kind,
+    side: "attack",
     teamId: hit.attackTeamId,
     injuries: input.attackInjuries,
     leaders: input.leaders,
     mpgByPlayerId: input.mpgByPlayerId,
   });
-  const defendInjury = findStyleOwnerInjury({
+  const defendOwner = findStyleOwnerInjury({
     kind: hit.def.kind,
+    side: "defend",
     teamId: hit.defendTeamId,
     injuries: input.defendInjuries,
     leaders: input.leaders,
     mpgByPlayerId: input.mpgByPlayerId,
   });
+  const attackInjury = attackOwner?.injury ?? null;
+  const defendInjury = defendOwner?.injury ?? null;
 
   let score = hit.baseScore;
   let hint = strengthHintEn({
@@ -313,12 +362,14 @@ function materializeClashFact(input: {
   let mode: NonNullable<ProInsightFact["mode"]> = "strength";
   let kindSuffix = "";
   let idPrefix = "str";
+  let attackOwnerWhenOutWl: string | null = null;
 
-  if (attackInjury) {
+  if (attackOwner && attackInjury) {
     const isOut =
       attackInjury.status === "out" || attackInjury.status === "doubtful";
     score += isOut ? 8 : 5;
-    hint += weakenSuffix(attackInjury);
+    hint += weakenSuffix(attackOwner);
+    metrics.push(...ownerMetrics(attackOwner.owner, hit.attackTeamId));
     players.push({
       playerId: String(attackInjury.playerId ?? ""),
       playerName: shortName(attackInjury),
@@ -327,7 +378,7 @@ function materializeClashFact(input: {
     dedupeKeys.push(
       `injury:${attackInjury.playerId ?? shortName(attackInjury)}`
     );
-    appendAceMetrics({
+    attackOwnerWhenOutWl = appendAceMetrics({
       metrics,
       attackTeamId: hit.attackTeamId,
       injury: attackInjury,
@@ -338,15 +389,16 @@ function materializeClashFact(input: {
     idPrefix = "weak";
   }
 
-  if (defendInjury) {
+  if (defendOwner && defendInjury) {
     const isOut =
       defendInjury.status === "out" || defendInjury.status === "doubtful";
     score += isOut ? 6 : 4;
     hint += amplifySuffix({
       tier: hit.tier,
-      injury: defendInjury,
+      hit: defendOwner,
       skill,
     });
+    metrics.push(...ownerMetrics(defendOwner.owner, hit.defendTeamId));
     players.push({
       playerId: String(defendInjury.playerId ?? ""),
       playerName: shortName(defendInjury),
@@ -376,6 +428,20 @@ function materializeClashFact(input: {
     mode,
     dedupeKeys,
     hintEn: hint,
+    matchup: {
+      type: "clash",
+      clashKind: hit.def.kind,
+      tier: hit.tier,
+      attackTeamId: hit.attackTeamId,
+      defendTeamId: hit.defendTeamId,
+      myKey: hit.def.myKey,
+      oppKey: hit.def.oppKey,
+      myRank: hit.myRank,
+      oppRank: hit.oppRank,
+      ...(attackOwner ? { attackOwner: toMatchupOwner(attackOwner) } : {}),
+      ...(defendOwner ? { defendOwner: toMatchupOwner(defendOwner) } : {}),
+      ...(attackOwnerWhenOutWl ? { attackOwnerWhenOutWl } : {}),
+    },
   };
 }
 
@@ -467,14 +533,16 @@ function playtypeFactsForTeam(input: {
     if (freqRank == null || pppRank == null) continue;
     if (freqRank > 8 || pppRank > 16) continue;
 
-    const injury = findStyleOwnerInjury({
+    const ownerHit = findStyleOwnerInjury({
       kind: def.kind,
+      side: "attack",
       teamId: input.teamId,
       injuries: input.injuries,
       leaders: input.leaders,
       mpgByPlayerId: input.mpgByPlayerId,
     });
-    if (!injury) continue;
+    if (!ownerHit) continue;
+    const { injury, owner } = ownerHit;
     const isOut =
       injury.status === "out" || injury.status === "doubtful";
     if (!isOut && injury.status !== "questionable") continue;
@@ -504,6 +572,7 @@ function playtypeFactsForTeam(input: {
           rank: pppRank,
           teamId: input.teamId,
         },
+        ...ownerMetrics(owner, input.teamId),
       ],
       players: [
         {
@@ -517,7 +586,17 @@ function playtypeFactsForTeam(input: {
         `playtype:${def.kind}`,
         `injury:${injury.playerId ?? shortName(injury)}`,
       ],
-      hintEn: `${proInsightTeamAbbr(input.teamId)} leans on ${def.label} (freq #${freqRank}, PPP #${pppRank}) but ${shortName(injury)} is ${injuryStatus(injury)} — style may thin vs ${proInsightTeamAbbr(input.opponentId)}.`,
+      matchup: {
+        type: "playtype",
+        playtypeKind: def.kind,
+        label: def.label,
+        teamId: input.teamId,
+        opponentId: input.opponentId,
+        freqRank,
+        pppRank,
+        owner: toMatchupOwner(ownerHit),
+      },
+      hintEn: `${proInsightTeamAbbr(input.teamId)} leans on ${def.label} (freq #${freqRank}, PPP #${pppRank}) but ${shortName(injury)} (${ownerNote(owner)}) is ${injuryStatus(injury)} — style may thin vs ${proInsightTeamAbbr(input.opponentId)}.`,
     });
   }
   return out;
@@ -588,8 +667,9 @@ export function buildMatchupFactCandidates(input: {
     selected = [tier3[0]!];
   }
 
-  const clashFacts = selected.map((hit) =>
-    materializeClashFact({
+  // 欠場折り込み版が INJURY IMPACT と選手競合で落ちたとき用に、折り込みなし版も候補に残す
+  const clashFacts = selected.flatMap((hit) => {
+    const folded = materializeClashFact({
       hit,
       attackInjuries: injuriesForTeam(
         input.homeTeamId,
@@ -608,8 +688,18 @@ export function buildMatchupFactCandidates(input: {
       aceOut: input.aceOutRecords,
       leaders,
       mpgByPlayerId: mpg,
-    })
-  );
+    });
+    if (folded.players.length === 0) return [folded];
+    const plain = materializeClashFact({
+      hit,
+      attackInjuries: [],
+      defendInjuries: [],
+      aceOut: input.aceOutRecords,
+      leaders,
+      mpgByPlayerId: mpg,
+    });
+    return [folded, plain];
+  });
 
   const playtype = [
     ...playtypeFactsForTeam({

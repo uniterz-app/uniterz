@@ -1,8 +1,10 @@
 // synced from lib/i18n/localize.ts — run npm run sync:monthly-report-builders
+/**
+ * UI コピー対象言語（アプリ全言語 = Language と同じ 9）
+ */
 import { normalizeLanguage, type Language } from "./language";
 import { ui, type UiStrings } from "./ui";
 
-/** UI コピー対象言語（アプリ全言語 = Language と同じ 9） */
 export type LocalizedLang = Language;
 
 export const LOCALIZED_UI_LANGUAGES: readonly LocalizedLang[] = [

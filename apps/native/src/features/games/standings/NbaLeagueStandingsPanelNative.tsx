@@ -21,17 +21,15 @@ import {
   type NbaConferenceStandingsRow,
 } from "../../../../../../lib/nba/nbaConferenceStandings";
 import type { NbaConferenceId } from "../../../../../../lib/nba/nbaConferenceTeams";
+import {
+  CURRENT_NBA_SEASON_KEY,
+  nbaStandingsSeasonKeys,
+} from "../../../../../../lib/rankings/nbaSeason";
 import { getUniterzApiBaseUrl } from "../submitPredictionApi";
+import NbaLeagueStatsSeasonNavNative from "../NbaLeagueStatsSeasonNavNative";
 import { nbaLeagueStatsChrome } from "../stats/nbaStatsUiCopy";
-import {
-  CyberSlantedTabBarNative,
-  CyberSlantedTabNative,
-  CYBER_TAB_CYAN,
-} from "../../rankings/CyberSlantedTabNative";
-import {
-  METRIC_FONT,
-  RANK_DISPLAY_FONT,
-} from "../../rankings/rankingsUiTheme";
+import { CYBER_TAB_CYAN } from "../../rankings/CyberSlantedTabNative";
+import { METRIC_FONT, RANK_DISPLAY_FONT } from "../../rankings/rankingsUiTheme";
 import { useBottomTabBarInsets } from "../../../navigation/useBottomTabBarInsets";
 
 type Props = {
@@ -104,6 +102,7 @@ function MetricCol({
 }
 
 const DASH_TICKS = [0, 1, 2, 3, 4, 5, 6, 7];
+const STANDINGS_SEASON_KEYS = nbaStandingsSeasonKeys();
 
 export default function NbaLeagueStandingsPanelNative({
   language,
@@ -111,12 +110,17 @@ export default function NbaLeagueStandingsPanelNative({
 }: Props) {
   const chrome = nbaLeagueStatsChrome(language);
   const { bottomContentReserveY } = useBottomTabBarInsets();
+  const [season, setSeason] = useState(CURRENT_NBA_SEASON_KEY);
+  const isCurrentSeason = season === CURRENT_NBA_SEASON_KEY;
   const { board, asOfLabel, loading } = useNbaConferenceStandings({
     apiBaseUrl: getUniterzApiBaseUrl(),
+    season,
   });
-  const updateFootnote = nbaDailyStatsUpdateFootnote(chrome.lang, asOfLabel);
-  const [conference, setConference] = useState<NbaConferenceId>("east");
-  const rows = conference === "east" ? board.east : board.west;
+  const updateFootnote = isCurrentSeason
+    ? nbaDailyStatsUpdateFootnote(chrome.lang, asOfLabel)
+    : chrome.lang === "ja"
+      ? "最終順位"
+      : "FINAL STANDINGS";
 
   return (
     <View style={styles.root}>
@@ -127,163 +131,201 @@ export default function NbaLeagueStandingsPanelNative({
       ) : null}
       <View style={styles.top}>
         <Text style={styles.asOf}>{updateFootnote}</Text>
-        <CyberSlantedTabBarNative fill>
-          <CyberSlantedTabNative
-            label="EAST"
-            active={conference === "east"}
-            onPress={() => setConference("east")}
-            compact
-            fontWeight="700"
-          />
-          <CyberSlantedTabNative
-            label="WEST"
-            active={conference === "west"}
-            onPress={() => setConference("west")}
-            compact
-            fontWeight="700"
-          />
-        </CyberSlantedTabBarNative>
+        <NbaLeagueStatsSeasonNavNative
+          seasonKey={season}
+          onSeasonChange={setSeason}
+          seasonKeys={STANDINGS_SEASON_KEYS}
+        />
       </View>
       <ScrollView
         style={styles.tableScroll}
         contentContainerStyle={{ paddingBottom: bottomContentReserveY }}
         showsVerticalScrollIndicator={false}
       >
-        <ScrollView
-          horizontal
-          nestedScrollEnabled
-          directionalLockEnabled
-          bounces={false}
-          showsHorizontalScrollIndicator
-          contentContainerStyle={styles.hScrollContent}
-        >
-          <View style={styles.table}>
-            <View style={styles.head}>
-              <Text style={[styles.th, styles.colRank]}>#</Text>
-              <Text style={[styles.th, styles.colTeam]}>
-                {chrome.teamCol}
-              </Text>
-              <MetricCol width={COL.wl}>
-                <Text style={[styles.th, styles.thMetric]}>
-                  {chrome.standingsWl}
-                </Text>
-              </MetricCol>
-              <MetricCol width={COL.pct}>
-                <Text style={[styles.th, styles.thPct]}>W%</Text>
-              </MetricCol>
-              <MetricCol width={COL.strk}>
-                <Text style={[styles.th, styles.thMetric]}>
-                  {chrome.standingsStreak}
-                </Text>
-              </MetricCol>
-              <MetricCol width={COL.split}>
-                <Text style={[styles.th, styles.thMetric]}>L10</Text>
-              </MetricCol>
-              <MetricCol width={COL.homeAway}>
-                <Text style={[styles.th, styles.thMetric]}>HOME</Text>
-              </MetricCol>
-              <MetricCol width={COL.homeAway}>
-                <Text style={[styles.th, styles.thMetric]}>AWAY</Text>
-              </MetricCol>
+        {CONFERENCE_SECTIONS.map(({ id, label }, sectionIndex) => (
+          <View
+            key={id}
+            style={sectionIndex > 0 ? styles.sectionSpaced : undefined}
+          >
+            <View style={styles.sectionHead}>
+              <CyberLine side="left" />
+              <Text style={styles.sectionLabel}>{label}</Text>
+              <CyberLine side="right" />
             </View>
-            {rows.map((row) => {
-              const primary = getTeamJerseyPrimaryColor("nba", row.teamId);
-              const streakTheme = teamStreakBadgeTheme(row.streak);
-              return (
-                <View key={row.teamId}>
-                  {row.rank === 7 ? (
-                    <View style={[styles.sep, styles.sepPlayoff]} />
-                  ) : null}
-                  {row.rank === 11 ? (
-                    <View style={[styles.sep, styles.sepPlayin]} />
-                  ) : null}
-                  <Pressable
-                    onPress={() => onSelectTeam(row.teamId)}
-                    accessibilityRole="button"
-                    style={({ pressed }) => [
-                      styles.row,
-                      pressed ? styles.rowPressed : null,
-                    ]}
-                  >
-                    {({ pressed }) => (
-                      <>
-                        <LinearGradient
-                          colors={[
-                            hexToRgba(primary, 0.18),
-                            hexToRgba(primary, 0.08),
-                            "rgba(0,0,0,0)",
-                          ]}
-                          locations={[0, 0.36, 1]}
-                          start={{ x: 0, y: 0 }}
-                          end={{ x: 1, y: 0 }}
-                          pointerEvents="none"
-                          style={StyleSheet.absoluteFillObject}
-                        />
-                        {pressed ? (
-                          <View
-                            pointerEvents="none"
-                            style={styles.rowPressedWash}
-                          />
-                        ) : null}
-                        <Text
-                          style={[
-                            styles.tdRank,
-                            { color: rankColor(row.rank) },
-                          ]}
-                        >
-                          {row.rank}
-                        </Text>
-                        <Text style={styles.tdTeam} numberOfLines={1}>
-                          {nick(row)}
-                        </Text>
-                        <MetricCol width={COL.wl}>
-                          <Text style={styles.tdWl}>
-                            {formatStandingsWl({
-                              wins: row.wins,
-                              losses: row.losses,
-                            })}
-                          </Text>
-                        </MetricCol>
-                        <MetricCol width={COL.pct}>
-                          <Text style={styles.tdPct}>
-                            {formatStandingsWinPct(row.winPct)}
-                          </Text>
-                        </MetricCol>
-                        <MetricCol width={COL.strk}>
-                          <Text
-                            style={[
-                              styles.tdStrk,
-                              { color: streakTheme.headlineColor },
-                            ]}
-                          >
-                            {formatStreakLabel(row.streak)}
-                          </Text>
-                        </MetricCol>
-                        <MetricCol width={COL.split}>
-                          <Text style={styles.tdSplit}>
-                            {formatStandingsWl(row.last10)}
-                          </Text>
-                        </MetricCol>
-                        <MetricCol width={COL.homeAway}>
-                          <Text style={styles.tdSplit}>
-                            {formatStandingsWl(row.home)}
-                          </Text>
-                        </MetricCol>
-                        <MetricCol width={COL.homeAway}>
-                          <Text style={styles.tdSplit}>
-                            {formatStandingsWl(row.away)}
-                          </Text>
-                        </MetricCol>
-                      </>
-                    )}
-                  </Pressable>
-                </View>
-              );
-            })}
+            <ConferenceTable
+              rows={id === "east" ? board.east : board.west}
+              chrome={chrome}
+              onSelectTeam={onSelectTeam}
+            />
           </View>
-        </ScrollView>
+        ))}
       </ScrollView>
     </View>
+  );
+}
+
+const CONFERENCE_SECTIONS: readonly { id: NbaConferenceId; label: string }[] = [
+  { id: "east", label: "EAST" },
+  { id: "west", label: "WEST" },
+];
+
+function CyberLine({ side }: { side: "left" | "right" }) {
+  const isLeft = side === "left";
+  return (
+    <View
+      pointerEvents="none"
+      style={[styles.cyberLine, isLeft ? null : styles.cyberLineReverse]}
+    >
+      <LinearGradient
+        colors={["rgba(0,245,255,0)", "rgba(0,245,255,0.7)"]}
+        start={{ x: isLeft ? 0 : 1, y: 0 }}
+        end={{ x: isLeft ? 1 : 0, y: 0 }}
+        style={styles.cyberLineRule}
+      />
+      <View style={styles.cyberTickSmall} />
+      <View style={styles.cyberTick} />
+    </View>
+  );
+}
+
+function ConferenceTable({
+  rows,
+  chrome,
+  onSelectTeam,
+}: {
+  rows: NbaConferenceStandingsRow[];
+  chrome: ReturnType<typeof nbaLeagueStatsChrome>;
+  onSelectTeam: (teamId: string) => void;
+}) {
+  return (
+    <ScrollView
+      horizontal
+      nestedScrollEnabled
+      directionalLockEnabled
+      bounces={false}
+      showsHorizontalScrollIndicator
+      contentContainerStyle={styles.hScrollContent}
+    >
+      <View style={styles.table}>
+        <View style={styles.head}>
+          <Text style={[styles.th, styles.colRank]}>#</Text>
+          <Text style={[styles.th, styles.colTeam]}>{chrome.teamCol}</Text>
+          <MetricCol width={COL.wl}>
+            <Text style={[styles.th, styles.thMetric]}>
+              {chrome.standingsWl}
+            </Text>
+          </MetricCol>
+          <MetricCol width={COL.pct}>
+            <Text style={[styles.th, styles.thPct]}>W%</Text>
+          </MetricCol>
+          <MetricCol width={COL.strk}>
+            <Text style={[styles.th, styles.thMetric]}>
+              {chrome.standingsStreak}
+            </Text>
+          </MetricCol>
+          <MetricCol width={COL.split}>
+            <Text style={[styles.th, styles.thMetric]}>L10</Text>
+          </MetricCol>
+          <MetricCol width={COL.homeAway}>
+            <Text style={[styles.th, styles.thMetric]}>HOME</Text>
+          </MetricCol>
+          <MetricCol width={COL.homeAway}>
+            <Text style={[styles.th, styles.thMetric]}>AWAY</Text>
+          </MetricCol>
+        </View>
+        {rows.map((row) => {
+          const primary = getTeamJerseyPrimaryColor("nba", row.teamId);
+          const streakTheme = teamStreakBadgeTheme(row.streak);
+          return (
+            <View key={row.teamId}>
+              {row.rank === 7 ? (
+                <View style={[styles.sep, styles.sepPlayoff]} />
+              ) : null}
+              {row.rank === 11 ? (
+                <View style={[styles.sep, styles.sepPlayin]} />
+              ) : null}
+              <Pressable
+                onPress={() => onSelectTeam(row.teamId)}
+                accessibilityRole="button"
+                style={({ pressed }) => [
+                  styles.row,
+                  pressed ? styles.rowPressed : null,
+                ]}
+              >
+                {({ pressed }) => (
+                  <>
+                    <LinearGradient
+                      colors={[
+                        hexToRgba(primary, 0.18),
+                        hexToRgba(primary, 0.08),
+                        "rgba(0,0,0,0)",
+                      ]}
+                      locations={[0, 0.36, 1]}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                      pointerEvents="none"
+                      style={StyleSheet.absoluteFillObject}
+                    />
+                    {pressed ? (
+                      <View
+                        pointerEvents="none"
+                        style={styles.rowPressedWash}
+                      />
+                    ) : null}
+                    <Text
+                      style={[styles.tdRank, { color: rankColor(row.rank) }]}
+                    >
+                      {row.rank}
+                    </Text>
+                    <Text style={styles.tdTeam} numberOfLines={1}>
+                      {nick(row)}
+                    </Text>
+                    <MetricCol width={COL.wl}>
+                      <Text style={styles.tdWl}>
+                        {formatStandingsWl({
+                          wins: row.wins,
+                          losses: row.losses,
+                        })}
+                      </Text>
+                    </MetricCol>
+                    <MetricCol width={COL.pct}>
+                      <Text style={styles.tdPct}>
+                        {formatStandingsWinPct(row.winPct)}
+                      </Text>
+                    </MetricCol>
+                    <MetricCol width={COL.strk}>
+                      <Text
+                        style={[
+                          styles.tdStrk,
+                          { color: streakTheme.headlineColor },
+                        ]}
+                      >
+                        {formatStreakLabel(row.streak)}
+                      </Text>
+                    </MetricCol>
+                    <MetricCol width={COL.split}>
+                      <Text style={styles.tdSplit}>
+                        {formatStandingsWl(row.last10)}
+                      </Text>
+                    </MetricCol>
+                    <MetricCol width={COL.homeAway}>
+                      <Text style={styles.tdSplit}>
+                        {formatStandingsWl(row.home)}
+                      </Text>
+                    </MetricCol>
+                    <MetricCol width={COL.homeAway}>
+                      <Text style={styles.tdSplit}>
+                        {formatStandingsWl(row.away)}
+                      </Text>
+                    </MetricCol>
+                  </>
+                )}
+              </Pressable>
+            </View>
+          );
+        })}
+      </View>
+    </ScrollView>
   );
 }
 
@@ -312,6 +354,49 @@ const styles = StyleSheet.create({
     textAlign: "right",
   },
   tableScroll: { flex: 1 },
+  sectionSpaced: { marginTop: 20 },
+  sectionHead: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingHorizontal: 12,
+    marginBottom: 8,
+  },
+  sectionLabel: {
+    fontFamily: METRIC_FONT,
+    color: CYBER_TAB_CYAN,
+    fontSize: 18,
+    fontWeight: "800",
+    letterSpacing: 5,
+    paddingLeft: 5,
+    textTransform: "uppercase",
+    includeFontPadding: false,
+    textShadowColor: "rgba(0,245,255,0.45)",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 10,
+    transform: [{ skewX: "-10deg" }],
+  },
+  cyberLine: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  cyberLineReverse: { flexDirection: "row-reverse" },
+  cyberLineRule: { flex: 1, height: 1 },
+  cyberTickSmall: {
+    width: 2,
+    height: 7,
+    backgroundColor: "rgba(0,245,255,0.6)",
+    transform: [{ skewX: "-14deg" }],
+  },
+  cyberTick: {
+    width: 3,
+    height: 11,
+    backgroundColor: CYBER_TAB_CYAN,
+    transform: [{ skewX: "-14deg" }],
+  },
   hScrollContent: {
     paddingHorizontal: 8,
   },

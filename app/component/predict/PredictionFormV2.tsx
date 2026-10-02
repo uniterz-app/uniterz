@@ -84,7 +84,7 @@ import { TUTORIAL_CYAN } from "@/lib/tutorial/tutorialMotion";
 import PredictOverlayScoreFields from "@/app/component/predict/PredictOverlayScoreFields";
 import { useUserPlan } from "@/hooks/useUserPlan";
 import { usePredictionPostDistribution } from "@/lib/hooks/usePredictionPostDistribution";
-import { loadResultPostDetailClient } from "@/lib/result/loadResultPostDetailClient";
+import { loadResultPostDocClient } from "@/lib/result/loadResultPostDetailClient";
 import { mergeGameIntoResultPost } from "@/lib/result/mergeGameIntoResultPost";
 import { invalidateResultPostsListCache } from "@/lib/result/resultPostsListCache";
 import type { PredictionPostV2 } from "@/types/prediction-post-v2";
@@ -473,13 +473,12 @@ export default function PredictionFormV2({
           if (alive) setExistingSnapshot(null);
           return;
         }
-        const detail = await loadResultPostDetailClient(effectivePostId);
+        const post = await loadResultPostDocClient(effectivePostId);
         if (!alive) return;
-        if (!detail.ok || detail.post.authorUid !== me.uid) {
+        if (!post || post.authorUid !== me.uid) {
           setExistingSnapshot(null);
           return;
         }
-        const post = detail.post;
         const editable =
           typeof post.startAtMillis === "number" &&
           Date.now() < post.startAtMillis;

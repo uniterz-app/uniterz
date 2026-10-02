@@ -82,6 +82,19 @@ export function nbaLeagueStatsSeasonKeys(
   );
 }
 
+/** 順位表で遡れる過去シーズン数（今季は含まない） */
+export const NBA_STANDINGS_PAST_SEASON_COUNT = 10;
+
+/** 順位表ナビ用: CURRENT + 過去 10 シーズン（新しい順） */
+export function nbaStandingsSeasonKeys(
+  fromSeasonKey: string = CURRENT_NBA_SEASON_KEY
+): string[] {
+  return nbaSeasonKeysLookingBack(
+    fromSeasonKey,
+    NBA_STANDINGS_PAST_SEASON_COUNT + 1
+  );
+}
+
 /** cumulative_ranking_snapshots の doc id（例: s2026-27_totalPoints） */
 export function nbaSeasonSnapshotDocId(
   seasonKey: string,

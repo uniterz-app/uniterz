@@ -2,7 +2,7 @@
 
 LLM の前に **ファクト選定** で落とす。文章は `hintEn` + プロンプトに従い、**ゲート例と同じ「読み」トーン**（スタッツ読み上げ禁止）。
 
-最終更新: 2026-09-26
+最終更新: 2026-09-27
 
 ---
 
@@ -37,12 +37,39 @@ LLM の前に **ファクト選定** で落とす。文章は `hintEn` + プロ�
 | 前提 | 衝突／差ファクトがあるときだけ。欠場だけでは MATCHUP を作らない |
 | mpg | **≥ 25** のみ（不明・未満は無視） |
 | status | OUT / doubtful / questionable（Probable 除外） |
-| 型オーナー | leaders チーム内 Top2 が clash kind の指標にヒットした選手だけ |
+| 型オーナー | **その型の専用指標**（攻め / 守り別・下表）で leaders チーム内 Top2 の選手だけ。PTS / USG / PIE など総合指標ではオーナーにしない |
 | 攻め側 | オーナー欠場 → **weakening**（uncertain edge） |
 | 守り側 | オーナー欠場 → **amplify**（さらに脆い／さらに多く許す／差がさらに開きやすい） |
 | leaders 無し | オーナー判定不可 → MATCHUP に欠場を折り込まない |
+| INJURY IMPACT と同一選手 | **IMPACT 優先**。MATCHUP は欠場折り込みなし版に差し替え（衝突自体は残す）。プレイタイプ（欠場が前提）は出さない |
+| 数字 | 折り込むときはオーナーの指標値とチーム内順位を本文・evidence に出す（例: `D.MITCHELL ISO 頻度 25.0%（チーム#1）`） |
 
-型オーナー指標例: paint → `pts_paint` / `reb` / `blk` 等（`clashStyleOwner.ts` が正）。
+型オーナー指標（`clashStyleOwner.ts` が正）:
+
+| kind | 攻め側 | 守り側 |
+|---|---|---|
+| paint | pts_paint / pct_pts_paint / restricted_pts / paint_touch_pts / drive_pts | blk / contested_shots / dreb |
+| fb | pts_fb / trans_pts / trans_freq | —（選手に帰属しない） |
+| off_tov | pts_tov / stl | — |
+| second | oreb / oreb_pts | dreb / reb |
+| three | fg3m / fg3a / pts_3 / cns_pts | — |
+| glass | oreb / oreb_pct | dreb / reb_pct |
+| tov | ast / ast_pct | stl / deflections |
+| fta | fta / pts_ft / fta_rate | — |
+| iso / pnr / post / spotup | 各 `*_freq` / `*_pts` | —（相手のプレイタイプ守備データは無い） |
+
+### 文章（テンプレ · LLM 不使用）
+
+MATCHUP の本文・evidence は `matchupNarrativeTemplate.ts` がコードで組み立てる（ja / en。他言語は en フォールバック）。LLM には MATCHUP を渡さない。
+
+| 段 | JA 本文 |
+|---|---|
+| Tier1 | `{A} は{攻め}が武器。{B} の{守り}は脆く、{場所}は {A} 有利。` |
+| Tier2 | `{A} は{攻め}が武器。{B} は{場所}で多く許しており、{A} 有利。` |
+| Tier3 | `今夜いちばん読みやすいのは{場所}。{A} の{攻め}と {B} の{守り}の差が最も大きく、{A} 有利。` |
+| プレイタイプ | `{T} は{型}が多いチーム（頻度 N 位・効率 M 位）。その中心の {P}（指標・チーム順位）が {status} で、この形は薄くなりやすい。` |
+
+evidence は fact の数字だけ。`opp*` は「被〜」（許した側）で表記する。
 
 ### 指標ペア（真の失点）
 
@@ -153,6 +180,12 @@ LLM の前に **ファクト選定** で落とす。文章は `hintEn` + プロ�
 - Pro Insight 生成時も recent games で last10 の空レーティング/3P を補完
 - extras: `nbaTeamInsightExtras`（多年 H2H · vsDivision · clutchClose5）。チーム詳細 UI には出さない
 
+### シーズン表記
+
+- 対帯 / venue / extras / カンファ順位の fact は出典季を metric（`statsSeason` / `seasonSource` / `oppConfRankSeason`）と hint（`in 2025-26`）に必ず載せる。多年 H2H は期間（`2023-24–2025-26`）
+- 本文は「25-26シーズン」「2025-26」と明示。**今季 / this season は書かない**（プロンプト規則）
+- 保険: 書き込み時 `rewriteThisSeasonLabels` — CONTEXT の出典季が試合の季と違えば「今季」等を明示季に置換（今季データのときは触らない）
+
 ---
 
 ## INJURY IMPACT（ロック）
@@ -197,6 +230,20 @@ LLM の前に **ファクト選定** で落とす。文章は `hintEn` + プロ�
 | cap | 試合全体 2 |
 | dedupe | `injury:{playerId}` — IMPACT 優先（MATCHUP 折り込みと二重にしない） |
 | multi_out | 今は出さない |
+
+### 文章（LLM）と後処理
+
+- 本文は 2 ビート: ①事実（数字）②今夜の読み（傾き / 信頼度 / 見どころ のどれか）。②に新しい数字は足さない。「形が変わる」「厳しい試合が予想される」だけは不可（`prompt.ts`）
+- 柱の意味（数字なし）: PTS→得点負担が回る · USG→攻撃の起点が変わる · AST→創出が細る · REB→ボード · STL→守備から走る形 · BLK→リム守備 · 3P→スペーシング · FT%→終盤のFT
+- 後処理 `injuryNarrativeFixups.ts`: evidence は metrics から組み立て（`narrativeRoles` = 本文が使う柱 2 本 → 欠場時 W–L → OFF/DEF）。本文の OFF/DEF 符号は metrics で上書き。when-out が無い fact で W–L を書いた文は削除
+
+### 長期離脱
+
+- 長期 = OUT / doubtful かつ（`returnEstimate` が tip から **21 日以上先** or 理由文に season-ending / miss the entire season 等）
+- チームが **今季レギュラーで 3 試合連続**その選手抜き（`games.liveStats.box` に不在）なら **Insight 全体から外す**（IMPACT も MATCHUP の担い手注記も）。チームは適応済みで「形が変わる」は古い読み
+- プレシーズンは数えない。box が無い試合で打ち切り（不明は欠場扱いしない）
+- オフから離脱中の選手は開幕 3 試合だけ出る。名簿は INJURY タブに残る
+- 実装: `longTermInjury.ts`（`dropStaleLongTermInjuries`）· 追加 BDL / Firestore 読みなし
 
 ### kind
 

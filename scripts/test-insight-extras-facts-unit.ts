@@ -120,7 +120,7 @@ const awayB2b: ProInsightFact = {
   assert.ok(ctx.some((f) => f.kind === "vs_division"));
   assert.ok(ctx.some((f) => f.kind === "clutch_close5"));
   const h2h = ctx.find((f) => f.kind === "multi_year_h2h")!;
-  assert.match(h2h.hintEn, /3-year H2H/);
+  assert.match(h2h.hintEn, /3-year( \([^)]+\))? H2H/);
   assert.match(h2h.hintEn, /last season|7-5|5-7|KNICKS|NETS/);
 }
 

@@ -65,6 +65,8 @@ export type AssembleProInsightFactsInput = {
   streaks?: TeamStreakFactInput[];
   /** カンファ内順位（opening は前季） */
   confRankByTeamId?: Record<string, number> | null;
+  /** confRankByTeamId の出典シーズン */
+  confRankSeasonKey?: string | null;
   /** ロスター平均出場（MATCHUP 欠場ゲート用） */
   mpgByPlayerId?: Record<string, number> | null;
   /** 条件付き得意／苦手形（中盤以降に効く） */
@@ -77,8 +79,8 @@ export type AssembleProInsightFactsInput = {
 
 /**
  * 同一 dedupeKey は試合全体で1回。先に高 score を残す。
- * INJURY IMPACT は injury:* を優先確保（MATCHUP weakening より後に pack するが
- * 先に injury キーを予約して MATCHUP から削る）。
+ * 欠場選手（injury:*）は INJURY IMPACT が先に確保し、同じ選手を MATCHUP に二重に出さない。
+ * MATCHUP の欠場折り込み版が弾かれたら、同じ衝突の折り込みなし版が残る。
  */
 export function rankAndPackFacts(
   candidates: ProInsightFact[],
@@ -108,18 +110,17 @@ export function rankAndPackFacts(
 
   const usedKeys = new Set<string>(reservedInjuryKeys);
 
-  // MATCHUP: weakening を最大1本確保（案2がスコア負けで消えないように）
+  // MATCHUP: weakening を最大1本確保（スコア負けで消えないように）
   {
-    const matchupSorted = sorted.filter((f) => f.section === "MATCHUP");
-    const bestWeak = matchupSorted.find((f) => f.mode === "weakening");
+    const bestWeak = sorted.find(
+      (f) =>
+        f.section === "MATCHUP" &&
+        f.mode === "weakening" &&
+        !f.dedupeKeys.some((k) => usedKeys.has(k))
+    );
     if (bestWeak) {
-      const otherKeys = bestWeak.dedupeKeys.filter(
-        (k) => !k.startsWith("injury:")
-      );
-      if (!otherKeys.some((k) => usedKeys.has(k))) {
-        bySection.MATCHUP.push(bestWeak);
-        for (const k of otherKeys) usedKeys.add(k);
-      }
+      bySection.MATCHUP.push(bestWeak);
+      for (const k of bestWeak.dedupeKeys) usedKeys.add(k);
     }
   }
 
@@ -130,20 +131,8 @@ export function rankAndPackFacts(
       if (bySection[section].length >= caps[section]) break;
       if (bySection[section].some((x) => x.id === f.id)) continue;
       if (f.dedupeKeys.some((k) => usedKeys.has(k))) continue;
-      const injuryOnly = f.dedupeKeys.filter((k) => k.startsWith("injury:"));
-      const otherKeys = f.dedupeKeys.filter((k) => !k.startsWith("injury:"));
-      if (otherKeys.some((k) => usedKeys.has(k))) continue;
-      if (
-        section !== "MATCHUP" &&
-        injuryOnly.some((k) => reservedInjuryKeys.has(k))
-      ) {
-        continue;
-      }
       bySection[section].push(f);
-      for (const k of otherKeys) usedKeys.add(k);
-      if (section !== "MATCHUP") {
-        for (const k of injuryOnly) usedKeys.add(k);
-      }
+      for (const k of f.dedupeKeys) usedKeys.add(k);
     }
   }
 
@@ -171,25 +160,13 @@ export function assembleProInsightFactPack(
     playerLeaders: input.playerLeaders,
   });
 
-  const weakeningKinds = matchup
-    .filter((f) => f.mode === "weakening" || f.mode === "amplify")
-    .map((f) => f.kind);
-
-  const matchupWeakeningByTeam: Record<string, string[]> = {};
+  const matchupStylesByPlayerId: Record<string, string[]> = {};
   for (const f of matchup) {
-    if (f.mode !== "weakening" && f.mode !== "amplify") continue;
-    const teamIds = new Set<string>();
-    if (f.mode === "weakening") {
-      if (f.teamIds[0]) teamIds.add(f.teamIds[0]);
-      // weakening + amplify 同時（players 2）→ 守り側も
-      if (f.players.length >= 2 && f.teamIds[1]) teamIds.add(f.teamIds[1]);
-    } else if (f.mode === "amplify") {
-      if (f.teamIds[1]) teamIds.add(f.teamIds[1]);
-    }
-    for (const teamId of teamIds) {
-      const list = matchupWeakeningByTeam[teamId] ?? [];
+    for (const p of f.players) {
+      if (!p.playerId) continue;
+      const list = matchupStylesByPlayerId[p.playerId] ?? [];
       list.push(f.kind);
-      matchupWeakeningByTeam[teamId] = list;
+      matchupStylesByPlayerId[p.playerId] = list;
     }
   }
 
@@ -233,6 +210,7 @@ export function assembleProInsightFactPack(
     priorRecords: input.priorRecords,
     streaks: input.streaks,
     confRankByTeamId: input.confRankByTeamId,
+    confRankSeasonKey: input.confRankSeasonKey,
     shapeRecords: input.shapeRecords,
   });
 
@@ -246,8 +224,7 @@ export function assembleProInsightFactPack(
     priorAceOutRecords: input.priorAceOutRecords,
     playerLeaders: input.playerLeaders,
     mpgByPlayerId: input.mpgByPlayerId,
-    matchupWeakeningKinds: weakeningKinds,
-    matchupWeakeningByTeam,
+    matchupStylesByPlayerId,
   });
 
   const candidates = [

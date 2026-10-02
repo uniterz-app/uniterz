@@ -49,6 +49,10 @@ import {
 } from "@/lib/nba/insights/proInsightLlm/prompt";
 import { parseProInsightLlmJson } from "@/lib/nba/insights/proInsightLlm/parseLlmJson";
 import { fallbackNarrativeFromFactPack } from "@/lib/nba/insights/proInsightLlm/fallbackFromFacts";
+import { renderMatchupNarrativeItem } from "@/lib/nba/insights/proInsightLlm/matchupNarrativeTemplate";
+import { dropStaleLongTermInjuries } from "@/lib/nba/insights/proInsightFacts/longTermInjury";
+import { withInjuryFixups } from "@/lib/nba/insights/proInsightLlm/injuryNarrativeFixups";
+import { rewriteThisSeasonLabels } from "@/lib/nba/insights/proInsightLlm/rewriteThisSeasonLabels";
 import {
   listPendingProInsightBatchJobs,
   saveProInsightBatchJob,
@@ -323,6 +327,21 @@ function recentOppWinPcts(input: {
   return out.reverse();
 }
 
+/** MATCHUP はテンプレで上書き（LLM / fallback の MATCHUP は捨てる） */
+function withTemplateMatchup(
+  brief: ProInsightNarrativeBrief,
+  pack: ProInsightFactPack
+): ProInsightNarrativeBrief {
+  const items = (pack.sections.MATCHUP ?? [])
+    .map(renderMatchupNarrativeItem)
+    .filter((x): x is NonNullable<typeof x> => x != null);
+  const rest = brief.sections.filter((s) => s.kind !== "MATCHUP");
+  const sections = items.length
+    ? [{ kind: "MATCHUP" as const, items }, ...rest]
+    : rest;
+  return { ...brief, sections };
+}
+
 async function writeNarrative(
   db: Firestore,
   gameId: string,
@@ -335,13 +354,20 @@ async function writeNarrative(
     factPack: ProInsightFactPack;
   }
 ): Promise<void> {
+  const finalBrief = withInjuryFixups(
+    rewriteThisSeasonLabels(
+      withTemplateMatchup(brief, meta.factPack),
+      meta.factPack
+    ),
+    meta.factPack
+  );
   await db
     .collection("games")
     .doc(gameId)
     .set(
       {
         proInsightNarrative: {
-          ...brief,
+          ...finalBrief,
           factsFingerprint: meta.fingerprint,
           injuryFingerprint: meta.injuryFingerprint,
           model: meta.model,
@@ -639,8 +665,18 @@ export async function submitProInsightNarrativeBatch(
         seasonRows,
         priorRows,
         last10Rows: last10ForPack.length ? last10ForPack : null,
-        homeInjuries,
-        awayInjuries,
+        homeInjuries: dropStaleLongTermInjuries({
+          injuries: homeInjuries,
+          teamId: homeTeamId,
+          tipAtMs,
+          docs: recentDocs,
+        }),
+        awayInjuries: dropStaleLongTermInjuries({
+          injuries: awayInjuries,
+          teamId: awayTeamId,
+          tipAtMs,
+          docs: recentDocs,
+        }),
         homePriorGames: homePrior,
         awayPriorGames: awayPrior,
         homeNextGame,
@@ -674,6 +710,10 @@ export async function submitProInsightNarrativeBatch(
             : Object.keys(seasonConfRanks).length
               ? seasonConfRanks
               : priorConfRanks,
+        confRankSeasonKey:
+          phase !== "opening" && Object.keys(seasonConfRanks).length
+            ? seasonKey
+            : priorKey,
         mpgByPlayerId: mpgByPlayerIdForPhase(
           phase,
           seasonMpgByPlayerId,
@@ -1404,8 +1444,18 @@ export async function patchProInsightNarrativesIfInjuryChanged(
         seasonRows,
         priorRows,
         last10Rows: last10ForPack.length ? last10ForPack : null,
-        homeInjuries,
-        awayInjuries,
+        homeInjuries: dropStaleLongTermInjuries({
+          injuries: homeInjuries,
+          teamId: homeTeamId,
+          tipAtMs,
+          docs: recentDocs,
+        }),
+        awayInjuries: dropStaleLongTermInjuries({
+          injuries: awayInjuries,
+          teamId: awayTeamId,
+          tipAtMs,
+          docs: recentDocs,
+        }),
         homePriorGames: homePrior,
         awayPriorGames: awayPrior,
         homeNextGame,
@@ -1439,6 +1489,10 @@ export async function patchProInsightNarrativesIfInjuryChanged(
             : Object.keys(seasonConfRanks).length
               ? seasonConfRanks
               : priorConfRanks,
+        confRankSeasonKey:
+          phase !== "opening" && Object.keys(seasonConfRanks).length
+            ? seasonKey
+            : priorKey,
         mpgByPlayerId: mpgByPlayerIdForPhase(
           phase,
           seasonMpgByPlayerId,

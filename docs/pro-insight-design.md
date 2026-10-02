@@ -33,7 +33,7 @@
 - Injury Impact という 4 つ目の枠
 - 短い移動の km（近所のロード）
 
-Pay-for-Insight。Pay to Win はしない。LLM は使わない（テンプレ穴埋めのみ・コスト ≈ $0）。
+Pay-for-Insight。Pay to Win はしない。選定はコード。MATCHUP の文章はテンプレ（コード）、SCHEDULE / CONTEXT / INJURY IMPACT の文章は OpenAI（Batch · `gpt-4o-mini`）で 9 言語化。
 
 ---
 
@@ -197,7 +197,7 @@ tip 1h 前 → injury 変更時のみ Chat 再生成
 
 公開 API: `GET /api/nba/matchup-insight?gameId=`（Pro · Bearer）→ `narrative` / `status`（`ready` | `pending` | `empty`）。全 Pro ユーザー共通スナップショット。
 
-LLM なし。コスト ≈ $0（Cloud Functions / Next の CPU のみ）。
+コストは [`pro-insight-openai-cost.md`](pro-insight-openai-cost.md)。
 
 ---
 

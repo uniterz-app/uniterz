@@ -91,7 +91,7 @@ function isAdvancedMetric(id: string): id is NbaPlayerAdvancedLeaderMetric {
   }
 }
 
-function higherIsBetterFor(id: string): boolean {
+export function higherIsBetterFor(id: string): boolean {
   if (isAdvancedMetric(id)) {
     return playerAdvancedMetricDef(id).higherIsBetter;
   }
@@ -100,13 +100,13 @@ function higherIsBetterFor(id: string): boolean {
   return true;
 }
 
-function shortLabel(id: string): string {
+export function shortLabel(id: string): string {
   if (isAdvancedMetric(id)) return playerAdvancedMetricDef(id).short;
   const bdl = NBA_PLAYER_STAT_LEADER_METRICS.find((m) => m.id === id);
   return bdl?.short ?? id.toUpperCase();
 }
 
-function formatMetricValue(id: string, value: number): string {
+export function formatMetricValue(id: string, value: number): string {
   if (isAdvancedMetric(id)) {
     return formatPlayerAdvancedLeaderValue(id, value);
   }
@@ -121,7 +121,7 @@ function formatMetricValue(id: string, value: number): string {
   return String(Math.round(value * 10) / 10);
 }
 
-function teamRankOnBoard(
+export function teamRankOnBoard(
   board: NbaPlayerStatLeaderRow[] | undefined,
   teamId: string,
   playerId: string,
@@ -252,6 +252,28 @@ export function resolveInjuryShapeImpact(input: {
       });
     }
     scoreBoost += h.rank === 1 ? h.weight : Math.max(2, h.weight - 3);
+  }
+
+  // hint 先頭 2 本（本文が使う柱）は evidence 用に metrics にも載せる
+  const narrativeTop = narrativeHits.slice(0, 2);
+  metrics.push({
+    key: "narrativeRoles",
+    value: narrativeTop.map((h) => h.metricId).join(","),
+    teamId: input.teamId,
+  });
+  for (const h of narrativeTop) {
+    if (roles.includes(h.metricId)) continue;
+    metrics.push({
+      key: `${h.metricId}TeamRank`,
+      value: `#${h.rank}`,
+      rank: h.rank,
+      teamId: input.teamId,
+    });
+    metrics.push({
+      key: h.metricId,
+      value: h.formatted,
+      teamId: input.teamId,
+    });
   }
 
   for (const h of narrativeHits.slice(0, 4)) {

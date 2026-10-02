@@ -535,20 +535,7 @@ export function buildSynchronizedTeamPayrollLines(
       const option = existingLine?.option ?? null;
       let forcedStandardContract = false;
 
-      // 特殊補正: Julian Phillips (56677857) と Oscar Tshiebwe (56677778) - 今季 (2026-27) のみ $2,537,526
       if (isCurrentSeason) {
-        if (pId === "56677857" || (upperFirst === "JULIAN" && upperLast === "PHILLIPS")) {
-          rawSalary = 2537526;
-          rawBase = 2537526;
-          rawCap = 2537526;
-          forcedStandardContract = true;
-        }
-        if (pId === "56677778" || (upperFirst === "OSCAR" && upperLast === "TSHIEBWE")) {
-          rawSalary = 2537526;
-          rawBase = 2537526;
-          rawCap = 2537526;
-          forcedStandardContract = true;
-        }
         // Bogdan Bogdanovic ロケッツ所属時はベテランミニマム $2,449,421
         if (pId === "53" || (upperFirst === "BOGDAN" && upperLast.includes("BOGDANOVIC"))) {
           rawSalary = 2449421;

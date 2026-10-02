@@ -52,7 +52,48 @@ export type ProInsightFact = {
   dedupeKeys: string[];
   /** LLM 向け短い英語ヒント（数字は metrics を正とする） */
   hintEn: string;
+  /** MATCHUP 本文テンプレ用（LLM に書かせない） */
+  matchup?: ProInsightMatchupDetail;
 };
+
+export type ProInsightMatchupOwner = {
+  playerName: string;
+  status: string;
+  /** leaders 指標 id（iso_freq / pts_paint …） */
+  metricId: string;
+  label: string;
+  formatted: string;
+  teamRank: number;
+};
+
+export type ProInsightMatchupDetail =
+  | {
+      type: "clash";
+      /** paint / fb / off_tov / second / three / glass / tov / fta */
+      clashKind: string;
+      tier: 1 | 2 | 3;
+      attackTeamId: string;
+      defendTeamId: string;
+      myKey: string;
+      oppKey: string;
+      myRank: number;
+      oppRank: number;
+      attackOwner?: ProInsightMatchupOwner;
+      defendOwner?: ProInsightMatchupOwner;
+      /** 攻め側オーナー欠場時のチーム W–L（ace-out） */
+      attackOwnerWhenOutWl?: string;
+    }
+  | {
+      type: "playtype";
+      /** iso / pnr / post / spotup */
+      playtypeKind: string;
+      label: string;
+      teamId: string;
+      opponentId: string;
+      freqRank: number;
+      pppRank: number;
+      owner: ProInsightMatchupOwner;
+    };
 
 export type ProInsightFactPack = {
   homeTeamId: string;

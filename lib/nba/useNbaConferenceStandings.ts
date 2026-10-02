@@ -13,6 +13,8 @@ import type { NbaConferenceStandingsSource } from "@/lib/nba/standings/nbaConfer
 
 export type UseNbaConferenceStandingsOptions = {
   apiBaseUrl?: string | null;
+  /** 省略時はカレンダー今季 */
+  season?: string;
 };
 
 export function useNbaConferenceStandings(
@@ -39,7 +41,7 @@ export function useNbaConferenceStandings(
     setLoading(true);
     setError(null);
 
-    const season = CURRENT_NBA_SEASON_KEY;
+    const season = options.season?.trim() || CURRENT_NBA_SEASON_KEY;
     const key = nbaSnapshotCacheKey(options.apiBaseUrl, season);
     const cached = nbaStandingsSnapshotCache.peek(key);
     if (cached) {
@@ -78,7 +80,7 @@ export function useNbaConferenceStandings(
     return () => {
       cancelled = true;
     };
-  }, [options.apiBaseUrl]);
+  }, [options.apiBaseUrl, options.season]);
 
   return { board, asOfLabel, source, loading, error };
 }

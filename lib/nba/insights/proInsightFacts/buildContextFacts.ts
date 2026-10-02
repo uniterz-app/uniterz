@@ -383,9 +383,16 @@ function vsBandFacts(input: {
   records: NbaTeamSeasonRecordsBundle | null | undefined;
   phase: ProBriefPhase;
   isHome: boolean;
+  confRankSeasonKey: string | null;
 }): ProInsightFact[] {
   const split = input.records?.teams[input.teamId];
   if (!split) return [];
+  const statsSeason = input.records?.seasonKey ?? "";
+  const seasonMetric = {
+    key: "statsSeason",
+    value: statsSeason,
+    teamId: input.teamId,
+  };
   const nick = abbr(input.teamId);
   const oppNick = abbr(input.opponentTeamId);
   const minGames = input.phase === "opening" ? 8 : 4;
@@ -419,11 +426,21 @@ function vsBandFacts(input: {
             value: String(input.opponentConfRank),
             teamId: input.opponentTeamId,
           },
+          ...(input.confRankSeasonKey
+            ? [
+                {
+                  key: "oppConfRankSeason",
+                  value: input.confRankSeasonKey,
+                  teamId: input.opponentTeamId,
+                },
+              ]
+            : []),
+          seasonMetric,
         ],
         players: [],
         mode: "neutral",
         dedupeKeys: [`vs_band:${input.teamId}`],
-        hintEn: `${nick} vs conf top-6: ${formatWl(top)} (tonight vs ${oppNick}, conf #${input.opponentConfRank}).`,
+        hintEn: `${nick} vs conf top-6 in ${statsSeason}: ${formatWl(top)} (tonight vs ${oppNick}, conf #${input.opponentConfRank}${input.confRankSeasonKey ? ` in ${input.confRankSeasonKey}` : ""}).`,
       });
       return out;
     }
@@ -453,11 +470,12 @@ function vsBandFacts(input: {
             value: pct1(oppPct),
             teamId: input.opponentTeamId,
           },
+          seasonMetric,
         ],
         players: [],
         mode: "neutral",
         dedupeKeys: [`vs_band:${input.teamId}`],
-        hintEn: `${nick} vs sub-.500: ${formatWl(under)} (tonight opp win% ${pct1(oppPct)}).`,
+        hintEn: `${nick} vs sub-.500 in ${statsSeason}: ${formatWl(under)} (tonight opp win% ${pct1(oppPct)}).`,
       });
     }
   } else if (!oppIsTop6) {
@@ -481,11 +499,12 @@ function vsBandFacts(input: {
             value: pct1(oppPct),
             teamId: input.opponentTeamId,
           },
+          seasonMetric,
         ],
         players: [],
         mode: "neutral",
         dedupeKeys: [`vs_band:${input.teamId}`],
-        hintEn: `${nick} vs .500+: ${formatWl(over)} (tonight opp win% ${pct1(oppPct)}).`,
+        hintEn: `${nick} vs .500+ in ${statsSeason}: ${formatWl(over)} (tonight opp win% ${pct1(oppPct)}).`,
       });
     }
   }
@@ -689,11 +708,16 @@ function venueSplitFact(input: {
         teamId: input.teamId,
       },
       { key: "venueWinPct", value: pct1(pct), teamId: input.teamId },
+      {
+        key: "statsSeason",
+        value: input.records?.seasonKey ?? "",
+        teamId: input.teamId,
+      },
     ],
     players: [],
     mode: "neutral",
     dedupeKeys: [`venue_split:${input.teamId}`],
-    hintEn: `${nick} ${venue} record ${formatWl(row)} (win% ${pct1(pct)}).`,
+    hintEn: `${nick} ${venue} record in ${input.records?.seasonKey ?? ""} ${formatWl(row)} (win% ${pct1(pct)}).`,
   };
 }
 
@@ -709,6 +733,7 @@ function sideFacts(input: {
   seasonRows: NbaLeagueTeamStatRow[];
   last10Rows: NbaLeagueTeamStatRow[] | null | undefined;
   shapeRecords?: NbaTeamShapeRecordsBundle | null;
+  confRankSeasonKey: string | null;
 }): ProInsightFact[] {
   const form = formFor(
     input.teamId,
@@ -745,6 +770,7 @@ function sideFacts(input: {
       records: input.records,
       phase: input.phase,
       isHome: input.isHomeTonight,
+      confRankSeasonKey: input.confRankSeasonKey,
     })
   );
   facts.push(...ratingTiltFacts(input.teamId, seasonRow, last10Row));
@@ -834,6 +860,8 @@ export function buildContextFactCandidates(input: {
   /** unused — prior から derive */
   streaks?: TeamStreakFactInput[];
   confRankByTeamId?: Record<string, number> | null;
+  /** confRankByTeamId の出典シーズン（開幕前は前季） */
+  confRankSeasonKey?: string | null;
   shapeRecords?: NbaTeamShapeRecordsBundle | null;
 }): ProInsightFact[] {
   const records =
@@ -855,6 +883,7 @@ export function buildContextFactCandidates(input: {
       seasonRows: input.seasonRows,
       last10Rows: input.last10Rows,
       shapeRecords: input.shapeRecords,
+      confRankSeasonKey: input.confRankSeasonKey ?? null,
     }),
     ...sideFacts({
       teamId: input.awayTeamId,
@@ -868,6 +897,7 @@ export function buildContextFactCandidates(input: {
       seasonRows: input.seasonRows,
       last10Rows: input.last10Rows,
       shapeRecords: input.shapeRecords,
+      confRankSeasonKey: input.confRankSeasonKey ?? null,
     }),
   ];
 }

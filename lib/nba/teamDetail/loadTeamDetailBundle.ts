@@ -28,6 +28,11 @@ import type { NbaTeamGameLogSlice } from "@/lib/nba/teamGameLog/teamGameLogTypes
 import type { NbaTeamAceOutRecord } from "@/lib/nba/insights/aceOutRecordTypes";
 import type { NbaTeamStrengthSplit } from "@/lib/nba/insights/fetchTeamStrengthSplitClient";
 import type { NbaTeamDetailShapeEdges } from "@/lib/nba/teamShapes/fetchTeamShapeEdgesClient";
+import { loadTeamOffseasonMoves } from "@/lib/nba/offseasonMoves/loadOffseasonMovesSnapshot";
+import type { NbaTeamOffseasonMoves } from "@/lib/nba/offseasonMoves/offseasonMovesTypes";
+
+/** 今季この試合数を超えたら OFFSEASON MOVES を出さない（開幕後およそ 1 か月） */
+const OFFSEASON_MOVES_MAX_FINALS = 15;
 
 export type NbaTeamDetailApiPayload = {
   ok: true;
@@ -41,6 +46,7 @@ export type NbaTeamDetailApiPayload = {
   strengthSplit: NbaTeamStrengthSplit;
   aceOut: NbaTeamAceOutRecord | null;
   shapeEdges: NbaTeamDetailShapeEdges;
+  offseasonMoves: NbaTeamOffseasonMoves | null;
   source: NbaStatsSnapshotSource;
   updatedAt: string | null;
 };
@@ -163,6 +169,7 @@ export async function loadTeamDetailBundle(
     seasonRecords,
     aceOutPayload,
     shapes,
+    offseason,
   ] = await Promise.all([
     loadTeamRosterSlice(db, liveSeason, teamId),
     loadTeamPayroll(db, liveSeason, teamId),
@@ -172,7 +179,13 @@ export async function loadTeamDetailBundle(
     loadTeamSeasonRecordsApiPayload(db, statsSeason),
     loadTeamAceOutRecordsApiPayload(db, statsSeason),
     loadShapeEdgesWithPriorFallback(db, statsSeason, teamId),
+    loadTeamOffseasonMoves(db, liveSeason, teamId),
   ]);
+
+  const offseasonMoves =
+    (gameLogPayload.log?.finalCount ?? 0) <= OFFSEASON_MOVES_MAX_FINALS
+      ? offseason.moves
+      : null;
 
   let rosterBlock: NbaRosterTeamBlock | null = null;
   const team = rosterSlice.team;
@@ -228,6 +241,7 @@ export async function loadTeamDetailBundle(
     strengthSplit,
     aceOut: aceRow,
     shapeEdges: shapes.shapeEdges,
+    offseasonMoves,
     source,
     updatedAt: newestIso(
       rosterSlice.updatedAt,
@@ -237,7 +251,8 @@ export async function loadTeamDetailBundle(
       injuryPayload.updatedAt,
       seasonRecords.updatedAt,
       aceOutPayload.updatedAt,
-      shapes.updatedAt
+      shapes.updatedAt,
+      offseason.updatedAt
     ),
   };
 }

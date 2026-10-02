@@ -4,9 +4,10 @@
  */
 import { useMemo } from "react";
 import { Platform, StyleSheet, Text, View } from "react-native";
-import type {
-  ProInsightNarrativeBrief,
-  ProInsightNarrativeKind,
+import {
+  proInsightShowsEvidence,
+  type ProInsightNarrativeBrief,
+  type ProInsightNarrativeKind,
 } from "../../../../../../lib/predict/proInsightNarrativeTypes";
 import { L, resolveLocalizedLang } from "../../../../../../lib/i18n/localize";
 import type { UiStrings } from "../../../../../../lib/i18n/ui";
@@ -146,7 +147,8 @@ export default function PredictProInsightNarrativePanelNative({
                     >
                       <Text style={styles.body}>{t(item.body, language)}</Text>
                     </View>
-                    {item.evidence.length > 0 ? (
+                    {proInsightShowsEvidence(section.kind) &&
+                    item.evidence.length > 0 ? (
                       <View style={styles.evidenceList}>
                         {item.evidence.map((ev, j) => (
                           <Text key={j} style={styles.evidence}>

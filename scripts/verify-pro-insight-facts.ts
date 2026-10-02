@@ -6,6 +6,11 @@ import assert from "node:assert/strict";
 import { assembleProInsightFactPack } from "../lib/nba/insights/proInsightFacts/index";
 import type { NbaLeagueTeamStatRow } from "../lib/predict/nbaLeagueTeamStatsMocks";
 import type { NbaTeamAceOutRecordsBundle } from "../lib/nba/insights/aceOutRecordTypes";
+import {
+  consecutiveTeamGamesMissed,
+  dropStaleLongTermInjuries,
+  isLongTermInjury,
+} from "../lib/nba/insights/proInsightFacts/longTermInjury";
 
 const TIP = Date.UTC(2026, 2, 13, 2, 30);
 const HOUR = 60 * 60 * 1000;
@@ -253,11 +258,17 @@ const pack = assembleProInsightFactPack({
   },
 });
 
-assert.ok(
-  pack.sections.MATCHUP.some((f) => f.mode === "weakening"),
-  "expected at least one MATCHUP weakening when ace is OUT"
+const impactPlayerIds = new Set(
+  pack.sections["INJURY IMPACT"].flatMap((f) => f.players.map((p) => p.playerId))
 );
-assert.equal(pack.sections.MATCHUP.length, 2);
+assert.ok(
+  pack.sections.MATCHUP.every((f) =>
+    f.players.every((p) => !impactPlayerIds.has(p.playerId))
+  ),
+  "same injured player must not appear in both MATCHUP and INJURY IMPACT"
+);
+assert.ok(pack.sections.MATCHUP.length >= 1);
+assert.ok(pack.sections.MATCHUP.length <= 2);
 assert.equal(pack.sections.SCHEDULE.length, 2);
 assert.equal(pack.sections.CONTEXT.length, 2);
 assert.ok(pack.sections["INJURY IMPACT"].length >= 1);
@@ -278,6 +289,8 @@ const schedKinds = pack.sections.SCHEDULE.map((f) => f.kind);
 assert.ok(
   schedKinds.includes("rest_gap") ||
     schedKinds.includes("travel_tonight") ||
+    schedKinds.includes("ot_travel") ||
+    schedKinds.includes("travel_load") ||
     schedKinds.includes("b2b"),
   `unexpected schedule kinds: ${schedKinds.join(",")}`
 );
@@ -314,5 +327,42 @@ console.log(
     2
   )
 );
+
+// —— 長期離脱: 今季 3 試合欠場で Insight から外す ——
+{
+  const DAY = 24 * HOUR;
+  const out = {
+    playerId: "131",
+    name: "D.DIVINCENZO",
+    status: "out" as const,
+    reason: "It seems more likely that DiVincenzo will miss the entire 2026-27 season.",
+    returnEstimate: "2027-04-01",
+  };
+  const shortOut = { ...out, playerId: "9", name: "X.SHORT", reason: null, returnEstimate: new Date(TIP + 5 * DAY).toISOString() };
+  assert.equal(isLongTermInjury(out, TIP), true);
+  assert.equal(isLongTermInjury(shortOut, TIP), false);
+  assert.equal(isLongTermInjury({ ...out, status: "questionable" }, TIP), false);
+
+  const boxPlayer = (playerId: string) => ({ playerId, firstName: "A", lastName: playerId, min: 30 });
+  const game = (daysAgo: number, homeIds: string[], phase = "regular") => ({
+    id: `g${daysAgo}`,
+    data: {
+      startAtJst: TIP - daysAgo * DAY,
+      seasonPhase: phase,
+      home: { teamId: "MIN" },
+      away: { teamId: "OPP" },
+      liveStats: { phase: "final", box: { home: homeIds.map(boxPlayer), away: [boxPlayer("z")] } },
+    },
+  });
+  const docs2 = [game(2, ["1"]), game(4, ["1"]), game(6, ["1", "131"])];
+  assert.equal(consecutiveTeamGamesMissed({ docs: docs2, teamId: "MIN", playerId: "131", beforeMs: TIP }), 2);
+  assert.equal(dropStaleLongTermInjuries({ injuries: [out], teamId: "MIN", tipAtMs: TIP, docs: docs2 }).length, 1);
+
+  const docs3 = [game(2, ["1"]), game(4, ["1"]), game(6, ["1"])];
+  assert.equal(dropStaleLongTermInjuries({ injuries: [out, shortOut], teamId: "MIN", tipAtMs: TIP, docs: docs3 }).map((i) => i.playerId).join(), "9");
+
+  const preseason = [game(2, ["1"], "preseason"), game(4, ["1"], "preseason"), game(6, ["1"], "preseason")];
+  assert.equal(dropStaleLongTermInjuries({ injuries: [out], teamId: "MIN", tipAtMs: TIP, docs: preseason }).length, 1);
+}
 
 console.log("verify-pro-insight-facts: ok");

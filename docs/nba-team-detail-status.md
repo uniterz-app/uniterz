@@ -31,6 +31,7 @@ useNbaTeamDetailLiveOverlay()
 | SPLITS HOME/AWAY · VS E/W | ✅ team-game-log |
 | **VS .500+ / SUB-.500** | ✅ team-season-records（**日次 ingest**） |
 | PAYROLL · ROSTER | ✅ Active+Dead キャップ総額順位 · curated dead（例: ATL Carter）· E10 $0 |
+| **OFFSEASON MOVES** | ✅ IN / OUT 2 列（ROSTER と TEAM INFORMATION の間）· 前季最終所属 × 今季ロスター差分 · 今季 final ≤15 試合のみ表示 · トレード / FA は区別しない |
 | **TEAM INFORMATION** | ✅ 手 curated · HC/GM/オーナーは移籍都度更新（`nbaTeamFranchiseInfo.ts` · asOf `NBA_TEAM_FRANCHISE_INFO_AS_OF`） |
 | **DRAFT ASSETS** | ✅ 手 curated · **トレード都度更新**（`nbaDraftCapitalData.ts`） |
 
@@ -48,6 +49,7 @@ useNbaTeamDetailLiveOverlay()
 |---|---|---|
 | team-season-records | ✅（`nbaStatsDailyIngest` · team-game-logs の直後） | |
 | team-rosters · injuries · game-logs · league-stats | ✅ | |
+| team-offseason-moves | ✅（rosters の直後 · Firestore のみ。前季最終所属は初回だけ BDL） | |
 | team-payroll | | ✅ 月曜 |
 | draft capital | 手更新（トレード時） | |
 | franchise info（HC/GM/オーナー等） | 手更新（人事時） | |
@@ -58,6 +60,7 @@ useNbaTeamDetailLiveOverlay()
 
 | 日付 | 内容 |
 |---|---|
+| 2026-09-28 | OFFSEASON MOVES（IN / OUT）追加 · `nbaTeamOffseasonMoves` / `nbaPlayerSeasonFinalTeams` |
 | 2026-09-24 | PAYROLL: キャップ総額（Active+Dead）順位 · デッドマネー枠 · curated E10 |
 | 2026-09-24 | TEAM INFORMATION を ROSTER 下に追加（静的フランチャイズ · カラーは四角ブロック） |
 | 2026-09-01 | PREVIEW 除去 · レガシー redirect · team-season-records を日次 ingest に追加 |

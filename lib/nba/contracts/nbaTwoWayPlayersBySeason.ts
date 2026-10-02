@@ -42,6 +42,7 @@ export const NBA_TWO_WAY_PLAYERS_BY_SEASON: Readonly<
     { playerId: "1028038474", teamId: "nba-nuggets", name: "K.J. Simpson" },
     { playerId: "1091464608", teamId: "nba-nuggets", name: "Bryce Hopkins" },
     { playerId: "56677831", teamId: "nba-nuggets", name: "Cam Whitmore" },
+    { playerId: "1057847894", teamId: "nba-nuggets", name: "Ryan Nembhard" },
     { playerId: "1028205331", teamId: "nba-pistons", name: "Isaac Jones" },
     { playerId: "1091476372", teamId: "nba-pistons", name: "Ugonna Onyenso" },
     { playerId: "1028264794", teamId: "nba-pistons", name: "Elijah Harkless" },
