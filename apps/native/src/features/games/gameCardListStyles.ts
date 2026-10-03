@@ -260,6 +260,13 @@ export const gameCardListStyles = StyleSheet.create({
     gap: 1,
     minHeight: 36,
   },
+  centerLiveClock: {
+    fontSize: 17,
+    lineHeight: 20,
+    marginTop: 4,
+    color: "rgba(255,255,255,0.95)",
+    letterSpacing: 0.6,
+  },
   liveMarkPill: liveMarkPillCyberBase,
   liveMarkText: liveMarkTextCyberBase,
   leagueDividerWrap: {

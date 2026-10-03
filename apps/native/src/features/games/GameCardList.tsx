@@ -354,6 +354,7 @@ export const GameCardListRow = memo(function GameCardListRow(props: GameCardList
                               style={[
                                 styles.centerSubline,
                                 isWcCard && styles.centerSublineWc,
+                                styles.centerLiveClock,
                               ]}
                               numberOfLines={2}
                             >
@@ -530,6 +531,7 @@ export const GameCardListRow = memo(function GameCardListRow(props: GameCardList
                               style={[
                                 styles.centerSubline,
                                 isWcCard && styles.centerSublineWc,
+                                styles.centerLiveClock,
                               ]}
                               numberOfLines={2}
                             >

@@ -480,7 +480,10 @@ export function PredictMatchPreview({
                   textStyle={s.matchPreviewLivePillText}
                 />
                 {centerBlock.subLine ? (
-                  <Text style={s.matchPreviewSub} numberOfLines={2}>
+                  <Text
+                    style={[s.matchPreviewSub, s.matchPreviewLiveClock]}
+                    numberOfLines={2}
+                  >
                     {centerBlock.subLine}
                   </Text>
                 ) : null}
@@ -3029,6 +3032,13 @@ const s = StyleSheet.create({
     textAlign: "center",
     marginTop: 2,
     letterSpacing: 0.4,
+  },
+  matchPreviewLiveClock: {
+    fontSize: 20,
+    lineHeight: 24,
+    marginTop: 8,
+    color: "rgba(255,255,255,0.95)",
+    letterSpacing: 1,
   },
   matchPreviewPkSub: {
     fontFamily: MATCH_CARD_DISPLAY_FONT,
