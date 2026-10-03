@@ -6,6 +6,7 @@ import { requireAdminUid } from "@/lib/admin/requireAdminUid";
 import { checkJobSecret } from "@/lib/security/assertJobSecret";
 import { ingestNbaTeamRostersFromBdl } from "@/lib/nba/ingest/nbaTeamRostersIngest";
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
+import { revalidateNbaInjuryApiCache } from "@/lib/nba/teamInjuries/nbaInjuryApiCache";
 
 /**
  * POST /api/admin/nba-team-rosters-ingest
@@ -31,6 +32,7 @@ export async function POST(req: Request) {
     const result = await ingestNbaTeamRostersFromBdl(getAdminDb(), {
       seasonKey,
     });
+    revalidateNbaInjuryApiCache();
 
     return NextResponse.json(result);
   } catch (e: unknown) {

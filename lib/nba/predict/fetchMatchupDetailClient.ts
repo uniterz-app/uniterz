@@ -106,6 +106,30 @@ export function prefetchMatchupDetailBundle(
   void fetchMatchupDetailBundle(options).catch(() => {});
 }
 
+/** 一覧表示時。カードを開く前に全カードを温める（同時 `concurrency` 本） */
+export async function prefetchMatchupDetailBundles(
+  list: Array<Omit<FetchMatchupDetailOptions, "apiBaseUrl">>,
+  opts: { apiBaseUrl?: string | null; concurrency?: number } = {}
+): Promise<void> {
+  const queue = list.filter(
+    (o) =>
+      o.homeTeamId?.trim() &&
+      o.awayTeamId?.trim() &&
+      !peekMatchupDetailBundle({ ...o, apiBaseUrl: opts.apiBaseUrl })
+  );
+  const worker = async () => {
+    for (let next = queue.shift(); next; next = queue.shift()) {
+      await fetchMatchupDetailBundle({
+        ...next,
+        apiBaseUrl: opts.apiBaseUrl,
+      }).catch(() => {});
+    }
+  };
+  await Promise.all(
+    Array.from({ length: Math.max(1, opts.concurrency ?? 3) }, worker)
+  );
+}
+
 export function peekMatchupDetailBundle(
   options: FetchMatchupDetailOptions
 ): NbaMatchupDetailApiPayload | null {

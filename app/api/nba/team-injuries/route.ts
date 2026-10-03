@@ -1,8 +1,13 @@
 export const runtime = "nodejs";
 
 import { NextResponse } from "next/server";
+import { unstable_cache } from "next/cache";
 import { getAdminDb } from "@/lib/firebaseAdmin";
 import { nbaInjurySnapshotCacheControl } from "@/lib/nba/nbaStatsSnapshotCacheControl";
+import {
+  NBA_INJURY_API_CACHE_REVALIDATE_SEC,
+  NBA_INJURY_API_CACHE_TAG,
+} from "@/lib/nba/teamInjuries/nbaInjuryApiCache";
 import {
   loadTeamInjuriesSnapshot,
   loadTeamInjury,
@@ -22,10 +27,17 @@ export async function GET(req: Request) {
       url.searchParams.get("season")
     );
     const team = (url.searchParams.get("team") ?? "").trim();
-    const db = getAdminDb();
+    const cacheOpts = {
+      revalidate: NBA_INJURY_API_CACHE_REVALIDATE_SEC,
+      tags: [NBA_INJURY_API_CACHE_TAG],
+    };
 
     if (team) {
-      const payload = await loadTeamInjury(db, season, team);
+      const payload = await unstable_cache(
+        () => loadTeamInjury(getAdminDb(), season, team),
+        ["nba-team-injuries", season, team],
+        cacheOpts
+      )();
       return NextResponse.json(payload, {
         headers: {
           "Cache-Control": nbaInjurySnapshotCacheControl({ source: payload.source }),
@@ -33,7 +45,11 @@ export async function GET(req: Request) {
       });
     }
 
-    const payload = await loadTeamInjuriesSnapshot(db, season);
+    const payload = await unstable_cache(
+      () => loadTeamInjuriesSnapshot(getAdminDb(), season),
+      ["nba-team-injuries", season],
+      cacheOpts
+    )();
     return NextResponse.json(payload, {
       headers: {
         "Cache-Control": nbaInjurySnapshotCacheControl({ source: payload.source }),

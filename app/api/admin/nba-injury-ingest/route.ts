@@ -11,6 +11,7 @@ import {
   type NbaInjuryIngestTrigger,
 } from "@/lib/nba/teamInjuries/runNbaInjuryIngestSchedule";
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
+import { revalidateNbaInjuryApiCache } from "@/lib/nba/teamInjuries/nbaInjuryApiCache";
 
 /**
  * POST /api/admin/nba-injury-ingest
@@ -52,6 +53,7 @@ export async function POST(req: Request) {
       trigger,
       baselineSlot,
     });
+    revalidateNbaInjuryApiCache();
 
     return NextResponse.json(result);
   } catch (e: unknown) {

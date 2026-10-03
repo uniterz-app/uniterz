@@ -29,6 +29,7 @@ import TutorialCardTapHintNative from "../tutorial/TutorialCardTapHintNative";
 import { MATCH_CARD_DISPLAY_FONT } from "./matchCardTypography";
 import { displayNbaRoundLabel } from "../../../../../lib/games/displayNbaRoundLabel";
 import { prefetchMatchupDetailBundle } from "../../../../../lib/nba/predict/fetchMatchupDetailClient";
+import { usePrefetchNbaMatchupDetailsNative } from "./usePrefetchNbaMatchupDetailsNative";
 import { getUniterzApiBaseUrl } from "./submitPredictionApi";
 function matchRoundSideCode(roundLabel: string): string {
   const u = roundLabel.toUpperCase();
@@ -668,6 +669,8 @@ export function GameCardListEmpty({ label }: { label: string }) {
 export default function GameCardList(props: GameCardListProps) {
   const { games, t, styles, enteringAnimationEnabled = true, entranceVariant = "full" } = props;
   const tutorialPickupGameId = resolveTutorialPickupGameId(games);
+
+  usePrefetchNbaMatchupDetailsNative(games);
 
   return (
     <View style={styles.listArea}>

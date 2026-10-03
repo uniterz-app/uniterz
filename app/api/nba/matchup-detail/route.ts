@@ -1,9 +1,14 @@
 export const runtime = "nodejs";
 
 import { NextResponse } from "next/server";
+import { unstable_cache } from "next/cache";
 import { getAdminDb } from "@/lib/firebaseAdmin";
 import { nbaInjurySnapshotCacheControl } from "@/lib/nba/nbaStatsSnapshotCacheControl";
 import { loadMatchupDetailBundle } from "@/lib/nba/predict/loadMatchupDetailBundle";
+import {
+  NBA_INJURY_API_CACHE_REVALIDATE_SEC,
+  NBA_INJURY_API_CACHE_TAG,
+} from "@/lib/nba/teamInjuries/nbaInjuryApiCache";
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
 
 /**
@@ -28,11 +33,19 @@ export async function GET(req: Request) {
       );
     }
 
-    const payload = await loadMatchupDetailBundle(getAdminDb(), {
-      homeTeamId: home,
-      awayTeamId: away,
-      seasonKey: season,
-    });
+    const payload = await unstable_cache(
+      () =>
+        loadMatchupDetailBundle(getAdminDb(), {
+          homeTeamId: home,
+          awayTeamId: away,
+          seasonKey: season,
+        }),
+      ["nba-matchup-detail", season, home, away],
+      {
+        revalidate: NBA_INJURY_API_CACHE_REVALIDATE_SEC,
+        tags: [NBA_INJURY_API_CACHE_TAG],
+      }
+    )();
 
     const hasRoster =
       (payload.rosterHome?.players?.length ?? 0) > 0 ||
