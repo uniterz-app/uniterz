@@ -109,10 +109,16 @@ function rememberTeams(rows: BdlBoxScore[]): void {
   }
 }
 
+/** `season_type` 省略時はプレシーズンが返らない（games と同じ） */
+export type BdlBoxScoreQueryOptions = { seasonType?: "preseason" };
+
 /** 当日のライブ更新ボックス（試合が無ければ空） */
-export async function fetchBdlLiveBoxScores(): Promise<BdlBoxScore[]> {
+export async function fetchBdlLiveBoxScores(
+  opts: BdlBoxScoreQueryOptions = {}
+): Promise<BdlBoxScore[]> {
   const res = await bdlNbaGetJson<BdlListResponse<BdlBoxScore>>(
-    "/nba/v1/box_scores/live"
+    "/nba/v1/box_scores/live",
+    { season_type: opts.seasonType }
   );
   const rows = Array.isArray(res.data) ? res.data : [];
   rememberTeams(rows);
@@ -121,7 +127,8 @@ export async function fetchBdlLiveBoxScores(): Promise<BdlBoxScore[]> {
 
 /** 特定日のボックス（YYYY-MM-DD） */
 export async function fetchBdlBoxScoresForDate(
-  date: string
+  date: string,
+  opts: BdlBoxScoreQueryOptions = {}
 ): Promise<BdlBoxScore[]> {
   const day = date.trim();
   if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) {
@@ -129,7 +136,7 @@ export async function fetchBdlBoxScoresForDate(
   }
   const res = await bdlNbaGetJson<BdlListResponse<BdlBoxScore>>(
     "/nba/v1/box_scores",
-    { date: day }
+    { date: day, season_type: opts.seasonType }
   );
   const rows = Array.isArray(res.data) ? res.data : [];
   rememberTeams(rows);

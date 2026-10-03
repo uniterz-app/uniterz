@@ -78,17 +78,22 @@ async function collectBoxScores(dates: string[]): Promise<BdlBoxScore[]> {
     byKey.set(key, row);
   };
 
+  const variants = [{}, { seasonType: "preseason" as const }];
   for (const date of dates) {
-    try {
-      for (const row of await fetchBdlBoxScoresForDate(date)) put(row);
-    } catch (e) {
-      console.warn("[nbaLiveGamesIngest] box_scores date failed", date, e);
+    for (const opts of variants) {
+      try {
+        for (const row of await fetchBdlBoxScoresForDate(date, opts)) put(row);
+      } catch (e) {
+        console.warn("[nbaLiveGamesIngest] box_scores date failed", date, opts, e);
+      }
     }
   }
-  try {
-    for (const row of await fetchBdlLiveBoxScores()) put(row);
-  } catch (e) {
-    console.warn("[nbaLiveGamesIngest] box_scores/live failed", e);
+  for (const opts of variants) {
+    try {
+      for (const row of await fetchBdlLiveBoxScores(opts)) put(row);
+    } catch (e) {
+      console.warn("[nbaLiveGamesIngest] box_scores/live failed", opts, e);
+    }
   }
   return [...byKey.values()];
 }
