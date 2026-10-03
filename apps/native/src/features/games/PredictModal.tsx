@@ -766,6 +766,8 @@ type PredictModalProps = {
     playerId: string,
     toolsTab?: "injuries" | "roster"
   ) => void;
+  /** Free の PRO INSIGHT ゲートから Get Pro へ（親で Modal を閉じてから遷移） */
+  onOpenProSubscribe?: () => void;
 };
 
 /** モバイル `PredictionFormV2`：glassCard（form）/ glassCardStatsPanel（tool） */
@@ -872,6 +874,7 @@ export default function PredictModal({
   tutorialMode = false,
   onOpenTeamDetail,
   onOpenPlayerDetail,
+  onOpenProSubscribe,
 }: PredictModalProps) {
   const insets = useSafeAreaInsets();
   const reduceMotion = useReducedMotion() ?? false;
@@ -1530,6 +1533,7 @@ export default function PredictModal({
                       }
                       onOpenTeamDetail={onOpenTeamDetail}
                       onOpenPlayerDetail={onOpenPlayerDetail}
+                      onOpenProSubscribe={onOpenProSubscribe}
                     />
                   ) : (
               <View>

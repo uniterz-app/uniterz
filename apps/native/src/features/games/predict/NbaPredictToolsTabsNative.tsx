@@ -55,6 +55,8 @@ type Props = {
     playerId: string,
     toolsTab?: "injuries" | "roster"
   ) => void;
+  /** RN Modal 内では navigate だけだと遷移先が Modal の裏に隠れるため、親で閉じてから遷移する */
+  onOpenProSubscribe?: () => void;
 };
 
 function PendingPanel({ text }: { text: string }) {
@@ -92,6 +94,7 @@ export default function NbaPredictToolsTabsNative({
   roster = null,
   onOpenTeamDetail,
   onOpenPlayerDetail,
+  onOpenProSubscribe,
 }: Props) {
   const t = getGamesTexts(language);
   const loadingLabel = t.predictToolLoading;
@@ -174,6 +177,10 @@ export default function NbaPredictToolsTabsNative({
   );
 
   const openProSubscribe = () => {
+    if (onOpenProSubscribe) {
+      onOpenProSubscribe();
+      return;
+    }
     navigation.navigate("ProfileTab", { screen: "ProSubscribe" });
   };
 

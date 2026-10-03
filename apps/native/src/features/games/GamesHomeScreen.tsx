@@ -2753,6 +2753,15 @@ export default function GamesHomeScreen({
             predictToolsTab: toolsTab ?? "roster",
           });
         }}
+        onOpenProSubscribe={() => {
+          setIsPredictModalOpen(false);
+          setExpandScoreFormWhenEditing(false);
+          setPredictSpectatorStartedNoPost(false);
+          setSelectedGame(null);
+          scheduleAfterPredictModalDismissed(() => {
+            tabNavigation.navigate("ProfileTab", { screen: "ProSubscribe" });
+          });
+        }}
         spectatorStartedNoPost={predictSpectatorStartedNoPost}
         predictionEditLockedAfterKickoff={
           selectedGame != null && isGameStarted(selectedGame)

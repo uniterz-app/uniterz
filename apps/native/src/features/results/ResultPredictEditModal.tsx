@@ -6,7 +6,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { cyberAlert } from "../../components/cyberAlert";
 import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useNavigation, type NavigationProp } from "@react-navigation/native";
 import { Timestamp, doc, getDoc } from "firebase/firestore";
+import type { MainTabParamList } from "../../navigation/types";
 import { db } from "../../lib/firebase";
 import {
   resolveGameScore,
@@ -592,6 +594,14 @@ export default function ResultPredictEditModal({
     onClose();
   }, [onClose, resetLocalForm]);
 
+  const tabNavigation = useNavigation<NavigationProp<MainTabParamList>>();
+  const handleOpenProSubscribe = useCallback(() => {
+    handleClose();
+    scheduleAfterPredictModalDismissed(() => {
+      tabNavigation.navigate("ProfileTab", { screen: "ProSubscribe" });
+    });
+  }, [handleClose, tabNavigation]);
+
   const handleSubmit = useCallback(async () => {
     if (!game || !fUser || !post) return;
     if (scoreHome.trim() === "" || scoreAway.trim() === "") {
@@ -765,6 +775,7 @@ export default function ResultPredictEditModal({
         overlayUnifiedForm
         myPostId={post?.id ?? null}
         isProUser={isProUser}
+        onOpenProSubscribe={handleOpenProSubscribe}
       />
     </>
   );
