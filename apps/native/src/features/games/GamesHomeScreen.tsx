@@ -160,10 +160,7 @@ import { tutorialSelectPredictToolsTab } from "../tutorial/tutorialPredictToolsB
 import { TUTORIAL_NBA_GAME_ID } from "../../../../../lib/tutorial/tutorialNbaRawGame";
 import { setTutorialWelcomeChromeHidden, setTutorialWelcomeBrandHidden } from "../../../../../lib/tutorial/tutorialWelcomeChrome";
 import { setTutorialRestartCover } from "../../../../../lib/tutorial/tutorialRestartCover";
-import {
-  beginTutorialWelcomeIntroSession,
-  getTutorialWelcomeIntroSession,
-} from "../../../../../lib/tutorial/tutorialWelcomeSkipIntro";
+import { getTutorialWelcomeIntroSession } from "../../../../../lib/tutorial/tutorialWelcomeSkipIntro";
 import type { TutorialWelcomeFlyDest } from "../../../../../lib/tutorial/tutorialMotion";
 import { tutorialWelcomeBriefingProps } from "../../../../../lib/tutorial/tutorialWelcomeAudience";
 import {
@@ -173,8 +170,10 @@ import {
   type TutorialWelcomeAudience,
 } from "../tutorial/tutorialWelcomeAudienceNative";
 import {
+  TUTORIAL_GAMES_FIRST_SUBSTEP,
   isTutorialGamesSubstep,
   isTutorialOnGamesHome,
+  nextTutorialGamesSubstep,
 } from "../../../../../lib/tutorial/tutorialGamesSubsteps";
 import { t as i18nT } from "../../../../../lib/i18n/t";
 import {
@@ -825,7 +824,7 @@ export default function GamesHomeScreen({
         return;
       }
       const start: TutorialLivePhase =
-        existing === "gamesPickup" || existing === "welcome"
+        isTutorialGamesSubstep(existing) || existing === "welcome"
           ? existing
           : "welcome";
       const audience = await ensureTutorialWelcomeFirstNative();
@@ -2489,7 +2488,7 @@ export default function GamesHomeScreen({
                   return;
                 }
                 setTutorialLiveTrackNative("full");
-                setTutorialPhaseAndStore("gamesPickup");
+                setTutorialPhaseAndStore(TUTORIAL_GAMES_FIRST_SUBSTEP);
               }
             : undefined
         }
@@ -2518,7 +2517,7 @@ export default function GamesHomeScreen({
                 }}
                 onNext={() => {
                   setTutorialLiveTrackNative("full");
-                  setTutorialPhaseAndStore("gamesPickup");
+                  setTutorialPhaseAndStore(TUTORIAL_GAMES_FIRST_SUBSTEP);
                 }}
                 onAltNext={() => {
                   setTutorialLiveTrackNative("features");
@@ -2785,34 +2784,43 @@ export default function GamesHomeScreen({
 
       <TutorialLiveCoachNative
         open={isTutorialGamesSubstep(tutorialPhase)}
-        title={tutorialCopy.tutorial.practice.gamesPickupTitle}
-        body={tutorialCopy.tutorial.practice.gamesPickupBody}
+        title={
+          tutorialPhase === "games"
+            ? tutorialCopy.tutorial.practice.gamesTitle
+            : tutorialCopy.tutorial.practice.gamesPickupTitle
+        }
+        body={
+          tutorialPhase === "games"
+            ? tutorialCopy.tutorial.practice.gamesBody
+            : tutorialCopy.tutorial.practice.gamesPickupBody
+        }
         skipLabel={tutorialCopy.tutorial.skip}
-        nextLabel={tutorialCopy.common.ok}
-        backLabel={tutorialCopy.tutorial.back}
+        nextLabel={
+          tutorialPhase === "games"
+            ? tutorialCopy.tutorial.next
+            : tutorialCopy.common.ok
+        }
         target={
-          tutorialPhase === "gamesPickup" && filteredGames.length > 0
-            ? "match-pickup-label"
-            : null
+          filteredGames.length === 0
+            ? null
+            : tutorialPhase === "games"
+              ? "match-card"
+              : "match-pickup-label"
         }
-        visual={
-          tutorialPhase === "gamesPickup" && filteredGames.length === 0
-            ? "matchCard"
-            : null
-        }
+        visual={filteredGames.length === 0 ? "matchCard" : null}
         accentTone="feature"
         {...skipConfirm}
         onSkip={() => {
           void markTutorialPageTipSeenNative(fUser?.uid, "games");
           completeTutorialFully();
         }}
-        onBack={() => {
-          if (!isTutorialGamesSubstep(tutorialPhase)) return;
-          setWelcomeIntroSession(beginTutorialWelcomeIntroSession());
-          setTutorialPhaseAndStore("welcome");
-        }}
         onNext={() => {
           if (!isTutorialGamesSubstep(tutorialPhase)) return;
+          const next = nextTutorialGamesSubstep(tutorialPhase);
+          if (next) {
+            setTutorialPhaseAndStore(next);
+            return;
+          }
           void markTutorialPageTipSeenNative(fUser?.uid, "games");
           setTutorialPhaseAndStore(null);
         }}

@@ -10,7 +10,7 @@ import type { TutorialVisualId } from "@/lib/tutorial/tutorialCopy";
 export const HORIZON_INCLUDE_SQUAD_BATTLE = false;
 
 const HORIZON_SQUAD_STEP_COUNT = 2;
-const HORIZON_PROFILE_FEATURE_STEP_COUNT = 4;
+const HORIZON_PROFILE_FEATURE_STEP_COUNT = 3;
 
 export const HORIZON_FEATURE_STEP_COUNT = HORIZON_INCLUDE_SQUAD_BATTLE
   ? HORIZON_SQUAD_STEP_COUNT + HORIZON_PROFILE_FEATURE_STEP_COUNT
@@ -28,10 +28,8 @@ export type HorizonPracticeCopy = {
   horizonUnitWhatBody: string;
   horizonUnitHowTitle: string;
   horizonUnitHowBody: string;
-  horizonCareerWhatTitle: string;
-  horizonCareerWhatBody: string;
-  horizonCareerHowTitle: string;
-  horizonCareerHowBody: string;
+  horizonCareerTitle: string;
+  horizonCareerBody: string;
   horizonStatsWhatTitle: string;
   horizonStatsWhatBody: string;
   horizonStatsHowTitle: string;
@@ -85,15 +83,9 @@ export function buildHorizonFeatureSteps(
       target: "profile-unit-coin",
     },
     {
-      title: p.horizonCareerWhatTitle,
-      body: p.horizonCareerWhatBody,
-      visual: "horizon-career",
-      target: "profile-career-tab",
-    },
-    {
-      title: p.horizonCareerHowTitle,
-      body: p.horizonCareerHowBody,
-      visual: "horizon-career",
+      title: p.horizonCareerTitle,
+      body: p.horizonCareerBody,
+      visual: null,
       target: "profile-career-tab",
     },
   ];

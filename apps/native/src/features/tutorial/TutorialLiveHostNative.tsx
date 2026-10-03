@@ -282,7 +282,7 @@ export default function TutorialLiveHostNative({ page, language }: Props) {
           title={step0 ? p.rankingsTitle : p.rankingsBoardsTitle}
           body={step0 ? p.rankingsBody : p.rankingsBoardsBody}
           skipLabel={m.tutorial.skip}
-          nextLabel={step0 ? m.tutorial.next : m.common.ok}
+          nextLabel={m.common.ok}
           backLabel={step0 ? undefined : m.tutorial.back}
           altNextLabel={step0 ? p.rankingsScoreHelpCta : undefined}
           target={step0 ? null : "rankings-division"}
@@ -346,7 +346,7 @@ export default function TutorialLiveHostNative({ page, language }: Props) {
           title={p.profileTitle}
           body={p.profileBody}
           skipLabel={m.tutorial.skip}
-          nextLabel={m.tutorial.next}
+          nextLabel={m.common.ok}
           allowInteractBehind
           {...skipConfirm}
           onSkip={() => void dismissPageTip("profile")}

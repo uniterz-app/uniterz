@@ -84,8 +84,10 @@ import {
   type TutorialLivePhase,
 } from "@/lib/tutorial/tutorialLivePhase";
 import {
+  TUTORIAL_GAMES_FIRST_SUBSTEP,
   isTutorialGamesSubstep,
   isTutorialOnGamesHome,
+  nextTutorialGamesSubstep,
 } from "@/lib/tutorial/tutorialGamesSubsteps";
 import { clearTutorialLivePick } from "@/lib/tutorial/tutorialLivePick";
 import { writeTutorialLiveTrack } from "@/lib/tutorial/tutorialLiveTrack";
@@ -93,10 +95,7 @@ import { writeTutorialHorizonSubstep } from "@/lib/tutorial/tutorialHorizonSubst
 import { writeTutorialWelcomeHandoff, tutorialProfileHref } from "@/lib/tutorial/tutorialWelcomeHandoff";
 import { setTutorialWelcomeChromeHidden, setTutorialWelcomeBrandHidden } from "@/lib/tutorial/tutorialWelcomeChrome";
 import { setTutorialRestartCover } from "@/lib/tutorial/tutorialRestartCover";
-import {
-  beginTutorialWelcomeIntroSession,
-  getTutorialWelcomeIntroSession,
-} from "@/lib/tutorial/tutorialWelcomeSkipIntro";
+import { getTutorialWelcomeIntroSession } from "@/lib/tutorial/tutorialWelcomeSkipIntro";
 import {
   ensureTutorialWelcomeFirst,
   resolveTutorialWelcomeAudience,
@@ -281,7 +280,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
         return;
       }
       const start: TutorialLivePhase =
-        existing === "gamesPickup" || existing === "welcome"
+        isTutorialGamesSubstep(existing) || existing === "welcome"
           ? existing
           : "welcome";
       const audience = ensureTutorialWelcomeFirst();
@@ -1383,7 +1382,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
                   return;
                 }
                 writeTutorialLiveTrack("full");
-                setTutorialPhaseAndStore("gamesPickup");
+                setTutorialPhaseAndStore(TUTORIAL_GAMES_FIRST_SUBSTEP);
               }
             : undefined
         }
@@ -1412,7 +1411,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
                 }}
                 onNext={() => {
                   writeTutorialLiveTrack("full");
-                  setTutorialPhaseAndStore("gamesPickup");
+                  setTutorialPhaseAndStore(TUTORIAL_GAMES_FIRST_SUBSTEP);
                 }}
                 onAltNext={() => {
                   writeTutorialLiveTrack("features");
@@ -1634,12 +1633,25 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
       {isTutorialGamesSubstep(tutorialPhase) ? (
         <TutorialLiveCoach
           open
-          title={m.tutorial.practice.gamesPickupTitle}
-          body={m.tutorial.practice.gamesPickupBody}
+          title={
+            tutorialPhase === "games"
+              ? m.tutorial.practice.gamesTitle
+              : m.tutorial.practice.gamesPickupTitle
+          }
+          body={
+            tutorialPhase === "games"
+              ? m.tutorial.practice.gamesBody
+              : m.tutorial.practice.gamesPickupBody
+          }
           skipLabel={m.tutorial.skip}
-          nextLabel={m.common.ok}
-          backLabel={m.tutorial.back}
-          target={filteredGames.length > 0 ? "match-pickup-label" : null}
+          nextLabel={tutorialPhase === "games" ? m.tutorial.next : m.common.ok}
+          target={
+            filteredGames.length === 0
+              ? null
+              : tutorialPhase === "games"
+                ? "match-card"
+                : "match-pickup-label"
+          }
           visual={filteredGames.length === 0 ? "matchCard" : null}
           accentTone="feature"
           {...skipConfirm}
@@ -1647,11 +1659,12 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
             markTutorialPageTipSeen(user?.uid, "games");
             completeTutorialFully();
           }}
-          onBack={() => {
-            setWelcomeIntroSession(beginTutorialWelcomeIntroSession());
-            setTutorialPhaseAndStore("welcome");
-          }}
           onNext={() => {
+            const next = nextTutorialGamesSubstep(tutorialPhase);
+            if (next) {
+              setTutorialPhaseAndStore(next);
+              return;
+            }
             markTutorialPageTipSeen(user?.uid, "games");
             setTutorialPhaseAndStore(null);
             setAppTutorialBlockingEvents(false);

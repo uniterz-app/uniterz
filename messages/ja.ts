@@ -968,7 +968,7 @@ const ja = {
       tabProfile: "マイ",
       welcomeTitle: "ウェルカム to UNITERZ",
       welcomeBody:
-        "試合を予想してポイントを稼ぎ、**ランキング**を競うアプリです。\n各タブを初めて開いたときに短いヒントが出ます。まずはピックアップから。",
+        "試合を予想してポイントを稼ぎ、**ランキング**を競うアプリです。\n各タブを初めて開いたときに短いヒントが出ます。",
       welcomeReturningBody:
         "各タブの短いヒントをもう一度見るか、UNIT・キャリアなどの**新機能だけ**案内するか選べます。",
       welcomeFullCta: "ヒントを見る",
@@ -978,7 +978,7 @@ const ja = {
         "今日の試合が並びます。**カードをタップ**すると予想画面が開きます。勝敗はスコアから自動です。",
       gamesPickupTitle: "ピックアップゲーム",
       gamesPickupBody:
-        "週ごとに選ばれた試合です。**黄色い枠**と左の **PICK UP** が目印です。**Pick Up ランキング**はこの試合への予想だけで決まります。**予想する**を押して、はじめての予想をしてみよう。",
+        "週ごとに選ばれた試合です。**黄色い枠**と左の **PICK UP** が目印です。**Pick Up ランキング**はこの試合への予想だけで決まります。",
       gamesStatsTitle: "STANDING / STATS",
       gamesStatsBody:
         "右端の **STANDING** と **STATS** から、順位やチーム・選手のスタッツを開けます。右端をスワイプしても同じです。",
@@ -1087,12 +1087,9 @@ const ja = {
       horizonUnitHowTitle: "UNIT の獲得",
       horizonUnitHowBody:
         "**週間・月間ランキング**や**スクワッドバトル**、**友達の招待**の報酬などで手に入ります。\n貯めた UNIT は**ユニフォーム**や**帽子**などと**交換**できます。",
-      horizonCareerWhatTitle: "キャリアとは",
-      horizonCareerWhatBody:
-        "予想者としての**履歴書**のような画面です。\n**的中率・連勝・シーズン順位**など、**長期の成績**をまとめて見られます。\n短期ランキングだけでは分からない**自分の伸び**を確認できます。",
-      horizonCareerHowTitle: "キャリアの開き方",
-      horizonCareerHowBody:
-        "プロフィール上部の **CAREER** タブから開きます。\n**シーズンごと**に成績を切り替えて振り返れます。\n**PROFILE ↔ CAREER** を行き来して、今とこれまでを比べられます。",
+      horizonCareerTitle: "キャリア",
+      horizonCareerBody:
+        "プロフィール上部の **CAREER** から開く、予想者としての**履歴書**です。\n**的中率・連勝・シーズン順位**など、**長期の成績**を振り返れます。",
       horizonStatsWhatTitle: "STATS とは",
       horizonStatsWhatBody:
         "**試合タブ**から見られる**チーム／選手スタッツ**です。\n得点・効率・直近の調子など、**予想前のリサーチ**に使えます。\n本番データに基づく** STATS ハブ**へつながります。",

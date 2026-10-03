@@ -178,6 +178,9 @@ function ActiveTabChromeThemed({
           styles.themedGlowOuter,
           {
             marginTop: GLOW_PAD,
+            // ホストは左右 GLOW_PAD 広い。塗りは本体幅に戻し、光だけはみ出させる
+            marginHorizontal: GLOW_PAD,
+            width: undefined,
             height: bodyH,
             shadowColor: accent,
           },

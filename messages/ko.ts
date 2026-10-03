@@ -947,7 +947,7 @@ const ko: Messages = {
       tabProfile: "Profile",
       welcomeTitle: "Welcome to UNITERZ",
       welcomeBody:
-        "경기를 예측해 포인트를 쌓고 **랭킹**을 겨루는 앱입니다.\n각 탭을 처음 열 때 짧은 힌트가 나옵니다. 픽업부터 시작하세요.",
+        "경기를 예측해 포인트를 쌓고 **랭킹**을 겨루는 앱입니다.\n각 탭을 처음 열 때 짧은 힌트가 나옵니다.",
       welcomeReturningBody:
         "각 탭의 짧은 힌트를 다시 보거나, UNIT·커리어 등 **새 기능만** 안내받을 수 있어요.",
       welcomeFullCta: "힌트 보기",
@@ -957,7 +957,7 @@ const ko: Messages = {
         "오늘의 경기가 여기에 나옵니다. **카드를 탭**하면 예측 화면이 열립니다. 승패는 스코어에서 자동입니다.",
       gamesPickupTitle: "픽업 게임",
       gamesPickupBody:
-        "주마다 고른 경기입니다. **노란 테두리**와 왼쪽 **PICK UP**이 표시입니다. **Pick Up 랭킹**은 이 경기 예측만 반영됩니다. **예측하기**를 눌러 첫 예측을 해보세요.",
+        "주마다 고른 경기입니다. **노란 테두리**와 왼쪽 **PICK UP**이 표시입니다. **Pick Up 랭킹**은 이 경기 예측만 반영됩니다.",
       gamesStatsTitle: "STANDING / STATS",
       gamesStatsBody:
         "오른쪽 **STANDING** 과 **STATS** 에서 순위와 팀/선수 스탯을 엽니다. 오른쪽 끝에서 스와이프해도 같습니다.",
@@ -1075,12 +1075,9 @@ const ko: Messages = {
       horizonUnitHowTitle: "Earning UNIT",
       horizonUnitHowBody:
         "**주간·월간 랭킹**, **스쿼드 배틀**, **친구 초대** 보상 등으로 얻습니다.\n모은 UNIT은 **유니폼**이나 **모자** 등과 **교환**할 수 있습니다.",
-      horizonCareerWhatTitle: "What is Career?",
-      horizonCareerWhatBody:
-        "Your predictor **track record** — like a résumé.\nSee **hit rate, streaks, season ranks**, and **long-term stats**.\nSpot growth that short-term rankings alone won't show.",
-      horizonCareerHowTitle: "Opening Career",
-      horizonCareerHowBody:
-        "Tap **CAREER** at the top of Profile.\nSwitch **by season** to look back.\nFlip **PROFILE ↔ CAREER** to compare now vs. your history.",
+      horizonCareerTitle: "Career",
+      horizonCareerBody:
+        "Your predictor **track record**, opened from **CAREER** at the top of Profile.\nLook back on **hit rate, streaks, season ranks**, and other **long-term stats**.",
       horizonStatsWhatTitle: "What is STATS?",
       horizonStatsWhatBody:
         "**Team and player stats** from the **Games** tab.\nUse for **pre-pick research** — scoring, efficiency, recent form.\nLinks to the live **STATS hub** backed by real data.",

@@ -1,17 +1,20 @@
 /**
- * 試合タブ内の案内 — ピックアップ説明のみ（簡略化）
+ * 試合タブ内の案内 — 試合カード → ピックアップの 2 段
  */
 
 import type { TutorialLivePhase } from "@/lib/tutorial/tutorialLivePhase";
 
-export const TUTORIAL_GAMES_SUBSTEPS = ["gamesPickup"] as const;
+export const TUTORIAL_GAMES_SUBSTEPS = ["games", "gamesPickup"] as const;
 
 export type TutorialGamesSubstep = (typeof TUTORIAL_GAMES_SUBSTEPS)[number];
+
+/** welcome の「ヒントを見る」から入る最初の段 */
+export const TUTORIAL_GAMES_FIRST_SUBSTEP: TutorialGamesSubstep = "games";
 
 export function isTutorialGamesSubstep(
   phase: TutorialLivePhase | null | undefined
 ): phase is TutorialGamesSubstep {
-  return phase === "gamesPickup";
+  return phase === "games" || phase === "gamesPickup";
 }
 
 /** 試合タブ上にコーチを出すフェーズ（welcome 含む） */
@@ -21,15 +24,9 @@ export function isTutorialOnGamesHome(
   return phase === "welcome" || isTutorialGamesSubstep(phase);
 }
 
-/** ピックアップ完了 → ツアー連鎖なし（呼び出し側で phase クリア） */
+/** 最後の段（ピックアップ）のあとはツアー連鎖なし（呼び出し側で phase クリア） */
 export function nextTutorialGamesSubstep(
-  _phase: TutorialGamesSubstep
+  phase: TutorialGamesSubstep
 ): TutorialLivePhase | null {
-  return null;
-}
-
-export function prevTutorialGamesSubstep(
-  _phase: TutorialGamesSubstep
-): TutorialLivePhase {
-  return "welcome";
+  return phase === "games" ? "gamesPickup" : null;
 }

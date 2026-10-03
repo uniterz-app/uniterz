@@ -974,7 +974,7 @@ const en: Messages = {
       tabProfile: "Profile",
       welcomeTitle: "Welcome to UNITERZ",
       welcomeBody:
-        "Predict games, earn points, and climb the **rankings**.\nShort tips appear the first time you open each tab. Start with Pick Up.",
+        "Predict games, earn points, and climb the **rankings**.\nShort tips appear the first time you open each tab.",
       welcomeReturningBody:
         "Replay the short tab tips, or jump to **new features** only (UNIT, career, and more).",
       welcomeFullCta: "Show tips",
@@ -984,7 +984,7 @@ const en: Messages = {
         "Today's matches live here. **Tap a card** to open the pick screen. Winner is set from the scores.",
       gamesPickupTitle: "Pick-up games",
       gamesPickupBody:
-        "Games chosen each week. Look for the **yellow frame** and the **PICK UP** mark. **Pick Up rankings** count only these picks. Tap **Predict** and try your first pick.",
+        "Games chosen each week. Look for the **yellow frame** and the **PICK UP** mark. **Pick Up rankings** count only these picks.",
       gamesStatsTitle: "STANDING / STATS",
       gamesStatsBody:
         "**STANDING** and **STATS** on the right edge open standings and team/player stats. Swiping from the right edge works too.",
@@ -1092,12 +1092,9 @@ const en: Messages = {
       horizonUnitHowTitle: "Earning UNIT",
       horizonUnitHowBody:
         "Earn from **weekly/monthly rankings**, **Squad Battle**, and **friend invites**.\nSave UNIT to **redeem** jerseys, hats, and more.",
-      horizonCareerWhatTitle: "What is Career?",
-      horizonCareerWhatBody:
-        "Your predictor **track record** — like a résumé.\nSee **hit rate, streaks, season ranks**, and **long-term stats**.\nSpot growth that short-term rankings alone won't show.",
-      horizonCareerHowTitle: "Opening Career",
-      horizonCareerHowBody:
-        "Tap **CAREER** at the top of Profile.\nSwitch **by season** to look back.\nFlip **PROFILE ↔ CAREER** to compare now vs. your history.",
+      horizonCareerTitle: "Career",
+      horizonCareerBody:
+        "Your predictor **track record**, opened from **CAREER** at the top of Profile.\nLook back on **hit rate, streaks, season ranks**, and other **long-term stats**.",
       horizonStatsWhatTitle: "What is STATS?",
       horizonStatsWhatBody:
         "**Team and player stats** from the **Games** tab.\nUse for **pre-pick research** — scoring, efficiency, recent form.\nLinks to the live **STATS hub** backed by real data.",

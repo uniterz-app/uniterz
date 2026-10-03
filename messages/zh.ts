@@ -947,7 +947,7 @@ const zh: Messages = {
       tabProfile: "Profile",
       welcomeTitle: "Welcome to UNITERZ",
       welcomeBody:
-        "命中得分、冲击**排行榜**。\n首次打开各页时会有短提示。先从精选比赛开始。",
+        "命中得分、冲击**排行榜**。\n首次打开各页时会有短提示。",
       welcomeReturningBody:
         "可再看各页短提示，或只看 UNIT、生涯等**新功能**。",
       welcomeFullCta: "查看提示",
@@ -957,7 +957,7 @@ const zh: Messages = {
         "这里列出今日赛程。**点按卡片**即可打开预测。胜负由比分自动决定。",
       gamesPickupTitle: "精选比赛",
       gamesPickupBody:
-        "每周指定的比赛。认准**黄色边框**和左侧 **PICK UP**。**Pick Up 排行榜**只统计这些预测。点 **预测**，试着完成第一次预测。",
+        "每周指定的比赛。认准**黄色边框**和左侧 **PICK UP**。**Pick Up 排行榜**只统计这些预测。",
       gamesStatsTitle: "STANDING / STATS",
       gamesStatsBody:
         "右侧 **STANDING** 与 **STATS** 可查看排名和球队/球员数据。从右缘滑动也能打开。",
@@ -1075,12 +1075,9 @@ const zh: Messages = {
       horizonUnitHowTitle: "Earning UNIT",
       horizonUnitHowBody:
         "可通过**周/月排行榜**、**小队对战**、**邀请好友**等奖励获得。\n攒下的 UNIT 可**兑换**球衣、帽子等。",
-      horizonCareerWhatTitle: "What is Career?",
-      horizonCareerWhatBody:
-        "Your predictor **track record** — like a résumé.\nSee **hit rate, streaks, season ranks**, and **long-term stats**.\nSpot growth that short-term rankings alone won't show.",
-      horizonCareerHowTitle: "Opening Career",
-      horizonCareerHowBody:
-        "Tap **CAREER** at the top of Profile.\nSwitch **by season** to look back.\nFlip **PROFILE ↔ CAREER** to compare now vs. your history.",
+      horizonCareerTitle: "Career",
+      horizonCareerBody:
+        "Your predictor **track record**, opened from **CAREER** at the top of Profile.\nLook back on **hit rate, streaks, season ranks**, and other **long-term stats**.",
       horizonStatsWhatTitle: "What is STATS?",
       horizonStatsWhatBody:
         "**Team and player stats** from the **Games** tab.\nUse for **pre-pick research** — scoring, efficiency, recent form.\nLinks to the live **STATS hub** backed by real data.",
