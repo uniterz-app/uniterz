@@ -80,7 +80,8 @@ export async function ingestNbaGamesFromBdl(
       const batch = db.batch();
       for (const g of chunk) {
         const ref = db.collection("games").doc(g.id);
-        const { startAtMs, startAtJstIso, id: _id, ...rest } = g;
+        // final はライブ ingest だけが立てる。merge で false に戻すと onGameFinalV2 が再発火する
+        const { startAtMs, startAtJstIso, id: _id, final: _final, ...rest } = g;
         const startAt = Timestamp.fromMillis(startAtMs);
         batch.set(
           ref,

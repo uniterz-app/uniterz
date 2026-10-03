@@ -117,7 +117,16 @@ export async function ingestNbaLiveGamesFromBdl(
     input.dates?.filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d)) ??
     nbaScheduleDateKeysAroundNow();
 
-  const games = await fetchBdlGames({ dates });
+  /** season_type 省略だとプレシーズンが返らないので別取得し、マップ時にヒントを渡す */
+  const [mainGames, preseasonGames] = await Promise.all([
+    fetchBdlGames({ dates }),
+    fetchBdlGames({ dates, seasonType: "preseason" }),
+  ]);
+  const preseasonIds = new Set(preseasonGames.map((g) => g.id));
+  const games = [
+    ...mainGames.filter((g) => !preseasonIds.has(g.id)),
+    ...preseasonGames,
+  ];
   const boxRows = await collectBoxScores(dates);
 
   const mappedBoxes: MappedLiveBoxScore[] = [];
@@ -168,7 +177,10 @@ export async function ingestNbaLiveGamesFromBdl(
   const sampleGameIds: string[] = [];
 
   for (const g of games) {
-    const mappedGame = mapBdlGameToNbaGameDoc(g);
+    const mappedGame = mapBdlGameToNbaGameDoc(
+      g,
+      preseasonIds.has(g.id) ? { seasonType: "preseason" } : undefined
+    );
     if (!mappedGame) {
       skipped += 1;
       continue;
