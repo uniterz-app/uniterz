@@ -17,7 +17,7 @@ import {
   type MyRankStatsSource,
 } from "../../../../../lib/rankings/myRankCardFocus";
 import { L, resolveLocalizedLang } from "../../../../../lib/i18n/localize";
-import { buildRankCardShareCaption } from "../../../../../lib/rankings/shareMyRankCardImage";
+import { buildRankCardShareCaption } from "../../../../../lib/rankings/rankCardShareText";
 import { rankingsTexts, type RankingsLanguage } from "./rankingsTexts";
 import { CyberRankingListRowNative } from "./CyberRankingListRowNative";
 import { MyRankCardFrameNative, resolveMyRankFrameTone } from "./MyRankCardFrameNative";

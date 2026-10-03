@@ -3,7 +3,7 @@ import type { View } from "react-native";
 import {
   buildRankCardShareCaption,
   type RankCardShareContext,
-} from "../../../../../lib/rankings/shareMyRankCardImage";
+} from "../../../../../lib/rankings/rankCardShareText";
 import {
   captureAndShareImageNative,
   type ShareImageNativeResult,
