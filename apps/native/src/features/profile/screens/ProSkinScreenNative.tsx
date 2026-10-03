@@ -228,7 +228,9 @@ function SkinThumbNative({
           </View>
         </View>
         <Text style={styles.tileMeta} numberOfLines={2}>
-          {condition} · {formatProSkinOwnerCount(owners, language)}
+          {entry.unlock.kind === "pro"
+            ? condition
+            : `${condition} · ${formatProSkinOwnerCount(owners, language)}`}
         </Text>
       </View>
       <View style={[styles.tilePreview, { height }]} collapsable={false}>
@@ -532,11 +534,12 @@ export default function ProSkinScreenNative() {
                       overlayEntry.unlock,
                       copy.lang
                     )}
-                    {" · "}
-                    {formatProSkinOwnerCount(
-                      ownerCounts[overlayEntry.id] ?? 0,
-                      copy.lang
-                    )}
+                    {overlayEntry.unlock.kind !== "pro"
+                      ? ` · ${formatProSkinOwnerCount(
+                          ownerCounts[overlayEntry.id] ?? 0,
+                          copy.lang
+                        )}`
+                      : null}
                   </Text>
                 </View>
               </View>

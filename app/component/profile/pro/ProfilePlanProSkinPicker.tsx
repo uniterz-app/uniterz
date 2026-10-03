@@ -333,8 +333,12 @@ function CatalogTile({
           ].join(" ")}
         >
           {condition}
-          <span className="mx-1.5 text-white/20">·</span>
-          {formatProSkinOwnerCount(owners, language)}
+          {entry.unlock.kind !== "pro" ? (
+            <>
+              <span className="mx-1.5 text-white/20">·</span>
+              {formatProSkinOwnerCount(owners, language)}
+            </>
+          ) : null}
         </p>
       </div>
       <div className="profile-plan-pro-bg-picker-catalog-tile__card relative">
@@ -821,7 +825,7 @@ export default function ProfilePlanProSkinPicker({
               </button>
             )}
           </div>
-          {overlayEntry ? (
+          {overlayEntry && overlayEntry.unlock.kind !== "pro" ? (
             <p
               className={[
                 nameOxanium.className,
