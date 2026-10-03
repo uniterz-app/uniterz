@@ -40,6 +40,9 @@ export const NBA_PLAYER_AWARDS_INGESTED: readonly NbaPlayerAwardId[] = [
   "stl_champ",
   "blk_champ",
   "all_star",
+  "all_star_mvp",
+  "dunk_contest",
+  "three_pt_contest",
   "all_nba_1st",
   "all_nba_2nd",
   "all_nba_3rd",
@@ -888,6 +891,61 @@ export const NBA_CONF_FINALS_MVP_SEASON_WINNERS: readonly NbaPlayerAwardSeasonWi
     { seasonKey: "2025-26", playerId: "56677822", playerName: "Victor Wembanyama" },
   ] as const;
 
+/**
+ * All-Star Game MVP（現役）。
+ * 2月開催 → そのシーズン（2025年2月 → 2024-25）。
+ */
+export const NBA_ALL_STAR_MVP_SEASON_WINNERS: readonly NbaPlayerAwardSeasonWinner[] = [
+  { seasonKey: "2005-06", playerId: "237", playerName: "LeBron James" },
+  { seasonKey: "2007-08", playerId: "237", playerName: "LeBron James" },
+  { seasonKey: "2011-12", playerId: "140", playerName: "Kevin Durant" },
+  { seasonKey: "2012-13", playerId: "367", playerName: "Chris Paul" },
+  { seasonKey: "2013-14", playerId: "228", playerName: "Kyrie Irving" },
+  { seasonKey: "2014-15", playerId: "472", playerName: "Russell Westbrook" },
+  { seasonKey: "2015-16", playerId: "472", playerName: "Russell Westbrook" },
+  { seasonKey: "2016-17", playerId: "117", playerName: "Anthony Davis" },
+  { seasonKey: "2017-18", playerId: "237", playerName: "LeBron James" },
+  { seasonKey: "2018-19", playerId: "140", playerName: "Kevin Durant" },
+  { seasonKey: "2019-20", playerId: "274", playerName: "Kawhi Leonard" },
+  { seasonKey: "2020-21", playerId: "15", playerName: "Giannis Antetokounmpo" },
+  { seasonKey: "2021-22", playerId: "115", playerName: "Stephen Curry" },
+  { seasonKey: "2022-23", playerId: "434", playerName: "Jayson Tatum" },
+  { seasonKey: "2023-24", playerId: "278", playerName: "Damian Lillard" },
+  { seasonKey: "2024-25", playerId: "115", playerName: "Stephen Curry" },
+  { seasonKey: "2025-26", playerId: "3547238", playerName: "Anthony Edwards" },
+] as const;
+
+/**
+ * Slam Dunk Contest 優勝（現役ロスターのみ）。
+ * Mac McClung（2022-23〜2024-25）は NBA ロスター外のため未掲載。
+ */
+export const NBA_DUNK_CONTEST_SEASON_WINNERS: readonly NbaPlayerAwardSeasonWinner[] = [
+  { seasonKey: "2014-15", playerId: "268", playerName: "Zach LaVine" },
+  { seasonKey: "2015-16", playerId: "268", playerName: "Zach LaVine" },
+  { seasonKey: "2017-18", playerId: "322", playerName: "Donovan Mitchell" },
+  { seasonKey: "2019-20", playerId: "247", playerName: "Derrick Jones Jr." },
+  { seasonKey: "2020-21", playerId: "419", playerName: "Anfernee Simons" },
+  { seasonKey: "2021-22", playerId: "3547243", playerName: "Obi Toppin" },
+  { seasonKey: "2025-26", playerId: "1028125584", playerName: "Keshad Johnson" },
+] as const;
+
+/** 3-Point Contest 優勝（現役ロスターのみ） */
+export const NBA_THREE_PT_CONTEST_SEASON_WINNERS: readonly NbaPlayerAwardSeasonWinner[] = [
+  { seasonKey: "2011-12", playerId: "285", playerName: "Kevin Love" },
+  { seasonKey: "2012-13", playerId: "228", playerName: "Kyrie Irving" },
+  { seasonKey: "2014-15", playerId: "115", playerName: "Stephen Curry" },
+  { seasonKey: "2015-16", playerId: "443", playerName: "Klay Thompson" },
+  { seasonKey: "2016-17", playerId: "178", playerName: "Eric Gordon" },
+  { seasonKey: "2017-18", playerId: "57", playerName: "Devin Booker" },
+  { seasonKey: "2019-20", playerId: "210", playerName: "Buddy Hield" },
+  { seasonKey: "2020-21", playerId: "115", playerName: "Stephen Curry" },
+  { seasonKey: "2021-22", playerId: "447", playerName: "Karl-Anthony Towns" },
+  { seasonKey: "2022-23", playerId: "278", playerName: "Damian Lillard" },
+  { seasonKey: "2023-24", playerId: "278", playerName: "Damian Lillard" },
+  { seasonKey: "2024-25", playerId: "666633", playerName: "Tyler Herro" },
+  { seasonKey: "2025-26", playerId: "278", playerName: "Damian Lillard" },
+] as const;
+
 const SEASON_WINNERS_BY_AWARD: Partial<
   Record<NbaPlayerAwardId, readonly NbaPlayerAwardSeasonWinner[]>
 > = {
@@ -904,6 +962,9 @@ const SEASON_WINNERS_BY_AWARD: Partial<
   stl_champ: NBA_STL_CHAMP_SEASON_WINNERS,
   blk_champ: NBA_BLK_CHAMP_SEASON_WINNERS,
   all_star: NBA_ALL_STAR_SEASON_WINNERS,
+  all_star_mvp: NBA_ALL_STAR_MVP_SEASON_WINNERS,
+  dunk_contest: NBA_DUNK_CONTEST_SEASON_WINNERS,
+  three_pt_contest: NBA_THREE_PT_CONTEST_SEASON_WINNERS,
   all_nba_1st: NBA_ALL_NBA_1ST_SEASON_WINNERS,
   all_nba_2nd: NBA_ALL_NBA_2ND_SEASON_WINNERS,
   all_nba_3rd: NBA_ALL_NBA_3RD_SEASON_WINNERS,
