@@ -127,7 +127,8 @@ export async function markAppTutorialSeenNative(
 /**
  * 既読を完全リセット（AsyncStorage + Firestore）。
  * DEV メニューから本番ツアーをやり直すときに使う。
- * Firestore は待たない（オフラインで再開が固まるのを防ぐ）。
+ * Firestore は最大 1.5 秒だけ待つ。待たないと直後の fetch が古い既読を拾い、
+ * ページヒントを全部既読に戻してしまう（オフラインで固まらないよう上限あり）。
  */
 export async function clearAppTutorialSeenNative(
   uid: string | null | undefined
@@ -145,9 +146,13 @@ export async function clearAppTutorialSeenNative(
     /* ignore */
   }
   if (!uid) return;
-  void deleteDoc(doc(db, `users/${uid}/reads`, APP_TUTORIAL_READ_ID)).catch(
+  const del = deleteDoc(doc(db, `users/${uid}/reads`, APP_TUTORIAL_READ_ID)).catch(
     () => {
       /* 未作成・権限なし・オフラインは無視 */
     }
   );
+  await Promise.race([
+    del,
+    new Promise<void>((resolve) => setTimeout(resolve, 1500)),
+  ]);
 }

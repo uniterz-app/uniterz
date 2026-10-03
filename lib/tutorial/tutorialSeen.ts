@@ -156,9 +156,14 @@ export async function clearAppTutorialSeen(
 ): Promise<void> {
   clearAppTutorialSeenLocal(uid);
   if (!uid) return;
-  void deleteDoc(doc(db, `users/${uid}/reads`, APP_TUTORIAL_READ_ID)).catch(
+  /** 直後の fetch が古い既読を拾わないよう最大 1.5 秒だけ待つ（オフラインで固まらない上限） */
+  const del = deleteDoc(doc(db, `users/${uid}/reads`, APP_TUTORIAL_READ_ID)).catch(
     () => {
       /* 未作成・権限なし・オフラインは無視 */
     }
   );
+  await Promise.race([
+    del,
+    new Promise<void>((resolve) => setTimeout(resolve, 1500)),
+  ]);
 }

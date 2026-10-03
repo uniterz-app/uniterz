@@ -1100,6 +1100,8 @@ const ja = {
       doneBody:
         "基本は以上です。本番で予想して、**毎日 16:00 更新のランキング**を目指しましょう。",
       finishCta: "アプリをはじめる",
+      finishMenuHint:
+        "このチュートリアルは、サイドメニューの「**チュートリアル**」からいつでも見直せます。",
       tapNavHint: "下のタブをタップするか、「次へ」で移動",
       progressLabel: "{current} / {total}",
     },

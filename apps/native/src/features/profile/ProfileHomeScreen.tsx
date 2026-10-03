@@ -151,7 +151,6 @@ import {
 import { profileSettingsSheetCopy } from "./profileSettingsSheetCopy";
 import { profileMarkToastCopy } from "./referralInviteCopy";
 import { TUTORIAL_WELCOME_LAND_HOLD_MS } from "../../../../../lib/tutorial/tutorialMotion";
-import { setTutorialRestartCover } from "../../../../../lib/tutorial/tutorialRestartCover";
 import {
   fetchProfileViewCountNative,
   recordProfileViewNative,
@@ -1885,7 +1884,6 @@ export default function ProfileHomeScreen({
         else if (page === "electronicNotice") navigation.navigate("ElectronicNotice");
         else if (page === "notificationDev" && __DEV__) navigation.navigate("NotificationDev");
         else if (page === "restartTutorial") {
-          setTutorialRestartCover(true);
           void (async () => {
             const uid = fUser?.uid ?? null;
             const {
@@ -1914,22 +1912,15 @@ export default function ProfileHomeScreen({
               cursor = parent as { getParent?: () => unknown };
             }
             const nav = tabNav ?? tabNavigation;
-            /**
-             * armTutorialTabTransitionQuiet の購読反映を1フレーム待つ。
-             * 同ティックで navigate するとスライド付きのまま welcome が載る。
-             */
-            await new Promise<void>((resolve) => {
-              requestAnimationFrame(() => resolve());
-            });
-            nav.navigate({
-              name: "GamesTab",
-              params: {
+            nav.navigate(
+              "GamesTab",
+              {
                 screen: "GamesHome",
                 params: { restartTutorialAt: at },
                 initial: false,
               },
-              merge: true,
-            });
+              { merge: true }
+            );
             /** lazy タブがマウントされるまでイベントを連続送出 */
             pulseTutorialRestartNative();
           })();

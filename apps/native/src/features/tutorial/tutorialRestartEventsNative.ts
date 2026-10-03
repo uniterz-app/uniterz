@@ -8,13 +8,10 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { clearAppTutorialSeenNative } from "./tutorialSeenNative";
 import { writeTutorialLivePhaseNative } from "./tutorialLivePhaseNative";
-import { setTutorialWelcomeChromeHidden } from "../../../../../lib/tutorial/tutorialWelcomeChrome";
-import { setTutorialRestartCover } from "../../../../../lib/tutorial/tutorialRestartCover";
-import { beginTutorialWelcomeIntroSession } from "../../../../../lib/tutorial/tutorialWelcomeSkipIntro";
-import { markTutorialWelcomeReturningNative } from "./tutorialWelcomeAudienceNative";
+import { setTutorialLiveTrackNative } from "./tutorialLiveTrackNative";
 import { clearTutorialLivePickNative } from "./tutorialLivePickNative";
 import { TUTORIAL_NBA_GAME_ID } from "../../../../../lib/tutorial/tutorialNbaRawGame";
-import { armTutorialTabTransitionQuiet } from "../../../../../lib/tutorial/tutorialTabTransitionQuiet";
+import { TUTORIAL_GAMES_FIRST_SUBSTEP } from "../../../../../lib/tutorial/tutorialGamesSubsteps";
 
 export const TUTORIAL_RESTART_TOKEN_KEY = "uniterz:tutorialLiveRestartAt:v1";
 
@@ -67,18 +64,13 @@ export async function consumeTutorialRestartTokenNative(): Promise<
 }
 
 /**
- * 既読・下書き・ピックを消し、フェーズを welcome にする。
+ * 既読・下書き・ピックを消し、試合タブのヒント先頭から始める（welcome 選択画面は挟まない）。
  * 戻り値はナビ params に載せるタイムスタンプ。
  */
 export async function prepareTutorialRestartNative(
   uid: string | null
 ): Promise<number> {
-  /** ナビ前にタブスライドを止め、welcome 合成の黒画面を避ける */
-  armTutorialTabTransitionQuiet();
-  setTutorialRestartCover(true);
-  beginTutorialWelcomeIntroSession();
-  markTutorialWelcomeReturningNative();
-  setTutorialWelcomeChromeHidden(true);
+  setTutorialLiveTrackNative("full");
   await clearAppTutorialSeenNative(uid);
   await clearTutorialLivePickNative();
   if (uid) {
@@ -88,7 +80,7 @@ export async function prepareTutorialRestartNative(
       /* ignore */
     }
   }
-  await writeTutorialLivePhaseNative("welcome");
+  await writeTutorialLivePhaseNative(TUTORIAL_GAMES_FIRST_SUBSTEP);
   const at = await markTutorialRestartPendingNative(Date.now());
   return at;
 }

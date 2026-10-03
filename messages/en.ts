@@ -1105,6 +1105,8 @@ const en: Messages = {
       doneBody:
         "That's the core. Post live picks and chase rankings that **update daily at 16:00 JST.**",
       finishCta: "Start the app",
+      finishMenuHint:
+        "You can replay this tutorial anytime from **Tutorial** in the side menu.",
       tapNavHint: "Tap the tab below, or press Next",
       progressLabel: "{current} / {total}",
     },

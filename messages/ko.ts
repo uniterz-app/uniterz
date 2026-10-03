@@ -1088,6 +1088,8 @@ const ko: Messages = {
       doneBody:
         "That's the UNITERZ loop. Predict real games and climb the ranks.",
       finishCta: "Start the app",
+      finishMenuHint:
+        "이 튜토리얼은 사이드 메뉴의 「**튜토리얼**」에서 언제든 다시 볼 수 있어요.",
       tapNavHint: "Tap the tab below, or press Next to go",
       progressLabel: "{current} / {total}",
     },

@@ -14,6 +14,8 @@ type Props = {
   availableLabels: string[];
   onChange: (label: string | null) => void;
   language?: Language;
+  /** 1 行だけ（注記なし・上下余白なし）。親の固定高スロットに収める用 */
+  compact?: boolean;
 };
 
 function pad2(n: number) {
@@ -54,6 +56,7 @@ export default function RankingsPeriodLabelNav({
   availableLabels,
   onChange,
   language = "ja",
+  compact = false,
 }: Props) {
   const { prevLabel, nextLabel, display } = useMemo(() => {
     if (!activeLabel || availableLabels.length === 0) {
@@ -83,7 +86,13 @@ export default function RankingsPeriodLabelNav({
   const isCurrent = activeLabel === availableLabels[0];
 
   return (
-    <div className="flex flex-col items-center gap-1 py-1">
+    <div
+      className={
+        compact
+          ? "flex flex-col items-center"
+          : "flex flex-col items-center gap-1 py-1"
+      }
+    >
       <div className="flex items-center justify-center gap-3">
         <button
           type="button"
@@ -127,9 +136,11 @@ export default function RankingsPeriodLabelNav({
           </button>
         ) : null}
       </div>
-      <p className="max-w-[20rem] px-3 text-center text-[10px] leading-snug text-white/40">
-        {calendarNote}
-      </p>
+      {compact ? null : (
+        <p className="max-w-[20rem] px-3 text-center text-[10px] leading-snug text-white/40">
+          {calendarNote}
+        </p>
+      )}
     </div>
   );
 }

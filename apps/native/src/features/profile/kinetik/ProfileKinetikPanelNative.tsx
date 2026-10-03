@@ -1796,23 +1796,29 @@ export default function ProfileKinetikPanelNative({
                 onPress={() => onMetricsTabChange?.("monthly")}
               />
             </CyberSlantedTabBarNative>
-            {metricsTab !== "total" &&
-            isPro &&
-            onMetricsWindowLabelChange &&
-            metricsPeriodLabels.length > 0 ? (
-              <RankingsPeriodLabelNavNative
-                period={metricsTab}
-                activeLabel={
-                  metricsWindowLabel ??
-                  currentRankingPeriodLabel(metricsTab)
-                }
-                availableLabels={metricsPeriodLabels}
-                onChange={onMetricsWindowLabelChange}
-                language={lang}
-              />
-            ) : metricsTab !== "total" && scopeHint.unitHint ? (
-              <Text style={styles.metricsPeriodHint}>{scopeHint.unitHint}</Text>
-            ) : null}
+            {/* TOTAL / WEEK / MONTH でカード（スキン）の高さが変わらないよう常に同じ高さを確保 */}
+            <View style={styles.metricsPeriodSlot}>
+              {metricsTab !== "total" &&
+              isPro &&
+              onMetricsWindowLabelChange &&
+              metricsPeriodLabels.length > 0 ? (
+                <RankingsPeriodLabelNavNative
+                  period={metricsTab}
+                  activeLabel={
+                    metricsWindowLabel ??
+                    currentRankingPeriodLabel(metricsTab)
+                  }
+                  availableLabels={metricsPeriodLabels}
+                  onChange={onMetricsWindowLabelChange}
+                  language={lang}
+                  compact
+                />
+              ) : metricsTab !== "total" && scopeHint.unitHint ? (
+                <Text style={styles.metricsPeriodHint} numberOfLines={1}>
+                  {scopeHint.unitHint}
+                </Text>
+              ) : null}
+            </View>
           </View>
         ) : null}
         <View>
@@ -2492,8 +2498,11 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "rgba(255,255,255,0.08)",
   },
+  metricsPeriodSlot: {
+    height: 24,
+    justifyContent: "center",
+  },
   metricsPeriodHint: {
-    marginTop: 6,
     textAlign: "center",
     color: "rgba(255,255,255,0.45)",
     fontSize: 10,

@@ -1178,11 +1178,12 @@ export default function ProfileEditKinetikPanel({
               compact
             />
           </CyberSlantedTabBar>
-          {metricsTab !== "total" &&
-          isPro &&
-          onMetricsWindowLabelChange &&
-          metricsPeriodLabels.length > 0 ? (
-            <div className="mt-2">
+          {/* TOTAL / WEEK / MONTH でカード（スキン）の高さが変わらないよう常に同じ高さを確保 */}
+          <div className="flex h-6 items-center justify-center">
+            {metricsTab !== "total" &&
+            isPro &&
+            onMetricsWindowLabelChange &&
+            metricsPeriodLabels.length > 0 ? (
               <RankingsPeriodLabelNav
                 period={metricsTab}
                 activeLabel={
@@ -1192,15 +1193,16 @@ export default function ProfileEditKinetikPanel({
                 availableLabels={metricsPeriodLabels}
                 onChange={onMetricsWindowLabelChange}
                 language={language}
+                compact
               />
-            </div>
-          ) : metricsTab !== "total" && scopeHint.unitHint ? (
-            <p
-              className={`${nameOxanium.className} mt-2 text-center text-[10px] font-bold tracking-wide text-white/45`}
-            >
-              {scopeHint.unitHint}
-            </p>
-          ) : null}
+            ) : metricsTab !== "total" && scopeHint.unitHint ? (
+              <p
+                className={`${nameOxanium.className} truncate text-center text-[10px] font-bold tracking-wide text-white/45`}
+              >
+                {scopeHint.unitHint}
+              </p>
+            ) : null}
+          </div>
         </div>
       ) : null}
       {statsPending ? (

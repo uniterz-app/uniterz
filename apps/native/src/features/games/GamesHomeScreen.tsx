@@ -854,10 +854,18 @@ export default function GamesHomeScreen({
     setWelcomeIntroSession(getTutorialWelcomeIntroSession());
   }, []);
 
+  /** サイドメニュー再開は welcome 選択画面を挟まず、試合タブのヒント先頭から */
   const applyTutorialRestart = useCallback(() => {
-    enterWelcomeUi();
-    void writeTutorialLivePhaseNative("welcome");
-  }, [enterWelcomeUi]);
+    setIsPredictModalOpen(false);
+    setSelectedGame(null);
+    setExpandScoreFormWhenEditing(false);
+    setPredictSpectatorStartedNoPost(false);
+    setWelcomeHandoff(null);
+    setTutorialWelcomeHandoffNative(null);
+    setTutorialLiveTrackNative("full");
+    setTutorialPhase(TUTORIAL_GAMES_FIRST_SUBSTEP);
+    void writeTutorialLivePhaseNative(TUTORIAL_GAMES_FIRST_SUBSTEP);
+  }, []);
 
   /** DEV「チュートリアル再開」— 表に出ているときだけ welcome へ（裏で集合を始めない） */
   useEffect(() => {
@@ -2406,7 +2414,6 @@ export default function GamesHomeScreen({
     () => ({ ...styles, ...gameCardListStyles }),
     []
   );
-  const tutorialPulseFirstCard = tutorialPhase === "games";
   const tutorialRegisterPickupLabel = tutorialPhase === "gamesPickup";
   const cardListProps: GameCardListProps = useMemo(
     () => ({
@@ -2430,11 +2437,7 @@ export default function GamesHomeScreen({
       getTeamRecordLabel: formatSideRecord,
       teamRecordById,
       resolveTeamJerseyPalette,
-      tutorialPulseFirstCard,
-      tutorialPulseLabel: tutorialPulseFirstCard
-        ? tutorialCopy.tutorial.pulseHint
-        : undefined,
-      tutorialRegisterMatchCard: tutorialPulseFirstCard,
+      tutorialRegisterMatchCard: tutorialPhase === "games",
       tutorialRegisterPickupLabel,
       shellVariant: "lineFrame",
       pickupMark: "left",
@@ -2453,9 +2456,8 @@ export default function GamesHomeScreen({
       resolveSeriesPairForList,
       formatSideRecord,
       teamRecordById,
-      tutorialPulseFirstCard,
+      tutorialPhase,
       tutorialRegisterPickupLabel,
-      tutorialCopy.tutorial.pulseHint,
     ]
   );
 
@@ -2818,6 +2820,8 @@ export default function GamesHomeScreen({
               ? "match-card"
               : "match-pickup-label"
         }
+        /** 試合カードは囲まない（位置合わせにだけ使う） */
+        showHoleRing={tutorialPhase !== "games"}
         visual={filteredGames.length === 0 ? "matchCard" : null}
         accentTone="feature"
         {...skipConfirm}

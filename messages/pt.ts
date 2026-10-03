@@ -1101,6 +1101,8 @@ const pt: Messages = {
       doneBody:
         "That's the UNITERZ loop. Predict real games and climb the ranks.",
       finishCta: "Start the app",
+      finishMenuHint:
+        "Você pode rever este tutorial a qualquer momento em **Tutorial** no menu lateral.",
       tapNavHint: "Tap the tab below, or press Next to go",
       progressLabel: "{current} / {total}",
     },

@@ -1,7 +1,7 @@
 /**
  * Web `ProfileKinetikHero` 相当 — Season/Playoff × Total/Week/Month。
  */
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { InteractionManager, type ViewStyle } from "react-native";
 import type { Profile } from "../../../../../../app/component/profile/useProfile";
 import { mapProfileToKinetikPanel } from "../../../../../../lib/profile/mapProfileToKinetikPanel";
@@ -138,7 +138,26 @@ export default function ProfileKinetikHeroNative({
     useState<ProfileKinetikMetricsPeriod>(() => preferredNbaKinetikPeriod());
   const [metricsTab, setMetricsTab] =
     useState<ProfileKinetikMetricsTab>("total");
-  const [windowLabel, setWindowLabel] = useState<string | null>(null);
+  /**
+   * 過去期間の選択はタブ／ボード付きで持つ。
+   * effect でリセットすると切替直後の 1 フレームだけ前タブのラベル（週 → 月表記）が出る。
+   */
+  const [windowSel, setWindowSel] = useState<{
+    tab: ProfileKinetikMetricsTab;
+    period: ProfileKinetikMetricsPeriod;
+    label: string | null;
+  } | null>(null);
+  const windowLabel =
+    windowSel &&
+    windowSel.tab === metricsTab &&
+    windowSel.period === metricsPeriod
+      ? windowSel.label
+      : null;
+  const setWindowLabel = useCallback(
+    (label: string | null) =>
+      setWindowSel({ tab: metricsTab, period: metricsPeriod, label }),
+    [metricsTab, metricsPeriod]
+  );
   const [careerFlipped, setCareerFlipped] = useState(false);
   /** 一度マウントしたら保持（毎回の Pro Skin 再構築を避ける） */
   const [careerMounted, setCareerMounted] = useState(false);
@@ -207,10 +226,6 @@ export default function ProfileKinetikHeroNative({
       apiBaseUrl: apiBase,
       enabled: Boolean(targetUid?.trim()),
     });
-
-  useEffect(() => {
-    setWindowLabel(null);
-  }, [metricsTab, metricsPeriod]);
 
   useEffect(() => {
     if (!targetUid?.trim() || statsLoading) return;
@@ -362,7 +377,11 @@ export default function ProfileKinetikHeroNative({
           metricsTab={metricsTab}
           onMetricsTabChange={setMetricsTab}
           metricsWindowLabel={
-            metricsTab === "total" ? null : windowData?.label ?? windowLabel
+            metricsTab === "total"
+              ? null
+              : windowData?.label && periodLabels.includes(windowData.label)
+                ? windowData.label
+                : windowLabel
           }
           onMetricsWindowLabelChange={
             callerIsPro ? setWindowLabel : undefined

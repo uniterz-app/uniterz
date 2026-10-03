@@ -59,12 +59,15 @@ export function RankingsPeriodLabelNavNative({
   availableLabels,
   onChange,
   language = "en",
+  compact = false,
 }: {
   period: Exclude<RankingPeriod, "season">;
   activeLabel: string | null;
   availableLabels: string[];
   onChange: (label: string | null) => void;
   language?: RankingsLanguage;
+  /** 1 行だけ（注記なし・上下余白なし）。親の固定高スロットに収める用 */
+  compact?: boolean;
 }) {
   const loc = resolveLocalizedLang(language);
   const { prevLabel, nextLabel, display } = useMemo(() => {
@@ -104,7 +107,7 @@ export function RankingsPeriodLabelNavNative({
   });
 
   return (
-    <View style={styles.wrap}>
+    <View style={[styles.wrap, compact ? styles.wrapCompact : null]}>
       <View style={styles.row}>
         <Pressable
           accessibilityRole="button"
@@ -157,9 +160,11 @@ export function RankingsPeriodLabelNavNative({
           </Pressable>
         ) : null}
       </View>
-      <Text style={styles.note} numberOfLines={2}>
-        {calendarNote}
-      </Text>
+      {compact ? null : (
+        <Text style={styles.note} numberOfLines={2}>
+          {calendarNote}
+        </Text>
+      )}
     </View>
   );
 }
@@ -169,6 +174,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 4,
     paddingVertical: 4,
+  },
+  wrapCompact: {
+    gap: 0,
+    paddingVertical: 0,
   },
   row: {
     flexDirection: "row",

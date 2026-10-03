@@ -35,6 +35,7 @@ export type HorizonPracticeCopy = {
   horizonStatsHowTitle: string;
   horizonStatsHowBody: string;
   finishCta: string;
+  finishMenuHint: string;
 };
 
 export type HorizonFeatureStep = {
@@ -68,7 +69,7 @@ export function buildHorizonFeatureSteps(
         },
       ]
     : [];
-  return [
+  const steps: HorizonFeatureStep[] = [
     ...squad,
     {
       title: p.horizonUnitWhatTitle,
@@ -89,6 +90,13 @@ export function buildHorizonFeatureSteps(
       target: "profile-career-tab",
     },
   ];
+  /** 最後のカードで、メニューからいつでも見直せることを伝える */
+  const last = steps[steps.length - 1]!;
+  steps[steps.length - 1] = {
+    ...last,
+    body: `${last.body}\n${p.finishMenuHint}`,
+  };
+  return steps;
 }
 
 /** サブ進捗（`新機能 1/4`）は出さず、主要進捗のみ */

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Profile } from "@/app/component/profile/useProfile";
 import type {
   SummaryForCardsV2,
@@ -77,7 +77,26 @@ export default function ProfileKinetikHero({
     useState<ProfileKinetikMetricsPeriod>(() => preferredNbaKinetikPeriod());
   const [metricsTab, setMetricsTab] =
     useState<ProfileKinetikMetricsTab>("total");
-  const [windowLabel, setWindowLabel] = useState<string | null>(null);
+  /**
+   * 過去期間の選択はタブ／ボード付きで持つ。
+   * effect でリセットすると切替直後の 1 フレームだけ前タブのラベル（週 → 月表記）が出る。
+   */
+  const [windowSel, setWindowSel] = useState<{
+    tab: ProfileKinetikMetricsTab;
+    period: ProfileKinetikMetricsPeriod;
+    label: string | null;
+  } | null>(null);
+  const windowLabel =
+    windowSel &&
+    windowSel.tab === metricsTab &&
+    windowSel.period === metricsPeriod
+      ? windowSel.label
+      : null;
+  const setWindowLabel = useCallback(
+    (label: string | null) =>
+      setWindowSel({ tab: metricsTab, period: metricsPeriod, label }),
+    [metricsTab, metricsPeriod]
+  );
 
   const windowEnabled = metricsTab !== "total";
   const fetchedBoard = preferredNbaKinetikPeriod();
@@ -131,10 +150,6 @@ export default function ProfileKinetikHero({
   const { career, loading: careerDocLoading } = useUserCareer(targetUid, {
     enabled: true,
   });
-
-  useEffect(() => {
-    setWindowLabel(null);
-  }, [metricsTab, metricsPeriod]);
 
   useEffect(() => {
     const otherBoard: ProfileKinetikMetricsPeriod =
@@ -272,7 +287,11 @@ export default function ProfileKinetikHero({
             metricsTab={metricsTab}
             onMetricsTabChange={setMetricsTab}
             metricsWindowLabel={
-              metricsTab === "total" ? null : windowData?.label ?? windowLabel
+              metricsTab === "total"
+                ? null
+                : windowData?.label && periodLabels.includes(windowData.label)
+                  ? windowData.label
+                  : windowLabel
             }
             onMetricsWindowLabelChange={
               callerIsPro ? setWindowLabel : undefined

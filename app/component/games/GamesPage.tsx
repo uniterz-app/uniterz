@@ -1652,6 +1652,8 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
                 ? "match-card"
                 : "match-pickup-label"
           }
+          /** 試合カードは囲まない（位置合わせにだけ使う） */
+          showHoleRing={tutorialPhase !== "games"}
           visual={filteredGames.length === 0 ? "matchCard" : null}
           accentTone="feature"
           {...skipConfirm}

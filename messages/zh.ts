@@ -1088,6 +1088,7 @@ const zh: Messages = {
       doneBody:
         "That's the UNITERZ loop. Predict real games and climb the ranks.",
       finishCta: "Start the app",
+      finishMenuHint: "随时可从侧边菜单的「**教程**」再次查看本教程。",
       tapNavHint: "Tap the tab below, or press Next to go",
       progressLabel: "{current} / {total}",
     },
