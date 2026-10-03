@@ -71,6 +71,7 @@
     "firebase-admin": "^13.5.0",
     "flag-icons": "^7.5.0",
     "framer-motion": "^12.35.1",
+    "google-auth-library": "^9.15.1",
     "gsap": "^3.14.2",
     "html-to-image": "^1.11.13",
     "lucide-react": "^0.545.0",

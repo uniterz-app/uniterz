@@ -2,6 +2,7 @@
  * 課金シークレットは users/{uid}/secure/billing に隔離（公開 users ドキュメントから外す）。
  * Admin SDK のみ書き込み。クライアントは本人 read のみ。
  */
+import { createHash } from "node:crypto";
 import { FieldValue, type Firestore } from "firebase-admin/firestore";
 
 export const USER_BILLING_SECURE_DOC = "billing";
@@ -34,6 +35,25 @@ export function appleOriginalTransactionIndexRef(
   return db
     .collection("appleOriginalTransactionIndex")
     .doc(originalTransactionId);
+}
+
+/** purchaseToken は長く記号を含むため sha256 を doc ID にする */
+export function googlePurchaseTokenIndexRef(db: Firestore, purchaseToken: string) {
+  const id = createHash("sha256").update(purchaseToken).digest("hex");
+  return db.collection("googlePurchaseTokenIndex").doc(id);
+}
+
+/** purchaseToken → uid（RTDN / 再検証） */
+export async function resolveUidByGooglePurchaseToken(
+  db: Firestore,
+  purchaseToken: string
+): Promise<string | null> {
+  const token = String(purchaseToken ?? "").trim();
+  if (!token) return null;
+  const idx = await googlePurchaseTokenIndexRef(db, token).get();
+  if (!idx.exists) return null;
+  const uid = String(idx.data()?.uid ?? "").trim();
+  return uid || null;
 }
 
 const LEGACY_BILLING_ROOT_KEYS = [
@@ -195,6 +215,13 @@ export async function writeUserBillingSecure(
   if ("googlePurchaseToken" in fields) {
     secureUpdate.googlePurchaseToken = fields.googlePurchaseToken ?? null;
     rootDelete.googlePurchaseToken = FieldValue.delete();
+    const token = String(fields.googlePurchaseToken ?? "").trim();
+    if (token) {
+      await googlePurchaseTokenIndexRef(db, token).set(
+        { uid, updatedAt: FieldValue.serverTimestamp() },
+        { merge: true }
+      );
+    }
   }
   if ("appleOriginalTransactionId" in fields) {
     secureUpdate.appleOriginalTransactionId =
