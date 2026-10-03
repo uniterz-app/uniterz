@@ -336,6 +336,11 @@ service cloud.firestore {
       allow create, update, delete: if isAdmin();
     }
 
+    // Pro Insight（有料）— クライアント直読み禁止。/api/nba/matchup-insight（Pro 判定）経由のみ
+    match /gameProInsights/{gameId} {
+      allow read, write: if false;
+    }
+
     match /teams/{teamId} {
       allow read: if true;
       allow create, update, delete: if isAdmin();

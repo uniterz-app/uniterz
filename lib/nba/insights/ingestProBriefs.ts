@@ -24,6 +24,10 @@ import { loadOrBuildTeamSeasonRecords } from "@/lib/nba/insights/loadPriorSeason
 import { loadAceOutRecordsBundle } from "@/lib/nba/insights/ingestNbaTeamAceOutRecords";
 import { loadPlayerStatLeadersSnapshot } from "@/lib/nba/playerStatLeaders/loadPlayerStatLeadersSnapshot";
 import type { NbaPlayerStatLeadersBundle } from "@/lib/predict/nbaPlayerStatLeadersMocks";
+import {
+  loadGameProInsight,
+  writeGameProInsight,
+} from "@/lib/nba/insights/gameProInsightStore";
 
 export type NbaProBriefIngestMode = "full" | "patch";
 
@@ -381,7 +385,8 @@ export async function ingestNbaProBriefs(
 
       let brief: PredictProBrief;
       if (mode === "patch") {
-        const existing = game.data.proBrief as PredictProBrief | undefined;
+        const existing = (await loadGameProInsight(db, game.id, game.data))
+          .proBrief as PredictProBrief | undefined;
         if (existing && existing.home && existing.away) {
           brief = patchMatchupInsightInjuriesAndSchedule(existing, genInput);
         } else {
@@ -408,13 +413,10 @@ export async function ingestNbaProBriefs(
         patchedAtMs: brief.patchedAtMs,
       };
 
-      await db.collection("games").doc(game.id).set(
-        {
-          proBrief: toStore,
-          proBriefUpdatedAt: FieldValue.serverTimestamp(),
-        },
-        { merge: true }
-      );
+      await writeGameProInsight(db, game.id, {
+        proBrief: toStore,
+        proBriefUpdatedAt: FieldValue.serverTimestamp(),
+      });
       written += 1;
     } catch (e) {
       errors.push({

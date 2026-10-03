@@ -15,15 +15,18 @@ import {
   MATCHUP_INSIGHT_CACHE_REVALIDATE_SEC,
   MATCHUP_INSIGHT_CACHE_TAG,
 } from "@/lib/nba/predict/matchupInsightCache";
+import { loadGameProInsight } from "@/lib/nba/insights/gameProInsightStore";
 
 async function loadMatchupInsightPayload(gameId: string) {
-  const snap = await getAdminDb().collection("games").doc(gameId).get();
+  const db = getAdminDb();
+  const snap = await db.collection("games").doc(gameId).get();
   if (!snap.exists) return { kind: "not_found" as const };
 
-  const data = snap.data() as Record<string, unknown>;
-  if (String(data.league ?? "").toLowerCase() !== "nba") {
+  const game = snap.data() as Record<string, unknown>;
+  if (String(game.league ?? "").toLowerCase() !== "nba") {
     return { kind: "not_nba" as const };
   }
+  const data = await loadGameProInsight(db, gameId, game);
 
   const narrative = sanitizeProInsightNarrativeForDisplay(
     data.proInsightNarrative
@@ -70,7 +73,7 @@ async function loadMatchupInsightPayload(gameId: string) {
 /**
  * GET /api/nba/matchup-insight?gameId=
  *
- * Firestore games/{id}:
+ * Firestore gameProInsights/{id}（クライアント読み取り不可）:
  *   - proInsightNarrative … 新 UI（試合共通スナップショット · Pro 限定）
  *   - proBrief … 旧 HOME/AWAY テンプレ（互換のため残す）
  *

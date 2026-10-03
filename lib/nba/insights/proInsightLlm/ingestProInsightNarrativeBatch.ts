@@ -5,7 +5,7 @@
  *
  * OPENAI_API_KEY 未設定時: dry_run（fact フォールバックを即書き）。
  */
-import { FieldValue, Timestamp, type Firestore } from "firebase-admin/firestore";
+import { Timestamp, type Firestore } from "firebase-admin/firestore";
 import {
   CURRENT_NBA_SEASON_KEY,
   previousNbaSeasonKey,
@@ -24,6 +24,10 @@ import { loadPlayerStatLeadersSnapshot } from "@/lib/nba/playerStatLeaders/loadP
 import { loadNbaConferenceStandings } from "@/lib/nba/standings/loadNbaConferenceStandings";
 import { loadTeamRostersSnapshot } from "@/lib/nba/teamRosters/loadTeamRostersSnapshot";
 import { assembleProInsightFactPack } from "@/lib/nba/insights/proInsightFacts";
+import {
+  loadGameProInsight,
+  writeGameProInsight,
+} from "@/lib/nba/insights/gameProInsightStore";
 import type { ProInsightFactPack } from "@/lib/nba/insights/proInsightFacts/types";
 import { fingerprintInjuryStatus } from "@/lib/nba/insights/proInsightFacts/fingerprint";
 import { highMinutePlayersFromRecentGames } from "@/lib/nba/insights/proInsightFacts/highMinutePlayersFromLiveStats";
@@ -361,31 +365,24 @@ async function writeNarrative(
     ),
     meta.factPack
   );
-  await db
-    .collection("games")
-    .doc(gameId)
-    .set(
-      {
-        proInsightNarrative: {
-          ...finalBrief,
-          factsFingerprint: meta.fingerprint,
-          injuryFingerprint: meta.injuryFingerprint,
-          model: meta.model,
-          source: meta.source,
-          generatedAtMs: Date.now(),
-        },
-        proInsightFacts: {
-          fingerprint: meta.fingerprint,
-          injuryFingerprint: meta.injuryFingerprint,
-          phase: meta.factPack.phase,
-          sections: meta.factPack.sections,
-          packedAtMs: Date.now(),
-          pendingBatch: false,
-        },
-        updatedAt: FieldValue.serverTimestamp(),
-      },
-      { merge: true }
-    );
+  await writeGameProInsight(db, gameId, {
+    proInsightNarrative: {
+      ...finalBrief,
+      factsFingerprint: meta.fingerprint,
+      injuryFingerprint: meta.injuryFingerprint,
+      model: meta.model,
+      source: meta.source,
+      generatedAtMs: Date.now(),
+    },
+    proInsightFacts: {
+      fingerprint: meta.fingerprint,
+      injuryFingerprint: meta.injuryFingerprint,
+      phase: meta.factPack.phase,
+      sections: meta.factPack.sections,
+      packedAtMs: Date.now(),
+      pendingBatch: false,
+    },
+  });
 }
 
 export async function submitProInsightNarrativeBatch(
@@ -864,23 +861,16 @@ export async function submitProInsightNarrativeBatch(
 
   // facts を試合に先置き（poll 時に照合）
   for (const p of prepared) {
-    await db
-      .collection("games")
-      .doc(p.gameId)
-      .set(
-        {
-          proInsightFacts: {
-            fingerprint: p.pack.fingerprint,
-            injuryFingerprint: p.injuryFingerprint,
-            phase: p.pack.phase,
-            sections: p.pack.sections,
-            packedAtMs: nowMs,
-            pendingBatch: true,
-          },
-          updatedAt: FieldValue.serverTimestamp(),
-        },
-        { merge: true }
-      );
+    await writeGameProInsight(db, p.gameId, {
+      proInsightFacts: {
+        fingerprint: p.pack.fingerprint,
+        injuryFingerprint: p.injuryFingerprint,
+        phase: p.pack.phase,
+        sections: p.pack.sections,
+        packedAtMs: nowMs,
+        pendingBatch: true,
+      },
+    });
   }
 
   try {
@@ -1018,7 +1008,8 @@ export async function pollProInsightNarrativeBatches(
         // 失敗分フォールバック
         for (const gameId of job.data.gameIds) {
           const g = await db.collection("games").doc(gameId).get();
-          const facts = g.data()?.proInsightFacts as
+          const insight = await loadGameProInsight(db, gameId, g.data() ?? null);
+          const facts = insight.proInsightFacts as
             | {
                 fingerprint?: string;
                 injuryFingerprint?: string;
@@ -1079,7 +1070,8 @@ export async function pollProInsightNarrativeBatches(
         if (!g.exists) continue;
         const homeId = teamIdFromSide(g.data()?.home, g.data()?.homeTeamId);
         const awayId = teamIdFromSide(g.data()?.away, g.data()?.awayTeamId);
-        const facts = g.data()?.proInsightFacts as
+        const insight = await loadGameProInsight(db, gameId, g.data() ?? null);
+        const facts = insight.proInsightFacts as
           | {
               fingerprint?: string;
               injuryFingerprint?: string;
@@ -1377,15 +1369,16 @@ export async function patchProInsightNarrativesIfInjuryChanged(
         awayInjuries,
       });
 
+      const insight = await loadGameProInsight(db, game.id, game.data);
       const prevInjuryFp = String(
-        (game.data.proInsightFacts as { injuryFingerprint?: string } | undefined)
+        (insight.proInsightFacts as { injuryFingerprint?: string } | undefined)
           ?.injuryFingerprint ??
-          (game.data.proInsightNarrative as
+          (insight.proInsightNarrative as
             | { injuryFingerprint?: string }
             | undefined)?.injuryFingerprint ??
           ""
       );
-      const hasNarrative = Boolean(game.data.proInsightNarrative);
+      const hasNarrative = Boolean(insight.proInsightNarrative);
       if (hasNarrative && prevInjuryFp && prevInjuryFp === injuryFingerprint) {
         skippedUnchanged += 1;
         continue;

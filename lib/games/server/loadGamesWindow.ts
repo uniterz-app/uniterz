@@ -148,9 +148,11 @@ export async function loadGamesWindow(
   const peerRows =
     peerRaw.length === windowRows.length
       ? []
-      : peerRaw.map((r) =>
-          serializeGameDoc(String(r.id ?? ""), r as Record<string, unknown>)
-        );
+      : peerRaw.map((r) => {
+          const data = { ...(r as Record<string, unknown>) };
+          for (const key of GAMES_WINDOW_OMIT_FIELDS) delete data[key];
+          return serializeGameDoc(String(r.id ?? ""), data);
+        });
 
   const hasLive =
     windowRows.some((r) => isLiveGameRow(r as Record<string, unknown>)) ||

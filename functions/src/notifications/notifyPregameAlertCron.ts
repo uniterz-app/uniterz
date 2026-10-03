@@ -142,8 +142,15 @@ export async function runNotifyPregameAlertCron(): Promise<void> {
     if (gameData.final === true) continue;
 
     const injuryFp = fingerprint(gameData.injuryReport ?? null);
+    // Pro Insight は gameProInsights/{id}（移行前は games 上の旧フィールド）
+    const insightDoc =
+      (await firestore.collection("gameProInsights").doc(gameDoc.id).get()).data() ?? {};
     const insightFp = fingerprint(
-      insightConclusionMaterial(gameData as Record<string, unknown>)
+      insightConclusionMaterial({
+        proInsightNarrative:
+          insightDoc.proInsightNarrative ?? gameData.proInsightNarrative,
+        proBrief: insightDoc.proBrief ?? gameData.proBrief,
+      })
     );
 
     const prev = (gameData.pushPregame as

@@ -184,7 +184,7 @@ npx tsx scripts/ingest-nba-team-ace-out-records.ts 2025-26 --force
 ### 生成・保存（全ユーザー共通スナップショット）
 
 ```
-前日 20:00 JST Batch 投入 → games/{gameId}.proInsightNarrative（初版）
+前日 20:00 JST Batch 投入 → gameProInsights/{gameId}.proInsightNarrative（初版）
 tip 1h 前 → injury 変更時のみ Chat 再生成
 クライアント → Firestore / 公開 API を読むだけ（開くたびに再計算しない）
 ```
@@ -204,7 +204,7 @@ tip 1h 前 → injury 変更時のみ Chat 再生成
 ## 8. 実装メモ
 
 - 生成: `lib/nba/insights/*`
-- 完成品: `games/{gameId}.proBrief`（`liveStats` と同じ置き場）
+- 完成品: `gameProInsights/{gameId}`（`proInsightNarrative` / `proInsightFacts` / `proBrief`）。**`games/{id}` は誰でも読めるので置かない**。読み書きは `lib/nba/insights/gameProInsightStore.ts`、rules は `allow read, write: if false`
 - 公開: `GET /api/nba/matchup-insight?gameId=`
 - 管理: `POST /api/admin/nba-pro-brief-ingest`（`mode: "batch_submit" | "batch_poll" | "narrative_patch" | "full" | "patch"`）
 - 表示前: `sanitizeProBriefForDisplay`
