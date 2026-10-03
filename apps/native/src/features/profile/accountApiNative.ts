@@ -64,6 +64,16 @@ export async function saveMeProSkinNative(
   clearNativeOpenSeasonRankingsClientCache();
   const uid = auth.currentUser?.uid;
   if (uid) {
+    const { peekUserDocMemoryEntry, setUserDocMemory } = await import(
+      "../../../../../lib/user/userDocMemoryCache"
+    );
+    const cached = peekUserDocMemoryEntry(uid);
+    if (cached?.exists) {
+      setUserDocMemory(uid, {
+        exists: true,
+        data: { ...cached.data, planProBgVariant },
+      });
+    }
     dispatchCumulativeRankingPatchMyProSkin(uid, planProBgVariant);
   }
 }

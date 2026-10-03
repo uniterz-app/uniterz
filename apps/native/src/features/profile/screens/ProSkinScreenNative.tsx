@@ -35,6 +35,7 @@ import {
 } from "../accountApiNative";
 import { useFirebaseUser } from "../../../auth/FirebaseUserProvider";
 import { cyberAlert } from "../../../components/cyberAlert";
+import { clearSideMenuResume } from "../sideMenuResumeNative";
 import { useNativeUserLanguageFromAuth } from "../../../hooks/useNativeUserLanguage";
 import type { ProfileStackParamList } from "../../../navigation/types";
 import { profilePlanProAdoptedSkinSwatch } from "../../../../../../lib/profile/profilePlanProAdoptedSkinSwatch";
@@ -420,6 +421,7 @@ export default function ProSkinScreenNative() {
       setSavedId(overlayId);
       setOverlayId(null);
       setSaving(false);
+      clearSideMenuResume();
       navigation.navigate("ProfileHome");
     } catch (e) {
       const msg =
