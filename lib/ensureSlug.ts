@@ -4,7 +4,15 @@ import { doc, getDoc, setDoc } from "firebase/firestore";
 function genSlug(len = 8) {
   const chars = "abcdefghjkmnpqrstuvwxyz0123456789";
   const buf = new Uint8Array(len);
-  crypto.getRandomValues(buf);
+  // React Native（Hermes）は crypto 未定義。slug は公開 ID で重複は slugs/ で検査するため Math.random で可
+  const webCrypto = (
+    globalThis as { crypto?: { getRandomValues?: (a: Uint8Array) => void } }
+  ).crypto;
+  if (typeof webCrypto?.getRandomValues === "function") {
+    webCrypto.getRandomValues(buf);
+  } else {
+    for (let i = 0; i < len; i++) buf[i] = Math.floor(Math.random() * 256);
+  }
   let out = "";
   for (let i = 0; i < len; i++) out += chars[buf[i] % chars.length];
   return out;

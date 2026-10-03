@@ -259,6 +259,7 @@ export default function OnboardingScreenNative() {
       if (isProfileGamblingTermsError(e)) {
         cyberAlert(t.invalidTitle, profileGamblingTermsUserMessage(language));
       } else {
+        console.warn("[Onboarding] profile save failed", e);
         cyberAlert(t.invalidTitle, t.saveFail);
       }
     } finally {

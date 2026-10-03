@@ -52,6 +52,8 @@ function calcPointsV3({
   const totalError = Math.abs(
     finalHome + finalAway - (predHome + predAway)
   );
+  /** Perfect（Pro Skin exactHits / 結果バッジ）。football は calcPointsFootball 側 */
+  const exactMatch = predHome === finalHome && predAway === finalAway;
 
   if (!winnerCorrect) {
     return {
@@ -63,6 +65,7 @@ function calcPointsV3({
       totalPoints: 0,
       diffError,
       totalError,
+      exactMatch,
     };
   }
 
@@ -81,6 +84,7 @@ function calcPointsV3({
     totalPoints,
     diffError,
     totalError,
+    exactMatch,
   };
 }
 
@@ -172,6 +176,7 @@ export function computePostSettlement({
         totalPoints: 0,
         diffError: null,
         totalError: null,
+        exactMatch: false,
       };
 
   const streakInfo = p.authorUid ? streakResultMap.get(p.authorUid) : undefined;

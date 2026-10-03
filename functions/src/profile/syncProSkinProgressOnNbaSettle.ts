@@ -5,9 +5,11 @@
  * Free 中も進捗は積む。解放は Pro のみ。
  * Pro 中に閾値を今回初めて跨いだ ID だけ proSkinUnlockNoticeIds へ（モーダル用）。
  * Free→Pro 遡及は ensurePersisted 側で unlocked のみ（notice なし）。
+ * プレシーズンはランキング対象外だが、マイルストーン進捗には積む（試合日のシーズンキー）。
  */
 import { FieldValue, getFirestore } from "firebase-admin/firestore";
 import {
+  nbaSeasonKeyFromDateJST,
   normalizeNbaSeasonPhase,
   resolveNbaRankingBucketKeys,
 } from "../rankings/nbaSeason";
@@ -85,7 +87,10 @@ export async function syncProSkinProgressOnNbaSettle(opts: {
   const leagueKey = String(opts.league ?? "")
     .trim()
     .toLowerCase();
-  if (!opts.countsForRanking || leagueKey !== "nba") return;
+  if (leagueKey !== "nba") return;
+  const seasonPhase = normalizeNbaSeasonPhase(opts.seasonPhase);
+  const isPreseason = seasonPhase === "preseason";
+  if (!opts.countsForRanking && !isPreseason) return;
 
   const startDate =
     opts.startAt && typeof (opts.startAt as { toDate?: () => Date }).toDate ===
@@ -95,12 +100,10 @@ export async function syncProSkinProgressOnNbaSettle(opts: {
         ? opts.startAt
         : new Date();
 
-  const { nbaSeasonKey } = resolveNbaRankingBucketKeys(
-    leagueKey === "nba" ? "nba" : leagueKey,
-    true,
-    startDate,
-    normalizeNbaSeasonPhase(opts.seasonPhase)
-  );
+  const nbaSeasonKey = isPreseason
+    ? nbaSeasonKeyFromDateJST(startDate)
+    : resolveNbaRankingBucketKeys("nba", true, startDate, seasonPhase)
+        .nbaSeasonKey;
   if (
     !nbaSeasonKey ||
     nbaSeasonKey < PRO_SKIN_UNLOCK_FROM_SEASON_KEY

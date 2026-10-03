@@ -225,6 +225,22 @@ export async function settleReferralRelation(
       const inviteeLedgerSnap = await tx.get(inviteeLedgerRef);
       const referrerBaseLedgerSnap = await tx.get(referrerBaseLedgerRef);
 
+      const withinCap = completedOrdinal <= REFERRAL_REFERRER_MAX_COMPLETED;
+
+      /** transaction は read → write の順が必須。マイルストーン台帳も最初の tx.set より前に読む */
+      const milestoneReads = withinCap
+        ? await Promise.all(
+            REFERRAL_MILESTONES.filter(
+              (m) => m.completedCount === completedOrdinal
+            ).map(async (m) => {
+              const ref = db
+                .collection(LEDGER)
+                .doc(referralMilestoneLedgerKey(referrerUid, m.completedCount));
+              return { m, ref, snap: await tx.get(ref) };
+            })
+          )
+        : [];
+
       let inviteeGranted = 0;
       let referrerBaseGranted = 0;
       let referrerMilestoneGranted = 0;
@@ -245,8 +261,6 @@ export async function settleReferralRelation(
         inviteeGranted = REFERRAL_INVITEE_UNITS;
       }
 
-      const withinCap = completedOrdinal <= REFERRAL_REFERRER_MAX_COMPLETED;
-
       if (withinCap && !referrerBaseLedgerSnap.exists) {
         tx.set(referrerBaseLedgerRef, {
           uid: referrerUid,
@@ -263,32 +277,24 @@ export async function settleReferralRelation(
       }
 
       let milestoneBonus = 0;
-      if (withinCap) {
-        for (const m of REFERRAL_MILESTONES) {
-          if (completedOrdinal !== m.completedCount) continue;
-          milestoneBonus = m.bonusUnits;
-          const milestoneRef = db
-            .collection(LEDGER)
-            .doc(referralMilestoneLedgerKey(referrerUid, m.completedCount));
-          const milestoneSnap = await tx.get(milestoneRef);
-          if (!milestoneSnap.exists) {
-            tx.set(milestoneRef, {
-              uid: referrerUid,
-              amount: m.bonusUnits,
-              reason: "referral_milestone",
-              idempotencyKey: referralMilestoneLedgerKey(
-                referrerUid,
-                m.completedCount
-              ),
-              inviteeUid,
-              referrerUid,
-              milestoneAt: m.completedCount,
-              createdAt: FieldValue.serverTimestamp(),
-            });
-            referrerIncrement += m.bonusUnits;
-            referrerMilestoneGranted = m.bonusUnits;
-          }
-        }
+      for (const { m, ref: milestoneRef, snap: milestoneSnap } of milestoneReads) {
+        milestoneBonus = m.bonusUnits;
+        if (milestoneSnap.exists) continue;
+        tx.set(milestoneRef, {
+          uid: referrerUid,
+          amount: m.bonusUnits,
+          reason: "referral_milestone",
+          idempotencyKey: referralMilestoneLedgerKey(
+            referrerUid,
+            m.completedCount
+          ),
+          inviteeUid,
+          referrerUid,
+          milestoneAt: m.completedCount,
+          createdAt: FieldValue.serverTimestamp(),
+        });
+        referrerIncrement += m.bonusUnits;
+        referrerMilestoneGranted = m.bonusUnits;
       }
 
       const referrerPatch: Record<string, unknown> = {
