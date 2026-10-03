@@ -25,6 +25,17 @@ export {
   GAMES_WINDOW_QUERY_LIMIT,
 } from "@/lib/games/gamesWindowConstants";
 
+/**
+ * 公開・認証なしの共有レスポンスに載せない。
+ * Pro Insight は `/api/nba/matchup-insight`（Pro ゲート）経由のみ。
+ */
+const GAMES_WINDOW_OMIT_FIELDS = [
+  "proInsightNarrative",
+  "proInsightFacts",
+  "proBrief",
+  "predictorUids",
+] as const;
+
 function isLiveGameRow(raw: Record<string, unknown>): boolean {
   if (raw.final === true || raw.final === 1) return false;
   const t = String(raw.status ?? "").toLowerCase();
@@ -119,10 +130,11 @@ export async function loadGamesWindow(
     .limit(limitN)
     .get();
 
-  const windowRows = snap.docs.map((d) => ({
-    id: d.id,
-    ...(d.data() as Record<string, unknown>),
-  }));
+  const windowRows = snap.docs.map((d) => {
+    const data = { ...(d.data() as Record<string, unknown>) };
+    for (const key of GAMES_WINDOW_OMIT_FIELDS) delete data[key];
+    return { id: d.id, ...data };
+  });
 
   const peerRaw =
     params.includePeers === false
@@ -132,9 +144,13 @@ export async function loadGamesWindow(
   const rows = windowRows.map((r) =>
     serializeGameDoc(String(r.id), r as Record<string, unknown>)
   );
-  const peerRows = peerRaw.map((r) =>
-    serializeGameDoc(String(r.id ?? ""), r as Record<string, unknown>)
-  );
+  // 追加 peer が無ければ空。クライアントは空のとき rows にフォールバックする
+  const peerRows =
+    peerRaw.length === windowRows.length
+      ? []
+      : peerRaw.map((r) =>
+          serializeGameDoc(String(r.id ?? ""), r as Record<string, unknown>)
+        );
 
   const hasLive =
     windowRows.some((r) => isLiveGameRow(r as Record<string, unknown>)) ||
