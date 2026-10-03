@@ -1,4 +1,8 @@
 import { profileKinetikPanelCopy } from "@/lib/profile/profileKinetikPanelCopy";
+import {
+  buildShareOutboundMessage,
+  getShareAppOrigin,
+} from "@/lib/share/shareAppUrls";
 
 export type ShareProfileOpts = {
   handle: string;
@@ -7,27 +11,27 @@ export type ShareProfileOpts = {
   language: string | null | undefined;
 };
 
-export function buildProfileShareUrl(
-  handle: string,
-  variant: "web" | "mobile"
-): string {
+/**
+ * 共有リンクは公開オリジン + /mobile（localhost やプレビュー URL を貼らない）。
+ * 未ログイン着地・Universal Link は /mobile/u/* のみ対応。
+ */
+export function buildProfileShareUrl(handle: string): string {
   const safeHandle = encodeURIComponent(handle.trim());
-  const path = `/${variant}/u/${safeHandle}`;
-  if (typeof window === "undefined") return path;
-  return `${window.location.origin}${path}`;
+  return `${getShareAppOrigin()}/mobile/u/${safeHandle}`;
 }
 
 /** Web Share API → 非対応時はクリップボード。成功時 true */
 export async function shareProfileUrl(opts: ShareProfileOpts): Promise<boolean> {
-  const url = buildProfileShareUrl(opts.handle, opts.variant);
+  const url = buildProfileShareUrl(opts.handle);
   const title = opts.displayName;
-  const text = profileKinetikPanelCopy(opts.language).shareText(
+  const caption = profileKinetikPanelCopy(opts.language).shareText(
     opts.displayName
   );
 
   if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
     try {
-      await navigator.share({ title, text, url });
+      // url は別フィールドで渡す（text に含めると二重になる共有先がある）
+      await navigator.share({ title, text: buildShareOutboundMessage(caption), url });
       return true;
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") {
@@ -38,7 +42,7 @@ export async function shareProfileUrl(opts: ShareProfileOpts): Promise<boolean> 
 
   if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
     try {
-      await navigator.clipboard.writeText(url);
+      await navigator.clipboard.writeText(buildShareOutboundMessage(caption, url));
       return true;
     } catch {
       return false;

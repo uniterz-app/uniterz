@@ -26,6 +26,7 @@ import { NativeLanguageProvider } from "./src/i18n/NativeLanguageProvider";
 import RootNavigator from "./src/navigation/RootNavigator";
 import { navigationRef } from "./src/navigation/navigationRef";
 import { useNativeShareDeepLinks } from "./src/navigation/useNativeShareDeepLinks";
+import { flushPendingShareDeepLink } from "./src/navigation/shareDeepLinkNative";
 import AppShellNative from "./src/components/AppShellNative";
 import TutorialRestartCoverNative from "./src/features/tutorial/TutorialRestartCoverNative";
 import MaintenanceGateNative from "./src/components/MaintenanceGateNative";
@@ -91,6 +92,7 @@ export default function App() {
           <AppShellNative>
             <NavigationContainer
               ref={navigationRef}
+              onReady={flushPendingShareDeepLink}
               theme={{
                 dark: true,
                 colors: {

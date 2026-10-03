@@ -7,6 +7,7 @@ import { useMinimumSplashVisible } from "@/app/component/splash/useMinimumSplash
 import { sanitizeInternalNext } from "@/lib/auth/safeNextRedirect";
 import { isGuestLegalPath } from "@/lib/guestLegalPaths";
 import { isGuestPreviewPath } from "@/lib/guestPreviewPaths";
+import { isShareGuestPath } from "@/lib/share/shareGuestPaths";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { usePathname, useRouter } from "next/navigation";
 
@@ -45,6 +46,7 @@ function isMobilePublicPath(pathname: string | null): boolean {
   if (pathname === "/mobile/login" || pathname === "/mobile/signup") return true;
   if (pathname.startsWith("/mobile/reset")) return true;
   if (pathname.startsWith("/mobile/r/")) return true;
+  if (isShareGuestPath(pathname)) return true;
   if (isGuestPreviewPath(pathname)) return true;
   if (isGuestLegalPath(pathname)) return true;
   return MOBILE_GUEST_LEGAL_PREFIXES.some(

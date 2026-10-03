@@ -27,6 +27,7 @@ import {
   SHARE_CAPTURE_BG,
   shareImageUriNative,
 } from "../share/shareImageNative";
+import ShareBrandFrameSealNative from "../share/ShareBrandFrameSealNative";
 
 export type MyRankCardShareState = {
   canShare: boolean;
@@ -309,6 +310,7 @@ export function MyRankCardNative({
           collapsable={false}
           style={sharing ? { backgroundColor: SHARE_CAPTURE_BG } : undefined}
         >
+          <ShareBrandFrameSealNative visible={sharing}>
           <MyRankCardFrameNative
             tone={frameTone}
             proSpec={proTier}
@@ -392,6 +394,7 @@ export function MyRankCardNative({
               ) : null}
             </View>
           </MyRankCardFrameNative>
+          </ShareBrandFrameSealNative>
         </View>
       </View>
     </View>

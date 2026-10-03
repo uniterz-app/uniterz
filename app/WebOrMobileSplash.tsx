@@ -8,6 +8,7 @@ import { isGuestLegalPath } from "@/lib/guestLegalPaths";
 import { isGuestPreviewPath } from "@/lib/guestPreviewPaths";
 import { isPublicLpPath } from "@/lib/lp/publicLpPaths";
 import { isProfileSetupRoute } from "@/lib/profileSetupRoute";
+import { useShareLandingMode } from "@/lib/share/useShareLandingMode";
 
 /** 下部ナビを出さないルート（ゲスト向け文言ページ・初回プロフィールセットアップ） */
 function shouldShowBottomNavBar(pathname: string | null | undefined): boolean {
@@ -26,6 +27,8 @@ export default function WebOrMobileSplash({
 }) {
   const pathname = usePathname();
   const isWeb = pathname?.startsWith("/web");
+  const shareLanding = useShareLandingMode();
+  const showNavBar = shouldShowBottomNavBar(pathname) && !shareLanding;
 
   // "/" は app/page.tsx 自身がスプラッシュと遷移制御を持つため、ここで重ねない
   if (pathname === "/") {
@@ -69,7 +72,7 @@ export default function WebOrMobileSplash({
         <div id="app-root" className="relative isolate min-h-0">
           {children}
         </div>
-        {shouldShowBottomNavBar(pathname) ? <NavBar /> : null}
+        {showNavBar ? <NavBar /> : null}
       </AuthGate>
     );
   }
@@ -79,7 +82,7 @@ export default function WebOrMobileSplash({
       <div id="app-root" className="relative isolate min-h-0">
         {children}
       </div>
-      {shouldShowBottomNavBar(pathname) ? <NavBar /> : null}
+      {showNavBar ? <NavBar /> : null}
     </AuthGate>
   );
 }

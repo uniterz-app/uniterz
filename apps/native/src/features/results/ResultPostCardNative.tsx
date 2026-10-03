@@ -50,7 +50,7 @@ import MatchPkResultLineNative from "../games/MatchPkResultLineNative";
 import { useTeamRecordLineNative } from "../games/useTeamRecordLineNative";
 import CornerMenuClusterNative from "../../ui/CornerMenuClusterNative";
 import CyberChamferButtonNative from "../../ui/CyberChamferButtonNative";
-import ShareLinkCaptureFooterNative from "../share/ShareLinkCaptureFooterNative";
+import ShareBrandCaptureHeaderNative from "../share/ShareBrandCaptureHeaderNative";
 import {
   captureViewAsPngNative,
   SHARE_CAPTURE_BG,
@@ -781,6 +781,7 @@ function ResultPostCardNativeInner({
                   : undefined
               }
             >
+              <ShareBrandCaptureHeaderNative visible={sharing} />
               <ResultCardDesignFaceNative
                 language={language}
                 face={faceModel}
@@ -793,10 +794,6 @@ function ResultPostCardNativeInner({
                 drawDelayMs={listEnterIndex * RESULT_CARD_STAGGER_MS}
                 motion={faceMotion}
                 detailSpineStyle={detailSpinePressStyle}
-              />
-              <ShareLinkCaptureFooterNative
-                url={shareLinkUrl}
-                visible={sharing}
               />
             </View>
             {cornerCluster}
@@ -849,6 +846,7 @@ function ResultPostCardNativeInner({
         collapsable={false}
         style={sharing ? styles.captureSurface : undefined}
       >
+      <ShareBrandCaptureHeaderNative visible={sharing} />
       <MatchListLineFrameNative
         topLabel={roundLabel}
         paint={lineFramePaint}
@@ -1114,7 +1112,6 @@ function ResultPostCardNativeInner({
         ) : null}
       </ResultGlassShellNative>
       </MatchListLineFrameNative>
-      <ShareLinkCaptureFooterNative url={shareLinkUrl} visible={sharing} />
       </View>
 
       {cornerCluster}

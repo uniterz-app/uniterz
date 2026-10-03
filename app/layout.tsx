@@ -22,12 +22,16 @@ import {
   isMaintenanceExemptPath,
 } from "@/lib/app/maintenanceMode";
 import { headers } from "next/headers";
+import { getAppStoreAppId, getShareAppOrigin } from "@/lib/share/shareAppUrls";
 import AppChrome from "@/app/component/AppChrome";
 import AppContentShell from "@/app/component/AppContentShell";
 import AppPageBackground from "@/app/component/AppPageBackground";
 import SplashGlbPreload from "@/app/component/splash/SplashGlbPreload";
 
+const appStoreAppId = getAppStoreAppId();
+
 export const metadata: Metadata = {
+  metadataBase: new URL(getShareAppOrigin()),
   title: "Uniterz",
   description: "Sports prediction platform",
   manifest: "/manifest.json",
@@ -35,6 +39,15 @@ export const metadata: Metadata = {
     apple: "/icon-new/Icon-new192.png",
     icon: "/icon-new/Icon-new192.png",
   },
+  openGraph: {
+    siteName: "UNITERZ",
+    title: "UNITERZ",
+    description: "スポーツの試合を予想して、ランキングで競うアプリ",
+    type: "website",
+    locale: "ja_JP",
+  },
+  twitter: { card: "summary_large_image" },
+  ...(appStoreAppId ? { itunes: { appId: appStoreAppId } } : {}),
 };
 
 export const viewport: Viewport = {

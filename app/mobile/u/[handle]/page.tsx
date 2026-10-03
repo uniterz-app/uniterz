@@ -1,38 +1,24 @@
-"use client";
+import type { Metadata } from "next";
+import { loadProfileShareMeta } from "@/lib/share/server/loadShareMeta";
+import { safeDecodeRouteParam } from "@/lib/share/shareGuestPaths";
+import { profileShareMetadataText } from "@/lib/share/shareLandingCopy";
+import { buildShareMetadata } from "@/lib/share/shareMetadata";
+import ProfilePageClient from "./ProfilePageClient";
 
-import { Suspense, useMemo } from "react";
-import { useParams } from "next/navigation";
-import ProfilePageBase from "@/app/component/profile/ProfilePageBaseV2";
-import CandleChartLoader from "@/app/component/common/CandleChartLoader";
-import TutorialWelcomeProfileFlyShell from "@/app/component/tutorial/TutorialWelcomeProfileFlyShell";
-import TutorialLiveHost from "@/app/component/tutorial/TutorialLiveHost";
+type Params = { params: Promise<{ handle: string }> };
 
-function ProfilePageSkeleton() {
-  return (
-    <div className="flex justify-center px-4 py-8">
-      <CandleChartLoader />
-    </div>
-  );
+export async function generateMetadata({ params }: Params): Promise<Metadata> {
+  const { handle } = await params;
+  const meta = await loadProfileShareMeta(safeDecodeRouteParam(handle));
+  return buildShareMetadata({
+    ...profileShareMetadataText(meta),
+    path: `/mobile/u/${handle}`,
+  });
 }
 
-export default function Page() {
-  const params = useParams<{ handle: string }>();
-  const handle = useMemo(() => {
-    const raw =
-      typeof params?.handle === "string"
-        ? params.handle
-        : Array.isArray(params?.handle)
-          ? params.handle[0]
-          : "";
-    return decodeURIComponent(raw);
-  }, [params]);
-
-  return (
-    <Suspense fallback={<ProfilePageSkeleton />}>
-      <TutorialWelcomeProfileFlyShell>
-        <ProfilePageBase handle={handle} variant="mobile" />
-      </TutorialWelcomeProfileFlyShell>
-      <TutorialLiveHost page="profile" />
-    </Suspense>
-  );
+export default async function Page({ params }: Params) {
+  const { handle: raw } = await params;
+  const handle = safeDecodeRouteParam(raw);
+  const shareMeta = await loadProfileShareMeta(handle);
+  return <ProfilePageClient handle={handle} shareMeta={shareMeta} />;
 }

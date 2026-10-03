@@ -50,6 +50,7 @@ import {
   ProfileStackScreen,
 } from "./StackNavigators";
 import { resetGamesStackInBackgroundNative } from "./resetGamesTabHomeNative";
+import { flushPendingShareDeepLink } from "./shareDeepLinkNative";
 import ProfileStatsPrefetchHost from "../features/profile/ProfileStatsPrefetchHost";
 import SquadBattleLaunchPromptHostNative from "../features/squads/SquadBattleLaunchPromptHostNative";
 
@@ -151,6 +152,12 @@ export default function MainTabNavigator() {
     // 動画ゲート中は OS スプラッシュ解除をゲート側に任せる
     if (!splashGateOpen) hideNativeBootSplash();
   }, [splashGateOpen]);
+
+  useEffect(() => {
+    // ログイン前に開かれた共有リンクを、Main がルートに載った次フレームで開く
+    const id = requestAnimationFrame(() => flushPendingShareDeepLink());
+    return () => cancelAnimationFrame(id);
+  }, []);
 
   return (
     <>

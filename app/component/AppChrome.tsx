@@ -6,6 +6,7 @@ import Header from "@/app/component/Header";
 import { isGuestLegalPath } from "@/lib/guestLegalPaths";
 import { isGuestPreviewPath } from "@/lib/guestPreviewPaths";
 import { isPublicLpPath } from "@/lib/lp/publicLpPaths";
+import { useShareLandingMode } from "@/lib/share/useShareLandingMode";
 import {
   getAppBrandShelfHidden,
   subscribeAppBrandShelfHidden,
@@ -37,6 +38,7 @@ export default function AppChrome() {
     getTutorialRestartCover,
     () => false
   );
+  const shareLanding = useShareLandingMode();
 
   const shouldHideAll =
     pathname === "/" ||
@@ -50,7 +52,8 @@ export default function AppChrome() {
     pathname === "/web/reset" ||
     pathname === "/mobile/reset" ||
     isGuestPreviewPath(pathname) ||
-    isGuestLegalPath(pathname);
+    isGuestLegalPath(pathname) ||
+    shareLanding;
 
   const shouldHideHeader =
     pathname === "/web/rankings" ||

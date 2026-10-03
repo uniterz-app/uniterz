@@ -53,16 +53,14 @@
           "action": "VIEW",
           "autoVerify": true,
           "data": [
-            {
-              "scheme": "https",
-              "host": "uniterz.app",
-              "pathPrefix": "/mobile"
-            },
-            {
-              "scheme": "https",
-              "host": "www.uniterz.app",
-              "pathPrefix": "/mobile"
-            }
+            { "scheme": "https", "host": "www.uniterz.app", "pathPrefix": "/mobile/result/" },
+            { "scheme": "https", "host": "www.uniterz.app", "pathPrefix": "/mobile/u/" },
+            { "scheme": "https", "host": "www.uniterz.app", "pathPrefix": "/mobile/communities/" },
+            { "scheme": "https", "host": "www.uniterz.app", "path": "/mobile/rankings" },
+            { "scheme": "https", "host": "uniterz.app", "pathPrefix": "/mobile/result/" },
+            { "scheme": "https", "host": "uniterz.app", "pathPrefix": "/mobile/u/" },
+            { "scheme": "https", "host": "uniterz.app", "pathPrefix": "/mobile/communities/" },
+            { "scheme": "https", "host": "uniterz.app", "path": "/mobile/rankings" }
           ],
           "category": [
             "BROWSABLE",

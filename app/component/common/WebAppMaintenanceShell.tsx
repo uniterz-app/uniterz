@@ -8,6 +8,7 @@ import {
   isMaintenanceExemptPath,
 } from "@/lib/app/maintenanceMode";
 import { normalizeRoutePath } from "@/lib/profileSetupRoute";
+import { isShareGuestPath } from "@/lib/share/shareGuestPaths";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 
 /**
@@ -24,6 +25,7 @@ export default function WebAppMaintenanceShell({
 
   if (!APP_WEB_APP_MAINTENANCE) return <>{children}</>;
   if (isMaintenanceExemptPath(pathname)) return <>{children}</>;
+  if (isShareGuestPath(pathname)) return <>{children}</>;
 
   const path = normalizeRoutePath(pathname);
   if (path.startsWith("/admin")) return <>{children}</>;

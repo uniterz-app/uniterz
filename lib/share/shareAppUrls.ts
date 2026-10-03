@@ -1,6 +1,12 @@
 /** 共有・ディープリンク用の Uniterz URL 生成 */
 
-export const DEFAULT_SHARE_APP_ORIGIN = "https://uniterz.app";
+/**
+ * apex（uniterz.app）は www へ 307 リダイレクトされる。
+ * Apple は AASA 取得でリダイレクトを辿らないため、共有リンクは www に寄せる。
+ */
+export const DEFAULT_SHARE_APP_ORIGIN = "https://www.uniterz.app";
+const APEX_SHARE_HOST = "uniterz.app";
+const CANONICAL_SHARE_HOST = "www.uniterz.app";
 
 /**
  * App Store 商品ページ。
@@ -19,6 +25,13 @@ export function getAppStoreShareUrl(): string | null {
     "";
   const raw = (fromEnv || APP_STORE_SHARE_URL).trim();
   return raw || null;
+}
+
+/** App Store URL の `idXXXX` 部分（Smart App Banner 用）。未設定なら null */
+export function getAppStoreAppId(): string | null {
+  const url = getAppStoreShareUrl();
+  const m = url?.match(/\/id(\d+)/);
+  return m?.[1] ?? null;
 }
 
 /**
@@ -59,7 +72,17 @@ function isLocalDevOrigin(raw: string): boolean {
 
 export function resolveShareAppOrigin(base?: string | null): string {
   const trimmed = base?.trim().replace(/\/$/, "");
-  return trimmed || DEFAULT_SHARE_APP_ORIGIN;
+  if (!trimmed) return DEFAULT_SHARE_APP_ORIGIN;
+  try {
+    const parsed = new URL(trimmed.includes("://") ? trimmed : `https://${trimmed}`);
+    if (parsed.hostname === APEX_SHARE_HOST) {
+      parsed.hostname = CANONICAL_SHARE_HOST;
+      return parsed.origin;
+    }
+  } catch {
+    return trimmed;
+  }
+  return trimmed;
 }
 
 /**
