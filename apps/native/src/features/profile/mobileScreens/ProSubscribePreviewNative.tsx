@@ -1,6 +1,6 @@
 /**
  * Web `ProSubscribePreview`（`/mobile/pro/subscribe`）本番 Get Pro 相当。
- * プラン選択アコーディオン → お試しモーダル → 模擬購入 → 成功。
+ * プラン選択アコーディオン → お試しモーダル → ストア購入（useNativeIap・サーバー検証）→ 成功。
  */
 import type { ComponentProps } from "react";
 import { useCallback, useEffect, useState } from "react";
@@ -46,20 +46,20 @@ import {
   planDiffRowLabel,
   planDiffTitle,
   proLegalLinkLabel,
-  proSubscribeAfterTrialNote,
+  proSubscribeAfterTrialPriceNote,
   proSubscribeBackLabel,
-  proSubscribeBuyPreviewLabel,
+  proSubscribeBuyLabel,
   proSubscribeBuyWithoutTrialLabel,
   proSubscribeCancelInTrialValue,
   proSubscribeChooseSkinLabel,
   proSubscribeFreeThenPrefix,
   proSubscribeIncludedTitle,
   proSubscribeLead,
-  proSubscribeNoTrialMicroNote,
+  proSubscribeNoTrialLiveMicroNote,
   proSubscribeProcessingLabel,
   proSubscribeStartTrialLabel,
   proSubscribeSuccessTitle,
-  proSubscribeTrialMicroNote,
+  proSubscribeTrialLiveMicroNote,
   proSubscribeTrialModalPoints,
   proSubscribeTrialModalSelected,
   proSubscribeTrialModalTitle,
@@ -200,7 +200,16 @@ export default function ProSubscribePreviewNative({
   const [checkoutKind, setCheckoutKind] = useState<CheckoutKind>("paid");
   const [trialModalOpen, setTrialModalOpen] = useState(false);
   const selected = planId ? proSubscribePreviewPlanById(planId) : null;
-  const { ready: iapReady, purchasing: iapBusy, restore } = useNativeIap();
+  const {
+    ready: iapReady,
+    purchasing: iapBusy,
+    purchase,
+    restore,
+    trialOfferAvailable,
+    storePrice,
+  } = useNativeIap();
+  const priceFor = (id: ProSubscribePreviewPlanId) =>
+    storePrice(id) ?? proSubscribePreviewPlanById(id).price;
   const { bottomContentReserveY } = useBottomTabBarInsets();
   const scrollPadBottom = bottomContentReserveY + 24;
 
@@ -221,19 +230,26 @@ export default function ProSubscribePreviewNative({
     setPlanId((prev) => (prev === id ? null : id));
   }
 
-  function startPaid() {
+  async function checkout(kind: CheckoutKind) {
     if (!planId || phase === "purchasing") return;
-    setCheckoutKind("paid");
+    setCheckoutKind(kind);
     setPhase("purchasing");
-    setTimeout(() => setPhase("success"), 900);
+    const ok = await purchase(planId, { trial: kind === "trial" });
+    setPhase(ok ? "success" : "plans");
+  }
+
+  function startPaid() {
+    void checkout("paid");
   }
 
   function confirmTrial() {
-    if (!planId) return;
     setTrialModalOpen(false);
-    setCheckoutKind("trial");
-    setPhase("purchasing");
-    setTimeout(() => setPhase("success"), 900);
+    void checkout("trial");
+  }
+
+  /** ストアが「お試し対象外」と返したプランはお試し導線を出さない（判定不可のときは出す） */
+  function showTrialFor(id: ProSubscribePreviewPlanId): boolean {
+    return trialAvailableFor(id) && trialOfferAvailable(id) !== false;
   }
 
   if (phase === "success" && selected && planId) {
@@ -251,7 +267,7 @@ export default function ProSubscribePreviewNative({
             lang={lang}
             planId={planId}
             planLabel={selected.label}
-            price={selected.price}
+            price={priceFor(planId)}
             period={
               planId === "season" ? seasonLabel : L(lang, selected.period)
             }
@@ -350,7 +366,7 @@ export default function ProSubscribePreviewNative({
                       </View>
 
                       <View style={styles.priceRow}>
-                        <Text style={styles.price}>{plan.price}</Text>
+                        <Text style={styles.price}>{priceFor(plan.id)}</Text>
                         <Text style={styles.period}>
                           {plan.id === "season"
                             ? seasonLabel
@@ -402,7 +418,7 @@ export default function ProSubscribePreviewNative({
                           </View>
                         ))}
 
-                        {trialAvailableFor(plan.id) ? (
+                        {showTrialFor(plan.id) ? (
                           <View style={styles.inlineCta}>
                             <Pressable
                               disabled={phase === "purchasing"}
@@ -428,9 +444,9 @@ export default function ProSubscribePreviewNative({
                               </Text>
                             </Pressable>
                             <Text style={styles.afterTrial}>
-                              {proSubscribeAfterTrialNote(
+                              {proSubscribeAfterTrialPriceNote(
                                 lang,
-                                plan.id === "weekly" ? "weekly" : "monthly"
+                                `${priceFor(plan.id)}${L(lang, plan.period)}`
                               )}
                             </Text>
                             <Pressable
@@ -460,7 +476,7 @@ export default function ProSubscribePreviewNative({
                               )}
                             </Pressable>
                             <Text style={styles.micro}>
-                              {proSubscribeTrialMicroNote(lang)}
+                              {proSubscribeTrialLiveMicroNote(lang)}
                             </Text>
                           </View>
                         ) : (
@@ -485,14 +501,11 @@ export default function ProSubscribePreviewNative({
                               >
                                 {phase === "purchasing"
                                   ? proSubscribeProcessingLabel(lang)
-                                  : proSubscribeBuyPreviewLabel(
-                                      lang,
-                                      plan.label
-                                    )}
+                                  : proSubscribeBuyLabel(lang, plan.label)}
                               </Text>
                             </Pressable>
                             <Text style={styles.micro}>
-                              {proSubscribeNoTrialMicroNote(lang)}
+                              {proSubscribeNoTrialLiveMicroNote(lang)}
                             </Text>
                           </View>
                         )}
@@ -526,6 +539,7 @@ export default function ProSubscribePreviewNative({
           <TrialExplainModal
             lang={lang}
             plan={selected}
+            price={priceFor(selected.id)}
             onClose={() => setTrialModalOpen(false)}
             onConfirm={confirmTrial}
           />
@@ -636,15 +650,17 @@ function PurchaseFootnotesNative({
 function TrialExplainModal({
   lang,
   plan,
+  price,
   onClose,
   onConfirm,
 }: {
   lang: import("@/lib/i18n/localize").LocalizedLang;
   plan: ProSubscribePreviewPlan;
+  price: string;
   onClose: () => void;
   onConfirm: () => void;
 }) {
-  const afterPrice = `${plan.price}${L(lang, plan.period)}`;
+  const afterPrice = `${price}${L(lang, plan.period)}`;
   const points = proSubscribeTrialModalPoints(lang, plan.label, afterPrice);
 
   return (

@@ -458,6 +458,65 @@ export function proSubscribeNoTrialMicroNote(
   });
 }
 
+/** 本番ストア購入用。`priceWithPeriod` はストアの現地価格（例: 「¥780/月」「$5.49/month」） */
+export function proSubscribeAfterTrialPriceNote(
+  lang: LocalizedLang | string,
+  priceWithPeriod: string
+): string {
+  return L(asLang(lang), {
+    ja: `お試し後は ${priceWithPeriod}。期間中の解約で課金なし。`,
+    en: `Then ${priceWithPeriod}. Cancel during trial — no charge.`,
+    ko: `체험 후 ${priceWithPeriod}. 기간 중 해지하면 과금 없음.`,
+    zh: `试用后 ${priceWithPeriod}。期间取消不扣费。`,
+    es: `Después ${priceWithPeriod}. Cancela en la prueba: sin cargo.`,
+    pt: `Depois ${priceWithPeriod}. Cancele no teste: sem cobrança.`,
+    fr: `Ensuite ${priceWithPeriod}. Annulez pendant l’essai : aucun débit.`,
+  });
+}
+
+export function proSubscribeBuyLabel(
+  lang: LocalizedLang | string,
+  planLabel: string
+): string {
+  return L(asLang(lang), {
+    ja: `${planLabel} を購入`,
+    en: `Buy ${planLabel}`,
+    ko: `${planLabel} 구매`,
+    zh: `购买 ${planLabel}`,
+    es: `Comprar ${planLabel}`,
+    pt: `Comprar ${planLabel}`,
+    fr: `Acheter ${planLabel}`,
+  });
+}
+
+export function proSubscribeTrialLiveMicroNote(
+  lang: LocalizedLang | string
+): string {
+  return L(asLang(lang), {
+    ja: "※ 初回のみ。App Store / Google Play のサブスク管理から解約できます。",
+    en: "※ First time only. Cancel in App Store / Google Play subscriptions.",
+    ko: "※ 최초 1회만. App Store / Google Play 구독 관리에서 해지할 수 있습니다.",
+    zh: "※ 仅限首次。可在 App Store / Google Play 订阅管理中取消。",
+    es: "※ Solo la primera vez. Cancela en las suscripciones de App Store / Google Play.",
+    pt: "※ Só na 1ª vez. Cancele nas assinaturas da App Store / Google Play.",
+    fr: "※ 1re fois seulement. Annulez dans les abonnements App Store / Google Play.",
+  });
+}
+
+export function proSubscribeNoTrialLiveMicroNote(
+  lang: LocalizedLang | string
+): string {
+  return L(asLang(lang), {
+    ja: "※ 7日無料は Weekly / Monthly のみ。Season は1回払いで、自動更新されません。",
+    en: "※ 7-day trial is Weekly / Monthly only. Season is a one-time payment and does not renew.",
+    ko: "※ 7일 무료는 Weekly / Monthly 전용. Season은 1회 결제이며 자동 갱신되지 않습니다.",
+    zh: "※ 7 天免费仅限 Weekly / Monthly。Season 为一次性付款，不会自动续订。",
+    es: "※ La prueba de 7 días es solo Weekly / Monthly. Season es un pago único y no se renueva.",
+    pt: "※ O teste de 7 dias é só Weekly / Monthly. Season é pagamento único e não renova.",
+    fr: "※ L’essai de 7 jours ne concerne que Weekly / Monthly. Season est un paiement unique, sans renouvellement.",
+  });
+}
+
 export function proSubscribeTrialModalTitle(
   lang: LocalizedLang | string
 ): string {

@@ -33,14 +33,51 @@ const API_BASE = process.env.EXPO_PUBLIC_UNITERZ_API_BASE_URL?.replace(/\/$/, ""
 
 type CatalogItem = Subscription | Product;
 
-/** Google Play 定期購入は offerToken 必須。無料トライアル等の特典（offerId あり）は対象者にだけ返るので優先 */
-function androidOfferToken(products: CatalogItem[], sku: string): string | null {
+function androidSubscriptionOffers(products: CatalogItem[], sku: string) {
   const item = products.find((p) => p.productId === sku) as
     | Partial<SubscriptionAndroid>
     | undefined;
-  const offers = item?.subscriptionOfferDetails ?? [];
-  const offer = offers.find((o) => o.offerId != null) ?? offers[0];
+  return item?.subscriptionOfferDetails ?? [];
+}
+
+/**
+ * Google Play 定期購入は offerToken 必須。
+ * 無料トライアル（offerId あり）は対象者にだけ返る。trial=false は基本プラン（offerId なし）。
+ */
+function androidOfferToken(
+  products: CatalogItem[],
+  sku: string,
+  trial: boolean
+): string | null {
+  const offers = androidSubscriptionOffers(products, sku);
+  const offer = trial
+    ? offers.find((o) => o.offerId != null)
+    : (offers.find((o) => o.offerId == null) ?? offers[0]);
   return offer?.offerToken ?? null;
+}
+
+/** ストアの現地価格。定期購入は基本プランの最後の課金フェーズ（トライアル後の通常価格） */
+function catalogPrice(products: CatalogItem[], sku: string): string | null {
+  const item = products.find((p) => p.productId === sku) as
+    | Record<string, unknown>
+    | undefined;
+  if (!item) return null;
+  if (typeof item.localizedPrice === "string" && item.localizedPrice) {
+    return item.localizedPrice;
+  }
+  const oneTime = item.oneTimePurchaseOfferDetails as
+    | { formattedPrice?: string }
+    | undefined;
+  if (oneTime?.formattedPrice) return oneTime.formattedPrice;
+  const offers = item.subscriptionOfferDetails as
+    | Array<{
+        offerId?: string | null;
+        pricingPhases?: { pricingPhaseList?: Array<{ formattedPrice?: string }> };
+      }>
+    | undefined;
+  const base = offers?.find((o) => o.offerId == null) ?? offers?.[0];
+  const phases = base?.pricingPhases?.pricingPhaseList ?? [];
+  return phases[phases.length - 1]?.formattedPrice ?? null;
 }
 
 export function useNativeIap() {
@@ -147,18 +184,38 @@ export function useNativeIap() {
     };
   }, [ready, verifyOnServer]);
 
+  /** Android はストアがトライアル対象者にだけ特典を返す。iOS / 未取得は null（判定不可） */
+  const trialOfferAvailable = useCallback(
+    (plan: ProIapPlan): boolean | null => {
+      if (!isSubscriptionPlan(plan)) return false;
+      if (Platform.OS !== "android" || !ready) return null;
+      return androidOfferToken(products, productIdForPlan(plan), true) != null;
+    },
+    [ready, products]
+  );
+
   const purchase = useCallback(
-    async (plan: ProIapPlan) => {
-      if (!ready || purchasing) return false;
+    async (plan: ProIapPlan, opts?: { trial?: boolean }) => {
+      if (purchasing) return false;
+      if (!ready) {
+        cyberAlert("購入エラー", "ストアに接続できませんでした。時間をおいて再度お試しください。");
+        return false;
+      }
       setPurchasing(true);
       try {
         const sku = productIdForPlan(plan);
         let offerToken: string | null = null;
         if (Platform.OS === "android" && isSubscriptionPlan(plan)) {
-          offerToken = androidOfferToken(products, sku);
+          const trial = opts?.trial === true;
+          offerToken = androidOfferToken(products, sku, trial);
           if (!offerToken) {
             setPurchasing(false);
-            cyberAlert("購入エラー", "プラン情報を取得できませんでした。");
+            cyberAlert(
+              "購入エラー",
+              trial
+                ? "このアカウントでは無料お試しを利用できません。お試しなしで購入してください。"
+                : "プラン情報を取得できませんでした。"
+            );
             return false;
           }
         }
@@ -212,5 +269,19 @@ export function useNativeIap() {
     }
   }, [ready, purchasing, verifyOnServer]);
 
-  return { ready, products, purchasing, purchase, restore };
+  const storePrice = useCallback(
+    (plan: ProIapPlan): string | null =>
+      catalogPrice(products, productIdForPlan(plan)),
+    [products]
+  );
+
+  return {
+    ready,
+    products,
+    purchasing,
+    purchase,
+    restore,
+    trialOfferAvailable,
+    storePrice,
+  };
 }
