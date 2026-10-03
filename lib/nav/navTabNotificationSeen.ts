@@ -1,4 +1,6 @@
 /** ナビタブ通知：最後にランキング／リザルトを見た時点（ユーザー別 localStorage） */
+import { dispatchWindowEvent } from "../dom/dispatchWindowEvent";
+
 const RANKING_SEEN_KEY = "uniterz:navSeen:rankingUpdatedAtMs:v1";
 const RESULT_SEEN_KEY = "uniterz:navSeen:resultSettledAtMs:v1";
 
@@ -91,8 +93,8 @@ export function markNavResultSeen(uid: string, settledAtMs: number): void {
 
 function notifyNavTabNotificationSeenChanged(): void {
   if (typeof window === "undefined") return;
-  window.dispatchEvent(new CustomEvent(NAV_TAB_NOTIFICATION_SEEN_CHANGED_EVENT));
+  dispatchWindowEvent(NAV_TAB_NOTIFICATION_SEEN_CHANGED_EVENT, null);
   queueMicrotask(() => {
-    window.dispatchEvent(new CustomEvent(NAV_TAB_NOTIFICATION_SEEN_CHANGED_EVENT));
+    dispatchWindowEvent(NAV_TAB_NOTIFICATION_SEEN_CHANGED_EVENT, null);
   });
 }

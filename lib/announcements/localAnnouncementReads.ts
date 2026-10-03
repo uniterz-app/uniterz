@@ -1,4 +1,6 @@
 /** 未ログイン時のお知らせ既読 ID（端末ローカル） */
+import { dispatchWindowEvent } from "../dom/dispatchWindowEvent";
+
 export const ANNOUNCEMENT_READ_IDS_STORAGE_KEY =
   "uniterz_announcement_read_ids_v1";
 
@@ -25,7 +27,7 @@ export function addLocalAnnouncementReadId(announcementId: string): void {
   if (!announcementId || typeof window === "undefined") return;
   const s = getLocalAnnouncementReadIds();
   if (s.has(announcementId)) {
-    window.dispatchEvent(new CustomEvent(ANNOUNCEMENT_READS_CHANGED_EVENT));
+    dispatchWindowEvent(ANNOUNCEMENT_READS_CHANGED_EVENT, null);
     return;
   }
   s.add(announcementId);
@@ -33,5 +35,5 @@ export function addLocalAnnouncementReadId(announcementId: string): void {
     ANNOUNCEMENT_READ_IDS_STORAGE_KEY,
     JSON.stringify([...s])
   );
-  window.dispatchEvent(new CustomEvent(ANNOUNCEMENT_READS_CHANGED_EVENT));
+  dispatchWindowEvent(ANNOUNCEMENT_READS_CHANGED_EVENT, null);
 }

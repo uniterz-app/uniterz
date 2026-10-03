@@ -1,3 +1,5 @@
+import { dispatchWindowEvent } from "../dom/dispatchWindowEvent";
+
 /** プロフィール保存後など、累積ランキングの再取得を促す（useCumulativeRankingsBulk が購読） */
 export const CUMULATIVE_RANKING_INVALIDATE_EVENT = "cumulative-ranking:invalidate";
 
@@ -124,8 +126,7 @@ export function dispatchCumulativeRankingInvalidate(): void {
       /* ignore */
     }
   }
-  if (typeof window === "undefined") return;
-  window.dispatchEvent(new Event(CUMULATIVE_RANKING_INVALIDATE_EVENT));
+  dispatchWindowEvent(CUMULATIVE_RANKING_INVALIDATE_EVENT);
 }
 
 export function dispatchCumulativeRankingPatchMyCountry(
@@ -140,13 +141,7 @@ export function dispatchCumulativeRankingPatchMyCountry(
       /* ignore */
     }
   }
-  if (typeof window === "undefined") return;
-  window.dispatchEvent(
-    new CustomEvent<CumulativeRankingPatchMyCountryDetail>(
-      CUMULATIVE_RANKING_PATCH_MY_COUNTRY_EVENT,
-      { detail }
-    )
-  );
+  dispatchWindowEvent(CUMULATIVE_RANKING_PATCH_MY_COUNTRY_EVENT, detail);
 }
 
 export function dispatchCumulativeRankingPatchMyProSkin(
@@ -164,11 +159,5 @@ export function dispatchCumulativeRankingPatchMyProSkin(
       /* ignore */
     }
   }
-  if (typeof window === "undefined") return;
-  window.dispatchEvent(
-    new CustomEvent<CumulativeRankingPatchMyProSkinDetail>(
-      CUMULATIVE_RANKING_PATCH_MY_PRO_SKIN_EVENT,
-      { detail }
-    )
-  );
+  dispatchWindowEvent(CUMULATIVE_RANKING_PATCH_MY_PRO_SKIN_EVENT, detail);
 }
