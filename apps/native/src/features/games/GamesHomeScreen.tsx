@@ -2483,6 +2483,7 @@ export default function GamesHomeScreen({
                     tabNavigation.navigate("ProfileTab", {
                       screen: "ProfileHome",
                       params: {},
+                      pop: true,
                     });
                   })();
                   return;
@@ -2528,6 +2529,7 @@ export default function GamesHomeScreen({
                     tabNavigation.navigate("ProfileTab", {
                       screen: "ProfileHome",
                       params: {},
+                      pop: true,
                     });
                   })();
                 }}

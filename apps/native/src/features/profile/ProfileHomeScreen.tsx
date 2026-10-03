@@ -334,6 +334,7 @@ export default function ProfileHomeScreen({
       tabNavigation.navigate("ProfileTab", {
         screen: "ProfileHome",
         params: { openMarkList: true },
+        pop: true,
       });
       return;
     }

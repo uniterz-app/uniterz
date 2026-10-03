@@ -14,5 +14,9 @@ export function navigateNativeTabForHorizonStep(
     navigation.navigate("LeaderboardsTab", { screen: "LeaderboardsHome" });
     return;
   }
-  navigation.navigate("ProfileTab", { screen: "ProfileHome", params: {} });
+  navigation.navigate("ProfileTab", {
+    screen: "ProfileHome",
+    params: {},
+    pop: true,
+  });
 }

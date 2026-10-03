@@ -22,6 +22,7 @@ import {
   peekProfileUserDocNative,
 } from "../features/profile/profileUserDocCacheNative";
 import { prefetchNativeProfileBadges } from "../features/profile/useNativeProfileBadges";
+import { clearSideMenuResume } from "../features/profile/sideMenuResumeNative";
 import {
   prefetchNativeProfileStats,
   seedNativeProfileStatsFromUserDoc,
@@ -173,6 +174,9 @@ export default function AppTabBar({ state, descriptors, navigation }: BottomTabB
 
                   const activeTabName = state.routes[state.index]?.name;
 
+                  /** タブ移動はメニュー経由の BACK ではない。戻り先でメニューを開き直さない */
+                  clearSideMenuResume();
+
                   /**
                    * Games スタック reset は同期で重い（特に Android）。
                    * Profile など遷移先の初回マウントと競合させない。
@@ -193,9 +197,11 @@ export default function AppTabBar({ state, descriptors, navigation }: BottomTabB
                   }
 
                   if (route.name === "ProfileTab") {
+                    /** v7 の navigate は既存画面へ戻らず push する。ルートの ProfileHome まで戻す */
                     navigation.navigate("ProfileTab", {
                       screen: "ProfileHome",
                       params: {},
+                      pop: true,
                     });
                     return;
                   }

@@ -8,6 +8,11 @@ export function requestSideMenuResume(): void {
   resumePending = true;
 }
 
+/** タブ移動など BACK 以外で離れたとき、予約を捨てる */
+export function clearSideMenuResume(): void {
+  resumePending = false;
+}
+
 export function consumeSideMenuResume(): boolean {
   if (!resumePending) return false;
   resumePending = false;

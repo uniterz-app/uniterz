@@ -60,7 +60,7 @@ export function navigateFromPushNotificationData(data: PushNotificationData) {
       case "unit_reward":
         navigationRef.navigate("Main", {
           screen: "ProfileTab",
-          params: { screen: "ProfileHome" },
+          params: { screen: "ProfileHome", pop: true },
         });
         return;
       case "weekly_report":
@@ -70,6 +70,7 @@ export function navigateFromPushNotificationData(data: PushNotificationData) {
           params: {
             screen: "ProfileHome",
             params: { openReportTab: true },
+            pop: true,
           },
         });
         return;
