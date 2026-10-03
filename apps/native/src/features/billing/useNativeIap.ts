@@ -15,6 +15,7 @@ import {
   type Product,
   type ProductPurchase,
   type Subscription,
+  type SubscriptionAndroid,
   type PurchaseError,
 } from "react-native-iap";
 import {
@@ -31,6 +32,16 @@ import { invalidateProfileUserDocNative } from "../profile/profileUserDocCacheNa
 const API_BASE = process.env.EXPO_PUBLIC_UNITERZ_API_BASE_URL?.replace(/\/$/, "") ?? "";
 
 type CatalogItem = Subscription | Product;
+
+/** Google Play 定期購入は offerToken 必須。無料トライアル等の特典（offerId あり）は対象者にだけ返るので優先 */
+function androidOfferToken(products: CatalogItem[], sku: string): string | null {
+  const item = products.find((p) => p.productId === sku) as
+    | Partial<SubscriptionAndroid>
+    | undefined;
+  const offers = item?.subscriptionOfferDetails ?? [];
+  const offer = offers.find((o) => o.offerId != null) ?? offers[0];
+  return offer?.offerToken ?? null;
+}
 
 export function useNativeIap() {
   const [ready, setReady] = useState(false);
@@ -65,7 +76,12 @@ export function useNativeIap() {
       }),
     });
     if (!res.ok) throw new Error("verify failed");
-    await finishTransaction({ purchase, isConsumable: false });
+    // 復元時の Android 購入は承認済みで、finishTransaction が reject する
+    if (Platform.OS !== "android" || !purchase.isAcknowledgedAndroid) {
+      await finishTransaction({ purchase, isConsumable: false }).catch((e) => {
+        if (Platform.OS !== "android") throw e;
+      });
+    }
     const uid = user.uid;
     if (uid) invalidateProfileUserDocNative(uid);
   }, []);
@@ -137,11 +153,25 @@ export function useNativeIap() {
       setPurchasing(true);
       try {
         const sku = productIdForPlan(plan);
+        let offerToken: string | null = null;
+        if (Platform.OS === "android" && isSubscriptionPlan(plan)) {
+          offerToken = androidOfferToken(products, sku);
+          if (!offerToken) {
+            setPurchasing(false);
+            cyberAlert("購入エラー", "プラン情報を取得できませんでした。");
+            return false;
+          }
+        }
         return await new Promise<boolean>((resolve) => {
           pendingResolveRef.current = resolve;
-          const req = isSubscriptionPlan(plan)
-            ? requestSubscription({ sku })
-            : requestPurchase({ sku });
+          const req =
+            Platform.OS === "android"
+              ? offerToken
+                ? requestSubscription({ subscriptionOffers: [{ sku, offerToken }] })
+                : requestPurchase({ skus: [sku] })
+              : isSubscriptionPlan(plan)
+                ? requestSubscription({ sku })
+                : requestPurchase({ sku });
           void req.catch(() => {
             pendingResolveRef.current = null;
             setPurchasing(false);
@@ -154,7 +184,7 @@ export function useNativeIap() {
         return false;
       }
     },
-    [ready, purchasing]
+    [ready, purchasing, products]
   );
 
   const restore = useCallback(async () => {

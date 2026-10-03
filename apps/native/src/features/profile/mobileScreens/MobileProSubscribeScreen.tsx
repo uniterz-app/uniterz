@@ -35,9 +35,25 @@ function catalogPriceLabel(products: unknown[], productId: string, fallback: str
   if (!item) return fallback;
   const price =
     (typeof item.localizedPrice === "string" && item.localizedPrice) ||
+    androidCatalogPrice(item) ||
     (typeof item.price === "string" && item.price) ||
     null;
   return price ?? fallback;
+}
+
+/** Google Play: 定期購入は基本プランの最後の課金フェーズ（トライアル後の通常価格）、1 回限りは oneTimePurchaseOfferDetails */
+function androidCatalogPrice(item: Record<string, unknown>): string | null {
+  const oneTime = item.oneTimePurchaseOfferDetails as { formattedPrice?: string } | undefined;
+  if (oneTime?.formattedPrice) return oneTime.formattedPrice;
+  const offers = item.subscriptionOfferDetails as
+    | Array<{
+        offerId?: string | null;
+        pricingPhases?: { pricingPhaseList?: Array<{ formattedPrice?: string }> };
+      }>
+    | undefined;
+  const base = offers?.find((o) => o.offerId == null) ?? offers?.[0];
+  const phases = base?.pricingPhases?.pricingPhaseList ?? [];
+  return phases[phases.length - 1]?.formattedPrice ?? null;
 }
 
 type Props = {
