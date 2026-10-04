@@ -2790,7 +2790,12 @@ export default function GamesHomeScreen({
             tabNavigation.navigate("ProfileTab", { screen: "ProSubscribe" });
           });
         }}
-        spectatorStartedNoPost={predictSpectatorStartedNoPost}
+        spectatorStartedNoPost={
+          predictSpectatorStartedNoPost ||
+          (selectedGame != null &&
+            isGameStarted(selectedGame) &&
+            !isEditingPrediction)
+        }
         predictionEditLockedAfterKickoff={
           selectedGame != null && isGameStarted(selectedGame)
         }
