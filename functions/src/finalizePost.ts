@@ -6,6 +6,7 @@ import {
 } from "./computePostSettlement";
 import type { UpdatedUserStreakResult } from "./updateUserStreak";
 import { isNbaPickupGame } from "./rankings/isPickupGame";
+import { isNbaPreseasonPhase } from "./rankings/nbaSeason";
 import type { ResultScoreRelAgg } from "./aggregateGamePointsDistribution";
 
 export async function finalizePost({
@@ -178,6 +179,8 @@ export async function finalizePost({
         : null,
     wcStage: null,
   });
+
+  if (isNbaPreseasonPhase(game?.seasonPhase)) return;
 
   const uid = p.authorUid;
   const exactHit = Boolean((baseScore as { exactMatch?: boolean }).exactMatch);

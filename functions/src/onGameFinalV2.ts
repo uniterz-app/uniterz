@@ -26,6 +26,7 @@ import {
   resolveActualOutcomeForUpset,
   type SettlementGameInput,
 } from "./settlementGame";
+import { isNbaPreseasonPhase } from "./rankings/nbaSeason";
 
 const db = () => getFirestore();
 
@@ -95,12 +96,14 @@ export const onGameFinalV2 = onDocumentWritten(
     let streakResultMap = new Map();
 
     if (becameFinal) {
-      streakResultMap = await updateUserStreak({
-        db: firestore,
-        gameId,
-        settlementGame,
-        postsSnap,
-      });
+      if (!isNbaPreseasonPhase(game.seasonPhase)) {
+        streakResultMap = await updateUserStreak({
+          db: firestore,
+          gameId,
+          settlementGame,
+          postsSnap,
+        });
+      }
 
       const skipTeamSeasonRecord = isExemptFromTeamSeasonRecord(game.knockout);
 

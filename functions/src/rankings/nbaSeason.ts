@@ -94,6 +94,11 @@ export function normalizeNbaSeasonPhase(v: unknown): NbaSeasonPhase {
   return null;
 }
 
+/** プレシーズンは採点のみ。通算・ランキング・連勝の集計には入れない */
+export function isNbaPreseasonPhase(v: unknown): boolean {
+  return normalizeNbaSeasonPhase(v) === "preseason";
+}
+
 /**
  * NBA ランキング日次・累積バケットキー。
  * regular / 未設定 → rankingBySeason、playoffs → rankingByNbaPlayoffs、
