@@ -90,6 +90,7 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: "700",
+    textAlign: "center",
   },
   ghostLabel: {
     color: "rgba(255,255,255,0.9)",

@@ -1,10 +1,11 @@
 "use client";
 
-import type { CSSProperties } from "react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import HalftoneJerseyMark from "@/app/component/games/HalftoneJerseyMark";
 import CountryFlag from "@/app/component/games/CountryFlag";
-import { jp } from "@/lib/fonts";
+import MatchListLineFrame from "@/app/component/games/MatchListLineFrame";
+import UniterzLogoFlat from "@/app/component/units/UniterzLogoFlat";
+import { jp, nameOxanium } from "@/lib/fonts";
 import { resultStatsMetricNumClass } from "@/lib/fonts";
 import type { League } from "@/lib/leagues";
 import { normalizeLeague } from "@/lib/leagues";
@@ -125,6 +126,62 @@ function broadcastDeckTitle(
   return msg.predict.nextGame;
 }
 
+/** 一覧の線枠カードと同じ HOME / AWAY 列 */
+function TeamColumn({
+  sideLabel,
+  isWc,
+  teamId,
+  jersey,
+  jerseyEnd,
+  title,
+  recordLine,
+}: {
+  sideLabel: "HOME" | "AWAY";
+  isWc: boolean;
+  teamId?: string;
+  jersey: string;
+  jerseyEnd?: string;
+  title: string;
+  recordLine: string | null;
+}) {
+  return (
+    <div className="flex min-w-0 flex-col items-center text-center">
+      <span
+        className={`${nameOxanium.className} text-[13px] font-bold uppercase leading-[15px] tracking-[0.07em] text-white/85`}
+      >
+        {sideLabel}
+      </span>
+      <div className="mt-0.5 flex h-[3.15rem] w-[3.15rem] items-center justify-center">
+        {isWc ? (
+          <CountryFlag
+            teamId={teamId ?? null}
+            className="h-[2.25rem] w-[3.3rem] rounded-none"
+          />
+        ) : (
+          <HalftoneJerseyMark
+            accent={jersey}
+            accentEnd={jerseyEnd}
+            className="h-[3.15rem] w-[3.15rem]"
+          />
+        )}
+      </div>
+      <p
+        className={`${nameOxanium.className} mt-1 max-w-full truncate text-[13px] font-semibold uppercase leading-[15px] tracking-[0.05em] text-white`}
+        style={{ transform: "skewX(-6deg)" }}
+      >
+        {title}
+      </p>
+      {recordLine ? (
+        <p
+          className={`${resultStatsMetricNumClass} max-w-full truncate text-[11px] leading-[13px] tabular-nums text-slate-200/70`}
+        >
+          {recordLine}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 export default function PredictNextGameModal({
   open,
   language,
@@ -147,10 +204,30 @@ export default function PredictNextGameModal({
   const m = t(language);
   const isEn = language === "en";
   const [dontShowAgain, setDontShowAgain] = useState(false);
+  const [choice, setChoice] = useState<"yes" | "no">("yes");
+  const commitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    if (open) setDontShowAgain(false);
+    if (open) {
+      setDontShowAgain(false);
+      setChoice("yes");
+    }
+    return () => {
+      if (commitTimerRef.current) clearTimeout(commitTimerRef.current);
+      commitTimerRef.current = null;
+    };
   }, [open]);
+
+  /** 選択の点灯を見せてから閉じる */
+  const commitChoice = (next: "yes" | "no") => {
+    if (commitTimerRef.current) return;
+    setChoice(next);
+    commitTimerRef.current = setTimeout(() => {
+      commitTimerRef.current = null;
+      if (next === "yes") onYes(dontShowAgain);
+      else onNo(dontShowAgain);
+    }, 160);
+  };
 
   useEffect(() => {
     if (!open) return;
@@ -214,239 +291,143 @@ export default function PredictNextGameModal({
     no: m.predict.predictNextNo,
   };
 
-  const gridBgStyle: CSSProperties = {
-    backgroundColor: "#080c12",
-    backgroundImage: [
-      "linear-gradient(to right, rgba(255,255,255,0.038) 1px, transparent 1px)",
-      "linear-gradient(to bottom, rgba(255,255,255,0.038) 1px, transparent 1px)",
-      "radial-gradient(ellipse 120% 80% at 50% -20%, rgba(34,211,238,0.07), transparent 55%)",
-    ].join(","),
-    backgroundSize: "9px 9px, 9px 9px, auto",
-  };
-
   return (
     <div
-      className="fixed inset-0 z-100010 flex min-h-dvh items-center justify-center bg-black/72 p-3 backdrop-blur-[3px]"
+      className="fixed inset-0 z-100010 flex min-h-dvh items-center justify-center bg-black/62 px-5 backdrop-blur-sm"
       role="dialog"
       aria-modal
       aria-labelledby="predict-next-title"
+      aria-describedby="predict-next-sub"
       onClick={(e) => {
         if (e.target === e.currentTarget) onNo(dontShowAgain);
       }}
     >
       <div
         className={[
-          "relative w-full max-w-[21rem] overflow-hidden rounded-2xl sm:max-w-[22rem]",
-          "border border-white/[0.13]",
-          "bg-[linear-gradient(168deg,rgba(255,255,255,0.07)_0%,rgba(255,255,255,0.025)_18%,rgba(6,11,18,0.96)_45%,rgba(3,7,12,0.99)_100%)]",
-          "px-3 py-3 shadow-[0_28px_72px_rgba(0,0,0,0.72),0_0_0_1px_rgba(255,255,255,0.04)_inset,0_0_48px_-12px_rgba(34,211,238,0.14)]",
-          /* モバイルのみ縦中央から上へ */
-          "max-sm:-translate-y-8 sm:translate-y-0",
+          "relative w-full max-w-[360px] rounded-none border-x border-b border-cyan-200/35 px-[18px] pb-[18px] pt-7",
+          "bg-[rgba(5,8,14,0.7)]",
+          "backdrop-blur-xl shadow-[0_20px_48px_rgba(0,0,0,0.55)]",
           jp.className,
         ].join(" ")}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* モーダル上端のシアンライン */}
+        {/* 上辺の枠線はロゴの左右で切る */}
+        <div className="pointer-events-none absolute inset-x-0 top-0 flex h-px" aria-hidden>
+          <span className="flex-1 bg-cyan-200/35" />
+          <span className="w-[128px]" />
+          <span className="flex-1 bg-cyan-200/35" />
+        </div>
         <div
-          className="pointer-events-none absolute inset-x-4 top-0 h-px bg-linear-to-r from-transparent via-cyan-400/55 to-transparent sm:inset-x-5"
+          className="pointer-events-none absolute left-1/2 top-0 z-10 w-[108px] -translate-x-1/2 -translate-y-1/2 text-white"
           aria-hidden
-        />
-        <div className="flex flex-col items-stretch">
-          <h2
-            id="predict-next-title"
-            className="relative mb-2 text-center text-[12px] font-bold leading-tight text-white sm:mb-2.5 sm:text-[13px]"
-          >
-            {txt.title}
-          </h2>
-          <div
-            className="pointer-events-none mb-2 h-px w-full bg-linear-to-r from-transparent via-cyan-400/22 to-transparent"
-            aria-hidden
-          />
+        >
+          <UniterzLogoFlat width="100%" fill="currentColor" title="UNITERZ" />
+        </div>
 
-          {/* グラデ縁＋グリッド地の中継カード */}
-          <div
-            className="rounded-xl bg-linear-to-br from-cyan-400/45 via-white/[0.14] to-blue-600/35 p-px shadow-[0_16px_40px_rgba(0,0,0,0.5)]"
-            aria-describedby="predict-next-sub"
-          >
-            <div
-              className="relative overflow-hidden rounded-[11px] ring-1 ring-black/50"
-              style={gridBgStyle}
-            >
-              <div
-                className="pointer-events-none absolute inset-0 bg-[radial-gradient(95%_65%_at_50%_0%,rgba(255,255,255,0.09),transparent_52%)]"
-                aria-hidden
-              />
-              <div
-                className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(34,211,238,0.04)_0%,transparent_28%,transparent_72%,rgba(0,0,0,0.35)_100%)]"
-                aria-hidden
-              />
-            <div className="relative px-1.5 pb-1.5 pt-1.5 sm:px-2 sm:pb-2 sm:pt-2">
-              <p className="mb-1 text-center text-[8px] font-semibold uppercase tracking-[0.14em] text-white/85 sm:mb-1.5 sm:text-[9px]">
-                {deckTitle}
+        <h2
+          id="predict-next-title"
+          className={`${nameOxanium.className} text-center text-[14px] font-bold tracking-[0.03em] text-slate-50`}
+        >
+          {txt.title}
+        </h2>
+        <p
+          id="predict-next-sub"
+          className="mt-1.5 text-center text-[12px] leading-[17px] text-slate-400"
+        >
+          {txt.sub}
+        </p>
+
+        {/* 一覧と同じ線枠カード（上辺にラウンド名） */}
+        <MatchListLineFrame topLabel={deckTitle || undefined} className="mt-2">
+          <div className="grid grid-cols-[1fr_minmax(5.5rem,1.05fr)_1fr] items-start gap-x-1 px-1 pb-3.5 pt-[18px]">
+            <TeamColumn
+              sideLabel="HOME"
+              isWc={lg === "wc"}
+              teamId={homeTeamId}
+              jersey={homeJersey}
+              jerseyEnd={homeJerseyEnd}
+              title={homeTitle}
+              recordLine={homeLine}
+            />
+
+            <div className="flex min-h-full min-w-0 flex-col items-center justify-center self-center text-center">
+              <p
+                className={[
+                  resultStatsMetricNumClass,
+                  "text-[24px] leading-[26px] tabular-nums text-slate-50 [text-shadow:0_1px_4px_rgba(0,0,0,0.45)]",
+                ].join(" ")}
+              >
+                {kickoff}
               </p>
-
-              <div className="grid grid-cols-[1fr_minmax(4.5rem,auto)_1fr] items-start gap-x-1 sm:grid-cols-[1fr_minmax(5.25rem,auto)_1fr] sm:gap-x-1.5">
-                {/* ホーム列（HOME） */}
-                <div className="flex min-w-0 flex-col items-center text-center">
-                  <span className="mb-1 text-[8px] font-semibold uppercase tracking-[0.2em] text-white/55 sm:text-[9px]">
-                    HOME
+              {showSeriesRow && seriesStanding ? (
+                <p className="mt-1 text-[12px] font-extrabold tabular-nums">
+                  <span className="text-[#facc15]">
+                    {seriesStanding.homeWins}
                   </span>
-                  {lg === "wc" ? (
-                    <CountryFlag
-                      teamId={homeTeamId ?? null}
-                      className="h-[2.25rem] w-[3.3rem] rounded-[6px] sm:h-[2.5rem] sm:w-[3.7rem]"
-                    />
-                  ) : (
-                    <HalftoneJerseyMark
-                      accent={homeJersey}
-                      accentEnd={homeJerseyEnd}
-                      className="h-[3.35rem] w-[3.35rem] sm:h-[3.85rem] sm:w-[3.85rem]"
-                    />
-                  )}
-                  <p
-                    className={[
-                      "mt-1 min-w-0 text-[11px] font-bold leading-tight text-white sm:text-xs",
-                      isEn ? "font-semibold tracking-tight" : "",
-                    ].join(" ")}
-                  >
-                    {homeTitle}
-                  </p>
-                  {homeLine ? (
-                    <p className="mt-px text-[8px] tabular-nums leading-tight text-white/45 sm:text-[9px]">
-                      {homeLine}
-                    </p>
-                  ) : null}
-                </div>
-
-                {/* 中央：キックオフ＋シリーズ（ユニの高さに合わせて下げる） */}
-                <div className="flex min-w-0 flex-col items-center justify-start pt-4 text-center sm:pt-[1.15rem]">
-                  <p
-                    className={[
-                      resultStatsMetricNumClass,
-                      "text-[1.1rem] leading-none text-white sm:text-[1.2rem]",
-                    ].join(" ")}
-                  >
-                    {kickoff}
-                  </p>
-                  {showSeriesRow && seriesStanding ? (
-                    <p className="mt-1 text-[9px] font-semibold tabular-nums sm:text-[10px]">
-                      <span className="text-white/55">( </span>
-                      <span className="text-[#facc15]">
-                        {seriesStanding.homeWins}
-                      </span>
-                      <span className="text-white/70"> — </span>
-                      <span className="text-cyan-400">
-                        {seriesStanding.awayWins}
-                      </span>
-                      <span className="text-white/55"> )</span>
-                    </p>
-                  ) : (
-                    <p className="mt-1 text-[8px] font-semibold uppercase tracking-[0.16em] text-white/32">
-                      vs
-                    </p>
-                  )}
-                </div>
-
-                {/* アウェイ列（AWAY） */}
-                <div className="flex min-w-0 flex-col items-center text-center">
-                  <span className="mb-1 text-[8px] font-semibold uppercase tracking-[0.2em] text-white/55 sm:text-[9px]">
-                    AWAY
+                  <span className="text-white/70"> — </span>
+                  <span className="text-cyan-400">
+                    {seriesStanding.awayWins}
                   </span>
-                  {lg === "wc" ? (
-                    <CountryFlag
-                      teamId={awayTeamId ?? null}
-                      className="h-[2.25rem] w-[3.3rem] rounded-[6px] sm:h-[2.5rem] sm:w-[3.7rem]"
-                    />
-                  ) : (
-                    <HalftoneJerseyMark
-                      accent={awayJersey}
-                      accentEnd={awayJerseyEnd}
-                      className="h-[3.35rem] w-[3.35rem] sm:h-[3.85rem] sm:w-[3.85rem]"
-                    />
-                  )}
-                  <p
-                    className={[
-                      "mt-1 min-w-0 text-[11px] font-bold leading-tight text-white sm:text-xs",
-                      isEn ? "font-semibold tracking-tight" : "",
-                    ].join(" ")}
-                  >
-                    {awayTitle}
-                  </p>
-                  {awayLine ? (
-                    <p className="mt-px text-[8px] tabular-nums leading-tight text-white/45 sm:text-[9px]">
-                      {awayLine}
-                    </p>
-                  ) : null}
-                </div>
-              </div>
+                </p>
+              ) : null}
             </div>
 
-            <p
-              id="predict-next-sub"
-              className="relative border-t border-white/[0.09] bg-black/25 px-2 py-1.5 text-center text-[9px] leading-snug text-white/52 sm:px-2.5 sm:text-[10px]"
-            >
-              {txt.sub}
-            </p>
-            <label className="relative flex cursor-pointer items-start gap-1.5 border-t border-white/[0.09] bg-black/30 px-2 py-1.5 text-left text-[9px] leading-snug text-white/78 sm:px-2.5 sm:py-2 sm:text-[10px] sm:text-white/82">
-              <input
-                type="checkbox"
-                checked={dontShowAgain}
-                onChange={(e) => setDontShowAgain(e.target.checked)}
-                className="mt-px size-2.5 shrink-0 rounded border-white/35 bg-black/50 text-cyan-500 shadow-[0_0_0_1px_rgba(255,255,255,0.06)_inset] focus:ring-cyan-400/40 sm:size-3"
-              />
-              <span>{txt.skip}</span>
-            </label>
-            </div>
+            <TeamColumn
+              sideLabel="AWAY"
+              isWc={lg === "wc"}
+              teamId={awayTeamId}
+              jersey={awayJersey}
+              jerseyEnd={awayJerseyEnd}
+              title={awayTitle}
+              recordLine={awayLine}
+            />
           </div>
+        </MatchListLineFrame>
 
-          {/* カードと揃えたメタリック系の二択ボタン（コンパクト） */}
-          <div className="mt-2.5 flex w-full flex-row gap-2 sm:mt-3">
-            <button
-              type="button"
-              onClick={() => onNo(dontShowAgain)}
-              className={[
-                "relative flex min-h-10 min-w-0 flex-1 items-center justify-center overflow-hidden rounded-none px-1.5 py-1",
-                "whitespace-pre-line text-center",
-                "border border-white/[0.18]",
-                "bg-[linear-gradient(168deg,rgba(255,255,255,0.11)_0%,rgba(255,255,255,0.045)_42%,rgba(255,255,255,0.02)_100%)]",
-                "text-[11px] font-semibold leading-tight text-white/92 sm:text-xs",
-                "shadow-[inset_0_1px_0_rgba(255,255,255,0.14),0_6px_16px_rgba(0,0,0,0.38)]",
-                "transition-[transform,box-shadow,border-color,background-color,color] duration-200",
-                "hover:border-white/28 hover:text-white",
-                "hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_0_20px_rgba(255,255,255,0.06),0_8px_20px_rgba(0,0,0,0.42)]",
-                "active:scale-[0.98]",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25 focus-visible:ring-offset-1 focus-visible:ring-offset-[#060a10]",
-              ].join(" ")}
-            >
-              <span
-                className="pointer-events-none absolute inset-x-2 top-0 h-px bg-linear-to-r from-transparent via-white/40 to-transparent opacity-65"
-                aria-hidden
-              />
-              {txt.no}
-            </button>
-            <button
-              type="button"
-              onClick={() => onYes(dontShowAgain)}
-              className={[
-                "relative flex min-h-10 min-w-0 flex-1 items-center justify-center overflow-hidden rounded-none border px-1.5 py-1",
-                "border-cyan-200/50",
-                "bg-[linear-gradient(152deg,#ecfeff_0%,#67e8f9_22%,#22d3ee_48%,#0ea5e9_78%,#0369a1_100%)]",
-                "text-[11px] font-bold leading-snug text-slate-950 sm:text-xs",
-                "shadow-[inset_0_1px_0_rgba(255,255,255,0.5),0_0_22px_rgba(34,211,238,0.32),0_6px_16px_rgba(0,0,0,0.32)]",
-                "transition-[transform,box-shadow,border-color,filter] duration-200",
-                "hover:border-cyan-100/70 hover:brightness-[1.03]",
-                "hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.58),0_0_28px_rgba(34,211,238,0.45),0_8px_18px_rgba(0,0,0,0.36)]",
-                "active:scale-[0.98]",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70 focus-visible:ring-offset-1 focus-visible:ring-offset-[#060a10]",
-              ].join(" ")}
-            >
-              <span
-                className="pointer-events-none absolute inset-x-4 top-0.5 h-[36%] bg-linear-to-b from-white/45 to-transparent opacity-50"
-                aria-hidden
-              />
-              {txt.yes}
-            </button>
-          </div>
+        <label className="mt-3.5 flex cursor-pointer items-center gap-2 border border-white/10 bg-white/[0.04] px-3 py-2.5 text-left text-[12px] leading-4 text-slate-200/90">
+          <input
+            type="checkbox"
+            checked={dontShowAgain}
+            onChange={(e) => setDontShowAgain(e.target.checked)}
+            className="size-4 shrink-0 cursor-pointer appearance-none rounded-none border border-cyan-200/55 bg-black/40 checked:border-[#00f5ff] checked:bg-[#00f5ff] focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/50"
+          />
+          <span>{txt.skip}</span>
+        </label>
+
+        {/* 真っ直ぐな選択セグメント（選択＝シアン塗り＋黒スキャン線） */}
+        <div className="mt-[18px] flex gap-2.5">
+          {(
+            [
+              { key: "no", label: txt.no.replace(/\n/g, "") },
+              { key: "yes", label: txt.yes },
+            ] as const
+          ).map((item) => {
+            const active = choice === item.key;
+            return (
+              <button
+                key={item.key}
+                type="button"
+                aria-pressed={active}
+                onClick={() => commitChoice(item.key)}
+                className={[
+                  "relative flex h-[42px] min-w-0 flex-1 items-center justify-center truncate rounded-none border border-[#00F5FF] px-1.5 text-[13px] font-bold tracking-[0.03em] transition-colors",
+                  active
+                    ? "bg-[#00F5FF] text-[#050508] shadow-[0_0_10px_rgba(0,245,255,0.55)]"
+                    : "text-[#00F5FF] hover:bg-cyan-300/[0.08]",
+                ].join(" ")}
+                style={
+                  active
+                    ? {
+                        backgroundImage:
+                          "repeating-linear-gradient(to bottom, transparent 0 2px, rgba(5,5,8,0.22) 2px 3px)",
+                      }
+                    : undefined
+                }
+              >
+                {item.label}
+              </button>
+            );
+          })}
         </div>
       </div>
     </div>
