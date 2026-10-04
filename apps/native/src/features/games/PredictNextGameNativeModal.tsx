@@ -483,7 +483,7 @@ const s = StyleSheet.create({
   btnGhostOuter: {
     flex: 1,
     minHeight: 40,
-    borderRadius: 12,
+    borderRadius: 0,
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.18)",
     overflow: "hidden",
@@ -500,7 +500,6 @@ const s = StyleSheet.create({
     left: 10,
     right: 10,
     height: 1,
-    borderRadius: 999,
     backgroundColor: "rgba(255,255,255,0.35)",
     opacity: 0.65,
   },
@@ -514,7 +513,7 @@ const s = StyleSheet.create({
   btnCyan: {
     flex: 1,
     minHeight: 40,
-    borderRadius: 12,
+    borderRadius: 0,
     overflow: "hidden",
     borderWidth: 1,
     borderColor: "rgba(165,243,252,0.5)",
@@ -526,7 +525,6 @@ const s = StyleSheet.create({
     left: 18,
     right: 18,
     height: "36%",
-    borderRadius: 999,
     backgroundColor: "rgba(255,255,255,0.35)",
     opacity: 0.5,
   },

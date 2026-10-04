@@ -405,7 +405,7 @@ export default function PredictNextGameModal({
               type="button"
               onClick={() => onNo(dontShowAgain)}
               className={[
-                "relative flex min-h-10 min-w-0 flex-1 items-center justify-center overflow-hidden rounded-xl px-1.5 py-1",
+                "relative flex min-h-10 min-w-0 flex-1 items-center justify-center overflow-hidden rounded-none px-1.5 py-1",
                 "whitespace-pre-line text-center",
                 "border border-white/[0.18]",
                 "bg-[linear-gradient(168deg,rgba(255,255,255,0.11)_0%,rgba(255,255,255,0.045)_42%,rgba(255,255,255,0.02)_100%)]",
@@ -419,7 +419,7 @@ export default function PredictNextGameModal({
               ].join(" ")}
             >
               <span
-                className="pointer-events-none absolute inset-x-2 top-0 h-px rounded-full bg-linear-to-r from-transparent via-white/40 to-transparent opacity-65"
+                className="pointer-events-none absolute inset-x-2 top-0 h-px bg-linear-to-r from-transparent via-white/40 to-transparent opacity-65"
                 aria-hidden
               />
               {txt.no}
@@ -428,7 +428,7 @@ export default function PredictNextGameModal({
               type="button"
               onClick={() => onYes(dontShowAgain)}
               className={[
-                "relative flex min-h-10 min-w-0 flex-1 items-center justify-center overflow-hidden rounded-xl border px-1.5 py-1",
+                "relative flex min-h-10 min-w-0 flex-1 items-center justify-center overflow-hidden rounded-none border px-1.5 py-1",
                 "border-cyan-200/50",
                 "bg-[linear-gradient(152deg,#ecfeff_0%,#67e8f9_22%,#22d3ee_48%,#0ea5e9_78%,#0369a1_100%)]",
                 "text-[11px] font-bold leading-snug text-slate-950 sm:text-xs",
@@ -441,7 +441,7 @@ export default function PredictNextGameModal({
               ].join(" ")}
             >
               <span
-                className="pointer-events-none absolute inset-x-4 top-0.5 h-[36%] rounded-full bg-linear-to-b from-white/45 to-transparent opacity-50"
+                className="pointer-events-none absolute inset-x-4 top-0.5 h-[36%] bg-linear-to-b from-white/45 to-transparent opacity-50"
                 aria-hidden
               />
               {txt.yes}
