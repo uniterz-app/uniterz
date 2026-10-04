@@ -8,6 +8,7 @@ import { doc, getDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, auth, storage } from "@/lib/firebase";
 import { ensureUserSlug } from "@/lib/ensureSlug";
+import { markFirstRunSetupPending } from "@/lib/onboarding/firstRunSetupWeb";
 import { COUNTRY_OPTIONS, FLAG_SRC } from "@/lib/rankings/country";
 import { countryName } from "@/lib/i18n/t";
 import { normalizeLanguage } from "@/lib/i18n/language";
@@ -110,6 +111,8 @@ export default function OnboardingForm({ variant }: Props) {
       const snap = await getDoc(userRef);
       const existing = snap.exists() ? (snap.data() as Record<string, unknown>) : {};
 
+      // 試合ページ着地時に初期設定確認（通知・スコア表示）を出す
+      markFirstRunSetupPending(user.uid);
       await ensureUserSlug(db, user.uid);
       const uploadedPhotoURL = await uploadAvatarIfNeeded(user.uid);
 

@@ -10,6 +10,11 @@ import React, {
 } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import GamesSeasonPredictHeaderButtons from "./GamesSeasonPredictHeaderButtons";
+import FirstRunSetupModal from "@/app/component/onboarding/FirstRunSetupModal";
+import {
+  clearFirstRunSetupPending,
+  readFirstRunSetupPending,
+} from "@/lib/onboarding/firstRunSetupWeb";
 import GamesRightEdgeTabs from "@/app/component/games/GamesRightEdgeTabs";
 import {
   gamesHeaderFilterWrapClass,
@@ -258,10 +263,27 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
     router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
   }, [searchParams, router, pathname]);
 
+  /** 新規登録直後: 通知・スコア表示の確認 → 閉じてからチュートリアル */
+  const [firstRunSetupGate, setFirstRunSetupGate] = useState<
+    "checking" | "open" | "done"
+  >("checking");
+  useEffect(() => {
+    const uid = user?.uid;
+    if (!uid) return;
+    setFirstRunSetupGate(readFirstRunSetupPending(uid) ? "open" : "done");
+  }, [user?.uid]);
+
+  const handleFirstRunSetupStart = useCallback(() => {
+    const uid = user?.uid;
+    if (uid) clearFirstRunSetupPending(uid);
+    setFirstRunSetupGate("done");
+  }, [user?.uid]);
+
   /** 初回: welcome 選択画面は出さず、試合カード → ピックアップ説明のみ（他タブは各ページ初訪問時） */
   useEffect(() => {
     const uid = user?.uid;
     if (!uid) return;
+    if (firstRunSetupGate !== "done") return;
     if (readAppTutorialSeenLocal(uid)) return;
     if (readTutorialPageTipSeen(uid, "games")) return;
     let cancelled = false;
@@ -289,7 +311,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
     return () => {
       cancelled = true;
     };
-  }, [user?.uid]);
+  }, [user?.uid, firstRunSetupGate]);
 
   useEffect(() => {
     return () => {
@@ -1359,6 +1381,12 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
         "pb-bottom-nav text-white",
       ].join(" ")}
     >
+      <FirstRunSetupModal
+        open={firstRunSetupGate === "open"}
+        uid={user?.uid ?? null}
+        language={language}
+        onStart={handleFirstRunSetupStart}
+      />
       <TutorialWelcomeWorldCamera
         active={welcomeBrandInWorld}
         flying={welcomeWorldFly}

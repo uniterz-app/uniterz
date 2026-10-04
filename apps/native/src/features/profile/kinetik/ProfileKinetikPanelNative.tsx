@@ -49,7 +49,6 @@ import {
   getKinetikWinStreakExplanation,
 } from "../../../../../../app/component/profile/edit/kinetikStreakFx";
 import { getKinetikRankBadgeExplanation } from "../../../../../../app/component/profile/edit/kinetikRankBadge";
-import { formatProfileMemberSince } from "../../../../../../lib/profile/formatProfileMemberSince";
 import {
   useKinetikMetricCountUp,
   type KinetikMetricCountFormat,
@@ -982,7 +981,6 @@ const KinetikUnitVaultNative = forwardRef<
 });
 
 function KinetikIdentityJoinIdRowNative({
-  memberSinceLabel,
   idLabel,
   shareCopied,
   copiedLabel,
@@ -990,7 +988,6 @@ function KinetikIdentityJoinIdRowNative({
   onShare,
   markToggle,
 }: {
-  memberSinceLabel: string | null;
   idLabel: string;
   shareCopied: boolean;
   copiedLabel: string;
@@ -1004,17 +1001,6 @@ function KinetikIdentityJoinIdRowNative({
 }) {
   return (
     <View style={styles.identityJoinIdRow}>
-      {memberSinceLabel ? (
-        <KinetikFooterRef style={[styles.footerRefIdentity, styles.footerRefJoin]}>
-          <Text style={styles.footerRefTextIdentity}>{memberSinceLabel}</Text>
-        </KinetikFooterRef>
-      ) : (
-        <View
-          style={[styles.footerRefIdentity, styles.footerRefJoin, styles.footerJoinSlot]}
-          accessibilityElementsHidden
-          importantForAccessibility="no-hide-descendants"
-        />
-      )}
       {idLabel ? (
         <KinetikIdentityIdChipNative
           idLabel={idLabel}
@@ -1084,22 +1070,6 @@ function KinetikViewCountChipNative({
         {viewCount.toLocaleString("en-US")}
       </Text>
     </Pressable>
-  );
-}
-
-function KinetikFooterNative({ memberSinceLabel }: { memberSinceLabel: string | null }) {
-  if (!memberSinceLabel) return null;
-
-  return (
-    <View style={styles.footer}>
-      <View style={styles.footerRow}>
-        <KinetikFooterRef style={styles.footerRefGrow}>
-          <Text style={styles.footerRefText} numberOfLines={1}>
-            {memberSinceLabel}
-          </Text>
-        </KinetikFooterRef>
-      </View>
-    </View>
   );
 }
 
@@ -1336,7 +1306,6 @@ export default function ProfileKinetikPanelNative({
     width: Math.max(0, windowW - 24),
     height: isPro ? 520 : 0,
   }));
-  const memberSinceLabel = formatProfileMemberSince(memberSinceMs, lang);
   const profileViewCountAria =
     profileViewCount == null ? null : copy.viewsAria(profileViewCount);
   const unitBalanceAria =
@@ -1851,7 +1820,6 @@ export default function ProfileKinetikPanelNative({
           </View>
         ) : null}
         <KinetikIdentityJoinIdRowNative
-          memberSinceLabel={memberSinceLabel}
           idLabel={profileIdLabel}
           shareCopied={shareCopied}
           copiedLabel={shareCopiedLabel}

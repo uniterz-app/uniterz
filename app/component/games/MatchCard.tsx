@@ -76,6 +76,7 @@ import EventPill from "@/app/component/common/EventPill";
 import { getGameEventTag } from "@/lib/events/eventRules";
 import { displayNbaRoundLabel } from "@/lib/games/displayNbaRoundLabel";
 import MatchScoreLine from "@/app/component/games/MatchScoreLine";
+import { useMatchScoreDisplayPrefs } from "@/lib/games/useMatchScoreDisplayPrefs";
 import {
   matchScoreClass,
   matchVsLabelClass,
@@ -436,6 +437,7 @@ function MatchCardView({
 
   const { fUser: user } = useFirebaseUser();
   const { timeZone: userTimeZone } = useUserLanguage(user?.uid ?? null);
+  const { prefs: scorePrefs } = useMatchScoreDisplayPrefs(user?.uid ?? null);
   const m = t(language);
   const displayedRoundLabel = displayNbaRoundLabel(
     roundLabel,
@@ -921,6 +923,13 @@ const isLive =
     startAtJst instanceof Date &&
     Date.now() >= startAtJst.getTime());
 
+/** 設定でスコアを隠す（リザルト系 resultPost 付きは常に表示） */
+const scoreHiddenByPref =
+  !resultPost &&
+  ((status === "live" && !scorePrefs.showLiveScore) ||
+    (status === "final" && !scorePrefs.showFinalScore));
+const displayScore = scoreHiddenByPref ? null : score;
+
 const showMergedPredictEdit = Boolean(
   showMergedResult &&
     resultPost &&
@@ -998,7 +1007,7 @@ const mergedPreKickoffScoreClass = [
 
 
   let center: React.ReactNode = overlayCenterMode ? (
-  status === "final" && score ? (
+  status === "final" && displayScore ? (
     <div
       data-tutorial-target={
         showMergedResult ? "result-detail-score" : undefined
@@ -1015,8 +1024,8 @@ const mergedPreKickoffScoreClass = [
     >
       <div className="flex flex-col items-center">
         <MatchScoreLine
-          home={score.home}
-          away={score.away}
+          home={displayScore.home}
+          away={displayScore.away}
           className={overlayScoreTextClass}
         />
         {showPlayoffSeriesRow && finalMeta?.ot ? (
@@ -1039,7 +1048,20 @@ const mergedPreKickoffScoreClass = [
       ) : null}
       {renderOverlayPredictScore()}
     </div>
-  ) : status === "live" && score ? (
+  ) : status === "final" && scoreHiddenByPref ? (
+    <div
+      className={
+        mobileDense
+          ? "flex min-h-[40px] w-full items-center justify-center md:min-h-[52px]"
+          : "flex min-h-[52px] w-full items-center justify-center md:min-h-[60px]"
+      }
+    >
+      <div className="text-sm font-medium text-white/80 md:text-base" style={teamNameFont}>
+        {m.games.finalLabel}
+        {finalMeta?.ot ? " (OT)" : ""}
+      </div>
+    </div>
+  ) : status === "live" && displayScore ? (
     <div
       className={
         isMobile
@@ -1052,8 +1074,8 @@ const mergedPreKickoffScoreClass = [
       }
     >
       <MatchScoreLine
-        home={score.home}
-        away={score.away}
+        home={displayScore.home}
+        away={displayScore.away}
         className={overlayScoreTextClass}
       />
       {liveMeta?.period ? (
@@ -1122,6 +1144,11 @@ const mergedPreKickoffScoreClass = [
       density={dense ? "matchDense" : "matchComfortable"}
       language={language}
     />
+  ) : status === "final" && scoreHiddenByPref ? (
+    <div className={listKickoffCenterClass(isMobile, mobileDense, scoreText)}>
+      {m.games.finalLabel}
+      {finalMeta?.ot ? " (OT)" : ""}
+    </div>
   ) : (
     <div className={listKickoffCenterClass(isMobile, mobileDense, scoreText)}>
       {fmtKickoff(startAtJst, displayTimeZone)}
@@ -1130,7 +1157,7 @@ const mergedPreKickoffScoreClass = [
 
 
 
-    if (!overlayCenterMode && status === "live" && score) {
+    if (!overlayCenterMode && status === "live" && displayScore) {
     center = (
       <div
         className={
@@ -1144,8 +1171,8 @@ const mergedPreKickoffScoreClass = [
           language={language}
         />
         <MatchScoreLine
-          home={score.home}
-          away={score.away}
+          home={displayScore.home}
+          away={displayScore.away}
           className={[scoreText, "leading-none"].join(" ")}
         />
         {liveMeta?.period && (
@@ -1158,7 +1185,7 @@ const mergedPreKickoffScoreClass = [
     );
   }
 
-  if (!overlayCenterMode && status === "final" && score) {
+  if (!overlayCenterMode && status === "final" && displayScore) {
     center = (
       <div
         className={
@@ -1169,8 +1196,8 @@ const mergedPreKickoffScoreClass = [
       >
         <div className="flex flex-col items-center">
           <MatchScoreLine
-            home={score.home}
-            away={score.away}
+            home={displayScore.home}
+            away={displayScore.away}
             className={[scoreText, "leading-none"].join(" ")}
           />
           {showPlayoffSeriesRow && finalMeta?.ot ? (

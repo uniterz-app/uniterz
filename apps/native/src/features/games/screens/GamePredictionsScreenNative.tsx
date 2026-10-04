@@ -25,6 +25,7 @@ import { resolveTeamJerseyPalette } from "../teamColors";
 import { MatchCardFineInnerPlate } from "../MatchCardFineInterior";
 import MatchTeamMarkNative from "../MatchTeamMarkNative";
 import { useNativeLanguage } from "../../../i18n/NativeLanguageProvider";
+import { useMatchScoreDisplayPrefsNative } from "../useMatchScoreDisplayPrefsNative";
 
 function isSoccerLeague(leagueRaw: unknown): boolean {
   const league = String(leagueRaw ?? "").toLowerCase();
@@ -37,6 +38,7 @@ export default function GamePredictionsScreenNative() {
   const navigation = useNavigation<NativeStackNavigationProp<GamesStackParamList>>();
   const { gameId } = route.params;
   const { fUser } = useFirebaseUser();
+  const { prefs: scorePrefs } = useMatchScoreDisplayPrefsNative(fUser?.uid);
   const { language: appLanguage } = useNativeLanguage();
   const language = toNativeGamesLanguage(appLanguage);
   const t = getGamesTexts(language);
@@ -90,8 +92,11 @@ export default function GamePredictionsScreenNative() {
       ? "LIVE"
       : t.scheduled;
 
+  const scoreHidden =
+    (status === "live" && !scorePrefs.showLiveScore) ||
+    (status === "final" && !scorePrefs.showFinalScore);
   const centerScore =
-    score && (score.home != null || score.away != null)
+    !scoreHidden && score && (score.home != null || score.away != null)
       ? `${score.away ?? "-"} - ${score.home ?? "-"}`
       : "vs";
 

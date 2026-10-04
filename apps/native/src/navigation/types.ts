@@ -141,6 +141,7 @@ export type ProfileStackParamList = {
     | undefined;
   ProfileSettings: undefined;
   NotificationSettings: undefined;
+  DisplaySettings: undefined;
   ProfilePassword: undefined;
   ProSkin: { fromTrial?: boolean } | undefined;
   DeleteAccount: undefined;

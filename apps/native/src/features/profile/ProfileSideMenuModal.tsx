@@ -79,6 +79,7 @@ type Props = {
     | "commercialLaw"
     | "password"
     | "notifications"
+    | "displaySettings"
     | "featureRequest"
     | "electronicNotice"
     | "notificationDev"
@@ -254,6 +255,7 @@ export default function ProfileSideMenuModal({
       | "commercialLaw"
       | "password"
       | "notifications"
+      | "displaySettings"
       | "featureRequest"
       | "electronicNotice"
       | "notificationDev"
@@ -452,6 +454,13 @@ export default function ProfileSideMenuModal({
                       onPress={() => openUserPage("notifications")}
                     >
                       {labels.notifications}
+                    </SideMenuItemButtonNative>
+                    <SideMenuItemButtonNative
+                      icon="tune-variant"
+                      labelStyle={labelStyle}
+                      onPress={() => openUserPage("displaySettings")}
+                    >
+                      {labels.displaySettings}
                     </SideMenuItemButtonNative>
                   </View>
 

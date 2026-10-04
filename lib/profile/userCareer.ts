@@ -7,6 +7,7 @@
  */
 
 import { resolveLocalizedLang } from "@/lib/i18n/localize";
+import { formatCareerSinceDate } from "@/lib/profile/profileCareerStats";
 
 export const USER_CAREER_COLLECTION = "user_career";
 export const USER_CAREER_SCHEMA_VERSION = 1 as const;
@@ -469,14 +470,18 @@ export function userCareerSummaryLabels(
 /** 通算サマリー行（表示順固定） */
 export function buildUserCareerSummaryRows(
   summary: UserCareerSummary,
-  language: string | null | undefined
+  language: string | null | undefined,
+  opts?: { memberSinceMs?: number | null }
 ): UserCareerSummaryRow[] {
   const labels = userCareerSummaryLabels(language);
+  const sinceValue =
+    formatCareerSinceDate(opts?.memberSinceMs) ??
+    (summary.sinceYear != null ? String(summary.sinceYear) : "—");
   return [
     {
       key: "since",
       label: labels.since,
-      value: summary.sinceYear != null ? String(summary.sinceYear) : "—",
+      value: sinceValue,
     },
     {
       key: "predictions",

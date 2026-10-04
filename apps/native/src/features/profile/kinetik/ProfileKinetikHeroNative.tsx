@@ -410,6 +410,7 @@ export default function ProfileKinetikHeroNative({
             isPro={plan === "pro"}
             planProBgVariant={planProBgVariant}
             proSkinActive={careerMounted}
+            memberSinceMs={memberSinceMs}
           />
         ) : null
       }

@@ -314,6 +314,7 @@ export default function ProfileKinetikHero({
             loading={careerPending}
             isPro={profile.plan === "pro"}
             planProBgVariant={profile.planProBgVariant}
+            memberSinceMs={profile.memberSinceMs}
           />
         }
       />

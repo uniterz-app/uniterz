@@ -42,7 +42,6 @@ import ProfilePlanProMetricsVariant from "@/app/component/profile/pro/ProfilePla
 import type { ProfilePlanProMetricLayoutVariant } from "@/lib/profile/profilePlanProMetricLayoutVariants";
 import { resolveKinetikRankBadge, resolveKinetikMenuAccent, resolveKinetikProfileAccent } from "./kinetikRankBadge";
 import type { ResolvedBadge } from "@/lib/profile/useProfileBadges";
-import { formatProfileMemberSince } from "@/lib/profile/formatProfileMemberSince";
 import { shareProfileUrl } from "@/lib/profile/shareProfileUrl";
 import {
   formatProfileMetricDayDelta,
@@ -462,29 +461,22 @@ function ProfileKinetikViewCountChip({
 }
 
 function ProfileKinetikIdentityJoinIdRow({
-  memberSinceLabel,
   systemId,
   shareLabel,
   shareCopiedLabel,
   shareCopied,
   onShare,
 }: {
-  memberSinceLabel: string | null;
   systemId: string;
   shareLabel: string;
   shareCopiedLabel: string;
   shareCopied: boolean;
   onShare: () => void;
 }) {
-  if (!memberSinceLabel && !systemId) return null;
+  if (!systemId) return null;
 
   return (
     <div className="profile-edit-kinetik-identity-join-id flex w-full max-w-full min-w-0 items-center gap-2">
-      {memberSinceLabel ? (
-        <p className="profile-edit-kinetik-footer-ref profile-edit-kinetik-footer-ref--identity shrink-0 whitespace-nowrap">
-          {memberSinceLabel}
-        </p>
-      ) : null}
       {systemId ? (
         <button
           type="button"
@@ -898,7 +890,6 @@ export default function ProfileEditKinetikPanel({
   );
   const [shareCopied, setShareCopied] = useState(false);
   const [badgeDetail, setBadgeDetail] = useState<ResolvedBadge | null>(null);
-  const memberSinceLabel = formatProfileMemberSince(memberSinceMs, language);
   const profileViewCountAria =
     profileViewCount == null ? null : panelCopy.viewsAria(profileViewCount);
   const unitBalanceAria =
@@ -1452,7 +1443,6 @@ export default function ProfileEditKinetikPanel({
                   />
                 ) : null}
                 <ProfileKinetikIdentityJoinIdRow
-                  memberSinceLabel={memberSinceLabel}
                   systemId={identity.systemId}
                   shareLabel={metricCopy.shareProfile}
                   shareCopiedLabel={metricCopy.shareCopied}
@@ -1582,7 +1572,6 @@ export default function ProfileEditKinetikPanel({
               />
             ) : null}
             <ProfileKinetikIdentityJoinIdRow
-              memberSinceLabel={memberSinceLabel}
               systemId={identity.systemId}
               shareLabel={metricCopy.shareProfile}
               shareCopiedLabel={metricCopy.shareCopied}
@@ -1669,7 +1658,6 @@ export default function ProfileEditKinetikPanel({
             />
           ) : null}
           <ProfileKinetikIdentityJoinIdRow
-            memberSinceLabel={memberSinceLabel}
             systemId={identity.systemId}
             shareLabel={metricCopy.shareProfile}
             shareCopiedLabel={metricCopy.shareCopied}

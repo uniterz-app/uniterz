@@ -32,6 +32,7 @@ import {
 } from "../../../../../lib/i18n/localize";
 import { onboardingWelcomeCopy } from "../../../../../lib/auth/onboardingWelcomeCopy";
 import { ensureUserSlug } from "../../../../../lib/ensureSlug";
+import { markFirstRunSetupPendingNative } from "./firstRunSetupNative";
 import { normalizeReferralInviteCode } from "../../../../../lib/referral/referralInviteCode";
 import { referralBindUserMessage } from "../../../../../lib/referral/referralBindErrorCopy";
 import { bindMeReferralNative } from "../profile/referralApiNative";
@@ -198,6 +199,8 @@ export default function OnboardingScreenNative() {
       const userRef = doc(db, "users", user.uid);
       const snap = await getDoc(userRef);
       const existing = snap.exists() ? snap.data() : {};
+      // handle 付与で Main に切り替わる前に立てる（試合ページで初期設定確認を出す）
+      await markFirstRunSetupPendingNative(user.uid);
       await ensureUserSlug(db, user.uid);
       const uploadedPhotoURL = await uploadAvatarIfNeeded(user.uid);
       const photoURL =

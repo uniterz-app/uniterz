@@ -42,6 +42,8 @@ type Props = {
   className?: string;
   isPro?: boolean;
   planProBgVariant?: ProfilePlanProBgVariant;
+  /** CAREER の Since を年月日で出す（登録日） */
+  memberSinceMs?: number | null;
 };
 
 type CareerRow = {
@@ -61,6 +63,7 @@ export default function ProfileCareerPanel({
   className = "",
   isPro = false,
   planProBgVariant = PROFILE_PLAN_PRO_BG_DEFAULT,
+  memberSinceMs = null,
 }: Props) {
   const msg = t(language);
   const lang = resolveLocalizedLang(language);
@@ -103,7 +106,7 @@ export default function ProfileCareerPanel({
   const rows: CareerRow[] = useMemo(() => {
     if (!career) return [];
     if (viewMode === "career") {
-      return buildUserCareerSummaryRows(career.summary, lang);
+      return buildUserCareerSummaryRows(career.summary, lang, { memberSinceMs });
     }
     const chapter = career.seasons[seasonKey];
     const boardStats =
@@ -112,7 +115,7 @@ export default function ProfileCareerPanel({
         : chapter?.regular;
     if (!boardStats) return [];
     return buildUserCareerBoardRows(boardStats, lang);
-  }, [career, viewMode, seasonKey, board, lang]);
+  }, [career, viewMode, seasonKey, board, lang, memberSinceMs]);
 
   const scopeTitle =
     viewMode === "career"

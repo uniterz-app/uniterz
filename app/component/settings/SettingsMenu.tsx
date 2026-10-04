@@ -26,7 +26,9 @@ import {
   GraduationCap,
   Bell,
   Search,
+  SlidersHorizontal,
 } from "lucide-react";
+import { matchScoreDisplayCopy } from "@/lib/games/matchScoreDisplayPrefs";
 import {
   parseUserProfileFields,
   parseUserUnitBalance,
@@ -364,6 +366,18 @@ export default function SettingsMenu({
           >
             <span className={cn(isEn && "uppercase")}>
               {m.settings.notifications}
+            </span>
+          </SideMenuItemButton>
+
+          <SideMenuItemButton
+            icon={SlidersHorizontal}
+            labelStyle={menuLabelFont}
+            onClick={() =>
+              pushFromMenu(p("/web/settings/display", "/mobile/settings/display"))
+            }
+          >
+            <span className={cn(isEn && "uppercase")}>
+              {matchScoreDisplayCopy(language).pageTitle}
             </span>
           </SideMenuItemButton>
         </div>

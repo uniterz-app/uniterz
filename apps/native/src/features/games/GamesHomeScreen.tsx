@@ -5,7 +5,15 @@ import { useFocusEffect, useIsFocused, useNavigation } from "@react-navigation/n
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { GamesStackParamList } from "../../navigation/types";
 import { GestureDetector } from "react-native-gesture-handler";
+import FirstRunSetupModalNative from "../auth/FirstRunSetupModalNative";
 import {
+  clearFirstRunSetupPendingNative,
+  readFirstRunSetupPendingNative,
+} from "../auth/firstRunSetupNative";
+import { markPushPermissionPrimerDismissedNative } from "../../notifications/pushPermissionPrimerNative";
+import { registerNativePushTokenFlow } from "../../notifications/registerPushTokenNative";
+import {
+  InteractionManager,
   Platform, Pressable, FlatList, RefreshControl, StyleSheet, Text, View,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
@@ -244,6 +252,8 @@ import {
   MATCH_CARD_SCORE_FONT,
 } from "./matchCardTypography";
 import { gameCardListStyles } from "./gameCardListStyles";
+import { useMatchScoreDisplayPrefsNative } from "./useMatchScoreDisplayPrefsNative";
+import type { MatchScoreDisplayPrefs } from "../../../../../lib/games/matchScoreDisplayPrefs";
 import { displayNbaRoundLabel } from "../../../../../lib/games/displayNbaRoundLabel";
 
 function formatKickoffTime(
@@ -295,12 +305,14 @@ function isEffectiveLive(game: Record<string, unknown>): boolean {
 }
 
 /**
- * 試合カード中央：終了はスコア、ライブは LIVE ＋スコア（取得済みのとき）、それ以外はキックオフ
+ * 試合カード中央：終了はスコア、ライブは LIVE ＋スコア（取得済みのとき）、それ以外はキックオフ。
+ * スコアは設定（ライブ既定 OFF / 終了既定 ON）で隠せる。
  */
 function getGameCardCenterBlock(
   game: Record<string, unknown>,
   language: Language | string,
-  timeZone: string
+  timeZone: string,
+  scorePrefs: MatchScoreDisplayPrefs
 ): GameCardCenterBlock {
   const texts = getGamesTexts(language);
   const status = resolveGameStatus(game);
@@ -310,6 +322,9 @@ function getGameCardCenterBlock(
   if (status === "final" && score) {
     const ot = resolveFinalMetaOt(game);
     const sub = `${texts.final}${ot ? " (OT)" : ""}`;
+    if (!scorePrefs.showFinalScore) {
+      return { variant: "time", time: sub };
+    }
     const pkScore = resolvePkScore(game);
     return {
       variant: "score",
@@ -320,6 +335,10 @@ function getGameCardCenterBlock(
     };
   }
   if (liveUi) {
+    // ライブスコア非表示時は試合時間も出さず LIVE のみ
+    if (!scorePrefs.showLiveScore) {
+      return { variant: "liveMark", subLine: null, score: null };
+    }
     const meta = resolveGameLiveMeta(game);
     const subLine =
       meta?.period || meta?.runningTime
@@ -340,9 +359,10 @@ function getGameCardCenterBlock(
 function renderCenterText(
   game: Record<string, unknown>,
   language: Language | string,
-  timeZone: string
+  timeZone: string,
+  scorePrefs: MatchScoreDisplayPrefs
 ): string {
-  const b = getGameCardCenterBlock(game, language, timeZone);
+  const b = getGameCardCenterBlock(game, language, timeZone, scorePrefs);
   if (b.variant === "score") {
     return `${b.home} – ${b.away}`;
   }
@@ -576,6 +596,7 @@ export default function GamesHomeScreen({
   const { topContentPadY } = useBottomTabBarInsets();
   const { fUser, status: authStatus } = useFirebaseUser();
   const { isPro: isProUser } = useNativeUserPlan(fUser?.uid);
+  const { prefs: scorePrefs } = useMatchScoreDisplayPrefsNative(fUser?.uid);
   const [filterOpen, setFilterOpen] = useState(false);
   const [gamesFilter, setGamesFilter] = useState<GamesFilterState>({
     selectedTeamIds: [],
@@ -819,10 +840,52 @@ export default function GamesHomeScreen({
   ]);
   const leagueHeaderLabel = LEAGUE_HEADER_LABEL.nba;
 
+  /** 新規登録直後: 通知・スコア表示の確認 → 閉じてからチュートリアル */
+  const [firstRunSetupGate, setFirstRunSetupGate] = useState<
+    "checking" | "open" | "done"
+  >("checking");
+  useEffect(() => {
+    const uid = fUser?.uid;
+    if (!uid || authStatus === "loading") return;
+    let cancelled = false;
+    void readFirstRunSetupPendingNative(uid).then((pending) => {
+      if (!cancelled) setFirstRunSetupGate(pending ? "open" : "done");
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [fUser?.uid, authStatus]);
+
+  const handleFirstRunSetupStart = useCallback(
+    ({ notify }: { notify: boolean }) => {
+      const uid = fUser?.uid;
+      if (uid) {
+        void clearFirstRunSetupPendingNative(uid);
+        // ここで聞いたので初回予想後のプリマーは出さない
+        void markPushPermissionPrimerDismissedNative(uid);
+      }
+      if (!notify) {
+        setFirstRunSetupGate("done");
+        return;
+      }
+      // Modal が閉じきってから OS ダイアログ → その後チュートリアル
+      setFirstRunSetupGate("checking");
+      InteractionManager.runAfterInteractions(() => {
+        setTimeout(() => {
+          void registerNativePushTokenFlow().finally(() =>
+            setFirstRunSetupGate("done")
+          );
+        }, 320);
+      });
+    },
+    [fUser?.uid]
+  );
+
   /** 初回: welcome 選択画面は出さず、試合カード → ピックアップ説明のみ（他タブは各ページ初訪問時） */
   useEffect(() => {
     const uid = fUser?.uid;
     if (!uid || authStatus === "loading") return;
+    if (firstRunSetupGate !== "done") return;
     let cancelled = false;
     void (async () => {
       const localSeen = await readAppTutorialSeenNative(uid);
@@ -850,7 +913,7 @@ export default function GamesHomeScreen({
     return () => {
       cancelled = true;
     };
-  }, [fUser?.uid, authStatus, setSelectedLeague]);
+  }, [fUser?.uid, authStatus, setSelectedLeague, firstRunSetupGate]);
 
   const enterWelcomeUi = useCallback(() => {
     setIsPredictModalOpen(false);
@@ -1061,7 +1124,7 @@ export default function GamesHomeScreen({
     const awayCompact = toCompactTeamName(g.league, awayName);
     const homeRecord = formatSideRecord(g.home, g.league);
     const awayRecord = formatSideRecord(g.away, g.league);
-    const centerBlock = getGameCardCenterBlock(g, language, dayTimeZone);
+    const centerBlock = getGameCardCenterBlock(g, language, dayTimeZone, scorePrefs);
     const seriesLabel = resolveNativeSeriesLabel(g, peerGamesForSeries);
     const seriesPair = resolveNativeSeriesPair(g, peerGamesForSeries);
     const roundLabelRaw = g.roundLabel;
@@ -1096,7 +1159,7 @@ export default function GamesHomeScreen({
       }),
       season: typeof g.season === "string" ? g.season : WC_DEFAULT_SEASON,
     };
-  }, [selectedGame, language, formatSideRecord, peerGamesForSeries]);
+  }, [selectedGame, language, formatSideRecord, peerGamesForSeries, scorePrefs]);
   const formatGameDateMs = useCallback(
     (ms: number) =>
       new Date(ms).toLocaleString(
@@ -2425,8 +2488,9 @@ export default function GamesHomeScreen({
     void openPredictModalRef.current(game);
   }, []);
   const getGameCardCenterBlockForList = useCallback(
-    (game: Record<string, unknown>) => getGameCardCenterBlock(game, language, dayTimeZone),
-    [language, dayTimeZone]
+    (game: Record<string, unknown>) =>
+      getGameCardCenterBlock(game, language, dayTimeZone, scorePrefs),
+    [language, dayTimeZone, scorePrefs]
   );
   const cardListStyles = useMemo(
     () => ({ ...styles, ...gameCardListStyles }),
@@ -2693,6 +2757,13 @@ export default function GamesHomeScreen({
       </View>
       </TutorialWelcomeWorldCameraNative>
 
+      <FirstRunSetupModalNative
+        open={firstRunSetupGate === "open"}
+        uid={fUser?.uid ?? null}
+        language={language}
+        onStart={handleFirstRunSetupStart}
+      />
+
       <GameDetailModal
         visible={isGameDetailModalVisible}
         selectedGame={selectedGame}
@@ -2704,7 +2775,7 @@ export default function GamesHomeScreen({
         resolveGameTeamName={resolveGameTeamName}
         resolveTeamPrimaryColor={resolveTeamPrimaryColor}
         renderCenterText={(game, lang) =>
-          renderCenterText(game, lang, dayTimeZone)
+          renderCenterText(game, lang, dayTimeZone, scorePrefs)
         }
         renderStatusLabel={renderStatusLabel}
         resolveGameStartAt={resolveGameStartAt}
@@ -3959,13 +4030,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 1,
     minHeight: 36,
-  },
-  centerLiveClock: {
-    fontSize: 17,
-    lineHeight: 20,
-    marginTop: 4,
-    color: "rgba(255,255,255,0.95)",
-    letterSpacing: 0.6,
   },
   liveMarkPill: liveMarkPillCyberBase,
   liveMarkText: liveMarkTextCyberBase,

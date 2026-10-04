@@ -1884,6 +1884,7 @@ export default function ProfileHomeScreen({
         else if (page === "commercialLaw") navigation.navigate("CommercialLaw");
         else if (page === "password") navigation.navigate("ProfilePassword");
         else if (page === "notifications") navigation.navigate("NotificationSettings");
+        else if (page === "displaySettings") navigation.navigate("DisplaySettings");
         else if (page === "featureRequest") navigation.navigate("FeatureRequest");
         else if (page === "adminFeatureInbox")
           navigation.navigate("AdminInbox", { kind: "feature" });

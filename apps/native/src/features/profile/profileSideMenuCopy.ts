@@ -25,6 +25,7 @@ export type ProfileSideMenuLabels = {
   commercialLaw: string;
   password: string;
   notifications: string;
+  displaySettings: string;
   featureRequest: string;
   electronicNotice: string;
   deleteAccount: string;
@@ -223,6 +224,15 @@ export function profileSideMenuLabels(
       es: "Notificaciones",
       pt: "Notificações",
       fr: "Notifications",
+    }),
+    displaySettings: L(lang, {
+      ja: "表示設定",
+      en: "Display",
+      ko: "표시 설정",
+      zh: "显示设置",
+      es: "Visualización",
+      pt: "Exibição",
+      fr: "Affichage",
     }),
     featureRequest: L(lang, {
       ja: "機能リクエスト",
