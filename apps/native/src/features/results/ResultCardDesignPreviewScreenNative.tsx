@@ -352,7 +352,13 @@ function MatchBlock({
         </View>
       </View>
 
-      <Animated.View style={[styles.matchCenter, motion?.centerBlockStyle]}>
+      <Animated.View
+        style={[
+          styles.matchCenter,
+          !settled ? styles.matchCenterPending : null,
+          motion?.centerBlockStyle,
+        ]}
+      >
         <View style={styles.skewWrap}>
           <Text
             style={[
@@ -1245,23 +1251,29 @@ const styles = StyleSheet.create({
   },
 
   pad: {
+    position: "relative",
     paddingHorizontal: 10,
-    paddingTop: 18,
-    paddingBottom: 14,
+    paddingTop: 20,
+    paddingBottom: 8,
   },
   layerDivider: {
     height: StyleSheet.hairlineWidth,
     width: "100%",
     backgroundColor: "rgba(255,255,255,0.1)",
-    marginTop: 10,
-    marginBottom: 10,
+    marginTop: 8,
+    marginBottom: 7,
   },
 
+  /** 縦幅を取らないよう重ねる（HIT・連勝タグはユニフォームの外側の角に乗る） */
   topBar: {
+    position: "absolute",
+    top: 8,
+    left: 10,
+    right: 10,
+    zIndex: 2,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 8,
     minHeight: 28,
   },
   topLeftSlot: {
@@ -1276,13 +1288,14 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     justifyContent: "space-between",
     marginBottom: 0,
+    paddingHorizontal: 14,
   },
   matchSide: {
     width: 92,
     alignItems: "center",
     gap: 3,
     /** 中央の予想スコアより少し下にユニフォーム＋チーム名を置く */
-    paddingTop: 16,
+    paddingTop: 12,
   },
   homeAwayLabel: {
     fontFamily: MATCH_CARD_METRIC_FONT,
@@ -1312,8 +1325,12 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     /** 判定前の「あなたの予想」＋数字をユニフォーム寄りに少し下げる */
-    paddingTop: 20,
+    paddingTop: 0,
     gap: 2,
+  },
+  /** 結果前は予想スコアだけなので、ユニフォームの高さまで下げる */
+  matchCenterPending: {
+    paddingTop: 10,
   },
   /** FINAL — 得点の上 */
   finalStatus: {
@@ -1387,7 +1404,7 @@ const styles = StyleSheet.create({
     color: "rgba(253,224,71,0.95)",
   },
 
-  biasRoot: { width: "100%", marginBottom: 6 },
+  biasRoot: { width: "100%", marginBottom: 4 },
   biasPctHeader: {
     flexDirection: "row",
     alignItems: "center",
@@ -1438,7 +1455,7 @@ const styles = StyleSheet.create({
     transformOrigin: "left center",
   },
 
-  statBlock: { gap: 6, paddingTop: 2 },
+  statBlock: { gap: 3, paddingTop: 0 },
 
   /** D split + relative */
   splitRow: {

@@ -242,8 +242,8 @@ function ResultCardPresentationImpl({
         /* MatchListLineFrame は topLabel 用に pt-3.5 / marginTop:14 があり、枠上辺はその下。
            top は「枠オフセット 14 + 枠内 inset」で指定しないと枠線に乗る */
         isMobile
-          ? "-m-3 p-3 right-2.5 top-7 z-[50]"
-          : "-m-5 p-5 right-2.5 top-7 z-40 sm:right-3 sm:top-8",
+          ? "-m-3 p-3 right-2.5 top-[23px] z-[50]"
+          : "-m-5 p-5 right-2.5 top-[23px] z-40 sm:right-3 sm:top-[27px]",
       ].join(" ")}
       onClick={(e) => e.stopPropagation()}
     >

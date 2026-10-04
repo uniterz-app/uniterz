@@ -1266,7 +1266,7 @@ const styles = StyleSheet.create({
   /** 左上：線枠内側。フライアウトは右へ展開 */
   leftActionCluster: {
     position: "absolute",
-    top: 28,
+    top: 23,
     left: 10,
     zIndex: 60,
     overflow: "visible",

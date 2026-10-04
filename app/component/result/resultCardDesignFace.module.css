@@ -42,23 +42,29 @@
 }
 
 .pad {
-  padding: 18px 10px 14px;
+  position: relative;
+  padding: 20px 10px 8px;
 }
 
 .layerDivider {
   width: 100%;
   height: 1px;
-  margin-top: 10px;
-  margin-bottom: 10px;
+  margin-top: 8px;
+  margin-bottom: 7px;
   background: rgba(255, 255, 255, 0.1);
 }
 
+/* 縦幅を取らないよう重ねる（HIT・連勝タグはユニフォームの外側の角に乗る） */
 .topBar {
+  position: absolute;
+  top: 8px;
+  left: 10px;
+  right: 10px;
+  z-index: 2;
   display: flex;
   min-height: 28px;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 8px;
 }
 
 .topLeftSlot {
@@ -97,6 +103,7 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
+  padding: 0 14px;
 }
 
 .matchSide {
@@ -105,7 +112,7 @@
   flex-direction: column;
   align-items: center;
   gap: 3px;
-  padding-top: 16px;
+  padding-top: 12px;
 }
 
 .homeAwayLabel {
@@ -137,8 +144,13 @@
   flex-direction: column;
   align-items: center;
   /* 判定前の「あなたの予想」＋数字をユニフォーム寄りに少し下げる */
-  padding-top: 20px;
+  padding-top: 0;
   gap: 2px;
+}
+
+/* 結果前は予想スコアだけなので、ユニフォームの高さまで下げる */
+.matchCenterPending {
+  padding-top: 10px;
 }
 
 .finalStatus {
@@ -208,7 +220,7 @@
 
 .biasRoot {
   width: 100%;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 
 .biasPctHeader {
@@ -299,8 +311,8 @@
 .statBlock {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding-top: 2px;
+  gap: 3px;
+  padding-top: 0;
 }
 
 .splitRow {

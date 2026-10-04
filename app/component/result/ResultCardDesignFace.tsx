@@ -251,7 +251,11 @@ export default function ResultCardDesignFace({
               </span>
             </div>
 
-            <div className={styles.matchCenter}>
+            <div
+              className={`${styles.matchCenter} ${
+                !settled ? styles.matchCenterPending : ""
+              }`}
+            >
               <span className={styles.skewWrap}>
                 <span
                   className={`${styles.finalStatus} ${
