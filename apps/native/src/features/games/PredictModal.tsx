@@ -478,13 +478,20 @@ export function PredictMatchPreview({
                 <LiveMarkPill
                   pillStyle={s.matchPreviewLivePill}
                   textStyle={s.matchPreviewLivePillText}
+                  clock={centerBlock.subLine}
                 />
-                {centerBlock.subLine ? (
+                {centerBlock.score ? (
                   <Text
-                    style={[s.matchPreviewSub, s.matchPreviewLiveClock]}
-                    numberOfLines={2}
+                    style={[s.matchPreviewScoreRow, s.matchPreviewLiveScore]}
+                    numberOfLines={1}
                   >
-                    {centerBlock.subLine}
+                    <Text style={s.matchPreviewScoreNum}>
+                      {centerBlock.score.home}
+                    </Text>
+                    <Text style={s.matchPreviewScoreDash}> – </Text>
+                    <Text style={s.matchPreviewScoreNum}>
+                      {centerBlock.score.away}
+                    </Text>
                   </Text>
                 ) : null}
                 {seriesPair != null ? (
@@ -3005,6 +3012,8 @@ const s = StyleSheet.create({
     paddingTop: 24,
   },
   matchPreviewScoreRow: { textAlign: "center" },
+  /** ライブ：「LIVE｜時間」ピルの下のスコア */
+  matchPreviewLiveScore: { marginTop: 4 },
   matchPreviewScoreNum: {
     fontFamily: MATCH_CARD_SCORE_FONT,
     fontSize: 20,
@@ -3032,13 +3041,6 @@ const s = StyleSheet.create({
     textAlign: "center",
     marginTop: 2,
     letterSpacing: 0.4,
-  },
-  matchPreviewLiveClock: {
-    fontSize: 20,
-    lineHeight: 24,
-    marginTop: 8,
-    color: "rgba(255,255,255,0.95)",
-    letterSpacing: 1,
   },
   matchPreviewPkSub: {
     fontFamily: MATCH_CARD_DISPLAY_FONT,

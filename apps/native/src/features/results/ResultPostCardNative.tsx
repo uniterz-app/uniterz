@@ -50,7 +50,7 @@ import MatchPkResultLineNative from "../games/MatchPkResultLineNative";
 import { useTeamRecordLineNative } from "../games/useTeamRecordLineNative";
 import CornerMenuClusterNative from "../../ui/CornerMenuClusterNative";
 import CyberChamferButtonNative from "../../ui/CyberChamferButtonNative";
-import ShareBrandCaptureHeaderNative from "../share/ShareBrandCaptureHeaderNative";
+import ShareBrandFrameSealNative from "../share/ShareBrandFrameSealNative";
 import {
   captureViewAsPngNative,
   SHARE_CAPTURE_BG,
@@ -104,6 +104,11 @@ import {
   ResultCardDesignFaceNative,
 } from "./ResultCardDesignPreviewScreenNative";
 import { useResultFaceMatchEntrance } from "./useResultFaceMatchEntrance";
+
+/** MatchListLineFrame（非 flush）の上マージン = 子の上端から線枠上辺まで */
+const RESULT_FRAME_EDGE_OFFSET = 14;
+/** 上辺左のラウンドラベルと重ならない幅 */
+const RESULT_SHARE_LOGO_W = 112;
 
 const JERSEY_SIZE_RESULT = MOBILE_RESULT_JERSEY_SIZE;
 const JERSEY_WIDTH_SCALE = MOBILE_RESULT_JERSEY_WIDTH_SCALE;
@@ -781,20 +786,27 @@ function ResultPostCardNativeInner({
                   : undefined
               }
             >
-              <ShareBrandCaptureHeaderNative visible={sharing} />
-              <ResultCardDesignFaceNative
-                language={language}
-                face={faceModel}
-                frameGlow
-                showDetailTab={!sharing}
-                pickup={faceModel.isPickup}
-                live={showLiveMark && !pauseListFx && !sharing}
-                deferJerseys
-                animateDraw={!reduceMotionList && entranceEnabled && !pauseListFx && !sharing}
-                drawDelayMs={listEnterIndex * RESULT_CARD_STAGGER_MS}
-                motion={faceMotion}
-                detailSpineStyle={detailSpinePressStyle}
-              />
+              <ShareBrandFrameSealNative
+                visible={sharing}
+                align="end"
+                edgeOffset={RESULT_FRAME_EDGE_OFFSET}
+                logoWidth={RESULT_SHARE_LOGO_W}
+              >
+                <ResultCardDesignFaceNative
+                  language={language}
+                  face={faceModel}
+                  frameGlow
+                  showDetailTab={!sharing}
+                  pickup={faceModel.isPickup}
+                  live={showLiveMark && !pauseListFx && !sharing}
+                  deferJerseys
+                  animateDraw={!reduceMotionList && entranceEnabled && !pauseListFx && !sharing}
+                  drawDelayMs={listEnterIndex * RESULT_CARD_STAGGER_MS}
+                  motion={faceMotion}
+                  detailSpineStyle={detailSpinePressStyle}
+                  topLabelAlign={sharing ? "start" : "center"}
+                />
+              </ShareBrandFrameSealNative>
             </View>
             {cornerCluster}
           </View>
@@ -846,9 +858,15 @@ function ResultPostCardNativeInner({
         collapsable={false}
         style={sharing ? styles.captureSurface : undefined}
       >
-      <ShareBrandCaptureHeaderNative visible={sharing} />
+      <ShareBrandFrameSealNative
+        visible={sharing}
+        align="end"
+        edgeOffset={RESULT_FRAME_EDGE_OFFSET}
+        logoWidth={RESULT_SHARE_LOGO_W}
+      >
       <MatchListLineFrameNative
         topLabel={roundLabel}
+        topLabelAlign={sharing ? "start" : "center"}
         paint={lineFramePaint}
         animateDraw={!reduceMotionList && entranceEnabled && !pauseListFx}
         drawDelayMs={listEnterIndex * RESULT_CARD_STAGGER_MS}
@@ -1112,6 +1130,7 @@ function ResultPostCardNativeInner({
         ) : null}
       </ResultGlassShellNative>
       </MatchListLineFrameNative>
+      </ShareBrandFrameSealNative>
       </View>
 
       {cornerCluster}

@@ -24,12 +24,16 @@ export function invalidateProfileUserDocNative(uid: string): void {
 }
 
 export async function loadProfileUserDocNative(
-  uid: string
+  uid: string,
+  opts?: {
+    /** メモリを使わず取り直す（残高などサーバー側で増える値を最新にする） */
+    fresh?: boolean;
+  }
 ): Promise<{ exists: boolean; data: Record<string, unknown> } | null> {
   const safeUid = uid.trim();
   if (!safeUid) return null;
 
-  const hit = peekUserDocMemoryEntry(safeUid);
+  const hit = opts?.fresh ? undefined : peekUserDocMemoryEntry(safeUid);
   if (hit) {
     return { exists: hit.exists, data: hit.data };
   }

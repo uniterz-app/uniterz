@@ -28,6 +28,10 @@ export async function grantReferralInviteeUnitsOnBind(
     .doc(referralInviteeRewardLedgerKey(inviteeUid));
   const inviteeRef = db.collection("users").doc(inviteeUid);
   const relRef = db.collection("referralRelations").doc(inviteeUid);
+  /** プロフィールで獲得演出を出す（残高差分だけだと初回はアニメなしで既読になる） */
+  const pendingRef = inviteeRef
+    .collection("pending_unit_earns")
+    .doc(referralInviteeRewardLedgerKey(inviteeUid));
 
   try {
     const result = await db.runTransaction(async (tx) => {
@@ -55,6 +59,18 @@ export async function grantReferralInviteeUnitsOnBind(
         },
         { merge: true }
       );
+
+      tx.set(pendingRef, {
+        amount: REFERRAL_INVITEE_UNITS,
+        reason: "referral_invitee",
+        titleJa: "招待ボーナス",
+        titleEn: "Invite bonus",
+        subtitleJa: null,
+        subtitleEn: null,
+        claimedAt: null,
+        createdAt: FieldValue.serverTimestamp(),
+        createdAtMs: Date.now(),
+      });
 
       tx.set(
         relRef,

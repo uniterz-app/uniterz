@@ -118,15 +118,8 @@ export default function TutorialLiveHost({ page }: Props) {
       if (cancelled || seen) return;
       if (readTutorialPageTipSeen(uid, tip)) return;
       const existing = readTutorialLivePhase();
-      if (
-        existing === "welcome" ||
-        existing === "gamesPickup" ||
-        existing === "horizon" ||
-        existing === "games" ||
-        existing === "gamesStats"
-      ) {
-        return;
-      }
+      /** 試合タブのヒントは試合タブを離れた時点で打ち切り。タブをまたぐ horizon だけ待つ */
+      if (existing === "horizon") return;
       if (existing === PAGE_TO_PHASE[tip]) {
         setPhase(existing);
         return;

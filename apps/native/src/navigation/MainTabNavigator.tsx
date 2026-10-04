@@ -10,6 +10,7 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import type { NavigationState, PartialState } from "@react-navigation/native";
 import { useReducedMotion } from "react-native-reanimated";
 import AppTabBar from "./AppTabBar";
+import { useBrandShelfSpaceNative } from "./useBrandShelfSpaceNative";
 import type { MainTabParamList } from "./types";
 import {
   forTabPagerSlide,
@@ -30,14 +31,9 @@ import {
   type HeaderWordmark,
 } from "../../../../lib/ui/headerWordmark";
 import {
-  getAppBrandShelfCollapsed,
   getAppBrandShelfHidden,
   subscribeAppBrandShelfHidden,
 } from "../../../../lib/ui/appBrandShelfVisibility";
-import {
-  getTutorialWelcomeBrandHidden,
-  subscribeTutorialWelcomeBrandHidden,
-} from "../../../../lib/tutorial/tutorialWelcomeChrome";
 import {
   getTutorialTabTransitionQuiet,
   subscribeTutorialTabTransitionQuiet,
@@ -93,11 +89,6 @@ export default function MainTabNavigator() {
     getAppBrandShelfHidden,
     () => false
   );
-  const brandShelfCollapsed = useSyncExternalStore(
-    subscribeAppBrandShelfHidden,
-    getAppBrandShelfCollapsed,
-    () => false
-  );
   const wordmarkOverride = useSyncExternalStore(
     subscribeAppBrandWordmarkOverride,
     getAppBrandWordmarkOverride,
@@ -111,16 +102,17 @@ export default function MainTabNavigator() {
     wordmark !== DEFAULT_HEADER_WORDMARK
       ? wordmark
       : (wordmarkOverride ?? wordmark);
-  const welcomeBrandHidden = useSyncExternalStore(
-    subscribeTutorialWelcomeBrandHidden,
-    getTutorialWelcomeBrandHidden,
-    () => false
-  );
   const tabTransitionQuiet = useSyncExternalStore(
     subscribeTutorialTabTransitionQuiet,
     getTutorialTabTransitionQuiet,
     () => false
   );
+  /**
+   * 棚は上に重ね、各スタック画面の contentStyle で棚ぶん下げる（StackNavigators）。
+   * タブ / native-stack の画面枠は上にはみ出した子を切り取るため、
+   * 枠の外で下げるとサブページ見出し（棚の位置まで引き上げる）が消える。
+   */
+  const { shelfRendered } = useBrandShelfSpaceNative();
 
   const syncWordmarkFromTabState = useCallback(
     (state: NavigationState | PartialState<NavigationState> | undefined) => {
@@ -165,17 +157,6 @@ export default function MainTabNavigator() {
       <NativePushNotificationsHost />
       <SquadBattleLaunchPromptHostNative />
       <View style={styles.root}>
-        {welcomeBrandHidden || brandShelfCollapsed ? null : (
-          <View
-            pointerEvents="none"
-            style={brandShelfHidden ? styles.shelfHold : undefined}
-          >
-            <UniterzBrandShelfNative
-              includeSafeAreaTop
-              title={shelfTitle}
-            />
-          </View>
-        )}
         <View style={styles.tabHost}>
           <Tab.Navigator
             tabBar={(props) => <AppTabBar {...props} />}
@@ -215,6 +196,17 @@ export default function MainTabNavigator() {
             <Tab.Screen name="ProfileTab" component={ProfileStackScreen} />
           </Tab.Navigator>
         </View>
+        {shelfRendered ? (
+          <View
+            pointerEvents="none"
+            style={[styles.shelfOverlay, brandShelfHidden ? styles.shelfHold : null]}
+          >
+            <UniterzBrandShelfNative
+              includeSafeAreaTop
+              title={shelfTitle}
+            />
+          </View>
+        ) : null}
         {splashGateOpen && SplashGate ? (
           <SplashGate onDone={onSplashDone} />
         ) : null}
@@ -234,7 +226,14 @@ const styles = StyleSheet.create({
     backgroundColor: "transparent",
     overflow: "visible",
   },
-  /** サブページ中も高さを残す（タブ全体が上に跳ねない） */
+  shelfOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 20,
+  },
+  /** サブページ中は見た目だけ消す（タブ側の padding は残る） */
   shelfHold: {
     opacity: 0,
   },

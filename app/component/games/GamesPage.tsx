@@ -97,7 +97,6 @@ import { setTutorialWelcomeChromeHidden, setTutorialWelcomeBrandHidden } from "@
 import { setTutorialRestartCover } from "@/lib/tutorial/tutorialRestartCover";
 import { getTutorialWelcomeIntroSession } from "@/lib/tutorial/tutorialWelcomeSkipIntro";
 import {
-  ensureTutorialWelcomeFirst,
   resolveTutorialWelcomeAudience,
   tutorialWelcomeBriefingProps,
   writeTutorialWelcomeAudience,
@@ -259,7 +258,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
     router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
   }, [searchParams, router, pathname]);
 
-  /** 初回: welcome → ピックアップ説明のみ（他タブは各ページ初訪問時） */
+  /** 初回: welcome 選択画面は出さず、試合カード → ピックアップ説明のみ（他タブは各ページ初訪問時） */
   useEffect(() => {
     const uid = user?.uid;
     if (!uid) return;
@@ -279,15 +278,12 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
       ) {
         return;
       }
-      const start: TutorialLivePhase =
-        isTutorialGamesSubstep(existing) || existing === "welcome"
-          ? existing
-          : "welcome";
-      const audience = ensureTutorialWelcomeFirst();
+      const start: TutorialLivePhase = isTutorialGamesSubstep(existing)
+        ? existing
+        : TUTORIAL_GAMES_FIRST_SUBSTEP;
+      writeTutorialLiveTrack("full");
       writeTutorialLivePhase(start);
       setTutorialPhase(start);
-      setWelcomeAudience(audience);
-      if (start === "welcome") setTutorialWelcomeChromeHidden(true);
       setAppTutorialBlockingEvents(true);
     })();
     return () => {

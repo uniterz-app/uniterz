@@ -160,14 +160,6 @@ export default function ReferralInvitePage() {
           >
             {copy.sendInvite}
           </h2>
-          <p
-            className={[
-              nameOxanium.className,
-              "text-[8px] font-bold uppercase tracking-[0.12em] text-white/35",
-            ].join(" ")}
-          >
-            CODE · LINK · QR
-          </p>
         </div>
 
         <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-start">
@@ -182,14 +174,16 @@ export default function ReferralInvitePage() {
                 {copy.inviteCode}
               </p>
               <div className="flex items-stretch gap-2">
-                <code
-                  className={referralSkewBlockClassName(
-                    "min-w-0 flex-1 truncate border border-amber-300/35 bg-amber-300/10 px-3 py-2.5 text-[16px] font-bold tracking-[0.14em] text-amber-100"
-                  )}
-                  style={referralSkewBlockStyle}
-                >
-                  {summary.inviteCode}
-                </code>
+                <div className="flex min-w-0 flex-1 items-center border border-amber-300/35 bg-amber-300/10 px-3 py-2.5">
+                  <code
+                    className={referralSkewBlockClassName(
+                      "max-w-full truncate text-[16px] font-bold tracking-[0.14em] text-amber-100"
+                    )}
+                    style={referralSkewBlockStyle}
+                  >
+                    {summary.inviteCode}
+                  </code>
+                </div>
                 <button
                   type="button"
                   onClick={() =>
@@ -243,14 +237,6 @@ export default function ReferralInvitePage() {
               height={132}
               className="border border-white/20 bg-white p-1.5"
             />
-            <p
-              className={[
-                nameOxanium.className,
-                "text-[8px] font-bold uppercase tracking-[0.14em] text-white/35",
-              ].join(" ")}
-            >
-              QR
-            </p>
           </div>
         </div>
 
@@ -328,9 +314,6 @@ export default function ReferralInvitePage() {
             </div>
           ))}
         </div>
-        <p className="text-[11px] leading-relaxed text-white/40">
-          {copy.grantNote}
-        </p>
       </section>
 
       {/* 進行ステータス */}

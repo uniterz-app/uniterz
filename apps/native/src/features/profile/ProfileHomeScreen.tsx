@@ -22,7 +22,7 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { keyboardAvoidingBehavior } from "../../ui/keyboardAvoidingBehaviorNative";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { signOut, updateProfile } from "firebase/auth";
@@ -250,6 +250,8 @@ export default function ProfileHomeScreen({
   const targetUid = isPublicProfileView ? profileByHandle.targetUid ?? undefined : myUid;
   const apiBase = getUniterzApiBaseUrl();
 
+  /** 設定はサイドメニュー Modal 内に重ねるため SafeAreaView だと上インセットが 0 になる */
+  const safeInsets = useSafeAreaInsets();
   const [tab, setTab] = useState<ProfileTab>("overview");
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -953,7 +955,8 @@ export default function ProfileHomeScreen({
       }
 
       try {
-        const loaded = await loadProfileUserDocNative(myUid);
+        /** warm で先に描画し、Unit 残高などは取り直す（招待ボーナス付与前のメモリが残るため） */
+        const loaded = await loadProfileUserDocNative(myUid, { fresh: true });
         if (!alive) return;
         if (!loaded) {
           setMyUserDoc(null);
@@ -1018,7 +1021,7 @@ export default function ProfileHomeScreen({
         return;
       }
       let alive = true;
-      void loadProfileUserDocNative(myUid).then((loaded) => {
+      void loadProfileUserDocNative(myUid, { fresh: true }).then((loaded) => {
         if (!alive || !loaded?.exists) return;
         const data = loaded.data;
         setMyUserDoc(data);
@@ -1535,7 +1538,16 @@ export default function ProfileHomeScreen({
         settingsOpen ? (
       <View style={styles.profileModalRoot}>
         <GamesPageBackgroundNative lite />
-        <SafeAreaView style={styles.profileModalSafe}>
+        <View
+          style={[
+            styles.profileModalSafe,
+            {
+              paddingTop: safeInsets.top,
+              paddingLeft: safeInsets.left,
+              paddingRight: safeInsets.right,
+            },
+          ]}
+        >
           <View style={styles.profileModalLayer}>
             <KeyboardAvoidingView
               style={styles.profileModalFill}
@@ -1844,7 +1856,7 @@ export default function ProfileHomeScreen({
               </View>
             )}
           </View>
-        </SafeAreaView>
+        </View>
       </View>
         ) : null
       }

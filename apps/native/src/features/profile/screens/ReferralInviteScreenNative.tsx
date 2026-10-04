@@ -135,7 +135,6 @@ export default function ReferralInviteScreenNative() {
             <Text style={styles.sectionTitleCyan}>
               {L(lang, { ja: "招待を送る", en: "Send invite", ko: "초대 보내기", zh: "发送邀请", es: "Enviar invitación", pt: "Enviar convite", fr: "Envoyer une invitation" })}
             </Text>
-            <Text style={styles.shareHeadMeta}>CODE · LINK · QR</Text>
           </View>
 
           <View style={styles.shareRow}>
@@ -144,9 +143,11 @@ export default function ReferralInviteScreenNative() {
                 {L(lang, { ja: "招待コード", en: "Invite code", ko: "초대 코드", zh: "邀请码", es: "Código de invitación", pt: "Código de convite", fr: "Code d’invitation" })}
               </Text>
               <View style={styles.codeRow}>
-                <Text style={styles.code} numberOfLines={1}>
-                  {summary.inviteCode}
-                </Text>
+                <View style={styles.codeBox}>
+                  <Text style={styles.code} numberOfLines={1}>
+                    {summary.inviteCode}
+                  </Text>
+                </View>
                 <Pressable
                   onPress={() =>
                     void copy(
@@ -190,7 +191,6 @@ export default function ReferralInviteScreenNative() {
                 source={{ uri: qrImageUrl(summary.inviteUrl) }}
                 style={styles.qr}
               />
-              <Text style={styles.qrCaption}>QR</Text>
             </View>
           </View>
 
@@ -259,7 +259,6 @@ export default function ReferralInviteScreenNative() {
               </View>
             ))}
           </View>
-          <Text style={styles.muted}>{inviteCopy.grantNote}</Text>
         </View>
 
         <View style={styles.statsGrid}>
@@ -359,13 +358,6 @@ const styles = StyleSheet.create({
     color: "rgba(255,255,255,0.7)",
     textTransform: "uppercase",
   },
-  shareHeadMeta: {
-    fontFamily: OX,
-    fontSize: 8,
-    fontWeight: "700",
-    letterSpacing: 1.2,
-    color: "rgba(255,255,255,0.35)",
-  },
   muted: { fontSize: 11, color: "rgba(255,255,255,0.4)", lineHeight: 16 },
   shareRow: { flexDirection: "row", gap: 12, alignItems: "flex-start" },
   shareCol: { flex: 1, minWidth: 0 },
@@ -379,13 +371,16 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   codeRow: { flexDirection: "row", alignItems: "stretch", gap: 8 },
-  code: {
+  codeBox: {
     flex: 1,
     borderWidth: 1,
     borderColor: "rgba(252,211,77,0.35)",
     backgroundColor: "rgba(252,211,77,0.1)",
     paddingHorizontal: 12,
     paddingVertical: 10,
+    justifyContent: "center",
+  },
+  code: {
     fontSize: 16,
     fontWeight: "700",
     letterSpacing: 1.8,
@@ -450,13 +445,6 @@ const styles = StyleSheet.create({
   },
   qrWrap: { width: 120, alignItems: "center", gap: 4 },
   qr: { width: 112, height: 112, backgroundColor: "#fff" },
-  qrCaption: {
-    fontFamily: OX,
-    fontSize: 8,
-    fontWeight: "700",
-    letterSpacing: 1.4,
-    color: "rgba(255,255,255,0.35)",
-  },
   rewardsCard: {
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.12)",

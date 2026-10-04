@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useRoute } from "@react-navigation/native";
 import type { RouteProp } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
@@ -14,6 +15,7 @@ import type {
   ProfileStackParamList,
 } from "./types";
 import { useBottomTabBarInsets } from "./useBottomTabBarInsets";
+import { useBrandShelfSpaceNative } from "./useBrandShelfSpaceNative";
 import { useFirebaseUser } from "../auth/FirebaseUserProvider";
 import { useNativeUserLanguage } from "../hooks/useNativeUserLanguage";
 import NativeStackBackdrop from "../components/NativeStackBackdrop";
@@ -32,6 +34,24 @@ const screenOptions = {
   detachInactiveScreens: true,
   freezeOnBlur: false,
 };
+
+/**
+ * 棚（MainTab で上に重ねる）ぶんを画面枠の内側で下げる。
+ * 枠の内側なので、サブページ見出しが棚の位置まで引き上げても切り取られない。
+ */
+function useStackScreenOptions() {
+  const { shelfSpace } = useBrandShelfSpaceNative();
+  return useMemo(
+    () => ({
+      ...screenOptions,
+      contentStyle: {
+        ...screenOptions.contentStyle,
+        paddingTop: shelfSpace,
+      },
+    }),
+    [shelfSpace]
+  );
+}
 
 const publicProfileScreenOptions = {
   animation: "slide_from_right" as const,
@@ -63,9 +83,10 @@ function GamesHomeRoute() {
 }
 
 function GamesStackScreen() {
+  const stackOptions = useStackScreenOptions();
   return (
     <NativeStackBackdrop>
-      <GamesStack.Navigator screenOptions={screenOptions}>
+      <GamesStack.Navigator screenOptions={stackOptions}>
         <GamesStack.Screen name="GamesHome" component={GamesHomeRoute} />
         <GamesStack.Screen
           name="GamePredict"
@@ -157,9 +178,10 @@ function GamesStackScreen() {
 
 function ResultStackScreen() {
   const { bottomContentReserveY } = useBottomTabBarInsets();
+  const stackOptions = useStackScreenOptions();
   return (
     <NativeStackBackdrop>
-      <ResultStack.Navigator screenOptions={screenOptions}>
+      <ResultStack.Navigator screenOptions={stackOptions}>
         <ResultStack.Screen name="ResultHome">
           {() => <ResultHomeScreen bottomReserveY={bottomContentReserveY} />}
         </ResultStack.Screen>
@@ -197,9 +219,10 @@ function ResultStackScreen() {
 
 function RankingsStackScreen() {
   const { bottomContentReserveY } = useBottomTabBarInsets();
+  const stackOptions = useStackScreenOptions();
   return (
     <NativeStackBackdrop>
-      <RankingsStack.Navigator screenOptions={screenOptions}>
+      <RankingsStack.Navigator screenOptions={stackOptions}>
         <RankingsStack.Screen name="RankingsHome">
           {() => <RankingsHomeScreen bottomReserveY={bottomContentReserveY} />}
         </RankingsStack.Screen>
@@ -231,9 +254,10 @@ function RankingsStackScreen() {
 
 function LeaderboardsStackScreen() {
   const { bottomContentReserveY } = useBottomTabBarInsets();
+  const stackOptions = useStackScreenOptions();
   return (
     <NativeStackBackdrop>
-      <LeaderboardsStack.Navigator screenOptions={screenOptions}>
+      <LeaderboardsStack.Navigator screenOptions={stackOptions}>
         <LeaderboardsStack.Screen name="LeaderboardsHome">
           {() => <LeaderboardsHomeScreen bottomReserveY={bottomContentReserveY} />}
         </LeaderboardsStack.Screen>
@@ -287,9 +311,10 @@ function ProfileHomeRoute() {
 }
 
 function ProfileStackScreen() {
+  const stackOptions = useStackScreenOptions();
   return (
     <NativeStackBackdrop>
-      <ProfileStack.Navigator screenOptions={screenOptions}>
+      <ProfileStack.Navigator screenOptions={stackOptions}>
         <ProfileStack.Screen name="ProfileHome" component={ProfileHomeRoute} />
         <ProfileStack.Screen
           name="PublicProfile"

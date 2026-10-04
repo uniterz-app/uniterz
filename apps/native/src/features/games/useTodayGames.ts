@@ -569,6 +569,50 @@ export function useTodayGames(options: UseTodayGamesOptions = {}) {
     liveWakeTick,
   ]);
 
+  /** 引っ張って更新: 表示中の行を残したまま窓を取り直す（loading にしない） */
+  const pullRefresh = useCallback(async () => {
+    const apiBase = getUniterzApiBaseUrl();
+    if (!apiBase) return;
+    const windowKey = fetchWindowKey;
+    const league = selectedLeague;
+    try {
+      const payload = await fetchGamesWindowShared({
+        league,
+        anchorDateKey: windowKey,
+        timeZone,
+        plusMinus: GAME_DAYS_PLUS_MINUS,
+        apiBaseUrl: apiBase,
+        season: GAME_SCHEDULE_SEASON,
+        force: true,
+      });
+      const prev = windowBoundsRef.current;
+      if (prev && prev.windowKey !== windowKey) return;
+      const rows = payload.rows as NativeGameRow[];
+      const peerRows = (payload.peerRows.length
+        ? payload.peerRows
+        : payload.rows) as NativeGameRow[];
+      const startKey = payload.range.startKey || prev?.startKey || "";
+      const endKey = payload.range.endKey || prev?.endKey || "";
+      if (startKey && endKey) {
+        windowBoundsRef.current = { windowKey, startKey, endKey };
+        writeGamesWindowRowsCache(
+          buildGamesWindowRowsCacheKey({
+            league,
+            timeZone,
+            windowKey,
+            plusMinus: GAME_DAYS_PLUS_MINUS,
+          }),
+          { rows, peerRows, windowKey, startKey, endKey }
+        );
+      }
+      setWindowRows(rows);
+      setPeerRowsForSeries(peerRows);
+      setError(null);
+    } catch {
+      /* 失敗時は表示中の行を維持 */
+    }
+  }, [fetchWindowKey, selectedLeague, timeZone]);
+
   useEffect(() => {
     if (loading) return;
     /** 窓外の日を選んだ直後（再取得前）の古い行で着地させない */
@@ -607,5 +651,6 @@ export function useTodayGames(options: UseTodayGamesOptions = {}) {
     goNextDay: () => moveDay(1),
     goToday: () => setSelectedDate(new Date()),
     refresh,
+    pullRefresh,
   };
 }

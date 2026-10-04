@@ -138,15 +138,8 @@ export default function TutorialLiveHostNative({ page, language }: Props) {
         if (cancelled || seen) return;
         if (await readTutorialPageTipSeenNative(uid, tip)) return;
         const existing = await readTutorialLivePhaseNative();
-        if (
-          existing === "welcome" ||
-          existing === "gamesPickup" ||
-          existing === "horizon" ||
-          existing === "games" ||
-          existing === "gamesStats"
-        ) {
-          return;
-        }
+        /** 試合タブのヒントは試合タブを離れた時点で打ち切り。タブをまたぐ horizon だけ待つ */
+        if (existing === "horizon") return;
         const phaseForTip = PAGE_TO_PHASE[tip];
         if (existing === phaseForTip) return;
         await writeTutorialLivePhaseNative(phaseForTip);

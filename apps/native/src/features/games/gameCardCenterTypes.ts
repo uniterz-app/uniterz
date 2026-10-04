@@ -12,6 +12,10 @@ export type GameCardCenterBlock =
       /** 試合終了ラベルの下（PK 戦の本数） */
       pkScore?: PkScore | null;
     }
-  /** ライブ中：LIVE のみ（Native — スコアは非表示） */
-  | { variant: "liveMark"; subLine?: string | null }
+  /** ライブ中：LIVE ＋ スコア（取得済みのとき・Web と同様）＋ピリオド */
+  | {
+      variant: "liveMark";
+      subLine?: string | null;
+      score?: { home: number; away: number } | null;
+    }
   | { variant: "time"; time: string };

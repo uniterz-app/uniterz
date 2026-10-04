@@ -2,8 +2,8 @@
  * Web `CyberSubpageShell` 相当。
  * 戻る（角切り）+ eyebrow + サイバー題名（中央）+ 説明は右上はてな（オーバーレイ）。
  */
-import { useCallback, useState, type ReactNode } from "react";
-import { useFocusEffect } from "@react-navigation/native";
+import { useCallback, useLayoutEffect, useState, type ReactNode } from "react";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import {
   Modal,
   Platform,
@@ -21,7 +21,6 @@ import {
   acquireAppBrandWordmark,
   isHeaderWordmark,
 } from "../../../../lib/ui/headerWordmark";
-import { uniterzBrandShelfOffsetTop } from "../features/UniterzBrandShelfNative";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import Animated, { useReducedMotion } from "react-native-reanimated";
 import { RankingsPageTitleCyberNative } from "../features/rankings/RankingsPageTitleCyberNative";
@@ -225,7 +224,8 @@ export function CyberSubpageHeaderNative({
       style={[
         styles.headerWrap,
         embedded && styles.headerWrapEmbedded,
-        hideShelf ? { paddingTop: insets.top } : null,
+        /** ステータスバー裏は塗らず背景を見せる（プロフィール編集と同じ） */
+        hideShelf ? { marginTop: insets.top } : null,
       ]}
       {...(!embedded && motionOn
         ? { entering: nbaSubpageHeaderEntering }
@@ -330,8 +330,18 @@ export default function CyberSubpageShellNative({
   const useEdgeBack = hideBack ?? edgeBack;
   const reduceMotion = useReducedMotion();
   const motionOn = reduceMotion !== true;
-  const insets = useSafeAreaInsets();
-  const shelfPull = hideBrandShelf ? uniterzBrandShelfOffsetTop(insets.top) : 0;
+  const navigation = useNavigation();
+
+  /**
+   * スタック画面は棚ぶん paddingTop で下がっている（StackNavigators）。
+   * 棚を隠すサブページはその画面だけ 0 にし、見出しを画面最上部から出す。
+   */
+  useLayoutEffect(() => {
+    if (!hideBrandShelf) return;
+    navigation.setOptions({
+      contentStyle: { backgroundColor: "transparent", paddingTop: 0 },
+    });
+  }, [hideBrandShelf, navigation]);
 
   const body = scroll ? (
     <ScrollView
@@ -348,20 +358,7 @@ export default function CyberSubpageShellNative({
   );
 
   return (
-    <View
-      style={[
-        styles.root,
-        hideBrandShelf
-          ? {
-              position: "absolute",
-              top: -shelfPull,
-              left: 0,
-              right: 0,
-              bottom: 0,
-            }
-          : null,
-      ]}
-    >
+    <View style={styles.root}>
       <CyberSubpageHeaderNative
         eyebrow={eyebrow}
         title={title}

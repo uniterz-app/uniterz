@@ -6,7 +6,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { GamesStackParamList } from "../../navigation/types";
 import { GestureDetector } from "react-native-gesture-handler";
 import {
-  Platform, Pressable, FlatList, StyleSheet, Text, View,
+  Platform, Pressable, FlatList, RefreshControl, StyleSheet, Text, View,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
   type ListRenderItemInfo,
@@ -164,7 +164,6 @@ import { getTutorialWelcomeIntroSession } from "../../../../../lib/tutorial/tuto
 import type { TutorialWelcomeFlyDest } from "../../../../../lib/tutorial/tutorialMotion";
 import { tutorialWelcomeBriefingProps } from "../../../../../lib/tutorial/tutorialWelcomeAudience";
 import {
-  ensureTutorialWelcomeFirstNative,
   getTutorialWelcomeAudienceNativeMemory,
   setTutorialWelcomeAudienceNative,
   type TutorialWelcomeAudience,
@@ -296,7 +295,7 @@ function isEffectiveLive(game: Record<string, unknown>): boolean {
 }
 
 /**
- * 試合カード中央：終了はスコア、ライブは LIVE のみ、それ以外はキックオフ
+ * 試合カード中央：終了はスコア、ライブは LIVE ＋スコア（取得済みのとき）、それ以外はキックオフ
  */
 function getGameCardCenterBlock(
   game: Record<string, unknown>,
@@ -326,7 +325,11 @@ function getGameCardCenterBlock(
       meta?.period || meta?.runningTime
         ? `${meta?.period ?? ""}${meta?.runningTime ? ` ${meta.runningTime}` : ""}`.trim()
         : null;
-    return { variant: "liveMark", subLine: subLine || null };
+    return {
+      variant: "liveMark",
+      subLine: subLine || null,
+      score: score ? { home: score.home, away: score.away } : null,
+    };
   }
   return {
     variant: "time",
@@ -751,7 +754,21 @@ export default function GamesHomeScreen({
     setSelectedLeague,
     goPrevDay,
     goNextDay,
+    pullRefresh,
   } = useTodayGames({ enabled: true, timeZone: dayTimeZone });
+  const [pullRefreshing, setPullRefreshing] = useState(false);
+  const onPullRefresh = useCallback(async () => {
+    setPullRefreshing(true);
+    try {
+      /** 一瞬で消えるとスピナーがチラつくため最低表示時間を取る */
+      await Promise.all([
+        pullRefresh(),
+        new Promise((resolve) => setTimeout(resolve, 600)),
+      ]);
+    } finally {
+      setPullRefreshing(false);
+    }
+  }, [pullRefresh]);
   const reduceMotion = useReducedMotion() ?? false;
   const { teams: scheduleTeams, nameById: teamNameById } =
     useScheduleTeamsNative(selectedLeague);
@@ -802,7 +819,7 @@ export default function GamesHomeScreen({
   ]);
   const leagueHeaderLabel = LEAGUE_HEADER_LABEL.nba;
 
-  /** 初回: welcome → ピックアップ説明のみ（他タブは各ページ初訪問時） */
+  /** 初回: welcome 選択画面は出さず、試合カード → ピックアップ説明のみ（他タブは各ページ初訪問時） */
   useEffect(() => {
     const uid = fUser?.uid;
     if (!uid || authStatus === "loading") return;
@@ -823,16 +840,12 @@ export default function GamesHomeScreen({
       ) {
         return;
       }
-      const start: TutorialLivePhase =
-        isTutorialGamesSubstep(existing) || existing === "welcome"
-          ? existing
-          : "welcome";
-      const audience = await ensureTutorialWelcomeFirstNative();
+      const start: TutorialLivePhase = isTutorialGamesSubstep(existing)
+        ? existing
+        : TUTORIAL_GAMES_FIRST_SUBSTEP;
+      setTutorialLiveTrackNative("full");
       await writeTutorialLivePhaseNative(start);
-      if (!cancelled) {
-        setTutorialPhase(start);
-        setWelcomeAudience(audience);
-      }
+      if (!cancelled) setTutorialPhase(start);
     })();
     return () => {
       cancelled = true;
@@ -1114,10 +1127,10 @@ export default function GamesHomeScreen({
   const mainScrollContentStyle = useMemo(
     () => [
       styles.mainScrollContent,
-      /** listContent より後に当てる想定。ナビ絶対配置分 + 末尾カード余白 */
-      { paddingTop: topContentPadY, paddingBottom: spacing.xl + bottomReserveY },
+      /** listContent より後に当てる想定。上余白は固定ヘッダー側で取る。末尾カード余白 */
+      { marginTop: 0, paddingTop: 0, paddingBottom: spacing.xl + bottomReserveY },
     ],
-    [bottomReserveY, topContentPadY]
+    [bottomReserveY]
   );
   const screenShellStyle = useMemo(
     () => [styles.card, { paddingTop: 0, flex: 1, zIndex: 1 }],
@@ -2353,6 +2366,11 @@ export default function GamesHomeScreen({
 
       setPredictedGameIds(nextPredictedIds);
       setMyPredictionsReloadNonce((prev) => prev + 1);
+      /** ヒント途中で予想したら試合タブのヒントは済み扱い（残すと他タブのヒントが止まる） */
+      if (isTutorialGamesSubstep(tutorialPhase)) {
+        void markTutorialPageTipSeenNative(fUser?.uid, "games");
+        setTutorialPhaseAndStore(null);
+      }
       if (fUser?.uid) {
         /** Result 一覧の短 TTL キャッシュを捨て、タブ再訪で新投稿が見えるようにする */
         invalidateResultPostsListCache(fUser.uid);
@@ -2545,16 +2563,9 @@ export default function GamesHomeScreen({
         <UniterzBrandShelfNative includeSafeAreaTop title="UNITERZ" />
       ) : null}
       <GestureDetector gesture={pageSwipeGesture}>
-      <GamesMainScrollNative
-        scrollRef={mainScrollRef}
-        style={styles.mainScroll}
-        contentContainerStyle={mainScrollContentStyle}
-        scrollEnabled={!welcomeResting && tutorialUserScrollEnabled}
-        onScrollY={(y) => {
-          mainScrollYRef.current = y;
-        }}
-        listHeader={
-          <>
+      <View style={styles.mainColumn}>
+      {/* 引っ張って更新で動くのは日付ストリップより下だけにする */}
+      <View style={[styles.gamesFixedHeader, { paddingTop: topContentPadY }]}>
       <View style={styles.gamesHeaderShell}>
         <View style={styles.gamesHeaderTitleRow}>
           <View style={styles.gamesHeaderSideLeft}>
@@ -2631,7 +2642,19 @@ export default function GamesHomeScreen({
         />
       )}
       </View>
-
+      </View>
+      <GamesMainScrollNative
+        scrollRef={mainScrollRef}
+        style={styles.mainScroll}
+        contentContainerStyle={mainScrollContentStyle}
+        scrollEnabled={!welcomeResting && tutorialUserScrollEnabled}
+        refreshing={pullRefreshing}
+        onRefresh={onPullRefresh}
+        onScrollY={(y) => {
+          mainScrollYRef.current = y;
+        }}
+        listHeader={
+          <>
       {showInitialSkeleton || predictionPaintPending ? (
         <View style={styles.skeletonList}>
           {SKELETON_ROWS.map((row) => (
@@ -2665,6 +2688,7 @@ export default function GamesHomeScreen({
         }
         cardListProps={cardListProps}
       />
+      </View>
       </GestureDetector>
       </View>
       </TutorialWelcomeWorldCameraNative>
@@ -2897,6 +2921,8 @@ type GamesMainScrollNativeProps = {
   style: object;
   contentContainerStyle: object;
   scrollEnabled: boolean;
+  refreshing: boolean;
+  onRefresh: () => void;
   onScrollY: (y: number) => void;
   listHeader: ReactElement;
   games: Array<Record<string, unknown>>;
@@ -2917,6 +2943,8 @@ function GamesMainScrollNative({
   style,
   contentContainerStyle,
   scrollEnabled,
+  refreshing,
+  onRefresh,
   onScrollY,
   listHeader,
   games,
@@ -2966,6 +2994,16 @@ function GamesMainScrollNative({
       showsVerticalScrollIndicator={false}
       contentInsetAdjustmentBehavior="never"
       scrollEnabled={scrollEnabled}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          enabled={scrollEnabled}
+          tintColor="#00F5FF"
+          colors={["#00F5FF"]}
+          progressBackgroundColor="#050508"
+        />
+      }
       onScroll={(e: NativeSyntheticEvent<NativeScrollEvent>) => {
         onScrollY(e.nativeEvent.contentOffset.y);
         onVisScroll?.(e);
@@ -2999,6 +3037,14 @@ const styles = StyleSheet.create({
   },
   welcomeWorldColumn: {
     flex: 1,
+  },
+  mainColumn: {
+    flex: 1,
+  },
+  /** 一覧の外に置く固定ヘッダー（カード一覧の listContent と同じ左右余白） */
+  gamesFixedHeader: {
+    paddingHorizontal: 12,
+    marginTop: 4,
   },
   gamesHeaderShell: {
     marginBottom: 8,

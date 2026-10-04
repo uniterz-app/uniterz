@@ -187,6 +187,7 @@ function RectShell({
   badge,
   paint: paintProp,
   topLabel,
+  topLabelAlign = "center",
   leftLabel,
   pickup = false,
   onOpenDetail,
@@ -201,6 +202,7 @@ function RectShell({
   badge: OutcomeBadge;
   paint?: { color: string; glow: string };
   topLabel?: string;
+  topLabelAlign?: "center" | "start";
   /** ピックアップ時の左辺縦ラベル（`PICK UP`） */
   leftLabel?: string;
   pickup?: boolean;
@@ -240,6 +242,7 @@ function RectShell({
   const shell = (
     <MatchListLineFrameNative
       topLabel={topLabel}
+      topLabelAlign={topLabelAlign}
       leftLabel={leftLabel}
       pickup={pickup}
       paint={paint}
@@ -688,6 +691,7 @@ function Plan1Card({
   motion,
   detailSpineStyle,
   deferJerseys = false,
+  topLabelAlign = "center",
 }: {
   sample: Sample;
   badge: OutcomeBadge | null;
@@ -707,6 +711,7 @@ function Plan1Card({
   motion?: ResultFaceMatchEntranceStyles;
   detailSpineStyle?: object;
   deferJerseys?: boolean;
+  topLabelAlign?: "center" | "start";
 }) {
   const settled = sample.settled !== false;
   const paint = settled && badge
@@ -751,6 +756,7 @@ function Plan1Card({
     return (
       <MatchListLineFrameNative
         topLabel={sample.roundLabel}
+        topLabelAlign={topLabelAlign}
         leftLabel={pickupLeft}
         pickup={pickup}
         paint={paint}
@@ -768,6 +774,7 @@ function Plan1Card({
       badge={shellBadge}
       paint={paint}
       topLabel={sample.roundLabel}
+      topLabelAlign={topLabelAlign}
       leftLabel={pickupLeft}
       pickup={pickup}
       onOpenDetail={onOpenDetail}
@@ -807,6 +814,7 @@ export function ResultCardDesignFaceNative({
   detailSpineStyle,
   live = false,
   deferJerseys = false,
+  topLabelAlign = "center",
 }: {
   language: import("../../../../../lib/i18n/language").Language;
   badge?: OutcomeBadge | null;
@@ -853,6 +861,8 @@ export function ResultCardDesignFaceNative({
   live?: boolean;
   /** 一覧: 画面近傍まで Skia ジャージ遅延 */
   deferJerseys?: boolean;
+  /** 共有キャプチャ中は start（上辺右にロゴをはめ込むため） */
+  topLabelAlign?: "center" | "start";
 }) {
   const settledFromFace =
     face != null
@@ -936,6 +946,7 @@ export function ResultCardDesignFaceNative({
       motion={motion}
       detailSpineStyle={detailSpineStyle}
       deferJerseys={deferJerseys}
+      topLabelAlign={topLabelAlign}
     />
   );
 }

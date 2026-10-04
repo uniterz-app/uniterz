@@ -301,9 +301,6 @@ export default function ReferralStampBoard({
             ? copy.nextHint(next.target, next.remaining, next.bonusUnits)
             : copy.completeHint}
         </p>
-        <p className="text-[10px] text-white/35">
-          {copy.breakdown(earned.base, earned.milestones)}
-        </p>
       </div>
     </section>
   );

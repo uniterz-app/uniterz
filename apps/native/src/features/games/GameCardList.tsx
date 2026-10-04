@@ -340,26 +340,60 @@ export const GameCardListRow = memo(function GameCardListRow(props: GameCardList
                       {centerBlock.variant === "liveMark" ? (
                         <View
                           style={
-                            centerBlock.subLine
+                            centerBlock.subLine || centerBlock.score
                               ? styles.liveScoreStack
                               : styles.liveMarkWrap
                           }
                         >
-                          <LiveMarkPill
-                            pillStyle={styles.liveMarkPill}
-                            textStyle={styles.liveMarkText}
-                          />
-                          {centerBlock.subLine ? (
-                            <Text
+                          {centerBlock.score ? null : (
+                            <LiveMarkPill
+                              pillStyle={styles.liveMarkPill}
+                              textStyle={styles.liveMarkText}
+                              clock={centerBlock.subLine}
+                            />
+                          )}
+                          {centerBlock.score ? (
+                            <View
                               style={[
-                                styles.centerSubline,
-                                isWcCard && styles.centerSublineWc,
-                                styles.centerLiveClock,
+                                styles.centerTextScoreRow,
+                                isWcCard && styles.centerTextScoreRowWc,
                               ]}
-                              numberOfLines={2}
                             >
-                              {centerBlock.subLine}
-                            </Text>
+                              <View
+                                pointerEvents="none"
+                                style={styles.livePillAboveScore}
+                              >
+                                <LiveMarkPill
+                                  pillStyle={styles.liveMarkPill}
+                                  textStyle={styles.liveMarkText}
+                                  clock={centerBlock.subLine}
+                                />
+                              </View>
+                              <Text
+                                style={[
+                                  styles.centerTextScoreNum,
+                                  isWcCard && styles.centerTextScoreNumWc,
+                                ]}
+                              >
+                                {centerBlock.score.home}
+                              </Text>
+                              <Text
+                                style={[
+                                  styles.centerScoreDash,
+                                  isWcCard && styles.centerScoreDashWc,
+                                ]}
+                              >
+                                –
+                              </Text>
+                              <Text
+                                style={[
+                                  styles.centerTextScoreNum,
+                                  isWcCard && styles.centerTextScoreNumWc,
+                                ]}
+                              >
+                                {centerBlock.score.away}
+                              </Text>
+                            </View>
                           ) : null}
                         </View>
                       ) : centerBlock.variant === "score" ? (
@@ -517,26 +551,60 @@ export const GameCardListRow = memo(function GameCardListRow(props: GameCardList
                       {centerBlock.variant === "liveMark" ? (
                         <View
                           style={
-                            centerBlock.subLine
+                            centerBlock.subLine || centerBlock.score
                               ? styles.liveScoreStack
                               : styles.liveMarkWrap
                           }
                         >
-                          <LiveMarkPill
-                            pillStyle={styles.liveMarkPill}
-                            textStyle={styles.liveMarkText}
-                          />
-                          {centerBlock.subLine ? (
-                            <Text
+                          {centerBlock.score ? null : (
+                            <LiveMarkPill
+                              pillStyle={styles.liveMarkPill}
+                              textStyle={styles.liveMarkText}
+                              clock={centerBlock.subLine}
+                            />
+                          )}
+                          {centerBlock.score ? (
+                            <View
                               style={[
-                                styles.centerSubline,
-                                isWcCard && styles.centerSublineWc,
-                                styles.centerLiveClock,
+                                styles.centerTextScoreRow,
+                                isWcCard && styles.centerTextScoreRowWc,
                               ]}
-                              numberOfLines={2}
                             >
-                              {centerBlock.subLine}
-                            </Text>
+                              <View
+                                pointerEvents="none"
+                                style={styles.livePillAboveScore}
+                              >
+                                <LiveMarkPill
+                                  pillStyle={styles.liveMarkPill}
+                                  textStyle={styles.liveMarkText}
+                                  clock={centerBlock.subLine}
+                                />
+                              </View>
+                              <Text
+                                style={[
+                                  styles.centerTextScoreNum,
+                                  isWcCard && styles.centerTextScoreNumWc,
+                                ]}
+                              >
+                                {centerBlock.score.home}
+                              </Text>
+                              <Text
+                                style={[
+                                  styles.centerScoreDash,
+                                  isWcCard && styles.centerScoreDashWc,
+                                ]}
+                              >
+                                –
+                              </Text>
+                              <Text
+                                style={[
+                                  styles.centerTextScoreNum,
+                                  isWcCard && styles.centerTextScoreNumWc,
+                                ]}
+                              >
+                                {centerBlock.score.away}
+                              </Text>
+                            </View>
                           ) : null}
                         </View>
                       ) : centerBlock.variant === "score" ? (

@@ -98,7 +98,11 @@ export function getGameCardCenterBlock(
       meta?.period || meta?.runningTime
         ? `${meta?.period ?? ""}${meta?.runningTime ? ` ${meta.runningTime}` : ""}`.trim()
         : null;
-    return { variant: "liveMark", subLine: subLine || null };
+    return {
+      variant: "liveMark",
+      subLine: subLine || null,
+      score: score ? { home: score.home, away: score.away } : null,
+    };
   }
   return {
     variant: "time",

@@ -181,6 +181,8 @@ export function resolveGameLiveMeta(
       ? liveMeta.period
       : typeof raw.period === "string"
       ? String(raw.period)
+      : typeof raw.periodLabel === "string" && raw.periodLabel.trim()
+      ? raw.periodLabel.trim()
       : undefined;
 
   const runningTime =
@@ -193,6 +195,15 @@ export function resolveGameLiveMeta(
       : typeof raw.clock === "string"
       ? String(raw.clock)
       : undefined;
+
+  /** BDL の clock は "Q2 11:45" / "Halftime" のようにピリオド込みのことがあるため二重表示を防ぐ */
+  if (
+    period &&
+    runningTime &&
+    /^(Q\d|\d?OT\d*|HT\b|Half|End\b)/i.test(runningTime.trim())
+  ) {
+    return { runningTime: runningTime.trim() };
+  }
 
   if (!period && !runningTime) return null;
   return { period, runningTime };

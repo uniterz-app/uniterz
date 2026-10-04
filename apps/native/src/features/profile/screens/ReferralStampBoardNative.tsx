@@ -239,9 +239,6 @@ export default function ReferralStampBoardNative({
           ? copy.nextHint(next.target, next.remaining, next.bonusUnits)
           : copy.completeHint}
       </Text>
-      <Text style={styles.breakdown}>
-        {copy.breakdown(earned.base, earned.milestones)}
-      </Text>
     </View>
   );
 }
@@ -437,9 +434,5 @@ const styles = StyleSheet.create({
     fontSize: 11,
     lineHeight: 16,
     color: "rgba(255,255,255,0.5)",
-  },
-  breakdown: {
-    fontSize: 10,
-    color: "rgba(255,255,255,0.35)",
   },
 });

@@ -260,12 +260,14 @@ export const gameCardListStyles = StyleSheet.create({
     gap: 1,
     minHeight: 36,
   },
-  centerLiveClock: {
-    fontSize: 17,
-    lineHeight: 20,
-    marginTop: 4,
-    color: "rgba(255,255,255,0.95)",
-    letterSpacing: 0.6,
+  /** ライブ：スコアをカード中央に固定し「LIVE｜時間」ピルはその上に浮かせる */
+  livePillAboveScore: {
+    position: "absolute",
+    bottom: "100%",
+    left: -60,
+    right: -60,
+    alignItems: "center",
+    paddingBottom: 6,
   },
   liveMarkPill: liveMarkPillCyberBase,
   liveMarkText: liveMarkTextCyberBase,
