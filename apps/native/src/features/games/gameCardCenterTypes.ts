@@ -18,4 +18,5 @@ export type GameCardCenterBlock =
       subLine?: string | null;
       score?: { home: number; away: number } | null;
     }
-  | { variant: "time"; time: string };
+  /** `finalLabel`: スコア非表示設定の終了試合（time に「試合終了」が入る） */
+  | { variant: "time"; time: string; finalLabel?: boolean };

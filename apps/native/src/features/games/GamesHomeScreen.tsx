@@ -323,7 +323,7 @@ function getGameCardCenterBlock(
     const ot = resolveFinalMetaOt(game);
     const sub = `${texts.final}${ot ? " (OT)" : ""}`;
     if (!scorePrefs.showFinalScore) {
-      return { variant: "time", time: sub };
+      return { variant: "time", time: sub, finalLabel: true };
     }
     const pkScore = resolvePkScore(game);
     return {

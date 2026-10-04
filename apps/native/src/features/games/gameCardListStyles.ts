@@ -193,6 +193,14 @@ export const gameCardListStyles = StyleSheet.create({
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 4,
   },
+  /** 数字用フォントは和文を持たずウェイトが効かないため、システム書体で太らせる */
+  centerTextFinalLabel: {
+    fontFamily: undefined,
+    fontSize: 16,
+    lineHeight: 20,
+    fontWeight: "900",
+    letterSpacing: 0.4,
+  },
   centerTextScoreRow: {
     flexDirection: "row",
     flexWrap: "nowrap",

@@ -508,7 +508,13 @@ export function PredictMatchPreview({
               </View>
             ) : (
               <View style={s.matchPreviewVsBlock}>
-                <Text style={s.matchPreviewVsText} numberOfLines={1}>
+                <Text
+                  style={[
+                    s.matchPreviewVsText,
+                    centerBlock.finalLabel && s.matchPreviewFinalLabelText,
+                  ]}
+                  numberOfLines={1}
+                >
                   {centerBlock.time}
                 </Text>
                 {seriesPair != null ? (
@@ -2915,6 +2921,14 @@ const s = StyleSheet.create({
     textShadowColor: "rgba(0,0,0,0.45)",
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 4,
+  },
+  /** 数字用フォントは和文を持たずウェイトが効かないため、システム書体で太らせる */
+  matchPreviewFinalLabelText: {
+    fontFamily: undefined,
+    fontSize: 16,
+    lineHeight: 20,
+    fontWeight: "900",
+    letterSpacing: 0.4,
   },
   /** Web `matchVsLabelClass`（Montserrat Black Italic） */
   matchPreviewVsLabel: {

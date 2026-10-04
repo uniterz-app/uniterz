@@ -429,7 +429,14 @@ export const GameCardListRow = memo(function GameCardListRow(props: GameCardList
                           </Text>
                         </View>
                       ) : (
-                        <Text style={styles.centerText} numberOfLines={1} ellipsizeMode="clip">
+                        <Text
+                          style={[
+                            styles.centerText,
+                            centerBlock.finalLabel && styles.centerTextFinalLabel,
+                          ]}
+                          numberOfLines={1}
+                          ellipsizeMode="clip"
+                        >
                           {centerBlock.time}
                         </Text>
                       )}
@@ -640,7 +647,14 @@ export const GameCardListRow = memo(function GameCardListRow(props: GameCardList
                           </Text>
                         </View>
                       ) : (
-                        <Text style={styles.centerText} numberOfLines={1} ellipsizeMode="clip">
+                        <Text
+                          style={[
+                            styles.centerText,
+                            centerBlock.finalLabel && styles.centerTextFinalLabel,
+                          ]}
+                          numberOfLines={1}
+                          ellipsizeMode="clip"
+                        >
                           {centerBlock.time}
                         </Text>
                       )}
