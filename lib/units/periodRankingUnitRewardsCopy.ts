@@ -197,6 +197,15 @@ function notesSection(
       pt: "Empates dividem posição e Units.",
       fr: "Ex æquo : même rang et Units.",
     }),
+    L(lang, {
+      ja: "Unit の付与・商品交換は UNITERZ が提供。Apple / Google はスポンサーではなく、一切関与していない。",
+      en: "Units and exchanges are provided by UNITERZ. Apple and Google are not sponsors and are not involved.",
+      ko: "Unit 지급·상품 교환은 UNITERZ 제공. Apple / Google은 스폰서가 아니며 관여하지 않음.",
+      zh: "Unit 发放与商品兑换由 UNITERZ 提供。Apple / Google 并非赞助方，亦未以任何方式参与。",
+      es: "Units y canjes los ofrece UNITERZ. Apple y Google no patrocinan ni participan.",
+      pt: "Units e trocas são oferecidos pela UNITERZ. Apple e Google não patrocinam nem participam.",
+      fr: "Units et échanges fournis par UNITERZ. Apple et Google ne sont ni sponsors ni impliqués.",
+    }),
   ];
 
   if (tab === "weekly") {

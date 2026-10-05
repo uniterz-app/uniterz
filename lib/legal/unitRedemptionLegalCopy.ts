@@ -19,12 +19,14 @@ export const UNIT_TERMS_SECTION = {
       "Unit の購入、換金、払戻し、譲渡、販売はできません。",
       "Unit は、運営が定める条件の範囲内で、指定の商品との交換申請にのみ使用できます。",
       "付与条件、有効期限、残高表示は運営が定め、予告のうえ変更することがあります。",
+      "Unit の付与と商品交換は運営が単独で提供するものであり、Apple Inc. および Google LLC はスポンサーではなく、一切関与していません。",
     ],
     en: [
       "Units are reward points granted free of charge by the operator when conditions are met.",
       "Units cannot be purchased, cashed out, refunded, transferred, or sold.",
       "Units may only be used to apply for exchange for designated products under the operator's rules.",
       "Grant conditions, validity, and balance display may change with notice.",
+      "Unit grants and product exchanges are provided solely by the operator. Apple Inc. and Google LLC are not sponsors and are not involved in any manner.",
     ],
   },
 } as const;

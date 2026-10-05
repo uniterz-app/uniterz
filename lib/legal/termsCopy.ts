@@ -280,6 +280,7 @@ export const TERMS_SECTIONS: readonly LegalSection[] = [
         "当社は、特定の期間（週間、月間等）におけるユーザーの合計PTに基づきランキングを決定し、本アプリ内に表示します。",
         "当社は、当社所定の条件を満たしたユーザーのアカウントに対し、Unitを無償で付与します。なお当該条件の詳細は、本アプリ内に表示します。",
         "ユーザーはUnitを有償で購入し、他のユーザーその他第三者へ譲渡若しくは貸与し、又は換金することは一切できないものとします。",
+        "ランキング、Unitの付与及び商品交換は当社が単独で提供するものであり、Apple Inc.及びGoogle LLCはそのスポンサーではなく、いかなる形でも関与していません。",
       ],
       en: [
         "Users may select Eligible Matches and post free predictions such as win/loss, score, and scorers.",
@@ -288,6 +289,7 @@ export const TERMS_SECTIONS: readonly LegalSection[] = [
         "We determine rankings from Users' total PT over designated periods (weekly, monthly, etc.) and display them in the App.",
         "We grant Units free of charge to accounts that meet our conditions; details are shown in the App.",
         "Users may not buy Units for value, transfer or lend them to others, or cash them out.",
+        "Rankings, Unit grants, and product exchanges are provided solely by us. Apple Inc. and Google LLC are not sponsors and are not involved in any manner.",
       ],
     },
   },
