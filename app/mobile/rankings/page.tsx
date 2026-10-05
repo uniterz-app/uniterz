@@ -13,6 +13,8 @@ import {
 } from "@/lib/rankings/rankingMetrics";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import RankingCard from "@/app/component/rankings/RankingCard";
+import { filterBlockedRows } from "@/lib/moderation/moderationTypes";
+import { useBlockedUids } from "@/lib/moderation/useBlockedUids";
 import { restContainer, restItem } from "@/app/component/rankings/anim";
 import TopPodium from "@/app/component/rankings/TopPodium";
 import RankingsMetricRow from "@/app/component/rankings/RankingsMetricRow";
@@ -269,10 +271,15 @@ export default function MobileRankingsPage() {
       ? bundle.count
       : 0;
 
+  const blockedUids = useBlockedUids();
   const rows: RankingRowWithCountry[] = useMemo(() => {
     if (rawRows.length === 0) return [];
-    return sortRankingRowsByMetric(metric, toMobileRows(metric, rawRows));
-  }, [metric, rawRows]);
+    return filterBlockedRows(
+      sortRankingRowsByMetric(metric, toMobileRows(metric, rawRows)),
+      blockedUids,
+      (r) => r.uid
+    );
+  }, [metric, rawRows, blockedUids]);
 
   const top3 = rows.slice(0, 3);
   const restRows = rows.slice(3);

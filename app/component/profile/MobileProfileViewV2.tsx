@@ -65,6 +65,8 @@ const ProfilePlayoffRankTrendChartLazy = dynamic(
 import ProfileKinetikHero from "./ui/ProfileKinetikHero";
 import SideMenuDrawer from "@/app/component/common/SideMenuDrawer";
 import ProfileMenuEdgeHandle from "@/app/component/profile/ui/ProfileMenuEdgeHandle";
+import ModerationSheet from "@/app/component/moderation/ModerationSheet";
+import { useRouter } from "next/navigation";
 import BadgeDetailModal from "@/app/mobile/badges/BadgeDetailModal";
 
 import { useProfilePlan } from "@/lib/profile/useProfilePlan";
@@ -117,11 +119,13 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
     props;
   const rankingLeague = props.profileStatsContext.rankingLeague;
 
+  const router = useRouter();
   const resolvedUid = typeof targetUid === "string" ? targetUid : null;
   const { language } = useUserLanguage(resolvedUid);
   const awardsBracketCopy = profileAwardsBracketCopy(language);
 
   const {
+    myUid,
     myPlan,
     myPlanType,
     loadingPlan,
@@ -209,6 +213,8 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
   } = useProfilePlayoffBracket(resolvedUid, { enabled: fetchBracketData });
 
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [moderationOpen, setModerationOpen] = useState(false);
+  const canModerateTarget = Boolean(myUid && resolvedUid && !isMe);
   const [welcomeProfileFly, setWelcomeProfileFly] = useState(false);
   const [profileEditOpen, setProfileEditOpen] = useState(false);
   const [badgeModalOpen, setBadgeModalOpen] = useState(false);
@@ -318,6 +324,27 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
           adminUnreadCount={adminInbox.total}
           hidden={drawerOpen || welcomeProfileFly}
         />
+      ) : null}
+
+      {canModerateTarget && resolvedUid ? (
+        <>
+          <ProfileMenuEdgeHandle
+            onOpen={() => setModerationOpen(true)}
+            label="MORE"
+            ariaLabel="MORE"
+            tone="more"
+            hidden={moderationOpen}
+          />
+          <ModerationSheet
+            open={moderationOpen}
+            onClose={() => setModerationOpen(false)}
+            targetType="user"
+            targetId={resolvedUid}
+            targetLabel={profile.displayName?.trim() || profile.handle || ""}
+            language={language}
+            onBlocked={() => router.back()}
+          />
+        </>
       ) : null}
 
       <div className="mt-4">

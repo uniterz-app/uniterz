@@ -36,6 +36,11 @@ import { copyTextNative, shareTextNative } from "./copyTextNative";
 import { getShareAppOrigin } from "../../../../../lib/share/shareAppUrls";
 import { communityMono, communityPressableTapStyle } from "./communityCrtThemeNative";
 import { COMMUNITY_GROUP_HERO_BG } from "../../../../../lib/communities/communityGroupHeroLayout";
+import { resolveLocalizedLang } from "../../../../../lib/i18n/localize";
+import { moderationCopy } from "../../../../../lib/moderation/moderationCopy";
+import { filterBlockedRows } from "../../../../../lib/moderation/moderationTypes";
+import ModerationSheetNative from "../moderation/ModerationSheetNative";
+import { useBlockedUidsNative } from "../moderation/blockedUsersStoreNative";
 
 type Props = {
   groupId: string;
@@ -162,14 +167,20 @@ export default function CommunityGroupDetailViewNative({
     [language]
   );
 
+  const moderation = useMemo(
+    () => moderationCopy(resolveLocalizedLang(language)),
+    [language]
+  );
+  const [reportOpen, setReportOpen] = useState(false);
+  const blockedUids = useBlockedUidsNative();
   const rankMetricForProfile = communityMetricToMobile(metric);
   const rankingItems = useMemo(
     () =>
-      rows.map((r) => ({
+      filterBlockedRows(rows, blockedUids, (r) => r.uid).map((r) => ({
         rank: r.rank,
         row: communityRowToRankingCardRow(r, metric),
       })),
-    [rows, metric]
+    [rows, metric, blockedUids]
   );
   const rankingCardRows = useMemo(
     () => rankingItems.map((item) => item.row),
@@ -399,6 +410,26 @@ export default function CommunityGroupDetailViewNative({
           <Text style={styles.leaveText}>{t.leave}</Text>
         </Pressable>
       ) : null}
+
+      {summary && !summary.isOwner ? (
+        <>
+          <Pressable
+            onPress={() => setReportOpen(true)}
+            style={({ pressed }) => [styles.reportBtn, pressed && communityPressableTapStyle(true)]}
+            accessibilityRole="button"
+          >
+            <Text style={styles.reportText}>{moderation.reportGroup}</Text>
+          </Pressable>
+          <ModerationSheetNative
+            visible={reportOpen}
+            onClose={() => setReportOpen(false)}
+            targetType="group"
+            targetId={groupId}
+            targetLabel={summary.name}
+            language={language}
+          />
+        </>
+      ) : null}
     </>
   );
 
@@ -521,6 +552,17 @@ const styles = StyleSheet.create({
     letterSpacing: 1.2,
     textTransform: "uppercase",
     color: "rgba(186,230,253,0.7)",
+  },
+  reportBtn: {
+    marginTop: 10,
+    paddingVertical: 8,
+    alignItems: "center",
+  },
+  reportText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "rgba(148,163,184,0.75)",
+    textDecorationLine: "underline",
   },
   rankingSkeletonPanel: {
     marginBottom: 8,

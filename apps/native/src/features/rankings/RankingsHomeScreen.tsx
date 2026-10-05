@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { openProSubscribeNative } from "../../navigation/navigationRef";
+import { useBlockedUidsNative } from "../moderation/blockedUsersStoreNative";
+import { filterBlockedRows } from "../../../../../lib/moderation/moderationTypes";
 import { useIsFocused, useNavigation } from "@react-navigation/native";
 import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -252,10 +254,15 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
     [bundle?.rows]
   );
 
+  const blockedUids = useBlockedUidsNative();
   const rows: RankingRowWithCountry[] = useMemo(() => {
     if (rawRows.length === 0) return [];
-    return sortRankingRowsByMetric(metric, toMobileRows(metric, rawRows));
-  }, [metric, rawRows]);
+    return filterBlockedRows(
+      sortRankingRowsByMetric(metric, toMobileRows(metric, rawRows)),
+      blockedUids,
+      (r) => r.uid
+    );
+  }, [metric, rawRows, blockedUids]);
 
   const myRawRow = (bundle?.myRow ?? null) as RankingRow | null;
   const { myRank: listMyRank, myRankDeltaPlaces: listMyRankDelta } = useMemo(

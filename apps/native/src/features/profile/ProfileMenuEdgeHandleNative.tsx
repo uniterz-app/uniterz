@@ -45,6 +45,16 @@ const VARIANTS = {
     zIndex: 22,
     elevation: 10,
   },
+  more: {
+    top: "46%" as const,
+    borderColor: "rgba(248,250,252,0.42)",
+    backgroundColor: "rgba(8,10,14,0.92)",
+    pressedBackgroundColor: "rgba(28,32,40,0.98)",
+    letterColor: "rgba(248,250,252,0.92)",
+    shadowColor: "#ffffff",
+    zIndex: 20,
+    elevation: 8,
+  },
 } as const;
 
 export default function ProfileMenuEdgeHandleNative({
@@ -57,7 +67,7 @@ export default function ProfileMenuEdgeHandleNative({
   fadeIn = false,
   /** 縦書きラベル（既定 MENU） */
   label = "MENU",
-  /** menu=黄 / mark=シアン */
+  /** menu=黄 / mark=シアン / more=白（他人プロフィールの通報・ブロック） */
   variant = "menu",
   /** 縦位置（variant 既定を上書き） */
   top,

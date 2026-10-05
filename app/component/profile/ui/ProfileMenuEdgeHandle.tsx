@@ -43,7 +43,8 @@ export default function ProfileMenuEdgeHandle({
   hidden?: boolean;
   fadeIn?: boolean;
   label?: string;
-  tone?: "gold" | "back";
+  /** more = BACK と同じ白黒（他人プロフィールの通報・ブロック） */
+  tone?: "gold" | "back" | "more";
   overlay?: boolean;
   tutorialTargetId?: string;
   inline?: boolean;
@@ -109,7 +110,7 @@ export default function ProfileMenuEdgeHandle({
         inline && "profile-menu-edge-handle--inline",
         fadeIn && !inline && "profile-menu-edge-handle--fade",
         !show && "profile-menu-edge-handle--hidden",
-        tone === "back" && "profile-menu-edge-handle--back",
+        (tone === "back" || tone === "more") && "profile-menu-edge-handle--back",
         overlay && "profile-menu-edge-handle--overlay"
       )}
       onClick={onOpen}

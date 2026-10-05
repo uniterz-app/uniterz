@@ -264,6 +264,18 @@ service cloud.firestore {
         allow delete: if request.auth != null && request.auth.uid == userId;
       }
 
+      // ブロックリスト — 本人のみ（App Store 1.2）
+      match /blocks/{targetUid} {
+        allow read: if request.auth != null && request.auth.uid == userId;
+        allow create: if request.auth != null
+          && request.auth.uid == userId
+          && targetUid != userId
+          && request.resource.data.targetUid == targetUid
+          && request.resource.data.keys().hasOnly(['targetUid', 'createdAt']);
+        allow update: if false;
+        allow delete: if request.auth != null && request.auth.uid == userId;
+      }
+
       // 被マーク — 誰にマークされたかは本人だけ読める。人数だけ UI に出す
       match /markedBy/{fromUid} {
         allow read: if request.auth != null && request.auth.uid == userId;

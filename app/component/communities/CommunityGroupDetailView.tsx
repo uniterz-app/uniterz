@@ -43,6 +43,11 @@ import InviteShareModal from "@/app/component/communities/InviteShareModal";
 import CommunityGroupHeaderHero from "@/app/component/communities/CommunityGroupHeaderHero";
 import CommunityGroupZoneLabel from "@/app/component/communities/CommunityGroupZoneLabel";
 import { COMMUNITY_GROUP_HERO_BG } from "@/lib/communities/communityGroupHeroLayout";
+import ModerationSheet from "@/app/component/moderation/ModerationSheet";
+import { resolveLocalizedLang } from "@/lib/i18n/localize";
+import { moderationCopy } from "@/lib/moderation/moderationCopy";
+import { filterBlockedRows } from "@/lib/moderation/moderationTypes";
+import { useBlockedUids } from "@/lib/moderation/useBlockedUids";
 
 async function authHeader(): Promise<string | null> {
   const u = auth.currentUser;
@@ -393,13 +398,15 @@ export default function CommunityGroupDetailView({
   const rankMetricForProfile = communityMetricToMobile(metric);
   const profileStatsLeague = communityLeagueForProfile(summary?.rankingLeague);
 
+  const blockedUids = useBlockedUids();
+  const [reportOpen, setReportOpen] = useState(false);
   const rankingItems = useMemo(
     () =>
-      rows.map((r) => ({
+      filterBlockedRows(rows, blockedUids, (r) => r.uid).map((r) => ({
         rank: r.rank,
         row: communityRowToRankingCardRow(r, metric),
       })),
-    [rows, metric]
+    [rows, metric, blockedUids]
   );
   const top3 = rankingItems.slice(0, 3).map((item) => item.row);
   const restRows = rankingItems.slice(3);
@@ -624,6 +631,27 @@ export default function CommunityGroupDetailView({
       </button>
     ) : null;
 
+  const reportGroupBtn =
+    summary && !summary.isOwner ? (
+      <>
+        <button
+          type="button"
+          onClick={() => setReportOpen(true)}
+          className="mt-2.5 w-full py-2 text-xs font-semibold text-slate-400/75 underline"
+        >
+          {moderationCopy(resolveLocalizedLang(language)).reportGroup}
+        </button>
+        <ModerationSheet
+          open={reportOpen}
+          onClose={() => setReportOpen(false)}
+          targetType="group"
+          targetId={groupId}
+          targetLabel={summary.name}
+          language={language}
+        />
+      </>
+    ) : null;
+
   const webHeaderPanel =
     summary && !useDenseLayout ? (
       <RankingsCyberPanel subtle className="mb-4" shellStyle={GROUP_DETAIL_PANEL_SHELL}>
@@ -729,12 +757,14 @@ export default function CommunityGroupDetailView({
                 {rankingSection}
                 {inviteOwnerPanel}
                 {leaveMemberBtn}
+                {reportGroupBtn}
               </>
             ) : (
               <>
                 {inviteOwnerPanel}
                 {leaveMemberBtn}
                 {rankingSection}
+                {reportGroupBtn}
               </>
             )}
           </>

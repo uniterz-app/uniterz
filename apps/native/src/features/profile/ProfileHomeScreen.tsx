@@ -73,6 +73,7 @@ import {
   requestSideMenuResume,
 } from "./sideMenuResumeNative";
 import { useProfileMarksNative } from "./useProfileMarksNative";
+import ModerationSheetNative from "../moderation/ModerationSheetNative";
 import { maxMarksForPlan } from "../../../../../lib/marks/markTypes";
 import { useNativeUserPlan } from "../../hooks/useNativeUserPlan";
 import { navigateToPublicProfileNative } from "../../navigation/navigateToPublicProfileNative";
@@ -519,6 +520,9 @@ export default function ProfileHomeScreen({
 
   /** 自分プロフィールは routeHandle 無し。plan hook の getDoc より先に確定できる */
   const isMe = !isPublicProfileView && !!myUid && myUid === targetUid;
+  const canModerateTarget =
+    isPublicProfileView && !!myUid && !!targetUid && targetUid !== myUid;
+  const [moderationOpen, setModerationOpen] = useState(false);
   const myNbaFavorites = useMyNbaFavoritesNative();
 
   /** 詳細で星を変えたあと、プロフィールのローカル state が古いまま残らないようにライブ同期 */
@@ -1500,6 +1504,26 @@ export default function ProfileHomeScreen({
           label="MARK"
           onOpen={() => setMarkListOpen(true)}
           hidden={menuOpen || markListOpen || welcomeFlyActive}
+        />
+      </>
+    ) : null}
+
+    {canModerateTarget ? (
+      <>
+        <ProfileMenuEdgeHandleNative
+          variant="more"
+          label="MORE"
+          onOpen={() => setModerationOpen(true)}
+          hidden={moderationOpen}
+        />
+        <ModerationSheetNative
+          visible={moderationOpen}
+          onClose={() => setModerationOpen(false)}
+          targetType="user"
+          targetId={targetUid ?? ""}
+          targetLabel={displayName.trim() || handle.trim()}
+          language={language}
+          onBlocked={returnToPreviousScreen}
         />
       </>
     ) : null}
