@@ -5,7 +5,7 @@
 import type { Firestore } from "firebase-admin/firestore";
 import { FieldValue } from "firebase-admin/firestore";
 import { bdlSeasonYearFromSeasonKey } from "@/lib/nba/bdl/bdlNbaEnv";
-import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
+import { CURRENT_NBA_SEASON_KEY, previousNbaSeasonKey } from "@/lib/rankings/nbaSeason";
 import { buildTeamGameLogsBundleFromGames } from "@/lib/nba/teamGameLog/buildTeamGameLogsBundleFromGames";
 import {
   buildLast10RowsFromGames,
@@ -66,9 +66,18 @@ export async function ingestNbaTeamGameLogsFromGames(
   const limit = Math.min(2000, Math.max(1, input.limit ?? 1500));
 
   const rows = await loadNbaSeasonGameRows(db, seasonKey, limit);
+  const priorSeasonRows = (
+    await loadLeagueTeamStatsSnapshot(db, previousNbaSeasonKey(seasonKey))
+  ).bundle.season;
+  const priorMarginByTeam = Object.fromEntries(
+    priorSeasonRows
+      .filter((row) => Number.isFinite(row.diff))
+      .map((row) => [row.teamId, row.diff] as const)
+  );
   const { teams, teamCount, gameCount } = buildTeamGameLogsBundleFromGames({
     seasonKey,
     games: rows,
+    priorMarginByTeam,
   });
 
   await writeTeamGameLogsSnapshot(db, seasonKey, teams, {

@@ -612,7 +612,7 @@ function TeamShapeEdgesSectionNative({
   accent: string;
   lang: import("../../../../../../lib/i18n/localize").LocalizedLang;
 }) {
-  if (!shapeEdges?.edges.length) return null;
+  if (!shapeEdges) return null;
   const frame = hexToRgba(accent, 0.3);
   return (
     <View style={styles.edgeSection}>
@@ -2009,7 +2009,7 @@ export default function NbaTeamDetailPanelNative({
           />
         </View>
 
-        {shapeEdges?.edges.length ? (
+        {shapeEdges ? (
           <>
             <View style={[styles.divider, { backgroundColor: dividerColor }]} />
             <TeamShapeEdgesSectionNative

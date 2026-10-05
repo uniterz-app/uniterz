@@ -15,6 +15,7 @@ import type {
   NbaTeamGameLogWl,
   NbaTeamHeadToHeadEntry,
 } from "@/lib/nba/teamGameLog/teamGameLogTypes";
+import type { UpcomingMatchupDifficultyContext } from "@/lib/nba/matchupDifficulty/upcomingMatchupDifficulty";
 
 const EMPTY_WL: NbaTeamGameLogWl = { wins: 0, losses: 0 };
 
@@ -94,6 +95,7 @@ export function buildTeamGameLogFromGames(input: {
   season: string;
   games: RawGame[];
   nowMs?: number;
+  matchupDifficulty?: UpcomingMatchupDifficultyContext;
 }): NbaTeamGameLogSlice {
   const teamId = input.teamId.trim();
   const season = input.season.trim();
@@ -159,8 +161,12 @@ export function buildTeamGameLogFromGames(input: {
       continue;
     }
 
-    // scheduled — 終了前の予定のみ upcoming（進行中 live はログ側）
-    if (status === "scheduled" && startMs >= nowMs - 3 * 60 * 60 * 1000) {
+    // scheduled — 終了前の予定のみ upcoming（進行中 live はログ側、プレシーズンは出さない）
+    if (
+      status === "scheduled" &&
+      phase !== "preseason" &&
+      startMs >= nowMs - 3 * 60 * 60 * 1000
+    ) {
       upcoming.push({
         startMs,
         upcoming: {
@@ -178,7 +184,15 @@ export function buildTeamGameLogFromGames(input: {
   finals.sort((a, b) => a.startMs - b.startMs);
   upcoming.sort((a, b) => a.startMs - b.startMs);
 
-  const upcomingGames = upcoming.slice(0, 8).map((u) => u.upcoming);
+  const upcomingGames = upcoming.slice(0, 10).map((u) => {
+    const difficulty = input.matchupDifficulty?.difficultyFor({
+      teamId,
+      oppTeamId: u.upcoming.oppTeamId,
+      home: u.upcoming.home,
+      startMs: u.startMs,
+    });
+    return difficulty ? { ...u.upcoming, difficulty } : u.upcoming;
+  });
 
   const seasonRecord: NbaTeamGameLogWl = { wins: 0, losses: 0 };
   const homeAwaySplit = {

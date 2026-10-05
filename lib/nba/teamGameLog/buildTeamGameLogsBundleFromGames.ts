@@ -7,6 +7,7 @@ import {
   emptyTeamGameLog,
 } from "@/lib/nba/teamGameLog/buildTeamGameLogFromGames";
 import type { NbaTeamGameLogSlice } from "@/lib/nba/teamGameLog/teamGameLogTypes";
+import { createUpcomingMatchupDifficultyContext } from "@/lib/nba/matchupDifficulty/upcomingMatchupDifficulty";
 
 export const NBA_ALL_TEAM_IDS: readonly string[] = [
   ...NBA_EAST_TEAM_IDS,
@@ -21,6 +22,8 @@ export function buildTeamGameLogsBundleFromGames(input: {
   seasonKey: string;
   games: Array<Record<string, unknown> & { id?: string }>;
   nowMs?: number;
+  /** 渡すと upcoming 行に Matchup Difficulty を付与（teamId → 前季 1 試合あたり得失点差） */
+  priorMarginByTeam?: Record<string, number>;
 }): {
   teams: Record<string, NbaTeamGameLogSlice>;
   teamCount: number;
@@ -30,6 +33,12 @@ export function buildTeamGameLogsBundleFromGames(input: {
   const games = input.games;
   const nowMs = input.nowMs;
   const teams: Record<string, NbaTeamGameLogSlice> = {};
+  const matchupDifficulty = input.priorMarginByTeam
+    ? createUpcomingMatchupDifficultyContext({
+        games,
+        priorMarginByTeam: input.priorMarginByTeam,
+      })
+    : undefined;
 
   for (const teamId of NBA_ALL_TEAM_IDS) {
     teams[teamId] = buildTeamGameLogFromGames({
@@ -37,6 +46,7 @@ export function buildTeamGameLogsBundleFromGames(input: {
       season: seasonKey,
       games,
       nowMs,
+      matchupDifficulty,
     });
   }
 
@@ -51,6 +61,7 @@ export function buildTeamGameLogsBundleFromGames(input: {
         season: seasonKey,
         games,
         nowMs,
+        matchupDifficulty,
       });
     }
   }

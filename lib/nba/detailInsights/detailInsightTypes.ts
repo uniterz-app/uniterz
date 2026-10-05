@@ -47,6 +47,8 @@ export type ScheduleDifficultyTier = "soft" | "balanced" | "tough";
 export type TeamScheduleDifficulty = {
   gameCount: number;
   avgOppWinPct: number;
+  /** Matchup Difficulty の平均（0〜100）。upcoming に difficulty が無い旧データは undefined */
+  avgDifficulty?: number;
   overallTier: ScheduleDifficultyTier;
   summaryJa: string;
   summaryEn: string;

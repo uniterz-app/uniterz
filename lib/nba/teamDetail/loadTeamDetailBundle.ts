@@ -5,7 +5,7 @@
  * クライアントは 1 fetch。CDN も team+season の 1 URL に集約。
  */
 import type { Firestore } from "firebase-admin/firestore";
-import { CURRENT_NBA_SEASON_KEY, previousNbaSeasonKey } from "@/lib/rankings/nbaSeason";
+import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
 import { resolveNbaStatsDisplaySeasonKey, resolveNbaRosterInjuryDisplaySeasonKey } from "@/lib/nba/resolveNbaStatsDisplaySeason";
 import { loadTeamRosterSlice } from "@/lib/nba/teamRosters/loadTeamRostersSnapshot";
 import { buildMatchupRosterReport } from "@/lib/nba/teamRosters/buildMatchupRosterReport";
@@ -103,7 +103,7 @@ function edgesFromShapePayload(
   };
 }
 
-async function loadShapeEdgesWithPriorFallback(
+async function loadShapeEdges(
   db: Firestore,
   season: string,
   teamId: string
@@ -113,27 +113,12 @@ async function loadShapeEdgesWithPriorFallback(
   updatedAt: string | null;
 }> {
   const current = await loadTeamShapeRecordsApiPayload(db, season, teamId);
-  const currentEdges = edgesFromShapePayload(current, teamId, season, false);
-  if (currentEdges.edges.length > 0) {
-    return {
-      shapeEdges: currentEdges,
-      source: current.source === "firestore" ? "firestore" : "empty",
-      updatedAt:
-        typeof current.builtAtMs === "number" && current.builtAtMs > 0
-          ? new Date(current.builtAtMs).toISOString()
-          : null,
-    };
-  }
-
-  const prior = previousNbaSeasonKey(season);
-  const priorPayload = await loadTeamShapeRecordsApiPayload(db, prior, teamId);
-  const priorEdges = edgesFromShapePayload(priorPayload, teamId, prior, true);
   return {
-    shapeEdges: priorEdges,
-    source: priorPayload.source === "firestore" ? "firestore" : "empty",
+    shapeEdges: edgesFromShapePayload(current, teamId, season, false),
+    source: current.source === "firestore" ? "firestore" : "empty",
     updatedAt:
-      typeof priorPayload.builtAtMs === "number" && priorPayload.builtAtMs > 0
-        ? new Date(priorPayload.builtAtMs).toISOString()
+      typeof current.builtAtMs === "number" && current.builtAtMs > 0
+        ? new Date(current.builtAtMs).toISOString()
         : null,
   };
 }
@@ -154,7 +139,8 @@ export async function loadTeamDetailBundle(
    * FORM / 連勝 / シーズン W–L / seed は「カレンダー今季」を正にする。
    * スタッツ表示が前期フォールバックのとき、standings だけ前期を読むと
    * game log 空（L10 0-0）なのに FREEZE L8・45-37 が残る。
-   * リーグ指標・strength / ace-out / shapes は引き続き statsSeason。
+   * SPLITS の vs .500 と EDGE（shapes）も今季のみ（無ければ 0-0 / 中身なし）。
+   * リーグ指標・ace-out は引き続き statsSeason。
    */
   const formSeason = statsDisplay.fromPriorSeason
     ? statsDisplay.calendarSeasonKey
@@ -176,9 +162,9 @@ export async function loadTeamDetailBundle(
     loadTeamGameLog(db, formSeason, teamId),
     loadNbaConferenceStandings(db, formSeason),
     loadTeamInjury(db, liveSeason, teamId),
-    loadTeamSeasonRecordsApiPayload(db, statsSeason),
+    loadTeamSeasonRecordsApiPayload(db, formSeason),
     loadTeamAceOutRecordsApiPayload(db, statsSeason),
-    loadShapeEdgesWithPriorFallback(db, statsSeason, teamId),
+    loadShapeEdges(db, formSeason, teamId),
     loadTeamOffseasonMoves(db, liveSeason, teamId),
   ]);
 

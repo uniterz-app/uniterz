@@ -510,7 +510,7 @@ function TeamShapeEdgesSection({
   accent: string;
   lang: LocalizedLang;
 }) {
-  if (!shapeEdges?.edges.length) return null;
+  if (!shapeEdges) return null;
   const frame = hexToRgba(accent, 0.3);
   return (
     <section className="space-y-2.5">
@@ -2614,7 +2614,7 @@ export default function NbaTeamDetailPanel({
         </div>
       </section>
 
-      {shapeEdges?.edges.length ? (
+      {shapeEdges ? (
         <>
           <div
             className="h-px"

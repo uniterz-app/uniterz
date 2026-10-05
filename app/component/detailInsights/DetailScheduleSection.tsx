@@ -3,6 +3,12 @@
 import type { TeamScheduleDifficulty } from "@/lib/nba/detailInsights/detailInsightTypes";
 import type { NbaTeamUpcomingGame } from "@/lib/predict/nbaTeamDetailPreviewMocks";
 import {
+  upcomingDifficultyLegend,
+  upcomingDifficultyRestTag,
+  upcomingDifficultyValueText,
+} from "@/lib/nba/matchupDifficulty/upcomingDifficultyDisplay";
+import {
+  matchupDifficultyColor,
   scheduleDifficultySummaryText,
   scheduleDifficultyTierColor,
   scheduleDifficultyTierLabel,
@@ -53,6 +59,10 @@ export function DetailScheduleSection({
   sectionTitle = "UPCOMING",
 }: Props) {
   const lang = resolveLocalizedLang(language ?? (isJa ? "ja" : "en"));
+  const legend = upcomingGames.some((g) => g.difficulty)
+    ? upcomingDifficultyLegend(lang)
+    : null;
+  const hasLowSample = upcomingGames.some((g) => g.difficulty?.lowSample);
   const frame = hexToRgba(accent, 0.3);
   const line = hexToRgba(accent, 0.12);
   const emptyCopy = L(lang, {
@@ -102,44 +112,84 @@ export function DetailScheduleSection({
           </span>
         </div>
       ) : null}
+      {legend ? (
+        <div className="space-y-1 text-[10px] font-semibold leading-snug text-white/45">
+          <p>{legend.scale}</p>
+          <p className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
+            {(
+              [
+                ["tough", legend.tough],
+                ["balanced", legend.balanced],
+                ["soft", legend.soft],
+              ] as const
+            ).map(([tier, label]) => (
+              <span key={tier} className="inline-flex items-center gap-1">
+                <span
+                  className="inline-block h-1.5 w-1.5 rounded-full"
+                  style={{ backgroundColor: matchupDifficultyColor(tier) }}
+                />
+                {label}
+              </span>
+            ))}
+          </p>
+          {hasLowSample ? <p>{legend.lowSample}</p> : null}
+        </div>
+      ) : null}
       <div
         className="overflow-hidden border bg-black/40"
         style={{ borderColor: frame }}
       >
-        {upcomingGames.map((game, i) => (
-          <div
-            key={`${game.dateLabel}-${game.oppTeamId}-${i}`}
-            className="flex items-center gap-1.5 px-2.5 py-2.5"
-            style={
-              i < upcomingGames.length - 1
-                ? { borderBottom: `1px solid ${line}` }
-                : undefined
-            }
-          >
-            <span className="w-11 shrink-0 text-[13px] text-white/40">
-              {game.dateLabel}
-            </span>
-            <span
-              className="min-w-0 flex-1 truncate text-[14px] font-bold uppercase"
-              style={{ transform: "skewX(-10deg)" }}
+        {upcomingGames.map((game, i) => {
+          const difficulty = game.difficulty;
+          const restTag = difficulty ? upcomingDifficultyRestTag(difficulty) : null;
+          return (
+            <div
+              key={`${game.dateLabel}-${game.oppTeamId}-${i}`}
+              style={
+                i < upcomingGames.length - 1
+                  ? { borderBottom: `1px solid ${line}` }
+                  : undefined
+              }
             >
-              <span style={{ display: "inline-block", transform: "skewX(4deg)" }}>
-                {game.home ? "vs" : "@"} {upcomingOppLabel(game)}
-                {game.conferenceGame ? (
-                  <span className="text-white/45"> · CONF</span>
+              <div className="flex items-center gap-1.5 px-2.5 py-2.5">
+                <span className="w-11 shrink-0 text-[13px] text-white/40">
+                  {game.dateLabel}
+                </span>
+                <span
+                  className="min-w-0 flex-1 truncate text-[14px] font-bold uppercase"
+                  style={{ transform: "skewX(-10deg)" }}
+                >
+                  <span style={{ display: "inline-block", transform: "skewX(4deg)" }}>
+                    {game.home ? "vs" : "@"} {upcomingOppLabel(game)}
+                    {restTag ? <span className="text-white/45"> · {restTag}</span> : null}
+                    {game.conferenceGame ? (
+                      <span className="text-white/45"> · CONF</span>
+                    ) : null}
+                  </span>
+                </span>
+                {difficulty ? (
+                  <span
+                    className="w-9 shrink-0 text-right text-[14px] font-extrabold tabular-nums"
+                    style={{
+                      color: matchupDifficultyColor(difficulty.tier),
+                      opacity: difficulty.lowSample ? 0.55 : 1,
+                    }}
+                  >
+                    {upcomingDifficultyValueText(difficulty)}
+                  </span>
                 ) : null}
-              </span>
-            </span>
-            <span
-              className="shrink-0 text-[14px] font-bold text-white/85"
-              style={{ transform: "skewX(-10deg)" }}
-            >
-              <span style={{ display: "inline-block", transform: "skewX(4deg)" }}>
-                {game.tipLabel}
-              </span>
-            </span>
-          </div>
-        ))}
+                <span
+                  className="shrink-0 text-[14px] font-bold text-white/85"
+                  style={{ transform: "skewX(-10deg)" }}
+                >
+                  <span style={{ display: "inline-block", transform: "skewX(4deg)" }}>
+                    {game.tipLabel}
+                  </span>
+                </span>
+              </div>
+            </div>
+          );
+        })}
       </div>
     </section>
   );

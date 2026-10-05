@@ -8,6 +8,7 @@ import type { NbaConferenceId } from "@/lib/nba/nbaConferenceTeams";
 import { TEAM_SHORT } from "@/lib/team-short";
 import { splitTeamNameByLeague } from "@/lib/team-name-split";
 import type { NbaRosterPlayer, NbaRosterTeamBlock } from "@/lib/predict/nbaRoster";
+import type { NbaUpcomingMatchupDifficulty } from "@/lib/nba/matchupDifficulty/upcomingMatchupDifficulty";
 import {
   formatMetricValue,
   getNbaLeagueTeamStatsMock,
@@ -53,6 +54,8 @@ export type NbaTeamUpcomingGame = {
   oppAbbr: string;
   home: boolean;
   conferenceGame: boolean;
+  /** team-game-logs ingest が付与。古いスナップショットには無い */
+  difficulty?: NbaUpcomingMatchupDifficulty;
 };
 
 export type NbaTeamStreak = {

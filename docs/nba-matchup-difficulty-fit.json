@@ -1,0 +1,389 @@
+{
+  "generatedAt": "2026-10-05T13:59:20.250Z",
+  "data": {
+    "source": "BDL /nba/v1/games (postseason=false)",
+    "priorOnlySeason": "2020-21",
+    "trainSeasons": [
+      "2021-22",
+      "2022-23",
+      "2023-24",
+      "2024-25"
+    ],
+    "holdoutSeason": "2025-26",
+    "trainGames": 4940,
+    "holdoutGames": 1237
+  },
+  "coefficients": {
+    "ratingScale": 1.147,
+    "homeCourt": 1.939,
+    "ownRest": {
+      "0": -2.693,
+      "1": 0,
+      "2": 0.218,
+      "3+": 1.191
+    },
+    "oppRest": {
+      "0": 2.693,
+      "1": 0,
+      "2": -0.218,
+      "3+": -1.191
+    },
+    "sigma": 13.797,
+    "seasonWeight": 0.8,
+    "shrinkGames": 20,
+    "priorCarryover": 0.4,
+    "lowSampleGames": 10,
+    "tierSoftMax": 40.62,
+    "tierToughMin": 59.918,
+    "scheduleTierSoftMax": 47.329,
+    "scheduleTierToughMin": 52.878
+  },
+  "standardErrors": {
+    "home": 0.197,
+    "ratingDiff": 0.037,
+    "rest0": 0.408,
+    "rest2": 0.428,
+    "rest3p": 0.868
+  },
+  "unconstrainedRestCheck": {
+    "beta": {
+      "home": 2.1,
+      "ratingDiff": 1.149,
+      "homeRest0": -2.75,
+      "homeRest2": -0.244,
+      "homeRest3p": 1.208,
+      "awayRest0": 2.619,
+      "awayRest2": -0.724,
+      "awayRest3p": -1.146
+    },
+    "se": {
+      "home": 0.278,
+      "ratingDiff": 0.037,
+      "homeRest0": 0.567,
+      "homeRest2": 0.563,
+      "homeRest3p": 0.938,
+      "awayRest0": 0.521,
+      "awayRest2": 0.584,
+      "awayRest3p": 1.092
+    }
+  },
+  "restSampleShare": {
+    "0": {
+      "teamGames": 1676,
+      "share": 0.17
+    },
+    "1": {
+      "teamGames": 6195,
+      "share": 0.627
+    },
+    "2": {
+      "teamGames": 1454,
+      "share": 0.147
+    },
+    "3+": {
+      "teamGames": 555,
+      "share": 0.056
+    }
+  },
+  "gridTop10": [
+    {
+      "w": 0.8,
+      "k": 20,
+      "rho": 0.4,
+      "rmse": 13.797
+    },
+    {
+      "w": 0.8,
+      "k": 15,
+      "rho": 0.5,
+      "rmse": 13.798
+    },
+    {
+      "w": 0.8,
+      "k": 15,
+      "rho": 0.4,
+      "rmse": 13.799
+    },
+    {
+      "w": 0.8,
+      "k": 20,
+      "rho": 0.5,
+      "rmse": 13.8
+    },
+    {
+      "w": 0.8,
+      "k": 12,
+      "rho": 0.5,
+      "rmse": 13.801
+    },
+    {
+      "w": 0.8,
+      "k": 15,
+      "rho": 0.6,
+      "rmse": 13.801
+    },
+    {
+      "w": 0.8,
+      "k": 12,
+      "rho": 0.6,
+      "rmse": 13.801
+    },
+    {
+      "w": 0.7,
+      "k": 20,
+      "rho": 0.4,
+      "rmse": 13.803
+    },
+    {
+      "w": 0.7,
+      "k": 15,
+      "rho": 0.5,
+      "rmse": 13.803
+    },
+    {
+      "w": 0.7,
+      "k": 20,
+      "rho": 0.5,
+      "rmse": 13.803
+    }
+  ],
+  "holdout": {
+    "games": 1237,
+    "marginRmse": 14.485,
+    "brier": 0.205,
+    "brierHomeCourtOnly": 0.247,
+    "logLoss": 0.598,
+    "winAccuracy": 0.684,
+    "fullModelCalibration": [
+      {
+        "band": "0-9%",
+        "n": 3,
+        "predictedHomeWin": 0.076,
+        "actualHomeWin": 0
+      },
+      {
+        "band": "10-19%",
+        "n": 35,
+        "predictedHomeWin": 0.167,
+        "actualHomeWin": 0.114
+      },
+      {
+        "band": "20-29%",
+        "n": 94,
+        "predictedHomeWin": 0.254,
+        "actualHomeWin": 0.213
+      },
+      {
+        "band": "30-39%",
+        "n": 131,
+        "predictedHomeWin": 0.354,
+        "actualHomeWin": 0.305
+      },
+      {
+        "band": "40-49%",
+        "n": 232,
+        "predictedHomeWin": 0.453,
+        "actualHomeWin": 0.448
+      },
+      {
+        "band": "50-59%",
+        "n": 219,
+        "predictedHomeWin": 0.547,
+        "actualHomeWin": 0.562
+      },
+      {
+        "band": "60-69%",
+        "n": 232,
+        "predictedHomeWin": 0.648,
+        "actualHomeWin": 0.672
+      },
+      {
+        "band": "70-79%",
+        "n": 173,
+        "predictedHomeWin": 0.747,
+        "actualHomeWin": 0.827
+      },
+      {
+        "band": "80-89%",
+        "n": 101,
+        "predictedHomeWin": 0.845,
+        "actualHomeWin": 0.822
+      },
+      {
+        "band": "90-99%",
+        "n": 17,
+        "predictedHomeWin": 0.924,
+        "actualHomeWin": 0.824
+      }
+    ],
+    "difficultyCalibrationAll": [
+      {
+        "band": "10-19",
+        "n": 53,
+        "predictedLossRate": 0.172,
+        "actualLossRate": 0.189
+      },
+      {
+        "band": "20-29",
+        "n": 234,
+        "predictedLossRate": 0.258,
+        "actualLossRate": 0.239
+      },
+      {
+        "band": "30-39",
+        "n": 371,
+        "predictedLossRate": 0.355,
+        "actualLossRate": 0.361
+      },
+      {
+        "band": "40-49",
+        "n": 530,
+        "predictedLossRate": 0.452,
+        "actualLossRate": 0.468
+      },
+      {
+        "band": "50-59",
+        "n": 610,
+        "predictedLossRate": 0.551,
+        "actualLossRate": 0.528
+      },
+      {
+        "band": "60-69",
+        "n": 454,
+        "predictedLossRate": 0.645,
+        "actualLossRate": 0.665
+      },
+      {
+        "band": "70-79",
+        "n": 179,
+        "predictedLossRate": 0.74,
+        "actualLossRate": 0.737
+      },
+      {
+        "band": "80-89",
+        "n": 43,
+        "predictedLossRate": 0.832,
+        "actualLossRate": 0.767
+      }
+    ],
+    "difficultyCalibrationLowSample": [
+      {
+        "band": "10-19",
+        "n": 1,
+        "predictedLossRate": 0.186,
+        "actualLossRate": 1
+      },
+      {
+        "band": "20-29",
+        "n": 17,
+        "predictedLossRate": 0.267,
+        "actualLossRate": 0.235
+      },
+      {
+        "band": "30-39",
+        "n": 40,
+        "predictedLossRate": 0.357,
+        "actualLossRate": 0.325
+      },
+      {
+        "band": "40-49",
+        "n": 79,
+        "predictedLossRate": 0.454,
+        "actualLossRate": 0.418
+      },
+      {
+        "band": "50-59",
+        "n": 106,
+        "predictedLossRate": 0.55,
+        "actualLossRate": 0.491
+      },
+      {
+        "band": "60-69",
+        "n": 51,
+        "predictedLossRate": 0.642,
+        "actualLossRate": 0.784
+      },
+      {
+        "band": "70-79",
+        "n": 6,
+        "predictedLossRate": 0.727,
+        "actualLossRate": 0.833
+      }
+    ],
+    "difficultyCalibrationEstablished": [
+      {
+        "band": "10-19",
+        "n": 52,
+        "predictedLossRate": 0.172,
+        "actualLossRate": 0.173
+      },
+      {
+        "band": "20-29",
+        "n": 217,
+        "predictedLossRate": 0.257,
+        "actualLossRate": 0.24
+      },
+      {
+        "band": "30-39",
+        "n": 331,
+        "predictedLossRate": 0.355,
+        "actualLossRate": 0.366
+      },
+      {
+        "band": "40-49",
+        "n": 451,
+        "predictedLossRate": 0.452,
+        "actualLossRate": 0.477
+      },
+      {
+        "band": "50-59",
+        "n": 504,
+        "predictedLossRate": 0.552,
+        "actualLossRate": 0.536
+      },
+      {
+        "band": "60-69",
+        "n": 403,
+        "predictedLossRate": 0.645,
+        "actualLossRate": 0.65
+      },
+      {
+        "band": "70-79",
+        "n": 173,
+        "predictedLossRate": 0.74,
+        "actualLossRate": 0.734
+      },
+      {
+        "band": "80-89",
+        "n": 43,
+        "predictedLossRate": 0.832,
+        "actualLossRate": 0.767
+      }
+    ]
+  },
+  "exampleLalAtDen": {
+    "denFinalMargin": 5.146,
+    "difficulty": 76.454,
+    "base": 64.411,
+    "expectedMargin": -9.947,
+    "steps": [
+      {
+        "key": "base",
+        "marginDelta": -5.098,
+        "difficulty": 64.411
+      },
+      {
+        "key": "venue",
+        "marginDelta": -1.939,
+        "difficulty": 69.497
+      },
+      {
+        "key": "rest",
+        "marginDelta": -2.911,
+        "difficulty": 76.454
+      }
+    ],
+    "tier": "tough",
+    "lowSample": false
+  }
+}

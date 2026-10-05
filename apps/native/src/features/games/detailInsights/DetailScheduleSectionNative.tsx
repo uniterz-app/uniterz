@@ -3,6 +3,12 @@ import { StyleSheet, Text, View } from "react-native";
 import type { TeamScheduleDifficulty } from "../../../../../../lib/nba/detailInsights/detailInsightTypes";
 import type { NbaTeamUpcomingGame } from "../../../../../../lib/predict/nbaTeamDetailPreviewMocks";
 import {
+  upcomingDifficultyLegend,
+  upcomingDifficultyRestTag,
+  upcomingDifficultyValueText,
+} from "../../../../../../lib/nba/matchupDifficulty/upcomingDifficultyDisplay";
+import {
+  matchupDifficultyColor,
   scheduleDifficultySummaryText,
   scheduleDifficultyTierColor,
   scheduleDifficultyTierLabel,
@@ -50,6 +56,10 @@ export function DetailScheduleSectionNative({
   sectionTitle?: string;
 }) {
   const lang = resolveLocalizedLang(language);
+  const legend = upcomingGames.some((g) => g.difficulty)
+    ? upcomingDifficultyLegend(lang)
+    : null;
+  const hasLowSample = upcomingGames.some((g) => g.difficulty?.lowSample);
   const frame = hexToRgba(accent, 0.3);
   const line = hexToRgba(accent, 0.12);
   const emptyCopy = L(lang, {
@@ -108,34 +118,80 @@ export function DetailScheduleSectionNative({
           </View>
         </View>
       ) : null}
-      <View style={[styles.card, { borderColor: frame }]}>
-        {upcomingGames.map((game, i) => (
-          <View
-            key={`${game.dateLabel}-${game.oppTeamId}-${i}`}
-            style={[
-              styles.row,
-              i < upcomingGames.length - 1
-                ? {
-                    borderBottomWidth: StyleSheet.hairlineWidth,
-                    borderBottomColor: line,
-                  }
-                : null,
-            ]}
-          >
-            <Text style={styles.date}>{game.dateLabel}</Text>
-            <View style={styles.matchupSkew}>
-              <Text style={styles.matchup} numberOfLines={1}>
-                {game.home ? "vs" : "@"} {upcomingOppLabel(game)}
-                {game.conferenceGame ? (
-                  <Text style={styles.confTag}> · CONF</Text>
-                ) : null}
-              </Text>
-            </View>
-            <View style={styles.tipSkew}>
-              <Text style={styles.tip}>{game.tipLabel}</Text>
-            </View>
+      {legend ? (
+        <View style={styles.legend}>
+          <Text style={styles.legendText}>{legend.scale}</Text>
+          <View style={styles.legendRow}>
+            {(
+              [
+                ["tough", legend.tough],
+                ["balanced", legend.balanced],
+                ["soft", legend.soft],
+              ] as const
+            ).map(([tier, label]) => (
+              <View key={tier} style={styles.legendItem}>
+                <View
+                  style={[
+                    styles.legendDot,
+                    { backgroundColor: matchupDifficultyColor(tier) },
+                  ]}
+                />
+                <Text style={styles.legendText}>{label}</Text>
+              </View>
+            ))}
           </View>
-        ))}
+          {hasLowSample ? (
+            <Text style={styles.legendText}>{legend.lowSample}</Text>
+          ) : null}
+        </View>
+      ) : null}
+      <View style={[styles.card, { borderColor: frame }]}>
+        {upcomingGames.map((game, i) => {
+          const difficulty = game.difficulty;
+          const restTag = difficulty ? upcomingDifficultyRestTag(difficulty) : null;
+          return (
+            <View
+              key={`${game.dateLabel}-${game.oppTeamId}-${i}`}
+              style={
+                i < upcomingGames.length - 1
+                  ? {
+                      borderBottomWidth: StyleSheet.hairlineWidth,
+                      borderBottomColor: line,
+                    }
+                  : null
+              }
+            >
+              <View style={styles.row}>
+                <Text style={styles.date}>{game.dateLabel}</Text>
+                <View style={styles.matchupSkew}>
+                  <Text style={styles.matchup} numberOfLines={1}>
+                    {game.home ? "vs" : "@"} {upcomingOppLabel(game)}
+                    {restTag ? <Text style={styles.confTag}> · {restTag}</Text> : null}
+                    {game.conferenceGame ? (
+                      <Text style={styles.confTag}> · CONF</Text>
+                    ) : null}
+                  </Text>
+                </View>
+                {difficulty ? (
+                  <Text
+                    style={[
+                      styles.difficulty,
+                      {
+                        color: matchupDifficultyColor(difficulty.tier),
+                        opacity: difficulty.lowSample ? 0.55 : 1,
+                      },
+                    ]}
+                  >
+                    {upcomingDifficultyValueText(difficulty)}
+                  </Text>
+                ) : null}
+                <View style={styles.tipSkew}>
+                  <Text style={styles.tip}>{game.tipLabel}</Text>
+                </View>
+              </View>
+            </View>
+          );
+        })}
       </View>
     </View>
   );
@@ -222,6 +278,31 @@ const styles = StyleSheet.create({
   },
   tipSkew: {
     transform: [{ skewX: "-10deg" }],
+  },
+  difficulty: {
+    width: 36,
+    textAlign: "right",
+    fontFamily: OXANIUM,
+    fontSize: 14,
+    fontWeight: "800",
+    fontVariant: ["tabular-nums"],
+  },
+  legend: { gap: 4 },
+  legendRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    columnGap: 10,
+    rowGap: 4,
+  },
+  legendItem: { flexDirection: "row", alignItems: "center", gap: 4 },
+  legendDot: { width: 6, height: 6, borderRadius: 3 },
+  legendText: {
+    fontFamily: OXANIUM,
+    fontSize: 10,
+    fontWeight: "600",
+    lineHeight: 14,
+    color: "rgba(255,255,255,0.45)",
   },
   tip: {
     fontFamily: OXANIUM,

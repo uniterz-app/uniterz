@@ -6,6 +6,8 @@ import type { NbaLeagueTeamStatRow } from "@/lib/predict/nbaLeagueTeamStatsMocks
 import type { NbaTeamUpcomingGame } from "@/lib/predict/nbaTeamDetailPreviewMocks";
 import { L, resolveLocalizedLang } from "@/lib/i18n/localize";
 import type { UiStrings } from "@/lib/i18n/ui";
+import { MATCHUP_DIFFICULTY_COEFFICIENTS } from "@/lib/nba/matchupDifficulty/fittedCoefficients";
+import { tierFromDifficulty } from "@/lib/nba/matchupDifficulty/model";
 
 const MIN_UPCOMING = 2;
 const OPP_MIN_GP = 3;
@@ -44,6 +46,13 @@ export function buildScheduleDifficulty(input: {
 }): TeamScheduleDifficulty | null {
   const slice = input.upcomingGames.slice(0, input.maxGames ?? DEFAULT_MAX_GAMES);
   if (slice.length < MIN_UPCOMING) return null;
+
+  const difficulties = slice
+    .map((game) => game.difficulty?.value)
+    .filter((value): value is number => Number.isFinite(value));
+  if (difficulties.length >= MIN_UPCOMING) {
+    return buildFromMatchupDifficulty(difficulties);
+  }
 
   const rowByTeam = new Map(
     input.seasonRows.map((row) => [row.teamId, row] as const)
@@ -86,6 +95,39 @@ export function buildScheduleDifficulty(input: {
     summaryEn: summary.en,
     summary,
   };
+}
+
+function buildFromMatchupDifficulty(difficulties: number[]): TeamScheduleDifficulty {
+  const n = difficulties.length;
+  const avgDifficulty = difficulties.reduce((sum, value) => sum + value, 0) / n;
+  const overallTier = tierFromDifficulty(avgDifficulty, {
+    tierSoftMax: MATCHUP_DIFFICULTY_COEFFICIENTS.scheduleTierSoftMax,
+    tierToughMin: MATCHUP_DIFFICULTY_COEFFICIENTS.scheduleTierToughMin,
+  });
+  const avgText = String(Math.round(avgDifficulty));
+  const summary: UiStrings = {
+    ja: `次の${n}試合 · 平均 ${avgText}`,
+    en: `Next ${n} · avg ${avgText}`,
+    ko: `다음 ${n}경기 · 평균 ${avgText}`,
+    zh: `未来 ${n} 场 · 平均 ${avgText}`,
+    es: `Próximos ${n} · media ${avgText}`,
+    pt: `Próximos ${n} · média ${avgText}`,
+    fr: `${n} prochains · moy. ${avgText}`,
+  };
+  return {
+    gameCount: n,
+    avgOppWinPct: 0,
+    avgDifficulty,
+    overallTier,
+    summaryJa: summary.ja,
+    summaryEn: summary.en,
+    summary,
+  };
+}
+
+/** Matchup Difficulty の tier 色（行の数字とサマリーバッジで共通） */
+export function matchupDifficultyColor(tier: ScheduleDifficultyTier): string {
+  return tier === "balanced" ? "rgba(255,255,255,0.72)" : scheduleDifficultyTierColor(tier);
 }
 
 /** 表示用: 7言語版があればそれを、無ければ ja/en フォールバック */
