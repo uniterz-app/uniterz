@@ -119,7 +119,6 @@ import {
 import { peekOwnProfileSeedNative, seedOwnProfileFromUserDocNative } from "./seedOwnProfileFromUserDocNative";
 import { useMyNbaFavoritesNative } from "./useMyNbaFavoritesNative";
 import { parseNbaFavorites } from "../../../../../lib/profile/nbaFavorites";
-import { hydrateMarksFromUserDoc } from "./marksFirestoreNative";
 import TutorialLiveHostNative from "../tutorial/TutorialLiveHostNative";
 import TutorialWelcomeWorldCameraNative from "../tutorial/TutorialWelcomeWorldCameraNative";
 import TutorialLiveCoachNative from "../tutorial/TutorialLiveCoachNative";
@@ -950,7 +949,6 @@ export default function ProfileHomeScreen({
           setProfileViewCount(warm.profileViewCount);
         }
         seedNativeProfileStatsFromUserDoc(myUid, warm.data);
-        hydrateMarksFromUserDoc(myUid, warm.data);
         setProfileLoading(false);
         setMyPlanReady(true);
       } else {
@@ -993,7 +991,6 @@ export default function ProfileHomeScreen({
         }
         if (snapExists) {
           seedNativeProfileStatsFromUserDoc(myUid, data);
-          hydrateMarksFromUserDoc(myUid, data);
         }
         // 期限解決を待たずカードを出す（空→埋めで伸びない）
         setProfileLoading(false);

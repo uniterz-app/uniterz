@@ -8,7 +8,6 @@ import {
   loadProfileUserDocNative,
   peekProfileUserDocNative,
 } from "./profileUserDocCacheNative";
-import { hydrateMarksFromUserDoc } from "./marksFirestoreNative";
 import { prefetchNativeProfileBadges } from "./useNativeProfileBadges";
 import {
   prefetchNativeProfileStats,
@@ -27,12 +26,10 @@ function warmOwnProfileData(uid: string): void {
   const peek = peekProfileUserDocNative(uid);
   if (peek) {
     seedNativeProfileStatsFromUserDoc(uid, peek);
-    hydrateMarksFromUserDoc(uid, peek);
   }
   void loadProfileUserDocNative(uid).then((loaded) => {
     if (!loaded?.exists) return;
     seedNativeProfileStatsFromUserDoc(uid, loaded.data);
-    hydrateMarksFromUserDoc(uid, loaded.data);
   });
   void prefetchNativeProfileStats(uid);
   void prefetchNativeProfileBadges(uid);

@@ -18,12 +18,10 @@ import {
   clearMarkedByNative,
   countMarkedByNative,
   deleteMarkNative,
-  hydrateMarksFromUserDoc,
   listMarksNative,
   setMarkedByNative,
   writeMarkNative,
 } from "./marksFirestoreNative";
-import { peekProfileUserDocNative } from "./profileUserDocCacheNative";
 import { prefetchMarksWeeklyBoard } from "../../../../../lib/profile/fetchMarksWeeklyBoard";
 import { getUniterzApiBaseUrl } from "../games/submitPredictionApi";
 
@@ -96,13 +94,6 @@ export function useProfileMarksNative(
     const current = getMarksMemorySnapshot();
     // 0 件でも hydrated 済みならスピナーを出さず、裏で再取得
     if (current.hydrated && current.owner === owner) {
-      setLoading(false);
-      void refresh({ silent: true });
-      return;
-    }
-    const peek = peekProfileUserDocNative(owner);
-    // レガシーに実データがあるときだけ暫定表示。本データは subcollection + legacy merge
-    if (peek && hydrateMarksFromUserDoc(owner, peek)) {
       setLoading(false);
       void refresh({ silent: true });
       return;

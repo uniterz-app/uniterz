@@ -12,10 +12,7 @@ import {
   loadProfileUserDocNative,
   peekProfileUserDocNative,
 } from "./profileUserDocCacheNative";
-import {
-  hydrateMarksFromUserDoc,
-  listMarksNative,
-} from "./marksFirestoreNative";
+import { listMarksNative } from "./marksFirestoreNative";
 import { replaceMarksMemory } from "../../../../../lib/marks/marksMemoryStore";
 import { prefetchNativeProfileBadges } from "./useNativeProfileBadges";
 import {
@@ -39,7 +36,6 @@ export default function ProfileStatsPrefetchHost() {
     const peek = peekProfileUserDocNative(uid);
     if (peek) {
       seedNativeProfileStatsFromUserDoc(uid, peek);
-      hydrateMarksFromUserDoc(uid, peek);
     }
 
     const task = InteractionManager.runAfterInteractions(() => {
@@ -49,7 +45,6 @@ export default function ProfileStatsPrefetchHost() {
       void loadProfileUserDocNative(uid).then((loaded) => {
         if (!loaded?.exists) return;
         seedNativeProfileStatsFromUserDoc(uid, loaded.data);
-        hydrateMarksFromUserDoc(uid, loaded.data);
       });
 
       void listMarksNative(uid).then((rows) => {
@@ -72,7 +67,6 @@ export default function ProfileStatsPrefetchHost() {
       void loadProfileUserDocNative(uid).then((loaded) => {
         if (!loaded?.exists) return;
         seedNativeProfileStatsFromUserDoc(uid, loaded.data);
-        hydrateMarksFromUserDoc(uid, loaded.data);
       });
       void prefetchNativeProfileStats(uid);
       void prefetchNativeProfileBadges(uid);

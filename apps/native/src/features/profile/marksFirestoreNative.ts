@@ -15,96 +15,8 @@ import {
   parseUserMark,
   type UserMark,
 } from "../../../../../lib/marks/markTypes";
-import {
-  hydrateMarksMemory,
-  peekMarksWriteEpoch,
-} from "../../../../../lib/marks/marksMemoryStore";
-import {
-  loadProfileUserDocNative,
-  peekProfileUserDocNative,
-} from "./profileUserDocCacheNative";
-
 type MarksOk = { ok: true };
 type MarksFail = { ok: false; error: "failed" };
-
-/** @deprecated ルートの markedPredictors は rules で書けない。後方互換の読みだけ残す */
-const LEGACY_MARKS_FIELD = "markedPredictors";
-
-function parseMarksField(raw: unknown): UserMark[] {
-  if (!Array.isArray(raw)) return [];
-  const rows: UserMark[] = [];
-  const seen = new Set<string>();
-  for (const item of raw) {
-    if (!item || typeof item !== "object") continue;
-    const data = item as Record<string, unknown>;
-    const uid =
-      typeof data.targetUid === "string" ? data.targetUid.trim() : "";
-    const parsed = parseUserMark(uid, data);
-    if (!parsed || seen.has(parsed.targetUid)) continue;
-    seen.add(parsed.targetUid);
-    rows.push(parsed);
-  }
-  rows.sort((a, b) => b.createdAtMs - a.createdAtMs);
-  return rows.slice(0, MAX_MARKS_PRO);
-}
-
-export function parseMarksFromUserDoc(
-  data: Record<string, unknown> | null | undefined
-): UserMark[] {
-  return parseMarksField(data?.[LEGACY_MARKS_FIELD]);
-}
-
-/** サブコレクション優先。同一 targetUid は sub 側を残す。 */
-export function mergeMarksLists(
-  primary: UserMark[],
-  fallback: UserMark[]
-): UserMark[] {
-  if (fallback.length === 0) return primary;
-  if (primary.length === 0) return fallback;
-  const seen = new Set(primary.map((m) => m.targetUid));
-  const merged = [...primary];
-  for (const row of fallback) {
-    if (seen.has(row.targetUid)) continue;
-    seen.add(row.targetUid);
-    merged.push(row);
-  }
-  merged.sort((a, b) => b.createdAtMs - a.createdAtMs);
-  return merged.slice(0, MAX_MARKS_PRO);
-}
-
-/**
- * レガシー配列に実データがあるときだけメモリを埋める。
- * 空配列では hydrated にしない（サブコレクション取得へ回す）。
- */
-export function hydrateMarksFromUserDoc(
-  uid: string,
-  data: Record<string, unknown> | null | undefined
-): boolean {
-  const owner = uid.trim();
-  if (!owner || !data) return false;
-  const legacy = data[LEGACY_MARKS_FIELD];
-  // 空配列は「未移行」ではなく「レガシー無し」。hydrated=空で
-  // サブコレクション取得をスキップ／上書きしない。
-  if (!Array.isArray(legacy) || legacy.length === 0) return false;
-  hydrateMarksMemory(
-    owner,
-    parseMarksFromUserDoc(data),
-    peekMarksWriteEpoch()
-  );
-  return true;
-}
-
-async function loadLegacyMarksNative(owner: string): Promise<UserMark[]> {
-  const peek = peekProfileUserDocNative(owner);
-  const fromPeek = parseMarksFromUserDoc(peek);
-  if (fromPeek.length > 0) return fromPeek;
-  try {
-    const loaded = await loadProfileUserDocNative(owner);
-    return parseMarksFromUserDoc(loaded?.data ?? null);
-  } catch {
-    return [];
-  }
-}
 
 export async function listMarksNative(uid: string): Promise<UserMark[]> {
   const owner = uid.trim();
@@ -127,9 +39,7 @@ export async function listMarksNative(uid: string): Promise<UserMark[]> {
   } catch (err) {
     console.warn("[marks] list failed", err);
   }
-  // サブが空／一部だけでも、未移行のレガシーを落とさない
-  const legacy = await loadLegacyMarksNative(owner);
-  return mergeMarksLists(fromSub, legacy);
+  return fromSub;
 }
 
 export async function writeMarkNative(
