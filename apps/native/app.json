@@ -14,7 +14,7 @@
       "backgroundColor": "#041418"
     },
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "bundleIdentifier": "com.uniterz.app",
       "buildNumber": "1",
       "associatedDomains": [
