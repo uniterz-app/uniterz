@@ -1119,7 +1119,7 @@ export const NBA_CURATED_PLAYER_ROLES_2026_REST: Readonly<
     {
       "playerId": "125",
       "name": "DeMar DeRozan",
-      "hierarchy": "third_option",
+      "hierarchy": "sixth_man",
       "roles": [
         "midrange_scorer",
         "shot_creator",
@@ -2750,7 +2750,7 @@ export const NBA_CURATED_PLAYER_ROLES_2026_REST: Readonly<
     {
       "playerId": "413",
       "name": "Collin Sexton",
-      "hierarchy": "third_option",
+      "hierarchy": "sixth_man",
       "roles": [
         "secondary_handler",
         "shot_creator",
