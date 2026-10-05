@@ -3,6 +3,7 @@
  * — カタログ + 模様タップでオーバーレイ確認（本番 Kinetik カード）
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { openProSubscribeNative } from "../../../navigation/navigationRef";
 import {
   ActivityIndicator,
   FlatList,
@@ -403,7 +404,7 @@ export default function ProSkinScreenNative() {
           : copy.applied;
 
   const goGetPro = useCallback(() => {
-    navigation.navigate("ProSubscribe");
+    openProSubscribeNative();
   }, [navigation]);
 
   const closeOverlay = useCallback(() => {

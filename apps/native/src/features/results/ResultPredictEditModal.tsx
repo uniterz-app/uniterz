@@ -3,6 +3,7 @@
  * リザルト一覧からその場でスコア修正できるようにする。
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { openProSubscribeNative } from "../../navigation/navigationRef";
 import { cyberAlert } from "../../components/cyberAlert";
 import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -598,7 +599,7 @@ export default function ResultPredictEditModal({
   const handleOpenProSubscribe = useCallback(() => {
     handleClose();
     scheduleAfterPredictModalDismissed(() => {
-      tabNavigation.navigate("ProfileTab", { screen: "ProSubscribe" });
+      openProSubscribeNative();
     });
   }, [handleClose, tabNavigation]);
 

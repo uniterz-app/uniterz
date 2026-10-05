@@ -1,26 +1,20 @@
 /**
- * Web `RankingsProLeagueTeaser` 相当 — Report ゲート同型（ぼかし + Pro バッジ + CTA）。
- * 本文は通常フローで高さを確保（absolute オーバーレイだと下端が切れる）。
+ * Web `RankingsProLeagueTeaser` 相当 — Pro Insight ゲート同型（黒地 + Pro バッジ + CTA）。
  */
 
-import { useMemo } from "react";
 import {
   Pressable,
   StyleSheet,
   Text,
   View,
 } from "react-native";
-import { BlurView } from "expo-blur";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import type { ComponentProps } from "react";
-import { buildProLeagueTeaserRows } from "../../../../../lib/rankings/proLeagueTeaserMocks";
 import {
   proLeagueGateCopy,
   type ProLeagueGateBullet,
 } from "../../../../../lib/rankings/proLeagueGateCopy";
 import { resolveLocalizedLang } from "../../../../../lib/i18n/localize";
-import { nativeBlurViewExtraProps } from "../../ui/nativeBlurProps";
-import { RankingListCardNative } from "./RankingsRankingCards";
 import ProCyberBadgeNative from "../profile/kinetik/ProCyberBadgeNative";
 import UniterzLogoNative from "../profile/UniterzLogoNative";
 import {
@@ -72,33 +66,9 @@ export function RankingsProLeagueTeaserNative({
   onBackToPickUp?: () => void;
 }) {
   const copy = proLeagueGateCopy(resolveLocalizedLang(language));
-  const rows = useMemo(() => buildProLeagueTeaserRows(), []);
 
   return (
     <View style={styles.root}>
-      <View style={styles.bgLayer} pointerEvents="none">
-        <View style={styles.previewClip}>
-          <View style={styles.listPad}>
-            {rows.map((r, i) => (
-              <RankingListCardNative
-                key={r.uid}
-                row={r}
-                rank={i + 1}
-                metric="totalScore"
-                language={language}
-              />
-            ))}
-          </View>
-        </View>
-        <BlurView
-          intensity={36}
-          tint="dark"
-          style={StyleSheet.absoluteFillObject}
-          {...nativeBlurViewExtraProps()}
-        />
-        <View style={styles.veil} />
-      </View>
-
       <View style={styles.messageWrap}>
         <View style={styles.message}>
           <View style={styles.centerBlock}>
@@ -168,22 +138,8 @@ const styles = StyleSheet.create({
     borderColor: "rgba(255,255,255,0.1)",
     borderRadius: 0,
     minHeight: 420,
-  },
-  /** ぼかし下地のみ absolute。本文の高さで root が伸びる */
-  bgLayer: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  previewClip: {
-    flex: 1,
-    overflow: "hidden",
-    opacity: 0.9,
-  },
-  listPad: {
-    paddingHorizontal: 2,
-  },
-  veil: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(4,8,14,0.55)",
+    /** PredictProBriefPanelNative のロック時と同じ下地 */
+    backgroundColor: "#000000",
   },
   messageWrap: {
     position: "relative",

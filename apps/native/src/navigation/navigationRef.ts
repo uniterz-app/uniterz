@@ -3,6 +3,11 @@ import type { RootStackParamList } from "./types";
 
 export const navigationRef = createNavigationContainerRef<RootStackParamList>();
 
+/** Web `/mobile/pro/subscribe` 相当。タブを切り替えずモーダルで開く */
+export function openProSubscribeNative(): void {
+  runWhenNavigationReady(() => navigationRef.navigate("ProSubscribeModal"));
+}
+
 /** NavigationContainer 準備完了後に実行（通知タップは起動直後もあり得る） */
 export function runWhenNavigationReady(run: () => void): void {
   if (navigationRef.isReady()) {

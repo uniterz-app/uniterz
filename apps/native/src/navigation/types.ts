@@ -235,4 +235,6 @@ export type AuthStackParamList = {
 export type RootStackParamList = {
   Auth: NavigatorScreenParams<AuthStackParamList>;
   Main: NavigatorScreenParams<MainTabParamList>;
+  /** どのタブからでも上にかぶせる Pro 購入（閉じると元の画面へ戻る） */
+  ProSubscribeModal: undefined;
 };

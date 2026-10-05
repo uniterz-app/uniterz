@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { openProSubscribeNative } from "../../../navigation/navigationRef";
 import { cyberAlert } from "../../../components/cyberAlert";
 import {
   Linking,
@@ -332,7 +333,7 @@ export default function NotificationSettingsScreenNative() {
         onClose={() => setProGateOpen(false)}
         onSeePro={() => {
           setProGateOpen(false);
-          navigation.navigate("ProSubscribe");
+          openProSubscribeNative();
         }}
       />
     </LegalPageLayoutNative>

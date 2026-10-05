@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { openProSubscribeNative } from "../../navigation/navigationRef";
 import { useIsFocused, useNavigation } from "@react-navigation/native";
 import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -523,9 +524,7 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
           <RankingsProLeagueTeaserNative
             language={language}
             onPressSubscribe={() =>
-              navigation.navigate("ProfileTab", {
-                screen: "ProSubscribe",
-              })
+              openProSubscribeNative()
             }
             onBackToPickUp={() => setNbaBoard("regular")}
           />

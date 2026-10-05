@@ -80,6 +80,15 @@ function catalogPrice(products: CatalogItem[], sku: string): string | null {
   return phases[phases.length - 1]?.formattedPrice ?? null;
 }
 
+/** endConnection は iOS の購入イベント送出を全体で止めるので、最後の利用者が外れたときだけ呼ぶ */
+let iapConnectionUsers = 0;
+/** 購入はイベントと request の戻り値の両方で届くため、同じ取引を二重処理しない */
+const handledPurchaseKeys = new Set<string>();
+
+function purchaseKey(purchase: ProductPurchase): string {
+  return purchase.transactionId || purchase.purchaseToken || "";
+}
+
 export function useNativeIap() {
   const [ready, setReady] = useState(false);
   const [products, setProducts] = useState<CatalogItem[]>([]);
@@ -123,15 +132,40 @@ export function useNativeIap() {
     if (uid) invalidateProfileUserDocNative(uid);
   }, []);
 
+  const handlePurchase = useCallback(
+    async (purchase: ProductPurchase) => {
+      if (!IAP_ALL_SKUS.includes(purchase.productId as (typeof IAP_ALL_SKUS)[number])) {
+        return;
+      }
+      const key = purchaseKey(purchase);
+      if (key) {
+        if (handledPurchaseKeys.has(key)) return;
+        handledPurchaseKeys.add(key);
+      }
+      try {
+        await verifyOnServer(purchase);
+        pendingResolveRef.current?.(true);
+      } catch {
+        if (key) handledPurchaseKeys.delete(key);
+        pendingResolveRef.current?.(false);
+        cyberAlert("購入エラー", "購入の検証に失敗しました。");
+      } finally {
+        pendingResolveRef.current = null;
+        setPurchasing(false);
+      }
+    },
+    [verifyOnServer]
+  );
+
   useEffect(() => {
     let alive = true;
+    iapConnectionUsers += 1;
     void (async () => {
       try {
         await initConnection();
-        const [subs, oneTime] = await Promise.all([
-          getSubscriptions({ skus: [...IAP_SUBSCRIPTION_SKUS] }),
-          getProducts({ skus: [...IAP_ONE_TIME_SKUS] }),
-        ]);
+        // iOS の react-native-iap は商品取得を 1 本しか保持せず、並列だと先行分が E_CANCELED になる
+        const subs = await getSubscriptions({ skus: [...IAP_SUBSCRIPTION_SKUS] });
+        const oneTime = await getProducts({ skus: [...IAP_ONE_TIME_SKUS] });
         if (alive) {
           setProducts([...subs, ...oneTime]);
           setReady(true);
@@ -142,27 +176,16 @@ export function useNativeIap() {
     })();
     return () => {
       alive = false;
-      void endConnection();
+      iapConnectionUsers -= 1;
+      if (iapConnectionUsers === 0) void endConnection();
     };
   }, []);
 
   useEffect(() => {
     if (!ready) return;
 
-    const successSub = purchaseUpdatedListener(async (purchase) => {
-      if (!IAP_ALL_SKUS.includes(purchase.productId as (typeof IAP_ALL_SKUS)[number])) {
-        return;
-      }
-      try {
-        await verifyOnServer(purchase);
-        pendingResolveRef.current?.(true);
-      } catch {
-        pendingResolveRef.current?.(false);
-        cyberAlert("購入エラー", "購入の検証に失敗しました。");
-      } finally {
-        pendingResolveRef.current = null;
-        setPurchasing(false);
-      }
+    const successSub = purchaseUpdatedListener((purchase) => {
+      void handlePurchase(purchase);
     });
 
     const errorSub = purchaseErrorListener((error: PurchaseError) => {
@@ -182,7 +205,7 @@ export function useNativeIap() {
       successSub.remove();
       errorSub.remove();
     };
-  }, [ready, verifyOnServer]);
+  }, [ready, handlePurchase]);
 
   /** Android はストアがトライアル対象者にだけ特典を返す。iOS / 未取得は null（判定不可） */
   const trialOfferAvailable = useCallback(
@@ -229,11 +252,19 @@ export function useNativeIap() {
               : isSubscriptionPlan(plan)
                 ? requestSubscription({ sku })
                 : requestPurchase({ sku });
-          void req.catch(() => {
-            pendingResolveRef.current = null;
-            setPurchasing(false);
-            resolve(false);
-          });
+          void req
+            .then((result) => {
+              const purchased = (Array.isArray(result) ? result[0] : result) as
+                | ProductPurchase
+                | null
+                | undefined;
+              if (purchased?.productId) void handlePurchase(purchased);
+            })
+            .catch(() => {
+              pendingResolveRef.current = null;
+              setPurchasing(false);
+              resolve(false);
+            });
         });
       } catch {
         setPurchasing(false);
@@ -241,7 +272,7 @@ export function useNativeIap() {
         return false;
       }
     },
-    [ready, purchasing, products]
+    [ready, purchasing, products, handlePurchase]
   );
 
   const restore = useCallback(async () => {

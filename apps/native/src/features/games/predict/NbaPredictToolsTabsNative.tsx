@@ -1,5 +1,6 @@
 /** Web `NbaPredictToolsTabs` 相当 */
 import { useEffect, useState } from "react";
+import { openProSubscribeNative } from "../../../navigation/navigationRef";
 import { StyleSheet, Text, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NavigationProp } from "@react-navigation/native";
@@ -181,7 +182,7 @@ export default function NbaPredictToolsTabsNative({
       onOpenProSubscribe();
       return;
     }
-    navigation.navigate("ProfileTab", { screen: "ProSubscribe" });
+    openProSubscribeNative();
   };
 
   return (

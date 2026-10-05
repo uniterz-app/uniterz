@@ -3,6 +3,7 @@
  * Pro は user_reports の確定版。非 Pro は Free ゲート。
  */
 import { useMemo, useState } from "react";
+import { openProSubscribeNative } from "../../navigation/navigationRef";
 import {
   ActivityIndicator,
   Pressable,
@@ -114,7 +115,7 @@ export default function ProfileStatsTabNative({
   const handleGateCta = (kind: ReportGateKind) => {
     switch (kind) {
       case "free":
-        navigation.navigate("ProSubscribe");
+        openProSubscribeNative();
         break;
       case "monthlyLocked":
         navigation.navigate("PlanChange");

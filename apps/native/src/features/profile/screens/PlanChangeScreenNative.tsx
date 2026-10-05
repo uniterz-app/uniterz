@@ -2,6 +2,7 @@
  * Web `app/mobile/plan-change/page.tsx` 相当
  */
 import { useEffect, useMemo, useState } from "react";
+import { openProSubscribeNative } from "../../../navigation/navigationRef";
 import {
   Linking,
   Platform,
@@ -156,7 +157,7 @@ export default function PlanChangeScreenNative() {
             <Text style={styles.hint}>{planChangeFreeGateBody(lang)}</Text>
             <PlanSlantCtaNative
               label={planChangeUpgradeCta(lang)}
-              onPress={() => navigation.navigate("ProSubscribe")}
+              onPress={() => openProSubscribeNative()}
             />
           </PlanChamferPanelNative>
         </ScrollView>

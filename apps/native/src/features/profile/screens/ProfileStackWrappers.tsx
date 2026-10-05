@@ -1,4 +1,5 @@
 import { useNavigation, useRoute } from "@react-navigation/native";
+import { openProSubscribeNative } from "../../../navigation/navigationRef";
 import type { RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useFirebaseUser } from "../../../auth/FirebaseUserProvider";
@@ -28,7 +29,12 @@ import ProInsightNarrativePreviewScreenNative from "../../games/predict/ProInsig
 import MatchupTeamStatsPreviewScreenNative from "../../games/predict/MatchupTeamStatsPreviewScreenNative";
 import ResultDetailPreviewScreenNative from "../../results/ResultDetailPreviewScreenNative";
 import ResultPickupPreviewScreenNative from "../../results/ResultPickupPreviewScreenNative";
-import type { ProfileStackParamList } from "../../../navigation/types";
+import { View } from "react-native";
+import NativePageBackground from "../../../components/NativePageBackground";
+import type {
+  ProfileStackParamList,
+  RootStackParamList,
+} from "../../../navigation/types";
 import { resolveLocalizedLang } from "@/lib/i18n/localize";
 
 const apiBase = process.env.EXPO_PUBLIC_UNITERZ_API_BASE_URL ?? null;
@@ -74,7 +80,7 @@ export function PlanStatusScreenWrapper() {
       language={language}
       uid={fUser?.uid}
       onClose={() => navigation.goBack()}
-      onUpgrade={() => navigation.navigate("ProSubscribe")}
+      onUpgrade={() => openProSubscribeNative()}
       apiBase={apiBase}
       onNavigate={(screen) => navigation.navigate(screen)}
     />
@@ -98,6 +104,33 @@ export function ProSubscribeScreenWrapper() {
         )
       }
     />
+  );
+}
+
+/** ルートのモーダル。閉じると開いた元のタブ・画面に戻る */
+export function ProSubscribeModalScreenWrapper() {
+  const navigation =
+    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const { fUser } = useFirebaseUser();
+  const { language } = useNativeUserLanguage(fUser?.uid);
+  return (
+    <View style={{ flex: 1 }}>
+      <NativePageBackground />
+      <ProSubscribePreviewNative
+        language={language}
+        onClose={() => navigation.goBack()}
+        onOpenSkin={(opts) => {
+          navigation.goBack();
+          navigation.navigate("Main", {
+            screen: "ProfileTab",
+            params: {
+              screen: "ProSkin",
+              params: opts?.fromTrial ? { fromTrial: true } : undefined,
+            },
+          });
+        }}
+      />
+    </View>
   );
 }
 
@@ -254,7 +287,7 @@ export function ProLeagueTeaserPreviewScreenWrapper() {
     <ProLeagueTeaserPreviewScreenNative
       language={resolveLocalizedLang(language) === "ja" ? "ja" : "en"}
       onClose={() => navigation.goBack()}
-      onPressSubscribe={() => navigation.navigate("ProSubscribe")}
+      onPressSubscribe={() => openProSubscribeNative()}
     />
   );
 }
@@ -346,7 +379,7 @@ export function ProInsightGatePreviewScreenWrapper() {
     <ProInsightGatePreviewScreenNative
       language={resolveLocalizedLang(language) === "ja" ? "ja" : "en"}
       onClose={() => navigation.goBack()}
-      onPressSubscribe={() => navigation.navigate("ProSubscribe")}
+      onPressSubscribe={() => openProSubscribeNative()}
     />
   );
 }

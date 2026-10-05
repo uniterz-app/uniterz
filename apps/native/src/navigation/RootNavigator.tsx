@@ -94,7 +94,22 @@ export default function RootNavigator() {
           )}
         </RootStack.Screen>
       ) : (
-        <RootStack.Screen name="Main" component={MainTabNavigator} />
+        <>
+          <RootStack.Screen name="Main" component={MainTabNavigator} />
+          <RootStack.Screen
+            name="ProSubscribeModal"
+            options={{
+              presentation: "modal",
+              animation: "slide_from_bottom",
+              freezeOnBlur: false,
+              contentStyle: { backgroundColor: "#000" },
+            }}
+            getComponent={() =>
+              require("../features/profile/screens/ProfileStackWrappers")
+                .ProSubscribeModalScreenWrapper
+            }
+          />
+        </>
       )}
     </RootStack.Navigator>
   );

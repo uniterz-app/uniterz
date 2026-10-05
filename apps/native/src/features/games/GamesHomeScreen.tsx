@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactElement, type RefObject } from "react";
+import { openProSubscribeNative } from "../../navigation/navigationRef";
 import { cyberAlert } from "../../components/cyberAlert";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect, useIsFocused, useNavigation } from "@react-navigation/native";
@@ -2858,7 +2859,7 @@ export default function GamesHomeScreen({
           setPredictSpectatorStartedNoPost(false);
           setSelectedGame(null);
           scheduleAfterPredictModalDismissed(() => {
-            tabNavigation.navigate("ProfileTab", { screen: "ProSubscribe" });
+            openProSubscribeNative();
           });
         }}
         spectatorStartedNoPost={

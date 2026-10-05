@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { openProSubscribeNative } from "../../navigation/navigationRef";
 import { cyberAlert } from "../../components/cyberAlert";
 import {
   CommonActions,
@@ -1873,7 +1874,7 @@ export default function ProfileHomeScreen({
         else if (page === "redeem") navigation.navigate("Redeem");
         else if (page === "announcements") navigation.navigate("Announcements");
         else if (page === "plan") navigation.navigate("PlanStatus");
-        else if (page === "subscribe") navigation.navigate("ProSubscribe");
+        else if (page === "subscribe") openProSubscribeNative();
         else if (page === "proSkin") navigation.navigate("ProSkin");
         else if (page === "deleteAccount") navigation.navigate("DeleteAccount");
         else if (page === "guidelines") navigation.navigate("CommunityGuidelines");
