@@ -54,8 +54,10 @@ import {
   mergeScheduleMyPostsCache,
   missingScheduleMyPostGameIds,
   peekScheduleMyPosts,
+  unknownScheduleMyPostGameIds,
   type ScheduleMyPostsMap,
 } from "../../../../../lib/games/scheduleMyPostsCache";
+import { useScheduleMyPostsPersistNative } from "./useScheduleMyPostsPersistNative";
 import { isLocalOnlyScheduleGameId } from "../../../../../lib/games/localOnlyScheduleGameId";
 import {
   resolveGameLiveMeta,
@@ -1470,26 +1472,29 @@ export default function GamesHomeScreen({
     () => predictedIdsForVisibleGames(fUser?.uid, gameIdSet, predictedGameIds),
     [fUser?.uid, gameIdSet, predictedGameIds]
   );
+  const myPostsHydrated = useScheduleMyPostsPersistNative(fUser?.uid);
+  /** 端末保存にも無く、予想の有無が分からない試合（保存分は先に塗って裏で取り直す） */
   const missingRemotePredictionIds = useMemo(() => {
     if (!fUser || gameIdSet.size === 0) return [];
-    return missingScheduleMyPostGameIds(fUser.uid, [...gameIdSet]).filter(
+    return unknownScheduleMyPostGameIds(fUser.uid, [...gameIdSet]).filter(
       (id) => !isLocalOnlyScheduleGameId(id)
     );
-  }, [fUser, gameIdSet]);
+    // predictedGameIds: 取得が終わったら待ちを解く（無いと毎回タイマー満了まで隠れる）
+  }, [fUser, gameIdSet, myPostsHydrated, predictedGameIds]);
   const [predictionWaitExpired, setPredictionWaitExpired] = useState(false);
   useEffect(() => {
     if (missingRemotePredictionIds.length === 0) {
       setPredictionWaitExpired(false);
       return;
     }
-    /** Android は Firestore が遅く、一覧を 1.2s 隠すと「初回が遅い」に直結する */
-    const waitMs = Platform.OS === "android" ? 380 : 1200;
+    /** 起動直後は Firestore の初回クエリが遅く、長く隠すと「初回が遅い」に直結する */
+    const waitMs = 380;
     const t = setTimeout(() => setPredictionWaitExpired(true), waitMs);
     return () => clearTimeout(t);
   }, [missingRemotePredictionIds]);
   /**
    * 未取得の予想を青で先塗りしない。ただしチュートリアル中やプレビュー試合、
-   * 1.2s 超過では一覧を隠さない（穴が測れず案内が中央モーダルのまま固まる）。
+   * 0.38s 超過では一覧を隠さない（穴が測れず案内が中央モーダルのまま固まる）。
    * Android は Firestore が遅く一覧隠しが初回遅延に直結するため、待たずに出す。
    */
   const predictionPaintPending = Boolean(
@@ -1645,11 +1650,11 @@ export default function GamesHomeScreen({
         setMyPredictionByGameId({});
       }
     }
-    void loadMyPredictions();
+    if (myPostsHydrated) void loadMyPredictions();
     return () => {
       alive = false;
     };
-  }, [fUser, gameIdsKey, gameIdSet, myPredictionsReloadNonce, windowGameIds]);
+  }, [fUser, gameIdsKey, gameIdSet, myPredictionsReloadNonce, windowGameIds, myPostsHydrated]);
 
   /** リザルトで投稿削除されたとき、一覧の「予想済み」を外す */
   useEffect(() => {
