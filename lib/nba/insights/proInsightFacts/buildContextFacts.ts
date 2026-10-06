@@ -4,7 +4,7 @@
  * multi_out / 単独連勝連敗は出さない。空セクション可。
  */
 import type { NbaLeagueTeamStatRow } from "@/lib/predict/nbaLeagueTeamStatsMocks";
-import { findTeamRow } from "@/lib/nba/insights/rankTeamMetrics";
+import { findTeamRow, teamGamesPlayed } from "@/lib/nba/insights/rankTeamMetrics";
 import {
   formatWl,
   wlTotal,
@@ -41,6 +41,8 @@ const STREAK_TOUGH = 0.52;
 const STREAK_FARM = 0.42;
 const MARGIN_MIN_SAMPLE = 4;
 const CLUTCH_DELTA_MIN = 3;
+/** クラッチ NET は数試合だと極端に振れる */
+const CLUTCH_MIN_GAMES = 10;
 const THREE_HOT_DELTA = 0.04;
 const THREE_HOT_ABS = 0.38;
 const RATING_DELTA_MIN = 3;
@@ -395,7 +397,7 @@ function vsBandFacts(input: {
   };
   const nick = abbr(input.teamId);
   const oppNick = abbr(input.opponentTeamId);
-  const minGames = input.phase === "opening" ? 8 : 4;
+  const minGames = input.phase === "full" ? 4 : 8;
   const out: ProInsightFact[] = [];
 
   const oppIsTop6 =
@@ -603,7 +605,7 @@ function clutchFormFact(
   teamId: string,
   seasonRow: NbaLeagueTeamStatRow | null
 ): ProInsightFact | null {
-  if (!seasonRow) return null;
+  if (!seasonRow || teamGamesPlayed(seasonRow) < CLUTCH_MIN_GAMES) return null;
   const clutch = seasonRow.clutchNet;
   const seasonNet = seasonRow.netrtg;
   if (
@@ -688,7 +690,7 @@ function venueSplitFact(input: {
   const split = input.records?.teams[input.teamId];
   if (!split) return null;
   const row = input.isHome ? split.home : split.away;
-  const minGames = input.phase === "opening" ? 10 : 8;
+  const minGames = input.phase === "full" ? 8 : 10;
   if (!row || wlTotal(row) < minGames) return null;
   const pct = row.wins / wlTotal(row);
   if (pct > 0.35 && pct < 0.65) return null;
@@ -864,10 +866,11 @@ export function buildContextFactCandidates(input: {
   confRankSeasonKey?: string | null;
   shapeRecords?: NbaTeamShapeRecordsBundle | null;
 }): ProInsightFact[] {
+  // 開幕〜序盤（今季 4 試合まで）は前季の成績で読む。数試合の今季 split は条件を満たさず消えるだけ
   const records =
-    input.phase === "opening"
-      ? input.priorRecords
-      : input.seasonRecords ?? input.priorRecords;
+    input.phase === "full"
+      ? input.seasonRecords ?? input.priorRecords
+      : input.priorRecords ?? input.seasonRecords;
   const ranks = input.confRankByTeamId ?? {};
 
   return [

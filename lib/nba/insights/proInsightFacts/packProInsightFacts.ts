@@ -23,6 +23,7 @@ import { buildInjuryImpactFactCandidates } from "@/lib/nba/insights/proInsightFa
 import type { NbaLeagueTeamStatRow } from "@/lib/predict/nbaLeagueTeamStatsMocks";
 import type { NbaTeamInjuryEntry } from "@/lib/predict/nbaTeamDetailPreviewMocks";
 import type { NbaTeamAceOutRecordsBundle } from "@/lib/nba/insights/aceOutRecordTypes";
+import type { NbaPlayerOutImpactBundle } from "@/lib/nba/injuryImpact/playerOutImpactTypes";
 import type { NbaTeamSeasonRecordsBundle } from "@/lib/nba/insights/priorSeasonRecordTypes";
 import type { NbaTeamShapeRecordsBundle } from "@/lib/nba/teamShapes/teamShapeTypes";
 import type { NbaTeamInsightExtrasBundle } from "@/lib/nba/insights/teamInsightExtraTypes";
@@ -60,6 +61,9 @@ export type AssembleProInsightFactsInput = {
   aceOutRecords?: NbaTeamAceOutRecordsBundle | null;
   /** early/full: 今季サンプル不足時の同 teamId 前季フォールバック */
   priorAceOutRecords?: NbaTeamAceOutRecordsBundle | null;
+  /** 選手欠場の影響（点）。今季 / 前季 */
+  outImpact?: NbaPlayerOutImpactBundle | null;
+  priorOutImpact?: NbaPlayerOutImpactBundle | null;
   /** USG/AST リーダー欠場の形変化用 */
   playerLeaders?: NbaPlayerStatLeadersBundle | null;
   streaks?: TeamStreakFactInput[];
@@ -225,6 +229,9 @@ export function assembleProInsightFactPack(
     playerLeaders: input.playerLeaders,
     mpgByPlayerId: input.mpgByPlayerId,
     matchupStylesByPlayerId,
+    outImpact: input.outImpact,
+    priorOutImpact: input.priorOutImpact,
+    tipAtMs: input.tipAtMs,
   });
 
   const candidates = [

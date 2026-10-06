@@ -5,7 +5,6 @@ import type { Firestore } from "firebase-admin/firestore";
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
 import { ingestNbaTeamPayrollFromBdl } from "@/lib/nba/ingest/nbaTeamPayrollIngest";
 import { ingestNbaPlayerContractsFromBdl } from "@/lib/nba/ingest/nbaPlayerContractsIngest";
-
 export type NbaStatsWeeklyIngestResult = {
   ok: boolean;
   seasonKey: string;
@@ -58,7 +57,6 @@ export async function runNbaStatsWeeklyIngest(
       })
     )
   );
-
   const finishedAt = new Date().toISOString();
   return {
     ok: steps.every((s) => s.ok),

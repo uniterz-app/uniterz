@@ -59,8 +59,9 @@ export function resolveInsightExtrasForPhase(input: {
   seasonExtras?: NbaTeamInsightExtrasBundle | null;
   priorExtras?: NbaTeamInsightExtrasBundle | null;
 }): { bundle: NbaTeamInsightExtrasBundle | null; usedPrior: boolean } {
-  if (input.phase === "opening") {
-    return { bundle: input.priorExtras ?? null, usedPrior: true };
+  if (input.phase !== "full") {
+    if (input.priorExtras) return { bundle: input.priorExtras, usedPrior: true };
+    return { bundle: input.seasonExtras ?? null, usedPrior: false };
   }
   const season = input.seasonExtras;
   if (season && Object.keys(season.teams).length > 0) {

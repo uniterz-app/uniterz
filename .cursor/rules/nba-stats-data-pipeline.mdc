@@ -48,6 +48,7 @@ BDL（サーバーのみ）
 | injury | `nbaTeamInjuries/{season}` | **専用** `nba-injury-ingest`（16:00 / 23:00 / 試合前窓） | `/api/nba/team-injuries` |
 | **カンファレンス順位** | `nbaStandings/{season}` | 日次 `nba-stats-daily-ingest`（`standings` ステップ）/ `nba-standings-ingest`（過去季は明示シーズンで一度だけ。L10・連勝は Firestore games 無しなら BDL レギュラー試合から。順位ページは今季＋過去 10 季を ◀▶） | `/api/nba/standings?season=` |
 | **チーム成績スプリット** | `nbaTeamSeasonRecords/{season}` | 日次 `nba-stats-daily-ingest`（`team-season-records` ステップ）/ pro-brief 内 build | `/api/nba/team-season-records` |
+| **選手欠場の影響（点）** | `nbaPlayerOutImpact/{season}`（`${teamId}:${playerId}` → impact / statPrior / gamesOut） | `nba-player-out-impact-ingest`（BDL `/nba/v1/stats` 全ページ × Firestore games。γ・λ は `scripts/nba-injury-impact-fit.ts` の 5 季実測で固定し当該季だけ fit。週次 cron が weekly の後に別リクエスト） | —（Pro Insight INJURY IMPACT の欠場込み厳しさ用） |
 | **エース欠場時 W–L** | `nbaTeamAceOutRecords/{season}` | `nba-team-ace-out-ingest`（BDL leaders pts + season stats で所属チーム確定 × min>0） | `/api/nba/team-ace-out-records` |
 | **得意形／苦手形（条件付き W–L）** | `nbaTeamShapeRecords/{season}` | 日次 `nba-stats-daily-ingest`（`team-shape-records`）/ `nba-team-shapes-ingest`（`games.liveStats.box`） | `/api/nba/team-shape-records` |
 | **前季最終所属** | `nbaPlayerSeasonFinalTeams/{season}` | `nba-team-offseason-moves-ingest`（無ければ BDL `/nba/v1/stats` 全ページの最終試合チーム。一度作れば固定・`refreshPriorFinalTeams` で再取得） | —（moves 内部用） |
@@ -55,6 +56,7 @@ BDL（サーバーのみ）
 | **チーム詳細寄せ** | （上の合成） | — | `/api/nba/team-detail`（roster+payroll+log+standings行+injury+strength+ace-out+shapes+offseason moves。CDN 1 URL） |
 | **試合日インデックス（日付ストリップ）** | `gameDayIndex/{league}__{season}`（distinct 開始 ms） | `nba-games-ingest` 末尾（日次 `games` ステップ） | `/api/games/days`（CDN 1h。ストリップは全試合日、カードは `/api/games/window` ±5 日） |
 | **試合カード予想ツール寄せ** | （上の合成） | — | `/api/nba/matchup-detail`（injury+roster+stats。Insight は別 `/api/nba/matchup-insight`） |
+| **今日のスタッツリーダー（TODAY）** | `games/{id}.liveStats.box`（その日の試合） | live ingest（毎分） | `/api/nba/daily-leaders?date=&tz=`（ユーザー TZ の暦日・プレシーズン含む・PTS/REB/AST/STL/BLK/3PM Top20） |
 
 ## 運用順（プレイヤー詳細）
 
@@ -84,7 +86,7 @@ BDL（サーバーのみ）
 - 中身: rosters → **team-offseason-moves** → games → league-stats → **team-game-logs** → **standings** → **team-season-records** → **team-shape-records** → shot-zones → **player-game-logs-incremental**（直近 box 出場者）
 - **injury** は日次から分離 → Firebase `runNbaInjuryBaseline16Cron`（16:00 · 試合日）/ `runNbaInjuryBaseline23Cron`（23:00）/ `runNbaInjuryPregameCron`（10分毎 · T-3h/1h/30m 窓）→ `POST /api/admin/nba-injury-ingest`
 - `mode: "heavy"` でプレイヤー試合ログ全件も（タイムアウト注意）。試合ログ書き込み後に leaders のシーズン回数ボードを game logs から再集計（追加 BDL なし。リーグ表 last10 は書かない）
-- 週次 Firebase cron `runNbaStatsWeeklyIngestCron` — **月曜 10:00 JST** → `POST /api/admin/nba-stats-weekly-ingest`（payroll + contracts）。キャリアは手動
+- 週次 Firebase cron `runNbaStatsWeeklyIngestCron` — **月曜 10:00 JST** → `POST /api/admin/nba-stats-weekly-ingest`（payroll + contracts）→ 続けて `POST /api/admin/nba-player-out-impact-ingest`（選手欠場の影響）。キャリアは手動
 - チーム league-stats は scoring / hustle / tracking / clutch / playtype 込み（HOW THEY PLAY）。team by_zone は BDL 不可 → リーグ表 RIM/C3 非表示・チーム詳細 SHOT 枠なし
 - 公開スタッツの表示シーズンは上記「表示シーズン」に従う（今季空→前期。BDL ライブは禁止のまま）
 - リーグ表は年切替（`2020-21`〜今季・◀▶）+ SEASON / PLAYOFFS。playoffs は ingest で BDL `season_type=playoffs` を同梱。過去分は `lookbackSeasons`（今季→2020-21）で一括 ingest

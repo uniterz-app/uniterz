@@ -19,6 +19,8 @@ import { loadOrBuildTeamSeasonRecords } from "@/lib/nba/insights/loadPriorSeason
 import { loadTeamShapeRecordsBundle } from "@/lib/nba/teamShapes/loadTeamShapeRecords";
 import type { NbaTeamShapeRecordsBundle } from "@/lib/nba/teamShapes/teamShapeTypes";
 import { loadAceOutRecordsBundle } from "@/lib/nba/insights/ingestNbaTeamAceOutRecords";
+import { loadPlayerOutImpactBundle } from "@/lib/nba/injuryImpact/ingestNbaPlayerOutImpact";
+import type { NbaPlayerOutImpactBundle } from "@/lib/nba/injuryImpact/playerOutImpactTypes";
 import { loadTeamInsightExtrasSnapshot } from "@/lib/nba/insights/ingestNbaTeamInsightExtras";
 import { loadPlayerStatLeadersSnapshot } from "@/lib/nba/playerStatLeaders/loadPlayerStatLeadersSnapshot";
 import { loadNbaConferenceStandings } from "@/lib/nba/standings/loadNbaConferenceStandings";
@@ -28,10 +30,36 @@ import {
   loadGameProInsight,
   writeGameProInsight,
 } from "@/lib/nba/insights/gameProInsightStore";
-import type { ProInsightFactPack } from "@/lib/nba/insights/proInsightFacts/types";
-import { fingerprintInjuryStatus } from "@/lib/nba/insights/proInsightFacts/fingerprint";
+import type {
+  ProInsightFactPack,
+  ProInsightScheduleDifficulty,
+} from "@/lib/nba/insights/proInsightFacts/types";
+import { proInsightTeamAbbr } from "@/lib/nba/insights/proInsightFacts/teamAbbr";
+import {
+  difficultyNarrativeItem,
+  type ScheduleDifficultySide,
+} from "@/lib/nba/matchupDifficulty/difficultyBriefLine";
+import {
+  INJURY_DIFFICULTY_FACT_KIND,
+  buildInjuryDifficultyItem,
+  injuryDifficultyEvidencePlayers,
+  injuryDifficultyFact,
+  type InjuryDifficultySide,
+} from "@/lib/nba/matchupDifficulty/injuryDifficultyNarrative";
+import { upcomingDifficultyForGame } from "@/lib/nba/matchupDifficulty/upcomingDifficultyForGame";
+import { loadTeamGameLogsSnapshot } from "@/lib/nba/teamGameLog/loadTeamGameLog";
+import type { NbaTeamGameLogSlice } from "@/lib/nba/teamGameLog/teamGameLogTypes";
+import {
+  fingerprintInjuryStatus,
+  fingerprintProInsightFacts,
+} from "@/lib/nba/insights/proInsightFacts/fingerprint";
 import { highMinutePlayersFromRecentGames } from "@/lib/nba/insights/proInsightFacts/highMinutePlayersFromLiveStats";
-import { resolveProBriefPhase, isWithinProBriefPatchWindow, isProInsightEligibleNbaGame } from "@/lib/nba/insights/proInsightPhases";
+import {
+  resolveProBriefPhase,
+  isWithinProBriefPatchWindow,
+  isProInsightEligibleNbaGame,
+  proBriefSampleNote,
+} from "@/lib/nba/insights/proInsightPhases";
 import type { ProBriefPhase } from "@/lib/predict/predictProBrief";
 import { teamGamesPlayed, findTeamRow } from "@/lib/nba/insights/rankTeamMetrics";
 import {
@@ -55,13 +83,19 @@ import { parseProInsightLlmJson } from "@/lib/nba/insights/proInsightLlm/parseLl
 import { fallbackNarrativeFromFactPack } from "@/lib/nba/insights/proInsightLlm/fallbackFromFacts";
 import { renderMatchupNarrativeItem } from "@/lib/nba/insights/proInsightLlm/matchupNarrativeTemplate";
 import { dropStaleLongTermInjuries } from "@/lib/nba/insights/proInsightFacts/longTermInjury";
+import { buildLongTermOutImpacts } from "@/lib/nba/insights/proInsightFacts/buildInjuryImpactFacts";
+import type { NbaInjuryOutImpact } from "@/lib/nba/matchupDifficulty/injuryAdjustedDifficulty";
 import { withInjuryFixups } from "@/lib/nba/insights/proInsightLlm/injuryNarrativeFixups";
+import { withNumberGuard } from "@/lib/nba/insights/proInsightLlm/numberGuard";
 import { rewriteThisSeasonLabels } from "@/lib/nba/insights/proInsightLlm/rewriteThisSeasonLabels";
 import {
   listPendingProInsightBatchJobs,
   saveProInsightBatchJob,
 } from "@/lib/nba/insights/proInsightLlm/batchJobStore";
-import type { ProInsightNarrativeBrief } from "@/lib/predict/proInsightNarrativeTypes";
+import {
+  PRO_INSIGHT_NARRATIVE_ITEM_CAPS,
+  type ProInsightNarrativeBrief,
+} from "@/lib/predict/proInsightNarrativeTypes";
 import type {
   SchedulePriorGame,
   ScheduleNextGame,
@@ -346,6 +380,188 @@ function withTemplateMatchup(
   return { ...brief, sections };
 }
 
+/** SCHEDULE 先頭を Matchup Difficulty の内訳テンプレに（LLM の SCHEDULE は残りの枠へ） */
+function withTemplateScheduleDifficulty(
+  brief: ProInsightNarrativeBrief,
+  pack: ProInsightFactPack
+): ProInsightNarrativeBrief {
+  const d = pack.scheduleDifficulty;
+  if (!d) return brief;
+  const sides: ScheduleDifficultySide[] = [];
+  if (d.home) {
+    sides.push({
+      teamAbbr: proInsightTeamAbbr(pack.homeTeamId),
+      isHome: true,
+      difficulty: d.home,
+    });
+  }
+  if (d.away) {
+    sides.push({
+      teamAbbr: proInsightTeamAbbr(pack.awayTeamId),
+      isHome: false,
+      difficulty: d.away,
+    });
+  }
+  const item = difficultyNarrativeItem(sides);
+  if (!item) return brief;
+
+  const cap = PRO_INSIGHT_NARRATIVE_ITEM_CAPS.SCHEDULE;
+  const existing = brief.sections.find((s) => s.kind === "SCHEDULE");
+  const schedule = {
+    kind: "SCHEDULE" as const,
+    items: [item, ...(existing?.items ?? [])].slice(0, cap),
+  };
+  if (existing) {
+    return {
+      ...brief,
+      sections: brief.sections.map((s) => (s.kind === "SCHEDULE" ? schedule : s)),
+    };
+  }
+  const matchupIdx = brief.sections.findIndex((s) => s.kind === "MATCHUP");
+  const sections = [...brief.sections];
+  sections.splice(matchupIdx + 1, 0, schedule);
+  return { ...brief, sections };
+}
+
+function injuryDifficultySides(pack: ProInsightFactPack): InjuryDifficultySide[] {
+  const d = pack.scheduleDifficulty;
+  const sides: InjuryDifficultySide[] = [];
+  if (d?.home) {
+    sides.push({
+      teamId: pack.homeTeamId,
+      teamAbbr: proInsightTeamAbbr(pack.homeTeamId),
+      difficulty: d.home,
+    });
+  }
+  if (d?.away) {
+    sides.push({
+      teamId: pack.awayTeamId,
+      teamAbbr: proInsightTeamAbbr(pack.awayTeamId),
+      difficulty: d.away,
+    });
+  }
+  return sides;
+}
+
+/**
+ * INJURY IMPACT 先頭に欠場込みの厳しさファクトを入れて LLM に書かせる。
+ * 欠場は cap 前の候補 + 長期離脱から集める（枠から漏れた選手も厳しさには効く）。
+ */
+function withInjuryDifficultyFact(pack: ProInsightFactPack): ProInsightFactPack {
+  const sides = injuryDifficultySides(pack);
+  if (sides.length === 0) return pack;
+  const seen = new Set<string>();
+  const impacts = [
+    ...pack.candidates
+      .filter((f) => f.section === "INJURY IMPACT")
+      .map((f) => f.injuryOut)
+      .filter((x): x is NbaInjuryOutImpact => x != null),
+    ...(pack.longTermOutImpacts ?? []),
+  ].filter((i) => {
+    const key = `${i.teamId}:${i.playerName}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+  const fact = injuryDifficultyFact(sides, impacts);
+  if (!fact) return pack;
+  const cap = PRO_INSIGHT_NARRATIVE_ITEM_CAPS["INJURY IMPACT"];
+  const sections = {
+    ...pack.sections,
+    "INJURY IMPACT": [fact, ...(pack.sections["INJURY IMPACT"] ?? [])].slice(0, cap),
+  };
+  return {
+    ...pack,
+    sections,
+    fingerprint: fingerprintProInsightFacts(sections, {
+      homeTeamId: pack.homeTeamId,
+      awayTeamId: pack.awayTeamId,
+      tipAtMs: pack.tipAtMs,
+      phase: pack.phase,
+    }),
+  };
+}
+
+/** INJURY IMPACT 先頭に厳しさ項目（コードの数字の行 + LLM の読み）を置き、中間値 injuryDifficultyRead を消す */
+function withInjuryDifficultyItem(
+  brief: ProInsightNarrativeBrief,
+  pack: ProInsightFactPack
+): ProInsightNarrativeBrief {
+  const { injuryDifficultyRead, ...base } = brief;
+  const facts = pack.sections["INJURY IMPACT"] ?? [];
+  const fact = facts.find((f) => f.kind === INJURY_DIFFICULTY_FACT_KIND);
+  if (!fact) return base;
+  const cap = PRO_INSIGHT_NARRATIVE_ITEM_CAPS["INJURY IMPACT"];
+  const existing = base.sections.find((s) => s.kind === "INJURY IMPACT");
+  const playersWithOwnItem = new Set(
+    facts
+      .filter((f) => f !== fact)
+      .slice(0, Math.min(existing?.items.length ?? 0, cap - 1))
+      .map((f) => f.players[0]?.playerName ?? "")
+  );
+  const item = buildInjuryDifficultyItem(
+    injuryDifficultyRead,
+    injuryDifficultySides(pack),
+    fact.injuryDifficultyImpacts ?? [],
+    playersWithOwnItem
+  );
+  if (!item) return base;
+
+  const injury = {
+    kind: "INJURY IMPACT" as const,
+    items: [item, ...(existing?.items ?? [])].slice(0, cap),
+  };
+  if (existing) {
+    return {
+      ...base,
+      sections: base.sections.map((s) => (s.kind === "INJURY IMPACT" ? injury : s)),
+    };
+  }
+  return { ...base, sections: [...base.sections, injury] };
+}
+
+function scheduleDifficultyFor(
+  logs: Record<string, NbaTeamGameLogSlice>,
+  homeTeamId: string,
+  awayTeamId: string,
+  tipAtMs: number
+): ProInsightScheduleDifficulty | null {
+  const home = upcomingDifficultyForGame(logs, homeTeamId, awayTeamId, true, tipAtMs);
+  const away = upcomingDifficultyForGame(logs, awayTeamId, homeTeamId, false, tipAtMs);
+  return home || away ? { home, away } : null;
+}
+
+async function loadOutImpactPair(
+  db: Firestore,
+  seasonKey: string,
+  priorKey: string
+): Promise<{
+  seasonOutImpact: NbaPlayerOutImpactBundle | null;
+  priorOutImpact: NbaPlayerOutImpactBundle | null;
+}> {
+  const load = async (key: string) => {
+    try {
+      const b = await loadPlayerOutImpactBundle(db, key);
+      return b && b.gameCount > 0 ? b : null;
+    } catch {
+      return null;
+    }
+  };
+  const [seasonOutImpact, priorOutImpact] = await Promise.all([load(seasonKey), load(priorKey)]);
+  return { seasonOutImpact, priorOutImpact };
+}
+
+async function loadTeamGameLogsTeams(
+  db: Firestore,
+  seasonKey: string
+): Promise<Record<string, NbaTeamGameLogSlice>> {
+  try {
+    return (await loadTeamGameLogsSnapshot(db, seasonKey)).bundle.teams;
+  } catch {
+    return {};
+  }
+}
+
 async function writeNarrative(
   db: Firestore,
   gameId: string,
@@ -358,16 +574,40 @@ async function writeNarrative(
     factPack: ProInsightFactPack;
   }
 ): Promise<void> {
-  const finalBrief = withInjuryFixups(
-    rewriteThisSeasonLabels(
-      withTemplateMatchup(brief, meta.factPack),
+  const difficultyFact = (meta.factPack.sections["INJURY IMPACT"] ?? []).find(
+    (f) => f.kind === INJURY_DIFFICULTY_FACT_KIND
+  );
+  const impactShownElsewhere = difficultyFact
+    ? injuryDifficultyEvidencePlayers(
+        injuryDifficultySides(meta.factPack),
+        difficultyFact.injuryDifficultyImpacts ?? []
+      )
+    : new Set<string>();
+  const finalBrief = withTemplateScheduleDifficulty(
+    withInjuryDifficultyItem(
+      withNumberGuard(
+        withInjuryFixups(
+          rewriteThisSeasonLabels(
+            withTemplateMatchup(brief, meta.factPack),
+            meta.factPack
+          ),
+          meta.factPack,
+          impactShownElsewhere
+        ),
+        meta.factPack
+      ),
       meta.factPack
     ),
     meta.factPack
   );
+  const gp = meta.factPack.gamesPlayed;
   await writeGameProInsight(db, gameId, {
     proInsightNarrative: {
       ...finalBrief,
+      sampleNote:
+        meta.factPack.phase === "early" && gp != null
+          ? proBriefSampleNote(gp).sampleNote
+          : null,
       factsFingerprint: meta.fingerprint,
       injuryFingerprint: meta.injuryFingerprint,
       model: meta.model,
@@ -379,6 +619,9 @@ async function writeNarrative(
       injuryFingerprint: meta.injuryFingerprint,
       phase: meta.factPack.phase,
       sections: meta.factPack.sections,
+      scheduleDifficulty: meta.factPack.scheduleDifficulty ?? null,
+      longTermOutImpacts: meta.factPack.longTermOutImpacts ?? [],
+      gamesPlayed: meta.factPack.gamesPlayed ?? null,
       packedAtMs: Date.now(),
       pendingBatch: false,
     },
@@ -399,6 +642,8 @@ export async function submitProInsightNarrativeBatch(
      * includePreseason / gameIds と併用想定。
      */
     syncChat?: boolean;
+    /** 検証用。今季の消化試合数をこの値とみなしてフェーズを決める（開幕前に early を試す） */
+    gamesPlayedOverride?: number;
   } = {}
 ): Promise<ProInsightNarrativeBatchSubmitResult> {
   const seasonKey = (input.seasonKey ?? CURRENT_NBA_SEASON_KEY).trim();
@@ -465,6 +710,11 @@ export async function submitProInsightNarrativeBatch(
   } catch {
     /* optional */
   }
+  const { seasonOutImpact, priorOutImpact } = await loadOutImpactPair(
+    db,
+    seasonKey,
+    priorKey
+  );
 
   let priorInsightExtras = null as Awaited<
     ReturnType<typeof loadTeamInsightExtrasSnapshot>
@@ -535,6 +785,7 @@ export async function submitProInsightNarrativeBatch(
   const injurySnap = await loadTeamInjuriesSnapshot(db, seasonKey);
   const injuryTeams = injurySnap.bundle.teams;
   const winPct = winPctByTeam(seasonRows);
+  const teamGameLogs = await loadTeamGameLogsTeams(db, seasonKey);
 
   let games: Array<{ id: string; data: Record<string, unknown> }>;
   if (input.gameIds?.length) {
@@ -598,7 +849,8 @@ export async function submitProInsightNarrativeBatch(
 
       const homeGp = teamGamesPlayed(findTeamRow(seasonRows, homeTeamId));
       const awayGp = teamGamesPlayed(findTeamRow(seasonRows, awayTeamId));
-      const phase = resolveProBriefPhase(Math.min(homeGp, awayGp));
+      const gamesPlayed = input.gamesPlayedOverride ?? Math.min(homeGp, awayGp);
+      const phase = resolveProBriefPhase(gamesPlayed);
 
       const recentDocs = await loadRecentNbaGamesAroundTeams(
         db,
@@ -653,6 +905,37 @@ export async function submitProInsightNarrativeBatch(
         awayInjuries,
       });
 
+      const homeActiveInjuries = dropStaleLongTermInjuries({
+        injuries: homeInjuries,
+        teamId: homeTeamId,
+        tipAtMs,
+        docs: recentDocs,
+      });
+      const awayActiveInjuries = dropStaleLongTermInjuries({
+        injuries: awayInjuries,
+        teamId: awayTeamId,
+        tipAtMs,
+        docs: recentDocs,
+      });
+      const longTermOutImpacts = [
+        ...buildLongTermOutImpacts({
+          phase,
+          teamId: homeTeamId,
+          staleInjuries: homeInjuries.filter((i) => !homeActiveInjuries.includes(i)),
+          tipAtMs,
+          outImpact: seasonOutImpact,
+          priorOutImpact,
+        }),
+        ...buildLongTermOutImpacts({
+          phase,
+          teamId: awayTeamId,
+          staleInjuries: awayInjuries.filter((i) => !awayActiveInjuries.includes(i)),
+          tipAtMs,
+          outImpact: seasonOutImpact,
+          priorOutImpact,
+        }),
+      ];
+
       const pack = assembleProInsightFactPack({
         phase,
         homeTeamId,
@@ -662,18 +945,8 @@ export async function submitProInsightNarrativeBatch(
         seasonRows,
         priorRows,
         last10Rows: last10ForPack.length ? last10ForPack : null,
-        homeInjuries: dropStaleLongTermInjuries({
-          injuries: homeInjuries,
-          teamId: homeTeamId,
-          tipAtMs,
-          docs: recentDocs,
-        }),
-        awayInjuries: dropStaleLongTermInjuries({
-          injuries: awayInjuries,
-          teamId: awayTeamId,
-          tipAtMs,
-          docs: recentDocs,
-        }),
+        homeInjuries: homeActiveInjuries,
+        awayInjuries: awayActiveInjuries,
         homePriorGames: homePrior,
         awayPriorGames: awayPrior,
         homeNextGame,
@@ -697,20 +970,25 @@ export async function submitProInsightNarrativeBatch(
         priorRecords,
         aceOutRecords: aceOut,
         priorAceOutRecords: priorAceOutForPack,
+        outImpact: seasonOutImpact,
+        priorOutImpact,
         playerLeaders:
           phase === "opening"
             ? priorPlayerLeaders ?? playerLeaders
             : playerLeaders ?? priorPlayerLeaders,
+        // 序盤（今季 4 試合まで）の順位表は数試合の勝敗で上位 6 判定がぶれるので前季
         confRankByTeamId:
-          phase === "opening"
-            ? priorConfRanks
-            : Object.keys(seasonConfRanks).length
-              ? seasonConfRanks
-              : priorConfRanks,
+          phase === "full" && Object.keys(seasonConfRanks).length
+            ? seasonConfRanks
+            : Object.keys(priorConfRanks).length
+              ? priorConfRanks
+              : seasonConfRanks,
         confRankSeasonKey:
-          phase !== "opening" && Object.keys(seasonConfRanks).length
+          phase === "full" && Object.keys(seasonConfRanks).length
             ? seasonKey
-            : priorKey,
+            : Object.keys(priorConfRanks).length
+              ? priorKey
+              : seasonKey,
         mpgByPlayerId: mpgByPlayerIdForPhase(
           phase,
           seasonMpgByPlayerId,
@@ -721,7 +999,19 @@ export async function submitProInsightNarrativeBatch(
         priorInsightExtras: priorInsightExtras,
       });
 
-      prepared.push({ gameId: game.id, pack, injuryFingerprint });
+      pack.scheduleDifficulty = scheduleDifficultyFor(
+        teamGameLogs,
+        homeTeamId,
+        awayTeamId,
+        tipAtMs
+      );
+      pack.longTermOutImpacts = longTermOutImpacts;
+      pack.gamesPlayed = gamesPlayed;
+      prepared.push({
+        gameId: game.id,
+        pack: withInjuryDifficultyFact(pack),
+        injuryFingerprint,
+      });
     } catch (e) {
       errors.push({
         gameId: game.id,
@@ -867,6 +1157,9 @@ export async function submitProInsightNarrativeBatch(
         injuryFingerprint: p.injuryFingerprint,
         phase: p.pack.phase,
         sections: p.pack.sections,
+        scheduleDifficulty: p.pack.scheduleDifficulty ?? null,
+        longTermOutImpacts: p.pack.longTermOutImpacts ?? [],
+        gamesPlayed: p.pack.gamesPlayed ?? null,
         packedAtMs: nowMs,
         pendingBatch: true,
       },
@@ -1015,6 +1308,9 @@ export async function pollProInsightNarrativeBatches(
                 injuryFingerprint?: string;
                 sections?: ProInsightFactPack["sections"];
                 phase?: ProInsightFactPack["phase"];
+                scheduleDifficulty?: ProInsightScheduleDifficulty | null;
+                longTermOutImpacts?: NbaInjuryOutImpact[];
+                gamesPlayed?: number | null;
               }
             | undefined;
           if (!facts?.sections || !facts.fingerprint) continue;
@@ -1026,6 +1322,9 @@ export async function pollProInsightNarrativeBatches(
             sections: facts.sections,
             candidates: [],
             fingerprint: facts.fingerprint,
+            scheduleDifficulty: facts.scheduleDifficulty ?? null,
+            longTermOutImpacts: facts.longTermOutImpacts ?? [],
+            gamesPlayed: facts.gamesPlayed ?? undefined,
           };
           const homeId = teamIdFromSide(g.data()?.home, g.data()?.homeTeamId);
           const awayId = teamIdFromSide(g.data()?.away, g.data()?.awayTeamId);
@@ -1077,10 +1376,16 @@ export async function pollProInsightNarrativeBatches(
               injuryFingerprint?: string;
               sections?: ProInsightFactPack["sections"];
               phase?: ProInsightFactPack["phase"];
+              scheduleDifficulty?: ProInsightScheduleDifficulty | null;
+              longTermOutImpacts?: NbaInjuryOutImpact[];
+              gamesPlayed?: number | null;
             }
           | undefined;
 
         const pack: ProInsightFactPack = {
+          scheduleDifficulty: facts?.scheduleDifficulty ?? null,
+          longTermOutImpacts: facts?.longTermOutImpacts ?? [],
+          gamesPlayed: facts?.gamesPlayed ?? undefined,
           homeTeamId: homeId,
           awayTeamId: awayId,
           tipAtMs: toMs(g.data()?.startAtJst) ?? Date.now(),
@@ -1244,6 +1549,11 @@ export async function patchProInsightNarrativesIfInjuryChanged(
   } catch {
     /* optional */
   }
+  const { seasonOutImpact, priorOutImpact } = await loadOutImpactPair(
+    db,
+    seasonKey,
+    priorKey
+  );
 
   let priorInsightExtras = null as Awaited<
     ReturnType<typeof loadTeamInsightExtrasSnapshot>
@@ -1314,6 +1624,7 @@ export async function patchProInsightNarrativesIfInjuryChanged(
   const injurySnap = await loadTeamInjuriesSnapshot(db, seasonKey);
   const injuryTeams = injurySnap.bundle.teams;
   const winPct = winPctByTeam(seasonRows);
+  const teamGameLogs = await loadTeamGameLogsTeams(db, seasonKey);
 
   let games: Array<{ id: string; data: Record<string, unknown> }>;
   if (input.gameIds?.length) {
@@ -1428,6 +1739,37 @@ export async function patchProInsightNarrativesIfInjuryChanged(
       const aceOut = phase === "opening" ? priorAceOut : seasonAceOut;
       const priorAceOutForPack = phase === "opening" ? null : priorAceOut;
 
+      const homeActiveInjuries = dropStaleLongTermInjuries({
+        injuries: homeInjuries,
+        teamId: homeTeamId,
+        tipAtMs,
+        docs: recentDocs,
+      });
+      const awayActiveInjuries = dropStaleLongTermInjuries({
+        injuries: awayInjuries,
+        teamId: awayTeamId,
+        tipAtMs,
+        docs: recentDocs,
+      });
+      const longTermOutImpacts = [
+        ...buildLongTermOutImpacts({
+          phase,
+          teamId: homeTeamId,
+          staleInjuries: homeInjuries.filter((i) => !homeActiveInjuries.includes(i)),
+          tipAtMs,
+          outImpact: seasonOutImpact,
+          priorOutImpact,
+        }),
+        ...buildLongTermOutImpacts({
+          phase,
+          teamId: awayTeamId,
+          staleInjuries: awayInjuries.filter((i) => !awayActiveInjuries.includes(i)),
+          tipAtMs,
+          outImpact: seasonOutImpact,
+          priorOutImpact,
+        }),
+      ];
+
       const pack = assembleProInsightFactPack({
         phase,
         homeTeamId,
@@ -1437,18 +1779,8 @@ export async function patchProInsightNarrativesIfInjuryChanged(
         seasonRows,
         priorRows,
         last10Rows: last10ForPack.length ? last10ForPack : null,
-        homeInjuries: dropStaleLongTermInjuries({
-          injuries: homeInjuries,
-          teamId: homeTeamId,
-          tipAtMs,
-          docs: recentDocs,
-        }),
-        awayInjuries: dropStaleLongTermInjuries({
-          injuries: awayInjuries,
-          teamId: awayTeamId,
-          tipAtMs,
-          docs: recentDocs,
-        }),
+        homeInjuries: homeActiveInjuries,
+        awayInjuries: awayActiveInjuries,
         homePriorGames: homePrior,
         awayPriorGames: awayPrior,
         homeNextGame,
@@ -1472,20 +1804,25 @@ export async function patchProInsightNarrativesIfInjuryChanged(
         priorRecords,
         aceOutRecords: aceOut,
         priorAceOutRecords: priorAceOutForPack,
+        outImpact: seasonOutImpact,
+        priorOutImpact,
         playerLeaders:
           phase === "opening"
             ? priorPlayerLeaders ?? playerLeaders
             : playerLeaders ?? priorPlayerLeaders,
+        // 序盤（今季 4 試合まで）の順位表は数試合の勝敗で上位 6 判定がぶれるので前季
         confRankByTeamId:
-          phase === "opening"
-            ? priorConfRanks
-            : Object.keys(seasonConfRanks).length
-              ? seasonConfRanks
-              : priorConfRanks,
+          phase === "full" && Object.keys(seasonConfRanks).length
+            ? seasonConfRanks
+            : Object.keys(priorConfRanks).length
+              ? priorConfRanks
+              : seasonConfRanks,
         confRankSeasonKey:
-          phase !== "opening" && Object.keys(seasonConfRanks).length
+          phase === "full" && Object.keys(seasonConfRanks).length
             ? seasonKey
-            : priorKey,
+            : Object.keys(priorConfRanks).length
+              ? priorKey
+              : seasonKey,
         mpgByPlayerId: mpgByPlayerIdForPhase(
           phase,
           seasonMpgByPlayerId,
@@ -1496,14 +1833,23 @@ export async function patchProInsightNarrativesIfInjuryChanged(
         priorInsightExtras: priorInsightExtras,
       });
 
-      const brief = await generateProInsightNarrativeForGameChat(pack);
+      pack.scheduleDifficulty = scheduleDifficultyFor(
+        teamGameLogs,
+        homeTeamId,
+        awayTeamId,
+        tipAtMs
+      );
+      pack.longTermOutImpacts = longTermOutImpacts;
+      pack.gamesPlayed = Math.min(homeGp, awayGp);
+      const packed = withInjuryDifficultyFact(pack);
+      const brief = await generateProInsightNarrativeForGameChat(packed);
       const source = isOpenAiConfigured() ? "openai_chat" : "fallback";
       await writeNarrative(db, game.id, brief, {
-        fingerprint: pack.fingerprint,
+        fingerprint: packed.fingerprint,
         injuryFingerprint,
         model: source === "fallback" ? "fallback" : model,
         source,
-        factPack: pack,
+        factPack: packed,
       });
       written += 1;
     } catch (e) {

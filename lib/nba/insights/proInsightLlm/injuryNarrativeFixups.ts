@@ -8,6 +8,7 @@ import type {
   ProInsightFactPack,
 } from "@/lib/nba/insights/proInsightFacts/types";
 import { shortLabel } from "@/lib/nba/insights/proInsightFacts/injuryShapeRoles";
+import { INJURY_DIFFICULTY_FACT_KIND } from "@/lib/nba/matchupDifficulty/injuryDifficultyNarrative";
 import type {
   ProInsightNarrativeBrief,
   ProInsightNarrativeItem,
@@ -21,10 +22,13 @@ function metric(fact: ProInsightFact, key: string): string | null {
 function signed(raw: string): string {
   const n = Number(raw);
   if (!Number.isFinite(n)) return raw;
-  return n > 0 ? `+${n}` : String(n);
+  return n > 0 ? `+${n}` : n < 0 ? `−${Math.abs(n)}` : String(n);
 }
 
-export function renderInjuryEvidence(fact: ProInsightFact): UiStrings {
+export function renderInjuryEvidence(
+  fact: ProInsightFact,
+  opts: { omitImpact?: boolean } = {}
+): UiStrings {
   const player = fact.players[0];
   const name = player?.playerName ?? "";
   const status = player?.status ?? metric(fact, "status") ?? "";
@@ -60,6 +64,12 @@ export function renderInjuryEvidence(fact: ProInsightFact): UiStrings {
   if (delta) {
     ja.push(delta);
     en.push(delta);
+  }
+
+  const impact = opts.omitImpact ? null : metric(fact, "outImpact");
+  if (impact) {
+    ja.push(`欠場影響 ${signed(impact)}点`);
+    en.push(`impact ${signed(impact)} pts`);
   }
 
   return { ja: ja.join(" · "), en: en.join(" · ") };
@@ -107,34 +117,41 @@ function factForItem(
   return byName ?? facts[index] ?? null;
 }
 
+/** `impactShownElsewhere`: 欠場影響（点）を厳しさ項目の根拠に載せた選手名（選手の項目では出さない） */
 export function withInjuryFixups(
   brief: ProInsightNarrativeBrief,
-  pack: ProInsightFactPack
+  pack: ProInsightFactPack,
+  impactShownElsewhere: ReadonlySet<string> = new Set()
 ): ProInsightNarrativeBrief {
-  const facts = pack.sections["INJURY IMPACT"] ?? [];
+  const facts = (pack.sections["INJURY IMPACT"] ?? []).filter(
+    (f) => f.kind !== INJURY_DIFFICULTY_FACT_KIND
+  );
   if (facts.length === 0) return brief;
   return {
     ...brief,
-    sections: brief.sections.map((s) =>
-      s.kind !== "INJURY IMPACT"
-        ? s
-        : {
-            ...s,
-            items: s.items.map((item, i) => {
-              const fact = factForItem(item, i, facts);
-              if (!fact) return item;
-              const body = { ...item.body } as Record<string, string>;
-              for (const [lang, text] of Object.entries(body)) {
-                if (typeof text === "string") {
-                  body[lang] = dropInventedWl(fixDeltas(text, fact), fact, lang);
-                }
-              }
-              return {
-                body: body as UiStrings,
-                evidence: [renderInjuryEvidence(fact)],
-              };
-            }),
+    sections: brief.sections.map((s) => {
+      if (s.kind !== "INJURY IMPACT") return s;
+      return {
+        ...s,
+        items: s.items.map((item, i) => {
+          const fact = factForItem(item, i, facts);
+          if (!fact) return item;
+          const body = { ...item.body } as Record<string, string>;
+          for (const [lang, text] of Object.entries(body)) {
+            if (typeof text === "string") {
+              body[lang] = dropInventedWl(fixDeltas(text, fact), fact, lang);
+            }
           }
-    ),
+          return {
+            body: body as UiStrings,
+            evidence: [
+              renderInjuryEvidence(fact, {
+                omitImpact: impactShownElsewhere.has(fact.players[0]?.playerName ?? ""),
+              }),
+            ],
+          };
+        }),
+      };
+    }),
   };
 }

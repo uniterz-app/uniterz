@@ -14,6 +14,8 @@ import {
   scheduleDifficultyTierLabel,
 } from "../../../../../../lib/nba/detailInsights/buildScheduleDifficulty";
 import { L, resolveLocalizedLang } from "../../../../../../lib/i18n/localize";
+import { useFirebaseUser } from "../../../auth/FirebaseUserProvider";
+import { useNativeUserPlan } from "../../../hooks/useNativeUserPlan";
 import {
   compactNbaCardNickname,
   getNbaTeamNicknameById,
@@ -56,10 +58,17 @@ export function DetailScheduleSectionNative({
   sectionTitle?: string;
 }) {
   const lang = resolveLocalizedLang(language);
-  const legend = upcomingGames.some((g) => g.difficulty)
-    ? upcomingDifficultyLegend(lang)
-    : null;
+  const { fUser } = useFirebaseUser();
+  const { isPro } = useNativeUserPlan(fUser?.uid);
+  const legend =
+    isPro && upcomingGames.some((g) => g.difficulty)
+      ? upcomingDifficultyLegend(lang)
+      : null;
   const hasLowSample = upcomingGames.some((g) => g.difficulty?.lowSample);
+  const summary =
+    scheduleDifficulty && (isPro || scheduleDifficulty.avgDifficulty == null)
+      ? scheduleDifficulty
+      : null;
   const frame = hexToRgba(accent, 0.3);
   const line = hexToRgba(accent, 0.12);
   const emptyCopy = L(lang, {
@@ -87,16 +96,16 @@ export function DetailScheduleSectionNative({
   return (
     <View style={styles.wrap}>
       <Text style={styles.title}>{sectionTitle}</Text>
-      {scheduleDifficulty ? (
+      {summary ? (
         <View style={styles.summaryRow}>
           <Text style={styles.summaryText}>
-            {scheduleDifficultySummaryText(scheduleDifficulty, lang)}
+            {scheduleDifficultySummaryText(summary, lang)}
           </Text>
           <View
             style={[
               styles.overallBadge,
               {
-                borderColor: `${scheduleDifficultyTierColor(scheduleDifficulty.overallTier)}88`,
+                borderColor: `${scheduleDifficultyTierColor(summary.overallTier)}88`,
               },
             ]}
           >
@@ -104,16 +113,11 @@ export function DetailScheduleSectionNative({
               style={[
                 styles.overallBadgeText,
                 {
-                  color: scheduleDifficultyTierColor(
-                    scheduleDifficulty.overallTier
-                  ),
+                  color: scheduleDifficultyTierColor(summary.overallTier),
                 },
               ]}
             >
-              {scheduleDifficultyTierLabel(
-                scheduleDifficulty.overallTier,
-                catalogJa
-              )}
+              {scheduleDifficultyTierLabel(summary.overallTier, catalogJa)}
             </Text>
           </View>
         </View>
@@ -147,8 +151,10 @@ export function DetailScheduleSectionNative({
       ) : null}
       <View style={[styles.card, { borderColor: frame }]}>
         {upcomingGames.map((game, i) => {
-          const difficulty = game.difficulty;
-          const restTag = difficulty ? upcomingDifficultyRestTag(difficulty) : null;
+          const difficulty = isPro ? game.difficulty : undefined;
+          const restTag = game.difficulty
+            ? upcomingDifficultyRestTag(game.difficulty)
+            : null;
           return (
             <View
               key={`${game.dateLabel}-${game.oppTeamId}-${i}`}

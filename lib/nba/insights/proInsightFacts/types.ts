@@ -5,6 +5,8 @@
 import type { ProInsightNarrativeKind } from "@/lib/predict/proInsightNarrativeTypes";
 import { PRO_INSIGHT_NARRATIVE_ITEM_CAPS } from "@/lib/predict/proInsightNarrativeTypes";
 import type { ProBriefPhase } from "@/lib/predict/predictProBrief";
+import type { NbaUpcomingMatchupDifficulty } from "@/lib/nba/matchupDifficulty/upcomingMatchupDifficulty";
+import type { NbaInjuryOutImpact } from "@/lib/nba/matchupDifficulty/injuryAdjustedDifficulty";
 
 export type ProInsightFactSection = ProInsightNarrativeKind;
 
@@ -54,6 +56,10 @@ export type ProInsightFact = {
   hintEn: string;
   /** MATCHUP 本文テンプレ用（LLM に書かせない） */
   matchup?: ProInsightMatchupDetail;
+  /** INJURY IMPACT 先頭の欠場込み厳しさテンプレ用（LLM に渡さない） */
+  injuryOut?: NbaInjuryOutImpact;
+  /** kind `injury_difficulty`: 厳しさの取り直しに使った欠場（検算用・LLM に渡さない） */
+  injuryDifficultyImpacts?: NbaInjuryOutImpact[];
 };
 
 export type ProInsightMatchupOwner = {
@@ -106,6 +112,17 @@ export type ProInsightFactPack = {
   candidates: ProInsightFact[];
   /** facts 指紋（patch 判定） */
   fingerprint: string;
+  /** team-game-logs 由来の今夜の Matchup Difficulty。SCHEDULE 先頭をテンプレで出す（LLM には渡さない） */
+  scheduleDifficulty?: ProInsightScheduleDifficulty | null;
+  /** LLM ファクトから外した長期離脱の影響（厳しさの取り直しだけで使う） */
+  longTermOutImpacts?: NbaInjuryOutImpact[];
+  /** 両チームのうち少ない方の今季消化試合数（early の「開幕N試合時点」注記用） */
+  gamesPlayed?: number;
+};
+
+export type ProInsightScheduleDifficulty = {
+  home: NbaUpcomingMatchupDifficulty | null;
+  away: NbaUpcomingMatchupDifficulty | null;
 };
 
 export { type ProBriefPhase };

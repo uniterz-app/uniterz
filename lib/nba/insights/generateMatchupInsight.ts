@@ -2,7 +2,12 @@
  * 1 試合分の Pro Insight を決定論的に生成。
  * 設計正: docs/pro-insight-design.md
  */
-import type { PredictProBrief } from "@/lib/predict/predictProBrief";
+import type {
+  PredictProBrief,
+  ProBriefLineItem,
+} from "@/lib/predict/predictProBrief";
+import { difficultyBriefLine } from "@/lib/nba/matchupDifficulty/difficultyBriefLine";
+import type { NbaUpcomingMatchupDifficulty } from "@/lib/nba/matchupDifficulty/upcomingMatchupDifficulty";
 import type { NbaLeagueTeamStatRow } from "@/lib/predict/nbaLeagueTeamStatsMocks";
 import type { NbaTeamInjuryEntry } from "@/lib/predict/nbaTeamDetailPreviewMocks";
 import {
@@ -51,8 +56,25 @@ export type GenerateMatchupInsightInput = {
   awayPriorGames: TeamScheduleInput["priorGames"];
   homeRecentOppWinPcts?: number[];
   awayRecentOppWinPcts?: number[];
+  /** team-game-logs の upcoming 行から。SCHEDULE 先頭に数字と内訳を出す */
+  homeDifficulty?: NbaUpcomingMatchupDifficulty | null;
+  awayDifficulty?: NbaUpcomingMatchupDifficulty | null;
   nowMs?: number;
 };
+
+const SCHEDULE_LINES_MAX = 3;
+
+function withDifficultyLine(
+  lines: ProBriefLineItem[],
+  difficulty: NbaUpcomingMatchupDifficulty | null | undefined,
+  isHome: boolean
+): ProBriefLineItem[] {
+  if (!difficulty) return lines;
+  return [difficultyBriefLine(difficulty, isHome), ...lines].slice(
+    0,
+    SCHEDULE_LINES_MAX
+  );
+}
 
 export function generateMatchupInsight(
   input: GenerateMatchupInsightInput
@@ -177,13 +199,13 @@ export function generateMatchupInsight(
   const brief: PredictProBrief = {
     home: {
       edges: homeEdges,
-      schedule: homeSchedule,
+      schedule: withDifficultyLine(homeSchedule, input.homeDifficulty, true),
       context: homeContext,
       players: homePlayers,
     },
     away: {
       edges: awayEdges,
-      schedule: awaySchedule,
+      schedule: withDifficultyLine(awaySchedule, input.awayDifficulty, false),
       context: awayContext,
       players: awayPlayers,
     },

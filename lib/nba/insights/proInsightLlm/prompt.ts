@@ -9,6 +9,7 @@
 import type { ProInsightFactPack } from "@/lib/nba/insights/proInsightFacts/types";
 import { proInsightTeamAbbr } from "@/lib/nba/insights/proInsightFacts/teamAbbr";
 import { PRO_INSIGHT_NARRATIVE_SECTION_KINDS } from "@/lib/predict/proInsightNarrativeTypes";
+import { INJURY_DIFFICULTY_FACT_KIND } from "@/lib/nba/matchupDifficulty/injuryDifficultyNarrative";
 
 export const PRO_INSIGHT_LLM_SYSTEM = `You write short UNITERZ Pro Insight blurbs for one NBA game.
 Return ONLY valid JSON (no markdown).
@@ -85,6 +86,7 @@ CONTEXT:
 - Interpret what it means for TONIGHT (e.g. recent soft slate vs tonight's tougher foe raises the bar).
 - Only use facts that apply to TONIGHT (e.g. vs conf top-6 only if the fact says the opponent is conf #1–6).
 - If phase is "opening", frame numbers as prior-season context and lean on "weight" reads (last season's team, soft signal) rather than confident tilts — unless the record is lopsided.
+- If phase is "early" (each team has played only gamesPlayed games this season): records / H2H / vs-band facts are prior-season context (same framing as opening). Any this-season form fact (SOS, streaks, margin, last-10 tilt) is a tiny sample — frame it as a light signal (JA 「まだ数試合だが」「参考程度」), never as an established trend.
 - Do not dump a bare W–L with no reading. Prefer streak quality / venue streak wording from hintEn.
 - Prefer empty section over a generic "struggled" line that does not involve tonight's opponent.
 - Do not invent next-opponent toughness, returns, or debuts unless a fact is present.
@@ -96,9 +98,21 @@ INJURY IMPACT:
 - Good JA: "J.Tatum OUT · BOS 今季欠場時 11-6。チーム USG/AST リーダー欠場で形が変わり、OFF −5.3 · DEF +1.8。LAL 有利。"
 - Bad: listing status + W–L with no "だから形がどうなる" reading.
 - If aceOutSeason is "prior" / hint says last season: use were + last-season framing.
+- aceOutOffDelta / aceOutDefDelta are per-100 ratings without him. OFF + = scored more, OFF − = scored less. DEF is points ALLOWED: DEF + = defense got WORSE (allowed more), DEF − = defense got better. Never call DEF + "守備が強化" / "defense improved".
 - NEVER say "when he plays" / "出場時". Never invent W–L. Never name a teammate who will "step up".
 - If there is no when-out W–L, still say status + shape roles only.
+- outImpact (e.g. "-4.7") = model estimate of how many points per game the team's margin drops without him (season in outImpactSeason). You may say "about 4.7 pts/game weaker" / JA "約4.7点分弱くなる". Do not restate difficulty numbers in player items.
 - weakenedStyles (e.g. "paint", "iso") = tonight's matchup style this player anchors. You may add one short clause on that style (e.g. paint defense thins vs tonight's opponent) — only that style, no new numbers.
+
+injuryDifficulty (top-level payload block, when present) → top-level output "injuryDifficultyRead":
+- What it is: tonight's matchup Difficulty (0–100, higher = harder for THAT team) re-computed with tonight's absences. Code prints the numbers line ("LAKERS は厳しさ 85 → 75（相手 S.Gilgeous-Alexander 欠場）。THUNDER は厳しさ 22 → 34（S.Gilgeous-Alexander 欠場）。") and your text follows it.
+- Write ONLY the read: 1–2 short sentences covering EVERY team in injuryDifficulty.teams, by nickname. NO digits at all, no arrows, no W–L, no outImpact — any digit makes code throw your text away. Do not restate who is OUT as its own sentence (the numbers line already says it).
+- hintEn is the meaning per team — follow it exactly. ownOut = that team's own absent players; oppOut = the OPPONENT's absent players (do not say the team lost them).
+- difficultyRead per team: stillTough (opponent shorthanded but still tough), muchTougher (losing their own player clearly raises the bar — say what gets harder only if obvious from who he is), smallImpact (holds up without him), muchEasier (opponent's absence opens the game), neutral (modest shift; say which way), conditional (questionable — "if he sits …" / JA "欠場なら …").
+- Direction must match hintEn for EACH team: "harder for X" → X's night gets tougher; "easier for X" → X's night gets easier. Never write "楽にならない" / "not easier" for a team whose hint says easier, and never call the absent player's own team "still strong" unless its hint says stillTough for the OTHER team.
+- Do not invent what the player provides (scoring / rebounding / shooting) — the player items cover that. Keep the read about the load shift between the two teams.
+- Bad JA: "影響は小さい。" alone / "厳しさは 48 から 52 に変化。" (digits) / "J.Butler が OUT。" (restating status) / a read that contradicts the numbers line.
+- This read is NOT an INJURY IMPACT item. INJURY IMPACT items are only for the facts listed in that section, and they must not repeat this read's tilt (e.g. "LAKERS は楽にならない").
 
 Output shape:
 {
@@ -112,15 +126,20 @@ Output shape:
         }
       ]
     }
-  ]
+  ],
+  "injuryDifficultyRead": { "ja": "...", "en": "...", "ko": "...", "zh": "...", "es": "...", "pt": "...", "fr": "...", "de": "...", "ar": "..." }
 }
 
+Include "injuryDifficultyRead" only when the payload has injuryDifficulty.
 Include every section kind that has facts in the user payload, with the same item counts (do not add extra items). Omit section kinds with zero facts.`;
 
 export function buildProInsightLlmUserPayload(pack: ProInsightFactPack): string {
+  const difficulty = (pack.sections["INJURY IMPACT"] ?? []).find(
+    (f) => f.kind === INJURY_DIFFICULTY_FACT_KIND
+  );
   const sections = PRO_INSIGHT_NARRATIVE_SECTION_KINDS.map((kind) => ({
     kind,
-    facts: (pack.sections[kind] ?? []).map((f) => ({
+    facts: (pack.sections[kind] ?? []).filter((f) => f !== difficulty).map((f) => ({
       id: f.id,
       kind: f.kind,
       mode: f.mode ?? null,
@@ -145,8 +164,26 @@ export function buildProInsightLlmUserPayload(pack: ProInsightFactPack): string 
       },
       tipAtMs: pack.tipAtMs,
       phase: pack.phase,
+      ...(pack.phase === "early" && pack.gamesPlayed != null
+        ? { gamesPlayed: pack.gamesPlayed }
+        : {}),
       fingerprint: pack.fingerprint,
       sections,
+      ...(difficulty
+        ? {
+            injuryDifficulty: {
+              teams: difficulty.teamIds.map((id) => proInsightTeamAbbr(id)),
+              metrics: difficulty.metrics
+                .filter((m) => m.key !== "difficultyBefore" && m.key !== "difficultyAfter")
+                .map((m) => ({
+                  key: m.key,
+                  value: m.value,
+                  team: m.teamId ? proInsightTeamAbbr(m.teamId) : null,
+                })),
+              hintEn: difficulty.hintEn,
+            },
+          }
+        : {}),
     },
     null,
     2

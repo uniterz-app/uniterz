@@ -121,12 +121,16 @@ export function parseProInsightLlmJson(
     const items = byKind.get(kind);
     if (items?.length) sections.push({ kind, items });
   }
-  if (sections.length === 0) return null;
+  const injuryDifficultyRead = asUiStrings(
+    (parsed as { injuryDifficultyRead?: unknown }).injuryDifficultyRead
+  );
+  if (sections.length === 0 && !injuryDifficultyRead) return null;
 
   return {
     homeTeamId: meta.homeTeamId,
     awayTeamId: meta.awayTeamId,
     sections,
     sampleNote: null,
+    ...(injuryDifficultyRead ? { injuryDifficultyRead } : {}),
   };
 }

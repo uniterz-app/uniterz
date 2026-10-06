@@ -35,6 +35,8 @@ export type ProInsightNarrativeItem = {
   body: UiStrings;
   /** 根拠数字・ラベル（小さく表示） */
   evidence: UiStrings[];
+  /** テンプレ生成の項目。"difficulty" なら SCHEDULE 見出しに説明の ? を出す */
+  template?: "difficulty" | "injury_difficulty";
 };
 
 export type ProInsightNarrativeSection = {
@@ -49,4 +51,6 @@ export type ProInsightNarrativeBrief = {
   sections: ProInsightNarrativeSection[];
   /** early 用など */
   sampleNote?: UiStrings | null;
+  /** LLM 出力の中間値（INJURY IMPACT 先頭の厳しさの読み）。保存前に項目へ組み込んで消す */
+  injuryDifficultyRead?: UiStrings;
 };

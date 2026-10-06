@@ -2,8 +2,9 @@
  * 新 Pro Insight UI — 試合1本 · 4枠短文 · 各枠2本。
  * HOME/AWAY 分割なし（被る事実は1回だけ）。
  */
-import { useMemo } from "react";
-import { Platform, StyleSheet, Text, View } from "react-native";
+import { useMemo, useState } from "react";
+import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { difficultyExplainCopy } from "../../../../../../lib/nba/matchupDifficulty/difficultyExplainCopy";
 import {
   proInsightShowsEvidence,
   type ProInsightNarrativeBrief,
@@ -65,6 +66,11 @@ export default function PredictProInsightNarrativePanelNative({
     if (!brief.sampleNote) return null;
     return t(brief.sampleNote, language);
   }, [brief.sampleNote, language]);
+  const explain = useMemo(
+    () => difficultyExplainCopy(resolveLocalizedLang(language)),
+    [language]
+  );
+  const [explainOpen, setExplainOpen] = useState(false);
 
   return (
     <View style={styles.shell}>
@@ -121,19 +127,57 @@ export default function PredictProInsightNarrativePanelNative({
                 si < brief.sections.length - 1 ? styles.sectionBorder : null,
               ]}
             >
-              <View
-                collapsable={false}
-                renderToHardwareTextureAndroid
-                style={[
-                  styles.kindWrap,
-                  { borderColor: accent },
-                  Platform.OS === "android" ? { opacity: 0.999 } : null,
-                ]}
-              >
-                <Text style={[styles.kind, { color: accent }]}>
-                  {section.kind}
-                </Text>
+              <View style={styles.kindRow}>
+                <View
+                  collapsable={false}
+                  renderToHardwareTextureAndroid
+                  style={[
+                    styles.kindWrap,
+                    { borderColor: accent },
+                    Platform.OS === "android" ? { opacity: 0.999 } : null,
+                  ]}
+                >
+                  <Text style={[styles.kind, { color: accent }]}>
+                    {section.kind}
+                  </Text>
+                </View>
+                {section.items.some((it) => it.template === "difficulty") ? (
+                  <Pressable
+                    onPress={() => setExplainOpen((v) => !v)}
+                    hitSlop={10}
+                    accessibilityRole="button"
+                    accessibilityLabel={explain.helpAria}
+                    accessibilityState={{ expanded: explainOpen }}
+                    style={[
+                      styles.helpBtn,
+                      { borderColor: accent },
+                      explainOpen ? { backgroundColor: accent } : null,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.helpBtnText,
+                        { color: explainOpen ? "#050508" : accent },
+                      ]}
+                    >
+                      ?
+                    </Text>
+                  </Pressable>
+                ) : null}
               </View>
+              {explainOpen &&
+              section.items.some((it) => it.template === "difficulty") ? (
+                <View style={[styles.explainBox, { borderColor: accent }]}>
+                  <Text style={[styles.explainTitle, { color: accent }]}>
+                    {explain.title}
+                  </Text>
+                  {explain.lines.map((line, li) => (
+                    <Text key={li} style={styles.explainLine}>
+                      {line}
+                    </Text>
+                  ))}
+                </View>
+              ) : null}
               <View style={styles.items}>
                 {section.items.map((item, ii) => (
                   <View key={`${section.kind}-${ii}`} style={styles.item}>
@@ -229,6 +273,44 @@ const styles = StyleSheet.create({
   sectionBorder: {
     borderBottomWidth: 1,
     borderBottomColor: "rgba(255,255,255,0.08)",
+  },
+  kindRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  helpBtn: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  helpBtnText: {
+    fontFamily: OXANIUM_800,
+    fontSize: 11,
+    lineHeight: 13,
+    includeFontPadding: false,
+  },
+  explainBox: {
+    borderWidth: 1,
+    borderStyle: "dashed",
+    backgroundColor: "rgba(253,230,138,0.04)",
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    gap: 4,
+  },
+  explainTitle: {
+    fontFamily: JP_600,
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  explainLine: {
+    fontFamily: JP_600,
+    fontSize: 11,
+    lineHeight: 16,
+    color: "rgba(255,255,255,0.7)",
   },
   kindWrap: {
     alignSelf: "flex-start",

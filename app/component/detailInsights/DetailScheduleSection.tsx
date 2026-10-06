@@ -14,6 +14,8 @@ import {
   scheduleDifficultyTierLabel,
 } from "@/lib/nba/detailInsights/buildScheduleDifficulty";
 import { L, resolveLocalizedLang } from "@/lib/i18n/localize";
+import { useFirebaseUser } from "@/lib/useFirebaseUser";
+import { useUserPlan } from "@/hooks/useUserPlan";
 import {
   compactNbaCardNickname,
   getNbaTeamNicknameById,
@@ -59,10 +61,17 @@ export function DetailScheduleSection({
   sectionTitle = "UPCOMING",
 }: Props) {
   const lang = resolveLocalizedLang(language ?? (isJa ? "ja" : "en"));
-  const legend = upcomingGames.some((g) => g.difficulty)
-    ? upcomingDifficultyLegend(lang)
-    : null;
+  const { fUser } = useFirebaseUser();
+  const { isPro } = useUserPlan(fUser?.uid);
+  const legend =
+    isPro && upcomingGames.some((g) => g.difficulty)
+      ? upcomingDifficultyLegend(lang)
+      : null;
   const hasLowSample = upcomingGames.some((g) => g.difficulty?.lowSample);
+  const summary =
+    scheduleDifficulty && (isPro || scheduleDifficulty.avgDifficulty == null)
+      ? scheduleDifficulty
+      : null;
   const frame = hexToRgba(accent, 0.3);
   const line = hexToRgba(accent, 0.12);
   const emptyCopy = L(lang, {
@@ -96,19 +105,19 @@ export function DetailScheduleSection({
       <h2 className="text-[10px] font-bold uppercase tracking-[0.14em] text-white/45">
         {sectionTitle}
       </h2>
-      {scheduleDifficulty ? (
+      {summary ? (
         <div className="flex flex-wrap items-center gap-2">
           <p className="text-[12px] font-semibold text-white/72">
-            {scheduleDifficultySummaryText(scheduleDifficulty, lang)}
+            {scheduleDifficultySummaryText(summary, lang)}
           </p>
           <span
             className="rounded px-2 py-0.5 text-[9px] font-extrabold tracking-wide"
             style={{
-              color: scheduleDifficultyTierColor(scheduleDifficulty.overallTier),
-              border: `1px solid ${scheduleDifficultyTierColor(scheduleDifficulty.overallTier)}88`,
+              color: scheduleDifficultyTierColor(summary.overallTier),
+              border: `1px solid ${scheduleDifficultyTierColor(summary.overallTier)}88`,
             }}
           >
-            {scheduleDifficultyTierLabel(scheduleDifficulty.overallTier, isJa)}
+            {scheduleDifficultyTierLabel(summary.overallTier, isJa)}
           </span>
         </div>
       ) : null}
@@ -140,8 +149,10 @@ export function DetailScheduleSection({
         style={{ borderColor: frame }}
       >
         {upcomingGames.map((game, i) => {
-          const difficulty = game.difficulty;
-          const restTag = difficulty ? upcomingDifficultyRestTag(difficulty) : null;
+          const difficulty = isPro ? game.difficulty : undefined;
+          const restTag = game.difficulty
+            ? upcomingDifficultyRestTag(game.difficulty)
+            : null;
           return (
             <div
               key={`${game.dateLabel}-${game.oppTeamId}-${i}`}

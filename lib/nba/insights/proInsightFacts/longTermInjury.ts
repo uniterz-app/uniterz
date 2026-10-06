@@ -1,6 +1,7 @@
 /**
  * 長期離脱（復帰見込み ≥21 日先 or シーズン絶望）は、チームが今季その選手抜きで
- * 3 試合戦ったら Insight から外す（チームはもう適応済み → 「形が変わる」は古い読み）。
+ * 3 試合戦ったら LLM ファクトから外す（チームはもう適応済み → 「形が変わる」は古い読み）。
+ * 欠場込みの厳しさテンプレには、織り込み済みを除いた影響で残す（buildLongTermOutImpacts）。
  * Firestore の games.liveStats box のみ · BDL なし。
  */
 import { normalizeLiveGameStatsDoc } from "@/lib/games/liveGameStats";

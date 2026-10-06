@@ -1,0 +1,469 @@
+{
+  "generatedAt": "2026-10-06T07:38:34.161Z",
+  "data": {
+    "seasons": [
+      "2021-22",
+      "2022-23",
+      "2023-24",
+      "2024-25",
+      "2025-26"
+    ],
+    "games": 6177,
+    "gamesWithOuts": 5831,
+    "rotationPlayerSeasons": 1917,
+    "rotation": {
+      "minGames": 10,
+      "minMpg": 15
+    }
+  },
+  "cv": [
+    {
+      "lambda": "none",
+      "rmseAll": 13.849,
+      "rmseOutGames": 13.591,
+      "rmseBigOutGames": 13.691
+    },
+    {
+      "lambda": 2,
+      "rmseAll": 14.476,
+      "rmseOutGames": 14.238,
+      "rmseBigOutGames": 14.526
+    },
+    {
+      "lambda": 5,
+      "rmseAll": 13.959,
+      "rmseOutGames": 13.697,
+      "rmseBigOutGames": 13.731
+    },
+    {
+      "lambda": 10,
+      "rmseAll": 13.721,
+      "rmseOutGames": 13.45,
+      "rmseBigOutGames": 13.338
+    },
+    {
+      "lambda": 20,
+      "rmseAll": 13.61,
+      "rmseOutGames": 13.335,
+      "rmseBigOutGames": 13.137
+    },
+    {
+      "lambda": 40,
+      "rmseAll": 13.588,
+      "rmseOutGames": 13.314,
+      "rmseBigOutGames": 13.085
+    },
+    {
+      "lambda": 80,
+      "rmseAll": 13.609,
+      "rmseOutGames": 13.337,
+      "rmseBigOutGames": 13.109
+    },
+    {
+      "lambda": 1000000,
+      "rmseAll": 13.693,
+      "rmseOutGames": 13.426,
+      "rmseBigOutGames": 13.236
+    }
+  ],
+  "bigOutGames": 1721,
+  "chosenLambda": 40,
+  "tauSquared": 3.97,
+  "residualSd": 12.602,
+  "homeCourt": 1.734,
+  "gamma": {
+    "mpg": 0.1093,
+    "ppg": -0.1987,
+    "rpg": -0.0912,
+    "apg": -0.5846,
+    "stocks": -0.8306,
+    "tov": 1.5832
+  },
+  "latestSeasonMostImpactful": [
+    {
+      "name": "Nikola Jokic",
+      "bdlTeam": "8",
+      "impact": -5,
+      "statPrior": -5.1,
+      "gamesOut": 17,
+      "mpg": 34.8,
+      "ppg": 27.7
+    },
+    {
+      "name": "Shai Gilgeous-Alexander",
+      "bdlTeam": "21",
+      "impact": -4.8,
+      "statPrior": -5.1,
+      "gamesOut": 12,
+      "mpg": 33.3,
+      "ppg": 31.1
+    },
+    {
+      "name": "Lauri Markkanen",
+      "bdlTeam": "29",
+      "impact": -4.4,
+      "statPrior": -2.3,
+      "gamesOut": 16,
+      "mpg": 34.4,
+      "ppg": 26.7
+    },
+    {
+      "name": "Victor Wembanyama",
+      "bdlTeam": "27",
+      "impact": -4.2,
+      "statPrior": -4.2,
+      "gamesOut": 17,
+      "mpg": 29.2,
+      "ppg": 24.9
+    },
+    {
+      "name": "Luka Doncic",
+      "bdlTeam": "14",
+      "impact": -4.2,
+      "statPrior": -3.8,
+      "gamesOut": 13,
+      "mpg": 35.8,
+      "ppg": 33.5
+    },
+    {
+      "name": "Kawhi Leonard",
+      "bdlTeam": "13",
+      "impact": -3.7,
+      "statPrior": -3.2,
+      "gamesOut": 17,
+      "mpg": 32.3,
+      "ppg": 27.8
+    },
+    {
+      "name": "Pascal Siakam",
+      "bdlTeam": "12",
+      "impact": -3.6,
+      "statPrior": -1.7,
+      "gamesOut": 15,
+      "mpg": 33.2,
+      "ppg": 24
+    },
+    {
+      "name": "Ty Jerome",
+      "bdlTeam": "15",
+      "impact": -3.5,
+      "statPrior": -3.3,
+      "gamesOut": 10,
+      "mpg": 22.7,
+      "ppg": 19.7
+    },
+    {
+      "name": "Stephen Curry",
+      "bdlTeam": "10",
+      "impact": -3.4,
+      "statPrior": -1.7,
+      "gamesOut": 39,
+      "mpg": 31.2,
+      "ppg": 26.5
+    },
+    {
+      "name": "Brandon Miller",
+      "bdlTeam": "4",
+      "impact": -3.3,
+      "statPrior": -0.5,
+      "gamesOut": 17,
+      "mpg": 30.3,
+      "ppg": 20.1
+    },
+    {
+      "name": "Tre Jones",
+      "bdlTeam": "5",
+      "impact": -3.3,
+      "statPrior": -2.1,
+      "gamesOut": 17,
+      "mpg": 27,
+      "ppg": 14.1
+    },
+    {
+      "name": "Dyson Daniels",
+      "bdlTeam": "1",
+      "impact": -3.2,
+      "statPrior": -2,
+      "gamesOut": 5,
+      "mpg": 33.2,
+      "ppg": 11.9
+    },
+    {
+      "name": "Tyrese Maxey",
+      "bdlTeam": "23",
+      "impact": -3.1,
+      "statPrior": -4,
+      "gamesOut": 12,
+      "mpg": 38.1,
+      "ppg": 28.3
+    },
+    {
+      "name": "Kristaps Porzingis",
+      "bdlTeam": "1",
+      "impact": -3,
+      "statPrior": -2.8,
+      "gamesOut": 22,
+      "mpg": 24.3,
+      "ppg": 17.1
+    },
+    {
+      "name": "Jamal Murray",
+      "bdlTeam": "8",
+      "impact": -3,
+      "statPrior": -3.2,
+      "gamesOut": 5,
+      "mpg": 35.4,
+      "ppg": 25.4
+    },
+    {
+      "name": "Jalen Brunson",
+      "bdlTeam": "20",
+      "impact": -3,
+      "statPrior": -2.6,
+      "gamesOut": 7,
+      "mpg": 35.1,
+      "ppg": 26
+    },
+    {
+      "name": "Paul George",
+      "bdlTeam": "23",
+      "impact": -2.9,
+      "statPrior": -1.8,
+      "gamesOut": 33,
+      "mpg": 30.7,
+      "ppg": 17.3
+    },
+    {
+      "name": "Jimmy Butler",
+      "bdlTeam": "10",
+      "impact": -2.9,
+      "statPrior": -2.8,
+      "gamesOut": 6,
+      "mpg": 31.2,
+      "ppg": 20
+    },
+    {
+      "name": "Franz Wagner",
+      "bdlTeam": "22",
+      "impact": -2.9,
+      "statPrior": -1.6,
+      "gamesOut": 48,
+      "mpg": 29.8,
+      "ppg": 20.3
+    },
+    {
+      "name": "RJ Barrett",
+      "bdlTeam": "28",
+      "impact": -2.8,
+      "statPrior": -1.1,
+      "gamesOut": 25,
+      "mpg": 30.3,
+      "ppg": 19.3
+    },
+    {
+      "name": "Cade Cunningham",
+      "bdlTeam": "9",
+      "impact": -2.8,
+      "statPrior": -3.4,
+      "gamesOut": 18,
+      "mpg": 33.9,
+      "ppg": 23.9
+    },
+    {
+      "name": "Cam Spencer",
+      "bdlTeam": "15",
+      "impact": -2.7,
+      "statPrior": -1.8,
+      "gamesOut": 7,
+      "mpg": 23.8,
+      "ppg": 11.1
+    },
+    {
+      "name": "T.J. McConnell",
+      "bdlTeam": "12",
+      "impact": -2.7,
+      "statPrior": -2.3,
+      "gamesOut": 9,
+      "mpg": 17.2,
+      "ppg": 9.4
+    },
+    {
+      "name": "LaMelo Ball",
+      "bdlTeam": "4",
+      "impact": -2.7,
+      "statPrior": -2.3,
+      "gamesOut": 10,
+      "mpg": 28.1,
+      "ppg": 20.2
+    },
+    {
+      "name": "Donovan Mitchell",
+      "bdlTeam": "6",
+      "impact": -2.7,
+      "statPrior": -2.6,
+      "gamesOut": 10,
+      "mpg": 33.5,
+      "ppg": 27.9
+    }
+  ],
+  "latestSeasonLeastImpactful": [
+    {
+      "name": "Patrick Williams",
+      "bdlTeam": "5",
+      "impact": 1.9,
+      "statPrior": 0.5,
+      "gamesOut": 10,
+      "mpg": 20.5,
+      "ppg": 7
+    },
+    {
+      "name": "Pete Nance",
+      "bdlTeam": "17",
+      "impact": 1.9,
+      "statPrior": 0.2,
+      "gamesOut": 22,
+      "mpg": 15.6,
+      "ppg": 5.4
+    },
+    {
+      "name": "Brice Sensabaugh",
+      "bdlTeam": "29",
+      "impact": 2,
+      "statPrior": 0.1,
+      "gamesOut": 8,
+      "mpg": 23.8,
+      "ppg": 15.1
+    },
+    {
+      "name": "Jericho Sims",
+      "bdlTeam": "17",
+      "impact": 2.2,
+      "statPrior": 1.1,
+      "gamesOut": 16,
+      "mpg": 20,
+      "ppg": 5.1
+    },
+    {
+      "name": "Ben Saraf",
+      "bdlTeam": "3",
+      "impact": 2.2,
+      "statPrior": 1.4,
+      "gamesOut": 38,
+      "mpg": 20.8,
+      "ppg": 7.5
+    },
+    {
+      "name": "PJ Hall",
+      "bdlTeam": "4",
+      "impact": 2.2,
+      "statPrior": 0.9,
+      "gamesOut": 16,
+      "mpg": 15.6,
+      "ppg": 6.1
+    },
+    {
+      "name": "Cam Thomas",
+      "bdlTeam": "3",
+      "impact": 2.6,
+      "statPrior": 0.5,
+      "gamesOut": 25,
+      "mpg": 24.3,
+      "ppg": 15.6
+    },
+    {
+      "name": "Jonathan Kuminga",
+      "bdlTeam": "10",
+      "impact": 2.7,
+      "statPrior": 1.3,
+      "gamesOut": 26,
+      "mpg": 23.9,
+      "ppg": 12.1
+    },
+    {
+      "name": "Anthony Gill",
+      "bdlTeam": "30",
+      "impact": 3.1,
+      "statPrior": 0,
+      "gamesOut": 28,
+      "mpg": 17.6,
+      "ppg": 5.9
+    },
+    {
+      "name": "Jalen Wilson",
+      "bdlTeam": "3",
+      "impact": 3.1,
+      "statPrior": 0.5,
+      "gamesOut": 28,
+      "mpg": 15.9,
+      "ppg": 6.4
+    }
+  ],
+  "examples": {
+    "sga": [
+      {
+        "name": "Shai Gilgeous-Alexander",
+        "bdlTeam": "21",
+        "impact": -4.8,
+        "statPrior": -5.1,
+        "gamesOut": 12,
+        "mpg": 33.3,
+        "ppg": 31.1
+      }
+    ],
+    "embiid": [
+      {
+        "name": "Joel Embiid",
+        "bdlTeam": "23",
+        "impact": -2.6,
+        "statPrior": -1.8,
+        "gamesOut": 41,
+        "mpg": 31.5,
+        "ppg": 26.9
+      }
+    ],
+    "wells": [
+      {
+        "name": "Jaylen Wells",
+        "bdlTeam": "15",
+        "impact": 0,
+        "statPrior": 0,
+        "gamesOut": 2,
+        "mpg": 26.4,
+        "ppg": 12.5
+      }
+    ],
+    "tatum": [
+      {
+        "name": "Jayson Tatum",
+        "bdlTeam": "2",
+        "impact": -2.2,
+        "statPrior": -2.2,
+        "gamesOut": 2,
+        "mpg": 32.6,
+        "ppg": 21.8
+      }
+    ],
+    "jokic": [
+      {
+        "name": "Nikola Jokic",
+        "bdlTeam": "8",
+        "impact": -5,
+        "statPrior": -5.1,
+        "gamesOut": 17,
+        "mpg": 34.8,
+        "ppg": 27.7
+      }
+    ],
+    "brown": [
+      {
+        "name": "Jaylen Brown",
+        "bdlTeam": "2",
+        "impact": 0.8,
+        "statPrior": -1,
+        "gamesOut": 10,
+        "mpg": 34.4,
+        "ppg": 28.7
+      }
+    ]
+  }
+}

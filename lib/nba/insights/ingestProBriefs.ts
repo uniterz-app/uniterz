@@ -28,6 +28,9 @@ import {
   loadGameProInsight,
   writeGameProInsight,
 } from "@/lib/nba/insights/gameProInsightStore";
+import { loadTeamGameLogsSnapshot } from "@/lib/nba/teamGameLog/loadTeamGameLog";
+import type { NbaTeamGameLogSlice } from "@/lib/nba/teamGameLog/teamGameLogTypes";
+import { upcomingDifficultyForGame as upcomingDifficultyFor } from "@/lib/nba/matchupDifficulty/upcomingDifficultyForGame";
 
 export type NbaProBriefIngestMode = "full" | "patch";
 
@@ -280,6 +283,16 @@ export async function ingestNbaProBriefs(
     );
   }
 
+  let teamGameLogs: Record<string, NbaTeamGameLogSlice> = {};
+  try {
+    teamGameLogs = (await loadTeamGameLogsSnapshot(db, seasonKey)).bundle.teams;
+  } catch (e) {
+    console.warn(
+      "[ingestNbaProBriefs] team game logs unavailable",
+      e instanceof Error ? e.message : e
+    );
+  }
+
   let injurySnap = await loadTeamInjuriesSnapshot(db, seasonKey);
   const injuryTeams = injurySnap.bundle.teams;
 
@@ -380,6 +393,20 @@ export async function ingestNbaProBriefs(
           limit: 5,
         }),
         playerLeaders,
+        homeDifficulty: upcomingDifficultyFor(
+          teamGameLogs,
+          homeTeamId,
+          awayTeamId,
+          true,
+          tipAtMs
+        ),
+        awayDifficulty: upcomingDifficultyFor(
+          teamGameLogs,
+          awayTeamId,
+          homeTeamId,
+          false,
+          tipAtMs
+        ),
         nowMs,
       };
 

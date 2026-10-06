@@ -85,6 +85,19 @@ export const PRO_INSIGHT_GATE_SAMPLE_BRIEF: ProInsightNarrativeBrief = {
       items: [
         {
           body: {
+            ja: "BOS は厳しさ 71。相手の強さ 58 に、アウェイで +5、B2B で +8。LAL は 29（相手の強さ 42・ホーム −5・相手B2B −8）。",
+            en: "BOS difficulty 71: opponent 58, road +5, B2B +8. LAL 29 (opponent 42 · home −5 · opp B2B −8).",
+            ko: "BOS 난이도 71. 상대 전력 58에 원정 +5, 백투백 +8. LAL은 29(상대 전력 42·홈 −5·상대 백투백 −8).",
+            zh: "凯尔特人难度 71：对手实力 58，客场 +5，背靠背 +8。湖人 29（对手实力 42 · 主场 −5 · 对手背靠背 −8）。",
+            es: "BOS dificultad 71: rival 58, visitante +5, B2B +8. LAL 29 (rival 42 · local −5 · rival en B2B −8).",
+            pt: "BOS dificuldade 71: adversário 58, fora +5, B2B +8. LAL 29 (adversário 42 · casa −5 · adversário em B2B −8).",
+            fr: "BOS difficulté 71 : adversaire 58, extérieur +5, B2B +8. LAL 29 (adversaire 42 · domicile −5 · adversaire en B2B −8).",
+          },
+          evidence: [e("BOS 71 = 58 +5 +8 · LAL 29 = 42 −5 −8")],
+          template: "difficulty",
+        },
+        {
+          body: {
             ja: `BOS は ${tonightHop} · 移動距離 ${tonightKm}。LAL は休養 2 日・ホーム。今夜いちばん大きい負荷差。`,
             en: `BOS ${tonightHop} · travel ${tonightKm}. LAL with 2 days rest at home — clearest load gap tonight.`,
             ko: `BOS ${tonightHop} · 이동 ${tonightKm}. LAL은 2일 휴식·홈. 오늘 가장 큰 부하 차.`,
@@ -96,18 +109,6 @@ export const PRO_INSIGHT_GATE_SAMPLE_BRIEF: ProInsightNarrativeBrief = {
           evidence: [
             e(`BOS ${tonightHop} ${tonightKm} · 48h ${windowKm} · LAL rest 2`),
           ],
-        },
-        {
-          body: {
-            ja: "BOS は連戦2日目・4日で3試合目。LAL は前試合 OT で主力 2 人が 36 分超。",
-            en: "BOS: 2nd of a B2B, 3rd game in 4 nights. LAL had two starters 36+ min after OT.",
-            ko: "BOS는 백투백 2번째·4일간 3번째. LAL은 직전 연장에서 주전 2명 36분 이상.",
-            zh: "凯尔特人背靠背第 2 场、4 天内第 3 场。湖人上一场加时两名主力超过 36 分钟。",
-            es: "BOS: 2.º del B2B, 3.er en 4 días. LAL: 2 titulares 36+ tras prórroga.",
-            pt: "BOS: 2.º do B2B, 3.º em 4 dias. LAL: 2 titulares 36+ após OT.",
-            fr: "BOS: 2e du B2B, 3e en 4 jours. LAL: 2 titulaires 36+ après OT.",
-          },
-          evidence: [e("BOS B2B · 3 in 4 · LAL OT · A.Reaves 38 · L.James 37")],
         },
       ],
     },
@@ -145,6 +146,19 @@ export const PRO_INSIGHT_GATE_SAMPLE_BRIEF: ProInsightNarrativeBrief = {
       items: [
         {
           body: {
+            ja: "BOS は厳しさ 71 → 81（J.Tatum 欠場）。LAL は厳しさ 29 → 19（相手 J.Tatum 欠場）。攻撃の起点を欠く BOS は押し切る手段が減り、LAL は主導権を握りやすい。",
+            en: "BOS Difficulty 71 → 81 (J.Tatum out). LAL Difficulty 29 → 19 (opp J.Tatum out). Without their main creator BOS have fewer ways to close, and LAL get the easier path to control the game.",
+            ko: "BOS 난이도 71 → 81 (J.Tatum 결장). LAL 난이도 29 → 19 (상대 J.Tatum 결장). 공격의 기점을 잃은 BOS는 마무리 수단이 줄고, LAL은 주도권을 잡기 쉽다.",
+            zh: "BOS 难度 71 → 81（J.Tatum 缺阵）。LAL 难度 29 → 19（对手 J.Tatum 缺阵）。失去进攻发起点的 BOS 终结手段变少，LAL 更容易掌握主动。",
+            es: "BOS dificultad 71 → 81 (baja de J.Tatum). LAL dificultad 29 → 19 (baja rival de J.Tatum). Sin su creador principal, BOS tiene menos recursos para cerrar y LAL lo tiene más fácil para mandar.",
+            pt: "BOS dificuldade 71 → 81 (J.Tatum fora). LAL dificuldade 29 → 19 (adversário sem J.Tatum). Sem seu criador principal, o BOS tem menos recursos para fechar e o LAL fica com o caminho mais fácil para controlar o jogo.",
+            fr: "BOS difficulté 71 → 81 (J.Tatum absent). LAL difficulté 29 → 19 (adversaire sans J.Tatum). Privés de leur créateur principal, les BOS ont moins de solutions pour conclure, et LAL a la voie la plus simple pour contrôler le match.",
+          },
+          evidence: [e("J.Tatum OUT · impact −4.7 pts (2025-26 · 17 g out) · when out 11-6")],
+          template: "injury_difficulty",
+        },
+        {
+          body: {
             ja: "J.Tatum OUT · BOS 今季欠場時 11-6。チーム USG/AST リーダー欠場で形が変わり、OFF −5.3 · DEF +1.8。LAL 有利。",
             en: "J.Tatum OUT · BOS when-out 11-6. Team USG/AST leader out — shape shifts; OFF −5.3 · DEF +1.8. Edge LAL.",
             ko: "J.Tatum OUT · BOS 결장 시 11-6. 팀 USG/AST 리더 결장으로 형이 바뀌고 OFF −5.3 · DEF +1.8. LAL 유리.",
@@ -158,18 +172,6 @@ export const PRO_INSIGHT_GATE_SAMPLE_BRIEF: ProInsightNarrativeBrief = {
               "J.Tatum OUT · leaders USG/AST/… · when-out 11-6 · 109.9-110.1 · OFF −5.3 · DEF +1.8"
             ),
           ],
-        },
-        {
-          body: {
-            ja: "LAL は主力フル。欠場の影響は BOS 側に寄っており、今夜は LAL 有利。",
-            en: "LAL are at full strength. The absence load sits with BOS — edge LAL tonight.",
-            ko: "LAL은 주력 풀. 결장 영향은 BOS 쪽에 있어 오늘은 LAL 유리.",
-            zh: "湖人主力齐全。伤停影响在凯尔特人一侧，今晚偏湖人有利。",
-            es: "LAL a plena. La carga de bajas cae en BOS — ventaja LAL.",
-            pt: "LAL completo. A carga de baixas fica com o BOS — vantagem LAL.",
-            fr: "LAL au complet. La charge d’absences est côté BOS — avantage LAL.",
-          },
-          evidence: [e("LAL OUT 0 · BOS OUT 1 (J.Tatum)")],
         },
       ],
     },

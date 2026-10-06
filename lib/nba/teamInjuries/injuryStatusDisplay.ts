@@ -34,7 +34,8 @@ export function mapBdlInjuryStatus(
     .trim()
     .toLowerCase();
   if (!key || key === "available" || key === "healthy") return null;
-  if (key === "out") return "out";
+  // "Out For Season" / "Out Indefinitely" など
+  if (key === "out" || key.startsWith("out ")) return "out";
   if (key === "doubtful") return "doubtful";
   if (key === "questionable") return "questionable";
   if (key === "probable") return "probable";

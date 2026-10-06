@@ -617,7 +617,7 @@ function injuriesForTeam(
 export function buildMatchupFactCandidates(input: {
   phase: ProBriefPhase;
   seasonRows: NbaLeagueTeamStatRow[];
-  /** opening は前季行を渡す */
+  /** opening / early は前季行を使う */
   priorRows?: NbaLeagueTeamStatRow[] | null;
   homeTeamId: string;
   awayTeamId: string;
@@ -629,8 +629,9 @@ export function buildMatchupFactCandidates(input: {
   /** 型オーナー判定用（無ければ欠場は MATCHUP に折り込まない） */
   playerLeaders?: NbaPlayerStatLeadersBundle | null;
 }): ProInsightFact[] {
+  // 序盤（今季 4 試合まで）のリーグ順位は 1 試合で 10 位単位で動くので前季で組む
   const rows =
-    input.phase === "opening" && input.priorRows && input.priorRows.length > 0
+    input.phase !== "full" && input.priorRows && input.priorRows.length > 0
       ? input.priorRows
       : input.seasonRows;
   const mpg = input.mpgByPlayerId ?? null;

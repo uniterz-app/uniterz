@@ -54,6 +54,8 @@ export type NbaTeamUpcomingGame = {
   oppAbbr: string;
   home: boolean;
   conferenceGame: boolean;
+  /** 試合開始 ms。古いスナップショットには無い */
+  startMs?: number;
   /** team-game-logs ingest が付与。古いスナップショットには無い */
   difficulty?: NbaUpcomingMatchupDifficulty;
 };

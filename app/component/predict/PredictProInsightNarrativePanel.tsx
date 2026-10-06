@@ -4,7 +4,8 @@
  * 新 Pro Insight UI — 試合1本 · 4枠短文 · 各枠2本。
  * HOME/AWAY 分割なし（Native `PredictProInsightNarrativePanelNative` 相当）。
  */
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { difficultyExplainCopy } from "@/lib/nba/matchupDifficulty/difficultyExplainCopy";
 import {
   proInsightShowsEvidence,
   type ProInsightNarrativeBrief,
@@ -66,6 +67,11 @@ export default function PredictProInsightNarrativePanel({
     if (!brief.sampleNote) return null;
     return t(brief.sampleNote, language);
   }, [brief.sampleNote, language]);
+  const explain = useMemo(
+    () => difficultyExplainCopy(resolveLocalizedLang(language)),
+    [language]
+  );
+  const [explainOpen, setExplainOpen] = useState(false);
 
   return (
     <div
@@ -141,23 +147,63 @@ export default function PredictProInsightNarrativePanel({
                   : "",
               ].join(" ")}
             >
-              <div
-                className="inline-flex self-start border bg-black px-2 py-0.5"
-                style={{
-                  borderColor: accent,
-                  transform: "skewX(-6deg)",
-                }}
-              >
-                <span
-                  className={[
-                    nameOxanium.className,
-                    "text-[10px] font-extrabold uppercase tracking-[0.16em]",
-                  ].join(" ")}
-                  style={{ color: accent }}
+              <div className="flex items-center gap-2">
+                <div
+                  className="inline-flex self-start border bg-black px-2 py-0.5"
+                  style={{
+                    borderColor: accent,
+                    transform: "skewX(-6deg)",
+                  }}
                 >
-                  {section.kind}
-                </span>
+                  <span
+                    className={[
+                      nameOxanium.className,
+                      "text-[10px] font-extrabold uppercase tracking-[0.16em]",
+                    ].join(" ")}
+                    style={{ color: accent }}
+                  >
+                    {section.kind}
+                  </span>
+                </div>
+                {section.items.some((it) => it.template === "difficulty") ? (
+                  <button
+                    type="button"
+                    onClick={() => setExplainOpen((v) => !v)}
+                    aria-label={explain.helpAria}
+                    aria-expanded={explainOpen}
+                    className={[
+                      nameOxanium.className,
+                      "grid h-[18px] w-[18px] place-items-center rounded-full border text-[11px] font-extrabold leading-none",
+                    ].join(" ")}
+                    style={{
+                      borderColor: accent,
+                      backgroundColor: explainOpen ? accent : "transparent",
+                      color: explainOpen ? "#050508" : accent,
+                    }}
+                  >
+                    ?
+                  </button>
+                ) : null}
               </div>
+              {explainOpen &&
+              section.items.some((it) => it.template === "difficulty") ? (
+                <div
+                  className={[
+                    jp.className,
+                    "flex flex-col gap-1 border border-dashed bg-[rgba(253,230,138,0.04)] px-2.5 py-2",
+                  ].join(" ")}
+                  style={{ borderColor: accent }}
+                >
+                  <p className="text-[12px] font-semibold leading-4" style={{ color: accent }}>
+                    {explain.title}
+                  </p>
+                  {explain.lines.map((line, li) => (
+                    <p key={li} className="text-[11px] font-semibold leading-4 text-white/70">
+                      {line}
+                    </p>
+                  ))}
+                </div>
+              ) : null}
               <div className="flex flex-col gap-2.5">
                 {section.items.map((item, ii) => (
                   <div key={`${section.kind}-${ii}`} className="flex flex-col gap-1">

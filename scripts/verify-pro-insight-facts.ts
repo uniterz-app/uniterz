@@ -11,6 +11,7 @@ import {
   dropStaleLongTermInjuries,
   isLongTermInjury,
 } from "../lib/nba/insights/proInsightFacts/longTermInjury";
+import { withNumberGuard } from "../lib/nba/insights/proInsightLlm/numberGuard";
 
 const TIP = Date.UTC(2026, 2, 13, 2, 30);
 const HOUR = 60 * 60 * 1000;
@@ -363,6 +364,43 @@ console.log(
 
   const preseason = [game(2, ["1"], "preseason"), game(4, ["1"], "preseason"), game(6, ["1"], "preseason")];
   assert.equal(dropStaleLongTermInjuries({ injuries: [out], teamId: "MIN", tipAtMs: TIP, docs: preseason }).length, 1);
+}
+
+{
+  const fact = {
+    id: "c1",
+    section: "CONTEXT" as const,
+    kind: "vs_top6",
+    score: 1,
+    teamIds: ["nba-76ers"],
+    label: "vs_conf_top6",
+    metrics: [{ key: "wl", value: "1-7" }, { key: "oppConfRank", value: "#3" }],
+    players: [],
+    dedupeKeys: [],
+    hintEn: "76ERS went 1-7 vs conference top-6 in 2025-26; tonight's opponent is #3.",
+  };
+  const pack = {
+    homeTeamId: "nba-76ers",
+    awayTeamId: "nba-knicks",
+    tipAtMs: TIP,
+    phase: "full" as const,
+    sections: { MATCHUP: [], SCHEDULE: [], CONTEXT: [fact], "INJURY IMPACT": [] },
+    candidates: [],
+    fingerprint: "",
+  };
+  const item = (ja: string, fr = ja) => ({ body: { ja, en: ja, fr } as never, evidence: [] });
+  const brief = (items: ReturnType<typeof item>[]) => ({
+    homeTeamId: pack.homeTeamId,
+    awayTeamId: pack.awayTeamId,
+    sections: [{ kind: "CONTEXT" as const, items }],
+  });
+  const kept = (ja: string, fr?: string) =>
+    withNumberGuard(brief([item(ja, fr)]), pack).sections.length === 1;
+  assert.equal(kept("76ERS は 25-26シーズン、上位6チーム相手に 1-7。3位 KNICKS 相手は分が悪い。"), true);
+  assert.equal(kept("8試合で 1勝。", "8 matchs, 1 victoire."), true);
+  assert.equal(kept("76ERS は上位相手に 2-9。"), false);
+  assert.equal(kept("直近 5 連敗。"), false);
+  assert.equal(kept("ok", "bilan de 1-7, 12 % de réussite"), false);
 }
 
 console.log("verify-pro-insight-facts: ok");

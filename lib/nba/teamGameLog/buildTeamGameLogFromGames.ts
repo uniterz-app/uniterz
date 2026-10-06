@@ -176,6 +176,7 @@ export function buildTeamGameLogFromGames(input: {
           oppAbbr,
           home,
           conferenceGame,
+          startMs,
         },
       });
     }
