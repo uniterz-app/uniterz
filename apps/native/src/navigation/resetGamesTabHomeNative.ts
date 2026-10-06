@@ -58,9 +58,11 @@ export function resetGamesStackInBackgroundNative(
 
 /** Games タブを開き、試合一覧へ（Games タブボタン向け）。 */
 export function openGamesTabHomeNative(navigation: ResetNavigation): void {
+  /** v7 の navigate は既存画面へ戻らず push する。詳細を重ねた上に GamesHome を積まないよう戻す */
   navigation.navigate("GamesTab", {
     screen: "GamesHome",
     params: {},
+    pop: true,
   } as never);
 }
 

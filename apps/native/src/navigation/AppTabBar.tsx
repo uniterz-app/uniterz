@@ -5,6 +5,7 @@ import {
   Animated,
   Dimensions,
   Image,
+  InteractionManager,
   Platform,
   Pressable,
   StyleSheet,
@@ -178,7 +179,7 @@ export default function AppTabBar({ state, descriptors, navigation }: BottomTabB
                   clearSideMenuResume();
 
                   /**
-                   * Games スタック reset は同期で重い（特に Android）。
+                   * Games スタック reset は同期で重い（特に Android。詳細を何枚も重ねていると全部アンマウント）。
                    * Profile など遷移先の初回マウントと競合させない。
                    */
                   if (
@@ -186,8 +187,13 @@ export default function AppTabBar({ state, descriptors, navigation }: BottomTabB
                     route.name !== "GamesTab"
                   ) {
                     const nav = navigation;
-                    requestAnimationFrame(() => {
-                      resetGamesStackInBackgroundNative(nav);
+                    InteractionManager.runAfterInteractions(() => {
+                      setTimeout(() => {
+                        /** 待っている間に Games へ戻っていたら、開いた画面を消さない */
+                        const s = nav.getState();
+                        if (s.routes[s.index]?.name === "GamesTab") return;
+                        resetGamesStackInBackgroundNative(nav);
+                      }, 250);
                     });
                   }
 
