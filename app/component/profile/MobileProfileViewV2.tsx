@@ -121,8 +121,6 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
 
   const router = useRouter();
   const resolvedUid = typeof targetUid === "string" ? targetUid : null;
-  const { language } = useUserLanguage(resolvedUid);
-  const awardsBracketCopy = profileAwardsBracketCopy(language);
 
   const {
     myUid,
@@ -137,6 +135,9 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
     targetUid,
     profilePlan: profile.plan,
   });
+  /** 他人のプロフィールも閲覧者の言語で表示する */
+  const { language } = useUserLanguage(myUid);
+  const awardsBracketCopy = profileAwardsBracketCopy(language);
 
   const forceProView = false;
   const currentIsProView = forceProView || isProView;

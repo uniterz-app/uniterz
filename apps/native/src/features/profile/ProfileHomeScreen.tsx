@@ -437,8 +437,13 @@ export default function ProfileHomeScreen({
     () =>
       ownSeedAtMount?.avatarUrl ?? publicIdentityAtMount?.photoURL ?? ""
   );
+  const { language: viewerLanguage, displayTimeZone: savedDisplayTimeZone } =
+    useNativeLanguage();
+  /** 他人のプロフィールは閲覧者の言語で表示する（相手の言語設定は使わない） */
   const [language, setLanguage] = useState<LocalizedLang>(() =>
-    resolveLocalizedLang(ownSeedAtMount?.language)
+    resolveLocalizedLang(
+      isPublicProfileView ? viewerLanguage : ownSeedAtMount?.language
+    )
   );
   const [countryCode, setCountryCode] = useState(
     () =>
@@ -478,7 +483,6 @@ export default function ProfileHomeScreen({
   const [langModalOpen, setLangModalOpen] = useState(false);
   const [countryModalOpen, setCountryModalOpen] = useState(false);
   const [tzModalOpen, setTzModalOpen] = useState(false);
-  const { displayTimeZone: savedDisplayTimeZone } = useNativeLanguage();
   /** "" は自動（端末） */
   const [displayTimeZone, setDisplayTimeZone] = useState("");
   const deviceTimeZone = useMemo(() => getDeviceTimeZone(), []);
@@ -487,6 +491,10 @@ export default function ProfileHomeScreen({
   useEffect(() => {
     if (settingsOpen) setDisplayTimeZone(savedDisplayTimeZone ?? "");
   }, [settingsOpen, savedDisplayTimeZone]);
+
+  useEffect(() => {
+    if (isPublicProfileView) setLanguage(resolveLocalizedLang(viewerLanguage));
+  }, [isPublicProfileView, viewerLanguage]);
 
   const handleSettingsRequestClose = useCallback(() => {
     if (langModalOpen || countryModalOpen || tzModalOpen) {
@@ -1078,7 +1086,6 @@ export default function ProfileHomeScreen({
     setBio(profileByHandle.bio);
     setHandle(profileByHandle.handle);
     setAvatarUrl(profileByHandle.avatarUrl);
-    setLanguage(profileByHandle.language);
     setCountryCode(profileByHandle.countryCode);
     setPlan(profileByHandle.plan);
     setPlanProBgVariant(profileByHandle.planProBgVariant);
