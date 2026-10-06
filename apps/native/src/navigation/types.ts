@@ -36,6 +36,8 @@ export type GamesStackParamList = {
   GamePredict: { gameId: string };
   GamePredictions: { gameId: string };
   Standings: undefined;
+  /** 今日の試合のスタッツリーダー（Games 右端 TODAY） */
+  DailyLeaders: undefined;
   TeamDetail: { teamId: string };
   PlayoffBracket: undefined;
   PlayoffBracketView: undefined;

@@ -8158,6 +8158,19 @@ html.unit-earn-settling .profile-edit-kinetik-panel [class*="profile-plan-pro"] 
   z-index: 3 !important;
 }
 
+.games-right-edge-tabs__today {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.games-right-edge-tabs__today .profile-menu-edge-handle {
+  pointer-events: auto;
+  z-index: 1 !important;
+}
+
 .games-right-edge-tabs--fade {
   transition: opacity 1.45s cubic-bezier(0.37, 0, 0.18, 1);
 }

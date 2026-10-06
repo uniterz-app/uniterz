@@ -1646,6 +1646,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
         onOpenStats={() =>
           router.push(isMobile ? "/mobile/stats-preview" : "/dev/stats-preview")
         }
+        onOpenToday={() => router.push("/mobile/today-leaders")}
         standingAriaLabel="STANDING"
         statsAriaLabel={m.games.statsSection}
         statsTutorialTargetId="games-stats-edge"

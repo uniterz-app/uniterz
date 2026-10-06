@@ -2979,6 +2979,7 @@ export default function GamesHomeScreen({
       <GamesRightEdgeTabsNative
         onOpenStanding={() => navigation.navigate("Standings")}
         onOpenStats={() => navigation.navigate("LeagueStats", { tab: "team" })}
+        onOpenToday={() => navigation.navigate("DailyLeaders")}
         statsTutorialTargetId="games-stats-edge"
         hidden={tutorialPhase === "welcome"}
         fadeIn

@@ -1,8 +1,8 @@
 "use client";
 
 /**
- * Games 右端 — STANDING を STATS の上に積む縦タブ。
- * STATS の位置は従来どおり（レール自体が 46% 中央）。
+ * Games 右端 — STANDING / STATS / TODAY の縦タブ。
+ * STATS の位置は従来どおり（レール自体が 46% 中央）。STANDING は上、TODAY は下に積む。
  */
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
@@ -16,8 +16,10 @@ const CANCEL_DY_PX = 40;
 type Props = {
   onOpenStanding: () => void;
   onOpenStats: () => void;
+  onOpenToday?: () => void;
   standingAriaLabel?: string;
   statsAriaLabel?: string;
+  todayAriaLabel?: string;
   hidden?: boolean;
   fadeIn?: boolean;
   statsTutorialTargetId?: string;
@@ -26,8 +28,10 @@ type Props = {
 export default function GamesRightEdgeTabs({
   onOpenStanding,
   onOpenStats,
+  onOpenToday,
   standingAriaLabel = "STANDING",
   statsAriaLabel = "STATS",
+  todayAriaLabel = "TODAY",
   hidden = false,
   fadeIn = false,
   statsTutorialTargetId,
@@ -114,6 +118,16 @@ export default function GamesRightEdgeTabs({
           ariaLabel={statsAriaLabel}
         />
       </div>
+      {onOpenToday ? (
+        <div className="games-right-edge-tabs__today">
+          <ProfileMenuEdgeHandle
+            inline
+            label="TODAY"
+            onOpen={onOpenToday}
+            ariaLabel={todayAriaLabel}
+          />
+        </div>
+      ) : null}
     </div>,
     document.body
   );

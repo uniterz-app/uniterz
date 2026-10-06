@@ -107,6 +107,12 @@ function GamesStackScreen() {
           }
         />
         <GamesStack.Screen
+          name="DailyLeaders"
+          getComponent={() =>
+            require("../features/games/screens/DailyLeadersScreenNative").default
+          }
+        />
+        <GamesStack.Screen
           name="TeamDetail"
           getComponent={() =>
             require("../features/games/screens/TeamDetailScreenNative").default

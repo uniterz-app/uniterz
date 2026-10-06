@@ -1,4 +1,4 @@
-/** Web `GamesRightEdgeTabs` 相当 — STANDING を STATS の上に積む */
+/** Web `GamesRightEdgeTabs` 相当 — STANDING / STATS / TODAY の縦タブ */
 import { useEffect, useRef } from "react";
 import { PanResponder, StyleSheet, View } from "react-native";
 import Animated, {
@@ -44,6 +44,7 @@ function unionRects(a: WinRect, b: WinRect): WinRect {
 type Props = {
   onOpenStanding: () => void;
   onOpenStats: () => void;
+  onOpenToday?: () => void;
   hidden?: boolean;
   fadeIn?: boolean;
   /** STANDING + STATS まとめてチュートリアル穴 */
@@ -53,6 +54,7 @@ type Props = {
 export default function GamesRightEdgeTabsNative({
   onOpenStanding,
   onOpenStats,
+  onOpenToday,
   hidden = false,
   fadeIn = false,
   statsTutorialTargetId,
@@ -138,6 +140,15 @@ export default function GamesRightEdgeTabsNative({
             onOpen={onOpenStats}
           />
         </View>
+        {onOpenToday ? (
+          <View style={styles.today} pointerEvents="box-none">
+            <ProfileMenuEdgeHandleNative
+              inline
+              label="TODAY"
+              onOpen={onOpenToday}
+            />
+          </View>
+        ) : null}
       </View>
     </Animated.View>
   );
@@ -171,6 +182,13 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: "100%",
     marginBottom: 8,
+    zIndex: 1,
+  },
+  today: {
+    position: "absolute",
+    right: 0,
+    top: "100%",
+    marginTop: 8,
     zIndex: 1,
   },
 });
