@@ -2,6 +2,10 @@
 
 import { useMemo, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
+import {
+  nbaPlayerDetailPreviewHref,
+  nbaTeamDetailPreviewHref,
+} from "@/lib/predict/nbaTeamDetailHref";
 import { AnimatePresence, motion } from "framer-motion";
 import { nameOxanium } from "@/lib/fonts";
 import {
@@ -795,10 +799,12 @@ function Injuries({
   injuries,
   accent,
   lang,
+  onPlayerClick,
 }: {
   injuries: NbaTeamInjuryEntry[];
   accent: string;
   lang: LocalizedLang;
+  onPlayerClick?: (playerId: string) => void;
 }) {
   const isJa = lang === "ja";
   return (
@@ -820,10 +826,24 @@ function Injuries({
               inj.returnEstimate,
               lang
             );
+            const canOpen = Boolean(onPlayerClick && inj.playerId);
             return (
               <div
                 key={inj.playerId}
-                className="space-y-1 px-3 py-2.5"
+                role={canOpen ? "button" : undefined}
+                tabIndex={canOpen ? 0 : undefined}
+                onClick={canOpen ? () => onPlayerClick?.(inj.playerId) : undefined}
+                onKeyDown={
+                  canOpen
+                    ? (e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          onPlayerClick?.(inj.playerId);
+                        }
+                      }
+                    : undefined
+                }
+                className={`space-y-1 px-3 py-2.5${canOpen ? " cursor-pointer active:bg-white/[0.06]" : ""}`}
                 style={
                   i < injuries.length - 1
                     ? { borderBottom: `1px solid ${hexToRgba(accent, 0.12)}` }
@@ -2496,7 +2516,14 @@ export default function NbaTeamDetailPanel({
         />
       ) : null}
 
-      <Injuries injuries={detail.injuries} accent={accent} lang={lang} />
+      <Injuries
+        injuries={detail.injuries}
+        accent={accent}
+        lang={lang}
+        onPlayerClick={(playerId) =>
+          router.push(nbaPlayerDetailPreviewHref(playerId))
+        }
+      />
 
       <div
         className="h-px"
@@ -2559,6 +2586,9 @@ export default function NbaTeamDetailPanel({
         accent={accent}
         isJa={isJa}
         language={language}
+        onTeamClick={(oppTeamId) =>
+          router.push(nbaTeamDetailPreviewHref(oppTeamId))
+        }
       />
 
       <div

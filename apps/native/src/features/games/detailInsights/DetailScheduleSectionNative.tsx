@@ -1,5 +1,5 @@
 /** Web `DetailScheduleSection` 相当 */
-import { StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import type { TeamScheduleDifficulty } from "../../../../../../lib/nba/detailInsights/detailInsightTypes";
 import type { NbaTeamUpcomingGame } from "../../../../../../lib/predict/nbaTeamDetailPreviewMocks";
 import {
@@ -50,12 +50,15 @@ export function DetailScheduleSectionNative({
   accent,
   language = "en",
   sectionTitle = "UPCOMING",
+  onSelectTeam,
 }: {
   upcomingGames: NbaTeamUpcomingGame[];
   scheduleDifficulty: TeamScheduleDifficulty | null;
   accent: string;
   language?: string;
   sectionTitle?: string;
+  /** 行タップで相手チーム詳細へ */
+  onSelectTeam?: (teamId: string) => void;
 }) {
   const lang = resolveLocalizedLang(language);
   const { fUser } = useFirebaseUser();
@@ -167,7 +170,15 @@ export function DetailScheduleSectionNative({
                   : null
               }
             >
-              <View style={styles.row}>
+              <Pressable
+                style={({ pressed }) => [
+                  styles.row,
+                  pressed && onSelectTeam ? styles.rowPressed : null,
+                ]}
+                disabled={!onSelectTeam || !game.oppTeamId}
+                onPress={() => onSelectTeam?.(game.oppTeamId)}
+                accessibilityRole={onSelectTeam ? "button" : undefined}
+              >
                 <Text style={styles.date}>{game.dateLabel}</Text>
                 <View style={styles.matchupSkew}>
                   <Text style={styles.matchup} numberOfLines={1}>
@@ -194,7 +205,7 @@ export function DetailScheduleSectionNative({
                 <View style={styles.tipSkew}>
                   <Text style={styles.tip}>{game.tipLabel}</Text>
                 </View>
-              </View>
+              </Pressable>
             </View>
           );
         })}
@@ -259,6 +270,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 10,
   },
+  rowPressed: { backgroundColor: "rgba(255,255,255,0.06)" },
   date: {
     width: 44,
     fontFamily: OXANIUM,

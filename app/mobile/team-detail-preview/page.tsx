@@ -26,7 +26,7 @@ function shouldReturnToPredictOverlay(
 function Inner() {
   const sp = useSearchParams();
   const teamId = sp.get("teamId") ?? undefined;
-  return <NbaTeamDetailPanel teamId={teamId} />;
+  return <NbaTeamDetailPanel key={teamId} teamId={teamId} />;
 }
 
 function TeamDetailPreviewShell() {

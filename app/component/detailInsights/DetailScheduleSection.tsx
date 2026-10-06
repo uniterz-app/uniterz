@@ -50,6 +50,8 @@ type Props = {
   /** 7言語コピー用。未指定なら isJa にフォールバック */
   language?: string;
   sectionTitle?: string;
+  /** 行タップで相手チーム詳細へ */
+  onTeamClick?: (teamId: string) => void;
 };
 
 export function DetailScheduleSection({
@@ -59,6 +61,7 @@ export function DetailScheduleSection({
   isJa,
   language,
   sectionTitle = "UPCOMING",
+  onTeamClick,
 }: Props) {
   const lang = resolveLocalizedLang(language ?? (isJa ? "ja" : "en"));
   const { fUser } = useFirebaseUser();
@@ -153,6 +156,7 @@ export function DetailScheduleSection({
           const restTag = game.difficulty
             ? upcomingDifficultyRestTag(game.difficulty)
             : null;
+          const canOpen = Boolean(onTeamClick && game.oppTeamId);
           return (
             <div
               key={`${game.dateLabel}-${game.oppTeamId}-${i}`}
@@ -162,7 +166,22 @@ export function DetailScheduleSection({
                   : undefined
               }
             >
-              <div className="flex items-center gap-1.5 px-2.5 py-2.5">
+              <div
+                role={canOpen ? "button" : undefined}
+                tabIndex={canOpen ? 0 : undefined}
+                onClick={canOpen ? () => onTeamClick?.(game.oppTeamId) : undefined}
+                onKeyDown={
+                  canOpen
+                    ? (e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          onTeamClick?.(game.oppTeamId);
+                        }
+                      }
+                    : undefined
+                }
+                className={`flex items-center gap-1.5 px-2.5 py-2.5${canOpen ? " cursor-pointer active:bg-white/[0.06]" : ""}`}
+              >
                 <span className="w-11 shrink-0 text-[13px] text-white/40">
                   {game.dateLabel}
                 </span>

@@ -7,6 +7,7 @@ type Props = {
   onClose: () => void;
   teamId?: string;
   onSelectPlayer?: (playerId: string) => void;
+  onSelectTeam?: (teamId: string) => void;
 };
 
 export default function TeamDetailPreviewScreenNative({
@@ -14,6 +15,7 @@ export default function TeamDetailPreviewScreenNative({
   onClose,
   teamId,
   onSelectPlayer,
+  onSelectTeam,
 }: Props) {
   const isJa = language === "ja";
   return (
@@ -33,6 +35,7 @@ export default function TeamDetailPreviewScreenNative({
         language={language}
         teamId={teamId}
         onSelectPlayer={onSelectPlayer}
+        onSelectTeam={onSelectTeam}
       />
     </MobilePageShell>
   );

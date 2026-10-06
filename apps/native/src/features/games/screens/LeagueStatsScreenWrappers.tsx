@@ -105,6 +105,9 @@ export function GamesTeamDetailPreviewScreenWrapper() {
       onSelectPlayer={(playerId) =>
         navigation.navigate("PlayerDetailPreview", { playerId })
       }
+      onSelectTeam={(nextTeamId) =>
+        navigation.push("TeamDetailPreview", { teamId: nextTeamId })
+      }
     />
   );
 }

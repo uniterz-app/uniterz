@@ -95,6 +95,7 @@ type Props = {
   language: string;
   teamId?: string;
   onSelectPlayer?: (playerId: string) => void;
+  onSelectTeam?: (teamId: string) => void;
 };
 
 const FORM_WIN = "#00F5FF";
@@ -448,10 +449,12 @@ function InjuriesSection({
   injuries,
   accent,
   ui,
+  onSelectPlayer,
 }: {
   injuries: NbaTeamInjuryEntry[];
   accent: string;
   ui: NbaTeamDetailUiCopy;
+  onSelectPlayer?: (playerId: string) => void;
 }) {
   const lang = ui.lang;
   const frame = hexToRgba(accent, 0.35);
@@ -473,16 +476,23 @@ function InjuriesSection({
               inj.returnEstimate,
               lang
             );
+            const canOpen = Boolean(onSelectPlayer && inj.playerId);
             return (
-              <View
+              <Pressable
                 key={inj.playerId}
-                style={[
+                disabled={!canOpen}
+                onPress={() => onSelectPlayer?.(inj.playerId)}
+                accessibilityRole={canOpen ? "button" : undefined}
+                style={({ pressed }) => [
                   styles.injuryRow,
                   i < injuries.length - 1
                     ? {
                         borderBottomWidth: StyleSheet.hairlineWidth,
                         borderBottomColor: hexToRgba(accent, 0.12),
                       }
+                    : null,
+                  pressed && canOpen
+                    ? { backgroundColor: "rgba(255,255,255,0.06)" }
                     : null,
                 ]}
               >
@@ -507,7 +517,7 @@ function InjuriesSection({
                     </Text>
                   ) : null}
                 </View>
-              </View>
+              </Pressable>
             );
           })
         )}
@@ -1726,6 +1736,7 @@ export default function NbaTeamDetailPanelNative({
   language,
   teamId,
   onSelectPlayer,
+  onSelectTeam,
 }: Props) {
   const ui = nbaTeamDetailUiCopy(language);
   const lang = ui.lang;
@@ -1879,6 +1890,7 @@ export default function NbaTeamDetailPanelNative({
           injuries={detail.injuries}
           accent={accent}
           ui={ui}
+          onSelectPlayer={onSelectPlayer}
         />
 
         <View style={[styles.divider, { backgroundColor: dividerColor }]} />
@@ -1959,6 +1971,7 @@ export default function NbaTeamDetailPanelNative({
           scheduleDifficulty={teamInsights.scheduleDifficulty}
           accent={accent}
           language={lang}
+          onSelectTeam={onSelectTeam}
         />
 
         <View style={[styles.divider, { backgroundColor: dividerColor }]} />
