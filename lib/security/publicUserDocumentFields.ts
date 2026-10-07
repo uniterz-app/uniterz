@@ -32,6 +32,7 @@ export const PUBLIC_USER_PROFILE_FIELDS = [
   "favoriteNbaTeamId",
   "favoriteNbaTeamFanSinceSeason",
   "favoriteNbaPlayers",
+  "visitedArenaIds",
   "profileViewCount",
   "plan",
   "planType",

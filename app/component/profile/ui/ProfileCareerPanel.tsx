@@ -2,12 +2,20 @@
 
 import { useEffect, useMemo, useState } from "react";
 import ProfileEditKinetikGlitchTitle from "@/app/component/profile/edit/ProfileEditKinetikGlitchTitle";
+import ProfileArenaPassportGrid from "@/app/component/profile/ui/ProfileArenaPassportGrid";
+import {
+  CyberSlantedTab,
+  CyberSlantedTabBar,
+  type CyberSlantedTabTheme,
+} from "@/app/component/rankings/CyberSlantedTab";
 import ProfileKinetikPanelFrame from "@/app/component/profile/ui/ProfileKinetikPanelFrame";
 import { jp, nameOxanium, nameRajdhani } from "@/lib/fonts";
 import type { Language } from "@/lib/i18n/language";
 import { resolveLocalizedLang } from "@/lib/i18n/localize";
 import { t } from "@/lib/i18n/t";
 import { profileKinetikPanelCopy } from "@/lib/profile/profileKinetikPanelCopy";
+import type { ArenaPassportId } from "@/lib/profile/arenaPassport";
+import { arenaPassportCopy } from "@/lib/profile/arenaPassportCopy";
 import {
   aggregateCareerAwardsFromBadges,
   type ProfileCareerBadgeLike,
@@ -44,6 +52,20 @@ type Props = {
   planProBgVariant?: ProfilePlanProBgVariant;
   /** CAREER の Since を年月日で出す（登録日） */
   memberSinceMs?: number | null;
+  /** face のみ。あれば CAREER / PASSPORT 切替を出す */
+  arenaPassport?: {
+    visited: readonly ArenaPassportId[];
+    loading: boolean;
+    onToggle: ((arenaId: ArenaPassportId) => Promise<boolean>) | null;
+  } | null;
+};
+
+const PASSPORT_TAB_THEME: CyberSlantedTabTheme = {
+  accent: "#F6C344",
+  inactiveText: "#F6C344",
+  activeText: "#050508",
+  activeShadow:
+    "0 0 10px rgba(246,195,68,0.55), 0 0 22px rgba(246,195,68,0.28)",
 };
 
 type CareerRow = {
@@ -64,6 +86,7 @@ export default function ProfileCareerPanel({
   isPro = false,
   planProBgVariant = PROFILE_PLAN_PRO_BG_DEFAULT,
   memberSinceMs = null,
+  arenaPassport = null,
 }: Props) {
   const msg = t(language);
   const lang = resolveLocalizedLang(language);
@@ -81,6 +104,9 @@ export default function ProfileCareerPanel({
     return keys;
   }, [career]);
 
+  const [faceView, setFaceView] = useState<"career" | "passport">("career");
+  const passportCopy = arenaPassportCopy(lang);
+  const showPassportSwitch = isFace && arenaPassport != null;
   const [viewMode, setViewMode] = useState<"career" | "season">("career");
   const [seasonKey, setSeasonKey] = useState<string>(
     () => seasonKeys[seasonKeys.length - 1] ?? CURRENT_NBA_SEASON_KEY
@@ -159,7 +185,7 @@ export default function ProfileCareerPanel({
     setBoard(prev.board);
   };
 
-  const body = (
+  const careerBody = (
     <div className="relative z-[3] flex min-h-0 flex-1 flex-col">
       <div className="flex flex-wrap items-end justify-between gap-2">
         <div className="min-w-0 flex-1">
@@ -400,6 +426,43 @@ export default function ProfileCareerPanel({
         </>
       )}
     </div>
+  );
+
+  const body = showPassportSwitch ? (
+    <div className="relative z-[3] flex min-h-0 flex-1 flex-col">
+      <div className="mb-1 px-1">
+        <CyberSlantedTabBar fill aria-label={passportCopy.switchAria}>
+          {(
+            [
+              ["career", passportCopy.tabCareer],
+              ["passport", passportCopy.tabPassport],
+            ] as const
+          ).map(([key, label]) => (
+            <CyberSlantedTab
+              key={key}
+              label={label}
+              active={faceView === key}
+              onClick={() => setFaceView(key)}
+              compact
+              theme={PASSPORT_TAB_THEME}
+              role="tab"
+            />
+          ))}
+        </CyberSlantedTabBar>
+      </div>
+      {faceView === "passport" ? (
+        <ProfileArenaPassportGrid
+          language={lang}
+          visited={arenaPassport.visited}
+          loading={arenaPassport.loading}
+          onToggle={arenaPassport.onToggle}
+        />
+      ) : (
+        careerBody
+      )}
+    </div>
+  ) : (
+    careerBody
   );
 
   if (isFace) {

@@ -32,6 +32,8 @@ import { useMyNbaFavorites } from "@/lib/profile/useMyNbaFavorites";
 import { nbaFavoritesEqual } from "@/lib/profile/nbaFavorites";
 import { preferredNbaKinetikPeriod, CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
 import { useUserCareer } from "@/lib/profile/useUserCareer";
+import { useArenaPassport } from "@/lib/profile/useArenaPassport";
+import { saveMeArenaPassportToggle } from "@/lib/api/saveMeArenaPassport";
 
 type Props = {
   layout: "web" | "mobile";
@@ -149,6 +151,9 @@ export default function ProfileKinetikHero({
 
   const { career, loading: careerDocLoading } = useUserCareer(targetUid, {
     enabled: true,
+  });
+  const arenaPassport = useArenaPassport(targetUid, {
+    save: isMe ? saveMeArenaPassportToggle : undefined,
   });
 
   useEffect(() => {
@@ -315,6 +320,15 @@ export default function ProfileKinetikHero({
             isPro={profile.plan === "pro"}
             planProBgVariant={profile.planProBgVariant}
             memberSinceMs={profile.memberSinceMs}
+            arenaPassport={
+              targetUid
+                ? {
+                    visited: arenaPassport.visited,
+                    loading: !arenaPassport.ready,
+                    onToggle: arenaPassport.toggle,
+                  }
+                : null
+            }
           />
         }
       />

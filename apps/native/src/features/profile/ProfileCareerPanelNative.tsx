@@ -36,6 +36,17 @@ import {
 } from "./profileOverviewChartShell";
 import { profileCareerPanelCopy } from "./profileOverviewWidgetsCopy";
 import { resolveLocalizedLang } from "../../../../../lib/i18n/localize";
+import type { ArenaPassportId } from "../../../../../lib/profile/arenaPassport";
+import { arenaPassportCopy } from "../../../../../lib/profile/arenaPassportCopy";
+import ProfileArenaPassportGridNative from "./ProfileArenaPassportGridNative";
+import {
+  CyberSlantedTabBarNative,
+  CyberSlantedTabNative,
+  type CyberSlantedTabThemeNative,
+} from "../rankings/CyberSlantedTabNative";
+
+/** 金は焼き込み素材あり（CyberSlantedTabNative） */
+const PASSPORT_TAB_THEME: CyberSlantedTabThemeNative = { accent: "#F6C344" };
 
 const RAJDHANI = "Rajdhani_600SemiBold";
 const OXANIUM = "Oxanium_700Bold";
@@ -54,6 +65,12 @@ type Props = {
   proSkinActive?: boolean;
   /** CAREER の Since を年月日で出す（登録日） */
   memberSinceMs?: number | null;
+  /** face のみ。あれば CAREER / PASSPORT 切替を出す */
+  arenaPassport?: {
+    visited: readonly ArenaPassportId[];
+    loading: boolean;
+    onToggle: ((arenaId: ArenaPassportId) => Promise<boolean>) | null;
+  } | null;
 };
 
 type CareerRow = { key: string; label: string; value: string };
@@ -69,8 +86,11 @@ export default function ProfileCareerPanelNative({
   planProBgVariant = null,
   proSkinActive = true,
   memberSinceMs = null,
+  arenaPassport = null,
 }: Props) {
   const copy = profileCareerPanelCopy(language);
+  const passportCopy = arenaPassportCopy(language);
+  const [faceView, setFaceView] = useState<"career" | "passport">("career");
   const lang = resolveLocalizedLang(language);
   const isFace = variant === "face";
   const showProSkin = isPro && isFace && proSkinActive && planProBgVariant != null;
@@ -162,7 +182,7 @@ export default function ProfileCareerPanelNative({
     setBoard(prev.board);
   };
 
-  const content = (
+  const careerContent = (
     <>
       {isFace ? (
         <View style={styles.sheetTitleWrap}>
@@ -356,6 +376,48 @@ export default function ProfileCareerPanelNative({
       )}
     </>
   );
+
+  const content =
+    isFace && arenaPassport ? (
+      <>
+        <View
+          style={styles.faceSwitchRow}
+          accessibilityLabel={passportCopy.switchAria}
+        >
+          <CyberSlantedTabBarNative fill>
+            {(
+              [
+                ["career", passportCopy.tabCareer],
+                ["passport", passportCopy.tabPassport],
+              ] as const
+            ).map(([key, label]) => (
+              <CyberSlantedTabNative
+                key={key}
+                label={label}
+                active={faceView === key}
+                onPress={() => setFaceView(key)}
+                compact
+                theme={PASSPORT_TAB_THEME}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: faceView === key }}
+              />
+            ))}
+          </CyberSlantedTabBarNative>
+        </View>
+        {faceView === "passport" ? (
+          <ProfileArenaPassportGridNative
+            language={language}
+            visited={arenaPassport.visited}
+            loading={arenaPassport.loading}
+            onToggle={arenaPassport.onToggle}
+          />
+        ) : (
+          careerContent
+        )}
+      </>
+    ) : (
+      careerContent
+    );
 
   if (isFace) {
     return (
@@ -670,6 +732,10 @@ const styles = StyleSheet.create({
   },
   seasonPillTextActive: {
     color: "rgba(236,254,255,0.95)",
+  },
+  faceSwitchRow: {
+    marginBottom: 4,
+    paddingHorizontal: 4,
   },
   seasonSoon: {
     marginLeft: 4,

@@ -27,6 +27,8 @@ import ProfileKinetikPanelNative from "./ProfileKinetikPanelNative";
 import ProfileKinetikFlipShellNative from "./ProfileKinetikFlipShellNative";
 import ProfileCareerPanelNative from "../ProfileCareerPanelNative";
 import { useUserCareerNative } from "../useUserCareerNative";
+import { useArenaPassport } from "../../../../../../lib/profile/useArenaPassport";
+import { saveMeArenaPassportToggleNative } from "../saveMeArenaPassportNative";
 
 export type ProfileKinetikHeroNativeProps = {
   displayName: string;
@@ -226,6 +228,10 @@ export default function ProfileKinetikHeroNative({
       apiBaseUrl: apiBase,
       enabled: Boolean(targetUid?.trim()),
     });
+  const arenaPassport = useArenaPassport(targetUid, {
+    enabled: careerMounted,
+    save: isMe ? saveMeArenaPassportToggleNative : undefined,
+  });
 
   useEffect(() => {
     if (!targetUid?.trim() || statsLoading) return;
@@ -411,6 +417,15 @@ export default function ProfileKinetikHeroNative({
             planProBgVariant={planProBgVariant}
             proSkinActive={careerMounted}
             memberSinceMs={memberSinceMs}
+            arenaPassport={
+              targetUid?.trim()
+                ? {
+                    visited: arenaPassport.visited,
+                    loading: !arenaPassport.ready,
+                    onToggle: arenaPassport.toggle,
+                  }
+                : null
+            }
           />
         ) : null
       }
