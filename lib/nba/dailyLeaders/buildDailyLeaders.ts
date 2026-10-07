@@ -46,6 +46,8 @@ export type DailyLeadersPayload = {
   /** box が入っている試合数 */
   gamesWithStats: number;
   hasLive: boolean;
+  /** 延期以外の全試合の box が final → 以後この日のスタッツは変わらない */
+  complete: boolean;
   /** その日の試合がすべてプレシーズン */
   preseason: boolean;
   boards: Record<DailyLeaderStatKey, DailyLeaderRow[]>;
@@ -105,11 +107,15 @@ export function buildDailyLeaders(
   let gamesWithStats = 0;
   let hasLive = false;
   let preseasonGames = 0;
+  let scheduledGames = 0;
+  let finalBoxGames = 0;
 
   for (const { id, data } of games) {
     if (String(data.seasonPhase ?? "") === "preseason") preseasonGames += 1;
+    if (data.postponed !== true) scheduledGames += 1;
     const live = normalizeLiveGameStatsDoc(data.liveStats);
     if (!live) continue;
+    if (live.phase === "final" && data.postponed !== true) finalBoxGames += 1;
     const boxCount = live.box.home.length + live.box.away.length;
     if (boxCount === 0) continue;
     gamesWithStats += 1;
@@ -164,6 +170,7 @@ export function buildDailyLeaders(
     gameCount: games.length,
     gamesWithStats,
     hasLive,
+    complete: scheduledGames > 0 && finalBoxGames === scheduledGames,
     preseason: games.length > 0 && preseasonGames === games.length,
     boards,
   };
