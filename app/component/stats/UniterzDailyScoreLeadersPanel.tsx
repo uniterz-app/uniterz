@@ -5,10 +5,12 @@
  * Native `UniterzDailyScoreLeadersPanelNative` 相当
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { motion, useReducedMotion } from "framer-motion";
 import {
   CyberSlantedTab,
   CyberSlantedTabBar,
 } from "@/app/component/rankings/CyberSlantedTab";
+import { restContainer, restItem } from "@/app/component/rankings/anim";
 import { RankingsAvatarCircle } from "@/app/component/rankings/RankingsAvatarCircle";
 import RankingsOpenProLock from "@/app/component/rankings/RankingsOpenProLock";
 import { auth } from "@/lib/firebase";
@@ -48,6 +50,7 @@ export default function UniterzDailyScoreLeadersPanel({
   const copy = useMemo(() => dailyScoreLeadersCopy(lang), [lang]);
   const baseCopy = useMemo(() => dailyLeadersCopy(lang), [lang]);
   const [division, setDivision] = useState<DailyScoreDivision>("standard");
+  const reduceMotion = useReducedMotion();
   const [state, setState] = useState<LoadState>({ kind: "loading" });
 
   const load = useCallback(async () => {
@@ -139,7 +142,13 @@ export default function UniterzDailyScoreLeadersPanel({
       ) : !data ? (
         <div className="py-10" />
       ) : (
-        <ol className="space-y-1.5">
+        <motion.ol
+          key={division}
+          className="space-y-1.5"
+          variants={restContainer}
+          initial={reduceMotion ? "show" : "hidden"}
+          animate="show"
+        >
           {rows.map((r, i) => {
             const rankColor =
               r.rank === 1
@@ -151,7 +160,7 @@ export default function UniterzDailyScoreLeadersPanel({
             const code = getCountryCode({ countryCode: r.countryCode });
             const flagSrc = code ? FLAG_SRC[code] : undefined;
             return (
-              <li key={r.uid}>
+              <motion.li key={r.uid} variants={restItem} custom={i}>
                 <button
                   type="button"
                   onClick={() => onSelectUser?.(r.uid)}
@@ -211,10 +220,10 @@ export default function UniterzDailyScoreLeadersPanel({
                     </span>
                   </span>
                 </button>
-              </li>
+              </motion.li>
             );
           })}
-        </ol>
+        </motion.ol>
       )}
     </div>
   );

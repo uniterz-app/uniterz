@@ -16,6 +16,7 @@ import {
 import { METRIC_FONT, RANK_DISPLAY_FONT } from "../../rankings/rankingsUiTheme";
 import TeamAbbrBadgeNative from "../TeamAbbrBadgeNative";
 import { getUniterzApiBaseUrl } from "../submitPredictionApi";
+import RankingsListEntranceRowNative from "../../rankings/RankingsListEntranceRowNative";
 import { useBottomTabBarInsets } from "../../../navigation/useBottomTabBarInsets";
 import { formatNbaPlayerListName } from "../../../../../../lib/nba/formatNbaPlayerListName";
 import { resolveLocalizedLang } from "../../../../../../lib/i18n/localize";
@@ -27,6 +28,11 @@ import {
   type DailyLeadersPayload,
 } from "../../../../../../lib/nba/dailyLeaders/buildDailyLeaders";
 import { dailyLeadersCopy } from "../../../../../../lib/nba/dailyLeaders/dailyLeadersCopy";
+
+/** Web `restItem`（0.048s 刻み・最大 0.32s・0.32s）と同じ秒数 */
+const LIST_ENTRANCE_STAGGER_MS = 48;
+const LIST_ENTRANCE_MAX_STAGGER_INDEX = 7;
+const LIST_ENTRANCE_DURATION_MS = 320;
 
 const POLL_MS = 60_000;
 
@@ -152,56 +158,63 @@ export default function NbaDailyLeadersPanelNative({
         >
           {rows.map((r, i) => {
             return (
-              <Pressable
+              <RankingsListEntranceRowNative
                 key={`${r.playerId}-${r.gameId}`}
-                onPress={() => onSelectPlayer?.(r.playerId)}
-                accessibilityRole="button"
-                style={({ pressed }) => [
-                  styles.card,
-                  i === 0 && styles.cardTop,
-                  pressed && styles.cardPressed,
-                ]}
+                index={Math.min(i, LIST_ENTRANCE_MAX_STAGGER_INDEX)}
+                entranceKey={stat}
+                staggerMs={LIST_ENTRANCE_STAGGER_MS}
+                durationMs={LIST_ENTRANCE_DURATION_MS}
               >
-                <Text style={[styles.rank, { color: rankColor(i + 1) }]}>
-                  {i + 1}
-                </Text>
-                <View style={styles.who}>
-                  <View style={styles.nameRow}>
-                    <Text style={styles.name} numberOfLines={1}>
-                      {formatNbaPlayerListName(
-                        `${r.firstName} ${r.lastName}`,
-                        r.playerId
-                      )}
-                    </Text>
-                    <TeamAbbrBadgeNative teamId={r.teamId} />
-                  </View>
-                  <View style={styles.subRow}>
-                    <Text style={styles.sub}>
-                      {r.isHome ? "vs" : "@"} {r.oppAbbr}
-                    </Text>
-                    {r.stats ? (
-                      <Text style={styles.sideStats} numberOfLines={1}>
-                        {dailyLeaderSideStats(r.stats, stat).map((s) => (
-                          <Text key={s.key}>
-                            {" · "}
-                            <Text style={styles.sideValue}>{s.value}</Text>{" "}
-                            {s.label}
-                          </Text>
-                        ))}
-                      </Text>
-                    ) : null}
-                    {r.live ? (
-                      <Text style={styles.live}>● {copy.live}</Text>
-                    ) : null}
-                  </View>
-                </View>
-                <View style={styles.valueCol}>
-                  <Text style={[styles.value, i === 0 && styles.valueTop]}>
-                    {r.value}
+                <Pressable
+                  onPress={() => onSelectPlayer?.(r.playerId)}
+                  accessibilityRole="button"
+                  style={({ pressed }) => [
+                    styles.card,
+                    i === 0 && styles.cardTop,
+                    pressed && styles.cardPressed,
+                  ]}
+                >
+                  <Text style={[styles.rank, { color: rankColor(i + 1) }]}>
+                    {i + 1}
                   </Text>
-                  <Text style={styles.valueLabel}>{statLabel}</Text>
-                </View>
-              </Pressable>
+                  <View style={styles.who}>
+                    <View style={styles.nameRow}>
+                      <Text style={styles.name} numberOfLines={1}>
+                        {formatNbaPlayerListName(
+                          `${r.firstName} ${r.lastName}`,
+                          r.playerId
+                        )}
+                      </Text>
+                      <TeamAbbrBadgeNative teamId={r.teamId} />
+                    </View>
+                    <View style={styles.subRow}>
+                      <Text style={styles.sub}>
+                        {r.isHome ? "vs" : "@"} {r.oppAbbr}
+                      </Text>
+                      {r.stats ? (
+                        <Text style={styles.sideStats} numberOfLines={1}>
+                          {dailyLeaderSideStats(r.stats, stat).map((s) => (
+                            <Text key={s.key}>
+                              {" · "}
+                              <Text style={styles.sideValue}>{s.value}</Text>{" "}
+                              {s.label}
+                            </Text>
+                          ))}
+                        </Text>
+                      ) : null}
+                      {r.live ? (
+                        <Text style={styles.live}>● {copy.live}</Text>
+                      ) : null}
+                    </View>
+                  </View>
+                  <View style={styles.valueCol}>
+                    <Text style={[styles.value, i === 0 && styles.valueTop]}>
+                      {r.value}
+                    </Text>
+                    <Text style={styles.valueLabel}>{statLabel}</Text>
+                  </View>
+                </Pressable>
+              </RankingsListEntranceRowNative>
             );
           })}
         </ScrollView>

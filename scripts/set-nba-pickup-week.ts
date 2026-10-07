@@ -22,7 +22,7 @@
  *   - 新 gameIds に pickupWeekKey を付与
  */
 
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
   assertWeekKey,
@@ -43,6 +43,38 @@ function argValue(flag: string): string | null {
   const i = process.argv.indexOf(flag);
   if (i < 0) return null;
   return process.argv[i + 1] ?? null;
+}
+
+/** service-account.json（または GOOGLE_APPLICATION_CREDENTIALS）→ 無ければ .env.local の FIREBASE_* */
+function loadServiceAccount(): Record<string, string> {
+  const jsonPath =
+    process.env.GOOGLE_APPLICATION_CREDENTIALS ??
+    resolve(process.cwd(), "service-account.json");
+  if (existsSync(jsonPath)) {
+    return JSON.parse(readFileSync(jsonPath, "utf8"));
+  }
+  const envPath = resolve(process.cwd(), ".env.local");
+  if (existsSync(envPath)) {
+    for (const line of readFileSync(envPath, "utf8").split("\n")) {
+      const m = line.match(/^([A-Z0-9_]+)=(.*)$/);
+      if (!m || process.env[m[1]]) continue;
+      let v = m[2].trim();
+      if (v.startsWith('"') && v.endsWith('"')) v = v.slice(1, -1);
+      process.env[m[1]] = v;
+    }
+  }
+  const { FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY } =
+    process.env;
+  if (!FIREBASE_PROJECT_ID || !FIREBASE_CLIENT_EMAIL || !FIREBASE_PRIVATE_KEY) {
+    throw new Error(
+      "Firebase Admin の認証情報がありません（service-account.json か .env.local の FIREBASE_*）"
+    );
+  }
+  return {
+    projectId: FIREBASE_PROJECT_ID,
+    clientEmail: FIREBASE_CLIENT_EMAIL,
+    privateKey: FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n"),
+  };
 }
 
 function uniqueIds(ids: string[]): string[] {
@@ -80,15 +112,10 @@ async function main() {
     return;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const admin = require("firebase-admin");
-  const serviceAccountPath =
-    process.env.GOOGLE_APPLICATION_CREDENTIALS ??
-    resolve(process.cwd(), "service-account.json");
-  const serviceAccount = JSON.parse(readFileSync(serviceAccountPath, "utf8"));
+  const admin = (await import("firebase-admin")).default;
   if (!admin.apps.length) {
     admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
+      credential: admin.credential.cert(loadServiceAccount()),
     });
   }
   const db = admin.firestore();

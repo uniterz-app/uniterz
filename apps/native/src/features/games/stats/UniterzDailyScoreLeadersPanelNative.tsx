@@ -11,6 +11,7 @@ import { rankingFlagImageUri } from "../../rankings/rankingFlagUri";
 import { rankingsTexts } from "../../rankings/rankingsTexts";
 import { METRIC_FONT, RANK_DISPLAY_FONT } from "../../rankings/rankingsUiTheme";
 import { getUniterzApiBaseUrl } from "../submitPredictionApi";
+import RankingsListEntranceRowNative from "../../rankings/RankingsListEntranceRowNative";
 import { auth } from "../../../lib/firebase";
 import { openProSubscribeNative } from "../../../navigation/navigationRef";
 import { useBottomTabBarInsets } from "../../../navigation/useBottomTabBarInsets";
@@ -34,6 +35,11 @@ function rankColor(rank: number): string {
   if (rank <= 3) return CYBER_TAB_CYAN;
   return "rgba(255,255,255,0.45)";
 }
+
+/** Web `restItem`（0.048s 刻み・最大 0.32s・0.32s）と同じ秒数 */
+const LIST_ENTRANCE_STAGGER_MS = 48;
+const LIST_ENTRANCE_MAX_STAGGER_INDEX = 7;
+const LIST_ENTRANCE_DURATION_MS = 320;
 
 type LoadState =
   | { kind: "loading" }
@@ -167,42 +173,49 @@ export default function UniterzDailyScoreLeadersPanelNative({
             { paddingBottom: bottomContentReserveY + 12 },
           ]}
         >
-          {rows.map((r) => {
+          {rows.map((r, i) => {
             const name = r.displayName || r.handle || "—";
             const flagUri = rankingFlagImageUri(r.countryCode ?? undefined);
             return (
-              <Pressable
+              <RankingsListEntranceRowNative
                 key={r.uid}
-                onPress={() => onSelectUser?.(r)}
-                accessibilityRole="button"
-                style={({ pressed }) => [
-                  styles.card,
-                  r.rank === 1 && styles.cardTop,
-                  pressed && styles.cardPressed,
-                ]}
+                index={Math.min(i, LIST_ENTRANCE_MAX_STAGGER_INDEX)}
+                entranceKey={division}
+                staggerMs={LIST_ENTRANCE_STAGGER_MS}
+                durationMs={LIST_ENTRANCE_DURATION_MS}
               >
-                <Text style={[styles.rank, { color: rankColor(r.rank) }]}>
-                  {r.rank}
-                </Text>
-                <RankingsAvatarNative photoURL={r.photoURL} label={name} size={36} square />
-                <View style={styles.who}>
-                  <Text style={styles.name} numberOfLines={1}>
-                    {name}
+                <Pressable
+                  onPress={() => onSelectUser?.(r)}
+                  accessibilityRole="button"
+                  style={({ pressed }) => [
+                    styles.card,
+                    r.rank === 1 && styles.cardTop,
+                    pressed && styles.cardPressed,
+                  ]}
+                >
+                  <Text style={[styles.rank, { color: rankColor(r.rank) }]}>
+                    {r.rank}
                   </Text>
-                  <View style={styles.subRow}>
-                    {flagUri ? (
-                      <Image source={{ uri: flagUri }} style={styles.flag} resizeMode="cover" />
-                    ) : null}
-                    <Text style={styles.subMuted}>{copy.postsLabel(r.posts)}</Text>
+                  <RankingsAvatarNative photoURL={r.photoURL} label={name} size={36} square />
+                  <View style={styles.who}>
+                    <Text style={styles.name} numberOfLines={1}>
+                      {name}
+                    </Text>
+                    <View style={styles.subRow}>
+                      {flagUri ? (
+                        <Image source={{ uri: flagUri }} style={styles.flag} resizeMode="cover" />
+                      ) : null}
+                      <Text style={styles.subMuted}>{copy.postsLabel(r.posts)}</Text>
+                    </View>
                   </View>
-                </View>
-                <View style={styles.valueCol}>
-                  <Text style={[styles.value, r.rank === 1 && styles.valueTop]}>
-                    {formatDailyScorePoints(r.points)}
-                  </Text>
-                  <Text style={styles.valueLabel}>{copy.pointsUnit}</Text>
-                </View>
-              </Pressable>
+                  <View style={styles.valueCol}>
+                    <Text style={[styles.value, r.rank === 1 && styles.valueTop]}>
+                      {formatDailyScorePoints(r.points)}
+                    </Text>
+                    <Text style={styles.valueLabel}>{copy.pointsUnit}</Text>
+                  </View>
+                </Pressable>
+              </RankingsListEntranceRowNative>
             );
           })}
         </ScrollView>

@@ -5,10 +5,12 @@
  * Native `NbaDailyLeadersPanelNative` 相当
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { motion, useReducedMotion } from "framer-motion";
 import {
   CyberSlantedTab,
   CyberSlantedTabBar,
 } from "@/app/component/rankings/CyberSlantedTab";
+import { restContainer, restItem } from "@/app/component/rankings/anim";
 import TeamAbbrBadge from "@/app/component/games/TeamAbbrBadge";
 import { nameBebas, nameOxanium } from "@/lib/fonts";
 import { resolveLocalizedLang } from "@/lib/i18n/localize";
@@ -40,6 +42,7 @@ export default function NbaDailyLeadersPanel({
     () => dailyLeadersCopy(resolveLocalizedLang(language)),
     [language]
   );
+  const reduceMotion = useReducedMotion();
   const [stat, setStat] = useState<DailyLeaderStatKey>("pts");
   const [data, setData] = useState<DailyLeadersPayload | null>(null);
   const [failed, setFailed] = useState(false);
@@ -115,12 +118,18 @@ export default function NbaDailyLeadersPanel({
       ) : !data ? (
         <div className="py-10" />
       ) : (
-        <ol className="space-y-1.5">
+        <motion.ol
+          key={stat}
+          className="space-y-1.5"
+          variants={restContainer}
+          initial={reduceMotion ? "show" : "hidden"}
+          animate="show"
+        >
           {rows.map((r, i) => {
             const rankColor =
               i === 0 ? "#FCD34D" : i < 3 ? "#00F5FF" : "rgba(255,255,255,0.45)";
             return (
-              <li key={`${r.playerId}-${r.gameId}`}>
+              <motion.li key={`${r.playerId}-${r.gameId}`} variants={restItem} custom={i}>
                 <button
                   type="button"
                   onClick={() => onSelectPlayer?.(r.playerId)}
@@ -187,10 +196,10 @@ export default function NbaDailyLeadersPanel({
                     </span>
                   </span>
                 </button>
-              </li>
+              </motion.li>
             );
           })}
-        </ol>
+        </motion.ol>
       )}
     </div>
   );
