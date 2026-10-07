@@ -1,13 +1,6 @@
 /** Web `ProfileArenaPassportGrid` 相当 */
 import { useState } from "react";
-import {
-  Image,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import {
   ARENA_PASSPORT_BADGE_ASPECT,
   ARENA_PASSPORT_ROWS,
@@ -40,12 +33,19 @@ export default function ProfileArenaPassportGridNative({
   const copy = arenaPassportCopy(language);
   const visitedSet = new Set(visited);
   const [saveFailed, setSaveFailed] = useState(false);
-  const [gridWidth, setGridWidth] = useState(0);
-  /** 横幅いっぱいだと大きすぎるので少し絞る。収まらない分は縦スクロール */
+  const [area, setArea] = useState({ width: 0, height: 0 });
+  /** 裏面は表と同じ高さで固定。横幅の 86% を上限に、高さにも収まるサイズ */
   const cols = ARENA_PASSPORT_ROWS[0]?.length ?? 5;
+  const rows = ARENA_PASSPORT_ROWS.length;
   const badgeWidth = Math.max(
     0,
-    Math.floor(((gridWidth - GAP * (cols - 1)) / cols) * BADGE_WIDTH_RATIO)
+    Math.floor(
+      Math.min(
+        ((area.width - GAP * (cols - 1)) / cols) * BADGE_WIDTH_RATIO,
+        ((area.height - GAP * (rows - 1)) / rows - CITY_H) *
+          ARENA_PASSPORT_BADGE_ASPECT
+      )
+    )
   );
 
   const handleToggle = async (id: ArenaPassportId) => {
@@ -56,12 +56,7 @@ export default function ProfileArenaPassportGridNative({
   };
 
   return (
-    <ScrollView
-      style={styles.root}
-      contentContainerStyle={styles.scrollContent}
-      nestedScrollEnabled
-      showsVerticalScrollIndicator={false}
-    >
+    <View style={styles.root}>
       <View style={styles.titleRow}>
         <Text style={styles.title}>{copy.title}</Text>
         <Text style={styles.count}>
@@ -71,7 +66,10 @@ export default function ProfileArenaPassportGridNative({
 
       <View
         style={styles.grid}
-        onLayout={(e) => setGridWidth(e.nativeEvent.layout.width)}
+        onLayout={(e) => {
+          const { width, height } = e.nativeEvent.layout;
+          setArea({ width, height });
+        }}
       >
         {badgeWidth > 0
           ? ARENA_PASSPORT_ROWS.map((row, rowIndex) => (
@@ -135,16 +133,13 @@ export default function ProfileArenaPassportGridNative({
       ) : null}
 
       <Text style={styles.disclaimer}>{copy.disclaimer}</Text>
-    </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: 8,
   },
   titleRow: {
     marginTop: 8,
@@ -167,8 +162,11 @@ const styles = StyleSheet.create({
     fontVariant: ["tabular-nums"],
   },
   grid: {
-    marginTop: 12,
+    flex: 1,
+    minHeight: 0,
+    marginTop: 10,
     gap: GAP,
+    justifyContent: "center",
   },
   row: {
     flexDirection: "row",
