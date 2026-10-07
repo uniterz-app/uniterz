@@ -61,7 +61,7 @@ export default function ProfileArenaPassportGrid({
 
       <div className="mt-3 flex flex-col gap-1.5">
         {ARENA_PASSPORT_ROWS.map((row, rowIndex) => (
-          <div key={rowIndex} className="grid grid-cols-5 gap-1.5">
+          <div key={rowIndex} className="grid grid-cols-5 gap-1">
             {row.map((arena) => {
               const isVisited = visitedSet.has(arena.id);
               const label = copy.badgeAria(arena.city, isVisited);
@@ -70,8 +70,8 @@ export default function ProfileArenaPassportGrid({
                   <Image
                     src={arenaPassportBadgeWebSrc(arena.id, isVisited)}
                     alt={label}
-                    width={240}
-                    height={270}
+                    width={206}
+                    height={254}
                     sizes="80px"
                     className={[
                       "h-auto w-full select-none transition-opacity duration-200",

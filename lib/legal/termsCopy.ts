@@ -445,10 +445,10 @@ export const TERMS_SECTIONS: readonly LegalSection[] = [
     title: { ja: "第16条（知的財産権）", en: "Article 16 (Intellectual Property)" },
     paragraphs: {
       ja: [
-        "本サービスに関する知的財産権は、別途合意した場合を除き、全て当社又は当社に利用を許諾しているものに帰属しており、利用契約は本サービスに関する知的財産権の使用許諾を意味するものではありません。NBA、チーム、選手等の名称・ロゴは各権利者に帰属します。本サービスはNBA又はその関係会社の公式サービスではありません。",
+        "本サービスに関する知的財産権は、別途合意した場合を除き、全て当社又は当社に利用を許諾しているものに帰属しており、利用契約は本サービスに関する知的財産権の使用許諾を意味するものではありません。NBA、チーム、選手等の名称・ロゴは各権利者に帰属します。本サービスはNBA又はその関係会社の公式サービスではありません。本サービス内のアリーナ等のイラストは各地域をイメージした当社のオリジナル作品であり、各施設の所有者・運営者とは提携・公認関係にありません。",
       ],
       en: [
-        "Except as separately agreed, IP in the Service belongs to us or our licensors; the User Agreement is not a license to that IP. NBA, team, and player names and logos belong to their owners. The Service is not an official NBA service or affiliate.",
+        "Except as separately agreed, IP in the Service belongs to us or our licensors; the User Agreement is not a license to that IP. NBA, team, and player names and logos belong to their owners. The Service is not an official NBA service or affiliate. Arena and similar illustrations in the Service are our original works inspired by each region, and we are not affiliated with or endorsed by the owners or operators of those venues.",
       ],
     },
   },

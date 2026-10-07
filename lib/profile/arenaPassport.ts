@@ -105,4 +105,4 @@ export function arenaPassportBadgeWebSrc(
 }
 
 /** バッジ画像のアスペクト（幅 / 高さ） */
-export const ARENA_PASSPORT_BADGE_ASPECT = 240 / 270;
+export const ARENA_PASSPORT_BADGE_ASPECT = 206 / 254;
