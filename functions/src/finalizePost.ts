@@ -225,6 +225,8 @@ export async function finalizePost({
         countsForRanking,
         seasonPhase: game?.seasonPhase ?? null,
         exactHit,
+        scorerHit: goalScorerBonus > 0,
+        upsetHit: result.upsetHit === true,
         activeWinStreak,
       });
 

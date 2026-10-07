@@ -1,5 +1,5 @@
 /**
- * Web 相当なし — DEV 用 Pro Skin 新規追加分（パーフェクト 3 / 10）。
+ * Web 相当なし — DEV 用 Pro Skin 新規追加分（連続予想日数 7〜100 · 鉱石 → 宝石）。
  * Profile サイドメニュー DEV → Candidate Pro Skin
  */
 import { ScrollView, StyleSheet, Text, View } from "react-native";
@@ -10,7 +10,7 @@ import { CyberRankingListRowNative } from "../../rankings/CyberRankingListRowNat
 import { OXANIUM_800 } from "../reports/reportThemeNative";
 import { PROFILE_EDIT_KINETIK_MOCK } from "../../../../../../app/component/profile/edit/profileEditKinetikTypes";
 import {
-  PROFILE_PLAN_PRO_BEAST_BG_ROUND12,
+  PROFILE_PLAN_PRO_BEAST_BG_ROUND14,
   PROFILE_PLAN_PRO_BEAST_BG_VARIANTS,
   type ProfilePlanProBeastBgVariant,
 } from "@/lib/profile/profilePlanProBeastBgVariants";
@@ -68,8 +68,8 @@ export default function CandidateProSkinPreviewScreenNative({
   return (
     <MobilePageShell
       title="Candidate"
-      eyebrow={`DEV · CANDIDATE ×${PROFILE_PLAN_PRO_BEAST_BG_ROUND12.length}`}
-      subtitle={ja ? "新スキン: パーフェクト 3 回 Shoals / 10 回 Uranus" : "New skins: Perfect 3 Shoals / 10 Uranus"}
+      eyebrow={`DEV · CANDIDATE ×${PROFILE_PLAN_PRO_BEAST_BG_ROUND14.length}`}
+      subtitle={ja ? "新スキン: 最多得点者 3〜100（炎）/ UPSET 3〜50（雷）" : "New skins: top scorer 3–100 (fire) / upset 3–50 (storm)"}
       onClose={onClose}
       appBackground
     >
@@ -77,7 +77,7 @@ export default function CandidateProSkinPreviewScreenNative({
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
       >
-        {PROFILE_PLAN_PRO_BEAST_BG_ROUND12.map((id, index) => {
+        {PROFILE_PLAN_PRO_BEAST_BG_ROUND14.map((id, index) => {
           const meta = PROFILE_PLAN_PRO_BEAST_BG_VARIANTS.find((v) => v.id === id)!;
           return (
             <View key={id} style={index > 0 ? styles.blockSpaced : undefined}>

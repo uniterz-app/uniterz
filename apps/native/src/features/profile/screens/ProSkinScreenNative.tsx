@@ -153,6 +153,9 @@ function SkinThumbNative({
     posts: number;
     exactHits: number;
     maxWinStreak: number;
+    maxPredictDayStreak: number;
+    scorerHits: number;
+    upsetHits: number;
     streakRuns: Record<string, number>;
     referralCompletedCount: number;
     periodWins: Record<string, number>;
@@ -301,6 +304,9 @@ export default function ProSkinScreenNative() {
     posts: 0,
     exactHits: 0,
     maxWinStreak: 0,
+    maxPredictDayStreak: 0,
+    scorerHits: 0,
+    upsetHits: 0,
     streakRuns: {} as Record<string, number>,
     referralCompletedCount: 0,
     periodWins: {} as Record<string, number>,
@@ -354,6 +360,9 @@ export default function ProSkinScreenNative() {
           posts: status.progress?.posts ?? 0,
           exactHits: status.progress?.exactHits ?? 0,
           maxWinStreak: status.progress?.maxWinStreak ?? 0,
+          maxPredictDayStreak: status.progress?.maxPredictDayStreak ?? 0,
+          scorerHits: status.progress?.scorerHits ?? 0,
+          upsetHits: status.progress?.upsetHits ?? 0,
           streakRuns: status.progress?.streakRuns ?? {},
           referralCompletedCount:
             status.progress?.referralCompletedCount ?? 0,

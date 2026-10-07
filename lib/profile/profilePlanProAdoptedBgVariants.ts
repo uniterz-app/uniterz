@@ -223,7 +223,7 @@ type AdoptedSpec = {
   family: ProfilePlanProAdoptedFamily;
 };
 
-/** 採用カタログ — 解放カタログ順（即解放11 → マイルストーン47）。詳細は `proSkinMilestoneCatalog.ts` */
+/** 採用カタログ — 解放カタログ順（即解放11 → マイルストーン52）。詳細は `proSkinMilestoneCatalog.ts` */
 const ADOPTED_SPECS: readonly AdoptedSpec[] = [
   // Pro 即解放 ×11
   { id: "atmos", name: "Atmos", category: "cyber", family: "atmos" },
@@ -266,6 +266,24 @@ const ADOPTED_SPECS: readonly AdoptedSpec[] = [
   { id: "beast-rings", name: "Rings", category: "cosmos", family: "beast" },
   { id: "beast-saturn", name: "Saturn", category: "cosmos", family: "beast" },
   { id: "beast-pluto", name: "Pluto", category: "cosmos", family: "beast" },
+  // 連続予想日数 = 鉱石 → 宝石
+  { id: "beast-ore", name: "Raw Ore", category: "material", family: "beast" },
+  { id: "beast-geode", name: "Geode", category: "material", family: "beast" },
+  { id: "beast-malachite", name: "Malachite", category: "material", family: "beast" },
+  { id: "beast-goldvein", name: "Gold Vein", category: "material", family: "beast" },
+  { id: "beast-brilliant", name: "Brilliant", category: "material", family: "beast" },
+  // 最多得点者的中 = 炎の温度（赤 → 青）
+  { id: "beast-ember", name: "Ember", category: "cosmos", family: "beast" },
+  { id: "beast-blaze", name: "Blaze", category: "cosmos", family: "beast" },
+  { id: "beast-inferno", name: "Inferno", category: "cosmos", family: "beast" },
+  { id: "beast-whiteheat", name: "White Heat", category: "cosmos", family: "beast" },
+  { id: "beast-blueflame", name: "Blue Flame", category: "cosmos", family: "beast" },
+  // 番狂わせ的中 = 雷の成長
+  { id: "beast-static", name: "Static", category: "cosmos", family: "beast" },
+  { id: "beast-bolt", name: "Bolt", category: "cosmos", family: "beast" },
+  { id: "beast-stormcloud", name: "Stormcloud", category: "cosmos", family: "beast" },
+  { id: "beast-tempest", name: "Tempest", category: "cosmos", family: "beast" },
+  { id: "beast-plasma", name: "Plasma", category: "cosmos", family: "beast" },
   // 順位 1回 = 称号
   { id: "beast-tessera", name: "Tessera", category: "geometry", family: "beast" },
   { id: "beast-jagarmor", name: "Jagged", category: "material", family: "beast" },

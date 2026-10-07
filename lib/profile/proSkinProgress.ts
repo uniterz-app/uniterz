@@ -26,6 +26,16 @@ export type ProSkinProgressSnapshot = {
   exactHits: number;
   /** 対象シーズン内の最大連勝 */
   maxWinStreak: number;
+  /** 対象シーズン内の最長連続予想日数（試合がない日は飛ばす） */
+  maxPredictDayStreak?: number;
+  /** 現在の連続予想日数 */
+  predictDayStreak?: number;
+  /** 最後に予想した試合日（Eastern YYYY-MM-DD） */
+  lastPredictDayKey?: string;
+  /** 対象シーズン内の最多得点者的中回数 */
+  scorerHits?: number;
+  /** 対象シーズン内の番狂わせ的中回数 */
+  upsetHits?: number;
   /** 連勝が N に届いた回数（キー: "5" / "10"） */
   streakRuns?: Record<string, number>;
   /** 直近 settle 時点の現在連勝（streakRuns の跨ぎ判定用） */
@@ -66,6 +76,9 @@ export function emptyProSkinProgressSnapshot(
     posts: 0,
     exactHits: 0,
     maxWinStreak: 0,
+    maxPredictDayStreak: 0,
+    scorerHits: 0,
+    upsetHits: 0,
     streakRuns: {},
     periodWins: {},
   };
@@ -84,6 +97,12 @@ export function parseProSkinProgressSnapshot(
     posts: safeInt(o.posts),
     exactHits: safeInt(o.exactHits),
     maxWinStreak: safeInt(o.maxWinStreak),
+    maxPredictDayStreak: safeInt(o.maxPredictDayStreak),
+    predictDayStreak: safeInt(o.predictDayStreak),
+    lastPredictDayKey:
+      typeof o.lastPredictDayKey === "string" ? o.lastPredictDayKey : undefined,
+    scorerHits: safeInt(o.scorerHits),
+    upsetHits: safeInt(o.upsetHits),
     streakRuns: parsePeriodWins(o.streakRuns),
     lastActiveWinStreak: safeInt(o.lastActiveWinStreak),
     periodWins: parsePeriodWins(o.periodWins),
@@ -105,6 +124,9 @@ export function progressFromProSkinSnapshot(
       posts: 0,
       exactHits: 0,
       maxWinStreak: 0,
+      maxPredictDayStreak: 0,
+      scorerHits: 0,
+      upsetHits: 0,
       streakRuns: {},
       weeklyRanks: { ...EMPTY_PRO_SKIN_RANK_MAP },
       monthlyRanks: { ...EMPTY_PRO_SKIN_RANK_MAP },
@@ -118,6 +140,9 @@ export function progressFromProSkinSnapshot(
     posts: snap.posts,
     exactHits: snap.exactHits,
     maxWinStreak: snap.maxWinStreak,
+    maxPredictDayStreak: snap.maxPredictDayStreak ?? 0,
+    scorerHits: snap.scorerHits ?? 0,
+    upsetHits: snap.upsetHits ?? 0,
     streakRuns: { ...(snap.streakRuns ?? {}) },
     weeklyRanks: { ...EMPTY_PRO_SKIN_RANK_MAP },
     monthlyRanks: { ...EMPTY_PRO_SKIN_RANK_MAP },
@@ -141,7 +166,16 @@ export function proSkinUnlockRuleHasProgressBar(
   rule: ProSkinUnlockRule
 ): rule is Extract<
   ProSkinUnlockRule,
-  | { kind: "streak" | "posts" | "exactHits" | "referralCompleted" }
+  | {
+      kind:
+        | "streak"
+        | "posts"
+        | "exactHits"
+        | "predictDays"
+        | "scorerHits"
+        | "upsetHits"
+        | "referralCompleted";
+    }
   | { kind: "streakRuns" }
   | { kind: "periodWins" }
 > {
@@ -150,6 +184,9 @@ export function proSkinUnlockRuleHasProgressBar(
     rule.kind === "streakRuns" ||
     rule.kind === "posts" ||
     rule.kind === "exactHits" ||
+    rule.kind === "predictDays" ||
+    rule.kind === "scorerHits" ||
+    rule.kind === "upsetHits" ||
     rule.kind === "referralCompleted" ||
     rule.kind === "periodWins"
   );
@@ -170,6 +207,9 @@ export function proSkinMilestoneProgressBar(
     | "posts"
     | "exactHits"
     | "maxWinStreak"
+    | "maxPredictDayStreak"
+    | "scorerHits"
+    | "upsetHits"
     | "streakRuns"
     | "referralCompletedCount"
     | "periodWins"
@@ -234,6 +274,45 @@ export function proSkinMilestoneProgressBar(
         fr: "perfect",
       });
       break;
+    case "predictDays":
+      current = progress.maxPredictDayStreak;
+      target = rule.threshold;
+      unit = L(lang, {
+        ja: "日連続",
+        en: "day streak",
+        ko: "일 연속",
+        zh: "天连续",
+        es: "días seguidos",
+        pt: "dias seguidos",
+        fr: "jours d’affilée",
+      });
+      break;
+    case "scorerHits":
+      current = progress.scorerHits;
+      target = rule.threshold;
+      unit = L(lang, {
+        ja: "最多得点者",
+        en: "top scorer",
+        ko: "최다 득점자",
+        zh: "最佳得分手",
+        es: "máx. anotador",
+        pt: "cestinha",
+        fr: "meilleur marqueur",
+      });
+      break;
+    case "upsetHits":
+      current = progress.upsetHits;
+      target = rule.threshold;
+      unit = L(lang, {
+        ja: "UPSET",
+        en: "upsets",
+        ko: "UPSET",
+        zh: "UPSET",
+        es: "upsets",
+        pt: "upsets",
+        fr: "upsets",
+      });
+      break;
     case "referralCompleted":
       current = progress.referralCompletedCount;
       target = rule.threshold;
@@ -284,6 +363,9 @@ export function proSkinMilestoneBarForId(
     | "posts"
     | "exactHits"
     | "maxWinStreak"
+    | "maxPredictDayStreak"
+    | "scorerHits"
+    | "upsetHits"
     | "streakRuns"
     | "referralCompletedCount"
     | "periodWins"
@@ -311,6 +393,21 @@ export function listThresholdUnlockIdsFromProgress(
     } else if (
       row.kind === "exactHits" &&
       progress.exactHits >= row.threshold
+    ) {
+      out.push(id);
+    } else if (
+      row.kind === "predictDays" &&
+      progress.maxPredictDayStreak >= row.threshold
+    ) {
+      out.push(id);
+    } else if (
+      row.kind === "scorerHits" &&
+      progress.scorerHits >= row.threshold
+    ) {
+      out.push(id);
+    } else if (
+      row.kind === "upsetHits" &&
+      progress.upsetHits >= row.threshold
     ) {
       out.push(id);
     }

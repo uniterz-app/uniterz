@@ -236,6 +236,9 @@ function CatalogTile({
     | "posts"
     | "exactHits"
     | "maxWinStreak"
+    | "maxPredictDayStreak"
+    | "scorerHits"
+    | "upsetHits"
     | "streakRuns"
     | "referralCompletedCount"
     | "periodWins"
@@ -423,6 +426,9 @@ export default function ProfilePlanProSkinPicker({
       | "posts"
       | "exactHits"
       | "maxWinStreak"
+      | "maxPredictDayStreak"
+      | "scorerHits"
+      | "upsetHits"
     | "streakRuns"
       | "referralCompletedCount"
       | "periodWins"
@@ -431,6 +437,9 @@ export default function ProfilePlanProSkinPicker({
     posts: 0,
     exactHits: 0,
     maxWinStreak: 0,
+    maxPredictDayStreak: 0,
+    scorerHits: 0,
+    upsetHits: 0,
     streakRuns: {},
     referralCompletedCount: 0,
     periodWins: {},
@@ -493,6 +502,9 @@ export default function ProfilePlanProSkinPicker({
           posts: status.progress?.posts ?? 0,
           exactHits: status.progress?.exactHits ?? 0,
           maxWinStreak: status.progress?.maxWinStreak ?? 0,
+          maxPredictDayStreak: status.progress?.maxPredictDayStreak ?? 0,
+          scorerHits: status.progress?.scorerHits ?? 0,
+          upsetHits: status.progress?.upsetHits ?? 0,
           streakRuns: status.progress?.streakRuns ?? {},
           referralCompletedCount:
             status.progress?.referralCompletedCount ?? 0,

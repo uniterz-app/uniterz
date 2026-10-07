@@ -89,7 +89,25 @@ export type ProfilePlanProBeastBgVariant =
   | "beast-milkyway"
   /** パーフェクト 3 / 10 */
   | "beast-shoals"
-  | "beast-uranus";
+  | "beast-uranus"
+  /** 連続予想日数 7 / 14 / 30 / 60 / 100（鉱石 → 宝石） */
+  | "beast-ore"
+  | "beast-geode"
+  | "beast-malachite"
+  | "beast-goldvein"
+  | "beast-brilliant"
+  /** 最多得点者的中 3 / 10 / 25 / 50 / 100（炎の温度 赤 → 青） */
+  | "beast-ember"
+  | "beast-blaze"
+  | "beast-inferno"
+  | "beast-whiteheat"
+  | "beast-blueflame"
+  /** 番狂わせ的中 3 / 10 / 20 / 35 / 50（雷の成長） */
+  | "beast-static"
+  | "beast-bolt"
+  | "beast-stormcloud"
+  | "beast-tempest"
+  | "beast-plasma";
 
 export type ProfilePlanProBeastBgMeta = {
   id: ProfilePlanProBeastBgVariant;
@@ -825,6 +843,126 @@ export const PROFILE_PLAN_PRO_BEAST_BG_VARIANTS: ProfilePlanProBeastBgMeta[] = [
     swatch:
       "linear-gradient(150deg, #010104, #0a1024 40%, #90b0f066 58%, #010102)",
   },
+  {
+    id: "beast-ore",
+    label: "Raw Ore",
+    tag: "原石",
+    description: "黒い岩肌に金の粒がわずかに光る原石。",
+    swatch:
+      "linear-gradient(150deg, #030304, #1a1a1e 40%, #8a7a5066 58%, #020203)",
+  },
+  {
+    id: "beast-geode",
+    label: "Geode",
+    tag: "晶洞",
+    description: "紫水晶の結晶がびっしり並ぶ晶洞の内側。",
+    swatch:
+      "linear-gradient(150deg, #030108, #20103a 40%, #9060d066 58%, #020104)",
+  },
+  {
+    id: "beast-malachite",
+    label: "Malachite",
+    tag: "研磨",
+    description: "磨き上げた孔雀石。深緑がうねる縞模様。",
+    swatch:
+      "linear-gradient(150deg, #010604, #06301e 40%, #30b07066 58%, #010302)",
+  },
+  {
+    id: "beast-goldvein",
+    label: "Gold Vein",
+    tag: "金脈",
+    description: "黒い岩を走る光る金の鉱脈。",
+    swatch:
+      "linear-gradient(150deg, #050402, #1a1408 40%, #e0b04066 58%, #030201)",
+  },
+  {
+    id: "beast-brilliant",
+    label: "Brilliant",
+    tag: "ダイヤモンド",
+    description: "ブリリアントカットのダイヤ。カット面のきらめきと虹色の分光。",
+    swatch:
+      "linear-gradient(150deg, #020306, #1a2030 40%, #d0e8ff66 58%, #020204)",
+  },
+  {
+    id: "beast-ember",
+    label: "Ember",
+    tag: "赤い炎",
+    description: "闇でくすぶる深紅の炎と火の粉。",
+    swatch:
+      "linear-gradient(150deg, #050101, #2a0606 40%, #c0202066 58%, #030101)",
+  },
+  {
+    id: "beast-blaze",
+    label: "Blaze",
+    tag: "橙の炎",
+    description: "両脇から燃え上がるオレンジの炎。",
+    swatch:
+      "linear-gradient(150deg, #060201, #301204 40%, #ff702066 58%, #030101)",
+  },
+  {
+    id: "beast-inferno",
+    label: "Inferno",
+    tag: "黄の炎",
+    description: "金色に揺らぐ高温の炎と舞う火花。",
+    swatch:
+      "linear-gradient(150deg, #060401, #302006 40%, #ffd03066 58%, #030201)",
+  },
+  {
+    id: "beast-whiteheat",
+    label: "White Heat",
+    tag: "白い炎",
+    description: "白熱して光る、さらに高温の炎。",
+    swatch:
+      "linear-gradient(150deg, #040405, #24242a 40%, #f0f0f866 58%, #020203)",
+  },
+  {
+    id: "beast-blueflame",
+    label: "Blue Flame",
+    tag: "青い炎",
+    description: "最も高温の青白い炎。",
+    swatch:
+      "linear-gradient(150deg, #010208, #061440 40%, #3080ff66 58%, #010104)",
+  },
+  {
+    id: "beast-static",
+    label: "Static",
+    tag: "静電気",
+    description: "闇の四隅にかすかに走る紫の放電。",
+    swatch:
+      "linear-gradient(150deg, #020104, #100a20 40%, #7060c066 58%, #010102)",
+  },
+  {
+    id: "beast-bolt",
+    label: "Bolt",
+    tag: "稲妻",
+    description: "夜空を裂いて枝分かれする青白い稲妻。",
+    swatch:
+      "linear-gradient(150deg, #020106, #121030 40%, #a0a0ff66 58%, #010103)",
+  },
+  {
+    id: "beast-stormcloud",
+    label: "Stormcloud",
+    tag: "雷雲",
+    description: "内側から雷光に照らされる紫と藍の積乱雲。",
+    swatch:
+      "linear-gradient(150deg, #020106, #1a1030 40%, #8060e066 58%, #010103)",
+  },
+  {
+    id: "beast-tempest",
+    label: "Tempest",
+    tag: "嵐",
+    description: "雷をまとって渦巻く嵐の目。",
+    swatch:
+      "linear-gradient(150deg, #010405, #062028 40%, #40c0d066 58%, #010203)",
+  },
+  {
+    id: "beast-plasma",
+    label: "Plasma",
+    tag: "プラズマ",
+    description: "マゼンタに輝くプラズマの放電。",
+    swatch:
+      "linear-gradient(150deg, #040106, #2a0838 40%, #e040ff66 58%, #020103)",
+  },
 ];
 
 /** Round 3 のみ（比較ナビ用） */
@@ -945,6 +1083,29 @@ export const PROFILE_PLAN_PRO_BEAST_BG_ROUND11: ProfilePlanProBeastBgVariant[] =
 export const PROFILE_PLAN_PRO_BEAST_BG_ROUND12: ProfilePlanProBeastBgVariant[] = [
   "beast-shoals",
   "beast-uranus",
+];
+
+/** Round 13 — 連続予想日数（鉱石 → 宝石・AI 生成テクスチャ） */
+export const PROFILE_PLAN_PRO_BEAST_BG_ROUND13: ProfilePlanProBeastBgVariant[] = [
+  "beast-ore",
+  "beast-geode",
+  "beast-malachite",
+  "beast-goldvein",
+  "beast-brilliant",
+];
+
+/** Round 14 — 最多得点者的中（炎の温度）/ 番狂わせ的中（雷の成長）・AI 生成テクスチャ */
+export const PROFILE_PLAN_PRO_BEAST_BG_ROUND14: ProfilePlanProBeastBgVariant[] = [
+  "beast-ember",
+  "beast-blaze",
+  "beast-inferno",
+  "beast-whiteheat",
+  "beast-blueflame",
+  "beast-static",
+  "beast-bolt",
+  "beast-stormcloud",
+  "beast-tempest",
+  "beast-plasma",
 ];
 
 

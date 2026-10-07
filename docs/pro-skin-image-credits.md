@@ -56,3 +56,8 @@ Hubble / Webb で ESA が共同クレジットの画像（蒼星・灰星雲・�
 ## 手続き生成（元画像なし）
 
 - `beast-dust`（`dust-powder-v4` / `dust-powder-rank-v4`）と `beast-dust-ash`（`dust-film-v4` / `dust-film-rank-v4`）は写真を使わず、ノイズ・粒子・線をプログラムで描いた完全自作素材。権利表記は不要。旧 v3（出典不明）は削除済み。
+
+## AI 生成（元画像なし）
+
+- 連続予想日数（鉱石 → 宝石）の `beast-ore` / `beast-geode` / `beast-malachite` / `beast-goldvein` / `beast-brilliant`（`ore-v3` 〜 `brilliant-v3` と各 `-rank-v3`）は画像生成で作った自作素材。第三者の写真を含まないため権利表記は不要。
+- 最多得点者的中（炎の温度）の `beast-ember` / `beast-blaze` / `beast-inferno` / `beast-whiteheat` / `beast-blueflame` と、番狂わせ的中（雷）の `beast-static` / `beast-bolt` / `beast-stormcloud` / `beast-tempest` / `beast-plasma` も同様に AI 生成。

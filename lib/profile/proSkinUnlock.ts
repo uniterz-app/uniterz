@@ -1,5 +1,5 @@
 /**
- * Pro Skin 解放ルール — 即解放11 / マイルストーン47。
+ * Pro Skin 解放ルール — 即解放11 / マイルストーン62。
  * 表示順の正は `PROFILE_PLAN_PRO_ADOPTED_BG`。解放条件は milestone catalog。
  */
 
@@ -27,6 +27,9 @@ export type ProSkinUnlockKind =
   | "streakRuns"
   | "posts"
   | "exactHits"
+  | "predictDays"
+  | "scorerHits"
+  | "upsetHits"
   | "weeklyRank"
   | "monthlyRank"
   | "referralCompleted"
@@ -46,6 +49,12 @@ export type ProSkinUnlockRule =
   | { kind: "streakRuns"; streak: number; runs: number }
   | { kind: "posts"; threshold: number }
   | { kind: "exactHits"; threshold: number }
+  /** 試合がある日だけで数えた連続予想日数（シーズン最長） */
+  | { kind: "predictDays"; threshold: number }
+  /** 最多得点者の的中回数（シーズン累計） */
+  | { kind: "scorerHits"; threshold: number }
+  /** 番狂わせ的中回数（シーズン累計） */
+  | { kind: "upsetHits"; threshold: number }
   | {
       kind: "weeklyRank";
       maxRank: number;
@@ -87,6 +96,12 @@ export type ProSkinUnlockProgress = {
   posts: number;
   /** 対象シーズン内のパーフェクト予想 */
   exactHits: number;
+  /** 対象シーズン内の最長連続予想日数（試合がない日は飛ばす） */
+  maxPredictDayStreak: number;
+  /** 対象シーズン内の最多得点者的中回数 */
+  scorerHits: number;
+  /** 対象シーズン内の番狂わせ的中回数 */
+  upsetHits: number;
   weeklyRanks: Record<ProSkinRankMetric, number | null>;
   monthlyRanks: Record<ProSkinRankMetric, number | null>;
   /** 招待完了人数（referralStats.completedCount） */
@@ -134,6 +149,9 @@ export function emptyProSkinUnlockProgress(
     isPro,
     posts: 0,
     exactHits: 0,
+    maxPredictDayStreak: 0,
+    scorerHits: 0,
+    upsetHits: 0,
     maxWinStreak: 0,
     streakRuns: {},
     weeklyRanks: { ...EMPTY_PRO_SKIN_RANK_MAP },
@@ -296,6 +314,12 @@ export function isProSkinUnlockRuleMet(
       return progress.posts >= rule.threshold;
     case "exactHits":
       return progress.exactHits >= rule.threshold;
+    case "predictDays":
+      return progress.maxPredictDayStreak >= rule.threshold;
+    case "scorerHits":
+      return progress.scorerHits >= rule.threshold;
+    case "upsetHits":
+      return progress.upsetHits >= rule.threshold;
     case "weeklyRank":
       return isRankMet(
         periodRank(progress, "weekly", rankMetric(rule)),
@@ -543,6 +567,36 @@ export function formatProSkinUnlockCondition(
         es: `Desbloquea con ${rule.threshold} aciertos perfectos`,
         pt: `Desbloqueie com ${rule.threshold} acertos perfeitos`,
         fr: `Débloquez avec ${rule.threshold} perfects`,
+      });
+    case "predictDays":
+      return L(lang, {
+        ja: `${rule.threshold} 日連続予想で解放`,
+        en: `Unlock at a ${rule.threshold}-day prediction streak`,
+        ko: `${rule.threshold}일 연속 예상으로 해제`,
+        zh: `连续预测 ${rule.threshold} 天解锁`,
+        es: `Desbloquea con ${rule.threshold} días seguidos prediciendo`,
+        pt: `Desbloqueie com ${rule.threshold} dias seguidos de palpites`,
+        fr: `Débloquez avec ${rule.threshold} jours de pronostics d’affilée`,
+      });
+    case "scorerHits":
+      return L(lang, {
+        ja: `最多得点者を ${rule.threshold} 回的中で解放`,
+        en: `Unlock at ${rule.threshold} top scorer hits`,
+        ko: `최다 득점자 ${rule.threshold}회 적중으로 해제`,
+        zh: `命中最佳得分手 ${rule.threshold} 次解锁`,
+        es: `Desbloquea acertando ${rule.threshold} veces al máximo anotador`,
+        pt: `Desbloqueie acertando o cestinha ${rule.threshold} vezes`,
+        fr: `Débloquez avec ${rule.threshold} meilleurs marqueurs trouvés`,
+      });
+    case "upsetHits":
+      return L(lang, {
+        ja: `UPSET を ${rule.threshold} 回的中で解放`,
+        en: `Unlock at ${rule.threshold} upset hits`,
+        ko: `UPSET ${rule.threshold}회 적중으로 해제`,
+        zh: `命中 UPSET ${rule.threshold} 次解锁`,
+        es: `Desbloquea con ${rule.threshold} upsets acertados`,
+        pt: `Desbloqueie com ${rule.threshold} upsets acertados`,
+        fr: `Débloquez avec ${rule.threshold} upsets trouvés`,
       });
     case "weeklyRank":
       return formatPeriodRankCondition(

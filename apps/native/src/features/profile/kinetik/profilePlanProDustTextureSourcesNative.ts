@@ -46,6 +46,21 @@ export const PROFILE_PLAN_PRO_DUST_TEXTURE_SOURCES: Record<
   "beast-milkyway": require("../../../../assets/pro-skins/textures/milkyway-v3.webp"),
   "beast-shoals": require("../../../../assets/pro-skins/textures/shoals-v3.webp"),
   "beast-uranus": require("../../../../assets/pro-skins/textures/uranus-v3.webp"),
+  "beast-ore": require("../../../../assets/pro-skins/textures/ore-v3.webp"),
+  "beast-geode": require("../../../../assets/pro-skins/textures/geode-v3.webp"),
+  "beast-malachite": require("../../../../assets/pro-skins/textures/malachite-v3.webp"),
+  "beast-goldvein": require("../../../../assets/pro-skins/textures/goldvein-v3.webp"),
+  "beast-brilliant": require("../../../../assets/pro-skins/textures/brilliant-v3.webp"),
+  "beast-ember": require("../../../../assets/pro-skins/textures/ember-v3.webp"),
+  "beast-blaze": require("../../../../assets/pro-skins/textures/blaze-v3.webp"),
+  "beast-inferno": require("../../../../assets/pro-skins/textures/inferno-v3.webp"),
+  "beast-whiteheat": require("../../../../assets/pro-skins/textures/whiteheat-v3.webp"),
+  "beast-blueflame": require("../../../../assets/pro-skins/textures/blueflame-v3.webp"),
+  "beast-static": require("../../../../assets/pro-skins/textures/static-v3.webp"),
+  "beast-bolt": require("../../../../assets/pro-skins/textures/bolt-v3.webp"),
+  "beast-stormcloud": require("../../../../assets/pro-skins/textures/stormcloud-v3.webp"),
+  "beast-tempest": require("../../../../assets/pro-skins/textures/tempest-v3.webp"),
+  "beast-plasma": require("../../../../assets/pro-skins/textures/plasma-v3.webp"),
 };
 
 export const PROFILE_PLAN_PRO_DUST_RANK_TEXTURE_SOURCES: Record<
@@ -85,6 +100,21 @@ export const PROFILE_PLAN_PRO_DUST_RANK_TEXTURE_SOURCES: Record<
   "beast-milkyway": require("../../../../assets/pro-skins/textures/milkyway-rank-v3.webp"),
   "beast-shoals": require("../../../../assets/pro-skins/textures/shoals-rank-v3.webp"),
   "beast-uranus": require("../../../../assets/pro-skins/textures/uranus-rank-v3.webp"),
+  "beast-ore": require("../../../../assets/pro-skins/textures/ore-rank-v3.webp"),
+  "beast-geode": require("../../../../assets/pro-skins/textures/geode-rank-v3.webp"),
+  "beast-malachite": require("../../../../assets/pro-skins/textures/malachite-rank-v3.webp"),
+  "beast-goldvein": require("../../../../assets/pro-skins/textures/goldvein-rank-v3.webp"),
+  "beast-brilliant": require("../../../../assets/pro-skins/textures/brilliant-rank-v3.webp"),
+  "beast-ember": require("../../../../assets/pro-skins/textures/ember-rank-v3.webp"),
+  "beast-blaze": require("../../../../assets/pro-skins/textures/blaze-rank-v3.webp"),
+  "beast-inferno": require("../../../../assets/pro-skins/textures/inferno-rank-v3.webp"),
+  "beast-whiteheat": require("../../../../assets/pro-skins/textures/whiteheat-rank-v3.webp"),
+  "beast-blueflame": require("../../../../assets/pro-skins/textures/blueflame-rank-v3.webp"),
+  "beast-static": require("../../../../assets/pro-skins/textures/static-rank-v3.webp"),
+  "beast-bolt": require("../../../../assets/pro-skins/textures/bolt-rank-v3.webp"),
+  "beast-stormcloud": require("../../../../assets/pro-skins/textures/stormcloud-rank-v3.webp"),
+  "beast-tempest": require("../../../../assets/pro-skins/textures/tempest-rank-v3.webp"),
+  "beast-plasma": require("../../../../assets/pro-skins/textures/plasma-rank-v3.webp"),
 };
 
 export { DUST_CARD_TEXTURE_SIZE, DUST_RANK_TEXTURE_SIZE };

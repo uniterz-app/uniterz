@@ -36,7 +36,22 @@ export type ProfilePlanProDustTextureId =
   | "beast-deepfield"
   | "beast-milkyway"
   | "beast-shoals"
-  | "beast-uranus";
+  | "beast-uranus"
+  | "beast-ore"
+  | "beast-geode"
+  | "beast-malachite"
+  | "beast-goldvein"
+  | "beast-brilliant"
+  | "beast-ember"
+  | "beast-blaze"
+  | "beast-inferno"
+  | "beast-whiteheat"
+  | "beast-blueflame"
+  | "beast-static"
+  | "beast-bolt"
+  | "beast-stormcloud"
+  | "beast-tempest"
+  | "beast-plasma";
 
 const DUST_PUBLIC_PATHS: Record<ProfilePlanProDustTextureId, string> = {
   "beast-dust": "/pro-skins/textures/dust-powder-v4.webp",
@@ -72,6 +87,21 @@ const DUST_PUBLIC_PATHS: Record<ProfilePlanProDustTextureId, string> = {
   "beast-milkyway": "/pro-skins/textures/milkyway-v3.webp",
   "beast-shoals": "/pro-skins/textures/shoals-v3.webp",
   "beast-uranus": "/pro-skins/textures/uranus-v3.webp",
+  "beast-ore": "/pro-skins/textures/ore-v3.webp",
+  "beast-geode": "/pro-skins/textures/geode-v3.webp",
+  "beast-malachite": "/pro-skins/textures/malachite-v3.webp",
+  "beast-goldvein": "/pro-skins/textures/goldvein-v3.webp",
+  "beast-brilliant": "/pro-skins/textures/brilliant-v3.webp",
+  "beast-ember": "/pro-skins/textures/ember-v3.webp",
+  "beast-blaze": "/pro-skins/textures/blaze-v3.webp",
+  "beast-inferno": "/pro-skins/textures/inferno-v3.webp",
+  "beast-whiteheat": "/pro-skins/textures/whiteheat-v3.webp",
+  "beast-blueflame": "/pro-skins/textures/blueflame-v3.webp",
+  "beast-static": "/pro-skins/textures/static-v3.webp",
+  "beast-bolt": "/pro-skins/textures/bolt-v3.webp",
+  "beast-stormcloud": "/pro-skins/textures/stormcloud-v3.webp",
+  "beast-tempest": "/pro-skins/textures/tempest-v3.webp",
+  "beast-plasma": "/pro-skins/textures/plasma-v3.webp",
 };
 
 /** ランキング行用横長帯 */
@@ -109,6 +139,21 @@ const DUST_RANK_PUBLIC_PATHS: Record<ProfilePlanProDustTextureId, string> = {
   "beast-milkyway": "/pro-skins/textures/milkyway-rank-v3.webp",
   "beast-shoals": "/pro-skins/textures/shoals-rank-v3.webp",
   "beast-uranus": "/pro-skins/textures/uranus-rank-v3.webp",
+  "beast-ore": "/pro-skins/textures/ore-rank-v3.webp",
+  "beast-geode": "/pro-skins/textures/geode-rank-v3.webp",
+  "beast-malachite": "/pro-skins/textures/malachite-rank-v3.webp",
+  "beast-goldvein": "/pro-skins/textures/goldvein-rank-v3.webp",
+  "beast-brilliant": "/pro-skins/textures/brilliant-rank-v3.webp",
+  "beast-ember": "/pro-skins/textures/ember-rank-v3.webp",
+  "beast-blaze": "/pro-skins/textures/blaze-rank-v3.webp",
+  "beast-inferno": "/pro-skins/textures/inferno-rank-v3.webp",
+  "beast-whiteheat": "/pro-skins/textures/whiteheat-rank-v3.webp",
+  "beast-blueflame": "/pro-skins/textures/blueflame-rank-v3.webp",
+  "beast-static": "/pro-skins/textures/static-rank-v3.webp",
+  "beast-bolt": "/pro-skins/textures/bolt-rank-v3.webp",
+  "beast-stormcloud": "/pro-skins/textures/stormcloud-rank-v3.webp",
+  "beast-tempest": "/pro-skins/textures/tempest-rank-v3.webp",
+  "beast-plasma": "/pro-skins/textures/plasma-rank-v3.webp",
 };
 
 export const DUST_CARD_TEXTURE_SIZE = { w: 1080, h: 1548 } as const;

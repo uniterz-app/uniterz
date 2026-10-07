@@ -3,11 +3,13 @@
  * Pro Skin マイルストーン定義の単一ソース。
  * Functions へは `npm run sync:pro-skin-milestone-catalog` で同期する。
  *
- * 構成: 即解放 11 / マイルストーン 47
+ * 構成: 即解放 11 / マイルストーン 62
  *
  * 系統ごとに世界観を揃える（低い段は柄、高い段は宇宙写真）
  * - 連勝 = 紅・炎 / パーフェクト = 蒼（結晶→地球の海→氷の衛星→氷の巨星→新星） / 予想数 = 地球→冥王星の旅
  * - 順位1回 = 称号（幾何・金属） / 順位回数 = 深宇宙 / RS 最終順位 = 銀河 / 招待 = 金
+ * - 連続予想日数 = 鉱石 → 宝石（原石 → 晶洞 → 研磨 → 金脈 → ダイヤ）
+ * - 最多得点者的中 = 炎の温度（赤 → 橙 → 黄 → 白 → 青） / 番狂わせ的中 = 雷（静電気 → 稲妻 → 雷雲 → 嵐 → プラズマ）
  *
  * - 閾値系・連勝回数系 → NBA settle
  * - 順位1回系 → period snapshot 確定後 grant（earnedIds）
@@ -46,7 +48,17 @@ export function proSkinPeriodGrantLockDocPath(
 
 export type ProSkinThresholdMilestone = {
   id: string;
-  kind: "streak" | "posts" | "exactHits";
+  /**
+   * predictDays: 試合がある日だけで数えた連続予想日数（シーズン最長）
+   * scorerHits: 最多得点者の的中回数 / upsetHits: 番狂わせ的中回数（シーズン累計）
+   */
+  kind:
+    | "streak"
+    | "posts"
+    | "exactHits"
+    | "predictDays"
+    | "scorerHits"
+    | "upsetHits";
   threshold: number;
 };
 
@@ -86,7 +98,7 @@ export type ProSkinPeriodWinMilestone = {
   wins: number;
 };
 
-/** 連勝（紅・炎）/ パーフェクト（蒼・氷）/ 予想数（地球→冥王星の旅） */
+/** 連勝（紅・炎）/ パーフェクト（蒼・氷）/ 予想数（地球→冥王星の旅）/ 連続予想日数（鉱石 → 宝石）/ 得点者（炎の温度）/ 番狂わせ（雷） */
 export const PRO_SKIN_THRESHOLD_MILESTONES: readonly ProSkinThresholdMilestone[] =
   [
     { id: "wave-crimson-shard", kind: "streak", threshold: 5 },
@@ -112,6 +124,21 @@ export const PRO_SKIN_THRESHOLD_MILESTONES: readonly ProSkinThresholdMilestone[]
     { id: "beast-rings", kind: "posts", threshold: 800 },
     { id: "beast-saturn", kind: "posts", threshold: 900 },
     { id: "beast-pluto", kind: "posts", threshold: 1000 },
+    { id: "beast-ore", kind: "predictDays", threshold: 7 },
+    { id: "beast-geode", kind: "predictDays", threshold: 14 },
+    { id: "beast-malachite", kind: "predictDays", threshold: 30 },
+    { id: "beast-goldvein", kind: "predictDays", threshold: 60 },
+    { id: "beast-brilliant", kind: "predictDays", threshold: 100 },
+    { id: "beast-ember", kind: "scorerHits", threshold: 3 },
+    { id: "beast-blaze", kind: "scorerHits", threshold: 10 },
+    { id: "beast-inferno", kind: "scorerHits", threshold: 25 },
+    { id: "beast-whiteheat", kind: "scorerHits", threshold: 50 },
+    { id: "beast-blueflame", kind: "scorerHits", threshold: 100 },
+    { id: "beast-static", kind: "upsetHits", threshold: 3 },
+    { id: "beast-bolt", kind: "upsetHits", threshold: 10 },
+    { id: "beast-stormcloud", kind: "upsetHits", threshold: 20 },
+    { id: "beast-tempest", kind: "upsetHits", threshold: 35 },
+    { id: "beast-plasma", kind: "upsetHits", threshold: 50 },
   ] as const;
 
 /** 連勝回数（紅・炎） */

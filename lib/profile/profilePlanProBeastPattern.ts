@@ -455,6 +455,21 @@ const PALETTES: Record<ProfilePlanProBeastBgVariant, BeastPalette> = {
   "beast-milkyway": photoPalette("170,90,200"),
   "beast-shoals": photoPalette("60,200,180"),
   "beast-uranus": photoPalette("140,170,240"),
+  "beast-ore": photoPalette("150,140,120"),
+  "beast-geode": photoPalette("150,110,220"),
+  "beast-malachite": photoPalette("60,180,120"),
+  "beast-goldvein": photoPalette("230,180,70"),
+  "beast-brilliant": photoPalette("200,225,255"),
+  "beast-ember": photoPalette("210,40,40"),
+  "beast-blaze": photoPalette("255,120,40"),
+  "beast-inferno": photoPalette("255,205,60"),
+  "beast-whiteheat": photoPalette("235,235,245"),
+  "beast-blueflame": photoPalette("70,140,255"),
+  "beast-static": photoPalette("130,110,210"),
+  "beast-bolt": photoPalette("160,165,255"),
+  "beast-stormcloud": photoPalette("140,100,230"),
+  "beast-tempest": photoPalette("70,200,215"),
+  "beast-plasma": photoPalette("230,80,255"),
 };
 
 /** 写真素材マップ系は SVG を描かないので、HUD 用の色だけ持つ */
