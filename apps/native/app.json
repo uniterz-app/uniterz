@@ -87,7 +87,8 @@
         "expo-image-picker",
         {
           "photosPermission": "プロフィール写真を選ぶために、写真ライブラリへのアクセスを使います。",
-          "cameraPermission": "プロフィール写真を撮影するためにカメラを使います。"
+          "cameraPermission": "プロフィール写真を撮影するためにカメラを使います。",
+          "microphonePermission": false
         }
       ],
       "expo-asset",

@@ -5538,6 +5538,11 @@ export default function SquadBattlePage({
       return;
     }
 
+    if (!isPreviewMode) {
+      flash(c.flashInvalidCode);
+      setJoinByCodeBusy(false);
+      return;
+    }
     const mockNorm = normalizeUiInviteCode(SQUAD_BATTLE_MOCK_INVITE_CODE);
     if (normalized !== mockNorm) {
       flash(c.flashInvalidCodePreview);

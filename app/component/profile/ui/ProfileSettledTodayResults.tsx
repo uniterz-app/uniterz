@@ -4,6 +4,9 @@ import type { Language } from "@/lib/i18n/language";
 import { resolveLocalizedLang } from "@/lib/i18n/localize";
 import { t } from "@/lib/i18n/t";
 import ResultCard from "@/app/component/result/ResultCard";
+import { ResultDayPipeGroup } from "@/app/component/result/ResultDayPipeGroup";
+import { dayPointsHeaderForList } from "@/lib/result/resultDayPointsHeader";
+import { formatNbaSlateDateLabel } from "@/lib/games/latestNbaSlate";
 import { useProfileSettledTodayResults } from "@/lib/profile/useProfileSettledTodayResults";
 import {
   resolveResultPostGameMarket,
@@ -48,7 +51,7 @@ export default function ProfileSettledTodayResults({
   const isCjk = lang === "ja" || lang === "ko" || lang === "zh";
   const isMobile = layout === "mobile";
   const visualEffectsLite = isProfileVisualLite(visualEffects);
-  const { posts, loading } = useProfileSettledTodayResults(
+  const { posts, loading, slateDateKey } = useProfileSettledTodayResults(
     uid,
     profileStatsContext,
     !!uid
@@ -60,6 +63,7 @@ export default function ProfileSettledTodayResults({
     isMobile && posts.length > MOBILE_SETTLED_TODAY_MAX
       ? posts.slice(0, MOBILE_SETTLED_TODAY_MAX)
       : posts;
+  const dayPoints = dayPointsHeaderForList(posts, [], language);
   const marketsFromGames = useResultPostsGameMarkets(visiblePosts);
   const roundMetaFromGames = useResultPostsGameRoundMeta(visiblePosts);
 
@@ -84,11 +88,16 @@ export default function ProfileSettledTodayResults({
         ) : posts.length === 0 ? (
           <p className="mt-4 text-sm text-white/45">{empty}</p>
         ) : (
-          <div
-            className={
+          <div className="mt-4">
+          <ResultDayPipeGroup
+            dateLabel={formatNbaSlateDateLabel(slateDateKey)}
+            isMobile={isMobile}
+            reducedMotion={visualEffectsLite}
+            dayPoints={dayPoints}
+            cardsClassName={
               isMobile
-                ? "mt-4 flex flex-col gap-3 overflow-visible"
-                : "mt-4 grid grid-cols-1 gap-4 overflow-visible sm:grid-cols-2"
+                ? "flex flex-col gap-3 overflow-visible"
+                : "grid grid-cols-1 gap-4 overflow-visible sm:grid-cols-2"
             }
           >
             {visiblePosts.map((post) => (
@@ -110,6 +119,7 @@ export default function ProfileSettledTodayResults({
                 href={`${gamesRoutePrefix}/result/${post.id}`}
               />
             ))}
+          </ResultDayPipeGroup>
           </div>
         )}
     </ProfileKinetikPanelFrame>

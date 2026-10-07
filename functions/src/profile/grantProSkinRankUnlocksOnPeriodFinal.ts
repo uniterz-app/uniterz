@@ -20,6 +20,7 @@ import {
 } from "../rankings/nbaPeriod";
 import { nbaSeasonKeyFromDateJST } from "../rankings/nbaSeason";
 import { countMilestoneUnlockedProSkins } from "./countMilestoneUnlockedProSkins";
+import { snapshotRewardableMaxRank } from "../units/grantPeriodRankingUnits";
 import {
   PRO_SKIN_PERIOD_WIN_MILESTONES,
   PRO_SKIN_RANK_MILESTONES,
@@ -249,7 +250,9 @@ export async function grantProSkinRankUnlocksForPeriod(opts: {
     const data = snap.data() as {
       ranks?: Record<string, number>;
       rows?: Array<{ uid?: string; rank?: number }>;
+      rewardableMaxRank?: unknown;
     };
+    maxRank = Math.min(maxRank, snapshotRewardableMaxRank(data));
     const ranks = data.ranks ?? {};
     const candidates = new Set<string>();
     for (const [uid, rank] of Object.entries(ranks)) {

@@ -298,8 +298,7 @@ export default function WebRankingsShell() {
   const winRateMinPosts = usePeriodBoard
     ? periodWinRateMinPosts(rankingPeriod as Exclude<RankingPeriod, "season">)
     : computeWinRateMinPosts(rankingLeague);
-  const winRateUsesPickupRate =
-    usePeriodBoard && rankingPeriod === "monthly" && nbaBoard === "regular";
+  const winRateUsesPickupRate = usePeriodBoard && nbaBoard === "regular";
 
   const listContentReady = computeRankingListContentReady({
     listReady,

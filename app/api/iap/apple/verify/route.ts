@@ -8,6 +8,7 @@ import { fetchAppleTransactionById } from "@/lib/billing/apple/fetchAppleTransac
 import { verifyAndDecodeAppleTransactionJws } from "@/lib/billing/apple/appleSignedDataVerifier";
 import { applyAppleTransactionEntitlement } from "@/lib/billing/apple/applyAppleTransactionEntitlement";
 import { applyProEntitlement } from "@/lib/billing/applyProEntitlement";
+import { resolveUidByAppleOriginalTransactionId } from "@/lib/billing/userBillingSecure";
 
 async function applyAppleVerifyStub(
   uid: string,
@@ -90,6 +91,26 @@ export async function POST(req: NextRequest) {
 
     if (productId && tx.productId && productId !== tx.productId) {
       return NextResponse.json({ error: "product_mismatch" }, { status: 400 });
+    }
+
+    // 期限切れ transaction の再送で Pro を延長させない
+    if (typeof tx.expiresDate === "number" && tx.expiresDate <= Date.now()) {
+      return NextResponse.json({ error: "expired" }, { status: 409 });
+    }
+
+    // 他アカウントに紐づいた購入の使い回しを拒否（Google の token_owned_by_other_user と同じ）
+    const originalTransactionId = String(tx.originalTransactionId ?? "").trim();
+    if (originalTransactionId) {
+      const ownerUid = await resolveUidByAppleOriginalTransactionId(
+        db,
+        originalTransactionId
+      );
+      if (ownerUid && ownerUid !== uid) {
+        return NextResponse.json(
+          { error: "transaction_owned_by_other_user" },
+          { status: 409 }
+        );
+      }
     }
 
     const result = await applyAppleTransactionEntitlement(db, uid, tx);

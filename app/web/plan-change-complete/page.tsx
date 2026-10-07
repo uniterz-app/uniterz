@@ -72,6 +72,8 @@ export default function PlanChangeCompletePage() {
   useEffect(() => {
     const fetchUser = async () => {
       const auth = getAuth();
+      // ハードリロード直後は currentUser が未復元で null になる
+      await auth.authStateReady();
       const user = auth.currentUser;
       if (!user) return;
 
@@ -89,7 +91,7 @@ export default function PlanChangeCompletePage() {
       setProfileHref(`/web/u/${encodeURIComponent(handle)}`);
     };
 
-    void fetchUser();
+    void fetchUser().catch((err) => console.error(err));
   }, []);
 
   const plan: ProIapPlan = asProIapPlan(storedType);

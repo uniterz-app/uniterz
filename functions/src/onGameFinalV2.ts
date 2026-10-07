@@ -62,6 +62,24 @@ async function revalidateDailyScoreLeaders(gameId: string): Promise<void> {
   }
 }
 
+/**
+ * 加算系（チーム成績・最終プッシュ）を試合ごとに一度だけ通す。
+ * final の巻き戻し→再 final や手動 retrigger でも二重加算しない（posts の確定は投稿側の印で冪等）。
+ */
+async function claimSettlementStep(
+  firestore: FirebaseFirestore.Firestore,
+  gameId: string,
+  step: "teamStats" | "finalPush"
+): Promise<boolean> {
+  const ref = firestore.doc(`gameSettlementClaims/${gameId}`);
+  return firestore.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    if (snap.exists && snap.get(step) != null) return false;
+    tx.set(ref, { [step]: FieldValue.serverTimestamp() }, { merge: true });
+    return true;
+  });
+}
+
 export const onGameFinalV2 = onDocumentWritten(
   {
     document: "games/{gameId}",
@@ -120,6 +138,12 @@ export const onGameFinalV2 = onDocumentWritten(
     /* ===== ② streak / team stats ===== */
     let streakResultMap = new Map();
 
+    const claimedTeamStats = await claimSettlementStep(
+      firestore,
+      gameId,
+      "teamStats"
+    );
+
     if (becameFinal) {
       if (!isNbaPreseasonPhase(game.seasonPhase)) {
         streakResultMap = await updateUserStreak({
@@ -133,6 +157,7 @@ export const onGameFinalV2 = onDocumentWritten(
       const skipTeamSeasonRecord = isExemptFromTeamSeasonRecord(game.knockout);
 
       if (
+        claimedTeamStats &&
         !skipTeamSeasonRecord &&
         countsTowardRegularSeasonTeamStats(game.seasonPhase)
       ) {
@@ -162,6 +187,7 @@ export const onGameFinalV2 = onDocumentWritten(
       }
 
       if (
+        claimedTeamStats &&
         !skipTeamSeasonRecord &&
         countsTowardPlayoffTeamStats(game.seasonPhase)
       ) {
@@ -331,7 +357,7 @@ export const onGameFinalV2 = onDocumentWritten(
 
     await revalidateDailyScoreLeaders(gameId);
 
-    if (becameFinal) {
+    if (becameFinal && (await claimSettlementStep(firestore, gameId, "finalPush"))) {
       try {
         await notifyGameFinalPush({
           gameId,

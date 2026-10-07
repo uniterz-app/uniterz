@@ -17,6 +17,8 @@ function navigateNow(target: ShareDeepLinkTarget) {
         params: {
           screen: "ResultDetail",
           params: { postId: target.postId },
+          // タブ未マウント時も ResultHome を下に残し、戻るで一覧へ戻れるようにする
+          initial: false,
         },
       });
       return;
@@ -49,6 +51,7 @@ function navigateNow(target: ShareDeepLinkTarget) {
         params: {
           screen: "CommunityDetail",
           params: { groupId: target.groupId },
+          initial: false,
         },
       });
       return;

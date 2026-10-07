@@ -98,6 +98,20 @@ type Props = {
   className?: string;
   /** トライアル成功画面中は true（親で BACK タブを隠す用） */
   onTrialSuccessChange?: (active: boolean) => void;
+  /** 本番 Web: 決済は iOS / Android アプリの IAP のみ。購入ボタンは案内を出す */
+  appOnlyPurchase?: boolean;
+};
+
+const APP_ONLY_PURCHASE_COPY = {
+  ja: "Pro の購入・無料トライアルは UNITERZ の iOS / Android アプリから行えます。同じアカウントでログインすれば Web でも Pro が使えます。",
+  en: "Pro and the free trial can be purchased in the UNITERZ iOS / Android app. Sign in with the same account to use Pro on the web.",
+  ko: "Pro 구매 및 무료 체험은 UNITERZ iOS / Android 앱에서 할 수 있습니다. 같은 계정으로 로그인하면 웹에서도 Pro를 사용할 수 있습니다.",
+  zh: "Pro 及免费试用请在 UNITERZ iOS / Android 应用中购买。使用同一账号登录后，网页版也可使用 Pro。",
+  es: "Pro y la prueba gratuita se compran en la app de UNITERZ para iOS / Android. Inicia sesión con la misma cuenta para usar Pro en la web.",
+  de: "Pro und die kostenlose Testphase kannst du in der UNITERZ-App für iOS / Android kaufen. Melde dich mit demselben Konto an, um Pro im Web zu nutzen.",
+  fr: "Pro et l’essai gratuit s’achètent dans l’app UNITERZ iOS / Android. Connectez-vous avec le même compte pour utiliser Pro sur le web.",
+  ar: "يمكن شراء Pro والتجربة المجانية من تطبيق UNITERZ على iOS / Android. سجّل الدخول بالحساب نفسه لاستخدام Pro على الويب.",
+  pt: "O Pro e o teste grátis são comprados no app UNITERZ para iOS / Android. Entre com a mesma conta para usar o Pro na web.",
 };
 
 /** 押し込みフィードバック（モバイルでも :active より確実） */
@@ -249,6 +263,7 @@ export default function ProSubscribePreview({
   language = "ja",
   className,
   onTrialSuccessChange,
+  appOnlyPurchase = false,
 }: Props) {
   const pathname = usePathname() ?? "";
   const isWeb = pathname.startsWith("/web");
@@ -261,6 +276,7 @@ export default function ProSubscribePreview({
   const [phase, setPhase] = useState<Phase>("plans");
   const [checkoutKind, setCheckoutKind] = useState<CheckoutKind>("paid");
   const [trialModalOpen, setTrialModalOpen] = useState(false);
+  const [appOnlyNoticeOpen, setAppOnlyNoticeOpen] = useState(false);
   const selected = planId ? proSubscribePreviewPlanById(planId) : null;
 
   useEffect(() => {
@@ -289,6 +305,10 @@ export default function ProSubscribePreview({
 
   function startPaid() {
     if (!planId || phase === "purchasing") return;
+    if (appOnlyPurchase) {
+      setAppOnlyNoticeOpen(true);
+      return;
+    }
     setCheckoutKind("paid");
     setPhase("purchasing");
     window.setTimeout(() => setPhase("success"), 900);
@@ -297,6 +317,10 @@ export default function ProSubscribePreview({
   function confirmTrialFromModal() {
     if (!planId) return;
     setTrialModalOpen(false);
+    if (appOnlyPurchase) {
+      setAppOnlyNoticeOpen(true);
+      return;
+    }
     setCheckoutKind("trial");
     setPhase("purchasing");
     window.setTimeout(() => setPhase("success"), 900);
@@ -601,6 +625,34 @@ export default function ProSubscribePreview({
 
         <PurchaseFootnotes lang={lang} legalPaths={legalPaths} />
       </div>
+
+      {appOnlyNoticeOpen ? (
+        <div
+          className="fixed inset-0 z-[80] flex items-center justify-center bg-black/70 px-6"
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setAppOnlyNoticeOpen(false)}
+        >
+          <div
+            className="w-full max-w-sm border border-amber-300/50 bg-[#0b0906] p-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className={[jp.className, "text-[13px] leading-relaxed text-white/85"].join(" ")}>
+              {L(lang, APP_ONLY_PURCHASE_COPY)}
+            </p>
+            <button
+              type="button"
+              onClick={() => setAppOnlyNoticeOpen(false)}
+              className={[
+                nameOxanium.className,
+                "mt-4 w-full rounded-[2px] bg-amber-300 py-3 text-[12px] font-extrabold uppercase tracking-[0.12em] text-[#120e08]",
+              ].join(" ")}
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       {trialModalOpen && selected ? (
         <TrialExplainModal

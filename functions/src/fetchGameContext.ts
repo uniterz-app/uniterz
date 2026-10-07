@@ -37,6 +37,9 @@ export type NormalizedGame = {
   leadingScorers?: unknown;
   /** false のときランキング集計から除外（play-in 等） */
   countsForRanking?: boolean;
+  /** NBA PICK UP 試合（isNbaPickupGame の判定元） */
+  isPickup?: boolean;
+  pickupWeekKey?: string | null;
 };
 
 export type GameContext = {
@@ -93,6 +96,9 @@ function normalizeGame(after: any, gameId: string): NormalizedGame {
     goalScorers: after?.goalScorers ?? null,
     leadingScorers: after?.leadingScorers ?? null,
     countsForRanking: after?.countsForRanking !== false,
+    isPickup: after?.isPickup === true,
+    pickupWeekKey:
+      typeof after?.pickupWeekKey === "string" ? after.pickupWeekKey : null,
   };
 }
 

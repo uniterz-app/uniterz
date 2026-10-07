@@ -148,8 +148,8 @@ export function periodMinPosts(
 }
 
 /**
- * 勝率タブの最低投稿（固定値フォールバック）。
- * 月間 standard は実装側で pickup 65% に差し替える（パターン B）。
+ * 勝率タブの最低投稿（固定値フォールバック。PRO LEAGUE と pickup 0 試合時）。
+ * standard は週間・月間とも実装側で pickup 65% に差し替える（パターン B）。
  */
 export function periodWinRateMinPosts(
   period: Exclude<RankingPeriod, "season">
@@ -157,11 +157,11 @@ export function periodWinRateMinPosts(
   return period === "weekly" ? 3 : 10;
 }
 
-/** 月間勝率は pickup 参加率ガードを使う */
+/** 週間・月間の勝率は pickup 参加率ガードを使う */
 export function periodWinRateUsesPickupParticipation(
-  period: Exclude<RankingPeriod, "season">
+  _period: Exclude<RankingPeriod, "season">
 ): boolean {
-  return period === "monthly";
+  return true;
 }
 
 /** start〜end の dateKey を列挙（両端含む） */

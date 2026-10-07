@@ -1,6 +1,13 @@
 /** Web `NbaDailyLeadersPanel` 相当 — 今日の試合の主要スタッツ Top20 */
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  AppState,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import {
   CYBER_TAB_CYAN,
   CyberSlantedTabBarNative,
@@ -69,8 +76,28 @@ export default function NbaDailyLeadersPanelNative({
 
   useEffect(() => {
     if (!data?.hasLive) return;
-    const id = setInterval(() => void load(), POLL_MS);
-    return () => clearInterval(id);
+    let id: ReturnType<typeof setInterval> | null = null;
+    const start = () => {
+      if (id) return;
+      id = setInterval(() => void load(), POLL_MS);
+    };
+    const stop = () => {
+      if (id) clearInterval(id);
+      id = null;
+    };
+    if (AppState.currentState === "active") start();
+    const sub = AppState.addEventListener("change", (next) => {
+      if (next === "active") {
+        void load();
+        start();
+      } else {
+        stop();
+      }
+    });
+    return () => {
+      stop();
+      sub.remove();
+    };
   }, [data?.hasLive, load]);
 
   const rows = data?.boards[stat] ?? [];

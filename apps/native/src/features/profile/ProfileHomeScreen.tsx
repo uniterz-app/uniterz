@@ -1285,9 +1285,21 @@ export default function ProfileHomeScreen({
         );
       return (
         <View style={styles.errorBox}>
-          <Text style={styles.errorText}>{statsBundle.error}</Text>
+          {__DEV__ ? (
+            <Text style={styles.errorText}>{statsBundle.error}</Text>
+          ) : null}
           <Text style={styles.warnText}>
-            {isFirestoreTransient
+            {!__DEV__
+              ? L(lang, {
+                  ja: "データを読み込めませんでした。しばらくしてから画面を引き下げて再読み込みしてください。",
+                  en: "Couldn't load your data. Pull to refresh in a moment.",
+                  ko: "데이터를 불러오지 못했습니다. 잠시 후 당겨서 새로고침하세요.",
+                  zh: "无法加载数据。请稍后下拉刷新。",
+                  es: "No se pudieron cargar los datos. Desliza para actualizar en un momento.",
+                  pt: "Não foi possível carregar os dados. Puxe para atualizar em breve.",
+                  fr: "Impossible de charger les données. Tirez pour actualiser dans un instant.",
+                })
+              : isFirestoreTransient
               ? L(lang, {
                   ja: "Firestore への接続が一時的に切れました。しばらくしてから画面を引き下げて再読み込みしてください。",
                   en: "Firestore connection dropped temporarily. Pull to refresh in a moment.",

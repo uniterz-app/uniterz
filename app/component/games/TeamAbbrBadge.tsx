@@ -3,10 +3,7 @@
 /** Native `TeamAbbrBadgeNative` / Awards パネル相当 — OUTLINE GLOW */
 import { nameOxanium } from "@/lib/fonts";
 import { nbaTeamIdFromBracketCode } from "@/lib/nba-bracket-code";
-import {
-  getTeamJerseyPrimaryColor,
-  softenTeamUiColor,
-} from "@/lib/team-colors";
+import { getTeamAbbrBadgeColor, softenTeamUiColor } from "@/lib/team-colors";
 import { TEAM_SHORT } from "@/lib/team-short";
 
 type Props = {
@@ -41,7 +38,7 @@ export default function TeamAbbrBadge({
   const fill = fillColor
     ? softenTeamUiColor(fillColor)
     : id
-      ? softenTeamUiColor(getTeamJerseyPrimaryColor("nba", id))
+      ? getTeamAbbrBadgeColor(id)
       : "#5B8CFF";
 
   return (

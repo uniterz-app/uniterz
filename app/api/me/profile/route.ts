@@ -142,7 +142,11 @@ export async function POST(req: Request) {
     const {
       bumpRankingUiGeneration,
       clearRankingSnapshotGenerationMemCache,
+      userMayAppearInRankings,
     } = await import("@/lib/rankings/server/loadRankingSnapshotGeneration");
+    if (!(await userMayAppearInRankings(uid))) {
+      return NextResponse.json({ ok: true });
+    }
     await bumpRankingUiGeneration();
     clearRankingSnapshotGenerationMemCache();
     revalidateTag("cumulative-ranking", {});

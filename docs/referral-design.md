@@ -454,4 +454,5 @@ docId = 招待されたユーザーの uid（1 人 1 関係）。
 | 2026-08-04 | `GET /api/me/referral`・招待画面接続・`settleReferralRelation`（自動付与）を追加 |
 | 2026-08-04 | コスト/安全性修正: referredByUid ゲート・同日 no-write・settle 再試行・序数 tx・bind Admin API |
 | 2026-08-04 | 打ち間違いロック解消・rules で Unit/招待フィールド凍結・inviteCodes 一意・達成後スキップ・画面セルフヒール |
+| 2026-10-07 | 被招待者 30 Unit の bind 時即時付与を廃止し、設計どおり 7 日達成後の settle で付与（獲得演出も settle で作成）。招待コード入力欄・招待画面の文言を同期 |
 | 2026-08-12 | 画面ヒール軽量化（posts 非走査・最大3）・rows 上限40・複合 index・未完了40上限・§22 削除再集計を実装に同期 |

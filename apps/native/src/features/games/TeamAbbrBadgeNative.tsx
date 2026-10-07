@@ -2,7 +2,7 @@
 import { StyleSheet, Text, View } from "react-native";
 import { nbaTeamIdFromBracketCode } from "../../../../../lib/nba-bracket-code";
 import {
-  getTeamJerseyPrimaryColor,
+  getTeamAbbrBadgeColor,
   softenTeamUiColor,
 } from "../../../../../lib/team-colors";
 import { TEAM_SHORT } from "../../../../../lib/team-short";
@@ -40,7 +40,7 @@ export default function TeamAbbrBadgeNative({
   const fill = fillColor
     ? softenTeamUiColor(fillColor)
     : id
-      ? softenTeamUiColor(getTeamJerseyPrimaryColor("nba", id))
+      ? getTeamAbbrBadgeColor(id)
       : "#5B8CFF";
 
   return (

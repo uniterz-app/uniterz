@@ -5,7 +5,10 @@ import { withTimeout } from "@/lib/async/withTimeout";
 import { loadProfileSettledTodayResultPosts } from "@/lib/profile/profileSettledTodayPosts";
 import type { ProfileStatsStreakContext } from "@/lib/profile/profileStreakScope";
 import type { PostWithMillis } from "@/lib/result/result-page-data";
-import { TIMEZONE_JST, toDateKeyInTimeZone } from "@/lib/time/zonedTime";
+import {
+  peekLatestNbaSlateDateKey,
+  useLatestNbaSlateDateKey,
+} from "@/lib/games/latestNbaSlate";
 
 type SettledTodayCacheEntry = {
   posts: PostWithMillis[];
@@ -16,10 +19,6 @@ type SettledTodayCacheEntry = {
 
 const settledTodayCache = new Map<string, SettledTodayCacheEntry>();
 const SETTLED_TODAY_TIMEOUT_MS = 15_000;
-
-function todayCacheDateKey(): string {
-  return toDateKeyInTimeZone(new Date(), TIMEZONE_JST);
-}
 
 function settledTodayCacheKey(
   uid: string,
@@ -44,6 +43,7 @@ function markSettledTodayFailed(key: string): PostWithMillis[] {
 async function loadSettledTodayOnce(
   uid: string,
   ctx: ProfileStatsStreakContext,
+  slateDateKey: string,
   key: string
 ): Promise<PostWithMillis[]> {
   const cached = settledTodayCache.get(key);
@@ -51,7 +51,7 @@ async function loadSettledTodayOnce(
   if (cached?.promise) return cached.promise;
 
   const promise = withTimeout(
-    loadProfileSettledTodayResultPosts(uid, ctx),
+    loadProfileSettledTodayResultPosts(uid, ctx, slateDateKey),
     SETTLED_TODAY_TIMEOUT_MS,
     "settled-today-timeout"
   )
@@ -68,16 +68,17 @@ async function loadSettledTodayOnce(
   return promise;
 }
 
-/** ランキング→プロフィール遷移前に今日の確定投稿を先読み */
+/** ランキング→プロフィール遷移前に最新試合日の確定投稿を先読み */
 export function prefetchProfileSettledTodayResults(
   uid: string,
   ctx: ProfileStatsStreakContext
 ): void {
   const safeUid = uid.trim();
   if (!safeUid) return;
-  const key = settledTodayCacheKey(safeUid, ctx, todayCacheDateKey());
+  const slateDateKey = peekLatestNbaSlateDateKey();
+  const key = settledTodayCacheKey(safeUid, ctx, slateDateKey);
   if (settledTodayCache.get(key)?.resolved) return;
-  void loadSettledTodayOnce(safeUid, ctx, key);
+  void loadSettledTodayOnce(safeUid, ctx, slateDateKey, key);
 }
 
 export function useProfileSettledTodayResults(
@@ -86,7 +87,7 @@ export function useProfileSettledTodayResults(
   enabled = true
 ) {
   const scopeKey = JSON.stringify(ctx);
-  const dateKey = todayCacheDateKey();
+  const dateKey = useLatestNbaSlateDateKey();
   const requestKey = enabled && uid ? settledTodayCacheKey(uid, ctx, dateKey) : null;
   const resolvedPosts = requestKey ? readResolvedPosts(requestKey) : null;
   const [state, setState] = useState<{
@@ -121,7 +122,7 @@ export function useProfileSettledTodayResults(
       loading: true,
     }));
 
-    void loadSettledTodayOnce(safeUid, ctx, safeRequestKey)
+    void loadSettledTodayOnce(safeUid, ctx, dateKey, safeRequestKey)
       .then((list) => {
         if (!alive) return;
         setState({ key: safeRequestKey, posts: list, loading: false });
@@ -138,13 +139,14 @@ export function useProfileSettledTodayResults(
     return () => {
       alive = false;
     };
-  }, [requestKey, scopeKey, uid]);
+  }, [requestKey, scopeKey, uid, dateKey]);
 
   return useMemo(
     () => ({
+      slateDateKey: dateKey,
       posts: state.key === requestKey ? state.posts : [],
       loading: Boolean(requestKey) && (state.loading || state.key !== requestKey),
     }),
-    [requestKey, state.key, state.loading, state.posts]
+    [dateKey, requestKey, state.key, state.loading, state.posts]
   );
 }

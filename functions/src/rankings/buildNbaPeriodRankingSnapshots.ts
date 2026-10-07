@@ -199,10 +199,10 @@ function resolvePrevRankBasis(
 async function buildOne(range: NbaPeriodRange, todayKey: string): Promise<void> {
   const firestore = db();
   const minPosts = periodMinPosts(range.period);
-  /** open / 週間は固定最低投稿。月間 standard 勝率は pickup 65%（パターン B） */
+  /** open は固定最低投稿。standard 勝率は週間・月間とも pickup 65%（パターン B） */
   const winRateMinFallback = periodWinRateMinPosts(range.period);
   let winRateMinStandard = winRateMinFallback;
-  if (range.period === "monthly") {
+  {
     const asOfKey = todayKey < range.endKey ? todayKey : range.endKey;
     const pickupSoFar = await countNbaPickupGamesSoFar({
       db: firestore,
@@ -424,12 +424,14 @@ async function writePeriodDivisionSnapshots(opts: {
     let lastVal: number | null = null;
     let lastRank = 0;
     const rankedRows: SnapshotRow[] = [];
+    let rewardableMaxRank = 0;
     sorted.forEach((row, i) => {
       const v = metricValue(row, metric);
       const rank = lastVal != null && v === lastVal ? lastRank : i + 1;
       lastVal = v;
       lastRank = rank;
       ranks[row.uid] = rank;
+      if (v > 0) rewardableMaxRank = rank;
       if (rankedRows.length < TOP_ROWS) {
         const prevRank = basis.prevRanks?.[row.uid];
         rankedRows.push({
@@ -455,6 +457,8 @@ async function writePeriodDivisionSnapshots(opts: {
       participantCount,
       rows: rankedRows,
       ranks,
+      // 値 0 以下の同率で Unit / Pro Skin を配らないための上限（この順位まで付与対象）
+      rewardableMaxRank,
       // 圏外ユーザーの変動計算・翌日の基準引き継ぎ用
       prevRanks: basis.prevRanks,
       prevDateKey: basis.prevDateKey,

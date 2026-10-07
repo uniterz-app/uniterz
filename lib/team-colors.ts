@@ -136,6 +136,20 @@ export function getTeamJerseyPrimaryColor(
   return getTeamPrimaryColor(league, teamId);
 }
 
+/** 黒背景で沈むチームは略称バッジだけ別色にする（ユニフォーム mark は変えない） */
+const abbrBadgeColorOverridesNBA: Record<string, string> = {
+  "nba-nets": "#FFFFFF",
+  "nba-kings": "#A77BDB",
+};
+
+/** チーム略称バッジ（TeamAbbrBadge）の枠・文字色 */
+export function getTeamAbbrBadgeColor(teamId: string): string {
+  return (
+    abbrBadgeColorOverridesNBA[teamId] ??
+    softenTeamUiColor(getTeamJerseyPrimaryColor("nba", teamId))
+  );
+}
+
 /**
  * UI 枠・バッジ用。ネオン黄（Lakers/Warriors 等）を落ち着いたゴールドへ抑える。
  * ジャージ mark 本体には使わず、枠線・テキストアクセント向け。

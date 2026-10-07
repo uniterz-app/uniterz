@@ -59,10 +59,10 @@ export default function ProSuccessPage() {
 
   useEffect(() => {
     const auth = getAuth();
-    const user = auth.currentUser;
-    if (!user) return;
-
     void (async () => {
+      await auth.authStateReady();
+      const user = auth.currentUser;
+      if (!user) return;
       const data = await getUserDocDataCached(user.uid);
       if (!data) return;
       setStoredType(normalizeStoredPlanType(data.planType));

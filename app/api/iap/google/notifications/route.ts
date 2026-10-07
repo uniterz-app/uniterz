@@ -7,6 +7,7 @@ import {
   handleGooglePlayRtdn,
   type GooglePlayRtdnPayload,
 } from "@/lib/billing/google/handleGooglePlayRtdn";
+import { timingSafeEqualString } from "@/lib/security/timingSafeEqualString";
 
 /**
  * Google Play Real-time developer notifications（Cloud Pub/Sub push）
@@ -19,7 +20,7 @@ export async function POST(req: Request) {
 
   const expected = googlePlayRtdnSecret();
   const provided = new URL(req.url).searchParams.get("secret");
-  if (!expected || provided !== expected) {
+  if (!expected || !provided || !timingSafeEqualString(provided, expected)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 

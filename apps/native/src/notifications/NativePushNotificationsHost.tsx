@@ -37,26 +37,31 @@ export default function NativePushNotificationsHost() {
 
     return subscribePushPermissionPrimerRequests((onSettled) => {
       void (async () => {
-        const Notifications = await loadExpoNotificationsModule();
-        if (!Notifications) {
-          onSettled();
-          return;
-        }
+        try {
+          const Notifications = await loadExpoNotificationsModule();
+          if (!Notifications) {
+            onSettled();
+            return;
+          }
 
-        const perm = await Notifications.getPermissionsAsync();
-        if (perm.status === "granted" || perm.status === "denied") {
-          onSettled();
-          return;
-        }
+          const perm = await Notifications.getPermissionsAsync();
+          if (perm.status === "granted" || perm.status === "denied") {
+            onSettled();
+            return;
+          }
 
-        const dismissed = await readPushPermissionPrimerDismissedNative(uid);
-        if (dismissed) {
-          onSettled();
-          return;
-        }
+          const dismissed = await readPushPermissionPrimerDismissedNative(uid);
+          if (dismissed) {
+            onSettled();
+            return;
+          }
 
-        settledRef.current = onSettled;
-        setPrimerOpen(true);
+          settledRef.current = onSettled;
+          setPrimerOpen(true);
+        } catch (err) {
+          console.warn("[push primer]", err);
+          onSettled();
+        }
       })();
     });
   }, [authed, uid]);
@@ -78,8 +83,13 @@ export default function NativePushNotificationsHost() {
     settledRef.current = null;
     scheduleAfterPrimerDismissed(() => {
       void (async () => {
-        await registerNativePushTokenFlow();
-        settled?.();
+        try {
+          await registerNativePushTokenFlow();
+        } catch (err) {
+          console.warn("[push register]", err);
+        } finally {
+          settled?.();
+        }
       })();
     });
   }, [uid]);

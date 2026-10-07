@@ -111,6 +111,33 @@ export function normalizeNbaLeadingScorers(raw: unknown): NbaLeadingScorer[] {
   return parsed.filter((p) => p.points === maxPts);
 }
 
+/** 確定 box score から最多得点者（同点は全員）。Firestore `games.leadingScorers` 形式 */
+export function leadingScorersFromBox(params: {
+  homeTeamId: string;
+  awayTeamId: string;
+  home: ReadonlyArray<{ playerId: string; firstName?: string; lastName?: string; pts: number }>;
+  away: ReadonlyArray<{ playerId: string; firstName?: string; lastName?: string; pts: number }>;
+}): Array<{ playerId: string; teamId: string; points: number; name?: string }> {
+  const rows = [
+    ...params.home.map((p) => ({ p, teamId: params.homeTeamId })),
+    ...params.away.map((p) => ({ p, teamId: params.awayTeamId })),
+  ].filter(({ p, teamId }) => p.playerId && teamId && Number.isFinite(p.pts));
+  if (rows.length === 0) return [];
+  const maxPts = Math.max(...rows.map(({ p }) => p.pts));
+  if (!(maxPts > 0)) return [];
+  return rows
+    .filter(({ p }) => p.pts === maxPts)
+    .map(({ p, teamId }) => {
+      const name = [p.firstName, p.lastName].filter(Boolean).join(" ").trim();
+      return {
+        playerId: p.playerId,
+        teamId,
+        points: p.pts,
+        ...(name ? { name } : {}),
+      };
+    });
+}
+
 export function nbaTopScorerPredictionHit(
   pick: NbaTopScorerPick | null | undefined,
   leadingScorers: NbaLeadingScorer[] | null | undefined

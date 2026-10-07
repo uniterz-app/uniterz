@@ -170,9 +170,12 @@ export async function POST(req: Request) {
       { merge: true }
     );
 
-    const { bumpRankingUiGeneration } = await import(
+    const { bumpRankingUiGeneration, userMayAppearInRankings } = await import(
       "@/lib/rankings/server/loadRankingSnapshotGeneration"
     );
+    if (!(await userMayAppearInRankings(uid))) {
+      return NextResponse.json({ ok: true, planProBgVariant: variant });
+    }
     const { revalidateTag } = await import("next/cache");
     await bumpRankingUiGeneration();
     revalidateTag("cumulative-ranking", {});

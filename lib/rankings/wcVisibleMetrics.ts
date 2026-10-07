@@ -4,9 +4,9 @@ import { METRICS } from "@/lib/rankings/rankingMetrics";
 /** NBA プレーオフ用の指標一覧 */
 export const NBA_VISIBLE_METRICS: MobileMetric[] = [
   "totalScore",
-  "winRate",
-  "upsetScore",
   "goalScorerHits",
+  "upsetScore",
+  "winRate",
 ];
 
 export function visibleMetricsForLeague(

@@ -1,6 +1,6 @@
 /**
- * under_review → completed + 紹介者 Unit 付与（Admin・単一 transaction・冪等）
- * 被招待者 30 Unit は bind 時に付与済み（ledger 冪等で二重付与しない）。
+ * under_review → completed + 被招待者 30 / 紹介者 Unit 付与（Admin・単一 transaction・冪等）
+ * 旧仕様で bind 時に付与済みの被招待者は ledger 冪等で二重付与しない。
  * docs/referral-design.md §2 / §6 / §22
  */
 import { FieldValue, type Firestore } from "firebase-admin/firestore";
@@ -259,6 +259,23 @@ export async function settleReferralRelation(
         });
         inviteeIncrement = REFERRAL_INVITEE_UNITS;
         inviteeGranted = REFERRAL_INVITEE_UNITS;
+        /** プロフィールで獲得演出を出す（残高差分だけだと初回はアニメなしで既読になる） */
+        tx.set(
+          inviteeRef
+            .collection("pending_unit_earns")
+            .doc(referralInviteeRewardLedgerKey(inviteeUid)),
+          {
+            amount: REFERRAL_INVITEE_UNITS,
+            reason: "referral_invitee",
+            titleJa: "招待ボーナス",
+            titleEn: "Invite bonus",
+            subtitleJa: null,
+            subtitleEn: null,
+            claimedAt: null,
+            createdAt: FieldValue.serverTimestamp(),
+            createdAtMs: Date.now(),
+          }
+        );
       }
 
       if (withinCap && !referrerBaseLedgerSnap.exists) {

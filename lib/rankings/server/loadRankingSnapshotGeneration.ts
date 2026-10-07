@@ -108,6 +108,15 @@ export async function loadRankingSnapshotGenerationKey(): Promise<string> {
 }
 
 /** Pro Skin / プロフィール chrome 変更時。CDN `u=` を進める */
+/**
+ * ランキング行に載りうるユーザー（確定投稿の集計がある）だけ UI 世代を進める。
+ * 新規登録直後のプロフィール編集で全ランキングの CDN を外さない。
+ */
+export async function userMayAppearInRankings(uid: string): Promise<boolean> {
+  const snap = await getAdminDb().collection("cumulative_stats").doc(uid).get();
+  return snap.exists;
+}
+
 export async function bumpRankingUiGeneration(): Promise<{
   updatedAtMs: number;
 }> {

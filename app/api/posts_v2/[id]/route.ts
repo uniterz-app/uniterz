@@ -22,6 +22,7 @@ import { FieldValue } from "firebase-admin/firestore";
 import { clientErrorResponse } from "@/lib/security/clientErrorResponse";
 import { loadGameKickoffLock } from "@/lib/predict/gameKickoffLock";
 import {
+  applyLiveMarketDelta,
   parseMarketSide,
   readLiveMarketCounts,
   swapLiveMarketSide,
@@ -96,7 +97,7 @@ async function getPostForDelete(uid: string, postId: string) {
 
   await assertPostUnlockedByLiveGame(data.gameId, data.startAtMillis);
 
-  return ref;
+  return { ref, data };
 }
 
 /* ========= GET ========= */
@@ -337,13 +338,48 @@ export async function DELETE(req: NextRequest, ctx: any) {
   const params = await ctx.params; // ★ここで Promise → { id } に変換
 
   try {
-    console.log("DELETE id =", params.id);
-
     const uid = await requireUid(req);
 
-    const ref = await getPostForDelete(uid, params.id);
+    const { ref, data } = await getPostForDelete(uid, params.id);
 
     await ref.delete();
+
+    const gameId = typeof data.gameId === "string" ? data.gameId.trim() : "";
+    if (gameId) {
+      try {
+        const side = parseMarketSide(
+          (data.prediction as { winner?: unknown } | undefined)?.winner
+        );
+        const gameRef = getAdminDb().collection("games").doc(gameId);
+        await getAdminDb().runTransaction(async (tx) => {
+          const gameSnap = await tx.get(gameRef);
+          if (!gameSnap.exists) return;
+          const gameData = (gameSnap.data() ?? {}) as Record<string, unknown>;
+          const prevCount =
+            typeof gameData.predictorCount === "number" ? gameData.predictorCount : 0;
+          const patch = side
+            ? applyLiveMarketDelta(readLiveMarketCounts(gameData), side, -1)
+            : null;
+          tx.set(
+            gameRef,
+            {
+              predictorUids: FieldValue.arrayRemove(uid),
+              predictorCount: Math.max(0, prevCount - 1),
+              ...(patch
+                ? {
+                    marketPickCounts: patch.marketPickCounts,
+                    market: patch.market,
+                    marketBias: patch.marketBias,
+                  }
+                : {}),
+            },
+            { merge: true }
+          );
+        });
+      } catch (marketErr) {
+        console.error("[DELETE /api/posts_v2] live market", marketErr);
+      }
+    }
 
     // 削除後に招待日数を現存 posts から再集計（§5）
     try {

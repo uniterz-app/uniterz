@@ -203,12 +203,12 @@ export const buildCumulativeRankingSnapshotCron = onSchedule(
 );
 
 /**
- * 期間ランキング Unit 付与 — スナップショット cron（16:00 JST）の 10 分後。
+ * 期間ランキング Unit 付与 — スナップショット cron（16:00 JST）の 10 分後。18:10 は取りこぼし再試行（付与済みはロックで skip）。
  * 実付与は Eastern 月曜（週次）・毎月1日（月次）のみ。他日は即 skip。
  */
 export const grantPeriodRankingUnitsCron = onSchedule(
   {
-    schedule: "10 16 * * *",
+    schedule: "10 16,18 * * *",
     timeZone: "Asia/Tokyo",
     memory: "512MiB",
     timeoutSeconds: 540,

@@ -41,7 +41,9 @@ export async function fetchMeReferralNative(): Promise<MeReferralApiPayload> {
     const raw = e instanceof Error ? e.message : String(e ?? "");
     if (/network|failed|fetch/i.test(raw) || !raw.trim()) {
       throw new Error(
-        "API に接続できません。Next.js（npm run dev）が起動しているか、EXPO_PUBLIC_UNITERZ_API_BASE_URL を確認してください。"
+        __DEV__
+          ? "API に接続できません。Next.js（npm run dev）が起動しているか、EXPO_PUBLIC_UNITERZ_API_BASE_URL を確認してください。"
+          : "通信に失敗しました。電波の良い場所でもう一度お試しください。"
       );
     }
     throw e instanceof Error ? e : new Error(raw || "request failed");
@@ -83,7 +85,9 @@ export async function bindMeReferralNative(
     const raw = e instanceof Error ? e.message : String(e ?? "");
     if (/network|failed|fetch/i.test(raw) || !raw.trim()) {
       throw new Error(
-        "API に接続できません。Next.js（npm run dev）が起動しているか、EXPO_PUBLIC_UNITERZ_API_BASE_URL を確認してください。"
+        __DEV__
+          ? "API に接続できません。Next.js（npm run dev）が起動しているか、EXPO_PUBLIC_UNITERZ_API_BASE_URL を確認してください。"
+          : "通信に失敗しました。電波の良い場所でもう一度お試しください。"
       );
     }
     throw e instanceof Error ? e : new Error(raw || "request failed");

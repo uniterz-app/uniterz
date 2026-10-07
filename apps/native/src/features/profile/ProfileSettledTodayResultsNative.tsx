@@ -11,6 +11,9 @@ import type { ProfileStatsStreakContext } from "../../../../../lib/profile/profi
 import { BlocksPulseLoader } from "../../components/BlocksPulseLoader";
 import type { MainTabParamList } from "../../navigation/types";
 import ResultPostCardNative from "../results/ResultPostCardNative";
+import ResultDayStripNative from "../results/ResultDayStripNative";
+import { dayPointsHeaderForNative } from "../results/nativeResultDaySummary";
+import { formatNbaSlateDateLabel } from "../../../../../lib/games/latestNbaSlate";
 import ProfileOverviewChartCardNative from "./ProfileOverviewChartCardNative";
 import { NATIVE_SETTLED_TODAY_MAX } from "./loadProfileSettledTodayNative";
 import {
@@ -51,7 +54,7 @@ export default function ProfileSettledTodayResultsNative({
   const cardLang = resolveLocalizedLang(language);
   const navigation = useNavigation();
   const nowMs = Date.now();
-  const { posts, loading } = useNativeProfileSettledTodayResults(
+  const { posts, loading, slateDateKey } = useNativeProfileSettledTodayResults(
     uid,
     profileStatsContext,
     !!uid
@@ -77,6 +80,10 @@ export default function ProfileSettledTodayResultsNative({
     return { visiblePosts: [], isDesignPreview: false };
   }, [loading, posts, showDesignPreviewWhenEmpty]);
 
+  const dayPoints = useMemo(
+    () => (isDesignPreview ? null : dayPointsHeaderForNative(posts, [], cardLang)),
+    [cardLang, isDesignPreview, posts]
+  );
   const marketsFromGames = useResultPostsGameMarkets(visiblePosts);
   const roundMetaFromGames = useResultPostsGameRoundMeta(visiblePosts);
 
@@ -115,6 +122,12 @@ export default function ProfileSettledTodayResultsNative({
         <Text style={styles.empty}>{empty}</Text>
       ) : (
         <View style={styles.list}>
+          {isDesignPreview ? null : (
+            <ResultDayStripNative
+              dateLabel={formatNbaSlateDateLabel(slateDateKey)}
+              dayPoints={dayPoints}
+            />
+          )}
           {visiblePosts.map((post, index) => (
             <ResultPostCardNative
               key={post.id}

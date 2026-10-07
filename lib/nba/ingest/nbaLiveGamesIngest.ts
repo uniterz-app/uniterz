@@ -21,8 +21,15 @@ import {
   nbaGameDocIdFromBdlId,
 } from "@/lib/nba/bdl/mapBdlGameToNbaGameDoc";
 import { normalizeLiveGameStatsDoc } from "@/lib/games/liveGameStats";
+import { leadingScorersFromBox } from "@/lib/nba/topScorer";
 import { fetchBdlGameAdvancedStats } from "@/lib/nba/bdl/fetchBdlGameAdvancedStats";
 import { mergeGameAdvancedIntoLiveStatsDoc } from "@/lib/nba/bdl/mergeGameAdvancedIntoLiveStats";
+
+type PrevGameState = {
+  final: boolean;
+  finalAt: boolean;
+  hasLeadingScorers: boolean;
+};
 
 export type IngestNbaLiveGamesResult = {
   ok: true;
@@ -181,6 +188,31 @@ export async function ingestNbaLiveGamesFromBdl(
   let skipped = 0;
   const sampleGameIds: string[] = [];
 
+  // 確定済みは再書き込みしない（onGameFinalV2 の再起動・final の巻き戻しを防ぐ）
+  const prevByDocId = new Map<string, PrevGameState>();
+  if (!dryRun) {
+    const docIds = [
+      ...new Set([
+        ...games.map((g) => nbaGameDocIdFromBdlId(g.id)),
+        ...mappedBoxes
+          .filter((b) => b.bdlGameId != null)
+          .map((b) => nbaGameDocIdFromBdlId(b.bdlGameId as number)),
+      ]),
+    ];
+    const snaps = docIds.length
+      ? await db.getAll(...docIds.map((id) => db.collection("games").doc(id)))
+      : [];
+    for (const snap of snaps) {
+      const d = (snap.data() ?? {}) as Record<string, unknown>;
+      prevByDocId.set(snap.id, {
+        final: d.final === true,
+        finalAt: d.finalAt != null,
+        hasLeadingScorers:
+          Array.isArray(d.leadingScorers) && d.leadingScorers.length > 0,
+      });
+    }
+  }
+
   for (const g of games) {
     const mappedGame = mapBdlGameToNbaGameDoc(
       g,
@@ -228,18 +260,28 @@ export async function ingestNbaLiveGamesFromBdl(
     }
 
     const docId = nbaGameDocIdFromBdlId(g.id);
+    const prev = prevByDocId.get(docId);
+    if (prev?.final && (prev.finalAt || !isFinal)) {
+      skipped += 1;
+      continue;
+    }
     if (sampleGameIds.length < 8) sampleGameIds.push(docId);
+    if (isFinal) {
+      patch.finalAt = FieldValue.serverTimestamp();
+      if (box && liveStats && !prev?.hasLeadingScorers) {
+        const leaders = leadingScorersFromBox({
+          homeTeamId: box.homeAppTeamId,
+          awayTeamId: box.awayAppTeamId,
+          home: liveStats.box.home,
+          away: liveStats.box.away,
+        });
+        if (leaders.length > 0) patch.leadingScorers = leaders;
+      }
+    }
 
     if (!dryRun) {
       const { id: _id, startAtMs, startAtJstIso, ...rest } = mappedGame;
       const ref = db.collection("games").doc(docId);
-      if (isFinal) {
-        const existing = await ref.get();
-        const prev = existing.data() as { finalAt?: unknown } | undefined;
-        if (prev?.finalAt == null) {
-          patch.finalAt = FieldValue.serverTimestamp();
-        }
-      }
       await ref.set(
         {
           ...rest,
@@ -262,6 +304,11 @@ export async function ingestNbaLiveGamesFromBdl(
     if (!liveStats) continue;
     const docId = nbaGameDocIdFromBdlId(box.bdlGameId);
     const isFinalBox = box.phase === "final";
+    const prevBox = prevByDocId.get(docId);
+    if (prevBox?.final && (prevBox.finalAt || !isFinalBox)) {
+      skipped += 1;
+      continue;
+    }
     if (!dryRun) {
       const ref = db.collection("games").doc(docId);
       const patchBox: Record<string, unknown> = {
@@ -282,10 +329,15 @@ export async function ingestNbaLiveGamesFromBdl(
         liveSyncedAt: FieldValue.serverTimestamp(),
       };
       if (isFinalBox) {
-        const existing = await ref.get();
-        const prev = existing.data() as { finalAt?: unknown } | undefined;
-        if (prev?.finalAt == null) {
-          patchBox.finalAt = FieldValue.serverTimestamp();
+        patchBox.finalAt = FieldValue.serverTimestamp();
+        if (!prevBox?.hasLeadingScorers) {
+          const leaders = leadingScorersFromBox({
+            homeTeamId: box.homeAppTeamId,
+            awayTeamId: box.awayAppTeamId,
+            home: liveStats.box.home,
+            away: liveStats.box.away,
+          });
+          if (leaders.length > 0) patchBox.leadingScorers = leaders;
         }
       }
       await ref.set(patchBox, { merge: true });

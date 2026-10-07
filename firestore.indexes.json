@@ -252,6 +252,14 @@
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "plan", "order": "ASCENDING" },
+        { "fieldPath": "proUntil", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "users",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "plan", "order": "ASCENDING" },
         { "fieldPath": "cancelAtPeriodEnd", "order": "ASCENDING" },
         { "fieldPath": "proUntil", "order": "ASCENDING" }
       ]

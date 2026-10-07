@@ -22,9 +22,9 @@ export const METRICS: { key: MobileMetric; label: string }[] = [
 /** NBA 共通の指標（最多得点者的中は goalScorerHits） */
 export const NBA_RANKING_METRICS: MobileMetric[] = [
   "totalScore",
-  "winRate",
-  "upsetScore",
   "goalScorerHits",
+  "upsetScore",
+  "winRate",
 ];
 
 export const WC_RANKING_METRICS: MobileMetric[] = [

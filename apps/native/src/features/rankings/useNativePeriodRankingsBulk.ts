@@ -216,7 +216,9 @@ export function useNativePeriodRankingsBulk(
     if (!pending) periodInflight.set(key, run);
 
     const value = await run;
-    periodCache.set(key, { at: Date.now(), value });
+    if (value.snapshotGeneration !== null) {
+      periodCache.set(key, { at: Date.now(), value });
+    }
     return value;
   }, [period, label, division]);
 

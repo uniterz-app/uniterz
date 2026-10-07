@@ -214,7 +214,10 @@ export function usePeriodRankingsBulk(
     if (!pending) periodInflight.set(key, run);
 
     const value = await run;
-    periodCache.set(key, { at: Date.now(), value });
+    // 失敗・pro_required は次回取り直す（Pro 加入直後やネットワーク復帰で空のまま残さない）
+    if (value.snapshotGeneration !== null) {
+      periodCache.set(key, { at: Date.now(), value });
+    }
     return value;
   }, [period, label, division]);
 

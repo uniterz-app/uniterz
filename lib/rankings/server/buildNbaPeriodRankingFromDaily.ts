@@ -163,7 +163,7 @@ export async function buildNbaPeriodRankingBulk(opts: {
   let winRateMin = periodWinRateMinPosts(opts.period);
   const db = getAdminDb();
 
-  if (opts.period === "monthly" && division === "standard") {
+  if (division === "standard") {
     const todayKey = rankingPeriodTodayKey(opts.now ?? new Date());
     const asOfKey = todayKey < range.endKey ? todayKey : range.endKey;
     const pickupSoFar = await countNbaPickupGamesSoFarAdmin({

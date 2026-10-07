@@ -22,57 +22,28 @@ import {
   type PostWithMillis,
 } from "@/lib/result/result-page-data";
 import { sortResultPostsForDisplay } from "@/lib/result/resultPostDaySort";
-import { getDayRangeInTimeZone, TIMEZONE_JST } from "@/lib/time/zonedTime";
+import { nbaSlateDayRange } from "@/lib/games/latestNbaSlate";
 
 const IN_QUERY_CHUNK = 30;
-const TODAY_FETCH_LIMIT = 48;
+const SLATE_FETCH_LIMIT = 48;
 
-/** 確定日時が JST の暦日「今日」に含まれるか */
-export function isSettledOnJstDay(
-  settledAtMs: number,
-  now: Date = new Date()
-): boolean {
-  if (!Number.isFinite(settledAtMs)) return false;
-  const { start, end } = getDayRangeInTimeZone(now, TIMEZONE_JST);
-  const startMs = start.getTime();
-  const endMs = end.getTime();
-  return settledAtMs >= startMs && settledAtMs < endMs;
-}
-
-export function filterSettledTodayForScope(
+export function filterSettledRowsForScope(
   rows: readonly SettledPostRow[],
-  ctx: ProfileStatsStreakContext,
-  now: Date = new Date()
+  ctx: ProfileStatsStreakContext
 ): SettledPostRow[] {
   const scope = resolveProfileStreakScopeKey(ctx);
-  const { start, end } = getDayRangeInTimeZone(now, TIMEZONE_JST);
-  const startMs = start.getTime();
-  const endMs = end.getTime();
-
-  const out: SettledPostRow[] = [];
-  for (const row of rows) {
-    if (row.settledAtMs < startMs || row.settledAtMs >= endMs) continue;
-    if (
-      !postMatchesProfileStreakScope(
-        {
-          league: row.league,
-          seasonPhase: row.seasonPhase,
-          wcStage: row.wcStage,
-        },
-        scope
-      )
-    ) {
-      continue;
-    }
-    out.push(row);
-  }
-
-  out.sort((a, b) => b.settledAtMs - a.settledAtMs);
-  return out;
+  return rows.filter((row) => postMatchesProfileStreakScope(row, scope));
 }
 
-function sortSettledTodayPosts(posts: PostWithMillis[]): PostWithMillis[] {
-  return sortResultPostsForDisplay(posts);
+/** 確定済みで、試合開始が試合日（米国東部）の範囲に入る投稿 */
+export function isSettledPostInSlate(
+  post: { status?: unknown; settledAtMillis?: number | null; startAtMillis?: number | null },
+  range: { start: Date; end: Date }
+): boolean {
+  if (post.status !== "final" || post.settledAtMillis == null) return false;
+  const startMs = post.startAtMillis;
+  if (typeof startMs !== "number" || !Number.isFinite(startMs)) return false;
+  return startMs >= range.start.getTime() && startMs < range.end.getTime();
 }
 
 function settledRowFromPost(post: PostWithMillis): SettledPostRow | null {
@@ -115,81 +86,66 @@ async function fetchPostsByIds(ids: readonly string[]): Promise<PostWithMillis[]
     .filter((p): p is PostWithMillis => p != null);
 }
 
-async function loadProfileSettledTodayResultPostsFallback(
-  uid: string,
-  ctx: ProfileStatsStreakContext
-): Promise<PostWithMillis[]> {
-  const rows = await loadProfileSettledPosts(uid);
-  const todayRows = filterSettledTodayForScope(rows, ctx);
-  const ids = todayRows.map((r) => r.postId);
-  const posts = await fetchPostsByIds(ids);
-  return sortSettledTodayPosts(
-    posts.filter((p) => p.status === "final" && p.settledAtMillis != null)
-  );
-}
-
 /**
- * 本日（JST）に確定した投稿を、プロフィールのリーグ／WC スコープで絞り込み、
- * リザルトカード用の PostWithMillis を返す。
+ * 最新の NBA 試合日（米国東部の暦日）に始まった試合の確定投稿を、
+ * プロフィールのリーグ／WC スコープで絞り込み、リザルトカード用の PostWithMillis を返す。
  *
- * 連勝用の直近 posts キャッシュが温いときは range query を飛ばし、
- * 今日分 ID だけ getDocs（documentId in）する。
+ * 試合日の試合は試合日 0:00（東部）以降に確定するので settledAt >= 試合日開始で引き、
+ * 試合開始時刻で試合日に絞る。
  */
 export async function loadProfileSettledTodayResultPosts(
   uid: string,
-  ctx: ProfileStatsStreakContext
+  ctx: ProfileStatsStreakContext,
+  slateDateKey: string
 ): Promise<PostWithMillis[]> {
-  // 連勝キャッシュ（5分 TTL）があれば今日分をそこから取り、posts 再クエリを避ける
+  const range = nbaSlateDayRange(slateDateKey);
+  if (!range) return [];
+  const startMs = range.start.getTime();
+
+  // 連勝キャッシュ（5分 TTL・直近 40 件）があれば候補をそこから取り、posts 再クエリを避ける
   try {
     const cachedRows = await loadProfileSettledPosts(uid);
-    const todayFromCache = filterSettledTodayForScope(cachedRows, ctx);
-    if (todayFromCache.length > 0) {
-      const posts = await fetchPostsByIds(todayFromCache.map((r) => r.postId));
-      return sortSettledTodayPosts(
-        posts.filter((p) => p.status === "final" && p.settledAtMillis != null)
-      );
-    }
-    // キャッシュはあるが今日ゼロ → range query せず空を返す（連勝取得が直近40件をカバー）
     if (cachedRows.length > 0) {
       const newest = cachedRows[0]?.settledAtMs ?? 0;
-      const { start } = getDayRangeInTimeZone(new Date(), TIMEZONE_JST);
-      if (newest < start.getTime()) {
-        // 直近 posts が全部昨日以前 → 今日は本当に無い可能性が高い
-        return [];
+      if (newest < startMs) return [];
+      // 試合日より前の確定まで入っていれば、試合日分はキャッシュに全部ある
+      if (cachedRows.some((r) => r.settledAtMs < startMs)) {
+        const candidates = filterSettledRowsForScope(
+          cachedRows.filter((r) => r.settledAtMs >= startMs),
+          ctx
+        );
+        const posts = await fetchPostsByIds(candidates.map((r) => r.postId));
+        return sortResultPostsForDisplay(
+          posts.filter((p) => isSettledPostInSlate(p, range))
+        );
       }
     }
   } catch {
     /* fall through */
   }
 
-  const { start, end } = getDayRangeInTimeZone(new Date(), TIMEZONE_JST);
-  let posts: PostWithMillis[];
-  try {
-    const q = query(
-      collection(db, "posts"),
-      where("authorUid", "==", uid),
-      where("schemaVersion", "==", 2),
-      where("settledAt", ">=", Timestamp.fromDate(start)),
-      where("settledAt", "<", Timestamp.fromDate(end)),
-      orderBy("settledAt", "desc"),
-      limit(TODAY_FETCH_LIMIT)
-    );
-    const snap = await getDocs(q);
-    posts = snap.docs
-      .map((d) => mapDocToPostWithMillis(d.id, d.data()))
-      .filter((p) => p.status === "final" && p.settledAtMillis != null);
-  } catch {
-    return loadProfileSettledTodayResultPostsFallback(uid, ctx);
-  }
+  const q = query(
+    collection(db, "posts"),
+    where("authorUid", "==", uid),
+    where("schemaVersion", "==", 2),
+    where("settledAt", ">=", Timestamp.fromDate(range.start)),
+    orderBy("settledAt", "desc"),
+    limit(SLATE_FETCH_LIMIT)
+  );
+  const snap = await getDocs(q);
+  const posts = snap.docs
+    .map((d) => mapDocToPostWithMillis(d.id, d.data()))
+    .filter((p) => isSettledPostInSlate(p, range));
 
   const rowCandidates = posts
     .map(settledRowFromPost)
     .filter((row): row is SettledPostRow => row != null);
   const enrichedRows = await enrichSettledPostsFromGames(rowCandidates, db);
-  const todayRows = filterSettledTodayForScope(enrichedRows, ctx);
-  const visibleIds = new Set(todayRows.map((row) => row.postId));
+  const visibleIds = new Set(
+    filterSettledRowsForScope(enrichedRows, ctx).map((row) => row.postId)
+  );
 
-  return sortSettledTodayPosts(
+  return sortResultPostsForDisplay(
     posts.filter((post) => visibleIds.has(post.id))
   );
 }

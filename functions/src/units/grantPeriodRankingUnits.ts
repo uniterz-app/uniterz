@@ -132,7 +132,43 @@ async function claimPeriodUnitGrant(opts: {
   });
 }
 
+/** 期間最終日より後に書かれた snapshot だけで付与する（期間最終日の試合が入っていない途中集計で確定させない） */
+async function periodSnapshotsBuiltAfterEnd(
+  period: PeriodRankingUnitPeriod,
+  labelKey: string
+): Promise<boolean> {
+  const db = getFirestore();
+  const metrics = periodRankingUnitMetricsForPeriod(period).filter(
+    (metric) => periodRankingUnitMaxRank(period, metric) > 0
+  );
+  const snaps = await db.getAll(
+    ...metrics.map((metric) =>
+      db
+        .collection("period_ranking_snapshots")
+        .doc(periodStandardSnapshotDocId(period, labelKey, metric))
+    )
+  );
+  return snaps.every((snap) => {
+    if (!snap.exists) return true;
+    const data = (snap.data() ?? {}) as {
+      snapshotDateKey?: unknown;
+      range?: { endKey?: unknown };
+    };
+    const built = typeof data.snapshotDateKey === "string" ? data.snapshotDateKey : "";
+    const endKey = typeof data.range?.endKey === "string" ? data.range.endKey : "";
+    return Boolean(built && endKey && built > endKey);
+  });
+}
+
 type RankEntry = { uid: string; rank: number };
+
+/** 値 0 以下の同率を付与対象から外す上限。旧 snapshot（フィールド無し）は制限なし */
+export function snapshotRewardableMaxRank(data: {
+  rewardableMaxRank?: unknown;
+}): number {
+  const v = data.rewardableMaxRank;
+  return typeof v === "number" && Number.isFinite(v) ? v : Number.POSITIVE_INFINITY;
+}
 
 function loadRankEntriesFromSnapshot(data: {
   ranks?: Record<string, number>;
@@ -160,6 +196,23 @@ export async function grantPeriodRankingUnitsForPeriod(opts: {
 }): Promise<{ granted: boolean; ledgerWrites: number; skipped: number }> {
   const now = opts.now ?? new Date();
   if (!isNbaPeriodFinalForUnitGrants(opts.period, opts.labelKey, now)) {
+    return { granted: false, ledgerWrites: 0, skipped: 0 };
+  }
+
+  if (!(await periodSnapshotsBuiltAfterEnd(opts.period, opts.labelKey))) {
+    try {
+      const { buildNbaPeriodRankingSnapshots } = await import(
+        "../rankings/buildNbaPeriodRankingSnapshots"
+      );
+      await buildNbaPeriodRankingSnapshots(now);
+    } catch (err) {
+      console.error("[grantPeriodRankingUnits] snapshot rebuild failed", err);
+    }
+  }
+  if (!(await periodSnapshotsBuiltAfterEnd(opts.period, opts.labelKey))) {
+    console.warn(
+      `[grantPeriodRankingUnits] wait: snapshots not rebuilt after period end ${opts.period} ${opts.labelKey}`
+    );
     return { granted: false, ledgerWrites: 0, skipped: 0 };
   }
 
@@ -202,16 +255,17 @@ export async function grantPeriodRankingUnitsForPeriod(opts: {
       }
       snapshotsSeen += 1;
 
-      const entries = loadRankEntriesFromSnapshot(
-        (snap.data() ?? {}) as {
-          ranks?: Record<string, number>;
-          rows?: Array<{ uid?: string; rank?: number }>;
-        }
-      );
+      const snapData = (snap.data() ?? {}) as {
+        ranks?: Record<string, number>;
+        rows?: Array<{ uid?: string; rank?: number }>;
+        rewardableMaxRank?: unknown;
+      };
+      const entries = loadRankEntriesFromSnapshot(snapData);
+      const rankCap = Math.min(maxRank, snapshotRewardableMaxRank(snapData));
 
       let metricGranted = 0;
       for (const { uid, rank } of entries) {
-        if (rank > maxRank) continue;
+        if (rank > rankCap) continue;
         const amount = unitsForPeriodRankingRank(opts.period, metric, rank);
         if (amount == null) continue;
 

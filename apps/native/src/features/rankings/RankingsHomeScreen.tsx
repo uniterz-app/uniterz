@@ -306,8 +306,7 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
   const winRateMinPosts = usePeriodBoard
     ? periodWinRateMinPosts(rankingPeriod as Exclude<RankingPeriod, "season">)
     : computeWinRateMinPosts("nba");
-  const winRateUsesPickupRate =
-    usePeriodBoard && rankingPeriod === "monthly" && nbaBoard === "regular";
+  const winRateUsesPickupRate = usePeriodBoard && nbaBoard === "regular";
   const rankingHasNoEntries =
     listReady && (rows.length === 0 || rankingListCount === 0);
 

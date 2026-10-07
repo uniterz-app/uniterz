@@ -53,17 +53,17 @@ service cloud.firestore {
      */
     function profileTextGamblingFree(s) {
       return s is string
-        && !(s.matches('.*ベット.*')
-            || s.matches('.*ベッド.*')
-            || s.matches('.*ベッティング.*')
-            || s.matches('.*賭け.*')
-            || s.matches('.*賭博.*')
-            || s.matches('.*ギャンブル.*')
-            || s.matches('(?i).*\\bbet\\b.*')
-            || s.matches('(?i).*\\bbetting\\b.*')
-            || s.matches('(?i).*\\bbets\\b.*')
-            || s.matches('(?i).*\\bbetted\\b.*')
-            || s.matches('(?i).*\\bbettor\\b.*'));
+        && !(s.matches('(?s).*ベット.*')
+            || s.matches('(?s).*ベッド.*')
+            || s.matches('(?s).*ベッティング.*')
+            || s.matches('(?s).*賭け.*')
+            || s.matches('(?s).*賭博.*')
+            || s.matches('(?s).*ギャンブル.*')
+            || s.matches('(?si).*\\bbet\\b.*')
+            || s.matches('(?si).*\\bbetting\\b.*')
+            || s.matches('(?si).*\\bbets\\b.*')
+            || s.matches('(?si).*\\bbetted\\b.*')
+            || s.matches('(?si).*\\bbettor\\b.*'));
     }
 
     function isValidNotificationPrefs(p) {

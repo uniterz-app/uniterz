@@ -41,7 +41,9 @@ function networkHint(cause: unknown): Error {
   const raw = cause instanceof Error ? cause.message : String(cause ?? "");
   if (/network|failed|fetch/i.test(raw) || !raw.trim()) {
     return new Error(
-      "API に接続できません。Next.js（npm run dev）が起動しているか、EXPO_PUBLIC_UNITERZ_API_BASE_URL を確認してください。"
+      __DEV__
+          ? "API に接続できません。Next.js（npm run dev）が起動しているか、EXPO_PUBLIC_UNITERZ_API_BASE_URL を確認してください。"
+          : "通信に失敗しました。電波の良い場所でもう一度お試しください。"
     );
   }
   return cause instanceof Error ? cause : new Error(raw || "request failed");

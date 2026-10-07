@@ -1,5 +1,6 @@
 "use client";
 
+import { toDateKeyInTimeZone } from "@/lib/time/zonedTime";
 import {
   useMemo,
   useRef,
@@ -217,7 +218,7 @@ export default function PredictionFormV2({
   const isMobile =
     pathname.startsWith("/mobile") || pathname.startsWith("/m/");
   const prefix = isMobile ? "/mobile" : "/web";
-  const { language } = useUserLanguage(auth.currentUser?.uid ?? null);
+  const { language, timeZone } = useUserLanguage(auth.currentUser?.uid ?? null);
   const m = t(language);
   const gameId = String((game as { id: string }).id);
   const { data: postDistribution, loading: postDistributionLoading } =
@@ -225,9 +226,9 @@ export default function PredictionFormV2({
 
   const gameDateKey = useMemo(() => {
     return game.startAtJst
-      ? game.startAtJst.toISOString().slice(0, 10)
+      ? toDateKeyInTimeZone(game.startAtJst, timeZone)
       : undefined;
-  }, [game.startAtJst]);
+  }, [game.startAtJst, timeZone]);
 
   const [winner, setWinner] = useState<Winner | null>(null);
   /** ノックアウトで同点（PK 決着）を予想したときに勝ち上がる側 */

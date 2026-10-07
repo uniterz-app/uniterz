@@ -287,8 +287,19 @@ export function useNativeIap() {
         cyberAlert("", "復元可能な購入がありません。");
         return false;
       }
+      // 期限切れの古い取引はサーバーが 409 を返すので、1 件でも通れば復元成功
+      let restored = 0;
       for (const p of valid) {
-        await verifyOnServer(p);
+        try {
+          await verifyOnServer(p);
+          restored += 1;
+        } catch (err) {
+          console.warn("[iap restore]", p.productId, err);
+        }
+      }
+      if (restored === 0) {
+        cyberAlert("", "有効な購入が見つかりませんでした。");
+        return false;
       }
       cyberAlert("", "購入を復元しました。");
       return true;

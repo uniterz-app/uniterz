@@ -21,6 +21,13 @@ module.exports = {
   android: {
     ...base.android,
     package: isPreview ? "com.uniterz.app.dev" : "com.uniterz.app",
+    usesCleartextTraffic: isPreview,
+    blockedPermissions: [
+      "android.permission.RECORD_AUDIO",
+      "android.permission.SYSTEM_ALERT_WINDOW",
+      "android.permission.READ_EXTERNAL_STORAGE",
+      "android.permission.WRITE_EXTERNAL_STORAGE",
+    ],
   },
   extra: {
     ...base.extra,

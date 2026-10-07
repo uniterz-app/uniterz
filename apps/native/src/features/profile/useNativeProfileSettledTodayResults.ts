@@ -4,7 +4,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { withTimeout } from "../../../../../lib/async/withTimeout";
 import type { ProfileStatsStreakContext } from "../../../../../lib/profile/profileStreakScope";
-import { TIMEZONE_JST, toDateKeyInTimeZone } from "../../../../../lib/time/zonedTime";
+import {
+  peekLatestNbaSlateDateKey,
+  useLatestNbaSlateDateKey,
+} from "../../../../../lib/games/latestNbaSlate";
+import { getUniterzApiBaseUrl } from "../games/submitPredictionApi";
 import { loadProfileSettledTodayResultPostsNative } from "./loadProfileSettledTodayNative";
 import type { PostWithMillis } from "../results/nativeResultModel";
 
@@ -22,9 +26,6 @@ export const NATIVE_PROFILE_SETTLED_TODAY_CTX: ProfileStatsStreakContext = {
   rankingLeague: "nba",
 };
 
-function todayCacheDateKey(): string {
-  return toDateKeyInTimeZone(new Date(), TIMEZONE_JST);
-}
 
 function settledTodayCacheKey(
   uid: string,
@@ -49,6 +50,7 @@ function markSettledTodayFailed(key: string): PostWithMillis[] {
 async function loadSettledTodayOnce(
   uid: string,
   ctx: ProfileStatsStreakContext,
+  slateDateKey: string,
   key: string
 ): Promise<PostWithMillis[]> {
   const cached = settledTodayCache.get(key);
@@ -56,7 +58,7 @@ async function loadSettledTodayOnce(
   if (cached?.promise) return cached.promise;
 
   const promise = withTimeout(
-    loadProfileSettledTodayResultPostsNative(uid, ctx),
+    loadProfileSettledTodayResultPostsNative(uid, ctx, slateDateKey),
     SETTLED_TODAY_TIMEOUT_MS,
     "settled-today-timeout"
   )
@@ -64,7 +66,10 @@ async function loadSettledTodayOnce(
       settledTodayCache.set(key, { posts, resolved: true });
       return posts;
     })
-    .catch(() => markSettledTodayFailed(key));
+    .catch((err) => {
+      console.warn("[useNativeProfileSettledTodayResults]", err);
+      return markSettledTodayFailed(key);
+    });
 
   settledTodayCache.set(key, { posts: [], resolved: false, promise });
   return promise;
@@ -77,9 +82,10 @@ export function prefetchNativeProfileSettledTodayResults(
 ): void {
   const safeUid = typeof uid === "string" ? uid.trim() : "";
   if (!safeUid) return;
-  const key = settledTodayCacheKey(safeUid, ctx, todayCacheDateKey());
+  const slateDateKey = peekLatestNbaSlateDateKey(getUniterzApiBaseUrl());
+  const key = settledTodayCacheKey(safeUid, ctx, slateDateKey);
   if (settledTodayCache.get(key)?.resolved) return;
-  void loadSettledTodayOnce(safeUid, ctx, key);
+  void loadSettledTodayOnce(safeUid, ctx, slateDateKey, key);
 }
 
 export function useNativeProfileSettledTodayResults(
@@ -88,7 +94,7 @@ export function useNativeProfileSettledTodayResults(
   enabled = true
 ) {
   const scopeKey = JSON.stringify(ctx);
-  const dateKey = todayCacheDateKey();
+  const dateKey = useLatestNbaSlateDateKey(getUniterzApiBaseUrl());
   const requestKey =
     enabled && uid ? settledTodayCacheKey(uid, ctx, dateKey) : null;
   const resolvedPosts = requestKey ? readResolvedPosts(requestKey) : null;
@@ -124,7 +130,7 @@ export function useNativeProfileSettledTodayResults(
       loading: true,
     }));
 
-    void loadSettledTodayOnce(safeUid, ctx, safeRequestKey)
+    void loadSettledTodayOnce(safeUid, ctx, dateKey, safeRequestKey)
       .then((list) => {
         if (!alive) return;
         setState({ key: safeRequestKey, posts: list, loading: false });
@@ -141,15 +147,16 @@ export function useNativeProfileSettledTodayResults(
     return () => {
       alive = false;
     };
-  }, [requestKey, scopeKey, uid, ctx]);
+  }, [requestKey, scopeKey, uid, ctx, dateKey]);
 
   return useMemo(
     () => ({
+      slateDateKey: dateKey,
       posts: state.key === requestKey ? state.posts : [],
       loading:
         Boolean(requestKey) &&
         (state.loading || state.key !== requestKey),
     }),
-    [requestKey, state.key, state.loading, state.posts]
+    [dateKey, requestKey, state.key, state.loading, state.posts]
   );
 }

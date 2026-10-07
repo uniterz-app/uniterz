@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireUidFromRequest } from "@/lib/communities/serverAuth";
 import { getAdminDb } from "@/lib/firebaseAdmin";
 import { bindReferralOnSignupAdmin } from "@/lib/referral/bindReferralOnSignupAdmin";
+import { consumeRateLimit, RATE_LIMIT_RULES } from "@/lib/security/rateLimit";
 
 export const runtime = "nodejs";
 
@@ -18,6 +19,19 @@ export async function POST(req: Request) {
     } | null;
     const inviteCode =
       typeof body?.inviteCode === "string" ? body.inviteCode : "";
+
+    // 招待コードの総当たり防止
+    const limit = await consumeRateLimit(
+      getAdminDb(),
+      RATE_LIMIT_RULES.inviteCodeLookup,
+      uid
+    );
+    if (!limit.allowed) {
+      return NextResponse.json(
+        { ok: false, error: "rate_limited" },
+        { status: 429, headers: { "Retry-After": String(limit.retryAfterSec) } }
+      );
+    }
 
     const result = await bindReferralOnSignupAdmin(
       getAdminDb(),

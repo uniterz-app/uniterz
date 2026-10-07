@@ -1,6 +1,7 @@
 export const runtime = "nodejs";
 
 import { NextResponse } from "next/server";
+import Stripe from "stripe";
 import { FieldValue } from "firebase-admin/firestore";
 import { getAdminAuth, getAdminDb } from "@/lib/firebaseAdmin";
 
@@ -30,8 +31,35 @@ async function requireRecentlyAuthenticatedUid(req: Request): Promise<string> {
 
 /**
  * 本人アカウント削除 — Auth ユーザー削除 + users/{uid} を墓標化（PII・経済・招待も消去）
- * Pro サブスクのストア解約はクライアント側で案内（ここでは行わない）
+ * Stripe サブスクはここで即時解約。App Store / Google Play はクライアント側で案内
  */
+async function cancelStripeSubscription(subscriptionId: string): Promise<void> {
+  const key = process.env.STRIPE_SECRET_KEY;
+  if (!key) return;
+  try {
+    await new Stripe(key).subscriptions.cancel(subscriptionId);
+  } catch (err) {
+    console.warn("DELETE /api/me/account stripe cancel:", err);
+  }
+}
+
+async function releaseUserSlugs(
+  db: FirebaseFirestore.Firestore,
+  uid: string,
+  tombstoneHandle: string
+): Promise<void> {
+  try {
+    const slugs = await db.collection("slugs").where("uid", "==", uid).limit(50).get();
+    const batch = db.batch();
+    for (const docSnap of slugs.docs) {
+      if (docSnap.id !== tombstoneHandle) batch.delete(docSnap.ref);
+    }
+    batch.set(db.collection("slugs").doc(tombstoneHandle), { uid });
+    await batch.commit();
+  } catch (err) {
+    console.warn("DELETE /api/me/account slugs:", err);
+  }
+}
 export async function DELETE(req: Request) {
   try {
     const uid = await requireRecentlyAuthenticatedUid(req);
@@ -43,6 +71,20 @@ export async function DELETE(req: Request) {
     if (!snap.exists) {
       return NextResponse.json({ error: "user not found" }, { status: 404 });
     }
+
+    const tombstoneHandle = `deleted_${uid.slice(0, 8)}`;
+
+    try {
+      const billing = await userRef.collection("secure").doc("billing").get();
+      const subId = billing.data()?.stripeSubscriptionId;
+      if (typeof subId === "string" && subId) {
+        await cancelStripeSubscription(subId);
+      }
+    } catch (billingErr) {
+      console.warn("DELETE /api/me/account billing read:", billingErr);
+    }
+
+    await releaseUserSlugs(db, uid, tombstoneHandle);
 
     // pushTokens を可能な範囲で掃除
     try {
@@ -76,7 +118,9 @@ export async function DELETE(req: Request) {
         bio: "",
         photoURL: "",
         avatarUrl: "",
-        handle: `deleted_${uid.slice(0, 8)}`,
+        handle: tombstoneHandle,
+        slug: FieldValue.delete(),
+        username: FieldValue.delete(),
         email: FieldValue.delete(),
         notificationPrefs: FieldValue.delete(),
         unitBalance: 0,

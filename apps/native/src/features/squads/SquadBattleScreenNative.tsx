@@ -4033,6 +4033,11 @@ export default function SquadBattleScreenNative() {
       return;
     }
 
+    if (!isPreviewMode) {
+      flash(c.flashInvalidCode);
+      setJoinByCodeBusy(false);
+      return;
+    }
     const mockNorm = normalizeUiInviteCodeNative(SQUAD_BATTLE_MOCK_INVITE_CODE);
     if (normalized !== mockNorm) {
       flash(c.flashInvalidCodePreview);

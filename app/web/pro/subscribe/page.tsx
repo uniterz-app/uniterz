@@ -33,6 +33,7 @@ export default function WebProSubscribePage() {
       <ProSubscribePreview
         language={language}
         onTrialSuccessChange={onTrialSuccessChange}
+        appOnlyPurchase
       />
     </CyberSubpageShell>
   );
