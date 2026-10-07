@@ -27,9 +27,11 @@ export async function shouldRunNbaLiveGamesIngest(
   if (snap.empty) return false;
 
   return snap.docs.some((doc) => {
-    const status = String(doc.data()?.status ?? "").toLowerCase();
+    const data = doc.data() ?? {};
+    const status = String(data.status ?? "").toLowerCase();
     if (status === "live") return true;
-    if (status === "final" || status === "ended") return false;
+    // 表示は final でも、得点者待ちで採点未確定（final=false）なら回し続ける
+    if (status === "final" || status === "ended") return data.final !== true;
     return true;
   });
 }

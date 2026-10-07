@@ -25,6 +25,9 @@ import { leadingScorersFromBox } from "@/lib/nba/topScorer";
 import { fetchBdlGameAdvancedStats } from "@/lib/nba/bdl/fetchBdlGameAdvancedStats";
 import { mergeGameAdvancedIntoLiveStatsDoc } from "@/lib/nba/bdl/mergeGameAdvancedIntoLiveStats";
 
+/** 開始からこの時間を過ぎても box の得点者が取れなければ、得点者なしで確定させる */
+const FINAL_WITHOUT_LEADERS_AFTER_MS = 3.5 * 60 * 60 * 1000;
+
 type PrevGameState = {
   final: boolean;
   finalAt: boolean;
@@ -241,13 +244,31 @@ export async function ingestNbaLiveGamesFromBdl(
         ? { home: homeScore, away: awayScore }
         : mappedGame.score;
     const isFinal = status === "final";
+    const docId = nbaGameDocIdFromBdlId(g.id);
+    const prev = prevByDocId.get(docId);
+
+    // onGameFinalV2 は final=true になった 1 回だけ採点する。得点者が揃うまで final を立てない
+    const leaders =
+      isFinal && box?.phase === "final" && liveStats
+        ? leadingScorersFromBox({
+            homeTeamId: box.homeAppTeamId,
+            awayTeamId: box.awayAppTeamId,
+            home: liveStats.box.home,
+            away: liveStats.box.away,
+          })
+        : [];
+    const waitedTooLong =
+      Date.now() - mappedGame.startAtMs > FINAL_WITHOUT_LEADERS_AFTER_MS;
+    const settleNow =
+      isFinal &&
+      (leaders.length > 0 || prev?.hasLeadingScorers === true || waitedTooLong);
 
     const patch: Record<string, unknown> = {
       status,
       homeScore,
       awayScore,
       score,
-      final: isFinal,
+      final: settleNow,
       updatedAt: FieldValue.serverTimestamp(),
       liveSyncedAt: FieldValue.serverTimestamp(),
     };
@@ -259,24 +280,20 @@ export async function ingestNbaLiveGamesFromBdl(
       patch.liveStats = liveStats;
     }
 
-    const docId = nbaGameDocIdFromBdlId(g.id);
-    const prev = prevByDocId.get(docId);
     if (prev?.final && (prev.finalAt || !isFinal)) {
       skipped += 1;
       continue;
     }
     if (sampleGameIds.length < 8) sampleGameIds.push(docId);
-    if (isFinal) {
+    if (settleNow) {
       patch.finalAt = FieldValue.serverTimestamp();
-      if (box && liveStats && !prev?.hasLeadingScorers) {
-        const leaders = leadingScorersFromBox({
-          homeTeamId: box.homeAppTeamId,
-          awayTeamId: box.awayAppTeamId,
-          home: liveStats.box.home,
-          away: liveStats.box.away,
-        });
-        if (leaders.length > 0) patch.leadingScorers = leaders;
+      if (leaders.length > 0 && !prev?.hasLeadingScorers) {
+        patch.leadingScorers = leaders;
       }
+    } else if (isFinal) {
+      console.warn(
+        `[nbaLiveGamesIngest] ${docId} final but leading scorers not ready; waiting`
+      );
     }
 
     if (!dryRun) {
