@@ -8,8 +8,7 @@ import {
   type NbaStatsSearchHit,
   type NbaStatsSearchKind,
 } from "@/lib/nba/nbaStatsSearch";
-import { useLeagueTeamStatsBundle } from "@/lib/nba/useLeagueTeamStatsBundle";
-import { usePlayerStatLeadersBundle } from "@/lib/nba/usePlayerStatLeadersBundle";
+import { useNbaStatsSearchBundles } from "@/lib/nba/useNbaStatsSearchBundles";
 
 type Props = {
   kind: NbaStatsSearchKind;
@@ -24,20 +23,11 @@ export default function NbaStatsSearchBar({
 }: Props) {
   const lang = resolveLocalizedLang(language);
   const [query, setQuery] = useState("");
-  // 検索対象の kind 側だけ取得する。パネルが既に読んだ bundle は共有キャッシュから来る
-  const { bundle: teamBundle } = useLeagueTeamStatsBundle({
-    enabled: kind === "team",
-  });
-  const { bundle: playerBundle } = usePlayerStatLeadersBundle({
-    enabled: kind === "player",
-  });
+  const bundles = useNbaStatsSearchBundles({ kind });
   const hits = useMemo(
     () =>
-      searchNbaStatsIndex(query, kind, 8, {
-        team: teamBundle,
-        player: playerBundle,
-      }),
-    [query, kind, teamBundle, playerBundle]
+      searchNbaStatsIndex(query, kind, 8, bundles),
+    [query, kind, bundles]
   );
   const placeholder =
     kind === "team"

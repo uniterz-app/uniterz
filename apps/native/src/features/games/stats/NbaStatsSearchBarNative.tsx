@@ -13,8 +13,7 @@ import {
   type NbaStatsSearchHit,
   type NbaStatsSearchKind,
 } from "../../../../../../lib/nba/nbaStatsSearch";
-import { useLeagueTeamStatsBundle } from "../../../../../../lib/nba/useLeagueTeamStatsBundle";
-import { usePlayerStatLeadersBundle } from "../../../../../../lib/nba/usePlayerStatLeadersBundle";
+import { useNbaStatsSearchBundles } from "../../../../../../lib/nba/useNbaStatsSearchBundles";
 import { getUniterzApiBaseUrl } from "../submitPredictionApi";
 import { METRIC_FONT } from "../../rankings/rankingsUiTheme";
 import { nbaStatsSearchCopy } from "./nbaStatsUiCopy";
@@ -33,22 +32,11 @@ export default function NbaStatsSearchBarNative({
   const copy = nbaStatsSearchCopy(language);
   const [query, setQuery] = useState("");
   const apiBaseUrl = getUniterzApiBaseUrl();
-  // 検索対象の kind 側だけ取得する。パネルが既に読んだ bundle は共有キャッシュから来る
-  const { bundle: teamBundle } = useLeagueTeamStatsBundle({
-    apiBaseUrl,
-    enabled: kind === "team",
-  });
-  const { bundle: playerBundle } = usePlayerStatLeadersBundle({
-    apiBaseUrl,
-    enabled: kind === "player",
-  });
+  const bundles = useNbaStatsSearchBundles({ kind, apiBaseUrl });
   const hits = useMemo(
     () =>
-      searchNbaStatsIndex(query, kind, 8, {
-        team: teamBundle,
-        player: playerBundle,
-      }),
-    [query, kind, teamBundle, playerBundle]
+      searchNbaStatsIndex(query, kind, 8, bundles),
+    [query, kind, bundles]
   );
   const placeholder =
     kind === "team" ? copy.placeholderTeam : copy.placeholderPlayer;
