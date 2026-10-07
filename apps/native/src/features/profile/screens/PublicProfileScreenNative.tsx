@@ -21,6 +21,7 @@ export default function PublicProfileScreenNative() {
       fromResultDetail={route.params?.fromResultDetail === true}
       fromMarkList={route.params?.fromMarkList === true}
       fromUserSearch={route.params?.fromUserSearch === true}
+      fromDailyLeaders={route.params?.fromDailyLeaders === true}
       resultDetailPostId={route.params?.resultDetailPostId}
       leaderboardsGroupId={route.params?.leaderboardsGroupId}
     />

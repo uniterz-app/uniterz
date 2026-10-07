@@ -32,6 +32,7 @@ export type OpenPublicProfileParams = {
   fromMarkList?: boolean;
   fromUserSearch?: boolean;
   fromWeeklyReport?: boolean;
+  fromDailyLeaders?: boolean;
   /** 省略時も handle だけは prime する */
   warm?: OpenPublicProfileWarm;
 };
@@ -53,6 +54,7 @@ function screenParamsFrom(
     ...(params.fromMarkList ? { fromMarkList: true } : {}),
     ...(params.fromUserSearch ? { fromUserSearch: true } : {}),
     ...(params.fromWeeklyReport ? { fromWeeklyReport: true } : {}),
+    ...(params.fromDailyLeaders ? { fromDailyLeaders: true } : {}),
     ...(resultDetailPostId ? { resultDetailPostId } : {}),
     ...(params.leaderboardsGroupId
       ? { leaderboardsGroupId: params.leaderboardsGroupId }

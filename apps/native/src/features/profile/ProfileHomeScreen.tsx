@@ -199,6 +199,7 @@ export default function ProfileHomeScreen({
   fromResultDetail = false,
   fromMarkList = false,
   fromUserSearch = false,
+  fromDailyLeaders = false,
   resultDetailPostId,
   leaderboardsGroupId,
   openSettingsOnMount = false,
@@ -221,6 +222,8 @@ export default function ProfileHomeScreen({
   fromMarkList?: boolean;
   /** ユーザー検索から遷移してきた他人プロフィール */
   fromUserSearch?: boolean;
+  /** Games TODAY から遷移してきた他人プロフィール */
+  fromDailyLeaders?: boolean;
   /** リザルト詳細へ戻るときの投稿 ID */
   resultDetailPostId?: string;
   leaderboardsGroupId?: string;
@@ -281,7 +284,8 @@ export default function ProfileHomeScreen({
       fromWeeklyReport ||
       fromResultDetail ||
       fromMarkList ||
-      fromUserSearch);
+      fromUserSearch ||
+      fromDailyLeaders);
 
   const dismissPublicProfileRoute = useCallback(() => {
     const state = navigation.getState();
@@ -308,6 +312,7 @@ export default function ProfileHomeScreen({
       fromWeeklyReport: undefined,
       fromResultDetail: undefined,
       fromMarkList: undefined,
+      fromDailyLeaders: undefined,
       resultDetailPostId: undefined,
       leaderboardsGroupId: undefined,
     });
@@ -350,6 +355,14 @@ export default function ProfileHomeScreen({
       });
       return;
     }
+    if (fromDailyLeaders) {
+      if (navigation.canGoBack()) {
+        navigation.goBack();
+        return;
+      }
+      tabNavigation.navigate("GamesTab", { screen: "DailyLeaders" });
+      return;
+    }
     if (fromResultDetail) {
       if (navigation.canGoBack()) {
         navigation.goBack();
@@ -381,6 +394,7 @@ export default function ProfileHomeScreen({
     tabNavigation.navigate("RankingsTab", { screen: "RankingsHome" });
   }, [
     dismissPublicProfileRoute,
+    fromDailyLeaders,
     fromLeaderboards,
     fromMarkList,
     fromUserSearch,

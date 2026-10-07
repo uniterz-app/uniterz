@@ -65,6 +65,7 @@ export default function DailyLeadersScreenNative() {
           onSelectUser={(row) =>
             navigateToPublicProfileNative(navigation, {
               handle: row.uid,
+              fromDailyLeaders: true,
               warm: {
                 uid: row.uid,
                 handle: row.handle ?? null,

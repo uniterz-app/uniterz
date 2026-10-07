@@ -74,9 +74,11 @@ export type GamesStackParamList = {
         returnToPredictGameId?: string;
       }
     | undefined;
+  /** TODAY の UNITERZ スコアリーダーから開く他人プロフィール */
+  PublicProfile: PublicProfileParams;
 };
 
-/** 他人プロフィール。Profile / Rankings / Leaderboards / Result 各スタックで共用 */
+/** 他人プロフィール。Profile / Rankings / Leaderboards / Result / Games 各スタックで共用 */
 export type PublicProfileParams = {
   handle: string;
   fromRankings?: boolean;
@@ -88,6 +90,8 @@ export type PublicProfileParams = {
   fromMarkList?: boolean;
   /** ユーザー検索から遷移してきた他人プロフィール */
   fromUserSearch?: boolean;
+  /** Games TODAY（UNITERZ スコアリーダー）から遷移してきた他人プロフィール */
+  fromDailyLeaders?: boolean;
 };
 
 export type ResultStackParamList = {

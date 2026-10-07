@@ -177,6 +177,13 @@ function GamesStackScreen() {
               .GamesPlayerDetailPreviewScreenWrapper
           }
         />
+        <GamesStack.Screen
+          name="PublicProfile"
+          getComponent={() =>
+            require("../features/profile/screens/PublicProfileScreenNative").default
+          }
+          options={publicProfileScreenOptions}
+        />
       </GamesStack.Navigator>
     </NativeStackBackdrop>
   );

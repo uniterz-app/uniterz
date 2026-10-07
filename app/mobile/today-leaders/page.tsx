@@ -14,6 +14,10 @@ import {
   dailyScoreLeadersCopy,
   type TodayLeadersTab,
 } from "@/lib/rankings/dailyScoreLeaders/dailyScoreLeadersCopy";
+import {
+  PROFILE_FROM_PARAM,
+  PROFILE_FROM_TODAY_VALUE,
+} from "@/lib/navigation/rankingsProfileFrom";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 
@@ -58,7 +62,11 @@ export default function MobileTodayLeadersPage() {
         ) : (
           <UniterzDailyScoreLeadersPanel
             language={language}
-            onSelectUser={(uid) => router.push(`/mobile/u/${encodeURIComponent(uid)}`)}
+            onSelectUser={(uid) =>
+              router.push(
+                `/mobile/u/${encodeURIComponent(uid)}?${PROFILE_FROM_PARAM}=${PROFILE_FROM_TODAY_VALUE}`
+              )
+            }
           />
         )}
       </div>

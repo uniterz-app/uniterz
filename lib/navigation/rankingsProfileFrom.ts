@@ -27,6 +27,8 @@ export const PROFILE_FROM_GROUP_VALUE = "group";
 export const PROFILE_FROM_GROUP_ID_PARAM = "groupId";
 /** 週次レポートのライバル一覧からプロフィールへ */
 export const PROFILE_FROM_REPORT_VALUE = "report";
+/** Games TODAY（UNITERZ スコアリーダー）からプロフィールへ */
+export const PROFILE_FROM_TODAY_VALUE = "today";
 
 /** Leaderboards でグループオーバーレイを開き直すクエリ */
 export const LEADERBOARDS_OPEN_GROUP_PARAM = "openGroup";

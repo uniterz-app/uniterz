@@ -11,6 +11,7 @@ import {
   PROFILE_FROM_GROUP_VALUE,
   PROFILE_FROM_RANKINGS_VALUE,
   PROFILE_FROM_REPORT_VALUE,
+  PROFILE_FROM_TODAY_VALUE,
   buildRankingsPathQuery,
   leaderboardsGroupReturnHref,
 } from "@/lib/navigation/rankingsProfileFrom";
@@ -35,10 +36,12 @@ export default function RankingsReturnNavLink({ language }: Props) {
       from === PROFILE_FROM_COMMUNITY_VALUE) &&
     !!groupId;
   const isReportReturn = from === PROFILE_FROM_REPORT_VALUE;
+  const isTodayReturn = from === PROFILE_FROM_TODAY_VALUE;
   if (
     from !== PROFILE_FROM_RANKINGS_VALUE &&
     !isGroupReturn &&
-    !isReportReturn
+    !isReportReturn &&
+    !isTodayReturn
   ) {
     return null;
   }
@@ -48,18 +51,26 @@ export default function RankingsReturnNavLink({ language }: Props) {
       ? "/mobile"
       : "/web";
   const tabQuery = buildRankingsPathQuery(sp);
-  const href = isGroupReturn
-    ? leaderboardsGroupReturnHref(prefix, groupId!)
-    : `${prefix}/rankings${tabQuery ? `?${tabQuery}` : ""}`;
-  const m = t(language);
-  const label = isReportReturn
-    ? m.profile.backToReport
+  const href = isTodayReturn
+    ? `${prefix}/today-leaders`
     : isGroupReturn
-      ? m.profile.backToGroupRankings
-      : m.profile.backToRankings;
+      ? leaderboardsGroupReturnHref(prefix, groupId!)
+      : `${prefix}/rankings${tabQuery ? `?${tabQuery}` : ""}`;
+  const m = t(language);
+  const label = isTodayReturn
+    ? m.common.back
+    : isReportReturn
+      ? m.profile.backToReport
+      : isGroupReturn
+        ? m.profile.backToGroupRankings
+        : m.profile.backToRankings;
 
   const goBack = () => {
     if (isReportReturn) {
+      router.back();
+      return;
+    }
+    if (isTodayReturn && window.history.length > 1) {
       router.back();
       return;
     }
