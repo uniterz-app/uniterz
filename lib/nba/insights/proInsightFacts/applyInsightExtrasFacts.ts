@@ -298,6 +298,13 @@ export function buildInsightExtrasContextCandidates(input: {
         wlTotal(fromHome.atHome) >= 2
           ? ` (${formatWl(fromHome.atHome)} at home)`
           : "";
+      const { wins, losses } = fromHome.overall;
+      const lean =
+        wins > losses
+          ? ` — series leans ${homeAbbr}`
+          : wins < losses
+            ? ` — series leans ${awayAbbr}`
+            : " — series is even";
       out.push({
         id: `ctx:h2hMulti:${pairKey}`,
         section: "CONTEXT",
@@ -329,7 +336,7 @@ export function buildInsightExtrasContextCandidates(input: {
         players: [],
         mode: "neutral",
         dedupeKeys: [`h2h_multi:${pairKey}`],
-        hintEn: `${yearBit} H2H: ${homeAbbr} ${formatWl(fromHome.overall)} vs ${awayAbbr}${atHome}.`,
+        hintEn: `${yearBit} H2H: ${homeAbbr} ${formatWl(fromHome.overall)} vs ${awayAbbr}${atHome}${lean}.`,
       });
     }
   }

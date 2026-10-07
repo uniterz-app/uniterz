@@ -84,6 +84,13 @@ function extremeWl(r: WlRecord, minGames: number): boolean {
   return pct >= 0.65 || pct <= 0.35 || Math.abs(r.wins - r.losses) >= 3;
 }
 
+/** W–L の数字だけだと LLM が向きを取り違える（8-2 を「厳しい」と書く）ので読みの向きを明示する */
+function wlLeanEn(r: WlRecord, nick: string): string {
+  if (r.wins > r.losses) return `winning record — a good sign for ${nick}, not a tough spot`;
+  if (r.wins < r.losses) return `losing record — ${nick} have struggled against this tier`;
+  return "even record";
+}
+
 function majority(part: number, whole: number): boolean {
   return whole >= 2 && part * 2 > whole;
 }
@@ -442,7 +449,7 @@ function vsBandFacts(input: {
         players: [],
         mode: "neutral",
         dedupeKeys: [`vs_band:${input.teamId}`],
-        hintEn: `${nick} vs conf top-6 in ${statsSeason}: ${formatWl(top)} (tonight vs ${oppNick}, conf #${input.opponentConfRank}${input.confRankSeasonKey ? ` in ${input.confRankSeasonKey}` : ""}).`,
+        hintEn: `${nick} vs conf top-6 in ${statsSeason}: ${formatWl(top)}, ${wlLeanEn(top, nick)} (tonight vs ${oppNick}, conf #${input.opponentConfRank}${input.confRankSeasonKey ? ` in ${input.confRankSeasonKey}` : ""}).`,
       });
       return out;
     }
@@ -477,7 +484,7 @@ function vsBandFacts(input: {
         players: [],
         mode: "neutral",
         dedupeKeys: [`vs_band:${input.teamId}`],
-        hintEn: `${nick} vs sub-.500 in ${statsSeason}: ${formatWl(under)} (tonight opp win% ${pct1(oppPct)}).`,
+        hintEn: `${nick} vs sub-.500 in ${statsSeason}: ${formatWl(under)}, ${wlLeanEn(under, nick)} (tonight opp win% ${pct1(oppPct)}).`,
       });
     }
   } else if (!oppIsTop6) {
@@ -506,7 +513,7 @@ function vsBandFacts(input: {
         players: [],
         mode: "neutral",
         dedupeKeys: [`vs_band:${input.teamId}`],
-        hintEn: `${nick} vs .500+ in ${statsSeason}: ${formatWl(over)} (tonight opp win% ${pct1(oppPct)}).`,
+        hintEn: `${nick} vs .500+ in ${statsSeason}: ${formatWl(over)}, ${wlLeanEn(over, nick)} (tonight opp win% ${pct1(oppPct)}).`,
       });
     }
   }

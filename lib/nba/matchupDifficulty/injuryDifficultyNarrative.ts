@@ -201,6 +201,8 @@ function readSide(
     combinedTeamNetDelta(own.map((i) => i.netDelta)),
     combinedTeamNetDelta(opp.map((i) => i.netDelta))
   );
+  // 「欠場なら 66 → 66」は読みにならない（LLM が向きを捏造する）
+  if (conditional && adj.after === adj.before) return null;
   return { side, adj, own, opp, conditional };
 }
 
@@ -300,7 +302,11 @@ function readHintEn(r: SideRead, oppAbbr: string): string {
   const t = r.side.teamAbbr;
   const own = r.own.map((i) => i.playerName).join(" / ");
   const opp = r.opp.map((i) => i.playerName).join(" / ");
-  const harder = r.adj.after >= r.adj.before;
+  const harder = r.adj.after > r.adj.before;
+  const shift =
+    r.adj.after === r.adj.before
+      ? "it barely moves"
+      : `a modest shift, slightly ${harder ? "harder" : "easier"} for ${t}`;
   if (r.conditional) {
     const who = own ? `${t}'s ${own}` : `${oppAbbr}'s ${opp}`;
     return `${t}: if ${who} sits (questionable), tonight gets ${harder ? "harder" : "easier"} for ${t}.`;
@@ -319,7 +325,7 @@ function readHintEn(r: SideRead, oppAbbr: string): string {
         own ? `${t} without their own ${own}` : "",
         opp ? `${oppAbbr} without ${opp}` : "",
       ].filter(Boolean);
-      return `${t}: ${parts.join("; ")} — a modest shift, slightly ${harder ? "harder" : "easier"} for ${t}.`;
+      return `${t}: ${parts.join("; ")} — ${shift}.`;
     }
   }
 }
