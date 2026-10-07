@@ -2,7 +2,7 @@
  * Pro Skin マイルストーン定義の単一ソース。
  * Functions へは `npm run sync:pro-skin-milestone-catalog` で同期する。
  *
- * 構成: 即解放 11 / マイルストーン 62
+ * 構成: 即解放 10 / マイルストーン 62
  *
  * 系統ごとに世界観を揃える（低い段は柄、高い段は宇宙写真）
  * - 連勝 = 紅・炎 / パーフェクト = 蒼（結晶→地球の海→氷の衛星→氷の巨星→新星） / 予想数 = 地球→冥王星の旅
@@ -23,7 +23,6 @@ export const PRO_IMMEDIATE_SKIN_IDS = [
   "atmos",
   "wave-riot-shard",
   "wave-uniterz-logo",
-  "wave-mono-hex",
   "beast-dust",
   "beast-dust-ash",
   "beast-crocodile",
@@ -32,6 +31,9 @@ export const PRO_IMMEDIATE_SKIN_IDS = [
   "scale-diamondback",
   "beast-shark",
 ] as const;
+
+/** 廃止スキン。既存ユーザーの所持リストに残っていてもマイルストーン数に数えない */
+export const PRO_RETIRED_SKIN_IDS = ["wave-mono-hex"] as const;
 
 /**
  * 期間確定 grant の冪等ロック。

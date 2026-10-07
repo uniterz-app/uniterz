@@ -1,6 +1,12 @@
-import { PRO_IMMEDIATE_SKIN_IDS } from "./proSkinMilestoneCatalog";
+import {
+  PRO_IMMEDIATE_SKIN_IDS,
+  PRO_RETIRED_SKIN_IDS,
+} from "./proSkinMilestoneCatalog";
 
-const PRO_IMMEDIATE = new Set<string>(PRO_IMMEDIATE_SKIN_IDS);
+const PRO_IMMEDIATE = new Set<string>([
+  ...PRO_IMMEDIATE_SKIN_IDS,
+  ...PRO_RETIRED_SKIN_IDS,
+]);
 
 export function countMilestoneUnlockedProSkins(
   unlockedIds: readonly string[]

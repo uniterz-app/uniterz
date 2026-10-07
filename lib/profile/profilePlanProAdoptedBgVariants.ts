@@ -223,13 +223,12 @@ type AdoptedSpec = {
   family: ProfilePlanProAdoptedFamily;
 };
 
-/** 採用カタログ — 解放カタログ順（即解放11 → マイルストーン52）。詳細は `proSkinMilestoneCatalog.ts` */
+/** 採用カタログ — 解放カタログ順（即解放10 → マイルストーン52）。詳細は `proSkinMilestoneCatalog.ts` */
 const ADOPTED_SPECS: readonly AdoptedSpec[] = [
-  // Pro 即解放 ×11
+  // Pro 即解放 ×10
   { id: "atmos", name: "Atmos", category: "cyber", family: "atmos" },
   { id: "wave-riot-shard", name: "Riot Shard", category: "cyber", family: "wave" },
   { id: "wave-uniterz-logo", name: "Uniterz", category: "material", family: "wave" },
-  { id: "wave-mono-hex", name: "Cyber Hex", category: "cyber", family: "wave" },
   { id: "beast-dust", name: "Dust", category: "material", family: "beast" },
   { id: "beast-dust-ash", name: "Ash", category: "material", family: "beast" },
   { id: "beast-crocodile", name: "Onyx Croc", category: "reptile", family: "beast" },

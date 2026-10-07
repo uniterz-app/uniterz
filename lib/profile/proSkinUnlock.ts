@@ -1,5 +1,5 @@
 /**
- * Pro Skin 解放ルール — 即解放11 / マイルストーン62。
+ * Pro Skin 解放ルール — 即解放10 / マイルストーン62。
  * 表示順の正は `PROFILE_PLAN_PRO_ADOPTED_BG`。解放条件は milestone catalog。
  */
 
@@ -11,6 +11,7 @@ import {
 import type { ProfilePlanProBgVariant } from "@/lib/profile/profilePlanProBgVariants";
 import {
   PRO_IMMEDIATE_SKIN_IDS,
+  PRO_RETIRED_SKIN_IDS,
   PRO_SKIN_PERIOD_WIN_MILESTONES,
   PRO_SKIN_RANK_MILESTONES,
   PRO_SKIN_REFERRAL_MILESTONES,
@@ -376,7 +377,10 @@ export function listProImmediateSkinIds(): ProfilePlanProBgVariant[] {
   );
 }
 
-const PRO_IMMEDIATE_SKIN_ID_SET = new Set<string>(listProImmediateSkinIds());
+const PRO_IMMEDIATE_SKIN_ID_SET = new Set<string>([
+  ...listProImmediateSkinIds(),
+  ...PRO_RETIRED_SKIN_IDS,
+]);
 
 /** CAREER 等: Pro 即解放を除いたマイルストーン解放スキン数 */
 export function countMilestoneUnlockedProSkins(
