@@ -9,7 +9,6 @@ import {
   PERIOD_RANKING_UNIT_MONTHLY_OVERALL_MAX_RANK,
   PERIOD_RANKING_UNIT_OVERALL_METRIC,
   PERIOD_RANKING_UNIT_WEEKLY_OVERALL_MAX_RANK,
-  PERIOD_WIN_RATE_PICKUP_PARTICIPATION_RATE,
   type PeriodRankingUnitMetric,
 } from "@/lib/units/periodRankingUnitRewards";
 
@@ -168,7 +167,6 @@ function notesSection(
   lang: PeriodRankingUnitRewardsLang,
   tab: PeriodRankingUnitRewardsTab
 ): PeriodRankingUnitRewardsSection {
-  const pct = Math.round(PERIOD_WIN_RATE_PICKUP_PARTICIPATION_RATE * 100);
   const common = [
     L(lang, {
       ja: "付与は Pick Up（standard）のみ。PRO LEAGUE は対象外。",
@@ -281,22 +279,22 @@ function notesSection(
     }),
     bullets: [
       L(lang, {
-        ja: "勝率 / アップセット / 得点者で同じ表。指標ごとに付与（合算可）。",
-        en: "Same table for Win% / Upset / Scorer. Paid per metric (stackable).",
-        ko: "승률 / 업셋 / 득점자 동일 표. 지표별 지급(합산 가능).",
-        zh: "胜率 / 爆冷 / 射手共用本表；分项各自发放（可叠加）。",
-        es: "Misma tabla Win% / Upset / Scorer. Por métrica (sumable).",
-        pt: "Mesma tabela Win% / Upset / Scorer. Por métrica (somável).",
-        fr: "Même table Win% / Upset / Scorer. Par métrique (cumulable).",
+        ja: "アップセット / 得点者で同じ表。指標ごとに付与（合算可）。",
+        en: "Same table for Upset / Scorer. Paid per metric (stackable).",
+        ko: "업셋 / 득점자 동일 표. 지표별 지급(합산 가능).",
+        zh: "爆冷 / 射手共用本表；分项各自发放（可叠加）。",
+        es: "Misma tabla Upset / Scorer. Por métrica (sumable).",
+        pt: "Mesma tabela Upset / Scorer. Por métrica (somável).",
+        fr: "Même table Upset / Scorer. Par métrique (cumulable).",
       }),
       L(lang, {
-        ja: `勝率部門は、その時点までの Pick Up 試合の ${pct}% 以上に予想が必要。`,
-        en: `Win% needs tips on at least ${pct}% of Pick Up games tipped so far.`,
-        ko: `승률 부문은 현재까지 Pick Up 경기의 ${pct}% 이상 예상 필요.`,
-        zh: `胜率分项需至少预测迄今 Pick Up 场次的 ${pct}%。`,
-        es: `Win% exige tips en ≥${pct}% de Pick Up hasta ahora.`,
-        pt: `Win% exige tips em ≥${pct}% dos Pick Up até agora.`,
-        fr: `Win% : tips sur ≥${pct}% des Pick Up à ce jour.`,
+        ja: "勝率ランキングには Unit 付与がない。",
+        en: "Win% board has no Unit payout.",
+        ko: "승률 랭킹에는 Unit 지급 없음.",
+        zh: "胜率榜不发 Unit。",
+        es: "El ranking Win% no paga Units.",
+        pt: "O ranking Win% não paga Units.",
+        fr: "Le classement Win% ne paie pas de Units.",
       }),
       ...common,
     ],
@@ -343,17 +341,17 @@ function rewardsSection(
   }
   return {
     title: L(lang, {
-      ja: "月間 · 部門（勝率 / UPSET / 得点者）",
-      en: "Monthly · Dept (Win% / Upset / Scorer)",
-      ko: "월간 · 부문 (승률 / UPSET / 득점자)",
-      zh: "月榜 · 分项（胜率 / 爆冷 / 射手）",
-      es: "Mensual · Dept (Win% / Upset / Scorer)",
-      pt: "Mensal · Dept (Win% / Upset / Scorer)",
-      fr: "Mensuel · Dept (Win% / Upset / Scorer)",
+      ja: "月間 · 部門（UPSET / 得点者）",
+      en: "Monthly · Dept (Upset / Scorer)",
+      ko: "월간 · 부문 (UPSET / 득점자)",
+      zh: "月榜 · 分项（爆冷 / 射手）",
+      es: "Mensual · Dept (Upset / Scorer)",
+      pt: "Mensal · Dept (Upset / Scorer)",
+      fr: "Mensuel · Dept (Upset / Scorer)",
     }),
     bullets: [
       topNLine(lang, PERIOD_RANKING_UNIT_MONTHLY_DEPARTMENT_MAX_RANK),
-      ...chunkUnitLines(lang, "monthly", "winRate"),
+      ...chunkUnitLines(lang, "monthly", "totalUpset"),
     ],
   };
 }
