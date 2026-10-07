@@ -57,6 +57,7 @@ BDL（サーバーのみ）
 | **試合日インデックス（日付ストリップ）** | `gameDayIndex/{league}__{season}`（distinct 開始 ms） | `nba-games-ingest` 末尾（日次 `games` ステップ） | `/api/games/days`（CDN 1h。ストリップは全試合日、カードは `/api/games/window` ±5 日） |
 | **試合カード予想ツール寄せ** | （上の合成） | — | `/api/nba/matchup-detail`（injury+roster+stats。Insight は別 `/api/nba/matchup-insight`） |
 | **今日のスタッツリーダー（TODAY）** | `games/{id}.liveStats.box`（その日の試合） | live ingest（毎分） | `/api/nba/daily-leaders?date=&tz=`（ユーザー TZ の暦日・プレシーズン含む・PTS/REB/AST/STL/BLK/3PM Top20） |
+| **今日のスコアリーダー（TODAY UNITERZ）** | `gameUserPoints/{gameId}`（試合ごとのユーザー確定ポイント小計。無い試合だけ `posts` にフォールバック） | onGameFinalV2 が小計を書き → `/api/internal/revalidate/daily-score-leaders` でキャッシュ破棄（ポーリングなし。全試合 `resultComputedAtV2` 済みの日は無期限キャッシュで以後読まない） | `/api/uniterz/daily-leaders?division=standard\|open`（米国東部の今日。全ユーザー同じ。試合なし日はそのまま空、未開始なら前日の試合日。合計ポイント Top20。PICK UP=`countedForPickup`、PRO LEAGUE=`countedForRanking` かつ Pro のみ・Bearer+Pro 必須） |
 
 ## 運用順（プレイヤー詳細）
 

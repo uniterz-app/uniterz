@@ -16,6 +16,7 @@ import { updateUserStreak } from "./updateUserStreak";
 import { updateTeamStats } from "./updateTeamStats";
 import { updateTeamSeasonRecord } from "./updateTeamSeasonRecord";
 import { notifyGameFinalPush } from "./notifications/notifyPushEvents";
+import { writeGameUserPoints } from "./writeGameUserPoints";
 import {
   countsTowardPlayoffTeamStats,
   countsTowardRegularSeasonTeamStats,
@@ -36,6 +37,30 @@ const UPSET_WIN_DIFF = 10;
 
 /** Firestore batch max 500 ops; ~1 update per post, chunk below limit */
 const FINALIZE_POSTS_CHUNK_SIZE = 400;
+
+/** TODAY UNITERZ（その日の合計ポイント）は posts 確定時だけ変わるので、ここで Next キャッシュを捨てる */
+async function revalidateDailyScoreLeaders(gameId: string): Promise<void> {
+  const base = process.env.NEXT_REVALIDATE_CUMULATIVE_RANKING_URL;
+  const token = process.env.INTERNAL_REVALIDATE_SECRET;
+  if (!base || !token) {
+    console.warn("[onGameFinalV2] skip daily-score-leaders revalidate (missing env)");
+    return;
+  }
+  try {
+    const url = new URL("/api/internal/revalidate/daily-score-leaders", base);
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "x-revalidate-token": token },
+    });
+    if (!res.ok) {
+      console.error(
+        `[onGameFinalV2] daily-score-leaders revalidate failed: ${res.status} (${gameId})`
+      );
+    }
+  } catch (err) {
+    console.error("[onGameFinalV2] daily-score-leaders revalidate error", err);
+  }
+}
 
 export const onGameFinalV2 = onDocumentWritten(
   {
@@ -290,7 +315,21 @@ export const onGameFinalV2 = onDocumentWritten(
       };
     }
 
+    try {
+      await writeGameUserPoints({
+        db: firestore,
+        gameId,
+        game,
+        postsSnap,
+        settlementByPostId,
+      });
+    } catch (err) {
+      console.error("[onGameFinalV2] gameUserPoints write failed", err);
+    }
+
     await firestore.doc(`games/${gameId}`).set(gamePatch, { merge: true });
+
+    await revalidateDailyScoreLeaders(gameId);
 
     if (becameFinal) {
       try {
