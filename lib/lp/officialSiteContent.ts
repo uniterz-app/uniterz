@@ -20,6 +20,7 @@ import {
   TOKUSHOHO_LEAD,
   TOKUSHOHO_ROWS,
 } from "@/lib/legal/tokushohoCopy";
+import { APP_STORE_SHARE_URL } from "@/lib/share/shareAppUrls";
 
 export type OfficialAssetBrief = {
   id: string;
@@ -42,9 +43,9 @@ export const officialSite = {
   companyHref: "/lp-official/company",
   electronicNoticeHref: "/web/electronic-notice",
   appStore: {
-    status: "comingSoon" as const,
-    label: "Coming Soon on iOS & Android",
-    href: null,
+    status: "available" as const,
+    label: "Download on the App Store",
+    href: APP_STORE_SHARE_URL as string | null,
   },
   playStore: {
     status: "comingSoon" as const,

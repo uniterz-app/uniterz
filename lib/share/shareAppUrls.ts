@@ -14,7 +14,7 @@ const CANONICAL_SHARE_HOST = "www.uniterz.app";
  * （または EXPO_PUBLIC_APP_STORE_URL / NEXT_PUBLIC_APP_STORE_URL）。
  * 空の間は共有文に付けない。ダミー URL は書かない。
  */
-export const APP_STORE_SHARE_URL = "";
+export const APP_STORE_SHARE_URL = "https://apps.apple.com/app/uniterz/id6819158408";
 
 /** 共有本文末尾に付ける App Store URL（未設定なら null） */
 export function getAppStoreShareUrl(): string | null {
