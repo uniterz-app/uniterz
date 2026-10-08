@@ -140,6 +140,9 @@ export function getTeamJerseyPrimaryColor(
 const abbrBadgeColorOverridesNBA: Record<string, string> = {
   "nba-nets": "#FFFFFF",
   "nba-kings": "#A77BDB",
+  "nba-timberwolves": "#78BE20",
+  "nba-suns": "#E56020",
+  "nba-wizards": "#E31837",
 };
 
 /** チーム略称バッジ（TeamAbbrBadge）の枠・文字色 */
