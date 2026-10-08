@@ -1,6 +1,8 @@
 /**
  * 稲妻 U をアプリアイコン用に書き出す。
  * 原稿: public/brand/uniterz-u-mark.svg
+ * 背景: public/brand/app-icon-bg-brushed-black.jpg（AI 生成のヘアライン黒メタル）
+ * スプラッシュは単色背景の上に contain で置かれるため、テクスチャを敷かない。
  *
  * Usage: node scripts/generate-uniterz-u-app-icon.mjs
  */
@@ -11,6 +13,7 @@ import sharp from "sharp";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const SOURCE = join(root, "public/brand/uniterz-u-mark.svg");
+const BG_TEXTURE = join(root, "public/brand/app-icon-bg-brushed-black.jpg");
 const CANVAS = 1024;
 const BG = "#041418";
 const RIM = "#8AF7FF";
@@ -20,7 +23,7 @@ function extractPaths(svg) {
   return [...svg.matchAll(/d="([^"]+)"/g)].map((m) => m[1]);
 }
 
-function svgIcon(paths, { pad, glow }) {
+function svgIcon(paths, { pad, glow, solidBg = true }) {
   const inner = 1 - pad * 2;
   // 元マークは 12% 余白。アイコン用にさらに縮小して角丸・アダプティブの欠けを避ける
   const s = inner / 0.76;
@@ -40,11 +43,24 @@ function svgIcon(paths, { pad, glow }) {
       <feGaussianBlur in="SourceAlpha" stdDeviation="4" result="b"/>
       <feFlood flood-color="${RIM}" flood-opacity="0.85"/>
       <feComposite in2="b" operator="in"/>
+    </filter>
+    <filter id="drop" x="-25%" y="-25%" width="150%" height="150%" color-interpolation-filters="sRGB">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="10" result="b"/>
+      <feOffset dy="10"/>
+      <feFlood flood-color="#000" flood-opacity="0.6"/>
+      <feComposite in2="b" operator="in"/>
     </filter>`
     : "";
 
   const glowLayers = glow
-    ? `
+    ? `${
+        solidBg
+          ? ""
+          : `
+    <g filter="url(#drop)" transform="translate(${t} ${t}) scale(${s})">
+${letter}
+    </g>`
+      }
     <g filter="url(#soft)" transform="translate(${t} ${t}) scale(${s})">
 ${letter}
     </g>
@@ -57,7 +73,7 @@ ${letter}
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${CANVAS} ${CANVAS}">
   <defs>${filters}
   </defs>
-  <rect width="${CANVAS}" height="${CANVAS}" fill="${BG}"/>
+${solidBg ? `  <rect width="${CANVAS}" height="${CANVAS}" fill="${BG}"/>` : ""}
 ${glowLayers}
   <g transform="translate(${t} ${t}) scale(${s})">
 ${letter}
@@ -73,13 +89,30 @@ async function pngFromSvg(svg, size, outPath) {
     .toFile(outPath);
 }
 
+/** App Store はアルファ付きアイコンを受け付けないため、不透明で書き出す */
+async function pngOnTexture(svg, size, outPath) {
+  const flat = await sharp(BG_TEXTURE)
+    .resize(CANVAS, CANVAS, { fit: "cover" })
+    .composite([{ input: Buffer.from(svg) }])
+    .flatten({ background: "#000" })
+    .removeAlpha()
+    .png()
+    .toBuffer();
+  await sharp(flat)
+    .resize(size, size, { kernel: "lanczos3" })
+    .removeAlpha()
+    .png()
+    .toFile(outPath);
+}
+
 async function main() {
   const source = readFileSync(SOURCE, "utf8");
   const paths = extractPaths(source);
   if (paths.length < 1) throw new Error("U パスが見つかりません");
 
-  const iosSvg = svgIcon(paths, { pad: 0.2, glow: true });
-  const adaptiveSvg = svgIcon(paths, { pad: 0.26, glow: true });
+  const iosSvg = svgIcon(paths, { pad: 0.2, glow: true, solidBg: false });
+  const adaptiveSvg = svgIcon(paths, { pad: 0.26, glow: true, solidBg: false });
+  const splashSvg = svgIcon(paths, { pad: 0.2, glow: true });
   const masterSvg = iosSvg;
 
   const brandDir = join(root, "public/brand");
@@ -92,17 +125,17 @@ async function main() {
   const masterSvgPath = join(brandDir, "uniterz-u-app-icon.svg");
   const masterPngPath = join(brandDir, "uniterz-u-app-icon.png");
   writeFileSync(masterSvgPath, masterSvg);
-  await pngFromSvg(masterSvg, 1024, masterPngPath);
+  await pngOnTexture(masterSvg, 1024, masterPngPath);
 
   const pwaSizes = [192, 256, 512, 1024];
   for (const size of pwaSizes) {
-    await pngFromSvg(masterSvg, size, join(iconNewDir, `Icon-new${size}.png`));
+    await pngOnTexture(masterSvg, size, join(iconNewDir, `Icon-new${size}.png`));
   }
 
-  await pngFromSvg(iosSvg, 1024, join(nativeDir, "icon.png"));
-  await pngFromSvg(adaptiveSvg, 1024, join(nativeDir, "adaptive-icon.png"));
-  await pngFromSvg(masterSvg, 48, join(nativeDir, "favicon.png"));
-  await pngFromSvg(iosSvg, 1024, join(nativeDir, "splash-icon.png"));
+  await pngOnTexture(iosSvg, 1024, join(nativeDir, "icon.png"));
+  await pngOnTexture(adaptiveSvg, 1024, join(nativeDir, "adaptive-icon.png"));
+  await pngOnTexture(masterSvg, 48, join(nativeDir, "favicon.png"));
+  await pngFromSvg(splashSvg, 1024, join(nativeDir, "splash-icon.png"));
 
   const nativeBrand = join(nativeDir, "brand");
   mkdirSync(nativeBrand, { recursive: true });
