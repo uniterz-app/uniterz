@@ -7,6 +7,7 @@ import {
 } from "@/lib/badges/server/loadMasterBadges";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 /**
  * GET /api/master-badges
@@ -16,8 +17,8 @@ export async function GET() {
   try {
     const cached = unstable_cache(
       async () => loadMasterBadges(getAdminDb()),
-      ["master-badges"],
-      { revalidate: 3600, tags: ["master-badges"] }
+      ["master-badges-v2"],
+      { revalidate: 600, tags: ["master-badges"] }
     );
     const payload = await cached();
     return NextResponse.json(payload, {

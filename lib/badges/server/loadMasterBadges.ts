@@ -63,5 +63,5 @@ export async function loadMasterBadges(
 }
 
 export function masterBadgesCacheControl(): string {
-  return "public, s-maxage=3600, stale-while-revalidate=86400";
+  return "public, s-maxage=600, stale-while-revalidate=3600";
 }
