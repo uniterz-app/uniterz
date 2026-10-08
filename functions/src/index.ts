@@ -44,10 +44,11 @@ export {
 
 // NBA スタッツ日次 ingest（Next admin API 経由）
 export { runNbaStatsDailyIngestCron } from "./nba/runNbaStatsDailyIngestCron";
-// NBA injury 専用 ingest（16:00 / 23:00 / 試合前窓）
+// NBA injury 専用 ingest（16:00 / 23:00 / 試合日毎時 / 試合前 60・45・30・15 分）
 export {
   runNbaInjuryBaseline16Cron,
   runNbaInjuryBaseline23Cron,
+  runNbaInjuryHourlyCron,
   runNbaInjuryPregameCron,
 } from "./nba/runNbaInjuryIngestCron";
 // NBA スタッツ週次（ペイロール + 契約）

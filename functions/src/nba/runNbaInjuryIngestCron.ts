@@ -3,7 +3,8 @@
  *
  * - 16:00 JST … ランキング更新日のベースライン（試合ある日のみ）
  * - 23:00 JST … 今夜試合向けベースライン
- * - 10分毎 … T-3h / T-1h / T-30m 窓（20分 dedupe は API 側）
+ * - 毎時 … 試合がある日（tip が 3h 前〜24h 先）のみ
+ * - 5分毎 … T-60 / T-45 / T-30 / T-15 分窓（10分 dedupe は API 側）
  *
  * env:
  *   NEXT_NBA_INJURY_INGEST_URL … 例 https://xxx.vercel.app/api/admin/nba-injury-ingest
@@ -85,9 +86,23 @@ export const runNbaInjuryBaseline23Cron = onSchedule(
   }
 );
 
+export const runNbaInjuryHourlyCron = onSchedule(
+  {
+    schedule: "0 * * * *",
+    timeZone: "Asia/Tokyo",
+    region: "asia-northeast1",
+    timeoutSeconds: 120,
+    memory: "512MiB",
+    secrets: [INTERNAL_JOB_SECRET],
+  },
+  async () => {
+    await postInjuryIngest({ trigger: "hourly" });
+  }
+);
+
 export const runNbaInjuryPregameCron = onSchedule(
   {
-    schedule: "*/10 * * * *",
+    schedule: "*/5 * * * *",
     timeZone: "Asia/Tokyo",
     region: "asia-northeast1",
     timeoutSeconds: 120,

@@ -3,6 +3,7 @@
  *
  *   npx tsx scripts/ingest-nba-team-injuries-from-bdl.ts
  *   npx tsx scripts/ingest-nba-team-injuries-from-bdl.ts 2026-27
+ *   npx tsx scripts/ingest-nba-team-injuries-from-bdl.ts 2026-27 --force  # 件数急減ガードを無視
  *
  * 認証: `.env.local` の FIREBASE_* と BALLDONTLIE_API_KEY
  */
@@ -35,9 +36,11 @@ function loadEnvLocal(): void {
 async function main() {
   loadEnvLocal();
   const { getAdminDb } = await import("../lib/firebaseAdmin");
-  const seasonKey = (process.argv[2] ?? CURRENT_NBA_SEASON_KEY).trim();
+  const args = process.argv.slice(2);
+  const seasonKey = (args.find((a) => !a.startsWith("--")) ?? CURRENT_NBA_SEASON_KEY).trim();
   const result = await ingestNbaTeamInjuriesFromBdl(getAdminDb(), {
     seasonKey,
+    force: args.includes("--force"),
   });
   console.log(JSON.stringify(result, null, 2));
 }

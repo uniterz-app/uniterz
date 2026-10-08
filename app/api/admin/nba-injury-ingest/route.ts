@@ -21,7 +21,7 @@ import { revalidateNbaInjuryApiCache } from "@/lib/nba/teamInjuries/nbaInjuryApi
  *
  * body: {
  *   seasonKey?: "2026-27",
- *   trigger: "baseline" | "pregame",
+ *   trigger: "baseline" | "hourly" | "pregame",
  *   baselineSlot?: "16" | "23"
  * }
  */
@@ -38,7 +38,7 @@ export async function POST(req: Request) {
     };
 
     const trigger: NbaInjuryIngestTrigger =
-      body.trigger === "pregame" ? "pregame" : "baseline";
+      body.trigger === "pregame" || body.trigger === "hourly" ? body.trigger : "baseline";
     const seasonKey =
       typeof body.seasonKey === "string" && body.seasonKey.trim()
         ? body.seasonKey.trim()

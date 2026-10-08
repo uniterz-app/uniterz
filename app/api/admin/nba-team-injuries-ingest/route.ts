@@ -22,6 +22,7 @@ export async function POST(req: Request) {
 
     const body = (await req.json().catch(() => ({}))) as {
       seasonKey?: string;
+      force?: boolean;
     };
     const seasonKey =
       typeof body.seasonKey === "string" && body.seasonKey.trim()
@@ -30,6 +31,7 @@ export async function POST(req: Request) {
 
     const result = await ingestNbaTeamInjuriesFromBdl(getAdminDb(), {
       seasonKey,
+      force: body.force === true,
     });
 
     return NextResponse.json(result);

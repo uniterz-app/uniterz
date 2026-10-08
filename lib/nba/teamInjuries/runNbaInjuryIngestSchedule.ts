@@ -9,13 +9,16 @@ import { hasNbaGamesScheduledJstToday } from "@/lib/nba/schedule/hasNbaGamesSche
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
 import { loadTeamInjuriesSnapshot } from "./loadTeamInjuriesSnapshot";
 import {
+  INJURY_HOURLY_LOOKAHEAD_MS,
+  INJURY_HOURLY_LOOKBACK_MS,
   INJURY_INGEST_MIN_INTERVAL_MS,
   INJURY_PREGAME_LOOKAHEAD_MS,
   injuryIngestUpdatedWithinMs,
   isAnyGameInInjuryPregameWindow,
 } from "./injuryIngestSchedule";
 
-export type NbaInjuryIngestTrigger = "baseline" | "pregame";
+/** baseline: 16 / 23 時の定時、hourly: 試合がある日の毎時、pregame: tip の T-60/45/30/15 分 */
+export type NbaInjuryIngestTrigger = "baseline" | "hourly" | "pregame";
 
 export type NbaInjuryIngestBaselineSlot = "16" | "23";
 
@@ -36,9 +39,11 @@ export type RunNbaInjuryIngestScheduleResult = {
   skipReason?:
     | "no_games_today"
     | "no_pregame_window"
-    | "recent_fetch";
+    | "recent_fetch"
+    | "suspicious_drop";
   teamCount?: number;
   injuryCount?: number;
+  previousInjuryCount?: number;
 };
 
 export async function runNbaInjuryIngestSchedule(
@@ -63,6 +68,23 @@ export async function runNbaInjuryIngestSchedule(
     }
   }
 
+  if (input.trigger === "hourly") {
+    const games = await loadUpcomingNbaGames(db, {
+      fromMs: nowMs - INJURY_HOURLY_LOOKBACK_MS,
+      toMs: nowMs + INJURY_HOURLY_LOOKAHEAD_MS,
+      limit: 1,
+    });
+    if (games.length === 0) {
+      return {
+        ok: true,
+        trigger: input.trigger,
+        seasonKey,
+        skipped: true,
+        skipReason: "no_games_today",
+      };
+    }
+  }
+
   if (input.trigger === "pregame") {
     const games = await loadUpcomingNbaGames(db, {
       fromMs: nowMs,
@@ -78,7 +100,9 @@ export async function runNbaInjuryIngestSchedule(
         skipReason: "no_pregame_window",
       };
     }
+  }
 
+  if (input.trigger === "pregame" || input.trigger === "hourly") {
     const snap = await loadTeamInjuriesSnapshot(db, seasonKey);
     if (
       injuryIngestUpdatedWithinMs(
@@ -109,14 +133,18 @@ export async function runNbaInjuryIngestSchedule(
     }
   }
 
-  const ingested = await ingestNbaTeamInjuriesFromBdl(db, { seasonKey });
+  const ingested = await ingestNbaTeamInjuriesFromBdl(db, { seasonKey, nowMs });
   return {
     ok: true,
     trigger: input.trigger,
     baselineSlot: input.baselineSlot,
     seasonKey,
-    skipped: false,
+    skipped: ingested.skipped === true,
+    ...(ingested.skipReason ? { skipReason: ingested.skipReason } : {}),
     teamCount: ingested.teamCount,
     injuryCount: ingested.injuryCount,
+    ...(ingested.previousInjuryCount != null
+      ? { previousInjuryCount: ingested.previousInjuryCount }
+      : {}),
   };
 }
