@@ -21,13 +21,16 @@ import {
   computeMatchupDifficulty,
   normCdf,
   type MatchupDifficultyCoefficients,
+  type TeamRatingParams,
 } from "../lib/nba/matchupDifficulty/model";
+import { preseasonWinTotalCentered } from "../lib/nba/matchupDifficulty/preseasonWinTotals";
 
 /** BDL season 年（2021 = 2021-22） */
-const PRIOR_ONLY_SEASON = 2020;
+/** 前季の値にだけ使う（学習しない） */
+const PRIOR_ONLY_SEASONS = [2019, 2020];
 const TRAIN_SEASONS = [2021, 2022, 2023, 2024];
 const HOLDOUT_SEASON = 2025;
-const ALL_SEASONS = [PRIOR_ONLY_SEASON, ...TRAIN_SEASONS, HOLDOUT_SEASON];
+const ALL_SEASONS = [...PRIOR_ONLY_SEASONS, ...TRAIN_SEASONS, HOLDOUT_SEASON];
 
 const CACHE_DIR = path.join(process.cwd(), ".tmp", "nba-matchup-difficulty");
 
@@ -87,28 +90,81 @@ async function main() {
   const finalMargins = new Map<number, Map<number, number>>();
   const rowsBySeason = new Map<number, GameRow[]>();
   for (const season of ALL_SEASONS) {
-    const prior = finalMargins.get(season - 1) ?? new Map<number, number>();
-    const { rows, finalMarginByTeam } = buildSeasonRows(season, bySeason.get(season)!, prior);
+    const { rows, finalMarginByTeam } = buildSeasonRows(
+      season,
+      bySeason.get(season)!,
+      finalMargins.get(season - 1) ?? new Map<number, number>()
+    );
     finalMargins.set(season, finalMarginByTeam);
-    if (season !== PRIOR_ONLY_SEASON) rowsBySeason.set(season, rows);
+    if (!PRIOR_ONLY_SEASONS.includes(season)) rowsBySeason.set(season, rows);
   }
   const trainRows = TRAIN_SEASONS.flatMap((s) => rowsBySeason.get(s)!);
   const holdoutRows = rowsBySeason.get(HOLDOUT_SEASON)!;
+  const missingWinTotals = [...trainRows, ...holdoutRows].filter(
+    (r) => r.home.winTotal == null || r.away.winTotal == null
+  ).length;
+  if (missingWinTotals > 0) throw new Error(`win total missing in ${missingWinTotals} games`);
 
-  // 1) w / k / priorCarryover を学習季の残差 RMSE で選ぶ
-  let best: { params: RatingParams; fit: OlsFit } | null = null;
-  const grid: Array<{ w: number; k: number; rho: number; rmse: number }> = [];
-  for (const w of [1, 0.9, 0.8, 0.7, 0.6, 0.5]) {
-    for (const k of [0, 2, 4, 6, 8, 10, 12, 15, 20, 30]) {
-      for (const rho of [0, 0.2, 0.4, 0.5, 0.6, 0.7, 0.8, 1]) {
-        const params = { seasonWeight: w, shrinkGames: k, priorCarryover: rho };
-        const fit = fitOls(trainRows, params);
-        grid.push({ w, k, rho, rmse: fit.rmse });
-        if (!best || fit.rmse < best.fit.rmse) best = { params, fit };
+  // 1a) ラインなし（前季得失点差だけ）: w / k / priorCarryover
+  const trainNoLines = withoutWinTotals(trainRows);
+  const holdoutNoLines = withoutWinTotals(holdoutRows);
+  let baseline: { params: RatingParams; fit: OlsFit } | null = null;
+  for (const w of [1, 0.9, 0.8, 0.7, 0.6]) {
+    for (const k of [6, 8, 10, 12, 15, 20, 25, 30, 40]) {
+      for (const rho of [0, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7]) {
+        const params = {
+          seasonWeight: w,
+          shrinkGames: k,
+          priorCarryover: rho,
+          winTotalScale: 0,
+          winTotalPriorCarryover: rho,
+        };
+        const fit = fitOls(trainNoLines, params);
+        if (!baseline || fit.rmse < baseline.fit.rmse) baseline = { params, fit };
       }
     }
   }
-  const { params, fit } = best!;
+
+  // 1b) 勝ち星ライン prior: w / k / winTotalScale / winTotalPriorCarryover（fallback の rho は 1a）
+  let withLines: { params: RatingParams; fit: OlsFit } | null = null;
+  const grid: Array<{ w: number; k: number; a: number; b: number; rmse: number }> = [];
+  for (const w of [1, 0.9, 0.8, 0.7, 0.6]) {
+    for (const k of [10, 15, 20, 25, 30, 40, 50, 60, 80]) {
+      for (const a of [0.1, 0.125, 0.15, 0.175, 0.2, 0.225, 0.25, 0.3, 0.35, 0.4]) {
+        for (const b of [0, 0.05, 0.1, 0.15, 0.2, 0.3]) {
+          const params = {
+            seasonWeight: w,
+            shrinkGames: k,
+            priorCarryover: baseline!.params.priorCarryover,
+            winTotalScale: a,
+            winTotalPriorCarryover: b,
+          };
+          const fit = fitOls(trainRows, params);
+          grid.push({ w, k, a, b, rmse: fit.rmse });
+          if (!withLines || fit.rmse < withLines.fit.rmse) withLines = { params, fit };
+        }
+      }
+    }
+  }
+
+  const baselineCoeffs = coeffsFromFit(baseline!.fit, baseline!.params, PLACEHOLDER_COEFFS);
+  const withLinesCoeffs = coeffsFromFit(withLines!.fit, withLines!.params, PLACEHOLDER_COEFFS);
+  const priorComparison = {
+    lastSeasonOnly: {
+      params: baseline!.params,
+      trainRmse: baseline!.fit.rmse,
+      holdout: holdoutSummary(holdoutNoLines, baselineCoeffs),
+    },
+    winTotals: {
+      params: withLines!.params,
+      trainRmse: withLines!.fit.rmse,
+      holdout: holdoutSummary(holdoutRows, withLinesCoeffs),
+    },
+  };
+  const linesAdopted =
+    priorComparison.winTotals.trainRmse < priorComparison.lastSeasonOnly.trainRmse &&
+    priorComparison.winTotals.holdout.all.rmse < priorComparison.lastSeasonOnly.holdout.all.rmse;
+  const { params, fit } = linesAdopted ? withLines! : baseline!;
 
   // 制約なし（自休養 / 相手休養を別推定）での対称性チェック
   const unconstrained = fitOls(trainRows, params, { symmetricRest: false });
@@ -132,6 +188,8 @@ async function main() {
     seasonWeight: params.seasonWeight,
     shrinkGames: params.shrinkGames,
     priorCarryover: params.priorCarryover,
+    winTotalScale: params.winTotalScale,
+    winTotalPriorCarryover: params.winTotalPriorCarryover,
     lowSampleGames: 10,
     tierSoftMax: 0,
     tierToughMin: 0,
@@ -170,7 +228,7 @@ async function main() {
   coeffs.scheduleTierToughMin = percentile(windowAverages, 0.75);
 
   // 3) holdout 検証
-  const holdout = evaluateHoldout(holdoutRows, coeffs);
+  const holdout = evaluateHoldout(linesAdopted ? holdoutRows : holdoutNoLines, coeffs);
 
   // 4) 計算例: LAL @ DEN（2025-26 終了時レーティング、LAL B2B / DEN 休養2日）
   const finalHoldout = finalMargins.get(HOLDOUT_SEASON)!;
@@ -183,6 +241,7 @@ async function main() {
           seasonMargin: denRating,
           last10Margin: denRating,
           priorSeasonMargin: finalMargins.get(HOLDOUT_SEASON - 1)?.get(BDL_DEN) ?? 0,
+          winTotalCentered: preseasonWinTotalCentered(seasonLabel(HOLDOUT_SEASON), "DEN"),
         },
         coeffs
       ),
@@ -198,7 +257,7 @@ async function main() {
     generatedAt: new Date().toISOString(),
     data: {
       source: "BDL /nba/v1/games (postseason=false)",
-      priorOnlySeason: seasonLabel(PRIOR_ONLY_SEASON),
+      priorOnlySeasons: PRIOR_ONLY_SEASONS.map(seasonLabel),
       trainSeasons: TRAIN_SEASONS.map(seasonLabel),
       holdoutSeason: seasonLabel(HOLDOUT_SEASON),
       trainGames: trainRows.length,
@@ -208,8 +267,11 @@ async function main() {
     standardErrors: roundDeep(fit.se),
     unconstrainedRestCheck: roundDeep({ beta: unconstrained.beta, se: unconstrained.se }),
     restSampleShare: roundDeep(restShares(trainRows)),
-    gridTop10: grid.sort((a, b) => a.rmse - b.rmse).slice(0, 10).map(roundDeep),
+    winTotalGridTop10: grid.sort((a, b) => a.rmse - b.rmse).slice(0, 10).map(roundDeep),
     holdout: roundDeep(holdout),
+    linesAdopted,
+    priorComparison: roundDeep(priorComparison),
+    openingPriors2026: roundDeep(openingPriors("2026-27", finalMargins.get(HOLDOUT_SEASON)!, bySeason.get(HOLDOUT_SEASON)!, coeffs)),
     exampleLalAtDen: roundDeep({ denFinalMargin: denRating, ...example }),
   };
 
@@ -234,6 +296,99 @@ async function main() {
 
 const BDL_DEN = 8;
 
+const PLACEHOLDER_COEFFS: MatchupDifficultyCoefficients = {
+  ratingScale: 0,
+  homeCourt: 0,
+  ownRest: { "0": 0, "1": 0, "2": 0, "3+": 0 },
+  oppRest: { "0": 0, "1": 0, "2": 0, "3+": 0 },
+  sigma: 1,
+  seasonWeight: 1,
+  shrinkGames: 0,
+  priorCarryover: 0,
+  winTotalScale: 0,
+  winTotalPriorCarryover: 0,
+  lowSampleGames: 10,
+  tierSoftMax: 0,
+  tierToughMin: 0,
+  scheduleTierSoftMax: 0,
+  scheduleTierToughMin: 0,
+};
+
+function withoutWinTotals(rows: GameRow[]): GameRow[] {
+  return rows.map((r) => ({
+    ...r,
+    home: { ...r.home, winTotal: null },
+    away: { ...r.away, winTotal: null },
+  }));
+}
+
+/** 開幕時点（0 試合）の prior: ラインあり / 前季だけ（期待点差の単位） */
+function openingPriors(
+  seasonKey: string,
+  prevFinal: Map<number, number>,
+  prevGames: BdlGame[],
+  coeffs: MatchupDifficultyCoefficients
+) {
+  const abbrById = bdlAbbreviations(prevGames);
+  return [...prevFinal.entries()]
+    .map(([id, prevMargin]) => {
+      const abbr = abbrById.get(id) ?? String(id);
+      const input = { gamesPlayed: 0, seasonMargin: 0, last10Margin: 0, priorSeasonMargin: prevMargin };
+      return {
+        team: abbr,
+        prevMargin,
+        withLines: blendTeamRating(
+          { ...input, winTotalCentered: preseasonWinTotalCentered(seasonKey, abbr) },
+          coeffs
+        ),
+        lastSeasonOnly: blendTeamRating(input, coeffs),
+      };
+    })
+    .sort((a, b) => b.withLines - a.withLines);
+}
+
+function bdlAbbreviations(games: BdlGame[]): Map<number, string> {
+  const out = new Map<number, string>();
+  for (const g of games) {
+    if (g.home_team?.id != null && g.home_team.abbreviation) {
+      out.set(g.home_team.id, g.home_team.abbreviation);
+    }
+    if (g.visitor_team?.id != null && g.visitor_team.abbreviation) {
+      out.set(g.visitor_team.id, g.visitor_team.abbreviation);
+    }
+  }
+  return out;
+}
+
+function coeffsFromFit(
+  fit: OlsFit,
+  params: RatingParams,
+  base: MatchupDifficultyCoefficients
+): MatchupDifficultyCoefficients {
+  return {
+    ...base,
+    ...params,
+    ratingScale: fit.beta.ratingDiff!,
+    homeCourt: fit.beta.home!,
+    ownRest: { "0": fit.beta.rest0!, "1": 0, "2": fit.beta.rest2!, "3+": fit.beta.rest3p! },
+    oppRest: { "0": -fit.beta.rest0!, "1": 0, "2": -fit.beta.rest2!, "3+": -fit.beta.rest3p! },
+    sigma: fit.rmse,
+  };
+}
+
+function holdoutSummary(rows: GameRow[], coeffs: MatchupDifficultyCoefficients) {
+  const early = rows.filter((r) => r.home.n < 20 && r.away.n < 20);
+  const veryEarly = rows.filter((r) => r.home.n < 10 && r.away.n < 10);
+  const all = evaluateHoldout(rows, coeffs);
+  const e = evaluateHoldout(early, coeffs);
+  const ve = evaluateHoldout(veryEarly, coeffs);
+  return {
+    all: { games: all.games, rmse: all.marginRmse, brier: all.brier, acc: all.winAccuracy },
+    under20Games: { games: e.games, rmse: e.marginRmse, brier: e.brier, acc: e.winAccuracy },
+    under10Games: { games: ve.games, rmse: ve.marginRmse, brier: ve.brier, acc: ve.winAccuracy },
+  };
+}
+
 type TeamState = { n: number; sum: number; last: number[]; lastDate: string | null };
 
 type TeamSnapshot = {
@@ -242,6 +397,8 @@ type TeamSnapshot = {
   seasonMargin: number;
   last10Margin: number;
   prior: number;
+  /** 勝ち星ライン − 季平均 */
+  winTotal: number | null;
   rest: RestCategory;
 };
 
@@ -252,10 +409,7 @@ type GameRow = {
   away: TeamSnapshot;
 };
 
-type RatingParams = Pick<
-  MatchupDifficultyCoefficients,
-  "seasonWeight" | "shrinkGames" | "priorCarryover"
->;
+type RatingParams = TeamRatingParams;
 
 function seasonLabel(year: number): string {
   return `${year}-${String((year + 1) % 100).padStart(2, "0")}`;
@@ -266,6 +420,8 @@ function buildSeasonRows(
   games: BdlGame[],
   priorByTeam: Map<number, number>
 ): { rows: GameRow[]; finalMarginByTeam: Map<number, number> } {
+  const abbrById = bdlAbbreviations(games);
+  const seasonKey = seasonLabel(season);
   const sorted = games
     .filter(
       (g) =>
@@ -297,6 +453,7 @@ function buildSeasonRows(
       seasonMargin: s.n ? s.sum / s.n : 0,
       last10Margin: s.last.length ? s.last.reduce((a, b) => a + b, 0) / s.last.length : 0,
       prior: priorByTeam.get(id) ?? 0,
+      winTotal: abbrById.has(id) ? preseasonWinTotalCentered(seasonKey, abbrById.get(id)!) : null,
       rest: restCategoryFromDays(restDaysBetweenGameDates(s.lastDate, date)),
     };
   };
@@ -332,6 +489,7 @@ function ratingOf(t: TeamSnapshot, params: RatingParams): number {
       seasonMargin: t.seasonMargin,
       last10Margin: t.last10Margin,
       priorSeasonMargin: t.prior,
+      winTotalCentered: t.winTotal,
     },
     params
   );

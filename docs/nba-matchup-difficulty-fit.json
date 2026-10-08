@@ -1,8 +1,11 @@
 {
-  "generatedAt": "2026-10-05T13:59:20.250Z",
+  "generatedAt": "2026-10-08T16:03:55.813Z",
   "data": {
     "source": "BDL /nba/v1/games (postseason=false)",
-    "priorOnlySeason": "2020-21",
+    "priorOnlySeasons": [
+      "2019-20",
+      "2020-21"
+    ],
     "trainSeasons": [
       "2021-22",
       "2022-23",
@@ -14,57 +17,59 @@
     "holdoutGames": 1237
   },
   "coefficients": {
-    "ratingScale": 1.147,
-    "homeCourt": 1.939,
+    "ratingScale": 1.171,
+    "homeCourt": 1.929,
     "ownRest": {
-      "0": -2.693,
+      "0": -2.675,
       "1": 0,
-      "2": 0.218,
-      "3+": 1.191
+      "2": 0.236,
+      "3+": 1.254
     },
     "oppRest": {
-      "0": 2.693,
+      "0": 2.675,
       "1": 0,
-      "2": -0.218,
-      "3+": -1.191
+      "2": -0.236,
+      "3+": -1.254
     },
-    "sigma": 13.797,
+    "sigma": 13.77,
     "seasonWeight": 0.8,
-    "shrinkGames": 20,
+    "shrinkGames": 25,
     "priorCarryover": 0.4,
+    "winTotalScale": 0.175,
+    "winTotalPriorCarryover": 0.1,
     "lowSampleGames": 10,
-    "tierSoftMax": 40.62,
-    "tierToughMin": 59.918,
-    "scheduleTierSoftMax": 47.329,
-    "scheduleTierToughMin": 52.878
+    "tierSoftMax": 40.578,
+    "tierToughMin": 60.117,
+    "scheduleTierSoftMax": 47.271,
+    "scheduleTierToughMin": 52.946
   },
   "standardErrors": {
     "home": 0.197,
     "ratingDiff": 0.037,
-    "rest0": 0.408,
-    "rest2": 0.428,
-    "rest3p": 0.868
+    "rest0": 0.407,
+    "rest2": 0.427,
+    "rest3p": 0.866
   },
   "unconstrainedRestCheck": {
     "beta": {
-      "home": 2.1,
-      "ratingDiff": 1.149,
-      "homeRest0": -2.75,
-      "homeRest2": -0.244,
-      "homeRest3p": 1.208,
-      "awayRest0": 2.619,
-      "awayRest2": -0.724,
-      "awayRest3p": -1.146
+      "home": 2.09,
+      "ratingDiff": 1.173,
+      "homeRest0": -2.755,
+      "homeRest2": -0.228,
+      "homeRest3p": 1.317,
+      "awayRest0": 2.585,
+      "awayRest2": -0.742,
+      "awayRest3p": -1.116
     },
     "se": {
-      "home": 0.278,
+      "home": 0.277,
       "ratingDiff": 0.037,
-      "homeRest0": 0.567,
-      "homeRest2": 0.563,
-      "homeRest3p": 0.938,
-      "awayRest0": 0.521,
-      "awayRest2": 0.584,
-      "awayRest3p": 1.092
+      "homeRest0": 0.566,
+      "homeRest2": 0.562,
+      "homeRest3p": 0.936,
+      "awayRest0": 0.52,
+      "awayRest2": 0.583,
+      "awayRest3p": 1.09
     }
   },
   "restSampleShare": {
@@ -85,302 +90,551 @@
       "share": 0.056
     }
   },
-  "gridTop10": [
+  "winTotalGridTop10": [
+    {
+      "w": 0.8,
+      "k": 25,
+      "a": 0.175,
+      "b": 0.1,
+      "rmse": 13.77
+    },
+    {
+      "w": 0.8,
+      "k": 25,
+      "a": 0.2,
+      "b": 0.05,
+      "rmse": 13.77
+    },
+    {
+      "w": 0.8,
+      "k": 25,
+      "a": 0.2,
+      "b": 0.1,
+      "rmse": 13.771
+    },
     {
       "w": 0.8,
       "k": 20,
-      "rho": 0.4,
-      "rmse": 13.797
-    },
-    {
-      "w": 0.8,
-      "k": 15,
-      "rho": 0.5,
-      "rmse": 13.798
-    },
-    {
-      "w": 0.8,
-      "k": 15,
-      "rho": 0.4,
-      "rmse": 13.799
+      "a": 0.2,
+      "b": 0.1,
+      "rmse": 13.771
     },
     {
       "w": 0.8,
       "k": 20,
-      "rho": 0.5,
-      "rmse": 13.8
+      "a": 0.225,
+      "b": 0.1,
+      "rmse": 13.771
     },
     {
       "w": 0.8,
-      "k": 12,
-      "rho": 0.5,
-      "rmse": 13.801
+      "k": 25,
+      "a": 0.175,
+      "b": 0.15,
+      "rmse": 13.771
     },
     {
       "w": 0.8,
-      "k": 15,
-      "rho": 0.6,
-      "rmse": 13.801
-    },
-    {
-      "w": 0.8,
-      "k": 12,
-      "rho": 0.6,
-      "rmse": 13.801
-    },
-    {
-      "w": 0.7,
       "k": 20,
-      "rho": 0.4,
-      "rmse": 13.803
+      "a": 0.2,
+      "b": 0.15,
+      "rmse": 13.771
     },
     {
-      "w": 0.7,
-      "k": 15,
-      "rho": 0.5,
-      "rmse": 13.803
-    },
-    {
-      "w": 0.7,
+      "w": 0.8,
       "k": 20,
-      "rho": 0.5,
-      "rmse": 13.803
+      "a": 0.225,
+      "b": 0.05,
+      "rmse": 13.771
+    },
+    {
+      "w": 0.8,
+      "k": 25,
+      "a": 0.15,
+      "b": 0.15,
+      "rmse": 13.771
+    },
+    {
+      "w": 0.8,
+      "k": 20,
+      "a": 0.175,
+      "b": 0.15,
+      "rmse": 13.771
     }
   ],
   "holdout": {
     "games": 1237,
-    "marginRmse": 14.485,
-    "brier": 0.205,
+    "marginRmse": 14.436,
+    "brier": 0.204,
     "brierHomeCourtOnly": 0.247,
-    "logLoss": 0.598,
-    "winAccuracy": 0.684,
+    "logLoss": 0.594,
+    "winAccuracy": 0.68,
     "fullModelCalibration": [
       {
         "band": "0-9%",
         "n": 3,
-        "predictedHomeWin": 0.076,
+        "predictedHomeWin": 0.082,
         "actualHomeWin": 0
       },
       {
         "band": "10-19%",
-        "n": 35,
-        "predictedHomeWin": 0.167,
-        "actualHomeWin": 0.114
+        "n": 34,
+        "predictedHomeWin": 0.165,
+        "actualHomeWin": 0.118
       },
       {
         "band": "20-29%",
-        "n": 94,
-        "predictedHomeWin": 0.254,
-        "actualHomeWin": 0.213
+        "n": 100,
+        "predictedHomeWin": 0.256,
+        "actualHomeWin": 0.19
       },
       {
         "band": "30-39%",
-        "n": 131,
-        "predictedHomeWin": 0.354,
-        "actualHomeWin": 0.305
+        "n": 132,
+        "predictedHomeWin": 0.357,
+        "actualHomeWin": 0.341
       },
       {
         "band": "40-49%",
-        "n": 232,
-        "predictedHomeWin": 0.453,
-        "actualHomeWin": 0.448
+        "n": 213,
+        "predictedHomeWin": 0.45,
+        "actualHomeWin": 0.451
       },
       {
         "band": "50-59%",
-        "n": 219,
+        "n": 239,
         "predictedHomeWin": 0.547,
-        "actualHomeWin": 0.562
+        "actualHomeWin": 0.536
       },
       {
         "band": "60-69%",
-        "n": 232,
+        "n": 226,
         "predictedHomeWin": 0.648,
-        "actualHomeWin": 0.672
+        "actualHomeWin": 0.695
       },
       {
         "band": "70-79%",
-        "n": 173,
-        "predictedHomeWin": 0.747,
-        "actualHomeWin": 0.827
+        "n": 167,
+        "predictedHomeWin": 0.746,
+        "actualHomeWin": 0.808
       },
       {
         "band": "80-89%",
-        "n": 101,
-        "predictedHomeWin": 0.845,
-        "actualHomeWin": 0.822
+        "n": 105,
+        "predictedHomeWin": 0.842,
+        "actualHomeWin": 0.838
       },
       {
         "band": "90-99%",
-        "n": 17,
-        "predictedHomeWin": 0.924,
-        "actualHomeWin": 0.824
+        "n": 18,
+        "predictedHomeWin": 0.921,
+        "actualHomeWin": 0.833
       }
     ],
     "difficultyCalibrationAll": [
       {
         "band": "10-19",
-        "n": 53,
-        "predictedLossRate": 0.172,
-        "actualLossRate": 0.189
+        "n": 56,
+        "predictedLossRate": 0.174,
+        "actualLossRate": 0.196
       },
       {
         "band": "20-29",
-        "n": 234,
+        "n": 241,
         "predictedLossRate": 0.258,
-        "actualLossRate": 0.239
+        "actualLossRate": 0.232
       },
       {
         "band": "30-39",
-        "n": 371,
-        "predictedLossRate": 0.355,
-        "actualLossRate": 0.361
+        "n": 368,
+        "predictedLossRate": 0.357,
+        "actualLossRate": 0.34
       },
       {
         "band": "40-49",
-        "n": 530,
-        "predictedLossRate": 0.452,
-        "actualLossRate": 0.468
+        "n": 524,
+        "predictedLossRate": 0.454,
+        "actualLossRate": 0.481
       },
       {
         "band": "50-59",
-        "n": 610,
-        "predictedLossRate": 0.551,
-        "actualLossRate": 0.528
+        "n": 601,
+        "predictedLossRate": 0.553,
+        "actualLossRate": 0.524
       },
       {
         "band": "60-69",
-        "n": 454,
-        "predictedLossRate": 0.645,
-        "actualLossRate": 0.665
+        "n": 465,
+        "predictedLossRate": 0.644,
+        "actualLossRate": 0.675
       },
       {
         "band": "70-79",
-        "n": 179,
-        "predictedLossRate": 0.74,
-        "actualLossRate": 0.737
+        "n": 180,
+        "predictedLossRate": 0.738,
+        "actualLossRate": 0.75
       },
       {
         "band": "80-89",
-        "n": 43,
-        "predictedLossRate": 0.832,
-        "actualLossRate": 0.767
+        "n": 39,
+        "predictedLossRate": 0.831,
+        "actualLossRate": 0.744
       }
     ],
     "difficultyCalibrationLowSample": [
       {
-        "band": "10-19",
-        "n": 1,
-        "predictedLossRate": 0.186,
-        "actualLossRate": 1
-      },
-      {
         "band": "20-29",
-        "n": 17,
-        "predictedLossRate": 0.267,
-        "actualLossRate": 0.235
+        "n": 19,
+        "predictedLossRate": 0.263,
+        "actualLossRate": 0.263
       },
       {
         "band": "30-39",
         "n": 40,
-        "predictedLossRate": 0.357,
-        "actualLossRate": 0.325
+        "predictedLossRate": 0.36,
+        "actualLossRate": 0.275
       },
       {
         "band": "40-49",
-        "n": 79,
-        "predictedLossRate": 0.454,
-        "actualLossRate": 0.418
+        "n": 81,
+        "predictedLossRate": 0.455,
+        "actualLossRate": 0.42
       },
       {
         "band": "50-59",
-        "n": 106,
-        "predictedLossRate": 0.55,
-        "actualLossRate": 0.491
+        "n": 100,
+        "predictedLossRate": 0.551,
+        "actualLossRate": 0.49
       },
       {
         "band": "60-69",
-        "n": 51,
-        "predictedLossRate": 0.642,
-        "actualLossRate": 0.784
+        "n": 53,
+        "predictedLossRate": 0.64,
+        "actualLossRate": 0.792
       },
       {
         "band": "70-79",
-        "n": 6,
-        "predictedLossRate": 0.727,
-        "actualLossRate": 0.833
+        "n": 7,
+        "predictedLossRate": 0.72,
+        "actualLossRate": 1
       }
     ],
     "difficultyCalibrationEstablished": [
       {
         "band": "10-19",
-        "n": 52,
-        "predictedLossRate": 0.172,
-        "actualLossRate": 0.173
+        "n": 56,
+        "predictedLossRate": 0.174,
+        "actualLossRate": 0.196
       },
       {
         "band": "20-29",
-        "n": 217,
-        "predictedLossRate": 0.257,
-        "actualLossRate": 0.24
+        "n": 222,
+        "predictedLossRate": 0.258,
+        "actualLossRate": 0.23
       },
       {
         "band": "30-39",
-        "n": 331,
-        "predictedLossRate": 0.355,
-        "actualLossRate": 0.366
+        "n": 328,
+        "predictedLossRate": 0.357,
+        "actualLossRate": 0.348
       },
       {
         "band": "40-49",
-        "n": 451,
-        "predictedLossRate": 0.452,
-        "actualLossRate": 0.477
+        "n": 443,
+        "predictedLossRate": 0.454,
+        "actualLossRate": 0.492
       },
       {
         "band": "50-59",
-        "n": 504,
-        "predictedLossRate": 0.552,
-        "actualLossRate": 0.536
+        "n": 501,
+        "predictedLossRate": 0.553,
+        "actualLossRate": 0.531
       },
       {
         "band": "60-69",
-        "n": 403,
+        "n": 412,
         "predictedLossRate": 0.645,
-        "actualLossRate": 0.65
+        "actualLossRate": 0.66
       },
       {
         "band": "70-79",
         "n": 173,
-        "predictedLossRate": 0.74,
-        "actualLossRate": 0.734
+        "predictedLossRate": 0.739,
+        "actualLossRate": 0.74
       },
       {
         "band": "80-89",
-        "n": 43,
-        "predictedLossRate": 0.832,
-        "actualLossRate": 0.767
+        "n": 39,
+        "predictedLossRate": 0.831,
+        "actualLossRate": 0.744
       }
     ]
   },
+  "linesAdopted": true,
+  "priorComparison": {
+    "lastSeasonOnly": {
+      "params": {
+        "seasonWeight": 0.8,
+        "shrinkGames": 20,
+        "priorCarryover": 0.4,
+        "winTotalScale": 0,
+        "winTotalPriorCarryover": 0.4
+      },
+      "trainRmse": 13.797,
+      "holdout": {
+        "all": {
+          "games": 1237,
+          "rmse": 14.485,
+          "brier": 0.205,
+          "acc": 0.684
+        },
+        "under20Games": {
+          "games": 291,
+          "rmse": 13.302,
+          "brier": 0.201,
+          "acc": 0.708
+        },
+        "under10Games": {
+          "games": 145,
+          "rmse": 13.957,
+          "brier": 0.215,
+          "acc": 0.703
+        }
+      }
+    },
+    "winTotals": {
+      "params": {
+        "seasonWeight": 0.8,
+        "shrinkGames": 25,
+        "priorCarryover": 0.4,
+        "winTotalScale": 0.175,
+        "winTotalPriorCarryover": 0.1
+      },
+      "trainRmse": 13.77,
+      "holdout": {
+        "all": {
+          "games": 1237,
+          "rmse": 14.436,
+          "brier": 0.204,
+          "acc": 0.68
+        },
+        "under20Games": {
+          "games": 291,
+          "rmse": 13.149,
+          "brier": 0.198,
+          "acc": 0.698
+        },
+        "under10Games": {
+          "games": 145,
+          "rmse": 13.668,
+          "brier": 0.208,
+          "acc": 0.697
+        }
+      }
+    }
+  },
+  "openingPriors2026": [
+    {
+      "team": "OKC",
+      "prevMargin": 11.146,
+      "withLines": 4.685,
+      "lastSeasonOnly": 4.459
+    },
+    {
+      "team": "SAS",
+      "prevMargin": 8.072,
+      "withLines": 4.027,
+      "lastSeasonOnly": 3.229
+    },
+    {
+      "team": "NYK",
+      "prevMargin": 6.386,
+      "withLines": 2.634,
+      "lastSeasonOnly": 2.554
+    },
+    {
+      "team": "BOS",
+      "prevMargin": 7.695,
+      "withLines": 2.415,
+      "lastSeasonOnly": 3.078
+    },
+    {
+      "team": "DET",
+      "prevMargin": 8.159,
+      "withLines": 2.286,
+      "lastSeasonOnly": 3.263
+    },
+    {
+      "team": "DEN",
+      "prevMargin": 5.146,
+      "withLines": 1.81,
+      "lastSeasonOnly": 2.059
+    },
+    {
+      "team": "HOU",
+      "prevMargin": 5.22,
+      "withLines": 1.642,
+      "lastSeasonOnly": 2.088
+    },
+    {
+      "team": "PHI",
+      "prevMargin": -0.036,
+      "withLines": 1.641,
+      "lastSeasonOnly": -0.014
+    },
+    {
+      "team": "MIN",
+      "prevMargin": 3.354,
+      "withLines": 1.63,
+      "lastSeasonOnly": 1.341
+    },
+    {
+      "team": "CLE",
+      "prevMargin": 4.11,
+      "withLines": 1.531,
+      "lastSeasonOnly": 1.644
+    },
+    {
+      "team": "TOR",
+      "prevMargin": 2.829,
+      "withLines": 1.228,
+      "lastSeasonOnly": 1.132
+    },
+    {
+      "team": "MIA",
+      "prevMargin": 2.289,
+      "withLines": 0.999,
+      "lastSeasonOnly": 0.916
+    },
+    {
+      "team": "LAL",
+      "prevMargin": 1.756,
+      "withLines": 0.946,
+      "lastSeasonOnly": 0.702
+    },
+    {
+      "team": "ATL",
+      "prevMargin": 2.415,
+      "withLines": 0.661,
+      "lastSeasonOnly": 0.966
+    },
+    {
+      "team": "ORL",
+      "prevMargin": 0.845,
+      "withLines": 0.505,
+      "lastSeasonOnly": 0.338
+    },
+    {
+      "team": "CHA",
+      "prevMargin": 4.357,
+      "withLines": 0.156,
+      "lastSeasonOnly": 1.743
+    },
+    {
+      "team": "PHX",
+      "prevMargin": 1.56,
+      "withLines": 0.051,
+      "lastSeasonOnly": 0.624
+    },
+    {
+      "team": "POR",
+      "prevMargin": -0.241,
+      "withLines": 0.046,
+      "lastSeasonOnly": -0.096
+    },
+    {
+      "team": "IND",
+      "prevMargin": -7.988,
+      "withLines": -0.379,
+      "lastSeasonOnly": -3.195
+    },
+    {
+      "team": "GSW",
+      "prevMargin": -0.667,
+      "withLines": -0.697,
+      "lastSeasonOnly": -0.267
+    },
+    {
+      "team": "UTA",
+      "prevMargin": -8.427,
+      "withLines": -1.473,
+      "lastSeasonOnly": -3.371
+    },
+    {
+      "team": "DAL",
+      "prevMargin": -5.512,
+      "withLines": -1.881,
+      "lastSeasonOnly": -2.205
+    },
+    {
+      "team": "LAC",
+      "prevMargin": 1.06,
+      "withLines": -2.099,
+      "lastSeasonOnly": 0.424
+    },
+    {
+      "team": "WAS",
+      "prevMargin": -11.976,
+      "withLines": -2.353,
+      "lastSeasonOnly": -4.79
+    },
+    {
+      "team": "NOP",
+      "prevMargin": -4.5,
+      "withLines": -2.655,
+      "lastSeasonOnly": -1.8
+    },
+    {
+      "team": "CHI",
+      "prevMargin": -5.207,
+      "withLines": -2.726,
+      "lastSeasonOnly": -2.083
+    },
+    {
+      "team": "MEM",
+      "prevMargin": -6.012,
+      "withLines": -2.806,
+      "lastSeasonOnly": -2.405
+    },
+    {
+      "team": "MIL",
+      "prevMargin": -6.207,
+      "withLines": -3.351,
+      "lastSeasonOnly": -2.483
+    },
+    {
+      "team": "BKN",
+      "prevMargin": -9.988,
+      "withLines": -3.904,
+      "lastSeasonOnly": -3.995
+    },
+    {
+      "team": "SAC",
+      "prevMargin": -10,
+      "withLines": -4.605,
+      "lastSeasonOnly": -4
+    }
+  ],
   "exampleLalAtDen": {
     "denFinalMargin": 5.146,
-    "difficulty": 76.454,
-    "base": 64.411,
-    "expectedMargin": -9.947,
+    "difficulty": 76.955,
+    "base": 65.023,
+    "expectedMargin": -10.154,
     "steps": [
       {
         "key": "base",
-        "marginDelta": -5.098,
-        "difficulty": 64.411
+        "marginDelta": -5.314,
+        "difficulty": 65.023
       },
       {
         "key": "venue",
-        "marginDelta": -1.939,
-        "difficulty": 69.497
+        "marginDelta": -1.929,
+        "difficulty": 70.055
       },
       {
         "key": "rest",
         "marginDelta": -2.911,
-        "difficulty": 76.454
+        "difficulty": 76.955
       }
     ],
     "tier": "tough",

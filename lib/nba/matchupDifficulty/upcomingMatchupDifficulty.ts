@@ -1,6 +1,6 @@
 /**
  * チーム試合ログの upcoming 行に載せる Matchup Difficulty。
- * Firestore `games`（今季）+ 前季の 1 試合あたり得失点差から計算する（BDL は呼ばない）。
+ * Firestore `games`（今季）+ 開幕前の勝ち星ライン + 前季の 1 試合あたり得失点差から計算する（BDL は呼ばない）。
  */
 import {
   resolveGameScore,
@@ -19,6 +19,8 @@ import {
   type MatchupDifficultyCoefficients,
   type MatchupDifficultyTier,
 } from "@/lib/nba/matchupDifficulty/model";
+import { preseasonWinTotalCentered } from "@/lib/nba/matchupDifficulty/preseasonWinTotals";
+import { TEAM_SHORT } from "@/lib/team-short";
 
 export type NbaUpcomingMatchupDifficulty = {
   /** 0〜100（整数） */
@@ -72,6 +74,8 @@ export function createUpcomingMatchupDifficultyContext(input: {
   games: RawGame[];
   /** teamId → 前季 1 試合あたり得失点差 */
   priorMarginByTeam: Record<string, number>;
+  /** 渡すと開幕前の勝ち星ラインを prior に使う（ラインが無い季・チームは前季だけ） */
+  seasonKey?: string;
   coefficients?: MatchupDifficultyCoefficients;
 }): UpcomingMatchupDifficultyContext {
   const coeffs = input.coefficients ?? MATCHUP_DIFFICULTY_COEFFICIENTS;
@@ -122,6 +126,10 @@ export function createUpcomingMatchupDifficultyContext(input: {
           seasonMargin: avg(margins),
           last10Margin: avg(margins.slice(-10)),
           priorSeasonMargin: input.priorMarginByTeam[teamId] ?? 0,
+          winTotalCentered:
+            input.seasonKey && TEAM_SHORT[teamId]
+              ? preseasonWinTotalCentered(input.seasonKey, TEAM_SHORT[teamId]!)
+              : null,
         },
         coeffs
       ),

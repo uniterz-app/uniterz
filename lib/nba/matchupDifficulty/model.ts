@@ -20,8 +20,11 @@ export type MatchupDifficultyCoefficients = {
   seasonWeight: number;
   /** 序盤の縮小: (n*current + k*prior) / (n + k) */
   shrinkGames: number;
-  /** prior = 前季レーティング x この値（平均へ回帰） */
+  /** 勝ち星ラインが無いときの prior = 前季 x priorCarryover（平均へ回帰） */
   priorCarryover: number;
+  /** 勝ち星ラインがあるときの prior = winTotalScale x (ライン - 季平均) + winTotalPriorCarryover x 前季 */
+  winTotalScale: number;
+  winTotalPriorCarryover: number;
   /** n 未満は「サンプル少」 */
   lowSampleGames: number;
   /** 表示 tier 境目（Difficulty 分布の 25 / 75 パーセンタイル） */
@@ -41,17 +44,22 @@ export type TeamRatingInput = {
   last10Margin: number;
   /** 前季 1 試合あたり得失点差（無ければ 0） */
   priorSeasonMargin: number;
+  /** 開幕前の勝ち星 O/U ライン − その季の全チーム平均（無ければ null） */
+  winTotalCentered?: number | null;
 };
 
-export function blendTeamRating(
-  input: TeamRatingInput,
-  params: Pick<
-    MatchupDifficultyCoefficients,
-    "seasonWeight" | "shrinkGames" | "priorCarryover"
-  >
-): number {
+export type TeamRatingParams = Pick<
+  MatchupDifficultyCoefficients,
+  "seasonWeight" | "shrinkGames" | "priorCarryover" | "winTotalScale" | "winTotalPriorCarryover"
+>;
+
+export function blendTeamRating(input: TeamRatingInput, params: TeamRatingParams): number {
   const n = Math.max(0, input.gamesPlayed);
-  const prior = params.priorCarryover * input.priorSeasonMargin;
+  const prior =
+    input.winTotalCentered != null
+      ? params.winTotalScale * input.winTotalCentered +
+        params.winTotalPriorCarryover * input.priorSeasonMargin
+      : params.priorCarryover * input.priorSeasonMargin;
   if (n === 0) return prior;
   const current =
     params.seasonWeight * input.seasonMargin +

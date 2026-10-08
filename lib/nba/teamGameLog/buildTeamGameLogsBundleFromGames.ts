@@ -37,6 +37,7 @@ export function buildTeamGameLogsBundleFromGames(input: {
     ? createUpcomingMatchupDifficultyContext({
         games,
         priorMarginByTeam: input.priorMarginByTeam,
+        seasonKey: input.seasonKey,
       })
     : undefined;
 
