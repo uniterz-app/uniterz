@@ -22,6 +22,16 @@ type Options = {
   language?: "ja" | "en";
 };
 
+/** ISO（UTC）→ ユーザーの時刻の M/D HH:mm */
+function formatInjuryUpdatedAt(iso: string | null | undefined): string | null {
+  const ms = iso ? Date.parse(iso) : NaN;
+  if (!Number.isFinite(ms)) return iso || null;
+  const date = new Date(ms);
+  const hh = String(date.getHours()).padStart(2, "0");
+  const mm = String(date.getMinutes()).padStart(2, "0");
+  return `${date.getMonth() + 1}/${date.getDate()} ${hh}:${mm}`;
+}
+
 function reportFromDetail(
   payload: NbaMatchupDetailApiPayload,
   language: "ja" | "en"
@@ -31,7 +41,7 @@ function reportFromDetail(
     awayTeamId: payload.awayTeamId,
     homeEntries: payload.injuryHome,
     awayEntries: payload.injuryAway,
-    asOfLabel: payload.injuryUpdatedAt || null,
+    asOfLabel: formatInjuryUpdatedAt(payload.injuryUpdatedAt),
     language,
   });
 }

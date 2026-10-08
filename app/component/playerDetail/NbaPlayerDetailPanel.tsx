@@ -1448,7 +1448,8 @@ export default function NbaPlayerDetailPanel({
               >
                 {formatInjuryReturnEstimate(
                   detail.availability.returnEstimate,
-                  isJa ? "ja" : "en"
+                  isJa ? "ja" : "en",
+                  detail.availability.returnGameStartMs
                 )}
               </span>
             ) : null}

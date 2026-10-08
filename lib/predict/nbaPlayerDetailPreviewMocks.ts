@@ -343,6 +343,8 @@ export type NbaPlayerAvailability = {
   reason: string | null;
   /** 復帰見込み（例: Day-to-day / 2 weeks） */
   returnEstimate: string | null;
+  /** returnEstimate（米国日付）のチームの試合開始 ms */
+  returnGameStartMs?: number | null;
 };
 
 export type NbaPlayerTeamStint = {

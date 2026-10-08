@@ -64,14 +64,29 @@ const MONTHS_EN = [
   "Dec",
 ] as const;
 
-/** return_date / BDL 文字列 → 表示用 */
+function localDateParts(ms: number): { y: number; m: number; d: number } {
+  const date = new Date(ms);
+  return { y: date.getFullYear(), m: date.getMonth() + 1, d: date.getDate() };
+}
+
+/**
+ * return_date / BDL 文字列 → 表示用。
+ * returnGameStartMs があれば、その試合の開始をユーザーの時刻で日付にする（return_date は米国日付）。
+ */
 export function formatInjuryReturnEstimate(
   estimate: string | null | undefined,
-  language: LocalizedLang | string | null | undefined
+  language: LocalizedLang | string | null | undefined,
+  returnGameStartMs?: number | null
 ): string | null {
   const lang = resolveLocalizedLang(language);
   const raw = estimate?.trim();
   if (!raw) return null;
+
+  if (returnGameStartMs != null && Number.isFinite(returnGameStartMs)) {
+    const { y, m, d } = localDateParts(returnGameStartMs);
+    if (lang === "ja") return `${m}/${d} 復帰見込み`;
+    return `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+  }
   const upper = raw.toUpperCase();
 
   if (upper === "DAY-TO-DAY" || upper === "DAY TO DAY") {

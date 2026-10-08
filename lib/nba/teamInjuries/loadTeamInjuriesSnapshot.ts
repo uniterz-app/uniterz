@@ -42,6 +42,10 @@ function resolveInjuryList(raw: unknown): NbaTeamInjuryEntry[] {
         typeof row.returnEstimate === "string" && row.returnEstimate.trim()
           ? row.returnEstimate.trim()
           : null,
+      returnGameStartMs:
+        typeof row.returnGameStartMs === "number" && Number.isFinite(row.returnGameStartMs)
+          ? row.returnGameStartMs
+          : null,
     });
   }
   return out;

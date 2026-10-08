@@ -606,6 +606,7 @@ export function availabilityFromInjury(
     status: teamInjuryStatusToAvailability(entry.status),
     reason: entry.reason,
     returnEstimate: entry.returnEstimate,
+    returnGameStartMs: entry.returnGameStartMs ?? null,
   };
 }
 

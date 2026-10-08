@@ -6,6 +6,7 @@ import type { Firestore } from "firebase-admin/firestore";
 import { FieldValue } from "firebase-admin/firestore";
 import { requireBdlNbaApiKey } from "@/lib/nba/bdl/bdlNbaEnv";
 import { fetchBdlPlayerInjuries } from "@/lib/nba/bdl/fetchBdlPlayerInjuries";
+import { attachReturnGameStart } from "@/lib/nba/teamInjuries/attachReturnGameStart";
 import { buildTeamInjuriesBundleFromBdl } from "@/lib/nba/teamInjuries/mapBdlToTeamInjuries";
 import { writeTeamInjuriesSnapshot } from "@/lib/nba/teamInjuries/loadTeamInjuriesSnapshot";
 import { syncGameInjuryReportsForPush } from "@/lib/nba/teamInjuries/syncGameInjuryReportsForPush";
@@ -32,7 +33,13 @@ export async function ingestNbaTeamInjuriesFromBdl(
   requireBdlNbaApiKey();
   const seasonKey = (input.seasonKey ?? CURRENT_NBA_SEASON_KEY).trim();
   const rows = await fetchBdlPlayerInjuries();
-  const { teams } = buildTeamInjuriesBundleFromBdl(rows, seasonKey);
+  const { teams: bdlTeams } = buildTeamInjuriesBundleFromBdl(rows, seasonKey);
+  let teams = bdlTeams;
+  try {
+    teams = await attachReturnGameStart(db, bdlTeams);
+  } catch (err) {
+    console.warn("[ingestNbaTeamInjuriesFromBdl] return game lookup failed", err);
+  }
 
   const { teamCount } = await writeTeamInjuriesSnapshot(db, seasonKey, teams, {
     source: "firestore",

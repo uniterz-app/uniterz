@@ -1400,7 +1400,8 @@ function AvailabilityBanner({
           <Text style={[styles.availReturn, { color: hexToRgba(tone, 0.85) }]}>
             {formatInjuryReturnEstimate(
               availability.returnEstimate,
-              isJa ? "ja" : "en"
+              isJa ? "ja" : "en",
+              availability.returnGameStartMs
             )}
           </Text>
         ) : null}

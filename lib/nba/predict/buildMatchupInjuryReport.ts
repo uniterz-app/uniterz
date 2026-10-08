@@ -47,7 +47,11 @@ export function mapTeamInjuryEntryToPredict(
       lastName: lastName || "—",
     },
     status: teamInjuryStatusToPredictStatus(entry.status) as NbaInjuryStatus,
-    returnDate: formatInjuryReturnEstimate(entry.returnEstimate, language),
+    returnDate: formatInjuryReturnEstimate(
+      entry.returnEstimate,
+      language,
+      entry.returnGameStartMs
+    ),
     injuryDetail: entry.reason,
     description: entry.reason,
   };

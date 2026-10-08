@@ -474,7 +474,8 @@ function InjuriesSection({
             const reasonLabel = injuryReasonLabel(inj.reason, lang);
             const returnLabel = formatInjuryReturnEstimate(
               inj.returnEstimate,
-              lang
+              lang,
+              inj.returnGameStartMs
             );
             const canOpen = Boolean(onSelectPlayer && inj.playerId);
             return (

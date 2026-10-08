@@ -154,6 +154,8 @@ export type NbaTeamInjuryEntry = {
     | "day-to-day";
   reason: string | null;
   returnEstimate: string | null;
+  /** returnEstimate（米国日付）のチームの試合開始 ms。表示はユーザーの時刻で日付を出す */
+  returnGameStartMs?: number | null;
 };
 
 /** 相手に許しているスタッツ（BallDontLie opponent averages 相当） */
