@@ -9,10 +9,8 @@ const APEX_SHARE_HOST = "uniterz.app";
 const CANONICAL_SHARE_HOST = "www.uniterz.app";
 
 /**
- * App Store 商品ページ。
- * 公開後に `https://apps.apple.com/.../idXXXX` を入れる
- * （または EXPO_PUBLIC_APP_STORE_URL / NEXT_PUBLIC_APP_STORE_URL）。
- * 空の間は共有文に付けない。ダミー URL は書かない。
+ * App Store 商品ページ（EXPO_PUBLIC_APP_STORE_URL / NEXT_PUBLIC_APP_STORE_URL があればそちら優先）。
+ * 空なら共有文に付けない。
  */
 export const APP_STORE_SHARE_URL = "https://apps.apple.com/app/uniterz/id6819158408";
 
