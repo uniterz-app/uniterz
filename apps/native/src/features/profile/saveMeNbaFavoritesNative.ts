@@ -5,6 +5,7 @@ import { auth } from "../../lib/firebase";
 import type { NbaFavorites } from "../../../../../lib/profile/nbaFavorites";
 import { getUniterzApiBaseUrl } from "../games/submitPredictionApi";
 import { invalidateProfileUserDocNative } from "./profileUserDocCacheNative";
+import { publishMyNbaFavoritesSaved } from "../../../../../lib/profile/myNbaFavoritesOptimistic";
 
 export type SaveMeNbaFavoritesNativePayload =
   | {
@@ -66,6 +67,7 @@ export async function saveMeNbaFavoritesNative(
   if (!data.favorites) {
     throw new Error("missing favorites");
   }
+  publishMyNbaFavoritesSaved(user.uid, data.favorites);
   invalidateProfileUserDocNative(user.uid);
   return { favorites: data.favorites };
 }

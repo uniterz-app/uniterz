@@ -7,6 +7,7 @@ import {
   type NbaFavorites,
 } from "@/lib/profile/nbaFavorites";
 import { subscribeUserDocLive } from "@/lib/user/subscribeUserDocLive";
+import { useMyNbaFavoritesWithOptimistic } from "@/lib/profile/myNbaFavoritesOptimistic";
 
 const EMPTY: NbaFavorites = {
   favoriteNbaTeamId: null,
@@ -43,5 +44,6 @@ export function useMyNbaFavorites(): {
     });
   }, [uid, status]);
 
-  return { favorites, ready, uid };
+  const merged = useMyNbaFavoritesWithOptimistic(uid, favorites);
+  return { favorites: merged, ready, uid };
 }
