@@ -103,22 +103,26 @@ function BoxScoreModeToggle({
 
 function TeamBoxCard({
   block,
-  defaultOpen,
   mode,
   onOpenPlayerDetail,
 }: {
   block: LiveGameBoxTeam;
-  defaultOpen: boolean;
   mode: LiveGameBoxScoreMode;
   onOpenPlayerDetail?: (playerId: string) => void;
 }) {
-  const [open, setOpen] = useState(defaultOpen);
+  /** false = 出場選手のみ / true = 未出場まで */
+  const [open, setOpen] = useState(false);
   const teamPrimary = getTeamJerseyPrimaryColor("nba", block.teamId);
   const jerseySecondary = getTeamJerseySecondaryColor("nba", block.teamId);
   const border = hexToRgba(teamPrimary, 0.55);
   const divider = hexToRgba(teamPrimary, 0.22);
   const sideLabel = block.side === "home" ? "HOME" : "AWAY";
-  const players = useMemo(() => sortBoxPlayers(block.players), [block.players]);
+  const sorted = useMemo(() => sortBoxPlayers(block.players), [block.players]);
+  const played = sorted.filter((p) => p.min > 0);
+  const dnpCount = sorted.length - played.length;
+  // 開始直後で誰も出場記録が無いときは全員を出す
+  const players = open || played.length === 0 ? sorted : played;
+  const showDnpToggle = dnpCount > 0 && played.length > 0;
   const columns = liveGameBoxColumns(mode);
 
   return (
@@ -127,12 +131,10 @@ function TeamBoxCard({
         onPress={() => setOpen((v) => !v)}
         style={({ pressed }) => [
           styles.header,
-          open
-            ? {
-                borderBottomWidth: StyleSheet.hairlineWidth,
-                borderBottomColor: divider,
-              }
-            : null,
+          {
+            borderBottomWidth: StyleSheet.hairlineWidth,
+            borderBottomColor: divider,
+          },
           pressed ? styles.headerPressed : null,
         ]}
       >
@@ -153,14 +155,16 @@ function TeamBoxCard({
             </Text>
           </View>
         </View>
-        <MaterialCommunityIcons
-          name={open ? "chevron-up" : "chevron-down"}
-          size={18}
-          color={teamPrimary}
-        />
+        {showDnpToggle ? (
+          <MaterialCommunityIcons
+            name={open ? "chevron-up" : "chevron-down"}
+            size={18}
+            color={teamPrimary}
+          />
+        ) : null}
       </Pressable>
 
-      {open ? (
+      {players.length > 0 ? (
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           <View style={styles.tablePad}>
             <View style={styles.tableHead}>
@@ -232,6 +236,27 @@ function TeamBoxCard({
           </View>
         </ScrollView>
       ) : null}
+      {showDnpToggle ? (
+        <Pressable
+          onPress={() => setOpen((v) => !v)}
+          style={({ pressed }) => [
+            styles.dnpToggle,
+            { borderTopColor: divider },
+            pressed ? styles.headerPressed : null,
+          ]}
+          accessibilityRole="button"
+          accessibilityState={{ expanded: open }}
+        >
+          <Text style={styles.dnpToggleText}>
+            {open ? "HIDE DNP" : `DNP · ${dnpCount}`}
+          </Text>
+          <MaterialCommunityIcons
+            name={open ? "chevron-up" : "chevron-down"}
+            size={12}
+            color="rgba(255,255,255,0.45)"
+          />
+        </Pressable>
+      ) : null}
     </View>
   );
 }
@@ -256,13 +281,11 @@ export default function LiveGameBoxScorePanelNative({
       />
       <TeamBoxCard
         block={report.box.home}
-        defaultOpen
         mode={mode}
         onOpenPlayerDetail={onOpenPlayerDetail}
       />
       <TeamBoxCard
         block={report.box.away}
-        defaultOpen={false}
         mode={mode}
         onOpenPlayerDetail={onOpenPlayerDetail}
       />
@@ -444,6 +467,22 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     fontVariant: ["tabular-nums"],
     transform: [{ skewX: "-6deg" }],
+  },
+  dnpToggle: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 4,
+    paddingVertical: 6,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  dnpToggleText: {
+    fontFamily: METRIC_FONT,
+    fontSize: 9,
+    fontWeight: "700",
+    letterSpacing: 1.4,
+    textTransform: "uppercase",
+    color: "rgba(255,255,255,0.45)",
   },
   statEmphasis: { color: "#fff" },
   statMuted: { color: "rgba(255,255,255,0.78)" },

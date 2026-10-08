@@ -183,22 +183,27 @@ const PLAYER_ROW_CLASS =
 
 function TeamBoxCard({
   block,
-  defaultOpen,
   mode,
   onOpenPlayerDetail,
 }: {
   block: LiveGameBoxTeam;
-  defaultOpen: boolean;
   mode: LiveGameBoxScoreMode;
   onOpenPlayerDetail?: (playerId: string) => void;
 }) {
-  const [open, setOpen] = useState(defaultOpen);
+  /** false = 出場選手のみ / true = 未出場まで */
+  const [open, setOpen] = useState(false);
   const teamPrimary = getTeamJerseyPrimaryColor("nba", block.teamId);
   const jerseySecondary = getTeamJerseySecondaryColor("nba", block.teamId);
   const border = hexToRgba(teamPrimary, 0.55);
   const divider = hexToRgba(teamPrimary, 0.22);
   const sideLabel = block.side === "home" ? "HOME" : "AWAY";
-  const players = sortBoxPlayers(block.players);
+  const sorted = sortBoxPlayers(block.players);
+  const played = sorted.filter((p) => p.min > 0);
+  const dnp = sorted.filter((p) => !(p.min > 0));
+  // 開始直後で誰も出場記録が無いときは全員を出す
+  const players = open || played.length === 0 ? sorted : played;
+  const hiddenCount = players === sorted ? 0 : dnp.length;
+  const showDnpToggle = dnp.length > 0 && played.length > 0;
   const columns = liveGameBoxColumns(mode);
 
   return (
@@ -211,7 +216,7 @@ function TeamBoxCard({
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
         className="flex w-full items-center gap-2 px-2.5 py-2 text-left transition-colors hover:bg-white/[0.03] active:bg-white/[0.08]"
-        style={{ borderBottom: open ? `1px solid ${divider}` : undefined }}
+        style={{ borderBottom: `1px solid ${divider}` }}
       >
         <HalftoneJerseyMark
           accent={teamPrimary}
@@ -240,29 +245,31 @@ function TeamBoxCard({
             </p>
           </div>
         </div>
-        <svg
-          width="14"
-          height="14"
-          viewBox="0 0 24 24"
-          fill="none"
-          className="shrink-0 transition-transform duration-200"
-          style={{
-            color: teamPrimary,
-            transform: open ? "rotate(180deg)" : "rotate(0deg)",
-          }}
-          aria-hidden
-        >
-          <path
-            d="M6 9l6 6 6-6"
-            stroke="currentColor"
-            strokeWidth="2.2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
+        {showDnpToggle ? (
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            className="shrink-0 transition-transform duration-200"
+            style={{
+              color: teamPrimary,
+              transform: open ? "rotate(180deg)" : "rotate(0deg)",
+            }}
+            aria-hidden
+          >
+            <path
+              d="M6 9l6 6 6-6"
+              stroke="currentColor"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        ) : null}
       </button>
 
-      {open ? (
+      {players.length > 0 ? (
         <div className="overflow-x-auto">
           <div className="min-w-max px-2 pb-2">
             <div className="flex items-center border-b border-white/[0.06]">
@@ -313,6 +320,36 @@ function TeamBoxCard({
             })}
           </div>
         </div>
+      ) : null}
+      {showDnpToggle ? (
+        <button
+          type="button"
+          aria-expanded={open}
+          onClick={() => setOpen((v) => !v)}
+          className={[
+            nameOxanium.className,
+            "flex w-full items-center justify-center gap-1.5 py-1.5 text-[9px] font-bold uppercase tracking-[0.14em] text-white/45 transition-colors active:bg-white/[0.08]",
+          ].join(" ")}
+          style={{ borderTop: `1px solid ${divider}` }}
+        >
+          {open ? "HIDE DNP" : `DNP · ${hiddenCount}`}
+          <svg
+            width="10"
+            height="10"
+            viewBox="0 0 24 24"
+            fill="none"
+            style={{ transform: open ? "rotate(180deg)" : "rotate(0deg)" }}
+            aria-hidden
+          >
+            <path
+              d="M6 9l6 6 6-6"
+              stroke="currentColor"
+              strokeWidth="2.4"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </button>
       ) : null}
     </section>
   );
@@ -380,13 +417,11 @@ export default function LiveGameBoxScorePanel({
       <div className="space-y-3">
         <TeamBoxCard
           block={report.box.home}
-          defaultOpen
           mode={mode}
           onOpenPlayerDetail={onOpenPlayerDetail}
         />
         <TeamBoxCard
           block={report.box.away}
-          defaultOpen={false}
           mode={mode}
           onOpenPlayerDetail={onOpenPlayerDetail}
         />
