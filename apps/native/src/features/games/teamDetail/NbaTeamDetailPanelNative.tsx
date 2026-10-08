@@ -1784,6 +1784,8 @@ export default function NbaTeamDetailPanelNative({
       : "WESTERN CONFERENCE";
 
   const winPctText = detail.season.winPct.toFixed(3).replace(/^0/, "");
+  /** プレシーズン（レギュラー 0 試合）は順位を出さない */
+  const seasonNotStarted = detail.season.wins + detail.season.losses === 0;
   return (
     <ScrollView
       style={styles.root}
@@ -1850,9 +1852,13 @@ export default function NbaTeamDetailPanelNative({
               <Text style={styles.recordRankLabel}>RANK</Text>
               <View style={styles.recordRankValues}>
                 <Text style={[styles.recordRankPrimary, { color: "#FFFFFF" }]}>
-                  #{String(detail.conferenceRank).padStart(2, "0")}
+                  {seasonNotStarted
+                    ? "--"
+                    : `#${String(detail.conferenceRank).padStart(2, "0")}`}
                 </Text>
-                <Text style={styles.recordRankAccentMuted}>Seed</Text>
+                {seasonNotStarted ? null : (
+                  <Text style={styles.recordRankAccentMuted}>Seed</Text>
+                )}
               </View>
             </View>
           </View>

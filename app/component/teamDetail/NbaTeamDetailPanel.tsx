@@ -2474,8 +2474,14 @@ export default function NbaTeamDetailPanel({
               Rank
             </p>
             <p className={`${nameOxanium.className} text-[22px] font-extrabold`} style={{ color: "#FFFFFF", transform: "skewX(-8deg)" }}>
-              #{String(detail.conferenceRank).padStart(2, "0")}{" "}
-              <span className="text-[13px] text-white/55">Seed</span>
+              {detail.season.wins + detail.season.losses === 0 ? (
+                "--"
+              ) : (
+                <>
+                  #{String(detail.conferenceRank).padStart(2, "0")}{" "}
+                  <span className="text-[13px] text-white/55">Seed</span>
+                </>
+              )}
             </p>
           </div>
         </div>
