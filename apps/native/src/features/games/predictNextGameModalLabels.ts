@@ -5,6 +5,7 @@ import { isPlayoffStyleGameCard } from "../../../../../lib/games/playoffSeriesUi
 import { normalizeLeague } from "../../../../../lib/leagues";
 /** Web `PredictNextGameModal` と同じ `lib/team-name-split`（NBA は表ルールで City / ニックネーム） */
 import { splitTeamNameByLeague } from "../../../../../lib/team-name-split";
+import { compactNbaCardNickname } from "../../../../../lib/nba-team-names";
 import { displayNbaRoundLabel } from "../../../../../lib/games/displayNbaRoundLabel";
 import { L, resolveLocalizedLang } from "../../../../../lib/i18n/localize";
 
@@ -22,7 +23,8 @@ export function scoreboardTeamLabelForNextModal(
     return upper ? s.toUpperCase() : s;
   }
   const [l1, l2] = splitTeamNameByLeague(lg, rawName);
-  const nick = (l2 ?? "").replace(/\u00A0/g, "").trim();
+  const rawNick = (l2 ?? "").replace(/\u00A0/g, "").trim();
+  const nick = lg === "nba" && rawNick ? compactNbaCardNickname(rawNick) : rawNick;
   if (nick) return upper ? nick.toUpperCase() : nick;
   const primary = (l1 ?? "").trim() || rawName.trim();
   return upper ? primary.toUpperCase() : primary;

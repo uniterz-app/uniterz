@@ -43,7 +43,9 @@ import {
   seasonPredictStandingsPageSubtitle,
   resolveSeasonPredictUiLang,
   seasonPredictPageUiCopy,
+  seasonPredictAwardsNudgeCopy,
 } from "@/lib/predict/seasonPredictUiCopy";
+import { fetchMeSeasonAwards } from "@/lib/api/fetchSeasonAwards";
 
 type Mode = "loading" | "edit" | "view" | "market" | "market_pending";
 
@@ -63,6 +65,7 @@ export default function SeasonStandingsPage() {
   const [uid, setUid] = useState<string | null>(null);
   const [rulesOpen, setRulesOpen] = useState(false);
   const [rulesAutoShown, setRulesAutoShown] = useState(false);
+  const [awardsNudgeOpen, setAwardsNudgeOpen] = useState(false);
   const { language } = useUserLanguage(uid);
   const rulesLang = resolveSeasonPredictUiLang(language);
   const deadlineLabel = seasonPredictSubmitDeadlineLabel(rulesLang);
@@ -159,12 +162,20 @@ export default function SeasonStandingsPage() {
       }
       setValue(data.prediction);
       setMode("view");
+      try {
+        const existing = await fetchMeSeasonAwards(season);
+        if (!existing.prediction) setAwardsNudgeOpen(true);
+      } catch {
+        setAwardsNudgeOpen(true);
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "submit failed");
     } finally {
       setSubmitting(false);
     }
-  }, [value, submitting, submitOpen, rulesLang]);
+  }, [value, submitting, submitOpen, rulesLang, season]);
+
+  const nudge = seasonPredictAwardsNudgeCopy(rulesLang);
 
   return (
     <GamesNbaSubpageShell
@@ -278,6 +289,55 @@ export default function SeasonStandingsPage() {
           ) : null}
         </div>
       )}
+
+      {awardsNudgeOpen ? (
+        <div
+          className="fixed inset-0 z-[80] flex items-center justify-center bg-black/70 p-4"
+          role="dialog"
+          aria-modal
+          aria-labelledby="awards-nudge-title"
+        >
+          <div className="w-full max-w-sm border border-cyan-300/30 bg-[rgba(6,10,16,0.98)] p-4 shadow-[0_0_40px_rgba(0,245,255,0.12)]">
+            <h3
+              id="awards-nudge-title"
+              className={[
+                nameOxanium.className,
+                "text-[13px] font-extrabold uppercase tracking-[0.14em] text-cyan-100",
+              ].join(" ")}
+            >
+              {nudge.title}
+            </h3>
+            <p className="mt-2 text-[12px] leading-relaxed text-white/55">
+              {nudge.body}
+            </p>
+            <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={() => setAwardsNudgeOpen(false)}
+                className={[
+                  nameOxanium.className,
+                  "border border-white/15 bg-white/[0.04] px-3 py-2 text-[10px] font-extrabold uppercase tracking-[0.12em] text-white/60",
+                ].join(" ")}
+              >
+                {nudge.later}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setAwardsNudgeOpen(false);
+                  router.push("/mobile/season-awards");
+                }}
+                className={[
+                  nameOxanium.className,
+                  "border border-cyan-300/50 bg-cyan-300/20 px-3 py-2 text-[10px] font-extrabold uppercase tracking-[0.12em] text-cyan-50",
+                ].join(" ")}
+              >
+                {nudge.goAwards}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {typeof document !== "undefined"
         ? createPortal(

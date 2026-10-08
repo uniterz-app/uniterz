@@ -13,6 +13,9 @@ type Props = {
   standingsLabel: string;
   onAwards: () => void;
   onStandings: () => void;
+  /** 未提出（締切前）なら右上に黄色マーク */
+  awardsPending?: boolean;
+  standingsPending?: boolean;
 };
 
 export default function GamesSeasonPredictHeaderButtons({
@@ -21,6 +24,8 @@ export default function GamesSeasonPredictHeaderButtons({
   standingsLabel,
   onAwards,
   onStandings,
+  awardsPending = false,
+  standingsPending = false,
 }: Props) {
   const h = gamesHeaderControlHeightClass(isMobile);
   return (
@@ -30,12 +35,14 @@ export default function GamesSeasonPredictHeaderButtons({
         label={awardsLabel}
         onClick={onAwards}
         heightClass={h}
+        pending={awardsPending}
       />
       <HeaderIconButton
         src="/games-drawer/standings.png"
         label={standingsLabel}
         onClick={onStandings}
         heightClass={h}
+        pending={standingsPending}
       />
     </div>
   );
@@ -46,11 +53,13 @@ function HeaderIconButton({
   label,
   onClick,
   heightClass,
+  pending,
 }: {
   src: string;
   label: string;
   onClick: () => void;
   heightClass: string;
+  pending: boolean;
 }) {
   return (
     <button
@@ -79,6 +88,12 @@ function HeaderIconButton({
           maskSize: "contain",
         }}
       />
+      {pending ? (
+        <span
+          aria-hidden
+          className="pointer-events-none absolute right-[3px] top-[3px] h-[8px] w-[8px] animate-pulse rounded-full border border-[#050508] bg-[#FACC15] shadow-[0_0_6px_rgba(250,204,21,0.9)]"
+        />
+      ) : null}
     </button>
   );
 }

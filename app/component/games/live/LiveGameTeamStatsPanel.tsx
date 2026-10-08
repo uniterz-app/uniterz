@@ -6,9 +6,9 @@ import {
   type LiveGameStatsReport,
 } from "@/lib/games/liveGameStats";
 import { nameOxanium } from "@/lib/fonts";
-import { getNbaTeamNicknameById } from "@/lib/nba-team-names";
+import { compactNbaCardNickname, getNbaTeamNicknameById } from "@/lib/nba-team-names";
 import { nbaTeamDetailPreviewHref } from "@/lib/predict/nbaTeamDetailHref";
-import { matchupTeamUiAccent } from "@/lib/team-colors";
+import { matchupTeamUiAccent, teamColorRgba } from "@/lib/team-colors";
 
 type Props = {
   report: LiveGameStatsReport;
@@ -16,9 +16,17 @@ type Props = {
   onOpenTeamDetail?: (teamId: string) => void;
 };
 
-const WIN_GREEN = "#5cf0b5";
 const FRAME = "rgba(255,255,255,0.22)";
 const ROW_LINE = "rgba(255,255,255,0.1)";
+
+/** 勝っている側の値はそのチームカラーで発光 */
+function winStyle(color: string) {
+  return {
+    color,
+    textShadow: `0 0 6px ${teamColorRgba(color, 0.42)}, 0 0 2px ${teamColorRgba(color, 0.55)}`,
+    transform: "skewX(-6deg)",
+  };
+}
 
 /** チームスタッツ比較行のみ（スコアヘッダーは LiveGameStatsPanel 側） */
 export default function LiveGameTeamStatsPanel({
@@ -37,8 +45,14 @@ export default function LiveGameTeamStatsPanel({
     report.home.teamId,
     report.away.teamId
   );
-  const homeNick = getNbaTeamNicknameById(report.home.teamId);
-  const awayNick = getNbaTeamNicknameById(report.away.teamId);
+  const homeNick = compactNbaCardNickname(
+    getNbaTeamNicknameById(report.home.teamId),
+    report.home.teamId
+  );
+  const awayNick = compactNbaCardNickname(
+    getNbaTeamNicknameById(report.away.teamId),
+    report.away.teamId
+  );
 
   const nameClass = [
     nameOxanium.className,
@@ -131,12 +145,7 @@ export default function LiveGameTeamStatsPanel({
               ].join(" ")}
               style={
                 leftWin
-                  ? {
-                      color: WIN_GREEN,
-                      textShadow:
-                        "0 0 6px rgba(92,240,181,0.42), 0 0 2px rgba(92,240,181,0.55)",
-                      transform: "skewX(-6deg)",
-                    }
+                  ? winStyle(homeColor)
                   : { transform: "skewX(-6deg)" }
               }
             >
@@ -158,12 +167,7 @@ export default function LiveGameTeamStatsPanel({
               ].join(" ")}
               style={
                 rightWin
-                  ? {
-                      color: WIN_GREEN,
-                      textShadow:
-                        "0 0 6px rgba(92,240,181,0.42), 0 0 2px rgba(92,240,181,0.55)",
-                      transform: "skewX(-6deg)",
-                    }
+                  ? winStyle(awayColor)
                   : { transform: "skewX(-6deg)" }
               }
             >

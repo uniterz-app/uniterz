@@ -4,11 +4,23 @@ import {
   formatLiveTeamStatValue,
   type LiveGameStatsReport,
 } from "../../../../../../lib/games/liveGameStats";
-import { getNbaTeamNicknameById } from "../../../../../../lib/nba-team-names";
-import { matchupTeamUiAccent } from "../../../../../../lib/team-colors";
+import {
+  compactNbaCardNickname,
+  getNbaTeamNicknameById,
+} from "../../../../../../lib/nba-team-names";
+import { matchupTeamUiAccent, teamColorRgba } from "../../../../../../lib/team-colors";
 import { METRIC_FONT } from "../../rankings/rankingsUiTheme";
 
-const WIN_GREEN = "#5cf0b5";
+/** 勝っている側の値はそのチームカラーで発光 */
+function winStyle(color: string) {
+  return {
+    color,
+    textShadowColor: teamColorRgba(color, 0.55),
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 6,
+  };
+}
+
 const FRAME = "rgba(255,255,255,0.22)";
 const ROW_LINE = "rgba(255,255,255,0.1)";
 
@@ -33,8 +45,14 @@ export default function LiveGameTeamStatsPanelNative({
     report.home.teamId,
     report.away.teamId
   );
-  const homeNick = getNbaTeamNicknameById(report.home.teamId);
-  const awayNick = getNbaTeamNicknameById(report.away.teamId);
+  const homeNick = compactNbaCardNickname(
+    getNbaTeamNicknameById(report.home.teamId),
+    report.home.teamId
+  );
+  const awayNick = compactNbaCardNickname(
+    getNbaTeamNicknameById(report.away.teamId),
+    report.away.teamId
+  );
 
   const homeLabel = `${homeNick} →`;
   const awayLabel = `${awayNick} →`;
@@ -117,7 +135,7 @@ export default function LiveGameTeamStatsPanelNative({
               style={[
                 styles.value,
                 styles.valueLeft,
-                leftWin ? styles.valueWin : styles.valuePlain,
+                leftWin ? winStyle(homeColor) : styles.valuePlain,
               ]}
             >
               {formatLiveTeamStatValue(row.home, row.format)}
@@ -127,7 +145,7 @@ export default function LiveGameTeamStatsPanelNative({
               style={[
                 styles.value,
                 styles.valueRight,
-                rightWin ? styles.valueWin : styles.valuePlain,
+                rightWin ? winStyle(awayColor) : styles.valuePlain,
               ]}
             >
               {formatLiveTeamStatValue(row.away, row.format)}
@@ -202,12 +220,6 @@ const styles = StyleSheet.create({
   valueLeft: { textAlign: "right" },
   valueRight: { textAlign: "left" },
   valuePlain: { color: "#fff" },
-  valueWin: {
-    color: WIN_GREEN,
-    textShadowColor: "rgba(92,240,181,0.55)",
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 6,
-  },
   label: {
     width: 80,
     fontFamily: METRIC_FONT,

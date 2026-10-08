@@ -40,7 +40,14 @@ import Header from "@/app/component/Header";
 import usePageSwipe from "./usePageSwipe";
 import { gameRowStartDateKeyInTimeZone } from "./useGamesByDate";
 import { useGameDays, monthRowsToSortedGameDays } from "./useGameDays";
-import { auth } from "@/lib/firebase";
+import { auth, db } from "@/lib/firebase";
+import { useSeasonPredictPending } from "@/lib/predict/useSeasonPredictPending";
+import {
+  SEASON_PREDICT_INVITE_DELAY_MS,
+  readSeasonPredictInviteSeenWeb,
+  writeSeasonPredictInviteSeenWeb,
+} from "@/lib/predict/seasonPredictInvite";
+import SeasonPredictInviteModal from "../predict/SeasonPredictInviteModal";
 import type { League } from "@/lib/leagues";
 import { useUserPreferredLeague } from "@/lib/hooks/useUserPreferredLeague";
 import { preferredLeagueToGamesLeague } from "@/lib/user/preferredLeague";
@@ -210,6 +217,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
   const deepLinkOpenPredictGameId = searchParams.get("openPredict");
 
   const { fUser: user } = useFirebaseUser();
+  const seasonPredictPending = useSeasonPredictPending(db, user?.uid);
   const { language, timeZone: dayTimeZone } = useUserLanguage(user?.uid ?? null);
   const m = t(language);
   const skipConfirm = tutorialSkipConfirmProps(m.tutorial);
@@ -279,18 +287,27 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
     setFirstRunSetupGate("done");
   }, [user?.uid]);
 
+  /** 下の初回チュートリアル開始判定が終わったか（シーズン予想案内の待ち合わせ用） */
+  const [gamesTutorialChecked, setGamesTutorialChecked] = useState(false);
+
   /** 初回: welcome 選択画面は出さず、試合カード → ピックアップ説明のみ（他タブは各ページ初訪問時） */
   useEffect(() => {
     const uid = user?.uid;
+    setGamesTutorialChecked(false);
     if (!uid) return;
     if (firstRunSetupGate !== "done") return;
-    if (readAppTutorialSeenLocal(uid)) return;
-    if (readTutorialPageTipSeen(uid, "games")) return;
+    if (readAppTutorialSeenLocal(uid) || readTutorialPageTipSeen(uid, "games")) {
+      setGamesTutorialChecked(true);
+      return;
+    }
     let cancelled = false;
     void (async () => {
       const seen = await fetchAppTutorialSeen(uid);
-      if (cancelled || seen) return;
-      if (readTutorialPageTipSeen(uid, "games")) return;
+      if (cancelled) return;
+      if (seen || readTutorialPageTipSeen(uid, "games")) {
+        setGamesTutorialChecked(true);
+        return;
+      }
       const existing = readTutorialLivePhase();
       if (
         existing === "rankings" ||
@@ -298,6 +315,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
         existing === "profile" ||
         existing === "horizon"
       ) {
+        setGamesTutorialChecked(true);
         return;
       }
       const start: TutorialLivePhase = isTutorialGamesSubstep(existing)
@@ -307,6 +325,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
       writeTutorialLivePhase(start);
       setTutorialPhase(start);
       setAppTutorialBlockingEvents(true);
+      setGamesTutorialChecked(true);
     })();
     return () => {
       cancelled = true;
@@ -341,6 +360,39 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
 
   /** 試合タブ上の案内（welcome + 試合サブステップ）。他タブ以降は TutorialLiveHost 側 */
   const tutorialActive = isTutorialOnGamesHome(tutorialPhase);
+
+  /** シーズン予想の案内 — チュートリアル済み・他モーダルなしのときだけ 1 回 */
+  const [scheduleBlockingUi, setScheduleBlockingUi] = useState(false);
+  const [seasonInviteOpen, setSeasonInviteOpen] = useState(false);
+  const seasonInviteWanted =
+    seasonPredictPending.awards || seasonPredictPending.standings;
+  useEffect(() => {
+    const uid = user?.uid;
+    if (!uid || !seasonInviteWanted || seasonInviteOpen) return;
+    if (
+      firstRunSetupGate !== "done" ||
+      !gamesTutorialChecked ||
+      tutorialActive ||
+      scheduleBlockingUi
+    ) {
+      return;
+    }
+    if (readSeasonPredictInviteSeenWeb(uid)) return;
+    const timer = setTimeout(() => {
+      if (readSeasonPredictInviteSeenWeb(uid)) return;
+      writeSeasonPredictInviteSeenWeb(uid);
+      setSeasonInviteOpen(true);
+    }, SEASON_PREDICT_INVITE_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [
+    user?.uid,
+    seasonInviteWanted,
+    seasonInviteOpen,
+    firstRunSetupGate,
+    gamesTutorialChecked,
+    tutorialActive,
+    scheduleBlockingUi,
+  ]);
   /** welcome 世界にコーチを出す期間（カメラ遠景 + オーバーレイ） */
   const welcomeBrandInWorld =
     tutorialPhase === "welcome" && welcomeHandoff !== "profile";
@@ -1306,6 +1358,8 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
         standingsLabel={m.games.standingsPredict}
         onAwards={() => router.push("/mobile/season-awards")}
         onStandings={() => router.push("/mobile/season-standings")}
+        awardsPending={seasonPredictPending.awards}
+        standingsPending={seasonPredictPending.standings}
       />
     </motion.div>
   );
@@ -1630,6 +1684,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
           tutorialMarkFirstCard={tutorialActive}
           tutorialRegisterPickupLabel={tutorialPhase === "gamesPickup"}
           deepLinkOpenPredictGameId={deepLinkOpenPredictGameId}
+          onBlockingUiChange={setScheduleBlockingUi}
         />
       </div>
     </motion.div>
@@ -1639,6 +1694,23 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
       </div>
       </TutorialWelcomeWorldCamera>
 
+      <SeasonPredictInviteModal
+        open={seasonInviteOpen}
+        language={language}
+        awardsLabel={m.games.awardsPredict}
+        standingsLabel={m.games.standingsPredict}
+        awardsPending={seasonPredictPending.awards}
+        standingsPending={seasonPredictPending.standings}
+        onAwards={() => {
+          setSeasonInviteOpen(false);
+          router.push("/mobile/season-awards");
+        }}
+        onStandings={() => {
+          setSeasonInviteOpen(false);
+          router.push("/mobile/season-standings");
+        }}
+        onLater={() => setSeasonInviteOpen(false)}
+      />
       <GamesRightEdgeTabs
         onOpenStanding={() =>
           router.push(isMobile ? "/mobile/standings" : "/dev/standings-preview")

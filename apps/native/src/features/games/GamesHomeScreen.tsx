@@ -221,6 +221,17 @@ import {
   type ClientPredictionValidationCode,
 } from "../../../../../lib/predict/clientPredictionSubmit";
 import { findNextUnpredictedScheduledGameInList } from "../../../../../lib/games/nextPredictGame";
+import { useSeasonPredictPending } from "../../../../../lib/predict/useSeasonPredictPending";
+import { isPreseasonPredictNoticeTarget } from "../../../../../lib/predict/preseasonPredictNotice";
+import PreseasonPredictNoticeModalNative, {
+  readPreseasonPredictNoticeSeenNative,
+  writePreseasonPredictNoticeSeenNative,
+} from "./PreseasonPredictNoticeModalNative";
+import { SEASON_PREDICT_INVITE_DELAY_MS } from "../../../../../lib/predict/seasonPredictInvite";
+import SeasonPredictInviteModalNative, {
+  readSeasonPredictInviteSeenNative,
+  writeSeasonPredictInviteSeenNative,
+} from "./SeasonPredictInviteModalNative";
 import { invalidateResultPostsListCache } from "../../../../../lib/result/resultPostsListCache";
 import { subscribeScheduleMyPostDeleted } from "../../../../../lib/games/scheduleMyPostSyncEvents";
 import { resolveGameMarketBiasDisplay, readGamePredictorCount } from "../../../../../lib/predict/gameMarketDistribution";
@@ -511,19 +522,21 @@ function clientPredictionErrorBody(
 }
 
 /**
- * モバイルWeb `findNextUnpredictedScheduledGameInList` 相当：同一リーグ・scheduled ・未予想
+ * モバイルWeb `findNextUnpredictedScheduledGameInList` 相当：同一リーグ・scheduled ・未予想（Free は PICK UP のみ）
  */
 function findNextUnpredictedGame(
   currentGameId: string,
   currentLeague: string,
   games: Array<Record<string, unknown>>,
-  predictedIds: Set<string>
+  predictedIds: Set<string>,
+  pickupOnly: boolean
 ): Record<string, unknown> | null {
   const nextId = findNextUnpredictedScheduledGameInList(
     games,
     currentGameId,
     currentLeague,
-    predictedIds
+    predictedIds,
+    pickupOnly
   );
   if (!nextId) return null;
   return games.find((g) => String(g.id ?? "") === nextId) ?? null;
@@ -599,6 +612,11 @@ export default function GamesHomeScreen({
   const { topContentPadY } = useBottomTabBarInsets();
   const { fUser, status: authStatus } = useFirebaseUser();
   const { isPro: isProUser } = useNativeUserPlan(fUser?.uid);
+  const seasonPredictPending = useSeasonPredictPending(db, fUser?.uid);
+  const [preseasonNoticeGame, setPreseasonNoticeGame] = useState<Record<
+    string,
+    unknown
+  > | null>(null);
   const { prefs: scorePrefs } = useMatchScoreDisplayPrefsNative(fUser?.uid);
   const [filterOpen, setFilterOpen] = useState(false);
   const [gamesFilter, setGamesFilter] = useState<GamesFilterState>({
@@ -884,19 +902,31 @@ export default function GamesHomeScreen({
     [fUser?.uid]
   );
 
+  /** 下の初回チュートリアル開始判定が終わったか（シーズン予想案内の待ち合わせ用） */
+  const [gamesTutorialChecked, setGamesTutorialChecked] = useState(false);
+
   /** 初回: welcome 選択画面は出さず、試合カード → ピックアップ説明のみ（他タブは各ページ初訪問時） */
+  useEffect(() => {
+    setGamesTutorialChecked(false);
+  }, [fUser?.uid]);
+
   useEffect(() => {
     const uid = fUser?.uid;
     if (!uid || authStatus === "loading") return;
     if (firstRunSetupGate !== "done") return;
     let cancelled = false;
+    const markChecked = () => {
+      if (!cancelled) setGamesTutorialChecked(true);
+    };
     void (async () => {
       const localSeen = await readAppTutorialSeenNative(uid);
-      if (cancelled || localSeen) return;
-      if (await readTutorialPageTipSeenNative(uid, "games")) return;
+      if (cancelled) return;
+      if (localSeen) return markChecked();
+      if (await readTutorialPageTipSeenNative(uid, "games")) return markChecked();
       const seen = await fetchAppTutorialSeenNative(uid);
-      if (cancelled || seen) return;
-      if (await readTutorialPageTipSeenNative(uid, "games")) return;
+      if (cancelled) return;
+      if (seen) return markChecked();
+      if (await readTutorialPageTipSeenNative(uid, "games")) return markChecked();
       const existing = await readTutorialLivePhaseNative();
       if (
         existing === "rankings" ||
@@ -904,7 +934,7 @@ export default function GamesHomeScreen({
         existing === "profile" ||
         existing === "horizon"
       ) {
-        return;
+        return markChecked();
       }
       const start: TutorialLivePhase = isTutorialGamesSubstep(existing)
         ? existing
@@ -912,6 +942,7 @@ export default function GamesHomeScreen({
       setTutorialLiveTrackNative("full");
       await writeTutorialLivePhaseNative(start);
       if (!cancelled) setTutorialPhase(start);
+      markChecked();
     })();
     return () => {
       cancelled = true;
@@ -2213,7 +2244,38 @@ export default function GamesHomeScreen({
       return;
     }
 
+    const uid = fUser?.uid;
+    if (
+      uid &&
+      !editBootstrap &&
+      !tutorialActive &&
+      !predictedGameIds.has(String(sourceGame.id ?? "")) &&
+      isPreseasonPredictNoticeTarget({
+        seasonPhase: sourceGame.seasonPhase,
+        status: resolveGameStatus(sourceGame),
+      }) &&
+      !isGameStarted(sourceGame) &&
+      !(await readPreseasonPredictNoticeSeenNative(uid))
+    ) {
+      setPreseasonNoticeGame(sourceGame);
+      return;
+    }
+
     proceedOpenPredictModal(sourceGame, editBootstrap);
+  }
+
+  function closePreseasonNotice() {
+    setPreseasonNoticeGame(null);
+  }
+
+  function confirmPreseasonNotice() {
+    const g = preseasonNoticeGame;
+    const uid = fUser?.uid;
+    if (uid) void writePreseasonPredictNoticeSeenNative(uid);
+    setPreseasonNoticeGame(null);
+    if (g) {
+      scheduleAfterPredictModalDismissed(() => proceedOpenPredictModal(g));
+    }
   }
 
   /** アワード/順位予想の戻る → 旧メニューフラグをクリア */
@@ -2427,7 +2489,8 @@ export default function GamesHomeScreen({
               gameId,
               currentLeague,
               games,
-              nextPredictedIds
+              nextPredictedIds,
+              !isProUser
             )
           : null;
       const skipNextModal =
@@ -2493,6 +2556,43 @@ export default function GamesHomeScreen({
   const openPredictModalStable = useCallback((game: Record<string, unknown>) => {
     void openPredictModalRef.current(game);
   }, []);
+
+  /** シーズン予想の案内 — チュートリアル済み・他モーダルなしのときだけ 1 回 */
+  const [seasonInviteOpen, setSeasonInviteOpen] = useState(false);
+  const seasonInviteWanted =
+    seasonPredictPending.awards || seasonPredictPending.standings;
+  const seasonInviteBlocked =
+    !isFocused ||
+    firstRunSetupGate !== "done" ||
+    !gamesTutorialChecked ||
+    tutorialActive ||
+    isPredictModalOpen ||
+    isGameDetailModalVisible ||
+    resultDetailPostId != null ||
+    filterOpen ||
+    nextGameAfterPost != null ||
+    preseasonNoticeGame != null;
+  useEffect(() => {
+    const uid = fUser?.uid;
+    if (!uid || !seasonInviteWanted || seasonInviteOpen || seasonInviteBlocked) {
+      return;
+    }
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    void (async () => {
+      if (await readSeasonPredictInviteSeenNative(uid)) return;
+      if (cancelled) return;
+      timer = setTimeout(() => {
+        if (cancelled) return;
+        void writeSeasonPredictInviteSeenNative(uid);
+        setSeasonInviteOpen(true);
+      }, SEASON_PREDICT_INVITE_DELAY_MS);
+    })();
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
+  }, [fUser?.uid, seasonInviteWanted, seasonInviteOpen, seasonInviteBlocked]);
   const getGameCardCenterBlockForList = useCallback(
     (game: Record<string, unknown>) =>
       getGameCardCenterBlock(game, language, dayTimeZone, scorePrefs),
@@ -2654,6 +2754,8 @@ export default function GamesHomeScreen({
                 standingsLabel={
                   i18nT(normalizeLanguage(language) ?? "en").games.standingsPredict
                 }
+                awardsPending={seasonPredictPending.awards}
+                standingsPending={seasonPredictPending.standings}
               />
             </Animated.View>
           </View>
@@ -2945,6 +3047,35 @@ export default function GamesHomeScreen({
           void markTutorialPageTipSeenNative(fUser?.uid, "games");
           setTutorialPhaseAndStore(null);
         }}
+      />
+      <SeasonPredictInviteModalNative
+        open={seasonInviteOpen}
+        language={language}
+        awardsLabel={i18nT(normalizeLanguage(language) ?? "en").games.awardsPredict}
+        standingsLabel={
+          i18nT(normalizeLanguage(language) ?? "en").games.standingsPredict
+        }
+        awardsPending={seasonPredictPending.awards}
+        standingsPending={seasonPredictPending.standings}
+        onAwards={() => {
+          setSeasonInviteOpen(false);
+          scheduleAfterPredictModalDismissed(() =>
+            navigation.navigate("SeasonPredict", { mode: "awards" })
+          );
+        }}
+        onStandings={() => {
+          setSeasonInviteOpen(false);
+          scheduleAfterPredictModalDismissed(() =>
+            navigation.navigate("SeasonPredict", { mode: "standings" })
+          );
+        }}
+        onLater={() => setSeasonInviteOpen(false)}
+      />
+      <PreseasonPredictNoticeModalNative
+        open={preseasonNoticeGame != null}
+        language={language}
+        onClose={closePreseasonNotice}
+        onConfirm={confirmPreseasonNotice}
       />
       {nextGameAfterPost && nextGameAfterPostDisplay ? (
         <PredictNextGameNativeModal

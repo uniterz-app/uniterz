@@ -2,6 +2,7 @@ import { fetchGamesForDay } from "@/lib/games/queries";
 import type { League } from "@/lib/leagues";
 import { normalizeLeague } from "@/lib/leagues";
 import { GAME_SCHEDULE_SEASON } from "@/lib/games/gameScheduleSeason";
+import { isNbaPickupGame } from "@/lib/nba/isPickupGame";
 
 function toSkipSet(ids?: Iterable<string>): Set<string> {
   const s = new Set<string>();
@@ -10,15 +11,25 @@ function toSkipSet(ids?: Iterable<string>): Set<string> {
   return s;
 }
 
+type NextPredictCandidate = {
+  id?: string;
+  status?: string;
+  league?: string;
+  isPickup?: unknown;
+  pickupWeekKey?: unknown;
+};
+
 /**
  * 一覧（kickoff 昇順想定）で current の後ろから、同一リーグ・scheduled・未スキップの最初の試合 ID。
  * Games オーバーレイの `propsList` にそのまま渡す。
+ * `pickupOnly`（Free）は PICK UP 試合だけを候補にし、無ければ null。
  */
 export function findNextUnpredictedScheduledGameInList(
-  games: { id?: string; status?: string; league?: string }[],
+  games: NextPredictCandidate[],
   currentGameId: string,
   league: string,
-  skipGameIds: ReadonlySet<string>
+  skipGameIds: ReadonlySet<string>,
+  pickupOnly = false
 ): string | null {
   const lg = normalizeLeague(league);
   const cur = String(currentGameId);
@@ -31,6 +42,7 @@ export function findNextUnpredictedScheduledGameInList(
     if (!id) continue;
     if (g.status !== "scheduled") continue;
     if (skipGameIds.has(id)) continue;
+    if (pickupOnly && !isNbaPickupGame(g)) continue;
     return id;
   }
   return null;
@@ -43,6 +55,7 @@ export async function getNextScheduledGameIdOnSameDay(opts: {
   dayAnchor: Date;
   /** すでに予想済みなど、モーダル候補から除外する gameId */
   skipGameIds?: Iterable<string>;
+  pickupOnly?: boolean;
 }): Promise<string | null> {
   const league = normalizeLeague(opts.league) as League;
   const skip = toSkipSet(opts.skipGameIds);
@@ -55,9 +68,10 @@ export async function getNextScheduledGameIdOnSameDay(opts: {
   const idx = games.findIndex((g: { id?: string }) => String(g.id) === cur);
   if (idx === -1) return null;
   for (let i = idx + 1; i < games.length; i++) {
-    const g = games[i] as { id?: string; status?: string };
+    const g = games[i] as NextPredictCandidate;
     const id = String(g.id ?? "");
     if (g.status !== "scheduled" || skip.has(id)) continue;
+    if (opts.pickupOnly && !isNbaPickupGame(g)) continue;
     return id;
   }
   return null;

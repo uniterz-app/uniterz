@@ -17,6 +17,12 @@ import {
 } from "@/lib/viewTransition";
 import type { League } from "@/lib/leagues";
 import { auth, db } from "@/lib/firebase";
+import PreseasonPredictNoticeModal from "../predict/PreseasonPredictNoticeModal";
+import {
+  isPreseasonPredictNoticeTarget,
+  readPreseasonPredictNoticeSeenWeb,
+  writePreseasonPredictNoticeSeenWeb,
+} from "@/lib/predict/preseasonPredictNotice";
 import { collection, doc, getDoc, getDocs, query, where } from "firebase/firestore";
 
 import MatchCard, { type MatchCardProps } from "./MatchCard";
@@ -166,6 +172,7 @@ export default function ScheduleList({
   forceCloseOverlay = false,
   /** チーム詳細から戻る — 予想オーバーレイを開く */
   deepLinkOpenPredictGameId = null,
+  onBlockingUiChange,
 }: {
   games: GameItemRaw[];
   dense?: boolean;
@@ -192,6 +199,8 @@ export default function ScheduleList({
   onOverlayGameIdChange?: (gameId: string | null) => void;
   forceCloseOverlay?: boolean;
   deepLinkOpenPredictGameId?: string | null;
+  /** 予想オーバーレイ / プレシーズン告知のどちらかが開いているか */
+  onBlockingUiChange?: (blocking: boolean) => void;
 }) {
   const searchParams = useSearchParams();
   const openPredictFromUrl = searchParams.get("openPredict");
@@ -458,6 +467,45 @@ export default function ScheduleList({
     },
     [openOverlayDirect]
   );
+
+  const [preseasonNoticeGameId, setPreseasonNoticeGameId] = useState<
+    string | null
+  >(null);
+
+  const openFromCard = useCallback(
+    (gameId: string) => {
+      const gid = String(gameId);
+      const uid = user?.uid;
+      const target = propsList.find((p) => String(p.id) === gid);
+      if (
+        uid &&
+        !tutorialModeGameId &&
+        !myPostMap[gid] &&
+        isPreseasonPredictNoticeTarget(target) &&
+        !readPreseasonPredictNoticeSeenWeb(uid)
+      ) {
+        setPreseasonNoticeGameId(gid);
+        return;
+      }
+      open(gid);
+    },
+    [user?.uid, propsList, tutorialModeGameId, myPostMap, open]
+  );
+
+  useEffect(() => {
+    onBlockingUiChange?.(openGameId != null || preseasonNoticeGameId != null);
+  }, [openGameId, preseasonNoticeGameId, onBlockingUiChange]);
+
+  const closePreseasonNotice = useCallback(() => {
+    setPreseasonNoticeGameId(null);
+  }, []);
+
+  const confirmPreseasonNotice = useCallback(() => {
+    const gid = preseasonNoticeGameId;
+    if (user?.uid) writePreseasonPredictNoticeSeenWeb(user.uid);
+    setPreseasonNoticeGameId(null);
+    if (gid) open(gid);
+  }, [preseasonNoticeGameId, user?.uid, open]);
 
   const close = useCallback(() => {
     const closingId = openGameId;
@@ -1119,7 +1167,7 @@ export default function ScheduleList({
         }
         sharedTransitionBaseKey={listSharedTransitionBaseKey}
         forceViewTransitionNameNone={forceViewTransitionNameNone}
-        onOpenPredict={open}
+        onOpenPredict={openFromCard}
         disableCardMotion={!!openGameId}
       />
     );
@@ -1176,6 +1224,12 @@ export default function ScheduleList({
             document.body,
           )
         : null}
+      <PreseasonPredictNoticeModal
+        open={preseasonNoticeGameId != null}
+        language={language}
+        onClose={closePreseasonNotice}
+        onConfirm={confirmPreseasonNotice}
+      />
     </>
   );
 }

@@ -63,6 +63,7 @@ import {
   seasonPredictInvalidSubmitError,
   seasonPredictMarketPendingBody,
   seasonPredictNudgeCopy,
+  seasonPredictAwardsNudgeCopy,
   seasonPredictPageUiCopy,
   seasonPredictStandingsIncompleteError,
   seasonPredictStandingsPageSubtitle,
@@ -247,6 +248,30 @@ export default function SeasonPredictScreenNative() {
     ], { variant: "success" });
   }, [language, navigation, season]);
 
+  /** 順位予想提出後 — アワード未提出なら案内。出したら true */
+  const offerAwardsNudge = useCallback(async (): Promise<boolean> => {
+    try {
+      const existing = await fetchMeSeasonAwardsNative(season);
+      if (existing.prediction) return false;
+    } catch {
+      /* 未提出扱いで案内 */
+    }
+    const nudge = seasonPredictAwardsNudgeCopy(language);
+    cyberAlert(nudge.title, nudge.body, [
+      {
+        text: nudge.later,
+        style: "cancel",
+      },
+      {
+        text: nudge.goAwards,
+        onPress: () => {
+          navigation.navigate("SeasonPredict", { mode: "awards" });
+        },
+      },
+    ], { variant: "success" });
+    return true;
+  }, [language, navigation, season]);
+
   const handleSubmitAwards = useCallback(async () => {
     if (submitting) return;
     if (!submitOpen) {
@@ -315,12 +340,14 @@ export default function SeasonPredictScreenNative() {
       }
       setStandings(data.prediction);
       setStandingsMode("view");
-      cyberAlert(
-        alerts.submittedTitle,
-        alerts.standingsSavedBody,
-        undefined,
-        { variant: "success" }
-      );
+      if (!(await offerAwardsNudge())) {
+        cyberAlert(
+          alerts.submittedTitle,
+          alerts.standingsSavedBody,
+          undefined,
+          { variant: "success" }
+        );
+      }
     } catch (e) {
       const msg = e instanceof Error ? e.message : "submit failed";
       setError(msg);
@@ -328,7 +355,7 @@ export default function SeasonPredictScreenNative() {
     } finally {
       setSubmitting(false);
     }
-  }, [alerts, language, standings, submitOpen, submitting]);
+  }, [alerts, language, offerAwardsNudge, standings, submitOpen, submitting]);
 
   const title = !submitOpen
     ? "MARKET"

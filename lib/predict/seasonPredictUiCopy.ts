@@ -325,6 +325,53 @@ export function seasonPredictNudgeCopy(lang: SeasonPredictUiLang): {
   };
 }
 
+/** 順位予想提出後 → アワード未提出なら案内（`seasonPredictNudgeCopy` の逆向き） */
+export function seasonPredictAwardsNudgeCopy(lang: SeasonPredictUiLang): {
+  title: string;
+  body: string;
+  later: string;
+  goAwards: string;
+} {
+  return {
+    title: L(lang, {
+      ja: "アワード予想もしますか？",
+      en: "Predict awards too?",
+      ko: "어워드 예측도 하시겠어요?",
+      zh: "也要预测奖项吗？",
+      es: "¿Predecir también los premios?",
+      pt: "Prever os prêmios também?",
+      fr: "Prédire aussi les trophées ?",
+    }),
+    body: L(lang, {
+      ja: "順位予想を提出しました。続けて MVP などのアワード予想もできます。",
+      en: "Standings submitted. You can also pick MVP and the other awards.",
+      ko: "순위 예측을 제출했습니다. MVP 등 어워드 예측도 이어서 할 수 있습니다.",
+      zh: "排名预测已提交。您也可以继续预测 MVP 等奖项。",
+      es: "Clasificación enviada. También puedes predecir el MVP y los demás premios.",
+      pt: "Classificação enviada. Você também pode prever o MVP e outros prêmios.",
+      fr: "Classement envoyé. Vous pouvez aussi prédire le MVP et les autres trophées.",
+    }),
+    later: L(lang, {
+      ja: "あとで",
+      en: "Later",
+      ko: "나중에",
+      zh: "稍后",
+      es: "Más tarde",
+      pt: "Depois",
+      fr: "Plus tard",
+    }),
+    goAwards: L(lang, {
+      ja: "アワード予想へ",
+      en: "Go to awards",
+      ko: "어워드 예측으로",
+      zh: "前往奖项预测",
+      es: "Ir a premios",
+      pt: "Ir para prêmios",
+      fr: "Aller aux trophées",
+    }),
+  };
+}
+
 export function seasonPredictStandingsBandLabel(
   lang: SeasonPredictUiLang,
   band: { label: UiStrings }

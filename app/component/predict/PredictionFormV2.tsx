@@ -979,7 +979,8 @@ export default function PredictionFormV2({
               overlayScheduleGames,
               currentId,
               game.league,
-              skip
+              skip,
+              !isProUser
             );
           } else if (game.startAtJst) {
             try {
@@ -988,6 +989,7 @@ export default function PredictionFormV2({
                 league: game.league,
                 dayAnchor: game.startAtJst,
                 skipGameIds: skip,
+                pickupOnly: !isProUser,
               });
             } catch {
               /* ignore */
