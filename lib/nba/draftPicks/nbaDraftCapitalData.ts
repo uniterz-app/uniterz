@@ -9680,29 +9680,29 @@ function computeAssetsSummary(
   const total1st = guaranteed1st + conditional1st;
   const total2nd = guaranteed2nd + conditional2nd;
 
-  // 柔軟性判定 (資産量に基づく総合スコア)
-  // 基準: 各年1本 = 7本 (1st 7本, 2nd 7本)
+  // 柔軟性判定 (保有資産の価値スコア)
+  // 基準: 自前のみ (1st 7本 + 2nd 7本) = 17.5 → MEDIUM の中央付近
+  // 放出分は保有本数の減少で既に反映されるため、別途減点しない
   const score =
     guaranteed1st * 2.0 +
     conditional1st * 1.2 +
     swapRights * 0.8 +
     guaranteed2nd * 0.5 +
-    conditional2nd * 0.3 -
-    outgoingPicks * 1.5;
+    conditional2nd * 0.3;
 
   let flexibility: NbaDraftAssetsSummary["flexibility"] = "MEDIUM";
   let flexibilityJa: NbaDraftAssetsSummary["flexibilityJa"] = "普通";
 
-  if (score >= 22 || total1st >= 10) {
+  if (score >= 25) {
     flexibility = "VERY HIGH";
     flexibilityJa = "極めて高い";
-  } else if (score >= 17 || total1st >= 8) {
+  } else if (score >= 19) {
     flexibility = "HIGH";
     flexibilityJa = "高い";
-  } else if (score >= 12 || (total1st >= 6 && outgoingPicks <= 2)) {
+  } else if (score >= 14) {
     flexibility = "MEDIUM";
     flexibilityJa = "普通";
-  } else if (score >= 7) {
+  } else if (score >= 10) {
     flexibility = "LOW";
     flexibilityJa = "低い";
   } else {
