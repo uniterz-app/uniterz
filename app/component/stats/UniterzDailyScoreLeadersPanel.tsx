@@ -13,6 +13,11 @@ import {
 import { restContainer, restItem } from "@/app/component/rankings/anim";
 import { RankingsAvatarCircle } from "@/app/component/rankings/RankingsAvatarCircle";
 import RankingsOpenProLock from "@/app/component/rankings/RankingsOpenProLock";
+import RankingListProSkinFx from "@/app/component/rankings/RankingListProSkinFx";
+import { RankingNameBadges } from "@/app/component/common/RankingNameBadges";
+import { proBadgeStaticMotion } from "@/app/component/common/ProCyberBadge";
+import { rankingRowProSkinVariant } from "@/lib/rankings/rankingRowProSkinVariant";
+import { t } from "@/lib/i18n/t";
 import { auth } from "@/lib/firebase";
 import { nameBebas, nameOxanium } from "@/lib/fonts";
 import type { Language } from "@/lib/i18n/language";
@@ -159,13 +164,22 @@ export default function UniterzDailyScoreLeadersPanel({
             const name = r.displayName || r.handle || "—";
             const code = getCountryCode({ countryCode: r.countryCode });
             const flagSrc = code ? FLAG_SRC[code] : undefined;
+            const isPro = r.plan === "pro";
+            const proSkinVariant = rankingRowProSkinVariant(
+              r.plan,
+              typeof r.planProBgVariant === "string" ? r.planProBgVariant : null
+            );
             return (
               <motion.li key={r.uid} variants={restItem} custom={i}>
                 <button
                   type="button"
                   onClick={() => onSelectUser?.(r.uid)}
-                  className={`relative flex min-h-[60px] w-full items-center gap-3 overflow-hidden rounded border bg-white/[0.03] px-3.5 py-2 text-left active:opacity-75 ${r.rank === 1 ? "border-amber-300/35" : "border-white/[0.08]"}`}
+                  className={`relative flex min-h-[60px] w-full items-center overflow-hidden rounded border text-left active:opacity-75 ${proSkinVariant ? "" : "bg-white/[0.03]"} ${r.rank === 1 ? "border-amber-300/35" : "border-white/[0.08]"}`}
                 >
+                  {proSkinVariant ? (
+                    <RankingListProSkinFx variant={proSkinVariant} intensity="medium" />
+                  ) : null}
+                  <span className="relative z-10 flex min-w-0 flex-1 items-center gap-3 px-3.5 py-2">
                   <span
                     className={`${nameBebas.className} w-[26px] text-center text-[28px] leading-none`}
                     style={{ color: rankColor, transform: SKEW }}
@@ -180,11 +194,19 @@ export default function UniterzDailyScoreLeadersPanel({
                     imageLoading={i < 8 ? "eager" : "lazy"}
                   />
                   <span className="flex min-w-0 flex-1 flex-col gap-[5px]">
-                    <span
-                      className={`${nameOxanium.className} block min-w-0 truncate text-[15px] font-semibold uppercase tracking-[0.03em] text-white/95`}
-                      style={{ transform: SKEW }}
-                    >
-                      {name}
+                    <span className="flex min-w-0 items-center gap-1.5">
+                      <span
+                        className={`${nameOxanium.className} block min-w-0 truncate text-[15px] font-semibold uppercase tracking-[0.03em] text-white/95`}
+                        style={{ transform: SKEW }}
+                      >
+                        {name}
+                      </span>
+                      <RankingNameBadges
+                        {...proBadgeStaticMotion}
+                        compact
+                        isPro={isPro}
+                        proLabel={t(language as Language).common.proMember}
+                      />
                     </span>
                     <span
                       className={`${nameOxanium.className} flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.1em] text-white/50`}
@@ -218,6 +240,7 @@ export default function UniterzDailyScoreLeadersPanel({
                     >
                       {copy.pointsUnit}
                     </span>
+                  </span>
                   </span>
                 </button>
               </motion.li>

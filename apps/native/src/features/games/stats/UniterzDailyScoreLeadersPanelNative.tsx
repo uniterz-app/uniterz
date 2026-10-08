@@ -12,6 +12,9 @@ import { rankingsTexts } from "../../rankings/rankingsTexts";
 import { METRIC_FONT, RANK_DISPLAY_FONT } from "../../rankings/rankingsUiTheme";
 import { getUniterzApiBaseUrl } from "../submitPredictionApi";
 import RankingsListEntranceRowNative from "../../rankings/RankingsListEntranceRowNative";
+import RankingListProSkinFxNative from "../../rankings/RankingListProSkinFxNative";
+import ProCyberBadgeNative from "../../profile/kinetik/ProCyberBadgeNative";
+import { rankingRowProSkinVariant } from "../../../../../../lib/rankings/rankingRowProSkinVariant";
 import { auth } from "../../../lib/firebase";
 import { openProSubscribeNative } from "../../../navigation/navigationRef";
 import { useBottomTabBarInsets } from "../../../navigation/useBottomTabBarInsets";
@@ -176,6 +179,10 @@ export default function UniterzDailyScoreLeadersPanelNative({
           {rows.map((r, i) => {
             const name = r.displayName || r.handle || "—";
             const flagUri = rankingFlagImageUri(r.countryCode ?? undefined);
+            const proSkinVariant = rankingRowProSkinVariant(
+              r.plan,
+              typeof r.planProBgVariant === "string" ? r.planProBgVariant : null
+            );
             return (
               <RankingsListEntranceRowNative
                 key={r.uid}
@@ -189,18 +196,26 @@ export default function UniterzDailyScoreLeadersPanelNative({
                   accessibilityRole="button"
                   style={({ pressed }) => [
                     styles.card,
+                    proSkinVariant && styles.cardSkinned,
                     r.rank === 1 && styles.cardTop,
                     pressed && styles.cardPressed,
                   ]}
                 >
+                  {proSkinVariant ? (
+                    <RankingListProSkinFxNative variant={proSkinVariant} intensity="medium" />
+                  ) : null}
+                  <View style={styles.cardContent}>
                   <Text style={[styles.rank, { color: rankColor(r.rank) }]}>
                     {r.rank}
                   </Text>
                   <RankingsAvatarNative photoURL={r.photoURL} label={name} size={36} square />
                   <View style={styles.who}>
-                    <Text style={styles.name} numberOfLines={1}>
-                      {name}
-                    </Text>
+                    <View style={styles.nameRow}>
+                      <Text style={[styles.name, styles.nameShrink]} numberOfLines={1}>
+                        {name}
+                      </Text>
+                      {r.plan === "pro" ? <ProCyberBadgeNative compact /> : null}
+                    </View>
                     <View style={styles.subRow}>
                       {flagUri ? (
                         <Image source={{ uri: flagUri }} style={styles.flag} resizeMode="cover" />
@@ -213,6 +228,7 @@ export default function UniterzDailyScoreLeadersPanelNative({
                       {formatDailyScorePoints(r.points)}
                     </Text>
                     <Text style={styles.valueLabel}>{copy.pointsUnit}</Text>
+                  </View>
                   </View>
                 </Pressable>
               </RankingsListEntranceRowNative>
@@ -309,6 +325,16 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   card: {
+    minHeight: 60,
+    overflow: "hidden",
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.08)",
+    backgroundColor: "rgba(255,255,255,0.03)",
+  },
+  cardSkinned: { backgroundColor: "transparent" },
+  cardContent: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
@@ -316,12 +342,10 @@ const styles = StyleSheet.create({
     paddingLeft: 14,
     paddingRight: 14,
     paddingVertical: 8,
-    overflow: "hidden",
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.08)",
-    backgroundColor: "rgba(255,255,255,0.03)",
+    zIndex: 10,
   },
+  nameRow: { flexDirection: "row", alignItems: "center", gap: 6, minWidth: 0 },
+  nameShrink: { flexShrink: 1 },
   cardTop: { borderColor: "rgba(252,211,77,0.35)" },
   cardPressed: { opacity: 0.75 },
   rank: {
