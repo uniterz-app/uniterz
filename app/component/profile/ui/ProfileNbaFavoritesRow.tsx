@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import TeamAbbrBadge from "@/app/component/games/TeamAbbrBadge";
 import {
   formatNbaFanSinceInline,
@@ -52,7 +53,10 @@ export default function ProfileNbaFavoritesRow({
       </p>
       <div className="flex w-full min-w-0 items-center justify-center gap-3">
         {teamId ? (
-          <div className="flex min-w-0 max-w-[50%] items-baseline gap-1.5">
+          <Link
+            href={`/mobile/team-detail-preview?teamId=${encodeURIComponent(teamId)}`}
+            className="flex min-w-0 max-w-[50%] items-baseline gap-1.5 active:opacity-60"
+          >
             <span
               className={`${nameOxanium.className} inline-block min-w-0 truncate text-[11px] font-extrabold uppercase tracking-[0.04em] text-white/85`}
               style={{ transform: "skewX(-8deg)" }}
@@ -68,7 +72,7 @@ export default function ProfileNbaFavoritesRow({
                 {fanSince}
               </span>
             ) : null}
-          </div>
+          </Link>
         ) : null}
         {teamId && player ? (
           <span className="shrink-0 text-white/25" aria-hidden>
@@ -76,8 +80,9 @@ export default function ProfileNbaFavoritesRow({
           </span>
         ) : null}
         {player ? (
-          <div
-            className="flex min-w-0 max-w-[50%] items-center gap-1.5"
+          <Link
+            href={`/mobile/player-detail-preview?playerId=${encodeURIComponent(player.playerId)}`}
+            className="flex min-w-0 max-w-[50%] items-center gap-1.5 active:opacity-60"
             title={player.displayName}
           >
             <span
@@ -87,7 +92,7 @@ export default function ProfileNbaFavoritesRow({
               {formatNbaFavoritePlayerInitialLast(player.displayName)}
             </span>
             {player.teamId ? <TeamAbbrBadge teamId={player.teamId} /> : null}
-          </div>
+          </Link>
         ) : null}
       </div>
     </div>

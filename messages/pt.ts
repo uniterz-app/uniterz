@@ -432,6 +432,7 @@ const pt: Messages = {
     upsetPointsLabel: "Pontos surpresa",
     totalPointsLabel: "Pontos totais",
     pendingCallLabel: "YOUR CALL",
+    othersCallLabel: "CALL",
     upsetPointsDesc: "Métrica separada (0–10) concedida apenas quando o jogo é uma surpresa e você acertou com uma previsão minoritária. Caso contrário, 0.",
     totalPointsDesc: "Pontos base determinados pelo vencedor correto, proximidade da margem e do placar total, mais bônus de surpresa e sequência.",
     helpPageLink: "Veja a lógica de pontuação na página de Ajuda",

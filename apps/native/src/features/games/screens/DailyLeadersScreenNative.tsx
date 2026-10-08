@@ -24,7 +24,7 @@ export default function DailyLeadersScreenNative() {
   const navigation =
     useNavigation<NativeStackNavigationProp<GamesStackParamList>>();
   const { fUser } = useFirebaseUser();
-  const { language, timeZone } = useNativeUserLanguage(fUser?.uid);
+  const { language } = useNativeUserLanguage(fUser?.uid);
   const [tab, setTab] = useState<TodayLeadersTab>("nba");
   const copy = dailyScoreLeadersCopy(resolveLocalizedLang(language));
 
@@ -54,7 +54,6 @@ export default function DailyLeadersScreenNative() {
       {tab === "nba" ? (
         <NbaDailyLeadersPanelNative
           language={language}
-          timeZone={timeZone}
           onSelectPlayer={(playerId) =>
             navigation.navigate("PlayerDetailPreview", { playerId })
           }

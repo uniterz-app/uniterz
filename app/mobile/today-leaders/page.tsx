@@ -25,7 +25,7 @@ import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 export default function MobileTodayLeadersPage() {
   const router = useRouter();
   const { fUser } = useFirebaseUser();
-  const { language, timeZone } = useUserLanguage(fUser?.uid ?? null);
+  const { language } = useUserLanguage(fUser?.uid ?? null);
   const [tab, setTab] = useState<TodayLeadersTab>("nba");
   const copy = dailyScoreLeadersCopy(resolveLocalizedLang(language));
 
@@ -52,7 +52,6 @@ export default function MobileTodayLeadersPage() {
         {tab === "nba" ? (
           <NbaDailyLeadersPanel
             language={language}
-            timeZone={timeZone}
             onSelectPlayer={(playerId) =>
               router.push(
                 `/mobile/player-detail-preview?playerId=${encodeURIComponent(playerId)}`

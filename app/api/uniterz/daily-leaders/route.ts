@@ -8,8 +8,10 @@ import type {
   DailyScoreLeadersPayload,
 } from "@/lib/rankings/dailyScoreLeaders/buildDailyScoreLeaders";
 import { clientErrorResponse } from "@/lib/security/clientErrorResponse";
-import { shiftDateKeyInTimeZone } from "@/lib/games/gamesWindowRange";
-import { getTodayKeyInTimeZone } from "@/lib/time/zonedTime";
+import { GAME_SCHEDULE_SEASON } from "@/lib/games/gameScheduleSeason";
+import { resolveLatestNbaSlateDateKey } from "@/lib/games/latestNbaSlate";
+import { loadGameDayIndex } from "@/lib/games/server/gameDayIndexAdmin";
+import { TIMEZONE_ET } from "@/lib/time/zonedTime";
 
 export const runtime = "nodejs";
 
@@ -66,22 +68,31 @@ async function loadCached(
 }
 
 /** NBA の試合日は米国東部の暦日。全ユーザーが同じ試合日のランキングを見る */
-const SLATE_TIME_ZONE = "America/New_York";
+const SLATE_TIME_ZONE = TIMEZONE_ET;
+
+function loadNbaGameDayIndexCached() {
+  return unstable_cache(
+    async () =>
+      loadGameDayIndex(getAdminDb(), {
+        league: "nba",
+        season: GAME_SCHEDULE_SEASON,
+      }),
+    ["game-day-index", "nba", GAME_SCHEDULE_SEASON],
+    {
+      revalidate: 3600,
+      tags: ["game-day-index", `game-day-index:nba:${GAME_SCHEDULE_SEASON}`],
+    }
+  )();
+}
+
 /**
- * 米国東部の今日。試合が無い日はそのまま（「試合はありません」）。
- * 試合はあるがまだ 1 つも始まっていないときだけ前日の試合日を出す（日本の午後〜夜に空にならないよう）。
+ * 開始済みで最新の試合日（Result Drop / TODAY スタッツと同じ基準）。
+ * 次の試合日の最初の試合が始まるまで、試合の無い日も前の試合日を出し続ける。
  */
 async function loadLatestSlate(): Promise<DailyScoreLeadersPayload> {
-  const todayKey = getTodayKeyInTimeZone(SLATE_TIME_ZONE);
-  const today = await loadCached(todayKey, SLATE_TIME_ZONE);
-  if (today.gameCount === 0) return today;
-  if (today.firstStartAtMs != null && today.firstStartAtMs <= Date.now()) {
-    return today;
-  }
-  const prevKey = shiftDateKeyInTimeZone(todayKey, SLATE_TIME_ZONE, -1);
-  if (!prevKey) return today;
-  const prev = await loadCached(prevKey, SLATE_TIME_ZONE);
-  return prev.gameCount > 0 ? prev : today;
+  const index = await loadNbaGameDayIndexCached();
+  const slateKey = resolveLatestNbaSlateDateKey(index.startMs);
+  return loadCached(slateKey, SLATE_TIME_ZONE);
 }
 
 /**

@@ -260,6 +260,20 @@ function RankingsStackScreen() {
           }
           options={publicProfileScreenOptions}
         />
+        <RankingsStack.Screen
+          name="TeamDetailPreview"
+          getComponent={() =>
+            require("../features/results/ResultStackWrappers")
+              .ResultTeamDetailPreviewScreenWrapper
+          }
+        />
+        <RankingsStack.Screen
+          name="PlayerDetailPreview"
+          getComponent={() =>
+            require("../features/results/ResultStackWrappers")
+              .ResultPlayerDetailPreviewScreenWrapper
+          }
+        />
       </RankingsStack.Navigator>
     </NativeStackBackdrop>
   );
@@ -300,6 +314,20 @@ function LeaderboardsStackScreen() {
             require("../features/profile/screens/PublicProfileScreenNative").default
           }
           options={publicProfileScreenOptions}
+        />
+        <LeaderboardsStack.Screen
+          name="TeamDetailPreview"
+          getComponent={() =>
+            require("../features/results/ResultStackWrappers")
+              .ResultTeamDetailPreviewScreenWrapper
+          }
+        />
+        <LeaderboardsStack.Screen
+          name="PlayerDetailPreview"
+          getComponent={() =>
+            require("../features/results/ResultStackWrappers")
+              .ResultPlayerDetailPreviewScreenWrapper
+          }
         />
       </LeaderboardsStack.Navigator>
     </NativeStackBackdrop>
@@ -508,24 +536,20 @@ function ProfileStackScreen() {
             }
           />
         ) : null}
-        {__DEV__ ? (
-          <ProfileStack.Screen
-            name="TeamDetailPreview"
-            getComponent={() =>
-              require("../features/profile/screens/ProfileStackWrappers")
-                .TeamDetailPreviewScreenWrapper
-            }
-          />
-        ) : null}
-        {__DEV__ ? (
-          <ProfileStack.Screen
-            name="PlayerDetailPreview"
-            getComponent={() =>
-              require("../features/profile/screens/ProfileStackWrappers")
-                .PlayerDetailPreviewScreenWrapper
-            }
-          />
-        ) : null}
+        <ProfileStack.Screen
+          name="TeamDetailPreview"
+          getComponent={() =>
+            require("../features/profile/screens/ProfileStackWrappers")
+              .TeamDetailPreviewScreenWrapper
+          }
+        />
+        <ProfileStack.Screen
+          name="PlayerDetailPreview"
+          getComponent={() =>
+            require("../features/profile/screens/ProfileStackWrappers")
+              .PlayerDetailPreviewScreenWrapper
+          }
+        />
         {__DEV__ ? (
           <ProfileStack.Screen
             name="LiveGameStatsPreview"

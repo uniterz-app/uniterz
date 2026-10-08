@@ -433,6 +433,7 @@ const fr: Messages = {
     upsetPointsLabel: "Points surprise",
     totalPointsLabel: "Points totaux",
     pendingCallLabel: "YOUR CALL",
+    othersCallLabel: "CALL",
     upsetPointsDesc: "Métrique séparée (0–10) accordée uniquement quand le match est une surprise et que vous avez prédit correctement en minorité. Sinon 0.",
     totalPointsDesc: "Points de base déterminés par le vainqueur correct, la proximité de la marge et du score total, plus les bonus de surprise et de série.",
     helpPageLink: "Voir la logique de notation sur la page d'Aide",

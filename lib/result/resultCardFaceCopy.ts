@@ -12,6 +12,7 @@ export function resultCardFaceCopy(
   const r = t(lang).results;
   return {
     pendingCall: r.pendingCallLabel,
+    othersCall: r.othersCallLabel,
     marketBias: r.marketBiasTitle,
     upset: r.upsetPointsLabel,
     score: r.totalPointsLabel,

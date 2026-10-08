@@ -2,7 +2,9 @@
  * Web `ProfileNbaFavoritesRow` 相当 — チーム1・選手1・横並び。
  * FAVORITES 見出しは中央。
  */
-import { StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import {
   formatNbaFanSinceInline,
   formatNbaFavoritePlayerInitialLast,
@@ -21,10 +23,18 @@ type Props = {
   language?: "ja" | "en";
 };
 
+/** Games / Result / Rankings / Leaderboards / Profile の各スタックに同名で登録済み */
+type FavoritesDetailParamList = {
+  TeamDetailPreview: { teamId?: string } | undefined;
+  PlayerDetailPreview: { playerId?: string } | undefined;
+};
+
 export default function ProfileNbaFavoritesRowNative({
   favorites,
   language = "ja",
 }: Props) {
+  const navigation =
+    useNavigation<NativeStackNavigationProp<FavoritesDetailParamList>>();
   const teamId = favorites.favoriteNbaTeamId;
   const player = favorites.favoriteNbaPlayers[0] ?? null;
   if (!teamId && !player) return null;
@@ -42,7 +52,16 @@ export default function ProfileNbaFavoritesRowNative({
       <Text style={styles.heading}>FAVORITES</Text>
       <View style={styles.row}>
         {teamId ? (
-          <View style={styles.teamCluster}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={teamLabel}
+            hitSlop={8}
+            onPress={() => navigation.navigate("TeamDetailPreview", { teamId })}
+            style={({ pressed }) => [
+              styles.teamCluster,
+              pressed ? styles.pressed : null,
+            ]}
+          >
             <Text style={styles.teamName} numberOfLines={1}>
               {teamLabel}
             </Text>
@@ -51,18 +70,31 @@ export default function ProfileNbaFavoritesRowNative({
                 {fanSince}
               </Text>
             ) : null}
-          </View>
+          </Pressable>
         ) : null}
         {teamId && player ? <Text style={styles.dot}>·</Text> : null}
         {player ? (
-          <View style={styles.playerCluster}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={player.displayName}
+            hitSlop={8}
+            onPress={() =>
+              navigation.navigate("PlayerDetailPreview", {
+                playerId: player.playerId,
+              })
+            }
+            style={({ pressed }) => [
+              styles.playerCluster,
+              pressed ? styles.pressed : null,
+            ]}
+          >
             <Text style={styles.playerName} numberOfLines={1}>
               {formatNbaFavoritePlayerInitialLast(player.displayName)}
             </Text>
             {player.teamId ? (
               <TeamAbbrBadgeNative teamId={player.teamId} />
             ) : null}
-          </View>
+          </Pressable>
         ) : null}
       </View>
     </View>
@@ -119,6 +151,9 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     textTransform: "uppercase",
     transform: [{ skewX: "-8deg" }],
+  },
+  pressed: {
+    opacity: 0.6,
   },
   dot: {
     color: "rgba(255,255,255,0.25)",

@@ -434,6 +434,7 @@ const en: Messages = {
     upsetPointsLabel: "Upset",
     totalPointsLabel: "Score",
     pendingCallLabel: "YOUR CALL",
+    othersCallLabel: "CALL",
     upsetPointsDesc:
       "A separate metric (0–10 per match) awarded only when the match is an upset and you correctly predicted it with a minority pick. If conditions aren't met, it's 0.",
     totalPointsDesc:

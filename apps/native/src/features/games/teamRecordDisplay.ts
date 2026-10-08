@@ -4,6 +4,7 @@
 
 import {
   formatTeamRecordWithRank,
+  isPreseasonPhase,
   type TeamRecordLine,
 } from "../../../../../lib/teamRecordDisplay";
 
@@ -16,7 +17,9 @@ export function formatTeamRecordForCard(
   side: unknown,
   teamRecordById: Readonly<Record<string, TeamRecordSnapshot>>,
   leagueRaw?: unknown,
+  seasonPhase?: unknown,
 ): string | null {
+  const hideRank = isPreseasonPhase(seasonPhase);
   const row = side as
     | {
         teamId?: string;
@@ -31,7 +34,7 @@ export function formatTeamRecordForCard(
   const id = row.teamId != null ? String(row.teamId).trim() : "";
   const fromTeamDoc = id && teamRecordById[id] ? teamRecordById[id] : null;
   if (fromTeamDoc) {
-    return formatTeamRecordWithRank(fromTeamDoc, leagueRaw);
+    return formatTeamRecordWithRank(fromTeamDoc, leagueRaw, { hideRank });
   }
 
   const wins = Number(row.wins);
@@ -49,5 +52,6 @@ export function formatTeamRecordForCard(
       rank: r,
     },
     leagueRaw,
+    { hideRank },
   );
 }

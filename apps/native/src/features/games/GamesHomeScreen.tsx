@@ -1134,8 +1134,13 @@ export default function GamesHomeScreen({
 
   const teamRecordById = useTeamRecordMap(games, selectedLeague);
   const formatSideRecord = useCallback(
-    (side: unknown, leagueRaw?: unknown) =>
-      formatTeamRecordForCard(side, teamRecordById, leagueRaw ?? selectedLeague),
+    (side: unknown, leagueRaw?: unknown, seasonPhase?: unknown) =>
+      formatTeamRecordForCard(
+        side,
+        teamRecordById,
+        leagueRaw ?? selectedLeague,
+        seasonPhase
+      ),
     [teamRecordById, selectedLeague]
   );
   const resolveSeriesLabelForList = useCallback(
@@ -1156,8 +1161,8 @@ export default function GamesHomeScreen({
     const awayName = resolveGameTeamName(g.away, g.awayTeamName, "AWAY");
     const homeCompact = toCompactTeamName(g.league, homeName);
     const awayCompact = toCompactTeamName(g.league, awayName);
-    const homeRecord = formatSideRecord(g.home, g.league);
-    const awayRecord = formatSideRecord(g.away, g.league);
+    const homeRecord = formatSideRecord(g.home, g.league, g.seasonPhase);
+    const awayRecord = formatSideRecord(g.away, g.league, g.seasonPhase);
     const centerBlock = getGameCardCenterBlock(g, language, dayTimeZone, scorePrefs);
     const seriesLabel = resolveNativeSeriesLabel(g, peerGamesForSeries);
     const seriesPair = resolveNativeSeriesPair(g, peerGamesForSeries);
@@ -1411,8 +1416,8 @@ export default function GamesHomeScreen({
       kickoff: formatKickoffTime(resolveGameStartAt(g), dayTimeZone),
       homePalette: resolveTeamJerseyPalette(g.league, g.home, "#ff6b8a"),
       awayPalette: resolveTeamJerseyPalette(g.league, g.away, "#5aa4ff"),
-      homeRecordLine: formatSideRecord(g.home, g.league),
-      awayRecordLine: formatSideRecord(g.away, g.league),
+      homeRecordLine: formatSideRecord(g.home, g.league, g.seasonPhase),
+      awayRecordLine: formatSideRecord(g.away, g.league, g.seasonPhase),
       showSeriesRow,
       seriesHomeWins: showSeriesRow && seriesStanding ? seriesStanding.homeWins : null,
       seriesAwayWins: showSeriesRow && seriesStanding ? seriesStanding.awayWins : null,

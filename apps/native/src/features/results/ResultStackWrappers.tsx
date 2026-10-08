@@ -1,4 +1,4 @@
-/** Result スタック用 · チーム / プレイヤー詳細 */
+/** Result / Rankings / Leaderboards スタック用 · チーム / プレイヤー詳細 */
 import { useNavigation, useRoute } from "@react-navigation/native";
 import type { RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";

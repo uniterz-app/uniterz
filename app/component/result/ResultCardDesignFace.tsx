@@ -110,6 +110,8 @@ type Props = {
   liveScore?: { home: number; away: number } | null;
   /** 明示上書き。省略時は face.isPickup */
   pickup?: boolean;
+  /** 他ユーザーの投稿（「あなたの予想」ではなく「予想」） */
+  othersCall?: boolean;
 };
 
 export default function ResultCardDesignFace({
@@ -122,9 +124,11 @@ export default function ResultCardDesignFace({
   live = false,
   liveScore = null,
   pickup: pickupProp,
+  othersCall = false,
 }: Props) {
   const reduceMotion = useReducedMotion();
   const copy = resultCardFaceCopy(language);
+  const callLabel = othersCall ? copy.othersCall : copy.pendingCall;
   const ja = language === "ja";
   const settled =
     face.resultHome != null && face.resultAway != null;
@@ -198,7 +202,7 @@ export default function ResultCardDesignFace({
     ? "FINAL"
     : live
       ? "LIVE"
-      : copy.pendingCall;
+      : callLabel;
   const showTopBar = showStreak || Boolean(badge);
   const scorerHit = face.topScorerHit === true;
   const showScorerOutcome = settled && face.topScorerHit != null;
@@ -309,7 +313,7 @@ export default function ResultCardDesignFace({
               {showActual || liveCall ? (
                 <>
                   <span className={styles.predCaption}>
-                    {copy.pendingCall}
+                    {callLabel}
                   </span>
                   <span className={`${styles.predScore} ${matchScoreClass}`}>
                     {face.predHome}

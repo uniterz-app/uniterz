@@ -30,9 +30,15 @@ export function footballWinsLossesDraws(data: {
   };
 }
 
+/** プレシーズンは順位が付かないため、試合カードで順位を出さない */
+export function isPreseasonPhase(seasonPhase: unknown): boolean {
+  return String(seasonPhase ?? "").trim().toLowerCase() === "preseason";
+}
+
 export function formatTeamRecordWithRank(
   record: TeamRecordLine | null | undefined,
   league: unknown,
+  options?: { hideRank?: boolean },
 ): string {
   const football = isFootballLeague(league);
 
@@ -48,7 +54,7 @@ export function formatTeamRecordWithRank(
     : `(${wins}-${losses})`;
 
   const rank = record.rank;
-  if (rank == null || !Number.isFinite(rank) || rank <= 0) {
+  if (options?.hideRank || rank == null || !Number.isFinite(rank) || rank <= 0) {
     return core;
   }
 

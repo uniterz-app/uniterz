@@ -24,6 +24,7 @@ import { resolveResultBadgeDisplay } from "../../../../../lib/result/resultBadge
 import { isResultPostLiveGame, isResultPostMatchStarted } from "../../../../../lib/result/resultLiveGame";
 import { resolvePkScoreFromResultPost } from "../../../../../lib/games/pkScore";
 import { getTeamAlias, splitTeamNameByLeague } from "../../utils/teamName";
+import { auth } from "../../lib/firebase";
 import DeferredJerseyMarkNative from "../games/DeferredJerseyMarkNative";
 import CountryFlagNative from "../games/CountryFlagNative";
 import {
@@ -209,6 +210,7 @@ function ResultPostCardNativeInner({
   gameMarket = null,
   gameRoundMeta = null,
   compactSpacing = false,
+  compactFace = false,
   tutorialTargetId,
 }: {
   post: PostWithMillis;
@@ -228,6 +230,8 @@ function ResultPostCardNativeInner({
   onRequestPredictEdit?: (post: PostWithMillis) => void;
   /** プロフィール等 — カード下マージンを抑える */
   compactSpacing?: boolean;
+  /** カード面の余白・文字を一段詰める（プロフィール Result Drop） */
+  compactFace?: boolean;
   pkScore?: { home: number; away: number } | null;
   /** games.marketBias / market 補完（marketMeta 未埋め込みの投稿向け） */
   gameMarket?: { homeRate: number; awayRate: number } | null;
@@ -282,6 +286,8 @@ function ResultPostCardNativeInner({
 
   const authorUid =
     typeof post.authorUid === "string" && post.authorUid.length > 0 ? post.authorUid : null;
+  const callViewerUid = viewerUid ?? auth.currentUser?.uid ?? null;
+  const othersCall = authorUid != null && authorUid !== callViewerUid;
   const gameId =
     typeof post.gameId === "string" && post.gameId.length > 0 ? post.gameId : null;
   const hasCornerTrash =
@@ -805,6 +811,8 @@ function ResultPostCardNativeInner({
                   motion={faceMotion}
                   detailSpineStyle={detailSpinePressStyle}
                   topLabelAlign={sharing ? "start" : "center"}
+                  compact={compactFace && !sharing}
+                  othersCall={othersCall}
                 />
               </ShareBrandFrameSealNative>
             </View>
@@ -1181,6 +1189,7 @@ const ResultPostCardNative = memo(
     if (prev.entranceEnabled !== next.entranceEnabled) return false;
     if (prev.siblingOverlayOpen !== next.siblingOverlayOpen) return false;
     if (prev.compactSpacing !== next.compactSpacing) return false;
+    if (prev.compactFace !== next.compactFace) return false;
     if (prev.tutorialTargetId !== next.tutorialTargetId) return false;
     if (prev.pkScore !== next.pkScore) return false;
     if (prev.gameMarket !== next.gameMarket) return false;

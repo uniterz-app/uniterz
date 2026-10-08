@@ -5,10 +5,8 @@ import { withTimeout } from "@/lib/async/withTimeout";
 import { loadProfileSettledTodayResultPosts } from "@/lib/profile/profileSettledTodayPosts";
 import type { ProfileStatsStreakContext } from "@/lib/profile/profileStreakScope";
 import type { PostWithMillis } from "@/lib/result/result-page-data";
-import {
-  peekLatestNbaSlateDateKey,
-  useLatestNbaSlateDateKey,
-} from "@/lib/games/latestNbaSlate";
+import { peekLatestNbaSlateDateKey } from "@/lib/games/latestNbaSlate";
+import { useLatestNbaSlateDateKey } from "@/lib/games/useLatestNbaSlateDateKey";
 
 type SettledTodayCacheEntry = {
   posts: PostWithMillis[];

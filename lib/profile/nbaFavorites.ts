@@ -325,6 +325,16 @@ export function replaceNbaFavoritePlayer(
   };
 }
 
+/**
+ * `users/{uid}.favoriteNbaPlayerIds`（お気に入り数の array-contains 集計用）。
+ * `favoriteNbaPlayers` を書くときは必ず一緒に書く。
+ */
+export function nbaFavoritePlayerIdsOf(
+  players: readonly NbaFavoritePlayer[]
+): string[] {
+  return players.map((p) => p.playerId);
+}
+
 export function nbaFavoritesEqual(a: NbaFavorites, b: NbaFavorites): boolean {
   if (a.favoriteNbaTeamId !== b.favoriteNbaTeamId) return false;
   if (a.favoriteNbaTeamFanSinceSeason !== b.favoriteNbaTeamFanSinceSeason) {

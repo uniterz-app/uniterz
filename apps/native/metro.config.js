@@ -61,7 +61,21 @@ function resolveSourceFile(basePathWithoutExt) {
   return null;
 }
 
+const FONT_SCALE_CAP_SHIM = path.join(
+  projectRoot,
+  "src/shims/reactNativeFontScaleCap.js"
+);
+const NODE_MODULES_SEGMENT = `${path.sep}node_modules${path.sep}`;
+
 config.resolver.resolveRequest = (context, moduleName, platform) => {
+  // アプリ側の Text / TextInput だけ文字拡大上限付きに差し替える（node_modules とシム自身は本物）
+  if (
+    moduleName === "react-native" &&
+    context.originModulePath !== FONT_SCALE_CAP_SHIM &&
+    !context.originModulePath.includes(NODE_MODULES_SEGMENT)
+  ) {
+    return { type: "sourceFile", filePath: FONT_SCALE_CAP_SHIM };
+  }
   if (typeof moduleName === "string" && moduleName.startsWith("@uniterz/shared")) {
     const sub = moduleName === "@uniterz/shared" ? "index" : moduleName.slice("@uniterz/shared/".length);
     const absoluteBase = path.join(workspaceRoot, "packages/shared/src", sub);

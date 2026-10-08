@@ -31,7 +31,10 @@ import {
   isResultCyberClipFrameBadge,
 } from "@/lib/result/resultGlass";
 import { matchCardRecentFormDisplay } from "@/lib/nba/standings/buildNbaStandingsTeamRecordMap";
-import { formatTeamRecordWithRank } from "@/lib/teamRecordDisplay";
+import {
+  formatTeamRecordWithRank,
+  isPreseasonPhase,
+} from "@/lib/teamRecordDisplay";
 import ResultHitCyberFrame from "@/app/component/result/ResultHitCyberFrame";
 import ResultPerfectCyberFrame from "@/app/component/result/ResultPerfectCyberFrame";
 import ResultStreakCyberFrame from "@/app/component/result/ResultStreakCyberFrame";
@@ -333,12 +336,15 @@ const RESULT_CARD_NUM_FONT =
 function RecordWithRank({
   r,
   league,
+  hideRank = false,
 }: {
   r: { wins: number; losses: number; draws?: number; rank?: number } | null;
   league: string;
+  hideRank?: boolean;
 }) {
-  const line = formatTeamRecordWithRank(r, league);
-  const hasRank = r?.rank != null && Number.isFinite(r.rank) && r.rank > 0;
+  const line = formatTeamRecordWithRank(r, league, { hideRank });
+  const hasRank =
+    !hideRank && r?.rank != null && Number.isFinite(r.rank) && r.rank > 0;
 
   if (!hasRank) {
     return (
@@ -2041,7 +2047,11 @@ const card = (
     mobileDense ? "-mt-0.5 pb-1 md:pb-0.5" : "mt-0 pb-1 md:pb-1",
   ].join(" ")}
 >
-  <RecordWithRank r={homeRecord} league={league} />
+  <RecordWithRank
+    r={homeRecord}
+    league={league}
+    hideRank={isPreseasonPhase(seasonPhase)}
+  />
 </div>
   </div>
 
@@ -2309,7 +2319,11 @@ const card = (
     mobileDense ? "-mt-0.5 pb-1 md:pb-0.5" : "mt-0 pb-1 md:pb-1",
   ].join(" ")}
 >
-  <RecordWithRank r={awayRecord} league={league} />
+  <RecordWithRank
+    r={awayRecord}
+    league={league}
+    hideRank={isPreseasonPhase(seasonPhase)}
+  />
 </div>
   </div>
 

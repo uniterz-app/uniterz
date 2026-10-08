@@ -433,6 +433,7 @@ const de: Messages = {
     upsetPointsLabel: "Überraschungspunkte",
     totalPointsLabel: "Gesamtpunkte",
     pendingCallLabel: "YOUR CALL",
+    othersCallLabel: "CALL",
     upsetPointsDesc: "Separater Wert (0–10), nur wenn das Spiel eine Überraschung war und du mit einer Minderheitsvorhersage richtig lagst. Sonst 0.",
     totalPointsDesc: "Basispunkte aus korrektem Gewinner, Differenznähe und Gesamtpunktenähe, plus Überraschungs- und Siegesserie-Bonus.",
     helpPageLink: "Punktelogik auf der Hilfe-Seite ansehen",

@@ -341,6 +341,11 @@ function ResultCardPresentationImpl({
         drawDelaySec={lineFrameDrawDelaySec}
         onOpen={embedded ? undefined : handle}
         live={isLiveGame}
+        othersCall={
+          viewerUid != null &&
+          typeof post.authorUid === "string" &&
+          post.authorUid !== viewerUid
+        }
       />
     </div>
   );

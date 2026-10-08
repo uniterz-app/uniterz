@@ -8,6 +8,7 @@ import {
   Alert,
   Pressable,
   StyleSheet,
+  Text,
   View,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
@@ -19,6 +20,9 @@ import {
 } from "../../../../../lib/profile/nbaFavorites";
 import { getNbaTeamNicknameById } from "../../../../../lib/nba-team-names";
 import { CURRENT_NBA_SEASON_KEY } from "../../../../../lib/rankings/nbaSeason";
+import { formatNbaFavoriteCount } from "../../../../../lib/nba/favoriteCounts";
+import { useNbaFavoriteCount } from "../../../../../lib/nba/useNbaFavoriteCount";
+import { METRIC_FONT } from "../rankings/rankingsUiTheme";
 import {
   NbaFavoritesMaxPlayersError,
   saveMeNbaFavoritesNative,
@@ -43,6 +47,8 @@ type PlayerProps = {
 
 export type NbaFavoriteStarButtonNativeProps = TeamProps | PlayerProps;
 
+const apiBase = process.env.EXPO_PUBLIC_UNITERZ_API_BASE_URL ?? null;
+
 export default function NbaFavoriteStarButtonNative(
   props: NbaFavoriteStarButtonNativeProps
 ) {
@@ -57,6 +63,13 @@ export default function NbaFavoriteStarButtonNative(
     props.kind === "team"
       ? hasNbaFavoriteTeam(favorites, props.teamId)
       : hasNbaFavoritePlayer(favorites, props.playerId);
+  const favoriteCount = useNbaFavoriteCount({
+    apiBase,
+    kind: props.kind,
+    id: props.kind === "team" ? props.teamId : props.playerId,
+    active,
+    ready,
+  });
 
   const saveTeam = useCallback(
     async (teamId: string, fanSinceSeason?: string | null) => {
@@ -187,6 +200,19 @@ export default function NbaFavoriteStarButtonNative(
           />
         )}
       </Pressable>
+      {favoriteCount != null && favoriteCount > 0 ? (
+        <Text
+          style={styles.countText}
+          numberOfLines={1}
+          accessibilityLabel={
+            isJa
+              ? `お気に入り ${favoriteCount} 人`
+              : `${favoriteCount} favorites`
+          }
+        >
+          {formatNbaFavoriteCount(favoriteCount)} FANS
+        </Text>
+      ) : null}
       {props.kind === "player" ? (
         <NbaFavoriteLimitModalNative
           open={limitOpen}
@@ -223,6 +249,16 @@ const styles = StyleSheet.create({
   wrap: {
     position: "relative",
     zIndex: 2,
+    alignItems: "center",
+    gap: 3,
+  },
+  countText: {
+    fontFamily: METRIC_FONT,
+    fontSize: 9,
+    fontWeight: "800",
+    letterSpacing: 0.8,
+    color: "#FCD34D",
+    fontVariant: ["tabular-nums"],
   },
   btn: {
     width: 36,

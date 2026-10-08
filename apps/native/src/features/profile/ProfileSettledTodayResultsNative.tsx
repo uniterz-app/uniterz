@@ -138,6 +138,7 @@ export default function ProfileSettledTodayResultsNative({
               listEnterIndex={index}
               entranceEnabled={false}
               compactSpacing
+              compactFace
               gameMarket={resolveResultPostGameMarket(post, marketsFromGames)}
               gameRoundMeta={resolveResultPostGameRoundMeta(
                 post,
@@ -194,7 +195,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   list: {
-    marginTop: 16,
-    gap: 12,
+    marginTop: 12,
+    gap: 8,
   },
 });

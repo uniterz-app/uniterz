@@ -433,6 +433,7 @@ const ar: Messages = {
     upsetPointsLabel: "نقاط المفاجأة",
     totalPointsLabel: "إجمالي النقاط",
     pendingCallLabel: "YOUR CALL",
+    othersCallLabel: "CALL",
     upsetPointsDesc: "مقياس منفصل (0–10) يُمنح فقط عندما تكون المباراة مفاجأة وتوقعت بشكل صحيح كأقلية. وإلا فهو 0.",
     totalPointsDesc: "نقاط أساسية يحددها الفائز الصحيح وقرب الفارق وقرب مجموع النقاط، بالإضافة إلى مكافأة المفاجأة وسلسلة الانتصارات.",
     helpPageLink: "اطّلع على منطق التسجيل في صفحة المساعدة",

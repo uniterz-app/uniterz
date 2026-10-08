@@ -431,6 +431,7 @@ const ja = {
     upsetPointsLabel: "アップセット",
     totalPointsLabel: "スコア",
     pendingCallLabel: "あなたの予想",
+    othersCallLabel: "予想",
     upsetPointsDesc:
       "その試合がアップセット（波乱）だったうえで、あなたが少数派予想で的中したときだけ加点される別指標（1試合 0〜10）。条件を満たさない場合は 0。",
     totalPointsDesc:

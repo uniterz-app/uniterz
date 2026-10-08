@@ -1,18 +1,21 @@
 export const runtime = "nodejs";
 
 import { NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { FieldValue } from "firebase-admin/firestore";
 import { getAdminAuth, getAdminDb } from "@/lib/firebaseAdmin";
 import {
   isValidNbaFavoritePlayerId,
   isValidNbaFavoriteTeamId,
   isValidNbaFanSinceSeason,
+  nbaFavoritePlayerIdsOf,
   parseNbaFavorites,
   replaceNbaFavoritePlayer,
   toggleNbaFavoritePlayer,
   toggleNbaFavoriteTeam,
   type NbaFavoritePlayer,
 } from "@/lib/profile/nbaFavorites";
+import { NBA_FAVORITE_COUNTS_CACHE_TAG } from "@/lib/nba/favoriteCounts";
 
 async function requireUid(req: Request): Promise<string> {
   const authz =
@@ -83,6 +86,7 @@ export async function POST(req: Request) {
         },
         { merge: true }
       );
+      revalidateTag(NBA_FAVORITE_COUNTS_CACHE_TAG, { expire: 0 });
       return NextResponse.json({ ok: true, favorites: next });
     }
 
@@ -129,10 +133,14 @@ export async function POST(req: Request) {
         await ref.set(
           {
             favoriteNbaPlayers: result.next.favoriteNbaPlayers,
+            favoriteNbaPlayerIds: nbaFavoritePlayerIdsOf(
+              result.next.favoriteNbaPlayers
+            ),
             updatedAt: FieldValue.serverTimestamp(),
           },
           { merge: true }
         );
+        revalidateTag(NBA_FAVORITE_COUNTS_CACHE_TAG, { expire: 0 });
         return NextResponse.json({ ok: true, favorites: result.next });
       }
 
@@ -146,10 +154,14 @@ export async function POST(req: Request) {
       await ref.set(
         {
           favoriteNbaPlayers: result.next.favoriteNbaPlayers,
+          favoriteNbaPlayerIds: nbaFavoritePlayerIdsOf(
+            result.next.favoriteNbaPlayers
+          ),
           updatedAt: FieldValue.serverTimestamp(),
         },
         { merge: true }
       );
+      revalidateTag(NBA_FAVORITE_COUNTS_CACHE_TAG, { expire: 0 });
       return NextResponse.json({ ok: true, favorites: result.next });
     }
 

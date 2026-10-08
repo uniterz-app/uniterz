@@ -111,6 +111,8 @@ export type RankingsStackParamList = {
   /** SQUAD BATTLE UI プレビュー（モック） */
   SquadBattlePreview: { mode?: "production" | "preview" } | undefined;
   PublicProfile: PublicProfileParams;
+  TeamDetailPreview: { teamId?: string } | undefined;
+  PlayerDetailPreview: { playerId?: string } | undefined;
 };
 
 export type LeaderboardsStackParamList = {
@@ -121,6 +123,8 @@ export type LeaderboardsStackParamList = {
   /** SQUAD BATTLE UI プレビュー（モック） */
   SquadBattlePreview: { mode?: "production" | "preview" } | undefined;
   PublicProfile: PublicProfileParams;
+  TeamDetailPreview: { teamId?: string } | undefined;
+  PlayerDetailPreview: { playerId?: string } | undefined;
 };
 
 export type ProfileStackParamList = {

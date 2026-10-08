@@ -15,7 +15,8 @@ import TeamAbbrBadge from "@/app/component/games/TeamAbbrBadge";
 import { nameBebas, nameOxanium } from "@/lib/fonts";
 import { resolveLocalizedLang } from "@/lib/i18n/localize";
 import { formatNbaPlayerListName } from "@/lib/nba/formatNbaPlayerListName";
-import { getTodayKeyInTimeZone } from "@/lib/time/zonedTime";
+import { fetchLatestNbaSlateDateKey } from "@/lib/games/latestNbaSlate";
+import { TIMEZONE_ET } from "@/lib/time/zonedTime";
 import {
   DAILY_LEADER_STATS,
   dailyLeaderSideStats,
@@ -29,13 +30,11 @@ const SKEW = "skewX(-6deg)";
 
 type Props = {
   language: string;
-  timeZone: string;
   onSelectPlayer?: (playerId: string) => void;
 };
 
 export default function NbaDailyLeadersPanel({
   language,
-  timeZone,
   onSelectPlayer,
 }: Props) {
   const copy = useMemo(
@@ -48,10 +47,10 @@ export default function NbaDailyLeadersPanel({
   const [failed, setFailed] = useState(false);
 
   const load = useCallback(async () => {
-    const dateKey = getTodayKeyInTimeZone(timeZone);
     try {
+      const dateKey = await fetchLatestNbaSlateDateKey();
       const res = await fetch(
-        `/api/nba/daily-leaders?date=${dateKey}&tz=${encodeURIComponent(timeZone)}`
+        `/api/nba/daily-leaders?date=${dateKey}&tz=${encodeURIComponent(TIMEZONE_ET)}`
       );
       const json = (await res.json()) as DailyLeadersPayload | { ok: false };
       if (!res.ok || !json.ok) throw new Error("failed");
@@ -60,7 +59,7 @@ export default function NbaDailyLeadersPanel({
     } catch {
       setFailed(true);
     }
-  }, [timeZone]);
+  }, []);
 
   useEffect(() => {
     void load();

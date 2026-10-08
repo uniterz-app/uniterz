@@ -4,10 +4,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { withTimeout } from "../../../../../lib/async/withTimeout";
 import type { ProfileStatsStreakContext } from "../../../../../lib/profile/profileStreakScope";
-import {
-  peekLatestNbaSlateDateKey,
-  useLatestNbaSlateDateKey,
-} from "../../../../../lib/games/latestNbaSlate";
+import { peekLatestNbaSlateDateKey } from "../../../../../lib/games/latestNbaSlate";
+import { useLatestNbaSlateDateKey } from "../../../../../lib/games/useLatestNbaSlateDateKey";
 import { getUniterzApiBaseUrl } from "../games/submitPredictionApi";
 import { loadProfileSettledTodayResultPostsNative } from "./loadProfileSettledTodayNative";
 import type { PostWithMillis } from "../results/nativeResultModel";

@@ -3,7 +3,15 @@
  * バッジは IMPACT（イタリック + 斜めアンダー）。UPSET 枠は濃い赤 / PERFECT は深い青。
  * 右辺 DETAIL タブ → 詳細プレビュー。Upset/Score は D + 相対ラベル。YOU なし。
  */
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import {
   Pressable,
   ScrollView,
@@ -59,6 +67,9 @@ import {
 import type { ResultFaceMatchEntranceStyles } from "./useResultFaceMatchEntrance";
 import { resultFaceGroupDelayMs } from "./useResultFaceMatchEntrance";
 
+/** true: 余白・文字・ユニフォームを一段詰めたカード面（プロフィール Result Drop） */
+const CompactFaceContext = createContext(false);
+
 type OutcomeBadge = "hit" | "perfect" | "upset" | "miss";
 
 type Sample = {
@@ -88,6 +99,8 @@ type Sample = {
   /** LIVE 中の実スコア。あれば中央を実スコアにし、予想は下段へ */
   liveHome?: number | null;
   liveAway?: number | null;
+  /** 他ユーザーの投稿（「あなたの予想」ではなく「予想」） */
+  othersCall?: boolean;
 };
 
 const SAMPLE: Sample = {
@@ -292,15 +305,16 @@ function TopBar({
   motion?: ResultFaceMatchEntranceStyles;
 }) {
   const showStreak = sample.settled !== false && sample.winStreak >= 3;
+  const compact = useContext(CompactFaceContext);
   if (!showStreak && !badge) return null;
   return (
     <Animated.View style={[styles.topBar, motion?.headerGroupStyle]}>
-      <View style={styles.topLeftSlot}>
+      <View style={[styles.topLeftSlot, compact && compactStyles.topLeftSlot]}>
         {showStreak ? (
           <ResultImpactStreakTagNative winStreak={sample.winStreak} />
         ) : null}
       </View>
-      <View style={styles.topBadgeSlot}>
+      <View style={[styles.topBadgeSlot, compact && compactStyles.topBadgeSlot]}>
         {badge ? (
           <ImpactOutcomeBadge kind={badge} />
         ) : live ? (
@@ -333,13 +347,14 @@ function MatchBlock({
   deferJerseys?: boolean;
 }) {
   const copy = resultCardFaceCopy(ja ? "ja" : "en");
+  const callLabel = sample.othersCall ? copy.othersCall : copy.pendingCall;
   const settled = sample.settled !== false;
   const live = sample.live === true;
   const statusLabel = settled
     ? "FINAL"
     : live
       ? "LIVE"
-      : copy.pendingCall;
+      : callLabel;
   const showLiveScore =
     !settled && live && sample.liveHome != null && sample.liveAway != null;
   const showActual = settled || showLiveScore;
@@ -356,20 +371,32 @@ function MatchBlock({
       ? sample.liveAway
       : sample.predAway;
   const Jersey = deferJerseys ? DeferredJerseyMarkNative : JerseyMarkAdaptive;
+  const compact = useContext(CompactFaceContext);
+  const jerseySize = compact ? 36 : 42;
   return (
-    <Animated.View style={[styles.matchRow, motion?.teamsGroupStyle]}>
-      <View style={styles.matchSide}>
-        <Text style={styles.homeAwayLabel}>HOME</Text>
+    <Animated.View
+      style={[
+        styles.matchRow,
+        compact && compactStyles.matchRow,
+        motion?.teamsGroupStyle,
+      ]}
+    >
+      <View style={[styles.matchSide, compact && compactStyles.matchSide]}>
+        <Text style={[styles.homeAwayLabel, compact && compactStyles.homeAwayLabel]}>
+          HOME
+        </Text>
         <Animated.View style={motion?.homeJerseyStyle}>
           <Jersey
             accent={sample.homeJersey.primary}
             accentEnd={sample.homeJersey.secondary}
-            size={42}
+            size={jerseySize}
             density="coarse"
           />
         </Animated.View>
         <View style={styles.skewWrap}>
-          <Text style={styles.teamNameSlant}>{sample.homeName}</Text>
+          <Text style={[styles.teamNameSlant, compact && compactStyles.teamNameSlant]}>
+            {sample.homeName}
+          </Text>
         </View>
       </View>
 
@@ -377,9 +404,9 @@ function MatchBlock({
         style={[
           styles.matchCenter,
           liveCall
-            ? styles.matchCenterLive
+            ? [styles.matchCenterLive, compact && compactStyles.matchCenterLive]
             : !showActual
-              ? styles.matchCenterPending
+              ? [styles.matchCenterPending, compact && compactStyles.matchCenterPending]
               : null,
           motion?.centerBlockStyle,
         ]}
@@ -397,6 +424,7 @@ function MatchBlock({
               <Text
                 style={[
                   styles.finalStatus,
+                  compact && compactStyles.finalStatus,
                   live && !settled ? styles.liveStatus : null,
                   !settled && !live && ja ? styles.finalStatusJa : null,
                 ]}
@@ -404,39 +432,59 @@ function MatchBlock({
                 {statusLabel}
               </Text>
             </View>
-            <Text style={showActual ? styles.finalScore : styles.predScoreMain}>
+            <Text
+              style={
+                showActual
+                  ? [styles.finalScore, compact && compactStyles.finalScore]
+                  : [styles.predScoreMain, compact && compactStyles.predScoreMain]
+              }
+            >
               {mainHome}
-              <Text style={showActual ? styles.finalDash : styles.predDash}> — </Text>
+              <Text
+                style={
+                  showActual
+                    ? [styles.finalDash, compact && compactStyles.finalDash]
+                    : [styles.predDash, compact && compactStyles.predDash]
+                }
+              >
+                {" — "}
+              </Text>
               {mainAway}
             </Text>
           </>
         )}
         {showActual || liveCall ? (
           <>
-            <Text style={styles.predCaption}>
-              {copy.pendingCall}
+            <Text style={[styles.predCaption, compact && compactStyles.predCaption]}>
+              {callLabel}
             </Text>
-            <Text style={styles.predScore}>
+            <Text style={[styles.predScore, compact && compactStyles.predScore]}>
               {sample.predHome}
-              <Text style={styles.predDash}> — </Text>
+              <Text style={[styles.predDash, compact && compactStyles.predDash]}>
+                {" — "}
+              </Text>
               {sample.predAway}
             </Text>
           </>
         ) : null}
       </Animated.View>
 
-      <View style={styles.matchSide}>
-        <Text style={styles.homeAwayLabel}>AWAY</Text>
+      <View style={[styles.matchSide, compact && compactStyles.matchSide]}>
+        <Text style={[styles.homeAwayLabel, compact && compactStyles.homeAwayLabel]}>
+          AWAY
+        </Text>
         <Animated.View style={motion?.awayJerseyStyle}>
           <Jersey
             accent={sample.awayJersey.primary}
             accentEnd={sample.awayJersey.secondary}
-            size={42}
+            size={jerseySize}
             density="coarse"
           />
         </Animated.View>
         <View style={styles.skewWrap}>
-          <Text style={styles.teamNameSlant}>{sample.awayName}</Text>
+          <Text style={[styles.teamNameSlant, compact && compactStyles.teamNameSlant]}>
+            {sample.awayName}
+          </Text>
         </View>
       </View>
     </Animated.View>
@@ -474,12 +522,14 @@ function BiasSegFace({
       transform: [{ scaleX: 0.12 + t * 0.88 }],
     };
   });
+  const compact = useContext(CompactFaceContext);
   return (
     <View style={styles.biasSegSlot}>
       <View style={styles.biasSegSkew}>
         <Animated.View
           style={[
             styles.biasSegFace,
+            compact && compactStyles.biasSegFace,
             {
               borderColor: hexWithAlpha(accent, "88"),
               backgroundColor: accent,
@@ -523,16 +573,24 @@ function MarketBias({
     );
   }, [animate, revealDelayMs, progress]);
 
+  const compact = useContext(CompactFaceContext);
   return (
-    <View style={styles.biasRoot}>
-      <View style={styles.biasPctHeader}>
-        <Text style={[styles.biasPctHeaderNum, { color: sample.homeAccent }]}>
+    <View style={[styles.biasRoot, compact && compactStyles.biasRoot]}>
+      <View style={[styles.biasPctHeader, compact && compactStyles.biasPctHeader]}>
+        <Text
+          style={[
+            styles.biasPctHeaderNum,
+            compact && compactStyles.biasPctHeaderNum,
+            { color: sample.homeAccent },
+          ]}
+        >
           {sample.marketHomePct.toFixed(1)}%
         </Text>
         <View style={styles.biasPctHeaderMid} />
         <Text
           style={[
             styles.biasPctHeaderNum,
+            compact && compactStyles.biasPctHeaderNum,
             styles.biasPctHeaderNumAway,
             { color: sample.awayAccent },
           ]}
@@ -575,22 +633,32 @@ function TopScorerRow({
   const iconName =
     SCORER_ICONS.find((i) => i.id === scorerIcon)?.name ?? "check";
   const iconColor = scorerHit ? SCORER_HIT_COLOR : SCORER_MISS_COLOR;
+  const compact = useContext(CompactFaceContext);
+  const hitClusterStyle = [
+    styles.scorerHitCluster,
+    compact && compactStyles.scorerHitCluster,
+  ];
 
   return (
-    <View style={styles.scorerBlock}>
+    <View style={[styles.scorerBlock, compact && compactStyles.scorerBlock]}>
       <View style={styles.scorerValueRow}>
         <View style={styles.skewWrap}>
-          <Text style={styles.scorerLabel}>TOP SCORER</Text>
+          <Text style={[styles.scorerLabel, compact && compactStyles.scorerLabel]}>
+            TOP SCORER
+          </Text>
         </View>
         <View style={styles.scorerNameWrap}>
           <View style={styles.scorerNameSkew}>
-            <Text style={styles.scorerName} numberOfLines={1}>
+            <Text
+              style={[styles.scorerName, compact && compactStyles.scorerName]}
+              numberOfLines={1}
+            >
               {sample.topScorer}
             </Text>
           </View>
         </View>
         {settled ? (
-          <View style={styles.scorerHitCluster}>
+          <View style={hitClusterStyle}>
             <MaterialCommunityIcons
               name={scorerHit ? iconName : "close"}
               size={14}
@@ -606,7 +674,7 @@ function TopScorerRow({
             </Text>
           </View>
         ) : (
-          <View style={styles.scorerHitCluster} />
+          <View style={hitClusterStyle} />
         )}
       </View>
     </View>
@@ -629,15 +697,18 @@ function UpsetScoreD({
   const upsetValue = hasUpset ? sample.upsetPoints!.toFixed(1) : "--";
   const rel = settled ? scoreRelText(scoreRel) : null;
   const relHot = scoreRel === "max" || scoreRel === "top5";
+  const compact = useContext(CompactFaceContext);
+  const sideStyle = [styles.splitSide, compact && compactStyles.splitSide];
+  const valueStyle = [styles.splitValue, compact && compactStyles.splitValue];
 
   return (
-    <View style={styles.splitRow}>
-      <View style={[styles.splitSide, !hasUpset && styles.splitSideMuted]}>
+    <View style={[styles.splitRow, compact && compactStyles.splitRow]}>
+      <View style={[sideStyle, !hasUpset && styles.splitSideMuted]}>
         <Text style={styles.splitLabel}>{copy.upset}</Text>
         <View style={styles.skewWrap}>
           <Text
             style={[
-              styles.splitValue,
+              valueStyle,
               hasUpset ? styles.splitValueUpset : styles.splitValueEmpty,
             ]}
           >
@@ -648,10 +719,10 @@ function UpsetScoreD({
         <Text style={styles.splitRelSpacer}> </Text>
       </View>
       <View style={styles.splitRule} />
-      <View style={styles.splitSide}>
+      <View style={sideStyle}>
         <Text style={styles.splitLabel}>{copy.score}</Text>
         <View style={styles.skewWrap}>
-          <Text style={[styles.splitValue, styles.splitValueScore]}>
+          <Text style={[valueStyle, styles.splitValueScore]}>
             {settled ? sample.totalPoints.toFixed(1) : "--"}
           </Text>
         </View>
@@ -704,9 +775,14 @@ function StatBlock({
       })
     );
   }, [tutorialMetricsTargetId]);
+  const compact = useContext(CompactFaceContext);
 
   return (
-    <View ref={metricsRef} collapsable={false} style={styles.statBlock}>
+    <View
+      ref={metricsRef}
+      collapsable={false}
+      style={[styles.statBlock, compact && compactStyles.statBlock]}
+    >
       <TopScorerRow sample={sample} scorerIcon={scorerIcon} />
       <UpsetScoreD sample={sample} ja={ja} scoreRel={scoreRel} />
     </View>
@@ -734,6 +810,7 @@ function Plan1Card({
   detailSpineStyle,
   deferJerseys = false,
   topLabelAlign = "center",
+  compact = false,
 }: {
   sample: Sample;
   badge: OutcomeBadge | null;
@@ -754,6 +831,7 @@ function Plan1Card({
   detailSpineStyle?: object;
   deferJerseys?: boolean;
   topLabelAlign?: "center" | "start";
+  compact?: boolean;
 }) {
   const settled = sample.settled !== false;
   const paint = settled && badge
@@ -762,7 +840,8 @@ function Plan1Card({
   const shellBadge: OutcomeBadge = badge ?? "miss";
   const pickupLeft = leftLabel ?? (pickup ? "PICK UP" : undefined);
   const body = (
-    <View style={styles.pad}>
+    <CompactFaceContext.Provider value={compact}>
+    <View style={[styles.pad, compact && compactStyles.pad]}>
       <TopBar
         sample={sample}
         badge={badge}
@@ -775,7 +854,13 @@ function Plan1Card({
         motion={motion}
         deferJerseys={deferJerseys}
       />
-      <Animated.View style={[styles.layerDivider, motion?.dividerStyle]} />
+      <Animated.View
+        style={[
+          styles.layerDivider,
+          compact && compactStyles.layerDivider,
+          motion?.dividerStyle,
+        ]}
+      />
       <Animated.View style={motion?.footerGroupStyle}>
         <MarketBias
           sample={sample}
@@ -792,6 +877,7 @@ function Plan1Card({
         />
       </Animated.View>
     </View>
+    </CompactFaceContext.Provider>
   );
 
   if (bare) {
@@ -858,6 +944,8 @@ export function ResultCardDesignFaceNative({
   liveScore = null,
   deferJerseys = false,
   topLabelAlign = "center",
+  compact = false,
+  othersCall = false,
 }: {
   language: import("../../../../../lib/i18n/language").Language;
   badge?: OutcomeBadge | null;
@@ -908,6 +996,10 @@ export function ResultCardDesignFaceNative({
   deferJerseys?: boolean;
   /** 共有キャプチャ中は start（上辺右にロゴをはめ込むため） */
   topLabelAlign?: "center" | "start";
+  /** 余白・文字を一段詰める（プロフィール Result Drop） */
+  compact?: boolean;
+  /** 他ユーザーの投稿（「あなたの予想」ではなく「予想」） */
+  othersCall?: boolean;
 }) {
   const settledFromFace =
     face != null
@@ -961,6 +1053,7 @@ export function ResultCardDesignFaceNative({
           live,
           liveHome: liveScore?.home ?? null,
           liveAway: liveScore?.away ?? null,
+          othersCall,
         };
       })()
     : { ...(sample ?? { ...SAMPLE, upsetPoints: 2.4 }), live: sample?.live ?? live };
@@ -994,6 +1087,7 @@ export function ResultCardDesignFaceNative({
       detailSpineStyle={detailSpineStyle}
       deferJerseys={deferJerseys}
       topLabelAlign={topLabelAlign}
+      compact={compact}
     />
   );
 }
@@ -1697,4 +1791,36 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     letterSpacing: 1.3,
   },
+});
+
+const compactStyles = StyleSheet.create({
+  topLeftSlot: { transform: [{ scale: 0.85 }], transformOrigin: "left center" },
+  topBadgeSlot: { transform: [{ scale: 0.85 }], transformOrigin: "right center" },
+  pad: { paddingHorizontal: 8, paddingTop: 16, paddingBottom: 6 },
+  layerDivider: { marginTop: 6, marginBottom: 5 },
+  matchRow: { paddingHorizontal: 10 },
+  matchSide: { width: 84, gap: 2, paddingTop: 8 },
+  homeAwayLabel: { fontSize: 8 },
+  teamNameSlant: { marginTop: 2, fontSize: 12 },
+  matchCenterPending: { paddingTop: 8 },
+  matchCenterLive: { paddingTop: 18 },
+  finalStatus: { fontSize: 10 },
+  finalScore: { fontSize: 17, lineHeight: 19 },
+  finalDash: { fontSize: 14 },
+  predCaption: { fontSize: 9 },
+  predScoreMain: { fontSize: 19, lineHeight: 21 },
+  predScore: { fontSize: 13, lineHeight: 15 },
+  predDash: { fontSize: 11 },
+  biasRoot: { marginBottom: 2 },
+  biasPctHeader: { marginBottom: 3 },
+  biasPctHeaderNum: { fontSize: 12 },
+  biasSegFace: { height: 8 },
+  statBlock: { gap: 1 },
+  scorerBlock: { paddingVertical: 2 },
+  scorerLabel: { fontSize: 11, width: 80 },
+  scorerName: { fontSize: 11 },
+  scorerHitCluster: { width: 80 },
+  splitRow: { paddingVertical: 0 },
+  splitSide: { gap: 2, paddingVertical: 1 },
+  splitValue: { fontSize: 19, lineHeight: 22 },
 });

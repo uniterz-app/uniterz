@@ -20,7 +20,8 @@ import RankingsListEntranceRowNative from "../../rankings/RankingsListEntranceRo
 import { useBottomTabBarInsets } from "../../../navigation/useBottomTabBarInsets";
 import { formatNbaPlayerListName } from "../../../../../../lib/nba/formatNbaPlayerListName";
 import { resolveLocalizedLang } from "../../../../../../lib/i18n/localize";
-import { getTodayKeyInTimeZone } from "../../../../../../lib/time/zonedTime";
+import { fetchLatestNbaSlateDateKey } from "../../../../../../lib/games/latestNbaSlate";
+import { TIMEZONE_ET } from "../../../../../../lib/time/zonedTime";
 import {
   DAILY_LEADER_STATS,
   dailyLeaderSideStats,
@@ -43,13 +44,11 @@ function rankColor(rank: number): string {
 }
 type Props = {
   language: string;
-  timeZone: string;
   onSelectPlayer?: (playerId: string) => void;
 };
 
 export default function NbaDailyLeadersPanelNative({
   language,
-  timeZone,
   onSelectPlayer,
 }: Props) {
   const copy = useMemo(
@@ -62,10 +61,11 @@ export default function NbaDailyLeadersPanelNative({
   const [failed, setFailed] = useState(false);
 
   const load = useCallback(async () => {
-    const dateKey = getTodayKeyInTimeZone(timeZone);
     try {
+      const apiBase = getUniterzApiBaseUrl();
+      const dateKey = await fetchLatestNbaSlateDateKey(apiBase);
       const res = await fetch(
-        `${getUniterzApiBaseUrl()}/api/nba/daily-leaders?date=${dateKey}&tz=${encodeURIComponent(timeZone)}`
+        `${apiBase}/api/nba/daily-leaders?date=${dateKey}&tz=${encodeURIComponent(TIMEZONE_ET)}`
       );
       const json = (await res.json()) as DailyLeadersPayload | { ok: false };
       if (!res.ok || !json.ok) throw new Error("failed");
@@ -74,10 +74,17 @@ export default function NbaDailyLeadersPanelNative({
     } catch {
       setFailed(true);
     }
-  }, [timeZone]);
+  }, []);
 
   useEffect(() => {
     void load();
+  }, [load]);
+
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (next) => {
+      if (next === "active") void load();
+    });
+    return () => sub.remove();
   }, [load]);
 
   useEffect(() => {
@@ -94,7 +101,6 @@ export default function NbaDailyLeadersPanelNative({
     if (AppState.currentState === "active") start();
     const sub = AppState.addEventListener("change", (next) => {
       if (next === "active") {
-        void load();
         start();
       } else {
         stop();

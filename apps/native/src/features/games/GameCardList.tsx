@@ -83,7 +83,11 @@ export type GameCardListProps = {
     game: Record<string, unknown>
   ) => { home: number; away: number } | null;
   /** チーム名下の (W-L) / (W-D-L) 行。モバイル Web の homeRecord/awayRecord 相当 */
-  getTeamRecordLabel?: (side: unknown, leagueRaw?: unknown) => string | null;
+  getTeamRecordLabel?: (
+    side: unknown,
+    leagueRaw?: unknown,
+    seasonPhase?: unknown
+  ) => string | null;
   /** WC 戦績マップ（ScheduleList の teamRecordMap 相当） */
   teamRecordById?: Readonly<Record<string, TeamRecordSnapshot>>;
   resolveTeamJerseyPalette: (
@@ -206,8 +210,16 @@ export const GameCardListRow = memo(function GameCardListRow(props: GameCardList
   const isKnockout = false;
   const seriesLabel = resolveSeriesLabel(game);
   const seriesPair = resolveSeriesPair(game);
-  const homeRecordLabel = getTeamRecordLabel(game.home, game.league);
-  const awayRecordLabel = getTeamRecordLabel(game.away, game.league);
+  const homeRecordLabel = getTeamRecordLabel(
+    game.home,
+    game.league,
+    game.seasonPhase
+  );
+  const awayRecordLabel = getTeamRecordLabel(
+    game.away,
+    game.league,
+    game.seasonPhase
+  );
   const homePalette = resolveTeamJerseyPalette(game.league, game.home, "#ff6b8a");
   const awayPalette = resolveTeamJerseyPalette(game.league, game.away, "#5aa4ff");
   const ctaLabel =

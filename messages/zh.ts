@@ -429,6 +429,7 @@ const zh: Messages = {
     upsetPointsLabel: "冷门得分",
     totalPointsLabel: "总得分",
     pendingCallLabel: "YOUR CALL",
+    othersCallLabel: "CALL",
     upsetPointsDesc: "仅在比赛爆冷且你以少数派预测命中时加分的独立指标（每场0–10分）。不满足条件为0。",
     totalPointsDesc: "由正确预测胜者、分差接近度和总分接近度决定的基础分，加上爆冷奖励和连胜奖励。",
     helpPageLink: "计分逻辑请参阅帮助页面",

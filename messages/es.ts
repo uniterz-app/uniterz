@@ -433,6 +433,7 @@ const es: Messages = {
     upsetPointsLabel: "Puntos sorpresa",
     totalPointsLabel: "Puntos totales",
     pendingCallLabel: "YOUR CALL",
+    othersCallLabel: "CALL",
     upsetPointsDesc: "Métrica aparte (0–10) otorgada solo cuando el partido es una sorpresa y acertaste con una predicción minoritaria. Si no se cumple, es 0.",
     totalPointsDesc: "Puntos base determinados por acertar el ganador, cercanía del margen y del puntaje total, más bonos de sorpresa y racha.",
     helpPageLink: "Consulta la lógica de puntuación en la página de Ayuda",

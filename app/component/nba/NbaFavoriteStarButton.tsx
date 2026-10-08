@@ -18,6 +18,9 @@ import { getNbaTeamNicknameById } from "@/lib/nba-team-names";
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
 import NbaFanSinceSeasonPicker from "@/app/component/nba/NbaFanSinceSeasonPicker";
 import NbaFavoriteLimitModal from "@/app/component/nba/NbaFavoriteLimitModal";
+import { formatNbaFavoriteCount } from "@/lib/nba/favoriteCounts";
+import { useNbaFavoriteCount } from "@/lib/nba/useNbaFavoriteCount";
+import { nameOxanium } from "@/lib/fonts";
 
 type TeamProps = {
   kind: "team";
@@ -84,6 +87,13 @@ export default function NbaFavoriteStarButton(
     props.kind === "team"
       ? hasNbaFavoriteTeam(favorites, props.teamId)
       : hasNbaFavoritePlayer(favorites, props.playerId);
+  const favoriteCount = useNbaFavoriteCount({
+    apiBase: "",
+    kind: props.kind,
+    id: props.kind === "team" ? props.teamId : props.playerId,
+    active,
+    ready,
+  });
 
   const pushLogin = useCallback(() => {
     const isMobile =
@@ -188,7 +198,11 @@ export default function NbaFavoriteStarButton(
       : undefined;
 
   return (
-    <div className={["relative shrink-0", props.className].filter(Boolean).join(" ")}>
+    <div
+      className={["relative flex shrink-0 flex-col items-center gap-[3px]", props.className]
+        .filter(Boolean)
+        .join(" ")}
+    >
       <button
         type="button"
         onClick={() => void onToggle()}
@@ -206,6 +220,16 @@ export default function NbaFavoriteStarButton(
       >
         <StarGlyph filled={active} />
       </button>
+      {favoriteCount != null && favoriteCount > 0 ? (
+        <span
+          className={`${nameOxanium.className} whitespace-nowrap text-[9px] font-extrabold leading-none tracking-[0.08em] tabular-nums text-amber-300`}
+          aria-label={
+            isJa ? `お気に入り ${favoriteCount} 人` : `${favoriteCount} favorites`
+          }
+        >
+          {formatNbaFavoriteCount(favoriteCount)} FANS
+        </span>
+      ) : null}
       {props.kind === "player" ? (
         <NbaFavoriteLimitModal
           open={limitOpen}
