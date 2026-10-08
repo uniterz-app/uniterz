@@ -13,6 +13,10 @@ import {
   mergeProfileChartsOnSeasonSettle,
   projectSeasonBucket,
 } from "./profile/mergeProfileCharts";
+import {
+  PROFILE_CHARTS_SUBCOL,
+  profileChartsOpenDocId,
+} from "./profile/profileChartsStorage";
 
 /* =========================================================
  * 型
@@ -309,11 +313,19 @@ export async function applyPostToUserStatsV2(opts: ApplyOptsV2) {
       forPickupRanking && nbaSeasonKey
         ? cumulativeRef.collection("profileCharts").doc(nbaSeasonKey)
         : null;
-    const [dailySnap, cumulativeSnap, chartsSnap] = await Promise.all([
-      tx.get(dailyRef),
-      tx.get(cumulativeRef),
-      chartsRef ? tx.get(chartsRef) : Promise.resolve(null),
-    ]);
+    const openChartsRef =
+      forOpenRanking && nbaSeasonKey
+        ? cumulativeRef
+            .collection(PROFILE_CHARTS_SUBCOL)
+            .doc(profileChartsOpenDocId(nbaSeasonKey))
+        : null;
+    const [dailySnap, cumulativeSnap, chartsSnap, openChartsSnap] =
+      await Promise.all([
+        tx.get(dailyRef),
+        tx.get(cumulativeRef),
+        chartsRef ? tx.get(chartsRef) : Promise.resolve(null),
+        openChartsRef ? tx.get(openChartsRef) : Promise.resolve(null),
+      ]);
 
     const inc: any = {
       posts: FieldValue.increment(1),
@@ -451,6 +463,39 @@ export async function applyPostToUserStatsV2(opts: ApplyOptsV2) {
       });
     }
 
+    /** PRO LEAGUE（無差別級）スライス。親 nested は PICK UP 専用なので読まない */
+    let openProfileCharts: ReturnType<
+      typeof mergeProfileChartsOnSeasonSettle
+    > | null = null;
+    if (openChartsRef && nbaSeasonKey) {
+      const dailyData = dailySnap.exists
+        ? (dailySnap.data() as Record<string, unknown>)
+        : null;
+      const openBySeason = (dailyData?.openRankingBySeason ?? {}) as Record<
+        string,
+        Record<string, unknown>
+      >;
+      openProfileCharts = mergeProfileChartsOnSeasonSettle({
+        cumulative: null,
+        chartsDoc: openChartsSnap?.exists
+          ? (openChartsSnap.data() as Record<string, unknown>)
+          : null,
+        seasonKey: nbaSeasonKey,
+        dateKey,
+        projectedSeasonBucket: projectSeasonBucket(openBySeason[nbaSeasonKey], {
+          posts: 1,
+          wins: isWin ? 1 : 0,
+          pointsSumV3: points,
+          upsetPointsSum: upsetPoints,
+        }),
+        last20Point: {
+          postId,
+          settledAtMs: startAt.toMillis(),
+          isWin,
+        },
+      });
+    }
+
     applyCumulativeIncrementInTransaction(
       tx,
       cumulativeRef,
@@ -476,6 +521,20 @@ export async function applyPostToUserStatsV2(opts: ApplyOptsV2) {
         payload,
         { merge: true }
       );
+    }
+
+    if (openProfileCharts && openChartsRef) {
+      const payload: Record<string, unknown> = {
+        v: openProfileCharts.v,
+        seasonKey: openProfileCharts.seasonKey,
+        dailyTrend: openProfileCharts.dailyTrend ?? [],
+        last20: openProfileCharts.last20 ?? [],
+        builtAtMs: Date.now(),
+      };
+      if (openProfileCharts.rankTrend !== undefined) {
+        payload.rankTrend = openProfileCharts.rankTrend;
+      }
+      tx.set(openChartsRef, payload, { merge: true });
     }
   });
 }

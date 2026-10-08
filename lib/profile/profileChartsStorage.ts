@@ -7,6 +7,10 @@ import {
   parseProfileChartsBundle,
   type ProfileChartsBundle,
 } from "@/lib/profile/profileChartsBundle";
+import {
+  profileChartsDocId,
+  type ProfileChartsDivision,
+} from "@/lib/profile/profileChartsDivision";
 
 export const PROFILE_CHARTS_SUBCOL = "profileCharts" as const;
 
@@ -37,13 +41,15 @@ export async function loadProfileChartsBundleClient(
   db: Firestore,
   uid: string,
   seasonKey: string,
-  cumulativeFallback?: Record<string, unknown> | null
+  cumulativeFallback?: Record<string, unknown> | null,
+  division: ProfileChartsDivision = "pickup"
 ): Promise<ProfileChartsBundle | null> {
   const safeUid = uid.trim();
   const safeSeason = seasonKey.trim();
   if (!safeUid || !safeSeason) return null;
+  const docId = profileChartsDocId(safeSeason, division);
 
-  const cacheKey = `${safeUid}:${safeSeason}`;
+  const cacheKey = `${safeUid}:${docId}`;
   const hit = chartsCache.get(cacheKey);
   if (hit && Date.now() - hit.at < CHARTS_CACHE_TTL_MS) {
     return hit.bundle;
@@ -52,7 +58,7 @@ export async function loadProfileChartsBundleClient(
   let bundle: ProfileChartsBundle | null = null;
   try {
     const subSnap = await getDoc(
-      doc(db, "cumulative_stats", safeUid, PROFILE_CHARTS_SUBCOL, safeSeason)
+      doc(db, "cumulative_stats", safeUid, PROFILE_CHARTS_SUBCOL, docId)
     );
     if (subSnap.exists()) {
       bundle = parseProfileChartsBundle(
@@ -64,7 +70,7 @@ export async function loadProfileChartsBundleClient(
     /* fall through */
   }
 
-  if (!bundle && cumulativeFallback) {
+  if (!bundle && cumulativeFallback && division === "pickup") {
     bundle = parseProfileChartsBundle(cumulativeFallback, safeSeason);
   }
 

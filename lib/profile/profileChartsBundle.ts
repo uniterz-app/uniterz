@@ -48,6 +48,23 @@ export function isProfileChartsComplete(
   );
 }
 
+/** rankTrend → チャート行（X 軸 M/D） */
+export function rankTrendChartPointsFromSeed(
+  raw: ProfileChartsRankPoint[]
+): Array<ProfileChartsRankPoint & { labelShort: string; date: string }> {
+  return raw.map((p) => {
+    const parts = p.dateKey.split("-");
+    const m = parts[1] ? Number(parts[1]) : 0;
+    const d = parts[2] ? Number(parts[2]) : 0;
+    return {
+      dateKey: p.dateKey,
+      rank: p.rank,
+      labelShort: m > 0 && d > 0 ? `${m}/${d}` : p.dateKey,
+      date: p.dateKey,
+    };
+  });
+}
+
 /** 保存済み last20。配列でない（未書き込み）は null */
 export function last20FromChartsBundle(
   charts: ProfileChartsBundle | null | undefined

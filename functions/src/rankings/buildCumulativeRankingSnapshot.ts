@@ -20,6 +20,7 @@ import {
 import { mergeProfileChartsOnRankSnapshot } from "../profile/mergeProfileCharts";
 import {
   loadProfileChartsSubcolByUid,
+  profileChartsOpenDocId,
   profileChartsSubdocMergeFields,
   PROFILE_CHARTS_SUBCOL,
 } from "../profile/profileChartsStorage";
@@ -734,6 +735,8 @@ export async function buildCumulativeRankingSnapshot(
 
   // 無差別級（Pro のみ）シーズンスナップショット
   const openBaseRows = baseRowsForOpenSeason;
+  /** PRO LEAGUE の Ranking Progress 用（totalPoints 順位） */
+  const openTotalPointsRankByUid = new Map<string, number>();
   for (const metric of METRICS) {
     const eligibleRows = filterRowsForMetricEligibility(openBaseRows, metric, {
       postedTodayUids:
@@ -749,6 +752,9 @@ export async function buildCumulativeRankingSnapshot(
     const ranksMap = assignCompetitionRanks(sortedFull, metric);
     const ranks: Record<string, number> = {};
     for (const [uid, rank] of ranksMap) ranks[uid] = rank;
+    if (metric === "totalPoints") {
+      for (const [uid, rank] of ranksMap) openTotalPointsRankByUid.set(uid, rank);
+    }
 
     const top20 = sortedFull.slice(0, 20).map((row) => ({
       ...row,
@@ -859,6 +865,37 @@ export async function buildCumulativeRankingSnapshot(
       { merge: true }
     );
     ops += 2;
+    if (ops >= 500) {
+      await flush();
+    }
+  }
+  await flush();
+
+  const openChartsDocId = profileChartsOpenDocId(seasonKey);
+  const openChartsByUid = await loadProfileChartsSubcolByUid(
+    firestore,
+    [...openTotalPointsRankByUid.keys()],
+    openChartsDocId
+  );
+  for (const [uid, totalPointsRank] of openTotalPointsRankByUid) {
+    if (!Number.isFinite(totalPointsRank) || totalPointsRank <= 0) continue;
+    const charts = mergeProfileChartsOnRankSnapshot({
+      cumulative: null,
+      chartsDoc: openChartsByUid.get(uid) ?? null,
+      seasonKey,
+      dateKey,
+      totalPointsRank,
+    });
+    batch.set(
+      firestore
+        .collection("cumulative_stats")
+        .doc(uid)
+        .collection(PROFILE_CHARTS_SUBCOL)
+        .doc(openChartsDocId),
+      profileChartsSubdocMergeFields(charts),
+      { merge: true }
+    );
+    ops += 1;
     if (ops >= 500) {
       await flush();
     }

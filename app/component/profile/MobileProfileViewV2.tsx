@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { LazyMotion, domAnimation, useInView } from "framer-motion";
-import React, { Suspense, useEffect, useRef, useState } from "react";
+import React, { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 import CandleChartLoader from "@/app/component/common/CandleChartLoader";
@@ -77,6 +77,23 @@ import {
 import { useProfilePlayoffBracket } from "@/lib/profile/useProfilePlayoffBracket";
 import { useProfileDailyTrendChart } from "@/lib/profile/useProfileDailyTrendChart";
 import { useProfilePlayoffRankTrend } from "@/lib/profile/useProfilePlayoffRankTrend";
+import { rankTrendChartPointsFromSeed } from "@/lib/profile/profileChartsBundle";
+import {
+  useProfileChartsDivision,
+  useProfileOpenCharts,
+} from "@/lib/profile/useProfileOpenCharts";
+import {
+  profileChartsDivisionCopy,
+  resolveProfileOpenChartsAccess,
+} from "@/lib/profile/profileChartsDivision";
+import { resolveLocalizedLang } from "@/lib/i18n/localize";
+import { db } from "@/lib/firebase";
+import {
+  CyberSlantedTab,
+  CyberSlantedTabBar,
+} from "@/app/component/rankings/CyberSlantedTab";
+import RankingsOpenProLock from "@/app/component/rankings/RankingsOpenProLock";
+import { PRO_LEAGUE_DIVISION_TAB_THEME } from "@/lib/rankings/proLeagueAtmosphere";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import { readTutorialLivePhase } from "@/lib/tutorial/tutorialLivePhase";
 import { readTutorialWelcomeHandoff } from "@/lib/tutorial/tutorialWelcomeHandoff";
@@ -204,6 +221,35 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
       seedPoints: props.profileRankTrendSeed ?? undefined,
       seedComplete: props.profileRankTrendSeedComplete,
     });
+
+  const viewerPlanReady = myPlan != null && !loadingPlan;
+  const openChartsAccess = viewerPlanReady
+    ? resolveProfileOpenChartsAccess({
+        isMe,
+        viewerIsPro: isMyPro,
+        targetIsPro: isTargetPro,
+      })
+    : "hidden";
+  const [chartsDivision, setChartsDivision] = useProfileChartsDivision(
+    resolvedUid,
+    openChartsAccess,
+    viewerPlanReady
+  );
+  const showOpenCharts =
+    chartsDivision === "open" && openChartsAccess === "visible";
+  const openCharts = useProfileOpenCharts(
+    db,
+    resolvedUid,
+    fetchOverviewExtras && openChartsAccess === "visible"
+  );
+  const chartsDivisionCopy = profileChartsDivisionCopy(
+    resolveLocalizedLang(language),
+    isMe
+  );
+  const openRankTrendRows = useMemo(
+    () => rankTrendChartPointsFromSeed(openCharts.rankTrend),
+    [openCharts.rankTrend]
+  );
 
   const {
     loading: playoffBracketLoading,
@@ -373,7 +419,29 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
                 />
               </div>
             ) : null}
-            {chartsReady ? (
+            {openChartsAccess !== "hidden" ? (
+              <CyberSlantedTabBar fill aria-label="Division">
+                <CyberSlantedTab
+                  label={chartsDivisionCopy.pickUp}
+                  active={chartsDivision === "pickup"}
+                  onClick={() => setChartsDivision("pickup")}
+                  compact
+                />
+                <CyberSlantedTab
+                  label={chartsDivisionCopy.proLeague}
+                  active={chartsDivision === "open"}
+                  onClick={() => setChartsDivision("open")}
+                  compact
+                  theme={PRO_LEAGUE_DIVISION_TAB_THEME}
+                />
+              </CyberSlantedTabBar>
+            ) : null}
+            {chartsDivision === "open" && openChartsAccess === "locked" ? (
+              <RankingsOpenProLock
+                language={language as Language}
+                body={chartsDivisionCopy.lockBody}
+              />
+            ) : chartsReady ? (
             <div ref={chartsSectionRef} className="w-full min-w-0 space-y-4">
               {!chartsInView ? (
                 <div
@@ -384,8 +452,8 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
               {chartsInView && overviewStage >= 1 ? (
               <div className="w-full min-w-0 overflow-visible pt-0">
                 <ProfilePlayoffRankTrendChartLazy
-                  data={rankPlayoffTrendRows}
-                  loading={rankTrendLoading}
+                  data={showOpenCharts ? openRankTrendRows : rankPlayoffTrendRows}
+                  loading={showOpenCharts ? openCharts.loading : rankTrendLoading}
                   language={language}
                   visualEffectsLite={visualEffectsLite}
                 />
@@ -397,17 +465,24 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
                   uid={resolvedUid}
                   language={language}
                   profileStatsContext={props.profileStatsContext}
-                  seedLast20={props.profileLast20Seed}
+                  seedLast20={
+                    showOpenCharts
+                      ? openCharts.loading
+                        ? undefined
+                        : openCharts.last20
+                      : props.profileLast20Seed
+                  }
                 />
               </div>
               ) : null}
               {chartsInView && overviewStage >= 3 ? (
               <div className="min-w-0 overflow-visible">
-                {dailyTrendLoading ? (
+                {(showOpenCharts ? openCharts.loading : dailyTrendLoading) ? (
                   <div className="h-44 skeleton-scan rounded-2xl border border-white/10 bg-white/6" />
                 ) : (
                   <ProfileDailyTrendChartLazy
-                    data={dailyTrendForChart}
+                    key={showOpenCharts ? "open" : "pickup"}
+                    data={showOpenCharts ? openCharts.dailyTrend : dailyTrendForChart}
                     range="30d"
                     allowAll={currentIsProView}
                     language={language}

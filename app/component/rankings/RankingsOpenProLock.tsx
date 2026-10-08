@@ -12,11 +12,13 @@ import { PRO_LEAGUE_ATMOSPHERE } from "@/lib/rankings/proLeagueAtmosphere";
 type Props = {
   language?: Language;
   subscribeHref?: string;
+  body?: string;
 };
 
 export default function RankingsOpenProLock({
   language = "ja",
   subscribeHref = "/mobile/pro/subscribe",
+  body,
 }: Props) {
   const m = t(language).rankings;
 
@@ -39,7 +41,8 @@ export default function RankingsOpenProLock({
         {m.divisionOpenTitle ?? "PRO LEAGUE"}
       </h2>
       <p className="mt-2 text-[13px] leading-5 text-white/65">
-        {m.divisionOpenLockBody ??
+        {body ??
+          m.divisionOpenLockBody ??
           "全試合の成績で競う Pro 限定ランキングです。参加・閲覧には Pro プランが必要です。"}
       </p>
       <Link

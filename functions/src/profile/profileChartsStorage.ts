@@ -4,6 +4,11 @@
  */
 export const PROFILE_CHARTS_SUBCOL = "profileCharts";
 
+/** PRO LEAGUE（無差別級）チャート doc は `{season}__open`。lib/profile/profileChartsDivision.ts と同期 */
+export function profileChartsOpenDocId(seasonKey: string): string {
+  return `${seasonKey}__open`;
+}
+
 export function profileChartsSubdocFields(
   charts: {
     v: number;
@@ -73,12 +78,12 @@ const GET_ALL_CHUNK = 90;
 export async function loadProfileChartsSubcolByUid(
   firestore: FirebaseFirestore.Firestore,
   uids: string[],
-  seasonKey: string
+  docId: string
 ): Promise<Map<string, Record<string, unknown>>> {
   const out = new Map<string, Record<string, unknown>>();
   const unique = [...new Set(uids.map((u) => u.trim()).filter(Boolean))];
   const refs = unique.map((uid) =>
-    firestore.doc(`cumulative_stats/${uid}/${PROFILE_CHARTS_SUBCOL}/${seasonKey}`)
+    firestore.doc(`cumulative_stats/${uid}/${PROFILE_CHARTS_SUBCOL}/${docId}`)
   );
   for (let i = 0; i < refs.length; i += GET_ALL_CHUNK) {
     const snaps = await firestore.getAll(...refs.slice(i, i + GET_ALL_CHUNK));

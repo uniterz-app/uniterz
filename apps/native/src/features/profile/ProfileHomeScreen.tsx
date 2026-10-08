@@ -28,7 +28,12 @@ import { keyboardAvoidingBehavior } from "../../ui/keyboardAvoidingBehaviorNativ
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { signOut, updateProfile } from "firebase/auth";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
-import { auth, storage } from "../../lib/firebase";
+import { auth, db, storage } from "../../lib/firebase";
+import { resolveProfileOpenChartsAccess } from "../../../../../lib/profile/profileChartsDivision";
+import {
+  useProfileChartsDivision,
+  useProfileOpenCharts,
+} from "../../../../../lib/profile/useProfileOpenCharts";
 import { colors, radius, spacing, typography } from "../../theme/tokens";
 import { useFirebaseUser } from "../../auth/FirebaseUserProvider";
 import { getUniterzApiBaseUrl } from "../games/submitPredictionApi";
@@ -820,6 +825,26 @@ export default function ProfileHomeScreen({
     { seedLast20: statsBundle.loading ? undefined : statsBundle.last20 }
   );
 
+  const viewerPlanReady =
+    profilePlanHook.myPlan != null && !profilePlanHook.loadingPlan;
+  const openChartsAccess = viewerPlanReady
+    ? resolveProfileOpenChartsAccess({
+        isMe,
+        viewerIsPro: profilePlanHook.isMyPro,
+        targetIsPro: profilePlanHook.isTargetPro,
+      })
+    : "hidden";
+  const [chartsDivision, setChartsDivision] = useProfileChartsDivision(
+    targetUid,
+    openChartsAccess,
+    viewerPlanReady
+  );
+  const openCharts = useProfileOpenCharts(
+    db,
+    targetUid,
+    tab === "overview" && authReady && openChartsAccess === "visible"
+  );
+
   const currentIsProView = profilePlanHook.isProView;
   const viewerPlanType = normalizeStoredPlanType(myUserDoc?.planType);
   const viewerCanViewMonthly = canViewMonthlyReport({
@@ -1351,6 +1376,11 @@ export default function ProfileHomeScreen({
         streakPoints={streakBundle.points}
         streakLoading={streakBundle.loading}
         streakUnavailable={streakBundle.unavailable}
+        isMe={isMe}
+        openChartsAccess={openChartsAccess}
+        chartsDivision={chartsDivision}
+        onChartsDivisionChange={setChartsDivision}
+        openCharts={openCharts}
       />
     );
   }

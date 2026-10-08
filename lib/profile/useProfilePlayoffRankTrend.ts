@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { fetchRankPlayoffTrendClient } from "@/lib/profile/fetchRankPlayoffTrendClient";
+import { rankTrendChartPointsFromSeed } from "@/lib/profile/profileChartsBundle";
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
 import type { WcRankingStage } from "@/lib/rankings/wcRankingStage";
 import type { RankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
@@ -57,18 +58,7 @@ export function useProfilePlayoffRankTrend(
 
   const seededPoints = useMemo((): PlayoffRankTrendPoint[] => {
     if (!useSeed) return [];
-    const raw = seedPoints ?? [];
-    return raw.map((p) => {
-      const parts = p.dateKey.split("-");
-      const m = parts[1] ? Number(parts[1]) : 0;
-      const d = parts[2] ? Number(parts[2]) : 0;
-      return {
-        dateKey: p.dateKey,
-        rank: p.rank,
-        labelShort: m > 0 && d > 0 ? `${m}/${d}` : p.dateKey,
-        date: p.dateKey,
-      };
-    });
+    return rankTrendChartPointsFromSeed(seedPoints ?? []);
   }, [seedPoints, useSeed]);
 
   const [points, setPoints] = useState<PlayoffRankTrendPoint[]>(() => {
