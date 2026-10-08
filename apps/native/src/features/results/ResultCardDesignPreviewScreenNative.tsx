@@ -1407,8 +1407,8 @@ const styles = StyleSheet.create({
   /** 本番スコア — Montserrat Black Italic */
   finalScore: {
     fontFamily: MATCH_CARD_SCORE_FONT,
-    fontSize: 22,
-    lineHeight: 24,
+    fontSize: 19,
+    lineHeight: 21,
     fontWeight: "900",
     color: "rgba(255,255,255,0.95)",
     fontVariant: ["tabular-nums"],
@@ -1416,7 +1416,7 @@ const styles = StyleSheet.create({
   },
   finalDash: {
     fontFamily: MATCH_CARD_SCORE_FONT,
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "900",
     color: "rgba(255,255,255,0.7)",
   },

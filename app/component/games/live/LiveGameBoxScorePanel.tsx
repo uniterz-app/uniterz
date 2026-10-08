@@ -13,10 +13,14 @@ import type {
   LiveGameStatsReport,
 } from "@/lib/games/liveGameStats";
 import {
+  activeLiveGameBoxSort,
   liveGameBoxColumnValues,
   liveGameBoxColumns,
   liveGameBoxHasAdvancedData,
+  nextLiveGameBoxSort,
+  sortLiveGameBoxPlayers,
   type LiveGameBoxScoreMode,
+  type LiveGameBoxSort,
 } from "@/lib/games/liveGameBoxScoreColumns";
 import {
   getTeamJerseyPrimaryColor,
@@ -47,35 +51,32 @@ function hexToRgba(hex: string, alpha: number): string {
   return `rgba(${r},${g},${b},${alpha})`;
 }
 
-function sortBoxPlayers(players: LiveGameBoxPlayer[]): LiveGameBoxPlayer[] {
-  return [...players].sort((a, b) => {
-    if (a.starter !== b.starter) return a.starter ? -1 : 1;
-    if (b.pts !== a.pts) return b.pts - a.pts;
-    return b.min - a.min;
-  });
-}
-
 function IdentityCell({
   player,
   accent,
   header,
+  onResetSort,
 }: {
   player?: LiveGameBoxPlayer;
   accent: string;
   header?: boolean;
+  onResetSort?: () => void;
 }) {
   if (header) {
     return (
-      <div
+      <button
+        type="button"
+        onClick={onResetSort}
+        aria-label="Reset box score sort"
         className={[
           nameOxanium.className,
-          "sticky left-0 z-[2] flex w-[9.75rem] shrink-0 items-center gap-1 border-r border-white/[0.08] bg-black py-1 pr-1 text-[7px] font-bold uppercase tracking-[0.12em] text-white/40",
+          "sticky left-0 z-[2] flex w-[9.75rem] shrink-0 items-center gap-1 border-r border-white/[0.08] bg-black py-1 pr-1 text-left text-[7px] font-bold uppercase tracking-[0.12em] text-white/40",
         ].join(" ")}
       >
         <span className="w-6 text-center">#</span>
         <span className="min-w-0">Player</span>
         <span className="ml-0.5">Pos</span>
-      </div>
+      </button>
     );
   }
 
@@ -133,24 +134,41 @@ function StatsCells({
   columns,
   values,
   header,
+  sort,
+  onSort,
 }: {
   columns: ReturnType<typeof liveGameBoxColumns>;
   values?: string[];
   header?: boolean;
+  sort?: LiveGameBoxSort;
+  onSort?: (key: string) => void;
 }) {
   if (header) {
     return (
       <div
         className={[
           nameOxanium.className,
-          "flex items-center gap-1.5 py-1 text-[9px] font-bold uppercase tracking-[0.12em] text-white/40",
+          "flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.08em]",
         ].join(" ")}
       >
-        {columns.map((c) => (
-          <span key={c.key} className="w-9 shrink-0 text-center">
-            {c.label}
-          </span>
-        ))}
+        {columns.map((c) => {
+          const active = sort?.key === c.key;
+          return (
+            <button
+              key={c.key}
+              type="button"
+              onClick={() => onSort?.(c.key)}
+              aria-label={`Sort by ${c.label}`}
+              className={[
+                "w-9 shrink-0 whitespace-nowrap py-1 text-center transition-colors",
+                active ? "text-[#00E5FF]" : "text-white/40 hover:text-white/70",
+              ].join(" ")}
+            >
+              {c.label}
+              {active ? (sort.dir === "desc" ? " ▼" : " ▲") : ""}
+            </button>
+          );
+        })}
       </div>
     );
   }
@@ -197,7 +215,12 @@ function TeamBoxCard({
   const border = hexToRgba(teamPrimary, 0.55);
   const divider = hexToRgba(teamPrimary, 0.22);
   const sideLabel = block.side === "home" ? "HOME" : "AWAY";
-  const sorted = sortBoxPlayers(block.players);
+  const [sort, setSort] = useState<LiveGameBoxSort>(null);
+  const activeSort = activeLiveGameBoxSort(sort, mode);
+  const sorted = useMemo(
+    () => sortLiveGameBoxPlayers(block.players, sort, mode),
+    [block.players, sort, mode]
+  );
   const played = sorted.filter((p) => p.min > 0);
   const dnp = sorted.filter((p) => !(p.min > 0));
   // 開始直後で誰も出場記録が無いときは全員を出す
@@ -273,8 +296,17 @@ function TeamBoxCard({
         <div className="overflow-x-auto">
           <div className="min-w-max px-2 pb-2">
             <div className="flex items-center border-b border-white/[0.06]">
-              <IdentityCell accent={teamPrimary} header />
-              <StatsCells columns={columns} header />
+              <IdentityCell
+                accent={teamPrimary}
+                header
+                onResetSort={() => setSort(null)}
+              />
+              <StatsCells
+                columns={columns}
+                header
+                sort={activeSort}
+                onSort={(key) => setSort((prev) => nextLiveGameBoxSort(prev, key))}
+              />
             </div>
             {players.map((p) => {
               const cells = (

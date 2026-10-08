@@ -10,15 +10,18 @@ import {
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { playerCardName } from "../../../../../../lib/predict/nbaRoster";
 import type {
-  LiveGameBoxPlayer,
   LiveGameBoxTeam,
   LiveGameStatsReport,
 } from "../../../../../../lib/games/liveGameStats";
 import {
+  activeLiveGameBoxSort,
   liveGameBoxColumnValues,
   liveGameBoxColumns,
   liveGameBoxHasAdvancedData,
+  nextLiveGameBoxSort,
+  sortLiveGameBoxPlayers,
   type LiveGameBoxScoreMode,
+  type LiveGameBoxSort,
 } from "../../../../../../lib/games/liveGameBoxScoreColumns";
 import {
   getTeamJerseyPrimaryColor,
@@ -26,6 +29,12 @@ import {
 } from "../../../../../../lib/team-colors";
 import JerseyMarkSvg from "../JerseyMarkSvg";
 import { METRIC_FONT } from "../../rankings/rankingsUiTheme";
+
+const IDENTITY_W = 176;
+/** ヘッダーの ▼▲ が入る幅（ロスター表と同じ） */
+const STAT_COL_W = 48;
+const ROW_H = 40;
+const HEAD_H = 28;
 
 type Props = {
   report: LiveGameStatsReport;
@@ -47,14 +56,6 @@ function hexToRgba(hex: string, alpha: number): string {
   const g = (n >> 8) & 255;
   const b = n & 255;
   return `rgba(${r},${g},${b},${alpha})`;
-}
-
-function sortBoxPlayers(players: LiveGameBoxPlayer[]): LiveGameBoxPlayer[] {
-  return [...players].sort((a, b) => {
-    if (a.starter !== b.starter) return a.starter ? -1 : 1;
-    if (b.pts !== a.pts) return b.pts - a.pts;
-    return b.min - a.min;
-  });
 }
 
 function BoxScoreModeToggle({
@@ -117,7 +118,12 @@ function TeamBoxCard({
   const border = hexToRgba(teamPrimary, 0.55);
   const divider = hexToRgba(teamPrimary, 0.22);
   const sideLabel = block.side === "home" ? "HOME" : "AWAY";
-  const sorted = useMemo(() => sortBoxPlayers(block.players), [block.players]);
+  const [sort, setSort] = useState<LiveGameBoxSort>(null);
+  const activeSort = activeLiveGameBoxSort(sort, mode);
+  const sorted = useMemo(
+    () => sortLiveGameBoxPlayers(block.players, sort, mode),
+    [block.players, sort, mode]
+  );
   const played = sorted.filter((p) => p.min > 0);
   const dnpCount = sorted.length - played.length;
   // 開始直後で誰も出場記録が無いときは全員を出す
@@ -165,54 +171,104 @@ function TeamBoxCard({
       </Pressable>
 
       {players.length > 0 ? (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          <View style={styles.tablePad}>
-            <View style={styles.tableHead}>
-              <View style={styles.identityCol}>
-                <Text style={styles.thJersey}>#</Text>
-                <Text style={styles.thPlayer}>Player</Text>
-                <Text style={styles.thPos}>Pos</Text>
-              </View>
-              {columns.map((c) => (
-                <Text key={c.key} style={styles.thStat}>
-                  {c.label}
-                </Text>
-              ))}
-            </View>
+        <View style={styles.tableWrap}>
+          <View style={styles.identityColumn}>
+            <Pressable
+              style={[styles.tableHead, styles.identityHead]}
+              onPress={() => setSort(null)}
+              accessibilityRole="button"
+              accessibilityLabel="Reset box score sort"
+            >
+              <Text style={styles.thJersey}>#</Text>
+              <Text style={styles.thPlayer}>Player</Text>
+              <Text style={styles.thPos}>Pos</Text>
+            </Pressable>
             {players.map((p) => {
-              const values = liveGameBoxColumnValues(p, mode);
-              const rowInner = (
+              const onPress =
+                onOpenPlayerDetail && p.playerId
+                  ? () => onOpenPlayerDetail(p.playerId)
+                  : undefined;
+              const inner = (
                 <>
-                  <View style={styles.identityCol}>
-                    <View style={[styles.jersey, { borderColor: teamPrimary }]}>
-                      <Text style={[styles.jerseyNum, { color: teamPrimary }]}>
-                        {p.jerseyNumber}
-                      </Text>
-                    </View>
-                    <Text style={styles.playerName} numberOfLines={1}>
-                      {playerCardName(p)}
+                  <View style={[styles.jersey, { borderColor: teamPrimary }]}>
+                    <Text style={[styles.jerseyNum, { color: teamPrimary }]}>
+                      {p.jerseyNumber}
                     </Text>
-                    <Text style={styles.pos}>{p.position}</Text>
                   </View>
-                  {values.map((v, i) => {
-                    const col = columns[i];
-                    if (!col) return null;
-                    return (
-                      <Text
-                        key={col.key}
-                        style={[
-                          styles.stat,
-                          col.emphasis ? styles.statEmphasis : styles.statMuted,
-                        ]}
-                      >
-                        {v}
-                      </Text>
-                    );
-                  })}
+                  <Text style={styles.playerName} numberOfLines={1}>
+                    {playerCardName(p)}
+                  </Text>
+                  <Text style={styles.pos}>{p.position}</Text>
                 </>
               );
-              if (onOpenPlayerDetail && p.playerId) {
-                return (
+              return onPress ? (
+                <Pressable
+                  key={p.playerId}
+                  onPress={onPress}
+                  style={({ pressed }) => [
+                    styles.tableRow,
+                    styles.identityRow,
+                    pressed ? styles.tableRowPressed : null,
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel={playerCardName(p)}
+                >
+                  {inner}
+                </Pressable>
+              ) : (
+                <View key={p.playerId} style={[styles.tableRow, styles.identityRow]}>
+                  {inner}
+                </View>
+              );
+            })}
+          </View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <View style={styles.statsPad}>
+              <View style={styles.tableHead}>
+                {columns.map((c) => {
+                  const active = activeSort?.key === c.key;
+                  const marker = active
+                    ? activeSort.dir === "desc"
+                      ? " ▼"
+                      : " ▲"
+                    : "";
+                  return (
+                    <Pressable
+                      key={c.key}
+                      onPress={() => setSort((prev) => nextLiveGameBoxSort(prev, c.key))}
+                      style={styles.thStatPress}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Sort by ${c.label}`}
+                    >
+                      <Text
+                        style={[styles.thStat, active ? styles.thStatActive : null]}
+                        numberOfLines={1}
+                      >
+                        {c.label}
+                        {marker}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+              {players.map((p) => {
+                const values = liveGameBoxColumnValues(p, mode);
+                const cells = values.map((v, i) => {
+                  const col = columns[i];
+                  if (!col) return null;
+                  return (
+                    <Text
+                      key={col.key}
+                      style={[
+                        styles.stat,
+                        col.emphasis ? styles.statEmphasis : styles.statMuted,
+                      ]}
+                    >
+                      {v}
+                    </Text>
+                  );
+                });
+                return onOpenPlayerDetail && p.playerId ? (
                   <Pressable
                     key={p.playerId}
                     onPress={() => onOpenPlayerDetail(p.playerId)}
@@ -220,21 +276,18 @@ function TeamBoxCard({
                       styles.tableRow,
                       pressed ? styles.tableRowPressed : null,
                     ]}
-                    accessibilityRole="button"
-                    accessibilityLabel={playerCardName(p)}
                   >
-                    {rowInner}
+                    {cells}
                   </Pressable>
+                ) : (
+                  <View key={p.playerId} style={styles.tableRow}>
+                    {cells}
+                  </View>
                 );
-              }
-              return (
-                <View key={p.playerId} style={styles.tableRow}>
-                  {rowInner}
-                </View>
-              );
-            })}
-          </View>
-        </ScrollView>
+              })}
+            </View>
+          </ScrollView>
+        </View>
       ) : null}
       {showDnpToggle ? (
         <Pressable
@@ -366,32 +419,33 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     color: "#fff",
   },
-  tablePad: { paddingHorizontal: 8, paddingBottom: 8, minWidth: "100%" },
+  tableWrap: { flexDirection: "row", paddingBottom: 8 },
+  identityColumn: {
+    width: IDENTITY_W,
+    paddingLeft: 8,
+    borderRightWidth: StyleSheet.hairlineWidth,
+    borderRightColor: "rgba(255,255,255,0.08)",
+    backgroundColor: "#000",
+  },
+  identityHead: { gap: 5, paddingRight: 6 },
+  identityRow: { gap: 5, paddingRight: 6 },
+  statsPad: { paddingRight: 8 },
   tableHead: {
+    height: HEAD_H,
     flexDirection: "row",
     alignItems: "center",
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: "rgba(255,255,255,0.06)",
-    paddingVertical: 4,
   },
   tableRow: {
+    height: ROW_H,
     flexDirection: "row",
     alignItems: "center",
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: "rgba(255,255,255,0.06)",
-    paddingVertical: 6,
   },
   tableRowPressed: {
     backgroundColor: "rgba(255,255,255,0.14)",
-  },
-  identityCol: {
-    width: 176,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    paddingRight: 6,
-    borderRightWidth: StyleSheet.hairlineWidth,
-    borderRightColor: "rgba(255,255,255,0.08)",
   },
   thJersey: {
     width: 26,
@@ -420,16 +474,22 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     color: "rgba(255,255,255,0.4)",
   },
+  thStatPress: {
+    width: STAT_COL_W,
+    height: "100%",
+    alignItems: "center",
+    justifyContent: "center",
+  },
   thStat: {
-    width: 40,
     textAlign: "center",
     fontFamily: METRIC_FONT,
     fontSize: 11,
     fontWeight: "700",
-    letterSpacing: 0.8,
+    letterSpacing: 0.4,
     textTransform: "uppercase",
     color: "rgba(255,255,255,0.4)",
   },
+  thStatActive: { color: "#00E5FF" },
   jersey: {
     width: 26,
     height: 26,
@@ -460,7 +520,7 @@ const styles = StyleSheet.create({
     transform: [{ skewX: "-6deg" }],
   },
   stat: {
-    width: 40,
+    width: STAT_COL_W,
     textAlign: "center",
     fontFamily: METRIC_FONT,
     fontSize: 14,

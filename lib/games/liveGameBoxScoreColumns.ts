@@ -103,6 +103,83 @@ export function liveGameBoxColumnValues(
   ];
 }
 
+/** 列ヘッダーのタップ: 降順 → 昇順 → 解除（ロスター表と同じ） */
+export type LiveGameBoxSort = { key: string; dir: "desc" | "asc" } | null;
+
+export function nextLiveGameBoxSort(
+  prev: LiveGameBoxSort,
+  key: string
+): LiveGameBoxSort {
+  if (!prev || prev.key !== key) return { key, dir: "desc" };
+  if (prev.dir === "desc") return { key, dir: "asc" };
+  return null;
+}
+
+function madeFromSplit(v: string): number | null {
+  const made = Number.parseInt(String(v).split("-")[0] ?? "", 10);
+  return Number.isFinite(made) ? made : null;
+}
+
+function finiteOrNull(v: unknown): number | null {
+  return typeof v === "number" && Number.isFinite(v) ? v : null;
+}
+
+/** FG / 3P / FT は成功数で比較 */
+export function liveGameBoxSortValue(
+  player: LiveGameBoxPlayer,
+  key: string
+): number | null {
+  switch (key) {
+    case "fg":
+      return madeFromSplit(player.fg);
+    case "fg3":
+      return madeFromSplit(player.fg3);
+    case "ft":
+      return madeFromSplit(player.ft);
+    case "pm":
+      return finiteOrNull(player.plusMinus);
+    default:
+      return finiteOrNull((player as Record<string, unknown>)[key]);
+  }
+}
+
+function defaultBoxOrder(a: LiveGameBoxPlayer, b: LiveGameBoxPlayer): number {
+  if (a.starter !== b.starter) return a.starter ? -1 : 1;
+  if (b.pts !== a.pts) return b.pts - a.pts;
+  return b.min - a.min;
+}
+
+/** sort 無し（または今のモードに無い列）は スタメン → PTS → MIN。値なしは常に末尾 */
+export function sortLiveGameBoxPlayers(
+  players: readonly LiveGameBoxPlayer[],
+  sort: LiveGameBoxSort,
+  mode: LiveGameBoxScoreMode
+): LiveGameBoxPlayer[] {
+  const active = activeLiveGameBoxSort(sort, mode);
+  if (!active) return [...players].sort(defaultBoxOrder);
+  const mul = active.dir === "desc" ? -1 : 1;
+  return [...players].sort((a, b) => {
+    const av = liveGameBoxSortValue(a, active.key);
+    const bv = liveGameBoxSortValue(b, active.key);
+    if (av == null || bv == null) {
+      if (av == null && bv == null) return defaultBoxOrder(a, b);
+      return av == null ? 1 : -1;
+    }
+    if (av !== bv) return av < bv ? -mul : mul;
+    return defaultBoxOrder(a, b);
+  });
+}
+
+/** 今のモードで有効な sort（無効なら null） */
+export function activeLiveGameBoxSort(
+  sort: LiveGameBoxSort,
+  mode: LiveGameBoxScoreMode
+): LiveGameBoxSort {
+  return sort && liveGameBoxColumns(mode).some((c) => c.key === sort.key)
+    ? sort
+    : null;
+}
+
 export function liveGameBoxHasAdvancedData(
   players: readonly LiveGameBoxPlayer[]
 ): boolean {
