@@ -606,6 +606,14 @@ export default function ResultDetailBodyNative({
               cardFace.resultAway == null &&
               Boolean(liveStatsReport)
             }
+            liveScore={
+              liveStatsReport
+                ? {
+                    home: liveStatsReport.home.score,
+                    away: liveStatsReport.away.score,
+                  }
+                : null
+            }
             tutorialMetricsTargetId="result-detail-metrics"
           />
         </WeeklyReportCardShell>

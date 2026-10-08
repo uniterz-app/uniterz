@@ -582,6 +582,19 @@ export default function ResultDetailBody({
           face={cardFace}
           showDetailTab={false}
           pickup={cardFace.isPickup}
+          live={
+            cardFace.resultHome == null &&
+            cardFace.resultAway == null &&
+            Boolean(liveStatsReport)
+          }
+          liveScore={
+            liveStatsReport
+              ? {
+                  home: liveStatsReport.home.score,
+                  away: liveStatsReport.away.score,
+                }
+              : null
+          }
         />
       </div>
 

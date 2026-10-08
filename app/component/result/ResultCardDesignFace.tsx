@@ -105,6 +105,8 @@ type Props = {
   onOpen?: (e: MouseEvent<HTMLDivElement>) => void;
   /** 開始〜確定まで。判定前カードの LIVE 表示 */
   live?: boolean;
+  /** LIVE 中の実スコア。あれば中央を実スコアにし、予想は下段へ */
+  liveScore?: { home: number; away: number } | null;
   /** 明示上書き。省略時は face.isPickup */
   pickup?: boolean;
 };
@@ -117,6 +119,7 @@ export default function ResultCardDesignFace({
   drawDelaySec = 0,
   onOpen,
   live = false,
+  liveScore = null,
   pickup: pickupProp,
 }: Props) {
   const reduceMotion = useReducedMotion();
@@ -176,8 +179,18 @@ export default function ResultCardDesignFace({
   const hasUpset = settled && face.upsetPoints != null;
   const upsetValue = hasUpset ? face.upsetPoints!.toFixed(1) : "--";
   const scoreValue = settled ? face.totalPoints.toFixed(1) : "--";
-  const mainHome = settled ? (face.resultHome ?? 0) : face.predHome;
-  const mainAway = settled ? (face.resultAway ?? 0) : face.predAway;
+  const showLiveScore = !settled && live && liveScore != null;
+  const showActual = settled || showLiveScore;
+  const mainHome = settled
+    ? (face.resultHome ?? 0)
+    : showLiveScore
+      ? liveScore.home
+      : face.predHome;
+  const mainAway = settled
+    ? (face.resultAway ?? 0)
+    : showLiveScore
+      ? liveScore.away
+      : face.predAway;
   const statusLabel = settled
     ? "FINAL"
     : live
@@ -253,7 +266,7 @@ export default function ResultCardDesignFace({
 
             <div
               className={`${styles.matchCenter} ${
-                !settled ? styles.matchCenterPending : ""
+                !showActual ? styles.matchCenterPending : ""
               }`}
             >
               <span className={styles.skewWrap}>
@@ -269,16 +282,16 @@ export default function ResultCardDesignFace({
                 </span>
               </span>
               <span
-                className={`${settled ? styles.finalScore : styles.predScoreMain} ${matchScoreClass}`}
+                className={`${showActual ? styles.finalScore : styles.predScoreMain} ${matchScoreClass}`}
               >
                 {mainHome}
-                <span className={settled ? styles.finalDash : styles.predDash}>
+                <span className={showActual ? styles.finalDash : styles.predDash}>
                   {" "}
                   —{" "}
                 </span>
                 {mainAway}
               </span>
-              {settled ? (
+              {showActual ? (
                 <>
                   <span className={styles.predCaption}>
                     {copy.pendingCall}

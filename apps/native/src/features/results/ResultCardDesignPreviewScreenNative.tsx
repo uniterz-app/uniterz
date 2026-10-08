@@ -80,6 +80,9 @@ type Sample = {
   /** false = 判定前。プレビューは省略時 true */
   settled?: boolean;
   live?: boolean;
+  /** LIVE 中の実スコア。あれば中央を実スコアにし、予想は下段へ */
+  liveHome?: number | null;
+  liveAway?: number | null;
 };
 
 const SAMPLE: Sample = {
@@ -332,8 +335,19 @@ function MatchBlock({
     : live
       ? "LIVE"
       : copy.pendingCall;
-  const mainHome = settled ? sample.resultHome : sample.predHome;
-  const mainAway = settled ? sample.resultAway : sample.predAway;
+  const showLiveScore =
+    !settled && live && sample.liveHome != null && sample.liveAway != null;
+  const showActual = settled || showLiveScore;
+  const mainHome = settled
+    ? sample.resultHome
+    : showLiveScore
+      ? sample.liveHome
+      : sample.predHome;
+  const mainAway = settled
+    ? sample.resultAway
+    : showLiveScore
+      ? sample.liveAway
+      : sample.predAway;
   const Jersey = deferJerseys ? DeferredJerseyMarkNative : JerseyMarkAdaptive;
   return (
     <Animated.View style={[styles.matchRow, motion?.teamsGroupStyle]}>
@@ -355,7 +369,7 @@ function MatchBlock({
       <Animated.View
         style={[
           styles.matchCenter,
-          !settled ? styles.matchCenterPending : null,
+          !showActual ? styles.matchCenterPending : null,
           motion?.centerBlockStyle,
         ]}
       >
@@ -370,12 +384,12 @@ function MatchBlock({
             {statusLabel}
           </Text>
         </View>
-        <Text style={settled ? styles.finalScore : styles.predScoreMain}>
+        <Text style={showActual ? styles.finalScore : styles.predScoreMain}>
           {mainHome}
-          <Text style={settled ? styles.finalDash : styles.predDash}> — </Text>
+          <Text style={showActual ? styles.finalDash : styles.predDash}> — </Text>
           {mainAway}
         </Text>
-        {settled ? (
+        {showActual ? (
           <>
             <Text style={styles.predCaption}>
               {copy.pendingCall}
@@ -819,6 +833,7 @@ export function ResultCardDesignFaceNative({
   motion,
   detailSpineStyle,
   live = false,
+  liveScore = null,
   deferJerseys = false,
   topLabelAlign = "center",
 }: {
@@ -865,6 +880,8 @@ export function ResultCardDesignFaceNative({
   detailSpineStyle?: object;
   /** 開始〜確定まで。判定前カードの LIVE 表示 */
   live?: boolean;
+  /** LIVE 中の実スコア（詳細画面の liveStats） */
+  liveScore?: { home: number; away: number } | null;
   /** 一覧: 画面近傍まで Skia ジャージ遅延 */
   deferJerseys?: boolean;
   /** 共有キャプチャ中は start（上辺右にロゴをはめ込むため） */
@@ -920,6 +937,8 @@ export function ResultCardDesignFaceNative({
           winStreak: face.winStreak,
           settled: settledFromFace,
           live,
+          liveHome: liveScore?.home ?? null,
+          liveAway: liveScore?.away ?? null,
         };
       })()
     : { ...(sample ?? { ...SAMPLE, upsetPoints: 2.4 }), live: sample?.live ?? live };
