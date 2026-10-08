@@ -1328,6 +1328,7 @@ const mergedPreKickoffScoreClass = [
             showDetailTab={false}
             animateDraw={false}
             live={isLive}
+            liveScore={isLive ? displayScore : null}
           />
         </div>
       </div>

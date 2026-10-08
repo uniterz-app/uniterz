@@ -235,6 +235,7 @@ export function PredictMatchPreview({
   nbaTopScorer = null,
   resultFace = null,
   resultFaceLive = false,
+  resultFaceLiveScore = null,
 }: {
   data: PredictModalMatchPreview;
   onClose: () => void;
@@ -260,6 +261,8 @@ export function PredictMatchPreview({
   /** WC 以外・予想済み：リザルト一覧・詳細と同じカード面 */
   resultFace?: ResultCardFaceModel | null;
   resultFaceLive?: boolean;
+  /** LIVE 中の実スコア（liveStats） */
+  resultFaceLiveScore?: { home: number; away: number } | null;
 }) {
   const captureRef = useRef<View>(null);
 
@@ -683,6 +686,7 @@ export function PredictMatchPreview({
           showDetailTab={false}
           pickup={resultFace.isPickup}
           live={resultFaceLive}
+          liveScore={resultFaceLiveScore}
           tutorialMetricsTargetId="result-detail-metrics"
         />
       ) : (
@@ -1488,6 +1492,14 @@ export default function PredictModal({
                         myPostId={myPostId}
                         resultFace={overlayResultFace}
                         resultFaceLive={overlayResultFaceLive}
+                        resultFaceLiveScore={
+                          liveStatsReport
+                            ? {
+                                home: liveStatsReport.home.score,
+                                away: liveStatsReport.away.score,
+                              }
+                            : (overlayMarketBar?.score ?? null)
+                        }
                       />
                     </Animated.View>
                   ) : null}
