@@ -169,6 +169,18 @@
   color: rgba(226, 232, 240, 0.55);
 }
 
+/* LIVE 中（実スコアなし）: LIVE ピル + 予想をユニフォーム列の縦中央へ */
+.matchCenterLive {
+  align-self: stretch;
+  justify-content: center;
+  gap: 4px;
+  padding-top: 12px;
+}
+
+.liveMarkSlot {
+  margin-bottom: 2px;
+}
+
 .finalScore {
   font-size: 22px;
   font-weight: 900;

@@ -8,6 +8,7 @@ import { motion, useReducedMotion } from "framer-motion";
 import type { MouseEvent } from "react";
 import HalftoneJerseyMark from "@/app/component/games/HalftoneJerseyMark";
 import MatchListLineFrame from "@/app/component/games/MatchListLineFrame";
+import { LiveMatchMark } from "@/app/component/games/LiveMatchMark";
 import {
   GAMES_CYBER_EASE,
   GAMES_CYBER_ENTRY_DURATION_SEC,
@@ -181,6 +182,8 @@ export default function ResultCardDesignFace({
   const scoreValue = settled ? face.totalPoints.toFixed(1) : "--";
   const showLiveScore = !settled && live && liveScore != null;
   const showActual = settled || showLiveScore;
+  /** LIVE 中で実スコア未取得: 中央は LIVE、予想は下段（予想を実スコアと誤認させない） */
+  const liveCall = !settled && live && !showLiveScore;
   const mainHome = settled
     ? (face.resultHome ?? 0)
     : showLiveScore
@@ -266,32 +269,44 @@ export default function ResultCardDesignFace({
 
             <div
               className={`${styles.matchCenter} ${
-                !showActual ? styles.matchCenterPending : ""
+                liveCall
+                  ? styles.matchCenterLive
+                  : !showActual
+                    ? styles.matchCenterPending
+                    : ""
               }`}
             >
-              <span className={styles.skewWrap}>
-                <span
-                  className={`${styles.finalStatus} ${
-                    !settled && !live && ja
-                      ? styles.finalStatusJa
-                      : nameBebas.className
-                  }`}
-                  style={live && !settled ? { color: LIVE_TONE } : undefined}
-                >
-                  {statusLabel}
+              {liveCall ? (
+                <span className={styles.liveMarkSlot}>
+                  <LiveMatchMark density="matchDense" language={language} />
                 </span>
-              </span>
-              <span
-                className={`${showActual ? styles.finalScore : styles.predScoreMain} ${matchScoreClass}`}
-              >
-                {mainHome}
-                <span className={showActual ? styles.finalDash : styles.predDash}>
-                  {" "}
-                  —{" "}
-                </span>
-                {mainAway}
-              </span>
-              {showActual ? (
+              ) : (
+                <>
+                  <span className={styles.skewWrap}>
+                    <span
+                      className={`${styles.finalStatus} ${
+                        !settled && !live && ja
+                          ? styles.finalStatusJa
+                          : nameBebas.className
+                      }`}
+                      style={live && !settled ? { color: LIVE_TONE } : undefined}
+                    >
+                      {statusLabel}
+                    </span>
+                  </span>
+                  <span
+                    className={`${showActual ? styles.finalScore : styles.predScoreMain} ${matchScoreClass}`}
+                  >
+                    {mainHome}
+                    <span className={showActual ? styles.finalDash : styles.predDash}>
+                      {" "}
+                      —{" "}
+                    </span>
+                    {mainAway}
+                  </span>
+                </>
+              )}
+              {showActual || liveCall ? (
                 <>
                   <span className={styles.predCaption}>
                     {copy.pendingCall}

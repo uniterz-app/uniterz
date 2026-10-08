@@ -26,6 +26,11 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import JerseyMarkAdaptive from "../games/JerseyMarkAdaptive";
 import DeferredJerseyMarkNative from "../games/DeferredJerseyMarkNative";
 import MatchListLineFrameNative from "../games/MatchListLineFrameNative";
+import { LiveMarkPill } from "../games/LiveMarkPill";
+import {
+  liveMarkPillCyberBase,
+  liveMarkTextCyberBase,
+} from "../../ui/liveMarkCyberStyles";
 import { resultOutcomeLineFramePaint, resultPendingLineFramePaint } from "@/lib/games/matchListLineFrame";
 import { resultCardFaceCopy } from "../../../../../lib/result/resultCardFaceCopy";
 import { normalizeLeague } from "../../../../../lib/leagues";
@@ -338,6 +343,8 @@ function MatchBlock({
   const showLiveScore =
     !settled && live && sample.liveHome != null && sample.liveAway != null;
   const showActual = settled || showLiveScore;
+  /** LIVE 中で実スコア未取得: 中央は LIVE、予想は下段（予想を実スコアと誤認させない） */
+  const liveCall = !settled && live && !showLiveScore;
   const mainHome = settled
     ? sample.resultHome
     : showLiveScore
@@ -369,27 +376,42 @@ function MatchBlock({
       <Animated.View
         style={[
           styles.matchCenter,
-          !showActual ? styles.matchCenterPending : null,
+          liveCall
+            ? styles.matchCenterLive
+            : !showActual
+              ? styles.matchCenterPending
+              : null,
           motion?.centerBlockStyle,
         ]}
       >
-        <View style={styles.skewWrap}>
-          <Text
-            style={[
-              styles.finalStatus,
-              live && !settled ? styles.liveStatus : null,
-              !settled && !live && ja ? styles.finalStatusJa : null,
-            ]}
-          >
-            {statusLabel}
-          </Text>
-        </View>
-        <Text style={showActual ? styles.finalScore : styles.predScoreMain}>
-          {mainHome}
-          <Text style={showActual ? styles.finalDash : styles.predDash}> — </Text>
-          {mainAway}
-        </Text>
-        {showActual ? (
+        {liveCall ? (
+          <View style={styles.liveMarkSlot}>
+            <LiveMarkPill
+              pillStyle={liveMarkPillCyberBase}
+              textStyle={liveMarkTextCyberBase}
+            />
+          </View>
+        ) : (
+          <>
+            <View style={styles.skewWrap}>
+              <Text
+                style={[
+                  styles.finalStatus,
+                  live && !settled ? styles.liveStatus : null,
+                  !settled && !live && ja ? styles.finalStatusJa : null,
+                ]}
+              >
+                {statusLabel}
+              </Text>
+            </View>
+            <Text style={showActual ? styles.finalScore : styles.predScoreMain}>
+              {mainHome}
+              <Text style={showActual ? styles.finalDash : styles.predDash}> — </Text>
+              {mainAway}
+            </Text>
+          </>
+        )}
+        {showActual || liveCall ? (
           <>
             <Text style={styles.predCaption}>
               {copy.pendingCall}
@@ -1371,6 +1393,16 @@ const styles = StyleSheet.create({
   },
   liveStatus: {
     color: LIVE_TONE,
+  },
+  /** LIVE 中（実スコアなし）: LIVE ピル + 予想をユニフォーム列の縦中央へ */
+  matchCenterLive: {
+    alignSelf: "stretch",
+    justifyContent: "center",
+    gap: 4,
+    paddingTop: 24,
+  },
+  liveMarkSlot: {
+    marginBottom: 2,
   },
   /** 本番スコア — Montserrat Black Italic */
   finalScore: {
