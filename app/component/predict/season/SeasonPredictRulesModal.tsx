@@ -99,16 +99,58 @@ export default function SeasonPredictRulesModal({
                   >
                     {section.title}
                   </h3>
-                  <ul
+                  {section.emphasis ? (
+                    <p
+                      className={[
+                        nameOxanium.className,
+                        "mb-1.5 font-extrabold tabular-nums text-white",
+                        isWeb ? "text-[22px]" : "text-[20px]",
+                      ].join(" ")}
+                    >
+                      {section.emphasis}
+                    </p>
+                  ) : null}
+                  <div
                     className={[
-                      "list-disc space-y-1.5 pl-4 leading-relaxed text-white/75",
+                      "space-y-1.5 leading-relaxed text-white/75",
                       isWeb ? "text-[13px]" : "text-[12px]",
                     ].join(" ")}
                   >
                     {section.bullets.map((line) => (
-                      <li key={line}>{line}</li>
+                      <p key={line}>{line}</p>
                     ))}
-                  </ul>
+                  </div>
+                  {section.rows?.length ? (
+                    <div className="mt-2 divide-y divide-cyan-400/18 border border-cyan-400/18 bg-cyan-400/4">
+                      {section.rows.map((row) => (
+                        <div
+                          key={row.label}
+                          className="flex items-center justify-between px-3 py-2"
+                        >
+                          <span
+                            className={[
+                              "text-white/82",
+                              isWeb ? "text-[14px]" : "text-[13px]",
+                            ].join(" ")}
+                          >
+                            {row.label}
+                          </span>
+                          <span
+                            className={`${nameOxanium.className} text-[16px] font-extrabold tabular-nums text-[#00F5FF]`}
+                          >
+                            {row.value}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
+                  {section.notes?.length ? (
+                    <div className="mt-2 space-y-1 text-[11px] leading-snug text-white/55">
+                      {section.notes.map((line) => (
+                        <p key={line}>{line}</p>
+                      ))}
+                    </div>
+                  ) : null}
                 </section>
               ))}
             </div>

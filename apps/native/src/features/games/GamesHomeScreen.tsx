@@ -104,6 +104,8 @@ import {
   updatePredictionPostApi,
 } from "./submitPredictionApi";
 import PredictNextGameNativeModal from "./PredictNextGameNativeModal";
+import { requestStoreReviewOnceNative } from "./storeReviewPromptNative";
+import { isNbaPickupGame } from "../../../../../lib/nba/isPickupGame";
 import {
   broadcastDeckTitleForNextModal,
   scoreboardTeamLabelForNextModal,
@@ -2500,6 +2502,28 @@ export default function GamesHomeScreen({
           : null;
       const skipNextModal =
         !isEditing ? await readPredictNextGameModalSkip() : false;
+      /** その日（表示中の日・同リーグ）に予想できる未予想の試合が残っていない */
+      const dayPredictionsComplete =
+        !isEditing &&
+        gameId !== TUTORIAL_NBA_GAME_ID &&
+        !games.some((g) => {
+          const id = String(g.id ?? "");
+          if (!id || nextPredictedIds.has(id)) return false;
+          if (
+            String(g.league ?? "").toLowerCase() !==
+            String(currentLeague).toLowerCase()
+          ) {
+            return false;
+          }
+          if (isGameStarted(g)) return false;
+          if (
+            !isProUser &&
+            !isNbaPickupGame(g as { isPickup?: unknown; pickupWeekKey?: unknown })
+          ) {
+            return false;
+          }
+          return true;
+        });
 
       setPredictedGameIds(nextPredictedIds);
       setMyPredictionsReloadNonce((prev) => prev + 1);
@@ -2527,10 +2551,16 @@ export default function GamesHomeScreen({
         const continueAfterPostUi = () => {
           if (isEditing) {
             cyberAlert(t.updateDone, t.updateDoneOnly);
-          } else if (skipNextModal) {
-            cyberAlert(t.postDone, t.postDoneOnly);
-          } else if (nextGame) {
+          } else if (nextGame && !skipNextModal) {
             setNextGameAfterPost(nextGame);
+          } else if (dayPredictionsComplete) {
+            cyberAlert(t.postDone, t.postDoneOnly, [
+              {
+                text: "OK",
+                style: "default",
+                onPress: () => void requestStoreReviewOnceNative(),
+              },
+            ]);
           } else {
             cyberAlert(t.postDone, t.postDoneOnly);
           }

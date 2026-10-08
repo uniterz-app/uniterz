@@ -21,7 +21,7 @@ export const NBA_OPENING_NIGHT_PREVIEW_DATE_KEY = NBA_OPENING_NIGHT_DATE_KEY;
 /** 表示 TZ の Opening Night 暦日（JST→10/21、ET→10/20） */
 export function nbaOpeningNightDefaultDateKey(timeZone: string): string {
   return toDateKeyInTimeZone(
-    new Date("2026-10-21T08:00:00+09:00"),
+    new Date("2026-10-21T04:00:00+09:00"),
     timeZone
   );
 }

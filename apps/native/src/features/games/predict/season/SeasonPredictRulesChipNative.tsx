@@ -99,9 +99,30 @@ export default function SeasonPredictRulesChipNative({
               {sections.map((section) => (
                 <View key={section.title} style={styles.section}>
                   <Text style={styles.sectionTitle}>{section.title}</Text>
+                  {section.emphasis ? (
+                    <Text style={styles.emphasis}>{section.emphasis}</Text>
+                  ) : null}
                   {section.bullets.map((line) => (
                     <Text key={line} style={styles.bullet}>
-                      · {line}
+                      {line}
+                    </Text>
+                  ))}
+                  {section.rows?.length ? (
+                    <View style={styles.rows}>
+                      {section.rows.map((row, i) => (
+                        <View
+                          key={row.label}
+                          style={[styles.row, i > 0 && styles.rowDivider]}
+                        >
+                          <Text style={styles.rowLabel}>{row.label}</Text>
+                          <Text style={styles.rowValue}>{row.value}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  ) : null}
+                  {section.notes?.map((line) => (
+                    <Text key={line} style={styles.note}>
+                      {line}
                     </Text>
                   ))}
                 </View>
@@ -190,10 +211,51 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     color: "rgba(165,243,252,0.85)",
   },
+  emphasis: {
+    fontFamily: MATCH_CARD_METRIC_FONT,
+    fontSize: 20,
+    lineHeight: 26,
+    fontWeight: "800",
+    color: "#fff",
+    fontVariant: ["tabular-nums"],
+  },
   bullet: {
     fontSize: 12,
     lineHeight: 18,
     color: "rgba(255,255,255,0.75)",
+  },
+  rows: {
+    marginTop: 2,
+    borderWidth: 1,
+    borderColor: "rgba(0,245,255,0.18)",
+    backgroundColor: "rgba(0,245,255,0.04)",
+  },
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  rowDivider: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: "rgba(0,245,255,0.18)",
+  },
+  rowLabel: {
+    fontSize: 13,
+    color: "rgba(255,255,255,0.82)",
+  },
+  rowValue: {
+    fontFamily: MATCH_CARD_METRIC_FONT,
+    fontSize: 16,
+    fontWeight: "800",
+    color: "#00F5FF",
+    fontVariant: ["tabular-nums"],
+  },
+  note: {
+    fontSize: 11,
+    lineHeight: 16,
+    color: "rgba(255,255,255,0.55)",
   },
   footer: {
     paddingHorizontal: 16,
