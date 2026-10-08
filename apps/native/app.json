@@ -3,7 +3,13 @@
     "name": "UNITERZ",
     "slug": "uniterz",
     "scheme": "uniterz",
-    "version": "1.0.0",
+    "version": "1.0.1",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/f5595b90-9704-42b0-8578-bc3585e9de14"
+    },
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
