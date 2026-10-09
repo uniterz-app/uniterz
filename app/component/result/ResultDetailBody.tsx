@@ -592,6 +592,7 @@ export default function ResultDetailBody({
               ? {
                   home: liveStatsReport.home.score,
                   away: liveStatsReport.away.score,
+                  clock: liveStatsReport.clock || liveStatsReport.periodLabel,
                 }
               : null
           }

@@ -13,7 +13,7 @@ export function useResultCardLiveScore(params: {
   showLiveScore: boolean;
   apiBaseUrl?: string | null;
   paused?: boolean;
-}): { home: number; away: number } | null {
+}): { home: number; away: number; clock: string | null } | null {
   const enabled =
     Boolean(params.gameId) && params.isNba && params.live && params.showLiveScore;
   const { report } = useLiveGameStats(params.gameId, enabled, {
@@ -24,5 +24,6 @@ export function useResultCardLiveScore(params: {
   const home = report.home?.score;
   const away = report.away?.score;
   if (typeof home !== "number" || typeof away !== "number") return null;
-  return { home, away };
+  const clock = report.clock?.trim() || report.periodLabel?.trim() || null;
+  return { home, away, clock };
 }

@@ -611,6 +611,7 @@ export default function ResultDetailBodyNative({
                 ? {
                     home: liveStatsReport.home.score,
                     away: liveStatsReport.away.score,
+                    clock: liveStatsReport.clock || liveStatsReport.periodLabel,
                   }
                 : null
             }

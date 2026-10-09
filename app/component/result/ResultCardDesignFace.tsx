@@ -107,7 +107,7 @@ type Props = {
   /** 開始〜確定まで。判定前カードの LIVE 表示 */
   live?: boolean;
   /** LIVE 中の実スコア。あれば中央を実スコアにし、予想は下段へ */
-  liveScore?: { home: number; away: number } | null;
+  liveScore?: { home: number; away: number; clock?: string | null } | null;
   /** 明示上書き。省略時は face.isPickup */
   pickup?: boolean;
   /** 他ユーザーの投稿（「あなたの予想」ではなく「予想」） */
@@ -291,6 +291,9 @@ export default function ResultCardDesignFace({
                       <span className={styles.finalDash}> — </span>
                       {liveScore.away}
                     </span>
+                  ) : null}
+                  {showLiveScore && liveScore.clock ? (
+                    <span className={styles.liveClock}>{liveScore.clock}</span>
                   ) : null}
                 </>
               ) : (

@@ -99,6 +99,8 @@ type Sample = {
   /** LIVE 中の実スコア。あれば中央を実スコアにし、予想は下段へ */
   liveHome?: number | null;
   liveAway?: number | null;
+  /** 試合カードと同じくピル内に「LIVE｜Q2 9:40」 */
+  liveClock?: string | null;
   /** 他ユーザーの投稿（「あなたの予想」ではなく「予想」） */
   othersCall?: boolean;
 };
@@ -422,6 +424,7 @@ function MatchBlock({
               <LiveMarkPill
                 pillStyle={liveMarkPillCyberBase}
                 textStyle={liveMarkTextCyberBase}
+                clock={showLiveScore ? sample.liveClock : null}
               />
             </View>
             {showLiveScore ? (
@@ -1007,7 +1010,7 @@ export function ResultCardDesignFaceNative({
   /** 開始〜確定まで。判定前カードの LIVE 表示 */
   live?: boolean;
   /** LIVE 中の実スコア（詳細画面の liveStats） */
-  liveScore?: { home: number; away: number } | null;
+  liveScore?: { home: number; away: number; clock?: string | null } | null;
   /** 一覧: 画面近傍まで Skia ジャージ遅延 */
   deferJerseys?: boolean;
   /** 共有キャプチャ中は start（上辺右にロゴをはめ込むため） */
@@ -1069,6 +1072,7 @@ export function ResultCardDesignFaceNative({
           live,
           liveHome: liveScore?.home ?? null,
           liveAway: liveScore?.away ?? null,
+          liveClock: liveScore?.clock ?? null,
           othersCall,
         };
       })()

@@ -213,6 +213,13 @@
   text-shadow: 0 0 12px rgba(251, 191, 36, 0.32);
 }
 
+/* 試合カードと同じ「Q2 9:40」 */
+.liveClock {
+  font-size: 10px;
+  line-height: 12px;
+  color: rgba(255, 255, 255, 0.75);
+}
+
 .predCaption {
   font-size: 10px;
   color: rgba(226, 232, 240, 0.45);
