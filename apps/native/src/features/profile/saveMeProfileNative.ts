@@ -56,3 +56,30 @@ export async function saveMeProfileNative(
 
   invalidateProfileUserDocNative(user.uid);
 }
+
+/** プロフィール画像だけ即保存（名前など入力途中の欄は送らない） */
+export async function saveMyPhotoURLNative(photoURL: string): Promise<void> {
+  const user = auth.currentUser;
+  if (!user) throw new Error("not authenticated");
+
+  const base = getUniterzApiBaseUrl()?.replace(/\/$/, "") ?? "";
+  if (!base) {
+    throw new Error("API_BASE_URL_missing");
+  }
+
+  const token = await user.getIdToken();
+  const res = await fetch(`${base}/api/me/profile`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ photoOnly: true, photoURL }),
+  });
+  if (!res.ok) {
+    const data = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(data?.error ?? res.statusText);
+  }
+
+  invalidateProfileUserDocNative(user.uid);
+}

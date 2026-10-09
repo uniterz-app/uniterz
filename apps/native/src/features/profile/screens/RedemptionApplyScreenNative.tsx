@@ -14,7 +14,8 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RouteProp } from "@react-navigation/native";
 import * as ImagePicker from "expo-image-picker";
-import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
+import { getDownloadURL, ref } from "firebase/storage";
+import { uploadLocalImageNative } from "../../../lib/uploadLocalImageNative";
 import LegalPageLayoutNative from "../../legal/LegalPageLayoutNative";
 import { useFirebaseUser } from "../../../auth/FirebaseUserProvider";
 import { useNativeUserLanguage } from "../../../hooks/useNativeUserLanguage";
@@ -150,28 +151,22 @@ export default function RedemptionApplyScreenNative() {
 
   async function uploadProductImage(): Promise<string> {
     if (!imageUri || !fUser?.uid) return "";
-    const res = await fetch(imageUri);
-    const buf = await res.arrayBuffer();
-    if (buf.byteLength > REDEMPTION_PRODUCT_IMAGE_MAX_BYTES) {
-      throw new Error(
-        L(lang, {
-          ja: "画像は 8MB 以下にしてください。",
-          en: "Image must be 8MB or less.",
-          ko: "이미지는 8MB 이하여야 합니다.",
-          zh: "图片须不超过 8MB。",
-          es: "La imagen debe ser de 8 MB o menos.",
-          pt: "A imagem deve ter no máximo 8 MB.",
-          fr: "L’image doit faire 8 Mo ou moins.",
-        })
-      );
-    }
     const fileId = `${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
     const fileRef = ref(
       storage,
       redemptionProductImageStoragePath(fUser.uid, fileId)
     );
-    await uploadBytes(fileRef, new Uint8Array(buf), {
-      contentType: "image/jpeg",
+    await uploadLocalImageNative(fileRef, imageUri, {
+      maxBytes: REDEMPTION_PRODUCT_IMAGE_MAX_BYTES,
+      tooLargeMessage: L(lang, {
+        ja: "画像は 8MB 以下にしてください。",
+        en: "Image must be 8MB or less.",
+        ko: "이미지는 8MB 이하여야 합니다.",
+        zh: "图片须不超过 8MB。",
+        es: "La imagen debe ser de 8 MB o menos.",
+        pt: "A imagem deve ter no máximo 8 MB.",
+        fr: "L’image doit faire 8 Mo ou moins.",
+      }),
     });
     return getDownloadURL(fileRef);
   }

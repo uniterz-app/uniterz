@@ -15,7 +15,8 @@ import {
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { signOut } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
-import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
+import { getDownloadURL, ref } from "firebase/storage";
+import { uploadLocalImageNative } from "../../lib/uploadLocalImageNative";
 import { auth, db, storage } from "../../lib/firebase";
 import { keyboardAvoidingBehavior } from "../../ui/keyboardAvoidingBehaviorNative";
 import AuthFormShellNative from "./AuthFormShellNative";
@@ -50,18 +51,8 @@ const API_BASE = process.env.EXPO_PUBLIC_UNITERZ_API_BASE_URL?.replace(/\/$/, ""
 
 type PendingAvatar = {
   uri: string;
-  base64?: string;
   mimeType?: string;
 };
-
-function base64ToUint8Array(b64: string): Uint8Array {
-  const atobFn = (globalThis as { atob?: (data: string) => string }).atob;
-  if (typeof atobFn !== "function") throw new Error("atob unavailable");
-  const bin = atobFn(b64);
-  const out = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i) & 0xff;
-  return out;
-}
 
 function isImagePickerNativeMissingError(e: unknown): boolean {
   const msg = e instanceof Error ? e.message : String(e);
@@ -136,13 +127,11 @@ export default function OnboardingScreenNative() {
         mediaTypes: ["images"],
         allowsEditing: false,
         quality: 0.75,
-        base64: true,
       });
       if (picked.canceled || !picked.assets?.[0]) return;
       const asset = picked.assets[0];
       setAvatar({
         uri: asset.uri,
-        base64: asset.base64 ?? undefined,
         mimeType: asset.mimeType,
       });
     } catch (e: unknown) {
@@ -159,20 +148,9 @@ export default function OnboardingScreenNative() {
   async function uploadAvatarIfNeeded(uid: string): Promise<string | null> {
     if (!avatar) return null;
     const fileRef = ref(storage, `avatars/${uid}/onboarding_profile.jpg`);
-    const contentType =
-      avatar.mimeType && avatar.mimeType.startsWith("image/")
-        ? avatar.mimeType
-        : "image/jpeg";
-    if (avatar.base64 && avatar.base64.length > 0) {
-      const bytes = base64ToUint8Array(avatar.base64);
-      if (bytes.byteLength === 0) throw new Error("empty image");
-      await uploadBytes(fileRef, bytes, { contentType });
-    } else {
-      const res = await fetch(avatar.uri);
-      const buf = await res.arrayBuffer();
-      if (!buf || buf.byteLength === 0) throw new Error("empty image");
-      await uploadBytes(fileRef, new Uint8Array(buf), { contentType });
-    }
+    await uploadLocalImageNative(fileRef, avatar.uri, {
+      contentType: avatar.mimeType,
+    });
     return getDownloadURL(fileRef);
   }
 

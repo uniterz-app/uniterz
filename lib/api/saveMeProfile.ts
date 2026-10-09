@@ -60,3 +60,26 @@ export async function saveMeProfile(payload: SaveMeProfilePayload): Promise<void
   dispatchCumulativeRankingInvalidate();
   invalidateUserDocCache(user.uid);
 }
+
+/** プロフィール画像だけ即保存（名前など入力途中の欄は送らない） */
+export async function saveMyPhotoURL(photoURL: string): Promise<void> {
+  const user = auth.currentUser;
+  if (!user) throw new Error("not authenticated");
+
+  const token = await user.getIdToken();
+  const res = await fetch("/api/me/profile", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ photoOnly: true, photoURL }),
+  });
+  if (!res.ok) {
+    const data = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(data?.error ?? res.statusText);
+  }
+
+  dispatchCumulativeRankingInvalidate();
+  invalidateUserDocCache(user.uid);
+}

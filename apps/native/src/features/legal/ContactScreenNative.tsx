@@ -6,7 +6,8 @@ import {
 import { useNavigation } from "@react-navigation/native";
 import * as ImagePicker from "expo-image-picker";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { ref, getDownloadURL } from "firebase/storage";
+import { uploadLocalImageNative } from "../../lib/uploadLocalImageNative";
 import { doc, getDoc } from "firebase/firestore";
 import LegalPageLayoutNative from "./LegalPageLayoutNative";
 import { useFirebaseUser } from "../../auth/FirebaseUserProvider";
@@ -228,10 +229,8 @@ export default function ContactScreenNative({
 
   async function uploadScreenshot(): Promise<string> {
     if (!imageUri || !fUser?.uid) return "";
-    const res = await fetch(imageUri);
-    const buf = await res.arrayBuffer();
     const fileRef = ref(storage, `contact_screenshots/${fUser.uid}/${Date.now()}.jpg`);
-    await uploadBytes(fileRef, new Uint8Array(buf), { contentType: "image/jpeg" });
+    await uploadLocalImageNative(fileRef, imageUri);
     return getDownloadURL(fileRef);
   }
 

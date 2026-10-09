@@ -25,8 +25,24 @@ async function requireUid(req: Request): Promise<string> {
   return decoded.uid;
 }
 
+/** ランキング行 chrome（国旗・名前・アバター・Skin）を CDN から外す */
+async function bumpRankingChromeForUser(uid: string): Promise<void> {
+  const {
+    bumpRankingUiGeneration,
+    clearRankingSnapshotGenerationMemCache,
+    userMayAppearInRankings,
+  } = await import("@/lib/rankings/server/loadRankingSnapshotGeneration");
+  if (!(await userMayAppearInRankings(uid))) return;
+  await bumpRankingUiGeneration();
+  clearRankingSnapshotGenerationMemCache();
+  revalidateTag("cumulative-ranking", {});
+  revalidateTag("period-ranking", {});
+  revalidateTag("ranking-ui", {});
+}
+
 /**
  * クライアントの Firestore ルールに依存せず、本人の users/{uid} の公開プロフィール欄を更新する。
+ * `photoOnly: true` のときは photoURL だけ更新する（画像選択直後の即時反映用。入力途中の名前等は触らない）。
  */
 export async function POST(req: Request) {
   try {
@@ -37,6 +53,27 @@ export async function POST(req: Request) {
     > | null;
     if (!body || typeof body !== "object") {
       return NextResponse.json({ error: "invalid json" }, { status: 400 });
+    }
+
+    if (body.photoOnly === true) {
+      const raw = typeof body.photoURL === "string" ? body.photoURL.trim() : "";
+      if (!/^https:\/\//i.test(raw)) {
+        return NextResponse.json({ error: "invalid photoURL" }, { status: 400 });
+      }
+      const photoURL = raw.slice(0, 4096);
+      const db = getAdminDb();
+      const rate = await consumeUidActionRateLimit(db, uid, "me_profile_update", 60);
+      if (!rate.ok) {
+        return NextResponse.json({ error: "rate_limited" }, { status: 429 });
+      }
+      const before = (await db.doc(`users/${uid}`).get()).data() ?? {};
+      await db
+        .doc(`users/${uid}`)
+        .set({ photoURL, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+      if (String(before.photoURL ?? "") !== photoURL) {
+        await bumpRankingChromeForUser(uid);
+      }
+      return NextResponse.json({ ok: true });
     }
 
     const lang = normalizeLanguage(body.language);
@@ -138,21 +175,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true });
     }
 
-    // ランキング行 chrome（国旗・名前・Skin）を CDN から外す
-    const {
-      bumpRankingUiGeneration,
-      clearRankingSnapshotGenerationMemCache,
-      userMayAppearInRankings,
-    } = await import("@/lib/rankings/server/loadRankingSnapshotGeneration");
-    if (!(await userMayAppearInRankings(uid))) {
-      return NextResponse.json({ ok: true });
-    }
-    await bumpRankingUiGeneration();
-    clearRankingSnapshotGenerationMemCache();
-    revalidateTag("cumulative-ranking", {});
-    revalidateTag("period-ranking", {});
-    revalidateTag("ranking-ui", {});
-
+    await bumpRankingChromeForUser(uid);
     return NextResponse.json({ ok: true });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : "server error";

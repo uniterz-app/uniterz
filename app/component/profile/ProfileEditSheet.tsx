@@ -35,7 +35,7 @@ import {
   timeZoneOptionLabel,
 } from "@/lib/i18n/timeZoneOptions";
 import { timeZoneSettingCopy } from "@/lib/i18n/timeZoneSettingCopy";
-import { saveMeProfile } from "@/lib/api/saveMeProfile";
+import { saveMeProfile, saveMyPhotoURL } from "@/lib/api/saveMeProfile";
 import {
   isProfileGamblingTermsError,
   profileGamblingTermsUserMessage,
@@ -109,24 +109,28 @@ export default function ProfileEditSheet({
     ? URL.createObjectURL(selectedFile)
     : currentPhotoURL || defaultAvatarUrl;
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files?.[0]) setSelectedFile(e.target.files[0]);
-  };
-
-  const handleUpload = async () => {
-    if (!selectedFile) return undefined;
+  /** 選んだ時点でアップロードし photoURL だけ即保存（「保存」を押さなくても反映） */
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
     const user = auth.currentUser;
-    if (!user) return undefined;
+    if (!file || !user || uploading) return;
+    setSelectedFile(file);
     try {
       setUploading(true);
-      const timestamp = Date.now();
       const fileRef = ref(
         storage,
-        `avatars/${user.uid}/${timestamp}_${selectedFile.name}`
+        `avatars/${user.uid}/${Date.now()}_${file.name}`
       );
-      await uploadBytes(fileRef, selectedFile);
-      return await getDownloadURL(fileRef);
+      await uploadBytes(fileRef, file);
+      const url = await getDownloadURL(fileRef);
+      await saveMyPhotoURL(url);
+      setCurrentPhotoURL(url);
+    } catch (err) {
+      console.error(err);
+      alert(t(language).common.saveFailed);
     } finally {
+      setSelectedFile(null);
       setUploading(false);
     }
   };
@@ -134,13 +138,9 @@ export default function ProfileEditSheet({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const user = auth.currentUser;
-    if (!user) return;
+    if (!user || uploading) return;
 
-    let photoURL: string | null = currentPhotoURL;
-    if (selectedFile) {
-      const uploaded = await handleUpload();
-      if (uploaded) photoURL = uploaded;
-    }
+    const photoURL = currentPhotoURL;
 
     try {
       await saveMeProfile({

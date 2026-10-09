@@ -27,7 +27,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { keyboardAvoidingBehavior } from "../../ui/keyboardAvoidingBehaviorNative";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { signOut, updateProfile } from "firebase/auth";
-import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
+import { getDownloadURL, ref } from "firebase/storage";
+import { uploadLocalImageNative } from "../../lib/uploadLocalImageNative";
 import { auth, db, storage } from "../../lib/firebase";
 import { resolveProfileOpenChartsAccess } from "../../../../../lib/profile/profileChartsDivision";
 import {
@@ -110,7 +111,10 @@ import {
   isProfileGamblingTermsError,
   profileGamblingTermsUserMessage,
 } from "../../../../../lib/profile/profileGamblingTerms";
-import { saveMeProfileNative } from "./saveMeProfileNative";
+import {
+  saveMeProfileNative,
+  saveMyPhotoURLNative,
+} from "./saveMeProfileNative";
 import { COUNTRY_OPTIONS } from "../../../../../lib/rankings/country";
 import type { ProfileStatsStreakContext } from "../../../../../lib/profile/profileStreakScope";
 import { parseUserProfileViewCount, parseUserUnitBalance } from "../../../../../lib/profile/parseUserProfileFields";
@@ -1143,23 +1147,13 @@ export default function ProfileHomeScreen({
     setProfileLoading(false);
   }, [isPublicProfileView, profileByHandle]);
 
-  /** expo-image-picker の base64 をバイナリに変換（uploadString より uploadBytes の方がルール検証と相性がよいことがある） */
-  function base64ToUint8Array(b64: string): Uint8Array {
-    const atobFn = (globalThis as { atob?: (data: string) => string }).atob;
-    if (typeof atobFn !== "function") throw new Error("atob unavailable");
-    const bin = atobFn(b64);
-    const out = new Uint8Array(bin.length);
-    for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i) & 0xff;
-    return out;
-  }
-
   /** ネイティブ未リンクの開発ビルドでは静的 import だと起動時に落ちるため、利用時のみ動的 import する */
   function isImagePickerNativeMissingError(e: unknown): boolean {
     const msg = e instanceof Error ? e.message : String(e);
     return /ExponentImagePicker|Cannot find native module/i.test(msg);
   }
 
-  /** Web プロフィール編集と同様：ライブラリから選び Storage に置いて URL を state に反映 */
+  /** ライブラリから選び Storage に置き、photoURL だけ即保存（「保存」を押さなくても反映） */
   async function pickAvatar() {
     if (!myUid || uploadingAvatar || saving) return;
     let ImagePicker: typeof import("expo-image-picker");
@@ -1179,34 +1173,25 @@ export default function ProfileHomeScreen({
         cyberAlert(t.pickPhotoTitle, t.pickPhotoDenied);
         return;
       }
-      // iOS で allowsEditing + fetch().blob() の組み合わせが落ちることがあるため、
-      // クロップは使わず base64 経由で Storage に送る（無ければ arrayBuffer にフォールバック）
       const picked = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ["images"],
         allowsEditing: false,
         quality: 0.75,
-        base64: true,
       });
       if (picked.canceled || !picked.assets?.[0]) return;
       const asset = picked.assets[0];
-      const uri = asset.uri;
       setUploadingAvatar(true);
       const fileRef = ref(storage, `avatars/${myUid}/${Date.now()}_profile.jpg`);
-      const contentType =
-        asset.mimeType && asset.mimeType.startsWith("image/") ? asset.mimeType : "image/jpeg";
-
-      if (asset.base64 && asset.base64.length > 0) {
-        const bytes = base64ToUint8Array(asset.base64);
-        if (bytes.byteLength === 0) throw new Error("empty image");
-        await uploadBytes(fileRef, bytes, { contentType });
-      } else {
-        const res = await fetch(uri);
-        const buf = await res.arrayBuffer();
-        if (!buf || buf.byteLength === 0) throw new Error("empty image");
-        await uploadBytes(fileRef, new Uint8Array(buf), { contentType });
-      }
+      await uploadLocalImageNative(fileRef, asset.uri, {
+        contentType: asset.mimeType ?? undefined,
+      });
       const url = await getDownloadURL(fileRef);
+      await saveMyPhotoURLNative(url);
+      if (auth.currentUser && auth.currentUser.uid === myUid) {
+        await updateProfile(auth.currentUser, { photoURL: url }).catch(() => {});
+      }
       setAvatarUrl(url);
+      setMyUserDoc((prev) => (prev ? { ...prev, photoURL: url } : prev));
     } catch (e: unknown) {
       if (isImagePickerNativeMissingError(e)) {
         cyberAlert(t.imagePickerNativeTitle, t.imagePickerNativeHint);
