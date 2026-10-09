@@ -54,6 +54,9 @@
     "badges:wcgp:revoke-test": "tsx scripts/archive/revoke-wc-2026-gp-test-grants.ts",
     "badges:wcgp:grant:dry": "DRY_RUN=1 tsx scripts/archive/grant-wc-2026-gp-total-points-badges.ts",
     "badges:wcgp:grant": "tsx scripts/archive/grant-wc-2026-gp-total-points-badges.ts",
+    "badges:season-zero:seed": "tsx scripts/seed-season-zero-web-badge.ts",
+    "badges:season-zero:grant:dry": "DRY_RUN=1 tsx scripts/grant-season-zero-web-badge.ts",
+    "badges:season-zero:grant": "tsx scripts/grant-season-zero-web-badge.ts",
     "sync:pro-skin-milestone-catalog": "node scripts/sync-pro-skin-milestone-catalog.mjs",
     "generate:pro-skin-previews": "tsx scripts/generate-pro-skin-preview-assets.ts"
   },
