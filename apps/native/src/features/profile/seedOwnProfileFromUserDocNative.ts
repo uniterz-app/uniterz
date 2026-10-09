@@ -8,7 +8,10 @@ import {
 } from "../../../../../lib/profile/parseUserProfileFields";
 import { parseUserPlanProBgVariant } from "../../../../../lib/profile/profilePlanProBgVariantField";
 import type { ProfilePlanProBgVariant } from "../../../../../lib/profile/profilePlanProBgVariants";
-import { peekProfileUserDocNative } from "./profileUserDocCacheNative";
+import {
+  peekLastGoodProfileUserDocNative,
+  peekProfileUserDocNative,
+} from "./profileUserDocCacheNative";
 import {
   parseNbaFavorites,
   type NbaFavoritePlayer,
@@ -67,13 +70,15 @@ export function seedOwnProfileFromUserDocNative(
   };
 }
 
-/** メモリキャッシュが温いときだけ返す（未キャッシュは null） */
+/** メモリキャッシュ（TTL 切れなら最後に取得できた doc）があるときだけ返す（未取得は null） */
 export function peekOwnProfileSeedNative(
   uid: string | undefined | null
 ): OwnProfileSeedNative | null {
   const safeUid = uid?.trim();
   if (!safeUid) return null;
-  const peek = peekProfileUserDocNative(safeUid);
+  const peek =
+    peekProfileUserDocNative(safeUid) ??
+    peekLastGoodProfileUserDocNative(safeUid);
   if (!peek) return null;
   return seedOwnProfileFromUserDocNative(
     peek,

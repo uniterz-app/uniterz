@@ -12,6 +12,7 @@ import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import {
   ActivityIndicator,
+  AppState,
   Image,
   InteractionManager,
   KeyboardAvoidingView,
@@ -968,11 +969,16 @@ export default function ProfileHomeScreen({
 
   const t = sheet;
 
+  /** users/{uid} を一度も読めていない間は、フォーカス復帰・前面復帰で読み直す */
+  const [ownUserDocReloadKey, setOwnUserDocReloadKey] = useState(0);
+  const ownUserDocMissingRef = useRef(false);
+
   useEffect(() => {
     if (isPublicProfileView) return;
     let alive = true;
     async function load() {
       if (!myUid) {
+        ownUserDocMissingRef.current = false;
         setProfileLoading(false);
         setMyPlanReady(true);
         setMyUserDoc(null);
@@ -1013,9 +1019,11 @@ export default function ProfileHomeScreen({
         const loaded = await loadProfileUserDocNative(myUid, { fresh: true });
         if (!alive) return;
         if (!loaded) {
-          setMyUserDoc(null);
+          ownUserDocMissingRef.current = !warm;
+          if (!warm) setMyUserDoc(null);
           return;
         }
+        ownUserDocMissingRef.current = false;
         const data = loaded.data;
         const snapExists = loaded.exists;
         const seed = seedOwnProfileFromUserDocNative(
@@ -1062,7 +1070,17 @@ export default function ProfileHomeScreen({
     return () => {
       alive = false;
     };
-  }, [myUid, isPublicProfileView]);
+  }, [myUid, isPublicProfileView, ownUserDocReloadKey]);
+
+  useEffect(() => {
+    if (isPublicProfileView || !myUid) return;
+    const sub = AppState.addEventListener("change", (next) => {
+      if (next === "active" && ownUserDocMissingRef.current) {
+        setOwnUserDocReloadKey((k) => k + 1);
+      }
+    });
+    return () => sub.remove();
+  }, [isPublicProfileView, myUid]);
 
   /** Pro Skin / Unit 残高 — 復帰時に再読込（初回フォーカスは上の load と重複させない） */
   const skipFirstFocusUserDocRef = useRef(true);
@@ -1071,6 +1089,10 @@ export default function ProfileHomeScreen({
       if (isPublicProfileView || !myUid) return;
       if (skipFirstFocusUserDocRef.current) {
         skipFirstFocusUserDocRef.current = false;
+        return;
+      }
+      if (ownUserDocMissingRef.current) {
+        setOwnUserDocReloadKey((k) => k + 1);
         return;
       }
       let alive = true;
@@ -1426,7 +1448,12 @@ export default function ProfileHomeScreen({
     >
       {isPublicProfileView || !profileLoading ? (
         <ProfileKinetikHeroNative
-          displayName={displayName.trim() || handle.trim()}
+          displayName={
+            displayName.trim() ||
+            handle.trim() ||
+            (!isPublicProfileView ? fUser?.displayName?.trim() : "") ||
+            ""
+          }
           handle={handle.trim()}
           avatarUrl={
             avatarUrl.trim() ||
