@@ -11,6 +11,7 @@ import {
   AWARDS_PREVIEW_PLAYERS,
 } from "../../../../../../../lib/predict/nbaSeasonAwardsPreviewMocks";
 import TeamAbbrBadgeNative from "../../TeamAbbrBadgeNative";
+import UniterzLogoNative from "../../../profile/UniterzLogoNative";
 import {
   MATCH_CARD_BRACKET_LETTER_SPACING_12,
   MATCH_CARD_BRACKET_TEXT,
@@ -20,6 +21,8 @@ type Props = {
   prediction: NbaSeasonAwardsPrediction;
   officialByAward?: Partial<Record<string, string | null>> | null;
   catalog?: readonly NbaAwardCandidate[];
+  /** 提出ページだけ: YOUR AWARDS の下に UNITERZ 横長ロゴ */
+  showBrandLogo?: boolean;
 };
 
 const OX = "Oxanium_700Bold";
@@ -36,6 +39,7 @@ export default function NbaSeasonAwardsViewPanelNative({
   prediction,
   officialByAward = null,
   catalog,
+  showBrandLogo = false,
 }: Props) {
   const list =
     catalog ??
@@ -44,8 +48,15 @@ export default function NbaSeasonAwardsViewPanelNative({
   return (
     <View>
       <View style={styles.header}>
-        <Text style={styles.h2}>Your awards</Text>
-        <Text style={styles.season}>{prediction.season}</Text>
+        <View style={styles.titleRow}>
+          <Text style={styles.h2}>Your awards</Text>
+          <Text style={[styles.season, styles.seasonInline]}>
+            {prediction.season}
+          </Text>
+        </View>
+        {showBrandLogo ? (
+          <UniterzLogoNative width={132} style={styles.brandLogo} />
+        ) : null}
       </View>
 
       <View style={styles.list}>
@@ -110,6 +121,20 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
     color: "rgba(255,255,255,0.35)",
     textTransform: "uppercase",
+  },
+  titleRow: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    gap: 8,
+  },
+  seasonInline: {
+    marginTop: 0,
+    fontSize: 14,
+    letterSpacing: 2.4,
+  },
+  brandLogo: {
+    marginTop: 10,
+    opacity: 0.9,
   },
   list: {
     borderRadius: 2,

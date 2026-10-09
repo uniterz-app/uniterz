@@ -2,7 +2,13 @@
  * Web `CyberSubpageShell` 相当。
  * 戻る（角切り）+ eyebrow + サイバー題名（中央）+ 説明は右上はてな（オーバーレイ）。
  */
-import { useCallback, useLayoutEffect, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import {
   Modal,
@@ -17,6 +23,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { acquireAppBrandShelfHidden } from "../../../../lib/ui/appBrandShelfVisibility";
+import { acquireAppBrandShelfHelpAction } from "../../../../lib/ui/appBrandShelfHelpAction";
 import {
   acquireAppBrandWordmark,
   isHeaderWordmark,
@@ -169,6 +176,15 @@ export function CyberSubpageHeaderNative({
     }
     setHelpOpen(true);
   };
+  const openHelpRef = useRef(openHelp);
+  openHelpRef.current = openHelp;
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!titleInBrandShelf || !showHelp) return;
+      return acquireAppBrandShelfHelpAction(() => openHelpRef.current());
+    }, [titleInBrandShelf, showHelp])
+  );
 
   useFocusEffect(
     useCallback(() => {
@@ -185,33 +201,20 @@ export function CyberSubpageHeaderNative({
   );
 
   if (titleInBrandShelf) {
-    if (!showHelp && !headerTrailing) return null;
+    /** 「？」本体は棚（MainTabNavigator）に出す。ここは追加アクションと説明オーバーレイだけ */
+    const helpOverlay =
+      showHelp && !onHelpPress && subtitle ? (
+        <CyberHelpOverlayNative
+          open={helpOpen}
+          text={subtitle}
+          onClose={() => setHelpOpen(false)}
+        />
+      ) : null;
+    if (!headerTrailing) return helpOverlay;
     return (
       <View style={styles.shelfHelpRow}>
         {headerTrailing}
-        {showHelp ? (
-          <>
-            <Pressable
-              onPress={openHelp}
-              accessibilityRole="button"
-              accessibilityLabel="説明"
-              accessibilityState={onHelpPress ? undefined : { expanded: helpOpen }}
-              style={({ pressed }) => [
-                styles.helpBtn,
-                pressed && styles.helpBtnPressed,
-              ]}
-            >
-              <CyberHelpMarkNative active={onHelpPress ? false : helpOpen} />
-            </Pressable>
-            {!onHelpPress && subtitle ? (
-              <CyberHelpOverlayNative
-                open={helpOpen}
-                text={subtitle}
-                onClose={() => setHelpOpen(false)}
-              />
-            ) : null}
-          </>
-        ) : null}
+        {helpOverlay}
       </View>
     );
   }

@@ -1,6 +1,7 @@
 /** Web `NbaSeasonStandingsViewPanel` 相当（順位 | West | East、列区切りあり） */
 import { StyleSheet, Text, View } from "react-native";
 import JerseyMarkSvg from "../../JerseyMarkSvg";
+import UniterzLogoNative from "../../../profile/UniterzLogoNative";
 import { NBA_STANDINGS_RANKS } from "../../../../../../../lib/nba/nbaConferenceTeams";
 import { getNbaTeamNicknameById } from "../../../../../../../lib/nba-team-names";
 import {
@@ -19,6 +20,8 @@ import {
 type Props = {
   prediction: NbaSeasonStandingsPrediction;
   official?: NbaSeasonStandingsPrediction | null;
+  /** 提出ページだけ: YOUR STANDING の下に UNITERZ 横長ロゴ */
+  showBrandLogo?: boolean;
 };
 
 type Band = "straight" | "playin" | "out";
@@ -65,7 +68,7 @@ function TeamCell({
       <JerseyMarkSvg
         accent={getTeamJerseyPrimaryColor("nba", teamId)}
         accentEnd={getTeamJerseySecondaryColor("nba", teamId)}
-        size={24}
+        size={22}
         density="coarse"
       />
       <Text style={styles.viewTeam} numberOfLines={1}>
@@ -111,12 +114,23 @@ function CombinedRow({
   );
 }
 
-export default function NbaSeasonStandingsViewPanelNative({ prediction, official = null }: Props) {
+export default function NbaSeasonStandingsViewPanelNative({
+  prediction,
+  official = null,
+  showBrandLogo = false,
+}: Props) {
   return (
     <View>
       <View style={styles.header}>
-        <Text style={styles.h2}>Your standing</Text>
-        <Text style={styles.season}>{prediction.season}</Text>
+        <View style={styles.titleRow}>
+          <Text style={styles.h2}>Your standing</Text>
+          <Text style={[styles.season, styles.seasonInline]}>
+            {prediction.season}
+          </Text>
+        </View>
+        {showBrandLogo ? (
+          <UniterzLogoNative width={132} style={styles.brandLogo} />
+        ) : null}
       </View>
 
       <View style={styles.card}>
@@ -150,7 +164,7 @@ export default function NbaSeasonStandingsViewPanelNative({ prediction, official
 }
 
 const styles = StyleSheet.create({
-  header: { alignItems: "center", marginBottom: 12 },
+  header: { alignItems: "center", marginBottom: 8 },
   h2: {
     fontFamily: OX,
     fontSize: 14,
@@ -167,6 +181,20 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
     color: "rgba(255,255,255,0.35)",
     textTransform: "uppercase",
+  },
+  titleRow: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    gap: 8,
+  },
+  seasonInline: {
+    marginTop: 0,
+    fontSize: 14,
+    letterSpacing: 2.4,
+  },
+  brandLogo: {
+    marginTop: 10,
+    opacity: 0.9,
   },
   card: {
     borderRadius: 2,
@@ -196,14 +224,15 @@ const styles = StyleSheet.create({
     flexShrink: 0,
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 8,
+    paddingVertical: 5,
     position: "relative",
   },
+  /** 1〜15 位が 1 画面に収まる行高（約 33pt） */
   teamCol: {
     flex: 1,
     minWidth: 0,
     paddingHorizontal: 8,
-    paddingVertical: 8,
+    paddingVertical: 5,
     justifyContent: "center",
   },
   colLabel: {

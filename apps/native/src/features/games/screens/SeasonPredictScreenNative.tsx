@@ -413,7 +413,10 @@ export default function SeasonPredictScreenNative() {
           </View>
         ) : standingsMode === "view" ? (
           <View style={{ gap: 12 }}>
-            <NbaSeasonStandingsViewPanelNative prediction={standings} />
+            <NbaSeasonStandingsViewPanelNative
+              prediction={standings}
+              showBrandLogo
+            />
             {submitOpen ? (
               <Pressable
                 onPress={() => {
@@ -471,6 +474,7 @@ export default function SeasonPredictScreenNative() {
           <NbaSeasonAwardsViewPanelNative
             prediction={awards}
             catalog={candidates.length > 0 ? candidates : undefined}
+            showBrandLogo
           />
           {submitOpen ? (
             <Pressable

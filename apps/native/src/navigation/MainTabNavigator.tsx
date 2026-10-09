@@ -1,4 +1,10 @@
-import { StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import CyberHelpMarkNative from "../ui/CyberHelpMarkNative";
+import {
+  getAppBrandShelfHelpAction,
+  subscribeAppBrandShelfHelpAction,
+} from "../../../../lib/ui/appBrandShelfHelpAction";
 import {
   useCallback,
   useEffect,
@@ -102,6 +108,12 @@ export default function MainTabNavigator() {
     wordmark !== DEFAULT_HEADER_WORDMARK
       ? wordmark
       : (wordmarkOverride ?? wordmark);
+  const shelfHelpAction = useSyncExternalStore(
+    subscribeAppBrandShelfHelpAction,
+    getAppBrandShelfHelpAction,
+    () => null
+  );
+  const insets = useSafeAreaInsets();
   const tabTransitionQuiet = useSyncExternalStore(
     subscribeTutorialTabTransitionQuiet,
     getTutorialTabTransitionQuiet,
@@ -207,6 +219,21 @@ export default function MainTabNavigator() {
             />
           </View>
         ) : null}
+        {shelfRendered && !brandShelfHidden && shelfHelpAction ? (
+          <Pressable
+            onPress={shelfHelpAction.onPress}
+            accessibilityRole="button"
+            accessibilityLabel="説明"
+            hitSlop={6}
+            style={({ pressed }) => [
+              styles.shelfHelpBtn,
+              { top: insets.top + 8 },
+              pressed ? styles.shelfHelpBtnPressed : null,
+            ]}
+          >
+            <CyberHelpMarkNative active={false} />
+          </Pressable>
+        ) : null}
         {splashGateOpen && SplashGate ? (
           <SplashGate onDone={onSplashDone} />
         ) : null}
@@ -236,5 +263,18 @@ const styles = StyleSheet.create({
   /** サブページ中は見た目だけ消す（タブ側の padding は残る） */
   shelfHold: {
     opacity: 0,
+  },
+  /** 棚のワードマーク行（U マークと同じ 40px）の右端 */
+  shelfHelpBtn: {
+    position: "absolute",
+    right: 18,
+    width: 40,
+    height: 40,
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 21,
+  },
+  shelfHelpBtnPressed: {
+    opacity: 0.85,
   },
 });
