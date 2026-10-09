@@ -30,7 +30,7 @@ export default function AppStoreUpdatePromptNative() {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    if (Platform.OS !== "ios") return;
+    if (__DEV__ || Platform.OS !== "ios") return;
     if (Constants.executionEnvironment === ExecutionEnvironment.StoreClient) return;
     const appId = getAppStoreAppId();
     const installed = Constants.expoConfig?.version ?? null;
