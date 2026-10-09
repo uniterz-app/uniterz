@@ -48,15 +48,15 @@ export default function NbaSeasonAwardsViewPanelNative({
   return (
     <View>
       <View style={styles.header}>
+        {showBrandLogo ? (
+          <UniterzLogoNative width={132} style={styles.brandLogo} />
+        ) : null}
         <View style={styles.titleRow}>
           <Text style={styles.h2}>Your awards</Text>
           <Text style={[styles.season, styles.seasonInline]}>
             {prediction.season}
           </Text>
         </View>
-        {showBrandLogo ? (
-          <UniterzLogoNative width={132} style={styles.brandLogo} />
-        ) : null}
       </View>
 
       <View style={styles.list}>
@@ -133,7 +133,7 @@ const styles = StyleSheet.create({
     letterSpacing: 2.4,
   },
   brandLogo: {
-    marginTop: 10,
+    marginBottom: 10,
     opacity: 0.9,
   },
   list: {
