@@ -1,13 +1,10 @@
 /** Web `NbaSeasonStandingsViewPanel` 相当（順位 | West | East、列区切りあり） */
+import { LinearGradient } from "expo-linear-gradient";
 import { StyleSheet, Text, View } from "react-native";
-import JerseyMarkSvg from "../../JerseyMarkSvg";
 import UniterzLogoNative from "../../../profile/UniterzLogoNative";
 import { NBA_STANDINGS_RANKS } from "../../../../../../../lib/nba/nbaConferenceTeams";
 import { getNbaTeamNicknameById } from "../../../../../../../lib/nba-team-names";
-import {
-  getTeamJerseyPrimaryColor,
-  getTeamJerseySecondaryColor,
-} from "../../../../../../../lib/team-colors";
+import { getTeamJerseyPrimaryColor } from "../../../../../../../lib/team-colors";
 import type {
   NbaSeasonStandingsPrediction,
   NbaStandingsRank,
@@ -35,10 +32,28 @@ function bandForRank(rank: NbaStandingsRank): Band {
   return "out";
 }
 
-function bandBar(band: Band): string {
-  if (band === "straight") return "#00E5FF";
-  if (band === "playin") return "#2DFF6E";
-  return "rgba(255,255,255,0.18)";
+function hexToRgba(hex: string, alpha: number): string {
+  const raw = hex.replace("#", "").trim();
+  if (raw.length !== 6) return `rgba(0,245,255,${alpha})`;
+  const r = Number.parseInt(raw.slice(0, 2), 16);
+  const g = Number.parseInt(raw.slice(2, 4), 16);
+  const b = Number.parseInt(raw.slice(4, 6), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+function TeamTint({ teamId }: { teamId: string | null | undefined }) {
+  if (!teamId) return null;
+  const primary = getTeamJerseyPrimaryColor("nba", teamId);
+  return (
+    <LinearGradient
+      colors={[hexToRgba(primary, 0.38), hexToRgba(primary, 0.18), "rgba(0,0,0,0)"]}
+      locations={[0, 0.45, 1]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 0 }}
+      pointerEvents="none"
+      style={StyleSheet.absoluteFillObject}
+    />
+  );
 }
 
 function bandRankColor(band: Band): string {
@@ -65,12 +80,6 @@ function TeamCell({
 
   return (
     <View style={styles.teamCell}>
-      <JerseyMarkSvg
-        accent={getTeamJerseyPrimaryColor("nba", teamId)}
-        accentEnd={getTeamJerseySecondaryColor("nba", teamId)}
-        size={22}
-        density="coarse"
-      />
       <Text style={styles.viewTeam} numberOfLines={1}>
         {getNbaTeamNicknameById(teamId).toUpperCase()}
       </Text>
@@ -101,13 +110,14 @@ function CombinedRow({
   return (
     <View style={[styles.dataRow, !isLast ? styles.rowBorder : null]}>
       <View style={[styles.rankCol, styles.colDivider]}>
-        <View style={[styles.bandBar, { backgroundColor: bandBar(band) }]} />
         <Text style={[styles.viewRank, { color: bandRankColor(band) }]}>{rank}</Text>
       </View>
       <View style={[styles.teamCol, styles.colDivider]}>
+        <TeamTint teamId={westTeamId} />
         <TeamCell teamId={westTeamId} officialTeamId={westOfficialTeamId} />
       </View>
       <View style={styles.teamCol}>
+        <TeamTint teamId={eastTeamId} />
         <TeamCell teamId={eastTeamId} officialTeamId={eastOfficialTeamId} />
       </View>
     </View>
@@ -200,7 +210,7 @@ const styles = StyleSheet.create({
     borderRadius: 2,
     borderWidth: 1,
     borderColor: "rgba(103,232,249,0.2)",
-    backgroundColor: "#000000",
+    backgroundColor: "rgba(0,0,0,0.55)",
     overflow: "hidden",
   },
   headerRow: {
@@ -224,15 +234,14 @@ const styles = StyleSheet.create({
     flexShrink: 0,
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 5,
+    paddingVertical: 10,
     position: "relative",
   },
-  /** 1〜15 位が 1 画面に収まる行高（約 33pt） */
   teamCol: {
     flex: 1,
     minWidth: 0,
-    paddingHorizontal: 8,
-    paddingVertical: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
     justifyContent: "center",
   },
   colLabel: {
@@ -245,7 +254,6 @@ const styles = StyleSheet.create({
   },
   colLabelWest: { color: "rgba(252,211,77,0.8)" },
   colLabelEast: { color: "rgba(103,232,249,0.8)" },
-  bandBar: { position: "absolute", left: 0, top: 0, bottom: 0, width: 3 },
   viewRank: {
     fontFamily: OX,
     fontSize: 12,
@@ -263,7 +271,7 @@ const styles = StyleSheet.create({
     ...MATCH_CARD_BRACKET_TEXT,
     flex: 1,
     minWidth: 0,
-    fontSize: 12,
+    fontSize: 13,
     letterSpacing: MATCH_CARD_BRACKET_LETTER_SPACING_12,
     color: "#fff",
     textTransform: "uppercase",
