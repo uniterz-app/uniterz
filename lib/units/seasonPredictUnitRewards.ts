@@ -9,7 +9,7 @@ export const SEASON_PREDICT_UNIT_MAX_RANK = 20;
 
 /**
  * 順位予想ランキング / アワード予想ランキングで共通。
- * index 0 = 1位。同点同順位のときは同額（既存ランキング Unit と同じ）。
+ * index 0 = 1位。同点は最終提出（予想 doc の `updatedAt`）が早い方を上位にして順位を一意にする。
  */
 export const SEASON_PREDICT_UNITS_BY_RANK: readonly number[] = [
   200, // 1

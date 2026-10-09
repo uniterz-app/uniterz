@@ -18,10 +18,12 @@ export const SEASON_STANDINGS_SCORE_PREVIEW = SEASON_STANDINGS_SCORE;
 /** アワード種数（`NBA_SEASON_AWARD_DEFS.length` と一致させる） */
 export const SEASON_AWARDS_COUNT = 7;
 
-/** アワード予想: 公式受賞者との完全一致のみ */
+/** アワード予想: 公式最終投票順位で加点（受賞 / 2 位 / 3 位） */
 export const SEASON_AWARDS_SCORE = {
-  exact: 25,
-  maxTotal: 25 * SEASON_AWARDS_COUNT,
+  exact: 5,
+  second: 2,
+  third: 1,
+  maxTotal: 5 * SEASON_AWARDS_COUNT,
 } as const;
 
 /** @deprecated 互換エイリアス — `SEASON_AWARDS_SCORE` を使う */
