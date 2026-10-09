@@ -25,6 +25,10 @@ import {
   buildMyRankMiniMetrics,
 } from "../../../../../lib/rankings/buildMyRankMiniMetrics";
 import { resolveMyRankForCard, getMyMetricValue, computeWinRateMinPosts } from "../../../../../lib/rankings/rankingsPageShared";
+import {
+  rankingsPreseasonNotice,
+  shouldShowRankingsPreseasonNotice,
+} from "../../../../../lib/rankings/rankingsPreseasonNotice";
 import { buildRankTierGapHint } from "../../../../../lib/rankings/rankTierMilestone";
 import { sortRankingRowsByMetric } from "../../../../../lib/rankings/sortRankingRows";
 import {
@@ -575,6 +579,12 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
               <View style={styles.loadingWrap}>
                 <CandleChartLoaderNative scale={0.85} label={t.loading} />
               </View>
+            ) : shouldShowRankingsPreseasonNotice(rankingHasNoEntries) ? (
+              <View style={styles.noDataWrap}>
+                <Text style={styles.preseasonNotice}>
+                  {rankingsPreseasonNotice(language)}
+                </Text>
+              </View>
             ) : rankingHasNoEntries ? (
               <View style={styles.noDataWrap}>
                 <Text
@@ -773,6 +783,13 @@ const styles = StyleSheet.create({
   },
   noDataPro: {
     color: PRO_LEAGUE_ATMOSPHERE.noData,
+  },
+  preseasonNotice: {
+    color: "rgba(255,255,255,0.45)",
+    fontSize: 12,
+    lineHeight: 18,
+    textAlign: "center",
+    paddingHorizontal: 16,
   },
   listSection: {
     marginTop: 4,

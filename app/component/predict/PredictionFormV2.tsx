@@ -79,6 +79,7 @@ import {
   PREDICT_OVERLAY_SUBMIT_BTN_DISABLED_CLASS,
 } from "@/lib/ui/predictOverlayCyber";
 import { predictHudTabButtonClass } from "@/lib/predict/predictOverlayHud";
+import { isProInsightPreseasonPhase } from "@/lib/predict/proInsightGateCopy";
 import PredictionScoringRulesChip from "@/app/component/predict/PredictionScoringRulesChip";
 import TutorialPredictAnnotator from "@/app/component/tutorial/TutorialPredictAnnotator";
 import { TUTORIAL_CYAN } from "@/lib/tutorial/tutorialMotion";
@@ -1174,6 +1175,7 @@ export default function PredictionFormV2({
                 }
                 fromPredictGameId={gameId}
                 predictReturnMode={inOverlay ? "overlay" : "route"}
+                preseason={isProInsightPreseasonPhase(game.seasonPhase)}
               />
             </div>
           </motion.div>

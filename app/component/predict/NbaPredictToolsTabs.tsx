@@ -25,6 +25,7 @@ import { t } from "@/lib/i18n/t";
 import { useAuth } from "@/app/AuthProvider";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import { formatProInsightFirstReadyPending } from "@/lib/predict/proInsightFirstReadyCopy";
+import { proInsightPreseasonNotice } from "@/lib/predict/proInsightGateCopy";
 
 export type NbaPredictToolsTab = "insight" | "injuries" | "stats" | "roster";
 
@@ -47,12 +48,14 @@ type Props = {
   fromPredictGameId?: string;
   /** Games オーバーレイ vs /predict 専用ルート */
   predictReturnMode?: "overlay" | "route";
+  /** プレシーズン: INSIGHT は Free / Pro とも対象外表示（Pro 勧誘なし） */
+  preseason?: boolean;
   className?: string;
 };
 
 function PendingPanel({ text }: { text: string }) {
   return (
-    <div className="border border-white/35 bg-transparent px-4 py-8 text-center text-xs leading-relaxed text-white/40">
+    <div className="whitespace-pre-line border border-white/35 bg-transparent px-4 py-8 text-center text-xs leading-relaxed text-white/40">
       {text}
     </div>
   );
@@ -85,6 +88,7 @@ export default function NbaPredictToolsTabs({
   tipAtMs = null,
   fromPredictGameId,
   predictReturnMode = "route",
+  preseason = false,
   className = "",
 }: Props) {
   const m = t(language).predict;
@@ -138,7 +142,7 @@ export default function NbaPredictToolsTabs({
   } = useNbaMatchupProBrief({
     gameId: fromPredictGameId,
     override: brief,
-    enabled: visited.has("insight") && isPro,
+    enabled: visited.has("insight") && isPro && !preseason,
   });
 
   const { report: liveInjury, loading: injuryLoading } =
@@ -212,7 +216,9 @@ export default function NbaPredictToolsTabs({
       {tab ? (
         <div className="mt-1.5 min-h-30 px-0.5">
           {tab === "insight" ? (
-            !isPro ? (
+            preseason ? (
+              <PendingPanel text={proInsightPreseasonNotice(language)} />
+            ) : !isPro ? (
               <PredictProBriefPanel
                 brief={null}
                 language={language}

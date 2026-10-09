@@ -30,6 +30,9 @@ import {
   isResultPostMatchStarted,
 } from "@/lib/result/resultLiveGame";
 import { useResultCardClockMs } from "@/lib/hooks/useResultCardClockMs";
+import { useMatchScoreDisplayPrefs } from "@/lib/games/useMatchScoreDisplayPrefs";
+import { useResultCardLiveScore } from "@/lib/result/useResultCardLiveScore";
+import { auth } from "@/lib/firebase";
 
 export type ResultCardOpenAnchor = { clientX: number; clientY: number };
 
@@ -121,6 +124,15 @@ function ResultCardPresentationImpl({
   };
 
   const isLiveGame = isResultPostLiveGame(post, clock);
+  const { prefs: scorePrefs } = useMatchScoreDisplayPrefs(
+    viewerUid ?? auth.currentUser?.uid ?? null
+  );
+  const liveScore = useResultCardLiveScore({
+    gameId: post.gameId ?? null,
+    isNba: normalizedLeague === "nba",
+    live: isLiveGame,
+    showLiveScore: scorePrefs.showLiveScore,
+  });
 
   const isOwnerPredict = Boolean(
     viewerUid && post.authorUid === viewerUid && post.gameId
@@ -341,6 +353,7 @@ function ResultCardPresentationImpl({
         drawDelaySec={lineFrameDrawDelaySec}
         onOpen={embedded ? undefined : handle}
         live={isLiveGame}
+        liveScore={liveScore}
         othersCall={
           viewerUid != null &&
           typeof post.authorUid === "string" &&

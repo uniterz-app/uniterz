@@ -25,6 +25,9 @@ import { isResultPostLiveGame, isResultPostMatchStarted } from "../../../../../l
 import { resolvePkScoreFromResultPost } from "../../../../../lib/games/pkScore";
 import { getTeamAlias, splitTeamNameByLeague } from "../../utils/teamName";
 import { auth } from "../../lib/firebase";
+import { useResultCardLiveScore } from "../../../../../lib/result/useResultCardLiveScore";
+import { useMatchScoreDisplayPrefsNative } from "../games/useMatchScoreDisplayPrefsNative";
+import { getUniterzApiBaseUrl } from "../games/submitPredictionApi";
 import DeferredJerseyMarkNative from "../games/DeferredJerseyMarkNative";
 import CountryFlagNative from "../games/CountryFlagNative";
 import {
@@ -338,6 +341,15 @@ function ResultPostCardNativeInner({
     gameId: post.gameId,
   });
   const isWcCard = leagueKey === "wc";
+  const { prefs: scorePrefs } = useMatchScoreDisplayPrefsNative(callViewerUid);
+  const liveScore = useResultCardLiveScore({
+    gameId,
+    isNba: leagueKey === "nba",
+    live: showLiveMark,
+    showLiveScore: scorePrefs.showLiveScore,
+    apiBaseUrl: getUniterzApiBaseUrl(),
+    paused: pauseListFx,
+  });
   const postStageMeta = post as PostWithMillis & {
     wcStage?: string | null;
     roundLabel?: string | null;
@@ -805,6 +817,7 @@ function ResultPostCardNativeInner({
                   showDetailTab={!sharing}
                   pickup={faceModel.isPickup}
                   live={showLiveMark && !pauseListFx && !sharing}
+                  liveScore={liveScore}
                   deferJerseys
                   animateDraw={!reduceMotionList && entranceEnabled && !pauseListFx && !sharing}
                   drawDelayMs={listEnterIndex * RESULT_CARD_STAGGER_MS}

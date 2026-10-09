@@ -42,6 +42,10 @@ import { t } from "@/lib/i18n/t";
 import { resolveLocalizedLang } from "@/lib/i18n/localize";
 import RankingsScheduleNotice from "@/app/component/rankings/RankingsScheduleNotice";
 import { CyberNoDataPage } from "@/app/component/common/CyberNoDataLabel";
+import {
+  rankingsPreseasonNotice,
+  shouldShowRankingsPreseasonNotice,
+} from "@/lib/rankings/rankingsPreseasonNotice";
 import { useSearchParams } from "next/navigation";
 import {
   RANKINGS_TAB_METRIC_PARAM,
@@ -564,7 +568,18 @@ export default function MobileRankingsPage() {
           <CandleChartLoader className="px-3 pt-2" label={m.common.loading} />
         )}
 
-        {openProLocked ? null : rankingHasNoEntries ? (
+        {openProLocked ? null : shouldShowRankingsPreseasonNotice(
+            rankingHasNoEntries
+          ) ? (
+          <div
+            role="status"
+            className="flex min-h-[220px] w-full items-center justify-center px-6"
+          >
+            <p className="whitespace-pre-line text-center text-xs leading-relaxed text-white/45">
+              {rankingsPreseasonNotice(language)}
+            </p>
+          </div>
+        ) : rankingHasNoEntries ? (
           <CyberNoDataPage
             variant={nbaBoard === "open" ? "rankingsPro" : "rankings"}
           />

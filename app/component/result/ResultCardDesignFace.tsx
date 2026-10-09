@@ -273,17 +273,26 @@ export default function ResultCardDesignFace({
 
             <div
               className={`${styles.matchCenter} ${
-                liveCall
-                  ? styles.matchCenterLive
+                liveCall || showLiveScore
+                  ? `${styles.matchCenterLive} ${showLiveScore ? styles.matchCenterLiveScore : ""}`
                   : !showActual
                     ? styles.matchCenterPending
                     : ""
               }`}
             >
-              {liveCall ? (
-                <span className={styles.liveMarkSlot}>
-                  <LiveMatchMark density="matchDense" language={language} />
-                </span>
+              {liveCall || showLiveScore ? (
+                <>
+                  <span className={styles.liveMarkSlot}>
+                    <LiveMatchMark density="matchDense" language={language} />
+                  </span>
+                  {showLiveScore ? (
+                    <span className={`${styles.finalScore} ${matchScoreClass}`}>
+                      {liveScore.home}
+                      <span className={styles.finalDash}> — </span>
+                      {liveScore.away}
+                    </span>
+                  ) : null}
+                </>
               ) : (
                 <>
                   <span className={styles.skewWrap}>

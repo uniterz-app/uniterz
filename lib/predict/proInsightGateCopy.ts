@@ -30,6 +30,28 @@ export type ProInsightGateCopy = {
   proMemberAria: string;
 };
 
+/** Pro Insight はプレシーズンを生成しない（ingest の isProInsightEligibleNbaGame と同じ判定） */
+export function isProInsightPreseasonPhase(seasonPhase: unknown): boolean {
+  const phase = String(seasonPhase ?? "").trim().toLowerCase();
+  return phase === "preseason" || phase === "pre";
+}
+
+/** プレシーズンの INSIGHT タブ（Free / Pro 共通。Pro 勧誘は出さない） */
+export function proInsightPreseasonNotice(language: string | null | undefined): string {
+  const lang = resolveLocalizedLang(language);
+  return L(lang, {
+    ja: "プレシーズンは PRO INSIGHT の対象外です。\nレギュラーシーズン開幕から各試合の PRO INSIGHT をお届けします。",
+    en: "PRO INSIGHT isn't available for preseason games.\nIt starts with the regular season.",
+    ko: "프리시즌은 PRO INSIGHT 대상이 아닙니다.\n정규시즌 개막부터 경기별 PRO INSIGHT를 제공합니다.",
+    zh: "季前赛不提供 PRO INSIGHT。\n常规赛开幕后每场比赛都会提供。",
+    es: "PRO INSIGHT no está disponible en pretemporada.\nComienza con la temporada regular.",
+    pt: "O PRO INSIGHT não está disponível na pré-temporada.\nComeça com a temporada regular.",
+    fr: "PRO INSIGHT n’est pas disponible en présaison.\nIl démarre avec la saison régulière.",
+    de: "PRO INSIGHT ist in der Preseason nicht verfügbar.\nEs startet mit der regulären Saison.",
+    ar: "PRO INSIGHT غير متاح لمباريات ما قبل الموسم.\nيبدأ مع انطلاق الموسم العادي.",
+  });
+}
+
 export function proInsightGateCopy(
   language: string | null | undefined
 ): ProInsightGateCopy {

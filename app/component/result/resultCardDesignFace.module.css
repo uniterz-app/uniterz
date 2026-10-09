@@ -177,6 +177,11 @@
   padding-top: 12px;
 }
 
+/* 実スコア行が増える分、LIVE とスコアを上に寄せる */
+.matchCenterLiveScore {
+  padding-top: 0;
+}
+
 .liveMarkSlot {
   margin-bottom: 2px;
 }

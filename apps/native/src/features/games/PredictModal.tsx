@@ -57,6 +57,7 @@ import PredictionScoringRulesChipNative from "./PredictionScoringRulesChipNative
 import MatchListLineFrameNative from "./MatchListLineFrameNative";
 import { resultOutcomeLineFramePaint } from "@/lib/games/matchListLineFrame";
 import NbaPredictToolsTabsNative from "./predict/NbaPredictToolsTabsNative";
+import { isProInsightPreseasonPhase } from "../../../../../lib/predict/proInsightGateCopy";
 import LiveGameStatsPanelNative from "./live/LiveGameStatsPanelNative";
 import LiveGameStatsPlaceholderNative from "./live/LiveGameStatsPlaceholderNative";
 import { useLiveGameStats } from "../../../../../lib/games/useLiveGameStats";
@@ -1562,6 +1563,9 @@ export default function PredictModal({
                       onOpenTeamDetail={onOpenTeamDetail}
                       onOpenPlayerDetail={onOpenPlayerDetail}
                       onOpenProSubscribe={onOpenProSubscribe}
+                      preseason={isProInsightPreseasonPhase(
+                        predictData?.subjectGame?.seasonPhase
+                      )}
                     />
                   ) : (
               <View>

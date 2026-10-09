@@ -31,6 +31,7 @@ import type { MainTabParamList } from "../../../navigation/types";
 import { getUniterzApiBaseUrl } from "../submitPredictionApi";
 import { useNativeUserLanguageFromAuth } from "../../../i18n/useNativeUserLanguageFromAuth";
 import { formatProInsightFirstReadyPending } from "../../../../../../lib/predict/proInsightFirstReadyCopy";
+import { proInsightPreseasonNotice } from "../../../../../../lib/predict/proInsightGateCopy";
 import type { Language } from "../../../../../../lib/i18n/language";
 
 export type NbaPredictToolsTab = "insight" | "injuries" | "stats" | "roster";
@@ -58,6 +59,8 @@ type Props = {
   ) => void;
   /** RN Modal 内では navigate だけだと遷移先が Modal の裏に隠れるため、親で閉じてから遷移する */
   onOpenProSubscribe?: () => void;
+  /** プレシーズン: INSIGHT は Free / Pro とも対象外表示（Pro 勧誘なし） */
+  preseason?: boolean;
 };
 
 function PendingPanel({ text }: { text: string }) {
@@ -96,6 +99,7 @@ export default function NbaPredictToolsTabsNative({
   onOpenTeamDetail,
   onOpenPlayerDetail,
   onOpenProSubscribe,
+  preseason = false,
 }: Props) {
   const t = getGamesTexts(language);
   const loadingLabel = t.predictToolLoading;
@@ -133,7 +137,7 @@ export default function NbaPredictToolsTabsNative({
     gameId,
     override: brief,
     apiBaseUrl,
-    enabled: visited.has("insight") && isPro,
+    enabled: visited.has("insight") && isPro && !preseason,
   });
 
   const { report: liveInjury, loading: injuryLoading } =
@@ -234,7 +238,9 @@ export default function NbaPredictToolsTabsNative({
         {tab ? (
           <View style={styles.panel}>
             {tab === "insight" ? (
-              !isPro ? (
+              preseason ? (
+                <PendingPanel text={proInsightPreseasonNotice(language)} />
+              ) : !isPro ? (
                 <PredictProBriefPanelNative
                   brief={null}
                   language={language}

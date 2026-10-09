@@ -403,21 +403,37 @@ function MatchBlock({
       <Animated.View
         style={[
           styles.matchCenter,
-          liveCall
-            ? [styles.matchCenterLive, compact && compactStyles.matchCenterLive]
+          liveCall || showLiveScore
+            ? [
+                styles.matchCenterLive,
+                compact && compactStyles.matchCenterLive,
+                showLiveScore && styles.matchCenterLiveScore,
+                showLiveScore && compact && compactStyles.matchCenterLiveScore,
+              ]
             : !showActual
               ? [styles.matchCenterPending, compact && compactStyles.matchCenterPending]
               : null,
           motion?.centerBlockStyle,
         ]}
       >
-        {liveCall ? (
-          <View style={styles.liveMarkSlot}>
-            <LiveMarkPill
-              pillStyle={liveMarkPillCyberBase}
-              textStyle={liveMarkTextCyberBase}
-            />
-          </View>
+        {liveCall || showLiveScore ? (
+          <>
+            <View style={styles.liveMarkSlot}>
+              <LiveMarkPill
+                pillStyle={liveMarkPillCyberBase}
+                textStyle={liveMarkTextCyberBase}
+              />
+            </View>
+            {showLiveScore ? (
+              <Text style={[styles.finalScore, compact && compactStyles.finalScore]}>
+                {sample.liveHome}
+                <Text style={[styles.finalDash, compact && compactStyles.finalDash]}>
+                  {" — "}
+                </Text>
+                {sample.liveAway}
+              </Text>
+            ) : null}
+          </>
         ) : (
           <>
             <View style={styles.skewWrap}>
@@ -1495,6 +1511,10 @@ const styles = StyleSheet.create({
     gap: 4,
     paddingTop: 24,
   },
+  /** 実スコア行が増える分、LIVE とスコアを上に寄せる */
+  matchCenterLiveScore: {
+    paddingTop: 8,
+  },
   liveMarkSlot: {
     marginBottom: 2,
   },
@@ -1804,6 +1824,7 @@ const compactStyles = StyleSheet.create({
   teamNameSlant: { marginTop: 2, fontSize: 12 },
   matchCenterPending: { paddingTop: 8 },
   matchCenterLive: { paddingTop: 18 },
+  matchCenterLiveScore: { paddingTop: 4 },
   finalStatus: { fontSize: 10 },
   finalScore: { fontSize: 17, lineHeight: 19 },
   finalDash: { fontSize: 14 },
