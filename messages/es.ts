@@ -1115,6 +1115,13 @@ const es: Messages = {
     },
   },
 
+  appUpdate: {
+    title: "Actualización",
+    message: "Hay una versión nueva en el App Store.",
+    cta: "Actualizar",
+    later: "Ahora no",
+  },
+
   countries: {
     US: "Estados Unidos",
     JP: "Japón",

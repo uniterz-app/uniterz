@@ -31,6 +31,7 @@ import AppShellNative from "./src/components/AppShellNative";
 import TutorialRestartCoverNative from "./src/features/tutorial/TutorialRestartCoverNative";
 import MaintenanceGateNative from "./src/components/MaintenanceGateNative";
 import CyberAlertProvider from "./src/components/CyberAlertProvider";
+import AppStoreUpdatePromptNative from "./src/components/AppStoreUpdatePromptNative";
 import { APP_MESH_BG_FALLBACK } from "../../lib/app/appMeshBackground";
 import { ensureNativeSplashHeld } from "./src/bootstrap/nativeBootSplash";
 import { initNativeObservability } from "./src/observability/initNativeObservability";
@@ -116,6 +117,7 @@ export default function App() {
               <TutorialRestartCoverNative />
             </NavigationContainer>
           </AppShellNative>
+          <AppStoreUpdatePromptNative />
           </CyberAlertProvider>
           </NativeLanguageProvider>
         </FirebaseUserProvider>

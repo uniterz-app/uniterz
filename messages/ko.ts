@@ -1096,6 +1096,13 @@ const ko: Messages = {
     },
   },
 
+  appUpdate: {
+    title: "업데이트",
+    message: "App Store에 새 버전이 있습니다.",
+    cta: "업데이트",
+    later: "나중에",
+  },
+
   countries: {
     US: "미국", JP: "일본", CN: "중국", KR: "대한민국", TW: "대만", HK: "홍콩",
     SG: "싱가포르", TH: "태국", VN: "베트남", ID: "인도네시아", PH: "필리핀",

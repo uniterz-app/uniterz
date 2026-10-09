@@ -1111,6 +1111,13 @@ const de: Messages = {
     },
   },
 
+  appUpdate: {
+    title: "Update",
+    message: "Eine neue Version ist im App Store.",
+    cta: "Aktualisieren",
+    later: "Später",
+  },
+
   countries: {
     US: "Vereinigte Staaten",
     JP: "Japan",

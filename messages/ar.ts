@@ -1115,6 +1115,13 @@ const ar: Messages = {
     },
   },
 
+  appUpdate: {
+    title: "تحديث",
+    message: "يتوفر إصدار جديد على App Store.",
+    cta: "تحديث",
+    later: "لاحقاً",
+  },
+
   countries: {
     US: "الولايات المتحدة",
     JP: "اليابان",

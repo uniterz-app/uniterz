@@ -1113,6 +1113,13 @@ const en: Messages = {
     },
   },
 
+  appUpdate: {
+    title: "Update",
+    message: "A new version is on the App Store.",
+    cta: "Update",
+    later: "Later",
+  },
+
   countries: {
     US: "United States",
     JP: "Japan",

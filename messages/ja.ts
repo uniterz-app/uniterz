@@ -1108,6 +1108,13 @@ const ja = {
     },
   },
 
+  appUpdate: {
+    title: "アップデート",
+    message: "新しいバージョンが公開されています。\nApp Storeで更新できます。",
+    cta: "更新する",
+    later: "あとで",
+  },
+
   countries: {
     US: "アメリカ合衆国",
     JP: "日本",

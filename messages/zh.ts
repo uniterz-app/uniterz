@@ -1095,6 +1095,13 @@ const zh: Messages = {
     },
   },
 
+  appUpdate: {
+    title: "更新",
+    message: "App Store 已发布新版本。",
+    cta: "前往更新",
+    later: "稍后",
+  },
+
   countries: {
     US: "美国",
     JP: "日本",
