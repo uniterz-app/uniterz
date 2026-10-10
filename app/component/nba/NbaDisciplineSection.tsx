@@ -19,7 +19,10 @@ import {
   NBA_DISCIPLINE_SECTION_TITLE,
   type NbaDisciplineCell,
 } from "@/lib/nba/discipline/disciplineDetailCells";
-import { useNbaTeamDisciplineSeason } from "@/lib/nba/discipline/useNbaTeamDisciplineSeason";
+import {
+  useNbaPlayerDisciplineSeason,
+  useNbaTeamDisciplineSeason,
+} from "@/lib/nba/discipline/useNbaTeamDisciplineSeason";
 import NbaLeagueStatsSeasonNav from "@/app/component/stats/NbaLeagueStatsSeasonNav";
 
 function hexToRgba(hex: string, alpha: number): string {
@@ -378,6 +381,37 @@ export function NbaTeamDisciplineSection({
       lang={lang}
       showPlayerNames
       onPlayerClick={onPlayerClick}
+      season={{
+        seasonKey: s.seasonKey,
+        seasonKeys: s.seasonKeys,
+        onChange: s.setSeasonKey,
+        loading: s.loading,
+      }}
+    />
+  );
+}
+
+/** 選手詳細: 年切替付き */
+export function NbaPlayerDisciplineSection({
+  playerId,
+  initial,
+  accent,
+  isJa,
+  lang,
+}: {
+  playerId: string;
+  initial: NbaDisciplineDetailSlice;
+  accent: string;
+  isJa: boolean;
+  lang?: Language;
+}) {
+  const s = useNbaPlayerDisciplineSeason({ playerId, initial });
+  return (
+    <NbaDisciplineSection
+      slice={s.slice}
+      accent={accent}
+      isJa={isJa}
+      lang={lang}
       season={{
         seasonKey: s.seasonKey,
         seasonKeys: s.seasonKeys,

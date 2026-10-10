@@ -17,7 +17,10 @@ import {
   NBA_DISCIPLINE_SECTION_TITLE,
   type NbaDisciplineCell,
 } from "../../../../../lib/nba/discipline/disciplineDetailCells";
-import { useNbaTeamDisciplineSeason } from "../../../../../lib/nba/discipline/useNbaTeamDisciplineSeason";
+import {
+  useNbaPlayerDisciplineSeason,
+  useNbaTeamDisciplineSeason,
+} from "../../../../../lib/nba/discipline/useNbaTeamDisciplineSeason";
 import type { Language } from "../../../../../lib/i18n/language";
 import { METRIC_FONT } from "../rankings/rankingsUiTheme";
 import NbaLeagueStatsSeasonNavNative from "./NbaLeagueStatsSeasonNavNative";
@@ -351,6 +354,41 @@ export function NbaTeamDisciplineSectionNative({
       lang={lang}
       showPlayerNames
       onPlayerPress={onPlayerPress}
+      season={{
+        seasonKey: s.seasonKey,
+        seasonKeys: s.seasonKeys,
+        onChange: s.setSeasonKey,
+        loading: s.loading,
+      }}
+    />
+  );
+}
+
+/** Web `NbaPlayerDisciplineSection` 相当 */
+export function NbaPlayerDisciplineSectionNative({
+  playerId,
+  initial,
+  accent,
+  isJa,
+  lang,
+}: {
+  playerId: string;
+  initial: NbaDisciplineDetailSlice;
+  accent: string;
+  isJa: boolean;
+  lang?: Language;
+}) {
+  const s = useNbaPlayerDisciplineSeason({
+    playerId,
+    initial,
+    apiBaseUrl: getUniterzApiBaseUrl(),
+  });
+  return (
+    <NbaDisciplineSectionNative
+      slice={s.slice}
+      accent={accent}
+      isJa={isJa}
+      lang={lang}
       season={{
         seasonKey: s.seasonKey,
         seasonKeys: s.seasonKeys,

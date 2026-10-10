@@ -1,32 +1,36 @@
 "use client";
 
 /**
- * チーム詳細 DISCIPLINE の年切替（Web / Native 共通）。
- * 初期シーズンは team-detail 同梱の切片、他は `/api/nba/team-discipline`。
+ * チーム詳細 / 選手詳細 DISCIPLINE の年切替（Web / Native 共通）。
+ * 初期シーズンは team-detail / player-detail 同梱の切片、
+ * 他は `/api/nba/team-discipline` / `/api/nba/player-discipline`。
  */
 import { useEffect, useMemo, useState } from "react";
 import type { NbaDisciplineDetailSlice } from "@/lib/nba/discipline/disciplineTypes";
 import { nbaLeagueStatsSeasonKeys } from "@/lib/rankings/nbaSeason";
 
+type DisciplineSubject = "team" | "player";
+
 const cache = new Map<string, Promise<NbaDisciplineDetailSlice | null>>();
 
-function fetchTeamDiscipline(
+function fetchDiscipline(
   apiBaseUrl: string | null | undefined,
-  teamId: string,
+  subject: DisciplineSubject,
+  id: string,
   season: string
 ): Promise<NbaDisciplineDetailSlice | null> {
   const root = (apiBaseUrl ?? "").replace(/\/$/, "");
-  const key = `${root}|${teamId}|${season}`;
+  const key = `${root}|${subject}|${id}|${season}`;
   let hit = cache.get(key);
   if (!hit) {
-    const qs = new URLSearchParams({ team: teamId, season });
-    hit = fetch(`${root}/api/nba/team-discipline?${qs.toString()}`)
+    const qs = new URLSearchParams({ [subject]: id, season });
+    hit = fetch(`${root}/api/nba/${subject}-discipline?${qs.toString()}`)
       .then(async (res) => {
         const data = (await res.json().catch(() => ({}))) as {
           ok?: boolean;
           discipline?: NbaDisciplineDetailSlice | null;
         };
-        if (!res.ok || !data.ok) throw new Error(`team discipline (${res.status})`);
+        if (!res.ok || !data.ok) throw new Error(`${subject} discipline (${res.status})`);
         return data.discipline ?? null;
       })
       .catch((e) => {
@@ -38,18 +42,21 @@ function fetchTeamDiscipline(
   return hit;
 }
 
-export function useNbaTeamDisciplineSeason(options: {
-  teamId: string;
-  initial: NbaDisciplineDetailSlice;
-  apiBaseUrl?: string | null;
-}): {
+export type NbaDisciplineSeasonState = {
   seasonKey: string;
   seasonKeys: readonly string[];
   setSeasonKey: (seasonKey: string) => void;
   slice: NbaDisciplineDetailSlice | null;
   loading: boolean;
-} {
-  const { teamId, initial, apiBaseUrl } = options;
+};
+
+export function useNbaDisciplineSeason(options: {
+  subject: DisciplineSubject;
+  id: string;
+  initial: NbaDisciplineDetailSlice;
+  apiBaseUrl?: string | null;
+}): NbaDisciplineSeasonState {
+  const { subject, id, initial, apiBaseUrl } = options;
   const seasonKeys = useMemo(
     () => nbaLeagueStatsSeasonKeys(initial.season),
     [initial.season]
@@ -62,15 +69,15 @@ export function useNbaTeamDisciplineSeason(options: {
 
   useEffect(() => {
     setSeasonKey(initial.season);
-  }, [teamId, initial.season]);
+  }, [subject, id, initial.season]);
 
   const isInitial = seasonKey === initial.season;
-  const fetchKey = `${teamId}|${seasonKey}`;
+  const fetchKey = `${subject}|${id}|${seasonKey}`;
 
   useEffect(() => {
     if (isInitial) return;
     let cancelled = false;
-    void fetchTeamDiscipline(apiBaseUrl, teamId, seasonKey)
+    void fetchDiscipline(apiBaseUrl, subject, id, seasonKey)
       .then((slice) => {
         if (!cancelled) setFetched({ key: fetchKey, slice });
       })
@@ -80,7 +87,7 @@ export function useNbaTeamDisciplineSeason(options: {
     return () => {
       cancelled = true;
     };
-  }, [apiBaseUrl, teamId, seasonKey, isInitial, fetchKey]);
+  }, [apiBaseUrl, subject, id, seasonKey, isInitial, fetchKey]);
 
   const ready = isInitial || fetched?.key === fetchKey;
   return {
@@ -90,4 +97,30 @@ export function useNbaTeamDisciplineSeason(options: {
     slice: isInitial ? initial : ready ? (fetched?.slice ?? null) : null,
     loading: !ready,
   };
+}
+
+export function useNbaTeamDisciplineSeason(options: {
+  teamId: string;
+  initial: NbaDisciplineDetailSlice;
+  apiBaseUrl?: string | null;
+}): NbaDisciplineSeasonState {
+  return useNbaDisciplineSeason({
+    subject: "team",
+    id: options.teamId,
+    initial: options.initial,
+    apiBaseUrl: options.apiBaseUrl,
+  });
+}
+
+export function useNbaPlayerDisciplineSeason(options: {
+  playerId: string;
+  initial: NbaDisciplineDetailSlice;
+  apiBaseUrl?: string | null;
+}): NbaDisciplineSeasonState {
+  return useNbaDisciplineSeason({
+    subject: "player",
+    id: options.playerId,
+    initial: options.initial,
+    apiBaseUrl: options.apiBaseUrl,
+  });
 }

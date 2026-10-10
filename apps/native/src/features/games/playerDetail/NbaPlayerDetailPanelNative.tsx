@@ -92,7 +92,7 @@ import { METRIC_FONT } from "../../rankings/rankingsUiTheme";
 import { profileOverviewChartNoDataStyle } from "../../profile/profileOverviewChartShell";
 import JerseyMarkSvg from "../JerseyMarkSvg";
 import NbaFavoriteStarButtonNative from "../NbaFavoriteStarButtonNative";
-import { NbaDisciplineSectionNative } from "../NbaDisciplineSectionNative";
+import { NbaPlayerDisciplineSectionNative } from "../NbaDisciplineSectionNative";
 import { resolveLocalizedLang } from "../../../../../../lib/i18n/localize";
 import NbaPlayerHowTheyPlayNative from "./NbaPlayerHowTheyPlayNative";
 import { useLeagueTeamStatsBundle } from "../../../../../../lib/nba/useLeagueTeamStatsBundle";
@@ -1688,11 +1688,12 @@ export default function NbaPlayerDetailPanelNative({
         ) : null}
         <GameLogsSection logs={detail.gameLogs} accent={accent} />
 
-        {discipline ? (
+        {discipline && playerId ? (
           <>
             <View style={[styles.divider, { backgroundColor: dividerColor }]} />
-            <NbaDisciplineSectionNative
-              slice={discipline}
+            <NbaPlayerDisciplineSectionNative
+              playerId={playerId}
+              initial={discipline}
               accent={accent}
               isJa={isJa}
               lang={resolveLocalizedLang(language)}

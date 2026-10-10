@@ -7,7 +7,7 @@ import { resolveLocalizedLang } from "@/lib/i18n/localize";
 import HalftoneJerseyMark from "@/app/component/games/HalftoneJerseyMark";
 import CountryFlag from "@/app/component/games/CountryFlag";
 import NbaFavoriteStarButton from "@/app/component/nba/NbaFavoriteStarButton";
-import { NbaDisciplineSection } from "@/app/component/nba/NbaDisciplineSection";
+import { NbaPlayerDisciplineSection } from "@/app/component/nba/NbaDisciplineSection";
 import {
   getTeamJerseyPrimaryColor,
   getTeamJerseySecondaryColor,
@@ -1682,14 +1682,15 @@ export default function NbaPlayerDetailPanel({
       ) : null}
       <GameLogs logs={detail.gameLogs} accent={uiAccent} />
 
-      {discipline ? (
+      {discipline && playerId ? (
         <>
           <div
             className="h-px"
             style={{ backgroundColor: hexToRgba(uiAccent, 0.2) }}
           />
-          <NbaDisciplineSection
-            slice={discipline}
+          <NbaPlayerDisciplineSection
+            playerId={playerId}
+            initial={discipline}
             accent={uiAccent}
             isJa={isJa}
             lang={lang}
