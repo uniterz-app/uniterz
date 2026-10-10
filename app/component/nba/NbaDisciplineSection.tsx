@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { nameOxanium } from "@/lib/fonts";
+import { jp, nameOxanium } from "@/lib/fonts";
 import type { Language } from "@/lib/i18n/language";
 import type {
   NbaDisciplineDetailSlice,
@@ -36,10 +36,12 @@ function CellRow({
   cells,
   accent,
   leagueLabel,
+  ja,
 }: {
   cells: NbaDisciplineCell[];
   accent: string;
   leagueLabel: string;
+  ja: boolean;
 }) {
   return (
     <div className="grid grid-cols-5 gap-1.5">
@@ -66,7 +68,7 @@ function CellRow({
               {c.display}
             </p>
             <p
-              className={`${nameOxanium.className} text-[9px] font-bold tabular-nums`}
+              className={`${ja ? jp.className : nameOxanium.className} text-[9px] font-bold tabular-nums`}
               style={{ color: hot ? accent : "rgba(255,255,255,0.35)" }}
             >
               {c.rank != null ? `${leagueLabel} #${c.rank}` : "\u00a0"}
@@ -83,11 +85,13 @@ function PhaseToggle({
   onChange,
   accent,
   labels,
+  ja,
 }: {
   phase: NbaDisciplineSeasonType;
   onChange: (p: NbaDisciplineSeasonType) => void;
   accent: string;
   labels: Record<NbaDisciplineSeasonType, string>;
+  ja: boolean;
 }) {
   return (
     <div className="flex gap-4">
@@ -98,7 +102,7 @@ function PhaseToggle({
             key={p}
             type="button"
             onClick={() => onChange(p)}
-            className={`${nameOxanium.className} border-b-2 pb-0.5 text-[10px] font-bold uppercase tracking-[0.14em] transition-colors`}
+            className={`${ja ? `${jp.className} tracking-[0.04em]` : `${nameOxanium.className} tracking-[0.14em]`} border-b-2 pb-0.5 text-[10px] font-bold uppercase transition-colors`}
             style={{
               borderColor: on ? accent : "transparent",
               color: on ? "#fff" : "rgba(255,255,255,0.4)",
@@ -118,19 +122,21 @@ function ExpandButton({
   onToggle,
   accent,
   copy,
+  ja,
 }: {
   expanded: boolean;
   total: number;
   onToggle: () => void;
   accent: string;
   copy: ReturnType<typeof disciplineSectionCopy>;
+  ja: boolean;
 }) {
   if (total <= NBA_DISCIPLINE_COLLAPSED_ROWS) return null;
   return (
     <button
       type="button"
       onClick={onToggle}
-      className={`${nameOxanium.className} w-full py-1.5 text-center text-[10px] font-bold uppercase tracking-[0.14em]`}
+      className={`${ja ? `${jp.className} tracking-[0.04em]` : `${nameOxanium.className} tracking-[0.14em]`} w-full py-1.5 text-center text-[10px] font-bold uppercase`}
       style={{ color: accent, borderTop: `1px solid ${hexToRgba(accent, 0.15)}` }}
     >
       {expanded ? copy.showLess : copy.showAll(total)}
@@ -166,6 +172,11 @@ export function NbaDisciplineSection({
   };
 }) {
   const copy = disciplineSectionCopy(isJa);
+  const bodyLang: Language = lang ?? (isJa ? "ja" : "en");
+  const jaCls = isJa ? jp.className : "";
+  const subLabel = isJa
+    ? `${jp.className} text-[9px] font-bold tracking-[0.04em] text-white/45`
+    : SUB_LABEL;
   const hasPlayoffs = slice ? disciplineHasPlayoffs(slice) : false;
   const [phase, setPhase] = useState<NbaDisciplineSeasonType>("regular");
   const [playersOpen, setPlayersOpen] = useState(false);
@@ -182,7 +193,7 @@ export function NbaDisciplineSection({
     ? buildDisciplineCells(slice[activePhase], slice.ranks?.[activePhase])
     : [];
   const playerRows = slice?.players ? disciplinePlayerRows(slice, activePhase) : [];
-  const fines = slice ? disciplineFineLines(slice, activePhase, lang ?? (isJa ? "ja" : "en")) : [];
+  const fines = slice ? disciplineFineLines(slice, activePhase, bodyLang) : [];
   const shownPlayers = playersOpen
     ? playerRows
     : playerRows.slice(0, NBA_DISCIPLINE_COLLAPSED_ROWS);
@@ -214,7 +225,7 @@ export function NbaDisciplineSection({
       </div>
 
       {!slice ? (
-        <p className="py-4 text-center text-[11px] text-white/40">
+        <p className={`${jaCls} py-4 text-center text-[11px] text-white/40`}>
           {season?.loading ? copy.loading : copy.empty}
         </p>
       ) : (
@@ -225,23 +236,26 @@ export function NbaDisciplineSection({
               onChange={setPhase}
               accent={accent}
               labels={{ regular: copy.regular, playoffs: copy.playoffs }}
+              ja={isJa}
             />
           ) : null}
 
-          <CellRow cells={cells} accent={accent} leagueLabel={copy.league} />
+          <CellRow cells={cells} accent={accent} leagueLabel={copy.league} ja={isJa} />
 
           {empty ? (
-            <p className="py-2 text-center text-[11px] text-white/40">{copy.empty}</p>
+            <p className={`${jaCls} py-2 text-center text-[11px] text-white/40`}>{copy.empty}</p>
           ) : null}
 
           {shownPlayers.length > 0 ? (
             <div className="space-y-1.5">
-              <p className={SUB_LABEL}>{copy.players}</p>
+              <p className={subLabel}>{copy.players}</p>
               <div className="border bg-black/40" style={boxStyle}>
                 <div
                   className={`${nameOxanium.className} grid grid-cols-[minmax(0,1fr)_26px_26px_26px_30px_52px] gap-1 px-2.5 py-1.5 text-[9px] font-bold uppercase tracking-[0.12em] text-white/40`}
                 >
-                  <span>{copy.player}</span>
+                  <span className={isJa ? `${jp.className} tracking-[0.04em]` : undefined}>
+                    {copy.player}
+                  </span>
                   <span className="text-right">T</span>
                   <span className="text-right">F</span>
                   <span className="text-right">E</span>
@@ -275,6 +289,7 @@ export function NbaDisciplineSection({
                   onToggle={() => setPlayersOpen((v) => !v)}
                   accent={accent}
                   copy={copy}
+                  ja={isJa}
                 />
               </div>
             </div>
@@ -282,7 +297,7 @@ export function NbaDisciplineSection({
 
           {shownFines.length > 0 ? (
             <div className="space-y-1.5">
-              <p className={SUB_LABEL}>
+              <p className={subLabel}>
                 {copy.fineLog} · {fines.length}
               </p>
               <div className="border bg-black/40" style={boxStyle}>
@@ -308,7 +323,9 @@ export function NbaDisciplineSection({
                           {f.playerName}
                         </button>
                       ) : null}
-                      <span className={f.suspension ? "text-white/80" : "text-white/60"}>
+                      <span
+                        className={`${bodyLang === "ja" ? jp.className : ""} ${f.suspension ? "text-white/80" : "text-white/60"}`}
+                      >
                         {f.reason}
                       </span>
                     </span>
@@ -326,6 +343,7 @@ export function NbaDisciplineSection({
                   onToggle={() => setFinesOpen((v) => !v)}
                   accent={accent}
                   copy={copy}
+                  ja={isJa}
                 />
               </div>
             </div>
@@ -333,7 +351,7 @@ export function NbaDisciplineSection({
         </>
       )}
 
-      <p className="text-[10px] leading-snug text-white/35">{copy.note}</p>
+      <p className={`${jaCls} text-[10px] leading-snug text-white/35`}>{copy.note}</p>
     </section>
   );
 }

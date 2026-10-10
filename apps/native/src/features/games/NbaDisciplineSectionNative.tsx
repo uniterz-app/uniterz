@@ -23,6 +23,10 @@ import { METRIC_FONT } from "../rankings/rankingsUiTheme";
 import NbaLeagueStatsSeasonNavNative from "./NbaLeagueStatsSeasonNavNative";
 import { getUniterzApiBaseUrl } from "./submitPredictionApi";
 
+/** アプリ日本語の基準フォント（Web `jp`）。Oxanium は和文グリフを持たない */
+const JA_LABEL_FONT = "NotoSansJP_700Bold";
+const JA_BODY_FONT = "NotoSansJP_400Regular";
+
 function hexToRgba(hex: string, alpha: number): string {
   const h = hex.replace("#", "");
   const full = h.length === 3 ? h.split("").map((c) => c + c).join("") : h;
@@ -37,10 +41,12 @@ function CellRow({
   cells,
   accent,
   leagueLabel,
+  ja,
 }: {
   cells: NbaDisciplineCell[];
   accent: string;
   leagueLabel: string;
+  ja: boolean;
 }) {
   return (
     <View style={styles.cellRow}>
@@ -59,7 +65,7 @@ function CellRow({
             <Text style={styles.cellValue} numberOfLines={1} adjustsFontSizeToFit>
               {c.display}
             </Text>
-            <Text style={[styles.cellRank, hot ? { color: accent } : null]}>
+            <Text style={[styles.cellRank, ja ? styles.jaLabel : null, hot ? { color: accent } : null]}>
               {c.rank != null ? `${leagueLabel} #${c.rank}` : " "}
             </Text>
           </View>
@@ -74,11 +80,13 @@ function PhaseToggle({
   onChange,
   accent,
   copy,
+  ja,
 }: {
   phase: NbaDisciplineSeasonType;
   onChange: (p: NbaDisciplineSeasonType) => void;
   accent: string;
   copy: Copy;
+  ja: boolean;
 }) {
   return (
     <View style={styles.phaseRow}>
@@ -90,7 +98,7 @@ function PhaseToggle({
             onPress={() => onChange(p)}
             style={[styles.phaseBtn, { borderBottomColor: on ? accent : "transparent" }]}
           >
-            <Text style={[styles.phaseText, on ? styles.phaseTextOn : null]}>
+            <Text style={[styles.phaseText, ja ? styles.jaLabel : null, on ? styles.phaseTextOn : null]}>
               {p === "regular" ? copy.regular : copy.playoffs}
             </Text>
           </Pressable>
@@ -106,12 +114,14 @@ function ExpandButton({
   onToggle,
   accent,
   copy,
+  ja,
 }: {
   expanded: boolean;
   total: number;
   onToggle: () => void;
   accent: string;
   copy: Copy;
+  ja: boolean;
 }) {
   if (total <= NBA_DISCIPLINE_COLLAPSED_ROWS) return null;
   return (
@@ -119,7 +129,7 @@ function ExpandButton({
       onPress={onToggle}
       style={[styles.expand, { borderTopColor: hexToRgba(accent, 0.2) }]}
     >
-      <Text style={[styles.expandText, { color: accent }]}>
+      <Text style={[styles.expandText, ja ? styles.jaLabel : null, { color: accent }]}>
         {expanded ? copy.showLess : copy.showAll(total)}
       </Text>
     </Pressable>
@@ -149,6 +159,7 @@ export function NbaDisciplineSectionNative({
   };
 }) {
   const copy = disciplineSectionCopy(isJa);
+  const bodyLang: Language = lang ?? (isJa ? "ja" : "en");
   const hasPlayoffs = slice ? disciplineHasPlayoffs(slice) : false;
   const [phase, setPhase] = useState<NbaDisciplineSeasonType>("regular");
   const [playersOpen, setPlayersOpen] = useState(false);
@@ -165,7 +176,7 @@ export function NbaDisciplineSectionNative({
     ? buildDisciplineCells(slice[activePhase], slice.ranks?.[activePhase])
     : [];
   const playerRows = slice?.players ? disciplinePlayerRows(slice, activePhase) : [];
-  const fines = slice ? disciplineFineLines(slice, activePhase, lang ?? (isJa ? "ja" : "en")) : [];
+  const fines = slice ? disciplineFineLines(slice, activePhase, bodyLang) : [];
   const shownPlayers = playersOpen
     ? playerRows
     : playerRows.slice(0, NBA_DISCIPLINE_COLLAPSED_ROWS);
@@ -194,7 +205,9 @@ export function NbaDisciplineSectionNative({
       </View>
 
       {!slice ? (
-        <Text style={styles.empty}>{season?.loading ? copy.loading : copy.empty}</Text>
+        <Text style={[styles.empty, isJa ? styles.jaBody : null]}>
+          {season?.loading ? copy.loading : copy.empty}
+        </Text>
       ) : (
         <>
           {hasPlayoffs ? (
@@ -203,19 +216,24 @@ export function NbaDisciplineSectionNative({
               onChange={setPhase}
               accent={accent}
               copy={copy}
+              ja={isJa}
             />
           ) : null}
 
-          <CellRow cells={cells} accent={accent} leagueLabel={copy.league} />
+          <CellRow cells={cells} accent={accent} leagueLabel={copy.league} ja={isJa} />
 
-          {empty ? <Text style={styles.empty}>{copy.empty}</Text> : null}
+          {empty ? (
+            <Text style={[styles.empty, isJa ? styles.jaBody : null]}>{copy.empty}</Text>
+          ) : null}
 
           {shownPlayers.length > 0 ? (
             <View style={styles.block}>
-              <Text style={styles.subLabel}>{copy.players}</Text>
+              <Text style={[styles.subLabel, isJa ? styles.jaLabel : null]}>{copy.players}</Text>
               <View style={[styles.box, boxBorder]}>
                 <View style={styles.tableRow}>
-                  <Text style={[styles.th, styles.colName]}>{copy.player}</Text>
+                  <Text style={[styles.th, styles.colName, isJa ? styles.jaLabel : null]}>
+                    {copy.player}
+                  </Text>
                   <Text style={[styles.th, styles.colN]}>T</Text>
                   <Text style={[styles.th, styles.colN]}>F</Text>
                   <Text style={[styles.th, styles.colN]}>E</Text>
@@ -247,6 +265,7 @@ export function NbaDisciplineSectionNative({
                   onToggle={() => setPlayersOpen((v) => !v)}
                   accent={accent}
                   copy={copy}
+                  ja={isJa}
                 />
               </View>
             </View>
@@ -254,7 +273,7 @@ export function NbaDisciplineSectionNative({
 
           {shownFines.length > 0 ? (
             <View style={styles.block}>
-              <Text style={styles.subLabel}>
+              <Text style={[styles.subLabel, isJa ? styles.jaLabel : null]}>
                 {copy.fineLog} · {fines.length}
               </Text>
               <View style={[styles.box, boxBorder]}>
@@ -273,6 +292,7 @@ export function NbaDisciplineSectionNative({
                       <Text
                         style={[
                           styles.fineReason,
+                          bodyLang === "ja" ? styles.jaBody : null,
                           f.suspension ? styles.fineReasonSusp : null,
                         ]}
                       >
@@ -292,6 +312,7 @@ export function NbaDisciplineSectionNative({
                   onToggle={() => setFinesOpen((v) => !v)}
                   accent={accent}
                   copy={copy}
+                  ja={isJa}
                 />
               </View>
             </View>
@@ -299,7 +320,7 @@ export function NbaDisciplineSectionNative({
         </>
       )}
 
-      <Text style={styles.note}>{copy.note}</Text>
+      <Text style={[styles.note, isJa ? styles.jaBody : null]}>{copy.note}</Text>
     </View>
   );
 }
@@ -536,6 +557,13 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#FFFFFF",
     fontVariant: ["tabular-nums"],
+  },
+  jaLabel: {
+    fontFamily: JA_LABEL_FONT,
+    letterSpacing: 0.4,
+  },
+  jaBody: {
+    fontFamily: JA_BODY_FONT,
   },
   note: {
     fontSize: 10,
