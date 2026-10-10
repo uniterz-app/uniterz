@@ -311,6 +311,7 @@ function finesForDetail(
     amountUsd: f.amountUsd,
     date: f.date,
     reason: f.reason,
+    ...(f.reasonI18n ? { reasonI18n: f.reasonI18n } : {}),
     seasonType: f.seasonType === "playoffs" ? "playoffs" : "regular",
     ...(f.kind === "suspension"
       ? { kind: "suspension" as const, games: f.games ?? 0 }

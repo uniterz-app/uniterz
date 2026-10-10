@@ -1692,6 +1692,7 @@ export default function NbaPlayerDetailPanel({
             slice={discipline}
             accent={uiAccent}
             isJa={isJa}
+            lang={lang}
           />
         </>
       ) : null}

@@ -2044,6 +2044,7 @@ export default function NbaTeamDetailPanelNative({
               initial={discipline}
               accent={accent}
               isJa={isJa}
+              lang={lang}
               onPlayerPress={onSelectPlayer}
             />
           </>

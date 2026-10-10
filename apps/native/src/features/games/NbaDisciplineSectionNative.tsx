@@ -18,6 +18,7 @@ import {
   type NbaDisciplineCell,
 } from "../../../../../lib/nba/discipline/disciplineDetailCells";
 import { useNbaTeamDisciplineSeason } from "../../../../../lib/nba/discipline/useNbaTeamDisciplineSeason";
+import type { Language } from "../../../../../lib/i18n/language";
 import { METRIC_FONT } from "../rankings/rankingsUiTheme";
 import NbaLeagueStatsSeasonNavNative from "./NbaLeagueStatsSeasonNavNative";
 import { getUniterzApiBaseUrl } from "./submitPredictionApi";
@@ -129,6 +130,7 @@ export function NbaDisciplineSectionNative({
   slice,
   accent,
   isJa,
+  lang,
   showPlayerNames = false,
   onPlayerPress,
   season,
@@ -136,6 +138,7 @@ export function NbaDisciplineSectionNative({
   slice: NbaDisciplineDetailSlice | null;
   accent: string;
   isJa: boolean;
+  lang?: Language;
   showPlayerNames?: boolean;
   onPlayerPress?: (playerId: string) => void;
   season?: {
@@ -162,7 +165,7 @@ export function NbaDisciplineSectionNative({
     ? buildDisciplineCells(slice[activePhase], slice.ranks?.[activePhase])
     : [];
   const playerRows = slice?.players ? disciplinePlayerRows(slice, activePhase) : [];
-  const fines = slice ? disciplineFineLines(slice, activePhase) : [];
+  const fines = slice ? disciplineFineLines(slice, activePhase, lang ?? (isJa ? "ja" : "en")) : [];
   const shownPlayers = playersOpen
     ? playerRows
     : playerRows.slice(0, NBA_DISCIPLINE_COLLAPSED_ROWS);
@@ -307,12 +310,14 @@ export function NbaTeamDisciplineSectionNative({
   initial,
   accent,
   isJa,
+  lang,
   onPlayerPress,
 }: {
   teamId: string;
   initial: NbaDisciplineDetailSlice;
   accent: string;
   isJa: boolean;
+  lang?: Language;
   onPlayerPress?: (playerId: string) => void;
 }) {
   const s = useNbaTeamDisciplineSeason({
@@ -325,6 +330,7 @@ export function NbaTeamDisciplineSectionNative({
       slice={s.slice}
       accent={accent}
       isJa={isJa}
+      lang={lang}
       showPlayerNames
       onPlayerPress={onPlayerPress}
       season={{

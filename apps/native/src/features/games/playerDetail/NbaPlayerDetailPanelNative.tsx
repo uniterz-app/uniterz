@@ -93,6 +93,7 @@ import { profileOverviewChartNoDataStyle } from "../../profile/profileOverviewCh
 import JerseyMarkSvg from "../JerseyMarkSvg";
 import NbaFavoriteStarButtonNative from "../NbaFavoriteStarButtonNative";
 import { NbaDisciplineSectionNative } from "../NbaDisciplineSectionNative";
+import { resolveLocalizedLang } from "../../../../../../lib/i18n/localize";
 import NbaPlayerHowTheyPlayNative from "./NbaPlayerHowTheyPlayNative";
 import { useLeagueTeamStatsBundle } from "../../../../../../lib/nba/useLeagueTeamStatsBundle";
 import { usePlayerStatLeadersBundle } from "../../../../../../lib/nba/usePlayerStatLeadersBundle";
@@ -1694,6 +1695,7 @@ export default function NbaPlayerDetailPanelNative({
               slice={discipline}
               accent={accent}
               isJa={isJa}
+              lang={resolveLocalizedLang(language)}
             />
           </>
         ) : null}

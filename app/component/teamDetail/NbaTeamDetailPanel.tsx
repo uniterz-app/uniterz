@@ -2669,6 +2669,7 @@ export default function NbaTeamDetailPanel({
             initial={discipline}
             accent={accent}
             isJa={isJa}
+            lang={lang}
             onPlayerClick={(playerId) =>
               router.push(nbaPlayerDetailPreviewHref(playerId))
             }

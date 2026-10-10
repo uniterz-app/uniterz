@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { nameOxanium } from "@/lib/fonts";
+import type { Language } from "@/lib/i18n/language";
 import type {
   NbaDisciplineDetailSlice,
   NbaDisciplineSeasonType,
@@ -142,6 +143,7 @@ export function NbaDisciplineSection({
   slice,
   accent,
   isJa,
+  lang,
   showPlayerNames = false,
   onPlayerClick,
   season,
@@ -150,6 +152,8 @@ export function NbaDisciplineSection({
   slice: NbaDisciplineDetailSlice | null;
   accent: string;
   isJa: boolean;
+  /** 罰金理由の表示言語（省略時は isJa で ja / en） */
+  lang?: Language;
   /** チーム詳細: 罰金ログに選手名を出す */
   showPlayerNames?: boolean;
   onPlayerClick?: (playerId: string) => void;
@@ -178,7 +182,7 @@ export function NbaDisciplineSection({
     ? buildDisciplineCells(slice[activePhase], slice.ranks?.[activePhase])
     : [];
   const playerRows = slice?.players ? disciplinePlayerRows(slice, activePhase) : [];
-  const fines = slice ? disciplineFineLines(slice, activePhase) : [];
+  const fines = slice ? disciplineFineLines(slice, activePhase, lang ?? (isJa ? "ja" : "en")) : [];
   const shownPlayers = playersOpen
     ? playerRows
     : playerRows.slice(0, NBA_DISCIPLINE_COLLAPSED_ROWS);
@@ -340,12 +344,14 @@ export function NbaTeamDisciplineSection({
   initial,
   accent,
   isJa,
+  lang,
   onPlayerClick,
 }: {
   teamId: string;
   initial: NbaDisciplineDetailSlice;
   accent: string;
   isJa: boolean;
+  lang?: Language;
   onPlayerClick?: (playerId: string) => void;
 }) {
   const s = useNbaTeamDisciplineSeason({ teamId, initial });
@@ -354,6 +360,7 @@ export function NbaTeamDisciplineSection({
       slice={s.slice}
       accent={accent}
       isJa={isJa}
+      lang={lang}
       showPlayerNames
       onPlayerClick={onPlayerClick}
       season={{

@@ -7,6 +7,7 @@ import type {
   NbaDisciplineRanks,
   NbaDisciplineSeasonType,
 } from "@/lib/nba/discipline/disciplineTypes";
+import type { Language } from "@/lib/i18n/language";
 import {
   formatDisciplineFineUsd,
   formatDisciplineFineUsdFull,
@@ -125,22 +126,26 @@ export type NbaDisciplineFineLine = {
 /** 個別罰金・出場停止のログ（新しい順。テクニカル定額分は含まない） */
 export function disciplineFineLines(
   slice: NbaDisciplineDetailSlice,
-  phase: NbaDisciplineSeasonType
+  phase: NbaDisciplineSeasonType,
+  lang: Language
 ): NbaDisciplineFineLine[] {
   return slice.fines
     .filter((f) => f.seasonType === phase)
-    .map((f, i) => ({
-      key: `${f.date}-${f.playerId}-${i}`,
-      date: f.date.slice(5).replace("-", "/"),
-      playerId: f.playerId,
-      playerName: f.playerName,
-      amount: formatDisciplineFineUsdFull(f.amountUsd),
-      reason:
-        f.kind === "suspension"
-          ? [`SUSP ${f.games ?? 0}G`, f.reason].filter(Boolean).join(" · ")
-          : f.reason,
-      suspension: f.kind === "suspension",
-    }));
+    .map((f, i) => {
+      const reason = f.reasonI18n?.[lang] ?? f.reason;
+      return {
+        key: `${f.date}-${f.playerId}-${i}`,
+        date: f.date.slice(5).replace("-", "/"),
+        playerId: f.playerId,
+        playerName: f.playerName,
+        amount: formatDisciplineFineUsdFull(f.amountUsd),
+        reason:
+          f.kind === "suspension"
+            ? [`SUSP ${f.games ?? 0}G`, reason].filter(Boolean).join(" · ")
+            : reason,
+        suspension: f.kind === "suspension",
+      };
+    });
 }
 
 export function disciplineSectionCopy(isJa: boolean) {

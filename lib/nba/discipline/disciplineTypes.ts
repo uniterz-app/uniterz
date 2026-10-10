@@ -5,6 +5,8 @@
  * コーチ・チーム（ベンチ）テクニカルは数えない。
  */
 
+import type { Language } from "@/lib/i18n/language";
+
 export type NbaDisciplineEventKind = "tech" | "flag" | "eject";
 
 export type NbaDisciplineSeasonType = "regular" | "playoffs";
@@ -80,6 +82,8 @@ export type NbaDisciplineFineDoc = {
   /** YYYY-MM-DD */
   date: string;
   reason: string;
+  /** `reason` のアプリ 9 言語訳（`translateDisciplineReason`） */
+  reasonI18n?: Partial<Record<Language, string>>;
   createdAtMs: number;
 };
 
@@ -131,6 +135,7 @@ export type NbaDisciplineDetailSlice = {
     amountUsd: number;
     date: string;
     reason: string;
+    reasonI18n?: Partial<Record<Language, string>>;
     seasonType: NbaDisciplineSeasonType;
     kind?: Exclude<NbaDisciplineFineKind, "rescind">;
     games?: number;

@@ -14,6 +14,7 @@ import {
 import { normalizeNbaPersonName } from "@/lib/nba/discipline/parseBdlPlaysDiscipline";
 import { revalidateNbaDisciplineApiCache } from "@/lib/nba/discipline/nbaDisciplineApiCache";
 import type { NbaDisciplineFineDoc } from "@/lib/nba/discipline/disciplineTypes";
+import { translateDisciplineReasons } from "@/lib/nba/discipline/translateDisciplineReason";
 
 /**
  * 罰金の手入力（管理画面）。書き込み後に `nbaDiscipline/{season}` を作り直す。
@@ -145,6 +146,14 @@ export async function POST(req: Request) {
       createdAtMs: Date.now(),
     };
     const db = getAdminDb();
+    if (doc.reason && kind !== "rescind") {
+      const i18n = await translateDisciplineReasons(db, [doc.reason]).catch((e) => {
+        console.error("[nba-discipline-fines] translate", e);
+        return null;
+      });
+      const hit = i18n?.get(doc.reason);
+      if (hit) doc.reasonI18n = hit;
+    }
     const ref = await db.collection(NBA_DISCIPLINE_FINES_COLLECTION).add(doc);
     await rebuildNbaDisciplineSnapshot(db, seasonKey);
     revalidateNbaDisciplineApiCache();
