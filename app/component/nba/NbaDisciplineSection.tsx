@@ -85,13 +85,11 @@ function PhaseToggle({
   onChange,
   accent,
   labels,
-  ja,
 }: {
   phase: NbaDisciplineSeasonType;
   onChange: (p: NbaDisciplineSeasonType) => void;
   accent: string;
   labels: Record<NbaDisciplineSeasonType, string>;
-  ja: boolean;
 }) {
   return (
     <div className="flex gap-4">
@@ -102,7 +100,7 @@ function PhaseToggle({
             key={p}
             type="button"
             onClick={() => onChange(p)}
-            className={`${ja ? `${jp.className} tracking-[0.04em]` : `${nameOxanium.className} tracking-[0.14em]`} border-b-2 pb-0.5 text-[10px] font-bold uppercase transition-colors`}
+            className={`${nameOxanium.className} border-b-2 pb-0.5 text-[10px] font-bold uppercase tracking-[0.14em] transition-colors`}
             style={{
               borderColor: on ? accent : "transparent",
               color: on ? "#fff" : "rgba(255,255,255,0.4)",
@@ -236,7 +234,6 @@ export function NbaDisciplineSection({
               onChange={setPhase}
               accent={accent}
               labels={{ regular: copy.regular, playoffs: copy.playoffs }}
-              ja={isJa}
             />
           ) : null}
 

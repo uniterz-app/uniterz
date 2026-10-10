@@ -80,13 +80,11 @@ function PhaseToggle({
   onChange,
   accent,
   copy,
-  ja,
 }: {
   phase: NbaDisciplineSeasonType;
   onChange: (p: NbaDisciplineSeasonType) => void;
   accent: string;
   copy: Copy;
-  ja: boolean;
 }) {
   return (
     <View style={styles.phaseRow}>
@@ -98,7 +96,7 @@ function PhaseToggle({
             onPress={() => onChange(p)}
             style={[styles.phaseBtn, { borderBottomColor: on ? accent : "transparent" }]}
           >
-            <Text style={[styles.phaseText, ja ? styles.jaLabel : null, on ? styles.phaseTextOn : null]}>
+            <Text style={[styles.phaseText, on ? styles.phaseTextOn : null]}>
               {p === "regular" ? copy.regular : copy.playoffs}
             </Text>
           </Pressable>
@@ -216,7 +214,6 @@ export function NbaDisciplineSectionNative({
               onChange={setPhase}
               accent={accent}
               copy={copy}
-              ja={isJa}
             />
           ) : null}
 

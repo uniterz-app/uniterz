@@ -150,8 +150,8 @@ export function disciplineFineLines(
 
 export function disciplineSectionCopy(isJa: boolean) {
   return {
-    regular: isJa ? "レギュラー" : "REGULAR",
-    playoffs: isJa ? "プレーオフ" : "PLAYOFFS",
+    regular: "SEASON",
+    playoffs: "PLAYOFFS",
     players: isJa ? "選手別" : "PLAYERS",
     player: isJa ? "選手" : "PLAYER",
     fineLog: isJa ? "罰金・出場停止" : "FINES & SUSPENSIONS",
