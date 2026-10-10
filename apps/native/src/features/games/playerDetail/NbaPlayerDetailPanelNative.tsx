@@ -92,6 +92,7 @@ import { METRIC_FONT } from "../../rankings/rankingsUiTheme";
 import { profileOverviewChartNoDataStyle } from "../../profile/profileOverviewChartShell";
 import JerseyMarkSvg from "../JerseyMarkSvg";
 import NbaFavoriteStarButtonNative from "../NbaFavoriteStarButtonNative";
+import { NbaDisciplineSectionNative } from "../NbaDisciplineSectionNative";
 import NbaPlayerHowTheyPlayNative from "./NbaPlayerHowTheyPlayNative";
 import { useLeagueTeamStatsBundle } from "../../../../../../lib/nba/useLeagueTeamStatsBundle";
 import { usePlayerStatLeadersBundle } from "../../../../../../lib/nba/usePlayerStatLeadersBundle";
@@ -1466,7 +1467,7 @@ export default function NbaPlayerDetailPanelNative({
         : getNbaPlayerDetailPreview(playerId),
     [playerId, useDevMock]
   );
-  const { detail, hasFetchError } = useNbaPlayerDetailLiveOverlay({
+  const { detail, discipline, hasFetchError } = useNbaPlayerDetailLiveOverlay({
     playerId,
     apiBaseUrl,
     base,
@@ -1685,6 +1686,17 @@ export default function NbaPlayerDetailPanelNative({
           </>
         ) : null}
         <GameLogsSection logs={detail.gameLogs} accent={accent} />
+
+        {discipline ? (
+          <>
+            <View style={[styles.divider, { backgroundColor: dividerColor }]} />
+            <NbaDisciplineSectionNative
+              slice={discipline}
+              accent={accent}
+              isJa={isJa}
+            />
+          </>
+        ) : null}
 
         <View style={[styles.divider, { backgroundColor: dividerColor }]} />
         <View style={styles.advTitleRow}>

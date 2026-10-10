@@ -19,6 +19,7 @@ import { listPlayerIdsFromRecentBoxScores } from "@/lib/nba/ingest/listPlayerIds
 import { loadOrBuildTeamSeasonRecords } from "@/lib/nba/insights/loadPriorSeasonTeamRecords";
 import { ingestNbaTeamShapesFromGames } from "@/lib/nba/ingest/nbaTeamShapesIngest";
 import { ingestNbaTeamOffseasonMoves } from "@/lib/nba/ingest/nbaTeamOffseasonMovesIngest";
+import { ingestNbaDisciplineFromBdl } from "@/lib/nba/ingest/nbaDisciplineIngest";
 
 export type NbaStatsDailyIngestMode = "daily" | "heavy";
 
@@ -113,6 +114,11 @@ export async function runNbaStatsDailyIngest(
   steps.push(
     await runStep("team-shape-records", () =>
       ingestNbaTeamShapesFromGames(db, { seasonKey })
+    )
+  );
+  steps.push(
+    await runStep("discipline", () =>
+      ingestNbaDisciplineFromBdl(db, { seasonKey, maxGames: 60 })
     )
   );
   steps.push(

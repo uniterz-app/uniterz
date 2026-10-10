@@ -7,6 +7,7 @@
  * ロスター外は Hero / Career / Awards / More 向けに識別情報を埋める。
  */
 import { useEffect, useMemo, useState } from "react";
+import type { NbaDisciplineDetailSlice } from "@/lib/nba/discipline/disciplineTypes";
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
 import { fetchPlayerDetailBundle } from "@/lib/nba/playerDetail/fetchPlayerDetailClient";
 import { overlayPlayerDetailWithLeaders } from "@/lib/nba/sliceNbaPlayerFromLeaders";
@@ -45,6 +46,7 @@ type Options = {
 
 export function useNbaPlayerDetailLiveOverlay(options: Options): {
   detail: NbaPlayerDetailPreview;
+  discipline: NbaDisciplineDetailSlice | null;
   loading: boolean;
   hasFetchError: boolean;
 } {
@@ -220,6 +222,7 @@ export function useNbaPlayerDetailLiveOverlay(options: Options): {
 
   return {
     detail,
+    discipline: bundle?.discipline ?? null,
     loading,
     hasFetchError: failed,
   };

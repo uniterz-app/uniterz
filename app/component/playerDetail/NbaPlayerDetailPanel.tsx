@@ -7,6 +7,7 @@ import { resolveLocalizedLang } from "@/lib/i18n/localize";
 import HalftoneJerseyMark from "@/app/component/games/HalftoneJerseyMark";
 import CountryFlag from "@/app/component/games/CountryFlag";
 import NbaFavoriteStarButton from "@/app/component/nba/NbaFavoriteStarButton";
+import { NbaDisciplineSection } from "@/app/component/nba/NbaDisciplineSection";
 import {
   getTeamJerseyPrimaryColor,
   getTeamJerseySecondaryColor,
@@ -1152,7 +1153,7 @@ export default function NbaPlayerDetailPanel({
         : getNbaPlayerDetailPreview(playerId),
     [playerId, useDevMock]
   );
-  const { detail, hasFetchError } = useNbaPlayerDetailLiveOverlay({
+  const { detail, discipline, hasFetchError } = useNbaPlayerDetailLiveOverlay({
     playerId,
     base,
     leaders,
@@ -1680,6 +1681,20 @@ export default function NbaPlayerDetailPanel({
         </>
       ) : null}
       <GameLogs logs={detail.gameLogs} accent={uiAccent} />
+
+      {discipline ? (
+        <>
+          <div
+            className="h-px"
+            style={{ backgroundColor: hexToRgba(uiAccent, 0.2) }}
+          />
+          <NbaDisciplineSection
+            slice={discipline}
+            accent={uiAccent}
+            isJa={isJa}
+          />
+        </>
+      ) : null}
 
       <div
         className="h-px"

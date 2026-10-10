@@ -9,6 +9,8 @@ import {
   normalizeLeagueTeamStatsSeasonKey,
 } from "@/lib/nba/leagueTeamStats/loadLeagueTeamStatsSnapshot";
 import { resolveNbaStatsDisplaySeasonKey } from "@/lib/nba/resolveNbaStatsDisplaySeason";
+import { loadNbaDisciplineSnapshot } from "@/lib/nba/discipline/nbaDisciplineSnapshot";
+import { applyDisciplineToLeagueTeamBundle } from "@/lib/nba/discipline/applyDisciplineToLeagueBundles";
 
 /**
  * GET /api/nba/league-team-stats?season=2025-26
@@ -28,7 +30,17 @@ export async function GET(req: Request) {
       : (await resolveNbaStatsDisplaySeasonKey(db, null)).seasonKey;
 
     const cached = unstable_cache(
-      async () => loadLeagueTeamStatsSnapshot(getAdminDb(), season),
+      async () => {
+        const adminDb = getAdminDb();
+        const [base, discipline] = await Promise.all([
+          loadLeagueTeamStatsSnapshot(adminDb, season),
+          loadNbaDisciplineSnapshot(adminDb, season),
+        ]);
+        return {
+          ...base,
+          bundle: applyDisciplineToLeagueTeamBundle(base.bundle, discipline),
+        };
+      },
       ["nba-league-team-stats", season],
       { revalidate: 300, tags: ["nba-league-team-stats", `nba-lts:${season}`] }
     );

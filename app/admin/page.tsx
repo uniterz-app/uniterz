@@ -46,6 +46,11 @@ export default function AdminHomePage() {
           title="Squad Battle 開催"
           desc="募集・対戦期間を決めて大会作成・フェーズ進行"
         />
+        <Card
+          href="/admin/nba-fines"
+          title="NBA 罰金"
+          desc="選手の罰金を手入力（リーグ表・詳細の FINES に反映）"
+        />
       </div>
     </AdminGuard>
   );

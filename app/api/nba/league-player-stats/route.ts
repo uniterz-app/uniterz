@@ -8,6 +8,8 @@ import {
   normalizePlayerStatLeadersSeasonKey,
 } from "@/lib/nba/playerStatLeaders/loadPlayerStatLeadersSnapshot";
 import { resolveNbaStatsDisplaySeasonKey } from "@/lib/nba/resolveNbaStatsDisplaySeason";
+import { loadNbaDisciplineSnapshot } from "@/lib/nba/discipline/nbaDisciplineSnapshot";
+import { applyDisciplineToPlayerLeadersBundle } from "@/lib/nba/discipline/applyDisciplineToLeagueBundles";
 
 /**
  * GET /api/nba/league-player-stats?season=2025-26
@@ -27,7 +29,14 @@ export async function GET(req: Request) {
       ? normalizePlayerStatLeadersSeasonKey(rawSeason)
       : (await resolveNbaStatsDisplaySeasonKey(db, null)).seasonKey;
 
-    const payload = await loadPlayerStatLeadersSnapshot(db, season);
+    const [base, discipline] = await Promise.all([
+      loadPlayerStatLeadersSnapshot(db, season),
+      loadNbaDisciplineSnapshot(db, season),
+    ]);
+    const payload = {
+      ...base,
+      bundle: applyDisciplineToPlayerLeadersBundle(base.bundle, discipline),
+    };
     return NextResponse.json(payload, {
       headers: {
         "Cache-Control": playerStatLeadersCacheControl({

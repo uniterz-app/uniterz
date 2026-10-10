@@ -52,6 +52,7 @@ import {
 } from "../matchCardTypography";
 import JerseyMarkSvg from "../JerseyMarkSvg";
 import NbaFavoriteStarButtonNative from "../NbaFavoriteStarButtonNative";
+import { NbaDisciplineSectionNative } from "../NbaDisciplineSectionNative";
 import { NbaTeamRosterCardNative } from "../predict/NbaRosterPanelNative";
 import NbaTeamHowTheyPlayNative from "./NbaTeamHowTheyPlayNative";
 import { NbaTeamOffseasonMovesNative } from "./NbaTeamOffseasonMovesNative";
@@ -1750,8 +1751,14 @@ export default function NbaTeamDetailPanelNative({
     () => getNbaTeamDetailPreview(teamId, bundle),
     [teamId, bundle]
   );
-  const { detail, aceOut, shapeEdges, offseasonMoves, hasFetchError } =
-    useNbaTeamDetailLiveOverlay({
+  const {
+    detail,
+    aceOut,
+    shapeEdges,
+    offseasonMoves,
+    discipline,
+    hasFetchError,
+  } = useNbaTeamDetailLiveOverlay({
       teamId: baseDetail.teamId,
       apiBaseUrl: getUniterzApiBaseUrl(),
       base: baseDetail,
@@ -2028,6 +2035,21 @@ export default function NbaTeamDetailPanelNative({
             accent={accent}
           />
         </View>
+
+        {discipline ? (
+          <>
+            <View style={[styles.divider, { backgroundColor: dividerColor }]} />
+            <NbaDisciplineSectionNative
+              slice={discipline}
+              accent={accent}
+              isJa={isJa}
+              leagueRows={bundle.season}
+              teamId={detail.teamId}
+              showPlayerNames
+              onPlayerPress={onSelectPlayer}
+            />
+          </>
+        ) : null}
 
         {shapeEdges ? (
           <>

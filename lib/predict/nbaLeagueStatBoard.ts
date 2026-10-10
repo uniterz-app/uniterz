@@ -15,7 +15,8 @@ export type NbaLeagueAdvancedCategory =
   | "playtype"
   | "defense"
   | "tracking"
-  | "hustle";
+  | "hustle"
+  | "discipline";
 
 export type NbaLeagueAdvancedCategoryDef = {
   id: NbaLeagueAdvancedCategory;
@@ -150,6 +151,20 @@ export const NBA_LEAGUE_ADVANCED_CATEGORIES: readonly NbaLeagueAdvancedCategoryD
         es: "Desvíos, cargas provocadas, balones sueltos.",
         pt: "Desvios, faltas de ataque provocadas, bolas soltas.",
         fr: "Déviations, fautes offensives provoquées, ballons perdus.",
+      },
+    },
+    {
+      id: "discipline",
+      short: "DISCIPLINE",
+      label: "Discipline",
+      hint: {
+        ja: "テクニカル・フラグラント・退場・罰金のシーズン累計。PER GAME / TOTAL とも同じ値。",
+        en: "Season totals of technicals, flagrants, ejections and fines. Same in PER GAME and TOTAL.",
+        ko: "테크니컬·플래그런트·퇴장·벌금 시즌 누적. PER GAME / TOTAL 동일.",
+        zh: "技术犯规、恶意犯规、驱逐出场与罚款的赛季累计。PER GAME / TOTAL 数值相同。",
+        es: "Totales de la temporada: técnicas, flagrantes, expulsiones y multas. Igual en PER GAME y TOTAL.",
+        pt: "Totais da temporada: técnicas, flagrantes, expulsões e multas. Igual em PER GAME e TOTAL.",
+        fr: "Cumuls de la saison : techniques, flagrantes, expulsions et amendes. Identique en PER GAME et TOTAL.",
       },
     },
   ] as const;

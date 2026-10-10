@@ -366,6 +366,7 @@ const TEAM_ADVANCED_CORE_BY_CATEGORY: Record<
   defense: [],
   tracking: [],
   hustle: [],
+  discipline: [],
 };
 
 export function teamBoardMetricsForCategory(

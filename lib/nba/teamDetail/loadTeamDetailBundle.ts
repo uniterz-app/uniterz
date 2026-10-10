@@ -30,6 +30,8 @@ import type { NbaTeamStrengthSplit } from "@/lib/nba/insights/fetchTeamStrengthS
 import type { NbaTeamDetailShapeEdges } from "@/lib/nba/teamShapes/fetchTeamShapeEdgesClient";
 import { loadTeamOffseasonMoves } from "@/lib/nba/offseasonMoves/loadOffseasonMovesSnapshot";
 import type { NbaTeamOffseasonMoves } from "@/lib/nba/offseasonMoves/offseasonMovesTypes";
+import { loadTeamDisciplineSlice } from "@/lib/nba/discipline/nbaDisciplineSnapshot";
+import type { NbaDisciplineDetailSlice } from "@/lib/nba/discipline/disciplineTypes";
 
 /** 今季この試合数を超えたら OFFSEASON MOVES を出さない（開幕後およそ 1 か月） */
 const OFFSEASON_MOVES_MAX_FINALS = 15;
@@ -47,6 +49,8 @@ export type NbaTeamDetailApiPayload = {
   aceOut: NbaTeamAceOutRecord | null;
   shapeEdges: NbaTeamDetailShapeEdges;
   offseasonMoves: NbaTeamOffseasonMoves | null;
+  /** TECH / FLAG / EJECT / FINES（スタッツ表示シーズン） */
+  discipline: NbaDisciplineDetailSlice | null;
   source: NbaStatsSnapshotSource;
   updatedAt: string | null;
 };
@@ -156,6 +160,7 @@ export async function loadTeamDetailBundle(
     aceOutPayload,
     shapes,
     offseason,
+    discipline,
   ] = await Promise.all([
     loadTeamRosterSlice(db, liveSeason, teamId),
     loadTeamPayroll(db, liveSeason, teamId),
@@ -166,6 +171,7 @@ export async function loadTeamDetailBundle(
     loadTeamAceOutRecordsApiPayload(db, statsSeason),
     loadShapeEdges(db, formSeason, teamId),
     loadTeamOffseasonMoves(db, liveSeason, teamId),
+    loadTeamDisciplineSlice(db, statsSeason, teamId),
   ]);
 
   const offseasonMoves =
@@ -228,6 +234,7 @@ export async function loadTeamDetailBundle(
     aceOut: aceRow,
     shapeEdges: shapes.shapeEdges,
     offseasonMoves,
+    discipline,
     source,
     updatedAt: newestIso(
       rosterSlice.updatedAt,

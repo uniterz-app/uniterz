@@ -16,6 +16,7 @@ import {
 import { matchCardTeamNameStyle } from "@/lib/games/teamDisplayTypography";
 import HalftoneJerseyMark from "@/app/component/games/HalftoneJerseyMark";
 import NbaFavoriteStarButton from "@/app/component/nba/NbaFavoriteStarButton";
+import { NbaDisciplineSection } from "@/app/component/nba/NbaDisciplineSection";
 import { CyberSlantedSegBar } from "@/app/component/rankings/CyberSlantedSegBar";
 import { NbaTeamRosterCard } from "@/app/component/predict/NbaRosterPanel";
 import {
@@ -2370,8 +2371,14 @@ export default function NbaTeamDetailPanel({
     () => getNbaTeamDetailPreview(teamId, bundle),
     [teamId, bundle]
   );
-  const { detail, aceOut, shapeEdges, offseasonMoves, hasFetchError } =
-    useNbaTeamDetailLiveOverlay({
+  const {
+    detail,
+    aceOut,
+    shapeEdges,
+    offseasonMoves,
+    discipline,
+    hasFetchError,
+  } = useNbaTeamDetailLiveOverlay({
       teamId: baseDetail.teamId,
       base: baseDetail,
     });
@@ -2650,6 +2657,26 @@ export default function NbaTeamDetailPanel({
           />
         </div>
       </section>
+
+      {discipline ? (
+        <>
+          <div
+            className="h-px"
+            style={{ backgroundColor: hexToRgba(accent, 0.22) }}
+          />
+          <NbaDisciplineSection
+            slice={discipline}
+            accent={accent}
+            isJa={isJa}
+            leagueRows={bundle.season}
+            teamId={detail.teamId}
+            showPlayerNames
+            onPlayerClick={(playerId) =>
+              router.push(nbaPlayerDetailPreviewHref(playerId))
+            }
+          />
+        </>
+      ) : null}
 
       {shapeEdges ? (
         <>

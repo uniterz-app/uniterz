@@ -8,6 +8,7 @@ import {
   chunkForChipGrid,
   NBA_LEAGUE_STAT_CHIP_COLS,
 } from "@/lib/predict/nbaLeagueStatBoard";
+import { formatDisciplineFineUsd } from "@/lib/nba/discipline/formatDisciplineFineUsd";
 
 export type NbaPlayerAdvancedLeaderMetric =
   | "per"
@@ -91,7 +92,11 @@ export type NbaPlayerAdvancedLeaderMetric =
   | "charges"
   | "loose_balls"
   | "screen_ast"
-  | "contested_shots";
+  | "contested_shots"
+  | "technical_fouls"
+  | "flagrant_fouls"
+  | "ejections"
+  | "fines_usd";
 
 export type NbaPlayerLeaderMetricKindEx =
   | "pct"
@@ -100,7 +105,9 @@ export type NbaPlayerLeaderMetricKindEx =
   | "eff"
   | "ppp"
   | "ratio"
-  | "rating";
+  | "rating"
+  | "count"
+  | "usd";
 
 export type NbaPlayerAdvancedLeaderMetricDef = {
   id: NbaPlayerAdvancedLeaderMetric;
@@ -1072,6 +1079,42 @@ export const NBA_PLAYER_ADVANCED_LEADER_METRICS: readonly NbaPlayerAdvancedLeade
         fr: "Tirs contestés par match.",
       }
     ),
+    def("technical_fouls", "TECH", "Technical fouls", "discipline", true, "count", {
+      ja: "テクニカルファウル数（シーズン累計）。",
+      en: "Technical fouls (season total).",
+      ko: "테크니컬 파울 수(시즌 누적).",
+      zh: "技术犯规次数（赛季累计）。",
+      es: "Faltas técnicas (total de temporada).",
+      pt: "Faltas técnicas (total da temporada).",
+      fr: "Fautes techniques (cumul saison).",
+    }),
+    def("flagrant_fouls", "FLAG", "Flagrant fouls", "discipline", true, "count", {
+      ja: "フラグラントファウル数（Type 1 + 2・シーズン累計）。",
+      en: "Flagrant fouls (Type 1 + 2, season total).",
+      ko: "플래그런트 파울 수(Type 1 + 2, 시즌 누적).",
+      zh: "恶意犯规次数（一级+二级，赛季累计）。",
+      es: "Faltas flagrantes (Tipo 1 + 2, total de temporada).",
+      pt: "Faltas flagrantes (Tipo 1 + 2, total da temporada).",
+      fr: "Fautes flagrantes (type 1 + 2, cumul saison).",
+    }),
+    def("ejections", "EJECT", "Ejections", "discipline", true, "count", {
+      ja: "退場回数（シーズン累計）。",
+      en: "Ejections (season total).",
+      ko: "퇴장 횟수(시즌 누적).",
+      zh: "被驱逐出场次数（赛季累计）。",
+      es: "Expulsiones (total de temporada).",
+      pt: "Expulsões (total da temporada).",
+      fr: "Expulsions (cumul saison).",
+    }),
+    def("fines_usd", "FINES", "Fines", "discipline", true, "usd", {
+      ja: "リーグからの罰金合計（USD・シーズン累計）。",
+      en: "Total league fines (USD, season total).",
+      ko: "리그 벌금 합계(USD, 시즌 누적).",
+      zh: "联盟罚款总额（美元，赛季累计）。",
+      es: "Multas de la liga (USD, total de temporada).",
+      pt: "Multas da liga (USD, total da temporada).",
+      fr: "Amendes de la ligue (USD, cumul saison).",
+    }),
   ];
 
 export function playerAdvancedMetricsForCategory(
@@ -1274,6 +1317,8 @@ export function formatPlayerAdvancedLeaderValue(
   if (kind === "pct") return `${(value * 100).toFixed(1)}%`;
   if (kind === "ppp") return value.toFixed(2);
   if (kind === "ratio") return value.toFixed(2);
+  if (kind === "count") return String(Math.round(value));
+  if (kind === "usd") return formatDisciplineFineUsd(value);
   if (Math.abs(value - Math.round(value)) < 1e-9) {
     return String(Math.round(value));
   }

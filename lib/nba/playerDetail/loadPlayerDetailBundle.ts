@@ -36,6 +36,8 @@ import {
 import { TEAM_SHORT } from "@/lib/team-short";
 import type { NbaStatsSnapshotSource } from "@/lib/nba/nbaStatsSnapshotCacheControl";
 import type { NbaPlayerContractSummary } from "@/lib/predict/nbaPlayerDetailPreviewMocks";
+import { loadPlayerDisciplineSlice } from "@/lib/nba/discipline/nbaDisciplineSnapshot";
+import type { NbaDisciplineDetailSlice } from "@/lib/nba/discipline/disciplineTypes";
 
 export type NbaPlayerDetailApiPayload = {
   ok: true;
@@ -50,6 +52,8 @@ export type NbaPlayerDetailApiPayload = {
   seasonMetrics: NbaPlayerSeasonMetricsApiPayload;
   /** ロスター外の氏名・最終所属（リーグ表 players から） */
   offRosterIdentity: OffRosterPlayerIdentity | null;
+  /** TECH / FLAG / EJECT / FINES（スタッツ表示シーズン） */
+  discipline: NbaDisciplineDetailSlice | null;
   source: NbaStatsSnapshotSource;
   updatedAt: string | null;
 };
@@ -95,6 +99,7 @@ export async function loadPlayerDetailBundle(
     seasonMetrics,
     offRosterIdentity,
     payroll,
+    discipline,
   ] = await Promise.all([
     teamId
       ? loadTeamInjury(db, liveSeason, teamId)
@@ -154,6 +159,7 @@ export async function loadPlayerDetailBundle(
     teamId
       ? loadTeamPayroll(db, liveSeason, teamId)
       : Promise.resolve(null),
+    loadPlayerDisciplineSlice(db, statsSeason, playerId),
   ]);
 
   let contract = contractRaw;
@@ -254,6 +260,7 @@ export async function loadPlayerDetailBundle(
     shotZones,
     seasonMetrics,
     offRosterIdentity,
+    discipline,
     source,
     updatedAt: newestIso(
       roster.updatedAt,

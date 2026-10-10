@@ -5,6 +5,7 @@
 import type { UiStrings } from "@/lib/i18n/ui";
 import type { NbaLeagueAdvancedCategory } from "@/lib/predict/nbaLeagueStatBoard";
 import { chunkForChipGrid, NBA_LEAGUE_STAT_CHIP_COLS } from "@/lib/predict/nbaLeagueStatBoard";
+import { formatDisciplineFineUsd } from "@/lib/nba/discipline/formatDisciplineFineUsd";
 
 type TeamStatWindow = "season" | "last10";
 
@@ -79,7 +80,11 @@ export type NbaLeagueTeamAdvancedMetric =
   | "charges"
   | "looseBalls"
   | "screenAst"
-  | "contestedShots";
+  | "contestedShots"
+  | "techFouls"
+  | "flagrantFouls"
+  | "ejections"
+  | "finesUsd";
 
 export type NbaLeagueTeamAdvancedFields = Record<
   NbaLeagueTeamAdvancedMetric,
@@ -93,7 +98,7 @@ export type NbaLeagueTeamAdvancedMetricDef = {
   higherIsBetter: boolean;
   hint: UiStrings;
   category: NbaLeagueAdvancedCategory | "basic";
-  format: "pct" | "signed" | "ppp" | "one";
+  format: "pct" | "signed" | "ppp" | "one" | "count" | "usd";
   /** false = リーグ表チップに出さない（詳細専用） */
   showInLeague: boolean;
 };
@@ -1022,6 +1027,42 @@ export const NBA_LEAGUE_TEAM_ADVANCED_METRIC_DEFS: readonly NbaLeagueTeamAdvance
         fr: "Tirs contestés par match.",
       }
     ),
+    def("techFouls", "TECH", "Technical fouls", "discipline", true, "count", {
+      ja: "選手のテクニカルファウル数（シーズン累計・コーチ除く）。",
+      en: "Player technical fouls (season total, coaches excluded).",
+      ko: "선수 테크니컬 파울 수(시즌 누적, 코치 제외).",
+      zh: "球员技术犯规次数（赛季累计，不含教练）。",
+      es: "Faltas técnicas de jugadores (total de temporada, sin entrenadores).",
+      pt: "Faltas técnicas de jogadores (total da temporada, sem técnicos).",
+      fr: "Fautes techniques des joueurs (cumul saison, hors entraîneurs).",
+    }),
+    def("flagrantFouls", "FLAG", "Flagrant fouls", "discipline", true, "count", {
+      ja: "フラグラントファウル数（Type 1 + 2・シーズン累計）。",
+      en: "Flagrant fouls (Type 1 + 2, season total).",
+      ko: "플래그런트 파울 수(Type 1 + 2, 시즌 누적).",
+      zh: "恶意犯规次数（一级+二级，赛季累计）。",
+      es: "Faltas flagrantes (Tipo 1 + 2, total de temporada).",
+      pt: "Faltas flagrantes (Tipo 1 + 2, total da temporada).",
+      fr: "Fautes flagrantes (type 1 + 2, cumul saison).",
+    }),
+    def("ejections", "EJECT", "Ejections", "discipline", true, "count", {
+      ja: "退場回数（シーズン累計）。",
+      en: "Ejections (season total).",
+      ko: "퇴장 횟수(시즌 누적).",
+      zh: "被驱逐出场次数（赛季累计）。",
+      es: "Expulsiones (total de temporada).",
+      pt: "Expulsões (total da temporada).",
+      fr: "Expulsions (cumul saison).",
+    }),
+    def("finesUsd", "FINES", "Fines", "discipline", true, "usd", {
+      ja: "リーグからの選手罰金の合計（USD・シーズン累計）。",
+      en: "Total league fines on players (USD, season total).",
+      ko: "리그가 선수에게 부과한 벌금 합계(USD, 시즌 누적).",
+      zh: "联盟对球员罚款总额（美元，赛季累计）。",
+      es: "Multas de la liga a jugadores (USD, total de temporada).",
+      pt: "Multas da liga a jogadores (USD, total da temporada).",
+      fr: "Amendes infligées aux joueurs par la ligue (USD, cumul saison).",
+    }),
   ];
 
 export const NBA_LEAGUE_TEAM_BASIC_EXTRA_METRICS =
@@ -1258,6 +1299,10 @@ export function buildLeagueTeamAdvancedFields(
     looseBalls,
     screenAst,
     contestedShots,
+    techFouls: 0,
+    flagrantFouls: 0,
+    ejections: 0,
+    finesUsd: 0,
   };
 }
 
@@ -1271,5 +1316,7 @@ export function formatTeamAdvancedValue(
   if (format === "pct") return `${(value * 100).toFixed(1)}%`;
   if (format === "signed") return `${value > 0 ? "+" : ""}${value.toFixed(1)}`;
   if (format === "ppp") return value.toFixed(2);
+  if (format === "count") return String(Math.round(value));
+  if (format === "usd") return formatDisciplineFineUsd(value);
   return value.toFixed(1);
 }
