@@ -4,7 +4,7 @@
  * - `nbaDisciplineFines/{autoId}` 個別の罰金（NBA 公式発表を管理画面で手入力）
  * - `nbaDiscipline/{seasonKey}` 上 2 つのシーズン集計（公開 API はこれだけ読む）。
  *   FINES = テクニカル・退場の定額罰金（`nbaDisciplineFineSchedule`）
- *         + 出場停止で失った年俸（`nbaDisciplineSuspensionSalary`。テクニカル累積は自動）+ 手入力分
+ *         + 出場停止で失った年俸（`nbaDisciplineSuspensionSalary`。NBA 発表分を手入力）+ 個別罰金
  */
 import type { Firestore } from "firebase-admin/firestore";
 import {
@@ -148,25 +148,15 @@ export async function rebuildNbaDisciplineSnapshot(
   const validFines = fines.filter(
     (f) => f.playerId && f.teamId && f.kind !== "rescind"
   );
-  const autoSuspensionId = (i: number) => `auto:${i}`;
-  const suspensions: NbaSuspensionForSalary[] = [
-    ...scheduled.suspensions.map((s, i) => ({
-      id: autoSuspensionId(i),
-      playerId: s.playerId,
-      date: s.date,
-      games: 1,
-      onCourt: true,
-    })),
-    ...validFines
-      .filter((f) => f.kind === "suspension")
-      .map((f) => ({
-        id: f.id,
-        playerId: f.playerId,
-        date: f.date,
-        games: f.games ?? 0,
-        onCourt: f.onCourt === true,
-      })),
-  ];
+  const suspensions: NbaSuspensionForSalary[] = validFines
+    .filter((f) => f.kind === "suspension")
+    .map((f) => ({
+      id: f.id,
+      playerId: f.playerId,
+      date: f.date,
+      games: f.games ?? 0,
+      onCourt: f.onCourt === true,
+    }));
   let lostById = new Map<string, number>();
   if (suspensions.length > 0) {
     const salaries = await ensureNbaPlayerSeasonSalaries(
@@ -181,12 +171,6 @@ export async function rebuildNbaDisciplineSnapshot(
       scheduled.regularSeasonDays
     );
   }
-  scheduled.suspensions.forEach((s, i) => {
-    const lost = lostById.get(autoSuspensionId(i)) ?? 0;
-    players[s.playerId]![s.phase].fines += lost;
-    teams[s.teamId]![s.phase].fines += lost;
-  });
-
   const amountUpdates: Array<{ id: string; amountUsd: number }> = [];
   for (const fine of validFines) {
     const phase: NbaDisciplineSeasonType =
