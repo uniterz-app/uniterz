@@ -51,6 +51,31 @@ export type NbaGameDisciplineEvent = {
   /** app team id */
   t: string;
   k: NbaDisciplineEventKind;
+  /** クォーター（5 以上は OT） */
+  q?: number;
+  /** 残り時間 "5:22" */
+  c?: string;
+};
+
+/**
+ * Firestore `nbaDisciplineLiveAlerts/{bdlGameId}_{playerId}_{kind}_{n}`
+ * 試合中に検知したお気に入り選手の規律イベント（作成 = プッシュ 1 通。id で重複防止）
+ */
+export type NbaDisciplineLiveAlertDoc = {
+  gameId: string;
+  playerId: string;
+  playerName: string;
+  teamId: string;
+  opponentAbbr: string;
+  kind: NbaDisciplineEventKind;
+  /** この試合で同じ種類の何回目か */
+  nth: number;
+  period: number | null;
+  clock: string | null;
+  seasonKey: string;
+  seasonType: NbaDisciplineSeasonType;
+  date: string;
+  createdAtMs: number;
 };
 
 export type NbaGameDisciplineDoc = {

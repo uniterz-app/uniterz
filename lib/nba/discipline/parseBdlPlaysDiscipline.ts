@@ -173,6 +173,8 @@ export function parseBdlPlaysDiscipline(
       }
       const at = `${play.period ?? ""}|${play.clock ?? ""}|${p.playerId}`;
       const event: NbaGameDisciplineEvent = { p: p.playerId, t: teamId, k: eventKind };
+      if (typeof play.period === "number") event.q = play.period;
+      if (typeof play.clock === "string" && play.clock.trim()) event.c = play.clock.trim();
       if (kind === "eject") ejectedAt.add(at);
       if (kind === "double_tech") {
         if (doubleTechSeen.has(at)) {

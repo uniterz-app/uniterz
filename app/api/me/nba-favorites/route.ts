@@ -16,6 +16,13 @@ import {
   type NbaFavoritePlayer,
 } from "@/lib/profile/nbaFavorites";
 import { NBA_FAVORITE_COUNTS_CACHE_TAG } from "@/lib/nba/favoriteCounts";
+import { addNbaFavoritePlayerIdsToIndex } from "@/lib/nba/discipline/nbaFavoritePlayerIndex";
+
+async function indexFavoritePlayer(playerId: string): Promise<void> {
+  await addNbaFavoritePlayerIdsToIndex(getAdminDb(), [playerId]).catch((e) =>
+    console.error("[nba-favorites] player index", e)
+  );
+}
 
 async function requireUid(req: Request): Promise<string> {
   const authz =
@@ -141,6 +148,7 @@ export async function POST(req: Request) {
           { merge: true }
         );
         revalidateTag(NBA_FAVORITE_COUNTS_CACHE_TAG, { expire: 0 });
+        await indexFavoritePlayer(playerId);
         return NextResponse.json({ ok: true, favorites: result.next });
       }
 
@@ -162,6 +170,9 @@ export async function POST(req: Request) {
         { merge: true }
       );
       revalidateTag(NBA_FAVORITE_COUNTS_CACHE_TAG, { expire: 0 });
+      if (result.next.favoriteNbaPlayers.some((p) => p.playerId === playerId)) {
+        await indexFavoritePlayer(playerId);
+      }
       return NextResponse.json({ ok: true, favorites: result.next });
     }
 

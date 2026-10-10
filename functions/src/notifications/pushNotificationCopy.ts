@@ -46,7 +46,30 @@ export type DisciplinePushInput = {
   seasonTech: number | null;
   /** next = 次のテクニカルで出場停止 / reached = この試合で出場停止の回数に到達 */
   suspension: "next" | "reached" | null;
+  /** 試合中の通知: 対戦相手と時間 */
+  live?: { opponentAbbr: string; period: number | null; clock: string | null };
 };
+
+function disciplineLiveLine(
+  lang: LocalizedLang,
+  live: NonNullable<DisciplinePushInput["live"]>
+): string {
+  const q = live.period;
+  const c = live.clock ?? "";
+  let when = "";
+  if (q != null && q > 4) {
+    when = `OT${q - 4 > 1 ? q - 4 : ""} ${c}`.trim();
+  } else if (q != null) {
+    when = L(lang, {
+      ja: `第${q}Q 残り${c}`,
+      en: `Q${q} ${c}`,
+      zh: `第${q}节 剩余${c}`,
+      ko: `${q}쿼터 ${c}`,
+    }).trim();
+  }
+  const vs = live.opponentAbbr ? `vs ${live.opponentAbbr}` : "";
+  return [vs, when].filter(Boolean).join(" · ");
+}
 
 export type PushLanguage = LocalizedLang;
 
@@ -145,6 +168,10 @@ function disciplineBody(lang: LocalizedLang, d: DisciplinePushInput): string {
       ar: " — يستوجب الإيقاف مباراة واحدة",
       pt: " — gera suspensão de um jogo",
     });
+  }
+  if (d.live) {
+    const line = disciplineLiveLine(lang, d.live);
+    if (line) body += `\n${line}`;
   }
   return body;
 }

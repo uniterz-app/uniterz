@@ -24,6 +24,10 @@ import { normalizeLiveGameStatsDoc } from "@/lib/games/liveGameStats";
 import { leadingScorersFromBox } from "@/lib/nba/topScorer";
 import { fetchBdlGameAdvancedStats } from "@/lib/nba/bdl/fetchBdlGameAdvancedStats";
 import { mergeGameAdvancedIntoLiveStatsDoc } from "@/lib/nba/bdl/mergeGameAdvancedIntoLiveStats";
+import {
+  detectLiveDisciplineAlerts,
+  type LiveDisciplineGame,
+} from "@/lib/nba/discipline/liveDisciplineAlerts";
 
 /** 開始からこの時間を過ぎても box の得点者が取れなければ、得点者なしで確定させる */
 const FINAL_WITHOUT_LEADERS_AFTER_MS = 3.5 * 60 * 60 * 1000;
@@ -41,6 +45,8 @@ export type IngestNbaLiveGamesResult = {
   gamesUpdated: number;
   liveStatsWritten: number;
   skipped: number;
+  /** お気に入り選手の試合中 TECH / FLAG / EJECT */
+  disciplineAlerts: { gamesChecked: number; alertsCreated: number };
   dryRun: boolean;
   sampleGameIds: string[];
 };
@@ -190,6 +196,7 @@ export async function ingestNbaLiveGamesFromBdl(
   let liveStatsWritten = 0;
   let skipped = 0;
   const sampleGameIds: string[] = [];
+  const disciplineGames: LiveDisciplineGame[] = [];
 
   // 確定済みは再書き込みしない（onGameFinalV2 の再起動・final の巻き戻しを防ぐ）
   const prevByDocId = new Map<string, PrevGameState>();
@@ -284,6 +291,16 @@ export async function ingestNbaLiveGamesFromBdl(
       skipped += 1;
       continue;
     }
+    if (box && !preseasonIds.has(g.id)) {
+      disciplineGames.push({
+        bdlGameId: g.id,
+        date: String(g.date ?? "").slice(0, 10),
+        seasonType: g.postseason ? "playoffs" : "regular",
+        homeAbbr: String(g.home_team?.abbreviation ?? ""),
+        awayAbbr: String(g.visitor_team?.abbreviation ?? ""),
+        box,
+      });
+    }
     if (sampleGameIds.length < 8) sampleGameIds.push(docId);
     if (settleNow) {
       patch.finalAt = FieldValue.serverTimestamp();
@@ -364,9 +381,19 @@ export async function ingestNbaLiveGamesFromBdl(
     if (sampleGameIds.length < 8) sampleGameIds.push(docId);
   }
 
+  let disciplineAlerts = { gamesChecked: 0, alertsCreated: 0 };
+  if (!dryRun) {
+    try {
+      disciplineAlerts = await detectLiveDisciplineAlerts(db, disciplineGames);
+    } catch (e) {
+      console.error("[nbaLiveGamesIngest] discipline alerts failed", e);
+    }
+  }
+
   return {
     ok: true,
     dates,
+    disciplineAlerts,
     gamesFetched: games.length,
     gamesUpdated: dryRun ? 0 : gamesUpdated,
     liveStatsWritten: dryRun ? 0 : liveStatsWritten,

@@ -8,9 +8,10 @@ import type { DisciplinePushInput } from "./pushNotificationCopy";
 const MAX_GAME_AGE_DAYS = 3;
 /** NBA Rule 12A: レギュラー 16 回目、プレーオフ 7 回目で 1 試合停止。以降 2 回ごと */
 const TECH_SUSPENSION_FIRST = { regular: 16, playoffs: 7 } as const;
+const LIVE_ALERTS = "nbaDisciplineLiveAlerts";
 
 type Phase = keyof typeof TECH_SUSPENSION_FIRST;
-
+type Kind = "tech" | "flag" | "eject";
 type GameEvent = { p?: unknown; k?: unknown };
 
 function isSuspensionCount(n: number, phase: Phase): boolean {
@@ -35,10 +36,99 @@ function gameAgeDays(date: string): number {
   return Number.isFinite(ms) ? (Date.now() - ms) / 86_400_000 : Infinity;
 }
 
+/** `nbaDiscipline/{season}` の今季テクニカル数（取り消し反映済み）と集計時刻 */
+async function snapshotTech(
+  seasonKey: string,
+  playerId: string,
+  phase: Phase
+): Promise<{ tech: number; builtAtMs: number } | null> {
+  if (!seasonKey) return null;
+  const techPath = new FieldPath("players", playerId, phase, "tech");
+  const [season] = await db.getAll(db.collection("nbaDiscipline").doc(seasonKey), {
+    fieldMask: [techPath, "builtAtMs"],
+  });
+  if (!season?.exists) return null;
+  return {
+    tech: Number(season.get(techPath) ?? 0) || 0,
+    builtAtMs: Number(season.get("builtAtMs") ?? 0) || 0,
+  };
+}
+
+async function sendToFans(
+  playerId: string,
+  discipline: DisciplinePushInput,
+  logTag: string
+): Promise<void> {
+  const fans = await db
+    .collection("users")
+    .where("favoriteNbaPlayerIds", "array-contains", playerId)
+    .select()
+    .get();
+  if (fans.empty) return;
+  const targets: SendTarget[] = fans.docs.map((d) => ({
+    uid: d.id,
+    data: { type: "discipline_alert", playerId },
+  }));
+  const result = await sendExpoPushToUids({
+    type: "discipline_alert",
+    targets,
+    matchup: { discipline },
+  });
+  console.log(`${logTag} player=${playerId} sent=${result.sent} fans=${targets.length}`);
+}
+
 /**
- * `nbaGameDiscipline/{bdlGameId}` 作成（日次 ingest の新規終了試合）→
- * その試合でテクニカル / フレグラント / 退場があった選手をお気に入りにしているユーザーへ。
- * 今季テクニカル数は `nbaDiscipline/{season}`（取り消し反映済み）から。
+ * 試合中（ライブ ingest が毎分 `nbaDisciplineLiveAlerts` を作成）→ お気に入りにしているユーザーへ即時。
+ * 今季テクニカル数 = 前日までの集計 + この試合の何本目か。
+ */
+export const onNbaDisciplineLiveAlertCreated = onDocumentCreated(
+  { document: `${LIVE_ALERTS}/{alertId}`, region: "asia-northeast1" },
+  async (event) => {
+    const a = event.data?.data() as
+      | {
+          playerId?: string;
+          playerName?: string;
+          kind?: Kind;
+          nth?: number;
+          opponentAbbr?: string;
+          period?: number | null;
+          clock?: string | null;
+          seasonKey?: string;
+          seasonType?: string;
+          date?: string;
+        }
+      | undefined;
+    if (!a?.playerId || !a.kind) return;
+    if (gameAgeDays(String(a.date ?? "")) > MAX_GAME_AGE_DAYS) return;
+    const phase: Phase = a.seasonType === "playoffs" ? "playoffs" : "regular";
+
+    let seasonTech: number | null = null;
+    if (a.kind === "tech") {
+      const snap = await snapshotTech(String(a.seasonKey ?? ""), a.playerId, phase);
+      seasonTech = (snap?.tech ?? 0) + (a.nth ?? 1);
+    }
+    await sendToFans(
+      a.playerId,
+      {
+        playerName: a.playerName || "NBA",
+        tech: a.kind === "tech" ? 1 : 0,
+        flag: a.kind === "flag" ? 1 : 0,
+        eject: a.kind === "eject" ? 1 : 0,
+        seasonTech,
+        suspension: seasonTech != null ? suspensionState(seasonTech, 1, phase) : null,
+        live: {
+          opponentAbbr: a.opponentAbbr ?? "",
+          period: a.period ?? null,
+          clock: a.clock ?? null,
+        },
+      },
+      `[onNbaDisciplineLiveAlertCreated] alert=${event.params.alertId}`
+    );
+  }
+);
+
+/**
+ * 日次 ingest の `nbaGameDiscipline/{bdlGameId}` 作成 → 試合中に通知できなかった選手だけ（取りこぼし用）。
  */
 export const onNbaGameDisciplineCreated = onDocumentCreated(
   { document: "nbaGameDiscipline/{gameId}", region: "asia-northeast1" },
@@ -70,45 +160,36 @@ export const onNbaGameDisciplineCreated = onDocumentCreated(
       byPlayer.set(pid, row);
     }
 
-    for (const [playerId, counts] of byPlayer) {
-      const fans = await db
-        .collection("users")
-        .where("favoriteNbaPlayerIds", "array-contains", playerId)
-        .select()
-        .get();
-      if (fans.empty) continue;
+    const liveAlerted = new Set(
+      (
+        await db
+          .collection(LIVE_ALERTS)
+          .where("gameId", "==", event.params.gameId)
+          .select("playerId")
+          .get()
+      ).docs.map((d) => String(d.get("playerId") ?? ""))
+    );
 
+    for (const [playerId, counts] of byPlayer) {
+      if (liveAlerted.has(playerId)) continue;
       let seasonTech: number | null = null;
-      if (counts.tech > 0 && seasonKey) {
-        const techPath = new FieldPath("players", playerId, phase, "tech");
-        const [season] = await db.getAll(db.collection("nbaDiscipline").doc(seasonKey), {
-          fieldMask: [techPath, "builtAtMs"],
-        });
-        if (season?.exists) {
-          const snapTech = Number(season.get(techPath) ?? 0) || 0;
-          const includesGame = Number(season.get("builtAtMs") ?? 0) >= Number(doc.builtAtMs ?? 0);
-          seasonTech = includesGame ? snapTech : snapTech + counts.tech;
+      if (counts.tech > 0) {
+        const s = await snapshotTech(seasonKey, playerId, phase);
+        if (s) {
+          const includesGame = s.builtAtMs >= Number(doc.builtAtMs ?? 0);
+          seasonTech = includesGame ? s.tech : s.tech + counts.tech;
         }
       }
-
-      const discipline: DisciplinePushInput = {
-        playerName: doc.names?.[playerId] ?? "NBA",
-        ...counts,
-        seasonTech,
-        suspension:
-          seasonTech != null ? suspensionState(seasonTech, counts.tech, phase) : null,
-      };
-      const targets: SendTarget[] = fans.docs.map((d) => ({
-        uid: d.id,
-        data: { type: "discipline_alert", playerId },
-      }));
-      const result = await sendExpoPushToUids({
-        type: "discipline_alert",
-        targets,
-        matchup: { discipline },
-      });
-      console.log(
-        `[onNbaGameDisciplineCreated] game=${event.params.gameId} player=${playerId} sent=${result.sent} fans=${targets.length}`
+      await sendToFans(
+        playerId,
+        {
+          playerName: doc.names?.[playerId] ?? "NBA",
+          ...counts,
+          seasonTech,
+          suspension:
+            seasonTech != null ? suspensionState(seasonTech, counts.tech, phase) : null,
+        },
+        `[onNbaGameDisciplineCreated] game=${event.params.gameId}`
       );
     }
   }
