@@ -163,6 +163,8 @@ export async function rebuildNbaDisciplineSnapshot(
       games: f.games ?? 0,
       onCourt: f.onCourt === true,
       ...(f.salaryUsd && f.salaryUsd > 0 ? { salaryUsd: f.salaryUsd } : {}),
+      ...(f.withholdingServices ? { withholdingServices: true } : {}),
+      ...(f.totalGames && f.totalGames > 0 ? { totalGames: f.totalGames } : {}),
     }));
   let lostById = new Map<string, number>();
   if (suspensions.length > 0) {

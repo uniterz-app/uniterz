@@ -66,6 +66,10 @@ export type NbaDisciplineFineDoc = {
    * 移籍・バイアウトして BDL が別チームの額を返す選手用。無ければ BDL
    */
   salaryUsd?: number;
+  /** 役務拒否（withholding services）による停止。1 試合 1/91.6 */
+  withholdingServices?: boolean;
+  /** 停止全体の試合数（20 試合以上なら 1/110。一部が前季で消化済み扱いのとき用） */
+  totalGames?: number;
   /** 取り消し対象（kind=rescind）。`date` は試合日（米国日付） */
   rescindKind?: NbaDisciplineEventKind;
   playerId: string;

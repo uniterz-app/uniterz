@@ -126,6 +126,12 @@ export async function POST(req: Request) {
       seasonType: body.seasonType === "playoffs" ? "playoffs" : "regular",
       kind,
       ...(kind === "suspension" ? { games, onCourt: body.onCourt === true } : {}),
+      ...(kind === "suspension" && body.withholdingServices === true
+        ? { withholdingServices: true }
+        : {}),
+      ...(kind === "suspension" && Math.trunc(Number(body.totalGames)) > games
+        ? { totalGames: Math.trunc(Number(body.totalGames)) }
+        : {}),
       ...(kind === "suspension" && Number(body.salaryUsd) > 0
         ? { salaryUsd: Math.round(Number(body.salaryUsd)) }
         : {}),

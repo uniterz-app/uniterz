@@ -3,6 +3,7 @@
  *
  * - 20 試合未満の停止: 1 試合につき Base Compensation の 1/145
  * - 20 試合以上の停止: 1 試合につき 1/110
+ * - 役務拒否（withholding services）: 1 試合につき 1/91.6
  * - 2023 CBA（2023-24〜）: シーズン最初の出場停止がコート上の行為による 1 試合停止なら日割り（1/レギュラー日数）
  *
  * 年俸は出場停止のあった選手だけ BDL `/nba/v1/contracts/players` から取り、
@@ -15,6 +16,7 @@ import { fetchBdlPlayerContractSeasons } from "@/lib/nba/bdl/fetchBdlPlayerContr
 export const NBA_PLAYER_SEASON_SALARIES_COLLECTION = "nbaPlayerSeasonSalaries";
 
 const PER_DAY_RULE_FIRST_SEASON_YEAR = 2023;
+const WITHHOLDING_SERVICES_DIVISOR = 91.6;
 
 export type NbaSuspensionForSalary = {
   /** 呼び出し側の識別子（手入力 doc id など） */
@@ -25,6 +27,10 @@ export type NbaSuspensionForSalary = {
   onCourt: boolean;
   /** 手入力の年俸。BDL より優先 */
   salaryUsd?: number;
+  /** 役務拒否（withholding services）による停止。1 試合 1/91.6 */
+  withholdingServices?: boolean;
+  /** 停止全体の試合数（一部が消化済み扱いでも 1/110 判定はこちら） */
+  totalGames?: number;
 };
 
 /** 年俸キャッシュを読み、無い選手だけ BDL から取って追記する。契約行が無ければ 0 */
@@ -88,7 +94,9 @@ export function suspensionLostSalaryUsd(
       out.set(s.id, 0);
       continue;
     }
-    let lost = (salary / (games >= 20 ? 110 : 145)) * games;
+    const length = Math.max(games, s.totalGames ?? 0);
+    const divisor = s.withholdingServices ? WITHHOLDING_SERVICES_DIVISOR : length >= 20 ? 110 : 145;
+    let lost = (salary / divisor) * games;
     if (perDayRule && s.onCourt && games === 1 && firstByPlayer.get(s.playerId) === s.id) {
       lost = salary / regularSeasonDays;
     }

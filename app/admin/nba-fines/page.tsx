@@ -59,6 +59,8 @@ export default function AdminNbaFinesPage() {
   const [games, setGames] = useState("1");
   const [onCourt, setOnCourt] = useState(true);
   const [salary, setSalary] = useState("");
+  const [withholding, setWithholding] = useState(false);
+  const [totalGames, setTotalGames] = useState("");
   const [rescindKind, setRescindKind] =
     useState<NbaDisciplineEventKind>("tech");
 
@@ -112,6 +114,8 @@ export default function AdminNbaFinesPage() {
           games: Number(games),
           onCourt,
           salaryUsd: Number(salary.replace(/[^0-9.]/g, "")) || undefined,
+          withholdingServices: withholding,
+          totalGames: Number(totalGames) || undefined,
           rescindKind,
           playerId: picked.playerId,
           playerName: picked.playerName,
@@ -125,6 +129,8 @@ export default function AdminNbaFinesPage() {
       setQuery("");
       setAmount("");
       setSalary("");
+      setWithholding(false);
+      setTotalGames("");
       setReason("");
       await load();
     } catch (e) {
@@ -291,6 +297,21 @@ export default function AdminNbaFinesPage() {
                 />
                 コート上の行為（乱闘・フラグラントなど）
               </label>
+              <label className="mt-2 flex items-center gap-2 text-xs text-white/60">
+                <input
+                  type="checkbox"
+                  checked={withholding}
+                  onChange={(e) => setWithholding(e.target.checked)}
+                />
+                役務拒否（withholding services・1 試合 1/91.6）
+              </label>
+              <input
+                className={`${input} mt-2`}
+                inputMode="numeric"
+                placeholder="停止全体の試合数（任意・一部が消化済み扱いのとき）"
+                value={totalGames}
+                onChange={(e) => setTotalGames(e.target.value)}
+              />
               <input
                 className={`${input} mt-2`}
                 inputMode="numeric"
