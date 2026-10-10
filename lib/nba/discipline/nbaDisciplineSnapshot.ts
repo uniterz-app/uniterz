@@ -128,17 +128,6 @@ export async function rebuildNbaDisciplineSnapshot(
     });
     return { ...g, events };
   });
-  for (const g of gameDocs) {
-    const phase: NbaDisciplineSeasonType =
-      g.seasonType === "playoffs" ? "playoffs" : "regular";
-    for (const ev of g.events ?? []) {
-      const entry = touchPlayer(ev.p, g.names?.[ev.p] ?? "", ev.t, g.date ?? "");
-      entry[phase][ev.k] += 1;
-      const team = (teams[ev.t] ??= emptyTeam());
-      team[phase][ev.k] += 1;
-    }
-  }
-
   const scheduled = scheduledDisciplineFines(
     gameDocs.map((g) => ({
       date: g.date ?? "",
@@ -146,6 +135,18 @@ export async function rebuildNbaDisciplineSnapshot(
       events: g.events ?? [],
     }))
   );
+  for (const g of gameDocs) {
+    const phase: NbaDisciplineSeasonType =
+      g.seasonType === "playoffs" ? "playoffs" : "regular";
+    const playIn = scheduled.playInDates.has(g.date ?? "");
+    for (const ev of g.events ?? []) {
+      const entry = touchPlayer(ev.p, g.names?.[ev.p] ?? "", ev.t, g.date ?? "");
+      const team = (teams[ev.t] ??= emptyTeam());
+      if (playIn) continue;
+      entry[phase][ev.k] += 1;
+      team[phase][ev.k] += 1;
+    }
+  }
   for (const fine of scheduled.fines) {
     players[fine.playerId]![fine.phase].fines += fine.amountUsd;
     teams[fine.teamId]![fine.phase].fines += fine.amountUsd;

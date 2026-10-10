@@ -96,9 +96,16 @@ function resolveByName(
   if (!norm) return null;
   const full = pickUnique(index.byFull.get(norm), teamId);
   if (full) return full;
-  const last = norm.split(" ").slice(1).join(" ");
+  const [first, ...rest] = norm.split(" ");
+  const last = rest.join(" ");
   if (!last) return null;
-  return pickUnique(index.byLast.get(last), teamId);
+  // 姓だけ一致はコーチ（Willie Green → Draymond Green 等）を拾うので、名の頭文字とチームも合わせる
+  const candidates = (index.byLast.get(last) ?? []).filter(
+    (p) =>
+      normalizeNbaPersonName(p.firstName).startsWith(first![0]!) &&
+      (!teamId || !p.teamId || p.teamId === teamId)
+  );
+  return pickUnique(candidates, teamId);
 }
 
 export type ParsedGameDiscipline = {
@@ -115,6 +122,10 @@ export function parseBdlPlaysDiscipline(
   const events: NbaGameDisciplineEvent[] = [];
   const unresolved: string[] = [];
   const names: Record<string, string> = {};
+  // BDL は double technical を両チーム分 2 行出す（両行に 2 名とも載る）
+  const doubleTechSeen = new Set<string>();
+  const doubleTechRepeated = new Map<string, NbaGameDisciplineEvent>();
+  const ejectedAt = new Set<string>();
 
   for (const play of plays) {
     const kind = classifyPlayType(String(play.type ?? ""));
@@ -160,9 +171,26 @@ export function parseBdlPlaysDiscipline(
         unresolved.push(`${play.type}: ${text}`);
         continue;
       }
-      events.push({ p: p.playerId, t: teamId, k: eventKind });
+      const at = `${play.period ?? ""}|${play.clock ?? ""}|${p.playerId}`;
+      const event: NbaGameDisciplineEvent = { p: p.playerId, t: teamId, k: eventKind };
+      if (kind === "eject") ejectedAt.add(at);
+      if (kind === "double_tech") {
+        if (doubleTechSeen.has(at)) {
+          doubleTechRepeated.set(at, event);
+          continue;
+        }
+        doubleTechSeen.add(at);
+      }
+      events.push(event);
       names[p.playerId] = `${p.firstName} ${p.lastName}`.trim();
     }
+  }
+
+  // 同時刻に double が重なり同時に退場 = 2 本目のテクニカル（その試合ほかに T なしのときだけ）
+  for (const [at, event] of doubleTechRepeated) {
+    if (!ejectedAt.has(at)) continue;
+    const techs = events.filter((e) => e.p === event.p && e.k === "tech").length;
+    if (techs === 1) events.push(event);
   }
 
   return { events, unresolved, names };

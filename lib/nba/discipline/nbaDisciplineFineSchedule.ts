@@ -31,6 +31,8 @@ export type NbaDisciplineScheduleResult = {
   fines: NbaScheduledDisciplineFine[];
   /** レギュラーシーズンの日数（初日〜最終日を含む。CBA の日割り年俸用。不明は 0） */
   regularSeasonDays: number;
+  /** プレーインの日付（NBA 公式はレギュラー・プレーオフどちらの回数にも入れない） */
+  playInDates: Set<string>;
 };
 
 const FLAT_FINE_USD = 2_000;
@@ -86,11 +88,13 @@ export function scheduledDisciplineFines(
   const techN = new Map<string, number>();
   const ejectN = new Map<string, number>();
   const fines: NbaScheduledDisciplineFine[] = [];
+  const playInDates = new Set<string>();
 
   for (const g of sorted) {
     const phase: NbaDisciplineSeasonType =
       g.seasonType === "playoffs" ? "playoffs" : "regular";
     const playIn = isPlayIn(g.date);
+    if (playIn) playInDates.add(g.date);
     for (const ev of g.events) {
       if (ev.k === "flag") continue;
       let amountUsd = FLAT_FINE_USD;
@@ -114,5 +118,5 @@ export function scheduledDisciplineFines(
         ) + 1
       : 0;
 
-  return { fines, regularSeasonDays };
+  return { fines, regularSeasonDays, playInDates };
 }
