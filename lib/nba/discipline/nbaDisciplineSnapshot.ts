@@ -46,7 +46,13 @@ function parseCounts(raw: unknown): NbaDisciplineCounts {
   const o = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
   const n = (v: unknown) =>
     typeof v === "number" && Number.isFinite(v) ? v : 0;
-  return { tech: n(o.tech), flag: n(o.flag), eject: n(o.eject), fines: n(o.fines) };
+  return {
+    tech: n(o.tech),
+    flag: n(o.flag),
+    eject: n(o.eject),
+    susp: n(o.susp),
+    fines: n(o.fines),
+  };
 }
 
 export async function listDisciplineFines(
@@ -180,10 +186,14 @@ export async function rebuildNbaDisciplineSnapshot(
       amountUsd = lostById.get(fine.id) ?? 0;
       if (amountUsd !== fine.amountUsd) amountUpdates.push({ id: fine.id, amountUsd });
     }
+    const suspGames =
+      fine.kind === "suspension" ? Math.max(0, Math.trunc(fine.games ?? 0)) : 0;
     const entry = touchPlayer(fine.playerId, fine.playerName, fine.teamId, fine.date);
     entry[phase].fines += amountUsd;
+    entry[phase].susp += suspGames;
     const team = (teams[fine.teamId] ??= emptyTeam());
     team[phase].fines += amountUsd;
+    team[phase].susp += suspGames;
   }
   for (const u of amountUpdates) {
     await db

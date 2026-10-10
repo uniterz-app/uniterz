@@ -26,6 +26,7 @@ const CELL_LABELS: Record<keyof NbaDisciplineCounts, string> = {
   tech: "TECH",
   flag: "FLAG",
   eject: "EJECT",
+  susp: "SUSP",
   fines: "FINES",
 };
 
@@ -33,6 +34,7 @@ const CELL_ORDER: ReadonlyArray<keyof NbaDisciplineCounts> = [
   "tech",
   "flag",
   "eject",
+  "susp",
   "fines",
 ];
 
@@ -71,7 +73,7 @@ export function buildDisciplineCells(
 
 export function disciplineHasPlayoffs(slice: NbaDisciplineDetailSlice): boolean {
   const p = slice.playoffs;
-  return p.tech + p.flag + p.eject + p.fines > 0;
+  return p.tech + p.flag + p.eject + p.susp + p.fines > 0;
 }
 
 export type NbaDisciplineFineLine = {

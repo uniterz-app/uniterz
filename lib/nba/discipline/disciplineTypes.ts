@@ -13,6 +13,8 @@ export type NbaDisciplineCounts = {
   tech: number;
   flag: number;
   eject: number;
+  /** 出場停止の試合数（NBA 発表分の手入力） */
+  susp: number;
   /** 罰金合計（USD） */
   fines: number;
 };
@@ -21,6 +23,7 @@ export const EMPTY_NBA_DISCIPLINE_COUNTS: NbaDisciplineCounts = {
   tech: 0,
   flag: 0,
   eject: 0,
+  susp: 0,
   fines: 0,
 };
 

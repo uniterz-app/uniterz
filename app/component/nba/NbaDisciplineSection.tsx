@@ -28,11 +28,11 @@ function CellRow({
   accent: string;
 }) {
   return (
-    <div className="grid grid-cols-4 gap-1.5">
+    <div className="grid grid-cols-5 gap-1.5">
       {cells.map((c) => (
         <div
           key={c.key}
-          className="space-y-0.5 border bg-black/40 px-2 py-2"
+          className="min-w-0 space-y-0.5 border bg-black/40 px-1.5 py-2"
           style={{ borderColor: hexToRgba(accent, 0.3) }}
         >
           <p

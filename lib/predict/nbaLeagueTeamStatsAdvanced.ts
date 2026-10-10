@@ -84,6 +84,7 @@ export type NbaLeagueTeamAdvancedMetric =
   | "techFouls"
   | "flagrantFouls"
   | "ejections"
+  | "suspensions"
   | "finesUsd";
 
 export type NbaLeagueTeamAdvancedFields = Record<
@@ -1054,6 +1055,15 @@ export const NBA_LEAGUE_TEAM_ADVANCED_METRIC_DEFS: readonly NbaLeagueTeamAdvance
       pt: "Expulsões (total da temporada).",
       fr: "Expulsions (cumul saison).",
     }),
+    def("suspensions", "SUSP", "Suspension games", "discipline", true, "count", {
+      ja: "選手の出場停止試合数（NBA 発表分・シーズン累計）。",
+      en: "Player games suspended (as announced by the NBA, season total).",
+      ko: "선수 출장 정지 경기 수(NBA 발표 기준, 시즌 누적).",
+      zh: "球员禁赛场次（以 NBA 公告为准，赛季累计）。",
+      es: "Partidos de suspensión de jugadores (anunciados por la NBA, total de temporada).",
+      pt: "Jogos de suspensão de jogadores (anunciados pela NBA, total da temporada).",
+      fr: "Matchs de suspension des joueurs (annoncés par la NBA, cumul saison).",
+    }),
     def("finesUsd", "FINES", "Fines", "discipline", true, "usd", {
       ja: "リーグからの選手罰金の合計（USD・シーズン累計）。",
       en: "Total league fines on players (USD, season total).",
@@ -1302,6 +1312,7 @@ export function buildLeagueTeamAdvancedFields(
     techFouls: 0,
     flagrantFouls: 0,
     ejections: 0,
+    suspensions: 0,
     finesUsd: 0,
   };
 }

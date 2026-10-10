@@ -23,6 +23,7 @@ export const NBA_PLAYER_DISCIPLINE_METRICS = [
   ["technical_fouls", "tech"],
   ["flagrant_fouls", "flag"],
   ["ejections", "eject"],
+  ["suspensions", "susp"],
   ["fines_usd", "fines"],
 ] as const satisfies ReadonlyArray<
   readonly [NbaPlayerLeaderMetricId, keyof NbaDisciplineCounts]
@@ -32,6 +33,7 @@ export const NBA_TEAM_DISCIPLINE_METRICS = [
   ["techFouls", "tech"],
   ["flagrantFouls", "flag"],
   ["ejections", "eject"],
+  ["suspensions", "susp"],
   ["finesUsd", "fines"],
 ] as const satisfies ReadonlyArray<
   readonly [keyof NbaLeagueTeamStatRow, keyof NbaDisciplineCounts]

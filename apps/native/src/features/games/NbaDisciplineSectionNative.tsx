@@ -166,8 +166,9 @@ const styles = StyleSheet.create({
   },
   cell: {
     flex: 1,
+    minWidth: 0,
     borderWidth: 1,
-    paddingHorizontal: 8,
+    paddingHorizontal: 6,
     paddingVertical: 8,
     backgroundColor: "rgba(8,8,12,0.4)",
     gap: 2,

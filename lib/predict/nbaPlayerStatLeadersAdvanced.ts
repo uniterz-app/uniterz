@@ -96,6 +96,7 @@ export type NbaPlayerAdvancedLeaderMetric =
   | "technical_fouls"
   | "flagrant_fouls"
   | "ejections"
+  | "suspensions"
   | "fines_usd";
 
 export type NbaPlayerLeaderMetricKindEx =
@@ -1105,6 +1106,15 @@ export const NBA_PLAYER_ADVANCED_LEADER_METRICS: readonly NbaPlayerAdvancedLeade
       es: "Expulsiones (total de temporada).",
       pt: "Expulsões (total da temporada).",
       fr: "Expulsions (cumul saison).",
+    }),
+    def("suspensions", "SUSP", "Suspension games", "discipline", true, "count", {
+      ja: "出場停止の試合数（NBA 発表分・シーズン累計）。",
+      en: "Games suspended (as announced by the NBA, season total).",
+      ko: "출장 정지 경기 수(NBA 발표 기준, 시즌 누적).",
+      zh: "禁赛场次（以 NBA 公告为准，赛季累计）。",
+      es: "Partidos de suspensión (anunciados por la NBA, total de temporada).",
+      pt: "Jogos de suspensão (anunciados pela NBA, total da temporada).",
+      fr: "Matchs de suspension (annoncés par la NBA, cumul saison).",
     }),
     def("fines_usd", "FINES", "Fines", "discipline", true, "usd", {
       ja: "リーグからの罰金合計（USD・シーズン累計）。",
