@@ -13,7 +13,8 @@
     "ios:dev": "expo run:ios",
     "ios:pod": "pod install --project-directory=ios",
     "postinstall": "node scripts/patch-rniap-podspec.mjs && node scripts/patch-expo-simulator-prerequisite.mjs && node scripts/patch-expo-dev-launcher-uiscene.mjs",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "ota:production": "APP_VARIANT=production EXPO_PUBLIC_APP_URL=https://uniterz.app EXPO_PUBLIC_UNITERZ_API_BASE_URL=https://www.uniterz.app npx -y eas-cli@latest update --branch production --platform all --non-interactive"
   },
   "dependencies": {
     "@expo-google-fonts/alfa-slab-one": "^0.4.1",
