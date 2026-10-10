@@ -46,7 +46,10 @@ import {
   rankingsPreseasonNotice,
   shouldShowRankingsPreseasonNotice,
 } from "@/lib/rankings/rankingsPreseasonNotice";
-import { upsetRankingEligibilityNotice } from "@/lib/rankings/upsetRankingEligibilityNotice";
+import {
+  upsetRankingEligibilityNotice,
+  winRateRankingNoUnitsNotice,
+} from "@/lib/rankings/upsetRankingEligibilityNotice";
 import { useSearchParams } from "next/navigation";
 import {
   RANKINGS_TAB_METRIC_PARAM,
@@ -552,6 +555,8 @@ export default function MobileRankingsPage() {
                           String(winRateMinPosts)
                         )
                       : m.rankings.noMinPosts}
+                  <br />
+                  {winRateRankingNoUnitsNotice(language)}
                 </p>
               )}
               {metric === "upsetScore" && rankingPeriod === "monthly" && (
