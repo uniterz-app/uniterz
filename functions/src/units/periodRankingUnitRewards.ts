@@ -38,15 +38,29 @@ export const PERIOD_RANKING_UNIT_MONTHLY_DEPARTMENT_MAX_RANK = 20;
  */
 export const PERIOD_WIN_RATE_PICKUP_PARTICIPATION_RATE = 0.65;
 
-/** 週間総合: 1→60 / 2→40 / 3→30 / 4→25 / 5→20 / 6–10→15 / 11–20→10 */
+/**
+ * 月間アップセット部門の参加条件。アップセット得点は外してもマイナスがないため、
+ * 格下だけを選び続けて点を積む逆張りを勝率で順位から外す。
+ */
+export const PERIOD_UPSET_MIN_WIN_RATE = 0.5;
+
+export function isPeriodUpsetEligible(input: {
+  posts: number;
+  wins: number;
+}): boolean {
+  if (input.posts <= 0) return false;
+  return input.wins / input.posts >= PERIOD_UPSET_MIN_WIN_RATE;
+}
+
+/** 週間総合: 1→50 / 2→40 / 3→30 / 4→25 / 5→20 / 6–10→15 / 11–20→10 */
 const WEEKLY_OVERALL_BY_RANK: readonly number[] = [
-  60, 40, 30, 25, 20, 15, 15, 15, 15, 15, 10, 10, 10, 10, 10, 10, 10, 10, 10,
+  50, 40, 30, 25, 20, 15, 15, 15, 15, 15, 10, 10, 10, 10, 10, 10, 10, 10, 10,
   10,
 ];
 
-/** 月間総合: 1→300 / 2→200 … 10→75 / 11–15→60 / 16–20→55 / 21–30→50 / 31–40→45 / 41–50→40 */
+/** 月間総合: 1→250 / 2→200 … 10→75 / 11–15→60 / 16–20→55 / 21–30→50 / 31–40→45 / 41–50→40 */
 const MONTHLY_OVERALL_BY_RANK: readonly number[] = [
-  300, 200, 175, 150, 130, 115, 105, 95, 85, 75, 60, 60, 60, 60, 60, 55, 55, 55,
+  250, 200, 175, 150, 130, 115, 105, 95, 85, 75, 60, 60, 60, 60, 60, 55, 55, 55,
   55, 55, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 45, 45, 45, 45, 45, 45, 45,
   45, 45, 45, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40,
 ];

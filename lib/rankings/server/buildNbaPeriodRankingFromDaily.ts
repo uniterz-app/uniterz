@@ -14,7 +14,10 @@ import {
 } from "@/lib/rankings/rankingPeriod";
 import { mergeUserPlansIntoBulkByMetric } from "@/lib/rankings/mergeUserPlanIntoRankingPayload";
 import { countNbaPickupGamesSoFarAdmin } from "@/lib/rankings/server/countNbaPickupGamesSoFarAdmin";
-import { winRateMinPostsFromPickupCount } from "@/lib/units/periodRankingUnitRewards";
+import {
+  isPeriodUpsetEligible,
+  winRateMinPostsFromPickupCount,
+} from "@/lib/units/periodRankingUnitRewards";
 import { rankingPeriodTodayKey } from "@/lib/rankings/rankingPeriodClock";
 
 type DailyInc = {
@@ -61,8 +64,7 @@ function addInc(agg: Agg, inc: DailyInc | null | undefined) {
   agg.posts += Number(inc.posts ?? 0) || 0;
   agg.wins += Number(inc.wins ?? 0) || 0;
   agg.totalPoints += Number(inc.pointsSumV3 ?? 0) || 0;
-  agg.totalUpset += Number(inc.upsetPointsSum ?? 0) || 0;
-  agg.totalGoalScorerHits += Number(inc.goalScorerHitCount ?? 0) || 0;
+  agg.totalUpset += Number(inc.upsetPointsSum ?? 0) || 0;  agg.totalGoalScorerHits += Number(inc.goalScorerHitCount ?? 0) || 0;
 }
 
 /** シーズンスライス（rankingBySeason.<key>）優先、なければ leagues.nba */
@@ -103,12 +105,20 @@ function metricValue(row: RankingApiRow, metric: PeriodMetricKey): number {
 function sortRows(
   rows: RankingApiRow[],
   metric: PeriodMetricKey,
-  winRateMin: number
+  winRateMin: number,
+  upsetWinRateGuard: boolean
 ): RankingApiRow[] {
   const eligible =
     metric === "winRate"
       ? rows.filter((r) => (r.totalPosts ?? 0) >= winRateMin)
-      : rows;
+      : metric === "totalUpset" && upsetWinRateGuard
+        ? rows.filter((r) =>
+            isPeriodUpsetEligible({
+              posts: r.totalPosts ?? 0,
+              wins: r.totalWins ?? 0,
+            })
+          )
+        : rows;
   return [...eligible].sort((a, b) => {
     const diff = metricValue(b, metric) - metricValue(a, metric);
     if (diff !== 0) return diff;
@@ -263,10 +273,11 @@ export async function buildNbaPeriodRankingBulk(opts: {
     baseRows = baseRows.filter((r) => r.plan === "pro");
   }
 
+  const upsetWinRateGuard = opts.period === "monthly";
   const byMetric = {} as Record<PeriodMetricKey, PeriodBulkMetricPayload>;
 
   for (const metric of PERIOD_METRICS) {
-    const sorted = sortRows(baseRows, metric, winRateMin);
+    const sorted = sortRows(baseRows, metric, winRateMin, upsetWinRateGuard);
     const ranked = assignRanks(sorted, metric).slice(0, 50);
     const fullRanks = assignRanks(sorted, metric);
     const myUid = opts.uid ?? null;

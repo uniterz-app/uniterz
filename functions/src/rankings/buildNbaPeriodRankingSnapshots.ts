@@ -19,7 +19,10 @@ import {
   type NbaRankingPeriod,
 } from "./nbaPeriod";
 import { countNbaPickupGamesSoFar } from "./countNbaPickupGamesSoFar";
-import { winRateMinPostsFromPickupCount } from "../units/periodRankingUnitRewards";
+import {
+  isPeriodUpsetEligible,
+  winRateMinPostsFromPickupCount,
+} from "../units/periodRankingUnitRewards";
 
 function db() {
   return getFirestore();
@@ -91,8 +94,7 @@ function addInc(agg: Agg, inc: DailyInc | null | undefined) {
   agg.posts += Number(inc.posts ?? 0) || 0;
   agg.wins += Number(inc.wins ?? 0) || 0;
   agg.totalPoints += Number(inc.pointsSumV3 ?? 0) || 0;
-  agg.totalUpset += Number(inc.upsetPointsSum ?? 0) || 0;
-  agg.totalGoalScorerHits += Number(inc.goalScorerHitCount ?? 0) || 0;
+  agg.totalUpset += Number(inc.upsetPointsSum ?? 0) || 0;  agg.totalGoalScorerHits += Number(inc.goalScorerHitCount ?? 0) || 0;
 }
 
 /** シーズンスライス。standard=Pick Up / open=PRO LEAGUE（未移行日は ranking にフォールバック） */
@@ -212,6 +214,7 @@ async function buildOne(range: NbaPeriodRange, todayKey: string): Promise<void> 
     const fromPickup = winRateMinPostsFromPickupCount(pickupSoFar);
     if (fromPickup > 0) winRateMinStandard = fromPickup;
   }
+  const upsetWinRateGuard = range.period === "monthly";
 
   const statsSnap = await firestore
     .collection("user_stats_v2_daily")
@@ -323,8 +326,7 @@ async function buildOne(range: NbaPeriodRange, todayKey: string): Promise<void> 
         totalPosts: agg.posts,
         totalWins: agg.wins,
         totalPoints: agg.totalPoints,
-        totalUpset: agg.totalUpset,
-        totalGoalScorerHits: agg.totalGoalScorerHits,
+        totalUpset: agg.totalUpset,        totalGoalScorerHits: agg.totalGoalScorerHits,
         totalPrecision: 0,
         activeWinStreak: 0,
         winRate: agg.posts > 0 ? agg.wins / agg.posts : 0,
@@ -347,6 +349,7 @@ async function buildOne(range: NbaPeriodRange, todayKey: string): Promise<void> 
     division: "standard",
     baseRows: standardBaseRows,
     winRateMin: winRateMinStandard,
+    upsetWinRateGuard,
     participantCount: standardParticipantCount,
   });
   await writePeriodDivisionSnapshots({
@@ -356,6 +359,7 @@ async function buildOne(range: NbaPeriodRange, todayKey: string): Promise<void> 
     division: "open",
     baseRows: openBaseRows,
     winRateMin: winRateMinFallback,
+    upsetWinRateGuard,
     participantCount: openParticipantCount,
   });
 
@@ -371,6 +375,8 @@ async function writePeriodDivisionSnapshots(opts: {
   division: "standard" | "open";
   baseRows: Array<Omit<SnapshotRow, "rank" | "rankDeltaPlaces">>;
   winRateMin: number;
+  /** 月間のみ。アップセット部門を勝率条件で絞る */
+  upsetWinRateGuard: boolean;
   /** その期間・部門で 1 回以上投稿した人数（最低投稿数の足切り前） */
   participantCount: number;
 }): Promise<void> {
@@ -381,6 +387,7 @@ async function writePeriodDivisionSnapshots(opts: {
     division,
     baseRows,
     winRateMin,
+    upsetWinRateGuard,
     participantCount,
   } = opts;
 
@@ -403,7 +410,11 @@ async function writePeriodDivisionSnapshots(opts: {
     const eligible =
       metric === "winRate"
         ? baseRows.filter((r) => r.totalPosts >= winRateMin)
-        : baseRows;
+        : metric === "totalUpset" && upsetWinRateGuard
+          ? baseRows.filter((r) =>
+              isPeriodUpsetEligible({ posts: r.totalPosts, wins: r.totalWins })
+            )
+          : baseRows;
     const sorted = [...eligible].sort((a, b) => {
       const diff = metricValue(b, metric) - metricValue(a, metric);
       if (diff !== 0) return diff;

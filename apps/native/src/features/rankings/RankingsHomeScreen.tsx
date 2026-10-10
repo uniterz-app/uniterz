@@ -29,6 +29,7 @@ import {
   rankingsPreseasonNotice,
   shouldShowRankingsPreseasonNotice,
 } from "../../../../../lib/rankings/rankingsPreseasonNotice";
+import { upsetRankingEligibilityNotice } from "../../../../../lib/rankings/upsetRankingEligibilityNotice";
 import { buildRankTierGapHint } from "../../../../../lib/rankings/rankTierMilestone";
 import { sortRankingRowsByMetric } from "../../../../../lib/rankings/sortRankingRows";
 import {
@@ -572,6 +573,11 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
                   : winRateMinPosts > 1
                     ? t.winRateMin(winRateMinPosts)
                     : t.winRateNoMin}
+              </Text>
+            ) : null}
+            {metric === "upsetScore" && rankingPeriod === "monthly" ? (
+              <Text style={styles.winRateHint}>
+                {upsetRankingEligibilityNotice(language)}
               </Text>
             ) : null}
 

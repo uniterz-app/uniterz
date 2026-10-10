@@ -9,6 +9,7 @@ import {
   PERIOD_RANKING_UNIT_MONTHLY_OVERALL_MAX_RANK,
   PERIOD_RANKING_UNIT_OVERALL_METRIC,
   PERIOD_RANKING_UNIT_WEEKLY_OVERALL_MAX_RANK,
+  PERIOD_UPSET_MIN_WIN_RATE,
   type PeriodRankingUnitMetric,
 } from "@/lib/units/periodRankingUnitRewards";
 
@@ -163,6 +164,19 @@ export function periodRankingUnitRewardsTabLabel(
   return ui.tabMonthlyDepartment;
 }
 
+function upsetEligibilityLine(lang: PeriodRankingUnitRewardsLang): string {
+  const pct = Math.round(PERIOD_UPSET_MIN_WIN_RATE * 100);
+  return L(lang, {
+    ja: `アップセットは、その月の勝率 ${pct}% 以上の人だけが順位に入る。`,
+    en: `Upset ranks only users with a win rate of ${pct}%+ that month.`,
+    ko: `업셋은 그달 승률 ${pct}% 이상인 사람만 순위에 오름.`,
+    zh: `爆冷榜仅收录当月胜率 ${pct}% 以上的用户。`,
+    es: `Upset solo clasifica a quien tenga ${pct}%+ de acierto ese mes.`,
+    pt: `Upset só classifica quem tiver ${pct}%+ de acerto no mês.`,
+    fr: `Upset ne classe que ceux qui ont ${pct}%+ de réussite dans le mois.`,
+  });
+}
+
 function notesSection(
   lang: PeriodRankingUnitRewardsLang,
   tab: PeriodRankingUnitRewardsTab
@@ -287,6 +301,7 @@ function notesSection(
         pt: "Mesma tabela Upset / Scorer. Por métrica (somável).",
         fr: "Même table Upset / Scorer. Par métrique (cumulable).",
       }),
+      upsetEligibilityLine(lang),
       L(lang, {
         ja: "勝率ランキングには Unit 付与がない。",
         en: "Win% board has no Unit payout.",
