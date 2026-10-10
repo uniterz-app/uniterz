@@ -29,6 +29,9 @@ import {
   type LiveDisciplineGame,
 } from "@/lib/nba/discipline/liveDisciplineAlerts";
 
+/** 規律通知の play-by-play はこの間隔（分）ごと。ライブ ingest 自体は毎分 */
+const DISCIPLINE_CHECK_EVERY_MIN = 2;
+
 /** 開始からこの時間を過ぎても box の得点者が取れなければ、得点者なしで確定させる */
 const FINAL_WITHOUT_LEADERS_AFTER_MS = 3.5 * 60 * 60 * 1000;
 
@@ -382,7 +385,7 @@ export async function ingestNbaLiveGamesFromBdl(
   }
 
   let disciplineAlerts = { gamesChecked: 0, alertsCreated: 0 };
-  if (!dryRun) {
+  if (!dryRun && Math.floor(Date.now() / 60_000) % DISCIPLINE_CHECK_EVERY_MIN === 0) {
     try {
       disciplineAlerts = await detectLiveDisciplineAlerts(db, disciplineGames);
     } catch (e) {
