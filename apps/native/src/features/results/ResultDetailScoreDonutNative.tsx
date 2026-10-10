@@ -14,6 +14,8 @@ export type ScoreDonutSegment = {
 type Props = {
   segments: ScoreDonutSegment[];
   total: number;
+  /** 中央の表示を差し替える（例: "$396K"）。省略時は total.toFixed(1) */
+  totalDisplay?: string;
   totalLabel: string;
   size?: number;
   thickness?: number;
@@ -47,6 +49,7 @@ function arcPath(
 export default function ResultDetailScoreDonutNative({
   segments,
   total,
+  totalDisplay,
   totalLabel,
   size = 116,
   thickness = 16,
@@ -85,7 +88,7 @@ export default function ResultDetailScoreDonutNative({
         </G>
       </Svg>
       <View style={styles.center} pointerEvents="none">
-        <Text style={styles.total}>{total.toFixed(1)}</Text>
+        <Text style={styles.total}>{totalDisplay ?? total.toFixed(1)}</Text>
         <Text style={styles.totalLabel}>{totalLabel}</Text>
       </View>
     </View>

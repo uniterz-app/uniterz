@@ -13,6 +13,8 @@ import {
   type NbaDisciplineDetailSlice,
   type NbaDisciplineFineDoc,
   type NbaDisciplineFineEntry,
+  type NbaDisciplineFineParts,
+  type NbaDisciplineFinePartsByPhase,
   type NbaDisciplinePlayerEntry,
   type NbaDisciplineRanks,
   type NbaDisciplineSeasonType,
@@ -43,7 +45,25 @@ function emptyTeam(): NbaDisciplineTeamEntry {
   return { regular: emptyCounts(), playoffs: emptyCounts() };
 }
 
-function parseCounts(raw: unknown): NbaDisciplineCounts {
+function emptyFineParts(): NbaDisciplineFinePartsByPhase {
+  return {
+    regular: { scheduled: 0, announced: 0, forfeited: 0 },
+    playoffs: { scheduled: 0, announced: 0, forfeited: 0 },
+  };
+}
+
+function parseFineParts(raw: unknown): NbaDisciplineFinePartsByPhase | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  const n = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : 0);
+  const phase = (v: unknown): NbaDisciplineFineParts => {
+    const o = (v && typeof v === "object" ? v : {}) as Record<string, unknown>;
+    return { scheduled: n(o.scheduled), announced: n(o.announced), forfeited: n(o.forfeited) };
+  };
+  const o = raw as Record<string, unknown>;
+  return { regular: phase(o.regular), playoffs: phase(o.playoffs) };
+}
+
+export function parseCounts(raw: unknown): NbaDisciplineCounts {
   const o = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
   const n = (v: unknown) =>
     typeof v === "number" && Number.isFinite(v) ? v : 0;
@@ -162,9 +182,12 @@ export async function rebuildNbaDisciplineSnapshot(
     }
   }
   for (const fine of scheduled.fines) {
-    players[fine.playerId]![fine.phase].fines += fine.amountUsd;
+    const entry = players[fine.playerId]!;
+    entry[fine.phase].fines += fine.amountUsd;
+    (entry.fineParts ??= emptyFineParts())[fine.phase].scheduled += fine.amountUsd;
     const { team, tp } = touchTeam(fine.teamId, fine.playerId, "");
     team[fine.phase].fines += fine.amountUsd;
+    (team.fineParts ??= emptyFineParts())[fine.phase].scheduled += fine.amountUsd;
     tp[fine.phase].fines += fine.amountUsd;
   }
 
@@ -208,11 +231,15 @@ export async function rebuildNbaDisciplineSnapshot(
     }
     const suspGames =
       fine.kind === "suspension" ? Math.max(0, Math.trunc(fine.games ?? 0)) : 0;
+    const part: keyof NbaDisciplineFineParts =
+      fine.kind === "suspension" ? "forfeited" : "announced";
     const entry = touchPlayer(fine.playerId, fine.playerName, fine.teamId, fine.date);
     entry[phase].fines += amountUsd;
     entry[phase].susp += suspGames;
+    (entry.fineParts ??= emptyFineParts())[phase][part] += amountUsd;
     const { team, tp } = touchTeam(fine.teamId, fine.playerId, fine.playerName);
     team[phase].fines += amountUsd;
+    (team.fineParts ??= emptyFineParts())[phase][part] += amountUsd;
     team[phase].susp += suspGames;
     tp[phase].fines += amountUsd;
     tp[phase].susp += suspGames;
@@ -273,6 +300,7 @@ export async function loadNbaDisciplineSnapshot(
       gamesPlayed: typeof p.gamesPlayed === "number" ? p.gamesPlayed : 0,
       regular: parseCounts(p.regular),
       playoffs: parseCounts(p.playoffs),
+      fineParts: parseFineParts(p.fineParts),
     };
   }
   const teams: Record<string, NbaDisciplineTeamEntry> = {};
@@ -290,6 +318,7 @@ export async function loadNbaDisciplineSnapshot(
     teams[id] = {
       regular: parseCounts(t.regular),
       playoffs: parseCounts(t.playoffs),
+      fineParts: parseFineParts(t.fineParts),
       players: roster,
     };
   }
@@ -356,6 +385,8 @@ export async function loadTeamDisciplineSlice(
     regular: team.regular,
     playoffs: team.playoffs,
     fines: finesForDetail(fines.filter((f) => f.teamId === teamId)),
+    ...(team.fineParts ? { fineParts: team.fineParts } : {}),
+    updatedAtMs: snapshot.builtAtMs,
     ranks: {
       regular: leagueRanks(allTeams.map((t) => t.regular), team.regular),
       playoffs: leagueRanks(allTeams.map((t) => t.playoffs), team.playoffs),
@@ -386,6 +417,8 @@ export async function loadPlayerDisciplineSlice(
     regular,
     playoffs,
     fines: finesForDetail(fines.filter((f) => f.playerId === playerId)),
+    ...(player?.fineParts ? { fineParts: player.fineParts } : {}),
+    updatedAtMs: snapshot.builtAtMs,
     ranks: {
       regular: leagueRanks(allPlayers.map((p) => p.regular), regular),
       playoffs: leagueRanks(allPlayers.map((p) => p.playoffs), playoffs),

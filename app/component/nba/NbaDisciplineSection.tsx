@@ -1,24 +1,35 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { jp, nameOxanium } from "@/lib/fonts";
 import type { Language } from "@/lib/i18n/language";
 import type {
   NbaDisciplineDetailSlice,
+  NbaDisciplineHistoryPoint,
   NbaDisciplineSeasonType,
 } from "@/lib/nba/discipline/disciplineTypes";
 import {
   buildDisciplineCells,
   disciplineFineLines,
+  disciplineFinePartRows,
   disciplineHasPlayoffs,
   disciplineHasRecords,
   disciplinePlayerRows,
   disciplineSectionCopy,
+  disciplineSourceLine,
   NBA_DISCIPLINE_COLLAPSED_ROWS,
   NBA_DISCIPLINE_HOT_RANK,
   NBA_DISCIPLINE_SECTION_TITLE,
   type NbaDisciplineCell,
 } from "@/lib/nba/discipline/disciplineDetailCells";
+import {
+  buildDisciplineTrend,
+  NBA_DISCIPLINE_TREND_METRICS,
+  type NbaDisciplineTrendMetric,
+} from "@/lib/nba/discipline/disciplineTrend";
+import { formatDisciplineFineUsd } from "@/lib/nba/discipline/formatDisciplineFineUsd";
+import { useNbaDisciplineHistory } from "@/lib/nba/discipline/useNbaDisciplineHistory";
+import ResultDetailScoreDonut from "@/app/component/result/ResultDetailScoreDonut";
 import {
   useNbaPlayerDisciplineSeason,
   useNbaTeamDisciplineSeason,
@@ -117,6 +128,196 @@ function PhaseToggle({
   );
 }
 
+const TREND_FRAME = { width: 320, height: 128, padX: 18, padTop: 20, padBottom: 20 };
+
+function TrendChart({
+  points,
+  phase,
+  accent,
+  selectedSeason,
+  onSelectSeason,
+  title,
+  totalLabel,
+  subLabel,
+}: {
+  points: NbaDisciplineHistoryPoint[];
+  phase: NbaDisciplineSeasonType;
+  accent: string;
+  selectedSeason: string | null;
+  onSelectSeason?: (season: string) => void;
+  title: string;
+  totalLabel: string;
+  subLabel: string;
+}) {
+  const [metric, setMetric] = useState<NbaDisciplineTrendMetric>("tech");
+  const gradId = useId().replace(/:/g, "");
+  const trend = buildDisciplineTrend(points, phase, metric, TREND_FRAME);
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-baseline justify-between">
+        <p className={subLabel}>{title}</p>
+        <p className={`${nameOxanium.className} text-[10px] font-bold tabular-nums text-white/55`}>
+          <span className={subLabel}>{totalLabel}</span>{" "}
+          <span className="text-white">{trend.total}</span>
+        </p>
+      </div>
+      <div className="border bg-black/40 px-2 pb-1.5 pt-2" style={{ borderColor: hexToRgba(accent, 0.3) }}>
+        <div className="flex gap-3.5 px-1">
+          {NBA_DISCIPLINE_TREND_METRICS.map((m) => {
+            const on = m.key === metric;
+            return (
+              <button
+                key={m.key}
+                type="button"
+                onClick={() => setMetric(m.key)}
+                className={`${nameOxanium.className} border-b-2 pb-0.5 text-[9px] font-bold uppercase tracking-[0.14em] transition-colors`}
+                style={{
+                  borderColor: on ? accent : "transparent",
+                  color: on ? "#fff" : "rgba(255,255,255,0.4)",
+                }}
+              >
+                {m.label}
+              </button>
+            );
+          })}
+        </div>
+        <svg
+          viewBox={`0 0 ${TREND_FRAME.width} ${TREND_FRAME.height}`}
+          className="mt-1 block h-auto w-full overflow-visible"
+        >
+          <defs>
+            <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={accent} stopOpacity={0.32} />
+              <stop offset="100%" stopColor={accent} stopOpacity={0} />
+            </linearGradient>
+          </defs>
+          <line
+            x1={0}
+            x2={TREND_FRAME.width}
+            y1={trend.baselineY}
+            y2={trend.baselineY}
+            stroke={hexToRgba(accent, 0.2)}
+            strokeWidth={1}
+          />
+          {trend.area ? (
+            <path d={trend.area} fill={`url(#${gradId})`} style={{ transition: "d 420ms ease" }} />
+          ) : null}
+          <path
+            d={trend.line}
+            fill="none"
+            stroke={accent}
+            strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            style={{ transition: "d 420ms ease", filter: `drop-shadow(0 0 4px ${hexToRgba(accent, 0.55)})` }}
+          />
+          {trend.dots.map((d) => {
+            const on = d.season === selectedSeason;
+            return (
+              <g
+                key={d.season}
+                onClick={() => onSelectSeason?.(d.season)}
+                className={onSelectSeason ? "cursor-pointer" : undefined}
+              >
+                <circle cx={d.x} cy={d.y} r={14} fill="transparent" />
+                <circle
+                  cx={d.x}
+                  cy={d.y}
+                  r={on ? 4.5 : 3}
+                  fill={on ? accent : "#050508"}
+                  stroke={accent}
+                  strokeWidth={1.5}
+                  style={{ transition: "cy 420ms ease" }}
+                />
+                <text
+                  x={d.x}
+                  y={d.y - 8}
+                  textAnchor="middle"
+                  className={nameOxanium.className}
+                  fontSize={9}
+                  fontWeight={700}
+                  fill={on ? "#fff" : "rgba(255,255,255,0.55)"}
+                >
+                  {d.display}
+                </text>
+                <text
+                  x={d.x}
+                  y={TREND_FRAME.height - 5}
+                  textAnchor="middle"
+                  className={nameOxanium.className}
+                  fontSize={8.5}
+                  fontWeight={700}
+                  fill={on ? accent : "rgba(255,255,255,0.35)"}
+                >
+                  {d.label}
+                </text>
+              </g>
+            );
+          })}
+        </svg>
+      </div>
+    </div>
+  );
+}
+
+function FineBreakdown({
+  rows,
+  total,
+  accent,
+  title,
+  subLabel,
+  bodyLang,
+}: {
+  rows: ReturnType<typeof disciplineFinePartRows>;
+  total: number;
+  accent: string;
+  title: string;
+  subLabel: string;
+  bodyLang: Language;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <p className={subLabel}>{title}</p>
+      <div
+        className="flex items-center gap-3 border bg-black/40 px-2.5 py-2.5"
+        style={{ borderColor: hexToRgba(accent, 0.3) }}
+      >
+        <ResultDetailScoreDonut
+          segments={rows.map((r) => ({ value: r.value, color: r.color }))}
+          total={total}
+          totalDisplay={formatDisciplineFineUsd(total)}
+          totalLabel="FINES"
+          size={88}
+          thickness={12}
+        />
+        <div className="min-w-0 flex-1 space-y-2">
+          {rows.map((r) => (
+            <div key={r.key} className="flex items-start gap-2">
+              <span className="mt-1 h-2.5 w-2.5 shrink-0" style={{ backgroundColor: r.color }} />
+              <span
+                className={`${bodyLang === "ja" ? jp.className : ""} min-w-0 flex-1 text-[11px] font-semibold leading-snug text-slate-100`}
+              >
+                {r.label}
+              </span>
+              <span className="shrink-0 text-right">
+                <span
+                  className={`${nameOxanium.className} block text-[12px] font-extrabold tabular-nums text-white`}
+                  style={{ transform: "skewX(-8deg)" }}
+                >
+                  {r.amount}
+                </span>
+                <span className={`${nameOxanium.className} block text-[9px] font-bold tabular-nums text-white/40`}>
+                  {r.pct}%
+                </span>
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ExpandButton({
   expanded,
   total,
@@ -153,6 +354,7 @@ export function NbaDisciplineSection({
   lang,
   showPlayerNames = false,
   onPlayerClick,
+  trend,
   season,
 }: {
   /** null = 年切替の読み込み中 / データなし */
@@ -164,6 +366,8 @@ export function NbaDisciplineSection({
   /** チーム詳細: 罰金ログに選手名を出す */
   showPlayerNames?: boolean;
   onPlayerClick?: (playerId: string) => void;
+  /** シーズン推移（undefined = 出さない / null = 読み込み中） */
+  trend?: NbaDisciplineHistoryPoint[] | null;
   /** チーム詳細: ◀ 25-26 ▶ */
   season?: {
     seasonKey: string;
@@ -195,6 +399,8 @@ export function NbaDisciplineSection({
     : [];
   const playerRows = slice?.players ? disciplinePlayerRows(slice, activePhase) : [];
   const fines = slice ? disciplineFineLines(slice, activePhase, bodyLang) : [];
+  const fineParts = slice ? disciplineFinePartRows(slice, activePhase, bodyLang) : [];
+  const trendPoints = trend && trend.length > 1 ? trend : null;
   const shownPlayers = playersOpen
     ? playerRows
     : playerRows.slice(0, NBA_DISCIPLINE_COLLAPSED_ROWS);
@@ -244,6 +450,17 @@ export function NbaDisciplineSection({
 
           {empty ? (
             <p className={`${jaCls} py-2 text-center text-[11px] text-white/40`}>{copy.empty}</p>
+          ) : null}
+
+          {fineParts.length > 0 ? (
+            <FineBreakdown
+              rows={fineParts}
+              total={slice[activePhase].fines}
+              accent={accent}
+              title={copy.fineBreakdown}
+              subLabel={subLabel}
+              bodyLang={bodyLang}
+            />
           ) : null}
 
           {shownPlayers.length > 0 ? (
@@ -351,7 +568,26 @@ export function NbaDisciplineSection({
         </>
       )}
 
+      {trendPoints ? (
+        <TrendChart
+          points={trendPoints}
+          phase={activePhase}
+          accent={accent}
+          selectedSeason={season?.seasonKey ?? slice?.season ?? null}
+          onSelectSeason={season?.onChange}
+          title={copy.trend}
+          totalLabel={copy.trendTotal}
+          subLabel={subLabel}
+        />
+      ) : null}
+
       <p className={`${jaCls} text-[10px] leading-snug text-white/35`}>{copy.note}</p>
+      <p
+        className={`${bodyLang === "ja" ? jp.className : ""} text-[10px] leading-snug text-white/45`}
+        suppressHydrationWarning
+      >
+        {disciplineSourceLine(bodyLang, slice?.updatedAtMs)}
+      </p>
     </section>
   );
 }
@@ -373,6 +609,7 @@ export function NbaTeamDisciplineSection({
   onPlayerClick?: (playerId: string) => void;
 }) {
   const s = useNbaTeamDisciplineSeason({ teamId, initial });
+  const trend = useNbaDisciplineHistory({ subject: "team", id: teamId, toSeason: initial.season });
   return (
     <NbaDisciplineSection
       slice={s.slice}
@@ -381,6 +618,7 @@ export function NbaTeamDisciplineSection({
       lang={lang}
       showPlayerNames
       onPlayerClick={onPlayerClick}
+      trend={trend}
       season={{
         seasonKey: s.seasonKey,
         seasonKeys: s.seasonKeys,
@@ -406,12 +644,14 @@ export function NbaPlayerDisciplineSection({
   lang?: Language;
 }) {
   const s = useNbaPlayerDisciplineSeason({ playerId, initial });
+  const trend = useNbaDisciplineHistory({ subject: "player", id: playerId, toSeason: initial.season });
   return (
     <NbaDisciplineSection
       slice={s.slice}
       accent={accent}
       isJa={isJa}
       lang={lang}
+      trend={trend}
       season={{
         seasonKey: s.seasonKey,
         seasonKeys: s.seasonKeys,

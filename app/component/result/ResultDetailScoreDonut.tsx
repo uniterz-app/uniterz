@@ -13,6 +13,8 @@ export type ScoreDonutSegment = {
 type Props = {
   segments: ScoreDonutSegment[];
   total: number;
+  /** 中央の表示を差し替える（例: "$396K"）。省略時は total.toFixed(1) */
+  totalDisplay?: string;
   totalLabel: string;
   size?: number;
   thickness?: number;
@@ -43,6 +45,7 @@ function arcPath(
 export default function ResultDetailScoreDonut({
   segments,
   total,
+  totalDisplay,
   totalLabel,
   size = 116,
   thickness = 16,
@@ -89,7 +92,7 @@ export default function ResultDetailScoreDonut({
         <span
           className={`${matchScoreClass} text-[22px] font-black leading-[26px] tracking-tight text-slate-50 tabular-nums`}
         >
-          {total.toFixed(1)}
+          {totalDisplay ?? total.toFixed(1)}
         </span>
         <span
           className={`${nameOxanium.className} text-[8px] font-bold uppercase tracking-[0.11em] text-slate-200/45`}

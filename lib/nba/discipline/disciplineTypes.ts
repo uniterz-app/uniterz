@@ -21,6 +21,21 @@ export type NbaDisciplineCounts = {
   fines: number;
 };
 
+/** FINES の内訳（USD） */
+export type NbaDisciplineFineParts = {
+  /** テクニカル・退場の規定額（`nbaDisciplineFineSchedule`） */
+  scheduled: number;
+  /** リーグ発表の個別罰金（手入力） */
+  announced: number;
+  /** 出場停止で失った年俸 */
+  forfeited: number;
+};
+
+export type NbaDisciplineFinePartsByPhase = Record<
+  NbaDisciplineSeasonType,
+  NbaDisciplineFineParts
+>;
+
 export const EMPTY_NBA_DISCIPLINE_COUNTS: NbaDisciplineCounts = {
   tech: 0,
   flag: 0,
@@ -97,6 +112,7 @@ export type NbaDisciplinePlayerEntry = {
   gamesPlayed: number;
   regular: NbaDisciplineCounts;
   playoffs: NbaDisciplineCounts;
+  fineParts?: NbaDisciplineFinePartsByPhase;
 };
 
 /** チーム在籍中だけの選手別カウント（シーズン途中の移籍は移籍前チームに残る） */
@@ -109,6 +125,7 @@ export type NbaDisciplineTeamPlayerEntry = {
 export type NbaDisciplineTeamEntry = {
   regular: NbaDisciplineCounts;
   playoffs: NbaDisciplineCounts;
+  fineParts?: NbaDisciplineFinePartsByPhase;
   players?: Record<string, NbaDisciplineTeamPlayerEntry>;
 };
 
@@ -121,6 +138,13 @@ export type NbaDisciplineSnapshot = {
   players: Record<string, NbaDisciplinePlayerEntry>;
   teams: Record<string, NbaDisciplineTeamEntry>;
   builtAtMs: number;
+};
+
+/** シーズン推移グラフの 1 点（古い順に並べる） */
+export type NbaDisciplineHistoryPoint = {
+  season: string;
+  regular: NbaDisciplineCounts;
+  playoffs: NbaDisciplineCounts;
 };
 
 /** チーム詳細 / 選手詳細に載せる切片 */
@@ -142,6 +166,9 @@ export type NbaDisciplineDetailSlice = {
   }>;
   /** リーグ順位（多い順・1 始まり。値 0 は載せない）。チームは 30 球団、選手は全選手中 */
   ranks?: { regular: NbaDisciplineRanks; playoffs: NbaDisciplineRanks };
+  fineParts?: NbaDisciplineFinePartsByPhase;
+  /** `nbaDiscipline/{season}` の集計時刻 */
+  updatedAtMs?: number;
   /** チーム詳細のみ: 在籍中の選手別（記録のある選手だけ） */
   players?: Array<NbaDisciplineTeamPlayerEntry & { playerId: string }>;
 };

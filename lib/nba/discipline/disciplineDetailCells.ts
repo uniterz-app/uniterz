@@ -4,10 +4,11 @@
 import type {
   NbaDisciplineCounts,
   NbaDisciplineDetailSlice,
+  NbaDisciplineFineParts,
   NbaDisciplineRanks,
   NbaDisciplineSeasonType,
 } from "@/lib/nba/discipline/disciplineTypes";
-import type { Language } from "@/lib/i18n/language";
+import { DATE_LOCALE, type Language } from "@/lib/i18n/language";
 import {
   formatDisciplineFineUsd,
   formatDisciplineFineUsdFull,
@@ -148,6 +149,119 @@ export function disciplineFineLines(
     });
 }
 
+export const NBA_DISCIPLINE_FINE_PART_COLORS = {
+  scheduled: "#22D3EE",
+  announced: "#FBBF24",
+  forfeited: "#DC2626",
+} as const;
+
+export type NbaDisciplineFinePartRow = {
+  key: keyof NbaDisciplineFineParts;
+  label: string;
+  color: string;
+  value: number;
+  amount: string;
+  pct: number;
+};
+
+const FINE_PART_LABELS: Record<keyof NbaDisciplineFineParts, Record<Language, string>> = {
+  scheduled: {
+    ja: "規定罰金（テクニカル・退場）",
+    en: "Tech & ejection schedule",
+    zh: "技术犯规/驱逐出场规定罚款",
+    ko: "테크니컬·퇴장 규정 벌금",
+    es: "Multas reglamentarias (técnicas/expulsiones)",
+    de: "Regelstrafen (Technicals/Ejections)",
+    fr: "Amendes réglementaires (techniques/expulsions)",
+    ar: "غرامات لائحية (فنية/طرد)",
+    pt: "Multas regulamentares (técnicas/expulsões)",
+  },
+  announced: {
+    ja: "リーグ発表の罰金",
+    en: "League-announced fines",
+    zh: "联盟公布的罚款",
+    ko: "리그 발표 벌금",
+    es: "Multas anunciadas por la liga",
+    de: "Von der Liga verhängte Geldstrafen",
+    fr: "Amendes annoncées par la ligue",
+    ar: "غرامات أعلنتها الرابطة",
+    pt: "Multas anunciadas pela liga",
+  },
+  forfeited: {
+    ja: "出場停止で失った年俸",
+    en: "Salary lost to suspensions",
+    zh: "禁赛损失的薪水",
+    ko: "출전 정지로 잃은 연봉",
+    es: "Salario perdido por suspensiones",
+    de: "Durch Sperren verlorenes Gehalt",
+    fr: "Salaire perdu (suspensions)",
+    ar: "راتب مفقود بسبب الإيقاف",
+    pt: "Salário perdido em suspensões",
+  },
+};
+
+const FINE_PART_ORDER: ReadonlyArray<keyof NbaDisciplineFineParts> = [
+  "scheduled",
+  "announced",
+  "forfeited",
+];
+
+/** FINES の内訳（ドーナツ + 凡例）。罰金 0 / 内訳なしは空配列 */
+export function disciplineFinePartRows(
+  slice: NbaDisciplineDetailSlice,
+  phase: NbaDisciplineSeasonType,
+  lang: Language
+): NbaDisciplineFinePartRow[] {
+  const parts = slice.fineParts?.[phase];
+  if (!parts) return [];
+  const total = parts.scheduled + parts.announced + parts.forfeited;
+  if (total <= 0) return [];
+  return FINE_PART_ORDER.filter((k) => parts[k] > 0).map((key) => ({
+    key,
+    label: FINE_PART_LABELS[key][lang],
+    color: NBA_DISCIPLINE_FINE_PART_COLORS[key],
+    value: parts[key],
+    amount: formatDisciplineFineUsdFull(parts[key]),
+    pct: Math.round((parts[key] / total) * 100),
+  }));
+}
+
+const SOURCE_LINE: Record<Language, string> = {
+  ja: "出典: NBA 公式発表・試合記録",
+  en: "Source: NBA official announcements & play-by-play",
+  zh: "来源：NBA 官方公告与比赛记录",
+  ko: "출처: NBA 공식 발표·경기 기록",
+  es: "Fuente: comunicados oficiales de la NBA y registro de jugadas",
+  de: "Quelle: offizielle NBA-Mitteilungen & Play-by-Play",
+  fr: "Source : communiqués officiels de la NBA et feuilles de match",
+  ar: "المصدر: بيانات NBA الرسمية وسجل المباريات",
+  pt: "Fonte: comunicados oficiais da NBA e registro de jogadas",
+};
+
+const UPDATED_LABEL: Record<Language, string> = {
+  ja: "更新",
+  en: "Updated",
+  zh: "更新",
+  ko: "업데이트",
+  es: "Actualizado",
+  de: "Aktualisiert",
+  fr: "Mis à jour",
+  ar: "آخر تحديث",
+  pt: "Atualizado",
+};
+
+/** 「出典 · 更新 10/11 18:05」（端末のタイムゾーン） */
+export function disciplineSourceLine(lang: Language, updatedAtMs?: number): string {
+  if (!updatedAtMs || !Number.isFinite(updatedAtMs)) return SOURCE_LINE[lang];
+  const when = new Intl.DateTimeFormat(DATE_LOCALE[lang], {
+    month: "numeric",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(updatedAtMs));
+  return `${SOURCE_LINE[lang]} · ${UPDATED_LABEL[lang]} ${when}`;
+}
+
 export function disciplineSectionCopy(isJa: boolean) {
   return {
     regular: "SEASON",
@@ -155,6 +269,9 @@ export function disciplineSectionCopy(isJa: boolean) {
     players: isJa ? "選手別" : "PLAYERS",
     player: isJa ? "選手" : "PLAYER",
     fineLog: isJa ? "罰金・出場停止" : "FINES & SUSPENSIONS",
+    fineBreakdown: isJa ? "罰金の内訳" : "FINE BREAKDOWN",
+    trend: isJa ? "シーズン推移" : "SEASON TREND",
+    trendTotal: isJa ? "合計" : "TOTAL",
     league: isJa ? "リーグ" : "LG",
     showAll: (n: number) => (isJa ? `すべて表示（${n}）` : `SHOW ALL (${n})`),
     showLess: isJa ? "閉じる" : "SHOW LESS",
