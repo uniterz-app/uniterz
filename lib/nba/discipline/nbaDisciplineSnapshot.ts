@@ -14,6 +14,7 @@ import {
   type NbaDisciplineFineDoc,
   type NbaDisciplineFineEntry,
   type NbaDisciplinePlayerEntry,
+  type NbaDisciplineRanks,
   type NbaDisciplineSeasonType,
   type NbaDisciplineSnapshot,
   type NbaDisciplineTeamEntry,
@@ -109,6 +110,17 @@ export async function rebuildNbaDisciplineSnapshot(
     }
     return entry;
   };
+  const touchTeam = (teamId: string, playerId: string, name: string) => {
+    const team = (teams[teamId] ??= emptyTeam());
+    const roster = (team.players ??= {});
+    const tp = (roster[playerId] ??= {
+      name: name || players[playerId]?.name || `Player ${playerId}`,
+      regular: emptyCounts(),
+      playoffs: emptyCounts(),
+    });
+    if (name && tp.name.startsWith("Player ")) tp.name = name;
+    return { team, tp };
+  };
 
   const rescindLeft = new Map<string, number>();
   for (const f of fines) {
@@ -140,16 +152,20 @@ export async function rebuildNbaDisciplineSnapshot(
       g.seasonType === "playoffs" ? "playoffs" : "regular";
     const playIn = scheduled.playInDates.has(g.date ?? "");
     for (const ev of g.events ?? []) {
-      const entry = touchPlayer(ev.p, g.names?.[ev.p] ?? "", ev.t, g.date ?? "");
-      const team = (teams[ev.t] ??= emptyTeam());
+      const name = g.names?.[ev.p] ?? "";
+      const entry = touchPlayer(ev.p, name, ev.t, g.date ?? "");
+      const { team, tp } = touchTeam(ev.t, ev.p, name);
       if (playIn) continue;
       entry[phase][ev.k] += 1;
       team[phase][ev.k] += 1;
+      tp[phase][ev.k] += 1;
     }
   }
   for (const fine of scheduled.fines) {
     players[fine.playerId]![fine.phase].fines += fine.amountUsd;
-    teams[fine.teamId]![fine.phase].fines += fine.amountUsd;
+    const { team, tp } = touchTeam(fine.teamId, fine.playerId, "");
+    team[fine.phase].fines += fine.amountUsd;
+    tp[fine.phase].fines += fine.amountUsd;
   }
 
   const validFines = fines.filter(
@@ -195,9 +211,11 @@ export async function rebuildNbaDisciplineSnapshot(
     const entry = touchPlayer(fine.playerId, fine.playerName, fine.teamId, fine.date);
     entry[phase].fines += amountUsd;
     entry[phase].susp += suspGames;
-    const team = (teams[fine.teamId] ??= emptyTeam());
+    const { team, tp } = touchTeam(fine.teamId, fine.playerId, fine.playerName);
     team[phase].fines += amountUsd;
     team[phase].susp += suspGames;
+    tp[phase].fines += amountUsd;
+    tp[phase].susp += suspGames;
   }
   for (const u of amountUpdates) {
     await db
@@ -260,7 +278,20 @@ export async function loadNbaDisciplineSnapshot(
   const teams: Record<string, NbaDisciplineTeamEntry> = {};
   const rawTeams = (raw.teams ?? {}) as Record<string, Record<string, unknown>>;
   for (const [id, t] of Object.entries(rawTeams)) {
-    teams[id] = { regular: parseCounts(t.regular), playoffs: parseCounts(t.playoffs) };
+    const roster: NonNullable<NbaDisciplineTeamEntry["players"]> = {};
+    const rawRoster = (t.players ?? {}) as Record<string, Record<string, unknown>>;
+    for (const [pid, p] of Object.entries(rawRoster)) {
+      roster[pid] = {
+        name: typeof p.name === "string" ? p.name : `Player ${pid}`,
+        regular: parseCounts(p.regular),
+        playoffs: parseCounts(p.playoffs),
+      };
+    }
+    teams[id] = {
+      regular: parseCounts(t.regular),
+      playoffs: parseCounts(t.playoffs),
+      players: roster,
+    };
   }
   return {
     seasonKey,
@@ -287,6 +318,26 @@ function finesForDetail(
   }));
 }
 
+const RANK_KEYS: ReadonlyArray<keyof NbaDisciplineCounts> = [
+  "tech",
+  "flag",
+  "eject",
+  "susp",
+  "fines",
+];
+
+function leagueRanks(
+  all: readonly NbaDisciplineCounts[],
+  mine: NbaDisciplineCounts
+): NbaDisciplineRanks {
+  const out: NbaDisciplineRanks = {};
+  for (const key of RANK_KEYS) {
+    if (mine[key] <= 0) continue;
+    out[key] = all.filter((c) => c[key] > mine[key]).length + 1;
+  }
+  return out;
+}
+
 export async function loadTeamDisciplineSlice(
   db: Firestore,
   seasonKey: string,
@@ -298,11 +349,20 @@ export async function loadTeamDisciplineSlice(
   ]);
   if (!snapshot) return null;
   const team = snapshot.teams[teamId] ?? emptyTeam();
+  const allTeams = Object.values(snapshot.teams);
   return {
     season: seasonKey,
     regular: team.regular,
     playoffs: team.playoffs,
     fines: finesForDetail(fines.filter((f) => f.teamId === teamId)),
+    ranks: {
+      regular: leagueRanks(allTeams.map((t) => t.regular), team.regular),
+      playoffs: leagueRanks(allTeams.map((t) => t.playoffs), team.playoffs),
+    },
+    players: Object.entries(team.players ?? {}).map(([playerId, p]) => ({
+      playerId,
+      ...p,
+    })),
   };
 }
 
@@ -317,10 +377,17 @@ export async function loadPlayerDisciplineSlice(
   ]);
   if (!snapshot) return null;
   const player = snapshot.players[playerId];
+  const regular = player?.regular ?? emptyCounts();
+  const playoffs = player?.playoffs ?? emptyCounts();
+  const allPlayers = Object.values(snapshot.players);
   return {
     season: seasonKey,
-    regular: player?.regular ?? emptyCounts(),
-    playoffs: player?.playoffs ?? emptyCounts(),
+    regular,
+    playoffs,
     fines: finesForDetail(fines.filter((f) => f.playerId === playerId)),
+    ranks: {
+      regular: leagueRanks(allPlayers.map((p) => p.regular), regular),
+      playoffs: leagueRanks(allPlayers.map((p) => p.playoffs), playoffs),
+    },
   };
 }

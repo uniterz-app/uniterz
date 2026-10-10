@@ -52,7 +52,7 @@ import {
 } from "../matchCardTypography";
 import JerseyMarkSvg from "../JerseyMarkSvg";
 import NbaFavoriteStarButtonNative from "../NbaFavoriteStarButtonNative";
-import { NbaDisciplineSectionNative } from "../NbaDisciplineSectionNative";
+import { NbaTeamDisciplineSectionNative } from "../NbaDisciplineSectionNative";
 import { NbaTeamRosterCardNative } from "../predict/NbaRosterPanelNative";
 import NbaTeamHowTheyPlayNative from "./NbaTeamHowTheyPlayNative";
 import { NbaTeamOffseasonMovesNative } from "./NbaTeamOffseasonMovesNative";
@@ -2039,13 +2039,11 @@ export default function NbaTeamDetailPanelNative({
         {discipline ? (
           <>
             <View style={[styles.divider, { backgroundColor: dividerColor }]} />
-            <NbaDisciplineSectionNative
-              slice={discipline}
+            <NbaTeamDisciplineSectionNative
+              teamId={detail.teamId}
+              initial={discipline}
               accent={accent}
               isJa={isJa}
-              leagueRows={bundle.season}
-              teamId={detail.teamId}
-              showPlayerNames
               onPlayerPress={onSelectPlayer}
             />
           </>

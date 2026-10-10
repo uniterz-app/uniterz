@@ -95,10 +95,20 @@ export type NbaDisciplinePlayerEntry = {
   playoffs: NbaDisciplineCounts;
 };
 
-export type NbaDisciplineTeamEntry = {
+/** チーム在籍中だけの選手別カウント（シーズン途中の移籍は移籍前チームに残る） */
+export type NbaDisciplineTeamPlayerEntry = {
+  name: string;
   regular: NbaDisciplineCounts;
   playoffs: NbaDisciplineCounts;
 };
+
+export type NbaDisciplineTeamEntry = {
+  regular: NbaDisciplineCounts;
+  playoffs: NbaDisciplineCounts;
+  players?: Record<string, NbaDisciplineTeamPlayerEntry>;
+};
+
+export type NbaDisciplineRanks = Partial<Record<keyof NbaDisciplineCounts, number>>;
 
 /** Firestore `nbaDiscipline/{seasonKey}` */
 export type NbaDisciplineSnapshot = {
@@ -125,4 +135,8 @@ export type NbaDisciplineDetailSlice = {
     kind?: Exclude<NbaDisciplineFineKind, "rescind">;
     games?: number;
   }>;
+  /** リーグ順位（多い順・1 始まり。値 0 は載せない）。チームは 30 球団、選手は全選手中 */
+  ranks?: { regular: NbaDisciplineRanks; playoffs: NbaDisciplineRanks };
+  /** チーム詳細のみ: 在籍中の選手別（記録のある選手だけ） */
+  players?: Array<NbaDisciplineTeamPlayerEntry & { playerId: string }>;
 };

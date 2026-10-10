@@ -16,7 +16,7 @@ import {
 import { matchCardTeamNameStyle } from "@/lib/games/teamDisplayTypography";
 import HalftoneJerseyMark from "@/app/component/games/HalftoneJerseyMark";
 import NbaFavoriteStarButton from "@/app/component/nba/NbaFavoriteStarButton";
-import { NbaDisciplineSection } from "@/app/component/nba/NbaDisciplineSection";
+import { NbaTeamDisciplineSection } from "@/app/component/nba/NbaDisciplineSection";
 import { CyberSlantedSegBar } from "@/app/component/rankings/CyberSlantedSegBar";
 import { NbaTeamRosterCard } from "@/app/component/predict/NbaRosterPanel";
 import {
@@ -2664,13 +2664,11 @@ export default function NbaTeamDetailPanel({
             className="h-px"
             style={{ backgroundColor: hexToRgba(accent, 0.22) }}
           />
-          <NbaDisciplineSection
-            slice={discipline}
+          <NbaTeamDisciplineSection
+            teamId={detail.teamId}
+            initial={discipline}
             accent={accent}
             isJa={isJa}
-            leagueRows={bundle.season}
-            teamId={detail.teamId}
-            showPlayerNames
             onPlayerClick={(playerId) =>
               router.push(nbaPlayerDetailPreviewHref(playerId))
             }
