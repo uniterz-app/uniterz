@@ -11,6 +11,11 @@ import { auth } from "../../lib/firebase";
 import { useNativeUserLanguageFromAuth } from "../../i18n/useNativeUserLanguageFromAuth";
 import type { MainTabParamList } from "../../navigation/types";
 import {
+  claimLaunchPromptSlot,
+  releaseLaunchPromptSlot,
+  subscribeLaunchPromptSlotFree,
+} from "../../../../../lib/launch/launchPromptSlot";
+import {
   formatSquadBattleRecruitDeadlineLabel,
   shouldShowSquadBattleLaunch,
 } from "../../../../../lib/squads/squadBattleLaunchGate";
@@ -18,6 +23,8 @@ import {
   getTutorialWelcomeChromeHidden,
   subscribeTutorialWelcomeChromeHidden,
 } from "../../../../../lib/tutorial/tutorialWelcomeChrome";
+
+const SLOT_ID = "squad-battle-launch";
 
 export default function SquadBattleLaunchPromptHostNative() {
   const navigation =
@@ -46,6 +53,7 @@ export default function SquadBattleLaunchPromptHostNative() {
         decidedRef.current = true;
         return;
       }
+      if (!claimLaunchPromptSlot(SLOT_ID)) return;
       decidedRef.current = true;
       await markSquadBattleLaunchSeenNative(battle!.id);
       setBattleId(battle!.id);
@@ -65,9 +73,13 @@ export default function SquadBattleLaunchPromptHostNative() {
     const unsub = subscribeTutorialWelcomeChromeHidden(() => {
       void evaluate();
     });
+    const unsubSlot = subscribeLaunchPromptSlotFree(() => {
+      void evaluate();
+    });
     return () => {
       clearTimeout(t);
       unsub();
+      unsubSlot();
     };
   }, [evaluate]);
 
@@ -77,9 +89,13 @@ export default function SquadBattleLaunchPromptHostNative() {
       battleId={battleId}
       language={language}
       deadlineLabel={deadlineLabel}
-      onClose={() => setOpen(false)}
+      onClose={() => {
+        setOpen(false);
+        releaseLaunchPromptSlot(SLOT_ID);
+      }}
       onEnter={() => {
         setOpen(false);
+        releaseLaunchPromptSlot(SLOT_ID);
         navigation.navigate("LeaderboardsTab", {
           screen: "SquadBattle",
         });

@@ -7,6 +7,7 @@ import { nbaTeamIdFromBracketCode } from "@/lib/nba-bracket-code";
 import { awardName } from "@/lib/predict/nbaSeasonAwardsPredict";
 import {
   seasonPredictAwardsMarketHint,
+  seasonPredictSubmissionCountLabel,
   type SeasonPredictUiLang,
 } from "@/lib/predict/seasonPredictUiCopy";
 
@@ -41,15 +42,25 @@ export default function NbaSeasonAwardsMarketPanel({
           >
             Awards market · {market.season}
           </h2>
-          <p
+        </div>
+        <p className="flex items-baseline gap-1.5">
+          <span
             className={[
               nameOxanium.className,
-              "text-[9px] font-bold uppercase tracking-[0.12em] text-white/40",
+              "text-[28px] font-black leading-none tabular-nums text-amber-200/95",
             ].join(" ")}
           >
-            {market.submissionCount.toLocaleString()} submissions
-          </p>
-        </div>
+            {market.submissionCount.toLocaleString()}
+          </span>
+          <span
+            className={[
+              nameOxanium.className,
+              "text-[12px] font-bold tracking-[0.04em] text-white/60",
+            ].join(" ")}
+          >
+            {seasonPredictSubmissionCountLabel(language)}
+          </span>
+        </p>
         <p className="text-[11px] leading-relaxed text-white/45">
           {seasonPredictAwardsMarketHint(language)}
         </p>

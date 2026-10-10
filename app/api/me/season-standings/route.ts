@@ -12,6 +12,8 @@ import {
   upsertSeasonStandingsDoc,
 } from "@/lib/predict/seasonStandingsServer";
 
+import { autoGrantReferralPreseasonBonus } from "@/lib/referral/referralPreseasonBonusServer";
+
 export const runtime = "nodejs";
 
 function seasonFromQuery(req: Request): string {
@@ -78,6 +80,7 @@ export async function POST(req: Request) {
     }
 
     await upsertSeasonStandingsDoc(getAdminDb(), uid, resolved.prediction);
+    await autoGrantReferralPreseasonBonus(getAdminDb(), uid);
 
     return NextResponse.json({
       ok: true,

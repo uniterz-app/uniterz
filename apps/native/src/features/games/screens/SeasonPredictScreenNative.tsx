@@ -2,7 +2,7 @@
  * Web `/mobile/season-awards` · 順位予想 相当。
  * 試合サイドメニュー「アワード予想」「順位予想」からの入口。
  */
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -24,7 +24,13 @@ import NbaSeasonStandingsMarketPanelNative from "../predict/season/NbaSeasonStan
 import NbaSeasonAwardsPredictPanelNative from "../predict/season/NbaSeasonAwardsPredictPanelNative";
 import NbaSeasonAwardsViewPanelNative from "../predict/season/NbaSeasonAwardsViewPanelNative";
 import NbaSeasonAwardsMarketPanelNative from "../predict/season/NbaSeasonAwardsMarketPanelNative";
+import {
+  CyberSlantedTabBarNative,
+  CyberSlantedTabNative,
+} from "../../rankings/CyberSlantedTabNative";
 import SeasonPredictRulesChipNative from "../predict/season/SeasonPredictRulesChipNative";
+import ReferralPreseasonInviteCardNative from "../../referral/ReferralPreseasonInviteCardNative";
+import { isReferralPreseasonOpen } from "../../../../../../lib/referral/referralPreseasonBonus";
 import {
   emptySeasonStandingsPrediction,
   isSeasonStandingsComplete,
@@ -72,6 +78,8 @@ import {
 import { useNativeUserLanguageFromAuth } from "../../../i18n/useNativeUserLanguageFromAuth";
 
 type PanelMode = "loading" | "edit" | "view" | "market" | "market_pending";
+type ViewTab = "mine" | "crowd";
+type PreviewState = "idle" | "loading" | "ready" | "pending";
 
 export default function SeasonPredictScreenNative() {
   const navigation = useNavigation<NativeStackNavigationProp<GamesStackParamList>>();
@@ -103,6 +111,73 @@ export default function SeasonPredictScreenNative() {
   const [error, setError] = useState<string | null>(null);
   const [rulesOpen, setRulesOpen] = useState(false);
   const [rulesAutoShown, setRulesAutoShown] = useState(false);
+  const routeView = route.params?.view;
+  const [viewTab, setViewTab] = useState<ViewTab>(routeView ?? "mine");
+  useEffect(() => {
+    if (routeView) setViewTab(routeView);
+  }, [routeView]);
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const inviteOfferedRef = useRef(false);
+
+  /** 順位・アワードの両方を出し終えた直後に 1 回だけ招待カード。出したら true */
+  const offerPreseasonInvite = useCallback((): boolean => {
+    if (inviteOfferedRef.current || !isReferralPreseasonOpen()) return false;
+    inviteOfferedRef.current = true;
+    setInviteOpen(true);
+    return true;
+  }, []);
+  const [standingsPreview, setStandingsPreview] = useState<PreviewState>("idle");
+  const [awardsPreview, setAwardsPreview] = useState<PreviewState>("idle");
+
+  const loadedRef = useRef({ standings: false, awards: false });
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  const switchKind = useCallback(
+    (next: "awards" | "standings") => {
+      if (next === mode) return;
+      navigation.setParams({ mode: next });
+    },
+    [mode, navigation]
+  );
+
+  const previewRequestedRef = useRef({ standings: false, awards: false });
+
+  /** 締切前・提出済みの「みんなの予想」— 種目ごとに初回だけ読む */
+  useEffect(() => {
+    if (!submitOpen || viewTab !== "crowd") return;
+    const kind = mode === "awards" ? "awards" : "standings";
+    if (previewRequestedRef.current[kind]) return;
+    previewRequestedRef.current[kind] = true;
+    const setState = kind === "awards" ? setAwardsPreview : setStandingsPreview;
+    setState("loading");
+    (async () => {
+      try {
+        const data = await fetchSeasonPredictMarketNative({
+          season,
+          kind,
+          preview: true,
+        });
+        if (kind === "awards" && data.awards) {
+          setAwardsMarket(data.awards);
+          setState("ready");
+        } else if (kind === "standings" && data.standings) {
+          setStandingsMarket(data.standings);
+          setState("ready");
+        } else {
+          setState("pending");
+        }
+      } catch (e) {
+        console.error("fetchSeasonPredictMarketNative preview", e);
+        setState("pending");
+      }
+    })();
+  }, [mode, season, submitOpen, viewTab]);
 
   useEffect(() => {
     setRulesAutoShown(false);
@@ -110,8 +185,8 @@ export default function SeasonPredictScreenNative() {
   }, [mode]);
 
   useEffect(() => {
-    if (mode !== "awards") return;
-    let cancelled = false;
+    if (mode !== "awards" || loadedRef.current.awards) return;
+    loadedRef.current.awards = true;
     setAwardsMode("loading");
     (async () => {
       if (!submitOpen) {
@@ -120,7 +195,7 @@ export default function SeasonPredictScreenNative() {
             season,
             kind: "awards",
           });
-          if (cancelled) return;
+          if (!mountedRef.current) return;
           if (data.awards) {
             setAwardsMarket(data.awards);
             setAwardsMode("market");
@@ -131,7 +206,7 @@ export default function SeasonPredictScreenNative() {
         } catch (e) {
           const msg = e instanceof Error ? e.message : "load failed";
           console.error("fetchSeasonPredictMarketNative awards", msg, e);
-          if (!cancelled) {
+          if (mountedRef.current) {
             setError(msg);
             setAwardsMode("market_pending");
           }
@@ -140,7 +215,7 @@ export default function SeasonPredictScreenNative() {
       }
       try {
         const data = await fetchMeSeasonAwardsNative(season);
-        if (cancelled) return;
+        if (!mountedRef.current) return;
         if (data.prediction) {
           setAwards(data.prediction);
           setCandidates(data.candidates ?? []);
@@ -153,20 +228,17 @@ export default function SeasonPredictScreenNative() {
       } catch (e) {
         const msg = e instanceof Error ? e.message : "load failed";
         console.error("fetchMeSeasonAwardsNative", msg, e);
-        if (!cancelled) {
+        if (mountedRef.current) {
           setError(msg);
           setAwardsMode("edit");
         }
       }
     })();
-    return () => {
-      cancelled = true;
-    };
   }, [mode, season, submitOpen]);
 
   useEffect(() => {
-    if (mode !== "standings") return;
-    let cancelled = false;
+    if (mode !== "standings" || loadedRef.current.standings) return;
+    loadedRef.current.standings = true;
     setStandingsMode("loading");
     (async () => {
       if (!submitOpen) {
@@ -175,7 +247,7 @@ export default function SeasonPredictScreenNative() {
             season,
             kind: "standings",
           });
-          if (cancelled) return;
+          if (!mountedRef.current) return;
           if (data.standings) {
             setStandingsMarket(data.standings);
             setStandingsMode("market");
@@ -186,7 +258,7 @@ export default function SeasonPredictScreenNative() {
         } catch (e) {
           const msg = e instanceof Error ? e.message : "load failed";
           console.error("fetchSeasonPredictMarketNative standings", msg, e);
-          if (!cancelled) {
+          if (mountedRef.current) {
             setError(msg);
             setStandingsMode("market_pending");
           }
@@ -195,7 +267,7 @@ export default function SeasonPredictScreenNative() {
       }
       try {
         const data = await fetchMeSeasonStandingsNative(season);
-        if (cancelled) return;
+        if (!mountedRef.current) return;
         if (data.prediction) {
           setStandings(data.prediction);
           setStandingsMode("view");
@@ -206,15 +278,12 @@ export default function SeasonPredictScreenNative() {
       } catch (e) {
         const msg = e instanceof Error ? e.message : "load failed";
         console.error("fetchMeSeasonStandingsNative", msg, e);
-        if (!cancelled) {
+        if (mountedRef.current) {
           setError(msg);
           setStandingsMode("edit");
         }
       }
     })();
-    return () => {
-      cancelled = true;
-    };
   }, [mode, season, submitOpen]);
 
   const activeMode = mode === "awards" ? awardsMode : standingsMode;
@@ -226,10 +295,11 @@ export default function SeasonPredictScreenNative() {
     setRulesAutoShown(true);
   }, [activeMode, rulesAutoShown]);
 
-  const offerStandingsNudge = useCallback(async () => {
+  /** アワード提出後 — 順位予想が未提出なら案内。出したら true */
+  const offerStandingsNudge = useCallback(async (): Promise<boolean> => {
     try {
       const existing = await fetchMeSeasonStandingsNative(season);
-      if (existing.prediction) return;
+      if (existing.prediction) return false;
     } catch {
       /* 未提出扱いで案内 */
     }
@@ -246,6 +316,7 @@ export default function SeasonPredictScreenNative() {
         },
       },
     ], { variant: "success" });
+    return true;
   }, [language, navigation, season]);
 
   /** 順位予想提出後 — アワード未提出なら案内。出したら true */
@@ -301,7 +372,7 @@ export default function SeasonPredictScreenNative() {
       setAwards(data.prediction);
       setCandidates(data.candidates ?? []);
       setAwardsMode("view");
-      await offerStandingsNudge();
+      if (!(await offerStandingsNudge())) offerPreseasonInvite();
     } catch (e) {
       const msg = e instanceof Error ? e.message : "submit failed";
       setError(msg);
@@ -309,7 +380,7 @@ export default function SeasonPredictScreenNative() {
     } finally {
       setSubmitting(false);
     }
-  }, [alerts, awards, language, offerStandingsNudge, submitOpen, submitting]);
+  }, [alerts, awards, language, offerPreseasonInvite, offerStandingsNudge, submitOpen, submitting]);
 
   const handleSubmitStandings = useCallback(async () => {
     if (submitting) return;
@@ -340,7 +411,7 @@ export default function SeasonPredictScreenNative() {
       }
       setStandings(data.prediction);
       setStandingsMode("view");
-      if (!(await offerAwardsNudge())) {
+      if (!(await offerAwardsNudge()) && !offerPreseasonInvite()) {
         cyberAlert(
           alerts.submittedTitle,
           alerts.standingsSavedBody,
@@ -355,7 +426,7 @@ export default function SeasonPredictScreenNative() {
     } finally {
       setSubmitting(false);
     }
-  }, [alerts, language, offerAwardsNudge, standings, submitOpen, submitting]);
+  }, [alerts, language, offerAwardsNudge, offerPreseasonInvite, standings, submitOpen, submitting]);
 
   const title = !submitOpen
     ? "MARKET"
@@ -370,6 +441,66 @@ export default function SeasonPredictScreenNative() {
 
   const lockedMsg = seasonPredictSubmitLockedMessage(language);
   const marketPendingBody = seasonPredictMarketPendingBody(language);
+
+  const kindTabs = (
+    <View style={styles.kindTabs}>
+      <CyberSlantedTabBarNative fill>
+        {(["awards", "standings"] as const).map((kind) => (
+          <CyberSlantedTabNative
+            key={kind}
+            label={kind === "awards" ? "AWARDS" : "STANDINGS"}
+            active={mode === kind}
+            fill
+            compact
+            onPress={() => switchKind(kind)}
+          />
+        ))}
+      </CyberSlantedTabBarNative>
+    </View>
+  );
+
+  const viewToggle = submitOpen ? (
+    <View style={styles.viewToggle}>
+      {(["mine", "crowd"] as const).map((tab) => {
+        const active = viewTab === tab;
+        return (
+          <Pressable
+            key={tab}
+            accessibilityRole="button"
+            accessibilityState={{ selected: active }}
+            onPress={() => setViewTab(tab)}
+            style={[styles.viewToggleBtn, active ? styles.viewToggleBtnActive : null]}
+          >
+            <Text
+              style={[
+                styles.viewToggleText,
+                active ? styles.viewToggleTextActive : null,
+              ]}
+            >
+              {tab === "mine" ? pageCopy.myPicksTab : pageCopy.crowdTab}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  ) : null;
+
+  const renderCrowd = (state: PreviewState, panel: ReactNode) =>
+    state === "ready" ? (
+      <View style={{ gap: 10 }}>
+        <Text style={styles.locked}>{pageCopy.marketPreviewNote}</Text>
+        {panel}
+      </View>
+    ) : state === "pending" ? (
+      <View style={{ gap: 8 }}>
+        <Text style={styles.pendingTitle}>{pageCopy.marketPending}</Text>
+        <Text style={styles.locked}>{pageCopy.marketPreviewPendingBody}</Text>
+      </View>
+    ) : (
+      <View style={styles.loading}>
+        <ActivityIndicator color="rgba(103,232,249,0.8)" />
+      </View>
+    );
 
   return (
     <KeyboardAvoidingView
@@ -392,6 +523,7 @@ export default function SeasonPredictScreenNative() {
           ? `${pageCopy.deadlineLabel} · ${deadlineLabel}`
           : pageCopy.marketPassed.toUpperCase()}
       </Text>
+      {kindTabs}
 
       {mode === "standings" ? (
         standingsMode === "loading" ? (
@@ -413,11 +545,24 @@ export default function SeasonPredictScreenNative() {
           </View>
         ) : standingsMode === "view" ? (
           <View style={{ gap: 12 }}>
+            {viewToggle}
+            {viewTab === "crowd" && submitOpen ? (
+              renderCrowd(
+                standingsPreview,
+                standingsMarket ? (
+                  <NbaSeasonStandingsMarketPanelNative
+                    market={standingsMarket}
+                    language={language}
+                  />
+                ) : null
+              )
+            ) : (
             <NbaSeasonStandingsViewPanelNative
               prediction={standings}
               showBrandLogo
             />
-            {submitOpen ? (
+            )}
+            {viewTab === "crowd" && submitOpen ? null : submitOpen ? (
               <Pressable
                 onPress={() => {
                   setError(null);
@@ -471,12 +616,25 @@ export default function SeasonPredictScreenNative() {
         </View>
       ) : awardsMode === "view" ? (
         <View style={{ gap: 12 }}>
+          {viewToggle}
+          {viewTab === "crowd" && submitOpen ? (
+            renderCrowd(
+              awardsPreview,
+              awardsMarket ? (
+                <NbaSeasonAwardsMarketPanelNative
+                  market={awardsMarket}
+                  language={language}
+                />
+              ) : null
+            )
+          ) : (
           <NbaSeasonAwardsViewPanelNative
             prediction={awards}
             catalog={candidates.length > 0 ? candidates : undefined}
             showBrandLogo
           />
-          {submitOpen ? (
+          )}
+          {viewTab === "crowd" && submitOpen ? null : submitOpen ? (
             <Pressable
               onPress={() => {
                 setError(null);
@@ -519,6 +677,11 @@ export default function SeasonPredictScreenNative() {
         open={rulesOpen}
         onOpenChange={setRulesOpen}
       />
+      <ReferralPreseasonInviteCardNative
+        visible={inviteOpen}
+        language={userLanguage}
+        onClose={() => setInviteOpen(false)}
+      />
     </GamesNbaSubpageShellNative>
     </KeyboardAvoidingView>
   );
@@ -550,6 +713,28 @@ const styles = StyleSheet.create({
     textAlign: "center",
     color: "rgba(255,255,255,0.7)",
     textTransform: "uppercase",
+  },
+  kindTabs: { marginBottom: 12 },
+  viewToggle: {
+    flexDirection: "row",
+    borderWidth: 1,
+    borderColor: "rgba(103,232,249,0.35)",
+  },
+  viewToggleBtn: {
+    flex: 1,
+    alignItems: "center",
+    paddingVertical: 9,
+  },
+  viewToggleBtnActive: {
+    backgroundColor: "rgba(103,232,249,0.16)",
+  },
+  viewToggleText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "rgba(255,255,255,0.5)",
+  },
+  viewToggleTextActive: {
+    color: "#cffafe",
   },
   error: { fontSize: 12, color: "rgba(255,138,180,0.85)", lineHeight: 18 },
   locked: { fontSize: 12, color: "rgba(255,255,255,0.45)", lineHeight: 18 },

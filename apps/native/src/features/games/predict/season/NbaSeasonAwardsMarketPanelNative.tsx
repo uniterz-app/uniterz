@@ -6,6 +6,7 @@ import { nbaTeamIdFromBracketCode } from "../../../../../../../lib/nba-bracket-c
 import { awardName } from "../../../../../../../lib/predict/nbaSeasonAwardsPredict";
 import {
   seasonPredictAwardsMarketHint,
+  seasonPredictSubmissionCountLabel,
   type SeasonPredictUiLang,
 } from "../../../../../../../lib/predict/seasonPredictUiCopy";
 import {
@@ -27,9 +28,14 @@ export default function NbaSeasonAwardsMarketPanelNative({
   return (
     <View style={styles.card}>
       <Text style={styles.h2}>Awards market · {market.season}</Text>
-      <Text style={styles.meta}>
-        {market.submissionCount.toLocaleString()} submissions
-      </Text>
+      <View style={styles.countRow}>
+        <Text style={styles.countNum}>
+          {market.submissionCount.toLocaleString()}
+        </Text>
+        <Text style={styles.countLabel}>
+          {seasonPredictSubmissionCountLabel(language)}
+        </Text>
+      </View>
       <Text style={styles.lead}>
         {seasonPredictAwardsMarketHint(language)}
       </Text>
@@ -93,14 +99,25 @@ const styles = StyleSheet.create({
     color: "rgba(253,230,138,0.9)",
     textTransform: "uppercase",
   },
-  meta: {
-    marginTop: 4,
+  countRow: {
+    marginTop: 6,
+    flexDirection: "row",
+    alignItems: "baseline",
+    gap: 6,
+  },
+  countNum: {
     fontFamily: OX,
-    fontSize: 9,
+    fontSize: 28,
+    fontWeight: "900",
+    color: "rgba(253,230,138,0.95)",
+    fontVariant: ["tabular-nums"],
+  },
+  countLabel: {
+    fontFamily: OX,
+    fontSize: 12,
     fontWeight: "700",
-    letterSpacing: 1.2,
-    color: "rgba(255,255,255,0.4)",
-    textTransform: "uppercase",
+    letterSpacing: 0.6,
+    color: "rgba(255,255,255,0.6)",
   },
   lead: {
     marginTop: 6,

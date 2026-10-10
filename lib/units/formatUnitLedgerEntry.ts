@@ -25,6 +25,7 @@ export function normalizeUnitLedgerReason(raw: unknown): UnitLedgerReasonCode {
     case "weekly_rank":
     case "monthly_rank":
     case "preseason_bonus":
+    case "referral_preseason":
     case "redemption":
     case "adjustment":
       return raw;
@@ -120,6 +121,16 @@ export function unitLedgerReasonTitle(
         es: "Bonus de pretemporada",
         pt: "Bônus de pré-temporada",
         fr: "Bonus de présaison",
+      });
+    case "referral_preseason":
+      return L(lang, {
+        ja: "招待特典（開幕前）",
+        en: "Invite bonus (preseason)",
+        ko: "초대 특典（개막 전）".replace("特典", "특전"),
+        zh: "邀请奖励（开幕前）",
+        es: "Bonus por invitación (pretemporada)",
+        pt: "Bônus de convite (pré-temporada)",
+        fr: "Bonus de parrainage (présaison)",
       });
     case "redemption":
       return L(lang, {

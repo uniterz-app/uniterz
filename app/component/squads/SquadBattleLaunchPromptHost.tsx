@@ -13,9 +13,16 @@ import {
   readSquadBattleLaunchSeenBattleId,
 } from "@/app/component/squads/SquadBattleLaunchOverlay";
 import {
+  claimLaunchPromptSlot,
+  releaseLaunchPromptSlot,
+  subscribeLaunchPromptSlotFree,
+} from "@/lib/launch/launchPromptSlot";
+import {
   formatSquadBattleRecruitDeadlineLabel,
   shouldShowSquadBattleLaunch,
 } from "@/lib/squads/squadBattleLaunchGate";
+
+const SLOT_ID = "squad-battle-launch";
 
 export default function SquadBattleLaunchPromptHost() {
   const router = useRouter();
@@ -49,6 +56,7 @@ export default function SquadBattleLaunchPromptHost() {
         decidedRef.current = true;
         return;
       }
+      if (!claimLaunchPromptSlot(SLOT_ID)) return;
       decidedRef.current = true;
       // 表示開始時に記録（他面との二重表示を防ぐ）
       markSquadBattleLaunchSeen(battle!.id);
@@ -66,7 +74,13 @@ export default function SquadBattleLaunchPromptHost() {
     const t = window.setTimeout(() => {
       void evaluate();
     }, 900);
-    return () => window.clearTimeout(t);
+    const unsubSlot = subscribeLaunchPromptSlotFree(() => {
+      void evaluate();
+    });
+    return () => {
+      window.clearTimeout(t);
+      unsubSlot();
+    };
   }, [evaluate]);
 
   return (
@@ -75,9 +89,13 @@ export default function SquadBattleLaunchPromptHost() {
       battleId={battleId}
       language={language}
       deadlineLabel={deadlineLabel}
-      onClose={() => setOpen(false)}
+      onClose={() => {
+        setOpen(false);
+        releaseLaunchPromptSlot(SLOT_ID);
+      }}
       onEnter={() => {
         setOpen(false);
+        releaseLaunchPromptSlot(SLOT_ID);
         router.push("/mobile/squad-battle");
       }}
     />

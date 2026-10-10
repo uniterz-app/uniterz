@@ -6,7 +6,7 @@
  * 締切後: マーケット集計
  * `/mobile/season-awards`
  */
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { onAuthStateChanged } from "firebase/auth";
@@ -16,6 +16,10 @@ import NbaSeasonAwardsViewPanel from "@/app/component/predict/season/NbaSeasonAw
 import NbaSeasonAwardsMarketPanel from "@/app/component/predict/season/NbaSeasonAwardsMarketPanel";
 import SeasonPredictRulesModal from "@/app/component/predict/season/SeasonPredictRulesModal";
 import CandleChartLoader from "@/app/component/common/CandleChartLoader";
+import ReferralPreseasonInviteCard from "@/app/component/referral/ReferralPreseasonInviteCard";
+import { isReferralPreseasonOpen } from "@/lib/referral/referralPreseasonBonus";
+import SeasonPredictCrowdToggle from "@/app/component/predict/season/SeasonPredictCrowdToggle";
+import SeasonPredictKindTabs from "@/app/component/predict/season/SeasonPredictKindTabs";
 import {
   fetchMeSeasonAwards,
   saveMeSeasonAwards,
@@ -66,6 +70,14 @@ export default function SeasonAwardsPage() {
   const [standingsNudgeOpen, setStandingsNudgeOpen] = useState(false);
   const [rulesOpen, setRulesOpen] = useState(false);
   const [rulesAutoShown, setRulesAutoShown] = useState(false);
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const inviteOfferedRef = useRef(false);
+  /** 順位・アワードの両方を出し終えた直後に 1 回だけ招待カード */
+  const offerPreseasonInvite = useCallback(() => {
+    if (inviteOfferedRef.current || !isReferralPreseasonOpen()) return;
+    inviteOfferedRef.current = true;
+    setInviteOpen(true);
+  }, []);
   const { language } = useUserLanguage(uid);
   const rulesLang = resolveSeasonPredictUiLang(language);
   const deadlineLabel = seasonPredictSubmitDeadlineLabel(rulesLang);
@@ -167,6 +179,7 @@ export default function SeasonAwardsPage() {
       try {
         const existing = await fetchMeSeasonStandings(season);
         if (!existing.prediction) setStandingsNudgeOpen(true);
+        else offerPreseasonInvite();
       } catch {
         setStandingsNudgeOpen(true);
       }
@@ -175,7 +188,7 @@ export default function SeasonAwardsPage() {
     } finally {
       setSubmitting(false);
     }
-  }, [value, submitting, season, submitOpen, rulesLang]);
+  }, [value, submitting, season, submitOpen, rulesLang, offerPreseasonInvite]);
 
   const nudge = seasonPredictNudgeCopy(rulesLang);
 
@@ -200,6 +213,7 @@ export default function SeasonAwardsPage() {
           >
             {pageUi.marketPassed}
           </p>
+          <SeasonPredictKindTabs active="awards" />
           <NbaSeasonAwardsMarketPanel
             market={market}
             language={rulesLang}
@@ -232,25 +246,41 @@ export default function SeasonAwardsPage() {
           >
             {pageUi.deadlineLabel} · {deadlineLabel}
           </p>
-          <NbaSeasonAwardsViewPanel
-            prediction={value}
-            catalog={candidates.length > 0 ? candidates : undefined}
-          />
+          <SeasonPredictKindTabs active="awards" />
           {submitOpen ? (
-            <button
-              type="button"
-              onClick={() => {
-                setError(null);
-                setMode("edit");
-              }}
-              className={[
-                nameOxanium.className,
-                "w-full border border-white/15 bg-white/[0.04] px-4 py-2.5 text-[11px] font-extrabold uppercase tracking-[0.14em] text-white/70 transition hover:bg-white/[0.08]",
-              ].join(" ")}
-            >
-              {pageUi.editResubmit}
-            </button>
+            <SeasonPredictCrowdToggle
+              kind="awards"
+              season={season}
+              language={rulesLang}
+              mine={
+                <div className="space-y-3">
+                  <NbaSeasonAwardsViewPanel
+                    prediction={value}
+                    catalog={candidates.length > 0 ? candidates : undefined}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setError(null);
+                      setMode("edit");
+                    }}
+                    className={[
+                      nameOxanium.className,
+                      "w-full border border-white/15 bg-white/[0.04] px-4 py-2.5 text-[11px] font-extrabold uppercase tracking-[0.14em] text-white/70 transition hover:bg-white/[0.08]",
+                    ].join(" ")}
+                  >
+                    {pageUi.editResubmit}
+                  </button>
+                </div>
+              }
+            />
           ) : (
+            <NbaSeasonAwardsViewPanel
+              prediction={value}
+              catalog={candidates.length > 0 ? candidates : undefined}
+            />
+          )}
+          {submitOpen ? null : (
             <p className="text-[12px] text-white/45">
               {seasonPredictSubmitLockedMessage(rulesLang)}
             </p>
@@ -266,6 +296,7 @@ export default function SeasonAwardsPage() {
           >
             {pageUi.deadlineLabel} · {deadlineLabel}
           </p>
+          <SeasonPredictKindTabs active="awards" />
           {error ? (
             <p className="text-[12px] text-[#FF8AB4]/85">{error}</p>
           ) : null}
@@ -355,6 +386,11 @@ export default function SeasonAwardsPage() {
             document.body
           )
         : null}
+      <ReferralPreseasonInviteCard
+        open={inviteOpen}
+        language={language}
+        onClose={() => setInviteOpen(false)}
+      />
     </GamesNbaSubpageShell>
   );
 }

@@ -6,7 +6,7 @@
  * 締切後: マーケット集計（Firestore スナップショット）
  * `/mobile/season-standings`
  */
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { onAuthStateChanged } from "firebase/auth";
@@ -16,6 +16,10 @@ import NbaSeasonStandingsViewPanel from "@/app/component/predict/season/NbaSeaso
 import NbaSeasonStandingsMarketPanel from "@/app/component/predict/season/NbaSeasonStandingsMarketPanel";
 import SeasonPredictRulesModal from "@/app/component/predict/season/SeasonPredictRulesModal";
 import CandleChartLoader from "@/app/component/common/CandleChartLoader";
+import ReferralPreseasonInviteCard from "@/app/component/referral/ReferralPreseasonInviteCard";
+import { isReferralPreseasonOpen } from "@/lib/referral/referralPreseasonBonus";
+import SeasonPredictCrowdToggle from "@/app/component/predict/season/SeasonPredictCrowdToggle";
+import SeasonPredictKindTabs from "@/app/component/predict/season/SeasonPredictKindTabs";
 import {
   fetchMeSeasonStandings,
   saveMeSeasonStandings,
@@ -65,6 +69,14 @@ export default function SeasonStandingsPage() {
   const [uid, setUid] = useState<string | null>(null);
   const [rulesOpen, setRulesOpen] = useState(false);
   const [rulesAutoShown, setRulesAutoShown] = useState(false);
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const inviteOfferedRef = useRef(false);
+  /** 順位・アワードの両方を出し終えた直後に 1 回だけ招待カード */
+  const offerPreseasonInvite = useCallback(() => {
+    if (inviteOfferedRef.current || !isReferralPreseasonOpen()) return;
+    inviteOfferedRef.current = true;
+    setInviteOpen(true);
+  }, []);
   const [awardsNudgeOpen, setAwardsNudgeOpen] = useState(false);
   const { language } = useUserLanguage(uid);
   const rulesLang = resolveSeasonPredictUiLang(language);
@@ -165,6 +177,7 @@ export default function SeasonStandingsPage() {
       try {
         const existing = await fetchMeSeasonAwards(season);
         if (!existing.prediction) setAwardsNudgeOpen(true);
+        else offerPreseasonInvite();
       } catch {
         setAwardsNudgeOpen(true);
       }
@@ -173,7 +186,7 @@ export default function SeasonStandingsPage() {
     } finally {
       setSubmitting(false);
     }
-  }, [value, submitting, submitOpen, rulesLang, season]);
+  }, [value, submitting, submitOpen, rulesLang, season, offerPreseasonInvite]);
 
   const nudge = seasonPredictAwardsNudgeCopy(rulesLang);
 
@@ -198,6 +211,7 @@ export default function SeasonStandingsPage() {
           >
             {pageUi.marketPassed}
           </p>
+          <SeasonPredictKindTabs active="standings" />
           <NbaSeasonStandingsMarketPanel
             market={market}
             language={rulesLang}
@@ -230,22 +244,35 @@ export default function SeasonStandingsPage() {
           >
             {pageUi.deadlineLabel} · {deadlineLabel}
           </p>
-          <NbaSeasonStandingsViewPanel prediction={value} />
+          <SeasonPredictKindTabs active="standings" />
           {submitOpen ? (
-            <button
-              type="button"
-              onClick={() => {
-                setError(null);
-                setMode("edit");
-              }}
-              className={[
-                nameOxanium.className,
-                "w-full border border-white/15 bg-white/[0.04] px-4 py-2.5 text-[11px] font-extrabold uppercase tracking-[0.14em] text-white/70 transition hover:bg-white/[0.08]",
-              ].join(" ")}
-            >
-              {pageUi.editResubmit}
-            </button>
+            <SeasonPredictCrowdToggle
+              kind="standings"
+              season={season}
+              language={rulesLang}
+              mine={
+                <div className="space-y-3">
+                  <NbaSeasonStandingsViewPanel prediction={value} />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setError(null);
+                      setMode("edit");
+                    }}
+                    className={[
+                      nameOxanium.className,
+                      "w-full border border-white/15 bg-white/[0.04] px-4 py-2.5 text-[11px] font-extrabold uppercase tracking-[0.14em] text-white/70 transition hover:bg-white/[0.08]",
+                    ].join(" ")}
+                  >
+                    {pageUi.editResubmit}
+                  </button>
+                </div>
+              }
+            />
           ) : (
+            <NbaSeasonStandingsViewPanel prediction={value} />
+          )}
+          {submitOpen ? null : (
             <p className="text-[12px] text-white/45">
               {seasonPredictSubmitLockedMessage(rulesLang)}
             </p>
@@ -261,6 +288,7 @@ export default function SeasonStandingsPage() {
           >
             {pageUi.deadlineLabel} · {deadlineLabel}
           </p>
+          <SeasonPredictKindTabs active="standings" />
           {error ? (
             <p className="text-[12px] text-[#FF8AB4]/85">{error}</p>
           ) : null}
@@ -350,6 +378,11 @@ export default function SeasonStandingsPage() {
             document.body
           )
         : null}
+      <ReferralPreseasonInviteCard
+        open={inviteOpen}
+        language={language}
+        onClose={() => setInviteOpen(false)}
+      />
     </GamesNbaSubpageShell>
   );
 }

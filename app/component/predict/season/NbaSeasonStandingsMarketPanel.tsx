@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import HalftoneJerseyMark from "@/app/component/games/HalftoneJerseyMark";
 import {
   CyberSlantedTab,
   CyberSlantedTabBar,
@@ -15,14 +14,12 @@ import {
   type SeasonStandingsCrowdBoardRow,
   type SeasonStandingsMarketSnapshot,
 } from "@/lib/predict/seasonPredictMarket";
-import {
-  getTeamJerseyPrimaryColor,
-  getTeamJerseySecondaryColor,
-} from "@/lib/team-colors";
+import { getTeamJerseyPrimaryColor } from "@/lib/team-colors";
 import {
   seasonPredictPredictedRankBandsHeading,
   seasonPredictStandingsBandLabel,
   seasonPredictStandingsMarketHint,
+  seasonPredictSubmissionCountLabel,
   type SeasonPredictUiLang,
 } from "@/lib/predict/seasonPredictUiCopy";
 
@@ -40,10 +37,19 @@ function bandForRank(rank: number): Band {
   return "out";
 }
 
-function bandAccent(band: Band): { bar: string; rank: string } {
-  if (band === "straight") return { bar: "#00E5FF", rank: "text-white" };
-  if (band === "playin") return { bar: "#2DFF6E", rank: "text-[#2DFF6E]" };
-  return { bar: "rgba(255,255,255,0.18)", rank: "text-white/35" };
+function bandRankClass(band: Band): string {
+  if (band === "straight") return "text-white";
+  if (band === "playin") return "text-[#2DFF6E]";
+  return "text-white/35";
+}
+
+function hexToRgba(hex: string, alpha: number): string {
+  const raw = hex.replace("#", "").trim();
+  if (raw.length !== 6) return `rgba(0,245,255,${alpha})`;
+  const r = Number.parseInt(raw.slice(0, 2), 16);
+  const g = Number.parseInt(raw.slice(2, 4), 16);
+  const b = Number.parseInt(raw.slice(4, 6), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
 }
 
 function DetailBands({
@@ -81,12 +87,12 @@ function DetailBands({
         {bands.map((b) => (
           <li
             key={b.id}
-            className="border border-white/8 bg-black/40 px-1 py-1 text-center"
+            className="border border-white/8 bg-black/40 px-1 py-1.5 text-center"
           >
             <p
               className={[
                 nameOxanium.className,
-                "text-[8px] font-bold uppercase tracking-[0.06em] text-white/40",
+                "text-[9px] font-bold uppercase tracking-[0.06em] text-white/40",
               ].join(" ")}
             >
               {seasonPredictStandingsBandLabel(language, b)}
@@ -94,11 +100,11 @@ function DetailBands({
             <p
               className={[
                 nameOxanium.className,
-                "text-[11px] font-extrabold tabular-nums text-white/90",
+                "mt-0.5 text-[16px] font-extrabold tabular-nums text-white/90",
               ].join(" ")}
             >
               {b.pct.toFixed(0)}
-              <span className="text-[8px] text-white/40">%</span>
+              <span className="text-[10px] text-white/40">%</span>
             </p>
           </li>
         ))}
@@ -112,74 +118,70 @@ function TeamListRow({
   expanded,
   onToggle,
   language = "ja",
+  isLast,
 }: {
   row: SeasonStandingsCrowdBoardRow;
   expanded: boolean;
   onToggle: () => void;
   language?: SeasonPredictUiLang;
+  isLast: boolean;
 }) {
   const band = bandForRank(row.boardRank);
-  const accent = bandAccent(band);
+  const primary = getTeamJerseyPrimaryColor("nba", row.teamId);
   const name = (
     getNbaTeamNicknameById(row.teamId) ?? row.teamId
   ).toUpperCase();
 
   return (
-    <li className="border border-white/10 bg-white/[0.02]">
+    <li className={!isLast ? "border-b border-white/[0.06]" : ""}>
       <button
         type="button"
         onClick={onToggle}
         aria-expanded={expanded}
-        className="flex w-full items-center gap-2.5 px-2.5 py-2 text-left transition hover:bg-white/[0.03] active:bg-white/[0.05]"
+        className="grid w-full grid-cols-[36px_minmax(0,1fr)] text-left transition hover:bg-white/[0.03] active:bg-white/[0.05]"
       >
-        <span className="relative flex h-8 w-7 shrink-0 items-center justify-center">
-          <span
-            aria-hidden
-            className="absolute bottom-0 left-0 top-0 w-[3px]"
-            style={{ background: accent.bar }}
-          />
+        <span className="flex items-center justify-center border-r border-white/[0.1] py-2">
           <span
             className={[
               nameOxanium.className,
-              "text-[12px] font-black tabular-nums",
-              accent.rank,
+              "text-[12px] font-black tabular-nums tracking-wide",
+              bandRankClass(band),
             ].join(" ")}
           >
             {row.boardRank}
           </span>
         </span>
-        <HalftoneJerseyMark
-          accent={getTeamJerseyPrimaryColor("nba", row.teamId)}
-          accentEnd={getTeamJerseySecondaryColor("nba", row.teamId)}
-          className="h-8 w-8 shrink-0"
-          glow="none"
-          density="coarse"
-        />
-        <div className="min-w-0 flex-1">
-          <p
+        <span
+          className="flex min-w-0 items-center gap-2 px-2 py-2"
+          style={{
+            background: `linear-gradient(90deg, ${hexToRgba(primary, 0.38)} 0%, ${hexToRgba(primary, 0.18)} 45%, rgba(0,0,0,0) 100%)`,
+          }}
+        >
+          <span
             className={[
               nameOxanium.className,
-              "truncate text-[12px] font-extrabold uppercase tracking-[0.04em] text-white",
+              "min-w-0 flex-1 truncate text-[12px] font-extrabold uppercase tracking-[0.02em] text-white",
             ].join(" ")}
+            style={{ transform: "skewX(-6deg)" }}
           >
             {name}
-          </p>
-          <p
+          </span>
+          <span
             className={[
               nameOxanium.className,
-              "text-[11px] font-bold uppercase tracking-[0.08em] text-white/45",
+              "shrink-0 text-[10px] font-bold uppercase tabular-nums tracking-[0.06em] text-white/45",
             ].join(" ")}
           >
-            avg {row.avgRank.toFixed(1)} · tap for bands
-          </p>
-        </div>
-        <span
-          className={[
-            nameOxanium.className,
-            "shrink-0 text-[10px] font-extrabold tracking-[0.1em] text-cyan-300/60",
-          ].join(" ")}
-        >
-          {expanded ? "▲" : "▼"}
+            avg {row.avgRank.toFixed(1)}
+          </span>
+          <span
+            className={[
+              nameOxanium.className,
+              "shrink-0 text-[10px] font-extrabold tracking-[0.1em] text-cyan-300/60",
+            ].join(" ")}
+          >
+            {expanded ? "▲" : "▼"}
+          </span>
         </span>
       </button>
       {expanded ? (
@@ -225,15 +227,25 @@ export default function NbaSeasonStandingsMarketPanel({
           >
             Standings market · {market.season}
           </h2>
-          <p
+        </div>
+        <p className="flex items-baseline gap-1.5">
+          <span
             className={[
               nameOxanium.className,
-              "text-[9px] font-bold uppercase tracking-[0.12em] text-white/40",
+              "text-[28px] font-black leading-none tabular-nums text-cyan-200",
             ].join(" ")}
           >
-            {market.submissionCount.toLocaleString()} submissions
-          </p>
-        </div>
+            {market.submissionCount.toLocaleString()}
+          </span>
+          <span
+            className={[
+              nameOxanium.className,
+              "text-[12px] font-bold tracking-[0.04em] text-white/60",
+            ].join(" ")}
+          >
+            {seasonPredictSubmissionCountLabel(language)}
+          </span>
+        </p>
         <p className="text-[11px] leading-relaxed text-white/45">
           {seasonPredictStandingsMarketHint(language)}
         </p>
@@ -266,8 +278,8 @@ export default function NbaSeasonStandingsMarketPanel({
         </CyberSlantedTabBar>
       </div>
 
-      <ol className="space-y-1.5">
-        {board.map((row) => (
+      <ol className="overflow-hidden rounded-[2px] border border-cyan-300/20 bg-black">
+        {board.map((row, i) => (
           <TeamListRow
             key={row.teamId}
             row={row}
@@ -278,6 +290,7 @@ export default function NbaSeasonStandingsMarketPanel({
               )
             }
             language={language}
+            isLast={i === board.length - 1}
           />
         ))}
       </ol>

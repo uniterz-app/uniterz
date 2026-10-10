@@ -3,7 +3,8 @@
 import { Geist, Geist_Mono, Montserrat } from "next/font/google";
 import "@/app/globals.css";
 import SquadBattleLaunchPromptHost from "@/app/component/squads/SquadBattleLaunchPromptHost";
-import PreseasonBonusClaimHost from "@/app/component/units/PreseasonBonusClaimHost";
+import UnitEarnLaunchHost from "@/app/component/units/UnitEarnLaunchHost";
+import SeasonPredictCrowdLaunchHost from "@/app/component/predict/season/SeasonPredictCrowdLaunchHost";
 
 const montserrat = Montserrat({
   subsets: ["latin"],
@@ -33,7 +34,8 @@ export default function MobileLayout({
     >
       <div className="relative z-10">{children}</div>
       <SquadBattleLaunchPromptHost />
-      <PreseasonBonusClaimHost />
+      <UnitEarnLaunchHost />
+      <SeasonPredictCrowdLaunchHost />
     </div>
   );
 }

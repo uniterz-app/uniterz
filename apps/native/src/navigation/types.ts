@@ -43,7 +43,7 @@ export type GamesStackParamList = {
   PlayoffBracketView: undefined;
   BracketMarket: undefined;
   /** シーズン アワード / 順位予想（プレビュー） */
-  SeasonPredict: { mode: "awards" | "standings" };
+  SeasonPredict: { mode: "awards" | "standings"; view?: "mine" | "crowd" };
   /** STATS ハブ（Team / Player タブ） */
   LeagueStats: { tab?: "team" | "player" } | undefined;
   /** @deprecated LeagueStats へ */

@@ -4,8 +4,6 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react
 import { useRouter } from "next/navigation";
 import { Eye } from "lucide-react";
 import { motion, useReducedMotion } from "framer-motion";
-import UnitEarnOverlay from "@/app/component/profile/UnitEarnOverlay";
-import { useUnitEarnOverlay } from "@/lib/units/useUnitEarnOverlay";
 import { unitVaultUiBalance } from "@/lib/units/unitVaultDisplay";
 import { UNIT_EARN_VAULT_COUNT_MS, unitEarnCountDisplayValue } from "@/lib/units/unitEarnMotion";
 import {
@@ -850,13 +848,6 @@ export default function ProfileEditKinetikPanel({
   const planProBgAccentReady = true;
   const metricCopy = buildKinetikMetricUi(language, scopeHint);
 
-  /** 自分プロフィールのみ: 残高増分 → 中央カウント → 金庫へ加算 */
-  const unitEarn = useUnitEarnOverlay({
-    balance: unitBalance ?? null,
-    enabled: editable && unitBalance != null,
-    storageKey: shareHandle?.trim() || "me",
-    language,
-  });
   /** 金庫加算カウント中は背景ループを止め続ける（オーバーレイ退出後も） */
   const [vaultSettling, setVaultSettling] = useState(false);
   const onVaultCountBusyChange = useCallback((busy: boolean) => {
@@ -1248,9 +1239,7 @@ export default function ProfileEditKinetikPanel({
       }
     : undefined;
 
-  /** hook 側でモック / プレビュー加算済み（1000→1250）まで解決済み */
-  const vaultDisplayBalance =
-    unitEarn.vaultBalance ?? unitVaultUiBalance(unitBalance);
+  const vaultDisplayBalance = unitVaultUiBalance(unitBalance);
 
   const unitCorner =
     unitBalance != null && unitBalanceAria ? (
@@ -1264,9 +1253,6 @@ export default function ProfileEditKinetikPanel({
         }
         corner
         onPress={openUnitLedger}
-        absorbPulse={unitEarn.active != null && unitEarn.absorbed}
-        /** 中央演出中は裏の金庫カウントを止める（ヒット後だけ加算） */
-        countUpEnabled={!unitEarn.active || unitEarn.absorbed}
         onCountBusyChange={onVaultCountBusyChange}
       />
     ) : null;
@@ -1462,19 +1448,6 @@ export default function ProfileEditKinetikPanel({
         </div>
       </ProfileKinetikPanelFrame>
       {badgeDetailModal}
-      {unitEarn.active ? (
-        <UnitEarnOverlay
-          open
-          amount={unitEarn.active.amount}
-          label={unitEarn.active.label}
-          title={unitEarn.active.title}
-          subtitle={unitEarn.active.subtitle}
-          rank={unitEarn.active.rank}
-          language={language}
-          onAbsorb={unitEarn.markAbsorbed}
-          onDone={unitEarn.dismiss}
-        />
-      ) : null}
       </>
     );
   }
@@ -1669,19 +1642,6 @@ export default function ProfileEditKinetikPanel({
 
     </ProfileKinetikPanelFrame>
     {badgeDetailModal}
-    {unitEarn.active ? (
-      <UnitEarnOverlay
-        open
-        amount={unitEarn.active.amount}
-        label={unitEarn.active.label}
-        title={unitEarn.active.title}
-        subtitle={unitEarn.active.subtitle}
-        rank={unitEarn.active.rank}
-        language={language}
-        onAbsorb={unitEarn.markAbsorbed}
-        onDone={unitEarn.dismiss}
-      />
-    ) : null}
     </>
   );
 }

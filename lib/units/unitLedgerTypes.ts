@@ -12,6 +12,7 @@ export type UnitLedgerReasonCode =
   | "weekly_rank"
   | "monthly_rank"
   | "preseason_bonus"
+  | "referral_preseason"
   | "redemption"
   | "adjustment"
   | "unknown";

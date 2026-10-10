@@ -62,7 +62,8 @@ import { resetGamesStackInBackgroundNative } from "./resetGamesTabHomeNative";
 import { flushPendingShareDeepLink } from "./shareDeepLinkNative";
 import ProfileStatsPrefetchHost from "../features/profile/ProfileStatsPrefetchHost";
 import SquadBattleLaunchPromptHostNative from "../features/squads/SquadBattleLaunchPromptHostNative";
-import PreseasonBonusClaimHostNative from "../features/units/PreseasonBonusClaimHostNative";
+import UnitEarnLaunchHostNative from "../features/units/UnitEarnLaunchHostNative";
+import SeasonPredictCrowdLaunchHostNative from "../features/games/predict/season/SeasonPredictCrowdLaunchHostNative";
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
@@ -228,7 +229,8 @@ export default function MainTabNavigator() {
       <ProfileStatsPrefetchHost />
       <NativePushNotificationsHost />
       <SquadBattleLaunchPromptHostNative />
-      <PreseasonBonusClaimHostNative />
+      <UnitEarnLaunchHostNative />
+      <SeasonPredictCrowdLaunchHostNative />
       <View style={styles.root}>
         <View style={styles.tabHost}>
           <Tab.Navigator

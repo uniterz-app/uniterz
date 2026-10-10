@@ -443,6 +443,19 @@ export function seasonPredictAlertCopy(lang: SeasonPredictUiLang) {
   };
 }
 
+/** マーケット見出し: 大きな数字の右に添える「人が予想」 */
+export function seasonPredictSubmissionCountLabel(lang: SeasonPredictUiLang): string {
+  return L(lang, {
+    ja: "人が予想",
+    en: "predictions",
+    ko: "명이 예측",
+    zh: "人已预测",
+    es: "predicciones",
+    pt: "palpites",
+    fr: "pronostics",
+  });
+}
+
 /** ページ共通 UI（standings / awards） */
 export function seasonPredictPageUiCopy(lang: SeasonPredictUiLang) {
   return {
@@ -472,6 +485,42 @@ export function seasonPredictPageUiCopy(lang: SeasonPredictUiLang) {
       es: "Mercado pendiente",
       pt: "Mercado pendente",
       fr: "Marché en attente",
+    }),
+    myPicksTab: L(lang, {
+      ja: "自分の予想",
+      en: "My picks",
+      ko: "내 예측",
+      zh: "我的预测",
+      es: "Mis picks",
+      pt: "Meus palpites",
+      fr: "Mes choix",
+    }),
+    crowdTab: L(lang, {
+      ja: "みんなの予想",
+      en: "Crowd",
+      ko: "모두의 예측",
+      zh: "大家的预测",
+      es: "La comunidad",
+      pt: "A galera",
+      fr: "La communauté",
+    }),
+    marketPreviewPendingBody: L(lang, {
+      ja: "みんなの予想を集計中です。しばらくしてからもう一度見てください。",
+      en: "We're tallying the crowd picks. Check back in a little while.",
+      ko: "모두의 예측을 집계 중입니다. 잠시 후 다시 확인해 주세요.",
+      zh: "正在统计大家的预测，请稍后再来查看。",
+      es: "Estamos contando los picks de la comunidad. Vuelve en un rato.",
+      pt: "Estamos contando os palpites da galera. Volte daqui a pouco.",
+      fr: "Nous comptabilisons les choix de la communauté. Reviens un peu plus tard.",
+    }),
+    marketPreviewNote: L(lang, {
+      ja: "締切前の途中集計 · 提出した人だけが見られます",
+      en: "Interim tally before the deadline · visible to submitters only",
+      ko: "마감 전 중간 집계 · 제출한 사람만 볼 수 있습니다",
+      zh: "截止前的中间统计 · 仅提交者可见",
+      es: "Recuento provisional antes del cierre · solo para quienes enviaron",
+      pt: "Parcial antes do prazo · visível só para quem enviou",
+      fr: "Décompte provisoire avant la date limite · réservé aux participants",
     }),
     editResubmit: L(lang, {
       ja: "編集して再提出",

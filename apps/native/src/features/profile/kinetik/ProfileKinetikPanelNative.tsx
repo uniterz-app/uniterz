@@ -11,8 +11,6 @@ import { cyberAlert } from "../../../components/cyberAlert";
 import {
   Image, InteractionManager, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View, type StyleProp, type ViewStyle,
 } from "react-native";
-import UnitEarnOverlayNative from "../UnitEarnOverlayNative";
-import { useUnitEarnOverlayNative } from "../useUnitEarnOverlayNative";
 import ProfileNbaFavoritesRowNative from "./ProfileNbaFavoritesRowNative";
 import { unitVaultUiBalance } from "../../../../../../lib/units/unitVaultDisplay";
 import { UNIT_EARN_VAULT_COUNT_MS, unitEarnCountDisplayValue } from "../../../../../../lib/units/unitEarnMotion";
@@ -1223,25 +1221,16 @@ export default function ProfileKinetikPanelNative({
   const [shareCopied, setShareCopied] = useState(false);
   const unitVaultRef = useRef<View>(null);
 
-  /** 自分プロフィール（台帳導線あり）のみ獲得演出 */
-  const unitEarn = useUnitEarnOverlayNative({
-    balance: unitBalance ?? null,
-    enabled: !!onOpenUnitLedger && unitBalance != null,
-    storageKey: shareHandle?.trim() || "me",
-    language: lang,
-  });
   /** 金庫加算中はバッジ／コイン常時ループを止め続ける */
   const [vaultSettling, setVaultSettling] = useState(false);
   const onVaultCountBusyChange = useCallback((busy: boolean) => {
     setVaultSettling(busy);
   }, []);
-  const earnFxPaused = unitEarn.active != null || vaultSettling;
+  const earnFxPaused = vaultSettling;
   const screenActive = useScreenActiveNative();
-  /** 獲得演出中・裏タブでは常時ループを止める */
+  /** 裏タブでは常時ループを止める */
   const uiMotionPaused = earnFxPaused || !screenActive;
-  /** hook 側でモック / プレビュー加算済み（1000→1250）まで解決済み */
-  const vaultDisplayBalance =
-    unitEarn.vaultBalance ?? unitVaultUiBalance(unitBalance);
+  const vaultDisplayBalance = unitVaultUiBalance(unitBalance);
 
   const activeWinStreak = Math.max(0, Math.floor(winStreak ?? stats.winStreak ?? 0));
   const activeTotalPointsRank = totalPointsRankProp ?? stats.totalPointsRank ?? null;
@@ -1620,8 +1609,6 @@ export default function ProfileKinetikPanelNative({
                         }
                         corner
                         onPress={onOpenUnitLedger}
-                        absorbPulse={unitEarn.active != null && unitEarn.absorbed}
-                        countUpEnabled={!unitEarn.active || unitEarn.absorbed}
                         effectsPaused={uiMotionPaused}
                         onCountBusyChange={onVaultCountBusyChange}
                       />
@@ -1838,20 +1825,6 @@ export default function ProfileKinetikPanelNative({
       </View>
 
     </View>
-    {unitEarn.active ? (
-      <UnitEarnOverlayNative
-        open
-        amount={unitEarn.active.amount}
-        label={unitEarn.active.label}
-        title={unitEarn.active.title}
-        subtitle={unitEarn.active.subtitle}
-        rank={unitEarn.active.rank}
-        language={lang}
-        vaultRef={unitVaultRef}
-        onAbsorb={unitEarn.markAbsorbed}
-        onDone={unitEarn.dismiss}
-      />
-    ) : null}
     </View>
   );
 }

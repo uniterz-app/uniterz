@@ -1,7 +1,7 @@
 /** Web `NbaSeasonStandingsMarketPanel` 相当 — フル表 + 行タップで帯% */
 import { useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import JerseyMarkSvg from "../../JerseyMarkSvg";
+import { TeamTint } from "./NbaSeasonStandingsViewPanelNative";
 import {
   CyberSlantedTabBarNative,
   CyberSlantedTabNative,
@@ -15,13 +15,10 @@ import {
   type SeasonStandingsMarketSnapshot,
 } from "../../../../../../../lib/predict/seasonPredictMarket";
 import {
-  getTeamJerseyPrimaryColor,
-  getTeamJerseySecondaryColor,
-} from "../../../../../../../lib/team-colors";
-import {
   seasonPredictPredictedRankBandsHeading,
   seasonPredictStandingsBandLabel,
   seasonPredictStandingsMarketHint,
+  seasonPredictSubmissionCountLabel,
   type SeasonPredictUiLang,
 } from "../../../../../../../lib/predict/seasonPredictUiCopy";
 import {
@@ -42,12 +39,6 @@ function bandForRank(rank: number): Band {
   if (rank <= 6) return "straight";
   if (rank <= 10) return "playin";
   return "out";
-}
-
-function bandBar(band: Band): string {
-  if (band === "straight") return "#00E5FF";
-  if (band === "playin") return "#2DFF6E";
-  return "rgba(255,255,255,0.18)";
 }
 
 function bandRankColor(band: Band): string {
@@ -105,11 +96,13 @@ function TeamListRow({
   expanded,
   onToggle,
   language = "ja",
+  isLast,
 }: {
   row: SeasonStandingsCrowdBoardRow;
   expanded: boolean;
   onToggle: () => void;
   language?: SeasonPredictUiLang;
+  isLast: boolean;
 }) {
   const band = bandForRank(row.boardRank);
   const name = (
@@ -117,7 +110,7 @@ function TeamListRow({
   ).toUpperCase();
 
   return (
-    <View style={styles.row}>
+    <View style={!isLast ? styles.rowBorder : null}>
       <Pressable
         onPress={onToggle}
         accessibilityRole="button"
@@ -127,26 +120,19 @@ function TeamListRow({
           pressed && { opacity: 0.88 },
         ]}
       >
-        <View style={styles.rankSlot}>
-          <View style={[styles.rankBar, { backgroundColor: bandBar(band) }]} />
+        <View style={styles.rankCol}>
           <Text style={[styles.rankNum, { color: bandRankColor(band) }]}>
             {row.boardRank}
           </Text>
         </View>
-        <JerseyMarkSvg
-          size={32}
-          accent={getTeamJerseyPrimaryColor("nba", row.teamId)}
-          accentEnd={getTeamJerseySecondaryColor("nba", row.teamId)}
-        />
-        <View style={styles.rowMain}>
+        <View style={styles.teamCol}>
+          <TeamTint teamId={row.teamId} />
           <Text style={styles.teamName} numberOfLines={1}>
             {name}
           </Text>
-          <Text style={styles.avgHint}>
-            AVG {row.avgRank.toFixed(1)} · TAP FOR BANDS
-          </Text>
+          <Text style={styles.avgHint}>AVG {row.avgRank.toFixed(1)}</Text>
+          <Text style={styles.chevron}>{expanded ? "▲" : "▼"}</Text>
         </View>
-        <Text style={styles.chevron}>{expanded ? "▲" : "▼"}</Text>
       </Pressable>
       {expanded ? <DetailBands row={row} language={language} /> : null}
     </View>
@@ -169,9 +155,14 @@ export default function NbaSeasonStandingsMarketPanelNative({
   return (
     <View style={styles.card}>
       <Text style={styles.h2}>Standings market · {market.season}</Text>
-      <Text style={styles.meta}>
-        {market.submissionCount.toLocaleString()} submissions
-      </Text>
+      <View style={styles.countRow}>
+        <Text style={styles.countNum}>
+          {market.submissionCount.toLocaleString()}
+        </Text>
+        <Text style={styles.countLabel}>
+          {seasonPredictSubmissionCountLabel(language)}
+        </Text>
+      </View>
       <Text style={styles.lead}>
         {seasonPredictStandingsMarketHint(language)}
       </Text>
@@ -201,8 +192,8 @@ export default function NbaSeasonStandingsMarketPanelNative({
         </CyberSlantedTabBarNative>
       </View>
 
-      <View style={{ gap: 6 }}>
-        {board.map((row) => (
+      <View style={styles.table}>
+        {board.map((row, i) => (
           <TeamListRow
             key={row.teamId}
             row={row}
@@ -213,6 +204,7 @@ export default function NbaSeasonStandingsMarketPanelNative({
               )
             }
             language={language}
+            isLast={i === board.length - 1}
           />
         ))}
       </View>
@@ -236,14 +228,25 @@ const styles = StyleSheet.create({
     color: "#a5f3fc",
     textTransform: "uppercase",
   },
-  meta: {
-    marginTop: 4,
+  countRow: {
+    marginTop: 6,
+    flexDirection: "row",
+    alignItems: "baseline",
+    gap: 6,
+  },
+  countNum: {
     fontFamily: OX,
-    fontSize: 9,
+    fontSize: 28,
+    fontWeight: "900",
+    color: "#a5f3fc",
+    fontVariant: ["tabular-nums"],
+  },
+  countLabel: {
+    fontFamily: OX,
+    fontSize: 12,
     fontWeight: "700",
-    letterSpacing: 1.2,
-    color: "rgba(255,255,255,0.4)",
-    textTransform: "uppercase",
+    letterSpacing: 0.6,
+    color: "rgba(255,255,255,0.6)",
   },
   lead: {
     marginTop: 6,
@@ -251,31 +254,29 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     color: "rgba(255,255,255,0.45)",
   },
-  row: {
+  table: {
+    borderRadius: 2,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
-    backgroundColor: "rgba(255,255,255,0.02)",
+    borderColor: "rgba(103,232,249,0.2)",
+    backgroundColor: "rgba(0,0,0,0.55)",
+    overflow: "hidden",
+  },
+  rowBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(255,255,255,0.06)",
   },
   rowBtn: {
     flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
+    alignItems: "stretch",
   },
-  rankSlot: {
-    width: 28,
-    height: 32,
+  rankCol: {
+    width: 36,
+    flexShrink: 0,
     alignItems: "center",
     justifyContent: "center",
-    position: "relative",
-  },
-  rankBar: {
-    position: "absolute",
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 3,
+    paddingVertical: 10,
+    borderRightWidth: 1,
+    borderRightColor: "rgba(255,255,255,0.1)",
   },
   rankNum: {
     fontFamily: OX,
@@ -283,21 +284,32 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     fontVariant: ["tabular-nums"],
   },
-  rowMain: { flex: 1, minWidth: 0, gap: 2 },
+  teamCol: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+  },
   teamName: {
     ...MATCH_CARD_BRACKET_TEXT,
-    fontSize: 12,
+    flex: 1,
+    minWidth: 0,
+    fontSize: 13,
     letterSpacing: MATCH_CARD_BRACKET_LETTER_SPACING_12,
     color: "#fff",
     textTransform: "uppercase",
+    transform: [{ skewX: "-6deg" }],
   },
   avgHint: {
     fontFamily: OX,
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: "700",
     letterSpacing: 0.6,
     color: "rgba(255,255,255,0.45)",
-    textTransform: "uppercase",
+    fontVariant: ["tabular-nums"],
   },
   chevron: {
     fontFamily: OX,
@@ -336,13 +348,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.08)",
     backgroundColor: "rgba(0,0,0,0.4)",
-    paddingVertical: 4,
+    paddingVertical: 6,
     paddingHorizontal: 2,
     alignItems: "center",
   },
   detailBandLabel: {
     fontFamily: OX,
-    fontSize: 8,
+    fontSize: 9,
     fontWeight: "700",
     letterSpacing: 0.4,
     color: "rgba(255,255,255,0.4)",
@@ -351,12 +363,12 @@ const styles = StyleSheet.create({
   detailPct: {
     fontFamily: OX,
     marginTop: 2,
-    fontSize: 11,
+    fontSize: 16,
     fontWeight: "800",
     color: "rgba(255,255,255,0.9)",
   },
   detailPctUnit: {
-    fontSize: 8,
+    fontSize: 10,
     fontWeight: "700",
     color: "rgba(255,255,255,0.4)",
   },

@@ -41,7 +41,7 @@ function hexToRgba(hex: string, alpha: number): string {
   return `rgba(${r},${g},${b},${alpha})`;
 }
 
-function TeamTint({ teamId }: { teamId: string | null | undefined }) {
+export function TeamTint({ teamId }: { teamId: string | null | undefined }) {
   if (!teamId) return null;
   const primary = getTeamJerseyPrimaryColor("nba", teamId);
   return (
