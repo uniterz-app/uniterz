@@ -81,11 +81,11 @@ export function LiveMarkPill({ pillStyle, textStyle, clock }: LiveMarkPillProps)
     <Animated.View
       style={[pillStyle, clockText ? styles.withClock : null, animatedStyle]}
     >
-      <Animated.Text style={[textStyle, animatedTextStyle]}>LIVE</Animated.Text>
+      <Animated.Text allowFontScaling={false} style={[textStyle, animatedTextStyle]}>LIVE</Animated.Text>
       {clockText ? (
         <>
           <View style={styles.divider} />
-          <Animated.Text
+          <Animated.Text allowFontScaling={false}
             style={[textStyle, styles.clock, animatedTextStyle]}
             numberOfLines={1}
           >

@@ -1,19 +1,16 @@
 /**
  * アプリ側コードの `react-native` はここに差し替わる（metro.config.js）。
- * iOS の文字サイズ設定による拡大を Text / TextInput 既定で最大 1.2 倍に抑える。
- * React 19 では Text.defaultProps が効かないため、ラップして既定値を入れる。
+ * iOS / Android の文字サイズ設定でアプリの文字を拡大しない（Text / TextInput 一律）。
+ * React 19 では Text.defaultProps が効かないため、ラップして固定する。
  */
 const React = require("react");
 const RN = require("react-native");
 
-const DEFAULT_MAX_FONT_SIZE_MULTIPLIER = 1.2;
-
-function withFontScaleCap(Base, displayName) {
-  const Wrapped = React.forwardRef(function FontScaleCapped(props, ref) {
+function withFixedFontScale(Base, displayName) {
+  const Wrapped = React.forwardRef(function FixedFontScale(props, ref) {
     return React.createElement(Base, {
       ...props,
-      maxFontSizeMultiplier:
-        props.maxFontSizeMultiplier ?? DEFAULT_MAX_FONT_SIZE_MULTIPLIER,
+      allowFontScaling: false,
       ref,
     });
   });
@@ -21,8 +18,8 @@ function withFontScaleCap(Base, displayName) {
   return Wrapped;
 }
 
-const Text = withFontScaleCap(RN.Text, "Text");
-const TextInput = withFontScaleCap(RN.TextInput, "TextInput");
+const Text = withFixedFontScale(RN.Text, "Text");
+const TextInput = withFixedFontScale(RN.TextInput, "TextInput");
 if (RN.TextInput && RN.TextInput.State) TextInput.State = RN.TextInput.State;
 
 const out = {};

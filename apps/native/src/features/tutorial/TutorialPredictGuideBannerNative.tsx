@@ -82,7 +82,7 @@ export default function TutorialPredictGuideBannerNative({
       <Text style={styles.title}>{title}</Text>
       <Text style={styles.body}>{body}</Text>
       {ctaHint ? (
-        <Animated.Text style={[styles.cta, hintStyle]}>{ctaHint}</Animated.Text>
+        <Animated.Text allowFontScaling={false} style={[styles.cta, hintStyle]}>{ctaHint}</Animated.Text>
       ) : null}
     </View>
   );

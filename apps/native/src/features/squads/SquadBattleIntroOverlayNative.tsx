@@ -112,7 +112,7 @@ export default function SquadBattleIntroOverlayNative({
         </Animated.View>
 
         <View style={styles.body}>
-          <Animated.Text
+          <Animated.Text allowFontScaling={false}
             style={styles.kicker}
             entering={
               reduceMotion
@@ -154,7 +154,7 @@ export default function SquadBattleIntroOverlayNative({
             </Text>
           </Animated.View>
 
-          <Animated.Text
+          <Animated.Text allowFontScaling={false}
             style={styles.rule}
             entering={
               reduceMotion

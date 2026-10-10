@@ -95,7 +95,7 @@ export default function TutorialResolvingOverlayNative({
         ]}
       >
         <Animated.View style={[styles.card, cardStyle]}>
-          <Animated.Text style={[styles.spin, spinStyle]}>
+          <Animated.Text allowFontScaling={false} style={[styles.spin, spinStyle]}>
             {spinLabel}
           </Animated.Text>
           <Text style={styles.title}>{title}</Text>

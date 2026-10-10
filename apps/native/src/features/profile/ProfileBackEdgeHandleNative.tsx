@@ -27,7 +27,6 @@ export default function ProfileBackEdgeHandleNative({
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
-      hitSlop={{ left: 14, right: 0, top: 6, bottom: 6 }}
     >
       <MaterialCommunityIcons
         name="chevron-left"

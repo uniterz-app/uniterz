@@ -524,7 +524,7 @@ export default function LandingScreenNative({
               )}
             </View>
             <View style={styles.heroBlock}>
-              <Animated.Text
+              <Animated.Text allowFontScaling={false}
                 style={[
                   styles.eyebrow,
                   {

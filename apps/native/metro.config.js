@@ -68,7 +68,7 @@ const FONT_SCALE_CAP_SHIM = path.join(
 const NODE_MODULES_SEGMENT = `${path.sep}node_modules${path.sep}`;
 
 config.resolver.resolveRequest = (context, moduleName, platform) => {
-  // アプリ側の Text / TextInput だけ文字拡大上限付きに差し替える（node_modules とシム自身は本物）
+  // アプリ側の Text / TextInput だけ文字拡大なしに差し替える（node_modules とシム自身は本物）
   if (
     moduleName === "react-native" &&
     context.originModulePath !== FONT_SCALE_CAP_SHIM &&
