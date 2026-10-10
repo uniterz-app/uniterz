@@ -1,8 +1,9 @@
 /**
  * システム Alert 代替 — 角切り octagon + シアン HUD（予想オーバーレイ系と同系統）。
  */
-import { type ReactNode, useMemo } from "react";
+import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import {
+  Animated,
   Modal,
   Platform,
   Pressable,
@@ -12,7 +13,6 @@ import {
 } from "react-native";
 import { BlurView } from "expo-blur";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import Animated, { FadeIn } from "react-native-reanimated";
 import { FullWindowOverlay } from "react-native-screens";
 import PredictOverlayChamferedFrameNative from "../features/games/PredictOverlayChamferedFrameNative";
 import UniterzLogoNative from "../features/profile/UniterzLogoNative";
@@ -87,13 +87,59 @@ function AlertActionButton({
 
 export default function CyberAlertModalNative({
   visible,
-  title,
-  message,
-  buttons,
-  variant,
+  title: liveTitle,
+  message: liveMessage,
+  buttons: liveButtons,
+  variant: liveVariant,
   onDismiss,
   onButtonPress,
 }: Props) {
+  /** iOS はフェードアウト中も閉じる直前の内容を出す（親は閉じた瞬間に空 props を渡す） */
+  const lastShownRef = useRef({
+    title: liveTitle,
+    message: liveMessage,
+    buttons: liveButtons,
+    variant: liveVariant,
+  });
+  if (visible) {
+    lastShownRef.current = {
+      title: liveTitle,
+      message: liveMessage,
+      buttons: liveButtons,
+      variant: liveVariant,
+    };
+  }
+  const { title, message, buttons, variant } = lastShownRef.current;
+
+  /**
+   * FullWindowOverlay をボタンのタッチ処理中に外すと iOS（New Arch）で落ちる。
+   * 先にフェードアウトし、終わってからウィンドウを外す。
+   */
+  const [overlayMounted, setOverlayMounted] = useState(visible);
+  const overlayOpacity = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (Platform.OS !== "ios") return;
+    if (visible) {
+      setOverlayMounted(true);
+      const fadeIn = Animated.timing(overlayOpacity, {
+        toValue: 1,
+        duration: 180,
+        useNativeDriver: true,
+      });
+      fadeIn.start();
+      return () => fadeIn.stop();
+    }
+    const fadeOut = Animated.timing(overlayOpacity, {
+      toValue: 0,
+      duration: 160,
+      useNativeDriver: true,
+    });
+    fadeOut.start(({ finished }) => {
+      if (finished) setOverlayMounted(false);
+    });
+    return () => fadeOut.stop();
+  }, [visible, overlayOpacity]);
+
   const displayTitle = title.trim() || (variant === "error" ? "ERROR" : "NOTICE");
   const showMessage = message.trim().length > 0;
   const isConfirm = variant === "confirm";
@@ -176,10 +222,13 @@ export default function CyberAlertModalNative({
    * 失敗しても RN 側は表示済み扱いになり画面のタッチが死ぬ。別ウィンドウで最前面に出す。
    */
   if (Platform.OS === "ios") {
-    if (!visible) return null;
+    if (!overlayMounted) return null;
     return (
       <FullWindowOverlay>
-        <Animated.View entering={FadeIn.duration(180)} style={styles.overlayFill}>
+        <Animated.View
+          pointerEvents={visible ? "auto" : "none"}
+          style={[styles.overlayFill, { opacity: overlayOpacity }]}
+        >
           {body}
         </Animated.View>
       </FullWindowOverlay>
