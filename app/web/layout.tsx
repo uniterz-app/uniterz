@@ -2,6 +2,7 @@
 
 import { Geist, Geist_Mono, Montserrat } from "next/font/google";
 import "@/app/globals.css";
+import PreseasonBonusClaimHost from "@/app/component/units/PreseasonBonusClaimHost";
 
 const montserrat = Montserrat({
   subsets: ["latin"],
@@ -30,6 +31,7 @@ export default function WebLayout({
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
       <div className="relative z-10">{children}</div>
+      <PreseasonBonusClaimHost />
     </div>
   );
 }

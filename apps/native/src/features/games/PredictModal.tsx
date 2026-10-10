@@ -745,6 +745,11 @@ type PredictModalProps = {
   isEditingPrediction: boolean;
   onSubmit: () => void;
   onClose: () => void;
+  /**
+   * 親が visible=false にしたとき、退場アニメ完了まで Modal を残す（送信成功時）。
+   * exiting 付きビューごと Modal を即破棄すると iOS でフリーズ／クラッシュする。
+   */
+  hideWithExitAnimation?: boolean;
   /** 試合開始済み・未投稿: Web `PredictionFormV2` overlay と同様スコア入力・送信を出さない */
   spectatorStartedNoPost?: boolean;
   /** 試合開始後（キックオフ時刻経過・LIVE・終了）は予想の修正 UI（「修正」・スコア再入力）を出さない */
@@ -879,6 +884,7 @@ export default function PredictModal({
   onClose,
   spectatorStartedNoPost = false,
   predictionEditLockedAfterKickoff = false,
+  hideWithExitAnimation = false,
   expandScoreFormWhenEditing: _expandScoreFormWhenEditing = false,
   predictData = null,
   overlayMarketBar = null,
@@ -1000,6 +1006,25 @@ export default function PredictModal({
   const [scoreFormExpanded, setScoreFormExpanded] = useState(true);
   const closeAnimLockRef = useRef(false);
   const closeAnimTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** 親起点の退場（送信成功）中は Modal を表示したまま中身だけ exiting させる */
+  const [parentHideExiting, setParentHideExiting] = useState(false);
+  const [prevVisible, setPrevVisible] = useState(visible);
+  if (prevVisible !== visible) {
+    setPrevVisible(visible);
+    if (!visible && hideWithExitAnimation && !reduceMotion && layersVisible) {
+      setParentHideExiting(true);
+      setLayersVisible(false);
+    }
+  }
+
+  useEffect(() => {
+    if (!parentHideExiting) return;
+    const id = setTimeout(
+      () => setParentHideExiting(false),
+      PREDICT_MODAL_EXIT_COMPLETION_MS
+    );
+    return () => clearTimeout(id);
+  }, [parentHideExiting]);
 
   /**
    * `visible` が true になった直後、`useEffect` だと 1 フレーム遅れて `layersVisible` が true になり、
@@ -1010,6 +1035,7 @@ export default function PredictModal({
     if (visible) {
       setLayersVisible(true);
       setExitingUi(false);
+      setParentHideExiting(false);
       closeAnimLockRef.current = false;
       if (closeAnimTimerRef.current) {
         clearTimeout(closeAnimTimerRef.current);
@@ -1345,7 +1371,7 @@ export default function PredictModal({
     </TutorialTargetNative>
   );
 
-  const modalChromeVisible = visible || exitingUi;
+  const modalChromeVisible = visible || exitingUi || parentHideExiting;
 
   /** ×・背景タップ・Android 戻る：閉じるアニメ後に親へ通知（親が即 visible=false にしないため exitingUi でモーダルを維持） */
   function scheduleCloseAfterExitAnimation() {

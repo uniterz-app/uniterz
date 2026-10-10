@@ -21,8 +21,6 @@ import {
 } from "@/lib/app/appMeshBackground";
 import type { Language } from "@/lib/i18n/language";
 import {
-  ALL_LANGUAGES,
-  LANGUAGE_NATIVE_NAMES,
   guessLanguageFromNavigator,
   normalizeLanguage,
 } from "@/lib/i18n/language";
@@ -147,7 +145,6 @@ export default function ProfileEditSheet({
         displayName: name || "",
         bio: bio || "",
         photoURL: photoURL || "",
-        language,
         countryCode: countryCode || null,
         displayTimeZone: displayTimeZone || null,
         photoCropY: cropY,
@@ -240,26 +237,6 @@ export default function ProfileEditSheet({
             rows: 4,
           }}
         />
-      </div>
-
-      <div className="space-y-1.5">
-        <label className="text-xs font-medium text-white/75">
-          {t(language).profile.appLanguage}
-        </label>
-        <CyberAuthSelect
-          angular
-          tone="mono"
-          selectProps={{
-            value: language,
-            onChange: (e) => setLanguage(e.target.value as Language),
-          }}
-        >
-          {ALL_LANGUAGES.map((l) => (
-            <option key={l} value={l}>
-              {LANGUAGE_NATIVE_NAMES[l]}
-            </option>
-          ))}
-        </CyberAuthSelect>
       </div>
 
       <div className="space-y-1.5">
@@ -384,8 +361,8 @@ export default function ProfileEditSheet({
         title="SETTINGS"
         subtitle={
           language === "en"
-            ? "Edit your icon, name, bio, language, and country."
-            : "アイコン・名前・自己紹介・言語・国を編集できます"
+            ? "Edit your icon, name, bio, and country."
+            : "アイコン・名前・自己紹介・国を編集できます"
         }
         onBack={handleDismiss}
         backAriaLabel={t(language).common.back}

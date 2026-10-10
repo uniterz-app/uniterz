@@ -1,4 +1,4 @@
-import { Dimensions } from "react-native";
+import { Dimensions, Easing } from "react-native";
 import type { BottomTabNavigationOptions } from "@react-navigation/bottom-tabs";
 
 type TabSceneStyleInterpolator = NonNullable<
@@ -6,23 +6,22 @@ type TabSceneStyleInterpolator = NonNullable<
 >;
 type TabTransitionSpec = NonNullable<BottomTabNavigationOptions["transitionSpec"]>;
 
+/** タブスライドの長さ。AppTabBar はこの間（transitionEnd まで）次のタブ移動を受け付けない */
+export const TAB_PAGER_TRANSITION_MS = 220;
+
 /**
- * 短いスプリング着地（オーバーシュートほぼなし）。
- * AppTabBar の連打ガード（280ms）と体感を揃える。
+ * 固定長の timing。スプリングは着地までの時間が毎回変わり、
+ * 連打で途中打ち切りになると画面が横にずれたまま残ることがある。
  *
  * 注意: scene に opacity / scale を載せない。
  * welcome の BlurView + Reanimated と親の RN Animated opacity が重なると
  * iOS で画面が真っ黒になる（サイドバーからチュートリアル再開で再現）。
  */
 export const tabPagerTransitionSpec: TabTransitionSpec = {
-  animation: "spring",
+  animation: "timing",
   config: {
-    stiffness: 320,
-    damping: 32,
-    mass: 0.85,
-    overshootClamping: true,
-    restDisplacementThreshold: 0.5,
-    restSpeedThreshold: 0.5,
+    duration: TAB_PAGER_TRANSITION_MS,
+    easing: Easing.out(Easing.cubic),
   },
 };
 

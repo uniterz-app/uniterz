@@ -12,7 +12,14 @@ import {
   useState,
   useSyncExternalStore,
 } from "react";
-import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import {
+  createBottomTabNavigator,
+  type BottomTabBarProps,
+} from "@react-navigation/bottom-tabs";
+import {
+  endTabTransition,
+  runAfterTabTransition,
+} from "./tabTransitionLockNative";
 import type { NavigationState, PartialState } from "@react-navigation/native";
 import { useReducedMotion } from "react-native-reanimated";
 import AppTabBar from "./AppTabBar";
@@ -55,6 +62,7 @@ import { resetGamesStackInBackgroundNative } from "./resetGamesTabHomeNative";
 import { flushPendingShareDeepLink } from "./shareDeepLinkNative";
 import ProfileStatsPrefetchHost from "../features/profile/ProfileStatsPrefetchHost";
 import SquadBattleLaunchPromptHostNative from "../features/squads/SquadBattleLaunchPromptHostNative";
+import PreseasonBonusClaimHostNative from "../features/units/PreseasonBonusClaimHostNative";
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
@@ -148,6 +156,58 @@ export default function MainTabNavigator() {
     [reduceMotion, tabTransitionQuiet]
   );
 
+  /**
+   * BottomTabView はオプションが変わるたびにスライドを掛け直す。
+   * 毎レンダー新しいオブジェクトを渡すと、ワードマーク更新などでスライドが途中で打ち切られる。
+   */
+  const screenOptions = useMemo(
+    () => ({
+      headerShown: false,
+      tabBarShowLabel: false,
+      tabBarStyle: { display: "none" as const },
+      // AppShell のメッシュ背景を通す（不透明 #090c15 だとヘッダー下だけ塗り潰される）
+      sceneStyle: { backgroundColor: "transparent" },
+      // 初回だけ遅延マウント。freezeOnBlur はタブ連打で解凍が積み上がりフリーズするためオフ
+      lazy: true,
+      freezeOnBlur: false,
+      ...tabTransitionOptions,
+    }),
+    [tabTransitionOptions]
+  );
+
+  const screenListeners = useMemo(
+    () => ({
+      state: (event: {
+        data: { state: NavigationState | PartialState<NavigationState> };
+      }) => {
+        syncWordmarkFromTabState(event.data.state);
+      },
+      transitionEnd: () => {
+        endTabTransition();
+      },
+    }),
+    [syncWordmarkFromTabState]
+  );
+
+  const gamesTabListeners = useCallback(
+    ({ navigation }: { navigation: Parameters<typeof resetGamesStackInBackgroundNative>[0] }) => ({
+      blur: () => {
+        /** スライド中に reset するとタブ画面がずれたまま止まる。着地後、まだ Games 以外なら戻す */
+        runAfterTabTransition(() => {
+          const s = navigation.getState();
+          if (s.routes[s.index]?.name === "GamesTab") return;
+          resetGamesStackInBackgroundNative(navigation);
+        });
+      },
+    }),
+    []
+  );
+
+  const renderTabBar = useCallback(
+    (props: BottomTabBarProps) => <AppTabBar {...props} />,
+    []
+  );
+
   const onSplashDone = useCallback(() => {
     setSplashGateOpen(false);
   }, []);
@@ -168,39 +228,19 @@ export default function MainTabNavigator() {
       <ProfileStatsPrefetchHost />
       <NativePushNotificationsHost />
       <SquadBattleLaunchPromptHostNative />
+      <PreseasonBonusClaimHostNative />
       <View style={styles.root}>
         <View style={styles.tabHost}>
           <Tab.Navigator
-            tabBar={(props) => <AppTabBar {...props} />}
-            screenListeners={{
-              state: (event) => {
-                syncWordmarkFromTabState(event.data.state);
-              },
-            }}
-            screenOptions={{
-              headerShown: false,
-              tabBarShowLabel: false,
-              tabBarStyle: { display: "none" },
-              // AppShell のメッシュ背景を通す（不透明 #090c15 だとヘッダー下だけ塗り潰される）
-              sceneStyle: { backgroundColor: "transparent" },
-              // 初回だけ遅延マウント。freezeOnBlur はタブ連打で解凍が積み上がりフリーズするためオフ
-              lazy: true,
-              freezeOnBlur: false,
-              ...tabTransitionOptions,
-            }}
+            tabBar={renderTabBar}
+            screenListeners={screenListeners}
+            screenOptions={screenOptions}
             initialRouteName="GamesTab"
           >
             <Tab.Screen
               name="GamesTab"
               component={GamesStackScreen}
-              listeners={({ navigation }) => ({
-                blur: () => {
-                  /** Profile 初回マウントと JS 競合しないよう次フレームへ */
-                  requestAnimationFrame(() => {
-                    resetGamesStackInBackgroundNative(navigation);
-                  });
-                },
-              })}
+              listeners={gamesTabListeners}
             />
             <Tab.Screen name="ResultTab" component={ResultStackScreen} />
             <Tab.Screen name="RankingsTab" component={RankingsStackScreen} />

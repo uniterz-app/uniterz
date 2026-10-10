@@ -24,7 +24,9 @@ import LogoutConfirmModalNative from "../../ui/LogoutConfirmModalNative";
 import { sideMenuLabelStyle } from "../../ui/cyberSideMenuNative";
 import ProCyberBadgeNative from "./kinetik/ProCyberBadgeNative";
 import { profileSideMenuLabels } from "./profileSideMenuCopy";
-import { L, resolveLocalizedLang } from "@/lib/i18n/localize";
+import { L, LOCALIZED_UI_LANGUAGES, resolveLocalizedLang } from "@/lib/i18n/localize";
+import { LANGUAGE_NATIVE_NAMES, type Language } from "@/lib/i18n/language";
+import { languageMenuCopy } from "@/lib/i18n/languageMenuCopy";
 
 type Lang = string;
 
@@ -59,6 +61,8 @@ type Props = {
   avatarUrl?: string;
   /** ゲーム内通貨残高（サイドメニュー先頭ウォレット） */
   unitBalance?: number;
+  /** サイドメニュー「言語」で選んだ言語を保存する */
+  onSelectLanguage?: (language: Language) => void;
   /** in-app 画面を開く */
   onOpenInApp: (page:
     | "badges"
@@ -128,6 +132,7 @@ export default function ProfileSideMenuModal({
   handle = "",
   avatarUrl = "",
   unitBalance = 0,
+  onSelectLanguage,
   onOpenInApp,
 }: Props) {
   const lang = resolveLocalizedLang(language);
@@ -142,6 +147,8 @@ export default function ProfileSideMenuModal({
     ? `@${handle.trim()}`
     : "OPERATOR";
   const [logoutOpen, setLogoutOpen] = useState(false);
+  const [langPickerOpen, setLangPickerOpen] = useState(false);
+  const langCopy = languageMenuCopy(lang);
   const slide = useRef(new Animated.Value(PANEL_W + 24)).current;
   const backdropOpacity = useRef(new Animated.Value(0)).current;
   const insets = useSafeAreaInsets();
@@ -157,6 +164,7 @@ export default function ProfileSideMenuModal({
   useEffect(() => {
     if (!visible) {
       setLogoutOpen(false);
+      setLangPickerOpen(false);
     }
   }, [visible]);
 
@@ -309,6 +317,10 @@ export default function ProfileSideMenuModal({
             setLogoutOpen(false);
             return;
           }
+          if (langPickerOpen) {
+            setLangPickerOpen(false);
+            return;
+          }
           if (settingsOverlay != null) {
             onSettingsRequestClose?.();
             return;
@@ -405,6 +417,20 @@ export default function ProfileSideMenuModal({
                     >
                       {labels.profile}
                     </SideMenuItemButtonNative>
+                    {uid && onSelectLanguage ? (
+                      <SideMenuItemButtonNative
+                        icon="translate"
+                        labelStyle={labelStyle}
+                        trailing={
+                          <Text style={styles.langTrailing} numberOfLines={1}>
+                            {LANGUAGE_NATIVE_NAMES[lang]}
+                          </Text>
+                        }
+                        onPress={() => setLangPickerOpen(true)}
+                      >
+                        {langCopy.label}
+                      </SideMenuItemButtonNative>
+                    ) : null}
                     <SideMenuItemButtonNative
                       icon="magnify"
                       labelStyle={labelStyle}
@@ -880,6 +906,46 @@ export default function ProfileSideMenuModal({
             language={lang}
           />
 
+          {langPickerOpen ? (
+            <View style={styles.langPickerRoot} pointerEvents="box-none">
+              <Pressable
+                style={styles.langPickerBackdrop}
+                onPress={() => setLangPickerOpen(false)}
+                accessibilityRole="button"
+                accessibilityLabel={langCopy.close}
+              />
+              <View style={styles.langPickerSheet}>
+                <Text style={styles.langPickerTitle}>{langCopy.label}</Text>
+                <ScrollView style={styles.langPickerScroll} bounces={false}>
+                  {LOCALIZED_UI_LANGUAGES.map((code) => (
+                    <Pressable
+                      key={code}
+                      style={({ pressed }) => [
+                        styles.langPickerOption,
+                        pressed && styles.langPickerOptionPressed,
+                      ]}
+                      onPress={() => {
+                        setLangPickerOpen(false);
+                        if (code !== lang) onSelectLanguage?.(code);
+                      }}
+                    >
+                      <Text style={styles.langPickerOptionText}>
+                        {LANGUAGE_NATIVE_NAMES[code]}
+                      </Text>
+                      {code === lang ? (
+                        <MaterialCommunityIcons
+                          name="check"
+                          size={18}
+                          color="rgba(245,245,245,0.95)"
+                        />
+                      ) : null}
+                    </Pressable>
+                  ))}
+                </ScrollView>
+              </View>
+            </View>
+          ) : null}
+
           {settingsOverlay != null ? (
             <View style={styles.settingsOverlayHost} pointerEvents="box-none">
               {settingsOverlay}
@@ -895,6 +961,58 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
     flexDirection: "row",
+  },
+  langTrailing: {
+    maxWidth: 90,
+    fontFamily: "Oxanium_600SemiBold",
+    fontSize: 11,
+    color: "rgba(255,255,255,0.55)",
+  },
+  langPickerRoot: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 70,
+    justifyContent: "center",
+    paddingHorizontal: 24,
+  },
+  langPickerBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.55)",
+  },
+  langPickerSheet: {
+    maxHeight: 480,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.32)",
+    backgroundColor: "rgba(8,8,10,0.98)",
+    paddingVertical: 8,
+    overflow: "hidden",
+  },
+  langPickerTitle: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    color: "rgba(248,250,252,0.92)",
+    fontSize: 14,
+    fontWeight: "700",
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "rgba(255,255,255,0.1)",
+  },
+  langPickerScroll: {
+    maxHeight: 420,
+  },
+  langPickerOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    gap: 12,
+  },
+  langPickerOptionPressed: {
+    backgroundColor: "rgba(255,255,255,0.06)",
+  },
+  langPickerOptionText: {
+    flex: 1,
+    color: "rgba(248,250,252,0.95)",
+    fontSize: 15,
   },
   settingsOverlayHost: {
     ...StyleSheet.absoluteFillObject,

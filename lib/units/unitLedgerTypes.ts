@@ -11,6 +11,7 @@ export type UnitLedgerReasonCode =
   | "group_battle_monthly"
   | "weekly_rank"
   | "monthly_rank"
+  | "preseason_bonus"
   | "redemption"
   | "adjustment"
   | "unknown";

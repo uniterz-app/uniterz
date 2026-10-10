@@ -642,6 +642,9 @@ export default function GamesHomeScreen({
     null
   );
   const [isPredictModalOpen, setIsPredictModalOpen] = useState(false);
+  /** 送信成功で閉じるときだけ退場アニメ完了まで Modal を残す */
+  const [predictModalHideAnimated, setPredictModalHideAnimated] =
+    useState(false);
   /** 終了＋予想済みは現行リザルト詳細（新カード面）を開く */
   const [resultDetailPostId, setResultDetailPostId] = useState<string | null>(
     null
@@ -1328,6 +1331,7 @@ export default function GamesHomeScreen({
         return;
       }
       pendingPredictGameRef.current = null;
+      setPredictModalHideAnimated(false);
       setIsPredictModalOpen(true);
       setSelectedGame(game);
       const tab = pendingPredictNbaToolsTabRef.current;
@@ -2176,6 +2180,7 @@ export default function GamesHomeScreen({
     setGoalScorerPick(null);
     setPredictToolsTab(null);
     setSelectedGame(sourceGame);
+    setPredictModalHideAnimated(false);
     setIsPredictModalOpen(true);
 
     /** 編集モード初回ヒントはストレージ await で開幕をブロックしない（モーダル表示後に実行） */
@@ -2544,6 +2549,7 @@ export default function GamesHomeScreen({
       setScoreAway("");
       setGoalScorerPick(null);
       setPredictToolsTab(null);
+      setPredictModalHideAnimated(true);
       setIsPredictModalOpen(false);
       setSelectedGame(null);
 
@@ -2960,6 +2966,7 @@ export default function GamesHomeScreen({
         setScoreHome={setScoreHome}
         predictSubmitting={predictSubmitting}
         isEditingPrediction={isEditingPrediction}
+        hideWithExitAnimation={predictModalHideAnimated}
         onSubmit={() => void handleSubmitPrediction()}
         onClose={() => {
           setIsPredictModalOpen(false);

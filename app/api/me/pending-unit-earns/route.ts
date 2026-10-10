@@ -5,6 +5,7 @@ import {
   claimPendingUnitEarns,
   loadUnclaimedPendingUnitEarns,
 } from "@/lib/units/pendingUnitEarnServer";
+import { autoGrantPreseasonBonus } from "@/lib/units/preseasonBonusServer";
 
 export const runtime = "nodejs";
 
@@ -17,6 +18,8 @@ export async function GET(req: Request) {
   try {
     const uid = await requireUidFromRequest(req);
     const db = getAdminDb();
+    /** 配布済みの旧アプリもここは呼ぶ。開幕前なら付与してから演出一覧に載せる */
+    await autoGrantPreseasonBonus(db, uid);
     const entries = await loadUnclaimedPendingUnitEarns(db, uid);
     return NextResponse.json({ ok: true, entries });
   } catch (e: unknown) {

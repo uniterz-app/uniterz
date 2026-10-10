@@ -24,6 +24,7 @@ export function normalizeUnitLedgerReason(raw: unknown): UnitLedgerReasonCode {
     case "group_battle_monthly":
     case "weekly_rank":
     case "monthly_rank":
+    case "preseason_bonus":
     case "redemption":
     case "adjustment":
       return raw;
@@ -109,6 +110,16 @@ export function unitLedgerReasonTitle(
         es: "Recompensa ranking mensual",
         pt: "Recompensa ranking mensal",
         fr: "Récompense classement mensuel",
+      });
+    case "preseason_bonus":
+      return L(lang, {
+        ja: "プレシーズン参加ボーナス",
+        en: "Preseason bonus",
+        ko: "프리시즌 참가 보너스",
+        zh: "季前赛参与奖励",
+        es: "Bonus de pretemporada",
+        pt: "Bônus de pré-temporada",
+        fr: "Bonus de présaison",
       });
     case "redemption":
       return L(lang, {

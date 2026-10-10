@@ -206,6 +206,10 @@ Unit は、以下の条件を満たしたユーザーに付与する。
 
 付与ジョブ・公式照合バッチはゲート D で実装。ルール UI: `SeasonPredictRulesChip`（Web / Native）。
 
+### 5.2 プレシーズン参加ボーナス（2026-27）
+
+プレシーズン期間（JST 10/8 〜 10/21 4:00 の開幕戦ティップオフ）に新規登録した、またはアプリを使ったユーザーに **50 Unit**（1 アカウント 1 回）。台帳 reason `preseason_bonus`。詳細・実行手順: [`preseason-predictor-unit-grant-backlog.md`](preseason-predictor-unit-grant-backlog.md)。
+
 ---
 
 ## 6. 招待制度による付与

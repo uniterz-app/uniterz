@@ -27,6 +27,8 @@ import {
   Bell,
   Search,
   SlidersHorizontal,
+  Languages,
+  Check,
 } from "lucide-react";
 import { matchScoreDisplayCopy } from "@/lib/games/matchScoreDisplayPrefs";
 import {
@@ -40,6 +42,13 @@ import { useIsAdmin } from "@/lib/admin/useIsAdmin";
 import { auth } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
+import {
+  ALL_LANGUAGES,
+  LANGUAGE_NATIVE_NAMES,
+  type Language,
+} from "@/lib/i18n/language";
+import { languageMenuCopy } from "@/lib/i18n/languageMenuCopy";
+import { saveMyLanguage } from "@/lib/api/saveMeProfile";
 import { t } from "@/lib/i18n/t";
 import { userSearchCopy } from "@/lib/users/userSearchCopy";
 import { useAnnouncementsUnread } from "@/lib/hooks/useAnnouncementsUnread";
@@ -107,6 +116,19 @@ export default function SettingsMenu({
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showPlanInfoModal, setShowPlanInfoModal] = useState(false);
   const [showProfileEdit, setShowProfileEdit] = useState(false);
+  const [showLanguagePicker, setShowLanguagePicker] = useState(false);
+  const langCopy = languageMenuCopy(language);
+
+  const handleSelectLanguage = async (code: Language) => {
+    setShowLanguagePicker(false);
+    if (code === language) return;
+    try {
+      await saveMyLanguage(code);
+    } catch (err) {
+      console.error(err);
+      alert(langCopy.saveFailed);
+    }
+  };
   const [portalReady, setPortalReady] = useState(false);
 
   const [plan, setPlan] = useState<"free" | "pro">("free");
@@ -297,6 +319,21 @@ export default function SettingsMenu({
           >
             <span className={cn(isEn && "uppercase")}>{m.settings.editProfile}</span>
           </SideMenuItemButton>
+
+          {user?.uid ? (
+            <SideMenuItemButton
+              icon={Languages}
+              labelStyle={menuLabelFont}
+              onClick={() => setShowLanguagePicker(true)}
+              trailing={
+                <span className="max-w-[6rem] truncate text-[11px] text-white/55">
+                  {LANGUAGE_NATIVE_NAMES[language]}
+                </span>
+              }
+            >
+              <span className={cn(isEn && "uppercase")}>{langCopy.label}</span>
+            </SideMenuItemButton>
+          ) : null}
 
           <SideMenuItemButton
             icon={Award}
@@ -678,6 +715,45 @@ export default function SettingsMenu({
         onConfirm={handleLogout}
         language={language}
       />
+
+      {portalReady &&
+        showLanguagePicker &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-[1000] flex items-center justify-center px-6"
+            role="dialog"
+            aria-modal="true"
+            aria-label={langCopy.label}
+          >
+            <button
+              type="button"
+              className="absolute inset-0 bg-black/55"
+              aria-label={langCopy.close}
+              onClick={() => setShowLanguagePicker(false)}
+            />
+            <div className="relative w-full max-w-sm overflow-hidden border border-white/30 bg-[rgba(8,8,10,0.98)] py-2">
+              <p className="border-b border-white/10 px-4 py-2.5 text-sm font-bold text-white/90">
+                {langCopy.label}
+              </p>
+              <div className="max-h-[420px] overflow-y-auto">
+                {ALL_LANGUAGES.map((code) => (
+                  <button
+                    key={code}
+                    type="button"
+                    className="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left text-[15px] text-white/95 transition-colors hover:bg-white/[0.06] active:bg-white/[0.08]"
+                    onClick={() => void handleSelectLanguage(code)}
+                  >
+                    <span>{LANGUAGE_NATIVE_NAMES[code]}</span>
+                    {code === language ? (
+                      <Check className="h-4 w-4 text-white/95" aria-hidden />
+                    ) : null}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
 
       {portalReady &&
         showProfileEdit &&

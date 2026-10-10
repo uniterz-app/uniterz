@@ -5,7 +5,6 @@ import {
   Animated,
   Dimensions,
   Image,
-  InteractionManager,
   Platform,
   Pressable,
   StyleSheet,
@@ -35,7 +34,11 @@ import {
   subscribeTutorialWelcomeChromeHidden,
 } from "../../../../lib/tutorial/tutorialWelcomeChrome";
 import { TUTORIAL_WELCOME_CHROME_FADE_MS } from "../../../../lib/tutorial/tutorialMotion";
-import { resetGamesStackInBackgroundNative, openGamesTabHomeNative } from "./resetGamesTabHomeNative";
+import { openGamesTabHomeNative } from "./resetGamesTabHomeNative";
+import {
+  beginTabTransition,
+  isTabTransitionBusy,
+} from "./tabTransitionLockNative";
 
 /** Web NavBar `data-tutorial-target` 相当 */
 const TUTORIAL_TARGET_BY_ROUTE: Record<string, string> = {
@@ -162,6 +165,8 @@ export default function AppTabBar({ state, descriptors, navigation }: BottomTabB
                     };
 
                 const onPress = () => {
+                  /** スライド着地前の次タブ移動は画面がずれたまま止まる原因になる */
+                  if (isTabTransitionBusy()) return;
                   const now = Date.now();
                   if (now - lastPressAtRef.current < 280) return;
                   lastPressAtRef.current = now;
@@ -178,23 +183,9 @@ export default function AppTabBar({ state, descriptors, navigation }: BottomTabB
                   /** タブ移動はメニュー経由の BACK ではない。戻り先でメニューを開き直さない */
                   clearSideMenuResume();
 
-                  /**
-                   * Games スタック reset は同期で重い（特に Android。詳細を何枚も重ねていると全部アンマウント）。
-                   * Profile など遷移先の初回マウントと競合させない。
-                   */
-                  if (
-                    activeTabName === "GamesTab" &&
-                    route.name !== "GamesTab"
-                  ) {
-                    const nav = navigation;
-                    InteractionManager.runAfterInteractions(() => {
-                      setTimeout(() => {
-                        /** 待っている間に Games へ戻っていたら、開いた画面を消さない */
-                        const s = nav.getState();
-                        if (s.routes[s.index]?.name === "GamesTab") return;
-                        resetGamesStackInBackgroundNative(nav);
-                      }, 250);
-                    });
+                  /** Games スタックの reset は GamesTab の blur（MainTabNavigator）でスライド着地後に 1 回だけ */
+                  if (activeTabName !== route.name) {
+                    beginTabTransition();
                   }
 
                   if (route.name === "GamesTab") {

@@ -15,6 +15,7 @@ import {
 } from "@/lib/profile/profileGamblingTerms";
 import { isPreferredLeague } from "@/lib/user/preferredLeague";
 import { consumeUidActionRateLimit } from "@/lib/security/consumeUidRateLimit";
+import { autoGrantPreseasonBonus } from "@/lib/units/preseasonBonusServer";
 
 async function requireUid(req: Request): Promise<string> {
   const authz =
@@ -43,6 +44,7 @@ async function bumpRankingChromeForUser(uid: string): Promise<void> {
 /**
  * クライアントの Firestore ルールに依存せず、本人の users/{uid} の公開プロフィール欄を更新する。
  * `photoOnly: true` のときは photoURL だけ更新する（画像選択直後の即時反映用。入力途中の名前等は触らない）。
+ * `languageOnly: true` のときは language だけ更新する（サイドメニュー「言語」）。
  */
 export async function POST(req: Request) {
   try {
@@ -76,8 +78,32 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true });
     }
 
-    const lang = normalizeLanguage(body.language);
-    if (!lang) {
+    if (body.languageOnly === true) {
+      const onlyLang = normalizeLanguage(body.language);
+      if (!onlyLang) {
+        return NextResponse.json({ error: "invalid language" }, { status: 400 });
+      }
+      const db = getAdminDb();
+      const rate = await consumeUidActionRateLimit(db, uid, "me_profile_update", 60);
+      if (!rate.ok) {
+        return NextResponse.json({ error: "rate_limited" }, { status: 429 });
+      }
+      await db.doc(`users/${uid}`).set(
+        {
+          language: onlyLang,
+          locale: onlyLang,
+          timeZone: FALLBACK_TIMEZONE_BY_LANGUAGE[onlyLang],
+          updatedAt: FieldValue.serverTimestamp(),
+        },
+        { merge: true }
+      );
+      return NextResponse.json({ ok: true });
+    }
+
+    /** キーが無いときは言語を触らない（言語はサイドメニューの「言語」で別保存） */
+    const hasLanguage = "language" in body && body.language != null;
+    const lang = hasLanguage ? normalizeLanguage(body.language) : null;
+    if (hasLanguage && !lang) {
       return NextResponse.json({ error: "invalid language" }, { status: 400 });
     }
 
@@ -129,12 +155,14 @@ export async function POST(req: Request) {
       displayName,
       bio,
       photoURL,
-      language: lang,
-      locale: lang,
-      timeZone: FALLBACK_TIMEZONE_BY_LANGUAGE[lang],
       countryCode,
       updatedAt: FieldValue.serverTimestamp(),
     };
+    if (lang) {
+      patch.language = lang;
+      patch.locale = lang;
+      patch.timeZone = FALLBACK_TIMEZONE_BY_LANGUAGE[lang];
+    }
 
     if (photoCropY !== undefined) {
       patch.photoCropY = photoCropY;
@@ -165,6 +193,11 @@ export async function POST(req: Request) {
 
     const before = (await db.doc(`users/${uid}`).get()).data() ?? {};
     await db.doc(`users/${uid}`).set(patch, { merge: true });
+
+    /** 新規登録（初期設定完了）は旧アプリでもここを通る */
+    if (completeOnboarding) {
+      await autoGrantPreseasonBonus(db, uid);
+    }
 
     const rankingChromeChanged =
       String(before.displayName ?? "") !== displayName ||

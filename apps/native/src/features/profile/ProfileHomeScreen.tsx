@@ -114,6 +114,7 @@ import {
 } from "../../../../../lib/profile/profileGamblingTerms";
 import {
   saveMeProfileNative,
+  saveMyLanguageNative,
   saveMyPhotoURLNative,
 } from "./saveMeProfileNative";
 import { COUNTRY_OPTIONS } from "../../../../../lib/rankings/country";
@@ -150,15 +151,14 @@ import { setTutorialWelcomeAudienceNative } from "../tutorial/tutorialWelcomeAud
 import { tutorialSkipConfirmProps } from "../../../../../lib/tutorial/tutorialSkipConfirmProps";
 import { t as i18nT } from "../../../../../lib/i18n/t";
 import {
-  LANGUAGE_NATIVE_NAMES,
   type Language,
 } from "../../../../../lib/i18n/language";
 import {
-  LOCALIZED_UI_LANGUAGES,
   L,
   resolveLocalizedLang,
   type LocalizedLang,
 } from "../../../../../lib/i18n/localize";
+import { languageMenuCopy } from "../../../../../lib/i18n/languageMenuCopy";
 import { profileSettingsSheetCopy } from "./profileSettingsSheetCopy";
 import { profileMarkToastCopy } from "./referralInviteCopy";
 import { TUTORIAL_WELCOME_LAND_HOLD_MS } from "../../../../../lib/tutorial/tutorialMotion";
@@ -329,7 +329,6 @@ export default function ProfileHomeScreen({
   }, [navigation]);
 
   const returnFromSettingsToMenu = useCallback(() => {
-    setLangModalOpen(false);
     setCountryModalOpen(false);
     setTzModalOpen(false);
     // 同一 Modal 内オーバーレイを外すだけ。サイドメニューはそのまま残る
@@ -504,7 +503,6 @@ export default function ProfileHomeScreen({
 
   const [saving, setSaving] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
-  const [langModalOpen, setLangModalOpen] = useState(false);
   const [countryModalOpen, setCountryModalOpen] = useState(false);
   const [tzModalOpen, setTzModalOpen] = useState(false);
   /** "" は自動（端末） */
@@ -521,14 +519,13 @@ export default function ProfileHomeScreen({
   }, [isPublicProfileView, viewerLanguage]);
 
   const handleSettingsRequestClose = useCallback(() => {
-    if (langModalOpen || countryModalOpen || tzModalOpen) {
-      setLangModalOpen(false);
+    if (countryModalOpen || tzModalOpen) {
       setCountryModalOpen(false);
       setTzModalOpen(false);
       return;
     }
     returnFromSettingsToMenu();
-  }, [langModalOpen, countryModalOpen, tzModalOpen, returnFromSettingsToMenu]);
+  }, [countryModalOpen, tzModalOpen, returnFromSettingsToMenu]);
 
   /** プロフィール保存成功 — システム Alert の代わりにサイバーガラストースト */
   const lang = resolveLocalizedLang(language);
@@ -1226,6 +1223,18 @@ export default function ProfileHomeScreen({
     }
   }
 
+  async function handleSelectLanguage(code: LocalizedLang) {
+    if (!myUid) return;
+    const prev = language;
+    setLanguage(code);
+    try {
+      await saveMyLanguageNative(code);
+    } catch {
+      setLanguage(prev);
+      cyberAlert("", languageMenuCopy(prev).saveFailed);
+    }
+  }
+
   async function handleSaveProfile() {
     if (!myUid || saving || uploadingAvatar) return;
     const safeName = displayName.trim();
@@ -1254,7 +1263,6 @@ export default function ProfileHomeScreen({
         displayName: safeName,
         bio: safeBio,
         photoURL: safePhoto,
-        language,
         countryCode: countryCode.trim() || null,
         displayTimeZone: displayTimeZone || null,
       });
@@ -1630,6 +1638,7 @@ export default function ProfileHomeScreen({
       }
       unitBalance={unitBalance ?? undefined}
       onOpenProfileSettings={openSettingsFromMenu}
+      onSelectLanguage={(code) => void handleSelectLanguage(code)}
       onSettingsRequestClose={handleSettingsRequestClose}
       settingsOverlay={
         settingsOpen ? (
@@ -1740,33 +1749,10 @@ export default function ProfileHomeScreen({
                   </View>
 
                   <View style={styles.fieldBlock}>
-                    <Text style={styles.fieldLabel}>{t.langLabel}</Text>
-                    <Pressable
-                      style={({ pressed }) => [styles.selectRow, pressed && styles.selectRowPressed]}
-                      onPress={() => {
-                        setCountryModalOpen(false);
-                        setTzModalOpen(false);
-                        setLangModalOpen(true);
-                      }}
-                      disabled={saving || uploadingAvatar}
-                    >
-                      <Text style={styles.selectRowText}>
-                        {LANGUAGE_NATIVE_NAMES[language]}
-                      </Text>
-                      <MaterialCommunityIcons
-                        name="chevron-down"
-                        size={20}
-                        color="rgba(226,232,240,0.65)"
-                      />
-                    </Pressable>
-                  </View>
-
-                  <View style={styles.fieldBlock}>
                     <Text style={styles.fieldLabel}>{t.countryLabel}</Text>
                     <Pressable
                       style={({ pressed }) => [styles.selectRow, pressed && styles.selectRowPressed]}
                       onPress={() => {
-                        setLangModalOpen(false);
                         setTzModalOpen(false);
                         setCountryModalOpen(true);
                       }}
@@ -1794,7 +1780,6 @@ export default function ProfileHomeScreen({
                     <Pressable
                       style={({ pressed }) => [styles.selectRow, pressed && styles.selectRowPressed]}
                       onPress={() => {
-                        setLangModalOpen(false);
                         setCountryModalOpen(false);
                         setTzModalOpen(true);
                       }}
@@ -1828,14 +1813,13 @@ export default function ProfileHomeScreen({
                 </View>
               </ScrollView>
             </KeyboardAvoidingView>
-            {(langModalOpen || countryModalOpen || tzModalOpen) && (
+            {(countryModalOpen || tzModalOpen) && (
               <View style={styles.profileInlinePickerRoot} pointerEvents="box-none">
                 <Pressable
                   accessibilityRole="button"
                   accessibilityLabel={t.settingsClose}
                   style={styles.modalBackdropFill}
                   onPress={() => {
-                    setLangModalOpen(false);
                     setCountryModalOpen(false);
                     setTzModalOpen(false);
                   }}
@@ -1874,39 +1858,6 @@ export default function ProfileHomeScreen({
                           <Text style={styles.modalOptionText}>{o.label}</Text>
                           {displayTimeZone === o.timeZone ? (
                             <MaterialCommunityIcons name="check" size={18} color="rgba(245,245,245,0.95)" />
-                          ) : null}
-                        </Pressable>
-                      ))}
-                    </ScrollView>
-                  </View>
-                ) : langModalOpen ? (
-                  <View style={styles.modalSheetTall}>
-                    <Text style={styles.modalSheetTitle}>{t.langLabel}</Text>
-                    <ScrollView
-                      style={styles.modalScroll}
-                      keyboardShouldPersistTaps="handled"
-                    >
-                      {LOCALIZED_UI_LANGUAGES.map((code) => (
-                        <Pressable
-                          key={code}
-                          style={({ pressed }) => [
-                            styles.modalOption,
-                            pressed && styles.modalOptionPressed,
-                          ]}
-                          onPress={() => {
-                            setLanguage(code);
-                            setLangModalOpen(false);
-                          }}
-                        >
-                          <Text style={styles.modalOptionText}>
-                            {LANGUAGE_NATIVE_NAMES[code]}
-                          </Text>
-                          {language === code ? (
-                            <MaterialCommunityIcons
-                              name="check"
-                              size={18}
-                              color="rgba(245,245,245,0.95)"
-                            />
                           ) : null}
                         </Pressable>
                       ))}
@@ -2388,7 +2339,7 @@ const styles = StyleSheet.create({
   profileModalSafe: {
     flex: 1,
   },
-  /** 設定シート内に言語・国ピッカーを重ねる（ネスト Modal 回避） */
+  /** 設定シート内に国・TZ ピッカーを重ねる（ネスト Modal 回避） */
   profileModalLayer: {
     flex: 1,
     position: "relative",

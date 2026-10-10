@@ -19,7 +19,8 @@ export type SaveMeProfilePayload = {
   displayName: string;
   bio: string;
   photoURL: string;
-  language: Language;
+  /** 未指定なら Firestore の既存値を維持 */
+  language?: Language;
   countryCode: string | null;
   /** 未指定なら Firestore の既存値を維持 */
   photoCropY?: number;
@@ -58,6 +59,28 @@ export async function saveMeProfile(payload: SaveMeProfilePayload): Promise<void
   persistRankCountrySessionOverride(user.uid, payload.countryCode);
   dispatchCumulativeRankingPatchMyCountry(user.uid, payload.countryCode);
   dispatchCumulativeRankingInvalidate();
+  invalidateUserDocCache(user.uid);
+}
+
+/** 表示言語だけ即保存（サイドメニュー「言語」） */
+export async function saveMyLanguage(language: Language): Promise<void> {
+  const user = auth.currentUser;
+  if (!user) throw new Error("not authenticated");
+
+  const token = await user.getIdToken();
+  const res = await fetch("/api/me/profile", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ languageOnly: true, language }),
+  });
+  if (!res.ok) {
+    const data = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(data?.error ?? res.statusText);
+  }
+
   invalidateUserDocCache(user.uid);
 }
 

@@ -12,6 +12,8 @@ import {
 } from "react-native";
 import { BlurView } from "expo-blur";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import Animated, { FadeIn } from "react-native-reanimated";
+import { FullWindowOverlay } from "react-native-screens";
 import PredictOverlayChamferedFrameNative from "../features/games/PredictOverlayChamferedFrameNative";
 import UniterzLogoNative from "../features/profile/UniterzLogoNative";
 import { PREDICT_OVERLAY_CYBER_FORM_CUT } from "../features/games/matchListCyberClipPath";
@@ -112,14 +114,7 @@ export default function CyberAlertModalNative({
     return buttons;
   }, [buttons]);
 
-  return (
-    <Modal
-      transparent
-      animationType="fade"
-      visible={visible}
-      onRequestClose={onDismiss}
-      statusBarTranslucent
-    >
+  const body = (
       <Pressable style={styles.root} onPress={onDismiss}>
         {(Platform.OS === "ios" || Platform.OS === "android") && (
           <BlurView
@@ -174,11 +169,40 @@ export default function CyberAlertModalNative({
           </PredictOverlayChamferedFrameNative>
         </Pressable>
       </Pressable>
+  );
+
+  /**
+   * iOS の Modal は表示中の Modal（サイドメニュー・予想オーバーレイ等）の上に重ねられず、
+   * 失敗しても RN 側は表示済み扱いになり画面のタッチが死ぬ。別ウィンドウで最前面に出す。
+   */
+  if (Platform.OS === "ios") {
+    if (!visible) return null;
+    return (
+      <FullWindowOverlay>
+        <Animated.View entering={FadeIn.duration(180)} style={styles.overlayFill}>
+          {body}
+        </Animated.View>
+      </FullWindowOverlay>
+    );
+  }
+
+  return (
+    <Modal
+      transparent
+      animationType="fade"
+      visible={visible}
+      onRequestClose={onDismiss}
+      statusBarTranslucent
+    >
+      {body}
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
+  overlayFill: {
+    ...StyleSheet.absoluteFillObject,
+  },
   root: {
     flex: 1,
     justifyContent: "center",
