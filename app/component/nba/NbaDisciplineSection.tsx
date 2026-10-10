@@ -252,7 +252,8 @@ export function NbaDisciplineSection({
                   >
                     <button
                       type="button"
-                      className="truncate text-left"
+                      className="truncate text-left text-[14px] font-extrabold"
+                      style={{ transform: "skewX(-8deg)" }}
                       onClick={() => onPlayerClick?.(r.playerId)}
                     >
                       {r.name}
@@ -296,7 +297,8 @@ export function NbaDisciplineSection({
                       {showPlayerNames ? (
                         <button
                           type="button"
-                          className={`${nameOxanium.className} mr-1.5 font-bold text-white`}
+                          className={`${nameOxanium.className} mr-1.5 block text-[14px] font-extrabold text-white`}
+                          style={{ transform: "skewX(-8deg)" }}
                           onClick={() => onPlayerClick?.(f.playerId)}
                         >
                           {f.playerName}

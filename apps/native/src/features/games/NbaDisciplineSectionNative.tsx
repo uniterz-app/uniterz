@@ -226,9 +226,11 @@ export function NbaDisciplineSectionNative({
                     disabled={!onPlayerPress}
                     style={[styles.tableRow, rowBorder]}
                   >
-                    <Text style={[styles.td, styles.colName]} numberOfLines={1}>
-                      {r.name}
-                    </Text>
+                    <View style={styles.colName}>
+                      <Text style={styles.playerName} numberOfLines={1}>
+                        {r.name}
+                      </Text>
+                    </View>
                     <Text style={[styles.td, styles.colN]}>{r.tech}</Text>
                     <Text style={[styles.td, styles.colN]}>{r.flag}</Text>
                     <Text style={[styles.td, styles.colN]}>{r.eject}</Text>
@@ -461,6 +463,13 @@ const styles = StyleSheet.create({
     minWidth: 0,
     textAlign: "left",
   },
+  playerName: {
+    fontFamily: METRIC_FONT,
+    fontSize: 14,
+    fontWeight: "800",
+    color: "#FFFFFF",
+    transform: [{ skewX: "-8deg" }],
+  },
   colN: {
     width: 24,
   },
@@ -503,9 +512,10 @@ const styles = StyleSheet.create({
   },
   fineName: {
     fontFamily: METRIC_FONT,
-    fontSize: 11,
-    fontWeight: "700",
+    fontSize: 14,
+    fontWeight: "800",
     color: "#FFFFFF",
+    transform: [{ skewX: "-8deg" }],
   },
   fineReason: {
     fontSize: 11,
