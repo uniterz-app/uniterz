@@ -1,6 +1,7 @@
 /**
  * 規律系スタッツ（テクニカル / フラグラント / 退場 / 罰金）。
- * TECH・FLAG・EJECT は BDL play-by-play 由来。罰金はテクニカル・退場の規定額（自動計算）+ 管理画面の手入力。
+ * TECH・FLAG・EJECT は BDL play-by-play 由来。罰金はテクニカル・退場の規定額（自動計算）
+ * + 出場停止で失った年俸（テクニカル累積分は自動、それ以外は管理画面で試合数を入力）+ 手入力の個別罰金。
  * コーチ・チーム（ベンチ）テクニカルは数えない。
  */
 
@@ -44,13 +45,22 @@ export type NbaGameDisciplineDoc = {
   builtAtMs: number;
 };
 
+export type NbaDisciplineFineKind = "fine" | "suspension";
+
 /** Firestore `nbaDisciplineFines/{autoId}` */
 export type NbaDisciplineFineDoc = {
   seasonKey: string;
   seasonType: NbaDisciplineSeasonType;
+  /** 未設定は fine（後方互換） */
+  kind?: NbaDisciplineFineKind;
+  /** 出場停止の試合数（kind=suspension） */
+  games?: number;
+  /** コート上の行為による出場停止か（シーズン最初の 1 試合停止は日割り年俸） */
+  onCourt?: boolean;
   playerId: string;
   playerName: string;
   teamId: string;
+  /** suspension は集計時に年俸から計算して上書き */
   amountUsd: number;
   /** YYYY-MM-DD */
   date: string;
@@ -97,5 +107,7 @@ export type NbaDisciplineDetailSlice = {
     date: string;
     reason: string;
     seasonType: NbaDisciplineSeasonType;
+    kind?: NbaDisciplineFineKind;
+    games?: number;
   }>;
 };

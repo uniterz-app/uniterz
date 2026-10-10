@@ -3,7 +3,8 @@
  * - `nbaGameDiscipline/{bdlGameId}` 試合ごとのイベント（ingest が書く）
  * - `nbaDisciplineFines/{autoId}` 個別の罰金（NBA 公式発表を管理画面で手入力）
  * - `nbaDiscipline/{seasonKey}` 上 2 つのシーズン集計（公開 API はこれだけ読む）。
- *   FINES = テクニカル・退場の定額罰金（`nbaDisciplineFineSchedule`）+ 手入力分
+ *   FINES = テクニカル・退場の定額罰金（`nbaDisciplineFineSchedule`）
+ *         + 出場停止で失った年俸（`nbaDisciplineSuspensionSalary`。テクニカル累積は自動）+ 手入力分
  */
 import type { Firestore } from "firebase-admin/firestore";
 import {
@@ -23,6 +24,11 @@ import {
   NBA_PLAYER_SEASON_METRICS_PLAYERS_SUB,
 } from "@/lib/nba/playerSeasonMetrics/playerSeasonMetricsTypes";
 import { scheduledDisciplineFines } from "@/lib/nba/discipline/nbaDisciplineFineSchedule";
+import {
+  ensureNbaPlayerSeasonSalaries,
+  suspensionLostSalaryUsd,
+  type NbaSuspensionForSalary,
+} from "@/lib/nba/discipline/nbaDisciplineSuspensionSalary";
 
 export const NBA_GAME_DISCIPLINE_COLLECTION = "nbaGameDiscipline";
 export const NBA_DISCIPLINE_FINES_COLLECTION = "nbaDisciplineFines";
@@ -117,19 +123,70 @@ export async function rebuildNbaDisciplineSnapshot(
       events: g.events ?? [],
     }))
   );
-  for (const fine of scheduled) {
+  for (const fine of scheduled.fines) {
     players[fine.playerId]![fine.phase].fines += fine.amountUsd;
     teams[fine.teamId]![fine.phase].fines += fine.amountUsd;
   }
 
-  for (const fine of fines) {
-    if (!fine.playerId || !fine.teamId) continue;
+  const validFines = fines.filter((f) => f.playerId && f.teamId);
+  const autoSuspensionId = (i: number) => `auto:${i}`;
+  const suspensions: NbaSuspensionForSalary[] = [
+    ...scheduled.suspensions.map((s, i) => ({
+      id: autoSuspensionId(i),
+      playerId: s.playerId,
+      date: s.date,
+      games: 1,
+      onCourt: true,
+    })),
+    ...validFines
+      .filter((f) => f.kind === "suspension")
+      .map((f) => ({
+        id: f.id,
+        playerId: f.playerId,
+        date: f.date,
+        games: f.games ?? 0,
+        onCourt: f.onCourt === true,
+      })),
+  ];
+  let lostById = new Map<string, number>();
+  if (suspensions.length > 0) {
+    const salaries = await ensureNbaPlayerSeasonSalaries(
+      db,
+      seasonKey,
+      suspensions.map((s) => s.playerId)
+    );
+    lostById = suspensionLostSalaryUsd(
+      seasonKey,
+      suspensions,
+      salaries,
+      scheduled.regularSeasonDays
+    );
+  }
+  scheduled.suspensions.forEach((s, i) => {
+    const lost = lostById.get(autoSuspensionId(i)) ?? 0;
+    players[s.playerId]![s.phase].fines += lost;
+    teams[s.teamId]![s.phase].fines += lost;
+  });
+
+  const amountUpdates: Array<{ id: string; amountUsd: number }> = [];
+  for (const fine of validFines) {
     const phase: NbaDisciplineSeasonType =
       fine.seasonType === "playoffs" ? "playoffs" : "regular";
+    let amountUsd = fine.amountUsd;
+    if (fine.kind === "suspension") {
+      amountUsd = lostById.get(fine.id) ?? 0;
+      if (amountUsd !== fine.amountUsd) amountUpdates.push({ id: fine.id, amountUsd });
+    }
     const entry = touchPlayer(fine.playerId, fine.playerName, fine.teamId, fine.date);
-    entry[phase].fines += fine.amountUsd;
+    entry[phase].fines += amountUsd;
     const team = (teams[fine.teamId] ??= emptyTeam());
-    team[phase].fines += fine.amountUsd;
+    team[phase].fines += amountUsd;
+  }
+  for (const u of amountUpdates) {
+    await db
+      .collection(NBA_DISCIPLINE_FINES_COLLECTION)
+      .doc(u.id)
+      .update({ amountUsd: u.amountUsd });
   }
 
   const outPlayers: Record<string, NbaDisciplinePlayerEntry> = {};
@@ -207,6 +264,9 @@ function finesForDetail(
     date: f.date,
     reason: f.reason,
     seasonType: f.seasonType === "playoffs" ? "playoffs" : "regular",
+    ...(f.kind === "suspension"
+      ? { kind: "suspension" as const, games: f.games ?? 0 }
+      : {}),
   }));
 }
 

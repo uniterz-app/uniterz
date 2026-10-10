@@ -94,7 +94,10 @@ export function disciplineFineLines(
     playerId: f.playerId,
     playerName: f.playerName,
     amount: formatDisciplineFineUsdFull(f.amountUsd),
-    reason: f.reason,
+    reason:
+      f.kind === "suspension"
+        ? [`SUSP ${f.games ?? 0}G`, f.reason].filter(Boolean).join(" · ")
+        : f.reason,
     playoffs: f.seasonType === "playoffs",
   }));
 }
@@ -105,7 +108,7 @@ export function disciplineSectionCopy(isJa: boolean) {
     playoffs: isJa ? "プレーオフ" : "PLAYOFFS",
     fines: isJa ? "罰金" : "FINES",
     note: isJa
-      ? "テクニカル・フラグラント・退場は試合記録から集計（コーチ除く）。罰金はテクニカル・退場の規定額（NBA ルール）とリーグ発表分の合計。"
-      : "Techs, flagrants and ejections from play-by-play (coaches excluded). Fines = NBA rulebook tech/ejection schedule plus league-announced fines.",
+      ? "テクニカル・フラグラント・退場は試合記録から集計（コーチ除く）。罰金はテクニカル・退場の規定額（NBA ルール）、出場停止で失った年俸（CBA）、リーグ発表分の合計。"
+      : "Techs, flagrants and ejections from play-by-play (coaches excluded). Fines = NBA rulebook tech/ejection schedule, salary lost to suspensions (CBA) and league-announced fines.",
   };
 }

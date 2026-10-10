@@ -21,6 +21,7 @@ import type { NbaDisciplineFineDoc } from "@/lib/nba/discipline/disciplineTypes"
  * GET    ?season=2026-27            → 罰金一覧
  * GET    ?season=2026-27&q=green    → 選手候補（ロスター / 規律スナップショット）
  * POST   { seasonKey, seasonType, playerId, playerName, teamId, amountUsd, date, reason }
+ *        出場停止は { kind: "suspension", games, onCourt }（金額は集計時に年俸から計算）
  * DELETE ?id=xxx
  */
 
@@ -95,13 +96,18 @@ export async function POST(req: Request) {
     const seasonKey = seasonFrom(body.seasonKey);
     const playerId = String(body.playerId ?? "").trim();
     const teamId = String(body.teamId ?? "").trim();
-    const amountUsd = Number(body.amountUsd);
+    const kind = body.kind === "suspension" ? "suspension" : "fine";
+    const amountUsd = kind === "suspension" ? 0 : Number(body.amountUsd);
+    const games = Math.trunc(Number(body.games));
     const date = String(body.date ?? "").trim();
     if (!playerId || !teamId) {
       return NextResponse.json({ ok: false, error: "player_required" }, { status: 400 });
     }
-    if (!Number.isFinite(amountUsd) || amountUsd <= 0) {
+    if (kind === "fine" && (!Number.isFinite(amountUsd) || amountUsd <= 0)) {
       return NextResponse.json({ ok: false, error: "amount_invalid" }, { status: 400 });
+    }
+    if (kind === "suspension" && (!Number.isFinite(games) || games <= 0)) {
+      return NextResponse.json({ ok: false, error: "games_invalid" }, { status: 400 });
     }
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
       return NextResponse.json({ ok: false, error: "date_invalid" }, { status: 400 });
@@ -109,6 +115,8 @@ export async function POST(req: Request) {
     const doc: NbaDisciplineFineDoc = {
       seasonKey,
       seasonType: body.seasonType === "playoffs" ? "playoffs" : "regular",
+      kind,
+      ...(kind === "suspension" ? { games, onCourt: body.onCourt === true } : {}),
       playerId,
       playerName: String(body.playerName ?? "").trim() || `Player ${playerId}`,
       teamId,

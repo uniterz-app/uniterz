@@ -10,6 +10,7 @@ import { TEAM_SHORT } from "@/lib/team-short";
 import { formatDisciplineFineUsdFull } from "@/lib/nba/discipline/formatDisciplineFineUsd";
 import type {
   NbaDisciplineFineEntry,
+  NbaDisciplineFineKind,
   NbaDisciplineSeasonType,
 } from "@/lib/nba/discipline/disciplineTypes";
 
@@ -53,6 +54,9 @@ export default function AdminNbaFinesPage() {
   const [reason, setReason] = useState("");
   const [seasonType, setSeasonType] =
     useState<NbaDisciplineSeasonType>("regular");
+  const [kind, setKind] = useState<NbaDisciplineFineKind>("fine");
+  const [games, setGames] = useState("1");
+  const [onCourt, setOnCourt] = useState(true);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -100,6 +104,9 @@ export default function AdminNbaFinesPage() {
         body: JSON.stringify({
           seasonKey: season,
           seasonType,
+          kind,
+          games: Number(games),
+          onCourt,
           playerId: picked.playerId,
           playerName: picked.playerName,
           teamId: picked.teamId,
@@ -153,7 +160,7 @@ export default function AdminNbaFinesPage() {
         </select>
       </div>
       <p className="text-sm text-white/55">
-        登録すると選手・チームの FINES（リーグ表 / チーム詳細 / 選手詳細）に反映されます。テクニカル・退場の規定罰金（$2,000〜$5,000）は自動計算されるので入れないでください。NBA 公式発表の個別の罰金（審判批判・乱闘など）だけを入力します。コーチ・チームへの罰金は入れないでください。
+        登録すると選手・チームの FINES（リーグ表 / チーム詳細 / 選手詳細）に反映されます。テクニカル・退場の規定罰金（$2,000〜$5,000）とテクニカル累積（16 回・プレーオフ 7 回）の出場停止は自動計算されるので入れないでください。NBA 公式発表の個別の罰金（審判批判・乱闘など）と、それ以外の出場停止（試合数のみ。失った年俸は CBA の計算式で自動）を入力します。コーチ・チームへの罰金は入れないでください。
       </p>
 
       <div className="space-y-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
@@ -205,17 +212,62 @@ export default function AdminNbaFinesPage() {
           ) : null}
         </div>
 
+        <div className="flex gap-2">
+          {(
+            [
+              ["fine", "罰金"],
+              ["suspension", "出場停止"],
+            ] as const
+          ).map(([k, label]) => (
+            <button
+              key={k}
+              type="button"
+              onClick={() => setKind(k)}
+              className={`rounded-lg border px-3 py-1.5 text-sm ${
+                kind === k
+                  ? "border-cyan-400 bg-cyan-400/15 text-cyan-200"
+                  : "border-white/15 text-white/60"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
         <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-          <div>
-            <label className="mb-1 block text-xs text-white/60">金額（USD）</label>
-            <input
-              className={input}
-              inputMode="numeric"
-              placeholder="25000"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-            />
-          </div>
+          {kind === "fine" ? (
+            <div>
+              <label className="mb-1 block text-xs text-white/60">金額（USD）</label>
+              <input
+                className={input}
+                inputMode="numeric"
+                placeholder="25000"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+              />
+            </div>
+          ) : (
+            <div>
+              <label className="mb-1 block text-xs text-white/60">
+                試合数（失った年俸は自動計算）
+              </label>
+              <input
+                className={input}
+                inputMode="numeric"
+                placeholder="1"
+                value={games}
+                onChange={(e) => setGames(e.target.value)}
+              />
+              <label className="mt-2 flex items-center gap-2 text-xs text-white/60">
+                <input
+                  type="checkbox"
+                  checked={onCourt}
+                  onChange={(e) => setOnCourt(e.target.checked)}
+                />
+                コート上の行為（乱闘・フラグラントなど）
+              </label>
+            </div>
+          )}
           <div>
             <label className="mb-1 block text-xs text-white/60">日付</label>
             <input
@@ -298,7 +350,14 @@ export default function AdminNbaFinesPage() {
                   <td className="px-3 py-2 text-right tabular-nums">
                     {formatDisciplineFineUsdFull(f.amountUsd)}
                   </td>
-                  <td className="px-3 py-2 text-white/70">{f.reason}</td>
+                  <td className="px-3 py-2 text-white/70">
+                    {f.kind === "suspension" ? (
+                      <span className="mr-1 text-xs text-amber-300">
+                        出場停止 {f.games ?? 0}試合
+                      </span>
+                    ) : null}
+                    {f.reason}
+                  </td>
                   <td className="px-3 py-2 text-right">
                     <button
                       type="button"
