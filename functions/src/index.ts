@@ -59,6 +59,8 @@ export { runNbaProBriefFullCron } from "./nba/runNbaProBriefFullCron";
 export { runNbaProInsightBatchPollCron } from "./nba/runNbaProInsightBatchPollCron";
 // Pro Insight tip 1h 前パッチ（injury は専用 cron が更新済みスナップショットを読む）
 export { runNbaProBriefPatchCron } from "./nba/runNbaProBriefPatchCron";
+// お気に入り選手のテクニカル / フレグラント / 退場（nbaGameDiscipline 作成時）
+export { onNbaGameDisciplineCreated } from "./notifications/notifyDisciplineAlert";
 // NBA ライブ試合スコア / box（60 秒）— オフシーズンは export を外して停止する
 export { runNbaLiveGamesIngestCron } from "./nba/runNbaLiveGamesIngestCron";
 

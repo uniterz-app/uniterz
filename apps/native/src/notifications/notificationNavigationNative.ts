@@ -63,6 +63,14 @@ export function navigateFromPushNotificationData(data: PushNotificationData) {
           params: { screen: "ProfileHome", pop: true },
         });
         return;
+      case "discipline_alert":
+        navigationRef.navigate("Main", {
+          screen: "GamesTab",
+          params: data.playerId
+            ? { screen: "PlayerDetailPreview", params: { playerId: data.playerId } }
+            : { screen: "GamesHome" },
+        });
+        return;
       case "weekly_report":
       case "monthly_report":
         navigationRef.navigate("Main", {

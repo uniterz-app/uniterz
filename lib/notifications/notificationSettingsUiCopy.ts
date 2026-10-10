@@ -285,6 +285,31 @@ function matchPrefRows(lang: LocalizedLang): PrefRowCopy[] {
         fr: "Quand des Units du classement hebdo/mensuel sont accordés",
       }),
     },
+    {
+      key: "disciplineAlert",
+      title: L(lang, {
+        ja: "お気に入り選手の規律",
+        en: "Favorite player discipline",
+        ko: "즐겨찾기 선수의 규율",
+        zh: "收藏球员的违规",
+        es: "Disciplina de jugadores favoritos",
+        pt: "Disciplina de jogadores favoritos",
+        fr: "Discipline des joueurs favoris",
+        de: "Disziplin von Lieblingsspielern",
+        ar: "انضباط اللاعبين المفضلين",
+      }),
+      desc: L(lang, {
+        ja: "テクニカル・フレグラント・退場、出場停止まであと 1 回のとき",
+        en: "Technicals, flagrants, ejections — and one tech away from a suspension",
+        ko: "테크니컬·플래그런트·퇴장, 출전 정지까지 1번 남았을 때",
+        zh: "技术犯规、恶意犯规、驱逐出场，以及距禁赛仅差一次时",
+        es: "Técnicas, flagrantes, expulsiones — y a una técnica de la suspensión",
+        pt: "Técnicas, flagrantes, expulsões — e a uma técnica da suspensão",
+        fr: "Techniques, flagrantes, expulsions — et à une technique de la suspension",
+        de: "Technicals, Flagrants, Ejections — und ein Technical vor der Sperre",
+        ar: "الأخطاء الفنية والمتعمدة والطرد — وعند الاقتراب من الإيقاف",
+      }),
+    },
   ];
 }
 

@@ -20,7 +20,9 @@ export type PushNotificationType =
   | "pro_insight_update"
   | "weekly_report"
   | "monthly_report"
-  | "unit_reward";
+  | "unit_reward"
+  /** お気に入り選手のテクニカル / フレグラント / 退場 */
+  | "discipline_alert";
 
 export type PushNotificationData = {
   type: PushNotificationType;
@@ -31,6 +33,19 @@ export type PushNotificationData = {
   amount?: string;
   period?: string;
   label?: string;
+  playerId?: string;
+};
+
+/** お気に入り選手の 1 試合分の規律イベント */
+export type DisciplinePushInput = {
+  playerName: string;
+  tech: number;
+  flag: number;
+  eject: number;
+  /** この試合後の今季テクニカル数（不明は null） */
+  seasonTech: number | null;
+  /** next = 次のテクニカルで出場停止 / reached = この試合で出場停止の回数に到達 */
+  suspension: "next" | "reached" | null;
 };
 
 export type PushLanguage = LocalizedLang;
@@ -38,7 +53,101 @@ export type PushLanguage = LocalizedLang;
 export type GameMatchupCopyInput = Partial<PushMatchupInput> & {
   detail?: string;
   pendingCount?: number;
+  discipline?: DisciplinePushInput;
 };
+
+function disciplineBody(lang: LocalizedLang, d: DisciplinePushInput): string {
+  const parts: string[] = [];
+  const times = (n: number) => (n > 1 ? ` ×${n}` : "");
+  if (d.tech > 0) {
+    const label =
+      L(lang, {
+        ja: "テクニカル",
+        en: "Technical",
+        zh: "技术犯规",
+        ko: "테크니컬",
+        es: "Técnica",
+        de: "Technisches Foul",
+        fr: "Faute technique",
+        ar: "خطأ فني",
+        pt: "Técnica",
+      }) + times(d.tech);
+    const n = d.seasonTech;
+    const nth =
+      n != null && n > 0
+        ? L(lang, {
+            ja: `（今季 ${n} 回目）`,
+            en: ` (#${n} this season)`,
+            zh: `（本赛季第 ${n} 次）`,
+            ko: ` (이번 시즌 ${n}번째)`,
+            es: ` (n.º ${n} esta temporada)`,
+            de: ` (${n}. der Saison)`,
+            fr: ` (${n}e de la saison)`,
+            ar: ` (رقم ${n} هذا الموسم)`,
+            pt: ` (nº ${n} na temporada)`,
+          })
+        : "";
+    parts.push(label + nth);
+  }
+  if (d.flag > 0) {
+    parts.push(
+      L(lang, {
+        ja: "フレグラント",
+        en: "Flagrant",
+        zh: "恶意犯规",
+        ko: "플래그런트",
+        es: "Flagrante",
+        de: "Flagrant Foul",
+        fr: "Faute flagrante",
+        ar: "خطأ متعمد",
+        pt: "Flagrante",
+      }) + times(d.flag)
+    );
+  }
+  if (d.eject > 0) {
+    parts.push(
+      L(lang, {
+        ja: "退場",
+        en: "Ejected",
+        zh: "被驱逐出场",
+        ko: "퇴장",
+        es: "Expulsado",
+        de: "Ejection",
+        fr: "Expulsé",
+        ar: "طرد",
+        pt: "Expulso",
+      })
+    );
+  }
+  const sep = lang === "ja" || lang === "zh" ? "・" : " · ";
+  let body = parts.join(sep);
+  if (d.suspension === "next") {
+    body += L(lang, {
+      ja: " — あと 1 回で出場停止",
+      en: " — one more means a suspension",
+      zh: " — 再吃一次将被禁赛",
+      ko: " — 1번 더 받으면 출전 정지",
+      es: " — una más y será suspendido",
+      de: " — beim nächsten folgt eine Sperre",
+      fr: " — encore une et c’est la suspension",
+      ar: " — خطأ آخر يعني الإيقاف",
+      pt: " — mais uma e será suspenso",
+    });
+  } else if (d.suspension === "reached") {
+    body += L(lang, {
+      ja: " — 1 試合出場停止の対象",
+      en: " — triggers a one-game suspension",
+      zh: " — 将触发禁赛一场",
+      ko: " — 1경기 출전 정지 대상",
+      es: " — conlleva un partido de suspensión",
+      de: " — führt zu einem Spiel Sperre",
+      fr: " — entraîne un match de suspension",
+      ar: " — يستوجب الإيقاف مباراة واحدة",
+      pt: " — gera suspensão de um jogo",
+    });
+  }
+  return body;
+}
 
 export function buildPushNotificationCopy(
   type: PushNotificationType,
@@ -70,6 +179,18 @@ export function buildPushNotificationCopy(
         : 0;
 
   switch (type) {
+    case "discipline_alert": {
+      const d = input?.discipline;
+      return {
+        title: d?.playerName ?? "NBA",
+        body: d
+          ? disciplineBody(lang, d)
+          : L(lang, {
+              ja: "お気に入り選手に規律の記録がありました",
+              en: "Discipline update for a favorite player",
+            }),
+      };
+    }
     case "game_final":
       return {
         title: L(lang, {

@@ -49,6 +49,16 @@ export function buildPushNotificationCopy(
         : 0;
 
   switch (type) {
+    case "discipline_alert":
+      return {
+        title: "NBA",
+        body:
+          detail ||
+          L(lang, {
+            ja: "お気に入り選手に規律の記録がありました",
+            en: "Discipline update for a favorite player",
+          }),
+      };
     case "game_final":
       return {
         title: L(lang, {

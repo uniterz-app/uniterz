@@ -9,6 +9,7 @@ export const PUSH_NOTIFICATION_PREF_KEYS = [
   "proInsightUpdate",
   "weeklyReport",
   "monthlyReport",
+  "disciplineAlert",
 ] as const;
 
 export type PushNotificationPrefKey = (typeof PUSH_NOTIFICATION_PREF_KEYS)[number];
@@ -47,6 +48,8 @@ export const DEFAULT_PUSH_NOTIFICATION_PREFS: PushNotificationPrefs = {
   proInsightUpdate: false,
   weeklyReport: true,
   monthlyReport: true,
+  /** お気に入り選手の規律（Free） */
+  disciplineAlert: true,
   predictionDeadlineMinutes: 30,
 };
 
@@ -95,6 +98,8 @@ export function prefKeyForPushType(
       return "weeklyReport";
     case "monthly_report":
       return "monthlyReport";
+    case "discipline_alert":
+      return "disciplineAlert";
     case "game_start":
     case "ranking_updated":
     case "starter_change":
@@ -150,6 +155,10 @@ export function parsePushNotificationPrefs(raw: unknown): PushNotificationPrefs 
     monthlyReport: boolOr(
       "monthlyReport",
       DEFAULT_PUSH_NOTIFICATION_PREFS.monthlyReport
+    ),
+    disciplineAlert: boolOr(
+      "disciplineAlert",
+      DEFAULT_PUSH_NOTIFICATION_PREFS.disciplineAlert
     ),
     predictionDeadlineMinutes: parseDeadlineMinutes(
       src.predictionDeadlineMinutes

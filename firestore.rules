@@ -72,6 +72,7 @@ service cloud.firestore {
           'gameStart', 'gameFinal', 'rankingUpdated',
           'injuryStatus', 'starterChange', 'predictionDeadline',
           'pregameDigest', 'proInsightUpdate', 'monthlyReport',
+          'unitReward', 'weeklyReport', 'disciplineAlert',
           'predictionDeadlineMinutes'
         ])
         && (!('gameStart' in p) || p.gameStart is bool)
@@ -83,6 +84,9 @@ service cloud.firestore {
         && (!('pregameDigest' in p) || p.pregameDigest is bool)
         && (!('proInsightUpdate' in p) || p.proInsightUpdate is bool)
         && (!('monthlyReport' in p) || p.monthlyReport is bool)
+        && (!('unitReward' in p) || p.unitReward is bool)
+        && (!('weeklyReport' in p) || p.weeklyReport is bool)
+        && (!('disciplineAlert' in p) || p.disciplineAlert is bool)
         && (!('predictionDeadlineMinutes' in p)
             || p.predictionDeadlineMinutes == 10
             || p.predictionDeadlineMinutes == 30
