@@ -1,0 +1,30 @@
+---
+description: Native の本番 OTA（EAS Update）の出し方
+alwaysApply: true
+---
+
+# Native 本番 OTA — 必ずスクリプト経由
+
+2026-10-11 に `apps/native/.env` の `http://localhost:3000` が OTA に埋め込まれ、本番アプリの通信が全滅した。再発防止。
+
+## 出し方（これ以外禁止）
+
+```bash
+cd apps/native && npm run ota:production -- --message "変更内容"
+```
+
+- `scripts/ota-production.mjs` が `eas.json` の `build.production.env` だけで書き出す（`EXPO_NO_DOTENV=1`、シェルの `EXPO_PUBLIC_*` も捨てる）
+- 公開前に `expo export --clear` でバンドルを作り、localhost / 127.0.0.1 / LAN IP が 1 件でもあれば **公開しない**
+- 公開後も `dist/` を検査。検出したら即 rollback か再公開
+- 検査だけ: `npm run ota:production -- --check-only`
+
+## 禁止
+
+- `eas update` を直接叩く（`.env` と Metro キャッシュの古い inline を拾う）
+- 環境変数を前置して `eas update` する（`.env` が勝つことがある）
+- 「バンドルに localhost が残っているがライブラリの文字列だろう」と推測で流す。検査が落ちたら公開しない
+
+## ローカル env の置き場所
+
+- `apps/native/.env` — 本番値（`https://www.uniterz.app`）
+- `apps/native/.env.development.local` — 開発だけ（`expo start` 時のみ読まれる）。localhost はここにだけ書く
