@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { getAdminDb } from "@/lib/firebaseAdmin";
 import { nbaStatsSnapshotCacheControl } from "@/lib/nba/nbaStatsSnapshotCacheControl";
 import { loadTeamDetailBundle } from "@/lib/nba/teamDetail/loadTeamDetailBundle";
+import { NBA_DISCIPLINE_CDN_TAG_HEADER } from "@/lib/nba/discipline/nbaDisciplineApiCache";
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
 
 /**
@@ -35,6 +36,7 @@ export async function GET(req: Request) {
 
     return NextResponse.json(payload, {
       headers: {
+        ...NBA_DISCIPLINE_CDN_TAG_HEADER,
         "Cache-Control": nbaStatsSnapshotCacheControl({
           source: payload.source,
           updatedAt: payload.updatedAt

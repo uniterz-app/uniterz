@@ -11,6 +11,7 @@ import {
 import { resolveNbaStatsDisplaySeasonKey } from "@/lib/nba/resolveNbaStatsDisplaySeason";
 import { loadNbaDisciplineSnapshot } from "@/lib/nba/discipline/nbaDisciplineSnapshot";
 import { applyDisciplineToLeagueTeamBundle } from "@/lib/nba/discipline/applyDisciplineToLeagueBundles";
+import { NBA_DISCIPLINE_CDN_TAG_HEADER } from "@/lib/nba/discipline/nbaDisciplineApiCache";
 
 /**
  * GET /api/nba/league-team-stats?season=2025-26
@@ -48,6 +49,7 @@ export async function GET(req: Request) {
     const payload = await cached();
     return NextResponse.json(payload, {
       headers: {
+        ...NBA_DISCIPLINE_CDN_TAG_HEADER,
         "Cache-Control": leagueTeamStatsCacheControl({
           source: payload.source,
           updatedAt: payload.updatedAt ? new Date(payload.updatedAt) : null,
