@@ -1427,11 +1427,7 @@ export default function PredictModal({
                 style={StyleSheet.absoluteFillObject}
                 pointerEvents="box-none"
               >
-                <Pressable
-                  style={StyleSheet.absoluteFillObject}
-                  onPress={scheduleCloseAfterExitAnimation}
-                  accessibilityRole="button"
-                />
+                <Pressable style={StyleSheet.absoluteFillObject} accessible={false} />
               </Animated.View>
             </View>
           ) : (
@@ -1448,11 +1444,8 @@ export default function PredictModal({
                 style={StyleSheet.absoluteFillObject}
               />
               <View style={s.backdropDim} pointerEvents="none" />
-              <Pressable
-                style={StyleSheet.absoluteFillObject}
-                onPress={scheduleCloseAfterExitAnimation}
-                accessibilityRole="button"
-              />
+              {/** 余白タップで閉じない（右端 BACK の周りを触っても戻らない）。閉じるのは BACK / × だけ */}
+              <Pressable style={StyleSheet.absoluteFillObject} accessible={false} />
             </Animated.View>
           )}
           <Animated.View
