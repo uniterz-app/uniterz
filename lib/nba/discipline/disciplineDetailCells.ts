@@ -105,7 +105,7 @@ export function disciplineSectionCopy(isJa: boolean) {
     playoffs: isJa ? "プレーオフ" : "PLAYOFFS",
     fines: isJa ? "罰金" : "FINES",
     note: isJa
-      ? "テクニカル・フラグラント・退場は試合記録から集計（コーチ除く）。罰金はリーグ発表分。"
-      : "Techs, flagrants and ejections from play-by-play (coaches excluded). Fines as announced by the league.",
+      ? "テクニカル・フラグラント・退場は試合記録から集計（コーチ除く）。罰金はテクニカル・退場の規定額（NBA ルール）とリーグ発表分の合計。"
+      : "Techs, flagrants and ejections from play-by-play (coaches excluded). Fines = NBA rulebook tech/ejection schedule plus league-announced fines.",
   };
 }

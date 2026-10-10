@@ -153,7 +153,7 @@ export default function AdminNbaFinesPage() {
         </select>
       </div>
       <p className="text-sm text-white/55">
-        登録すると選手・チームの FINES（リーグ表 / チーム詳細 / 選手詳細）に反映されます。コーチ・チームへの罰金は入れないでください。
+        登録すると選手・チームの FINES（リーグ表 / チーム詳細 / 選手詳細）に反映されます。テクニカル・退場の規定罰金（$2,000〜$5,000）は自動計算されるので入れないでください。NBA 公式発表の個別の罰金（審判批判・乱闘など）だけを入力します。コーチ・チームへの罰金は入れないでください。
       </p>
 
       <div className="space-y-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4">

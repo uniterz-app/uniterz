@@ -1,8 +1,9 @@
 /**
  * Firestore:
  * - `nbaGameDiscipline/{bdlGameId}` 試合ごとのイベント（ingest が書く）
- * - `nbaDisciplineFines/{autoId}` 罰金（管理画面の手入力）
- * - `nbaDiscipline/{seasonKey}` 上 2 つのシーズン集計（公開 API はこれだけ読む）
+ * - `nbaDisciplineFines/{autoId}` 個別の罰金（NBA 公式発表を管理画面で手入力）
+ * - `nbaDiscipline/{seasonKey}` 上 2 つのシーズン集計（公開 API はこれだけ読む）。
+ *   FINES = テクニカル・退場の定額罰金（`nbaDisciplineFineSchedule`）+ 手入力分
  */
 import type { Firestore } from "firebase-admin/firestore";
 import {
@@ -21,6 +22,7 @@ import {
   NBA_PLAYER_SEASON_METRICS_COLLECTION,
   NBA_PLAYER_SEASON_METRICS_PLAYERS_SUB,
 } from "@/lib/nba/playerSeasonMetrics/playerSeasonMetricsTypes";
+import { scheduledDisciplineFines } from "@/lib/nba/discipline/nbaDisciplineFineSchedule";
 
 export const NBA_GAME_DISCIPLINE_COLLECTION = "nbaGameDiscipline";
 export const NBA_DISCIPLINE_FINES_COLLECTION = "nbaDisciplineFines";
@@ -96,8 +98,8 @@ export async function rebuildNbaDisciplineSnapshot(
     return entry;
   };
 
-  for (const doc of gamesSnap.docs) {
-    const g = doc.data() as NbaGameDisciplineDoc;
+  const gameDocs = gamesSnap.docs.map((d) => d.data() as NbaGameDisciplineDoc);
+  for (const g of gameDocs) {
     const phase: NbaDisciplineSeasonType =
       g.seasonType === "playoffs" ? "playoffs" : "regular";
     for (const ev of g.events ?? []) {
@@ -106,6 +108,18 @@ export async function rebuildNbaDisciplineSnapshot(
       const team = (teams[ev.t] ??= emptyTeam());
       team[phase][ev.k] += 1;
     }
+  }
+
+  const scheduled = scheduledDisciplineFines(
+    gameDocs.map((g) => ({
+      date: g.date ?? "",
+      seasonType: g.seasonType === "playoffs" ? "playoffs" : "regular",
+      events: g.events ?? [],
+    }))
+  );
+  for (const fine of scheduled) {
+    players[fine.playerId]![fine.phase].fines += fine.amountUsd;
+    teams[fine.teamId]![fine.phase].fines += fine.amountUsd;
   }
 
   for (const fine of fines) {
