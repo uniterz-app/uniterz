@@ -15,6 +15,8 @@ type Props = {
   total: number;
   /** 中央の表示を差し替える（例: "$396K"）。省略時は total.toFixed(1) */
   totalDisplay?: string;
+  /** 中央数字のサイズ（既定 22） */
+  totalFontSize?: number;
   totalLabel: string;
   size?: number;
   thickness?: number;
@@ -46,6 +48,7 @@ export default function ResultDetailScoreDonut({
   segments,
   total,
   totalDisplay,
+  totalFontSize,
   totalLabel,
   size = 116,
   thickness = 16,
@@ -91,6 +94,11 @@ export default function ResultDetailScoreDonut({
       <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-0.5">
         <span
           className={`${matchScoreClass} text-[22px] font-black leading-[26px] tracking-tight text-slate-50 tabular-nums`}
+          style={
+            totalFontSize
+              ? { fontSize: totalFontSize, lineHeight: `${Math.round(totalFontSize * 1.2)}px` }
+              : undefined
+          }
         >
           {totalDisplay ?? total.toFixed(1)}
         </span>

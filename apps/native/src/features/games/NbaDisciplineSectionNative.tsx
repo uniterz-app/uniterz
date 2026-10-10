@@ -300,6 +300,7 @@ function FineBreakdownNative({
           segments={rows.map((r) => ({ value: r.value, color: r.color }))}
           total={total}
           totalDisplay={formatDisciplineFineUsd(total)}
+          totalFontSize={15}
           totalLabel="FINES"
           size={88}
           thickness={12}

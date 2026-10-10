@@ -16,6 +16,8 @@ type Props = {
   total: number;
   /** 中央の表示を差し替える（例: "$396K"）。省略時は total.toFixed(1) */
   totalDisplay?: string;
+  /** 中央数字のサイズ（既定 22） */
+  totalFontSize?: number;
   totalLabel: string;
   size?: number;
   thickness?: number;
@@ -50,6 +52,7 @@ export default function ResultDetailScoreDonutNative({
   segments,
   total,
   totalDisplay,
+  totalFontSize,
   totalLabel,
   size = 116,
   thickness = 16,
@@ -88,7 +91,16 @@ export default function ResultDetailScoreDonutNative({
         </G>
       </Svg>
       <View style={styles.center} pointerEvents="none">
-        <Text style={styles.total}>{totalDisplay ?? total.toFixed(1)}</Text>
+        <Text
+          style={[
+            styles.total,
+            totalFontSize
+              ? { fontSize: totalFontSize, lineHeight: Math.round(totalFontSize * 1.2) }
+              : null,
+          ]}
+        >
+          {totalDisplay ?? total.toFixed(1)}
+        </Text>
         <Text style={styles.totalLabel}>{totalLabel}</Text>
       </View>
     </View>
