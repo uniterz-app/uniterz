@@ -3,21 +3,21 @@
  * 文言は OS 固定（独自の事前確認は出さない）。
  */
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { requireOptionalNativeModule } from "expo";
 
 const STORE_REVIEW_REQUESTED_KEY = "uniterz.storeReviewRequested.v1";
 
-type StoreReviewModule = {
+type StoreReviewNativeModule = {
   isAvailableAsync: () => Promise<boolean>;
   requestReview: () => Promise<void>;
 };
 
-/** expo-store-review を含まない同 runtimeVersion のバイナリへ EAS Update で届いても落ちないよう遅延 require */
-function loadStoreReview(): StoreReviewModule | null {
-  try {
-    return require("expo-store-review") as StoreReviewModule;
-  } catch {
-    return null;
-  }
+/**
+ * ネイティブ側だけを見る。`require("expo-store-review")` はモジュールの無いバイナリ（EAS Update 先）で
+ * Metro が致命的エラーとして報告し、try/catch でも止められずアプリが落ちる。
+ */
+function loadStoreReview(): StoreReviewNativeModule | null {
+  return requireOptionalNativeModule<StoreReviewNativeModule>("ExpoStoreReview");
 }
 
 export async function requestStoreReviewOnceNative(): Promise<void> {
