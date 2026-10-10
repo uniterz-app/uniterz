@@ -22,6 +22,7 @@ import type { NbaDisciplineFineDoc } from "@/lib/nba/discipline/disciplineTypes"
  * GET    ?season=2026-27&q=green    → 選手候補（ロスター / 規律スナップショット）
  * POST   { seasonKey, seasonType, playerId, playerName, teamId, amountUsd, date, reason }
  *        出場停止は { kind: "suspension", games, onCourt }（金額は集計時に年俸から計算）
+ *        取り消しは { kind: "rescind", rescindKind: "tech"|"flag"|"eject", date: 試合日 }
  * DELETE ?id=xxx
  */
 
@@ -96,8 +97,13 @@ export async function POST(req: Request) {
     const seasonKey = seasonFrom(body.seasonKey);
     const playerId = String(body.playerId ?? "").trim();
     const teamId = String(body.teamId ?? "").trim();
-    const kind = body.kind === "suspension" ? "suspension" : "fine";
-    const amountUsd = kind === "suspension" ? 0 : Number(body.amountUsd);
+    const kind =
+      body.kind === "suspension" || body.kind === "rescind" ? body.kind : "fine";
+    const rescindKind =
+      body.rescindKind === "tech" || body.rescindKind === "flag" || body.rescindKind === "eject"
+        ? body.rescindKind
+        : null;
+    const amountUsd = kind === "fine" ? Number(body.amountUsd) : 0;
     const games = Math.trunc(Number(body.games));
     const date = String(body.date ?? "").trim();
     if (!playerId || !teamId) {
@@ -109,6 +115,9 @@ export async function POST(req: Request) {
     if (kind === "suspension" && (!Number.isFinite(games) || games <= 0)) {
       return NextResponse.json({ ok: false, error: "games_invalid" }, { status: 400 });
     }
+    if (kind === "rescind" && !rescindKind) {
+      return NextResponse.json({ ok: false, error: "rescind_kind_invalid" }, { status: 400 });
+    }
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
       return NextResponse.json({ ok: false, error: "date_invalid" }, { status: 400 });
     }
@@ -117,6 +126,7 @@ export async function POST(req: Request) {
       seasonType: body.seasonType === "playoffs" ? "playoffs" : "regular",
       kind,
       ...(kind === "suspension" ? { games, onCourt: body.onCourt === true } : {}),
+      ...(kind === "rescind" && rescindKind ? { rescindKind } : {}),
       playerId,
       playerName: String(body.playerName ?? "").trim() || `Player ${playerId}`,
       teamId,

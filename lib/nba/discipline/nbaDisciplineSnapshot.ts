@@ -104,7 +104,24 @@ export async function rebuildNbaDisciplineSnapshot(
     return entry;
   };
 
-  const gameDocs = gamesSnap.docs.map((d) => d.data() as NbaGameDisciplineDoc);
+  const rescindLeft = new Map<string, number>();
+  for (const f of fines) {
+    if (f.kind !== "rescind" || !f.rescindKind) continue;
+    const key = `${f.playerId}|${f.date}|${f.rescindKind}`;
+    rescindLeft.set(key, (rescindLeft.get(key) ?? 0) + 1);
+  }
+  const gameDocs = gamesSnap.docs.map((d) => {
+    const g = d.data() as NbaGameDisciplineDoc;
+    if (rescindLeft.size === 0) return g;
+    const events = (g.events ?? []).filter((ev) => {
+      const key = `${ev.p}|${g.date}|${ev.k}`;
+      const left = rescindLeft.get(key) ?? 0;
+      if (left <= 0) return true;
+      rescindLeft.set(key, left - 1);
+      return false;
+    });
+    return { ...g, events };
+  });
   for (const g of gameDocs) {
     const phase: NbaDisciplineSeasonType =
       g.seasonType === "playoffs" ? "playoffs" : "regular";
@@ -128,7 +145,9 @@ export async function rebuildNbaDisciplineSnapshot(
     teams[fine.teamId]![fine.phase].fines += fine.amountUsd;
   }
 
-  const validFines = fines.filter((f) => f.playerId && f.teamId);
+  const validFines = fines.filter(
+    (f) => f.playerId && f.teamId && f.kind !== "rescind"
+  );
   const autoSuspensionId = (i: number) => `auto:${i}`;
   const suspensions: NbaSuspensionForSalary[] = [
     ...scheduled.suspensions.map((s, i) => ({
@@ -257,7 +276,7 @@ export async function loadNbaDisciplineSnapshot(
 function finesForDetail(
   fines: readonly NbaDisciplineFineEntry[]
 ): NbaDisciplineDetailSlice["fines"] {
-  return fines.map((f) => ({
+  return fines.filter((f) => f.kind !== "rescind").map((f) => ({
     playerId: f.playerId,
     playerName: f.playerName,
     amountUsd: f.amountUsd,

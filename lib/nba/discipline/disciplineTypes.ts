@@ -45,7 +45,8 @@ export type NbaGameDisciplineDoc = {
   builtAtMs: number;
 };
 
-export type NbaDisciplineFineKind = "fine" | "suspension";
+/** rescind = リーグが後から取り消した TECH / FLAG / EJECT（その日の該当イベントを 1 件差し引く） */
+export type NbaDisciplineFineKind = "fine" | "suspension" | "rescind";
 
 /** Firestore `nbaDisciplineFines/{autoId}` */
 export type NbaDisciplineFineDoc = {
@@ -57,6 +58,8 @@ export type NbaDisciplineFineDoc = {
   games?: number;
   /** コート上の行為による出場停止か（シーズン最初の 1 試合停止は日割り年俸） */
   onCourt?: boolean;
+  /** 取り消し対象（kind=rescind）。`date` は試合日（米国日付） */
+  rescindKind?: NbaDisciplineEventKind;
   playerId: string;
   playerName: string;
   teamId: string;
@@ -107,7 +110,7 @@ export type NbaDisciplineDetailSlice = {
     date: string;
     reason: string;
     seasonType: NbaDisciplineSeasonType;
-    kind?: NbaDisciplineFineKind;
+    kind?: Exclude<NbaDisciplineFineKind, "rescind">;
     games?: number;
   }>;
 };

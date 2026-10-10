@@ -9,6 +9,7 @@ import {
 import { TEAM_SHORT } from "@/lib/team-short";
 import { formatDisciplineFineUsdFull } from "@/lib/nba/discipline/formatDisciplineFineUsd";
 import type {
+  NbaDisciplineEventKind,
   NbaDisciplineFineEntry,
   NbaDisciplineFineKind,
   NbaDisciplineSeasonType,
@@ -57,6 +58,8 @@ export default function AdminNbaFinesPage() {
   const [kind, setKind] = useState<NbaDisciplineFineKind>("fine");
   const [games, setGames] = useState("1");
   const [onCourt, setOnCourt] = useState(true);
+  const [rescindKind, setRescindKind] =
+    useState<NbaDisciplineEventKind>("tech");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -107,6 +110,7 @@ export default function AdminNbaFinesPage() {
           kind,
           games: Number(games),
           onCourt,
+          rescindKind,
           playerId: picked.playerId,
           playerName: picked.playerName,
           teamId: picked.teamId,
@@ -160,7 +164,7 @@ export default function AdminNbaFinesPage() {
         </select>
       </div>
       <p className="text-sm text-white/55">
-        登録すると選手・チームの FINES（リーグ表 / チーム詳細 / 選手詳細）に反映されます。テクニカル・退場の規定罰金（$2,000〜$5,000）とテクニカル累積（16 回・プレーオフ 7 回）の出場停止は自動計算されるので入れないでください。NBA 公式発表の個別の罰金（審判批判・乱闘など）と、それ以外の出場停止（試合数のみ。失った年俸は CBA の計算式で自動）を入力します。コーチ・チームへの罰金は入れないでください。
+        登録すると選手・チームの FINES（リーグ表 / チーム詳細 / 選手詳細）に反映されます。テクニカル・退場の規定罰金（$2,000〜$5,000）とテクニカル累積（16 回・プレーオフ 7 回）の出場停止は自動計算されるので入れないでください。NBA 公式発表の個別の罰金（審判批判・乱闘など）と、それ以外の出場停止（試合数のみ。失った年俸は CBA の計算式で自動）を入力します。NBA Official がテクニカル等の取り消しを発表したら「取り消し」で試合日と種類を入れると、回数・罰金・累積出場停止から差し引かれます。コーチ・チームへの罰金は入れないでください。
       </p>
 
       <div className="space-y-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
@@ -217,6 +221,7 @@ export default function AdminNbaFinesPage() {
             [
               ["fine", "罰金"],
               ["suspension", "出場停止"],
+              ["rescind", "取り消し"],
             ] as const
           ).map(([k, label]) => (
             <button
@@ -245,6 +250,23 @@ export default function AdminNbaFinesPage() {
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
               />
+            </div>
+          ) : kind === "rescind" ? (
+            <div>
+              <label className="mb-1 block text-xs text-white/60">
+                取り消し対象（日付は試合日・米国日付）
+              </label>
+              <select
+                className={input}
+                value={rescindKind}
+                onChange={(e) =>
+                  setRescindKind(e.target.value as NbaDisciplineEventKind)
+                }
+              >
+                <option value="tech">テクニカル</option>
+                <option value="flag">フラグラント</option>
+                <option value="eject">退場</option>
+              </select>
             </div>
           ) : (
             <div>
@@ -354,6 +376,16 @@ export default function AdminNbaFinesPage() {
                     {f.kind === "suspension" ? (
                       <span className="mr-1 text-xs text-amber-300">
                         出場停止 {f.games ?? 0}試合
+                      </span>
+                    ) : null}
+                    {f.kind === "rescind" ? (
+                      <span className="mr-1 text-xs text-emerald-300">
+                        取り消し{" "}
+                        {f.rescindKind === "flag"
+                          ? "フラグラント"
+                          : f.rescindKind === "eject"
+                            ? "退場"
+                            : "テクニカル"}
                       </span>
                     ) : null}
                     {f.reason}
