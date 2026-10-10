@@ -23,6 +23,8 @@ export type NbaSuspensionForSalary = {
   date: string;
   games: number;
   onCourt: boolean;
+  /** 手入力の年俸。BDL より優先 */
+  salaryUsd?: number;
 };
 
 /** 年俸キャッシュを読み、無い選手だけ BDL から取って追記する。契約行が無ければ 0 */
@@ -80,7 +82,7 @@ export function suspensionLostSalaryUsd(
 
   const out = new Map<string, number>();
   for (const s of suspensions) {
-    const salary = salaries.get(s.playerId) ?? 0;
+    const salary = s.salaryUsd ?? salaries.get(s.playerId) ?? 0;
     const games = Math.max(0, Math.trunc(s.games));
     if (salary <= 0 || games === 0) {
       out.set(s.id, 0);

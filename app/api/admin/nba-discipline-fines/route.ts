@@ -21,7 +21,7 @@ import type { NbaDisciplineFineDoc } from "@/lib/nba/discipline/disciplineTypes"
  * GET    ?season=2026-27            → 罰金一覧
  * GET    ?season=2026-27&q=green    → 選手候補（ロスター / 規律スナップショット）
  * POST   { seasonKey, seasonType, playerId, playerName, teamId, amountUsd, date, reason }
- *        出場停止は { kind: "suspension", games, onCourt }（金額は集計時に年俸から計算）
+ *        出場停止は { kind: "suspension", games, onCourt, salaryUsd? }（金額は集計時に年俸から計算）
  *        取り消しは { kind: "rescind", rescindKind: "tech"|"flag"|"eject", date: 試合日 }
  * DELETE ?id=xxx
  */
@@ -126,6 +126,9 @@ export async function POST(req: Request) {
       seasonType: body.seasonType === "playoffs" ? "playoffs" : "regular",
       kind,
       ...(kind === "suspension" ? { games, onCourt: body.onCourt === true } : {}),
+      ...(kind === "suspension" && Number(body.salaryUsd) > 0
+        ? { salaryUsd: Math.round(Number(body.salaryUsd)) }
+        : {}),
       ...(kind === "rescind" && rescindKind ? { rescindKind } : {}),
       playerId,
       playerName: String(body.playerName ?? "").trim() || `Player ${playerId}`,

@@ -58,6 +58,7 @@ export default function AdminNbaFinesPage() {
   const [kind, setKind] = useState<NbaDisciplineFineKind>("fine");
   const [games, setGames] = useState("1");
   const [onCourt, setOnCourt] = useState(true);
+  const [salary, setSalary] = useState("");
   const [rescindKind, setRescindKind] =
     useState<NbaDisciplineEventKind>("tech");
 
@@ -110,6 +111,7 @@ export default function AdminNbaFinesPage() {
           kind,
           games: Number(games),
           onCourt,
+          salaryUsd: Number(salary.replace(/[^0-9.]/g, "")) || undefined,
           rescindKind,
           playerId: picked.playerId,
           playerName: picked.playerName,
@@ -122,6 +124,7 @@ export default function AdminNbaFinesPage() {
       setPicked(null);
       setQuery("");
       setAmount("");
+      setSalary("");
       setReason("");
       await load();
     } catch (e) {
@@ -288,6 +291,13 @@ export default function AdminNbaFinesPage() {
                 />
                 コート上の行為（乱闘・フラグラントなど）
               </label>
+              <input
+                className={`${input} mt-2`}
+                inputMode="numeric"
+                placeholder="年俸 USD（任意・two-way や途中移籍で BDL がずれるとき）"
+                value={salary}
+                onChange={(e) => setSalary(e.target.value)}
+              />
             </div>
           )}
           <div>

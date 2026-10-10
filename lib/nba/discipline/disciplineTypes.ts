@@ -61,6 +61,11 @@ export type NbaDisciplineFineDoc = {
   games?: number;
   /** コート上の行為による出場停止か（シーズン最初の 1 試合停止は日割り年俸） */
   onCourt?: boolean;
+  /**
+   * 出場停止時の年俸（手入力）。BDL に契約行が無い two-way / シーズン途中で
+   * 移籍・バイアウトして BDL が別チームの額を返す選手用。無ければ BDL
+   */
+  salaryUsd?: number;
   /** 取り消し対象（kind=rescind）。`date` は試合日（米国日付） */
   rescindKind?: NbaDisciplineEventKind;
   playerId: string;

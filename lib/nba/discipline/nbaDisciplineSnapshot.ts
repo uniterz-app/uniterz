@@ -162,13 +162,14 @@ export async function rebuildNbaDisciplineSnapshot(
       date: f.date,
       games: f.games ?? 0,
       onCourt: f.onCourt === true,
+      ...(f.salaryUsd && f.salaryUsd > 0 ? { salaryUsd: f.salaryUsd } : {}),
     }));
   let lostById = new Map<string, number>();
   if (suspensions.length > 0) {
     const salaries = await ensureNbaPlayerSeasonSalaries(
       db,
       seasonKey,
-      suspensions.map((s) => s.playerId)
+      suspensions.filter((s) => s.salaryUsd == null).map((s) => s.playerId)
     );
     lostById = suspensionLostSalaryUsd(
       seasonKey,
