@@ -37,6 +37,8 @@ type Props = {
   imageLoading?: "eager" | "lazy";
   /** 不透明の背景（ぼかし backdrop 上のリザルト詳細など） */
   solid?: boolean;
+  /** 名前を一段小さく（リザルト得点上位） */
+  smallName?: boolean;
 };
 
 export const dailyScoreRankRowSkew = SKEW;
@@ -54,6 +56,7 @@ export default function DailyScoreRankRow({
   valueUnit,
   imageLoading = "lazy",
   solid = false,
+  smallName = false,
 }: Props) {
   const code = getCountryCode({ countryCode: countryCode ?? undefined });
   const flagSrc = code ? FLAG_SRC[code] : undefined;
@@ -85,7 +88,7 @@ export default function DailyScoreRankRow({
         <span className="flex min-w-0 flex-1 flex-col gap-[5px]">
           <span className="flex min-w-0 items-center gap-1.5">
             <span
-              className={`${nameOxanium.className} block min-w-0 truncate text-[15px] font-semibold uppercase tracking-[0.03em] text-white/95`}
+              className={`${nameOxanium.className} block min-w-0 truncate ${smallName ? "text-[13px]" : "text-[15px]"} font-semibold uppercase tracking-[0.03em] text-white/95`}
               style={{ transform: SKEW }}
             >
               {name}

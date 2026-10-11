@@ -328,6 +328,7 @@ function TopScoresPanel({
               value={entry.points.toFixed(1)}
               valueUnit="PTS"
               solid
+              smallName
             />
           );
           if (!profileKey) return <div key={entry.postId}>{row}</div>;

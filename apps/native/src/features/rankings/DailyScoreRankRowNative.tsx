@@ -30,6 +30,8 @@ type Props = {
   onPress?: () => void;
   /** 不透明の背景（ぼかし backdrop 上のリザルト詳細など） */
   solid?: boolean;
+  /** 名前を一段小さく（リザルト得点上位） */
+  smallName?: boolean;
 };
 
 export default function DailyScoreRankRowNative({
@@ -44,6 +46,7 @@ export default function DailyScoreRankRowNative({
   valueUnit,
   onPress,
   solid = false,
+  smallName = false,
 }: Props) {
   const flagUri = rankingFlagImageUri(countryCode ?? undefined);
   const proSkinVariant =
@@ -71,7 +74,10 @@ export default function DailyScoreRankRowNative({
         <RankingsAvatarNative photoURL={photoURL ?? undefined} label={name} size={36} square />
         <View style={styles.who}>
           <View style={styles.nameRow}>
-            <Text style={[styles.name, styles.nameShrink]} numberOfLines={1}>
+            <Text
+              style={[styles.name, smallName && styles.nameSmall, styles.nameShrink]}
+              numberOfLines={1}
+            >
               {name}
             </Text>
             {isPro ? <ProCyberBadgeNative compact /> : null}
@@ -157,6 +163,7 @@ const styles = StyleSheet.create({
     includeFontPadding: false,
     transform: [{ skewX: "-6deg" }],
   },
+  nameSmall: { fontSize: 13 },
   subRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   flag: {
     width: 21,

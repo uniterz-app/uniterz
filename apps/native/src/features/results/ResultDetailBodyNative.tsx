@@ -297,6 +297,7 @@ function Top10Panel({
               value={fmtPt(row.points)}
               valueUnit="PTS"
               solid
+              smallName
               onPress={
                 onOpenProfile && profileKey
                   ? () => {

@@ -149,7 +149,7 @@ export default function NbaTopScorerPicker({
             {m.nbaTopScorerTitle}
           </div>
           <div
-            className={`${nameOxanium.className} shrink-0 text-[10px] font-bold uppercase tracking-[0.08em] text-white/50`}
+            className={`${nameOxanium.className} shrink-0 text-[13px] font-bold uppercase tracking-[0.08em] text-[#F5C518]`}
           >
             {m.nbaTopScorerBonusHint}
           </div>

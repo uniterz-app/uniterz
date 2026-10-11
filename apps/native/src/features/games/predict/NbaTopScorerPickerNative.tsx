@@ -302,8 +302,8 @@ const styles = StyleSheet.create({
     transform: [{ skewX: "-6deg" }],
   },
   hint: {
-    color: "rgba(255,255,255,0.5)",
-    fontSize: 10,
+    color: "#F5C518",
+    fontSize: 13,
     fontWeight: "700",
     letterSpacing: 0.6,
     textTransform: "uppercase",

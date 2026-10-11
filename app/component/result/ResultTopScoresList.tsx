@@ -68,6 +68,7 @@ export default function ResultTopScoresList({
               value={entry.points.toFixed(1)}
               valueUnit="PTS"
               solid
+              smallName
             />
           );
           if (!profileKey) return <div key={`${entry.rank}-${entry.postId}`}>{row}</div>;
