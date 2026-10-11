@@ -1,6 +1,9 @@
 /** Web Player Detail 相当 — IDカード型ヘッダー + ゾーン効率マップ */
 import { useMemo, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View, Image } from "react-native";
+import { Animated, Pressable, ScrollView, StyleSheet, Text, View, Image } from "react-native";
+import DetailStickyTitleNative, {
+  useDetailStickyTitleNative,
+} from "../DetailStickyTitleNative";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import Svg, {
   Circle,
@@ -85,6 +88,7 @@ import {
 } from "../../../../../../lib/predict/nbaShotZoneCourtGeometry";
 import {
   getTeamJerseyPrimaryColor,
+  getTeamRosterMarkColor,
   getTeamJerseySecondaryColor,
   getTeamUiAccentColor,
 } from "../../../../../../lib/team-colors";
@@ -1458,6 +1462,7 @@ export default function NbaPlayerDetailPanelNative({
   const chrome = nbaPlayerDetailChrome(language);
   const isJa = chrome.catalogJa;
   const insets = useSafeAreaInsets();
+  const sticky = useDetailStickyTitleNative();
   const apiBaseUrl = getUniterzApiBaseUrl();
   const { bundle: leaders } = usePlayerStatLeadersBundle({ apiBaseUrl });
   const { bundle: teamStats } = useLeagueTeamStatsBundle({ apiBaseUrl });
@@ -1530,14 +1535,29 @@ export default function NbaPlayerDetailPanelNative({
   const frameColor = hexToRgba(accent, 0.35);
   const displayAge = resolvePlayerDisplayAge(detail);
   const isRetired = detail.availability.status === "retired";
+  const stickyName = [
+    detail.jerseyNumber != null && String(detail.jerseyNumber).trim()
+      ? `#${String(detail.jerseyNumber).trim()}`
+      : null,
+    formatNbaPlayerDisplayName(
+      detail.firstName,
+      detail.lastName,
+      detail.playerId
+    ).toUpperCase(),
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   return (
-    <ScrollView
+    <View style={styles.root}>
+    <Animated.ScrollView
       style={styles.root}
       contentContainerStyle={[styles.pad, { paddingBottom: bottomPad + 120 }]}
       showsVerticalScrollIndicator={false}
+      onScroll={sticky.onScroll}
+      scrollEventThrottle={16}
     >
-      <View style={styles.panel}>
+      <View style={styles.panel} onLayout={sticky.onPanelLayout}>
 
         {hasFetchError ? (
           <Text style={styles.fetchError}>
@@ -1547,7 +1567,9 @@ export default function NbaPlayerDetailPanelNative({
           </Text>
         ) : null}
 
-        <PlayerIdCard detail={detail} language={isJa ? "ja" : "en"} />
+        <View onLayout={sticky.onHeroLayout}>
+          <PlayerIdCard detail={detail} language={isJa ? "ja" : "en"} />
+        </View>
 
         <View style={[styles.divider, { backgroundColor: dividerColor }]} />
 
@@ -2032,7 +2054,15 @@ export default function NbaPlayerDetailPanelNative({
           {detail.asOfLabel}
         </Text>
       </View>
-    </ScrollView>
+    </Animated.ScrollView>
+    <DetailStickyTitleNative
+      scrollY={sticky.scrollY}
+      threshold={sticky.threshold}
+      title={stickyName}
+      tag={isRetired ? null : detail.teamAbbr}
+      accent={getTeamRosterMarkColor("nba", detail.teamId)}
+    />
+    </View>
   );
 }
 

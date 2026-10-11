@@ -1,10 +1,14 @@
 /** Team Detail 再構築 — 参考ダッシュボード UI をそのまま再現（微調整前提） */
 import { useMemo, useState } from "react";
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View, type StyleProp, type TextStyle } from "react-native";
+import { Animated as RNAnimated, Modal, Pressable, StyleSheet, Text, View, type StyleProp, type TextStyle } from "react-native";
+import DetailStickyTitleNative, {
+  useDetailStickyTitleNative,
+} from "../DetailStickyTitleNative";
 import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   getTeamJerseyPrimaryColor,
+  getTeamRosterMarkColor,
   getTeamJerseySecondaryColor,
   getTeamUiAccentColor,
 } from "../../../../../../lib/team-colors";
@@ -1744,6 +1748,7 @@ export default function NbaTeamDetailPanelNative({
   const lang = ui.lang;
   const isJa = lang === "ja";
   const insets = useSafeAreaInsets();
+  const sticky = useDetailStickyTitleNative();
   const { bundle } = useLeagueTeamStatsBundle({
     apiBaseUrl: getUniterzApiBaseUrl(),
   });
@@ -1795,12 +1800,15 @@ export default function NbaTeamDetailPanelNative({
   /** プレシーズン（レギュラー 0 試合）は順位を出さない */
   const seasonNotStarted = detail.season.wins + detail.season.losses === 0;
   return (
-    <ScrollView
+    <View style={styles.root}>
+    <RNAnimated.ScrollView
       style={styles.root}
       contentContainerStyle={[styles.pad, { paddingBottom: bottomPad + 120 }]}
       showsVerticalScrollIndicator={false}
+      onScroll={sticky.onScroll}
+      scrollEventThrottle={16}
     >
-      <View style={styles.panel}>
+      <View style={styles.panel} onLayout={sticky.onPanelLayout}>
         
         {hasFetchError ? (
           <Text style={{ color: "rgba(255,255,255,0.65)", fontSize: 11, fontWeight: "700", marginBottom: 8 }}>
@@ -1808,7 +1816,10 @@ export default function NbaTeamDetailPanelNative({
           </Text>
         ) : null}
 {/* HEADER */}
-        <View style={[styles.headerCard, { borderColor: accent }]}>
+        <View
+          style={[styles.headerCard, { borderColor: accent }]}
+          onLayout={sticky.onHeroLayout}
+        >
           <View style={styles.header}>
             <View style={styles.jerseyFrame}>
               <JerseyMarkSvg
@@ -2116,7 +2127,14 @@ export default function NbaTeamDetailPanelNative({
           {detail.asOfLabel}
         </Text>
       </View>
-    </ScrollView>
+    </RNAnimated.ScrollView>
+    <DetailStickyTitleNative
+      scrollY={sticky.scrollY}
+      threshold={sticky.threshold}
+      title={`${detail.cityEn} ${detail.nickEn}`.toUpperCase()}
+      accent={getTeamRosterMarkColor("nba", detail.teamId)}
+    />
+    </View>
   );
 }
 
