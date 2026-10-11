@@ -23,6 +23,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { colors } from "./src/theme/tokens";
 import { FirebaseUserProvider } from "./src/auth/FirebaseUserProvider";
 import { NativeLanguageProvider } from "./src/i18n/NativeLanguageProvider";
+import { ChineseScriptProviderNative } from "./src/i18n/chineseScriptNative";
 import RootNavigator from "./src/navigation/RootNavigator";
 import { navigationRef } from "./src/navigation/navigationRef";
 import { useNativeShareDeepLinks } from "./src/navigation/useNativeShareDeepLinks";
@@ -84,6 +85,7 @@ export default function App() {
   if (!criticalFontsLoaded) return null;
 
   return (
+    <ChineseScriptProviderNative>
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: APP_MESH_BG_FALLBACK }}>
       <SafeAreaProvider style={{ flex: 1, backgroundColor: "transparent" }}>
         <MaintenanceGateNative>
@@ -124,5 +126,6 @@ export default function App() {
         </MaintenanceGateNative>
       </SafeAreaProvider>
     </GestureHandlerRootView>
+    </ChineseScriptProviderNative>
   );
 }

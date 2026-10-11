@@ -4,7 +4,12 @@ import { NextResponse } from "next/server";
 import { revalidateTag } from "next/cache";
 import { FieldValue } from "firebase-admin/firestore";
 import { getAdminAuth, getAdminDb } from "@/lib/firebaseAdmin";
-import { normalizeLanguage } from "@/lib/i18n/language";
+import {
+  chineseScriptFromChoice,
+  languageFromChoice,
+  normalizeLanguageChoice,
+  type LanguageChoice,
+} from "@/lib/i18n/language";
 import {
   FALLBACK_TIMEZONE_BY_LANGUAGE,
   isValidTimeZone,
@@ -24,6 +29,10 @@ async function requireUid(req: Request): Promise<string> {
   if (!token) throw new Error("unauthorized");
   const decoded = await getAdminAuth().verifyIdToken(token);
   return decoded.uid;
+}
+
+function chineseScriptPatch(choice: LanguageChoice) {
+  return chineseScriptFromChoice(choice) === "hant" ? "hant" : FieldValue.delete();
 }
 
 /** ランキング行 chrome（国旗・名前・アバター・Skin）を CDN から外す */
@@ -79,10 +88,11 @@ export async function POST(req: Request) {
     }
 
     if (body.languageOnly === true) {
-      const onlyLang = normalizeLanguage(body.language);
-      if (!onlyLang) {
+      const onlyChoice = normalizeLanguageChoice(body.language);
+      if (!onlyChoice) {
         return NextResponse.json({ error: "invalid language" }, { status: 400 });
       }
+      const onlyLang = languageFromChoice(onlyChoice);
       const db = getAdminDb();
       const rate = await consumeUidActionRateLimit(db, uid, "me_profile_update", 60);
       if (!rate.ok) {
@@ -92,6 +102,7 @@ export async function POST(req: Request) {
         {
           language: onlyLang,
           locale: onlyLang,
+          chineseScript: chineseScriptPatch(onlyChoice),
           timeZone: FALLBACK_TIMEZONE_BY_LANGUAGE[onlyLang],
           updatedAt: FieldValue.serverTimestamp(),
         },
@@ -102,7 +113,8 @@ export async function POST(req: Request) {
 
     /** キーが無いときは言語を触らない（言語はサイドメニューの「言語」で別保存） */
     const hasLanguage = "language" in body && body.language != null;
-    const lang = hasLanguage ? normalizeLanguage(body.language) : null;
+    const langChoice = hasLanguage ? normalizeLanguageChoice(body.language) : null;
+    const lang = langChoice ? languageFromChoice(langChoice) : null;
     if (hasLanguage && !lang) {
       return NextResponse.json({ error: "invalid language" }, { status: 400 });
     }
@@ -158,9 +170,10 @@ export async function POST(req: Request) {
       countryCode,
       updatedAt: FieldValue.serverTimestamp(),
     };
-    if (lang) {
+    if (lang && langChoice) {
       patch.language = lang;
       patch.locale = lang;
+      patch.chineseScript = chineseScriptPatch(langChoice);
       patch.timeZone = FALLBACK_TIMEZONE_BY_LANGUAGE[lang];
     }
 

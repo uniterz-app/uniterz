@@ -24,9 +24,15 @@ import LogoutConfirmModalNative from "../../ui/LogoutConfirmModalNative";
 import { sideMenuLabelStyle } from "../../ui/cyberSideMenuNative";
 import ProCyberBadgeNative from "./kinetik/ProCyberBadgeNative";
 import { profileSideMenuLabels } from "./profileSideMenuCopy";
-import { L, LOCALIZED_UI_LANGUAGES, resolveLocalizedLang } from "@/lib/i18n/localize";
-import { LANGUAGE_NATIVE_NAMES, type Language } from "@/lib/i18n/language";
+import { L, resolveLocalizedLang } from "@/lib/i18n/localize";
+import {
+  LANGUAGE_CHOICE_NATIVE_NAMES,
+  LANGUAGE_CHOICES,
+  languageChoiceOf,
+  type LanguageChoice,
+} from "@/lib/i18n/language";
 import { languageMenuCopy } from "@/lib/i18n/languageMenuCopy";
+import { useNativeLanguage } from "../../i18n/NativeLanguageProvider";
 
 type Lang = string;
 
@@ -62,7 +68,7 @@ type Props = {
   /** ゲーム内通貨残高（サイドメニュー先頭ウォレット） */
   unitBalance?: number;
   /** サイドメニュー「言語」で選んだ言語を保存する */
-  onSelectLanguage?: (language: Language) => void;
+  onSelectLanguage?: (language: LanguageChoice) => void;
   /** in-app 画面を開く */
   onOpenInApp: (page:
     | "badges"
@@ -136,6 +142,8 @@ export default function ProfileSideMenuModal({
   onOpenInApp,
 }: Props) {
   const lang = resolveLocalizedLang(language);
+  const { chineseScript } = useNativeLanguage();
+  const langChoice = languageChoiceOf(lang, chineseScript);
   const labelStyle = sideMenuLabelStyle(lang);
   const labels = profileSideMenuLabels(lang);
   const identityName =
@@ -423,7 +431,7 @@ export default function ProfileSideMenuModal({
                         labelStyle={labelStyle}
                         trailing={
                           <Text style={styles.langTrailing} numberOfLines={1}>
-                            {LANGUAGE_NATIVE_NAMES[lang]}
+                            {LANGUAGE_CHOICE_NATIVE_NAMES[langChoice]}
                           </Text>
                         }
                         onPress={() => setLangPickerOpen(true)}
@@ -917,7 +925,7 @@ export default function ProfileSideMenuModal({
               <View style={styles.langPickerSheet}>
                 <Text style={styles.langPickerTitle}>{langCopy.label}</Text>
                 <ScrollView style={styles.langPickerScroll} bounces={false}>
-                  {LOCALIZED_UI_LANGUAGES.map((code) => (
+                  {LANGUAGE_CHOICES.map((code) => (
                     <Pressable
                       key={code}
                       style={({ pressed }) => [
@@ -926,13 +934,13 @@ export default function ProfileSideMenuModal({
                       ]}
                       onPress={() => {
                         setLangPickerOpen(false);
-                        if (code !== lang) onSelectLanguage?.(code);
+                        if (code !== langChoice) onSelectLanguage?.(code);
                       }}
                     >
                       <Text style={styles.langPickerOptionText}>
-                        {LANGUAGE_NATIVE_NAMES[code]}
+                        {LANGUAGE_CHOICE_NATIVE_NAMES[code]}
                       </Text>
-                      {code === lang ? (
+                      {code === langChoice ? (
                         <MaterialCommunityIcons
                           name="check"
                           size={18}

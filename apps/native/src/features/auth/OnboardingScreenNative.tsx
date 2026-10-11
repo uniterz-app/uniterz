@@ -25,12 +25,19 @@ import SlantCtaNative from "../../ui/SlantCtaNative";
 import { LEAGUES } from "../../../../../lib/leagues";
 import { hideNativeBootSplash } from "../../bootstrap/nativeBootSplash";
 import { resolveDeviceLocalizedLang } from "../../i18n/resolveDeviceAppLanguage";
-import { LANGUAGE_NATIVE_NAMES, type Language } from "../../../../../lib/i18n/language";
-import { countryName } from "../../../../../lib/i18n/t";
 import {
-  LOCALIZED_UI_LANGUAGES,
-  type LocalizedLang,
-} from "../../../../../lib/i18n/localize";
+  chineseScriptFromChoice,
+  guessChineseScriptFromDevice,
+  LANGUAGE_CHOICE_NATIVE_NAMES,
+  LANGUAGE_CHOICES,
+  languageChoiceOf,
+  languageFromChoice,
+  type Language,
+  type LanguageChoice,
+} from "../../../../../lib/i18n/language";
+import { setActiveChineseScript } from "../../i18n/chineseScriptNative";
+import { countryName } from "../../../../../lib/i18n/t";
+import { type LocalizedLang } from "../../../../../lib/i18n/localize";
 import { onboardingWelcomeCopy } from "../../../../../lib/auth/onboardingWelcomeCopy";
 import { ensureUserSlug } from "../../../../../lib/ensureSlug";
 import { markFirstRunSetupPendingNative } from "./firstRunSetupNative";
@@ -73,9 +80,10 @@ type PickerKind = "language" | "country" | null;
 export default function OnboardingScreenNative() {
   const [displayName, setDisplayName] = useState("");
   const [inviteCode, setInviteCode] = useState("");
-  const [language, setLanguage] = useState<LocalizedLang>(
-    resolveDeviceLocalizedLang
+  const [languageChoice, setLanguageChoice] = useState<LanguageChoice>(() =>
+    languageChoiceOf(resolveDeviceLocalizedLang(), guessChineseScriptFromDevice())
   );
+  const language: LocalizedLang = languageFromChoice(languageChoice);
   const [countryCode, setCountryCode] = useState("");
   const [picker, setPicker] = useState<PickerKind>(null);
   const [avatar, setAvatar] = useState<PendingAvatar | null>(null);
@@ -189,7 +197,7 @@ export default function OnboardingScreenNative() {
         displayName: name,
         bio: typeof existing.bio === "string" ? existing.bio : "",
         photoURL,
-        language,
+        language: languageChoice,
         countryCode: countryCode.trim() || null,
         completeOnboarding: true,
         preferredLeague: LEAGUES.NBA,
@@ -216,6 +224,9 @@ export default function OnboardingScreenNative() {
             displayName: name,
             photoURL,
             language,
+            ...(chineseScriptFromChoice(languageChoice) === "hant"
+              ? { chineseScript: "hant" }
+              : {}),
             countryCode: countryCode.trim() || null,
             preferredLeague: LEAGUES.NBA,
             handle: existing.handle || handle,
@@ -304,7 +315,7 @@ export default function OnboardingScreenNative() {
         >
           <View style={styles.selectRow}>
             <Text style={styles.selectText} numberOfLines={1}>
-              {LANGUAGE_NATIVE_NAMES[language]}
+              {LANGUAGE_CHOICE_NATIVE_NAMES[languageChoice]}
             </Text>
             <MaterialCommunityIcons
               name="chevron-down"
@@ -389,8 +400,8 @@ export default function OnboardingScreenNative() {
               keyboardShouldPersistTaps="handled"
             >
               {picker === "language"
-                ? LOCALIZED_UI_LANGUAGES.map((code) => {
-                    const selected = language === code;
+                ? LANGUAGE_CHOICES.map((code) => {
+                    const selected = languageChoice === code;
                     return (
                       <Pressable
                         key={code}
@@ -399,13 +410,14 @@ export default function OnboardingScreenNative() {
                           pressed && styles.pickerOptionPressed,
                         ]}
                         onPress={() => {
-                          setLanguage(code);
+                          setLanguageChoice(code);
+                          setActiveChineseScript(chineseScriptFromChoice(code));
                           setPicker(null);
                         }}
                       >
                         <View style={styles.pickerOptionMain}>
                           <Text style={styles.pickerOptionText}>
-                            {LANGUAGE_NATIVE_NAMES[code]}
+                            {LANGUAGE_CHOICE_NATIVE_NAMES[code]}
                           </Text>
                         </View>
                         {selected ? (

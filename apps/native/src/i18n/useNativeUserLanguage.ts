@@ -2,8 +2,11 @@
 import { useEffect, useMemo, useState } from "react";
 import type { DocumentData } from "firebase/firestore";
 import {
+  guessChineseScriptFromDevice,
   guessLanguageFromNavigator,
+  normalizeChineseScript,
   normalizeLanguage,
+  type ChineseScript,
   type Language,
 } from "../../../../lib/i18n/language";
 import { resolveDisplayTimeZone } from "../../../../lib/i18n/countryTimezone";
@@ -13,6 +16,9 @@ export function useNativeUserLanguage(uid: string | null | undefined) {
   const [language, setLanguage] = useState<Language>(() =>
     guessLanguageFromNavigator()
   );
+  const [chineseScript, setChineseScript] = useState<ChineseScript>(() =>
+    guessChineseScriptFromDevice()
+  );
   const [countryCode, setCountryCode] = useState<string | null>(null);
   /** 手動設定のみ。null は自動（端末） */
   const [displayTimeZone, setDisplayTimeZone] = useState<string | null>(null);
@@ -21,6 +27,7 @@ export function useNativeUserLanguage(uid: string | null | undefined) {
   useEffect(() => {
     if (!uid) {
       setLanguage(guessLanguageFromNavigator());
+      setChineseScript(guessChineseScriptFromDevice());
       setCountryCode(null);
       setDisplayTimeZone(null);
       setLoading(false);
@@ -31,6 +38,9 @@ export function useNativeUserLanguage(uid: string | null | undefined) {
     return subscribeUserDocLive(uid, (data: DocumentData | null) => {
       const resolved = normalizeLanguage(data?.language);
       setLanguage(resolved ?? guessLanguageFromNavigator());
+      setChineseScript(
+        resolved ? normalizeChineseScript(data?.chineseScript) : guessChineseScriptFromDevice()
+      );
       setCountryCode(
         typeof data?.countryCode === "string" ? data.countryCode : null
       );
@@ -47,5 +57,5 @@ export function useNativeUserLanguage(uid: string | null | undefined) {
     [displayTimeZone, countryCode, language]
   );
 
-  return { language, countryCode, displayTimeZone, timeZone, loading };
+  return { language, chineseScript, countryCode, displayTimeZone, timeZone, loading };
 }

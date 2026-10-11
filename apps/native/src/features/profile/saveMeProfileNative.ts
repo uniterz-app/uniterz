@@ -2,7 +2,7 @@
  * Native 向け `saveMeProfile`。Web と同じ `/api/me/profile` を叩く。
  */
 import { auth } from "../../lib/firebase";
-import type { Language } from "../../../../../lib/i18n/language";
+import type { LanguageChoice } from "../../../../../lib/i18n/language";
 import {
   assertProfileTextsFreeOfGamblingTerms,
   ProfileGamblingTermsError,
@@ -15,8 +15,8 @@ export type SaveMeProfileNativePayload = {
   displayName: string;
   bio: string;
   photoURL: string;
-  /** 未指定なら Firestore の既存値を維持 */
-  language?: Language;
+  /** 未指定なら Firestore の既存値を維持（`zh-Hant` は zh + chineseScript=hant で保存） */
+  language?: LanguageChoice;
   countryCode: string | null;
   photoCropY?: number;
   /** 表示 TZ の手動設定。null で自動（端末）。未指定なら既存値を維持 */
@@ -59,7 +59,7 @@ export async function saveMeProfileNative(
 }
 
 /** 表示言語だけ即保存（サイドメニュー「言語」） */
-export async function saveMyLanguageNative(language: Language): Promise<void> {
+export async function saveMyLanguageNative(language: LanguageChoice): Promise<void> {
   const user = auth.currentUser;
   if (!user) throw new Error("not authenticated");
 

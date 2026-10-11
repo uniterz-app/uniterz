@@ -151,8 +151,15 @@ import { setTutorialWelcomeAudienceNative } from "../tutorial/tutorialWelcomeAud
 import { tutorialSkipConfirmProps } from "../../../../../lib/tutorial/tutorialSkipConfirmProps";
 import { t as i18nT } from "../../../../../lib/i18n/t";
 import {
+  chineseScriptFromChoice,
+  languageFromChoice,
   type Language,
+  type LanguageChoice,
 } from "../../../../../lib/i18n/language";
+import {
+  getActiveChineseScript,
+  setActiveChineseScript,
+} from "../../i18n/chineseScriptNative";
 import {
   L,
   resolveLocalizedLang,
@@ -1223,14 +1230,17 @@ export default function ProfileHomeScreen({
     }
   }
 
-  async function handleSelectLanguage(code: LocalizedLang) {
+  async function handleSelectLanguage(choice: LanguageChoice) {
     if (!myUid) return;
     const prev = language;
-    setLanguage(code);
+    const prevScript = getActiveChineseScript();
+    setLanguage(languageFromChoice(choice));
+    setActiveChineseScript(chineseScriptFromChoice(choice));
     try {
-      await saveMyLanguageNative(code);
+      await saveMyLanguageNative(choice);
     } catch {
       setLanguage(prev);
+      setActiveChineseScript(prevScript);
       cyberAlert("", languageMenuCopy(prev).saveFailed);
     }
   }
@@ -2064,6 +2074,10 @@ export default function ProfileHomeScreen({
       }}
       onUnmark={(uid) => {
         void removeMark(uid);
+      }}
+      onFindUsers={() => {
+        setMarkListOpen(false);
+        navigation.navigate("UserSearch");
       }}
     />
     {reportOverlay ? (
