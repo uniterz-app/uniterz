@@ -92,6 +92,56 @@ function rowsFromBoard(
   return next;
 }
 
+function MarkAboutCard({
+  copy,
+  maxMarks,
+  onFindUsers,
+}: {
+  copy: ReturnType<typeof profileMarkListCopy>;
+  maxMarks: number;
+  onFindUsers?: () => void;
+}) {
+  return (
+    <View style={styles.aboutCard}>
+      <View style={styles.aboutHead}>
+        <UniterzUMarkNative size={16} color={CYBER_LIST_CYAN} />
+        <Text style={styles.aboutKicker}>ABOUT MARK</Text>
+        <View style={styles.aboutHeadLine} />
+      </View>
+      <Text style={styles.aboutLead}>{copy.aboutLead}</Text>
+      <View style={styles.aboutList}>
+        {copy.aboutItems.map((item) => (
+          <View key={item.icon} style={styles.aboutRow}>
+            <View style={styles.aboutIconTile}>
+              <MaterialCommunityIcons name={item.icon} size={16} color={CYBER_LIST_CYAN} />
+            </View>
+            <View style={styles.aboutTextCol}>
+              <Text style={styles.aboutItemTitle}>{item.title}</Text>
+              <Text style={styles.aboutItemBody}>{item.body}</Text>
+            </View>
+          </View>
+        ))}
+      </View>
+      <View style={styles.aboutFooter}>
+        <View style={styles.markButtonReplica} accessibilityElementsHidden>
+          <MaterialCommunityIcons name="bookmark-plus-outline" size={14} color="#a5f3fc" />
+        </View>
+        <Text style={styles.aboutFooterText}>{copy.aboutHowTo(maxMarks)}</Text>
+      </View>
+      {onFindUsers ? (
+        <Pressable
+          onPress={onFindUsers}
+          style={({ pressed }) => [styles.findUsersBtn, pressed ? styles.findUsersBtnPressed : null]}
+          accessibilityRole="button"
+        >
+          <MaterialCommunityIcons name="account-search" size={16} color="#050508" />
+          <Text style={styles.findUsersText}>{copy.findUsers}</Text>
+        </Pressable>
+      ) : null}
+    </View>
+  );
+}
+
 type Props = {
   visible: boolean;
   language: string;
@@ -102,6 +152,7 @@ type Props = {
   onClose: () => void;
   onOpenProfile: (row: MarkListRow) => void;
   onUnmark: (targetUid: string) => void;
+  onFindUsers?: () => void;
   /** 退場アニメ完了（親が Modal を外す用） */
   onExitComplete?: () => void;
 };
@@ -126,12 +177,14 @@ function MarkListSheetBody({
   onClose,
   onOpenProfile,
   onUnmark,
+  onFindUsers,
   onExitComplete,
 }: Props) {
   const insets = useSafeAreaInsets();
   const copy = profileMarkListCopy(language);
   const [rows, setRows] = useState<MarkListRow[]>([]);
   const [statsLoading, setStatsLoading] = useState(false);
+  const [aboutOpen, setAboutOpen] = useState(false);
   const metricTag = cyberMetricTag("totalScore", resolveLocalizedLang(language));
   const tagFontSize = rankingFontSizePx(7, metricTag);
   const sheetWidth = useMemo(
@@ -256,6 +309,27 @@ function MarkListSheetBody({
             <Text style={styles.sub}>
               {copy.sub(marks.length, maxMarks, markedByCount)}
             </Text>
+            {showEmpty ? null : (
+              <Pressable
+                onPress={() => setAboutOpen((v) => !v)}
+                hitSlop={8}
+                style={styles.aboutToggle}
+                accessibilityRole="button"
+                accessibilityState={{ expanded: aboutOpen }}
+              >
+                <MaterialCommunityIcons
+                  name="help-circle-outline"
+                  size={14}
+                  color="#a5f3fc"
+                />
+                <Text style={styles.aboutToggleText}>{copy.aboutToggle}</Text>
+                <MaterialCommunityIcons
+                  name={aboutOpen ? "chevron-up" : "chevron-down"}
+                  size={14}
+                  color="rgba(165,243,252,0.7)"
+                />
+              </Pressable>
+            )}
           </View>
 
           {showSpinner ? (
@@ -263,16 +337,16 @@ function MarkListSheetBody({
               <ActivityIndicator color="#a5f3fc" />
             </View>
           ) : showEmpty ? (
-            <View style={styles.center}>
-              <MaterialCommunityIcons
-                name="crosshairs"
-                size={28}
-                color="rgba(165,243,252,0.45)"
-              />
-              <Text style={styles.empty}>
-                {copy.empty}
-              </Text>
-            </View>
+            <ScrollView
+              style={styles.scroll}
+              contentContainerStyle={[
+                styles.emptyContent,
+                { paddingBottom: Math.max(insets.bottom, 20) },
+              ]}
+              showsVerticalScrollIndicator={false}
+            >
+              <MarkAboutCard copy={copy} maxMarks={maxMarks} onFindUsers={onFindUsers} />
+            </ScrollView>
           ) : (
             <ScrollView
               style={styles.scroll}
@@ -282,6 +356,11 @@ function MarkListSheetBody({
               ]}
               showsVerticalScrollIndicator={false}
             >
+              {aboutOpen ? (
+                <View style={styles.aboutInList}>
+                  <MarkAboutCard copy={copy} maxMarks={maxMarks} onFindUsers={onFindUsers} />
+                </View>
+              ) : null}
               <View style={styles.sectionTitleRow}>
                 <Text style={styles.sectionTitle}>
                   {copy.weekly}
@@ -524,11 +603,141 @@ const styles = StyleSheet.create({
     paddingHorizontal: 28,
     gap: 12,
   },
-  empty: {
-    color: "rgba(226,242,255,0.72)",
-    fontSize: 13,
-    textAlign: "center",
+  emptyContent: {
+    flexGrow: 1,
+    justifyContent: "center",
+    paddingHorizontal: 16,
+    paddingTop: 24,
+  },
+  aboutToggle: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    gap: 5,
+    marginLeft: 32,
+    paddingVertical: 2,
+  },
+  aboutToggleText: {
+    color: "#a5f3fc",
+    fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: 0.3,
+  },
+  aboutInList: {
+    paddingHorizontal: 12,
+    marginBottom: 14,
+  },
+  aboutCard: {
+    alignSelf: "stretch",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.16)",
+    backgroundColor: "rgba(255,255,255,0.03)",
+    paddingHorizontal: 14,
+    paddingTop: 12,
+    paddingBottom: 10,
+  },
+  aboutHead: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  aboutKicker: {
+    fontFamily: METRIC_FONT,
+    color: "rgba(255,255,255,0.96)",
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 1.8,
+  },
+  aboutHeadLine: {
+    flex: 1,
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: "rgba(0,245,255,0.42)",
+  },
+  aboutLead: {
+    marginTop: 10,
+    color: "rgba(255,255,255,0.96)",
+    fontSize: 14,
     lineHeight: 20,
+    fontWeight: "700",
+  },
+  aboutList: {
+    marginTop: 12,
+    gap: 12,
+  },
+  aboutRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  aboutIconTile: {
+    width: 30,
+    height: 30,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "rgba(0,245,255,0.55)",
+    backgroundColor: "rgba(0,245,255,0.06)",
+  },
+  aboutTextCol: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  aboutItemTitle: {
+    color: CYBER_LIST_CYAN,
+    fontSize: 13,
+    lineHeight: 17,
+    fontWeight: "700",
+  },
+  aboutItemBody: {
+    color: "rgba(255,255,255,0.6)",
+    fontSize: 11,
+    lineHeight: 15,
+  },
+  aboutFooter: {
+    marginTop: 12,
+    paddingTop: 9,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: "rgba(255,255,255,0.12)",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  aboutFooterText: {
+    flex: 1,
+    color: "rgba(255,255,255,0.72)",
+    fontSize: 11,
+    lineHeight: 16,
+    fontWeight: "600",
+  },
+  markButtonReplica: {
+    width: 22,
+    height: 22,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderRadius: 1,
+    borderColor: "rgba(165,243,252,0.7)",
+    backgroundColor: "rgba(0,245,255,0.08)",
+  },
+  findUsersBtn: {
+    marginTop: 12,
+    height: 40,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    backgroundColor: CYBER_LIST_CYAN,
+  },
+  findUsersBtnPressed: {
+    opacity: 0.85,
+  },
+  findUsersText: {
+    fontFamily: METRIC_FONT,
+    color: "#050508",
+    fontSize: 13,
+    fontWeight: "700",
+    letterSpacing: 1,
   },
   scroll: { flex: 1 },
   scrollContent: {
