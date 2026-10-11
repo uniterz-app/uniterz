@@ -2,10 +2,12 @@
  * Web `NbaFavoriteStarButton` 相当 — 詳細ヒーロー用星トグル。
  * チーム追加時はファン歴シーズンを選ぶ。選手上限時は入れ替えモーダル。
  */
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Animated,
+  Easing,
   Pressable,
   StyleSheet,
   Text,
@@ -30,6 +32,14 @@ import {
 import { useMyNbaFavoritesNative } from "../profile/useMyNbaFavoritesNative";
 import NbaFanSinceSeasonPickerNative from "./NbaFanSinceSeasonPickerNative";
 import NbaFavoriteLimitModalNative from "./NbaFavoriteLimitModalNative";
+import NbaFavoritePromptModalNative, {
+  hasSeenNbaFavoritePrompt,
+  markNbaFavoritePromptSeen,
+} from "./NbaFavoritePromptModalNative";
+
+const PROMPT_DELAY_MS = 1000;
+/** iOS は Modal の退場中に次の Modal を出すと表示されないことがある */
+const MODAL_HANDOFF_MS = 350;
 
 type TeamProps = {
   kind: "team";
@@ -58,6 +68,50 @@ export default function NbaFavoriteStarButtonNative(
   const [limitOpen, setLimitOpen] = useState(false);
   const [replaceBusy, setReplaceBusy] = useState(false);
   const [fanSinceOpen, setFanSinceOpen] = useState(false);
+  const [promptOpen, setPromptOpen] = useState(false);
+  const pulse = useRef(new Animated.Value(1)).current;
+
+  const hasAnyOfKind =
+    props.kind === "team"
+      ? Boolean(favorites.favoriteNbaTeamId)
+      : favorites.favoriteNbaPlayers.length > 0;
+
+  useEffect(() => {
+    if (!ready || !uid || hasAnyOfKind) return;
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    void hasSeenNbaFavoritePrompt(props.kind, uid).then((seen) => {
+      if (cancelled || seen) return;
+      timer = setTimeout(() => {
+        if (cancelled) return;
+        void markNbaFavoritePromptSeen(props.kind, uid);
+        setPromptOpen(true);
+      }, PROMPT_DELAY_MS);
+    });
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
+  }, [ready, uid, hasAnyOfKind, props.kind]);
+
+  const pulseStar = useCallback(() => {
+    const beat = () =>
+      Animated.sequence([
+        Animated.timing(pulse, {
+          toValue: 1.3,
+          duration: 180,
+          easing: Easing.out(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulse, {
+          toValue: 1,
+          duration: 220,
+          easing: Easing.in(Easing.quad),
+          useNativeDriver: true,
+        }),
+      ]);
+    Animated.sequence([Animated.delay(MODAL_HANDOFF_MS), beat(), beat()]).start();
+  }, [pulse]);
 
   const active =
     props.kind === "team"
@@ -174,6 +228,7 @@ export default function NbaFavoriteStarButtonNative(
 
   return (
     <View style={styles.wrap}>
+      <Animated.View style={{ transform: [{ scale: pulse }] }}>
       <Pressable
         onPress={() => void onToggle()}
         disabled={busy || replaceBusy || !ready}
@@ -200,6 +255,7 @@ export default function NbaFavoriteStarButtonNative(
           />
         )}
       </Pressable>
+      </Animated.View>
       {favoriteCount != null && favoriteCount > 0 ? (
         <Text
           style={styles.countText}
@@ -213,6 +269,19 @@ export default function NbaFavoriteStarButtonNative(
           {formatNbaFavoriteCount(favoriteCount)} FANS
         </Text>
       ) : null}
+      <NbaFavoritePromptModalNative
+        open={promptOpen}
+        kind={props.kind}
+        language={isJa ? "ja" : "en"}
+        onConfirm={() => {
+          setPromptOpen(false);
+          setTimeout(() => void onToggle(), MODAL_HANDOFF_MS);
+        }}
+        onLater={() => {
+          setPromptOpen(false);
+          pulseStar();
+        }}
+      />
       {props.kind === "player" ? (
         <NbaFavoriteLimitModalNative
           open={limitOpen}
