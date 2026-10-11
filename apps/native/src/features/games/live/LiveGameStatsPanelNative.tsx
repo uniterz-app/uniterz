@@ -1,5 +1,10 @@
 /** Web `LiveGameStatsPanel` 相当 */
+import { useState, type ReactNode } from "react";
 import { StyleSheet, Text, View } from "react-native";
+import {
+  CyberSlantedTabBarNative,
+  CyberSlantedTabNative,
+} from "../../rankings/CyberSlantedTabNative";
 import type { LiveGameStatsReport } from "../../../../../../lib/games/liveGameStats";
 import { L, resolveLocalizedLang } from "../../../../../../lib/i18n/localize";
 import { getTeamPrimaryColor } from "../../../../../../lib/team-colors";
@@ -22,6 +27,9 @@ type Props = {
   omitScoreHeader?: boolean;
   onOpenTeamDetail?: (teamId: string) => void;
   onOpenPlayerDetail?: (playerId: string) => void;
+  /** 渡すと Team Stats の上に STATS / UNITERZ タブを出す（UNITERZ の中身） */
+  uniterzContent?: ReactNode;
+  initialTab?: "stats" | "uniterz";
 };
 
 export default function LiveGameStatsPanelNative({
@@ -30,7 +38,11 @@ export default function LiveGameStatsPanelNative({
   omitScoreHeader = false,
   onOpenTeamDetail,
   onOpenPlayerDetail,
+  uniterzContent,
+  initialTab = "stats",
 }: Props) {
+  const [tab, setTab] = useState<"stats" | "uniterz">(initialTab);
+  const showUniterz = uniterzContent != null && tab === "uniterz";
   const homeColor =
     getTeamPrimaryColor("nba", report.home.teamId) ?? "#5cf0b5";
   const awayColor =
@@ -112,26 +124,49 @@ export default function LiveGameStatsPanelNative({
         </View>
       )}
 
-      <View style={styles.section}>
-        <LiveGameSectionTitleNative title="Team Stats" />
-        <LiveGameTeamStatsPanelNative
-          report={report}
-          onOpenTeamDetail={onOpenTeamDetail}
-        />
-      </View>
+      {uniterzContent != null ? (
+        <CyberSlantedTabBarNative fill>
+          <CyberSlantedTabNative
+            label="STATS"
+            active={tab === "stats"}
+            onPress={() => setTab("stats")}
+            compact
+          />
+          <CyberSlantedTabNative
+            label="UNITERZ"
+            active={tab === "uniterz"}
+            onPress={() => setTab("uniterz")}
+            compact
+          />
+        </CyberSlantedTabBarNative>
+      ) : null}
 
-      <View style={styles.section}>
-        <LiveGameSectionTitleNative title="Game Leaders" />
-        <LiveGameLeadersPanelNative report={report} />
-      </View>
+      {showUniterz ? (
+        uniterzContent
+      ) : (
+        <>
+          <View style={styles.section}>
+            <LiveGameSectionTitleNative title="Team Stats" />
+            <LiveGameTeamStatsPanelNative
+              report={report}
+              onOpenTeamDetail={onOpenTeamDetail}
+            />
+          </View>
 
-      <View style={styles.section}>
-        <LiveGameSectionTitleNative title="Box Score" />
-        <LiveGameBoxScorePanelNative
-          report={report}
-          onOpenPlayerDetail={onOpenPlayerDetail}
-        />
-      </View>
+          <View style={styles.section}>
+            <LiveGameSectionTitleNative title="Game Leaders" />
+            <LiveGameLeadersPanelNative report={report} />
+          </View>
+
+          <View style={styles.section}>
+            <LiveGameSectionTitleNative title="Box Score" />
+            <LiveGameBoxScorePanelNative
+              report={report}
+              onOpenPlayerDetail={onOpenPlayerDetail}
+            />
+          </View>
+        </>
+      )}
     </View>
   );
 }

@@ -12,6 +12,8 @@ export type GamePointsTopEntryV1 = {
   isPro: boolean;
   points: number;
   countryCode?: string | null;
+  /** users.planProBgVariant（表示時に users から補完。snapshot には書かない） */
+  planProBgVariant?: string | null;
 };
 
 function isFiniteNum(x: unknown): x is number {

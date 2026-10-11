@@ -1,15 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import {
-  ProCyberBadge,
-  proBadgeStaticMotion,
-} from "@/app/component/common/ProCyberBadge";
-import {
-  CyberRankingListRow,
-  CyberRankingScore,
-} from "@/app/component/rankings/CyberRankingListParts";
-import { cyberMetricTag } from "@/lib/rankings/cyberRankVisual";
+import DailyScoreRankRow from "@/app/component/rankings/DailyScoreRankRow";
 import type { Language } from "@/lib/i18n/language";
 import { L, resolveLocalizedLang } from "@/lib/i18n/localize";
 import { t } from "@/lib/i18n/t";
@@ -23,7 +15,7 @@ type Props = {
   gamesRoutePrefix?: "/web" | "/mobile";
 };
 
-/** リザルト詳細 — この試合の得点上位。見た目は本番 CyberRankingListRow。 */
+/** リザルト詳細 — この試合の得点上位。見た目は TODAY UNITERZ の行。 */
 export default function ResultTopScoresList({
   entries,
   language = "en",
@@ -31,7 +23,6 @@ export default function ResultTopScoresList({
 }: Props) {
   if (entries.length === 0) return null;
   const loc = resolveLocalizedLang(language);
-  const metricTag = cyberMetricTag("totalScore", loc);
   const title = L(loc, {
     ja: "得点上位",
     en: "TOP SCORES",
@@ -43,11 +34,11 @@ export default function ResultTopScoresList({
   });
 
   return (
-    <section className="-mx-3 mt-4 sm:-mx-4">
+    <section className="mt-4">
       <p className="mb-2 px-1 text-[10px] font-bold uppercase tracking-[0.18em] text-cyan-300/70">
         {title}
       </p>
-      <div>
+      <div className="space-y-1.5">
         {entries.map((entry) => {
           const profileKey = profilePathKeyFromRow({
             uid: entry.uid,
@@ -66,36 +57,17 @@ export default function ResultTopScoresList({
             });
           };
           const row = (
-            <CyberRankingListRow
+            <DailyScoreRankRow
               rank={entry.rank}
-              displayName={entry.displayName}
+              name={entry.displayName || entry.handle || "—"}
               photoURL={entry.photoURL}
-              metric="totalScore"
-              metricTag={metricTag}
+              isPro={entry.isPro}
+              proLabel={t(language).common.proMember}
+              planProBgVariant={entry.planProBgVariant}
               countryCode={entry.countryCode}
-              compact
-              scoreLayout="web"
-              hideListMeta
-              showFirstPlaceFrame
-              nameExtra={
-                entry.isPro ? (
-                  <ProCyberBadge
-                    {...proBadgeStaticMotion}
-                    compact
-                    ariaLabel={t(language).common.proMember}
-                  />
-                ) : null
-              }
-              language={language}
-              scoreSlot={
-                <CyberRankingScore
-                  rank={entry.rank}
-                  metric="totalScore"
-                  counted={entry.points}
-                  compact
-                  scoreLayout="web"
-                />
-              }
+              value={entry.points.toFixed(1)}
+              valueUnit="PTS"
+              solid
             />
           );
           if (!profileKey) return <div key={`${entry.rank}-${entry.postId}`}>{row}</div>;

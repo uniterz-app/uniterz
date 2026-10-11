@@ -12,15 +12,7 @@ import ResultCardDesignFace from "@/app/component/result/ResultCardDesignFace";
 import ResultDetailScoreDonut from "@/app/component/result/ResultDetailScoreDonut";
 import LiveGameStatsPlaceholder from "@/app/component/games/live/LiveGameStatsPlaceholder";
 import { useLiveGameStats } from "@/lib/games/useLiveGameStats";
-import {
-  ProCyberBadge,
-  proBadgeStaticMotion,
-} from "@/app/component/common/ProCyberBadge";
-import {
-  CyberRankingListRow,
-  CyberRankingScore,
-} from "@/app/component/rankings/CyberRankingListParts";
-import { cyberMetricTag } from "@/lib/rankings/cyberRankVisual";
+import DailyScoreRankRow from "@/app/component/rankings/DailyScoreRankRow";
 import { matchScoreClass, nameOxanium } from "@/lib/fonts";
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
@@ -292,24 +284,21 @@ function MatchStatsPanel({
 
 function TopScoresPanel({
   ja,
-  frameColor,
   entries,
   language,
   gamesRoutePrefix,
 }: {
   ja: boolean;
-  frameColor: string;
   entries: GamePointsTopEntryV1[];
   language: Language;
   gamesRoutePrefix: "/web" | "/mobile";
 }) {
   if (entries.length === 0) return null;
-  const metricTag = cyberMetricTag("totalScore", language);
 
   return (
     <div className="flex flex-col gap-2.5">
       <SectionHeader title={ja ? "得点上位" : "TOP SCORES"} accent={ACCENT} />
-      <SectionCard frameColor={frameColor}>
+      <div className="space-y-1.5">
         {entries.map((entry) => {
           const profileKey = profilePathKeyFromRow({
             uid: entry.uid,
@@ -328,36 +317,17 @@ function TopScoresPanel({
             });
           };
           const row = (
-            <CyberRankingListRow
+            <DailyScoreRankRow
               rank={entry.rank}
-              displayName={entry.displayName}
+              name={entry.displayName || entry.handle || "—"}
               photoURL={entry.photoURL}
-              metric="totalScore"
-              metricTag={metricTag}
+              isPro={entry.isPro}
+              proLabel={t(language).common.proMember}
+              planProBgVariant={entry.planProBgVariant}
               countryCode={entry.countryCode}
-              compact
-              scoreLayout="web"
-              hideListMeta
-              showFirstPlaceFrame
-              nameExtra={
-                entry.isPro ? (
-                  <ProCyberBadge
-                    {...proBadgeStaticMotion}
-                    compact
-                    ariaLabel={t(language).common.proMember}
-                  />
-                ) : null
-              }
-              language={language}
-              scoreSlot={
-                <CyberRankingScore
-                  rank={entry.rank}
-                  metric="totalScore"
-                  counted={entry.points}
-                  compact
-                  scoreLayout="web"
-                />
-              }
+              value={entry.points.toFixed(1)}
+              valueUnit="PTS"
+              solid
             />
           );
           if (!profileKey) return <div key={entry.postId}>{row}</div>;
@@ -373,7 +343,7 @@ function TopScoresPanel({
             </Link>
           );
         })}
-      </SectionCard>
+      </div>
     </div>
   );
 }
@@ -580,6 +550,32 @@ export default function ResultDetailBody({
     Boolean(nbaGameId)
   );
 
+  const uniterzSections = (
+    <div className="flex flex-col gap-5">
+      {matchStats ? (
+        <MatchStatsPanel
+          ja={ja}
+          frameColor={frameColor}
+          stats={matchStats}
+          topScorerMarket={view.topScorerMarket}
+        />
+      ) : null}
+      {view.topEntries.length > 0 ? (
+        <TopScoresPanel
+          ja={ja}
+          entries={view.topEntries}
+          language={language}
+          gamesRoutePrefix={gamesRoutePrefix}
+        />
+      ) : null}
+      <ScoreBreakdownPanel
+        ja={ja}
+        frameColor={frameColor}
+        breakdown={view.breakdown}
+      />
+    </div>
+  );
+
   return (
     <div
       className="pt-1 text-white"
@@ -612,90 +608,26 @@ export default function ResultDetailBody({
         />
       </div>
 
-      {cardAndLiveStats ? (
-        <>
-          <div
-            className="my-4 h-px"
-            style={{ backgroundColor: dividerColor }}
-          />
-          {liveStatsReport ? (
-            <LiveGameStatsPanel
-              report={liveStatsReport}
-              language={language}
-              omitScoreHeader
-              onOpenTeamDetail={onOpenTeamDetail}
-              onOpenPlayerDetail={onOpenPlayerDetail}
-            />
-          ) : (
-            <LiveGameStatsPlaceholder
-              language={language}
-              loading={liveStatsLoading}
-            />
-          )}
-        </>
+      <div className="my-4 h-px" style={{ backgroundColor: dividerColor }} />
+      {liveStatsReport ? (
+        <LiveGameStatsPanel
+          report={liveStatsReport}
+          language={language}
+          omitScoreHeader
+          onOpenTeamDetail={onOpenTeamDetail}
+          onOpenPlayerDetail={onOpenPlayerDetail}
+          uniterzContent={uniterzSections}
+          initialTab={cardAndLiveStats ? "stats" : "uniterz"}
+        />
+      ) : liveStatsLoading && cardAndLiveStats ? (
+        <LiveGameStatsPlaceholder language={language} loading />
       ) : (
         <>
-          {matchStats ? (
+          {uniterzSections}
+          {nbaGameId && liveStatsLoading ? (
             <>
-              <div
-                className="my-4 h-px"
-                style={{ backgroundColor: dividerColor }}
-              />
-              <MatchStatsPanel
-                ja={ja}
-                frameColor={frameColor}
-                stats={matchStats}
-                topScorerMarket={view.topScorerMarket}
-              />
-            </>
-          ) : null}
-
-          {view.topEntries.length > 0 ? (
-            <>
-              <div
-                className="my-4 h-px"
-                style={{ backgroundColor: dividerColor }}
-              />
-              <TopScoresPanel
-                ja={ja}
-                frameColor={frameColor}
-                entries={view.topEntries}
-                language={language}
-                gamesRoutePrefix={gamesRoutePrefix}
-              />
-            </>
-          ) : null}
-
-          <div
-            className="my-4 h-px"
-            style={{ backgroundColor: dividerColor }}
-          />
-          <ScoreBreakdownPanel
-            ja={ja}
-            frameColor={frameColor}
-            breakdown={view.breakdown}
-          />
-
-          {nbaGameId && (liveStatsReport || liveStatsLoading) ? (
-            <>
-              <div
-                className="my-4 h-px"
-                style={{ backgroundColor: dividerColor }}
-              />
-              {liveStatsReport ? (
-                <LiveGameStatsPanel
-                  report={liveStatsReport}
-                  language={language}
-                  omitScoreHeader
-                  onOpenTeamDetail={onOpenTeamDetail}
-                  onOpenPlayerDetail={onOpenPlayerDetail}
-                />
-              ) : (
-                <LiveGameStatsPlaceholder
-                  language={language}
-                  loading={liveStatsLoading}
-                />
-              )}
+              <div className="my-4 h-px" style={{ backgroundColor: dividerColor }} />
+              <LiveGameStatsPlaceholder language={language} loading />
             </>
           ) : null}
         </>

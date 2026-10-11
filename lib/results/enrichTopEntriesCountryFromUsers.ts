@@ -4,47 +4,66 @@ import {
   mergeCountryIntoTopEntries,
   pickCountryCodeFromUserDoc,
 } from "@/lib/results/mergeCountryIntoTopEntries";
+import { parseEquippedProSkinFromUserDoc } from "@/lib/profile/profilePlanProBgVariantField";
 
-const COUNTRY_TTL_MS = 10 * 60 * 1000;
+const USER_TTL_MS = 10 * 60 * 1000;
 
-type CountryCacheEntry = { at: number; code: string | null };
-const countryByUidCache = new Map<string, CountryCacheEntry>();
+type UserCacheEntry = {
+  at: number;
+  code: string | null;
+  proSkin: string | null;
+};
+const userByUidCache = new Map<string, UserCacheEntry>();
 
-async function loadCountryCode(
+async function loadUserBits(
   firestore: Firestore,
   uid: string
-): Promise<string | null> {
+): Promise<UserCacheEntry> {
   const now = Date.now();
-  const hit = countryByUidCache.get(uid);
-  if (hit && now - hit.at < COUNTRY_TTL_MS) return hit.code;
+  const hit = userByUidCache.get(uid);
+  if (hit && now - hit.at < USER_TTL_MS) return hit;
 
   const snap = await getDoc(doc(firestore, "users", uid));
   const data = snap.exists() ? snap.data() : null;
-  const code = pickCountryCodeFromUserDoc(data?.countryCode);
-  countryByUidCache.set(uid, { at: Date.now(), code });
-  return code;
+  const entry: UserCacheEntry = {
+    at: Date.now(),
+    code: pickCountryCodeFromUserDoc(data?.countryCode),
+    proSkin: data ? parseEquippedProSkinFromUserDoc(data) ?? null : null,
+  };
+  userByUidCache.set(uid, entry);
+  return entry;
 }
 
-/** 既存 snapshot に国が無いとき users.countryCode を足す（得点は触らない） */
+/**
+ * 既存 snapshot に国が無いとき users.countryCode を足す（得点は触らない）。
+ * Pro 行は users.planProBgVariant も足す（行背景の Pro Skin）。
+ */
 export async function enrichTopEntriesCountryFromUsers(
   firestore: Firestore,
   top: GamePointsTopEntryV1[]
 ): Promise<GamePointsTopEntryV1[]> {
-  const missing = [
+  const targets = [
     ...new Set(
       top
-        .filter((row) => !row.countryCode)
+        .filter((row) => !row.countryCode || row.isPro)
         .map((row) => row.uid?.trim() || "")
         .filter(Boolean)
     ),
   ];
-  if (missing.length === 0) return top.map((row) => ({ ...row }));
+  if (targets.length === 0) return top.map((row) => ({ ...row }));
 
-  const countryByUid = new Map<string, string | null>();
+  const bitsByUid = new Map<string, UserCacheEntry>();
   await Promise.all(
-    missing.map(async (uid) => {
-      countryByUid.set(uid, await loadCountryCode(firestore, uid));
+    targets.map(async (uid) => {
+      bitsByUid.set(uid, await loadUserBits(firestore, uid));
     })
   );
-  return mergeCountryIntoTopEntries(top, countryByUid);
+  const countryByUid = new Map<string, string | null>(
+    [...bitsByUid].map(([uid, b]) => [uid, b.code])
+  );
+  return mergeCountryIntoTopEntries(top, countryByUid).map((row) => {
+    if (!row.isPro) return row;
+    const skin = bitsByUid.get(row.uid?.trim() || "")?.proSkin;
+    return skin ? { ...row, planProBgVariant: skin } : row;
+  });
 }

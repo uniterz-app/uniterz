@@ -91,7 +91,7 @@ export function buildResultDetailViewModel(
         row.displayName,
       photoURL:
         viewer.photoURL !== undefined ? viewer.photoURL : row.photoURL,
-      isPro: viewer.isPro ?? row.isPro,
+      isPro: viewer.isPro === true || row.isPro,
     };
   });
 

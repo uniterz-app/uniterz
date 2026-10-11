@@ -1,5 +1,10 @@
 "use client";
 
+import { useState, type ReactNode } from "react";
+import {
+  CyberSlantedTab,
+  CyberSlantedTabBar,
+} from "@/app/component/rankings/CyberSlantedTab";
 import LiveGameTeamStatsPanel from "@/app/component/games/live/LiveGameTeamStatsPanel";
 import LiveGameBoxScorePanel from "@/app/component/games/live/LiveGameBoxScorePanel";
 import LiveGameLineScorePanel from "@/app/component/games/live/LiveGameLineScorePanel";
@@ -23,6 +28,9 @@ type Props = {
   omitScoreHeader?: boolean;
   onOpenTeamDetail?: (teamId: string) => void;
   onOpenPlayerDetail?: (playerId: string) => void;
+  /** 渡すと Team Stats の上に STATS / UNITERZ タブを出す（UNITERZ の中身） */
+  uniterzContent?: ReactNode;
+  initialTab?: "stats" | "uniterz";
 };
 
 export default function LiveGameStatsPanel({
@@ -32,7 +40,11 @@ export default function LiveGameStatsPanel({
   omitScoreHeader = false,
   onOpenTeamDetail,
   onOpenPlayerDetail,
+  uniterzContent,
+  initialTab = "stats",
 }: Props) {
+  const [tab, setTab] = useState<"stats" | "uniterz">(initialTab);
+  const showUniterz = uniterzContent != null && tab === "uniterz";
   const homeColor =
     getTeamPrimaryColor("nba", report.home.teamId) ?? "#5cf0b5";
   const awayColor =
@@ -126,26 +138,49 @@ export default function LiveGameStatsPanel({
         </header>
       )}
 
-      <section className="space-y-2.5">
-        <LiveGameSectionTitle title="Team Stats" />
-        <LiveGameTeamStatsPanel
-          report={report}
-          onOpenTeamDetail={onOpenTeamDetail}
-        />
-      </section>
+      {uniterzContent != null ? (
+        <CyberSlantedTabBar fill aria-label="Game stats">
+          <CyberSlantedTab
+            label="STATS"
+            active={tab === "stats"}
+            onClick={() => setTab("stats")}
+            compact
+          />
+          <CyberSlantedTab
+            label="UNITERZ"
+            active={tab === "uniterz"}
+            onClick={() => setTab("uniterz")}
+            compact
+          />
+        </CyberSlantedTabBar>
+      ) : null}
 
-      <section className="space-y-2.5">
-        <LiveGameSectionTitle title="Game Leaders" />
-        <LiveGameLeadersPanel report={report} />
-      </section>
+      {showUniterz ? (
+        uniterzContent
+      ) : (
+        <>
+          <section className="space-y-2.5">
+            <LiveGameSectionTitle title="Team Stats" />
+            <LiveGameTeamStatsPanel
+              report={report}
+              onOpenTeamDetail={onOpenTeamDetail}
+            />
+          </section>
 
-      <section className="space-y-2.5">
-        <LiveGameSectionTitle title="Box Score" />
-        <LiveGameBoxScorePanel
-          report={report}
-          onOpenPlayerDetail={onOpenPlayerDetail}
-        />
-      </section>
+          <section className="space-y-2.5">
+            <LiveGameSectionTitle title="Game Leaders" />
+            <LiveGameLeadersPanel report={report} />
+          </section>
+
+          <section className="space-y-2.5">
+            <LiveGameSectionTitle title="Box Score" />
+            <LiveGameBoxScorePanel
+              report={report}
+              onOpenPlayerDetail={onOpenPlayerDetail}
+            />
+          </section>
+        </>
+      )}
     </div>
   );
 }
