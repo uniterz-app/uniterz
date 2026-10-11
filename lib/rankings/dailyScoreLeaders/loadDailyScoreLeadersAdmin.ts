@@ -9,6 +9,8 @@ import {
   DAILY_SCORE_TOP_N,
   aggregateDailyScores,
   withRanks,
+  type DailyScoreDivision,
+  type DailyScoreLeaderRow,
   type DailyScoreLeadersPayload,
   type DailyScorePostInput,
 } from "@/lib/rankings/dailyScoreLeaders/buildDailyScoreLeaders";
@@ -128,15 +130,12 @@ export async function loadDailyScoreLeadersAdmin(
     }
   });
 
-  const standard = await mergeUserPlansIntoLeaderboardRows(
-    aggregateDailyScores(posts, "standard").slice(0, DAILY_SCORE_TOP_N)
+  const standard = aggregateDailyScores(posts, "standard").slice(
+    0,
+    DAILY_SCORE_TOP_N
   );
-  const openCandidates = await mergeUserPlansIntoLeaderboardRows(
-    aggregateDailyScores(posts, "open").slice(0, OPEN_CANDIDATES)
-  );
-  const open = withRanks(
-    openCandidates.filter((r) => r.plan === "pro")
-  ).slice(0, DAILY_SCORE_TOP_N);
+  /** plan で絞らない候補。Pro 判定は確定日の無期限キャッシュの外（`selectDailyScoreBoardRows`）で行う */
+  const open = aggregateDailyScores(posts, "open").slice(0, OPEN_CANDIDATES);
 
   return {
     ok: true,
@@ -156,4 +155,20 @@ export async function loadDailyScoreLeadersAdmin(
       games.every((g) => isPreseasonGame(g.data)),
     boards: { standard, open },
   };
+}
+
+/**
+ * キャッシュ済み候補に users の最新 plan / Pro Skin を重ね、表示行を作る。
+ * PRO LEAGUE は確定後に Pro 化・解約した人も反映するため、ここで Pro に絞って順位を振り直す。
+ */
+export async function selectDailyScoreBoardRows(
+  candidates: DailyScoreLeaderRow[],
+  division: DailyScoreDivision
+): Promise<DailyScoreLeaderRow[]> {
+  const merged = await mergeUserPlansIntoLeaderboardRows(candidates);
+  if (division === "standard") return merged;
+  return withRanks(merged.filter((r) => r.plan === "pro")).slice(
+    0,
+    DAILY_SCORE_TOP_N
+  );
 }

@@ -2,8 +2,10 @@ import { NextResponse } from "next/server";
 import { unstable_cache } from "next/cache";
 import { getAdminAuth, getAdminDb } from "@/lib/firebaseAdmin";
 import { assertProUser } from "@/lib/rankings/server/fetchRankGapAnalysis";
-import { loadDailyScoreLeadersAdmin } from "@/lib/rankings/dailyScoreLeaders/loadDailyScoreLeadersAdmin";
-import { mergeUserPlansIntoLeaderboardRows } from "@/lib/rankings/mergeUserPlanIntoRankingPayload";
+import {
+  loadDailyScoreLeadersAdmin,
+  selectDailyScoreBoardRows,
+} from "@/lib/rankings/dailyScoreLeaders/loadDailyScoreLeadersAdmin";
 import type {
   DailyScoreDivision,
   DailyScoreLeadersPayload,
@@ -39,7 +41,7 @@ class DayNotCompleteError extends Error {
 function loadLiveCached(dateKey: string, timeZone: string) {
   return unstable_cache(
     () => loadDailyScoreLeadersAdmin(getAdminDb(), { dateKey, timeZone }),
-    ["uniterz-daily-score-leaders", "v2", dateKey, timeZone],
+    ["uniterz-daily-score-leaders", "v3", dateKey, timeZone],
     { revalidate: 1800, tags: ["uniterz-daily-score-leaders"] }
   )();
 }
@@ -59,7 +61,7 @@ async function loadCached(
         if (!payload.complete) throw new DayNotCompleteError(payload);
         return payload;
       },
-      ["uniterz-daily-score-leaders-complete", "v2", dateKey, timeZone],
+      ["uniterz-daily-score-leaders-complete", "v3", dateKey, timeZone],
       { revalidate: false }
     )();
   } catch (e) {
@@ -68,15 +70,21 @@ async function loadCached(
   }
 }
 
-/** 確定日の無期限キャッシュ後に Pro 化・スキン変更した人も反映するため、plan / スキンだけ短い間隔で読み直す */
-function mergeFreshPlansCached(
-  rows: DailyScoreLeadersPayload["boards"][DailyScoreDivision],
+/** 確定日の無期限キャッシュ後に Pro 化・解約・スキン変更した人も反映するため、plan 依存部分だけ短い間隔で作り直す */
+function selectBoardRowsCached(
+  candidates: DailyScoreLeadersPayload["boards"][DailyScoreDivision],
   dateKey: string,
   division: DailyScoreDivision
 ) {
   return unstable_cache(
-    () => mergeUserPlansIntoLeaderboardRows(rows),
-    ["uniterz-daily-score-leaders-plans", dateKey, division, rows.map((r) => r.uid).join(",")],
+    () => selectDailyScoreBoardRows(candidates, division),
+    [
+      "uniterz-daily-score-leaders-plans",
+      "v3",
+      dateKey,
+      division,
+      candidates.map((r) => `${r.uid}:${r.points}`).join(","),
+    ],
     { revalidate: 300 }
   )();
 }
@@ -133,7 +141,7 @@ export async function GET(req: Request) {
     const payload = await loadLatestSlate();
 
     const { boards, ...meta } = payload;
-    const rows = await mergeFreshPlansCached(boards[division], meta.dateKey, division);
+    const rows = await selectBoardRowsCached(boards[division], meta.dateKey, division);
     const body = { ...meta, division, rows };
 
     // URL に日付が無く、次の試合日が始まると中身が切り替わるので CDN は短く（サーバー側は確定日を無期限キャッシュ）
