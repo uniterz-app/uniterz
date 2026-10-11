@@ -169,7 +169,10 @@ export default function NbaLeaguePlayerStatLeadersPanelNative({
       season: bundle.season[metric] ?? [],
       playoffs: bundle.playoffs?.[metric] ?? [],
     });
-    return sortDir === "asc" ? [...list].reverse() : list;
+    // 低いほど良い指標（守備% など）は ingest 時点で昇順なので、反転ではなく値で並べる
+    return [...list].sort((a, b) =>
+      sortDir === "asc" ? a.value - b.value : b.value - a.value
+    );
   }, [bundle, phase, mode, metric, sortDir]);
 
   const emptyCopy = leagueStatsTableEmptyCopy(lang, mode);
