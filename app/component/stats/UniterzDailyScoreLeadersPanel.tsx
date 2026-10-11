@@ -11,18 +11,16 @@ import {
   CyberSlantedTabBar,
 } from "@/app/component/rankings/CyberSlantedTab";
 import { restContainer, restItem } from "@/app/component/rankings/anim";
-import { RankingsAvatarCircle } from "@/app/component/rankings/RankingsAvatarCircle";
 import RankingsOpenProLock from "@/app/component/rankings/RankingsOpenProLock";
-import RankingListProSkinFx from "@/app/component/rankings/RankingListProSkinFx";
-import { RankingNameBadges } from "@/app/component/common/RankingNameBadges";
-import { proBadgeStaticMotion } from "@/app/component/common/ProCyberBadge";
+import DailyScoreRankRow, {
+  dailyScoreRankRowSkew,
+} from "@/app/component/rankings/DailyScoreRankRow";
 import { rankingRowProSkinVariant } from "@/lib/rankings/rankingRowProSkinVariant";
 import { t } from "@/lib/i18n/t";
 import { auth } from "@/lib/firebase";
-import { nameBebas, nameOxanium } from "@/lib/fonts";
+import { nameOxanium } from "@/lib/fonts";
 import type { Language } from "@/lib/i18n/language";
 import { resolveLocalizedLang } from "@/lib/i18n/localize";
-import { FLAG_SRC, getCountryCode } from "@/lib/rankings/country";
 import type {
   DailyScoreDivision,
   DailyScoreLeadersResponse,
@@ -33,8 +31,6 @@ import {
   formatDailyScoreSlateLabel,
 } from "@/lib/rankings/dailyScoreLeaders/dailyScoreLeadersCopy";
 import { dailyLeadersCopy } from "@/lib/nba/dailyLeaders/dailyLeadersCopy";
-
-const SKEW = "skewX(-6deg)";
 
 type LoadState =
   | { kind: "loading" }
@@ -154,98 +150,43 @@ export default function UniterzDailyScoreLeadersPanel({
           initial={reduceMotion ? "show" : "hidden"}
           animate="show"
         >
-          {rows.map((r, i) => {
-            const rankColor =
-              r.rank === 1
-                ? "#FCD34D"
-                : r.rank <= 3
-                  ? "#00F5FF"
-                  : "rgba(255,255,255,0.45)";
-            const name = r.displayName || r.handle || "—";
-            const code = getCountryCode({ countryCode: r.countryCode });
-            const flagSrc = code ? FLAG_SRC[code] : undefined;
-            const isPro = r.plan === "pro";
-            const proSkinVariant = rankingRowProSkinVariant(
-              r.plan,
-              typeof r.planProBgVariant === "string" ? r.planProBgVariant : null
-            );
-            return (
-              <motion.li key={r.uid} variants={restItem} custom={i}>
-                <button
-                  type="button"
-                  onClick={() => onSelectUser?.(r.uid)}
-                  className={`relative flex min-h-[60px] w-full items-center overflow-hidden rounded border text-left active:opacity-75 ${proSkinVariant ? "" : "bg-white/[0.03]"} ${r.rank === 1 ? "border-amber-300/35" : "border-white/[0.08]"}`}
-                >
-                  {proSkinVariant ? (
-                    <RankingListProSkinFx variant={proSkinVariant} intensity="medium" />
-                  ) : null}
-                  <span className="relative z-10 flex min-w-0 flex-1 items-center gap-3 px-3.5 py-2">
-                  <span
-                    className={`${nameBebas.className} w-[26px] text-center text-[28px] leading-none`}
-                    style={{ color: rankColor, transform: SKEW }}
-                  >
-                    {r.rank}
-                  </span>
-                  <RankingsAvatarCircle
-                    photoURL={r.photoURL}
-                    displayName={name}
-                    boxClassName="h-9 w-9 shrink-0"
-                    shape="square"
-                    imageLoading={i < 8 ? "eager" : "lazy"}
-                  />
-                  <span className="flex min-w-0 flex-1 flex-col gap-[5px]">
-                    <span className="flex min-w-0 items-center gap-1.5">
-                      <span
-                        className={`${nameOxanium.className} block min-w-0 truncate text-[15px] font-semibold uppercase tracking-[0.03em] text-white/95`}
-                        style={{ transform: SKEW }}
-                      >
-                        {name}
-                      </span>
-                      <RankingNameBadges
-                        {...proBadgeStaticMotion}
-                        compact
-                        isPro={isPro}
-                        proLabel={t(language as Language).common.proMember}
-                      />
-                    </span>
-                    <span
-                      className={`${nameOxanium.className} flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.1em] text-white/50`}
-                    >
-                      {flagSrc ? (
-                        <img
-                          src={flagSrc}
-                          alt=""
-                          width={21}
-                          height={14}
-                          className="h-[14px] w-[21px] shrink-0 rounded-[1px] object-cover opacity-80"
-                          loading="lazy"
-                          decoding="async"
-                        />
-                      ) : null}
-                      <span className="normal-case tracking-[0.06em] text-white/40" style={{ transform: SKEW }}>
+          {rows.map((r, i) => (
+            <motion.li key={r.uid} variants={restItem} custom={i}>
+              <button
+                type="button"
+                onClick={() => onSelectUser?.(r.uid)}
+                className="block w-full active:opacity-75"
+              >
+                <DailyScoreRankRow
+                  rank={r.rank}
+                  name={r.displayName || r.handle || "—"}
+                  photoURL={r.photoURL}
+                  isPro={r.plan === "pro"}
+                  proLabel={t(language as Language).common.proMember}
+                  planProBgVariant={rankingRowProSkinVariant(
+                    r.plan,
+                    typeof r.planProBgVariant === "string" ? r.planProBgVariant : null
+                  )}
+                  countryCode={r.countryCode}
+                  imageLoading={i < 8 ? "eager" : "lazy"}
+                  sub={
+                    <>
+                      <span className="normal-case tracking-[0.06em] text-white/40" style={{ transform: dailyScoreRankRowSkew }}>
                         {copy.postsLabel(r.posts)}
                       </span>
-                    </span>
-                  </span>
-                  <span className="min-w-[52px] text-right">
-                    <span
-                      className={`${nameOxanium.className} block text-[26px] font-extrabold leading-none tabular-nums ${r.rank === 1 ? "text-[#00F5FF]" : "text-white"}`}
-                      style={{ transform: SKEW }}
-                    >
-                      {formatDailyScorePoints(r.points)}
-                    </span>
-                    <span
-                      className={`${nameOxanium.className} block text-[9px] font-bold tracking-[0.14em] text-white/40`}
-                      style={{ transform: SKEW }}
-                    >
-                      {copy.pointsUnit}
-                    </span>
-                  </span>
-                  </span>
-                </button>
-              </motion.li>
-            );
-          })}
+                      {typeof r.wins === "number" ? (
+                        <span className="normal-case tabular-nums tracking-[0.06em] text-white/70" style={{ transform: dailyScoreRankRowSkew }}>
+                          {copy.hitsLabel(r.wins, r.posts)}
+                        </span>
+                      ) : null}
+                    </>
+                  }
+                  value={formatDailyScorePoints(r.points)}
+                  valueUnit={copy.pointsUnit}
+                />
+              </button>
+            </motion.li>
+          ))}
         </motion.ol>
       )}
     </div>

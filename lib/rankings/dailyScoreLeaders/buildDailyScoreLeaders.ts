@@ -13,6 +13,8 @@ export type DailyScorePostInput = {
   points: number;
   countedForPickup: boolean;
   countedForRanking: boolean;
+  /** 勝敗的中 */
+  win: boolean;
   displayName?: string;
   handle?: string;
   photoURL?: string | null;
@@ -29,6 +31,8 @@ export type DailyScoreLeaderRow = {
   countryCode?: string | null;
   points: number;
   posts: number;
+  /** 勝敗的中した予想数 */
+  wins: number;
 };
 
 export type DailyScoreLeadersPayload = {
@@ -72,9 +76,11 @@ export function aggregateDailyScores(
       photoURL: p.photoURL ?? null,
       points: 0,
       posts: 0,
+      wins: 0,
     };
     row.points += p.points;
     row.posts += 1;
+    if (p.win) row.wins += 1;
     byUid.set(p.uid, row);
   }
   const rows = [...byUid.values()]

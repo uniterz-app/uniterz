@@ -1,19 +1,16 @@
 /** Web `UniterzDailyScoreLeadersPanel` 相当 — その日の合計ポイント Top20（PICK UP / PRO LEAGUE） */
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AppState, Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { AppState, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import {
-  CYBER_TAB_CYAN,
   CyberSlantedTabBarNative,
   CyberSlantedTabNative,
 } from "../../rankings/CyberSlantedTabNative";
-import { RankingsAvatarNative } from "../../rankings/RankingsAvatarAndTabs";
-import { rankingFlagImageUri } from "../../rankings/rankingFlagUri";
 import { rankingsTexts } from "../../rankings/rankingsTexts";
-import { METRIC_FONT, RANK_DISPLAY_FONT } from "../../rankings/rankingsUiTheme";
 import { getUniterzApiBaseUrl } from "../submitPredictionApi";
 import RankingsListEntranceRowNative from "../../rankings/RankingsListEntranceRowNative";
-import RankingListProSkinFxNative from "../../rankings/RankingListProSkinFxNative";
-import ProCyberBadgeNative from "../../profile/kinetik/ProCyberBadgeNative";
+import DailyScoreRankRowNative, {
+  dailyScoreRankRowSubStyles,
+} from "../../rankings/DailyScoreRankRowNative";
 import { rankingRowProSkinVariant } from "../../../../../../lib/rankings/rankingRowProSkinVariant";
 import { auth } from "../../../lib/firebase";
 import { openProSubscribeNative } from "../../../navigation/navigationRef";
@@ -32,12 +29,6 @@ import {
 } from "../../../../../../lib/rankings/dailyScoreLeaders/dailyScoreLeadersCopy";
 import { dailyLeadersCopy } from "../../../../../../lib/nba/dailyLeaders/dailyLeadersCopy";
 
-
-function rankColor(rank: number): string {
-  if (rank === 1) return "#FCD34D";
-  if (rank <= 3) return CYBER_TAB_CYAN;
-  return "rgba(255,255,255,0.45)";
-}
 
 /** Web `restItem`（0.048s 刻み・最大 0.32s・0.32s）と同じ秒数 */
 const LIST_ENTRANCE_STAGGER_MS = 48;
@@ -177,12 +168,6 @@ export default function UniterzDailyScoreLeadersPanelNative({
           ]}
         >
           {rows.map((r, i) => {
-            const name = r.displayName || r.handle || "—";
-            const flagUri = rankingFlagImageUri(r.countryCode ?? undefined);
-            const proSkinVariant = rankingRowProSkinVariant(
-              r.plan,
-              typeof r.planProBgVariant === "string" ? r.planProBgVariant : null
-            );
             return (
               <RankingsListEntranceRowNative
                 key={r.uid}
@@ -191,46 +176,32 @@ export default function UniterzDailyScoreLeadersPanelNative({
                 staggerMs={LIST_ENTRANCE_STAGGER_MS}
                 durationMs={LIST_ENTRANCE_DURATION_MS}
               >
-                <Pressable
-                  onPress={() => onSelectUser?.(r)}
-                  accessibilityRole="button"
-                  style={({ pressed }) => [
-                    styles.card,
-                    proSkinVariant && styles.cardSkinned,
-                    r.rank === 1 && styles.cardTop,
-                    pressed && styles.cardPressed,
-                  ]}
-                >
-                  {proSkinVariant ? (
-                    <RankingListProSkinFxNative variant={proSkinVariant} intensity="medium" />
-                  ) : null}
-                  <View style={styles.cardContent}>
-                  <Text style={[styles.rank, { color: rankColor(r.rank) }]}>
-                    {r.rank}
-                  </Text>
-                  <RankingsAvatarNative photoURL={r.photoURL} label={name} size={36} square />
-                  <View style={styles.who}>
-                    <View style={styles.nameRow}>
-                      <Text style={[styles.name, styles.nameShrink]} numberOfLines={1}>
-                        {name}
+                <DailyScoreRankRowNative
+                  rank={r.rank}
+                  name={r.displayName || r.handle || "—"}
+                  photoURL={r.photoURL}
+                  isPro={r.plan === "pro"}
+                  planProBgVariant={rankingRowProSkinVariant(
+                    r.plan,
+                    typeof r.planProBgVariant === "string" ? r.planProBgVariant : null
+                  )}
+                  countryCode={r.countryCode}
+                  sub={
+                    <>
+                      <Text style={dailyScoreRankRowSubStyles.muted}>
+                        {copy.postsLabel(r.posts)}
                       </Text>
-                      {r.plan === "pro" ? <ProCyberBadgeNative compact /> : null}
-                    </View>
-                    <View style={styles.subRow}>
-                      {flagUri ? (
-                        <Image source={{ uri: flagUri }} style={styles.flag} resizeMode="cover" />
+                      {typeof r.wins === "number" ? (
+                        <Text style={dailyScoreRankRowSubStyles.hits}>
+                          {copy.hitsLabel(r.wins, r.posts)}
+                        </Text>
                       ) : null}
-                      <Text style={styles.subMuted}>{copy.postsLabel(r.posts)}</Text>
-                    </View>
-                  </View>
-                  <View style={styles.valueCol}>
-                    <Text style={[styles.value, r.rank === 1 && styles.valueTop]}>
-                      {formatDailyScorePoints(r.points)}
-                    </Text>
-                    <Text style={styles.valueLabel}>{copy.pointsUnit}</Text>
-                  </View>
-                  </View>
-                </Pressable>
+                    </>
+                  }
+                  value={formatDailyScorePoints(r.points)}
+                  valueUnit={copy.pointsUnit}
+                  onPress={() => onSelectUser?.(r)}
+                />
               </RankingsListEntranceRowNative>
             );
           })}
@@ -324,78 +295,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     gap: 6,
   },
-  card: {
-    minHeight: 60,
-    overflow: "hidden",
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.08)",
-    backgroundColor: "rgba(255,255,255,0.03)",
-  },
-  cardSkinned: { backgroundColor: "transparent" },
-  cardContent: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    minHeight: 60,
-    paddingLeft: 14,
-    paddingRight: 14,
-    paddingVertical: 8,
-    zIndex: 10,
-  },
-  nameRow: { flexDirection: "row", alignItems: "center", gap: 6, minWidth: 0 },
-  nameShrink: { flexShrink: 1 },
-  cardTop: { borderColor: "rgba(252,211,77,0.35)" },
   cardPressed: { opacity: 0.75 },
-  rank: {
-    width: 26,
-    textAlign: "center",
-    fontFamily: RANK_DISPLAY_FONT,
-    fontSize: 28,
-    lineHeight: 30,
-    transform: [{ skewX: "-6deg" }],
-  },
-  who: { flex: 1, minWidth: 0, gap: 5 },
-  name: {
-    fontFamily: "Oxanium_600SemiBold",
-    fontWeight: "600",
-    fontSize: 15,
-    letterSpacing: 0.4,
-    color: "rgba(255,255,255,0.95)",
-    textTransform: "uppercase",
-    includeFontPadding: false,
-    transform: [{ skewX: "-6deg" }],
-  },
-  subRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-  flag: {
-    width: 21,
-    height: 14,
-    borderRadius: 1,
-    opacity: 0.8,
-  },
-  subMuted: {
-    fontFamily: METRIC_FONT,
-    fontSize: 10,
-    letterSpacing: 0.6,
-    color: "rgba(255,255,255,0.4)",
-    transform: [{ skewX: "-6deg" }],
-  },
-  valueCol: { alignItems: "flex-end", minWidth: 52 },
-  value: {
-    fontFamily: "Oxanium_800ExtraBold",
-    fontSize: 26,
-    lineHeight: 28,
-    color: "#fff",
-    fontVariant: ["tabular-nums"],
-    transform: [{ skewX: "-6deg" }],
-  },
-  valueTop: { color: CYBER_TAB_CYAN },
-  valueLabel: {
-    fontFamily: METRIC_FONT,
-    fontSize: 9,
-    letterSpacing: 1.4,
-    color: "rgba(255,255,255,0.4)",
-    transform: [{ skewX: "-6deg" }],
-  },
 });

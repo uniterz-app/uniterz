@@ -26,15 +26,17 @@ export async function writeGameUserPoints(params: {
     (countsForRanking ? GAME_USER_POINTS_RANKING : 0) |
     (countsForRanking && isNbaPickupGame(game) ? GAME_USER_POINTS_PICKUP : 0);
 
-  const entries: Array<{ u: string; p: number; k: number }> = [];
+  /** w: 1 = 勝敗的中（TODAY の「的中 / 予想」） */
+  const entries: Array<{ u: string; p: number; k: number; w: 0 | 1 }> = [];
   for (const doc of postsSnap.docs) {
     const d = doc.data();
     const uid = typeof d.authorUid === "string" ? d.authorUid : "";
     if (!uid) continue;
-    const points =
-      settlementByPostId.get(doc.id)?.totalPoints ?? Number(d.stats?.pointsV3);
+    const settlement = settlementByPostId.get(doc.id);
+    const points = settlement?.totalPoints ?? Number(d.stats?.pointsV3);
     if (!Number.isFinite(points)) continue;
-    entries.push({ u: uid, p: points, k });
+    const isWin = settlement ? settlement.result.isWin : d.stats?.isWin === true;
+    entries.push({ u: uid, p: points, k, w: isWin ? 1 : 0 });
   }
 
   await db.doc(`gameUserPoints/${gameId}`).set({

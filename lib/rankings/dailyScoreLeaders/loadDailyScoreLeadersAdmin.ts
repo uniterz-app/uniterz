@@ -68,18 +68,23 @@ export async function loadDailyScoreLeadersAdmin(
   const missing: string[] = [];
   subtotalSnaps.forEach((snap, i) => {
     const entries = snap.exists ? (snap.data()?.entries as unknown) : null;
-    if (!Array.isArray(entries)) {
+    // 的中フラグ w が無い旧小計も posts から読み直す
+    if (
+      !Array.isArray(entries) ||
+      entries.some((e) => (e as { w?: unknown })?.w == null)
+    ) {
       missing.push(finals[i]!.id);
       return;
     }
     const preseason = isPreseasonGame(finals[i]!.data);
-    for (const e of entries as Array<{ u?: unknown; p?: unknown; k?: unknown }>) {
+    for (const e of entries as Array<{ u?: unknown; p?: unknown; k?: unknown; w?: unknown }>) {
       const k = Number(e.k) || 0;
       posts.push({
         uid: String(e.u ?? ""),
         points: Number(e.p),
         countedForRanking: preseason || (k & GAME_USER_POINTS_RANKING) !== 0,
         countedForPickup: preseason || (k & GAME_USER_POINTS_PICKUP) !== 0,
+        win: Number(e.w) === 1,
       });
     }
   });
@@ -115,6 +120,7 @@ export async function loadDailyScoreLeadersAdmin(
             ? stats.countedForPickup
             : countedForRanking),
         countedForRanking,
+        win: stats.isWin === true,
         displayName: str(d.authorDisplayName),
         handle: str(d.authorHandle),
         photoURL: str(d.authorPhotoURL) ?? null,

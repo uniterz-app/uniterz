@@ -57,6 +57,18 @@ export function dailyScoreLeadersCopy(lang: LocalizedLang) {
         de: `${n} ${n === 1 ? "Tipp" : "Tipps"}`,
         ar: `${n} توقعات`,
       }),
+    hitsLabel: (wins: number, posts: number) =>
+      L(lang, {
+        ja: `${wins}/${posts} 的中`,
+        en: `${wins}/${posts} hit`,
+        ko: `${wins}/${posts} 적중`,
+        zh: `${wins}/${posts} 命中`,
+        es: `${wins}/${posts} aciertos`,
+        pt: `${wins}/${posts} acertos`,
+        fr: `${wins}/${posts} réussis`,
+        de: `${wins}/${posts} Treffer`,
+        ar: `${wins}/${posts} صحيحة`,
+      }),
   };
 }
 

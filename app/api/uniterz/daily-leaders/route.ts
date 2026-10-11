@@ -38,7 +38,7 @@ class DayNotCompleteError extends Error {
 function loadLiveCached(dateKey: string, timeZone: string) {
   return unstable_cache(
     () => loadDailyScoreLeadersAdmin(getAdminDb(), { dateKey, timeZone }),
-    ["uniterz-daily-score-leaders", dateKey, timeZone],
+    ["uniterz-daily-score-leaders", "v2", dateKey, timeZone],
     { revalidate: 1800, tags: ["uniterz-daily-score-leaders"] }
   )();
 }
@@ -58,7 +58,7 @@ async function loadCached(
         if (!payload.complete) throw new DayNotCompleteError(payload);
         return payload;
       },
-      ["uniterz-daily-score-leaders-complete", dateKey, timeZone],
+      ["uniterz-daily-score-leaders-complete", "v2", dateKey, timeZone],
       { revalidate: false }
     )();
   } catch (e) {
