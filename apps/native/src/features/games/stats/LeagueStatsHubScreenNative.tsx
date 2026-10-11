@@ -9,6 +9,11 @@ import {
 import NbaLeagueTeamStatsPanelNative from "../teamStats/NbaLeagueTeamStatsPanelNative";
 import NbaLeaguePlayerStatLeadersPanelNative from "../playerStats/NbaLeaguePlayerStatLeadersPanelNative";
 import NbaStatsSearchBarNative from "./NbaStatsSearchBarNative";
+import {
+  LeagueStatsCollapseProvider,
+  LeagueStatsCollapsibleNative,
+  useLeagueStatsCollapseState,
+} from "./LeagueStatsCollapseNative";
 
 type TabId = "team" | "player";
 
@@ -30,6 +35,7 @@ export default function LeagueStatsHubScreenNative({
 }: Props) {
   const [tab, setTab] = useState<TabId>(initialTab);
   const title = tab === "team" ? "TEAM STATS" : "PLAYER STATS";
+  const collapse = useLeagueStatsCollapseState(tab);
 
   return (
     <GamesNbaSubpageShellNative
@@ -39,6 +45,8 @@ export default function LeagueStatsHubScreenNative({
       scroll={false}
       contentStyle={styles.shell}
     >
+      <LeagueStatsCollapseProvider value={collapse}>
+      <LeagueStatsCollapsibleNative zIndex={20}>
       <View style={styles.tabs}>
         <CyberSlantedTabBarNative fill>
           <CyberSlantedTabNative
@@ -69,6 +77,7 @@ export default function LeagueStatsHubScreenNative({
           }}
         />
       </View>
+      </LeagueStatsCollapsibleNative>
       <View style={styles.body}>
         {tab === "team" ? (
           <NbaLeagueTeamStatsPanelNative
@@ -82,6 +91,7 @@ export default function LeagueStatsHubScreenNative({
           />
         )}
       </View>
+      </LeagueStatsCollapseProvider>
     </GamesNbaSubpageShellNative>
   );
 }
@@ -98,7 +108,6 @@ const styles = StyleSheet.create({
   search: {
     paddingHorizontal: 12,
     paddingBottom: 8,
-    zIndex: 20,
   },
   body: {
     flex: 1,

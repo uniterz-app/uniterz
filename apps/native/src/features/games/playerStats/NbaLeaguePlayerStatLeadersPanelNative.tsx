@@ -26,6 +26,11 @@ import { leagueStatsTableEmptyCopy } from "../../../../../../lib/nba/leagueStats
 import NbaLeagueStatsTableEmptyNative from "../stats/NbaLeagueStatsTableEmptyNative";
 import NbaLeagueStatsSeasonNavNative from "../NbaLeagueStatsSeasonNavNative";
 import {
+  LeagueStatsCollapsedSummaryNative,
+  LeagueStatsCollapsibleNative,
+  useLeagueStatsCollapse,
+} from "../stats/LeagueStatsCollapseNative";
+import {
   coercePlayerModeForPhase,
   modeTabLabel,
   modesForPlayerPhase,
@@ -35,7 +40,10 @@ import {
   type NbaLeagueStatsMode,
   type NbaLeagueStatsPhase,
 } from "../../../../../../lib/nba/leagueStatsTableTabs";
-import { nbaLeagueStatsDefaultSeasonKey } from "../../../../../../lib/nba/nbaLeagueStatsSeasonNav";
+import {
+  nbaLeagueStatsDefaultSeasonKey,
+  nbaLeagueStatsSeasonNavState,
+} from "../../../../../../lib/nba/nbaLeagueStatsSeasonNav";
 
 import { getUniterzApiBaseUrl } from "../submitPredictionApi";
 import {
@@ -111,6 +119,7 @@ export default function NbaLeaguePlayerStatLeadersPanelNative({
   const { width: screenW } = useWindowDimensions();
   const railW = Math.round(screenW * 0.22);
   const { bottomContentReserveY } = useBottomTabBarInsets();
+  const { onTableScroll } = useLeagueStatsCollapse();
   const [seasonKey, setSeasonKey] = useState(nbaLeagueStatsDefaultSeasonKey);
   const { bundle, loading, error } = usePlayerStatLeadersBundle({
     apiBaseUrl: getUniterzApiBaseUrl(),
@@ -174,6 +183,7 @@ export default function NbaLeaguePlayerStatLeadersPanelNative({
         </View>
       ) : null}
 
+      <LeagueStatsCollapsibleNative>
       <View style={styles.top}>
         <Text style={styles.asOf}>{updateFootnote}</Text>
         {error ? (
@@ -217,6 +227,14 @@ export default function NbaLeaguePlayerStatLeadersPanelNative({
           </View>
         </View>
       </View>
+      </LeagueStatsCollapsibleNative>
+      <LeagueStatsCollapsedSummaryNative
+        text={[
+          nbaLeagueStatsSeasonNavState(seasonKey).label,
+          phaseTabLabel(phase),
+          modeTabLabel(mode),
+        ].join(" · ")}
+      />
 
       <View style={styles.split}>
         <View style={[styles.railWrap, { width: railW }]}>
@@ -300,6 +318,8 @@ export default function NbaLeaguePlayerStatLeadersPanelNative({
             style={styles.tableScroll}
             contentContainerStyle={{ paddingBottom: bottomContentReserveY }}
             showsVerticalScrollIndicator={false}
+            onScroll={onTableScroll}
+            scrollEventThrottle={16}
           >
             <View style={styles.table}>
               <View style={styles.tableHead}>
