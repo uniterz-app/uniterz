@@ -224,8 +224,10 @@ export default function RankingListProSkinFxNative({
     if (width !== w || height !== h) setSize({ w: width, h: height });
   };
 
+  /** ロゴは非同期の Image なので焼くと読み込み前の黒だけが残る。軽いのでライブ描画 */
+  const drawLive = variant === "wave-uniterz-logo";
   const cacheKey =
-    w > 0 && h > 0
+    !drawLive && w > 0 && h > 0
       ? proSkinRasterCacheKey(`rank:${variant}:${intensity}`, w, h)
       : "";
   const cached = cacheKey ? peekProSkinRaster(cacheKey) : null;
@@ -442,7 +444,9 @@ export default function RankingListProSkinFxNative({
       style={[styles.root, riseStyle]}
       onLayout={onLayout}
     >
-      {w > 0 && h > 0 ? (
+      {w > 0 && h > 0 && drawLive ? (
+        layers
+      ) : w > 0 && h > 0 ? (
         <RasterizeOnceNative
           cacheKey={cacheKey}
           width={w}
