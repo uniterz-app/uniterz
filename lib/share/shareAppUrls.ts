@@ -14,6 +14,28 @@ const CANONICAL_SHARE_HOST = "www.uniterz.app";
  */
 export const APP_STORE_SHARE_URL = "https://apps.apple.com/app/uniterz/id6819158408";
 
+/** Google Play 商品ページ（applicationId は `apps/native/app.json` の android.package） */
+export const PLAY_STORE_URL =
+  "https://play.google.com/store/apps/details?id=com.uniterz.app";
+
+/** OS 判定でストアへ振り分ける共有用ダウンロード URL のパス（`app/get/route.ts`） */
+export const APP_DOWNLOAD_PATH = "/get";
+
+export type AppDownloadTarget = "appStore" | "playStore" | "site";
+
+/** User-Agent からダウンロード先を決める。iPadOS のデスクトップ UA は判別できないので site */
+export function resolveAppDownloadTarget(userAgent: string | null | undefined): AppDownloadTarget {
+  const ua = userAgent ?? "";
+  if (/android/i.test(ua)) return "playStore";
+  if (/iphone|ipad|ipod/i.test(ua)) return "appStore";
+  return "site";
+}
+
+/** 共有本文に付けるダウンロード URL（iOS → App Store / Android → Google Play / その他 → 公式サイト） */
+export function getAppDownloadShareUrl(): string {
+  return `${getShareAppOrigin()}${APP_DOWNLOAD_PATH}`;
+}
+
 /** 共有本文末尾に付ける App Store URL（未設定なら null） */
 export function getAppStoreShareUrl(): string | null {
   const fromEnv =
@@ -33,7 +55,7 @@ export function getAppStoreAppId(): string | null {
 }
 
 /**
- * 共有本文: キャプション + ディープリンク +（公開後）App Store URL。
+ * 共有本文: キャプション + ディープリンク + ダウンロード URL（OS でストアへ振り分け）。
  * rank / result / profile の OS 共有・SNS Intent はここを通す。
  */
 export function buildShareOutboundMessage(
@@ -50,7 +72,7 @@ export function buildShareOutboundMessage(
   };
 
   pushUnique(deepLinkUrl);
-  pushUnique(getAppStoreShareUrl());
+  pushUnique(getAppDownloadShareUrl());
   return message;
 }
 

@@ -11,10 +11,13 @@ iOS は App Store 公開済み。商品ページ: `https://apps.apple.com/app/un
 
 1. `lib/share/shareAppUrls.ts` の `APP_STORE_SHARE_URL`（env `EXPO_PUBLIC_APP_STORE_URL` / `NEXT_PUBLIC_APP_STORE_URL` があればそちら優先）
 2. LP `lib/lp/officialSiteContent.ts` の `appStore`（`status: "available"`、`href` は `APP_STORE_SHARE_URL`）
-3. rank / result / profile 共有は `buildShareOutboundMessage` 経由で **自動付与**される。個別画面に足し直さない
+3. rank / result / profile 共有は `buildShareOutboundMessage` 経由で **ダウンロード URL `https://www.uniterz.app/get`（`getAppDownloadShareUrl()`）が自動付与**される。`app/get/route.ts` が User-Agent で iOS → App Store / Android → Google Play / その他 → `/lp` に 302。個別画面に足し直さない。共有着地ページの主 CTA も `/get`
 
 URL を別の場所にハードコードしない（`APP_STORE_SHARE_URL` / `getAppStoreShareUrl()` を参照する）。
 
-## 未対応
+## Google Play
 
-Google Play は未公開（LP `playStore` は Coming Soon）。公開したら `playStore` を同様に更新する。ダミーの Play URL は書かない。
+Android も公開済み。商品ページ: `https://play.google.com/store/apps/details?id=com.uniterz.app`
+
+- `lib/share/shareAppUrls.ts` の `PLAY_STORE_URL`
+- LP `lib/lp/officialSiteContent.ts` の `playStore`（`status: "available"`）→ ヒーローで App Store と並べて表示

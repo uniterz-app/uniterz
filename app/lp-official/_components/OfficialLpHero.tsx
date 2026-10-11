@@ -11,22 +11,27 @@ export default function OfficialLpHero() {
     <section id="top" className="olp-section olp-hero">
       <div className="olp-hero-stage olp-hero-enter">
         <div className="olp-hero-copy">
-          {officialSite.appStore.href ? (
-            <a
-              href={officialSite.appStore.href}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="olp-status olp-metric"
-            >
-              <span aria-hidden />
-              {officialSite.appStore.label}
-            </a>
-          ) : (
-            <p className="olp-status olp-metric">
-              <span aria-hidden />
-              {officialSite.appStore.label}
-            </p>
-          )}
+          <div className="olp-store-links">
+            {[officialSite.appStore, officialSite.playStore].map((store) =>
+              store.href ? (
+                <a
+                  key={store.label}
+                  href={store.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="olp-status olp-metric"
+                >
+                  <span aria-hidden />
+                  {store.label}
+                </a>
+              ) : (
+                <p key={store.label} className="olp-status olp-metric">
+                  <span aria-hidden />
+                  {store.label}
+                </p>
+              )
+            )}
+          </div>
           <div className="olp-logo-hero">
             <OfficialLpLogo priority centered />
           </div>

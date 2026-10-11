@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { getAppStoreShareUrl } from "@/lib/share/shareAppUrls";
+import { getAppStoreShareUrl, PLAY_STORE_URL } from "@/lib/share/shareAppUrls";
 
 export default function WebAppSeasonMaintenanceOverlay() {
   const appStoreUrl = getAppStoreShareUrl();
@@ -56,17 +56,26 @@ export default function WebAppSeasonMaintenanceOverlay() {
           <br />
           Sign in with your existing account.
         </p>
-        {appStoreUrl ? (
+        <div className="mt-6 flex flex-col items-center gap-3">
+          {appStoreUrl ? (
+            <a
+              href={appStoreUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center rounded-full bg-white px-6 py-3 text-sm font-bold text-black"
+            >
+              App Store でダウンロード
+            </a>
+          ) : null}
           <a
-            href={appStoreUrl}
+            href={PLAY_STORE_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-6 inline-flex items-center justify-center rounded-full bg-white px-6 py-3 text-sm font-bold text-black"
+            className="inline-flex items-center justify-center rounded-full bg-white px-6 py-3 text-sm font-bold text-black"
           >
-            App Store でダウンロード
+            Google Play でダウンロード
           </a>
-        ) : null}
-        <p className="mt-3 text-xs opacity-60">Android 版は近日公開</p>
+        </div>
         <a
           href="/lp"
           className="mt-6 inline-flex text-sm font-semibold text-cyan-300 underline-offset-4 hover:underline"

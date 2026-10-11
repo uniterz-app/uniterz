@@ -2,11 +2,11 @@
 
 import {
   buildShareOutboundMessage,
-  getAppStoreShareUrl,
+  getAppDownloadShareUrl,
 } from "./shareAppUrls";
 
 export type SnsTextShareUrls = {
-  /** 共有キャプション（ディープリンク + App Store 込み） */
+  /** 共有キャプション（ディープリンク + ダウンロード URL 込み） */
   text: string;
   /** モバイル LINE アプリ直開き */
   lineAppUrl: string;
@@ -28,7 +28,7 @@ export function buildSnsTextShareUrls({
   url,
 }: BuildSnsTextShareUrlsOptions): SnsTextShareUrls {
   const text = buildShareOutboundMessage(caption, url);
-  const link = url?.trim() || getAppStoreShareUrl() || undefined;
+  const link = url?.trim() || getAppDownloadShareUrl();
   const urlPart = link ? `&url=${encodeURIComponent(link)}` : "";
 
   return {

@@ -20,7 +20,7 @@ import {
   TOKUSHOHO_LEAD,
   TOKUSHOHO_ROWS,
 } from "@/lib/legal/tokushohoCopy";
-import { APP_STORE_SHARE_URL } from "@/lib/share/shareAppUrls";
+import { APP_STORE_SHARE_URL, PLAY_STORE_URL } from "@/lib/share/shareAppUrls";
 
 export type OfficialAssetBrief = {
   id: string;
@@ -48,9 +48,9 @@ export const officialSite = {
     href: APP_STORE_SHARE_URL as string | null,
   },
   playStore: {
-    status: "comingSoon" as const,
-    label: "Coming Soon on Google Play",
-    href: null,
+    status: "available" as const,
+    label: "Get it on Google Play",
+    href: PLAY_STORE_URL as string | null,
   },
   sns: {
     x: { label: "X", href: null as string | null },
@@ -551,12 +551,12 @@ export const officialFaq = {
       a: "違います。NBA、チーム、選手等の名称・ロゴは各権利者に帰属します。Uniterz は NBA またはその関係会社の公式サービスではありません。",
     },
     {
-      q: "いつリリース？",
-      a: "iOS / Android 向けに公開準備中です。公開日は決まり次第、このページで案内します。",
+      q: "どこでダウンロードできる？",
+      a: "App Store（iOS）と Google Play（Android）で公開中です。",
     },
     {
       q: "対応端末は？",
-      a: "iOS および Android アプリを予定しています。あわせて対応する Web 版も利用できます。対応 OS の詳細は公開時および各ストアページに表示します。",
+      a: "iOS および Android アプリに対応しています。あわせて Web 版も利用できます。対応 OS の詳細は各ストアページに表示しています。",
     },
   ],
 } as const;

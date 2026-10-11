@@ -7,7 +7,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { APP_WEB_APP_MAINTENANCE } from "@/lib/app/maintenanceMode";
-import { getAppStoreShareUrl } from "@/lib/share/shareAppUrls";
+import { APP_DOWNLOAD_PATH } from "@/lib/share/shareAppUrls";
 import {
   formatSharePoints,
   formatShareStartTime,
@@ -93,20 +93,10 @@ export default function ShareLandingView({ target, path, language, signedIn }: P
     language ?? (typeof navigator !== "undefined" ? navigator.language : "ja")
   );
   const c = shareLandingCopy(lang);
-  const appStoreUrl = getAppStoreShareUrl();
   const webAvailable = !APP_WEB_APP_MAINTENANCE;
   const next = encodeURIComponent(path);
 
-  const primary: Cta = appStoreUrl
-    ? { href: appStoreUrl, label: c.ctaApp, external: true }
-    : !webAvailable
-      ? { href: "/lp", label: c.ctaAbout }
-      : signedIn
-        ? { href: "/mobile/games", label: c.ctaBack }
-        : {
-            href: `/mobile/signup?next=${next}`,
-            label: target.kind === "community" ? c.ctaJoinCommunity : c.ctaStart,
-          };
+  const primary: Cta = { href: APP_DOWNLOAD_PATH, label: c.ctaApp, external: true };
   const login: Cta | null =
     webAvailable && !signedIn ? { href: `/mobile/login?next=${next}`, label: c.ctaLogin } : null;
 
