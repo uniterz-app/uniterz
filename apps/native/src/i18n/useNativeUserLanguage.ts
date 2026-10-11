@@ -2,22 +2,24 @@
 import { useEffect, useMemo, useState } from "react";
 import type { DocumentData } from "firebase/firestore";
 import {
-  guessChineseScriptFromDevice,
-  guessLanguageFromNavigator,
   normalizeChineseScript,
   normalizeLanguage,
   type ChineseScript,
   type Language,
 } from "../../../../lib/i18n/language";
+import {
+  guessDeviceChineseScript,
+  resolveDeviceLocalizedLang,
+} from "./resolveDeviceAppLanguage";
 import { resolveDisplayTimeZone } from "../../../../lib/i18n/countryTimezone";
 import { subscribeUserDocLive } from "../../../../lib/user/subscribeUserDocLive";
 
 export function useNativeUserLanguage(uid: string | null | undefined) {
   const [language, setLanguage] = useState<Language>(() =>
-    guessLanguageFromNavigator()
+    resolveDeviceLocalizedLang()
   );
   const [chineseScript, setChineseScript] = useState<ChineseScript>(() =>
-    guessChineseScriptFromDevice()
+    guessDeviceChineseScript()
   );
   const [countryCode, setCountryCode] = useState<string | null>(null);
   /** 手動設定のみ。null は自動（端末） */
@@ -26,8 +28,8 @@ export function useNativeUserLanguage(uid: string | null | undefined) {
 
   useEffect(() => {
     if (!uid) {
-      setLanguage(guessLanguageFromNavigator());
-      setChineseScript(guessChineseScriptFromDevice());
+      setLanguage(resolveDeviceLocalizedLang());
+      setChineseScript(guessDeviceChineseScript());
       setCountryCode(null);
       setDisplayTimeZone(null);
       setLoading(false);
@@ -37,9 +39,9 @@ export function useNativeUserLanguage(uid: string | null | undefined) {
     setLoading(true);
     return subscribeUserDocLive(uid, (data: DocumentData | null) => {
       const resolved = normalizeLanguage(data?.language);
-      setLanguage(resolved ?? guessLanguageFromNavigator());
+      setLanguage(resolved ?? resolveDeviceLocalizedLang());
       setChineseScript(
-        resolved ? normalizeChineseScript(data?.chineseScript) : guessChineseScriptFromDevice()
+        resolved ? normalizeChineseScript(data?.chineseScript) : guessDeviceChineseScript()
       );
       setCountryCode(
         typeof data?.countryCode === "string" ? data.countryCode : null

@@ -33,6 +33,16 @@ export function normalizeLanguage(v: unknown): Language | null {
   return null;
 }
 
+/** `ja-JP` / `zh_TW` / `en-US` の言語部分。未知は null（英語へ潰さない） */
+export function languageFromLocaleTag(raw: unknown): Language | null {
+  if (typeof raw !== "string") return null;
+  const tag = raw.trim().toLowerCase().replace(/_/g, "-").replace(/#/g, "");
+  if (!tag) return null;
+  if (tag === "zh" || tag.startsWith("zh-")) return "zh";
+  const primary = tag.split("-")[0] ?? "";
+  return normalizeLanguage(primary);
+}
+
 /**
  * 中国語の字体。文言は `zh`（簡体字）で持ち、`hant` のときだけ表示時に繁体字へ変換する。
  * Firestore は `users.language = "zh"` + `users.chineseScript = "hant"`（簡体字は欠落）。
@@ -91,11 +101,25 @@ export function chineseScriptFromChoice(choice: LanguageChoice): ChineseScript {
   return choice === "zh-Hant" ? "hant" : "hans";
 }
 
+/** 中国語タグなら字体。中国語でなければ null */
+export function chineseScriptFromLocaleTag(raw: unknown): ChineseScript | null {
+  if (typeof raw !== "string") return null;
+  const tag = raw.trim().toLowerCase().replace(/_/g, "-").replace(/#/g, "-");
+  if (tag !== "zh" && !tag.startsWith("zh-")) return null;
+  if (tag.includes("hant") || /-(tw|hk|mo)(-|$)/.test(tag)) return "hant";
+  return "hans";
+}
+
 /** 端末ロケールが繁体字圏（zh-Hant / zh-TW / zh-HK / zh-MO）なら hant */
 export function guessChineseScriptFromDevice(): ChineseScript {
   const tags: string[] = [];
   try {
     if (typeof navigator !== "undefined" && navigator.language) tags.push(navigator.language);
+    if (typeof navigator !== "undefined" && Array.isArray(navigator.languages)) {
+      for (const item of navigator.languages) {
+        if (typeof item === "string" && item) tags.push(item);
+      }
+    }
   } catch {
     // ignore
   }
@@ -105,10 +129,8 @@ export function guessChineseScriptFromDevice(): ChineseScript {
     // ignore
   }
   for (const raw of tags) {
-    const tag = String(raw || "").trim().toLowerCase().replace(/_/g, "-");
-    if (!tag.startsWith("zh")) continue;
-    if (tag.includes("hant") || /-(tw|hk|mo)(-|$)/.test(tag)) return "hant";
-    return "hans";
+    const script = chineseScriptFromLocaleTag(raw);
+    if (script) return script;
   }
   return "hans";
 }
@@ -126,15 +148,22 @@ export const DATE_LOCALE: Record<Language, string> = {
 };
 
 export function guessLanguageFromNavigator(): Language {
-  if (typeof navigator === "undefined") return "en";
-  const low = navigator.language?.toLowerCase() ?? "";
-  if (low.startsWith("ja")) return "ja";
-  if (low.startsWith("zh")) return "zh";
-  if (low.startsWith("ko")) return "ko";
-  if (low.startsWith("es")) return "es";
-  if (low.startsWith("de")) return "de";
-  if (low.startsWith("fr")) return "fr";
-  if (low.startsWith("ar")) return "ar";
-  if (low.startsWith("pt")) return "pt";
+  const tags: string[] = [];
+  try {
+    if (typeof navigator !== "undefined") {
+      if (navigator.language) tags.push(navigator.language);
+      if (Array.isArray(navigator.languages)) {
+        for (const item of navigator.languages) {
+          if (typeof item === "string" && item) tags.push(item);
+        }
+      }
+    }
+  } catch {
+    // ignore
+  }
+  for (const tag of tags) {
+    const lang = languageFromLocaleTag(tag);
+    if (lang) return lang;
+  }
   return "en";
 }

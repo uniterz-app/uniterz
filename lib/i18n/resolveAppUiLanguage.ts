@@ -1,16 +1,22 @@
 /**
- * 未ログイン時の UI 言語（ja | en）。
- * 端末 / ブラウザが日本語なら ja、それ以外は en。
+ * 未ログイン時の UI 言語。
+ * ブラウザが日本語なら ja。9 言語コピーは地域付きタグ（ja-JP など）も言語部分で判定する。
  */
-import { resolveLocalizedLang, type LocalizedLang } from "@/lib/i18n/localize";
+import { languageFromLocaleTag } from "@/lib/i18n/language";
+import type { LocalizedLang } from "@/lib/i18n/localize";
 
 export type AppUiLanguage = "ja" | "en";
 
 function localeCandidates(): string[] {
   const out: string[] = [];
   try {
-    if (typeof navigator !== "undefined" && navigator.language) {
-      out.push(navigator.language);
+    if (typeof navigator !== "undefined") {
+      if (navigator.language) out.push(navigator.language);
+      if (Array.isArray(navigator.languages)) {
+        for (const item of navigator.languages) {
+          if (typeof item === "string" && item) out.push(item);
+        }
+      }
     }
   } catch {
     // ignore
@@ -27,8 +33,7 @@ function localeCandidates(): string[] {
 
 export function resolveAppUiLanguage(): AppUiLanguage {
   for (const raw of localeCandidates()) {
-    const tag = String(raw || "").trim().toLowerCase().replace(/_/g, "-");
-    if (tag === "ja" || tag.startsWith("ja-")) return "ja";
+    if (languageFromLocaleTag(raw) === "ja") return "ja";
   }
   return "en";
 }
@@ -36,10 +41,8 @@ export function resolveAppUiLanguage(): AppUiLanguage {
 /** 未ログイン画面でも 9 言語コピーを出したいとき（ja|en に潰さない） */
 export function resolveAppUiLocalizedLang(): LocalizedLang {
   for (const raw of localeCandidates()) {
-    const tag = String(raw || "").trim();
-    if (!tag) continue;
-    const resolved = resolveLocalizedLang(tag);
-    if (resolved !== "en" || /^en(-|$)/i.test(tag)) return resolved;
+    const lang = languageFromLocaleTag(raw);
+    if (lang) return lang;
   }
   return "en";
 }

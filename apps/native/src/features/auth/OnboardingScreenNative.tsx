@@ -24,10 +24,12 @@ import { AUTH_LANDING } from "./authLandingPalette";
 import SlantCtaNative from "../../ui/SlantCtaNative";
 import { LEAGUES } from "../../../../../lib/leagues";
 import { hideNativeBootSplash } from "../../bootstrap/nativeBootSplash";
-import { resolveDeviceLocalizedLang } from "../../i18n/resolveDeviceAppLanguage";
+import {
+  guessDeviceChineseScript,
+  resolveDeviceLocalizedLang,
+} from "../../i18n/resolveDeviceAppLanguage";
 import {
   chineseScriptFromChoice,
-  guessChineseScriptFromDevice,
   LANGUAGE_CHOICE_NATIVE_NAMES,
   LANGUAGE_CHOICES,
   languageChoiceOf,
@@ -81,7 +83,7 @@ export default function OnboardingScreenNative() {
   const [displayName, setDisplayName] = useState("");
   const [inviteCode, setInviteCode] = useState("");
   const [languageChoice, setLanguageChoice] = useState<LanguageChoice>(() =>
-    languageChoiceOf(resolveDeviceLocalizedLang(), guessChineseScriptFromDevice())
+    languageChoiceOf(resolveDeviceLocalizedLang(), guessDeviceChineseScript())
   );
   const language: LocalizedLang = languageFromChoice(languageChoice);
   const [countryCode, setCountryCode] = useState("");
