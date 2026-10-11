@@ -3,6 +3,7 @@ import { unstable_cache } from "next/cache";
 import { getAdminAuth, getAdminDb } from "@/lib/firebaseAdmin";
 import { assertProUser } from "@/lib/rankings/server/fetchRankGapAnalysis";
 import { loadDailyScoreLeadersAdmin } from "@/lib/rankings/dailyScoreLeaders/loadDailyScoreLeadersAdmin";
+import { mergeUserPlansIntoLeaderboardRows } from "@/lib/rankings/mergeUserPlanIntoRankingPayload";
 import type {
   DailyScoreDivision,
   DailyScoreLeadersPayload,
@@ -67,6 +68,19 @@ async function loadCached(
   }
 }
 
+/** 確定日の無期限キャッシュ後に Pro 化・スキン変更した人も反映するため、plan / スキンだけ短い間隔で読み直す */
+function mergeFreshPlansCached(
+  rows: DailyScoreLeadersPayload["boards"][DailyScoreDivision],
+  dateKey: string,
+  division: DailyScoreDivision
+) {
+  return unstable_cache(
+    () => mergeUserPlansIntoLeaderboardRows(rows),
+    ["uniterz-daily-score-leaders-plans", dateKey, division, rows.map((r) => r.uid).join(",")],
+    { revalidate: 300 }
+  )();
+}
+
 /** NBA の試合日は米国東部の暦日。全ユーザーが同じ試合日のランキングを見る */
 const SLATE_TIME_ZONE = TIMEZONE_ET;
 
@@ -119,7 +133,8 @@ export async function GET(req: Request) {
     const payload = await loadLatestSlate();
 
     const { boards, ...meta } = payload;
-    const body = { ...meta, division, rows: boards[division] };
+    const rows = await mergeFreshPlansCached(boards[division], meta.dateKey, division);
+    const body = { ...meta, division, rows };
 
     // URL に日付が無く、次の試合日が始まると中身が切り替わるので CDN は短く（サーバー側は確定日を無期限キャッシュ）
     const cacheControl =
