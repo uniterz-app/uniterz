@@ -16,6 +16,7 @@ export type ResultSettlementBreakdown = {
   upsetBonus: number;
   streakBonus: number;
   goalScorerBonus: number;
+  perfectBonus: number;
   totalPoints: number;
 };
 
@@ -24,11 +25,13 @@ type ResultStatsRecord = {
   upsetPoints?: unknown;
   pointsV3?: unknown;
   goalScorerBonus?: unknown;
+  perfectBonus?: unknown;
   pointsV3Detail?: {
     basePoints?: unknown;
     upsetBonus?: unknown;
     streakBonus?: unknown;
     goalScorerBonus?: unknown;
+    perfectBonus?: unknown;
   };
 };
 
@@ -56,6 +59,7 @@ export function extractResultSettlementBreakdown(
     goalScorerBonus: toNumber(
       resultStats?.goalScorerBonus ?? detail?.goalScorerBonus
     ),
+    perfectBonus: toNumber(resultStats?.perfectBonus ?? detail?.perfectBonus),
     totalPoints: pointsV3,
   };
 }

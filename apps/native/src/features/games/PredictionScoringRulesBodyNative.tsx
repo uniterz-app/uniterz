@@ -91,6 +91,12 @@ function BasketballBody({ c }: { c: ScoringRulesCopy }) {
         <HudIntro>{c.bbBonusIntro}</HudIntro>
         <HudRow
           tone="accent"
+          label="PERFECT"
+          pts="+4"
+          hint={c.bbPerfectHint}
+        />
+        <HudRow
+          tone="accent"
           label="TOP SCORER"
           pts="+2"
           hint={c.bbTopScorerHint}

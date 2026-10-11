@@ -47,6 +47,7 @@ export async function finalizePost({
     upsetBonus,
     streakBonus,
     goalScorerBonus,
+    perfectBonus,
     activeWinStreak,
   } =
     settlementIn ??
@@ -136,6 +137,7 @@ export async function finalizePost({
       upsetBonus,
       streakBonus,
       goalScorerBonus,
+      perfectBonus,
 
       exactMatch: Boolean((baseScore as { exactMatch?: boolean }).exactMatch),
 
@@ -158,6 +160,7 @@ export async function finalizePost({
         upsetBonus,
         streakBonus,
         goalScorerBonus,
+        perfectBonus,
         activeWinStreak,
         diffError: baseScore.diffError,
         totalError: baseScore.totalError,

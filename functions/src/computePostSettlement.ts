@@ -96,8 +96,12 @@ export type PostSettlementComputed = {
   upsetBonus: number;
   streakBonus: number;
   goalScorerBonus: number;
+  perfectBonus: number;
   activeWinStreak: number;
 };
+
+/** バスケのスコア完全的中ボーナス（football は calcPointsFootball 側で完全一致を採点） */
+export const BASKETBALL_PERFECT_BONUS = 4;
 
 /**
  * finalizePost と同じ inputs で pointsV3（totalPoints）などを算出。
@@ -197,8 +201,19 @@ export function computePostSettlement({
           awayTeamId: game.awayTeamId,
         });
 
+  const perfectBonus =
+    sport === "basketball" &&
+    baseScore.winnerCorrect &&
+    (baseScore as { exactMatch?: boolean }).exactMatch === true
+      ? BASKETBALL_PERFECT_BONUS
+      : 0;
+
   const totalPoints =
-    baseScore.basePoints + upsetBonus + streakBonus + goalScorerBonus;
+    baseScore.basePoints +
+    upsetBonus +
+    streakBonus +
+    goalScorerBonus +
+    perfectBonus;
 
   return {
     totalPoints,
@@ -208,6 +223,7 @@ export function computePostSettlement({
     upsetBonus,
     streakBonus,
     goalScorerBonus,
+    perfectBonus,
     activeWinStreak,
   };
 }

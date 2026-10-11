@@ -136,6 +136,15 @@ export function scoringRulesCopy(lang: ScoringRulesLang) {
       pt: "Somado à base. O total pode passar de 10.",
       fr: "Ajouté au base. Le total peut dépasser 10.",
     }),
+    bbPerfectHint: L(lang, {
+      ja: "両チームのスコアを完全的中。",
+      en: "Both teams’ scores exactly right.",
+      ko: "양 팀 스코어를 완전 적중.",
+      zh: "两队比分完全猜中。",
+      es: "Marcador de ambos equipos exacto.",
+      pt: "Placar dos dois times exato.",
+      fr: "Score exact des deux équipes.",
+    }),
     bbTopScorerHint: L(lang, {
       ja: "最多得点者を的中（勝者予想とは別枠）。",
       en: "Hit the game’s top scorer (separate from the winner pick).",

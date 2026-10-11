@@ -351,6 +351,9 @@ function ScoreBreakdownPanel({
     ...(b.goalScorerBonus > 1e-6
       ? [{ value: b.goalScorerBonus, color: SCORE_BREAKDOWN_COLORS.scorer }]
       : []),
+    ...(b.perfectBonus > 1e-6
+      ? [{ value: b.perfectBonus, color: SCORE_BREAKDOWN_COLORS.perfect }]
+      : []),
   ];
 
   type Row = {
@@ -399,6 +402,16 @@ function ScoreBreakdownPanel({
             color: SCORE_BREAKDOWN_COLORS.scorer,
             hit: b.topScorerHit === true,
             sub: b.topScorerName ?? undefined,
+          },
+        ]
+      : []),
+    ...(b.perfectBonus > 1e-6
+      ? [
+          {
+            key: "perfect",
+            label: ja ? "PERFECT ボーナス" : "PERFECT bonus",
+            value: b.perfectBonus,
+            color: SCORE_BREAKDOWN_COLORS.perfect,
           },
         ]
       : []),

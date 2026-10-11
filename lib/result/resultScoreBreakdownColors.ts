@@ -4,4 +4,5 @@ export const SCORE_BREAKDOWN_COLORS = {
   streak: "#FBBF24",
   upset: "#DC2626",
   scorer: "#A78BFA",
+  perfect: "#FDE047",
 } as const;
