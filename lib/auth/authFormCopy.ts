@@ -26,6 +26,8 @@ export type AuthFormCopy = {
   missingEmail: string;
   missingBoth: string;
   weakPassword: string;
+  /** `{email}` を候補アドレスに置換 */
+  emailTypo: string;
   authErrorTitle: string;
   resetSentTitle: string;
   resetSentBody: string;
@@ -159,6 +161,15 @@ const COPY: Record<keyof AuthFormCopy, UiStrings> = {
     pt: "A senha deve ter pelo menos 6 caracteres.",
     fr: "Le mot de passe doit contenir au moins 6 caractères.",
   },
+  emailTypo: {
+    ja: "メールアドレスが間違っていませんか？\n{email}\n間違ったままだとパスワード再設定のメールが届きません。",
+    en: "Did you mean {email}?\nWith a typo, password reset emails can't reach you.",
+    ko: "이메일 주소가 맞나요? {email}\n오타가 있으면 비밀번호 재설정 메일을 받을 수 없습니다.",
+    zh: "邮箱地址是否有误？{email}\n地址有误将无法收到密码重置邮件。",
+    es: "¿Quisiste decir {email}?\nCon un error no recibirás el correo para restablecer la contraseña.",
+    pt: "Você quis dizer {email}?\nCom erro, o e-mail de redefinição de senha não chegará.",
+    fr: "Vouliez-vous dire {email} ?\nAvec une faute, l'e-mail de réinitialisation ne vous parviendra pas.",
+  },
   authErrorTitle: {
     ja: "認証エラー",
     en: "Authentication error",
@@ -215,6 +226,7 @@ export function authFormCopy(
     missingEmail: L(lang, COPY.missingEmail),
     missingBoth: L(lang, COPY.missingBoth),
     weakPassword: L(lang, COPY.weakPassword),
+    emailTypo: L(lang, COPY.emailTypo),
     authErrorTitle: L(lang, COPY.authErrorTitle),
     resetSentTitle: L(lang, COPY.resetSentTitle),
     resetSentBody: L(lang, COPY.resetSentBody),

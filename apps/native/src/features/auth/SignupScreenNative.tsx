@@ -20,6 +20,7 @@ import SlantCtaNative from "../../ui/SlantCtaNative";
 import { bindMeReferralNative } from "../profile/referralApiNative";
 import { normalizeReferralInviteCode } from "../../../../../lib/referral/referralInviteCode";
 import { authFormCopy } from "@/lib/auth/authFormCopy";
+import { suggestEmailTypoFix } from "@/lib/auth/emailDomainCheck";
 import { resolveDeviceLocalizedLang } from "../../i18n/resolveDeviceAppLanguage";
 import { referralBindUserMessage } from "@/lib/referral/referralBindErrorCopy";
 
@@ -45,6 +46,11 @@ export default function SignupScreenNative() {
     }
     if (password.length < 6) {
       cyberAlert(copy.missingInputTitle, copy.weakPassword);
+      return;
+    }
+    const typoFix = suggestEmailTypoFix(normalized);
+    if (typoFix) {
+      cyberAlert(copy.missingInputTitle, copy.emailTypo.replace("{email}", typoFix));
       return;
     }
     setSubmitting(true);

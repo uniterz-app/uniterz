@@ -588,10 +588,22 @@ function scheduleNextHour() {
   let next = Math.floor(now / HOUR_MS) * HOUR_MS + HOUR_MS;
   if (latest && next - latest.fetchedAt < MIN_GAP_MS) next += HOUR_MS;
   nextRefreshAt = next;
-  setTimeout(async () => {
-    if (!latest || Date.now() - latest.fetchedAt >= MIN_GAP_MS) await refresh();
-    scheduleNextHour();
-  }, next - now);
 }
+
+/**
+ * 1 時間の setTimeout は Mac のスリープ中に時計が止まり、起きてもその分だけ遅れる。
+ * 毎分、壁時計で予定時刻を過ぎたかを見る（スリープ明けはすぐ取り直す）。
+ */
+let refreshing = false;
+setInterval(async () => {
+  if (refreshing || !(Date.now() >= nextRefreshAt)) return;
+  refreshing = true;
+  try {
+    if (!latest || Date.now() - latest.fetchedAt >= MIN_GAP_MS) await refresh();
+  } finally {
+    refreshing = false;
+    scheduleNextHour();
+  }
+}, 60_000);
 
 void refresh().then(scheduleNextHour);

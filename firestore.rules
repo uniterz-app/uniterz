@@ -48,7 +48,7 @@ service cloud.firestore {
     }
 
     /**
-     * 表示名・bio からギャンブル関連語を拒否（Web API `lib/profile/profileGamblingTerms.ts` と同趣旨）。
+     * 表示名・bio からギャンブル関連語・性的表現・差別語を拒否（Web API `lib/profile/profileGamblingTerms.ts` と同趣旨）。
      * 直接 Firestore を書くクライアント対策。英語は単語境界。
      */
     function profileTextGamblingFree(s) {
@@ -63,7 +63,9 @@ service cloud.firestore {
             || s.matches('(?si).*\\bbetting\\b.*')
             || s.matches('(?si).*\\bbets\\b.*')
             || s.matches('(?si).*\\bbetted\\b.*')
-            || s.matches('(?si).*\\bbettor\\b.*'));
+            || s.matches('(?si).*\\bbettor\\b.*')
+            || s.matches('(?s).*(セックス|せっくす|エロ動画|ちんこ|チンコ|ちんぽ|チンポ|まんこ|マンコ|中出し|男優|AV女優|オナニー|シコシコ|シコる|シコら|レイプ|射精|勃起|痴漢|風俗).*')
+            || s.matches('(?si).*(sex|porn|fuck|pussy|hentai|nigg|xvideos).*'));
     }
 
     function isValidNotificationPrefs(p) {

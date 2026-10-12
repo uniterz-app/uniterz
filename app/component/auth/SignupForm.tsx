@@ -21,6 +21,7 @@ import {
   pickReferralInviteCodeFromSearch,
 } from "@/lib/referral/referralInviteCode";
 import { authFormCopy } from "@/lib/auth/authFormCopy";
+import { suggestEmailTypoFix } from "@/lib/auth/emailDomainCheck";
 import { resolveAppUiLocalizedLang } from "@/lib/i18n/resolveAppUiLanguage";
 import { referralBindUserMessage } from "@/lib/referral/referralBindErrorCopy";
 
@@ -62,6 +63,7 @@ export default function SignupForm({ variant = "web" }: SignupFormProps) {
       passwordPlaceholder: "Password",
       invitePlaceholder: "Invite code (optional)",
       inviteHint: copy.inviteHint,
+      emailTypo: copy.emailTypo,
       signupCta: "SIGN UP",
       alreadyLead: copy.alreadyLead,
       loginText: "Login",
@@ -75,6 +77,11 @@ export default function SignupForm({ variant = "web" }: SignupFormProps) {
     e.preventDefault();
     try {
       if (submitting) return;
+      const typoFix = suggestEmailTypoFix(email);
+      if (typoFix) {
+        alert(ui.emailTypo.replace("{email}", typoFix));
+        return;
+      }
       setSubmitting(true);
       const cred = await createUserWithEmailAndPassword(
         auth,

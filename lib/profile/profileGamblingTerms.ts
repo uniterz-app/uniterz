@@ -1,8 +1,10 @@
 import type { Language } from "@/lib/i18n/language";
 
 /**
- * プロフィールの表示名・自己紹介に含めさせないギャンブル関連語。
+ * プロフィールの表示名・自己紹介に含めさせない語（ギャンブル関連・性的表現・差別語）。
  * 英語の "bet" は単語境界で判定し、"alphabet" 等の誤検知を避ける。
+ * 「シコ」単体は「メキシコ」に当たるため入れない。
+ * firestore.rules の profileTextGamblingFree と揃える。
  */
 const JA_SUBSTRINGS = [
   "ベット",
@@ -11,6 +13,27 @@ const JA_SUBSTRINGS = [
   "賭け",
   "賭博",
   "ギャンブル",
+  "セックス",
+  "せっくす",
+  "エロ動画",
+  "ちんこ",
+  "チンコ",
+  "ちんぽ",
+  "チンポ",
+  "まんこ",
+  "マンコ",
+  "中出し",
+  "男優",
+  "AV女優",
+  "オナニー",
+  "シコシコ",
+  "シコる",
+  "シコら",
+  "レイプ",
+  "射精",
+  "勃起",
+  "痴漢",
+  "風俗",
 ] as const;
 
 /** 日本語はそのまま部分一致 */
@@ -20,6 +43,13 @@ const EN_WORD_PATTERNS: readonly RegExp[] = [
   /\bbets\b/i,
   /\bbetted\b/i,
   /\bbettor\b/i,
+  /sex/i,
+  /porn/i,
+  /fuck/i,
+  /pussy/i,
+  /hentai/i,
+  /nigg/i,
+  /xvideos/i,
 ];
 
 export class ProfileGamblingTermsError extends Error {

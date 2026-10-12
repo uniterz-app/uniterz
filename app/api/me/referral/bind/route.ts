@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireUidFromRequest } from "@/lib/communities/serverAuth";
-import { getAdminDb } from "@/lib/firebaseAdmin";
+import { getAdminAuth, getAdminDb } from "@/lib/firebaseAdmin";
+import { isDisposableEmail } from "@/lib/auth/emailDomainCheck";
 import { bindReferralOnSignupAdmin } from "@/lib/referral/bindReferralOnSignupAdmin";
 import { consumeRateLimit, RATE_LIMIT_RULES } from "@/lib/security/rateLimit";
 
@@ -30,6 +31,15 @@ export async function POST(req: Request) {
       return NextResponse.json(
         { ok: false, error: "rate_limited" },
         { status: 429, headers: { "Retry-After": String(limit.retryAfterSec) } }
+      );
+    }
+
+    // 使い捨てメールでの量産アカウントによる招待報酬の水増しを防ぐ
+    const invitee = await getAdminAuth().getUser(uid);
+    if (isDisposableEmail(invitee.email)) {
+      return NextResponse.json(
+        { ok: false, error: "disposable_email", inviteCode: null },
+        { status: 403 }
       );
     }
 

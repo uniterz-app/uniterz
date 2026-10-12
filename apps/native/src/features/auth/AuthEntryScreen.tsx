@@ -34,6 +34,7 @@ import { useFirebaseUser } from "../../auth/FirebaseUserProvider";
 import type { AuthStackParamList } from "../../navigation/types";
 import { resolveDeviceLocalizedLang } from "../../i18n/resolveDeviceAppLanguage";
 import { authFormCopy } from "@/lib/auth/authFormCopy";
+import { suggestEmailTypoFix } from "@/lib/auth/emailDomainCheck";
 import AuthLandingBackgroundNative from "./AuthLandingBackgroundNative";
 import { AUTH_LANDING } from "./authLandingPalette";
 import AuthLegalConsentGateNative from "./AuthLegalConsentGateNative";
@@ -221,6 +222,11 @@ export default function AuthEntryScreen({
     }
     if (mode === "signup" && password.length < 6) {
       cyberAlert(copy.missingInputTitle, copy.weakPassword);
+      return;
+    }
+    const typoFix = mode === "signup" ? suggestEmailTypoFix(normalizedEmail) : null;
+    if (typoFix) {
+      cyberAlert(copy.missingInputTitle, copy.emailTypo.replace("{email}", typoFix));
       return;
     }
 

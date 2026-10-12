@@ -50,6 +50,16 @@ export function referralBindUserMessage(
         pt: "Convites mútuos não são permitidos.",
         fr: "Les invitations mutuelles ne sont pas autorisées.",
       });
+    case "disposable_email":
+      return L(lang, {
+        ja: "使い捨てメールアドレスでは招待コードを使えません。",
+        en: "Invite codes can't be used with a disposable email address.",
+        ko: "일회용 이메일 주소로는 초대 코드를 사용할 수 없습니다.",
+        zh: "一次性邮箱无法使用邀请码。",
+        es: "No se pueden usar códigos de invitación con un correo desechable.",
+        pt: "Não é possível usar códigos de convite com e-mail descartável.",
+        fr: "Les codes d'invitation ne sont pas utilisables avec une adresse jetable.",
+      });
     default:
       return null;
   }
