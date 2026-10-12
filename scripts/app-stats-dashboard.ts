@@ -13,7 +13,7 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { exec } from "node:child_process";
 import { getAuth } from "firebase-admin/auth";
-import type { DocumentSnapshot } from "firebase-admin/firestore";
+import { Timestamp, type DocumentSnapshot } from "firebase-admin/firestore";
 import { getAdminDb } from "../lib/firebaseAdmin";
 import { CURRENT_NBA_SEASON_KEY } from "../lib/rankings/nbaSeason";
 import { referralPreseasonInviteeKey } from "../lib/referral/referralPreseasonBonusServer";
@@ -84,10 +84,69 @@ const saveHistory = (rows: Snapshot[]) => {
   writeFileSync(HISTORY_PATH, JSON.stringify(rows.filter((r) => r.at >= cutoff)));
 };
 
+/**
+ * 毎時の全件読み（予想提出・全ユーザー doc・全端末）を避けるため、前回の結果を手元に持ち、
+ * 増えた分だけ読む。削除や後からの変更を拾うため 1 日 1 回は全件読み直す。
+ */
+const CACHE_PATH = join(HISTORY_DIR, "app-stats-cache.json");
+const FULL_REFRESH_MS = DAY_MS;
+/** プロフィール（お気に入り・国）はオンボーディング中に入るので、この間は毎回読み直す */
+const RECENT_USER_REREAD_MS = 6 * HOUR_MS;
+
+type UserRow = { displayName: string | null; favorite: boolean; country: string; language: string };
+type SubmissionRow = { uid: string; ms: number };
+type TokenRow = { first: number; updated: number };
+
+type FetchCache = {
+  fullAt: number;
+  standings: Record<string, SubmissionRow>;
+  awards: Record<string, SubmissionRow>;
+  /** uid → tokenId → row */
+  tokens: Record<string, Record<string, TokenRow>>;
+  tokensCheckedAt: number;
+  users: Record<string, UserRow>;
+};
+
+const loadFetchCache = (): FetchCache | null => {
+  try {
+    return existsSync(CACHE_PATH) ? (JSON.parse(readFileSync(CACHE_PATH, "utf8")) as FetchCache) : null;
+  } catch {
+    return null;
+  }
+};
+
+const saveFetchCache = (cache: FetchCache) => {
+  mkdirSync(HISTORY_DIR, { recursive: true });
+  writeFileSync(CACHE_PATH, JSON.stringify(cache));
+};
+
+const userRowOf = (d: DocumentSnapshot): UserRow => {
+  const name = d.get("displayName");
+  const team = d.get("favoriteNbaTeamId");
+  const players = d.get("favoriteNbaPlayers");
+  return {
+    displayName: typeof name === "string" && name.trim() ? name.trim() : null,
+    favorite:
+      (typeof team === "string" && team.length > 0) ||
+      (Array.isArray(players) && players.length > 0),
+    country: String(d.get("countryCode") ?? "").trim().toUpperCase() || "-",
+    language: String(d.get("language") ?? d.get("locale") ?? "").trim() || "-",
+  };
+};
+
+const maxSubmittedMs = (rows: Record<string, SubmissionRow>) =>
+  Object.values(rows).reduce((m, r) => (Number.isFinite(r.ms) && r.ms > m ? r.ms : m), 0);
+
 async function fetchRaw(): Promise<Raw> {
   const db = getAdminDb();
   const auth = getAuth();
   const now = Date.now();
+  const prevCache = loadFetchCache();
+  const full = !prevCache || now - prevCache.fullAt >= FULL_REFRESH_MS;
+  const cache: FetchCache = full
+    ? { fullAt: now, standings: {}, awards: {}, tokens: {}, tokensCheckedAt: now, users: {} }
+    : prevCache;
+  const recentCreatedUids = new Set<string>();
 
   const users: Raw["users"] = [];
   const webUserLast: number[] = [];
@@ -107,44 +166,94 @@ async function fetchRaw(): Promise<Raw> {
       }
       cohort.add(u.uid);
       users.push({ created, last });
+      if (now - created <= RECENT_USER_REREAD_MS) recentCreatedUids.add(u.uid);
     }
     pageToken = res.pageToken;
   } while (pageToken);
 
-  const submittedAt = async (collection: string) => {
-    const snap = await db
-      .collection(collection)
-      .where("isSubmitted", "==", true)
-      .select("uid", "submittedAt")
-      .get();
-    const byUid = new Map<string, number>();
+  /** 提出 doc の submittedAt は初回提出時だけ書かれる → 前回の最大値以降だけ読めば新規提出を拾える */
+  const syncSubmissions = async (collection: string, rows: Record<string, SubmissionRow>) => {
+    const sinceMs = full ? 0 : maxSubmittedMs(rows);
+    const q = sinceMs > 0
+      ? db.collection(collection).where("submittedAt", ">=", Timestamp.fromMillis(sinceMs))
+      : db.collection(collection).where("isSubmitted", "==", true);
+    const snap = await q.select("uid", "submittedAt", "isSubmitted").get();
     for (const d of snap.docs) {
-      const uid = String(d.get("uid") ?? "");
-      if (!cohort.has(uid) || !d.id.startsWith(`${CURRENT_NBA_SEASON_KEY}_`)) continue;
+      if (d.get("isSubmitted") !== true || !d.id.startsWith(`${CURRENT_NBA_SEASON_KEY}_`)) continue;
       const ms = toMs(d.get("submittedAt"));
-      byUid.set(uid, Number.isFinite(ms) ? ms : APP_RELEASE_MS);
+      rows[d.id] = { uid: String(d.get("uid") ?? ""), ms: Number.isFinite(ms) ? ms : APP_RELEASE_MS };
+    }
+  };
+
+  const submittedByUid = (rows: Record<string, SubmissionRow>) => {
+    const byUid = new Map<string, number>();
+    for (const r of Object.values(rows)) {
+      if (cohort.has(r.uid)) byUid.set(r.uid, r.ms);
     }
     return byUid;
   };
 
-  const [standingsByUid, awardsByUid, relSnap, tokenSnap] = await Promise.all([
-    submittedAt("seasonStandingsPredictions"),
-    submittedAt("seasonAwardsPredictions"),
+  /** 端末登録のたびに pushTokenOwners.updatedAt も更新される → 変わった人の pushTokens だけ読み直す */
+  const syncTokens = async () => {
+    const checkedAt = Date.now();
+    if (full) {
+      const snap = await db.collectionGroup("pushTokens").select("createdAt", "updatedAt").get();
+      cache.tokens = {};
+      for (const d of snap.docs) {
+        const uid = d.ref.parent.parent?.id;
+        if (!uid) continue;
+        const updated = toMs(d.get("updatedAt"));
+        const created = toMs(d.get("createdAt"));
+        (cache.tokens[uid] ??= {})[d.id] = {
+          first: Number.isFinite(created) ? created : updated,
+          updated,
+        };
+      }
+      cache.tokensCheckedAt = checkedAt;
+      return;
+    }
+    const owners = await db
+      .collection("pushTokenOwners")
+      .where("updatedAt", ">=", Timestamp.fromMillis(cache.tokensCheckedAt - 5 * 60_000))
+      .select("uid")
+      .get();
+    const uids = [...new Set(owners.docs.map((d) => String(d.get("uid") ?? "")).filter(Boolean))];
+    await Promise.all(
+      uids.map(async (uid) => {
+        const snap = await db
+          .collection(`users/${uid}/pushTokens`)
+          .select("createdAt", "updatedAt")
+          .get();
+        const rows: Record<string, TokenRow> = {};
+        for (const d of snap.docs) {
+          const updated = toMs(d.get("updatedAt"));
+          const created = toMs(d.get("createdAt"));
+          rows[d.id] = { first: Number.isFinite(created) ? created : updated, updated };
+        }
+        if (snap.empty) delete cache.tokens[uid];
+        else cache.tokens[uid] = rows;
+      })
+    );
+    cache.tokensCheckedAt = checkedAt;
+  };
+
+  const [, , relSnap] = await Promise.all([
+    syncSubmissions("seasonStandingsPredictions", cache.standings),
+    syncSubmissions("seasonAwardsPredictions", cache.awards),
     db.collection("referralRelations").get(),
-    db.collectionGroup("pushTokens").select("createdAt", "updatedAt").get(),
+    syncTokens(),
   ]);
+  const standingsByUid = submittedByUid(cache.standings);
+  const awardsByUid = submittedByUid(cache.awards);
 
   const deviceByUid = new Map<string, AppDevice>();
-  for (const d of tokenSnap.docs) {
-    const uid = d.ref.parent.parent?.id;
-    if (!uid) continue;
-    const updated = toMs(d.get("updatedAt"));
-    const created = toMs(d.get("createdAt"));
-    const first = Number.isFinite(created) ? created : updated;
-    const row = deviceByUid.get(uid) ?? { first: Infinity, last: -Infinity, isNew: cohort.has(uid) };
-    if (Number.isFinite(first)) row.first = Math.min(row.first, first);
-    if (Number.isFinite(updated)) row.last = Math.max(row.last, updated);
-    deviceByUid.set(uid, row);
+  for (const [uid, tokens] of Object.entries(cache.tokens)) {
+    for (const t of Object.values(tokens)) {
+      const row = deviceByUid.get(uid) ?? { first: Infinity, last: -Infinity, isNew: cohort.has(uid) };
+      if (Number.isFinite(t.first)) row.first = Math.min(row.first, t.first);
+      if (Number.isFinite(t.updated)) row.last = Math.max(row.last, t.updated);
+      deviceByUid.set(uid, row);
+    }
   }
 
   const rels = relSnap.docs.filter((d) => cohort.has(d.id));
@@ -155,18 +264,18 @@ async function fetchRaw(): Promise<Raw> {
   }
   nameUids.delete("");
 
-  const cohortRefs = [...cohort].map((uid) => db.collection("users").doc(uid));
-  const extraRefs = [...nameUids]
-    .filter((uid) => !cohort.has(uid))
+  /** キャッシュに無い人と登録直後の人だけ users doc を読む（全件は 1 日 1 回） */
+  const needUser = (uid: string) => !cache.users[uid] || recentCreatedUids.has(uid);
+  const userRefs = [...new Set([...cohort, ...returnedUids, ...nameUids])]
+    .filter(needUser)
     .map((uid) => db.collection("users").doc(uid));
   const ledgerRefs = rels.map((d) =>
     db.collection("unit_ledger").doc(referralPreseasonInviteeKey(d.id))
   );
 
-  const returnedRefs = returnedUids.map((uid) => db.collection("users").doc(uid));
-  const [cohortDocs, extraDocs, ledgerDocs, returnedDocs] = await Promise.all([
-    cohortRefs.length
-      ? db.getAll(...cohortRefs, {
+  const [userDocs, ledgerDocs] = await Promise.all([
+    userRefs.length
+      ? db.getAll(...userRefs, {
           fieldMask: [
             "displayName",
             "favoriteNbaTeamId",
@@ -175,44 +284,32 @@ async function fetchRaw(): Promise<Raw> {
           ],
         })
       : Promise.resolve([]),
-    extraRefs.length
-      ? db.getAll(...extraRefs, { fieldMask: ["displayName"] })
-      : Promise.resolve([]),
     ledgerRefs.length ? db.getAll(...ledgerRefs) : Promise.resolve([]),
-    returnedRefs.length
-      ? db.getAll(...returnedRefs, { fieldMask: [...LOCALE_FIELDS] })
-      : Promise.resolve([]),
   ]);
+  for (const d of userDocs) cache.users[d.id] = userRowOf(d);
+  saveFetchCache(cache);
 
-  const tallyLocale = (docs: DocumentSnapshot[]): LocaleTally => {
+  const userRows = (uids: Iterable<string>): UserRow[] =>
+    [...uids].map((uid) => cache.users[uid]).filter((r): r is UserRow => !!r);
+
+  const tallyLocale = (rows: UserRow[]): LocaleTally => {
     const country: Record<string, number> = {};
     const language: Record<string, number> = {};
-    for (const d of docs) {
-      const c = String(d.get("countryCode") ?? "").trim().toUpperCase() || "-";
-      const l = String(d.get("language") ?? d.get("locale") ?? "").trim() || "-";
-      country[c] = (country[c] ?? 0) + 1;
-      language[l] = (language[l] ?? 0) + 1;
+    for (const r of rows) {
+      country[r.country] = (country[r.country] ?? 0) + 1;
+      language[r.language] = (language[r.language] ?? 0) + 1;
     }
     return { country, language };
   };
-  const locale = { fresh: tallyLocale(cohortDocs), returned: tallyLocale(returnedDocs) };
+  const cohortRows = userRows(cohort);
+  const locale = { fresh: tallyLocale(cohortRows), returned: tallyLocale(userRows(returnedUids)) };
 
   const names = new Map<string, string>();
-  let favorites = 0;
-  for (const d of [...cohortDocs, ...extraDocs]) {
-    const name = d.get("displayName");
-    if (typeof name === "string" && name.trim()) names.set(d.id, name.trim());
+  for (const uid of new Set([...cohort, ...nameUids])) {
+    const name = cache.users[uid]?.displayName;
+    if (name) names.set(uid, name);
   }
-  for (const d of cohortDocs) {
-    const team = d.get("favoriteNbaTeamId");
-    const players = d.get("favoriteNbaPlayers");
-    if (
-      (typeof team === "string" && team.length > 0) ||
-      (Array.isArray(players) && players.length > 0)
-    ) {
-      favorites++;
-    }
-  }
+  const favorites = cohortRows.filter((r) => r.favorite).length;
   const grantedInvitees = new Set(
     ledgerDocs.filter((d) => d.exists).map((d) => String(d.get("uid") ?? ""))
   );
