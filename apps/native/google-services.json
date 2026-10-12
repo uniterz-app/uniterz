@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "993533705061",
+    "project_id": "matchpik-7dbb1",
+    "storage_bucket": "matchpik-7dbb1.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:993533705061:android:7a84174667f84fd7b77f8c",
+        "android_client_info": {
+          "package_name": "com.uniterz.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "993533705061-d4545lfbb3q76kbc3bpbje40jr541l6e.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD7jh-Ce5g5Fr-Dc_VETpVVq3Kkl78xGVg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "993533705061-d4545lfbb3q76kbc3bpbje40jr541l6e.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

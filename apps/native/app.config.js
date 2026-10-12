@@ -21,6 +21,8 @@ module.exports = {
   android: {
     ...base.android,
     package: isPreview ? "com.uniterz.app.dev" : "com.uniterz.app",
+    // FCM（Android プッシュ）。Firebase には com.uniterz.app しか登録していない
+    ...(isPreview ? {} : { googleServicesFile: "./google-services.json" }),
     usesCleartextTraffic: isPreview,
     blockedPermissions: [
       "android.permission.RECORD_AUDIO",
