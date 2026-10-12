@@ -31,6 +31,7 @@ import {
 } from "@/lib/predict/liveGameMarket";
 import { consumeUidActionRateLimit } from "@/lib/security/consumeUidRateLimit";
 import { isNbaPickupGame } from "@/lib/nba/isPickupGame";
+import { GAME_PREDICTORS_COLLECTION } from "@/lib/games/server/gamePredictors";
 
 /* ========= 型 ========= */
 type Status = "scheduled" | "live" | "final";
@@ -402,6 +403,9 @@ export async function POST(req: Request) {
       }
       try {
         const gameRef = adminDb.doc(`games/${parsed.gameId}`);
+        const predictorsRef = adminDb
+          .collection(GAME_PREDICTORS_COLLECTION)
+          .doc(parsed.gameId);
         const side = parseMarketSide(prediction.winner);
         await adminDb.runTransaction(async (tx) => {
           const gameSnap = await tx.get(gameRef);
@@ -410,9 +414,13 @@ export async function POST(req: Request) {
             ? applyLiveMarketDelta(readLiveMarketCounts(gameData), side, 1)
             : null;
           tx.set(
+            predictorsRef,
+            { uids: FieldValue.arrayUnion(uid) },
+            { merge: true }
+          );
+          tx.set(
             gameRef,
             {
-              predictorUids: FieldValue.arrayUnion(uid),
               predictorCount: FieldValue.increment(1),
               ...(patch
                 ? {

@@ -8,6 +8,7 @@ import {
   resolveGameMatchupCopy,
   type PushNotificationType,
 } from "./pushNotificationCopy";
+import { loadGamePredictorUids } from "./gamePredictors";
 
 const PUSH_LEAGUES = ["nba", "bj", "j1", "pl", "wc"] as const;
 const LOOKAHEAD_MS = 12 * 60 * 60 * 1000;
@@ -204,13 +205,14 @@ export async function runNotifyPregameAlertCron(): Promise<void> {
 
     const gameId = gameDoc.id;
     const baseMatchup = resolveGameMatchupCopy(gameData);
+    const predictorUids = [
+      ...((
+        await loadGamePredictorUids(firestore, [{ id: gameId, data: gameData }])
+      ).get(gameId) ?? []),
+    ];
 
     for (const type of changed) {
-      const targets = targetsFromPredictorUids(
-        gameId,
-        type,
-        gameData.predictorUids
-      );
+      const targets = targetsFromPredictorUids(gameId, type, predictorUids);
       if (targets.length === 0) continue;
       const matchup =
         type === "injury_status"
