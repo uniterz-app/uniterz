@@ -1,11 +1,11 @@
 /** Web `UniterzDailyScoreLeadersPanel` 相当 — その日の合計ポイント Top20（PICK UP / PRO LEAGUE） */
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AppState, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { AppState, ScrollView, StyleSheet, Text, View } from "react-native";
 import {
   CyberSlantedTabBarNative,
   CyberSlantedTabNative,
 } from "../../rankings/CyberSlantedTabNative";
-import { rankingsTexts } from "../../rankings/rankingsTexts";
+import { RankingsProLeagueTeaserNative } from "../../rankings/RankingsProLeagueTeaserNative";
 import { getUniterzApiBaseUrl } from "../submitPredictionApi";
 import RankingsListEntranceRowNative from "../../rankings/RankingsListEntranceRowNative";
 import DailyScoreRankRowNative, {
@@ -16,7 +16,6 @@ import { auth } from "../../../lib/firebase";
 import { openProSubscribeNative } from "../../../navigation/navigationRef";
 import { useBottomTabBarInsets } from "../../../navigation/useBottomTabBarInsets";
 import { resolveLocalizedLang } from "../../../../../../lib/i18n/localize";
-import { PRO_LEAGUE_ATMOSPHERE } from "../../../../../../lib/rankings/proLeagueAtmosphere";
 import type {
   DailyScoreDivision,
   DailyScoreLeaderRow,
@@ -53,7 +52,6 @@ export default function UniterzDailyScoreLeadersPanelNative({
   const lang = resolveLocalizedLang(language);
   const copy = useMemo(() => dailyScoreLeadersCopy(lang), [lang]);
   const baseCopy = useMemo(() => dailyLeadersCopy(lang), [lang]);
-  const lockCopy = useMemo(() => rankingsTexts(language), [language]);
   const { bottomContentReserveY } = useBottomTabBarInsets();
   const [division, setDivision] = useState<DailyScoreDivision>("standard");
   const [state, setState] = useState<LoadState>({ kind: "loading" });
@@ -142,22 +140,18 @@ export default function UniterzDailyScoreLeadersPanelNative({
       ) : null}
 
       {state.kind === "locked" ? (
-        <View style={styles.lock}>
-          <Text style={styles.lockEyebrow}>PRO ONLY</Text>
-          <Text style={styles.lockTitle}>
-            {lockCopy.divisionOpenTitle ?? "PRO LEAGUE"}
-          </Text>
-          <Text style={styles.lockBody}>{lockCopy.divisionOpenLockBody}</Text>
-          <Pressable
-            onPress={openProSubscribeNative}
-            accessibilityRole="button"
-            style={({ pressed }) => [styles.lockCta, pressed && styles.cardPressed]}
-          >
-            <Text style={styles.lockCtaText}>
-              {lockCopy.divisionOpenCta ?? "Explore Pro"}
-            </Text>
-          </Pressable>
-        </View>
+        <ScrollView
+          contentContainerStyle={[
+            styles.lock,
+            { paddingBottom: bottomContentReserveY + 12 },
+          ]}
+        >
+          <RankingsProLeagueTeaserNative
+            language={lang}
+            onPressSubscribe={openProSubscribeNative}
+            onBackToPickUp={() => setDivision("standard")}
+          />
+        </ScrollView>
       ) : empty ? (
         <Text style={styles.empty}>{empty}</Text>
       ) : !data ? null : (
@@ -249,51 +243,11 @@ const styles = StyleSheet.create({
     color: "rgba(255,255,255,0.55)",
   },
   lock: {
-    marginHorizontal: 16,
-    marginTop: 4,
-    paddingHorizontal: 16,
-    paddingVertical: 32,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: PRO_LEAGUE_ATMOSPHERE.panelBorder,
-    backgroundColor: "rgba(192,132,252,0.10)",
-  },
-  lockEyebrow: {
-    fontSize: 10,
-    fontWeight: "700",
-    letterSpacing: 2,
-    color: PRO_LEAGUE_ATMOSPHERE.gold,
-  },
-  lockTitle: {
-    marginTop: 8,
-    fontSize: 18,
-    fontWeight: "700",
-    letterSpacing: 0.6,
-    color: "#fff",
-  },
-  lockBody: {
-    marginTop: 8,
-    fontSize: 13,
-    lineHeight: 20,
-    textAlign: "center",
-    color: "rgba(255,255,255,0.65)",
-  },
-  lockCta: {
-    marginTop: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 2,
-    backgroundColor: PRO_LEAGUE_ATMOSPHERE.gold,
-  },
-  lockCtaText: {
-    fontSize: 12,
-    fontWeight: "700",
-    letterSpacing: 0.6,
-    color: PRO_LEAGUE_ATMOSPHERE.ink,
+    paddingHorizontal: 12,
+    paddingTop: 4,
   },
   list: {
     paddingHorizontal: 12,
     gap: 6,
   },
-  cardPressed: { opacity: 0.75 },
 });

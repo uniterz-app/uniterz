@@ -11,7 +11,7 @@ import {
   CyberSlantedTabBar,
 } from "@/app/component/rankings/CyberSlantedTab";
 import { restContainer, restItem } from "@/app/component/rankings/anim";
-import RankingsOpenProLock from "@/app/component/rankings/RankingsOpenProLock";
+import RankingsProLeagueTeaser from "@/app/component/rankings/RankingsProLeagueTeaser";
 import DailyScoreRankRow, {
   dailyScoreRankRowSkew,
 } from "@/app/component/rankings/DailyScoreRankRow";
@@ -137,7 +137,10 @@ export default function UniterzDailyScoreLeadersPanel({
       ) : null}
 
       {state.kind === "locked" ? (
-        <RankingsOpenProLock language={language as Language} />
+        <RankingsProLeagueTeaser
+          language={language as Language}
+          onBackToPickUp={() => setDivision("standard")}
+        />
       ) : empty ? (
         <p className="py-10 text-center text-[13px] text-white/55">{empty}</p>
       ) : !data ? (
