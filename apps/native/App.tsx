@@ -36,6 +36,7 @@ import AppStoreUpdatePromptNative from "./src/components/AppStoreUpdatePromptNat
 import { APP_MESH_BG_FALLBACK } from "../../lib/app/appMeshBackground";
 import { ensureNativeSplashHeld } from "./src/bootstrap/nativeBootSplash";
 import { initNativeObservability } from "./src/observability/initNativeObservability";
+import { useOtaAutoApplyNative } from "./src/bootstrap/useOtaAutoApplyNative";
 
 ensureNativeSplashHeld();
 initNativeObservability();
@@ -81,6 +82,7 @@ export default function App() {
   }, [criticalFontsLoaded]);
 
   useNativeShareDeepLinks();
+  useOtaAutoApplyNative();
 
   if (!criticalFontsLoaded) return null;
 
