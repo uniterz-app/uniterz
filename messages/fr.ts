@@ -811,6 +811,12 @@ const fr: Messages = {
     nbaTopScorerEmpty: "Player list not ready yet",
     nbaTopScorerMore: "{n} more",
     nbaTopScorerLess: "Show less",
+    topScorerMissingTitle: "Aucun meilleur marqueur choisi",
+    topScorerMissingBonus: "Trouvez le meilleur marqueur : +{n} points bonus",
+    topScorerMissingEditable: "Vous pouvez modifier votre pronostic jusqu'au début du match",
+    topScorerMissingConfirm: "Envoyer quand même ?",
+    topScorerMissingPick: "Choisir un joueur",
+    topScorerMissingSend: "Envoyer quand même",
     scoringRulesChip: "Règles de notation",
     timing: {
       proInfoTitle: "Pro Info",

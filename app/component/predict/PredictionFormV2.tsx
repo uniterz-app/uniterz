@@ -61,6 +61,7 @@ import {
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import { t } from "@/lib/i18n/t";
 import PredictNextGameModal from "@/app/component/predict/PredictNextGameModal";
+import PredictTopScorerMissingModal from "@/app/component/predict/PredictTopScorerMissingModal";
 import {
   findNextUnpredictedScheduledGameInList,
   getNextScheduledGameIdOnSameDay,
@@ -240,6 +241,8 @@ export default function PredictionFormV2({
     WcGoalScorerPick | NbaTopScorerPick | null
   >(null);
   const [submitting, setSubmitting] = useState(false);
+  const [topScorerConfirmOpen, setTopScorerConfirmOpen] = useState(false);
+  const topScorerPickerRef = useRef<HTMLDivElement>(null);
   const [toolsTab, setToolsTab] = useState<
     null | "stats" | "market" | "standings" | "preview" | "results"
   >(null);
@@ -791,7 +794,7 @@ export default function PredictionFormV2({
     ].join(" ");
 
   /** Match tab label font size (text-xs / text-sm). */
-  const handleSubmit = async () => {
+  const handleSubmit = async (opts?: { skipTopScorerCheck?: boolean }) => {
     if (!canSubmit) return;
 
     const h = Number(scoreHome);
@@ -815,6 +818,17 @@ export default function PredictionFormV2({
         return;
       }
       alert(m.predict.enterValidScores);
+      return;
+    }
+
+    if (
+      isNba &&
+      !tutorialMode &&
+      !opts?.skipTopScorerCheck &&
+      nbaTopScorerCandidates.length > 0 &&
+      !normalizeNbaTopScorerPick(goalScorerPick)
+    ) {
+      setTopScorerConfirmOpen(true);
       return;
     }
 
@@ -1023,6 +1037,32 @@ export default function PredictionFormV2({
       setSubmitting(false);
     }
   };
+
+  const handleTopScorerConfirmPick = useCallback(() => {
+    setTopScorerConfirmOpen(false);
+    topScorerPickerRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
+    });
+  }, []);
+
+  const handleTopScorerConfirmSend = () => {
+    setTopScorerConfirmOpen(false);
+    void handleSubmit({ skipTopScorerCheck: true });
+  };
+
+  const topScorerConfirmModal =
+    typeof document !== "undefined" && topScorerConfirmOpen
+      ? createPortal(
+          <PredictTopScorerMissingModal
+            open
+            language={language}
+            onPick={handleTopScorerConfirmPick}
+            onSend={handleTopScorerConfirmSend}
+          />,
+          document.body
+        )
+      : null;
 
   const handleNextModalYes = useCallback(
     (dontShowAgain: boolean) => {
@@ -1740,6 +1780,7 @@ export default function PredictionFormV2({
 
               {isNba ? (
                 <div
+                  ref={topScorerPickerRef}
                   data-tutorial-target={
                     tutorialMode ? "predict-bonus" : undefined
                   }
@@ -1770,7 +1811,7 @@ export default function PredictionFormV2({
             >
               <button
                 disabled={!canSubmit}
-                onClick={handleSubmit}
+                onClick={() => void handleSubmit()}
                 className={[
                   canSubmit
                     ? PREDICT_OVERLAY_SUBMIT_BTN_CLASS
@@ -1806,6 +1847,7 @@ export default function PredictionFormV2({
       </div>
     </motion.div>
     {nextModal}
+    {topScorerConfirmModal}
     <WcKnockoutChallengeModal
       open={knockoutChallengePrompt.open}
       language={language}

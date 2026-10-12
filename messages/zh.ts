@@ -799,6 +799,12 @@ const zh: Messages = {
     nbaTopScorerEmpty: "Player list not ready yet",
     nbaTopScorerMore: "{n} more",
     nbaTopScorerLess: "Show less",
+    topScorerMissingTitle: "尚未选择得分王",
+    topScorerMissingBonus: "猜中得分王可获得 +{n} 分奖励",
+    topScorerMissingEditable: "比赛开始前都可以修改预测",
+    topScorerMissingConfirm: "仍要提交吗？",
+    topScorerMissingPick: "选择球员",
+    topScorerMissingSend: "直接提交",
     scoringRulesChip: "评分规则",
     timing: {
       proInfoTitle: "Pro Info",

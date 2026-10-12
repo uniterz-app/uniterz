@@ -799,6 +799,12 @@ const ko: Messages = {
     nbaTopScorerEmpty: "Player list not ready yet",
     nbaTopScorerMore: "{n} more",
     nbaTopScorerLess: "Show less",
+    topScorerMissingTitle: "득점왕이 선택되지 않았습니다",
+    topScorerMissingBonus: "득점왕을 맞히면 보너스 +{n}점",
+    topScorerMissingEditable: "경기 시작 전까지 예측을 수정할 수 있어요",
+    topScorerMissingConfirm: "그래도 제출할까요?",
+    topScorerMissingPick: "선수 선택",
+    topScorerMissingSend: "그대로 제출",
     scoringRulesChip: "채점 규칙",
     timing: {
       proInfoTitle: "Pro Info",

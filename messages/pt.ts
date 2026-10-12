@@ -807,6 +807,12 @@ const pt: Messages = {
     nbaTopScorerEmpty: "Player list not ready yet",
     nbaTopScorerMore: "{n} more",
     nbaTopScorerLess: "Show less",
+    topScorerMissingTitle: "Nenhum cestinha selecionado",
+    topScorerMissingBonus: "Acerte o cestinha e ganhe +{n} de bônus",
+    topScorerMissingEditable: "Você pode editar o palpite até o início do jogo",
+    topScorerMissingConfirm: "Enviar mesmo assim?",
+    topScorerMissingPick: "Escolher jogador",
+    topScorerMissingSend: "Enviar assim",
     scoringRulesChip: "Regras de avaliação",
     timing: {
       proInfoTitle: "Pro Info",

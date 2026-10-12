@@ -809,6 +809,12 @@ const de: Messages = {
     nbaTopScorerEmpty: "Player list not ready yet",
     nbaTopScorerMore: "{n} more",
     nbaTopScorerLess: "Show less",
+    topScorerMissingTitle: "Kein Topscorer ausgewählt",
+    topScorerMissingBonus: "Triff den Topscorer für +{n} Bonuspunkte",
+    topScorerMissingEditable: "Du kannst deinen Tipp bis Spielbeginn ändern",
+    topScorerMissingConfirm: "Trotzdem senden?",
+    topScorerMissingPick: "Spieler wählen",
+    topScorerMissingSend: "Trotzdem senden",
     scoringRulesChip: "Bewertungsregeln",
     timing: {
       proInfoTitle: "Pro Info",

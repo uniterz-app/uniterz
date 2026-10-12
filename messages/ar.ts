@@ -811,6 +811,12 @@ const ar: Messages = {
     nbaTopScorerEmpty: "Player list not ready yet",
     nbaTopScorerMore: "{n} more",
     nbaTopScorerLess: "Show less",
+    topScorerMissingTitle: "لم يتم اختيار أفضل مسجل",
+    topScorerMissingBonus: "توقّع أفضل مسجل لتحصل على +{n} نقاط إضافية",
+    topScorerMissingEditable: "يمكنك تعديل توقعك حتى بداية المباراة",
+    topScorerMissingConfirm: "هل تريد الإرسال على أي حال؟",
+    topScorerMissingPick: "اختر لاعبًا",
+    topScorerMissingSend: "إرسال على أي حال",
     scoringRulesChip: "قواعد التقييم",
     timing: {
       proInfoTitle: "Pro Info",

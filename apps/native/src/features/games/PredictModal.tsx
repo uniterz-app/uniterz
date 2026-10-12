@@ -66,6 +66,7 @@ import { useNbaTopScorerCandidates } from "../../../../../lib/nba/useNbaTopScore
 import { useAppActiveNative } from "../../hooks/useAppActiveNative";
 import CountryFlagNative from "./CountryFlagNative";
 import NbaTopScorerPickerNative from "./predict/NbaTopScorerPickerNative";
+import PredictTopScorerMissingNativeOverlay from "./predict/PredictTopScorerMissingNativeOverlay";
 import {
   normalizeNbaTopScorerCandidates,
   normalizeNbaTopScorerPick,
@@ -906,6 +907,10 @@ export default function PredictModal({
   const insets = useSafeAreaInsets();
   const reduceMotion = useReducedMotion() ?? false;
   const [tutorialAnnotDismissed, setTutorialAnnotDismissed] = useState(false);
+  const [topScorerConfirmOpen, setTopScorerConfirmOpen] = useState(false);
+  useEffect(() => {
+    if (!visible) setTopScorerConfirmOpen(false);
+  }, [visible]);
   const [tutorialUserScrollEnabled, setTutorialUserScrollEnabled] =
     useState(true);
   const tutorialMsgs = i18nT(normalizeLanguage(language) ?? "en").tutorial
@@ -1349,12 +1354,27 @@ export default function PredictModal({
       return true;
     })();
 
+  const handleSubmitPress = () => {
+    if (
+      predictData?.league === "nba" &&
+      !isWcLeague &&
+      !tutorialMode &&
+      nbaTopScorerCandidates.length > 0 &&
+      !normalizeNbaTopScorerPick(goalScorerPick)
+    ) {
+      Keyboard.dismiss();
+      setTopScorerConfirmOpen(true);
+      return;
+    }
+    onSubmit();
+  };
+
   const predictSubmitButton = (
     <TutorialTargetNative id="predict-submit">
       <PredictOverlaySubmitButtonNative
         enabled={canSubmit}
         tutorialPulse={tutorialMode}
-        onPress={onSubmit}
+        onPress={handleSubmitPress}
         label={
           predictSubmitting
             ? isEditingPrediction
@@ -2282,6 +2302,21 @@ export default function PredictModal({
                 fr: "Retour",
               })}
             />
+            {topScorerConfirmOpen ? (
+              <PredictTopScorerMissingNativeOverlay
+                title={t.topScorerMissingTitle}
+                bonusText={t.topScorerMissingBonus}
+                editableText={t.topScorerMissingEditable}
+                confirmText={t.topScorerMissingConfirm}
+                pickLabel={t.topScorerMissingPick}
+                sendLabel={t.topScorerMissingSend}
+                onPick={() => setTopScorerConfirmOpen(false)}
+                onSend={() => {
+                  setTopScorerConfirmOpen(false);
+                  onSubmit();
+                }}
+              />
+            ) : null}
             </>
           ) : null}
         </View>
