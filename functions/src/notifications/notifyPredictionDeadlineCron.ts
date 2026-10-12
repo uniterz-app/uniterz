@@ -5,6 +5,7 @@ import {
   type SendTarget,
 } from "./sendExpoPush";
 import { resolveGameMatchupCopy } from "./pushNotificationCopy";
+import { loadGamePredictorUids } from "./gamePredictors";
 
 const PUSH_LEAGUES = ["nba", "bj", "j1", "pl", "wc"] as const;
 const LOOKAHEAD_LIMIT = 40;
@@ -102,15 +103,24 @@ export async function runNotifyPredictionDeadlineCron(): Promise<void> {
     ),
   ]);
 
-  const activePredictors = new Set<string>();
-  for (const snap of slateSnaps.flat()) {
-    for (const doc of snap.docs) {
-      const data = doc.data();
-      if (data.final === true) continue;
-      for (const uid of uidSetFromPredictorUids(data.predictorUids)) {
-        activePredictors.add(uid);
-      }
+  const slateGames = slateSnaps
+    .flat()
+    .flatMap((snap) => snap.docs)
+    .filter((doc) => doc.data().final !== true)
+    .map((doc) => ({ id: doc.id, data: doc.data() }));
+  const gamesForPredictors = new Map(slateGames.map((g) => [g.id, g]));
+  for (const doc of deadlineSnaps.flat().flatMap((snap) => snap.docs)) {
+    if (!gamesForPredictors.has(doc.id)) {
+      gamesForPredictors.set(doc.id, { id: doc.id, data: doc.data() });
     }
+  }
+  const predictorsByGame = await loadGamePredictorUids(firestore, [
+    ...gamesForPredictors.values(),
+  ]);
+
+  const activePredictors = new Set<string>();
+  for (const game of slateGames) {
+    for (const uid of predictorsByGame.get(game.id) ?? []) activePredictors.add(uid);
   }
 
   if (activePredictors.size === 0) {
@@ -128,7 +138,8 @@ export async function runNotifyPredictionDeadlineCron(): Promise<void> {
       deadlineGames.push({
         id: doc.id,
         startMs,
-        predictorUids: uidSetFromPredictorUids(data.predictorUids),
+        predictorUids:
+          predictorsByGame.get(doc.id) ?? uidSetFromPredictorUids(data.predictorUids),
         matchup: resolveGameMatchupCopy(data),
       });
     }

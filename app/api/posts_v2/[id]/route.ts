@@ -19,6 +19,7 @@ import {
   type ParsedPredictionPayload,
 } from "@/lib/predict/parsePredictionPayload";
 import { FieldValue } from "firebase-admin/firestore";
+import { GAME_PREDICTORS_COLLECTION } from "@/lib/games/server/gamePredictors";
 import { clientErrorResponse } from "@/lib/security/clientErrorResponse";
 import { loadGameKickoffLock } from "@/lib/predict/gameKickoffLock";
 import {
@@ -351,6 +352,9 @@ export async function DELETE(req: NextRequest, ctx: any) {
           (data.prediction as { winner?: unknown } | undefined)?.winner
         );
         const gameRef = getAdminDb().collection("games").doc(gameId);
+        const predictorsRef = getAdminDb()
+          .collection(GAME_PREDICTORS_COLLECTION)
+          .doc(gameId);
         await getAdminDb().runTransaction(async (tx) => {
           const gameSnap = await tx.get(gameRef);
           if (!gameSnap.exists) return;
@@ -361,9 +365,16 @@ export async function DELETE(req: NextRequest, ctx: any) {
             ? applyLiveMarketDelta(readLiveMarketCounts(gameData), side, -1)
             : null;
           tx.set(
+            predictorsRef,
+            { uids: FieldValue.arrayRemove(uid) },
+            { merge: true }
+          );
+          tx.set(
             gameRef,
             {
-              predictorUids: FieldValue.arrayRemove(uid),
+              ...(Array.isArray(gameData.predictorUids)
+                ? { predictorUids: FieldValue.arrayRemove(uid) }
+                : {}),
               predictorCount: Math.max(0, prevCount - 1),
               ...(patch
                 ? {

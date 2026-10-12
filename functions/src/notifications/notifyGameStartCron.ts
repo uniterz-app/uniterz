@@ -1,4 +1,8 @@
-import { getFirestore, Timestamp } from "firebase-admin/firestore";
+import { FieldValue, getFirestore, Timestamp } from "firebase-admin/firestore";
+import {
+  GAME_PREDICTORS_COLLECTION,
+  loadGamePredictorUids,
+} from "./gamePredictors";
 import {
   markGamePushNotified,
   sendExpoPushToUids,
@@ -31,8 +35,8 @@ function targetsFromPredictorUids(
 }
 
 /**
- * レガシー: predictorUids 未整備の試合だけ posts から uid を拾う（select のみ）。
- * 新規投稿は posts_v2 で games.predictorUids に積む。
+ * レガシー: 予想者一覧が無い試合だけ posts から uid を拾う（select のみ）。
+ * 新規投稿は posts_v2 で gamePredictors/{gameId}.uids に積む。
  */
 async function legacyTargetsFromPosts(
   gameId: string
@@ -81,20 +85,22 @@ export async function runNotifyGameStartCron(): Promise<void> {
     if (gameData.pushNotifiedStartAt) continue;
 
     const gameId = gameDoc.id;
-    let targets = targetsFromPredictorUids(gameId, gameData.predictorUids);
-    if (
-      targets.length === 0 &&
-      !Array.isArray(gameData.predictorUids)
-    ) {
+    const predictorUids = [
+      ...((
+        await loadGamePredictorUids(firestore, [{ id: gameId, data: gameData }])
+      ).get(gameId) ?? []),
+    ];
+    let targets = targetsFromPredictorUids(gameId, predictorUids);
+    if (targets.length === 0) {
       targets = await legacyTargetsFromPosts(gameId);
       if (targets.length > 0) {
-        await firestore.doc(`games/${gameId}`).set(
-          {
-            predictorUids: targets.map((t) => t.uid),
-            predictorCount: targets.length,
-          },
-          { merge: true }
-        );
+        await firestore
+          .collection(GAME_PREDICTORS_COLLECTION)
+          .doc(gameId)
+          .set(
+            { uids: FieldValue.arrayUnion(...targets.map((t) => t.uid)) },
+            { merge: true }
+          );
       }
     }
 
