@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { auth, db } from "../../lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import { withTimeout } from "../../../../../lib/async/withTimeout";
+import { userDataPlan } from "@/lib/pro/userPlanActive";
 
 type Params = {
   targetUid: string | null | undefined;
@@ -37,24 +38,7 @@ export function resolveAndExpireMyPlan(
   _myUid: string,
   data: Record<string, unknown>
 ): "free" | "pro" {
-  const plan = typeof data.plan === "string" ? data.plan : "free";
-  if (plan !== "pro") return "free";
-
-  const proUntil = data.proUntil as { toMillis?: () => number } | undefined;
-  const proUntilMs =
-    proUntil && typeof proUntil.toMillis === "function"
-      ? proUntil.toMillis()
-      : undefined;
-  const cancelAtPeriodEnd = data.cancelAtPeriodEnd === true;
-
-  if (
-    cancelAtPeriodEnd &&
-    typeof proUntilMs === "number" &&
-    Date.now() > proUntilMs
-  ) {
-    return "free";
-  }
-  return "pro";
+  return userDataPlan(data);
 }
 
 export function useNativeProfilePlan({

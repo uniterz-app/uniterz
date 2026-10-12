@@ -18,6 +18,7 @@ import { parseMemberSinceMs } from "@/lib/profile/parseMemberSinceMs";
 import type { RankingRowWithCountry, MobileMetric } from "@/lib/rankings/rankingMetrics";
 import type { ProfilePlanProBgVariant } from "@/lib/profile/profilePlanProBgVariants";
 import { parseUserPlanProBgVariant } from "@/lib/profile/profilePlanProBgVariantField";
+import { userDataPlan } from "@/lib/pro/userPlanActive";
 import { currentSeasonWinStreak } from "@/lib/profile/currentSeasonWinStreak";
 import { seedProfileHeroFromUserDoc } from "@/lib/profile/seedProfileHeroFromUserDoc";
 import {
@@ -249,7 +250,7 @@ export function warmPublicProfileFromListEntry(input: {
           data.streakSeasonKeyBasketball
         ),
         maxStreak: typeof data.maxStreak === "number" ? data.maxStreak : 0,
-        plan: data.plan === "pro" ? "pro" : "free",
+        plan: userDataPlan(data),
         planProBgVariant: parseUserPlanProBgVariant(data.planProBgVariant),
         countryCode:
           typeof data.countryCode === "string" ? data.countryCode : null,
@@ -312,8 +313,7 @@ export function useProfile(handle: string) {
         const d = docSnap.data;
         const { displayName, handle: userHandle } = parseUserProfileFields(d);
 
-        const rawPlan = d.plan;
-        const plan: "free" | "pro" = rawPlan === "pro" ? "pro" : "free";
+        const plan = userDataPlan(d);
         const countsRaw = d.counts as { posts?: number } | undefined;
 
         seedProfileHeroFromUserDoc(docSnap.id, d);

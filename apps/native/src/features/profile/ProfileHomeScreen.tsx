@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { userDataPlan } from "@/lib/pro/userPlanActive";
 import { openProSubscribeNative } from "../../navigation/navigationRef";
 import { cyberAlert } from "../../components/cyberAlert";
 import {
@@ -1105,7 +1106,7 @@ export default function ProfileHomeScreen({
         const data = loaded.data;
         setMyUserDoc(data);
         setPlanProBgVariant(parseUserPlanProBgVariant(data.planProBgVariant));
-        setPlan(data.plan === "pro" ? "pro" : "free");
+        setPlan(userDataPlan(data));
         setUnitBalance(parseUserUnitBalance(data));
         const fav = parseNbaFavorites(data);
         setFavoriteNbaTeamId(fav.favoriteNbaTeamId);

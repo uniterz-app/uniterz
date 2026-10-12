@@ -3,6 +3,7 @@
  * users / cumulative_stats から displayName・photoURL を補完する。
  */
 import type { GamePointsTopEntryV1 } from "@/lib/results/gamePointsTop";
+import { userDataIsPro, userDataPlan } from "@/lib/pro/userPlanActive";
 
 export type GamePointsTopProfileLite = {
   handle?: string | null;
@@ -34,8 +35,8 @@ export function profileLiteFromUserDoc(
     handle,
     displayName,
     photoURL,
-    plan: pickNonEmpty(data.plan),
-    isPro: data.isPro === true || data.plan === "pro",
+    plan: userDataPlan(data),
+    isPro: userDataIsPro(data),
     countryCode: pickNonEmpty(data.countryCode)?.toUpperCase() ?? null,
   };
 }
@@ -58,7 +59,8 @@ export function enrichGamePointsTopEntries(
       row.displayName;
     const photoURL =
       pickNonEmpty(profile.photoURL) ?? row.photoURL ?? null;
-    const isPro = profile.isPro === true || row.isPro;
+    const isPro =
+      typeof profile.isPro === "boolean" ? profile.isPro : row.isPro;
     const countryCode =
       pickNonEmpty(profile.countryCode)?.toUpperCase() ??
       row.countryCode ??

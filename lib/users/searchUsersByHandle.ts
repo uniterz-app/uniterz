@@ -4,6 +4,7 @@
  * 大文字小文字ゆれ用に数パターンを並列取得してマージする。
  */
 import type { Firestore } from "firebase-admin/firestore";
+import { userDataPlan } from "@/lib/pro/userPlanActive";
 
 export type UserSearchHit = {
   uid: string;
@@ -33,7 +34,7 @@ function mapUserDoc(
     typeof data.photoURL === "string" && data.photoURL.trim()
       ? data.photoURL.trim()
       : null;
-  const plan = data.plan === "pro" ? "pro" : "free";
+  const plan = userDataPlan(data);
   return { uid, handle, displayName, photoURL, plan };
 }
 

@@ -2,6 +2,7 @@
  * Web `app/mobile/plan-change/page.tsx` 相当
  */
 import { useEffect, useMemo, useState } from "react";
+import { userDataPlan } from "@/lib/pro/userPlanActive";
 import { openProSubscribeNative } from "../../../navigation/navigationRef";
 import {
   Linking,
@@ -93,7 +94,7 @@ export default function PlanChangeScreenNative() {
       if (!alive) return;
       const data = snap.data() as Record<string, unknown> | undefined;
       if (data) {
-        setPlan(data.plan === "pro" ? "pro" : "free");
+        setPlan(userDataPlan(data));
         setStoredType(normalizeStoredPlanType(data.planType));
         setProUntil(firestoreDate(data.proUntil as { toDate?: () => Date } | Date | null));
         setPlanStart(

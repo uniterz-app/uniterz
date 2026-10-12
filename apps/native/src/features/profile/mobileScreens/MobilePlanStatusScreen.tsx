@@ -2,6 +2,7 @@
  * Web `app/mobile/plan-status/page.tsx` に相当。
  */
 import { useEffect, useState } from "react";
+import { userDataPlan } from "@/lib/pro/userPlanActive";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { CandleChartLoaderNative } from "../../../components/CandleChartLoaderNative";
 import { doc, getDoc } from "firebase/firestore";
@@ -71,7 +72,7 @@ export default function MobilePlanStatusScreen({
       if (!alive) return;
       if (snap.exists()) {
         const data = snap.data() as Record<string, unknown>;
-        setPlan(data.plan === "pro" ? "pro" : "free");
+        setPlan(userDataPlan(data));
         setPlanType(normalizeStoredPlanType(data.planType));
         setProUntil(
           firestoreDate(data.proUntil as { toDate?: () => Date } | Date | null)

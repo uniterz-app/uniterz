@@ -31,6 +31,7 @@ import {
   suggestedChangeTarget,
   type StoredPlanType,
 } from "@/lib/pro/planChangeDisplay";
+import { userDataPlan } from "@/lib/pro/userPlanActive";
 import type { ProIapPlan } from "@/lib/pro/iapProductIds";
 import {
   planChangeConfirmHint,
@@ -88,7 +89,7 @@ export default function PlanChangePage() {
       }
 
       const data = snap.data();
-      setPlan(data.plan === "pro" ? "pro" : "free");
+      setPlan(userDataPlan(data));
       setStoredType(normalizeStoredPlanType(data.planType));
       setProUntil(firestoreDate(data.proUntil));
       setPlanStart(firestoreDate(data.planStartDate));

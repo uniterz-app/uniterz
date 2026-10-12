@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { userDataPlan } from "@/lib/pro/userPlanActive";
 import type { DocumentData } from "firebase/firestore";
 import { subscribeUserDocLive } from "../../../../../lib/user/subscribeUserDocLive";
 import {
@@ -56,7 +57,7 @@ export function useNativeMyRankingUser(uid: string | null | undefined) {
         displayName: d.displayName?.trim() || "",
         handle: d.handle?.trim() || "",
         photoURL: d.photoURL?.trim() || "",
-        plan: d.plan === "pro" ? "pro" : "free",
+        plan: userDataPlan(d as Record<string, unknown>),
         language: resolveLocalizedLang(d.language),
         countryCode:
           typeof d.countryCode === "string" && d.countryCode.trim()

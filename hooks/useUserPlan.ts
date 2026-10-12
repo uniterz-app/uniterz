@@ -4,6 +4,7 @@ import {
   normalizeStoredPlanType,
   type StoredPlanType,
 } from "@/lib/pro/planChangeDisplay";
+import { userDataPlan } from "@/lib/pro/userPlanActive";
 
 type Plan = "free" | "pro";
 
@@ -38,7 +39,7 @@ export function useUserPlan(uid?: string) {
         setLoading(false);
         return;
       }
-      setPlan((data.plan as Plan | undefined) ?? "free");
+      setPlan(userDataPlan(data));
       setPlanType(normalizeStoredPlanType(data.planType));
       setProUntil(proUntilFromData(data));
       setLoading(false);

@@ -25,6 +25,7 @@ import {
   PROFILE_CHARTS_SUBCOL,
 } from "../profile/profileChartsStorage";
 import { buildProfileHeroSnapshotFromCumulative } from "../profile/profileHeroSnapshot";
+import { loadActiveUserPlans } from "../shared/loadActiveUserPlans";
 
 /* =========================================================
  * Firestore
@@ -576,6 +577,7 @@ export async function buildCumulativeRankingSnapshot(
   const statsByUid = cumulativeStatsDocsToMap(snap);
 
   const nbaSettledTodayUids = await loadAuthorUidsSettledToday("nba");
+  const livePlans = await loadActiveUserPlans(snap.docs.map((d) => d.id));
 
   /** uid → 現行シーズンの指標別順位 */
   const rankByUidSeason = new Map<string, PhaseRankMap>();
@@ -606,7 +608,7 @@ export async function buildCumulativeRankingSnapshot(
         handle: d.handle ?? null,
         photoURL: d.photoURL ?? null,
         countryCode: d.countryCode ?? null,
-        plan: (d.plan === "pro" ? "pro" : "free") as BaseRow["plan"],
+        plan: livePlans.get(doc.id) ?? "free",
 
         totalPosts: r.totalPosts,
         totalWins: r.totalWins,
@@ -631,7 +633,7 @@ export async function buildCumulativeRankingSnapshot(
         handle: d.handle ?? null,
         photoURL: d.photoURL ?? null,
         countryCode: d.countryCode ?? null,
-        plan: (d.plan === "pro" ? "pro" : "free") as BaseRow["plan"],
+        plan: livePlans.get(doc.id) ?? "free",
         totalPosts: r.totalPosts,
         totalWins: r.totalWins,
         winRate: r.winRate,

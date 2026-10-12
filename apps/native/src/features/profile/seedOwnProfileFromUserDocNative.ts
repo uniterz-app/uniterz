@@ -1,4 +1,5 @@
 import { resolveLocalizedLang, type LocalizedLang } from "../../../../../lib/i18n/localize";
+import { userDataPlan } from "@/lib/pro/userPlanActive";
 import { auth } from "../../lib/firebase";
 import { parseMemberSinceMs } from "../../../../../lib/profile/parseMemberSinceMs";
 import {
@@ -58,7 +59,7 @@ export function seedOwnProfileFromUserDocNative(
       typeof data.language === "string" ? data.language : null
     ),
     countryCode: typeof data.countryCode === "string" ? data.countryCode : "",
-    plan: data.plan === "pro" ? "pro" : "free",
+    plan: userDataPlan(data),
     planProBgVariant: parseUserPlanProBgVariant(data.planProBgVariant),
     memberSinceMs: parseMemberSinceMs(data),
     unitBalance: parseUserUnitBalance(data),

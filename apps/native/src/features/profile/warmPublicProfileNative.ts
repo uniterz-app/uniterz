@@ -3,6 +3,7 @@
  * 押下と同時に fire-and-forget。画面は identity seed で即描画する。
  */
 import type { RankingRowWithCountry } from "../../../../../lib/rankings/rankingMetrics";
+import { userDataPlan } from "@/lib/pro/userPlanActive";
 import { profilePathKeyFromRow } from "../../../../../lib/profile/profilePathKey";
 import { primePublicProfileIdentity } from "../../../../../lib/profile/publicProfileIdentityCache";
 import { seedProfileHeroFromUserDoc } from "../../../../../lib/profile/seedProfileHeroFromUserDoc";
@@ -148,7 +149,7 @@ export function warmPublicProfileNative(
           typeof loaded.data.photoURL === "string"
             ? loaded.data.photoURL
             : photoURL,
-        plan: loaded.data.plan === "pro" ? "pro" : "free",
+        plan: userDataPlan(loaded.data),
         planProBgVariant: parseUserPlanProBgVariant(
           loaded.data.planProBgVariant
         ),
@@ -187,7 +188,7 @@ export function warmPublicProfileNative(
         typeof docSnap.data.photoURL === "string"
           ? docSnap.data.photoURL
           : photoURL,
-      plan: docSnap.data.plan === "pro" ? "pro" : "free",
+      plan: userDataPlan(docSnap.data),
       planProBgVariant: parseUserPlanProBgVariant(
         docSnap.data.planProBgVariant
       ),

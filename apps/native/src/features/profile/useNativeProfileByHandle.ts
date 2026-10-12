@@ -1,4 +1,5 @@
 import { resolveLocalizedLang, type LocalizedLang } from "../../../../../lib/i18n/localize";
+import { userDataPlan } from "@/lib/pro/userPlanActive";
 import { useEffect, useMemo, useState } from "react";
 import { db } from "../../lib/firebase";
 import { fetchUserDocByRouteKey } from "../../../../../lib/profile/fetchUserDocByRouteKey";
@@ -84,7 +85,7 @@ function mapUserDoc(
       : typeof data.avatarUrl === "string" && data.avatarUrl.trim().length > 0
         ? data.avatarUrl.trim()
         : "";
-  const plan: "free" | "pro" = data.plan === "pro" ? "pro" : "free";
+  const plan = userDataPlan(data);
   const favorites = parseNbaFavorites(data);
 
   return {

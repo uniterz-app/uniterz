@@ -7,6 +7,7 @@ import { loadCumulativeDataClient } from "@/lib/profile/fetchNbaProfileCardPhase
 import { profileOverviewSeasonKey } from "@/lib/profile/profileOverviewSeason";
 import { loadProfileChartsBundleClient } from "@/lib/profile/profileChartsStorage";
 import { pickNbaCumulativeRankingSlice } from "@/lib/rankings/pickNbaStatsBucket";
+import { userDataPlan } from "@/lib/pro/userPlanActive";
 import type { MyRankProgressPoint } from "@/lib/rankings/myRankRankingProgress";
 import { readStoredRankFromSnapshotRanks } from "@/lib/rankings/server/readSnapshotRanksFromCumulative";
 
@@ -57,7 +58,7 @@ function buildNbaMyRow(
   const bySeason = pickNbaCumulativeRankingSlice(data);
   const tp = Number(bySeason.totalPosts ?? 0);
   const tw = Number(bySeason.totalWins ?? 0);
-  const plan = data.plan === "pro" ? "pro" : "free";
+  const plan = userDataPlan(data);
   return {
     uid,
     displayName: String(data.displayName ?? ""),

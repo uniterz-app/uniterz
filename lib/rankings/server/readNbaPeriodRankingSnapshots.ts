@@ -12,6 +12,7 @@ import {
   type RankingDivision,
 } from "@/lib/rankings/rankingDivision";
 import type { RankingApiRow } from "@/lib/rankings/rankingTransform";
+import { userDataPlan } from "@/lib/pro/userPlanActive";
 import {
   enumerateDateKeysInclusive,
   resolveRankingPeriodRangeForLabel,
@@ -231,7 +232,7 @@ async function buildMyPeriodRow(
         typeof u.countryCode === "string" && u.countryCode.trim()
           ? u.countryCode.trim()
           : null;
-      plan = u.plan === "pro" ? "pro" : u.plan === "free" ? "free" : null;
+      plan = u.plan === "pro" || u.plan === "free" ? userDataPlan(u) : null;
     }
   } catch {
     /* identity はフォールバックのまま */

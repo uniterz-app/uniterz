@@ -1,5 +1,6 @@
 /** Web 未実装 — Native MARK LIST。左から横スライドするサイドシート。 */
 import { useEffect, useMemo, useRef, useState } from "react";
+import { userDataIsPro } from "@/lib/pro/userPlanActive";
 import {
   ActivityIndicator,
   Animated,
@@ -58,7 +59,7 @@ export type MarkListRow = UserMark & {
 };
 
 function isProPlan(data: Record<string, unknown> | null | undefined): boolean {
-  return data?.plan === "pro";
+  return userDataIsPro(data);
 }
 
 function skinFromPeek(uid: string, isPro: boolean): string | null {

@@ -56,6 +56,7 @@ import { useAdminInboxUnread } from "@/lib/admin/useAdminInboxUnread";
 import LogoutConfirmModal from "../modals/LogoutConfirmModal";
 import ProfileEditSheet from "@/app/component/profile/ProfileEditSheet";
 import { getUserDocDataCached } from "@/lib/user/userDocCache";
+import { userDataPlan } from "@/lib/pro/userPlanActive";
 import { CyberSideMenuSectionTitle } from "@/app/component/common/CyberSideMenuSectionTitle";
 import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
 import SideMenuItemButton from "@/app/component/settings/SideMenuItemButton";
@@ -179,8 +180,7 @@ export default function SettingsMenu({
     getUserDocDataCached(user.uid).then((data) => {
       if (!alive) return;
       const row = (data ?? {}) as Record<string, unknown>;
-      const p = data?.plan;
-      setPlan(p === "pro" ? "pro" : "free");
+      setPlan(userDataPlan(row));
       setUnitBalance(parseUserUnitBalance(row));
       const { displayName: name, handle: h } = parseUserProfileFields(row);
       setDisplayName(

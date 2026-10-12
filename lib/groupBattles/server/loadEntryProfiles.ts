@@ -13,6 +13,7 @@ import {
   previousWeekLabelForMondayDelivery,
 } from "@/lib/reports/reportDelivery";
 import { currentSeasonWinStreak } from "@/lib/profile/currentSeasonWinStreak";
+import { userDataPlan } from "@/lib/pro/userPlanActive";
 
 export type { GroupBattleEntryProfile } from "@/lib/groupBattles/entryProfileTypes";
 
@@ -154,7 +155,7 @@ export async function loadGroupBattleEntryProfiles(
           : typeof u.avatarUrl === "string" && u.avatarUrl.trim()
             ? u.avatarUrl.trim()
             : null;
-      const plan = u.plan === "pro" ? "pro" : "free";
+      const plan = userDataPlan(u);
 
       const cum = cumSnap.exists
         ? (cumSnap.data() as Record<string, unknown>)

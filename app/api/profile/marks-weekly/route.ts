@@ -8,6 +8,7 @@ import { getAdminDb } from "@/lib/firebaseAdmin";
 import { MAX_MARKS_PRO } from "@/lib/marks/markTypes";
 import { currentRankingPeriodLabel } from "@/lib/rankings/rankingPeriod";
 import { periodRankingSnapshotDocId } from "@/lib/rankings/rankingDivision";
+import { userDataIsPro } from "@/lib/pro/userPlanActive";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -93,7 +94,7 @@ export async function GET(req: Request) {
       board[uid] = {
         rank: rank != null && rank > 0 ? Math.floor(rank) : null,
         points: pointsByUid.get(uid) ?? null,
-        isPro: userData?.plan === "pro",
+        isPro: userDataIsPro(userData),
       };
     });
 

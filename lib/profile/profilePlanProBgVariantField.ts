@@ -3,6 +3,7 @@ import {
   PROFILE_PLAN_PRO_BG_DEFAULT,
   type ProfilePlanProBgVariant,
 } from "@/lib/profile/profilePlanProBgVariants";
+import { userDataIsPro } from "@/lib/pro/userPlanActive";
 
 /** Firestore `users.planProBgVariant` → 採用スキン（不正値はデフォルト） */
 export function parseUserPlanProBgVariant(
@@ -30,10 +31,11 @@ export function tryParseUserPlanProBgVariant(
 /** Pro の装備スキン。プロフィール表示と一致させる（所持リスト欠落でチタンに落とさない） */
 export function parseEquippedProSkinFromUserDoc(data: {
   plan?: unknown;
+  proUntil?: unknown;
   planProBgVariant?: unknown;
   proSkinUnlockedIds?: unknown;
 }): ProfilePlanProBgVariant | undefined {
-  if (data.plan !== "pro") return undefined;
+  if (!userDataIsPro(data)) return undefined;
   /**
    * 以前は proSkinUnlockedIds に無い装備をデフォルトへ落としていた。
    * マイルストーン解放のリスト遅延・欠落と装備値のズレで、プロフィールは

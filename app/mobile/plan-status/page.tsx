@@ -29,6 +29,7 @@ import {
   planPeriodLabel,
   type StoredPlanType,
 } from "@/lib/pro/planChangeDisplay";
+import { userDataPlan } from "@/lib/pro/userPlanActive";
 
 type PlanType = StoredPlanType | null;
 
@@ -72,7 +73,7 @@ export default function PlanStatusPage() {
 
       const data = snap.data();
 
-      setPlan(data.plan === "pro" ? "pro" : "free");
+      setPlan(userDataPlan(data));
       setPlanType(normalizeStoredPlanType(data.planType));
       setProUntil(firestoreDate(data.proUntil));
       setPlanStart(firestoreDate(data.planStartDate));

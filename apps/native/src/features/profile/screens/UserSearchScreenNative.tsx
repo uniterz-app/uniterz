@@ -2,6 +2,7 @@
  * メニュー → ユーザー検索。ハンドル検索して MARK / プロフィール閲覧。
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { userDataIsPro } from "@/lib/pro/userPlanActive";
 import {
   ActivityIndicator,
   Pressable,
@@ -38,7 +39,7 @@ export default function UserSearchScreenNative() {
   const copy = userSearchCopy(language);
   const myUid = fUser?.uid ?? null;
   const myPeek = myUid ? peekProfileUserDocNative(myUid) : null;
-  const myIsPro = myPeek?.plan === "pro";
+  const myIsPro = userDataIsPro(myPeek);
   const maxMarks = maxMarksForPlan(!!myIsPro);
   const { addMark, removeMark, isMarked, atCap } = useProfileMarksNative(
     myUid,

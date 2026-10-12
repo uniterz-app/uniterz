@@ -9,6 +9,7 @@ import {
   normalizeStoredPlanType,
   type StoredPlanType,
 } from "@/lib/pro/planChangeDisplay";
+import { userDataPlan } from "@/lib/pro/userPlanActive";
 
 type Params = {
   targetUid: string | null;
@@ -60,33 +61,9 @@ export function useProfilePlan({ targetUid, profilePlan }: Params) {
           return;
         }
 
-        let nextPlan: "free" | "pro" = data.plan === "pro" ? "pro" : "free";
+        // proUntil 超過は表示だけ free（plan の書き戻しは Functions expireProUsers）
+        const nextPlan = userDataPlan(data as Record<string, unknown>);
         const nextType = normalizeStoredPlanType(data.planType);
-
-        if (isMe) {
-          const proUntilRaw = data.proUntil;
-          const proUntilMs =
-            proUntilRaw &&
-            typeof proUntilRaw === "object" &&
-            "toMillis" in proUntilRaw &&
-            typeof (proUntilRaw as { toMillis?: unknown }).toMillis ===
-              "function"
-              ? (proUntilRaw as { toMillis: () => number }).toMillis()
-              : undefined;
-          const cancelAtPeriodEnd = data.cancelAtPeriodEnd === true;
-
-          // 表示だけ free に倒す。Firestore の書き換えはしない
-          // （users の plan / proUntil はルールでクライアント書き込み禁止。
-          //  実際のダウングレードは Functions の expireProUsers が行う）
-          if (
-            nextPlan === "pro" &&
-            cancelAtPeriodEnd &&
-            typeof proUntilMs === "number" &&
-            Date.now() > proUntilMs
-          ) {
-            nextPlan = "free";
-          }
-        }
 
         if (!cancelled) {
           setMyPlan(nextPlan);

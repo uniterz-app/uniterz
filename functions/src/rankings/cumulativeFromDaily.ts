@@ -8,6 +8,7 @@ import {
   type Transaction,
 } from "firebase-admin/firestore";
 import { safeRankMetricNum } from "./safeRankMetricNum";
+import { userDataPlan } from "../shared/userPlanActive";
 import {
   CUMULATIVE_RANKING_TOTAL_POSTS_FIELD,
   rankingTotalPostsFromAggregate,
@@ -239,7 +240,7 @@ export function applyCumulativeIncrementInTransaction(
       handle: user.handle ?? null,
       photoURL: user.photoURL ?? null,
       countryCode: user.countryCode ?? null,
-      plan: user.plan === "pro" ? "pro" : "free",
+      plan: userDataPlan(user),
       cumulativeLiveUpdates: true,
       updatedAt: FieldValue.serverTimestamp(),
       ...buildCumulativeIncrementFields(contrib, sign),
@@ -392,7 +393,7 @@ export function cumulativePayloadFromAggregate(
     handle: user.handle ?? null,
     photoURL: user.photoURL ?? null,
     countryCode: user.countryCode ?? null,
-    plan: user.plan === "pro" ? "pro" : "free",
+    plan: userDataPlan(user),
 
     totalPosts: agg.profile.totalPosts,
     totalWins: agg.profile.totalWins,

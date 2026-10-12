@@ -1,6 +1,7 @@
 import { getAdminDb } from "@/lib/firebaseAdmin";
 import { parseEquippedProSkinFromUserDoc } from "@/lib/profile/profilePlanProBgVariantField";
 import type { ProfilePlanProBgVariant } from "@/lib/profile/profilePlanProBgVariants";
+import { userDataPlan } from "@/lib/pro/userPlanActive";
 
 type RowLike = Record<string, unknown> & { uid?: string };
 
@@ -44,8 +45,8 @@ type UserMergeFields = {
   planProBgVariant?: ProfilePlanProBgVariant;
 };
 
-function planFromUserDoc(data: { plan?: string } | undefined): "free" | "pro" {
-  return data?.plan === "pro" ? "pro" : "free";
+function planFromUserDoc(data: Record<string, unknown> | undefined): "free" | "pro" {
+  return userDataPlan(data);
 }
 
 /** Cloud Functions getCumulativeRanking と同じ country の正規化 */

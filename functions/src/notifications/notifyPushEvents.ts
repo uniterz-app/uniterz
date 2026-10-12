@@ -5,6 +5,7 @@ import {
   uniqueAuthorTargetsFromPosts,
 } from "./sendExpoPush";
 import { resolveGameMatchupCopy } from "./pushNotificationCopy";
+import { userDataPlan } from "../shared/userPlanActive";
 
 export async function notifyGameFinalPush(input: {
   gameId: string;
@@ -83,7 +84,7 @@ export async function notifyWeeklyReportPush(input: {
       const data = snap.data() ?? {};
       if (
         canViewWeeklyReport({
-          plan: data.plan,
+          plan: userDataPlan(data),
           planType: data.planType,
         })
       ) {
@@ -135,7 +136,7 @@ export async function notifyMonthlyReportPush(input: {
       const data = snap.data() ?? {};
       if (
         canViewMonthlyReport({
-          plan: data.plan,
+          plan: userDataPlan(data),
           planType: data.planType,
         })
       ) {

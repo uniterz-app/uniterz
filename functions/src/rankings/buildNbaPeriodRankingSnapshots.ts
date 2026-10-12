@@ -23,6 +23,7 @@ import {
   isPeriodUpsetEligible,
   winRateMinPostsFromPickupCount,
 } from "../units/periodRankingUnitRewards";
+import { userDataIsPro } from "../shared/userPlanActive";
 
 function db() {
   return getFirestore();
@@ -293,19 +294,12 @@ async function buildOne(range: NbaPeriodRange, todayKey: string): Promise<void> 
     const slice = proCheckUids.slice(i, i + CHUNK);
     const refs = slice.map((uid) => firestore.collection("users").doc(uid));
     const snaps = await firestore.getAll(...refs);
-    const nowMs = Date.now();
     for (let j = 0; j < snaps.length; j++) {
       const snap = snaps[j];
-      if (!snap.exists) continue;
-      const d = snap.data() ?? {};
-      if (d.plan !== "pro") continue;
-      const until = d.proUntil as { toMillis?: () => number } | undefined;
-      if (until && typeof until.toMillis === "function" && until.toMillis() <= nowMs) {
-        continue;
-      }
-      proUidSet.add(slice[j]!);
+      const isPro = userDataIsPro(snap.exists ? snap.data() : undefined);
+      if (isPro) proUidSet.add(slice[j]!);
       const profile = profileByUid.get(slice[j]!);
-      if (profile) profile.plan = "pro";
+      if (profile) profile.plan = isPro ? "pro" : "free";
     }
   }
 

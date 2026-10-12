@@ -17,6 +17,7 @@ import type {
   GroupBattlePastMemberSummary,
   GroupBattlePastSquadItem,
 } from "@/lib/groupBattles/types";
+import { userDataPlan } from "@/lib/pro/userPlanActive";
 
 function isLockedOrDisbanded(status: string): boolean {
   return status === "locked" || status === "disbanded";
@@ -50,7 +51,7 @@ export async function loadUserMemberSummaries(
           ? d.displayName.trim()
           : "User",
       handle: handleRaw || null,
-      plan: d.plan === "pro" ? "pro" : "free",
+      plan: userDataPlan(d),
       photoURL:
         typeof d.photoURL === "string" && d.photoURL.trim()
           ? d.photoURL.trim()

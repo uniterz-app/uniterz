@@ -4,6 +4,7 @@ import {
   normalizeStoredPlanType,
   type StoredPlanType,
 } from "@/lib/pro/planChangeDisplay";
+import { userDataPlan } from "@/lib/pro/userPlanActive";
 
 type Plan = "free" | "pro";
 
@@ -39,7 +40,7 @@ export function useNativeUserPlan(uid?: string | null) {
         setLoading(false);
         return;
       }
-      setPlan(data.plan === "pro" ? "pro" : "free");
+      setPlan(userDataPlan(data));
       setPlanType(normalizeStoredPlanType(data.planType));
       setProUntil(proUntilFromData(data));
       setLoading(false);

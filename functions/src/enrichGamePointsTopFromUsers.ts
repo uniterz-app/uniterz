@@ -4,6 +4,7 @@
  */
 import type { Firestore } from "firebase-admin/firestore";
 import type { GamePointsTopEntryAgg } from "./aggregateGamePointsDistribution";
+import { userDataIsPro } from "./shared/userPlanActive";
 
 function pickNonEmpty(v: unknown): string | null {
   if (typeof v !== "string") return null;
@@ -51,7 +52,7 @@ export async function enrichGamePointsTopFromUsers(
       handle,
       displayName,
       photoURL,
-      isPro: d.isPro === true || d.plan === "pro",
+      isPro: userDataIsPro(d),
       countryCode: pickNonEmpty(d.countryCode)?.toUpperCase() ?? null,
     });
   }
@@ -68,7 +69,7 @@ export async function enrichGamePointsTopFromUsers(
       handle,
       displayName,
       photoURL: p.photoURL ?? row.photoURL ?? null,
-      isPro: p.isPro || row.isPro,
+      isPro: p.isPro,
       countryCode: p.countryCode ?? row.countryCode ?? null,
     };
   });

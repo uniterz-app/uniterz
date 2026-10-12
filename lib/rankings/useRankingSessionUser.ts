@@ -7,6 +7,7 @@ import {
   normalizeLanguage,
 } from "@/lib/i18n/language";
 import { subscribeUserDocLive } from "@/lib/user/subscribeUserDocLive";
+import { userDataPlan } from "@/lib/pro/userPlanActive";
 
 export type RankingSessionUser = {
   displayName: string;
@@ -59,7 +60,7 @@ export function useRankingSessionUser(uid: string | null | undefined) {
         displayName: d.displayName?.trim() || "",
         handle: d.handle?.trim() || "",
         photoURL: d.photoURL?.trim() || "",
-        plan: d.plan === "pro" ? "pro" : "free",
+        plan: userDataPlan(d as Record<string, unknown>),
         language: normalizeLanguage(d.language) ?? guessLanguageFromNavigator(),
         countryCode: typeof d.countryCode === "string" ? d.countryCode : null,
       });
