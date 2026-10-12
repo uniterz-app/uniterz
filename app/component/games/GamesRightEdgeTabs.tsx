@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import cn from "clsx";
 import ProfileMenuEdgeHandle from "@/app/component/profile/ui/ProfileMenuEdgeHandle";
+import { TODAY_UNITERZ_DOT_COLOR } from "@/lib/rankings/dailyScoreLeaders/todayUniterzUnread";
 
 const EDGE_START_PX = 28;
 const OPEN_DX_PX = 48;
@@ -17,6 +18,8 @@ type Props = {
   onOpenStanding: () => void;
   onOpenStats: () => void;
   onOpenToday?: () => void;
+  /** TODAY UNITERZ に未読の更新あり（黄色の点） */
+  todayUnread?: boolean;
   standingAriaLabel?: string;
   statsAriaLabel?: string;
   todayAriaLabel?: string;
@@ -29,6 +32,7 @@ export default function GamesRightEdgeTabs({
   onOpenStanding,
   onOpenStats,
   onOpenToday,
+  todayUnread = false,
   standingAriaLabel = "STANDING",
   statsAriaLabel = "STATS",
   todayAriaLabel = "TODAY",
@@ -125,6 +129,7 @@ export default function GamesRightEdgeTabs({
             label="TODAY"
             onOpen={onOpenToday}
             ariaLabel={todayAriaLabel}
+            dotColor={todayUnread ? TODAY_UNITERZ_DOT_COLOR : null}
           />
         </div>
       ) : null}

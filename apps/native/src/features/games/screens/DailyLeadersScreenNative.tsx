@@ -1,5 +1,5 @@
 /** Web `/mobile/today-leaders` 相当 — NBA スタッツリーダー / UNITERZ スコアリーダー */
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { StyleSheet, View } from "react-native";
@@ -14,6 +14,8 @@ import { navigateToPublicProfileNative } from "../../../navigation/navigateToPub
 import type { GamesStackParamList } from "../../../navigation/types";
 import NbaDailyLeadersPanelNative from "../stats/NbaDailyLeadersPanelNative";
 import UniterzDailyScoreLeadersPanelNative from "../stats/UniterzDailyScoreLeadersPanelNative";
+import { useTodayUniterzUnreadNative } from "../stats/useTodayUniterzUnreadNative";
+import { TODAY_UNITERZ_DOT_COLOR } from "../../../../../../lib/rankings/dailyScoreLeaders/todayUniterzUnread";
 import { resolveLocalizedLang } from "../../../../../../lib/i18n/localize";
 import {
   dailyScoreLeadersCopy,
@@ -27,6 +29,15 @@ export default function DailyLeadersScreenNative() {
   const { language } = useNativeUserLanguage(fUser?.uid);
   const [tab, setTab] = useState<TodayLeadersTab>("nba");
   const copy = dailyScoreLeadersCopy(resolveLocalizedLang(language));
+  const {
+    unread: uniterzUnread,
+    latest: uniterzVersion,
+    markSeen: markUniterzSeen,
+  } = useTodayUniterzUnreadNative();
+
+  useEffect(() => {
+    if (tab === "uniterz" && uniterzVersion) markUniterzSeen();
+  }, [tab, uniterzVersion, markUniterzSeen]);
 
   return (
     <GamesNbaSubpageShellNative
@@ -49,6 +60,9 @@ export default function DailyLeadersScreenNative() {
             onPress={() => setTab("uniterz")}
           />
         </CyberSlantedTabBarNative>
+        {uniterzUnread && tab !== "uniterz" ? (
+          <View pointerEvents="none" style={styles.uniterzDot} />
+        ) : null}
       </View>
 
       {tab === "nba" ? (
@@ -83,4 +97,17 @@ export default function DailyLeadersScreenNative() {
 const styles = StyleSheet.create({
   shell: { flex: 1 },
   topTabs: { paddingHorizontal: 12, paddingTop: 4, paddingBottom: 4 },
+  uniterzDot: {
+    position: "absolute",
+    top: 4,
+    right: 14,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: TODAY_UNITERZ_DOT_COLOR,
+    shadowColor: TODAY_UNITERZ_DOT_COLOR,
+    shadowOpacity: 0.8,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 0 },
+  },
 });

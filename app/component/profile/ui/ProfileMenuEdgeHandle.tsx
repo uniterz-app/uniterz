@@ -34,6 +34,8 @@ export default function ProfileMenuEdgeHandle({
   tutorialTargetId,
   /** 親レール内に置く（portal / 右端スワイプなし） */
   inline = false,
+  /** 数のない新着マーク（色を指定すると表示） */
+  dotColor = null,
 }: {
   onOpen: () => void;
   unreadCount?: number;
@@ -48,6 +50,7 @@ export default function ProfileMenuEdgeHandle({
   overlay?: boolean;
   tutorialTargetId?: string;
   inline?: boolean;
+  dotColor?: string | null;
 }) {
   const [mounted, setMounted] = useState(false);
 
@@ -161,6 +164,13 @@ export default function ProfileMenuEdgeHandle({
         >
           {unreadCount > 9 ? "9+" : unreadCount}
         </span>
+      ) : null}
+      {dotColor && unreadCount <= 0 && adminUnreadCount <= 0 ? (
+        <span
+          className="profile-menu-edge-handle__dot"
+          style={{ background: dotColor, boxShadow: `0 0 6px ${dotColor}` }}
+          aria-hidden
+        />
       ) : null}
     </button>
   );

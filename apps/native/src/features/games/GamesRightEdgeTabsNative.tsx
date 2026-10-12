@@ -10,6 +10,7 @@ import Animated, {
 import { TUTORIAL_STATS_EDGE_FADE_MS } from "../../../../../lib/tutorial/tutorialMotion";
 import { registerTutorialTarget } from "../tutorial/tutorialMeasureNative";
 import ProfileMenuEdgeHandleNative from "../profile/ProfileMenuEdgeHandleNative";
+import { TODAY_UNITERZ_DOT_COLOR } from "../../../../../lib/rankings/dailyScoreLeaders/todayUniterzUnread";
 
 const OPEN_DX = 40;
 const CANCEL_DY = 24;
@@ -45,6 +46,8 @@ type Props = {
   onOpenStanding: () => void;
   onOpenStats: () => void;
   onOpenToday?: () => void;
+  /** TODAY UNITERZ に未読の更新あり（黄色の点） */
+  todayUnread?: boolean;
   hidden?: boolean;
   fadeIn?: boolean;
   /** STANDING + STATS まとめてチュートリアル穴 */
@@ -55,6 +58,7 @@ export default function GamesRightEdgeTabsNative({
   onOpenStanding,
   onOpenStats,
   onOpenToday,
+  todayUnread = false,
   hidden = false,
   fadeIn = false,
   statsTutorialTargetId,
@@ -146,6 +150,7 @@ export default function GamesRightEdgeTabsNative({
               inline
               label="TODAY"
               onOpen={onOpenToday}
+              dotColor={todayUnread ? TODAY_UNITERZ_DOT_COLOR : null}
             />
           </View>
         ) : null}

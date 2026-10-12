@@ -75,6 +75,8 @@ export default function ProfileMenuEdgeHandleNative({
   tutorialTargetId,
   /** 親レール内（absolute 位置・フェード・スワイプなし） */
   inline = false,
+  /** 数のない新着マーク（色を指定すると表示） */
+  dotColor = null,
 }: {
   onOpen: () => void;
   unreadCount?: number;
@@ -87,6 +89,7 @@ export default function ProfileMenuEdgeHandleNative({
   top?: `${number}%` | number;
   tutorialTargetId?: string;
   inline?: boolean;
+  dotColor?: string | null;
 }) {
   const theme = VARIANTS[variant];
   const handleTop = top ?? theme.top;
@@ -178,6 +181,12 @@ export default function ProfileMenuEdgeHandleNative({
               {unreadCount > 9 ? "9+" : String(unreadCount)}
             </Text>
           </View>
+        ) : null}
+        {dotColor && unreadCount <= 0 && adminUnreadCount <= 0 ? (
+          <View
+            pointerEvents="none"
+            style={[styles.dot, { backgroundColor: dotColor, shadowColor: dotColor }]}
+          />
         ) : null}
         </View>
   );
@@ -314,6 +323,18 @@ const styles = StyleSheet.create({
     backgroundColor: "#00F5FF",
     alignItems: "center",
     justifyContent: "center",
+    zIndex: 2,
+  },
+  dot: {
+    position: "absolute",
+    top: -15,
+    left: -14,
+    width: 9,
+    height: 9,
+    borderRadius: 999,
+    shadowOpacity: 0.8,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 0 },
     zIndex: 2,
   },
   badgeLower: {

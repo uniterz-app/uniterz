@@ -16,6 +16,8 @@ import {
   readFirstRunSetupPending,
 } from "@/lib/onboarding/firstRunSetupWeb";
 import GamesRightEdgeTabs from "@/app/component/games/GamesRightEdgeTabs";
+import { useTodayUniterzUnread } from "@/app/component/stats/useTodayUniterzUnread";
+import { TODAY_UNITERZ_POLL_MS } from "@/lib/rankings/dailyScoreLeaders/todayUniterzUnread";
 import {
   gamesHeaderFilterWrapClass,
   gamesHeaderMobileShellClass,
@@ -211,6 +213,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const { unread: todayUniterzUnread } = useTodayUniterzUnread(TODAY_UNITERZ_POLL_MS);
 
   const season = searchParams.get("season") ?? getCurrentPlayoffSeason();
   const dateParam = searchParams.get("date");
@@ -1719,6 +1722,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
           router.push(isMobile ? "/mobile/stats-preview" : "/dev/stats-preview")
         }
         onOpenToday={() => router.push("/mobile/today-leaders")}
+        todayUnread={todayUniterzUnread}
         standingAriaLabel="STANDING"
         statsAriaLabel={m.games.statsSection}
         statsTutorialTargetId="games-stats-edge"

@@ -8199,6 +8199,16 @@ html.unit-earn-settling .profile-edit-kinetik-panel [class*="profile-plan-pro"] 
   line-height: 8px;
 }
 
+.profile-menu-edge-handle__dot {
+  position: absolute;
+  top: -4px;
+  left: -4px;
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  pointer-events: none;
+}
+
 .profile-menu-edge-handle__badge {
   position: absolute;
   top: -6px;
