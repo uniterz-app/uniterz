@@ -138,6 +138,8 @@ export async function sendExpoPushToUids(input: {
   type: PushNotificationType;
   targets: SendTarget[];
   matchup?: GameMatchupCopyInput;
+  /** uid ごとに文面が違うとき（`matchup` より優先） */
+  matchupByUid?: Map<string, GameMatchupCopyInput>;
   predictionDeadlineMinutes?: 10 | 30 | 60;
 }): Promise<{ sent: number; skipped: number }> {
   if (isRetiredPushType(input.type)) {
@@ -157,6 +159,8 @@ export async function sendExpoPushToUids(input: {
   const dataByUid = new Map(input.targets.map((t) => [t.uid, t.data]));
 
   const messages: ExpoPushMessage[] = [];
+  /** messages と同じ並び（設定で飛ばしたトークンは含まない） */
+  const messageTokens: TokenRecord[] = [];
   for (const rec of tokens) {
     const ctx = userContexts.get(rec.uid);
     if (
@@ -187,7 +191,7 @@ export async function sendExpoPushToUids(input: {
               .filter((x): x is string => typeof x === "string" && x.length > 0)
               .join(" "),
           }
-        : input.matchup;
+        : input.matchupByUid?.get(rec.uid) ?? input.matchup;
     const copy = buildPushNotificationCopy(
       input.type,
       ctx.language,
@@ -201,6 +205,7 @@ export async function sendExpoPushToUids(input: {
       ...(copy.subtitle ? { subtitle: copy.subtitle } : {}),
       data: data as Record<string, unknown>,
     });
+    messageTokens.push(rec);
   }
 
   const chunks = expo.chunkPushNotifications(messages);
@@ -212,7 +217,7 @@ export async function sendExpoPushToUids(input: {
     const tickets: ExpoPushTicket[] = await expo.sendPushNotificationsAsync(chunk);
     for (let i = 0; i < tickets.length; i++) {
       const ticket = tickets[i];
-      const rec = tokens[offset + i];
+      const rec = messageTokens[offset + i];
       if (!rec) continue;
       if (ticket.status === "ok") {
         sent++;

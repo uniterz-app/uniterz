@@ -85,6 +85,7 @@ import {
   resultFilterBarNative,
 } from "./resultMobileUiNative";
 import { isResultPostLiveGame, isResultPostMatchStarted } from "../../../../../lib/result/resultLiveGame";
+import { useResultPendingPollActive } from "../../../../../lib/result/useResultPendingPollActive";
 import {
   dayPointsHeaderForNative,
   type NativeDayPointsHeader,
@@ -336,10 +337,11 @@ export default function ResultHomeScreen({
     }, [uid, leagueTab])
   );
 
-  const hasPendingSettlement = useMemo(
-    () => grouped.some((g) => g.pending.length > 0),
+  const pendingPosts = useMemo(
+    () => grouped.flatMap((g) => g.pending),
     [grouped]
   );
+  const hasPendingSettlement = useResultPendingPollActive(pendingPosts);
 
   /** 未精算カードがある間は定期再取得（Cloud Functions 精算完了を待つ） */
   useEffect(() => {

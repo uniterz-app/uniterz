@@ -188,18 +188,12 @@ export async function runNotifyPredictionDeadlineCron(): Promise<void> {
     }
 
     if (targets.length > 0) {
-      // ユーザーごとに pendingCount / lead matchup が違うので1人ずつ送る
-      let sent = 0;
-      for (const target of targets) {
-        const matchup = matchupByUid.get(target.uid);
-        const result = await sendExpoPushToUids({
-          type: "prediction_deadline",
-          targets: [target],
-          matchup,
-          predictionDeadlineMinutes: bucket.minutes,
-        });
-        sent += result.sent;
-      }
+      const { sent } = await sendExpoPushToUids({
+        type: "prediction_deadline",
+        targets,
+        matchupByUid,
+        predictionDeadlineMinutes: bucket.minutes,
+      });
       console.log(
         `[notifyPredictionDeadlineCron] min=${bucket.minutes} sent=${sent} users=${targets.length} games=${pendingGames.length}`
       );
