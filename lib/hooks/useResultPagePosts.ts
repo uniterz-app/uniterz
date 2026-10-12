@@ -33,6 +33,7 @@ import {
   type ResultDayGroup,
   type ResultListLeagueTab,
 } from "@/lib/result/result-page-data";
+import { useResultPendingPollActive } from "@/lib/result/useResultPendingPollActive";
 import { normalizeLeague, resolvePostListLeague } from "@/lib/leagues";
 import {
   clearResultPostsListInflight,
@@ -359,10 +360,11 @@ export function useResultPagePosts(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authReady, uid, league, fetchEnabled]);
 
-  const hasPendingSettlement = useMemo(
-    () => posts.some((p) => !isFinalResultPost(p)),
+  const pendingPosts = useMemo(
+    () => posts.filter((p) => !isFinalResultPost(p)),
     [posts]
   );
+  const hasPendingSettlement = useResultPendingPollActive(pendingPosts);
 
   /** 未精算カードがある間は定期再取得（非表示タブは止める） */
   useEffect(() => {

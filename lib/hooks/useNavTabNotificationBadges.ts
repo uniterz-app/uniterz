@@ -35,7 +35,9 @@ type Options = {
 };
 
 /** 未読ドットは数分遅れでも可。常時 onSnapshot は開発中の読み取り急増の主因 */
-const BADGE_POLL_MS = 120_000;
+const RESULT_BADGE_POLL_MS = 5 * 60_000;
+/** snapshotRanks は日次バッチでしか変わらない */
+const RANKING_BADGE_POLL_MS = 15 * 60_000;
 
 function firestoreTsToMs(v: unknown): number | null {
   const t = v as { toMillis?: () => number; seconds?: number } | null | undefined;
@@ -139,7 +141,7 @@ export function useNavTabNotificationBadges(options: Options = {}) {
     };
 
     void refresh();
-    const timer = window.setInterval(() => void refresh(), BADGE_POLL_MS);
+    const timer = window.setInterval(() => void refresh(), RANKING_BADGE_POLL_MS);
     const onVis = () => {
       if (document.visibilityState === "visible") void refresh();
     };
@@ -203,7 +205,7 @@ export function useNavTabNotificationBadges(options: Options = {}) {
     };
 
     void refresh();
-    const timer = window.setInterval(() => void refresh(), BADGE_POLL_MS);
+    const timer = window.setInterval(() => void refresh(), RESULT_BADGE_POLL_MS);
     const onVis = () => {
       if (document.visibilityState === "visible") void refresh();
     };

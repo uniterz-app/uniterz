@@ -21,7 +21,9 @@ import {
 } from "./navTabNotificationSeenNative";
 
 /** Web `useNavTabNotificationBadges` と同趣旨 — 常時 onSnapshot を避けて poll */
-const BADGE_POLL_MS = 120_000;
+const RESULT_BADGE_POLL_MS = 5 * 60_000;
+/** snapshotRanks は日次バッチでしか変わらない */
+const RANKING_BADGE_POLL_MS = 15 * 60_000;
 
 function firestoreTsToMs(v: unknown): number | null {
   const t = v as { toMillis?: () => number; seconds?: number } | null | undefined;
@@ -112,7 +114,7 @@ export function useNativeNavTabNotificationBadges(options: Options = {}) {
     };
 
     void refresh();
-    const timer = setInterval(() => void refresh(), BADGE_POLL_MS);
+    const timer = setInterval(() => void refresh(), RANKING_BADGE_POLL_MS);
     const sub = AppState.addEventListener("change", (state) => {
       if (state === "active") void refresh();
     });
@@ -177,7 +179,7 @@ export function useNativeNavTabNotificationBadges(options: Options = {}) {
     };
 
     void refresh();
-    const timer = setInterval(() => void refresh(), BADGE_POLL_MS);
+    const timer = setInterval(() => void refresh(), RESULT_BADGE_POLL_MS);
     const sub = AppState.addEventListener("change", (state) => {
       if (state === "active") void refresh();
     });
