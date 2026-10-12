@@ -8,7 +8,10 @@
  * `--day=YYYY-MM-DD` で日を指定。stdout は JSON のみ。
  */
 import "./_loadAdminEnv";
-import { Timestamp } from "firebase-admin/firestore";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { homedir } from "node:os";
+import { join } from "node:path";
+import { FieldPath, Timestamp } from "firebase-admin/firestore";
 import { getAdminDb } from "../lib/firebaseAdmin";
 
 const PAGE = 500;
@@ -119,35 +122,83 @@ async function countTodayRegistrations(start: Date, end: Date): Promise<number> 
   return snap.data().count;
 }
 
-async function countTodayPredictions(start: Date, end: Date): Promise<{
+/**
+ * 予想者の uid は日ごとにローカルへ貯め、前回の続き（新しい posts）だけ読む。
+ * 5 分ごとに当日の posts を全件読むと、それだけで 1 日数十万 read になるため。
+ */
+type PredictorCache = {
+  dayKey: string;
+  uids: string[];
+  lastCreatedAtMs: number | null;
+  lastId: string | null;
+};
+
+const CACHE_DIR = join(homedir(), ".cache", "uniterz-glance");
+
+function predictorCachePath(dayKey: string): string {
+  return join(CACHE_DIR, `predictors-${dayKey}.json`);
+}
+
+function loadPredictorCache(dayKey: string): PredictorCache {
+  try {
+    const raw = JSON.parse(readFileSync(predictorCachePath(dayKey), "utf8")) as PredictorCache;
+    if (raw.dayKey === dayKey && Array.isArray(raw.uids)) return raw;
+  } catch {
+    // 無い・壊れている → 最初から
+  }
+  return { dayKey, uids: [], lastCreatedAtMs: null, lastId: null };
+}
+
+function savePredictorCache(cache: PredictorCache): void {
+  mkdirSync(CACHE_DIR, { recursive: true });
+  writeFileSync(predictorCachePath(cache.dayKey), JSON.stringify(cache));
+}
+
+async function countTodayPredictions(
+  start: Date,
+  end: Date,
+  dayKey: string
+): Promise<{
   predictors: number;
   posts: number;
 }> {
   const db = getAdminDb();
-  const uids = new Set<string>();
-  let posts = 0;
-  let cursor: FirebaseFirestore.QueryDocumentSnapshot | undefined;
+  const range = db
+    .collection("posts")
+    .where("createdAt", ">=", Timestamp.fromDate(start))
+    .where("createdAt", "<", Timestamp.fromDate(end));
+
+  const cache = loadPredictorCache(dayKey);
+  const uids = new Set(cache.uids);
+  let lastCreatedAtMs = cache.lastCreatedAtMs;
+  let lastId = cache.lastId;
 
   for (;;) {
-    let q = db
-      .collection("posts")
-      .where("createdAt", ">=", Timestamp.fromDate(start))
-      .where("createdAt", "<", Timestamp.fromDate(end))
+    let q = range
       .orderBy("createdAt")
+      .orderBy(FieldPath.documentId())
       .select("authorUid", "createdAt")
       .limit(PAGE);
-    if (cursor) q = q.startAfter(cursor);
+    if (lastCreatedAtMs != null && lastId) {
+      q = q.startAfter(Timestamp.fromMillis(lastCreatedAtMs), lastId);
+    }
     const snap = await q.get();
     if (snap.empty) break;
     for (const doc of snap.docs) {
-      posts += 1;
       const uid = doc.get("authorUid");
       if (typeof uid === "string" && uid.trim()) uids.add(uid);
     }
-    cursor = snap.docs[snap.docs.length - 1];
+    const last = snap.docs[snap.docs.length - 1]!;
+    const lastTs = last.get("createdAt");
+    if (!(lastTs instanceof Timestamp)) break;
+    lastCreatedAtMs = lastTs.toMillis();
+    lastId = last.id;
     if (snap.size < PAGE) break;
   }
 
+  savePredictorCache({ dayKey, uids: [...uids], lastCreatedAtMs, lastId });
+
+  const posts = (await range.count().get()).data().count;
   return { predictors: uids.size, posts };
 }
 
@@ -157,7 +208,7 @@ async function main() {
     countRegisteredUsers(),
     countActiveSubscribers(),
     countTodayRegistrations(start, end),
-    countTodayPredictions(start, end),
+    countTodayPredictions(start, end, dayKey),
   ]);
   const payload = {
     registered,
