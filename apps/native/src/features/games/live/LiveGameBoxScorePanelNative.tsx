@@ -198,6 +198,12 @@ function TeamBoxCard({
                   <Text style={styles.playerName} numberOfLines={1}>
                     {playerCardName(p)}
                   </Text>
+                  {p.starter ? (
+                    <View
+                      accessibilityLabel="Starter"
+                      style={[styles.starterDot, { backgroundColor: teamPrimary }]}
+                    />
+                  ) : null}
                   <Text style={styles.pos}>{p.position}</Text>
                 </>
               );
@@ -504,7 +510,7 @@ const styles = StyleSheet.create({
     fontVariant: ["tabular-nums"],
   },
   playerName: {
-    maxWidth: 96,
+    maxWidth: 88,
     fontFamily: METRIC_FONT,
     fontSize: 14,
     fontWeight: "700",
@@ -512,6 +518,11 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     color: "#fff",
     transform: [{ skewX: "-6deg" }],
+  },
+  starterDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
   },
   pos: {
     fontFamily: METRIC_FONT,

@@ -117,6 +117,13 @@ function IdentityCell({
         >
           {playerCardName(asRoster)}
         </p>
+        {p.starter ? (
+          <span
+            aria-label="Starter"
+            className="h-1.5 w-1.5 shrink-0 rounded-full"
+            style={{ backgroundColor: accent }}
+          />
+        ) : null}
         <p
           className={[
             nameOxanium.className,
