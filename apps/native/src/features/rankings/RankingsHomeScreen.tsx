@@ -22,7 +22,6 @@ import {
   RankingsStickyStatusBarNative,
   type RankingsStickyMe,
 } from "./RankingsStickyStatusBarNative";
-import { useNavBarCompactOnScroll } from "../../navigation/navBarCompactStore";
 import {
   DEV_DUMMY_RANKINGS_ENABLED,
   buildDevDummyRankingRows,
@@ -489,17 +488,15 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
   const tabsBottomRef = useRef<number | null>(null);
   tabsBottomRef.current = tabsBottomY;
 
-  const onNavCompactScroll = useNavBarCompactOnScroll(isFocused);
   const onListScroll = useCallback(
     (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-      onNavCompactScroll(e);
       const bottom = tabsBottomRef.current;
       const next = bottom != null && e.nativeEvent.contentOffset.y > bottom;
       if (next === stickyVisibleRef.current) return;
       stickyVisibleRef.current = next;
       setStickyVisible(next);
     },
-    [onNavCompactScroll]
+    []
   );
 
   const myListIndex = useMemo(

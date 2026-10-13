@@ -1,5 +1,5 @@
-/** 下部タブピルを縮めるかどうか（スクロール中の画面が書き、AppTabBar が読む） */
-import { useCallback, useEffect, useRef } from "react";
+/** 下部タブピルを縮めるかどうか（縦スクロールが書き、AppTabBar が読む） */
+import { useCallback, useRef } from "react";
 import type { NativeScrollEvent, NativeSyntheticEvent } from "react-native";
 
 let compact = false;
@@ -27,38 +27,28 @@ const TOGGLE_DISTANCE = 12;
 /** 先頭付近では常に通常サイズ */
 const TOP_ZONE = 8;
 
-/**
- * 下へスクロールで縮め、上へ戻すか先頭で通常サイズ。
- * `active` が false（タブ非フォーカス）になったら即通常サイズに戻す。
- */
-export function useNavBarCompactOnScroll(active: boolean) {
+/** 縦スクロール 1 本ぶんの判定。下へで縮め、上へ戻すか先頭で通常サイズ */
+export function useNavBarCompactScrollHandler() {
   const lastY = useRef(0);
   const acc = useRef(0);
 
-  useEffect(() => {
-    if (!active) setNavBarCompact(false);
-    return () => setNavBarCompact(false);
-  }, [active]);
-
-  return useCallback(
-    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-      if (!active) return;
-      const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
-      const y = contentOffset.y;
-      const dy = y - lastY.current;
-      lastY.current = y;
-      if (y <= TOP_ZONE) {
-        acc.current = 0;
-        setNavBarCompact(false);
-        return;
-      }
-      /** 末尾のバウンスで戻さない */
-      if (y >= contentSize.height - layoutMeasurement.height - 1) return;
-      acc.current =
-        Math.sign(dy) === Math.sign(acc.current) ? acc.current + dy : dy;
-      if (acc.current > TOGGLE_DISTANCE) setNavBarCompact(true);
-      else if (acc.current < -TOGGLE_DISTANCE) setNavBarCompact(false);
-    },
-    [active]
-  );
+  return useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
+    /** 中身が画面に収まる（スクロールしない）ものは触らない */
+    if (contentSize.height <= layoutMeasurement.height + 1) return;
+    const y = contentOffset.y;
+    const dy = y - lastY.current;
+    lastY.current = y;
+    if (y <= TOP_ZONE) {
+      acc.current = 0;
+      setNavBarCompact(false);
+      return;
+    }
+    /** 末尾のバウンスで戻さない */
+    if (y >= contentSize.height - layoutMeasurement.height - 1) return;
+    acc.current =
+      Math.sign(dy) === Math.sign(acc.current) ? acc.current + dy : dy;
+    if (acc.current > TOGGLE_DISTANCE) setNavBarCompact(true);
+    else if (acc.current < -TOGGLE_DISTANCE) setNavBarCompact(false);
+  }, []);
 }

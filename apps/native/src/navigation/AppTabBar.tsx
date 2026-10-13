@@ -16,7 +16,11 @@ import { useNativeNavTabNotificationBadges } from "./useNativeNavTabNotification
 import NavBarChamferShellNative from "./NavBarChamferShellNative";
 /** `useBottomTabBarInsets` の pill 底オフセットと同じ式（コンテンツ余白と揃える） */
 const TAB_BAR_BOTTOM_GAP = 2;
-import { getNavBarCompact, subscribeNavBarCompact } from "./navBarCompactStore";
+import {
+  getNavBarCompact,
+  setNavBarCompact,
+  subscribeNavBarCompact,
+} from "./navBarCompactStore";
 /** スクロール中の縮小（中心基準の scale で浮いた分より少し下げる） */
 const NAV_COMPACT_SCALE = 0.82;
 const NAV_COMPACT_SINK_Y = 10;
@@ -130,6 +134,11 @@ export default function AppTabBar({ state, descriptors, navigation }: BottomTabB
 
   const activeRouteName = state.routes[state.index]?.name ?? "";
   const leafRouteName = focusedLeafRouteName(state);
+
+  /** タブ切替・スタック遷移では通常サイズに戻す */
+  useEffect(() => {
+    setNavBarCompact(false);
+  }, [activeRouteName, leafRouteName]);
   const { showRankingBadge, showResultBadge } =
     useNativeNavTabNotificationBadges({
       rankingTabActive: activeRouteName === "RankingsTab",
