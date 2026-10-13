@@ -59,6 +59,26 @@ function initialLastName(full: string): string {
   return `${parts[0][0]}.${parts.slice(1).join(" ")}`.toUpperCase();
 }
 
+function boxPointsForPlayer(
+  gameData: Record<string, unknown>,
+  playerId: string
+): number | null {
+  const box = (gameData.liveStats as { box?: unknown } | null | undefined)
+    ?.box as { home?: unknown; away?: unknown } | null | undefined;
+  if (!box) return null;
+  for (const side of [box.home, box.away]) {
+    if (!Array.isArray(side)) continue;
+    for (const row of side) {
+      const r = row as { playerId?: unknown; pts?: unknown } | null;
+      if (r && String(r.playerId ?? "") === playerId) {
+        const pts = Number(r.pts);
+        return Number.isFinite(pts) ? pts : null;
+      }
+    }
+  }
+  return null;
+}
+
 function leaderForPick(
   playerId: string,
   teamId: string,
@@ -266,6 +286,9 @@ export function resolveTopScorerMarketView(
         leaders
       ),
       hit,
+      points:
+        leaderForPick(pick.playerId, pick.teamId, leaders)?.points ??
+        boxPointsForPlayer(gameData, pick.playerId),
     };
   }
 

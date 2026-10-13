@@ -110,12 +110,18 @@ function MatchStatsPanel({
       : null;
   const myPick = market?.myPick ?? null;
   const actual = market?.actual ?? [];
+  const myPickPointsRaw = myPick?.points ?? null;
   const myPickSlice =
     myPick != null
       ? slices.find(
           (s) =>
             s.playerId === myPick.playerId && s.teamId === myPick.teamId
         )
+      : null;
+  const myPickPointsAny = myPickPointsRaw ?? myPickSlice?.points ?? null;
+  const myPickPoints =
+    myPickPointsAny != null && Number.isFinite(myPickPointsAny)
+      ? myPickPointsAny
       : null;
 
   return (
@@ -223,14 +229,16 @@ function MatchStatsPanel({
                   <Text style={[styles.myPickLabel, styles.actualLabel]}>
                     {ja ? "実際のトップスコアラー" : "ACTUAL TOP SCORER"}
                   </Text>
-                  <Text style={styles.myPickName} numberOfLines={2}>
-                    {actual.map((a) => a.name).join(" / ")}
-                  </Text>
+                  <View style={styles.myPickNameRow}>
+                    <Text style={styles.myPickName} numberOfLines={2}>
+                      {actual.map((a) => a.name).join(" / ")}
+                    </Text>
+                    <Text style={styles.myPickPoints}>
+                      {actual[0].points}
+                      <Text style={styles.myPickPtsUnit}> PTS</Text>
+                    </Text>
+                  </View>
                 </View>
-                <Text style={styles.myPickPoints}>
-                  {actual[0].points}
-                  <Text style={styles.myPickPtsUnit}> PTS</Text>
-                </Text>
               </View>
             ) : null}
 
@@ -249,16 +257,17 @@ function MatchStatsPanel({
                 <Text style={styles.myPickLabel}>
                   {ja ? "あなたの選択" : "YOUR PICK"}
                 </Text>
-                <Text style={styles.myPickName} numberOfLines={1}>
-                  {myPick?.name ?? (ja ? "未選択" : "NO PICK")}
-                </Text>
-                {myPickSlice?.points != null &&
-                Number.isFinite(myPickSlice.points) ? (
-                  <Text style={styles.myPickPoints}>
-                    {myPickSlice.points}
-                    <Text style={styles.myPickPtsUnit}> PTS</Text>
+                <View style={styles.myPickNameRow}>
+                  <Text style={styles.myPickName} numberOfLines={1}>
+                    {myPick?.name ?? (ja ? "未選択" : "NO PICK")}
                   </Text>
-                ) : null}
+                  {myPickPoints != null ? (
+                    <Text style={styles.myPickPoints}>
+                      {myPickPoints}
+                      <Text style={styles.myPickPtsUnit}> PTS</Text>
+                    </Text>
+                  ) : null}
+                </View>
               </View>
               {myPick?.hit != null ? (
                 <View style={styles.myPickHitCluster}>
@@ -832,6 +841,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "700",
     color: "rgba(226,232,240,0.88)",
+    transform: [{ skewX: "-6deg" }],
   },
   topScorerPoints: {
     fontFamily: MATCH_CARD_SCORE_FONT,
@@ -900,11 +910,18 @@ const styles = StyleSheet.create({
     letterSpacing: 1.2,
     color: "rgba(148,163,184,0.75)",
   },
+  myPickNameRow: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    gap: 8,
+  },
   myPickName: {
+    flexShrink: 1,
     fontFamily: METRIC_FONT,
     fontSize: 13,
     fontWeight: "800",
     color: "#F8FAFC",
+    transform: [{ skewX: "-6deg" }],
   },
   myPickPoints: {
     fontFamily: MATCH_CARD_SCORE_FONT,

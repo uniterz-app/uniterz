@@ -123,6 +123,11 @@ function MatchStatsPanel({
             s.playerId === myPick.playerId && s.teamId === myPick.teamId
         )
       : null;
+  const myPickPointsAny = myPick?.points ?? myPickSlice?.points ?? null;
+  const myPickPoints =
+    myPickPointsAny != null && Number.isFinite(myPickPointsAny)
+      ? myPickPointsAny
+      : null;
 
   return (
     <div className="flex flex-col gap-2.5">
@@ -201,7 +206,10 @@ function MatchStatsPanel({
                       />
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1">
-                          <span className="truncate text-[12px] font-semibold text-slate-100">
+                          <span
+                            className={`${nameOxanium.className} truncate text-[12px] font-bold text-slate-100`}
+                            style={{ transform: "skewX(-6deg)" }}
+                          >
                             {slice.name}
                           </span>
                           {slice.isActual ? (
@@ -236,18 +244,23 @@ function MatchStatsPanel({
                   >
                     {ja ? "実際のトップスコアラー" : "ACTUAL TOP SCORER"}
                   </p>
-                  <p className="text-[13px] font-semibold text-slate-100">
-                    {actual.map((a) => a.name).join(" / ")}
-                  </p>
+                  <div className="flex items-baseline gap-2">
+                    <p
+                      className={`${nameOxanium.className} text-[13px] font-extrabold text-slate-100`}
+                      style={{ transform: "skewX(-6deg)" }}
+                    >
+                      {actual.map((a) => a.name).join(" / ")}
+                    </p>
+                    <p
+                      className={`${nameOxanium.className} shrink-0 text-[14px] font-extrabold tabular-nums leading-none text-slate-100`}
+                    >
+                      {actual[0].points}
+                      <span className="ml-1 text-[10px] font-bold tracking-[0.08em] text-slate-400">
+                        PTS
+                      </span>
+                    </p>
+                  </div>
                 </div>
-                <p
-                  className={`${nameOxanium.className} shrink-0 text-[14px] font-extrabold tabular-nums leading-none text-slate-100`}
-                >
-                  {actual[0].points}
-                  <span className="ml-1 text-[10px] font-bold tracking-[0.08em] text-slate-400">
-                    PTS
-                  </span>
-                </p>
               </div>
             ) : null}
 
@@ -267,20 +280,24 @@ function MatchStatsPanel({
                 >
                   {ja ? "あなたの選択" : "YOUR PICK"}
                 </p>
-                <p className="truncate text-[13px] font-semibold text-slate-100">
-                  {myPick?.name ?? (ja ? "未選択" : "NO PICK")}
-                </p>
-                {myPickSlice?.points != null &&
-                Number.isFinite(myPickSlice.points) ? (
+                <div className="flex min-w-0 items-baseline gap-2">
                   <p
-                    className={`${nameOxanium.className} text-[14px] font-extrabold tabular-nums leading-none text-slate-100`}
+                    className={`${nameOxanium.className} truncate text-[13px] font-extrabold text-slate-100`}
+                    style={{ transform: "skewX(-6deg)" }}
                   >
-                    {myPickSlice.points}
-                    <span className="ml-1 text-[10px] font-bold tracking-[0.08em] text-slate-400">
-                      PTS
-                    </span>
+                    {myPick?.name ?? (ja ? "未選択" : "NO PICK")}
                   </p>
-                ) : null}
+                  {myPickPoints != null ? (
+                    <p
+                      className={`${nameOxanium.className} shrink-0 text-[14px] font-extrabold tabular-nums leading-none text-slate-100`}
+                    >
+                      {myPickPoints}
+                      <span className="ml-1 text-[10px] font-bold tracking-[0.08em] text-slate-400">
+                        PTS
+                      </span>
+                    </p>
+                  ) : null}
+                </div>
               </div>
               {myPick?.hit != null ? (
                 <div className="flex shrink-0 items-center gap-1">

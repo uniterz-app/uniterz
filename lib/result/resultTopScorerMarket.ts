@@ -28,6 +28,8 @@ export type ResultTopScorerMarketView = {
     teamId: string;
     name: string;
     hit: boolean | null;
+    /** 選んだ選手の試合得点（box に居なければ null） */
+    points?: number | null;
   } | null;
   /** 実最多得点者（同点は複数）。試合未確定・box 無しは空 */
   actual?: {
