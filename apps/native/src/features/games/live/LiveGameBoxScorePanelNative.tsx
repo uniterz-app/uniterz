@@ -106,10 +106,13 @@ function BoxScoreModeToggle({
 function TeamBoxCard({
   block,
   mode,
+  showStarterDot,
   onOpenPlayerDetail,
 }: {
   block: LiveGameBoxTeam;
   mode: LiveGameBoxScoreMode;
+  /** 試合中は「今コートにいる」と誤読されるので終了後だけ */
+  showStarterDot: boolean;
   onOpenPlayerDetail?: (playerId: string) => void;
 }) {
   /** false = 出場選手のみ / true = 未出場まで */
@@ -200,7 +203,7 @@ function TeamBoxCard({
                   <Text style={styles.playerName} numberOfLines={1}>
                     {playerCardName(p)}
                   </Text>
-                  {p.starter ? (
+                  {showStarterDot && p.starter ? (
                     <View
                       accessibilityLabel="Starter"
                       style={[styles.starterDot, { backgroundColor: markColor }]}
@@ -343,11 +346,13 @@ export default function LiveGameBoxScorePanelNative({
       <TeamBoxCard
         block={report.box.home}
         mode={mode}
+        showStarterDot={report.phase === "final"}
         onOpenPlayerDetail={onOpenPlayerDetail}
       />
       <TeamBoxCard
         block={report.box.away}
         mode={mode}
+        showStarterDot={report.phase === "final"}
         onOpenPlayerDetail={onOpenPlayerDetail}
       />
     </View>

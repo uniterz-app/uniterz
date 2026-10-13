@@ -56,11 +56,13 @@ function IdentityCell({
   player,
   accent,
   header,
+  showStarterDot,
   onResetSort,
 }: {
   player?: LiveGameBoxPlayer;
   accent: string;
   header?: boolean;
+  showStarterDot?: boolean;
   onResetSort?: () => void;
 }) {
   if (header) {
@@ -118,7 +120,7 @@ function IdentityCell({
         >
           {playerCardName(asRoster)}
         </p>
-        {p.starter ? (
+        {showStarterDot && p.starter ? (
           <span
             aria-label="Starter"
             className="h-1.5 w-1.5 shrink-0 rounded-full"
@@ -210,10 +212,13 @@ const PLAYER_ROW_CLASS =
 function TeamBoxCard({
   block,
   mode,
+  showStarterDot,
   onOpenPlayerDetail,
 }: {
   block: LiveGameBoxTeam;
   mode: LiveGameBoxScoreMode;
+  /** 試合中は「今コートにいる」と誤読されるので終了後だけ */
+  showStarterDot: boolean;
   onOpenPlayerDetail?: (playerId: string) => void;
 }) {
   /** false = 出場選手のみ / true = 未出場まで */
@@ -320,7 +325,11 @@ function TeamBoxCard({
             {players.map((p) => {
               const cells = (
                 <>
-                  <IdentityCell player={p} accent={markColor} />
+                  <IdentityCell
+                    player={p}
+                    accent={markColor}
+                    showStarterDot={showStarterDot}
+                  />
                   <StatsCells
                     columns={columns}
                     values={liveGameBoxColumnValues(p, mode)}
@@ -459,11 +468,13 @@ export default function LiveGameBoxScorePanel({
         <TeamBoxCard
           block={report.box.home}
           mode={mode}
+          showStarterDot={report.phase === "final"}
           onOpenPlayerDetail={onOpenPlayerDetail}
         />
         <TeamBoxCard
           block={report.box.away}
           mode={mode}
+          showStarterDot={report.phase === "final"}
           onOpenPlayerDetail={onOpenPlayerDetail}
         />
       </div>
