@@ -16,6 +16,12 @@ import { useNativeNavTabNotificationBadges } from "./useNativeNavTabNotification
 import NavBarChamferShellNative from "./NavBarChamferShellNative";
 /** `useBottomTabBarInsets` の pill 底オフセットと同じ式（コンテンツ余白と揃える） */
 const TAB_BAR_BOTTOM_GAP = 2;
+import { getNavBarCompact, subscribeNavBarCompact } from "./navBarCompactStore";
+/** スクロール中の縮小（中心基準の scale で浮いた分より少し下げる） */
+const NAV_COMPACT_SCALE = 0.82;
+const NAV_COMPACT_SINK_Y = 10;
+const NAV_COMPACT_OPACITY = 0.9;
+const NAV_COMPACT_MS = 180;
 import { useFirebaseUser } from "../auth/FirebaseUserProvider";
 import {
   loadProfileUserDocNative,
@@ -108,6 +114,20 @@ export default function AppTabBar({ state, descriptors, navigation }: BottomTabB
     }).start();
   }, [chromeOp, welcomeChromeHidden]);
 
+  const navCompact = useSyncExternalStore(
+    subscribeNavBarCompact,
+    getNavBarCompact,
+    () => false
+  );
+  const compactAnim = useRef(new Animated.Value(navCompact ? 1 : 0)).current;
+  useEffect(() => {
+    Animated.timing(compactAnim, {
+      toValue: navCompact ? 1 : 0,
+      duration: NAV_COMPACT_MS,
+      useNativeDriver: true,
+    }).start();
+  }, [compactAnim, navCompact]);
+
   const activeRouteName = state.routes[state.index]?.name ?? "";
   const leafRouteName = focusedLeafRouteName(state);
   const { showRankingBadge, showResultBadge } =
@@ -132,7 +152,27 @@ export default function AppTabBar({ state, descriptors, navigation }: BottomTabB
             left: pillSidePad,
             right: pillSidePad,
             bottom: pillBottom,
-            opacity: chromeOp,
+            opacity: Animated.multiply(
+              chromeOp,
+              compactAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: [1, NAV_COMPACT_OPACITY],
+              })
+            ),
+            transform: [
+              {
+                translateY: compactAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0, NAV_COMPACT_SINK_Y],
+                }),
+              },
+              {
+                scale: compactAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [1, NAV_COMPACT_SCALE],
+                }),
+              },
+            ],
           },
         ]}
         pointerEvents={welcomeChromeHidden ? "none" : "box-none"}
