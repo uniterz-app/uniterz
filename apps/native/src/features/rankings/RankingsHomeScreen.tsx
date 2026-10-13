@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { openProSubscribeNative } from "../../navigation/navigationRef";
 import { useBlockedUidsNative } from "../moderation/blockedUsersStoreNative";
 import { filterBlockedRows } from "../../../../../lib/moderation/moderationTypes";
@@ -11,7 +11,21 @@ import {
   StyleSheet,
   Text,
   View,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
 } from "react-native";
+import { metricNum } from "../../../../../lib/rankings/metric";
+import { formatMetricDecimals } from "../../../../../lib/format/metricDecimals";
+import { pillMetricLabel } from "./RankingsMetricRowNative";
+import { formatRankingPeriodLabel } from "./RankingsPeriodLabelNavNative";
+import {
+  RankingsStickyStatusBarNative,
+  type RankingsStickyMe,
+} from "./RankingsStickyStatusBarNative";
+import {
+  DEV_DUMMY_RANKINGS_ENABLED,
+  buildDevDummyRankingRows,
+} from "./devDummyRankingRows";
 import {
   PRO_LEAGUE_ATMOSPHERE,
   PRO_LEAGUE_TAB_THEME,
@@ -257,10 +271,23 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
     }
   }, [metric, visibleMetrics]);
 
-  const rawRows = useMemo(
+  const realRawRows = useMemo(
     () => (Array.isArray(bundle?.rows) ? (bundle.rows as RankingApiRow[]) : []),
     [bundle?.rows]
   );
+  const devDummyRows = useMemo(
+    () =>
+      DEV_DUMMY_RANKINGS_ENABLED && listReady && realRawRows.length === 0
+        ? buildDevDummyRankingRows({
+            uid: myUid,
+            displayName: user.displayName,
+            handle: user.handle,
+            photoURL: user.photoURL,
+          })
+        : null,
+    [listReady, realRawRows.length, myUid, user.displayName, user.handle, user.photoURL]
+  );
+  const rawRows: RankingApiRow[] = devDummyRows ?? realRawRows;
 
   const blockedUids = useBlockedUidsNative();
   const rows: RankingRowWithCountry[] = useMemo(() => {
@@ -303,8 +330,11 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
       : null) ??
     (byMetric?.totalPoints?.myRow as RankingRow | null | undefined) ??
     myRawRow;
-  const rankingListCount =
-    typeof bundle?.count === "number" && Number.isFinite(bundle.count) ? bundle.count : 0;
+  const rankingListCount = devDummyRows
+    ? devDummyRows.length
+    : typeof bundle?.count === "number" && Number.isFinite(bundle.count)
+      ? bundle.count
+      : 0;
 
   const myValue = useMemo(
     () => getMyMetricValue(metric, myRawRow ?? myStatsRow),
@@ -429,18 +459,127 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
           entranceKey={listEntranceKey}
           staggerMs={58}
         >
-          <RankingListCardNative
-            row={item}
-            rank={index + 4}
-            metric={metric}
-            language={language}
-            onPress={() => openProfile(item)}
-          />
+          <View
+            style={
+              myUid != null && item.uid === myUid
+                ? [styles.meRow, listShellPro ? styles.meRowPro : null]
+                : null
+            }
+          >
+            <RankingListCardNative
+              row={item}
+              rank={index + 4}
+              metric={metric}
+              language={language}
+              onPress={() => openProfile(item)}
+            />
+          </View>
         </RankingsListEntranceRowNative>
       </View>
     ),
-    [metric, language, listEntranceKey, openProfile, listShellPro]
+    [metric, language, listEntranceKey, openProfile, listShellPro, myUid]
   );
+
+  const listRef = useRef<FlatList<RankingRowWithCountry>>(null);
+  /** 指標タブ行の下端（リスト content 座標）。ここを過ぎたらバーを出す */
+  const [tabsBottomY, setTabsBottomY] = useState<number | null>(null);
+  const [stickyVisible, setStickyVisible] = useState(false);
+  const stickyVisibleRef = useRef(false);
+  const tabsBottomRef = useRef<number | null>(null);
+  tabsBottomRef.current = tabsBottomY;
+
+  const onListScroll = useCallback(
+    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+      const bottom = tabsBottomRef.current;
+      const next = bottom != null && e.nativeEvent.contentOffset.y > bottom;
+      if (next === stickyVisibleRef.current) return;
+      stickyVisibleRef.current = next;
+      setStickyVisible(next);
+    },
+    []
+  );
+
+  const myListIndex = useMemo(
+    () => (myUid ? rows.findIndex((r) => r.uid === myUid) : -1),
+    [rows, myUid]
+  );
+
+  const stickyConditionText = useMemo(() => {
+    const parts: string[] = [];
+    if (nbaBoard === "playoffs") parts.push("PLAYOFFS");
+    else parts.push(nbaBoard === "open" ? t.divisionOpen : t.divisionStandard);
+    if (showNbaPeriodTabs) {
+      parts.push(
+        rankingPeriod === "season"
+          ? t.periodSeason
+          : rankingPeriod === "weekly"
+            ? t.periodWeekly
+            : t.periodMonthly
+      );
+    }
+    if (usePeriodBoard && periodBulk.activeLabel) {
+      parts.push(
+        formatRankingPeriodLabel(
+          rankingPeriod as Exclude<RankingPeriod, "season">,
+          periodBulk.activeLabel,
+          language
+        )
+      );
+    }
+    parts.push(pillMetricLabel(metric, language));
+    return parts.join(" · ").toUpperCase();
+  }, [
+    nbaBoard,
+    showNbaPeriodTabs,
+    rankingPeriod,
+    usePeriodBoard,
+    periodBulk.activeLabel,
+    metric,
+    language,
+    t,
+  ]);
+
+  const stickyMe: RankingsStickyMe | null = useMemo(() => {
+    if (rankingHasNoEntries) return null;
+    const listRow = myListIndex >= 0 ? rows[myListIndex] : null;
+    const rank = listRow ? myListIndex + 1 : myRank;
+    if (rank == null || rank < 1) return null;
+    const { n, d } = listRow
+      ? metricNum(listRow, metric)
+      : { n: myValue, d: metric === "totalScore" || metric === "upsetScore" ? 1 : 0 };
+    const unit = metric === "totalScore" ? " PT" : metric === "winRate" ? "%" : "";
+    return {
+      rank,
+      valueText: `${formatMetricDecimals(n, d)}${unit}`,
+      deltaPlaces: listRow?.rankDeltaPlaces ?? myRankDeltaPlaces ?? null,
+    };
+  }, [
+    rankingHasNoEntries,
+    myListIndex,
+    rows,
+    myRank,
+    metric,
+    myValue,
+    myRankDeltaPlaces,
+  ]);
+
+  const scrollToTop = useCallback(() => {
+    listRef.current?.scrollToOffset({ offset: 0, animated: true });
+  }, []);
+
+  const scrollToMe = useMemo(() => {
+    if (myListIndex < 0) return null;
+    if (myListIndex < 3) {
+      return () =>
+        listRef.current?.scrollToOffset({
+          offset: Math.max(0, (tabsBottomRef.current ?? 0) - 40),
+          animated: true,
+        });
+    }
+    const index = myListIndex - 3;
+    return () =>
+      listRef.current?.scrollToIndex({ index, viewPosition: 0.4, animated: true });
+  }, [myListIndex]);
 
   const listHeader = (
         <View style={styles.section}>
@@ -556,7 +695,13 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
                 rankingPeriod={rankingPeriod}
               />
             </View>
-            <View style={styles.metricRowWrap}>
+            <View
+              style={styles.metricRowWrap}
+              onLayout={(e) => {
+                const { y, height } = e.nativeEvent.layout;
+                setTabsBottomY(y + height);
+              }}
+            >
               <RankingsMetricRowNative
                 metrics={metricItems}
                 metric={metric}
@@ -631,6 +776,24 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
   return (
     <View style={styles.root}>
       <FlatList
+        ref={listRef}
+        onScroll={onListScroll}
+        scrollEventThrottle={16}
+        onScrollToIndexFailed={(info) => {
+          listRef.current?.scrollToOffset({
+            offset:
+              (tabsBottomRef.current ?? 0) +
+              info.averageItemLength * (info.index + 3),
+            animated: true,
+          });
+          setTimeout(() => {
+            listRef.current?.scrollToIndex({
+              index: info.index,
+              viewPosition: 0.4,
+              animated: true,
+            });
+          }, 260);
+        }}
         style={styles.scrollLayer}
         contentContainerStyle={[
           styles.scrollContent,
@@ -656,6 +819,15 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
             />
           ) : null
         }
+      />
+      <RankingsStickyStatusBarNative
+        visible={stickyVisible && category === "playoffs" && !openProLocked}
+        top={topContentPadY}
+        conditionText={stickyConditionText}
+        me={stickyMe}
+        pro={nbaBoard === "open"}
+        onPressConditions={scrollToTop}
+        onPressMe={scrollToMe}
       />
       <ProfileMenuEdgeHandleNative
         onOpen={() => setMenuOpen(true)}
@@ -854,5 +1026,14 @@ const styles = StyleSheet.create({
   restList: {
     gap: 0,
     paddingTop: 0,
+  },
+  meRow: {
+    borderWidth: 1,
+    borderColor: "rgba(0,245,255,0.75)",
+    backgroundColor: "rgba(0,245,255,0.07)",
+  },
+  meRowPro: {
+    borderColor: PRO_LEAGUE_ATMOSPHERE.panelBorder,
+    backgroundColor: "rgba(168,85,247,0.08)",
   },
 });

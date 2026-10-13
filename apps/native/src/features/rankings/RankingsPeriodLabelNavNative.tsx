@@ -22,7 +22,7 @@ function weekEndLabel(startKey: string): string {
   )}`;
 }
 
-function formatLabel(
+export function formatRankingPeriodLabel(
   period: Exclude<RankingPeriod, "season">,
   label: string,
   language: RankingsLanguage
@@ -84,7 +84,7 @@ export function RankingsPeriodLabelNavNative({
     return {
       prevLabel: prev,
       nextLabel: next,
-      display: formatLabel(period, activeLabel, loc),
+      display: formatRankingPeriodLabel(period, activeLabel, loc),
     };
   }, [activeLabel, availableLabels, period, loc]);
 

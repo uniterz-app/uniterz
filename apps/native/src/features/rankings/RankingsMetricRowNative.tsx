@@ -13,7 +13,7 @@ import {
 } from "./CyberSlantedTabNative";
 
 /** Web `RankingsMetricRow` の `formatLabel` と同じ短縮ルール */
-function pillMetricLabel(m: MobileMetric, lang: RankingsLanguage): string {
+export function pillMetricLabel(m: MobileMetric, lang: RankingsLanguage): string {
   const l = lang as Language;
   if (m === "upsetScore") return upsetShortLabel(l);
   return webMetricLabel(m, l);
