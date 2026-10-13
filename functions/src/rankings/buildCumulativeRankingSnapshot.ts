@@ -128,6 +128,9 @@ export function subtractOneDayFromDateKeyJST(dateKey: string): string {
 /** Max days to walk back when yesterday's per-user rank snapshot doc is missing. */
 export const RANK_DELTA_PRIOR_MAX_LOOKBACK_DAYS = 30;
 
+/** シーズン一覧（PICK UP / PRO LEAGUE）に載せる上位人数 */
+export const SEASON_TOP_ROWS = 50;
+
 /* =========================================================
  * Utils
  * =======================================================*/
@@ -498,13 +501,13 @@ async function fetchLatestPriorMetricValuesForUids(
 
 /**
  * 日次スナップショット doc が無い/空のとき、getCumulativeRanking が一覧を出せるよう
- * cumulative_stats からその場で Top20 を算出する。
+ * cumulative_stats からその場で上位 SEASON_TOP_ROWS 人を算出する。
  */
 export type LiveTop20Payload = {
   rows: SnapshotRow[];
-  /** 指標の対象参加者数（Top20 ではない） */
+  /** 指標の対象参加者数（上位行数ではない） */
   totalCount: number;
-  /** 全参加者の順位（Top20 外 uid の myRank 用） */
+  /** 全参加者の順位（上位外 uid の myRank 用） */
   rankByUid: Map<string, number>;
 };
 
@@ -548,7 +551,7 @@ export async function loadNbaSeasonTop20RowsLive(
   return {
     totalCount: sortedFull.length,
     rankByUid: ranks,
-    rows: sortedFull.slice(0, 20).map((row) => ({
+    rows: sortedFull.slice(0, SEASON_TOP_ROWS).map((row) => ({
       ...row,
       rank: ranks.get(row.uid) ?? 0,
       rankDeltaPlaces: null,
@@ -561,7 +564,7 @@ export async function loadNbaSeasonTop20RowsLive(
  * =======================================================*/
 export type BuildCumulativeRankingSnapshotOptions = {
   /**
-   * 手動実行向け: 連勝ランキングは「当日確定」条件を外し、連勝>0 のみで Top20 を作る。
+   * 手動実行向け: 連勝ランキングは「当日確定」条件を外し、連勝>0 のみで上位一覧を作る。
    * 本番 Cron では指定しないこと。
    */
   streakAllEligible?: boolean;
@@ -667,16 +670,16 @@ export async function buildCumulativeRankingSnapshot(
       ensureSeason(uid)[metric] = rank;
     }
 
-    const top20 = sortedFull.slice(0, 20).map((row) => ({
+    const topRows = sortedFull.slice(0, SEASON_TOP_ROWS).map((row) => ({
       ...row,
       rank: ranks.get(row.uid) ?? 0,
     }));
-    for (const r of top20) {
+    for (const r of topRows) {
       topUidSet.add(r.uid);
     }
     seasonTop20Jobs.push({
       metric,
-      rows: top20,
+      rows: topRows,
       totalCount: sortedFull.length,
     });
   }
@@ -758,7 +761,7 @@ export async function buildCumulativeRankingSnapshot(
       for (const [uid, rank] of ranksMap) openTotalPointsRankByUid.set(uid, rank);
     }
 
-    const top20 = sortedFull.slice(0, 20).map((row) => ({
+    const topRows = sortedFull.slice(0, SEASON_TOP_ROWS).map((row) => ({
       ...row,
       rank: ranksMap.get(row.uid) ?? 0,
       rankDeltaPlaces: null as number | null,
@@ -774,7 +777,7 @@ export async function buildCumulativeRankingSnapshot(
           division: "open",
           seasonKey,
           metric,
-          rows: top20,
+          rows: topRows,
           ranks,
           totalCount: sortedFull.length,
           participantCount: openBaseRows.length,

@@ -1,4 +1,4 @@
-/** 指定日（ユーザー TZ の暦日）に始まった NBA 試合の確定 posts を読み、UNITERZ スコア Top20 を作る */
+/** 指定日（ユーザー TZ の暦日）に始まった NBA 試合の確定 posts を読み、UNITERZ スコア Top50 を作る */
 import type { Firestore } from "firebase-admin/firestore";
 import { Timestamp } from "firebase-admin/firestore";
 import { GAME_SCHEDULE_SEASON } from "@/lib/games/gameScheduleSeason";

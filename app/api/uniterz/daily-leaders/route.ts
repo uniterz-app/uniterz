@@ -42,7 +42,7 @@ class DayNotCompleteError extends Error {
 function loadLiveCached(dateKey: string, timeZone: string) {
   return unstable_cache(
     () => loadDailyScoreLeadersAdmin(getAdminDb(), { dateKey, timeZone }),
-    ["uniterz-daily-score-leaders", "v4", dateKey, timeZone],
+    ["uniterz-daily-score-leaders", "v5", dateKey, timeZone],
     { revalidate: 1800, tags: ["uniterz-daily-score-leaders"] }
   )();
 }
@@ -62,7 +62,7 @@ async function loadCached(
         if (!payload.complete) throw new DayNotCompleteError(payload);
         return payload;
       },
-      ["uniterz-daily-score-leaders-complete", "v4", dateKey, timeZone],
+      ["uniterz-daily-score-leaders-complete", "v5", dateKey, timeZone],
       { revalidate: false }
     )();
   } catch (e) {
@@ -84,7 +84,7 @@ function selectBoardRowsCached(
     () => selectDailyScoreBoardRows(candidates, division, getAdminDb()),
     [
       "uniterz-daily-score-leaders-plans",
-      "v4",
+      "v5",
       dateKey,
       division,
       candidatesKey,
@@ -123,7 +123,7 @@ async function loadLatestSlate(): Promise<DailyScoreLeadersPayload> {
 
 /**
  * GET /api/uniterz/daily-leaders?division=standard|open
- * 最新の NBA 試合日（米国東部）の確定 posts から、ユーザーの合計ポイント Top20。
+ * 最新の NBA 試合日（米国東部）の確定 posts から、ユーザーの合計ポイント Top50。
  * division=open（PRO LEAGUE）は Bearer + Pro 必須。
  */
 export async function GET(req: Request) {

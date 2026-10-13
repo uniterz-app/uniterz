@@ -1,10 +1,10 @@
 /**
- * TODAY UNITERZ — NBA の試合日（米国東部の暦日）の確定ポイント合計 Top20。全ユーザー同じ。
+ * TODAY UNITERZ — NBA の試合日（米国東部の暦日）の確定ポイント合計 Top50。全ユーザー同じ。
  * PICK UP = stats.countedForPickup、PRO LEAGUE = stats.countedForRanking（Pro のみ掲載）。
  * プレシーズンの試合は両方に数える（通常ランキング対象外だが TODAY には出す）。
  */
 
-export const DAILY_SCORE_TOP_N = 20;
+export const DAILY_SCORE_TOP_N = 50;
 
 export type DailyScoreDivision = "standard" | "open";
 

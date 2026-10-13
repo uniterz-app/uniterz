@@ -1,4 +1,4 @@
-/** Web `UniterzDailyScoreLeadersPanel` 相当 — その日の合計ポイント Top20（PICK UP / PRO LEAGUE） */
+/** Web `UniterzDailyScoreLeadersPanel` 相当 — その日の合計ポイント Top50（PICK UP / PRO LEAGUE） */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AppState, ScrollView, StyleSheet, Text, View } from "react-native";
 import {
