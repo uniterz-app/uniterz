@@ -1,6 +1,7 @@
 /** Web `NbaSeasonAwardsMarketPanel` 相当 */
 import { StyleSheet, Text, View } from "react-native";
 import TeamAbbrBadgeNative from "../../TeamAbbrBadgeNative";
+import { TeamTint } from "./NbaSeasonStandingsViewPanelNative";
 import type { SeasonAwardsMarketSnapshot } from "../../../../../../../lib/predict/seasonPredictMarket";
 import { nbaTeamIdFromBracketCode } from "../../../../../../../lib/nba-bracket-code";
 import { awardName } from "../../../../../../../lib/predict/nbaSeasonAwardsPredict";
@@ -59,6 +60,7 @@ export default function NbaSeasonAwardsMarketPanelNative({
                     key={`${block.awardId}-${row.candidateId}`}
                     style={styles.pickRow}
                   >
+                    <TeamTint teamId={teamId} />
                     <Text style={styles.rank}>{i + 1}</Text>
                     <View style={styles.pickMain}>
                       <Text style={styles.name} numberOfLines={1}>
@@ -147,6 +149,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.1)",
     backgroundColor: "rgba(255,255,255,0.02)",
+    overflow: "hidden",
     paddingHorizontal: 10,
     paddingVertical: 8,
   },
