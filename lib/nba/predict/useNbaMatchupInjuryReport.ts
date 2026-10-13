@@ -20,6 +20,8 @@ type Options = {
   /** false のときは取得しない（未選択タブの先読みを止める） */
   enabled?: boolean;
   language?: "ja" | "en";
+  /** この試合の開始（復帰予定がこの試合なら日付を省く） */
+  tipAtMs?: number | null;
 };
 
 /** ISO（UTC）→ ユーザーの時刻の M/D HH:mm */
@@ -34,7 +36,8 @@ function formatInjuryUpdatedAt(iso: string | null | undefined): string | null {
 
 function reportFromDetail(
   payload: NbaMatchupDetailApiPayload,
-  language: "ja" | "en"
+  language: "ja" | "en",
+  tipAtMs: number | null
 ): NbaInjuryReport {
   return buildMatchupInjuryReport({
     homeTeamId: payload.homeTeamId,
@@ -43,6 +46,7 @@ function reportFromDetail(
     awayEntries: payload.injuryAway,
     asOfLabel: formatInjuryUpdatedAt(payload.injuryUpdatedAt),
     language,
+    tipAtMs,
   });
 }
 
@@ -70,11 +74,14 @@ export function useNbaMatchupInjuryReport(options: Options): {
   const apiBaseUrl = options.apiBaseUrl;
   const enabled = options.enabled ?? true;
   const language = options.language ?? "en";
+  const tipAtMs = options.tipAtMs ?? null;
   const want = enabled && !override && !!homeTeamId && !!awayTeamId;
   const fetchOpts = { homeTeamId, awayTeamId, season, apiBaseUrl };
   const peeked = want ? peekMatchupDetailBundle(fetchOpts) : null;
-  const peekedReport = peeked ? reportFromDetail(peeked, language) : null;
-  const scopeKey = `${homeTeamId}|${awayTeamId}|${season}|${language}|injury`;
+  const peekedReport = peeked
+    ? reportFromDetail(peeked, language, tipAtMs)
+    : null;
+  const scopeKey = `${homeTeamId}|${awayTeamId}|${season}|${language}|${tipAtMs ?? ""}|injury`;
 
   const [report, setReport] = useState<NbaInjuryReport | null>(
     () => override ?? peekedReport
@@ -105,7 +112,7 @@ export function useNbaMatchupInjuryReport(options: Options): {
 
     const hit = peekMatchupDetailBundle(fetchOpts);
     if (hit) {
-      setReport(reportFromDetail(hit, language));
+      setReport(reportFromDetail(hit, language, tipAtMs));
       setSource(sourceFromDetail(hit));
       setReadyScope(scopeKey);
       return;
@@ -115,7 +122,7 @@ export function useNbaMatchupInjuryReport(options: Options): {
     fetchMatchupDetailBundle(fetchOpts)
       .then((payload) => {
         if (cancelled) return;
-        setReport(reportFromDetail(payload, language));
+        setReport(reportFromDetail(payload, language, tipAtMs));
         setSource(sourceFromDetail(payload));
       })
       .catch(() => {
@@ -138,6 +145,7 @@ export function useNbaMatchupInjuryReport(options: Options): {
     apiBaseUrl,
     override,
     language,
+    tipAtMs,
     scopeKey,
   ]);
 

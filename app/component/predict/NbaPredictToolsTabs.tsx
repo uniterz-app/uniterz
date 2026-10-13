@@ -152,6 +152,7 @@ export default function NbaPredictToolsTabs({
       override: injuryReport,
       enabled: visited.has("injuries"),
       language: language === "ja" ? "ja" : "en",
+      tipAtMs,
     });
   const { stats: liveStats, loading: statsLoading } = useNbaMatchupTeamStats({
     homeTeamId,

@@ -148,6 +148,7 @@ export default function NbaPredictToolsTabsNative({
       apiBaseUrl,
       enabled: visited.has("injuries"),
       language: language === "ja" ? "ja" : "en",
+      tipAtMs,
     });
   const { stats: liveStats, loading: statsLoading } = useNbaMatchupTeamStats({
     homeTeamId,

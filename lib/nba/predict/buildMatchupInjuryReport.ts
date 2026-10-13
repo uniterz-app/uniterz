@@ -35,11 +35,21 @@ function splitPlayerName(name: string): {
   return { firstName: "", lastName: raw };
 }
 
+/** 同じ試合とみなす開始時刻の差（延期でない限り一致する） */
+const SAME_GAME_TOLERANCE_MS = 6 * 60 * 60 * 1000;
+
 export function mapTeamInjuryEntryToPredict(
   entry: NbaTeamInjuryEntry,
-  language: "ja" | "en" = "en"
+  language: "ja" | "en" = "en",
+  tipAtMs?: number | null
 ): NbaInjuryEntry {
   const { firstName, lastName } = splitPlayerName(entry.name);
+  const returnsThisGame =
+    tipAtMs != null &&
+    Number.isFinite(tipAtMs) &&
+    entry.returnGameStartMs != null &&
+    Number.isFinite(entry.returnGameStartMs) &&
+    Math.abs(entry.returnGameStartMs - tipAtMs) <= SAME_GAME_TOLERANCE_MS;
   return {
     player: {
       id: entry.playerId,
@@ -47,11 +57,15 @@ export function mapTeamInjuryEntryToPredict(
       lastName: lastName || "—",
     },
     status: teamInjuryStatusToPredictStatus(entry.status) as NbaInjuryStatus,
-    returnDate: formatInjuryReturnEstimate(
-      entry.returnEstimate,
-      language,
-      entry.returnGameStartMs
-    ),
+    returnDate: returnsThisGame
+      ? language === "ja"
+        ? "復帰見込み"
+        : "EXPECTED BACK"
+      : formatInjuryReturnEstimate(
+          entry.returnEstimate,
+          language,
+          entry.returnGameStartMs
+        ),
     injuryDetail: entry.reason,
     description: entry.reason,
   };
@@ -64,6 +78,8 @@ export function buildMatchupInjuryReport(input: {
   awayEntries: NbaTeamInjuryEntry[];
   asOfLabel?: string | null;
   language?: "ja" | "en";
+  /** この試合の開始。復帰予定がこの試合なら日付を省く */
+  tipAtMs?: number | null;
 }): NbaInjuryReport {
   const homeId = input.homeTeamId.trim();
   const awayId = input.awayTeamId.trim();
@@ -73,10 +89,14 @@ export function buildMatchupInjuryReport(input: {
   }
 
   const homeEntries = sortInjuryEntries(
-    input.homeEntries.map((e) => mapTeamInjuryEntryToPredict(e, language))
+    input.homeEntries.map((e) =>
+      mapTeamInjuryEntryToPredict(e, language, input.tipAtMs)
+    )
   );
   const awayEntries = sortInjuryEntries(
-    input.awayEntries.map((e) => mapTeamInjuryEntryToPredict(e, language))
+    input.awayEntries.map((e) =>
+      mapTeamInjuryEntryToPredict(e, language, input.tipAtMs)
+    )
   );
 
   return {
