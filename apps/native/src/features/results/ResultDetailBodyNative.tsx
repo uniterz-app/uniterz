@@ -109,6 +109,7 @@ function MatchStatsPanel({
       ? market.hitRatePct
       : null;
   const myPick = market?.myPick ?? null;
+  const actual = market?.actual ?? [];
   const myPickSlice =
     myPick != null
       ? slices.find(
@@ -216,9 +217,27 @@ function MatchStatsPanel({
               </View>
             </View>
 
+            {actual.length > 0 ? (
+              <View style={[styles.myPickBox, styles.actualBox]}>
+                <View style={styles.myPickCopy}>
+                  <Text style={[styles.myPickLabel, styles.actualLabel]}>
+                    {ja ? "実際のトップスコアラー" : "ACTUAL TOP SCORER"}
+                  </Text>
+                  <Text style={styles.myPickName} numberOfLines={2}>
+                    {actual.map((a) => a.name).join(" / ")}
+                  </Text>
+                </View>
+                <Text style={styles.myPickPoints}>
+                  {actual[0].points}
+                  <Text style={styles.myPickPtsUnit}> PTS</Text>
+                </Text>
+              </View>
+            ) : null}
+
             <View
               style={[
                 styles.myPickBox,
+                actual.length > 0 ? styles.myPickBoxAfterActual : null,
                 myPick?.hit === true
                   ? styles.myPickBoxHit
                   : myPick?.hit === false
@@ -846,6 +865,16 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 12,
     borderWidth: 1,
+  },
+  actualBox: {
+    borderColor: "rgba(251,191,36,0.45)",
+    backgroundColor: "rgba(251,191,36,0.08)",
+  },
+  actualLabel: {
+    color: "rgba(251,191,36,0.85)",
+  },
+  myPickBoxAfterActual: {
+    marginTop: 8,
   },
   myPickBoxHit: {
     borderColor: "rgba(184,255,60,0.45)",

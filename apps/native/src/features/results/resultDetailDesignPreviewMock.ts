@@ -236,6 +236,14 @@ export const RESULT_DETAIL_DESIGN_TOP_SCORER_MARKET: ResultTopScorerMarketView =
       name: "S.Gilgeous-Alexander",
       hit: true,
     },
+    actual: [
+      {
+        playerId: "sga",
+        teamId: "nba-okc",
+        name: "S.Gilgeous-Alexander",
+        points: 34,
+      },
+    ],
     slices: [
       {
         playerId: "sga",

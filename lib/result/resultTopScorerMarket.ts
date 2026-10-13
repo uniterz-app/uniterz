@@ -29,6 +29,13 @@ export type ResultTopScorerMarketView = {
     name: string;
     hit: boolean | null;
   } | null;
+  /** 実最多得点者（同点は複数）。試合未確定・box 無しは空 */
+  actual?: {
+    playerId: string;
+    teamId: string;
+    name: string;
+    points: number;
+  }[];
 };
 
 export function parseResultTopScorerMarketView(

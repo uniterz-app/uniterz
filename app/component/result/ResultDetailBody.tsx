@@ -115,6 +115,7 @@ function MatchStatsPanel({
       ? market.hitRatePct
       : null;
   const myPick = market?.myPick ?? null;
+  const actual = market?.actual ?? [];
   const myPickSlice =
     myPick != null
       ? slices.find(
@@ -226,6 +227,29 @@ function MatchStatsPanel({
                 })}
               </div>
             </div>
+
+            {actual.length > 0 ? (
+              <div className="mt-2 flex items-center justify-between gap-2 border border-amber-400/45 bg-amber-400/8 px-3 py-2">
+                <div className="min-w-0">
+                  <p
+                    className={`${nameOxanium.className} text-[9px] font-bold uppercase tracking-[0.12em] text-amber-300/85`}
+                  >
+                    {ja ? "実際のトップスコアラー" : "ACTUAL TOP SCORER"}
+                  </p>
+                  <p className="text-[13px] font-semibold text-slate-100">
+                    {actual.map((a) => a.name).join(" / ")}
+                  </p>
+                </div>
+                <p
+                  className={`${nameOxanium.className} shrink-0 text-[14px] font-extrabold tabular-nums leading-none text-slate-100`}
+                >
+                  {actual[0].points}
+                  <span className="ml-1 text-[10px] font-bold tracking-[0.08em] text-slate-400">
+                    PTS
+                  </span>
+                </p>
+              </div>
+            ) : null}
 
             <div
               className={[

@@ -52,6 +52,13 @@ function resolveSliceName(
   return playerId;
 }
 
+/** 凡例と同じ `A.EDWARDS` 形式 */
+function initialLastName(full: string): string {
+  const parts = full.trim().split(/\s+/);
+  if (parts.length < 2 || full.includes(".")) return full.toUpperCase();
+  return `${parts[0][0]}.${parts.slice(1).join(" ")}`.toUpperCase();
+}
+
 function leaderForPick(
   playerId: string,
   teamId: string,
@@ -262,10 +269,29 @@ export function resolveTopScorerMarketView(
     };
   }
 
+  const actual = leaders
+    .filter((l) => Number.isFinite(l.points))
+    .map((l) => {
+      const slice = embed.slices.find(
+        (s) => s.playerId === l.playerId && s.teamId === l.teamId
+      );
+      return {
+        playerId: l.playerId,
+        teamId: l.teamId,
+        name:
+          slice?.name ??
+          initialLastName(
+            resolveSliceName(l.playerId, l.teamId, l.name, candidates, leaders)
+          ),
+        points: l.points,
+      };
+    });
+
   return {
     n: embed.n,
     slices: embed.slices,
     hitRatePct: embed.hitRatePct,
     myPick,
+    actual,
   };
 }
