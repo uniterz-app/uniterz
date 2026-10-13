@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 import { unstable_cache } from "next/cache";
 import { getAdminAuth, getAdminDb } from "@/lib/firebaseAdmin";
@@ -41,7 +42,7 @@ class DayNotCompleteError extends Error {
 function loadLiveCached(dateKey: string, timeZone: string) {
   return unstable_cache(
     () => loadDailyScoreLeadersAdmin(getAdminDb(), { dateKey, timeZone }),
-    ["uniterz-daily-score-leaders", "v3", dateKey, timeZone],
+    ["uniterz-daily-score-leaders", "v4", dateKey, timeZone],
     { revalidate: 1800, tags: ["uniterz-daily-score-leaders"] }
   )();
 }
@@ -61,7 +62,7 @@ async function loadCached(
         if (!payload.complete) throw new DayNotCompleteError(payload);
         return payload;
       },
-      ["uniterz-daily-score-leaders-complete", "v3", dateKey, timeZone],
+      ["uniterz-daily-score-leaders-complete", "v4", dateKey, timeZone],
       { revalidate: false }
     )();
   } catch (e) {
@@ -76,14 +77,17 @@ function selectBoardRowsCached(
   dateKey: string,
   division: DailyScoreDivision
 ) {
+  const candidatesKey = createHash("sha1")
+    .update(candidates.map((r) => `${r.uid}:${r.points}`).join(","))
+    .digest("hex");
   return unstable_cache(
-    () => selectDailyScoreBoardRows(candidates, division),
+    () => selectDailyScoreBoardRows(candidates, division, getAdminDb()),
     [
       "uniterz-daily-score-leaders-plans",
-      "v3",
+      "v4",
       dateKey,
       division,
-      candidates.map((r) => `${r.uid}:${r.points}`).join(","),
+      candidatesKey,
     ],
     { revalidate: 300 }
   )();
