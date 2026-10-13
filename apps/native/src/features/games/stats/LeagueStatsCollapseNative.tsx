@@ -178,17 +178,27 @@ export function LeagueStatsCollapsibleNative({
   const { collapsed } = useLeagueStatsCollapse();
   const [height, setHeight] = useState(0);
   const progress = useRef(new Animated.Value(collapsed ? 1 : 0)).current;
-  /** 検索候補のドロップダウンを切らないよう、展開しきった時だけはみ出しを許す */
-  const [clip, setClip] = useState(collapsed);
+  /**
+   * 展開しきったら高さ指定を外して自然な高さに戻す（アニメの最終値が残ると下の行が潜り込む）。
+   * 検索候補のドロップダウンを切らないよう、この間だけはみ出しも許す
+   */
+  const [settled, setSettled] = useState(!collapsed);
+  const settledRef = useRef(settled);
+  settledRef.current = settled;
+  const mounted = useRef(false);
 
   useEffect(() => {
-    setClip(true);
+    if (!mounted.current) {
+      mounted.current = true;
+      return;
+    }
+    setSettled(false);
     Animated.timing(progress, {
       toValue: collapsed ? 1 : 0,
       duration: 200,
       useNativeDriver: false,
     }).start(({ finished }) => {
-      if (finished && !collapsed) setClip(false);
+      if (finished && !collapsed) setSettled(true);
     });
   }, [collapsed, progress]);
 
@@ -196,7 +206,7 @@ export function LeagueStatsCollapsibleNative({
     <Animated.View
       style={[
         zIndex != null ? { zIndex } : null,
-        height > 0
+        !settled && height > 0
           ? {
               height: progress.interpolate({
                 inputRange: [0, 1],
@@ -207,7 +217,7 @@ export function LeagueStatsCollapsibleNative({
                 outputRange: [1, 0],
                 extrapolate: "clamp",
               }),
-              overflow: clip ? "hidden" : "visible",
+              overflow: "hidden",
             }
           : null,
       ]}
@@ -215,6 +225,8 @@ export function LeagueStatsCollapsibleNative({
     >
       <View
         onLayout={(e) => {
+          /** 畳み中・アニメ中の値は信用しない（未計測なら初回だけ拾う） */
+          if (!settledRef.current && height > 0) return;
           const h = e.nativeEvent.layout.height;
           if (h > 0 && Math.abs(h - height) > 0.5) setHeight(h);
         }}
