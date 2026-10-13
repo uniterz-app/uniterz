@@ -157,6 +157,7 @@ export default function SeasonPredictScreenNative() {
     const setState = kind === "awards" ? setAwardsPreview : setStandingsPreview;
     setState("loading");
     (async () => {
+      let ready = false;
       try {
         const data = await fetchSeasonPredictMarketNative({
           season,
@@ -165,17 +166,17 @@ export default function SeasonPredictScreenNative() {
         });
         if (kind === "awards" && data.awards) {
           setAwardsMarket(data.awards);
-          setState("ready");
+          ready = true;
         } else if (kind === "standings" && data.standings) {
           setStandingsMarket(data.standings);
-          setState("ready");
-        } else {
-          setState("pending");
+          ready = true;
         }
       } catch (e) {
         console.error("fetchSeasonPredictMarketNative preview", e);
-        setState("pending");
       }
+      setState(ready ? "ready" : "pending");
+      // 未提出・失敗は次にタブを開いたとき（提出後など）取り直す
+      if (!ready) previewRequestedRef.current[kind] = false;
     })();
   }, [mode, season, submitOpen, viewTab]);
 

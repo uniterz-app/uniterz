@@ -56,21 +56,22 @@ export default function SeasonPredictCrowdToggle({
     requestedRef.current = true;
     setState("loading");
     (async () => {
+      let ready = false;
       try {
         const res = await fetchSeasonPredictMarket({ season, kind, preview: true });
         if (kind === "standings" && res.standings) {
           setMarket({ kind, data: res.standings });
-          setState("ready");
+          ready = true;
         } else if (kind === "awards" && res.awards) {
           setMarket({ kind, data: res.awards });
-          setState("ready");
-        } else {
-          setState("pending");
+          ready = true;
         }
       } catch (e) {
         console.error("fetchSeasonPredictMarket preview", e);
-        setState("pending");
       }
+      setState(ready ? "ready" : "pending");
+      // 未提出・失敗は次にタブを開いたとき（提出後など）取り直す
+      if (!ready) requestedRef.current = false;
     })();
   }, [kind, season, tab]);
 
