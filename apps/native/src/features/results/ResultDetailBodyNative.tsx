@@ -199,6 +199,12 @@ function MatchStatsPanel({
                           <Text style={styles.topScorerName} numberOfLines={1}>
                             {slice.name}
                           </Text>
+                          {showPoints ? (
+                            <Text style={styles.topScorerPoints}>
+                              {slice.points}
+                              <Text style={styles.topScorerPtsUnit}> PTS</Text>
+                            </Text>
+                          ) : null}
                           {slice.isActual ? (
                             <MaterialCommunityIcons
                               name="check"
@@ -207,12 +213,6 @@ function MatchStatsPanel({
                             />
                           ) : null}
                         </View>
-                        {showPoints ? (
-                          <Text style={styles.topScorerPoints}>
-                            {slice.points}
-                            <Text style={styles.topScorerPtsUnit}> PTS</Text>
-                          </Text>
-                        ) : null}
                       </View>
                       <Text style={styles.topScorerPct}>
                         {slice.pct.toFixed(1)}%
@@ -832,7 +832,7 @@ const styles = StyleSheet.create({
   topScorerNameRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    gap: 6,
     minWidth: 0,
   },
   topScorerName: {
@@ -844,8 +844,9 @@ const styles = StyleSheet.create({
     transform: [{ skewX: "-6deg" }],
   },
   topScorerPoints: {
+    flexShrink: 0,
     fontFamily: MATCH_CARD_SCORE_FONT,
-    fontSize: 17,
+    fontSize: 12,
     fontWeight: "800",
     fontStyle: "italic",
     letterSpacing: 0.3,
@@ -853,7 +854,7 @@ const styles = StyleSheet.create({
   },
   topScorerPtsUnit: {
     fontFamily: METRIC_FONT,
-    fontSize: 11,
+    fontSize: 9,
     fontWeight: "700",
     fontStyle: "normal",
     letterSpacing: 0.8,

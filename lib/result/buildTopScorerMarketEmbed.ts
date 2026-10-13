@@ -310,9 +310,15 @@ export function resolveTopScorerMarketView(
       };
     });
 
+  const slices = embed.slices.map((s) =>
+    s.points != null || s.playerId === TOP_SCORER_MARKET_NO_PICK_ID
+      ? s
+      : { ...s, points: boxPointsForPlayer(gameData, s.playerId) }
+  );
+
   return {
     n: embed.n,
-    slices: embed.slices,
+    slices,
     hitRatePct: embed.hitRatePct,
     myPick,
     actual,

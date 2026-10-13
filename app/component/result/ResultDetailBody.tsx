@@ -205,27 +205,27 @@ function MatchStatsPanel({
                         style={{ backgroundColor: color }}
                       />
                       <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-1.5">
                           <span
                             className={`${nameOxanium.className} truncate text-[12px] font-bold text-slate-100`}
                             style={{ transform: "skewX(-6deg)" }}
                           >
                             {slice.name}
                           </span>
+                          {showPoints ? (
+                            <span
+                              className={`${nameOxanium.className} shrink-0 text-[12px] font-extrabold tabular-nums leading-none text-slate-100`}
+                            >
+                              {slice.points}
+                              <span className="ml-0.5 text-[9px] font-bold tracking-[0.08em] text-slate-400">
+                                PTS
+                              </span>
+                            </span>
+                          ) : null}
                           {slice.isActual ? (
                             <Check className="h-3.5 w-3.5 shrink-0 text-amber-300" />
                           ) : null}
                         </div>
-                        {showPoints ? (
-                          <span
-                            className={`${nameOxanium.className} text-[15px] font-extrabold tabular-nums leading-none text-slate-100`}
-                          >
-                            {slice.points}
-                            <span className="ml-1 text-[11px] font-bold tracking-[0.08em] text-slate-400">
-                              PTS
-                            </span>
-                          </span>
-                        ) : null}
                       </div>
                       <span className="shrink-0 text-[11px] tabular-nums text-slate-300">
                         {slice.pct.toFixed(1)}%
