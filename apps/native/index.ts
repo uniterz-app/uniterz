@@ -1,4 +1,3 @@
-import "./src/navigation/installNavBarCompactScroll";
 import "react-native-gesture-handler";
 import "react-native-reanimated";
 import { enableScreens, enableFreeze } from "react-native-screens";

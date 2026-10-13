@@ -66,6 +66,17 @@ const FONT_SCALE_CAP_SHIM = path.join(
   "src/shims/reactNativeFontScaleCap.js"
 );
 const NODE_MODULES_SEGMENT = `${path.sep}node_modules${path.sep}`;
+const NAV_COMPACT_SCROLL_VIEW_SHIM = path.join(
+  projectRoot,
+  "src/shims/navBarCompactScrollView.tsx"
+);
+const RN_SCROLL_VIEW_SUFFIX = path.join(
+  "react-native",
+  "Libraries",
+  "Components",
+  "ScrollView",
+  "ScrollView.js"
+);
 
 config.resolver.resolveRequest = (context, moduleName, platform) => {
   // アプリ側の Text / TextInput だけ文字拡大なしに差し替える（node_modules とシム自身は本物）
@@ -109,11 +120,20 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
     }
   }
   // カスタム resolveRequest からビルトインへ渡す（無限再帰を避ける）
-  return metroResolve(
+  const resolved = metroResolve(
     { ...context, resolveRequest: metroResolve },
     moduleName,
     platform
   );
+  // RN の ScrollView 本体を下部タブ縮小つきに差し替える（シム自身は本物を読む）
+  if (
+    resolved.type === "sourceFile" &&
+    resolved.filePath.endsWith(RN_SCROLL_VIEW_SUFFIX) &&
+    context.originModulePath !== NAV_COMPACT_SCROLL_VIEW_SHIM
+  ) {
+    return { type: "sourceFile", filePath: NAV_COMPACT_SCROLL_VIEW_SHIM };
+  }
+  return resolved;
 };
 
 module.exports = config;

@@ -9,8 +9,7 @@ export function getNavBarCompact(): boolean {
   return compact;
 }
 
-export function setNavBarCompact(next: boolean) {
-  if (compact === next) return;
+export function setNavBarCompact(next: boolean) {  if (compact === next) return;
   compact = next;
   listeners.forEach((l) => l());
 }
