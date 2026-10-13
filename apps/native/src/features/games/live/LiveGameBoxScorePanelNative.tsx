@@ -26,6 +26,7 @@ import {
 import {
   getTeamJerseyPrimaryColor,
   getTeamJerseySecondaryColor,
+  getTeamRosterMarkColor,
 } from "../../../../../../lib/team-colors";
 import JerseyMarkSvg from "../JerseyMarkSvg";
 import { METRIC_FONT } from "../../rankings/rankingsUiTheme";
@@ -115,6 +116,7 @@ function TeamBoxCard({
   const [open, setOpen] = useState(false);
   const teamPrimary = getTeamJerseyPrimaryColor("nba", block.teamId);
   const jerseySecondary = getTeamJerseySecondaryColor("nba", block.teamId);
+  const markColor = getTeamRosterMarkColor("nba", block.teamId);
   const border = hexToRgba(teamPrimary, 0.55);
   const divider = hexToRgba(teamPrimary, 0.22);
   const sideLabel = block.side === "home" ? "HOME" : "AWAY";
@@ -152,7 +154,7 @@ function TeamBoxCard({
         <View style={styles.headerText}>
           <View style={styles.headerTop}>
             <Text
-              style={[styles.sideTag, { borderColor: teamPrimary, color: teamPrimary }]}
+              style={[styles.sideTag, { borderColor: markColor, color: markColor }]}
             >
               {sideLabel}
             </Text>
@@ -165,7 +167,7 @@ function TeamBoxCard({
           <MaterialCommunityIcons
             name={open ? "chevron-up" : "chevron-down"}
             size={18}
-            color={teamPrimary}
+            color={markColor}
           />
         ) : null}
       </Pressable>
@@ -190,8 +192,8 @@ function TeamBoxCard({
                   : undefined;
               const inner = (
                 <>
-                  <View style={[styles.jersey, { borderColor: teamPrimary }]}>
-                    <Text style={[styles.jerseyNum, { color: teamPrimary }]}>
+                  <View style={[styles.jersey, { borderColor: markColor }]}>
+                    <Text style={[styles.jerseyNum, { color: markColor }]}>
                       {p.jerseyNumber}
                     </Text>
                   </View>
@@ -201,7 +203,7 @@ function TeamBoxCard({
                   {p.starter ? (
                     <View
                       accessibilityLabel="Starter"
-                      style={[styles.starterDot, { backgroundColor: teamPrimary }]}
+                      style={[styles.starterDot, { backgroundColor: markColor }]}
                     />
                   ) : null}
                   <Text style={styles.pos}>{p.position}</Text>

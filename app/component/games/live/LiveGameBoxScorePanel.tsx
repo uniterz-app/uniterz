@@ -25,6 +25,7 @@ import {
 import {
   getTeamJerseyPrimaryColor,
   getTeamJerseySecondaryColor,
+  getTeamRosterMarkColor,
 } from "@/lib/team-colors";
 import { nameOxanium } from "@/lib/fonts";
 import { nbaPlayerDetailPreviewHref } from "@/lib/predict/nbaTeamDetailHref";
@@ -219,6 +220,7 @@ function TeamBoxCard({
   const [open, setOpen] = useState(false);
   const teamPrimary = getTeamJerseyPrimaryColor("nba", block.teamId);
   const jerseySecondary = getTeamJerseySecondaryColor("nba", block.teamId);
+  const markColor = getTeamRosterMarkColor("nba", block.teamId);
   const border = hexToRgba(teamPrimary, 0.55);
   const divider = hexToRgba(teamPrimary, 0.22);
   const sideLabel = block.side === "home" ? "HOME" : "AWAY";
@@ -261,7 +263,7 @@ function TeamBoxCard({
                 nameOxanium.className,
                 "rounded-[2px] border bg-transparent px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-[0.12em]",
               ].join(" ")}
-              style={{ borderColor: teamPrimary, color: teamPrimary }}
+              style={{ borderColor: markColor, color: markColor }}
             >
               {sideLabel}
             </span>
@@ -283,7 +285,7 @@ function TeamBoxCard({
             fill="none"
             className="shrink-0 transition-transform duration-200"
             style={{
-              color: teamPrimary,
+              color: markColor,
               transform: open ? "rotate(180deg)" : "rotate(0deg)",
             }}
             aria-hidden
@@ -304,7 +306,7 @@ function TeamBoxCard({
           <div className="min-w-max px-2 pb-2">
             <div className="flex items-center border-b border-white/[0.06]">
               <IdentityCell
-                accent={teamPrimary}
+                accent={markColor}
                 header
                 onResetSort={() => setSort(null)}
               />
@@ -318,7 +320,7 @@ function TeamBoxCard({
             {players.map((p) => {
               const cells = (
                 <>
-                  <IdentityCell player={p} accent={teamPrimary} />
+                  <IdentityCell player={p} accent={markColor} />
                   <StatsCells
                     columns={columns}
                     values={liveGameBoxColumnValues(p, mode)}
