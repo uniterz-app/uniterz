@@ -10,7 +10,9 @@ import {
   AWARDS_PREVIEW_COACHES,
   AWARDS_PREVIEW_PLAYERS,
 } from "../../../../../../../lib/predict/nbaSeasonAwardsPreviewMocks";
+import { appTeamIdFromBdlAbbreviation } from "../../../../../../../lib/nba/bdl/bdlNbaTeamIdMap";
 import TeamAbbrBadgeNative from "../../TeamAbbrBadgeNative";
+import { TeamTint } from "./NbaSeasonStandingsViewPanelNative";
 import UniterzLogoNative from "../../../profile/UniterzLogoNative";
 import {
   MATCH_CARD_BRACKET_LETTER_SPACING_12,
@@ -73,28 +75,35 @@ export default function NbaSeasonAwardsViewPanelNative({
               key={def.id}
               style={[styles.row, !isLast ? styles.rowBorder : null]}
             >
-              <Text style={styles.awardLabel}>{def.labelEn}</Text>
-              {picked ? (
-                <>
-                  <Text style={styles.pickName} numberOfLines={1}>
-                    {awardCandidateLabel(picked)}
+              <View style={styles.labelCol}>
+                <Text style={styles.awardLabel}>{def.labelEn}</Text>
+              </View>
+              <View style={styles.pickCol}>
+                <TeamTint
+                  teamId={appTeamIdFromBdlAbbreviation(picked?.teamAbbr)}
+                />
+                {picked ? (
+                  <>
+                    <Text style={styles.pickName} numberOfLines={1}>
+                      {awardCandidateLabel(picked)}
+                    </Text>
+                    {picked.teamAbbr ? (
+                      <TeamAbbrBadgeNative abbr={picked.teamAbbr} />
+                    ) : (
+                      <View style={styles.badgeSpacer} />
+                    )}
+                  </>
+                ) : (
+                  <Text style={styles.dash}>—</Text>
+                )}
+                {hit != null ? (
+                  <Text
+                    style={[styles.resultMark, hit ? styles.hit : styles.miss]}
+                  >
+                    {hit ? "HIT" : "MISS"}
                   </Text>
-                  {picked.teamAbbr ? (
-                    <TeamAbbrBadgeNative abbr={picked.teamAbbr} />
-                  ) : (
-                    <View style={styles.badgeSpacer} />
-                  )}
-                </>
-              ) : (
-                <Text style={styles.dash}>—</Text>
-              )}
-              {hit != null ? (
-                <Text
-                  style={[styles.resultMark, hit ? styles.hit : styles.miss]}
-                >
-                  {hit ? "HIT" : "MISS"}
-                </Text>
-              ) : null}
+                ) : null}
+              </View>
             </View>
           );
         })}
@@ -145,6 +154,20 @@ const styles = StyleSheet.create({
   },
   row: {
     flexDirection: "row",
+    alignItems: "stretch",
+  },
+  labelCol: {
+    width: 62,
+    flexShrink: 0,
+    justifyContent: "center",
+    paddingLeft: 10,
+    borderRightWidth: 1,
+    borderRightColor: "rgba(255,255,255,0.1)",
+  },
+  pickCol: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: "row",
     alignItems: "center",
     gap: 8,
     paddingHorizontal: 10,
@@ -155,7 +178,6 @@ const styles = StyleSheet.create({
     borderBottomColor: "rgba(255,255,255,0.06)",
   },
   awardLabel: {
-    width: 52,
     fontFamily: OX,
     fontSize: 10,
     fontWeight: "800",
