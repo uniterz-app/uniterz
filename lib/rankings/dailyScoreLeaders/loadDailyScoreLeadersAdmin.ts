@@ -19,9 +19,6 @@ import {
 const GAME_USER_POINTS_RANKING = 1;
 const GAME_USER_POINTS_PICKUP = 2;
 
-/** PRO LEAGUE は Pro 以外を外すので、上位から多めに取ってから絞る */
-const OPEN_CANDIDATES = DAILY_SCORE_TOP_N * 3;
-
 /** onGameFinalV2 が posts を確定し終えた試合（final フラグだけだと settle 前がある） */
 function isSettledGame(data: Record<string, unknown>): boolean {
   return data.resultComputedAtV2 != null;
@@ -134,8 +131,11 @@ export async function loadDailyScoreLeadersAdmin(
     0,
     DAILY_SCORE_TOP_N
   );
-  /** plan で絞らない候補。Pro 判定は確定日の無期限キャッシュの外（`selectDailyScoreBoardRows`）で行う */
-  const open = aggregateDailyScores(posts, "open").slice(0, OPEN_CANDIDATES);
+  /**
+   * plan で絞らない全員。Pro は全体の上位に居ないことが多いので上位 N で切らない。
+   * Pro 判定は確定日の無期限キャッシュの外（`selectDailyScoreBoardRows`）で行う
+   */
+  const open = aggregateDailyScores(posts, "open");
 
   return {
     ok: true,
@@ -163,10 +163,21 @@ export async function loadDailyScoreLeadersAdmin(
  */
 export async function selectDailyScoreBoardRows(
   candidates: DailyScoreLeaderRow[],
-  division: DailyScoreDivision
+  division: DailyScoreDivision,
+  db: Firestore
 ): Promise<DailyScoreLeaderRow[]> {
-  const merged = await mergeUserPlansIntoLeaderboardRows(candidates);
-  if (division === "standard") return merged;
+  if (division === "standard") {
+    return mergeUserPlansIntoLeaderboardRows(candidates);
+  }
+  const proSnap = await db
+    .collection("users")
+    .where("plan", "==", "pro")
+    .select()
+    .get();
+  const proUids = new Set(proSnap.docs.map((d) => d.id));
+  const merged = await mergeUserPlansIntoLeaderboardRows(
+    candidates.filter((r) => proUids.has(r.uid))
+  );
   return withRanks(merged.filter((r) => r.plan === "pro")).slice(
     0,
     DAILY_SCORE_TOP_N
