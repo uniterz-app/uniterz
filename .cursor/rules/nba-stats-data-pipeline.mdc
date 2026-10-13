@@ -109,3 +109,4 @@ BDL（サーバーのみ）
 - 公開 `GET /api/games/live-stats` は Firestore のみ（`unstable_cache` 60 秒）。クライアントポーリング 60 秒
 - `/api/games/window` は `unstable_cache` 5 分 + tag `games-window:nba` を live / games / daily ingest の書き込み後に `revalidateTag`（ライブ中は毎分、非ライブ時は Firestore 読みほぼゼロ）。一覧は開始済み未終了の試合がある間だけ 60 秒で取り直す
 - BDL: `/nba/v1/games?dates[]=` + `/nba/v1/box_scores` / `box_scores/live`（GOAT 等 Box Scores 付きプラン）
+- **box の先発（starter）**: box_scores には starter が無く並びも先発順ではない → live ingest が `/nba/v1/lineups?game_ids[]=` で両チーム 5 人揃ったら `games.liveStarterIds` に保存（以後その試合は叩かない）し `liveStats.box[].starter` を確定。揃うまでは出場リスト先頭 5 の仮置き。既存試合は `scripts/backfill-nba-box-starters.ts --seasons`。表示はスタメン → PTS → MIN、スタメンは名前横にチームカラーの点

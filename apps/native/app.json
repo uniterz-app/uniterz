@@ -3,7 +3,7 @@
     "name": "UNITERZ",
     "slug": "uniterz",
     "scheme": "uniterz",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "runtimeVersion": {
       "policy": "appVersion"
     },
@@ -105,7 +105,8 @@
           "paymentProvider": "Play Store"
         }
       ],
-      "./plugins/withPlayBillingSdkVersion.js"
+      "./plugins/withPlayBillingSdkVersion.js",
+      "./plugins/withPodsMinDeploymentTarget.js"
     ],
     "web": {
       "favicon": "./assets/favicon.png"

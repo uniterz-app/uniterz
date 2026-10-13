@@ -26,6 +26,7 @@ import {
 import {
   getTeamJerseyPrimaryColor,
   getTeamJerseySecondaryColor,
+  getTeamRosterMarkColor,
 } from "../../../../../../lib/team-colors";
 import JerseyMarkSvg from "../JerseyMarkSvg";
 import { METRIC_FONT } from "../../rankings/rankingsUiTheme";
@@ -115,6 +116,7 @@ function TeamBoxCard({
   const [open, setOpen] = useState(false);
   const teamPrimary = getTeamJerseyPrimaryColor("nba", block.teamId);
   const jerseySecondary = getTeamJerseySecondaryColor("nba", block.teamId);
+  const markColor = getTeamRosterMarkColor("nba", block.teamId);
   const border = hexToRgba(teamPrimary, 0.55);
   const divider = hexToRgba(teamPrimary, 0.22);
   const sideLabel = block.side === "home" ? "HOME" : "AWAY";
@@ -152,7 +154,7 @@ function TeamBoxCard({
         <View style={styles.headerText}>
           <View style={styles.headerTop}>
             <Text
-              style={[styles.sideTag, { borderColor: teamPrimary, color: teamPrimary }]}
+              style={[styles.sideTag, { borderColor: markColor, color: markColor }]}
             >
               {sideLabel}
             </Text>
@@ -165,7 +167,7 @@ function TeamBoxCard({
           <MaterialCommunityIcons
             name={open ? "chevron-up" : "chevron-down"}
             size={18}
-            color={teamPrimary}
+            color={markColor}
           />
         ) : null}
       </Pressable>
@@ -190,14 +192,20 @@ function TeamBoxCard({
                   : undefined;
               const inner = (
                 <>
-                  <View style={[styles.jersey, { borderColor: teamPrimary }]}>
-                    <Text style={[styles.jerseyNum, { color: teamPrimary }]}>
+                  <View style={[styles.jersey, { borderColor: markColor }]}>
+                    <Text style={[styles.jerseyNum, { color: markColor }]}>
                       {p.jerseyNumber}
                     </Text>
                   </View>
                   <Text style={styles.playerName} numberOfLines={1}>
                     {playerCardName(p)}
                   </Text>
+                  {p.starter ? (
+                    <View
+                      accessibilityLabel="Starter"
+                      style={[styles.starterDot, { backgroundColor: markColor }]}
+                    />
+                  ) : null}
                   <Text style={styles.pos}>{p.position}</Text>
                 </>
               );
@@ -504,7 +512,7 @@ const styles = StyleSheet.create({
     fontVariant: ["tabular-nums"],
   },
   playerName: {
-    maxWidth: 96,
+    maxWidth: 88,
     fontFamily: METRIC_FONT,
     fontSize: 14,
     fontWeight: "700",
@@ -512,6 +520,11 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     color: "#fff",
     transform: [{ skewX: "-6deg" }],
+  },
+  starterDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
   },
   pos: {
     fontFamily: METRIC_FONT,

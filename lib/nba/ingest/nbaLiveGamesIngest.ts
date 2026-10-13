@@ -10,7 +10,9 @@ import {
   fetchBdlLiveBoxScores,
   type BdlBoxScore,
 } from "@/lib/nba/bdl/fetchBdlBoxScores";
+import { fetchBdlGameStarterIds } from "@/lib/nba/bdl/fetchBdlGameLineups";
 import {
+  applyStarterIdsToLiveStats,
   bdlBoxMatchKey,
   lineScoreFromBdlPeriodFields,
   mapBdlBoxScoreToLiveStats,
@@ -39,6 +41,8 @@ type PrevGameState = {
   final: boolean;
   finalAt: boolean;
   hasLeadingScorers: boolean;
+  /** `/nba/v1/lineups` で確定済みの先発（取れたら以後 BDL を叩かない） */
+  starterIds: string[] | null;
 };
 
 export type IngestNbaLiveGamesResult = {
@@ -222,7 +226,39 @@ export async function ingestNbaLiveGamesFromBdl(
         finalAt: d.finalAt != null,
         hasLeadingScorers:
           Array.isArray(d.leadingScorers) && d.leadingScorers.length > 0,
+        starterIds:
+          Array.isArray(d.liveStarterIds) && d.liveStarterIds.length > 0
+            ? d.liveStarterIds.map(String)
+            : null,
       });
+    }
+  }
+
+  /** 新しく確定した先発だけ書く */
+  const newStarterIdsByGameId = new Map<number, string[]>();
+  {
+    const needFetch = mappedBoxes
+      .map((m) => m.bdlGameId)
+      .filter((id): id is number => {
+        if (id == null) return false;
+        const prev = prevByDocId.get(nbaGameDocIdFromBdlId(id));
+        return !prev?.starterIds && !(prev?.final && prev.finalAt);
+      });
+    if (needFetch.length > 0) {
+      try {
+        for (const [gid, ids] of await fetchBdlGameStarterIds(needFetch)) {
+          newStarterIdsByGameId.set(gid, ids);
+        }
+      } catch (e) {
+        console.warn("[nbaLiveGamesIngest] lineups failed", e);
+      }
+    }
+    for (const mapped of mappedBoxes) {
+      if (mapped.bdlGameId == null) continue;
+      const ids =
+        newStarterIdsByGameId.get(mapped.bdlGameId) ??
+        prevByDocId.get(nbaGameDocIdFromBdlId(mapped.bdlGameId))?.starterIds;
+      mapped.liveStats = applyStarterIdsToLiveStats(mapped.liveStats, ids);
     }
   }
 
@@ -289,6 +325,8 @@ export async function ingestNbaLiveGamesFromBdl(
     if (liveStats) {
       patch.liveStats = liveStats;
     }
+    const newStarters = newStarterIdsByGameId.get(g.id);
+    if (newStarters) patch.liveStarterIds = newStarters;
 
     if (prev?.final && (prev.finalAt || !isFinal)) {
       skipped += 1;
@@ -365,6 +403,8 @@ export async function ingestNbaLiveGamesFromBdl(
         updatedAt: FieldValue.serverTimestamp(),
         liveSyncedAt: FieldValue.serverTimestamp(),
       };
+      const newBoxStarters = newStarterIdsByGameId.get(box.bdlGameId);
+      if (newBoxStarters) patchBox.liveStarterIds = newBoxStarters;
       if (isFinalBox) {
         patchBox.finalAt = FieldValue.serverTimestamp();
         if (!prevBox?.hasLeadingScorers) {

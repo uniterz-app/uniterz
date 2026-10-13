@@ -108,7 +108,7 @@ function mapSidePlayers(rows: BdlBoxScorePlayerStat[]): LiveGameBoxPlayer[] {
     }))
     .filter((x) => x.min > 0 || x.pts > 0 || x.fga > 0)
     .map((x) => x.idx);
-  // BDL に starter フラグが無いので、出場リスト先頭 5 を starter 扱い
+  // 仮置き: 出場リスト先頭 5。確定先発は `/nba/v1/lineups` → applyStarterIdsToLiveStats で上書き
   const starterIdx = new Set(activeIdx.slice(0, 5));
   const out: LiveGameBoxPlayer[] = [];
   rows.forEach((row, idx) => {
@@ -277,6 +277,24 @@ export function lineScoreFromBdlPeriodFields(
   }
 
   return { periods, home, away };
+}
+
+/** BDL lineups の先発 id で box の starter を確定させる（id が空なら何もしない） */
+export function applyStarterIdsToLiveStats(
+  liveStats: LiveGameStatsDoc,
+  starterIds: readonly string[] | null | undefined
+): LiveGameStatsDoc {
+  if (!starterIds?.length) return liveStats;
+  const set = new Set(starterIds);
+  const mark = (players: LiveGameBoxPlayer[]) =>
+    players.map((p) => ({ ...p, starter: set.has(p.playerId) }));
+  return {
+    ...liveStats,
+    box: {
+      home: mark(liveStats.box.home),
+      away: mark(liveStats.box.away),
+    },
+  };
 }
 
 export type MappedLiveBoxScore = {
