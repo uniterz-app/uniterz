@@ -27,6 +27,11 @@ import {
   formatDailyScoreSlateLabel,
 } from "../../../../../../lib/rankings/dailyScoreLeaders/dailyScoreLeadersCopy";
 import { dailyLeadersCopy } from "../../../../../../lib/nba/dailyLeaders/dailyLeadersCopy";
+import {
+  LeagueStatsCollapsedSummaryNative,
+  LeagueStatsCollapsibleNative,
+  useLeagueStatsCollapse,
+} from "./LeagueStatsCollapseNative";
 
 
 /** Web `restItem`（0.048s 刻み・最大 0.32s・0.32s）と同じ秒数 */
@@ -42,13 +47,17 @@ type LoadState =
 
 type Props = {
   language: string;
+  /** 畳んだときのサマリー先頭（上段タブ名） */
+  summaryPrefix?: string;
   onSelectUser?: (row: DailyScoreLeaderRow) => void;
 };
 
 export default function UniterzDailyScoreLeadersPanelNative({
   language,
+  summaryPrefix,
   onSelectUser,
 }: Props) {
+  const { onTableScroll, expand } = useLeagueStatsCollapse();
   const lang = resolveLocalizedLang(language);
   const copy = useMemo(() => dailyScoreLeadersCopy(lang), [lang]);
   const baseCopy = useMemo(() => dailyLeadersCopy(lang), [lang]);
@@ -106,38 +115,49 @@ export default function UniterzDailyScoreLeadersPanelNative({
     else if (rows.length === 0) empty = copy.noEntries;
   }
 
+  const summaryText = [
+    summaryPrefix,
+    division === "open" ? copy.proLeague : copy.pickUp,
+    data && data.gameCount > 0 ? formatDailyScoreSlateLabel(data.dateKey) : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
   return (
     <View style={styles.root}>
-      <View style={styles.tabs}>
-        <CyberSlantedTabBarNative fill>
-          <CyberSlantedTabNative
-            label={copy.pickUp}
-            active={division === "standard"}
-            onPress={() => setDivision("standard")}
-            compact
-          />
-          <CyberSlantedTabNative
-            label={copy.proLeague}
-            active={division === "open"}
-            onPress={() => setDivision("open")}
-            compact
-          />
-        </CyberSlantedTabBarNative>
-      </View>
-
-      {data && data.gameCount > 0 ? (
-        <View style={styles.meta}>
-          <Text style={styles.metaText}>
-            {formatDailyScoreSlateLabel(data.dateKey)} ·{" "}
-            {copy.finalsLabel(data.finalCount, data.gameCount)}
-          </Text>
-          {data.preseason ? (
-            <View style={styles.preseasonBadge}>
-              <Text style={styles.preseasonText}>{baseCopy.preseason}</Text>
-            </View>
-          ) : null}
+      <LeagueStatsCollapsibleNative>
+        <View style={styles.tabs}>
+          <CyberSlantedTabBarNative fill>
+            <CyberSlantedTabNative
+              label={copy.pickUp}
+              active={division === "standard"}
+              onPress={() => setDivision("standard")}
+              compact
+            />
+            <CyberSlantedTabNative
+              label={copy.proLeague}
+              active={division === "open"}
+              onPress={() => setDivision("open")}
+              compact
+            />
+          </CyberSlantedTabBarNative>
         </View>
-      ) : null}
+
+        {data && data.gameCount > 0 ? (
+          <View style={styles.meta}>
+            <Text style={styles.metaText}>
+              {formatDailyScoreSlateLabel(data.dateKey)} ·{" "}
+              {copy.finalsLabel(data.finalCount, data.gameCount)}
+            </Text>
+            {data.preseason ? (
+              <View style={styles.preseasonBadge}>
+                <Text style={styles.preseasonText}>{baseCopy.preseason}</Text>
+              </View>
+            ) : null}
+          </View>
+        ) : null}
+      </LeagueStatsCollapsibleNative>
+      <LeagueStatsCollapsedSummaryNative text={summaryText} />
 
       {state.kind === "locked" ? (
         <ScrollView
@@ -149,13 +169,18 @@ export default function UniterzDailyScoreLeadersPanelNative({
           <RankingsProLeagueTeaserNative
             language={lang}
             onPressSubscribe={openProSubscribeNative}
-            onBackToPickUp={() => setDivision("standard")}
+            onBackToPickUp={() => {
+              setDivision("standard");
+              expand();
+            }}
           />
         </ScrollView>
       ) : empty ? (
         <Text style={styles.empty}>{empty}</Text>
       ) : !data ? null : (
         <ScrollView
+          onScroll={onTableScroll}
+          scrollEventThrottle={16}
           contentContainerStyle={[
             styles.list,
             { paddingBottom: bottomContentReserveY + 12 },

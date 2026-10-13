@@ -29,6 +29,11 @@ import {
   type DailyLeadersPayload,
 } from "../../../../../../lib/nba/dailyLeaders/buildDailyLeaders";
 import { dailyLeadersCopy } from "../../../../../../lib/nba/dailyLeaders/dailyLeadersCopy";
+import {
+  LeagueStatsCollapsedSummaryNative,
+  LeagueStatsCollapsibleNative,
+  useLeagueStatsCollapse,
+} from "./LeagueStatsCollapseNative";
 
 /** Web `restItem`（0.048s 刻み・最大 0.32s・0.32s）と同じ秒数 */
 const LIST_ENTRANCE_STAGGER_MS = 48;
@@ -44,13 +49,17 @@ function rankColor(rank: number): string {
 }
 type Props = {
   language: string;
+  /** 畳んだときのサマリー先頭（上段タブ名） */
+  summaryPrefix?: string;
   onSelectPlayer?: (playerId: string) => void;
 };
 
 export default function NbaDailyLeadersPanelNative({
   language,
+  summaryPrefix,
   onSelectPlayer,
 }: Props) {
+  const { onTableScroll } = useLeagueStatsCollapse();
   const copy = useMemo(
     () => dailyLeadersCopy(resolveLocalizedLang(language)),
     [language]
@@ -121,42 +130,55 @@ export default function NbaDailyLeadersPanelNative({
   else if (data.gameCount === 0) empty = copy.noGames;
   else if (data.gamesWithStats === 0) empty = copy.notStarted;
 
+  const summaryText = [
+    summaryPrefix,
+    statLabel,
+    data && data.gameCount > 0 ? copy.gamesLabel(data.gameCount) : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
   return (
     <View style={styles.root}>
-      <View style={styles.tabs}>
-        <CyberSlantedTabBarNative fill>
-          {DAILY_LEADER_STATS.map((s) => (
-            <CyberSlantedTabNative
-              key={s.key}
-              label={s.label}
-              active={stat === s.key}
-              onPress={() => setStat(s.key)}
-              compact
-            />
-          ))}
-        </CyberSlantedTabBarNative>
-      </View>
-
-      {data && data.gameCount > 0 ? (
-        <View style={styles.meta}>
-          <Text style={styles.metaText}>{copy.gamesLabel(data.gameCount)}</Text>
-          {data.preseason ? (
-            <View style={styles.preseasonBadge}>
-              <Text style={styles.preseasonText}>{copy.preseason}</Text>
-            </View>
-          ) : null}
-          {data.hasLive ? (
-            <Text style={styles.liveNote} numberOfLines={1}>
-              · {copy.liveNote}
-            </Text>
-          ) : null}
+      <LeagueStatsCollapsibleNative>
+        <View style={styles.tabs}>
+          <CyberSlantedTabBarNative fill>
+            {DAILY_LEADER_STATS.map((s) => (
+              <CyberSlantedTabNative
+                key={s.key}
+                label={s.label}
+                active={stat === s.key}
+                onPress={() => setStat(s.key)}
+                compact
+              />
+            ))}
+          </CyberSlantedTabBarNative>
         </View>
-      ) : null}
+
+        {data && data.gameCount > 0 ? (
+          <View style={styles.meta}>
+            <Text style={styles.metaText}>{copy.gamesLabel(data.gameCount)}</Text>
+            {data.preseason ? (
+              <View style={styles.preseasonBadge}>
+                <Text style={styles.preseasonText}>{copy.preseason}</Text>
+              </View>
+            ) : null}
+            {data.hasLive ? (
+              <Text style={styles.liveNote} numberOfLines={1}>
+                · {copy.liveNote}
+              </Text>
+            ) : null}
+          </View>
+        ) : null}
+      </LeagueStatsCollapsibleNative>
+      <LeagueStatsCollapsedSummaryNative text={summaryText} />
 
       {empty ? (
         <Text style={styles.empty}>{empty}</Text>
       ) : !data ? null : (
         <ScrollView
+          onScroll={onTableScroll}
+          scrollEventThrottle={16}
           contentContainerStyle={[
             styles.list,
             { paddingBottom: bottomContentReserveY + 12 },

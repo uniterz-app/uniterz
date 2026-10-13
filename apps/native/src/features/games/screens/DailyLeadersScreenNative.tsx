@@ -15,6 +15,11 @@ import type { GamesStackParamList } from "../../../navigation/types";
 import NbaDailyLeadersPanelNative from "../stats/NbaDailyLeadersPanelNative";
 import UniterzDailyScoreLeadersPanelNative from "../stats/UniterzDailyScoreLeadersPanelNative";
 import { useTodayUniterzUnreadNative } from "../stats/useTodayUniterzUnreadNative";
+import {
+  LeagueStatsCollapseProvider,
+  LeagueStatsCollapsibleNative,
+  useLeagueStatsCollapseState,
+} from "../stats/LeagueStatsCollapseNative";
 import { TODAY_UNITERZ_DOT_COLOR } from "../../../../../../lib/rankings/dailyScoreLeaders/todayUniterzUnread";
 import { resolveLocalizedLang } from "../../../../../../lib/i18n/localize";
 import {
@@ -28,6 +33,7 @@ export default function DailyLeadersScreenNative() {
   const { fUser } = useFirebaseUser();
   const { language } = useNativeUserLanguage(fUser?.uid);
   const [tab, setTab] = useState<TodayLeadersTab>("nba");
+  const collapse = useLeagueStatsCollapseState(tab);
   const copy = dailyScoreLeadersCopy(resolveLocalizedLang(language));
   const {
     unread: uniterzUnread,
@@ -47,26 +53,30 @@ export default function DailyLeadersScreenNative() {
       scroll={false}
       contentStyle={styles.shell}
     >
-      <View style={styles.topTabs}>
-        <CyberSlantedTabBarNative fill>
-          <CyberSlantedTabNative
-            label={copy.tabNba}
-            active={tab === "nba"}
-            onPress={() => setTab("nba")}
-          />
-          <CyberSlantedTabNative
-            label={copy.tabUniterz}
-            active={tab === "uniterz"}
-            onPress={() => setTab("uniterz")}
-          />
-        </CyberSlantedTabBarNative>
-        {uniterzUnread && tab !== "uniterz" ? (
-          <View pointerEvents="none" style={styles.uniterzDot} />
-        ) : null}
-      </View>
+      <LeagueStatsCollapseProvider value={collapse}>
+      <LeagueStatsCollapsibleNative>
+        <View style={styles.topTabs}>
+          <CyberSlantedTabBarNative fill>
+            <CyberSlantedTabNative
+              label={copy.tabNba}
+              active={tab === "nba"}
+              onPress={() => setTab("nba")}
+            />
+            <CyberSlantedTabNative
+              label={copy.tabUniterz}
+              active={tab === "uniterz"}
+              onPress={() => setTab("uniterz")}
+            />
+          </CyberSlantedTabBarNative>
+          {uniterzUnread && tab !== "uniterz" ? (
+            <View pointerEvents="none" style={styles.uniterzDot} />
+          ) : null}
+        </View>
+      </LeagueStatsCollapsibleNative>
 
       {tab === "nba" ? (
         <NbaDailyLeadersPanelNative
+          summaryPrefix={copy.tabNba}
           language={language}
           onSelectPlayer={(playerId) =>
             navigation.navigate("PlayerDetailPreview", { playerId })
@@ -74,6 +84,7 @@ export default function DailyLeadersScreenNative() {
         />
       ) : (
         <UniterzDailyScoreLeadersPanelNative
+          summaryPrefix={copy.tabUniterz}
           language={language}
           onSelectUser={(row) =>
             navigateToPublicProfileNative(navigation, {
@@ -90,6 +101,7 @@ export default function DailyLeadersScreenNative() {
           }
         />
       )}
+      </LeagueStatsCollapseProvider>
     </GamesNbaSubpageShellNative>
   );
 }

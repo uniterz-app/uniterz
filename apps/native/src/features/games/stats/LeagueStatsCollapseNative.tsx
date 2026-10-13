@@ -1,4 +1,4 @@
-/** STATS ハブ: 表を下へスクロールしたら上部コントロールを畳み、少し戻すと再表示する */
+/** STATS ハブ / TODAY'S LEADERS: 下へスクロールで上部コントロールを畳む。展開はサマリーバーのタップか先頭での引っ張り */
 import {
   createContext,
   useCallback,
