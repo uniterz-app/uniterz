@@ -106,7 +106,8 @@
         }
       ],
       "./plugins/withPlayBillingSdkVersion.js",
-      "./plugins/withPodsMinDeploymentTarget.js"
+      "./plugins/withPodsMinDeploymentTarget.js",
+      "./plugins/withUISceneLifecycle.js"
     ],
     "web": {
       "favicon": "./assets/favicon.png"
