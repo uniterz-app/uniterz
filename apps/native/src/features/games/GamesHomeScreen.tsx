@@ -244,6 +244,7 @@ import { useTodayUniterzUnreadNative } from "./stats/useTodayUniterzUnreadNative
 import { TODAY_UNITERZ_POLL_MS } from "../../../../../lib/rankings/dailyScoreLeaders/todayUniterzUnread";
 import UniterzBrandShelfNative from "../UniterzBrandShelfNative";
 import GamesHeaderFilterButtonNative from "./GamesHeaderFilterButtonNative";
+import GamesCalendarSheetNative from "./GamesCalendarSheetNative";
 import GamesSeasonPredictHeaderButtonsNative from "./GamesSeasonPredictHeaderButtonsNative";
 import {
   GAMES_HEADER_CONTROL_HEIGHT,
@@ -623,6 +624,7 @@ export default function GamesHomeScreen({
   > | null>(null);
   const { prefs: scorePrefs } = useMatchScoreDisplayPrefsNative(fUser?.uid);
   const [filterOpen, setFilterOpen] = useState(false);
+  const [calendarOpen, setCalendarOpen] = useState(false);
   const [gamesFilter, setGamesFilter] = useState<GamesFilterState>({
     selectedTeamIds: [],
     matchMode: "any",
@@ -2583,6 +2585,7 @@ export default function GamesHomeScreen({
     isGameDetailModalVisible ||
     resultDetailPostId != null ||
     filterOpen ||
+    calendarOpen ||
     nextGameAfterPost != null ||
     preseasonNoticeGame != null;
   useEffect(() => {
@@ -2781,6 +2784,16 @@ export default function GamesHomeScreen({
             </Animated.View>
           </View>
           <View style={styles.gamesHeaderSideRight}>
+            <Animated.View
+              key={`calendar-${headerMotionKey}`}
+              entering={webGamesMotion ? gamesTopBarFilterEntering : undefined}
+            >
+              <GamesHeaderFilterButtonNative
+                icon="calendar-month-outline"
+                onPress={() => setCalendarOpen(true)}
+                accessibilityLabel="calendar"
+              />
+            </Animated.View>
             <Animated.View
               key={`filter-${headerMotionKey}`}
               entering={webGamesMotion ? gamesTopBarFilterEntering : undefined}
@@ -3117,6 +3130,18 @@ export default function GamesHomeScreen({
           onNo={(d) => void handleNextGameModalNo(d)}
         />
       ) : null}
+      <GamesCalendarSheetNative
+        visible={calendarOpen}
+        onClose={() => setCalendarOpen(false)}
+        language={String(language ?? "en")}
+        gameDayKeys={dateKeysForDayStrip}
+        selectedKey={selectedDayKey}
+        todayKey={toDateKeyInTimeZone(today, dayTimeZone)}
+        onSelectKey={(key) => {
+          const d = parseDateKeyInTimeZone(key, dayTimeZone);
+          if (d) selectDateManually(d);
+        }}
+      />
       <GamesTeamFilterPanelNative
         visible={filterOpen}
         onClose={() => setFilterOpen(false)}

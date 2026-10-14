@@ -10,12 +10,14 @@ type Props = {
   active?: boolean;
   onPress: () => void;
   accessibilityLabel: string;
+  icon?: "tune-variant" | "calendar-month-outline";
 };
 
 export default function GamesHeaderFilterButtonNative({
   active = false,
   onPress,
   accessibilityLabel,
+  icon = "tune-variant",
 }: Props) {
   return (
     <Pressable
@@ -38,7 +40,7 @@ export default function GamesHeaderFilterButtonNative({
         style={StyleSheet.absoluteFillObject}
       />
       <MaterialCommunityIcons
-        name="tune-variant"
+        name={icon}
         size={16}
         color={active ? "#a5f3fc" : "rgba(224,250,254,0.88)"}
       />
