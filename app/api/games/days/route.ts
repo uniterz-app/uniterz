@@ -24,7 +24,7 @@ export async function GET(req: Request) {
 
     const cached = unstable_cache(
       async () => loadGameDayIndex(getAdminDb(), { league, season }),
-      ["game-day-index", league, season],
+      ["game-day-index-v2", league, season],
       {
         revalidate: 3600,
         tags: ["game-day-index", `game-day-index:${league}:${season}`],

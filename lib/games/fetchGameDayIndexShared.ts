@@ -40,15 +40,23 @@ function finiteNumbers(raw: unknown): number[] | null {
     : null;
 }
 
-async function fetchIndex(params: Params): Promise<CachedIndex> {
+async function fetchIndex(
+  params: Params,
+  requireGameStartMs = false
+): Promise<CachedIndex> {
   const base = baseOf(params);
   const key = cacheKey(params.league, params.season, base);
   const hit = peekIndex(params);
-  if (hit) return hit;
+  if (hit && (!requireGameStartMs || hit.gameStartMs)) return hit;
   const pending = resultInflight.get(key);
   if (pending) return pending;
 
-  const q = new URLSearchParams({ league: params.league, season: params.season });
+  /** `v`: gameStartMs 追加前の CDN キャッシュを踏まない */
+  const q = new URLSearchParams({
+    league: params.league,
+    season: params.season,
+    v: "2",
+  });
   const promise = (async () => {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 8_000);
@@ -98,5 +106,5 @@ export function peekGameStartMsShared(params: Params): number[] | null {
 export async function fetchGameStartMsShared(
   params: Params
 ): Promise<number[] | null> {
-  return (await fetchIndex(params)).gameStartMs;
+  return (await fetchIndex(params, true)).gameStartMs;
 }
