@@ -167,6 +167,20 @@ export function sortedUniqueDateKeysFromRows(rows: NativeGameRow[], timeZone: st
   return Array.from(keys).sort();
 }
 
+export function gameCountsByDateKeyFromRows(
+  rows: NativeGameRow[],
+  timeZone: string = TIMEZONE_JST
+): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const g of rows) {
+    const d = toDateOrNull(g.startAtJst);
+    if (!d) continue;
+    const k = toDateKeyInTimeZone(d, timeZone);
+    out[k] = (out[k] ?? 0) + 1;
+  }
+  return out;
+}
+
 type UseTodayGamesOptions = {
   /** false の間はフェッチしない（優先リーグ確定待ち） */
   enabled?: boolean;

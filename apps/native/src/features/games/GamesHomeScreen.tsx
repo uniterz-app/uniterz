@@ -44,6 +44,7 @@ import {
   firstGameDayKeyInMonth,
 } from "../../../../../lib/games/gameDayIndex";
 import { useGameDayIndex } from "../../../../../lib/games/useGameDayIndex";
+import { useGameDayCounts } from "../../../../../lib/games/useGameDayCounts";
 import { GAME_SCHEDULE_SEASON } from "../../../../../lib/games/gameScheduleSeason";
 import {
   fetchNearestGameDayToLocalDay,
@@ -76,6 +77,7 @@ import {
   type NativeGameRow,
   type SupportedLeague,
   sortedUniqueDateKeysFromRows,
+  gameCountsByDateKeyFromRows,
   useTodayGames,
 } from "./useTodayGames";
 import GamesTeamFilterPanelNative from "./GamesTeamFilterPanelNative";
@@ -863,6 +865,31 @@ export default function GamesHomeScreen({
     filterActive,
     seasonGameDayKeys,
     dateKeysWithGames,
+    peerGamesForSeries,
+    gamesFilter,
+    teamNameById,
+    dayTimeZone,
+  ]);
+  const seasonGameCountByKey = useGameDayCounts({
+    league: selectedLeague,
+    season: GAME_SCHEDULE_SEASON,
+    timeZone: dayTimeZone,
+    apiBaseUrl: getUniterzApiBaseUrl(),
+    enabled: calendarOpen,
+  });
+  const gameCountByKey = useMemo(() => {
+    if (!calendarOpen) return null;
+    if (!filterActive && seasonGameCountByKey) return seasonGameCountByKey;
+    return gameCountsByDateKeyFromRows(
+      filterActive
+        ? applyNativeGamesFilter(peerGamesForSeries, gamesFilter, teamNameById)
+        : peerGamesForSeries,
+      dayTimeZone
+    );
+  }, [
+    calendarOpen,
+    filterActive,
+    seasonGameCountByKey,
     peerGamesForSeries,
     gamesFilter,
     teamNameById,
@@ -3135,6 +3162,7 @@ export default function GamesHomeScreen({
         onClose={() => setCalendarOpen(false)}
         language={String(language ?? "en")}
         gameDayKeys={dateKeysForDayStrip}
+        gameCountByKey={gameCountByKey}
         selectedKey={selectedDayKey}
         todayKey={toDateKeyInTimeZone(today, dayTimeZone)}
         onSelectKey={(key) => {

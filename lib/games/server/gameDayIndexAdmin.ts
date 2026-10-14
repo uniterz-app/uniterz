@@ -28,19 +28,26 @@ async function collectStartMsFromGames(
   db: Firestore,
   league: League,
   season: string
-): Promise<number[]> {
+): Promise<{ startMs: number[]; gameStartMs: number[] }> {
   const snap = await db
     .collection("games")
     .where("league", "==", league)
     .where("season", "==", season)
     .select("startAtJst")
     .get();
-  const set = new Set<number>();
+  const all: number[] = [];
   for (const doc of snap.docs) {
     const ms = toStartMs(doc.get("startAtJst"));
-    if (ms != null && Number.isFinite(ms)) set.add(ms);
+    if (ms != null && Number.isFinite(ms)) all.push(ms);
   }
-  return [...set].sort((a, b) => a - b);
+  all.sort((a, b) => a - b);
+  return { startMs: [...new Set(all)], gameStartMs: all };
+}
+
+function numberArray(raw: unknown): number[] | null {
+  return Array.isArray(raw)
+    ? raw.filter((v): v is number => typeof v === "number" && Number.isFinite(v))
+    : null;
 }
 
 /** games から組み立てて Firestore に保存する（ingest 用） */
@@ -49,12 +56,17 @@ export async function writeGameDayIndexFromGames(
   input: { league: League; season: string }
 ): Promise<{ docId: string; startCount: number }> {
   const league = normalizeLeague(input.league);
-  const startMs = await collectStartMsFromGames(db, league, input.season);
+  const { startMs, gameStartMs } = await collectStartMsFromGames(
+    db,
+    league,
+    input.season
+  );
   const docId = gameDayIndexDocId(league, input.season);
   await db.collection(GAME_DAY_INDEX_COLLECTION).doc(docId).set({
     league,
     season: input.season,
     startMs,
+    gameStartMs,
     updatedAt: Timestamp.now(),
   });
   return { docId, startCount: startMs.length };
@@ -70,9 +82,17 @@ export async function loadGameDayIndex(
     .collection(GAME_DAY_INDEX_COLLECTION)
     .doc(gameDayIndexDocId(league, input.season))
     .get();
-  const stored = snap.exists ? snap.get("startMs") : null;
-  const startMs = Array.isArray(stored)
-    ? stored.filter((v): v is number => typeof v === "number" && Number.isFinite(v))
-    : await collectStartMsFromGames(db, league, input.season);
-  return { ok: true, league, season: input.season, startMs };
+  const storedStart = snap.exists ? numberArray(snap.get("startMs")) : null;
+  const storedGames = snap.exists ? numberArray(snap.get("gameStartMs")) : null;
+  if (storedStart) {
+    return {
+      ok: true,
+      league,
+      season: input.season,
+      startMs: storedStart,
+      ...(storedGames ? { gameStartMs: storedGames } : {}),
+    };
+  }
+  const built = await collectStartMsFromGames(db, league, input.season);
+  return { ok: true, league, season: input.season, ...built };
 }

@@ -21,6 +21,8 @@ type Props = {
   language: string;
   /** 試合のある日（YYYY-MM-DD、日付ストリップと同じタイムゾーン） */
   gameDayKeys: readonly string[];
+  /** 日付キー → その日の試合数。未取得なら null（数は出さない） */
+  gameCountByKey?: Record<string, number> | null;
   selectedKey: string;
   todayKey: string;
   onSelectKey: (key: string) => void;
@@ -65,6 +67,7 @@ export default function GamesCalendarSheetNative({
   onClose,
   language,
   gameDayKeys,
+  gameCountByKey,
   selectedKey,
   todayKey,
   onSelectKey,
@@ -114,6 +117,15 @@ export default function GamesCalendarSheetNative({
     pt: "HOJE",
     fr: "AUJ.",
   });
+
+  const countLabel = (n: number) =>
+    lang === "ja"
+      ? `${n}試合`
+      : lang === "ko"
+        ? `${n}경기`
+        : lang === "zh"
+          ? `${n}场`
+          : `${n} G`;
 
   const jumpToday = () => {
     const sorted = [...gameDayKeys].sort();
@@ -190,6 +202,7 @@ export default function GamesCalendarSheetNative({
                 const hasGame = gameSet.has(key);
                 const selected = key === selectedKey;
                 const isToday = key === todayKey;
+                const count = hasGame ? (gameCountByKey?.[key] ?? 0) : 0;
                 return (
                   <View key={key} style={styles.cell}>
                     <Pressable
@@ -215,7 +228,17 @@ export default function GamesCalendarSheetNative({
                       >
                         {Number(key.slice(8))}
                       </Text>
-                      {hasGame && !selected ? <View style={styles.dot} /> : null}
+                      {count > 0 ? (
+                        <Text
+                          numberOfLines={1}
+                          style={[
+                            styles.countText,
+                            selected ? styles.countTextSelected : null,
+                          ]}
+                        >
+                          {countLabel(count)}
+                        </Text>
+                      ) : null}
                     </Pressable>
                   </View>
                 );
@@ -301,13 +324,14 @@ const styles = StyleSheet.create({
   cell: {
     width: `${100 / 7}%`,
     aspectRatio: 1,
-    padding: 3,
+    padding: 2,
   },
   day: {
     flex: 1,
-    borderRadius: 999,
+    borderRadius: 3,
     alignItems: "center",
     justifyContent: "center",
+    gap: 1,
   },
   dayGame: {
     borderWidth: 1,
@@ -332,14 +356,13 @@ const styles = StyleSheet.create({
   dayTextGame: { color: "#fff" },
   dayTextOff: { color: "rgba(255,255,255,0.22)" },
   dayTextSelected: { color: "#fff" },
-  dot: {
-    position: "absolute",
-    bottom: 5,
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: ACCENT,
+  countText: {
+    fontFamily: OX,
+    fontSize: 9,
+    letterSpacing: 0.2,
+    color: ACCENT,
   },
+  countTextSelected: { color: "#F3E8FF" },
   todayBtn: {
     marginTop: 10,
     alignSelf: "center",

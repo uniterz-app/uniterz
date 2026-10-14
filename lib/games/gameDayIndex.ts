@@ -15,7 +15,22 @@ export type GameDayIndexPayload = {
   season: string;
   /** distinct な試合開始 UTC ms（昇順） */
   startMs: number[];
+  /** 全試合の開始 UTC ms（同時刻も試合数ぶん・昇順）。カレンダーの日別試合数用。旧 doc には無い */
+  gameStartMs?: number[];
 };
+
+/** 閲覧者 TZ の日付キー → その日の試合数 */
+export function gameCountsByDayKey(
+  gameStartMs: readonly number[],
+  timeZone: string
+): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const ms of gameStartMs) {
+    const k = toDateKeyInTimeZone(new Date(ms), timeZone);
+    out[k] = (out[k] ?? 0) + 1;
+  }
+  return out;
+}
 
 /** 閲覧者 TZ の日付キー（重複なし・昇順） */
 export function gameDayKeysFromStartMs(
