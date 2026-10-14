@@ -352,6 +352,7 @@ const styles = StyleSheet.create({
   dayText: {
     fontFamily: OX,
     fontSize: 16,
+    transform: [{ skewX: "-8deg" }],
   },
   dayTextGame: { color: "#fff" },
   dayTextOff: { color: "rgba(255,255,255,0.22)" },
@@ -360,6 +361,7 @@ const styles = StyleSheet.create({
     fontFamily: OX,
     fontSize: 10,
     letterSpacing: 0.2,
+    transform: [{ skewX: "-8deg" }],
     color: ACCENT,
   },
   countTextSelected: { color: "#F3E8FF" },
