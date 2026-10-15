@@ -1,4 +1,4 @@
-import { useRoute, useNavigation } from "@react-navigation/native";
+import { StackActions, useRoute, useNavigation } from "@react-navigation/native";
 import type { RouteProp } from "@react-navigation/native";
 import ResultDetailScreen from "./ResultDetailScreen";
 import type { ResultStackParamList } from "../../navigation/types";
@@ -18,7 +18,14 @@ export default function ResultDetailStackScreen() {
       visible
       postId={postId}
       language={language}
-      onClose={() => navigation.goBack()}
+      onClose={() => {
+        // 詳細だけのスタックで goBack すると親タブへ抜け、Result タブが詳細のまま残る
+        if (navigation.getState()?.routes.length === 1) {
+          navigation.dispatch(StackActions.replace("ResultHome"));
+          return;
+        }
+        navigation.goBack();
+      }}
     />
   );
 }

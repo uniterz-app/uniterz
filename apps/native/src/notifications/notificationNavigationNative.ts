@@ -42,6 +42,8 @@ export function navigateFromPushNotificationData(data: PushNotificationData) {
             params: {
               screen: "ResultDetail",
               params: { postId: data.postId },
+              // タブ未マウント時も ResultHome を下に残し、戻るで一覧へ戻れるようにする
+              initial: false,
             },
           });
         } else {
@@ -67,7 +69,11 @@ export function navigateFromPushNotificationData(data: PushNotificationData) {
         navigationRef.navigate("Main", {
           screen: "GamesTab",
           params: data.playerId
-            ? { screen: "PlayerDetailPreview", params: { playerId: data.playerId } }
+            ? {
+                screen: "PlayerDetailPreview",
+                params: { playerId: data.playerId },
+                initial: false,
+              }
             : { screen: "GamesHome" },
         });
         return;
