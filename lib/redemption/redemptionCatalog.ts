@@ -222,13 +222,13 @@ export function redemptionDisclaimerCopy(
 ): string {
   const lang = resolveLocalizedLang(language);
   return L(lang, {
-    ja: "UNITERZ は NBA およびその関連団体とは無関係の独立したサービスです。商品は運営が、配送先の国・地域に対応する正規オンラインストア等から購入し、ユーザーへお届けします。送料・関税等は原則運営負担です。",
-    en: "UNITERZ is an independent service and is not affiliated with the NBA or its partners. Products are purchased by the operator from authorized online stores for your shipping country/region when possible, and shipped to you. Shipping and duties are generally borne by the operator.",
-    ko: "UNITERZ는 NBA 및 관련 단체와 무관한 독립 서비스입니다. 상품은 배송국 공식 온라인 스토어 등에서 운영이 구매해 직송합니다. 배송비·관세 등은 원칙 운영 부담입니다.",
-    zh: "UNITERZ 为独立服务，与 NBA 及其关联机构无关。商品由运营方优先从配送国官方网店采购并直送。运费与关税等原则上由运营承担。",
-    es: "UNITERZ es un servicio independiente y no está afiliado a la NBA ni a sus socios. Compramos en la tienda online oficial de tu país cuando es posible y enviamos directo. Envío y aranceles suelen ir a nuestro cargo.",
-    pt: "UNITERZ é um serviço independente e não é afiliado à NBA ou parceiros. Compramos na loja online oficial do seu país quando possível e enviamos direto. Frete e taxas geralmente são nossos.",
-    fr: "UNITERZ est un service indépendant, non affilié à la NBA ni à ses partenaires. Nous achetons sur la boutique officielle de votre pays si possible et expédions directement. Frais d’envoi et droits sont en général à notre charge.",
+    ja: "UNITERZ は NBA およびその関連団体とは無関係の独立したサービスです。商品は運営が、配送先の国・地域に対応する正規オンラインストア等から購入し、ユーザーへお届けします。送料・関税等は原則運営負担です。ブラジルにお住まいの方・ブラジルへの配送は、現地法令により交換の対象外です。",
+    en: "UNITERZ is an independent service and is not affiliated with the NBA or its partners. Products are purchased by the operator from authorized online stores for your shipping country/region when possible, and shipped to you. Shipping and duties are generally borne by the operator. Exchange is not available to residents of Brazil or for delivery to Brazil due to local regulations.",
+    ko: "UNITERZ는 NBA 및 관련 단체와 무관한 독립 서비스입니다. 상품은 배송국 공식 온라인 스토어 등에서 운영이 구매해 직송합니다. 배송비·관세 등은 원칙 운영 부담입니다. 브라질 거주자 및 브라질 배송은 현지 법령에 따라 교환 대상이 아닙니다.",
+    zh: "UNITERZ 为独立服务，与 NBA 及其关联机构无关。商品由运营方优先从配送国官方网店采购并直送。运费与关税等原则上由运营承担。因当地法规，巴西居民及配送至巴西不在兑换范围内。",
+    es: "UNITERZ es un servicio independiente y no está afiliado a la NBA ni a sus socios. Compramos en la tienda online oficial de tu país cuando es posible y enviamos directo. Envío y aranceles suelen ir a nuestro cargo. Por la normativa local, el canje no está disponible para residentes de Brasil ni envíos a Brasil.",
+    pt: "UNITERZ é um serviço independente e não é afiliado à NBA ou parceiros. Compramos na loja online oficial do seu país quando possível e enviamos direto. Frete e taxas geralmente são nossos. Por exigências legais locais, a troca não está disponível para residentes no Brasil nem para envio ao Brasil.",
+    fr: "UNITERZ est un service indépendant, non affilié à la NBA ni à ses partenaires. Nous achetons sur la boutique officielle de votre pays si possible et expédions directement. Frais d’envoi et droits sont en général à notre charge. En raison de la réglementation locale, l’échange n’est pas disponible pour les résidents du Brésil ni pour une livraison au Brésil.",
   });
 }
 

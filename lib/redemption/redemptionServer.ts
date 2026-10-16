@@ -12,6 +12,10 @@ import {
 } from "@/lib/redemption/redemptionCatalog";
 import { isRedemptionUnitsLive } from "@/lib/redemption/redemptionLiveFlags";
 import {
+  REDEMPTION_REGION_UNAVAILABLE_ERROR,
+  isRedemptionRegionBlocked,
+} from "@/lib/redemption/redemptionRegion";
+import {
   canAdminTransition,
   canUserCancelRedemption,
 } from "@/lib/redemption/redemptionStatus";
@@ -134,6 +138,14 @@ function validateInput(input: RedemptionApplicationInput): string | null {
   if (!input.shippingAddress?.trim()) return "shippingAddress required";
   if (!input.shippingPhone?.trim()) return "shippingPhone required";
   return null;
+}
+
+/** プロフィールの国旗は好みで選ぶ人もいるため判定に使わない（配送先・電話・アクセス元のみ） */
+function isRegionBlockedForRequest(
+  shipping: { shippingCountry?: unknown; shippingPhone?: unknown },
+  requestCountryCode: string | null | undefined
+): boolean {
+  return isRedemptionRegionBlocked({ ...shipping, requestCountryCode });
 }
 
 async function sumSeasonUnitsUsed(
@@ -353,10 +365,13 @@ export async function createRedemptionRequest(
   db: Firestore,
   uid: string,
   input: RedemptionApplicationInput,
-  opts?: { asDraft?: boolean }
+  opts?: { asDraft?: boolean; requestCountryCode?: string | null }
 ): Promise<{ ok: true; request: RedemptionRequest } | { ok: false; error: string }> {
   const err = validateInput(input);
   if (err) return { ok: false, error: err };
+  if (isRegionBlockedForRequest(input, opts?.requestCountryCode)) {
+    return { ok: false, error: REDEMPTION_REGION_UNAVAILABLE_ERROR };
+  }
 
   const kind = normalizeRedemptionProductKind(input.productKind)!;
   const catalog = redemptionCatalogItem(kind)!;
@@ -425,8 +440,17 @@ export async function createRedemptionRequest(
 export async function submitDraftRedemption(
   db: Firestore,
   uid: string,
-  id: string
+  id: string,
+  opts?: { requestCountryCode?: string | null }
 ): Promise<{ ok: true; request: RedemptionRequest } | { ok: false; error: string }> {
+  const draft = await loadRedemptionById(db, id);
+  if (
+    draft &&
+    draft.uid === uid &&
+    isRegionBlockedForRequest(draft, opts?.requestCountryCode)
+  ) {
+    return { ok: false, error: REDEMPTION_REGION_UNAVAILABLE_ERROR };
+  }
   const ts = nowMs();
   try {
     await db.runTransaction(async (tx) => {

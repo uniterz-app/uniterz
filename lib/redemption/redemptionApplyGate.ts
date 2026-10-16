@@ -55,6 +55,17 @@ export function redemptionApplyErrorMessage(
       fr: "Dépasserait le plafond de saison (2 000 Units).",
     });
   }
+  if (key === "region_unavailable") {
+    return L(lang, {
+      ja: "お住まいの国・地域では現在、商品交換を受け付けていません。予想・ランキング・Unit の獲得はこれまで通りご利用いただけます。",
+      en: "Product exchange is not available in your country/region. You can still make picks, join rankings, and earn Units.",
+      ko: "거주 국가·지역에서는 현재 상품 교환을 받지 않습니다. 예측·랭킹·Unit 획득은 계속 이용할 수 있습니다.",
+      zh: "您所在的国家/地区目前不支持商品兑换。预测、排名及获得 Unit 仍可照常使用。",
+      es: "El canje de productos no está disponible en tu país/región. Puedes seguir haciendo picks, competir en rankings y ganar Units.",
+      pt: "A troca de produtos não está disponível no seu país/região. Você continua podendo fazer palpites, participar dos rankings e ganhar Units.",
+      fr: "L’échange de produits n’est pas disponible dans votre pays/région. Vous pouvez toujours pronostiquer, participer aux classements et gagner des Units.",
+    });
+  }
   if (key === "consent_required") {
     return L(lang, {
       ja: "申請には同意が必要です。",

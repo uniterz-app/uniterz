@@ -21,6 +21,7 @@ import type { LegalLang } from "@/lib/legal/unitRedemptionLegalCopy";
 export type { LegalLang };
 
 export const TERMS_UPDATED_AT = "2026-09-09";
+export const TERMS_REVISED_AT = "2026-10-16";
 
 export const TERMS_INTRO = {
   ja: "Uniterz におけるご利用条件を定めたページです。ご利用前に必ずご確認ください。",
@@ -41,6 +42,7 @@ export const TERMS_PREAMBLE = {
 export const TERMS_FOOTER = {
   ja: [
     `${TERMS_UPDATED_AT} 制定`,
+    `${TERMS_REVISED_AT} 改定`,
     COMPANY_LEGAL_NAME,
     COMPANY_ADDRESS_FULL,
     `お問い合わせ：${SUPPORT_EMAIL}`,
@@ -49,6 +51,7 @@ export const TERMS_FOOTER = {
   ],
   en: [
     `Adopted ${TERMS_UPDATED_AT}`,
+    `Revised ${TERMS_REVISED_AT}`,
     companyLegalName("en"),
     companyAddressFull("en"),
     `Contact: ${SUPPORT_EMAIL}`,
@@ -306,6 +309,7 @@ export const TERMS_SECTIONS: readonly LegalSection[] = [
         "当社は、第1項の申請を承認した場合、正規販売店から商品を購入し、当該ユーザーへ配送します。購入・発送にあたっては、配送先の国または地域に対応する正規オンラインストアからの直送を優先します。ユーザーは、当社による商品の購入完了時にUnitを消費するものとします。商品の品切れ、生産終了その他の事情により、当初予定していた商品を提供できない場合、Unitの消費は発生せず、当社からの代替品の発送等の対応は実施しません。",
         `商品の配送に要する送料並びに関税、輸入税及び現地手数料等は、原則として当社が負担するものとします。ただし、ユーザーが交換申請時に指定した配達先情報に誤りがあった場合、再配達及び配達先の変更等により生じた送料（着払い）は、当該ユーザーが負担するものとします。当該ユーザー負担となる送料は、全国一律${REDELIVERY_SHIPPING_FEE_JPY}円（税込）とします。`,
         "当社が購入した商品が、当社の責めに帰すべき事由によらずにユーザーに配達されなかった場合、当社は一切の責任を負わないものとします。",
+        "現地法令上の理由により、ブラジルに居住するユーザー、及び配送先をブラジルとする申請は、商品交換の対象外とします。当該ユーザーも、予想、ランキング及びUnitの獲得その他の本サービスは引き続き利用できます。",
         "当社は本サービス上において、交換対象となり得る商品のロゴ、画像等を掲載しないものとします。なお、商品カテゴリ、必要Unit数、価格上限その他のテキスト情報を表示する場合があります。",
       ],
       en: [
@@ -314,6 +318,7 @@ export const TERMS_SECTIONS: readonly LegalSection[] = [
         "If we approve an application, we buy the product from an authorized retailer and ship it to the User. We prioritize purchasing and shipping from the official online store for the User's shipping country or region (direct to the User). Units are consumed when our purchase completes. If we cannot supply the intended product due to stock-outs, discontinuation, or similar, Units are not consumed and we do not ship substitutes.",
         `Ordinary shipping and duties, import taxes, and local fees are generally borne by us. If shipping details the User provided are wrong, the User bears redelivery or address-change shipping (cash on delivery). That User-paid fee is a flat ¥${REDELIVERY_SHIPPING_FEE_JPY} (tax included) nationwide.`,
         "If a purchased product is not delivered for reasons not attributable to us, we have no liability.",
+        "Due to local regulations, Users residing in Brazil and applications with a shipping address in Brazil are not eligible for product exchange. Such Users may continue to use the rest of the Service, including picks, rankings, and earning Units.",
         "We do not post logos or images of potentially exchangeable products on the Service. We may still show text such as category, required Units, and price caps.",
       ],
     },

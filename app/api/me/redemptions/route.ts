@@ -12,6 +12,10 @@ import { normalizeRedemptionProductKind } from "@/lib/redemption/redemptionCatal
 
 export const runtime = "nodejs";
 
+function requestCountryCode(req: Request): string | null {
+  return req.headers.get("x-vercel-ip-country")?.trim() || null;
+}
+
 function unauthorized() {
   return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
 }
@@ -57,7 +61,9 @@ export async function POST(req: Request) {
       if (!id) {
         return NextResponse.json({ ok: false, error: "id required" }, { status: 400 });
       }
-      const result = await submitDraftRedemption(db, uid, id);
+      const result = await submitDraftRedemption(db, uid, id, {
+        requestCountryCode: requestCountryCode(req),
+      });
       if (!result.ok) {
         return NextResponse.json(result, { status: 400 });
       }
@@ -89,7 +95,10 @@ export async function POST(req: Request) {
     };
 
     const asDraft = body.asDraft === true;
-    const result = await createRedemptionRequest(db, uid, input, { asDraft });
+    const result = await createRedemptionRequest(db, uid, input, {
+      asDraft,
+      requestCountryCode: requestCountryCode(req),
+    });
     if (!result.ok) {
       return NextResponse.json(result, { status: 400 });
     }
