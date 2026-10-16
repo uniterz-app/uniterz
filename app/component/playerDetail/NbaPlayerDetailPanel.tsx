@@ -1,6 +1,11 @@
 "use client";
 
 import { useMemo, useState, type ReactNode } from "react";
+import DetailTabBar from "@/app/component/nba/DetailTabBar";
+import {
+  NBA_PLAYER_DETAIL_TABS,
+  type NbaPlayerDetailTab,
+} from "@/lib/nba/detailTabs";
 import { Trophy } from "lucide-react";
 import { nameOxanium } from "@/lib/fonts";
 import { resolveLocalizedLang } from "@/lib/i18n/localize";
@@ -1146,6 +1151,7 @@ export default function NbaPlayerDetailPanel({
   const isJa = lang === "ja";
   const { bundle: leaders } = usePlayerStatLeadersBundle();
   const { bundle: teamStats } = useLeagueTeamStatsBundle();
+  const [tab, setTab] = useState<NbaPlayerDetailTab>("overview");
   const base = useMemo(
     () =>
       useDevMock
@@ -1213,6 +1219,10 @@ export default function NbaPlayerDetailPanel({
     detail.playerId
   ).toUpperCase();
   const isRetired = detail.availability.status === "retired";
+  /** 引退選手はキャリア・アワードだけなのでタブにしない */
+  const tabbed = !isRetired;
+  const showOverview = !tabbed || tab === "overview";
+  const showCareer = !tabbed || tab === "career";
   const jerseyNum = detail.jerseyNumber.replace(/^#/, "") || "—";
   const jerseyPrimary = getTeamJerseyPrimaryColor("nba", detail.teamId);
   const jerseySecondary = getTeamJerseySecondaryColor("nba", detail.teamId);
@@ -1399,6 +1409,19 @@ export default function NbaPlayerDetailPanel({
         </div>
       </div>
 
+      {tabbed ? (
+        <DetailTabBar
+          tabs={NBA_PLAYER_DETAIL_TABS}
+          active={tab}
+          onChange={setTab}
+          pinnedTitle={fullName}
+          pinnedTag={detail.teamAbbr || null}
+          accent={uiAccent}
+        />
+      ) : null}
+
+      {showOverview ? (
+      <>
       {!isRetired && playerInsights.summary ? (
         <DetailInsightSummary
           text={
@@ -1636,22 +1659,6 @@ export default function NbaPlayerDetailPanel({
           />
         </>
       ) : null}
-      </>
-      ) : null}
-
-      <SeasonHistoryTable
-        playerId={detail.playerId}
-        regular={detail.careerSeasons.regular}
-        playoffs={detail.careerSeasons.playoffs}
-        accent={uiAccent}
-      />
-
-      {!isRetired ? (
-      <>
-      <div
-        className="h-px"
-        style={{ backgroundColor: hexToRgba(uiAccent, 0.2) }}
-      />
       <ShotZoneHeat
         zones={detail.shotZones}
         accent={uiAccent}
@@ -1680,28 +1687,109 @@ export default function NbaPlayerDetailPanel({
           />
         </>
       ) : null}
-      <GameLogs logs={detail.gameLogs} accent={uiAccent} />
-
-      {discipline && playerId ? (
-        <>
-          <div
-            className="h-px"
-            style={{ backgroundColor: hexToRgba(uiAccent, 0.2) }}
-          />
-          <NbaPlayerDisciplineSection
-            playerId={playerId}
-            initial={discipline}
-            accent={uiAccent}
-            isJa={isJa}
-            lang={lang}
-          />
-        </>
+      </>
       ) : null}
+      </>
+      ) : null}
+
+      {tab === "games" && !isRetired ? (
+        <GameLogs logs={detail.gameLogs} accent={uiAccent} />
+      ) : null}
+
+      {showCareer ? (
+      <>
+      <SeasonHistoryTable
+        playerId={detail.playerId}
+        regular={detail.careerSeasons.regular}
+        playoffs={detail.careerSeasons.playoffs}
+        accent={uiAccent}
+      />
 
       <div
         className="h-px"
         style={{ backgroundColor: hexToRgba(uiAccent, 0.2) }}
       />
+      <section className="space-y-3">
+        <h2 className={SECTION_HEADING_CLASS}>Awards</h2>
+        <div
+          className="overflow-hidden border bg-black/40"
+          style={{ borderColor: hexToRgba(uiAccent, 0.25) }}
+        >
+          {(detail.awards.length > 0
+            ? detail.awards.map((a) => [a.label, `× ${a.count}`] as const)
+            : [["—", isJa ? "なし" : "None"] as const]
+          ).map(([label, value], i, arr) => (
+            <div
+              key={`${label}-${i}`}
+              className="flex items-center justify-between gap-3 px-3 py-2.5"
+              style={
+                i < arr.length - 1
+                  ? {
+                      borderBottom: `1px solid ${hexToRgba(uiAccent, 0.12)}`,
+                    }
+                  : undefined
+              }
+            >
+              <span
+                className={`${nameOxanium.className} text-[11px] font-bold tracking-wide text-white/85`}
+                style={{ transform: "skewX(-6deg)" }}
+              >
+                {label}
+              </span>
+              <span
+                className={`${nameOxanium.className} text-right text-[13px] font-extrabold`}
+                style={{ color: uiAccent, transform: "skewX(-6deg)" }}
+              >
+                {value}
+              </span>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <div
+        className="h-px"
+        style={{ backgroundColor: hexToRgba(uiAccent, 0.2) }}
+      />
+      <section className="space-y-3">
+        <h2 className={SECTION_HEADING_CLASS}>More</h2>
+        <div
+          className="overflow-hidden border bg-black/40"
+          style={{ borderColor: hexToRgba(uiAccent, 0.25) }}
+        >
+          {moreRows.map(([label, value], i, arr) => (
+            <div
+              key={label}
+              className="flex items-center justify-between gap-3 px-3 py-2.5"
+              style={
+                i < arr.length - 1
+                  ? {
+                      borderBottom: `1px solid ${hexToRgba(uiAccent, 0.12)}`,
+                    }
+                  : undefined
+              }
+            >
+              <span
+                className={`${nameOxanium.className} text-[11px] font-bold tracking-wide text-white/85`}
+                style={{ transform: "skewX(-6deg)" }}
+              >
+                {label}
+              </span>
+              <span
+                className={`${nameOxanium.className} text-right text-[13px] font-extrabold text-white/90`}
+                style={{ transform: "skewX(-6deg)" }}
+              >
+                {value}
+              </span>
+            </div>
+          ))}
+        </div>
+      </section>
+      </>
+      ) : null}
+
+      {tab === "contract" && !isRetired ? (
+      <>
       <section className="space-y-3">
         <h2 className={SECTION_HEADING_CLASS}>CONTRACT</h2>
         {showActiveContract && currentSalary && contract ? (
@@ -1860,89 +1948,24 @@ export default function NbaPlayerDetailPanel({
           <PlayerDetailSectionNoData accent={uiAccent} />
         )}
       </section>
+
+      {discipline && playerId ? (
+        <>
+          <div
+            className="h-px"
+            style={{ backgroundColor: hexToRgba(uiAccent, 0.2) }}
+          />
+          <NbaPlayerDisciplineSection
+            playerId={playerId}
+            initial={discipline}
+            accent={uiAccent}
+            isJa={isJa}
+            lang={lang}
+          />
+        </>
+      ) : null}
       </>
       ) : null}
-
-      <div
-        className="h-px"
-        style={{ backgroundColor: hexToRgba(uiAccent, 0.2) }}
-      />
-      <section className="space-y-3">
-        <h2 className={SECTION_HEADING_CLASS}>Awards</h2>
-        <div
-          className="overflow-hidden border bg-black/40"
-          style={{ borderColor: hexToRgba(uiAccent, 0.25) }}
-        >
-          {(detail.awards.length > 0
-            ? detail.awards.map((a) => [a.label, `× ${a.count}`] as const)
-            : [["—", isJa ? "なし" : "None"] as const]
-          ).map(([label, value], i, arr) => (
-            <div
-              key={`${label}-${i}`}
-              className="flex items-center justify-between gap-3 px-3 py-2.5"
-              style={
-                i < arr.length - 1
-                  ? {
-                      borderBottom: `1px solid ${hexToRgba(uiAccent, 0.12)}`,
-                    }
-                  : undefined
-              }
-            >
-              <span
-                className={`${nameOxanium.className} text-[11px] font-bold tracking-wide text-white/85`}
-                style={{ transform: "skewX(-6deg)" }}
-              >
-                {label}
-              </span>
-              <span
-                className={`${nameOxanium.className} text-right text-[13px] font-extrabold`}
-                style={{ color: uiAccent, transform: "skewX(-6deg)" }}
-              >
-                {value}
-              </span>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <div
-        className="h-px"
-        style={{ backgroundColor: hexToRgba(uiAccent, 0.2) }}
-      />
-      <section className="space-y-3">
-        <h2 className={SECTION_HEADING_CLASS}>More</h2>
-        <div
-          className="overflow-hidden border bg-black/40"
-          style={{ borderColor: hexToRgba(uiAccent, 0.25) }}
-        >
-          {moreRows.map(([label, value], i, arr) => (
-            <div
-              key={label}
-              className="flex items-center justify-between gap-3 px-3 py-2.5"
-              style={
-                i < arr.length - 1
-                  ? {
-                      borderBottom: `1px solid ${hexToRgba(uiAccent, 0.12)}`,
-                    }
-                  : undefined
-              }
-            >
-              <span
-                className={`${nameOxanium.className} text-[11px] font-bold tracking-wide text-white/85`}
-                style={{ transform: "skewX(-6deg)" }}
-              >
-                {label}
-              </span>
-              <span
-                className={`${nameOxanium.className} text-right text-[13px] font-extrabold text-white/90`}
-                style={{ transform: "skewX(-6deg)" }}
-              >
-                {value}
-              </span>
-            </div>
-          ))}
-        </div>
-      </section>
 
       <p
         className={`${nameOxanium.className} text-center text-[9px] font-bold uppercase tracking-[0.14em] text-white/40`}

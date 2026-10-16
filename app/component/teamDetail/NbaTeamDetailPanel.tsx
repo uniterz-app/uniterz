@@ -1,6 +1,11 @@
 "use client";
 
 import { useMemo, useState, type ReactNode } from "react";
+import DetailTabBar from "@/app/component/nba/DetailTabBar";
+import {
+  NBA_TEAM_DETAIL_TABS,
+  type NbaTeamDetailTab,
+} from "@/lib/nba/detailTabs";
 import { useRouter } from "next/navigation";
 import {
   nbaPlayerDetailPreviewHref,
@@ -2367,6 +2372,7 @@ export default function NbaTeamDetailPanel({
   const lang = resolveLocalizedLang(language);
   const isJa = lang === "ja";
   const { bundle } = useLeagueTeamStatsBundle();
+  const [tab, setTab] = useState<NbaTeamDetailTab>("overview");
   const baseDetail = useMemo(
     () => getNbaTeamDetailPreview(teamId, bundle),
     [teamId, bundle]
@@ -2404,6 +2410,9 @@ export default function NbaTeamDetailPanel({
       : "WESTERN CONFERENCE";
   const seasonMetrics = detail.metrics.season;
   const byId = new Map(seasonMetrics.map((m) => [m.id, m]));
+  const divider = (
+    <div className="h-px" style={{ backgroundColor: hexToRgba(accent, 0.22) }} />
+  );
   return (
     <div className="space-y-4 pb-24 text-white">
       {hasFetchError ? (
@@ -2495,272 +2504,241 @@ export default function NbaTeamDetailPanel({
         </div>
       </div>
 
-      <div
-        className="h-px"
-        style={{ backgroundColor: hexToRgba(accent, 0.22) }}
+      <DetailTabBar
+        tabs={NBA_TEAM_DETAIL_TABS}
+        active={tab}
+        onChange={setTab}
+        pinnedTitle={`${detail.cityEn} ${detail.nickEn}`.toUpperCase()}
+        accent={accent}
       />
 
-      {teamInsights.summary ? (
+      {tab === "overview" ? (
         <>
-          <DetailInsightSummary
-            text={
-              isJa ? teamInsights.summary.linesJa : teamInsights.summary.linesEn
-            }
-          />
-          <DetailIdentityChipRow
-            chips={teamInsights.identity}
+          {teamInsights.summary ? (
+            <>
+              <DetailInsightSummary
+                text={
+                  isJa ? teamInsights.summary.linesJa : teamInsights.summary.linesEn
+                }
+              />
+              <DetailIdentityChipRow
+                chips={teamInsights.identity}
+                accent={accent}
+                title="TEAM IDENTITY"
+                language={lang}
+              />
+            </>
+          ) : teamInsights.identity.length > 0 ? (
+            <DetailIdentityChipRow
+              chips={teamInsights.identity}
+              accent={accent}
+              title="TEAM IDENTITY"
+              language={lang}
+            />
+          ) : null}
+
+          {teamInsights.summary || teamInsights.identity.length > 0 ? divider : null}
+
+          <Injuries
+            injuries={detail.injuries}
             accent={accent}
-            title="TEAM IDENTITY"
-            language={lang}
-          />
-        </>
-      ) : teamInsights.identity.length > 0 ? (
-        <DetailIdentityChipRow
-          chips={teamInsights.identity}
-          accent={accent}
-          title="TEAM IDENTITY"
-          language={lang}
-        />
-      ) : null}
-
-      {teamInsights.summary || teamInsights.identity.length > 0 ? (
-        <div
-          className="h-px"
-          style={{ backgroundColor: hexToRgba(accent, 0.22) }}
-        />
-      ) : null}
-
-      <Injuries
-        injuries={detail.injuries}
-        accent={accent}
-        lang={lang}
-        onPlayerClick={(playerId) =>
-          router.push(nbaPlayerDetailPreviewHref(playerId))
-        }
-      />
-
-      <div
-        className="h-px"
-        style={{ backgroundColor: hexToRgba(accent, 0.22) }}
-      />
-
-      <PerformanceMetrics
-        ortg={byId.get("ortg")}
-        drtg={byId.get("drtg")}
-        accent={accent}
-      />
-
-      <HowTheyPlayBoard
-        teamId={detail.teamId}
-        accent={accent}
-        lang={lang}
-        bundle={bundle}
-      />
-
-      <div
-        className="h-px"
-        style={{ backgroundColor: hexToRgba(accent, 0.22) }}
-      />
-
-      <div
-        className="border bg-black/40 p-3"
-        style={{ borderColor: frame }}
-      >
-        <RecentForm
-          games={detail.recentGames}
-          streak={detail.streak}
-          accent={accent}
-          isJa={isJa}
-          trends={teamInsights.trends}
-        />
-      </div>
-
-      <div
-        className="h-px"
-        style={{ backgroundColor: hexToRgba(accent, 0.22) }}
-      />
-
-      <GameLogs games={detail.recentGames} accent={accent} isJa={isJa} />
-
-      <div
-        className="h-px"
-        style={{ backgroundColor: hexToRgba(accent, 0.22) }}
-      />
-
-      <HeadToHead rows={detail.headToHead} accent={accent} isJa={isJa} />
-
-      <div
-        className="h-px"
-        style={{ backgroundColor: hexToRgba(accent, 0.22) }}
-      />
-
-      <DetailScheduleSection
-        upcomingGames={detail.upcomingGames}
-        scheduleDifficulty={teamInsights.scheduleDifficulty}
-        accent={accent}
-        isJa={isJa}
-        language={language}
-        onTeamClick={(oppTeamId) =>
-          router.push(nbaTeamDetailPreviewHref(oppTeamId))
-        }
-      />
-
-      <div
-        className="h-px"
-        style={{ backgroundColor: hexToRgba(accent, 0.22) }}
-      />
-
-      <section className="space-y-2.5">
-        <SectionTitle title="SPLITS" accent={accent} />
-        <div className="flex gap-2">
-          <SplitCard
-            label="HOME"
-            wins={detail.homeAwaySplit.home.wins}
-            losses={detail.homeAwaySplit.home.losses}
-            accent={accent}
-          />
-          <SplitCard
-            label="AWAY"
-            wins={detail.homeAwaySplit.away.wins}
-            losses={detail.homeAwaySplit.away.losses}
-            accent={accent}
-          />
-        </div>
-        <div className="flex gap-2">
-          <SplitCard
-            label="VS EAST"
-            wins={detail.conferenceSplit.vsEast.wins}
-            losses={detail.conferenceSplit.vsEast.losses}
-            labelColor="#EF3B24"
-            accent={accent}
-          />
-          <SplitCard
-            label="VS WEST"
-            wins={detail.conferenceSplit.vsWest.wins}
-            losses={detail.conferenceSplit.vsWest.losses}
-            labelColor="#007AC1"
-            accent={accent}
-          />
-        </div>
-        <div className="flex gap-2">
-          <SplitCard
-            label="VS .500+"
-            wins={detail.strengthSplit.vsOver500.wins}
-            losses={detail.strengthSplit.vsOver500.losses}
-            accent={accent}
-          />
-          <SplitCard
-            label="VS SUB-.500"
-            wins={detail.strengthSplit.vsUnder500.wins}
-            losses={detail.strengthSplit.vsUnder500.losses}
-            accent={accent}
-          />
-        </div>
-      </section>
-
-      {discipline ? (
-        <>
-          <div
-            className="h-px"
-            style={{ backgroundColor: hexToRgba(accent, 0.22) }}
-          />
-          <NbaTeamDisciplineSection
-            teamId={detail.teamId}
-            initial={discipline}
-            accent={accent}
-            isJa={isJa}
             lang={lang}
             onPlayerClick={(playerId) =>
               router.push(nbaPlayerDetailPreviewHref(playerId))
             }
           />
-        </>
-      ) : null}
 
-      {shapeEdges ? (
-        <>
-          <div
-            className="h-px"
-            style={{ backgroundColor: hexToRgba(accent, 0.22) }}
+          {divider}
+
+          <PerformanceMetrics
+            ortg={byId.get("ortg")}
+            drtg={byId.get("drtg")}
+            accent={accent}
           />
-          <TeamShapeEdgesSection
-            shapeEdges={shapeEdges}
+
+          <HowTheyPlayBoard
+            teamId={detail.teamId}
             accent={accent}
             lang={lang}
+            bundle={bundle}
+          />
+
+          {divider}
+
+          <section className="space-y-2.5">
+            <SectionTitle title="SPLITS" accent={accent} />
+            <div className="flex gap-2">
+              <SplitCard
+                label="HOME"
+                wins={detail.homeAwaySplit.home.wins}
+                losses={detail.homeAwaySplit.home.losses}
+                accent={accent}
+              />
+              <SplitCard
+                label="AWAY"
+                wins={detail.homeAwaySplit.away.wins}
+                losses={detail.homeAwaySplit.away.losses}
+                accent={accent}
+              />
+            </div>
+            <div className="flex gap-2">
+              <SplitCard
+                label="VS EAST"
+                wins={detail.conferenceSplit.vsEast.wins}
+                losses={detail.conferenceSplit.vsEast.losses}
+                labelColor="#EF3B24"
+                accent={accent}
+              />
+              <SplitCard
+                label="VS WEST"
+                wins={detail.conferenceSplit.vsWest.wins}
+                losses={detail.conferenceSplit.vsWest.losses}
+                labelColor="#007AC1"
+                accent={accent}
+              />
+            </div>
+            <div className="flex gap-2">
+              <SplitCard
+                label="VS .500+"
+                wins={detail.strengthSplit.vsOver500.wins}
+                losses={detail.strengthSplit.vsOver500.losses}
+                accent={accent}
+              />
+              <SplitCard
+                label="VS SUB-.500"
+                wins={detail.strengthSplit.vsUnder500.wins}
+                losses={detail.strengthSplit.vsUnder500.losses}
+                accent={accent}
+              />
+            </div>
+          </section>
+
+          {shapeEdges ? (
+            <>
+              {divider}
+              <TeamShapeEdgesSection
+                shapeEdges={shapeEdges}
+                accent={accent}
+                lang={lang}
+              />
+            </>
+          ) : null}
+        </>
+      ) : null}
+
+      {tab === "games" ? (
+        <>
+          <div
+            className="border bg-black/40 p-3"
+            style={{ borderColor: frame }}
+          >
+            <RecentForm
+              games={detail.recentGames}
+              streak={detail.streak}
+              accent={accent}
+              isJa={isJa}
+              trends={teamInsights.trends}
+            />
+          </div>
+
+          {divider}
+
+          <GameLogs games={detail.recentGames} accent={accent} isJa={isJa} />
+
+          {divider}
+
+          <HeadToHead rows={detail.headToHead} accent={accent} isJa={isJa} />
+
+          {divider}
+
+          <DetailScheduleSection
+            upcomingGames={detail.upcomingGames}
+            scheduleDifficulty={teamInsights.scheduleDifficulty}
+            accent={accent}
+            isJa={isJa}
+            language={language}
+            onTeamClick={(oppTeamId) =>
+              router.push(nbaTeamDetailPreviewHref(oppTeamId))
+            }
           />
         </>
       ) : null}
 
-      <div
-        className="h-px"
-        style={{ backgroundColor: hexToRgba(accent, 0.22) }}
-      />
-
-      <PayrollCard
-        payroll={detail.payroll}
-        rosterBlock={detail.rosterBlock}
-        accent={accent}
-        isJa={isJa}
-      />
-
-      <div
-        className="h-px"
-        style={{ backgroundColor: hexToRgba(accent, 0.22) }}
-      />
-
-      <DraftPicksCard teamId={detail.teamId} accent={accent} language={lang} />
-
-      <div
-        className="h-px"
-        style={{ backgroundColor: hexToRgba(accent, 0.22) }}
-      />
-
-      <section className="space-y-2.5">
-        <SectionTitle title="ROSTER" accent={accent} />
-        <div
-          className="border bg-black/40 p-2"
-          style={{ borderColor: frame }}
-        >
-          <NbaTeamRosterCard
-            block={detail.rosterBlock}
-            onPlayerClick={(player) =>
-              router.push(
-                `/mobile/player-detail-preview?playerId=${encodeURIComponent(String(player.id))}`
-              )
-            }
-          />
-        </div>
-      </section>
-
-      <div
-        className="h-px"
-        style={{ backgroundColor: hexToRgba(accent, 0.22) }}
-      />
-
-      {offseasonMoves ? (
+      {tab === "roster" ? (
         <>
-          <OffseasonMovesSection
-            moves={offseasonMoves}
+          <section className="space-y-2.5">
+            <SectionTitle title="ROSTER" accent={accent} />
+            <div
+              className="border bg-black/40 p-2"
+              style={{ borderColor: frame }}
+            >
+              <NbaTeamRosterCard
+                block={detail.rosterBlock}
+                onPlayerClick={(player) =>
+                  router.push(
+                    `/mobile/player-detail-preview?playerId=${encodeURIComponent(String(player.id))}`
+                  )
+                }
+              />
+            </div>
+          </section>
+
+          {offseasonMoves ? (
+            <>
+              {divider}
+              <OffseasonMovesSection
+                moves={offseasonMoves}
+                accent={accent}
+                language={language}
+                onPlayerClick={(playerId) =>
+                  router.push(
+                    `/mobile/player-detail-preview?playerId=${encodeURIComponent(playerId)}`
+                  )
+                }
+              />
+            </>
+          ) : null}
+
+          {discipline ? (
+            <>
+              {divider}
+              <NbaTeamDisciplineSection
+                teamId={detail.teamId}
+                initial={discipline}
+                accent={accent}
+                isJa={isJa}
+                lang={lang}
+                onPlayerClick={(playerId) =>
+                  router.push(nbaPlayerDetailPreviewHref(playerId))
+                }
+              />
+            </>
+          ) : null}
+        </>
+      ) : null}
+
+      {tab === "office" ? (
+        <>
+          <PayrollCard
+            payroll={detail.payroll}
+            rosterBlock={detail.rosterBlock}
+            accent={accent}
+            isJa={isJa}
+          />
+
+          {divider}
+
+          <DraftPicksCard teamId={detail.teamId} accent={accent} language={lang} />
+
+          {divider}
+
+          <TeamInformationSection
+            teamId={detail.teamId}
             accent={accent}
             language={language}
-            onPlayerClick={(playerId) =>
-              router.push(
-                `/mobile/player-detail-preview?playerId=${encodeURIComponent(playerId)}`
-              )
-            }
-          />
-          <div
-            className="h-px"
-            style={{ backgroundColor: hexToRgba(accent, 0.22) }}
           />
         </>
       ) : null}
-
-      <TeamInformationSection
-        teamId={detail.teamId}
-        accent={accent}
-        language={language}
-      />
 
       <p
         className={`${nameOxanium.className} text-center text-[9px] font-bold uppercase tracking-[0.14em]`}

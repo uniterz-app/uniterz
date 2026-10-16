@@ -4,6 +4,11 @@ import { Animated, Pressable, ScrollView, StyleSheet, Text, View, Image } from "
 import DetailStickyTitleNative, {
   useDetailStickyTitleNative,
 } from "../DetailStickyTitleNative";
+import DetailTabBarNative from "../DetailTabBarNative";
+import {
+  NBA_PLAYER_DETAIL_TABS,
+  type NbaPlayerDetailTab,
+} from "../../../../../../lib/nba/detailTabs";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import Svg, {
   Circle,
@@ -1463,6 +1468,11 @@ export default function NbaPlayerDetailPanelNative({
   const isJa = chrome.catalogJa;
   const insets = useSafeAreaInsets();
   const sticky = useDetailStickyTitleNative();
+  const [tab, setTab] = useState<NbaPlayerDetailTab>("overview");
+  const selectTab = (next: NbaPlayerDetailTab) => {
+    sticky.scrollToTabs();
+    setTab(next);
+  };
   const apiBaseUrl = getUniterzApiBaseUrl();
   const { bundle: leaders } = usePlayerStatLeadersBundle({ apiBaseUrl });
   const { bundle: teamStats } = useLeagueTeamStatsBundle({ apiBaseUrl });
@@ -1535,6 +1545,10 @@ export default function NbaPlayerDetailPanelNative({
   const frameColor = hexToRgba(accent, 0.35);
   const displayAge = resolvePlayerDisplayAge(detail);
   const isRetired = detail.availability.status === "retired";
+  /** 引退選手はキャリア・アワードだけなのでタブにしない */
+  const tabbed = !isRetired;
+  const showOverview = !tabbed || tab === "overview";
+  const showCareer = !tabbed || tab === "career";
   const stickyName = [
     detail.jerseyNumber != null && String(detail.jerseyNumber).trim()
       ? `#${String(detail.jerseyNumber).trim()}`
@@ -1551,6 +1565,7 @@ export default function NbaPlayerDetailPanelNative({
   return (
     <View style={styles.root}>
     <Animated.ScrollView
+      ref={sticky.scrollRef}
       style={styles.root}
       contentContainerStyle={[styles.pad, { paddingBottom: bottomPad + 120 }]}
       showsVerticalScrollIndicator={false}
@@ -1570,9 +1585,21 @@ export default function NbaPlayerDetailPanelNative({
         <View onLayout={sticky.onHeroLayout}>
           <PlayerIdCard detail={detail} language={isJa ? "ja" : "en"} />
         </View>
+        {tabbed ? (
+          <View style={styles.detailTabs} onLayout={sticky.onTabsLayout}>
+            <DetailTabBarNative
+              tabs={NBA_PLAYER_DETAIL_TABS}
+              active={tab}
+              onChange={selectTab}
+              accent={accent}
+            />
+          </View>
+        ) : null}
 
         <View style={[styles.divider, { backgroundColor: dividerColor }]} />
 
+        {showOverview ? (
+          <>
         {!isRetired && playerInsights.summary ? (
           <>
             <DetailInsightSummaryNative
@@ -1671,19 +1698,6 @@ export default function NbaPlayerDetailPanelNative({
             />
           </>
         ) : null}
-          </>
-        ) : null}
-
-        <View style={[styles.divider, { backgroundColor: dividerColor }]} />
-        <SeasonHistorySection
-          playerId={detail.playerId}
-          regular={detail.careerSeasons.regular}
-          playoffs={detail.careerSeasons.playoffs}
-          accent={accent}
-        />
-
-        {!isRetired ? (
-          <>
         <View style={[styles.divider, { backgroundColor: dividerColor }]} />
         <ShotZoneHeatmap
           zones={detail.shotZones}
@@ -1708,22 +1722,96 @@ export default function NbaPlayerDetailPanelNative({
             <View style={[styles.divider, { backgroundColor: dividerColor }]} />
           </>
         ) : null}
-        <GameLogsSection logs={detail.gameLogs} accent={accent} />
-
-        {discipline && playerId ? (
-          <>
-            <View style={[styles.divider, { backgroundColor: dividerColor }]} />
-            <NbaPlayerDisciplineSectionNative
-              playerId={playerId}
-              initial={discipline}
-              accent={accent}
-              isJa={isJa}
-              lang={resolveLocalizedLang(language)}
-            />
+          </>
+        ) : null}
           </>
         ) : null}
 
+        {tab === "games" && !isRetired ? (
+          <GameLogsSection logs={detail.gameLogs} accent={accent} />
+        ) : null}
+
+        {showCareer ? (
+          <>
+        {tabbed ? null : (
+          <View style={[styles.divider, { backgroundColor: dividerColor }]} />
+        )}
+        <SeasonHistorySection
+          playerId={detail.playerId}
+          regular={detail.careerSeasons.regular}
+          playoffs={detail.careerSeasons.playoffs}
+          accent={accent}
+        />
+
         <View style={[styles.divider, { backgroundColor: dividerColor }]} />
+
+        <View style={styles.advTitleRow}>
+          <Text style={styles.advTitle}>AWARDS</Text>
+          <View style={styles.advTitleLine} />
+        </View>
+        <View style={[styles.infoCard, { borderColor: frameColor }]}>
+          {detail.awards.length > 0 ? (
+            detail.awards.map((award) => (
+              <InfoRow
+                key={award.id}
+                label={award.label}
+                value={`× ${award.count}`}
+                accent={accent}
+                valueAccent
+              />
+            ))
+          ) : (
+            <InfoRow label="—" value={chrome.none} accent={accent} />
+          )}
+        </View>
+
+        <View style={[styles.divider, { backgroundColor: dividerColor }]} />
+
+        <View style={styles.advTitleRow}>
+          <Text style={styles.advTitle}>MORE</Text>
+          <View style={styles.advTitleLine} />
+        </View>
+        <View style={[styles.infoCard, { borderColor: frameColor }]}>
+          {displayAge != null ? (
+            <InfoRow
+              label={chrome.age}
+              value={String(displayAge)}
+              accent={accent}
+            />
+          ) : null}
+          <InfoRow
+            label="COLLEGE/PRIOR"
+            value={
+              detail.college?.trim()
+                ? detail.college
+                : isJa
+                  ? "大学なし"
+                  : "None"
+            }
+            accent={accent}
+          />
+          <InfoRow
+            label={
+              detail.availability.status === "retired"
+                ? isJa
+                  ? "最終所属"
+                  : "LAST TEAM"
+                : "TEAM"
+            }
+            value={detail.teamName}
+            accent={accent}
+          />
+          <InfoRow
+            label={chrome.history}
+            value={formatTeamHistory(detail.teamHistory)}
+            accent={accent}
+          />
+        </View>
+          </>
+        ) : null}
+
+        {tab === "contract" && !isRetired ? (
+          <>
         <View style={styles.advTitleRow}>
           <Text style={styles.advTitle}>
             CONTRACT
@@ -1980,73 +2068,21 @@ export default function NbaPlayerDetailPanelNative({
           <PlayerDetailSectionNoDataNative accent={accent} />
         )}
 
+        {discipline && playerId ? (
+          <>
+            <View style={[styles.divider, { backgroundColor: dividerColor }]} />
+            <NbaPlayerDisciplineSectionNative
+              playerId={playerId}
+              initial={discipline}
+              accent={accent}
+              isJa={isJa}
+              lang={resolveLocalizedLang(language)}
+            />
+          </>
+        ) : null}
           </>
         ) : null}
 
-        <View style={[styles.divider, { backgroundColor: dividerColor }]} />
-
-        <View style={styles.advTitleRow}>
-          <Text style={styles.advTitle}>AWARDS</Text>
-          <View style={styles.advTitleLine} />
-        </View>
-        <View style={[styles.infoCard, { borderColor: frameColor }]}>
-          {detail.awards.length > 0 ? (
-            detail.awards.map((award) => (
-              <InfoRow
-                key={award.id}
-                label={award.label}
-                value={`× ${award.count}`}
-                accent={accent}
-                valueAccent
-              />
-            ))
-          ) : (
-            <InfoRow label="—" value={chrome.none} accent={accent} />
-          )}
-        </View>
-
-        <View style={[styles.divider, { backgroundColor: dividerColor }]} />
-
-        <View style={styles.advTitleRow}>
-          <Text style={styles.advTitle}>MORE</Text>
-          <View style={styles.advTitleLine} />
-        </View>
-        <View style={[styles.infoCard, { borderColor: frameColor }]}>
-          {displayAge != null ? (
-            <InfoRow
-              label={chrome.age}
-              value={String(displayAge)}
-              accent={accent}
-            />
-          ) : null}
-          <InfoRow
-            label="COLLEGE/PRIOR"
-            value={
-              detail.college?.trim()
-                ? detail.college
-                : isJa
-                  ? "大学なし"
-                  : "None"
-            }
-            accent={accent}
-          />
-          <InfoRow
-            label={
-              detail.availability.status === "retired"
-                ? isJa
-                  ? "最終所属"
-                  : "LAST TEAM"
-                : "TEAM"
-            }
-            value={detail.teamName}
-            accent={accent}
-          />
-          <InfoRow
-            label={chrome.history}
-            value={formatTeamHistory(detail.teamHistory)}
-            accent={accent}
-          />
-        </View>
 
         <Text
           style={styles.footerAsOf}
@@ -2061,7 +2097,17 @@ export default function NbaPlayerDetailPanelNative({
       title={stickyName}
       tag={isRetired ? null : detail.teamAbbr}
       accent={getTeamRosterMarkColor("nba", detail.teamId)}
-    />
+      pinned={sticky.pinned}
+    >
+      {tabbed ? (
+        <DetailTabBarNative
+          tabs={NBA_PLAYER_DETAIL_TABS}
+          active={tab}
+          onChange={selectTab}
+          accent={accent}
+        />
+      ) : null}
+    </DetailStickyTitleNative>
     </View>
   );
 }
@@ -2203,6 +2249,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
     transform: [{ skewX: "-6deg" }],
   },
+  detailTabs: { marginTop: 10 },
   divider: {
     height: StyleSheet.hairlineWidth,
     backgroundColor: "rgba(124,255,107,0.18)",

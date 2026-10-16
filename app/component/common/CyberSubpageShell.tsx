@@ -284,6 +284,7 @@ export function CyberSubpageHeader({
 
   return (
     <motion.div
+      data-cyber-subpage-header
       className={cn(
         "sticky top-0 z-30 border-b border-[rgba(0,245,255,0.14)] bg-black",
         hideBrandShelf && "pt-[env(safe-area-inset-top)]",

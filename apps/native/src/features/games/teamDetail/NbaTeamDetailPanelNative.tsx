@@ -4,6 +4,11 @@ import { Animated as RNAnimated, Modal, Pressable, StyleSheet, Text, View, type 
 import DetailStickyTitleNative, {
   useDetailStickyTitleNative,
 } from "../DetailStickyTitleNative";
+import DetailTabBarNative from "../DetailTabBarNative";
+import {
+  NBA_TEAM_DETAIL_TABS,
+  type NbaTeamDetailTab,
+} from "../../../../../../lib/nba/detailTabs";
 import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
@@ -1749,6 +1754,11 @@ export default function NbaTeamDetailPanelNative({
   const isJa = lang === "ja";
   const insets = useSafeAreaInsets();
   const sticky = useDetailStickyTitleNative();
+  const [tab, setTab] = useState<NbaTeamDetailTab>("overview");
+  const selectTab = (next: NbaTeamDetailTab) => {
+    sticky.scrollToTabs();
+    setTab(next);
+  };
   const { bundle } = useLeagueTeamStatsBundle({
     apiBaseUrl: getUniterzApiBaseUrl(),
   });
@@ -1802,6 +1812,7 @@ export default function NbaTeamDetailPanelNative({
   return (
     <View style={styles.root}>
     <RNAnimated.ScrollView
+      ref={sticky.scrollRef}
       style={styles.root}
       contentContainerStyle={[styles.pad, { paddingBottom: bottomPad + 120 }]}
       showsVerticalScrollIndicator={false}
@@ -1883,8 +1894,19 @@ export default function NbaTeamDetailPanelNative({
           </View>
         </View>
 
+        <View style={styles.detailTabs} onLayout={sticky.onTabsLayout}>
+          <DetailTabBarNative
+            tabs={NBA_TEAM_DETAIL_TABS}
+            active={tab}
+            onChange={selectTab}
+            accent={accent}
+          />
+        </View>
+
         <View style={[styles.divider, { backgroundColor: dividerColor }]} />
 
+        {tab === "overview" ? (
+          <>
         {teamInsights.summary ? (
           <>
             <DetailInsightSummaryNative
@@ -1963,44 +1985,6 @@ export default function NbaTeamDetailPanelNative({
 
         <View style={[styles.divider, { backgroundColor: dividerColor }]} />
 
-        <View style={[styles.sectionCard, { borderColor: frameColor }]}>
-          <RecentFormSection
-            games={detail.recentGames}
-            streak={detail.streak}
-            accent={accent}
-            ui={ui}
-            trends={teamInsights.trends}
-          />
-        </View>
-
-        <View style={[styles.divider, { backgroundColor: dividerColor }]} />
-
-        <GameLogsSection
-          games={detail.recentGames}
-          accent={accent}
-          ui={ui}
-        />
-
-        <View style={[styles.divider, { backgroundColor: dividerColor }]} />
-
-        <HeadToHeadSection
-          rows={detail.headToHead}
-          accent={accent}
-          ui={ui}
-        />
-
-        <View style={[styles.divider, { backgroundColor: dividerColor }]} />
-
-        <DetailScheduleSectionNative
-          upcomingGames={detail.upcomingGames}
-          scheduleDifficulty={teamInsights.scheduleDifficulty}
-          accent={accent}
-          language={lang}
-          onSelectTeam={onSelectTeam}
-        />
-
-        <View style={[styles.divider, { backgroundColor: dividerColor }]} />
-
         <SectionHeader title="SPLITS" accent={accent} />
         <View style={styles.splitRow}>
           <SplitCard
@@ -2047,6 +2031,83 @@ export default function NbaTeamDetailPanelNative({
           />
         </View>
 
+        {shapeEdges ? (
+          <>
+            <View style={[styles.divider, { backgroundColor: dividerColor }]} />
+            <TeamShapeEdgesSectionNative
+              shapeEdges={shapeEdges}
+              accent={accent}
+              lang={lang}
+            />
+          </>
+        ) : null}
+          </>
+        ) : null}
+
+        {tab === "games" ? (
+          <>
+        <View style={[styles.sectionCard, { borderColor: frameColor }]}>
+          <RecentFormSection
+            games={detail.recentGames}
+            streak={detail.streak}
+            accent={accent}
+            ui={ui}
+            trends={teamInsights.trends}
+          />
+        </View>
+
+        <View style={[styles.divider, { backgroundColor: dividerColor }]} />
+
+        <GameLogsSection
+          games={detail.recentGames}
+          accent={accent}
+          ui={ui}
+        />
+
+        <View style={[styles.divider, { backgroundColor: dividerColor }]} />
+
+        <HeadToHeadSection
+          rows={detail.headToHead}
+          accent={accent}
+          ui={ui}
+        />
+
+        <View style={[styles.divider, { backgroundColor: dividerColor }]} />
+
+        <DetailScheduleSectionNative
+          upcomingGames={detail.upcomingGames}
+          scheduleDifficulty={teamInsights.scheduleDifficulty}
+          accent={accent}
+          language={lang}
+          onSelectTeam={onSelectTeam}
+        />
+          </>
+        ) : null}
+
+        {tab === "roster" ? (
+          <>
+        <SectionHeader title="ROSTER" accent={accent} />
+        <View style={[styles.rosterFrame, { borderColor: frameColor }]}>
+          <NbaTeamRosterCardNative
+            block={detail.rosterBlock}
+            onPlayerPress={(player) =>
+              onSelectPlayer?.(String(player.id))
+            }
+          />
+        </View>
+
+        {offseasonMoves ? (
+          <>
+            <View style={[styles.divider, { backgroundColor: dividerColor }]} />
+            <NbaTeamOffseasonMovesNative
+              moves={offseasonMoves}
+              accent={accent}
+              language={language}
+              onSelectPlayer={onSelectPlayer}
+            />
+          </>
+        ) : null}
+
         {discipline ? (
           <>
             <View style={[styles.divider, { backgroundColor: dividerColor }]} />
@@ -2060,20 +2121,11 @@ export default function NbaTeamDetailPanelNative({
             />
           </>
         ) : null}
-
-        {shapeEdges ? (
-          <>
-            <View style={[styles.divider, { backgroundColor: dividerColor }]} />
-            <TeamShapeEdgesSectionNative
-              shapeEdges={shapeEdges}
-              accent={accent}
-              lang={lang}
-            />
           </>
         ) : null}
 
-        <View style={[styles.divider, { backgroundColor: dividerColor }]} />
-
+        {tab === "office" ? (
+          <>
         <PayrollSection
           payroll={detail.payroll}
           rosterBlock={detail.rosterBlock}
@@ -2091,35 +2143,13 @@ export default function NbaTeamDetailPanelNative({
 
         <View style={[styles.divider, { backgroundColor: dividerColor }]} />
 
-        <SectionHeader title="ROSTER" accent={accent} />
-        <View style={[styles.rosterFrame, { borderColor: frameColor }]}>
-          <NbaTeamRosterCardNative
-            block={detail.rosterBlock}
-            onPlayerPress={(player) =>
-              onSelectPlayer?.(String(player.id))
-            }
-          />
-        </View>
-
-        <View style={[styles.divider, { backgroundColor: dividerColor }]} />
-
-        {offseasonMoves ? (
-          <>
-            <NbaTeamOffseasonMovesNative
-              moves={offseasonMoves}
-              accent={accent}
-              language={language}
-              onSelectPlayer={onSelectPlayer}
-            />
-            <View style={[styles.divider, { backgroundColor: dividerColor }]} />
-          </>
-        ) : null}
-
         <TeamInformationSectionNative
           teamId={detail.teamId}
           accent={accent}
           language={language}
         />
+          </>
+        ) : null}
 
         <Text
           style={[styles.footerAsOf, { color: "rgba(255,255,255,0.4)" }]}
@@ -2133,7 +2163,15 @@ export default function NbaTeamDetailPanelNative({
       threshold={sticky.threshold}
       title={`${detail.cityEn} ${detail.nickEn}`.toUpperCase()}
       accent={getTeamRosterMarkColor("nba", detail.teamId)}
-    />
+      pinned={sticky.pinned}
+    >
+      <DetailTabBarNative
+        tabs={NBA_TEAM_DETAIL_TABS}
+        active={tab}
+        onChange={selectTab}
+        accent={accent}
+      />
+    </DetailStickyTitleNative>
     </View>
   );
 }
@@ -2258,6 +2296,7 @@ const styles = StyleSheet.create({
     height: StyleSheet.hairlineWidth,
     marginVertical: 16,
   },
+  detailTabs: { marginTop: 10 },
   perfCard: {
     borderWidth: 1,
     backgroundColor: "rgba(8,8,12,0.4)",
