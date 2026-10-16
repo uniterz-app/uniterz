@@ -14,6 +14,7 @@ import {
   REFERRAL_REFERRER_UNITS_PER_COMPLETED,
 } from "./referralRewards";
 import { recomputeReferralActivePredictDays } from "./recomputeReferralActivePredictDays";
+import { PARTNER_INVITEE_UNITS, isPartnerReferrerUid } from "./referralPartner";
 
 const LEDGER = "unit_ledger";
 
@@ -168,6 +169,91 @@ export async function settleReferralRelation(
           ok: true as const,
           skipped: true as const,
           reason: "insufficient_active_days",
+        };
+      }
+
+      if (isPartnerReferrerUid(referrerUid)) {
+        const inviteeRef = db.collection("users").doc(inviteeUid);
+        const inviteeLedgerRef = db
+          .collection(LEDGER)
+          .doc(referralInviteeRewardLedgerKey(inviteeUid));
+        const [inviteeSnap, inviteeLedgerSnap] = await Promise.all([
+          tx.get(inviteeRef),
+          tx.get(inviteeLedgerRef),
+        ]);
+        if (inviteeSnap.data()?.deletedAt != null) {
+          tx.set(
+            relRef,
+            { status: "withdrawn", updatedAt: FieldValue.serverTimestamp() },
+            { merge: true }
+          );
+          return {
+            ok: true as const,
+            skipped: true as const,
+            reason: "invitee_deleted",
+          };
+        }
+        const snapUnits = Math.floor(Number(data.inviteeUnits));
+        const units = snapUnits > 0 ? snapUnits : PARTNER_INVITEE_UNITS;
+        const partnerCode = String(data.partnerCode ?? data.inviteCode ?? "");
+        let granted = 0;
+        if (!inviteeLedgerSnap.exists) {
+          granted = units;
+          tx.set(inviteeLedgerRef, {
+            uid: inviteeUid,
+            amount: units,
+            reason: "referral_invitee",
+            idempotencyKey: referralInviteeRewardLedgerKey(inviteeUid),
+            inviteeUid,
+            referrerUid,
+            partnerCode,
+            createdAt: FieldValue.serverTimestamp(),
+          });
+          tx.set(
+            inviteeRef
+              .collection("pending_unit_earns")
+              .doc(referralInviteeRewardLedgerKey(inviteeUid)),
+            {
+              amount: units,
+              reason: "referral_invitee",
+              titleJa: "招待ボーナス",
+              titleEn: "Invite bonus",
+              subtitleJa: null,
+              subtitleEn: null,
+              claimedAt: null,
+              createdAt: FieldValue.serverTimestamp(),
+              createdAtMs: Date.now(),
+            }
+          );
+        }
+        const inviteePatch: Record<string, unknown> = {
+          referralSettledAt: FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp(),
+        };
+        if (granted > 0) inviteePatch.unitBalance = FieldValue.increment(granted);
+        tx.set(inviteeRef, inviteePatch, { merge: true });
+        tx.set(
+          relRef,
+          {
+            status: "completed",
+            completedAt: FieldValue.serverTimestamp(),
+            updatedAt: FieldValue.serverTimestamp(),
+            unitsGranted: {
+              invitee: units,
+              referrerBase: 0,
+              referrerMilestone: 0,
+              completedOrdinal: 0,
+            },
+          },
+          { merge: true }
+        );
+        return {
+          ok: true as const,
+          skipped: false as const,
+          inviteeGranted: granted,
+          referrerBaseGranted: 0,
+          referrerMilestoneGranted: 0,
+          completedOrdinal: 0,
         };
       }
 

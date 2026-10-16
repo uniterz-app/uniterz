@@ -5,6 +5,11 @@
  */
 import { FieldValue, type Firestore } from "firebase-admin/firestore";
 import { findUidByInviteCodeAdmin } from "./ensureUserInviteCodeAdmin";
+import { partnerReferrerUid } from "./referralPartner";
+import {
+  grantPartnerInviteeUnitsAdmin,
+  loadActivePartnerCodeAdmin,
+} from "./referralPartnerAdmin";
 import {
   isValidReferralInviteCodeFormat,
   normalizeReferralInviteCode,
@@ -67,6 +72,55 @@ function createdAtMillis(data: Record<string, unknown>): number | null {
   return null;
 }
 
+/** パートナーコード: 人数制限（rate limit / open cap）を通さない */
+async function bindPartnerRelation(
+  db: Firestore,
+  inviteeUid: string,
+  code: string,
+  inviteeUnits: number
+): Promise<BindReferralOnSignupResult> {
+  const referrerUid = partnerReferrerUid(code);
+  await db.collection("users").doc(inviteeUid).set(
+    {
+      referralInviteCode: code,
+      referredByUid: referrerUid,
+      referralBoundAt: FieldValue.serverTimestamp(),
+    },
+    { merge: true }
+  );
+  try {
+    await db.collection("referralRelations").doc(inviteeUid).create({
+      inviteeUid,
+      referrerUid,
+      inviteCode: code,
+      partnerCode: code,
+      inviteeUnits,
+      status: "registered" satisfies ReferralRelationStatus,
+      activePredictDayKeys: [],
+      activePredictDays: 0,
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+  } catch (e: unknown) {
+    const codeNum =
+      e && typeof e === "object" && "code" in e
+        ? Number((e as { code?: number }).code)
+        : null;
+    if (codeNum === 6) {
+      return { ok: false, error: "already_bound", inviteCode: code };
+    }
+    throw e;
+  }
+  await grantPartnerInviteeUnitsAdmin(db, inviteeUid, code, inviteeUnits);
+  return {
+    ok: true,
+    inviteCode: code,
+    referrerUid,
+    relationCreated: true,
+    alreadyBound: false,
+  };
+}
+
 export async function bindReferralOnSignupAdmin(
   db: Firestore,
   inviteeUid: string,
@@ -123,6 +177,11 @@ export async function bindReferralOnSignupAdmin(
         alreadyBound: true,
       };
     }
+  }
+
+  const partner = await loadActivePartnerCodeAdmin(db, code);
+  if (partner) {
+    return bindPartnerRelation(db, inviteeUid, partner.code, partner.inviteeUnits);
   }
 
   const referrerUid = await findUidByInviteCodeAdmin(db, code);

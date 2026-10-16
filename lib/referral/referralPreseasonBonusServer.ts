@@ -11,6 +11,7 @@ import {
   REFERRAL_PRESEASON_MAX_PER_REFERRER,
   REFERRAL_PRESEASON_REFERRER_UNITS,
 } from "@/lib/referral/referralPreseasonBonus";
+import { isPartnerReferrerUid } from "@/lib/referral/referralPartner";
 
 const REJECTED_STATUSES = new Set(["invalid", "fraud_rejected", "withdrawn"]);
 
@@ -56,7 +57,12 @@ export async function grantReferralPreseasonBonus(
     if (!relSnap.exists) return none;
     const status = String(relSnap.get("status") ?? "");
     const referrerUid = String(relSnap.get("referrerUid") ?? "").trim();
-    if (!referrerUid || referrerUid === inviteeUid || REJECTED_STATUSES.has(status)) {
+    if (
+      !referrerUid ||
+      referrerUid === inviteeUid ||
+      isPartnerReferrerUid(referrerUid) ||
+      REJECTED_STATUSES.has(status)
+    ) {
       return none;
     }
 

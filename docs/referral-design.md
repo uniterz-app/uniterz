@@ -454,6 +454,15 @@ docId = 招待されたユーザーの uid（1 人 1 関係）。
 5. ~~rules 凍結・コード一意・達成後スキップ・セルフヒール~~
 6. ~~画面オープンの軽量ヒール・rows 上限・rate/open index・削除時再集計の設計同期~~
 
+### パートナー招待コード（YouTuber 等）
+
+- `referralPartnerCodes/{CODE}`（`label` / `active` / `inviteeUnits`）。発行・停止・コード別登録数は `/admin/referral-partners`（`/api/admin/referral-partners`）
+- 登録時の入力欄・`/r/{CODE}` は通常コードと共通。bind でパートナーコードを先に引き、`referrerUid = partner:{CODE}`・`partnerCode`・`inviteeUnits`（発行時の値を固定）で `referralRelations` を作る
+- 紹介者レート制限・未完了上限は通さない（人数無制限）
+- 招待された側には bind 成功時に即 `inviteeUnits`（既定 50）。台帳キーは通常招待と同じ `referral:invitee:{uid}:reward` で、7 日達成の settle は二重付与しない（bind 時の付与が失敗していたら settle が補う）。紹介者側の Unit・マイルストーン・スキンはなし
+- 日キー・status（registered → in_progress → completed）は効果測定のためだけに通常どおり進める
+- 開幕前の紹介特典（`referral_preseason`）とプレシーズン参加ボーナス（`preseason_bonus`）は対象外
+
 ---
 
 ## 23. 変更履歴
@@ -470,4 +479,5 @@ docId = 招待されたユーザーの uid（1 人 1 関係）。
 | 2026-08-04 | コスト/安全性修正: referredByUid ゲート・同日 no-write・settle 再試行・序数 tx・bind Admin API |
 | 2026-08-04 | 打ち間違いロック解消・rules で Unit/招待フィールド凍結・inviteCodes 一意・達成後スキップ・画面セルフヒール |
 | 2026-10-07 | 被招待者 30 Unit の bind 時即時付与を廃止し、設計どおり 7 日達成後の settle で付与（獲得演出も settle で作成）。招待コード入力欄・招待画面の文言を同期 |
+| 2026-10-15 | パートナー招待コード（人数無制限・登録時に被招待者 50 Unit・紹介者報酬なし・開幕前ボーナス対象外）と管理画面を追加 |
 | 2026-08-12 | 画面ヒール軽量化（posts 非走査・最大3）・rows 上限40・複合 index・未完了40上限・§22 削除再集計を実装に同期 |

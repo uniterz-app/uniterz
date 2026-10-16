@@ -499,6 +499,10 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    match /referralPartnerCodes/{code} {
+      allow read, write: if false;
+    }
+
     // Unit 台帳 — Admin のみ
     match /unit_ledger/{ledgerId} {
       allow read, write: if false;

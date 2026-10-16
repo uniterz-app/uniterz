@@ -12,6 +12,7 @@ import {
   PRESEASON_BONUS_WINDOW_START_MS,
   preseasonBonusIdempotencyKey,
 } from "@/lib/units/preseasonBonus";
+import { isPartnerReferrerUid } from "@/lib/referral/referralPartner";
 
 export type PreseasonBonusEligibility = "signup" | "active" | "auto";
 
@@ -39,6 +40,7 @@ export async function grantPreseasonBonus(
     if (!userSnap.exists || typeof name !== "string" || name.trim() === "") {
       return false;
     }
+    if (isPartnerReferrerUid(userSnap.get("referredByUid"))) return false;
     tx.set(ledgerRef, {
       uid,
       amount: PRESEASON_BONUS_UNITS,
