@@ -7,6 +7,7 @@ import { metricNum } from "../../../../../lib/rankings/metric";
 import { rankingRowProSkinVariant } from "../../../../../lib/rankings/rankingRowProSkinVariant";
 import { type RankingsLanguage } from "./rankingsTexts";
 import { CyberRankingListRowNative } from "./CyberRankingListRowNative";
+import RankingRowCommentNative from "./RankingRowCommentNative";
 import RankingsPodiumEntranceRowNative from "./RankingsPodiumEntranceRowNative";
 import { rankingsUiStyles as styles } from "./rankingsUiStyles";
 
@@ -38,6 +39,7 @@ function RankingRowCard({
   );
 
   return (
+    <>
     <CyberRankingListRowNative
       rank={rank}
       displayName={row.displayName || row.handle || "Unknown"}
@@ -61,6 +63,8 @@ function RankingRowCard({
       reduceMotion={reduceMotion}
       proSkinVariant={proSkinVariant}
     />
+    <RankingRowCommentNative comment={row.rankingComment} align="list" />
+    </>
   );
 }
 

@@ -9,6 +9,7 @@ import { useRankCountUp } from "@/lib/hooks/useCountUpRanking";
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
 import { RankingNameBadges } from "@/app/component/common/RankingNameBadges";
+import RankingRowComment from "@/app/component/rankings/RankingRowComment";
 import { proBadgeStaticMotion } from "@/app/component/common/ProCyberBadge";
 import { profileHrefWithRankingsReturn } from "@/lib/navigation/rankingsProfileFrom";
 import { profilePathKeyFromRow } from "@/lib/profile/profilePathKey";
@@ -143,6 +144,7 @@ export default function RankingCard({
   const proSkinVariant = rankingRowProSkinVariant(r.plan, r.planProBgVariant);
 
   return (
+    <>
     <Link
       href={profileHref}
       className="block min-w-0 origin-center transition-[transform,opacity] duration-100 ease-out active:scale-[0.99] active:opacity-95"
@@ -193,5 +195,10 @@ export default function RankingCard({
         }
       />
     </Link>
+    <RankingRowComment
+      comment={r.rankingComment}
+      align={compact ? "listCompact" : "list"}
+    />
+    </>
   );
 }

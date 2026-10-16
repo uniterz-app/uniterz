@@ -2036,6 +2036,8 @@ export default function ProfileHomeScreen({
           navigation.navigate("ProInsightNarrativePreview");
         else if (page === "matchupTeamStatsPreview" && __DEV__)
           navigation.navigate("MatchupTeamStatsPreview");
+        else if (page === "rankingCommentDesignPreview" && __DEV__)
+          navigation.navigate("RankingCommentDesignPreview");
       }}
     />
     <ProfileBadgeDetailModal

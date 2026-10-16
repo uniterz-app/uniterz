@@ -92,6 +92,7 @@ import { useNativeMyRankCardFast } from "./useNativeMyRankCardFast";
 import TutorialLiveHostNative from "../tutorial/TutorialLiveHostNative";
 import { RankingsDivisionTabsNative } from "./RankingsDivisionTabsNative";
 import { RankingsProLeagueTeaserNative } from "./RankingsProLeagueTeaserNative";
+import RankingCommentEditorNative from "./RankingCommentEditorNative";
 import {
   divisionFromNbaBoard,
   type NbaRankingBoard,
@@ -290,14 +291,24 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
   const rawRows: RankingApiRow[] = devDummyRows ?? realRawRows;
 
   const blockedUids = useBlockedUidsNative();
+  /** 保存直後の自分のひとこと（一覧キャッシュ更新前の即時反映） */
+  const [myRankingComment, setMyRankingComment] = useState<string | null>(null);
+  const showRankingCommentEditor =
+    rankingsLeague === "nba" && !(nbaBoard === "open" && openProLocked);
   const rows: RankingRowWithCountry[] = useMemo(() => {
     if (rawRows.length === 0) return [];
-    return filterBlockedRows(
+    const sorted = filterBlockedRows(
       sortRankingRowsByMetric(metric, toMobileRows(metric, rawRows)),
       blockedUids,
       (r) => r.uid
     );
-  }, [metric, rawRows, blockedUids]);
+    if (myRankingComment == null || !myUid) return sorted;
+    return sorted.map((r) =>
+      r.uid === myUid && r.plan === "pro"
+        ? { ...r, rankingComment: myRankingComment || undefined }
+        : r
+    );
+  }, [metric, rawRows, blockedUids, myRankingComment, myUid]);
 
   const myRawRow = (bundle?.myRow ?? null) as RankingRow | null;
   const { myRank: listMyRank, myRankDeltaPlaces: listMyRankDelta } = useMemo(
@@ -737,6 +748,14 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
                 {upsetRankingEligibilityNotice(language)}
               </Text>
             ) : null}
+            {showRankingCommentEditor ? (
+              <View style={styles.rankingCommentEditor}>
+                <RankingCommentEditorNative
+                  language={language}
+                  onSaved={setMyRankingComment}
+                />
+              </View>
+            ) : null}
 
             {!listReady ? (
               <View style={styles.loadingWrap}>
@@ -950,6 +969,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     lineHeight: 16,
   },
+  rankingCommentEditor: { marginTop: 8 },
   loadingWrap: {
     alignItems: "center",
     justifyContent: "center",

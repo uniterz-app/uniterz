@@ -205,6 +205,8 @@ export type ProfileStackParamList = {
   ProInsightNarrativePreview: undefined;
   /** __DEV__ 予想マッチアップ Team Stats + LAST 5 */
   MatchupTeamStatsPreview: undefined;
+  /** __DEV__ PRO LEAGUE ひとことの見せ方案 */
+  RankingCommentDesignPreview: undefined;
   ProSuccess: { plan?: "weekly" | "monthly" | "season" } | undefined;
   PlanChange: undefined;
   PlanChangeComplete: undefined;

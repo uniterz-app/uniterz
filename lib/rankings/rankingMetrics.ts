@@ -56,4 +56,6 @@ export type RankingRowWithCountry = RankingRow & {
   goalScorerHits?: number;
   /** Pro Skin（ランキング行背景）。Pro かつ採用スキン時のみ描画 */
   planProBgVariant?: string;
+  /** PRO LEAGUE のみ（users.rankingComment） */
+  rankingComment?: string;
 };

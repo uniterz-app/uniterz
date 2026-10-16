@@ -20,6 +20,7 @@ import {
 import { assertProUser } from "@/lib/rankings/server/fetchRankGapAnalysis";
 import { getAdminAuth } from "@/lib/firebaseAdmin";
 import { mergeUserPlansIntoBulkByMetric } from "@/lib/rankings/mergeUserPlanIntoRankingPayload";
+import { RANKING_COMMENT_CDN_TAG_HEADER } from "@/lib/rankings/rankingCommentCache";
 import { loadRankingSnapshotGenerationKey } from "@/lib/rankings/server/loadRankingSnapshotGeneration";
 
 async function optionalUid(req: Request): Promise<string | null> {
@@ -147,7 +148,8 @@ export async function GET(req: Request) {
         };
       }
       await mergeUserPlansIntoBulkByMetric(
-        byMetric as Record<string, { rows?: unknown[]; myRow?: unknown | null }>
+        byMetric as Record<string, { rows?: unknown[]; myRow?: unknown | null }>,
+        { includeRankingComment: true }
       );
       return NextResponse.json(
         {
@@ -226,13 +228,19 @@ export async function GET(req: Request) {
         body.byMetric as Record<
           string,
           { rows?: unknown[]; myRow?: unknown | null }
-        >
+        >,
+        { includeRankingComment: true }
       );
     }
 
     return NextResponse.json(
       { ...body, label, division, availableLabels, snapshotGeneration },
-      { headers: { "Cache-Control": cacheControl } }
+      {
+        headers: {
+          "Cache-Control": cacheControl,
+          ...RANKING_COMMENT_CDN_TAG_HEADER,
+        },
+      }
     );
   } catch (e: unknown) {
     console.error("[api/period-ranking/bulk]", e);

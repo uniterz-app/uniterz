@@ -167,7 +167,9 @@ export async function selectDailyScoreBoardRows(
   db: Firestore
 ): Promise<DailyScoreLeaderRow[]> {
   if (division === "standard") {
-    return mergeUserPlansIntoLeaderboardRows(candidates);
+    return mergeUserPlansIntoLeaderboardRows(candidates, {
+      includeRankingComment: true,
+    });
   }
   const proSnap = await db
     .collection("users")
@@ -176,7 +178,8 @@ export async function selectDailyScoreBoardRows(
     .get();
   const proUids = new Set(proSnap.docs.map((d) => d.id));
   const merged = await mergeUserPlansIntoLeaderboardRows(
-    candidates.filter((r) => proUids.has(r.uid))
+    candidates.filter((r) => proUids.has(r.uid)),
+    { includeRankingComment: true }
   );
   return withRanks(merged.filter((r) => r.plan === "pro")).slice(
     0,

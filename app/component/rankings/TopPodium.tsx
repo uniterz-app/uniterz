@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { motion, useReducedMotion } from "framer-motion";
 import type { Variants } from "framer-motion";
-import { useCallback, useEffect, useMemo } from "react";
+import { Fragment, useCallback, useEffect, useMemo } from "react";
 import { Crown } from "lucide-react";
 import type { MobileMetric, RankingRowWithCountry } from "@/lib/rankings/rankingMetrics";
 import { metricNum } from "@/lib/rankings/metric";
@@ -12,6 +12,7 @@ import { useRankCountUp } from "@/lib/hooks/useCountUpRanking";
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
 import { RankingNameBadges } from "@/app/component/common/RankingNameBadges";
+import RankingRowComment from "@/app/component/rankings/RankingRowComment";
 import { proBadgeStaticMotion } from "@/app/component/common/ProCyberBadge";
 import { profileHrefWithRankingsReturn } from "@/lib/navigation/rankingsProfileFrom";
 import { profilePathKeyFromRow } from "@/lib/profile/profilePathKey";
@@ -189,8 +190,8 @@ export default function TopPodium({
           );
 
           return (
+            <Fragment key={row.uid}>
             <motion.div
-              key={row.uid}
               variants={cardVariants}
               initial={motionOn ? "hidden" : "show"}
               animate="show"
@@ -300,6 +301,11 @@ export default function TopPodium({
                 />
               </Link>
             </motion.div>
+            <RankingRowComment
+              comment={row.rankingComment}
+              align={compact ? "listCompact" : "list"}
+            />
+            </Fragment>
           );
         })}
       </div>

@@ -19,6 +19,7 @@ import {
 import { rankingFunctionUrl } from "@/lib/rankings/server/rankingFunctionUrl";
 import { getAdminAuth } from "@/lib/firebaseAdmin";
 import { mergeUserPlansIntoBulkByMetric } from "@/lib/rankings/mergeUserPlanIntoRankingPayload";
+import { RANKING_COMMENT_CDN_TAG_HEADER } from "@/lib/rankings/rankingCommentCache";
 
 export const runtime = "nodejs";
 
@@ -151,7 +152,9 @@ export async function GET(req: Request) {
         typeof structuredClone === "function"
           ? structuredClone(payload.byMetric)
           : (JSON.parse(JSON.stringify(payload.byMetric)) as typeof payload.byMetric);
-      await mergeUserPlansIntoBulkByMetric(byMetric);
+      await mergeUserPlansIntoBulkByMetric(byMetric, {
+        includeRankingComment: true,
+      });
 
       return NextResponse.json(
         {
@@ -224,7 +227,8 @@ export async function GET(req: Request) {
 
     if (data.byMetric && typeof data.byMetric === "object") {
       await mergeUserPlansIntoBulkByMetric(
-        data.byMetric as Record<string, { rows?: unknown[]; myRow?: unknown | null }>
+        data.byMetric as Record<string, { rows?: unknown[]; myRow?: unknown | null }>,
+        { includeRankingComment: true }
       );
     }
 
@@ -240,7 +244,10 @@ export async function GET(req: Request) {
       },
       {
         status: 200,
-        headers: { "Cache-Control": cacheControl },
+        headers: {
+          "Cache-Control": cacheControl,
+          ...RANKING_COMMENT_CDN_TAG_HEADER,
+        },
       }
     );
   } catch (e: unknown) {

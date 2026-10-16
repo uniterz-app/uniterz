@@ -112,6 +112,7 @@ type Props = {
     | "proInsightGatePreview"
     | "proInsightNarrativePreview"
     | "matchupTeamStatsPreview"
+    | "rankingCommentDesignPreview"
     | "adminFeatureInbox"
     | "adminContactInbox"
     | "adminRedemptions"
@@ -294,6 +295,7 @@ export default function ProfileSideMenuModal({
       | "proInsightGatePreview"
       | "proInsightNarrativePreview"
       | "matchupTeamStatsPreview"
+      | "rankingCommentDesignPreview"
       | "adminFeatureInbox"
       | "adminContactInbox"
       | "adminRedemptions"
@@ -813,6 +815,16 @@ export default function ProfileSideMenuModal({
                           }
                         >
                           マッチアップ STATS + LAST 5
+                        </SideMenuItemButtonNative>
+                        <SideMenuItemButtonNative
+                          icon="message-processing-outline"
+                          dense
+                          labelStyle={labelStyle}
+                          onPress={() =>
+                            openUserPage("rankingCommentDesignPreview")
+                          }
+                        >
+                          ひとこと デザイン案
                         </SideMenuItemButtonNative>
                       </View>
                     </>

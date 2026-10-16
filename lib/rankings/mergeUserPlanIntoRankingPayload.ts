@@ -2,8 +2,14 @@ import { getAdminDb } from "@/lib/firebaseAdmin";
 import { parseEquippedProSkinFromUserDoc } from "@/lib/profile/profilePlanProBgVariantField";
 import type { ProfilePlanProBgVariant } from "@/lib/profile/profilePlanProBgVariants";
 import { userDataPlan } from "@/lib/pro/userPlanActive";
+import { rankingCommentFromUserDoc } from "@/lib/rankings/rankingComment";
 
 type RowLike = Record<string, unknown> & { uid?: string };
+
+export type UserMergeOptions = {
+  /** NBA ランキング（累計・期間・TODAY）だけ Pro の users.rankingComment を行に載せる。グループ等には出さない */
+  includeRankingComment?: boolean;
+};
 
 function pickUserHandle(data: {
   handle?: string;
@@ -43,6 +49,7 @@ type UserMergeFields = {
   photoURL?: string | null;
   /** Pro のときのみ。採用スキン（未設定はデフォルト） */
   planProBgVariant?: ProfilePlanProBgVariant;
+  rankingComment?: string;
 };
 
 function planFromUserDoc(data: Record<string, unknown> | undefined): "free" | "pro" {
@@ -58,8 +65,17 @@ function countryFromUserDoc(data: { countryCode?: unknown } | undefined): string
   return null;
 }
 
-function applyMergeFieldsToRow(r: RowLike, f: UserMergeFields): RowLike {
+function applyMergeFieldsToRow(
+  r: RowLike,
+  f: UserMergeFields,
+  opts?: UserMergeOptions
+): RowLike {
   const next: RowLike = { ...r, plan: f.plan };
+  if (opts?.includeRankingComment && f.plan === "pro" && f.rankingComment) {
+    next.rankingComment = f.rankingComment;
+  } else {
+    delete next.rankingComment;
+  }
   if ("countryCode" in f) {
     next.countryCode = f.countryCode;
   }
@@ -115,6 +131,7 @@ async function loadUserMergeFieldsByUid(
             ? data.photoURL.trim()
             : null,
         planProBgVariant: parseEquippedProSkinFromUserDoc(data),
+        rankingComment: rankingCommentFromUserDoc(data),
       });
     });
   }
@@ -141,10 +158,11 @@ function collectUidsFromBulk(
  * unstable_cache 内の古い行でも、他ユーザーの国旗が Firestore と一致するようにする。
  */
 export async function mergeUserPlansIntoBulkByMetric(
-  byMetric: Record<string, { rows?: unknown[]; myRow?: unknown | null }>
+  byMetric: Record<string, { rows?: unknown[]; myRow?: unknown | null }>,
+  opts?: UserMergeOptions
 ): Promise<void> {
   const fieldsByUid = await loadUserMergeFieldsByUid(collectUidsFromBulk(byMetric));
-  applyUserMergeFieldsToBulk(byMetric, fieldsByUid);
+  applyUserMergeFieldsToBulk(byMetric, fieldsByUid, opts);
 }
 
 /** ログイン時の myRow だけ plan / 国旗を最新化するとき用 */
@@ -160,7 +178,8 @@ export async function mergeUserPlansForUids(
 
 function applyUserMergeFieldsToBulk(
   byMetric: Record<string, { rows?: unknown[]; myRow?: unknown | null }>,
-  fieldsByUid: Map<string, UserMergeFields>
+  fieldsByUid: Map<string, UserMergeFields>,
+  opts?: UserMergeOptions
 ): void {
 
   for (const bundle of Object.values(byMetric)) {
@@ -171,14 +190,14 @@ function applyUserMergeFieldsToBulk(
         if (typeof uid !== "string" || !uid) return row;
         const f = fieldsByUid.get(uid);
         if (f === undefined) return row;
-        return applyMergeFieldsToRow(r, f);
+        return applyMergeFieldsToRow(r, f, opts);
       });
     }
     if (bundle.myRow && typeof (bundle.myRow as RowLike).uid === "string") {
       const m = bundle.myRow as RowLike;
       const f = fieldsByUid.get(m.uid as string);
       if (f !== undefined) {
-        bundle.myRow = applyMergeFieldsToRow(m, f);
+        bundle.myRow = applyMergeFieldsToRow(m, f, opts);
       }
     }
   }
@@ -223,12 +242,12 @@ export async function mergeUserPlansIntoSingleRanking(body: {
  */
 export async function mergeUserPlansIntoLeaderboardRows<
   T extends { uid: string },
->(rows: T[]): Promise<T[]> {
+>(rows: T[], opts?: UserMergeOptions): Promise<T[]> {
   if (rows.length === 0) return rows;
   const fieldsByUid = await loadUserMergeFieldsByUid(rows.map((r) => r.uid));
   return rows.map((row) => {
     const f = fieldsByUid.get(row.uid);
     if (f === undefined) return row;
-    return applyMergeFieldsToRow(row as RowLike, f) as T;
+    return applyMergeFieldsToRow(row as RowLike, f, opts) as T;
   });
 }

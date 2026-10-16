@@ -17,6 +17,7 @@ import { filterBlockedRows } from "@/lib/moderation/moderationTypes";
 import { useBlockedUids } from "@/lib/moderation/useBlockedUids";
 import { restContainer, restItem } from "@/app/component/rankings/anim";
 import TopPodium from "@/app/component/rankings/TopPodium";
+import RankingCommentEditor from "@/app/component/rankings/RankingCommentEditor";
 import RankingsMetricRow from "@/app/component/rankings/RankingsMetricRow";
 import MyRankCard from "@/app/component/rankings/MyRankCard";
 import CandleChartLoader from "@/app/component/common/CandleChartLoader";
@@ -280,14 +281,24 @@ export default function MobileRankingsPage() {
       : 0;
 
   const blockedUids = useBlockedUids();
+  /** 保存直後の自分のひとこと（一覧キャッシュ更新前の即時反映） */
+  const [myRankingComment, setMyRankingComment] = useState<string | null>(null);
+  const showRankingCommentEditor =
+    rankingLeague === "nba" && !(rankingDivision === "open" && openProLocked);
   const rows: RankingRowWithCountry[] = useMemo(() => {
     if (rawRows.length === 0) return [];
-    return filterBlockedRows(
+    const sorted = filterBlockedRows(
       sortRankingRowsByMetric(metric, toMobileRows(metric, rawRows)),
       blockedUids,
       (r) => r.uid
     );
-  }, [metric, rawRows, blockedUids]);
+    if (myRankingComment == null || !myUid) return sorted;
+    return sorted.map((r) =>
+      r.uid === myUid && r.plan === "pro"
+        ? { ...r, rankingComment: myRankingComment || undefined }
+        : r
+    );
+  }, [metric, rawRows, blockedUids, myRankingComment, myUid]);
 
   const top3 = rows.slice(0, 3);
   const restRows = rows.slice(3);
@@ -578,6 +589,15 @@ export default function MobileRankingsPage() {
         ) : effectiveCategory === "playoffs" && !listContentReady && (
           <CandleChartLoader className="px-3 pt-2" label={m.common.loading} />
         )}
+
+        {showRankingCommentEditor ? (
+          <div className="px-2 pb-2">
+            <RankingCommentEditor
+              language={language}
+              onSaved={setMyRankingComment}
+            />
+          </div>
+        ) : null}
 
         {openProLocked ? null : shouldShowRankingsPreseasonNotice(
             rankingHasNoEntries

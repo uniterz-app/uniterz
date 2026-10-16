@@ -37,6 +37,8 @@ export type RankingApiRow = {
   metricValueDelta?: number | null;
   /** Pro Skin（users.planProBgVariant） */
   planProBgVariant?: string | null;
+  /** PRO LEAGUE のみ（users.rankingComment） */
+  rankingComment?: string | null;
 };
 
 export function toApiMetric(metric: MobileMetric) {
@@ -68,6 +70,12 @@ export function toMobileRows(
       planProBgVariant:
         row.plan === "pro" && typeof row.planProBgVariant === "string"
           ? row.planProBgVariant
+          : undefined,
+      rankingComment:
+        row.plan === "pro" &&
+        typeof row.rankingComment === "string" &&
+        row.rankingComment.trim()
+          ? row.rankingComment.trim()
           : undefined,
 
       totalScore: totalPoints,

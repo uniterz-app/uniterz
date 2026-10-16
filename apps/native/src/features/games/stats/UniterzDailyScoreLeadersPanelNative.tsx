@@ -6,6 +6,8 @@ import {
   CyberSlantedTabNative,
 } from "../../rankings/CyberSlantedTabNative";
 import { RankingsProLeagueTeaserNative } from "../../rankings/RankingsProLeagueTeaserNative";
+import RankingCommentEditorNative from "../../rankings/RankingCommentEditorNative";
+import RankingRowCommentNative from "../../rankings/RankingRowCommentNative";
 import { getUniterzApiBaseUrl } from "../submitPredictionApi";
 import RankingsListEntranceRowNative from "../../rankings/RankingsListEntranceRowNative";
 import DailyScoreRankRowNative, {
@@ -64,6 +66,9 @@ export default function UniterzDailyScoreLeadersPanelNative({
   const { bottomContentReserveY } = useBottomTabBarInsets();
   const [division, setDivision] = useState<DailyScoreDivision>("standard");
   const [state, setState] = useState<LoadState>({ kind: "loading" });
+  const myUid = auth.currentUser?.uid ?? null;
+  /** 保存直後の自分のひとこと（API キャッシュ更新前の即時反映） */
+  const [myComment, setMyComment] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -156,6 +161,12 @@ export default function UniterzDailyScoreLeadersPanelNative({
             ) : null}
           </View>
         ) : null}
+
+        {state.kind !== "locked" ? (
+          <View style={styles.commentEditor}>
+            <RankingCommentEditorNative language={lang} onSaved={setMyComment} />
+          </View>
+        ) : null}
       </LeagueStatsCollapsibleNative>
       <LeagueStatsCollapsedSummaryNative text={summaryText} />
 
@@ -221,6 +232,14 @@ export default function UniterzDailyScoreLeadersPanelNative({
                   valueUnit={copy.pointsUnit}
                   onPress={() => onSelectUser?.(r)}
                 />
+                <RankingRowCommentNative
+                  align="daily"
+                  comment={
+                    r.uid === myUid && myComment != null
+                      ? myComment
+                      : r.rankingComment
+                  }
+                />
               </RankingsListEntranceRowNative>
             );
           })}
@@ -233,6 +252,7 @@ export default function UniterzDailyScoreLeadersPanelNative({
 const styles = StyleSheet.create({
   root: { flex: 1 },
   tabs: { paddingHorizontal: 12, paddingTop: 4, paddingBottom: 8 },
+  commentEditor: { paddingHorizontal: 12, paddingBottom: 8 },
   meta: {
     flexDirection: "row",
     alignItems: "center",

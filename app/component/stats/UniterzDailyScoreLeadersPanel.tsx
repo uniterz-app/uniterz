@@ -12,6 +12,8 @@ import {
 } from "@/app/component/rankings/CyberSlantedTab";
 import { restContainer, restItem } from "@/app/component/rankings/anim";
 import RankingsProLeagueTeaser from "@/app/component/rankings/RankingsProLeagueTeaser";
+import RankingCommentEditor from "@/app/component/rankings/RankingCommentEditor";
+import RankingRowComment from "@/app/component/rankings/RankingRowComment";
 import DailyScoreRankRow, {
   dailyScoreRankRowSkew,
 } from "@/app/component/rankings/DailyScoreRankRow";
@@ -53,6 +55,9 @@ export default function UniterzDailyScoreLeadersPanel({
   const [division, setDivision] = useState<DailyScoreDivision>("standard");
   const reduceMotion = useReducedMotion();
   const [state, setState] = useState<LoadState>({ kind: "loading" });
+  const myUid = auth.currentUser?.uid ?? null;
+  /** 保存直後の自分のひとこと（API キャッシュ更新前の即時反映） */
+  const [myComment, setMyComment] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -136,6 +141,10 @@ export default function UniterzDailyScoreLeadersPanel({
         </div>
       ) : null}
 
+      {state.kind !== "locked" ? (
+        <RankingCommentEditor language={language} onSaved={setMyComment} />
+      ) : null}
+
       {state.kind === "locked" ? (
         <RankingsProLeagueTeaser
           language={language as Language}
@@ -188,6 +197,14 @@ export default function UniterzDailyScoreLeadersPanel({
                   valueUnit={copy.pointsUnit}
                 />
               </button>
+              <RankingRowComment
+                align="daily"
+                comment={
+                  r.uid === myUid && myComment != null
+                    ? myComment
+                    : r.rankingComment
+                }
+              />
             </motion.li>
           ))}
         </motion.ol>

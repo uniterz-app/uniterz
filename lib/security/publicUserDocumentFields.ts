@@ -38,6 +38,8 @@ export const PUBLIC_USER_PROFILE_FIELDS = [
   "plan",
   "planType",
   "proUntil",
+  "rankingComment",
+  "rankingCommentUpdatedAt",
 ] as const;
 
 /** プロダクト要件で公開読める（課金・残高 UX） */

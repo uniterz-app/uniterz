@@ -29,6 +29,8 @@ export type DailyScoreLeaderRow = {
   plan?: string;
   planProBgVariant?: unknown;
   countryCode?: string | null;
+  /** PRO LEAGUE のみ（users.rankingComment） */
+  rankingComment?: string;
   points: number;
   posts: number;
   /** 勝敗的中した予想数 */

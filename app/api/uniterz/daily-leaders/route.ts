@@ -16,6 +16,7 @@ import { GAME_SCHEDULE_SEASON } from "@/lib/games/gameScheduleSeason";
 import { resolveLatestNbaSlateDateKey } from "@/lib/games/latestNbaSlate";
 import { loadGameDayIndex } from "@/lib/games/server/gameDayIndexAdmin";
 import { TIMEZONE_ET } from "@/lib/time/zonedTime";
+import { DAILY_SCORE_LEADERS_PLANS_TAG } from "@/lib/rankings/dailyScoreLeaders/dailyScoreLeadersCacheTags";
 
 export const runtime = "nodejs";
 
@@ -89,7 +90,7 @@ function selectBoardRowsCached(
       division,
       candidatesKey,
     ],
-    { revalidate: 300 }
+    { revalidate: 300, tags: [DAILY_SCORE_LEADERS_PLANS_TAG] }
   )();
 }
 
