@@ -1,6 +1,7 @@
 /**
  * STATS ハブ用: チーム / 選手の前方・部分一致検索。
- * 索引はリーグ表 / リーダー表の共有スナップショットから切る（モックなし）。
+ * 索引はリーグ表 / ロスター / リーダー表の共有スナップショットから切る（モックなし）。
+ * 選手はロスター全員が正（リーダー表は各指標 Top30 のみで、出場の少ない選手が漏れる）。
  */
 import { TEAM_SHORT } from "@/lib/team-short";
 import { NBA_TEAM_NAME_BY_ID } from "@/lib/nba-team-names";
@@ -8,6 +9,7 @@ import { getMobileTeamName } from "@/lib/team-name-split-mobile";
 import { formatNbaPlayerListName } from "@/lib/nba/formatNbaPlayerListName";
 import type { NbaLeagueTeamStatsBundle } from "@/lib/predict/nbaLeagueTeamStatsMocks";
 import type { NbaPlayerStatLeadersBundle } from "@/lib/predict/nbaPlayerStatLeadersMocks";
+import type { NbaTeamRosterDocTeam } from "@/lib/nba/teamRosters/teamRosterTypes";
 
 export type NbaStatsSearchKind = "team" | "player";
 
@@ -24,6 +26,7 @@ export type NbaStatsSearchHit = {
 export type NbaStatsSearchBundles = {
   team?: NbaLeagueTeamStatsBundle;
   player?: NbaPlayerStatLeadersBundle;
+  rosters?: Record<string, NbaTeamRosterDocTeam>;
 };
 
 const EMPTY_TEAM_BUNDLE: NbaLeagueTeamStatsBundle = {
@@ -74,11 +77,33 @@ export function listNbaTeamSearchIndex(
   });
 }
 
+function teamAbbr(teamId: string): string {
+  return (TEAM_SHORT[teamId] ?? teamId.replace(/^nba-/i, "")).toUpperCase();
+}
+
 export function listNbaPlayerSearchIndex(
-  leaders?: NbaPlayerStatLeadersBundle | null
+  leaders?: NbaPlayerStatLeadersBundle | null,
+  rosters?: Record<string, NbaTeamRosterDocTeam> | null
 ): NbaStatsSearchHit[] {
   const seen = new Map<string, NbaStatsSearchHit>();
-  if (!leaders) return [];
+
+  for (const team of Object.values(rosters ?? {})) {
+    for (const p of team.players) {
+      const id = String(p.id ?? "").trim();
+      const fullName = `${p.firstName ?? ""} ${p.lastName ?? ""}`.trim();
+      if (!id || !fullName || seen.has(id)) continue;
+      seen.set(id, {
+        kind: "player",
+        id,
+        name: formatNbaPlayerListName(fullName, id),
+        abbr: teamAbbr(team.teamId),
+        teamId: team.teamId,
+        matchText: fullName,
+      });
+    }
+  }
+
+  if (!leaders) return [...seen.values()];
 
   for (const rows of Object.values(leaders.season)) {
     for (const row of rows) {
@@ -87,9 +112,7 @@ export function listNbaPlayerSearchIndex(
         kind: "player",
         id: row.playerId,
         name: formatNbaPlayerListName(row.playerName, row.playerId),
-        abbr: (
-          TEAM_SHORT[row.teamId] ?? row.teamId.replace(/^nba-/i, "")
-        ).toUpperCase(),
+        abbr: teamAbbr(row.teamId),
         teamId: row.teamId,
         matchText: row.playerName,
       });
@@ -110,7 +133,7 @@ export function searchNbaStatsIndex(
   const source =
     kind === "team"
       ? listNbaTeamSearchIndex(bundles?.team)
-      : listNbaPlayerSearchIndex(bundles?.player);
+      : listNbaPlayerSearchIndex(bundles?.player, bundles?.rosters);
   return source
     .map((hit) => {
       const hay = haystack(hit.name, hit.matchText, hit.abbr, hit.teamId, hit.id);

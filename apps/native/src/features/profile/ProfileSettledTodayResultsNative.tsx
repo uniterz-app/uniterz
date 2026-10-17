@@ -3,8 +3,8 @@
  * カード本体はリザルト一覧と同じ `ResultPostCardNative`。
  * 本日確定が空でもデザイン確認できるようプレビューカードを出す。
  */
-import { useMemo } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { useMemo, useState } from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import type { ProfileStatsStreakContext } from "../../../../../lib/profile/profileStreakScope";
@@ -15,7 +15,10 @@ import ResultDayStripNative from "../results/ResultDayStripNative";
 import { dayPointsHeaderForNative } from "../results/nativeResultDaySummary";
 import { formatNbaSlateDateLabel } from "../../../../../lib/games/latestNbaSlate";
 import ProfileOverviewChartCardNative from "./ProfileOverviewChartCardNative";
-import { NATIVE_SETTLED_TODAY_MAX } from "./loadProfileSettledTodayNative";
+import {
+  PROFILE_SETTLED_TODAY_COLLAPSED_MAX,
+  profileSettledTodayShowAllLabel,
+} from "../../../../../lib/profile/profileSettledTodayShowAll";
 import {
   profileOverviewChartSubtitleStyle,
 } from "./profileOverviewChartShell";
@@ -63,11 +66,19 @@ export default function ProfileSettledTodayResultsNative({
   const title = "Result Drop";
   const subtitle = copy.subtitle;
   const empty = copy.empty;
+  const expandKey = `${uid ?? ""}|${slateDateKey}`;
+  const [expandedKey, setExpandedKey] = useState<string | null>(null);
+  const expanded = expandedKey === expandKey;
+  const hiddenCount = expanded
+    ? 0
+    : Math.max(0, posts.length - PROFILE_SETTLED_TODAY_COLLAPSED_MAX);
 
   const { visiblePosts, isDesignPreview } = useMemo(() => {
     if (posts.length > 0) {
       return {
-        visiblePosts: posts.slice(0, NATIVE_SETTLED_TODAY_MAX),
+        visiblePosts: expanded
+          ? posts
+          : posts.slice(0, PROFILE_SETTLED_TODAY_COLLAPSED_MAX),
         isDesignPreview: false,
       };
     }
@@ -78,7 +89,7 @@ export default function ProfileSettledTodayResultsNative({
       };
     }
     return { visiblePosts: [], isDesignPreview: false };
-  }, [loading, posts, showDesignPreviewWhenEmpty]);
+  }, [expanded, loading, posts, showDesignPreviewWhenEmpty]);
 
   const dayPoints = useMemo(
     () => (isDesignPreview ? null : dayPointsHeaderForNative(posts, [], cardLang)),
@@ -147,6 +158,20 @@ export default function ProfileSettledTodayResultsNative({
               onOpenDetail={openPost}
             />
           ))}
+          {!isDesignPreview && hiddenCount > 0 ? (
+            <Pressable
+              onPress={() => setExpandedKey(expandKey)}
+              accessibilityRole="button"
+              style={({ pressed }) => [
+                styles.showAll,
+                pressed ? { opacity: 0.75 } : null,
+              ]}
+            >
+              <Text style={styles.showAllText}>
+                {profileSettledTodayShowAllLabel(language, hiddenCount)}
+              </Text>
+            </Pressable>
+          ) : null}
         </View>
       )}
     </ProfileOverviewChartCardNative>
@@ -197,5 +222,20 @@ const styles = StyleSheet.create({
   list: {
     marginTop: 12,
     gap: 8,
+  },
+  showAll: {
+    marginTop: 4,
+    alignSelf: "stretch",
+    alignItems: "center",
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: "rgba(0,245,255,0.35)",
+    backgroundColor: "rgba(0,245,255,0.06)",
+  },
+  showAllText: {
+    color: "rgba(0,245,255,0.95)",
+    fontSize: 12,
+    fontWeight: "800",
+    letterSpacing: 0.6,
   },
 });

@@ -27,8 +27,6 @@ import {
 } from "../results/nativeResultModel";
 
 const SLATE_FETCH_LIMIT = 48;
-/** モバイルプロフィール表示上限（Web mobile と同じ） */
-export const NATIVE_SETTLED_TODAY_MAX = 6;
 
 function settledRowFromPost(post: PostWithMillis): SettledPostRow | null {
   const raw = post as PostWithMillis & Record<string, unknown>;

@@ -15,10 +15,7 @@ import { fetchMeReferralNative } from "../profile/referralApiNative";
 import { cyberAlert } from "../../components/cyberAlert";
 import UniterzLogoNative from "../profile/UniterzLogoNative";
 import { referralPreseasonInviteCopy } from "../../../../../lib/referral/referralPreseasonBonus";
-
-const WEB_ORIGIN =
-  process.env.EXPO_PUBLIC_UNITERZ_API_BASE_URL?.replace(/\/$/, "") ||
-  "https://uniterz.app";
+import { getAppDownloadShareUrl } from "../../../../../lib/share/shareAppUrls";
 
 type Props = {
   visible: boolean;
@@ -39,14 +36,12 @@ export default function ReferralPreseasonInviteCardNative({
     setBusy(true);
     try {
       const data = await fetchMeReferralNative();
-      const path = data.invitePath || data.inviteUrl || "";
-      const url = path.startsWith("http")
-        ? path
-        : `${WEB_ORIGIN}${path.startsWith("/") ? path : `/${path}`}`;
       onClose();
       // モーダルが閉じ切る前に共有シートを出すと iOS で表示されない
       await new Promise((r) => setTimeout(r, 400));
-      await Share.share({ message: copy.shareMessage(data.inviteCode, url), url });
+      await Share.share({
+        message: copy.shareMessage(data.inviteCode, getAppDownloadShareUrl()),
+      });
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e ?? "");
       if (msg) cyberAlert("", msg);

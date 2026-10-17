@@ -8,6 +8,10 @@ import {
   seasonPredictInviteCopy,
   seasonPredictInviteStorageKey,
 } from "../../../../../lib/predict/seasonPredictInvite";
+import {
+  seasonPredictLastCallCopy,
+  seasonPredictLastCallStorageKey,
+} from "../../../../../lib/predict/seasonPredictLastCall";
 
 const OXANIUM_BOLD = "Oxanium_700Bold";
 const OXANIUM_EXTRA = "Oxanium_800ExtraBold";
@@ -34,8 +38,32 @@ export async function writeSeasonPredictInviteSeenNative(
   }
 }
 
+export async function readSeasonPredictLastCallSeenNative(
+  uid: string
+): Promise<boolean> {
+  try {
+    return (
+      (await AsyncStorage.getItem(seasonPredictLastCallStorageKey(uid))) === "1"
+    );
+  } catch {
+    return true;
+  }
+}
+
+export async function writeSeasonPredictLastCallSeenNative(
+  uid: string
+): Promise<void> {
+  try {
+    await AsyncStorage.setItem(seasonPredictLastCallStorageKey(uid), "1");
+  } catch {
+    // 無視
+  }
+}
+
 type Props = {
   open: boolean;
+  /** 締切 24 時間前の「もうした？」文言 */
+  lastCall?: boolean;
   language?: string | null;
   awardsLabel: string;
   standingsLabel: string;
@@ -48,6 +76,7 @@ type Props = {
 
 export default function SeasonPredictInviteModalNative({
   open,
+  lastCall = false,
   language,
   awardsLabel,
   standingsLabel,
@@ -58,7 +87,14 @@ export default function SeasonPredictInviteModalNative({
   onLater,
 }: Props) {
   const insets = useSafeAreaInsets();
-  const copy = seasonPredictInviteCopy(language);
+  const baseCopy = seasonPredictInviteCopy(language);
+  const copy = lastCall
+    ? seasonPredictLastCallCopy(
+        language,
+        { awards: awardsPending, standings: standingsPending },
+        baseCopy
+      )
+    : baseCopy;
 
   return (
     <Modal visible={open} transparent animationType="fade" onRequestClose={onLater}>

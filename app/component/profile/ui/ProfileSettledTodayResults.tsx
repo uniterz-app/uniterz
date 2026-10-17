@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import type { Language } from "@/lib/i18n/language";
 import { resolveLocalizedLang } from "@/lib/i18n/localize";
 import { t } from "@/lib/i18n/t";
@@ -20,6 +21,10 @@ import ProfileKinetikPanelFrame from "@/app/component/profile/ui/ProfileKinetikP
 import ProfileOverviewLineFrame from "@/app/component/profile/ui/ProfileOverviewLineFrame";
 import { jp } from "@/lib/fonts";
 import {
+  PROFILE_SETTLED_TODAY_COLLAPSED_MAX,
+  profileSettledTodayShowAllLabel,
+} from "@/lib/profile/profileSettledTodayShowAll";
+import {
   type ProfileVisualEffects,
   isProfileVisualLite,
 } from "@/lib/profile/profileVisualEffects";
@@ -33,9 +38,6 @@ type Props = {
   gamesRoutePrefix?: "/web" | "/mobile";
   visualEffects?: ProfileVisualEffects;
 };
-
-/** モバイルプロフィールで「今日の確定」に載せる上限（Safari のメモリ対策） */
-const MOBILE_SETTLED_TODAY_MAX = 6;
 
 export default function ProfileSettledTodayResults({
   uid,
@@ -59,10 +61,16 @@ export default function ProfileSettledTodayResults({
 
   const title = msg.profile.settledTodayResults;
   const empty = msg.profile.settledTodayEmpty;
-  const visiblePosts =
-    isMobile && posts.length > MOBILE_SETTLED_TODAY_MAX
-      ? posts.slice(0, MOBILE_SETTLED_TODAY_MAX)
-      : posts;
+  const expandKey = `${uid ?? ""}|${slateDateKey}`;
+  const [expandedKey, setExpandedKey] = useState<string | null>(null);
+  const collapsed =
+    isMobile &&
+    expandedKey !== expandKey &&
+    posts.length > PROFILE_SETTLED_TODAY_COLLAPSED_MAX;
+  const visiblePosts = collapsed
+    ? posts.slice(0, PROFILE_SETTLED_TODAY_COLLAPSED_MAX)
+    : posts;
+  const hiddenCount = posts.length - visiblePosts.length;
   const dayPoints = dayPointsHeaderForList(posts, [], language);
   const marketsFromGames = useResultPostsGameMarkets(visiblePosts);
   const roundMetaFromGames = useResultPostsGameRoundMeta(visiblePosts);
@@ -120,6 +128,15 @@ export default function ProfileSettledTodayResults({
               />
             ))}
           </ResultDayPipeGroup>
+          {hiddenCount > 0 ? (
+            <button
+              type="button"
+              onClick={() => setExpandedKey(expandKey)}
+              className="mt-3 w-full border border-[#00F5FF]/35 bg-[#00F5FF]/[0.06] py-2.5 text-xs font-extrabold tracking-wide text-[#00F5FF] active:opacity-75"
+            >
+              {profileSettledTodayShowAllLabel(language, hiddenCount)}
+            </button>
+          ) : null}
           </div>
         )}
     </ProfileKinetikPanelFrame>
