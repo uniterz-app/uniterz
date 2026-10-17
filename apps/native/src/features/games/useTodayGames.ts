@@ -78,14 +78,8 @@ function isSameLocalDay(a: Date, b: Date): boolean {
   );
 }
 
-function addDaysLocal(base: Date, offset: number): Date {
-  const d = new Date(base);
-  d.setDate(d.getDate() + offset);
-  return d;
-}
-
 /**
- * ローカル暦で「今日」を見ているとき、その日の試合がすべて終了なら翌日へ寄せる。
+ * ローカル暦で「今日」を見ているとき、その日の試合がすべて終了なら次の試合日へ寄せる。
  * フェッチ完了と同一バッチで適用し、画面が一度「今日」で描画されてから翌日へ跳ぶガタつきを防ぐ。
  */
 function pickLandingDateAfterFetch(selectedBefore: Date, rows: NativeGameRow[], timeZone: string): Date {
@@ -98,7 +92,12 @@ function pickLandingDateAfterFetch(selectedBefore: Date, rows: NativeGameRow[], 
     (g) => resolveGameStatus(g as Record<string, unknown>) === "final"
   );
   if (!allFinal) return selectedBefore;
-  return addDaysLocal(selectedBefore, 1);
+  /** 翌日が試合なしだと月頭の試合日へ飛ぶため、窓内の次の試合日へ。無ければ画面側が日インデックスで送る */
+  const selectedKey = toDateKeyInTimeZone(selectedBefore, timeZone);
+  const nextKey = sortedUniqueDateKeysFromRows(rows, timeZone).find(
+    (k) => k > selectedKey
+  );
+  return (nextKey ? parseDateKeyInTimeZone(nextKey, timeZone) : null) ?? selectedBefore;
 }
 
 /** Web `GamesPage.findInitialGameDay` 相当 */
@@ -121,7 +120,12 @@ function findInitialGameDay(params: {
     const inMonth = gameDays
       .filter((d) => toDateKeyInTimeZone(d, timeZone).startsWith(monthPrefix))
       .sort((a, b) => a.getTime() - b.getTime());
-    if (inMonth.length) return inMonth[0] ?? null;
+    /** 試合なしの日からは近い側（以降の最初 → 無ければ直前）。月頭へ戻さない */
+    const onOrAfter = inMonth.find(
+      (d) => toDateKeyInTimeZone(d, timeZone) >= wantedKey
+    );
+    if (onOrAfter) return onOrAfter;
+    if (inMonth.length) return inMonth[inMonth.length - 1] ?? null;
     return null;
   }
 

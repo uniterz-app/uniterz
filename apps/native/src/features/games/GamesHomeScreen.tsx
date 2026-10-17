@@ -1864,7 +1864,9 @@ export default function GamesHomeScreen({
     const currentKey = toDateKeyInTimeZone(selectedDate, dayTimeZone);
     const nextKey = dateKeysForDayStrip.find((k) => k > currentKey);
     const nextDay = nextKey ? parseDateKeyInTimeZone(nextKey, dayTimeZone) : null;
-    setSelectedDate(nextDay ?? addDays(selectedDate, 1));
+    /** 試合なしの翌日へ送ると月頭の試合日に着地し直すため、次の試合日が分かるまで動かさない */
+    if (!nextDay) return;
+    setSelectedDate(nextDay);
   }, [loading, games, selectedDate, setSelectedDate, today, dateKeysForDayStrip, dayTimeZone]);
 
   /**
