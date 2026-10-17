@@ -13,6 +13,7 @@ import {
   type ReferralPartnerStats,
 } from "./referralPartner";
 import { referralInviteeRewardLedgerKey } from "./settleReferralRelation";
+import { preseasonBonusIdempotencyKey } from "@/lib/units/preseasonBonus";
 
 function toMs(v: unknown): number | null {
   const t = v as { toMillis?: () => number } | null | undefined;
@@ -43,7 +44,10 @@ export async function loadActivePartnerCodeAdmin(
   return row.active ? row : null;
 }
 
-/** コードで登録した時点で招待された側へ付与（台帳キーで冪等。7 日達成時の settle は二重付与しない） */
+/**
+ * コードで登録した時点で招待された側へ付与（台帳キーで冪等。7 日達成時の settle は二重付与しない）。
+ * プレシーズン参加ボーナスとは併給しない（Native 初期設定はプロフィール保存 → bind の順でボーナスが先に付く）。
+ */
 export async function grantPartnerInviteeUnitsAdmin(
   db: Firestore,
   inviteeUid: string,
@@ -52,10 +56,16 @@ export async function grantPartnerInviteeUnitsAdmin(
 ): Promise<boolean> {
   const key = referralInviteeRewardLedgerKey(inviteeUid);
   const ledgerRef = db.collection("unit_ledger").doc(key);
+  const preseasonLedgerRef = db
+    .collection("unit_ledger")
+    .doc(preseasonBonusIdempotencyKey(inviteeUid));
   const userRef = db.collection("users").doc(inviteeUid);
   return db.runTransaction(async (tx) => {
-    const ledgerSnap = await tx.get(ledgerRef);
-    if (ledgerSnap.exists) return false;
+    const [ledgerSnap, preseasonSnap] = await Promise.all([
+      tx.get(ledgerRef),
+      tx.get(preseasonLedgerRef),
+    ]);
+    if (ledgerSnap.exists || preseasonSnap.exists) return false;
     tx.set(ledgerRef, {
       uid: inviteeUid,
       amount: units,

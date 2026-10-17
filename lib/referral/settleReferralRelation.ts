@@ -15,6 +15,7 @@ import {
 } from "./referralRewards";
 import { recomputeReferralActivePredictDays } from "./recomputeReferralActivePredictDays";
 import { PARTNER_INVITEE_UNITS, isPartnerReferrerUid } from "./referralPartner";
+import { preseasonBonusIdempotencyKey } from "@/lib/units/preseasonBonus";
 
 const LEDGER = "unit_ledger";
 
@@ -177,9 +178,13 @@ export async function settleReferralRelation(
         const inviteeLedgerRef = db
           .collection(LEDGER)
           .doc(referralInviteeRewardLedgerKey(inviteeUid));
-        const [inviteeSnap, inviteeLedgerSnap] = await Promise.all([
+        const preseasonLedgerRef = db
+          .collection(LEDGER)
+          .doc(preseasonBonusIdempotencyKey(inviteeUid));
+        const [inviteeSnap, inviteeLedgerSnap, preseasonLedgerSnap] = await Promise.all([
           tx.get(inviteeRef),
           tx.get(inviteeLedgerRef),
+          tx.get(preseasonLedgerRef),
         ]);
         if (inviteeSnap.data()?.deletedAt != null) {
           tx.set(
@@ -197,7 +202,7 @@ export async function settleReferralRelation(
         const units = snapUnits > 0 ? snapUnits : PARTNER_INVITEE_UNITS;
         const partnerCode = String(data.partnerCode ?? data.inviteCode ?? "");
         let granted = 0;
-        if (!inviteeLedgerSnap.exists) {
+        if (!inviteeLedgerSnap.exists && !preseasonLedgerSnap.exists) {
           granted = units;
           tx.set(inviteeLedgerRef, {
             uid: inviteeUid,
