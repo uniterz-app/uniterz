@@ -26,6 +26,8 @@ import { useAuth } from "@/app/AuthProvider";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import { formatProInsightFirstReadyPending } from "@/lib/predict/proInsightFirstReadyCopy";
 import { proInsightPreseasonNotice } from "@/lib/predict/proInsightGateCopy";
+import { TODAY_UNITERZ_DOT_COLOR } from "@/lib/rankings/dailyScoreLeaders/todayUniterzUnread";
+import { useProInsightUnread } from "@/app/component/predict/useProInsightUnread";
 
 export type NbaPredictToolsTab = "insight" | "injuries" | "stats" | "roster";
 
@@ -136,13 +138,20 @@ export default function NbaPredictToolsTabs({
    * 本番: games.proInsightNarrative（試合共通）。Free はゲート。
    * brief prop は旧互換プレビュー用（narrative 優先）。
    */
+  const insightAvailable = isPro && !preseason;
   const {
     narrative: liveNarrative,
     loading: briefLoading,
+    updatedAt: insightUpdatedAt,
   } = useNbaMatchupProBrief({
     gameId: fromPredictGameId,
     override: brief,
-    enabled: visited.has("insight") && isPro && !preseason,
+    enabled: insightAvailable,
+  });
+  const insightUnread = useProInsightUnread({
+    gameId: fromPredictGameId,
+    version: insightAvailable && !briefLoading ? insightUpdatedAt : null,
+    viewing: tab === "insight",
   });
 
   const { report: liveInjury, loading: injuryLoading } =
@@ -181,7 +190,7 @@ export default function NbaPredictToolsTabs({
         親（PredictionFormV2）が overflow-x-hidden のため、skew(-14deg) の先端が
         端で四角く切れる。ランキング period タブ（px-3 + overflow-x-clip）と同じ横余白。
       */}
-      <div className="w-full min-w-0 overflow-visible px-3 pb-1.5 pt-0">
+      <div className="relative w-full min-w-0 overflow-visible px-3 pb-1.5 pt-0">
         <CyberSlantedTabBar fill aria-label="NBA predict tools">
           <CyberSlantedTab
             role="tab"
@@ -212,6 +221,25 @@ export default function NbaPredictToolsTabs({
             compact
           />
         </CyberSlantedTabBar>
+        {insightUnread ? (
+          <div
+            className="pointer-events-none absolute inset-x-3 top-0 flex gap-2"
+            aria-hidden
+          >
+            <div className="relative flex-1">
+              <span
+                className="absolute -right-1 top-1 h-[9px] w-[9px] rounded-full"
+                style={{
+                  background: TODAY_UNITERZ_DOT_COLOR,
+                  boxShadow: `0 0 6px ${TODAY_UNITERZ_DOT_COLOR}`,
+                }}
+              />
+            </div>
+            <div className="flex-1" />
+            <div className="flex-1" />
+            <div className="flex-1" />
+          </div>
+        ) : null}
       </div>
 
       {tab ? (

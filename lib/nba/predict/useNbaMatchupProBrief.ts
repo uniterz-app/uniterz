@@ -29,6 +29,8 @@ export function useNbaMatchupProBrief(opts: {
   narrative: ProInsightNarrativeBrief | null;
   status: ProInsightNarrativeStatus;
   loading: boolean;
+  /** 生成時刻（ISO）。INSIGHT 未読マークの更新番号 */
+  updatedAt: string | null;
 } {
   const enabled = opts.enabled !== false;
   const override = opts.override;
@@ -53,6 +55,7 @@ export function useNbaMatchupProBrief(opts: {
   const [status, setStatus] = useState<ProInsightNarrativeStatus>(() =>
     hasNarrativeOverride ? "ready" : "empty"
   );
+  const [updatedAt, setUpdatedAt] = useState<string | null>(null);
   const [readyScope, setReadyScope] = useState<string | null>(() =>
     hasNarrativeOverride || hasBriefOverride ? fetchScope : null
   );
@@ -84,6 +87,7 @@ export function useNbaMatchupProBrief(opts: {
           if (!cancelled) {
             setBrief(null);
             setNarrative(null);
+            setUpdatedAt(null);
             setStatus("empty");
           }
           return;
@@ -99,6 +103,7 @@ export function useNbaMatchupProBrief(opts: {
           if (!cancelled) {
             setBrief(null);
             setNarrative(null);
+            setUpdatedAt(null);
             setStatus("empty");
           }
           return;
@@ -108,12 +113,18 @@ export function useNbaMatchupProBrief(opts: {
           brief?: PredictProBrief | null;
           narrative?: unknown;
           status?: ProInsightNarrativeStatus;
+          updatedAt?: unknown;
         };
         if (cancelled) return;
         const nextNarrative = sanitizeProInsightNarrativeForDisplay(
           json.narrative
         );
         setNarrative(nextNarrative);
+        setUpdatedAt(
+          nextNarrative && typeof json.updatedAt === "string"
+            ? json.updatedAt
+            : null
+        );
         setBrief(sanitizeProBriefForDisplay(json.brief) ?? null);
         setStatus(
           json.status === "ready" ||
@@ -128,6 +139,7 @@ export function useNbaMatchupProBrief(opts: {
         if (!cancelled) {
           setBrief(null);
           setNarrative(null);
+          setUpdatedAt(null);
           setStatus("empty");
         }
       } finally {
@@ -165,5 +177,6 @@ export function useNbaMatchupProBrief(opts: {
     narrative: resolvedNarrative,
     status: resolvedStatus,
     loading,
+    updatedAt: hasNarrativeOverride || hasBriefOverride ? null : updatedAt,
   };
 }

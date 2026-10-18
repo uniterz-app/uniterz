@@ -33,6 +33,8 @@ import { useNativeUserLanguageFromAuth } from "../../../i18n/useNativeUserLangua
 import { formatProInsightFirstReadyPending } from "../../../../../../lib/predict/proInsightFirstReadyCopy";
 import { proInsightPreseasonNotice } from "../../../../../../lib/predict/proInsightGateCopy";
 import type { Language } from "../../../../../../lib/i18n/language";
+import { TODAY_UNITERZ_DOT_COLOR } from "../../../../../../lib/rankings/dailyScoreLeaders/todayUniterzUnread";
+import { useProInsightUnreadNative } from "./useProInsightUnreadNative";
 
 export type NbaPredictToolsTab = "insight" | "injuries" | "stats" | "roster";
 
@@ -130,14 +132,21 @@ export default function NbaPredictToolsTabsNative({
     setVisited((cur) => (cur.has(tab) ? cur : new Set(cur).add(tab)));
   }, [tab]);
 
+  const insightAvailable = isPro && !preseason;
   const {
     narrative: liveNarrative,
     loading: briefLoading,
+    updatedAt: insightUpdatedAt,
   } = useNbaMatchupProBrief({
     gameId,
     override: brief,
     apiBaseUrl,
-    enabled: visited.has("insight") && isPro && !preseason,
+    enabled: insightAvailable,
+  });
+  const insightUnread = useProInsightUnreadNative({
+    gameId,
+    version: insightAvailable && !briefLoading ? insightUpdatedAt : null,
+    viewing: tab === "insight",
   });
 
   const { report: liveInjury, loading: injuryLoading } =
@@ -233,6 +242,24 @@ export default function NbaPredictToolsTabsNative({
                 accessibilityState={{ selected: tab === "roster" }}
               />
             </CyberSlantedTabBarNative>
+            {insightUnread ? (
+              <View pointerEvents="none" style={styles.dotRow}>
+                <View style={styles.dotCell}>
+                  <View
+                    style={[
+                      styles.dot,
+                      {
+                        backgroundColor: TODAY_UNITERZ_DOT_COLOR,
+                        shadowColor: TODAY_UNITERZ_DOT_COLOR,
+                      },
+                    ]}
+                  />
+                </View>
+                <View style={styles.dotCell} />
+                <View style={styles.dotCell} />
+                <View style={styles.dotCell} />
+              </View>
+            ) : null}
           </View>
         </TutorialTargetNative>
 
@@ -328,6 +355,31 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingTop: 0,
     paddingBottom: 6,
+  },
+  /** INSIGHT 未読の点。タブバーと同じ 4 等分（左右 12 · gap 8）で INSIGHT の右上に重ねる */
+  dotRow: {
+    position: "absolute",
+    left: 12,
+    right: 12,
+    top: 0,
+    flexDirection: "row",
+    gap: 8,
+  },
+  dotCell: {
+    flexGrow: 1,
+    flexShrink: 1,
+    flexBasis: 0,
+  },
+  dot: {
+    position: "absolute",
+    top: 2,
+    right: -4,
+    width: 9,
+    height: 9,
+    borderRadius: 999,
+    shadowOpacity: 0.8,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 0 },
   },
   panel: {
     minHeight: 120,
