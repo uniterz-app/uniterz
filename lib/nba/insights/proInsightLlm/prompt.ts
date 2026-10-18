@@ -23,6 +23,7 @@ Voice (critical — match the PRO INSIGHT gate sample tone):
 - Good JA: "LAL のリバウンドは上位。BOS は連戦でボックスアウトが甘くなりやすく、ボードは LAL 有利。"
 - Bad JA: "LAL OREB%（#4）は BOS のリバウンド守備（#26）に対して相性が良さそうです。"
 - Prefer hintEn as the meaning skeleton, then rewrite into this voice in every language (not a literal rank dump).
+- One read per item, said once. Do not restate the same read in other words — JA bad: 「良い兆しで、厳しい状況ではない」「互角で、どちらにも傾かない均衡」; good: 「SPURS には良い兆し。」
 - Punchy. No filler ("It will be interesting…", "We'll see…", "Overall…", JA "重要な一戦" / "注目の一戦" / "鍵になる" with no concrete what).
 
 Two-beat rule (critical — every body in SCHEDULE / CONTEXT / INJURY IMPACT):
@@ -37,7 +38,7 @@ Two-beat rule (critical — every body in SCHEDULE / CONTEXT / INJURY IMPACT):
 - Even / neutral facts still get a read: e.g. an even H2H → "no matchup lean; tonight is decided by other factors".
 - Generic beat 2 is INVALID: JA "厳しい試合が予想される" / "厳しい戦い" / "形が変わる" / "形が変わりやすい" / "柱が弱体化" alone, EN "a tough game is expected" / "the shape changes". Say WHAT gets harder or WHAT changes (use the pillar meanings above).
 - INJURY IMPACT beat 2 = the pillar meaning (e.g. FT% leader out → "終盤のフリースローで取り切る手段が減る"; 3P% leader out → "外の脅威が減り、ペイントが詰まりやすい"; STL leader out → "守備から走る形が減る"; scoring leader out → "得点の負担が他の選手に回る"). If when-out W–L exists, add whether the team held up or sagged without him — the direction comes from aceOutVerdict, never from "a key player is out" alone.
-- Every travel-only SCHEDULE fact still needs beat 2 (who carries the load and where it shows up).
+- Every travel-only SCHEDULE fact still needs beat 2, and it must follow hintEn's travel read after ";" (light load / mild extra load / legs can be heavier). Never write heavy legs or a pace edge when hintEn says "a light load".
 - Beat 2 stays inside its own fact: pillar meanings are for INJURY IMPACT only; CONTEXT reads the record (e.g. close-game W–L → late-game execution), not injuries.
 - INJURY IMPACT evidence is rebuilt by code — you may output a short placeholder evidence line there.
 
@@ -45,11 +46,13 @@ Two-beat examples (JA shown; write the same idea in every language):
 - CONTEXT bad: "76ERS は 2025-26シーズンのトップ6チームに対して 1-7。今夜の相手 KNICKS はカンファレンス3位。"
 - CONTEXT good: "76ERS は 25-26シーズン、カンファ上位6チーム相手に 1-7。上位には勝ち切れておらず、3位 KNICKS 相手は 76ERS に分の悪い構図。"
 - CONTEXT bad: "76ERS は KNICKS に対して 3年で 3-9。ホームでは 0-6。"
-- CONTEXT good: "過去3年の対戦は 76ERS 3-9、ホームでも 0-6。会場の後押しが効いていないカードで、相性は KNICKS 寄り。"
+- CONTEXT good: "過去3年の対戦は 76ERS 3-9、76ERS のホームでも 0-6。会場の後押しが効いていないカードで、相性は KNICKS 寄り。"
+- H2H home record: always name whose home it is ("when hosting" in hintEn = that team's home). JA bad: 「PISTONS 4-7、ホームでは 3-2」; good: 「PISTONS 4-7、PISTONS のホームでは 3-2」. The connector comes from hintEn: "same lean at home" → JA 「〜のホームでも」; "even at home" → 「ただ〜のホームでは 3-3 の五分」; "flips at home" → 「ただ〜のホームでは 3-2 と勝ち越し」. Never 「でも」 for even / flips.
 - CONTEXT good (even): "過去3年（23-24〜25-26）の対戦は 6-6 の五分。相性ではどちらにも傾かず、今夜は移動や欠場の差で決まりやすい。"
 - CONTEXT bad: "CLIPPERS は 25-26シーズンのディビジョン対戦で 10勝7敗。今夜の WARRIORS との試合は重要な一戦。"
 - SCHEDULE bad: "HEAT は MIAMI から TORONTO まで移動（1,988km）。"
-- SCHEDULE good: "HEAT は MIAMI から TORONTO へ 1,988km の移動。負担は HEAT 側で、脚が重くなりやすい序盤は RAPTORS がペースを握りやすい。"
+- SCHEDULE good (hint "legs can be heavier"): "HEAT は MIAMI から TORONTO へ 1,988km、休養1日での移動。負担は HEAT 側で、脚が重くなりやすい序盤は RAPTORS がペースを握りやすい。"
+- SCHEDULE good (hint "a light load"): "CELTICS は BOSTON から DETROIT へ 984km の移動。ただ前に試合がなく負担は軽めで、移動の差は参考程度。"
 - INJURY bad: "D.DIVINCENZO が OUT · チームのスティールリーダーが欠場し、形が変わる。"
 - INJURY good: "D.DiVincenzo は OUT。チーム最多のスティールが抜け、TIMBERWOLVES は守備から走る形が減りやすい。"
 - INJURY bad: "J.BUTLER が OUT。チームのFT%リーダーが欠場し、フリースローの柱が弱体化。"
@@ -148,7 +151,7 @@ export function buildProInsightLlmUserPayload(pack: ProInsightFactPack): string 
   );
   const sections = PRO_INSIGHT_NARRATIVE_SECTION_KINDS.map((kind) => ({
     kind,
-    facts: (pack.sections[kind] ?? []).filter((f) => f !== difficulty).map((f) => ({
+    facts: (pack.sections[kind] ?? []).filter((f) => f !== difficulty && !f.templateBody).map((f) => ({
       id: f.id,
       kind: f.kind,
       mode: f.mode ?? null,

@@ -9,6 +9,7 @@ import type {
 import { PRO_INSIGHT_FACT_CAPS } from "@/lib/nba/insights/proInsightFacts/types";
 import { fingerprintProInsightFacts } from "@/lib/nba/insights/proInsightFacts/fingerprint";
 import { buildMatchupFactCandidates } from "@/lib/nba/insights/proInsightFacts/buildMatchupFacts";
+import { buildMatchupStatTable } from "@/lib/nba/insights/proInsightFacts/buildMatchupStatTable";
 import {
   buildScheduleFactCandidates,
   type HighMinutePlayer,
@@ -46,6 +47,9 @@ export type AssembleProInsightFactsInput = {
   tonightVenueTeamId?: string;
   seasonRows: NbaLeagueTeamStatRow[];
   priorRows?: NbaLeagueTeamStatRow[] | null;
+  /** seasonRows / priorRows のシーズン（MATCHUP 表の出典表示） */
+  seasonKey?: string | null;
+  priorSeasonKey?: string | null;
   last10Rows?: NbaLeagueTeamStatRow[] | null;
   homeInjuries: NbaTeamInjuryEntry[];
   awayInjuries: NbaTeamInjuryEntry[];
@@ -257,5 +261,18 @@ export function assembleProInsightFactPack(
     sections,
     candidates,
     fingerprint,
+    matchupTable: buildMatchupStatTable({
+      phase: input.phase,
+      seasonRows: input.seasonRows,
+      priorRows: input.priorRows,
+      seasonKey: input.seasonKey,
+      priorSeasonKey: input.priorSeasonKey,
+      homeTeamId: input.homeTeamId,
+      awayTeamId: input.awayTeamId,
+      homeInjuries: input.homeInjuries,
+      awayInjuries: input.awayInjuries,
+      playerLeaders: input.playerLeaders,
+      mpgByPlayerId: input.mpgByPlayerId,
+    }),
   };
 }

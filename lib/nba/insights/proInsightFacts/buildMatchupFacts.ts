@@ -38,14 +38,14 @@ import { proInsightTeamAbbr } from "@/lib/nba/insights/proInsightFacts/teamAbbr"
 
 export { MATCHUP_INJURY_MIN_MPG };
 
-type ClashDef = {
+export type ClashDef = {
   kind: string;
   label: string;
   myKey: RankedMetricKey;
   oppKey: RankedMetricKey;
 };
 
-const CLASH_DEFS: ClashDef[] = [
+export const CLASH_DEFS: ClashDef[] = [
   { kind: "paint", label: "PAINT", myKey: "ptsPaint", oppKey: "oppPtsPaint" },
   { kind: "fb", label: "FAST BREAK", myKey: "ptsFb", oppKey: "oppPtsFb" },
   {
@@ -227,7 +227,7 @@ function ownerMetrics(
   ];
 }
 
-function toMatchupOwner(hit: StyleOwnerInjury): ProInsightMatchupOwner {
+export function toMatchupOwner(hit: StyleOwnerInjury): ProInsightMatchupOwner {
   return {
     playerName: shortName(hit.injury),
     status: injuryStatus(hit.injury) ?? "questionable",

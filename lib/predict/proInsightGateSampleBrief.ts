@@ -79,6 +79,46 @@ export const PRO_INSIGHT_GATE_SAMPLE_BRIEF: ProInsightNarrativeBrief = {
           evidence: [e("LAL OREB% #4 · Opp DREB% #26 · BOS rest 0")],
         },
       ],
+      table: {
+        seasonKey: "2025-26",
+        teamCount: 30,
+        rows: [
+          {
+            kind: "three",
+            label: { ja: "3P", en: "Three-point" },
+            edgeTeamId: "nba-celtics",
+            away: { teamId: "nba-celtics", metric: { ja: "3PA", en: "3PA" }, value: "42.1", rank: 3 },
+            home: { teamId: "nba-lakers", metric: { ja: "被3P%", en: "Opp 3P%" }, value: "37.2%", rank: 24 },
+            notes: [
+              {
+                ja: "CELTICS はこの武器の担い手 J.Tatum（3P 成功数チーム1位）が OUT",
+                en: "CELTICS: J.Tatum (#1 on team in 3PM) is OUT",
+              },
+            ],
+          },
+          {
+            kind: "glass",
+            label: { ja: "オフェンスリバウンド", en: "Offensive glass" },
+            edgeTeamId: "nba-lakers",
+            away: { teamId: "nba-celtics", metric: { ja: "被OREB%", en: "Opp OREB%" }, value: "31.8%", rank: 26 },
+            home: { teamId: "nba-lakers", metric: { ja: "OREB%", en: "OREB%" }, value: "33.9%", rank: 4 },
+          },
+          {
+            kind: "tov",
+            label: { ja: "ターンオーバー", en: "Turnovers" },
+            edgeTeamId: "nba-celtics",
+            away: { teamId: "nba-celtics", metric: { ja: "TOV%", en: "TOV%" }, value: "12.1%", rank: 2 },
+            home: { teamId: "nba-lakers", metric: { ja: "強制TO", en: "Forced TO" }, value: "13.4", rank: 21 },
+          },
+          {
+            kind: "paint",
+            label: { ja: "ペイント", en: "Paint" },
+            edgeTeamId: "nba-lakers",
+            away: { teamId: "nba-celtics", metric: { ja: "被ペイント得点", en: "Opp paint PTS" }, value: "52.0", rank: 22 },
+            home: { teamId: "nba-lakers", metric: { ja: "ペイント得点", en: "Paint PTS" }, value: "54.2", rank: 6 },
+          },
+        ],
+      },
     },
     {
       kind: "SCHEDULE",

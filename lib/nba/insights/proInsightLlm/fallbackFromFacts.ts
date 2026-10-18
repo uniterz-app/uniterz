@@ -37,10 +37,14 @@ export function fallbackNarrativeFromFactPack(
     const facts = pack.sections[kind as ProInsightNarrativeKind] ?? [];
     return {
       kind: kind as ProInsightNarrativeKind,
-      items: facts.map((f) => ({
-        body: allLang(f.hintEn),
-        evidence: [evidenceLine(f.metrics)],
-      })),
+      items: facts.map((f) =>
+        f.templateBody
+          ? { body: f.templateBody, evidence: [], template: "fact" as const }
+          : {
+              body: allLang(f.hintEn),
+              evidence: [evidenceLine(f.metrics)],
+            }
+      ),
     };
   }).filter((s) => s.items.length > 0);
 

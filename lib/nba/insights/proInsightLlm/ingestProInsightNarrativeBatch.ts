@@ -81,7 +81,12 @@ import {
 } from "@/lib/nba/insights/proInsightLlm/prompt";
 import { parseProInsightLlmJson } from "@/lib/nba/insights/proInsightLlm/parseLlmJson";
 import { fallbackNarrativeFromFactPack } from "@/lib/nba/insights/proInsightLlm/fallbackFromFacts";
-import { renderMatchupNarrativeItem } from "@/lib/nba/insights/proInsightLlm/matchupNarrativeTemplate";
+import { matchupTableCompatItems } from "@/lib/nba/insights/proInsightFacts/buildMatchupStatTable";
+import {
+  PRO_INSIGHT_NARRATIVE_SECTION_KINDS,
+  type ProInsightMatchupStatTable,
+  type ProInsightNarrativeItem,
+} from "@/lib/predict/proInsightNarrativeTypes";
 import { dropStaleLongTermInjuries } from "@/lib/nba/insights/proInsightFacts/longTermInjury";
 import { buildLongTermOutImpacts } from "@/lib/nba/insights/proInsightFacts/buildInjuryImpactFacts";
 import type { NbaInjuryOutImpact } from "@/lib/nba/matchupDifficulty/injuryAdjustedDifficulty";
@@ -371,18 +376,50 @@ function recentOppWinPcts(input: {
   return out.reverse();
 }
 
-/** MATCHUP はテンプレで上書き（LLM / fallback の MATCHUP は捨てる） */
+/** MATCHUP は順位差の表で上書き（LLM / fallback の MATCHUP は捨てる） */
 function withTemplateMatchup(
   brief: ProInsightNarrativeBrief,
   pack: ProInsightFactPack
 ): ProInsightNarrativeBrief {
-  const items = (pack.sections.MATCHUP ?? [])
-    .map(renderMatchupNarrativeItem)
-    .filter((x): x is NonNullable<typeof x> => x != null);
+  const table = pack.matchupTable ?? null;
   const rest = brief.sections.filter((s) => s.kind !== "MATCHUP");
-  const sections = items.length
-    ? [{ kind: "MATCHUP" as const, items }, ...rest]
+  const sections = table
+    ? [
+        {
+          kind: "MATCHUP" as const,
+          items: matchupTableCompatItems(table),
+          table,
+        },
+        ...rest,
+      ]
     : rest;
+  return { ...brief, sections };
+}
+
+/** 本文をコードで決める事実（templateBody）をパック順の位置に差し込む。LLM にはその事実を渡していない */
+function withTemplateFactItems(
+  brief: ProInsightNarrativeBrief,
+  pack: ProInsightFactPack
+): ProInsightNarrativeBrief {
+  const byKind = new Map(brief.sections.map((s) => [s.kind, s]));
+  for (const kind of ["SCHEDULE", "CONTEXT"] as const) {
+    const facts = pack.sections[kind] ?? [];
+    if (!facts.some((f) => f.templateBody)) continue;
+    const llmItems = [...(byKind.get(kind)?.items ?? [])];
+    const items: ProInsightNarrativeItem[] = [];
+    for (const f of facts) {
+      if (f.templateBody) {
+        items.push({ body: f.templateBody, evidence: [], template: "fact" });
+        continue;
+      }
+      const next = llmItems.shift();
+      if (next) items.push(next);
+    }
+    if (items.length) byKind.set(kind, { ...(byKind.get(kind) ?? { kind }), kind, items });
+  }
+  const sections = PRO_INSIGHT_NARRATIVE_SECTION_KINDS.map((k) => byKind.get(k)).filter(
+    (s): s is ProInsightNarrativeBrief["sections"][number] => s != null
+  );
   return { ...brief, sections };
 }
 
@@ -593,8 +630,11 @@ async function writeNarrative(
     withInjuryDifficultyItem(
       withNumberGuard(
         withInjuryFixups(
-          rewriteThisSeasonLabels(
-            withTemplateMatchup(brief, meta.factPack),
+          withTemplateFactItems(
+            rewriteThisSeasonLabels(
+              withTemplateMatchup(brief, meta.factPack),
+              meta.factPack
+            ),
             meta.factPack
           ),
           meta.factPack,
@@ -626,6 +666,7 @@ async function writeNarrative(
       phase: meta.factPack.phase,
       sections: meta.factPack.sections,
       scheduleDifficulty: meta.factPack.scheduleDifficulty ?? null,
+      matchupTable: meta.factPack.matchupTable ?? null,
       longTermOutImpacts: meta.factPack.longTermOutImpacts ?? [],
       gamesPlayed: meta.factPack.gamesPlayed ?? null,
       packedAtMs: Date.now(),
@@ -951,6 +992,8 @@ export async function submitProInsightNarrativeBatch(
         tonightVenueTeamId: homeTeamId,
         seasonRows,
         priorRows,
+        seasonKey,
+        priorSeasonKey: priorKey,
         last10Rows: last10ForPack.length ? last10ForPack : null,
         homeInjuries: homeActiveInjuries,
         awayInjuries: awayActiveInjuries,
@@ -1165,6 +1208,7 @@ export async function submitProInsightNarrativeBatch(
         phase: p.pack.phase,
         sections: p.pack.sections,
         scheduleDifficulty: p.pack.scheduleDifficulty ?? null,
+        matchupTable: p.pack.matchupTable ?? null,
         longTermOutImpacts: p.pack.longTermOutImpacts ?? [],
         gamesPlayed: p.pack.gamesPlayed ?? null,
         packedAtMs: nowMs,
@@ -1316,6 +1360,7 @@ export async function pollProInsightNarrativeBatches(
                 sections?: ProInsightFactPack["sections"];
                 phase?: ProInsightFactPack["phase"];
                 scheduleDifficulty?: ProInsightScheduleDifficulty | null;
+                matchupTable?: ProInsightMatchupStatTable | null;
                 longTermOutImpacts?: NbaInjuryOutImpact[];
                 gamesPlayed?: number | null;
               }
@@ -1330,6 +1375,7 @@ export async function pollProInsightNarrativeBatches(
             candidates: [],
             fingerprint: facts.fingerprint,
             scheduleDifficulty: facts.scheduleDifficulty ?? null,
+            matchupTable: facts.matchupTable ?? null,
             longTermOutImpacts: facts.longTermOutImpacts ?? [],
             gamesPlayed: facts.gamesPlayed ?? undefined,
           };
@@ -1384,6 +1430,7 @@ export async function pollProInsightNarrativeBatches(
               sections?: ProInsightFactPack["sections"];
               phase?: ProInsightFactPack["phase"];
               scheduleDifficulty?: ProInsightScheduleDifficulty | null;
+                matchupTable?: ProInsightMatchupStatTable | null;
               longTermOutImpacts?: NbaInjuryOutImpact[];
               gamesPlayed?: number | null;
             }
@@ -1391,6 +1438,7 @@ export async function pollProInsightNarrativeBatches(
 
         const pack: ProInsightFactPack = {
           scheduleDifficulty: facts?.scheduleDifficulty ?? null,
+          matchupTable: facts?.matchupTable ?? null,
           longTermOutImpacts: facts?.longTermOutImpacts ?? [],
           gamesPlayed: facts?.gamesPlayed ?? undefined,
           homeTeamId: homeId,
@@ -1786,6 +1834,8 @@ export async function patchProInsightNarrativesIfInjuryChanged(
         tonightVenueTeamId: homeTeamId,
         seasonRows,
         priorRows,
+        seasonKey,
+        priorSeasonKey: priorKey,
         last10Rows: last10ForPack.length ? last10ForPack : null,
         homeInjuries: homeActiveInjuries,
         awayInjuries: awayActiveInjuries,

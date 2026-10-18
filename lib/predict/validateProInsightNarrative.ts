@@ -4,12 +4,16 @@
  */
 import type { UiStrings } from "@/lib/i18n/ui";
 import type {
+  ProInsightMatchupStatRow,
+  ProInsightMatchupStatSide,
+  ProInsightMatchupStatTable,
   ProInsightNarrativeBrief,
   ProInsightNarrativeItem,
   ProInsightNarrativeKind,
   ProInsightNarrativeSection,
 } from "@/lib/predict/proInsightNarrativeTypes";
 import {
+  PRO_INSIGHT_MATCHUP_TABLE_MAX_ROWS,
   PRO_INSIGHT_NARRATIVE_ITEM_CAPS,
   PRO_INSIGHT_NARRATIVE_SECTION_KINDS,
 } from "@/lib/predict/proInsightNarrativeTypes";
@@ -138,15 +142,74 @@ function sanitizeSection(raw: unknown): ProInsightNarrativeSection | null {
   }
   const itemsRaw = (raw as { items?: unknown }).items;
   if (!Array.isArray(itemsRaw)) return null;
-  const cap = PRO_INSIGHT_NARRATIVE_ITEM_CAPS[kind as ProInsightNarrativeKind];
+  const table =
+    kind === "MATCHUP"
+      ? sanitizeMatchupTable((raw as { table?: unknown }).table)
+      : null;
+  const cap = table
+    ? PRO_INSIGHT_MATCHUP_TABLE_MAX_ROWS
+    : PRO_INSIGHT_NARRATIVE_ITEM_CAPS[kind as ProInsightNarrativeKind];
   const items: ProInsightNarrativeItem[] = [];
   for (const it of itemsRaw) {
     if (items.length >= cap) break;
     const item = sanitizeItem(it);
     if (item) items.push(item);
   }
-  if (items.length === 0) return null;
-  return { kind: kind as ProInsightNarrativeKind, items };
+  if (items.length === 0 && !table) return null;
+  return {
+    kind: kind as ProInsightNarrativeKind,
+    items,
+    ...(table ? { table } : {}),
+  };
+}
+
+function sanitizeMatchupSide(raw: unknown): ProInsightMatchupStatSide | null {
+  if (!raw || typeof raw !== "object") return null;
+  const o = raw as Record<string, unknown>;
+  const teamId = String(o.teamId ?? "").trim();
+  const metric = asUiStrings(o.metric);
+  const value = typeof o.value === "string" ? o.value.trim() : "";
+  const rank = Number(o.rank);
+  if (!teamId || !metric || !value || !Number.isFinite(rank) || rank < 1) {
+    return null;
+  }
+  return { teamId, metric, value, rank };
+}
+
+function sanitizeMatchupTable(raw: unknown): ProInsightMatchupStatTable | null {
+  if (!raw || typeof raw !== "object") return null;
+  const o = raw as Record<string, unknown>;
+  const rowsRaw = Array.isArray(o.rows) ? o.rows : [];
+  const rows: ProInsightMatchupStatRow[] = [];
+  for (const r of rowsRaw) {
+    if (rows.length >= PRO_INSIGHT_MATCHUP_TABLE_MAX_ROWS) break;
+    if (!r || typeof r !== "object") continue;
+    const ro = r as Record<string, unknown>;
+    const label = asUiStrings(ro.label);
+    const away = sanitizeMatchupSide(ro.away);
+    const home = sanitizeMatchupSide(ro.home);
+    const edgeTeamId = String(ro.edgeTeamId ?? "").trim();
+    if (!label || !away || !home || !edgeTeamId) continue;
+    const notes = (Array.isArray(ro.notes) ? ro.notes : [])
+      .map(asUiStrings)
+      .filter((n): n is UiStrings => n != null)
+      .map((n) => mapUiStrings(n, normalizeStatusWords));
+    rows.push({
+      kind: String(ro.kind ?? ""),
+      label,
+      edgeTeamId,
+      away,
+      home,
+      ...(notes.length ? { notes } : {}),
+    });
+  }
+  if (rows.length === 0) return null;
+  const teamCount = Number(o.teamCount);
+  return {
+    rows,
+    seasonKey: typeof o.seasonKey === "string" ? o.seasonKey : null,
+    teamCount: Number.isFinite(teamCount) && teamCount > 0 ? teamCount : 30,
+  };
 }
 
 export type ProInsightNarrativeApiMeta = {

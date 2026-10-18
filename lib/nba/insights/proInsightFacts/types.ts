@@ -3,8 +3,12 @@
  * UI 本数: MATCHUP2 / SCHEDULE2 / CONTEXT2 / INJURY IMPACT2。
  */
 import type { ProInsightNarrativeKind } from "@/lib/predict/proInsightNarrativeTypes";
-import { PRO_INSIGHT_NARRATIVE_ITEM_CAPS } from "@/lib/predict/proInsightNarrativeTypes";
+import {
+  PRO_INSIGHT_NARRATIVE_ITEM_CAPS,
+  type ProInsightMatchupStatTable,
+} from "@/lib/predict/proInsightNarrativeTypes";
 import type { ProBriefPhase } from "@/lib/predict/predictProBrief";
+import type { UiStrings } from "@/lib/i18n/ui";
 import type { NbaUpcomingMatchupDifficulty } from "@/lib/nba/matchupDifficulty/upcomingMatchupDifficulty";
 import type { NbaInjuryOutImpact } from "@/lib/nba/matchupDifficulty/injuryAdjustedDifficulty";
 
@@ -54,6 +58,8 @@ export type ProInsightFact = {
   dedupeKeys: string[];
   /** LLM 向け短い英語ヒント（数字は metrics を正とする） */
   hintEn: string;
+  /** 本文をコードで決める事実（今夜の移動・多年 H2H）。LLM に渡さず、この文をそのまま出す */
+  templateBody?: UiStrings;
   /** MATCHUP 本文テンプレ用（LLM に書かせない） */
   matchup?: ProInsightMatchupDetail;
   /** INJURY IMPACT 先頭の欠場込み厳しさテンプレ用（LLM に渡さない） */
@@ -114,6 +120,8 @@ export type ProInsightFactPack = {
   fingerprint: string;
   /** team-game-logs 由来の今夜の Matchup Difficulty。SCHEDULE 先頭をテンプレで出す（LLM には渡さない） */
   scheduleDifficulty?: ProInsightScheduleDifficulty | null;
+  /** MATCHUP 表（順位差が大きい順。LLM には渡さない） */
+  matchupTable?: ProInsightMatchupStatTable | null;
   /** LLM ファクトから外した長期離脱の影響（厳しさの取り直しだけで使う） */
   longTermOutImpacts?: NbaInjuryOutImpact[];
   /** 両チームのうち少ない方の今季消化試合数（early の「開幕N試合時点」注記用） */

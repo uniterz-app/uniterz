@@ -10,6 +10,7 @@ alwaysApply: false
 
 - 名簿は INJURY。Insight は今夜の読み（HOME / AWAY 最大 2 本）
 - MATCHUP は **型の衝突が大きい** か **欠場インパクトが大きい** の OR。差が小さくても、そのスタッツを厚く担う OUT/QUES は出す
+- MATCHUP の表示は **文章ではなく表**（攻め × 相手の守りの順位差が大きい順に最大 5 行・有利な側をチーム色）。今夜の移動と多年 H2H の文もコードで決める（`docs/pro-insight-generation-rules.md`）
 - 欠場の折り込みはペイント限定ではない（3P / リバウンド / TO 等すべて）
 - Injury Impact という 4 つ目の枠は作らない（選手読みは **PLAYERS**）
 - 勝者・推奨スコアは出さない

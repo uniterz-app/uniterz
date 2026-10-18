@@ -11,8 +11,10 @@ import {
 import { travelSummaryForBrief } from "@/lib/predict/nbaProBriefTravel";
 import {
   proInsightTeamAbbr,
+  proInsightTeamCity,
   proInsightTravelHopEn,
 } from "@/lib/nba/insights/proInsightFacts/teamAbbr";
+import type { UiStrings } from "@/lib/i18n/ui";
 import { computeRestDays } from "@/lib/nba/insights/buildScheduleLines";
 import type { ProInsightFact } from "@/lib/nba/insights/proInsightFacts/types";
 import type { ProBriefPhase } from "@/lib/predict/predictProBrief";
@@ -106,6 +108,51 @@ function countVenueStreak(prior: SchedulePriorGame[], home: boolean): number {
 
 function lastPrior(prior: SchedulePriorGame[]): SchedulePriorGame | null {
   return [...prior].sort((a, b) => b.startAtMs - a.startAtMs)[0] ?? null;
+}
+
+/** 今夜の移動の読み（休養日数で決める。距離だけで「脚が重い」と書かせない） */
+function travelReadEn(km: number, rest: number | null): string {
+  if (rest == null) return "no game before it, so the trip itself is a light load";
+  if (rest >= 2) return `${rest} days of rest soften it, a light load`;
+  return km >= 2500
+    ? "a long hop on one day of rest, legs can be heavier"
+    : "one day of rest after the trip, a mild extra load";
+}
+
+function travelTemplateBody(input: {
+  abbr: string;
+  fromTeamId: string | null | undefined;
+  toTeamId: string | null | undefined;
+  km: string;
+  rawKm: number;
+  rest: number | null;
+}): UiStrings {
+  const from = proInsightTeamCity(input.fromTeamId);
+  const to = proInsightTeamCity(input.toTeamId);
+  const hopJa = from && to ? `${from} から ${to} へ` : to ? `${to} へ` : "";
+  const hopEn = proInsightTravelHopEn(input.fromTeamId, input.toTeamId);
+  const { abbr, km, rest } = input;
+  const long = input.rawKm >= 2500;
+  const readJa =
+    rest == null
+      ? "前に試合がなく、移動の負担は軽め。"
+      : rest >= 2
+        ? `休養${rest}日があり、移動の負担は軽め。`
+        : long
+          ? "休養1日での長距離移動で、序盤は脚が重くなりやすい。"
+          : "休養1日での移動で、負担は少し増える。";
+  const readEn =
+    rest == null
+      ? "No game before it, so the trip is a light load."
+      : rest >= 2
+        ? `${rest} days of rest make it a light load.`
+        : long
+          ? "A long hop on one day of rest; legs can be heavier early."
+          : "One day of rest after the trip adds a little load.";
+  return {
+    ja: `${abbr} は ${hopJa} ${km} の移動。${readJa}`.replace(/\s+/g, " "),
+    en: `${abbr} travel ${hopEn} (${km}). ${readEn}`.replace(/\s+/g, " "),
+  };
 }
 
 function travelForTeam(input: {
@@ -588,7 +635,15 @@ function teamScheduleSide(input: {
           { key: "tonightKm", value: km, teamId: input.teamId },
         ],
         dedupeKeys: [`travel_load:${input.teamId}`],
-        hintEn: `${abbr} travel tonight ${hop} (${km}).`,
+        hintEn: `${abbr} travel tonight ${hop} (${km}); ${travelReadEn(travel.tonightKm, rest)}.`,
+        templateBody: travelTemplateBody({
+          abbr,
+          fromTeamId: travel.tonightFromId,
+          toTeamId: travel.tonightToId,
+          km,
+          rawKm: travel.tonightKm,
+          rest,
+        }),
       })
     );
   } else if (rest !== 0 && has48hTravel) {

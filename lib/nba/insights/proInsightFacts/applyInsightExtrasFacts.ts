@@ -19,10 +19,60 @@ import {
 } from "@/lib/nba/insights/proInsightFacts/teamAbbr";
 import type { ProInsightFact } from "@/lib/nba/insights/proInsightFacts/types";
 import type { ProBriefPhase } from "@/lib/predict/predictProBrief";
+import type { UiStrings } from "@/lib/i18n/ui";
 import {
   selectScheduleFactsDifferentialFirst,
   type SchedulePriorGame,
 } from "@/lib/nba/insights/proInsightFacts/buildScheduleFacts";
+
+/** 多年 H2H の本文（ホーム成績のつなぎ「でも／ただ」と相性の向きは勝敗の符号で決める） */
+function h2hTemplateBody(input: {
+  years: number;
+  homeAbbr: string;
+  awayAbbr: string;
+  overall: WlRecord;
+  atHome: WlRecord | null;
+}): UiStrings {
+  const { homeAbbr: H, awayAbbr: A, overall, atHome } = input;
+  const sign = Math.sign(overall.wins - overall.losses);
+  const span = input.years > 1 ? `過去${input.years}年の対戦` : "過去の対戦";
+  const spanEn = input.years > 1 ? `Over the last ${input.years} seasons` : "In recent meetings";
+
+  let homeJa = "。";
+  let homeEn = ".";
+  if (atHome) {
+    const hs = Math.sign(atHome.wins - atHome.losses);
+    const wl = formatWl(atHome);
+    if (hs === 0) {
+      homeJa = `。ただ ${H} のホームでは ${wl} の五分。`;
+      homeEn = `, though ${wl} (even) when ${H} host.`;
+    } else if (hs === sign) {
+      homeJa = `、${H} のホームでも ${wl}。`;
+      homeEn = `, and ${wl} when ${H} host.`;
+    } else {
+      homeJa = `。ただ ${H} のホームでは ${wl} と${hs > 0 ? "勝ち越し" : "負け越し"}。`;
+      homeEn = `, but ${wl} when ${H} host.`;
+    }
+  }
+
+  const leanJa =
+    sign > 0
+      ? `相性は ${H} 寄り。`
+      : sign < 0
+        ? `相性は ${A} 寄り。`
+        : "相性ではどちらにも傾かず、今夜は他の要素で決まりやすい。";
+  const leanEn =
+    sign > 0
+      ? `The series leans ${H}.`
+      : sign < 0
+        ? `The series leans ${A}.`
+        : "No series lean; tonight turns on other factors.";
+
+  return {
+    ja: `${span}は ${H} ${formatWl(overall)}${homeJa}${leanJa}`,
+    en: `${spanEn}, ${H} are ${formatWl(overall)} vs ${A}${homeEn} ${leanEn}`,
+  };
+}
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const MIN_WL_GAMES = 5;
@@ -294,11 +344,19 @@ export function buildInsightExtrasContextCandidates(input: {
       const span =
         keys.length > 1 ? ` (${keys[keys.length - 1]}–${keys[0]})` : "";
       const yearBit = `${years > 1 ? `${years}-year` : "multi-year"}${span}`;
+      const { wins, losses } = fromHome.overall;
+      const overallSign = Math.sign(wins - losses);
+      const homeSign = Math.sign(fromHome.atHome.wins - fromHome.atHome.losses);
+      const homeRelation =
+        homeSign === 0
+          ? "even at home"
+          : homeSign === overallSign
+            ? "same lean at home"
+            : "flips at home";
       const atHome =
         wlTotal(fromHome.atHome) >= 2
-          ? ` (${formatWl(fromHome.atHome)} at home)`
+          ? ` (${homeAbbr} ${formatWl(fromHome.atHome)} when hosting ${awayAbbr}; ${homeRelation})`
           : "";
-      const { wins, losses } = fromHome.overall;
       const lean =
         wins > losses
           ? ` — series leans ${homeAbbr}`
@@ -337,6 +395,13 @@ export function buildInsightExtrasContextCandidates(input: {
         mode: "neutral",
         dedupeKeys: [`h2h_multi:${pairKey}`],
         hintEn: `${yearBit} H2H: ${homeAbbr} ${formatWl(fromHome.overall)} vs ${awayAbbr}${atHome}${lean}.`,
+        templateBody: h2hTemplateBody({
+          years,
+          homeAbbr,
+          awayAbbr,
+          overall: fromHome.overall,
+          atHome: wlTotal(fromHome.atHome) >= 2 ? fromHome.atHome : null,
+        }),
       });
     }
   }

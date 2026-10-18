@@ -23,6 +23,7 @@ import {
 } from "../../profile/reports/reportThemeNative";
 import { MATCH_CARD_TEAM_NAME_FONT } from "../matchCardTypography";
 import type { GamesLanguage } from "../gamesI18n";
+import PredictProInsightMatchupTableNative from "./PredictProInsightMatchupTableNative";
 
 type Props = {
   brief: ProInsightNarrativeBrief;
@@ -178,6 +179,16 @@ export default function PredictProInsightNarrativePanelNative({
                   ))}
                 </View>
               ) : null}
+              {section.table ? (
+                <PredictProInsightMatchupTableNative
+                  table={section.table}
+                  lang={resolveLocalizedLang(language)}
+                  awayNick={awayNick}
+                  homeNick={homeNick}
+                  awayColor={awayColor}
+                  homeColor={homeColor}
+                />
+              ) : (
               <View style={styles.items}>
                 {section.items.map((item, ii) => (
                   <View key={`${section.kind}-${ii}`} style={styles.item}>
@@ -204,6 +215,7 @@ export default function PredictProInsightNarrativePanelNative({
                   </View>
                 ))}
               </View>
+              )}
             </View>
           );
         })}

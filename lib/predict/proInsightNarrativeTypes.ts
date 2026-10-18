@@ -14,6 +14,9 @@ export const PRO_INSIGHT_NARRATIVE_SECTION_KINDS = [
 export type ProInsightNarrativeKind =
   (typeof PRO_INSIGHT_NARRATIVE_SECTION_KINDS)[number];
 
+/** MATCHUP 表の最大行数 */
+export const PRO_INSIGHT_MATCHUP_TABLE_MAX_ROWS = 5;
+
 /** 枠ごとの本数（試合全体・設計正） */
 export const PRO_INSIGHT_NARRATIVE_ITEM_CAPS: Record<
   ProInsightNarrativeKind,
@@ -35,13 +38,47 @@ export type ProInsightNarrativeItem = {
   body: UiStrings;
   /** 根拠数字・ラベル（小さく表示） */
   evidence: UiStrings[];
-  /** テンプレ生成の項目。"difficulty" なら SCHEDULE 見出しに説明の ? を出す */
-  template?: "difficulty" | "injury_difficulty";
+  /** テンプレ生成の項目。"difficulty" なら SCHEDULE 見出しに説明の ? を出す。"fact" = 事実ごとのコード文 */
+  template?: "difficulty" | "injury_difficulty" | "fact";
+};
+
+export type ProInsightMatchupStatSide = {
+  teamId: string;
+  /** 指標名（攻め側は OREB%、守り側は 被OREB% など） */
+  metric: UiStrings;
+  /** 表示用の値（33.6% / 44.3） */
+  value: string;
+  /** リーグ内順位（1 = その指標で最良） */
+  rank: number;
+};
+
+/** MATCHUP 表の 1 行（攻め × 相手の守り。差が大きい順） */
+export type ProInsightMatchupStatRow = {
+  /** clash kind（paint / glass …） */
+  kind: string;
+  /** どこの争いか（ペイント / ボード …） */
+  label: UiStrings;
+  /** 有利な側（攻め側） */
+  edgeTeamId: string;
+  away: ProInsightMatchupStatSide;
+  home: ProInsightMatchupStatSide;
+  /** その指標を担う選手の欠場（OUT / questionable） */
+  notes?: UiStrings[];
+};
+
+export type ProInsightMatchupStatTable = {
+  rows: ProInsightMatchupStatRow[];
+  /** 数字の出典シーズン（序盤は前季） */
+  seasonKey: string | null;
+  /** 順位の母数 */
+  teamCount: number;
 };
 
 export type ProInsightNarrativeSection = {
   kind: ProInsightNarrativeKind;
+  /** MATCHUP は table がある版から table を表示。items は旧クライアント向けの 1 行要約 */
   items: ProInsightNarrativeItem[];
+  table?: ProInsightMatchupStatTable;
 };
 
 /** 試合単位の Insight（HOME/AWAY 分割なし） */

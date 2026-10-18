@@ -23,6 +23,7 @@ import {
 } from "@/app/component/common/ProCyberBadge";
 import { nameOxanium, jp } from "@/lib/fonts";
 import { matchCardTeamNameStyle } from "@/lib/games/teamDisplayTypography";
+import PredictProInsightMatchupTable from "@/app/component/predict/PredictProInsightMatchupTable";
 
 type Props = {
   brief: ProInsightNarrativeBrief;
@@ -204,6 +205,16 @@ export default function PredictProInsightNarrativePanel({
                   ))}
                 </div>
               ) : null}
+              {section.table ? (
+                <PredictProInsightMatchupTable
+                  table={section.table}
+                  lang={resolveLocalizedLang(language)}
+                  awayNick={awayNick}
+                  homeNick={homeNick}
+                  awayColor={awayColor}
+                  homeColor={homeColor}
+                />
+              ) : (
               <div className="flex flex-col gap-2.5">
                 {section.items.map((item, ii) => (
                   <div key={`${section.kind}-${ii}`} className="flex flex-col gap-1">
@@ -235,6 +246,7 @@ export default function PredictProInsightNarrativePanel({
                   </div>
                 ))}
               </div>
+              )}
             </div>
           );
         })}
