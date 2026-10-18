@@ -3,6 +3,7 @@
  * 設定・表示は Pro のみ。PICK UP / PRO LEAGUE 両方の TODAY とシーズン／期間ランキングで、誰でも見られる。
  */
 import { L, resolveLocalizedLang } from "@/lib/i18n/localize";
+import { findExternalContactViolation } from "@/lib/profile/externalContactTerms";
 import { findProfileGamblingTermViolation } from "@/lib/profile/profileGamblingTerms";
 
 export const RANKING_COMMENT_FIELD = "rankingComment";
@@ -24,7 +25,11 @@ export function validateRankingComment(
   text: string
 ): RankingCommentError | null {
   if (rankingCommentLength(text) > RANKING_COMMENT_MAX_CHARS) return "too_long";
-  if (text && findProfileGamblingTermViolation(text) != null) {
+  if (
+    text &&
+    (findProfileGamblingTermViolation(text) != null ||
+      findExternalContactViolation(text) != null)
+  ) {
     return "forbidden_terms";
   }
   return null;
