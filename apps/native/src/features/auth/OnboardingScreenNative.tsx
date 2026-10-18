@@ -127,11 +127,6 @@ export default function OnboardingScreenNative() {
       return;
     }
     try {
-      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (!perm.granted) {
-        cyberAlert(t.photoDeniedTitle, t.photoDenied);
-        return;
-      }
       setPicking(true);
       const picked = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ["images"],

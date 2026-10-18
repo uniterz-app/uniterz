@@ -184,11 +184,6 @@ export default function CreateGroupModalNative({ visible, language, onClose, onC
   }, [busy, onClose, resetFormFields]);
 
   const pickImage = useCallback(async () => {
-    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!perm.granted) {
-      cyberAlert("", language === "en" ? "Photo access is required." : "写真へのアクセスが必要です。");
-      return;
-    }
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images"],
       quality: 0.85,

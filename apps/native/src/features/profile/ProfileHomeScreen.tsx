@@ -1195,11 +1195,6 @@ export default function ProfileHomeScreen({
       return;
     }
     try {
-      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (!perm.granted) {
-        cyberAlert(t.pickPhotoTitle, t.pickPhotoDenied);
-        return;
-      }
       const picked = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ["images"],
         allowsEditing: false,

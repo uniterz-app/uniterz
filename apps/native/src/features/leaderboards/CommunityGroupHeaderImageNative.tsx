@@ -218,11 +218,6 @@ export default function CommunityGroupHeaderImageNative({
 
   const pickImage = useCallback(async () => {
     if (!editable || busy) return;
-    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!perm.granted) {
-      cyberAlert("", t.photoRequired);
-      return;
-    }
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images"],
       quality: 0.85,

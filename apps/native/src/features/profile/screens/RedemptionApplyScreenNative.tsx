@@ -43,7 +43,6 @@ import {
   REDEMPTION_PRODUCT_IMAGE_MAX_BYTES,
   redemptionProductImageStoragePath,
 } from "../../../../../../lib/redemption/uploadRedemptionProductImage";
-import { cyberAlert } from "../../../components/cyberAlert";
 import { redemptionApplyFlowCopy } from "../../../../../../lib/redemption/redemptionApplyFlowCopy";
 import RedemptionApplyFlowModalNative from "./RedemptionApplyFlowModalNative";
 
@@ -123,22 +122,6 @@ export default function RedemptionApplyScreenNative() {
   }, [fUser?.uid]);
 
   async function pickImage() {
-    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!perm.granted) {
-      cyberAlert(
-        "",
-        L(lang, {
-          ja: "写真ライブラリへのアクセスを許可してください。",
-          en: "Please allow photo library access.",
-          ko: "사진 라이브러리 접근을 허용해 주세요.",
-          zh: "请允许访问相册。",
-          es: "Permite el acceso a la galería.",
-          pt: "Permita acesso à galeria.",
-          fr: "Autorisez l’accès à la photothèque.",
-        })
-      );
-      return;
-    }
     const picked = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images"],
       quality: 0.85,
