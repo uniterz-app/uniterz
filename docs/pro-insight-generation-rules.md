@@ -2,7 +2,16 @@
 
 LLM の前に **ファクト選定** で落とす。文章は `hintEn` + プロンプトに従い、**ゲート例と同じ「読み」トーン**（スタッツ読み上げ禁止）。
 
-最終更新: 2026-09-27
+最終更新: 2026-10-18
+
+---
+
+## プレシーズンは材料にしない（全セクション共通）
+
+レギュラー以降の試合の Insight では、**プレシーズンの試合を一切数えない**。直近の成績・連勝・接戦／大差・ホームスタンド／ロード何戦目・連戦・移動・36 分以上出場・長期離脱判定はすべてレギュラー以降の試合だけ。開幕戦は「直近の試合なし」として扱う（前季の数字だけで書く）。
+
+- 実装: `ingestProInsightNarrativeBatch.ts` の `loadRecentNbaGamesAroundTeams`（`excludePreseason`）。厳しさのゲームログ（`buildTeamGameLogFromGames`）も同じくプレシーズン除外
+- 例外: プレシーズン同士の確認用スモーク（`includePreseason`）だけは対象試合がプレシーズンなので残す
 
 ---
 
@@ -234,7 +243,8 @@ evidence は fact の数字だけ。`opp*` は「被〜」（許した側）で�
 ### 文章（LLM）と後処理
 
 - 本文は 2 ビート: ①事実（数字）②今夜の読み（傾き / 信頼度 / 見どころ のどれか）。②に新しい数字は足さない。「形が変わる」「厳しい試合が予想される」だけは不可（`prompt.ts`）
-- 柱の意味（数字なし）: PTS→得点負担が回る · USG→攻撃の起点が変わる · AST→創出が細る · REB→ボード · STL→守備から走る形 · BLK→リム守備 · 3P→スペーシング · FT%→終盤のFT
+- 柱の意味（数字なし）: PTS→得点負担が回る · USG→攻撃の起点が変わる · AST→創出が細る · REB→ボード · STL→守備から走る形 · BLK→リム守備 · 3P→スペーシング · FT%→終盤のFT。hintEn に「if he sits, …」で指標ごとに渡す（`injuryShapeRoles.ts` の `PILLAR_MEANING`）。「柱が弱体化」は不可
+- 欠場時 W–L の向きはコードで決める（`aceOutVerdict`）: 欠場時勝率がチーム全体 −5pt 以内 = held_up（普段の水準。「弱体化」「崩れる」禁止）、−15pt 以上 = sagged、その間 = dipped
 - 後処理 `injuryNarrativeFixups.ts`: evidence は metrics から組み立て（`narrativeRoles` = 本文が使う柱 2 本 → 欠場時 W–L → OFF/DEF）。本文の OFF/DEF 符号は metrics で上書き。when-out が無い fact で W–L を書いた文は削除
 
 ### 長期離脱

@@ -300,11 +300,16 @@ async function loadUpcomingNbaGames(
   }));
 }
 
+/**
+ * 直近試合（日程・最近の形・連戦・出場時間の材料）。
+ * レギュラー以降の試合ではプレシーズンを数えない（開幕戦が「ホーム 3 戦目」「直近 1-4」になるため）。
+ */
 async function loadRecentNbaGamesAroundTeams(
   db: Firestore,
   teamIds: string[],
   beforeMs: number,
-  lookbackMs: number
+  lookbackMs: number,
+  opts: { excludePreseason: boolean }
 ): Promise<Array<{ id: string; data: Record<string, unknown> }>> {
   const fromMs = beforeMs - lookbackMs;
   const snap = await db
@@ -319,6 +324,7 @@ async function loadRecentNbaGamesAroundTeams(
   return snap.docs
     .map((d) => ({ id: d.id, data: d.data() as Record<string, unknown> }))
     .filter((d) => {
+      if (opts.excludePreseason && !isProInsightEligibleNbaGame(d.data)) return false;
       const homeId = teamIdFromSide(d.data.home, d.data.homeTeamId);
       const awayId = teamIdFromSide(d.data.away, d.data.awayTeamId);
       return want.has(homeId) || want.has(awayId);
@@ -856,7 +862,8 @@ export async function submitProInsightNarrativeBatch(
         db,
         [homeTeamId, awayTeamId],
         tipAtMs,
-        21 * 24 * 60 * 60 * 1000
+        21 * 24 * 60 * 60 * 1000,
+        { excludePreseason: isProInsightEligibleNbaGame(game.data) }
       );
       const homePrior = parsePriorGamesForTeam(recentDocs, homeTeamId, tipAtMs);
       const awayPrior = parsePriorGamesForTeam(recentDocs, awayTeamId, tipAtMs);
@@ -1702,7 +1709,8 @@ export async function patchProInsightNarrativesIfInjuryChanged(
         db,
         [homeTeamId, awayTeamId],
         tipAtMs,
-        21 * 24 * 60 * 60 * 1000
+        21 * 24 * 60 * 60 * 1000,
+        { excludePreseason: isProInsightEligibleNbaGame(game.data) }
       );
       const homePrior = parsePriorGamesForTeam(recentDocs, homeTeamId, tipAtMs);
       const awayPrior = parsePriorGamesForTeam(recentDocs, awayTeamId, tipAtMs);
