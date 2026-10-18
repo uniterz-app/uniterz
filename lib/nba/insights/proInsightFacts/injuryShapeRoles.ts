@@ -73,6 +73,42 @@ const METRIC_WEIGHT: Record<string, number> = {
   drtg: 6,
 };
 
+/**
+ * hint に載せる「抜けると何が起きるか」。抽象的な "pillar drops" だと LLM が「柱が弱体化」と直訳するので、
+ * 指標ごとに今夜の読みになる言い方を渡す。
+ */
+const PILLAR_MEANING: Record<string, string> = {
+  usg: "who runs the offense changes",
+  pts: "the scoring load shifts to others",
+  pts_paint: "paint scoring thins",
+  pct_pts_paint: "paint scoring thins",
+  pts_3: "outside scoring thins",
+  pct_pts_3: "outside scoring thins",
+  ast: "shot creation thins",
+  ast_pct: "shot creation thins",
+  reb: "the glass gets thinner",
+  reb_pct: "the glass gets thinner",
+  dreb: "defensive rebounding gets thinner",
+  oreb: "fewer second-chance possessions",
+  stl: "fewer forced turnovers and transition chances",
+  blk: "rim protection thins",
+  fg3m: "spacing shrinks and the paint gets crowded",
+  fg3_pct: "spacing shrinks and the paint gets crowded",
+  ts_pct: "efficient scoring thins",
+  efg_pct: "efficient scoring thins",
+  drtg: "the defense loses its anchor",
+  min: "the minutes load spreads to the bench",
+};
+
+function pillarMeaning(id: string): string {
+  if (PILLAR_MEANING[id]) return PILLAR_MEANING[id]!;
+  if (id.startsWith("pnr_")) return "the pick-and-roll engine thins";
+  if (id.startsWith("iso_")) return "one-on-one scoring thins";
+  if (id.startsWith("post_")) return "post scoring thins";
+  if (id.startsWith("clutch_")) return "late-game execution thins";
+  return "what he provides has to come from others";
+}
+
 function metricWeight(id: string): number {
   if (METRIC_WEIGHT[id] != null) return METRIC_WEIGHT[id]!;
   if (id.startsWith("pnr_") || id.startsWith("iso_") || id.startsWith("post_")) {
@@ -278,7 +314,7 @@ export function resolveInjuryShapeImpact(input: {
 
   for (const h of narrativeHits.slice(0, 4)) {
     hintBits.push(
-      `team ${h.label} leader #${h.rank} (${h.formatted}) — that pillar drops if out`
+      `team ${h.label} leader #${h.rank} (${h.formatted}) — if he sits, ${pillarMeaning(h.metricId)}`
     );
   }
 

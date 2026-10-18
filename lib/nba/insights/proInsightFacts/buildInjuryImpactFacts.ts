@@ -12,7 +12,12 @@ import {
   ACE_OUT_MIN_GAMES,
   ACE_OUT_DELTA_MIN,
 } from "@/lib/nba/insights/aceOutInsight";
-import { formatWl } from "@/lib/nba/insights/priorSeasonRecordTypes";
+import {
+  formatWl,
+  wlTotal,
+  wlWinPct,
+  type WlRecord,
+} from "@/lib/nba/insights/priorSeasonRecordTypes";
 import type { NbaPlayerStatLeadersBundle } from "@/lib/predict/nbaPlayerStatLeadersMocks";
 import {
   resolveInjuryShapeImpact,
@@ -32,6 +37,27 @@ import { isLongTermInjury } from "@/lib/nba/insights/proInsightFacts/longTermInj
 
 /** ace-out / shape が無くても、この点以上チームが弱くなる欠場は INJURY IMPACT に出す */
 const OUT_IMPACT_FACT_MIN = -1.5;
+
+export type AceOutVerdict = "held_up" | "dipped" | "sagged";
+
+/**
+ * 欠場時の勝率をチーム全体と比べた向き。LLM は W–L だけ見ると「主力欠場 = 弱体化」と書きがちなので、
+ * 向きはコードで決めて hint に載せる。
+ */
+export function aceOutVerdict(whenOut: WlRecord, overall: WlRecord): AceOutVerdict | null {
+  if (wlTotal(whenOut) <= 0 || wlTotal(overall) <= 0) return null;
+  const drop = wlWinPct(overall) - wlWinPct(whenOut);
+  if (drop <= 0.05) return "held_up";
+  if (drop >= 0.15) return "sagged";
+  return "dipped";
+}
+
+/** LLM 失敗時は hintEn がそのまま本文になるので、指示ではなく読める文にする */
+const ACE_OUT_VERDICT_HINT: Record<AceOutVerdict, string> = {
+  held_up: "No worse than their usual level without him.",
+  dipped: "A modest dip without him.",
+  sagged: "They clearly sagged without him.",
+};
 
 function shortName(entry: NbaTeamInjuryEntry): string {
   const raw = entry.name.trim();
@@ -323,11 +349,27 @@ function teamInjuryFacts(input: {
         }
       }
       score += 6;
+      const verdict = aceOutVerdict(hit.player.whenOut, hit.team.teamOverall);
+      if (verdict) {
+        metrics.push({
+          key: "aceOutTeamWl",
+          value: formatWl(hit.team.teamOverall),
+          teamId: input.teamId,
+        });
+        metrics.push({
+          key: "aceOutVerdict",
+          value: verdict,
+          teamId: input.teamId,
+        });
+      }
       const verb = aceSeason === "prior" ? "were" : "are";
       const seasonBit = aceSeason === "prior" ? " last season" : "";
       const deltaSuffix =
         deltaBits.length > 0 ? `, ${deltaBits.join("/")} vs season` : "";
-      whenOutClause = ` ${team} ${verb} ${formatWl(hit.player.whenOut)} when he was out${seasonBit} (${hit.player.whenOutPtsFor}-${hit.player.whenOutPtsAgainst})${deltaSuffix}.`;
+      const overallBit = verdict
+        ? ` Overall that season: ${formatWl(hit.team.teamOverall)}. ${ACE_OUT_VERDICT_HINT[verdict]}`
+        : "";
+      whenOutClause = ` ${team} ${verb} ${formatWl(hit.player.whenOut)} when he was out${seasonBit} (${hit.player.whenOutPtsFor}-${hit.player.whenOutPtsAgainst})${deltaSuffix}.${overallBit}`;
     }
 
     if (shape) {

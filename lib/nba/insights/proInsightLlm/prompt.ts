@@ -36,7 +36,7 @@ Two-beat rule (critical — every body in SCHEDULE / CONTEXT / INJURY IMPACT):
 - Pillar meanings you may use for beat 2 (no numbers): PTS → the scoring load shifts to others; USG → who runs the offense changes; AST → shot creation thins; REB/OREB → the glass; STL → fewer forced turnovers / transition chances; BLK → rim protection; 3P% / 3PM → spacing; FT% → late-game free-throw reliability.
 - Even / neutral facts still get a read: e.g. an even H2H → "no matchup lean; tonight is decided by other factors".
 - Generic beat 2 is INVALID: JA "厳しい試合が予想される" / "厳しい戦い" / "形が変わる" / "形が変わりやすい" / "柱が弱体化" alone, EN "a tough game is expected" / "the shape changes". Say WHAT gets harder or WHAT changes (use the pillar meanings above).
-- INJURY IMPACT beat 2 = the pillar meaning (e.g. FT% leader out → "終盤のフリースローで取り切る手段が減る"; 3P% leader out → "外の脅威が減り、ペイントが詰まりやすい"; STL leader out → "守備から走る形が減る"; scoring leader out → "得点の負担が他の選手に回る"). If when-out W–L exists, add whether the team held up or sagged without him.
+- INJURY IMPACT beat 2 = the pillar meaning (e.g. FT% leader out → "終盤のフリースローで取り切る手段が減る"; 3P% leader out → "外の脅威が減り、ペイントが詰まりやすい"; STL leader out → "守備から走る形が減る"; scoring leader out → "得点の負担が他の選手に回る"). If when-out W–L exists, add whether the team held up or sagged without him — the direction comes from aceOutVerdict, never from "a key player is out" alone.
 - Every travel-only SCHEDULE fact still needs beat 2 (who carries the load and where it shows up).
 - Beat 2 stays inside its own fact: pillar meanings are for INJURY IMPACT only; CONTEXT reads the record (e.g. close-game W–L → late-game execution), not injuries.
 - INJURY IMPACT evidence is rebuilt by code — you may output a short placeholder evidence line there.
@@ -54,7 +54,9 @@ Two-beat examples (JA shown; write the same idea in every language):
 - INJURY good: "D.DiVincenzo は OUT。チーム最多のスティールが抜け、TIMBERWOLVES は守備から走る形が減りやすい。"
 - INJURY bad: "J.BUTLER が OUT。チームのFT%リーダーが欠場し、フリースローの柱が弱体化。"
 - INJURY good: "J.Butler は OUT。チーム最高の FT% が抜け、WARRIORS は接戦終盤にフリースローで取り切る手段が減る。"
-- INJURY good (with when-out): "B.Miller が questionable。得点の柱が抜けると負担が他に回り、HORNETS は昨季彼の欠場時 4-15 と崩れていた。"
+- INJURY good (with when-out, aceOutVerdict sagged): "B.Miller が questionable。得点の柱が抜けると負担が他に回り、HORNETS は昨季彼の欠場時 4-15 と崩れていた。"
+- INJURY bad (held_up): "J.Duren が questionable。リバウンドの柱が弱体化。PISTONS は昨季彼の欠場時 10-2。" (10-2 is BETTER than their season — calling it 弱体化 contradicts the record)
+- INJURY good (held_up): "J.Duren が questionable。チーム最多のリバウンドが抜けてもボードで崩れる根拠は薄く、PISTONS は昨季彼の欠場時 10-2 と勝ち続けていた。"
 - CONTEXT bad beat 2: "…今夜の相手 PISTONS はカンファレンス1位で、厳しい戦いが予想される。"
 - CONTEXT good: "SUNS は 25-26シーズン、カンファ上位6チーム相手に 3-8。上位の強度に押し負けており、1位 PISTONS 相手は SUNS に分の悪い構図。"
 
@@ -94,9 +96,15 @@ CONTEXT:
 INJURY IMPACT:
 - Emit ONLY facts provided (ace-out W–L and/or shape pillar). Do not invent teammate usage bumps or who inherits touches.
 - Interpret the SHAPE SHIFT: who is out, what pillar drops, how the team has looked without them — then optional edge if facts support it.
-- Pattern spirit: "{Player} is {status}. [pillar thins]. {TEAM} are/were {W–L} when he was out … [OFF/DEF Δ if present]."
+- Pattern spirit: "{Player} is {status}. [the concrete change from hintEn's "if he sits, …"]. {TEAM} are/were {W–L} when he was out … [OFF/DEF Δ if present]."
+- hintEn gives the change per role ("if he sits, shot creation thins"). Rewrite THAT change in each language. JA NEVER: "〜の柱が弱体化" / "〜リーダーが欠場すると" / "形が変わる" — e.g. AST → "チャンスを作る役が減る", REB → "ボードが薄くなる", BLK → "リムを守る役がいなくなる".
 - Good JA: "J.Tatum OUT · BOS 今季欠場時 11-6。チーム USG/AST リーダー欠場で形が変わり、OFF −5.3 · DEF +1.8。LAL 有利。"
 - Bad: listing status + W–L with no "だから形がどうなる" reading.
+- aceOutVerdict (code-decided, follow it exactly — it compares the when-out record with the team's overall record aceOutTeamWl):
+  - held_up → without him the team stayed at its usual level (JA 「彼抜きでも普段の水準を保っていた」; for a strong team you may say 勝ち続けていた). The pillar still leaves (say what he provides), but NEVER write that the team weakens, sags, collapses or struggles (JA never 弱体化 / 崩れる / 苦しくなる / 失速 for that team). Read: "the absence is less damaging than it looks".
+  - dipped → a modest dip, not a collapse ("やや落ちる程度").
+  - sagged → they clearly fell off without him ("崩れていた" is fine).
+  - No aceOutVerdict → do not judge the direction from W–L yourself.
 - If aceOutSeason is "prior" / hint says last season: use were + last-season framing.
 - aceOutOffDelta / aceOutDefDelta are per-100 ratings without him. OFF + = scored more, OFF − = scored less. DEF is points ALLOWED: DEF + = defense got WORSE (allowed more), DEF − = defense got better. Never call DEF + "守備が強化" / "defense improved".
 - NEVER say "when he plays" / "出場時". Never invent W–L. Never name a teammate who will "step up".
