@@ -4,7 +4,7 @@
  * leaders 無し / ヒット無し → 欠場は MATCHUP に折り込まない。
  */
 import type { NbaTeamInjuryEntry } from "@/lib/predict/nbaTeamDetailPreviewMocks";
-import { isOutOrQuestionableInjury } from "@/lib/nba/teamInjuries/injuryStatusDisplay";
+import { isProInsightAbsenceStatus } from "@/lib/nba/teamInjuries/injuryStatusDisplay";
 import type {
   NbaPlayerLeaderMetricId,
   NbaPlayerStatLeadersBundle,
@@ -140,7 +140,7 @@ export function findStyleOwnerInjury(input: {
 }): StyleOwnerInjury | null {
   if (!input.leaders) return null;
   const list = input.injuries.filter((i) => {
-    if (!isOutOrQuestionableInjury(i.status)) return false;
+    if (!isProInsightAbsenceStatus(i.status)) return false;
     return mpgOf(i, input.mpgByPlayerId) >= MATCHUP_INJURY_MIN_MPG;
   });
   if (list.length === 0) return null;

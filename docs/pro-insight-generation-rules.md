@@ -189,6 +189,10 @@ evidence は fact の数字だけ。`opp*` は「被〜」（許した側）で�
 - Pro Insight 生成時も recent games で last10 の空レーティング/3P を補完
 - extras: `nbaTeamInsightExtras`（多年 H2H · vsDivision · clutchClose5）。チーム詳細 UI には出さない
 
+### 相手の順位（開幕前・序盤）
+
+opening / early の「上位 6 相手」は前季の順位で判定する。相手の順位の数字は渡さず「25-26シーズン上位6」とだけ書く（今の順位に読めるため。`buildContextFacts.ts`）。full になったら今季の順位の数字を出す。
+
 ### シーズン表記
 
 - 対帯 / venue / extras / カンファ順位の fact は出典季を metric（`statsSeason` / `seasonSource` / `oppConfRankSeason`）と hint（`in 2025-26`）に必ず載せる。多年 H2H は期間（`2023-24–2025-26`）
@@ -246,6 +250,10 @@ evidence は fact の数字だけ。`opp*` は「被〜」（許した側）で�
 - 柱の意味（数字なし）: PTS→得点負担が回る · USG→攻撃の起点が変わる · AST→創出が細る · REB→ボード · STL→守備から走る形 · BLK→リム守備 · 3P→スペーシング · FT%→終盤のFT。hintEn に「if he sits, …」で指標ごとに渡す（`injuryShapeRoles.ts` の `PILLAR_MEANING`）。「柱が弱体化」は不可
 - 欠場時 W–L の向きはコードで決める（`aceOutVerdict`）: 欠場時勝率がチーム全体 −5pt 以内 = held_up（普段の水準。「弱体化」「崩れる」禁止）、−15pt 以上 = sagged、その間 = dipped
 - 後処理 `injuryNarrativeFixups.ts`: evidence は metrics から組み立て（`narrativeRoles` = 本文が使う柱 2 本 → 欠場時 W–L → OFF/DEF）。本文の OFF/DEF 符号は metrics で上書き。when-out が無い fact で W–L を書いた文は削除
+
+### day-to-day は出さない
+
+欠場として扱うのは OUT / doubtful / questionable だけ。day-to-day は復帰見込みなので INJURY IMPACT・欠場込みの厳しさ・MATCHUP の担い手注記に出さない（`isProInsightAbsenceStatus`）。
 
 ### 長期離脱
 

@@ -50,6 +50,13 @@ export function isOutOrQuestionableInjury(
   return status !== "probable";
 }
 
+/** Pro Insight で欠場として扱う。day-to-day は復帰見込みなので欠場の影響・担い手注記に出さない */
+export function isProInsightAbsenceStatus(
+  status: NbaTeamInjurySnapshotStatus
+): boolean {
+  return status === "out" || status === "doubtful" || status === "questionable";
+}
+
 /** プレイヤー詳細 availability（out | gtd） */
 export function teamInjuryStatusToAvailability(
   status: NbaTeamInjurySnapshotStatus

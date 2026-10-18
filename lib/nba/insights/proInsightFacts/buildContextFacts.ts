@@ -417,6 +417,11 @@ function vsBandFacts(input: {
     const top =
       venue && wlTotal(venue) >= 2 ? venue : split.vsConfTop6;
     if (top && extremeWl(top, minGames === 8 ? 4 : 2)) {
+      // opening / early の順位は前季。順位の数字を渡すと LLM が季を落として「今 2 位」と書くので、上位 6 とだけ渡す
+      const priorRank = input.phase !== "full" && input.confRankSeasonKey != null;
+      const oppBit = priorRank
+        ? `tonight vs ${oppNick}, a conf top-6 team in ${input.confRankSeasonKey} (not a current standing)`
+        : `tonight vs ${oppNick}, conf #${input.opponentConfRank}${input.confRankSeasonKey ? ` in ${input.confRankSeasonKey}` : ""}`;
       out.push({
         id: `ctx:vsTop:${input.teamId}`,
         section: "CONTEXT",
@@ -430,11 +435,15 @@ function vsBandFacts(input: {
             value: formatWl(top),
             teamId: input.teamId,
           },
-          {
-            key: "oppConfRank",
-            value: String(input.opponentConfRank),
-            teamId: input.opponentTeamId,
-          },
+          ...(priorRank
+            ? []
+            : [
+                {
+                  key: "oppConfRank",
+                  value: String(input.opponentConfRank),
+                  teamId: input.opponentTeamId,
+                },
+              ]),
           ...(input.confRankSeasonKey
             ? [
                 {
@@ -449,7 +458,7 @@ function vsBandFacts(input: {
         players: [],
         mode: "neutral",
         dedupeKeys: [`vs_band:${input.teamId}`],
-        hintEn: `${nick} vs conf top-6 in ${statsSeason}: ${formatWl(top)}, ${wlLeanEn(top, nick)} (tonight vs ${oppNick}, conf #${input.opponentConfRank}${input.confRankSeasonKey ? ` in ${input.confRankSeasonKey}` : ""}).`,
+        hintEn: `${nick} vs conf top-6 in ${statsSeason}: ${formatWl(top)}, ${wlLeanEn(top, nick)} (${oppBit}).`,
       });
       return out;
     }

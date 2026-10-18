@@ -4,7 +4,7 @@
  * 队友バンプ／役割増加の予測はしない。
  */
 import type { NbaTeamInjuryEntry } from "@/lib/predict/nbaTeamDetailPreviewMocks";
-import { isOutOrQuestionableInjury } from "@/lib/nba/teamInjuries/injuryStatusDisplay";
+import { isProInsightAbsenceStatus } from "@/lib/nba/teamInjuries/injuryStatusDisplay";
 import type { NbaTeamAceOutRecordsBundle } from "@/lib/nba/insights/aceOutRecordTypes";
 import {
   aceOutOffDefDeltas,
@@ -235,7 +235,7 @@ function teamInjuryFacts(input: {
   tipAtMs?: number;
 }): ProInsightFact[] {
   const list = input.injuries.filter((i) =>
-    isOutOrQuestionableInjury(i.status)
+    isProInsightAbsenceStatus(i.status)
   );
   if (list.length === 0) return [];
 

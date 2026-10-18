@@ -87,6 +87,7 @@ CONTEXT:
 - Use ONLY context facts given (SOS, streak quality, home/away streaks, margin profile, vs win% band, multi-year H2H, vs division, last-10 rating tilt, clutch form / close-game W–L, hot 3P, venue split).
 - Interpret what it means for TONIGHT (e.g. recent soft slate vs tonight's tougher foe raises the bar).
 - Only use facts that apply to TONIGHT (e.g. vs conf top-6 only if the fact says the opponent is conf #1–6).
+- When hintEn says the opponent is "a conf top-6 team in 2025-26 (not a current standing)", write exactly that with the season (JA "25-26シーズン上位6の CELTICS"). NEVER write a rank number or a present-tense standing (JA never "カンファレンス2位の" / "今2位"). Every mention of the opponent's top-6 status must carry the season — JA bad: 「今夜の相手 CELTICS はカンファレンス上位6チーム」; good: 「今夜の相手 CELTICS も 25-26シーズンは上位6」.
 - If phase is "opening", frame numbers as prior-season context and lean on "weight" reads (last season's team, soft signal) rather than confident tilts — unless the record is lopsided.
 - If phase is "early" (each team has played only gamesPlayed games this season): records / H2H / vs-band facts are prior-season context (same framing as opening). Any this-season form fact (SOS, streaks, margin, last-10 tilt) is a tiny sample — frame it as a light signal (JA 「まだ数試合だが」「参考程度」), never as an established trend.
 - Do not dump a bare W–L with no reading. Prefer streak quality / venue streak wording from hintEn.
