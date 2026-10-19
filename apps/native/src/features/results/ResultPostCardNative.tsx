@@ -60,10 +60,6 @@ import {
   SHARE_CAPTURE_BG,
   shareImageUriNative,
 } from "../share/shareImageNative";
-import {
-  buildResultShareUrl,
-  getShareAppOrigin,
-} from "../../../../../lib/share/shareAppUrls";
 import { buildResultCardShareCaption } from "../../../../../lib/result/shareResultCardCaption";
 import { cyberAlert } from "../../components/cyberAlert";
 import { registerTutorialTarget, notifyTutorialTargetsChanged } from "../tutorial/tutorialMeasureNative";
@@ -642,8 +638,6 @@ function ResultPostCardNativeInner({
     [post, gameMarket, gameRoundMeta, gameFromCache, scorerFromGame]
   );
 
-  const shareLinkUrl = buildResultShareUrl(post.id, getShareAppOrigin());
-
   const waitNextPaint = () =>
     new Promise<void>((resolve) => {
       requestAnimationFrame(() => {
@@ -665,15 +659,10 @@ function ResultPostCardNativeInner({
         finalHome: faceModel.resultHome,
         finalAway: faceModel.resultAway,
         totalPoints: faceModel.totalPoints,
-        postId: null,
-        appBaseUrl: getShareAppOrigin(),
       });
       await waitNextPaint();
       const uri = await captureViewAsPngNative(captureRef);
-      const result = await shareImageUriNative(uri, {
-        caption,
-        linkUrl: shareLinkUrl,
-      });
+      const result = await shareImageUriNative(uri, { caption });
       if (result === "failed") {
         cyberAlert("", resultCopy.shareResultCardFailed);
       }
@@ -692,7 +681,6 @@ function ResultPostCardNativeInner({
     faceModel.totalPoints,
     loc,
     resultCopy.shareResultCardFailed,
-    shareLinkUrl,
     sharing,
   ]);
 

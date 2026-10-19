@@ -28,7 +28,7 @@ function formatScoreLine(
 
 export { buildResultShareUrl as buildResultCardShareUrl };
 
-/** リザルトカード共有用キャプション（予想・結果・総合得点 + URL） */
+/** リザルトカード共有用キャプション（予想・結果・総合得点 + ダウンロード URL） */
 export function buildResultCardShareCaption(ctx: ResultCardShareContext): string {
   const r = t(ctx.language).results;
   const isJa = ctx.language === "ja";
@@ -54,9 +54,6 @@ export function buildResultCardShareCaption(ctx: ResultCardShareContext): string
     parts.push(r.shareResultTotal.replace("{pts}", pts));
   }
 
-  const caption = `${parts.join(isJa ? " · " : " · ")} #Uniterz`;
-  const url = ctx.postId
-    ? buildResultShareUrl(ctx.postId, ctx.appBaseUrl)
-    : undefined;
-  return buildShareOutboundMessage(caption, url);
+  const caption = `${parts.join(" · ")} #Uniterz`;
+  return buildShareOutboundMessage(caption);
 }
