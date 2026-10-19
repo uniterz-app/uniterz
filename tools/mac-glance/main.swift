@@ -6,7 +6,6 @@ import Foundation
 final class GlanceApp: NSObject, NSApplicationDelegate, NSWindowDelegate {
   private var window: NSWindow!
   private var widget: GlanceWidgetView!
-  private var timer: Timer?
   private var requestSerial = 0
   private var didPlace = false
   private var selectedDayKey: String
@@ -61,11 +60,14 @@ final class GlanceApp: NSObject, NSApplicationDelegate, NSWindowDelegate {
     window.animationBehavior = .none
 
     widget = GlanceWidgetView(frame: NSRect(origin: .zero, size: frame.size))
-    widget.onRefresh = { [weak self] in self?.refreshNow() }
+    widget.onRefresh = { [weak self] in self?.refreshNow(diff: true) }
     widget.onResetPosition = { [weak self] in self?.resetPosition() }
     widget.onQuit = { NSApp.terminate(nil) }
     widget.onDragged = { [weak self] origin in
-      UserDefaults.standard.set(["x": origin.x, "y": origin.y], forKey: self?.originKey ?? "widgetOrigin")
+      UserDefaults.standard.set(
+        ["x": origin.x, "y": origin.y, "h": GlanceMetrics.height],
+        forKey: self?.originKey ?? "widgetOrigin"
+      )
     }
     widget.onShiftDay = { [weak self] delta in self?.shiftDay(by: delta) }
     widget.onPickDate = { [weak self] in self?.toggleDatePicker() }
@@ -81,10 +83,6 @@ final class GlanceApp: NSObject, NSApplicationDelegate, NSWindowDelegate {
       widget.setDayLabel(GlanceDay.label(selectedDayKey), isToday: selectedDayKey == GlanceDay.todayKey())
     }
     didPlace = true
-    refreshNow()
-    timer = Timer.scheduledTimer(withTimeInterval: 5 * 60, repeats: true) { [weak self] _ in
-      self?.refreshNow()
-    }
   }
 
   func windowDidMove(_ notification: Notification) {
@@ -106,7 +104,9 @@ final class GlanceApp: NSObject, NSApplicationDelegate, NSWindowDelegate {
           let x = raw["x"] as? Double,
           let y = raw["y"] as? Double
     else { return nil }
-    return NSRect(x: x, y: y, width: GlanceMetrics.width, height: GlanceMetrics.height)
+    let savedHeight = raw["h"] as? Double ?? 180
+    let yShift = CGFloat(savedHeight) - GlanceMetrics.height
+    return NSRect(x: x, y: y + yShift, width: GlanceMetrics.width, height: GlanceMetrics.height)
   }
 
   /// 通知センターのデスクトップウィジェット列の真下。座標は画面上端原点。
@@ -176,7 +176,6 @@ final class GlanceApp: NSObject, NSApplicationDelegate, NSWindowDelegate {
       widget.setDailyPlaceholder()
     }
     closeDatePicker()
-    refreshNow()
   }
 
   private func toggleDatePicker() {
@@ -251,7 +250,8 @@ final class GlanceApp: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
   }
 
-  private func refreshNow() {
+  /// `diff` のときだけ直近7日を読み、前日比を更新する。
+  private func refreshNow(diff: Bool) {
     if UserDefaults.standard.string(forKey: dayDefaultsKey) == nil {
       selectedDayKey = GlanceDay.todayKey()
       widget.setNextEnabled(false)
@@ -262,13 +262,14 @@ final class GlanceApp: NSObject, NSApplicationDelegate, NSWindowDelegate {
     let root = self.root
     let node = self.node
     DispatchQueue.global(qos: .utility).async { [weak self] in
-      let result = Self.fetch(root: root, node: node, dayKey: dayKey)
+      let result = Self.fetch(root: root, node: node, dayKey: dayKey, diff: diff)
       DispatchQueue.main.async {
         guard let self, serial == self.requestSerial else { return }
         if case .success(let stats) = result, stats.dayKey == dayKey {
-          self.memory[stats.dayKey] = stats
-          self.saveCache(stats)
-          self.render(stats)
+          let merged = stats.keepingSeries(from: self.memory[stats.dayKey])
+          self.memory[merged.dayKey] = merged
+          self.saveCache(merged)
+          self.render(merged)
         }
       }
     }
@@ -280,8 +281,13 @@ final class GlanceApp: NSObject, NSApplicationDelegate, NSWindowDelegate {
       total: format(stats.registered),
       subscribers: format(stats.subscribers),
       plans: stats.plans,
+      billing: stats.billing,
       todayRegistered: format(stats.todayRegistered),
       todayPredictions: format(stats.todayPosts),
+      predictors: format(stats.todayPredictors),
+      series: stats.series,
+      invites: stats.invites,
+      people: stats.people,
       dayLabel: GlanceDay.label(stats.dayKey),
       isToday: stats.dayKey == today
     )
@@ -302,7 +308,7 @@ final class GlanceApp: NSObject, NSApplicationDelegate, NSWindowDelegate {
     try? data.write(to: cacheURL, options: .atomic)
   }
 
-  private static func fetch(root: String, node: String, dayKey: String) -> Result<Stats, GlanceError> {
+  private static func fetch(root: String, node: String, dayKey: String, diff: Bool) -> Result<Stats, GlanceError> {
     let tsx = URL(fileURLWithPath: root)
       .appendingPathComponent("node_modules/.bin/tsx").path
     let script = URL(fileURLWithPath: root)
@@ -316,7 +322,7 @@ final class GlanceApp: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     let proc = Process()
     proc.executableURL = URL(fileURLWithPath: node)
-    proc.arguments = [tsx, script, "--day=\(dayKey)"]
+    proc.arguments = [tsx, script, "--day=\(dayKey)"] + (diff ? ["--diff"] : [])
     proc.currentDirectoryURL = URL(fileURLWithPath: "/tmp")
     var env = ProcessInfo.processInfo.environment
     env["PATH"] = "\(URL(fileURLWithPath: node).deletingLastPathComponent().path):/usr/bin:/bin"
@@ -404,12 +410,331 @@ private enum GlanceDay {
 }
 
 private enum GlanceMetrics {
-  static let width: CGFloat = 360
-  static let height: CGFloat = 180
+  static let width: CGFloat = 540
+  static let height: CGFloat = 840
   static let inset: CGFloat = 8
-  static let radius: CGFloat = 20
+  static let radius: CGFloat = 22
   static let ink = NSColor(srgbRed: 0.031, green: 0.067, blue: 0.086, alpha: 1) // #081116
   static let cyan = NSColor(srgbRed: 0, green: 0.961, blue: 1, alpha: 1) // #00F5FF
+  static let gold = NSColor(srgbRed: 1, green: 0.784, blue: 0.235, alpha: 1)
+}
+
+fileprivate struct GlanceDayPoint {
+  var label: String
+  var registered: Int
+  var posts: Int
+}
+
+/// 直近7日。シアンが登録、金が予想の件数。
+final class GlanceChartView: NSView {
+  private var days: [GlanceDayPoint] = []
+
+  override init(frame frameRect: NSRect) {
+    super.init(frame: frameRect)
+    wantsLayer = true
+    layer?.backgroundColor = NSColor.white.withAlphaComponent(0.03).cgColor
+    layer?.cornerRadius = 12
+    layer?.borderWidth = 1
+    layer?.borderColor = GlanceMetrics.cyan.withAlphaComponent(0.22).cgColor
+  }
+
+  required init?(coder: NSCoder) { nil }
+
+  fileprivate func setDays(_ days: [GlanceDayPoint]) {
+    self.days = days
+    needsDisplay = true
+  }
+
+  override func draw(_ dirtyRect: NSRect) {
+    guard let ctx = NSGraphicsContext.current?.cgContext else { return }
+    let plot = bounds.insetBy(dx: 12, dy: 8)
+    let labelH: CGFloat = 16
+    let legendH: CGFloat = 14
+    let chart = CGRect(x: plot.minX, y: plot.minY + labelH, width: plot.width, height: plot.height - labelH - legendH)
+    let peak = CGFloat(max(days.map { max($0.registered, $0.posts) }.max() ?? 0, 1))
+
+    ctx.setStrokeColor(NSColor.white.withAlphaComponent(0.08).cgColor)
+    ctx.setLineWidth(1)
+    for step in 0...2 {
+      let y = chart.minY + chart.height * CGFloat(step) / 2
+      ctx.move(to: CGPoint(x: chart.minX, y: y))
+      ctx.addLine(to: CGPoint(x: chart.maxX, y: y))
+    }
+    ctx.strokePath()
+
+    let count = max(days.count, 1)
+    let slot = chart.width / CGFloat(count)
+    let barW: CGFloat = min(8, slot * 0.28)
+    for (index, day) in days.enumerated() {
+      let cx = chart.minX + slot * (CGFloat(index) + 0.5)
+      let regH = chart.height * CGFloat(day.registered) / peak
+      let postH = chart.height * CGFloat(day.posts) / peak
+      let selected = index == days.count - 1
+      fillBar(ctx, CGRect(x: cx - barW - 1, y: chart.minY, width: barW, height: max(regH, 1)), GlanceMetrics.cyan, strong: selected)
+      fillBar(ctx, CGRect(x: cx + 1, y: chart.minY, width: barW, height: max(postH, 1)), GlanceMetrics.gold, strong: selected)
+
+      let label = NSAttributedString(
+        string: day.label,
+        attributes: [
+          .font: NSFont.monospacedDigitSystemFont(ofSize: 9, weight: selected ? .bold : .medium),
+          .foregroundColor: selected ? GlanceMetrics.cyan : NSColor.white.withAlphaComponent(0.45),
+        ]
+      )
+      let size = label.size()
+      label.draw(at: CGPoint(x: cx - size.width / 2, y: plot.minY))
+    }
+
+    drawLegend(in: CGRect(x: plot.minX, y: plot.maxY - legendH, width: plot.width, height: legendH))
+  }
+
+  private func fillBar(_ ctx: CGContext, _ rect: CGRect, _ color: NSColor, strong: Bool) {
+    ctx.setFillColor(color.withAlphaComponent(strong ? 1 : 0.72).cgColor)
+    let path = CGPath(roundedRect: rect, cornerWidth: 2, cornerHeight: 2, transform: nil)
+    ctx.addPath(path)
+    ctx.fillPath()
+  }
+
+  private func drawLegend(in rect: CGRect) {
+    let font = NSFont.systemFont(ofSize: 10, weight: .semibold)
+    func chip(_ title: String, _ color: NSColor, x: CGFloat) -> CGFloat {
+      let dot = CGRect(x: x, y: rect.midY - 3, width: 6, height: 6)
+      color.setFill()
+      NSBezierPath(roundedRect: dot, xRadius: 1, yRadius: 1).fill()
+      let text = NSAttributedString(string: title, attributes: [
+        .font: font,
+        .foregroundColor: NSColor.white.withAlphaComponent(0.78),
+      ])
+      text.draw(at: CGPoint(x: dot.maxX + 5, y: rect.midY - text.size().height / 2))
+      return dot.maxX + 5 + text.size().width + 14
+    }
+    var x = rect.minX
+    x = chip("登録", GlanceMetrics.cyan, x: x)
+    _ = chip("予想", GlanceMetrics.gold, x: x)
+  }
+}
+
+fileprivate struct GlanceStatCell {
+  var label: String
+  var value: String
+  var active: Bool
+}
+
+/// 名簿。課金と試用中は名前、招待した人は1人ずつ人数つき。
+final class GlancePeopleView: NSView {
+  private var paid: [String] = []
+  private var trialing: [String] = []
+  private var referrers: [InvitePerson] = []
+
+  override init(frame frameRect: NSRect) {
+    super.init(frame: frameRect)
+    wantsLayer = true
+    layer?.backgroundColor = NSColor.white.withAlphaComponent(0.03).cgColor
+    layer?.cornerRadius = 12
+    layer?.borderWidth = 1
+    layer?.borderColor = GlanceMetrics.cyan.withAlphaComponent(0.22).cgColor
+  }
+
+  required init?(coder: NSCoder) { nil }
+
+  fileprivate func setPeople(paid: [String], trialing: [String], referrers: [InvitePerson]) {
+    self.paid = paid
+    self.trialing = trialing
+    self.referrers = referrers
+    needsDisplay = true
+  }
+
+  override func draw(_ dirtyRect: NSRect) {
+    let pad: CGFloat = 12
+    var top = bounds.height - pad
+    top = drawNames(title: "課金", names: paid, color: GlanceMetrics.gold, top: top, pad: pad)
+    top = drawRule(top: top - 8, pad: pad)
+    top = drawNames(title: "試用中", names: trialing, color: GlanceMetrics.cyan, top: top, pad: pad)
+    top = drawRule(top: top - 8, pad: pad)
+    drawInvites(top: top, pad: pad)
+  }
+
+  private func drawNames(title: String, names: [String], color: NSColor, top: CGFloat, pad: CGFloat) -> CGFloat {
+    var cursor = drawTitle(title, top: top, pad: pad)
+    let font = NSFont.systemFont(ofSize: 15, weight: .semibold)
+    let items = names.isEmpty ? ["—"] : names
+    let itemColor = names.isEmpty ? NSColor.white.withAlphaComponent(0.35) : color
+    let maxW = bounds.width - pad * 2
+    let lineH: CGFloat = 24
+    let gap: CGFloat = 14
+    var x = pad
+    for name in items {
+      let text = GlancePeopleView.fitted(name, font: font, color: itemColor, maxWidth: maxW)
+      let width = text.size().width
+      if x > pad, x + width > bounds.width - pad {
+        cursor -= lineH
+        x = pad
+      }
+      guard cursor - lineH >= pad else { return cursor }
+      let textH = text.size().height
+      text.draw(at: NSPoint(x: x, y: cursor - lineH + (lineH - textH) / 2))
+      x += width + gap
+    }
+    return cursor - lineH
+  }
+
+  private func drawInvites(top: CGFloat, pad: CGFloat) {
+    let cursor = drawTitle("招待した", top: top, pad: pad)
+    if referrers.isEmpty {
+      let dash = NSAttributedString(string: "—", attributes: [
+        .font: NSFont.systemFont(ofSize: 15, weight: .semibold),
+        .foregroundColor: NSColor.white.withAlphaComponent(0.35),
+      ])
+      dash.draw(at: NSPoint(x: pad, y: cursor - 24))
+      return
+    }
+
+    let columns = 2
+    let gap: CGFloat = 8
+    let rowH: CGFloat = 30
+    let colW = (bounds.width - pad * 2 - gap) / CGFloat(columns)
+    let nameFont = NSFont.systemFont(ofSize: 14, weight: .semibold)
+    let countFont = NSFont.monospacedDigitSystemFont(ofSize: 13, weight: .bold)
+    var hidden = 0
+
+    for (index, person) in referrers.enumerated() {
+      let col = index % columns
+      let row = index / columns
+      let rowTop = cursor - CGFloat(row) * rowH
+      if rowTop - rowH < pad {
+        hidden = referrers.count - index
+        break
+      }
+      let rect = CGRect(
+        x: pad + CGFloat(col) * (colW + gap),
+        y: rowTop - rowH + 3,
+        width: colW,
+        height: rowH - 6
+      )
+      NSColor.white.withAlphaComponent(0.05).setFill()
+      NSBezierPath(roundedRect: rect, xRadius: 6, yRadius: 6).fill()
+
+      let count = NSAttributedString(string: "\(person.count)人", attributes: [
+        .font: countFont,
+        .foregroundColor: GlanceMetrics.cyan,
+      ])
+      let countW = count.size().width
+      let nameMax = max(rect.width - countW - 16, 24)
+      let name = GlancePeopleView.fitted(person.name, font: nameFont, color: .white, maxWidth: nameMax)
+      let nameH = name.size().height
+      let countH = count.size().height
+      name.draw(at: NSPoint(x: rect.minX + 8, y: rect.midY - nameH / 2))
+      count.draw(at: NSPoint(x: rect.maxX - 8 - countW, y: rect.midY - countH / 2))
+    }
+
+    if hidden > 0 {
+      let more = NSAttributedString(string: "+\(hidden)", attributes: [
+        .font: countFont,
+        .foregroundColor: NSColor.white.withAlphaComponent(0.45),
+      ])
+      more.draw(at: NSPoint(x: bounds.width - pad - more.size().width, y: pad))
+    }
+  }
+
+  private func drawTitle(_ title: String, top: CGFloat, pad: CGFloat) -> CGFloat {
+    let label = NSAttributedString(string: title, attributes: [
+      .font: NSFont.systemFont(ofSize: 11, weight: .semibold),
+      .foregroundColor: NSColor.white.withAlphaComponent(0.55),
+    ])
+    let lineH: CGFloat = 16
+    label.draw(at: NSPoint(x: pad, y: top - lineH + (lineH - label.size().height) / 2))
+    return top - lineH - 2
+  }
+
+  private func drawRule(top: CGFloat, pad: CGFloat) -> CGFloat {
+    let path = NSBezierPath()
+    path.move(to: NSPoint(x: pad, y: top))
+    path.line(to: NSPoint(x: bounds.width - pad, y: top))
+    path.lineWidth = 1
+    NSColor.white.withAlphaComponent(0.08).setStroke()
+    path.stroke()
+    return top - 8
+  }
+
+  private static func fitted(_ name: String, font: NSFont, color: NSColor, maxWidth: CGFloat) -> NSAttributedString {
+    let full = NSAttributedString(string: name, attributes: [.font: font, .foregroundColor: color])
+    if full.size().width <= maxWidth { return full }
+    var kept = name
+    while kept.count > 1 {
+      kept.removeLast()
+      let trial = NSAttributedString(string: kept + "…", attributes: [.font: font, .foregroundColor: color])
+      if trial.size().width <= maxWidth { return trial }
+    }
+    return NSAttributedString(string: "…", attributes: [.font: font, .foregroundColor: color])
+  }
+}
+
+/// 下段。同じ大きさのマスにラベルと数字を置く。
+final class GlanceStatGrid: NSView {
+  private var rows: [[GlanceStatCell]] = []
+
+  override init(frame frameRect: NSRect) {
+    super.init(frame: frameRect)
+    wantsLayer = true
+    layer?.backgroundColor = NSColor.white.withAlphaComponent(0.03).cgColor
+    layer?.cornerRadius = 12
+    layer?.borderWidth = 1
+    layer?.borderColor = GlanceMetrics.cyan.withAlphaComponent(0.22).cgColor
+  }
+
+  required init?(coder: NSCoder) { nil }
+
+  fileprivate func setRows(_ rows: [[GlanceStatCell]]) {
+    self.rows = rows
+    needsDisplay = true
+  }
+
+  override func draw(_ dirtyRect: NSRect) {
+    guard !rows.isEmpty else { return }
+    let rowH = bounds.height / CGFloat(rows.count)
+    let line = NSColor.white.withAlphaComponent(0.08)
+    line.setStroke()
+    for r in 1..<rows.count {
+      let y = bounds.height - CGFloat(r) * rowH
+      let path = NSBezierPath()
+      path.move(to: CGPoint(x: 10, y: y))
+      path.line(to: CGPoint(x: bounds.width - 10, y: y))
+      path.lineWidth = 1
+      path.stroke()
+    }
+    for (r, row) in rows.enumerated() {
+      let cols = max(row.count, 1)
+      let colW = bounds.width / CGFloat(cols)
+      let y = bounds.height - CGFloat(r + 1) * rowH
+      if cols > 1 {
+        for c in 1..<cols {
+          let path = NSBezierPath()
+          path.move(to: CGPoint(x: CGFloat(c) * colW, y: y + 8))
+          path.line(to: CGPoint(x: CGFloat(c) * colW, y: y + rowH - 8))
+          path.lineWidth = 1
+          path.stroke()
+        }
+      }
+      for (c, cell) in row.enumerated() {
+        let rect = CGRect(x: CGFloat(c) * colW, y: y, width: colW, height: rowH)
+        let valueColor = cell.active ? GlanceMetrics.cyan : NSColor.white.withAlphaComponent(0.35)
+        let value = NSAttributedString(string: cell.value, attributes: [
+          .font: NSFont.monospacedDigitSystemFont(ofSize: 16, weight: .bold),
+          .foregroundColor: valueColor,
+        ])
+        let label = NSAttributedString(string: cell.label, attributes: [
+          .font: NSFont.systemFont(ofSize: 9, weight: .medium),
+          .foregroundColor: NSColor.white.withAlphaComponent(0.55),
+        ])
+        let valueSize = value.size()
+        let labelSize = label.size()
+        let block = valueSize.height + 2 + labelSize.height
+        var top = rect.midY + block / 2 - labelSize.height
+        label.draw(at: CGPoint(x: rect.midX - labelSize.width / 2, y: top))
+        top -= 2 + valueSize.height
+        value.draw(at: CGPoint(x: rect.midX - valueSize.width / 2, y: top))
+      }
+    }
+  }
 }
 
 final class GlanceWidgetView: NSView {
@@ -420,16 +745,23 @@ final class GlanceWidgetView: NSView {
   var onShiftDay: ((Int) -> Void)?
   var onPickDate: (() -> Void)?
 
-  private let totalValue = GlanceWidgetView.numberField(size: 26, color: .white)
-  private let subscribersValue = GlanceWidgetView.numberField(size: 26, color: .white)
-  private let todayRegisteredValue = GlanceWidgetView.numberField(size: 26, color: GlanceMetrics.cyan)
-  private let todayPredictionsValue = GlanceWidgetView.numberField(size: 26, color: GlanceMetrics.cyan)
-  private let planLine = NSTextField(labelWithString: "")
+  private let totalValue = GlanceWidgetView.numberField(size: 28, color: .white)
+  private let subscribersValue = GlanceWidgetView.numberField(size: 28, color: .white)
+  private let todayRegisteredValue = GlanceWidgetView.numberField(size: 28, color: GlanceMetrics.cyan)
+  private let todayPredictionsValue = GlanceWidgetView.numberField(size: 28, color: GlanceMetrics.gold)
+  private let registeredDelta = GlanceWidgetView.deltaField()
+  private let predictionsDelta = GlanceWidgetView.deltaField()
+  private let blankDeltaA = GlanceWidgetView.deltaField()
+  private let blankDeltaB = GlanceWidgetView.deltaField()
+  private let chart = GlanceChartView()
+  private let statGrid = GlanceStatGrid()
+  private let peopleView = GlancePeopleView()
   private let registeredCaption = GlanceWidgetView.caption("今日の登録")
   private let predictionsCaption = GlanceWidgetView.caption("今日の予想数")
   private let dayValue = NSTextField(labelWithString: "")
   private let prevButton = GlanceWidgetView.arrowButton("‹")
   private let nextButton = GlanceWidgetView.arrowButton("›")
+  private let refreshButton = GlanceWidgetView.arrowButton("↻")
   private var dateCluster: NSStackView!
   private var nextEnabled = true
 
@@ -491,6 +823,7 @@ final class GlanceWidgetView: NSView {
     dates.addArrangedSubview(prevButton)
     dates.addArrangedSubview(dayValue)
     dates.addArrangedSubview(nextButton)
+    dates.addArrangedSubview(refreshButton)
     dateCluster = dates
 
     let rule = NSView()
@@ -504,20 +837,21 @@ final class GlanceWidgetView: NSView {
     row.alignment = .centerY
     row.spacing = 0
     row.translatesAutoresizingMaskIntoConstraints = false
-    row.addArrangedSubview(column(caption: GlanceWidgetView.caption("総登録"), value: totalValue))
-    row.addArrangedSubview(column(caption: GlanceWidgetView.caption("課金"), value: subscribersValue))
-    row.addArrangedSubview(column(caption: registeredCaption, value: todayRegisteredValue))
-    row.addArrangedSubview(column(caption: predictionsCaption, value: todayPredictionsValue))
-
-    planLine.alignment = .center
-    planLine.translatesAutoresizingMaskIntoConstraints = false
-    planLine.attributedStringValue = GlanceWidgetView.planLine(PlanCounts())
+    row.addArrangedSubview(column(caption: GlanceWidgetView.caption("総登録"), value: totalValue, delta: blankDeltaA))
+    row.addArrangedSubview(column(caption: GlanceWidgetView.caption("課金"), value: subscribersValue, delta: blankDeltaB))
+    row.addArrangedSubview(column(caption: registeredCaption, value: todayRegisteredValue, delta: registeredDelta))
+    row.addArrangedSubview(column(caption: predictionsCaption, value: todayPredictionsValue, delta: predictionsDelta))
 
     card.addSubview(brand)
     card.addSubview(dates)
     card.addSubview(rule)
+    chart.translatesAutoresizingMaskIntoConstraints = false
+    statGrid.translatesAutoresizingMaskIntoConstraints = false
+    peopleView.translatesAutoresizingMaskIntoConstraints = false
     card.addSubview(row)
-    card.addSubview(planLine)
+    card.addSubview(chart)
+    card.addSubview(statGrid)
+    card.addSubview(peopleView)
 
     NSLayoutConstraint.activate([
       card.leadingAnchor.constraint(equalTo: leadingAnchor, constant: GlanceMetrics.inset),
@@ -543,6 +877,8 @@ final class GlanceWidgetView: NSView {
       prevButton.heightAnchor.constraint(equalToConstant: 22),
       nextButton.widthAnchor.constraint(equalToConstant: 22),
       nextButton.heightAnchor.constraint(equalToConstant: 22),
+      refreshButton.widthAnchor.constraint(equalToConstant: 22),
+      refreshButton.heightAnchor.constraint(equalToConstant: 22),
       dayValue.widthAnchor.constraint(greaterThanOrEqualToConstant: 44),
 
       rule.leadingAnchor.constraint(equalTo: card.leadingAnchor, constant: 16),
@@ -552,11 +888,22 @@ final class GlanceWidgetView: NSView {
 
       row.leadingAnchor.constraint(equalTo: card.leadingAnchor, constant: 6),
       row.trailingAnchor.constraint(equalTo: card.trailingAnchor, constant: -6),
-      row.topAnchor.constraint(equalTo: rule.bottomAnchor, constant: 8),
+      row.topAnchor.constraint(equalTo: rule.bottomAnchor, constant: 6),
 
-      planLine.leadingAnchor.constraint(equalTo: card.leadingAnchor, constant: 10),
-      planLine.trailingAnchor.constraint(equalTo: card.trailingAnchor, constant: -10),
-      planLine.bottomAnchor.constraint(equalTo: card.bottomAnchor, constant: -10),
+      chart.leadingAnchor.constraint(equalTo: card.leadingAnchor, constant: 14),
+      chart.trailingAnchor.constraint(equalTo: card.trailingAnchor, constant: -14),
+      chart.topAnchor.constraint(equalTo: row.bottomAnchor, constant: 8),
+      chart.heightAnchor.constraint(equalToConstant: 118),
+
+      statGrid.leadingAnchor.constraint(equalTo: card.leadingAnchor, constant: 14),
+      statGrid.trailingAnchor.constraint(equalTo: card.trailingAnchor, constant: -14),
+      statGrid.topAnchor.constraint(equalTo: chart.bottomAnchor, constant: 8),
+      statGrid.heightAnchor.constraint(equalToConstant: 126),
+
+      peopleView.leadingAnchor.constraint(equalTo: card.leadingAnchor, constant: 14),
+      peopleView.trailingAnchor.constraint(equalTo: card.trailingAnchor, constant: -14),
+      peopleView.topAnchor.constraint(equalTo: statGrid.bottomAnchor, constant: 8),
+      peopleView.bottomAnchor.constraint(equalTo: card.bottomAnchor, constant: -12),
     ])
   }
 
@@ -578,6 +925,11 @@ final class GlanceWidgetView: NSView {
       }
       if nextFrame.contains(local), nextEnabled {
         onShiftDay?(1)
+        return
+      }
+      let refreshFrame = refreshButton.convert(refreshButton.bounds, to: dateCluster).insetBy(dx: -4, dy: -6)
+      if refreshFrame.contains(local) {
+        onRefresh?()
         return
       }
       if dayFrame.contains(local) {
@@ -615,14 +967,22 @@ final class GlanceWidgetView: NSView {
   func setDailyPlaceholder() {
     todayRegisteredValue.stringValue = "—"
     todayPredictionsValue.stringValue = "—"
+    registeredDelta.attributedStringValue = GlanceWidgetView.deltaText(current: nil, previous: nil)
+    predictionsDelta.attributedStringValue = GlanceWidgetView.deltaText(current: nil, previous: nil)
+    chart.setDays([])
   }
 
   func setValues(
     total: String,
     subscribers: String,
     plans: PlanCounts,
+    billing: BillingDetail,
     todayRegistered: String,
     todayPredictions: String,
+    predictors: String,
+    series: [DayPoint],
+    invites: InviteCounts,
+    people: PeopleLists,
     dayLabel: String,
     isToday: Bool
   ) {
@@ -630,7 +990,24 @@ final class GlanceWidgetView: NSView {
     subscribersValue.stringValue = subscribers
     todayRegisteredValue.stringValue = todayRegistered
     todayPredictionsValue.stringValue = todayPredictions
-    planLine.attributedStringValue = GlanceWidgetView.planLine(plans)
+    let prevReg = series.count >= 2 ? series[series.count - 2].registered : nil
+    let prevPosts = series.count >= 2 ? series[series.count - 2].posts : nil
+    let reg = series.last?.registered
+    let posts = series.last?.posts
+    registeredDelta.attributedStringValue = GlanceWidgetView.deltaText(current: reg, previous: prevReg)
+    predictionsDelta.attributedStringValue = GlanceWidgetView.deltaText(current: posts, previous: prevPosts)
+    chart.setDays(series.map { point in
+      let label = point.dayKey.count >= 10 ? String(point.dayKey.dropFirst(5)).replacingOccurrences(of: "-", with: "/") : point.dayKey
+      return GlanceDayPoint(label: label, registered: point.registered, posts: point.posts)
+    })
+    statGrid.setRows(GlanceWidgetView.statRows(
+      plans: plans,
+      billing: billing,
+      predictors: predictors,
+      invites: invites,
+      isToday: isToday
+    ))
+    peopleView.setPeople(paid: people.paid, trialing: people.trialing, referrers: people.referrers)
     setDayLabel(dayLabel, isToday: isToday)
   }
 
@@ -653,11 +1030,11 @@ final class GlanceWidgetView: NSView {
   @objc private func resetClicked() { onResetPosition?() }
   @objc private func quitClicked() { onQuit?() }
 
-  private func column(caption: NSTextField, value: NSTextField) -> NSStackView {
-    let stack = NSStackView(views: [value, caption])
+  private func column(caption: NSTextField, value: NSTextField, delta: NSTextField) -> NSStackView {
+    let stack = NSStackView(views: [value, caption, delta])
     stack.orientation = .vertical
     stack.alignment = .centerX
-    stack.spacing = 4
+    stack.spacing = 2
     return stack
   }
 
@@ -677,31 +1054,45 @@ final class GlanceWidgetView: NSView {
     return field
   }
 
-  fileprivate static func planLine(_ plans: PlanCounts) -> NSAttributedString {
-    let line = NSMutableAttributedString()
-    let nameFont = NSFont.systemFont(ofSize: 11, weight: .semibold)
-    let countFont = NSFont.monospacedDigitSystemFont(ofSize: 11, weight: .bold)
-    let dim = NSColor.white.withAlphaComponent(0.55)
-    func append(name: String, count: Int, gap: Bool) {
-      if gap {
-        line.append(NSAttributedString(string: "    ", attributes: [.font: nameFont, .foregroundColor: dim]))
-      }
-      let active = count > 0
-      line.append(NSAttributedString(
-        string: name + " ",
-        attributes: [.font: nameFont, .foregroundColor: active ? NSColor.white : dim]
-      ))
-      line.append(NSAttributedString(
-        string: String(count),
-        attributes: [.font: countFont, .foregroundColor: active ? GlanceMetrics.cyan : dim]
-      ))
-    }
-    append(name: "Weekly", count: plans.weekly, gap: false)
-    append(name: "Monthly", count: plans.monthly, gap: true)
-    append(name: "Season", count: plans.season, gap: true)
-    if plans.annual > 0 { append(name: "年額", count: plans.annual, gap: true) }
-    if plans.other > 0 { append(name: "その他", count: plans.other, gap: true) }
-    return line
+  private static func statCell(_ label: String, _ count: Int) -> GlanceStatCell {
+    GlanceStatCell(label: label, value: String(count), active: count > 0)
+  }
+
+  fileprivate static func statRows(
+    plans: PlanCounts,
+    billing: BillingDetail,
+    predictors: String,
+    invites: InviteCounts,
+    isToday: Bool
+  ) -> [[GlanceStatCell]] {
+    var trial = [
+      statCell("試用中", billing.trialing),
+      statCell("試用後", billing.afterTrial),
+      statCell("試用なし", billing.noTrial),
+      statCell(isToday ? "今日開始" : "開始", billing.started),
+    ]
+    if billing.canceling > 0 { trial.append(statCell("解約予約", billing.canceling)) }
+
+    var plansRow = [
+      statCell("Weekly", plans.weekly),
+      statCell("Monthly", plans.monthly),
+      statCell("Season", plans.season),
+    ]
+    if plans.annual > 0 { plansRow.append(statCell("年額", plans.annual)) }
+    if plans.other > 0 { plansRow.append(statCell("その他", plans.other)) }
+    let peopleActive = predictors != "—" && predictors != "0"
+    plansRow.append(GlanceStatCell(label: "予想した人", value: predictors, active: peopleActive))
+
+    return [
+      trial,
+      plansRow,
+      [
+        statCell("招待した人", invites.referrers),
+        statCell("招かれた人", invites.invited),
+        statCell(isToday ? "今日の招待" : "その日の招待", invites.today),
+        statCell("成立", invites.completed),
+      ],
+    ]
   }
 
   private static func arrowTitle(_ glyph: String, color: NSColor) -> NSAttributedString {
@@ -712,6 +1103,27 @@ final class GlanceWidgetView: NSView {
         .foregroundColor: color,
       ]
     )
+  }
+
+  private static func deltaField() -> NSTextField {
+    let field = NSTextField(labelWithString: "")
+    field.alignment = .center
+    field.attributedStringValue = deltaText(current: nil, previous: nil)
+    return field
+  }
+
+  private static func deltaText(current: Int?, previous: Int?) -> NSAttributedString {
+    let font = NSFont.monospacedDigitSystemFont(ofSize: 10, weight: .bold)
+    guard let current, let previous else {
+      return NSAttributedString(string: " ", attributes: [.font: font, .foregroundColor: NSColor.clear])
+    }
+    let diff = current - previous
+    let text = diff > 0 ? "+\(diff)" : "\(diff)"
+    let color: NSColor
+    if diff > 0 { color = GlanceMetrics.cyan }
+    else if diff < 0 { color = NSColor(srgbRed: 1, green: 0.42, blue: 0.48, alpha: 1) }
+    else { color = NSColor.white.withAlphaComponent(0.45) }
+    return NSAttributedString(string: text, attributes: [.font: font, .foregroundColor: color])
   }
 
   private static func numberField(size: CGFloat, color: NSColor) -> NSTextField {
@@ -754,19 +1166,130 @@ struct PlanCounts: Codable {
   }
 }
 
+struct BillingDetail: Codable {
+  let trialing: Int
+  let afterTrial: Int
+  let noTrial: Int
+  let canceling: Int
+  let started: Int
+
+  init(trialing: Int = 0, afterTrial: Int = 0, noTrial: Int = 0, canceling: Int = 0, started: Int = 0) {
+    self.trialing = trialing
+    self.afterTrial = afterTrial
+    self.noTrial = noTrial
+    self.canceling = canceling
+    self.started = started
+  }
+
+  init(from decoder: Decoder) throws {
+    let c = try decoder.container(keyedBy: CodingKeys.self)
+    trialing = try c.decodeIfPresent(Int.self, forKey: .trialing) ?? 0
+    afterTrial = try c.decodeIfPresent(Int.self, forKey: .afterTrial) ?? 0
+    noTrial = try c.decodeIfPresent(Int.self, forKey: .noTrial) ?? 0
+    canceling = try c.decodeIfPresent(Int.self, forKey: .canceling) ?? 0
+    started = try c.decodeIfPresent(Int.self, forKey: .started) ?? 0
+  }
+}
+
+struct InviteCounts: Codable {
+  let referrers: Int
+  let invited: Int
+  let today: Int
+  let completed: Int
+
+  init(referrers: Int = 0, invited: Int = 0, today: Int = 0, completed: Int = 0) {
+    self.referrers = referrers
+    self.invited = invited
+    self.today = today
+    self.completed = completed
+  }
+
+  init(from decoder: Decoder) throws {
+    let c = try decoder.container(keyedBy: CodingKeys.self)
+    referrers = try c.decodeIfPresent(Int.self, forKey: .referrers) ?? 0
+    invited = try c.decodeIfPresent(Int.self, forKey: .invited) ?? 0
+    today = try c.decodeIfPresent(Int.self, forKey: .today) ?? 0
+    completed = try c.decodeIfPresent(Int.self, forKey: .completed) ?? 0
+  }
+}
+
+struct InvitePerson: Codable {
+  let name: String
+  let count: Int
+
+  init(name: String = "", count: Int = 0) {
+    self.name = name
+    self.count = count
+  }
+
+  init(from decoder: Decoder) throws {
+    let c = try decoder.container(keyedBy: CodingKeys.self)
+    name = try c.decodeIfPresent(String.self, forKey: .name) ?? ""
+    count = try c.decodeIfPresent(Int.self, forKey: .count) ?? 0
+  }
+}
+
+struct PeopleLists: Codable {
+  let paid: [String]
+  let trialing: [String]
+  let referrers: [InvitePerson]
+
+  init(paid: [String] = [], trialing: [String] = [], referrers: [InvitePerson] = []) {
+    self.paid = paid
+    self.trialing = trialing
+    self.referrers = referrers
+  }
+
+  init(from decoder: Decoder) throws {
+    let c = try decoder.container(keyedBy: CodingKeys.self)
+    paid = try c.decodeIfPresent([String].self, forKey: .paid) ?? []
+    trialing = try c.decodeIfPresent([String].self, forKey: .trialing) ?? []
+    if let rows = try? c.decode([InvitePerson].self, forKey: .referrers) {
+      referrers = rows
+    } else if let names = try? c.decode([String].self, forKey: .referrers) {
+      referrers = names.map { InvitePerson(name: $0, count: 0) }
+    } else {
+      referrers = []
+    }
+  }
+}
+
+struct DayPoint: Codable {
+  let dayKey: String
+  let registered: Int
+  let posts: Int
+
+  init(dayKey: String = "", registered: Int = 0, posts: Int = 0) {
+    self.dayKey = dayKey
+    self.registered = registered
+    self.posts = posts
+  }
+
+  init(from decoder: Decoder) throws {
+    let c = try decoder.container(keyedBy: CodingKeys.self)
+    dayKey = try c.decodeIfPresent(String.self, forKey: .dayKey) ?? ""
+    registered = try c.decodeIfPresent(Int.self, forKey: .registered) ?? 0
+    posts = try c.decodeIfPresent(Int.self, forKey: .posts) ?? 0
+  }
+}
+
 struct Stats: Codable {
   let registered: Int
   let subscribers: Int
   let plans: PlanCounts
+  let billing: BillingDetail
   let todayRegistered: Int
   let todayPredictors: Int
   let todayPosts: Int
+  let series: [DayPoint]
+  let invites: InviteCounts
+  let people: PeopleLists
   let dayKey: String
   let timezone: String
   let asOf: String
 
   enum CodingKeys: String, CodingKey {
-    case registered, subscribers, plans, todayRegistered, todayPredictors, todayPosts, dayKey, timezone, asOf
+    case registered, subscribers, plans, billing, todayRegistered, todayPredictors, todayPosts, series, invites, people, dayKey, timezone, asOf
   }
 
   init(from decoder: Decoder) throws {
@@ -774,12 +1297,68 @@ struct Stats: Codable {
     registered = try c.decode(Int.self, forKey: .registered)
     subscribers = try c.decodeIfPresent(Int.self, forKey: .subscribers) ?? 0
     plans = try c.decodeIfPresent(PlanCounts.self, forKey: .plans) ?? PlanCounts()
+    billing = try c.decodeIfPresent(BillingDetail.self, forKey: .billing) ?? BillingDetail()
     todayRegistered = try c.decodeIfPresent(Int.self, forKey: .todayRegistered) ?? 0
     todayPredictors = try c.decodeIfPresent(Int.self, forKey: .todayPredictors) ?? 0
     todayPosts = try c.decode(Int.self, forKey: .todayPosts)
+    series = try c.decodeIfPresent([DayPoint].self, forKey: .series) ?? []
+    invites = try c.decodeIfPresent(InviteCounts.self, forKey: .invites) ?? InviteCounts()
+    people = try c.decodeIfPresent(PeopleLists.self, forKey: .people) ?? PeopleLists()
     dayKey = try c.decode(String.self, forKey: .dayKey)
     timezone = try c.decode(String.self, forKey: .timezone)
     asOf = try c.decode(String.self, forKey: .asOf)
+  }
+
+  /// 件数だけの更新は series を空で返す。前日比は前回の7日分を残す。
+  func keepingSeries(from previous: Stats?) -> Stats {
+    guard series.isEmpty, let previous, previous.dayKey == dayKey, !previous.series.isEmpty else {
+      return self
+    }
+    return Stats(
+      registered: registered,
+      subscribers: subscribers,
+      plans: plans,
+      billing: billing,
+      todayRegistered: todayRegistered,
+      todayPredictors: todayPredictors,
+      todayPosts: todayPosts,
+      series: previous.series,
+      invites: invites,
+      people: people,
+      dayKey: dayKey,
+      timezone: timezone,
+      asOf: asOf
+    )
+  }
+
+  init(
+    registered: Int,
+    subscribers: Int,
+    plans: PlanCounts,
+    billing: BillingDetail,
+    todayRegistered: Int,
+    todayPredictors: Int,
+    todayPosts: Int,
+    series: [DayPoint],
+    invites: InviteCounts,
+    people: PeopleLists,
+    dayKey: String,
+    timezone: String,
+    asOf: String
+  ) {
+    self.registered = registered
+    self.subscribers = subscribers
+    self.plans = plans
+    self.billing = billing
+    self.todayRegistered = todayRegistered
+    self.todayPredictors = todayPredictors
+    self.todayPosts = todayPosts
+    self.series = series
+    self.invites = invites
+    self.people = people
+    self.dayKey = dayKey
+    self.timezone = timezone
+    self.asOf = asOf
   }
 }
 
