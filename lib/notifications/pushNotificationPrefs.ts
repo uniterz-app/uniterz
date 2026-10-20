@@ -91,6 +91,8 @@ export function prefKeyForPushType(
     case "injury_status":
       return "injuryStatus";
     case "prediction_deadline":
+    case "prediction_slate_nudge":
+    case "season_predict_last_call":
       return "predictionDeadline";
     case "pro_insight_update":
       return "proInsightUpdate";

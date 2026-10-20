@@ -9,6 +9,10 @@ export type PushNotificationType =
   | "starter_change"
   /** 予想締切（未予想試合） */
   | "prediction_deadline"
+  /** 毎晩 21:00。翌日の未予想 */
+  | "prediction_slate_nudge"
+  /** アワード・順位予想の締切前夜 */
+  | "season_predict_last_call"
   /** 複数変化のまとめ通知 */
   | "pregame_digest"
   /** PRO INSIGHT の重要更新（結論変化時のみ） */
@@ -39,6 +43,8 @@ const PUSH_TYPES = new Set<PushNotificationType>([
   "injury_status",
   "starter_change",
   "prediction_deadline",
+  "prediction_slate_nudge",
+  "season_predict_last_call",
   "pregame_digest",
   "pro_insight_update",
   "weekly_report",

@@ -17,6 +17,8 @@ export type GameMatchupCopyInput = Partial<PushMatchupInput> & {
   detail?: string;
   /** 予想締切まとめ — 未予想件数（2以上でまとめ文言） */
   pendingCount?: number;
+  /** シーズン予想の未提出 */
+  seasonGap?: "awards" | "standings" | "both";
 };
 
 export function buildPushNotificationCopy(
@@ -153,6 +155,102 @@ export function buildPushNotificationCopy(
             fr: "Il vous reste un match non tippé",
           }),
       };
+
+    case "prediction_slate_nudge": {
+      const n = Math.max(1, pendingCount);
+      const lead = matchup || "";
+      return {
+        title: L(lang, {
+          ja: "明日の予想をしましょう",
+          en: "Make tomorrow's picks",
+          ko: "내일 예측을 해볼까요",
+          zh: "来预测明天的比赛吧",
+          es: "Haz los tips de mañana",
+          pt: "Faça os tips de amanhã",
+          fr: "Faites les tips de demain",
+        }),
+        body:
+          n >= 2
+            ? L(lang, {
+                ja: lead
+                  ? `明日は ${n} 試合（${lead} ほか）`
+                  : `明日は ${n} 試合あります`,
+                en: lead
+                  ? `${n} games tomorrow (${lead} + more)`
+                  : `${n} games tomorrow`,
+                ko: lead
+                  ? `내일 ${n}경기（${lead} 외）`
+                  : `내일 ${n}경기가 있습니다`,
+                zh: lead
+                  ? `明天有 ${n} 场（${lead} 等）`
+                  : `明天有 ${n} 场比赛`,
+                es: lead
+                  ? `${n} partidos mañana (${lead} y más)`
+                  : `${n} partidos mañana`,
+                pt: lead
+                  ? `${n} jogos amanhã (${lead} e mais)`
+                  : `${n} jogos amanhã`,
+                fr: lead
+                  ? `${n} matchs demain (${lead} et plus)`
+                  : `${n} matchs demain`,
+              })
+            : L(lang, {
+                ja: lead ? `明日は ${lead}` : "明日の試合が残っています",
+                en: lead ? `Tomorrow: ${lead}` : "Tomorrow's game is still open",
+                ko: lead ? `내일 ${lead}` : "내일 경기가 남아 있습니다",
+                zh: lead ? `明天是 ${lead}` : "明天还有比赛",
+                es: lead ? `Mañana: ${lead}` : "Queda el partido de mañana",
+                pt: lead ? `Amanhã: ${lead}` : "Ainda há jogo amanhã",
+                fr: lead ? `Demain : ${lead}` : "Le match de demain est encore ouvert",
+              }),
+      };
+    }
+
+    case "season_predict_last_call": {
+      const gap = input?.seasonGap ?? "both";
+      const body =
+        gap === "awards"
+          ? L(lang, {
+              ja: "アワード予想が明日締め切られます",
+              en: "Award picks lock tomorrow",
+              ko: "어워드 예측이 내일 마감됩니다",
+              zh: "奖项预测明天截止",
+              es: "Los premios cierran mañana",
+              pt: "Os prêmios fecham amanhã",
+              fr: "Les trophées ferment demain",
+            })
+          : gap === "standings"
+            ? L(lang, {
+                ja: "順位予想が明日締め切られます",
+                en: "Standings picks lock tomorrow",
+                ko: "순위 예측이 내일 마감됩니다",
+                zh: "排名预测明天截止",
+                es: "La clasificación cierra mañana",
+                pt: "A classificação fecha amanhã",
+                fr: "Le classement ferme demain",
+              })
+            : L(lang, {
+                ja: "アワードと順位予想が明日締め切られます",
+                en: "Award and standings picks lock tomorrow",
+                ko: "어워드와 순위 예측이 내일 마감됩니다",
+                zh: "奖项和排名预测明天截止",
+                es: "Premios y clasificación cierran mañana",
+                pt: "Prêmios e classificação fecham amanhã",
+                fr: "Trophées et classement ferment demain",
+              });
+      return {
+        title: L(lang, {
+          ja: "明日締め切りです",
+          en: "Deadline is tomorrow",
+          ko: "내일이 마감입니다",
+          zh: "明天截止",
+          es: "Mañana es el cierre",
+          pt: "Amanhã é o prazo",
+          fr: "La date limite est demain",
+        }),
+        body,
+      };
+    }
 
     case "pro_insight_update":
       return {

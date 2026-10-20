@@ -35,6 +35,12 @@ export function navigateFromPushNotificationData(data: PushNotificationData) {
       case "pro_insight_update":
         navigateToGamePredict(data.gameId);
         return;
+      case "prediction_slate_nudge":
+        navigationRef.navigate("Main", {
+          screen: "GamesTab",
+          params: { screen: "GamesHome" },
+        });
+        return;
       case "game_final":
         if (data.postId) {
           navigationRef.navigate("Main", {
@@ -63,6 +69,18 @@ export function navigateFromPushNotificationData(data: PushNotificationData) {
         navigationRef.navigate("Main", {
           screen: "ProfileTab",
           params: { screen: "ProfileHome", pop: true },
+        });
+        return;
+      case "season_predict_last_call":
+        navigationRef.navigate("Main", {
+          screen: "GamesTab",
+          params: {
+            screen: "SeasonPredict",
+            params: {
+              mode: data.label === "standings" ? "standings" : "awards",
+            },
+            initial: false,
+          },
         });
         return;
       case "discipline_alert":

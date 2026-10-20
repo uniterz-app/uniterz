@@ -14,6 +14,7 @@ import { grantAllFinalGroupBattleUnits } from "./groupBattles/grantGroupBattleUn
 import { advanceDueGroupBattlePhases } from "./groupBattles/advanceDuePhases";
 import { hasRankingAggregationScheduledJstToday } from "./schedule/hasRankingAggregationScheduledJstToday";
 import { runNotifyPredictionDeadlineCron } from "./notifications/notifyPredictionDeadlineCron";
+import { runNotifyEveningPredictNudgesCron } from "./notifications/notifyEveningPredictNudgesCron";
 import { runNotifyPregameAlertCron } from "./notifications/notifyPregameAlertCron";
 
 // ===============================
@@ -270,6 +271,23 @@ export const notifyPredictionDeadlinePushCron = onSchedule(
       await runNotifyPredictionDeadlineCron();
     } catch (err) {
       console.error("[notifyPredictionDeadlinePushCron] failed", err);
+    }
+  }
+);
+
+/** 毎晩 21:00 JST。翌日の予想促しと、シーズン予想の「明日締め切り」 */
+export const notifyEveningPredictNudgesCron = onSchedule(
+  {
+    schedule: "0 21 * * *",
+    timeZone: "Asia/Tokyo",
+    memory: "512MiB",
+    timeoutSeconds: 300,
+  },
+  async () => {
+    try {
+      await runNotifyEveningPredictNudgesCron();
+    } catch (err) {
+      console.error("[notifyEveningPredictNudgesCron] failed", err);
     }
   }
 );

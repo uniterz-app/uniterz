@@ -16,6 +16,8 @@ export type PushNotificationType =
   | "injury_status"
   | "starter_change"
   | "prediction_deadline"
+  | "prediction_slate_nudge"
+  | "season_predict_last_call"
   | "pregame_digest"
   | "pro_insight_update"
   | "weekly_report"
@@ -76,6 +78,7 @@ export type PushLanguage = LocalizedLang;
 export type GameMatchupCopyInput = Partial<PushMatchupInput> & {
   detail?: string;
   pendingCount?: number;
+  seasonGap?: "awards" | "standings" | "both";
   discipline?: DisciplinePushInput;
 };
 
@@ -312,6 +315,62 @@ export function buildPushNotificationCopy(
             fr: "Il vous reste un match non tippé",
           }),
       };
+
+    case "prediction_slate_nudge": {
+      const n = Math.max(1, pendingCount);
+      const lead = matchup || "";
+      return {
+        title: L(lang, {
+          ja: "明日の予想をしましょう",
+          en: "Make tomorrow's picks",
+          ko: "내일 예측을 해볼까요",
+          zh: "来预测明天的比赛吧",
+          es: "Haz los tips de mañana",
+          pt: "Faça os tips de amanhã",
+          fr: "Faites les tips de demain",
+        }),
+        body:
+          n >= 2
+            ? L(lang, {
+                ja: lead
+                  ? `明日は ${n} 試合（${lead} ほか）`
+                  : `明日は ${n} 試合あります`,
+                en: lead
+                  ? `${n} games tomorrow (${lead} + more)`
+                  : `${n} games tomorrow`,
+              })
+            : L(lang, {
+                ja: lead ? `明日は ${lead}` : "明日の試合が残っています",
+                en: lead ? `Tomorrow: ${lead}` : "Tomorrow's game is still open",
+              }),
+      };
+    }
+
+    case "season_predict_last_call": {
+      const gap = input?.seasonGap ?? "both";
+      const body =
+        gap === "awards"
+          ? L(lang, {
+              ja: "アワード予想が明日締め切られます",
+              en: "Award picks lock tomorrow",
+            })
+          : gap === "standings"
+            ? L(lang, {
+                ja: "順位予想が明日締め切られます",
+                en: "Standings picks lock tomorrow",
+              })
+            : L(lang, {
+                ja: "アワードと順位予想が明日締め切られます",
+                en: "Award and standings picks lock tomorrow",
+              });
+      return {
+        title: L(lang, {
+          ja: "明日締め切りです",
+          en: "Deadline is tomorrow",
+        }),
+        body,
+      };
+    }
 
     case "pro_insight_update":
       return {
