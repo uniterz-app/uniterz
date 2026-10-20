@@ -303,7 +303,14 @@ export const onGameFinalV2 = onDocumentWritten(
       }
 
       await batch.commit();
-      await Promise.all(userUpdateTasks);
+      const taskResults = await Promise.allSettled(userUpdateTasks);
+      const failedTasks = taskResults.filter((r) => r.status === "rejected");
+      if (failedTasks.length > 0) {
+        console.error(
+          `[onGameFinalV2] SETTLE_STATS_FAILED ${failedTasks.length} user tasks (${gameId})`,
+          failedTasks.map((r) => (r as PromiseRejectedResult).reason)
+        );
+      }
     }
 
     /* ===== ⑥ finalize game ===== */

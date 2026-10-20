@@ -17,6 +17,9 @@ import { nbaSeasonKeyFromDateJST } from "./rankings/nbaSeason";
  */
 export const SUPPRESS_STREAK_INCREMENT_V2_FIELD = "suppressStreakIncrementV2";
 
+/** ユーザーごとに書き込み先が別なので並列でよい。onGameFinalV2 の 540 秒に収める */
+const STREAK_UPDATE_CONCURRENCY = 20;
+
 export type UpdatedUserStreakResult = {
   uid: string;
   didWin: boolean;
@@ -137,7 +140,7 @@ export async function updateUserStreak({
     return updatedMap;
   }
 
-  for (const [uid, didWin] of userResult.entries()) {
+  const applyForUser = async (uid: string, didWin: boolean) => {
     const userRef = db.doc(`user_stats_v2/${uid}`);
     const cumulativeRef = db.doc(`cumulative_stats/${uid}`);
     const publicUserRef = db.doc(`users/${uid}`);
@@ -269,6 +272,22 @@ export async function updateUserStreak({
     );
 
     updatedMap.set(uid, updated);
+  };
+
+  const entries = [...userResult.entries()];
+  for (let i = 0; i < entries.length; i += STREAK_UPDATE_CONCURRENCY) {
+    const chunk = entries.slice(i, i + STREAK_UPDATE_CONCURRENCY);
+    await Promise.all(
+      chunk.map(([uid, didWin]) =>
+        applyForUser(uid, didWin).catch((err) => {
+          /** 1 人の失敗で試合全体の精算を止めない（その人は連勝ボーナスなしで精算される） */
+          console.error(
+            `[updateUserStreak] STREAK_UPDATE_FAILED game=${gameId} uid=${uid}`,
+            err
+          );
+        })
+      )
+    );
   }
 
   return updatedMap;

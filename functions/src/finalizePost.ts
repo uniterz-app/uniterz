@@ -9,6 +9,35 @@ import { isNbaPickupGame } from "./rankings/isPickupGame";
 import { isNbaPreseasonPhase } from "./rankings/nbaSeason";
 import type { ResultScoreRelAgg } from "./aggregateGamePointsDistribution";
 
+const SETTLE_STATS_MAX_ATTEMPTS = 3;
+
+/**
+ * post は batch で先に settledAt が付くため、ここで落ちると再トリガーでも拾われない。
+ * applyPostToUserStatsV2 は applied_posts マーカーで冪等なので再試行してよい。
+ */
+async function withSettleRetry(
+  label: string,
+  uid: string,
+  postId: string,
+  fn: () => Promise<unknown>
+): Promise<void> {
+  for (let attempt = 1; attempt <= SETTLE_STATS_MAX_ATTEMPTS; attempt++) {
+    try {
+      await fn();
+      return;
+    } catch (err) {
+      if (attempt === SETTLE_STATS_MAX_ATTEMPTS) {
+        console.error(
+          `[finalizePost] SETTLE_STATS_FAILED ${label} uid=${uid} postId=${postId}`,
+          err
+        );
+        return;
+      }
+      await new Promise((r) => setTimeout(r, 500 * attempt + Math.random() * 500));
+    }
+  }
+}
+
 export async function finalizePost({
   postDoc,
   game,
@@ -189,71 +218,81 @@ export async function finalizePost({
   const exactHit = Boolean((baseScore as { exactMatch?: boolean }).exactMatch);
   userUpdateTasks.push(
     (async () => {
-      await applyPostToUserStatsV2({
-        uid,
-        postId: postDoc.id,
-        createdAt: p.createdAt,
-        startAt: after.startAtJst ?? after.startAt ?? p.createdAt,
-        league: game.league,
+      await withSettleRetry("applyPostToUserStatsV2", uid, postDoc.id, () =>
+        applyPostToUserStatsV2({
+          uid,
+          postId: postDoc.id,
+          createdAt: p.createdAt,
+          startAt: after.startAtJst ?? after.startAt ?? p.createdAt,
+          league: game.league,
 
-        isWin: result.isWin,
-        scoreError: result.scoreError,
-        hadUpsetGame,
+          isWin: result.isWin,
+          scoreError: result.scoreError,
+          hadUpsetGame,
 
-        upsetHit: result.upsetHit,
-        upsetPoints,
-        upsetBonus,
-        streakBonus,
-        goalScorerBonus,
-        goalScorerHit: goalScorerBonus > 0,
-        exactHit,
+          upsetHit: result.upsetHit,
+          upsetPoints,
+          upsetBonus,
+          streakBonus,
+          goalScorerBonus,
+          goalScorerHit: goalScorerBonus > 0,
+          exactHit,
 
-        points: totalPoints,
-        countsForRanking,
-        isPickup,
-        seasonPhase: game?.seasonPhase ?? null,
-        wcStage: null,
-        homeTeamId: game.homeTeamId ?? p.home?.teamId ?? null,
-        awayTeamId: game.awayTeamId ?? p.away?.teamId ?? null,
-      });
-
-      const { syncProSkinProgressOnNbaSettle } = await import(
-        "./profile/syncProSkinProgressOnNbaSettle"
+          points: totalPoints,
+          countsForRanking,
+          isPickup,
+          seasonPhase: game?.seasonPhase ?? null,
+          wcStage: null,
+          homeTeamId: game.homeTeamId ?? p.home?.teamId ?? null,
+          awayTeamId: game.awayTeamId ?? p.away?.teamId ?? null,
+        })
       );
-      await syncProSkinProgressOnNbaSettle({
-        uid,
-        postId: postDoc.id,
-        startAt: after.startAtJst ?? after.startAt ?? p.createdAt,
-        league: game.league,
-        countsForRanking,
-        seasonPhase: game?.seasonPhase ?? null,
-        exactHit,
-        scorerHit: goalScorerBonus > 0,
-        upsetHit: result.upsetHit === true,
-        activeWinStreak,
-      });
 
-      const { syncProfileHeroSnapshotOnNbaSettle } = await import(
-        "./profile/syncProfileHeroSnapshotOnNbaSettle"
-      );
-      await syncProfileHeroSnapshotOnNbaSettle({
-        uid,
-        postId: postDoc.id,
-        startAt: after.startAtJst ?? after.startAt ?? p.createdAt,
-        league: game.league,
-        countsForRanking,
-        isPickup,
-        seasonPhase: game?.seasonPhase ?? null,
-        isWin: result.isWin,
-        points: totalPoints,
-        upsetPoints,
-        upsetBonus,
-        streakBonus,
-        goalScorerHit: goalScorerBonus > 0,
-        hadUpsetGame,
-        upsetHit: result.upsetHit,
-        activeWinStreak,
-      });
+      try {
+        const { syncProSkinProgressOnNbaSettle } = await import(
+          "./profile/syncProSkinProgressOnNbaSettle"
+        );
+        await syncProSkinProgressOnNbaSettle({
+          uid,
+          postId: postDoc.id,
+          startAt: after.startAtJst ?? after.startAt ?? p.createdAt,
+          league: game.league,
+          countsForRanking,
+          seasonPhase: game?.seasonPhase ?? null,
+          exactHit,
+          scorerHit: goalScorerBonus > 0,
+          upsetHit: result.upsetHit === true,
+          activeWinStreak,
+        });
+      } catch (skinErr) {
+        console.warn("[finalizePost] pro skin settle sync failed", uid, postDoc.id, skinErr);
+      }
+
+      try {
+        const { syncProfileHeroSnapshotOnNbaSettle } = await import(
+          "./profile/syncProfileHeroSnapshotOnNbaSettle"
+        );
+        await syncProfileHeroSnapshotOnNbaSettle({
+          uid,
+          postId: postDoc.id,
+          startAt: after.startAtJst ?? after.startAt ?? p.createdAt,
+          league: game.league,
+          countsForRanking,
+          isPickup,
+          seasonPhase: game?.seasonPhase ?? null,
+          isWin: result.isWin,
+          points: totalPoints,
+          upsetPoints,
+          upsetBonus,
+          streakBonus,
+          goalScorerHit: goalScorerBonus > 0,
+          hadUpsetGame,
+          upsetHit: result.upsetHit,
+          activeWinStreak,
+        });
+      } catch (heroErr) {
+        console.warn("[finalizePost] profile hero settle sync failed", uid, postDoc.id, heroErr);
+      }
 
       try {
         const { syncUserCareerOnNbaSettle } = await import(
