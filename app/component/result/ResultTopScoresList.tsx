@@ -1,12 +1,16 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import DailyScoreRankRow from "@/app/component/rankings/DailyScoreRankRow";
 import type { Language } from "@/lib/i18n/language";
 import { L, resolveLocalizedLang } from "@/lib/i18n/localize";
 import { t } from "@/lib/i18n/t";
 import { profilePathKeyFromRow } from "@/lib/profile/profilePathKey";
-import type { GamePointsTopEntryV1 } from "@/lib/results/gamePointsTop";
+import {
+  GAME_POINTS_TOP_INITIAL_VISIBLE,
+  type GamePointsTopEntryV1,
+} from "@/lib/results/gamePointsTop";
 import { warmPublicProfileFromListEntry } from "@/app/component/profile/useProfile";
 
 type Props = {
@@ -21,7 +25,13 @@ export default function ResultTopScoresList({
   language = "en",
   gamesRoutePrefix = "/mobile",
 }: Props) {
+  const [expanded, setExpanded] = useState(false);
   if (entries.length === 0) return null;
+  const canExpand = entries.length > GAME_POINTS_TOP_INITIAL_VISIBLE;
+  const visible =
+    expanded || !canExpand
+      ? entries
+      : entries.slice(0, GAME_POINTS_TOP_INITIAL_VISIBLE);
   const loc = resolveLocalizedLang(language);
   const title = L(loc, {
     ja: "得点上位",
@@ -39,7 +49,7 @@ export default function ResultTopScoresList({
         {title}
       </p>
       <div className="space-y-1.5">
-        {entries.map((entry) => {
+        {visible.map((entry) => {
           const profileKey = profilePathKeyFromRow({
             uid: entry.uid,
             handle: entry.handle === "—" ? "" : entry.handle,
@@ -85,6 +95,16 @@ export default function ResultTopScoresList({
           );
         })}
       </div>
+      {canExpand ? (
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          aria-expanded={expanded}
+          className="mt-2 w-full border border-cyan-300/35 bg-cyan-300/5 py-2 text-[11px] font-bold uppercase tracking-[0.18em] text-cyan-300/90 transition-opacity active:opacity-70"
+        >
+          {expanded ? "CLOSE" : `MORE · TOP ${entries.length}`}
+        </button>
+      ) : null}
     </section>
   );
 }

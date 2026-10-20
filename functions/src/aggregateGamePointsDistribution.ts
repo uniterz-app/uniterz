@@ -5,6 +5,9 @@ import {
 import type { SettlementGameInput } from "./settlementGame";
 import type { UpdatedUserStreakResult } from "./updateUserStreak";
 
+/** lib `GAME_POINTS_TOP_LIMIT` と同値（リザルト詳細は先頭 10 + MORE で 50） */
+const GAME_POINTS_TOP_LIMIT = 50;
+
 export type GamePointsTopEntryAgg = {
   rank: number;
   postId: string;
@@ -105,7 +108,7 @@ function buildSummaryFromScores(
     max: sorted[n - 1] ?? null,
     p95: percentileFloorFromSortedAsc(sorted, 0.05),
     p90: percentileFloorFromSortedAsc(sorted, 0.1),
-    top: top.slice(0, 10),
+    top: top.slice(0, GAME_POINTS_TOP_LIMIT),
   };
 }
 
@@ -201,7 +204,7 @@ export function aggregateGamePointsSummaryFromPostsSnap({
 
   const top = scoredRows
     .sort((a, b) => b.points - a.points || a.postId.localeCompare(b.postId))
-    .slice(0, 10)
+    .slice(0, GAME_POINTS_TOP_LIMIT)
     .map((row, i) => ({
       ...row,
       rank: i + 1,

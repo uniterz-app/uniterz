@@ -8,9 +8,10 @@
  * - n / median / max
  * - p95: TOP 5% 下限得点
  * - p90: TOP 10% 下限得点
- * - top: 得点上位 10
+ * - top: 得点上位 50
  */
 import {
+  GAME_POINTS_TOP_LIMIT,
   parseGamePointsTopEntries,
   type GamePointsTopEntryV1,
 } from "./gamePointsTop";
@@ -73,7 +74,7 @@ export function buildGamePointsSummaryFromScores(
     max,
     p95: percentileFloorFromSortedDesc(sorted, 0.05),
     p90: percentileFloorFromSortedDesc(sorted, 0.1),
-    top: top.slice(0, 10),
+    top: top.slice(0, GAME_POINTS_TOP_LIMIT),
   };
 }
 

@@ -2,6 +2,13 @@
  * 試合確定時に games.pointsDistribution.top へ埋め込む上位エントリ。
  * settle 時の posts スナップから構築（追加クエリなし）。
  */
+
+/** games.pointsSummary.top に保存する人数（functions `aggregateGamePointsDistribution` と同値） */
+export const GAME_POINTS_TOP_LIMIT = 50;
+
+/** リザルト詳細で MORE を押す前に見せる人数 */
+export const GAME_POINTS_TOP_INITIAL_VISIBLE = 10;
+
 export type GamePointsTopEntryV1 = {
   rank: number;
   postId: string;
@@ -59,7 +66,7 @@ export function parseGamePointsTopEntries(
       countryCode: countryRaw,
     });
   }
-  return out.sort((a, b) => a.rank - b.rank).slice(0, 10);
+  return out.sort((a, b) => a.rank - b.rank).slice(0, GAME_POINTS_TOP_LIMIT);
 }
 
 /** posts スナップ行から Top 用の表示メタを抜く（追加 user read なし） */

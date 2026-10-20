@@ -3,7 +3,7 @@
 /**
  * Native `ResultDetailBodyNative` 相当 — リザルト詳細ボディ（カード面 + この試合 + Top10 + 内訳）。
  */
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Check, X } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useNbaTopScorerCandidates } from "@/lib/nba/useNbaTopScorerCandidates";
@@ -23,7 +23,10 @@ import type {
 } from "@/lib/result/buildResultDetailView";
 import { SCORE_BREAKDOWN_COLORS } from "@/lib/result/resultScoreBreakdownColors";
 import type { ResultTopScorerMarketView } from "@/lib/result/resultTopScorerMarket";
-import type { GamePointsTopEntryV1 } from "@/lib/results/gamePointsTop";
+import {
+  GAME_POINTS_TOP_INITIAL_VISIBLE,
+  type GamePointsTopEntryV1,
+} from "@/lib/results/gamePointsTop";
 import { profilePathKeyFromRow } from "@/lib/profile/profilePathKey";
 import { warmPublicProfileFromListEntry } from "@/app/component/profile/useProfile";
 
@@ -334,13 +337,19 @@ function TopScoresPanel({
   language: Language;
   gamesRoutePrefix: "/web" | "/mobile";
 }) {
+  const [expanded, setExpanded] = useState(false);
   if (entries.length === 0) return null;
+  const canExpand = entries.length > GAME_POINTS_TOP_INITIAL_VISIBLE;
+  const visible =
+    expanded || !canExpand
+      ? entries
+      : entries.slice(0, GAME_POINTS_TOP_INITIAL_VISIBLE);
 
   return (
     <div className="flex flex-col gap-2.5">
       <SectionHeader title={ja ? "得点上位" : "TOP SCORES"} accent={ACCENT} />
       <div className="space-y-1.5">
-        {entries.map((entry) => {
+        {visible.map((entry) => {
           const profileKey = profilePathKeyFromRow({
             uid: entry.uid,
             handle: entry.handle === "—" ? "" : entry.handle,
@@ -386,6 +395,21 @@ function TopScoresPanel({
           );
         })}
       </div>
+      {canExpand ? (
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          aria-expanded={expanded}
+          className={`${nameOxanium.className} w-full border py-2 text-[11px] font-bold uppercase tracking-[0.18em] transition-opacity active:opacity-70`}
+          style={{
+            borderColor: hexToRgba(ACCENT, 0.35),
+            backgroundColor: hexToRgba(ACCENT, 0.05),
+            color: hexToRgba(ACCENT, 0.9),
+          }}
+        >
+          {expanded ? "CLOSE" : `MORE · TOP ${entries.length}`}
+        </button>
+      ) : null}
     </div>
   );
 }

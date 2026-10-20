@@ -256,7 +256,7 @@ export const onGameFinalV2 = onDocumentWritten(
         streakResultMap,
       });
 
-    /** Top10 の表示名 / アバターは users から補完（posts.author が無いため） */
+    /** Top50 の表示名 / アバターは users から補完（posts.author が無いため） */
     const pointsSummary = {
       ...pointsSummaryRaw,
       top: await enrichGamePointsTopFromUsers(

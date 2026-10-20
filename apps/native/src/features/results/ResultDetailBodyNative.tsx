@@ -2,7 +2,7 @@
  * 本番／DEV 共用 — リザルト詳細ボディ（カード面 + 中央値/最高 + Top10 + 内訳）。
  * `ResultDetailViewModel` をそのまま描画。
  */
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { db } from "../../lib/firebase";
@@ -30,7 +30,10 @@ import type {
   ResultDetailViewModel,
 } from "../../../../../lib/result/buildResultDetailView";
 import type { ResultTopScorerMarketView } from "../../../../../lib/result/resultTopScorerMarket";
-import type { GamePointsTopEntryV1 } from "../../../../../lib/results/gamePointsTop";
+import {
+  GAME_POINTS_TOP_INITIAL_VISIBLE,
+  type GamePointsTopEntryV1,
+} from "../../../../../lib/results/gamePointsTop";
 import { profilePathKeyFromRow } from "../../../../../lib/profile/profilePathKey";
 import type { OpenPublicProfileWarm } from "../../navigation/navigateToPublicProfileNative";
 import { useNbaTopScorerCandidates } from "../../../../../lib/nba/useNbaTopScorerCandidates";
@@ -303,12 +306,18 @@ function Top10Panel({
   entries: GamePointsTopEntryV1[];
   onOpenProfile?: (handle: string, warm?: OpenPublicProfileWarm) => void;
 }) {
+  const [expanded, setExpanded] = useState(false);
   if (entries.length === 0) return null;
+  const canExpand = entries.length > GAME_POINTS_TOP_INITIAL_VISIBLE;
+  const visible =
+    expanded || !canExpand
+      ? entries
+      : entries.slice(0, GAME_POINTS_TOP_INITIAL_VISIBLE);
   return (
     <View style={styles.sectionBlock}>
       <SectionHeader title={ja ? "得点上位" : "TOP SCORES"} accent={ACCENT} />
       <View style={styles.topScoresList}>
-        {entries.map((row) => {
+        {visible.map((row) => {
           const profileKey = profilePathKeyFromRow({
             uid: row.uid,
             handle: row.handle === "—" ? "" : row.handle,
@@ -344,6 +353,21 @@ function Top10Panel({
           );
         })}
       </View>
+      {canExpand ? (
+        <Pressable
+          onPress={() => setExpanded((v) => !v)}
+          accessibilityRole="button"
+          accessibilityState={{ expanded }}
+          style={({ pressed }) => [
+            styles.topScoresMore,
+            pressed ? styles.topScoresMorePressed : null,
+          ]}
+        >
+          <Text style={styles.topScoresMoreText}>
+            {expanded ? "CLOSE" : `MORE · TOP ${entries.length}`}
+          </Text>
+        </Pressable>
+      ) : null}
     </View>
   );
 }
@@ -741,6 +765,23 @@ const styles = StyleSheet.create({
   },
   topScoresList: {
     gap: 6,
+  },
+  topScoresMore: {
+    borderWidth: 1,
+    borderColor: "rgba(0,245,255,0.35)",
+    backgroundColor: "rgba(0,245,255,0.05)",
+    paddingVertical: 9,
+    alignItems: "center",
+  },
+  topScoresMorePressed: {
+    opacity: 0.7,
+  },
+  topScoresMoreText: {
+    fontFamily: METRIC_FONT,
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 2,
+    color: "rgba(0,245,255,0.9)",
   },
   uniterzTab: {
     gap: 20,
