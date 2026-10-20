@@ -14,6 +14,7 @@ import {
 } from "@/lib/nba/insights/priorSeasonRecordTypes";
 import { NBA_TEAM_US_GEO } from "@/lib/nba/nbaTeamUsGeo";
 import { computeRestDays } from "@/lib/nba/insights/buildScheduleLines";
+import { nbaSeasonShortLabel } from "@/lib/rankings/nbaSeason";
 import {
   proInsightTeamAbbr,
 } from "@/lib/nba/insights/proInsightFacts/teamAbbr";
@@ -32,8 +33,10 @@ function h2hTemplateBody(input: {
   awayAbbr: string;
   overall: WlRecord;
   atHome: WlRecord | null;
+  /** 直近季の向きが合算と逆のときだけ（勝ち越した側の視点） */
+  recentFlip: { seasonKey: string; leaderAbbr: string; wl: WlRecord } | null;
 }): UiStrings {
-  const { homeAbbr: H, awayAbbr: A, overall, atHome } = input;
+  const { homeAbbr: H, awayAbbr: A, overall, atHome, recentFlip } = input;
   const sign = Math.sign(overall.wins - overall.losses);
   const span = input.years > 1 ? `過去${input.years}年の対戦` : "過去の対戦";
   const spanEn = input.years > 1 ? `Over the last ${input.years} seasons` : "In recent meetings";
@@ -55,18 +58,19 @@ function h2hTemplateBody(input: {
     }
   }
 
+  const leanAbbr = sign > 0 ? H : A;
   const leanJa =
-    sign > 0
-      ? `相性は ${H} 寄り。`
-      : sign < 0
-        ? `相性は ${A} 寄り。`
-        : "相性ではどちらにも傾かず、今夜は他の要素で決まりやすい。";
+    sign === 0
+      ? "相性ではどちらにも傾かず、今夜は他の要素で決まりやすい。"
+      : recentFlip
+        ? `相性は ${leanAbbr} 寄りだが、${nbaSeasonShortLabel(recentFlip.seasonKey)}シーズンは ${recentFlip.leaderAbbr} が ${formatWl(recentFlip.wl)}。`
+        : `相性は ${leanAbbr} 寄り。`;
   const leanEn =
-    sign > 0
-      ? `The series leans ${H}.`
-      : sign < 0
-        ? `The series leans ${A}.`
-        : "No series lean; tonight turns on other factors.";
+    sign === 0
+      ? "No series lean; tonight turns on other factors."
+      : recentFlip
+        ? `The series leans ${leanAbbr}, but ${recentFlip.leaderAbbr} went ${formatWl(recentFlip.wl)} in ${recentFlip.seasonKey}.`
+        : `The series leans ${leanAbbr}.`;
 
   return {
     ja: `${span}は ${H} ${formatWl(overall)}${homeJa}${leanJa}`,
@@ -77,6 +81,8 @@ function h2hTemplateBody(input: {
 const DAY_MS = 24 * 60 * 60 * 1000;
 const MIN_WL_GAMES = 5;
 const MIN_H2H_GAMES = 4;
+/** 直近季の向きを添える最低対戦数（1-0 は向きと言えない） */
+const MIN_RECENT_H2H_GAMES = 2;
 const MIN_CLUTCH_GAMES = 8;
 const MIN_DIV_GAMES = 5;
 
@@ -357,12 +363,35 @@ export function buildInsightExtrasContextCandidates(input: {
         wlTotal(fromHome.atHome) >= 2
           ? ` (${homeAbbr} ${formatWl(fromHome.atHome)} when hosting ${awayAbbr}; ${homeRelation})`
           : "";
+      const latest = (input.bundle.h2hBySeason?.[pairKey] ?? [])
+        .map((p) => ({
+          seasonKey: p.seasonKey,
+          wl: h2hFromPerspective(p, input.homeTeamId)?.overall ?? null,
+        }))
+        .find((p) => p.wl != null && wlTotal(p.wl) >= MIN_RECENT_H2H_GAMES);
+      const latestSign = latest?.wl
+        ? Math.sign(latest.wl.wins - latest.wl.losses)
+        : 0;
+      const recentFlip =
+        latest?.wl && overallSign !== 0 && latestSign === -overallSign
+          ? {
+              seasonKey: latest.seasonKey,
+              leaderAbbr: latestSign > 0 ? homeAbbr : awayAbbr,
+              wl:
+                latestSign > 0
+                  ? latest.wl
+                  : { wins: latest.wl.losses, losses: latest.wl.wins },
+            }
+          : null;
       const lean =
-        wins > losses
+        (wins > losses
           ? ` — series leans ${homeAbbr}`
           : wins < losses
             ? ` — series leans ${awayAbbr}`
-            : " — series is even";
+            : " — series is even") +
+        (recentFlip
+          ? ` (but ${recentFlip.leaderAbbr} ${formatWl(recentFlip.wl)} in ${recentFlip.seasonKey})`
+          : "");
       out.push({
         id: `ctx:h2hMulti:${pairKey}`,
         section: "CONTEXT",
@@ -401,6 +430,7 @@ export function buildInsightExtrasContextCandidates(input: {
           awayAbbr,
           overall: fromHome.overall,
           atHome: wlTotal(fromHome.atHome) >= 2 ? fromHome.atHome : null,
+          recentFlip,
         }),
       });
     }

@@ -47,6 +47,8 @@ export type NbaTeamInsightExtrasBundle = {
   teams: Record<string, NbaTeamInsightExtraSplit>;
   /** 複数年 H2H（ペアキー teamA|teamB） */
   h2hMultiYear: Record<string, NbaH2HSeasonPair>;
+  /** 同じペアのシーズン別（新しい順・対戦のあった季だけ）。旧ドキュメントには無い */
+  h2hBySeason?: Record<string, Array<NbaH2HSeasonPair & { seasonKey: string }>>;
   gameCount: number;
   builtAtMs: number;
   source: string;

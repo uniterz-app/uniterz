@@ -216,10 +216,23 @@ export function buildTeamInsightExtraRecords(input: {
   }
 
   const h2hMultiYear: Record<string, NbaH2HSeasonPair> = {};
+  const h2hBySeason: NonNullable<NbaTeamInsightExtrasBundle["h2hBySeason"]> =
+    {};
   const h2hSeasonKeys: string[] = [];
   for (const block of input.h2hBySeason ?? []) {
     h2hSeasonKeys.push(block.seasonKey);
     for (const [key, pair] of Object.entries(block.h2h)) {
+      if (pair.aWins + pair.bWins > 0) {
+        (h2hBySeason[key] ??= []).push({
+          seasonKey: block.seasonKey,
+          teamAId: pair.teamAId,
+          teamBId: pair.teamBId,
+          aWins: pair.aWins,
+          bWins: pair.bWins,
+          atA: { ...pair.atA },
+          atB: { ...pair.atB },
+        });
+      }
       const existing = h2hMultiYear[key];
       if (!existing) {
         h2hMultiYear[key] = {
@@ -246,6 +259,7 @@ export function buildTeamInsightExtraRecords(input: {
     h2hSeasonKeys,
     teams,
     h2hMultiYear,
+    h2hBySeason,
     gameCount: regular.length,
     builtAtMs: input.nowMs ?? Date.now(),
     source: "games+h2hLookback",
