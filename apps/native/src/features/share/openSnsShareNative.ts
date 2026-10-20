@@ -14,7 +14,7 @@ function isShareCancelled(error: unknown): boolean {
   return msg.includes("cancel") || msg.includes("dismiss");
 }
 
-/** OS 共有シート（画像ありなら PNG + 文面） */
+/** OS 共有シート（画像ありなら PNG のみ。文面だけの共有はリンク付き） */
 export async function shareViaOsNative(options: {
   caption: string;
   linkUrl?: string | null;
@@ -23,10 +23,7 @@ export async function shareViaOsNative(options: {
 }): Promise<ShareImageNativeResult> {
   const { caption, linkUrl, imageUri, title } = options;
   if (imageUri) {
-    return shareImageUriNative(imageUri, {
-      caption,
-      linkUrl: linkUrl ?? undefined,
-    });
+    return shareImageUriNative(imageUri);
   }
 
   const message = buildShareOutboundMessage(caption, linkUrl);

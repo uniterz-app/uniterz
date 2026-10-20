@@ -1522,15 +1522,20 @@ const styles = StyleSheet.create({
   liveMarkSlot: {
     marginBottom: 2,
   },
-  /** 本番スコア — Montserrat Black Italic */
+  /**
+   * 本番スコア — Montserrat Black Italic。
+   * 斜体の上端が lineHeight からはみ出すと、共有 PNG で文字が切れる。
+   */
   finalScore: {
     fontFamily: MATCH_CARD_SCORE_FONT,
     fontSize: 19,
-    lineHeight: 21,
+    lineHeight: 28,
     fontWeight: "900",
     color: "rgba(255,255,255,0.95)",
     fontVariant: ["tabular-nums"],
     letterSpacing: -0.5,
+    includeFontPadding: false,
+    paddingTop: 2,
   },
   finalDash: {
     fontFamily: MATCH_CARD_SCORE_FONT,
@@ -1545,26 +1550,30 @@ const styles = StyleSheet.create({
   predScoreMain: {
     fontFamily: MATCH_CARD_SCORE_FONT,
     fontSize: 22,
-    lineHeight: 24,
+    lineHeight: 32,
     fontWeight: "900",
     color: "rgba(253,224,71,0.95)",
     fontVariant: ["tabular-nums"],
     letterSpacing: -0.5,
+    includeFontPadding: false,
+    paddingTop: 2,
     textShadowColor: "rgba(251,191,36,0.32)",
     textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 12,
+    textShadowRadius: 8,
   },
   predScore: {
     fontFamily: MATCH_CARD_SCORE_FONT,
     fontSize: 15,
-    lineHeight: 17,
+    lineHeight: 22,
     fontWeight: "900",
     color: "rgba(253,224,71,0.95)",
     fontVariant: ["tabular-nums"],
     letterSpacing: -0.4,
+    includeFontPadding: false,
+    paddingTop: 2,
     textShadowColor: "rgba(251,191,36,0.32)",
     textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 12,
+    textShadowRadius: 8,
   },
   predDash: {
     fontFamily: MATCH_CARD_SCORE_FONT,
@@ -1655,8 +1664,10 @@ const styles = StyleSheet.create({
   splitValue: {
     fontFamily: MATCH_CARD_SCORE_FONT,
     fontSize: 22,
-    lineHeight: 26,
+    lineHeight: 32,
     fontWeight: "900",
+    includeFontPadding: false,
+    paddingTop: 2,
     fontVariant: ["tabular-nums"],
     letterSpacing: -0.4,
     color: "#F8FAFC",
@@ -1830,11 +1841,11 @@ const compactStyles = StyleSheet.create({
   matchCenterLive: { paddingTop: 18 },
   matchCenterLiveScore: { paddingTop: 4 },
   finalStatus: { fontSize: 10 },
-  finalScore: { fontSize: 17, lineHeight: 19 },
+  finalScore: { fontSize: 17, lineHeight: 26 },
   finalDash: { fontSize: 14 },
   predCaption: { fontSize: 9 },
-  predScoreMain: { fontSize: 19, lineHeight: 21 },
-  predScore: { fontSize: 13, lineHeight: 15 },
+  predScoreMain: { fontSize: 19, lineHeight: 28 },
+  predScore: { fontSize: 13, lineHeight: 20 },
   predDash: { fontSize: 11 },
   biasRoot: { marginBottom: 2 },
   biasPctHeader: { marginBottom: 3 },
@@ -1847,5 +1858,5 @@ const compactStyles = StyleSheet.create({
   scorerHitCluster: { width: 80 },
   splitRow: { paddingVertical: 0 },
   splitSide: { gap: 2, paddingVertical: 1 },
-  splitValue: { fontSize: 19, lineHeight: 22 },
+  splitValue: { fontSize: 19, lineHeight: 28 },
 });

@@ -17,7 +17,6 @@ import {
   type MyRankStatsSource,
 } from "../../../../../lib/rankings/myRankCardFocus";
 import { L, resolveLocalizedLang } from "../../../../../lib/i18n/localize";
-import { buildRankCardShareCaption } from "../../../../../lib/rankings/rankCardShareText";
 import { rankingsTexts, type RankingsLanguage } from "./rankingsTexts";
 import { CyberRankingListRowNative } from "./CyberRankingListRowNative";
 import { MyRankCardFrameNative, resolveMyRankFrameTone } from "./MyRankCardFrameNative";
@@ -201,17 +200,9 @@ export function MyRankCardNative({
     if (!canShare) return;
     setSharing(true);
     try {
-      const caption = buildRankCardShareCaption({
-        language: loc,
-        rank,
-        leagueLabel,
-        totalEntries,
-      });
       await waitNextPaint();
       const uri = await captureViewAsPngNative(captureRef);
-      const result = await shareImageUriNative(uri, {
-        caption,
-      });
+      const result = await shareImageUriNative(uri);
       if (result === "failed") {
         cyberAlert("", t.shareRankCardFailed);
       }
@@ -220,14 +211,7 @@ export function MyRankCardNative({
     } finally {
       setSharing(false);
     }
-  }, [
-    canShare,
-    loc,
-    leagueLabel,
-    rank,
-    t.shareRankCardFailed,
-    totalEntries,
-  ]);
+  }, [canShare, t.shareRankCardFailed]);
 
   useEffect(() => {
     onShareStateChange?.({

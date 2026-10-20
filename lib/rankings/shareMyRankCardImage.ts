@@ -27,11 +27,6 @@ export type RankCardImagePayload = {
 const TRANSPARENT_PIXEL =
   "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
 
-function getAppUrl(): string | undefined {
-  if (typeof process === "undefined") return undefined;
-  return process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "");
-}
-
 /** 共有 PNG 生成時に除外する要素（data-capture-skip / data-share-exclude） */
 export function shouldIncludeInRankCardCapture(el: Node): boolean {
   if (!(el instanceof HTMLElement)) return true;
@@ -145,7 +140,7 @@ async function composeBrandedRankCard(captureBlob: Blob): Promise<Blob | null> {
     ctx.drawImage(img, pad, pad, cardW, cardH);
     ctx.restore();
 
-    // フッターブランド: シアンティック + UNITERZ / 右にサービス URL
+    // フッターブランド: シアンティック + UNITERZ
     const baseY = pad + cardH + footerH * 0.68;
     const brandSize = Math.max(12, Math.round(footerH * 0.44));
     ctx.textBaseline = "alphabetic";
@@ -159,16 +154,6 @@ async function composeBrandedRankCard(captureBlob: Blob): Promise<Blob | null> {
     ctx.font = `800 ${brandSize}px Oxanium, 'Avenir Next', Futura, system-ui, sans-serif`;
     ctx.fillStyle = "rgba(255,255,255,0.92)";
     ctx.fillText("UNITERZ", pad + brandSize * 0.5, baseY);
-
-    const appUrl = getAppUrl();
-    if (appUrl) {
-      const host = appUrl.replace(/^https?:\/\//, "");
-      const urlSize = Math.max(10, Math.round(brandSize * 0.7));
-      ctx.font = `600 ${urlSize}px Oxanium, system-ui, sans-serif`;
-      ctx.fillStyle = "rgba(140,240,255,0.55)";
-      const tw = ctx.measureText(host).width;
-      ctx.fillText(host, w - pad - tw, baseY);
-    }
 
     const blob = await new Promise<Blob | null>((resolve) =>
       canvas.toBlob(resolve, "image/png")
@@ -215,43 +200,26 @@ export async function captureRankCardPng(
     : new Error("Rank card capture failed");
 }
 
-/** 画像ファイルを OS の共有シートへ（Instagram / LINE / X 等） */
+/** 画像ファイルだけを OS の共有シートへ（文面・URL は付けない） */
 export async function shareRankCardFile(
   file: File,
-  shareText?: string
+  _shareText?: string
 ): Promise<ShareRankCardResult> {
   if (typeof navigator === "undefined" || typeof navigator.share !== "function") {
     return "unsupported";
   }
-  const appUrl = getAppUrl();
-  const withMeta: ShareData = {
-    files: [file],
-    ...(shareText ? { text: shareText } : {}),
-    ...(appUrl ? { url: appUrl } : {}),
-  };
   const filesOnly: ShareData = { files: [file] };
   try {
     if (navigator.canShare?.(filesOnly) === false) {
       return "unsupported";
     }
-    await navigator.share(
-      navigator.canShare?.(withMeta) !== false ? withMeta : filesOnly
-    );
+    await navigator.share(filesOnly);
     return "shared";
   } catch (e) {
     if (e instanceof DOMException && e.name === "AbortError") {
       return "cancelled";
     }
-    // text/url 付きで拒否される環境向けにファイル単体で再試行
-    try {
-      await navigator.share(filesOnly);
-      return "shared";
-    } catch (e2) {
-      if (e2 instanceof DOMException && e2.name === "AbortError") {
-        return "cancelled";
-      }
-      return "failed";
-    }
+    return "failed";
   }
 }
 

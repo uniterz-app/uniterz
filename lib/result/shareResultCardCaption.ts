@@ -1,9 +1,6 @@
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
-import {
-  buildResultShareUrl,
-  buildShareOutboundMessage,
-} from "@/lib/share/shareAppUrls";
+import { buildResultShareUrl } from "@/lib/share/shareAppUrls";
 
 export type ResultCardShareContext = {
   language: Language;
@@ -28,7 +25,7 @@ function formatScoreLine(
 
 export { buildResultShareUrl as buildResultCardShareUrl };
 
-/** リザルトカード共有用キャプション（予想・結果・総合得点 + ダウンロード URL） */
+/** リザルトカードの説明文（画像共有には付けない。リンクも付けない） */
 export function buildResultCardShareCaption(ctx: ResultCardShareContext): string {
   const r = t(ctx.language).results;
   const isJa = ctx.language === "ja";
@@ -54,6 +51,5 @@ export function buildResultCardShareCaption(ctx: ResultCardShareContext): string
     parts.push(r.shareResultTotal.replace("{pts}", pts));
   }
 
-  const caption = `${parts.join(" · ")} #Uniterz`;
-  return buildShareOutboundMessage(caption);
+  return `${parts.join(" · ")} #Uniterz`;
 }

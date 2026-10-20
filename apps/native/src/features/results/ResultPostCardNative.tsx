@@ -60,7 +60,6 @@ import {
   SHARE_CAPTURE_BG,
   shareImageUriNative,
 } from "../share/shareImageNative";
-import { buildResultCardShareCaption } from "../../../../../lib/result/shareResultCardCaption";
 import { cyberAlert } from "../../components/cyberAlert";
 import { registerTutorialTarget, notifyTutorialTargetsChanged } from "../tutorial/tutorialMeasureNative";
 import type { PostWithMillis } from "./nativeResultModel";
@@ -650,19 +649,9 @@ function ResultPostCardNativeInner({
     setCornerFabOpen(false);
     setSharing(true);
     try {
-      const caption = buildResultCardShareCaption({
-        language: loc,
-        homeName: faceModel.homeName,
-        awayName: faceModel.awayName,
-        predictedHome: faceModel.predHome,
-        predictedAway: faceModel.predAway,
-        finalHome: faceModel.resultHome,
-        finalAway: faceModel.resultAway,
-        totalPoints: faceModel.totalPoints,
-      });
       await waitNextPaint();
       const uri = await captureViewAsPngNative(captureRef);
-      const result = await shareImageUriNative(uri, { caption });
+      const result = await shareImageUriNative(uri);
       if (result === "failed") {
         cyberAlert("", resultCopy.shareResultCardFailed);
       }
@@ -671,18 +660,7 @@ function ResultPostCardNativeInner({
     } finally {
       setSharing(false);
     }
-  }, [
-    faceModel.awayName,
-    faceModel.homeName,
-    faceModel.predAway,
-    faceModel.predHome,
-    faceModel.resultAway,
-    faceModel.resultHome,
-    faceModel.totalPoints,
-    loc,
-    resultCopy.shareResultCardFailed,
-    sharing,
-  ]);
+  }, [resultCopy.shareResultCardFailed, sharing]);
 
   const cornerCluster = showCornerControl ? (
         <View style={styles.leftActionCluster} pointerEvents="box-none">
@@ -1269,9 +1247,16 @@ const styles = StyleSheet.create({
     position: "relative",
     overflow: "visible",
   },
-  /** 共有キャプチャ時 — 透明を白落ちさせない */
+  /**
+   * 共有キャプチャ時 — 透明を白落ちさせない。
+   * 左の縦ラベルと上辺ラベルは枠の外にはみ出すので、余白がないと PNG で切れる。
+   */
   captureSurface: {
     backgroundColor: SHARE_CAPTURE_BG,
+    paddingTop: 6,
+    paddingBottom: 10,
+    paddingLeft: 14,
+    paddingRight: 8,
   },
   /** 左上：線枠内側。フライアウトは右へ展開 */
   leftActionCluster: {

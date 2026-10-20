@@ -1,20 +1,13 @@
 import type { RefObject } from "react";
-import { Platform, Share, type View } from "react-native";
+import { type View } from "react-native";
+import * as Sharing from "expo-sharing";
 import { captureRef } from "react-native-view-shot";
-import { buildShareOutboundMessage } from "../../../../../lib/share/shareAppUrls";
-import { copyTextNative } from "../leaderboards/copyTextNative";
 
 export type ShareImageNativeResult =
   | "shared"
   | "cancelled"
   | "unsupported"
   | "failed";
-
-export type ShareImageNativeOptions = {
-  caption: string;
-  /** 投稿キャプション・SNS テキストに付ける HTTPS リンク（ディープリンク） */
-  linkUrl?: string;
-};
 
 function isShareCancelled(error: unknown): boolean {
   if (!(error instanceof Error)) return false;
@@ -57,30 +50,22 @@ export async function captureViewAsPngNative(
 export const SHARE_CAPTURE_BG = "#05080e";
 
 /**
- * キャプチャ済み PNG を OS 共有へ。
- * 文面はクリップボードにも載せ、受け取り側がメッセージを捨てたとき貼れるようにする。
+ * キャプチャ済み PNG だけを OS 共有へ。
+ * キャプション・ディープリンク・ダウンロード URL は付けない。
+ * Android の RN Share は text/plain しか送れないため、画像は expo-sharing を使う。
  */
 export async function shareImageUriNative(
-  imageUri: string,
-  options: ShareImageNativeOptions
+  imageUri: string
 ): Promise<ShareImageNativeResult> {
-  const message = buildShareOutboundMessage(options.caption, options.linkUrl);
   const fileUri = normalizeFileUri(imageUri);
 
-  await copyTextNative(message);
-
   try {
-    const payload =
-      Platform.OS === "ios"
-        ? { url: fileUri, message }
-        : {
-            message,
-            url: fileUri,
-            title: message.split("\n")[0]?.slice(0, 80) ?? "Uniterz",
-          };
-
-    const result = await Share.share(payload);
-    if (result.action === Share.dismissedAction) return "cancelled";
+    const available = await Sharing.isAvailableAsync();
+    if (!available) return "unsupported";
+    await Sharing.shareAsync(fileUri, {
+      mimeType: "image/png",
+      UTI: "public.png",
+    });
     return "shared";
   } catch (error) {
     if (isShareCancelled(error)) return "cancelled";
@@ -88,14 +73,13 @@ export async function shareImageUriNative(
   }
 }
 
-/** キャプチャ → リンク付き共有を一括実行 */
+/** キャプチャ → 画像だけの共有を一括実行 */
 export async function captureAndShareImageNative(
-  viewRef: RefObject<View | null>,
-  options: ShareImageNativeOptions
+  viewRef: RefObject<View | null>
 ): Promise<ShareImageNativeResult> {
   try {
     const uri = await captureViewAsPngNative(viewRef);
-    return await shareImageUriNative(uri, options);
+    return await shareImageUriNative(uri);
   } catch {
     return "failed";
   }

@@ -11,7 +11,7 @@ iOS は App Store 公開済み。商品ページ: `https://apps.apple.com/app/un
 
 1. `lib/share/shareAppUrls.ts` の `APP_STORE_SHARE_URL`（env `EXPO_PUBLIC_APP_STORE_URL` / `NEXT_PUBLIC_APP_STORE_URL` があればそちら優先）
 2. LP `lib/lp/officialSiteContent.ts` の `appStore`（`status: "available"`、`href` は `APP_STORE_SHARE_URL`）
-3. rank / result / profile 共有は `buildShareOutboundMessage` 経由で **ダウンロード URL `https://www.uniterz.app/get`（`getAppDownloadShareUrl()`）が自動付与**される。`app/get/route.ts` が User-Agent で iOS → App Store / Android → Google Play / その他 → `/lp` に 302。個別画面に足し直さない。共有着地ページの主 CTA も `/get`
+3. 順位カード・リザルトカードの共有は **PNG だけ**。キャプション・ディープリンク・ダウンロード URL は付けない（Native は `expo-sharing` で画像ファイルのみ。Android の RN `Share` は text/plain しか送れない）。プロフィール共有はプロフィール URL、招待・紹介はそれぞれの文面。`/get` は着地の主 CTA と、招待文が明示的に渡すときだけ。`app/get/route.ts` が User-Agent で iOS → App Store / Android → Google Play / その他 → `/lp` に 302
 
 URL を別の場所にハードコードしない（`APP_STORE_SHARE_URL` / `getAppStoreShareUrl()` を参照する）。
 
