@@ -11,11 +11,15 @@ import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 export default function MobileNbaAskPage() {
   const router = useRouter();
   const { fUser } = useFirebaseUser();
-  const { language } = useUserLanguage(fUser?.uid ?? null);
+  const { language, timeZone } = useUserLanguage(fUser?.uid ?? null);
   const copy = nbaAskCopy(language);
   return (
     <MobilePageShell eyebrow={copy.eyebrow} title={copy.title} onClose={() => router.back()}>
-      <NbaAskChat language={String(language ?? "ja")} signedIn={Boolean(fUser)} />
+      <NbaAskChat
+        language={String(language ?? "ja")}
+        timeZone={timeZone}
+        signedIn={Boolean(fUser)}
+      />
     </MobilePageShell>
   );
 }

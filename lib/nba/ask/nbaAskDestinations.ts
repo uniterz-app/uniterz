@@ -25,6 +25,7 @@ const TOPIC_OPEN: Record<string, NbaAskDestinationId | undefined> = {
   stats: "stats",
   scoring: "rankings",
   ranking: "rankings",
+  unit_rewards: "rankings",
   pro_plans: "pro",
 };
 

@@ -11,6 +11,7 @@ import {
 } from "@/lib/games/liveGameStats";
 import { getResolvedGameScore } from "@/lib/games/transform";
 import { toDateKeyInTimeZone } from "@/lib/time/zonedTime";
+import { nbaGameDocIdFromBdlId } from "@/lib/nba/bdl/mapBdlGameToNbaGameDoc";
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
 import { TEAM_SHORT } from "@/lib/team-short";
 import { searchNbaStatsIndex } from "@/lib/nba/nbaStatsSearch";
@@ -39,8 +40,8 @@ import {
   selectDailyScoreBoardRows,
 } from "@/lib/rankings/dailyScoreLeaders/loadDailyScoreLeadersAdmin";
 
-/** NBA の試合日は米国東部の暦日 */
-export const NBA_ASK_TIME_ZONE = "America/New_York";
+/** NBA の試合日（スレート）は米国東部の暦日。ユーザーに見せる日付は表示タイムゾーンで出す */
+const NBA_SLATE_TIME_ZONE = "America/New_York";
 
 const DATE_RE = /^(\d{4})-(\d{2})-(\d{2})$/;
 
@@ -61,27 +62,51 @@ function abbr(teamId: string): string {
   return (TEAM_SHORT[teamId] ?? teamId.replace(/^nba-/i, "")).toUpperCase();
 }
 
-async function loadGamesOnDate(db: Firestore, dateKey: string) {
+function startOf(data: Record<string, unknown>): Date | null {
+  const t = data.startAtJst as { toDate?: () => Date } | undefined;
+  return t?.toDate?.() ?? null;
+}
+
+/** 表示タイムゾーンの暦日に始まる試合（試合一覧の日付と同じ切り方） */
+async function loadGamesOnDate(db: Firestore, dateKey: string, timeZone: string) {
   const m = DATE_RE.exec(dateKey);
   if (!m) return null;
-  // 米国東部の 1 日は UTC の当日 04:00〜翌 05:00 に収まる。広めに取り、東部の暦日で絞る
+  // どのタイムゾーンの 1 日も UTC 当日 0 時の前後 14 時間以内に収まる。広めに取り、暦日で絞る
   const utcMidnight = Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  const hour = 3600 * 1000;
   const snap = await db
     .collection("games")
     .where("league", "==", "nba")
     .where("season", "==", GAME_SCHEDULE_SEASON)
-    .where("startAtJst", ">=", Timestamp.fromMillis(utcMidnight))
-    .where("startAtJst", "<", Timestamp.fromMillis(utcMidnight + 36 * 3600 * 1000))
+    .where("startAtJst", ">=", Timestamp.fromMillis(utcMidnight - 15 * hour))
+    .where("startAtJst", "<", Timestamp.fromMillis(utcMidnight + 39 * hour))
     .orderBy("startAtJst", "asc")
-    .limit(40)
+    .limit(60)
     .get();
   return snap.docs
     .map((d) => ({ id: d.id, data: d.data() as Record<string, unknown> }))
     .filter(({ data }) => {
-      const t = data.startAtJst as { toDate?: () => Date } | undefined;
-      const start = t?.toDate?.();
-      return start ? toDateKeyInTimeZone(start, NBA_ASK_TIME_ZONE) === dateKey : false;
+      const start = startOf(data);
+      return start ? toDateKeyInTimeZone(start, timeZone) === dateKey : false;
     });
+}
+
+/** 選手の試合ログ（BDL 試合 ID）→ 表示タイムゾーンの日付 */
+async function gameDateKeysByBdlId(
+  db: Firestore,
+  bdlGameIds: string[],
+  timeZone: string
+): Promise<Map<string, string>> {
+  const out = new Map<string, string>();
+  if (bdlGameIds.length === 0) return out;
+  const snaps = await db.getAll(
+    ...bdlGameIds.map((id) => db.collection("games").doc(nbaGameDocIdFromBdlId(Number(id))))
+  );
+  snaps.forEach((snap, i) => {
+    const start = snap.exists ? startOf(snap.data() as Record<string, unknown>) : null;
+    if (start) out.set(bdlGameIds[i]!, toDateKeyInTimeZone(start, timeZone));
+  });
+  return out;
 }
 
 function boxLine(p: LiveGameBoxPlayer) {
@@ -126,10 +151,10 @@ export const NBA_ASK_TOOL_DEFS = [
     type: "function",
     function: {
       name: "get_games_on_date",
-      description: "Games on a US Eastern date with scores and each team's top scorers.",
+      description: "Games that start on a date (the user's time zone) with scores and each team's top scorers.",
       parameters: {
         type: "object",
-        properties: { date: { type: "string", description: "YYYY-MM-DD (US Eastern)" } },
+        properties: { date: { type: "string", description: "YYYY-MM-DD (user's time zone)" } },
         required: ["date"],
       },
     },
@@ -138,12 +163,12 @@ export const NBA_ASK_TOOL_DEFS = [
     type: "function",
     function: {
       name: "get_player_game",
-      description: "One player's full box score line for the game on a US Eastern date.",
+      description: "One player's full box score line for the game on a date (the user's time zone).",
       parameters: {
         type: "object",
         properties: {
           player_id: { type: "string" },
-          date: { type: "string", description: "YYYY-MM-DD (US Eastern)" },
+          date: { type: "string", description: "YYYY-MM-DD (user's time zone)" },
         },
         required: ["player_id", "date"],
       },
@@ -153,7 +178,7 @@ export const NBA_ASK_TOOL_DEFS = [
     type: "function",
     function: {
       name: "get_player_recent_games",
-      description: "A player's most recent games this season (newest first).",
+      description: "A player's most recent games this season (newest first). Dates are in the user's time zone.",
       parameters: {
         type: "object",
         properties: {
@@ -227,11 +252,11 @@ export const NBA_ASK_PRO_TOOL_DEFS = [
     function: {
       name: "get_pro_insight",
       description:
-        "PRO-only pregame read (Pro Insight) for one NBA game on a US Eastern date. Matchup, schedule, context, injuries.",
+        "PRO-only pregame read (Pro Insight) for one NBA game on a date (the user's time zone). Matchup, schedule, context, injuries.",
       parameters: {
         type: "object",
         properties: {
-          date: { type: "string", description: "YYYY-MM-DD (US Eastern)" },
+          date: { type: "string", description: "YYYY-MM-DD (user's time zone)" },
           team: {
             type: "string",
             description: "Team abbr or name, when that date has several games",
@@ -394,7 +419,8 @@ export async function runNbaAskTool(
   db: Firestore,
   name: string,
   args: Record<string, unknown>,
-  language = "ja"
+  language: string,
+  timeZone: string
 ): Promise<unknown> {
   const str = (v: unknown) => String(v ?? "").trim();
 
@@ -415,7 +441,7 @@ export async function runNbaAskTool(
   if (name === "get_games_on_date") {
     const date = str(args.date);
     if (!DATE_RE.test(date)) return { error: "date must be YYYY-MM-DD" };
-    const games = await loadGamesOnDate(db, date);
+    const games = await loadGamesOnDate(db, date, timeZone);
     if (!games) return { error: "invalid date" };
     return {
       date,
@@ -447,7 +473,7 @@ export async function runNbaAskTool(
     const playerId = str(args.player_id);
     const date = str(args.date);
     if (!playerId || !DATE_RE.test(date)) return { error: "player_id and date required" };
-    const games = await loadGamesOnDate(db, date);
+    const games = await loadGamesOnDate(db, date, timeZone);
     if (!games) return { error: "invalid date" };
     for (const { id, data } of games) {
       const live = normalizeLiveGameStatsDoc(data.liveStats);
@@ -482,10 +508,16 @@ export async function runNbaAskTool(
     if (!playerId) return { error: "player_id required" };
     const n = Math.min(10, Math.max(1, Number(args.last_n) || 5));
     const logs = await loadPlayerGameLogsSnapshot(db, CURRENT_NBA_SEASON_KEY, playerId);
+    const recent = logs.gameLogs.slice(0, n);
+    const dates = await gameDateKeysByBdlId(
+      db,
+      recent.map((g) => g.gameId).filter((id) => /^\d+$/.test(id)),
+      timeZone
+    );
     return {
       season: logs.season,
-      games: logs.gameLogs.slice(0, n).map((g) => ({
-        date: g.dateLabel,
+      games: recent.map((g) => ({
+        date: dates.get(g.gameId) ?? null,
         opp: `${g.home ? "vs" : "@"} ${g.oppAbbr}`,
         result: g.result,
         min: g.min,
@@ -580,7 +612,7 @@ export async function runNbaAskTool(
     const date = str(args.date);
     const team = str(args.team);
     if (!DATE_RE.test(date)) return { error: "date must be YYYY-MM-DD" };
-    const games = await loadGamesOnDate(db, date);
+    const games = await loadGamesOnDate(db, date, timeZone);
     if (!games) return { error: "invalid date" };
     const listed = games.map(({ id, data }) => {
       const ctx = gameDocTeamContext(data);
@@ -627,11 +659,16 @@ export async function runNbaAskTool(
     const dateKey = resolveLatestNbaSlateDateKey(index.startMs);
     const payload = await loadDailyScoreLeadersAdmin(db, {
       dateKey,
-      timeZone: NBA_ASK_TIME_ZONE,
+      timeZone: NBA_SLATE_TIME_ZONE,
     });
     const rows = await selectDailyScoreBoardRows(payload.boards.open, "open", db);
+    const slateStarts = index.startMs.filter(
+      (ms) => toDateKeyInTimeZone(new Date(ms), NBA_SLATE_TIME_ZONE) === payload.dateKey
+    );
     return {
-      date: payload.dateKey,
+      date: slateStarts.length
+        ? toDateKeyInTimeZone(new Date(Math.min(...slateStarts)), timeZone)
+        : payload.dateKey,
       complete: payload.complete,
       leaders: rows.slice(0, PRO_LEAGUE_TOP_N).map((r) => ({
         rank: r.rank,

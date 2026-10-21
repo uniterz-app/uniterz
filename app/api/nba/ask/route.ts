@@ -4,7 +4,11 @@ import { NextResponse } from "next/server";
 import { getAdminAuth, getAdminDb } from "@/lib/firebaseAdmin";
 import { assertProUser } from "@/lib/pro/assertProUser";
 import { getOpenAiApiKey } from "@/lib/openai/openaiEnv";
-import { runNbaAsk, sanitizeNbaAskTurns } from "@/lib/nba/ask/runNbaAsk";
+import {
+  resolveNbaAskTimeZone,
+  runNbaAsk,
+  sanitizeNbaAskTurns,
+} from "@/lib/nba/ask/runNbaAsk";
 import {
   consumeNbaAskSafetyCaps,
   readNbaAskStatsAllowance,
@@ -50,7 +54,7 @@ export async function GET(req: Request) {
 
 /**
  * POST /api/nba/ask — アプリの使い方と NBA スタッツの質問に答える（Bearer 必須）。
- * body: { messages: [{ role: "user" | "assistant", content }], language? }
+ * body: { messages: [{ role: "user" | "assistant", content }], language?, timeZone? }
  * データは Firestore スナップショットとアプリのヘルプ文言だけ（BDL は叩かない）。
  */
 export async function POST(req: Request) {
@@ -61,6 +65,7 @@ export async function POST(req: Request) {
     const body = (await req.json().catch(() => null)) as {
       messages?: unknown;
       language?: unknown;
+      timeZone?: unknown;
     } | null;
     const turns = sanitizeNbaAskTurns(body?.messages);
     if (turns.length === 0 || turns[turns.length - 1].role !== "user") {
@@ -82,12 +87,14 @@ export async function POST(req: Request) {
 
     const stats = await readNbaAskStatsAllowance(db, uid, isPro);
     const language = String(body?.language ?? "ja").slice(0, 8);
+    const timeZone = resolveNbaAskTimeZone(body?.timeZone, language);
     let result: Awaited<ReturnType<typeof runNbaAsk>> | null = null;
     try {
       result = await runNbaAsk({
         db,
         turns,
         language,
+        timeZone,
         allowStats: stats.allowed,
         isPro,
         uid,

@@ -5,12 +5,7 @@
 import type { Firestore } from "firebase-admin/firestore";
 import { requireOpenAiApiKey } from "@/lib/openai/openaiEnv";
 import { getTodayKeyInTimeZone } from "@/lib/time/zonedTime";
-import {
-  NBA_ASK_PRO_TOOL_DEFS,
-  NBA_ASK_TIME_ZONE,
-  NBA_ASK_TOOL_DEFS,
-  runNbaAskTool,
-} from "./nbaAskTools";
+import { NBA_ASK_PRO_TOOL_DEFS, NBA_ASK_TOOL_DEFS, runNbaAskTool } from "./nbaAskTools";
 import { NBA_ASK_APP_TOPICS, nbaAskAppGuide } from "./nbaAskAppGuide";
 import { isNbaAskDestinationId, type NbaAskDestinationId } from "./nbaAskDestinations";
 import { consumeNbaAskWebSearch, refundNbaAskWebSearch } from "./nbaAskQuota";
@@ -20,7 +15,8 @@ const APP_GUIDE_TOOL = {
   type: "function",
   function: {
     name: "get_app_guide",
-    description: "Official guide for the UNITERZ app (predictions, scoring, ranking, PRO plans, this chat).",
+    description:
+      "Official guide for the UNITERZ app (predictions, scoring, ranking, Units earned by weekly/monthly rank, PRO plans, this chat).",
     parameters: {
       type: "object",
       properties: { topic: { type: "string", enum: NBA_ASK_APP_TOPICS } },
@@ -44,6 +40,32 @@ export const NBA_ASK_MAX_CHARS = 400;
 const MAX_TOOL_ROUNDS = 3;
 const MAX_OUTPUT_TOKENS = 350;
 
+/**
+ * 試合一覧の日付と同じタイムゾーン。送られてこない古いアプリは、日本語なら日本時間・それ以外は米国東部
+ */
+export function resolveNbaAskTimeZone(raw: unknown, language: string): string {
+  const tz = typeof raw === "string" ? raw.trim().slice(0, 64) : "";
+  if (tz) {
+    try {
+      new Intl.DateTimeFormat("en-US", { timeZone: tz });
+      return tz;
+    } catch {
+      // 不正な値は既定へ
+    }
+  }
+  return language === "ja" ? "Asia/Tokyo" : "America/New_York";
+}
+
+function nowInTimeZone(timeZone: string): string {
+  const time = new Intl.DateTimeFormat("en-GB", {
+    timeZone,
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).format(new Date());
+  return `${getTodayKeyInTimeZone(timeZone)} ${time}`;
+}
+
 function model(): string {
   return process.env.OPENAI_NBA_ASK_MODEL?.trim() || "gpt-4o-mini";
 }
@@ -61,14 +83,18 @@ function dataAccessLine(allowStats: boolean, isPro: boolean): string {
   return "NBA stats tools are NOT available: this free account has used its stats questions. Public stats are unlimited with PRO. Looking up one game's Pro Insight, the live PRO LEAGUE board, or the web is PRO-only. Explaining what those features are, via get_app_guide, still works. Do not guess stats or a specific game's PRO read.";
 }
 
-function systemPrompt(language: string, allowStats: boolean, isPro: boolean): string {
-  const today = getTodayKeyInTimeZone(NBA_ASK_TIME_ZONE);
+function systemPrompt(
+  language: string,
+  timeZone: string,
+  allowStats: boolean,
+  isPro: boolean
+): string {
   return [
     "You are the assistant in the UNITERZ app (NBA score prediction app).",
     "You answer (1) questions about using the UNITERZ app via get_app_guide, and (2) NBA stats questions.",
     "Questions about what PRO features are (Pro Insight, PRO LEAGUE, alerts, plans, this chat) are fine for everyone. Answer those from get_app_guide topic pro_plans or ask_chat. Do not invent details the guide does not have.",
     "When the user asks about an app feature, call get_app_guide. If the result includes open, the app puts a button under your answer that opens that screen. Tell them to tap the button. Do not invent a path.",
-    `Today is ${today} (US Eastern). NBA game dates are US Eastern dates.`,
+    `Now is ${nowInTimeZone(timeZone)} in the user's time zone (${timeZone}). The app's games list shows each game on the date it starts in this time zone. "Today", "yesterday", tool date arguments, and dates in your answer all use this time zone. Do not convert to US dates.`,
     "Answer ONLY from tool results. Never guess numbers or app rules. If the guide or data doesn't cover it, say you don't know.",
     dataAccessLine(allowStats, isPro),
     "Keep answers short (2-5 lines). Politely decline topics other than UNITERZ and NBA.",
@@ -146,6 +172,8 @@ export async function runNbaAsk(input: {
   db: Firestore;
   turns: NbaAskTurn[];
   language: string;
+  /** ユーザーの表示タイムゾーン（`resolveNbaAskTimeZone` 済み） */
+  timeZone: string;
   /** false のとき公開スタッツの道具を渡さない（無料枠を使い切った人、または Pro の 1 日上限） */
   allowStats: boolean;
   /** Pro Insight / PRO LEAGUE / 外部検索は Pro だけ。無料には道具自体を渡さない */
@@ -171,7 +199,10 @@ export async function runNbaAsk(input: {
   let usedWeb = false;
   const opens: NbaAskDestinationId[] = [];
   const messages: ChatMessage[] = [
-    { role: "system", content: systemPrompt(input.language, input.allowStats, input.isPro) },
+    {
+      role: "system",
+      content: systemPrompt(input.language, input.timeZone, input.allowStats, input.isPro),
+    },
     ...input.turns.map((t) => ({ role: t.role, content: t.content }) as ChatMessage),
   ];
   let promptTokens = 0;
@@ -232,7 +263,7 @@ export async function runNbaAsk(input: {
           }
         } else if (input.allowStats && PUBLIC_STATS_TOOL_NAMES.has(name)) {
           usedStats = true;
-          result = await runNbaAskTool(input.db, name, args, input.language);
+          result = await runNbaAskTool(input.db, name, args, input.language, input.timeZone);
         } else if (allowPro && name === "search_web") {
           result = await runWebSearch(
             input.db,
@@ -248,7 +279,7 @@ export async function runNbaAsk(input: {
           );
         } else if (allowPro && PRO_TOOL_NAMES.has(name)) {
           usedStats = true;
-          result = await runNbaAskTool(input.db, name, args, input.language);
+          result = await runNbaAskTool(input.db, name, args, input.language, input.timeZone);
         } else {
           result = { error: "tool not available" };
         }

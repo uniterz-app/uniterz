@@ -24,10 +24,11 @@ const MAX_QUESTION_CHARS = 300;
 
 type Props = {
   language: string;
+  timeZone: string;
   signedIn: boolean;
 };
 
-export default function NbaAskChat({ language, signedIn }: Props) {
+export default function NbaAskChat({ language, timeZone, signedIn }: Props) {
   const router = useRouter();
   const copy = nbaAskCopy(language);
   const [turns, setTurns] = useState<NbaAskTurnClient[]>([]);
@@ -77,6 +78,7 @@ export default function NbaAskChat({ language, signedIn }: Props) {
       token: await user.getIdToken(),
       turns: next,
       language,
+      timeZone,
     });
     setBusy(false);
     if (result.ok) {

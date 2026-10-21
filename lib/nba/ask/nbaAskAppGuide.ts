@@ -5,6 +5,11 @@
 import { L, resolveLocalizedLang } from "@/lib/i18n/localize";
 import { helpFaqsCopy, type HelpFaqEntryCopy } from "@/lib/settings/helpFaqsCopy";
 import { PRO_SUBSCRIBE_PREVIEW_PLANS } from "@/lib/pro/proSubscribePreviewPlans";
+import {
+  PERIOD_RANKING_UNIT_REWARDS_TABS,
+  periodRankingUnitRewardsSections,
+  periodRankingUnitRewardsTabLabel,
+} from "@/lib/units/periodRankingUnitRewardsCopy";
 import { nbaAskDestinationForTopic } from "./nbaAskDestinations";
 import { NBA_ASK_FREE_STATS_LIFETIME, NBA_ASK_PRO_WEB_DAILY } from "./nbaAskQuota";
 
@@ -13,6 +18,7 @@ export const NBA_ASK_APP_TOPICS = [
   "stats",
   "scoring",
   "ranking",
+  "unit_rewards",
   "pro_plans",
   "ask_chat",
 ] as const;
@@ -50,6 +56,17 @@ function proPlansText(language: string): string {
   }).join("\n\n");
 }
 
+/** ランキング画面の「unit表」シートと同じ表（週間 / 月間スコア / 月間部門） */
+function unitRewardsText(language: string): string {
+  const lang = resolveLocalizedLang(language);
+  return PERIOD_RANKING_UNIT_REWARDS_TABS.map((tab) => {
+    const sections = periodRankingUnitRewardsSections(tab, lang).map(
+      (sec) => `[${sec.title}]\n${sec.bullets.map((b) => `- ${b}`).join("\n")}`
+    );
+    return `## ${periodRankingUnitRewardsTabLabel(tab, lang)}\n${sections.join("\n")}`;
+  }).join("\n\n");
+}
+
 function askChatText(): string {
   return [
     "UNITERZ ASK (this chat):",
@@ -71,7 +88,9 @@ export function nbaAskAppGuide(topic: string, language: string): unknown {
   const body =
     t === "pro_plans"
       ? proPlansText(language)
-      : t === "ask_chat"
+      : t === "unit_rewards"
+        ? unitRewardsText(language)
+        : t === "ask_chat"
         ? askChatText()
         : (() => {
             const id = FAQ_ID_BY_TOPIC[t];

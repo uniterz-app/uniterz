@@ -18,11 +18,18 @@ export async function loadNbaAskStatusNative(): Promise<NbaAskStatus | null> {
 
 export async function askNbaStatsNative(
   turns: NbaAskTurnClient[],
-  language: string
+  language: string,
+  timeZone: string
 ): Promise<NbaAskReply> {
   const user = auth.currentUser;
   const apiBaseUrl = getUniterzApiBaseUrl();
   if (!user) return { ok: false, error: "auth" };
   if (!apiBaseUrl) return { ok: false, error: "failed" };
-  return postNbaAsk({ apiBaseUrl, token: await user.getIdToken(), turns, language });
+  return postNbaAsk({
+    apiBaseUrl,
+    token: await user.getIdToken(),
+    turns,
+    language,
+    timeZone,
+  });
 }

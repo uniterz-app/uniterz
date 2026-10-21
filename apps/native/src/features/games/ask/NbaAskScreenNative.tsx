@@ -65,7 +65,7 @@ function openNbaAskDestination(navigation: AskNav, id: NbaAskDestinationId) {
 export default function NbaAskScreenNative() {
   const navigation = useNavigation<AskNav>();
   const { fUser } = useFirebaseUser();
-  const { language } = useNativeUserLanguage(fUser?.uid);
+  const { language, timeZone } = useNativeUserLanguage(fUser?.uid);
   const lang = String(language ?? "ja");
   const copy = nbaAskCopy(lang);
   const { bottomContentReserveY } = useBottomTabBarInsets();
@@ -120,7 +120,7 @@ export default function NbaAskScreenNative() {
     setDraft("");
     setNotice(null);
     setBusy(true);
-    const result = await askNbaStatsNative(next, lang);
+    const result = await askNbaStatsNative(next, lang, timeZone);
     setBusy(false);
     if (result.ok) {
       setTurns((prev) => [

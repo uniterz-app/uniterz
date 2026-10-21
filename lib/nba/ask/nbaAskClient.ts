@@ -68,6 +68,8 @@ export async function postNbaAsk(input: {
   token: string;
   turns: NbaAskTurnClient[];
   language: string;
+  /** 試合一覧と同じ表示タイムゾーン。「今日」や試合日をこの暦日で答える */
+  timeZone: string;
 }): Promise<NbaAskReply> {
   try {
     const res = await fetch(url(input.apiBaseUrl), {
@@ -76,7 +78,11 @@ export async function postNbaAsk(input: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${input.token}`,
       },
-      body: JSON.stringify({ messages: input.turns, language: input.language }),
+      body: JSON.stringify({
+        messages: input.turns,
+        language: input.language,
+        timeZone: input.timeZone,
+      }),
     });
     const json = (await res.json().catch(() => null)) as Record<string, unknown> | null;
     if (!json) return { ok: false, error: "unavailable" };
