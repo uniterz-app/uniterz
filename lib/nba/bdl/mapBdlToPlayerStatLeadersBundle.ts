@@ -442,6 +442,11 @@ export async function buildPlayerStatLeadersBundleFromBdl(input: {
     { id: "blk", higherIsBetter: true, value: (p) => n(p.base, "blk") },
     { id: "fg3m", higherIsBetter: true, value: (p) => n(p.base, "fg3m") },
     { id: "tov", higherIsBetter: false, value: (p) => n(p.base, "tov") },
+    {
+      id: "pf",
+      higherIsBetter: true,
+      value: (p) => n(p.base, "pf", "personal_fouls"),
+    },
     { id: "min", higherIsBetter: true, value: (p) => n(p.base, "min") },
     { id: "fg3a", higherIsBetter: true, value: (p) => n(p.base, "fg3a") },
     { id: "fga", higherIsBetter: true, value: (p) => n(p.base, "fga") },

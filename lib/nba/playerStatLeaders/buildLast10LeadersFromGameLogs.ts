@@ -77,6 +77,8 @@ type Agg = {
   stl: number;
   blk: number;
   tov: number;
+  /** 直近試合すべてに pf があるときだけ。無いログはボードに載せない */
+  pf: number | null;
   min: number;
   fgm: number;
   fga: number;
@@ -102,6 +104,8 @@ function aggregateLast10(
   let stl = 0;
   let blk = 0;
   let tov = 0;
+  let pf = 0;
+  let pfGames = 0;
   let min = 0;
   let fgm = 0;
   let fga = 0;
@@ -129,6 +133,10 @@ function aggregateLast10(
     stl += g.stl;
     blk += g.blk;
     tov += g.tov;
+    if (typeof g.pf === "number" && Number.isFinite(g.pf)) {
+      pf += g.pf;
+      pfGames += 1;
+    }
     min += g.min;
     fgm += g.fgm;
     fga += g.fga;
@@ -155,6 +163,7 @@ function aggregateLast10(
     stl,
     blk,
     tov,
+    pf: pfGames === slice.length ? pf : null,
     min,
     fgm,
     fga,
@@ -228,6 +237,14 @@ export function buildLast10LeadersFromGameLogs(
   perGame("stl", (a) => a.stl);
   perGame("blk", (a) => a.blk);
   perGame("tov", (a) => a.tov, false);
+  const withPf = aggs.filter((a) => a.pf != null);
+  if (withPf.length > 0) {
+    fillBoard(
+      board,
+      "pf",
+      withPf.map((a) => toRow(a, round1((a.pf as number) / a.gp)))
+    );
+  }
   perGame("min", (a) => a.min);
   perGame("fgm", (a) => a.fgm);
   perGame("fga", (a) => a.fga);

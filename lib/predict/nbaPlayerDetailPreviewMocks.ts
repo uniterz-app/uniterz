@@ -19,10 +19,13 @@ import type { UiStrings } from "@/lib/i18n/ui";
 export type NbaPlayerSeasonMetricId =
   | "pts"
   | "reb"
+  | "oreb"
+  | "dreb"
   | "ast"
   | "stl"
   | "blk"
   | "tov"
+  | "pf"
   | "min"
   | "fg_pct"
   | "fga"
@@ -38,10 +41,13 @@ export const NBA_PLAYER_DETAIL_SEASON_SHOWN: readonly NbaPlayerSeasonMetricId[] 
   [
     "pts",
     "reb",
+    "oreb",
+    "dreb",
     "ast",
     "stl",
     "blk",
     "tov",
+    "pf",
     "min",
     "plus_minus",
     "fg_pct",
@@ -80,6 +86,8 @@ export type NbaPlayerGameLog = {
   stl: number;
   blk: number;
   tov: number;
+  /** 試合ログに pf があるときのみ */
+  pf?: number;
   fgm: number;
   fga: number;
   fg3m: number;
@@ -111,10 +119,15 @@ export type NbaPlayerCareerSeasonRow = {
   fta: number;
   ftPct: number;
   reb: number;
+  /** 未取り込みの過去スナップショットは未設定 */
+  oreb?: number;
+  dreb?: number;
   ast: number;
   stl: number;
   blk: number;
   tov: number;
+  /** 未取り込みの過去スナップショットは未設定 */
+  pf?: number;
   pts: number;
 };
 
@@ -253,10 +266,15 @@ export type NbaPlayerDetailPreview = {
     min: number;
     pts: number;
     reb: number;
+    /** 未取り込みのときは未設定（UI は "—"） */
+    oreb?: number;
+    dreb?: number;
     ast: number;
     stl: number;
     blk: number;
     tov: number;
+    /** 未取り込みのときは未設定（UI は "—"） */
+    pf?: number;
     fgPct: number;
     fg3Pct: number;
     ftPct: number;
@@ -364,10 +382,13 @@ const METRIC_DEFS: Array<{
 }> = [
   { id: "pts", short: "PTS", higherIsBetter: true, kind: "perGame" },
   { id: "reb", short: "REB", higherIsBetter: true, kind: "perGame" },
+  { id: "oreb", short: "ORB", higherIsBetter: true, kind: "perGame" },
+  { id: "dreb", short: "DRB", higherIsBetter: true, kind: "perGame" },
   { id: "ast", short: "AST", higherIsBetter: true, kind: "perGame" },
   { id: "stl", short: "STL", higherIsBetter: true, kind: "perGame" },
   { id: "blk", short: "BLK", higherIsBetter: true, kind: "perGame" },
   { id: "tov", short: "TOV", higherIsBetter: false, kind: "perGame" },
+  { id: "pf", short: "PF", higherIsBetter: true, kind: "perGame" },
   { id: "min", short: "MIN", higherIsBetter: true, kind: "minutes" },
   {
     id: "plus_minus",
@@ -829,6 +850,7 @@ export function formatMetricDisplay(
   id: NbaPlayerSeasonMetricId,
   value: number
 ): string {
+  if (!Number.isFinite(value)) return "—";
   if (id === "fg_pct" || id === "fg3_pct" || id === "ft_pct") {
     return `${(value * 100).toFixed(1)}%`;
   }
@@ -1225,6 +1247,10 @@ function seasonValue(
       return season.pts;
     case "reb":
       return season.reb;
+    case "oreb":
+      return season.oreb ?? Number.NaN;
+    case "dreb":
+      return season.dreb ?? Number.NaN;
     case "ast":
       return season.ast;
     case "stl":
@@ -1233,6 +1259,8 @@ function seasonValue(
       return season.blk;
     case "tov":
       return season.tov;
+    case "pf":
+      return season.pf ?? Number.NaN;
     case "min":
       return season.min;
     case "fg_pct":
@@ -1341,11 +1369,23 @@ function buildCareerSeasons(
     });
     const pts = isCurrent ? base.pts : round1(base.pts * curve);
     const reb = isCurrent ? base.reb : round1(base.reb * (0.9 + curve * 0.12));
+    const oreb =
+      isCurrent && base.oreb != null
+        ? base.oreb
+        : round1(reb * (0.18 + rnd() * 0.16));
+    const dreb =
+      isCurrent && base.dreb != null
+        ? base.dreb
+        : round1(Math.max(0, reb - oreb));
     const ast = isCurrent ? base.ast : round1(base.ast * (0.88 + curve * 0.14));
     const min = isCurrent ? base.min : round1(Math.min(38, base.min * (0.85 + curve * 0.18)));
     const stl = isCurrent ? base.stl : round1(base.stl * (0.9 + rnd() * 0.2));
     const blk = isCurrent ? base.blk : round1(base.blk * (0.85 + rnd() * 0.3));
     const tov = isCurrent ? base.tov : round1(base.tov * (1.15 - curve * 0.2));
+    const pf =
+      isCurrent && base.pf != null
+        ? base.pf
+        : round1(1.5 + rnd() * 2.2);
     const fgPct = isCurrent
       ? base.fgPct
       : round3(Math.min(0.58, Math.max(0.38, base.fgPct * (0.92 + curve * 0.1))));
@@ -1385,10 +1425,13 @@ function buildCareerSeasons(
       fta,
       ftPct,
       reb,
+      oreb,
+      dreb,
       ast,
       stl,
       blk,
       tov,
+      pf,
       pts,
     };
     regular.push(row);
@@ -1403,10 +1446,13 @@ function buildCareerSeasons(
         min: round1(Math.min(42, row.min * 1.05)),
         pts: round1(row.pts * poScale),
         reb: round1(row.reb * poScale),
+        oreb: round1((row.oreb ?? row.reb * 0.25) * poScale),
+        dreb: round1((row.dreb ?? row.reb * 0.75) * poScale),
         ast: round1(row.ast * poScale),
         stl: round1(row.stl * poScale),
         blk: round1(row.blk * poScale),
         tov: round1(row.tov * (1.05 + rnd() * 0.1)),
+        pf: round1((row.pf ?? 2) * (1.02 + rnd() * 0.08)),
         fgm: round1(row.fgm * poScale),
         fga: round1(row.fga * poScale),
         fg3m: round1(row.fg3m * poScale),
@@ -1498,10 +1544,24 @@ function buildGameLogs(
       min: Math.round((season.min * (0.85 + rnd() * 0.25)) * 10) / 10,
       pts: Math.round(season.pts * scale + (rnd() - 0.5) * 8),
       reb: Math.max(0, Math.round(season.reb * scale + (rnd() - 0.5) * 3)),
+      oreb: Math.max(
+        0,
+        Math.round((season.oreb ?? season.reb * 0.28) * (0.7 + rnd() * 0.6) * 10) /
+          10
+      ),
+      dreb: Math.max(
+        0,
+        Math.round((season.dreb ?? season.reb * 0.72) * (0.7 + rnd() * 0.6) * 10) /
+          10
+      ),
       ast: Math.max(0, Math.round(season.ast * scale + (rnd() - 0.5) * 3)),
       stl: Math.max(0, Math.round(rnd() * 3)),
       blk: Math.max(0, Math.round(rnd() * 2)),
       tov: Math.max(0, Math.round(season.tov * (0.6 + rnd() * 0.8))),
+      pf: Math.max(
+        0,
+        Math.round((season.pf ?? 2) * (0.6 + rnd() * 0.8) * 10) / 10
+      ),
       fgm,
       fga,
       fg3m,
@@ -1536,6 +1596,9 @@ function seedFromRosterPlayer(
     stl: player.spg ?? 0,
     blk: player.bpg ?? 0,
     tov: player.tpg ?? 0,
+    ...(player.oreb != null ? { oreb: player.oreb } : {}),
+    ...(player.dreb != null ? { dreb: player.dreb } : {}),
+    ...(player.pf != null ? { pf: player.pf } : {}),
     fgPct: player.fgPct ?? 0.45,
     fg3Pct: player.fg3Pct ?? 0.35,
     ftPct: player.ftPct ?? 0.75,
@@ -1925,10 +1988,15 @@ export type NbaPlayerRecentWindowAvg = {
   games: number;
   pts: number;
   reb: number;
+  /** 直近試合すべてに oreb / dreb があるときだけ */
+  oreb?: number;
+  dreb?: number;
   ast: number;
   stl: number;
   blk: number;
   tov: number;
+  /** 直近試合すべてに pf があるときだけ */
+  pf?: number;
   min: number;
   plusMinus: number;
   fgPct: number;
@@ -1957,6 +2025,10 @@ export function playerDetailRecentRawValue(
       return avg.pts;
     case "reb":
       return avg.reb;
+    case "oreb":
+      return avg.oreb ?? Number.NaN;
+    case "dreb":
+      return avg.dreb ?? Number.NaN;
     case "ast":
       return avg.ast;
     case "stl":
@@ -1965,6 +2037,8 @@ export function playerDetailRecentRawValue(
       return avg.blk;
     case "tov":
       return avg.tov;
+    case "pf":
+      return avg.pf ?? Number.NaN;
     case "min":
       return avg.min;
     case "fg_pct":
@@ -2010,16 +2084,24 @@ export function averageRecentGameLogs(
   const fg3a = sum((g) => g.fg3a);
   const ftm = sum((g) => g.ftm);
   const fta = sum((g) => g.fta);
+  const splitKnown = (key: "oreb" | "dreb" | "pf") =>
+    slice.every((g) => typeof g[key] === "number" && Number.isFinite(g[key]));
+  const orebKnown = splitKnown("oreb");
+  const drebKnown = splitKnown("dreb");
+  const pfKnown = splitKnown("pf");
   const r1 = (v: number) => Math.round((v / n) * 10) / 10;
   return {
     window,
     games: n,
     pts: r1(sum((g) => g.pts)),
     reb: r1(sum((g) => g.reb)),
+    ...(orebKnown ? { oreb: r1(sum((g) => g.oreb ?? 0)) } : {}),
+    ...(drebKnown ? { dreb: r1(sum((g) => g.dreb ?? 0)) } : {}),
     ast: r1(sum((g) => g.ast)),
     stl: r1(sum((g) => g.stl)),
     blk: r1(sum((g) => g.blk)),
     tov: r1(sum((g) => g.tov)),
+    ...(pfKnown ? { pf: r1(sum((g) => g.pf ?? 0)) } : {}),
     min: r1(sum((g) => g.min)),
     plusMinus: r1(sum((g) => g.plusMinus)),
     fga: r1(fga),

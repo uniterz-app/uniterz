@@ -33,6 +33,8 @@ const STAT_COLS = [
   { key: "min", label: "MIN", field: "mpg" },
   { key: "pts", label: "PTS", field: "ppg" },
   { key: "reb", label: "REB", field: "rpg" },
+  { key: "oreb", label: "ORB", field: "oreb" },
+  { key: "dreb", label: "DRB", field: "dreb" },
   { key: "ast", label: "AST", field: "apg" },
   { key: "fg", label: "FG%", field: "fgPct" },
   { key: "fgm", label: "FGM", field: "fgm" },
@@ -46,6 +48,7 @@ const STAT_COLS = [
   { key: "stl", label: "STL", field: "spg" },
   { key: "blk", label: "BLK", field: "bpg" },
   { key: "tov", label: "TO", field: "tpg" },
+  { key: "pf", label: "PF", field: "pf" },
 ] as const;
 
 type StatColKey = (typeof STAT_COLS)[number]["key"];
@@ -95,6 +98,8 @@ function playerStats(p: NbaRosterPlayer): string[] {
     fmt(p.mpg),
     fmt(p.ppg),
     fmt(p.rpg),
+    fmt(p.oreb),
+    fmt(p.dreb),
     fmt(p.apg),
     fmtPct(p.fgPct),
     fmt(p.fgm),
@@ -108,6 +113,7 @@ function playerStats(p: NbaRosterPlayer): string[] {
     fmt(p.spg),
     fmt(p.bpg),
     fmt(p.tpg),
+    fmt(p.pf),
   ];
 }
 

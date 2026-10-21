@@ -535,6 +535,20 @@ const CAREER_SEASON_COLS: Array<{
     render: (r) => fmtPerGame(r.reb),
   },
   {
+    key: "oreb",
+    label: "ORB",
+    widthPx: 40,
+    render: (r) =>
+      r.oreb == null || !Number.isFinite(r.oreb) ? "—" : fmtPerGame(r.oreb),
+  },
+  {
+    key: "dreb",
+    label: "DRB",
+    widthPx: 40,
+    render: (r) =>
+      r.dreb == null || !Number.isFinite(r.dreb) ? "—" : fmtPerGame(r.dreb),
+  },
+  {
     key: "ast",
     label: "AST",
     widthPx: 40,
@@ -611,6 +625,13 @@ const CAREER_SEASON_COLS: Array<{
     label: "TOV",
     widthPx: 36,
     render: (r) => fmtPerGame(r.tov),
+  },
+  {
+    key: "pf",
+    label: "PF",
+    widthPx: 36,
+    render: (r) =>
+      r.pf == null || !Number.isFinite(r.pf) ? "—" : fmtPerGame(r.pf),
   },
 ];
 

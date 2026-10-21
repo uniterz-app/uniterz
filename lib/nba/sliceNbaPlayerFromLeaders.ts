@@ -23,10 +23,13 @@ const SEASON_TO_LEADER: Partial<
 > = {
   pts: "pts",
   reb: "reb",
+  oreb: "oreb",
+  dreb: "dreb",
   ast: "ast",
   stl: "stl",
   blk: "blk",
   tov: "tov",
+  pf: "pf",
   min: "min",
   fg_pct: "fg_pct",
   fga: "fga",
@@ -127,10 +130,13 @@ export function overlayPlayerDetailWithLeaders(
   };
   patchSeason("pts", "pts");
   patchSeason("reb", "reb");
+  patchSeason("oreb", "oreb");
+  patchSeason("dreb", "dreb");
   patchSeason("ast", "ast");
   patchSeason("stl", "stl");
   patchSeason("blk", "blk");
   patchSeason("tov", "tov");
+  patchSeason("pf", "pf");
   patchSeason("min", "min");
   patchSeason("fgPct", "fg_pct");
   patchSeason("fg3Pct", "fg3_pct");

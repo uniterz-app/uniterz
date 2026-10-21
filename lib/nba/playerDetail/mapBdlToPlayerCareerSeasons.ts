@@ -16,6 +16,44 @@ function round3(n: number): number {
   return Math.round(n * 1000) / 1000;
 }
 
+/** BDL base にあるときだけ載せる（無い過去行は UI が "—"） */
+function careerOptional(
+  stats: BdlPlayerCareerAverageRow["stats"],
+  field: "oreb" | "dreb",
+  ...keys: string[]
+): Partial<Record<"oreb" | "dreb", number>> {
+  if (!stats) return {};
+  for (const key of keys) {
+    const raw = stats[key];
+    const n =
+      typeof raw === "number"
+        ? raw
+        : typeof raw === "string" && raw.trim() !== ""
+          ? Number(raw)
+          : NaN;
+    if (Number.isFinite(n)) return { [field]: round1(n) };
+  }
+  return {};
+}
+
+/** BDL base に pf があるときだけ載せる（無い過去行は UI が "—"） */
+function careerPf(
+  stats: BdlPlayerCareerAverageRow["stats"]
+): { pf: number } | Record<string, never> {
+  if (!stats) return {};
+  for (const key of ["pf", "personal_fouls"] as const) {
+    const raw = stats[key];
+    const n =
+      typeof raw === "number"
+        ? raw
+        : typeof raw === "string" && raw.trim() !== ""
+          ? Number(raw)
+          : NaN;
+    if (Number.isFinite(n)) return { pf: round1(n) };
+  }
+  return {};
+}
+
 export function mapBdlCareerAverageToRow(
   row: BdlPlayerCareerAverageRow,
   opts: {
@@ -93,10 +131,13 @@ export function mapBdlCareerAverageToRow(
       bdlCareerStatNum(stats, "ft_pct") || (fta > 0 ? ftm / fta : 0)
     ),
     reb: round1(bdlCareerStatNum(stats, "reb", "trb")),
+    ...careerOptional(stats, "oreb", "oreb", "offensive_rebounds"),
+    ...careerOptional(stats, "dreb", "dreb", "defensive_rebounds"),
     ast: round1(bdlCareerStatNum(stats, "ast")),
     stl: round1(bdlCareerStatNum(stats, "stl")),
     blk: round1(bdlCareerStatNum(stats, "blk")),
     tov: round1(bdlCareerStatNum(stats, "tov", "turnover")),
+    ...careerPf(stats),
     pts: round1(bdlCareerStatNum(stats, "pts")),
   };
 }

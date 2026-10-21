@@ -19,6 +19,8 @@ export type BdlPlayerGameLogStatRow = {
   stl?: number | null;
   blk?: number | null;
   turnover?: number | null;
+  pf?: number | null;
+  personal_fouls?: number | null;
   pts?: number | null;
   plus_minus?: number | null;
   player?: { id?: number } | null;

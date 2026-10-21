@@ -41,6 +41,7 @@ export type NbaPlayerLeaderBdlStatType =
   | "fg_pct"
   | "ft_pct"
   | "tov"
+  | "pf"
   | "min"
   | "eff"
   | "fg3a"
@@ -71,6 +72,7 @@ export const NBA_BDL_PLAYER_LEADER_STAT_TYPES: readonly NbaPlayerLeaderBdlStatTy
     "fg_pct",
     "ft_pct",
     "tov",
+    "pf",
     "min",
     "eff",
     "fg3a",
@@ -355,6 +357,23 @@ export const NBA_PLAYER_STAT_LEADER_METRICS: readonly NbaPlayerStatLeaderMetricD
       showInChipBar: true,
     },
     {
+      id: "pf",
+      label: "Personal Fouls per Game",
+      short: "PF",
+      higherIsBetter: true,
+      hint: {
+        ja: "1試合あたりのパーソナルファウル（多い順）。",
+        en: "Personal fouls per game (most fouls).",
+        ko: "경기당 퍼스널 파울(많은 순).",
+        zh: "场均个人犯规（由多到少）。",
+        es: "Faltas personales por partido (de más a menos).",
+        pt: "Faltas pessoais por jogo (da maior para a menor).",
+        fr: "Fautes personnelles par match (des plus nombreuses).",
+      },
+      kind: "perGame",
+      showInChipBar: true,
+    },
+    {
       id: "min",
       label: "Minutes per Game",
       short: "MIN",
@@ -532,6 +551,7 @@ const PLAYER_LAST10_METRIC_IDS = new Set<NbaPlayerLeaderMetricId>([
   "fg_pct",
   "ft_pct",
   "tov",
+  "pf",
   "min",
   "eff",
   "fg3a",
@@ -732,6 +752,8 @@ function buildMetricValue(
       return pct(0.62 + rnd() * 0.35);
     case "tov":
       return Math.round((1.2 + rnd() * 4.5) * 10) / 10;
+    case "pf":
+      return Math.round((1.2 + rnd() * 3.2) * 10) / 10;
     case "min":
       return Math.round((18 + rnd() * 22) * 10) / 10;
     case "eff":
@@ -828,7 +850,7 @@ function buildLeadersBundle(window: "season" | "last10") {
 
 let cached: NbaPlayerStatLeadersBundle | null = null;
 let cacheVer: string | null = null;
-const MOCK_CACHE_KEY = "v8-player-playtype-freq";
+const MOCK_CACHE_KEY = "v9-player-pf";
 
 export function getNbaPlayerStatLeadersMock(): NbaPlayerStatLeadersBundle {
   if (cached && cacheVer === MOCK_CACHE_KEY) return cached;

@@ -48,10 +48,13 @@ const SEASON_TO_LEADER: Partial<
 > = {
   pts: "pts",
   reb: "reb",
+  oreb: "oreb",
+  dreb: "dreb",
   ast: "ast",
   stl: "stl",
   blk: "blk",
   tov: "tov",
+  pf: "pf",
   min: "min",
   fg_pct: "fg_pct",
   fga: "fga",
@@ -111,10 +114,20 @@ export function applyRosterToPlayerDetail(
     min: player.mpg || 0,
     pts: player.ppg || 0,
     reb: player.rpg ?? 0,
+    oreb:
+      player.oreb != null && Number.isFinite(player.oreb)
+        ? player.oreb
+        : undefined,
+    dreb:
+      player.dreb != null && Number.isFinite(player.dreb)
+        ? player.dreb
+        : undefined,
     ast: player.apg ?? 0,
     stl: player.spg ?? 0,
     blk: player.bpg ?? 0,
     tov: player.tpg ?? 0,
+    pf:
+      player.pf != null && Number.isFinite(player.pf) ? player.pf : undefined,
     fgPct: pct01(player.fgPct),
     fg3Pct: pct01(player.fg3Pct),
     ftPct: pct01(player.ftPct),
@@ -545,10 +558,13 @@ export function applyPlayerSeasonMetricsToPlayerDetail(
   };
   patch("pts", "pts");
   patch("reb", "reb");
+  patch("oreb", "oreb");
+  patch("dreb", "dreb");
   patch("ast", "ast");
   patch("stl", "stl");
   patch("blk", "blk");
   patch("tov", "tov");
+  patch("pf", "pf");
   patch("min", "min");
   patch("fgPct", "fg_pct");
   patch("fg3Pct", "fg3_pct");

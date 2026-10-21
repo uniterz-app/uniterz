@@ -55,6 +55,8 @@ const STAT_COLS = [
   { key: "min", label: "MIN" },
   { key: "pts", label: "PTS" },
   { key: "reb", label: "REB" },
+  { key: "oreb", label: "ORB" },
+  { key: "dreb", label: "DRB" },
   { key: "ast", label: "AST" },
   { key: "fg", label: "FG%" },
   { key: "fgm", label: "FGM" },
@@ -68,6 +70,7 @@ const STAT_COLS = [
   { key: "stl", label: "STL" },
   { key: "blk", label: "BLK" },
   { key: "tov", label: "TO" },
+  { key: "pf", label: "PF" },
 ] as const;
 
 const EMPHASIS_KEYS = new Set(["pts", "fg", "fg3", "fga", "fg3a"]);
@@ -115,6 +118,8 @@ function playerStats(player: NbaRosterPlayer): string[] {
     fmt(player.mpg),
     fmt(player.ppg),
     fmt(player.rpg),
+    fmt(player.oreb),
+    fmt(player.dreb),
     fmt(player.apg),
     fmtPct(player.fgPct),
     fmt(player.fgm),
@@ -128,6 +133,7 @@ function playerStats(player: NbaRosterPlayer): string[] {
     fmt(player.spg),
     fmt(player.bpg),
     fmt(player.tpg),
+    fmt(player.pf),
   ];
 }
 

@@ -14,6 +14,9 @@ export type NbaRosterPlayer = {
   mpg: number;
   ppg: number;
   rpg?: number;
+  /** 1試合あたりのオフェンス／ディフェンスリバウンド */
+  oreb?: number;
+  dreb?: number;
   apg?: number;
   /** 0–1（例: 0.482）または 0–100。UI は自動で % 表示 */
   fgPct?: number;
@@ -29,6 +32,8 @@ export type NbaRosterPlayer = {
   spg?: number;
   bpg?: number;
   tpg?: number;
+  /** 1試合あたりのパーソナルファウル */
+  pf?: number;
   plusMinus?: number;
   /** UI で一段薄い行（深ベンチ等） */
   dimmed?: boolean;

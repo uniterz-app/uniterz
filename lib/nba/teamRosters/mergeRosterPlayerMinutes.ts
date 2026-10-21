@@ -24,10 +24,15 @@ export type NbaRosterSeasonAverages = {
   mpg: number;
   ppg: number;
   rpg: number;
+  /** BDL base に oreb / dreb があるときだけ */
+  oreb?: number;
+  dreb?: number;
   apg: number;
   spg: number;
   bpg: number;
   tpg: number;
+  /** BDL base に pf があるときだけ */
+  pf?: number;
   fgPct: number;
   fg3Pct: number;
   ftPct: number;
@@ -75,10 +80,13 @@ export function buildPlayerSeasonAveragesMap(
 
     const pts = bdlStatNum(row.stats, "pts", "points") ?? 0;
     const reb = bdlStatNum(row.stats, "reb", "rebound", "rebounds") ?? 0;
+    const oreb = bdlStatNum(row.stats, "oreb", "offensive_rebounds");
+    const dreb = bdlStatNum(row.stats, "dreb", "defensive_rebounds");
     const ast = bdlStatNum(row.stats, "ast", "assists") ?? 0;
     const stl = bdlStatNum(row.stats, "stl", "steals") ?? 0;
     const blk = bdlStatNum(row.stats, "blk", "blocks") ?? 0;
     const tov = bdlStatNum(row.stats, "tov", "turnover", "turnovers") ?? 0;
+    const pf = bdlStatNum(row.stats, "pf", "personal_fouls");
     const fgm = bdlStatNum(row.stats, "fgm") ?? 0;
     const fga = bdlStatNum(row.stats, "fga") ?? 0;
     const fg3m = bdlStatNum(row.stats, "fg3m") ?? 0;
@@ -93,10 +101,13 @@ export function buildPlayerSeasonAveragesMap(
       mpg,
       ppg: round1(pts),
       rpg: round1(reb),
+      ...(oreb != null ? { oreb: round1(oreb) } : {}),
+      ...(dreb != null ? { dreb: round1(dreb) } : {}),
       apg: round1(ast),
       spg: round1(stl),
       bpg: round1(blk),
       tpg: round1(tov),
+      ...(pf != null ? { pf: round1(pf) } : {}),
       fgPct: rate01(bdlStatNum(row.stats, "fg_pct", "fgPct")),
       fg3Pct: rate01(bdlStatNum(row.stats, "fg3_pct", "fg3Pct")),
       ftPct: rate01(bdlStatNum(row.stats, "ft_pct", "ftPct")),
@@ -139,10 +150,13 @@ export function mergeSeasonAveragesOntoRosterPlayers(
       mpg: a.mpg,
       ppg: a.ppg,
       rpg: a.rpg,
+      ...(a.oreb != null ? { oreb: a.oreb } : {}),
+      ...(a.dreb != null ? { dreb: a.dreb } : {}),
       apg: a.apg,
       spg: a.spg,
       bpg: a.bpg,
       tpg: a.tpg,
+      ...(a.pf != null ? { pf: a.pf } : {}),
       fgPct: a.fgPct,
       fg3Pct: a.fg3Pct,
       ftPct: a.ftPct,

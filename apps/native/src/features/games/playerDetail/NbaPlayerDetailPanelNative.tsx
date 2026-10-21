@@ -994,6 +994,20 @@ const CAREER_COLS_NATIVE: Array<{
     emphasize: true,
   },
   { key: "reb", label: "REB", width: 40, render: (r) => fmtPerGameNative(r.reb) },
+  {
+    key: "oreb",
+    label: "ORB",
+    width: 40,
+    render: (r) =>
+      r.oreb == null || !Number.isFinite(r.oreb) ? "—" : fmtPerGameNative(r.oreb),
+  },
+  {
+    key: "dreb",
+    label: "DRB",
+    width: 40,
+    render: (r) =>
+      r.dreb == null || !Number.isFinite(r.dreb) ? "—" : fmtPerGameNative(r.dreb),
+  },
   { key: "ast", label: "AST", width: 40, render: (r) => fmtPerGameNative(r.ast) },
   { key: "fg", label: "FG", width: 36, render: (r) => fmtPerGameNative(r.fgm) },
   { key: "fga", label: "FGA", width: 40, render: (r) => fmtPerGameNative(r.fga) },
@@ -1007,6 +1021,13 @@ const CAREER_COLS_NATIVE: Array<{
   { key: "stl", label: "STL", width: 36, render: (r) => fmtPerGameNative(r.stl) },
   { key: "blk", label: "BLK", width: 36, render: (r) => fmtPerGameNative(r.blk) },
   { key: "tov", label: "TOV", width: 36, render: (r) => fmtPerGameNative(r.tov) },
+  {
+    key: "pf",
+    label: "PF",
+    width: 36,
+    render: (r) =>
+      r.pf == null || !Number.isFinite(r.pf) ? "—" : fmtPerGameNative(r.pf),
+  },
 ];
 
 /** Web `SeasonHistoryTable` 相当 — BRef 風シーズン平均 */

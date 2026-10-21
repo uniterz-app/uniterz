@@ -141,6 +141,9 @@ export function mapBdlStatRowToPlayerGameLog(
     stl: num(row.stl),
     blk: num(row.blk),
     tov: num(row.turnover),
+    ...(row.pf != null || row.personal_fouls != null
+      ? { pf: num(row.pf ?? row.personal_fouls) }
+      : {}),
     fgm: num(row.fgm),
     fga: num(row.fga),
     fg3m: num(row.fg3m),
