@@ -173,6 +173,7 @@ export default function ScheduleList({
   /** チーム詳細から戻る — 予想オーバーレイを開く */
   deepLinkOpenPredictGameId = null,
   onBlockingUiChange,
+  batchEdit = null,
 }: {
   games: GameItemRaw[];
   dense?: boolean;
@@ -201,6 +202,19 @@ export default function ScheduleList({
   deepLinkOpenPredictGameId?: string | null;
   /** 予想オーバーレイ / プレシーズン告知のどちらかが開いているか */
   onBlockingUiChange?: (blocking: boolean) => void;
+  /** まとめて入力。対象カードのキックオフをスコア入力にし、NBA は最多得点も選ぶ */
+  batchEdit?: {
+    ids: ReadonlySet<string>;
+    scores: Readonly<Record<string, { home: string; away: string } | undefined>>;
+    onChange: (gameId: string, side: "home" | "away", value: string) => void;
+    scorers?: Readonly<
+      Record<string, { playerId: string; teamId: string; name?: string | null } | undefined>
+    >;
+    onScorer?: (
+      gameId: string,
+      pick: { playerId: string; teamId: string; name?: string | null } | null
+    ) => void;
+  } | null;
 }) {
   const searchParams = useSearchParams();
   const openPredictFromUrl = searchParams.get("openPredict");
@@ -1169,6 +1183,26 @@ export default function ScheduleList({
         forceViewTransitionNameNone={forceViewTransitionNameNone}
         onOpenPredict={openFromCard}
         disableCardMotion={!!openGameId}
+        batchScore={
+          batchEdit?.ids.has(String(props.id))
+            ? {
+                home: batchEdit.scores[String(props.id)]?.home ?? "",
+                away: batchEdit.scores[String(props.id)]?.away ?? "",
+                onChange: (side, value) =>
+                  batchEdit.onChange(String(props.id), side, value),
+              }
+            : null
+        }
+        batchScorer={
+          batchEdit?.ids.has(String(props.id))
+            ? (batchEdit.scorers?.[String(props.id)] ?? null)
+            : null
+        }
+        onBatchScorer={
+          batchEdit?.ids.has(String(props.id)) && batchEdit.onScorer
+            ? (pick) => batchEdit.onScorer?.(String(props.id), pick)
+            : undefined
+        }
       />
     );
 

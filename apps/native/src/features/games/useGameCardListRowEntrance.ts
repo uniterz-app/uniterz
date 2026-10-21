@@ -54,6 +54,8 @@ export type GameCardListRowEntranceParams = {
   entranceVariant?: GameCardEntranceVariant;
   isPredicted: boolean;
   showPredictPrimaryGlow: boolean;
+  /** まとめて入力中の絞り込みで、入場の消え・発光をやり直さない */
+  suppressReplay?: boolean;
 };
 
 type EntranceBaseline = {
@@ -274,6 +276,7 @@ export function useGameCardListRowEntrance(params: GameCardListRowEntranceParams
     reduceMotion,
     entranceVariant = "full",
     showPredictPrimaryGlow,
+    suppressReplay = false,
   } = params;
 
   const isDaySwitch = entranceVariant === "light";
@@ -349,6 +352,11 @@ export function useGameCardListRowEntrance(params: GameCardListRowEntranceParams
       scanOpacity.value = 0;
       frameStrokeEnd.value = 1;
     };
+
+    if (suppressReplay) {
+      resetAll();
+      return;
+    }
 
     if (skip) {
       resetAll();
@@ -594,7 +602,7 @@ export function useGameCardListRowEntrance(params: GameCardListRowEntranceParams
 
     resetAll();
     return undefined;
-  }, [skip, isDaySwitch, isPageRich, isPageRest, rowIndex]);
+  }, [skip, isDaySwitch, isPageRich, isPageRest, rowIndex, suppressReplay]);
 
   /** 予想済み判定の非同期解決時 — 入場全体は再生せずフッターグローのみ更新 */
   useLayoutEffect(() => {

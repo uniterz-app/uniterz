@@ -1,7 +1,16 @@
-import { Platform, Pressable, StyleSheet, Text, View, type ImageStyle, type TextStyle, type ViewStyle } from "react-native";
-import { memo, useEffect, useMemo, useRef } from "react";
+import { Platform, Pressable, StyleSheet, Text, TextInput, View, type ImageStyle, type TextStyle, type ViewStyle } from "react-native";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { registerTutorialTarget } from "../tutorial/tutorialMeasureNative";
-import Animated, { useReducedMotion, withTiming } from "react-native-reanimated";
+import Animated, {
+  FadeIn,
+  runOnJS,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withDelay,
+  withTiming,
+} from "react-native-reanimated";
+import { gamesCyberEaseBezier } from "./gamesPageMotion";
 import type { TeamRecordSnapshot } from "./teamRecordDisplay";
 import MatchTeamMarkNative from "./MatchTeamMarkNative";
 import type { GamesLanguage, GamesTexts } from "./gamesI18n";
@@ -28,6 +37,9 @@ import {
 import TutorialCardTapHintNative from "../tutorial/TutorialCardTapHintNative";
 import { MATCH_CARD_DISPLAY_FONT } from "./matchCardTypography";
 import { displayNbaRoundLabel } from "../../../../../lib/games/displayNbaRoundLabel";
+import { matchLineFramePaint } from "../../../../../lib/games/matchListLineFrame";
+import type { NbaTopScorerPick } from "../../../../../lib/nba/topScorer";
+import BatchCompactCardNative from "./BatchCompactCardNative";
 import { prefetchMatchupDetailBundle } from "../../../../../lib/nba/predict/fetchMatchupDetailClient";
 import { usePrefetchNbaMatchupDetailsNative } from "./usePrefetchNbaMatchupDetailsNative";
 import { getUniterzApiBaseUrl } from "./submitPredictionApi";
@@ -106,6 +118,23 @@ export type GameCardListProps = {
   shellVariant?: "cyber" | "lineFrame";
   /** ピックアップ表記。本番は左辺 `PICK UP` */
   pickupMark?: "top" | "left";
+  /** まとめて入力。対象カードをスコア＋最多得点セグメントに差し替える */
+  batchEdit?: {
+    ids: ReadonlySet<string>;
+    scores: Readonly<Record<string, { home: string; away: string } | undefined>>;
+    onChange: (gameId: string, side: "home" | "away", value: string) => void;
+    scorers?: Readonly<Record<string, NbaTopScorerPick | undefined>>;
+    onScorer?: (gameId: string, pick: NbaTopScorerPick | null) => void;
+    /** teamId → シーズン平均得点（整数） */
+    teamPpg?: Readonly<Record<string, number>>;
+    /** 得点リールを動かしているあいだ true */
+    onScoreDrag?: (locked: boolean) => void;
+    /** 選択中のカード（このカードだけリールが動く） */
+    focusedId?: string | null;
+    onFocus?: (gameId: string | null) => void;
+    /** 同点で提出できないときにカードへ出す短い文言 */
+    tieLabel?: string;
+  } | null;
 };
 
 type GameCardListRowProps = GameCardListProps & {
@@ -119,6 +148,82 @@ type GameCardListRowProps = GameCardListProps & {
 };
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
+const BATCH_SWAP_OUT_MS = 160;
+const BATCH_SWAP_IN_MS = 200;
+const BATCH_SWAP_STAGGER_MS = 36;
+const BATCH_SWAP_SHIFT = 10;
+
+/** まとめて入力の入りと戻り。出てから、逆方向に入る */
+function useBatchCardSwap(active: boolean, reduceMotion: boolean, rowIndex: number) {
+  const [shown, setShown] = useState(active);
+  const opacity = useSharedValue(1);
+  const translateY = useSharedValue(0);
+  const gen = useRef(0);
+  const activeRef = useRef(active);
+  const skipEnter = useRef(true);
+  activeRef.current = active;
+
+  const commit = useCallback((id: number) => {
+    if (gen.current !== id) return;
+    setShown(activeRef.current);
+  }, []);
+
+  useEffect(() => {
+    if (active === shown) return;
+    if (reduceMotion) {
+      setShown(active);
+      return;
+    }
+    const id = ++gen.current;
+    const delay = Math.min(rowIndex, 5) * BATCH_SWAP_STAGGER_MS;
+    opacity.value = withDelay(
+      delay,
+      withTiming(
+        0,
+        { duration: BATCH_SWAP_OUT_MS, easing: gamesCyberEaseBezier },
+        (finished) => {
+          if (finished) runOnJS(commit)(id);
+        }
+      )
+    );
+    translateY.value = withDelay(
+      delay,
+      withTiming(active ? -BATCH_SWAP_SHIFT : BATCH_SWAP_SHIFT, {
+        duration: BATCH_SWAP_OUT_MS,
+        easing: gamesCyberEaseBezier,
+      })
+    );
+  }, [active, shown, reduceMotion, rowIndex, commit, opacity, translateY]);
+
+  useEffect(() => {
+    if (skipEnter.current) {
+      skipEnter.current = false;
+      return;
+    }
+    if (reduceMotion) {
+      opacity.value = 1;
+      translateY.value = 0;
+      return;
+    }
+    opacity.value = 0;
+    translateY.value = shown ? BATCH_SWAP_SHIFT : -BATCH_SWAP_SHIFT;
+    opacity.value = withTiming(1, {
+      duration: BATCH_SWAP_IN_MS,
+      easing: gamesCyberEaseBezier,
+    });
+    translateY.value = withTiming(0, {
+      duration: BATCH_SWAP_IN_MS,
+      easing: gamesCyberEaseBezier,
+    });
+  }, [shown, reduceMotion, opacity, translateY]);
+
+  const style = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+    transform: [{ translateY: translateY.value }],
+  }));
+  return { shown, style };
+}
 
 /** 試合一覧行：Reanimated による depth reveal / bottom-up 入場 */
 export const GameCardListRow = memo(function GameCardListRow(props: GameCardListRowProps) {
@@ -150,6 +255,7 @@ export const GameCardListRow = memo(function GameCardListRow(props: GameCardList
     tutorialPickupGameId = null,
     shellVariant = "lineFrame",
     pickupMark = "left",
+    batchEdit = null,
   } = props;
   const useLineFrame = shellVariant === "lineFrame";
 
@@ -239,6 +345,13 @@ export const GameCardListRow = memo(function GameCardListRow(props: GameCardList
       ? "predicted"
       : "normal";
   const ctaDisplayLabel = ctaLabel;
+  const batchEditing = Boolean(
+    batchEdit &&
+      !started &&
+      !isPredicted &&
+      status !== "final" &&
+      batchEdit.ids.has(gameId)
+  );
 
   const showPredictPrimaryGlow =
     status !== "final" && !started && !isPredicted;
@@ -250,10 +363,12 @@ export const GameCardListRow = memo(function GameCardListRow(props: GameCardList
     entranceVariant,
     isPredicted,
     showPredictPrimaryGlow,
+    suppressReplay: Boolean(batchEdit),
   });
 
   /** Canvas 準備後に枠側で描く。親 strokeEnd だとジャージ計測遅れでパスアニメが消える */
   const lineFrameAnimateDraw =
+    !batchEdit &&
     useLineFrame &&
     gameCardShouldAnimateLineFrameDraw({
       enteringAnimationEnabled,
@@ -264,15 +379,19 @@ export const GameCardListRow = memo(function GameCardListRow(props: GameCardList
   const lineFrameDrawDelayMs = lineFrameAnimateDraw
     ? gameCardLineFrameDrawDelayMs(rowIndex, entranceVariant)
     : 0;
+  const batchSwap = useBatchCardSwap(batchEditing, reduceMotion, rowIndex);
 
   return (
     <AnimatedPressable
       collapsable={false}
+      pointerEvents={batchEditing ? "box-none" : "auto"}
       android_ripple={Platform.OS === "android" ? { color: "rgba(255,255,255,0.06)" } : undefined}
       onPress={() => {
+        if (batchEditing) return;
         void openPredictModal(game);
       }}
       onPressIn={() => {
+        if (batchEditing) return;
         if (leagueKey === "nba" && homeTeamId && awayTeamId) {
           prefetchMatchupDetailBundle({
             homeTeamId,
@@ -291,8 +410,8 @@ export const GameCardListRow = memo(function GameCardListRow(props: GameCardList
       }}
       style={[
         styles.gameCardOuter,
-        ent.shellTransformStyle,
-        useLineFrame ? ent.shellOpacityStyle : null,
+        batchEditing ? null : ent.shellTransformStyle,
+        useLineFrame && !batchEditing ? ent.shellOpacityStyle : null,
       ]}
     >
       {/*
@@ -304,7 +423,39 @@ export const GameCardListRow = memo(function GameCardListRow(props: GameCardList
         collapsable={false}
         style={rowStyles.cardMeasure}
       >
-      {useLineFrame ? (
+      <Animated.View style={batchSwap.style}>
+      {batchSwap.shown ? (
+        <BatchCompactCardNative
+          leagueKey={leagueKey}
+          homeTeamId={homeTeamId ?? ""}
+          awayTeamId={awayTeamId ?? ""}
+          homeName={homeCompact}
+          awayName={awayCompact}
+          borderColor={
+            matchLineFramePaint({ pickup: isPickup, predicted: isPredicted }).color
+          }
+          homeScore={batchEdit?.scores[gameId]?.home ?? ""}
+          awayScore={batchEdit?.scores[gameId]?.away ?? ""}
+          onHome={(value) => batchEdit?.onChange(gameId, "home", value)}
+          onAway={(value) => batchEdit?.onChange(gameId, "away", value)}
+          homeAverage={
+            homeTeamId ? batchEdit?.teamPpg?.[homeTeamId] : undefined
+          }
+          awayAverage={
+            awayTeamId ? batchEdit?.teamPpg?.[awayTeamId] : undefined
+          }
+          onDragLock={batchEdit?.onScoreDrag}
+          pick={batchEdit?.scorers?.[gameId] ?? null}
+          onPick={(pick) => batchEdit?.onScorer?.(gameId, pick)}
+          reduceMotion={reduceMotion}
+          overrideCandidates={game.topScorerCandidates}
+          focused={batchEdit?.focusedId === gameId}
+          tieLabel={batchEdit?.tieLabel}
+          onToggleFocus={() =>
+            batchEdit?.onFocus?.(batchEdit.focusedId === gameId ? null : gameId)
+          }
+        />
+      ) : useLineFrame ? (
         <MatchListLineFrameNative
           predicted={isPredicted}
           pickup={isPickup}
@@ -440,6 +591,16 @@ export const GameCardListRow = memo(function GameCardListRow(props: GameCardList
                             {centerBlock.away}
                           </Text>
                         </View>
+                      ) : batchEditing ? (
+                        <BatchCardScorePair
+                          home={batchEdit?.scores[gameId]?.home ?? ""}
+                          away={batchEdit?.scores[gameId]?.away ?? ""}
+                          homeName={homeCompact}
+                          awayName={awayCompact}
+                          reduceMotion={reduceMotion}
+                          onHome={(value) => batchEdit?.onChange(gameId, "home", value)}
+                          onAway={(value) => batchEdit?.onChange(gameId, "away", value)}
+                        />
                       ) : (
                         <Text
                           style={[
@@ -658,6 +819,16 @@ export const GameCardListRow = memo(function GameCardListRow(props: GameCardList
                             {centerBlock.away}
                           </Text>
                         </View>
+                      ) : batchEditing ? (
+                        <BatchCardScorePair
+                          home={batchEdit?.scores[gameId]?.home ?? ""}
+                          away={batchEdit?.scores[gameId]?.away ?? ""}
+                          homeName={homeCompact}
+                          awayName={awayCompact}
+                          reduceMotion={reduceMotion}
+                          onHome={(value) => batchEdit?.onChange(gameId, "home", value)}
+                          onAway={(value) => batchEdit?.onChange(gameId, "away", value)}
+                        />
                       ) : (
                         <Text
                           style={[
@@ -741,6 +912,7 @@ export const GameCardListRow = memo(function GameCardListRow(props: GameCardList
         </Animated.View>
       </MatchListCyberClipNative>
       )}
+      </Animated.View>
       {/* カード面の後ろに回らないよう、クリップの後・高 zIndex で重ねる */}
       {showTutorialPulse ? (
         <TutorialCardTapHintNative label={tutorialPulseLabel} />
@@ -749,6 +921,51 @@ export const GameCardListRow = memo(function GameCardListRow(props: GameCardList
     </AnimatedPressable>
   );
 });
+
+function BatchCardScorePair({
+  home,
+  away,
+  homeName,
+  awayName,
+  reduceMotion,
+  onHome,
+  onAway,
+}: {
+  home: string;
+  away: string;
+  homeName: string;
+  awayName: string;
+  reduceMotion: boolean;
+  onHome: (value: string) => void;
+  onAway: (value: string) => void;
+}) {
+  function digits(value: string) {
+    return value.replace(/[^\d]/g, "").slice(0, 3);
+  }
+  return (
+    <Animated.View
+      entering={reduceMotion ? undefined : FadeIn.duration(220)}
+      onStartShouldSetResponder={() => true}
+      style={batchScoreStyles.row}
+    >
+      <TextInput
+        value={home}
+        onChangeText={(value) => onHome(digits(value))}
+        keyboardType="number-pad"
+        accessibilityLabel={`${homeName} score`}
+        style={batchScoreStyles.input}
+      />
+      <Text style={batchScoreStyles.dash}>–</Text>
+      <TextInput
+        value={away}
+        onChangeText={(value) => onAway(digits(value))}
+        keyboardType="number-pad"
+        accessibilityLabel={`${awayName} score`}
+        style={batchScoreStyles.input}
+      />
+    </Animated.View>
+  );
+}
 
 export function GameCardListEmpty({ label }: { label: string }) {
   return (
@@ -790,6 +1007,32 @@ export default function GameCardList(props: GameCardListProps) {
     </View>
   );
 }
+
+const batchScoreStyles = StyleSheet.create({
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 4,
+  },
+  input: {
+    width: 36,
+    height: 32,
+    padding: 0,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.85)",
+    backgroundColor: "#000000",
+    color: "#ffffff",
+    fontFamily: MATCH_CARD_DISPLAY_FONT,
+    fontSize: 18,
+    textAlign: "center",
+  },
+  dash: {
+    color: "rgba(255,255,255,0.7)",
+    fontSize: 16,
+    fontFamily: MATCH_CARD_DISPLAY_FONT,
+  },
+});
 
 const rowStyles = StyleSheet.create({
   /** クリップと同寸。親一覧幅へ伸びないよう width 100% のみ */

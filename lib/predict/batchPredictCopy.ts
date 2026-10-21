@@ -1,0 +1,100 @@
+import { L, resolveLocalizedLang, type LocalizedLang } from "@/lib/i18n/localize";
+
+export function batchPredictCopy(language: string | null | undefined) {
+  const lang: LocalizedLang = resolveLocalizedLang(language);
+  return {
+    enter: L(lang, {
+      ja: "まとめて入力",
+      en: "Enter all",
+      ko: "한번에 입력",
+      zh: "批量填写",
+      es: "Introducir todo",
+      pt: "Preencher tudo",
+      fr: "Tout saisir",
+    }),
+    open: L(lang, {
+      ja: "まとめて提出",
+      en: "Submit all",
+      ko: "한번에 제출",
+      zh: "批量提交",
+      es: "Enviar todo",
+      pt: "Enviar tudo",
+      fr: "Tout envoyer",
+    }),
+    title: L(lang, {
+      ja: "今日の予想をまとめて提出",
+      en: "Submit today's picks",
+      ko: "오늘 예측을 한번에 제출",
+      zh: "提交今天的预测",
+      es: "Enviar los tips de hoy",
+      pt: "Enviar os tips de hoje",
+      fr: "Envoyer les tips du jour",
+    }),
+    hint: L(lang, {
+      ja: "スコアを入れた試合だけ出します。空欄はそのまま残ります。",
+      en: "Only games with a score are submitted. Blank rows stay open.",
+      ko: "점수를 넣은 경기만 제출합니다. 빈 칸은 그대로 둡니다.",
+      zh: "只提交填了比分的比赛。空着的会留下。",
+      es: "Solo se envían los partidos con marcador. Las filas vacías se quedan.",
+      pt: "Só entram partidas com placar. Linhas vazias ficam.",
+      fr: "Seuls les matchs avec un score partent. Les lignes vides restent.",
+    }),
+    submit: (n: number) =>
+      L(lang, {
+        ja: `${n} 試合を提出`,
+        en: `Submit ${n}`,
+        ko: `${n}경기 제출`,
+        zh: `提交 ${n} 场`,
+        es: `Enviar ${n}`,
+        pt: `Enviar ${n}`,
+        fr: `Envoyer ${n}`,
+      }),
+    close: L(lang, { ja: "閉じる", en: "Close" }),
+    tie: L(lang, {
+      ja: "同点はこのリーグでは出せません",
+      en: "Ties can't be submitted in this league",
+      ko: "이 리그에서는 동점을 제출할 수 없습니다",
+      zh: "该联赛不能提交平局",
+      es: "No se puede enviar un empate en esta liga",
+      pt: "Empate não entra nesta liga",
+      fr: "Le nul n'est pas possible dans cette ligue",
+    }),
+    tieShort: L(lang, {
+      ja: "同点不可",
+      en: "NO TIE",
+      ko: "동점 불가",
+      zh: "不可平局",
+      es: "SIN EMPATE",
+      pt: "SEM EMPATE",
+      fr: "PAS DE NUL",
+    }),
+    done: (n: number) =>
+      L(lang, {
+        ja: `${n} 試合を提出しました`,
+        en: `Submitted ${n}`,
+        ko: `${n}경기를 제출했습니다`,
+        zh: `已提交 ${n} 场`,
+        es: `Enviados ${n}`,
+        pt: `Enviados ${n}`,
+        fr: `${n} envoyés`,
+      }),
+    failed: L(lang, {
+      ja: "一部を提出できませんでした",
+      en: "Some picks could not be submitted",
+      ko: "일부는 제출하지 못했습니다",
+      zh: "有几场没能提交",
+      es: "Algunos tips no se enviaron",
+      pt: "Alguns tips não foram enviados",
+      fr: "Certains tips n'ont pas été envoyés",
+    }),
+    needTwo: L(lang, {
+      ja: "2試合以上スコアを入れてください",
+      en: "Enter scores for at least 2 games",
+      ko: "2경기 이상 점수를 입력하세요",
+      zh: "请至少填写 2 场比分",
+      es: "Pon el marcador de al menos 2 partidos",
+      pt: "Preencha o placar de pelo menos 2 jogos",
+      fr: "Saisissez le score d'au moins 2 matchs",
+    }),
+  };
+}

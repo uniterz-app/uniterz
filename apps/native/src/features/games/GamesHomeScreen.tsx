@@ -21,7 +21,13 @@ import {
   type ListRenderItemInfo,
 } from "react-native";
 import { SkeletonScanNative } from "../../components/SkeletonScanNative";
-import Animated, { useReducedMotion } from "react-native-reanimated";
+import Animated, {
+  FadeIn,
+  FadeInDown,
+  FadeOut,
+  FadeOutDown,
+  useReducedMotion,
+} from "react-native-reanimated";
 import { useBottomTabBarInsets } from "../../navigation/useBottomTabBarInsets";
 import {
   collection,
@@ -76,16 +82,9 @@ import { useNativeUserLanguageFromAuth } from "../../hooks/useNativeUserLanguage
 import {
   type NativeGameRow,
   type SupportedLeague,
-  sortedUniqueDateKeysFromRows,
   gameCountsByDateKeyFromRows,
   useTodayGames,
 } from "./useTodayGames";
-import GamesTeamFilterPanelNative from "./GamesTeamFilterPanelNative";
-import {
-  applyNativeGamesFilter,
-  gamesFilterIsActive,
-  type GamesFilterState,
-} from "./applyNativeGamesFilter";
 import {
   resolveTeamJerseyPalette,
   resolveMatchupUiAccents,
@@ -101,12 +100,25 @@ import { useNativeUserPlan } from "../../hooks/useNativeUserPlan";
 import { buildPredictModalMergedFinalPreview } from "./buildPredictModalMergedFinal";
 import {
   createPredictionPostApi,
+  createPredictionPostsBatchApi,
   getUniterzApiBaseUrl,
   PredictionApiError,
   updatePredictionPostApi,
 } from "./submitPredictionApi";
 import PredictNextGameNativeModal from "./PredictNextGameNativeModal";
+import PredictOverlaySubmitButtonNative from "./PredictOverlaySubmitButtonNative";
+import {
+  CyberSlantedTabBarNative,
+  CyberSlantedTabNative,
+} from "../rankings/CyberSlantedTabNative";
+import {
+  batchPredictRowFromGame,
+  buildBatchPredictItems,
+  keepSingleBatchGameDay,
+} from "../../../../../lib/predict/batchPredict";
+import { batchPredictCopy } from "../../../../../lib/predict/batchPredictCopy";
 import { isNbaPickupGame } from "../../../../../lib/nba/isPickupGame";
+import { fetchLeagueTeamStats } from "../../../../../lib/nba/leagueTeamStats/fetchLeagueTeamStatsClient";
 import {
   broadcastDeckTitleForNextModal,
   scoreboardTeamLabelForNextModal,
@@ -271,7 +283,6 @@ import {
   liveMarkPillCyberBase,
   liveMarkTextCyberBase,
 } from "../../ui/liveMarkCyberStyles";
-import { useScheduleTeamsNative } from "./useScheduleTeamsNative";
 import { useGamesPageSwipe } from "./useGamesPageSwipe";
 import GamesDateNavigatorNative from "./GamesDateNavigatorNative";
 import { RankingsPageTitleCyberNative } from "../rankings/RankingsPageTitleCyberNative";
@@ -643,14 +654,7 @@ export default function GamesHomeScreen({
     unknown
   > | null>(null);
   const { prefs: scorePrefs } = useMatchScoreDisplayPrefsNative(fUser?.uid);
-  const [filterOpen, setFilterOpen] = useState(false);
   const [calendarOpen, setCalendarOpen] = useState(false);
-  const [gamesFilter, setGamesFilter] = useState<GamesFilterState>({
-    selectedTeamIds: [],
-    matchMode: "any",
-    marginMin: "",
-    marginMax: "",
-  });
   const mainScrollRef = useRef<FlatList<Record<string, unknown>> | null>(null);
   const mainScrollYRef = useRef(0);
   const didInitPreferredLeagueRef = useRef(false);
@@ -828,6 +832,20 @@ export default function GamesHomeScreen({
     >
   >({});
   const [myPredictionsReloadNonce, setMyPredictionsReloadNonce] = useState(0);
+  const [batchMode, setBatchMode] = useState(false);
+  const batchHeaderOpened = useRef(false);
+  if (batchMode) batchHeaderOpened.current = true;
+  const [batchPickupOnly, setBatchPickupOnly] = useState(false);
+  const [teamPpg, setTeamPpg] = useState<Record<string, number>>({});
+  const [batchScores, setBatchScores] = useState<
+    Record<string, { home: string; away: string }>
+  >({});
+  const [batchScorers, setBatchScorers] = useState<
+    Record<string, NbaTopScorerPick>
+  >({});
+  const [batchBusy, setBatchBusy] = useState(false);
+  const [batchMessage, setBatchMessage] = useState<string | null>(null);
+  const batchModeRef = useRef(false);
   const [countdownNowMs, setCountdownNowMs] = useState(() => Date.now());
   const [userDisplayName, setUserDisplayName] = useState("");
   const { language, timeZone: dayTimeZone } = useNativeUserLanguageFromAuth();
@@ -864,12 +882,166 @@ export default function GamesHomeScreen({
     }
   }, [pullRefresh]);
   const reduceMotion = useReducedMotion() ?? false;
-  const { teams: scheduleTeams, nameById: teamNameById } =
-    useScheduleTeamsNative(selectedLeague);
-  const filteredGames = useMemo(
-    () => applyNativeGamesFilter(games, gamesFilter, teamNameById),
-    [games, gamesFilter, teamNameById]
+  const batchListGames = useMemo(() => {
+    if (!batchMode || !batchPickupOnly) return games;
+    return games.filter((game) =>
+      isNbaPickupGame(game as { isPickup?: unknown; pickupWeekKey?: unknown })
+    );
+  }, [games, batchMode, batchPickupOnly]);
+  /** その日のまとめて入力できる試合（PICK UP 絞り込み前）。ボタンの出し分けに使う */
+  const batchDayRows = useMemo(() => {
+    const dayKey = toDateKeyInTimeZone(selectedDate, dayTimeZone);
+    const out = [];
+    for (const g of games) {
+      const id = String(g.id ?? "");
+      if (!id || predictedGameIds.has(id) || isGameStarted(g)) continue;
+      const start = resolveGameStartAt(g);
+      if (!start || toDateKeyInTimeZone(start, dayTimeZone) !== dayKey) continue;
+      const row = batchPredictRowFromGame(g);
+      if (!row) continue;
+      out.push({
+        row: {
+          ...row,
+          homeLabel: toCompactTeamName(
+            g.league,
+            resolveGameTeamName(g.home, g.homeTeamName, row.homeLabel)
+          ),
+          awayLabel: toCompactTeamName(
+            g.league,
+            resolveGameTeamName(g.away, g.awayTeamName, row.awayLabel)
+          ),
+        },
+        startAtMs: start.getTime(),
+      });
+    }
+    return keepSingleBatchGameDay(out, (r) => ({
+      league: r.row.league,
+      startAtMs: r.startAtMs,
+    })).map((r) => r.row);
+  }, [games, predictedGameIds, selectedDate, dayTimeZone]);
+  /** 提出対象は画面に出ているカードだけ（PICK UP で隠した試合は出さない） */
+  const batchPredictRows = useMemo(() => {
+    const shown = new Set(batchListGames.map((game) => String(game.id ?? "")));
+    return batchDayRows.filter((row) => shown.has(row.gameId));
+  }, [batchDayRows, batchListGames]);
+  const batchCopy = useMemo(() => batchPredictCopy(language), [language]);
+  const batchBuilt = useMemo(
+    () => buildBatchPredictItems(batchPredictRows, batchScores, batchScorers),
+    [batchPredictRows, batchScores, batchScorers]
   );
+  const batchReady = batchBuilt.items.length >= 2;
+  const batchEligibleIds = useMemo(
+    () => new Set(batchPredictRows.map((row) => row.gameId)),
+    [batchPredictRows]
+  );
+  /** undefined = 表示順で先頭の入力可能カードを自動で選ぶ。null = ユーザーが選択を外した */
+  const [batchFocusPick, setBatchFocusPick] = useState<string | null | undefined>(undefined);
+  const batchFocusedId = useMemo(() => {
+    if (batchFocusPick === null) return null;
+    if (batchFocusPick && batchEligibleIds.has(batchFocusPick)) return batchFocusPick;
+    for (const game of batchListGames) {
+      const id = String(game.id ?? "");
+      if (batchEligibleIds.has(id)) return id;
+    }
+    return null;
+  }, [batchFocusPick, batchEligibleIds, batchListGames]);
+
+  useEffect(() => {
+    if (!batchMode) return;
+    let cancelled = false;
+    fetchLeagueTeamStats({
+      apiBaseUrl: getUniterzApiBaseUrl(),
+      // 今季スナップショットが空なら公開 API が前期を返す
+      season: null,
+    })
+      .then((payload) => {
+        if (cancelled) return;
+        const next: Record<string, number> = {};
+        for (const row of payload.bundle.season) {
+          if (!row.teamId || !(row.ppg > 0)) continue;
+          next[row.teamId] = Math.round(row.ppg);
+        }
+        setTeamPpg(next);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [batchMode]);
+
+  function setBatchSide(gameId: string, side: "home" | "away", value: string) {
+    setBatchScores((prev) => ({
+      ...prev,
+      [gameId]: {
+        home: side === "home" ? value : (prev[gameId]?.home ?? ""),
+        away: side === "away" ? value : (prev[gameId]?.away ?? ""),
+      },
+    }));
+  }
+
+  function setBatchScorer(gameId: string, pick: NbaTopScorerPick | null) {
+    setBatchScorers((prev) => {
+      if (!pick) {
+        if (!prev[gameId]) return prev;
+        const next = { ...prev };
+        delete next[gameId];
+        return next;
+      }
+      return { ...prev, [gameId]: pick };
+    });
+  }
+
+  async function submitBatch() {
+    if (!batchReady) {
+      setBatchMessage(batchCopy.needTwo);
+      return;
+    }
+    setBatchBusy(true);
+    setBatchMessage(batchBuilt.skippedTieIds.length > 0 ? batchCopy.tie : null);
+    try {
+      const result = await createPredictionPostsBatchApi(
+        batchBuilt.items.map((item) => ({
+          gameId: item.gameId,
+          winner: item.prediction.winner,
+          scoreHome: item.prediction.score.home,
+          scoreAway: item.prediction.score.away,
+          goalScorer: item.prediction.goalScorer ?? null,
+        }))
+      );
+      if (result.okIds.length === 0) {
+        setBatchMessage(batchCopy.failed);
+        return;
+      }
+      setPredictedGameIds((prev) => {
+        const next = new Set(prev);
+        for (const id of result.okIds) next.add(id);
+        return next;
+      });
+      setMyPredictionsReloadNonce((n) => n + 1);
+      setBatchScores((prev) => {
+        const next = { ...prev };
+        for (const id of result.okIds) delete next[id];
+        return next;
+      });
+      setBatchScorers((prev) => {
+        const next = { ...prev };
+        for (const id of result.okIds) delete next[id];
+        return next;
+      });
+      setBatchMessage(batchCopy.done(result.submitted));
+      if (
+        result.okIds.length === batchBuilt.items.length &&
+        batchBuilt.skippedTieIds.length === 0
+      ) {
+        setBatchMode(false);
+        setBatchPickupOnly(false);
+      }
+    } catch {
+      setBatchMessage(batchCopy.failed);
+    } finally {
+      setBatchBusy(false);
+    }
+  }
   const showInitialSkeleton =
     (!preferredLeagueReady || loading) && !hasWindowData;
 
@@ -885,10 +1057,6 @@ export default function GamesHomeScreen({
     });
   }, [showInitialSkeleton, fUser?.uid, tabNavigation]);
 
-  const filterActive = useMemo(
-    () => gamesFilterIsActive(gamesFilter),
-    [gamesFilter]
-  );
   /** シーズン全試合日（取得前・失敗時は取得済み窓の試合日） */
   const seasonGameDayKeys = useGameDayIndex({
     league: selectedLeague,
@@ -896,21 +1064,7 @@ export default function GamesHomeScreen({
     timeZone: dayTimeZone,
     apiBaseUrl: getUniterzApiBaseUrl(),
   });
-  const dateKeysForDayStrip = useMemo(() => {
-    if (!filterActive) return seasonGameDayKeys ?? dateKeysWithGames;
-    return sortedUniqueDateKeysFromRows(
-      applyNativeGamesFilter(peerGamesForSeries, gamesFilter, teamNameById),
-      dayTimeZone
-    );
-  }, [
-    filterActive,
-    seasonGameDayKeys,
-    dateKeysWithGames,
-    peerGamesForSeries,
-    gamesFilter,
-    teamNameById,
-    dayTimeZone,
-  ]);
+  const dateKeysForDayStrip = seasonGameDayKeys ?? dateKeysWithGames;
   const seasonGameCountByKey = useGameDayCounts({
     league: selectedLeague,
     season: GAME_SCHEDULE_SEASON,
@@ -920,22 +1074,9 @@ export default function GamesHomeScreen({
   });
   const gameCountByKey = useMemo(() => {
     if (!calendarOpen) return null;
-    if (!filterActive && seasonGameCountByKey) return seasonGameCountByKey;
-    return gameCountsByDateKeyFromRows(
-      filterActive
-        ? applyNativeGamesFilter(peerGamesForSeries, gamesFilter, teamNameById)
-        : peerGamesForSeries,
-      dayTimeZone
-    );
-  }, [
-    calendarOpen,
-    filterActive,
-    seasonGameCountByKey,
-    peerGamesForSeries,
-    gamesFilter,
-    teamNameById,
-    dayTimeZone,
-  ]);
+    if (seasonGameCountByKey) return seasonGameCountByKey;
+    return gameCountsByDateKeyFromRows(peerGamesForSeries, dayTimeZone);
+  }, [calendarOpen, seasonGameCountByKey, peerGamesForSeries, dayTimeZone]);
   const leagueHeaderLabel = LEAGUE_HEADER_LABEL.nba;
 
   /** 新規登録直後: 通知・スコア表示の確認 → 閉じてからチュートリアル */
@@ -1307,9 +1448,13 @@ export default function GamesHomeScreen({
     () => [
       styles.mainScrollContent,
       /** listContent より後に当てる想定。上余白は固定ヘッダー側で取る。末尾カード余白 */
-      { marginTop: 0, paddingTop: 0, paddingBottom: spacing.xl + bottomReserveY },
+      {
+        marginTop: 0,
+        paddingTop: 0,
+        paddingBottom: spacing.xl + bottomReserveY + (batchMode ? 148 : 0),
+      },
     ],
-    [bottomReserveY]
+    [bottomReserveY, batchMode]
   );
   const screenShellStyle = useMemo(
     () => [styles.card, { paddingTop: 0, flex: 1, zIndex: 1 }],
@@ -1798,23 +1943,24 @@ export default function GamesHomeScreen({
 
   const t = useMemo(() => getGamesTexts(gamesLanguage), [gamesLanguage]);
 
-  const gamesFilterKey = useMemo(
-    () =>
-      JSON.stringify([
-        [...gamesFilter.selectedTeamIds].sort(),
-        gamesFilter.matchMode,
-        gamesFilter.marginMin,
-        gamesFilter.marginMax,
-      ]),
-    [gamesFilter]
-  );
   const selectedDayKey = toDateKeyInTimeZone(selectedDate, dayTimeZone);
+  batchModeRef.current = batchMode;
+
+  const prevSelectedDayKeyRef = useRef<string | null>(null);
+  useEffect(() => {
+    const prev = prevSelectedDayKeyRef.current;
+    prevSelectedDayKeyRef.current = selectedDayKey;
+    if (!prev || !selectedDayKey || prev === selectedDayKey) return;
+    setBatchMessage(null);
+    setBatchPickupOnly(false);
+    setBatchMode(false);
+  }, [selectedDayKey]);
   const { scheduleBlockKey, listShellIntro, richScheduleMotion } =
     useGamesListShellIntro({
       reduceMotion,
       league: selectedLeague,
       selectedDayKey,
-      filterKey: gamesFilterKey,
+      filterKey: "all",
       isLoading: showInitialSkeleton,
     });
   const cardListEntranceVariant: "full" | "light" =
@@ -1880,7 +2026,7 @@ export default function GamesHomeScreen({
     }
     const todayKey = toDateKeyInTimeZone(today, dayTimeZone);
     const current = toDateKeyInTimeZone(selectedDate, dayTimeZone);
-    if (filteredGames.length === 0) {
+    if (games.length === 0) {
       const memoryNearest = pickNearestDateKey(todayKey, dateKeysForDayStrip);
       if (memoryNearest && memoryNearest !== current) {
         const next = parseDateKeyInTimeZone(memoryNearest, dayTimeZone);
@@ -1926,13 +2072,23 @@ export default function GamesHomeScreen({
     dateKeysForDayStrip,
     selectedDate,
     selectedLeague,
-    filteredGames.length,
+    games.length,
     setSelectedDate,
   ]);
+
+  function leaveBatchForOtherDay(nextDate: Date) {
+    if (!batchModeRef.current) return;
+    const nextKey = toDateKeyInTimeZone(nextDate, dayTimeZone);
+    if (!nextKey || nextKey === selectedDayKey) return;
+    setBatchMessage(null);
+    setBatchPickupOnly(false);
+    setBatchMode(false);
+  }
 
   function selectDateManually(nextDate: Date) {
     skipAutoAdvanceRef.current = true;
     suppressAutoAdvanceForTodayRef.current = true;
+    leaveBatchForOtherDay(nextDate);
     setSelectedDate(nextDate);
   }
 
@@ -1949,7 +2105,10 @@ export default function GamesHomeScreen({
     const pick =
       inMonth.find((d) => toDateKeyInTimeZone(d, dayTimeZone) >= todayKey) ??
       inMonth[inMonth.length - 1];
-    if (pick) setSelectedDate(pick);
+    if (pick) {
+      leaveBatchForOtherDay(pick);
+      setSelectedDate(pick);
+    }
   }
 
   function moveToAdjacentMonth(delta: -1 | 1) {
@@ -1963,7 +2122,9 @@ export default function GamesHomeScreen({
     const firstDay = firstKey
       ? parseDateKeyInTimeZone(firstKey, dayTimeZone)
       : null;
-    setSelectedDate(firstDay ?? monthStart);
+    const landing = firstDay ?? monthStart;
+    leaveBatchForOtherDay(landing);
+    setSelectedDate(landing);
   }
 
   function goPrevMonth() {
@@ -1982,7 +2143,9 @@ export default function GamesHomeScreen({
       const current = toDateKeyInTimeZone(selectedDate, dayTimeZone);
       const idx = keys.indexOf(current);
       if (idx > 0) {
-        setSelectedDate(parseDateKeyInTimeZone(keys[idx - 1]!, dayTimeZone)!);
+        const next = parseDateKeyInTimeZone(keys[idx - 1]!, dayTimeZone)!;
+        leaveBatchForOtherDay(next);
+        setSelectedDate(next);
         return;
       }
       return;
@@ -1998,7 +2161,9 @@ export default function GamesHomeScreen({
       const current = toDateKeyInTimeZone(selectedDate, dayTimeZone);
       const idx = keys.indexOf(current);
       if (idx >= 0 && idx < keys.length - 1) {
-        setSelectedDate(parseDateKeyInTimeZone(keys[idx + 1]!, dayTimeZone)!);
+        const next = parseDateKeyInTimeZone(keys[idx + 1]!, dayTimeZone)!;
+        leaveBatchForOtherDay(next);
+        setSelectedDate(next);
         return;
       }
       return;
@@ -2693,7 +2858,6 @@ export default function GamesHomeScreen({
     postFlowModalActive ||
     isGameDetailModalVisible ||
     resultDetailPostId != null ||
-    filterOpen ||
     calendarOpen;
   useEffect(() => {
     const uid = fUser?.uid;
@@ -2829,9 +2993,27 @@ export default function GamesHomeScreen({
     []
   );
   const tutorialRegisterPickupLabel = tutorialPhase === "gamesPickup";
+  const batchScoreDragLocks = useRef(0);
+  const listScrollAllowedRef = useRef(true);
+  listScrollAllowedRef.current =
+    !welcomeResting && tutorialUserScrollEnabled;
+  const setBatchScoreDragging = useCallback((locked: boolean) => {
+    batchScoreDragLocks.current = Math.max(
+      0,
+      batchScoreDragLocks.current + (locked ? 1 : -1)
+    );
+    const allow =
+      batchScoreDragLocks.current === 0 && listScrollAllowedRef.current;
+    (
+      mainScrollRef.current as {
+        setNativeProps?: (props: { scrollEnabled: boolean }) => void;
+      } | null
+    )?.setNativeProps?.({ scrollEnabled: allow });
+  }, []);
+
   const cardListProps: GameCardListProps = useMemo(
     () => ({
-      games: filteredGames,
+      games,
       enteringAnimationEnabled: webGamesMotion,
       entranceVariant: cardListEntranceVariant,
       predictedGameIds: predictedGameIdsForList,
@@ -2855,9 +3037,23 @@ export default function GamesHomeScreen({
       tutorialRegisterPickupLabel,
       shellVariant: "lineFrame",
       pickupMark: "left",
+      batchEdit: batchMode
+        ? {
+            ids: batchEligibleIds,
+            scores: batchScores,
+            onChange: setBatchSide,
+            scorers: batchScorers,
+            onScorer: setBatchScorer,
+            teamPpg,
+            onScoreDrag: setBatchScoreDragging,
+            focusedId: batchFocusedId,
+            onFocus: setBatchFocusPick,
+            tieLabel: batchCopy.tieShort,
+          }
+        : null,
     }),
     [
-      filteredGames,
+      games,
       webGamesMotion,
       cardListEntranceVariant,
       predictedGameIdsForList,
@@ -2872,6 +3068,14 @@ export default function GamesHomeScreen({
       teamRecordById,
       tutorialPhase,
       tutorialRegisterPickupLabel,
+      batchMode,
+      batchEligibleIds,
+      batchScores,
+      batchScorers,
+      teamPpg,
+      setBatchScoreDragging,
+      batchFocusedId,
+      batchCopy,
     ]
   );
 
@@ -3004,16 +3208,6 @@ export default function GamesHomeScreen({
                 accessibilityLabel="calendar"
               />
             </Animated.View>
-            <Animated.View
-              key={`filter-${headerMotionKey}`}
-              entering={webGamesMotion ? gamesTopBarFilterEntering : undefined}
-            >
-              <GamesHeaderFilterButtonNative
-                active={filterActive}
-                onPress={() => setFilterOpen(true)}
-                accessibilityLabel={t.filter}
-              />
-            </Animated.View>
           </View>
         </View>
       {showInitialSkeleton ? (
@@ -3084,11 +3278,67 @@ export default function GamesHomeScreen({
           {t.fetchError}: {error}
         </Text>
       ) : null}
+      {batchDayRows.length >= 2 && fUser ? (
+        batchMode ? (
+          <Animated.View
+            entering={reduceMotion ? undefined : FadeIn.duration(200)}
+            exiting={reduceMotion ? undefined : FadeOut.duration(160)}
+            style={{ marginBottom: 6 }}
+          >
+            <CyberSlantedTabBarNative fill>
+              <CyberSlantedTabNative
+                label={batchCopy.close}
+                active={false}
+                compact
+                onPress={() => {
+                  setBatchMessage(null);
+                  setBatchPickupOnly(false);
+                  setBatchMode(false);
+                }}
+              />
+              <CyberSlantedTabNative
+                label="PICK UP"
+                active={batchPickupOnly}
+                compact
+                onPress={() => setBatchPickupOnly((on) => !on)}
+              />
+            </CyberSlantedTabBarNative>
+          </Animated.View>
+        ) : (
+          <Animated.View
+            entering={
+              reduceMotion || !batchHeaderOpened.current
+                ? undefined
+                : FadeIn.duration(200)
+            }
+            exiting={reduceMotion ? undefined : FadeOut.duration(160)}
+          >
+          <Pressable
+            onPress={() => {
+              setBatchMessage(null);
+              setBatchFocusPick(undefined);
+              setBatchMode(true);
+            }}
+            style={{
+              marginBottom: 12,
+              borderWidth: 1,
+              borderColor: "rgba(0,245,255,0.7)",
+              paddingVertical: 10,
+              alignItems: "center",
+            }}
+          >
+            <Text style={{ color: "#00F5FF", fontWeight: "700", fontSize: 13 }}>
+              {batchCopy.enter}
+            </Text>
+          </Pressable>
+          </Animated.View>
+        )
+      ) : null}
           </>
         }
         games={
           !showInitialSkeleton && !predictionPaintPending && !error
-            ? filteredGames
+            ? batchListGames
             : []
         }
         showGameCards={
@@ -3259,7 +3509,7 @@ export default function GamesHomeScreen({
             : tutorialCopy.common.ok
         }
         target={
-          filteredGames.length === 0
+          games.length === 0
             ? null
             : tutorialPhase === "games"
               ? "match-card"
@@ -3267,7 +3517,7 @@ export default function GamesHomeScreen({
         }
         /** 試合カードは囲まない（位置合わせにだけ使う） */
         showHoleRing={tutorialPhase !== "games"}
-        visual={filteredGames.length === 0 ? "matchCard" : null}
+        visual={games.length === 0 ? "matchCard" : null}
         accentTone="feature"
         {...skipConfirm}
         onSkip={() => {
@@ -3346,6 +3596,39 @@ export default function GamesHomeScreen({
           onNo={(d) => void handleNextGameModalNo(d)}
         />
       ) : null}
+      {batchMode ? (
+        <Animated.View
+          entering={reduceMotion ? undefined : FadeInDown.duration(220)}
+          exiting={reduceMotion ? undefined : FadeOutDown.duration(180)}
+          style={{
+            position: "absolute",
+            left: 12,
+            right: 12,
+            bottom: bottomReserveY + 8,
+            zIndex: 30,
+          }}
+        >
+          {batchMessage ? (
+            <Text
+              style={{
+                color: "rgba(147,185,255,0.9)",
+                fontSize: 12,
+                marginBottom: 6,
+                textAlign: "center",
+              }}
+            >
+              {batchMessage}
+            </Text>
+          ) : null}
+          <PredictOverlaySubmitButtonNative
+            variant="cyber"
+            enabled={batchReady && !batchBusy}
+            onPress={() => void submitBatch()}
+            label={batchCopy.submit(batchBuilt.items.length)}
+            disabledLabel={batchCopy.open}
+          />
+        </Animated.View>
+      ) : null}
       <GamesCalendarSheetNative
         visible={calendarOpen}
         onClose={() => setCalendarOpen(false)}
@@ -3358,15 +3641,6 @@ export default function GamesHomeScreen({
           const d = parseDateKeyInTimeZone(key, dayTimeZone);
           if (d) selectDateManually(d);
         }}
-      />
-      <GamesTeamFilterPanelNative
-        visible={filterOpen}
-        onClose={() => setFilterOpen(false)}
-        language={language}
-        teams={scheduleTeams}
-        initial={gamesFilter}
-        onApply={setGamesFilter}
-        league={selectedLeague}
       />
       <GamesRightEdgeTabsNative
         onOpenStanding={() => navigation.navigate("Standings")}

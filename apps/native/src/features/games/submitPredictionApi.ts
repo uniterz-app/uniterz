@@ -155,6 +155,99 @@ export async function createPredictionPostApi(input: {
   return id;
 }
 
+/** Web `POST /api/posts_v2/batch`。複数試合の一括提出 */
+export async function createPredictionPostsBatchApi(
+  items: Array<{
+    gameId: string;
+    winner: "home" | "away" | "draw";
+    scoreHome: number;
+    scoreAway: number;
+    goalScorer?: { playerId: string; teamId: string; name?: string | null } | null;
+  }>
+): Promise<{ submitted: number; okIds: string[]; error?: string }> {
+  const base = getUniterzApiBaseUrl();
+  if (!base) {
+    throw new PredictionApiError("EXPO_PUBLIC_UNITERZ_API_BASE_URL が未設定です。", {
+      status: 0,
+      code: "missing_api_base",
+    });
+  }
+  const user = auth.currentUser;
+  if (!user) {
+    throw new PredictionApiError("ログインが必要です。", { status: 401, code: "auth" });
+  }
+  const token = await user.getIdToken();
+  const res = await fetch(`${base}/api/posts_v2/batch`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      items: items.map((item) => ({
+        gameId: item.gameId,
+        prediction: {
+          winner: item.winner,
+          score: { home: item.scoreHome, away: item.scoreAway },
+          ...(item.goalScorer ? { goalScorer: item.goalScorer } : {}),
+        },
+        comment: "",
+      })),
+    }),
+  });
+  // 未デプロイだと /api/posts_v2/[id] に吸われて 405 になる。単発提出へ落とす
+  if (res.status === 404 || res.status === 405) {
+    return submitBatchOneByOne(items);
+  }
+  const json = await parseJsonResponse(res);
+  const results = Array.isArray(json.results) ? json.results : [];
+  const okIds = results
+    .filter(
+      (row): row is { gameId: string; ok: true } =>
+        !!row &&
+        typeof row === "object" &&
+        (row as { ok?: unknown }).ok === true &&
+        typeof (row as { gameId?: unknown }).gameId === "string"
+    )
+    .map((row) => row.gameId);
+  if (!res.ok && okIds.length === 0) {
+    const msg =
+      (typeof json.message === "string" && json.message) ||
+      (typeof json.error === "string" && json.error) ||
+      `HTTP ${res.status}`;
+    throw new PredictionApiError(msg, { status: res.status, code: String(json.error ?? "") });
+  }
+  return {
+    submitted: okIds.length,
+    okIds,
+    error: typeof json.error === "string" ? json.error : undefined,
+  };
+}
+
+/** 一括ルートが無い環境。既存の単発 POST を試合ごとに送る */
+async function submitBatchOneByOne(
+  items: Array<{
+    gameId: string;
+    winner: "home" | "away" | "draw";
+    scoreHome: number;
+    scoreAway: number;
+    goalScorer?: { playerId: string; teamId: string; name?: string | null } | null;
+  }>
+): Promise<{ submitted: number; okIds: string[]; error?: string }> {
+  const okIds: string[] = [];
+  for (const item of items) {
+    try {
+      await createPredictionPostApi(item);
+      okIds.push(item.gameId);
+    } catch (error) {
+      if (error instanceof PredictionApiError && error.status === 409) {
+        okIds.push(item.gameId);
+      }
+    }
+  }
+  return { submitted: okIds.length, okIds };
+}
+
 /** Web `PATCH /api/posts_v2/:id` と同一ペイロード */
 export async function updatePredictionPostApi(
   postId: string,

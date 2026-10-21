@@ -49,7 +49,8 @@ function useSearchRosterTeams(
         if (!cancelled) setTeams(next);
       })
       .catch(() => {
-        // リーダー表だけで検索を続ける
+        // リーダー表だけで検索を続ける（undefined のままだと「読み込み中」に見える）
+        if (!cancelled) setTeams({});
       });
     return () => {
       cancelled = true;

@@ -2,6 +2,7 @@
 "use client";
 
 
+import BatchTopScorerSegments from "@/app/component/games/BatchTopScorerSegments";
 import HalftoneJerseyMark from "@/app/component/games/HalftoneJerseyMark";
 import Jersey from "@/app/component/games/icons/Jersey";
 import {
@@ -9,6 +10,10 @@ import {
   splitTeamNameByLeague,
 } from "@/lib/team-name-split";
 import { compactNbaCardNickname } from "@/lib/nba-team-names";
+import {
+  sortNbaTopScorerCandidatesByPpg,
+} from "@/lib/nba/topScorer";
+import { useNbaTopScorerCandidates } from "@/lib/nba/useNbaTopScorerCandidates";
 import { usePathname, useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useState, useMemo, useCallback, useEffect } from "react";
@@ -65,11 +70,14 @@ import {
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
+import { batchPredictWinnerFromScores } from "@/lib/predict/batchPredict";
+import { batchPredictCopy } from "@/lib/predict/batchPredictCopy";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import {
   getTeamPrimaryColor,
   getTeamJerseyPrimaryColor,
   getTeamJerseySecondaryColor,
+  getTeamRosterMarkColor,
   resolveMatchupUiAccents,
 } from "@/lib/team-colors";
 import { normalizeLeague, type League } from "@/lib/leagues";
@@ -178,6 +186,17 @@ export type MatchCardProps = {
   viewPredictionHref: string;
   makePredictionHref: string;
   onOpenPredict?: (gameId: string) => void;
+  /** まとめて入力。キックオフの位置をスコア入力に差し替える */
+  batchScore?: {
+    home: string;
+    away: string;
+    onChange: (side: "home" | "away", value: string) => void;
+  } | null;
+  /** まとめて入力中の最多得点。NBA だけ */
+  batchScorer?: { playerId: string; teamId: string; name?: string | null } | null;
+  onBatchScorer?: (
+    pick: { playerId: string; teamId: string; name?: string | null } | null
+  ) => void;
   sharedLayoutId?: string;
   /** View Transitions 共有要素用のベースキー（一覧とオーバーレイで同一値） */
   sharedTransitionBaseKey?: string;
@@ -423,6 +442,9 @@ function MatchCardView({
   sharedTransitionBaseKey,
   forceViewTransitionNameNone = false,
   onOpenPredict,
+  batchScore = null,
+  batchScorer = null,
+  onBatchScorer,
   disableCardMotion = false,
   scheduleEntryIndex,
   heavyListEntry = true,
@@ -456,7 +478,19 @@ function MatchCardView({
   const [fullCardPressed, setFullCardPressed] = useState(false);
 
 const isPredicted = !!myPostId;
-
+  const batchNba =
+    Boolean(batchScore) && String(league).toLowerCase() === "nba";
+  const { candidates: batchCandidates, loading: batchCandidatesLoading } =
+    useNbaTopScorerCandidates({
+      homeTeamId: home.teamId,
+      awayTeamId: away.teamId,
+      enabled: batchNba,
+      override: topScorerCandidates,
+    });
+  const batchTop = useMemo(
+    () => sortNbaTopScorerCandidatesByPpg(batchCandidates).slice(0, 4),
+    [batchCandidates]
+  );
     // ▼ 追加：モバイル判定
  // ✅ 追加（既存の useSectionPrefix を使う）
 const prefix = useSectionPrefix();
@@ -911,7 +945,7 @@ const marketMajority = useMemo(() => {
   })();
 
   const lineFrameBottomLabel =
-    showListLineFrame && !hideActions
+    showListLineFrame && !hideActions && !batchScore
       ? status === "final"
         ? m.games.finalLabel
         : isGameStarted
@@ -1223,6 +1257,54 @@ const mergedPreKickoffScoreClass = [
     );
   }
 
+  const batchEditing =
+    Boolean(batchScore) && !isGameStarted && status === "scheduled" && !isPredicted;
+  if (batchEditing && batchScore) {
+    const homeN = Number(batchScore.home);
+    const awayN = Number(batchScore.away);
+    const batchTie =
+      batchScore.home.trim() !== "" &&
+      batchScore.away.trim() !== "" &&
+      Number.isInteger(homeN) &&
+      Number.isInteger(awayN) &&
+      !batchPredictWinnerFromScores(league, homeN, awayN, knockout).ok;
+    center = (
+      <div
+        className="relative z-20 flex items-center gap-1.5"
+        onClick={(e) => e.stopPropagation()}
+        onPointerDown={(e) => e.stopPropagation()}
+      >
+        <input
+          inputMode="numeric"
+          aria-label={`${home.name} score`}
+          value={batchScore.home}
+          onChange={(e) =>
+            batchScore.onChange("home", e.target.value.replace(/[^\d]/g, "").slice(0, 3))
+          }
+          className={`h-7 w-14 border bg-black text-center text-base text-white ${batchTie ? "border-red-400" : "border-white/80"}`}
+        />
+        <span className="h-px w-4 bg-white/70" />
+        <input
+          inputMode="numeric"
+          aria-label={`${away.name} score`}
+          value={batchScore.away}
+          onChange={(e) =>
+            batchScore.onChange("away", e.target.value.replace(/[^\d]/g, "").slice(0, 3))
+          }
+          className={`h-7 w-14 border bg-black text-center text-base text-white ${batchTie ? "border-red-400" : "border-white/80"}`}
+        />
+        {batchTie ? (
+          <span
+            className="absolute left-1/2 top-full mt-0.5 -translate-x-1/2 whitespace-nowrap text-[9px] font-bold tracking-[0.12em] text-red-400"
+            role="status"
+          >
+            {batchPredictCopy(language).tieShort}
+          </span>
+        ) : null}
+      </div>
+    );
+  }
+
   const [homeL1, homeL2Raw] = splitTeamNameByLeague(league, home.name);
   const [awayL1, awayL2Raw] = splitTeamNameByLeague(league, away.name);
   const homeL2 =
@@ -1352,6 +1434,7 @@ const mergedPreKickoffScoreClass = [
 
   /** カード全面をクリック対象にする（オーバーレイ用 Link / クリックレイヤー） */
   const useFullCardHitLayer =
+    !batchEditing &&
     !hideActions &&
     !inPredictOverlay &&
     (Boolean(onOpenPredict) || Boolean(effectiveFullCardLinkHref));
@@ -2366,6 +2449,16 @@ const card = (
 </motion.div>
 
       </div>
+
+{batchNba ? (
+  <BatchTopScorerSegments
+    players={batchTop}
+    loading={batchCandidatesLoading}
+    colorForTeam={(teamId) => getTeamRosterMarkColor(normalizedLeague, teamId)}
+    selected={batchScorer ?? null}
+    onSelect={(pick) => onBatchScorer?.(pick)}
+  />
+) : null}
 
       {showOverlayMarketBar && !nbaOverlayFooter ? (
         <motion.div

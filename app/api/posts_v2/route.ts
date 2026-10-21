@@ -2,122 +2,17 @@ export const runtime = "nodejs";
 
 import { NextResponse } from "next/server";
 import { getAdminDb, getAdminAuth } from "@/lib/firebaseAdmin";
-import { resultLeagueFlagPatchForPost } from "@/lib/result/userResultLeagueFlags";
-import { resolveWcStageFromGame } from "@/lib/legacyWcWebShims";
-import { isWcKnockoutGame } from "@/lib/legacyWcWebShims";
-import { normalizeLeague, type League } from "@/lib/leagues";
-import { parsePredictionPayload } from "@/lib/predict/parsePredictionPayload";
-import {
-  normalizeNbaTopScorerCandidates,
-  normalizeNbaTopScorerPick,
-  validateNbaTopScorerPickForGame,
-} from "@/lib/nba/topScorer";
-import {
-  normalizeWcGoalScorerPick,
-  validateWcGoalScorerPickForGame,
-  type WcGoalScorerPick,
-} from "@/lib/legacyWcWebShims";
-import { FieldValue, Timestamp } from "firebase-admin/firestore";
-import { touchReferralPredictDay } from "@/lib/referral/touchReferralPredictDay";
-import { settleReferralRelationWithRetries } from "@/lib/referral/settleReferralRelation";
-import {
-  deterministicPostV2Id,
-  gameKickoffLockFromData,
-} from "@/lib/predict/gameKickoffLock";
-import {
-  applyLiveMarketDelta,
-  parseMarketSide,
-  readLiveMarketCounts,
-} from "@/lib/predict/liveGameMarket";
 import { consumeUidActionRateLimit } from "@/lib/security/consumeUidRateLimit";
-import { isNbaPickupGame } from "@/lib/nba/isPickupGame";
-import { GAME_PREDICTORS_COLLECTION } from "@/lib/games/server/gamePredictors";
-
-/* ========= 型 ========= */
-type Status = "scheduled" | "live" | "final";
-
-type PredictionPayloadV2 = {
-  winner: "home" | "away" | "draw";
-  score: { home: number; away: number };
-  goalScorer?: WcGoalScorerPick;
-};
-
-type ParsedOkV2 = {
-  ok: true;
-  gameId: string;
-  comment: string;
-  rawPrediction: unknown;
-};
-type ParsedNg = { ok: false; error: string };
-
-/* ========= バリデーション（game 未取得時の薄い抽出。整合は game 取得後に parsePredictionPayload） ========= */
-function sanitizeBodyV2(body: any): ParsedOkV2 | ParsedNg {
-  try {
-    const gameId = String(body?.gameId ?? "").trim();
-    if (!gameId) throw new Error("gameId required");
-
-    const p = body?.prediction ?? {};
-    if (!["home", "away", "draw"].includes(p.winner))
-      throw new Error("prediction.winner must be home/away/draw");
-
-    const s = p.score ?? {};
-    const home = Number(s.home);
-    const away = Number(s.away);
-    if (
-      !Number.isInteger(home) ||
-      !Number.isInteger(away) ||
-      home < 0 ||
-      away < 0
-    )
-      throw new Error("score invalid");
-
-    const comment = String(body?.comment ?? "").slice(0, 2000);
-
-    return {
-      ok: true,
-      gameId,
-      comment,
-      rawPrediction: p,
-    };
-  } catch (e: any) {
-    return { ok: false, error: e?.message ?? "bad payload" };
-  }
-}
-
-/* ========= 補助 ========= */
-function resolvePostLeagueFromGame(g: Record<string, unknown>, gameId: string): League {
-  const rawLeague = g?.league;
-  if (String(rawLeague ?? "").trim()) return normalizeLeague(rawLeague);
-  if (gameId.startsWith("wc-")) return "wc";
-  if (gameId.startsWith("nba-")) return "nba";
-  return normalizeLeague(rawLeague);
-}
-
-function toAdminTimestamp(v: any): Timestamp | null {
-  if (v instanceof Timestamp) return v;
-  if (v && typeof v.toMillis === "function") {
-    try {
-      return Timestamp.fromMillis(v.toMillis());
-    } catch {}
-  }
-  if (typeof v === "number" && Number.isFinite(v)) {
-    return Timestamp.fromMillis(v);
-  }
-  if (typeof v === "string") {
-    const ms = Date.parse(v);
-    if (!Number.isNaN(ms)) return Timestamp.fromMillis(ms);
-  }
-  return null;
-}
+import {
+  createPredictionPostV2,
+  loadPredictionAuthorContext,
+} from "@/lib/predict/createPredictionPostV2";
+import { sanitizePredictionBody } from "@/lib/predict/batchPredict";
 
 async function requireUid(req: Request): Promise<string> {
-  const authz =
-    req.headers.get("authorization") ||
-    req.headers.get("Authorization");
-
+  const authz = req.headers.get("authorization") || req.headers.get("Authorization");
   const token = authz?.startsWith("Bearer ") ? authz.slice(7) : null;
   if (!token) throw new Error("unauthorized");
-
   const decoded = await getAdminAuth().verifyIdToken(token);
   return decoded.uid;
 }
@@ -127,30 +22,21 @@ export async function POST(req: Request) {
   try {
     const body = await req.json().catch(() => null);
     if (!body) {
-      return NextResponse.json(
-        { ok: false, error: "invalid json" },
-        { status: 400 }
-      );
+      return NextResponse.json({ ok: false, error: "invalid json" }, { status: 400 });
     }
 
-    const parsed = sanitizeBodyV2(body);
+    const parsed = sanitizePredictionBody(body);
     if (!parsed.ok) {
-      return NextResponse.json(
-        { ok: false, error: parsed.error },
-        { status: 400 }
-      );
+      return NextResponse.json({ ok: false, error: parsed.error }, { status: 400 });
     }
 
     let uid: string;
     try {
       uid = await requireUid(req);
-    } catch (e: any) {
-      const msg = String(e?.message ?? "");
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "";
       if (msg === "unauthorized") {
-        return NextResponse.json(
-          { ok: false, error: "unauthorized" },
-          { status: 401 }
-        );
+        return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
       }
       console.error("[POST /api/posts_v2] auth", e);
       return NextResponse.json(
@@ -167,326 +53,33 @@ export async function POST(req: Request) {
     }
 
     const adminDb = getAdminDb();
+    const rate = await consumeUidActionRateLimit(adminDb, uid, "posts_v2", 120);
+    if (!rate.ok) {
+      return NextResponse.json({ ok: false, error: "rate_limited" }, { status: 429 });
+    }
 
-    const rate = await consumeUidActionRateLimit(
+    const author = await loadPredictionAuthorContext(adminDb, uid);
+    const created = await createPredictionPostV2({
       adminDb,
       uid,
-      "posts_v2",
-      120
-    );
-    if (!rate.ok) {
-      return NextResponse.json(
-        { ok: false, error: "rate_limited" },
-        { status: 429 }
-      );
-    }
-
-    let authorDisplayName = "ユーザー";
-    let authorPhotoURL: string | null = null;
-    let authorHandle: string | null = null;
-    let referredByUid: string | null = null;
-    let referralSettled = false;
-    let userFlags: Record<string, unknown> | null = null;
-
-    try {
-      const userDoc = await adminDb.collection("users").doc(uid).get();
-      if (userDoc.exists) {
-        const u = userDoc.data() || {};
-        userFlags = u;
-        authorDisplayName = u.displayName || authorDisplayName;
-        authorPhotoURL = u.photoURL || u.avatarUrl || null;
-        authorHandle = u.handle || u.username || u.slug || null;
-        const rawRef = u.referredByUid;
-        if (typeof rawRef === "string" && rawRef.trim()) {
-          referredByUid = rawRef.trim();
-        }
-        referralSettled = Boolean(u.referralSettledAt);
-      }
-    } catch {}
-
-    const gameSnap = await adminDb.collection("games").doc(parsed.gameId).get();
-    if (!gameSnap.exists) {
-      return NextResponse.json(
-        { ok: false, error: "game not found" },
-        { status: 404 }
-      );
-    }
-
-    const g = gameSnap.data() as Record<string, unknown>;
-    const league: League = resolvePostLeagueFromGame(g, parsed.gameId);
-
-    const isKnockout = isWcKnockoutGame({
-      league,
-      knockout: (g as { knockout?: boolean }).knockout ?? null,
-      roundLabel: (g as { roundLabel?: string }).roundLabel ?? null,
-      wcStage: (g as { wcStage?: string }).wcStage ?? null,
-    });
-
-    const predictionParsed = parsePredictionPayload(
-      parsed.rawPrediction,
-      league,
-      isKnockout
-    );
-    if (!predictionParsed.ok) {
-      return NextResponse.json(
-        { ok: false, error: predictionParsed.error },
-        { status: 400 }
-      );
-    }
-
-    const startAtTs =
-      toAdminTimestamp(g?.startAtJst) ??
-      toAdminTimestamp(g?.startAt) ??
-      null;
-
-    if (!startAtTs) {
-      return NextResponse.json(
-        { ok: false, error: "invalid game startAt" },
-        { status: 500 }
-      );
-    }
-
-    const startAtMillis = startAtTs.toMillis();
-    const startAtIso = new Date(startAtMillis).toISOString();
-
-    const lock = gameKickoffLockFromData(g);
-    if (!lock.ok) {
-      return NextResponse.json(
-        { ok: false, error: lock.error },
-        { status: 500 }
-      );
-    }
-    if (lock.locked) {
-      return NextResponse.json(
-        { ok: false, error: "locked: game started" },
-        { status: 403 }
-      );
-    }
-
-    const homeTeamId =
-      (g.home as { teamId?: string } | undefined)?.teamId ??
-      (g.homeTeamId as string | undefined) ??
-      null;
-    const awayTeamId =
-      (g.away as { teamId?: string } | undefined)?.teamId ??
-      (g.awayTeamId as string | undefined) ??
-      null;
-    const rawGoalScorer = predictionParsed.rawGoalScorer;
-    const goalScorerPick =
-      league === "nba"
-        ? normalizeNbaTopScorerPick(rawGoalScorer)
-        : normalizeWcGoalScorerPick(rawGoalScorer);
-    const allowsGoalScorer = league === "wc" || league === "nba";
-    if (allowsGoalScorer && rawGoalScorer != null && !goalScorerPick) {
-      return NextResponse.json(
-        { ok: false, error: "goalScorer invalid" },
-        { status: 400 }
-      );
-    }
-    if (!allowsGoalScorer && goalScorerPick) {
-      return NextResponse.json(
-        { ok: false, error: "goalScorer only allowed for wc or nba" },
-        { status: 400 }
-      );
-    }
-    if (goalScorerPick) {
-      if (league === "nba") {
-        const candidates = normalizeNbaTopScorerCandidates(
-          (g as { topScorerCandidates?: unknown }).topScorerCandidates
-        );
-        const v = validateNbaTopScorerPickForGame(
-          goalScorerPick,
-          homeTeamId,
-          awayTeamId,
-          candidates.length > 0 ? candidates : null
-        );
-        if (!v.ok) {
-          return NextResponse.json({ ok: false, error: v.error }, { status: 400 });
-        }
-      } else {
-        const v = validateWcGoalScorerPickForGame(
-          goalScorerPick,
-          homeTeamId,
-          awayTeamId,
-          predictionParsed.prediction.score
-        );
-        if (!v.ok) {
-          return NextResponse.json({ ok: false, error: v.error }, { status: 400 });
-        }
-      }
-    }
-
-    const prediction: PredictionPayloadV2 = {
-      ...predictionParsed.prediction,
-      ...(goalScorerPick ? { goalScorer: goalScorerPick } : {}),
-    };
-
-    const dup = await adminDb
-      .collection("posts")
-      .where("authorUid", "==", uid)
-      .where("gameId", "==", parsed.gameId)
-      .where("schemaVersion", "==", 2)
-      .limit(1)
-      .get();
-
-    if (!dup.empty) {
-      return NextResponse.json(
-        { ok: false, error: "duplicate", existingId: dup.docs[0].id },
-        { status: 409 }
-      );
-    }
-
-    const postId = deterministicPostV2Id(uid, parsed.gameId);
-
-    const data = {
-      schemaVersion: 2,
-
-      authorUid: uid,
-      authorDisplayName,
-      authorPhotoURL,
-      authorHandle,
-
+      author,
       gameId: parsed.gameId,
-      league,
-      seasonPhase: g?.seasonPhase ?? null,
-      /** プレーオフは playoffRound（cf 等）。seasonRound は互換のため同値 */
-      playoffRound: g?.playoffRound ?? null,
-      seasonRound: g?.playoffRound ?? g?.seasonRound ?? null,
-      roundLabel:
-        typeof g?.roundLabel === "string" && g.roundLabel.trim()
-          ? g.roundLabel.trim()
-          : null,
-      wcStage: resolveWcStageFromGame(g) ?? g?.wcStage ?? null,
-      /** 一覧カード左辺 PICK UP（games を都度読まない） */
-      isPickup: isNbaPickupGame(g),
-      ...(typeof g?.pickupWeekKey === "string" && g.pickupWeekKey.trim()
-        ? { pickupWeekKey: g.pickupWeekKey.trim() }
-        : {}),
-      home: g?.home ?? null,
-      away: g?.away ?? null,
-      status: (g?.status as Status) || "scheduled",
-
-      startAt: startAtTs,
-      startAtMillis,
-      startAtIso,
-
-      prediction,
       comment: parsed.comment,
-
-      result: null,
-      stats: null as any,
-
-      likeCount: 0,
-      saveCount: 0,
-
-      createdAt: FieldValue.serverTimestamp(),
-      updatedAt: FieldValue.serverTimestamp(),
-    };
-
-    try {
-      const ref = adminDb.collection("posts").doc(postId);
-      try {
-        await ref.create(data);
-      } catch (createErr: unknown) {
-        const code =
-          createErr && typeof createErr === "object" && "code" in createErr
-            ? Number((createErr as { code?: number }).code)
-            : null;
-        // ALREADY_EXISTS
-        if (code === 6) {
-          return NextResponse.json(
-            { ok: false, error: "duplicate", existingId: postId },
-            { status: 409 }
-          );
-        }
-        throw createErr;
-      }
-      try {
-        const gameRef = adminDb.doc(`games/${parsed.gameId}`);
-        const predictorsRef = adminDb
-          .collection(GAME_PREDICTORS_COLLECTION)
-          .doc(parsed.gameId);
-        const side = parseMarketSide(prediction.winner);
-        await adminDb.runTransaction(async (tx) => {
-          const gameSnap = await tx.get(gameRef);
-          const gameData = (gameSnap.data() ?? {}) as Record<string, unknown>;
-          const patch = side
-            ? applyLiveMarketDelta(readLiveMarketCounts(gameData), side, 1)
-            : null;
-          tx.set(
-            predictorsRef,
-            { uids: FieldValue.arrayUnion(uid) },
-            { merge: true }
-          );
-          tx.set(
-            gameRef,
-            {
-              predictorCount: FieldValue.increment(1),
-              ...(patch
-                ? {
-                    marketPickCounts: patch.marketPickCounts,
-                    market: patch.market,
-                    marketBias: patch.marketBias,
-                  }
-                : {}),
-            },
-            { merge: true }
-          );
-        });
-      } catch (predErr) {
-        console.error("[POST /api/posts_v2] predictorUids", predErr);
-      }
-      const leagueFlagPatch = resultLeagueFlagPatchForPost(league);
-      const flagsAlreadySet =
-        leagueFlagPatch != null &&
-        userFlags != null &&
-        Object.keys(leagueFlagPatch).every((k) => userFlags?.[k] === true);
-      if (leagueFlagPatch && !flagsAlreadySet) {
-        try {
-          await adminDb
-            .collection("users")
-            .doc(uid)
-            .set(leagueFlagPatch, { merge: true });
-        } catch (flagErr) {
-          console.error("[POST /api/posts_v2] user league flags", flagErr);
-        }
-      }
-      try {
-        // 招待経由かつ未精算のみ。達成済みは touch しない（コスト抑制）
-        if (referredByUid && !referralSettled) {
-          const touch = await touchReferralPredictDay(adminDb, uid);
-          if (!touch.ok) {
-            console.error("[POST /api/posts_v2] referral day", touch.error);
-          } else if (touch.needsSettle) {
-            try {
-              const settled = await settleReferralRelationWithRetries(
-                adminDb,
-                uid,
-                3
-              );
-              if (!settled.ok) {
-                console.error(
-                  "[POST /api/posts_v2] referral settle",
-                  settled.error
-                );
-              }
-            } catch (settleErr) {
-              console.error("[POST /api/posts_v2] referral settle", settleErr);
-            }
-          }
-        }
-      } catch (referralErr) {
-        console.error("[POST /api/posts_v2] referral day", referralErr);
-      }
-      return NextResponse.json({ ok: true, id: postId }, { status: 201 });
-    } catch (e: any) {
-      console.error("[POST /api/posts_v2]", e?.message ?? e);
+      rawPrediction: parsed.rawPrediction,
+      touchReferral: true,
+    });
+    if (!created.ok) {
       return NextResponse.json(
-        { ok: false, error: "write failed" },
-        { status: 500 }
+        {
+          ok: false,
+          error: created.error,
+          ...(created.existingId ? { existingId: created.existingId } : {}),
+        },
+        { status: created.status }
       );
     }
-  } catch (e: any) {
+    return NextResponse.json({ ok: true, id: created.id }, { status: 201 });
+  } catch (e: unknown) {
     console.error("[POST /api/posts_v2] fatal", e);
     return NextResponse.json(
       {
@@ -494,7 +87,7 @@ export async function POST(req: Request) {
         error: "server_error",
         message:
           process.env.NODE_ENV === "development"
-            ? String(e?.message ?? e)
+            ? String(e instanceof Error ? e.message : e)
             : undefined,
       },
       { status: 500 }

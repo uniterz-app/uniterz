@@ -73,7 +73,7 @@ export default function NbaStatsSearchBar({
         ].join(" ")}
       />
       {query.trim() ? (
-        <div className="absolute left-0 right-0 z-20 mt-1 border border-[rgba(0,245,255,0.28)] bg-[#050808] shadow-[0_12px_32px_rgba(0,0,0,0.55)]">
+        <div className="absolute left-0 right-0 z-20 mt-1 max-h-[360px] overflow-y-auto overscroll-contain border border-[rgba(0,245,255,0.28)] bg-[#050808] shadow-[0_12px_32px_rgba(0,0,0,0.55)]">
           {hits.length === 0 ? (
             <p
               className={`${nameOxanium.className} px-3 py-3 text-[11px] font-bold uppercase tracking-[0.12em] text-white/40`}

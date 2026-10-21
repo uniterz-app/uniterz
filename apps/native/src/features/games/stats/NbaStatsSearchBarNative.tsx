@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import {
   Keyboard,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -54,7 +55,11 @@ export default function NbaStatsSearchBarNative({
         style={styles.input}
       />
       {query.trim() ? (
-        <View style={styles.dropdown}>
+        <ScrollView
+          style={styles.dropdown}
+          keyboardShouldPersistTaps="handled"
+          nestedScrollEnabled
+        >
           {hits.length === 0 ? (
             <Text style={styles.empty}>{copy.noMatches}</Text>
           ) : (
@@ -78,7 +83,7 @@ export default function NbaStatsSearchBarNative({
               </Pressable>
             ))
           )}
-        </View>
+        </ScrollView>
       ) : null}
     </View>
   );
@@ -110,6 +115,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(0,245,255,0.28)",
     backgroundColor: "#050808",
+    /** ロスター全員（最大 18 人前後）が出るので、画面からはみ出さないよう中でスクロール */
+    maxHeight: 360,
     zIndex: 30,
     elevation: 16,
   },

@@ -3,7 +3,9 @@
  * ソリッド塗り（ガラス／発光グラデなし）・直角・1px 枠。
  */
 import { useEffect } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { BlurView } from "expo-blur";
+import { nativeBlurViewExtraProps } from "../../ui/nativeBlurProps";
 import Animated, {
   Easing,
   cancelAnimation,
@@ -23,6 +25,8 @@ type Props = {
   onPress: () => void;
   /** チュートリアル時は有効化でパルス発光 */
   tutorialPulse?: boolean;
+  /** まとめて提出。斜めセグメントと同じ傾きとスキャン線 */
+  variant?: "solid" | "cyber";
 };
 
 export default function PredictOverlaySubmitButtonNative({
@@ -31,6 +35,7 @@ export default function PredictOverlaySubmitButtonNative({
   enabled,
   onPress,
   tutorialPulse = false,
+  variant = "solid",
 }: Props) {
   const reduceMotion = useReducedMotion() ?? false;
   const glow = useSharedValue(0);
@@ -66,6 +71,8 @@ export default function PredictOverlaySubmitButtonNative({
     opacity: enabled ? 0.22 + glow.value * 0.35 : 0,
   }));
 
+  const cyber = variant === "cyber";
+
   return (
     <View style={styles.wrap}>
       {enabled && tutorialPulse ? (
@@ -80,14 +87,37 @@ export default function PredictOverlaySubmitButtonNative({
         style={({ pressed }) => [
           styles.root,
           enabled ? styles.rootOn : styles.rootOff,
+          cyber && enabled ? styles.rootCyberOn : null,
+          cyber && !enabled ? styles.rootCyberOff : null,
           pressed && enabled ? styles.pressed : null,
         ]}
         accessibilityRole="button"
         accessibilityState={{ disabled: !enabled }}
       >
-        <Text style={[styles.label, !enabled && styles.labelDisabled]}>
-          {enabled ? label : disabledLabel ?? label}
-        </Text>
+        {cyber ? (
+          <>
+            <BlurView
+              pointerEvents="none"
+              style={StyleSheet.absoluteFillObject}
+              tint="dark"
+              intensity={Platform.OS === "ios" ? 32 : 24}
+              {...nativeBlurViewExtraProps()}
+            />
+            <View pointerEvents="none" style={styles.glassTint} />
+          </>
+        ) : null}
+        <View>
+          <Text
+            style={[
+              styles.label,
+              !enabled && styles.labelDisabled,
+              cyber && enabled ? styles.labelCyber : null,
+              cyber && !enabled ? styles.labelCyberOff : null,
+            ]}
+          >
+            {enabled ? label : disabledLabel ?? label}
+          </Text>
+        </View>
       </Pressable>
     </View>
   );
@@ -117,6 +147,24 @@ const styles = StyleSheet.create({
     borderRadius: 0,
     overflow: "hidden",
   },
+  rootCyberOn: {
+    borderWidth: 1,
+    borderColor: "rgba(0,245,255,0.85)",
+    backgroundColor: "transparent",
+    shadowColor: "#00F5FF",
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 4,
+  },
+  rootCyberOff: {
+    borderColor: "rgba(0,245,255,0.45)",
+    backgroundColor: "transparent",
+  },
+  glassTint: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,245,255,0.1)",
+  },
   rootOn: {
     borderColor: "#00F5FF",
     backgroundColor: "#00F5FF",
@@ -135,6 +183,12 @@ const styles = StyleSheet.create({
   },
   labelDisabled: {
     color: "rgba(255,255,255,0.42)",
+  },
+  labelCyber: {
+    color: "#00F5FF",
+  },
+  labelCyberOff: {
+    color: "rgba(0,245,255,0.55)",
   },
   pressed: {
     opacity: 0.88,

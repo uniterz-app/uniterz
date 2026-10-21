@@ -78,6 +78,20 @@ export function normalizeNbaTopScorerCandidates(
   return out;
 }
 
+const NBA_SCORER_NAME_SUFFIX = /^(jr\.?|sr\.?|ii|iii|iv|v)$/i;
+
+/** セグメント表示用。姓だけ（Jr. などは除く） */
+export function nbaTopScorerSegmentLabel(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  while (
+    parts.length > 1 &&
+    NBA_SCORER_NAME_SUFFIX.test(parts[parts.length - 1] ?? "")
+  ) {
+    parts.pop();
+  }
+  return (parts[parts.length - 1] ?? name).toUpperCase();
+}
+
 /** 平均得点が高い順。同点は名前順 */
 export function sortNbaTopScorerCandidatesByPpg(
   candidates: NbaTopScorerCandidate[]

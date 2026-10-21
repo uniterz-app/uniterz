@@ -19,7 +19,6 @@ import GamesRightEdgeTabs from "@/app/component/games/GamesRightEdgeTabs";
 import { useTodayUniterzUnread } from "@/app/component/stats/useTodayUniterzUnread";
 import { TODAY_UNITERZ_POLL_MS } from "@/lib/rankings/dailyScoreLeaders/todayUniterzUnread";
 import {
-  gamesHeaderFilterWrapClass,
   gamesHeaderMobileShellClass,
   gamesHeaderMobileSideLeftClass,
   gamesHeaderMobileSideRightClass,
@@ -32,7 +31,6 @@ import {
 } from "@/lib/ui/gamesHeaderBar";
 import { RankingsPageTitleCyber } from "@/app/component/rankings/RankingsPageTitleCyber";
 import { LEAGUE_DISPLAY } from "@/lib/leagues";
-import GamesTeamFilterPanel from "./GamesTeamFilterPanel";
 import MonthHeader from "./MonthHeader";
 import DayStrip from "./DayStrip";
 import ScheduleList from "./ScheduleList";
@@ -41,7 +39,7 @@ import TutorialWelcomeWorldCamera from "@/app/component/tutorial/TutorialWelcome
 import Header from "@/app/component/Header";
 import usePageSwipe from "./usePageSwipe";
 import { gameRowStartDateKeyInTimeZone } from "./useGamesByDate";
-import { useGameDays, monthRowsToSortedGameDays } from "./useGameDays";
+import { useGameDays } from "./useGameDays";
 import { auth, db } from "@/lib/firebase";
 import { useSeasonPredictPending } from "@/lib/predict/useSeasonPredictPending";
 import {
@@ -50,6 +48,19 @@ import {
   writeSeasonPredictInviteSeenWeb,
 } from "@/lib/predict/seasonPredictInvite";
 import SeasonPredictInviteModal from "../predict/SeasonPredictInviteModal";
+import { batchPredictCopy } from "@/lib/predict/batchPredictCopy";
+import {
+  batchPredictRowFromGame,
+  buildBatchPredictItems,
+  keepSingleBatchGameDay,
+} from "@/lib/predict/batchPredict";
+import type { NbaTopScorerPick } from "@/lib/nba/topScorer";
+import { isNbaPickupGame } from "@/lib/nba/isPickupGame";
+import {
+  CyberSlantedTab,
+  CyberSlantedTabBar,
+} from "@/app/component/rankings/CyberSlantedTab";
+import { toDateOrNull } from "@/lib/games/transform";
 import type { League } from "@/lib/leagues";
 import { useUserPreferredLeague } from "@/lib/hooks/useUserPreferredLeague";
 import { preferredLeagueToGamesLeague } from "@/lib/user/preferredLeague";
@@ -123,19 +134,6 @@ import {
   fetchPreviousGameDayBeforeLocalDay,
   pickNearestDateKey,
 } from "@/lib/games/fetchNextGameDayAfter";
-import {
-  gameInvolvesAnyTeam,
-  gameIsHeadToHeadBetween,
-  parseTeamFilterMode,
-  parseTeamFilterParam,
-  serializeTeamFilterParam,
-  type TeamFilterMatchMode,
-} from "@/lib/games/gameTeamFilter";
-import { useScheduleTeams } from "@/lib/games/useScheduleTeams";
-import {
-  gameMatchesMarginBounds,
-  parseMarginBoundParam,
-} from "@/lib/games/marginFilter";
 import { sortGamesByKickoffAsc } from "@/lib/games/sortGamesByKickoff";
 import { toStatus } from "@/lib/games/transform";
 
@@ -220,6 +218,20 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
   const deepLinkOpenPredictGameId = searchParams.get("openPredict");
 
   const { fUser: user } = useFirebaseUser();
+  const [batchMode, setBatchMode] = useState(false);
+  const [batchPickupOnly, setBatchPickupOnly] = useState(false);
+  const [batchScores, setBatchScores] = useState<
+    Record<string, { home: string; away: string }>
+  >({});
+  const [batchScorers, setBatchScorers] = useState<
+    Record<string, NbaTopScorerPick>
+  >({});
+  const [batchBusy, setBatchBusy] = useState(false);
+  const [batchMessage, setBatchMessage] = useState<string | null>(null);
+  /** 日付変更の判定用。提出の有無に関係なく、別の日へ移ったら一括入力を閉じる */
+  const batchModeRef = useRef(false);
+  const selectedDayKeyRef = useRef("");
+  const [scheduleReloadKey, setScheduleReloadKey] = useState(0);
   const seasonPredictPending = useSeasonPredictPending(db, user?.uid);
   const { language, timeZone: dayTimeZone } = useUserLanguage(user?.uid ?? null);
   const m = t(language);
@@ -520,158 +532,13 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
     [seasonGameDayKeys, windowGameDays, dayTimeZone]
   );
 
-  const { teams, nameById } = useScheduleTeams(league);
+  const gameDaysForStrip = gameDays;
 
-  const teamFilterIds = useMemo(
-    () => parseTeamFilterParam(searchParams.get("team")),
-    [searchParams],
-  );
-
-  const teamFilterMatchMode: TeamFilterMatchMode = useMemo(() => {
-    if (teamFilterIds.length < 2) return "any";
-    return parseTeamFilterMode(searchParams.get("team_mode"));
-  }, [teamFilterIds, searchParams]);
-
-  const marginMin = useMemo(() => {
-    const a = parseMarginBoundParam(searchParams.get("margin_min"));
-    if (a != null) return a;
-    const legacy = parseMarginBoundParam(searchParams.get("margin"));
-    return legacy;
-  }, [searchParams]);
-
-  const marginMax = useMemo(() => {
-    const b = parseMarginBoundParam(searchParams.get("margin_max"));
-    if (b != null) return b;
-    const legacy = parseMarginBoundParam(searchParams.get("margin"));
-    if (
-      legacy != null &&
-      searchParams.get("margin_min") == null &&
-      searchParams.get("margin_max") == null
-    ) {
-      return legacy;
-    }
-    return null;
-  }, [searchParams]);
-
-  const teamFilterKey = useMemo(
-    () =>
-      [
-        serializeTeamFilterParam(teamFilterIds) ?? "all",
-        teamFilterIds.length === 2 ? teamFilterMatchMode : "na",
-        marginMin ?? "x",
-        marginMax ?? "x",
-      ].join("-"),
-    [teamFilterIds, teamFilterMatchMode, marginMin, marginMax],
-  );
-
-  useEffect(() => {
-    if (teamFilterIds.length >= 2) return;
-    if (!searchParams.has("team_mode")) return;
-    const params = new URLSearchParams(searchParams.toString());
-    params.delete("team_mode");
-    const qs = params.toString();
-    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
-  }, [teamFilterIds.length, searchParams, router, pathname]);
-
-  const setTeamFilterIds = useCallback(
-    (next: string[]) => {
-      const params = new URLSearchParams(searchParams.toString());
-      const s = serializeTeamFilterParam(next);
-      if (s) params.set("team", s);
-      else params.delete("team");
-      if (next.length !== 2) params.delete("team_mode");
-      const qs = params.toString();
-      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
-    },
-    [router, searchParams, pathname],
-  );
-
-  const setTeamFilterMatchMode = useCallback(
-    (mode: TeamFilterMatchMode) => {
-      const params = new URLSearchParams(searchParams.toString());
-      if (teamFilterIds.length === 2 && mode === "h2h") {
-        params.set("team_mode", "h2h");
-      } else {
-        params.delete("team_mode");
-      }
-      const qs = params.toString();
-      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
-    },
-    [router, searchParams, teamFilterIds.length, pathname],
-  );
-
-  const setMarginMinMax = useCallback(
-    (nextMin: number | null, nextMax: number | null) => {
-      const params = new URLSearchParams(searchParams.toString());
-      params.delete("margin");
-      if (nextMin == null) params.delete("margin_min");
-      else params.set("margin_min", String(nextMin));
-      if (nextMax == null) params.delete("margin_max");
-      else params.set("margin_max", String(nextMax));
-      const qs = params.toString();
-      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
-    },
-    [router, searchParams, pathname],
-  );
-
-  const clearAllTeamAndMarginFilters = useCallback(() => {
-    const params = new URLSearchParams(searchParams.toString());
-    params.delete("team");
-    params.delete("team_mode");
-    params.delete("margin");
-    params.delete("margin_min");
-    params.delete("margin_max");
-    const qs = params.toString();
-    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
-  }, [router, searchParams, pathname]);
-
-  const passesTeamFilterRow = useCallback(
-    (game: Record<string, unknown>) => {
-      if (!teamFilterIds.length) return true;
-      if (teamFilterIds.length === 2 && teamFilterMatchMode === "h2h") {
-        return gameIsHeadToHeadBetween(game, teamFilterIds, nameById);
-      }
-      return gameInvolvesAnyTeam(game, teamFilterIds, nameById);
-    },
-    [teamFilterIds, teamFilterMatchMode, nameById],
-  );
-
-  /** 日付ストリップ用。チーム・点差の両方を反映 */
-  const gameDaysForStrip = useMemo(() => {
-    const needTeam = teamFilterIds.length > 0;
-    const needMargin = marginMin != null || marginMax != null;
-    if (!needTeam && !needMargin) return gameDays;
-
-    const filteredRows = monthRows.filter((g) => {
-      const game = g as Record<string, unknown>;
-      if (needTeam && !passesTeamFilterRow(game)) return false;
-      if (needMargin && !gameMatchesMarginBounds(game, marginMin, marginMax)) {
-        return false;
-      }
-      return true;
-    });
-    return monthRowsToSortedGameDays(filteredRows, dayTimeZone);
-  }, [
-    teamFilterIds.length,
-    passesTeamFilterRow,
-    marginMin,
-    marginMax,
-    monthRows,
-    gameDays,
-    dayTimeZone,
-  ]);
-
-  /** 取得済みウィンドウから「その日の試合が全部 final」な日キーを算出（フィルタ反映） */
+  /** 取得済みウィンドウから「その日の試合が全部 final」な日キーを算出 */
   const allFinalDayKeys = useMemo(() => {
-    const needTeam = teamFilterIds.length > 0;
-    const needMargin = marginMin != null || marginMax != null;
     const counts = new Map<string, { total: number; final: number }>();
     for (const g of monthRows) {
       const game = g as Record<string, unknown>;
-      if (needTeam && !passesTeamFilterRow(game)) continue;
-      if (needMargin && !gameMatchesMarginBounds(game, marginMin, marginMax)) {
-        continue;
-      }
       const dk = gameRowStartDateKeyInTimeZone(
         game as { startAtJst?: unknown },
         dayTimeZone
@@ -687,14 +554,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
       if (c.total > 0 && c.final === c.total) set.add(dk);
     }
     return set;
-  }, [
-    monthRows,
-    teamFilterIds.length,
-    passesTeamFilterRow,
-    marginMin,
-    marginMax,
-    dayTimeZone,
-  ]);
+  }, [monthRows, dayTimeZone]);
 
   /* =========================
      初期選択日を render 中に確定
@@ -765,9 +625,15 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
 
   const setSelectedAndSync = useCallback(
     (d: Date) => {
+      const nextDateKey = toDateKeyInTimeZone(d, dayTimeZone);
+      const currentKey = selectedDayKeyRef.current;
+      if (batchModeRef.current && currentKey && nextDateKey !== currentKey) {
+        setBatchMessage(null);
+        setBatchPickupOnly(false);
+        setBatchMode(false);
+      }
       setSelectedByLeague((prev) => ({ ...prev, [league]: d }));
 
-      const nextDateKey = toDateKeyInTimeZone(d, dayTimeZone);
       const currentDateKey = searchParams.get("date");
       if (currentDateKey === nextDateKey) return;
 
@@ -775,7 +641,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
       params.set("date", nextDateKey);
       router.replace(`?${params.toString()}`, { scroll: false });
     },
-    [league, router, searchParams]
+    [league, router, searchParams, dayTimeZone]
   );
 
   /** 隣接暦月に試合があるか（月送りの可否） */
@@ -909,6 +775,8 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
     () => (selected ? toDateKeyInTimeZone(selected, dayTimeZone) : ""),
     [selected, dayTimeZone]
   );
+  batchModeRef.current = batchMode;
+  selectedDayKeyRef.current = selectedDayKey;
 
   const games = useMemo(() => {
     if (!selectedDayKey) return [];
@@ -925,28 +793,135 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
 
   const loading = loadingDays;
 
-  const gamesAfterTeamFilter = useMemo(() => {
-    const raw = games ?? [];
-    if (!teamFilterIds.length) return raw;
-    if (
-      teamFilterIds.length === 2 &&
-      teamFilterMatchMode === "h2h"
-    ) {
-      return raw.filter((g: Record<string, unknown>) =>
-        gameIsHeadToHeadBetween(g, teamFilterIds, nameById),
-      );
-    }
-    return raw.filter((g: Record<string, unknown>) =>
-      gameInvolvesAnyTeam(g, teamFilterIds, nameById),
+  const batchListGames = useMemo(() => {
+    if (!batchMode || !batchPickupOnly) return games;
+    return games.filter((game) =>
+      isNbaPickupGame(game as { isPickup?: unknown; pickupWeekKey?: unknown })
     );
-  }, [games, teamFilterIds, teamFilterMatchMode, nameById]);
+  }, [games, batchMode, batchPickupOnly]);
 
-  const filteredGames = useMemo(() => {
-    if (marginMin == null && marginMax == null) return gamesAfterTeamFilter;
-    return gamesAfterTeamFilter.filter((g: Record<string, unknown>) =>
-      gameMatchesMarginBounds(g, marginMin, marginMax)
+  /** その日のまとめて入力できる試合（PICK UP 絞り込み前）。ボタンの出し分けに使う */
+  const batchDayRows = useMemo(() => {
+    const out = [];
+    for (const g of games as Record<string, unknown>[]) {
+      const start = toDateOrNull(g.startAtJst) ?? toDateOrNull(g.startAt);
+      if (!start || start.getTime() <= Date.now()) continue;
+      const status = String(g.status ?? "");
+      if (g.final === true || status === "live" || status === "final" || status === "finished") {
+        continue;
+      }
+      const row = batchPredictRowFromGame(g);
+      if (row) out.push({ row, startAtMs: start.getTime() });
+    }
+    return keepSingleBatchGameDay(out, (r) => ({
+      league: r.row.league,
+      startAtMs: r.startAtMs,
+    })).map((r) => r.row);
+  }, [games]);
+  /** 提出対象は画面に出ているカードだけ（PICK UP で隠した試合は出さない） */
+  const batchPredictRows = useMemo(() => {
+    const shown = new Set(
+      (batchListGames as Record<string, unknown>[]).map((game) => String(game.id ?? ""))
     );
-  }, [gamesAfterTeamFilter, marginMin, marginMax]);
+    return batchDayRows.filter((row) => shown.has(row.gameId));
+  }, [batchDayRows, batchListGames]);
+  const batchCopy = useMemo(() => batchPredictCopy(language), [language]);
+  const batchBuilt = useMemo(
+    () => buildBatchPredictItems(batchPredictRows, batchScores, batchScorers),
+    [batchPredictRows, batchScores, batchScorers]
+  );
+  const batchReady = batchBuilt.items.length >= 2;
+  const batchEligibleIds = useMemo(
+    () => new Set(batchPredictRows.map((row) => row.gameId)),
+    [batchPredictRows]
+  );
+
+  function setBatchSide(gameId: string, side: "home" | "away", value: string) {
+    setBatchScores((prev) => ({
+      ...prev,
+      [gameId]: {
+        home: side === "home" ? value : (prev[gameId]?.home ?? ""),
+        away: side === "away" ? value : (prev[gameId]?.away ?? ""),
+      },
+    }));
+  }
+
+  function setBatchScorer(gameId: string, pick: NbaTopScorerPick | null) {
+    setBatchScorers((prev) => {
+      if (!pick) {
+        if (!prev[gameId]) return prev;
+        const next = { ...prev };
+        delete next[gameId];
+        return next;
+      }
+      return { ...prev, [gameId]: pick };
+    });
+  }
+
+  async function submitBatch() {
+    if (!batchReady) {
+      setBatchMessage(batchCopy.needTwo);
+      return;
+    }
+    setBatchBusy(true);
+    setBatchMessage(batchBuilt.skippedTieIds.length > 0 ? batchCopy.tie : null);
+    try {
+      const current = auth.currentUser;
+      if (!current) throw new Error("auth");
+      const token = await current.getIdToken();
+      const res = await fetch("/api/posts_v2/batch", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ items: batchBuilt.items }),
+      });
+      const json = (await res.json().catch(() => null)) as {
+        results?: Array<{ gameId: string; ok: boolean }>;
+        error?: string;
+      } | null;
+      if (!res.ok) {
+        setBatchMessage(json?.error || batchCopy.failed);
+        return;
+      }
+      const okIds = (json?.results ?? []).filter((row) => row.ok).map((row) => row.gameId);
+      if (okIds.length === 0) {
+        setBatchMessage(batchCopy.failed);
+        return;
+      }
+      setBatchScores((prev) => {
+        const next = { ...prev };
+        for (const id of okIds) delete next[id];
+        return next;
+      });
+      setBatchScorers((prev) => {
+        const next = { ...prev };
+        for (const id of okIds) delete next[id];
+        return next;
+      });
+      setBatchMessage(batchCopy.done(okIds.length));
+      setScheduleReloadKey((n) => n + 1);
+      if (okIds.length === batchBuilt.items.length && batchBuilt.skippedTieIds.length === 0) {
+        setBatchMode(false);
+        setBatchPickupOnly(false);
+      }
+    } catch {
+      setBatchMessage(batchCopy.failed);
+    } finally {
+      setBatchBusy(false);
+    }
+  }
+
+  const prevSelectedDayKeyRef = useRef<string | null>(null);
+  useEffect(() => {
+    const prev = prevSelectedDayKeyRef.current;
+    prevSelectedDayKeyRef.current = selectedDayKey;
+    if (!prev || !selectedDayKey || prev === selectedDayKey) return;
+    setBatchMessage(null);
+    setBatchPickupOnly(false);
+    setBatchMode(false);
+  }, [selectedDayKey]);
 
   /**
    * games は selectedDayKey で絞り込んだ取得済みウィンドウなので、
@@ -957,17 +932,6 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
   /** チュートリアル開始日の最寄り試合日は、入場セッションごとに1回だけ解決する */
   const tutorialNearestFetchRef = useRef<number | null>(null);
 
-  const hasAnyListFilter =
-    teamFilterIds.length > 0 || marginMin != null || marginMax != null;
-
-  const scheduleEmptyHint =
-    hasAnyListFilter && !listLoading && filteredGames.length === 0
-      ? teamFilterIds.length === 2 && teamFilterMatchMode === "h2h"
-        ? m.games.noH2hOnDate
-        : teamFilterIds.length > 0
-          ? m.games.noTeamGamesOnDate
-          : m.games.noMarginGamesOnDate
-      : null;
 
   /* =========================
      全試合終了判定
@@ -1030,7 +994,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
     if (!allFinished) return;
     if (didAutoAdvance.current[league]) return;
     if (nextGameDay) return;
-    if (seasonGameDayKeys && !hasAnyListFilter) return;
+    if (seasonGameDayKeys) return;
 
     let cancelled = false;
     fetchNextGameDayAfterLocalDay({
@@ -1056,7 +1020,6 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
     allFinished,
     nextGameDay,
     seasonGameDayKeys,
-    hasAnyListFilter,
     league,
     dayTimeZone,
     setSelectedAndSync,
@@ -1077,7 +1040,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
     const selectedKey = selected
       ? toDateKeyInTimeZone(selected, dayTimeZone)
       : "";
-    if (filteredGames.length === 0) {
+    if (games.length === 0) {
       const memoryNearest = pickNearestDateKey(todayKey, stripKeys);
       if (memoryNearest && memoryNearest !== selectedKey) {
         const d = parseDateKeyInTimeZone(memoryNearest, dayTimeZone);
@@ -1127,7 +1090,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
     dayTimeZone,
     gameDaysForStrip,
     selected,
-    filteredGames.length,
+    games.length,
     setSelectedAndSync,
   ]);
 
@@ -1251,8 +1214,8 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
 
   /** 一覧の listShellIntro はブロック再マウント時だけ更新（900ms だけ変わると Framer が再入場しがち） */
   const scheduleBlockKey = useMemo(
-    () => `${league}|${selectedDayKey}|${teamFilterKey}`,
-    [league, selectedDayKey, teamFilterKey],
+    () => `${league}|${selectedDayKey}`,
+    [league, selectedDayKey],
   );
 
   /**
@@ -1309,30 +1272,6 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
           },
         }
       : { initial: false as const, animate: { opacity: 1, x: 0 } };
-
-  const renderFilterControl = (headerMobile: boolean) => (
-    <motion.div
-      className={gamesHeaderFilterWrapClass(headerMobile)}
-      {...topBarEntry(0.18, 14)}
-    >
-      <GamesTeamFilterPanel
-        teams={teams}
-        selectedIds={teamFilterIds}
-        onChange={setTeamFilterIds}
-        matchMode={teamFilterMatchMode}
-        onMatchModeChange={setTeamFilterMatchMode}
-        marginMin={marginMin}
-        marginMax={marginMax}
-        onMarginMinMaxChange={setMarginMinMax}
-        onClearAllFilters={clearAllTeamAndMarginFilters}
-        dense={dense || isMobile}
-        compactHeader={headerMobile}
-        language={language}
-        layoutMobile={isMobile}
-        league={league}
-      />
-    </motion.div>
-  );
 
   const monthHeaderMotion = webGamesMotion
     ? {
@@ -1538,9 +1477,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
               <div className={gamesHeaderTitleCenterClass(true)}>
                 {renderLeagueTitle()}
               </div>
-              <div className={gamesHeaderMobileSideRightClass()}>
-                {renderFilterControl(true)}
-              </div>
+              <div className={gamesHeaderMobileSideRightClass()} />
             </div>
             <motion.div className="w-full" {...monthHeaderMotion}>
               {renderMonthHeader()}
@@ -1555,9 +1492,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
               <div className={gamesHeaderTitleCenterClass(false)}>
                 {renderLeagueTitle()}
               </div>
-              <div className={gamesHeaderDesktopSideRightClass()}>
-                {renderFilterControl(false)}
-              </div>
+              <div className={gamesHeaderDesktopSideRightClass()} />
             </div>
             <motion.div className="w-full" {...monthHeaderMotion}>
               {renderMonthHeader()}
@@ -1587,7 +1522,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
 ) : (
   <>
     <motion.div
-      key={`day-strip-${league}-${teamFilterKey}`}
+      key={`day-strip-${league}`}
       className="mb-2"
       initial={webGamesMotion ? { opacity: 0, x: -12 } : false}
       animate={
@@ -1676,18 +1611,62 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
           isSwitchingDate ? "opacity-85" : "opacity-100",
         ].join(" ")}
       >
+        {user && batchDayRows.length >= 2 ? (
+          batchMode ? (
+            <CyberSlantedTabBar fill className="mb-1">
+              <CyberSlantedTab
+                label={batchCopy.close}
+                active={false}
+                compact
+                onClick={() => {
+                  setBatchMessage(null);
+                  setBatchPickupOnly(false);
+                  setBatchMode(false);
+                }}
+              />
+              <CyberSlantedTab
+                label="PICK UP"
+                active={batchPickupOnly}
+                compact
+                onClick={() => setBatchPickupOnly((on) => !on)}
+              />
+            </CyberSlantedTabBar>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                setBatchMessage(null);
+                setBatchMode(true);
+              }}
+              className="mb-3 w-full border border-cyan-400/70 py-2 text-sm font-semibold tracking-wide text-cyan-300"
+            >
+              {batchCopy.enter}
+            </button>
+          )
+        ) : null}
         <ScheduleList
-          games={filteredGames}
+          key={scheduleReloadKey}
+          games={batchListGames}
           extraPeerGamesForSeriesInference={peerRowsForSeriesInference}
           dense={dense}
-          loading={listLoading && filteredGames.length === 0}
+          loading={listLoading && games.length === 0}
           league={league}
-          emptyHint={scheduleEmptyHint}
           listShellIntro={listShellIntroLocked}
           tutorialMarkFirstCard={tutorialActive}
           tutorialRegisterPickupLabel={tutorialPhase === "gamesPickup"}
           deepLinkOpenPredictGameId={deepLinkOpenPredictGameId}
           onBlockingUiChange={setScheduleBlockingUi}
+          batchEdit={
+            batchMode
+              ? {
+                  ids: batchEligibleIds,
+                  scores: batchScores,
+                  onChange: setBatchSide,
+                  scorers: batchScorers,
+                  onScorer: setBatchScorer,
+                }
+              : null
+          }
         />
       </div>
     </motion.div>
@@ -1697,6 +1676,35 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
       </div>
       </TutorialWelcomeWorldCamera>
 
+      {batchMode ? (
+        <div className="fixed inset-x-0 bottom-[max(5.5rem,env(safe-area-inset-bottom))] z-40 px-4">
+          {batchMessage ? (
+            <p className="mb-1 text-center text-xs text-cyan-100">{batchMessage}</p>
+          ) : null}
+          <button
+            type="button"
+            disabled={batchBusy || !batchReady}
+            onClick={() => void submitBatch()}
+            className="relative min-h-[52px] w-full overflow-hidden px-4 py-3 text-[15px] font-extrabold uppercase tracking-wider backdrop-blur-md"
+            style={{
+              background: "rgba(0,245,255,0.1)",
+              border: batchReady && !batchBusy
+                ? "1px solid rgba(0,245,255,0.85)"
+                : "1px solid rgba(0,245,255,0.45)",
+              color:
+                batchReady && !batchBusy ? "#00F5FF" : "rgba(0,245,255,0.55)",
+              boxShadow:
+                batchReady && !batchBusy
+                  ? "0 0 18px rgba(0,245,255,0.28)"
+                  : "none",
+            }}
+          >
+            <span className="relative z-[1] block">
+              {batchReady ? batchCopy.submit(batchBuilt.items.length) : batchCopy.open}
+            </span>
+          </button>
+        </div>
+      ) : null}
       <SeasonPredictInviteModal
         open={seasonInviteOpen}
         language={language}
@@ -1747,7 +1755,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
           skipLabel={m.tutorial.skip}
           nextLabel={tutorialPhase === "games" ? m.tutorial.next : m.common.ok}
           target={
-            filteredGames.length === 0
+            games.length === 0
               ? null
               : tutorialPhase === "games"
                 ? "match-card"
@@ -1755,7 +1763,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
           }
           /** 試合カードは囲まない（位置合わせにだけ使う） */
           showHoleRing={tutorialPhase !== "games"}
-          visual={filteredGames.length === 0 ? "matchCard" : null}
+          visual={games.length === 0 ? "matchCard" : null}
           accentTone="feature"
           {...skipConfirm}
           onSkip={() => {

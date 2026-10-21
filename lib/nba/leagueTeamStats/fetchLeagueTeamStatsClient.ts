@@ -4,12 +4,17 @@ import type { NbaLeagueTeamStatsApiPayload } from "./leagueTeamStatsTypes";
 export type FetchLeagueTeamStatsOptions = {
   /** Native: `getUniterzApiBaseUrl()`。Web クライアントは省略で同一オリジン */
   apiBaseUrl?: string | null;
-  season?: string;
+  /**
+   * 省略時はカレンダー今季。
+   * null のときはシーズンを付けず、公開 API の表示季（今季が空なら前期）に任せる。
+   */
+  season?: string | null;
   signal?: AbortSignal;
 };
 
-function buildUrl(base: string, season: string): string {
+function buildUrl(base: string, season: string | null): string {
   const root = base.replace(/\/$/, "");
+  if (!season) return `${root}/api/nba/league-team-stats`;
   const qs = new URLSearchParams({ season });
   return `${root}/api/nba/league-team-stats?${qs.toString()}`;
 }
@@ -18,9 +23,14 @@ function buildUrl(base: string, season: string): string {
 export async function fetchLeagueTeamStats(
   options: FetchLeagueTeamStatsOptions = {}
 ): Promise<NbaLeagueTeamStatsApiPayload> {
-  const season = (options.season ?? CURRENT_NBA_SEASON_KEY).trim();
+  const season =
+    options.season === null
+      ? null
+      : (options.season ?? CURRENT_NBA_SEASON_KEY).trim();
   const base = (options.apiBaseUrl ?? "").trim();
-  const path = `/api/nba/league-team-stats?${new URLSearchParams({ season })}`;
+  const path = season
+    ? `/api/nba/league-team-stats?${new URLSearchParams({ season })}`
+    : "/api/nba/league-team-stats";
 
   let res: Response;
   try {
