@@ -3,7 +3,6 @@ import Animated from "react-native-reanimated";
 import { useReducedMotion } from "react-native-reanimated";
 import { podiumEntranceStepForRank } from "../../../../../lib/rankings/podiumEntrance";
 import { useRankingsPodiumCardEntrance } from "./useRankingsPodiumCardEntrance";
-import { useRankingsPodiumFirstGlow } from "./useRankingsPodiumFirstGlow";
 
 type Props = {
   rank: 1 | 2 | 3;
@@ -11,7 +10,7 @@ type Props = {
   children: ReactNode;
 };
 
-/** Top3 行 — 3→2→1 の順で入場、1位はグロー */
+/** Top3 行 — 3→2→1 の順で入場 */
 export default function RankingsPodiumEntranceRowNative({
   rank,
   entranceKey,
@@ -21,10 +20,9 @@ export default function RankingsPodiumEntranceRowNative({
   const pageKey = String(entranceKey);
   const stepIndex = podiumEntranceStepForRank(rank);
   const { cardStyle } = useRankingsPodiumCardEntrance(stepIndex, pageKey, reduced);
-  const { glowStyle } = useRankingsPodiumFirstGlow(rank === 1, pageKey, reduced);
 
   return (
-    <Animated.View style={[cardStyle, rank === 1 ? glowStyle : null]}>
+    <Animated.View style={cardStyle}>
       {children}
     </Animated.View>
   );

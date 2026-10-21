@@ -128,6 +128,14 @@ export function cyberRankQuietFrameColor(rank: number): string | null {
   return null;
 }
 
+/** ランキングリスト・TODAY の 1〜3 位の枠（光らない金・銀・銅）。4位以下はなし */
+export function rankMedalFrameColor(rank: number): string | null {
+  if (rank === 1) return "#E8B923";
+  if (rank === 2) return "#C9D1DB";
+  if (rank === 3) return "#C27A3E";
+  return null;
+}
+
 export function cyberMetricTag(metric: MobileMetric, lang: Language): string {
   if (metric === "totalScore") return t(lang).rankings.pts.toUpperCase();
   if (metric === "winRate") return "WIN%";

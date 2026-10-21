@@ -8,6 +8,7 @@ import { METRIC_FONT, RANK_DISPLAY_FONT } from "./rankingsUiTheme";
 import RankingListProSkinFxNative from "./RankingListProSkinFxNative";
 import ProCyberBadgeNative from "../profile/kinetik/ProCyberBadgeNative";
 import { rankingRowProSkinVariant } from "../../../../../lib/rankings/rankingRowProSkinVariant";
+import { rankMedalFrameColor } from "../../../../../lib/rankings/cyberRankVisual";
 
 function rankColor(rank: number): string {
   if (rank === 1) return "#FCD34D";
@@ -53,6 +54,7 @@ export default function DailyScoreRankRowNative({
     typeof planProBgVariant === "string"
       ? rankingRowProSkinVariant(isPro ? "pro" : "free", planProBgVariant)
       : null;
+  const medalFrame = rankMedalFrameColor(rank);
   return (
     <Pressable
       onPress={onPress}
@@ -62,7 +64,7 @@ export default function DailyScoreRankRowNative({
         styles.card,
         proSkinVariant && styles.cardSkinned,
         solid && styles.cardSolid,
-        rank === 1 && styles.cardTop,
+        medalFrame ? [styles.cardMedal, { borderColor: medalFrame }] : null,
         pressed && styles.cardPressed,
       ]}
     >
@@ -142,7 +144,7 @@ const styles = StyleSheet.create({
   },
   nameRow: { flexDirection: "row", alignItems: "center", gap: 6, minWidth: 0 },
   nameShrink: { flexShrink: 1 },
-  cardTop: { borderColor: "rgba(252,211,77,0.35)" },
+  cardMedal: { borderWidth: 1.5 },
   cardPressed: { opacity: 0.75 },
   rank: {
     width: 26,

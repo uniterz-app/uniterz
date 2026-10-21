@@ -17,7 +17,7 @@ import { cyberScoreGlowLayers } from "../../../../../lib/rankings/cyberGlyphGlow
 import {
   cyberMetricTag,
   cyberRankPalette,
-  cyberRankQuietFrameColor,
+  rankMedalFrameColor,
   CYBER_LIST_CYAN,
   CYBER_LIST_MAGENTA,
 } from "../../../../../lib/rankings/cyberRankVisual";
@@ -34,7 +34,6 @@ import type { RankingsLanguage } from "./rankingsTexts";
 import { RankingsAvatarNative } from "./RankingsAvatarAndTabs";
 import { CyberRankNumberNative } from "./CyberRankNumberNative";
 import { RankDeltaBadgeNative } from "./RankingsRankDeltaBadge";
-import { RankFirstBorderEdgeScanNative } from "./RankFirstBorderEdgeScanNative";
 import RankingListProSkinFxNative, {
   type RankingListProSkinIntensity,
 } from "./RankingListProSkinFxNative";
@@ -283,7 +282,7 @@ export function CyberRankingListRowNative({
 }) {
   const palette = cyberRankPalette(rank);
   const firstFrame = !bare && palette.firstPlaceFrame;
-  const quietFrame = bare ? null : cyberRankQuietFrameColor(rank);
+  const medalFrame = bare ? null : rankMedalFrameColor(rank);
   const metricTag = cyberMetricTag(metric, language);
   const nameJa = hasJaScript(displayName);
   const nameFontSize = rankingFontSizePx(compact ? 13 : 15, displayName);
@@ -352,11 +351,10 @@ export function CyberRankingListRowNative({
           style={StyleSheet.absoluteFillObject}
         />
       )}
-      {firstFrame ? <RankFirstBorderEdgeScanNative /> : null}
-      {quietFrame ? (
+      {medalFrame ? (
         <View
           pointerEvents="none"
-          style={[styles.quietFrame, { borderColor: quietFrame }]}
+          style={[styles.medalFrame, { borderColor: medalFrame }]}
         />
       ) : null}
       <View
@@ -586,11 +584,10 @@ const styles = StyleSheet.create({
   contentAboveFx: {
     zIndex: 10,
   },
-  quietFrame: {
+  medalFrame: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 6,
-    borderWidth: 1,
-    opacity: 0.92,
+    borderWidth: 1.5,
   },
   rowPressed: {
     opacity: 0.96,

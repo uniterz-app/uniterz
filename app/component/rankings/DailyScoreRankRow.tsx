@@ -10,6 +10,7 @@ import RankingListProSkinFx from "@/app/component/rankings/RankingListProSkinFx"
 import { RankingNameBadges } from "@/app/component/common/RankingNameBadges";
 import { proBadgeStaticMotion } from "@/app/component/common/ProCyberBadge";
 import { rankingRowProSkinVariant } from "@/lib/rankings/rankingRowProSkinVariant";
+import { rankMedalFrameColor } from "@/lib/rankings/cyberRankVisual";
 import { nameBebas, nameOxanium } from "@/lib/fonts";
 import { FLAG_SRC, getCountryCode } from "@/lib/rankings/country";
 
@@ -64,9 +65,11 @@ export default function DailyScoreRankRow({
     typeof planProBgVariant === "string"
       ? rankingRowProSkinVariant(isPro ? "pro" : "free", planProBgVariant)
       : null;
+  const medalFrame = rankMedalFrameColor(rank);
   return (
     <span
-      className={`relative flex min-h-[60px] w-full items-center overflow-hidden rounded border text-left ${solid ? "bg-black" : proSkinVariant ? "" : "bg-white/[0.03]"} ${rank === 1 ? "border-amber-300/35" : "border-white/[0.08]"}`}
+      className={`relative flex min-h-[60px] w-full items-center overflow-hidden rounded text-left ${solid ? "bg-black" : proSkinVariant ? "" : "bg-white/[0.03]"} ${medalFrame ? "border-[1.5px]" : "border border-white/[0.08]"}`}
+      style={medalFrame ? { borderColor: medalFrame } : undefined}
     >
       {proSkinVariant ? (
         <RankingListProSkinFx variant={proSkinVariant} intensity="medium" />

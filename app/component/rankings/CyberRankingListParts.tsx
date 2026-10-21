@@ -8,12 +8,11 @@ import {
   cyberMetricTag,
   cyberRankNumStyle,
   cyberRankPalette,
-  cyberRankQuietFrameColor,
   CYBER_LIST_CYAN,
+  rankMedalFrameColor,
 } from "@/lib/rankings/cyberRankVisual";
 import type { MobileMetric } from "@/lib/rankings/rankingMetrics";
 import { formatMetricDecimals } from "@/lib/format/metricDecimals";
-import { RankFirstBorderEdgeScan } from "@/app/component/rankings/RankFirstBorderEdgeScan";
 import {
   hasJaScript,
   rankingFontSizePx,
@@ -344,7 +343,7 @@ export function CyberRankingListRow({
   const palette = cyberRankPalette(rank);
   const firstFrame =
     !bare && palette.firstPlaceFrame && (!subtleShell || showFirstPlaceFrame);
-  const quietFrame = bare ? null : cyberRankQuietFrameColor(rank);
+  const medalFrame = bare ? null : rankMedalFrameColor(rank);
   const nameJa = hasJaScript(displayName);
   const isWebScore = scoreLayout === "web" && !compact;
   /** compact でも PTS 横並び（リザルト詳細など） */
@@ -435,12 +434,11 @@ export function CyberRankingListRow({
           intensity={proSkinIntensity}
         />
       ) : null}
-      {firstFrame ? <RankFirstBorderEdgeScan /> : null}
-      {quietFrame ? (
+      {medalFrame ? (
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 z-[6]"
-          style={{ boxShadow: `inset 0 0 0 1px ${quietFrame}` }}
+          style={{ boxShadow: `inset 0 0 0 1.5px ${medalFrame}` }}
         />
       ) : null}
 

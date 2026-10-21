@@ -490,6 +490,7 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
               metric={metric}
               language={language}
               onPress={() => openProfile(item)}
+              hideProSkin={listShellPro}
             />
           </View>
         </RankingsListEntranceRowNative>
@@ -791,6 +792,7 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
                   language={language}
                   onPressProfile={openProfile}
                   entranceKey={entranceKey}
+                  hideProSkin={nbaBoard === "open"}
                 />
               </View>
             )}
