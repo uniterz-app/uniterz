@@ -2,8 +2,11 @@
  * 共有リンクのプレビュー画像（1200×630）。next/og（Satori）で描く。
  * Satori は複数子要素の div に display:flex が必須。
  */
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 import { ImageResponse } from "next/og";
 import type { ReactElement, ReactNode } from "react";
+import sharp from "sharp";
 import {
   formatSharePoints,
   formatShareStartTime,
@@ -23,7 +26,10 @@ const BG = "#05080e";
 const ACCENT = "#00F5FF";
 const TEXT = "#f4f7fb";
 const MUTED = "#8b97a8";
+const TAGLINE = "#d5dee8";
 const FONT_FAMILY = "Noto Sans JP";
+/** アーチなしの直立ワードマーク */
+const WORDMARK_FILE = join(process.cwd(), "public/brand/uniterz-logo-flat.png");
 
 const c = shareLandingCopy("ja");
 
@@ -59,6 +65,66 @@ async function loadImageDataUrl(url: string | null): Promise<string | null> {
     return `data:${type};base64,${buf.toString("base64")}`;
   };
   return withTimeout(run(), 3000);
+}
+
+type GlowingWordmark = { src: string; width: number; height: number };
+
+let glowingWordmark: Promise<GlowingWordmark | null> | null = null;
+
+/** 確定版ワードマークに、スプラッシュと同じシアンの縁光を焼き込む */
+function loadGlowingWordmark(): Promise<GlowingWordmark | null> {
+  glowingWordmark ??= buildGlowingWordmark().catch((err: unknown) => {
+    glowingWordmark = null;
+    console.error("[share-og] wordmark", err);
+    return null;
+  });
+  return glowingWordmark;
+}
+
+async function buildGlowingWordmark(): Promise<GlowingWordmark | null> {
+  const file = await readFile(WORDMARK_FILE);
+  const logo = await sharp(file).trim({ threshold: 8 }).png().toBuffer();
+  const meta = await sharp(logo).metadata();
+  const width = meta.width ?? 0;
+  const height = meta.height ?? 0;
+  if (width < 8 || height < 8) return null;
+
+  const { data, info } = await sharp(logo).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  const tinted = Buffer.alloc(data.length);
+  for (let i = 0; i < info.width * info.height; i += 1) {
+    const alpha = data[i * 4 + 3] ?? 0;
+    tinted[i * 4] = 0;
+    tinted[i * 4 + 1] = 245;
+    tinted[i * 4 + 2] = 255;
+    tinted[i * 4 + 3] = alpha;
+  }
+
+  const pad = Math.round(width * 0.045);
+  const blur = Math.max(6, Math.round(width * 0.008));
+  const glow = await sharp(tinted, {
+    raw: { width: info.width, height: info.height, channels: 4 },
+  })
+    .extend({
+      top: pad,
+      bottom: pad,
+      left: pad,
+      right: pad,
+      background: { r: 0, g: 0, b: 0, alpha: 0 },
+    })
+    .blur(blur)
+    .png()
+    .toBuffer();
+
+  const composed = await sharp(glow)
+    .composite([{ input: logo, gravity: "centre" }])
+    .png()
+    .toBuffer();
+  const out = await sharp(composed).metadata();
+  return {
+    src: `data:image/png;base64,${composed.toString("base64")}`,
+    width: out.width ?? width + pad * 2,
+    height: out.height ?? height + pad * 2,
+  };
 }
 
 function Frame({ children }: { children: ReactNode }) {
@@ -117,11 +183,39 @@ async function render(node: ReactElement, text: string): Promise<ImageResponse> 
 }
 
 export async function renderGenericShareOgImage(): Promise<ImageResponse> {
+  const mark = await loadGlowingWordmark();
+  if (!mark) {
+    const node = (
+      <Frame>
+        <div style={{ fontSize: 88 }}>UNITERZ</div>
+        <div style={{ fontSize: 40, color: MUTED, marginTop: 16 }}>{c.siteTagline}</div>
+      </Frame>
+    );
+    return render(node, c.siteTagline);
+  }
+
+  const displayW = 1040;
+  const displayH = Math.round((displayW * mark.height) / mark.width);
   const node = (
-    <Frame>
-      <div style={{ fontSize: 88 }}>UNITERZ</div>
-      <div style={{ fontSize: 40, color: MUTED, marginTop: 16 }}>{c.siteTagline}</div>
-    </Frame>
+    <div
+      style={{
+        width: "100%",
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: "#062028",
+        backgroundImage:
+          "radial-gradient(ellipse 90% 80% at 78% 0%, rgba(0,245,255,0.38), transparent 56%), radial-gradient(ellipse 70% 60% at 8% 100%, rgba(0,110,130,0.45), transparent 62%)",
+        fontFamily: FONT_FAMILY,
+        color: TEXT,
+      }}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={mark.src} width={displayW} height={displayH} alt="" />
+      <div style={{ fontSize: 34, color: TAGLINE, marginTop: 28 }}>{c.siteTagline}</div>
+    </div>
   );
   return render(node, c.siteTagline);
 }
