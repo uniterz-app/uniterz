@@ -16,13 +16,13 @@ export function nbaAskCopy(language: string | null | undefined) {
     title: "ASK",
     eyebrow: "UNITERZ AI",
     intro: L(lang, {
-      ja: "アプリの使い方や、試合・選手のスタッツ、PRO の機能について聞いてください。答えはアプリの情報とデータだけから出します。試合ごとの Pro Insight や PRO LEAGUE の中身、外部のニュースは PRO だけが見られます。",
-      en: "Ask how to use the app, about game and player stats, or what PRO features are. Answers come only from the app's info and data. A game's Pro Insight, the PRO LEAGUE board, and web news are PRO-only.",
-      ko: "앱 사용법이나 경기·선수 스탯을 물어보세요. 앱의 정보와 데이터로만 답합니다. Pro Insight와 PRO LEAGUE는 PRO만 볼 수 있습니다.",
-      zh: "可以询问应用的用法，或比赛、球员的数据。答案只来自应用的信息和数据。Pro Insight 与 PRO LEAGUE 仅 PRO 可查看。",
-      es: "Pregunta cómo usar la app o por estadísticas. Solo respondemos con la información y datos de la app. Pro Insight y PRO LEAGUE son solo PRO.",
-      pt: "Pergunte como usar o app ou sobre estatísticas. Respostas só com informações e dados do app. Pro Insight e PRO LEAGUE são só para PRO.",
-      fr: "Demandez comment utiliser l'app ou des stats. Réponses uniquement à partir des infos et données de l'app. Pro Insight et PRO LEAGUE sont réservés à PRO.",
+      ja: "アプリの使い方や、試合・選手のスタッツ、PRO の機能について聞いてください。答えはアプリの情報とデータをもとに出します。試合ごとの Pro Insight、PRO LEAGUE の中身、外部のニュース検索は PRO だけが使えます。",
+      en: "Ask how to use the app, about game and player stats, or what PRO features are. Answers are based on the app's info and data. A game's Pro Insight, the PRO LEAGUE board, and web news search are PRO-only.",
+      ko: "앱 사용법이나 경기·선수 스탯, PRO 기능에 대해 물어보세요. 앱의 정보와 데이터를 바탕으로 답합니다. 경기별 Pro Insight, PRO LEAGUE 내용, 외부 뉴스 검색은 PRO만 이용할 수 있습니다.",
+      zh: "可以询问应用的用法、比赛和球员的数据，或 PRO 的功能。答案基于应用的信息和数据。每场比赛的 Pro Insight、PRO LEAGUE 的内容以及外部新闻搜索仅限 PRO 使用。",
+      es: "Pregunta cómo usar la app, por estadísticas de partidos y jugadores o por las funciones PRO. Respondemos con base en la información y los datos de la app. El Pro Insight de cada partido, el contenido de PRO LEAGUE y la búsqueda de noticias externas son solo PRO.",
+      pt: "Pergunte como usar o app, sobre estatísticas de jogos e jogadores ou sobre os recursos PRO. As respostas se baseiam nas informações e nos dados do app. O Pro Insight de cada jogo, o conteúdo da PRO LEAGUE e a busca de notícias externas são só para PRO.",
+      fr: "Demandez comment utiliser l'app, des stats de matchs et de joueurs ou les fonctions PRO. Les réponses s'appuient sur les infos et données de l'app. Le Pro Insight de chaque match, le contenu de PRO LEAGUE et la recherche d'actualités externes sont réservés à PRO.",
     }),
     suggestions: [
       L(lang, {
