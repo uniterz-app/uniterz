@@ -10,7 +10,7 @@ type Props = {
   active?: boolean;
   onPress: () => void;
   accessibilityLabel: string;
-  icon?: "tune-variant" | "calendar-month-outline";
+  icon?: "tune-variant" | "calendar-month-outline" | "chat-processing-outline";
 };
 
 export default function GamesHeaderFilterButtonNative({

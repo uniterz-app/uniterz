@@ -117,6 +117,7 @@ import {
   keepSingleBatchGameDay,
 } from "../../../../../lib/predict/batchPredict";
 import { batchPredictCopy } from "../../../../../lib/predict/batchPredictCopy";
+import { nbaAskCopy } from "../../../../../lib/nba/ask/nbaAskCopy";
 import { isNbaPickupGame } from "../../../../../lib/nba/isPickupGame";
 import { fetchLeagueTeamStats } from "../../../../../lib/nba/leagueTeamStats/fetchLeagueTeamStatsClient";
 import {
@@ -3215,6 +3216,16 @@ export default function GamesHomeScreen({
                 icon="calendar-month-outline"
                 onPress={() => setCalendarOpen(true)}
                 accessibilityLabel="calendar"
+              />
+            </Animated.View>
+            <Animated.View
+              key={`ask-${headerMotionKey}`}
+              entering={webGamesMotion ? gamesTopBarFilterEntering : undefined}
+            >
+              <GamesHeaderFilterButtonNative
+                icon="chat-processing-outline"
+                onPress={() => navigation.navigate("NbaAsk")}
+                accessibilityLabel={nbaAskCopy(gamesLanguage).open}
               />
             </Animated.View>
           </View>

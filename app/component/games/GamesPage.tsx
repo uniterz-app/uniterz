@@ -19,6 +19,8 @@ import GamesRightEdgeTabs from "@/app/component/games/GamesRightEdgeTabs";
 import { useTodayUniterzUnread } from "@/app/component/stats/useTodayUniterzUnread";
 import { TODAY_UNITERZ_POLL_MS } from "@/lib/rankings/dailyScoreLeaders/todayUniterzUnread";
 import {
+  gamesHeaderFilterButtonClasses,
+  gamesHeaderFilterWrapClass,
   gamesHeaderMobileShellClass,
   gamesHeaderMobileSideLeftClass,
   gamesHeaderMobileSideRightClass,
@@ -30,6 +32,8 @@ import {
   gamesHeaderTitleCenterClass,
 } from "@/lib/ui/gamesHeaderBar";
 import { RankingsPageTitleCyber } from "@/app/component/rankings/RankingsPageTitleCyber";
+import { MessageSquareText } from "lucide-react";
+import { nbaAskCopy } from "@/lib/nba/ask/nbaAskCopy";
 import { LEAGUE_DISPLAY } from "@/lib/leagues";
 import MonthHeader from "./MonthHeader";
 import DayStrip from "./DayStrip";
@@ -1299,6 +1303,34 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
       }
     : { initial: false as const, animate: { opacity: 1, y: 0 } };
 
+  /** 右上（もと絞り込み）— NBA スタッツを AI に質問 */
+  const renderAskControl = (headerMobile: boolean) =>
+    league === "nba" ? (
+      <motion.div
+        className={gamesHeaderFilterWrapClass(headerMobile)}
+        {...topBarEntry(0.18, 14)}
+      >
+        <button
+          type="button"
+          onClick={() => router.push("/mobile/ask")}
+          aria-label={nbaAskCopy(language).open}
+          className={gamesHeaderFilterButtonClasses(
+            false,
+            headerMobile,
+            headerMobile
+              ? "relative z-30 w-9 min-w-9 max-w-9 gap-0 px-0"
+              : "relative z-30 gap-2 px-3",
+          )}
+        >
+          <MessageSquareText
+            className={headerMobile ? "h-3.5 w-3.5 shrink-0" : "h-4 w-4 shrink-0"}
+            aria-hidden
+          />
+          {!headerMobile ? <span>ASK</span> : null}
+        </button>
+      </motion.div>
+    ) : null;
+
   const renderSeasonPredictButtons = () => (
     <motion.div
       className="pointer-events-auto relative z-40 flex items-center justify-center touch-manipulation"
@@ -1487,7 +1519,9 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
               <div className={gamesHeaderTitleCenterClass(true)}>
                 {renderLeagueTitle()}
               </div>
-              <div className={gamesHeaderMobileSideRightClass()} />
+              <div className={gamesHeaderMobileSideRightClass()}>
+                {renderAskControl(true)}
+              </div>
             </div>
             <motion.div className="w-full" {...monthHeaderMotion}>
               {renderMonthHeader()}
@@ -1502,7 +1536,9 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
               <div className={gamesHeaderTitleCenterClass(false)}>
                 {renderLeagueTitle()}
               </div>
-              <div className={gamesHeaderDesktopSideRightClass()} />
+              <div className={gamesHeaderDesktopSideRightClass()}>
+                {renderAskControl(false)}
+              </div>
             </div>
             <motion.div className="w-full" {...monthHeaderMotion}>
               {renderMonthHeader()}

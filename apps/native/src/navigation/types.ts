@@ -38,6 +38,8 @@ export type GamesStackParamList = {
   Standings: undefined;
   /** 今日の試合のスタッツリーダー（Games 右端 TODAY） */
   DailyLeaders: undefined;
+  /** NBA スタッツを AI に質問するチャット（Games ヘッダー右上） */
+  NbaAsk: undefined;
   TeamDetail: { teamId: string };
   PlayoffBracket: undefined;
   PlayoffBracketView: undefined;
