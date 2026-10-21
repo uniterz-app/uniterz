@@ -48,6 +48,7 @@ import {
   winRateRankingNoUnitsNotice,
 } from "../../../../../lib/rankings/upsetRankingEligibilityNotice";
 import { buildRankTierGapHint } from "../../../../../lib/rankings/rankTierMilestone";
+import { rankingDisplayRank, capRankingDisplayRows } from "../../../../../lib/rankings/rankingDisplayRank";
 import { sortRankingRowsByMetric } from "../../../../../lib/rankings/sortRankingRows";
 import {
   visibleMetricsForLeague,
@@ -302,12 +303,15 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
       blockedUids,
       (r) => r.uid
     );
-    if (myRankingComment == null || !myUid) return sorted;
-    return sorted.map((r) =>
-      r.uid === myUid && r.plan === "pro"
-        ? { ...r, rankingComment: myRankingComment || undefined }
-        : r
-    );
+    const withComment =
+      myRankingComment == null || !myUid
+        ? sorted
+        : sorted.map((r) =>
+            r.uid === myUid && r.plan === "pro"
+              ? { ...r, rankingComment: myRankingComment || undefined }
+              : r
+          );
+    return capRankingDisplayRows(withComment);
   }, [metric, rawRows, blockedUids, myRankingComment, myUid]);
 
   const myRawRow = (bundle?.myRow ?? null) as RankingRow | null;
@@ -414,13 +418,8 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
   const top3 = rows.slice(0, 3);
   const restRows = rows.slice(3);
   const listEntranceKey = `${rankingsLeague}-${category}-${metric}-${round}`;
-  /** 切替のたびに新しい入場にする（同じ指標へ戻っても流し直す） */
-  const entranceDeps = `${listEntranceKey}|${nbaBoard}|${rankingPeriod}|${periodLabel ?? ""}`;
-  const entranceRef = useRef({ deps: entranceDeps, n: 0 });
-  if (entranceRef.current.deps !== entranceDeps) {
-    entranceRef.current = { deps: entranceDeps, n: entranceRef.current.n + 1 };
-  }
-  const rowEntranceKey = `${listEntranceKey}#${entranceRef.current.n}`;
+  /** 指標・リーグ・期間ごとに最初の一度だけ入場する */
+  const entranceKey = `${listEntranceKey}|${nbaBoard}|${rankingPeriod}|${periodLabel ?? ""}`;
 
   const openProfile = useCallback((row: RankingRowWithCountry) => {
     const key = warmPublicProfileFromRankingRowNative(row);
@@ -474,7 +473,7 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
       >
         <RankingsListEntranceRowNative
           index={index + 3}
-          entranceKey={rowEntranceKey}
+          entranceKey={entranceKey}
           staggerMs={58}
         >
           <View
@@ -486,7 +485,7 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
           >
             <RankingListCardNative
               row={item}
-              rank={index + 4}
+              rank={rankingDisplayRank(item, index + 3)}
               metric={metric}
               language={language}
               onPress={() => openProfile(item)}
@@ -495,7 +494,7 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
         </RankingsListEntranceRowNative>
       </View>
     ),
-    [metric, language, rowEntranceKey, openProfile, listShellPro, myUid]
+    [metric, language, entranceKey, openProfile, listShellPro, myUid]
   );
 
   const listRef = useRef<FlatList<RankingRowWithCountry>>(null);
@@ -790,7 +789,7 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
                   metric={metric}
                   language={language}
                   onPressProfile={openProfile}
-                  entranceKey={listEntranceKey}
+                  entranceKey={entranceKey}
                 />
               </View>
             )}

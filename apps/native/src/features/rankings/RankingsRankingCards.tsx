@@ -9,6 +9,7 @@ import { type RankingsLanguage } from "./rankingsTexts";
 import { CyberRankingListRowNative } from "./CyberRankingListRowNative";
 import RankingRowCommentNative from "./RankingRowCommentNative";
 import RankingsPodiumEntranceRowNative from "./RankingsPodiumEntranceRowNative";
+import { rankingDisplayRank } from "../../../../../lib/rankings/rankingDisplayRank";
 import { rankingsUiStyles as styles } from "./rankingsUiStyles";
 
 function RankingRowCard({
@@ -87,11 +88,12 @@ export function RankingsTopPodiumNative({
   return (
     <View style={styles.podiumWrap}>
       {rows.slice(0, 3).map((row, index) => {
-        const rank = (index + 1) as 1 | 2 | 3;
+        const rank = rankingDisplayRank(row, index);
+        const entranceRank = (rank <= 1 ? 1 : rank === 2 ? 2 : 3) as 1 | 2 | 3;
         return (
           <RankingsPodiumEntranceRowNative
             key={row.uid}
-            rank={rank}
+            rank={entranceRank}
             entranceKey={entranceKey}
           >
             <RankingRowCard

@@ -30,6 +30,7 @@ import {
 } from "@/app/component/rankings/CyberRankingListParts";
 import { cyberMetricTag } from "@/lib/rankings/cyberRankVisual";
 import { markRankingsCountUpIntroPlayed } from "@/lib/rankings/rankingsCountUpIntro";
+import { rankingDisplayRank } from "@/lib/rankings/rankingDisplayRank";
 import {
   podiumCrownDelayS,
   podiumEntranceStepForRank,
@@ -159,11 +160,11 @@ export default function TopPodium({
   if (!r1) return null;
 
   const topRows = [
-    r1 ? { rank: 1 as const, row: r1, value: v1n } : null,
-    r2 ? { rank: 2 as const, row: r2, value: v2n } : null,
-    r3 ? { rank: 3 as const, row: r3, value: v3n } : null,
+    r1 ? { rank: rankingDisplayRank(r1, 0), row: r1, value: v1n } : null,
+    r2 ? { rank: rankingDisplayRank(r2, 1), row: r2, value: v2n } : null,
+    r3 ? { rank: rankingDisplayRank(r3, 2), row: r3, value: v3n } : null,
   ].filter(Boolean) as Array<{
-    rank: 1 | 2 | 3;
+    rank: number;
     row: RankingRowWithCountry;
     value: number;
   }>;

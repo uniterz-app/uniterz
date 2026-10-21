@@ -5,7 +5,7 @@ import Animated, {
   Easing,
   useAnimatedStyle,
   useSharedValue,
-  withRepeat,
+  withSequence,
   withTiming,
 } from "react-native-reanimated";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
@@ -39,7 +39,8 @@ import RankingListProSkinFxNative, {
   type RankingListProSkinIntensity,
 } from "./RankingListProSkinFxNative";
 import { rankingFlagImageUri } from "./rankingFlagUri";
-import { METRIC_FONT, RANKING_SCORE_FONT, rankingNameFont, rankingTagFont } from "./rankingsUiTheme";
+import { rankingRankLabel } from "../../../../../lib/rankings/rankingDisplayRank";
+import { METRIC_FONT, rankingNameFont, rankingTagFont } from "./rankingsUiTheme";
 import { useRankingsCrownEntrance } from "./useRankingsCrownEntrance";
 import ProCyberBadgeNative from "../profile/kinetik/ProCyberBadgeNative";
 
@@ -98,7 +99,7 @@ function CyberRankingScoreNative({
             color,
             fontSize,
             lineHeight: scoreLineHeight(fontSize),
-            fontFamily: RANKING_SCORE_FONT,
+            fontFamily: "Oxanium_800ExtraBold",
           },
         ]}
         layers={plainWhite ? [] : cyberScoreGlowLayers(rank)}
@@ -109,7 +110,7 @@ function CyberRankingScoreNative({
   );
 }
 
-/** Web `.cyber-rank-avatar-first-glow` — 4s 一定周期 */
+/** Web `.cyber-rank-avatar-first-glow` — 一度光って静かに残す */
 const AVATAR_GLOW_PULSE_MS = 2000;
 
 /** Web `.cyber-rank-avatar-first-glow` — 1位アバター枠の脈動 */
@@ -130,13 +131,15 @@ function RankFirstAvatarGlowNative({
       return;
     }
     pulse.value = 0;
-    pulse.value = withRepeat(
+    pulse.value = withSequence(
       withTiming(1, {
         duration: AVATAR_GLOW_PULSE_MS,
         easing: Easing.inOut(Easing.sin),
       }),
-      -1,
-      true
+      withTiming(0.55, {
+        duration: AVATAR_GLOW_PULSE_MS,
+        easing: Easing.inOut(Easing.sin),
+      })
     );
     return () => cancelAnimation(pulse);
   }, [pulse, reduceMotion]);
@@ -297,6 +300,29 @@ export function CyberRankingListRowNative({
     reduceMotion
   );
   const elevateContent = Boolean(firstFrame || proSkinVariant);
+  /** 順位は列の中央ではなく左端。YOUR RANK と一覧で揃える */
+  const rankFlushLeft = true;
+  const rankLabel = rankingRankLabel(rank, rankDisplayValue);
+  /**
+   * 左寄せ。桁の右側の空きが 3 桁と 4 桁で揃うよう、文字幅＋同じ余白にする。
+   * 4桁を広く取りすぎるとアイコンまで空き、3桁を狭くすると詰まる。
+   */
+  const rankColWidth =
+    rankLabel.length >= 4
+      ? compact
+        ? 68
+        : 84
+      : rankLabel.length >= 3
+        ? compact
+          ? 52
+          : 68
+        : rankLabel.length >= 2
+          ? compact
+            ? 38
+            : 48
+          : compact
+            ? 28
+            : 34;
 
   const body = (
     <View
@@ -344,12 +370,17 @@ export function CyberRankingListRowNative({
         <View
           style={[
             styles.rankCol,
+            { width: rankColWidth },
             compact ? styles.rankColCompact : null,
             rankOverline ? styles.rankColWithOverline : null,
+            rankFlushLeft ? styles.rankColFlushLeft : null,
           ]}
         >
           {rankOverline ? (
-            <Text style={styles.rankOverline} numberOfLines={1}>
+            <Text
+              style={[styles.rankOverline, rankFlushLeft ? styles.rankOverlineFlush : null]}
+              numberOfLines={1}
+            >
               {rankOverline}
             </Text>
           ) : null}
@@ -358,6 +389,7 @@ export function CyberRankingListRowNative({
             displayValue={rankDisplayValue}
             muted={rankMuted}
             compact={compact}
+            flushLeft={rankFlushLeft}
           />
           <RankDeltaBadgeNative delta={rankDeltaPlaces} />
         </View>
@@ -419,8 +451,11 @@ export function CyberRankingListRowNative({
                 styles.name,
                 {
                   fontSize: nameFontSize,
-                  letterSpacing: nameJa ? 0.4 : 0.6,
-                  fontFamily: rankingNameFont(displayName),
+                  letterSpacing: 0.4,
+                  fontFamily: nameJa
+                    ? rankingNameFont(displayName)
+                    : "Oxanium_600SemiBold",
+                  fontWeight: nameJa ? "700" : "600",
                   textTransform: nameJa ? "none" : "uppercase",
                 },
               ]}
@@ -564,13 +599,13 @@ const styles = StyleSheet.create({
   rowInner: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    gap: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
     zIndex: 1,
   },
   rowInnerCompact: {
-    gap: 8,
+    gap: 6,
     paddingHorizontal: 8,
     paddingVertical: 8,
   },
@@ -585,18 +620,23 @@ const styles = StyleSheet.create({
   rankCol: {
     width: 52,
     minHeight: 44,
+    flexShrink: 0,
     alignItems: "center",
     justifyContent: "center",
     gap: 2,
   },
   rankColCompact: {
-    width: 42,
     minHeight: 36,
   },
   rankColWithOverline: {
     height: undefined,
     minHeight: 44,
     gap: 6,
+  },
+  /** 順位は左寄せ。枠に食い込まないよう少し内側 */
+  rankColFlushLeft: {
+    alignItems: "flex-start",
+    marginLeft: 6,
   },
   rankOverline: {
     color: "rgba(255,255,255,0.5)",
@@ -607,6 +647,10 @@ const styles = StyleSheet.create({
     fontFamily: METRIC_FONT,
     textAlign: "center",
     marginBottom: 2,
+  },
+  rankOverlineFlush: {
+    textAlign: "left",
+    alignSelf: "flex-start",
   },
   avatarCol: {
     width: 44,
@@ -692,6 +736,7 @@ const styles = StyleSheet.create({
     textShadowColor: "rgba(0,245,255,0.35)",
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 12,
+    transform: [{ skewX: "-6deg" }],
   },
   metaRow: {
     flexDirection: "row",
@@ -738,7 +783,7 @@ const styles = StyleSheet.create({
     gap: 5,
   },
   scoreMainSkew: {
-    transform: [{ skewX: "-12deg" }],
+    transform: [{ skewX: "-6deg" }],
   },
   scoreMain: {
     fontWeight: "700",

@@ -129,7 +129,21 @@ export function subtractOneDayFromDateKeyJST(dateKey: string): string {
 export const RANK_DELTA_PRIOR_MAX_LOOKBACK_DAYS = 30;
 
 /** シーズン一覧（PICK UP / PRO LEAGUE）に載せる上位人数 */
-export const SEASON_TOP_ROWS = 50;
+/** 一覧は100位まで。同点で100位が複数いるときはその全員を載せる */
+export const RANKING_LIST_MAX_RANK = 100;
+
+function rowsThroughListRank<T extends { uid: string }>(
+  sorted: readonly T[],
+  ranks: Map<string, number>
+): T[] {
+  const out: T[] = [];
+  for (const row of sorted) {
+    const rank = ranks.get(row.uid);
+    if (rank == null || rank > RANKING_LIST_MAX_RANK) break;
+    out.push(row);
+  }
+  return out;
+}
 
 /* =========================================================
  * Utils
@@ -501,7 +515,7 @@ async function fetchLatestPriorMetricValuesForUids(
 
 /**
  * 日次スナップショット doc が無い/空のとき、getCumulativeRanking が一覧を出せるよう
- * cumulative_stats からその場で上位 SEASON_TOP_ROWS 人を算出する。
+ * cumulative_stats からその場で100位まで（同点含む）を算出する。
  */
 export type LiveTop20Payload = {
   rows: SnapshotRow[];
@@ -551,7 +565,7 @@ export async function loadNbaSeasonTop20RowsLive(
   return {
     totalCount: sortedFull.length,
     rankByUid: ranks,
-    rows: sortedFull.slice(0, SEASON_TOP_ROWS).map((row) => ({
+    rows: rowsThroughListRank(sortedFull, ranks).map((row) => ({
       ...row,
       rank: ranks.get(row.uid) ?? 0,
       rankDeltaPlaces: null,
@@ -670,7 +684,7 @@ export async function buildCumulativeRankingSnapshot(
       ensureSeason(uid)[metric] = rank;
     }
 
-    const topRows = sortedFull.slice(0, SEASON_TOP_ROWS).map((row) => ({
+    const topRows = rowsThroughListRank(sortedFull, ranks).map((row) => ({
       ...row,
       rank: ranks.get(row.uid) ?? 0,
     }));
@@ -761,7 +775,7 @@ export async function buildCumulativeRankingSnapshot(
       for (const [uid, rank] of ranksMap) openTotalPointsRankByUid.set(uid, rank);
     }
 
-    const topRows = sortedFull.slice(0, SEASON_TOP_ROWS).map((row) => ({
+    const topRows = rowsThroughListRank(sortedFull, ranksMap).map((row) => ({
       ...row,
       rank: ranksMap.get(row.uid) ?? 0,
       rankDeltaPlaces: null as number | null,

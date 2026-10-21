@@ -39,6 +39,8 @@ export type RankingApiRow = {
   planProBgVariant?: string | null;
   /** PRO LEAGUE のみ（users.rankingComment） */
   rankingComment?: string | null;
+  /** 同値は同じ順位（1,1,1,4）。未設定の行は並び順で補う */
+  rank?: number;
 };
 
 export function toApiMetric(metric: MobileMetric) {
@@ -95,6 +97,11 @@ export function toMobileRows(
       winRate: totalPosts > 0 ? totalWins / totalPosts : 0,
 
       countryCode: row.countryCode ?? undefined,
+
+      rank:
+        typeof row.rank === "number" && Number.isFinite(row.rank) && row.rank >= 1
+          ? Math.floor(row.rank)
+          : undefined,
 
       rankDeltaPlaces:
         typeof row.rankDeltaPlaces === "number" &&

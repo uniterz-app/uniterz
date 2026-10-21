@@ -58,7 +58,8 @@ const PERIOD_METRICS: PeriodMetric[] = [
   "totalGoalScorerHits",
 ];
 
-const TOP_ROWS = 50;
+/** 一覧は100位まで。同点で100位が複数いるときはその全員を載せる */
+const RANKING_LIST_MAX_RANK = 100;
 
 type SnapshotRow = {
   uid: string;
@@ -437,7 +438,7 @@ async function writePeriodDivisionSnapshots(opts: {
       lastRank = rank;
       ranks[row.uid] = rank;
       if (v > 0) rewardableMaxRank = rank;
-      if (rankedRows.length < TOP_ROWS) {
+      if (rank <= RANKING_LIST_MAX_RANK) {
         const prevRank = basis.prevRanks?.[row.uid];
         rankedRows.push({
           ...row,
@@ -480,7 +481,8 @@ async function writePeriodDivisionSnapshots(opts: {
  * Unit 付与は別 cron（snapshot の数分後）— grantPeriodRankingUnitsCron。
  */
 export async function buildNbaPeriodRankingSnapshots(
-  now: Date = new Date()
+  now: Date = new Date(),
+  options: { grants?: boolean } = {}
 ): Promise<void> {
   const todayKey = dateKeyJST(now);
   const targets: NbaPeriodRange[] = [];
@@ -510,6 +512,8 @@ export async function buildNbaPeriodRankingSnapshots(
       );
     }
   }
+
+  if (options.grants === false) return;
 
   try {
     const { grantProSkinRankUnlocksAfterPeriodSnapshots } = await import(

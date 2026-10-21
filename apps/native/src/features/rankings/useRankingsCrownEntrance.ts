@@ -6,6 +6,7 @@ import {
   withDelay,
   withTiming,
 } from "react-native-reanimated";
+import { rankingsEntranceShouldPlay } from "../../../../../lib/rankings/rankingsEntranceOnce";
 import {
   RANKINGS_CROWN_DURATION_MS,
   RANKINGS_CROWN_FROM_SCALE,
@@ -25,7 +26,7 @@ export function useRankingsCrownEntrance(
   const scale = useSharedValue(reduceMotion || !enabled ? 1 : RANKINGS_CROWN_FROM_SCALE);
 
   useLayoutEffect(() => {
-    if (!enabled || reduceMotion) {
+    if (!enabled || reduceMotion || !rankingsEntranceShouldPlay(pageKey)) {
       opacity.value = 1;
       translateY.value = 0;
       scale.value = 1;

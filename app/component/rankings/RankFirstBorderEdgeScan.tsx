@@ -14,6 +14,7 @@ export function RankFirstBorderEdgeScan() {
   const ref = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ w: 0, h: 0 });
   const [progress, setProgress] = useState(0);
+  const [loopDone, setLoopDone] = useState(false);
 
   useEffect(() => {
     const el = ref.current;
@@ -31,17 +32,30 @@ export function RankFirstBorderEdgeScan() {
       return;
     }
     let raf = 0;
+    let stopped = false;
     const t0 = performance.now();
     const tick = (now: number) => {
-      setProgress(((now - t0) / RANK_FIRST_LOOP_DURATION_MS) % 1);
+      if (stopped) return;
+      const p = (now - t0) / RANK_FIRST_LOOP_DURATION_MS;
+      if (p >= 1) {
+        stopped = true;
+        setLoopDone(true);
+        return;
+      }
+      setProgress(p);
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
+    return () => {
+      stopped = true;
+      cancelAnimationFrame(raf);
+    };
   }, []);
 
   const beams =
-    size.w > 0 && size.h > 0 ? rankFirstLoopBeams(progress, size.w, size.h) : null;
+    !loopDone && size.w > 0 && size.h > 0
+      ? rankFirstLoopBeams(progress, size.w, size.h)
+      : null;
   const hW = size.w * RANK_FIRST_EDGE_H_BEAM_RATIO;
   const vH = size.h * RANK_FIRST_EDGE_V_BEAM_RATIO;
 

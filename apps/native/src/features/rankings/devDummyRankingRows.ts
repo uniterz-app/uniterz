@@ -1,10 +1,11 @@
 /**
- * 開発ビルド専用: 今季データが空のときランキング一覧の見た目確認用に差し込むダミー行。
- * `__DEV__` は本番ビルド / OTA では false になるため表示されない。
+ * 開発ビルド専用だった見た目確認用のダミー行。
+ * 空の週でも実スナップショットを出すため、差し込みはしない。
  */
 import type { RankingApiRow } from "../../../../../lib/rankings/rankingTransform";
 
-export const DEV_DUMMY_RANKINGS_ENABLED = __DEV__;
+/** 開発用ダミーは出さない。空のときは空のまま、スナップショットの実順位を待つ */
+export const DEV_DUMMY_RANKINGS_ENABLED = false;
 
 const DUMMY_COUNT = 40;
 const MY_RANK = 17;

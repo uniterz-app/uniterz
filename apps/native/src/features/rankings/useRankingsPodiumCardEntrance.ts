@@ -6,6 +6,7 @@ import {
   withDelay,
   withTiming,
 } from "react-native-reanimated";
+import { rankingsEntranceShouldPlay } from "../../../../../lib/rankings/rankingsEntranceOnce";
 import {
   RANKINGS_PODIUM_CARD_DURATION_MS,
   RANKINGS_PODIUM_CARD_FROM_Y,
@@ -23,7 +24,7 @@ export function useRankingsPodiumCardEntrance(
   const translateY = useSharedValue(reduceMotion ? 0 : RANKINGS_PODIUM_CARD_FROM_Y);
 
   useLayoutEffect(() => {
-    if (reduceMotion) {
+    if (reduceMotion || !rankingsEntranceShouldPlay(pageKey)) {
       opacity.value = 1;
       translateY.value = 0;
       return;

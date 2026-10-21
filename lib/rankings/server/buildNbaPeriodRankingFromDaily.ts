@@ -2,6 +2,7 @@
  * user_stats_v2_daily から NBA Weekly / Monthly ランキングを組み立てる。
  */
 
+import { RANKING_LIST_MAX_RANK } from "@/lib/rankings/rankingDisplayRank";
 import { getAdminDb } from "@/lib/firebaseAdmin";
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
 import type { RankingDivision } from "@/lib/rankings/rankingDivision";
@@ -278,7 +279,9 @@ export async function buildNbaPeriodRankingBulk(opts: {
 
   for (const metric of PERIOD_METRICS) {
     const sorted = sortRows(baseRows, metric, winRateMin, upsetWinRateGuard);
-    const ranked = assignRanks(sorted, metric).slice(0, 50);
+    const ranked = assignRanks(sorted, metric).filter(
+      (row) => row.rank <= RANKING_LIST_MAX_RANK
+    );
     const fullRanks = assignRanks(sorted, metric);
     const myUid = opts.uid ?? null;
     const myFull = myUid

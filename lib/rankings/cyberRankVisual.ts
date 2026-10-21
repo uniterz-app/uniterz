@@ -108,7 +108,7 @@ export function cyberRankNumStyle(
   const p = cyberRankPalette(rank);
   return {
     fontSize: cyberRankNumFontSize(rank, compact, variant),
-    transform: "skewX(-12deg)",
+    transform: "skewX(-6deg)",
     display: "inline-block",
     color: p.textFill,
     WebkitTextStroke: `1.2px ${p.stroke}`,

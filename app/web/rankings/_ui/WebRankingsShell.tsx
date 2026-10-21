@@ -9,6 +9,8 @@ import {
 } from "react";
 import { useSearchParams } from "next/navigation";
 import type { MobileMetric } from "@/lib/rankings/rankingMetrics";
+import { rankingDisplayRank } from "@/lib/rankings/rankingDisplayRank";
+import { useRankingsEntrancePlay } from "@/lib/rankings/rankingsEntranceOnce";
 import RankingCard from "@/app/component/rankings/RankingCard";
 import TopPodium from "@/app/component/rankings/TopPodium";
 import { restContainer, restItem } from "@/app/component/rankings/anim";
@@ -380,6 +382,8 @@ export default function WebRankingsShell() {
       metric: metric as MobileMetric,
     }) + `:${nbaBoard}:${rankingPeriod}:${effectiveRound}`;
   const prefersReducedMotion = useReducedMotion();
+  const playEntrance =
+    useRankingsEntrancePlay(pageKey) && !prefersReducedMotion;
   const { skipCountUp, topDone, handleTopCountDone } = useRankingsTopDone(pageKey);
 
   return (
@@ -549,7 +553,7 @@ export default function WebRankingsShell() {
                   participantCount={rankingListCount || null}
                   onTopCountDone={handleTopCountDone}
                   countUpEnabled={!skipCountUp}
-                  entranceEnabled={!prefersReducedMotion}
+                  entranceEnabled={playEntrance}
                   language={language}
                 />
 
@@ -557,9 +561,14 @@ export default function WebRankingsShell() {
                 key={`rest-${pageKey}`}
                 className="pb-bottom-nav"
                 variants={restContainer}
-                initial={prefersReducedMotion ? "show" : "hidden"}
-                animate={topDone || prefersReducedMotion ? "show" : "hidden"}
-                style={{ opacity: topDone || prefersReducedMotion ? 1 : 0.35 }}
+                initial={playEntrance ? "hidden" : "show"}
+                animate={
+                  !playEntrance || topDone || prefersReducedMotion ? "show" : "hidden"
+                }
+                style={{
+                  opacity:
+                    !playEntrance || topDone || prefersReducedMotion ? 1 : 0.35,
+                }}
               >
                 {restRows.length > 0 &&
                   restRows.map((r, i) => (
@@ -570,7 +579,7 @@ export default function WebRankingsShell() {
                     >
                       <RankingCard
                         row={r}
-                        rank={i + 4}
+                        rank={rankingDisplayRank(r, i + 3)}
                         metric={metric}
                         rankPhase={phase}
                         playoffRound={effectiveRound}

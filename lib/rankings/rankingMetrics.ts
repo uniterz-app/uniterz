@@ -58,4 +58,6 @@ export type RankingRowWithCountry = RankingRow & {
   planProBgVariant?: string;
   /** PRO LEAGUE のみ（users.rankingComment） */
   rankingComment?: string;
+  /** 同値は同じ順位。一覧の表示番号 */
+  rank?: number;
 };

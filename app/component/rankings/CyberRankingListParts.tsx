@@ -1,8 +1,8 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { nameBebas, nameOxanium, nameRajdhani, jp } from "@/lib/fonts";
-import { summaryMetricNumClass } from "@/lib/fonts";
+import { nameBebas, nameOxanium, jp } from "@/lib/fonts";
+import { rankingRankLabel } from "@/lib/rankings/rankingDisplayRank";
 import { RankingsAvatarCircle } from "@/app/component/rankings/RankingsAvatarCircle";
 import {
   cyberMetricTag,
@@ -51,7 +51,7 @@ export function CyberRankNumber({
   /** 1位でもサイズを変えない（表の列揃え） */
   uniform?: boolean;
 }) {
-  const label = displayValue ?? String(rank).padStart(2, "0");
+  const label = rankingRankLabel(rank, displayValue);
   const isCompact = !!compact;
   const uniformSize =
     variant === "tower"
@@ -64,14 +64,16 @@ export function CyberRankNumber({
   const style = muted
     ? {
         fontSize: uniformSize,
-        transform: "skewX(-12deg)",
+        transform: "skewX(-6deg)",
         display: "inline-block" as const,
         color: "rgba(255,255,255,0.42)",
         letterSpacing: "0.05em",
+        whiteSpace: "nowrap" as const,
       }
     : {
         ...cyberRankNumStyle(rank, isCompact, variant),
         ...(uniform ? { fontSize: uniformSize } : {}),
+        whiteSpace: "nowrap" as const,
       };
 
   return (
@@ -120,7 +122,7 @@ export function CyberScanlineText({
   );
 }
 
-const rankHudNumClass = summaryMetricNumClass;
+const rankHudNumClass = [nameOxanium.className, "font-extrabold"].join(" ");
 
 function cyberScoreColor(rank: number): string {
   if (rank === 1) return "#FFD65A";
@@ -176,7 +178,7 @@ export function CyberRankingScore({
   const valueStyle = {
     color,
     textShadow: plainWhite ? "none" : cyberScoreGlow(rank),
-    transform: "skewX(-12deg)",
+    transform: "skewX(-6deg)",
     display: "inline-block" as const,
   };
 
@@ -356,6 +358,23 @@ export function CyberRankingListRow({
     isWebScore ? 10 : scoreBesideTag ? 9 : compact ? 7 : 8,
     metricTag
   );
+  const rankLabel = rankingRankLabel(rank, rankDisplayValue);
+  const rankColWidthClass =
+    rankLabel.length >= 4
+      ? compact
+        ? "min-h-9 w-[68px]"
+        : "min-h-11 w-[84px]"
+      : rankLabel.length >= 3
+        ? compact
+          ? "min-h-9 w-[52px]"
+          : "min-h-11 w-[68px]"
+        : rankLabel.length >= 2
+          ? compact
+            ? "min-h-9 w-[38px]"
+            : "min-h-11 w-[48px]"
+          : compact
+            ? "min-h-9 w-[28px]"
+            : "min-h-11 w-[34px]";
   const dayDeltaText = formatListMetricDayDelta(metric, metricValueDelta);
   const dayDeltaFontSize = rankingFontSizePx(
     isWebScore ? 11 : compact ? 9 : 10,
@@ -431,17 +450,17 @@ export function CyberRankingListRow({
           firstFrame || proSkinVariant ? "relative z-10" : "",
           compact
             ? firstFrame
-              ? "gap-2 px-2 pb-2 pt-5"
-              : "gap-2 px-2 py-2"
+              ? "gap-1.5 px-2 pb-2 pt-5"
+              : "gap-1.5 px-2 py-2"
             : firstFrame
-              ? "gap-3 px-3 pb-2.5 pt-5 sm:gap-4 sm:px-4"
-              : "gap-3 px-3 py-2.5 sm:gap-4 sm:px-4",
+              ? "gap-2 px-3 pb-2.5 pt-5 sm:px-4"
+              : "gap-2 px-3 py-2.5 sm:px-4",
         ].join(" ")}
       >
         <div
           className={[
-            "relative flex shrink-0 flex-col items-center justify-center",
-            compact ? "min-h-9 w-[42px]" : "min-h-11 w-[52px] sm:w-[58px]",
+            "relative ml-1.5 flex shrink-0 flex-col items-start justify-center",
+            rankColWidthClass,
             rankOverline ? (compact ? "gap-1.5" : "gap-2") : "gap-0",
           ].join(" ")}
         >
@@ -449,7 +468,7 @@ export function CyberRankingListRow({
             <span
               className={[
                 nameOxanium.className,
-                "whitespace-nowrap text-center font-bold uppercase tracking-[0.12em] text-white/50",
+                "whitespace-nowrap text-left font-bold uppercase tracking-[0.12em] text-white/50",
                 compact ? "text-[6.5px]" : "text-[7px]",
               ].join(" ")}
             >
@@ -539,13 +558,15 @@ export function CyberRankingListRow({
           <div className="flex min-w-0 items-center gap-1">
             <div
               className={[
-                "min-w-0 truncate font-bold tracking-[0.06em]",
-                nameJa ? jp.className : nameRajdhani.className,
+                "min-w-0 truncate font-bold",
+                nameJa ? jp.className : nameOxanium.className,
                 nameJa ? "" : "uppercase",
               ].join(" ")}
               style={{
                 color: CYBER_LIST_CYAN,
                 fontSize: nameFontSize,
+                letterSpacing: 0.4,
+                transform: "skewX(-6deg)",
                 textShadow: "0 0 12px rgba(0,245,255,0.35)",
               }}
             >

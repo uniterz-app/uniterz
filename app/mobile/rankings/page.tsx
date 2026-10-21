@@ -13,6 +13,8 @@ import {
 } from "@/lib/rankings/rankingMetrics";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import RankingCard from "@/app/component/rankings/RankingCard";
+import { rankingDisplayRank, capRankingDisplayRows } from "@/lib/rankings/rankingDisplayRank";
+import { useRankingsEntrancePlay } from "@/lib/rankings/rankingsEntranceOnce";
 import { filterBlockedRows } from "@/lib/moderation/moderationTypes";
 import { useBlockedUids } from "@/lib/moderation/useBlockedUids";
 import { restContainer, restItem } from "@/app/component/rankings/anim";
@@ -292,12 +294,15 @@ export default function MobileRankingsPage() {
       blockedUids,
       (r) => r.uid
     );
-    if (myRankingComment == null || !myUid) return sorted;
-    return sorted.map((r) =>
-      r.uid === myUid && r.plan === "pro"
-        ? { ...r, rankingComment: myRankingComment || undefined }
-        : r
-    );
+    const withComment =
+      myRankingComment == null || !myUid
+        ? sorted
+        : sorted.map((r) =>
+            r.uid === myUid && r.plan === "pro"
+              ? { ...r, rankingComment: myRankingComment || undefined }
+              : r
+          );
+    return capRankingDisplayRows(withComment);
   }, [metric, rawRows, blockedUids, myRankingComment, myUid]);
 
   const top3 = rows.slice(0, 3);
@@ -425,6 +430,8 @@ export default function MobileRankingsPage() {
       metric,
     }) + `:${nbaBoard}:${rankingPeriod}:${effectiveRound}`;
   const prefersReducedMotion = useReducedMotion();
+  const playEntrance =
+    useRankingsEntrancePlay(pageKey) && !prefersReducedMotion;
   const { skipCountUp, topDone, handleTopCountDone } = useRankingsTopDone(pageKey);
 
   return (
@@ -631,15 +638,20 @@ export default function MobileRankingsPage() {
                   participantCount={rankingListCount || null}
                   onTopCountDone={handleTopCountDone}
                   countUpEnabled={!skipCountUp}
-                  entranceEnabled={!prefersReducedMotion}
+                  entranceEnabled={playEntrance}
                   language={language}
                 />
               <motion.div
                 key={`rest-${pageKey}`}
                 variants={restContainer}
-                initial={prefersReducedMotion ? "show" : "hidden"}
-                animate={topDone || prefersReducedMotion ? "show" : "hidden"}
-                style={{ opacity: topDone || prefersReducedMotion ? 1 : 0.35 }}
+                initial={playEntrance ? "hidden" : "show"}
+                animate={
+                  !playEntrance || topDone || prefersReducedMotion ? "show" : "hidden"
+                }
+                style={{
+                  opacity:
+                    !playEntrance || topDone || prefersReducedMotion ? 1 : 0.35,
+                }}
               >
                 {restRows.length > 0 &&
                   restRows.map((r, i) => (
@@ -650,7 +662,7 @@ export default function MobileRankingsPage() {
                     >
                       <RankingCard
                         row={r}
-                        rank={i + 4}
+                        rank={rankingDisplayRank(r, i + 3)}
                         metric={metric}
                         rankPhase={phase}
                         playoffRound={effectiveRound}

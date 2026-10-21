@@ -6,6 +6,7 @@ import {
 } from "../../../../../lib/rankings/cyberRankVisual";
 import { cyberRankNumGlowLayers } from "../../../../../lib/rankings/cyberGlyphGlowLayers";
 import { RANK_DISPLAY_FONT } from "./rankingsUiTheme";
+import { rankingRankLabel } from "../../../../../lib/rankings/rankingDisplayRank";
 import { CyberGlyphGlowTextNative } from "./CyberGlyphGlowTextNative";
 
 type Props = {
@@ -16,6 +17,8 @@ type Props = {
   variant?: CyberRankNumVariant;
   /** 1位でもサイズを変えない（表の列揃え） */
   uniform?: boolean;
+  /** 列の中央ではなく左端に置く */
+  flushLeft?: boolean;
 };
 
 /** Web `.cyber-rank-num__scan` 相当 */
@@ -37,8 +40,10 @@ export function CyberRankNumberNative({
   muted = false,
   variant = "list",
   uniform = false,
+  flushLeft = false,
 }: Props) {
-  const label = displayValue ?? String(rank).padStart(2, "0");
+  const label = rankingRankLabel(rank, displayValue);
+  const fourDigits = label.length >= 4;
   const uniformSize =
     variant === "tower" ? (compact ? 38 : 48) : compact ? 26 : 34;
   const resolvedStyle = muted
@@ -64,16 +69,27 @@ export function CyberRankNumberNative({
     color: resolvedStyle.color,
   };
 
+  const lineStyle = fourDigits
+    ? [numStyle, flushLeft ? styles.numFlushLeft : styles.numSingleLine]
+    : numStyle;
+
   return (
-    <View style={styles.wrap}>
+    <View
+      style={[
+        styles.wrap,
+        fourDigits ? styles.wrapFourDigits : null,
+        flushLeft ? styles.wrapFlushLeft : null,
+      ]}
+    >
       {muted ? (
-        <CyberGlyphGlowTextNative style={numStyle} layers={[]}>
+        <CyberGlyphGlowTextNative style={lineStyle} layers={[]} singleLine={fourDigits}>
           {label}
         </CyberGlyphGlowTextNative>
       ) : (
         <CyberGlyphGlowTextNative
-          style={numStyle}
+          style={lineStyle}
           layers={cyberRankNumGlowLayers(rank)}
+          singleLine={fourDigits}
         >
           {label}
         </CyberGlyphGlowTextNative>
@@ -103,8 +119,16 @@ function nativeRankStyleFromWeb(
 const styles = StyleSheet.create({
   wrap: {
     position: "relative",
-    transform: [{ skewX: "-12deg" }],
+    transform: [{ skewX: "-6deg" }],
     overflow: "visible",
+  },
+  /** 親の4桁用の幅いっぱいに縮小して1行 */
+  wrapFourDigits: {
+    alignSelf: "stretch",
+    width: "100%",
+  },
+  wrapFlushLeft: {
+    alignSelf: "flex-start",
   },
   num: {
     fontFamily: RANK_DISPLAY_FONT,
@@ -115,6 +139,14 @@ const styles = StyleSheet.create({
       android: { fontWeight: "400" },
       default: {},
     }),
+  },
+  numSingleLine: {
+    width: "100%",
+    textAlign: "center",
+  },
+  numFlushLeft: {
+    width: "100%",
+    textAlign: "left",
   },
   scanOverlay: {
     ...StyleSheet.absoluteFillObject,

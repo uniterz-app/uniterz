@@ -1,5 +1,5 @@
-/** Web `RankFirstBorderEdgeScan` — 旧エッジ光線が枠を一周する */
-import { useEffect, useState } from "react";
+/** Web `RankFirstBorderEdgeScan` — 旧エッジ光線が枠を一周する（1周で止める） */
+import { useEffect, useRef, useState } from "react";
 import {
   AccessibilityInfo,
   LayoutChangeEvent,
@@ -10,9 +10,9 @@ import { LinearGradient } from "expo-linear-gradient";
 import Animated, {
   cancelAnimation,
   Easing,
+  runOnJS,
   useAnimatedStyle,
   useSharedValue,
-  withRepeat,
   withTiming,
   type SharedValue,
 } from "react-native-reanimated";
@@ -159,6 +159,8 @@ function VBeam({
 export function RankFirstBorderEdgeScanNative() {
   const [size, setSize] = useState({ w: 0, h: 0 });
   const [reduceMotion, setReduceMotion] = useState(false);
+  const [finished, setFinished] = useState(false);
+  const startedRef = useRef(false);
   const progress = useSharedValue(0);
   const boxW = useSharedValue(0);
   const boxH = useSharedValue(0);
@@ -179,22 +181,30 @@ export function RankFirstBorderEdgeScanNative() {
   }, []);
 
   useEffect(() => {
-    if (reduceMotion || size.w <= 0 || size.h <= 0) {
-      cancelAnimation(progress);
-      progress.value = 0;
+    if (
+      reduceMotion ||
+      finished ||
+      size.w <= 0 ||
+      size.h <= 0 ||
+      startedRef.current
+    ) {
       return;
     }
+    startedRef.current = true;
     progress.value = 0;
-    progress.value = withRepeat(
-      withTiming(1, {
+    progress.value = withTiming(
+      1,
+      {
         duration: RANK_FIRST_LOOP_DURATION_MS,
         easing: Easing.linear,
-      }),
-      -1,
-      false
+      },
+      (done) => {
+        if (done) runOnJS(setFinished)(true);
+      }
     );
-    return () => cancelAnimation(progress);
-  }, [progress, reduceMotion, size.h, size.w]);
+  }, [finished, progress, reduceMotion, size.h, size.w]);
+
+  useEffect(() => () => cancelAnimation(progress), [progress]);
 
   function onLayout(event: LayoutChangeEvent) {
     const { width, height } = event.nativeEvent.layout;
@@ -206,7 +216,7 @@ export function RankFirstBorderEdgeScanNative() {
     setSize({ w: width, h: height });
   }
 
-  const paused = reduceMotion || size.w <= 0 || size.h <= 0;
+  const paused = reduceMotion || finished || size.w <= 0 || size.h <= 0;
   const hW = size.w * RANK_FIRST_EDGE_H_BEAM_RATIO;
   const vH = size.h * RANK_FIRST_EDGE_V_BEAM_RATIO;
 

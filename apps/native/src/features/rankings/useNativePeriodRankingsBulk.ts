@@ -57,6 +57,12 @@ export function clearPeriodRankingsClientCache(): void {
   personalInflight.clear();
 }
 
+function periodResultHasRows(value: PeriodBulkResult): boolean {
+  return Object.values(value.byMetric).some(
+    (metric) => Array.isArray(metric?.rows) && metric.rows.length > 0
+  );
+}
+
 function periodCacheKey(
   period: string,
   label: string | null,
@@ -160,7 +166,11 @@ export function useNativePeriodRankingsBulk(
     const generation = await fetchRankingSnapshotGeneration(base);
     const key = periodCacheKey(period, label, division, generation);
     const cached = periodCache.get(key);
-    if (cached && Date.now() - cached.at < PERIOD_CACHE_TTL_MS) {
+    if (
+      cached &&
+      periodResultHasRows(cached.value) &&
+      Date.now() - cached.at < PERIOD_CACHE_TTL_MS
+    ) {
       return cached.value;
     }
 
@@ -184,7 +194,7 @@ export function useNativePeriodRankingsBulk(
               headers: token
                 ? { Authorization: `Bearer ${token}` }
                 : undefined,
-              cache: "force-cache",
+              cache: "no-store",
             }
           );
           const json = (await res.json()) as {
@@ -216,7 +226,7 @@ export function useNativePeriodRankingsBulk(
     if (!pending) periodInflight.set(key, run);
 
     const value = await run;
-    if (value.snapshotGeneration !== null) {
+    if (value.snapshotGeneration !== null && periodResultHasRows(value)) {
       periodCache.set(key, { at: Date.now(), value });
     }
     return value;

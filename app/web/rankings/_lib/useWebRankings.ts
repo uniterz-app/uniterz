@@ -25,6 +25,7 @@ import type { RankingPhase } from "@/lib/rankings/rankingPhase";
 import type { WcRankingStage } from "@/lib/rankings/wcRankingStage";
 import type { RankingDivision } from "@/lib/rankings/rankingDivision";
 import { resolveMyRankForCard } from "@/lib/rankings/rankingsPageShared";
+import { capRankingDisplayRows } from "@/lib/rankings/rankingDisplayRank";
 import { sortRankingRowsByMetric } from "@/lib/rankings/sortRankingRows";
 
 export type WebRankingRow = RankingRowWithCountry & {
@@ -126,9 +127,8 @@ export function useWebRankings(
       const rawRows = Array.isArray(data?.rows)
         ? (data.rows as RankingApiRow[])
         : [];
-      next[m] = sortWebRankingRows(
-        m,
-        mergeRowsWithMeta(m, rawRows)
+      next[m] = capRankingDisplayRows(
+        sortWebRankingRows(m, mergeRowsWithMeta(m, rawRows))
       );
     }
     return next;

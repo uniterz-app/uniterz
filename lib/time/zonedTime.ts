@@ -36,6 +36,8 @@ function getTimeZoneOffsetMinutes(date: Date, timeZone: string): number {
   // Offset is computed as:
   // (interpreting the timeZone-wall-clock parts as if they were UTC) - (the actual instant)
   // Example: New York at UTC-4 => offsetMinutes will be about -240.
+  // hour12:false は Node によっては深夜 0 時を hour=24 と返す。
+  // Date.UTC が翌日に繰り上がり、暦日の開始が 1 日ずれる。h23 は 0–23 に固定する。
   const parts = new Intl.DateTimeFormat("en-US", {
     timeZone,
     year: "numeric",
@@ -44,7 +46,7 @@ function getTimeZoneOffsetMinutes(date: Date, timeZone: string): number {
     hour: "2-digit",
     minute: "2-digit",
     second: "2-digit",
-    hour12: false,
+    hourCycle: "h23",
   }).formatToParts(date);
 
   const get = (type: string) => {

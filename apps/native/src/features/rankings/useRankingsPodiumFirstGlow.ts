@@ -8,6 +8,7 @@ import {
   withSequence,
   withTiming,
 } from "react-native-reanimated";
+import { rankingsEntranceShouldPlay } from "../../../../../lib/rankings/rankingsEntranceOnce";
 import { podiumEntranceStepForRank } from "../../../../../lib/rankings/podiumEntrance";
 import {
   RANKINGS_PODIUM_CARD_DURATION_MS,
@@ -23,8 +24,8 @@ export function useRankingsPodiumFirstGlow(
   const glow = useSharedValue(reduceMotion || !enabled ? 0.5 : 0);
 
   useLayoutEffect(() => {
-    if (!enabled || reduceMotion) {
-      glow.value = enabled ? 0.5 : 0;
+    if (!enabled || reduceMotion || !rankingsEntranceShouldPlay(pageKey)) {
+      glow.value = enabled ? 0.52 : 0;
       return;
     }
 
