@@ -18,7 +18,7 @@ import NavBarChamferShellNative from "./NavBarChamferShellNative";
 const TAB_BAR_BOTTOM_GAP = 2;
 import {
   getNavBarCompact,
-  setNavBarCompact,
+  noteNavBarTouched,
   subscribeNavBarCompact,
 } from "./navBarCompactStore";
 /** スクロール中の縮小（中心基準の scale で浮いた分より少し下げる） */
@@ -135,9 +135,14 @@ export default function AppTabBar({ state, descriptors, navigation }: BottomTabB
   const activeRouteName = state.routes[state.index]?.name ?? "";
   const leafRouteName = focusedLeafRouteName(state);
 
-  /** タブ切替・スタック遷移では通常サイズに戻す */
+  /** 起動直後は大きく出したまま。画面を移ったら触ったときと同じく、数秒後に縮める */
+  const navSizeArmed = useRef(false);
   useEffect(() => {
-    setNavBarCompact(false);
+    if (!navSizeArmed.current) {
+      navSizeArmed.current = true;
+      return;
+    }
+    noteNavBarTouched();
   }, [activeRouteName, leafRouteName]);
   const { showRankingBadge, showResultBadge } =
     useNativeNavTabNotificationBadges({
@@ -393,7 +398,10 @@ function TutorialTabButton({
       accessibilityRole="button"
       accessibilityState={accessibilityState}
       accessibilityLabel={accessibilityLabel}
-      onPressIn={onPressIn}
+      onPressIn={() => {
+        noteNavBarTouched();
+        onPressIn?.();
+      }}
       onPress={onPress}
       style={style}
     >
