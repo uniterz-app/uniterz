@@ -1,9 +1,6 @@
 import Expo
 import React
 import ReactAppDependencyProvider
-#if DEBUG
-import EXDevLauncher
-#endif
 
 @UIApplicationMain
 public class AppDelegate: ExpoAppDelegate {
@@ -77,7 +74,13 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     self.window = window
 
 #if DEBUG
-    EXDevLauncherController.sharedInstance().autoSetupStart(window)
+    // EXDevLauncher を import すると prebuilt React と別定義の RCTReactNativeFactory が入り、
+    // ExpoAppDelegate を継承できなくなる（Debug ビルドだけ失敗する）。ObjC ランタイム経由で呼ぶ。
+    if let launcher = NSClassFromString("EXDevLauncherController") as? NSObject.Type,
+       let shared = launcher.perform(NSSelectorFromString("sharedInstance"))?
+         .takeUnretainedValue() as? NSObject {
+      shared.perform(NSSelectorFromString("autoSetupStart:"), with: window)
+    }
 #endif
 
     for context in connectionOptions.urlContexts {
