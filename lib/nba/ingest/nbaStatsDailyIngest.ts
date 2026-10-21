@@ -62,34 +62,12 @@ async function runStep(
   }
 }
 
-export async function runNbaStatsDailyIngest(
+/** 試合確定後のスタッツ一式（リーグ表〜ショットゾーン）。日次と試合後監視で共通 */
+export async function runNbaStatsSnapshotSteps(
   db: Firestore,
-  input: NbaStatsDailyIngestInput = {}
-): Promise<NbaStatsDailyIngestResult> {
-  const seasonKey = (input.seasonKey ?? CURRENT_NBA_SEASON_KEY).trim();
-  const mode: NbaStatsDailyIngestMode =
-    input.mode === "heavy" ? "heavy" : "daily";
-  const startedAt = new Date().toISOString();
+  seasonKey: string
+): Promise<NbaStatsDailyIngestStepResult[]> {
   const steps: NbaStatsDailyIngestStepResult[] = [];
-
-  steps.push(
-    await runStep("team-rosters", () =>
-      ingestNbaTeamRostersFromBdl(db, { seasonKey })
-    )
-  );
-  steps.push(
-    await runStep("team-offseason-moves", () =>
-      ingestNbaTeamOffseasonMoves(db, { seasonKey })
-    )
-  );
-  steps.push(
-    await runStep("games", () =>
-      ingestNbaGamesFromBdl(db, {
-        seasonKey,
-        rebuildTeamGameLogs: false,
-      })
-    )
-  );
   steps.push(
     await runStep("league-stats", () =>
       ingestNbaLeagueStatsFromProvider(db, { seasonKey })
@@ -126,6 +104,56 @@ export async function runNbaStatsDailyIngest(
       ingestNbaPlayerShotZonesFromBdl(db, { seasonKey })
     )
   );
+  return steps;
+}
+
+/** 直近 box 出場者だけプレイヤー試合ログを取り直す */
+export function runNbaRecentPlayerGameLogsStep(
+  db: Firestore,
+  seasonKey: string
+): Promise<NbaStatsDailyIngestStepResult> {
+  return runStep("player-game-logs-incremental", async () => {
+    const { dates, playerIds } = await listPlayerIdsFromRecentBoxScores();
+    if (playerIds.length === 0) {
+      return { ok: true, dates, playerIds: [], skipped: true };
+    }
+    const result = await ingestNbaPlayerGameLogsFromBdl(db, {
+      seasonKey,
+      playerIds,
+    });
+    return { ...result, dates, incremental: true };
+  });
+}
+
+export async function runNbaStatsDailyIngest(
+  db: Firestore,
+  input: NbaStatsDailyIngestInput = {}
+): Promise<NbaStatsDailyIngestResult> {
+  const seasonKey = (input.seasonKey ?? CURRENT_NBA_SEASON_KEY).trim();
+  const mode: NbaStatsDailyIngestMode =
+    input.mode === "heavy" ? "heavy" : "daily";
+  const startedAt = new Date().toISOString();
+  const steps: NbaStatsDailyIngestStepResult[] = [];
+
+  steps.push(
+    await runStep("team-rosters", () =>
+      ingestNbaTeamRostersFromBdl(db, { seasonKey })
+    )
+  );
+  steps.push(
+    await runStep("team-offseason-moves", () =>
+      ingestNbaTeamOffseasonMoves(db, { seasonKey })
+    )
+  );
+  steps.push(
+    await runStep("games", () =>
+      ingestNbaGamesFromBdl(db, {
+        seasonKey,
+        rebuildTeamGameLogs: false,
+      })
+    )
+  );
+  steps.push(...(await runNbaStatsSnapshotSteps(db, seasonKey)));
 
   if (mode === "heavy") {
     steps.push(
@@ -142,19 +170,7 @@ export async function runNbaStatsDailyIngest(
       )
     );
   } else {
-    steps.push(
-      await runStep("player-game-logs-incremental", async () => {
-        const { dates, playerIds } = await listPlayerIdsFromRecentBoxScores();
-        if (playerIds.length === 0) {
-          return { ok: true, dates, playerIds: [], skipped: true };
-        }
-        const result = await ingestNbaPlayerGameLogsFromBdl(db, {
-          seasonKey,
-          playerIds,
-        });
-        return { ...result, dates, incremental: true };
-      })
-    );
+    steps.push(await runNbaRecentPlayerGameLogsStep(db, seasonKey));
   }
 
   // Pro Insight フル生成は前日 19:00 JST の runNbaProBriefFullCron に分離

@@ -88,6 +88,7 @@ BDL（サーバーのみ）
 - Firebase cron `runNbaStatsDailyIngestCron` — **毎日 18:00 JST**
 - Next `POST /api/admin/nba-stats-daily-ingest`（`mode: "daily"`）
 - 中身: rosters → **team-offseason-moves** → games → league-stats → **team-game-logs** → **standings** → **team-season-records** → **team-shape-records** → **discipline** → shot-zones → **player-game-logs-incremental**（直近 box 出場者）
+- **試合後監視（18:00 を待たない）**: ライブ cron `runNbaLiveGamesIngestCron` が 10 分ごとに相乗り → 直近 10h に final になったレギュラー / プレーオフで未完了のものがあれば `POST /api/admin/nba-post-game-stats-refresh`（`lib/nba/ingest/nbaPostGameStatsRefresh.ts`）。BDL の順位 + チーム平均の試合数が Firestore の終了試合数に追いついたら（team）、両チーム最長出場選手のシーズン平均がその試合を含んだら（player）、日次と同じ `runNbaStatsSnapshotSteps` + 直近試合ログを回す。進捗 `nbaPostGameStatsRefresh/{bdlGameId}`（games doc には書かない）。final から 6h で諦め、18:00 日次が保険
 - **injury** は日次から分離 → Firebase `runNbaInjuryBaseline16Cron`（16:00 · 試合日）/ `runNbaInjuryBaseline23Cron`（23:00）/ `runNbaInjuryPregameCron`（10分毎 · T-3h/1h/30m 窓）→ `POST /api/admin/nba-injury-ingest`
 - `mode: "heavy"` でプレイヤー試合ログ全件も（タイムアウト注意）。試合ログ書き込み後に leaders のシーズン回数ボードを game logs から再集計（追加 BDL なし。リーグ表 last10 は書かない）
 - 週次 Firebase cron `runNbaStatsWeeklyIngestCron` — **月曜 10:00 JST** → `POST /api/admin/nba-stats-weekly-ingest`（payroll + contracts）→ 続けて `POST /api/admin/nba-player-out-impact-ingest`（選手欠場の影響）。キャリアは手動
