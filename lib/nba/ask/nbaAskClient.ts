@@ -1,6 +1,12 @@
 /** `/api/nba/ask` のクライアント（Web / Native 共通）。OpenAI キーはサーバーだけが持つ */
+import { isNbaAskDestinationId, type NbaAskDestinationId } from "./nbaAskDestinations";
 
-export type NbaAskTurnClient = { role: "user" | "assistant"; content: string };
+export type NbaAskTurnClient = {
+  role: "user" | "assistant";
+  content: string;
+  /** アシスタントの答えの下に出す「その画面を開く」 */
+  opens?: NbaAskDestinationId[];
+};
 
 export type NbaAskStatus = {
   isPro: boolean;
@@ -13,8 +19,17 @@ export type NbaAskStatus = {
 export type NbaAskError = "rate_limited" | "slow_down" | "auth" | "unavailable" | "failed";
 
 export type NbaAskReply =
-  | { ok: true; answer: string; statsFreeRemaining: number | null }
+  | { ok: true; answer: string; statsFreeRemaining: number | null; opens: NbaAskDestinationId[] }
   | { ok: false; error: NbaAskError };
+
+function opensOf(raw: unknown): NbaAskDestinationId[] {
+  if (!Array.isArray(raw)) return [];
+  const ids: NbaAskDestinationId[] = [];
+  for (const item of raw) {
+    if (isNbaAskDestinationId(item) && !ids.includes(item)) ids.push(item);
+  }
+  return ids.slice(0, 2);
+}
 
 function url(apiBaseUrl: string | null | undefined): string {
   return `${(apiBaseUrl ?? "").replace(/\/$/, "")}/api/nba/ask`;
@@ -70,6 +85,7 @@ export async function postNbaAsk(input: {
         ok: true,
         answer: json.answer,
         statsFreeRemaining: numOrNull(json.statsFreeRemaining),
+        opens: opensOf(json.opens),
       };
     }
     const error: NbaAskError =

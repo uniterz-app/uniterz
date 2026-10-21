@@ -12,6 +12,7 @@ import {
   runNbaAskTool,
 } from "./nbaAskTools";
 import { NBA_ASK_APP_TOPICS, nbaAskAppGuide } from "./nbaAskAppGuide";
+import { isNbaAskDestinationId, type NbaAskDestinationId } from "./nbaAskDestinations";
 import { consumeNbaAskWebSearch, refundNbaAskWebSearch } from "./nbaAskQuota";
 import { searchNbaAskWeb } from "./nbaAskWebSearch";
 
@@ -66,6 +67,7 @@ function systemPrompt(language: string, allowStats: boolean, isPro: boolean): st
     "You are the assistant in the UNITERZ app (NBA score prediction app).",
     "You answer (1) questions about using the UNITERZ app via get_app_guide, and (2) NBA stats questions.",
     "Questions about what PRO features are (Pro Insight, PRO LEAGUE, alerts, plans, this chat) are fine for everyone. Answer those from get_app_guide topic pro_plans or ask_chat. Do not invent details the guide does not have.",
+    "When the user asks about an app feature, call get_app_guide. If the result includes open, the app puts a button under your answer that opens that screen. Tell them to tap the button. Do not invent a path.",
     `Today is ${today} (US Eastern). NBA game dates are US Eastern dates.`,
     "Answer ONLY from tool results. Never guess numbers or app rules. If the guide or data doesn't cover it, say you don't know.",
     dataAccessLine(allowStats, isPro),
@@ -153,6 +155,8 @@ export async function runNbaAsk(input: {
   answer: string;
   /** スタッツの道具を 1 回でも使った（＝スタッツの質問として数える） */
   usedStats: boolean;
+  /** 機能の説明で開く画面（答えの下のボタン） */
+  opens: NbaAskDestinationId[];
   promptTokens: number;
   completionTokens: number;
 }> {
@@ -165,6 +169,7 @@ export async function runNbaAsk(input: {
   ];
   let usedStats = false;
   let usedWeb = false;
+  const opens: NbaAskDestinationId[] = [];
   const messages: ChatMessage[] = [
     { role: "system", content: systemPrompt(input.language, input.allowStats, input.isPro) },
     ...input.turns.map((t) => ({ role: t.role, content: t.content }) as ChatMessage),
@@ -202,6 +207,7 @@ export async function runNbaAsk(input: {
       return {
         answer: (msg?.content ?? "").trim(),
         usedStats,
+        opens,
         promptTokens,
         completionTokens,
       };
@@ -220,6 +226,10 @@ export async function runNbaAsk(input: {
       try {
         if (name === "get_app_guide") {
           result = nbaAskAppGuide(String(args.topic ?? ""), input.language);
+          const open = (result as { open?: unknown }).open;
+          if (isNbaAskDestinationId(open) && !opens.includes(open) && opens.length < 2) {
+            opens.push(open);
+          }
         } else if (input.allowStats && PUBLIC_STATS_TOOL_NAMES.has(name)) {
           usedStats = true;
           result = await runNbaAskTool(input.db, name, args, input.language);
@@ -254,5 +264,5 @@ export async function runNbaAsk(input: {
     }
   }
 
-  return { answer: "", usedStats, promptTokens, completionTokens };
+  return { answer: "", usedStats, opens, promptTokens, completionTokens };
 }

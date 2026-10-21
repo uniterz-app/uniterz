@@ -115,7 +115,12 @@ export async function POST(req: Request) {
         out: result.completionTokens,
       })
     );
-    return NextResponse.json({ ok: true, answer: result.answer, statsFreeRemaining });
+    return NextResponse.json({
+      ok: true,
+      answer: result.answer,
+      statsFreeRemaining,
+      opens: result.opens,
+    });
   } catch (e: unknown) {
     console.error("[POST /api/nba/ask]", e);
     return NextResponse.json({ ok: false, error: "server_error" }, { status: 500 });

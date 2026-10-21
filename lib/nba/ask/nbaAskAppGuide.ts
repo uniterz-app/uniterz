@@ -5,6 +5,7 @@
 import { L, resolveLocalizedLang } from "@/lib/i18n/localize";
 import { helpFaqsCopy, type HelpFaqEntryCopy } from "@/lib/settings/helpFaqsCopy";
 import { PRO_SUBSCRIBE_PREVIEW_PLANS } from "@/lib/pro/proSubscribePreviewPlans";
+import { nbaAskDestinationForTopic } from "./nbaAskDestinations";
 import { NBA_ASK_FREE_STATS_LIFETIME, NBA_ASK_PRO_WEB_DAILY } from "./nbaAskQuota";
 
 export const NBA_ASK_APP_TOPICS = [
@@ -59,15 +60,23 @@ function askChatText(): string {
     "- Explaining what PRO features are is free for everyone (use the pro_plans guide).",
     "- Looking up one game's Pro Insight, the live PRO LEAGUE board, or the web is PRO-only. Free accounts can hear what those features are, not the live contents.",
     "- Answers come only from the app's data. Opened from the top-right icon on the games list.",
+    "- When this guide includes an open id, the app shows a button under the answer that opens that screen. Tell the user to tap it. Do not invent a menu path or URL.",
   ].join("\n");
 }
 
 export function nbaAskAppGuide(topic: string, language: string): unknown {
   const t = NBA_ASK_APP_TOPICS.find((x) => x === topic);
   if (!t) return { error: "unknown topic", topics: NBA_ASK_APP_TOPICS };
-  if (t === "pro_plans") return { topic: t, text: proPlansText(language) };
-  if (t === "ask_chat") return { topic: t, text: askChatText() };
-  const id = FAQ_ID_BY_TOPIC[t];
-  const entry = helpFaqsCopy(language).find((e) => e.id === id);
-  return entry ? { topic: t, text: faqText(entry) } : { topic: t, text: null };
+  const open = nbaAskDestinationForTopic(t);
+  const body =
+    t === "pro_plans"
+      ? proPlansText(language)
+      : t === "ask_chat"
+        ? askChatText()
+        : (() => {
+            const id = FAQ_ID_BY_TOPIC[t];
+            const entry = helpFaqsCopy(language).find((e) => e.id === id);
+            return entry ? faqText(entry) : null;
+          })();
+  return open ? { topic: t, text: body, open } : { topic: t, text: body };
 }

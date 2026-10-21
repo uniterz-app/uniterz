@@ -15,6 +15,10 @@ import {
   type NbaAskTurnClient,
 } from "@/lib/nba/ask/nbaAskClient";
 import { splitNbaAskLinks } from "@/lib/nba/ask/nbaAskLinkify";
+import {
+  nbaAskDestinationLabel,
+  nbaAskDestinationWebPath,
+} from "@/lib/nba/ask/nbaAskDestinations";
 
 const MAX_QUESTION_CHARS = 300;
 
@@ -76,7 +80,10 @@ export default function NbaAskChat({ language, signedIn }: Props) {
     });
     setBusy(false);
     if (result.ok) {
-      setTurns((prev) => [...prev, { role: "assistant", content: result.answer }]);
+      setTurns((prev) => [
+        ...prev,
+        { role: "assistant", content: result.answer, opens: result.opens },
+      ]);
       setStatus((prev) =>
         prev ? { ...prev, statsFreeRemaining: result.statsFreeRemaining } : prev
       );
@@ -127,30 +134,43 @@ export default function NbaAskChat({ language, signedIn }: Props) {
         ) : null}
 
         {turns.map((t, i) => (
-          <div
-            key={i}
-            className={cn(
-              "max-w-[86%] whitespace-pre-wrap rounded-[4px] border px-3 py-2 text-[14px] leading-[1.5] text-white/94",
-              t.role === "user"
-                ? "ml-auto border-[rgba(0,245,255,0.45)] bg-[rgba(0,245,255,0.1)]"
-                : "mr-auto border-[rgba(0,245,255,0.16)] bg-[rgba(4,16,24,0.6)]",
-            )}
-          >
-            {splitNbaAskLinks(t.content).map((part, j) =>
-              part.kind === "link" ? (
-                <a
-                  key={j}
-                  href={part.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="underline text-[#00F5FF]"
-                >
-                  {part.url}
-                </a>
-              ) : (
-                <span key={j}>{part.text}</span>
-              )
-            )}
+          <div key={i} className={cn("flex max-w-[86%] flex-col gap-1.5", t.role === "user" ? "ml-auto" : "mr-auto")}>
+            <div
+              className={cn(
+                "whitespace-pre-wrap rounded-[4px] border px-3 py-2 text-[14px] leading-[1.5] text-white/94",
+                t.role === "user"
+                  ? "border-[rgba(0,245,255,0.45)] bg-[rgba(0,245,255,0.1)]"
+                  : "border-[rgba(0,245,255,0.16)] bg-[rgba(4,16,24,0.6)]",
+              )}
+            >
+              {splitNbaAskLinks(t.content).map((part, j) =>
+                part.kind === "link" ? (
+                  <a
+                    key={j}
+                    href={part.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline text-[#00F5FF]"
+                  >
+                    {part.url}
+                  </a>
+                ) : (
+                  <span key={j}>{part.text}</span>
+                )
+              )}
+            </div>
+            {t.role === "assistant"
+              ? t.opens?.map((id) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => router.push(nbaAskDestinationWebPath(id))}
+                    className={`${nameOxanium.className} self-start bg-[#00F5FF] px-3 py-2 text-[12px] font-bold tracking-[0.06em] text-[#050508] hover:opacity-90`}
+                  >
+                    {nbaAskDestinationLabel(id, language)}
+                  </button>
+                ))
+              : null}
           </div>
         ))}
 

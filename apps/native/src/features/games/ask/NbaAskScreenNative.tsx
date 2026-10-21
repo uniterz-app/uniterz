@@ -13,7 +13,9 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, type CompositeNavigationProp } from "@react-navigation/native";
+import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import GamesNbaSubpageShellNative from "../GamesNbaSubpageShellNative";
 import { useFirebaseUser } from "../../../auth/FirebaseUserProvider";
@@ -24,6 +26,11 @@ import { openProSubscribeNative } from "../../../navigation/navigationRef";
 import { CYBER_SIDE_MENU_PANEL, CYBER_TAB_CYAN } from "../../../ui/cyberSideMenuNative";
 import { METRIC_FONT } from "../../rankings/rankingsUiTheme";
 import { nbaAskCopy } from "../../../../../../lib/nba/ask/nbaAskCopy";
+import {
+  nbaAskDestinationLabel,
+  type NbaAskDestinationId,
+} from "../../../../../../lib/nba/ask/nbaAskDestinations";
+import type { GamesStackParamList, MainTabParamList } from "../../../navigation/types";
 import type {
   NbaAskStatus,
   NbaAskTurnClient,
@@ -32,8 +39,31 @@ import { askNbaStatsNative, loadNbaAskStatusNative } from "./nbaAskApi";
 
 const MAX_QUESTION_CHARS = 300;
 
+type AskNav = CompositeNavigationProp<
+  NativeStackNavigationProp<GamesStackParamList, "NbaAsk">,
+  BottomTabNavigationProp<MainTabParamList>
+>;
+
+/** 答えの下のボタン。機能の画面へ移す */
+function openNbaAskDestination(navigation: AskNav, id: NbaAskDestinationId) {
+  switch (id) {
+    case "games":
+      navigation.navigate("GamesHome");
+      return;
+    case "stats":
+      navigation.navigate("LeagueStats", { tab: "team" });
+      return;
+    case "rankings":
+      navigation.navigate("RankingsTab", { screen: "RankingsHome" });
+      return;
+    case "pro":
+      openProSubscribeNative();
+      return;
+  }
+}
+
 export default function NbaAskScreenNative() {
-  const navigation = useNavigation();
+  const navigation = useNavigation<AskNav>();
   const { fUser } = useFirebaseUser();
   const { language } = useNativeUserLanguage(fUser?.uid);
   const lang = String(language ?? "ja");
@@ -93,7 +123,10 @@ export default function NbaAskScreenNative() {
     const result = await askNbaStatsNative(next, lang);
     setBusy(false);
     if (result.ok) {
-      setTurns((prev) => [...prev, { role: "assistant", content: result.answer }]);
+      setTurns((prev) => [
+        ...prev,
+        { role: "assistant", content: result.answer, opens: result.opens },
+      ]);
       setStatus((prev) =>
         prev ? { ...prev, statsFreeRemaining: result.statsFreeRemaining } : prev
       );
@@ -169,23 +202,37 @@ export default function NbaAskScreenNative() {
           {turns.map((t, i) => (
             <View
               key={i}
-              style={[styles.bubble, t.role === "user" ? styles.bubbleUser : styles.bubbleBot]}
+              style={[styles.turn, t.role === "user" ? styles.turnUser : styles.turnBot]}
             >
-              <Text style={styles.bubbleText} selectable>
-                {splitNbaAskLinks(t.content).map((part, j) =>
-                  part.kind === "link" ? (
-                    <Text
-                      key={j}
-                      style={styles.link}
-                      onPress={() => void Linking.openURL(part.url)}
+              <View style={[styles.bubble, t.role === "user" ? styles.bubbleUser : styles.bubbleBot]}>
+                <Text style={styles.bubbleText} selectable>
+                  {splitNbaAskLinks(t.content).map((part, j) =>
+                    part.kind === "link" ? (
+                      <Text
+                        key={j}
+                        style={styles.link}
+                        onPress={() => void Linking.openURL(part.url)}
+                      >
+                        {part.url}
+                      </Text>
+                    ) : (
+                      <Text key={j}>{part.text}</Text>
+                    )
+                  )}
+                </Text>
+              </View>
+              {t.role === "assistant"
+                ? t.opens?.map((id) => (
+                    <Pressable
+                      key={id}
+                      onPress={() => openNbaAskDestination(navigation, id)}
+                      accessibilityRole="button"
+                      style={({ pressed }) => [styles.openBtn, pressed && styles.chipPressed]}
                     >
-                      {part.url}
-                    </Text>
-                  ) : (
-                    <Text key={j}>{part.text}</Text>
-                  )
-                )}
-              </Text>
+                      <Text style={styles.openBtnText}>{nbaAskDestinationLabel(id, lang)}</Text>
+                    </Pressable>
+                  ))
+                : null}
             </View>
           ))}
 
@@ -311,20 +358,36 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "600",
   },
-  bubble: {
+  turn: {
     maxWidth: "86%",
+    gap: 6,
+  },
+  turnUser: { alignSelf: "flex-end" },
+  turnBot: { alignSelf: "flex-start" },
+  bubble: {
     borderWidth: 1,
     borderRadius: 4,
     paddingHorizontal: 12,
     paddingVertical: 9,
   },
+  openBtn: {
+    alignSelf: "flex-start",
+    minHeight: 36,
+    justifyContent: "center",
+    paddingHorizontal: 14,
+    backgroundColor: CYBER_TAB_CYAN,
+  },
+  openBtnText: {
+    fontFamily: METRIC_FONT,
+    color: "#050508",
+    fontSize: 12,
+    letterSpacing: 0.6,
+  },
   bubbleUser: {
-    alignSelf: "flex-end",
     borderColor: "rgba(0,245,255,0.45)",
     backgroundColor: "rgba(0,245,255,0.1)",
   },
   bubbleBot: {
-    alignSelf: "flex-start",
     borderColor: CYBER_SIDE_MENU_PANEL.innerBorderColor,
     backgroundColor: "rgba(4,16,24,0.6)",
   },
@@ -338,6 +401,7 @@ const styles = StyleSheet.create({
     textDecorationLine: "underline",
   },
   thinking: {
+    alignSelf: "flex-start",
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
