@@ -2,7 +2,7 @@
 
 /**
  * Pro Insight MATCHUP — 攻め × 相手の守りの順位差が大きい順の表（Native `PredictProInsightMatchupTableNative` 相当）。
- * 左 = AWAY / 右 = HOME（パネル見出しと同じ並び）。有利な側の順位をチーム色にする。
+ * 左 = HOME / 右 = AWAY（試合カード・パネル見出しと同じ並び）。有利な側の順位をチーム色にする。
  */
 import type {
   ProInsightMatchupStatSide,
@@ -72,16 +72,16 @@ export default function PredictProInsightMatchupTable({
       <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 pb-1">
         <span
           className={[nameOxanium.className, "truncate text-[10px] font-extrabold uppercase tracking-[0.12em]"].join(" ")}
-          style={{ color: awayColor }}
+          style={{ color: homeColor }}
         >
-          {awayNick}
+          {homeNick}
         </span>
         <span />
         <span
           className={[nameOxanium.className, "truncate text-right text-[10px] font-extrabold uppercase tracking-[0.12em]"].join(" ")}
-          style={{ color: homeColor }}
+          style={{ color: awayColor }}
         >
-          {homeNick}
+          {awayNick}
         </span>
       </div>
       {table.rows.map((row) => (
@@ -91,9 +91,9 @@ export default function PredictProInsightMatchupTable({
         >
           <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
             <Cell
-              side={row.away}
-              edge={row.edgeTeamId === row.away.teamId}
-              color={awayColor}
+              side={row.home}
+              edge={row.edgeTeamId === row.home.teamId}
+              color={homeColor}
               align="start"
               lang={lang}
             />
@@ -103,9 +103,9 @@ export default function PredictProInsightMatchupTable({
               {L(lang, row.label)}
             </span>
             <Cell
-              side={row.home}
-              edge={row.edgeTeamId === row.home.teamId}
-              color={homeColor}
+              side={row.away}
+              edge={row.edgeTeamId === row.away.teamId}
+              color={awayColor}
               align="end"
               lang={lang}
             />

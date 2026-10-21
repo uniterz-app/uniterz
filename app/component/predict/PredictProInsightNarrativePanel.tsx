@@ -93,13 +93,13 @@ export default function PredictProInsightNarrativePanel({
           className="min-w-0 shrink truncate uppercase"
           style={{
             ...matchCardTeamNameStyle(true),
-            color: awayColor,
+            color: homeColor,
             fontSize: 15,
             letterSpacing: "0.08em",
             transform: "skewX(-8deg)",
           }}
         >
-          {awayNick}
+          {homeNick}
         </span>
         <span
           className={[
@@ -114,13 +114,13 @@ export default function PredictProInsightNarrativePanel({
           className="min-w-0 shrink truncate uppercase"
           style={{
             ...matchCardTeamNameStyle(true),
-            color: homeColor,
+            color: awayColor,
             fontSize: 15,
             letterSpacing: "0.08em",
             transform: "skewX(-8deg)",
           }}
         >
-          {homeNick}
+          {awayNick}
         </span>
       </div>
 

@@ -71,31 +71,31 @@ export default function PredictProInsightMatchupTableNative({
   return (
     <View>
       <View style={styles.headRow}>
-        <Text style={[styles.headTeam, { color: awayColor }]} numberOfLines={1}>
-          {awayNick}
+        <Text style={[styles.headTeam, { color: homeColor }]} numberOfLines={1}>
+          {homeNick}
         </Text>
         <Text
-          style={[styles.headTeam, styles.headTeamRight, { color: homeColor }]}
+          style={[styles.headTeam, styles.headTeamRight, { color: awayColor }]}
           numberOfLines={1}
         >
-          {homeNick}
+          {awayNick}
         </Text>
       </View>
       {table.rows.map((row) => (
         <View key={row.kind} style={styles.row}>
           <View style={styles.rowMain}>
             <Cell
-              side={row.away}
-              edge={row.edgeTeamId === row.away.teamId}
-              color={awayColor}
+              side={row.home}
+              edge={row.edgeTeamId === row.home.teamId}
+              color={homeColor}
               align="start"
               lang={lang}
             />
             <Text style={styles.label}>{L(lang, row.label)}</Text>
             <Cell
-              side={row.home}
-              edge={row.edgeTeamId === row.home.teamId}
-              color={homeColor}
+              side={row.away}
+              edge={row.edgeTeamId === row.away.teamId}
+              color={awayColor}
               align="end"
               lang={lang}
             />

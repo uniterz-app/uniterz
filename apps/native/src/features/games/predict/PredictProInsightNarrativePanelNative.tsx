@@ -87,8 +87,8 @@ export default function PredictProInsightNarrativePanelNative({
             Platform.OS === "android" ? { opacity: 0.999 } : null,
           ]}
         >
-          <Text style={[styles.matchTeam, { color: awayColor }]} numberOfLines={1}>
-            {awayNick}
+          <Text style={[styles.matchTeam, { color: homeColor }]} numberOfLines={1}>
+            {homeNick}
           </Text>
         </View>
         <View
@@ -109,8 +109,8 @@ export default function PredictProInsightNarrativePanelNative({
             Platform.OS === "android" ? { opacity: 0.999 } : null,
           ]}
         >
-          <Text style={[styles.matchTeam, { color: homeColor }]} numberOfLines={1}>
-            {homeNick}
+          <Text style={[styles.matchTeam, { color: awayColor }]} numberOfLines={1}>
+            {awayNick}
           </Text>
         </View>
       </View>
