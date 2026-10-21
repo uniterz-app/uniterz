@@ -1,37 +1,30 @@
-/** 開幕戦を予想した直後の招待モーダル（見た目は `ReferralPreseasonInviteCardNative` と同系） */
+/** 無料ユーザーがピックアップ以外の試合を予想したあとの Pro 案内（見た目は `DayCompleteInviteModalNative` と同系） */
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useCallback, useState } from "react";
-import {
-  ActivityIndicator,
-  Modal,
-  Pressable,
-  Share,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { useCallback } from "react";
+import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import { fonts } from "../../theme/tokens";
 import { JP_600, JP_700 } from "../profile/reports/reportThemeNative";
-import { fetchMeReferralNative } from "../profile/referralApiNative";
-import { cyberAlert } from "../../components/cyberAlert";
 import UniterzLogoNative from "../profile/UniterzLogoNative";
+import { openProSubscribeNative } from "../../navigation/navigationRef";
 import {
-  openingNightInviteCopy,
-  openingNightInviteStorageKey,
-} from "../../../../../lib/referral/openingNightInvite";
-import { getAppDownloadShareUrl } from "../../../../../lib/share/shareAppUrls";
+  isProLeagueUpsellDue,
+  proLeagueUpsellCopy,
+  proLeagueUpsellStorageKey,
+} from "../../../../../lib/pro/proLeagueUpsell";
+import { PRO_LEAGUE_ATMOSPHERE } from "../../../../../lib/rankings/proLeagueAtmosphere";
 
-export async function readOpeningNightInviteSeenNative(uid: string): Promise<boolean> {
+export async function readProLeagueUpsellDueNative(uid: string): Promise<boolean> {
   try {
-    return (await AsyncStorage.getItem(openingNightInviteStorageKey(uid))) === "1";
+    const raw = await AsyncStorage.getItem(proLeagueUpsellStorageKey(uid));
+    return isProLeagueUpsellDue(raw == null ? null : Number(raw));
   } catch {
-    return true;
+    return false;
   }
 }
 
-export async function writeOpeningNightInviteSeenNative(uid: string): Promise<void> {
+export async function writeProLeagueUpsellShownNative(uid: string): Promise<void> {
   try {
-    await AsyncStorage.setItem(openingNightInviteStorageKey(uid), "1");
+    await AsyncStorage.setItem(proLeagueUpsellStorageKey(uid), String(Date.now()));
   } catch {
     // 無視
   }
@@ -43,35 +36,18 @@ type Props = {
   onClose: () => void;
 };
 
-export default function OpeningNightInviteModalNative({
+export default function ProLeagueUpsellModalNative({
   visible,
   language,
   onClose,
 }: Props) {
-  const copy = openingNightInviteCopy(language);
-  const [busy, setBusy] = useState(false);
+  const copy = proLeagueUpsellCopy(language);
 
-  const handleInvite = useCallback(async () => {
-    if (busy) return;
-    setBusy(true);
-    // モーダルが閉じ切る前に共有シート／アラートを出すと iOS で表示されない
-    const waitClosed = () => new Promise((r) => setTimeout(r, 400));
-    try {
-      const data = await fetchMeReferralNative();
-      onClose();
-      await waitClosed();
-      await Share.share({
-        message: copy.shareMessage(data.inviteCode, getAppDownloadShareUrl()),
-      });
-    } catch (e) {
-      onClose();
-      await waitClosed();
-      const msg = e instanceof Error ? e.message : String(e ?? "");
-      if (msg) cyberAlert("", msg);
-    } finally {
-      setBusy(false);
-    }
-  }, [busy, copy, onClose]);
+  const handleSeePro = useCallback(() => {
+    onClose();
+    // モーダルが閉じ切る前に次の画面を重ねると iOS で表示されない
+    setTimeout(() => openProSubscribeNative(), 400);
+  }, [onClose]);
 
   return (
     <Modal
@@ -90,24 +66,17 @@ export default function OpeningNightInviteModalNative({
           </View>
           <Text style={styles.title}>{copy.title}</Text>
           <Text style={styles.body}>{copy.body}</Text>
-          {copy.preseasonExtra ? (
-            <Text style={styles.extra}>{copy.preseasonExtra}</Text>
-          ) : null}
+          <Text style={styles.trial}>{copy.trial}</Text>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={copy.invite}
-            disabled={busy}
-            onPress={() => void handleInvite()}
+            accessibilityLabel={copy.cta}
+            onPress={handleSeePro}
             style={({ pressed }) => [
               styles.primaryBtn,
-              pressed || busy ? styles.pressed : null,
+              pressed ? styles.pressed : null,
             ]}
           >
-            {busy ? (
-              <ActivityIndicator color="#041018" />
-            ) : (
-              <Text style={styles.primaryText}>{copy.invite}</Text>
-            )}
+            <Text style={styles.primaryText}>{copy.cta}</Text>
           </Pressable>
           <Pressable
             accessibilityRole="button"
@@ -123,7 +92,7 @@ export default function OpeningNightInviteModalNative({
   );
 }
 
-const CYBER_CYAN = "#00F5FF";
+const GOLD = PRO_LEAGUE_ATMOSPHERE.gold;
 
 const styles = StyleSheet.create({
   root: {
@@ -144,14 +113,14 @@ const styles = StyleSheet.create({
     paddingBottom: 14,
     backgroundColor: "#07090d",
     borderWidth: 1,
-    borderColor: "rgba(0,245,255,0.35)",
+    borderColor: PRO_LEAGUE_ATMOSPHERE.panelBorder,
   },
   eyebrow: {
     fontFamily: fonts.metricExtra,
     fontSize: 11,
     fontWeight: "800",
     letterSpacing: 1.8,
-    color: CYBER_CYAN,
+    color: GOLD,
     textAlign: "center",
   },
   logo: {
@@ -176,7 +145,7 @@ const styles = StyleSheet.create({
     color: "rgba(226,246,255,0.75)",
     textAlign: "center",
   },
-  extra: {
+  trial: {
     marginTop: 8,
     fontFamily: JP_600,
     fontSize: 12,
@@ -191,7 +160,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 20,
-    backgroundColor: CYBER_CYAN,
+    backgroundColor: GOLD,
   },
   pressed: {
     opacity: 0.85,
@@ -200,7 +169,7 @@ const styles = StyleSheet.create({
     fontFamily: JP_700,
     fontSize: 14,
     fontWeight: "800",
-    color: "#041018",
+    color: PRO_LEAGUE_ATMOSPHERE.ink,
   },
   laterBtn: {
     marginTop: 6,

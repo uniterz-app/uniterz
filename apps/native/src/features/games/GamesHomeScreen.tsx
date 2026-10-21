@@ -245,17 +245,19 @@ import PreseasonPredictNoticeModalNative, {
 } from "./PreseasonPredictNoticeModalNative";
 import { SEASON_PREDICT_INVITE_DELAY_MS } from "../../../../../lib/predict/seasonPredictInvite";
 import { isSeasonPredictLastCallWindow } from "../../../../../lib/predict/seasonPredictLastCall";
-import { isNbaOpeningNightGame } from "../../../../../lib/referral/openingNightInvite";
 import {
   claimLaunchPromptSlot,
-  hasOtherLaunchPromptShown,
   releaseLaunchPromptSlot,
   subscribeLaunchPromptSlotFree,
 } from "../../../../../lib/launch/launchPromptSlot";
-import OpeningNightInviteModalNative, {
-  readOpeningNightInviteSeenNative,
-  writeOpeningNightInviteSeenNative,
-} from "../referral/OpeningNightInviteModalNative";
+import DayCompleteInviteModalNative, {
+  readDayCompleteInviteSeenNative,
+  writeDayCompleteInviteSeenNative,
+} from "../referral/DayCompleteInviteModalNative";
+import ProLeagueUpsellModalNative, {
+  readProLeagueUpsellDueNative,
+  writeProLeagueUpsellShownNative,
+} from "./ProLeagueUpsellModalNative";
 import SeasonPredictInviteModalNative, {
   readSeasonPredictInviteSeenNative,
   readSeasonPredictLastCallSeenNative,
@@ -575,9 +577,8 @@ function findNextUnpredictedGame(
 }
 
 const SEASON_INVITE_SLOT_ID = "season-predict-invite";
-const OPENING_INVITE_SLOT_ID = "opening-night-invite";
-/** 起動時モーダル（Unit 獲得 1.4s・シーズン予想案内 0.8s〜）が先に決まるのを待つ */
-const OPENING_INVITE_SESSION_DELAY_MS = 6000;
+const POST_PROMPT_SLOT_ID = "post-predict-prompt";
+type PostPrompt = "invite" | "pro";
 function isGameStarted(game: Record<string, unknown>): boolean {
   const status = resolveGameStatus(game);
   if (status === "live" || status === "final") return true;
@@ -785,17 +786,11 @@ export default function GamesHomeScreen({
     string,
     unknown
   > | null>(null);
-  /** 開幕戦を予想した直後の招待。次の試合モーダルが出るときは閉じたあとに出す */
-  const [openingInviteWanted, setOpeningInviteWanted] = useState(false);
-  const [openingInviteOpen, setOpeningInviteOpen] = useState(false);
-  /** 開幕戦招待を出した起動ではシーズン予想案内を続けて出さない（次回起動で出る） */
-  const [openingInviteShownThisMount, setOpeningInviteShownThisMount] =
-    useState(false);
-  const openingInviteAfterNextGameRef = useRef(false);
-  /** 起動時の予想済みチェック由来（他の起動時モーダルが出ていたら譲る） */
-  const openingInviteFromSessionRef = useRef(false);
-  const openingInviteSessionCheckedRef = useRef(false);
-  const openingInviteSessionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** 「投稿完了」の OK のあとに出す案内（初めてその日の予想を全部終えた → 招待 / ピックアップ以外 → Pro） */
+  const [postPromptWanted, setPostPromptWanted] = useState<PostPrompt | null>(
+    null
+  );
+  const [postPromptOpen, setPostPromptOpen] = useState<PostPrompt | null>(null);
   /** 起動時モーダル（Unit 獲得・スクワッド等）と重ねないための枠の空き通知 */
   const [launchSlotTick, setLaunchSlotTick] = useState(0);
   useEffect(() => {
@@ -805,7 +800,7 @@ export default function GamesHomeScreen({
     return () => {
       unsubscribe();
       releaseLaunchPromptSlot(SEASON_INVITE_SLOT_ID);
-      releaseLaunchPromptSlot(OPENING_INVITE_SLOT_ID);
+      releaseLaunchPromptSlot(POST_PROMPT_SLOT_ID);
     };
   }, []);
   const [winner, setWinner] = useState<"home" | "away" | "draw" | null>(null);
@@ -2619,8 +2614,6 @@ export default function GamesHomeScreen({
   async function handleNextGameModalYes(dontShowAgain: boolean) {
     if (dontShowAgain) await writePredictNextGameModalSkip();
     const g = nextGameAfterPost;
-    /** 次も開幕戦なので、その投稿後に出す */
-    openingInviteAfterNextGameRef.current = false;
     setNextGameAfterPost(null);
     if (g) {
       requestAnimationFrame(() => {
@@ -2632,10 +2625,6 @@ export default function GamesHomeScreen({
   async function handleNextGameModalNo(dontShowAgain: boolean) {
     if (dontShowAgain) await writePredictNextGameModalSkip();
     setNextGameAfterPost(null);
-    if (openingInviteAfterNextGameRef.current) {
-      openingInviteAfterNextGameRef.current = false;
-      setOpeningInviteWanted(true);
-    }
   }
 
   async function handleSubmitPrediction() {
@@ -2761,24 +2750,51 @@ export default function GamesHomeScreen({
           : null;
       const skipNextModal =
         !isEditing ? await readPredictNextGameModalSkip() : false;
-      const wantOpeningInvite =
+      const promptUid = fUser?.uid ?? null;
+      const countsForPostPrompt =
         !isEditing &&
-        !!fUser?.uid &&
+        promptUid != null &&
+        !tutorialActive &&
         gameId !== TUTORIAL_NBA_GAME_ID &&
-        isNbaOpeningNightGame({
-          league: selectedGame.league,
-          seasonPhase: selectedGame.seasonPhase,
-          startAtMs: resolveGameStartAt(selectedGame)?.getTime() ?? null,
-        }) &&
-        !(await readOpeningNightInviteSeenNative(fUser.uid));
-      if (wantOpeningInvite) {
-        openingInviteSessionCheckedRef.current = true;
-        openingInviteFromSessionRef.current = false;
-        if (openingInviteSessionTimerRef.current) {
-          clearTimeout(openingInviteSessionTimerRef.current);
-          openingInviteSessionTimerRef.current = null;
-        }
-      }
+        currentLeague.toLowerCase() === "nba" &&
+        String(selectedGame.seasonPhase ?? "") !== "preseason";
+      const submittedIsPickup = isNbaPickupGame(
+        selectedGame as { isPickup?: unknown; pickupWeekKey?: unknown }
+      );
+      /** 今の投稿でその日（表示中の日・同リーグ）の予想対象が全部埋まった。無料はピックアップだけが対象 */
+      const dayPredictionsComplete =
+        countsForPostPrompt &&
+        (isProUser || submittedIsPickup) &&
+        !games.some((g) => {
+          const id = String(g.id ?? "");
+          if (!id || nextPredictedIds.has(id)) return false;
+          if (String(g.league ?? "") !== currentLeague) return false;
+          if (isGameStarted(g)) return false;
+          if (
+            !isProUser &&
+            !isNbaPickupGame(
+              g as { isPickup?: unknown; pickupWeekKey?: unknown }
+            )
+          ) {
+            return false;
+          }
+          return true;
+        });
+      const inviteSeen =
+        promptUid != null && countsForPostPrompt
+          ? await readDayCompleteInviteSeenNative(promptUid)
+          : true;
+      const postPrompt: PostPrompt | null =
+        dayPredictionsComplete && !inviteSeen
+          ? "invite"
+          : countsForPostPrompt &&
+              inviteSeen &&
+              !isProUser &&
+              !submittedIsPickup &&
+              promptUid != null &&
+              (await readProLeagueUpsellDueNative(promptUid))
+            ? "pro"
+            : null;
 
       setPredictedGameIds(nextPredictedIds);
       setMyPredictionsReloadNonce((prev) => prev + 1);
@@ -2808,10 +2824,11 @@ export default function GamesHomeScreen({
           if (isEditing) {
             cyberAlert(t.updateDone, t.updateDoneOnly);
           } else if (nextGame && !skipNextModal) {
-            openingInviteAfterNextGameRef.current = wantOpeningInvite;
             setNextGameAfterPost(nextGame);
-          } else if (wantOpeningInvite) {
-            setOpeningInviteWanted(true);
+          } else if (postPrompt) {
+            cyberAlert(t.postDone, t.postDoneOnly, [
+              { text: "OK", onPress: () => setPostPromptWanted(postPrompt) },
+            ]);
           } else {
             cyberAlert(t.postDone, t.postDoneOnly);
           }
@@ -2851,14 +2868,13 @@ export default function GamesHomeScreen({
   const [seasonInviteLastCall, setSeasonInviteLastCall] = useState(false);
   const seasonInviteWanted =
     seasonPredictPending.awards || seasonPredictPending.standings;
-  /** 投稿直後〜開幕戦招待までの一連のモーダル中 */
+  /** 投稿直後〜招待 / Pro 案内までの一連のモーダル中 */
   const postFlowModalActive =
     isPredictModalOpen ||
     nextGameAfterPost != null ||
     preseasonNoticeGame != null ||
-    openingInviteWanted ||
-    openingInviteOpen ||
-    openingInviteShownThisMount;
+    postPromptWanted != null ||
+    postPromptOpen != null;
   const seasonInviteBlocked =
     !isFocused ||
     firstRunSetupGate !== "done" ||
@@ -2906,8 +2922,8 @@ export default function GamesHomeScreen({
     releaseLaunchPromptSlot(SEASON_INVITE_SLOT_ID);
   }, []);
 
-  /** 開幕戦を予想した直後の招待 — 投稿フローのモーダルが閉じ切ってから 1 回 */
-  const openingInviteBlocked =
+  /** 「投稿完了」の OK のあと — アラートが閉じ切ってから、起動時モーダルと重ねずに出す */
+  const postPromptBlocked =
     !isFocused ||
     firstRunSetupGate !== "done" ||
     tutorialActive ||
@@ -2919,26 +2935,18 @@ export default function GamesHomeScreen({
     resultDetailPostId != null;
   useEffect(() => {
     const uid = fUser?.uid;
-    if (!uid || !openingInviteWanted || openingInviteOpen || openingInviteBlocked) {
+    if (!uid || !postPromptWanted || postPromptOpen || postPromptBlocked) {
       return;
     }
     let cancelled = false;
+    const kind = postPromptWanted;
     const cancelSchedule = scheduleAfterPredictModalDismissed(() => {
       if (cancelled) return;
-      if (
-        openingInviteFromSessionRef.current &&
-        (hasOtherLaunchPromptShown(OPENING_INVITE_SLOT_ID) || seasonInviteWanted)
-      ) {
-        openingInviteFromSessionRef.current = false;
-        setOpeningInviteWanted(false);
-        return;
-      }
-      if (!claimLaunchPromptSlot(OPENING_INVITE_SLOT_ID)) return;
-      openingInviteFromSessionRef.current = false;
-      void writeOpeningNightInviteSeenNative(uid);
-      setOpeningInviteWanted(false);
-      setOpeningInviteShownThisMount(true);
-      setOpeningInviteOpen(true);
+      if (!claimLaunchPromptSlot(POST_PROMPT_SLOT_ID)) return;
+      if (kind === "invite") void writeDayCompleteInviteSeenNative(uid);
+      else void writeProLeagueUpsellShownNative(uid);
+      setPostPromptWanted(null);
+      setPostPromptOpen(kind);
     });
     return () => {
       cancelled = true;
@@ -2946,52 +2954,16 @@ export default function GamesHomeScreen({
     };
   }, [
     fUser?.uid,
-    openingInviteWanted,
-    openingInviteOpen,
-    openingInviteBlocked,
+    postPromptWanted,
+    postPromptOpen,
+    postPromptBlocked,
     launchSlotTick,
-    seasonInviteWanted,
   ]);
-  const closeOpeningInvite = useCallback(() => {
-    setOpeningInviteOpen(false);
-    releaseLaunchPromptSlot(OPENING_INVITE_SLOT_ID);
+  const closePostPrompt = useCallback(() => {
+    setPostPromptOpen(null);
+    releaseLaunchPromptSlot(POST_PROMPT_SLOT_ID);
   }, []);
 
-  /**
-   * このバージョンより前に開幕戦を予想済みの人にも 1 回（投稿直後の経路は handleSubmitPrediction 側）。
-   * 起動時モーダル（Unit 獲得・スクワッド・シーズン予想案内）が先に決まるまで待ち、
-   * どれかが出た／シーズン予想が未提出ならこの起動では出さない（既読にしないので次回起動で出る）。
-   */
-  useEffect(
-    () => () => {
-      if (openingInviteSessionTimerRef.current) {
-        clearTimeout(openingInviteSessionTimerRef.current);
-      }
-    },
-    []
-  );
-  useEffect(() => {
-    const uid = fUser?.uid;
-    if (!uid || openingInviteSessionCheckedRef.current) return;
-    const hasOpeningPick = games.some(
-      (g) =>
-        predictedGameIds.has(String(g.id ?? "")) &&
-        isNbaOpeningNightGame({
-          league: g.league,
-          seasonPhase: g.seasonPhase,
-          startAtMs: resolveGameStartAt(g)?.getTime() ?? null,
-        })
-    );
-    if (!hasOpeningPick) return;
-    openingInviteSessionCheckedRef.current = true;
-    void readOpeningNightInviteSeenNative(uid).then((seen) => {
-      if (seen) return;
-      openingInviteSessionTimerRef.current = setTimeout(() => {
-        openingInviteFromSessionRef.current = true;
-        setOpeningInviteWanted(true);
-      }, OPENING_INVITE_SESSION_DELAY_MS);
-    });
-  }, [fUser?.uid, games, predictedGameIds]);
   const getGameCardCenterBlockForList = useCallback(
     (game: Record<string, unknown>) =>
       getGameCardCenterBlock(game, language, dayTimeZone, scorePrefs),
@@ -3600,10 +3572,15 @@ export default function GamesHomeScreen({
         }}
         onLater={closeSeasonInvite}
       />
-      <OpeningNightInviteModalNative
-        visible={openingInviteOpen}
+      <DayCompleteInviteModalNative
+        visible={postPromptOpen === "invite"}
         language={language}
-        onClose={closeOpeningInvite}
+        onClose={closePostPrompt}
+      />
+      <ProLeagueUpsellModalNative
+        visible={postPromptOpen === "pro"}
+        language={language}
+        onClose={closePostPrompt}
       />
       <PreseasonPredictNoticeModalNative
         open={preseasonNoticeGame != null}
