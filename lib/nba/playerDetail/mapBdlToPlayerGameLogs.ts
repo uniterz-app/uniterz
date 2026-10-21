@@ -27,16 +27,25 @@ function num(raw: unknown, fallback = 0): number {
   return fallback;
 }
 
+const JST_MONTH_DAY = new Intl.DateTimeFormat("en-US", {
+  month: "numeric",
+  day: "numeric",
+  timeZone: "Asia/Tokyo",
+});
+
+/** チームの試合ログ（`buildTeamGameLogFromGames`）と同じく日本時間の月日 */
 function formatDateLabel(raw: string | null | undefined): string {
   const s = String(raw ?? "").trim();
   if (!s) return "—";
+  const dateOnly = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (dateOnly) return `${Number(dateOnly[2])}/${Number(dateOnly[3])}`;
   const d = new Date(s);
   if (Number.isNaN(d.getTime())) {
     const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
     if (m) return `${Number(m[2])}/${Number(m[3])}`;
     return s.slice(0, 10);
   }
-  return `${d.getUTCMonth() + 1}/${d.getUTCDate()}`;
+  return JST_MONTH_DAY.format(d);
 }
 
 function gameSortKey(game: Partial<BdlGame> | null | undefined): number {
