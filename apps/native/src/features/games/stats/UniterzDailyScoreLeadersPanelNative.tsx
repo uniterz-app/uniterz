@@ -211,14 +211,10 @@ export default function UniterzDailyScoreLeadersPanelNative({
                   name={r.displayName || r.handle || "—"}
                   photoURL={r.photoURL}
                   isPro={r.plan === "pro"}
-                  planProBgVariant={
-                    division === "open"
-                      ? undefined
-                      : rankingRowProSkinVariant(
-                          r.plan,
-                          typeof r.planProBgVariant === "string" ? r.planProBgVariant : null
-                        )
-                  }
+                  planProBgVariant={rankingRowProSkinVariant(
+                    r.plan,
+                    typeof r.planProBgVariant === "string" ? r.planProBgVariant : null
+                  )}
                   countryCode={r.countryCode}
                   sub={
                     <>

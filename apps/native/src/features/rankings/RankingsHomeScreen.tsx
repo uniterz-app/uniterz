@@ -490,7 +490,6 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
               metric={metric}
               language={language}
               onPress={() => openProfile(item)}
-              hideProSkin={listShellPro}
             />
           </View>
         </RankingsListEntranceRowNative>
@@ -792,7 +791,6 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
                   language={language}
                   onPressProfile={openProfile}
                   entranceKey={entranceKey}
-                  hideProSkin={nbaBoard === "open"}
                 />
               </View>
             )}
@@ -1013,7 +1011,6 @@ const styles = StyleSheet.create({
   },
   listSectionPro: {
     borderColor: PRO_LEAGUE_ATMOSPHERE.panelBorder,
-    backgroundColor: PRO_LEAGUE_ATMOSPHERE.panelBg,
   },
   /** FlatList 分割用: 枠線を podium / mid / bottom で継ぐ（見た目は単一 listSection） */
   listSectionTop: {
@@ -1028,7 +1025,6 @@ const styles = StyleSheet.create({
   },
   listSectionProTop: {
     borderColor: PRO_LEAGUE_ATMOSPHERE.panelBorder,
-    backgroundColor: PRO_LEAGUE_ATMOSPHERE.panelBg,
   },
   listSectionMid: {
     borderLeftWidth: 1,
@@ -1038,7 +1034,6 @@ const styles = StyleSheet.create({
   },
   listSectionProMid: {
     borderColor: PRO_LEAGUE_ATMOSPHERE.panelBorder,
-    backgroundColor: PRO_LEAGUE_ATMOSPHERE.panelBg,
   },
   listSectionBottom: {
     borderBottomWidth: 1,
@@ -1050,7 +1045,6 @@ const styles = StyleSheet.create({
   },
   listSectionProBottom: {
     borderColor: PRO_LEAGUE_ATMOSPHERE.panelBorder,
-    backgroundColor: PRO_LEAGUE_ATMOSPHERE.panelBg,
   },
   restList: {
     gap: 0,
@@ -1063,6 +1057,6 @@ const styles = StyleSheet.create({
   },
   meRowPro: {
     borderColor: PRO_LEAGUE_ATMOSPHERE.panelBorder,
-    backgroundColor: "rgba(168,85,247,0.08)",
+    backgroundColor: "rgba(246,195,68,0.06)",
   },
 });

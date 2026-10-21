@@ -141,10 +141,7 @@ export default function RankingCard({
   const metricTag = cyberMetricTag(metric, language);
   const isWebList = base === "/web" && !compact;
   const scoreLayout = isWebList ? ("web" as const) : ("stack" as const);
-  const proSkinVariant =
-    nbaBoard === "open"
-      ? null
-      : rankingRowProSkinVariant(r.plan, r.planProBgVariant);
+  const proSkinVariant = rankingRowProSkinVariant(r.plan, r.planProBgVariant);
 
   return (
     <>

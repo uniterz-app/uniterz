@@ -175,14 +175,10 @@ export default function UniterzDailyScoreLeadersPanel({
                   photoURL={r.photoURL}
                   isPro={r.plan === "pro"}
                   proLabel={t(language as Language).common.proMember}
-                  planProBgVariant={
-                    division === "open"
-                      ? undefined
-                      : rankingRowProSkinVariant(
-                          r.plan,
-                          typeof r.planProBgVariant === "string" ? r.planProBgVariant : null
-                        )
-                  }
+                  planProBgVariant={rankingRowProSkinVariant(
+                    r.plan,
+                    typeof r.planProBgVariant === "string" ? r.planProBgVariant : null
+                  )}
                   countryCode={r.countryCode}
                   imageLoading={i < 8 ? "eager" : "lazy"}
                   sub={

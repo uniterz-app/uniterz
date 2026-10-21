@@ -21,7 +21,6 @@ function RankingRowCard({
   animateCrown = false,
   pageKey = "",
   reduceMotion = false,
-  hideProSkin = false,
 }: {
   row: RankingRowWithCountry;
   rank: number;
@@ -31,15 +30,14 @@ function RankingRowCard({
   animateCrown?: boolean;
   pageKey?: string;
   reduceMotion?: boolean;
-  /** PRO LEAGUE は全員 Pro なので、行ごとの Pro Skin を出さない */
-  hideProSkin?: boolean;
 }) {
   const countryCode = getCountryCode(row);
   const { n } = metricNum(row, metric);
   const isPro = row.plan === "pro";
-  const proSkinVariant = hideProSkin
-    ? null
-    : rankingRowProSkinVariant(row.plan, row.planProBgVariant);
+  const proSkinVariant = rankingRowProSkinVariant(
+    row.plan,
+    row.planProBgVariant
+  );
 
   return (
     <>
@@ -77,14 +75,12 @@ export function RankingsTopPodiumNative({
   language,
   onPressProfile,
   entranceKey,
-  hideProSkin = false,
 }: {
   rows: RankingRowWithCountry[];
   metric: MobileMetric;
   language: RankingsLanguage;
   onPressProfile?: (row: RankingRowWithCountry) => void;
   entranceKey: string | number;
-  hideProSkin?: boolean;
 }) {
   const reduced = useReducedMotion() ?? false;
   if (rows.length === 0) return null;
@@ -109,7 +105,6 @@ export function RankingsTopPodiumNative({
               animateCrown={rank === 1}
               pageKey={pageKey}
               reduceMotion={reduced}
-              hideProSkin={hideProSkin}
             />
           </RankingsPodiumEntranceRowNative>
         );
@@ -127,7 +122,6 @@ export function RankingListCardNative({
   animateCrown = false,
   pageKey = "",
   reduceMotion = false,
-  hideProSkin = false,
 }: {
   row: RankingRowWithCountry;
   rank: number;
@@ -137,7 +131,6 @@ export function RankingListCardNative({
   animateCrown?: boolean;
   pageKey?: string;
   reduceMotion?: boolean;
-  hideProSkin?: boolean;
 }) {
   return (
     <RankingRowCard
@@ -149,7 +142,6 @@ export function RankingListCardNative({
       animateCrown={animateCrown}
       pageKey={pageKey}
       reduceMotion={reduceMotion}
-      hideProSkin={hideProSkin}
     />
   );
 }
