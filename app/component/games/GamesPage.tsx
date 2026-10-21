@@ -69,6 +69,7 @@ import { nbaGamesDefaultDateKey } from "@/lib/games/nbaOpeningNightPreviewGames"
 import { loadPlayoffBracket } from "@/lib/playoff-bracket-firestore";
 import { getCurrentPlayoffSeason } from "@/lib/playoff-bracket-config";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
+import { useUserPlan } from "@/hooks/useUserPlan";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import { t } from "@/lib/i18n/t";
 import {
@@ -218,6 +219,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
   const deepLinkOpenPredictGameId = searchParams.get("openPredict");
 
   const { fUser: user } = useFirebaseUser();
+  const { isPro: isProUser, loading: planLoading } = useUserPlan(user?.uid);
   const [batchMode, setBatchMode] = useState(false);
   const [batchPickupOnly, setBatchPickupOnly] = useState(false);
   const [batchScores, setBatchScores] = useState<
@@ -859,6 +861,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
   }
 
   async function submitBatch() {
+    if (!isProUser) return;
     if (!batchReady) {
       setBatchMessage(batchCopy.needTwo);
       return;
@@ -912,6 +915,13 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
       setBatchBusy(false);
     }
   }
+
+  useEffect(() => {
+    if (planLoading || isProUser || !batchMode) return;
+    setBatchMessage(null);
+    setBatchPickupOnly(false);
+    setBatchMode(false);
+  }, [planLoading, isProUser, batchMode]);
 
   const prevSelectedDayKeyRef = useRef<string | null>(null);
   useEffect(() => {
@@ -1611,8 +1621,8 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
           isSwitchingDate ? "opacity-85" : "opacity-100",
         ].join(" ")}
       >
-        {user && batchDayRows.length >= 2 ? (
-          batchMode ? (
+        {user && batchDayRows.length >= 2 && !planLoading ? (
+          batchMode && isProUser ? (
             <CyberSlantedTabBar fill className="mb-1">
               <CyberSlantedTab
                 label={batchCopy.close}
@@ -1635,12 +1645,25 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
             <button
               type="button"
               onClick={() => {
+                if (!isProUser) {
+                  router.push(
+                    pathname?.startsWith("/web")
+                      ? "/web/pro/subscribe"
+                      : "/mobile/pro/subscribe"
+                  );
+                  return;
+                }
                 setBatchMessage(null);
                 setBatchMode(true);
               }}
-              className="mb-3 w-full border border-cyan-400/70 py-2 text-sm font-semibold tracking-wide text-cyan-300"
+              className="mb-3 flex w-full items-center justify-center gap-2 border border-cyan-400/70 py-2 text-sm font-semibold tracking-wide text-cyan-300"
             >
               {batchCopy.enter}
+              {!isProUser ? (
+                <span className="bg-cyan-300 px-1 text-[10px] font-extrabold tracking-widest text-black">
+                  PRO
+                </span>
+              ) : null}
             </button>
           )
         ) : null}
@@ -1657,7 +1680,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
           deepLinkOpenPredictGameId={deepLinkOpenPredictGameId}
           onBlockingUiChange={setScheduleBlockingUi}
           batchEdit={
-            batchMode
+            batchMode && isProUser
               ? {
                   ids: batchEligibleIds,
                   scores: batchScores,
@@ -1676,7 +1699,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
       </div>
       </TutorialWelcomeWorldCamera>
 
-      {batchMode ? (
+      {batchMode && isProUser ? (
         <div className="fixed inset-x-0 bottom-[max(5.5rem,env(safe-area-inset-bottom))] z-40 px-4">
           {batchMessage ? (
             <p className="mb-1 text-center text-xs text-cyan-100">{batchMessage}</p>

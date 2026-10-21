@@ -647,7 +647,7 @@ export default function GamesHomeScreen({
   const { unread: todayUniterzUnread } = useTodayUniterzUnreadNative(TODAY_UNITERZ_POLL_MS);
   const { topContentPadY } = useBottomTabBarInsets();
   const { fUser, status: authStatus } = useFirebaseUser();
-  const { isPro: isProUser } = useNativeUserPlan(fUser?.uid);
+  const { isPro: isProUser, loading: planLoading } = useNativeUserPlan(fUser?.uid);
   const seasonPredictPending = useSeasonPredictPending(db, fUser?.uid);
   const [preseasonNoticeGame, setPreseasonNoticeGame] = useState<Record<
     string,
@@ -992,6 +992,7 @@ export default function GamesHomeScreen({
   }
 
   async function submitBatch() {
+    if (!isProUser) return;
     if (!batchReady) {
       setBatchMessage(batchCopy.needTwo);
       return;
@@ -1451,10 +1452,10 @@ export default function GamesHomeScreen({
       {
         marginTop: 0,
         paddingTop: 0,
-        paddingBottom: spacing.xl + bottomReserveY + (batchMode ? 148 : 0),
+        paddingBottom: spacing.xl + bottomReserveY + (batchMode && isProUser ? 148 : 0),
       },
     ],
-    [bottomReserveY, batchMode]
+    [bottomReserveY, batchMode, isProUser]
   );
   const screenShellStyle = useMemo(
     () => [styles.card, { paddingTop: 0, flex: 1, zIndex: 1 }],
@@ -1945,6 +1946,13 @@ export default function GamesHomeScreen({
 
   const selectedDayKey = toDateKeyInTimeZone(selectedDate, dayTimeZone);
   batchModeRef.current = batchMode;
+
+  useEffect(() => {
+    if (planLoading || isProUser || !batchMode) return;
+    setBatchMessage(null);
+    setBatchPickupOnly(false);
+    setBatchMode(false);
+  }, [planLoading, isProUser, batchMode]);
 
   const prevSelectedDayKeyRef = useRef<string | null>(null);
   useEffect(() => {
@@ -3037,7 +3045,7 @@ export default function GamesHomeScreen({
       tutorialRegisterPickupLabel,
       shellVariant: "lineFrame",
       pickupMark: "left",
-      batchEdit: batchMode
+      batchEdit: batchMode && isProUser
         ? {
             ids: batchEligibleIds,
             scores: batchScores,
@@ -3069,6 +3077,7 @@ export default function GamesHomeScreen({
       tutorialPhase,
       tutorialRegisterPickupLabel,
       batchMode,
+      isProUser,
       batchEligibleIds,
       batchScores,
       batchScorers,
@@ -3278,8 +3287,8 @@ export default function GamesHomeScreen({
           {t.fetchError}: {error}
         </Text>
       ) : null}
-      {batchDayRows.length >= 2 && fUser ? (
-        batchMode ? (
+      {batchDayRows.length >= 2 && fUser && !planLoading ? (
+        batchMode && isProUser ? (
           <Animated.View
             entering={reduceMotion ? undefined : FadeIn.duration(200)}
             exiting={reduceMotion ? undefined : FadeOut.duration(160)}
@@ -3315,6 +3324,10 @@ export default function GamesHomeScreen({
           >
           <Pressable
             onPress={() => {
+              if (!isProUser) {
+                openProSubscribeNative();
+                return;
+              }
               setBatchMessage(null);
               setBatchFocusPick(undefined);
               setBatchMode(true);
@@ -3325,11 +3338,28 @@ export default function GamesHomeScreen({
               borderColor: "rgba(0,245,255,0.7)",
               paddingVertical: 10,
               alignItems: "center",
+              flexDirection: "row",
+              justifyContent: "center",
+              gap: 8,
             }}
           >
             <Text style={{ color: "#00F5FF", fontWeight: "700", fontSize: 13 }}>
               {batchCopy.enter}
             </Text>
+            {!isProUser ? (
+              <Text
+                style={{
+                  color: "#050508",
+                  backgroundColor: "#00F5FF",
+                  fontWeight: "800",
+                  fontSize: 10,
+                  letterSpacing: 1,
+                  paddingHorizontal: 4,
+                }}
+              >
+                PRO
+              </Text>
+            ) : null}
           </Pressable>
           </Animated.View>
         )
@@ -3596,7 +3626,7 @@ export default function GamesHomeScreen({
           onNo={(d) => void handleNextGameModalNo(d)}
         />
       ) : null}
-      {batchMode ? (
+      {batchMode && isProUser ? (
         <Animated.View
           entering={reduceMotion ? undefined : FadeInDown.duration(220)}
           exiting={reduceMotion ? undefined : FadeOutDown.duration(180)}

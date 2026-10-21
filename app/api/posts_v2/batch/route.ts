@@ -12,6 +12,7 @@ import {
   batchPredictGameDayKey,
   sanitizePredictionBody,
 } from "@/lib/predict/batchPredict";
+import { assertProUser } from "@/lib/pro/assertProUser";
 
 function gameStartMillis(v: unknown): number | null {
   if (v && typeof v === "object" && typeof (v as { toMillis?: unknown }).toMillis === "function") {
@@ -58,6 +59,10 @@ export async function POST(req: Request) {
     } catch (e: unknown) {
       console.error("[POST /api/posts_v2/batch] auth", e);
       return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
+    }
+
+    if (!(await assertProUser(uid))) {
+      return NextResponse.json({ ok: false, error: "pro_required" }, { status: 403 });
     }
 
     const adminDb = getAdminDb();
