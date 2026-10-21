@@ -13,6 +13,7 @@ import {
 import { enrichGamePointsTopFromUsers } from "./enrichGamePointsTopFromUsers";
 import { buildTopScorerMarketEmbedFromPostsSnap } from "./buildTopScorerMarketEmbed";
 import { updateUserStreak } from "./updateUserStreak";
+import { markStreakApplied, waitForEarlierStreakGames } from "./streakOrder";
 import { updateTeamStats } from "./updateTeamStats";
 import { updateTeamSeasonRecord } from "./updateTeamSeasonRecord";
 import { notifyGameFinalPush } from "./notifications/notifyPushEvents";
@@ -105,7 +106,10 @@ export const onGameFinalV2 = onDocumentWritten(
       gameId,
       after,
     });
-    if (!ctx) return;
+    if (!ctx) {
+      await markStreakApplied(firestore, gameId);
+      return;
+    }
 
     const {
       game,
@@ -119,8 +123,10 @@ export const onGameFinalV2 = onDocumentWritten(
       awayWins,
     } = ctx;
 
-    if (!game.final) return;
-    if (game.homeScore == null || game.awayScore == null) return;
+    if (!game.final || game.homeScore == null || game.awayScore == null) {
+      await markStreakApplied(firestore, gameId);
+      return;
+    }
 
     const settlementGame: SettlementGameInput = {
       homeScore: game.homeScore,
@@ -146,6 +152,10 @@ export const onGameFinalV2 = onDocumentWritten(
 
     if (becameFinal) {
       if (!isNbaPreseasonPhase(game.seasonPhase)) {
+        await waitForEarlierStreakGames(firestore, gameId, {
+          league: game.league,
+          finalAt: after.finalAt,
+        });
         streakResultMap = await updateUserStreak({
           db: firestore,
           gameId,
@@ -153,6 +163,7 @@ export const onGameFinalV2 = onDocumentWritten(
           postsSnap,
         });
       }
+      await markStreakApplied(firestore, gameId);
 
       const skipTeamSeasonRecord = isExemptFromTeamSeasonRecord(game.knockout);
 
