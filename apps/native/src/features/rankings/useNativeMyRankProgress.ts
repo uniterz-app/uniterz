@@ -14,8 +14,9 @@ const cache = new Map<string, { at: number; points: MyRankProgressPoint[] }>();
 function cacheKey(input: {
   uid: string;
   rankingLeague: RankingLeagueSource;
+  division: "pickup" | "open";
 }): string {
-  return [input.uid, input.rankingLeague].join(":");
+  return [input.uid, input.rankingLeague, input.division].join(":");
 }
 
 export function useNativeMyRankProgress(input: {
@@ -23,10 +24,13 @@ export function useNativeMyRankProgress(input: {
   enabled: boolean;
   rankingLeague: RankingLeagueSource;
   wcStage?: unknown;
+  /** open は PRO LEAGUE の日次順位 */
+  division?: "pickup" | "open";
   seedPoints?: MyRankProgressPoint[] | null;
   seedComplete?: boolean;
 }): { points: MyRankProgressPoint[] | null; loading: boolean } {
   const { uid, enabled, rankingLeague } = input;
+  const division = input.division === "open" ? "open" : "pickup";
   const seedComplete = input.seedComplete === true;
   const seedPoints = input.seedPoints;
 
@@ -44,14 +48,14 @@ export function useNativeMyRankProgress(input: {
 
     if (seedComplete) {
       setState({
-        key: cacheKey({ uid, rankingLeague }),
+        key: cacheKey({ uid, rankingLeague, division }),
         points: seedPoints ?? [],
         loading: false,
       });
       return;
     }
 
-    const key = cacheKey({ uid, rankingLeague });
+    const key = cacheKey({ uid, rankingLeague, division });
     const cached = cache.get(key);
     if (cached && Date.now() - cached.at < CACHE_TTL_MS) {
       setState({ key, points: cached.points, loading: false });
@@ -63,7 +67,10 @@ export function useNativeMyRankProgress(input: {
 
     void (async () => {
       try {
-        const rows = await fetchRankPlayoffTrend(uid, { rankingLeague });
+        const rows = await fetchRankPlayoffTrend(uid, {
+          rankingLeague,
+          division,
+        });
         const points: MyRankProgressPoint[] = rows.map((r) => ({
           dateKey: r.dateKey,
           rank: r.rank,
@@ -78,7 +85,7 @@ export function useNativeMyRankProgress(input: {
     return () => {
       aborted = true;
     };
-  }, [enabled, uid, rankingLeague, seedComplete, seedPoints]);
+  }, [division, enabled, uid, rankingLeague, seedComplete, seedPoints]);
 
   return { points: state.points, loading: state.loading };
 }

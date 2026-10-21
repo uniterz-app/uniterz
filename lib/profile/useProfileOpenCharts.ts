@@ -15,6 +15,7 @@ import {
   type ProfileChartsRankPoint,
 } from "@/lib/profile/profileChartsBundle";
 import type { ProfileDailyTrendRow } from "@/lib/profile/profileDailyTrendRow";
+import { fetchNbaSeasonRankTrendFirestore } from "@/lib/profile/fetchNbaSeasonRankTrendFirestore";
 import { loadProfileChartsBundleClient } from "@/lib/profile/profileChartsStorage";
 import { profileOverviewSeasonKey } from "@/lib/profile/profileOverviewSeason";
 
@@ -71,13 +72,24 @@ export function useProfileOpenCharts(
     setState({ ...EMPTY, loading: true });
     const seasonKey = profileOverviewSeasonKey();
     void loadProfileChartsBundleClient(db, safeUid, seasonKey, null, "open")
-      .then((bundle) => {
+      .then(async (bundle) => {
         if (cancelled) return;
         const b = bundle ?? emptyProfileChartsBundle(seasonKey);
+        let rankTrend = b.rankTrend ?? [];
+        if (rankTrend.length === 0) {
+          const history = await fetchNbaSeasonRankTrendFirestore(safeUid, "open");
+          if (!cancelled && history.length > 0) {
+            rankTrend = history.map((p) => ({
+              dateKey: p.dateKey,
+              rank: p.rank,
+            }));
+          }
+        }
+        if (cancelled) return;
         setState({
           loading: false,
           dailyTrend: b.dailyTrend ?? [],
-          rankTrend: b.rankTrend ?? [],
+          rankTrend,
           last20: b.last20 ?? [],
         });
       })

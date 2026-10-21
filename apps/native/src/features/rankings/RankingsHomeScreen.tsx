@@ -240,6 +240,7 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
       uid: myUid,
       enabled: rankProgressEnabled,
       rankingLeague: rankingLeagueSource,
+      division: nbaBoard === "open" ? "open" : "pickup",
       wcStage: null,
       seedPoints: myRankCardFastEnabled ? cardFast.rankProgressPoints : null,
       seedComplete:

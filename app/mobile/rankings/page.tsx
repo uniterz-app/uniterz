@@ -415,6 +415,7 @@ export default function MobileRankingsPage() {
       uid: myUid,
       enabled: rankProgressEnabled,
       rankingLeague,
+      division: nbaBoard === "open" ? "open" : "pickup",
       wcStage: wcStageForHook,
       seedPoints: myRankCardFastEnabled ? cardFast.rankProgressPoints : null,
       seedComplete:

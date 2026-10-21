@@ -14,8 +14,12 @@ const CACHE_TTL_MS = 5 * 60 * 1000;
 
 const cache = new Map<string, { at: number; points: MyRankProgressPoint[] }>();
 
-function cacheKey(input: { uid: string; rankingLeague: RankingLeagueSource }): string {
-  return [input.uid, input.rankingLeague].join(":");
+function cacheKey(input: {
+  uid: string;
+  rankingLeague: RankingLeagueSource;
+  division: "pickup" | "open";
+}): string {
+  return [input.uid, input.rankingLeague, input.division].join(":");
 }
 
 function normalizePoints(raw: unknown): MyRankProgressPoint[] {
@@ -37,11 +41,14 @@ export function useMyRankProgress(input: {
   enabled: boolean;
   rankingLeague: RankingLeagueSource;
   wcStage?: unknown;
+  /** open は PRO LEAGUE の日次順位 */
+  division?: "pickup" | "open";
   /** cumulative profileCharts.rankTrend */
   seedPoints?: MyRankProgressPoint[] | null;
   seedComplete?: boolean;
 }): { points: MyRankProgressPoint[] | null; loading: boolean } {
   const { uid, enabled, rankingLeague } = input;
+  const division = input.division === "open" ? "open" : "pickup";
   const seedComplete = input.seedComplete === true;
   const seedPoints = input.seedPoints;
 
@@ -59,14 +66,14 @@ export function useMyRankProgress(input: {
 
     if (seedComplete) {
       setState({
-        key: cacheKey({ uid, rankingLeague }),
+        key: cacheKey({ uid, rankingLeague, division }),
         points: seedPoints ?? [],
         loading: false,
       });
       return;
     }
 
-    const key = cacheKey({ uid, rankingLeague });
+    const key = cacheKey({ uid, rankingLeague, division });
     const cached = cache.get(key);
     if (cached && Date.now() - cached.at < CACHE_TTL_MS) {
       setState({ key, points: cached.points, loading: false });
@@ -76,7 +83,7 @@ export function useMyRankProgress(input: {
     let aborted = false;
     setState({ key, points: null, loading: true });
 
-    const params = new URLSearchParams({ uid, phase: "playoffs" });
+    const params = new URLSearchParams({ uid, phase: "playoffs", division });
 
     (async () => {
       try {
@@ -97,7 +104,7 @@ export function useMyRankProgress(input: {
     return () => {
       aborted = true;
     };
-  }, [enabled, uid, rankingLeague, seedComplete, seedPoints]);
+  }, [division, enabled, uid, rankingLeague, seedComplete, seedPoints]);
 
   return { points: state.points, loading: state.loading };
 }

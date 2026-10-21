@@ -125,7 +125,8 @@ export function chartsFromLoadedBundle(
   const seasonActive =
     hasNbaSeasonActivity ??
     cumulativeHasNbaSeasonActivity(data, overviewSeasonKey);
-  if (!PROFILE_OVERVIEW_USE_PREVIOUS_SEASON && !seasonActive) {
+  const hasRankPoints = (parsed?.rankTrend?.length ?? 0) > 0;
+  if (!PROFILE_OVERVIEW_USE_PREVIOUS_SEASON && !seasonActive && !hasRankPoints) {
     return {
       profileCharts: emptyProfileChartsBundle(overviewSeasonKey),
       chartsPath: "empty-season",

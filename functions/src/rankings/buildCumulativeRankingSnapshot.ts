@@ -186,15 +186,50 @@ function sliceFromBucket(
   };
 }
 
+const SEASON_MAP_PREFIXES = [
+  "rankingBySeason",
+  "openRankingBySeason",
+  "rankingByNbaPlayoffs",
+] as const;
+
+/**
+ * increment のドット名（`rankingBySeason.2026-27.totalPosts`）が
+ * ネストされず残っている doc も、マップとして読む。
+ * ネスト側に値があればそちらを優先する。
+ */
+function seasonMapFromDoc(
+  d: Record<string, unknown>,
+  prefix: (typeof SEASON_MAP_PREFIXES)[number]
+): Record<string, Record<string, unknown>> {
+  const nested = (d[prefix] ?? {}) as Record<string, Record<string, unknown>>;
+  const merged: Record<string, Record<string, unknown>> = {};
+  for (const [seasonKey, bucket] of Object.entries(nested)) {
+    if (bucket && typeof bucket === "object") merged[seasonKey] = { ...bucket };
+  }
+  const head = `${prefix}.`;
+  for (const key of Object.keys(d)) {
+    if (!key.startsWith(head)) continue;
+    const rest = key.slice(head.length);
+    const dot = rest.indexOf(".");
+    if (dot <= 0) continue;
+    const seasonKey = rest.slice(0, dot);
+    const field = rest.slice(dot + 1);
+    if (!field || field.includes(".")) continue;
+    const val = d[key];
+    if (typeof val !== "number" || !Number.isFinite(val)) continue;
+    const bucket = merged[seasonKey] ?? {};
+    if (bucket[field] == null) bucket[field] = val;
+    merged[seasonKey] = bucket;
+  }
+  return merged;
+}
+
 /** NBA 現行シーズンのスライス（rankingBySeason.<CURRENT_NBA_SEASON_KEY>） */
 export function nbaSeasonRankingSlice(
   d: Record<string, unknown>,
   seasonKey: string = CURRENT_NBA_SEASON_KEY
 ): RankingSliceTotals {
-  const bySeason = d.rankingBySeason as
-    | Record<string, Record<string, unknown>>
-    | undefined;
-  return sliceFromBucket(bySeason?.[seasonKey]);
+  return sliceFromBucket(seasonMapFromDoc(d, "rankingBySeason")[seasonKey]);
 }
 
 /** PRO LEAGUE 用。openRankingBySeason 優先、未移行は rankingBySeason にフォールバック */
@@ -202,10 +237,9 @@ export function nbaOpenSeasonRankingSlice(
   d: Record<string, unknown>,
   seasonKey: string = CURRENT_NBA_SEASON_KEY
 ): RankingSliceTotals {
-  const openBySeason = d.openRankingBySeason as
-    | Record<string, Record<string, unknown>>
-    | undefined;
-  const open = sliceFromBucket(openBySeason?.[seasonKey]);
+  const open = sliceFromBucket(
+    seasonMapFromDoc(d, "openRankingBySeason")[seasonKey]
+  );
   if ((open.totalPosts ?? 0) > 0) return open;
   return nbaSeasonRankingSlice(d, seasonKey);
 }
@@ -333,10 +367,7 @@ function toSnapshotMetricValues(r: {
 
 function buildMetricValuesBlock(d: Record<string, unknown>): HistoryMetricValuesBlock {
   const seasons: Partial<Record<string, SnapshotMetricValues>> = {};
-  const bySeason = (d.rankingBySeason ?? {}) as Record<
-    string,
-    Record<string, unknown>
-  >;
+  const bySeason = seasonMapFromDoc(d, "rankingBySeason");
   for (const [seasonKey, bucket] of Object.entries(bySeason)) {
     const slice = sliceFromBucket(bucket);
     if (slice.totalPosts > 0) {
@@ -754,7 +785,16 @@ export async function buildCumulativeRankingSnapshot(
 
   // 無差別級（Pro のみ）シーズンスナップショット
   const openBaseRows = baseRowsForOpenSeason;
-  /** PRO LEAGUE の Ranking Progress 用（totalPoints 順位） */
+  /** PRO LEAGUE の指標別順位。Ranking Progress は totalPoints を openSeasons に残す */
+  const openRankByUid = new Map<string, PhaseRankMap>();
+  const ensureOpen = (uid: string): PhaseRankMap => {
+    let row = openRankByUid.get(uid);
+    if (!row) {
+      row = {};
+      openRankByUid.set(uid, row);
+    }
+    return row;
+  };
   const openTotalPointsRankByUid = new Map<string, number>();
   for (const metric of METRICS) {
     const eligibleRows = filterRowsForMetricEligibility(openBaseRows, metric, {
@@ -770,7 +810,10 @@ export async function buildCumulativeRankingSnapshot(
     );
     const ranksMap = assignCompetitionRanks(sortedFull, metric);
     const ranks: Record<string, number> = {};
-    for (const [uid, rank] of ranksMap) ranks[uid] = rank;
+    for (const [uid, rank] of ranksMap) {
+      ranks[uid] = rank;
+      ensureOpen(uid)[metric] = rank;
+    }
     if (metric === "totalPoints") {
       for (const [uid, rank] of ranksMap) openTotalPointsRankByUid.set(uid, rank);
     }
@@ -898,6 +941,7 @@ export async function buildCumulativeRankingSnapshot(
   );
   for (const [uid, totalPointsRank] of openTotalPointsRankByUid) {
     if (!Number.isFinite(totalPointsRank) || totalPointsRank <= 0) continue;
+    const openRanks = openRankByUid.get(uid) ?? { totalPoints: totalPointsRank };
     const charts = mergeProfileChartsOnRankSnapshot({
       cumulative: null,
       chartsDoc: openChartsByUid.get(uid) ?? null,
@@ -905,16 +949,28 @@ export async function buildCumulativeRankingSnapshot(
       dateKey,
       totalPointsRank,
     });
+    const cumRef = firestore.collection("cumulative_stats").doc(uid);
     batch.set(
-      firestore
-        .collection("cumulative_stats")
-        .doc(uid)
-        .collection(PROFILE_CHARTS_SUBCOL)
-        .doc(openChartsDocId),
+      cumRef.collection(PROFILE_CHARTS_SUBCOL).doc(openChartsDocId),
       profileChartsSubdocMergeFields(charts),
       { merge: true }
     );
-    ops += 1;
+    batch.set(
+      cumRef.collection(RANK_SNAPSHOT_HISTORY_SUBCOL).doc(dateKey),
+      {
+        dateKey,
+        openSeasons: { [seasonKey]: openRanks },
+      },
+      { merge: true }
+    );
+    batch.set(
+      cumRef,
+      {
+        [`snapshotRanks.openSeasons.${seasonKey}`]: openRanks,
+      },
+      { merge: true }
+    );
+    ops += 3;
     if (ops >= 500) {
       await flush();
     }

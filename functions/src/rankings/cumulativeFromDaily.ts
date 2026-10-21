@@ -136,10 +136,43 @@ function bucketToInc(
 }
 
 /** 1投稿ぶんの加算/減算（sign = 1 | -1）を cumulative_stats 用 FieldValue に変換 */
+/**
+ * increment は DocumentTransform がドットを分割しない。
+ * `"rankingBySeason.2026-27.totalPosts"` のように書くと、ネストではなく
+ * ドットを含むフィールド名になり、スナップショットが読めなくなる。
+ * 必ずネストしたオブジェクトで渡す。
+ */
+function rankingIncrementBlock(opts: {
+  posts: number;
+  wins: number;
+  points: number;
+  upset: number;
+  goalScorer?: number;
+  upsetBonus: number;
+  streakBonus: number;
+}): Record<string, FieldValue> {
+  const block: Record<string, FieldValue> = {
+    totalPosts: FieldValue.increment(opts.posts),
+    totalWins: FieldValue.increment(opts.wins),
+    totalPoints: FieldValue.increment(opts.points),
+    totalUpset: FieldValue.increment(opts.upset),
+  };
+  if (opts.goalScorer != null) {
+    block.totalGoalScorerHits = FieldValue.increment(opts.goalScorer);
+  }
+  if (opts.upsetBonus !== 0) {
+    block.upsetBonusSum = FieldValue.increment(opts.upsetBonus);
+  }
+  if (opts.streakBonus !== 0) {
+    block.streakBonusSum = FieldValue.increment(opts.streakBonus);
+  }
+  return block;
+}
+
 export function buildCumulativeIncrementFields(
   contrib: PostCumulativeContribution,
   sign: 1 | -1 = 1
-): Record<string, FieldValue> {
+): Record<string, unknown> {
   const s = sign;
   const posts = s;
   const wins = contrib.isWin ? s : 0;
@@ -149,7 +182,7 @@ export function buildCumulativeIncrementFields(
   const upsetBonus = safeRankMetricNum(contrib.upsetBonus) * s;
   const streakBonus = safeRankMetricNum(contrib.streakBonus) * s;
 
-  const out: Record<string, FieldValue> = {
+  const out: Record<string, unknown> = {
     totalPosts: FieldValue.increment(posts),
     totalWins: FieldValue.increment(wins),
     totalPoints: FieldValue.increment(points),
@@ -158,67 +191,48 @@ export function buildCumulativeIncrementFields(
   if (upsetBonus !== 0) out.upsetBonusSum = FieldValue.increment(upsetBonus);
   if (streakBonus !== 0) out.streakBonusSum = FieldValue.increment(streakBonus);
 
-  const applyBonusToPath = (path: string) => {
-    if (upsetBonus !== 0) {
-      out[`${path}.upsetBonusSum`] = FieldValue.increment(upsetBonus);
-    }
-    if (streakBonus !== 0) {
-      out[`${path}.streakBonusSum`] = FieldValue.increment(streakBonus);
-    }
-  };
-
-  const applySeasonPaths = (prefix: "rankingBySeason" | "openRankingBySeason") => {
-    if (!contrib.nbaSeasonKey) return;
-    const p = `${prefix}.${contrib.nbaSeasonKey}`;
-    out[`${p}.totalPosts`] = FieldValue.increment(posts);
-    out[`${p}.totalWins`] = FieldValue.increment(wins);
-    out[`${p}.totalPoints`] = FieldValue.increment(points);
-    out[`${p}.totalUpset`] = FieldValue.increment(upset);
-    out[`${p}.totalGoalScorerHits`] = FieldValue.increment(goalScorer);
-    applyBonusToPath(p);
-  };
+  const flatBlock = () =>
+    rankingIncrementBlock({
+      posts,
+      wins,
+      points,
+      upset,
+      upsetBonus,
+      streakBonus,
+    });
+  const seasonBlock = () =>
+    rankingIncrementBlock({
+      posts,
+      wins,
+      points,
+      upset,
+      goalScorer,
+      upsetBonus,
+      streakBonus,
+    });
 
   // Pick Up（standard）
   if (contrib.forRanking) {
     out[CUMULATIVE_RANKING_TOTAL_POSTS_FIELD] = FieldValue.increment(posts);
-
-    out["ranking.totalPosts"] = FieldValue.increment(posts);
-    out["ranking.totalWins"] = FieldValue.increment(wins);
-    out["ranking.totalPoints"] = FieldValue.increment(points);
-    out["ranking.totalUpset"] = FieldValue.increment(upset);
-    if (upsetBonus !== 0) {
-      out["ranking.upsetBonusSum"] = FieldValue.increment(upsetBonus);
+    out.ranking = flatBlock();
+    if (contrib.nbaSeasonKey) {
+      out.rankingBySeason = { [contrib.nbaSeasonKey]: seasonBlock() };
     }
-    if (streakBonus !== 0) {
-      out["ranking.streakBonusSum"] = FieldValue.increment(streakBonus);
-    }
-    applySeasonPaths("rankingBySeason");
   }
 
   // PRO LEAGUE（open）— 全試合
   if (contrib.forOpenRanking) {
-    out["openRanking.totalPosts"] = FieldValue.increment(posts);
-    out["openRanking.totalWins"] = FieldValue.increment(wins);
-    out["openRanking.totalPoints"] = FieldValue.increment(points);
-    out["openRanking.totalUpset"] = FieldValue.increment(upset);
-    if (upsetBonus !== 0) {
-      out["openRanking.upsetBonusSum"] = FieldValue.increment(upsetBonus);
+    out.openRanking = flatBlock();
+    if (contrib.nbaSeasonKey) {
+      out.openRankingBySeason = { [contrib.nbaSeasonKey]: seasonBlock() };
     }
-    if (streakBonus !== 0) {
-      out["openRanking.streakBonusSum"] = FieldValue.increment(streakBonus);
-    }
-    applySeasonPaths("openRankingBySeason");
   }
 
   // プレーオフはピックアップ対象外 → ランキング対象の全試合
   if (contrib.forPlayoffsRanking && contrib.nbaPlayoffsSeasonKey) {
-    const p = `rankingByNbaPlayoffs.${contrib.nbaPlayoffsSeasonKey}`;
-    out[`${p}.totalPosts`] = FieldValue.increment(posts);
-    out[`${p}.totalWins`] = FieldValue.increment(wins);
-    out[`${p}.totalPoints`] = FieldValue.increment(points);
-    out[`${p}.totalUpset`] = FieldValue.increment(upset);
-    out[`${p}.totalGoalScorerHits`] = FieldValue.increment(goalScorer);
-    applyBonusToPath(p);
+    out.rankingByNbaPlayoffs = {
+      [contrib.nbaPlayoffsSeasonKey]: seasonBlock(),
+    };
   }
 
   return out;

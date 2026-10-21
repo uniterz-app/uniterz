@@ -50,8 +50,11 @@ export async function GET(req: Request) {
       );
     }
 
+    const divisionParam = searchParams.get("division");
+    const division = divisionParam === "open" ? "open" : "pickup";
     const points = await buildRankPlayoffTrendPoints(resolvedUid, {
       rankingLeague,
+      division,
     });
 
     return NextResponse.json({

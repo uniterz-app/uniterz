@@ -32,6 +32,7 @@ import {
   fetchNbaProfileOverviewChartsFirestore,
   type NbaProfileCardPhaseFirestore,
 } from "./fetchNbaProfileCardPhaseFirestore";
+import { fetchNbaSeasonRankTrendFirestore } from "../../../../../lib/profile/fetchNbaSeasonRankTrendFirestore";
 import { loadProfileUserDocNative } from "./profileUserDocCacheNative";
 import {
   ensureNbaTodayGamesSettled,
@@ -251,6 +252,17 @@ function chartsRowsFromBundle(charts: ProfileChartsBundle | null) {
   };
 }
 
+/** profileCharts.rankTrend が空でも rankSnapshotHistory をチャートに載せる */
+async function withRankSnapshotHistory(
+  uid: string,
+  rows: ReturnType<typeof chartsRowsFromBundle>
+): Promise<ReturnType<typeof chartsRowsFromBundle>> {
+  if (rows.rankTrend.length > 0) return rows;
+  const history = await fetchNbaSeasonRankTrendFirestore(uid);
+  if (history.length === 0) return rows;
+  return { ...rows, rankTrend: history };
+}
+
 async function resolveNbaHeroSummary(
   targetUid: string,
   rankingLeague: RankingLeagueSource,
@@ -300,11 +312,12 @@ async function fetchOverviewChartsOnly(
   });
 }
 
-function commitChartsToStatsCache(
+async function commitChartsToStatsCache(
   cacheKey: string,
+  uid: string,
   charts: ProfileChartsBundle | null
-): ReturnType<typeof chartsRowsFromBundle> {
-  const rows = chartsRowsFromBundle(charts);
+): Promise<ReturnType<typeof chartsRowsFromBundle>> {
+  const rows = await withRankSnapshotHistory(uid, chartsRowsFromBundle(charts));
   mergeCacheEntry(cacheKey, rows);
   return rows;
 }
@@ -480,7 +493,7 @@ export async function prefetchNativeProfileCharts(
   try {
     const chartsResult = await fetchOverviewChartsOnly(safeUid, hasActivity);
     if (!cached?.summary) return;
-    commitChartsToStatsCache(cacheKey, chartsResult.profileCharts);
+    await commitChartsToStatsCache(cacheKey, safeUid, chartsResult.profileCharts);
   } catch {
     /* ignore */
   }
@@ -614,8 +627,9 @@ export function useNativeProfileStats(
             hasNbaActivityFromSummary(cached.summary)
           );
           if (cancelled) return;
-          const rows = commitChartsToStatsCache(
+          const rows = await commitChartsToStatsCache(
             cacheKey,
+            targetUid,
             chartsResult.profileCharts
           );
           setState((prev) => ({
@@ -674,8 +688,9 @@ export function useNativeProfileStats(
             hasNbaActivityFromSummary(cached.summary)
           );
           if (cancelled) return;
-          const rows = commitChartsToStatsCache(
+          const rows = await commitChartsToStatsCache(
             cacheKey,
+            targetUid,
             chartsResult.profileCharts
           );
           setState((prev) => ({
@@ -786,7 +801,10 @@ export function useNativeProfileStats(
           if (cancelled) return;
 
           const charts = chartsResult.profileCharts;
-          const rows = chartsRowsFromBundle(charts);
+          const rows = await withRankSnapshotHistory(
+            targetUid,
+            chartsRowsFromBundle(charts)
+          );
 
           if (!isProfileChartsComplete(charts)) {
             if (__DEV__) {

@@ -542,17 +542,18 @@ export async function resolveProfileDailyTrend(
  * 本人プロフィール用: rankSnapshotHistory を現行シーズンキーのみで読む。
  */
 export async function fetchNbaSeasonRankTrendFirestore(
-  uid: string
+  uid: string,
+  division: "pickup" | "open" = "pickup"
 ): Promise<RankPlayoffTrendPointNative[]> {
-  return fetchNbaSeasonRankTrendFirestoreShared(uid);
+  return fetchNbaSeasonRankTrendFirestoreShared(uid, division);
 }
 
 /** NBA は cumulative_stats / rankSnapshotHistory 公開読取（本番 API 不要） */
 export async function fetchRankPlayoffTrend(
   uid: string,
-  _ctx?: ProfileStatsStreakContext
+  ctx?: ProfileStatsStreakContext & { division?: "pickup" | "open" }
 ): Promise<RankPlayoffTrendPointNative[]> {
-  return fetchNbaSeasonRankTrendFirestore(uid);
+  return fetchNbaSeasonRankTrendFirestore(uid, ctx?.division ?? "pickup");
 }
 
 /** 欠けた profileCharts をサーバーで埋めて返す（以降は cumulative 1 read） */

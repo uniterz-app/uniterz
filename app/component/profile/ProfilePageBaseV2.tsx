@@ -115,7 +115,8 @@ export default function ProfilePageBaseV2({ handle, variant = "web" }: Props) {
     profileDailyTrendSeed: overview.dailyTrend,
     profileDailyTrendSeedComplete: !overview.loading,
     profileRankTrendSeed: overview.rankTrend,
-    profileRankTrendSeedComplete: !overview.loading,
+    profileRankTrendSeedComplete:
+      !overview.loading && overview.rankTrend.length > 0,
     profileLast20Seed: overview.loading ? undefined : overview.last20,
     profileStatsContext,
   };

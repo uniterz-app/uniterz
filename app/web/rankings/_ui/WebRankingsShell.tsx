@@ -370,6 +370,7 @@ export default function WebRankingsShell() {
       uid: myUid,
       enabled: rankProgressEnabled,
       rankingLeague,
+      division: nbaBoard === "open" ? "open" : "pickup",
       wcStage: wcStageForHook,
     });
 
