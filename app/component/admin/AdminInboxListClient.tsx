@@ -116,6 +116,7 @@ export default function AdminInboxListClient({ kind, itemHref }: Props) {
                     </span>
                   ) : null}
                   {c.userDisplayName ? <span>@{c.userDisplayName}</span> : null}
+                  {c.deviceModel ? <span>{c.deviceModel}</span> : null}
                 </div>
                 <p className="mt-1 text-[11px] text-white/35">
                   {formatAdminInboxDate(c.createdAtMs, isJa ? "ja" : "en")}

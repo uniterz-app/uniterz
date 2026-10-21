@@ -9,6 +9,11 @@ import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import { t } from "@/lib/i18n/t";
 import {
+  CONTACT_DEVICE_KINDS,
+  contactDeviceKindLabel,
+  type ContactDeviceKind,
+} from "@/lib/support/contactDevice";
+import {
   CONTACT_TYPE_OPTIONS,
   type ContactType,
 } from "@/lib/support/contactTypes";
@@ -68,6 +73,7 @@ export default function ContactForm({
     email: "",
     message: "",
     screenshotUrl: "",
+    deviceKind: "" as "" | ContactDeviceKind,
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -127,6 +133,10 @@ export default function ContactForm({
   const validate = () => {
     const newErrors: Record<string, string> = {};
 
+    if (!form.deviceKind) {
+      newErrors.device = m.support.validationDeviceRequired;
+    }
+
     if (!form.message.trim()) {
       newErrors.message = m.support.validationRequired;
     } else if (form.message.trim().length < 10) {
@@ -151,7 +161,7 @@ export default function ContactForm({
     e.preventDefault();
 
     if (!validate()) return;
-    if (!user?.uid) return;
+    if (!user?.uid || !form.deviceKind) return;
 
     setSubmitting(true);
     setSubmitError(null);
@@ -169,16 +179,28 @@ export default function ContactForm({
         appVariant: variant,
         userUid: user.uid,
         userDisplayName: user.displayName ?? null,
+        deviceKind: form.deviceKind,
       });
 
       setSubmitted(true);
-      setForm({ type: initialType, email: "", message: "", screenshotUrl: "" });
+      setForm({
+        type: initialType,
+        email: "",
+        message: "",
+        screenshotUrl: "",
+        deviceKind: "",
+      });
       setPreviewUrl(null);
       setSelectedFile(null);
 
     } catch (err) {
       console.error(err);
-      setSubmitError(m.support.sendFailed);
+      const code = err instanceof Error ? err.message : "";
+      setSubmitError(
+        code === "invalid_device"
+          ? m.support.validationDeviceRequired
+          : m.support.sendFailed
+      );
     } finally {
       setSubmitting(false);
     }
@@ -257,6 +279,32 @@ export default function ContactForm({
           </select>
         </div>
       )}
+
+      <div className="space-y-1.5">
+        <label className={labelClass}>{m.support.deviceLabel}</label>
+        <select
+          value={form.deviceKind}
+          onChange={(e) =>
+            setForm({
+              ...form,
+              deviceKind: e.target.value as "" | ContactDeviceKind,
+            })
+          }
+          className={fieldClass}
+        >
+          <option value="" disabled className="bg-black text-white">
+            {m.support.devicePlaceholder}
+          </option>
+          {CONTACT_DEVICE_KINDS.map((kind) => (
+            <option key={kind} value={kind} className="bg-black text-white">
+              {contactDeviceKindLabel(kind)}
+            </option>
+          ))}
+        </select>
+        {errors.device ? (
+          <p className="text-[11px] text-white/80">{errors.device}</p>
+        ) : null}
+      </div>
 
       {/* メール */}
       <div className="space-y-1.5">

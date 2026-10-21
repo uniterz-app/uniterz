@@ -10,6 +10,7 @@ export type SubmitContactParams = {
   appVariant?: "web" | "mobile";
   userUid: string | null;
   userDisplayName: string | null;
+  deviceKind: string;
 };
 
 export async function submitContact(params: SubmitContactParams) {
@@ -32,6 +33,7 @@ export async function submitContact(params: SubmitContactParams) {
       fromPath: params.fromPath,
       appVariant: params.appVariant,
       userDisplayName: params.userDisplayName,
+      deviceKind: params.deviceKind,
     }),
   });
   const json = (await res.json().catch(() => null)) as {

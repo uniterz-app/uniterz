@@ -14,6 +14,8 @@ export type ContactDoc = {
   message: string;                // 本文（必須）
   email?: string | null;          // メールアドレス（任意）
   screenshotUrl?: string | null;  // 関連URL / スクショURL（任意）
+  deviceKind?: string | null;     // apple / google_play（必須）
+  deviceModel?: string | null;    // 表示名（Apple / Google Play）
 
   // コンテキスト情報
   fromPath?: string | null;       // フォームを開いた画面のパス

@@ -76,6 +76,11 @@ export default function AdminInboxDetailClient({ contactId }: Props) {
             {isJa ? "メール" : "Email"}：{row.email}
           </p>
         ) : null}
+        {row.deviceModel ? (
+          <p className="text-sm text-white">
+            {isJa ? "ストア" : "Store"}：{row.deviceModel}
+          </p>
+        ) : null}
         <p className="text-xs text-white/45">
           {formatAdminInboxDate(row.createdAtMs, isJa ? "ja" : "en")}
         </p>

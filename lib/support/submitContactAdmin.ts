@@ -4,6 +4,7 @@
  */
 import { FieldValue, type Firestore } from "firebase-admin/firestore";
 import { dateKeyJST } from "@/lib/rankings/rankSnapshotDate";
+import { resolveContactDeviceModel } from "@/lib/support/contactDevice";
 import type { ContactType } from "@/lib/support/contactTypes";
 
 export const CONTACT_TYPES = ["bug", "feature", "report", "other"] as const;
@@ -25,6 +26,8 @@ export type SubmitContactAdminInput = {
   fromPath?: string | null;
   appVariant?: "web" | "mobile" | null;
   userDisplayName?: string | null;
+  /** apple / google_play。未選択は拒否 */
+  deviceKind?: string | null;
 };
 
 export type SubmitContactAdminResult =
@@ -36,6 +39,7 @@ export type SubmitContactAdminResult =
         | "invalid_message"
         | "invalid_email"
         | "invalid_url"
+        | "invalid_device"
         | "rate_limited";
     };
 
@@ -79,6 +83,11 @@ export async function submitContactAdmin(
     if (!/^https:\/\//i.test(screenshotUrl)) {
       return { ok: false, error: "invalid_url" };
     }
+  }
+
+  const device = resolveContactDeviceModel(String(input.deviceKind ?? "").trim());
+  if (!device) {
+    return { ok: false, error: "invalid_device" };
   }
 
   const fromPath = String(input.fromPath ?? "").trim().slice(0, CONTACT_PATH_MAX);
@@ -130,6 +139,8 @@ export async function submitContactAdmin(
     message,
     email: emailRaw || null,
     screenshotUrl: screenshotUrl || null,
+    deviceKind: device.deviceKind,
+    deviceModel: device.deviceModel,
     fromPath: fromPath || null,
     appVariant,
     userUid: uid,

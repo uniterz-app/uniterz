@@ -21,6 +21,7 @@ export async function POST(req: Request) {
       appVariant?: unknown;
       handle?: unknown;
       userDisplayName?: unknown;
+      deviceKind?: unknown;
     } | null;
 
     const result = await submitContactAdmin(getAdminDb(), uid, {
@@ -40,6 +41,7 @@ export async function POST(req: Request) {
           : typeof body?.handle === "string"
             ? body.handle
             : null,
+      deviceKind: typeof body?.deviceKind === "string" ? body.deviceKind : "",
     });
 
     if (!result.ok) {

@@ -14,7 +14,13 @@ import { useFirebaseUser } from "../../auth/FirebaseUserProvider";
 import { useNativeUserLanguage } from "../../hooks/useNativeUserLanguage";
 import { db, storage } from "../../lib/firebase";
 import { SUPPORT_EMAIL } from "@/lib/contact/companyEmails";
+import { t } from "@/lib/i18n/t";
 import { L, resolveLocalizedLang } from "../../../../../lib/i18n/localize";
+import {
+  CONTACT_DEVICE_KINDS,
+  contactDeviceKindLabel,
+  type ContactDeviceKind,
+} from "../../../../../lib/support/contactDevice";
 
 const API_BASE = process.env.EXPO_PUBLIC_UNITERZ_API_BASE_URL?.replace(/\/$/, "") ?? "";
 
@@ -36,9 +42,11 @@ export default function ContactScreenNative({
   const { fUser } = useFirebaseUser();
   const { language } = useNativeUserLanguage(fUser?.uid);
   const lang = resolveLocalizedLang(language);
+  const m = t(lang);
   const isFeature = variant === "featureRequest";
 
   const [type, setType] = useState<ContactType>(initialType);
+  const [deviceKind, setDeviceKind] = useState<"" | ContactDeviceKind>("");
   const [email, setEmail] = useState(fUser?.email ?? "");
   const [message, setMessage] = useState("");
   const [handle, setHandle] = useState<string | null>(null);
@@ -233,6 +241,10 @@ export default function ContactScreenNative({
   }
 
   async function handleSubmit() {
+    if (!deviceKind) {
+      cyberAlert("", m.support.validationDeviceRequired);
+      return;
+    }
     if (message.trim().length < 10) {
       cyberAlert("", labels.needMsg);
       return;
@@ -258,11 +270,17 @@ export default function ContactScreenNative({
           message: message.trim(),
           screenshotUrl: screenshotUrl || undefined,
           handle: handle ?? undefined,
+          deviceKind,
         }),
       });
       if (!res.ok) {
         if (res.status === 429) {
           cyberAlert("", labels.rateLimit);
+          return;
+        }
+        const json = (await res.json().catch(() => null)) as { error?: string } | null;
+        if (json?.error === "invalid_device") {
+          cyberAlert("", m.support.validationDeviceRequired);
           return;
         }
         throw new Error("failed");
@@ -321,6 +339,24 @@ export default function ContactScreenNative({
             ))}
           </View>
         ) : null}
+
+        <Text style={styles.fieldLabel}>{m.support.deviceLabel}</Text>
+        <View style={styles.chipRow}>
+          {CONTACT_DEVICE_KINDS.map((kind) => {
+            const selected = deviceKind === kind;
+            return (
+              <Pressable
+                key={kind}
+                style={[styles.chip, selected && styles.chipActive]}
+                onPress={() => setDeviceKind(kind)}
+              >
+                <Text style={[styles.chipLabel, selected && styles.chipLabelActive]}>
+                  {contactDeviceKindLabel(kind)}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
 
         <Text style={styles.fieldLabel}>{labels.email}</Text>
         <TextInput

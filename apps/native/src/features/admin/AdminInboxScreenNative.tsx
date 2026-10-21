@@ -128,6 +128,9 @@ export default function AdminInboxScreenNative() {
                 {c.userDisplayName ? (
                   <Text style={styles.meta}>@{c.userDisplayName}</Text>
                 ) : null}
+                {c.deviceModel ? (
+                  <Text style={styles.meta}>{c.deviceModel}</Text>
+                ) : null}
                 <Text style={styles.meta}>
                   {formatAdminInboxDate(c.createdAtMs, isJa ? "ja" : "en")}
                 </Text>

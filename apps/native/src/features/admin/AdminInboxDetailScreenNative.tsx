@@ -90,6 +90,11 @@ export default function AdminInboxDetailScreenNative() {
                   {isJa ? "メール" : "Email"}：{row.email}
                 </Text>
               ) : null}
+              {row.deviceModel ? (
+                <Text style={styles.line}>
+                  {isJa ? "ストア" : "Store"}：{row.deviceModel}
+                </Text>
+              ) : null}
               <Text style={styles.meta}>
                 {formatAdminInboxDate(row.createdAtMs, isJa ? "ja" : "en")}
               </Text>

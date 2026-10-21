@@ -23,6 +23,7 @@ export type AdminContactRow = {
   screenshotUrl: string | null;
   userDisplayName: string | null;
   userUid: string | null;
+  deviceModel: string | null;
   status: string;
   createdAtMs: number;
 };
@@ -60,6 +61,7 @@ export function parseAdminContactRow(
       ? String(data.userDisplayName)
       : null,
     userUid: data.userUid ? String(data.userUid) : null,
+    deviceModel: data.deviceModel ? String(data.deviceModel) : null,
     status: String(data.status ?? "unread"),
     createdAtMs: firestoreTimeToMs(data.createdAt),
   };
