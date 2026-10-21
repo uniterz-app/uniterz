@@ -1,6 +1,6 @@
 /**
- * 今季ロスター行に出場平均が無いとき、前季ロスターの平均を playerId で載せる。
- * ingest 前の Firestore（全 0）でも TOP SCORER / ROSTER が昨季 PPG を出せる。
+ * 今季ロスター行に出場平均が無い選手だけ、前季ロスターの平均を playerId で載せる。
+ * 開幕前（全 0）も、開幕直後でまだ出場していない選手も、TOP SCORER / ROSTER が昨季 PPG を出せる。
  */
 import type { NbaRosterPlayer } from "@/lib/predict/nbaRoster";
 import type { NbaTeamRosterDocTeam } from "./teamRosterTypes";
@@ -23,12 +23,14 @@ export function rosterBundleHasSeasonAverages(
 
 function mergePlayerAverages(
   current: NbaRosterPlayer,
-  prior: NbaRosterPlayer | undefined
+  prior: NbaRosterPlayer | undefined,
+  priorAveragesSeasonKey: string
 ): NbaRosterPlayer {
   if (!prior || playerHasSeasonAverages(current)) return current;
   if (!playerHasSeasonAverages(prior)) return current;
   return {
     ...current,
+    averagesSeasonKey: priorAveragesSeasonKey,
     gp: prior.gp,
     mpg: prior.mpg,
     ppg: prior.ppg,
@@ -55,7 +57,8 @@ function mergePlayerAverages(
 
 export function mergePriorAveragesOntoRosterTeam(
   current: NbaTeamRosterDocTeam,
-  prior: NbaTeamRosterDocTeam | null | undefined
+  prior: NbaTeamRosterDocTeam | null | undefined,
+  priorAveragesSeasonKey: string
 ): NbaTeamRosterDocTeam {
   if (!prior?.players?.length) return current;
   const byId = new Map(
@@ -64,18 +67,23 @@ export function mergePriorAveragesOntoRosterTeam(
   return {
     ...current,
     players: current.players.map((p) =>
-      mergePlayerAverages(p, byId.get(String(p.id)))
+      mergePlayerAverages(p, byId.get(String(p.id)), priorAveragesSeasonKey)
     ),
   };
 }
 
 export function mergePriorAveragesOntoRosterTeams(
   current: Record<string, NbaTeamRosterDocTeam>,
-  prior: Record<string, NbaTeamRosterDocTeam>
+  prior: Record<string, NbaTeamRosterDocTeam>,
+  priorAveragesSeasonKey: string
 ): Record<string, NbaTeamRosterDocTeam> {
   const out: Record<string, NbaTeamRosterDocTeam> = {};
   for (const [teamId, team] of Object.entries(current)) {
-    out[teamId] = mergePriorAveragesOntoRosterTeam(team, prior[teamId]);
+    out[teamId] = mergePriorAveragesOntoRosterTeam(
+      team,
+      prior[teamId],
+      priorAveragesSeasonKey
+    );
   }
   return out;
 }

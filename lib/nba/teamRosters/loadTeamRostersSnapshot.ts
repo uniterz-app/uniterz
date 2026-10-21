@@ -124,7 +124,8 @@ export async function loadTeamRostersSnapshot(
   }
 
   let bundle = resolved.bundle;
-  // 今季平均が空（開幕前など）→ 前季ロスターから PPG 等を載せる
+  // 今季平均が空（開幕前など）→ 前季ロスターから PPG 等を載せる。
+  // 開幕後に未出場の選手へ前季平均を載せるのは ingest 側（nbaTeamRostersIngest）
   const needsPrior =
     averagesSeasonKey === key &&
     !rosterBundleHasSeasonAverages(bundle.teams);
@@ -145,18 +146,20 @@ export async function loadTeamRostersSnapshot(
         priorResolved &&
         rosterBundleHasSeasonAverages(priorResolved.bundle.teams)
       ) {
-        bundle = {
-          seasonKey: key,
-          teams: mergePriorAveragesOntoRosterTeams(
-            bundle.teams,
-            priorResolved.bundle.teams
-          ),
-        };
-        averagesSeasonKey =
+        const priorAveragesSeasonKey =
           typeof priorData?.averagesSeasonKey === "string" &&
           priorData.averagesSeasonKey.trim()
             ? priorData.averagesSeasonKey.trim()
             : priorKey;
+        bundle = {
+          seasonKey: key,
+          teams: mergePriorAveragesOntoRosterTeams(
+            bundle.teams,
+            priorResolved.bundle.teams,
+            priorAveragesSeasonKey
+          ),
+        };
+        averagesSeasonKey = priorAveragesSeasonKey;
       }
     }
   }
@@ -233,7 +236,7 @@ export async function loadPlayerRosterHit(
   return {
     ok: true,
     season: payload.season,
-    averagesSeasonKey: payload.averagesSeasonKey,
+    averagesSeasonKey: hit?.player.averagesSeasonKey ?? payload.averagesSeasonKey,
     playerId: want,
     hit,
     source: payload.source,

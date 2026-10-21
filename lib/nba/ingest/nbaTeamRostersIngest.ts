@@ -3,7 +3,8 @@
  * クライアントは BDL を叩かない。
  *
  * シーズン平均は全選手の base averages をロスター行に載せる。
- * 要求シーズン（例: 2026-27）に出場が無ければ直前シーズン（25-26）の平均を載せる。
+ * 要求シーズン（例: 2026-27）に出場が無い選手は直前シーズン（25-26）の平均を載せる
+ * （開幕前は全員、開幕後はまだ出場していない選手だけ。選手行の `averagesSeasonKey` に前季を入れる）。
  */
 import type { Firestore } from "firebase-admin/firestore";
 import { FieldValue } from "firebase-admin/firestore";
@@ -17,6 +18,7 @@ import {
   type BdlPlayerSeasonAverageRow,
 } from "@/lib/nba/bdl/fetchBdlPlayerSeasonAverages";
 import { writeTeamRostersSnapshot } from "@/lib/nba/teamRosters/loadTeamRostersSnapshot";
+import { mergePriorAveragesOntoRosterTeam } from "@/lib/nba/teamRosters/applyPriorSeasonRosterAverages";
 import {
   buildPlayerSeasonAveragesMap,
   mergeSeasonAveragesOntoRosterPlayers,
@@ -59,29 +61,34 @@ async function loadAveragesForSeasonYear(
 }
 
 /**
- * PPG の季の切り替え:
- * - プレシーズン〜今季レギュラーが 0 試合: 直前季（例 2025-26）
- * - 今季レギュラーを 1 試合でも誰かが出場（BDL regular averages に gp≥1）: 今季
+ * PPG の季:
+ * - 今季レギュラーに出場した選手（BDL regular averages に gp≥1）: 今季
+ * - まだ出場していない選手: 直前季（例 2025-26）。開幕前は全員こちら
+ * - ドキュメントの `averagesSeasonKey` は、今季に1人でも出場していれば今季
  *
  * BDL `season_type=regular` のみ見るのでプレシーズン平均は混ざらない。
  */
 async function resolveRosterAverages(seasonKey: string): Promise<{
   averagesSeasonKey: string;
   rows: BdlPlayerSeasonAverageRow[];
+  prior: { averagesSeasonKey: string; rows: BdlPlayerSeasonAverageRow[] } | null;
 }> {
   const year = bdlSeasonYearFromSeasonKey(seasonKey);
-  const currentRows = await loadAveragesForSeasonYear(year);
-  // 今季レギュラーが1試合でも始まっていれば今季平均
-  if (playerAveragesRowsHavePlayed(currentRows)) {
-    return { averagesSeasonKey: seasonKey, rows: currentRows };
-  }
   const prevKey = previousNbaSeasonKey(seasonKey);
   const prevYear = bdlSeasonYearFromSeasonKey(prevKey);
-  const prevRows = await loadAveragesForSeasonYear(prevYear);
-  if (playerAveragesRowsHavePlayed(prevRows)) {
-    return { averagesSeasonKey: seasonKeyFromYear(prevYear), rows: prevRows };
+  const [currentRows, prevRows] = await Promise.all([
+    loadAveragesForSeasonYear(year),
+    prevKey !== seasonKey
+      ? loadAveragesForSeasonYear(prevYear)
+      : Promise.resolve([] as BdlPlayerSeasonAverageRow[]),
+  ]);
+  const prior = playerAveragesRowsHavePlayed(prevRows)
+    ? { averagesSeasonKey: seasonKeyFromYear(prevYear), rows: prevRows }
+    : null;
+  if (playerAveragesRowsHavePlayed(currentRows) || !prior) {
+    return { averagesSeasonKey: seasonKey, rows: currentRows, prior };
   }
-  return { averagesSeasonKey: seasonKey, rows: currentRows };
+  return { averagesSeasonKey: prior.averagesSeasonKey, rows: prior.rows, prior: null };
 }
 
 export async function ingestNbaTeamRostersFromBdl(
@@ -97,19 +104,36 @@ export async function ingestNbaTeamRostersFromBdl(
   ]);
 
   const averagesMap = buildPlayerSeasonAveragesMap(averages.rows);
+  const priorAveragesMap = averages.prior
+    ? buildPlayerSeasonAveragesMap(averages.prior.rows)
+    : null;
 
   const teams: Record<string, NbaTeamRosterDocTeam> = {};
   for (const [teamId, snap] of byTeam) {
-    const players = sortRosterPlayersByMpg(
-      filterCuratedRosterExcludedPlayers(
-        seasonKey,
-        mergeSeasonAveragesOntoRosterPlayers(snap.players, averagesMap)
-      )
-    );
-    teams[teamId] = {
+    const current: NbaTeamRosterDocTeam = {
       teamId: snap.teamId,
       teamName: snap.teamName,
-      players,
+      players: mergeSeasonAveragesOntoRosterPlayers(snap.players, averagesMap),
+    };
+    const merged =
+      averages.prior && priorAveragesMap
+        ? mergePriorAveragesOntoRosterTeam(
+            current,
+            {
+              ...current,
+              players: mergeSeasonAveragesOntoRosterPlayers(
+                snap.players,
+                priorAveragesMap
+              ),
+            },
+            averages.prior.averagesSeasonKey
+          )
+        : current;
+    teams[teamId] = {
+      ...merged,
+      players: sortRosterPlayersByMpg(
+        filterCuratedRosterExcludedPlayers(seasonKey, merged.players)
+      ),
     };
   }
 

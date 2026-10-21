@@ -13,6 +13,8 @@ export type NbaRosterPlayer = {
   gp: number;
   mpg: number;
   ppg: number;
+  /** 今季の出場が無く前季の平均を載せたとき、その平均のシーズン */
+  averagesSeasonKey?: string;
   rpg?: number;
   /** 1試合あたりのオフェンス／ディフェンスリバウンド */
   oreb?: number;
