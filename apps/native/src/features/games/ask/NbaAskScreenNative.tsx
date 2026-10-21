@@ -23,7 +23,7 @@ import { useNativeUserLanguage } from "../../../hooks/useNativeUserLanguage";
 import { useBottomTabBarInsets } from "../../../navigation/useBottomTabBarInsets";
 import { splitNbaAskLinks } from "../../../../../../lib/nba/ask/nbaAskLinkify";
 import { openProSubscribeNative } from "../../../navigation/navigationRef";
-import { CYBER_SIDE_MENU_PANEL, CYBER_TAB_CYAN } from "../../../ui/cyberSideMenuNative";
+import { CYBER_TAB_CYAN } from "../../../ui/cyberSideMenuNative";
 import { METRIC_FONT } from "../../rankings/rankingsUiTheme";
 import { nbaAskCopy } from "../../../../../../lib/nba/ask/nbaAskCopy";
 import {
@@ -171,17 +171,9 @@ export default function NbaAskScreenNative() {
           keyboardDismissMode="interactive"
         >
           {unavailable ? (
-            <View style={styles.intro}>
-              <MaterialCommunityIcons name="progress-clock" size={30} color="rgba(0,245,255,0.55)" />
-              <Text style={styles.gateTitle}>{copy.unavailable}</Text>
-            </View>
+            <Text style={styles.gateTitle}>{copy.unavailable}</Text>
           ) : turns.length === 0 ? (
-            <View style={styles.intro}>
-              <MaterialCommunityIcons
-                name="chat-processing-outline"
-                size={30}
-                color="rgba(0,245,255,0.55)"
-              />
+            <View style={styles.channel}>
               <Text style={styles.introText}>{copy.intro}</Text>
               <View style={styles.suggestions}>
                 {copy.suggestions.map((s) => (
@@ -199,42 +191,42 @@ export default function NbaAskScreenNative() {
             </View>
           ) : null}
 
-          {turns.map((t, i) => (
-            <View
-              key={i}
-              style={[styles.turn, t.role === "user" ? styles.turnUser : styles.turnBot]}
-            >
-              <View style={[styles.bubble, t.role === "user" ? styles.bubbleUser : styles.bubbleBot]}>
-                <Text style={styles.bubbleText} selectable>
-                  {splitNbaAskLinks(t.content).map((part, j) =>
-                    part.kind === "link" ? (
-                      <Text
-                        key={j}
-                        style={styles.link}
-                        onPress={() => void Linking.openURL(part.url)}
+          {turns.map((t, i) => {
+            const mine = t.role === "user";
+            return (
+              <View key={i} style={[styles.turn, mine ? styles.turnUser : styles.turnBot]}>
+                <View style={[styles.bubble, mine ? styles.bubbleUser : styles.bubbleBot]}>
+                  <Text style={[styles.bubbleText, mine && styles.bubbleTextMine]} selectable>
+                    {splitNbaAskLinks(t.content).map((part, j) =>
+                      part.kind === "link" ? (
+                        <Text
+                          key={j}
+                          style={[styles.link, mine && styles.linkMine]}
+                          onPress={() => void Linking.openURL(part.url)}
+                        >
+                          {part.url}
+                        </Text>
+                      ) : (
+                        <Text key={j}>{part.text}</Text>
+                      )
+                    )}
+                  </Text>
+                </View>
+                {t.role === "assistant"
+                  ? t.opens?.map((id) => (
+                      <Pressable
+                        key={id}
+                        onPress={() => openNbaAskDestination(navigation, id)}
+                        accessibilityRole="button"
+                        style={({ pressed }) => [styles.openBtn, pressed && styles.chipPressed]}
                       >
-                        {part.url}
-                      </Text>
-                    ) : (
-                      <Text key={j}>{part.text}</Text>
-                    )
-                  )}
-                </Text>
+                        <Text style={styles.openBtnText}>{nbaAskDestinationLabel(id, lang)}</Text>
+                      </Pressable>
+                    ))
+                  : null}
               </View>
-              {t.role === "assistant"
-                ? t.opens?.map((id) => (
-                    <Pressable
-                      key={id}
-                      onPress={() => openNbaAskDestination(navigation, id)}
-                      accessibilityRole="button"
-                      style={({ pressed }) => [styles.openBtn, pressed && styles.chipPressed]}
-                    >
-                      <Text style={styles.openBtnText}>{nbaAskDestinationLabel(id, lang)}</Text>
-                    </Pressable>
-                  ))
-                : null}
-            </View>
-          ))}
+            );
+          })}
 
           {busy ? (
             <View style={[styles.bubble, styles.bubbleBot, styles.thinking]}>
@@ -278,7 +270,7 @@ export default function NbaAskScreenNative() {
                 value={draft}
                 onChangeText={setDraft}
                 placeholder={copy.placeholder}
-                placeholderTextColor="rgba(255,255,255,0.45)"
+                placeholderTextColor="rgba(255,255,255,0.42)"
                 selectionColor={CYBER_TAB_CYAN}
                 style={styles.input}
                 multiline
@@ -300,7 +292,7 @@ export default function NbaAskScreenNative() {
                 <MaterialCommunityIcons
                   name="send"
                   size={18}
-                  color={canSend ? "#050508" : "rgba(0,245,255,0.5)"}
+                  color={canSend ? "#041014" : "rgba(255,255,255,0.35)"}
                 />
               </Pressable>
             </View>
@@ -315,60 +307,49 @@ const styles = StyleSheet.create({
   shell: { flex: 1 },
   flex: { flex: 1 },
   thread: {
-    paddingHorizontal: 12,
-    paddingTop: 8,
+    paddingHorizontal: 16,
+    paddingTop: 18,
     paddingBottom: 16,
-    gap: 10,
+    gap: 14,
   },
-  intro: {
-    alignItems: "center",
-    gap: 12,
-    paddingTop: 24,
-    paddingHorizontal: 12,
-  },
+  channel: { gap: 18 },
   introText: {
-    color: "rgba(255,255,255,0.7)",
-    fontSize: 13,
-    lineHeight: 19,
-    textAlign: "center",
+    color: "rgba(255,255,255,0.82)",
+    fontSize: 15,
+    lineHeight: 23,
   },
   gateTitle: {
     color: "rgba(255,255,255,0.92)",
     fontSize: 15,
-    fontWeight: "700",
-    textAlign: "center",
+    lineHeight: 22,
+    fontWeight: "600",
   },
   suggestions: {
     flexDirection: "row",
     flexWrap: "wrap",
-    justifyContent: "center",
     gap: 8,
-    marginTop: 4,
   },
   chip: {
-    borderWidth: 1,
-    borderColor: "rgba(0,245,255,0.35)",
-    borderRadius: 2,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(255,255,255,0.28)",
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
-  chipPressed: { opacity: 0.7 },
+  chipPressed: { opacity: 0.55 },
   chipText: {
-    color: "rgba(165,243,252,0.9)",
+    color: "rgba(255,255,255,0.92)",
     fontSize: 13,
-    fontWeight: "600",
+    lineHeight: 18,
   },
   turn: {
-    maxWidth: "86%",
-    gap: 6,
+    maxWidth: "84%",
+    gap: 8,
   },
   turnUser: { alignSelf: "flex-end" },
   turnBot: { alignSelf: "flex-start" },
   bubble: {
-    borderWidth: 1,
-    borderRadius: 4,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
   },
   openBtn: {
     alignSelf: "flex-start",
@@ -384,21 +365,25 @@ const styles = StyleSheet.create({
     letterSpacing: 0.6,
   },
   bubbleUser: {
-    borderColor: "rgba(0,245,255,0.45)",
-    backgroundColor: "rgba(0,245,255,0.1)",
+    backgroundColor: CYBER_TAB_CYAN,
   },
   bubbleBot: {
-    borderColor: CYBER_SIDE_MENU_PANEL.innerBorderColor,
-    backgroundColor: "rgba(4,16,24,0.6)",
+    backgroundColor: "rgba(255,255,255,0.06)",
   },
   bubbleText: {
     color: "rgba(255,255,255,0.94)",
-    fontSize: 14,
-    lineHeight: 21,
+    fontSize: 15,
+    lineHeight: 22,
+  },
+  bubbleTextMine: {
+    color: "#041014",
   },
   link: {
     color: "#00F5FF",
     textDecorationLine: "underline",
+  },
+  linkMine: {
+    color: "#041014",
   },
   thinking: {
     alignSelf: "flex-start",
@@ -421,19 +406,15 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   inputBar: {
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingTop: 8,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: "rgba(0,245,255,0.16)",
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingTop: 10,
     backgroundColor: "#05080e",
   },
   quota: {
-    alignSelf: "flex-end",
-    fontFamily: METRIC_FONT,
-    fontSize: 10,
-    letterSpacing: 0.6,
-    color: "rgba(0,245,255,0.7)",
+    fontSize: 11,
+    lineHeight: 15,
+    color: "rgba(255,255,255,0.45)",
   },
   proNudge: {
     flexDirection: "row",
@@ -461,31 +442,26 @@ const styles = StyleSheet.create({
   inputRow: {
     flexDirection: "row",
     alignItems: "flex-end",
-    gap: 8,
+    backgroundColor: "rgba(255,255,255,0.06)",
   },
   input: {
     flex: 1,
-    minHeight: 44,
+    minHeight: 46,
     maxHeight: 110,
-    borderWidth: 1,
-    borderColor: "rgba(0,245,255,0.28)",
-    backgroundColor: "rgba(0,0,0,0.5)",
     color: "#fff",
-    fontSize: 15,
-    paddingHorizontal: 12,
-    paddingTop: 11,
-    paddingBottom: 11,
+    fontSize: 16,
+    paddingHorizontal: 14,
+    paddingTop: 12,
+    paddingBottom: 12,
   },
   sendBtn: {
-    width: 44,
-    height: 44,
+    width: 46,
+    height: 46,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: CYBER_TAB_CYAN,
   },
   sendBtnDisabled: {
-    backgroundColor: "transparent",
-    borderWidth: 1,
-    borderColor: "rgba(0,245,255,0.3)",
+    backgroundColor: "rgba(255,255,255,0.08)",
   },
 });

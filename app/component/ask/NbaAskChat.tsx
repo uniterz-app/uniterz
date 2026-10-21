@@ -3,7 +3,7 @@
 /** UNITERZ AI チャット（アプリの使い方 + NBA スタッツ。Native `NbaAskScreenNative` 相当） */
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Clock, Loader2, MessageSquareText, SendHorizontal } from "lucide-react";
+import { Loader2, SendHorizontal } from "lucide-react";
 import cn from "clsx";
 import { auth } from "@/lib/firebase";
 import { nameOxanium } from "@/lib/fonts";
@@ -109,22 +109,18 @@ export default function NbaAskChat({ language, signedIn }: Props) {
     <div className="flex min-h-[calc(100dvh-12rem)] flex-col">
       <div className="flex-1 space-y-2.5 pb-4">
         {unavailable ? (
-          <div className="flex flex-col items-center gap-3 px-3 pt-6 text-center">
-            <Clock className="h-7 w-7 text-[rgba(0,245,255,0.55)]" aria-hidden />
-            <p className="text-[15px] font-bold text-white/92">{copy.unavailable}</p>
-          </div>
+          <p className="text-[15px] font-semibold leading-snug text-white/92">{copy.unavailable}</p>
         ) : turns.length === 0 ? (
-          <div className="flex flex-col items-center gap-3 px-3 pt-6 text-center">
-            <MessageSquareText className="h-7 w-7 text-[rgba(0,245,255,0.55)]" aria-hidden />
-            <p className="text-[13px] leading-relaxed text-white/70">{copy.intro}</p>
-            <div className="mt-1 flex flex-wrap justify-center gap-2">
+          <div className="flex flex-col gap-4 pt-2">
+            <p className="text-[15px] leading-[1.55] text-white/82">{copy.intro}</p>
+            <div className="flex flex-wrap gap-2">
               {copy.suggestions.map((s) => (
                 <button
                   key={s}
                   type="button"
                   disabled={busy}
                   onClick={() => void send(s)}
-                  className="rounded-[2px] border border-[rgba(0,245,255,0.35)] px-3 py-2 text-[13px] font-semibold text-[rgba(165,243,252,0.9)] hover:bg-[rgba(0,245,255,0.08)] disabled:opacity-50"
+                  className="border border-white/25 px-3 py-2 text-left text-[13px] text-white/92 hover:border-white/50 disabled:opacity-50"
                 >
                   {s}
                 </button>
@@ -133,54 +129,52 @@ export default function NbaAskChat({ language, signedIn }: Props) {
           </div>
         ) : null}
 
-        {turns.map((t, i) => (
-          <div key={i} className={cn("flex max-w-[86%] flex-col gap-1.5", t.role === "user" ? "ml-auto" : "mr-auto")}>
-            <div
-              className={cn(
-                "whitespace-pre-wrap rounded-[4px] border px-3 py-2 text-[14px] leading-[1.5] text-white/94",
-                t.role === "user"
-                  ? "border-[rgba(0,245,255,0.45)] bg-[rgba(0,245,255,0.1)]"
-                  : "border-[rgba(0,245,255,0.16)] bg-[rgba(4,16,24,0.6)]",
-              )}
-            >
-              {splitNbaAskLinks(t.content).map((part, j) =>
-                part.kind === "link" ? (
-                  <a
-                    key={j}
-                    href={part.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="underline text-[#00F5FF]"
-                  >
-                    {part.url}
-                  </a>
-                ) : (
-                  <span key={j}>{part.text}</span>
-                )
-              )}
+        {turns.map((t, i) => {
+          const mine = t.role === "user";
+          return (
+            <div key={i} className={cn("flex max-w-[84%] flex-col gap-2", mine ? "ml-auto items-end" : "mr-auto")}>
+              <div
+                className={cn(
+                  "whitespace-pre-wrap px-3.5 py-2.5 text-[15px] leading-[1.5]",
+                  mine ? "bg-[#00F5FF] text-[#041014]" : "bg-white/[0.06] text-white/94",
+                )}
+              >
+                {splitNbaAskLinks(t.content).map((part, j) =>
+                  part.kind === "link" ? (
+                    <a
+                      key={j}
+                      href={part.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={cn("underline", mine ? "text-[#041014]" : "text-[#00F5FF]")}
+                    >
+                      {part.url}
+                    </a>
+                  ) : (
+                    <span key={j}>{part.text}</span>
+                  )
+                )}
+              </div>
+              {t.role === "assistant"
+                ? t.opens?.map((id) => (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => router.push(nbaAskDestinationWebPath(id))}
+                      className={`${nameOxanium.className} self-start bg-[#00F5FF] px-3 py-2 text-[12px] font-bold tracking-[0.06em] text-[#050508] hover:opacity-90`}
+                    >
+                      {nbaAskDestinationLabel(id, language)}
+                    </button>
+                  ))
+                : null}
             </div>
-            {t.role === "assistant"
-              ? t.opens?.map((id) => (
-                  <button
-                    key={id}
-                    type="button"
-                    onClick={() => router.push(nbaAskDestinationWebPath(id))}
-                    className={`${nameOxanium.className} self-start bg-[#00F5FF] px-3 py-2 text-[12px] font-bold tracking-[0.06em] text-[#050508] hover:opacity-90`}
-                  >
-                    {nbaAskDestinationLabel(id, language)}
-                  </button>
-                ))
-              : null}
-          </div>
-        ))}
+          );
+        })}
 
         {busy ? (
-          <div
-            className="mr-auto flex items-center gap-2 rounded-[4px] border border-[rgba(0,245,255,0.16)] bg-[rgba(4,16,24,0.6)] px-3 py-2"
-            role="status"
-          >
+          <div className="mr-auto flex items-center gap-2 bg-white/[0.06] px-3.5 py-2.5" role="status">
             <Loader2 className="h-4 w-4 animate-spin text-[#00F5FF] motion-reduce:animate-none" aria-hidden />
-            <span className="text-[13px] text-white/60">{copy.thinking}</span>
+            <span className="text-[13px] text-white/70">{copy.thinking}</span>
           </div>
         ) : null}
 
@@ -194,7 +188,7 @@ export default function NbaAskChat({ language, signedIn }: Props) {
 
       {!unavailable ? (
         <form
-          className="sticky bottom-[var(--bottom-nav-clearance)] z-10 -mx-1 space-y-1.5 border-t border-[rgba(0,245,255,0.16)] bg-[#05080e] px-1 pb-2 pt-2"
+          className="sticky bottom-[var(--bottom-nav-clearance)] z-10 -mx-1 space-y-2 bg-[#05080e] px-1 pb-2 pt-2"
           onSubmit={(e) => {
             e.preventDefault();
             void send(draft);
@@ -212,13 +206,11 @@ export default function NbaAskChat({ language, signedIn }: Props) {
               </button>
             </div>
           ) : status?.statsFreeRemaining != null ? (
-            <p
-              className={`${nameOxanium.className} text-right text-[10px] font-bold tracking-[0.06em] text-[rgba(0,245,255,0.7)]`}
-            >
+            <p className="text-[11px] leading-snug text-white/45">
               {copy.statsFreeRemaining(status.statsFreeRemaining)}
             </p>
           ) : null}
-          <div className="flex items-end gap-2">
+          <div className="flex items-end bg-white/[0.06]">
             <textarea
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
@@ -232,17 +224,15 @@ export default function NbaAskChat({ language, signedIn }: Props) {
               maxLength={MAX_QUESTION_CHARS}
               rows={1}
               aria-label={copy.open}
-              className="max-h-28 min-h-11 flex-1 resize-none border border-[rgba(0,245,255,0.28)] bg-black/50 px-3 py-[11px] text-[16px] text-white outline-none placeholder:text-white/45 focus:border-[#00F5FF] disabled:opacity-50"
+              className="max-h-28 min-h-[46px] flex-1 resize-none bg-transparent px-3.5 py-3 text-[16px] text-white outline-none placeholder:text-white/40 disabled:opacity-50"
             />
             <button
               type="submit"
               disabled={!canSend}
               aria-label={copy.send}
               className={cn(
-                "flex h-11 w-11 shrink-0 items-center justify-center",
-                canSend
-                  ? "bg-[#00F5FF] text-[#050508] hover:opacity-90"
-                  : "border border-[rgba(0,245,255,0.3)] text-[rgba(0,245,255,0.5)]",
+                "flex h-[46px] w-[46px] shrink-0 items-center justify-center",
+                canSend ? "bg-[#00F5FF] text-[#050508] hover:opacity-90" : "bg-white/10 text-white/35",
               )}
             >
               <SendHorizontal className="h-[18px] w-[18px]" aria-hidden />
