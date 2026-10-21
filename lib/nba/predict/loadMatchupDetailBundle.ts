@@ -5,7 +5,10 @@
  * Insight（Pro / auth）は含めない。
  */
 import type { Firestore } from "firebase-admin/firestore";
-import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
+import {
+  CURRENT_NBA_SEASON_KEY,
+  previousNbaSeasonKey,
+} from "@/lib/rankings/nbaSeason";
 import { resolveNbaStatsDisplaySeasonKey, resolveNbaRosterInjuryDisplaySeasonKey } from "@/lib/nba/resolveNbaStatsDisplaySeason";
 import { loadMatchupRosters } from "@/lib/nba/teamRosters/loadTeamRostersSnapshot";
 import { loadTeamInjuriesSnapshot } from "@/lib/nba/teamInjuries/loadTeamInjuriesSnapshot";
@@ -13,6 +16,10 @@ import { loadTeamGameLog } from "@/lib/nba/teamGameLog/loadTeamGameLog";
 import { loadLeagueTeamStatsSnapshot } from "@/lib/nba/leagueTeamStats/loadLeagueTeamStatsSnapshot";
 import { enrichLeagueTeamStatsBundle } from "@/lib/predict/nbaLeagueTeamStatsMocks";
 import { buildMatchupTeamStatsBundle } from "@/lib/nba/predict/buildMatchupTeamStatsBundle";
+import {
+  leagueTeamRowsNeedPrior,
+  mergePriorSeasonTeamRows,
+} from "@/lib/nba/leagueTeamStats/mergePriorSeasonTeamRows";
 import { buildMatchupRosterReport } from "@/lib/nba/teamRosters/buildMatchupRosterReport";
 import type { NbaStatsSnapshotSource } from "@/lib/nba/nbaStatsSnapshotCacheControl";
 import type { NbaTeamInjuryEntry } from "@/lib/predict/nbaTeamDetailPreviewMocks";
@@ -98,10 +105,28 @@ export async function loadMatchupDetailBundle(
     leaguePayload.bundle,
     leaguePayload.source
   );
+  let seasonRows = enriched.season;
+  if (
+    !statsDisplay.fromPriorSeason &&
+    statsSeason === statsDisplay.calendarSeasonKey &&
+    leagueTeamRowsNeedPrior(seasonRows)
+  ) {
+    const priorPayload = await loadLeagueTeamStatsSnapshot(
+      db,
+      previousNbaSeasonKey(statsSeason)
+    );
+    const priorRows = enrichLeagueTeamStatsBundle(
+      priorPayload.bundle,
+      priorPayload.source
+    ).season;
+    if (priorRows.length > 0) {
+      seasonRows = mergePriorSeasonTeamRows(seasonRows, priorRows);
+    }
+  }
   const stats = buildMatchupTeamStatsBundle({
     homeTeamId,
     awayTeamId,
-    seasonRows: enriched.season,
+    seasonRows,
     last10Rows: enriched.last10,
     homeLog: homeLogPayload.log,
     awayLog: awayLogPayload.log,
