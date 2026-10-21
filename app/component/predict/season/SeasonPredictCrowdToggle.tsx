@@ -1,8 +1,9 @@
 "use client";
 
 /**
- * 締切前・提出後ビュー — 「自分の予想 / みんなの予想」切替。
- * みんなの予想は提出者だけが読める途中集計（初回切替時に 1 回だけ取得）。
+ * 「自分の予想 / みんなの予想」切替。
+ * 締切前: みんなの予想は提出者だけが読める途中集計（初回切替時に 1 回だけ取得）。
+ * 締切後: 親が読み込んだ確定集計を `crowd` で渡す。
  */
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { nameOxanium } from "@/lib/fonts";
@@ -25,6 +26,9 @@ type Props = {
   language: SeasonPredictUiLang;
   /** 自分の予想タブの中身（ビュー + 編集ボタン） */
   mine: ReactNode;
+  /** 渡したときは途中集計を取りに行かず、これをみんなの予想タブに出す */
+  crowd?: ReactNode;
+  initialTab?: "mine" | "crowd";
 };
 
 type Market =
@@ -36,9 +40,12 @@ export default function SeasonPredictCrowdToggle({
   season,
   language,
   mine,
+  crowd,
+  initialTab = "mine",
 }: Props) {
   const pageUi = seasonPredictPageUiCopy(language);
-  const [tab, setTab] = useState<"mine" | "crowd">("mine");
+  const [tab, setTab] = useState<"mine" | "crowd">(initialTab);
+  const hasCrowd = crowd !== undefined;
   const [state, setState] = useState<"idle" | "loading" | "ready" | "pending">(
     "idle"
   );
@@ -52,7 +59,7 @@ export default function SeasonPredictCrowdToggle({
   }, []);
 
   useEffect(() => {
-    if (tab !== "crowd" || requestedRef.current) return;
+    if (hasCrowd || tab !== "crowd" || requestedRef.current) return;
     requestedRef.current = true;
     setState("loading");
     (async () => {
@@ -73,7 +80,7 @@ export default function SeasonPredictCrowdToggle({
       // 未提出・失敗は次にタブを開いたとき（提出後など）取り直す
       if (!ready) requestedRef.current = false;
     })();
-  }, [kind, season, tab]);
+  }, [hasCrowd, kind, season, tab]);
 
   return (
     <div className="space-y-3">
@@ -102,6 +109,8 @@ export default function SeasonPredictCrowdToggle({
 
       {tab === "mine" ? (
         mine
+      ) : hasCrowd ? (
+        crowd
       ) : state === "ready" && market ? (
         <div className="space-y-3">
           <p className="text-[12px] text-white/45">{pageUi.marketPreviewNote}</p>

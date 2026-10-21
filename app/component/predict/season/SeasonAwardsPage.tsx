@@ -3,7 +3,7 @@
 /**
  * 本番: NBA シーズンアワード予想
  * 締切前: 提出 / 提出後ビュー
- * 締切後: マーケット集計
+ * 締切後: 自分の予想 / みんなの予想（確定集計）
  * `/mobile/season-awards`
  */
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -52,7 +52,7 @@ import {
   seasonPredictPageUiCopy,
 } from "@/lib/predict/seasonPredictUiCopy";
 
-type Mode = "loading" | "edit" | "view" | "market" | "market_pending";
+type Mode = "loading" | "edit" | "view" | "locked";
 
 export default function SeasonAwardsPage() {
   const router = useRouter();
@@ -64,6 +64,7 @@ export default function SeasonAwardsPage() {
   );
   const [candidates, setCandidates] = useState<NbaAwardCandidate[]>([]);
   const [market, setMarket] = useState<SeasonAwardsMarketSnapshot | null>(null);
+  const [hasMine, setHasMine] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [uid, setUid] = useState<string | null>(null);
@@ -99,26 +100,28 @@ export default function SeasonAwardsPage() {
     let cancelled = false;
     (async () => {
       if (!submitOpen) {
-        try {
-          const data = await fetchSeasonPredictMarket({
-            season,
-            kind: "awards",
-          });
-          if (cancelled) return;
-          if (data.awards) {
-            setMarket(data.awards);
-            setMode("market");
-          } else {
-            setMarket(null);
-            setMode("market_pending");
-          }
-        } catch (e) {
-          console.error("fetchSeasonPredictMarket awards", e);
-          if (!cancelled) {
-            setError(e instanceof Error ? e.message : "market load failed");
-            setMode("market_pending");
-          }
+        const [marketRes, mineRes] = await Promise.allSettled([
+          fetchSeasonPredictMarket({ season, kind: "awards" }),
+          fetchMeSeasonAwards(season),
+        ]);
+        if (cancelled) return;
+        if (marketRes.status === "fulfilled") {
+          setMarket(marketRes.value.awards ?? null);
+        } else {
+          console.error("fetchSeasonPredictMarket awards", marketRes.reason);
+          setMarket(null);
         }
+        if (mineRes.status === "fulfilled" && mineRes.value.prediction) {
+          setValue(mineRes.value.prediction);
+          setCandidates(mineRes.value.candidates ?? []);
+          setHasMine(true);
+        } else {
+          if (mineRes.status === "rejected") {
+            console.error("fetchMeSeasonAwards", mineRes.reason);
+          }
+          setHasMine(false);
+        }
+        setMode("locked");
         return;
       }
 
@@ -203,7 +206,7 @@ export default function SeasonAwardsPage() {
         <div className="flex justify-center py-16">
           <CandleChartLoader />
         </div>
-      ) : mode === "market" && market ? (
+      ) : mode === "locked" ? (
         <div className="space-y-3">
           <p
             className={[
@@ -214,27 +217,43 @@ export default function SeasonAwardsPage() {
             {pageUi.marketPassed}
           </p>
           <SeasonPredictKindTabs active="awards" />
-          <NbaSeasonAwardsMarketPanel
-            market={market}
+          <SeasonPredictCrowdToggle
+            kind="awards"
+            season={season}
             language={rulesLang}
+            initialTab={hasMine ? "mine" : "crowd"}
+            mine={
+              hasMine ? (
+                <NbaSeasonAwardsViewPanel
+                  prediction={value}
+                  catalog={candidates.length > 0 ? candidates : undefined}
+                />
+              ) : (
+                <p className="py-8 text-center text-[13px] leading-relaxed text-white/50">
+                  {pageUi.myPicksNotSubmitted}
+                </p>
+              )
+            }
+            crowd={
+              market ? (
+                <NbaSeasonAwardsMarketPanel market={market} language={rulesLang} />
+              ) : (
+                <div className="space-y-3 py-8 text-center">
+                  <p
+                    className={[
+                      nameOxanium.className,
+                      "text-[12px] font-extrabold uppercase tracking-[0.14em] text-amber-200/80",
+                    ].join(" ")}
+                  >
+                    {pageUi.marketPending}
+                  </p>
+                  <p className="text-[13px] leading-relaxed text-white/50">
+                    {seasonPredictMarketPendingBody(rulesLang)}
+                  </p>
+                </div>
+              )
+            }
           />
-        </div>
-      ) : mode === "market_pending" ? (
-        <div className="space-y-3 py-8 text-center">
-          <p
-            className={[
-              nameOxanium.className,
-              "text-[12px] font-extrabold uppercase tracking-[0.14em] text-amber-200/80",
-            ].join(" ")}
-          >
-            {pageUi.marketPending}
-          </p>
-          <p className="text-[13px] leading-relaxed text-white/50">
-            {seasonPredictMarketPendingBody(rulesLang)}
-          </p>
-          {error ? (
-            <p className="text-[12px] text-[#FF8AB4]/85">{error}</p>
-          ) : null}
         </div>
       ) : mode === "view" ? (
         <div className="space-y-3">

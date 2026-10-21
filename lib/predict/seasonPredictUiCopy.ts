@@ -522,6 +522,15 @@ export function seasonPredictPageUiCopy(lang: SeasonPredictUiLang) {
       pt: "Parcial antes do prazo · visível só para quem enviou",
       fr: "Décompte provisoire avant la date limite · réservé aux participants",
     }),
+    myPicksNotSubmitted: L(lang, {
+      ja: "締切までに予想を提出していません。",
+      en: "You didn't submit picks before the deadline.",
+      ko: "마감 전에 예측을 제출하지 않았습니다.",
+      zh: "你没有在截止前提交预测。",
+      es: "No enviaste tus picks antes del cierre.",
+      pt: "Você não enviou palpites antes do prazo.",
+      fr: "Tu n'as pas envoyé de choix avant la date limite.",
+    }),
     editResubmit: L(lang, {
       ja: "編集して再提出",
       en: "Edit & resubmit",

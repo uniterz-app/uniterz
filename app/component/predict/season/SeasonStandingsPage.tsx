@@ -3,7 +3,7 @@
 /**
  * 本番: NBA シーズン順位予想
  * 締切前: 提出 / 提出後ビュー
- * 締切後: マーケット集計（Firestore スナップショット）
+ * 締切後: 自分の予想 / みんなの予想（確定集計）
  * `/mobile/season-standings`
  */
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -51,7 +51,7 @@ import {
 } from "@/lib/predict/seasonPredictUiCopy";
 import { fetchMeSeasonAwards } from "@/lib/api/fetchSeasonAwards";
 
-type Mode = "loading" | "edit" | "view" | "market" | "market_pending";
+type Mode = "loading" | "edit" | "view" | "locked";
 
 export default function SeasonStandingsPage() {
   const router = useRouter();
@@ -64,6 +64,7 @@ export default function SeasonStandingsPage() {
   const [market, setMarket] = useState<SeasonStandingsMarketSnapshot | null>(
     null
   );
+  const [hasMine, setHasMine] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [uid, setUid] = useState<string | null>(null);
@@ -99,26 +100,27 @@ export default function SeasonStandingsPage() {
     let cancelled = false;
     (async () => {
       if (!submitOpen) {
-        try {
-          const data = await fetchSeasonPredictMarket({
-            season,
-            kind: "standings",
-          });
-          if (cancelled) return;
-          if (data.standings) {
-            setMarket(data.standings);
-            setMode("market");
-          } else {
-            setMarket(null);
-            setMode("market_pending");
-          }
-        } catch (e) {
-          console.error("fetchSeasonPredictMarket standings", e);
-          if (!cancelled) {
-            setError(e instanceof Error ? e.message : "market load failed");
-            setMode("market_pending");
-          }
+        const [marketRes, mineRes] = await Promise.allSettled([
+          fetchSeasonPredictMarket({ season, kind: "standings" }),
+          fetchMeSeasonStandings(season),
+        ]);
+        if (cancelled) return;
+        if (marketRes.status === "fulfilled") {
+          setMarket(marketRes.value.standings ?? null);
+        } else {
+          console.error("fetchSeasonPredictMarket standings", marketRes.reason);
+          setMarket(null);
         }
+        if (mineRes.status === "fulfilled" && mineRes.value.prediction) {
+          setValue(mineRes.value.prediction);
+          setHasMine(true);
+        } else {
+          if (mineRes.status === "rejected") {
+            console.error("fetchMeSeasonStandings", mineRes.reason);
+          }
+          setHasMine(false);
+        }
+        setMode("locked");
         return;
       }
 
@@ -201,7 +203,7 @@ export default function SeasonStandingsPage() {
         <div className="flex justify-center py-16">
           <CandleChartLoader />
         </div>
-      ) : mode === "market" && market ? (
+      ) : mode === "locked" ? (
         <div className="space-y-3">
           <p
             className={[
@@ -212,27 +214,40 @@ export default function SeasonStandingsPage() {
             {pageUi.marketPassed}
           </p>
           <SeasonPredictKindTabs active="standings" />
-          <NbaSeasonStandingsMarketPanel
-            market={market}
+          <SeasonPredictCrowdToggle
+            kind="standings"
+            season={season}
             language={rulesLang}
+            initialTab={hasMine ? "mine" : "crowd"}
+            mine={
+              hasMine ? (
+                <NbaSeasonStandingsViewPanel prediction={value} />
+              ) : (
+                <p className="py-8 text-center text-[13px] leading-relaxed text-white/50">
+                  {pageUi.myPicksNotSubmitted}
+                </p>
+              )
+            }
+            crowd={
+              market ? (
+                <NbaSeasonStandingsMarketPanel market={market} language={rulesLang} />
+              ) : (
+                <div className="space-y-3 py-8 text-center">
+                  <p
+                    className={[
+                      nameOxanium.className,
+                      "text-[12px] font-extrabold uppercase tracking-[0.14em] text-cyan-200/80",
+                    ].join(" ")}
+                  >
+                    {pageUi.marketPending}
+                  </p>
+                  <p className="text-[13px] leading-relaxed text-white/50">
+                    {seasonPredictMarketPendingBody(rulesLang)}
+                  </p>
+                </div>
+              )
+            }
           />
-        </div>
-      ) : mode === "market_pending" ? (
-        <div className="space-y-3 py-8 text-center">
-          <p
-            className={[
-              nameOxanium.className,
-              "text-[12px] font-extrabold uppercase tracking-[0.14em] text-cyan-200/80",
-            ].join(" ")}
-          >
-            {pageUi.marketPending}
-          </p>
-          <p className="text-[13px] leading-relaxed text-white/50">
-            {seasonPredictMarketPendingBody(rulesLang)}
-          </p>
-          {error ? (
-            <p className="text-[12px] text-[#FF8AB4]/85">{error}</p>
-          ) : null}
         </div>
       ) : mode === "view" ? (
         <div className="space-y-3">

@@ -77,7 +77,7 @@ import {
 } from "../../../../../../lib/predict/seasonPredictUiCopy";
 import { useNativeUserLanguageFromAuth } from "../../../i18n/useNativeUserLanguageFromAuth";
 
-type PanelMode = "loading" | "edit" | "view" | "market" | "market_pending";
+type PanelMode = "loading" | "edit" | "view" | "locked";
 type ViewTab = "mine" | "crowd";
 type PreviewState = "idle" | "loading" | "ready" | "pending";
 
@@ -107,6 +107,8 @@ export default function SeasonPredictScreenNative() {
   const [awardsMode, setAwardsMode] = useState<PanelMode>("loading");
   const [awardsMarket, setAwardsMarket] =
     useState<SeasonAwardsMarketSnapshot | null>(null);
+  const [standingsHasMine, setStandingsHasMine] = useState(false);
+  const [awardsHasMine, setAwardsHasMine] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [rulesOpen, setRulesOpen] = useState(false);
@@ -191,27 +193,28 @@ export default function SeasonPredictScreenNative() {
     setAwardsMode("loading");
     (async () => {
       if (!submitOpen) {
-        try {
-          const data = await fetchSeasonPredictMarketNative({
-            season,
-            kind: "awards",
-          });
-          if (!mountedRef.current) return;
-          if (data.awards) {
-            setAwardsMarket(data.awards);
-            setAwardsMode("market");
-          } else {
-            setAwardsMarket(null);
-            setAwardsMode("market_pending");
-          }
-        } catch (e) {
-          const msg = e instanceof Error ? e.message : "load failed";
-          console.error("fetchSeasonPredictMarketNative awards", msg, e);
-          if (mountedRef.current) {
-            setError(msg);
-            setAwardsMode("market_pending");
-          }
+        const [marketRes, mineRes] = await Promise.allSettled([
+          fetchSeasonPredictMarketNative({ season, kind: "awards" }),
+          fetchMeSeasonAwardsNative(season),
+        ]);
+        if (!mountedRef.current) return;
+        if (marketRes.status === "fulfilled") {
+          setAwardsMarket(marketRes.value.awards ?? null);
+        } else {
+          console.error("fetchSeasonPredictMarketNative awards", marketRes.reason);
+          setAwardsMarket(null);
         }
+        const mine =
+          mineRes.status === "fulfilled" ? mineRes.value.prediction : null;
+        if (mineRes.status === "fulfilled" && mine) {
+          setAwards(mine);
+          setCandidates(mineRes.value.candidates ?? []);
+        } else if (mineRes.status === "rejected") {
+          console.error("fetchMeSeasonAwardsNative", mineRes.reason);
+        }
+        setAwardsHasMine(Boolean(mine));
+        if (!routeView) setViewTab(mine ? "mine" : "crowd");
+        setAwardsMode("locked");
         return;
       }
       try {
@@ -235,7 +238,7 @@ export default function SeasonPredictScreenNative() {
         }
       }
     })();
-  }, [mode, season, submitOpen]);
+  }, [mode, routeView, season, submitOpen]);
 
   useEffect(() => {
     if (mode !== "standings" || loadedRef.current.standings) return;
@@ -243,27 +246,27 @@ export default function SeasonPredictScreenNative() {
     setStandingsMode("loading");
     (async () => {
       if (!submitOpen) {
-        try {
-          const data = await fetchSeasonPredictMarketNative({
-            season,
-            kind: "standings",
-          });
-          if (!mountedRef.current) return;
-          if (data.standings) {
-            setStandingsMarket(data.standings);
-            setStandingsMode("market");
-          } else {
-            setStandingsMarket(null);
-            setStandingsMode("market_pending");
-          }
-        } catch (e) {
-          const msg = e instanceof Error ? e.message : "load failed";
-          console.error("fetchSeasonPredictMarketNative standings", msg, e);
-          if (mountedRef.current) {
-            setError(msg);
-            setStandingsMode("market_pending");
-          }
+        const [marketRes, mineRes] = await Promise.allSettled([
+          fetchSeasonPredictMarketNative({ season, kind: "standings" }),
+          fetchMeSeasonStandingsNative(season),
+        ]);
+        if (!mountedRef.current) return;
+        if (marketRes.status === "fulfilled") {
+          setStandingsMarket(marketRes.value.standings ?? null);
+        } else {
+          console.error("fetchSeasonPredictMarketNative standings", marketRes.reason);
+          setStandingsMarket(null);
         }
+        const mine =
+          mineRes.status === "fulfilled" ? mineRes.value.prediction : null;
+        if (mine) {
+          setStandings(mine);
+        } else if (mineRes.status === "rejected") {
+          console.error("fetchMeSeasonStandingsNative", mineRes.reason);
+        }
+        setStandingsHasMine(Boolean(mine));
+        if (!routeView) setViewTab(mine ? "mine" : "crowd");
+        setStandingsMode("locked");
         return;
       }
       try {
@@ -285,7 +288,7 @@ export default function SeasonPredictScreenNative() {
         }
       }
     })();
-  }, [mode, season, submitOpen]);
+  }, [mode, routeView, season, submitOpen]);
 
   const activeMode = mode === "awards" ? awardsMode : standingsMode;
 
@@ -460,7 +463,7 @@ export default function SeasonPredictScreenNative() {
     </View>
   );
 
-  const viewToggle = submitOpen ? (
+  const viewToggle = (
     <View style={styles.viewToggle}>
       {(["mine", "crowd"] as const).map((tab) => {
         const active = viewTab === tab;
@@ -484,7 +487,21 @@ export default function SeasonPredictScreenNative() {
         );
       })}
     </View>
-  ) : null;
+  );
+
+  const notSubmitted = (
+    <Text style={[styles.locked, styles.notSubmitted]}>
+      {pageCopy.myPicksNotSubmitted}
+    </Text>
+  );
+
+  const lockedCrowd = (panel: ReactNode) =>
+    panel ?? (
+      <View style={{ gap: 8 }}>
+        <Text style={styles.pendingTitle}>{pageCopy.marketPending}</Text>
+        <Text style={styles.locked}>{marketPendingBody}</Text>
+      </View>
+    );
 
   const renderCrowd = (state: PreviewState, panel: ReactNode) =>
     state === "ready" ? (
@@ -531,18 +548,26 @@ export default function SeasonPredictScreenNative() {
           <View style={styles.loading}>
             <ActivityIndicator color="rgba(103,232,249,0.8)" />
           </View>
-        ) : standingsMode === "market" && standingsMarket ? (
-          <NbaSeasonStandingsMarketPanelNative
-            market={standingsMarket}
-            language={language}
-          />
-        ) : standingsMode === "market_pending" ? (
-          <View style={{ gap: 8 }}>
-            <Text style={styles.pendingTitle}>{pageCopy.marketPending}</Text>
-            <Text style={styles.locked}>
-              {marketPendingBody}
-            </Text>
-            {error ? <Text style={styles.error}>{error}</Text> : null}
+        ) : standingsMode === "locked" ? (
+          <View style={{ gap: 12 }}>
+            {viewToggle}
+            {viewTab === "crowd"
+              ? lockedCrowd(
+                  standingsMarket ? (
+                    <NbaSeasonStandingsMarketPanelNative
+                      market={standingsMarket}
+                      language={language}
+                    />
+                  ) : null
+                )
+              : standingsHasMine ? (
+                  <NbaSeasonStandingsViewPanelNative
+                    prediction={standings}
+                    showBrandLogo
+                  />
+                ) : (
+                  notSubmitted
+                )}
           </View>
         ) : standingsMode === "view" ? (
           <View style={{ gap: 12 }}>
@@ -602,18 +627,27 @@ export default function SeasonPredictScreenNative() {
         <View style={styles.loading}>
           <ActivityIndicator color="rgba(252,211,77,0.8)" />
         </View>
-      ) : awardsMode === "market" && awardsMarket ? (
-        <NbaSeasonAwardsMarketPanelNative
-          market={awardsMarket}
-          language={language}
-        />
-      ) : awardsMode === "market_pending" ? (
-        <View style={{ gap: 8 }}>
-          <Text style={styles.pendingTitle}>{pageCopy.marketPending}</Text>
-          <Text style={styles.locked}>
-            {marketPendingBody}
-          </Text>
-          {error ? <Text style={styles.error}>{error}</Text> : null}
+      ) : awardsMode === "locked" ? (
+        <View style={{ gap: 12 }}>
+          {viewToggle}
+          {viewTab === "crowd"
+            ? lockedCrowd(
+                awardsMarket ? (
+                  <NbaSeasonAwardsMarketPanelNative
+                    market={awardsMarket}
+                    language={language}
+                  />
+                ) : null
+              )
+            : awardsHasMine ? (
+                <NbaSeasonAwardsViewPanelNative
+                  prediction={awards}
+                  catalog={candidates.length > 0 ? candidates : undefined}
+                  showBrandLogo
+                />
+              ) : (
+                notSubmitted
+              )}
         </View>
       ) : awardsMode === "view" ? (
         <View style={{ gap: 12 }}>
@@ -739,6 +773,7 @@ const styles = StyleSheet.create({
   },
   error: { fontSize: 12, color: "rgba(255,138,180,0.85)", lineHeight: 18 },
   locked: { fontSize: 12, color: "rgba(255,255,255,0.45)", lineHeight: 18 },
+  notSubmitted: { paddingVertical: 32, textAlign: "center", fontSize: 13 },
   pendingTitle: {
     fontFamily: "Oxanium_700Bold",
     fontSize: 12,
