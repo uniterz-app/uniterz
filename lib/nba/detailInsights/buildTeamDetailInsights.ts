@@ -4,7 +4,6 @@ import type {
   TeamDetailSummary,
 } from "@/lib/nba/detailInsights/detailInsightTypes";
 import { teamFieldValue } from "@/lib/nba/detailInsights/leagueRankUtils";
-import { isOutOrQuestionableInjury } from "@/lib/nba/teamInjuries/injuryStatusDisplay";
 import {
   rankBucket,
   rankBucketLabelEn,
@@ -15,15 +14,7 @@ import {
   type TeamIdentityInput,
 } from "@/lib/nba/detailInsights/teamIdentityCandidates";
 import { buildScheduleDifficulty } from "@/lib/nba/detailInsights/buildScheduleDifficulty";
-import { ACE_OUT_MIN_GAMES } from "@/lib/nba/insights/aceOutInsight";
-import {
-  findAceOutPlayerForInjury,
-} from "@/lib/nba/insights/aceOutInsight";
 import type { NbaTeamAceOutRecord } from "@/lib/nba/insights/aceOutRecordTypes";
-import {
-  formatWl,
-  wlWinPct,
-} from "@/lib/nba/insights/priorSeasonRecordTypes";
 import type { NbaLeagueTeamStatRow } from "@/lib/predict/nbaLeagueTeamStatsMocks";
 import { formatMetricValue } from "@/lib/predict/nbaLeagueTeamStatsMocks";
 import type {
@@ -37,15 +28,6 @@ export type BuildTeamDetailInsightsInput = {
   seasonRows: NbaLeagueTeamStatRow[];
   aceOut?: NbaTeamAceOutRecord | null;
 };
-
-function shortInjuryName(name: string): string {
-  const raw = name.trim();
-  const m = raw.match(/^([A-Za-z])\.(.+)$/);
-  if (m) return `${m[1]}.${m[2]}`.replace(/\s+/g, " ");
-  const parts = raw.split(/\s+/);
-  if (parts.length >= 2) return `${parts[0]!.charAt(0)}.${parts.slice(1).join(" ")}`;
-  return raw;
-}
 
 function offenseDefenseSentenceJa(
   ortgRank: number | undefined,
@@ -96,7 +78,7 @@ function offenseDefenseSentenceEn(
 }
 
 function buildTeamSummary(input: BuildTeamDetailInsightsInput): TeamDetailSummary | null {
-  const { detail, aceOut } = input;
+  const { detail } = input;
   const ortg = detail.metrics.season.find((m) => m.id === "ortg");
   const drtg = detail.metrics.season.find((m) => m.id === "drtg");
   const l10 = detail.last10Record;
@@ -116,58 +98,6 @@ function buildTeamSummary(input: BuildTeamDetailInsightsInput): TeamDetailSummar
   const odEn = offenseDefenseSentenceEn(ortg?.leagueRank, drtg?.leagueRank);
   if (odJa) ja.push(odJa);
   if (odEn) en.push(odEn);
-
-  const outGtd = detail.injuries.filter(
-    (i) => isOutOrQuestionableInjury(i.status)
-  );
-  let injuryLine = false;
-
-  if (aceOut && outGtd.length) {
-    const bundle = {
-      seasonKey: "",
-      teams: { [detail.teamId]: aceOut },
-      gameCount: 0,
-      builtAtMs: 0,
-      source: "",
-    };
-    for (const inj of outGtd) {
-      const hit = findAceOutPlayerForInjury(bundle, detail.teamId, inj);
-      if (hit && hit.gamesOut >= ACE_OUT_MIN_GAMES) {
-        ja.push(
-          `${shortInjuryName(inj.name)}欠場時は${formatWl(hit.whenOut)}（得点${Math.round(hit.whenOutPtsFor)}–失点${Math.round(hit.whenOutPtsAgainst)}）。`
-        );
-        en.push(
-          `Without ${shortInjuryName(inj.name)}: ${formatWl(hit.whenOut)} (${Math.round(hit.whenOutPtsFor)}–${Math.round(hit.whenOutPtsAgainst)} pts).`
-        );
-        injuryLine = true;
-        break;
-      }
-    }
-  }
-
-  if (!injuryLine && outGtd.length >= 2) {
-    ja.push(`主力${outGtd.length}名が欠場・疑わしい状態。`);
-    en.push(`${outGtd.length} key players OUT or GTD.`);
-    injuryLine = true;
-  }
-
-  if (!injuryLine && aceOut) {
-    const overall = wlWinPct(aceOut.teamOverall);
-    let worst: (typeof aceOut.players)[number] | null = null;
-    let worstDelta = 0;
-    for (const p of aceOut.players) {
-      if (p.gamesOut < ACE_OUT_MIN_GAMES) continue;
-      const delta = overall - wlWinPct(p.whenOut);
-      if (delta >= 0.12 && delta > worstDelta) {
-        worst = p;
-        worstDelta = delta;
-      }
-    }
-    if (worst) {
-      ja.push(`${shortInjuryName(worst.playerName)}不在時の勝率が大きく落ちる。`);
-      en.push(`Win rate drops sharply without ${shortInjuryName(worst.playerName)}.`);
-    }
-  }
 
   if (!ja.length) return null;
   return { linesJa: ja.join(""), linesEn: en.join("") };

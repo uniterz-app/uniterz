@@ -138,13 +138,7 @@ HOW THEY PLAY（既存）
    - ORTG elite & DRTG elite → JA: `攻守ともリーグ上位。`
    - その他 → 既存 `resolveLean` 相当を自然文に: `攻撃は{bucket}、守備は{bucket}。`
 
-3. **欠場影響文**（条件付き · 優先度順で 1 つだけ）
-   - **A.** 現在 OUT/GTD の ace-out 選手（`findAceOutPlayerForInjury` · `gamesOut ≥ 3`）  
-     JA: `{短名}欠場時は{W}-{L}（得点{ptsFor}–失点{ptsAgainst}）。`
-   - **B.** OUT/GTD が 2 人以上で ace データなし  
-     JA: `主力{ n }名が欠場・疑わしい状態。`
-   - **C.** ace-out 最大影響選手が healthy だが whenOut の win% が teamOverall より **≥ 12pt 低い**  
-     JA: `{短名}不在時の勝率が大きく落ちる。`
+3. **欠場影響文** — 出さない（2026-10-21 ユーザー指示。欠場はページ下の INJURY / ACE OUT で見える）
 
 **出力型**
 
