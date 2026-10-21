@@ -130,7 +130,7 @@ export default function NbaLeagueStandingsPanelNative({
         </View>
       ) : null}
       <View style={styles.top}>
-        <Text style={styles.asOf}>{updateFootnote}</Text>
+        {updateFootnote ? <Text style={styles.asOf}>{updateFootnote}</Text> : null}
         <NbaLeagueStatsSeasonNavNative
           seasonKey={season}
           onSeasonChange={setSeason}

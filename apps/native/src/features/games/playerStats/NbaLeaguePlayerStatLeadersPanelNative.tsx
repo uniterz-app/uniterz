@@ -188,7 +188,7 @@ export default function NbaLeaguePlayerStatLeadersPanelNative({
 
       <LeagueStatsCollapsibleNative>
       <View style={styles.top}>
-        <Text style={styles.asOf}>{updateFootnote}</Text>
+        {updateFootnote ? <Text style={styles.asOf}>{updateFootnote}</Text> : null}
         {error ? (
           <Text style={styles.fetchWarn}>
             {chrome.loadFailed(error)}

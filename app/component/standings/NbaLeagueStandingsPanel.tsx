@@ -185,11 +185,13 @@ export default function NbaLeagueStandingsPanel({
       ].join(" ")}
     >
       <header className="mb-2 shrink-0 space-y-1.5 px-0.5">
-        <p
-          className={`${nameOxanium.className} text-right text-[9px] font-bold uppercase tracking-[0.16em] text-[#00F5FF]/45`}
-        >
-          {updateFootnote}
-        </p>
+        {updateFootnote ? (
+          <p
+            className={`${nameOxanium.className} text-right text-[9px] font-bold uppercase tracking-[0.16em] text-[#00F5FF]/45`}
+          >
+            {updateFootnote}
+          </p>
+        ) : null}
         <NbaLeagueStatsSeasonNav
           seasonKey={season}
           onSeasonChange={setSeason}
