@@ -13,6 +13,7 @@ import {
   nbaAskIsScoringQuestion,
   nbaAskScoringFocus,
 } from "./nbaAskAppGuide";
+import { nbaAskDropPriorTurns, nbaAskSubject } from "./nbaAskSubject";
 import { isNbaAskDestinationId, type NbaAskDestinationId } from "./nbaAskDestinations";
 import { consumeNbaAskWebSearch, refundNbaAskWebSearch } from "./nbaAskQuota";
 import { searchNbaAskWeb } from "./nbaAskWebSearch";
@@ -23,7 +24,7 @@ const APP_GUIDE_TOOL = {
   function: {
     name: "get_app_guide",
     description:
-      "Official UNITERZ app guide from published copy. scoring focus: overview, upset, win, total. Also prediction_form, stats, ranking, unit_rewards, pro_plans, ask_chat, notifications, invite, squads, profile. Shot zones, contracts, discipline, and shape records are on their screens; this chat has no tool for them yet.",
+      "Official UNITERZ app guide from published copy. scoring focus: overview, upset, win, total. Also prediction_form, stats, ranking, unit_rewards, pro_plans, ask_chat, notifications, invite, squads, profile.",
     parameters: {
       type: "object",
       properties: {
@@ -109,13 +110,14 @@ function systemPrompt(
     `Now is ${nowInTimeZone(timeZone)} in the user's time zone (${timeZone}). The app's games list shows each game on the date it starts in this time zone. "Today", "yesterday", tool date arguments, and dates in your answer all use this time zone. Do not convert to US dates.`,
     "Upset (アップセット, あっぷせっと, 番狂わせ), win streaks, points, and win rate are UNITERZ scoring. Call get_app_guide topic scoring with focus upset, win, total, or overview. Answer in a few spoken sentences. Finer formulas than the guide are not public: say the help text is the limit.",
     "Notifications, invites, squads, profile, and Unit rewards use get_app_guide topics notifications, invite, squads, profile, unit_rewards.",
-    "Shot zones, contracts, discipline, and team shape records live on their screens. Say this chat cannot look them up yet. Do not use search_web for them.",
+    "Shot zones, contracts, career averages, discipline (tech, flagrant, ejection, fines), team strengths and weaknesses, and today's stat leaders have their own tools. Read those. Do not use search_web to fill them, and do not use Spotrac.",
     "Answer ONLY from tool results. Never guess numbers or app rules. If the guide or data doesn't cover it, say you don't know.",
     "Earlier messages are this same conversation. 'その選手', 'じゃあ', '昨日のは', 'そっち' keep the same player, team, and game. A new question with a different subject is not a follow-up. Do not answer it with the previous topic's guide.",
     "売上, うりあげ, revenue, and costs are not scoring. Do not call a tool for them. Say you cannot answer that.",
     "When the tools return stats, the app draws the table. Do not repeat those numbers as bullets or a second list. At most one short sentence for something the table does not show.",
     "For a league leader or team stat, say the leader and the asked team's rank. Do not list every team.",
-    "Call search_web only after a stats tool returns found:false, or liveNews:false (season roster IN/OUT is not a same-day wire). Never replace an app number or the IN/OUT list with the web. Say whether a number is from the app or the web, and include the source URL for the web.",
+    "Call search_web only after a stats tool returns found:false without webOk:false, or liveNews:false (season roster IN/OUT is not a same-day wire). Never replace an app number, contract, or the IN/OUT list with the web. If a tool says the app has no number yet, say that. Include the source URL when a number is from the web.",
+    "The messages above are the only conversation. Do not continue a topic that is not in them.",
     dataAccessLine(allowStats, isPro),
     "The app shows your text as-is. Plain sentences only. No markdown, no asterisks, no bold, no headings.",
     "If the user says the previous answer was hard to understand, explain the same facts again in 2 or 3 short everyday sentences. Do not repeat the previous wording or its numbered list. Do not tell them to read the in-app guide.",
@@ -254,7 +256,11 @@ export async function runNbaAsk(input: {
   const talkedScoring = input.turns.some(
     (t) => t.role === "user" && nbaAskIsScoringQuestion(t.content)
   );
-  const turnsForModel = clarify ? dropLastAssistantTurn(input.turns) : input.turns;
+  const turnsForModel = nbaAskDropPriorTurns(input.turns)
+    ? input.turns.filter((t) => t.role === "user").slice(-1)
+    : clarify
+      ? dropLastAssistantTurn(input.turns)
+      : input.turns;
   const messages: ChatMessage[] = [
     {
       role: "system",
@@ -341,7 +347,18 @@ export async function runNbaAsk(input: {
       const name = call.function.name;
       try {
         if (name === "get_app_guide") {
-          result = nbaAskAppGuide(String(args.topic ?? ""), input.language, String(args.focus ?? ""));
+          const asked = nbaAskSubject(latestUser);
+          let topic = String(args.topic ?? "");
+          let focus = String(args.focus ?? "");
+          if (asked.kind === "nba") {
+            result = { error: "This is an NBA question. Use a stats tool." };
+          } else {
+            if (asked.kind === "app") {
+              topic = asked.topic;
+              if (asked.topic === "scoring") focus = nbaAskScoringFocus(latestUser);
+            }
+            result = nbaAskAppGuide(topic, input.language, focus);
+          }
           const open = (result as { open?: unknown }).open;
           if (isNbaAskDestinationId(open) && !opens.includes(open) && opens.length < 2) {
             opens.push(open);
@@ -377,8 +394,10 @@ export async function runNbaAsk(input: {
         result = { error: "data unavailable" };
       }
       if (result && typeof result === "object") {
-        const row = result as { found?: unknown; liveNews?: unknown };
-        if (row.found === false || row.liveNews === false) statsMiss = true;
+        const row = result as { found?: unknown; liveNews?: unknown; webOk?: unknown };
+        if (row.liveNews === false || (row.found === false && row.webOk !== false)) {
+          statsMiss = true;
+        }
       }
       const nextBoard = boardFromAskTool(name, result);
       if (nextBoard) board = nextBoard;

@@ -20,8 +20,20 @@ import { NBA_ASK_FREE_STATS_LIFETIME, NBA_ASK_PRO_WEB_DAILY } from "./nbaAskQuot
 const SCORING_QUESTION =
   /あっぷせっと|アップセット|番狂わせ|\bupset\b|連勝|れんしょう|採点|勝率|ポイントの仕組み|ポイントの付き|ボーナス/i;
 
+/** チーム成績の勝率・連勝。アプリの採点とは別 */
+function nbaAskIsTeamRecordQuestion(text: string): boolean {
+  if (/採点|ポイントの仕組み|ポイントの付き|ボーナス|あっぷせっと|アップセット|番狂わせ|\bupset\b/i.test(text)) {
+    return false;
+  }
+  const named = text.match(/(\S{1,24})の(?:勝率|連勝)/);
+  if (!named) return false;
+  return !/^(?:自分|予想|アプリ|ピック|ユーザー|このアプリ)/.test(named[1] ?? "");
+}
+
 export function nbaAskIsScoringQuestion(text: string): boolean {
-  return SCORING_QUESTION.test(text.trim());
+  const q = text.trim();
+  if (nbaAskIsTeamRecordQuestion(q)) return false;
+  return SCORING_QUESTION.test(q);
 }
 
 /** 「わかりにくい」など、直前の答えを短く言い直す続き */
