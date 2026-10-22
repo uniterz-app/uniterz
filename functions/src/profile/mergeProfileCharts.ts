@@ -160,6 +160,34 @@ export function mergeProfileChartsOnSeasonSettle(opts: {
   };
 }
 
+/** 日次バケットで、その日の行だけ差し替える（確定時には読まない） */
+export function replaceDailyTrendRow(
+  prev: ProfileChartsDailyRow[] | undefined,
+  dateKey: string,
+  bucket: Record<string, unknown> | null | undefined
+): ProfileChartsDailyRow[] {
+  const dailyPrev = Array.isArray(prev) ? [...prev] : [];
+  const row = dailyRowFromSeasonBucket(dateKey, bucket);
+  const without = dailyPrev.filter((r) => r.date !== row.date);
+  if (hasActivity(row)) without.push(row);
+  return pruneDaily(without);
+}
+
+/** arrayUnion で伸びた直近結果を 20 件に戻す */
+export function pruneLast20(
+  prev: ProfileChartsLast20Point[] | undefined
+): ProfileChartsLast20Point[] {
+  const byId = new Map<string, ProfileChartsLast20Point>();
+  for (const point of prev ?? []) {
+    if (!point || typeof point.postId !== "string" || !point.postId) continue;
+    byId.set(point.postId, point);
+  }
+  const sorted = [...byId.values()].sort((a, b) => a.settledAtMs - b.settledAtMs);
+  return sorted.length <= PROFILE_CHARTS_LAST20_MAX
+    ? sorted
+    : sorted.slice(sorted.length - PROFILE_CHARTS_LAST20_MAX);
+}
+
 export function mergeProfileChartsOnRankSnapshot(opts: {
   cumulative: Record<string, unknown> | null | undefined;
   /** profileCharts/{season}。あれば親 nested より優先 */

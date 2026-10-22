@@ -218,6 +218,7 @@ export async function finalizePost({
   const exactHit = Boolean((baseScore as { exactMatch?: boolean }).exactMatch);
   userUpdateTasks.push(
     (async () => {
+      const streakInfo = streakResultMap.get(uid);
       await withSettleRetry("applyPostToUserStatsV2", uid, postDoc.id, () =>
         applyPostToUserStatsV2({
           uid,
@@ -245,74 +246,11 @@ export async function finalizePost({
           wcStage: null,
           homeTeamId: game.homeTeamId ?? p.home?.teamId ?? null,
           awayTeamId: game.awayTeamId ?? p.away?.teamId ?? null,
-        })
-      );
-
-      try {
-        const { syncProSkinProgressOnNbaSettle } = await import(
-          "./profile/syncProSkinProgressOnNbaSettle"
-        );
-        await syncProSkinProgressOnNbaSettle({
-          uid,
-          postId: postDoc.id,
-          startAt: after.startAtJst ?? after.startAt ?? p.createdAt,
-          league: game.league,
-          countsForRanking,
-          seasonPhase: game?.seasonPhase ?? null,
-          exactHit,
-          scorerHit: goalScorerBonus > 0,
-          upsetHit: result.upsetHit === true,
-          activeWinStreak,
-        });
-      } catch (skinErr) {
-        console.warn("[finalizePost] pro skin settle sync failed", uid, postDoc.id, skinErr);
-      }
-
-      try {
-        const { syncProfileHeroSnapshotOnNbaSettle } = await import(
-          "./profile/syncProfileHeroSnapshotOnNbaSettle"
-        );
-        await syncProfileHeroSnapshotOnNbaSettle({
-          uid,
-          postId: postDoc.id,
-          startAt: after.startAtJst ?? after.startAt ?? p.createdAt,
-          league: game.league,
-          countsForRanking,
-          isPickup,
-          seasonPhase: game?.seasonPhase ?? null,
-          isWin: result.isWin,
-          points: totalPoints,
-          upsetPoints,
-          upsetBonus,
-          streakBonus,
-          goalScorerHit: goalScorerBonus > 0,
-          hadUpsetGame,
-          upsetHit: result.upsetHit,
-          activeWinStreak,
-        });
-      } catch (heroErr) {
-        console.warn("[finalizePost] profile hero settle sync failed", uid, postDoc.id, heroErr);
-      }
-
-      try {
-        const { syncUserCareerOnNbaSettle } = await import(
-          "./profile/syncUserCareer"
-        );
-        const streakInfo = streakResultMap.get(uid);
-        await syncUserCareerOnNbaSettle({
-          uid,
-          startAt: after.startAtJst ?? after.startAt ?? p.createdAt,
-          league: game.league,
-          countsForRanking,
-          seasonPhase: game?.seasonPhase ?? null,
-          isWin: result.isWin,
-          exactHit,
           activeWinStreak,
           maxWinStreak: streakInfo?.maxWinStreak,
-        });
-      } catch (careerErr) {
-        console.warn("[finalizePost] user_career settle sync failed", careerErr);
-      }
+          streakDenorm: streakInfo?.denorm ?? null,
+        })
+      );
     })()
   );
 }

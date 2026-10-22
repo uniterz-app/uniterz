@@ -20,6 +20,18 @@ export const SUPPRESS_STREAK_INCREMENT_V2_FIELD = "suppressStreakIncrementV2";
 /** ユーザーごとに書き込み先が別なので並列でよい。onGameFinalV2 の 540 秒に収める */
 const STREAK_UPDATE_CONCURRENCY = 20;
 
+/** users / cumulative へ後から1回だけ写す連勝。確定トランザクションがまとめて書く */
+export type StreakDenorm = {
+  basketball: number;
+  football: number;
+  maxBasketball: number;
+  maxFootball: number;
+  maxLoseStreak: number;
+  /** 今回の競技の連勝（負け中は 0）。cumulative.activeWinStreak にそのまま載せる */
+  activeWinStreak: number;
+  streakSeasonKeyBasketball: string | null;
+};
+
 export type UpdatedUserStreakResult = {
   uid: string;
   didWin: boolean;
@@ -27,7 +39,35 @@ export type UpdatedUserStreakResult = {
   activeWinStreak: number;
   maxWinStreak: number;
   maxLoseStreak: number;
+  denorm?: StreakDenorm;
 };
+
+/** 公開プロフィール（users）に載せる連勝 */
+export function streakUsersPatch(denorm: StreakDenorm): Record<string, unknown> {
+  const patch: Record<string, unknown> = {
+    streakBySport: { basketball: denorm.basketball, football: denorm.football },
+    currentStreak: denorm.basketball,
+    streakFootball: denorm.football,
+    maxStreak: denorm.maxBasketball,
+  };
+  if (denorm.streakSeasonKeyBasketball) {
+    patch.streakSeasonKeyBasketball = denorm.streakSeasonKeyBasketball;
+  }
+  patch.updatedAt = FieldValue.serverTimestamp();
+  return patch;
+}
+
+/** 通算（cumulative_stats）に載せる連勝 */
+export function streakCumulativePatch(denorm: StreakDenorm): Record<string, unknown> {
+  const activeB = denorm.basketball > 0 ? denorm.basketball : 0;
+  const activeF = denorm.football > 0 ? denorm.football : 0;
+  return {
+    ...streakUsersPatch(denorm),
+    activeWinStreak: denorm.activeWinStreak,
+    activeWinStreakBasketball: activeB,
+    activeWinStreakFootball: activeF,
+  };
+}
 
 type StreakBySportState = {
   basketball: number;
@@ -142,8 +182,6 @@ export async function updateUserStreak({
 
   const applyForUser = async (uid: string, didWin: boolean) => {
     const userRef = db.doc(`user_stats_v2/${uid}`);
-    const cumulativeRef = db.doc(`cumulative_stats/${uid}`);
-    const publicUserRef = db.doc(`users/${uid}`);
     const markerRef = streakApplyMarkerRef(db, gameId, uid);
 
     const updated = await db.runTransaction<UpdatedUserStreakResult>(
@@ -204,8 +242,6 @@ export async function updateUserStreak({
               : 0;
 
         const currentForSport = sportKey === "football" ? curF : curB;
-        const activeWinStreakBasketball = curB > 0 ? curB : 0;
-        const activeWinStreakFootball = curF > 0 ? curF : 0;
         const basketballSeasonPatch =
           sportKey === "basketball"
             ? { streakSeasonKeyBasketball: basketballSeasonKey }
@@ -228,38 +264,11 @@ export async function updateUserStreak({
           { merge: true }
         );
 
-        tx.set(
-          publicUserRef,
-          {
-            streakBySport: { basketball: curB, football: curF },
-            currentStreak: curB,
-            streakFootball: curF,
-            maxStreak: maxB,
-            ...basketballSeasonPatch,
-            updatedAt: FieldValue.serverTimestamp(),
-          },
-          { merge: true }
-        );
-
-        tx.set(
-          cumulativeRef,
-          {
-            streakBySport: { basketball: curB, football: curF },
-            currentStreak: curB,
-            streakFootball: curF,
-            activeWinStreak,
-            activeWinStreakBasketball,
-            activeWinStreakFootball,
-            ...basketballSeasonPatch,
-            updatedAt: FieldValue.serverTimestamp(),
-          },
-          { merge: true }
-        );
-
         tx.set(markerRef, {
           appliedAt: FieldValue.serverTimestamp(),
         });
 
+        const storedSeason = snap.get("streakSeasonKeyBasketball");
         return {
           uid,
           didWin,
@@ -267,6 +276,20 @@ export async function updateUserStreak({
           activeWinStreak,
           maxWinStreak: sportKey === "football" ? maxF : maxB,
           maxLoseStreak: maxLose,
+          denorm: {
+            basketball: curB,
+            football: curF,
+            maxBasketball: maxB,
+            maxFootball: maxF,
+            maxLoseStreak: maxLose,
+            activeWinStreak,
+            streakSeasonKeyBasketball:
+              sportKey === "basketball"
+                ? basketballSeasonKey
+                : typeof storedSeason === "string" && storedSeason
+                  ? storedSeason
+                  : null,
+          },
         };
       }
     );

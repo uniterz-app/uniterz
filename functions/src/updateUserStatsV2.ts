@@ -9,14 +9,29 @@ import {
   resolveNbaRankingBucketKeys,
   type NbaSeasonPhase,
 } from "./rankings/nbaSeason";
-import {
-  mergeProfileChartsOnSeasonSettle,
-  projectSeasonBucket,
-} from "./profile/mergeProfileCharts";
+import { PROFILE_CHARTS_BUNDLE_VERSION } from "./profile/mergeProfileCharts";
 import {
   PROFILE_CHARTS_SUBCOL,
   profileChartsOpenDocId,
 } from "./profile/profileChartsStorage";
+import {
+  PROFILE_CHART_DIRTY_CHART_IDS_FIELD,
+  PROFILE_CHART_DIRTY_DATES_FIELD,
+  PROFILE_CHART_DIRTY_FIELD,
+} from "./profile/profileChartDirty";
+import {
+  streakCumulativePatch,
+  streakUsersPatch,
+  type StreakDenorm,
+} from "./updateUserStreak";
+import {
+  buildProSkinSettlePatch,
+  gameDayKeysForProSkin,
+  recordNewlyUnlockedProSkins,
+  resolveProSkinSettleSeasonKey,
+} from "./profile/syncProSkinProgressOnNbaSettle";
+import { buildHeroSettlePatch } from "./profile/syncProfileHeroSnapshotOnNbaSettle";
+import { nextUserCareerSettleWrite } from "./profile/syncUserCareer";
 
 /* =========================================================
  * 型
@@ -87,6 +102,10 @@ type ApplyOptsV2 = {
   isPickup?: boolean;
   /** NBA: regular / play_in / playoffs — バケット振り分け用 */
   seasonPhase?: NbaSeasonPhase;
+  /** 連勝トランザクションが先に計算した値。users へはこの確定で1回だけ写す */
+  activeWinStreak?: number;
+  maxWinStreak?: number;
+  streakDenorm?: StreakDenorm | null;
   /** World Cup（league=wc）: 予選 / 本戦。overall は常に別途加算 */
   wcStage?: "qualifying" | "main" | null;
   /** 試合のホーム / アウェイ teamId（teams.* バケット用） */
@@ -280,6 +299,9 @@ export async function applyPostToUserStatsV2(opts: ApplyOptsV2) {
     seasonPhase,
     homeTeamId,
     awayTeamId,
+    activeWinStreak = 0,
+    maxWinStreak,
+    streakDenorm = null,
   } = opts;
 
   const leagueKey = normalizeLeague(league);
@@ -301,242 +323,249 @@ export async function applyPostToUserStatsV2(opts: ApplyOptsV2) {
   const userRef = db().doc(`users/${uid}`);
 
   const userStatsRef = db().doc(`user_stats_v2/${uid}`);
+  const careerRef =
+    forOpenRanking && leagueKey === "nba" ? db().doc(`user_career/${uid}`) : null;
+  const skinSeasonKey = resolveProSkinSettleSeasonKey({
+    startAt,
+    league,
+    countsForRanking: forOpenRanking,
+    seasonPhase,
+  });
+  const gameDayKeys = skinSeasonKey ? await gameDayKeysForProSkin(skinSeasonKey) : null;
+  const chartIds: string[] = [];
+  if (nbaSeasonKey && forPickupRanking) chartIds.push(nbaSeasonKey);
+  if (nbaSeasonKey && forOpenRanking) chartIds.push(profileChartsOpenDocId(nbaSeasonKey));
+
+  let newlyUnlockedIds: string[] = [];
 
   await db().runTransaction(async (tx) => {
-    const marker = await tx.get(markerRef);
-    if (marker.exists) return;
+    const markerPromise = tx.get(markerRef);
+    const userPromise = tx.get(userRef);
+    const careerPromise = careerRef ? tx.get(careerRef) : Promise.resolve(null);
+    const [marker, userSnap, careerSnap] = await Promise.all([
+      markerPromise,
+      userPromise,
+      careerPromise,
+    ]);
+    const user = (userSnap.exists ? userSnap.data() : {}) as Record<string, unknown>;
+    const statsAlready = marker.exists;
 
-    const userSnap = await tx.get(userRef);
-    const user = userSnap.exists ? userSnap.data()! : {};
-    /** profileCharts merge 用（writes 前に全 reads） */
-    const chartsRef =
-      forPickupRanking && nbaSeasonKey
-        ? cumulativeRef.collection("profileCharts").doc(nbaSeasonKey)
-        : null;
-    const openChartsRef =
-      forOpenRanking && nbaSeasonKey
-        ? cumulativeRef
-            .collection(PROFILE_CHARTS_SUBCOL)
-            .doc(profileChartsOpenDocId(nbaSeasonKey))
-        : null;
-    const [dailySnap, cumulativeSnap, chartsSnap, openChartsSnap] =
-      await Promise.all([
-        tx.get(dailyRef),
-        tx.get(cumulativeRef),
-        chartsRef ? tx.get(chartsRef) : Promise.resolve(null),
-        openChartsRef ? tx.get(openChartsRef) : Promise.resolve(null),
-      ]);
+    if (!statsAlready) {
+      const inc: any = {
+        posts: FieldValue.increment(1),
+        wins: FieldValue.increment(isWin ? 1 : 0),
+        scoreErrorSum: FieldValue.increment(scoreError),
 
-    const inc: any = {
-      posts: FieldValue.increment(1),
-      wins: FieldValue.increment(isWin ? 1 : 0),
-      scoreErrorSum: FieldValue.increment(scoreError),
+        upsetOpportunityCount: FieldValue.increment(hadUpsetGame ? 1 : 0),
+        upsetHitCount: FieldValue.increment(upsetHit ? 1 : 0),
+        upsetPickCount: FieldValue.increment(hadUpsetGame ? 1 : 0),
 
-      upsetOpportunityCount: FieldValue.increment(hadUpsetGame ? 1 : 0),
-      upsetHitCount: FieldValue.increment(upsetHit ? 1 : 0),
-      upsetPickCount: FieldValue.increment(hadUpsetGame ? 1 : 0),
+        exactHitCount: FieldValue.increment(exactHit ? 1 : 0),
 
-      exactHitCount: FieldValue.increment(exactHit ? 1 : 0),
+        pointsSumV3: FieldValue.increment(points),
+        upsetPointsSum: FieldValue.increment(upsetPoints),
 
-      pointsSumV3: FieldValue.increment(points),
-      upsetPointsSum: FieldValue.increment(upsetPoints),
-
-      upsetBonusSum: FieldValue.increment(upsetBonus),
-      streakBonusSum: FieldValue.increment(streakBonus),
-      goalScorerHitCount: FieldValue.increment(goalScorerHit ? 1 : 0),
-      goalScorerBonusSum: FieldValue.increment(goalScorerBonus),
-    };
-
-    const update: any = {
-      date: dateKey,
-      updatedAt: FieldValue.serverTimestamp(),
-      all: inc,
-      ...(forPickupRanking ? { ranking: inc } : {}),
-      ...(forPickupRanking && nbaSeasonKey
-        ? { rankingBySeason: { [nbaSeasonKey]: inc } }
-        : {}),
-      ...(forOpenRanking ? { openRanking: inc } : {}),
-      ...(forOpenRanking && nbaSeasonKey
-        ? { openRankingBySeason: { [nbaSeasonKey]: inc } }
-        : {}),
-      ...(forOpenRanking && nbaPlayoffsSeasonKey
-        ? { rankingByNbaPlayoffs: { [nbaPlayoffsSeasonKey]: inc } }
-        : {}),
-    };
-
-    if (leagueKey) {
-      update.leagues = {
-        ...(update.leagues || {}),
-        [leagueKey]: inc,
+        upsetBonusSum: FieldValue.increment(upsetBonus),
+        streakBonusSum: FieldValue.increment(streakBonus),
+        goalScorerHitCount: FieldValue.increment(goalScorerHit ? 1 : 0),
+        goalScorerBonusSum: FieldValue.increment(goalScorerBonus),
       };
 
-      tx.set(
-        userStatsRef,
-        {
-          leaguePosts: {
-            [leagueKey]: FieldValue.increment(1),
+      const update: any = {
+        date: dateKey,
+        updatedAt: FieldValue.serverTimestamp(),
+        all: inc,
+        ...(forPickupRanking ? { ranking: inc } : {}),
+        ...(forPickupRanking && nbaSeasonKey
+          ? { rankingBySeason: { [nbaSeasonKey]: inc } }
+          : {}),
+        ...(forOpenRanking ? { openRanking: inc } : {}),
+        ...(forOpenRanking && nbaSeasonKey
+          ? { openRankingBySeason: { [nbaSeasonKey]: inc } }
+          : {}),
+        ...(forOpenRanking && nbaPlayoffsSeasonKey
+          ? { rankingByNbaPlayoffs: { [nbaPlayoffsSeasonKey]: inc } }
+          : {}),
+      };
+
+      if (leagueKey) {
+        update.leagues = {
+          ...(update.leagues || {}),
+          [leagueKey]: inc,
+        };
+
+        tx.set(
+          userStatsRef,
+          {
+            leaguePosts: {
+              [leagueKey]: FieldValue.increment(1),
+            },
+            lastActiveLeague: leagueKey,
+            updatedAt: FieldValue.serverTimestamp(),
           },
-          lastActiveLeague: leagueKey,
-          updatedAt: FieldValue.serverTimestamp(),
-        },
-        { merge: true }
+          { merge: true }
+        );
+      }
+
+      const gameTeamIds = uniqueGameTeamIds(homeTeamId, awayTeamId);
+      if (forPickupRanking && gameTeamIds.length > 0) {
+        update.teams = {
+          ...(update.teams ?? {}),
+          ...Object.fromEntries(
+            gameTeamIds.map((teamId) => [teamId, inc])
+          ),
+        };
+      }
+
+      tx.set(dailyRef, update, { merge: true });
+      tx.set(markerRef, {
+        at: FieldValue.serverTimestamp(),
+        league: leagueKey,
+        homeTeamId: homeTeamId ?? null,
+        awayTeamId: awayTeamId ?? null,
+        posts: 1,
+        wins: isWin ? 1 : 0,
+        scoreErrorSum: scoreError,
+        exactHitCount: 0,
+        pointsSumV3: points,
+        upsetPointsSum: upsetPoints,
+        upsetHitCount: upsetHit ? 1 : 0,
+        upsetOpportunityCount: hadUpsetGame ? 1 : 0,
+        countedForRanking: forOpenRanking,
+        countedForPickup: forPickupRanking,
+      });
+
+      const contrib = buildPostCumulativeContribution({
+        countsForRanking,
+        isPickup,
+        league,
+        startAt,
+        seasonPhase,
+        isWin,
+        points,
+        upsetPoints,
+        exactHit,
+        goalScorerHit,
+        wcStage,
+        upsetBonus,
+        streakBonus,
+      });
+
+      const chartExtra: Record<string, unknown> = streakDenorm
+        ? streakCumulativePatch(streakDenorm)
+        : {};
+      if (chartIds.length > 0) {
+        chartExtra[PROFILE_CHART_DIRTY_FIELD] = true;
+        chartExtra[PROFILE_CHART_DIRTY_DATES_FIELD] = FieldValue.arrayUnion(dateKey);
+        chartExtra[PROFILE_CHART_DIRTY_CHART_IDS_FIELD] =
+          FieldValue.arrayUnion(...chartIds);
+      }
+
+      applyCumulativeIncrementInTransaction(
+        tx,
+        cumulativeRef,
+        user,
+        uid,
+        contrib,
+        1,
+        chartExtra
       );
-    }
 
-    const gameTeamIds = uniqueGameTeamIds(homeTeamId, awayTeamId);
-    if (forPickupRanking && gameTeamIds.length > 0) {
-      update.teams = {
-        ...(update.teams ?? {}),
-        ...Object.fromEntries(
-          gameTeamIds.map((teamId) => [teamId, inc])
-        ),
+      /** last20 だけ先に足す。日次推移は汚しフラグを日次ジョブが作り直す */
+      const last20Point = {
+        postId,
+        settledAtMs: startAt.toMillis(),
+        isWin,
       };
+      for (const chartId of chartIds) {
+        tx.set(
+          cumulativeRef.collection(PROFILE_CHARTS_SUBCOL).doc(chartId),
+          {
+            v: PROFILE_CHARTS_BUNDLE_VERSION,
+            seasonKey: nbaSeasonKey,
+            last20: FieldValue.arrayUnion(last20Point),
+          },
+          { merge: true }
+        );
+      }
     }
 
-    tx.set(dailyRef, update, { merge: true });
-    tx.set(markerRef, {
-      at: FieldValue.serverTimestamp(),
-      league: leagueKey,
-      homeTeamId: homeTeamId ?? null,
-      awayTeamId: awayTeamId ?? null,
-      posts: 1,
-      wins: isWin ? 1 : 0,
-      scoreErrorSum: scoreError,
-      exactHitCount: 0,
-      pointsSumV3: points,
-      upsetPointsSum: upsetPoints,
-      upsetHitCount: upsetHit ? 1 : 0,
-      upsetOpportunityCount: hadUpsetGame ? 1 : 0,
-      countedForRanking: forOpenRanking,
-      countedForPickup: forPickupRanking,
-    });
-
-    const contrib = buildPostCumulativeContribution({
-      countsForRanking,
-      isPickup,
-      league,
+    const usersPatch: Record<string, unknown> = {};
+    if (!statsAlready && streakDenorm) {
+      Object.assign(usersPatch, streakUsersPatch(streakDenorm));
+    }
+    const skin = skinSeasonKey
+      ? buildProSkinSettlePatch(
+          user,
+          {
+            postId,
+            startAt,
+            league,
+            countsForRanking: forOpenRanking,
+            seasonPhase,
+            exactHit,
+            scorerHit: goalScorerHit,
+            upsetHit,
+            activeWinStreak,
+          },
+          skinSeasonKey,
+          gameDayKeys
+        )
+      : null;
+    if (skin) {
+      Object.assign(usersPatch, skin.patch);
+      newlyUnlockedIds = skin.newlyUnlockedIds;
+    }
+    const hero = buildHeroSettlePatch(user, {
+      postId,
       startAt,
+      league,
+      countsForRanking: forOpenRanking,
+      isPickup,
       seasonPhase,
       isWin,
       points,
       upsetPoints,
-      exactHit,
-      goalScorerHit,
-      wcStage,
       upsetBonus,
       streakBonus,
+      goalScorerHit,
+      hadUpsetGame,
+      upsetHit,
+      activeWinStreak,
     });
-
-    /** overview チャート用 denorm（Pick Up シーズンスライス） */
-    let profileCharts: ReturnType<typeof mergeProfileChartsOnSeasonSettle> | null =
-      null;
-    if (forPickupRanking && nbaSeasonKey) {
-      const dailyData = dailySnap.exists
-        ? (dailySnap.data() as Record<string, unknown>)
-        : null;
-      const bySeason = (dailyData?.rankingBySeason ?? {}) as Record<
-        string,
-        Record<string, unknown>
-      >;
-      const projected = projectSeasonBucket(bySeason[nbaSeasonKey], {
-        posts: 1,
-        wins: isWin ? 1 : 0,
-        pointsSumV3: points,
-        upsetPointsSum: upsetPoints,
-      });
-      const settledAtMs = startAt.toMillis();
-      profileCharts = mergeProfileChartsOnSeasonSettle({
-        cumulative: cumulativeSnap.exists
-          ? (cumulativeSnap.data() as Record<string, unknown>)
-          : null,
-        chartsDoc: chartsSnap?.exists
-          ? (chartsSnap.data() as Record<string, unknown>)
-          : null,
-        seasonKey: nbaSeasonKey,
-        dateKey,
-        projectedSeasonBucket: projected,
-        last20Point: {
-          postId,
-          settledAtMs,
-          isWin,
-        },
-      });
+    if (hero) Object.assign(usersPatch, hero);
+    if (Object.keys(usersPatch).length > 0) {
+      tx.set(userRef, usersPatch, { merge: true });
     }
 
-    /** PRO LEAGUE（無差別級）スライス。親 nested は PICK UP 専用なので読まない */
-    let openProfileCharts: ReturnType<
-      typeof mergeProfileChartsOnSeasonSettle
-    > | null = null;
-    if (openChartsRef && nbaSeasonKey) {
-      const dailyData = dailySnap.exists
-        ? (dailySnap.data() as Record<string, unknown>)
-        : null;
-      const openBySeason = (dailyData?.openRankingBySeason ?? {}) as Record<
-        string,
-        Record<string, unknown>
-      >;
-      openProfileCharts = mergeProfileChartsOnSeasonSettle({
-        cumulative: null,
-        chartsDoc: openChartsSnap?.exists
-          ? (openChartsSnap.data() as Record<string, unknown>)
-          : null,
-        seasonKey: nbaSeasonKey,
-        dateKey,
-        projectedSeasonBucket: projectSeasonBucket(openBySeason[nbaSeasonKey], {
-          posts: 1,
-          wins: isWin ? 1 : 0,
-          pointsSumV3: points,
-          upsetPointsSum: upsetPoints,
-        }),
-        last20Point: {
+    if (careerRef && careerSnap) {
+      const payload = nextUserCareerSettleWrite(
+        careerSnap.exists ? careerSnap.data() : {},
+        {
+          uid,
           postId,
-          settledAtMs: startAt.toMillis(),
+          startAt,
+          league,
+          countsForRanking: forOpenRanking,
+          seasonPhase,
           isWin,
-        },
-      });
-    }
-
-    applyCumulativeIncrementInTransaction(
-      tx,
-      cumulativeRef,
-      user,
-      uid,
-      contrib
-    );
-
-    if (profileCharts) {
-      const builtAtMs = Date.now();
-      const payload: Record<string, unknown> = {
-        v: profileCharts.v,
-        seasonKey: profileCharts.seasonKey,
-        dailyTrend: profileCharts.dailyTrend ?? [],
-        last20: profileCharts.last20 ?? [],
-        builtAtMs,
-      };
-      if (profileCharts.rankTrend !== undefined) {
-        payload.rankTrend = profileCharts.rankTrend;
-      }
-      tx.set(
-        cumulativeRef.collection("profileCharts").doc(profileCharts.seasonKey),
-        payload,
-        { merge: true }
+          exactHit,
+          activeWinStreak,
+          maxWinStreak,
+          unlockedSkinCount: skin?.unlockedCount,
+        }
       );
-    }
-
-    if (openProfileCharts && openChartsRef) {
-      const payload: Record<string, unknown> = {
-        v: openProfileCharts.v,
-        seasonKey: openProfileCharts.seasonKey,
-        dailyTrend: openProfileCharts.dailyTrend ?? [],
-        last20: openProfileCharts.last20 ?? [],
-        builtAtMs: Date.now(),
-      };
-      if (openProfileCharts.rankTrend !== undefined) {
-        payload.rankTrend = openProfileCharts.rankTrend;
-      }
-      tx.set(openChartsRef, payload, { merge: true });
+      if (payload) tx.set(careerRef, payload, { merge: true });
     }
   });
+
+  if (newlyUnlockedIds.length > 0) {
+    try {
+      await recordNewlyUnlockedProSkins(newlyUnlockedIds);
+    } catch (err) {
+      console.warn("[applyPostToUserStatsV2] pro skin holder count failed", err);
+    }
+  }
 }
 
 /* =========================================================

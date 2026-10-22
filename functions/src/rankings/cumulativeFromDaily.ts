@@ -244,7 +244,9 @@ export function applyCumulativeIncrementInTransaction(
   user: Record<string, unknown>,
   uid: string,
   contrib: PostCumulativeContribution,
-  sign: 1 | -1 = 1
+  sign: 1 | -1 = 1,
+  /** 連勝の写しとチャート遅延フラグ。加算と同じ set に載せる */
+  extra?: Record<string, unknown>
 ) {
   tx.set(
     cumulativeRef,
@@ -258,6 +260,7 @@ export function applyCumulativeIncrementInTransaction(
       cumulativeLiveUpdates: true,
       updatedAt: FieldValue.serverTimestamp(),
       ...buildCumulativeIncrementFields(contrib, sign),
+      ...extra,
     },
     { merge: true }
   );

@@ -209,6 +209,18 @@ export const buildCumulativeRankingSnapshotCron = onSchedule(
         err
       );
     }
+
+    try {
+      const { refreshDirtyProfileCharts } = await import(
+        "./profile/refreshDirtyProfileCharts"
+      );
+      await refreshDirtyProfileCharts();
+    } catch (err) {
+      console.error(
+        "[buildCumulativeRankingSnapshotCron] profile charts failed",
+        err
+      );
+    }
   }
 );
 
@@ -250,6 +262,18 @@ export const rebuildGroupBattleSnapshotsEveningCron = onSchedule(
     } catch (err) {
       console.error(
         "[rebuildGroupBattleSnapshotsEveningCron] failed",
+        err
+      );
+    }
+
+    try {
+      const { refreshDirtyProfileCharts } = await import(
+        "./profile/refreshDirtyProfileCharts"
+      );
+      await refreshDirtyProfileCharts();
+    } catch (err) {
+      console.error(
+        "[rebuildGroupBattleSnapshotsEveningCron] profile charts failed",
         err
       );
     }

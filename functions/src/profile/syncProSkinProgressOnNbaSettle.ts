@@ -158,6 +158,218 @@ function nextHitCount(
   return prev;
 }
 
+export type ProSkinSettlePatch = {
+  patch: Record<string, unknown>;
+  newlyUnlockedIds: string[];
+  unlockedCount: number;
+};
+
+/** users を読んだあとの差分。変化がなければ null（訂正で結果が同じとき） */
+export function buildProSkinSettlePatch(
+  user: Record<string, unknown>,
+  opts: {
+    postId: string;
+    startAt: FirebaseFirestore.Timestamp | Date | null | undefined;
+    league: string | null | undefined;
+    countsForRanking: boolean;
+    seasonPhase: string | null | undefined;
+    exactHit: boolean;
+    scorerHit: boolean;
+    upsetHit: boolean;
+    activeWinStreak: number;
+  },
+  nbaSeasonKey: string,
+  gameDayKeys: readonly string[] | null
+): ProSkinSettlePatch | null {
+  const predictDayKey = dateKeyET(
+    opts.startAt && typeof (opts.startAt as { toDate?: () => Date }).toDate === "function"
+      ? (opts.startAt as FirebaseFirestore.Timestamp).toDate()
+      : opts.startAt instanceof Date
+        ? opts.startAt
+        : new Date()
+  );
+  const prevRaw = user.proSkinProgress as Record<string, unknown> | undefined;
+  const prevSeason = typeof prevRaw?.seasonKey === "string" ? prevRaw.seasonKey : "";
+  const lastPostId = typeof prevRaw?.lastPostId === "string" ? prevRaw.lastPostId : "";
+  const lastExactHit = prevRaw?.lastExactHit === true;
+  const lastScorerHit = prevRaw?.lastScorerHit === true;
+  const lastUpsetHit = prevRaw?.lastUpsetHit === true;
+  const sameSeason = prevSeason === nbaSeasonKey;
+  const prevPeriodWins = sameSeason ? parsePeriodWins(prevRaw?.periodWins) : {};
+  const prevStreakRuns = sameSeason ? parsePeriodWins(prevRaw?.streakRuns) : {};
+  const prevActiveWinStreak = sameSeason ? safeInt(prevRaw?.lastActiveWinStreak) : 0;
+
+  const isCorrection = lastPostId === opts.postId;
+  if (
+    isCorrection &&
+    lastExactHit === opts.exactHit &&
+    lastScorerHit === opts.scorerHit &&
+    lastUpsetHit === opts.upsetHit
+  ) {
+    return null;
+  }
+
+  const prevPosts = sameSeason ? safeInt(prevRaw?.posts) : 0;
+  const prevExactHits = sameSeason ? safeInt(prevRaw?.exactHits) : 0;
+  const prevScorerHits = sameSeason ? safeInt(prevRaw?.scorerHits) : 0;
+  const prevUpsetHits = sameSeason ? safeInt(prevRaw?.upsetHits) : 0;
+  const prevMaxWinStreak = sameSeason ? safeInt(prevRaw?.maxWinStreak) : 0;
+  const prevMaxPredictDayStreak = sameSeason ? safeInt(prevRaw?.maxPredictDayStreak) : 0;
+  const nextDay = nextPredictDayStreak({
+    prevDayKey:
+      sameSeason && typeof prevRaw?.lastPredictDayKey === "string"
+        ? prevRaw.lastPredictDayKey
+        : "",
+    prevStreak: sameSeason ? safeInt(prevRaw?.predictDayStreak) : 0,
+    dayKey: predictDayKey,
+    gameDayKeys,
+  });
+  const maxPredictDayStreak = Math.max(prevMaxPredictDayStreak, nextDay.streak);
+
+  const posts = isCorrection ? prevPosts : prevPosts + 1;
+  const exactHits = nextHitCount(prevExactHits, isCorrection, lastExactHit, opts.exactHit);
+  const scorerHits = nextHitCount(prevScorerHits, isCorrection, lastScorerHit, opts.scorerHit);
+  const upsetHits = nextHitCount(prevUpsetHits, isCorrection, lastUpsetHit, opts.upsetHit);
+  let maxWinStreak = prevMaxWinStreak;
+  const streak = Math.max(0, Math.floor(opts.activeWinStreak || 0));
+  if (streak > maxWinStreak) maxWinStreak = streak;
+
+  const streakRuns: Record<string, number> = { ...prevStreakRuns };
+  const activeWinStreak = isCorrection ? prevActiveWinStreak : streak;
+  if (!isCorrection) {
+    for (const len of PRO_SKIN_STREAK_RUN_LENGTHS) {
+      if (prevActiveWinStreak < len && streak >= len) {
+        const key = String(len);
+        streakRuns[key] = (streakRuns[key] ?? 0) + 1;
+      }
+    }
+  }
+
+  const isPro = isProUser(user);
+  const unlocked = new Set<string>(
+    Array.isArray(user.proSkinUnlockedIds)
+      ? user.proSkinUnlockedIds.filter((x): x is string => typeof x === "string")
+      : []
+  );
+  const prevHeld = new Set<string>([
+    ...unlocked,
+    ...(Array.isArray(user.proSkinHeldIds)
+      ? user.proSkinHeldIds.filter((x): x is string => typeof x === "string")
+      : []),
+  ]);
+  const newlyUnlockedIds: string[] = [];
+  const liveNoticeIds: string[] = [];
+
+  if (isPro) {
+    const prevValues: Record<ThresholdKind, number> = {
+      streak: prevMaxWinStreak,
+      posts: prevPosts,
+      exactHits: prevExactHits,
+      predictDays: prevMaxPredictDayStreak,
+      scorerHits: prevScorerHits,
+      upsetHits: prevUpsetHits,
+    };
+    const nowValues: Record<ThresholdKind, number> = {
+      streak: maxWinStreak,
+      posts,
+      exactHits,
+      predictDays: maxPredictDayStreak,
+      scorerHits,
+      upsetHits,
+    };
+    for (const row of PRO_SKIN_THRESHOLD_MILESTONES) {
+      const prevValue = prevValues[row.kind];
+      const nowValue = nowValues[row.kind];
+      const prevOk = prevValue >= row.threshold;
+      const nowOk = nowValue >= row.threshold;
+      if (nowOk) {
+        if (!prevHeld.has(row.id)) newlyUnlockedIds.push(row.id);
+        unlocked.add(row.id);
+        if (!prevOk) liveNoticeIds.push(row.id);
+      }
+    }
+    for (const row of PRO_SKIN_STREAK_RUN_MILESTONES) {
+      const key = String(row.streak);
+      const prevOk = (prevStreakRuns[key] ?? 0) >= row.runs;
+      const nowOk = (streakRuns[key] ?? 0) >= row.runs;
+      if (nowOk) {
+        if (!prevHeld.has(row.id)) newlyUnlockedIds.push(row.id);
+        unlocked.add(row.id);
+        if (!prevOk) liveNoticeIds.push(row.id);
+      }
+    }
+  }
+
+  const held = new Set<string>([...prevHeld, ...unlocked]);
+  const patch: Record<string, unknown> = {
+    proSkinProgress: {
+      seasonKey: nbaSeasonKey,
+      posts,
+      exactHits,
+      scorerHits,
+      upsetHits,
+      maxWinStreak,
+      maxPredictDayStreak,
+      predictDayStreak: nextDay.streak,
+      lastPredictDayKey: nextDay.lastDayKey,
+      streakRuns,
+      lastActiveWinStreak: activeWinStreak,
+      periodWins: prevPeriodWins,
+      updatedAtMs: Date.now(),
+      lastPostId: opts.postId,
+      lastExactHit: opts.exactHit,
+      lastScorerHit: opts.scorerHit,
+      lastUpsetHit: opts.upsetHit,
+    },
+    proSkinUnlockedIds: [...unlocked],
+    proSkinHeldIds: [...held],
+    proSkinUnlockSeason: PRO_SKIN_UNLOCK_FROM_SEASON_KEY,
+    updatedAt: FieldValue.serverTimestamp(),
+  };
+  if (liveNoticeIds.length > 0) {
+    patch.proSkinUnlockNoticeIds = FieldValue.arrayUnion(...liveNoticeIds);
+  }
+
+  return {
+    patch,
+    newlyUnlockedIds,
+    unlockedCount: countMilestoneUnlockedProSkins([...unlocked]),
+  };
+}
+
+/** シーズン対象外なら null。対象なら試合日キー（連続予想日の判定用） */
+export function resolveProSkinSettleSeasonKey(opts: {
+  startAt: FirebaseFirestore.Timestamp | Date | null | undefined;
+  league: string | null | undefined;
+  countsForRanking: boolean;
+  seasonPhase: string | null | undefined;
+}): string | null {
+  const leagueKey = String(opts.league ?? "").trim().toLowerCase();
+  if (leagueKey !== "nba") return null;
+  const seasonPhase = normalizeNbaSeasonPhase(opts.seasonPhase);
+  const isPreseason = seasonPhase === "preseason";
+  if (!opts.countsForRanking && !isPreseason) return null;
+  const startDate =
+    opts.startAt && typeof (opts.startAt as { toDate?: () => Date }).toDate === "function"
+      ? (opts.startAt as FirebaseFirestore.Timestamp).toDate()
+      : opts.startAt instanceof Date
+        ? opts.startAt
+        : new Date();
+  const nbaSeasonKey = isPreseason
+    ? nbaSeasonKeyFromDateJST(startDate)
+    : resolveNbaRankingBucketKeys("nba", true, startDate, seasonPhase).nbaSeasonKey;
+  if (!nbaSeasonKey || nbaSeasonKey < PRO_SKIN_UNLOCK_FROM_SEASON_KEY) return null;
+  return nbaSeasonKey;
+}
+
+export async function gameDayKeysForProSkin(seasonKey: string): Promise<string[] | null> {
+  return loadNbaGameDayKeys(seasonKey);
+}
+
+export async function recordNewlyUnlockedProSkins(ids: readonly string[]): Promise<void> {
+  await incrementHolderCounts(ids);
+}
+
 export async function syncProSkinProgressOnNbaSettle(opts: {
   uid: string;
   postId: string;
@@ -170,35 +382,9 @@ export async function syncProSkinProgressOnNbaSettle(opts: {
   upsetHit: boolean;
   activeWinStreak: number;
 }): Promise<void> {
-  const leagueKey = String(opts.league ?? "")
-    .trim()
-    .toLowerCase();
-  if (leagueKey !== "nba") return;
-  const seasonPhase = normalizeNbaSeasonPhase(opts.seasonPhase);
-  const isPreseason = seasonPhase === "preseason";
-  if (!opts.countsForRanking && !isPreseason) return;
-
-  const startDate =
-    opts.startAt && typeof (opts.startAt as { toDate?: () => Date }).toDate ===
-      "function"
-      ? (opts.startAt as FirebaseFirestore.Timestamp).toDate()
-      : opts.startAt instanceof Date
-        ? opts.startAt
-        : new Date();
-
-  const nbaSeasonKey = isPreseason
-    ? nbaSeasonKeyFromDateJST(startDate)
-    : resolveNbaRankingBucketKeys("nba", true, startDate, seasonPhase)
-        .nbaSeasonKey;
-  if (
-    !nbaSeasonKey ||
-    nbaSeasonKey < PRO_SKIN_UNLOCK_FROM_SEASON_KEY
-  ) {
-    return;
-  }
-
-  const predictDayKey = dateKeyET(startDate);
-  const gameDayKeys = await loadNbaGameDayKeys(nbaSeasonKey);
+  const nbaSeasonKey = resolveProSkinSettleSeasonKey(opts);
+  if (!nbaSeasonKey) return;
+  const gameDayKeys = await gameDayKeysForProSkin(nbaSeasonKey);
 
   const db = getFirestore();
   const userRef = db.doc(`users/${opts.uid}`);
@@ -210,181 +396,16 @@ export async function syncProSkinProgressOnNbaSettle(opts: {
     unlockedCount = 0;
     const snap = await tx.get(userRef);
     const user = (snap.exists ? snap.data() : {}) as Record<string, unknown>;
-    const prevRaw = user.proSkinProgress as Record<string, unknown> | undefined;
-    const prevSeason =
-      typeof prevRaw?.seasonKey === "string" ? prevRaw.seasonKey : "";
-    const lastPostId =
-      typeof prevRaw?.lastPostId === "string" ? prevRaw.lastPostId : "";
-    const lastExactHit = prevRaw?.lastExactHit === true;
-    const lastScorerHit = prevRaw?.lastScorerHit === true;
-    const lastUpsetHit = prevRaw?.lastUpsetHit === true;
-    const sameSeason = prevSeason === nbaSeasonKey;
-    const prevPeriodWins = sameSeason ? parsePeriodWins(prevRaw?.periodWins) : {};
-    const prevStreakRuns = sameSeason ? parsePeriodWins(prevRaw?.streakRuns) : {};
-    const prevActiveWinStreak = sameSeason
-      ? safeInt(prevRaw?.lastActiveWinStreak)
-      : 0;
-
-    const isCorrection = lastPostId === opts.postId;
-    if (
-      isCorrection &&
-      lastExactHit === opts.exactHit &&
-      lastScorerHit === opts.scorerHit &&
-      lastUpsetHit === opts.upsetHit
-    ) {
-      return;
-    }
-
-    const prevPosts = sameSeason ? safeInt(prevRaw?.posts) : 0;
-    const prevExactHits = sameSeason ? safeInt(prevRaw?.exactHits) : 0;
-    const prevScorerHits = sameSeason ? safeInt(prevRaw?.scorerHits) : 0;
-    const prevUpsetHits = sameSeason ? safeInt(prevRaw?.upsetHits) : 0;
-    const prevMaxWinStreak = sameSeason ? safeInt(prevRaw?.maxWinStreak) : 0;
-    const prevMaxPredictDayStreak = sameSeason
-      ? safeInt(prevRaw?.maxPredictDayStreak)
-      : 0;
-    const nextDay = nextPredictDayStreak({
-      prevDayKey:
-        sameSeason && typeof prevRaw?.lastPredictDayKey === "string"
-          ? prevRaw.lastPredictDayKey
-          : "",
-      prevStreak: sameSeason ? safeInt(prevRaw?.predictDayStreak) : 0,
-      dayKey: predictDayKey,
-      gameDayKeys,
-    });
-    const maxPredictDayStreak = Math.max(
-      prevMaxPredictDayStreak,
-      nextDay.streak
-    );
-
-    const posts = isCorrection ? prevPosts : prevPosts + 1;
-    const exactHits = nextHitCount(
-      prevExactHits,
-      isCorrection,
-      lastExactHit,
-      opts.exactHit
-    );
-    const scorerHits = nextHitCount(
-      prevScorerHits,
-      isCorrection,
-      lastScorerHit,
-      opts.scorerHit
-    );
-    const upsetHits = nextHitCount(
-      prevUpsetHits,
-      isCorrection,
-      lastUpsetHit,
-      opts.upsetHit
-    );
-    let maxWinStreak = prevMaxWinStreak;
-    const streak = Math.max(0, Math.floor(opts.activeWinStreak || 0));
-    if (streak > maxWinStreak) maxWinStreak = streak;
-
-    /** 連勝が N を「今回跨いだ」ときだけ +1（訂正 settle では数えない） */
-    const streakRuns: Record<string, number> = { ...prevStreakRuns };
-    const activeWinStreak = isCorrection ? prevActiveWinStreak : streak;
-    if (!isCorrection) {
-      for (const len of PRO_SKIN_STREAK_RUN_LENGTHS) {
-        if (prevActiveWinStreak < len && streak >= len) {
-          const key = String(len);
-          streakRuns[key] = (streakRuns[key] ?? 0) + 1;
-        }
-      }
-    }
-
-    const isPro = isProUser(user);
-    const unlocked = new Set<string>(
-      Array.isArray(user.proSkinUnlockedIds)
-        ? user.proSkinUnlockedIds.filter((x): x is string => typeof x === "string")
-        : []
-    );
-    const prevHeld = new Set<string>([
-      ...unlocked,
-      ...(Array.isArray(user.proSkinHeldIds)
-        ? user.proSkinHeldIds.filter((x): x is string => typeof x === "string")
-        : []),
-    ]);
-
-    /** Pro 中に閾値を「今回初めて」跨いだ ID のみモーダル対象 */
-    const liveNoticeIds: string[] = [];
-
-    if (isPro) {
-      const prevValues: Record<ThresholdKind, number> = {
-        streak: prevMaxWinStreak,
-        posts: prevPosts,
-        exactHits: prevExactHits,
-        predictDays: prevMaxPredictDayStreak,
-        scorerHits: prevScorerHits,
-        upsetHits: prevUpsetHits,
-      };
-      const nowValues: Record<ThresholdKind, number> = {
-        streak: maxWinStreak,
-        posts,
-        exactHits,
-        predictDays: maxPredictDayStreak,
-        scorerHits,
-        upsetHits,
-      };
-      for (const row of PRO_SKIN_THRESHOLD_MILESTONES) {
-        const prevValue = prevValues[row.kind];
-        const nowValue = nowValues[row.kind];
-        const prevOk = prevValue >= row.threshold;
-        const nowOk = nowValue >= row.threshold;
-        if (nowOk) {
-          if (!prevHeld.has(row.id)) newlyUnlockedIds.push(row.id);
-          unlocked.add(row.id);
-          if (!prevOk) liveNoticeIds.push(row.id);
-        }
-      }
-      for (const row of PRO_SKIN_STREAK_RUN_MILESTONES) {
-        const key = String(row.streak);
-        const prevOk = (prevStreakRuns[key] ?? 0) >= row.runs;
-        const nowOk = (streakRuns[key] ?? 0) >= row.runs;
-        if (nowOk) {
-          if (!prevHeld.has(row.id)) newlyUnlockedIds.push(row.id);
-          unlocked.add(row.id);
-          if (!prevOk) liveNoticeIds.push(row.id);
-        }
-      }
-    }
-
-    const held = new Set<string>([...prevHeld, ...unlocked]);
-    const patch: Record<string, unknown> = {
-      proSkinProgress: {
-        seasonKey: nbaSeasonKey,
-        posts,
-        exactHits,
-        scorerHits,
-        upsetHits,
-        maxWinStreak,
-        maxPredictDayStreak,
-        predictDayStreak: nextDay.streak,
-        lastPredictDayKey: nextDay.lastDayKey,
-        streakRuns,
-        lastActiveWinStreak: activeWinStreak,
-        periodWins: prevPeriodWins,
-        updatedAtMs: Date.now(),
-        lastPostId: opts.postId,
-        lastExactHit: opts.exactHit,
-        lastScorerHit: opts.scorerHit,
-        lastUpsetHit: opts.upsetHit,
-      },
-      proSkinUnlockedIds: [...unlocked],
-      proSkinHeldIds: [...held],
-      proSkinUnlockSeason: PRO_SKIN_UNLOCK_FROM_SEASON_KEY,
-      updatedAt: FieldValue.serverTimestamp(),
-    };
-    if (liveNoticeIds.length > 0) {
-      patch.proSkinUnlockNoticeIds = FieldValue.arrayUnion(...liveNoticeIds);
-    }
-
-    tx.set(userRef, patch, { merge: true });
-    unlockedCount = countMilestoneUnlockedProSkins([...unlocked]);
+    const built = buildProSkinSettlePatch(user, opts, nbaSeasonKey, gameDayKeys);
+    if (!built) return;
+    newlyUnlockedIds = built.newlyUnlockedIds;
+    unlockedCount = built.unlockedCount;
+    tx.set(userRef, built.patch, { merge: true });
   });
 
   if (newlyUnlockedIds.length > 0) {
     try {
-      await incrementHolderCounts(newlyUnlockedIds);
+      await recordNewlyUnlockedProSkins(newlyUnlockedIds);
     } catch (err) {
       console.warn("[syncProSkinProgressOnNbaSettle] holder count failed", err);
     }
@@ -392,9 +413,7 @@ export async function syncProSkinProgressOnNbaSettle(opts: {
 
   if (unlockedCount > 0) {
     try {
-      const { syncUserCareerUnlockedSkinCount } = await import(
-        "./syncUserCareer"
-      );
+      const { syncUserCareerUnlockedSkinCount } = await import("./syncUserCareer");
       await syncUserCareerUnlockedSkinCount(opts.uid, unlockedCount);
     } catch (err) {
       console.warn("[syncProSkinProgressOnNbaSettle] career skin sync failed", err);

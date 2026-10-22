@@ -88,9 +88,10 @@ function toStartDate(startAt: unknown): Date {
   return new Date();
 }
 
-/** settle 1 件を career に反映（doc が無ければ作成） */
-export async function syncUserCareerOnNbaSettle(opts: {
+export type UserCareerSettleOpts = {
   uid: string;
+  /** 同じ投稿の再実行で通算を二重に足さない */
+  postId?: string;
   startAt: unknown;
   league: unknown;
   countsForRanking: boolean;
@@ -100,12 +101,22 @@ export async function syncUserCareerOnNbaSettle(opts: {
   activeWinStreak: number;
   /** users 上の通算最高連勝（あれば active より正確） */
   maxWinStreak?: number;
-}): Promise<void> {
-  if (!opts.countsForRanking) return;
+  /** 今回の解放数。既存より大きいときだけ上書き */
+  unlockedSkinCount?: number;
+};
+
+/**
+ * career を読んだあとの書き込み。対象外・反映済みなら null。
+ */
+export function nextUserCareerSettleWrite(
+  data: Record<string, unknown> | undefined,
+  opts: UserCareerSettleOpts
+): Record<string, unknown> | null {
+  if (!opts.countsForRanking) return null;
   const leagueKey = String(opts.league ?? "")
     .trim()
     .toLowerCase();
-  if (leagueKey !== "nba") return;
+  if (leagueKey !== "nba") return null;
 
   const phase = normalizeNbaSeasonPhase(opts.seasonPhase);
   const keys = resolveNbaRankingBucketKeys(
@@ -118,28 +129,38 @@ export async function syncUserCareerOnNbaSettle(opts: {
     phase === "playoffs" ? "playoffs" : "regular";
   const seasonKey =
     board === "playoffs" ? keys.nbaPlayoffsSeasonKey : keys.nbaSeasonKey;
-  if (!seasonKey) return;
+  if (!seasonKey) return null;
 
-  const db = getFirestore();
-  const ref = db.collection(COLLECTION).doc(opts.uid);
-  await db.runTransaction(async (tx) => {
-    const snap = await tx.get(ref);
-    const data = (snap.exists ? snap.data() : {}) as Record<string, unknown>;
-    const summaryObj =
-      data.summary && typeof data.summary === "object"
-        ? ({ ...(data.summary as Record<string, unknown>) } as Record<
-            string,
-            unknown
-          >)
-        : ({} as Record<string, unknown>);
+  const postId = opts.postId ?? "";
+  const summaryPeek =
+    data?.summary && typeof data.summary === "object"
+      ? (data.summary as Record<string, unknown>)
+      : {};
+  if (postId && data?.lastSettlePostId === postId) {
+    const currentSkins = safeInt(summaryPeek.unlockedSkinCount);
+    if (
+      opts.unlockedSkinCount != null &&
+      opts.unlockedSkinCount > currentSkins
+    ) {
+      return {
+        summary: { ...summaryPeek, unlockedSkinCount: opts.unlockedSkinCount },
+        updatedAtMs: Date.now(),
+        source: "settle",
+        updatedAt: FieldValue.serverTimestamp(),
+      };
+    }
+    return null;
+  }
 
-    const seasons =
-      data.seasons && typeof data.seasons === "object"
-        ? ({ ...(data.seasons as Record<string, unknown>) } as Record<
-            string,
-            unknown
-          >)
-        : ({} as Record<string, unknown>);
+  const summaryObj =
+    data?.summary && typeof data.summary === "object"
+      ? ({ ...(data.summary as Record<string, unknown>) } as Record<string, unknown>)
+      : ({} as Record<string, unknown>);
+
+  const seasons =
+    data?.seasons && typeof data.seasons === "object"
+      ? ({ ...(data.seasons as Record<string, unknown>) } as Record<string, unknown>)
+      : ({} as Record<string, unknown>);
     const chapterRaw =
       seasons[seasonKey] && typeof seasons[seasonKey] === "object"
         ? ({ ...(seasons[seasonKey] as Record<string, unknown>) } as Record<
@@ -179,32 +200,44 @@ export async function syncUserCareerOnNbaSettle(opts: {
       streakPeak
     );
 
-    tx.set(
-      ref,
-      {
-        v: SCHEMA_V,
-        uid: opts.uid,
-        summary: {
-          ...summaryObj,
-          ...nextSummaryBoard,
-          sinceYear: summaryObj.sinceYear ?? null,
-          unlockedSkinCount: safeInt(summaryObj.unlockedSkinCount),
-          lifetimeUnitsEarned:
-            summaryObj.lifetimeUnitsEarned == null
-              ? null
-              : safeInt(summaryObj.lifetimeUnitsEarned),
-          bestGroupBattleRank:
-            safeInt(summaryObj.bestGroupBattleRank) >= 1
-              ? safeInt(summaryObj.bestGroupBattleRank)
-              : null,
-        },
-        seasons,
-        updatedAtMs: Date.now(),
-        source: "settle",
-        updatedAt: FieldValue.serverTimestamp(),
-      },
-      { merge: true }
-    );
+  return {
+    v: SCHEMA_V,
+    uid: opts.uid,
+    ...(postId ? { lastSettlePostId: postId } : {}),
+    summary: {
+      ...summaryObj,
+      ...nextSummaryBoard,
+      sinceYear: summaryObj.sinceYear ?? null,
+      unlockedSkinCount:
+        opts.unlockedSkinCount == null
+          ? safeInt(summaryObj.unlockedSkinCount)
+          : Math.max(safeInt(summaryObj.unlockedSkinCount), opts.unlockedSkinCount),
+      lifetimeUnitsEarned:
+        summaryObj.lifetimeUnitsEarned == null
+          ? null
+          : safeInt(summaryObj.lifetimeUnitsEarned),
+      bestGroupBattleRank:
+        safeInt(summaryObj.bestGroupBattleRank) >= 1
+          ? safeInt(summaryObj.bestGroupBattleRank)
+          : null,
+    },
+    seasons,
+    updatedAtMs: Date.now(),
+    source: "settle",
+    updatedAt: FieldValue.serverTimestamp(),
+  };
+}
+
+/** settle 1 件を career に反映（doc が無ければ作成） */
+export async function syncUserCareerOnNbaSettle(opts: UserCareerSettleOpts): Promise<void> {
+  const db = getFirestore();
+  const ref = db.collection(COLLECTION).doc(opts.uid);
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    const data = (snap.exists ? snap.data() : {}) as Record<string, unknown>;
+    const payload = nextUserCareerSettleWrite(data, opts);
+    if (!payload) return;
+    tx.set(ref, payload, { merge: true });
   });
 }
 
