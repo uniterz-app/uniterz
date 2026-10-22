@@ -1140,32 +1140,34 @@ export default function ProfileEditKinetikPanel({
     <div>
       {showNbaMetricsTabs ? (
         <div className={periodTabWrapClass}>
-          <CyberSlantedTabBar
-            fill
-            aria-label={panelCopy.metricsTabsAria}
-          >
-            <CyberSlantedTab
-              role="tab"
-              label="TOTAL"
-              active={metricsTab === "total"}
-              onClick={() => onMetricsTabChange?.("total")}
-              compact
-            />
-            <CyberSlantedTab
-              role="tab"
-              label="WEEK"
-              active={metricsTab === "weekly"}
-              onClick={() => onMetricsTabChange?.("weekly")}
-              compact
-            />
-            <CyberSlantedTab
-              role="tab"
-              label="MONTH"
-              active={metricsTab === "monthly"}
-              onClick={() => onMetricsTabChange?.("monthly")}
-              compact
-            />
-          </CyberSlantedTabBar>
+          <div className="[&>div]:py-1 [&_.cyber-slanted-tab]:py-[5px]">
+            <CyberSlantedTabBar
+              fill
+              aria-label={panelCopy.metricsTabsAria}
+            >
+              <CyberSlantedTab
+                role="tab"
+                label="TOTAL"
+                active={metricsTab === "total"}
+                onClick={() => onMetricsTabChange?.("total")}
+                compact
+              />
+              <CyberSlantedTab
+                role="tab"
+                label="WEEK"
+                active={metricsTab === "weekly"}
+                onClick={() => onMetricsTabChange?.("weekly")}
+                compact
+              />
+              <CyberSlantedTab
+                role="tab"
+                label="MONTH"
+                active={metricsTab === "monthly"}
+                onClick={() => onMetricsTabChange?.("monthly")}
+                compact
+              />
+            </CyberSlantedTabBar>
+          </div>
           {/* プレーオフ（切替なし）は見えないまま場所だけ取り、カードの高さを揃える */}
           <div
             className={
