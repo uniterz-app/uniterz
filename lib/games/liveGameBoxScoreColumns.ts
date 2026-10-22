@@ -59,6 +59,16 @@ function pieLabel(v: unknown): string {
   return (v * 100).toFixed(1);
 }
 
+/** 分は小数（24.9333…）で保存される → 24:56 */
+export function formatBoxMinutes(min: number): string {
+  if (!Number.isFinite(min) || min <= 0) return "0";
+  if (Number.isInteger(min)) return String(min);
+  const totalSec = Math.round(min * 60);
+  const m = Math.floor(totalSec / 60);
+  const s = totalSec % 60;
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
 export function liveGameBoxColumns(
   mode: LiveGameBoxScoreMode
 ): readonly LiveGameBoxColumnDef[] {
@@ -74,7 +84,7 @@ export function liveGameBoxColumnValues(
   if (mode === "basic") {
     const pm = player.plusMinus;
     return [
-      String(player.min),
+      formatBoxMinutes(player.min),
       String(player.pts),
       String(player.reb),
       String(player.ast),
@@ -89,7 +99,7 @@ export function liveGameBoxColumnValues(
   }
 
   return [
-    String(player.min),
+    formatBoxMinutes(player.min),
     dash(player.oreb),
     dash(player.dreb),
     dash(player.pf),
