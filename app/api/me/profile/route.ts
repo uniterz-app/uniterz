@@ -35,6 +35,20 @@ function chineseScriptPatch(choice: LanguageChoice) {
   return chineseScriptFromChoice(choice) === "hant" ? "hant" : FieldValue.delete();
 }
 
+/**
+ * アバターは Functions が縮小版に差し替えたあと、users.photoOriginalURL に原寸を残す。
+ * 端末の編集画面は原寸 URL を持ったまま保存してくるので、それで縮小版を戻さない。
+ */
+function keepResizedAvatar(
+  incoming: string,
+  before: Record<string, unknown>
+): string {
+  const original =
+    typeof before.photoOriginalURL === "string" ? before.photoOriginalURL : "";
+  const current = typeof before.photoURL === "string" ? before.photoURL : "";
+  return incoming && current && incoming === original ? current : incoming;
+}
+
 /** ランキング行 chrome（国旗・名前・アバター・Skin）を CDN から外す */
 async function bumpRankingChromeForUser(uid: string): Promise<void> {
   const {
@@ -78,10 +92,14 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "rate_limited" }, { status: 429 });
       }
       const before = (await db.doc(`users/${uid}`).get()).data() ?? {};
+      const nextPhotoURL = keepResizedAvatar(photoURL, before);
       await db
         .doc(`users/${uid}`)
-        .set({ photoURL, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
-      if (String(before.photoURL ?? "") !== photoURL) {
+        .set(
+          { photoURL: nextPhotoURL, updatedAt: FieldValue.serverTimestamp() },
+          { merge: true }
+        );
+      if (String(before.photoURL ?? "") !== nextPhotoURL) {
         await bumpRankingChromeForUser(uid);
       }
       return NextResponse.json({ ok: true });
@@ -205,6 +223,8 @@ export async function POST(req: Request) {
     }
 
     const before = (await db.doc(`users/${uid}`).get()).data() ?? {};
+    const nextPhotoURL = keepResizedAvatar(photoURL, before);
+    patch.photoURL = nextPhotoURL;
     await db.doc(`users/${uid}`).set(patch, { merge: true });
 
     /** 新規登録（初期設定完了）は旧アプリでもここを通る */
@@ -214,7 +234,7 @@ export async function POST(req: Request) {
 
     const rankingChromeChanged =
       String(before.displayName ?? "") !== displayName ||
-      String(before.photoURL ?? "") !== photoURL ||
+      String(before.photoURL ?? "") !== nextPhotoURL ||
       (before.countryCode ?? null) !== countryCode ||
       (photoCropY !== undefined && before.photoCropY !== photoCropY);
     if (!rankingChromeChanged) {

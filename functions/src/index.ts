@@ -28,6 +28,9 @@ export { getCumulativeRanking } from "./rankings/getCumulativeRanking";
 // 🔥 Pro 期限切れユーザーを Free に戻す Cron
 export { expireProUsers } from "./triggers/expireProUsers";
 
+// 🔥 アバター原寸を 384px に縮めて photoURL を差し替え
+export { resizeAvatarOnUpload } from "./profile/resizeAvatarOnUpload";
+
 // 🔥 Pro 月次レポート（user_reports）
 export {
   rebuildMonthlyReportsCronV2,
