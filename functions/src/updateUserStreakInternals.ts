@@ -55,7 +55,33 @@ export function streakResultFromUserSnap(
   }
 
   const activeWinStreak = current > 0 ? current : 0;
-  const maxLose = snap.get("maxLoseStreak") ?? 0;
+  const maxLoseRaw = snap.get("maxLoseStreak");
+  const maxLose = typeof maxLoseRaw === "number" ? maxLoseRaw : 0;
+  const basketball =
+    typeof sb?.basketball === "number"
+      ? sb.basketball
+      : typeof snap.get("currentStreak") === "number"
+        ? snap.get("currentStreak")
+        : 0;
+  const football =
+    typeof sb?.football === "number"
+      ? sb.football
+      : typeof snap.get("streakFootball") === "number"
+        ? snap.get("streakFootball")
+        : 0;
+  const maxBasketball =
+    typeof mb?.basketball === "number"
+      ? mb.basketball
+      : typeof snap.get("maxWinStreak") === "number"
+        ? snap.get("maxWinStreak")
+        : 0;
+  const maxFootball =
+    typeof mb?.football === "number"
+      ? mb.football
+      : typeof snap.get("maxWinStreakFootball") === "number"
+        ? snap.get("maxWinStreakFootball")
+        : 0;
+  const seasonKey = snap.get("streakSeasonKeyBasketball");
 
   return {
     uid,
@@ -64,5 +90,15 @@ export function streakResultFromUserSnap(
     activeWinStreak,
     maxWinStreak: maxWin,
     maxLoseStreak: maxLose,
+    denorm: {
+      basketball,
+      football,
+      maxBasketball,
+      maxFootball,
+      maxLoseStreak: maxLose,
+      activeWinStreak,
+      streakSeasonKeyBasketball:
+        typeof seasonKey === "string" && seasonKey ? seasonKey : null,
+    },
   };
 }
