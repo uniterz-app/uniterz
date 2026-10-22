@@ -27,6 +27,9 @@ export function RankingsDefaultAvatarGlyphNative({ size }: { size: number }) {
         shadowOpacity: 1,
         shadowRadius: 4,
       }}
+      /** 透明背景の影はスクロール中に毎フレーム計算されるので、1 枚の絵として保持する */
+      shouldRasterizeIOS
+      renderToHardwareTextureAndroid
     >
       <Svg width={glyphSize} height={glyphSize} viewBox="0 0 40 40">
         <Polygon
@@ -72,7 +75,7 @@ export function RankingsAvatarNative({
       style={[styles.avatarWrap, boxStyle, square && styles.avatarSquare]}
     >
       {uri ? (
-        <Image source={{ uri }} style={imageStyle} />
+        <Image source={{ uri }} style={imageStyle} resizeMethod="resize" />
       ) : (
         <RankingsDefaultAvatarGlyphNative size={size} />
       )}

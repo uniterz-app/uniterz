@@ -3,7 +3,7 @@
  * SVG は 1 回焼いて Image に差し替える（同じスキンの行は使い回し）。
  * 初回マウントで下から浮き上がる入場。
  */
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Image,
   LayoutChangeEvent,
@@ -71,6 +71,19 @@ type Props = {
 };
 
 type CoverFocus = { x: number; y: number };
+
+/**
+ * 同じ焼きキーは 1 行だけが SVG を描いて焼き、他の行は焼き上がりを待つ。
+ * PRO LEAGUE は全行 Pro なので、全行が同時に SVG を描くと発熱する。
+ */
+const rasterOwners = new Map<string, symbol>();
+/** 焼けなかったキーは従来どおり各行で描く */
+const rasterFailed = new Set<string>();
+const rasterOwnerListeners = new Set<() => void>();
+
+function notifyRasterOwnerListeners() {
+  rasterOwnerListeners.forEach((fn) => fn());
+}
 
 function CoverSvgLayer({
   xml,
@@ -200,10 +213,54 @@ export default function RankingListProSkinFxNative({
    */
   const screenActive = useScreenActiveNative();
 
+  const ownerIdRef = useRef<symbol>(Symbol("proSkinRow"));
+
   useEffect(() => {
     if (!screenActive) return;
-    return subscribeProSkinRaster(() => setRasterTick((n) => n + 1));
+    const bump = () => setRasterTick((n) => n + 1);
+    rasterOwnerListeners.add(bump);
+    const unsubscribe = subscribeProSkinRaster(bump);
+    return () => {
+      rasterOwnerListeners.delete(bump);
+      unsubscribe();
+    };
   }, [screenActive]);
+
+  /** ロゴは非同期の Image なので焼くと読み込み前の黒だけが残る。軽いのでライブ描画 */
+  const drawLive = variant === "wave-uniterz-logo";
+  const isDust = isProfilePlanProDustTextureVariant(variant);
+  const cacheKey =
+    !drawLive && !isDust && w > 0 && h > 0
+      ? proSkinRasterCacheKey(`rank:${variant}:${intensity}`, w, h)
+      : "";
+  const cached = cacheKey ? peekProSkinRaster(cacheKey) : null;
+  const failed = cacheKey !== "" && rasterFailed.has(cacheKey);
+  const isOwner =
+    cacheKey !== "" && rasterOwners.get(cacheKey) === ownerIdRef.current;
+
+  useEffect(() => {
+    if (!screenActive || !cacheKey || cached || failed) return;
+    const me = ownerIdRef.current;
+    if (!rasterOwners.has(cacheKey)) {
+      rasterOwners.set(cacheKey, me);
+      setRasterTick((n) => n + 1);
+    }
+    return () => {
+      if (rasterOwners.get(cacheKey) !== me) return;
+      rasterOwners.delete(cacheKey);
+      notifyRasterOwnerListeners();
+    };
+  }, [cacheKey, cached, failed, screenActive]);
+
+  const onOwnerRasterComplete = () => {
+    if (!cacheKey || peekProSkinRaster(cacheKey)) return;
+    rasterFailed.add(cacheKey);
+    notifyRasterOwnerListeners();
+  };
+
+  /** 待ち行は焼き上がって見えた時点で浮き上がる */
+  const hasContent =
+    cached != null || isOwner || failed || drawLive || isDust;
 
   useEffect(() => {
     if (reduced) {
@@ -211,6 +268,7 @@ export default function RankingListProSkinFxNative({
       return;
     }
     rise.value = 0;
+    if (!hasContent) return;
     rise.value = withDelay(
       30,
       withTiming(1, {
@@ -218,7 +276,7 @@ export default function RankingListProSkinFxNative({
         easing: Easing.out(Easing.cubic),
       })
     );
-  }, [variant, intensity, reduced, rise]);
+  }, [variant, intensity, reduced, rise, hasContent]);
 
   const riseStyle = useAnimatedStyle(() => ({
     opacity: rise.value,
@@ -233,16 +291,10 @@ export default function RankingListProSkinFxNative({
     if (width !== w || height !== h) setSize({ w: width, h: height });
   };
 
-  /** ロゴは非同期の Image なので焼くと読み込み前の黒だけが残る。軽いのでライブ描画 */
-  const drawLive = variant === "wave-uniterz-logo";
-  const cacheKey =
-    !drawLive && w > 0 && h > 0
-      ? proSkinRasterCacheKey(`rank:${variant}:${intensity}`, w, h)
-      : "";
-  const cached = cacheKey ? peekProSkinRaster(cacheKey) : null;
+  const drawsLayers = drawLive || isOwner || failed;
 
   const layers = useMemo(() => {
-    if (!screenActive || cached || w <= 0 || h <= 0) return null;
+    if (!screenActive || cached || !drawsLayers || w <= 0 || h <= 0) return null;
 
     if (isProfilePlanProScaleBgVariant(variant)) {
       return (
@@ -402,7 +454,7 @@ export default function RankingListProSkinFxNative({
         <Wash intensity={intensity} />
       </>
     );
-  }, [cached, screenActive, variant, intensity, w, h]);
+  }, [cached, drawsLayers, screenActive, variant, intensity, w, h]);
 
   if (cached) {
     return (
@@ -417,7 +469,7 @@ export default function RankingListProSkinFxNative({
     );
   }
 
-  if (isProfilePlanProDustTextureVariant(variant)) {
+  if (isDust && isProfilePlanProDustTextureVariant(variant)) {
     const source = PROFILE_PLAN_PRO_DUST_RANK_TEXTURE_SOURCES[variant];
     const skinOp = intensity === "medium" ? 1 : 0.78;
     return (
@@ -455,12 +507,13 @@ export default function RankingListProSkinFxNative({
     >
       {w > 0 && h > 0 && drawLive && screenActive ? (
         layers
-      ) : w > 0 && h > 0 && screenActive ? (
+      ) : w > 0 && h > 0 && screenActive && (isOwner || failed) ? (
         <RasterizeOnceNative
           cacheKey={cacheKey}
           width={w}
           height={h}
           pixelRatio={1}
+          onComplete={isOwner ? onOwnerRasterComplete : undefined}
         >
           {layers}
         </RasterizeOnceNative>
