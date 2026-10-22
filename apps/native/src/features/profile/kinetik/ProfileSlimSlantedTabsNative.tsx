@@ -1,22 +1,15 @@
-/** Web `ProfileEditKinetikPanel` の PICK UP / ALL GAMES 切替相当（CyberSlantedTab より低い専用版） */
+/** Web `ProfileEditKinetikPanel` の TOTAL/WEEK/MONTH・PICK UP/ALL GAMES 相当（CyberSlantedTab より低い専用版） */
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
-import type { ProfileKinetikGames } from "../../../../../../lib/profile/useNbaKinetikMonthlyStats";
 import { METRIC_FONT } from "../../rankings/rankingsUiTheme";
 
 const CYAN = "#00F5FF";
 const ACTIVE_TEXT = "#050508";
-const TAB_H = 20;
 const FONT_SIZE = 9;
 
-const OPTIONS: { value: ProfileKinetikGames; label: string }[] = [
-  { value: "pickup", label: "PICK UP" },
-  { value: "all", label: "ALL GAMES" },
-];
-
-function ScanLines() {
+function ScanLines({ height }: { height: number }) {
   const lines = [];
-  for (let y = 2; y < TAB_H; y += 3) {
+  for (let y = 2; y < height; y += 3) {
     lines.push(<View key={y} style={[styles.scanLine, { top: y }]} />);
   }
   return (
@@ -26,16 +19,20 @@ function ScanLines() {
   );
 }
 
-export function ProfileMetricsGamesToggleNative({
+export function ProfileSlimSlantedTabsNative<T extends string>({
+  options,
   value,
   onChange,
+  height,
 }: {
-  value: ProfileKinetikGames;
-  onChange: (next: ProfileKinetikGames) => void;
+  options: readonly { value: T; label: string }[];
+  value: T;
+  onChange: (next: T) => void;
+  height: number;
 }) {
   return (
     <View style={styles.row}>
-      {OPTIONS.map((opt) => {
+      {options.map((opt) => {
         const active = value === opt.value;
         return (
           <Pressable
@@ -44,13 +41,17 @@ export function ProfileMetricsGamesToggleNative({
             accessibilityState={{ selected: active }}
             onPress={() => onChange(opt.value)}
             hitSlop={{ top: 6, bottom: 6 }}
-            style={({ pressed }) => [styles.slot, pressed ? styles.pressed : null]}
+            style={({ pressed }) => [
+              styles.slot,
+              { height },
+              pressed ? styles.pressed : null,
+            ]}
           >
             <View
               pointerEvents="none"
               style={[styles.chrome, active ? styles.chromeActive : styles.chromeInactive]}
             >
-              {active ? <ScanLines /> : null}
+              {active ? <ScanLines height={height} /> : null}
             </View>
             <View pointerEvents="none" style={styles.labelLayer}>
               <View style={styles.labelSkew}>
@@ -80,7 +81,6 @@ const styles = StyleSheet.create({
   slot: {
     flex: 1,
     minWidth: 0,
-    height: TAB_H,
   },
   pressed: {
     opacity: 0.94,

@@ -61,12 +61,8 @@ import {
   KINETIK_UPSET_METRIC_LABEL,
   kinetikMetricLabelUsesLatinUppercase,
 } from "../../../../../../lib/profile/kinetikMetricDisplay";
-import {
-  CyberSlantedTabBarNative,
-  CyberSlantedTabNative,
-} from "../../rankings/CyberSlantedTabNative";
 import { METRIC_FONT } from "../../rankings/rankingsUiTheme";
-import { ProfileMetricsGamesToggleNative } from "./ProfileMetricsGamesToggleNative";
+import { ProfileSlimSlantedTabsNative } from "./ProfileSlimSlantedTabsNative";
 import { RankingsPeriodLabelNavNative } from "../../rankings/RankingsPeriodLabelNavNative";
 import {
   getKinetikMetricsScopeHint,
@@ -112,6 +108,23 @@ import { isProfilePlanProFuturisticBgVariant } from "../../../../../../lib/profi
 import { isProfilePlanProLabBgVariant } from "../../../../../../lib/profile/profilePlanProLabBgVariants";
 import { isProfilePlanProWaveBgVariant } from "../../../../../../lib/profile/profilePlanProWaveBgVariants";
 import TutorialTargetNative from "../../tutorial/TutorialTargetNative";
+
+const METRICS_PERIOD_TAB_OPTIONS: readonly {
+  value: ProfileKinetikMetricsTab;
+  label: string;
+}[] = [
+  { value: "total", label: "TOTAL" },
+  { value: "weekly", label: "WEEK" },
+  { value: "monthly", label: "MONTH" },
+];
+
+const METRICS_GAMES_TAB_OPTIONS: readonly {
+  value: ProfileKinetikGames;
+  label: string;
+}[] = [
+  { value: "pickup", label: "PICK UP" },
+  { value: "all", label: "ALL GAMES" },
+];
 
 const OXANIUM_BOLD = "Oxanium_700Bold";
 const OXANIUM_EXTRA = "Oxanium_800ExtraBold";
@@ -1736,29 +1749,12 @@ export default function ProfileKinetikPanelNative({
               isPro ? styles.metricsDividerPlanPro : null,
             ]}
           >
-            <CyberSlantedTabBarNative fill>
-              <CyberSlantedTabNative
-                label="TOTAL"
-                active={metricsTab === "total"}
-                fill
-                compact
-                onPress={() => onMetricsTabChange?.("total")}
-              />
-              <CyberSlantedTabNative
-                label="WEEK"
-                active={metricsTab === "weekly"}
-                fill
-                compact
-                onPress={() => onMetricsTabChange?.("weekly")}
-              />
-              <CyberSlantedTabNative
-                label="MONTH"
-                active={metricsTab === "monthly"}
-                fill
-                compact
-                onPress={() => onMetricsTabChange?.("monthly")}
-              />
-            </CyberSlantedTabBarNative>
+            <ProfileSlimSlantedTabsNative
+              options={METRICS_PERIOD_TAB_OPTIONS}
+              value={metricsTab ?? "total"}
+              onChange={(tab) => onMetricsTabChange?.(tab)}
+              height={25}
+            />
             {/* プレーオフ（切替なし）は見えないまま場所だけ取り、カードの高さを揃える */}
             <View
               style={[
@@ -1767,9 +1763,11 @@ export default function ProfileKinetikPanelNative({
               ]}
               pointerEvents={onMetricsGamesChange ? "auto" : "none"}
             >
-              <ProfileMetricsGamesToggleNative
+              <ProfileSlimSlantedTabsNative
+                options={METRICS_GAMES_TAB_OPTIONS}
                 value={metricsGames ?? "pickup"}
                 onChange={(g) => onMetricsGamesChange?.(g)}
+                height={20}
               />
             </View>
             {/* TOTAL / WEEK / MONTH でカード（スキン）の高さが変わらないよう常に同じ高さを確保 */}
