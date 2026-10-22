@@ -69,6 +69,7 @@ import { METRIC_FONT } from "../../rankings/rankingsUiTheme";
 import { RankingsPeriodLabelNavNative } from "../../rankings/RankingsPeriodLabelNavNative";
 import {
   getKinetikMetricsScopeHint,
+  type ProfileKinetikGames,
   type ProfileKinetikMetricsTab,
 } from "../../../../../../lib/profile/useNbaKinetikMonthlyStats";
 import { currentRankingPeriodLabel } from "../../../../../../lib/rankings/rankingPeriod";
@@ -1125,6 +1126,9 @@ export type ProfileKinetikPanelNativeProps = {
   /** NBA: TOTAL / Week / Month 切替 */
   metricsTab?: ProfileKinetikMetricsTab;
   onMetricsTabChange?: (tab: ProfileKinetikMetricsTab) => void;
+  /** NBA: PICK UP / ALL GAMES（season のみ。未指定なら行は空き） */
+  metricsGames?: ProfileKinetikGames;
+  onMetricsGamesChange?: (games: ProfileKinetikGames) => void;
   metricsWindowLabel?: string | null;
   onMetricsWindowLabelChange?: (label: string | null) => void;
   metricsPeriodLabels?: string[];
@@ -1177,6 +1181,8 @@ export default function ProfileKinetikPanelNative({
   onMetricsPeriodChange,
   metricsTab,
   onMetricsTabChange,
+  metricsGames = "pickup",
+  onMetricsGamesChange,
   metricsWindowLabel = null,
   onMetricsWindowLabelChange,
   metricsPeriodLabels = [],
@@ -1752,6 +1758,37 @@ export default function ProfileKinetikPanelNative({
                 onPress={() => onMetricsTabChange?.("monthly")}
               />
             </CyberSlantedTabBarNative>
+            <View style={styles.metricsGamesSlot}>
+              {onMetricsGamesChange ? (
+                <View style={styles.metricsGamesRow}>
+                  {(["pickup", "all"] as const).map((g) => {
+                    const on = metricsGames === g;
+                    return (
+                      <Pressable
+                        key={g}
+                        accessibilityRole="button"
+                        accessibilityState={{ selected: on }}
+                        onPress={() => onMetricsGamesChange(g)}
+                        hitSlop={6}
+                        style={[
+                          styles.metricsGamesChip,
+                          on ? styles.metricsGamesChipOn : null,
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.metricsGamesChipText,
+                            on ? styles.metricsGamesChipTextOn : null,
+                          ]}
+                        >
+                          {g === "pickup" ? "PICK UP" : "ALL GAMES"}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              ) : null}
+            </View>
             {/* TOTAL / WEEK / MONTH でカード（スキン）の高さが変わらないよう常に同じ高さを確保 */}
             <View style={styles.metricsPeriodSlot}>
               {metricsTab !== "total" &&
@@ -2442,6 +2479,37 @@ const styles = StyleSheet.create({
   metricsPeriodSlot: {
     height: 24,
     justifyContent: "center",
+  },
+  /** プレーオフ（切替なし）でも高さを揃える */
+  metricsGamesSlot: {
+    height: 26,
+    justifyContent: "center",
+  },
+  metricsGamesRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 6,
+  },
+  metricsGamesChip: {
+    minWidth: 84,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderWidth: 1,
+    borderColor: "rgba(0,245,255,0.55)",
+    alignItems: "center",
+  },
+  metricsGamesChipOn: {
+    backgroundColor: "#00F5FF",
+    borderColor: "#00F5FF",
+  },
+  metricsGamesChipText: {
+    fontFamily: OXANIUM_BOLD,
+    fontSize: 10,
+    letterSpacing: 1.2,
+    color: "#00F5FF",
+  },
+  metricsGamesChipTextOn: {
+    color: "#050508",
   },
   metricsPeriodHint: {
     textAlign: "center",

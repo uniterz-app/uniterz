@@ -16,11 +16,12 @@ import {
 } from "@/lib/rankings/rankingPeriod";
 import type {
   ProfileKinetikBoard,
+  ProfileKinetikGames,
   ProfileKinetikWindow,
 } from "@/lib/profile/resolveNbaWindowProfileSummary";
 import { L, resolveLocalizedLang } from "@/lib/i18n/localize";
 
-export type { ProfileKinetikBoard, ProfileKinetikWindow };
+export type { ProfileKinetikBoard, ProfileKinetikGames, ProfileKinetikWindow };
 export type ProfileKinetikMetricsPeriod = ProfileKinetikBoard;
 /** プロフィール表カード: シーズン累計 / 週次 / 月次 */
 export type ProfileKinetikMetricsTab = "total" | ProfileKinetikWindow;
@@ -56,12 +57,20 @@ const windowInflight = new Map<
   Promise<NbaWindowKinetikStats | null>
 >();
 
-function cacheKey(uid: string, period: ProfileKinetikMetricsPeriod): string {
-  return `${uid}:${period}:${CURRENT_NBA_SEASON_KEY}`;
+function cacheKey(
+  uid: string,
+  period: ProfileKinetikMetricsPeriod,
+  games: ProfileKinetikGames = "pickup"
+): string {
+  return `${uid}:${period}:${games}:${CURRENT_NBA_SEASON_KEY}`;
 }
 
-function readCache(uid: string, period: ProfileKinetikMetricsPeriod) {
-  const hit = cache.get(cacheKey(uid, period));
+function readCache(
+  uid: string,
+  period: ProfileKinetikMetricsPeriod,
+  games: ProfileKinetikGames = "pickup"
+) {
+  const hit = cache.get(cacheKey(uid, period, games));
   if (!hit) return null;
   if (Date.now() - hit.at >= CACHE_TTL_MS) return null;
   return hit.data;
@@ -78,19 +87,21 @@ function windowCacheKey(
   uid: string,
   board: ProfileKinetikBoard,
   window: ProfileKinetikWindow,
-  label: string | null | undefined
+  label: string | null | undefined,
+  games: ProfileKinetikGames = "pickup"
 ): string {
   const labelKey = label?.trim() || "current";
-  return `${uid}:${board}:${window}:${labelKey}:${CURRENT_NBA_SEASON_KEY}`;
+  return `${uid}:${board}:${games}:${window}:${labelKey}:${CURRENT_NBA_SEASON_KEY}`;
 }
 
 function readWindowCache(
   uid: string,
   board: ProfileKinetikBoard,
   window: ProfileKinetikWindow,
-  label?: string | null
+  label?: string | null,
+  games: ProfileKinetikGames = "pickup"
 ) {
-  const hit = windowCache.get(windowCacheKey(uid, board, window, label));
+  const hit = windowCache.get(windowCacheKey(uid, board, window, label, games));
   if (!hit) return null;
   if (Date.now() - hit.at >= CACHE_TTL_MS) return null;
   return hit.data;
@@ -128,10 +139,11 @@ async function bearerHeaders(): Promise<HeadersInit> {
 async function fetchNbaPeriodKinetikStats(
   uid: string,
   period: ProfileKinetikMetricsPeriod,
-  apiBase?: string
+  apiBase?: string,
+  games: ProfileKinetikGames = "pickup"
 ): Promise<NbaPeriodKinetikStats | null> {
-  const key = cacheKey(uid, period);
-  const cached = readCache(uid, period);
+  const key = cacheKey(uid, period, games);
+  const cached = readCache(uid, period, games);
   if (cached) return cached;
 
   const existing = inflight.get(key);
@@ -143,6 +155,7 @@ async function fetchNbaPeriodKinetikStats(
     league: "nba",
     period,
   });
+  if (games === "all") qs.set("games", "all");
   const base = (apiBase ?? "").replace(/\/$/, "");
   const url = `${base}/api/profile/user-stats?${qs.toString()}`;
 
@@ -193,11 +206,12 @@ export async function loadNbaWindowKinetikStats(
   board: ProfileKinetikBoard,
   window: ProfileKinetikWindow,
   apiBase?: string,
-  label?: string | null
+  label?: string | null,
+  games: ProfileKinetikGames = "pickup"
 ): Promise<NbaWindowKinetikStats | null> {
   const safeUid = uid.trim();
   if (!safeUid) return null;
-  return fetchNbaWindowKinetikStats(safeUid, board, window, apiBase, label);
+  return fetchNbaWindowKinetikStats(safeUid, board, window, apiBase, label, games);
 }
 
 async function fetchNbaWindowKinetikStats(
@@ -205,10 +219,11 @@ async function fetchNbaWindowKinetikStats(
   board: ProfileKinetikBoard,
   window: ProfileKinetikWindow,
   apiBase?: string,
-  label?: string | null
+  label?: string | null,
+  games: ProfileKinetikGames = "pickup"
 ): Promise<NbaWindowKinetikStats | null> {
-  const key = windowCacheKey(uid, board, window, label);
-  const cached = readWindowCache(uid, board, window, label);
+  const key = windowCacheKey(uid, board, window, label, games);
+  const cached = readWindowCache(uid, board, window, label, games);
   if (cached) return cached;
 
   const existing = windowInflight.get(key);
@@ -221,6 +236,7 @@ async function fetchNbaWindowKinetikStats(
     period: window,
     board,
   });
+  if (games === "all") qs.set("games", "all");
   const trimmedLabel = label?.trim();
   if (trimmedLabel) {
     qs.set(window === "weekly" ? "week" : "month", trimmedLabel);
@@ -282,11 +298,12 @@ async function fetchNbaWindowKinetikStats(
 export function prefetchNbaKinetikPeriodStats(
   uid: string | null | undefined,
   period: ProfileKinetikMetricsPeriod,
-  apiBase?: string
+  apiBase?: string,
+  games: ProfileKinetikGames = "pickup"
 ): void {
   const safeUid = uid?.trim() ?? "";
   if (!safeUid) return;
-  void fetchNbaPeriodKinetikStats(safeUid, period, apiBase);
+  void fetchNbaPeriodKinetikStats(safeUid, period, apiBase, games);
 }
 
 export function prefetchNbaKinetikWindowStats(
@@ -294,11 +311,12 @@ export function prefetchNbaKinetikWindowStats(
   board: ProfileKinetikBoard,
   window: ProfileKinetikWindow,
   apiBase?: string,
-  label?: string | null
+  label?: string | null,
+  games: ProfileKinetikGames = "pickup"
 ): void {
   const safeUid = uid?.trim() ?? "";
   if (!safeUid) return;
-  void fetchNbaWindowKinetikStats(safeUid, board, window, apiBase, label);
+  void fetchNbaWindowKinetikStats(safeUid, board, window, apiBase, label, games);
 }
 
 export function useNbaKinetikPeriodStats(
@@ -306,14 +324,15 @@ export function useNbaKinetikPeriodStats(
   period: ProfileKinetikMetricsPeriod,
   enabled: boolean,
   /** Native は API ベース URL。Web は省略（相対パス） */
-  apiBase?: string
+  apiBase?: string,
+  games: ProfileKinetikGames = "pickup"
 ): {
   data: NbaPeriodKinetikStats | null;
   loading: boolean;
 } {
   const safeUid = uid?.trim() ?? "";
   const initial =
-    enabled && safeUid ? readCache(safeUid, period) : null;
+    enabled && safeUid ? readCache(safeUid, period, games) : null;
   const [data, setData] = useState<NbaPeriodKinetikStats | null>(initial);
   const [loading, setLoading] = useState(
     () => Boolean(enabled && safeUid && !initial)
@@ -326,7 +345,7 @@ export function useNbaKinetikPeriodStats(
       return;
     }
 
-    const cached = readCache(safeUid, period);
+    const cached = readCache(safeUid, period, games);
     if (cached) {
       setData(cached);
       setLoading(false);
@@ -336,7 +355,7 @@ export function useNbaKinetikPeriodStats(
     let cancelled = false;
     setLoading(true);
 
-    void fetchNbaPeriodKinetikStats(safeUid, period, apiBase).then((next) => {
+    void fetchNbaPeriodKinetikStats(safeUid, period, apiBase, games).then((next) => {
       if (cancelled) return;
       setData(next);
       setLoading(false);
@@ -345,7 +364,7 @@ export function useNbaKinetikPeriodStats(
     return () => {
       cancelled = true;
     };
-  }, [uid, period, enabled, apiBase, safeUid]);
+  }, [uid, period, enabled, apiBase, safeUid, games]);
 
   return { data, loading };
 }
@@ -357,14 +376,17 @@ export function useNbaKinetikWindowStats(
   window: ProfileKinetikWindow,
   enabled: boolean,
   apiBase?: string,
-  label?: string | null
+  label?: string | null,
+  games: ProfileKinetikGames = "pickup"
 ): {
   data: NbaWindowKinetikStats | null;
   loading: boolean;
 } {
   const safeUid = uid?.trim() ?? "";
   const initial =
-    enabled && safeUid ? readWindowCache(safeUid, board, window, label) : null;
+    enabled && safeUid
+      ? readWindowCache(safeUid, board, window, label, games)
+      : null;
   const [data, setData] = useState<NbaWindowKinetikStats | null>(initial);
   const [loading, setLoading] = useState(
     () => Boolean(enabled && safeUid && !initial)
@@ -377,7 +399,7 @@ export function useNbaKinetikWindowStats(
       return;
     }
 
-    const cached = readWindowCache(safeUid, board, window, label);
+    const cached = readWindowCache(safeUid, board, window, label, games);
     if (cached) {
       setData(cached);
       setLoading(false);
@@ -392,7 +414,8 @@ export function useNbaKinetikWindowStats(
       board,
       window,
       apiBase,
-      label
+      label,
+      games
     ).then((next) => {
       if (cancelled) return;
       setData(next);
@@ -402,7 +425,7 @@ export function useNbaKinetikWindowStats(
     return () => {
       cancelled = true;
     };
-  }, [uid, board, window, enabled, apiBase, safeUid, label]);
+  }, [uid, board, window, enabled, apiBase, safeUid, label, games]);
 
   return { data, loading };
 }
