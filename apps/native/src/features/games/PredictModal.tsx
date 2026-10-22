@@ -264,7 +264,11 @@ export function PredictMatchPreview({
   resultFace?: ResultCardFaceModel | null;
   resultFaceLive?: boolean;
   /** LIVE 中の実スコア（liveStats） */
-  resultFaceLiveScore?: { home: number; away: number } | null;
+  resultFaceLiveScore?: {
+    home: number;
+    away: number;
+    clock?: string | null;
+  } | null;
 }) {
   const captureRef = useRef<View>(null);
 
@@ -1537,6 +1541,10 @@ export default function PredictModal({
                             ? {
                                 home: liveStatsReport.home.score,
                                 away: liveStatsReport.away.score,
+                                clock:
+                                  liveStatsReport.clock?.trim() ||
+                                  liveStatsReport.periodLabel?.trim() ||
+                                  null,
                               }
                             : (overlayMarketBar?.score ?? null)
                         }

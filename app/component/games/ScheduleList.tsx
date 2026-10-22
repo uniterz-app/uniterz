@@ -976,6 +976,13 @@ export default function ScheduleList({
                       ? teamRecordMap[overlayGameProps.away.teamId] ?? null
                       : null
                   }
+                  liveClock={
+                    liveStatsReport
+                      ? liveStatsReport.clock?.trim() ||
+                        liveStatsReport.periodLabel?.trim() ||
+                        null
+                      : null
+                  }
                   sharedLayoutId={undefined}
                   sharedTransitionBaseKey={
                     vtUi

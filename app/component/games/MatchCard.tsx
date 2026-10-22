@@ -174,6 +174,8 @@ export type MatchCardProps = {
   home: TeamSide;
   away: TeamSide;
   score: { home: number; away: number } | null;
+  /** LIVE 中の試合時間（Q4 5:32）。オーバーレイのリザルト面ピル用 */
+  liveClock?: string | null;
   /** PK 戦の本数（規定・延長スコアとは別） */
   pkScore?: { home: number; away: number } | null;
   /** プレーオフ系：シリーズのホーム先勝数（未設定時は null） */
@@ -416,6 +418,7 @@ function MatchCardView({
   home,
   away,
   score,
+  liveClock = null,
   pkScore = null,
   seriesStanding = null,
   liveMeta,
@@ -1416,7 +1419,11 @@ const mergedPreKickoffScoreClass = [
             showDetailTab={false}
             animateDraw={false}
             live={isLive}
-            liveScore={isLive ? displayScore : null}
+            liveScore={
+              isLive && displayScore
+                ? { ...displayScore, clock: liveClock ?? null }
+                : null
+            }
           />
         </div>
       </div>
