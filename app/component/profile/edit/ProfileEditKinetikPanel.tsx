@@ -59,6 +59,7 @@ import {
 } from "@/app/component/rankings/CyberSlantedTab";
 import {
   getKinetikMetricsScopeHint,
+  type ProfileKinetikGames,
   type ProfileKinetikMetricsPeriod,
   type ProfileKinetikMetricsTab,
 } from "@/lib/profile/useNbaKinetikMonthlyStats";
@@ -754,6 +755,9 @@ type Props = {
   /** NBA: TOTAL / Week / Month 切替 */
   metricsTab?: ProfileKinetikMetricsTab;
   onMetricsTabChange?: (tab: ProfileKinetikMetricsTab) => void;
+  /** NBA: PICK UP / ALL GAMES（season のみ。未指定なら行は空き） */
+  metricsGames?: ProfileKinetikGames;
+  onMetricsGamesChange?: (games: ProfileKinetikGames) => void;
   /** Week / Month の対象ラベル（null = 現行） */
   metricsWindowLabel?: string | null;
   onMetricsWindowLabelChange?: (label: string | null) => void;
@@ -806,6 +810,8 @@ export default function ProfileEditKinetikPanel({
   onMetricsPeriodChange,
   metricsTab,
   onMetricsTabChange,
+  metricsGames = "pickup",
+  onMetricsGamesChange,
   metricsWindowLabel = null,
   onMetricsWindowLabelChange,
   metricsPeriodLabels = [],
@@ -1160,6 +1166,29 @@ export default function ProfileEditKinetikPanel({
               compact
             />
           </CyberSlantedTabBar>
+          {/* プレーオフ（切替なし）でも高さを揃える */}
+          <div className="flex h-[26px] items-center justify-center gap-1.5">
+            {onMetricsGamesChange
+              ? (["pickup", "all"] as const).map((g) => {
+                  const on = metricsGames === g;
+                  return (
+                    <button
+                      key={g}
+                      type="button"
+                      aria-pressed={on}
+                      onClick={() => onMetricsGamesChange(g)}
+                      className={`min-w-[84px] border px-2.5 py-[3px] text-[10px] font-bold tracking-[0.12em] ${
+                        on
+                          ? "border-[#00F5FF] bg-[#00F5FF] text-[#050508]"
+                          : "border-[#00F5FF]/55 text-[#00F5FF]"
+                      }`}
+                    >
+                      {g === "pickup" ? "PICK UP" : "ALL GAMES"}
+                    </button>
+                  );
+                })
+              : null}
+          </div>
           {/* TOTAL / WEEK / MONTH でカード（スキン）の高さが変わらないよう常に同じ高さを確保 */}
           <div className="flex h-6 items-center justify-center">
             {metricsTab !== "total" &&

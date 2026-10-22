@@ -6,6 +6,7 @@
 import type { Firestore } from "firebase-admin/firestore";
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
 import {
+  pickNbaOpenSeasonKeyDailyIncBucket,
   pickNbaPlayoffsDailyIncBucket,
   pickNbaSeasonKeyDailyIncBucket,
 } from "@/lib/rankings/pickNbaStatsBucket";
@@ -22,6 +23,8 @@ import { resolveNbaMonthlyProfileSummary } from "@/lib/profile/resolveNbaMonthly
 
 export type ProfileKinetikBoard = "season" | "playoffs";
 export type ProfileKinetikWindow = Exclude<RankingPeriod, "season">;
+/** pickup = ピックアップのみ / all = 全試合（PRO LEAGUE と同じ集計）。playoffs は元から全試合 */
+export type ProfileKinetikGames = "pickup" | "all";
 
 /** 週次/月次プロフィール（WEEK/MONTH）カード用の事前集計キャッシュ */
 const PROFILE_WINDOW_SUMMARY_CACHE_COLLECTION =
@@ -78,12 +81,15 @@ const EMPTY_RANKS: ProfileSummaryRanks = {
 
 function pickDailyInc(
   data: Record<string, unknown>,
-  board: ProfileKinetikBoard
+  board: ProfileKinetikBoard,
+  games: ProfileKinetikGames
 ): DailyInc | null {
   const row =
     board === "playoffs"
       ? pickNbaPlayoffsDailyIncBucket(data)
-      : pickNbaSeasonKeyDailyIncBucket(data, CURRENT_NBA_SEASON_KEY);
+      : games === "all"
+        ? pickNbaOpenSeasonKeyDailyIncBucket(data, CURRENT_NBA_SEASON_KEY)
+        : pickNbaSeasonKeyDailyIncBucket(data, CURRENT_NBA_SEASON_KEY);
   if (!row || typeof row !== "object" || Object.keys(row).length === 0) {
     return null;
   }
@@ -109,12 +115,15 @@ export async function resolveNbaWindowProfileSummary(
     board: ProfileKinetikBoard;
     window: ProfileKinetikWindow;
     label?: string | null;
+    games?: ProfileKinetikGames;
   }
 ): Promise<NbaWindowProfileSummaryResult> {
   const { board, window } = opts;
+  const games: ProfileKinetikGames =
+    board === "season" && opts.games === "all" ? "all" : "pickup";
 
   /** 互換: 従来の月次 Season 実装へ委譲 */
-  if (board === "season" && window === "monthly") {
+  if (board === "season" && window === "monthly" && games === "pickup") {
     const monthly = await resolveNbaMonthlyProfileSummary(
       db,
       uid,
@@ -133,8 +142,11 @@ export async function resolveNbaWindowProfileSummary(
   const isCurrentWindow = label === currentRankingPeriodLabel(window);
 
   // 現行ウィンドウは日次合算で鮮度優先（キャッシュでズレるリスクを避ける）
+  const cacheDocId =
+    games === "all"
+      ? `${uid}_${board}_all_${window}_${label}`
+      : `${uid}_${board}_${window}_${label}`;
   if (!isCurrentWindow) {
-    const cacheDocId = `${uid}_${board}_${window}_${label}`;
     const snap = await db
       .collection(PROFILE_WINDOW_SUMMARY_CACHE_COLLECTION)
       .doc(cacheDocId)
@@ -178,7 +190,7 @@ export async function resolveNbaWindowProfileSummary(
     for (const snap of snaps) {
       if (!snap.exists) continue;
       const data = snap.data() as Record<string, unknown>;
-      const inc = pickDailyInc(data, board);
+      const inc = pickDailyInc(data, board, games);
       if (!inc) continue;
       posts += safeInt(inc.posts);
       wins += safeInt(inc.wins);
@@ -216,8 +228,8 @@ export async function resolveNbaWindowProfileSummary(
       : emptySummary();
 
   let summaryRanks = EMPTY_RANKS;
-  /** Playoff 専用の週次/月次ボードは未整備 — 順位は出さない */
-  if (board === "season") {
+  /** Playoff 専用の週次/月次ボードは未整備・全試合は PRO LEAGUE（Pro のみ）なので順位は出さない */
+  if (board === "season" && games === "pickup") {
     try {
       const snapshot = await readNbaPeriodRankingSnapshots({
         period: window,
@@ -245,13 +257,13 @@ export async function resolveNbaWindowProfileSummary(
 
   // 過去ラベルのみ書き戻し（現行は鮮度優先のためスキップ）
   if (!isCurrentWindow) {
-    const cacheDocId = `${uid}_${board}_${window}_${label}`;
     await db
       .collection(PROFILE_WINDOW_SUMMARY_CACHE_COLLECTION)
       .doc(cacheDocId)
       .set(
         {
           board,
+          games,
           window,
           label,
           summary,

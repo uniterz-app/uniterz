@@ -24,6 +24,7 @@ import {
   prefetchNbaKinetikWindowStats,
   useNbaKinetikPeriodStats,
   useNbaKinetikWindowStats,
+  type ProfileKinetikGames,
   type ProfileKinetikMetricsPeriod,
   type ProfileKinetikMetricsTab,
 } from "@/lib/profile/useNbaKinetikMonthlyStats";
@@ -79,6 +80,11 @@ export default function ProfileKinetikHero({
     useState<ProfileKinetikMetricsPeriod>(() => preferredNbaKinetikPeriod());
   const [metricsTab, setMetricsTab] =
     useState<ProfileKinetikMetricsTab>("total");
+  const [metricsGamesPick, setMetricsGames] =
+    useState<ProfileKinetikGames>("pickup");
+  /** プレーオフは元から全試合集計 */
+  const metricsGames: ProfileKinetikGames =
+    metricsPeriod === "season" ? metricsGamesPick : "pickup";
   /**
    * 過去期間の選択はタブ／ボード付きで持つ。
    * effect でリセットすると切替直後の 1 フレームだけ前タブのラベル（週 → 月表記）が出る。
@@ -105,6 +111,7 @@ export default function ProfileKinetikHero({
   const parentPeriodStats = useMemo(() => {
     if (metricsTab !== "total" || !summary) return null;
     if (metricsPeriod !== fetchedBoard) return null;
+    if (metricsGames !== "pickup") return null;
     return {
       summary,
       summaryRanks: summaryRanks ?? {
@@ -116,7 +123,7 @@ export default function ProfileKinetikHero({
       },
       seasonKey: CURRENT_NBA_SEASON_KEY,
     };
-  }, [metricsTab, metricsPeriod, summary, summaryRanks, fetchedBoard]);
+  }, [metricsTab, metricsPeriod, metricsGames, summary, summaryRanks, fetchedBoard]);
 
   const periodFetchEnabled =
     metricsTab === "total" &&
@@ -126,7 +133,9 @@ export default function ProfileKinetikHero({
   const { data: periodData, loading: periodLoading } = useNbaKinetikPeriodStats(
     targetUid,
     metricsPeriod,
-    periodFetchEnabled
+    periodFetchEnabled,
+    undefined,
+    metricsGames
   );
   const { data: windowData, loading: windowLoading } = useNbaKinetikWindowStats(
     targetUid,
@@ -134,7 +143,8 @@ export default function ProfileKinetikHero({
     metricsTab === "weekly" || metricsTab === "monthly" ? metricsTab : "weekly",
     windowEnabled,
     undefined,
-    windowLabel
+    windowLabel,
+    metricsGames
   );
 
   const activeData =
@@ -161,15 +171,27 @@ export default function ProfileKinetikHero({
       metricsPeriod === "season" ? "playoffs" : "season";
     if (metricsTab === "total") {
       if (periodFetchEnabled) {
-        prefetchNbaKinetikPeriodStats(targetUid, metricsPeriod);
+        prefetchNbaKinetikPeriodStats(
+          targetUid,
+          metricsPeriod,
+          undefined,
+          metricsGames
+        );
       }
       return;
     }
     const otherTab: ProfileKinetikMetricsTab =
       metricsTab === "monthly" ? "weekly" : "monthly";
-    prefetchNbaKinetikWindowStats(targetUid, metricsPeriod, otherTab);
+    prefetchNbaKinetikWindowStats(
+      targetUid,
+      metricsPeriod,
+      otherTab,
+      undefined,
+      null,
+      metricsGames
+    );
     prefetchNbaKinetikWindowStats(targetUid, otherBoard, metricsTab);
-  }, [targetUid, metricsPeriod, metricsTab, periodFetchEnabled]);
+  }, [targetUid, metricsPeriod, metricsTab, metricsGames, periodFetchEnabled]);
 
   const periodLabels = useMemo(() => {
     if (metricsTab === "total") return [];
@@ -291,6 +313,10 @@ export default function ProfileKinetikHero({
             onMetricsPeriodChange={setMetricsPeriod}
             metricsTab={metricsTab}
             onMetricsTabChange={setMetricsTab}
+            metricsGames={metricsGames}
+            onMetricsGamesChange={
+              metricsPeriod === "season" ? setMetricsGames : undefined
+            }
             metricsWindowLabel={
               metricsTab === "total"
                 ? null

@@ -37,6 +37,29 @@ export function pickNbaSeasonKeyCumulativeSlice(
   return asBucket(bySeason[seasonKey]) ?? {};
 }
 
+/** 全試合（PRO LEAGUE と同じ集計・ピックアップ含む）。openRankingBySeason.<key> */
+export function pickNbaOpenSeasonKeyCumulativeSlice(
+  cumulative: Record<string, unknown> | null | undefined,
+  seasonKey: string = CURRENT_NBA_SEASON_KEY
+): Record<string, unknown> {
+  if (!cumulative) return {};
+  const bySeason = (cumulative.openRankingBySeason ?? {}) as Record<
+    string,
+    unknown
+  >;
+  return asBucket(bySeason[seasonKey]) ?? {};
+}
+
+/** 日次: 全試合（openRankingBySeason.<key>） */
+export function pickNbaOpenSeasonKeyDailyIncBucket(
+  daily: Record<string, unknown> | null | undefined,
+  seasonKey: string = CURRENT_NBA_SEASON_KEY
+): Record<string, unknown> {
+  if (!daily) return {};
+  const bySeason = (daily.openRankingBySeason ?? {}) as Record<string, unknown>;
+  return asBucket(bySeason[seasonKey]) ?? {};
+}
+
 /** 日次: 現行シーズンキーのプレーオフのみ */
 export function pickNbaPlayoffsDailyIncBucket(
   daily: Record<string, unknown> | null | undefined,

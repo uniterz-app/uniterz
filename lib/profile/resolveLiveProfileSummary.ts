@@ -5,7 +5,7 @@
  */
 
 import type { Firestore } from "firebase-admin/firestore";
-import { pickNbaCumulativeRankingSlice, pickNbaDailyIncBucket, pickNbaPlayoffsCumulativeSlice, pickNbaPlayoffsDailyIncBucket, pickNbaSeasonKeyCumulativeSlice, pickNbaSeasonKeyDailyIncBucket } from "@/lib/rankings/pickNbaStatsBucket";
+import { pickNbaCumulativeRankingSlice, pickNbaDailyIncBucket, pickNbaOpenSeasonKeyCumulativeSlice, pickNbaOpenSeasonKeyDailyIncBucket, pickNbaPlayoffsCumulativeSlice, pickNbaPlayoffsDailyIncBucket, pickNbaSeasonKeyCumulativeSlice, pickNbaSeasonKeyDailyIncBucket } from "@/lib/rankings/pickNbaStatsBucket";
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
 import { getPastDateKeysInTimeZone, TIMEZONE_JST } from "@/lib/time/zonedTime";
 
@@ -141,15 +141,20 @@ export function summaryFromSeasonRanking(
   return summaryFromNbaRankingBucket(pickNbaCumulativeRankingSlice(cumulative));
 }
 
-/** 明示スコープ: playoffs / season とも現行シーズンキーのみ（フォールバックなし） */
+/** NBA プロフィールの集計範囲。open = 全試合（PRO LEAGUE と同じ・ピックアップ含む） */
+export type NbaProfileSummaryScope = "playoffs" | "season" | "open";
+
+/** 明示スコープ: 現行シーズンキーのみ（フォールバックなし） */
 export function summaryFromNbaScopeRanking(
   cumulative: Record<string, unknown> | null,
-  scope: "playoffs" | "season"
+  scope: NbaProfileSummaryScope
 ): ProfileSummaryForCards {
   const bucket =
     scope === "playoffs"
       ? pickNbaPlayoffsCumulativeSlice(cumulative, CURRENT_NBA_SEASON_KEY)
-      : pickNbaSeasonKeyCumulativeSlice(cumulative, CURRENT_NBA_SEASON_KEY);
+      : scope === "open"
+        ? pickNbaOpenSeasonKeyCumulativeSlice(cumulative, CURRENT_NBA_SEASON_KEY)
+        : pickNbaSeasonKeyCumulativeSlice(cumulative, CURRENT_NBA_SEASON_KEY);
   return summaryFromNbaRankingBucket(bucket);
 }
 
@@ -187,9 +192,12 @@ function summaryFromNbaRankingBucket(
 
 function pickNbaDailyRow(
   data: Record<string, unknown>,
-  scope?: "playoffs" | "season"
+  scope?: NbaProfileSummaryScope
 ): Record<string, unknown> {
   if (scope === "playoffs") return pickNbaPlayoffsDailyIncBucket(data);
+  if (scope === "open") {
+    return pickNbaOpenSeasonKeyDailyIncBucket(data, CURRENT_NBA_SEASON_KEY);
+  }
   if (scope === "season") {
     return pickNbaSeasonKeyDailyIncBucket(data, CURRENT_NBA_SEASON_KEY);
   }
@@ -223,8 +231,8 @@ export async function resolveNbaProfileSummaryLive(
   uid: string,
   cumulative: Record<string, unknown> | null,
   prior: PriorSnapshotMetrics | null | undefined,
-  /** 省略時は従来どおりフォールバック付き。playoffs / season は明示バケット */
-  scope?: "playoffs" | "season"
+  /** 省略時は従来どおりフォールバック付き。playoffs / season / open は明示バケット */
+  scope?: NbaProfileSummaryScope
 ): Promise<ProfileSummaryForCards> {
   const base =
     scope != null

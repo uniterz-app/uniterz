@@ -137,6 +137,11 @@ async function buildUserStatsResponse(req: Request) {
   const rawBoard = searchParams.get("board")?.trim() ?? "";
   const windowBoard: "playoffs" | "season" =
     rawBoard === "playoffs" ? "playoffs" : "season";
+  /** 全試合（PRO LEAGUE と同じ集計）。プレーオフは元から全試合なので season のみ */
+  const wantAllGames =
+    rankingLeague === "nba" &&
+    searchParams.get("games")?.trim() === "all" &&
+    (wantWindow ? windowBoard === "season" : nbaScope !== "playoffs");
   const rawWindowLabel =
     searchParams.get(wantWeekly ? "week" : "month")?.trim() ?? "";
   const resolvedWindowPeriod = wantWeekly ? "weekly" : "monthly";
@@ -294,11 +299,13 @@ async function buildUserStatsResponse(req: Request) {
           board: windowBoard,
           window: wantWeekly ? "weekly" : "monthly",
           label: windowLabel,
+          games: wantAllGames ? "all" : "pickup",
         }),
       [
         "profile-window-stats",
         uid,
         windowBoard,
+        wantAllGames ? "all" : "pickup",
         wantWeekly ? "weekly" : "monthly",
         windowLabel,
       ],
@@ -314,6 +321,15 @@ async function buildUserStatsResponse(req: Request) {
       summary = windowed.summary;
       metricValueDeltas = null;
     }
+  } else if (wantPhase && wantAllGames) {
+    summary = await resolveNbaProfileSummaryLive(
+      adminDb,
+      uid,
+      cumulative as Record<string, unknown> | null,
+      null,
+      "open"
+    );
+    metricValueDeltas = null;
   } else if (wantPhase) {
     const deltaOpts = {
       wcStage: null,
@@ -358,8 +374,8 @@ async function buildUserStatsResponse(req: Request) {
   let summaryRanks: SummaryRanks | null = null;
   if (wantWindow && monthlySummaryRanks) {
     summaryRanks = monthlySummaryRanks;
-  } else if (nbaScope === "playoffs") {
-    // プレーオフ専用ボードは廃止済み — 順位は出さない
+  } else if (nbaScope === "playoffs" || wantAllGames) {
+    // プレーオフ専用ボードは廃止済み・全試合は PRO LEAGUE（Pro のみ）— 順位は出さない
     summaryRanks = {
       totalPrecision: null,
       totalUpset: null,
@@ -388,6 +404,7 @@ async function buildUserStatsResponse(req: Request) {
           ? "playoffs"
           : "season",
     board: wantWindow ? windowBoard : nbaScope ?? "season",
+    games: wantAllGames ? "all" : "pickup",
     monthLabel: monthlyResolvedLabel,
     weekLabel: wantWeekly ? windowResolvedLabel : null,
     windowLabel: windowResolvedLabel,
