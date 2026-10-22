@@ -16,7 +16,7 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { signOut } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { getDownloadURL, ref } from "firebase/storage";
-import { uploadLocalImageNative } from "../../lib/uploadLocalImageNative";
+import { uploadAvatarImageNative } from "../../lib/uploadLocalImageNative";
 import { auth, db, storage } from "../../lib/firebase";
 import { keyboardAvoidingBehavior } from "../../ui/keyboardAvoidingBehaviorNative";
 import AuthFormShellNative from "./AuthFormShellNative";
@@ -61,6 +61,8 @@ const API_BASE = process.env.EXPO_PUBLIC_UNITERZ_API_BASE_URL?.replace(/\/$/, ""
 type PendingAvatar = {
   uri: string;
   mimeType?: string;
+  width?: number;
+  height?: number;
 };
 
 function isImagePickerNativeMissingError(e: unknown): boolean {
@@ -138,6 +140,8 @@ export default function OnboardingScreenNative() {
       setAvatar({
         uri: asset.uri,
         mimeType: asset.mimeType,
+        width: asset.width,
+        height: asset.height,
       });
     } catch (e: unknown) {
       if (isImagePickerNativeMissingError(e)) {
@@ -153,9 +157,7 @@ export default function OnboardingScreenNative() {
   async function uploadAvatarIfNeeded(uid: string): Promise<string | null> {
     if (!avatar) return null;
     const fileRef = ref(storage, `avatars/${uid}/onboarding_profile.jpg`);
-    await uploadLocalImageNative(fileRef, avatar.uri, {
-      contentType: avatar.mimeType,
-    });
+    await uploadAvatarImageNative(fileRef, avatar);
     return getDownloadURL(fileRef);
   }
 
