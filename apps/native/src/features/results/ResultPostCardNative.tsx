@@ -693,19 +693,18 @@ function ResultPostCardNativeInner({
                     accessibilityLabel={resultCopy.editPredictionAriaLabel}
                   />
                 ) : null}
+                {/* 左下に置くので下には開かない（次のカードに重なる） */}
+                {hasCornerTrash ? (
+                  <CyberChamferButtonNative
+                    size="xs"
+                    dim={26}
+                    embedded
+                    variant="delete"
+                    onPress={requestDeletePost}
+                    accessibilityLabel={resultCopy.removeFromList}
+                  />
+                ) : null}
               </>
-            }
-            bottomFlyout={
-              hasCornerTrash ? (
-                <CyberChamferButtonNative
-                  size="xs"
-                  dim={26}
-                  embedded
-                  variant="delete"
-                  onPress={requestDeletePost}
-                  accessibilityLabel={resultCopy.removeFromList}
-                />
-              ) : null
             }
           />
         </View>
@@ -1259,9 +1258,10 @@ const styles = StyleSheet.create({
     paddingRight: 8,
   },
   /** 左上：線枠内側。フライアウトは右へ展開 */
+  /** 左上は連勝タグがあるので左下（右下の DETAIL と同じ高さ） */
   leftActionCluster: {
     position: "absolute",
-    top: 23,
+    bottom: 12,
     left: 10,
     zIndex: 60,
     overflow: "visible",
