@@ -129,13 +129,15 @@ export async function incrementHolderCounts(
 ): Promise<void> {
   if (newlyBySkin.size === 0) return;
   const db = getFirestore();
-  const updates: Record<string, unknown> = {
-    updatedAt: FieldValue.serverTimestamp(),
-  };
+  /** set(merge) はドット区切りキーをパスにしないので入れ子の map で書く */
+  const counts: Record<string, unknown> = {};
   for (const [id, n] of newlyBySkin) {
-    if (n > 0) updates[`counts.${id}`] = FieldValue.increment(n);
+    if (n > 0) counts[id] = FieldValue.increment(n);
   }
-  await db.doc(OWNER_COUNTS_DOC).set(updates, { merge: true });
+  if (Object.keys(counts).length === 0) return;
+  await db
+    .doc(OWNER_COUNTS_DOC)
+    .set({ counts, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
 }
 
 /**

@@ -68,13 +68,12 @@ function isProUser(user: Record<string, unknown>): boolean {
 async function incrementHolderCounts(ids: readonly string[]): Promise<void> {
   const unique = [...new Set(ids)].filter(Boolean);
   if (unique.length === 0) return;
-  const updates: Record<string, unknown> = {
-    updatedAt: FieldValue.serverTimestamp(),
-  };
-  for (const id of unique) {
-    updates[`counts.${id}`] = FieldValue.increment(1);
-  }
-  await getFirestore().doc(OWNER_COUNTS_DOC).set(updates, { merge: true });
+  /** set(merge) はドット区切りキーをパスにしないので入れ子の map で書く */
+  const counts: Record<string, unknown> = {};
+  for (const id of unique) counts[id] = FieldValue.increment(1);
+  await getFirestore()
+    .doc(OWNER_COUNTS_DOC)
+    .set({ counts, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
 }
 
 const GAME_DAY_KEYS_TTL_MS = 10 * 60 * 1000;

@@ -37,6 +37,7 @@ import {
   userDataIsPro,
 } from "@/lib/profile/proSkinUnlock";
 import type { ProfilePlanProBgVariant } from "@/lib/profile/profilePlanProBgVariants";
+import { parseProSkinOwnerCounts } from "@/lib/profile/proSkinOwnerCountsClient";
 import {
   USER_CAREER_COLLECTION,
   USER_CAREER_SCHEMA_VERSION,
@@ -344,13 +345,7 @@ export async function ensurePersistedProSkinUnlocks(
       { merge: true }
     );
     if (newlyUnlocked.length > 0) {
-      const updates: Record<string, unknown> = {
-        updatedAt: FieldValue.serverTimestamp(),
-      };
-      for (const id of newlyUnlocked) {
-        updates[`counts.${id}`] = FieldValue.increment(1);
-      }
-      tx.set(countsRef, updates, { merge: true });
+      tx.set(countsRef, ownerCountIncrements(newlyUnlocked), { merge: true });
     }
   });
 
@@ -369,13 +364,17 @@ export async function readProSkinOwnerCounts(
   db: Firestore
 ): Promise<Record<string, number>> {
   const snap = await db.doc(PRO_SKIN_OWNER_COUNTS_DOC).get();
-  const data = snap.data() as { counts?: Record<string, unknown> } | undefined;
-  const raw = data?.counts ?? {};
-  const out: Record<string, number> = {};
-  for (const [k, v] of Object.entries(raw)) {
-    out[k] = safeInt(v);
-  }
-  return out;
+  return parseProSkinOwnerCounts(snap.data());
+}
+
+/**
+ * set(merge) はドット区切りキーをパスとして解釈しない（`counts.x` という名前のフィールドになる）。
+ * 必ず入れ子の map で書く。
+ */
+function ownerCountIncrements(ids: readonly string[]): Record<string, unknown> {
+  const counts: Record<string, unknown> = {};
+  for (const id of ids) counts[id] = FieldValue.increment(1);
+  return { counts, updatedAt: FieldValue.serverTimestamp() };
 }
 
 export async function incrementProSkinHolderCounts(
@@ -384,14 +383,9 @@ export async function incrementProSkinHolderCounts(
 ): Promise<void> {
   const ids = [...new Set(newlyUnlockedIds)].filter(Boolean);
   if (ids.length === 0) return;
-  const ref = db.doc(PRO_SKIN_OWNER_COUNTS_DOC);
-  const updates: Record<string, unknown> = {
-    updatedAt: FieldValue.serverTimestamp(),
-  };
-  for (const id of ids) {
-    updates[`counts.${id}`] = FieldValue.increment(1);
-  }
-  await ref.set(updates, { merge: true });
+  await db
+    .doc(PRO_SKIN_OWNER_COUNTS_DOC)
+    .set(ownerCountIncrements(ids), { merge: true });
 }
 
 /** CAREER 面のマイルストーン所持数を users の解放リストに合わせる */
