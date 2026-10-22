@@ -117,6 +117,9 @@ import {
   keepSingleBatchGameDay,
 } from "../../../../../lib/predict/batchPredict";
 import { batchPredictCopy } from "../../../../../lib/predict/batchPredictCopy";
+
+/** 1.0.4 ストア版はまとめて入力を出さない（入口ボタンだけ止める） */
+const BATCH_PREDICT_ENTRY_ENABLED = false;
 import { isNbaPickupGame } from "../../../../../lib/nba/isPickupGame";
 import { fetchLeagueTeamStats } from "../../../../../lib/nba/leagueTeamStats/fetchLeagueTeamStatsClient";
 import {
@@ -3259,7 +3262,7 @@ export default function GamesHomeScreen({
           {t.fetchError}: {error}
         </Text>
       ) : null}
-      {batchDayRows.length >= 2 && fUser && !planLoading ? (
+      {BATCH_PREDICT_ENTRY_ENABLED && batchDayRows.length >= 2 && fUser && !planLoading ? (
         batchMode && isProUser ? (
           <Animated.View
             entering={reduceMotion ? undefined : FadeIn.duration(200)}
