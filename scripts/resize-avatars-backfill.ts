@@ -1,7 +1,7 @@
 /**
  * 既存ユーザーのアバター原寸を 384px JPEG に縮め、users.photoURL / Auth を差し替える。
  * 新規アップロードは Functions `resizeAvatarOnUpload` が同じことをする。
- * 最後にランキングスナップショット（行に photoURL を持つ）の URL も置き換える。
+ * 最後に photoURL のコピー（投稿・試合のポイント分布・ランキング・グループ等）も縮小版へ置き換える。
  *
  *   npx tsx --tsconfig tsconfig.json scripts/resize-avatars-backfill.ts --dry-run
  *   npx tsx --tsconfig tsconfig.json scripts/resize-avatars-backfill.ts
@@ -60,9 +60,18 @@ async function resizeAvatar(input: Buffer): Promise<Buffer> {
   }
 }
 
-const SNAPSHOT_COLLECTIONS = [
-  "period_ranking_snapshots",
-  "cumulative_ranking_snapshots",
+/** photoURL をコピーして持つ所（2026-10 時点の全件スキャンで見つかったもの） */
+const COPY_TARGETS: { name: string; group?: boolean }[] = [
+  { name: "period_ranking_snapshots" },
+  { name: "cumulative_ranking_snapshots" },
+  { name: "cumulative_stats" },
+  { name: "games" },
+  { name: "posts" },
+  { name: "groups" },
+  { name: "leaderboards_monthly" },
+  { name: "monthly_leaderboard_snapshots" },
+  { name: "leaderboard_snapshots", group: true },
+  { name: "docs", group: true },
 ];
 
 function objectNameFromUrl(url: string): string | null {
@@ -81,10 +90,13 @@ function downloadUrl(name: string, token: string): string {
   )}?alt=media&token=${token}`;
 }
 
-function replaceUrls(value: unknown, map: Map<string, string>): { value: unknown; changed: boolean } {
+function replaceUrls(
+  value: unknown,
+  map: (s: string) => string | undefined
+): { value: unknown; changed: boolean } {
   if (typeof value === "string") {
-    const next = map.get(value);
-    return next ? { value: next, changed: true } : { value, changed: false };
+    const next = map(value);
+    return next && next !== value ? { value: next, changed: true } : { value, changed: false };
   }
   if (Array.isArray(value)) {
     let changed = false;
@@ -199,19 +211,49 @@ async function main() {
   console.log(
     `${dryRun ? "[dry-run] " : ""}resized ${dryRun ? "(would)" : replaced.size}: ${mb(before)}MB -> ${mb(after)}MB / skipped ${skipped} / failed ${failed}`
   );
-  if (dryRun || replaced.size === 0) return;
+  await patchAvatarCopies(db, dryRun);
+}
 
-  let patched = 0;
-  for (const col of SNAPSHOT_COLLECTIONS) {
-    const snaps = await db.collection(col).get();
-    for (const d of snaps.docs) {
-      const r = replaceUrls(d.data(), replaced);
-      if (!r.changed) continue;
-      await d.ref.set(r.value as Record<string, unknown>);
-      patched++;
-    }
+/**
+ * 投稿・試合のポイント分布・ランキング・グループ等は書き込み時点の photoURL をコピーして持つ。
+ * 原寸 URL（差し替え前・以前の写真とも）をその人の今の縮小版に置き換える。
+ */
+async function patchAvatarCopies(db: FirebaseFirestore.Firestore, dryRun: boolean) {
+  const users = await db.collection("users").select("photoURL", "photoOriginalURL").get();
+  const byOriginal = new Map<string, string>();
+  const thumbByUid = new Map<string, string>();
+  for (const d of users.docs) {
+    const photo = d.get("photoURL");
+    if (typeof photo !== "string" || !photo.includes("%2Fthumbs%2F")) continue;
+    thumbByUid.set(d.id, photo);
+    const original = d.get("photoOriginalURL");
+    if (typeof original === "string") byOriginal.set(original, photo);
   }
-  console.log(`ranking snapshots patched: ${patched}`);
+  const resolve = (s: string): string | undefined => {
+    const hit = byOriginal.get(s);
+    if (hit) return hit;
+    const name = objectNameFromUrl(s);
+    const m = name ? ORIGINAL_PATH.exec(name) : null;
+    return m ? thumbByUid.get(m[1]) : undefined;
+  };
+
+  const writer = db.bulkWriter();
+  for (const target of COPY_TARGETS) {
+    const q = target.group ? db.collectionGroup(target.name) : db.collection(target.name);
+    let docs = 0;
+    for await (const snap of q.stream() as AsyncIterable<FirebaseFirestore.QueryDocumentSnapshot>) {
+      const patch: Record<string, unknown> = {};
+      for (const [key, value] of Object.entries(snap.data())) {
+        const r = replaceUrls(value, resolve);
+        if (r.changed) patch[key] = r.value;
+      }
+      if (Object.keys(patch).length === 0) continue;
+      docs++;
+      if (!dryRun) void writer.set(snap.ref, patch, { merge: true });
+    }
+    console.log(`${dryRun ? "[dry-run] " : ""}${target.group ? "*/" : ""}${target.name}: ${docs} docs`);
+  }
+  await writer.close();
 }
 
 main().catch((e) => {
