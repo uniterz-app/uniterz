@@ -30,7 +30,7 @@ import { keyboardAvoidingBehavior } from "../../ui/keyboardAvoidingBehaviorNativ
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { signOut, updateProfile } from "firebase/auth";
 import { getDownloadURL, ref } from "firebase/storage";
-import { uploadLocalImageNative } from "../../lib/uploadLocalImageNative";
+import { uploadAvatarImageNative } from "../../lib/uploadLocalImageNative";
 import { auth, db, storage } from "../../lib/firebase";
 import { resolveProfileOpenChartsAccess } from "../../../../../lib/profile/profileChartsDivision";
 import {
@@ -1204,9 +1204,7 @@ export default function ProfileHomeScreen({
       const asset = picked.assets[0];
       setUploadingAvatar(true);
       const fileRef = ref(storage, `avatars/${myUid}/${Date.now()}_profile.jpg`);
-      await uploadLocalImageNative(fileRef, asset.uri, {
-        contentType: asset.mimeType ?? undefined,
-      });
+      await uploadAvatarImageNative(fileRef, asset);
       const url = await getDownloadURL(fileRef);
       await saveMyPhotoURLNative(url);
       if (auth.currentUser && auth.currentUser.uid === myUid) {

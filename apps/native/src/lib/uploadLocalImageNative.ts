@@ -16,6 +16,37 @@ function readLocalBlob(uri: string): Promise<Blob> {
   });
 }
 
+/** サーバーの `resizeAvatarOnUpload` と同じ辺長。HEIC はサーバーで縮められないので端末で JPEG にする */
+const AVATAR_MAX_PX = 384;
+
+/**
+ * アバターを 384px JPEG に縮めてからアップロードする。
+ * expo-image-manipulator が無い旧バイナリ（OTA 適用時）は原寸のまま上げ、サーバー側の縮小に任せる。
+ */
+export async function uploadAvatarImageNative(
+  fileRef: StorageReference,
+  asset: { uri: string; width?: number; height?: number; mimeType?: string | null }
+): Promise<number> {
+  let uri = asset.uri;
+  let contentType = asset.mimeType ?? undefined;
+  try {
+    const { ImageManipulator, SaveFormat } = await import("expo-image-manipulator");
+    const w = asset.width ?? 0;
+    const h = asset.height ?? 0;
+    const ctx = ImageManipulator.manipulate(asset.uri);
+    if (w <= 0 || h <= 0 || Math.max(w, h) > AVATAR_MAX_PX) {
+      ctx.resize(h > w ? { height: AVATAR_MAX_PX } : { width: AVATAR_MAX_PX });
+    }
+    const image = await ctx.renderAsync();
+    const saved = await image.saveAsync({ format: SaveFormat.JPEG, compress: 0.8 });
+    uri = saved.uri;
+    contentType = "image/jpeg";
+  } catch {
+    /* 縮小できなければ原寸 */
+  }
+  return uploadLocalImageNative(fileRef, uri, { contentType });
+}
+
 /** アップロードしたバイト数を返す */
 export async function uploadLocalImageNative(
   fileRef: StorageReference,
