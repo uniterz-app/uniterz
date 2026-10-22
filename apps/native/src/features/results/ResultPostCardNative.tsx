@@ -298,8 +298,8 @@ function ResultPostCardNativeInner({
       !isPredictionFinalized &&
       onRequestPredictEdit
   );
-  /** 共有は常時。編集・削除は条件付き */
-  const showCornerControl = true;
+  /** 共有は自分の投稿だけ（他人のカードにはメニューごと出さない）。編集・削除は条件付き */
+  const showCornerControl = !othersCall;
 
   useEffect(() => {
     if (isMatchStarted || isPredictionFinalized) {
