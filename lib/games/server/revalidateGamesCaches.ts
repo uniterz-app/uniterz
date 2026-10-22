@@ -9,6 +9,11 @@ export function revalidateGamesWindowCache(league: League): void {
   revalidateTag(`games-window:${normalizeLeague(league)}`, {});
 }
 
+/** ライブ中のスコアだけ。窓全体は試合終了時に別途捨てる */
+export function revalidateGamesLiveCardsCache(): void {
+  revalidateTag("games-live-cards", {});
+}
+
 export function revalidateGameDayIndexCache(league: League, season: string): void {
   revalidateTag(`game-day-index:${normalizeLeague(league)}:${season}`, {});
 }
