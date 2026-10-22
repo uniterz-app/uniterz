@@ -29,6 +29,34 @@ export type GamesWindowLiveRefreshPlan = {
   wakeAtMs: number | null;
 };
 
+const LIVE_SCORE_REFRESH_MAX_IDS = 24;
+
+function rowId(row: Record<string, unknown>): string {
+  const id = row.id;
+  return typeof id === "string" ? id.trim() : "";
+}
+
+/**
+ * 開始済みで未終了の試合 id。一覧の再取得ではなく、この id だけスコアを取り直す。
+ */
+export function liveScoreRefreshGameIds(
+  rows: ReadonlyArray<Record<string, unknown>>,
+  nowMs: number
+): string[] {
+  const ids: string[] = [];
+  for (const row of rows) {
+    if (isFinalRow(row) || isSkippedRow(row)) continue;
+    const start = toDateOrNull(row.startAtJst)?.getTime();
+    if (start == null || !Number.isFinite(start) || start > nowMs) continue;
+    if (nowMs - start >= LIVE_MAX_AGE_MS) continue;
+    const id = rowId(row);
+    if (!id || ids.includes(id)) continue;
+    ids.push(id);
+    if (ids.length >= LIVE_SCORE_REFRESH_MAX_IDS) break;
+  }
+  return ids;
+}
+
 export function planGamesWindowLiveRefresh(
   rows: ReadonlyArray<Record<string, unknown>>,
   nowMs: number

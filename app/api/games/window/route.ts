@@ -113,7 +113,7 @@ export async function GET(req: Request) {
         ),
       cacheKey,
       {
-        // ライブ中は nba-live-games-ingest が毎分 tag を捨てる。予想数・マーケットの遅延上限
+        // スコアの毎分更新では捨てない。日程の取り込みと試合終了のときだけ tag を捨てる
         revalidate: 300,
         tags: [
           "games-window",

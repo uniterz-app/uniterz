@@ -97,37 +97,13 @@ export async function fetchMatchupDetailBundle(
   return value;
 }
 
-/** カード押下開始時など。結果は共有キャッシュに載り、予想ツールがそのまま使う */
+/** カードを押し始めたときだけ温める。一覧を開いた時点では読まない */
 export function prefetchMatchupDetailBundle(
   options: FetchMatchupDetailOptions
 ): void {
   if (!options.homeTeamId?.trim() || !options.awayTeamId?.trim()) return;
   if (peekMatchupDetailBundle(options)) return;
   void fetchMatchupDetailBundle(options).catch(() => {});
-}
-
-/** 一覧表示時。カードを開く前に全カードを温める（同時 `concurrency` 本） */
-export async function prefetchMatchupDetailBundles(
-  list: Array<Omit<FetchMatchupDetailOptions, "apiBaseUrl">>,
-  opts: { apiBaseUrl?: string | null; concurrency?: number } = {}
-): Promise<void> {
-  const queue = list.filter(
-    (o) =>
-      o.homeTeamId?.trim() &&
-      o.awayTeamId?.trim() &&
-      !peekMatchupDetailBundle({ ...o, apiBaseUrl: opts.apiBaseUrl })
-  );
-  const worker = async () => {
-    for (let next = queue.shift(); next; next = queue.shift()) {
-      await fetchMatchupDetailBundle({
-        ...next,
-        apiBaseUrl: opts.apiBaseUrl,
-      }).catch(() => {});
-    }
-  };
-  await Promise.all(
-    Array.from({ length: Math.max(1, opts.concurrency ?? 3) }, worker)
-  );
 }
 
 export function peekMatchupDetailBundle(
