@@ -1,6 +1,14 @@
 /** Web `UniterzDailyScoreLeadersPanel` 相当 — その日の合計ポイント Top50（PICK UP / PRO LEAGUE） */
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AppState, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  AppState,
+  FlatList,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import {
   CyberSlantedTabBarNative,
   CyberSlantedTabNative,
@@ -34,12 +42,19 @@ import {
   LeagueStatsCollapsibleNative,
   useLeagueStatsCollapse,
 } from "./LeagueStatsCollapseNative";
+import {
+  RANKING_LIST_ENTRANCE_DURATION_MS,
+  RANKING_LIST_ENTRANCE_MAX_STAGGER_INDEX,
+  RANKING_LIST_ENTRANCE_STAGGER_MS,
+} from "../../rankings/rankingsMotion";
 
+function leaderRowKey(r: DailyScoreLeaderRow): string {
+  return r.uid;
+}
 
-/** Web `restItem`（0.048s 刻み・最大 0.32s・0.32s）と同じ秒数 */
-const LIST_ENTRANCE_STAGGER_MS = 48;
-const LIST_ENTRANCE_MAX_STAGGER_INDEX = 7;
-const LIST_ENTRANCE_DURATION_MS = 320;
+function RowGap() {
+  return <View style={styles.rowGap} />;
+}
 
 type LoadState =
   | { kind: "loading" }
@@ -120,6 +135,52 @@ export default function UniterzDailyScoreLeadersPanelNative({
     else if (rows.length === 0) empty = copy.noEntries;
   }
 
+  const renderRow = useCallback(
+    ({ item: r, index: i }: { item: DailyScoreLeaderRow; index: number }) => (
+      <RankingsListEntranceRowNative
+        index={i}
+        entranceKey={division}
+        staggerMs={RANKING_LIST_ENTRANCE_STAGGER_MS}
+        durationMs={RANKING_LIST_ENTRANCE_DURATION_MS}
+        maxStaggerIndex={RANKING_LIST_ENTRANCE_MAX_STAGGER_INDEX}
+      >
+        <DailyScoreRankRowNative
+          rank={r.rank}
+          name={r.displayName || r.handle || "—"}
+          photoURL={r.photoURL}
+          isPro={r.plan === "pro"}
+          planProBgVariant={rankingRowProSkinVariant(
+            r.plan,
+            typeof r.planProBgVariant === "string" ? r.planProBgVariant : null
+          )}
+          countryCode={r.countryCode}
+          sub={
+            <>
+              <Text style={dailyScoreRankRowSubStyles.muted}>
+                {copy.postsLabel(r.posts)}
+              </Text>
+              {typeof r.wins === "number" ? (
+                <Text style={dailyScoreRankRowSubStyles.hits}>
+                  {copy.hitsLabel(r.wins, r.posts)}
+                </Text>
+              ) : null}
+            </>
+          }
+          value={formatDailyScorePoints(r.points)}
+          valueUnit={copy.pointsUnit}
+          onPress={() => onSelectUser?.(r)}
+        />
+        <RankingRowCommentNative
+          align="daily"
+          comment={
+            r.uid === myUid && myComment != null ? myComment : r.rankingComment
+          }
+        />
+      </RankingsListEntranceRowNative>
+    ),
+    [copy, division, myComment, myUid, onSelectUser]
+  );
+
   const summaryText = [
     summaryPrefix,
     division === "open" ? copy.proLeague : copy.pickUp,
@@ -189,61 +250,22 @@ export default function UniterzDailyScoreLeadersPanelNative({
       ) : empty ? (
         <Text style={styles.empty}>{empty}</Text>
       ) : !data ? null : (
-        <ScrollView
+        <FlatList
+          data={rows}
+          keyExtractor={leaderRowKey}
+          renderItem={renderRow}
+          ItemSeparatorComponent={RowGap}
           onScroll={onTableScroll}
           scrollEventThrottle={16}
+          initialNumToRender={12}
+          maxToRenderPerBatch={8}
+          windowSize={7}
+          removeClippedSubviews={Platform.OS === "android"}
           contentContainerStyle={[
             styles.list,
             { paddingBottom: bottomContentReserveY + 12 },
           ]}
-        >
-          {rows.map((r, i) => {
-            return (
-              <RankingsListEntranceRowNative
-                key={r.uid}
-                index={Math.min(i, LIST_ENTRANCE_MAX_STAGGER_INDEX)}
-                entranceKey={division}
-                staggerMs={LIST_ENTRANCE_STAGGER_MS}
-                durationMs={LIST_ENTRANCE_DURATION_MS}
-              >
-                <DailyScoreRankRowNative
-                  rank={r.rank}
-                  name={r.displayName || r.handle || "—"}
-                  photoURL={r.photoURL}
-                  isPro={r.plan === "pro"}
-                  planProBgVariant={rankingRowProSkinVariant(
-                    r.plan,
-                    typeof r.planProBgVariant === "string" ? r.planProBgVariant : null
-                  )}
-                  countryCode={r.countryCode}
-                  sub={
-                    <>
-                      <Text style={dailyScoreRankRowSubStyles.muted}>
-                        {copy.postsLabel(r.posts)}
-                      </Text>
-                      {typeof r.wins === "number" ? (
-                        <Text style={dailyScoreRankRowSubStyles.hits}>
-                          {copy.hitsLabel(r.wins, r.posts)}
-                        </Text>
-                      ) : null}
-                    </>
-                  }
-                  value={formatDailyScorePoints(r.points)}
-                  valueUnit={copy.pointsUnit}
-                  onPress={() => onSelectUser?.(r)}
-                />
-                <RankingRowCommentNative
-                  align="daily"
-                  comment={
-                    r.uid === myUid && myComment != null
-                      ? myComment
-                      : r.rankingComment
-                  }
-                />
-              </RankingsListEntranceRowNative>
-            );
-          })}
-        </ScrollView>
+        />
       )}
     </View>
   );
@@ -293,6 +315,6 @@ const styles = StyleSheet.create({
   },
   list: {
     paddingHorizontal: 12,
-    gap: 6,
   },
+  rowGap: { height: 6 },
 });

@@ -88,6 +88,11 @@ import { RankingsPeriodTabsNative } from "./RankingsPeriodTabsNative";
 import { RankingsPeriodLabelNavNative } from "./RankingsPeriodLabelNavNative";
 import PeriodRankingUnitRewardsSheetNative from "./PeriodRankingUnitRewardsSheetNative";
 import RankingsListEntranceRowNative from "./RankingsListEntranceRowNative";
+import {
+  RANKING_LIST_ENTRANCE_DURATION_MS,
+  RANKING_LIST_ENTRANCE_MAX_STAGGER_INDEX,
+  RANKING_LIST_ENTRANCE_STAGGER_MS,
+} from "./rankingsMotion";
 import { useNativeMyRankProgress } from "./useNativeMyRankProgress";
 import { useNativeMyRankCardFast } from "./useNativeMyRankCardFast";
 import TutorialLiveHostNative from "../tutorial/TutorialLiveHostNative";
@@ -475,7 +480,10 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
         <RankingsListEntranceRowNative
           index={index + 3}
           entranceKey={entranceKey}
-          staggerMs={58}
+          staggerMs={RANKING_LIST_ENTRANCE_STAGGER_MS}
+          durationMs={RANKING_LIST_ENTRANCE_DURATION_MS}
+          maxStaggerIndex={RANKING_LIST_ENTRANCE_MAX_STAGGER_INDEX}
+          active={isFocused}
         >
           <View
             style={
@@ -495,7 +503,7 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
         </RankingsListEntranceRowNative>
       </View>
     ),
-    [metric, language, entranceKey, openProfile, listShellPro, myUid]
+    [metric, language, entranceKey, openProfile, listShellPro, myUid, isFocused]
   );
 
   const listRef = useRef<FlatList<RankingRowWithCountry>>(null);
@@ -791,6 +799,7 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
                   language={language}
                   onPressProfile={openProfile}
                   entranceKey={entranceKey}
+                  entranceActive={isFocused}
                 />
               </View>
             )}

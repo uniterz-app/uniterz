@@ -28,6 +28,11 @@ export const RANKINGS_REST_ROW_STAGGER_CAP_MS = 72;
 export const RANKINGS_REST_ROW_FROM_Y = 4;
 export const RANKINGS_REST_CONTAINER_DIM_OPACITY = 0.55;
 
+/** ランキングリスト行（TODAY STATS と同じ IN）。20 位まで順番、21 位以降は同時 */
+export const RANKING_LIST_ENTRANCE_STAGGER_MS = 48;
+export const RANKING_LIST_ENTRANCE_DURATION_MS = 320;
+export const RANKING_LIST_ENTRANCE_MAX_STAGGER_INDEX = 19;
+
 export const rankingsPodiumEase = Easing.bezier(0.16, 0.82, 0.32, 1);
 export const rankingsRestEase = Easing.bezier(0.22, 1, 0.36, 1);
 export const rankingsCrownEase = Easing.bezier(0.22, 1, 0.36, 1);

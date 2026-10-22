@@ -76,16 +76,20 @@ export function RankingsTopPodiumNative({
   language,
   onPressProfile,
   entranceKey,
+  entranceActive = true,
 }: {
   rows: RankingRowWithCountry[];
   metric: MobileMetric;
   language: RankingsLanguage;
   onPressProfile?: (row: RankingRowWithCountry) => void;
   entranceKey: string | number;
+  /** false のあいだ入場を始めない（常時マウントのタブ用） */
+  entranceActive?: boolean;
 }) {
   const reduced = useReducedMotion() ?? false;
   if (rows.length === 0) return null;
-  const pageKey = String(entranceKey);
+  /** 王冠は表示中だけ入場を判断する（非表示中はカードごと隠れている） */
+  const pageKey = entranceActive ? String(entranceKey) : "";
   return (
     <View style={styles.podiumWrap}>
       {rows.slice(0, 3).map((row, index) => {
@@ -96,6 +100,7 @@ export function RankingsTopPodiumNative({
             key={row.uid}
             rank={entranceRank}
             entranceKey={entranceKey}
+            active={entranceActive}
           >
             <RankingRowCard
               row={row}
