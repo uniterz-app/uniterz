@@ -9,6 +9,7 @@ import { CURRENT_NBA_SEASON_KEY } from "./nbaSeason";
 import {
   dateKeyJST,
   monthLabelJST,
+  monthlyMinPostsFromStartedPickups,
   periodMinPosts,
   periodWinRateMinPosts,
   previousLabel,
@@ -202,7 +203,7 @@ function resolvePrevRankBasis(
 
 async function buildOne(range: NbaPeriodRange, todayKey: string): Promise<void> {
   const firestore = db();
-  const minPosts = periodMinPosts(range.period);
+  let minPosts = periodMinPosts(range.period);
   /** open は固定最低投稿。standard 勝率は週間・月間とも pickup 65%（パターン B） */
   const winRateMinFallback = periodWinRateMinPosts(range.period);
   let winRateMinStandard = winRateMinFallback;
@@ -215,6 +216,15 @@ async function buildOne(range: NbaPeriodRange, todayKey: string): Promise<void> 
     });
     const fromPickup = winRateMinPostsFromPickupCount(pickupSoFar);
     if (fromPickup > 0) winRateMinStandard = fromPickup;
+    if (range.period === "monthly") {
+      const startedPickups = await countNbaPickupGamesSoFar({
+        db: firestore,
+        startKey: range.startKey,
+        asOfKey,
+        startedBeforeMs: Date.now(),
+      });
+      minPosts = monthlyMinPostsFromStartedPickups(startedPickups);
+    }
   }
   const upsetWinRateGuard = range.period === "monthly";
 
@@ -359,7 +369,7 @@ async function buildOne(range: NbaPeriodRange, todayKey: string): Promise<void> 
   });
 
   console.log(
-    `[buildNbaPeriodRankingSnapshots] ${range.period} ${range.labelKey} standard=${standardBaseRows.length}/${standardParticipantCount} open=${openBaseRows.length}/${openParticipantCount} winRateMinStandard=${winRateMinStandard}`
+    `[buildNbaPeriodRankingSnapshots] ${range.period} ${range.labelKey} standard=${standardBaseRows.length}/${standardParticipantCount} open=${openBaseRows.length}/${openParticipantCount} winRateMinStandard=${winRateMinStandard} minPosts=${minPosts}`
   );
 }
 

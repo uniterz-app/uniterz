@@ -239,6 +239,24 @@ export function periodMinPosts(period: NbaRankingPeriod): number {
   return period === "weekly" ? 1 : 10;
 }
 
+const MONTHLY_MIN_POSTS_PICKUP_RATE = 0.65;
+
+/**
+ * 月間の一覧参加の最小投稿数。月初・開幕直後に誰も 10 に届かず空になるのを防ぐため、
+ * 開始済みピックアップ数 × 65%（切り上げ）まで下げる。上限は periodMinPosts("monthly")。
+ * Next `lib/rankings/rankingPeriod.ts` の同名関数と同期。
+ */
+export function monthlyMinPostsFromStartedPickups(
+  startedPickupCount: number
+): number {
+  const cap = periodMinPosts("monthly");
+  if (!Number.isFinite(startedPickupCount) || startedPickupCount <= 0) return cap;
+  return Math.min(
+    cap,
+    Math.max(1, Math.ceil(startedPickupCount * MONTHLY_MIN_POSTS_PICKUP_RATE))
+  );
+}
+
 /** 勝率タブの最小投稿数 */
 export function periodWinRateMinPosts(period: NbaRankingPeriod): number {
   return period === "weekly" ? 3 : 10;

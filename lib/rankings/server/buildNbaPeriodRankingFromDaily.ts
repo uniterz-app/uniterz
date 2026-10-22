@@ -8,6 +8,7 @@ import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
 import type { RankingDivision } from "@/lib/rankings/rankingDivision";
 import type { RankingApiRow } from "@/lib/rankings/rankingTransform";
 import {
+  monthlyMinPostsFromStartedPickups,
   periodMinPosts,
   periodWinRateMinPosts,
   resolveRankingPeriodRange,
@@ -170,13 +171,13 @@ export async function buildNbaPeriodRankingBulk(opts: {
 }> {
   const division = opts.division ?? "standard";
   const range = resolveRankingPeriodRange(opts.period, opts.now ?? new Date());
-  const minPosts = periodMinPosts(opts.period);
+  let minPosts = periodMinPosts(opts.period);
   let winRateMin = periodWinRateMinPosts(opts.period);
   const db = getAdminDb();
+  const todayKey = rankingPeriodTodayKey(opts.now ?? new Date());
+  const asOfKey = todayKey < range.endKey ? todayKey : range.endKey;
 
   if (division === "standard") {
-    const todayKey = rankingPeriodTodayKey(opts.now ?? new Date());
-    const asOfKey = todayKey < range.endKey ? todayKey : range.endKey;
     const pickupSoFar = await countNbaPickupGamesSoFarAdmin({
       db,
       startKey: range.startKey,
@@ -184,6 +185,15 @@ export async function buildNbaPeriodRankingBulk(opts: {
     });
     const fromPickup = winRateMinPostsFromPickupCount(pickupSoFar);
     if (fromPickup > 0) winRateMin = fromPickup;
+  }
+  if (opts.period === "monthly") {
+    const startedPickups = await countNbaPickupGamesSoFarAdmin({
+      db,
+      startKey: range.startKey,
+      asOfKey,
+      startedBeforeMs: (opts.now ?? new Date()).getTime(),
+    });
+    minPosts = monthlyMinPostsFromStartedPickups(startedPickups);
   }
 
   const statsSnap = await db

@@ -23,6 +23,8 @@ export async function countNbaPickupGamesSoFarAdmin(opts: {
   db: Firestore;
   startKey: string;
   asOfKey: string;
+  /** 指定時は tip-off がこの時刻以前の試合だけ数える（未開始を除く） */
+  startedBeforeMs?: number;
 }): Promise<number> {
   if (opts.asOfKey < opts.startKey) return 0;
 
@@ -35,7 +37,13 @@ export async function countNbaPickupGamesSoFarAdmin(opts: {
 
   let n = 0;
   for (const doc of snap.docs) {
-    if (isNbaPickupGame(doc.data())) n += 1;
+    const data = doc.data();
+    if (!isNbaPickupGame(data)) continue;
+    if (opts.startedBeforeMs != null) {
+      const startMs = (data.startAtJst as Timestamp | undefined)?.toMillis?.();
+      if (startMs == null || startMs > opts.startedBeforeMs) continue;
+    }
+    n += 1;
   }
   return n;
 }
