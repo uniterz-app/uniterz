@@ -143,7 +143,10 @@ export async function fetchProfileSummaryRanks(
     }
 
     const [history, totalPointsDenominatorRaw] = await Promise.all([
-      loadHistoryRanks(uid),
+      loadHistoryRanks(uid).catch(() => ({
+        ranks: {} as Partial<Record<RankMetric, number | null>>,
+        totalPointsDelta: null,
+      })),
       loadSnapshotTotalCount("totalPoints"),
     ]);
 

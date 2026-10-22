@@ -8,6 +8,8 @@ import {
   subtractOneDayFromDateKeyJST,
 } from "@/lib/rankings/rankSnapshotDate";
 
+const NEAR_LOOKBACK_DAYS = 3;
+
 export type RankSnapshotHistoryDoc = {
   id: string;
   data: Record<string, unknown>;
@@ -50,7 +52,6 @@ export async function loadRankSnapshotHistoryDocsWalkBack(
   if (maxDocs <= 0 || maxLookbackDays <= 0) return [];
 
   const lookbackKeys = buildLookbackDateKeys(startKey, maxLookbackDays);
-  const minKey = lookbackKeys[lookbackKeys.length - 1]!;
 
   const adminDb = getAdminDb();
   const historyCol = adminDb
@@ -58,19 +59,27 @@ export async function loadRankSnapshotHistoryDocsWalkBack(
     .doc(uid)
     .collection(RANK_SNAPSHOT_HISTORY_SUBCOL);
 
-  const snap = await historyCol
-    .where(FieldPath.documentId(), ">=", minKey)
-    .where(FieldPath.documentId(), "<=", startKey)
-    .orderBy(FieldPath.documentId(), "desc")
-    .limit(maxDocs)
-    .get();
+  /**
+   * documentId の desc はこのサブコレに複合インデックスが無く FAILED_PRECONDITION になる。
+   * asc の範囲クエリで読み、まず直近数日 → 足りなければ全 lookback に広げる（読み取りを抑える）。
+   */
+  const windows = [...new Set([Math.min(NEAR_LOOKBACK_DAYS, maxLookbackDays), maxLookbackDays])];
+  let collected: RankSnapshotHistoryDoc[] = [];
+  for (const days of windows) {
+    const minKey = lookbackKeys[days - 1]!;
+    const snap = await historyCol
+      .where(FieldPath.documentId(), ">=", minKey)
+      .where(FieldPath.documentId(), "<=", startKey)
+      .orderBy(FieldPath.documentId(), "asc")
+      .get();
+    collected = snap.docs.map((d) => ({
+      id: d.id,
+      data: (d.data() as Record<string, unknown>) ?? {},
+    }));
+    if (collected.length >= maxDocs) break;
+  }
 
-  const collected: RankSnapshotHistoryDoc[] = snap.docs.map((d) => ({
-    id: d.id,
-    data: (d.data() as Record<string, unknown>) ?? {},
-  }));
-
-  return collected.sort((a, b) => a.id.localeCompare(b.id));
+  return collected.slice(-maxDocs);
 }
 
 /**

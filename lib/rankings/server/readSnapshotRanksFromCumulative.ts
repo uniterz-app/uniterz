@@ -48,6 +48,10 @@ export function readStoredRankFromSnapshotRanks(
   metric: SnapshotRankMetric
 ): number | null {
   const snapshotRanks = readSnapshotRanksRoot(data);
-  const raw = snapshotRanks.seasons?.[CURRENT_NBA_SEASON_KEY]?.[metric];
+  /** Functions は batch.set(merge) にドット区切りキーを渡すため、リテラルのフィールド名で保存される */
+  const literal = data?.[`snapshotRanks.seasons.${CURRENT_NBA_SEASON_KEY}`];
+  const raw =
+    snapshotRanks.seasons?.[CURRENT_NBA_SEASON_KEY]?.[metric] ??
+    (isNonEmptyObject(literal) ? (literal as MetricRankMap)[metric] : undefined);
   return coerceTotalPointsRank(raw);
 }
