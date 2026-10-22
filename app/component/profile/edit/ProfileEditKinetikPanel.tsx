@@ -1169,9 +1169,10 @@ export default function ProfileEditKinetikPanel({
           {/* プレーオフ（切替なし）は見えないまま場所だけ取り、カードの高さを揃える */}
           <div
             className={
-              onMetricsGamesChange
-                ? "mx-auto mt-1 w-[62%]"
-                : "pointer-events-none invisible mx-auto mt-1 w-[62%]"
+              [
+                "[&>div]:py-1 [&_.cyber-slanted-tab]:py-[3px]",
+                onMetricsGamesChange ? "" : "pointer-events-none invisible",
+              ].join(" ")
             }
             aria-hidden={onMetricsGamesChange ? undefined : true}
           >

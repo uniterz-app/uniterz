@@ -66,6 +66,7 @@ import {
   CyberSlantedTabNative,
 } from "../../rankings/CyberSlantedTabNative";
 import { METRIC_FONT } from "../../rankings/rankingsUiTheme";
+import { ProfileMetricsGamesToggleNative } from "./ProfileMetricsGamesToggleNative";
 import { RankingsPeriodLabelNavNative } from "../../rankings/RankingsPeriodLabelNavNative";
 import {
   getKinetikMetricsScopeHint,
@@ -1766,22 +1767,10 @@ export default function ProfileKinetikPanelNative({
               ]}
               pointerEvents={onMetricsGamesChange ? "auto" : "none"}
             >
-              <CyberSlantedTabBarNative fill>
-                <CyberSlantedTabNative
-                  label="PICK UP"
-                  active={metricsGames === "pickup"}
-                  fill
-                  compact
-                  onPress={() => onMetricsGamesChange?.("pickup")}
-                />
-                <CyberSlantedTabNative
-                  label="ALL GAMES"
-                  active={metricsGames === "all"}
-                  fill
-                  compact
-                  onPress={() => onMetricsGamesChange?.("all")}
-                />
-              </CyberSlantedTabBarNative>
+              <ProfileMetricsGamesToggleNative
+                value={metricsGames ?? "pickup"}
+                onChange={(g) => onMetricsGamesChange?.(g)}
+              />
             </View>
             {/* TOTAL / WEEK / MONTH でカード（スキン）の高さが変わらないよう常に同じ高さを確保 */}
             <View style={styles.metricsPeriodSlot}>
@@ -2475,9 +2464,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   metricsGamesRow: {
-    marginTop: 4,
-    width: "62%",
-    alignSelf: "center",
+    marginTop: 2,
   },
   metricsGamesRowHidden: {
     opacity: 0,
