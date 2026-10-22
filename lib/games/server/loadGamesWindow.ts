@@ -172,10 +172,10 @@ export async function loadGamesWindow(
   };
 }
 
-/** CDN / オリジン共有キャッシュ用 Cache-Control */
-export function gamesWindowCacheControl(hasLive: boolean): string {
-  if (hasLive) {
-    return "public, s-maxage=30, stale-while-revalidate=30";
-  }
+/**
+ * CDN / オリジン共有キャッシュ用 Cache-Control。
+ * ライブのスコアは `/api/games/live-cards` が足すので、窓は短く捨てない。
+ */
+export function gamesWindowCacheControl(_hasLive: boolean): string {
   return "public, s-maxage=60, stale-while-revalidate=300";
 }

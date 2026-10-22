@@ -145,7 +145,6 @@ import {
   GameCardListRow,
   type GameCardListProps,
 } from "./GameCardList";
-import { usePrefetchNbaMatchupDetailsNative } from "./usePrefetchNbaMatchupDetailsNative";
 import {
   ScrollVisibilityProvider,
   useScrollVisibilityOnScroll,
@@ -3716,7 +3715,6 @@ function GamesMainScrollNative({
 }: GamesMainScrollNativeProps) {
   const onVisScroll = useScrollVisibilityOnScroll();
   const tutorialPickupGameId = resolveTutorialPickupGameId(games);
-  usePrefetchNbaMatchupDetailsNative(showGameCards ? games : []);
   const listStyles = cardListProps.styles;
 
   const renderItem = useCallback(

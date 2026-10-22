@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 
 import type { League } from "@/lib/leagues";
 import { normalizeLeague } from "@/lib/leagues";
@@ -15,8 +15,11 @@ import { GAME_SCHEDULE_SEASON } from "@/lib/games/gameScheduleSeason";
 import { snapGamesWindowAnchorKey } from "@/lib/games/gamesWindowRange";
 import {
   GAMES_WINDOW_LIVE_REFRESH_MS,
+  liveScoreRefreshGameIds,
   planGamesWindowLiveRefresh,
 } from "@/lib/games/gamesWindowLiveRefresh";
+import { fetchLiveGameCardPatches } from "@/lib/games/fetchLiveGameCardPatches";
+import { applyLiveGameCardPatches } from "@/lib/games/liveGameCardPatch";
 import {
   buildGamesWindowRowsCacheKey,
   findCoveringGamesWindowRows,
@@ -181,16 +184,20 @@ export function useGameDays(
     };
   }, [fetchDepsKey]);
 
-  /** 開始済み・未終了の試合がある間だけ 60 秒ごとに窓を取り直す（タブ裏では止める） */
+  /** 開始済み・未終了の試合がある間だけ、その試合のスコアだけ 60 秒ごとに足す */
   const [liveWakeTick, setLiveWakeTick] = useState(0);
+  const rowsRef = useRef(rows);
+  const peerRowsRef = useRef(peerRowsForSeriesInference);
+  rowsRef.current = rows;
+  peerRowsRef.current = peerRowsForSeriesInference;
+  const livePlan = planGamesWindowLiveRefresh(rows, Date.now());
   useEffect(() => {
     if (league === "wc" || rows.length === 0) return;
-    const plan = planGamesWindowLiveRefresh(rows, Date.now());
-    if (!plan.active) {
-      if (plan.wakeAtMs == null) return;
+    if (!livePlan.active) {
+      if (livePlan.wakeAtMs == null) return;
       const wake = setTimeout(
         () => setLiveWakeTick((n) => n + 1),
-        Math.max(1_000, plan.wakeAtMs - Date.now() + 30_000)
+        Math.max(1_000, livePlan.wakeAtMs - Date.now() + 30_000)
       );
       return () => clearTimeout(wake);
     }
@@ -204,39 +211,40 @@ export function useGameDays(
       plusMinus: GAME_DAYS_PLUS_MINUS,
     });
 
-    const refetch = async () => {
+    const refreshScores = async () => {
       if (typeof document !== "undefined" && document.hidden) return;
+      const currentRows = rowsRef.current;
+      const currentPeers = peerRowsRef.current;
+      const ids = liveScoreRefreshGameIds(currentRows, Date.now());
+      if (ids.length === 0) return;
       try {
-        const payload = await fetchGamesWindowShared({
-          league,
-          anchorDateKey,
-          timeZone,
-          plusMinus: GAME_DAYS_PLUS_MINUS,
-          season: GAME_SCHEDULE_SEASON,
-          force: true,
-        });
-        if (!alive) return;
-        const peerRows = payload.peerRows.length ? payload.peerRows : payload.rows;
+        const patches = await fetchLiveGameCardPatches({ ids });
+        if (!alive || patches.length === 0) return;
+        const nextRows = applyLiveGameCardPatches(currentRows, patches);
+        const nextPeers = applyLiveGameCardPatches(currentPeers, patches);
+        if (nextRows === currentRows && nextPeers === currentPeers) return;
+        const cached = readGamesWindowRowsCache(cacheKey);
         writeGamesWindowRowsCache(cacheKey, {
-          rows: payload.rows,
-          peerRows,
-          startKey: payload.range.startKey,
-          endKey: payload.range.endKey,
+          rows: nextRows,
+          peerRows: nextPeers,
+          startKey: cached?.startKey ?? "",
+          endKey: cached?.endKey ?? "",
           windowKey: anchorDateKey,
         });
-        setRows(payload.rows);
-        setPeerRowsForSeriesInference(peerRows);
+        if (nextRows !== currentRows) setRows(nextRows);
+        if (nextPeers !== currentPeers) setPeerRowsForSeriesInference(nextPeers);
       } catch {
         /* 次の周期で再試行 */
       }
     };
 
+    void refreshScores();
     const interval = setInterval(
-      () => void refetch(),
+      () => void refreshScores(),
       GAMES_WINDOW_LIVE_REFRESH_MS
     );
     const onVisible = () => {
-      if (!document.hidden) void refetch();
+      if (!document.hidden) void refreshScores();
     };
     document.addEventListener("visibilitychange", onVisible);
     return () => {
@@ -244,7 +252,7 @@ export function useGameDays(
       clearInterval(interval);
       document.removeEventListener("visibilitychange", onVisible);
     };
-  }, [rows, league, timeZone, anchorDateKey, liveWakeTick]);
+  }, [rows.length, livePlan.active, livePlan.wakeAtMs, league, timeZone, anchorDateKey, liveWakeTick]);
 
   const displayRows = useMemo(() => rows, [rows]);
   const displayPeerRows = useMemo(

@@ -50,6 +50,8 @@ export type IngestNbaLiveGamesResult = {
   dates: string[];
   gamesFetched: number;
   gamesUpdated: number;
+  /** この回で final になった試合。一覧の窓を捨てるのはこのときだけ */
+  gamesFinalized: number;
   liveStatsWritten: number;
   skipped: number;
   /** お気に入り選手の試合中 TECH / FLAG / EJECT */
@@ -200,6 +202,7 @@ export async function ingestNbaLiveGamesFromBdl(
   }
 
   let gamesUpdated = 0;
+  const finalizedGameIds = new Set<string>();
   let liveStatsWritten = 0;
   let skipped = 0;
   const sampleGameIds: string[] = [];
@@ -344,6 +347,7 @@ export async function ingestNbaLiveGamesFromBdl(
     }
     if (sampleGameIds.length < 8) sampleGameIds.push(docId);
     if (settleNow) {
+      finalizedGameIds.add(docId);
       patch.finalAt = FieldValue.serverTimestamp();
       if (leaders.length > 0 && !prev?.hasLeadingScorers) {
         patch.leadingScorers = leaders;
@@ -406,6 +410,7 @@ export async function ingestNbaLiveGamesFromBdl(
       const newBoxStarters = newStarterIdsByGameId.get(box.bdlGameId);
       if (newBoxStarters) patchBox.liveStarterIds = newBoxStarters;
       if (isFinalBox) {
+        finalizedGameIds.add(docId);
         patchBox.finalAt = FieldValue.serverTimestamp();
         if (!prevBox?.hasLeadingScorers) {
           const leaders = leadingScorersFromBox({
@@ -439,6 +444,7 @@ export async function ingestNbaLiveGamesFromBdl(
     disciplineAlerts,
     gamesFetched: games.length,
     gamesUpdated: dryRun ? 0 : gamesUpdated,
+    gamesFinalized: dryRun ? 0 : finalizedGameIds.size,
     liveStatsWritten: dryRun ? 0 : liveStatsWritten,
     skipped,
     dryRun,
