@@ -1172,7 +1172,7 @@ export default function ProfileEditKinetikPanel({
           <div
             className={
               [
-                "[&>div]:py-1 [&_.cyber-slanted-tab]:py-[3px]",
+                "[&>div]:py-1 [&_.cyber-slanted-tab]:py-[4px]",
                 onMetricsGamesChange ? "" : "pointer-events-none invisible",
               ].join(" ")
             }

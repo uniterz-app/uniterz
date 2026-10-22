@@ -1767,7 +1767,7 @@ export default function ProfileKinetikPanelNative({
                 options={METRICS_GAMES_TAB_OPTIONS}
                 value={metricsGames ?? "pickup"}
                 onChange={(g) => onMetricsGamesChange?.(g)}
-                height={20}
+                height={23}
               />
             </View>
             {/* TOTAL / WEEK / MONTH でカード（スキン）の高さが変わらないよう常に同じ高さを確保 */}
