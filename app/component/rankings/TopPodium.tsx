@@ -201,7 +201,7 @@ export default function TopPodium({
               <Link
                 href={profileHref}
                 className="relative block origin-center transition-[transform,opacity] duration-100 ease-out active:scale-[0.99] active:opacity-95"
-                prefetch
+                prefetch={false}
                 onPointerEnter={() =>
                   warmProfileRoute(profileKey, row, profileHref, rank)
                 }

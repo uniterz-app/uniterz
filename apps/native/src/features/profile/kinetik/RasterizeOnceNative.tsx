@@ -11,7 +11,15 @@ const MAX_CACHE = 48;
 /** Android は同時焼きが多いとタブ遷移中に固まる */
 const MAX_CAPTURE = Platform.OS === "android" ? 2 : 8;
 const cache = new Map<string, string>();
-const inflight = new Map<string, Promise<string | null>>();
+type InflightJob = {
+  promise: Promise<string | null>;
+  /** まだ結果を待っている呼び出し元の数 */
+  refs: number;
+  /** 全員が離れたら captureRef の前で打ち切る */
+  abort: boolean;
+};
+
+const inflight = new Map<string, InflightJob>();
 let liveCaptures = 0;
 const captureWaiters: Array<() => void> = [];
 const rasterListeners = new Set<() => void>();
@@ -58,23 +66,46 @@ function releaseCaptureSlot() {
   if (next) next();
 }
 
+/**
+ * 同じキーの焼きは1本にまとめる。
+ * 呼び出し元が全部外れたら、スロット待ちのあいだに captureRef へ進まない
+ * （ランキングを離れたあともメインスレッドを奪わないため）。
+ */
 function captureRaster(
   node: View,
   key: string,
   pixelRatio: number
-): Promise<string | null> {
-  const pending = inflight.get(key);
-  if (pending) return pending;
+): { promise: Promise<string | null>; release: () => void } {
+  const existing = inflight.get(key);
+  if (existing) {
+    existing.refs += 1;
+    existing.abort = false;
+    return {
+      promise: existing.promise,
+      release: () => {
+        existing.refs -= 1;
+        if (existing.refs <= 0) existing.abort = true;
+      },
+    };
+  }
 
-  const job = (async () => {
+  const job: InflightJob = {
+    promise: Promise.resolve(null),
+    refs: 1,
+    abort: false,
+  };
+
+  job.promise = (async () => {
     await acquireCaptureSlot();
     try {
+      if (job.abort) return null;
       const uri = await captureRef(node, {
         format: "png",
         quality: 1,
         result: "tmpfile",
         pixelRatio,
       });
+      if (job.abort) return null;
       if (typeof uri === "string" && uri.length > 0) {
         cacheSet(key, uri);
         return uri;
@@ -88,10 +119,17 @@ function captureRaster(
   })();
 
   inflight.set(key, job);
-  void job.finally(() => {
+  void job.promise.finally(() => {
     inflight.delete(key);
   });
-  return job;
+
+  return {
+    promise: job.promise,
+    release: () => {
+      job.refs -= 1;
+      if (job.refs <= 0) job.abort = true;
+    },
+  };
 }
 
 export function peekProSkinRaster(key: string): string | null {
@@ -166,9 +204,15 @@ export default function RasterizeOnceNative({
     }
     let cancelled = false;
     let timeoutId: ReturnType<typeof setTimeout> | null = null;
+    let rafOuter = 0;
+    let rafInner = 0;
+    let releaseCapture: (() => void) | null = null;
     const task = InteractionManager.runAfterInteractions(() => {
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
+      if (cancelled) return;
+      rafOuter = requestAnimationFrame(() => {
+        if (cancelled) return;
+        rafInner = requestAnimationFrame(() => {
+          if (cancelled) return;
           /** Android の captureRef はメインスレッドを奪うので初回描画後に遅らせる */
           const delayMs = Platform.OS === "android" ? 520 : 48;
           timeoutId = setTimeout(() => {
@@ -183,7 +227,9 @@ export default function RasterizeOnceNative({
               finish(hit);
               return;
             }
-            void captureRaster(node, cacheKey, ratio).then((next) => {
+            const captured = captureRaster(node, cacheKey, ratio);
+            releaseCapture = captured.release;
+            void captured.promise.then((next) => {
               if (cancelled) return;
               finish(next);
             });
@@ -194,7 +240,10 @@ export default function RasterizeOnceNative({
     return () => {
       cancelled = true;
       if (timeoutId != null) clearTimeout(timeoutId);
+      if (rafOuter) cancelAnimationFrame(rafOuter);
+      if (rafInner) cancelAnimationFrame(rafInner);
       task.cancel();
+      releaseCapture?.();
     };
   }, [cacheKey, height, ratio, uri, width]);
 

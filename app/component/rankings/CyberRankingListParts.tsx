@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { nameBebas, nameOxanium, jp } from "@/lib/fonts";
 import { rankingRankLabel } from "@/lib/rankings/rankingDisplayRank";
 import { RankingsAvatarCircle } from "@/app/component/rankings/RankingsAvatarCircle";
@@ -8,6 +8,7 @@ import {
   cyberMetricTag,
   cyberRankNumStyle,
   cyberRankPalette,
+  rankingListNumColors,
   CYBER_LIST_CYAN,
   rankMedalFrameColor,
 } from "@/lib/rankings/cyberRankVisual";
@@ -38,6 +39,7 @@ export function CyberRankNumber({
   muted = false,
   variant = "list",
   uniform = false,
+  quiet = false,
 }: {
   rank: number;
   compact?: boolean;
@@ -49,6 +51,8 @@ export function CyberRankNumber({
   variant?: "list" | "tower";
   /** 1位でもサイズを変えない（表の列揃え） */
   uniform?: boolean;
+  /** ランキングリスト — 1位金・2位銀、ドロップシャドウの発光なし */
+  quiet?: boolean;
 }) {
   const label = rankingRankLabel(rank, displayValue);
   const isCompact = !!compact;
@@ -72,6 +76,7 @@ export function CyberRankNumber({
     : {
         ...cyberRankNumStyle(rank, isCompact, variant),
         ...(uniform ? { fontSize: uniformSize } : {}),
+        ...(quiet ? quietListNumStyle(rank) : {}),
         whiteSpace: "nowrap" as const,
       };
 
@@ -123,21 +128,30 @@ export function CyberScanlineText({
 
 const rankHudNumClass = [nameOxanium.className, "font-extrabold"].join(" ");
 
-function cyberScoreColor(rank: number): string {
-  if (rank === 1) return "#FFD65A";
-  if (rank === 2) return "#FCD34D";
-  if (rank === 3) return "#FB923C";
-  return "rgba(255,255,255,0.96)";
+function quietListNumStyle(rank: number): CSSProperties {
+  const medal = rankingListNumColors(rank);
+  const sameAsList = rank === 3 ? cyberRankPalette(4) : null;
+  return {
+    filter: "none",
+    ...(medal
+      ? {
+          color: medal.textFill,
+          WebkitTextStroke: `1.2px ${medal.stroke}`,
+        }
+      : {}),
+    ...(sameAsList
+      ? {
+          color: sameAsList.textFill,
+          WebkitTextStroke: `1.2px ${sameAsList.stroke}`,
+        }
+      : {}),
+  };
 }
 
-function cyberScoreGlow(rank: number): string {
-  if (rank === 1) {
-    return "0 0 10px rgba(255,214,90,0.55), 0 0 18px rgba(255,43,214,0.25)";
-  }
-  if (rank <= 3) {
-    return "0 0 8px rgba(255,43,214,0.42)";
-  }
-  return "none";
+function cyberScoreColor(rank: number): string {
+  if (rank === 1) return "#E8C56A";
+  if (rank === 2) return "#C9D0DA";
+  return "rgba(255,255,255,0.96)";
 }
 
 export function CyberRankingScore({
@@ -176,7 +190,7 @@ export function CyberRankingScore({
 
   const valueStyle = {
     color,
-    textShadow: plainWhite ? "none" : cyberScoreGlow(rank),
+    textShadow: "none",
     transform: "skewX(-6deg)",
     display: "inline-block" as const,
   };
@@ -404,7 +418,7 @@ export function CyberRankingListRow({
       style={{
         color: "#FFD65A",
         fontSize: dayDeltaFontSize,
-        textShadow: "0 0 8px rgba(255,214,90,0.45)",
+        textShadow: "none",
       }}
     >
       {dayDeltaText}
@@ -418,7 +432,7 @@ export function CyberRankingListRow({
   return (
     <article
       className={[
-        "relative mb-[3px] flex items-stretch overflow-hidden",
+        "cyber-rank-list-row relative mb-[3px] flex items-stretch overflow-hidden",
         compact ? "min-h-[56px]" : isWebScore ? "min-h-[82px]" : "min-h-[72px]",
       ].join(" ")}
       style={{
@@ -445,7 +459,7 @@ export function CyberRankingListRow({
       <div
         className={[
           "flex min-w-0 flex-1 items-center",
-          firstFrame || proSkinVariant ? "relative z-10" : "",
+          medalFrame || proSkinVariant ? "relative z-10" : "",
           compact
             ? firstFrame
               ? "gap-1.5 px-2 pb-2 pt-5"
@@ -478,6 +492,7 @@ export function CyberRankingListRow({
             compact={compact}
             displayValue={rankDisplayValue}
             muted={rankMuted}
+            quiet
           />
           <RankDeltaBadge
             delta={rankDeltaPlaces}
@@ -512,8 +527,7 @@ export function CyberRankingListRow({
                   compact ? "text-[6px] tracking-[0.08em]" : "text-[7px] tracking-widest",
                 ].join(" ")}
                 style={{
-                  color: "#B8FF3C",
-                  textShadow: "0 0 6px rgba(184,255,60,0.55)",
+                  color: "#E8C56A",
                 }}
               >
                 +++
@@ -523,14 +537,11 @@ export function CyberRankingListRow({
           <div
             className={[
               "relative shrink-0 rounded-sm",
-              firstFrame ? "cyber-rank-avatar-first-glow" : "",
             ].join(" ")}
             style={{
               width: compact ? 36 : 44,
               height: compact ? 36 : 44,
-              ...(firstFrame
-                ? null
-                : { border: "1px solid rgba(255,255,255,0.12)" }),
+              border: "1px solid rgba(255,255,255,0.12)",
             }}
           >
             <RankingsAvatarCircle
@@ -565,7 +576,6 @@ export function CyberRankingListRow({
                 fontSize: nameFontSize,
                 letterSpacing: 0.4,
                 transform: "skewX(-6deg)",
-                textShadow: "0 0 12px rgba(0,245,255,0.35)",
               }}
             >
               {displayName}

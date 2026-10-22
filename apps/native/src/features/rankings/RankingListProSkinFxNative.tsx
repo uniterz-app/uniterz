@@ -21,6 +21,7 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import type { ProfilePlanProBgVariant } from "../../../../../lib/profile/profilePlanProBgVariants";
+import { useScreenActiveNative } from "../../hooks/useScreenActiveNative";
 import RasterizeOnceNative, {
   peekProSkinRaster,
   proSkinRasterCacheKey,
@@ -193,8 +194,16 @@ export default function RankingListProSkinFxNative({
   const [, setRasterTick] = useState(0);
   const reduced = useReducedMotion() ?? false;
   const rise = useSharedValue(reduced ? 1 : 0);
+  /**
+   * タブは離してもマウントされたまま。
+   * 非表示中に SVG 焼き（captureRef）が続くと、次の画面のメインスレッドが重くなる。
+   */
+  const screenActive = useScreenActiveNative();
 
-  useEffect(() => subscribeProSkinRaster(() => setRasterTick((n) => n + 1)), []);
+  useEffect(() => {
+    if (!screenActive) return;
+    return subscribeProSkinRaster(() => setRasterTick((n) => n + 1));
+  }, [screenActive]);
 
   useEffect(() => {
     if (reduced) {
@@ -233,7 +242,7 @@ export default function RankingListProSkinFxNative({
   const cached = cacheKey ? peekProSkinRaster(cacheKey) : null;
 
   const layers = useMemo(() => {
-    if (cached || w <= 0 || h <= 0) return null;
+    if (!screenActive || cached || w <= 0 || h <= 0) return null;
 
     if (isProfilePlanProScaleBgVariant(variant)) {
       return (
@@ -393,7 +402,7 @@ export default function RankingListProSkinFxNative({
         <Wash intensity={intensity} />
       </>
     );
-  }, [cached, variant, intensity, w, h]);
+  }, [cached, screenActive, variant, intensity, w, h]);
 
   if (cached) {
     return (
@@ -444,9 +453,9 @@ export default function RankingListProSkinFxNative({
       style={[styles.root, riseStyle]}
       onLayout={onLayout}
     >
-      {w > 0 && h > 0 && drawLive ? (
+      {w > 0 && h > 0 && drawLive && screenActive ? (
         layers
-      ) : w > 0 && h > 0 ? (
+      ) : w > 0 && h > 0 && screenActive ? (
         <RasterizeOnceNative
           cacheKey={cacheKey}
           width={w}

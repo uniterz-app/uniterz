@@ -1,19 +1,11 @@
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
-import { useEffect, type ReactNode } from "react";
-import Animated, {
-  cancelAnimation,
-  Easing,
-  useAnimatedStyle,
-  useSharedValue,
-  withSequence,
-  withTiming,
-} from "react-native-reanimated";
+import type { ReactNode } from "react";
+import Animated from "react-native-reanimated";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import type { MobileMetric } from "../../../../../lib/rankings/rankingMetrics";
 import type { ProfilePlanProBgVariant } from "../../../../../lib/profile/profilePlanProBgVariants";
 import { formatMetricDecimals } from "../../../../../lib/format/metricDecimals";
-import { cyberScoreGlowLayers } from "../../../../../lib/rankings/cyberGlyphGlowLayers";
 import {
   cyberMetricTag,
   cyberRankPalette,
@@ -44,9 +36,8 @@ import { useRankingsCrownEntrance } from "./useRankingsCrownEntrance";
 import ProCyberBadgeNative from "../profile/kinetik/ProCyberBadgeNative";
 
 function cyberScoreColor(rank: number): string {
-  if (rank === 1) return "#FFD65A";
-  if (rank === 2) return "#FCD34D";
-  if (rank === 3) return "#FB923C";
+  if (rank === 1) return "#E8C56A";
+  if (rank === 2) return "#C9D0DA";
   return "rgba(255,255,255,0.96)";
 }
 
@@ -101,71 +92,11 @@ function CyberRankingScoreNative({
             fontFamily: "Oxanium_800ExtraBold",
           },
         ]}
-        layers={plainWhite ? [] : cyberScoreGlowLayers(rank)}
+        layers={[]}
       >
         {displayValue}
       </CyberGlyphGlowTextNative>
     </View>
-  );
-}
-
-/** Web `.cyber-rank-avatar-first-glow` — 一度光って静かに残す */
-const AVATAR_GLOW_PULSE_MS = 2000;
-
-/** Web `.cyber-rank-avatar-first-glow` — 1位アバター枠の脈動 */
-function RankFirstAvatarGlowNative({
-  children,
-  reduceMotion,
-  compact = false,
-}: {
-  children: ReactNode;
-  reduceMotion: boolean;
-  compact?: boolean;
-}) {
-  const pulse = useSharedValue(reduceMotion ? 0.55 : 0);
-
-  useEffect(() => {
-    if (reduceMotion) {
-      pulse.value = 0.55;
-      return;
-    }
-    pulse.value = 0;
-    pulse.value = withSequence(
-      withTiming(1, {
-        duration: AVATAR_GLOW_PULSE_MS,
-        easing: Easing.inOut(Easing.sin),
-      }),
-      withTiming(0.55, {
-        duration: AVATAR_GLOW_PULSE_MS,
-        easing: Easing.inOut(Easing.sin),
-      })
-    );
-    return () => cancelAnimation(pulse);
-  }, [pulse, reduceMotion]);
-
-  const glowStyle = useAnimatedStyle(() => ({
-    shadowColor: "#B8FF3C",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.32 + pulse.value * 0.5,
-    shadowRadius: 5 + pulse.value * 7,
-  }));
-
-  const haloStyle = useAnimatedStyle(() => ({
-    opacity: 0.22 + pulse.value * 0.58,
-  }));
-
-  return (
-    <Animated.View
-      style={[
-        styles.avatarSquare,
-        compact ? styles.avatarSquareCompact : null,
-        styles.avatarFirstGlow,
-        glowStyle,
-      ]}
-    >
-      <Animated.View pointerEvents="none" style={[styles.avatarFirstHalo, haloStyle]} />
-      {children}
-    </Animated.View>
   );
 }
 
@@ -298,7 +229,7 @@ export function CyberRankingListRowNative({
     pageKey,
     reduceMotion
   );
-  const elevateContent = Boolean(firstFrame || proSkinVariant);
+  const elevateContent = Boolean(medalFrame || proSkinVariant);
   /** 順位は列の中央ではなく左端。YOUR RANK と一覧で揃える */
   const rankFlushLeft = true;
   const rankLabel = rankingRankLabel(rank, rankDisplayValue);
@@ -388,6 +319,7 @@ export function CyberRankingListRowNative({
             muted={rankMuted}
             compact={compact}
             flushLeft={rankFlushLeft}
+            quiet
           />
           <RankDeltaBadgeNative delta={rankDeltaPlaces} />
         </View>
@@ -411,35 +343,22 @@ export function CyberRankingListRowNative({
               </Text>
             </Animated.View>
           ) : null}
-          {firstFrame ? (
-            <RankFirstAvatarGlowNative reduceMotion={reduceMotion} compact={compact}>
-              <View style={styles.avatarCrop}>
-                <RankingsAvatarNative
-                  photoURL={photoURL}
-                  label={displayName}
-                  size={avatarSize}
-                  square
-                />
-              </View>
-            </RankFirstAvatarGlowNative>
-          ) : (
-            <View
-              style={[
-                styles.avatarSquare,
-                compact ? styles.avatarSquareCompact : null,
-                styles.avatarRestBorder,
-              ]}
-            >
-              <View style={styles.avatarCrop}>
-                <RankingsAvatarNative
-                  photoURL={photoURL}
-                  label={displayName}
-                  size={avatarSize}
-                  square
-                />
-              </View>
+          <View
+            style={[
+              styles.avatarSquare,
+              compact ? styles.avatarSquareCompact : null,
+              styles.avatarRestBorder,
+            ]}
+          >
+            <View style={styles.avatarCrop}>
+              <RankingsAvatarNative
+                photoURL={photoURL}
+                label={displayName}
+                size={avatarSize}
+                square
+              />
             </View>
-          )}
+          </View>
         </View>
 
         <View style={styles.mainCol}>
@@ -675,14 +594,11 @@ const styles = StyleSheet.create({
     zIndex: 3,
   },
   plusLabel: {
-    color: "#B8FF3C",
+    color: "#E8C56A",
     fontSize: 7,
     fontWeight: "700",
     letterSpacing: 1.2,
     fontFamily: METRIC_FONT,
-    textShadowColor: "rgba(184,255,60,0.55)",
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 6,
   },
   plusLabelCompact: {
     fontSize: 6,
@@ -707,15 +623,6 @@ const styles = StyleSheet.create({
   avatarRestBorder: {
     borderColor: "rgba(255,255,255,0.12)",
   },
-  avatarFirstGlow: {
-    borderColor: "rgba(184,255,60,0.78)",
-  },
-  avatarFirstHalo: {
-    ...StyleSheet.absoluteFillObject,
-    margin: -4,
-    borderRadius: 7,
-    backgroundColor: "rgba(184,255,60,0.28)",
-  },
   mainCol: {
     flex: 1,
     minWidth: 0,
@@ -730,9 +637,6 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     color: CYBER_LIST_CYAN,
     fontWeight: "700",
-    textShadowColor: "rgba(0,245,255,0.35)",
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 12,
     transform: [{ skewX: "-6deg" }],
   },
   metaRow: {
@@ -807,9 +711,6 @@ const styles = StyleSheet.create({
     lineHeight: 14,
     includeFontPadding: false,
     fontFamily: METRIC_FONT,
-    textShadowColor: "rgba(255,214,90,0.45)",
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 8,
   },
   bottomBorder: {
     position: "absolute",

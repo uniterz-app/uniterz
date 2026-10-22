@@ -445,6 +445,12 @@ html {
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
 }
 
+/* 画面外の行はスキン（filter / blend）を塗らない。開いたあとのメモリを残さない */
+.cyber-rank-list-row {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 72px;
+}
+
 /* 1位アバター枠グロー — 一度光って静かに残す（無限ループは端末が熱くなる） */
 .cyber-rank-avatar-first-glow {
   border: 1px solid rgba(184, 255, 60, 0.78);

@@ -148,7 +148,7 @@ export default function RankingCard({
     <Link
       href={profileHref}
       className="block min-w-0 origin-center transition-[transform,opacity] duration-100 ease-out active:scale-[0.99] active:opacity-95"
-      prefetch
+      prefetch={false}
       onPointerEnter={warmProfileRoute}
       onFocus={warmProfileRoute}
       onTouchStart={warmProfileRoute}
@@ -173,7 +173,7 @@ export default function RankingCard({
         subtleShell={subtleShell}
         showFirstPlaceFrame={showFirstPlaceFrame}
         proSkinVariant={proSkinVariant}
-        proSkinIntensity="medium"
+        proSkinIntensity="subtle"
         nameExtra={
           <RankingNameBadges
             {...proBadgeStaticMotion}

@@ -2,6 +2,7 @@ import { Platform, StyleSheet, View } from "react-native";
 import {
   cyberRankNumStyle,
   cyberRankPalette,
+  rankingListNumColors,
   type CyberRankNumVariant,
 } from "../../../../../lib/rankings/cyberRankVisual";
 import { cyberRankNumGlowLayers } from "../../../../../lib/rankings/cyberGlyphGlowLayers";
@@ -19,6 +20,8 @@ type Props = {
   uniform?: boolean;
   /** 列の中央ではなく左端に置く */
   flushLeft?: boolean;
+  /** ランキングリスト — 1位金・2位銀、字形グローなし */
+  quiet?: boolean;
 };
 
 /** Web `.cyber-rank-num__scan` 相当 */
@@ -41,11 +44,14 @@ export function CyberRankNumberNative({
   variant = "list",
   uniform = false,
   flushLeft = false,
+  quiet = false,
 }: Props) {
   const label = rankingRankLabel(rank, displayValue);
   const fourDigits = label.length >= 4;
   const uniformSize =
     variant === "tower" ? (compact ? 38 : 48) : compact ? 26 : 34;
+  const medal = quiet ? rankingListNumColors(rank) : null;
+  const sameAsList = quiet && rank === 3 ? cyberRankPalette(4).textFill : null;
   const resolvedStyle = muted
     ? {
         fontSize: uniformSize,
@@ -54,6 +60,8 @@ export function CyberRankNumberNative({
       }
     : {
         ...nativeRankStyleFromWeb(rank, compact, variant),
+        ...(medal ? { color: medal.textFill } : {}),
+        ...(sameAsList ? { color: sameAsList } : {}),
         ...(uniform
           ? {
               fontSize: uniformSize,
@@ -88,7 +96,7 @@ export function CyberRankNumberNative({
       ) : (
         <CyberGlyphGlowTextNative
           style={lineStyle}
-          layers={cyberRankNumGlowLayers(rank)}
+          layers={quiet ? [] : cyberRankNumGlowLayers(rank)}
           singleLine={fourDigits}
         >
           {label}

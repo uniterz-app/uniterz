@@ -63,6 +63,7 @@ function RankingRowCard({
       pageKey={pageKey}
       reduceMotion={reduceMotion}
       proSkinVariant={proSkinVariant}
+      proSkinIntensity="subtle"
     />
     <RankingRowCommentNative comment={row.rankingComment} align="list" />
     </>

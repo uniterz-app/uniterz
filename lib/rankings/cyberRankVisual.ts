@@ -136,6 +136,15 @@ export function rankMedalFrameColor(rank: number): string | null {
   return null;
 }
 
+/** リスト順位数字。1位=金、2位=銀。3位以下はパレット色のまま（発光は別で切る） */
+export function rankingListNumColors(
+  rank: number
+): { textFill: string; stroke: string } | null {
+  if (rank === 1) return { textFill: "#FFF6D8", stroke: "#C4922A" };
+  if (rank === 2) return { textFill: "#F3F6FA", stroke: "#8E98A8" };
+  return null;
+}
+
 export function cyberMetricTag(metric: MobileMetric, lang: Language): string {
   if (metric === "totalScore") return t(lang).rankings.pts.toUpperCase();
   if (metric === "winRate") return "WIN%";
