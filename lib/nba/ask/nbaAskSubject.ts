@@ -60,7 +60,31 @@ export function nbaAskSubject(text: string): NbaAskSubject {
 
 type Turn = { role: string; content: string };
 
-const NAME_SKIP = new Set(["pro", "nba", "the", "and", "for", "per"]);
+const NAME_SKIP = new Set([
+  "pro",
+  "nba",
+  "the",
+  "and",
+  "for",
+  "per",
+  "リバウンド",
+  "アシスト",
+  "スティール",
+  "ブロック",
+  "ターンオーバー",
+  "リーダー",
+  "シーズン",
+  "プレーオフ",
+  "レギュラー",
+  "ショット",
+  "ゾーン",
+  "テクニカル",
+  "フラグラント",
+  "キャリア",
+  "スタッツ",
+  "ボックス",
+  "ポイント",
+]);
 
 /** カタカナか英字の固有名。リバウンドだけ、のような続きには名前が無い */
 function nameTokens(text: string): string[] {

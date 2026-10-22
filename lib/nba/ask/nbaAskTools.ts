@@ -27,6 +27,19 @@ import { NBA_CONFERENCE_STANDINGS_COLLECTION } from "@/lib/nba/standings/loadNba
 import type { NbaConferenceStandingsRow } from "@/lib/nba/nbaConferenceStandings";
 import type { NbaTeamRosterDocTeam } from "@/lib/nba/teamRosters/teamRosterTypes";
 import { loadPlayerGameLogsSnapshot } from "@/lib/nba/playerGameLogs/loadPlayerGameLogsSnapshot";
+import { loadPlayerShotZonesSnapshot } from "@/lib/nba/playerShotZones/loadPlayerShotZonesSnapshot";
+import { loadPlayerContractSnapshot } from "@/lib/nba/playerContract/loadPlayerContractSnapshot";
+import { loadPlayerCareerSeasonsSnapshot } from "@/lib/nba/playerCareerSeasons/loadPlayerCareerSeasonsSnapshot";
+import { loadPlayerDisciplineSlice, loadTeamDisciplineSlice } from "@/lib/nba/discipline/nbaDisciplineSnapshot";
+import { loadTeamShapeRecordsBundle } from "@/lib/nba/teamShapes/loadTeamShapeRecords";
+import { selectTeamShapeEdges } from "@/lib/nba/teamShapes/selectTeamShapeEdges";
+import { resolveTeamShapeLabel } from "@/lib/nba/teamShapes/shapeDefs";
+import { loadDailyLeadersAdmin } from "@/lib/nba/dailyLeaders/loadDailyLeadersAdmin";
+import type { DailyLeaderStatKey } from "@/lib/nba/dailyLeaders/buildDailyLeaders";
+import {
+  formatCareerSeasonLabel,
+  formatContractSeasonLabel,
+} from "@/lib/predict/nbaPlayerDetailPreviewMocks";
 import { loadPlayerStatLeadersSnapshot } from "@/lib/nba/playerStatLeaders/loadPlayerStatLeadersSnapshot";
 import { loadLeagueTeamStatsSnapshot } from "@/lib/nba/leagueTeamStats/loadLeagueTeamStatsSnapshot";
 import {
@@ -289,6 +302,101 @@ export const NBA_ASK_TOOL_DEFS = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "get_player_shot_zones",
+      description: "A player's shot zone field goal percentage and attempts. Not a web lookup.",
+      parameters: {
+        type: "object",
+        properties: {
+          player_id: { type: "string" },
+          season: { type: "string", description: "Optional, like 2024-25" },
+        },
+        required: ["player_id"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_player_contract",
+      description:
+        "A player's contract years and salaries stored in the app. Not Spotrac. Do not search the web for a contract.",
+      parameters: {
+        type: "object",
+        properties: {
+          player_id: { type: "string" },
+          season: { type: "string", description: "Optional, like 2024-25" },
+        },
+        required: ["player_id"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_player_career",
+      description: "Career season averages (per game), regular season or playoffs. Most recent seasons.",
+      parameters: {
+        type: "object",
+        properties: {
+          player_id: { type: "string" },
+          season_type: { type: "string", enum: ["season", "playoffs"] },
+          season: { type: "string", description: "Optional single season, like 2023-24" },
+        },
+        required: ["player_id"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_team_shapes",
+      description:
+        "A team's stronger and weaker game shapes (conditional W-L) shown on the team screen. Not all shapes.",
+      parameters: {
+        type: "object",
+        properties: {
+          team: { type: "string", description: "Team abbr or name" },
+          season: { type: "string", description: "Optional, like 2024-25" },
+        },
+        required: ["team"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_discipline",
+      description:
+        "Season technicals, flagrants, ejections, and fine totals for one player or one team. Pass player_id or team.",
+      parameters: {
+        type: "object",
+        properties: {
+          player_id: { type: "string" },
+          team: { type: "string", description: "Team abbr or name" },
+          season: { type: "string", description: "Optional, like 2024-25" },
+          season_type: { type: "string", enum: ["season", "playoffs"] },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_daily_leaders",
+      description:
+        "Today's NBA stat leaders from games already stored (PTS, REB, AST, STL, BLK, 3PM). Top of the list only.",
+      parameters: {
+        type: "object",
+        properties: {
+          metric: { type: "string", enum: ["pts", "reb", "ast", "stl", "blk", "fg3m"] },
+          date: { type: "string", description: "Optional US Eastern YYYY-MM-DD. Default is the latest slate." },
+        },
+      },
+    },
+  },
 ] as const;
 
 /**
@@ -396,6 +504,7 @@ async function loadInjuryTeams(
 
 /** チャットが聞いてよい選手リーダー指標。ショットゾーンや契約は含めない */
 const PLAYER_LEADER_METRICS = ["pts", "reb", "ast", "stl", "blk", "tov"] as const;
+const DAILY_LEADER_METRICS = ["pts", "reb", "ast", "stl", "blk", "fg3m"] as const;
 /** チームは1指標だけ。失点と DEF は低い方が上位 */
 const TEAM_STAT_METRICS = ["ppg", "papg", "pace", "netrtg", "ortg", "drtg", "diff"] as const;
 
@@ -848,6 +957,194 @@ export async function runNbaAskTool(
       leader,
       ...(teamRow ? { team: teamRow } : { top: rows.slice(0, 5).map((row, index) => pack(row, index + 1)) }),
     };
+  }
+
+  if (name === "get_player_shot_zones") {
+    const playerId = str(args.player_id);
+    if (!playerId) return { error: "player_id required" };
+    const season = askSeason(args.season);
+    if (typeof season !== "string") return season;
+    const payload = await loadPlayerShotZonesSnapshot(db, season, playerId);
+    if (payload.shotZones.length === 0) {
+      return { found: false, webOk: false, season, note: "No shot zone snapshot" };
+    }
+    return {
+      found: true,
+      webOk: false,
+      season,
+      zones: payload.shotZones.map((z) => ({
+        zone: z.label || z.short,
+        fgPct: z.fgPct,
+        fga: z.fga,
+      })),
+    };
+  }
+
+  if (name === "get_player_contract") {
+    const playerId = str(args.player_id);
+    if (!playerId) return { error: "player_id required" };
+    const season = askSeason(args.season);
+    if (typeof season !== "string") return season;
+    const payload = await loadPlayerContractSnapshot(db, season, playerId);
+    const contract = payload.contract;
+    if (!contract) return { found: false, webOk: false, season, note: "No contract snapshot" };
+    return {
+      found: true,
+      webOk: false,
+      season,
+      yearsRemaining: contract.yearsRemaining,
+      freeAgencyYear: contract.freeAgencyYear,
+      freeAgencyType: contract.freeAgencyType,
+      averageSalary: contract.averageSalary,
+      seasons: contract.seasons.slice(0, 6).map((row) => ({
+        season: formatContractSeasonLabel(row.season),
+        salary: row.baseSalary,
+        team: row.teamAbbr,
+        ...(row.option ? { option: row.option } : {}),
+      })),
+      ...(contract.deadSalary
+        ? {
+            deadSalary: {
+              team: contract.deadSalary.teamAbbr,
+              salary: contract.deadSalary.salary,
+              season: formatContractSeasonLabel(contract.deadSalary.season),
+            },
+          }
+        : {}),
+    };
+  }
+
+  if (name === "get_player_career") {
+    const playerId = str(args.player_id);
+    if (!playerId) return { error: "player_id required" };
+    const payload = await loadPlayerCareerSeasonsSnapshot(db, playerId);
+    const windowName = str(args.season_type) === "playoffs" ? "playoffs" : "regular";
+    let rows = [...payload.careerSeasons[windowName]].sort((a, b) => b.seasonStart - a.seasonStart);
+    const seasonKey = str(args.season);
+    if (seasonKey) {
+      const start = Number.parseInt(seasonKey.slice(0, 4), 10);
+      rows = rows.filter((row) => row.seasonStart === start);
+    }
+    rows = rows.slice(0, 8);
+    if (rows.length === 0) {
+      return { found: false, webOk: false, note: "No career snapshot" };
+    }
+    return {
+      found: true,
+      webOk: false,
+      name: payload.playerName,
+      perGame: true,
+      seasonType: windowName,
+      seasons: rows.map((row) => ({
+        season: formatCareerSeasonLabel(row.seasonStart),
+        team: row.teamAbbr,
+        gp: row.games,
+        pts: row.pts,
+        reb: row.reb,
+        ast: row.ast,
+      })),
+    };
+  }
+
+  if (name === "get_team_shapes") {
+    const team = await resolveTeam(db, str(args.team));
+    if (!("teamId" in team)) return team;
+    const season = askSeason(args.season);
+    if (typeof season !== "string") return season;
+    const bundle = await loadTeamShapeRecordsBundle(db, season);
+    const record = bundle?.teams[team.teamId];
+    const edges = selectTeamShapeEdges(record);
+    if (!record || edges.length === 0) {
+      return { found: false, webOk: false, season, note: "No shape meets the screen cutoff yet" };
+    }
+    const lang = resolveLocalizedLang(language);
+    return {
+      found: true,
+      webOk: false,
+      season,
+      team: abbr(team.teamId),
+      record: `${record.overall.wins}-${record.overall.losses}`,
+      shapes: edges.map((edge) => ({
+        kind: edge.kind === "strength" ? "strong" : "weak",
+        label: resolveTeamShapeLabel(edge.split.shapeId, lang),
+        w: edge.split.when.wins,
+        l: edge.split.when.losses,
+        games: edge.split.games,
+      })),
+    };
+  }
+
+  if (name === "get_discipline") {
+    const season = askSeason(args.season);
+    if (typeof season !== "string") return season;
+    const phase = str(args.season_type) === "playoffs" ? "playoffs" : "regular";
+    const playerId = str(args.player_id);
+    const teamQ = str(args.team);
+    if (!playerId && !teamQ) return { error: "player_id or team required" };
+    if (playerId) {
+      const slice = await loadPlayerDisciplineSlice(db, season, playerId);
+      if (!slice) return { found: false, webOk: false, season, note: "No discipline snapshot" };
+      const counts = slice[phase];
+      return {
+        found: true,
+        webOk: false,
+        season,
+        seasonType: phase,
+        tech: counts.tech,
+        flag: counts.flag,
+        eject: counts.eject,
+        suspensions: counts.susp,
+        fineUsd: counts.fines,
+      };
+    }
+    const team = await resolveTeam(db, teamQ);
+    if (!("teamId" in team)) return team;
+    const slice = await loadTeamDisciplineSlice(db, season, team.teamId);
+    if (!slice) return { found: false, webOk: false, season, note: "No discipline snapshot" };
+    const counts = slice[phase];
+    const players = (slice.players ?? [])
+      .map((p) => {
+        const row = p[phase];
+        return { name: p.name, tech: row.tech, flag: row.flag, eject: row.eject };
+      })
+      .filter((p) => p.tech + p.flag + p.eject > 0)
+      .sort((a, b) => b.tech + b.flag + b.eject - (a.tech + a.flag + a.eject))
+      .slice(0, 5);
+    return {
+      found: true,
+      webOk: false,
+      season,
+      seasonType: phase,
+      team: abbr(team.teamId),
+      tech: counts.tech,
+      flag: counts.flag,
+      eject: counts.eject,
+      suspensions: counts.susp,
+      fineUsd: counts.fines,
+      ...(players.length > 0 ? { players } : {}),
+    };
+  }
+
+  if (name === "get_daily_leaders") {
+    const metric = (str(args.metric) || "pts") as DailyLeaderStatKey;
+    if (!DAILY_LEADER_METRICS.includes(metric as (typeof DAILY_LEADER_METRICS)[number])) {
+      return { error: "metric required" };
+    }
+    let date = str(args.date);
+    if (!date) {
+      const index = await loadGameDayIndex(db, { league: "nba", season: GAME_SCHEDULE_SEASON });
+      date = resolveLatestNbaSlateDateKey(index.startMs);
+    }
+    if (!DATE_RE.test(date)) return { error: "date must be YYYY-MM-DD" };
+    const payload = await loadDailyLeadersAdmin(db, { dateKey: date, timeZone: NBA_ASK_TIME_ZONE });
+    const leaders = (payload.boards[metric] ?? []).slice(0, 5).map((row, index) => ({
+      rank: index + 1,
+      name: `${row.firstName} ${row.lastName}`.trim(),
+      team: row.teamAbbr,
+      value: row.value,
+    }));
+    if (leaders.length === 0) return { found: false, webOk: false, date, metric, note: "No box scores that day" };
+    return { found: true, webOk: false, date, metric, leaders };
   }
 
   return { error: `unknown tool ${name}` };

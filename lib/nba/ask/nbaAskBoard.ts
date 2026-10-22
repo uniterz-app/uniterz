@@ -23,18 +23,21 @@ const METRIC_LABEL: Record<string, string> = {
   ortg: "OFF",
   drtg: "DEF",
   diff: "得失点差",
+  fg3m: "3ポイント",
 };
 
 const APP_QUESTION =
   /使い方|ポイント|採点|ランキング|料金|プラン|って何|とは|通知|招待|スクワッド|ログイン|プロ\b|PRO\b|あっぷせっと|アップセット|番狂わせ|\bupset\b|連勝|勝率/i;
 
 const STATS_QUESTION =
-  /平均|スタッツ|試合|得点|リバウンド|アシスト|順位|欠場|怪我|けが|結果|直近|リーダー|成績|勝敗|ボックス|スコア/i;
+  /平均|スタッツ|試合|得点|リバウンド|アシスト|順位|欠場|怪我|けが|結果|直近|リーダー|成績|勝敗|ボックス|スコア|契約|年俸|ショット|テクニカル|フラグラント|退場|罰金|得意形|苦手形|キャリア|通算/i;
 
 /** スタッツの質問なら表で見せる。アプリの使い方は吹き出しのまま。 */
 export function nbaAskLooksLikeStats(text: string): boolean {
   const q = text.trim();
-  if (!q || APP_QUESTION.test(q)) return false;
+  if (!q) return false;
+  if (STATS_QUESTION.test(q) && !/使い方|採点|って何|とは|通知|招待|スクワッド/.test(q)) return true;
+  if (APP_QUESTION.test(q)) return false;
   return STATS_QUESTION.test(q);
 }
 
@@ -42,6 +45,14 @@ function percent(value: unknown): string | null {
   if (typeof value !== "number" || !Number.isFinite(value)) return null;
   const n = value > 1 ? value : value * 100;
   return `${n.toFixed(1)}%`;
+}
+
+function money(value: unknown): string {
+  if (typeof value !== "number" || !Number.isFinite(value)) return "—";
+  const sign = value < 0 ? "-" : "";
+  const abs = Math.abs(value);
+  if (abs >= 1_000_000) return `${sign}$${(abs / 1_000_000).toFixed(1)}M`;
+  return `${sign}$${Math.round(abs).toLocaleString("en-US")}`;
 }
 
 function cell(value: unknown): string {
@@ -168,6 +179,102 @@ export function boardFromAskTool(name: string, result: unknown): NbaAskBoard | n
       columns: ["順位", metric],
       rows,
       ...(season ? { note: season } : {}),
+    };
+  }
+
+  if (name === "get_player_shot_zones") {
+    const zones = rowsOf(data.zones).slice(0, 8);
+    if (zones.length === 0) return null;
+    return {
+      columns: ["FG%", "試投"],
+      rows: zones.map((zone) => ({
+        label: cell(zone.zone),
+        cells: [percent(zone.fgPct) ?? "—", cell(zone.fga)],
+      })),
+      ...(data.season ? { note: String(data.season) } : {}),
+    };
+  }
+
+  if (name === "get_player_contract") {
+    const seasons = rowsOf(data.seasons).slice(0, 6);
+    if (seasons.length === 0) return null;
+    const fa = data.freeAgencyYear ? `FA ${cell(data.freeAgencyYear)}` : "";
+    return {
+      columns: ["年俸"],
+      rows: seasons.map((row) => ({
+        label: `${cell(row.season)} ${cell(row.team)}`.trim(),
+        cells: [money(row.salary)],
+      })),
+      ...(fa ? { note: fa } : {}),
+    };
+  }
+
+  if (name === "get_player_career") {
+    const seasons = rowsOf(data.seasons).slice(0, 8);
+    if (seasons.length === 0) return null;
+    return {
+      columns: ["得点", "リバウンド", "アシスト"],
+      rows: seasons.map((row) => ({
+        label: `${cell(row.season)} ${cell(row.team)}`.trim(),
+        cells: [cell(row.pts), cell(row.reb), cell(row.ast)],
+      })),
+      note: "1試合平均",
+    };
+  }
+
+  if (name === "get_team_shapes") {
+    const shapes = rowsOf(data.shapes).slice(0, 4);
+    if (shapes.length === 0) return null;
+    return {
+      columns: ["勝", "敗"],
+      rows: shapes.map((row) => ({
+        label: `${row.kind === "weak" ? "苦手" : "得意"} ${cell(row.label)}`.trim(),
+        cells: [cell(row.w), cell(row.l)],
+      })),
+      ...(data.record ? { note: String(data.record) } : {}),
+    };
+  }
+
+  if (name === "get_discipline") {
+    const players = rowsOf(data.players).slice(0, 5);
+    const rows =
+      players.length > 0
+        ? players.map((row) => ({
+            label: cell(row.name),
+            cells: [cell(row.tech), cell(row.flag), cell(row.eject)],
+          }))
+        : [
+            {
+              label: cell(data.team || "今季"),
+              cells: [cell(data.tech), cell(data.flag), cell(data.eject)],
+            },
+          ];
+    const note = [
+      players.length > 0 ? `チーム ${cell(data.tech)}/${cell(data.flag)}/${cell(data.eject)}` : "",
+      data.fineUsd ? `罰金 ${money(data.fineUsd)}` : "",
+      data.season ? String(data.season) : "",
+    ]
+      .filter(Boolean)
+      .join(" · ")
+      .slice(0, 80);
+    return {
+      columns: ["テクニカル", "フラグラント", "退場"],
+      rows,
+      ...(note ? { note } : {}),
+    };
+  }
+
+  if (name === "get_daily_leaders") {
+    const metric = METRIC_LABEL[String(data.metric ?? "")] ?? "数値";
+    const leaders = rowsOf(data.leaders).slice(0, 5);
+    if (leaders.length === 0) return null;
+    return {
+      columns: ["順位", metric],
+      rows: leaders.map((row) => ({
+        label: `${cell(row.name)} ${cell(row.team)}`.trim(),
+        cells: [cell(row.rank), cell(row.value)],
+      })),
+      ...(data.date ? { note: String(data.date) } : {}),
     };
   }
 
