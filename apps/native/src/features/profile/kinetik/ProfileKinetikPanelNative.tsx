@@ -2476,6 +2476,8 @@ const styles = StyleSheet.create({
   },
   metricsGamesRow: {
     marginTop: 4,
+    width: "62%",
+    alignSelf: "center",
   },
   metricsGamesRowHidden: {
     opacity: 0,
