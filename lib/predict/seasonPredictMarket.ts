@@ -9,7 +9,12 @@ import {
   NBA_STANDINGS_RANKS,
   type NbaConferenceId,
 } from "@/lib/nba/nbaConferenceTeams";
-import type { NbaAwardId } from "@/lib/predict/nbaSeasonAwardsPredict";
+import {
+  awardCandidateLabel,
+  type NbaAwardCandidate,
+  type NbaAwardId,
+  type NbaSeasonAwardsPrediction,
+} from "@/lib/predict/nbaSeasonAwardsPredict";
 
 /** 「2–6」「1–3」など数字だけの帯は全言語同じ表記 */
 function numericBandLabel(range: string): UiStrings {
@@ -350,4 +355,38 @@ export function buildStandingsConsensusSlots(
   }
 
   return slots;
+}
+
+/** マーケット各賞に重ねる自分の予想。名前は提出時の候補、無ければ Top5 から */
+export type SeasonAwardsMinePick = {
+  candidateId: string;
+  name: string;
+  teamAbbr: string | null;
+};
+
+export function resolveSeasonAwardsMinePick(
+  awardId: NbaAwardId,
+  top: readonly SeasonAwardsMarketPickRow[],
+  prediction: NbaSeasonAwardsPrediction | null | undefined,
+  candidates: readonly NbaAwardCandidate[]
+): SeasonAwardsMinePick | null {
+  const raw = prediction?.picks[awardId];
+  if (typeof raw !== "string" || !raw.trim()) return null;
+  const candidateId = raw.trim();
+  const fromCatalog = candidates.find((c) => c.id === candidateId);
+  if (fromCatalog) {
+    const teamAbbr = fromCatalog.teamAbbr?.trim() || null;
+    return {
+      candidateId,
+      name: awardCandidateLabel(fromCatalog),
+      teamAbbr,
+    };
+  }
+  const fromTop = top.find((row) => row.candidateId === candidateId);
+  if (!fromTop) return null;
+  return {
+    candidateId,
+    name: fromTop.name,
+    teamAbbr: fromTop.teamAbbr,
+  };
 }

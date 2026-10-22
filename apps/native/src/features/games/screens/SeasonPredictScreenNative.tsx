@@ -109,6 +109,10 @@ export default function SeasonPredictScreenNative() {
     useState<SeasonAwardsMarketSnapshot | null>(null);
   const [standingsHasMine, setStandingsHasMine] = useState(false);
   const [awardsHasMine, setAwardsHasMine] = useState(false);
+  const [awardsMine, setAwardsMine] = useState<{
+    prediction: NbaSeasonAwardsPrediction | null;
+    candidates: NbaAwardCandidate[];
+  } | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [rulesOpen, setRulesOpen] = useState(false);
@@ -206,11 +210,18 @@ export default function SeasonPredictScreenNative() {
         }
         const mine =
           mineRes.status === "fulfilled" ? mineRes.value.prediction : null;
-        if (mineRes.status === "fulfilled" && mine) {
-          setAwards(mine);
-          setCandidates(mineRes.value.candidates ?? []);
-        } else if (mineRes.status === "rejected") {
+        if (mineRes.status === "fulfilled") {
+          setAwardsMine({
+            prediction: mine,
+            candidates: mineRes.value.candidates ?? [],
+          });
+          if (mine) {
+            setAwards(mine);
+            setCandidates(mineRes.value.candidates ?? []);
+          }
+        } else {
           console.error("fetchMeSeasonAwardsNative", mineRes.reason);
+          setAwardsMine(null);
         }
         setAwardsHasMine(Boolean(mine));
         if (!routeView) setViewTab(mine ? "mine" : "crowd");
@@ -636,6 +647,7 @@ export default function SeasonPredictScreenNative() {
                   <NbaSeasonAwardsMarketPanelNative
                     market={awardsMarket}
                     language={language}
+                    mine={awardsMine ?? undefined}
                   />
                 ) : null
               )
@@ -659,6 +671,7 @@ export default function SeasonPredictScreenNative() {
                 <NbaSeasonAwardsMarketPanelNative
                   market={awardsMarket}
                   language={language}
+                  mine={{ prediction: awards, candidates }}
                 />
               ) : null
             )

@@ -65,6 +65,10 @@ export default function SeasonAwardsPage() {
   const [candidates, setCandidates] = useState<NbaAwardCandidate[]>([]);
   const [market, setMarket] = useState<SeasonAwardsMarketSnapshot | null>(null);
   const [hasMine, setHasMine] = useState(false);
+  const [awardsMine, setAwardsMine] = useState<{
+    prediction: NbaSeasonAwardsPrediction | null;
+    candidates: NbaAwardCandidate[];
+  } | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [uid, setUid] = useState<string | null>(null);
@@ -111,14 +115,21 @@ export default function SeasonAwardsPage() {
           console.error("fetchSeasonPredictMarket awards", marketRes.reason);
           setMarket(null);
         }
-        if (mineRes.status === "fulfilled" && mineRes.value.prediction) {
-          setValue(mineRes.value.prediction);
-          setCandidates(mineRes.value.candidates ?? []);
-          setHasMine(true);
-        } else {
-          if (mineRes.status === "rejected") {
-            console.error("fetchMeSeasonAwards", mineRes.reason);
+        if (mineRes.status === "fulfilled") {
+          setAwardsMine({
+            prediction: mineRes.value.prediction,
+            candidates: mineRes.value.candidates ?? [],
+          });
+          if (mineRes.value.prediction) {
+            setValue(mineRes.value.prediction);
+            setCandidates(mineRes.value.candidates ?? []);
+            setHasMine(true);
+          } else {
+            setHasMine(false);
           }
+        } else {
+          console.error("fetchMeSeasonAwards", mineRes.reason);
+          setAwardsMine(null);
           setHasMine(false);
         }
         setMode("locked");
@@ -234,9 +245,14 @@ export default function SeasonAwardsPage() {
                 </p>
               )
             }
+            awardsMine={awardsMine}
             crowd={
               market ? (
-                <NbaSeasonAwardsMarketPanel market={market} language={rulesLang} />
+                <NbaSeasonAwardsMarketPanel
+                  market={market}
+                  language={rulesLang}
+                  mine={awardsMine ?? undefined}
+                />
               ) : (
                 <div className="space-y-3 py-8 text-center">
                   <p
@@ -271,6 +287,7 @@ export default function SeasonAwardsPage() {
               kind="awards"
               season={season}
               language={rulesLang}
+              awardsMine={{ prediction: value, candidates }}
               mine={
                 <div className="space-y-3">
                   <NbaSeasonAwardsViewPanel

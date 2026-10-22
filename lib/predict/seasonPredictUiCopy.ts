@@ -279,6 +279,34 @@ export function seasonPredictAwardsMarketHint(
   });
 }
 
+export function seasonPredictYourAwardPickLabel(
+  lang: SeasonPredictUiLang
+): string {
+  return L(lang, {
+    ja: "あなた",
+    en: "You",
+    ko: "나",
+    zh: "我的",
+    es: "Tú",
+    pt: "Você",
+    fr: "Vous",
+  });
+}
+
+export function seasonPredictYourAwardPickMissing(
+  lang: SeasonPredictUiLang
+): string {
+  return L(lang, {
+    ja: "あなたの予想は未提出です。",
+    en: "You have not submitted a pick.",
+    ko: "내 예측은 제출되지 않았습니다.",
+    zh: "你还没有提交预测。",
+    es: "No has enviado tu predicción.",
+    pt: "Você não enviou um palpite.",
+    fr: "Vous n'avez pas envoyé de pronostic.",
+  });
+}
+
 export function seasonPredictNudgeCopy(lang: SeasonPredictUiLang): {
   title: string;
   body: string;

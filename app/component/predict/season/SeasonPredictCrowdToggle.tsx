@@ -15,6 +15,10 @@ import type {
   SeasonAwardsMarketSnapshot,
   SeasonStandingsMarketSnapshot,
 } from "@/lib/predict/seasonPredictMarket";
+import type {
+  NbaAwardCandidate,
+  NbaSeasonAwardsPrediction,
+} from "@/lib/predict/nbaSeasonAwardsPredict";
 import {
   seasonPredictPageUiCopy,
   type SeasonPredictUiLang,
@@ -29,6 +33,11 @@ type Props = {
   /** 渡したときは途中集計を取りに行かず、これをみんなの予想タブに出す */
   crowd?: ReactNode;
   initialTab?: "mine" | "crowd";
+  /** アワードのみんなの予想に重ねる自分の提出 */
+  awardsMine?: {
+    prediction: NbaSeasonAwardsPrediction | null;
+    candidates?: readonly NbaAwardCandidate[];
+  } | null;
 };
 
 type Market =
@@ -42,6 +51,7 @@ export default function SeasonPredictCrowdToggle({
   mine,
   crowd,
   initialTab = "mine",
+  awardsMine,
 }: Props) {
   const pageUi = seasonPredictPageUiCopy(language);
   const [tab, setTab] = useState<"mine" | "crowd">(initialTab);
@@ -117,7 +127,11 @@ export default function SeasonPredictCrowdToggle({
           {market.kind === "standings" ? (
             <NbaSeasonStandingsMarketPanel market={market.data} language={language} />
           ) : (
-            <NbaSeasonAwardsMarketPanel market={market.data} language={language} />
+            <NbaSeasonAwardsMarketPanel
+              market={market.data}
+              language={language}
+              mine={awardsMine}
+            />
           )}
         </div>
       ) : state === "pending" ? (
