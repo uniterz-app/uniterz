@@ -3,7 +3,7 @@
 /** UNITERZ AI チャット（アプリの使い方 + NBA スタッツ。Native `NbaAskScreenNative` 相当） */
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, SendHorizontal } from "lucide-react";
+import { SendHorizontal } from "lucide-react";
 import cn from "clsx";
 import { auth } from "@/lib/firebase";
 import { nameOxanium } from "@/lib/fonts";
@@ -15,6 +15,7 @@ import {
   type NbaAskTurnClient,
 } from "@/lib/nba/ask/nbaAskClient";
 import { splitNbaAskLinks } from "@/lib/nba/ask/nbaAskLinkify";
+import { nbaAskLooksLikeStats, type NbaAskBoard } from "@/lib/nba/ask/nbaAskBoard";
 import {
   nbaAskDestinationLabel,
   nbaAskDestinationWebPath,
@@ -84,7 +85,12 @@ export default function NbaAskChat({ language, timeZone, signedIn }: Props) {
     if (result.ok) {
       setTurns((prev) => [
         ...prev,
-        { role: "assistant", content: result.answer, opens: result.opens },
+        {
+          role: "assistant",
+          content: result.answer,
+          opens: result.opens,
+          board: result.board,
+        },
       ]);
       setStatus((prev) =>
         prev ? { ...prev, statsFreeRemaining: result.statsFreeRemaining } : prev
@@ -113,32 +119,57 @@ export default function NbaAskChat({ language, timeZone, signedIn }: Props) {
         {unavailable ? (
           <p className="text-[15px] font-semibold leading-snug text-white/92">{copy.unavailable}</p>
         ) : turns.length === 0 ? (
-          <div className="flex flex-col gap-4 pt-2">
-            <p className="text-[15px] leading-[1.55] text-white/82">{copy.intro}</p>
-            <div className="flex flex-wrap gap-2">
-              {copy.suggestions.map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  disabled={busy}
-                  onClick={() => void send(s)}
-                  className="border border-white/25 px-3 py-2 text-left text-[13px] text-white/92 hover:border-white/50 disabled:opacity-50"
-                >
-                  {s}
-                </button>
-              ))}
-            </div>
+          <div className="flex flex-col">
+            {copy.suggestions.map((s) => (
+              <button
+                key={s}
+                type="button"
+                disabled={busy}
+                onClick={() => void send(s)}
+                className="border-b border-white/10 py-3.5 text-left text-[15px] text-white/88 hover:text-white disabled:opacity-50"
+              >
+                {s}
+              </button>
+            ))}
           </div>
         ) : null}
 
         {turns.map((t, i) => {
           const mine = t.role === "user";
+          const statsQuestion = mine && nbaAskLooksLikeStats(t.content);
+          if (t.board) {
+            return (
+              <div key={i} className="mr-auto w-full">
+                <StatsBoard board={t.board} />
+                {t.opens?.map((id) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => router.push(nbaAskDestinationWebPath(id))}
+                    className={`${nameOxanium.className} self-start bg-[#00F5FF] px-3 py-2 text-[12px] font-bold tracking-[0.06em] text-[#050508] hover:opacity-90`}
+                  >
+                    {nbaAskDestinationLabel(id, language)}
+                  </button>
+                ))}
+              </div>
+            );
+          }
           return (
-            <div key={i} className={cn("flex max-w-[84%] flex-col gap-2", mine ? "ml-auto items-end" : "mr-auto")}>
+            <div
+              key={i}
+              className={cn(
+                "flex flex-col gap-2",
+                statsQuestion ? "mr-auto items-start" : mine ? "ml-auto max-w-[84%] items-end" : "mr-auto max-w-[84%]",
+              )}
+            >
               <div
                 className={cn(
                   "whitespace-pre-wrap px-3.5 py-2.5 text-[15px] leading-[1.5]",
-                  mine ? "bg-[#00F5FF] text-[#041014]" : "bg-white/[0.06] text-white/94",
+                  statsQuestion
+                    ? "border border-[#00F5FF] text-white"
+                    : mine
+                      ? "bg-[#00F5FF] text-[#041014]"
+                      : "bg-white/[0.06] text-white/94",
                 )}
               >
                 {splitNbaAskLinks(t.content).map((part, j) =>
@@ -173,12 +204,7 @@ export default function NbaAskChat({ language, timeZone, signedIn }: Props) {
           );
         })}
 
-        {busy ? (
-          <div className="mr-auto flex items-center gap-2 bg-white/[0.06] px-3.5 py-2.5" role="status">
-            <Loader2 className="h-4 w-4 animate-spin text-[#00F5FF] motion-reduce:animate-none" aria-hidden />
-            <span className="text-[13px] text-white/70">{copy.thinking}</span>
-          </div>
-        ) : null}
+        {busy ? <AnswerSkeleton label={copy.composing} /> : null}
 
         {notice ? (
           <p className="py-3 text-center text-[13px] text-white/72" role="status">
@@ -190,7 +216,7 @@ export default function NbaAskChat({ language, timeZone, signedIn }: Props) {
 
       {!unavailable ? (
         <form
-          className="sticky bottom-[var(--bottom-nav-clearance)] z-10 -mx-1 space-y-2 bg-[#05080e] px-1 pb-2 pt-2"
+          className="sticky bottom-[var(--bottom-nav-clearance)] z-10 -mx-1 space-y-2 bg-[#07090e] px-1 pb-2 pt-2"
           onSubmit={(e) => {
             e.preventDefault();
             void send(draft);
@@ -242,6 +268,73 @@ export default function NbaAskChat({ language, timeZone, signedIn }: Props) {
           </div>
         </form>
       ) : null}
+    </div>
+  );
+}
+
+function AnswerSkeleton({ label }: { label: string }) {
+  return (
+    <div className="mr-auto w-full max-w-[92%]" role="status">
+      <p className="text-[13px] text-[#00F5FF]">{label}</p>
+      <div className="mt-3 space-y-2.5">
+        <div className="h-2 w-[78%] bg-white/25" />
+        <div className="relative h-2 w-[92%] overflow-hidden bg-white/15">
+          <div className="ask-scan absolute inset-y-0 w-1/3 bg-[#00F5FF]" />
+        </div>
+        <div className="h-2 w-[64%] bg-white/15" />
+      </div>
+      <style>{`@keyframes askScan{from{left:-35%}to{left:100%}}.ask-scan{animation:askScan 1.4s linear infinite}@media (prefers-reduced-motion:reduce){.ask-scan{animation:none;left:33%}}`}</style>
+    </div>
+  );
+}
+
+function StatsBoard({ board }: { board: NbaAskBoard }) {
+  const single = board.rows.length === 1 ? board.rows[0] : null;
+  return (
+    <div className="py-1">
+      {single ? (
+        <>
+          <p className="text-[11px] tracking-[0.16em] text-white/45">{single.label}</p>
+          <div
+            className="mt-3 grid gap-y-1"
+            style={{ gridTemplateColumns: `repeat(${board.columns.length}, minmax(0, 1fr))` }}
+          >
+            {board.columns.map((column) => (
+              <span key={column} className="text-[11px] text-white/45">
+                {column}
+              </span>
+            ))}
+            {single.cells.map((value, index) => (
+              <span key={index} className={`${nameOxanium.className} text-[28px] leading-none text-white`}>
+                {value}
+              </span>
+            ))}
+          </div>
+        </>
+      ) : (
+        <div
+          className="grid gap-y-2.5"
+          style={{ gridTemplateColumns: `minmax(5.5rem, auto) repeat(${board.columns.length}, minmax(0, 1fr))` }}
+        >
+          <span />
+          {board.columns.map((column) => (
+            <span key={column} className="text-center text-[11px] text-white/45">
+              {column}
+            </span>
+          ))}
+          {board.rows.map((row, rowIndex) => (
+            <div key={`${row.label}-${rowIndex}`} className="contents">
+              <span className="truncate text-[12px] text-white/70">{row.label}</span>
+              {row.cells.map((value, index) => (
+                <span key={index} className={`${nameOxanium.className} text-center text-[18px] leading-none text-white`}>
+                  {value}
+                </span>
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
+      {board.note ? <p className="mt-3 text-[12px] text-white/55">{board.note}</p> : null}
     </div>
   );
 }

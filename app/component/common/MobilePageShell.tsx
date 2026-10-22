@@ -15,6 +15,10 @@ type Props = {
   eyebrow?: string;
   contentClassName?: string;
   backAriaLabel?: string;
+  /** 見出しの黒を外し、背景を上まで見せる */
+  headerTransparent?: boolean;
+  /** 見出しの後ろに敷く全面 */
+  underlay?: ReactNode;
   children: ReactNode;
 };
 
@@ -26,6 +30,8 @@ export default function MobilePageShell({
   eyebrow = "PROFILE",
   contentClassName,
   backAriaLabel,
+  headerTransparent,
+  underlay,
   children,
 }: Props) {
   const router = useRouter();
@@ -41,6 +47,8 @@ export default function MobilePageShell({
       contentClassName={contentClassName ?? "max-w-lg"}
       edgeBack
       hideBack
+      headerTransparent={headerTransparent}
+      underlay={underlay}
     >
       {children}
     </CyberSubpageShell>

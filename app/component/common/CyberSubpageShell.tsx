@@ -206,6 +206,8 @@ export type CyberSubpageHeaderProps = {
    * このバーのタイトルは出さない。
    */
   titleInBrandShelf?: boolean;
+  /** 見出しの黒塗りと下線を外し、ページの背景を上まで見せる */
+  headerTransparent?: boolean;
 };
 
 /**
@@ -225,6 +227,7 @@ export function CyberSubpageHeader({
   className,
   hideBrandShelf = true,
   titleInBrandShelf = false,
+  headerTransparent = false,
 }: CyberSubpageHeaderProps) {
   const [helpOpen, setHelpOpen] = useState(false);
   const reduceMotion = useReducedMotion() === true;
@@ -286,7 +289,9 @@ export function CyberSubpageHeader({
     <motion.div
       data-cyber-subpage-header
       className={cn(
-        "sticky top-0 z-30 border-b border-[rgba(0,245,255,0.14)] bg-black",
+        headerTransparent
+          ? "sticky top-0 z-30 bg-transparent"
+          : "sticky top-0 z-30 border-b border-[rgba(0,245,255,0.14)] bg-black",
         hideBrandShelf && "pt-[env(safe-area-inset-top)]",
         className
       )}
@@ -384,6 +389,8 @@ type ShellProps = CyberSubpageHeaderProps & {
   bare?: boolean;
   /** ページ全面の背景。指定時は既定のサイバーグリッドを出さない */
   backdrop?: ReactNode;
+  /** 見出しの後ろに敷く全面。ASK のグラデーションなど、この画面だけ */
+  underlay?: ReactNode;
 };
 
 /**
@@ -394,6 +401,7 @@ export default function CyberSubpageShell({
   contentClassName,
   bare = false,
   backdrop,
+  underlay,
   edgeBack: edgeBackProp,
   hideBack: hideBackProp,
   ...headerProps
@@ -415,11 +423,17 @@ export default function CyberSubpageShell({
         backdrop ? "bg-[#070707]" : "bg-transparent"
       )}
     >
+      {underlay ? (
+        <div className="pointer-events-none absolute inset-0 z-0" aria-hidden>
+          {underlay}
+        </div>
+      ) : null}
       {backdrop ? (
         <div className="badge-page-quilt" aria-hidden>
           {backdrop}
         </div>
-      ) : !bare ? (
+      ) : null}
+      {!backdrop && !underlay && !bare ? (
         <>
           <div
             aria-hidden

@@ -1,11 +1,16 @@
 /** `/api/nba/ask` のクライアント（Web / Native 共通）。OpenAI キーはサーバーだけが持つ */
+import { parseNbaAskBoard, type NbaAskBoard } from "./nbaAskBoard";
 import { isNbaAskDestinationId, type NbaAskDestinationId } from "./nbaAskDestinations";
+
+export type { NbaAskBoard };
 
 export type NbaAskTurnClient = {
   role: "user" | "assistant";
   content: string;
   /** アシスタントの答えの下に出す「その画面を開く」 */
   opens?: NbaAskDestinationId[];
+  /** スタッツの表。数字はサーバーの道具からだけ */
+  board?: NbaAskBoard;
 };
 
 export type NbaAskStatus = {
@@ -19,7 +24,13 @@ export type NbaAskStatus = {
 export type NbaAskError = "rate_limited" | "slow_down" | "auth" | "unavailable" | "failed";
 
 export type NbaAskReply =
-  | { ok: true; answer: string; statsFreeRemaining: number | null; opens: NbaAskDestinationId[] }
+  | {
+      ok: true;
+      answer: string;
+      statsFreeRemaining: number | null;
+      opens: NbaAskDestinationId[];
+      board?: NbaAskBoard;
+    }
   | { ok: false; error: NbaAskError };
 
 function opensOf(raw: unknown): NbaAskDestinationId[] {
@@ -92,6 +103,7 @@ export async function postNbaAsk(input: {
         answer: json.answer,
         statsFreeRemaining: numOrNull(json.statsFreeRemaining),
         opens: opensOf(json.opens),
+        board: parseNbaAskBoard(json.board),
       };
     }
     const error: NbaAskError =

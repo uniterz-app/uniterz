@@ -24,6 +24,13 @@ export function isMaintenanceExemptPath(
 ): boolean {
   if (isPublicLpPath(pathname)) return true;
   if (isGuestLegalPath(pathname)) return true;
+  // ローカルだけで ASK の見た目候補を出す。本番はページ側が 404。
+  if (
+    process.env.NODE_ENV !== "production" &&
+    normalizeRoutePath(pathname) === "/mobile/ask-ui-preview"
+  ) {
+    return true;
+  }
   return false;
 }
 

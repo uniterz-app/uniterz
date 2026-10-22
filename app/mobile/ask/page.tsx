@@ -14,7 +14,18 @@ export default function MobileNbaAskPage() {
   const { language, timeZone } = useUserLanguage(fUser?.uid ?? null);
   const copy = nbaAskCopy(language);
   return (
-    <MobilePageShell eyebrow={copy.eyebrow} title={copy.title} onClose={() => router.back()}>
+    <MobilePageShell
+      eyebrow={copy.eyebrow}
+      title={copy.title}
+      onClose={() => router.back()}
+      headerTransparent
+      underlay={
+        <>
+          <div className="absolute inset-0 bg-[#07090e]" />
+          <div className="absolute inset-x-0 top-0 h-[560px] bg-[linear-gradient(180deg,rgba(0,245,255,0.18)_0%,rgba(0,245,255,0.18)_22%,transparent_100%)]" />
+        </>
+      }
+    >
       <NbaAskChat
         language={String(language ?? "ja")}
         timeZone={timeZone}

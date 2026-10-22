@@ -9,6 +9,9 @@ export const NBA_ASK_DESTINATION_IDS = [
   "stats",
   "rankings",
   "pro",
+  "notifications",
+  "invite",
+  "squads",
 ] as const;
 export type NbaAskDestinationId = (typeof NBA_ASK_DESTINATION_IDS)[number];
 
@@ -17,6 +20,9 @@ const WEB_PATH: Record<NbaAskDestinationId, string> = {
   stats: "/mobile/stats-preview",
   rankings: "/mobile/rankings",
   pro: "/mobile/pro/subscribe",
+  notifications: "/mobile/settings/notifications",
+  invite: "/mobile/invite",
+  squads: "/mobile/squad-battle",
 };
 
 /** ガイドのトピック → 開く画面。このチャット自身（ask_chat）はボタンを出さない */
@@ -27,6 +33,9 @@ const TOPIC_OPEN: Record<string, NbaAskDestinationId | undefined> = {
   ranking: "rankings",
   unit_rewards: "rankings",
   pro_plans: "pro",
+  notifications: "notifications",
+  invite: "invite",
+  squads: "squads",
 };
 
 export function nbaAskDestinationForTopic(topic: string): NbaAskDestinationId | null {
@@ -84,6 +93,36 @@ export function nbaAskDestinationLabel(id: NbaAskDestinationId, language: string
         es: "Abrir PRO",
         pt: "Abrir PRO",
         fr: "Ouvrir PRO",
+      });
+    case "notifications":
+      return L(lang, {
+        ja: "通知設定を開く",
+        en: "Open notifications",
+        ko: "알림 설정 열기",
+        zh: "打开通知设置",
+        es: "Abrir notificaciones",
+        pt: "Abrir notificações",
+        fr: "Ouvrir les notifications",
+      });
+    case "invite":
+      return L(lang, {
+        ja: "招待を開く",
+        en: "Open invite",
+        ko: "초대 열기",
+        zh: "打开邀请",
+        es: "Abrir invitación",
+        pt: "Abrir convite",
+        fr: "Ouvrir l'invitation",
+      });
+    case "squads":
+      return L(lang, {
+        ja: "スクワッドを開く",
+        en: "Open squads",
+        ko: "스쿼드 열기",
+        zh: "打开小队",
+        es: "Abrir squads",
+        pt: "Abrir squads",
+        fr: "Ouvrir les squads",
       });
   }
 }

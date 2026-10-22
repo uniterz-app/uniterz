@@ -144,6 +144,8 @@ export type CyberSubpageHeaderNativeProps = {
    * このバーのタイトルは出さない。
    */
   titleInBrandShelf?: boolean;
+  /** 見出しの黒塗りを外し、ページの背景を上まで見せる */
+  headerTransparent?: boolean;
 };
 
 /** Web `CyberSubpageHeader` 相当 */
@@ -159,6 +161,7 @@ export function CyberSubpageHeaderNative({
   embedded = false,
   hideBrandShelf,
   titleInBrandShelf = false,
+  headerTransparent = false,
 }: CyberSubpageHeaderNativeProps) {
   const useEdgeBack = hideBack ?? edgeBack;
   const hideShelf = hideBrandShelf ?? !embedded;
@@ -227,6 +230,7 @@ export function CyberSubpageHeaderNative({
       style={[
         styles.headerWrap,
         embedded && styles.headerWrapEmbedded,
+        headerTransparent && styles.headerWrapClear,
         /** ステータスバー裏は塗らず背景を見せる（プロフィール編集と同じ） */
         hideShelf ? { marginTop: insets.top } : null,
       ]}
@@ -310,6 +314,8 @@ type Props = CyberSubpageHeaderNativeProps & {
   /** ScrollView を使わず children をそのまま置く（ブラケット等） */
   scroll?: boolean;
   contentStyle?: StyleProp<ViewStyle>;
+  /** 画面ルート。ASK は棚の下に見出しを残したまま、背景だけ上まで伸ばす */
+  rootStyle?: StyleProp<ViewStyle>;
   /** ScrollView の stickyHeaderIndices（RANK ピン留め等） */
   stickyHeaderIndices?: number[];
 };
@@ -325,9 +331,11 @@ export default function CyberSubpageShellNative({
   hideBack,
   hideBrandShelf = true,
   titleInBrandShelf = false,
+  headerTransparent = false,
   children,
   scroll = true,
   contentStyle,
+  rootStyle,
   stickyHeaderIndices,
 }: Props) {
   const useEdgeBack = hideBack ?? edgeBack;
@@ -361,7 +369,7 @@ export default function CyberSubpageShellNative({
   );
 
   return (
-    <View style={styles.root}>
+    <View style={[styles.root, rootStyle]}>
       <CyberSubpageHeaderNative
         eyebrow={eyebrow}
         title={title}
@@ -373,6 +381,7 @@ export default function CyberSubpageShellNative({
         hideBack={useEdgeBack}
         hideBrandShelf={hideBrandShelf}
         titleInBrandShelf={titleInBrandShelf}
+        headerTransparent={headerTransparent}
       />
 
       <Animated.View
@@ -409,6 +418,10 @@ const styles = StyleSheet.create({
   },
   headerWrapEmbedded: {
     backgroundColor: "#000000",
+  },
+  headerWrapClear: {
+    backgroundColor: "transparent",
+    borderBottomWidth: 0,
   },
   header: {
     position: "relative",

@@ -12,7 +12,7 @@ import {
 import { getResolvedGameScore } from "@/lib/games/transform";
 import { toDateKeyInTimeZone } from "@/lib/time/zonedTime";
 import { nbaGameDocIdFromBdlId } from "@/lib/nba/bdl/mapBdlGameToNbaGameDoc";
-import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
+import { CURRENT_NBA_SEASON_KEY, nbaLeagueStatsSeasonKeys } from "@/lib/rankings/nbaSeason";
 import { TEAM_SHORT } from "@/lib/team-short";
 import { searchNbaStatsIndex } from "@/lib/nba/nbaStatsSearch";
 import { loadTeamRostersSnapshot } from "@/lib/nba/teamRosters/loadTeamRostersSnapshot";
@@ -27,6 +27,14 @@ import { NBA_CONFERENCE_STANDINGS_COLLECTION } from "@/lib/nba/standings/loadNba
 import type { NbaConferenceStandingsRow } from "@/lib/nba/nbaConferenceStandings";
 import type { NbaTeamRosterDocTeam } from "@/lib/nba/teamRosters/teamRosterTypes";
 import { loadPlayerGameLogsSnapshot } from "@/lib/nba/playerGameLogs/loadPlayerGameLogsSnapshot";
+import { loadPlayerStatLeadersSnapshot } from "@/lib/nba/playerStatLeaders/loadPlayerStatLeadersSnapshot";
+import { loadLeagueTeamStatsSnapshot } from "@/lib/nba/leagueTeamStats/loadLeagueTeamStatsSnapshot";
+import {
+  leagueMetricDef,
+  metricValue,
+  type NbaLeagueTeamStatMetric,
+} from "@/lib/predict/nbaLeagueTeamStatsMocks";
+import type { NbaPlayerLeaderBdlStatType } from "@/lib/predict/nbaPlayerStatLeadersMocks";
 import { loadGameProInsight } from "@/lib/nba/insights/gameProInsightStore";
 import { sanitizeProInsightNarrativeForDisplay } from "@/lib/predict/validateProInsightNarrative";
 import type { ProInsightNarrativeBrief } from "@/lib/predict/proInsightNarrativeTypes";
@@ -184,6 +192,7 @@ export const NBA_ASK_TOOL_DEFS = [
         properties: {
           player_id: { type: "string" },
           last_n: { type: "integer", minimum: 1, maximum: 10 },
+          season: { type: "string", description: "Optional, like 2024-25. Default is the current season." },
         },
         required: ["player_id"],
       },
@@ -193,7 +202,7 @@ export const NBA_ASK_TOOL_DEFS = [
     type: "function",
     function: {
       name: "get_player_season_averages",
-      description: "A player's season per-game averages and current team.",
+      description: "A player's current-season per-game averages, including steals, blocks, and turnovers.",
       parameters: {
         type: "object",
         properties: { player_id: { type: "string" } },
@@ -221,7 +230,10 @@ export const NBA_ASK_TOOL_DEFS = [
       description: "Current injury report for one team (out, doubtful, questionable).",
       parameters: {
         type: "object",
-        properties: { team: { type: "string", description: "Team abbr or name" } },
+        properties: {
+          team: { type: "string", description: "Team abbr or name" },
+          season: { type: "string", description: "Optional, like 2024-25. Default is the current season." },
+        },
         required: ["team"],
       },
     },
@@ -230,13 +242,50 @@ export const NBA_ASK_TOOL_DEFS = [
     type: "function",
     function: {
       name: "get_standings",
-      description: "Conference W-L standings. Pass conference or one team.",
+      description: "Conference W-L standings. Pass conference, one team, or a past season like 2024-25.",
       parameters: {
         type: "object",
         properties: {
           conference: { type: "string", enum: ["east", "west"] },
           team: { type: "string", description: "Team abbr or name, for one row" },
+          season: { type: "string", description: "Optional, like 2024-25. Default is the current season." },
         },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_player_leaders",
+      description:
+        "League player leaders for one stat. Returns the leader and a short list, not the whole board. Use season 2024-25 and season_type playoffs when asked.",
+      parameters: {
+        type: "object",
+        properties: {
+          metric: { type: "string", enum: ["pts", "reb", "ast", "stl", "blk", "tov"] },
+          season: { type: "string", description: "Optional, like 2024-25" },
+          season_type: { type: "string", enum: ["season", "playoffs"] },
+          team: { type: "string", description: "Team abbr, to include that team's player on the list" },
+        },
+        required: ["metric"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_team_stat",
+      description:
+        "One team-stat leaderboard. Returns the leader and, if team is set, that team's rank. Not all 30 teams.",
+      parameters: {
+        type: "object",
+        properties: {
+          metric: { type: "string", enum: ["ppg", "papg", "pace", "netrtg", "ortg", "drtg", "diff"] },
+          season: { type: "string", description: "Optional, like 2024-25" },
+          season_type: { type: "string", enum: ["season", "playoffs"] },
+          team: { type: "string", description: "Team abbr or name" },
+        },
+        required: ["metric"],
       },
     },
   },
@@ -280,7 +329,7 @@ export const NBA_ASK_PRO_TOOL_DEFS = [
     function: {
       name: "search_web",
       description:
-        "PRO-only. One public-web search for NBA news the app does not have (today's reported trades, news). Not for stats the other tools return.",
+        "PRO-only. Call only after a stats tool returns found:false, for news the app does not store. Do not use it to replace an app number. Not for contracts or Spotrac.",
       parameters: {
         type: "object",
         properties: { query: { type: "string" } },
@@ -331,11 +380,31 @@ let movesCache: {
   teams: NbaTeamOffseasonMovesDoc["teams"];
 } | null = null;
 
-async function loadInjuryTeams(db: Firestore): Promise<Record<string, NbaTeamInjuryDocTeam>> {
-  if (injuryCache && Date.now() - injuryCache.at < ROSTER_CACHE_MS) return injuryCache.teams;
-  const payload = await loadTeamInjuriesSnapshot(db, CURRENT_NBA_SEASON_KEY);
-  injuryCache = { at: Date.now(), teams: payload.bundle.teams };
-  return injuryCache.teams;
+async function loadInjuryTeams(
+  db: Firestore,
+  season = CURRENT_NBA_SEASON_KEY
+): Promise<Record<string, NbaTeamInjuryDocTeam>> {
+  if (season === CURRENT_NBA_SEASON_KEY && injuryCache && Date.now() - injuryCache.at < ROSTER_CACHE_MS) {
+    return injuryCache.teams;
+  }
+  const payload = await loadTeamInjuriesSnapshot(db, season);
+  if (season === CURRENT_NBA_SEASON_KEY) {
+    injuryCache = { at: Date.now(), teams: payload.bundle.teams };
+  }
+  return payload.bundle.teams;
+}
+
+/** チャットが聞いてよい選手リーダー指標。ショットゾーンや契約は含めない */
+const PLAYER_LEADER_METRICS = ["pts", "reb", "ast", "stl", "blk", "tov"] as const;
+/** チームは1指標だけ。失点と DEF は低い方が上位 */
+const TEAM_STAT_METRICS = ["ppg", "papg", "pace", "netrtg", "ortg", "drtg", "diff"] as const;
+
+/** 2020-21 から今季まで。空なら今季。範囲外はエラー */
+function askSeason(raw: unknown): string | { error: string } {
+  const season = String(raw ?? "").trim();
+  if (!season) return CURRENT_NBA_SEASON_KEY;
+  if (!nbaLeagueStatsSeasonKeys().includes(season)) return { error: "season out of range" };
+  return season;
 }
 
 async function loadMovesTeams(
@@ -453,8 +522,11 @@ export async function runNbaAskTool(
           [...players]
             .filter((p) => p.min > 0)
             .sort((a, b) => b.pts - a.pts)
-            .slice(0, 2)
-            .map((p) => `${p.firstName} ${p.lastName} ${p.pts}pts ${p.reb}reb ${p.ast}ast`);
+            .slice(0, 5)
+            .map(
+              (p) =>
+                `${p.firstName} ${p.lastName} ${p.pts}pts ${p.reb}reb ${p.ast}ast ${p.stl}stl ${p.blk}blk`
+            );
         return {
           gameId: id,
           away: abbr(ctx.awayTeamId),
@@ -507,7 +579,12 @@ export async function runNbaAskTool(
     const playerId = str(args.player_id);
     if (!playerId) return { error: "player_id required" };
     const n = Math.min(10, Math.max(1, Number(args.last_n) || 5));
-    const logs = await loadPlayerGameLogsSnapshot(db, CURRENT_NBA_SEASON_KEY, playerId);
+    const season = askSeason(args.season);
+    if (typeof season !== "string") return season;
+    const logs = await loadPlayerGameLogsSnapshot(db, season, playerId);
+    if (logs.gameLogs.length === 0) {
+      return { found: false, season: logs.season, note: "No game log" };
+    }
     const recent = logs.gameLogs.slice(0, n);
     const dates = await gameDateKeysByBdlId(
       db,
@@ -549,6 +626,9 @@ export async function runNbaAskTool(
         ppg: p.ppg,
         rpg: p.rpg ?? null,
         apg: p.apg ?? null,
+        spg: p.spg ?? null,
+        bpg: p.bpg ?? null,
+        tpg: p.tpg ?? null,
         fgPct: p.fgPct ?? null,
         fg3Pct: p.fg3Pct ?? null,
       };
@@ -565,12 +645,16 @@ export async function runNbaAskTool(
       return {
         team: abbr(team.teamId),
         note: "Season roster IN/OUT versus last season. Not moves from today.",
+        liveNews: false,
         incoming: (row?.incoming ?? []).slice(0, MOVE_CAP).map(compactMove),
         outgoing: (row?.outgoing ?? []).slice(0, MOVE_CAP).map(compactMove),
       };
     }
-    const injuries = await loadInjuryTeams(db);
+    const season = askSeason(args.season);
+    if (typeof season !== "string") return season;
+    const injuries = await loadInjuryTeams(db, season);
     return {
+      season,
       team: abbr(team.teamId),
       players: (injuries[team.teamId] ?? []).slice(0, MOVE_CAP).map((p) => ({
         name: p.name,
@@ -581,9 +665,11 @@ export async function runNbaAskTool(
   }
 
   if (name === "get_standings") {
+    const season = askSeason(args.season);
+    if (typeof season !== "string") return season;
     const snap = await db
       .collection(NBA_CONFERENCE_STANDINGS_COLLECTION)
-      .doc(CURRENT_NBA_SEASON_KEY)
+      .doc(season)
       .get();
     const board = readStandingsBoard(snap.data());
     if (!board) return { found: false, note: "Standings snapshot is not ready" };
@@ -593,15 +679,15 @@ export async function runNbaAskTool(
       if (!("teamId" in team)) return team;
       const row = [...board.east, ...board.west].find((r) => r.teamId === team.teamId);
       if (!row) return { found: false };
-      return { season: CURRENT_NBA_SEASON_KEY, conference: row.conference, ...compactStanding(row) };
+      return { season, conference: row.conference, ...compactStanding(row) };
     }
     const side = str(args.conference).toLowerCase();
     const rowsOf = (rows: NbaConferenceStandingsRow[]) =>
       (side === "east" || side === "west" ? rows : rows.slice(0, 8)).map(compactStanding);
-    if (side === "east") return { season: CURRENT_NBA_SEASON_KEY, east: rowsOf(board.east) };
-    if (side === "west") return { season: CURRENT_NBA_SEASON_KEY, west: rowsOf(board.west) };
+    if (side === "east") return { season, east: rowsOf(board.east) };
+    if (side === "west") return { season, west: rowsOf(board.west) };
     return {
-      season: CURRENT_NBA_SEASON_KEY,
+      season,
       east: rowsOf(board.east),
       west: rowsOf(board.west),
       note: "Top 8 each. Pass conference=east or west for the full side.",
@@ -676,6 +762,91 @@ export async function runNbaAskTool(
         points: r.points,
         wins: r.wins,
       })),
+    };
+  }
+
+  if (name === "get_player_leaders") {
+    const metric = str(args.metric) as NbaPlayerLeaderBdlStatType;
+    if (!PLAYER_LEADER_METRICS.includes(metric as (typeof PLAYER_LEADER_METRICS)[number])) {
+      return { error: "metric required" };
+    }
+    const season = askSeason(args.season);
+    if (typeof season !== "string") return season;
+    const windowName = str(args.season_type) === "playoffs" ? "playoffs" : "season";
+    const payload = await loadPlayerStatLeadersSnapshot(db, season);
+    const rows = payload.bundle[windowName]?.[metric] ?? [];
+    if (rows.length === 0) return { found: false, season, metric, note: "No leader snapshot" };
+    const ranked = rows.slice(0, 8).map((row, index) => ({
+      rank: index + 1,
+      name: row.playerName,
+      team: abbr(row.teamId),
+      value: row.value,
+    }));
+    const teamQ = str(args.team);
+    let teamRow: { rank: number; name: string; team: string; value: number } | null = null;
+    if (teamQ) {
+      const team = await resolveTeam(db, teamQ);
+      if ("teamId" in team) {
+        const index = rows.findIndex((row) => row.teamId === team.teamId);
+        const row = index >= 0 ? rows[index] : undefined;
+        if (row) {
+          teamRow = {
+            rank: index + 1,
+            name: row.playerName,
+            team: abbr(row.teamId),
+            value: row.value,
+          };
+        }
+      }
+    }
+    return {
+      found: true,
+      season,
+      metric,
+      seasonType: windowName,
+      leader: ranked[0],
+      leaders: ranked.slice(0, 5),
+      ...(teamRow ? { team: teamRow } : {}),
+    };
+  }
+
+  if (name === "get_team_stat") {
+    const metric = str(args.metric) as NbaLeagueTeamStatMetric;
+    if (!TEAM_STAT_METRICS.includes(metric as (typeof TEAM_STAT_METRICS)[number])) {
+      return { error: "metric required" };
+    }
+    const season = askSeason(args.season);
+    if (typeof season !== "string") return season;
+    const windowName = str(args.season_type) === "playoffs" ? "playoffs" : "season";
+    const payload = await loadLeagueTeamStatsSnapshot(db, season);
+    const higherFirst = leagueMetricDef(metric).higherIsBetter;
+    const rows = [...(payload.bundle[windowName] ?? [])].sort((a, b) => {
+      const delta = metricValue(b, metric) - metricValue(a, metric);
+      return higherFirst ? delta : -delta;
+    });
+    if (rows.length === 0) return { found: false, season, metric, note: "No team stat snapshot" };
+    const pack = (row: (typeof rows)[number], rank: number) => ({
+      rank,
+      team: abbr(row.teamId),
+      value: metricValue(row, metric),
+    });
+    const leader = pack(rows[0]!, 1);
+    const teamQ = str(args.team);
+    let teamRow: ReturnType<typeof pack> | null = null;
+    if (teamQ) {
+      const team = await resolveTeam(db, teamQ);
+      if ("teamId" in team) {
+        const index = rows.findIndex((row) => row.teamId === team.teamId);
+        if (index >= 0) teamRow = pack(rows[index]!, index + 1);
+      }
+    }
+    return {
+      found: true,
+      season,
+      metric,
+      seasonType: windowName,
+      leader,
+      ...(teamRow ? { team: teamRow } : { top: rows.slice(0, 5).map((row, index) => pack(row, index + 1)) }),
     };
   }
 

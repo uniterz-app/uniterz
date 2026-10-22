@@ -6,20 +6,30 @@ import type { Firestore } from "firebase-admin/firestore";
 import { requireOpenAiApiKey } from "@/lib/openai/openaiEnv";
 import { getTodayKeyInTimeZone } from "@/lib/time/zonedTime";
 import { NBA_ASK_PRO_TOOL_DEFS, NBA_ASK_TOOL_DEFS, runNbaAskTool } from "./nbaAskTools";
-import { NBA_ASK_APP_TOPICS, nbaAskAppGuide } from "./nbaAskAppGuide";
+import {
+  NBA_ASK_APP_TOPICS,
+  nbaAskAppGuide,
+  nbaAskIsClarifyFollowUp,
+  nbaAskIsScoringQuestion,
+  nbaAskScoringFocus,
+} from "./nbaAskAppGuide";
 import { isNbaAskDestinationId, type NbaAskDestinationId } from "./nbaAskDestinations";
 import { consumeNbaAskWebSearch, refundNbaAskWebSearch } from "./nbaAskQuota";
 import { searchNbaAskWeb } from "./nbaAskWebSearch";
+import { boardFromAskTool, nbaAskLooksLikeStats, type NbaAskBoard } from "./nbaAskBoard";
 
 const APP_GUIDE_TOOL = {
   type: "function",
   function: {
     name: "get_app_guide",
     description:
-      "Official guide for the UNITERZ app (predictions, scoring, ranking, Units earned by weekly/monthly rank, PRO plans, this chat).",
+      "Official UNITERZ app guide from published copy. scoring focus: overview, upset, win, total. Also prediction_form, stats, ranking, unit_rewards, pro_plans, ask_chat, notifications, invite, squads, profile. Shot zones, contracts, discipline, and shape records are on their screens; this chat has no tool for them yet.",
     parameters: {
       type: "object",
-      properties: { topic: { type: "string", enum: NBA_ASK_APP_TOPICS } },
+      properties: {
+        topic: { type: "string", enum: NBA_ASK_APP_TOPICS },
+        focus: { type: "string", enum: ["overview", "upset", "win", "total"] },
+      },
       required: ["topic"],
     },
   },
@@ -39,6 +49,7 @@ export const NBA_ASK_MAX_TURNS = 6;
 export const NBA_ASK_MAX_CHARS = 400;
 const MAX_TOOL_ROUNDS = 3;
 const MAX_OUTPUT_TOKENS = 350;
+const MAX_APP_OUTPUT_TOKENS = 520;
 
 /**
  * 試合一覧の日付と同じタイムゾーン。送られてこない古いアプリは、日本語なら日本時間・それ以外は米国東部
@@ -93,10 +104,21 @@ function systemPrompt(
     "You are the assistant in the UNITERZ app (NBA score prediction app).",
     "You answer (1) questions about using the UNITERZ app via get_app_guide, and (2) NBA stats questions.",
     "Questions about what PRO features are (Pro Insight, PRO LEAGUE, alerts, plans, this chat) are fine for everyone. Answer those from get_app_guide topic pro_plans or ask_chat. Do not invent details the guide does not have.",
+    "Never answer questions about permissions, roles, admin access, or how many people use the app or subscribe to PRO. Say you cannot answer that. Do not estimate, search the web, or call any tool for it.",
     "When the user asks about an app feature, call get_app_guide. If the result includes open, the app puts a button under your answer that opens that screen. Tell them to tap the button. Do not invent a path.",
     `Now is ${nowInTimeZone(timeZone)} in the user's time zone (${timeZone}). The app's games list shows each game on the date it starts in this time zone. "Today", "yesterday", tool date arguments, and dates in your answer all use this time zone. Do not convert to US dates.`,
+    "Upset (アップセット, あっぷせっと, 番狂わせ), win streaks, points, and win rate are UNITERZ scoring. Call get_app_guide topic scoring with focus upset, win, total, or overview. Answer in a few spoken sentences. Finer formulas than the guide are not public: say the help text is the limit.",
+    "Notifications, invites, squads, profile, and Unit rewards use get_app_guide topics notifications, invite, squads, profile, unit_rewards.",
+    "Shot zones, contracts, discipline, and team shape records live on their screens. Say this chat cannot look them up yet. Do not use search_web for them.",
     "Answer ONLY from tool results. Never guess numbers or app rules. If the guide or data doesn't cover it, say you don't know.",
+    "Earlier messages are this same conversation. 'その選手', 'じゃあ', '昨日のは', 'そっち' keep the same player, team, and game. A new question with a different subject is not a follow-up. Do not answer it with the previous topic's guide.",
+    "売上, うりあげ, revenue, and costs are not scoring. Do not call a tool for them. Say you cannot answer that.",
+    "When the tools return stats, the app draws the table. Do not repeat those numbers as bullets or a second list. At most one short sentence for something the table does not show.",
+    "For a league leader or team stat, say the leader and the asked team's rank. Do not list every team.",
+    "Call search_web only after a stats tool returns found:false, or liveNews:false (season roster IN/OUT is not a same-day wire). Never replace an app number or the IN/OUT list with the web. Say whether a number is from the app or the web, and include the source URL for the web.",
     dataAccessLine(allowStats, isPro),
+    "The app shows your text as-is. Plain sentences only. No markdown, no asterisks, no bold, no headings.",
+    "If the user says the previous answer was hard to understand, explain the same facts again in 2 or 3 short everyday sentences. Do not repeat the previous wording or its numbered list. Do not tell them to read the in-app guide.",
     "Keep answers short (2-5 lines). Politely decline topics other than UNITERZ and NBA.",
     `Reply in ${language === "ja" ? "Japanese" : "the user's language"}.`,
   ].join(" ");
@@ -129,6 +151,31 @@ type ChatResponse = {
   usage?: { prompt_tokens?: number; completion_tokens?: number };
   error?: { message?: string };
 };
+
+/** 直前の助手の文は渡さない。「わかりにくい」のあと、同じ文をコピーさせない */
+function dropLastAssistantTurn(turns: NbaAskTurn[]): NbaAskTurn[] {
+  const next = [...turns];
+  for (let i = next.length - 1; i >= 0; i--) {
+    if (next[i]?.role === "assistant") {
+      next.splice(i, 1);
+      break;
+    }
+  }
+  return next;
+}
+
+/** 画面はプレーンテキスト。** や見出し記号がそのまま出るのを落とす */
+function plainAskAnswer(raw: string): string {
+  return raw
+    .replace(/\*\*([\s\S]+?)\*\*/g, "$1")
+    .replace(/\*\*/g, "")
+    .replace(/^#{1,6}\s+/gm, "")
+    .split("\n")
+    .filter((line) => !/ガイドを参照/.test(line))
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
 
 export function sanitizeNbaAskTurns(raw: unknown): NbaAskTurn[] {
   if (!Array.isArray(raw)) return [];
@@ -185,6 +232,8 @@ export async function runNbaAsk(input: {
   usedStats: boolean;
   /** 機能の説明で開く画面（答えの下のボタン） */
   opens: NbaAskDestinationId[];
+  /** スタッツは表で見せる。道具の数字があるときだけ */
+  board: NbaAskBoard | null;
   promptTokens: number;
   completionTokens: number;
 }> {
@@ -197,14 +246,49 @@ export async function runNbaAsk(input: {
   ];
   let usedStats = false;
   let usedWeb = false;
+  let statsMiss = false;
+  let board: NbaAskBoard | null = null;
   const opens: NbaAskDestinationId[] = [];
+  const latestUser = [...input.turns].reverse().find((t) => t.role === "user")?.content ?? "";
+  const clarify = nbaAskIsClarifyFollowUp(latestUser);
+  const talkedScoring = input.turns.some(
+    (t) => t.role === "user" && nbaAskIsScoringQuestion(t.content)
+  );
+  const turnsForModel = clarify ? dropLastAssistantTurn(input.turns) : input.turns;
   const messages: ChatMessage[] = [
     {
       role: "system",
       content: systemPrompt(input.language, input.timeZone, input.allowStats, input.isPro),
     },
-    ...input.turns.map((t) => ({ role: t.role, content: t.content }) as ChatMessage),
+    ...turnsForModel.map((t) => ({ role: t.role, content: t.content }) as ChatMessage),
   ];
+  if (nbaAskIsScoringQuestion(latestUser) || (clarify && talkedScoring)) {
+    const guide = {
+      ...(nbaAskAppGuide(
+        "scoring",
+        input.language,
+        nbaAskScoringFocus(latestUser)
+      ) as Record<string, unknown>),
+    };
+    delete guide.open;
+    messages.push({
+      role: "system",
+      content: [
+        clarify
+          ? "The user said the previous explanation was hard to understand. Explain the same scoring facts again in 2 or 3 short spoken sentences. Do not reuse the previous list or wording."
+          : "The latest question is about UNITERZ scoring. あっぷせっと means アップセット (upset).",
+        "Answer only what they asked, in plain sentences. No markdown, no asterisks, no numbered dump of the whole guide.",
+        "Do not say to check the in-app guide. For when a pick counts as an upset, use the 45% minority rule in the guide.",
+        JSON.stringify(guide),
+      ].join("\n"),
+    });
+  } else if (clarify) {
+    messages.push({
+      role: "system",
+      content:
+        "The user said the previous explanation was hard to understand. Explain the same facts again in 2 or 3 short spoken sentences. Do not reuse the previous wording or its list. No markdown.",
+    });
+  }
   let promptTokens = 0;
   let completionTokens = 0;
 
@@ -219,7 +303,7 @@ export async function runNbaAsk(input: {
       body: JSON.stringify({
         model: model(),
         temperature: 0.2,
-        max_tokens: MAX_OUTPUT_TOKENS,
+        max_tokens: nbaAskLooksLikeStats(latestUser) ? MAX_OUTPUT_TOKENS : MAX_APP_OUTPUT_TOKENS,
         messages,
         // 最終ラウンドは道具を渡さず、手元のデータで必ず答えさせる
         ...(lastRound ? {} : { tools }),
@@ -236,9 +320,10 @@ export async function runNbaAsk(input: {
     const calls = msg?.tool_calls ?? [];
     if (calls.length === 0 || lastRound) {
       return {
-        answer: (msg?.content ?? "").trim(),
+        answer: plainAskAnswer(msg?.content ?? ""),
         usedStats,
         opens,
+        board,
         promptTokens,
         completionTokens,
       };
@@ -256,7 +341,7 @@ export async function runNbaAsk(input: {
       const name = call.function.name;
       try {
         if (name === "get_app_guide") {
-          result = nbaAskAppGuide(String(args.topic ?? ""), input.language);
+          result = nbaAskAppGuide(String(args.topic ?? ""), input.language, String(args.focus ?? ""));
           const open = (result as { open?: unknown }).open;
           if (isNbaAskDestinationId(open) && !opens.includes(open) && opens.length < 2) {
             opens.push(open);
@@ -265,7 +350,11 @@ export async function runNbaAsk(input: {
           usedStats = true;
           result = await runNbaAskTool(input.db, name, args, input.language, input.timeZone);
         } else if (allowPro && name === "search_web") {
-          result = await runWebSearch(
+          if (!statsMiss) {
+            result = {
+              error: "search_web only after an app tool returns found:false or liveNews:false",
+            };
+          } else result = await runWebSearch(
             input.db,
             input.uid,
             args,
@@ -287,6 +376,12 @@ export async function runNbaAsk(input: {
         console.error("[runNbaAsk] tool", call.function.name, e);
         result = { error: "data unavailable" };
       }
+      if (result && typeof result === "object") {
+        const row = result as { found?: unknown; liveNews?: unknown };
+        if (row.found === false || row.liveNews === false) statsMiss = true;
+      }
+      const nextBoard = boardFromAskTool(name, result);
+      if (nextBoard) board = nextBoard;
       messages.push({
         role: "tool",
         tool_call_id: call.id,
@@ -295,5 +390,5 @@ export async function runNbaAsk(input: {
     }
   }
 
-  return { answer: "", usedStats, opens, promptTokens, completionTokens };
+  return { answer: "", usedStats, opens, board, promptTokens, completionTokens };
 }

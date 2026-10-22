@@ -10,6 +10,12 @@ import {
   sanitizeNbaAskTurns,
 } from "@/lib/nba/ask/runNbaAsk";
 import {
+  nbaAskAnswerLeaksInternal,
+  nbaAskPrivateRefusal,
+  nbaAskRedactedRefusal,
+  nbaAskTurnIsPrivate,
+} from "@/lib/nba/ask/nbaAskPrivate";
+import {
   consumeNbaAskSafetyCaps,
   readNbaAskStatsAllowance,
   recordNbaAskStatsUse,
@@ -71,6 +77,18 @@ export async function POST(req: Request) {
     if (turns.length === 0 || turns[turns.length - 1].role !== "user") {
       return NextResponse.json({ ok: false, error: "question required" }, { status: 400 });
     }
+    const language = String(body?.language ?? "ja").slice(0, 8);
+    if (nbaAskTurnIsPrivate(turns)) {
+      const isPro = await assertProUser(uid);
+      const stats = await readNbaAskStatsAllowance(getAdminDb(), uid, isPro);
+      return NextResponse.json({
+        ok: true,
+        answer: nbaAskPrivateRefusal(language, turns),
+        statsFreeRemaining: stats.freeRemaining,
+        opens: [],
+        board: null,
+      });
+    }
     if (!getOpenAiApiKey()) {
       return NextResponse.json({ ok: false, error: "not_configured" }, { status: 503 });
     }
@@ -86,7 +104,6 @@ export async function POST(req: Request) {
     }
 
     const stats = await readNbaAskStatsAllowance(db, uid, isPro);
-    const language = String(body?.language ?? "ja").slice(0, 8);
     const timeZone = resolveNbaAskTimeZone(body?.timeZone, language);
     let result: Awaited<ReturnType<typeof runNbaAsk>> | null = null;
     try {
@@ -112,21 +129,25 @@ export async function POST(req: Request) {
       await recordNbaAskStatsUse(db, uid, isPro);
       if (statsFreeRemaining != null) statsFreeRemaining = Math.max(0, statsFreeRemaining - 1);
     }
+    const leaked = nbaAskAnswerLeaksInternal(result.answer);
+    const answer = leaked ? nbaAskRedactedRefusal(language) : result.answer;
     // 実際の費用を測るため（1 質問 1 行）
     console.info(
       "[nba-ask] usage",
       JSON.stringify({
         pro: isPro,
         stats: result.usedStats,
+        leaked,
         in: result.promptTokens,
         out: result.completionTokens,
       })
     );
     return NextResponse.json({
       ok: true,
-      answer: result.answer,
+      answer,
       statsFreeRemaining,
-      opens: result.opens,
+      opens: leaked ? [] : result.opens,
+      board: leaked ? null : result.board,
     });
   } catch (e: unknown) {
     console.error("[POST /api/nba/ask]", e);

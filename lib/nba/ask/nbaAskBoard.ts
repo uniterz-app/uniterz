@@ -1,0 +1,210 @@
+/**
+ * スタッツの答えを表にする。道具が返した数字だけを載せ、文章では作らない。
+ */
+
+export type NbaAskBoard = {
+  columns: string[];
+  rows: { label: string; cells: string[] }[];
+  /** 表に出しきれない所属・出場数。箇条書きにはしない */
+  note?: string;
+};
+
+const METRIC_LABEL: Record<string, string> = {
+  pts: "得点",
+  reb: "リバウンド",
+  ast: "アシスト",
+  stl: "スティール",
+  blk: "ブロック",
+  tov: "ターンオーバー",
+  ppg: "得点",
+  papg: "失点",
+  pace: "ペース",
+  netrtg: "NET",
+  ortg: "OFF",
+  drtg: "DEF",
+  diff: "得失点差",
+};
+
+const APP_QUESTION =
+  /使い方|ポイント|採点|ランキング|料金|プラン|って何|とは|通知|招待|スクワッド|ログイン|プロ\b|PRO\b|あっぷせっと|アップセット|番狂わせ|\bupset\b|連勝|勝率/i;
+
+const STATS_QUESTION =
+  /平均|スタッツ|試合|得点|リバウンド|アシスト|順位|欠場|怪我|けが|結果|直近|リーダー|成績|勝敗|ボックス|スコア/i;
+
+/** スタッツの質問なら表で見せる。アプリの使い方は吹き出しのまま。 */
+export function nbaAskLooksLikeStats(text: string): boolean {
+  const q = text.trim();
+  if (!q || APP_QUESTION.test(q)) return false;
+  return STATS_QUESTION.test(q);
+}
+
+function percent(value: unknown): string | null {
+  if (typeof value !== "number" || !Number.isFinite(value)) return null;
+  const n = value > 1 ? value : value * 100;
+  return `${n.toFixed(1)}%`;
+}
+
+function cell(value: unknown): string {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    if (Math.abs(value - Math.round(value)) < 0.05) return String(Math.round(value));
+    return value.toFixed(1);
+  }
+  const text = String(value ?? "").trim();
+  return text || "—";
+}
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  return value as Record<string, unknown>;
+}
+
+function rowsOf(value: unknown): Record<string, unknown>[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((item) => {
+    const row = asRecord(item);
+    return row ? [row] : [];
+  });
+}
+
+/** 道具の結果が表にできるときだけ返す。検索の途中結果は表にしない。 */
+export function boardFromAskTool(name: string, result: unknown): NbaAskBoard | null {
+  const data = asRecord(result);
+  if (!data || data.error || data.found === false) return null;
+
+  if (name === "get_player_season_averages" && "ppg" in data) {
+    const fg = percent(data.fgPct);
+    const extra = [
+      data.spg != null ? `STL ${cell(data.spg)}` : "",
+      data.bpg != null ? `BLK ${cell(data.bpg)}` : "",
+      data.tpg != null ? `TO ${cell(data.tpg)}` : "",
+    ].filter(Boolean);
+    const note = [cell(data.team), data.gp != null ? `${cell(data.gp)}試合` : "", data.mpg != null ? `${cell(data.mpg)}分` : "", fg ? `FG ${fg}` : "", extra.join(" ")]
+      .filter((part) => part && part !== "—")
+      .join(" · ");
+    return {
+      columns: ["得点", "リバウンド", "アシスト"],
+      rows: [{ label: "今季", cells: [cell(data.ppg), cell(data.rpg), cell(data.apg)] }],
+      ...(note ? { note } : {}),
+    };
+  }
+
+  if (name === "get_player_recent_games") {
+    const games = rowsOf(data.games).slice(0, 5);
+    if (games.length === 0) return null;
+    return {
+      columns: ["得点", "リバウンド", "アシスト"],
+      rows: games.map((game) => ({
+        label: `${cell(game.date)} ${cell(game.opp)}`.trim(),
+        cells: [cell(game.pts), cell(game.reb), cell(game.ast)],
+      })),
+    };
+  }
+
+  if (name === "get_player_game" && data.found === true) {
+    const line = asRecord(data.line);
+    if (!line) return null;
+    return {
+      columns: ["得点", "リバウンド", "アシスト"],
+      rows: [
+        {
+          label: cell(data.opponent),
+          cells: [cell(line.pts), cell(line.reb), cell(line.ast)],
+        },
+      ],
+    };
+  }
+
+  if (name === "get_games_on_date") {
+    const games = rowsOf(data.games).slice(0, 6);
+    if (games.length === 0) return null;
+    return {
+      columns: ["スコア"],
+      rows: games.map((game) => ({
+        label: `${cell(game.away)} @ ${cell(game.home)}`,
+        cells: [cell(game.score ?? game.status)],
+      })),
+    };
+  }
+
+  if (name === "get_player_leaders") {
+    const metric = METRIC_LABEL[String(data.metric ?? "")] ?? "数値";
+    const leaders = rowsOf(data.leaders).slice(0, 5);
+    const asked = asRecord(data.team);
+    const rows = leaders.map((row) => ({
+      label: `${cell(row.name)} ${cell(row.team)}`.trim(),
+      cells: [cell(row.rank), cell(row.value)],
+    }));
+    if (asked && !leaders.some((row) => cell(row.name) === cell(asked.name) && cell(row.team) === cell(asked.team))) {
+      rows.push({
+        label: `${cell(asked.name)} ${cell(asked.team)}`.trim(),
+        cells: [cell(asked.rank), cell(asked.value)],
+      });
+    }
+    if (rows.length === 0) return null;
+    const season = String(data.season ?? "").trim();
+    return {
+      columns: ["順位", metric],
+      rows,
+      ...(season ? { note: season } : {}),
+    };
+  }
+
+  if (name === "get_team_stat") {
+    const metric = METRIC_LABEL[String(data.metric ?? "")] ?? "数値";
+    const top = rowsOf(data.top);
+    const leader = asRecord(data.leader);
+    const asked = asRecord(data.team);
+    const listed = top.length > 0 ? top : [leader, asked].flatMap((row) => (row ? [row] : []));
+    const rows = listed
+      .filter((row, index, all) => all.findIndex((other) => cell(other.team) === cell(row.team) && cell(other.rank) === cell(row.rank)) === index)
+      .slice(0, 8)
+      .map((row) => ({
+        label: cell(row.team),
+        cells: [cell(row.rank), cell(row.value)],
+      }));
+    if (rows.length === 0) return null;
+    const season = String(data.season ?? "").trim();
+    return {
+      columns: ["順位", metric],
+      rows,
+      ...(season ? { note: season } : {}),
+    };
+  }
+
+  if (name === "get_standings") {
+    const one = "w" in data && "l" in data;
+    const listed = one
+      ? [data]
+      : [...rowsOf(data.east), ...rowsOf(data.west)].slice(0, 8);
+    if (listed.length === 0) return null;
+    return {
+      columns: ["順位", "勝", "敗"],
+      rows: listed.map((row) => ({
+        label: cell(row.team),
+        cells: [cell(row.rank), cell(row.w), cell(row.l)],
+      })),
+    };
+  }
+
+  return null;
+}
+
+export function parseNbaAskBoard(raw: unknown): NbaAskBoard | undefined {
+  const data = asRecord(raw);
+  if (!data || !Array.isArray(data.columns) || !Array.isArray(data.rows)) return undefined;
+  const columns = data.columns.map((item) => String(item)).filter(Boolean).slice(0, 4);
+  if (columns.length === 0) return undefined;
+  const rows = data.rows.flatMap((item) => {
+    const row = asRecord(item);
+    if (!row || !Array.isArray(row.cells)) return [];
+    return [
+      {
+        label: String(row.label ?? "").slice(0, 40),
+        cells: row.cells.map((cell) => String(cell)).slice(0, columns.length),
+      },
+    ];
+  });
+  if (rows.length === 0) return undefined;
+  const note = typeof data.note === "string" ? data.note.trim().slice(0, 80) : "";
+  return note ? { columns, rows: rows.slice(0, 8), note } : { columns, rows: rows.slice(0, 8) };
+}

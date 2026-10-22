@@ -1,7 +1,7 @@
 /** UNITERZ AI チャット（アプリの使い方 + NBA スタッツ）。試合一覧ヘッダー右上から */
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator,
+  Animated,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
@@ -17,6 +17,8 @@ import { useNavigation, type CompositeNavigationProp } from "@react-navigation/n
 import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
+import { useBrandShelfSpaceNative } from "../../../navigation/useBrandShelfSpaceNative";
 import GamesNbaSubpageShellNative from "../GamesNbaSubpageShellNative";
 import { useFirebaseUser } from "../../../auth/FirebaseUserProvider";
 import { useNativeUserLanguage } from "../../../hooks/useNativeUserLanguage";
@@ -26,6 +28,7 @@ import { openProSubscribeNative } from "../../../navigation/navigationRef";
 import { CYBER_TAB_CYAN } from "../../../ui/cyberSideMenuNative";
 import { METRIC_FONT } from "../../rankings/rankingsUiTheme";
 import { nbaAskCopy } from "../../../../../../lib/nba/ask/nbaAskCopy";
+import { nbaAskLooksLikeStats, type NbaAskBoard } from "../../../../../../lib/nba/ask/nbaAskBoard";
 import {
   nbaAskDestinationLabel,
   type NbaAskDestinationId,
@@ -59,11 +62,30 @@ function openNbaAskDestination(navigation: AskNav, id: NbaAskDestinationId) {
     case "pro":
       openProSubscribeNative();
       return;
+    case "notifications":
+      navigation.navigate("ProfileTab", { screen: "NotificationSettings" });
+      return;
+    case "invite":
+      navigation.navigate("ProfileTab", { screen: "Invite" });
+      return;
+    case "squads":
+      navigation.navigate("RankingsTab", { screen: "SquadBattle" });
+      return;
   }
 }
 
 export default function NbaAskScreenNative() {
   const navigation = useNavigation<AskNav>();
+  const { shelfSpace } = useBrandShelfSpaceNative();
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      contentStyle: {
+        backgroundColor: "#07090e",
+        paddingTop: 0,
+      },
+    });
+  }, [navigation]);
   const { fUser } = useFirebaseUser();
   const { language, timeZone } = useNativeUserLanguage(fUser?.uid);
   const lang = String(language ?? "ja");
@@ -125,7 +147,7 @@ export default function NbaAskScreenNative() {
     if (result.ok) {
       setTurns((prev) => [
         ...prev,
-        { role: "assistant", content: result.answer, opens: result.opens },
+        { role: "assistant", content: result.answer, opens: result.opens, board: result.board },
       ]);
       setStatus((prev) =>
         prev ? { ...prev, statsFreeRemaining: result.statsFreeRemaining } : prev
@@ -150,14 +172,27 @@ export default function NbaAskScreenNative() {
 
   const canSend = draft.trim().length > 0 && !busy && !unavailable;
 
+  const headerBand = 72;
+  const glowHeight = shelfSpace + headerBand + 280;
+  const glowHold = (shelfSpace + headerBand) / glowHeight;
+
   return (
-    <GamesNbaSubpageShellNative
-      title={copy.title}
-      eyebrow={copy.eyebrow}
-      onBack={() => navigation.goBack()}
-      scroll={false}
-      contentStyle={styles.shell}
-    >
+    <View style={styles.flex}>
+      <LinearGradient
+        pointerEvents="none"
+        colors={["rgba(0,245,255,0.18)", "rgba(0,245,255,0.18)", "transparent"]}
+        locations={[0, glowHold, 1]}
+        style={[styles.pageGlow, { height: glowHeight }]}
+      />
+      <GamesNbaSubpageShellNative
+        title={copy.title}
+        eyebrow={copy.eyebrow}
+        onBack={() => navigation.goBack()}
+        scroll={false}
+        headerTransparent
+        rootStyle={{ paddingTop: shelfSpace }}
+        contentStyle={styles.shell}
+      >
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -173,30 +208,50 @@ export default function NbaAskScreenNative() {
           {unavailable ? (
             <Text style={styles.gateTitle}>{copy.unavailable}</Text>
           ) : turns.length === 0 ? (
-            <View style={styles.channel}>
-              <Text style={styles.introText}>{copy.intro}</Text>
-              <View style={styles.suggestions}>
-                {copy.suggestions.map((s) => (
-                  <Pressable
-                    key={s}
-                    disabled={busy}
-                    onPress={() => void send(s)}
-                    accessibilityRole="button"
-                    style={({ pressed }) => [styles.chip, pressed && styles.chipPressed]}
-                  >
-                    <Text style={styles.chipText}>{s}</Text>
-                  </Pressable>
-                ))}
-              </View>
+            <View>
+              {copy.suggestions.map((s) => (
+                <Pressable
+                  key={s}
+                  disabled={busy}
+                  onPress={() => void send(s)}
+                  accessibilityRole="button"
+                  style={({ pressed }) => [styles.prompt, pressed && styles.chipPressed]}
+                >
+                  <Text style={styles.promptText}>{s}</Text>
+                </Pressable>
+              ))}
             </View>
           ) : null}
 
           {turns.map((t, i) => {
             const mine = t.role === "user";
+            const statsQuestion = mine && nbaAskLooksLikeStats(t.content);
+            if (t.board) {
+              return (
+                <View key={i} style={styles.boardWrap}>
+                  <StatsBoardNative board={t.board} />
+                  {t.opens?.map((id) => (
+                    <Pressable
+                      key={id}
+                      onPress={() => openNbaAskDestination(navigation, id)}
+                      accessibilityRole="button"
+                      style={({ pressed }) => [styles.openBtn, pressed && styles.chipPressed]}
+                    >
+                      <Text style={styles.openBtnText}>{nbaAskDestinationLabel(id, lang)}</Text>
+                    </Pressable>
+                  ))}
+                </View>
+              );
+            }
             return (
-              <View key={i} style={[styles.turn, mine ? styles.turnUser : styles.turnBot]}>
-                <View style={[styles.bubble, mine ? styles.bubbleUser : styles.bubbleBot]}>
-                  <Text style={[styles.bubbleText, mine && styles.bubbleTextMine]} selectable>
+              <View key={i} style={[styles.turn, statsQuestion ? styles.turnBot : mine ? styles.turnUser : styles.turnBot]}>
+                <View
+                  style={[
+                    styles.bubble,
+                    statsQuestion ? styles.bubbleStats : mine ? styles.bubbleUser : styles.bubbleBot,
+                  ]}
+                >
+                  <Text style={[styles.bubbleText, mine && !statsQuestion && styles.bubbleTextMine]} selectable>
                     {splitNbaAskLinks(t.content).map((part, j) =>
                       part.kind === "link" ? (
                         <Text
@@ -228,12 +283,7 @@ export default function NbaAskScreenNative() {
             );
           })}
 
-          {busy ? (
-            <View style={[styles.bubble, styles.bubbleBot, styles.thinking]}>
-              <ActivityIndicator size="small" color={CYBER_TAB_CYAN} />
-              <Text style={styles.thinkingText}>{copy.thinking}</Text>
-            </View>
-          ) : null}
+          {busy ? <AnswerSkeletonNative label={copy.composing} /> : null}
 
           {notice ? (
             <View style={styles.notice}>
@@ -300,6 +350,7 @@ export default function NbaAskScreenNative() {
         )}
       </KeyboardAvoidingView>
     </GamesNbaSubpageShellNative>
+    </View>
   );
 }
 
@@ -312,34 +363,22 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
     gap: 14,
   },
-  channel: { gap: 18 },
-  introText: {
-    color: "rgba(255,255,255,0.82)",
-    fontSize: 15,
-    lineHeight: 23,
-  },
   gateTitle: {
     color: "rgba(255,255,255,0.92)",
     fontSize: 15,
     lineHeight: 22,
     fontWeight: "600",
   },
-  suggestions: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  chip: {
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "rgba(255,255,255,0.28)",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+  prompt: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "rgba(255,255,255,0.12)",
+    paddingVertical: 14,
   },
   chipPressed: { opacity: 0.55 },
-  chipText: {
-    color: "rgba(255,255,255,0.92)",
-    fontSize: 13,
-    lineHeight: 18,
+  promptText: {
+    color: "rgba(255,255,255,0.88)",
+    fontSize: 15,
+    lineHeight: 22,
   },
   turn: {
     maxWidth: "84%",
@@ -367,6 +406,69 @@ const styles = StyleSheet.create({
   bubbleUser: {
     backgroundColor: CYBER_TAB_CYAN,
   },
+  bubbleStats: {
+    alignSelf: "flex-start",
+    backgroundColor: "transparent",
+    borderWidth: 1,
+    borderColor: CYBER_TAB_CYAN,
+  },
+  boardWrap: {
+    alignSelf: "stretch",
+  },
+  preparing: {
+    color: CYBER_TAB_CYAN,
+    fontSize: 13,
+  },
+  boardCard: {
+    paddingVertical: 4,
+  },
+  boardEyebrow: {
+    color: "rgba(255,255,255,0.45)",
+    fontSize: 11,
+    letterSpacing: 1.4,
+  },
+  boardColumns: {
+    flexDirection: "row",
+    marginTop: 12,
+  },
+  boardValues: {
+    flexDirection: "row",
+    marginTop: 2,
+  },
+  boardHead: {
+    flex: 1,
+    color: "rgba(255,255,255,0.45)",
+    fontSize: 11,
+  },
+  boardValue: {
+    flex: 1,
+    fontFamily: METRIC_FONT,
+    color: "#fff",
+    fontSize: 28,
+    lineHeight: 32,
+  },
+  boardMeta: {
+    marginTop: 12,
+    color: "rgba(255,255,255,0.55)",
+    fontSize: 12,
+  },
+  boardRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 8,
+  },
+  boardLabel: {
+    width: 92,
+    color: "rgba(255,255,255,0.7)",
+    fontSize: 12,
+  },
+  boardCell: {
+    flex: 1,
+    textAlign: "center",
+    fontFamily: METRIC_FONT,
+    color: "#fff",
+    fontSize: 18,
+  },
   bubbleBot: {
     backgroundColor: "rgba(255,255,255,0.06)",
   },
@@ -385,15 +487,31 @@ const styles = StyleSheet.create({
   linkMine: {
     color: "#041014",
   },
-  thinking: {
-    alignSelf: "flex-start",
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
+  skeletonWrap: {
+    alignSelf: "stretch",
+    maxWidth: "92%",
+    gap: 12,
   },
-  thinkingText: {
-    color: "rgba(255,255,255,0.6)",
-    fontSize: 13,
+  skeletonBar: {
+    height: 8,
+    backgroundColor: "rgba(255,255,255,0.22)",
+  },
+  skeletonBarDim: {
+    height: 8,
+    backgroundColor: "rgba(255,255,255,0.14)",
+  },
+  skeletonTrack: {
+    height: 8,
+    width: "92%",
+    overflow: "hidden",
+    backgroundColor: "rgba(255,255,255,0.14)",
+  },
+  skeletonScan: {
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    width: "34%",
+    backgroundColor: CYBER_TAB_CYAN,
   },
   notice: {
     alignSelf: "stretch",
@@ -409,7 +527,13 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingHorizontal: 16,
     paddingTop: 10,
-    backgroundColor: "#05080e",
+    backgroundColor: "#07090e",
+  },
+  pageGlow: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
   },
   quota: {
     fontSize: 11,
@@ -465,3 +589,83 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.08)",
   },
 });
+
+function AnswerSkeletonNative({ label }: { label: string }) {
+  const scan = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.timing(scan, {
+        toValue: 1,
+        duration: 1400,
+        useNativeDriver: true,
+      })
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [scan]);
+  const translateX = scan.interpolate({
+    inputRange: [0, 1],
+    outputRange: [-80, 280],
+  });
+  return (
+    <View style={styles.skeletonWrap} accessibilityRole="progressbar">
+      <Text style={styles.preparing}>{label}</Text>
+      <View style={[styles.skeletonBar, { width: "78%" }]} />
+      <View style={styles.skeletonTrack}>
+        <Animated.View style={[styles.skeletonScan, { transform: [{ translateX }] }]} />
+      </View>
+      <View style={[styles.skeletonBarDim, { width: "64%" }]} />
+    </View>
+  );
+}
+
+function StatsBoardNative({ board }: { board: NbaAskBoard }) {
+  const single = board.rows.length === 1 ? board.rows[0] : null;
+  return (
+    <View style={styles.boardCard}>
+      {single ? (
+        <>
+          <Text style={styles.boardEyebrow}>{single.label}</Text>
+          <View style={styles.boardColumns}>
+            {board.columns.map((column) => (
+              <Text key={column} style={styles.boardHead}>
+                {column}
+              </Text>
+            ))}
+          </View>
+          <View style={styles.boardValues}>
+            {single.cells.map((value, index) => (
+              <Text key={index} style={styles.boardValue}>
+                {value}
+              </Text>
+            ))}
+          </View>
+        </>
+      ) : (
+        <>
+          <View style={styles.boardRow}>
+            <Text style={styles.boardLabel}> </Text>
+            {board.columns.map((column) => (
+              <Text key={column} style={[styles.boardHead, { textAlign: "center" }]}>
+                {column}
+              </Text>
+            ))}
+          </View>
+          {board.rows.map((row, rowIndex) => (
+            <View key={`${row.label}-${rowIndex}`} style={styles.boardRow}>
+              <Text style={styles.boardLabel} numberOfLines={2}>
+                {row.label}
+              </Text>
+              {row.cells.map((value, index) => (
+                <Text key={index} style={styles.boardCell}>
+                  {value}
+                </Text>
+              ))}
+            </View>
+          ))}
+        </>
+      )}
+      {board.note ? <Text style={styles.boardMeta}>{board.note}</Text> : null}
+    </View>
+  );
+}
