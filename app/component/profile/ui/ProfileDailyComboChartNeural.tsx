@@ -510,6 +510,22 @@ export default function ProfileDailyComboChartNeural({
                 </text>
               );
             })}
+
+            {/* 棒が細い・0 件の日でも選べるよう、列全体を最前面のクリック領域にする */}
+            {chartRows.map((row, i) => (
+              <rect
+                key={`hit-${row.date}`}
+                x={padL + groupW * i}
+                y={0}
+                width={groupW}
+                height={H}
+                fill="transparent"
+                pointerEvents="all"
+                style={{ cursor: "pointer" }}
+                onClick={() => setSelectedIdx(i)}
+                aria-hidden
+              />
+            ))}
           </svg>
         </div>
 

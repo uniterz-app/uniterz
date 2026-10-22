@@ -1166,28 +1166,27 @@ export default function ProfileEditKinetikPanel({
               compact
             />
           </CyberSlantedTabBar>
-          {/* プレーオフ（切替なし）でも高さを揃える */}
-          <div className="flex h-[26px] items-center justify-center gap-1.5">
-            {onMetricsGamesChange
-              ? (["pickup", "all"] as const).map((g) => {
-                  const on = metricsGames === g;
-                  return (
-                    <button
-                      key={g}
-                      type="button"
-                      aria-pressed={on}
-                      onClick={() => onMetricsGamesChange(g)}
-                      className={`min-w-[84px] border px-2.5 py-[3px] text-[10px] font-bold tracking-[0.12em] ${
-                        on
-                          ? "border-[#00F5FF] bg-[#00F5FF] text-[#050508]"
-                          : "border-[#00F5FF]/55 text-[#00F5FF]"
-                      }`}
-                    >
-                      {g === "pickup" ? "PICK UP" : "ALL GAMES"}
-                    </button>
-                  );
-                })
-              : null}
+          {/* プレーオフ（切替なし）は見えないまま場所だけ取り、カードの高さを揃える */}
+          <div
+            className={
+              onMetricsGamesChange ? "mt-1" : "pointer-events-none invisible mt-1"
+            }
+            aria-hidden={onMetricsGamesChange ? undefined : true}
+          >
+            <CyberSlantedTabBar fill>
+              <CyberSlantedTab
+                label="PICK UP"
+                active={metricsGames === "pickup"}
+                onClick={() => onMetricsGamesChange?.("pickup")}
+                compact
+              />
+              <CyberSlantedTab
+                label="ALL GAMES"
+                active={metricsGames === "all"}
+                onClick={() => onMetricsGamesChange?.("all")}
+                compact
+              />
+            </CyberSlantedTabBar>
           </div>
           {/* TOTAL / WEEK / MONTH でカード（スキン）の高さが変わらないよう常に同じ高さを確保 */}
           <div className="flex h-6 items-center justify-center">

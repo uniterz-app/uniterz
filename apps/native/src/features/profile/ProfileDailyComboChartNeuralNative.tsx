@@ -334,7 +334,7 @@ export default function ProfileDailyComboChartNeuralNative({
             const gx = padL + groupW * i + (groupW - pairW) / 2;
             const selected = i === selectedIdx;
             return (
-              <G key={row.date} onPress={() => setSelectedIdx(i)}>
+              <G key={row.date}>
                 <SegmentedBar
                   x={gx}
                   barW={barW}
@@ -420,6 +420,20 @@ export default function ProfileDailyComboChartNeuralNative({
               </SvgText>
             );
           })}
+
+          {/* 棒が細い・0 件の日でも選べるよう、列全体を最前面のタップ領域にする */}
+          {chartRows.map((row, i) => (
+            <Rect
+              key={`hit-${row.date}`}
+              x={padL + groupW * i}
+              y={0}
+              width={groupW}
+              height={H}
+              fill="#000"
+              fillOpacity={0.001}
+              onPress={() => setSelectedIdx(i)}
+            />
+          ))}
         </Svg>
       </View>
 
