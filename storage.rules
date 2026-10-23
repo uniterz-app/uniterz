@@ -27,8 +27,11 @@ service firebase.storage {
     }
 
     // お問い合わせ添付 — ContactForm
+    // 本人の read が無いと getDownloadURL が拒否され、画像付きの送信が失敗する。
+    // トークン付き URL だけを管理画面に残す。他ユーザーからの読み取りは拒否。
     match /contact_screenshots/{userId}/{allPaths=**} {
-      allow read: if false;
+      allow read: if request.auth != null
+        && (request.auth.uid == userId || isAdmin());
       allow write: if isOwnerImageUpload(userId);
     }
 

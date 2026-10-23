@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { Send, AlertCircle, CheckCircle2, Image as ImageIcon } from "lucide-react";
+import { Send, AlertCircle, CheckCircle2, Image as ImageIcon, X } from "lucide-react";
 
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
@@ -18,6 +18,10 @@ import {
   type ContactType,
 } from "@/lib/support/contactTypes";
 import { submitContact } from "@/lib/support/submitContact";
+import {
+  CONTACT_SCREENSHOT_MAX_BYTES,
+  contactScreenshotContentType,
+} from "@/lib/support/contactScreenshot";
 
 import { storage } from "@/lib/firebase";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
@@ -76,6 +80,15 @@ export default function ContactForm({
     deviceKind: "" as "" | ContactDeviceKind,
   });
 
+  // ログイン済みのメールを初期表示する。手入力後は上書きしない
+  useEffect(() => {
+    const accountEmail = user?.email?.trim() ?? "";
+    if (!accountEmail) return;
+    setForm((prev) =>
+      prev.email.trim() ? prev : { ...prev, email: accountEmail }
+    );
+  }, [user?.email]);
+
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -101,11 +114,39 @@ export default function ContactForm({
   // -----------------------------
   // 写真選択
   // -----------------------------
+  const clearImage = () => {
+    setSelectedFile(null);
+    setPreviewUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return null;
+    });
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files?.[0]) return;
-    const file = e.target.files[0];
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+
+    if (!contactScreenshotContentType(file.type)) {
+      setErrors((prev) => ({ ...prev, image: m.support.attachImageInvalid }));
+      return;
+    }
+    if (file.size > CONTACT_SCREENSHOT_MAX_BYTES) {
+      setErrors((prev) => ({ ...prev, image: m.support.attachImageTooLarge }));
+      return;
+    }
+
+    setErrors((prev) => {
+      if (!prev.image) return prev;
+      const next = { ...prev };
+      delete next.image;
+      return next;
+    });
     setSelectedFile(file);
-    setPreviewUrl(URL.createObjectURL(file));
+    setPreviewUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return URL.createObjectURL(file);
+    });
   };
 
   // -----------------------------
@@ -114,17 +155,22 @@ export default function ContactForm({
   const uploadScreenshot = async () => {
     if (!selectedFile || !user?.uid) return "";
 
+    const contentType = contactScreenshotContentType(selectedFile.type);
+    if (!contentType) {
+      throw new Error("invalid_image");
+    }
+    if (selectedFile.size > CONTACT_SCREENSHOT_MAX_BYTES) {
+      throw new Error("image_too_large");
+    }
+
     setUploading(true);
-
-    const uid = user.uid;
-    const fileId = uuidv4();
-
-    const fileRef = ref(storage, `contact_screenshots/${uid}/${fileId}`);
-    await uploadBytes(fileRef, selectedFile);
-    const url = await getDownloadURL(fileRef);
-
-    setUploading(false);
-    return url;
+    try {
+      const fileRef = ref(storage, `contact_screenshots/${user.uid}/${uuidv4()}`);
+      await uploadBytes(fileRef, selectedFile, { contentType });
+      return await getDownloadURL(fileRef);
+    } finally {
+      setUploading(false);
+    }
   };
 
   // -----------------------------
@@ -150,8 +196,12 @@ export default function ContactForm({
       }
     }
 
+    if (errors.image) newErrors.image = errors.image;
+
     setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    const blocking = { ...newErrors };
+    delete blocking.image;
+    return Object.keys(blocking).length === 0;
   };
 
   // -----------------------------
@@ -190,8 +240,7 @@ export default function ContactForm({
         screenshotUrl: "",
         deviceKind: "",
       });
-      setPreviewUrl(null);
-      setSelectedFile(null);
+      clearImage();
 
     } catch (err) {
       console.error(err);
@@ -199,7 +248,11 @@ export default function ContactForm({
       setSubmitError(
         code === "invalid_device"
           ? m.support.validationDeviceRequired
-          : m.support.sendFailed
+          : code === "image_too_large"
+            ? m.support.attachImageTooLarge
+            : code === "invalid_image"
+              ? m.support.attachImageInvalid
+              : m.support.sendFailed
       );
     } finally {
       setSubmitting(false);
@@ -335,10 +388,10 @@ export default function ContactForm({
         {errors.message && <p className="text-[11px] text-white/80">{errors.message}</p>}
       </div>
 
-      {/* 写真 */}
+      {/* 写真（任意・1枚・8MBまで） */}
       <div className="space-y-1.5">
         <label className={labelClass}>
-          {m.support.attachImage}
+          {m.support.photoOptional}
         </label>
 
         <label
@@ -348,15 +401,34 @@ export default function ContactForm({
           <span className="text-xs md:text-sm text-white/70">
             {m.support.attachImage}
           </span>
-          <input type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
+          <input
+            type="file"
+            accept="image/png,image/jpeg,image/webp,image/gif,image/heic,image/heif"
+            onChange={handleFileChange}
+            className="hidden"
+          />
         </label>
 
+        {errors.image ? (
+          <p className="text-[11px] text-white/80">{errors.image}</p>
+        ) : null}
+
         {previewUrl && (
-          <img
-            src={previewUrl}
-            className="mt-2 w-full border border-white/20 max-h-60 object-cover"
-            alt="preview"
-          />
+          <div className="relative mt-2">
+            <img
+              src={previewUrl}
+              className="w-full border border-white/20 max-h-60 object-contain"
+              alt=""
+            />
+            <button
+              type="button"
+              onClick={clearImage}
+              className="absolute right-2 top-2 inline-flex items-center gap-1 border border-white/30 bg-black/80 px-2 py-1 text-[11px] text-white"
+            >
+              <X className="h-3 w-3" />
+              {m.support.attachImageRemove}
+            </button>
+          </div>
         )}
       </div>
 
