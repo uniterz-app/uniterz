@@ -1180,7 +1180,10 @@ export default function ProfileHomeScreen({
     return /ExponentImagePicker|Cannot find native module/i.test(msg);
   }
 
-  /** ライブラリから選び Storage に置き、photoURL だけ即保存（「保存」を押さなくても反映） */
+  /**
+   * ライブラリから選び Storage に置き、photoURL だけ即保存（「保存」を押さなくても反映）。
+   * 写真・フォルダ許可は求めない。拒否後に request すると、以後ピッカーが開かず許可案内だけになる。
+   */
   async function pickAvatar() {
     if (!myUid || uploadingAvatar || saving) return;
     let ImagePicker: typeof import("expo-image-picker");
