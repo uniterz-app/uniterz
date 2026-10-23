@@ -5,6 +5,7 @@
 import { FieldValue, type Firestore } from "firebase-admin/firestore";
 import { dateKeyJST } from "@/lib/rankings/rankSnapshotDate";
 import { resolveContactDeviceModel } from "@/lib/support/contactDevice";
+import { isContactScreenshotUrl } from "@/lib/support/contactScreenshot";
 import type { ContactType } from "@/lib/support/contactTypes";
 
 export const CONTACT_TYPES = ["bug", "feature", "report", "other"] as const;
@@ -77,10 +78,10 @@ export async function submitContactAdmin(
 
   const screenshotUrl = String(input.screenshotUrl ?? "").trim();
   if (screenshotUrl) {
-    if (screenshotUrl.length > CONTACT_URL_MAX) {
-      return { ok: false, error: "invalid_url" };
-    }
-    if (!/^https:\/\//i.test(screenshotUrl)) {
+    if (
+      screenshotUrl.length > CONTACT_URL_MAX ||
+      !isContactScreenshotUrl(uid, screenshotUrl)
+    ) {
       return { ok: false, error: "invalid_url" };
     }
   }

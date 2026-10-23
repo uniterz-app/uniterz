@@ -125,6 +125,7 @@ export default function AdminInboxScreenNative() {
                 <Text style={styles.cardBody} numberOfLines={2}>
                   {c.message}
                 </Text>
+                {c.email ? <Text style={styles.meta}>{c.email}</Text> : null}
                 {c.userDisplayName ? (
                   <Text style={styles.meta}>@{c.userDisplayName}</Text>
                 ) : null}
