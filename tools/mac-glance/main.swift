@@ -286,8 +286,6 @@ final class GlanceApp: NSObject, NSApplicationDelegate, NSWindowDelegate {
       todayPredictions: format(stats.todayPosts),
       predictors: format(stats.todayPredictors),
       series: stats.series,
-      invites: stats.invites,
-      people: stats.people,
       dayLabel: GlanceDay.label(stats.dayKey),
       isToday: stats.dayKey == today
     )
@@ -411,7 +409,7 @@ private enum GlanceDay {
 
 private enum GlanceMetrics {
   static let width: CGFloat = 540
-  static let height: CGFloat = 840
+  static let height: CGFloat = 356
   static let inset: CGFloat = 8
   static let radius: CGFloat = 22
   static let ink = NSColor(srgbRed: 0.031, green: 0.067, blue: 0.086, alpha: 1) // #081116
@@ -519,155 +517,6 @@ fileprivate struct GlanceStatCell {
   var active: Bool
 }
 
-/// 名簿。課金と試用中は名前、招待した人は1人ずつ人数つき。
-final class GlancePeopleView: NSView {
-  private var paid: [String] = []
-  private var trialing: [String] = []
-  private var referrers: [InvitePerson] = []
-
-  override init(frame frameRect: NSRect) {
-    super.init(frame: frameRect)
-    wantsLayer = true
-    layer?.backgroundColor = NSColor.white.withAlphaComponent(0.03).cgColor
-    layer?.cornerRadius = 12
-    layer?.borderWidth = 1
-    layer?.borderColor = GlanceMetrics.cyan.withAlphaComponent(0.22).cgColor
-  }
-
-  required init?(coder: NSCoder) { nil }
-
-  fileprivate func setPeople(paid: [String], trialing: [String], referrers: [InvitePerson]) {
-    self.paid = paid
-    self.trialing = trialing
-    self.referrers = referrers
-    needsDisplay = true
-  }
-
-  override func draw(_ dirtyRect: NSRect) {
-    let pad: CGFloat = 12
-    var top = bounds.height - pad
-    top = drawNames(title: "課金", names: paid, color: GlanceMetrics.gold, top: top, pad: pad)
-    top = drawRule(top: top - 8, pad: pad)
-    top = drawNames(title: "試用中", names: trialing, color: GlanceMetrics.cyan, top: top, pad: pad)
-    top = drawRule(top: top - 8, pad: pad)
-    drawInvites(top: top, pad: pad)
-  }
-
-  private func drawNames(title: String, names: [String], color: NSColor, top: CGFloat, pad: CGFloat) -> CGFloat {
-    var cursor = drawTitle(title, top: top, pad: pad)
-    let font = NSFont.systemFont(ofSize: 15, weight: .semibold)
-    let items = names.isEmpty ? ["—"] : names
-    let itemColor = names.isEmpty ? NSColor.white.withAlphaComponent(0.35) : color
-    let maxW = bounds.width - pad * 2
-    let lineH: CGFloat = 24
-    let gap: CGFloat = 14
-    var x = pad
-    for name in items {
-      let text = GlancePeopleView.fitted(name, font: font, color: itemColor, maxWidth: maxW)
-      let width = text.size().width
-      if x > pad, x + width > bounds.width - pad {
-        cursor -= lineH
-        x = pad
-      }
-      guard cursor - lineH >= pad else { return cursor }
-      let textH = text.size().height
-      text.draw(at: NSPoint(x: x, y: cursor - lineH + (lineH - textH) / 2))
-      x += width + gap
-    }
-    return cursor - lineH
-  }
-
-  private func drawInvites(top: CGFloat, pad: CGFloat) {
-    let cursor = drawTitle("招待した", top: top, pad: pad)
-    if referrers.isEmpty {
-      let dash = NSAttributedString(string: "—", attributes: [
-        .font: NSFont.systemFont(ofSize: 15, weight: .semibold),
-        .foregroundColor: NSColor.white.withAlphaComponent(0.35),
-      ])
-      dash.draw(at: NSPoint(x: pad, y: cursor - 24))
-      return
-    }
-
-    let columns = 2
-    let gap: CGFloat = 8
-    let rowH: CGFloat = 30
-    let colW = (bounds.width - pad * 2 - gap) / CGFloat(columns)
-    let nameFont = NSFont.systemFont(ofSize: 14, weight: .semibold)
-    let countFont = NSFont.monospacedDigitSystemFont(ofSize: 13, weight: .bold)
-    var hidden = 0
-
-    for (index, person) in referrers.enumerated() {
-      let col = index % columns
-      let row = index / columns
-      let rowTop = cursor - CGFloat(row) * rowH
-      if rowTop - rowH < pad {
-        hidden = referrers.count - index
-        break
-      }
-      let rect = CGRect(
-        x: pad + CGFloat(col) * (colW + gap),
-        y: rowTop - rowH + 3,
-        width: colW,
-        height: rowH - 6
-      )
-      NSColor.white.withAlphaComponent(0.05).setFill()
-      NSBezierPath(roundedRect: rect, xRadius: 6, yRadius: 6).fill()
-
-      let count = NSAttributedString(string: "\(person.count)人", attributes: [
-        .font: countFont,
-        .foregroundColor: GlanceMetrics.cyan,
-      ])
-      let countW = count.size().width
-      let nameMax = max(rect.width - countW - 16, 24)
-      let name = GlancePeopleView.fitted(person.name, font: nameFont, color: .white, maxWidth: nameMax)
-      let nameH = name.size().height
-      let countH = count.size().height
-      name.draw(at: NSPoint(x: rect.minX + 8, y: rect.midY - nameH / 2))
-      count.draw(at: NSPoint(x: rect.maxX - 8 - countW, y: rect.midY - countH / 2))
-    }
-
-    if hidden > 0 {
-      let more = NSAttributedString(string: "+\(hidden)", attributes: [
-        .font: countFont,
-        .foregroundColor: NSColor.white.withAlphaComponent(0.45),
-      ])
-      more.draw(at: NSPoint(x: bounds.width - pad - more.size().width, y: pad))
-    }
-  }
-
-  private func drawTitle(_ title: String, top: CGFloat, pad: CGFloat) -> CGFloat {
-    let label = NSAttributedString(string: title, attributes: [
-      .font: NSFont.systemFont(ofSize: 11, weight: .semibold),
-      .foregroundColor: NSColor.white.withAlphaComponent(0.55),
-    ])
-    let lineH: CGFloat = 16
-    label.draw(at: NSPoint(x: pad, y: top - lineH + (lineH - label.size().height) / 2))
-    return top - lineH - 2
-  }
-
-  private func drawRule(top: CGFloat, pad: CGFloat) -> CGFloat {
-    let path = NSBezierPath()
-    path.move(to: NSPoint(x: pad, y: top))
-    path.line(to: NSPoint(x: bounds.width - pad, y: top))
-    path.lineWidth = 1
-    NSColor.white.withAlphaComponent(0.08).setStroke()
-    path.stroke()
-    return top - 8
-  }
-
-  private static func fitted(_ name: String, font: NSFont, color: NSColor, maxWidth: CGFloat) -> NSAttributedString {
-    let full = NSAttributedString(string: name, attributes: [.font: font, .foregroundColor: color])
-    if full.size().width <= maxWidth { return full }
-    var kept = name
-    while kept.count > 1 {
-      kept.removeLast()
-      let trial = NSAttributedString(string: kept + "…", attributes: [.font: font, .foregroundColor: color])
-      if trial.size().width <= maxWidth { return trial }
-    }
-    return NSAttributedString(string: "…", attributes: [.font: font, .foregroundColor: color])
-  }
-}
-
 /// 下段。同じ大きさのマスにラベルと数字を置く。
 final class GlanceStatGrid: NSView {
   private var rows: [[GlanceStatCell]] = []
@@ -755,7 +604,6 @@ final class GlanceWidgetView: NSView {
   private let blankDeltaB = GlanceWidgetView.deltaField()
   private let chart = GlanceChartView()
   private let statGrid = GlanceStatGrid()
-  private let peopleView = GlancePeopleView()
   private let registeredCaption = GlanceWidgetView.caption("今日の登録")
   private let predictionsCaption = GlanceWidgetView.caption("今日の予想数")
   private let dayValue = NSTextField(labelWithString: "")
@@ -847,11 +695,9 @@ final class GlanceWidgetView: NSView {
     card.addSubview(rule)
     chart.translatesAutoresizingMaskIntoConstraints = false
     statGrid.translatesAutoresizingMaskIntoConstraints = false
-    peopleView.translatesAutoresizingMaskIntoConstraints = false
     card.addSubview(row)
     card.addSubview(chart)
     card.addSubview(statGrid)
-    card.addSubview(peopleView)
 
     NSLayoutConstraint.activate([
       card.leadingAnchor.constraint(equalTo: leadingAnchor, constant: GlanceMetrics.inset),
@@ -893,17 +739,18 @@ final class GlanceWidgetView: NSView {
       chart.leadingAnchor.constraint(equalTo: card.leadingAnchor, constant: 14),
       chart.trailingAnchor.constraint(equalTo: card.trailingAnchor, constant: -14),
       chart.topAnchor.constraint(equalTo: row.bottomAnchor, constant: 8),
-      chart.heightAnchor.constraint(equalToConstant: 118),
+      // 高さの端数はグラフが吸収する
+      {
+        let c = chart.heightAnchor.constraint(equalToConstant: 118)
+        c.priority = .defaultLow
+        return c
+      }(),
 
       statGrid.leadingAnchor.constraint(equalTo: card.leadingAnchor, constant: 14),
       statGrid.trailingAnchor.constraint(equalTo: card.trailingAnchor, constant: -14),
       statGrid.topAnchor.constraint(equalTo: chart.bottomAnchor, constant: 8),
-      statGrid.heightAnchor.constraint(equalToConstant: 126),
-
-      peopleView.leadingAnchor.constraint(equalTo: card.leadingAnchor, constant: 14),
-      peopleView.trailingAnchor.constraint(equalTo: card.trailingAnchor, constant: -14),
-      peopleView.topAnchor.constraint(equalTo: statGrid.bottomAnchor, constant: 8),
-      peopleView.bottomAnchor.constraint(equalTo: card.bottomAnchor, constant: -12),
+      statGrid.heightAnchor.constraint(equalToConstant: 84),
+      statGrid.bottomAnchor.constraint(equalTo: card.bottomAnchor, constant: -12),
     ])
   }
 
@@ -981,8 +828,6 @@ final class GlanceWidgetView: NSView {
     todayPredictions: String,
     predictors: String,
     series: [DayPoint],
-    invites: InviteCounts,
-    people: PeopleLists,
     dayLabel: String,
     isToday: Bool
   ) {
@@ -1004,10 +849,8 @@ final class GlanceWidgetView: NSView {
       plans: plans,
       billing: billing,
       predictors: predictors,
-      invites: invites,
       isToday: isToday
     ))
-    peopleView.setPeople(paid: people.paid, trialing: people.trialing, referrers: people.referrers)
     setDayLabel(dayLabel, isToday: isToday)
   }
 
@@ -1062,7 +905,6 @@ final class GlanceWidgetView: NSView {
     plans: PlanCounts,
     billing: BillingDetail,
     predictors: String,
-    invites: InviteCounts,
     isToday: Bool
   ) -> [[GlanceStatCell]] {
     var trial = [
@@ -1083,16 +925,7 @@ final class GlanceWidgetView: NSView {
     let peopleActive = predictors != "—" && predictors != "0"
     plansRow.append(GlanceStatCell(label: "予想した人", value: predictors, active: peopleActive))
 
-    return [
-      trial,
-      plansRow,
-      [
-        statCell("招待した人", invites.referrers),
-        statCell("招かれた人", invites.invited),
-        statCell(isToday ? "今日の招待" : "その日の招待", invites.today),
-        statCell("成立", invites.completed),
-      ],
-    ]
+    return [trial, plansRow]
   }
 
   private static func arrowTitle(_ glyph: String, color: NSColor) -> NSAttributedString {
@@ -1191,69 +1024,6 @@ struct BillingDetail: Codable {
   }
 }
 
-struct InviteCounts: Codable {
-  let referrers: Int
-  let invited: Int
-  let today: Int
-  let completed: Int
-
-  init(referrers: Int = 0, invited: Int = 0, today: Int = 0, completed: Int = 0) {
-    self.referrers = referrers
-    self.invited = invited
-    self.today = today
-    self.completed = completed
-  }
-
-  init(from decoder: Decoder) throws {
-    let c = try decoder.container(keyedBy: CodingKeys.self)
-    referrers = try c.decodeIfPresent(Int.self, forKey: .referrers) ?? 0
-    invited = try c.decodeIfPresent(Int.self, forKey: .invited) ?? 0
-    today = try c.decodeIfPresent(Int.self, forKey: .today) ?? 0
-    completed = try c.decodeIfPresent(Int.self, forKey: .completed) ?? 0
-  }
-}
-
-struct InvitePerson: Codable {
-  let name: String
-  let count: Int
-
-  init(name: String = "", count: Int = 0) {
-    self.name = name
-    self.count = count
-  }
-
-  init(from decoder: Decoder) throws {
-    let c = try decoder.container(keyedBy: CodingKeys.self)
-    name = try c.decodeIfPresent(String.self, forKey: .name) ?? ""
-    count = try c.decodeIfPresent(Int.self, forKey: .count) ?? 0
-  }
-}
-
-struct PeopleLists: Codable {
-  let paid: [String]
-  let trialing: [String]
-  let referrers: [InvitePerson]
-
-  init(paid: [String] = [], trialing: [String] = [], referrers: [InvitePerson] = []) {
-    self.paid = paid
-    self.trialing = trialing
-    self.referrers = referrers
-  }
-
-  init(from decoder: Decoder) throws {
-    let c = try decoder.container(keyedBy: CodingKeys.self)
-    paid = try c.decodeIfPresent([String].self, forKey: .paid) ?? []
-    trialing = try c.decodeIfPresent([String].self, forKey: .trialing) ?? []
-    if let rows = try? c.decode([InvitePerson].self, forKey: .referrers) {
-      referrers = rows
-    } else if let names = try? c.decode([String].self, forKey: .referrers) {
-      referrers = names.map { InvitePerson(name: $0, count: 0) }
-    } else {
-      referrers = []
-    }
-  }
-}
-
 struct DayPoint: Codable {
   let dayKey: String
   let registered: Int
@@ -1282,14 +1052,12 @@ struct Stats: Codable {
   let todayPredictors: Int
   let todayPosts: Int
   let series: [DayPoint]
-  let invites: InviteCounts
-  let people: PeopleLists
   let dayKey: String
   let timezone: String
   let asOf: String
 
   enum CodingKeys: String, CodingKey {
-    case registered, subscribers, plans, billing, todayRegistered, todayPredictors, todayPosts, series, invites, people, dayKey, timezone, asOf
+    case registered, subscribers, plans, billing, todayRegistered, todayPredictors, todayPosts, series, dayKey, timezone, asOf
   }
 
   init(from decoder: Decoder) throws {
@@ -1302,8 +1070,6 @@ struct Stats: Codable {
     todayPredictors = try c.decodeIfPresent(Int.self, forKey: .todayPredictors) ?? 0
     todayPosts = try c.decode(Int.self, forKey: .todayPosts)
     series = try c.decodeIfPresent([DayPoint].self, forKey: .series) ?? []
-    invites = try c.decodeIfPresent(InviteCounts.self, forKey: .invites) ?? InviteCounts()
-    people = try c.decodeIfPresent(PeopleLists.self, forKey: .people) ?? PeopleLists()
     dayKey = try c.decode(String.self, forKey: .dayKey)
     timezone = try c.decode(String.self, forKey: .timezone)
     asOf = try c.decode(String.self, forKey: .asOf)
@@ -1323,8 +1089,6 @@ struct Stats: Codable {
       todayPredictors: todayPredictors,
       todayPosts: todayPosts,
       series: previous.series,
-      invites: invites,
-      people: people,
       dayKey: dayKey,
       timezone: timezone,
       asOf: asOf
@@ -1340,8 +1104,6 @@ struct Stats: Codable {
     todayPredictors: Int,
     todayPosts: Int,
     series: [DayPoint],
-    invites: InviteCounts,
-    people: PeopleLists,
     dayKey: String,
     timezone: String,
     asOf: String
@@ -1354,8 +1116,6 @@ struct Stats: Codable {
     self.todayPredictors = todayPredictors
     self.todayPosts = todayPosts
     self.series = series
-    self.invites = invites
-    self.people = people
     self.dayKey = dayKey
     self.timezone = timezone
     self.asOf = asOf
