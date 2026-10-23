@@ -34,6 +34,7 @@ import {
 } from "@/lib/i18n/timeZoneOptions";
 import { timeZoneSettingCopy } from "@/lib/i18n/timeZoneSettingCopy";
 import { saveMeProfile, saveMyPhotoURL } from "@/lib/api/saveMeProfile";
+import { pickLocalImageFile } from "@/lib/profile/pickLocalImageFile";
 import {
   isProfileGamblingTermsError,
   profileGamblingTermsUserMessage,
@@ -108,11 +109,11 @@ export default function ProfileEditSheet({
     : currentPhotoURL || defaultAvatarUrl;
 
   /** 選んだ時点でアップロードし photoURL だけ即保存（「保存」を押さなくても反映） */
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    e.target.value = "";
+  const pickAndUploadPhoto = async () => {
+    if (uploading) return;
+    const file = await pickLocalImageFile();
     const user = auth.currentUser;
-    if (!file || !user || uploading) return;
+    if (!file || !user) return;
     setSelectedFile(file);
     try {
       setUploading(true);
@@ -176,7 +177,13 @@ export default function ProfileEditSheet({
   ) : (
     <form onSubmit={handleSubmit} className="flex flex-col gap-5 text-left">
       <div className="flex justify-center">
-        <label className="relative inline-block cursor-pointer">
+        <button
+          type="button"
+          className="relative inline-block cursor-pointer border-0 bg-transparent p-0 text-inherit disabled:cursor-wait"
+          aria-label={t(language).profile.changePhoto}
+          disabled={uploading}
+          onClick={() => void pickAndUploadPhoto()}
+        >
           <div className="relative h-32 w-32 overflow-hidden rounded-none border border-cyan-400/40 ring-2 ring-white/10 ring-offset-2 ring-offset-black/40 sm:h-36 sm:w-36">
             <img
               src={previewURL}
@@ -192,13 +199,7 @@ export default function ProfileEditSheet({
           >
             <Camera className="h-4 w-4" />
           </span>
-          <input
-            type="file"
-            accept="image/*"
-            onChange={handleFileChange}
-            className="hidden"
-          />
-        </label>
+        </button>
       </div>
 
       <div className="space-y-1.5">
