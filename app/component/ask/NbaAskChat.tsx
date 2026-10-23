@@ -15,7 +15,8 @@ import {
   type NbaAskTurnClient,
 } from "@/lib/nba/ask/nbaAskClient";
 import { splitNbaAskLinks } from "@/lib/nba/ask/nbaAskLinkify";
-import { nbaAskLooksLikeStats, type NbaAskBoard } from "@/lib/nba/ask/nbaAskBoard";
+import { type NbaAskBoard } from "@/lib/nba/ask/nbaAskBoard";
+import AskGameCard from "@/app/component/ask/AskGameCard";
 import {
   nbaAskDestinationLabel,
   nbaAskDestinationWebPath,
@@ -90,6 +91,7 @@ export default function NbaAskChat({ language, timeZone, signedIn }: Props) {
           content: result.answer,
           opens: result.opens,
           board: result.board,
+          games: result.games,
         },
       ]);
       setStatus((prev) =>
@@ -136,7 +138,37 @@ export default function NbaAskChat({ language, timeZone, signedIn }: Props) {
 
         {turns.map((t, i) => {
           const mine = t.role === "user";
-          const statsQuestion = mine && nbaAskLooksLikeStats(t.content);
+          if (t.games && t.games.length > 0) {
+            return (
+              <div key={i} className="mr-auto flex w-full flex-col gap-3">
+                {t.games.map((game, index) => (
+                  <AskGameCard
+                    key={`${game.id || game.away}-${game.home}-${index}`}
+                    game={game}
+                    language={language}
+                    onPress={
+                      game.id
+                        ? () =>
+                            router.push(
+                              `/mobile/games?openPredict=${encodeURIComponent(game.id)}`
+                            )
+                        : undefined
+                    }
+                  />
+                ))}
+                {t.opens?.map((id) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => router.push(nbaAskDestinationWebPath(id))}
+                    className={`${nameOxanium.className} self-start bg-[#00F5FF] px-3 py-2 text-[12px] font-bold tracking-[0.06em] text-[#050508] hover:opacity-90`}
+                  >
+                    {nbaAskDestinationLabel(id, language)}
+                  </button>
+                ))}
+              </div>
+            );
+          }
           if (t.board) {
             return (
               <div key={i} className="mr-auto w-full">
@@ -159,17 +191,13 @@ export default function NbaAskChat({ language, timeZone, signedIn }: Props) {
               key={i}
               className={cn(
                 "flex flex-col gap-2",
-                statsQuestion ? "mr-auto items-start" : mine ? "ml-auto max-w-[84%] items-end" : "mr-auto max-w-[84%]",
+                mine ? "ml-auto max-w-[84%] items-end" : "mr-auto max-w-[84%]",
               )}
             >
               <div
                 className={cn(
                   "whitespace-pre-wrap px-3.5 py-2.5 text-[15px] leading-[1.5]",
-                  statsQuestion
-                    ? "border border-[#00F5FF] text-white"
-                    : mine
-                      ? "bg-[#00F5FF] text-[#041014]"
-                      : "bg-white/[0.06] text-white/94",
+                  mine ? "bg-[#00F5FF] text-[#041014]" : "bg-white/[0.06] text-white/94",
                 )}
               >
                 {splitNbaAskLinks(t.content).map((part, j) =>

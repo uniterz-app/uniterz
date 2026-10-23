@@ -148,6 +148,7 @@ export async function POST(req: Request) {
       statsFreeRemaining,
       opens: leaked ? [] : result.opens,
       board: leaked ? null : result.board,
+      games: leaked ? null : result.games,
     });
   } catch (e: unknown) {
     console.error("[POST /api/nba/ask]", e);

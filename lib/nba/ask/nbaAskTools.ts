@@ -10,7 +10,9 @@ import {
   type LiveGameBoxPlayer,
 } from "@/lib/games/liveGameStats";
 import { getResolvedGameScore } from "@/lib/games/transform";
-import { toDateKeyInTimeZone } from "@/lib/time/zonedTime";
+import { getTodayKeyInTimeZone, toDateKeyInTimeZone } from "@/lib/time/zonedTime";
+import { shiftDateKeyInTimeZone } from "@/lib/games/gamesWindowRange";
+import { isNbaPickupGame } from "@/lib/nba/isPickupGame";
 import { nbaGameDocIdFromBdlId } from "@/lib/nba/bdl/mapBdlGameToNbaGameDoc";
 import { CURRENT_NBA_SEASON_KEY, nbaLeagueStatsSeasonKeys } from "@/lib/rankings/nbaSeason";
 import { TEAM_SHORT } from "@/lib/team-short";
@@ -24,7 +26,10 @@ import {
   type NbaTeamOffseasonMovesDoc,
 } from "@/lib/nba/offseasonMoves/offseasonMovesTypes";
 import { NBA_CONFERENCE_STANDINGS_COLLECTION } from "@/lib/nba/standings/loadNbaConferenceStandings";
+import { buildNbaStandingsTeamRecordMap } from "@/lib/nba/standings/buildNbaStandingsTeamRecordMap";
 import type { NbaConferenceStandingsRow } from "@/lib/nba/nbaConferenceStandings";
+import { displayNbaRoundLabel } from "@/lib/games/displayNbaRoundLabel";
+import { formatTeamRecordWithRank, isPreseasonPhase } from "@/lib/teamRecordDisplay";
 import type { NbaTeamRosterDocTeam } from "@/lib/nba/teamRosters/teamRosterTypes";
 import { loadPlayerGameLogsSnapshot } from "@/lib/nba/playerGameLogs/loadPlayerGameLogsSnapshot";
 import { loadPlayerShotZonesSnapshot } from "@/lib/nba/playerShotZones/loadPlayerShotZonesSnapshot";
@@ -83,9 +88,64 @@ function abbr(teamId: string): string {
   return (TEAM_SHORT[teamId] ?? teamId.replace(/^nba-/i, "")).toUpperCase();
 }
 
+/** 試合一覧カードの戦績行。今季スナップショットが無いチームは (0-0) */
+let standingsRecordCache: {
+  at: number;
+  map: ReturnType<typeof buildNbaStandingsTeamRecordMap>;
+} | null = null;
+
+async function loadStandingsRecords(db: Firestore) {
+  if (standingsRecordCache && Date.now() - standingsRecordCache.at < ROSTER_CACHE_MS) {
+    return standingsRecordCache.map;
+  }
+  try {
+    const snap = await db.collection(NBA_CONFERENCE_STANDINGS_COLLECTION).doc(CURRENT_NBA_SEASON_KEY).get();
+    const board = readStandingsBoard(snap.data());
+    const map = board ? buildNbaStandingsTeamRecordMap(board) : {};
+    standingsRecordCache = { at: Date.now(), map };
+    return map;
+  } catch {
+    return standingsRecordCache?.map ?? {};
+  }
+}
+
+function recordLine(
+  map: ReturnType<typeof buildNbaStandingsTeamRecordMap>,
+  teamId: string,
+  seasonPhase: unknown
+): string {
+  const row = map[teamId];
+  if (!row) return "(0-0)";
+  return formatTeamRecordWithRank(row, "nba", { hideRank: isPreseasonPhase(seasonPhase) });
+}
+
 function startOf(data: Record<string, unknown>): Date | null {
   const t = data.startAtJst as { toDate?: () => Date } | undefined;
   return t?.toDate?.() ?? null;
+}
+
+/** スタッツ回数を使い切っていても渡す。試合一覧そのもの */
+export const NBA_ASK_SCHEDULE_TOOL_NAMES: ReadonlySet<string> = new Set(["get_games_on_date"]);
+
+/** today / tomorrow / yesterday を、ユーザーの暦日に直す */
+function resolveAskDate(raw: string, timeZone: string): string | null {
+  const q = raw.trim().toLowerCase();
+  const today = getTodayKeyInTimeZone(timeZone);
+  if (!q || q === "today") return today;
+  if (q === "tomorrow") return shiftDateKeyInTimeZone(today, timeZone, 1);
+  if (q === "yesterday") return shiftDateKeyInTimeZone(today, timeZone, -1);
+  return DATE_RE.test(q) ? q : null;
+}
+
+function kickoffLabel(data: Record<string, unknown>, timeZone: string): string {
+  const start = startOf(data);
+  if (!start) return "";
+  return new Intl.DateTimeFormat("en-GB", {
+    timeZone,
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).format(start);
 }
 
 /** 表示タイムゾーンの暦日に始まる試合（試合一覧の日付と同じ切り方） */
@@ -172,10 +232,14 @@ export const NBA_ASK_TOOL_DEFS = [
     type: "function",
     function: {
       name: "get_games_on_date",
-      description: "Games that start on a date (the user's time zone) with scores and each team's top scorers.",
+      description:
+        "Games that start on a date in the user's time zone, including which ones are PICK UP. date may be today, tomorrow, yesterday, or YYYY-MM-DD. Set pickup_only for ピックアップ / pick up. Available even when other stats tools are off. Empty means that day has no such game.",
       parameters: {
         type: "object",
-        properties: { date: { type: "string", description: "YYYY-MM-DD (user's time zone)" } },
+        properties: {
+          date: { type: "string", description: "today, tomorrow, yesterday, or YYYY-MM-DD" },
+          pickup_only: { type: "boolean" },
+        },
         required: ["date"],
       },
     },
@@ -617,34 +681,47 @@ export async function runNbaAskTool(
   }
 
   if (name === "get_games_on_date") {
-    const date = str(args.date);
-    if (!DATE_RE.test(date)) return { error: "date must be YYYY-MM-DD" };
+    const date = resolveAskDate(str(args.date), timeZone);
+    if (!date) return { error: "date must be today, tomorrow, yesterday, or YYYY-MM-DD" };
     const games = await loadGamesOnDate(db, date, timeZone);
     if (!games) return { error: "invalid date" };
+    const pickupOnly = args.pickup_only === true || args.pickup_only === "true";
+    const listed = games.filter(({ data }) => !pickupOnly || isNbaPickupGame(data));
+    if (listed.length === 0) {
+      return {
+        found: false,
+        webOk: false,
+        date,
+        pickupOnly,
+        note: pickupOnly ? "No PICK UP game on this date" : "No game on this date",
+      };
+    }
+    const records = await loadStandingsRecords(db);
     return {
+      found: true,
+      webOk: false,
       date,
-      games: games.map(({ id, data }) => {
+      pickupOnly,
+      games: listed.slice(0, 12).map(({ id, data }) => {
         const ctx = gameDocTeamContext(data);
         const live = normalizeLiveGameStatsDoc(data.liveStats);
         const score = getResolvedGameScore(data);
-        const top = (players: LiveGameBoxPlayer[]) =>
-          [...players]
-            .filter((p) => p.min > 0)
-            .sort((a, b) => b.pts - a.pts)
-            .slice(0, 5)
-            .map(
-              (p) =>
-                `${p.firstName} ${p.lastName} ${p.pts}pts ${p.reb}reb ${p.ast}ast ${p.stl}stl ${p.blk}blk`
-            );
+        const status = gameStatus(data, live?.phase ?? null);
         return {
-          gameId: id,
+          id,
           away: abbr(ctx.awayTeamId),
           home: abbr(ctx.homeTeamId),
+          awayTeamId: ctx.awayTeamId,
+          homeTeamId: ctx.homeTeamId,
+          awayRecord: recordLine(records, ctx.awayTeamId, data.seasonPhase),
+          homeRecord: recordLine(records, ctx.homeTeamId, data.seasonPhase),
+          start: kickoffLabel(data, timeZone),
+          pickup: isNbaPickupGame(data),
           score: score ? `${score.away}-${score.home}` : null,
-          status: gameStatus(data, live?.phase ?? null),
-          ...(live
-            ? { awayTop: top(live.box.away), homeTop: top(live.box.home) }
-            : {}),
+          scoreHome: score && status !== "scheduled" ? score.home : null,
+          scoreAway: score && status !== "scheduled" ? score.away : null,
+          status,
+          round: displayNbaRoundLabel(typeof data.roundLabel === "string" ? data.roundLabel : ""),
         };
       }),
     };
