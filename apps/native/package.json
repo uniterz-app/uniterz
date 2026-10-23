@@ -12,7 +12,7 @@
     "ios": "expo run:ios",
     "ios:dev": "expo run:ios",
     "ios:pod": "pod install --project-directory=ios",
-    "postinstall": "node scripts/patch-rniap-podspec.mjs && node scripts/patch-expo-simulator-prerequisite.mjs && node scripts/patch-expo-dev-launcher-uiscene.mjs && node scripts/patch-bottom-tabs-settle.mjs",
+    "postinstall": "node scripts/patch-rniap-podspec.mjs && node scripts/patch-expo-simulator-prerequisite.mjs && node scripts/patch-expo-dev-launcher-uiscene.mjs && node scripts/patch-bottom-tabs-settle.mjs && node scripts/patch-expo-image-picker-permission.mjs",
     "web": "expo start --web",
     "ota:production": "node scripts/ota-production.mjs"
   },
