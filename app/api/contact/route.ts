@@ -1,7 +1,24 @@
 import { NextResponse } from "next/server";
 import { requireUidFromRequest } from "@/lib/communities/serverAuth";
-import { getAdminDb } from "@/lib/firebaseAdmin";
+import { getAdminAuth, getAdminDb } from "@/lib/firebaseAdmin";
 import { submitContactAdmin } from "@/lib/support/submitContactAdmin";
+
+/** フォームが空なら、ログイン中アカウントのメールを載せる */
+async function resolveContactEmail(
+  uid: string,
+  raw: string | null
+): Promise<string | null> {
+  const typed = raw?.trim() ?? "";
+  if (typed) return typed;
+  try {
+    const record = await getAdminAuth().getUser(uid);
+    const account = record.email?.trim() ?? "";
+    return account || null;
+  } catch (e) {
+    console.error("POST /api/contact account email:", e);
+    return null;
+  }
+}
 
 export const runtime = "nodejs";
 
@@ -24,10 +41,15 @@ export async function POST(req: Request) {
       deviceKind?: unknown;
     } | null;
 
+    const email = await resolveContactEmail(
+      uid,
+      typeof body?.email === "string" ? body.email : null
+    );
+
     const result = await submitContactAdmin(getAdminDb(), uid, {
       type: typeof body?.type === "string" ? body.type : "",
       message: typeof body?.message === "string" ? body.message : "",
-      email: typeof body?.email === "string" ? body.email : null,
+      email,
       screenshotUrl:
         typeof body?.screenshotUrl === "string" ? body.screenshotUrl : null,
       fromPath: typeof body?.fromPath === "string" ? body.fromPath : null,

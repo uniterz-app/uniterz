@@ -21,6 +21,7 @@ import {
   contactDeviceKindLabel,
   type ContactDeviceKind,
 } from "../../../../../lib/support/contactDevice";
+import { CONTACT_SCREENSHOT_MAX_BYTES } from "../../../../../lib/support/contactScreenshot";
 
 const API_BASE = process.env.EXPO_PUBLIC_UNITERZ_API_BASE_URL?.replace(/\/$/, "") ?? "";
 
@@ -47,7 +48,7 @@ export default function ContactScreenNative({
 
   const [type, setType] = useState<ContactType>(initialType);
   const [deviceKind, setDeviceKind] = useState<"" | ContactDeviceKind>("");
-  const [email, setEmail] = useState(fUser?.email ?? "");
+  const [email, setEmail] = useState(fUser?.email?.trim() ?? "");
   const [message, setMessage] = useState("");
   const [handle, setHandle] = useState<string | null>(null);
   const [imageUri, setImageUri] = useState<string | null>(null);
@@ -57,6 +58,13 @@ export default function ContactScreenNative({
   useEffect(() => {
     setType(initialType);
   }, [initialType]);
+
+  // ログイン済みのメールを初期表示する。手入力後は上書きしない
+  useEffect(() => {
+    const accountEmail = fUser?.email?.trim() ?? "";
+    if (!accountEmail) return;
+    setEmail((prev) => (prev.trim() ? prev : accountEmail));
+  }, [fUser?.email]);
 
   useEffect(() => {
     if (!fUser?.uid) return;
@@ -228,15 +236,22 @@ export default function ContactScreenNative({
       mediaTypes: ["images"],
       quality: 0.8,
     });
-    if (!picked.canceled && picked.assets[0]) {
-      setImageUri(picked.assets[0].uri);
+    const asset = picked.canceled ? null : picked.assets[0];
+    if (!asset) return;
+    if (asset.fileSize != null && asset.fileSize > CONTACT_SCREENSHOT_MAX_BYTES) {
+      cyberAlert("", m.support.attachImageTooLarge);
+      return;
     }
+    setImageUri(asset.uri);
   }
 
   async function uploadScreenshot(): Promise<string> {
     if (!imageUri || !fUser?.uid) return "";
     const fileRef = ref(storage, `contact_screenshots/${fUser.uid}/${Date.now()}.jpg`);
-    await uploadLocalImageNative(fileRef, imageUri);
+    await uploadLocalImageNative(fileRef, imageUri, {
+      maxBytes: CONTACT_SCREENSHOT_MAX_BYTES,
+      tooLargeMessage: "image_too_large",
+    });
     return getDownloadURL(fileRef);
   }
 
@@ -286,8 +301,9 @@ export default function ContactScreenNative({
         throw new Error("failed");
       }
       setSubmitted(true);
-    } catch {
-      cyberAlert("", labels.err);
+    } catch (e) {
+      const code = e instanceof Error ? e.message : "";
+      cyberAlert("", code === "image_too_large" ? m.support.attachImageTooLarge : labels.err);
     } finally {
       setSubmitting(false);
     }
@@ -382,7 +398,12 @@ export default function ContactScreenNative({
           <Text style={styles.attachLabel}>{labels.attach}</Text>
         </Pressable>
         {imageUri ? (
-          <Image source={{ uri: imageUri }} style={styles.preview} resizeMode="cover" />
+          <View>
+            <Image source={{ uri: imageUri }} style={styles.preview} resizeMode="contain" />
+            <Pressable style={styles.removeImage} onPress={() => setImageUri(null)}>
+              <Text style={styles.removeImageLabel}>{m.support.attachImageRemove}</Text>
+            </Pressable>
+          </View>
         ) : null}
 
         <Pressable
@@ -453,11 +474,19 @@ const styles = StyleSheet.create({
   attachLabel: { fontSize: 13, color: "rgba(255,255,255,0.7)", fontWeight: "600" },
   preview: {
     width: "100%",
-    height: 120,
+    height: 160,
     borderRadius: 0,
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.2)",
+    backgroundColor: "#000000",
   },
+  removeImage: {
+    alignSelf: "flex-end",
+    marginTop: 6,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+  },
+  removeImageLabel: { fontSize: 12, color: "rgba(255,255,255,0.7)", fontWeight: "600" },
   submitBtn: {
     marginTop: 8,
     flexDirection: "row",
