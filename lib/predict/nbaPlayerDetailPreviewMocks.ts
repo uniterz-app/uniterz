@@ -387,7 +387,7 @@ const METRIC_DEFS: Array<{
   { id: "ast", short: "AST", higherIsBetter: true, kind: "perGame" },
   { id: "stl", short: "STL", higherIsBetter: true, kind: "perGame" },
   { id: "blk", short: "BLK", higherIsBetter: true, kind: "perGame" },
-  { id: "tov", short: "TOV", higherIsBetter: false, kind: "perGame" },
+  { id: "tov", short: "TOV", higherIsBetter: true, kind: "perGame" },
   { id: "pf", short: "PF", higherIsBetter: true, kind: "perGame" },
   { id: "min", short: "MIN", higherIsBetter: true, kind: "minutes" },
   {

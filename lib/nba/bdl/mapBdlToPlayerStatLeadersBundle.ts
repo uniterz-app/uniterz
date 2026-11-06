@@ -25,6 +25,7 @@ import {
   qualifiesForFgPctLeaders,
   qualifiesForFtPctLeaders,
   qualifiesForNonPctLeaders,
+  qualifiesForTurnoverPctLeaders,
 } from "@/lib/nba/nbaOfficialLeaderMinimums";
 import {
   NBA_BDL_PLAYER_LEADER_STAT_TYPES,
@@ -441,7 +442,8 @@ export async function buildPlayerStatLeadersBundleFromBdl(input: {
     { id: "stl", higherIsBetter: true, value: (p) => n(p.base, "stl") },
     { id: "blk", higherIsBetter: true, value: (p) => n(p.base, "blk") },
     { id: "fg3m", higherIsBetter: true, value: (p) => n(p.base, "fg3m") },
-    { id: "tov", higherIsBetter: false, value: (p) => n(p.base, "tov") },
+    // 画面は「多い順」。false だと少ない 30 人だけ残り、本当の上位が落ちる
+    { id: "tov", higherIsBetter: true, value: (p) => n(p.base, "tov") },
     {
       id: "pf",
       higherIsBetter: true,
@@ -594,6 +596,8 @@ export async function buildPlayerStatLeadersBundleFromBdl(input: {
       limit?: number;
       /** true: FG% 最低決め本数。それ以外はチーム試合の 70% 出場 */
       shootingPct?: boolean;
+      /** 指定時は上の既定資格の代わりに使う（TOV% の出場時間・使用率） */
+      qualifies?: (p: MergedPlayer) => boolean;
     }
   ) => {
     const limit = opts?.limit ?? LEADER_BOARD_LIMIT;
@@ -605,7 +609,9 @@ export async function buildPlayerStatLeadersBundleFromBdl(input: {
       const row = rowOf(p, v);
       if (!row) continue;
       let qualifies = false;
-      if (shootingPct) {
+      if (opts?.qualifies) {
+        qualifies = opts.qualifies(p);
+      } else if (shootingPct) {
         const fgm =
           n(p.advanced, "fgm") ?? makesTotal(n(p.base, "fgm"), p.gp);
         qualifies =
@@ -642,8 +648,19 @@ export async function buildPlayerStatLeadersBundleFromBdl(input: {
     shootingPct: true,
   });
   fillAdv("oreb_pct", true, (p) => rate(n(p.advanced, "oreb_pct")));
-  fillAdv("tov_pct", false, (p) =>
-    rate(n(p.advanced, "tm_tov_pct", "e_tov_pct", "tov_pct"))
+  fillAdv(
+    "tov_pct",
+    false,
+    (p) => rate(n(p.advanced, "tm_tov_pct", "e_tov_pct", "tov_pct")),
+    {
+      qualifies: (p) =>
+        qualifiesForTurnoverPctLeaders({
+          teamGamesPlayed: p.teamGames,
+          gamesPlayed: p.gp,
+          minutesPerGame: n(p.base, "min") ?? 0,
+          usagePct: rate(n(p.advanced, "usg_pct")) ?? 0,
+        }),
+    }
   );
   fillAdv("fta_rate", true, (p) => {
     const fta = n(p.base, "fta");
