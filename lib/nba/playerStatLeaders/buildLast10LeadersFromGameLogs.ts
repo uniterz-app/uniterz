@@ -236,7 +236,7 @@ export function buildLast10LeadersFromGameLogs(
   perGame("ast", (a) => a.ast);
   perGame("stl", (a) => a.stl);
   perGame("blk", (a) => a.blk);
-  perGame("tov", (a) => a.tov, false);
+  perGame("tov", (a) => a.tov);
   const withPf = aggs.filter((a) => a.pf != null);
   if (withPf.length > 0) {
     fillBoard(

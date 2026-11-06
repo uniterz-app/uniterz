@@ -83,3 +83,30 @@ export function qualifiesForNonPctLeaders(input: {
   const need = nbaNonPctMinGames(input.teamGamesPlayed);
   return input.gamesPlayed >= need;
 }
+
+/**
+ * 選手 TOV% の追加資格。
+ * 出場 70% だけだと、ボールにほとんど触れていない 0% が1位になる。
+ * 平均 15 分かつ使用率 15% 以上に限る。
+ */
+export const NBA_TOV_PCT_MIN_MPG = 15;
+export const NBA_TOV_PCT_MIN_USG = 0.15;
+
+export function qualifiesForTurnoverPctLeaders(input: {
+  teamGamesPlayed: number;
+  gamesPlayed: number;
+  minutesPerGame: number;
+  /** 0–1。100 刻みで来た場合は 15 を 0.15 と読む */
+  usagePct: number;
+}): boolean {
+  if (!qualifiesForNonPctLeaders(input)) return false;
+  if (
+    !Number.isFinite(input.minutesPerGame) ||
+    input.minutesPerGame < NBA_TOV_PCT_MIN_MPG
+  ) {
+    return false;
+  }
+  const usg =
+    input.usagePct > 1.5 ? input.usagePct / 100 : input.usagePct;
+  return Number.isFinite(usg) && usg >= NBA_TOV_PCT_MIN_USG;
+}

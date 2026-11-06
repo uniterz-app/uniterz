@@ -1,13 +1,11 @@
 // app/api/cumulative-ranking/bulk/route.ts
-// 指標をまとめて取得（metrics 省略時は全5指標）。サーバー側 unstable_cache で Function 負荷を抑制。
+// 指標をまとめて取得（metrics 省略時は全4指標）。一覧は Firestore スナップショットだけ読む。
 
 import { unstable_cache } from "next/cache";
 import { NextResponse } from "next/server";
 import { CUMULATIVE_RANKING_REVALIDATE_SEC } from "@/lib/rankings/cumulativeRankingCache";
-import {
-  fetchBulkFromFunctions,
-  type BulkRankingMetric,
-} from "@/lib/rankings/server/fetchCumulativeRankingBulk";
+import { type BulkRankingMetric } from "@/lib/rankings/server/fetchCumulativeRankingBulk";
+import { readNbaStandardSeasonRankingSnapshots } from "@/lib/rankings/server/readNbaStandardSeasonRanking";
 import { loadPersonalBulkOverlayFromFirestore } from "@/lib/rankings/server/loadPersonalBulkOverlay";
 import { loadRankingSnapshotGenerationKey } from "@/lib/rankings/server/loadRankingSnapshotGeneration";
 import { parseRankingDivision } from "@/lib/rankings/rankingDivision";
@@ -16,7 +14,6 @@ import {
   buildNbaOpenSeasonRankingFromCumulative,
   readNbaOpenSeasonRankingSnapshots,
 } from "@/lib/rankings/server/readNbaOpenSeasonRanking";
-import { rankingFunctionUrl } from "@/lib/rankings/server/rankingFunctionUrl";
 import { getAdminAuth } from "@/lib/firebaseAdmin";
 import { mergeUserPlansIntoBulkByMetric } from "@/lib/rankings/mergeUserPlanIntoRankingPayload";
 import { RANKING_COMMENT_CDN_TAG_HEADER } from "@/lib/rankings/rankingCommentCache";
@@ -69,20 +66,15 @@ async function uidFromBearer(req: Request): Promise<string | null> {
 }
 
 const getCachedBulk = unstable_cache(
-  async (
-    uidKey: string,
-    metricsKey: string,
-    snapshotGenerationKey: string
-  ) => {
-    const uid = uidKey === "__anon__" ? undefined : uidKey;
+  async (metricsKey: string, snapshotGenerationKey: string) => {
     const parts = metricsKey
       .split(",")
       .filter((m): m is BulkRankingMetric => METRIC_SET.has(m));
     const metrics = (parts.length ? parts : [...BULK_METRICS]) as BulkRankingMetric[];
     void snapshotGenerationKey;
-    return fetchBulkFromFunctions(uid, metrics);
+    return readNbaStandardSeasonRankingSnapshots({ metrics });
   },
-  ["cumulative-ranking-bulk-v16-nba"],
+  ["cumulative-ranking-bulk-v17-snapshot"],
   {
     revalidate: CUMULATIVE_RANKING_REVALIDATE_SEC,
     tags: ["cumulative-ranking"],
@@ -206,19 +198,8 @@ export async function GET(req: Request) {
       );
     }
 
-    if (!rankingFunctionUrl()) {
-      return NextResponse.json(
-        { ok: false, error: "CUMULATIVE_RANKING_FUNCTION_URL is not set" },
-        { status: 500 }
-      );
-    }
-
     void uid;
-    const listSource = await getCachedBulk(
-      "__anon__",
-      metricsKey,
-      snapshotGeneration
-    );
+    const listSource = await getCachedBulk(metricsKey, snapshotGeneration);
 
     const data =
       typeof structuredClone === "function"
