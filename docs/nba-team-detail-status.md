@@ -28,6 +28,7 @@ useNbaTeamDetailLiveOverlay()
 | セクション | 状態 |
 |---|---|
 | Hero · INJURIES · METRICS · HOW THEY PLAY · Form/Logs/H2H/Upcoming | ✅ API |
+| **POINTS ALLOWED BY POSITION** | ✅ PERFORMANCE METRICS の直下 · G / F / C の 1 試合失点・リーグ平均・差・順位（PTS のみ表示。REB/AST/3PM はデータのみ）· team-game-log 明細 doc の `positionDefense` |
 | SPLITS HOME/AWAY · VS E/W | ✅ team-game-log |
 | **VS .500+ / SUB-.500** | ✅ team-season-records（**日次 ingest**） |
 | PAYROLL · ROSTER | ✅ Active+Dead キャップ総額順位 · curated dead（例: ATL Carter）· E10 $0 |
@@ -60,6 +61,7 @@ useNbaTeamDetailLiveOverlay()
 
 | 日付 | 内容 |
 |---|---|
+| 2026-11-07 | POINTS ALLOWED BY POSITION（G / F / C 3 区分・ユーザー確定）追加 |
 | 2026-09-28 | OFFSEASON MOVES（IN / OUT）追加 · `nbaTeamOffseasonMoves` / `nbaPlayerSeasonFinalTeams` |
 | 2026-09-24 | PAYROLL: キャップ総額（Active+Dead）順位 · デッドマネー枠 · curated E10 |
 | 2026-09-24 | TEAM INFORMATION を ROSTER 下に追加（静的フランチャイズ · カラーは四角ブロック） |
