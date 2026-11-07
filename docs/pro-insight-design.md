@@ -201,7 +201,7 @@ npx tsx scripts/ingest-nba-team-ace-out-records.ts 2025-26 --force
 - 材料シート（`buildPreviewOutlookSheet`・`lib/nba/insights/proInsightLlm/previewOutlook.ts`）: 上の分析 + MATCHUP 表（順位・欠場注記）、MATCHUP / SCHEDULE / CONTEXT / INJURY IMPACT の hintEn、Difficulty（会場込み・欠場込み）、連戦 2 日目のチーム、前回の対戦・前の試合の事実文（`previewTemplate.ts` の en。表示には使わない）
 - 前回の対戦・前の試合の事実: `games`（2 チーム一致・終了・プレシーズン除く）+ `liveStats.box`。box が無い過去季は `nbaPlayerGameLogs/{season}` の `gameId` 一致行（無ければスコア・日付・対戦成績だけ）
 - LLM: Chat 1 回で **ja / en だけ**（ほかの言語は表示側が en にフォールバック。出力が費用の大半のため。1 回 約 0.02 ドル）。モデル `OPENAI_PRO_INSIGHT_PREVIEW_MODEL`、既定 `gpt-4.1`。本文の Batch とは別。`writeNarrative` の保存直前に生成（Batch poll / 1h 前 patch / sync すべて）。poll は保存を並列化
-- 長さ: 4 段落・各 2〜4 文・ja 1 段落 110〜180 字程度・数字は 1 段落 4 つまで（2026-11-08 に短くしたが、ユーザー判断で元の量に戻した）
+- 長さ: 4 段落・各 2〜3 文・ja 1 段落 100〜150 字程度（2 段落目だけ 180 字まで・選手は 2〜3 人）・数字は 1 段落 4 つまで。全体 600 字前後（2026-11-08 ユーザー確定。90〜130 字は短すぎ、110〜180 字は長すぎ）
 - ja の選手名はシートの形（「A.Edwards」）だけ。カタカナ・姓だけは禁止（表記が揃わず色付けも外れる）
 - 生成タイミング: 20:00 の定時と、試合 1 時間前に injury 指紋が変わったときだけ。ルール変更後の手動作り直しは 1 試合で確認してから残り
 - PREVIEW がある試合は CONTEXT の枠を出さない（材料は PREVIEW のシートに入っている）
