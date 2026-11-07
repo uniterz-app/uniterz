@@ -1,15 +1,15 @@
 /**
  * ダーク前提で書かれた色リテラルをライト（シアンミスト地）用に写す。
  *
- * - 背景級の黒 → `LIGHT_THEME_BG`（#E6F0F0）
- * - 少し明るい面（カード）→ 白寄り
+ * - 背景級の黒 → `LIGHT_THEME_BG`（#DCE5E5）
+ * - 少し明るい面（カード）→ 背景より一段明るい薄グレー（真っ白にはしない。まぶしさ対策）
  * - 白文字・明るいグレー → 墨（#122022）寄り
  * - 彩度の高いネオン → 同じ色相で暗く（白地で読める濃さ）
  *
  * アルファは保つ。OKLab で明度だけ写し、色相は変えない。
  */
 
-export const LIGHT_THEME_BG = "#E6F0F0";
+export const LIGHT_THEME_BG = "#DCE5E5";
 export const LIGHT_THEME_INK = "#122022";
 
 export type LightThemeColorRole = "shadow" | "glow" | undefined;
@@ -134,15 +134,19 @@ function lerp(a: number, b: number, t: number): number {
   return a + (b - a) * t;
 }
 
-const [BG_L, BG_A, BG_B] = rgbToOklab(0xe6, 0xf0, 0xf0);
+const [BG_L, BG_A, BG_B] = rgbToOklab(0xdc, 0xe5, 0xe5);
+/** カード等の上限。背景 0.915 から +0.04 */
+const SURFACE_MAX_L = 0.955;
+/** 中間グレー（枠線など）の起点。背景との差を旧配色と同じ 0.085 に保つ */
+const MID_SURFACE_L = 0.83;
 const [INK_L] = rgbToOklab(0x12, 0x20, 0x22);
 const MIST_HUE = Math.atan2(BG_B, BG_A);
 const MIST_CHROMA = Math.hypot(BG_A, BG_B);
 
 /** 無彩色・暗い有彩色（面）用の明度写像 */
 function mapSurfaceLightness(L: number): number {
-  if (L <= 0.3) return lerp(BG_L, 0.995, smoothstep(0.15, 0.3, L));
-  return lerp(0.86, INK_L, (L - 0.3) / 0.7);
+  if (L <= 0.3) return lerp(BG_L, SURFACE_MAX_L, smoothstep(0.15, 0.3, L));
+  return lerp(MID_SURFACE_L, INK_L, (L - 0.3) / 0.7);
 }
 
 /** 明るい有彩色（ネオン文字・アクセント）用 */
