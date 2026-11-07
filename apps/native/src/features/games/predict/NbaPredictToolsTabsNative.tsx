@@ -24,6 +24,8 @@ import { useNbaMatchupRoster } from "../../../../../../lib/nba/teamRosters/useNb
 import { useNbaMatchupInjuryReport } from "../../../../../../lib/nba/predict/useNbaMatchupInjuryReport";
 import { useNbaMatchupTeamStats } from "../../../../../../lib/nba/predict/useNbaMatchupTeamStats";
 import { useNbaMatchupProBrief } from "../../../../../../lib/nba/predict/useNbaMatchupProBrief";
+import { useNbaMatchupInsightTeaser } from "../../../../../../lib/nba/predict/useNbaMatchupInsightTeaser";
+import PredictProInsightTeaserPanelNative from "./PredictProInsightTeaserPanelNative";
 import { injuryStatusByPlayerId } from "../../../../../../lib/predict/nbaInjuryReport";
 import type { GamesLanguage } from "../gamesI18n";
 import { getGamesTexts } from "../gamesI18n";
@@ -142,6 +144,11 @@ export default function NbaPredictToolsTabsNative({
     override: brief,
     apiBaseUrl,
     enabled: insightAvailable,
+  });
+  const { teaser, loading: teaserLoading } = useNbaMatchupInsightTeaser({
+    gameId,
+    apiBaseUrl,
+    enabled: !isPro && !preseason && visited.has("insight"),
   });
   const insightUnread = useProInsightUnreadNative({
     gameId,
@@ -268,6 +275,16 @@ export default function NbaPredictToolsTabsNative({
             {tab === "insight" ? (
               preseason ? (
                 <PendingPanel text={proInsightPreseasonNotice(language)} />
+              ) : !isPro && teaser ? (
+                <PredictProInsightTeaserPanelNative
+                  teaser={teaser}
+                  language={language}
+                  homeTeamName={homeTeamName}
+                  awayTeamName={awayTeamName}
+                  onPressUpgrade={openProSubscribe}
+                />
+              ) : !isPro && teaserLoading ? (
+                <LoadingPanel label={loadingLabel} />
               ) : !isPro ? (
                 <PredictProBriefPanelNative
                   brief={null}
