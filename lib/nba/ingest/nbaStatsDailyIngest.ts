@@ -20,6 +20,10 @@ import { loadOrBuildTeamSeasonRecords } from "@/lib/nba/insights/loadPriorSeason
 import { ingestNbaTeamShapesFromGames } from "@/lib/nba/ingest/nbaTeamShapesIngest";
 import { ingestNbaTeamOffseasonMoves } from "@/lib/nba/ingest/nbaTeamOffseasonMovesIngest";
 import { ingestNbaDisciplineFromBdl } from "@/lib/nba/ingest/nbaDisciplineIngest";
+import {
+  loadNbaSeasonGameRows,
+  type NbaSeasonGameRow,
+} from "@/lib/nba/ingest/nbaSeasonGameRows";
 
 export type NbaStatsDailyIngestMode = "daily" | "heavy";
 
@@ -73,25 +77,35 @@ export async function runNbaStatsSnapshotSteps(
       ingestNbaLeagueStatsFromProvider(db, { seasonKey })
     )
   );
+  // games を読む 4 ステップで共有（失敗時は各ステップが自分で読む）
+  let seasonGames: NbaSeasonGameRow[] | undefined;
+  try {
+    seasonGames = await loadNbaSeasonGameRows(db, seasonKey);
+  } catch (e) {
+    console.error("[nba-stats-daily-ingest] season games load failed", e);
+  }
   steps.push(
     await runStep("team-game-logs", () =>
-      ingestNbaTeamGameLogsFromGames(db, { seasonKey })
+      ingestNbaTeamGameLogsFromGames(db, { seasonKey, seasonGames })
     )
   );
   steps.push(
-    await runStep("standings", () => ingestNbaStandingsFromBdl(db, { seasonKey }))
+    await runStep("standings", () =>
+      ingestNbaStandingsFromBdl(db, { seasonKey, seasonGames })
+    )
   );
   steps.push(
     await runStep("team-season-records", () =>
       loadOrBuildTeamSeasonRecords(db, seasonKey, {
         fetchFromBdlIfSparse: true,
         seasonInProgress: seasonKey === CURRENT_NBA_SEASON_KEY,
+        seasonGames,
       })
     )
   );
   steps.push(
     await runStep("team-shape-records", () =>
-      ingestNbaTeamShapesFromGames(db, { seasonKey })
+      ingestNbaTeamShapesFromGames(db, { seasonKey, seasonGames })
     )
   );
   steps.push(

@@ -20,14 +20,23 @@ import {
   writeTeamGameLogsSnapshot,
 } from "@/lib/nba/teamGameLog/loadTeamGameLog";
 import { writeTeamGameLogDetails } from "@/lib/nba/teamGameLog/loadTeamGameLogDetail";
+import {
+  loadNbaSeasonGameRows,
+  NBA_SEASON_GAME_ROWS_LIMIT,
+  type NbaSeasonGameRow,
+} from "@/lib/nba/ingest/nbaSeasonGameRows";
+
+export { loadNbaSeasonGameRows };
 import { buildTeamGameLogDetailsFromGames } from "@/lib/nba/teamGameLog/teamGameLogDetail";
 
 export const NBA_TEAM_GAME_LOGS_INGEST_READY = true;
 
 export type NbaTeamGameLogsIngestInput = {
   seasonKey?: string;
-  /** 既定 1500 */
+  /** 既定 NBA_SEASON_GAME_ROWS_LIMIT */
   limit?: number;
+  /** 日次 / 試合後監視が読み済みのシーズン games（渡せば読み直さない） */
+  seasonGames?: NbaSeasonGameRow[];
 };
 
 export type NbaTeamGameLogsIngestResult = {
@@ -38,25 +47,6 @@ export type NbaTeamGameLogsIngestResult = {
   teamCount: number;
 };
 
-export async function loadNbaSeasonGameRows(
-  db: Firestore,
-  season: string,
-  limit: number
-): Promise<Array<Record<string, unknown> & { id: string }>> {
-  const snap = await db
-    .collection("games")
-    .where("league", "==", "nba")
-    .where("season", "==", season)
-    .orderBy("startAtJst", "asc")
-    .limit(limit)
-    .get();
-
-  return snap.docs.map((d) => ({
-    id: d.id,
-    ...(d.data() as Record<string, unknown>),
-  }));
-}
-
 export async function ingestNbaTeamGameLogsFromGames(
   db: Firestore,
   input: NbaTeamGameLogsIngestInput = {}
@@ -65,9 +55,13 @@ export async function ingestNbaTeamGameLogsFromGames(
     input.seasonKey ?? CURRENT_NBA_SEASON_KEY
   );
   const seasonYear = bdlSeasonYearFromSeasonKey(seasonKey);
-  const limit = Math.min(2000, Math.max(1, input.limit ?? 1500));
+  const limit = Math.min(
+    NBA_SEASON_GAME_ROWS_LIMIT,
+    Math.max(1, input.limit ?? NBA_SEASON_GAME_ROWS_LIMIT)
+  );
 
-  const rows = await loadNbaSeasonGameRows(db, seasonKey, limit);
+  const rows =
+    input.seasonGames ?? (await loadNbaSeasonGameRows(db, seasonKey, limit));
   const priorSeasonRows = (
     await loadLeagueTeamStatsSnapshot(db, previousNbaSeasonKey(seasonKey))
   ).bundle.season;

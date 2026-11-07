@@ -4,9 +4,12 @@
 import type { Firestore } from "firebase-admin/firestore";
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
 import { buildAndWriteTeamShapeRecordsFromGames } from "@/lib/nba/teamShapes/loadTeamShapeRecords";
+import type { NbaSeasonGameRow } from "@/lib/nba/ingest/nbaSeasonGameRows";
 
 export type NbaTeamShapesIngestInput = {
   seasonKey?: string;
+  /** 読み済みのシーズン games（渡せば読み直さない） */
+  seasonGames?: NbaSeasonGameRow[];
 };
 
 export type NbaTeamShapesIngestResult = {
@@ -23,7 +26,11 @@ export async function ingestNbaTeamShapesFromGames(
   input: NbaTeamShapesIngestInput = {}
 ): Promise<NbaTeamShapesIngestResult> {
   const seasonKey = (input.seasonKey ?? CURRENT_NBA_SEASON_KEY).trim();
-  const bundle = await buildAndWriteTeamShapeRecordsFromGames(db, seasonKey);
+  const bundle = await buildAndWriteTeamShapeRecordsFromGames(
+    db,
+    seasonKey,
+    input.seasonGames
+  );
   return {
     ok: true,
     seasonKey: bundle.seasonKey,
