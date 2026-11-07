@@ -25,6 +25,8 @@ export type ProInsightGateCopy = {
   body: string;
   bullets: readonly ProInsightGateBullet[];
   cta: string;
+  /** Native: 無料トライアル誘導のボタン文言 */
+  trialCta: string;
   /** ゲート下に出す実画面サンプルの見出し */
   exampleLabel: string;
   proMemberAria: string;
@@ -163,6 +165,15 @@ export function proInsightGateCopy(
       },
     ],
     cta: "Explore Pro",
+    trialCta: L(lang, {
+      ja: "7日無料で試す",
+      en: "Try 7 days free",
+      ko: "7일 무료 체험",
+      zh: "免费试用 7 天",
+      es: "Prueba 7 días gratis",
+      pt: "Teste 7 dias grátis",
+      fr: "Essai gratuit 7 jours",
+    }),
     exampleLabel: L(lang, {
       ja: "表示イメージ（例）",
       en: "What it looks like (example)",
@@ -180,6 +191,54 @@ export function proInsightGateCopy(
       es: "Miembro Pro",
       pt: "Membro Pro",
       fr: "Membre Pro",
+    }),
+  };
+}
+
+/** Free 向け PREVIEW チラ見せの下のロック枠 */
+export function proInsightTeaserCopy(language: string | null | undefined): {
+  title: string;
+  body: string;
+  cta: string;
+  note: string;
+} {
+  const lang = resolveLocalizedLang(language);
+  return {
+    title: L(lang, {
+      ja: "続きは PRO で",
+      en: "Read the rest with Pro",
+      ko: "나머지는 PRO에서",
+      zh: "后续内容请升级 PRO",
+      es: "Lee el resto con Pro",
+      pt: "Leia o resto com o Pro",
+      fr: "La suite avec Pro",
+    }),
+    body: L(lang, {
+      ja: "狙い目の選手、ディフィカルティと条件、前回対戦からの注目点まで。MATCHUP・SCHEDULE・CONTEXT・PLAYERS もすべて読めます。",
+      en: "Players to target, difficulty and conditions, and what to watch from the last meeting — plus the full MATCHUP, SCHEDULE, CONTEXT and PLAYERS.",
+      ko: "노릴 만한 선수, 난이도와 조건, 지난 맞대결에서 볼 포인트까지. MATCHUP·SCHEDULE·CONTEXT·PLAYERS도 모두 볼 수 있습니다.",
+      zh: "值得关注的球员、比赛难度与条件、上次交手后的看点，以及完整的 MATCHUP、SCHEDULE、CONTEXT、PLAYERS。",
+      es: "Jugadores a seguir, dificultad y condiciones, y qué mirar del último duelo — además de MATCHUP, SCHEDULE, CONTEXT y PLAYERS completos.",
+      pt: "Jogadores para ficar de olho, dificuldade e condições, e o que observar do último confronto — além de MATCHUP, SCHEDULE, CONTEXT e PLAYERS completos.",
+      fr: "Joueurs à suivre, difficulté et conditions, ce qu’il faut retenir du dernier duel — plus MATCHUP, SCHEDULE, CONTEXT et PLAYERS en entier.",
+    }),
+    cta: L(lang, {
+      ja: "7日無料で続きを読む",
+      en: "Read on — 7 days free",
+      ko: "7일 무료로 계속 읽기",
+      zh: "免费试用 7 天继续阅读",
+      es: "Sigue leyendo — 7 días gratis",
+      pt: "Continue lendo — 7 dias grátis",
+      fr: "Lire la suite — 7 jours gratuits",
+    }),
+    note: L(lang, {
+      ja: "Weekly / Monthly は初回 7 日無料。期間中に解約すれば料金はかかりません。",
+      en: "Weekly / Monthly: first 7 days free. Cancel during the trial and you won't be charged.",
+      ko: "Weekly / Monthly는 첫 7일 무료. 기간 내 해지하면 요금이 청구되지 않습니다.",
+      zh: "Weekly / Monthly 首次 7 天免费，试用期内取消不收费。",
+      es: "Weekly / Monthly: primeros 7 días gratis. Si cancelas durante la prueba, no se cobra.",
+      pt: "Weekly / Monthly: primeiros 7 dias grátis. Cancele durante o teste e não será cobrado.",
+      fr: "Weekly / Monthly : 7 premiers jours offerts. Annulez pendant l’essai, rien n’est facturé.",
     }),
   };
 }
