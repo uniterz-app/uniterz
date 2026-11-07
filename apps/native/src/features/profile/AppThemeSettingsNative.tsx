@@ -79,7 +79,7 @@ export default function AppThemeSettingsNative() {
               <View
                 style={[
                   styles.swatch,
-                  { backgroundColor: o.mode === "dark" ? rawColor("#070708") : rawColor("#E6F0F0") },
+                  { backgroundColor: o.mode === "dark" ? rawColor("#070708") : rawColor("#DCE5E5") },
                 ]}
               >
                 <Text
