@@ -21,6 +21,7 @@ import { proInsightTeamAbbr } from "@/lib/nba/insights/proInsightFacts/teamAbbr"
 import type { ProInsightFact } from "@/lib/nba/insights/proInsightFacts/types";
 import type { ProBriefPhase } from "@/lib/predict/predictProBrief";
 import type { NbaTeamShapeRecordsBundle } from "@/lib/nba/teamShapes/teamShapeTypes";
+import type { TeamShapeId } from "@/lib/nba/teamShapes/shapeDefs";
 import {
   formatShapeEdgeHintEn,
   selectTeamShapeEdges,
@@ -806,22 +807,100 @@ function sideFacts(input: {
   facts.push(
     ...shapeEdgeFacts({
       teamId: input.teamId,
+      opponentTeamId: input.opponentTeamId,
+      seasonRows: input.seasonRows,
       shapeRecords: input.shapeRecords,
     })
   );
   return facts;
 }
 
+/**
+ * 形の条件が今夜起きやすいかを、条件を左右するチームのシーズン値の順位で見る。
+ * likelyWhenHigh = 値が大きいほど条件を満たしやすい。likely は今夜の相手を言葉で添える。
+ */
+const SHAPE_TONIGHT: Partial<
+  Record<
+    TeamShapeId,
+    { side: "opp" | "self"; key: keyof NbaLeagueTeamStatRow; likelyWhenHigh: boolean; likely: (team: string) => string }
+  >
+> = {
+  opp_efg_le_52: { side: "opp", key: "efgPct", likelyWhenHigh: false, likely: (t) => `${t} are among the league's least efficient shooting teams` },
+  opp_tov_ge_15: { side: "opp", key: "tovPct", likelyWhenHigh: true, likely: (t) => `${t} are among the league's most turnover-prone teams` },
+  opp_ortg_le_110_dreb_high: { side: "opp", key: "ortg", likelyWhenHigh: false, likely: (t) => `${t} have one of the league's weaker offenses` },
+  tov_le_10: { side: "opp", key: "oppTov", likelyWhenHigh: false, likely: (t) => `${t} rarely force turnovers` },
+  fg3m_15: { side: "opp", key: "oppFg3Pct", likelyWhenHigh: true, likely: (t) => `${t} allow a high opponent 3P%` },
+  fta_25: { side: "opp", key: "drtg", likelyWhenHigh: true, likely: (t) => `${t} have one of the league's weaker defenses` },
+  ast_28: { side: "opp", key: "drtg", likelyWhenHigh: true, likely: (t) => `${t} have one of the league's weaker defenses` },
+  ortg_ge_118: { side: "opp", key: "drtg", likelyWhenHigh: true, likely: (t) => `${t} have one of the league's weaker defenses` },
+  ortg_vs_self_plus5: { side: "opp", key: "drtg", likelyWhenHigh: true, likely: (t) => `${t} have one of the league's weaker defenses` },
+  pts_vs_opp_papg_plus8: { side: "opp", key: "drtg", likelyWhenHigh: true, likely: (t) => `${t} have one of the league's weaker defenses` },
+};
+
+const SHAPE_TIER_SIZE = 10;
+
+/**
+ * 苦手形に出してよい形。ほかの形は条件そのものが良いこと（3P 15 本・FT 25 本…）で、
+ * 「それが起きると負ける」は終盤のファウルゲーム等の偏りで、読み手には意味が通らない。
+ */
+const SHAPE_WEAKNESS_OK = new Set<TeamShapeId>(["margin_abs_le_5", "total_pts_lt_220"]);
+
+function shapeTonight(
+  shapeId: TeamShapeId,
+  teamId: string,
+  opponentTeamId: string,
+  seasonRows: NbaLeagueTeamStatRow[]
+): { lean: "likely" | "unlikely" | "open"; reason: string | null } {
+  const def = SHAPE_TONIGHT[shapeId];
+  if (!def) return { lean: "open", reason: null };
+  const subject = def.side === "opp" ? opponentTeamId : teamId;
+  const rows = seasonRows.filter((r) => {
+    const v = r[def.key];
+    return typeof v === "number" && Number.isFinite(v) && v > 0;
+  });
+  const row = rows.find((r) => r.teamId === subject);
+  if (!row || rows.length < SHAPE_TIER_SIZE * 2) return { lean: "open", reason: null };
+  const v = row[def.key] as number;
+  const rank =
+    1 +
+    rows.filter((r) => {
+      const o = r[def.key] as number;
+      return def.likelyWhenHigh ? o > v : o < v;
+    }).length;
+  if (rank <= SHAPE_TIER_SIZE) return { lean: "likely", reason: def.likely(abbr(subject)) };
+  if (rank > rows.length - SHAPE_TIER_SIZE) return { lean: "unlikely", reason: null };
+  return { lean: "open", reason: null };
+}
+
 function shapeEdgeFacts(input: {
   teamId: string;
+  opponentTeamId: string;
+  seasonRows: NbaLeagueTeamStatRow[];
   shapeRecords: NbaTeamShapeRecordsBundle | null | undefined;
 }): ProInsightFact[] {
   const rec = input.shapeRecords?.teams?.[input.teamId];
   if (!rec) return [];
-  const edges = selectTeamShapeEdges(rec, { surface: "context" });
+  // 下のゲートで落ちる分を見込んで多めに取り、通ったものから得意 2・苦手 1
+  const edges = selectTeamShapeEdges(rec, { surface: "context", maxStrengths: 8, maxWeaknesses: 8 });
   const nick = abbr(input.teamId);
   const out: ProInsightFact[] = [];
+  const kept = { strength: 0, weakness: 0 };
   for (const edge of edges) {
+    if (kept[edge.kind] >= (edge.kind === "strength" ? 2 : 1)) continue;
+    // 「シーズンより良い」だけだと負け越しチームの 3-3 が得意になる。得意は勝ち越し・苦手は負け越しだけ
+    const { wins, losses } = edge.split.when;
+    if (edge.kind === "strength" ? wins <= losses : wins >= losses) continue;
+    if (edge.kind === "weakness" && !SHAPE_WEAKNESS_OK.has(edge.def.id)) continue;
+    // 今夜の相手だと条件が起きにくい形は今夜の材料にならない
+    const tonight = shapeTonight(edge.def.id, input.teamId, input.opponentTeamId, input.seasonRows);
+    if (tonight.lean === "unlikely") continue;
+    kept[edge.kind] += 1;
+    const read =
+      tonight.lean === "likely"
+        ? edge.kind === "strength"
+          ? `Tonight: ${tonight.reason}, so this shape is likely — edge ${nick}.`
+          : `Tonight: ${tonight.reason}, so this shape is likely — a warning sign for ${nick}.`
+        : `Tonight: no lean — the watch point is whether ${nick} ${edge.kind === "strength" ? "can get" : "can avoid"} ${edge.def.condition.en} tonight.`;
     const pp = Math.round(edge.split.deltaWinPct * 100);
     const score =
       edge.kind === "strength"
@@ -855,7 +934,7 @@ function shapeEdgeFacts(input: {
       players: [],
       mode: edge.kind === "strength" ? "strength" : "weakening",
       dedupeKeys: [`shape_edge:${input.teamId}:${edge.def.id}`],
-      hintEn: `${nick}: ${formatShapeEdgeHintEn(edge)}`,
+      hintEn: `${nick}: ${formatShapeEdgeHintEn(edge)} ${read}`,
     });
   }
   return out;

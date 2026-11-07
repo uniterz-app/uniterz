@@ -94,6 +94,9 @@ CONTEXT:
 - If phase is "opening", frame numbers as prior-season context and lean on "weight" reads (last season's team, soft signal) rather than confident tilts — unless the record is lopsided.
 - If phase is "early" (each team has played only gamesPlayed games this season): records / H2H / vs-band facts are prior-season context (same framing as opening). Any this-season form fact (SOS, streaks, margin, last-10 tilt) is a tiny sample — frame it as a light signal (JA 「まだ数試合だが」「参考程度」), never as an established trend.
 - Do not dump a bare W–L with no reading. Prefer streak quality / venue streak wording from hintEn.
+- SHAPE_STRENGTH / SHAPE_WEAKNESS (conditional W–L "When …"): the "Tonight:" clause of hintEn decides beat 2 — follow it exactly. "edge X" → tilt to X; "a warning sign for X" → against X; "no lean" → watch-point only: say what X needs to make happen (or avoid) tonight. With "no lean", never say the condition is likely or possible tonight and never call it 有利 / an edge for anyone. Say nothing about tonight's opponent beyond the Tonight clause. Name the concrete condition in plain words (JA 「相手のターンオーバーを 15 以上に増やせるか」) — never 「この形」 / "this shape".
+  - JA bad (no lean): 「PACERS は相手の eFG% が 52% 以下の時 3-3。今夜は NUGGETS の攻撃を抑えられる可能性があり、PACERS に有利な構図。」
+  - JA good (no lean): 「PACERS は相手の eFG% を 52% 以下に抑えた試合で 4-1。NUGGETS のシュート効率を落とせるかが PACERS の分かれ目。」
 - Prefer empty section over a generic "struggled" line that does not involve tonight's opponent.
 - Do not invent next-opponent toughness, returns, or debuts unless a fact is present.
 

@@ -199,6 +199,15 @@ MATCHUP は文章にせず、**攻め × 相手の守りの順位差が大きい
 
 `multi_year_h2h` は **本文をコードで決める**（`templateBody`。LLM に渡さない）。必ずホームの主語を書く（`PISTONS のホームでは 3-2`）。つなぎは勝敗の符号で決める: 通算と同じ向き → 「〜のホームでも」、五分 → 「ただ〜のホームでは 3-3 の五分」、逆向き → 「ただ〜のホームでは 3-2 と勝ち越し」。締めは通算の向き（`相性は {TEAM} 寄り` / 五分なら「どちらにも傾かず、今夜は他の要素で決まりやすい」）。対戦 2 試合以上ある直近季の向きが通算と逆なら「相性は CELTICS 寄りだが、25-26シーズンは PISTONS が 3-1」と直近季を添える（シーズン別は extras の `h2hBySeason`。ingest で作り直した doc にだけある）。
 
+### 得意形・苦手形（`shape_strength` / `shape_weakness`）
+
+`nbaTeamShapeRecords` の条件付き W–L（`buildContextFacts.ts` の `shapeEdgeFacts`）。シーズン勝率との差だけで選ぶと負け越しチームの 3-3 が「得意」になり、PREVIEW と逆の読みを書くため、次のゲートを通ったものだけ（得意 2・苦手 1）:
+
+- 得意は勝ち越し（W > L）、苦手は負け越し（W < L）だけ
+- 苦手は接戦（点差 5 以内）とロースコア（合計 220 未満）だけ。ほかの形は条件そのものが良いこと（3P 15 本・FT 25 本…）で「起きると負ける」は終盤のファウルゲーム等の偏り
+- 今夜起きやすいか: 条件を左右するチームのシーズン値の 30 チーム順位（相手 eFG% → 今夜の相手の eFG%、相手 TO → 相手の TOV%、自分の TO → 相手の強制 TO、3P 15 本 → 相手の被 3P%、FT / AST / ORtg 系 → 相手の DRtg）。上位 10（起きやすい）→ hint に「Tonight: {相手の特徴}, so this shape is likely — edge X / a warning sign for X」、下位 10（起きにくい）→ 出さない、中位・判定なし → 「Tonight: no lean — the watch point is whether X can get {条件} tonight」
+- LLM は Tonight の向きどおりに書く（no lean のとき「可能性がある」「有利」は禁止。条件を具体的に書く、「この形」は禁止）。PREVIEW のシートにも同じ hint が入り、CONTEXT と矛盾させない
+
 ### 相手の順位（開幕前・序盤）
 
 opening / early の「上位 6 相手」は前季の順位で判定する。相手の順位の数字は渡さず「25-26シーズン上位6」とだけ書く（今の順位に読めるため。`buildContextFacts.ts`）。full になったら今季の順位の数字を出す。

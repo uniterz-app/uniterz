@@ -10,7 +10,10 @@ import { INJURY_DIFFICULTY_FACT_KIND } from "@/lib/nba/matchupDifficulty/injuryD
 import { rankTier, type OutlookPos } from "@/lib/nba/insights/proInsightFacts/buildOutlookAnalysis";
 import { allowedFromText, numbersIn } from "@/lib/nba/insights/proInsightLlm/numberGuard";
 import { isOpenAiConfigured, openAiChatCompletionJson } from "@/lib/openai/openaiBatch";
-import type { ProInsightNarrativeBrief } from "@/lib/predict/proInsightNarrativeTypes";
+import type {
+  ProInsightNarrativeBrief,
+  ProInsightPreviewName,
+} from "@/lib/predict/proInsightNarrativeTypes";
 
 const LANGS = ["ja", "en", "ko", "zh", "es", "pt", "fr", "de", "ar"] as const;
 const PREVIEW_THIRD_ATTEMPT_BUDGET_MS = 100_000;
@@ -172,6 +175,7 @@ Reading the sheet:
 - styleEdges[]: favors = the team the area leans to; why = the reason, always written with the team that OWNS each strength / weakness as the subject. teams[].styleStrengths / styleWeaknesses repeat the same lines under the owning team. A weakness belongs only to the team it is listed under — never move it to the other team (e.g. "PACERS give up a lot of second-chance points" must never become "NUGGETS give up second-chance points"). When why says a team is average in that area, do not describe that team's side at all (no "weak", "vulnerable", "struggles", "脆弱", "弱さ", "苦しむ"). League #1 = best; for "Opp …" metrics #1 = allows the least.
 - Meanings: Paint PTS = scoring at the rim/inside; Opp paint PTS = interior defense. 2nd-chance PTS / OREB% = offensive rebounding; Opp 2nd-chance PTS / Opp OREB% = DEFENSIVE REBOUNDING (boxing out), NOT rim protection. TOV% = ball security (lower is better); Forced TO / Opp TOV = forcing turnovers. PTS off TO = scoring off the other team's turnovers (transition). Fast break PTS = transition. 3PM/3PA/3P% = perimeter shooting; Opp 3P… = perimeter defense. FTA rate = getting to the line.
 - injuryNotes / injuries / teams[].absences / difficulty.ownOut name tonight's absences. Never write that a team has no absences or no major absences (no "full strength", 「大きな離脱はない」「主力の離脱はない」) — if a team has none listed, say nothing about its health.
+- context[] lines are shown to the fan right below your preview. Never contradict them; when a line has a "Tonight:" clause, any mention of it must keep that lean (no lean = do not tilt it).
 - Tie a style (drives, rim pressure, threes, rebounding) to a player ONLY when the sheet ties that player to it. Players named only in lastMeeting / lastGames are evidence of what happened, not of how they play.
 
 Rules:
@@ -185,8 +189,15 @@ Rules:
 - Banned filler: JA 「注目の一戦」「見逃せない」「期待される」「鍵になる」(without saying what), EN "it will be interesting", "only time will tell", "a must-watch".
 - Write the same content, natural and native, in ja, en, ko, zh, es, pt, fr, de, ar.
 
+Headlines ("heads"): one per paragraph, same order. The takeaway of that paragraph, so a fan who reads only the 4 headlines gets the whole read.
+- JA 10〜22 字、句点なし、体言止めか短い言い切り（例 「NUGGETS のインサイド守備が狙われる」「N.Jokic はペイントで大きな夜に」）。EN at most 8 words, no period.
+- NO digits. Names and nicknames exactly as in the paragraph. Only what the paragraph says — no new claims, no winner.
+- Do not restate the paragraph's role ("Game shape", 「試合の形」「見どころ」) — the app prints that label itself.
+- Headline 2 names the player(s) set up for a big night; headline 4 names the watch point.
+
 Output shape:
-{ "paragraphs": { "ja": ["p1", "p2", "p3", "p4"], "en": [...], "ko": [...], "zh": [...], "es": [...], "pt": [...], "fr": [...], "de": [...], "ar": [...] } }`;
+{ "paragraphs": { "ja": ["p1", "p2", "p3", "p4"], "en": [...], "ko": [...], "zh": [...], "es": [...], "pt": [...], "fr": [...], "de": [...], "ar": [...] },
+  "heads": { "ja": ["h1", "h2", "h3", "h4"], "en": [...], "ko": [...], "zh": [...], "es": [...], "pt": [...], "fr": [...], "de": [...], "ar": [...] } }`;
 
 function allowedNumbersFromSheet(sheet: Record<string, unknown>): Set<string> {
   const text = JSON.stringify(sheet);
@@ -289,19 +300,41 @@ function stripSentences(text: string, sentences: string[]): string {
     .join("\n");
 }
 
+/** 見出しは段落と同数・数字なし・短いものだけ。崩れていたらその言語は見出しなし */
+function headsOf(raw: unknown, count: number, lang: (typeof LANGS)[number]): string | null {
+  if (!Array.isArray(raw)) return null;
+  const heads = raw
+    .filter((h): h is string => typeof h === "string")
+    .map((h) => h.trim().replace(/[。.]+$/, ""))
+    .filter(Boolean);
+  const max = lang === "ja" || lang === "zh" || lang === "ko" ? 30 : 90;
+  if (heads.length !== count || heads.some((h) => /\d/.test(h) || h.length > max)) return null;
+  const joined = heads.join("\n");
+  if (NO_ABSENCE_CLAIM[lang]?.test(joined)) return null;
+  return joined;
+}
+
 function parseOutlook(
   content: string,
   allowed: Set<string>,
   facts: PosDefense
-): { text: Partial<UiStrings>; bad: string[]; filler: string[]; wrongPos: Partial<Record<"ja" | "en", string[]>> } {
+): {
+  text: Partial<UiStrings>;
+  heads: Partial<UiStrings>;
+  bad: string[];
+  filler: string[];
+  wrongPos: Partial<Record<"ja" | "en", string[]>>;
+} {
   let parsed: unknown;
   try {
     parsed = JSON.parse(content);
   } catch {
-    return { text: {}, bad: [...LANGS], filler: [], wrongPos: {} };
+    return { text: {}, heads: {}, bad: [...LANGS], filler: [], wrongPos: {} };
   }
   const byLang = (parsed as { paragraphs?: Record<string, unknown> })?.paragraphs ?? {};
+  const headsByLang = (parsed as { heads?: Record<string, unknown> })?.heads ?? {};
   const text: Partial<UiStrings> = {};
+  const heads: Partial<UiStrings> = {};
   const bad: string[] = [];
   const filler: string[] = [];
   const wrongPos: Partial<Record<"ja" | "en", string[]>> = {};
@@ -321,19 +354,34 @@ function parseOutlook(
       if (wrong.length) wrongPos[lang] = wrong;
     }
     text[lang] = joined;
+    const h = headsOf(headsByLang[lang], paras!.length, lang);
+    if (h) heads[lang] = h;
   }
-  return { text, bad, filler, wrongPos };
+  return { text, heads, bad, filler, wrongPos };
 }
 
-export async function generatePreviewOutlook(pack: ProInsightFactPack): Promise<UiStrings | null> {
+export type PreviewOutlookResult = { preview: UiStrings; heads: UiStrings | null };
+
+/** 本文が en で代用された言語は見出しも en。ja / en の見出しが無ければ見出しごと無し */
+function headsFor(text: Partial<UiStrings>, heads: Partial<UiStrings>): UiStrings | null {
+  if (!heads.ja || !heads.en) return null;
+  const out = { ja: heads.ja, en: heads.en } as UiStrings;
+  for (const lang of LANGS) {
+    const h = text[lang] ? heads[lang] : heads.en;
+    if (h) (out as Record<string, string>)[lang] = h;
+  }
+  return out;
+}
+
+export async function generatePreviewOutlook(pack: ProInsightFactPack): Promise<PreviewOutlookResult | null> {
   const sheet = buildPreviewOutlookSheet(pack);
   if (!sheet || !isOpenAiConfigured()) return null;
   const allowed = allowedNumbersFromSheet(sheet);
   const facts = positionDefenseOf(pack);
   const startedAt = Date.now();
   let rejected: string[] = [];
-  let fallback: UiStrings | null = null;
-  let stripped: UiStrings | null = null;
+  let fallback: PreviewOutlookResult | null = null;
+  let stripped: PreviewOutlookResult | null = null;
   for (let attempt = 0; attempt < 3; attempt++) {
     // 3 回目は取り込みの時間制限（300 秒・並列）に収まるときだけ
     if (attempt === 2 && Date.now() - startedAt > PREVIEW_THIRD_ATTEMPT_BUDGET_MS) break;
@@ -360,7 +408,7 @@ export async function generatePreviewOutlook(pack: ProInsightFactPack): Promise<
       console.warn("[pro-insight] preview outlook failed", e instanceof Error ? e.message : e);
       return null;
     }
-    const { text, bad, filler, wrongPos } = parseOutlook(content, allowed, facts);
+    const { text, heads, bad, filler, wrongPos } = parseOutlook(content, allowed, facts);
     const wrongList = [...(wrongPos.ja ?? []), ...(wrongPos.en ?? [])];
     if (bad.length) console.warn(`[pro-insight] preview outlook dropped: ${bad.join(" ")}`);
     if (filler.length) console.warn(`[pro-insight] preview outlook filler: ${filler.join(" ")}`);
@@ -369,21 +417,47 @@ export async function generatePreviewOutlook(pack: ProInsightFactPack): Promise<
     if (!text.ja || !text.en) continue;
     const out = { ja: text.ja, en: text.en } as UiStrings;
     for (const lang of LANGS) (out as Record<string, string>)[lang] = text[lang] ?? text.en;
+    const outHeads = headsFor(text, heads);
     if (wrongList.length) {
-      // 最後まで直らなければ誤りの文だけ削る。未チェックの言語は削った en で代用
+      // 最後まで直らなければ誤りの文だけ削る。未チェックの言語は削った en で代用。段落が消えたら見出しはずれるので表示側が捨てる
       const en = stripSentences(text.en, wrongPos.en ?? []);
       const s = { ja: stripSentences(text.ja, wrongPos.ja ?? []), en } as UiStrings;
       for (const lang of LANGS) if (lang !== "ja") (s as Record<string, string>)[lang] = en;
-      stripped = s;
+      const h = outHeads ? ({ ja: outHeads.ja, en: outHeads.en } as UiStrings) : null;
+      if (h) for (const lang of LANGS) if (lang !== "ja") (h as Record<string, string>)[lang] = outHeads!.en;
+      stripped = { preview: s, heads: h };
       continue;
     }
     if (filler.some((f) => f.startsWith("ja(") || f.startsWith("en("))) {
-      fallback = out;
+      fallback = { preview: out, heads: outHeads };
       continue;
     }
-    return out;
+    return { preview: out, heads: outHeads };
   }
   return fallback ?? stripped;
+}
+
+/** 本文で色を付ける選手（主力・欠場者）。名前は シートと同じ "N.Jokic" 形式 */
+function previewNamesOf(pack: ProInsightFactPack): ProInsightPreviewName[] {
+  const idByAbbr = new Map(
+    [pack.homeTeamId, pack.awayTeamId].map((id) => [proInsightTeamAbbr(id), id] as const)
+  );
+  const out: ProInsightPreviewName[] = [];
+  const seen = new Set<string>();
+  for (const t of pack.preview?.analysis?.teams ?? []) {
+    const teamId = idByAbbr.get(t.team);
+    if (!teamId) continue;
+    const names = [
+      ...t.keyPlayers.map((p) => p.name),
+      ...t.absences.map((a) => /^([A-Z][^\s,]*\.[^\s,]+)/.exec(a)?.[1] ?? ""),
+    ];
+    for (const name of names) {
+      if (!name || seen.has(name)) continue;
+      seen.add(name);
+      out.push({ name, teamId });
+    }
+  }
+  return out;
 }
 
 /** ピックアップ（pack.preview あり）だけ展望を付ける。それ以外は preview を外す */
@@ -391,8 +465,15 @@ export async function withPreviewOutlook(
   brief: ProInsightNarrativeBrief,
   pack: ProInsightFactPack
 ): Promise<ProInsightNarrativeBrief> {
-  const { preview: _old, ...rest } = brief;
+  const { preview: _old, previewHeads: _oldHeads, previewNames: _oldNames, ...rest } = brief;
   if (!pack.preview) return rest;
-  const preview = await generatePreviewOutlook(pack);
-  return preview ? { ...rest, preview } : rest;
+  const result = await generatePreviewOutlook(pack);
+  if (!result) return rest;
+  const names = previewNamesOf(pack);
+  return {
+    ...rest,
+    preview: result.preview,
+    ...(result.heads ? { previewHeads: result.heads } : {}),
+    ...(names.length ? { previewNames: names } : {}),
+  };
 }
