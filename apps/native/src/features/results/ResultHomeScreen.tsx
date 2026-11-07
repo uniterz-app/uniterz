@@ -53,7 +53,7 @@ import {
 import { resolveTeamJerseyPalette, resolveTeamPrimaryColor } from "../games/teamColors";
 import { toCompactTeamName } from "../games/gameCardDisplayUtils";
 import type { PostWithMillis, ResultDayGroup } from "./nativeResultModel";
-import { canDismissResultListPostNow, mergeResultDayPostsByKickoff } from "./nativeResultModel";
+import { canDismissResultListPostNow, mergeResultDayPosts } from "./nativeResultModel";
 import ResultListFiltersNative, {
   type ResultFilterState,
 } from "./ResultListFiltersNative";
@@ -390,7 +390,7 @@ export default function ResultHomeScreen({
   const sections: SectionT[] = useMemo(() => {
     let baseFlatIndex = 0;
     return filteredGrouped.map((g: ResultDayGroup) => {
-      const data = mergeResultDayPostsByKickoff(g);
+      const data = mergeResultDayPosts(g);
       const section: SectionT = {
         title: g.dateLabel,
         dateLabel: g.dateLabel,
