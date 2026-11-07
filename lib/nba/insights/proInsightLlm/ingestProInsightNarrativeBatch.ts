@@ -92,7 +92,7 @@ import { buildLongTermOutImpacts } from "@/lib/nba/insights/proInsightFacts/buil
 import type { NbaInjuryOutImpact } from "@/lib/nba/matchupDifficulty/injuryAdjustedDifficulty";
 import { withInjuryFixups } from "@/lib/nba/insights/proInsightLlm/injuryNarrativeFixups";
 import { withNumberGuard } from "@/lib/nba/insights/proInsightLlm/numberGuard";
-import { withPreview } from "@/lib/nba/insights/proInsightLlm/previewNarrative";
+import { withPreviewOutlook } from "@/lib/nba/insights/proInsightLlm/previewOutlook";
 import { rewriteThisSeasonLabels } from "@/lib/nba/insights/proInsightLlm/rewriteThisSeasonLabels";
 import {
   listPendingProInsightBatchJobs,
@@ -631,7 +631,7 @@ async function writeNarrative(
         difficultyFact.injuryDifficultyImpacts ?? []
       )
     : new Set<string>();
-  const finalBrief = withPreview(withTemplateScheduleDifficulty(
+  const finalBrief = await withPreviewOutlook(withTemplateScheduleDifficulty(
     withInjuryDifficultyItem(
       withNumberGuard(
         withInjuryFixups(
@@ -1429,6 +1429,7 @@ export async function pollProInsightNarrativeBatches(
       completed += 1;
       const outText = await downloadOpenAiFileText(remote.output_file_id);
       const writtenIds: string[] = [];
+      const writes: Promise<void>[] = [];
       for (const line of outText.split("\n")) {
         if (!line.trim()) continue;
         let row: {
@@ -1499,16 +1500,20 @@ export async function pollProInsightNarrativeBatches(
         const source = brief ? "openai_batch" : "fallback";
         if (!brief) brief = fallbackNarrativeFromFactPack(pack);
 
-        await writeNarrative(db, gameId, brief, {
-          fingerprint: pack.fingerprint,
-          injuryFingerprint: facts?.injuryFingerprint ?? "unknown",
-          model: job.data.model,
-          source,
-          factPack: pack,
-        });
+        // ピックアップは PREVIEW 展望の Chat を待つので並列に書く
+        writes.push(
+          writeNarrative(db, gameId, brief, {
+            fingerprint: pack.fingerprint,
+            injuryFingerprint: facts?.injuryFingerprint ?? "unknown",
+            model: job.data.model,
+            source,
+            factPack: pack,
+          })
+        );
         written += 1;
         writtenIds.push(gameId);
       }
+      await Promise.all(writes);
 
       await saveProInsightBatchJob(db, job.id, {
         ...job.data,
