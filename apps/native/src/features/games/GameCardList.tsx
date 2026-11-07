@@ -73,6 +73,10 @@ export type GameCardListProps = {
   /** `light` = 日付変更時の簡易入場（フル cyber reveal は初回・リーグ切替のみ） */
   entranceVariant?: GameCardEntranceVariant;
   predictedGameIds: Set<string>;
+  /** 自分の予想スコア。開かずに確認できるよう中央欄の下に出す（結果は出さない） */
+  myPredictionByGameId?: Readonly<
+    Record<string, { score: { home: number; away: number } } | undefined>
+  >;
   language: GamesLanguage | string;
   t: GamesTexts;
   styles: ScreenStyles;
@@ -230,6 +234,7 @@ export const GameCardListRow = memo(function GameCardListRow(props: GameCardList
     game,
     rowIndex,
     predictedGameIds,
+    myPredictionByGameId,
     t,
     styles,
     openPredictModal,
@@ -281,6 +286,9 @@ export const GameCardListRow = memo(function GameCardListRow(props: GameCardList
   const reduceMotion = useReducedMotion() ?? false;
   const gameId = String(game.id ?? "");
   const isPredicted = predictedGameIds.has(gameId);
+  const myPredictedScore = isPredicted
+    ? myPredictionByGameId?.[gameId]?.score ?? null
+    : null;
   const awayName = resolveGameTeamName(game.away, game.awayTeamName, "AWAY");
   const homeName = resolveGameTeamName(game.home, game.homeTeamName, "HOME");
   const awayCompact = toCompactTeamName(game.league, awayName);
@@ -638,6 +646,21 @@ export const GameCardListRow = memo(function GameCardListRow(props: GameCardList
                         />
                       ) : seriesLabel ? (
                         <Text style={styles.seriesText}>{seriesLabel}</Text>
+                      ) : null}
+                      {myPredictedScore && !batchEditing ? (
+                        <View
+                          style={rowStyles.myPick}
+                          accessibilityLabel={
+                            language === "ja"
+                              ? `自分の予想 ${homeCompact} ${myPredictedScore.home} 対 ${awayCompact} ${myPredictedScore.away}`
+                              : `My pick ${homeCompact} ${myPredictedScore.home}, ${awayCompact} ${myPredictedScore.away}`
+                          }
+                        >
+                          <Text style={rowStyles.myPickLabel}>MY</Text>
+                          <Text style={rowStyles.myPickScore}>
+                            {myPredictedScore.home}–{myPredictedScore.away}
+                          </Text>
+                        </View>
                       ) : null}
                     </View>
                   </Animated.View>
@@ -1037,6 +1060,30 @@ const rowStyles = StyleSheet.create({
     position: "relative",
     width: "100%",
     overflow: "visible",
+  },
+  myPick: {
+    marginTop: 3,
+    flexDirection: "row",
+    alignItems: "baseline",
+    justifyContent: "center",
+    gap: 4,
+  },
+  myPickLabel: {
+    color: "rgba(165,243,252,0.6)",
+    fontSize: 9,
+    fontWeight: "800",
+    letterSpacing: 1,
+    includeFontPadding: false,
+    fontFamily: MATCH_CARD_DISPLAY_FONT,
+  },
+  myPickScore: {
+    color: "rgba(226,242,255,0.85)",
+    fontSize: 12,
+    fontWeight: "800",
+    letterSpacing: 0.3,
+    includeFontPadding: false,
+    fontVariant: ["tabular-nums"],
+    fontFamily: MATCH_CARD_DISPLAY_FONT,
   },
 });
 
