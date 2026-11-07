@@ -194,6 +194,7 @@ npx tsx scripts/ingest-nba-team-ace-out-records.ts 2025-26 --force
   - 主力 3 人（OUT / doubtful 除く・ppg 順）: 今季平均、直近 5 試合、シーズンハイ、`nbaPlayerSeasonMetrics` のリーグ 15 位以内の得意プレー（最大 4）、今季の対戦相手との平均、今夜の相手のそのポジションへの失点
   - 欠場: 平均 5 点以上の OUT / doubtful / questionable、**欠場時の得点の移り方**（欠場者が出ていない今季の試合での主力の平均 vs 出た試合。各 2 試合以上・差 3 点以上）
   - 順位には段階の語（top 5 / top 10 / middle — not a strength or weakness / bottom 10 / bottom 5、失点は「allows among the most — a clear weakness」等）を付けて渡す。中位を強み・弱みと書かせないため
+  - MATCHUP 表の行は、攻めが上位 10 か守りが下位 10 のものだけ渡す（順位差だけで拾われた中位同士の行は外す）。各行は持ち主のチームを主語にした文（「PACERS give up a lot of second-chance points」）にし、同じ文を `teams[].styleStrengths` / `styleWeaknesses` にも入れる。片側が中位の行は「中位側を弱い・強いと書かない」を文に含める。どちらのチームの弱点かを LLM が取り違えないため
 - 材料シート（`buildPreviewOutlookSheet`・`lib/nba/insights/proInsightLlm/previewOutlook.ts`）: 上の分析 + MATCHUP 表（順位・欠場注記）、MATCHUP / SCHEDULE / CONTEXT / INJURY IMPACT の hintEn、Difficulty（会場込み・欠場込み）、連戦 2 日目のチーム、前回の対戦・前の試合の事実文（`previewTemplate.ts` の en。表示には使わない）
 - 前回の対戦・前の試合の事実: `games`（2 チーム一致・終了・プレシーズン除く）+ `liveStats.box`。box が無い過去季は `nbaPlayerGameLogs/{season}` の `gameId` 一致行（無ければスコア・日付・対戦成績だけ）
 - LLM: Chat 1 回で 9 言語（モデル `OPENAI_PRO_INSIGHT_PREVIEW_MODEL`、既定 `gpt-4.1`。本文の Batch とは別）。`writeNarrative` の保存直前に生成（Batch poll / 1h 前 patch / sync すべて）。poll は保存を並列化
