@@ -41,7 +41,10 @@ export type OutlookKeyPlayer = {
   seasonHigh: string | null;
   strengths: string[];
   vsOpponentThisSeason?: string;
-  opponentVsPosition: string | null;
+  /** 今夜の相手がそのポジションで上位 10 / 下位 10 のときだけ */
+  opponentVsPosition?: string;
+  /** この選手が支える守りが相手の同ポジションの得点源に厳しい（defensiveReads と同じ文） */
+  defensiveRead?: string;
 };
 
 export type OutlookTeam = {
@@ -53,7 +56,8 @@ export type OutlookTeam = {
   pace: string;
   shooting: string[];
   last10?: string;
-  allowedByPosition: Record<OutlookPos, string>;
+  /** 上位 10 / 下位 10 のポジションだけ */
+  allowedByPosition: Partial<Record<OutlookPos, string>>;
   keyPlayers: OutlookKeyPlayer[];
   /** そのポジションへの失点が上位 5 かつ守りの強みを持つ選手がいる → 相手の同ポジションの得点源に厳しい */
   defensiveReads?: string[];
@@ -91,13 +95,12 @@ export function rankTier(rank: number, of: number): string {
   return "middle — not a strength or weakness";
 }
 
-/** 失点の順位（#1 = 最も許さない） */
+/** 失点の順位（#1 = 最も許さない。中位は allowedLine が渡さない） */
 function allowedTier(rank: number, of: number): string {
   if (rank <= 5) return "among the stingiest — a tough matchup";
   if (rank <= 10) return "stingier than most";
   if (rank > of - 5) return "allows among the most — a clear weakness";
-  if (rank > of - 10) return "allows more than most — a weakness";
-  return "middle — not an edge";
+  return "allows more than most — a weakness";
 }
 const pct1 = (n: number) => `${round1(n * 100)}%`;
 
@@ -228,10 +231,12 @@ export function buildOutlookAnalysis(input: OutlookAnalysisInput): ProInsightOut
   );
   const allowedTeams = allowed.size;
 
+  /** 中位（上位 10・下位 10 以外）は返さない。渡すと LLM が「平均的で弱点はない」と要らない一言を書く */
   const allowedLine = (teamId: string, pos: OutlookPos): string | null => {
     const a = allowed.get(teamId);
     const r = allowedRank[pos].get(teamId);
     if (!a || !r) return null;
+    if (r > 10 && r <= allowedTeams - 10) return null;
     return `${round1(a.pts[pos])} pts per game to ${POS_WORD[pos]} (#${r} of ${allowedTeams}, #1 = allows the least: ${allowedTier(r, allowedTeams)})`;
   };
 
@@ -297,9 +302,9 @@ export function buildOutlookAnalysis(input: OutlookAnalysisInput): ProInsightOut
           seasonHigh: high ? `${high.pts} pts vs ${high.oppAbbr} (${high.dateLabel})` : null,
           strengths: strengthsOf(input.metricsByPlayer[id]),
           ...(vsOpp.length ? { vsOpponentThisSeason: `${avgPts(vsOpp)} ppg in ${vsOpp.length} game(s) vs ${opp}` } : {}),
-          opponentVsPosition: (() => {
+          ...(() => {
             const line = allowedLine(oppId, pos);
-            return line ? `${opp} allow ${line}` : null;
+            return line ? { opponentVsPosition: `${opp} allow ${line}` } : {};
           })(),
         };
       });
@@ -367,9 +372,12 @@ export function buildOutlookAnalysis(input: OutlookAnalysisInput): ProInsightOut
         .sort((a, b) => b.ppg - a.ppg)[0];
       if (!target) continue;
       const shift = loadShiftOf(oppId, target);
-      defensiveReads.push(
-        `${abbr} allow ${r === 1 ? "the fewest" : "among the fewest"} points to ${POS_WORD[pos]} (#${r} of ${allowedTeams}), and ${previewShortName(anchor.p.firstName, anchor.p.lastName)} is #${anchor.m.rank} among all players in ${anchor.def.label} (${round1(anchor.m.value)}) — a tough matchup for ${opp}'s ${POS_WORD[pos].slice(0, -1)} ${previewShortName(target.firstName, target.lastName)} (${round1(target.ppg)} ppg${shift ? `; ${shift}` : ""})`
-      );
+      const anchorName = previewShortName(anchor.p.firstName, anchor.p.lastName);
+      const read =
+        `${anchorName} (${abbr}, #${anchor.m.rank} among all players in ${anchor.def.label}, ${round1(anchor.m.value)}) anchors a ${abbr} defense that allows ${r === 1 ? "the fewest" : "among the fewest"} points to ${POS_WORD[pos]} (#${r} of ${allowedTeams}) — a tough matchup for ${opp}'s ${POS_WORD[pos].slice(0, -1)} ${previewShortName(target.firstName, target.lastName)} (${round1(target.ppg)} ppg${shift ? `; ${shift}` : ""}). The stingy defense belongs to ${abbr}, not ${opp}.`;
+      defensiveReads.push(read);
+      const kp = keyPlayers.find((k) => k.name === anchorName);
+      if (kp) kp.defensiveRead = read;
     }
 
     const l10 = input.last10Rows.find((r) => r.teamId === teamId);
@@ -391,11 +399,12 @@ export function buildOutlookAnalysis(input: OutlookAnalysisInput): ProInsightOut
       ...(l10 && l10.wins + l10.losses < seasonGames
         ? { last10: `${l10.wins}-${l10.losses}, net ${round1(l10.netrtg)}` }
         : {}),
-      allowedByPosition: {
-        G: allowedLine(teamId, "G") ?? "n/a",
-        F: allowedLine(teamId, "F") ?? "n/a",
-        C: allowedLine(teamId, "C") ?? "n/a",
-      },
+      allowedByPosition: Object.fromEntries(
+        (["G", "F", "C"] as const).flatMap((pos) => {
+          const line = allowedLine(teamId, pos);
+          return line ? [[pos, line]] : [];
+        })
+      ),
       keyPlayers,
       ...(defensiveReads.length ? { defensiveReads } : {}),
       absences,
