@@ -65,6 +65,7 @@ import { NbaTeamDisciplineSectionNative } from "../NbaDisciplineSectionNative";
 import { NbaTeamRosterCardNative } from "../predict/NbaRosterPanelNative";
 import NbaTeamHowTheyPlayNative from "./NbaTeamHowTheyPlayNative";
 import { NbaTeamOffseasonMovesNative } from "./NbaTeamOffseasonMovesNative";
+import { NbaTeamPositionDefenseNative } from "./NbaTeamPositionDefenseNative";
 import {
   NbaTeamStatSplitTableNative,
   type NbaTeamStatSplitTableRow,
@@ -692,7 +693,7 @@ function winPctLabel(wins: number, losses: number): string {
 }
 
 function teamSplitTableRows(
-  detail: NbaTeamGameLogDetail
+  detail: Pick<NbaTeamGameLogDetail, "splits">
 ): NbaTeamStatSplitTableRow[] {
   const s = detail.splits;
   return [
@@ -1887,6 +1888,7 @@ export default function NbaTeamDetailPanelNative({
     aceOut,
     shapeEdges,
     gameLogDetail,
+    positionDefense,
     offseasonMoves,
     discipline,
     hasFetchError,
@@ -2090,6 +2092,18 @@ export default function NbaTeamDetailPanelNative({
             />
           ) : null}
         </View>
+
+        {positionDefense ? (
+          <>
+            <View style={[styles.divider, { backgroundColor: dividerColor }]} />
+            <NbaTeamPositionDefenseNative
+              teamId={detail.teamId}
+              defense={positionDefense}
+              accent={accent}
+              ui={ui}
+            />
+          </>
+        ) : null}
 
         <View style={[styles.divider, { backgroundColor: dividerColor }]} />
 

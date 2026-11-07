@@ -36,6 +36,25 @@ export function nbaTeamDetailUiCopy(language: string | null | undefined) {
       pt: "Por jogo (deslize para o lado)",
       fr: "Par match (faites défiler)",
     }),
+    positionDefenseHint: (games: number) =>
+      L(lang, {
+        ja: `相手のポジション別・1試合平均の失点（レギュラー${games}試合）`,
+        en: `Opponent points per game by position (${games} regular-season games)`,
+        ko: `상대 포지션별 경기당 실점 (정규시즌 ${games}경기)`,
+        zh: `对手各位置场均得分（常规赛 ${games} 场）`,
+        es: `Puntos rivales por partido según posición (${games} partidos de temporada regular)`,
+        pt: `Pontos do adversário por jogo por posição (${games} jogos da temporada regular)`,
+        fr: `Points adverses par match selon le poste (${games} matchs de saison régulière)`,
+      }),
+    positionDefenseNote: L(lang, {
+      ja: "選手の登録ポジション（G / F / C）で集計。誰がマークしたかではありません。",
+      en: "Grouped by listed position (G / F / C), not by who was guarding.",
+      ko: "선수 등록 포지션(G / F / C) 기준. 누가 마크했는지가 아닙니다.",
+      zh: "按球员登记位置（G / F / C）统计，并非实际防守对位。",
+      es: "Agrupado por posición registrada (G / F / C), no por quién defendía.",
+      pt: "Agrupado pela posição registrada (G / F / C), não por quem marcava.",
+      fr: "Regroupé par poste déclaré (G / F / C), pas par défenseur direct.",
+    }),
     gameLogsTapHint: L(lang, {
       ja: "タップで試合スタッツ",
       en: "Tap a game for the box score",
