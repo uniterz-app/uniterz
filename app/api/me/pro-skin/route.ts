@@ -67,12 +67,16 @@ export async function GET(req: Request) {
     const noticeIds = parseProSkinUnlockNoticeIds(
       userData.proSkinUnlockNoticeIds
     );
+    const lockedNoticeIds = parseProSkinUnlockNoticeIds(
+      userData.proSkinLockedNoticeIds
+    );
 
     return NextResponse.json({
       ok: true,
       progress,
       unlockedIds,
       noticeIds,
+      lockedNoticeIds,
       savedId,
       skins,
       ownerCounts,
@@ -111,6 +115,7 @@ export async function POST(req: Request) {
         await userRef.set(
           {
             proSkinUnlockNoticeIds: FieldValue.arrayRemove(...ids),
+            proSkinLockedNoticeIds: FieldValue.arrayRemove(...ids),
             updatedAt: FieldValue.serverTimestamp(),
           },
           { merge: true }

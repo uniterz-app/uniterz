@@ -450,6 +450,16 @@ export async function settleReferralRelation(
             );
           }
         }
+      } else if (!alreadyCompleted) {
+        const lockedNotice = PRO_SKIN_REFERRAL_MILESTONES.filter(
+          (skin) =>
+            completedOrdinal === skin.completedCount && !prevHeld.has(skin.id)
+        ).map((skin) => skin.id);
+        if (lockedNotice.length > 0) {
+          referrerPatch.proSkinLockedNoticeIds = FieldValue.arrayUnion(
+            ...lockedNotice
+          );
+        }
       }
 
       if (

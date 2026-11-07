@@ -51,6 +51,7 @@ export const PRODUCT_VISIBLE_USER_FIELDS = [
   "proSkinProgress",
   "proSkinRankEarnedIds",
   "proSkinUnlockNoticeIds",
+  "proSkinLockedNoticeIds",
   "proSkinUnlockSeason",
   "proSkinHeldIds",
 ] as const;

@@ -373,9 +373,11 @@ export async function grantProSkinRankUnlocksForPeriod(opts: {
           : []),
       ]);
 
+      const prevWinsByKey = new Map<string, number>();
       if (winKeys && winKeys.size > 0) {
         for (const key of winKeys) {
           const prev = Number(periodWinsRaw[key] ?? 0);
+          prevWinsByKey.set(key, Number.isFinite(prev) ? Math.max(0, Math.floor(prev)) : 0);
           const next =
             (Number.isFinite(prev) ? Math.max(0, Math.floor(prev)) : 0) + 1;
           periodWinsRaw[key] = next;
@@ -426,6 +428,38 @@ export async function grantProSkinRankUnlocksForPeriod(opts: {
       }
       if (newlyUnlocked.length > 0) {
         patch.proSkinUnlockNoticeIds = FieldValue.arrayUnion(...newlyUnlocked);
+      }
+
+      if (!isProUser(user)) {
+        const prevEarned = new Set<string>(
+          Array.isArray(user.proSkinRankEarnedIds)
+            ? user.proSkinRankEarnedIds.filter(
+                (x): x is string => typeof x === "string"
+              )
+            : []
+        );
+        const lockedNotice = skinIds.filter(
+          (id) => !prevEarned.has(id) && !prevHeld.has(id)
+        );
+        if (winKeys) {
+          for (const rule of periodWinRules) {
+            if (prevHeld.has(rule.id)) continue;
+            const key = proSkinPeriodWinCounterKey({
+              period: rule.period,
+              metric: rule.metric,
+              maxRank: rule.maxRank,
+            });
+            if (!winKeys.has(key)) continue;
+            const prev = prevWinsByKey.get(key) ?? 0;
+            const next = Number(periodWinsRaw[key] ?? 0);
+            if (prev < rule.wins && next >= rule.wins) lockedNotice.push(rule.id);
+          }
+        }
+        if (lockedNotice.length > 0) {
+          patch.proSkinLockedNoticeIds = FieldValue.arrayUnion(
+            ...new Set(lockedNotice)
+          );
+        }
       }
 
       tx.set(userRef, patch, { merge: true });
