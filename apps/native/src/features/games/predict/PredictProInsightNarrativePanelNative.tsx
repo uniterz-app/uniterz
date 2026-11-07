@@ -39,6 +39,7 @@ const SECTION_ACCENT: Record<ProInsightNarrativeKind, string> = {
   CONTEXT: "rgba(103,232,249,0.92)",
   "INJURY IMPACT": "rgba(251,113,133,0.95)",
 };
+const PREVIEW_ACCENT = "rgba(232,197,110,0.95)";
 
 function teamNick(teamId: string, fallbackName: string): string {
   if (teamId.startsWith("nba-")) {
@@ -67,6 +68,14 @@ export default function PredictProInsightNarrativePanelNative({
     if (!brief.sampleNote) return null;
     return t(brief.sampleNote, language);
   }, [brief.sampleNote, language]);
+  const preview = useMemo(() => {
+    if (!brief.preview) return null;
+    const paras = t(brief.preview, language)
+      .split(/\n+/)
+      .map((p) => p.trim())
+      .filter(Boolean);
+    return paras.length ? paras : null;
+  }, [brief.preview, language]);
   const explain = useMemo(
     () => difficultyExplainCopy(resolveLocalizedLang(language)),
     [language]
@@ -116,6 +125,41 @@ export default function PredictProInsightNarrativePanelNative({
       </View>
 
       {note ? <Text style={styles.sampleNote}>{note}</Text> : null}
+
+      {preview ? (
+        <View
+          style={[styles.section, brief.sections.length > 0 ? styles.sectionBorder : null]}
+        >
+          <View style={styles.kindRow}>
+            <View
+              collapsable={false}
+              renderToHardwareTextureAndroid
+              style={[
+                styles.kindWrap,
+                { borderColor: PREVIEW_ACCENT },
+                Platform.OS === "android" ? { opacity: 0.999 } : null,
+              ]}
+            >
+              <Text style={[styles.kind, { color: PREVIEW_ACCENT }]}>PREVIEW</Text>
+            </View>
+          </View>
+          <View style={styles.previewParagraphs}>
+            {preview.map((para, i) => (
+              <View
+                key={i}
+                collapsable={false}
+                renderToHardwareTextureAndroid
+                style={[
+                  styles.bodySkew,
+                  Platform.OS === "android" ? { opacity: 0.999 } : null,
+                ]}
+              >
+                <Text style={styles.previewBody}>{para}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      ) : null}
 
       <View style={styles.sections}>
         {brief.sections.map((section, si) => {
@@ -357,6 +401,15 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 19,
     color: "rgba(255,255,255,0.9)",
+  },
+  previewParagraphs: {
+    gap: 8,
+  },
+  previewBody: {
+    fontFamily: JP_600,
+    fontSize: 13.5,
+    lineHeight: 21,
+    color: "rgba(255,255,255,0.92)",
   },
   evidenceList: {
     gap: 2,

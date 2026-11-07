@@ -7,6 +7,7 @@ import type {
   ProInsightNarrativeItem,
   ProInsightNarrativeKind,
   ProInsightNarrativeSection,
+  ProInsightPreviewParts,
 } from "@/lib/predict/proInsightNarrativeTypes";
 import { PRO_INSIGHT_NARRATIVE_SECTION_KINDS } from "@/lib/predict/proInsightNarrativeTypes";
 
@@ -124,7 +125,24 @@ export function parseProInsightLlmJson(
   const injuryDifficultyRead = asUiStrings(
     (parsed as { injuryDifficultyRead?: unknown }).injuryDifficultyRead
   );
-  if (sections.length === 0 && !injuryDifficultyRead) return null;
+  const previewRaw = (parsed as { previewTranslations?: unknown }).previewTranslations;
+  const previewObj =
+    previewRaw && typeof previewRaw === "object"
+      ? (previewRaw as Record<string, unknown>)
+      : {};
+  const previewParts: ProInsightPreviewParts = {};
+  for (const key of ["meeting", "recent", "read"] as const) {
+    const raw = previewObj[key];
+    if (!raw || typeof raw !== "object") continue;
+    const part: Partial<UiStrings> = {};
+    for (const lang of LANGS) {
+      const v = (raw as Record<string, unknown>)[lang];
+      if (typeof v === "string" && v.trim()) part[lang] = v.trim();
+    }
+    if (Object.keys(part).length) previewParts[key] = part;
+  }
+  const hasPreview = Object.keys(previewParts).length > 0;
+  if (sections.length === 0 && !injuryDifficultyRead && !hasPreview) return null;
 
   return {
     homeTeamId: meta.homeTeamId,
@@ -132,5 +150,6 @@ export function parseProInsightLlmJson(
     sections,
     sampleNote: null,
     ...(injuryDifficultyRead ? { injuryDifficultyRead } : {}),
+    ...(hasPreview ? { previewParts } : {}),
   };
 }
