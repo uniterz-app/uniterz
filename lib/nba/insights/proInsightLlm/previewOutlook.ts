@@ -15,8 +15,10 @@ import type {
   ProInsightPreviewName,
 } from "@/lib/predict/proInsightNarrativeTypes";
 
-const LANGS = ["ja", "en", "ko", "zh", "es", "pt", "fr", "de", "ar"] as const;
-const PREVIEW_THIRD_ATTEMPT_BUDGET_MS = 100_000;
+/** ja / en だけ書かせる（出力が費用の大半）。ほかの言語は表示側が en にフォールバック */
+const LANGS = ["ja", "en"] as const;
+/** 書き直しは 1 回まで（1 回目 + 再生成 1 回） */
+const PREVIEW_MAX_ATTEMPTS = 2;
 
 export function getOpenAiProInsightPreviewModel(): string {
   return process.env.OPENAI_PRO_INSIGHT_PREVIEW_MODEL?.trim() || "gpt-4.1";
@@ -156,7 +158,7 @@ Find the 2–3 strongest such connections in the sheet. Combine: a player's stre
 
 Write exactly 4 paragraphs:
 1) The shape of the game. Team-level: pace (fast vs slow → possessions), offense vs defense quality, the biggest style edge (styleEdges / shooting / turnovers / glass), and what kind of game that produces.
-2) Players set up for a big (or tough) night. 2–4 players, and ALWAYS each team's top scorer (teams[].keyPlayers[0]) — a star is never left out just because the opponent has no weakness at his position. For each, the reason chain: what he does well (strengths, usage, recent form last5Ppg vs season ppg, season high) × why tonight's opponent is vulnerable to it (opponentVsPosition, the matching team weakness) × load shift from absences (loadShiftWithoutAbsent). Give each top scorer the full picture: season ppg, last5Ppg, season high, his top 1–2 strengths. If he has no opponentVsPosition, his case rests on his own form, usage and strengths alone — state it with confidence and say nothing about the opponent's defense at his position; never hedge with "how far it works" / 「どこまで通用するか」「どこまで押し切れるか」. When teams[].defensiveReads is present, paragraph 2 MUST include it (the defender vs the named opposing scorer, e.g. "his rim protection makes it a tough night for the opposing center"). Projections are allowed ("a big scoring night is in play", "likely to carry more of the load"); certainty is not.
+2) Players set up for a big (or tough) night. 2–3 players, and ALWAYS each team's top scorer (teams[].keyPlayers[0]) — a star is never left out just because the opponent has no weakness at his position. For each, the reason chain: what he does well (strengths, usage, recent form last5Ppg vs season ppg, season high) × why tonight's opponent is vulnerable to it (opponentVsPosition, the matching team weakness) × load shift from absences (loadShiftWithoutAbsent). Give each top scorer the full picture: season ppg, last5Ppg, season high, his top 1–2 strengths. If he has no opponentVsPosition, his case rests on his own form, usage and strengths alone — state it with confidence and say nothing about the opponent's defense at his position; never hedge with "how far it works" / 「どこまで通用するか」「どこまで押し切れるか」. When teams[].defensiveReads is present, paragraph 2 MUST include it (the defender vs the named opposing scorer, e.g. "his rim protection makes it a tough night for the opposing center"). Projections are allowed ("a big scoring night is in play", "likely to carry more of the load"); certainty is not.
 3) Difficulty and condition. Who has the harder night and why: absences (what each takes away), difficulty with absences, back-to-back / travel / heavy minutes, and what that changes late in the game.
 4) Last meeting and last games as evidence for or against the reads above, then 1–2 concrete watch points — in-game signs that tell the fan which way it is going.
 
@@ -180,14 +182,17 @@ Reading the sheet:
 
 Rules:
 - Interpret, never list. Every sentence must say why it matters tonight. Do not walk through the sheet item by item; select the strongest connections.
-- At most 4 numbers per paragraph. Prefer words ("one of the league's worst defensive glass teams", JA 「リーグ下位の」) over raw ranks; use a number only when it is the point.
+- At most 3 numbers per paragraph. Prefer words ("one of the league's worst defensive glass teams", JA 「リーグ下位の」) over raw ranks; use a number only when it is the point.
 - Every number, name, status, date and record must come from the sheet. No invented stats, no arithmetic, no new ranks. Never write a number that is not in the sheet.
 - Do NOT pick a winner, predict a final score, or give betting advice. You MAY say an area or the matchup leans toward a team, and you MAY project individual output ("big scoring night", "more shots") with its reason.
 - If phase is "early" or "opening", mention the small sample once, briefly (e.g. "nine games in"). If styleStatsSeason / teamAnalysisSeason is an earlier season than the game, say those numbers are from that season.
 - Team names = nicknames exactly as in the sheet (THUNDER). Player names in English as written (S.Gilgeous-Alexander). Status words OUT / questionable / doubtful stay English in every language.
-- Each paragraph 2–4 sentences. JA: 1 段落 110〜180 字程度。スポーツ記者の展望の文体（だ・である調 / 体言止め可。です・ます調にしない）。
+- Each paragraph 2–3 sentences — keep only the strongest reads, cut the rest. JA: 1 段落 90〜130 字（超えない）。EN: 1 paragraph 45–75 words. スポーツ記者の展望の文体（だ・である調 / 体言止め可。です・ます調にしない）。
+- Paragraph 2 obeys the same length cap: one sentence per player (season ppg / last5 / one strength / tonight's reason). Add a third player only if it still fits in 130 字 — otherwise leave him out.
+- JA player names: the sheet form only ("A.Edwards", "L.Markkanen") at EVERY mention, including repeats. Never katakana or a bare surname (bad 「エドワーズ」「マルッカネン」「Edwards不在時」).
+- A player facing a stingy defense: state it as a tougher night (JA 「堅い守備に苦しみやすい」). Never ask how far he can go (bad 「どこまで出せるか」「どこまで通用するか」).
 - Banned filler: JA 「注目の一戦」「見逃せない」「期待される」「鍵になる」(without saying what), EN "it will be interesting", "only time will tell", "a must-watch".
-- Write the same content, natural and native, in ja, en, ko, zh, es, pt, fr, de, ar.
+- Write the same content, natural and native, in ja and en only.
 
 Headlines ("heads"): one per paragraph, same order. The takeaway of that paragraph, so a fan who reads only the 4 headlines gets the whole read.
 - JA 10〜22 字、句点なし、体言止めか短い言い切り（例 「NUGGETS のインサイド守備が狙われる」「N.Jokic はペイントで大きな夜に」）。EN at most 8 words, no period.
@@ -196,8 +201,8 @@ Headlines ("heads"): one per paragraph, same order. The takeaway of that paragra
 - Headline 2 names the player(s) set up for a big night; headline 4 names the watch point.
 
 Output shape:
-{ "paragraphs": { "ja": ["p1", "p2", "p3", "p4"], "en": [...], "ko": [...], "zh": [...], "es": [...], "pt": [...], "fr": [...], "de": [...], "ar": [...] },
-  "heads": { "ja": ["h1", "h2", "h3", "h4"], "en": [...], "ko": [...], "zh": [...], "es": [...], "pt": [...], "fr": [...], "de": [...], "ar": [...] } }`;
+{ "paragraphs": { "ja": ["p1", "p2", "p3", "p4"], "en": ["p1", "p2", "p3", "p4"] },
+  "heads": { "ja": ["h1", "h2", "h3", "h4"], "en": ["h1", "h2", "h3", "h4"] } }`;
 
 function allowedNumbersFromSheet(sheet: Record<string, unknown>): Set<string> {
   const text = JSON.stringify(sheet);
@@ -307,7 +312,7 @@ function headsOf(raw: unknown, count: number, lang: (typeof LANGS)[number]): str
     .filter((h): h is string => typeof h === "string")
     .map((h) => h.trim().replace(/[。.]+$/, ""))
     .filter(Boolean);
-  const max = lang === "ja" || lang === "zh" || lang === "ko" ? 30 : 90;
+  const max = lang === "ja" ? 30 : 90;
   if (heads.length !== count || heads.some((h) => /\d/.test(h) || h.length > max)) return null;
   const joined = heads.join("\n");
   if (NO_ABSENCE_CLAIM[lang]?.test(joined)) return null;
@@ -362,15 +367,9 @@ function parseOutlook(
 
 export type PreviewOutlookResult = { preview: UiStrings; heads: UiStrings | null };
 
-/** 本文が en で代用された言語は見出しも en。ja / en の見出しが無ければ見出しごと無し */
-function headsFor(text: Partial<UiStrings>, heads: Partial<UiStrings>): UiStrings | null {
-  if (!heads.ja || !heads.en) return null;
-  const out = { ja: heads.ja, en: heads.en } as UiStrings;
-  for (const lang of LANGS) {
-    const h = text[lang] ? heads[lang] : heads.en;
-    if (h) (out as Record<string, string>)[lang] = h;
-  }
-  return out;
+/** ja / en の見出しが揃わなければ見出しごと無し */
+function headsFor(heads: Partial<UiStrings>): UiStrings | null {
+  return heads.ja && heads.en ? { ja: heads.ja, en: heads.en } : null;
 }
 
 export async function generatePreviewOutlook(pack: ProInsightFactPack): Promise<PreviewOutlookResult | null> {
@@ -378,13 +377,10 @@ export async function generatePreviewOutlook(pack: ProInsightFactPack): Promise<
   if (!sheet || !isOpenAiConfigured()) return null;
   const allowed = allowedNumbersFromSheet(sheet);
   const facts = positionDefenseOf(pack);
-  const startedAt = Date.now();
   let rejected: string[] = [];
   let fallback: PreviewOutlookResult | null = null;
   let stripped: PreviewOutlookResult | null = null;
-  for (let attempt = 0; attempt < 3; attempt++) {
-    // 3 回目は取り込みの時間制限（300 秒・並列）に収まるときだけ
-    if (attempt === 2 && Date.now() - startedAt > PREVIEW_THIRD_ATTEMPT_BUDGET_MS) break;
+  for (let attempt = 0; attempt < PREVIEW_MAX_ATTEMPTS; attempt++) {
     let content: string;
     try {
       content = await openAiChatCompletionJson({
@@ -415,17 +411,17 @@ export async function generatePreviewOutlook(pack: ProInsightFactPack): Promise<
     if (wrongList.length) console.warn(`[pro-insight] preview outlook wrong team defense: ${wrongList.join(" | ")}`);
     rejected = [...bad, ...filler, ...wrongList.map((s) => `wrong team: "${s}"`)];
     if (!text.ja || !text.en) continue;
-    const out = { ja: text.ja, en: text.en } as UiStrings;
-    for (const lang of LANGS) (out as Record<string, string>)[lang] = text[lang] ?? text.en;
-    const outHeads = headsFor(text, heads);
+    const out: UiStrings = { ja: text.ja, en: text.en };
+    const outHeads = headsFor(heads);
     if (wrongList.length) {
-      // 最後まで直らなければ誤りの文だけ削る。未チェックの言語は削った en で代用。段落が消えたら見出しはずれるので表示側が捨てる
-      const en = stripSentences(text.en, wrongPos.en ?? []);
-      const s = { ja: stripSentences(text.ja, wrongPos.ja ?? []), en } as UiStrings;
-      for (const lang of LANGS) if (lang !== "ja") (s as Record<string, string>)[lang] = en;
-      const h = outHeads ? ({ ja: outHeads.ja, en: outHeads.en } as UiStrings) : null;
-      if (h) for (const lang of LANGS) if (lang !== "ja") (h as Record<string, string>)[lang] = outHeads!.en;
-      stripped = { preview: s, heads: h };
+      // 最後まで直らなければ誤りの文だけ削る。段落が消えたら見出しはずれるので表示側が捨てる
+      stripped = {
+        preview: {
+          ja: stripSentences(text.ja, wrongPos.ja ?? []),
+          en: stripSentences(text.en, wrongPos.en ?? []),
+        },
+        heads: outHeads,
+      };
       continue;
     }
     if (filler.some((f) => f.startsWith("ja(") || f.startsWith("en("))) {
@@ -472,6 +468,8 @@ export async function withPreviewOutlook(
   const names = previewNamesOf(pack);
   return {
     ...rest,
+    // CONTEXT の材料は PREVIEW のシートに入っている。別枠で繰り返すと重複・食い違いの元
+    sections: rest.sections.filter((s) => s.kind !== "CONTEXT"),
     preview: result.preview,
     ...(result.heads ? { previewHeads: result.heads } : {}),
     ...(names.length ? { previewNames: names } : {}),
