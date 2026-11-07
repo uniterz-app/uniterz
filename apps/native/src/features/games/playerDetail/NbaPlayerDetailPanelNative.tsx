@@ -1646,6 +1646,8 @@ export default function NbaPlayerDetailPanelNative({
 
         {tab === "games" && !isRetired ? (
           <>
+            <GameLogsSection logs={detail.gameLogs} accent={accent} />
+            <View style={[styles.divider, { backgroundColor: dividerColor }]} />
             <PlayerGameSplitsSectionNative
               logs={detail.seasonGameLogs ?? detail.gameLogs}
               seasonKey={
@@ -1654,8 +1656,6 @@ export default function NbaPlayerDetailPanelNative({
               accent={accent}
               language={language}
             />
-            <View style={[styles.divider, { backgroundColor: dividerColor }]} />
-            <GameLogsSection logs={detail.gameLogs} accent={accent} />
           </>
         ) : null}
 
