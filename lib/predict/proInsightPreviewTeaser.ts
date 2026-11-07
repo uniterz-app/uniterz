@@ -1,6 +1,6 @@
 /**
- * Free 向け PREVIEW のチラ見せ（第 1 段落だけ）。
- * 続きの段落はサーバーから出さない（クライアントで隠すだけにしない）。
+ * Free 向け PREVIEW のチラ見せ（第 1 段落の冒頭 1 文だけ）。
+ * 続きはサーバーから出さない（クライアントで隠すだけにしない）。
  */
 import type { UiStrings } from "@/lib/i18n/ui";
 import type { ProInsightNarrativeBrief } from "@/lib/predict/proInsightNarrativeTypes";
@@ -8,9 +8,13 @@ import type { ProInsightNarrativeBrief } from "@/lib/predict/proInsightNarrative
 export type ProInsightPreviewTeaser = {
   homeTeamId: string;
   awayTeamId: string;
-  /** 第 1 段落のみ */
+  /** 第 1 段落の冒頭 1 文のみ */
   preview: UiStrings;
 };
+
+/** 1 文目がこれより短いときだけ 2 文目まで（CJK は文字数が少ないので別） */
+const MIN_TEASER_CHARS_CJK = 30;
+const MIN_TEASER_CHARS = 70;
 
 function firstParagraph(text: unknown): string | null {
   if (typeof text !== "string") return null;
@@ -21,14 +25,32 @@ function firstParagraph(text: unknown): string | null {
   return para ?? null;
 }
 
+function splitSentences(para: string, cjk: boolean): string[] {
+  const parts = cjk
+    ? para.match(/[^。！？]+[。！？]?/g)
+    : para.match(/[^.!?]+(?:[.!?]+(?=\s|$)|$)/g);
+  return (parts ?? [para]).map((s) => s.trim()).filter(Boolean);
+}
+
+function teaserSentence(text: unknown, lang: string): string | null {
+  const para = firstParagraph(text);
+  if (!para) return null;
+  const cjk = lang === "ja" || lang === "zh";
+  const sentences = splitSentences(para, cjk);
+  const min = cjk ? MIN_TEASER_CHARS_CJK : MIN_TEASER_CHARS;
+  let out = sentences[0] ?? para;
+  if (out.length < min && sentences[1]) out = `${out}${cjk ? "" : " "}${sentences[1]}`;
+  return out;
+}
+
 export function buildProInsightPreviewTeaser(
   narrative: ProInsightNarrativeBrief | null | undefined
 ): ProInsightPreviewTeaser | null {
   if (!narrative?.preview) return null;
   const out: Partial<UiStrings> = {};
   for (const [lang, text] of Object.entries(narrative.preview)) {
-    const para = firstParagraph(text);
-    if (para) out[lang as keyof UiStrings] = para;
+    const sentence = teaserSentence(text, lang);
+    if (sentence) out[lang as keyof UiStrings] = sentence;
   }
   const ja = out.ja ?? out.en;
   const en = out.en ?? out.ja;
