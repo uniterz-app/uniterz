@@ -1,9 +1,7 @@
 /** Web `NbaTeamStatsPanel` 相当（SymmetricalCompareRow レイアウト） */
 import { useState } from "react";
 import {
-  Modal,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -14,7 +12,6 @@ import type {
   NbaTeamStatSide,
 } from "../../../../../../lib/predict/nbaTeamStatsPreviewMocks";
 import { metricDelta } from "../../../../../../lib/predict/nbaTeamStatsForm";
-import { useLiveGameStats } from "../../../../../../lib/games/useLiveGameStats";
 import { NBA_TEAM_NAME_BY_ID } from "../../../../../../lib/nba-team-names";
 import { getMobileTeamName } from "../../../../../../lib/team-name-split-mobile";
 import {
@@ -25,10 +22,7 @@ import { MATCH_CARD_DISPLAY_FONT, MATCH_CARD_TEAM_NAME_FONT } from "../matchCard
 import { RANK_DISPLAY_FONT } from "../../rankings/rankingsUiTheme";
 import type { GamesLanguage } from "../gamesI18n";
 import { getGamesTexts } from "../gamesI18n";
-import LiveGameStatsPanelNative from "../live/LiveGameStatsPanelNative";
-import { getUniterzApiBaseUrl } from "../submitPredictionApi";
-import { db } from "../../../lib/firebase";
-import { getCachedGameDocForResult } from "../../../../../../lib/result/resultDetailFirestoreCache";
+import NbaGameBoxScoreModalNative from "../live/NbaGameBoxScoreModalNative";
 import { L, resolveLocalizedLang } from "../../../../../../lib/i18n/localize";
 
 type WindowId = "season" | "last10";
@@ -212,99 +206,6 @@ function FormGameLine({
   return row;
 }
 
-async function loadGameDocForLiveStats(
-  gameId: string
-): Promise<Record<string, unknown> | null> {
-  const { exists, data } = await getCachedGameDocForResult(gameId, db);
-  if (!exists || !data) return null;
-  return { id: gameId, ...data };
-}
-
-function FormGameBoxOverlay({
-  gameId,
-  language,
-  onClose,
-  onOpenTeamDetail,
-}: {
-  gameId: string;
-  language: GamesLanguage;
-  onClose: () => void;
-  onOpenTeamDetail?: (teamId: string) => void;
-}) {
-  const lang = resolveLocalizedLang(language);
-  const { report, loading } = useLiveGameStats(gameId, true, {
-    apiBaseUrl: getUniterzApiBaseUrl(),
-    loadGameDoc: loadGameDocForLiveStats,
-  });
-  return (
-    <Modal
-      visible
-      animationType="slide"
-      presentationStyle="fullScreen"
-      onRequestClose={onClose}
-    >
-      <View style={styles.boxOverlay}>
-        <View style={styles.boxOverlayHeader}>
-          <Text style={styles.boxOverlayTitle}>BOX SCORE</Text>
-          <Pressable
-            onPress={onClose}
-            style={styles.boxOverlayClose}
-            accessibilityRole="button"
-          >
-            <Text style={styles.boxOverlayCloseText}>
-              {L(lang, {
-                ja: "閉じる",
-                en: "Close",
-                ko: "닫기",
-                zh: "关闭",
-                es: "Cerrar",
-                pt: "Fechar",
-                fr: "Fermer",
-              })}
-            </Text>
-          </Pressable>
-        </View>
-        <ScrollView
-          contentContainerStyle={styles.boxOverlayScroll}
-          showsVerticalScrollIndicator={false}
-        >
-          {loading && !report ? (
-            <Text style={styles.boxOverlayEmpty}>
-              {L(lang, {
-                ja: "読み込み中…",
-                en: "Loading…",
-                ko: "불러오는 중…",
-                zh: "加载中…",
-                es: "Cargando…",
-                pt: "Carregando…",
-                fr: "Chargement…",
-              })}
-            </Text>
-          ) : report ? (
-            <LiveGameStatsPanelNative
-              report={report}
-              language={language}
-              onOpenTeamDetail={onOpenTeamDetail}
-            />
-          ) : (
-            <Text style={styles.boxOverlayEmpty}>
-              {L(lang, {
-                ja: "ボックススコアがありません",
-                en: "No box score yet",
-                ko: "박스스코어가 없습니다",
-                zh: "暂无技术统计",
-                es: "Aún no hay box score",
-                pt: "Ainda sem box score",
-                fr: "Pas encore de box score",
-              })}
-            </Text>
-          )}
-        </ScrollView>
-      </View>
-    </Modal>
-  );
-}
-
 function RecentFormGamesStrip({
   left,
   right,
@@ -384,7 +285,7 @@ function RecentFormGamesStrip({
         </View>
       ) : null}
       {boxGameId ? (
-        <FormGameBoxOverlay
+        <NbaGameBoxScoreModalNative
           gameId={boxGameId}
           language={language}
           onClose={() => setBoxGameId(null)}
@@ -905,58 +806,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.6,
     color: "rgba(255,255,255,0.45)",
     transform: [{ skewX: "-6deg" }],
-  },
-  boxOverlay: {
-    flex: 1,
-    backgroundColor: "#050508",
-  },
-  boxOverlayHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "rgba(255,255,255,0.1)",
-    paddingHorizontal: 12,
-    paddingTop: 54,
-    paddingBottom: 12,
-  },
-  boxOverlayTitle: {
-    fontFamily: OXANIUM,
-    fontSize: 13,
-    fontWeight: "700",
-    letterSpacing: 1.4,
-    color: "rgba(255,255,255,0.7)",
-    textTransform: "uppercase",
-    transform: [{ skewX: "-6deg" }],
-  },
-  boxOverlayClose: {
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.25)",
-    borderRadius: 2,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  boxOverlayCloseText: {
-    fontFamily: OXANIUM,
-    fontSize: 11,
-    fontWeight: "800",
-    letterSpacing: 1,
-    color: "rgba(255,255,255,0.8)",
-    textTransform: "uppercase",
-  },
-  boxOverlayScroll: {
-    paddingHorizontal: 8,
-    paddingTop: 12,
-    paddingBottom: 40,
-  },
-  boxOverlayEmpty: {
-    marginTop: 24,
-    textAlign: "center",
-    fontFamily: OXANIUM,
-    fontSize: 12,
-    fontWeight: "700",
-    color: "rgba(255,255,255,0.45)",
   },
   recentFormGrid: {
     flexDirection: "row",
