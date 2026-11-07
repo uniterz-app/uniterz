@@ -190,13 +190,13 @@ export default function ProfileProSkinUnlockOverlayNative({
             {locked ? (
               <Text style={styles.lockedLead}>
                 {L(lang, {
-                  ja: "条件は達成済み。Pro にするとこのスキンをすぐ使えます。",
-                  en: "You've hit the goal. Go Pro to use this skin right away.",
-                  ko: "조건을 달성했습니다. Pro로 업그레이드하면 바로 사용할 수 있어요.",
-                  zh: "已达成条件。升级 Pro 即可立即使用此皮肤。",
-                  es: "Ya cumpliste el reto. Hazte Pro para usar este skin ya.",
-                  pt: "Você já cumpriu a meta. Assine o Pro para usar esta skin agora.",
-                  fr: "Objectif atteint. Passez Pro pour utiliser ce skin tout de suite.",
+                  ja: "条件は達成済みです。このスキンをプロフィールに適用するには、Pro プランへの加入が必要です。",
+                  en: "You've hit the goal. To apply this skin to your profile, you need a Pro plan.",
+                  ko: "조건을 달성했습니다. 이 스킨을 프로필에 적용하려면 Pro 플랜 가입이 필요합니다.",
+                  zh: "已达成条件。要将此皮肤应用到个人资料，需要加入 Pro 方案。",
+                  es: "Ya cumpliste el reto. Para aplicar este skin a tu perfil necesitas el plan Pro.",
+                  pt: "Você já cumpriu a meta. Para aplicar esta skin ao seu perfil, é preciso assinar o plano Pro.",
+                  fr: "Objectif atteint. Pour appliquer ce skin à votre profil, il faut l’abonnement Pro.",
                 })}
               </Text>
             ) : null}
