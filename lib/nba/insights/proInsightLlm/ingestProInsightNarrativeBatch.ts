@@ -109,6 +109,7 @@ import type {
 import type { NbaTeamRosterDocTeam } from "@/lib/nba/teamRosters/teamRosterTypes";
 import type { ProInsightPreviewFacts } from "@/lib/nba/insights/proInsightFacts/buildPreviewFacts";
 import { loadProInsightPreviewFacts } from "@/lib/nba/insights/proInsightFacts/loadPreviewFacts";
+import { isNbaPickupGame } from "@/lib/nba/isPickupGame";
 
 export type ProInsightNarrativeBatchSubmitResult = {
   ok: boolean;
@@ -1068,16 +1069,18 @@ export async function submitProInsightNarrativeBatch(
       pack.longTermOutImpacts = longTermOutImpacts;
       pack.gamesPlayed = gamesPlayed;
       pack.seasonKey = seasonKey;
-      pack.preview = await loadProInsightPreviewFacts(db, {
-        homeTeamId,
-        awayTeamId,
-        tipAtMs,
-        seasonKey,
-        priorSeasonKey: priorKey,
-        recentDocs,
-        seasonRosterTeams,
-        priorRosterTeams,
-      });
+      pack.preview = isNbaPickupGame(game.data)
+        ? await loadProInsightPreviewFacts(db, {
+            homeTeamId,
+            awayTeamId,
+            tipAtMs,
+            seasonKey,
+            priorSeasonKey: priorKey,
+            recentDocs,
+            seasonRosterTeams,
+            priorRosterTeams,
+          })
+        : null;
       prepared.push({
         gameId: game.id,
         pack: withInjuryDifficultyFact(pack),
@@ -1935,16 +1938,18 @@ export async function patchProInsightNarrativesIfInjuryChanged(
       pack.longTermOutImpacts = longTermOutImpacts;
       pack.gamesPlayed = Math.min(homeGp, awayGp);
       pack.seasonKey = seasonKey;
-      pack.preview = await loadProInsightPreviewFacts(db, {
-        homeTeamId,
-        awayTeamId,
-        tipAtMs,
-        seasonKey,
-        priorSeasonKey: priorKey,
-        recentDocs,
-        seasonRosterTeams,
-        priorRosterTeams,
-      });
+      pack.preview = isNbaPickupGame(game.data)
+        ? await loadProInsightPreviewFacts(db, {
+            homeTeamId,
+            awayTeamId,
+            tipAtMs,
+            seasonKey,
+            priorSeasonKey: priorKey,
+            recentDocs,
+            seasonRosterTeams,
+            priorRosterTeams,
+          })
+        : null;
       const packed = withInjuryDifficultyFact(pack);
       const brief = await generateProInsightNarrativeForGameChat(packed);
       const source = isOpenAiConfigured() ? "openai_chat" : "fallback";
