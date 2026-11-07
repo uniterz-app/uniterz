@@ -154,13 +154,13 @@ export function nbaPlayerDetailChrome(language: string | null | undefined) {
       fr: "HISTORIQUE",
     }),
     seasonAvgHint: L(lang, {
-      ja: "今季の出場試合からの平均",
-      en: "Season average from games played",
-      ko: "이번 시즌 출전 경기 평균",
-      zh: "本季出场比赛平均",
-      es: "Promedio de partidos jugados esta temporada",
-      pt: "Média dos jogos disputados nesta temporada",
-      fr: "Moyenne des matchs joués cette saison",
+      ja: "今季の出場試合からの平均（横にスクロール）",
+      en: "Season average from games played (scroll sideways)",
+      ko: "이번 시즌 출전 경기 평균 (가로 스크롤)",
+      zh: "本季出场比赛平均（左右滑动）",
+      es: "Promedio de partidos jugados esta temporada (desliza a los lados)",
+      pt: "Média dos jogos disputados nesta temporada (deslize para o lado)",
+      fr: "Moyenne des matchs joués cette saison (faites défiler)",
     }),
   };
 }
