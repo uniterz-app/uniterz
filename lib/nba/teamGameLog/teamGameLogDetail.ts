@@ -13,6 +13,16 @@ import {
 import { nbaConferenceForTeam } from "@/lib/nba/nbaConferenceTeams";
 import { TEAM_SHORT } from "@/lib/team-short";
 import type { NbaTeamRecentGame } from "@/lib/predict/nbaTeamDetailPreviewMocks";
+import {
+  addPositionAllowed,
+  emptyPositionDefenseAcc,
+  finalizePositionDefense,
+  resolveTeamPositionDefense,
+  sumPositionTotals,
+  type NbaPositionDefenseAcc,
+  type NbaPositionTotals,
+  type NbaTeamPositionDefense,
+} from "@/lib/nba/teamGameLog/teamPositionDefense";
 
 export const NBA_TEAM_GAME_LOG_DETAIL_SUBCOLLECTION = "teams";
 
@@ -78,6 +88,8 @@ export type NbaTeamGameLogDetail = {
   splits: Record<NbaTeamSplitKey, NbaTeamSplitStatRow>;
   /** 試合数降順 */
   headToHead: NbaTeamHeadToHeadStatRow[];
+  /** ポジション別失点（レギュラー・box あり 0 試合 / ingest 前の doc は null） */
+  positionDefense: NbaTeamPositionDefense | null;
 };
 
 type RawGame = Record<string, unknown> & { id?: string };
@@ -293,6 +305,8 @@ type FinalGame = {
   awayScore: number;
   homeBox: BoxTotals | null;
   awayBox: BoxTotals | null;
+  homePos: NbaPositionTotals | null;
+  awayPos: NbaPositionTotals | null;
 };
 
 /** 同じ 2 チーム・同じ東部暦日の重複 doc（別 ingest 由来）は 1 試合に。box のある方を残す */
@@ -322,6 +336,8 @@ function parseFinalGames(games: RawGame[]): FinalGame[] {
       awayScore: score.away,
       homeBox: sumSide(box?.home),
       awayBox: sumSide(box?.away),
+      homePos: sumPositionTotals(coercePlayers(box?.home)),
+      awayPos: sumPositionTotals(coercePlayers(box?.away)),
     };
     const key = `${homeId}|${awayId}|${g.etDay}`;
     const prev = byKey.get(key);
@@ -340,6 +356,7 @@ type TeamWork = {
   recentEtDays: number[];
   wins: number;
   losses: number;
+  positionDefense: NbaPositionDefenseAcc;
 };
 
 function newTeamWork(): TeamWork {
@@ -352,6 +369,7 @@ function newTeamWork(): TeamWork {
     recentEtDays: [],
     wins: 0,
     losses: 0,
+    positionDefense: emptyPositionDefenseAcc(),
   };
 }
 
@@ -359,13 +377,14 @@ export function emptyTeamGameLogDetail(
   teamId: string,
   season: string
 ): NbaTeamGameLogDetail {
-  return finalizeTeamWork(teamId, season, newTeamWork());
+  return finalizeTeamWork(teamId, season, newTeamWork(), null);
 }
 
 function finalizeTeamWork(
   teamId: string,
   season: string,
-  work: TeamWork
+  work: TeamWork,
+  positionDefense: NbaTeamPositionDefense | null
 ): NbaTeamGameLogDetail {
   const splits = Object.fromEntries(
     NBA_TEAM_SPLIT_KEYS.map((k) => [k, finalizeAcc(work.splits[k])])
@@ -387,6 +406,7 @@ function finalizeTeamWork(
     games: [...work.games].reverse(),
     splits,
     headToHead,
+    positionDefense,
   };
 }
 
@@ -452,6 +472,11 @@ export function buildTeamGameLogDetailsFromGames(input: {
       }
       addGame(h2h, line);
 
+      const oppPos = s.isHome ? g.awayPos : g.homePos;
+      if (g.regular && box && oppBox && oppPos) {
+        addPositionAllowed(s.self.positionDefense, oppPos);
+      }
+
       const selfConf = nbaConferenceForTeam(s.teamId);
       s.self.games.push({
         dateLabel: formatDateLabel(g.startMs),
@@ -478,9 +503,17 @@ export function buildTeamGameLogDetailsFromGames(input: {
     }
   }
 
+  const positionDefense = finalizePositionDefense(
+    new Map([...work].map(([teamId, w]) => [teamId, w.positionDefense]))
+  );
   const out: Record<string, NbaTeamGameLogDetail> = {};
   for (const [teamId, w] of work) {
-    out[teamId] = finalizeTeamWork(teamId, season, w);
+    out[teamId] = finalizeTeamWork(
+      teamId,
+      season,
+      w,
+      positionDefense.get(teamId) ?? null
+    );
   }
   return out;
 }
@@ -583,5 +616,12 @@ export function resolveTeamGameLogDetail(
       headToHead.push({ oppTeamId, oppAbbr, ...resolveStatRow(item) });
     }
   }
-  return { teamId, season, games, splits, headToHead };
+  return {
+    teamId,
+    season,
+    games,
+    splits,
+    headToHead,
+    positionDefense: resolveTeamPositionDefense(raw.positionDefense),
+  };
 }

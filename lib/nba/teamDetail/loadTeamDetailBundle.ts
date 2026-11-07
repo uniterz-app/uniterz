@@ -13,6 +13,7 @@ import { loadTeamPayroll } from "@/lib/nba/teamPayroll/loadTeamPayrollSnapshot";
 import { loadTeamGameLog } from "@/lib/nba/teamGameLog/loadTeamGameLog";
 import { loadTeamGameLogDetail } from "@/lib/nba/teamGameLog/loadTeamGameLogDetail";
 import type { NbaTeamGameLogDetail } from "@/lib/nba/teamGameLog/teamGameLogDetail";
+import type { NbaTeamPositionDefense } from "@/lib/nba/teamGameLog/teamPositionDefense";
 import { loadTeamInjury } from "@/lib/nba/teamInjuries/loadTeamInjuriesSnapshot";
 import { loadNbaConferenceStandings } from "@/lib/nba/standings/loadNbaConferenceStandings";
 import { findNbaConferenceStandingsRow } from "@/lib/nba/standings/findNbaConferenceStandingsRow";
@@ -45,8 +46,10 @@ export type NbaTeamDetailApiPayload = {
   rosterBlock: NbaRosterTeamBlock | null;
   payroll: NbaTeamPayroll | null;
   gameLog: NbaTeamGameLogSlice | null;
-  /** 全試合・スプリット平均・H2H 平均（ingest 前の季は null） */
-  gameLogDetail: NbaTeamGameLogDetail | null;
+  /** 全試合・スプリット平均・H2H 平均（ingest 前の季は null）。ポジション別失点は `positionDefense` 側だけに載せる */
+  gameLogDetail: Omit<NbaTeamGameLogDetail, "positionDefense"> | null;
+  /** ポジション別失点（スタッツ表示シーズン。box の無い季は null） */
+  positionDefense: (NbaTeamPositionDefense & { season: string }) | null;
   standingsRow: NbaConferenceStandingsRow | null;
   injuries: NbaTeamInjuryEntry[];
   strengthSplit: NbaTeamStrengthSplit;
@@ -166,6 +169,7 @@ export async function loadTeamDetailBundle(
     offseason,
     discipline,
     gameLogDetailPayload,
+    statsSeasonDetailPayload,
   ] = await Promise.all([
     loadTeamRosterSlice(db, liveSeason, teamId),
     loadTeamPayroll(db, liveSeason, teamId),
@@ -178,7 +182,21 @@ export async function loadTeamDetailBundle(
     loadTeamOffseasonMoves(db, liveSeason, teamId),
     loadTeamDisciplineSlice(db, statsSeason, teamId),
     loadTeamGameLogDetail(db, formSeason, teamId),
+    statsSeason === formSeason
+      ? null
+      : loadTeamGameLogDetail(db, statsSeason, teamId),
   ]);
+
+  const positionDefenseSource = (statsSeasonDetailPayload ?? gameLogDetailPayload)
+    .detail?.positionDefense;
+  const positionDefense = positionDefenseSource
+    ? { ...positionDefenseSource, season: statsSeason }
+    : null;
+  let gameLogDetail: NbaTeamDetailApiPayload["gameLogDetail"] = null;
+  if (gameLogDetailPayload.detail) {
+    const { positionDefense: _omit, ...rest } = gameLogDetailPayload.detail;
+    gameLogDetail = rest;
+  }
 
   const offseasonMoves =
     (gameLogPayload.log?.finalCount ?? 0) <= OFFSEASON_MOVES_MAX_FINALS
@@ -234,7 +252,8 @@ export async function loadTeamDetailBundle(
     rosterBlock,
     payroll: payrollPayload.payroll,
     gameLog: gameLogPayload.log,
-    gameLogDetail: gameLogDetailPayload.detail,
+    gameLogDetail,
+    positionDefense,
     standingsRow,
     injuries: injuryPayload.injuries ?? [],
     strengthSplit,
