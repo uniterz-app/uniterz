@@ -137,6 +137,164 @@ function venueFromAcc(venue: "home" | "away", acc: Acc): NbaPlayerVenueSplit | n
   };
 }
 
+function splitRowFromAcc(acc: Acc): NbaPlayerGameSplitStats {
+  return {
+    ...extrasFromAcc(acc),
+    games: acc.games,
+    min: avg(acc.min, acc.games),
+    pts: avg(acc.pts, acc.games),
+    reb: avg(acc.reb, acc.games),
+    ast: avg(acc.ast, acc.games),
+    plusMinus: avg(acc.plusMinus, acc.games),
+  };
+}
+
+export type NbaPlayerGameSplitStats = NbaPlayerSplitExtras & {
+  games: number;
+  min: number;
+  pts: number;
+  reb: number;
+  ast: number;
+  plusMinus: number;
+};
+
+export type NbaPlayerGameSplitKey =
+  | "home"
+  | "away"
+  | "win"
+  | "loss"
+  | "vsEast"
+  | "vsWest"
+  | "vsOver500"
+  | "vsUnder500"
+  | "b2b"
+  | "threeInFour"
+  | `month:${number}`;
+
+export type NbaPlayerGameSplit = {
+  key: NbaPlayerGameSplitKey;
+  stats: NbaPlayerGameSplitStats;
+};
+
+const MONTH_ABBR = [
+  "JAN", "FEB", "MAR", "APR", "MAY", "JUN",
+  "JUL", "AUG", "SEP", "OCT", "NOV", "DEC",
+];
+
+export function nbaPlayerGameSplitLabel(key: NbaPlayerGameSplitKey): string {
+  if (key.startsWith("month:")) {
+    return MONTH_ABBR[Number(key.slice(6)) - 1] ?? key;
+  }
+  switch (key) {
+    case "home":
+      return "HOME";
+    case "away":
+      return "AWAY";
+    case "win":
+      return "WIN";
+    case "loss":
+      return "LOSS";
+    case "vsEast":
+      return "VS EAST";
+    case "vsWest":
+      return "VS WEST";
+    case "vsOver500":
+      return "VS .500+";
+    case "vsUnder500":
+      return "VS SUB-.500";
+    case "b2b":
+      return "B2B";
+    case "threeInFour":
+      return "3IN4";
+  }
+  return key;
+}
+
+/**
+ * `dateLabel`（日本時間の `M/D`）→ 通日。試合は米国の夜＝日本の翌日で揃うため、日差は米国東部と同じ。
+ * 年は無いのでシーズン開始年から補う（8 月以降 = 開始年）。
+ */
+function dayNumberFromLabel(label: string, seasonStartYear: number): number | null {
+  const m = label.match(/^(\d{1,2})\/(\d{1,2})$/);
+  if (!m) return null;
+  const month = Number(m[1]);
+  const day = Number(m[2]);
+  const year = month >= 8 ? seasonStartYear : seasonStartYear + 1;
+  const t = Date.UTC(year, month - 1, day);
+  return Number.isFinite(t) ? Math.round(t / 86_400_000) : null;
+}
+
+/**
+ * GAMES タブのスプリット。
+ * - B2B / 3IN4 はこの選手の出場日で判定（前日も出場 / 4 日間で 3 試合目）
+ * - 対 .500 は相手の現在の勝率（`oppWinPctByTeam`）。無いチームは入れない
+ */
+export function buildPlayerGameSplits(
+  gameLogs: NbaPlayerGameLog[],
+  opts: {
+    seasonStartYear: number;
+    conferenceOf: (teamId: string) => "east" | "west" | null;
+    oppWinPctByTeam?: ReadonlyMap<string, number>;
+  }
+): NbaPlayerGameSplit[] {
+  const accs = new Map<NbaPlayerGameSplitKey, Acc>();
+  const put = (key: NbaPlayerGameSplitKey, log: NbaPlayerGameLog) => {
+    let acc = accs.get(key);
+    if (!acc) {
+      acc = emptyAcc();
+      accs.set(key, acc);
+    }
+    add(acc, log);
+  };
+
+  const dated = gameLogs
+    .map((log) => ({ log, day: dayNumberFromLabel(log.dateLabel, opts.seasonStartYear) }))
+    .sort((a, b) => (a.day ?? 0) - (b.day ?? 0));
+
+  const months: number[] = [];
+  const recentDays: number[] = [];
+  for (const { log, day } of dated) {
+    put(log.home ? "home" : "away", log);
+    put(log.result === "W" ? "win" : "loss", log);
+    const conf = opts.conferenceOf(log.oppTeamId);
+    if (conf === "east") put("vsEast", log);
+    else if (conf === "west") put("vsWest", log);
+    const oppPct = opts.oppWinPctByTeam?.get(log.oppTeamId);
+    if (oppPct != null) put(oppPct >= 0.5 ? "vsOver500" : "vsUnder500", log);
+
+    if (day != null) {
+      const [prev, prevPrev] = recentDays;
+      if (prev != null && day - prev === 1) put("b2b", log);
+      if (prevPrev != null && day - prevPrev <= 3) put("threeInFour", log);
+      recentDays.unshift(day);
+      recentDays.length = Math.min(recentDays.length, 2);
+      const month = new Date(day * 86_400_000).getUTCMonth() + 1;
+      if (!months.includes(month)) months.push(month);
+      put(`month:${month}`, log);
+    }
+  }
+
+  const order: NbaPlayerGameSplitKey[] = [
+    "home",
+    "away",
+    "win",
+    "loss",
+    "vsEast",
+    "vsWest",
+    "vsOver500",
+    "vsUnder500",
+    "b2b",
+    "threeInFour",
+    ...months.map((m) => `month:${m}` as const),
+  ];
+  const out: NbaPlayerGameSplit[] = [];
+  for (const key of order) {
+    const acc = accs.get(key);
+    if (acc && acc.games > 0) out.push({ key, stats: splitRowFromAcc(acc) });
+  }
+  return out;
+}
+
 export type PlayerSplitsFromGameLogs = {
   venueSplits: NbaPlayerVenueSplit[];
   vsOpponentSamples: NbaPlayerVsOpponentSample[];

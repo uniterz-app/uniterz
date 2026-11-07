@@ -521,6 +521,7 @@ export function applyPlayerGameLogsToPlayerDetail(
   return {
     ...detail,
     gameLogs: gameLogs.slice(0, GAME_LOG_UI_LIMIT),
+    seasonGameLogs: gameLogs,
     venueSplits,
     vsOpponentSamples,
   };

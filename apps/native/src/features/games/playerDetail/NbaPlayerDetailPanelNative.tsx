@@ -120,6 +120,12 @@ import { getUniterzApiBaseUrl } from "../submitPredictionApi";
 import { nbaPlayerDetailChrome } from "./nbaPlayerDetailChromeCopy";
 import { NbaPlayerSplitStatTableNative } from "./NbaPlayerSplitStatTableNative";
 import { NbaPlayerGameLogTableNative } from "./NbaPlayerGameLogTableNative";
+import {
+  buildPlayerGameSplits,
+  nbaPlayerGameSplitLabel,
+} from "../../../../../../lib/nba/playerDetail/buildPlayerSplitsFromGameLogs";
+import { useNbaConferenceStandings } from "../../../../../../lib/nba/useNbaConferenceStandings";
+import { nbaConferenceForTeam } from "../../../../../../lib/nba/nbaConferenceTeams";
 
 type Props = {
   language: "ja" | "en";
@@ -1211,6 +1217,54 @@ function SeasonHistorySection({
   );
 }
 
+function PlayerGameSplitsSectionNative({
+  logs,
+  seasonKey,
+  accent,
+  language,
+}: {
+  logs: NbaPlayerGameLog[];
+  seasonKey: string;
+  accent: string;
+  language: string;
+}) {
+  const chrome = nbaPlayerDetailChrome(language);
+  const { board } = useNbaConferenceStandings({
+    apiBaseUrl: getUniterzApiBaseUrl(),
+    season: seasonKey,
+  });
+  const splits = useMemo(() => {
+    const oppWinPctByTeam = new Map<string, number>();
+    for (const row of [...board.east, ...board.west]) {
+      const gp = row.wins + row.losses;
+      if (gp > 0) oppWinPctByTeam.set(row.teamId, row.wins / gp);
+    }
+    return buildPlayerGameSplits(logs, {
+      seasonStartYear: Number(seasonKey.slice(0, 4)),
+      conferenceOf: nbaConferenceForTeam,
+      oppWinPctByTeam: oppWinPctByTeam.size > 0 ? oppWinPctByTeam : undefined,
+    });
+  }, [logs, seasonKey, board]);
+  if (splits.length === 0) return null;
+  return (
+    <View style={styles.advWrap}>
+      <View style={styles.advTitleRow}>
+        <Text style={styles.advTitle}>SPLITS</Text>
+        <View style={styles.advTitleLine} />
+      </View>
+      <Text style={styles.splitHint}>{chrome.gameSplitsHint}</Text>
+      <NbaPlayerSplitStatTableNative
+        accent={accent}
+        rows={splits.map((s) => ({
+          key: s.key,
+          label: nbaPlayerGameSplitLabel(s.key),
+          row: s.stats,
+        }))}
+      />
+    </View>
+  );
+}
+
 function GameLogsSection({
   logs,
   accent,
@@ -1591,7 +1645,18 @@ export default function NbaPlayerDetailPanelNative({
         ) : null}
 
         {tab === "games" && !isRetired ? (
-          <GameLogsSection logs={detail.gameLogs} accent={accent} />
+          <>
+            <PlayerGameSplitsSectionNative
+              logs={detail.seasonGameLogs ?? detail.gameLogs}
+              seasonKey={
+                detail.asOfLabel.match(/(\d{4}-\d{2})/)?.[1] ?? CURRENT_NBA_SEASON_KEY
+              }
+              accent={accent}
+              language={language}
+            />
+            <View style={[styles.divider, { backgroundColor: dividerColor }]} />
+            <GameLogsSection logs={detail.gameLogs} accent={accent} />
+          </>
         ) : null}
 
         {showCareer ? (
