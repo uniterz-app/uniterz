@@ -13,7 +13,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   formatNbaFavoritePlayerInitialLast,
-  NBA_FAVORITE_MAX_PLAYERS,
+  NBA_FAVORITE_MAX_PLAYERS_PRO,
   type NbaFavoritePlayer,
 } from "../../../../../lib/profile/nbaFavorites";
 import TeamAbbrBadgeNative from "./TeamAbbrBadgeNative";
@@ -26,19 +26,49 @@ type Props = {
   language?: "ja" | "en";
   incomingLabel?: string;
   players: NbaFavoritePlayer[];
+  maxPlayers: number;
+  isPro: boolean;
   busy?: boolean;
   onClose: () => void;
   onReplace: (removePlayerId: string) => void;
+  /** 無料ユーザーだけ。Pro 購入へ */
+  onUpgrade?: () => void;
 };
+
+function limitMessage(
+  isJa: boolean,
+  maxPlayers: number,
+  isPro: boolean,
+  incomingLabel: string | undefined
+): string {
+  if (isJa) {
+    const head = isPro
+      ? `お気に入り選手は${maxPlayers}人までです。`
+      : `無料プランのお気に入り選手は${maxPlayers}人までです。Pro なら${NBA_FAVORITE_MAX_PLAYERS_PRO}人まで登録できます。`;
+    return incomingLabel
+      ? `${head}「${incomingLabel}」に入れ替える選手を選んでください。`
+      : head;
+  }
+  const plural = (n: number) => `${n} player${n === 1 ? "" : "s"}`;
+  const head = isPro
+    ? `You can favorite ${plural(maxPlayers)}.`
+    : `Free plan: ${plural(maxPlayers)}. Pro: up to ${plural(NBA_FAVORITE_MAX_PLAYERS_PRO)}.`;
+  return incomingLabel
+    ? `${head} Pick who to replace with ${incomingLabel}.`
+    : head;
+}
 
 export default function NbaFavoriteLimitModalNative({
   open,
   language = "ja",
   incomingLabel,
   players,
+  maxPlayers,
+  isPro,
   busy = false,
   onClose,
   onReplace,
+  onUpgrade,
 }: Props) {
   const isJa = language === "ja";
   const insets = useSafeAreaInsets();
@@ -84,19 +114,7 @@ export default function NbaFavoriteLimitModalNative({
               {isJa ? "入れ替えますか？" : "Replace favorite?"}
             </Text>
             <Text style={styles.sub}>
-              {isJa
-                ? `お気に入り選手は${NBA_FAVORITE_MAX_PLAYERS}人までです${
-                    incomingLabel
-                      ? `。「${incomingLabel}」に入れ替える選手を選んでください。`
-                      : "。"
-                  }`
-                : `You can favorite ${NBA_FAVORITE_MAX_PLAYERS} player${
-                    NBA_FAVORITE_MAX_PLAYERS === 1 ? "" : "s"
-                  }${
-                    incomingLabel
-                      ? `. Pick who to replace with ${incomingLabel}.`
-                      : "."
-                  }`}
+              {limitMessage(isJa, maxPlayers, isPro, incomingLabel)}
             </Text>
           </View>
           <View style={styles.list}>
@@ -123,6 +141,23 @@ export default function NbaFavoriteLimitModalNative({
               );
             })}
           </View>
+          {!isPro && onUpgrade ? (
+            <Pressable
+              disabled={busy}
+              onPress={onUpgrade}
+              accessibilityRole="button"
+              style={({ pressed }) => [
+                styles.upgrade,
+                pressed || busy ? styles.btnBusy : null,
+              ]}
+            >
+              <Text style={styles.upgradeText}>
+                {isJa
+                  ? `PRO で${NBA_FAVORITE_MAX_PLAYERS_PRO}人まで登録`
+                  : `GO PRO · UP TO ${NBA_FAVORITE_MAX_PLAYERS_PRO}`}
+              </Text>
+            </Pressable>
+          ) : null}
           <View style={styles.actions}>
             <Pressable
               disabled={busy}
@@ -230,6 +265,25 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "800",
     letterSpacing: 0.6,
+    textTransform: "uppercase",
+    transform: [{ skewX: "-8deg" }],
+  },
+  upgrade: {
+    marginHorizontal: 12,
+    marginBottom: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 40,
+    borderWidth: 1,
+    borderColor: "rgba(252,211,77,0.7)",
+    backgroundColor: "#FCD34D",
+  },
+  upgradeText: {
+    color: "#0a0a0c",
+    fontFamily: OXANIUM_EXTRA,
+    fontSize: 12,
+    fontWeight: "800",
+    letterSpacing: 1.2,
     textTransform: "uppercase",
     transform: [{ skewX: "-8deg" }],
   },

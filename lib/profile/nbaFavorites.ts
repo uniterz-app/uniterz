@@ -4,13 +4,28 @@
  */
 
 import { TEAM_SHORT } from "@/lib/team-short";
+import { userDataIsPro } from "@/lib/pro/userPlanActive";
 import {
   CURRENT_NBA_SEASON_KEY,
   nbaSeasonShortLabel,
   previousNbaSeasonKey,
 } from "@/lib/rankings/nbaSeason";
 
-export const NBA_FAVORITE_MAX_PLAYERS = 1;
+export const NBA_FAVORITE_MAX_PLAYERS_FREE = 1;
+export const NBA_FAVORITE_MAX_PLAYERS_PRO = 3;
+/** 無料の上限。プランで分けるときは `nbaFavoriteMaxPlayers` を使う */
+export const NBA_FAVORITE_MAX_PLAYERS = NBA_FAVORITE_MAX_PLAYERS_FREE;
+
+export function nbaFavoriteMaxPlayers(isPro: boolean): number {
+  return isPro ? NBA_FAVORITE_MAX_PLAYERS_PRO : NBA_FAVORITE_MAX_PLAYERS_FREE;
+}
+
+/** users ドキュメントの plan / proUntil から上限（期限切れ Pro は無料扱い） */
+export function nbaFavoriteMaxPlayersForUserData(
+  data: Record<string, unknown> | null | undefined
+): number {
+  return nbaFavoriteMaxPlayers(userDataIsPro(data));
+}
 
 /** ファン歴ピッカーの最古（含む）— 3ポイントライン導入付近 */
 export const NBA_FAN_SINCE_OLDEST_START_YEAR = 1979;
@@ -137,9 +152,27 @@ function normalizePlayer(raw: unknown): NbaFavoritePlayer | null {
   };
 }
 
-/** Firestore users ドキュメントからお気に入りを読む */
+/**
+ * Firestore users ドキュメントからお気に入りを読む（表示・編集用）。
+ * 選手は同じドキュメントのプランの上限まで。Pro が切れた人は先頭 1 人だけ見せ、
+ * 残りは保存したまま Pro に戻ったら出す。
+ */
 export function parseNbaFavorites(
   data: Record<string, unknown> | null | undefined
+): NbaFavorites {
+  return parseNbaFavoritesWithMax(data, nbaFavoriteMaxPlayersForUserData(data));
+}
+
+/** プランに関係なく保存されている選手を読む（backfill 用） */
+export function parseStoredNbaFavorites(
+  data: Record<string, unknown> | null | undefined
+): NbaFavorites {
+  return parseNbaFavoritesWithMax(data, NBA_FAVORITE_MAX_PLAYERS_PRO);
+}
+
+function parseNbaFavoritesWithMax(
+  data: Record<string, unknown> | null | undefined,
+  maxPlayers: number
 ): NbaFavorites {
   if (!data) return { ...EMPTY, favoriteNbaPlayers: [] };
 
@@ -173,7 +206,7 @@ export function parseNbaFavorites(
       if (!p) continue;
       if (favoriteNbaPlayers.some((x) => x.playerId === p.playerId)) continue;
       favoriteNbaPlayers.push(p);
-      if (favoriteNbaPlayers.length >= NBA_FAVORITE_MAX_PLAYERS) break;
+      if (favoriteNbaPlayers.length >= maxPlayers) break;
     }
   }
 
@@ -247,7 +280,8 @@ function normalizeFavoritePlayerInput(
 
 export function toggleNbaFavoritePlayer(
   current: NbaFavorites,
-  player: NbaFavoritePlayer
+  player: NbaFavoritePlayer,
+  maxPlayers: number = NBA_FAVORITE_MAX_PLAYERS_FREE
 ): ToggleNbaFavoritePlayerResult {
   const normalized = normalizeFavoritePlayerInput(player);
   if (!normalized) {
@@ -266,7 +300,7 @@ export function toggleNbaFavoritePlayer(
       },
     };
   }
-  if (current.favoriteNbaPlayers.length >= NBA_FAVORITE_MAX_PLAYERS) {
+  if (current.favoriteNbaPlayers.length >= maxPlayers) {
     return { ok: false, reason: "max_players", next: current };
   }
   return {
@@ -287,7 +321,7 @@ export type ReplaceNbaFavoritePlayerResult =
     };
 
 /**
- * 上限到達時: removePlayerId を外して addPlayer を入れる（原子的）。
+ * 上限到達時: removePlayerId を外して addPlayer を同じ位置に入れる（原子的）。
  */
 export function replaceNbaFavoritePlayer(
   current: NbaFavorites,
@@ -317,10 +351,9 @@ export function replaceNbaFavoritePlayer(
     ok: true,
     next: {
       ...current,
-      favoriteNbaPlayers: [
-        ...current.favoriteNbaPlayers.filter((p) => p.playerId !== removeId),
-        normalized,
-      ],
+      favoriteNbaPlayers: current.favoriteNbaPlayers.map((p) =>
+        p.playerId === removeId ? normalized : p
+      ),
     },
   };
 }
