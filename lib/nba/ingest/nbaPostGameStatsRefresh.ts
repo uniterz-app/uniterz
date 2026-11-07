@@ -101,6 +101,17 @@ async function loadCandidates(db: Firestore, nowMs: number): Promise<Candidate[]
     .where("league", "==", "nba")
     .where("startAtJst", ">=", Timestamp.fromMillis(nowMs - WATCH_WINDOW_MS))
     .where("startAtJst", "<=", Timestamp.fromMillis(nowMs))
+    .select(
+      "final",
+      "seasonPhase",
+      "bdlGameId",
+      "season",
+      "homeTeamId",
+      "awayTeamId",
+      "startAtJst",
+      "finalAt",
+      "liveStats.box"
+    )
     .get();
   const out: Candidate[] = [];
   for (const doc of snap.docs) {

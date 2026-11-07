@@ -13,6 +13,10 @@ import {
 } from "@/lib/nba/teamShapes/teamShapeTypes";
 import { loadLeagueTeamStatsSnapshot } from "@/lib/nba/leagueTeamStats/loadLeagueTeamStatsSnapshot";
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
+import {
+  loadNbaSeasonGameRows,
+  type NbaSeasonGameRow,
+} from "@/lib/nba/ingest/nbaSeasonGameRows";
 
 export function normalizeTeamShapeSeasonKey(
   raw: string | null | undefined
@@ -89,21 +93,18 @@ export async function loadTeamShapeSeasonRates(
 /** games コレクションから今季 final を集計して書く */
 export async function buildAndWriteTeamShapeRecordsFromGames(
   db: Firestore,
-  seasonKey: string
+  seasonKey: string,
+  seasonGames?: NbaSeasonGameRow[]
 ): Promise<NbaTeamShapeRecordsBundle> {
   const season = normalizeTeamShapeSeasonKey(seasonKey);
-  const [snap, seasonRatesByTeam] = await Promise.all([
-    db
-      .collection("games")
-      .where("league", "==", "nba")
-      .where("season", "==", season)
-      .get(),
+  const [rows, seasonRatesByTeam] = await Promise.all([
+    seasonGames ?? loadNbaSeasonGameRows(db, season),
     loadTeamShapeSeasonRates(db, season),
   ]);
 
   const games = [];
-  for (const doc of snap.docs) {
-    const g = teamShapeGameFromDoc(doc.data() as Record<string, unknown>);
+  for (const row of rows) {
+    const g = teamShapeGameFromDoc(row);
     if (g) games.push(g);
   }
 
