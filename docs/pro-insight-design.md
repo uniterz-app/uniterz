@@ -177,21 +177,22 @@ npx tsx scripts/ingest-nba-team-ace-out-records.ts 2025-26 --force
 
 ---
 
-## 6.6. PREVIEW（文章のプレビュー・INSIGHT の一番上）
+## 6.6. PREVIEW（展望の文章・INSIGHT の一番上）
 
-前回の直接対決 → 両チームの前の試合 → それを踏まえた読み、を段落の文章で出す。表・枠（MATCHUP 以下）はその下に残す。**ピックアップの試合だけ**（`isNbaPickupGame`。それ以外はファクトを読まず翻訳も頼まない）。
+**ピックアップの試合だけ**（`isNbaPickupGame`。それ以外は材料を読まず LLM も呼ばない）。スタッツを並べるのではなく「今夜どこで決まるか」の展望を 3 段落で書く。表・枠（MATCHUP 以下）はその下に残す。
 
-| 段落 | 中身 | データ |
-|---|---|---|
-| meeting | 前回の対戦（今季 or 昨季・プレーオフなら明記）の日付・会場・スコア・点差、勝った側→負けた側の得点上位（FG）、目立つチーム差（REB / 3PM / TO）、対戦成績（レギュラー / プレーイン / プレーオフ別） | `games`（2 チーム一致・終了・プレシーズン除く）+ `liveStats.box`。box が無い試合は `nbaPlayerGameLogs/{season}` の `gameId` 一致行 |
-| recent | 両チームの直近の終了試合（間に未消化試合があるチームは出さない）: 前日なら「前日」、スコア・得点上位・36 分以上の出場 | ナラティブ生成時に読んでいる直近 `games` |
-| read | 最新シーズンで 2 勝差以上なら相性、B2B（片方 / 両方）と長時間出場から脚の読み | 上の 2 段落のファクトだけ |
+| 段落 | 中身 |
+|---|---|
+| 1. どこで決まるか | 型の相性（MATCHUP 表の上位 1〜2 本）を、欠場で薄くなる守り・攻めと結び付けて、コート上で何が起きるか |
+| 2. ディフィカルティと条件 | 欠場込みの厳しさ・連戦・移動・長時間出場から、どちらが厳しい夜か、それで試合の何が変わるか |
+| 3. 前回・前の試合から | 前回の対戦と両チームの前の試合を 1〜2 の読みの裏付け（または反証）に使い、今夜の注目点（試合中に見える兆し）で締める |
 
-- **ja / en はコードが書く**（`lib/nba/insights/proInsightFacts/previewTemplate.ts`）。LLM に文章を作らせると数字の取り違え・ファクトに無い主張が出たため
-- ko / zh / es / pt / fr / de / ar は LLM が en を**翻訳だけ**（`previewTranslations`）。訳の数字が en と一致しない（足した・落とした）段落は en を出す（`previewNarrative.ts`）
+- 材料シート（`buildPreviewOutlookSheet`・`lib/nba/insights/proInsightLlm/previewOutlook.ts`）: MATCHUP 表（順位・欠場注記）、MATCHUP / SCHEDULE / CONTEXT / INJURY IMPACT の hintEn、Difficulty（会場込み・欠場込み）、連戦 2 日目のチーム、前回の対戦・前の試合の事実文（`previewTemplate.ts` の en。表示には使わない）
+- 前回の対戦・前の試合の事実: `games`（2 チーム一致・終了・プレシーズン除く）+ `liveStats.box`。box が無い過去季は `nbaPlayerGameLogs/{season}` の `gameId` 一致行（無ければスコア・日付・対戦成績だけ）
+- LLM: Chat 1 回で 9 言語（モデル `OPENAI_PRO_INSIGHT_PREVIEW_MODEL`、既定 `gpt-4.1`。本文の Batch とは別）。`writeNarrative` の保存直前に生成（Batch poll / 1h 前 patch / sync すべて）。poll は保存を並列化
+- 数字ガード: シートに無い数字が出た言語は捨てて en を出す。ja / en が落ちたら 1 回だけ再生成、それでも駄目なら PREVIEW なし
+- プロンプトで禁止: 勝者・スコア予想、材料に無い欠場の有無の断定、材料に無い選手の特徴（ドライブ等）、指標の取り違え（被 2nd チャンス = ディフェンスリバウンド）
 - ファクトは `proInsightFacts.preview` に保存し、Batch poll で復元
-- 勝者予想は書かない
-- 昨季の対戦は `nbaPlayerGameLogs/{昨季}` が無いとスコア・日付・対戦成績だけになる
 
 ---
 
