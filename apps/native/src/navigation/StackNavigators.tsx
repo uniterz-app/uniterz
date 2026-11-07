@@ -390,6 +390,12 @@ function ProfileStackScreen() {
           }
         />
         <ProfileStack.Screen
+          name="ThemeSettings"
+          getComponent={() =>
+            require("../features/profile/screens/ThemeSettingsScreenNative").default
+          }
+        />
+        <ProfileStack.Screen
           name="ProfilePassword"
           getComponent={() =>
             require("../features/profile/screens/ProfilePasswordScreenNative").default

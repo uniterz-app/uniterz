@@ -90,6 +90,7 @@ type Props = {
     | "password"
     | "notifications"
     | "displaySettings"
+    | "themeSettings"
     | "featureRequest"
     | "electronicNotice"
     | "notificationDev"
@@ -273,6 +274,7 @@ export default function ProfileSideMenuModal({
       | "password"
       | "notifications"
       | "displaySettings"
+      | "themeSettings"
       | "featureRequest"
       | "electronicNotice"
       | "notificationDev"
@@ -497,6 +499,13 @@ export default function ProfileSideMenuModal({
                       onPress={() => openUserPage("displaySettings")}
                     >
                       {labels.displaySettings}
+                    </SideMenuItemButtonNative>
+                    <SideMenuItemButtonNative
+                      icon="theme-light-dark"
+                      labelStyle={labelStyle}
+                      onPress={() => openUserPage("themeSettings")}
+                    >
+                      {labels.themeSettings}
                     </SideMenuItemButtonNative>
                   </View>
 
