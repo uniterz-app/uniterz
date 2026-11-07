@@ -96,6 +96,7 @@ export default function MilestoneProSkinPreviewScreenNative({
   const entries = previewEntries(lang);
   const [unlockPreviewId, setUnlockPreviewId] =
     useState<ProfilePlanProBeastBgVariant | null>(null);
+  const [unlockPreviewLocked, setUnlockPreviewLocked] = useState(false);
 
   return (
     <>
@@ -148,14 +149,30 @@ export default function MilestoneProSkinPreviewScreenNative({
                 language={lang}
                 style={styles.credit}
               />
-              <Pressable
-                style={styles.unlockBtn}
-                onPress={() => setUnlockPreviewId(id)}
-              >
-                <Text style={styles.unlockBtnText}>
-                  {ja ? "解放画面を見る" : "Preview unlock"}
-                </Text>
-              </Pressable>
+              <View style={styles.unlockBtnRow}>
+                <Pressable
+                  style={styles.unlockBtn}
+                  onPress={() => {
+                    setUnlockPreviewLocked(false);
+                    setUnlockPreviewId(id);
+                  }}
+                >
+                  <Text style={styles.unlockBtnText}>
+                    {ja ? "解放画面を見る" : "Preview unlock"}
+                  </Text>
+                </Pressable>
+                <Pressable
+                  style={styles.unlockBtn}
+                  onPress={() => {
+                    setUnlockPreviewLocked(true);
+                    setUnlockPreviewId(id);
+                  }}
+                >
+                  <Text style={styles.unlockBtnText}>
+                    {ja ? "Free 版を見る" : "Preview (Free)"}
+                  </Text>
+                </Pressable>
+              </View>
             </View>
           );
         })}
@@ -167,6 +184,7 @@ export default function MilestoneProSkinPreviewScreenNative({
         language={language}
         preview
         visible
+        locked={unlockPreviewLocked}
         ownerCounts={{ [unlockPreviewId]: 128 }}
         onDismiss={() => setUnlockPreviewId(null)}
       />
@@ -205,8 +223,12 @@ const styles = StyleSheet.create({
   credit: {
     marginTop: 6,
   },
-  unlockBtn: {
+  unlockBtnRow: {
     marginTop: 10,
+    flexDirection: "row",
+    gap: 8,
+  },
+  unlockBtn: {
     alignSelf: "flex-start",
     borderWidth: 1,
     borderColor: "rgba(0,245,255,0.5)",

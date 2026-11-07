@@ -210,6 +210,18 @@ export async function grantProSkinSeasonRankUnlocks(opts: {
           );
         }
         careerCount = countMilestoneUnlockedProSkins([...unlocked]);
+      } else {
+        const known = new Set<string>(
+          [user.proSkinRankEarnedIds, user.proSkinHeldIds].flatMap((raw) =>
+            Array.isArray(raw)
+              ? raw.filter((x): x is string => typeof x === "string")
+              : []
+          )
+        );
+        const lockedNotice = skinIds.filter((id) => !known.has(id));
+        if (lockedNotice.length > 0) {
+          patch.proSkinLockedNoticeIds = FieldValue.arrayUnion(...lockedNotice);
+        }
       }
 
       tx.set(userRef, patch, { merge: true });

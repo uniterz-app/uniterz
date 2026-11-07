@@ -1,8 +1,11 @@
 /**
- * Pro Skin マイルストーン解放通知（プロフィール復帰時）。
+ * Pro Skin マイルストーン解放通知（Native はアプリ起動・復帰時）。
  *
  * 方針:
- * - モーダル対象は users.proSkinUnlockNoticeIds（Pro 中のライブ達成のみ settle が積む）
+ * - users.proSkinUnlockNoticeIds: Pro 中のライブ達成（settle / 順位確定 / 紹介が積む）
+ * - users.proSkinLockedNoticeIds: Free 中に条件を満たした分（Pro 誘導用）。
+ *   1.0.4 以前の Native はプロフィールで proSkinUnlockNoticeIds だけを「適用」ボタン付きで出すため分ける
+ * - 表示時に今 Pro なら両方を「解放」、Free なら両方を「Pro で解放」として出す
  * - Free→Pro 遡及解放は unlockedIds に入るが notice には載せない（サイレント）
  * - ローカル seen は二重表示防止の保険
  */
@@ -35,10 +38,20 @@ export function serializeProSkinUnlockSeenIds(ids: Iterable<string>): string {
   return JSON.stringify([...ids]);
 }
 
-/** users.proSkinUnlockNoticeIds */
+/** users.proSkinUnlockNoticeIds / users.proSkinLockedNoticeIds */
 export function parseProSkinUnlockNoticeIds(raw: unknown): string[] {
   if (!Array.isArray(raw)) return [];
   return raw.filter((x): x is string => typeof x === "string" && x.length > 0);
+}
+
+/** 両キューの和（Pro 中の解放 → Free 中の獲得の順・重複なし） */
+export function mergeProSkinNoticeQueues(userData: Record<string, unknown>): string[] {
+  return [
+    ...new Set([
+      ...parseProSkinUnlockNoticeIds(userData.proSkinUnlockNoticeIds),
+      ...parseProSkinUnlockNoticeIds(userData.proSkinLockedNoticeIds),
+    ]),
+  ];
 }
 
 /** プレビュー用 — 実際の模様を1枚ヒーロー表示 */

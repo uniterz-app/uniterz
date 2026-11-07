@@ -146,6 +146,7 @@ export async function DELETE(req: Request) {
         proSkinProgress: FieldValue.delete(),
         proSkinRankEarnedIds: FieldValue.delete(),
         proSkinUnlockNoticeIds: FieldValue.delete(),
+        proSkinLockedNoticeIds: FieldValue.delete(),
         proSkinUnlockSeason: FieldValue.delete(),
         proSkinHeldIds: FieldValue.delete(),
         updatedAt: FieldValue.serverTimestamp(),
