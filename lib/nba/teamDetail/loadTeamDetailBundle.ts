@@ -11,6 +11,8 @@ import { loadTeamRosterSlice } from "@/lib/nba/teamRosters/loadTeamRostersSnapsh
 import { buildMatchupRosterReport } from "@/lib/nba/teamRosters/buildMatchupRosterReport";
 import { loadTeamPayroll } from "@/lib/nba/teamPayroll/loadTeamPayrollSnapshot";
 import { loadTeamGameLog } from "@/lib/nba/teamGameLog/loadTeamGameLog";
+import { loadTeamGameLogDetail } from "@/lib/nba/teamGameLog/loadTeamGameLogDetail";
+import type { NbaTeamGameLogDetail } from "@/lib/nba/teamGameLog/teamGameLogDetail";
 import { loadTeamInjury } from "@/lib/nba/teamInjuries/loadTeamInjuriesSnapshot";
 import { loadNbaConferenceStandings } from "@/lib/nba/standings/loadNbaConferenceStandings";
 import { findNbaConferenceStandingsRow } from "@/lib/nba/standings/findNbaConferenceStandingsRow";
@@ -43,6 +45,8 @@ export type NbaTeamDetailApiPayload = {
   rosterBlock: NbaRosterTeamBlock | null;
   payroll: NbaTeamPayroll | null;
   gameLog: NbaTeamGameLogSlice | null;
+  /** 全試合・スプリット平均・H2H 平均（ingest 前の季は null） */
+  gameLogDetail: NbaTeamGameLogDetail | null;
   standingsRow: NbaConferenceStandingsRow | null;
   injuries: NbaTeamInjuryEntry[];
   strengthSplit: NbaTeamStrengthSplit;
@@ -161,6 +165,7 @@ export async function loadTeamDetailBundle(
     shapes,
     offseason,
     discipline,
+    gameLogDetailPayload,
   ] = await Promise.all([
     loadTeamRosterSlice(db, liveSeason, teamId),
     loadTeamPayroll(db, liveSeason, teamId),
@@ -172,6 +177,7 @@ export async function loadTeamDetailBundle(
     loadShapeEdges(db, formSeason, teamId),
     loadTeamOffseasonMoves(db, liveSeason, teamId),
     loadTeamDisciplineSlice(db, statsSeason, teamId),
+    loadTeamGameLogDetail(db, formSeason, teamId),
   ]);
 
   const offseasonMoves =
@@ -228,6 +234,7 @@ export async function loadTeamDetailBundle(
     rosterBlock,
     payroll: payrollPayload.payroll,
     gameLog: gameLogPayload.log,
+    gameLogDetail: gameLogDetailPayload.detail,
     standingsRow,
     injuries: injuryPayload.injuries ?? [],
     strengthSplit,

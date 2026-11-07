@@ -12,6 +12,7 @@ import type {
 } from "@/lib/predict/nbaTeamDetailPreviewMocks";
 import type { NbaConferenceStandingsRow } from "@/lib/nba/nbaConferenceStandings";
 import type { NbaTeamGameLogSlice } from "@/lib/nba/teamGameLog/teamGameLogTypes";
+import type { NbaTeamGameLogDetail } from "@/lib/nba/teamGameLog/teamGameLogDetail";
 import type { NbaRosterTeamBlock } from "@/lib/predict/nbaRoster";
 import type { NbaTeamAceOutRecord } from "@/lib/nba/insights/aceOutRecordTypes";
 import type { NbaTeamStrengthSplit } from "@/lib/nba/insights/fetchTeamStrengthSplitClient";
@@ -62,6 +63,7 @@ export function useNbaTeamDetailLiveOverlay(options: Options): {
   detail: NbaTeamDetailPreview;
   aceOut: NbaTeamAceOutRecord | null;
   shapeEdges: NbaTeamDetailShapeEdges | null;
+  gameLogDetail: NbaTeamGameLogDetail | null;
   offseasonMoves: NbaTeamOffseasonMoves | null;
   discipline: NbaDisciplineDetailSlice | null;
   loading: boolean;
@@ -78,6 +80,8 @@ export function useNbaTeamDetailLiveOverlay(options: Options): {
   );
   const [payroll, setPayroll] = useState<NbaTeamPayroll | null>(null);
   const [gameLog, setGameLog] = useState<NbaTeamGameLogSlice | null>(null);
+  const [gameLogDetail, setGameLogDetail] =
+    useState<NbaTeamGameLogDetail | null>(null);
   const [standingsRow, setStandingsRow] =
     useState<NbaConferenceStandingsRow | null>(null);
   const [injuries, setInjuries] = useState<NbaTeamInjuryEntry[] | null>(null);
@@ -99,6 +103,7 @@ export function useNbaTeamDetailLiveOverlay(options: Options): {
       setRosterBlock(null);
       setPayroll(null);
       setGameLog(null);
+      setGameLogDetail(null);
       setStandingsRow(null);
       setInjuries(null);
       setStrengthSplit(null);
@@ -124,6 +129,7 @@ export function useNbaTeamDetailLiveOverlay(options: Options): {
         setRosterBlock(payload.rosterBlock);
         setPayroll(payload.payroll);
         setGameLog(payload.gameLog);
+        setGameLogDetail(payload.gameLogDetail ?? null);
         setStandingsRow(payload.standingsRow);
         setInjuries(payload.injuries);
         setStrengthSplit(payload.strengthSplit);
@@ -138,6 +144,7 @@ export function useNbaTeamDetailLiveOverlay(options: Options): {
         setRosterBlock(null);
         setPayroll(null);
         setGameLog(null);
+        setGameLogDetail(null);
         setStandingsRow(null);
         setInjuries(null);
         setStrengthSplit(null);
@@ -222,6 +229,7 @@ export function useNbaTeamDetailLiveOverlay(options: Options): {
     detail,
     aceOut,
     shapeEdges,
+    gameLogDetail,
     offseasonMoves,
     discipline,
     loading,
