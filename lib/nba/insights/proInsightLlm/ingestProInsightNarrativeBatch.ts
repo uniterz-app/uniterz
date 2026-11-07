@@ -110,6 +110,11 @@ import type { NbaTeamRosterDocTeam } from "@/lib/nba/teamRosters/teamRosterTypes
 import type { ProInsightPreviewFacts } from "@/lib/nba/insights/proInsightFacts/buildPreviewFacts";
 import { loadProInsightPreviewFacts } from "@/lib/nba/insights/proInsightFacts/loadPreviewFacts";
 import { isNbaPickupGame } from "@/lib/nba/isPickupGame";
+import {
+  loadProInsightOutlookAnalysis,
+  loadSeasonPlayerLogs,
+} from "@/lib/nba/insights/proInsightFacts/loadOutlookAnalysis";
+import type { OutlookPlayerLogs } from "@/lib/nba/insights/proInsightFacts/buildOutlookAnalysis";
 
 export type ProInsightNarrativeBatchSubmitResult = {
   ok: boolean;
@@ -844,6 +849,7 @@ export async function submitProInsightNarrativeBatch(
   const injuryTeams = injurySnap.bundle.teams;
   const winPct = winPctByTeam(seasonRows);
   const teamGameLogs = await loadTeamGameLogsTeams(db, seasonKey);
+  let seasonPlayerLogs: Map<string, OutlookPlayerLogs> | null = null;
 
   let games: Array<{ id: string; data: Record<string, unknown> }>;
   if (input.gameIds?.length) {
@@ -1081,6 +1087,19 @@ export async function submitProInsightNarrativeBatch(
             priorRosterTeams,
           })
         : null;
+      if (pack.preview) {
+        seasonPlayerLogs ??= await loadSeasonPlayerLogs(db, seasonKey);
+        pack.preview.analysis = await loadProInsightOutlookAnalysis(db, {
+          homeTeamId,
+          awayTeamId,
+          seasonKey,
+          seasonRows,
+          last10Rows,
+          rosterTeams: seasonRosterTeams,
+          injuries: injuryTeams,
+          logsByPlayer: seasonPlayerLogs,
+        });
+      }
       prepared.push({
         gameId: game.id,
         pack: withInjuryDifficultyFact(pack),
@@ -1723,6 +1742,7 @@ export async function patchProInsightNarrativesIfInjuryChanged(
   const injuryTeams = injurySnap.bundle.teams;
   const winPct = winPctByTeam(seasonRows);
   const teamGameLogs = await loadTeamGameLogsTeams(db, seasonKey);
+  let seasonPlayerLogs: Map<string, OutlookPlayerLogs> | null = null;
 
   let games: Array<{ id: string; data: Record<string, unknown> }>;
   if (input.gameIds?.length) {
@@ -1955,6 +1975,19 @@ export async function patchProInsightNarrativesIfInjuryChanged(
             priorRosterTeams,
           })
         : null;
+      if (pack.preview) {
+        seasonPlayerLogs ??= await loadSeasonPlayerLogs(db, seasonKey);
+        pack.preview.analysis = await loadProInsightOutlookAnalysis(db, {
+          homeTeamId,
+          awayTeamId,
+          seasonKey,
+          seasonRows,
+          last10Rows,
+          rosterTeams: seasonRosterTeams,
+          injuries: injuryTeams,
+          logsByPlayer: seasonPlayerLogs,
+        });
+      }
       const packed = withInjuryDifficultyFact(pack);
       const brief = await generateProInsightNarrativeForGameChat(packed);
       const source = isOpenAiConfigured() ? "openai_chat" : "fallback";
