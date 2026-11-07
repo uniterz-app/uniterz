@@ -7,6 +7,7 @@ import {
   teamIdFromSide,
   toMs,
 } from "@/lib/nba/insights/proInsightFacts/highMinutePlayersFromLiveStats";
+import type { ProInsightOutlookAnalysis } from "@/lib/nba/insights/proInsightFacts/buildOutlookAnalysis";
 
 export type ProInsightPreviewPlayerLine = {
   name: string;
@@ -73,6 +74,8 @@ export type ProInsightPreviewFacts = {
   lastMeeting: ProInsightPreviewMeeting | null;
   series: ProInsightPreviewSeries[];
   prevGames: ProInsightPreviewPrevGame[];
+  /** 展望の分析材料（攻守・ポジション別失点・主力・欠場時の得点の移り方） */
+  analysis?: ProInsightOutlookAnalysis | null;
 };
 
 export type PreviewGameDoc = { id: string; data: Record<string, unknown> };
