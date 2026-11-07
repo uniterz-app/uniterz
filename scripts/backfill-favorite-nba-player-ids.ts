@@ -11,7 +11,7 @@ import "./_loadAdminEnv";
 import { getAdminDb } from "../lib/firebaseAdmin";
 import {
   nbaFavoritePlayerIdsOf,
-  parseNbaFavorites,
+  parseStoredNbaFavorites,
 } from "../lib/profile/nbaFavorites";
 
 const DRY_RUN = process.argv.includes("--dry-run");
@@ -45,7 +45,7 @@ async function main() {
     if (!hasPlayersField && !hasIdsField) continue;
 
     const ids = nbaFavoritePlayerIdsOf(
-      parseNbaFavorites(data).favoriteNbaPlayers,
+      parseStoredNbaFavorites(data).favoriteNbaPlayers,
     );
     if (sameIds(data.favoriteNbaPlayerIds, ids)) continue;
 

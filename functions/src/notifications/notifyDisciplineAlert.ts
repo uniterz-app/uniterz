@@ -1,6 +1,7 @@
 import { onDocumentCreated } from "firebase-functions/v2/firestore";
 import { FieldPath } from "firebase-admin/firestore";
 import { db } from "../firebase";
+import { userDataIsPro } from "../shared/userPlanActive";
 import { sendExpoPushToUids, type SendTarget } from "./sendExpoPush";
 import type { DisciplinePushInput } from "./pushNotificationCopy";
 
@@ -62,10 +63,18 @@ async function sendToFans(
   const fans = await db
     .collection("users")
     .where("favoriteNbaPlayerIds", "array-contains", playerId)
-    .select()
+    .select("favoriteNbaPlayerIds", "plan", "proUntil")
     .get();
   if (fans.empty) return;
-  const targets: SendTarget[] = fans.docs.map((d) => ({
+  // Pro が切れた人は先頭 1 人だけ有効（2〜3 人目は Pro に戻るまで保存だけ）
+  const active = fans.docs.filter((d) => {
+    const data = d.data();
+    if (userDataIsPro(data)) return true;
+    const ids = data.favoriteNbaPlayerIds;
+    return Array.isArray(ids) && ids[0] === playerId;
+  });
+  if (active.length === 0) return;
+  const targets: SendTarget[] = active.map((d) => ({
     uid: d.id,
     data: { type: "discipline_alert", playerId },
   }));

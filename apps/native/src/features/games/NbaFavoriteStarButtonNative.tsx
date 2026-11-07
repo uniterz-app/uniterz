@@ -18,8 +18,8 @@ import {
   formatNbaFavoritePlayerInitialLast,
   hasNbaFavoritePlayer,
   hasNbaFavoriteTeam,
-  NBA_FAVORITE_MAX_PLAYERS,
 } from "../../../../../lib/profile/nbaFavorites";
+import { openProSubscribeNative } from "../../navigation/navigationRef";
 import { getNbaTeamNicknameById } from "../../../../../lib/nba-team-names";
 import { CURRENT_NBA_SEASON_KEY } from "../../../../../lib/rankings/nbaSeason";
 import { formatNbaFavoriteCount } from "../../../../../lib/nba/favoriteCounts";
@@ -63,7 +63,7 @@ export default function NbaFavoriteStarButtonNative(
   props: NbaFavoriteStarButtonNativeProps
 ) {
   const isJa = (props.language ?? "ja") === "ja";
-  const { favorites, ready, uid } = useMyNbaFavoritesNative();
+  const { favorites, ready, uid, isPro, maxPlayers } = useMyNbaFavoritesNative();
   const [busy, setBusy] = useState(false);
   const [limitOpen, setLimitOpen] = useState(false);
   const [replaceBusy, setReplaceBusy] = useState(false);
@@ -160,10 +160,7 @@ export default function NbaFavoriteStarButtonNative(
       setFanSinceOpen(true);
       return;
     }
-    if (
-      !active &&
-      favorites.favoriteNbaPlayers.length >= NBA_FAVORITE_MAX_PLAYERS
-    ) {
+    if (!active && favorites.favoriteNbaPlayers.length >= maxPlayers) {
       setLimitOpen(true);
       return;
     }
@@ -191,6 +188,7 @@ export default function NbaFavoriteStarButtonNative(
     active,
     saveTeam,
     favorites.favoriteNbaPlayers.length,
+    maxPlayers,
   ]);
 
   const onReplace = useCallback(
@@ -288,11 +286,17 @@ export default function NbaFavoriteStarButtonNative(
           language={isJa ? "ja" : "en"}
           incomingLabel={incomingLabel}
           players={favorites.favoriteNbaPlayers}
+          maxPlayers={maxPlayers}
+          isPro={isPro}
           busy={replaceBusy}
           onClose={() => {
             if (!replaceBusy) setLimitOpen(false);
           }}
           onReplace={(id) => void onReplace(id)}
+          onUpgrade={() => {
+            setLimitOpen(false);
+            setTimeout(() => openProSubscribeNative(), MODAL_HANDOFF_MS);
+          }}
         />
       ) : null}
       {props.kind === "team" ? (

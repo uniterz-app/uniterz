@@ -1,13 +1,15 @@
 /**
- * Web `ProfileNbaFavoritesRow` 相当 — チーム1・選手1・横並び。
- * FAVORITES 見出しは中央。
+ * Web `ProfileNbaFavoritesRow` 相当 — チーム1・選手は無料1 / Pro 3。
+ * 選手1人までは横1行、2人以上は1行目チーム・2行目選手。FAVORITES 見出しは中央。
  */
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { Fragment } from "react";
 import {
   formatNbaFanSinceInline,
   formatNbaFavoritePlayerInitialLast,
+  type NbaFavoritePlayer,
   type NbaFavorites,
 } from "../../../../../../lib/profile/nbaFavorites";
 import {
@@ -36,8 +38,8 @@ export default function ProfileNbaFavoritesRowNative({
   const navigation =
     useNavigation<NativeStackNavigationProp<FavoritesDetailParamList>>();
   const teamId = favorites.favoriteNbaTeamId;
-  const player = favorites.favoriteNbaPlayers[0] ?? null;
-  if (!teamId && !player) return null;
+  const players = favorites.favoriteNbaPlayers;
+  if (!teamId && players.length === 0) return null;
 
   const fanSince = formatNbaFanSinceInline(
     favorites.favoriteNbaTeamFanSinceSeason,
@@ -47,55 +49,78 @@ export default function ProfileNbaFavoritesRowNative({
     ? compactNbaCardNickname(getNbaTeamNicknameById(teamId), teamId)
     : "";
 
+  const team = teamId ? (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={teamLabel}
+      hitSlop={8}
+      onPress={() => navigation.navigate("TeamDetailPreview", { teamId })}
+      style={({ pressed }) => [
+        styles.teamCluster,
+        players.length > 1 ? styles.teamClusterAlone : null,
+        pressed ? styles.pressed : null,
+      ]}
+    >
+      <Text style={styles.teamName} numberOfLines={1}>
+        {teamLabel}
+      </Text>
+      {fanSince ? (
+        <Text style={styles.fanSince} numberOfLines={1}>
+          {fanSince}
+        </Text>
+      ) : null}
+    </Pressable>
+  ) : null;
+
+  const renderPlayer = (player: NbaFavoritePlayer, maxWidth: `${number}%`) => (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={player.displayName}
+      hitSlop={8}
+      onPress={() =>
+        navigation.navigate("PlayerDetailPreview", {
+          playerId: player.playerId,
+        })
+      }
+      style={({ pressed }) => [
+        styles.playerCluster,
+        { maxWidth },
+        pressed ? styles.pressed : null,
+      ]}
+    >
+      <Text style={styles.playerName} numberOfLines={1}>
+        {formatNbaFavoritePlayerInitialLast(player.displayName)}
+      </Text>
+      {player.teamId ? <TeamAbbrBadgeNative teamId={player.teamId} /> : null}
+    </Pressable>
+  );
+
+  if (players.length <= 1) {
+    const player = players[0] ?? null;
+    return (
+      <View style={styles.wrap} accessibilityLabel="Favorites">
+        <Text style={styles.heading}>FAVORITES</Text>
+        <View style={styles.row}>
+          {team}
+          {team && player ? <Text style={styles.dot}>·</Text> : null}
+          {player ? renderPlayer(player, "48%") : null}
+        </View>
+      </View>
+    );
+  }
+
+  const playerMaxWidth: `${number}%` = players.length >= 3 ? "31%" : "46%";
   return (
     <View style={styles.wrap} accessibilityLabel="Favorites">
       <Text style={styles.heading}>FAVORITES</Text>
-      <View style={styles.row}>
-        {teamId ? (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={teamLabel}
-            hitSlop={8}
-            onPress={() => navigation.navigate("TeamDetailPreview", { teamId })}
-            style={({ pressed }) => [
-              styles.teamCluster,
-              pressed ? styles.pressed : null,
-            ]}
-          >
-            <Text style={styles.teamName} numberOfLines={1}>
-              {teamLabel}
-            </Text>
-            {fanSince ? (
-              <Text style={styles.fanSince} numberOfLines={1}>
-                {fanSince}
-              </Text>
-            ) : null}
-          </Pressable>
-        ) : null}
-        {teamId && player ? <Text style={styles.dot}>·</Text> : null}
-        {player ? (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={player.displayName}
-            hitSlop={8}
-            onPress={() =>
-              navigation.navigate("PlayerDetailPreview", {
-                playerId: player.playerId,
-              })
-            }
-            style={({ pressed }) => [
-              styles.playerCluster,
-              pressed ? styles.pressed : null,
-            ]}
-          >
-            <Text style={styles.playerName} numberOfLines={1}>
-              {formatNbaFavoritePlayerInitialLast(player.displayName)}
-            </Text>
-            {player.teamId ? (
-              <TeamAbbrBadgeNative teamId={player.teamId} />
-            ) : null}
-          </Pressable>
-        ) : null}
+      {team ? <View style={styles.row}>{team}</View> : null}
+      <View style={[styles.row, team ? styles.playersRow : null]}>
+        {players.map((p, i) => (
+          <Fragment key={p.playerId}>
+            {i > 0 ? <Text style={styles.dot}>·</Text> : null}
+            {renderPlayer(p, playerMaxWidth)}
+          </Fragment>
+        ))}
       </View>
     </View>
   );
@@ -123,6 +148,10 @@ const styles = StyleSheet.create({
     gap: 10,
     maxWidth: "100%",
   },
+  playersRow: {
+    marginTop: 6,
+    gap: 8,
+  },
   teamCluster: {
     flexDirection: "row",
     alignItems: "baseline",
@@ -130,6 +159,9 @@ const styles = StyleSheet.create({
     minWidth: 0,
     maxWidth: "48%",
     gap: 6,
+  },
+  teamClusterAlone: {
+    maxWidth: "100%",
   },
   teamName: {
     flexShrink: 1,
@@ -165,7 +197,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     flexShrink: 1,
     minWidth: 0,
-    maxWidth: "48%",
     gap: 6,
   },
   playerName: {
