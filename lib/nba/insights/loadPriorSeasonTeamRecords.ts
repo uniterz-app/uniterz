@@ -9,6 +9,10 @@ import {
 } from "@/lib/nba/insights/buildPriorSeasonTeamRecords";
 import type { NbaTeamSeasonRecordsBundle } from "@/lib/nba/insights/priorSeasonRecordTypes";
 import { ingestNbaGamesFromBdl } from "@/lib/nba/ingest/nbaGamesIngest";
+import {
+  loadNbaSeasonGameRows,
+  type NbaSeasonGameRow,
+} from "@/lib/nba/ingest/nbaSeasonGameRows";
 
 export const NBA_TEAM_SEASON_RECORDS_COLLECTION = "nbaTeamSeasonRecords";
 
@@ -102,18 +106,13 @@ async function countFinalNbaGamesInSeason(
 
 export async function loadTeamSeasonRecordsFromGames(
   db: Firestore,
-  seasonKey: string
+  seasonKey: string,
+  seasonGames?: NbaSeasonGameRow[]
 ): Promise<NbaTeamSeasonRecordsBundle> {
-  const snap = await db
-    .collection("games")
-    .where("league", "==", "nba")
-    .where("season", "==", seasonKey)
-    .orderBy("startAtJst", "asc")
-    .get();
-
+  const rows = seasonGames ?? (await loadNbaSeasonGameRows(db, seasonKey));
   const games: PriorSeasonGameInput[] = [];
-  for (const doc of snap.docs) {
-    const g = gameFromDoc(doc.data() as Record<string, unknown>);
+  for (const row of rows) {
+    const g = gameFromDoc(row);
     if (g) games.push(g);
   }
   return buildPriorSeasonTeamRecords({ seasonKey, games });
@@ -190,6 +189,8 @@ export async function loadOrBuildTeamSeasonRecords(
     fetchFromBdlIfSparse?: boolean;
     /** 今季など未完了シーズンは BDL 閾値を下げない（既定 false = 完了シーズン想定） */
     seasonInProgress?: boolean;
+    /** 読み済みのシーズン games（BDL 取り直し後は読み直す） */
+    seasonGames?: NbaSeasonGameRow[];
   }
 ): Promise<NbaTeamSeasonRecordsBundle> {
   const key = seasonKey.trim();
@@ -208,7 +209,7 @@ export async function loadOrBuildTeamSeasonRecords(
     }
   }
 
-  let built = await loadTeamSeasonRecordsFromGames(db, key);
+  let built = await loadTeamSeasonRecordsFromGames(db, key, opts?.seasonGames);
   let source = "games";
 
   const needBdl =

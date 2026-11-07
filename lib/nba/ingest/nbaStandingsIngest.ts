@@ -22,13 +22,18 @@ import {
 } from "@/lib/nba/standings/buildPreseasonConferenceStandingsBoard";
 import { writeNbaConferenceStandingsSnapshot } from "@/lib/nba/standings/loadNbaConferenceStandings";
 import type { NbaTeamGameLogSlice } from "@/lib/nba/teamGameLog/teamGameLogTypes";
-import { loadNbaSeasonGameRows } from "@/lib/nba/ingest/nbaTeamGameLogsIngest";
+import {
+  loadNbaSeasonGameRows,
+  type NbaSeasonGameRow,
+} from "@/lib/nba/ingest/nbaSeasonGameRows";
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
 
 export const NBA_STANDINGS_INGEST_READY = true;
 
 export type NbaStandingsIngestInput = {
   seasonKey?: string;
+  /** 試合ログ snapshot が無いときの補完用（渡せば読み直さない） */
+  seasonGames?: NbaSeasonGameRow[];
 };
 
 export type NbaStandingsIngestResult = {
@@ -57,14 +62,16 @@ async function loadBdlRegularSeasonGameRows(
 
 async function resolveTeamGameLogsForStandingsEnrichment(
   db: Firestore,
-  seasonKey: string
+  seasonKey: string,
+  seasonGames?: NbaSeasonGameRow[]
 ): Promise<Record<string, NbaTeamGameLogSlice>> {
   const snapshot = await loadTeamGameLogsSnapshot(db, seasonKey);
   const fromDoc = snapshot.bundle.teams;
   if (Object.keys(fromDoc).length > 0) return fromDoc;
 
   const isPastSeason = seasonKey < CURRENT_NBA_SEASON_KEY;
-  let rows = await loadNbaSeasonGameRows(db, seasonKey, 1500);
+  let rows: Array<Record<string, unknown> & { id: string }> =
+    seasonGames ?? (await loadNbaSeasonGameRows(db, seasonKey));
   if (rows.length === 0 && isPastSeason) {
     rows = await loadBdlRegularSeasonGameRows(seasonKey);
   }
@@ -101,7 +108,11 @@ export async function ingestNbaStandingsFromBdl(
     asOfLabel = preseasonStandingsAsOfLabel(seasonKey);
   }
 
-  const teamLogs = await resolveTeamGameLogsForStandingsEnrichment(db, seasonKey);
+  const teamLogs = await resolveTeamGameLogsForStandingsEnrichment(
+    db,
+    seasonKey,
+    input.seasonGames
+  );
   board = enrichConferenceStandingsFromTeamGameLogs(board, teamLogs);
 
   await writeNbaConferenceStandingsSnapshot(

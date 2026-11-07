@@ -13,7 +13,7 @@ import {
 } from "@/lib/nba/standings/buildPreseasonConferenceStandingsBoard";
 import { loadTeamGameLogsSnapshot } from "@/lib/nba/teamGameLog/loadTeamGameLog";
 import { buildTeamGameLogsBundleFromGames } from "@/lib/nba/teamGameLog/buildTeamGameLogsBundleFromGames";
-import { loadNbaSeasonGameRows } from "@/lib/nba/ingest/nbaTeamGameLogsIngest";
+import { loadNbaSeasonGameRows } from "@/lib/nba/ingest/nbaSeasonGameRows";
 import { nbaSeasonStatsReady } from "@/lib/predict/nbaSeasonStatsReady";
 import type { NbaConferenceStandingsApiPayload } from "./nbaConferenceStandingsTypes";
 
@@ -132,7 +132,7 @@ export async function loadNbaConferenceStandings(
   const gameLogSnap = await loadTeamGameLogsSnapshot(db, seasonKey);
   let teamLogs = gameLogSnap.bundle.teams;
   if (Object.keys(teamLogs).length === 0) {
-    const rows = await loadNbaSeasonGameRows(db, seasonKey, 1500);
+    const rows = await loadNbaSeasonGameRows(db, seasonKey);
     if (rows.length > 0) {
       teamLogs = buildTeamGameLogsBundleFromGames({ seasonKey, games: rows }).teams;
     }
