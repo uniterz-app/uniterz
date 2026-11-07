@@ -36,7 +36,7 @@ alwaysApply: true
 2. サーバーが要るもの → `app/api/*` または `functions/`（NBA スタッツは `nba-stats-data-pipeline.mdc` に従う）
 3. UI → `apps/native/`（`*Native` 命名、`StyleSheet` + `packages/design-tokens`）
 4. 型チェック → `npm run native:typecheck`
-5. 出し方 → JS だけなら OTA（`native-ota-production.mdc`）、ネイティブモジュールやパッチが変わるならストアビルド
+5. 出し方 → ユーザーが Mac でストアビルドを作る。OTA は基本しない（明示指示があるときだけ `native-ota-production.mdc`）
 
 ## 廃止
 
