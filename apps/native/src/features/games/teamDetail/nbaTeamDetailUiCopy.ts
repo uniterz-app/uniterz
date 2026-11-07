@@ -36,6 +36,15 @@ export function nbaTeamDetailUiCopy(language: string | null | undefined) {
       pt: "Por jogo (deslize para o lado)",
       fr: "Par match (faites défiler)",
     }),
+    gameLogsTapHint: L(lang, {
+      ja: "タップで試合スタッツ",
+      en: "Tap a game for the box score",
+      ko: "탭하면 경기 스탯",
+      zh: "点按查看比赛统计",
+      es: "Toca un partido para ver el box score",
+      pt: "Toque num jogo para ver o box score",
+      fr: "Touchez un match pour le box score",
+    }),
     showAllGames: (count: number) =>
       L(lang, {
         ja: `全${count}試合を表示`,
