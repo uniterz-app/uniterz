@@ -179,19 +179,26 @@ npx tsx scripts/ingest-nba-team-ace-out-records.ts 2025-26 --force
 
 ## 6.6. PREVIEW（展望の文章・INSIGHT の一番上）
 
-**ピックアップの試合だけ**（`isNbaPickupGame`。それ以外は材料を読まず LLM も呼ばない）。スタッツを並べるのではなく「今夜どこで決まるか」の展望を 3 段落で書く。表・枠（MATCHUP 以下）はその下に残す。
+**ピックアップの試合だけ**（`isNbaPickupGame`。それ以外は材料を読まず LLM も呼ばない）。スタッツを並べるのではなく、データをつないで一歩先の展望を 4 段落で書く（例: 「相手はガードに失点が多い × このガードはアイソ・ミドルがリーグ首位 → 大量得点の目」）。勝敗・最終スコアの断定はしない。個人の数字の見込みは理由付きなら書く。表・枠（MATCHUP 以下）はその下に残す。
 
 | 段落 | 中身 |
 |---|---|
-| 1. どこで決まるか | 型の相性（MATCHUP 表の上位 1〜2 本）を、欠場で薄くなる守り・攻めと結び付けて、コート上で何が起きるか |
-| 2. ディフィカルティと条件 | 欠場込みの厳しさ・連戦・移動・長時間出場から、どちらが厳しい夜か、それで試合の何が変わるか |
-| 3. 前回・前の試合から | 前回の対戦と両チームの前の試合を 1〜2 の読みの裏付け（または反証）に使い、今夜の注目点（試合中に見える兆し）で締める |
+| 1. 試合の形 | ペース（ポゼッション数）、攻守の質、最大の型の相性 → どんな試合になりやすいか |
+| 2. 個人の狙い目 | 1〜3 人。得意（リーグ上位のプレー・使用率・直近 5 試合）× 今夜の相手のそのポジション / プレーへの弱さ × 欠場で増える負担 |
+| 3. ディフィカルティと条件 | 欠場（何が抜けるか）・欠場込みの厳しさ・連戦・移動・長時間出場 → 終盤に何が変わるか |
+| 4. 前回・前の試合から | 上の読みの裏付け / 反証と、今夜の注目点（試合中に見える兆し） |
 
-- 材料シート（`buildPreviewOutlookSheet`・`lib/nba/insights/proInsightLlm/previewOutlook.ts`）: MATCHUP 表（順位・欠場注記）、MATCHUP / SCHEDULE / CONTEXT / INJURY IMPACT の hintEn、Difficulty（会場込み・欠場込み）、連戦 2 日目のチーム、前回の対戦・前の試合の事実文（`previewTemplate.ts` の en。表示には使わない）
+- 分析材料（`lib/nba/insights/proInsightFacts/buildOutlookAnalysis.ts` + `loadOutlookAnalysis.ts`。生成時に計算して `proInsightFacts.preview.analysis` に保存）:
+  - チーム: リーグ表の ORtg / DRtg / Net / ペース / 3PA / 3P% / 被3P% / TOV% / 強制TO の順位、L10
+  - **ポジション別の失点**: 今季の全選手試合ログ（`nbaPlayerGameLogs/{season}/players`、1 ジョブ 1 回読み）を `oppTeamId` × ロスターのポジション（C を含む = C、F… = F、G… = G）で集計 → 1 試合あたりと 30 チーム順位
+  - 主力 3 人（OUT / doubtful 除く・ppg 順）: 今季平均、直近 5 試合、シーズンハイ、`nbaPlayerSeasonMetrics` のリーグ 15 位以内の得意プレー（最大 4）、今季の対戦相手との平均、今夜の相手のそのポジションへの失点
+  - 欠場: 平均 5 点以上の OUT / doubtful / questionable、**欠場時の得点の移り方**（欠場者が出ていない今季の試合での主力の平均 vs 出た試合。各 2 試合以上・差 3 点以上）
+  - 順位には段階の語（top 5 / top 10 / middle — not a strength or weakness / bottom 10 / bottom 5、失点は「allows among the most — a clear weakness」等）を付けて渡す。中位を強み・弱みと書かせないため
+- 材料シート（`buildPreviewOutlookSheet`・`lib/nba/insights/proInsightLlm/previewOutlook.ts`）: 上の分析 + MATCHUP 表（順位・欠場注記）、MATCHUP / SCHEDULE / CONTEXT / INJURY IMPACT の hintEn、Difficulty（会場込み・欠場込み）、連戦 2 日目のチーム、前回の対戦・前の試合の事実文（`previewTemplate.ts` の en。表示には使わない）
 - 前回の対戦・前の試合の事実: `games`（2 チーム一致・終了・プレシーズン除く）+ `liveStats.box`。box が無い過去季は `nbaPlayerGameLogs/{season}` の `gameId` 一致行（無ければスコア・日付・対戦成績だけ）
 - LLM: Chat 1 回で 9 言語（モデル `OPENAI_PRO_INSIGHT_PREVIEW_MODEL`、既定 `gpt-4.1`。本文の Batch とは別）。`writeNarrative` の保存直前に生成（Batch poll / 1h 前 patch / sync すべて）。poll は保存を並列化
 - 数字ガード: シートに無い数字が出た言語は捨てて en を出す。ja / en が落ちたら 1 回だけ再生成、それでも駄目なら PREVIEW なし
-- プロンプトで禁止: 勝者・スコア予想、材料に無い欠場の有無の断定、材料に無い選手の特徴（ドライブ等）、指標の取り違え（被 2nd チャンス = ディフェンスリバウンド）
+- プロンプトで禁止: 勝者・最終スコア予想、材料に無い欠場の有無の断定、材料に無い選手の特徴（ドライブ等）、指標の取り違え（被 2nd チャンス = ディフェンスリバウンド）、中位を強み・弱みと書くこと、選手名のフルネーム展開（シートどおり「N.Jokic」）
 - ファクトは `proInsightFacts.preview` に保存し、Batch poll で復元
 
 ---
