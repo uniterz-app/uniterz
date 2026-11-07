@@ -1,6 +1,6 @@
 /**
  * GET /api/users/search?q=
- * ログイン必須。表示名（ユーザー名）前方一致（2〜40文字）。
+ * ログイン必須。表示名（ユーザー名）前方一致 + ID（handle）完全一致（2〜40文字）。ID 一致を先頭に出す。
  */
 import { NextResponse } from "next/server";
 import { getAdminDb } from "@/lib/firebaseAdmin";
@@ -13,6 +13,7 @@ import {
 import {
   normalizeUserSearchQuery,
   searchUsersByDisplayNamePrefix,
+  searchUsersByExactHandle,
 } from "@/lib/users/searchUsersByHandle";
 
 export const runtime = "nodejs";
@@ -61,10 +62,18 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "query_too_long" }, { status: 400 });
     }
 
-    const users = await searchUsersByDisplayNamePrefix(db, q, {
-      limit: 20,
-      excludeUid: callerUid,
-    });
+    const [byHandle, byName] = await Promise.all([
+      searchUsersByExactHandle(db, q, { excludeUid: callerUid }),
+      searchUsersByDisplayNamePrefix(db, q, {
+        limit: 20,
+        excludeUid: callerUid,
+      }),
+    ]);
+    const seen = new Set(byHandle.map((u) => u.uid));
+    const users = [
+      ...byHandle,
+      ...byName.filter((u) => !seen.has(u.uid)),
+    ].slice(0, 20);
 
     return NextResponse.json(
       { ok: true, q, users },
