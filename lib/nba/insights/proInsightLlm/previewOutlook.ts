@@ -7,12 +7,13 @@ import type { ProInsightFactPack } from "@/lib/nba/insights/proInsightFacts/type
 import { proInsightTeamAbbr } from "@/lib/nba/insights/proInsightFacts/teamAbbr";
 import { buildPreviewTemplate } from "@/lib/nba/insights/proInsightFacts/previewTemplate";
 import { INJURY_DIFFICULTY_FACT_KIND } from "@/lib/nba/matchupDifficulty/injuryDifficultyNarrative";
-import { rankTier } from "@/lib/nba/insights/proInsightFacts/buildOutlookAnalysis";
+import { rankTier, type OutlookPos } from "@/lib/nba/insights/proInsightFacts/buildOutlookAnalysis";
 import { allowedFromText, numbersIn } from "@/lib/nba/insights/proInsightLlm/numberGuard";
 import { isOpenAiConfigured, openAiChatCompletionJson } from "@/lib/openai/openaiBatch";
 import type { ProInsightNarrativeBrief } from "@/lib/predict/proInsightNarrativeTypes";
 
 const LANGS = ["ja", "en", "ko", "zh", "es", "pt", "fr", "de", "ar"] as const;
+const PREVIEW_THIRD_ATTEMPT_BUDGET_MS = 100_000;
 
 export function getOpenAiProInsightPreviewModel(): string {
   return process.env.OPENAI_PRO_INSIGHT_PREVIEW_MODEL?.trim() || "gpt-4.1";
@@ -63,8 +64,8 @@ export function buildPreviewOutlookSheet(pack: ProInsightFactPack): Record<strin
       attackStrong && defenseWeak
         ? `${strongLine}, and ${weakLine}.`
         : attackStrong
-          ? `${strongLine}. ${D} is average in this area — never call ${D} weak or vulnerable here.`
-          : `${weakLine} — this is ${D}'s weakness, not ${A}'s. ${A} is only average at it — never call it a ${A} strength.`;
+          ? `${strongLine}. (Say nothing about ${D}'s side of this area.)`
+          : `${weakLine} — this is ${D}'s weakness, not ${A}'s. (Say nothing about ${A}'s side of this area.)`;
     return [
       {
         area: r.label.en,
@@ -152,17 +153,18 @@ Find the 2–3 strongest such connections in the sheet. Combine: a player's stre
 
 Write exactly 4 paragraphs:
 1) The shape of the game. Team-level: pace (fast vs slow → possessions), offense vs defense quality, the biggest style edge (styleEdges / shooting / turnovers / glass), and what kind of game that produces.
-2) Players set up for a big (or tough) night. 2–4 players, and ALWAYS each team's top scorer (teams[].keyPlayers[0]) — a star is never left out just because the opponent has no weakness at his position. For each, the reason chain: what he does well (strengths, usage, recent form last5Ppg vs season ppg, season high) × why tonight's opponent is vulnerable to it (opponentVsPosition, the matching team weakness) × load shift from absences (loadShiftWithoutAbsent). Give each top scorer the full picture: season ppg, last5Ppg, season high, his top 1–2 strengths. If the opponent is middle at his position, his case rests on his own form, usage and strengths alone — state it with confidence and do not add a sentence about the opponent being average; never hedge with "how far it works" / 「どこまで通用するか」「どこまで押し切れるか」. When teams[].defensiveReads is present, paragraph 2 MUST include it (the defender vs the named opposing scorer, e.g. "his rim protection makes it a tough night for the opposing center"). Projections are allowed ("a big scoring night is in play", "likely to carry more of the load"); certainty is not.
+2) Players set up for a big (or tough) night. 2–4 players, and ALWAYS each team's top scorer (teams[].keyPlayers[0]) — a star is never left out just because the opponent has no weakness at his position. For each, the reason chain: what he does well (strengths, usage, recent form last5Ppg vs season ppg, season high) × why tonight's opponent is vulnerable to it (opponentVsPosition, the matching team weakness) × load shift from absences (loadShiftWithoutAbsent). Give each top scorer the full picture: season ppg, last5Ppg, season high, his top 1–2 strengths. If he has no opponentVsPosition, his case rests on his own form, usage and strengths alone — state it with confidence and say nothing about the opponent's defense at his position; never hedge with "how far it works" / 「どこまで通用するか」「どこまで押し切れるか」. When teams[].defensiveReads is present, paragraph 2 MUST include it (the defender vs the named opposing scorer, e.g. "his rim protection makes it a tough night for the opposing center"). Projections are allowed ("a big scoring night is in play", "likely to carry more of the load"); certainty is not.
 3) Difficulty and condition. Who has the harder night and why: absences (what each takes away), difficulty with absences, back-to-back / travel / heavy minutes, and what that changes late in the game.
 4) Last meeting and last games as evidence for or against the reads above, then 1–2 concrete watch points — in-game signs that tell the fan which way it is going.
 
 Reading the sheet:
-- teams[].allowedByPosition: points per game a team gives up to opposing guards / forwards / centers; the rank says #N of M where the highest number = allows the most. keyPlayers[].opponentVsPosition is that line for tonight's opponent vs the player's position — the core of "who is set up".
+- teams[].allowedByPosition: points per game a team gives up to opposing guards / forwards / centers, listed ONLY where the team is top 10 or bottom 10; the rank says #N of M where the highest number = allows the most. keyPlayers[].opponentVsPosition is that line for tonight's opponent vs the player's position — the core of "who is set up". A player without opponentVsPosition has no matchup angle — do not mention the opponent's defense at his position at all.
 - teams[] ranks: #1 = best in that stat unless the text says otherwise (pace #1 = fastest, opponent 3P% #1 = stingiest, TOV% #1 = fewest turnovers).
 - keyPlayers[].strengths: player ranks among ALL NBA players (e.g. isolation frequency #1).
-- teams[].defensiveReads: code-built matchup — the team is stingy at a position and has a defender ranked high in blocks / steals / rebounds, against the opposing scorer at that position (with his load shift if any).
+- teams[].defensiveReads (also on the defender's keyPlayers[].defensiveRead): code-built matchup — the named defender's team is stingy at a position, against the opposing scorer at that position (with his load shift if any). The stingy defense belongs to the defender's team; write it with the defender as the subject (e.g. "V.Wembanyama's rim protection makes it a tough night for D.Clingan").
 - loadShiftWithoutAbsent: how a teammate's scoring changed in games the absent player missed this season (small samples — say "in the games he missed").
-- Every rank in teams[] carries its tier in words ("top 5", "bottom 10", "allows among the most — a clear weakness", "middle — not an edge"). Your wording must match that tier exactly. Anything marked "middle" is NEVER a strength, weakness, "vulnerable", "soft" or "下位/上位" and is never used as a reason. A player edge from opponentVsPosition counts only when it says "weakness"; "tough matchup" / "stingier" = a harder night for that player.
+- Every rank in teams[] carries its tier in words ("top 5", "bottom 10", "allows among the most — a clear weakness", "middle — not a strength or weakness"). Your wording must match that tier exactly. Anything marked "middle" is NEVER a strength, weakness, "vulnerable", "soft" or "下位/上位" and is never used as a reason. A player edge from opponentVsPosition counts only when it says "weakness"; "tough matchup" / "stingier" = a harder night for that player.
+- Never write a sentence or clause whose only content is that something is average or has no particular weakness (no "BLAZERS' center defense is average, but…", 「センター守備は平均レベルだが」「特別な弱点はない」「ガード守備は中位で」). Leave average items out entirely.
 - Do not print the "#N" rank of a middle item, and do not convert ranks into other numbers (no "5th-most").
 - When the opponent side is middle, the player's case rests only on his own strengths, form and load shift. Do not fill the gap with an invented opponent reason (no "their defense tends to break down", "the current lineup may struggle", 「守備の連携が乱れやすい」).
 - JA for points allowed: write 「多く許している」「失点が多い」/「少ない」「堅い」. Never 「下位の得点を許す」「上位の失点」 — 上位/下位 is ambiguous for allowed stats.
@@ -209,16 +211,100 @@ const NO_ABSENCE_CLAIM: Partial<Record<(typeof LANGS)[number], RegExp>> = {
   en: /\bno (major |key |significant )?(absences|injuries)\b|full strength|fully healthy|healthy roster/i,
 };
 
-function parseOutlook(content: string, allowed: Set<string>): { text: Partial<UiStrings>; bad: string[] } {
+/** 「平均的で弱点はない」だけの一言。誤りではないので 1 回だけ書き直させ、2 回目は受け入れる */
+const AVERAGE_FILLER: Partial<Record<(typeof LANGS)[number], RegExp>> = {
+  ja: /弱点[はがも](な|無)|穴[はがも](な|無)|(守備|守り|ディフェンス)[はがも]?(平均的|平均レベル|中位|並み|中庸)|(上位|下位)の(得点|失点)を許/,
+  en: /\b(defen[cs]e|defending)\b[^.]{0,40}\b(is|are|has been) (only |merely )?(average|middling|mid-pack)\b|\bno (\w+ ){0,2}weakness(es)?\b|\bwithout (a |any )?(\w+ )?weakness/i,
+};
+
+type PosDefense = Map<string, Partial<Record<OutlookPos, "stingy" | "weak">>>;
+
+/** シートのポジション別失点（上位 10 = stingy / 下位 10 = weak）。中位は載っていない */
+function positionDefenseOf(pack: ProInsightFactPack): PosDefense {
+  const out: PosDefense = new Map();
+  for (const t of pack.preview?.analysis?.teams ?? []) {
+    const row: Partial<Record<OutlookPos, "stingy" | "weak">> = {};
+    for (const [pos, line] of Object.entries(t.allowedByPosition) as Array<[OutlookPos, string]>) {
+      if (/stingi/.test(line)) row[pos] = "stingy";
+      else if (/weakness/.test(line)) row[pos] = "weak";
+    }
+    out.set(t.team, row);
+  }
+  return out;
+}
+
+const POS_WORDS: Record<"ja" | "en", Array<[RegExp, OutlookPos]>> = {
+  ja: [
+    [/ガード/, "G"],
+    [/フォワード/, "F"],
+    [/センター/, "C"],
+  ],
+  en: [
+    [/\bguards?\b/i, "G"],
+    [/\bforwards?\b/i, "F"],
+    [/\bcenters?\b/i, "C"],
+  ],
+};
+const STINGY_WORD = { ja: /堅|強固|屈指|少な|最少|手強|壁/, en: /stingy|stingiest|stout|elite|fewest|among the best|\btough\b|\bwall\b/i };
+const WEAK_WORD = { ja: /弱|脆|多く許|失点が多|緩|穴/, en: /\bweak|vulnerab|\bsoft\b|leaky|porous|struggl|the most points|a lot of points|more than most/i };
+
+/**
+ * 「X のセンター守備は堅い」をシートと照合し、持ち主のチームを取り違えた文を返す。
+ * 対比の書き方（エースは強い、だが相手の守備は…）で相手チームの守りの評価を入れ替える誤りが半々で出るため。
+ */
+function wrongPositionClaims(lang: "ja" | "en", text: string, facts: PosDefense): string[] {
+  const teams = [...facts.keys()];
+  const sentences = lang === "ja" ? text.split(/(?<=[。\n])/) : text.split(/(?<=[.!?\n])\s*/);
+  const wrong: string[] = [];
+  for (const s of sentences) {
+    for (const team of teams) {
+      const at = lang === "ja" ? s.indexOf(team) : s.search(new RegExp(`\\b${team}\\b`, "i"));
+      if (at < 0) continue;
+      let seg = s.slice(at + team.length);
+      for (const other of teams) {
+        if (other === team) continue;
+        const cut = lang === "ja" ? seg.indexOf(other) : seg.search(new RegExp(`\\b${other}\\b`, "i"));
+        if (cut >= 0) seg = seg.slice(0, cut);
+      }
+      const posHit = POS_WORDS[lang]
+        .map(([re, pos]) => ({ pos, i: seg.search(re) }))
+        .filter((h) => h.i >= 0 && h.i <= (lang === "ja" ? 12 : 30))
+        .sort((a, b) => a.i - b.i)[0];
+      if (!posHit) continue;
+      const tail = seg.slice(posHit.i, posHit.i + (lang === "ja" ? 30 : 60));
+      const claim = STINGY_WORD[lang].test(tail) ? "stingy" : WEAK_WORD[lang].test(tail) ? "weak" : null;
+      if (claim && facts.get(team)?.[posHit.pos] !== claim) wrong.push(s.trim());
+    }
+  }
+  return [...new Set(wrong)];
+}
+
+function stripSentences(text: string, sentences: string[]): string {
+  let out = text;
+  for (const s of sentences) out = out.replace(s, "");
+  return out
+    .split("\n")
+    .map((p) => p.replace(/\s{2,}/g, " ").trim())
+    .filter(Boolean)
+    .join("\n");
+}
+
+function parseOutlook(
+  content: string,
+  allowed: Set<string>,
+  facts: PosDefense
+): { text: Partial<UiStrings>; bad: string[]; filler: string[]; wrongPos: Partial<Record<"ja" | "en", string[]>> } {
   let parsed: unknown;
   try {
     parsed = JSON.parse(content);
   } catch {
-    return { text: {}, bad: [...LANGS] };
+    return { text: {}, bad: [...LANGS], filler: [], wrongPos: {} };
   }
   const byLang = (parsed as { paragraphs?: Record<string, unknown> })?.paragraphs ?? {};
   const text: Partial<UiStrings> = {};
   const bad: string[] = [];
+  const filler: string[] = [];
+  const wrongPos: Partial<Record<"ja" | "en", string[]>> = {};
   for (const lang of LANGS) {
     const paras = paragraphsOf(byLang[lang]);
     const joined = paras?.join("\n");
@@ -228,17 +314,29 @@ function parseOutlook(content: string, allowed: Set<string>): { text: Partial<Ui
       bad.push(stray.length ? `${lang}(${stray.join(",")})` : claim ? `${lang}(${claim})` : lang);
       continue;
     }
+    const avg = AVERAGE_FILLER[lang]?.exec(joined)?.[0];
+    if (avg) filler.push(`${lang}(${avg})`);
+    if (lang === "ja" || lang === "en") {
+      const wrong = wrongPositionClaims(lang, joined, facts);
+      if (wrong.length) wrongPos[lang] = wrong;
+    }
     text[lang] = joined;
   }
-  return { text, bad };
+  return { text, bad, filler, wrongPos };
 }
 
 export async function generatePreviewOutlook(pack: ProInsightFactPack): Promise<UiStrings | null> {
   const sheet = buildPreviewOutlookSheet(pack);
   if (!sheet || !isOpenAiConfigured()) return null;
   const allowed = allowedNumbersFromSheet(sheet);
+  const facts = positionDefenseOf(pack);
+  const startedAt = Date.now();
   let rejected: string[] = [];
-  for (let attempt = 0; attempt < 2; attempt++) {
+  let fallback: UiStrings | null = null;
+  let stripped: UiStrings | null = null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    // 3 回目は取り込みの時間制限（300 秒・並列）に収まるときだけ
+    if (attempt === 2 && Date.now() - startedAt > PREVIEW_THIRD_ATTEMPT_BUDGET_MS) break;
     let content: string;
     try {
       content = await openAiChatCompletionJson({
@@ -249,7 +347,7 @@ export async function generatePreviewOutlook(pack: ProInsightFactPack): Promise<
             sheet,
             ...(rejected.length
               ? {
-                  previousDraftRejected: `These languages were rejected (numbers not in the sheet, or a claim that a team has no absences): ${rejected.join(" ")}. Rewrite without them.`,
+                  previousDraftRejected: `The previous draft was rejected for: ${rejected.join(" | ")} (a number not in the sheet, a claim that a team has no absences, a filler clause saying something is average / has no weakness, or a position defense credited to the wrong team — check teams[].allowedByPosition for whose defense it is). Rewrite without them.`,
                 }
               : {}),
           },
@@ -262,15 +360,30 @@ export async function generatePreviewOutlook(pack: ProInsightFactPack): Promise<
       console.warn("[pro-insight] preview outlook failed", e instanceof Error ? e.message : e);
       return null;
     }
-    const { text, bad } = parseOutlook(content, allowed);
+    const { text, bad, filler, wrongPos } = parseOutlook(content, allowed, facts);
+    const wrongList = [...(wrongPos.ja ?? []), ...(wrongPos.en ?? [])];
     if (bad.length) console.warn(`[pro-insight] preview outlook dropped: ${bad.join(" ")}`);
-    rejected = bad;
+    if (filler.length) console.warn(`[pro-insight] preview outlook filler: ${filler.join(" ")}`);
+    if (wrongList.length) console.warn(`[pro-insight] preview outlook wrong team defense: ${wrongList.join(" | ")}`);
+    rejected = [...bad, ...filler, ...wrongList.map((s) => `wrong team: "${s}"`)];
     if (!text.ja || !text.en) continue;
     const out = { ja: text.ja, en: text.en } as UiStrings;
     for (const lang of LANGS) (out as Record<string, string>)[lang] = text[lang] ?? text.en;
+    if (wrongList.length) {
+      // 最後まで直らなければ誤りの文だけ削る。未チェックの言語は削った en で代用
+      const en = stripSentences(text.en, wrongPos.en ?? []);
+      const s = { ja: stripSentences(text.ja, wrongPos.ja ?? []), en } as UiStrings;
+      for (const lang of LANGS) if (lang !== "ja") (s as Record<string, string>)[lang] = en;
+      stripped = s;
+      continue;
+    }
+    if (filler.some((f) => f.startsWith("ja(") || f.startsWith("en("))) {
+      fallback = out;
+      continue;
+    }
     return out;
   }
-  return null;
+  return fallback ?? stripped;
 }
 
 /** ピックアップ（pack.preview あり）だけ展望を付ける。それ以外は preview を外す */
