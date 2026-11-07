@@ -11,6 +11,7 @@ const {
   convertForChineseScript,
   getActiveChineseScript,
 } = require("../i18n/chineseScriptNative");
+const { getAppThemeMode } = require("../theme/themeColorRuntime");
 
 function convertChildren(children, script) {
   if (script !== "hant") return children;
@@ -42,6 +43,7 @@ const TextInput = React.forwardRef(function FixedFontScaleTextInput(props, ref) 
       typeof props.placeholder === "string"
         ? convertForChineseScript(props.placeholder, script)
         : props.placeholder,
+    keyboardAppearance: getAppThemeMode() === "light" ? "light" : props.keyboardAppearance,
     allowFontScaling: false,
     ref,
   });
