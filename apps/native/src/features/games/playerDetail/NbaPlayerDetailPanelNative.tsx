@@ -28,7 +28,6 @@ import {
 } from "../../../../../../lib/nba/teamInjuries/injuryReasonDisplay";
 import {
   averageRecentGameLogs,
-  formatFgLine,
   formatMetricDisplay,
   formatPhysique,
   formatSalaryUsd,
@@ -120,6 +119,7 @@ import { nbaSeasonStatsReady } from "@/lib/predict/nbaSeasonStatsReady";
 import { getUniterzApiBaseUrl } from "../submitPredictionApi";
 import { nbaPlayerDetailChrome } from "./nbaPlayerDetailChromeCopy";
 import { NbaPlayerSplitStatTableNative } from "./NbaPlayerSplitStatTableNative";
+import { NbaPlayerGameLogTableNative } from "./NbaPlayerGameLogTableNative";
 
 type Props = {
   language: "ja" | "en";
@@ -128,8 +128,6 @@ type Props = {
   useDevMock?: boolean;
 };
 
-const FORM_WIN = "#00F5FF";
-const FORM_LOSS = "#FF2D78";
 const OXANIUM = "Oxanium_800ExtraBold";
 
 function hexToRgba(hex: string, alpha: number): string {
@@ -1213,73 +1211,6 @@ function SeasonHistorySection({
   );
 }
 
-function GameLogHeader({ borderColor }: { borderColor: string }) {
-  return (
-    <View
-      style={[
-        styles.gameRow,
-        {
-          borderBottomWidth: StyleSheet.hairlineWidth,
-          borderBottomColor: borderColor,
-          paddingVertical: 8,
-        },
-      ]}
-    >
-      <Text style={[styles.gameDate, styles.gameHead]}>DATE</Text>
-      <Text style={[styles.gameVs, styles.gameHead]}>GAME</Text>
-      <Text style={[styles.gameResult, styles.gameHead]}> </Text>
-      <Text style={[styles.gameLine, styles.gameHead]}>MIN</Text>
-      <Text style={[styles.gamePts, styles.gameHead]}>PTS</Text>
-      <Text style={[styles.gameLine, styles.gameHead]}>R/A</Text>
-      <Text style={[styles.gameFg, styles.gameHead]}>FG</Text>
-    </View>
-  );
-}
-
-function GameLogRow({
-  log,
-  border,
-  borderColor,
-}: {
-  log: NbaPlayerGameLog;
-  border: boolean;
-  borderColor: string;
-}) {
-  const vs = `${log.home ? "vs" : "@"} ${log.oppAbbr}`;
-  return (
-    <View
-      style={[
-        styles.gameRow,
-        border
-          ? {
-              borderBottomWidth: StyleSheet.hairlineWidth,
-              borderBottomColor: borderColor,
-            }
-          : null,
-      ]}
-    >
-      <Text style={styles.gameDate}>{log.dateLabel}</Text>
-      <Text style={styles.gameVs} numberOfLines={1}>
-        {vs}
-      </Text>
-      <Text
-        style={[
-          styles.gameResult,
-          log.result === "W" ? styles.win : styles.loss,
-        ]}
-      >
-        {log.result}
-      </Text>
-      <Text style={styles.gameLine}>{Math.round(log.min)}m</Text>
-      <Text style={styles.gamePts}>{log.pts}</Text>
-      <Text style={styles.gameLine}>
-        {log.reb}/{log.ast}
-      </Text>
-      <Text style={styles.gameFg}>{formatFgLine(log.fgm, log.fga)}</Text>
-    </View>
-  );
-}
-
 function GameLogsSection({
   logs,
   accent,
@@ -1290,7 +1221,6 @@ function GameLogsSection({
   const [open, setOpen] = useState(true);
   const wins = logs.filter((g) => g.result === "W").length;
   const losses = logs.length - wins;
-  const line = hexToRgba(accent, 0.14);
 
   if (logs.length === 0) {
     return (
@@ -1320,19 +1250,7 @@ function GameLogsSection({
       </Pressable>
 
       {open ? (
-        <View
-          style={[styles.gameList, { borderColor: hexToRgba(accent, 0.3) }]}
-        >
-          <GameLogHeader borderColor={line} />
-          {logs.map((log, i) => (
-            <GameLogRow
-              key={log.gameId}
-              log={log}
-              border={i < logs.length - 1}
-              borderColor={line}
-            />
-          ))}
-        </View>
+        <NbaPlayerGameLogTableNative logs={logs} accent={accent} />
       ) : null}
     </View>
   );
@@ -2228,76 +2146,6 @@ const styles = StyleSheet.create({
     fontVariant: ["tabular-nums"],
     transform: [{ skewX: "-8deg" }],
   },
-  gameList: {
-    borderWidth: 1,
-    backgroundColor: "rgba(8,8,12,0.55)",
-    overflow: "hidden",
-  },
-  gameRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 8,
-    paddingVertical: 10,
-    gap: 4,
-  },
-  gameHead: {
-    color: "rgba(255,255,255,0.35)",
-    fontSize: 11,
-    fontWeight: "700",
-    letterSpacing: 0.8,
-    transform: [],
-  },
-  gameDate: {
-    width: 44,
-    fontFamily: METRIC_FONT,
-    color: "rgba(255,255,255,0.4)",
-    fontSize: 14,
-  },
-  gameVs: {
-    flex: 1,
-    fontFamily: METRIC_FONT,
-    color: "rgba(255,255,255,0.88)",
-    fontSize: 14,
-    fontWeight: "700",
-    minWidth: 52,
-  },
-  gameResult: {
-    width: 18,
-    fontFamily: METRIC_FONT,
-    fontSize: 14,
-    fontWeight: "800",
-    textAlign: "center",
-    transform: [{ skewX: "-8deg" }],
-  },
-  gameLine: {
-    width: 46,
-    textAlign: "right",
-    fontFamily: METRIC_FONT,
-    color: "rgba(255,255,255,0.7)",
-    fontSize: 14,
-    fontVariant: ["tabular-nums"],
-    transform: [{ skewX: "-8deg" }],
-  },
-  gamePts: {
-    width: 32,
-    textAlign: "right",
-    fontFamily: METRIC_FONT,
-    color: "#FFFFFF",
-    fontSize: 14,
-    fontWeight: "800",
-    fontVariant: ["tabular-nums"],
-    transform: [{ skewX: "-8deg" }],
-  },
-  gameFg: {
-    width: 52,
-    textAlign: "right",
-    fontFamily: METRIC_FONT,
-    color: "rgba(255,255,255,0.55)",
-    fontSize: 14,
-    fontVariant: ["tabular-nums"],
-  },
-  win: { color: FORM_WIN },
-  loss: { color: FORM_LOSS },
   advWrap: { gap: 10 },
   advTitleRow: {
     flexDirection: "row",
