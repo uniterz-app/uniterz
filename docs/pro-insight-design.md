@@ -192,13 +192,16 @@ npx tsx scripts/ingest-nba-team-ace-out-records.ts 2025-26 --force
   - チーム: リーグ表の ORtg / DRtg / Net / ペース / 3PA / 3P% / 被3P% / TOV% / 強制TO の順位、L10
   - **ポジション別の失点**: 今季の全選手試合ログ（`nbaPlayerGameLogs/{season}/players`、1 ジョブ 1 回読み）を `oppTeamId` × ロスターのポジション（C を含む = C、F… = F、G… = G）で集計 → 1 試合あたりと 30 チーム順位
   - 主力 3 人（OUT / doubtful 除く・ppg 順）: 今季平均、直近 5 試合、シーズンハイ、`nbaPlayerSeasonMetrics` のリーグ 15 位以内の得意プレー（最大 4）、今季の対戦相手との平均、今夜の相手のそのポジションへの失点
+  - **守りの読み**（`defensiveReads`）: そのポジションへの失点が 30 チーム中上位 5 で、同じポジションにブロック / スティール / リバウンドが全選手中 15 位以内の選手がいるとき、相手のそのポジションの得点源（平均 8 点以上・欠場除く・欠場者がいない試合での得点増も付ける）に厳しい、という 1 文。展望の 2 段落目に必ず入れる
   - 欠場: 平均 5 点以上の OUT / doubtful / questionable、**欠場時の得点の移り方**（欠場者が出ていない今季の試合での主力の平均 vs 出た試合。各 2 試合以上・差 3 点以上）
   - 順位には段階の語（top 5 / top 10 / middle — not a strength or weakness / bottom 10 / bottom 5、失点は「allows among the most — a clear weakness」等）を付けて渡す。中位を強み・弱みと書かせないため
   - MATCHUP 表の行は、攻めが上位 10 か守りが下位 10 のものだけ渡す（順位差だけで拾われた中位同士の行は外す）。各行は持ち主のチームを主語にした文（「PACERS give up a lot of second-chance points」）にし、同じ文を `teams[].styleStrengths` / `styleWeaknesses` にも入れる。片側が中位の行は「中位側を弱い・強いと書かない」を文に含める。どちらのチームの弱点かを LLM が取り違えないため
 - 材料シート（`buildPreviewOutlookSheet`・`lib/nba/insights/proInsightLlm/previewOutlook.ts`）: 上の分析 + MATCHUP 表（順位・欠場注記）、MATCHUP / SCHEDULE / CONTEXT / INJURY IMPACT の hintEn、Difficulty（会場込み・欠場込み）、連戦 2 日目のチーム、前回の対戦・前の試合の事実文（`previewTemplate.ts` の en。表示には使わない）
 - 前回の対戦・前の試合の事実: `games`（2 チーム一致・終了・プレシーズン除く）+ `liveStats.box`。box が無い過去季は `nbaPlayerGameLogs/{season}` の `gameId` 一致行（無ければスコア・日付・対戦成績だけ）
 - LLM: Chat 1 回で 9 言語（モデル `OPENAI_PRO_INSIGHT_PREVIEW_MODEL`、既定 `gpt-4.1`。本文の Batch とは別）。`writeNarrative` の保存直前に生成（Batch poll / 1h 前 patch / sync すべて）。poll は保存を並列化
-- 数字ガード: シートに無い数字が出た言語は捨てて en を出す。ja / en が落ちたら 1 回だけ再生成、それでも駄目なら PREVIEW なし
+- 数字ガード: シートに無い数字が出た言語は捨てて en を出す。ja / en が落ちたら 1 回だけ再生成（落ちた理由を渡す）、それでも駄目なら PREVIEW なし
+- 「欠場なし」ガード: ja「離脱はない」「欠場がなく」「万全」等 / en「no absences」「full strength」等が出た言語も捨てる（injury の取り込み遅れで誤りになるため）
+- 2 段落目は各チームの得点トップを必ず入れる（相手が中位でも本人の平均・直近 5・シーズンハイ・得意プレーで語る。「どこまで通用するか」等のぼかしは禁止）
 - プロンプトで禁止: 勝者・最終スコア予想、材料に無い欠場の有無の断定、材料に無い選手の特徴（ドライブ等）、指標の取り違え（被 2nd チャンス = ディフェンスリバウンド）、中位を強み・弱みと書くこと、選手名のフルネーム展開（シートどおり「N.Jokic」）
 - ファクトは `proInsightFacts.preview` に保存し、Batch poll で復元
 
