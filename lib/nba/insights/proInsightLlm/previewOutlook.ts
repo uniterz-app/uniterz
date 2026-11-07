@@ -7,6 +7,7 @@ import type { ProInsightFactPack } from "@/lib/nba/insights/proInsightFacts/type
 import { proInsightTeamAbbr } from "@/lib/nba/insights/proInsightFacts/teamAbbr";
 import { buildPreviewTemplate } from "@/lib/nba/insights/proInsightFacts/previewTemplate";
 import { INJURY_DIFFICULTY_FACT_KIND } from "@/lib/nba/matchupDifficulty/injuryDifficultyNarrative";
+import { rankTier } from "@/lib/nba/insights/proInsightFacts/buildOutlookAnalysis";
 import { allowedFromText, numbersIn } from "@/lib/nba/insights/proInsightLlm/numberGuard";
 import { isOpenAiConfigured, openAiChatCompletionJson } from "@/lib/openai/openaiBatch";
 import type { ProInsightNarrativeBrief } from "@/lib/predict/proInsightNarrativeTypes";
@@ -17,6 +18,21 @@ export function getOpenAiProInsightPreviewModel(): string {
   return process.env.OPENAI_PRO_INSIGHT_PREVIEW_MODEL?.trim() || "gpt-4.1";
 }
 
+/** 相性の表の行 → チームを主語にした強み・弱みの言い方（LLM がどちらの弱点かを取り違えないように） */
+const STYLE_PHRASES: Record<string, { strong: string; weak: string }> = {
+  paint: { strong: "scores a lot in the paint", weak: "gives up a lot of paint points (weak interior defense)" },
+  fb: { strong: "scores a lot on fast breaks", weak: "gives up a lot of fast-break points" },
+  off_tov: { strong: "scores a lot off turnovers", weak: "gives up a lot of points off its own turnovers" },
+  second: {
+    strong: "scores a lot of second-chance points",
+    weak: "gives up a lot of second-chance points (weak defensive rebounding)",
+  },
+  three: { strong: "takes a lot of threes", weak: "allows a high opponent 3P% (weak perimeter defense)" },
+  glass: { strong: "crashes the offensive glass", weak: "gives up a lot of offensive rebounds (weak defensive rebounding)" },
+  tov: { strong: "protects the ball (few turnovers)", weak: "rarely forces turnovers" },
+  fta: { strong: "gets to the free-throw line a lot", weak: "sends opponents to the free-throw line a lot" },
+};
+
 export function buildPreviewOutlookSheet(pack: ProInsightFactPack): Record<string, unknown> | null {
   if (!pack.preview) return null;
   const tpl = buildPreviewTemplate(pack.preview, pack.seasonKey ?? null);
@@ -25,17 +41,44 @@ export function buildPreviewOutlookSheet(pack: ProInsightFactPack): Record<strin
   const away = abbr(pack.awayTeamId);
 
   const table = pack.matchupTable;
-  const styleEdges = (table?.rows ?? []).map((r) => {
+  const of = table?.teamCount ?? 30;
+  const styleStrengths = new Map<string, string[]>();
+  const styleWeaknesses = new Map<string, string[]>();
+  const push = (m: Map<string, string[]>, team: string, line: string) => m.set(team, [...(m.get(team) ?? []), line]);
+  const styleEdges = (table?.rows ?? []).flatMap((r) => {
     const attack = r.home.teamId === r.edgeTeamId ? r.home : r.away;
     const defense = attack === r.home ? r.away : r.home;
-    return {
-      area: r.label.en,
-      edge: abbr(r.edgeTeamId),
-      attack: `${abbr(attack.teamId)} ${attack.metric.en} ${attack.value} (league #${attack.rank})`,
-      defense: `${abbr(defense.teamId)} ${defense.metric.en} ${defense.value} (league #${defense.rank})`,
-      ...(r.notes?.length ? { injuryNotes: r.notes.map((n) => n.en) } : {}),
-    };
+    const attackStrong = attack.rank <= 10;
+    const defenseWeak = defense.rank > of - 10;
+    // 順位差だけで拾われた行（攻めも守りも中位）は強み・弱みの根拠にならない
+    if (!attackStrong && !defenseWeak) return [];
+    const A = abbr(attack.teamId);
+    const D = abbr(defense.teamId);
+    const phrase = STYLE_PHRASES[r.kind] ?? { strong: `strong at ${attack.metric.en}`, weak: `weak at ${defense.metric.en}` };
+    const strongLine = `${A} ${phrase.strong} (${attack.metric.en} ${attack.value}, league #${attack.rank}, ${rankTier(attack.rank, of)})`;
+    const weakLine = `${D} ${phrase.weak} (${defense.metric.en} ${defense.value}, league #${defense.rank}, ${rankTier(defense.rank, of)})`;
+    if (attackStrong) push(styleStrengths, A, strongLine);
+    if (defenseWeak) push(styleWeaknesses, D, weakLine);
+    const why =
+      attackStrong && defenseWeak
+        ? `${strongLine}, and ${weakLine}.`
+        : attackStrong
+          ? `${strongLine}. ${D} is average in this area — never call ${D} weak or vulnerable here.`
+          : `${weakLine} — this is ${D}'s weakness, not ${A}'s. ${A} is only average at it — never call it a ${A} strength.`;
+    return [
+      {
+        area: r.label.en,
+        favors: A,
+        why,
+        ...(r.notes?.length ? { injuryNotes: r.notes.map((n) => n.en) } : {}),
+      },
+    ];
   });
+  const teams = pack.preview.analysis?.teams.map((t) => ({
+    ...t,
+    ...(styleStrengths.get(t.team) ? { styleStrengths: styleStrengths.get(t.team) } : {}),
+    ...(styleWeaknesses.get(t.team) ? { styleWeaknesses: styleWeaknesses.get(t.team) } : {}),
+  }));
 
   const difficultyFact = (pack.sections["INJURY IMPACT"] ?? []).find(
     (f) => f.kind === INJURY_DIFFICULTY_FACT_KIND
@@ -79,7 +122,7 @@ export function buildPreviewOutlookSheet(pack: ProInsightFactPack): Record<strin
       ? {
           teamAnalysisSeason: pack.preview.analysis.seasonKey,
           rankNote: pack.preview.analysis.rankNote,
-          teams: pack.preview.analysis.teams,
+          teams,
         }
       : {}),
     styleEdges,
@@ -120,10 +163,12 @@ Reading the sheet:
 - loadShiftWithoutAbsent: how a teammate's scoring changed in games the absent player missed this season (small samples — say "in the games he missed").
 - Every rank in teams[] carries its tier in words ("top 5", "bottom 10", "allows among the most — a clear weakness", "middle — not an edge"). Your wording must match that tier exactly. Anything marked "middle" is NEVER a strength, weakness, "vulnerable", "soft" or "下位/上位" and is never used as a reason. A player edge from opponentVsPosition counts only when it says "weakness"; "tough matchup" / "stingier" = a harder night for that player.
 - Do not print the "#N" rank of a middle item, and do not convert ranks into other numbers (no "5th-most").
+- When the opponent side is middle, the player's case rests only on his own strengths, form and load shift. Do not fill the gap with an invented opponent reason (no "their defense tends to break down", "the current lineup may struggle", 「守備の連携が乱れやすい」).
+- JA for points allowed: write 「多く許している」「失点が多い」/「少ない」「堅い」. Never 「下位の得点を許す」「上位の失点」 — 上位/下位 is ambiguous for allowed stats.
 - Player names: write them EXACTLY as in the sheet (initial + last name, e.g. "N.Jokic", "T.Haliburton") in EVERY language including English. Never expand to full first names.
-- styleEdges ranks: league #1 = best at that metric among teamsRanked. For "Opp …" metrics (what a team ALLOWS), #1 = allows the least, so a high number like #27 = a weak defense in that area.
+- styleEdges[]: favors = the team the area leans to; why = the reason, always written with the team that OWNS each strength / weakness as the subject. teams[].styleStrengths / styleWeaknesses repeat the same lines under the owning team. A weakness belongs only to the team it is listed under — never move it to the other team (e.g. "PACERS give up a lot of second-chance points" must never become "NUGGETS give up second-chance points"). When why says a team is average in that area, do not describe that team's side at all (no "weak", "vulnerable", "struggles", "脆弱", "弱さ", "苦しむ"). League #1 = best; for "Opp …" metrics #1 = allows the least.
 - Meanings: Paint PTS = scoring at the rim/inside; Opp paint PTS = interior defense. 2nd-chance PTS / OREB% = offensive rebounding; Opp 2nd-chance PTS / Opp OREB% = DEFENSIVE REBOUNDING (boxing out), NOT rim protection. TOV% = ball security (lower is better); Forced TO / Opp TOV = forcing turnovers. PTS off TO = scoring off the other team's turnovers (transition). Fast break PTS = transition. 3PM/3PA/3P% = perimeter shooting; Opp 3P… = perimeter defense. FTA rate = getting to the line.
-- injuryNotes / injuries / difficulty.ownOut name tonight's absences. If none are given, say nothing about health (never claim "no injuries" or "full strength").
+- injuryNotes / injuries / teams[].absences / difficulty.ownOut name tonight's absences. Never write that a team has no absences or no major absences (no "full strength", 「大きな離脱はない」「主力の離脱はない」) — if a team has none listed, say nothing about its health.
 - Tie a style (drives, rim pressure, threes, rebounding) to a player ONLY when the sheet ties that player to it. Players named only in lastMeeting / lastGames are evidence of what happened, not of how they play.
 
 Rules:
