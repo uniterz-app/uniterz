@@ -66,6 +66,15 @@ import { NbaTeamRosterCardNative } from "../predict/NbaRosterPanelNative";
 import NbaTeamHowTheyPlayNative from "./NbaTeamHowTheyPlayNative";
 import { NbaTeamOffseasonMovesNative } from "./NbaTeamOffseasonMovesNative";
 import {
+  NbaTeamStatSplitTableNative,
+  type NbaTeamStatSplitTableRow,
+} from "./NbaTeamStatSplitTableNative";
+import type {
+  NbaTeamGameLogDetail,
+  NbaTeamGameLogDetailGame,
+  NbaTeamHeadToHeadStatRow,
+} from "../../../../../../lib/nba/teamGameLog/teamGameLogDetail";
+import {
   apronStatusLabel,
   draftBadgeHeadline,
   nbaTeamDetailUiCopy,
@@ -328,7 +337,10 @@ function RecentFormSection({
   ui: NbaTeamDetailUiCopy;
   trends?: DetailTrendDelta[];
 }) {
-  const results = games.slice(-10).map((g) => g.result);
+  const results = games
+    .slice(0, 10)
+    .reverse()
+    .map((g) => g.result);
   const wins = results.filter((r) => r === "W").length;
   const losses = results.length - wins;
   const streakLabel = formatStreakLabel(streak);
@@ -378,23 +390,35 @@ function RecentFormSection({
   );
 }
 
+const GAME_LOGS_COLLAPSED = 10;
+
 function GameLogsSection({
   games,
   accent,
   ui,
 }: {
-  games: NbaTeamRecentGame[];
+  /** 新しい順 */
+  games: NbaTeamGameLogDetailGame[];
   accent: string;
   ui: NbaTeamDetailUiCopy;
 }) {
-  const list = [...games].slice(-10).reverse();
+  const [expanded, setExpanded] = useState(false);
+  const canExpand = games.length > GAME_LOGS_COLLAPSED;
+  const list =
+    expanded || !canExpand ? games : games.slice(0, GAME_LOGS_COLLAPSED);
   const frame = hexToRgba(accent, 0.3);
   const line = hexToRgba(accent, 0.12);
   const emptyCopy = ui.noData;
   return (
     <View style={styles.schedSection}>
       <SectionHeader
-        title={list.length > 0 ? `GAME LOGS (LAST ${list.length})` : "GAME LOGS"}
+        title={
+          list.length === 0
+            ? "GAME LOGS"
+            : expanded && canExpand
+              ? `GAME LOGS (${games.length})`
+              : `GAME LOGS (LAST ${list.length})`
+        }
         accent={accent}
       />
       <View style={[styles.gameList, { borderColor: frame }]}>
@@ -434,6 +458,8 @@ function GameLogsSection({
                 <Text style={styles.gameDate}>{g.dateLabel}</Text>
                 <Text style={styles.gameVs} numberOfLines={1}>
                   {g.home ? "vs" : "@"} {g.oppAbbr}
+                  {g.b2b ? <Text style={styles.b2bTag}>{"  B2B"}</Text> : null}
+                  {g.threeInFour ? <Text style={styles.b2bTag}>{"  3IN4"}</Text> : null}
                 </Text>
                 <Text style={styles.gameScore}>
                   {g.teamScore}-{g.oppScore}
@@ -451,6 +477,21 @@ function GameLogsSection({
           </>
         )}
       </View>
+      {canExpand ? (
+        <Pressable
+          onPress={() => setExpanded((v) => !v)}
+          accessibilityRole="button"
+          style={({ pressed }) => [
+            styles.gameLogsToggle,
+            { borderColor: frame },
+            pressed ? { backgroundColor: hexToRgba(accent, 0.12) } : null,
+          ]}
+        >
+          <Text style={[styles.gameLogsToggleText, { color: accent }]}>
+            {expanded ? ui.showFewerGames : ui.showAllGames(games.length)}
+          </Text>
+        </Pressable>
+      ) : null}
     </View>
   );
 }
@@ -539,16 +580,35 @@ function InjuriesSection({
 
 function HeadToHeadSection({
   rows,
+  statRows,
   accent,
   ui,
 }: {
   rows: NbaTeamHeadToHeadEntry[];
+  /** 明細 doc があれば平均スタッツ付きの表 */
+  statRows: NbaTeamHeadToHeadStatRow[] | null;
   accent: string;
   ui: NbaTeamDetailUiCopy;
 }) {
   const frame = hexToRgba(accent, 0.3);
   const line = hexToRgba(accent, 0.12);
   const emptyCopy = ui.noData;
+  if (statRows && statRows.length > 0) {
+    return (
+      <View style={styles.schedSection}>
+        <SectionHeader title="HEAD-TO-HEAD" accent={accent} />
+        <Text style={styles.splitStatsHint}>{ui.splitStatsHint}</Text>
+        <NbaTeamStatSplitTableNative
+          accent={accent}
+          rows={statRows.map((r) => ({
+            key: r.oppTeamId,
+            label: r.oppAbbr,
+            row: r,
+          }))}
+        />
+      </View>
+    );
+  }
   return (
     <View style={styles.schedSection}>
       <SectionHeader title="HEAD-TO-HEAD" accent={accent} />
@@ -589,6 +649,22 @@ function winPctLabel(wins: number, losses: number): string {
   const n = wins + losses;
   if (n <= 0) return ".000";
   return (wins / n).toFixed(3).replace(/^0/, "");
+}
+
+function teamSplitTableRows(
+  detail: NbaTeamGameLogDetail
+): NbaTeamStatSplitTableRow[] {
+  const s = detail.splits;
+  return [
+    { key: "home", label: "HOME", row: s.home },
+    { key: "away", label: "AWAY", row: s.away },
+    { key: "vsEast", label: "VS EAST", labelColor: "#EF3B24", row: s.vsEast },
+    { key: "vsWest", label: "VS WEST", labelColor: "#007AC1", row: s.vsWest },
+    { key: "vsOver500", label: "VS .500+", row: s.vsOver500 },
+    { key: "vsUnder500", label: "VS SUB-.500", row: s.vsUnder500 },
+    { key: "b2b", label: "B2B", row: s.b2b },
+    { key: "threeInFour", label: "3IN4", row: s.threeInFour },
+  ];
 }
 
 function SplitCard({
@@ -1770,6 +1846,7 @@ export default function NbaTeamDetailPanelNative({
     detail,
     aceOut,
     shapeEdges,
+    gameLogDetail,
     offseasonMoves,
     discipline,
     hasFetchError,
@@ -2030,6 +2107,31 @@ export default function NbaTeamDetailPanelNative({
             accent={accent}
           />
         </View>
+        {gameLogDetail ? (
+          <>
+            <View style={[styles.splitRow, { marginTop: 8 }]}>
+              <SplitCard
+                label="B2B"
+                wins={gameLogDetail.splits.b2b.wins}
+                losses={gameLogDetail.splits.b2b.losses}
+                accent={accent}
+              />
+              <SplitCard
+                label="3IN4"
+                wins={gameLogDetail.splits.threeInFour.wins}
+                losses={gameLogDetail.splits.threeInFour.losses}
+                accent={accent}
+              />
+            </View>
+            <Text style={[styles.splitStatsHint, { marginTop: 12 }]}>
+              {ui.splitStatsHint}
+            </Text>
+            <NbaTeamStatSplitTableNative
+              accent={accent}
+              rows={teamSplitTableRows(gameLogDetail)}
+            />
+          </>
+        ) : null}
 
         {shapeEdges ? (
           <>
@@ -2059,7 +2161,7 @@ export default function NbaTeamDetailPanelNative({
         <View style={[styles.divider, { backgroundColor: dividerColor }]} />
 
         <GameLogsSection
-          games={detail.recentGames}
+          games={gameLogDetail?.games.length ? gameLogDetail.games : detail.recentGames}
           accent={accent}
           ui={ui}
         />
@@ -2068,6 +2170,7 @@ export default function NbaTeamDetailPanelNative({
 
         <HeadToHeadSection
           rows={detail.headToHead}
+          statRows={gameLogDetail?.headToHead ?? null}
           accent={accent}
           ui={ui}
         />
@@ -3311,6 +3414,31 @@ const styles = StyleSheet.create({
     transform: [{ skewX: "-8deg" }],
   },
   splitRow: { flexDirection: "row", gap: 10 },
+  splitStatsHint: {
+    fontFamily: METRIC_FONT,
+    color: "rgba(255,255,255,0.4)",
+    fontSize: 10,
+    fontWeight: "700",
+    marginBottom: 6,
+  },
+  b2bTag: {
+    color: "rgba(255,196,0,0.85)",
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 0.6,
+  },
+  gameLogsToggle: {
+    marginTop: 8,
+    borderWidth: 1,
+    paddingVertical: 10,
+    alignItems: "center",
+  },
+  gameLogsToggleText: {
+    fontFamily: METRIC_FONT,
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 1.2,
+  },
   splitCard: {
     flex: 1,
     borderWidth: 1,

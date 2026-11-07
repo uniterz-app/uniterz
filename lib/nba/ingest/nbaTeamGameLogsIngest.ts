@@ -19,6 +19,8 @@ import {
   normalizeTeamGameLogSeasonKey,
   writeTeamGameLogsSnapshot,
 } from "@/lib/nba/teamGameLog/loadTeamGameLog";
+import { writeTeamGameLogDetails } from "@/lib/nba/teamGameLog/loadTeamGameLogDetail";
+import { buildTeamGameLogDetailsFromGames } from "@/lib/nba/teamGameLog/teamGameLogDetail";
 
 export const NBA_TEAM_GAME_LOGS_INGEST_READY = true;
 
@@ -86,6 +88,13 @@ export async function ingestNbaTeamGameLogsFromGames(
     source: "firestore",
     serverTimestamp: FieldValue.serverTimestamp(),
   });
+
+  await writeTeamGameLogDetails(
+    db,
+    seasonKey,
+    buildTeamGameLogDetailsFromGames({ seasonKey, games: rows }),
+    FieldValue.serverTimestamp()
+  );
 
   const last10 = buildLast10RowsFromGames(rows, {
     seasonPaceByTeamId: seasonPaceByTeamIdFromRows(
