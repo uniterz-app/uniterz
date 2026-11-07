@@ -1136,7 +1136,7 @@ export async function runNbaAskTool(
       date = resolveLatestNbaSlateDateKey(index.startMs);
     }
     if (!DATE_RE.test(date)) return { error: "date must be YYYY-MM-DD" };
-    const payload = await loadDailyLeadersAdmin(db, { dateKey: date, timeZone: NBA_ASK_TIME_ZONE });
+    const payload = await loadDailyLeadersAdmin(db, { dateKey: date, timeZone: NBA_SLATE_TIME_ZONE });
     const leaders = (payload.boards[metric] ?? []).slice(0, 5).map((row, index) => ({
       rank: index + 1,
       name: `${row.firstName} ${row.lastName}`.trim(),
