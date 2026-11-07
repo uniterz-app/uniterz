@@ -88,6 +88,16 @@ export type ProInsightNarrativeBrief = {
   sections: ProInsightNarrativeSection[];
   /** early 用など */
   sampleNote?: UiStrings | null;
+  /** 一番上の文章（前回の直接対決 · 両チームの前の試合 · 今夜の読み） */
+  preview?: UiStrings | null;
   /** LLM 出力の中間値（INJURY IMPACT 先頭の厳しさの読み）。保存前に項目へ組み込んで消す */
   injuryDifficultyRead?: UiStrings;
+  /** LLM 出力の中間値（PREVIEW 英文の翻訳）。数字検査のあと preview に結合して消す */
+  previewParts?: ProInsightPreviewParts;
+};
+
+export type ProInsightPreviewParts = {
+  meeting?: Partial<UiStrings>;
+  recent?: Partial<UiStrings>;
+  read?: Partial<UiStrings>;
 };

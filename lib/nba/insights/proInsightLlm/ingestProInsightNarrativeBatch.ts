@@ -92,6 +92,7 @@ import { buildLongTermOutImpacts } from "@/lib/nba/insights/proInsightFacts/buil
 import type { NbaInjuryOutImpact } from "@/lib/nba/matchupDifficulty/injuryAdjustedDifficulty";
 import { withInjuryFixups } from "@/lib/nba/insights/proInsightLlm/injuryNarrativeFixups";
 import { withNumberGuard } from "@/lib/nba/insights/proInsightLlm/numberGuard";
+import { withPreview } from "@/lib/nba/insights/proInsightLlm/previewNarrative";
 import { rewriteThisSeasonLabels } from "@/lib/nba/insights/proInsightLlm/rewriteThisSeasonLabels";
 import {
   listPendingProInsightBatchJobs,
@@ -105,6 +106,9 @@ import type {
   SchedulePriorGame,
   ScheduleNextGame,
 } from "@/lib/nba/insights/proInsightFacts/buildScheduleFacts";
+import type { NbaTeamRosterDocTeam } from "@/lib/nba/teamRosters/teamRosterTypes";
+import type { ProInsightPreviewFacts } from "@/lib/nba/insights/proInsightFacts/buildPreviewFacts";
+import { loadProInsightPreviewFacts } from "@/lib/nba/insights/proInsightFacts/loadPreviewFacts";
 
 export type ProInsightNarrativeBatchSubmitResult = {
   ok: boolean;
@@ -626,7 +630,7 @@ async function writeNarrative(
         difficultyFact.injuryDifficultyImpacts ?? []
       )
     : new Set<string>();
-  const finalBrief = withTemplateScheduleDifficulty(
+  const finalBrief = withPreview(withTemplateScheduleDifficulty(
     withInjuryDifficultyItem(
       withNumberGuard(
         withInjuryFixups(
@@ -645,7 +649,7 @@ async function writeNarrative(
       meta.factPack
     ),
     meta.factPack
-  );
+  ), meta.factPack);
   const gp = meta.factPack.gamesPlayed;
   await writeGameProInsight(db, gameId, {
     proInsightNarrative: {
@@ -669,6 +673,8 @@ async function writeNarrative(
       matchupTable: meta.factPack.matchupTable ?? null,
       longTermOutImpacts: meta.factPack.longTermOutImpacts ?? [],
       gamesPlayed: meta.factPack.gamesPlayed ?? null,
+      preview: meta.factPack.preview ?? null,
+      seasonKey: meta.factPack.seasonKey ?? null,
       packedAtMs: Date.now(),
       pendingBatch: false,
     },
@@ -816,14 +822,18 @@ export async function submitProInsightNarrativeBatch(
 
   let seasonMpgByPlayerId: Record<string, number> = {};
   let priorMpgByPlayerId: Record<string, number> = {};
+  let seasonRosterTeams: Record<string, NbaTeamRosterDocTeam> | null = null;
+  let priorRosterTeams: Record<string, NbaTeamRosterDocTeam> | null = null;
   try {
     const rosterSnap = await loadTeamRostersSnapshot(db, seasonKey);
+    seasonRosterTeams = rosterSnap.bundle.teams;
     seasonMpgByPlayerId = mpgByPlayerIdFromRosterTeams(rosterSnap.bundle.teams);
   } catch {
     /* optional */
   }
   try {
     const priorRosterSnap = await loadTeamRostersSnapshot(db, priorKey);
+    priorRosterTeams = priorRosterSnap.bundle.teams;
     priorMpgByPlayerId = mpgByPlayerIdFromRosterTeams(priorRosterSnap.bundle.teams);
   } catch {
     /* optional */
@@ -1057,6 +1067,17 @@ export async function submitProInsightNarrativeBatch(
       );
       pack.longTermOutImpacts = longTermOutImpacts;
       pack.gamesPlayed = gamesPlayed;
+      pack.seasonKey = seasonKey;
+      pack.preview = await loadProInsightPreviewFacts(db, {
+        homeTeamId,
+        awayTeamId,
+        tipAtMs,
+        seasonKey,
+        priorSeasonKey: priorKey,
+        recentDocs,
+        seasonRosterTeams,
+        priorRosterTeams,
+      });
       prepared.push({
         gameId: game.id,
         pack: withInjuryDifficultyFact(pack),
@@ -1211,6 +1232,8 @@ export async function submitProInsightNarrativeBatch(
         matchupTable: p.pack.matchupTable ?? null,
         longTermOutImpacts: p.pack.longTermOutImpacts ?? [],
         gamesPlayed: p.pack.gamesPlayed ?? null,
+        preview: p.pack.preview ?? null,
+        seasonKey: p.pack.seasonKey ?? null,
         packedAtMs: nowMs,
         pendingBatch: true,
       },
@@ -1363,6 +1386,8 @@ export async function pollProInsightNarrativeBatches(
                 matchupTable?: ProInsightMatchupStatTable | null;
                 longTermOutImpacts?: NbaInjuryOutImpact[];
                 gamesPlayed?: number | null;
+                preview?: ProInsightPreviewFacts | null;
+                seasonKey?: string | null;
               }
             | undefined;
           if (!facts?.sections || !facts.fingerprint) continue;
@@ -1378,6 +1403,8 @@ export async function pollProInsightNarrativeBatches(
             matchupTable: facts.matchupTable ?? null,
             longTermOutImpacts: facts.longTermOutImpacts ?? [],
             gamesPlayed: facts.gamesPlayed ?? undefined,
+            preview: facts.preview ?? null,
+            seasonKey: facts.seasonKey ?? undefined,
           };
           const homeId = teamIdFromSide(g.data()?.home, g.data()?.homeTeamId);
           const awayId = teamIdFromSide(g.data()?.away, g.data()?.awayTeamId);
@@ -1433,10 +1460,14 @@ export async function pollProInsightNarrativeBatches(
                 matchupTable?: ProInsightMatchupStatTable | null;
               longTermOutImpacts?: NbaInjuryOutImpact[];
               gamesPlayed?: number | null;
+              preview?: ProInsightPreviewFacts | null;
+              seasonKey?: string | null;
             }
           | undefined;
 
         const pack: ProInsightFactPack = {
+          preview: facts?.preview ?? null,
+          seasonKey: facts?.seasonKey ?? undefined,
           scheduleDifficulty: facts?.scheduleDifficulty ?? null,
           matchupTable: facts?.matchupTable ?? null,
           longTermOutImpacts: facts?.longTermOutImpacts ?? [],
@@ -1663,14 +1694,18 @@ export async function patchProInsightNarrativesIfInjuryChanged(
 
   let seasonMpgByPlayerId: Record<string, number> = {};
   let priorMpgByPlayerId: Record<string, number> = {};
+  let seasonRosterTeams: Record<string, NbaTeamRosterDocTeam> | null = null;
+  let priorRosterTeams: Record<string, NbaTeamRosterDocTeam> | null = null;
   try {
     const rosterSnap = await loadTeamRostersSnapshot(db, seasonKey);
+    seasonRosterTeams = rosterSnap.bundle.teams;
     seasonMpgByPlayerId = mpgByPlayerIdFromRosterTeams(rosterSnap.bundle.teams);
   } catch {
     /* optional */
   }
   try {
     const priorRosterSnap = await loadTeamRostersSnapshot(db, priorKey);
+    priorRosterTeams = priorRosterSnap.bundle.teams;
     priorMpgByPlayerId = mpgByPlayerIdFromRosterTeams(priorRosterSnap.bundle.teams);
   } catch {
     /* optional */
@@ -1899,6 +1934,17 @@ export async function patchProInsightNarrativesIfInjuryChanged(
       );
       pack.longTermOutImpacts = longTermOutImpacts;
       pack.gamesPlayed = Math.min(homeGp, awayGp);
+      pack.seasonKey = seasonKey;
+      pack.preview = await loadProInsightPreviewFacts(db, {
+        homeTeamId,
+        awayTeamId,
+        tipAtMs,
+        seasonKey,
+        priorSeasonKey: priorKey,
+        recentDocs,
+        seasonRosterTeams,
+        priorRosterTeams,
+      });
       const packed = withInjuryDifficultyFact(pack);
       const brief = await generateProInsightNarrativeForGameChat(packed);
       const source = isOpenAiConfigured() ? "openai_chat" : "fallback";

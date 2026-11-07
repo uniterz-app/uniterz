@@ -10,6 +10,22 @@ import type { ProInsightFactPack } from "@/lib/nba/insights/proInsightFacts/type
 import { proInsightTeamAbbr } from "@/lib/nba/insights/proInsightFacts/teamAbbr";
 import { PRO_INSIGHT_NARRATIVE_SECTION_KINDS } from "@/lib/predict/proInsightNarrativeTypes";
 import { INJURY_DIFFICULTY_FACT_KIND } from "@/lib/nba/matchupDifficulty/injuryDifficultyNarrative";
+import {
+  buildPreviewTemplate,
+  PREVIEW_PART_KEYS,
+} from "@/lib/nba/insights/proInsightFacts/previewTemplate";
+
+/** PREVIEW の英文（コードで組んだもの）。LLM はこれを 7 言語に訳すだけ */
+export function previewEnForTranslation(pack: ProInsightFactPack): Record<string, string> | null {
+  const tpl = buildPreviewTemplate(pack.preview, pack.seasonKey ?? null);
+  if (!tpl) return null;
+  const out: Record<string, string> = {};
+  for (const key of PREVIEW_PART_KEYS) {
+    const part = tpl[key];
+    if (part) out[key] = part.en;
+  }
+  return out;
+}
 
 export const PRO_INSIGHT_LLM_SYSTEM = `You write short UNITERZ Pro Insight blurbs for one NBA game.
 Return ONLY valid JSON (no markdown).
@@ -126,6 +142,13 @@ injuryDifficulty (top-level payload block, when present) → top-level output "i
 - Bad JA: "影響は小さい。" alone / "厳しさは 48 から 52 に変化。" (digits) / "J.Butler が OUT。" (restating status) / a read that contradicts the numbers line.
 - This read is NOT an INJURY IMPACT item. INJURY IMPACT items are only for the facts listed in that section, and they must not repeat this read's tilt (e.g. "LAKERS は楽にならない").
 
+previewEn (top-level payload block, when present) → top-level output "previewTranslations":
+- previewEn is finished English text written by code (keys "meeting" / "recent" / "read"). Do NOT rewrite, shorten, add to, or reorder it. TRANSLATE each part faithfully into ko, zh, es, pt, fr, de, ar.
+- Translate EVERY sentence of each part. Never drop a sentence, a team, a player, or a number (a translation that omits any is discarded).
+- Keep every number exactly as written (scores "141-107", dates "4/3", "FG 7/20", minutes). Do not convert dates to another format, do not compute anything, add no number.
+- Keep team nicknames (HAWKS) and player names (N.Alexander-Walker) in English exactly as written.
+- Natural sports-preview wording in each language. Plain sentences, no markdown.
+
 Output shape:
 {
   "sections": [
@@ -139,13 +162,20 @@ Output shape:
       ]
     }
   ],
-  "injuryDifficultyRead": { "ja": "...", "en": "...", "ko": "...", "zh": "...", "es": "...", "pt": "...", "fr": "...", "de": "...", "ar": "..." }
+  "injuryDifficultyRead": { "ja": "...", "en": "...", "ko": "...", "zh": "...", "es": "...", "pt": "...", "fr": "...", "de": "...", "ar": "..." },
+  "previewTranslations": {
+    "meeting": { "ko": "...", "zh": "...", "es": "...", "pt": "...", "fr": "...", "de": "...", "ar": "..." },
+    "recent": { "ko": "...", "zh": "...", "es": "...", "pt": "...", "fr": "...", "de": "...", "ar": "..." },
+    "read": { "ko": "...", "zh": "...", "es": "...", "pt": "...", "fr": "...", "de": "...", "ar": "..." }
+  }
 }
 
 Include "injuryDifficultyRead" only when the payload has injuryDifficulty.
+Include "previewTranslations" only when the payload has previewEn, with exactly the same keys as previewEn.
 Include every section kind that has facts in the user payload, with the same item counts (do not add extra items). Omit section kinds with zero facts.`;
 
 export function buildProInsightLlmUserPayload(pack: ProInsightFactPack): string {
+  const previewEn = previewEnForTranslation(pack);
   const difficulty = (pack.sections["INJURY IMPACT"] ?? []).find(
     (f) => f.kind === INJURY_DIFFICULTY_FACT_KIND
   );
@@ -181,6 +211,7 @@ export function buildProInsightLlmUserPayload(pack: ProInsightFactPack): string 
         : {}),
       fingerprint: pack.fingerprint,
       sections,
+      ...(previewEn ? { previewEn } : {}),
       ...(difficulty
         ? {
             injuryDifficulty: {
