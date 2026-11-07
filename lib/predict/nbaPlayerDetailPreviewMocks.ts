@@ -298,6 +298,8 @@ export type NbaPlayerDetailPreview = {
   /** ゾーン別 FG%（簡易ヒート） */
   shotZones: NbaPlayerShotZone[];
   gameLogs: NbaPlayerGameLog[];
+  /** 今季の出場試合すべて（新しい順・上限 82）。GAMES スプリットの集計用 */
+  seasonGameLogs?: NbaPlayerGameLog[];
   contract: NbaPlayerContractSummary | null;
   /** キャリアアワード（回数付き） */
   awards: NbaPlayerAward[];

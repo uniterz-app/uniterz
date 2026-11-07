@@ -153,6 +153,15 @@ export function nbaPlayerDetailChrome(language: string | null | undefined) {
       pt: "HISTÓRICO",
       fr: "HISTORIQUE",
     }),
+    gameSplitsHint: L(lang, {
+      ja: "今季の出場試合の平均。B2B・3IN4 は本人の出場日、対 .500 は相手の現在の勝率（横にスクロール）",
+      en: "Per game this season. B2B / 3IN4 use his own game days; .500 uses opponents' current record (scroll sideways)",
+      ko: "이번 시즌 출전 경기 평균. B2B·3IN4는 본인 출전일, .500은 상대의 현재 승률 (가로 스크롤)",
+      zh: "本季出场场均。B2B·3IN4 按本人出场日，.500 按对手当前胜率（左右滑动）",
+      es: "Por partido esta temporada. B2B / 3IN4 según sus días jugados; .500 según el récord actual del rival (desliza)",
+      pt: "Por jogo nesta temporada. B2B / 3IN4 pelos dias em que jogou; .500 pelo recorde atual do rival (deslize)",
+      fr: "Par match cette saison. B2B / 3IN4 selon ses jours joués ; .500 selon le bilan actuel de l’adversaire (faites défiler)",
+    }),
     seasonAvgHint: L(lang, {
       ja: "今季の出場試合からの平均（横にスクロール）",
       en: "Season average from games played (scroll sideways)",
