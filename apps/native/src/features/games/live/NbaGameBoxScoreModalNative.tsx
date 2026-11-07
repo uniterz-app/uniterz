@@ -1,9 +1,10 @@
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Modal, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useLiveGameStats } from "../../../../../../lib/games/useLiveGameStats";
 import { L, resolveLocalizedLang } from "../../../../../../lib/i18n/localize";
 import { getCachedGameDocForResult } from "../../../../../../lib/result/resultDetailFirestoreCache";
 import { db } from "../../../lib/firebase";
 import { getUniterzApiBaseUrl } from "../submitPredictionApi";
+import ProfileBackEdgeHandleNative from "../../profile/ProfileBackEdgeHandleNative";
 import LiveGameStatsPanelNative from "./LiveGameStatsPanelNative";
 
 const OXANIUM = "Oxanium_700Bold";
@@ -46,23 +47,6 @@ export default function NbaGameBoxScoreModalNative({
       <View style={styles.root}>
         <View style={styles.header}>
           <Text style={styles.title}>BOX SCORE</Text>
-          <Pressable
-            onPress={onClose}
-            style={styles.close}
-            accessibilityRole="button"
-          >
-            <Text style={styles.closeText}>
-              {L(lang, {
-                ja: "閉じる",
-                en: "Close",
-                ko: "닫기",
-                zh: "关闭",
-                es: "Cerrar",
-                pt: "Fechar",
-                fr: "Fermer",
-              })}
-            </Text>
-          </Pressable>
         </View>
         <ScrollView
           contentContainerStyle={styles.scroll}
@@ -101,6 +85,7 @@ export default function NbaGameBoxScoreModalNative({
             </Text>
           )}
         </ScrollView>
+        <ProfileBackEdgeHandleNative onPress={onClose} />
       </View>
     </Modal>
   );
@@ -130,21 +115,6 @@ const styles = StyleSheet.create({
     color: "rgba(255,255,255,0.7)",
     textTransform: "uppercase",
     transform: [{ skewX: "-6deg" }],
-  },
-  close: {
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.25)",
-    borderRadius: 2,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  closeText: {
-    fontFamily: OXANIUM,
-    fontSize: 11,
-    fontWeight: "800",
-    letterSpacing: 1,
-    color: "rgba(255,255,255,0.8)",
-    textTransform: "uppercase",
   },
   scroll: {
     paddingHorizontal: 8,
