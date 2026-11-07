@@ -51,5 +51,6 @@ export async function writeGameProInsight(
   gameId: string,
   patch: GameProInsightDoc
 ): Promise<void> {
-  await gameProInsightRef(db, gameId).set(patch, { merge: true });
+  // 渡したフィールドは丸ごと置き換える（深いマージだと前回の preview の言語や消した項目が残る）
+  await gameProInsightRef(db, gameId).set(patch, { mergeFields: Object.keys(patch) });
 }
