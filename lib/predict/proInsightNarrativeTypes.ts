@@ -81,6 +81,8 @@ export type ProInsightNarrativeSection = {
   table?: ProInsightMatchupStatTable;
 };
 
+export type ProInsightPreviewName = { name: string; teamId: string };
+
 /** 試合単位の Insight（HOME/AWAY 分割なし） */
 export type ProInsightNarrativeBrief = {
   homeTeamId: string;
@@ -90,6 +92,10 @@ export type ProInsightNarrativeBrief = {
   sampleNote?: UiStrings | null;
   /** ピックアップだけ: 一番上の展望（段落は "\n" 区切り） */
   preview?: UiStrings | null;
+  /** preview の段落ごとの要点（"\n" 区切り・段落と同数のときだけ表示に使う） */
+  previewHeads?: UiStrings | null;
+  /** preview 本文で色を付ける選手名（"N.Jokic" 形式）と所属 */
+  previewNames?: ProInsightPreviewName[] | null;
   /** LLM 出力の中間値（INJURY IMPACT 先頭の厳しさの読み）。保存前に項目へ組み込んで消す */
   injuryDifficultyRead?: UiStrings;
 };
