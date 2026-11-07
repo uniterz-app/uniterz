@@ -152,7 +152,7 @@ Find the 2–3 strongest such connections in the sheet. Combine: a player's stre
 
 Write exactly 4 paragraphs:
 1) The shape of the game. Team-level: pace (fast vs slow → possessions), offense vs defense quality, the biggest style edge (styleEdges / shooting / turnovers / glass), and what kind of game that produces.
-2) Players set up for a big (or tough) night. 1–3 players. For each, the reason chain: what he does well (strengths, usage, recent form last5Ppg vs season ppg, season high) × why tonight's opponent is vulnerable to it (opponentVsPosition, the matching team weakness) × load shift from absences (loadShiftWithoutAbsent). Projections are allowed ("a big scoring night is in play", "likely to carry more of the load"); certainty is not.
+2) Players set up for a big (or tough) night. 2–4 players, and ALWAYS each team's top scorer (teams[].keyPlayers[0]) — a star is never left out just because the opponent has no weakness at his position. For each, the reason chain: what he does well (strengths, usage, recent form last5Ppg vs season ppg, season high) × why tonight's opponent is vulnerable to it (opponentVsPosition, the matching team weakness) × load shift from absences (loadShiftWithoutAbsent). Give each top scorer the full picture: season ppg, last5Ppg, season high, his top 1–2 strengths. If the opponent is middle at his position, his case rests on his own form, usage and strengths alone — state it with confidence and do not add a sentence about the opponent being average; never hedge with "how far it works" / 「どこまで通用するか」「どこまで押し切れるか」. When teams[].defensiveReads is present, paragraph 2 MUST include it (the defender vs the named opposing scorer, e.g. "his rim protection makes it a tough night for the opposing center"). Projections are allowed ("a big scoring night is in play", "likely to carry more of the load"); certainty is not.
 3) Difficulty and condition. Who has the harder night and why: absences (what each takes away), difficulty with absences, back-to-back / travel / heavy minutes, and what that changes late in the game.
 4) Last meeting and last games as evidence for or against the reads above, then 1–2 concrete watch points — in-game signs that tell the fan which way it is going.
 
@@ -160,6 +160,7 @@ Reading the sheet:
 - teams[].allowedByPosition: points per game a team gives up to opposing guards / forwards / centers; the rank says #N of M where the highest number = allows the most. keyPlayers[].opponentVsPosition is that line for tonight's opponent vs the player's position — the core of "who is set up".
 - teams[] ranks: #1 = best in that stat unless the text says otherwise (pace #1 = fastest, opponent 3P% #1 = stingiest, TOV% #1 = fewest turnovers).
 - keyPlayers[].strengths: player ranks among ALL NBA players (e.g. isolation frequency #1).
+- teams[].defensiveReads: code-built matchup — the team is stingy at a position and has a defender ranked high in blocks / steals / rebounds, against the opposing scorer at that position (with his load shift if any).
 - loadShiftWithoutAbsent: how a teammate's scoring changed in games the absent player missed this season (small samples — say "in the games he missed").
 - Every rank in teams[] carries its tier in words ("top 5", "bottom 10", "allows among the most — a clear weakness", "middle — not an edge"). Your wording must match that tier exactly. Anything marked "middle" is NEVER a strength, weakness, "vulnerable", "soft" or "下位/上位" and is never used as a reason. A player edge from opponentVsPosition counts only when it says "weakness"; "tough matchup" / "stingier" = a harder night for that player.
 - Do not print the "#N" rank of a middle item, and do not convert ranks into other numbers (no "5th-most").
@@ -202,6 +203,12 @@ function paragraphsOf(raw: unknown): string[] | null {
   return out.length >= 2 ? out : null;
 }
 
+/** 「欠場なし」の言い切り（injury の取り込み遅れで誤りになる）。プロンプトだけでは止まらない */
+const NO_ABSENCE_CLAIM: Partial<Record<(typeof LANGS)[number], RegExp>> = {
+  ja: /(離脱|欠場)(は|が)(な|無)[くい]|大量離脱|万全/,
+  en: /\bno (major |key |significant )?(absences|injuries)\b|full strength|fully healthy|healthy roster/i,
+};
+
 function parseOutlook(content: string, allowed: Set<string>): { text: Partial<UiStrings>; bad: string[] } {
   let parsed: unknown;
   try {
@@ -216,8 +223,9 @@ function parseOutlook(content: string, allowed: Set<string>): { text: Partial<Ui
     const paras = paragraphsOf(byLang[lang]);
     const joined = paras?.join("\n");
     const stray = joined ? numbersIn(joined).filter((n) => !allowed.has(n)) : [];
-    if (!joined || stray.length) {
-      bad.push(stray.length ? `${lang}(${stray.join(",")})` : lang);
+    const claim = joined ? NO_ABSENCE_CLAIM[lang]?.exec(joined)?.[0] : undefined;
+    if (!joined || stray.length || claim) {
+      bad.push(stray.length ? `${lang}(${stray.join(",")})` : claim ? `${lang}(${claim})` : lang);
       continue;
     }
     text[lang] = joined;
@@ -229,13 +237,25 @@ export async function generatePreviewOutlook(pack: ProInsightFactPack): Promise<
   const sheet = buildPreviewOutlookSheet(pack);
   if (!sheet || !isOpenAiConfigured()) return null;
   const allowed = allowedNumbersFromSheet(sheet);
+  let rejected: string[] = [];
   for (let attempt = 0; attempt < 2; attempt++) {
     let content: string;
     try {
       content = await openAiChatCompletionJson({
         model: getOpenAiProInsightPreviewModel(),
         system: PREVIEW_OUTLOOK_SYSTEM,
-        user: JSON.stringify({ sheet }, null, 1),
+        user: JSON.stringify(
+          {
+            sheet,
+            ...(rejected.length
+              ? {
+                  previousDraftRejected: `These languages were rejected (numbers not in the sheet, or a claim that a team has no absences): ${rejected.join(" ")}. Rewrite without them.`,
+                }
+              : {}),
+          },
+          null,
+          1
+        ),
         temperature: 0.4,
       });
     } catch (e) {
@@ -244,6 +264,7 @@ export async function generatePreviewOutlook(pack: ProInsightFactPack): Promise<
     }
     const { text, bad } = parseOutlook(content, allowed);
     if (bad.length) console.warn(`[pro-insight] preview outlook dropped: ${bad.join(" ")}`);
+    rejected = bad;
     if (!text.ja || !text.en) continue;
     const out = { ja: text.ja, en: text.en } as UiStrings;
     for (const lang of LANGS) (out as Record<string, string>)[lang] = text[lang] ?? text.en;

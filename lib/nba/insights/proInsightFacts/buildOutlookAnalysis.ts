@@ -55,6 +55,8 @@ export type OutlookTeam = {
   last10?: string;
   allowedByPosition: Record<OutlookPos, string>;
   keyPlayers: OutlookKeyPlayer[];
+  /** そのポジションへの失点が上位 5 かつ守りの強みを持つ選手がいる → 相手の同ポジションの得点源に厳しい */
+  defensiveReads?: string[];
   absences: string[];
   loadShiftWithoutAbsent: string[];
 };
@@ -168,6 +170,13 @@ const STRENGTH_METRICS: Array<{ id: string; label: string; pct?: boolean }> = [
   { id: "clutch_pts", label: "clutch points" },
 ];
 
+/** 守りの読みの根拠にする指標と、それが効くポジション */
+const DEFENSIVE_METRICS: Array<{ id: string; label: string; positions: OutlookPos[] }> = [
+  { id: "blk", label: "blocks", positions: ["C", "F"] },
+  { id: "stl", label: "steals", positions: ["G", "F"] },
+  { id: "reb", label: "rebounds", positions: ["C"] },
+];
+
 function strengthsOf(metrics: Record<string, OutlookPlayerMetric> | undefined): string[] {
   if (!metrics) return [];
   return STRENGTH_METRICS.map((def) => ({ def, m: metrics[def.id] }))
@@ -224,6 +233,26 @@ export function buildOutlookAnalysis(input: OutlookAnalysisInput): ProInsightOut
     const r = allowedRank[pos].get(teamId);
     if (!a || !r) return null;
     return `${round1(a.pts[pos])} pts per game to ${POS_WORD[pos]} (#${r} of ${allowedTeams}, #1 = allows the least: ${allowedTier(r, allowedTeams)})`;
+  };
+
+  /** 欠場者がいない試合でその選手の得点が 3 点以上伸びていれば 1 文で返す */
+  const loadShiftOf = (teamId: string, player: { id: string | number }): string | null => {
+    const roster = input.rosterTeams?.[teamId]?.players ?? [];
+    const logs = sortedLogs(input.logsByPlayer.get(String(player.id))?.logs ?? []);
+    for (const inj of input.injuries[teamId] ?? []) {
+      if (inj.status !== "out" && inj.status !== "doubtful") continue;
+      const outLogs = sortedLogs(input.logsByPlayer.get(String(inj.playerId))?.logs ?? []);
+      if (!outLogs.length) continue;
+      const played = new Set(outLogs.map((g) => g.gameId));
+      const without = logs.filter((g) => !played.has(g.gameId));
+      const withHim = logs.filter((g) => played.has(g.gameId));
+      if (without.length < 2 || withHim.length < 2) continue;
+      if (avgPts(without) - avgPts(withHim) < 3) continue;
+      const outPlayer = roster.find((r) => String(r.id) === String(inj.playerId));
+      const outName = outPlayer ? previewShortName(outPlayer.firstName, outPlayer.lastName) : inj.name;
+      return `${avgPts(without)} ppg in ${without.length} games without ${outName}, who is out tonight`;
+    }
+    return null;
   };
 
   const teamOf = (teamId: string, oppId: string): OutlookTeam | null => {
@@ -310,6 +339,39 @@ export function buildOutlookAnalysis(input: OutlookAnalysisInput): ProInsightOut
       }
     }
 
+    const oppSidelined = new Set(
+      (input.injuries[oppId] ?? [])
+        .filter((i) => i.status === "out" || i.status === "doubtful")
+        .map((i) => String(i.playerId))
+    );
+    const oppRoster = (input.rosterTeams?.[oppId]?.players ?? []).filter(
+      (p) => !oppSidelined.has(String(p.id)) && p.gp > 0 && !p.averagesSeasonKey
+    );
+    const anchors = roster
+      .filter((p) => !sidelined.has(String(p.id)) && p.gp > 0 && !p.averagesSeasonKey)
+      .flatMap((p) =>
+        DEFENSIVE_METRICS.map((def) => ({ p, def, m: input.metricsByPlayer[String(p.id)]?.[def.id] }))
+          .filter(({ m }) => m && m.rank > 0 && m.rank <= 15)
+          .map(({ p, def, m }) => ({ p, def, m: m! }))
+      );
+    const defensiveReads: string[] = [];
+    for (const pos of ["G", "F", "C"] as const) {
+      const r = allowedRank[pos].get(teamId);
+      if (!r || r > 5) continue;
+      const anchor = anchors
+        .filter(({ p, def }) => def.positions.includes(pos) && primaryPos(p.position) === pos)
+        .sort((a, b) => a.m.rank - b.m.rank)[0];
+      if (!anchor) continue;
+      const target = oppRoster
+        .filter((p) => primaryPos(p.position) === pos && p.ppg >= 8)
+        .sort((a, b) => b.ppg - a.ppg)[0];
+      if (!target) continue;
+      const shift = loadShiftOf(oppId, target);
+      defensiveReads.push(
+        `${abbr} allow ${r === 1 ? "the fewest" : "among the fewest"} points to ${POS_WORD[pos]} (#${r} of ${allowedTeams}), and ${previewShortName(anchor.p.firstName, anchor.p.lastName)} is #${anchor.m.rank} among all players in ${anchor.def.label} (${round1(anchor.m.value)}) — a tough matchup for ${opp}'s ${POS_WORD[pos].slice(0, -1)} ${previewShortName(target.firstName, target.lastName)} (${round1(target.ppg)} ppg${shift ? `; ${shift}` : ""})`
+      );
+    }
+
     const l10 = input.last10Rows.find((r) => r.teamId === teamId);
     const seasonGames = row.wins + row.losses;
     return {
@@ -335,6 +397,7 @@ export function buildOutlookAnalysis(input: OutlookAnalysisInput): ProInsightOut
         C: allowedLine(teamId, "C") ?? "n/a",
       },
       keyPlayers,
+      ...(defensiveReads.length ? { defensiveReads } : {}),
       absences,
       loadShiftWithoutAbsent: loadShiftWithoutAbsent.slice(0, 3),
     };
