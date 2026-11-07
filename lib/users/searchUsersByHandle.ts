@@ -116,6 +116,33 @@ export async function searchUsersByDisplayNamePrefix(
   return out;
 }
 
+/**
+ * ID（handle）の完全一致。プロフィールの「ID: @xxxx」を貼っても拾う。
+ * handle はランダム英数字なので、前方一致にすると他人の ID を総当たりで拾えてしまう。
+ */
+export async function searchUsersByExactHandle(
+  db: Firestore,
+  q: string,
+  opts?: { excludeUid?: string | null }
+): Promise<UserSearchHit[]> {
+  const base = normalizeUserSearchQuery(q.trim().replace(/^id\s*[:：]\s*/i, ""));
+  if (base.length < 2 || base.length > 40 || /\s/.test(base)) return [];
+  const variants = [...new Set([base, base.toLowerCase(), `@${base}`, `@${base.toLowerCase()}`])];
+  const snap = await db
+    .collection("users")
+    .where("handle", "in", variants)
+    .limit(5)
+    .get();
+  const exclude = opts?.excludeUid?.trim() || "";
+  const out: UserSearchHit[] = [];
+  for (const doc of snap.docs) {
+    if (exclude && doc.id === exclude) continue;
+    const hit = mapUserDoc(doc.id, doc.data() as Record<string, unknown>);
+    if (hit) out.push(hit);
+  }
+  return out;
+}
+
 /** @deprecated 表示名検索へ移行。互換エイリアス */
 export async function searchUsersByHandlePrefix(
   db: Firestore,
