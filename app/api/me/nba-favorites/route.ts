@@ -8,6 +8,7 @@ import {
   isValidNbaFavoritePlayerId,
   isValidNbaFavoriteTeamId,
   isValidNbaFanSinceSeason,
+  nbaFavoriteMaxPlayersForUserData,
   nbaFavoritePlayerIdsOf,
   parseNbaFavorites,
   replaceNbaFavoritePlayer,
@@ -55,7 +56,8 @@ type Body =
 
 /**
  * 本人の NBA お気に入りをトグル保存（Admin merge）。
- * チーム最大 1・選手最大 1。公開プロフィールフィールド。
+ * チーム最大 1・選手は無料 1 / Pro 3。公開プロフィールフィールド。
+ * Pro が切れた人は先頭 1 人として編集するので、選手を編集すると隠れていた分は消える。
  */
 export async function POST(req: Request) {
   try {
@@ -67,9 +69,11 @@ export async function POST(req: Request) {
 
     const ref = getAdminDb().doc(`users/${uid}`);
     const snap = await ref.get();
-    const current = parseNbaFavorites(
-      snap.exists ? (snap.data() as Record<string, unknown>) : null
-    );
+    const userData = snap.exists
+      ? (snap.data() as Record<string, unknown>)
+      : null;
+    const current = parseNbaFavorites(userData);
+    const maxPlayers = nbaFavoriteMaxPlayersForUserData(userData);
 
     if (body.action === "toggleTeam") {
       const teamId =
@@ -152,7 +156,7 @@ export async function POST(req: Request) {
         return NextResponse.json({ ok: true, favorites: result.next });
       }
 
-      const result = toggleNbaFavoritePlayer(current, player);
+      const result = toggleNbaFavoritePlayer(current, player, maxPlayers);
       if (!result.ok) {
         return NextResponse.json(
           { error: result.reason, favorites: result.next },
