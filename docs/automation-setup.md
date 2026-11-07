@@ -1,5 +1,7 @@
 # Cursor Automation 設定手順（一回だけ）
 
+> **廃止（2026-11-07）:** プロダクトは Native だけに絞り、Web とのパリティ自動化はやめた。Agents Window で **Native Parity Daily / Web Sync / Merge Chain の 3 つを削除（または無効化）** すること。以下は記録として残す。方針: [`.cursor/rules/native-first.mdc`](../.cursor/rules/native-first.mdc)
+
 Agents Window で Automation を作成・更新する。プロンプトは下記 **「Automation 用プロンプト全文」** をそのまま貼る。
 
 **前提:** この `docs/` と `.cursor/` がリポジトリに push 済みであること。
@@ -141,7 +143,7 @@ Run N: parityComplete: true → push せず終了
 - 設計判断が必要なら blockedItems に記録してスキップ
 - 参照の正: app/mobile/* + app/component/*
 - ロジックは lib/、Native UI は apps/native/（*Native 命名）
-- 詳細は .cursor/skills/native-web-sync/SKILL.md も参照
+- 詳細は .cursor/skills/native-web-sync/SKILL.md も参照（2026-11-07 削除済み）
 ```
 
 ---

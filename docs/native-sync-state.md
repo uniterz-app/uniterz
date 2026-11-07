@@ -1,5 +1,7 @@
 # Native 同期状態
 
+> **廃止（2026-11-07）:** Web とのパリティ同期はやめた（`native-sync-state.json` は `retired: true`）。以下は記録。方針: [`.cursor/rules/native-first.mdc`](../.cursor/rules/native-first.mdc)
+
 エージェントは毎セッション最初に [`native-sync-state.json`](native-sync-state.json) を読む。
 
 ## phase 遷移

@@ -1,4 +1,7 @@
 {
+  "retired": true,
+  "retiredAt": "2026-11-07",
+  "retiredReason": "プロダクトを Native だけに絞り、Web とのパリティ同期を廃止（.cursor/rules/native-first.mdc）",
   "parityComplete": true,
   "phase": "phase-c",
   "lastCompletedId": "app-tutorial-hybrid",
