@@ -44,9 +44,10 @@ import {
   CyberSlantedTabNative,
   type CyberSlantedTabThemeNative,
 } from "../rankings/CyberSlantedTabNative";
+import { rawColor } from "../../../../../lib/theme/rawColor";
 
 /** 金は焼き込み素材あり（CyberSlantedTabNative） */
-const PASSPORT_TAB_THEME: CyberSlantedTabThemeNative = { accent: "#F6C344" };
+const PASSPORT_TAB_THEME: CyberSlantedTabThemeNative = { accent: rawColor("#F6C344") };
 
 const RAJDHANI = "Rajdhani_600SemiBold";
 const OXANIUM = "Oxanium_700Bold";

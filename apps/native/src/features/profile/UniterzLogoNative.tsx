@@ -55,7 +55,7 @@ export default function UniterzLogoNative({
     >
       <Image
         source={LOGO}
-        style={{ width, height: h }}
+        style={{ width, height: h, tintColor: "#ffffff" }}
         resizeMode={resizeMode}
       />
     </View>
@@ -79,9 +79,11 @@ const styles = StyleSheet.create({
   fillImage: {
     width: "100%",
     height: "100%",
+    tintColor: "#ffffff",
   },
   fillImageWidth: {
     width: "100%",
     height: "100%",
+    tintColor: "#ffffff",
   },
 });

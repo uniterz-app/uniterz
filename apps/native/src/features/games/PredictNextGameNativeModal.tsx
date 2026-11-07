@@ -295,7 +295,7 @@ export default function PredictNextGameNativeModal({
           <View pointerEvents="none" style={s.logoOnLine}>
             <Image
               source={LOGO_FLAT}
-              style={{ width: LOGO_W, height: LOGO_H }}
+              style={{ width: LOGO_W, height: LOGO_H, tintColor: "#ffffff" }}
               resizeMode="contain"
               accessibilityLabel="UNITERZ"
             />

@@ -16,14 +16,23 @@ import {
   getAppPageAtmosphere,
   subscribeAppPageAtmosphere,
 } from "../../../../../lib/ui/appPageAtmosphere";
+import { isLightAppTheme } from "../../theme/themeColorRuntime";
 
 type Props = {
   /** 互換のため残す */
   lite?: boolean;
 };
 
-const RING = require("../../../assets/bg/app-mesh.png") as number;
-const PRO_MESH = require("../../../assets/bg/pro-league-mesh.png") as number;
+const RING = (
+  isLightAppTheme()
+    ? require("../../../assets/bg/app-mesh-light.png")
+    : require("../../../assets/bg/app-mesh.png")
+) as number;
+const PRO_MESH = (
+  isLightAppTheme()
+    ? require("../../../assets/bg/pro-league-mesh-light.png")
+    : require("../../../assets/bg/pro-league-mesh.png")
+) as number;
 
 /**
  * Web `MobileStaticPageBackground` 相当。

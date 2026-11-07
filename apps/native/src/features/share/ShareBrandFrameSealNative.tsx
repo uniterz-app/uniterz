@@ -50,7 +50,7 @@ export default function ShareBrandFrameSealNative({
           <View style={styles.seal}>
             <Image
               source={LOGO_FLAT}
-              style={{ width: logoWidth, height: logoH }}
+              style={{ width: logoWidth, height: logoH, tintColor: "#ffffff" }}
               resizeMode="contain"
               accessibilityLabel="UNITERZ"
             />
