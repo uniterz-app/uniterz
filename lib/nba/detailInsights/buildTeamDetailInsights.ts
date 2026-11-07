@@ -129,7 +129,7 @@ function buildTeamTrends(detail: NbaTeamDetailPreview): DetailTrendDelta[] {
     const season = metricById(detail.metrics.season, p.id as NbaTeamMetricWithRank["id"]);
     const last10 = metricById(detail.metrics.last10, p.id as NbaTeamMetricWithRank["id"]);
     if (!season || !last10) continue;
-    if (!season.value && !last10.value) continue;
+    if (!season.value || !last10.value) continue;
     const delta = last10.value - season.value;
     if (Math.abs(delta) < p.threshold) continue;
     out.push({

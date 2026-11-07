@@ -9,7 +9,7 @@ const POSITIVE_TEAL = "#5cf0b5";
 const NEGATIVE = "#FF2D78";
 const ROW_H = 38;
 const HEAD_H = 30;
-const LABEL_W = 84;
+const LABEL_W = 104;
 
 export type NbaTeamStatSplitTableRow = {
   key: string;
