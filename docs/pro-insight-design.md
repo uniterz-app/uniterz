@@ -200,13 +200,17 @@ npx tsx scripts/ingest-nba-team-ace-out-records.ts 2025-26 --force
   - MATCHUP 表の行は、攻めが上位 10 か守りが下位 10 のものだけ渡す（順位差だけで拾われた中位同士の行は外す）。各行は持ち主のチームを主語にした文（「PACERS give up a lot of second-chance points」）にし、同じ文を `teams[].styleStrengths` / `styleWeaknesses` にも入れる。片側が中位の行は「中位側を弱い・強いと書かない」を文に含める。どちらのチームの弱点かを LLM が取り違えないため
 - 材料シート（`buildPreviewOutlookSheet`・`lib/nba/insights/proInsightLlm/previewOutlook.ts`）: 上の分析 + MATCHUP 表（順位・欠場注記）、MATCHUP / SCHEDULE / CONTEXT / INJURY IMPACT の hintEn、Difficulty（会場込み・欠場込み）、連戦 2 日目のチーム、前回の対戦・前の試合の事実文（`previewTemplate.ts` の en。表示には使わない）
 - 前回の対戦・前の試合の事実: `games`（2 チーム一致・終了・プレシーズン除く）+ `liveStats.box`。box が無い過去季は `nbaPlayerGameLogs/{season}` の `gameId` 一致行（無ければスコア・日付・対戦成績だけ）
-- LLM: Chat 1 回で 9 言語（モデル `OPENAI_PRO_INSIGHT_PREVIEW_MODEL`、既定 `gpt-4.1`。本文の Batch とは別）。`writeNarrative` の保存直前に生成（Batch poll / 1h 前 patch / sync すべて）。poll は保存を並列化
+- LLM: Chat 1 回で **ja / en だけ**（ほかの言語は表示側が en にフォールバック。出力が費用の大半のため。1 回 約 0.02 ドル）。モデル `OPENAI_PRO_INSIGHT_PREVIEW_MODEL`、既定 `gpt-4.1`。本文の Batch とは別。`writeNarrative` の保存直前に生成（Batch poll / 1h 前 patch / sync すべて）。poll は保存を並列化
+- 長さ: 4 段落・各 2〜3 文・ja 1 段落 90〜130 字（en 45〜75 語）・数字は 1 段落 3 つまで。2 段落目も同じ上限（3 人目は収まるときだけ）
+- 生成タイミング: 20:00 の定時と、試合 1 時間前に injury 指紋が変わったときだけ。ルール変更後の手動作り直しは 1 試合で確認してから残り
+- PREVIEW がある試合は CONTEXT の枠を出さない（材料は PREVIEW のシートに入っている）
+- 保存は `mergeFields`（上位フィールドを丸ごと置き換え）。深いマージだと前回の preview の言語・消した枠が残る
 - 数字ガード: シートに無い数字が出た言語は捨てて en を出す。ja / en が落ちたら 1 回だけ再生成（落ちた理由を渡す）、それでも駄目なら PREVIEW なし
 - 「欠場なし」ガード: ja「離脱はない」「欠場がなく」「万全」等 / en「no absences」「full strength」等が出た言語も捨てる（injury の取り込み遅れで誤りになるため）
 - 2 段落目は各チームの得点トップを必ず入れる（相手が中位でも本人の平均・直近 5・シーズンハイ・得意プレーで語る。「どこまで通用するか」等のぼかしは禁止）
 - ポジション別の失点は上位 10 / 下位 10 だけシートに載せる（中位は `allowedByPosition` / `opponentVsPosition` から外す。載せると「平均的で弱点はない」と要らない一言を書くため）。それでも出た「弱点はない」「守備は平均的」「下位の失点を許す」は 1 回だけ書き直させ、2 回目は受け入れる
-- ポジション守備の持ち主の照合: ja / en の「X のセンター守備は堅い」「X はフォワードへの失点が多い」をシートのポジション別失点と照合し、合わなければ書き直させる（エースの対比で相手チームの守りの評価を入れ替える誤りが半々で出る）。最後まで直らなければその文だけ削り、未チェックの言語は削った en で代用
-- 再生成は最大 3 回。3 回目は開始から 100 秒以内のときだけ（取り込みの 300 秒制限）
+- ポジション守備の持ち主の照合: ja / en の「X のセンター守備は堅い」「X はフォワードへの失点が多い」をシートのポジション別失点と照合し、合わなければ書き直させる（エースの対比で相手チームの守りの評価を入れ替える誤りが半々で出る）。最後まで直らなければその文だけ削る
+- 生成は最大 2 回（1 回目 + 書き直し 1 回）
 - プロンプトで禁止: 勝者・最終スコア予想、材料に無い欠場の有無の断定、材料に無い選手の特徴（ドライブ等）、指標の取り違え（被 2nd チャンス = ディフェンスリバウンド）、中位を強み・弱みと書くこと、選手名のフルネーム展開（シートどおり「N.Jokic」）
 - ファクトは `proInsightFacts.preview` に保存し、Batch poll で復元
 - 見出し: LLM が段落ごとの要点（`previewHeads`・"\n" 区切り・数字なし・ja 22 字程度）を本文と同時に書く。段落数と合わないとき・ja / en が崩れたときは見出しなし。CONTEXT の hint（Tonight の向き）と矛盾させない

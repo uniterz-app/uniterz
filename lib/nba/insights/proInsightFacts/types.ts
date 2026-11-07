@@ -1,6 +1,6 @@
 /**
  * Pro Insight — LLM に渡す構造化ファクト（散文なし）。
- * UI 本数: MATCHUP2 / SCHEDULE2 / CONTEXT2 / INJURY IMPACT2。
+ * UI 本数: MATCHUP2 / SCHEDULE2 / CONTEXT1 / INJURY IMPACT2。
  */
 import type { ProInsightNarrativeKind } from "@/lib/predict/proInsightNarrativeTypes";
 import {

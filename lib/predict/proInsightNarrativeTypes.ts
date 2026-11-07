@@ -1,6 +1,6 @@
 /**
  * 新 Pro Insight — LLM 文章表示用の構造（ファクト選定は別層）。
- * UI: 試合1本 · MATCHUP2 / SCHEDULE2 / CONTEXT2 / INJURY IMPACT2。
+ * UI: 試合1本 · MATCHUP2 / SCHEDULE2 / CONTEXT1 / INJURY IMPACT2。
  */
 import type { UiStrings } from "@/lib/i18n/ui";
 
@@ -24,7 +24,8 @@ export const PRO_INSIGHT_NARRATIVE_ITEM_CAPS: Record<
 > = {
   MATCHUP: 2,
   SCHEDULE: 2,
-  CONTEXT: 2,
+  /** 両チームの材料を 1 本ずつ並べると「どちらにも有利」に読めるため 1 本 */
+  CONTEXT: 1,
   "INJURY IMPACT": 2,
 };
 
