@@ -62,6 +62,7 @@ import { resetGamesStackInBackgroundNative } from "./resetGamesTabHomeNative";
 import { flushPendingShareDeepLink } from "./shareDeepLinkNative";
 import ProfileStatsPrefetchHost from "../features/profile/ProfileStatsPrefetchHost";
 import SquadBattleLaunchPromptHostNative from "../features/squads/SquadBattleLaunchPromptHostNative";
+import ProSkinUnlockLaunchHostNative from "../features/profile/reports/ProSkinUnlockLaunchHostNative";
 import UnitEarnLaunchHostNative from "../features/units/UnitEarnLaunchHostNative";
 import SeasonPredictCrowdLaunchHostNative from "../features/games/predict/season/SeasonPredictCrowdLaunchHostNative";
 
@@ -231,6 +232,7 @@ export default function MainTabNavigator() {
       <SquadBattleLaunchPromptHostNative />
       <UnitEarnLaunchHostNative />
       <SeasonPredictCrowdLaunchHostNative />
+      <ProSkinUnlockLaunchHostNative />
       <View style={styles.root}>
         <View style={styles.tabHost}>
           <Tab.Navigator

@@ -31,6 +31,9 @@ type Props = {
   onDismiss: () => void;
   /** 適用成功後（ローカルの planProBgVariant 更新など） */
   onApplied?: (id: ProfilePlanProBgVariant) => void;
+  /** Free: 条件達成済みだが未解放。主ボタンは Pro 購入へ */
+  locked?: boolean;
+  onUpgrade?: () => void;
 };
 
 export default function ProfileProSkinUnlockOverlayNative({
@@ -41,6 +44,8 @@ export default function ProfileProSkinUnlockOverlayNative({
   ownerCounts = {},
   onDismiss,
   onApplied,
+  locked = false,
+  onUpgrade,
 }: Props) {
   const lang = resolveLocalizedLang(language);
   const entries = resolveProSkinUnlockNoticeEntries(unlockedIds);
@@ -68,6 +73,11 @@ export default function ProfileProSkinUnlockOverlayNative({
   async function handleApply() {
     if (applying) return;
     setError(null);
+    if (locked) {
+      onDismiss();
+      if (!preview) onUpgrade?.();
+      return;
+    }
     if (preview) {
       onDismiss();
       return;
@@ -133,7 +143,9 @@ export default function ProfileProSkinUnlockOverlayNative({
             />
             <View style={styles.badgeCol}>
               <View style={styles.unlockedBadge}>
-                <Text style={styles.unlockedBadgeText}>SKIN UNLOCKED</Text>
+                <Text style={styles.unlockedBadgeText}>
+                  {locked ? "PRO SKIN EARNED" : "SKIN UNLOCKED"}
+                </Text>
               </View>
             </View>
             <View style={styles.heroMeta}>
@@ -150,21 +162,44 @@ export default function ProfileProSkinUnlockOverlayNative({
               </Text>
               {moreCount > 0 ? (
                 <Text style={styles.moreText}>
-                  {L(lang, {
-                    ja: `ほか ${moreCount} 件も解放`,
-                    en: `+${moreCount} more unlocked`,
-                    ko: `외 ${moreCount}개 더 해제`,
-                    zh: `另有 ${moreCount} 个已解锁`,
-                    es: `+${moreCount} más desbloqueados`,
-                    pt: `+${moreCount} mais desbloqueados`,
-                    fr: `+${moreCount} de plus débloqués`,
-                  })}
+                  {locked
+                    ? L(lang, {
+                        ja: `ほか ${moreCount} 件も条件達成`,
+                        en: `+${moreCount} more earned`,
+                        ko: `외 ${moreCount}개 더 조건 달성`,
+                        zh: `另有 ${moreCount} 个已达成条件`,
+                        es: `+${moreCount} más conseguidos`,
+                        pt: `+${moreCount} mais conquistados`,
+                        fr: `+${moreCount} de plus obtenus`,
+                      })
+                    : L(lang, {
+                        ja: `ほか ${moreCount} 件も解放`,
+                        en: `+${moreCount} more unlocked`,
+                        ko: `외 ${moreCount}개 더 해제`,
+                        zh: `另有 ${moreCount} 个已解锁`,
+                        es: `+${moreCount} más desbloqueados`,
+                        pt: `+${moreCount} mais desbloqueados`,
+                        fr: `+${moreCount} de plus débloqués`,
+                      })}
                 </Text>
               ) : null}
             </View>
           </View>
 
           <View style={styles.footer}>
+            {locked ? (
+              <Text style={styles.lockedLead}>
+                {L(lang, {
+                  ja: "条件は達成済み。Pro にするとこのスキンをすぐ使えます。",
+                  en: "You've hit the goal. Go Pro to use this skin right away.",
+                  ko: "조건을 달성했습니다. Pro로 업그레이드하면 바로 사용할 수 있어요.",
+                  zh: "已达成条件。升级 Pro 即可立即使用此皮肤。",
+                  es: "Ya cumpliste el reto. Hazte Pro para usar este skin ya.",
+                  pt: "Você já cumpriu a meta. Assine o Pro para usar esta skin agora.",
+                  fr: "Objectif atteint. Passez Pro pour utiliser ce skin tout de suite.",
+                })}
+              </Text>
+            ) : null}
             {error ? <Text style={styles.errorText}>{error}</Text> : null}
             <Pressable
               style={[styles.primaryBtn, applying ? styles.btnDisabled : null]}
@@ -172,7 +207,17 @@ export default function ProfileProSkinUnlockOverlayNative({
               disabled={applying}
             >
               <Text style={styles.primaryBtnText}>
-                {applying
+                {locked
+                  ? L(lang, {
+                      ja: "PRO で解放する",
+                      en: "Unlock with Pro",
+                      ko: "Pro로 해제",
+                      zh: "升级 Pro 解锁",
+                      es: "Desbloquear con Pro",
+                      pt: "Desbloquear com Pro",
+                      fr: "Débloquer avec Pro",
+                    })
+                  : applying
                   ? L(lang, {
                       ja: "適用中…",
                       en: "Applying…",
@@ -309,6 +354,12 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     paddingBottom: 14,
     gap: 8,
+  },
+  lockedLead: {
+    textAlign: "center",
+    fontSize: 12,
+    lineHeight: 17,
+    color: "rgba(255,255,255,0.78)",
   },
   errorText: {
     textAlign: "center",

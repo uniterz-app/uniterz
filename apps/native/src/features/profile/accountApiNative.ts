@@ -121,6 +121,8 @@ export async function fetchProSkinStatusNative(): Promise<{
   }[];
   ownerCounts: Record<string, number>;
   noticeIds: string[];
+  /** Free 中に条件を満たしたスキン（Pro 誘導） */
+  lockedNoticeIds: string[];
 }> {
   const base = requireApiBase();
   const headers = await authHeaders();
@@ -153,6 +155,7 @@ export async function fetchProSkinStatusNative(): Promise<{
     }[];
     ownerCounts?: Record<string, number>;
     noticeIds?: string[];
+    lockedNoticeIds?: string[];
   };
   if (!res.ok) {
     throw new Error(data.error ?? res.statusText);
@@ -182,6 +185,9 @@ export async function fetchProSkinStatusNative(): Promise<{
     ownerCounts: data.ownerCounts ?? {},
     noticeIds: Array.isArray(data.noticeIds)
       ? data.noticeIds.filter((x): x is string => typeof x === "string")
+      : [],
+    lockedNoticeIds: Array.isArray(data.lockedNoticeIds)
+      ? data.lockedNoticeIds.filter((x): x is string => typeof x === "string")
       : [],
   };
 }

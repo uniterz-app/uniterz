@@ -4,6 +4,7 @@
  *
  * Free 中も進捗は積む。解放は Pro のみ。
  * Pro 中に閾値を今回初めて跨いだ ID だけ proSkinUnlockNoticeIds へ（モーダル用）。
+ * Free 中に跨いだ ID は proSkinLockedNoticeIds へ（Pro 誘導モーダル用。1.0.4 以前のアプリは読まない）。
  * Free→Pro 遡及は ensurePersisted 側で unlocked のみ（notice なし）。
  * プレシーズンは finalizePost が呼ばないため進捗に積まれない。
  * 連続予想日数: 試合日（Eastern）単位。前回の予想日との間に試合日が無ければ連続（試合がない日は飛ばす）。
@@ -259,6 +260,7 @@ export function buildProSkinSettlePatch(
   ]);
   const newlyUnlockedIds: string[] = [];
   const liveNoticeIds: string[] = [];
+  const lockedNoticeIds: string[] = [];
 
   if (isPro) {
     const prevValues: Record<ThresholdKind, number> = {
@@ -298,6 +300,36 @@ export function buildProSkinSettlePatch(
         if (!prevOk) liveNoticeIds.push(row.id);
       }
     }
+  } else {
+    const prevValues: Record<ThresholdKind, number> = {
+      streak: prevMaxWinStreak,
+      posts: prevPosts,
+      exactHits: prevExactHits,
+      predictDays: prevMaxPredictDayStreak,
+      scorerHits: prevScorerHits,
+      upsetHits: prevUpsetHits,
+    };
+    const nowValues: Record<ThresholdKind, number> = {
+      streak: maxWinStreak,
+      posts,
+      exactHits,
+      predictDays: maxPredictDayStreak,
+      scorerHits,
+      upsetHits,
+    };
+    for (const row of PRO_SKIN_THRESHOLD_MILESTONES) {
+      if (prevHeld.has(row.id)) continue;
+      if (prevValues[row.kind] < row.threshold && nowValues[row.kind] >= row.threshold) {
+        lockedNoticeIds.push(row.id);
+      }
+    }
+    for (const row of PRO_SKIN_STREAK_RUN_MILESTONES) {
+      if (prevHeld.has(row.id)) continue;
+      const key = String(row.streak);
+      if ((prevStreakRuns[key] ?? 0) < row.runs && (streakRuns[key] ?? 0) >= row.runs) {
+        lockedNoticeIds.push(row.id);
+      }
+    }
   }
 
   const held = new Set<string>([...prevHeld, ...unlocked]);
@@ -328,6 +360,9 @@ export function buildProSkinSettlePatch(
   };
   if (liveNoticeIds.length > 0) {
     patch.proSkinUnlockNoticeIds = FieldValue.arrayUnion(...liveNoticeIds);
+  }
+  if (lockedNoticeIds.length > 0) {
+    patch.proSkinLockedNoticeIds = FieldValue.arrayUnion(...lockedNoticeIds);
   }
 
   return {

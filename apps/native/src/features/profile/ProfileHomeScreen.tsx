@@ -98,13 +98,11 @@ import ProfileAwardsTabNative from "./ProfileAwardsTabNative";
 import ProfileBracketTabNative from "./ProfileBracketTabNative";
 import ProfileStatsTabNative from "./ProfileStatsTabNative";
 import ProfileReportDeliveryOverlayNative from "./reports/ProfileReportDeliveryOverlayNative";
-import ProfileProSkinUnlockOverlayNative from "./reports/ProfileProSkinUnlockOverlayNative";
 import { normalizeStoredPlanType } from "../../../../../lib/pro/planChangeDisplay";
 import {
   canViewMonthlyReport,
 } from "../../../../../lib/reports/reportEntitlements";
 import { useProReportDeliveryOverlayNative } from "./reports/useProReportDeliveryOverlayNative";
-import { useProSkinUnlockOverlayNative } from "./reports/useProSkinUnlockOverlayNative";
 import { useNativeProfileByHandle } from "./useNativeProfileByHandle";
 import ProfileOverviewSectionNative from "./ProfileOverviewSectionNative";
 import { BlocksPulseLoader } from "../../components/BlocksPulseLoader";
@@ -871,8 +869,6 @@ export default function ProfileHomeScreen({
       enabled: reportOverlayEnabled,
       canViewMonthly: viewerCanViewMonthly,
     });
-  const skinUnlockEnabled = Boolean(isMe && myUid) && reportOverlay == null;
-
   const tutorialCopy = useMemo(
     () => i18nT(language as Language),
     [language]
@@ -934,17 +930,6 @@ export default function ProfileHomeScreen({
       };
     }, [isPublicProfileView])
   );
-  const {
-    activeIds: skinUnlockIds,
-    ownerCounts: skinUnlockOwnerCounts,
-    preview: skinUnlockPreview,
-    dismiss: dismissSkinUnlock,
-  } = useProSkinUnlockOverlayNative({
-    uid: myUid,
-    enabled: skinUnlockEnabled,
-    userDoc: isMe ? myUserDoc : null,
-  });
-
   const currentStreak = useMemo(() => {
     if (isPublicProfileView) {
       return profileByHandle.currentStreak;
@@ -2084,19 +2069,6 @@ export default function ProfileHomeScreen({
         active={reportOverlay}
         language={language}
         onDismiss={dismissReportOverlay}
-      />
-    ) : null}
-    {skinUnlockIds && skinUnlockIds.length > 0 ? (
-      <ProfileProSkinUnlockOverlayNative
-        unlockedIds={skinUnlockIds}
-        language={language}
-        preview={skinUnlockPreview}
-        visible
-        ownerCounts={skinUnlockOwnerCounts}
-        onDismiss={dismissSkinUnlock}
-        onApplied={(id) => {
-          setPlanProBgVariant(id);
-        }}
       />
     ) : null}
     {!isPublicProfileView && isFocused ? (
