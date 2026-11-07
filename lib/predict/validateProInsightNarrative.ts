@@ -11,6 +11,7 @@ import type {
   ProInsightNarrativeItem,
   ProInsightNarrativeKind,
   ProInsightNarrativeSection,
+  ProInsightPreviewName,
 } from "@/lib/predict/proInsightNarrativeTypes";
 import {
   PRO_INSIGHT_MATCHUP_TABLE_MAX_ROWS,
@@ -224,6 +225,18 @@ export type ProInsightNarrativeApiMeta = {
   pendingBatch?: boolean;
 };
 
+function sanitizePreviewNames(raw: unknown): ProInsightPreviewName[] {
+  if (!Array.isArray(raw)) return [];
+  const out: ProInsightPreviewName[] = [];
+  for (const r of raw) {
+    if (!r || typeof r !== "object") continue;
+    const name = String((r as Record<string, unknown>).name ?? "").trim();
+    const teamId = String((r as Record<string, unknown>).teamId ?? "").trim();
+    if (name && teamId) out.push({ name, teamId });
+  }
+  return out.slice(0, 60);
+}
+
 /** 表示してよい narrative。壊れている / 禁止表現なら null。 */
 export function sanitizeProInsightNarrativeForDisplay(
   raw: unknown
@@ -255,8 +268,17 @@ export function sanitizeProInsightNarrativeForDisplay(
   };
   if (BANNED.some((re) => re.test(blobOf(brief)))) return null;
   if (preview) {
-    const withPreview = { ...brief, preview };
-    if (!BANNED.some((re) => re.test(blobOf(withPreview)))) return withPreview;
+    const withPreview: ProInsightNarrativeBrief = { ...brief, preview };
+    if (!BANNED.some((re) => re.test(blobOf(withPreview)))) {
+      const headsRaw = asUiStrings(o.previewHeads);
+      const heads = headsRaw ? mapUiStrings(headsRaw, normalizeStatusWords) : null;
+      if (heads && !BANNED.some((re) => LANGS.some((l) => re.test(heads[l] ?? "")))) {
+        withPreview.previewHeads = heads;
+      }
+      const names = sanitizePreviewNames(o.previewNames);
+      if (names.length) withPreview.previewNames = names;
+      return withPreview;
+    }
   }
   return sections.length > 0 ? brief : null;
 }
