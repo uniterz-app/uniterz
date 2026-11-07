@@ -1,5 +1,7 @@
 # Native パリティ作業キュー
 
+> **廃止（2026-11-07）:** Web とのパリティ同期はやめた。このキューは実行しない。方針: [`.cursor/rules/native-first.mdc`](../.cursor/rules/native-first.mdc)
+
 エージェントは **上から順に** 実行する。ユーザーへの確認は不要。
 
 `phase: functional` の間は機能キューのみ。空になったら `phase: ui-polish` に切替。Phase B 完了後に `partial` / `gap` が残る場合は `phase: phase-c` で Phase C を消化。

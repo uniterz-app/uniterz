@@ -1,0 +1,44 @@
+---
+description: プロダクトは Native だけ。Web の通常画面は凍結（2026-11-07 ユーザー確定）
+alwaysApply: true
+---
+
+# Native のみ — Web 画面は凍結
+
+ユーザー確定（2026-11-07）。**機能追加・UI 修正は Native（`apps/native/`）だけで行う。** Web とのパリティ作業は廃止。
+
+## 正
+
+- UI の正: `apps/native/`
+- ロジック: `lib/`（Native と API が共有）
+- サーバー: Next.js `app/api/*`（Vercel）+ Firebase Functions。Native の通信はすべてここ（`EXPO_PUBLIC_UNITERZ_API_BASE_URL`）
+
+## Web で維持するもの（壊したら直す）
+
+| 対象 | パス | 理由 |
+|---|---|---|
+| API | `app/api/*` | Native のバックエンド。ingest / cron の受け口も含む |
+| 規約・ヘルプ | `/mobile/terms`・`/mobile/privacy`・`/mobile/law`・`/mobile/electronic-notice`・`/mobile/help` | Native が WebView で開く。ストア登録のプライバシー URL |
+| 共有の着地 | `/mobile/u/*`・`/mobile/result/*`・`/mobile/communities/*`・`/mobile/rankings`（`lib/share/appLinkAssociation.ts`） | 未インストールの人が着地する。ユニバーサルリンク |
+| ダウンロード導線 | `/get`・`/lp*` | 招待文・LP |
+| 管理画面 | `app/admin/*`・Native が参照する `/mobile/admin/*` | 罰金・出場停止の手入力など Web にしか無い |
+
+## Web で凍結するもの（触らない）
+
+- 上の表以外の `app/mobile/*`・`app/web/*`・`app/component/*` の画面
+- 新機能を Web に足さない。Native の変更を Web へ移植しない
+- 凍結画面が壊れても直さない（維持対象の画面が共有コンポーネント経由で壊れた場合だけ直す）
+- 既存の `/** Web \`Foo\` 相当 */` コメントは残してよいが、新規 Native ファイルには付けない
+
+## 新機能の作り方
+
+1. データ・計算 → `lib/`（RN / Node 両方で動く純関数を優先）
+2. サーバーが要るもの → `app/api/*` または `functions/`（NBA スタッツは `nba-stats-data-pipeline.mdc` に従う）
+3. UI → `apps/native/`（`*Native` 命名、`StyleSheet` + `packages/design-tokens`）
+4. 型チェック → `npm run native:typecheck`
+5. 出し方 → JS だけなら OTA（`native-ota-production.mdc`）、ネイティブモジュールやパッチが変わるならストアビルド
+
+## 廃止
+
+- パリティ自動化（Native Parity Daily / Web Sync / Merge Chain）と `docs/native-parity-gaps.md` のキュー。`docs/native-sync-state.json` は `retired: true`
+- `apps/native/.parity-chain` の更新・チェーン継続のための push はしない
