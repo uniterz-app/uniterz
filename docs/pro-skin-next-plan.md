@@ -33,13 +33,15 @@
 
 | ケース | 解放 | モーダル |
 |---|---|---|
-| Free 中に閾値到達 | 進捗のみ積む（unlocked には入れない） | なし |
+| Free 中に閾値・順位・招待を初めて達成 | 進捗のみ積む（unlocked には入れない）+ `proSkinLockedNoticeIds` | **あり**（Pro 誘導。「PRO で解放する」→ 購入モーダル） |
 | Free→Pro で遡及解放 | 努力: progress / 順位: `proSkinRankEarnedIds` → unlocked | **なし**（サイレント） |
-| Pro 中に閾値を初めて跨ぐ | settle が unlocked + `proSkinUnlockNoticeIds` | **あり**（プロフィール復帰） |
+| Pro 中に閾値を初めて跨ぐ | settle が unlocked + `proSkinUnlockNoticeIds` | **あり**（「適用する」） |
 | Pro 中に期間順位を達成 | grant が earned + unlocked + notice | **あり** |
 
-- モーダル対象の正は `users.proSkinUnlockNoticeIds`（unlocked 全件 diff ではない）
-- dismiss は `POST /api/me/pro-skin` `{ dismissNoticeIds }` + ローカル seen
+- モーダル対象の正は `users.proSkinUnlockNoticeIds`（Pro 中の解放）と `users.proSkinLockedNoticeIds`（Free 中の達成）。unlocked 全件 diff ではない。held 済みは積まない
+- 2 本に分けるのは 1.0.4 以前の Native がプロフィールで `proSkinUnlockNoticeIds` だけを「適用」付きで出すため（Free に出すと適用が 403）
+- 表示（1.0.5〜）: `ProSkinUnlockLaunchHostNative`（MainTabNavigator）がアプリ起動・復帰時に、users live 購読でキューがあるときだけ `GET /api/me/pro-skin` を読み、起動時モーダル枠（`claimLaunchPromptSlot`）で 1 枚出す。今 Pro なら両キューを「解放」、Free なら両キューを「Pro で解放」。プロフィール画面では出さない
+- dismiss は `POST /api/me/pro-skin` `{ dismissNoticeIds }`（両キューから削除）+ ローカル seen
 - （任意）遡及分は NEW バッジ / 短い toast のみ — ヒーローモーダルは出さない
 
 ### なぜ cumulative を再利用しなかったか
