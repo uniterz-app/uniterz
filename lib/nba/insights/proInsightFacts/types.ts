@@ -11,6 +11,7 @@ import type { ProBriefPhase } from "@/lib/predict/predictProBrief";
 import type { UiStrings } from "@/lib/i18n/ui";
 import type { NbaUpcomingMatchupDifficulty } from "@/lib/nba/matchupDifficulty/upcomingMatchupDifficulty";
 import type { NbaInjuryOutImpact } from "@/lib/nba/matchupDifficulty/injuryAdjustedDifficulty";
+import type { ProInsightPreviewFacts } from "@/lib/nba/insights/proInsightFacts/buildPreviewFacts";
 
 export type ProInsightFactSection = ProInsightNarrativeKind;
 
@@ -126,6 +127,10 @@ export type ProInsightFactPack = {
   longTermOutImpacts?: NbaInjuryOutImpact[];
   /** 両チームのうち少ない方の今季消化試合数（early の「開幕N試合時点」注記用） */
   gamesPlayed?: number;
+  /** PREVIEW 文章の材料（前回の直接対決 · 前の試合） */
+  preview?: ProInsightPreviewFacts | null;
+  /** 今夜の試合のシーズン（PREVIEW の今季 / 昨季の書き分け） */
+  seasonKey?: string;
 };
 
 export type ProInsightScheduleDifficulty = {

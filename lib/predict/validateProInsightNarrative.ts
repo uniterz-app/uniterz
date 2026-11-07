@@ -81,6 +81,9 @@ function blobOf(brief: ProInsightNarrativeBrief): string {
   if (brief.sampleNote) {
     for (const lang of LANGS) parts.push(brief.sampleNote[lang] ?? "");
   }
+  if (brief.preview) {
+    for (const lang of LANGS) parts.push(brief.preview[lang] ?? "");
+  }
   return parts.join("\n");
 }
 
@@ -240,7 +243,9 @@ export function sanitizeProInsightNarrativeForDisplay(
   const sections = PRO_INSIGHT_NARRATIVE_SECTION_KINDS.map(
     (k) => byKind.get(k)
   ).filter((s): s is ProInsightNarrativeSection => Boolean(s));
-  if (sections.length === 0) return null;
+  const previewRaw = asUiStrings(o.preview);
+  const preview = previewRaw ? mapUiStrings(previewRaw, normalizeStatusWords) : null;
+  if (sections.length === 0 && !preview) return null;
 
   const brief: ProInsightNarrativeBrief = {
     homeTeamId,
@@ -249,7 +254,11 @@ export function sanitizeProInsightNarrativeForDisplay(
     sampleNote: asUiStrings(o.sampleNote),
   };
   if (BANNED.some((re) => re.test(blobOf(brief)))) return null;
-  return brief;
+  if (preview) {
+    const withPreview = { ...brief, preview };
+    if (!BANNED.some((re) => re.test(blobOf(withPreview)))) return withPreview;
+  }
+  return sections.length > 0 ? brief : null;
 }
 
 export function readProInsightNarrativeMeta(
