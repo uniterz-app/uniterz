@@ -121,6 +121,11 @@ import { nbaPlayerDetailChrome } from "./nbaPlayerDetailChromeCopy";
 import { NbaPlayerSplitStatTableNative } from "./NbaPlayerSplitStatTableNative";
 import { NbaPlayerGameLogTableNative } from "./NbaPlayerGameLogTableNative";
 import {
+  NbaPlayerHighsAndHitRatesNative,
+  NbaPlayerNextGameNative,
+  NbaPlayerTrendChartNative,
+} from "./NbaPlayerGameInsightsNative";
+import {
   buildPlayerGameSplits,
   nbaPlayerGameSplitLabel,
 } from "../../../../../../lib/nba/playerDetail/buildPlayerSplitsFromGameLogs";
@@ -1559,6 +1564,19 @@ export default function NbaPlayerDetailPanelNative({
           language={language}
         />
 
+        {detail.teamId ? (
+          <View style={{ marginTop: 16 }}>
+            <NbaPlayerNextGameNative
+              teamId={detail.teamId}
+              seasonLogs={detail.seasonGameLogs ?? detail.gameLogs}
+              teamStatRows={teamStats?.season ?? []}
+              apiBaseUrl={apiBaseUrl}
+              accent={accent}
+              language={language}
+            />
+          </View>
+        ) : null}
+
         <View
           style={[
             styles.divider,
@@ -1646,6 +1664,12 @@ export default function NbaPlayerDetailPanelNative({
 
         {tab === "games" && !isRetired ? (
           <>
+            <NbaPlayerTrendChartNative
+              seasonLogs={detail.seasonGameLogs ?? detail.gameLogs}
+              accent={accent}
+              language={language}
+              trailingDivider={[styles.divider, { backgroundColor: dividerColor }]}
+            />
             <GameLogsSection logs={detail.gameLogs} accent={accent} />
             <View style={[styles.divider, { backgroundColor: dividerColor }]} />
             <PlayerGameSplitsSectionNative
@@ -1653,6 +1677,12 @@ export default function NbaPlayerDetailPanelNative({
               seasonKey={
                 detail.asOfLabel.match(/(\d{4}-\d{2})/)?.[1] ?? CURRENT_NBA_SEASON_KEY
               }
+              accent={accent}
+              language={language}
+            />
+            <View style={[styles.divider, { backgroundColor: dividerColor }]} />
+            <NbaPlayerHighsAndHitRatesNative
+              seasonLogs={detail.seasonGameLogs ?? detail.gameLogs}
               accent={accent}
               language={language}
             />
