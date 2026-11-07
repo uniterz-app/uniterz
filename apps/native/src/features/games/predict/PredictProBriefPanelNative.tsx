@@ -557,7 +557,7 @@ export default function PredictProBriefPanelNative({
                       pressed ? styles.ctaPressed : null,
                     ]}
                     accessibilityRole="button"
-                    accessibilityLabel={gate.cta}
+                    accessibilityLabel={gate.trialCta}
                   >
                     {({ pressed }) => (
                       <Text
@@ -566,7 +566,7 @@ export default function PredictProBriefPanelNative({
                           pressed ? styles.ctaLabelPressed : null,
                         ]}
                       >
-                        {gate.cta}
+                        {gate.trialCta}
                       </Text>
                     )}
                   </Pressable>

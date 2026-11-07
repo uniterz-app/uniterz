@@ -20,6 +20,8 @@
 
 タブは Free でも見える。Pro は中身が読める。Free はぼかして「Pro を見る」。試合開始前の NBA 予想オーバーレイのみ。
 
+Free × PREVIEW のある試合（ピックアップ）は、PREVIEW の第 1 段落だけ見せて続きをぼかし、「7日無料で続きを読む」（Native 1.0.5〜）。`/api/nba/matchup-insight?teaser=1` が Free に第 1 段落だけ返す（続きの段落・各セクションはサーバーから出さない）。PREVIEW の無い試合は従来のゲート（ボタンは「7日無料で試す」）。
+
 見た目: 背景黒、枠は PRO バッジと同じ金（`UNITERZ_PRO_BADGE_GOLD.mid`）。
 
 ---

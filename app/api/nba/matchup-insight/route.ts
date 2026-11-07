@@ -16,6 +16,7 @@ import {
   MATCHUP_INSIGHT_CACHE_TAG,
 } from "@/lib/nba/predict/matchupInsightCache";
 import { loadGameProInsight } from "@/lib/nba/insights/gameProInsightStore";
+import { buildProInsightPreviewTeaser } from "@/lib/predict/proInsightPreviewTeaser";
 
 async function loadMatchupInsightPayload(gameId: string) {
   const db = getAdminDb();
@@ -78,6 +79,7 @@ async function loadMatchupInsightPayload(gameId: string) {
  *   - proBrief … 旧 HOME/AWAY テンプレ（互換のため残す）
  *
  * クライアントは narrative を優先。未生成は status: "empty" | "pending"。
+ * Free + `teaser=1`: PREVIEW の第 1 段落だけ `{ locked: true, teaser }`。PREVIEW の無い試合は 403。
  * Pro 判定は毎回。試合共通部分は unstable_cache（書き込み側 ingest で tag を捨てる）。
  */
 export async function GET(req: Request) {
@@ -89,15 +91,16 @@ export async function GET(req: Request) {
       return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
     }
 
+    const { searchParams } = new URL(req.url);
     const isPro = await assertProUser(uid);
-    if (!isPro) {
+    const wantsTeaser = searchParams.get("teaser") === "1";
+    if (!isPro && !wantsTeaser) {
       return NextResponse.json(
         { ok: false, error: "pro_required", locked: true },
         { status: 403 }
       );
     }
 
-    const { searchParams } = new URL(req.url);
     const gameId = (searchParams.get("gameId") ?? "").trim();
     if (!gameId) {
       return NextResponse.json(
@@ -119,6 +122,20 @@ export async function GET(req: Request) {
       return NextResponse.json(
         { ok: false, error: result.kind },
         { status: 404 }
+      );
+    }
+
+    if (!isPro) {
+      const teaser = buildProInsightPreviewTeaser(result.body.narrative);
+      if (!teaser) {
+        return NextResponse.json(
+          { ok: false, error: "pro_required", locked: true },
+          { status: 403 }
+        );
+      }
+      return NextResponse.json(
+        { ok: true, gameId, locked: true, teaser },
+        { headers: { "Cache-Control": "private, no-store" } }
       );
     }
 
