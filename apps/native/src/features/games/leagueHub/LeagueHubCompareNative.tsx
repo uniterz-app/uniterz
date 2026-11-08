@@ -1,10 +1,10 @@
-/** スタイルマップの 2 人比較。今季スタッツを左右に並べ、上回った側のセルに色を付ける */
+/** スタイルマップの 2 人比較。今季スタッツを左右に並べ、上回った側にその選手のチームカラーの斜め帯 */
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import type { LeagueHubPlayer } from "../../../../../../lib/nba/leagueHub/leagueHubTypes";
 import { CYBER_TAB_CYAN } from "../../rankings/CyberSlantedTabNative";
 import { METRIC_FONT } from "../../rankings/rankingsUiTheme";
 import HubShareSectionNative, { useHubCapturing } from "./HubShareSectionNative";
-import { HubTeamTag, playerNameStyle, type HubLang } from "./leagueHubUiNative";
+import { HubTeamTag, playerNameStyle, teamInk, type HubLang } from "./leagueHubUiNative";
 
 type CompareRow = {
   key: string;
@@ -46,22 +46,22 @@ function winner(row: CompareRow, a: LeagueHubPlayer, b: LeagueHubPlayer): -1 | 0
   return (row.invert ? va < vb : va > vb) ? -1 : 1;
 }
 
-export default function LeagueHubCompareNative({
-  a,
-  b,
-  lang,
-  stamp,
-  onClose,
-}: {
+type CompareProps = {
   a: LeagueHubPlayer;
   b: LeagueHubPlayer;
+  /** いま見ているスタイルマップでの区画名 */
+  styleA: string | null;
+  styleB: string | null;
+  mapLabel: string;
   lang: HubLang;
   stamp: string;
   onClose: () => void;
-}) {
+};
+
+export default function LeagueHubCompareNative({ lang, stamp, ...rest }: CompareProps) {
   return (
     <HubShareSectionNative title="VS" stamp={stamp} lang={lang}>
-      <CompareBody a={a} b={b} ja={lang === "ja"} onClose={onClose} />
+      <CompareBody {...rest} ja={lang === "ja"} />
     </HubShareSectionNative>
   );
 }
@@ -69,48 +69,40 @@ export default function LeagueHubCompareNative({
 function CompareBody({
   a,
   b,
+  styleA,
+  styleB,
+  mapLabel,
   ja,
   onClose,
-}: {
-  a: LeagueHubPlayer;
-  b: LeagueHubPlayer;
-  ja: boolean;
-  onClose: () => void;
-}) {
+}: Omit<CompareProps, "lang" | "stamp"> & { ja: boolean }) {
   const capturing = useHubCapturing();
+  const inkA = teamInk(a.teamId);
+  const inkB = teamInk(b.teamId);
   return (
     <View>
       <View style={styles.table}>
-        <View style={[styles.row, styles.headRow]}>
-          <PlayerHead p={a} />
-          <View style={styles.labelCell} />
-          <PlayerHead p={b} />
+        <View style={styles.row}>
+          <PlayerHead p={a} style={styleA} />
+          <View style={styles.spine} />
+          <PlayerHead p={b} style={styleB} />
         </View>
         {COMPARE_ROWS.map((r) => {
           const w = winner(r, a, b);
           return (
             <View key={r.key} style={styles.row}>
-              <View style={[styles.cell, w === -1 ? styles.cellWin : null]}>
-                <Text style={[styles.value, w === -1 ? styles.valueWin : null]}>
-                  {fmt(r.get(a), r.format)}
-                </Text>
-              </View>
-              <View style={styles.labelCell}>
+              <ValueCell text={fmt(r.get(a), r.format)} win={w === -1} ink={inkA} />
+              <View style={styles.spine}>
                 <Text style={styles.label}>{r.label}</Text>
               </View>
-              <View style={[styles.cell, w === 1 ? styles.cellWin : null]}>
-                <Text style={[styles.value, w === 1 ? styles.valueWin : null]}>
-                  {fmt(r.get(b), r.format)}
-                </Text>
-              </View>
+              <ValueCell text={fmt(r.get(b), r.format)} win={w === 1} ink={inkB} />
             </View>
           );
         })}
       </View>
       <Text style={styles.foot}>
         {ja
-          ? "今季の 1 試合平均。TOV と DRtg は低い方が上。"
-          : "Season per-game. Lower TOV and DRtg are better."}
+          ? `今季の 1 試合平均。TOV と DRtg は低い方が上。型は「${mapLabel}」マップでの位置。`
+          : `Season per-game. Lower TOV and DRtg are better. Style = quadrant on the ${mapLabel} map.`}
       </Text>
       {capturing ? null : (
         <Pressable onPress={onClose} hitSlop={8} style={styles.close}>
@@ -121,32 +113,53 @@ function CompareBody({
   );
 }
 
-function PlayerHead({ p }: { p: LeagueHubPlayer }) {
+function ValueCell({ text, win, ink }: { text: string; win: boolean; ink: string }) {
+  return (
+    <View style={styles.cell}>
+      {win ? (
+        <View
+          pointerEvents="none"
+          style={[styles.band, { backgroundColor: `${ink}55`, borderColor: ink, shadowColor: ink }]}
+        >
+          <View style={[styles.bandScan, { top: 3, backgroundColor: `${ink}66` }]} />
+          <View style={[styles.bandScan, { bottom: 3, backgroundColor: `${ink}66` }]} />
+        </View>
+      ) : null}
+      <Text style={[styles.value, win ? styles.valueWin : null]}>{text}</Text>
+    </View>
+  );
+}
+
+function PlayerHead({ p, style }: { p: LeagueHubPlayer; style: string | null }) {
   return (
     <View style={styles.player}>
       <Text style={[styles.playerName, playerNameStyle]} numberOfLines={1}>
         {p.name}
       </Text>
       <HubTeamTag teamId={p.teamId} />
+      {style ? (
+        <View style={styles.styleChip}>
+          <Text style={styles.styleText} numberOfLines={1}>
+            {style}
+          </Text>
+        </View>
+      ) : null}
     </View>
   );
 }
 
 const LINE = "rgba(0,245,255,0.16)";
+const SPINE = "rgba(0,245,255,0.5)";
 
 const styles = StyleSheet.create({
   table: {
-    borderWidth: 1,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
     borderColor: LINE,
   },
   row: {
     flexDirection: "row",
     alignItems: "stretch",
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: LINE,
-  },
-  headRow: {
-    borderTopWidth: 0,
   },
   player: {
     flex: 1,
@@ -162,18 +175,52 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     maxWidth: "100%",
   },
+  styleChip: {
+    maxWidth: "100%",
+    marginTop: 1,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderWidth: 1,
+    borderColor: "rgba(0,245,255,0.55)",
+    backgroundColor: "rgba(0,245,255,0.08)",
+    transform: [{ skewX: "-14deg" }],
+  },
+  styleText: {
+    color: CYBER_TAB_CYAN,
+    fontSize: 10,
+    fontWeight: "800",
+    transform: [{ skewX: "14deg" }],
+  },
   cell: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 6,
+    paddingVertical: 7,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: LINE,
   },
-  cellWin: {
-    backgroundColor: "rgba(0,245,255,0.12)",
+  band: {
+    position: "absolute",
+    top: 4,
+    bottom: 4,
+    left: "18%",
+    right: "18%",
+    overflow: "hidden",
+    borderWidth: 1,
+    transform: [{ skewX: "-14deg" }],
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 5,
+  },
+  bandScan: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    height: 1,
   },
   value: {
     fontFamily: METRIC_FONT,
-    color: "rgba(255,255,255,0.6)",
+    color: "rgba(255,255,255,0.55)",
     fontSize: 13,
     fontWeight: "700",
   },
@@ -181,13 +228,14 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontWeight: "800",
   },
-  labelCell: {
+  spine: {
     width: 64,
     alignItems: "center",
     justifyContent: "center",
-    borderLeftWidth: StyleSheet.hairlineWidth,
-    borderRightWidth: StyleSheet.hairlineWidth,
-    borderColor: LINE,
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
+    borderColor: SPINE,
+    backgroundColor: "rgba(0,245,255,0.05)",
   },
   label: {
     fontFamily: METRIC_FONT,
