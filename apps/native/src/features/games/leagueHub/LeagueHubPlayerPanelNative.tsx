@@ -15,12 +15,12 @@ import { CYBER_TAB_CYAN } from "../../rankings/CyberSlantedTabNative";
 import { METRIC_FONT } from "../../rankings/rankingsUiTheme";
 import LeagueHubScatterNative, { type HubScatterPoint } from "./LeagueHubScatterNative";
 import LeagueHubZoneKingsNative from "./LeagueHubZoneKingsNative";
-import TeamAbbrBadgeNative from "../TeamAbbrBadgeNative";
 import {
   HubChips,
   HubEmpty,
   HubRow,
   HubSection,
+  HubTeamTag,
   HubToggle,
   HubTwoCol,
   formatHubValue,
@@ -119,9 +119,11 @@ function StyleMap({
       )}
       {sel ? (
         <Pressable style={styles.selRow} onPress={() => onSelectPlayer(sel.playerId)}>
-          <TeamAbbrBadgeNative teamId={sel.teamId} />
           <View style={styles.selNameCol}>
-            <Text style={[styles.selName, playerNameStyle]}>{sel.name}</Text>
+            <View style={styles.selNameLine}>
+              <Text style={[styles.selName, playerNameStyle]}>{sel.name}</Text>
+              <HubTeamTag teamId={sel.teamId} />
+            </View>
             <Text style={styles.selSub}>
               {sel.gp} GP · {sel.min.toFixed(1)} MIN
             </Text>
@@ -442,6 +444,11 @@ const styles = StyleSheet.create({
   },
   selNameCol: {
     minWidth: 0,
+  },
+  selNameLine: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
   },
   selName: {
     color: "#fff",
