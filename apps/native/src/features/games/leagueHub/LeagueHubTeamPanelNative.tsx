@@ -34,6 +34,7 @@ import {
   formatRecord,
   recordPct,
   teamAbbr,
+  teamNameStyle,
   type HubLang,
 } from "./leagueHubUiNative";
 
@@ -125,7 +126,7 @@ function TeamScatterBlock({
       />
       {sel ? (
         <Pressable style={styles.selRow} onPress={() => onSelectTeam(sel.teamId)}>
-          <Text style={styles.selName}>{nick(sel.teamId)}</Text>
+          <Text style={[styles.selName, teamNameStyle]}>{nick(sel.teamId)}</Text>
           <View style={styles.selStats}>
             {([preset.x, preset.y] as const).map((ax) => {
               const rank = rankOf(rows, sel.teamId, ax.metric, ax.invert);
@@ -283,6 +284,7 @@ function TeamForm({
           key={t.teamId}
           teamId={t.teamId}
           name={nick(t.teamId)}
+          kind="team"
           value={`${t.streak!.kind}${t.streak!.count}`}
           valueSub={`L10 ${formatRecord(t.last10)}`}
           onPress={() => onSelectTeam(t.teamId)}
@@ -323,6 +325,7 @@ function PositionDefense({
         rank={cell.rank}
         teamId={t.teamId}
         name={nick(t.teamId)}
+          kind="team"
         value={cell.pts.toFixed(1)}
         onPress={() => onSelectTeam(t.teamId)}
       />
@@ -383,6 +386,7 @@ function Conditions({
         key={t.teamId}
         teamId={t.teamId}
         name={nick(t.teamId)}
+          kind="team"
         value={formatRecord(rec)}
         valueSub={pct.toFixed(3).replace(/^0/, "")}
         onPress={() => onSelectTeam(t.teamId)}
