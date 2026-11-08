@@ -1,7 +1,7 @@
 export const runtime = "nodejs";
 
 import { NextResponse } from "next/server";
-import { getAdminDb } from "@/lib/firebaseAdmin";
+import { getNbaPublicReadDb } from "@/lib/nba/nbaPublicReadDb";
 import { nbaStatsSnapshotCacheControl } from "@/lib/nba/nbaStatsSnapshotCacheControl";
 import {
   loadMatchupRosters,
@@ -30,7 +30,7 @@ export async function GET(req: Request) {
     const away = (url.searchParams.get("away") ?? "").trim();
     const team = (url.searchParams.get("team") ?? "").trim();
     const player = (url.searchParams.get("player") ?? "").trim();
-    const db = getAdminDb();
+    const db = getNbaPublicReadDb();
 
     if (home && away) {
       const payload = await loadMatchupRosters(db, season, home, away);

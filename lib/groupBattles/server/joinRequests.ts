@@ -40,28 +40,31 @@ function toApiItem(
 export async function listJoinRequestsForUser(
   db: Firestore,
   battleId: string,
-  uid: string
+  uid: string,
+  /** 呼び出し側で読んであれば渡す（undefined のときだけ読む） */
+  knownMembership?: Awaited<ReturnType<typeof getMembership>>
 ): Promise<{
   incoming: GroupBattleJoinRequestApiItem[];
   outgoing: GroupBattleJoinRequestApiItem[];
 }> {
-  const pendingSnap = await joinRequestsCol(db, battleId)
-    .where("status", "==", "pending")
-    .limit(80)
-    .get();
-
-  const parsed = pendingSnap.docs.map((d) =>
-    parseJoinRequest(d.id, d.data() as Record<string, unknown>)
-  );
-
-  const membership = await getMembership(db, battleId, uid);
+  const membership =
+    knownMembership !== undefined
+      ? knownMembership
+      : await getMembership(db, battleId, uid);
   const mySquadId =
     membership?.role === "owner" ? membership.squadId : null;
 
-  const incomingRows = mySquadId
-    ? parsed.filter((r) => r.squadId === mySquadId)
-    : [];
-  const outgoingRows = parsed.filter((r) => r.applicantUid === uid);
+  const pending = joinRequestsCol(db, battleId).where("status", "==", "pending");
+  const parseAll = (snap: FirebaseFirestore.QuerySnapshot) =>
+    snap.docs.map((d) =>
+      parseJoinRequest(d.id, d.data() as Record<string, unknown>)
+    );
+  const [incomingRows, outgoingRows] = await Promise.all([
+    mySquadId
+      ? pending.where("squadId", "==", mySquadId).limit(80).get().then(parseAll)
+      : Promise.resolve([] as ReturnType<typeof parseJoinRequest>[]),
+    pending.where("applicantUid", "==", uid).limit(80).get().then(parseAll),
+  ]);
 
   const squadIds = [
     ...new Set([...incomingRows, ...outgoingRows].map((r) => r.squadId)),
@@ -86,7 +89,7 @@ export async function listJoinRequestsForUser(
   }
 
   const mapRow = (
-    row: (typeof parsed)[number]
+    row: ReturnType<typeof parseJoinRequest>
   ): GroupBattleJoinRequestApiItem => {
     const p = entryProfileOrFallback(row.applicantUid, profiles);
     return toApiItem(row, squadNameById.get(row.squadId) ?? "SQUAD", {

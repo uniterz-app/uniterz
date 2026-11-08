@@ -1,5 +1,6 @@
 import { resolveJoinRequest } from "@/lib/groupBattles/server/resolveJoinRequest";
 import { jsonErr, mapAuthError } from "@/lib/groupBattles/server/http";
+import { revalidateGroupBattleSharedCache } from "@/lib/groupBattles/server/sharedViewCache";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -29,7 +30,9 @@ function mapJoinError(e: unknown) {
 export async function POST(req: Request, ctx: Ctx) {
   try {
     const { battleId, requestId } = await ctx.params;
-    return await resolveJoinRequest(req, battleId, requestId, "approved");
+    const res = await resolveJoinRequest(req, battleId, requestId, "approved");
+    if (res.ok) revalidateGroupBattleSharedCache();
+    return res;
   } catch (e) {
     return mapJoinError(e);
   }

@@ -1,20 +1,15 @@
 /**
  * 当日 NBA 試合がすべて final（または試合なし）ならカードキャッシュを長く持つ。
  * プロフィール表示ごとに games を読まず、セッション内で共有する。
+ * games を Firestore から直接読むと 1 件 20KB 前後を毎回受け取るので、CDN 共有の試合窓 API を使う。
  */
-import {
-  collection,
-  getDocs,
-  query,
-  Timestamp,
-  where,
-} from "firebase/firestore";
-import { CURRENT_NBA_SEASON_KEY } from "../../../../../lib/rankings/nbaSeason";
+import { fetchGamesWindowShared } from "../../../../../lib/games/fetchGamesWindowShared";
 import {
   getPastDateKeysInTimeZone,
   TIMEZONE_JST,
+  toDateKeyInTimeZone,
 } from "../../../../../lib/time/zonedTime";
-import { db } from "../../lib/firebase";
+import { getUniterzApiBaseUrl } from "../games/submitPredictionApi";
 
 const LIVE_TTL_MS = 45_000;
 const SETTLED_TTL_MS = 30 * 60_000;
@@ -31,13 +26,6 @@ let probeInflight: Promise<boolean> | null = null;
 
 function todayJstKey(): string {
   return getPastDateKeysInTimeZone(new Date(), TIMEZONE_JST, 1)[0] ?? "";
-}
-
-function jstDayRangeMs(dateKey: string): { startMs: number; endMs: number } {
-  const [y, m, d] = dateKey.split("-").map(Number);
-  const start = new Date(y!, m! - 1, d!, 0, 0, 0);
-  const end = new Date(y!, m! - 1, d! + 1, 0, 0, 0);
-  return { startMs: start.getTime(), endMs: end.getTime() };
 }
 
 /** 未解決なら null（短い TTL を使う） */
@@ -71,21 +59,24 @@ export function ensureNbaTodayGamesSettled(): void {
 
   probeInflight = (async () => {
     try {
-      const { startMs, endMs } = jstDayRangeMs(dateKey);
-      const q = query(
-        collection(db, "games"),
-        where("league", "==", "nba"),
-        where("season", "==", CURRENT_NBA_SEASON_KEY),
-        where("startAtJst", ">=", Timestamp.fromMillis(startMs)),
-        where("startAtJst", "<", Timestamp.fromMillis(endMs))
-      );
-      const snap = await getDocs(q);
-      const settled =
-        snap.empty ||
-        snap.docs.every((d) => {
-          const status = (d.data() as { status?: unknown }).status;
-          return status === "final";
-        });
+      const { rows } = await fetchGamesWindowShared({
+        league: "nba",
+        timeZone: TIMEZONE_JST,
+        anchorDateKey: dateKey,
+        plusMinus: 0,
+        includePeers: false,
+        apiBaseUrl: getUniterzApiBaseUrl(),
+      });
+      const settled = rows
+        .filter((row) => {
+          const start = row.startAtJst as { toMillis?: () => number } | undefined;
+          const ms = start?.toMillis?.();
+          return (
+            typeof ms === "number" &&
+            toDateKeyInTimeZone(new Date(ms), TIMEZONE_JST) === dateKey
+          );
+        })
+        .every((row) => row.status === "final");
       settledCache = { dateKey, settled, at: Date.now() };
       return settled;
     } catch {

@@ -2,7 +2,7 @@ export const runtime = "nodejs";
 
 import { NextResponse } from "next/server";
 import { unstable_cache } from "next/cache";
-import { getAdminDb } from "@/lib/firebaseAdmin";
+import { getNbaPublicReadDb } from "@/lib/nba/nbaPublicReadDb";
 import { leagueTeamStatsCacheControl } from "@/lib/nba/leagueTeamStats/leagueTeamStatsCacheControl";
 import {
   loadLeagueTeamStatsSnapshot,
@@ -23,7 +23,7 @@ import { NBA_DISCIPLINE_CDN_TAG_HEADER } from "@/lib/nba/discipline/nbaDisciplin
 export async function GET(req: Request) {
   try {
     const url = new URL(req.url);
-    const db = getAdminDb();
+    const db = getNbaPublicReadDb();
     const rawSeason = url.searchParams.get("season");
     const hasExplicitSeason = rawSeason != null && rawSeason.trim() !== "";
     const season = hasExplicitSeason
@@ -32,7 +32,7 @@ export async function GET(req: Request) {
 
     const cached = unstable_cache(
       async () => {
-        const adminDb = getAdminDb();
+        const adminDb = getNbaPublicReadDb();
         const [base, discipline] = await Promise.all([
           loadLeagueTeamStatsSnapshot(adminDb, season),
           loadNbaDisciplineSnapshot(adminDb, season),

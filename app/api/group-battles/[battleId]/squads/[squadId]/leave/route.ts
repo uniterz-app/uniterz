@@ -10,6 +10,7 @@ import {
   squadsCol,
 } from "@/lib/groupBattles/server/firestore";
 import { jsonErr, jsonOk, mapAuthError } from "@/lib/groupBattles/server/http";
+import { revalidateGroupBattleSharedCache } from "@/lib/groupBattles/server/sharedViewCache";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -51,6 +52,7 @@ export async function POST(req: Request, ctx: Ctx) {
       tx.delete(squadMembersCol(adminDb, battleId).doc(uid));
     });
 
+    revalidateGroupBattleSharedCache();
     return jsonOk({ left: true });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);

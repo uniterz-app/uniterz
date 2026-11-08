@@ -22,6 +22,7 @@ export async function shouldRunNbaLiveGamesIngest(
     .where("startAtJst", ">=", windowStart)
     .where("startAtJst", "<=", windowEnd)
     .limit(40)
+    .select("status", "final")
     .get();
 
   if (snap.empty) return false;

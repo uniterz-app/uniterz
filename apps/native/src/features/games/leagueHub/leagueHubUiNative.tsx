@@ -3,6 +3,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { TEAM_SHORT } from "../../../../../../lib/team-short";
 import { getTeamAbbrBadgeColor } from "../../../../../../lib/team-colors";
 import type { LeagueHubAxisFormat } from "../../../../../../lib/nba/leagueHub/leagueHubScatterPresets";
+import type { LeagueHubPosition } from "../../../../../../lib/nba/leagueHub/leagueHubTypes";
 import { CYBER_TAB_CYAN } from "../../rankings/CyberSlantedTabNative";
 import { METRIC_FONT, RANK_DISPLAY_FONT } from "../../rankings/rankingsUiTheme";
 export type HubLang = "ja" | "en";
@@ -61,11 +62,45 @@ export function HubChips<T extends string>({
   items,
   value,
   onChange,
+  wrap = false,
+  columns = 3,
 }: {
   items: readonly { id: T; label: string }[];
   value: T;
   onChange: (id: T) => void;
+  /** 横スクロールではなく columns 列で折り返す */
+  wrap?: boolean;
+  columns?: 3 | 4 | 5;
 }) {
+  if (wrap) {
+    return (
+      <View style={styles.chipGrid}>
+        {items.map((it) => {
+          const active = it.id === value;
+          return (
+            <Pressable
+              key={it.id}
+              onPress={() => onChange(it.id)}
+              style={[
+                styles.chip,
+                styles.chipCell,
+                columns === 4 ? styles.chipCell4 : columns === 5 ? styles.chipCell5 : null,
+                active ? styles.chipActive : null,
+              ]}
+            >
+              <Text
+                style={[styles.chipText, active ? styles.chipTextActive : null]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+              >
+                {it.label}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+    );
+  }
   return (
     <ScrollView
       horizontal
@@ -94,24 +129,32 @@ export function HubToggle<T extends string>({
   items,
   value,
   onChange,
+  fill = false,
 }: {
   items: readonly { id: T; label: string }[];
   value: T;
   onChange: (id: T) => void;
+  /** 横幅いっぱいに等分する */
+  fill?: boolean;
 }) {
   return (
-    <View style={styles.toggle}>
+    <View style={[styles.toggle, fill ? styles.toggleFill : null]}>
       {items.map((it) => {
         const active = it.id === value;
         return (
           <Pressable
             key={it.id}
             onPress={() => onChange(it.id)}
-            style={[styles.toggleItem, active ? { backgroundColor: CYBER_TAB_CYAN } : null]}
+            style={[
+              styles.toggleItem,
+              fill ? styles.toggleItemFill : null,
+              active ? { backgroundColor: CYBER_TAB_CYAN } : null,
+            ]}
           >
             <Text
               style={[
                 styles.toggleText,
+                fill ? styles.toggleTextFill : null,
                 { color: active ? "#050508" : "rgba(255,255,255,0.55)" },
               ]}
             >
@@ -124,6 +167,65 @@ export function HubToggle<T extends string>({
   );
 }
 
+/** TEAM / PLAYER の下の区分タブ（下線で選択を示す・等幅） */
+export function HubSubTabs<T extends string>({
+  items,
+  value,
+  onChange,
+}: {
+  items: readonly { id: T; label: string }[];
+  value: T;
+  onChange: (id: T) => void;
+}) {
+  return (
+    <View style={styles.subTabs}>
+      {items.map((it) => {
+        const active = it.id === value;
+        return (
+          <Pressable
+            key={it.id}
+            onPress={() => onChange(it.id)}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: active }}
+            style={({ pressed }) => [styles.subTab, pressed ? styles.subTabPressed : null]}
+          >
+            <Text style={[styles.subTabText, active ? styles.subTabTextActive : null]}>
+              {it.label}
+            </Text>
+            {active ? <View style={styles.subTabBar} /> : null}
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+export type HubPosFilter = "all" | LeagueHubPosition;
+
+/** 全員 / G / F / C */
+export function HubPosToggle({
+  value,
+  onChange,
+  lang,
+}: {
+  value: HubPosFilter;
+  onChange: (v: HubPosFilter) => void;
+  lang: HubLang;
+}) {
+  return (
+    <HubToggle
+      items={[
+        { id: "all", label: "ALL" },
+        { id: "G", label: "G" },
+        { id: "F", label: "F" },
+        { id: "C", label: "C" },
+      ]}
+      value={value}
+      onChange={onChange}
+    />
+  );
+}
+
 /** 選手 / チームの 1 行（順位・色点・名前・値） */
 export function HubRow({
   rank,
@@ -131,18 +233,24 @@ export function HubRow({
   name,
   sub,
   value,
+  cells,
   valueSub,
   onPress,
   highlight,
   kind = "player",
+  rankMove,
 }: {
   rank?: number;
+  /** 先週からの順位変動（+ = 上昇）。"new" = 新しく圏内 */
+  rankMove?: number | "new" | null;
   teamId: string | null;
   name: string;
   /** team = 順位表と同じチーム名書体 */
   kind?: "player" | "team";
   sub?: string;
-  value: string;
+  value?: string;
+  /** `HubCellHeader` の見出しと揃う等幅の数値列（value の代わり） */
+  cells?: readonly string[];
   valueSub?: string;
   onPress?: () => void;
   highlight?: boolean;
@@ -158,7 +266,26 @@ export function HubRow({
         pressed ? styles.rowPressed : null,
       ]}
     >
-      {rank != null ? <Text style={styles.rowRank}>{rank}</Text> : null}
+      {rank != null ? (
+        <View style={styles.rowRankCol}>
+          <Text style={styles.rowRank}>{rank}</Text>
+          {rankMove != null && rankMove !== 0 ? (
+            <Text
+              style={[
+                styles.rowMove,
+                {
+                  color:
+                    rankMove === "new" || rankMove > 0
+                      ? "rgba(110,231,183,0.95)"
+                      : "rgba(252,165,165,0.9)",
+                },
+              ]}
+            >
+              {rankMove === "new" ? "NEW" : rankMove > 0 ? `▲${rankMove}` : `▼${-rankMove}`}
+            </Text>
+          ) : null}
+        </View>
+      ) : null}
       {kind === "team" ? (
         <View style={[styles.rowSquare, { backgroundColor: ink }]} />
       ) : null}
@@ -186,10 +313,43 @@ export function HubRow({
         ) : null}
       </View>
       <View style={styles.rowValueCol}>
-        <Text style={styles.rowValue}>{value}</Text>
+        {cells ? (
+          <View style={styles.cells}>
+            {cells.map((c, i) => (
+              <Text key={i} style={[styles.rowValue, styles.cell]} numberOfLines={1}>
+                {c}
+              </Text>
+            ))}
+          </View>
+        ) : (
+          <Text style={styles.rowValue}>{value}</Text>
+        )}
         {valueSub ? <Text style={styles.rowValueSub}>{valueSub}</Text> : null}
       </View>
     </Pressable>
+  );
+}
+
+/** `HubRow` の `cells` の上に置く列見出し */
+export function HubCellHeader({
+  labels,
+  caption,
+}: {
+  labels: readonly string[];
+  /** 列全体の単位（例: 平均得点） */
+  caption?: string;
+}) {
+  return (
+    <View style={styles.cellHeader}>
+      {caption ? <Text style={styles.cellCaption}>{caption}</Text> : null}
+      <View style={styles.cells}>
+        {labels.map((l, i) => (
+          <Text key={i} style={[styles.cellLabel, styles.cell]} numberOfLines={1}>
+            {l}
+          </Text>
+        ))}
+      </View>
+    </View>
   );
 }
 
@@ -308,6 +468,25 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 5,
   },
+  chipGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+    paddingBottom: 8,
+  },
+  chipCell: {
+    flexBasis: "30%",
+    flexGrow: 1,
+    alignItems: "center",
+  },
+  chipCell4: {
+    flexBasis: "22%",
+    paddingHorizontal: 4,
+  },
+  chipCell5: {
+    flexBasis: "17%",
+    paddingHorizontal: 3,
+  },
   chipActive: {
     backgroundColor: CYBER_TAB_CYAN,
     borderColor: CYBER_TAB_CYAN,
@@ -327,9 +506,53 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(0,245,255,0.35)",
   },
+  subTabs: {
+    flexDirection: "row",
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(0,245,255,0.22)",
+  },
+  subTab: {
+    flex: 1,
+    alignItems: "center",
+    paddingVertical: 9,
+  },
+  subTabPressed: {
+    backgroundColor: "rgba(0,245,255,0.08)",
+  },
+  subTabText: {
+    fontFamily: METRIC_FONT,
+    color: "rgba(255,255,255,0.5)",
+    fontSize: 12,
+    fontWeight: "800",
+    letterSpacing: 1.6,
+  },
+  subTabTextActive: {
+    color: CYBER_TAB_CYAN,
+  },
+  subTabBar: {
+    position: "absolute",
+    left: 6,
+    right: 6,
+    bottom: -1,
+    height: 2,
+    backgroundColor: CYBER_TAB_CYAN,
+  },
   toggleItem: {
     paddingHorizontal: 8,
     paddingVertical: 3,
+  },
+  toggleFill: {
+    alignSelf: "stretch",
+    marginBottom: 6,
+  },
+  toggleItemFill: {
+    flex: 1,
+    alignItems: "center",
+    paddingVertical: 5,
+  },
+  toggleTextFill: {
+    fontSize: 11,
+    letterSpacing: 1.4,
   },
   toggleText: {
     fontFamily: METRIC_FONT,
@@ -351,6 +574,16 @@ const styles = StyleSheet.create({
   },
   rowPressed: {
     backgroundColor: "rgba(0,245,255,0.12)",
+  },
+  rowRankCol: {
+    width: 22,
+    alignItems: "center",
+  },
+  rowMove: {
+    fontFamily: METRIC_FONT,
+    fontSize: 8,
+    fontWeight: "800",
+    marginTop: 1,
   },
   rowRank: {
     fontFamily: RANK_DISPLAY_FONT,
@@ -424,6 +657,34 @@ const styles = StyleSheet.create({
     color: "rgba(255,255,255,0.45)",
     fontSize: 10,
     marginTop: 1,
+  },
+  cells: {
+    flexDirection: "row",
+  },
+  cell: {
+    width: 44,
+    textAlign: "right",
+  },
+  cellHeader: {
+    alignItems: "flex-end",
+    paddingHorizontal: 4,
+    paddingTop: 6,
+    paddingBottom: 2,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "rgba(0,245,255,0.22)",
+  },
+  cellCaption: {
+    fontFamily: METRIC_FONT,
+    color: "rgba(255,255,255,0.45)",
+    fontSize: 9,
+    marginBottom: 1,
+  },
+  cellLabel: {
+    fontFamily: METRIC_FONT,
+    color: "rgba(0,245,255,0.7)",
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 0.6,
   },
   empty: {
     color: "rgba(255,255,255,0.4)",

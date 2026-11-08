@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import Svg, { Circle, G, Path, Rect } from "react-native-svg";
 import {
   SHOT_ZONE_BASKET,
@@ -12,22 +12,28 @@ import {
   formatShotZoneMakesPerGame,
   shotCourtFreeThrowCirclePath,
   shotCourtTop,
+  shotZoneAboveBreak3Dividers,
   shotZonePathAboveBreak3Fill,
+  shotZonePathAboveBreak3Sector,
   shotZonePathLeftCorner3,
   shotZonePathMidRange,
   shotZonePathPaint,
   shotZonePathRightCorner3,
   shotZoneThreePointLine,
 } from "../../../../../../lib/predict/nbaShotZoneCourtGeometry";
-import type { LeagueHubZoneBoard } from "../../../../../../lib/nba/leagueHub/leagueHubTypes";
-import type { NbaPlayerShotZoneId } from "../../../../../../lib/predict/nbaPlayerDetailPreviewMocks";
+import type {
+  LeagueHubZoneBoard,
+  LeagueHubZoneId,
+} from "../../../../../../lib/nba/leagueHub/leagueHubTypes";
 import { CYBER_TAB_CYAN } from "../../rankings/CyberSlantedTabNative";
 import { METRIC_FONT } from "../../rankings/rankingsUiTheme";
 import {
   HubChips,
   HubEmpty,
+  HubPosToggle,
   HubRow,
   HubToggle,
+  type HubPosFilter,
   formatHubValue,
   playerNameStyle,
   teamInk,
@@ -36,26 +42,36 @@ import {
 
 const KING_WRAP_W = 150;
 
-const ZONE_ORDER: readonly NbaPlayerShotZoneId[] = [
-  "restricted",
-  "paint",
-  "mid",
+/** チップは 2 段: 中（3 つ）と 3P（コートと同じ左→右）。データにあるエリアだけ出す */
+const INSIDE_ZONES: readonly LeagueHubZoneId[] = ["restricted", "paint", "mid"];
+const THREE_ZONES: readonly LeagueHubZoneId[] = [
   "left_corner_3",
-  "right_corner_3",
+  "left_wing_3",
+  "top_3",
   "above_break_3",
+  "right_wing_3",
+  "right_corner_3",
 ];
+const ZONE_ORDER: readonly LeagueHubZoneId[] = [...INSIDE_ZONES, ...THREE_ZONES];
 
-const ZONE_LABEL: Record<NbaPlayerShotZoneId, { ja: string; en: string }> = {
-  restricted: { ja: "リング下", en: "RIM" },
-  paint: { ja: "ペイント", en: "PAINT" },
-  mid: { ja: "ミドル", en: "MID" },
-  left_corner_3: { ja: "左コーナー3", en: "L CORNER 3" },
-  right_corner_3: { ja: "右コーナー3", en: "R CORNER 3" },
-  above_break_3: { ja: "トップ3", en: "ABOVE BREAK 3" },
+/** 3P の段は全部 3P なので「3」を付けない */
+const ZONE_LABEL: Record<LeagueHubZoneId, string> = {
+  restricted: "RIM",
+  paint: "PAINT",
+  mid: "MID",
+  left_corner_3: "L CORNER",
+  left_wing_3: "L WING",
+  top_3: "TOP",
+  above_break_3: "ABOVE BREAK",
+  right_wing_3: "R WING",
+  right_corner_3: "R CORNER",
 };
 
-function zonePath(id: NbaPlayerShotZoneId): string | null {
+function zonePath(id: LeagueHubZoneId): string | null {
   if (id === "above_break_3") return shotZonePathAboveBreak3Fill();
+  if (id === "left_wing_3") return shotZonePathAboveBreak3Sector("left");
+  if (id === "top_3") return shotZonePathAboveBreak3Sector("center");
+  if (id === "right_wing_3") return shotZonePathAboveBreak3Sector("right");
   if (id === "mid") return shotZonePathMidRange();
   if (id === "left_corner_3") return shotZonePathLeftCorner3();
   if (id === "right_corner_3") return shotZonePathRightCorner3();
@@ -63,13 +79,24 @@ function zonePath(id: NbaPlayerShotZoneId): string | null {
   return null;
 }
 
-/** コーナーは細いので名前を中に寄せる */
-const NAME_POS: Record<NbaPlayerShotZoneId, { x: number; y: number }> = {
+/** コーナーと 45 度は細いので名前を中に寄せる */
+const NAME_POS: Record<LeagueHubZoneId, { x: number; y: number }> = {
   ...SHOT_ZONE_LABEL_POS,
   left_corner_3: { x: 80, y: SHOT_ZONE_LABEL_POS.left_corner_3.y },
   right_corner_3: { x: SHOT_ZONE_VB_W - 80, y: SHOT_ZONE_LABEL_POS.right_corner_3.y },
   restricted: { x: SHOT_ZONE_BASKET.x, y: SHOT_ZONE_BASKET.y + 2 },
+  left_wing_3: { x: 80, y: 200 },
+  top_3: SHOT_ZONE_LABEL_POS.above_break_3,
+  right_wing_3: { x: SHOT_ZONE_VB_W - 80, y: 200 },
 };
+
+const SMALL_NAME_ZONES = new Set<LeagueHubZoneId>([
+  "restricted",
+  "left_corner_3",
+  "right_corner_3",
+  "left_wing_3",
+  "right_wing_3",
+]);
 
 type Props = {
   zones: LeagueHubZoneBoard[];
@@ -78,11 +105,19 @@ type Props = {
 };
 
 export default function LeagueHubZoneKingsNative({ zones, lang, onSelectPlayer }: Props) {
-  const [zoneId, setZoneId] = useState<NbaPlayerShotZoneId>("above_break_3");
+  const order = ZONE_ORDER.filter((id) => zones.some((z) => z.id === id));
+  const [pickedZone, setZoneId] = useState<LeagueHubZoneId>(
+    order.includes("top_3") ? "top_3" : "above_break_3"
+  );
+  const zoneId = order.includes(pickedZone) ? pickedZone : (order[0] ?? pickedZone);
   const [mode, setMode] = useState<"pct" | "fga">("pct");
   const [courtW, setCourtW] = useState(0);
-  const byId = new Map(zones.map((z) => [z.id, z]));
+  const [pos, setPos] = useState<HubPosFilter>("all");
+  const byId = new Map(
+    zones.map((z) => [z.id, pos === "all" || !z.byPos ? z : z.byPos[pos]] as const)
+  );
   const board = byId.get(zoneId);
+  const zone = zones.find((z) => z.id === zoneId);
   const rows = board ? (mode === "pct" ? board.byPct : board.byFga) : [];
   const line = "rgba(255,255,255,0.28)";
   const baselineY = SHOT_ZONE_PAINT.y + SHOT_ZONE_PAINT.h;
@@ -107,7 +142,7 @@ export default function LeagueHubZoneKingsNative({ zones, lang, onSelectPlayer }
             height={SHOT_ZONE_VB_H}
             fill="#04040a"
           />
-          {ZONE_ORDER.map((id) => {
+          {order.map((id) => {
             const active = id === zoneId;
             const fill = active ? "rgba(0,245,255,0.22)" : "rgba(255,255,255,0.03)";
             const d = zonePath(id);
@@ -153,22 +188,30 @@ export default function LeagueHubZoneKingsNative({ zones, lang, onSelectPlayer }
               strokeWidth={1.1}
             />
             <Path d={shotZoneThreePointLine()} fill="none" stroke={line} strokeWidth={1.5} />
+            {order.includes("top_3") ? (
+              <Path
+                d={shotZoneAboveBreak3Dividers()}
+                fill="none"
+                stroke={line}
+                strokeWidth={1}
+                strokeDasharray="5 5"
+              />
+            ) : null}
           </G>
         </Svg>
         {courtW > 0
-          ? ZONE_ORDER.map((id) => {
+          ? order.map((id) => {
               const king = byId.get(id)?.byPct[0];
               if (!king) return null;
               const pos = NAME_POS[id];
               const active = id === zoneId;
               const scale = courtW / SHOT_ZONE_VB_W;
-              const small =
-                id === "restricted" || id === "left_corner_3" || id === "right_corner_3";
+              const small = SMALL_NAME_ZONES.has(id);
               const nameSize = (small ? 17 : 19) * scale;
               return (
                 <View
                   key={`k-${id}`}
-                  pointerEvents="none"
+                  pointerEvents="box-none"
                   style={[
                     styles.kingWrap,
                     {
@@ -177,7 +220,11 @@ export default function LeagueHubZoneKingsNative({ zones, lang, onSelectPlayer }
                     },
                   ]}
                 >
-                  <View style={styles.kingBox}>
+                  <Pressable
+                    style={({ pressed }) => [styles.kingBox, pressed ? { opacity: 0.6 } : null]}
+                    onPress={() => onSelectPlayer(king.playerId)}
+                    hitSlop={4}
+                  >
                     <Text
                       numberOfLines={1}
                       style={[
@@ -202,31 +249,57 @@ export default function LeagueHubZoneKingsNative({ zones, lang, onSelectPlayer }
                     >
                       {formatHubValue(king.fgPct, "pct")}
                     </Text>
-                  </View>
+                  </Pressable>
                 </View>
               );
             })
           : null}
       </View>
       <View style={styles.controls}>
-        <View style={styles.chipsWrap}>
-          <HubChips
-            items={ZONE_ORDER.map((id) => ({ id, label: ZONE_LABEL[id][lang] }))}
-            value={zoneId}
-            onChange={setZoneId}
-          />
-        </View>
+        {[INSIDE_ZONES, THREE_ZONES].map((row, i) => {
+          const ids = row.filter((id) => order.includes(id));
+          return ids.length > 0 ? (
+            <HubChips
+              key={i}
+              items={ids.map((id) => ({ id, label: ZONE_LABEL[id] }))}
+              value={zoneId}
+              onChange={setZoneId}
+              wrap
+              columns={ids.length > 3 ? 5 : 3}
+            />
+          ) : null;
+        })}
       </View>
       <View style={styles.listHead}>
+        <HubPosToggle value={pos} onChange={setPos} lang={lang} />
         <HubToggle
           items={[
             { id: "pct", label: "FG%" },
-            { id: "fga", label: lang === "ja" ? "試投数" : "VOLUME" },
+            { id: "fga", label: "FGA" },
           ]}
           value={mode}
           onChange={setMode}
         />
       </View>
+      {zone ? (
+        <View style={styles.zoneMeta}>
+          {zone.leagueFgPct != null ? (
+            <Text style={styles.zoneAvg}>
+              {lang === "ja" ? "リーグ平均 " : "LEAGUE AVG "}
+              <Text style={styles.zoneAvgValue}>{formatHubValue(zone.leagueFgPct, "pct")}</Text>
+            </Text>
+          ) : (
+            <View />
+          )}
+          {mode === "pct" ? (
+            <Text style={styles.zoneMin}>
+              {lang === "ja"
+                ? `1 試合 ${zone.minFga} 本以上${zone.minTotal ? `・合計 ${zone.minTotal} 本以上` : ""}`
+                : `Min ${zone.minFga} FGA/G${zone.minTotal ? `, ${zone.minTotal} total` : ""}`}
+            </Text>
+          ) : null}
+        </View>
+      ) : null}
       {rows.length === 0 ? (
         <HubEmpty text={lang === "ja" ? "まだデータがありません" : "No data yet"} />
       ) : (
@@ -284,10 +357,31 @@ const styles = StyleSheet.create({
   controls: {
     marginTop: 8,
   },
-  chipsWrap: {},
   listHead: {
     flexDirection: "row",
-    justifyContent: "flex-end",
+    justifyContent: "space-between",
+    marginBottom: 6,
+  },
+  zoneMeta: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "baseline",
     marginBottom: 4,
+  },
+  zoneAvg: {
+    fontFamily: METRIC_FONT,
+    color: "rgba(255,255,255,0.5)",
+    fontSize: 10,
+    fontWeight: "700",
+  },
+  zoneAvgValue: {
+    color: CYBER_TAB_CYAN,
+    fontSize: 12,
+    fontWeight: "800",
+  },
+  zoneMin: {
+    fontFamily: METRIC_FONT,
+    color: "rgba(255,255,255,0.4)",
+    fontSize: 10,
   },
 });

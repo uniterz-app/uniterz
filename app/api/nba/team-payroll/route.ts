@@ -1,7 +1,7 @@
 export const runtime = "nodejs";
 
 import { NextResponse } from "next/server";
-import { getAdminDb } from "@/lib/firebaseAdmin";
+import { getNbaPublicReadDb } from "@/lib/nba/nbaPublicReadDb";
 import { nbaStatsSnapshotCacheControl } from "@/lib/nba/nbaStatsSnapshotCacheControl";
 import {
   loadTeamPayroll,
@@ -22,7 +22,7 @@ export async function GET(req: Request) {
       url.searchParams.get("season")
     );
     const team = (url.searchParams.get("team") ?? "").trim();
-    const db = getAdminDb();
+    const db = getNbaPublicReadDb();
 
     if (team) {
       const payload = await loadTeamPayroll(db, season, team);

@@ -27,6 +27,16 @@ import { getUniterzApiBaseUrl } from "../games/submitPredictionApi";
 
 const EMPTY: UserMark[] = [];
 
+/** プロフィールを開くたびに MARK 全件を読み直さない（追加・削除はこの hook 経由でメモリに反映済み） */
+const MARKS_RELOAD_MIN_MS = 10 * 60_000;
+let lastMarksLoad: { owner: string; at: number } | null = null;
+const markedByCountCache = new Map<string, { n: number; at: number }>();
+
+/** hook 以外（起動時プリフェッチ）で全件読んだとき */
+export function rememberMarksLoadedNative(owner: string): void {
+  lastMarksLoad = { owner, at: Date.now() };
+}
+
 export function useProfileMarksNative(
   myUid: string | null | undefined,
   maxMarks: number = MAX_MARKS_FREE
@@ -44,14 +54,27 @@ export function useProfileMarksNative(
   );
   const [markedByCount, setMarkedByCount] = useState(0);
 
-  const refreshMarkedBy = useCallback(async () => {
-    if (!owner) {
-      setMarkedByCount(0);
-      return;
-    }
-    const n = await countMarkedByNative(owner);
-    setMarkedByCount(n);
-  }, [owner]);
+  const refreshMarkedBy = useCallback(
+    async (opts?: { allowCached?: boolean }) => {
+      if (!owner) {
+        setMarkedByCount(0);
+        return;
+      }
+      const hit = markedByCountCache.get(owner);
+      if (
+        opts?.allowCached &&
+        hit &&
+        Date.now() - hit.at < MARKS_RELOAD_MIN_MS
+      ) {
+        setMarkedByCount(hit.n);
+        return;
+      }
+      const n = await countMarkedByNative(owner);
+      markedByCountCache.set(owner, { n, at: Date.now() });
+      setMarkedByCount(n);
+    },
+    [owner]
+  );
 
   const refresh = useCallback(async (opts?: { silent?: boolean }) => {
     if (!owner) {
@@ -71,6 +94,7 @@ export function useProfileMarksNative(
       // 書き込みと競合した古い list は捨てる。失敗時に空で消さない。
       if (epoch !== peekMarksWriteEpoch()) return;
       replaceMarksMemory(owner, rows);
+      lastMarksLoad = { owner, at: Date.now() };
     } catch {
       // keep existing memory / タイムアウト時は空 hydrated にしてスピナー解除
       if (epoch === peekMarksWriteEpoch()) {
@@ -92,10 +116,13 @@ export function useProfileMarksNative(
       return;
     }
     const current = getMarksMemorySnapshot();
-    // 0 件でも hydrated 済みならスピナーを出さず、裏で再取得
+    // 0 件でも hydrated 済みならスピナーを出さず、古いときだけ裏で再取得
     if (current.hydrated && current.owner === owner) {
       setLoading(false);
-      void refresh({ silent: true });
+      const fresh =
+        lastMarksLoad?.owner === owner &&
+        Date.now() - lastMarksLoad.at < MARKS_RELOAD_MIN_MS;
+      if (!fresh) void refresh({ silent: true });
       return;
     }
     void refresh();
@@ -103,7 +130,7 @@ export function useProfileMarksNative(
 
   useEffect(() => {
     if (!owner || !snap.hydrated || snap.owner !== owner) return;
-    void refreshMarkedBy();
+    void refreshMarkedBy({ allowCached: true });
     prefetchMarksWeeklyBoard(
       marks.map((m) => m.targetUid),
       getUniterzApiBaseUrl() || undefined

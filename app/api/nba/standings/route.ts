@@ -2,7 +2,7 @@ export const runtime = "nodejs";
 
 import { NextResponse } from "next/server";
 import { unstable_cache } from "next/cache";
-import { getAdminDb } from "@/lib/firebaseAdmin";
+import { getNbaPublicReadDb } from "@/lib/nba/nbaPublicReadDb";
 import {
   loadNbaConferenceStandings,
   nbaConferenceStandingsCacheControl,
@@ -20,7 +20,7 @@ export async function GET(req: Request) {
     const season = normalizeStandingsSeasonKey(url.searchParams.get("season"));
 
     const cached = unstable_cache(
-      async () => loadNbaConferenceStandings(getAdminDb(), season),
+      async () => loadNbaConferenceStandings(getNbaPublicReadDb(), season),
       ["nba-conference-standings", season],
       { revalidate: 120, tags: ["nba-standings", `nba-standings:${season}`] }
     );

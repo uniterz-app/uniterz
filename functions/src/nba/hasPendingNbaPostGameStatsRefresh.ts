@@ -14,6 +14,7 @@ export async function hasPendingNbaPostGameStatsRefresh(
     .where("league", "==", "nba")
     .where("startAtJst", ">=", Timestamp.fromMillis(now.getTime() - 10 * 60 * 60 * 1000))
     .where("startAtJst", "<=", Timestamp.fromMillis(now.getTime()))
+    .select("final", "seasonPhase", "bdlGameId")
     .get();
   const ids = snap.docs
     .map((d) => d.data() ?? {})

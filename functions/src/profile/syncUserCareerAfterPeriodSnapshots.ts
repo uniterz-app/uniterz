@@ -82,17 +82,21 @@ export async function syncUserCareerForPeriod(opts: {
     opts.labelKey,
     "totalPoints"
   );
-  const snap = await db.collection("period_ranking_snapshots").doc(docId).get();
+  const snapRef = db.collection("period_ranking_snapshots").doc(docId);
+  const snap = await snapRef.get();
   if (!snap.exists) return { updated: 0 };
+  const snapData = (snap.data() ?? {}) as {
+    ranks?: Record<string, number>;
+    rows?: Array<{ uid?: string; rank?: number }>;
+    careerSyncedAt?: unknown;
+  };
+  // 確定済み期間は 1 回反映すれば足りる（毎日全員の user_career を読み直さない）
+  if (snapData.careerSyncedAt) return { updated: 0 };
 
-  const entries = loadRankEntries(
-    (snap.data() ?? {}) as {
-      ranks?: Record<string, number>;
-      rows?: Array<{ uid?: string; rank?: number }>;
-    }
-  );
+  const entries = loadRankEntries(snapData);
   const seasonKey = seasonKeyFromPeriodLabel(opts.period, opts.labelKey);
   let updated = 0;
+  let failed = 0;
   // 逐次で OK（週1/月1）。並列しすぎると transaction 競合・コスト増。
   for (const { uid, rank } of entries) {
     try {
@@ -105,11 +109,15 @@ export async function syncUserCareerForPeriod(opts: {
       });
       updated += 1;
     } catch (err) {
+      failed += 1;
       console.warn(
         `[syncUserCareerForPeriod] ${opts.period} ${opts.labelKey} uid=${uid}`,
         err
       );
     }
+  }
+  if (failed === 0) {
+    await snapRef.set({ careerSyncedAt: new Date() }, { merge: true });
   }
   console.log(
     `[syncUserCareerForPeriod] ${opts.period} ${opts.labelKey} updated=${updated}/${entries.length}`

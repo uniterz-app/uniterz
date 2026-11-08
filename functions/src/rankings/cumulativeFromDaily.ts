@@ -446,35 +446,73 @@ export async function fetchAllDailyDocsForUid(
   return snap.docs.map((d) => d.data());
 }
 
+function daysBetweenDateKeys(fromKey: string, toKey: string): number {
+  const parse = (k: string) => {
+    const [y, m, d] = k.split("-").map(Number);
+    return Date.UTC(y, (m ?? 1) - 1, d ?? 1);
+  };
+  const diff = (parse(toKey) - parse(fromKey)) / 86_400_000;
+  return Number.isFinite(diff) ? diff : Infinity;
+}
+
+/** 照合で日次履歴を読んだ日（一致しても書く）。 */
+const RECONCILE_CHECKED_FIELD = "reconcileCheckedDateKey";
+
 export async function reconcileCumulativeStatsForUid(
   db: Firestore,
   uid: string,
-  lastReconciledDateKey: string
-): Promise<{ updated: boolean; reason: "ok" | "no_daily" | "unchanged" }> {
+  lastReconciledDateKey: string,
+  opts?: {
+    /**
+     * 前回照合からこの日数未満ならスキップ（日次履歴は全期間読むので、
+     * アクティブユーザー全員を毎日照合すると読み取りがシーズン日数に比例して増える）。
+     */
+    minIntervalDays?: number;
+  }
+): Promise<{
+  updated: boolean;
+  reason: "ok" | "no_daily" | "unchanged" | "recently_checked";
+}> {
+  const cumulativeRef = db.doc(`cumulative_stats/${uid}`);
+  const cumulativeSnap = await cumulativeRef.get();
+  const current = cumulativeSnap.exists
+    ? (cumulativeSnap.data() as Record<string, unknown>)
+    : undefined;
+
+  const minIntervalDays = opts?.minIntervalDays ?? 0;
+  const checkedKey = current?.[RECONCILE_CHECKED_FIELD];
+  if (
+    minIntervalDays > 0 &&
+    typeof checkedKey === "string" &&
+    daysBetweenDateKeys(checkedKey, lastReconciledDateKey) < minIntervalDays
+  ) {
+    return { updated: false, reason: "recently_checked" };
+  }
+
   const dailyDocs = await fetchAllDailyDocsForUid(db, uid);
   if (dailyDocs.length === 0) {
     return { updated: false, reason: "no_daily" };
   }
 
   const agg = aggregateCumulativeFromDailyData(dailyDocs);
-  const cumulativeRef = db.doc(`cumulative_stats/${uid}`);
-  const userRef = db.doc(`users/${uid}`);
-  const [cumulativeSnap, userSnap] = await Promise.all([
-    cumulativeRef.get(),
-    userRef.get(),
-  ]);
-
-  const user = userSnap.exists ? userSnap.data()! : {};
-  const current = cumulativeSnap.exists
-    ? (cumulativeSnap.data() as Record<string, unknown>)
-    : undefined;
 
   if (aggregatedCumulativeMatchesDoc(agg, current)) {
+    if (minIntervalDays > 0) {
+      await cumulativeRef.set(
+        { [RECONCILE_CHECKED_FIELD]: lastReconciledDateKey },
+        { merge: true }
+      );
+    }
     return { updated: false, reason: "unchanged" };
   }
 
+  const userSnap = await db.doc(`users/${uid}`).get();
+  const user = userSnap.exists ? userSnap.data()! : {};
   await cumulativeRef.set(
-    cumulativePayloadFromAggregate(uid, user, agg, lastReconciledDateKey),
+    {
+      ...cumulativePayloadFromAggregate(uid, user, agg, lastReconciledDateKey),
+      [RECONCILE_CHECKED_FIELD]: lastReconciledDateKey,
+    },
     { merge: true }
   );
   return { updated: true, reason: "ok" };

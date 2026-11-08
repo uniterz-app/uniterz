@@ -1,6 +1,7 @@
 export const runtime = "nodejs";
 
 import { NextResponse } from "next/server";
+import { revalidateNbaDocCache } from "@/lib/nba/nbaPublicReadDb";
 import { getAdminDb } from "@/lib/firebaseAdmin";
 import { requireAdminUid } from "@/lib/admin/requireAdminUid";
 import { checkJobSecret } from "@/lib/security/assertJobSecret";
@@ -45,6 +46,7 @@ export async function POST(req: Request) {
       lookbackSeasons,
     });
 
+    revalidateNbaDocCache();
     return NextResponse.json({
       ...result,
       defaultLookback: NBA_LEAGUE_STATS_SEASON_LOOKBACK,

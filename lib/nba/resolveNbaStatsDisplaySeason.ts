@@ -10,6 +10,8 @@
  * ingest・内部処理は必ず明示シーズンで load* を呼び、この解決を通さない。
  */
 import type { Firestore } from "firebase-admin/firestore";
+import { unstable_cache } from "next/cache";
+import { nbaDocCacheTags } from "@/lib/nba/nbaPublicReadDb";
 import {
   CURRENT_NBA_SEASON_KEY,
   previousNbaSeasonKey,
@@ -25,6 +27,9 @@ import { bundleFromFirestoreData } from "@/lib/nba/leagueTeamStats/normalizeLeag
 import type { NbaLeagueTeamStatsFirestoreDoc } from "@/lib/nba/leagueTeamStats/leagueTeamStatsTypes";
 import { NBA_TEAM_ROSTERS_COLLECTION } from "@/lib/nba/teamRosters/loadTeamRostersSnapshot";
 import { NBA_TEAM_INJURIES_COLLECTION } from "@/lib/nba/teamInjuries/loadTeamInjuriesSnapshot";
+
+/** 有無だけ（数バイト）をキャッシュし、判定のために 4 本の大きな doc を毎回開かない */
+const DISPLAY_CHECK_TTL_SEC = 600;
 
 export type NbaStatsDisplaySeason = {
   seasonKey: string;
@@ -127,7 +132,15 @@ export async function resolveNbaStatsDisplaySeasonKey(
     };
   }
 
-  if (await nbaStatsSeasonHasDisplayData(db, calendarSeasonKey)) {
+  const hasStats = await unstable_cache(
+    () => nbaStatsSeasonHasDisplayData(db, calendarSeasonKey),
+    ["nba-display-season:stats", calendarSeasonKey],
+    {
+      revalidate: DISPLAY_CHECK_TTL_SEC,
+      tags: nbaDocCacheTags(["nbaLeagueTeamStats", "nbaLeaguePlayerStats"]),
+    }
+  )();
+  if (hasStats) {
     return {
       seasonKey: calendarSeasonKey,
       fromPriorSeason: false,
@@ -161,11 +174,21 @@ export async function resolveNbaRosterInjuryDisplaySeasonKey(
     };
   }
 
-  const [roster, injury] = await Promise.all([
-    hasRosterTeams(db, calendarSeasonKey),
-    hasInjuryTeams(db, calendarSeasonKey),
-  ]);
-  if (roster || injury) {
+  const hasLive = await unstable_cache(
+    async () => {
+      const [roster, injury] = await Promise.all([
+        hasRosterTeams(db, calendarSeasonKey),
+        hasInjuryTeams(db, calendarSeasonKey),
+      ]);
+      return roster || injury;
+    },
+    ["nba-display-season:roster-injury", calendarSeasonKey],
+    {
+      revalidate: DISPLAY_CHECK_TTL_SEC,
+      tags: nbaDocCacheTags(["nbaTeamRosters", "nbaTeamInjuries"]),
+    }
+  )();
+  if (hasLive) {
     return {
       seasonKey: calendarSeasonKey,
       fromPriorSeason: false,

@@ -1,7 +1,7 @@
 export const runtime = "nodejs";
 
 import { NextResponse } from "next/server";
-import { getAdminDb } from "@/lib/firebaseAdmin";
+import { getNbaPublicReadDb } from "@/lib/nba/nbaPublicReadDb";
 import { loadTeamDisciplineSlice } from "@/lib/nba/discipline/nbaDisciplineSnapshot";
 import { NBA_DISCIPLINE_CDN_TAG_HEADER } from "@/lib/nba/discipline/nbaDisciplineApiCache";
 import { nbaStatsSnapshotCacheControl } from "@/lib/nba/nbaStatsSnapshotCacheControl";
@@ -23,7 +23,7 @@ export async function GET(req: Request) {
         { status: 400 }
       );
     }
-    const discipline = await loadTeamDisciplineSlice(getAdminDb(), season, teamId);
+    const discipline = await loadTeamDisciplineSlice(getNbaPublicReadDb(), season, teamId);
     return NextResponse.json(
       { ok: true, discipline },
       {

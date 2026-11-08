@@ -8,6 +8,9 @@ function db() {
   return getFirestore();
 }
 
+/** 確定時インクリメントが正。照合は保険なので 1 ユーザー週 1 回で足りる */
+const RECONCILE_MIN_INTERVAL_DAYS = 7;
+
 function toDateKeyJST(d: Date) {
   const j = new Date(d.getTime() + 9 * 60 * 60 * 1000);
   const y = j.getUTCFullYear();
@@ -69,7 +72,9 @@ export async function buildCumulativeStats() {
       const chunk = uids.slice(i, i + CONCURRENCY);
       const chunkResults = await Promise.all(
         chunk.map((uid) =>
-          reconcileCumulativeStatsForUid(firestore, uid, dateKey)
+          reconcileCumulativeStatsForUid(firestore, uid, dateKey, {
+            minIntervalDays: RECONCILE_MIN_INTERVAL_DAYS,
+          })
         )
       );
       chunkResults.forEach((r) => {

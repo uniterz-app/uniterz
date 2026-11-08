@@ -79,6 +79,62 @@ export function shotZonePathAboveBreak3Fill(): string {
   ].join(" ");
 }
 
+/** NBA の shot_zone_area: ゴールから見て ±18° の内側が Center、外側が Left / Right Side Center */
+const ABOVE_BREAK_CENTER_DEG = 18;
+
+/** アーク上の 3P を左 45 度・トップ・右 45 度に分けた塗り */
+export function shotZonePathAboveBreak3Sector(part: "left" | "center" | "right"): string {
+  const r = SHOT_ZONE_ARC_R;
+  const { x: bx, y: by } = SHOT_ZONE_BASKET;
+  const cornerY = cornerArcY();
+  const top = shotCourtTop();
+  const rad = (ABOVE_BREAK_CENTER_DEG * Math.PI) / 180;
+  const arcDx = r * Math.sin(rad);
+  const arcY = by - r * Math.cos(rad);
+  const topDx = (by - top) * Math.tan(rad);
+  const lArc = `${bx - arcDx} ${arcY}`;
+  const rArc = `${bx + arcDx} ${arcY}`;
+  if (part === "center") {
+    return [
+      `M ${bx - topDx} ${top}`,
+      `L ${bx + topDx} ${top}`,
+      `L ${rArc}`,
+      `A ${r} ${r} 0 0 0 ${lArc}`,
+      `Z`,
+    ].join(" ");
+  }
+  if (part === "left") {
+    return [
+      `M 8 ${top}`,
+      `L ${bx - topDx} ${top}`,
+      `L ${lArc}`,
+      `A ${r} ${r} 0 0 0 ${CORNER_X_L} ${cornerY}`,
+      `L 8 ${cornerY}`,
+      `Z`,
+    ].join(" ");
+  }
+  return [
+    `M ${bx + topDx} ${top}`,
+    `L ${SHOT_ZONE_VB_W - 8} ${top}`,
+    `L ${SHOT_ZONE_VB_W - 8} ${cornerY}`,
+    `L ${CORNER_X_R} ${cornerY}`,
+    `A ${r} ${r} 0 0 0 ${rArc}`,
+    `Z`,
+  ].join(" ");
+}
+
+/** 45 度とトップの境目（ゴールからコート上端までの線） */
+export function shotZoneAboveBreak3Dividers(): string {
+  const r = SHOT_ZONE_ARC_R;
+  const { x: bx, y: by } = SHOT_ZONE_BASKET;
+  const top = shotCourtTop();
+  const rad = (ABOVE_BREAK_CENTER_DEG * Math.PI) / 180;
+  const arcDx = r * Math.sin(rad);
+  const arcY = by - r * Math.cos(rad);
+  const topDx = (by - top) * Math.tan(rad);
+  return `M ${bx - arcDx} ${arcY} L ${bx - topDx} ${top} M ${bx + arcDx} ${arcY} L ${bx + topDx} ${top}`;
+}
+
 export function shotZonePathLeftCorner3(): string {
   const cornerY = cornerArcY();
   return [

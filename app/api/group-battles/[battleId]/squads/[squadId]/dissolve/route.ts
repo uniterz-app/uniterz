@@ -2,6 +2,7 @@ import { adminDb } from "@/lib/firebaseAdmin";
 import { requireUidFromRequest } from "@/lib/communities/serverAuth";
 import { dissolveSquad } from "@/lib/groupBattles/server/dissolveSquad";
 import { jsonErr, jsonOk, mapAuthError } from "@/lib/groupBattles/server/http";
+import { revalidateGroupBattleSharedCache } from "@/lib/groupBattles/server/sharedViewCache";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -17,6 +18,7 @@ export async function POST(req: Request, ctx: Ctx) {
     if (!result.ok) {
       return jsonErr(result.error, result.status);
     }
+    revalidateGroupBattleSharedCache();
     return jsonOk({ dissolved: true });
   } catch (e) {
     return mapAuthError(e);

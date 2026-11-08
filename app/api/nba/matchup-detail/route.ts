@@ -2,7 +2,7 @@ export const runtime = "nodejs";
 
 import { NextResponse } from "next/server";
 import { unstable_cache } from "next/cache";
-import { getAdminDb } from "@/lib/firebaseAdmin";
+import { getNbaPublicReadDb } from "@/lib/nba/nbaPublicReadDb";
 import { nbaInjurySnapshotCacheControl } from "@/lib/nba/nbaStatsSnapshotCacheControl";
 import { loadMatchupDetailBundle } from "@/lib/nba/predict/loadMatchupDetailBundle";
 import {
@@ -35,7 +35,7 @@ export async function GET(req: Request) {
 
     const payload = await unstable_cache(
       () =>
-        loadMatchupDetailBundle(getAdminDb(), {
+        loadMatchupDetailBundle(getNbaPublicReadDb(), {
           homeTeamId: home,
           awayTeamId: away,
           seasonKey: season,
