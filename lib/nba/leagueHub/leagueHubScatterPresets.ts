@@ -70,9 +70,9 @@ export const LEAGUE_HUB_PLAYER_SCATTER_PRESETS: readonly LeagueHubPlayerScatterP
     volumeLabel: { ja: "得点", en: "PTS" },
     quadrants: {
       tr: { ja: "ファーストオプション", en: "FIRST OPTION" },
-      tl: { ja: "高効率ロールプレーヤー", en: "EFFICIENT ROLE" },
+      tl: { ja: "効率型スコアラー", en: "EFFICIENT SCORER" },
       br: { ja: "ボリュームスコアラー", en: "VOLUME SCORER" },
-      bl: { ja: "ロールプレーヤー", en: "ROLE PLAYER" },
+      bl: { ja: "セカンドオプション", en: "SECOND OPTION" },
     },
   },
   {
