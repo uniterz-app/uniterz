@@ -148,7 +148,7 @@ export const LEAGUE_HUB_PLAYER_SCATTER_PRESETS: readonly LeagueHubPlayerScatterP
     id: "shotType",
     label: { ja: "シュートの型", en: "SHOT TYPE" },
     hint: {
-      ja: "右ほどパスからのシュート、上ほどドリブルからのシュートが入る。",
+      ja: "右ほどキャッチ＆シュート、上ほどプルアップが入る。",
       en: "Right = better catch-and-shoot FG%, up = better pull-up FG%.",
     },
     x: { metric: "cns_fg_pct", label: { ja: "C&S FG%", en: "C&S FG%" }, format: "pct" },
