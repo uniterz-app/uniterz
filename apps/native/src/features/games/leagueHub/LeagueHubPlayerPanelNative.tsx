@@ -412,6 +412,89 @@ function draftLabel(r: LeagueHubLadderRow, ja: boolean): string {
   return ja ? `${r.draftRound} 巡 ${r.draftNumber} 位` : `R${r.draftRound} #${r.draftNumber}`;
 }
 
+type AwardId = "mvp" | "rookies" | "dpoy" | "sixth" | "mip";
+
+const AWARD_CHIPS: readonly { id: AwardId; label: string }[] = [
+  { id: "mvp", label: "MVP" },
+  { id: "rookies", label: "ROY" },
+  { id: "dpoy", label: "DPOY" },
+  { id: "sixth", label: "6MOY" },
+  { id: "mip", label: "MIP" },
+];
+
+const AWARD_FOOTNOTE: Record<AwardId, { ja: string; en: string }> = {
+  mvp: {
+    ja: "UNITERZ の試算。65 試合ルール（20 分以上の出場）にまだ届く選手だけを、個人の貢献度（PIE）5 割・効率込みの得点 2 割・チームの勝率 3 割で順位付け。公式の投票とは別物です。PTS / REB / AST。",
+    en: "UNITERZ estimate. Players still on track for 65 games (20+ min), ranked by PIE (50%), efficiency-adjusted scoring (20%) and team win % (30%). Not the official vote. PTS / REB / AST.",
+  },
+  rookies: {
+    ja: "UNITERZ の試算。前季までに NBA の試合に出ていない選手（ドラフト外も含む）を、Game Score（効率も含めた 1 試合の総合値）の平均 6 割・個人の貢献度（PIE）2 割・総出場時間 2 割で順位付け。チーム試合の半分以上・平均 12 分以上が対象。PTS / REB / AST。",
+    en: "UNITERZ estimate. Players with no prior NBA games (undrafted included), ranked by average Game Score (60%), PIE (20%) and total minutes (20%). Half of team games and 12+ MPG required. PTS / REB / AST.",
+  },
+  dpoy: {
+    ja: "UNITERZ の試算。65 試合ルールにまだ届く選手を、出場中の失点ペース（DRtg）3 割・STL＋BLK 2.5 割・ディフレクション＋シュートチェック 2 割・マークした相手の FG% 1.5 割・DREB 1 割で順位付け。STL / BLK と DRtg。",
+    en: "UNITERZ estimate. Players still on track for 65 games, ranked by on-court DRtg (30%), STL+BLK (25%), deflections + contests (20%), opponent FG% when guarding (15%) and DREB (10%). STL / BLK and DRtg.",
+  },
+  sixth: {
+    ja: "UNITERZ の試算。65 試合ルールにまだ届き、先発よりベンチ出場が多い選手を、ベンチ出場時の Game Score 平均 5 割・効率込みの得点 3 割・個人の貢献度（PIE）2 割で順位付け。PTS / REB / AST。",
+    en: "UNITERZ estimate. Players still on track for 65 games who come off the bench more than they start, ranked by average Game Score off the bench (50%), efficiency-adjusted scoring (30%) and PIE (20%). PTS / REB / AST.",
+  },
+  mip: {
+    ja: "UNITERZ の試算。前季 20 試合以上・前季平均 25 点未満で、65 試合ルールにまだ届く選手の前季からの伸び。得点の増分 3 割・得点の伸び率 2 割・個人の貢献度（PIE）の増分 3 割・出場時間の増分 2 割。シーズン序盤は数試合で大きく動きます。前季 → 今季の平均得点。",
+    en: "UNITERZ estimate. Growth from last season for players with 20+ games and under 25 PPG last season, still on track for 65 games: points gained (30%), points growth rate (20%), PIE gained (30%) and minutes gained (20%). Swings a lot early in the season. Last season → this season PPG.",
+  },
+};
+
+function awardRowText(
+  award: AwardId,
+  r: LeagueHubLadderRow,
+  ja: boolean
+): { sub?: string; value: string; valueSub?: string } {
+  const line = `${r.pts.toFixed(1)} / ${r.reb.toFixed(1)} / ${r.ast.toFixed(1)}`;
+  switch (award) {
+    case "mvp":
+      return {
+        sub: r.pieRank != null ? (ja ? `貢献度 ${r.pieRank} 位` : `PIE #${r.pieRank}`) : undefined,
+        value: line,
+        valueSub:
+          r.teamWins != null ? `${ja ? "チーム" : "TEAM"} ${r.teamWins}-${r.teamLosses}` : undefined,
+      };
+    case "rookies":
+      return {
+        sub: `${draftLabel(r, ja)} · ${r.gp} GP`,
+        value: line,
+        valueSub: r.gameScore != null ? `GmSc ${r.gameScore.toFixed(1)}` : undefined,
+      };
+    case "dpoy":
+      return {
+        sub:
+          r.matchupFgPct != null
+            ? `${ja ? "マーク相手 FG%" : "Opp FG%"} ${(r.matchupFgPct * 100).toFixed(1)}%`
+            : `${r.gp} GP`,
+        value: `${(r.stl ?? 0).toFixed(1)} / ${(r.blk ?? 0).toFixed(1)}`,
+        valueSub: r.drtg != null ? `DRtg ${r.drtg.toFixed(1)}` : undefined,
+      };
+    case "sixth":
+      return {
+        sub: ja
+          ? `ベンチ ${r.benchGames ?? 0} · 先発 ${r.startGames ?? 0}`
+          : `Bench ${r.benchGames ?? 0} · Start ${r.startGames ?? 0}`,
+        value: line,
+        valueSub: r.gameScore != null ? `GmSc ${r.gameScore.toFixed(1)}` : undefined,
+      };
+    case "mip": {
+      const dPts = r.prevPts != null ? r.pts - r.prevPts : null;
+      const dPie = r.pieDelta != null ? r.pieDelta * 100 : null;
+      const signed = (v: number) => `${v >= 0 ? "+" : ""}${v.toFixed(1)}`;
+      return {
+        sub: dPie != null ? `${ja ? "貢献度" : "PIE"} ${signed(dPie)}` : undefined,
+        value: r.prevPts != null ? `${r.prevPts.toFixed(1)} → ${r.pts.toFixed(1)}` : r.pts.toFixed(1),
+        valueSub: dPts != null ? `PTS ${signed(dPts)}` : undefined,
+      };
+    }
+  }
+}
+
 export default function LeagueHubPlayerPanelNative({ hub, lang, onSelectPlayer }: Props) {
   const [high, setHigh] = useState<LeagueHubHighStat>("pts");
   const [countId, setCountId] = useState<CountId>("pts20");
@@ -428,7 +511,9 @@ export default function LeagueHubPlayerPanelNative({ hub, lang, onSelectPlayer }
             ? hub.counts.doubleDouble
             : hub.counts.tripleDouble;
   const isStreak = countId === "pts20" || countId === "ddStreak";
-  const hasPrev = hub.ladderPrev != null;
+  const [award, setAward] = useState<AwardId>("mvp");
+  const awardRows = (award === "rookies" ? hub.rookies : award === "mvp" ? hub.mvp : hub[award]) ?? [];
+  const awardPrev = hub.ladderPrev?.[award];
 
   return (
     <View>
@@ -451,54 +536,22 @@ export default function LeagueHubPlayerPanelNative({ hub, lang, onSelectPlayer }
         )}
       </HubSection>
 
-      <HubSection title="MVP LADDER">
-        {hub.mvp.length === 0
+      <HubSection title="AWARD LADDERS">
+        <HubChips items={AWARD_CHIPS} value={award} onChange={setAward} />
+        {awardRows.length === 0
           ? noData(lang)
-          : hub.mvp.map((r, i) => (
+          : awardRows.map((r, i) => (
               <HubRow
                 key={r.playerId}
                 rank={i + 1}
-                rankMove={ladderMove(r, i, hasPrev)}
+                rankMove={ladderMove(r, i, awardPrev != null)}
                 teamId={r.teamId}
                 name={r.name}
-                sub={r.pieRank != null ? (ja ? `貢献度 ${r.pieRank} 位` : `PIE #${r.pieRank}`) : undefined}
-                value={`${r.pts.toFixed(1)} / ${r.reb.toFixed(1)} / ${r.ast.toFixed(1)}`}
-                valueSub={
-                  r.teamWins != null
-                    ? `${ja ? "チーム" : "TEAM"} ${r.teamWins}-${r.teamLosses}`
-                    : undefined
-                }
+                {...awardRowText(award, r, ja)}
                 onPress={() => onSelectPlayer(r.playerId)}
               />
             ))}
-        <Text style={hubStyles.footnote}>
-          {ja
-            ? "UNITERZ の試算。65 試合ルール（20 分以上の出場）にまだ届く選手だけを、個人の貢献度（PIE）5 割・効率込みの得点 2 割・チームの勝率 3 割で順位付け。公式の投票とは別物です。PTS / REB / AST。"
-            : "UNITERZ estimate. Players still on track for 65 games (20+ min), ranked by PIE (50%), efficiency-adjusted scoring (20%) and team win % (30%). Not the official vote. PTS / REB / AST."}
-        </Text>
-      </HubSection>
-
-      <HubSection title="ROOKIE LADDER">
-        {hub.rookies.length === 0
-          ? noData(lang)
-          : hub.rookies.map((r, i) => (
-              <HubRow
-                key={r.playerId}
-                rank={i + 1}
-                rankMove={ladderMove(r, i, hasPrev)}
-                teamId={r.teamId}
-                name={r.name}
-                sub={`${draftLabel(r, ja)} · ${r.gp} GP`}
-                value={`${r.pts.toFixed(1)} / ${r.reb.toFixed(1)} / ${r.ast.toFixed(1)}`}
-                valueSub={r.gameScore != null ? `GmSc ${r.gameScore.toFixed(1)}` : undefined}
-                onPress={() => onSelectPlayer(r.playerId)}
-              />
-            ))}
-        <Text style={hubStyles.footnote}>
-          {ja
-            ? "UNITERZ の試算。前季までに NBA の試合に出ていない選手（ドラフト外も含む）を、Game Score（効率も含めた 1 試合の総合値）の平均 6 割・個人の貢献度（PIE）2 割・総出場時間 2 割で順位付け。チーム試合の半分以上・平均 12 分以上が対象。"
-            : "UNITERZ estimate. Players with no prior NBA games (undrafted included), ranked by average Game Score (60%), PIE (20%) and total minutes (20%). Half of team games and 12+ MPG required."}
-        </Text>
+        <Text style={hubStyles.footnote}>{AWARD_FOOTNOTE[award][ja ? "ja" : "en"]}</Text>
       </HubSection>
 
       <HubSection

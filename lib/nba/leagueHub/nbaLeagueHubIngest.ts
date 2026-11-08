@@ -14,7 +14,7 @@ import { NBA_PLAYER_SHOT_ZONES_COLLECTION } from "@/lib/nba/playerShotZones/play
 import { NBA_PLAYER_SEASON_METRICS_COLLECTION } from "@/lib/nba/playerSeasonMetrics/playerSeasonMetricsTypes";
 import { NBA_PLAYER_GAME_LOGS_COLLECTION } from "@/lib/nba/playerGameLogs/playerGameLogsTypes";
 import { NBA_PLAYER_CAREER_SEASONS_COLLECTION } from "@/lib/nba/playerCareerSeasons/playerCareerSeasonsTypes";
-import { nbaLeagueStatsSeasonKeys } from "@/lib/rankings/nbaSeason";
+import { nbaLeagueStatsSeasonKeys, previousNbaSeasonKey } from "@/lib/rankings/nbaSeason";
 import { loadNbaPlayerShotAreas } from "@/lib/nba/shotCharts/loadNbaPlayerShotAreas";
 import {
   buildNbaLeagueHub,
@@ -81,13 +81,13 @@ async function loadRoster(db: Firestore, seasonKey: string) {
   return out;
 }
 
-async function loadMetrics(db: Firestore, seasonKey: string) {
+/** 前季は MIP の比較に使う指標だけ読む */
+const PRIOR_SEASON_METRIC_FIELDS = ["gamesPlayed", "teamId", "metrics.pts", "metrics.pie", "metrics.min"];
+
+async function loadMetrics(db: Firestore, seasonKey: string, fields?: string[]) {
   const out = new Map<string, LeagueHubMetricsEntry>();
-  const snap = await db
-    .collection(NBA_PLAYER_SEASON_METRICS_COLLECTION)
-    .doc(seasonKey)
-    .collection("players")
-    .get();
+  const col = db.collection(NBA_PLAYER_SEASON_METRICS_COLLECTION).doc(seasonKey).collection("players");
+  const snap = await (fields ? col.select(...fields) : col).get();
   for (const d of snap.docs) {
     const data = d.data();
     const values: Record<string, number> = {};
@@ -210,15 +210,18 @@ async function loadCloseRecords(db: Firestore, seasonKey: string) {
 async function loadPriorPlayerIds(
   db: Firestore,
   seasonKey: string,
-  currentIds: Iterable<string>
+  currentIds: Iterable<string>,
+  lastSeason: { key: string; ids: Iterable<string> }
 ): Promise<Set<string>> {
-  const prior = nbaLeagueStatsSeasonKeys(seasonKey).filter((k) => k !== seasonKey);
+  const prior = nbaLeagueStatsSeasonKeys(seasonKey).filter(
+    (k) => k !== seasonKey && k !== lastSeason.key
+  );
   const snaps = await Promise.all(
     prior.map((k) =>
       db.collection(NBA_PLAYER_SEASON_METRICS_COLLECTION).doc(k).collection("players").select().get()
     )
   );
-  const out = new Set<string>();
+  const out = new Set<string>(lastSeason.ids);
   for (const snap of snaps) for (const d of snap.docs) out.add(d.id);
 
   const startYear = Number.parseInt(seasonKey.slice(0, 4), 10);
@@ -240,23 +243,56 @@ async function loadPriorPlayerIds(
   return out;
 }
 
+/** 今季の試合ごとの先発（BDL game id → playerId）。live ingest が lineups から保存したものだけ */
+async function loadStarterIdsByGame(db: Firestore, seasonKey: string) {
+  const out = new Map<string, Set<string>>();
+  const snap = await db
+    .collection("games")
+    .where("league", "==", "nba")
+    .where("season", "==", seasonKey)
+    .select("liveStarterIds")
+    .get();
+  for (const d of snap.docs) {
+    const ids = d.get("liveStarterIds");
+    const m = /^nba-bdl-(\d+)$/.exec(d.id);
+    if (!m || !Array.isArray(ids) || ids.length === 0) continue;
+    out.set(m[1]!, new Set(ids.map(String)));
+  }
+  return out;
+}
+
 export async function ingestNbaLeagueHub(
   db: Firestore,
   input: { seasonKey: string; nowMs?: number }
 ) {
   const { seasonKey } = input;
-  const [roster, metrics, shotZones, gameLogs, standings, teamLogs, closeRecords] =
-    await Promise.all([
-      loadRoster(db, seasonKey),
-      loadMetrics(db, seasonKey),
-      loadShotZones(db, seasonKey),
-      loadGameLogs(db, seasonKey),
-      loadStandings(db, seasonKey),
-      loadTeamLogs(db, seasonKey),
-      loadCloseRecords(db, seasonKey),
-    ]);
+  const lastSeasonKey = previousNbaSeasonKey(seasonKey);
+  const [
+    roster,
+    metrics,
+    priorSeasonMetrics,
+    shotZones,
+    gameLogs,
+    standings,
+    teamLogs,
+    closeRecords,
+    starterIdsByGame,
+  ] = await Promise.all([
+    loadRoster(db, seasonKey),
+    loadMetrics(db, seasonKey),
+    loadMetrics(db, lastSeasonKey, PRIOR_SEASON_METRIC_FIELDS),
+    loadShotZones(db, seasonKey),
+    loadGameLogs(db, seasonKey),
+    loadStandings(db, seasonKey),
+    loadTeamLogs(db, seasonKey),
+    loadCloseRecords(db, seasonKey),
+    loadStarterIdsByGame(db, seasonKey),
+  ]);
   const [priorPlayerIds, prevSnap, shotAreasDoc] = await Promise.all([
-    loadPriorPlayerIds(db, seasonKey, metrics.keys()),
+    loadPriorPlayerIds(db, seasonKey, metrics.keys(), {
+      key: lastSeasonKey,
+      ids: priorSeasonMetrics.keys(),
+    }),
     db.collection(NBA_LEAGUE_HUB_COLLECTION).doc(seasonKey).get(),
     loadNbaPlayerShotAreas(db, seasonKey),
   ]);
@@ -274,6 +310,8 @@ export async function ingestNbaLeagueHub(
     teamLogs,
     closeRecords,
     priorPlayerIds,
+    priorSeasonMetrics,
+    starterIdsByGame,
     previousLadders: prevData
       ? {
           ladderWeek: (prevData.ladderWeek as LeagueHubLadderWeek | undefined) ?? null,
@@ -296,5 +334,8 @@ export async function ingestNbaLeagueHub(
     week: hub.week ? `${hub.week.startLabel}-${hub.week.endLabel}` : null,
     mvp: hub.mvp.length,
     rookies: hub.rookies.length,
+    dpoy: hub.dpoy?.length ?? 0,
+    sixth: hub.sixth?.length ?? 0,
+    mip: hub.mip?.length ?? 0,
   };
 }

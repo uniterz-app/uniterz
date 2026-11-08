@@ -160,6 +160,17 @@ export type LeagueHubLadderRow = LeagueHubPlayerRef & {
   /** 新人: 指名（巡・順位）。ドラフト外は null */
   draftRound?: number | null;
   draftNumber?: number | null;
+  /** DPOY: 出場時の守備レーティング・STL / BLK・マークした相手の FG%（0–1） */
+  drtg?: number;
+  stl?: number;
+  blk?: number;
+  matchupFgPct?: number;
+  /** シックスマン: 先発がわかる試合のうちベンチ / 先発の数（gameScore はベンチ出場時の平均） */
+  benchGames?: number;
+  startGames?: number;
+  /** MIP: 前季の平均得点と PIE の増分 */
+  prevPts?: number;
+  pieDelta?: number;
   /** 先週の同じラダーの順位（圏外 / 初週は null） */
   prevRank?: number | null;
 };
@@ -169,6 +180,9 @@ export type LeagueHubLadderWeek = {
   weekStartMs: number;
   mvp: Record<string, number>;
   rookies: Record<string, number>;
+  dpoy?: Record<string, number>;
+  sixth?: Record<string, number>;
+  mip?: Record<string, number>;
 };
 
 export type LeagueHubRecord = { wins: number; losses: number };
@@ -211,6 +225,9 @@ export type NbaLeagueHubDoc = {
   week: LeagueHubWeek | null;
   rookies: LeagueHubLadderRow[];
   mvp: LeagueHubLadderRow[];
+  dpoy?: LeagueHubLadderRow[];
+  sixth?: LeagueHubLadderRow[];
+  mip?: LeagueHubLadderRow[];
   teams: LeagueHubTeamRow[];
   /** 今週の順位（週が変わったら ladderPrev へ回す） */
   ladderWeek?: LeagueHubLadderWeek | null;

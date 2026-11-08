@@ -76,6 +76,10 @@ export type BuildNbaLeagueHubInput = {
   closeRecords: Map<string, LeagueHubRecord>;
   /** 前季までに NBA 出場がある選手。無いときは draftYear で新人判定 */
   priorPlayerIds?: Set<string> | null;
+  /** 前季のシーズン平均（MIP の比較用） */
+  priorSeasonMetrics?: Map<string, LeagueHubMetricsEntry> | null;
+  /** BDL game id → 先発 5 人 × 2 の playerId（シックスマンの判定用） */
+  starterIdsByGame?: Map<string, Set<string>> | null;
   /** 既存 hub doc のラダー週次スナップショット */
   previousLadders?: Pick<NbaLeagueHubDoc, "ladderWeek" | "ladderPrev"> | null;
 };
@@ -91,6 +95,12 @@ const AWARD_MIN_GAMES = 65;
 const AWARD_GAME_MIN = 20;
 /** 前季 ID は 2020-21 からしか無いので、それより前の指名は新人扱いしない */
 const ROOKIE_OLDEST_DRAFT_YEAR = 2020;
+/** MIP の比較に使う前季の最低出場 */
+const MIP_PRIOR_MIN_GP = 20;
+/** 前季すでにこの平均得点以上のスターは MIP の対象外 */
+const MIP_ESTABLISHED_PTS = 25;
+/** 伸び率の分母の下限（3 → 8 点のような低い前季を過大にしない） */
+const MIP_REL_FLOOR_PTS = 8;
 const DAY_MS = 86_400_000;
 /** 「いま続いている」とみなす最終出場からの日数 */
 const ACTIVE_WITHIN_DAYS = 10;
@@ -223,6 +233,16 @@ function blendZ<T>(pool: T[], parts: Array<[(item: T) => number, number]>): numb
     });
   }
   return out;
+}
+
+/** 欠けている値は母集団の平均で埋める（z が 0 になる） */
+function fillMean<T>(pool: T[], get: (item: T) => number | undefined): (item: T) => number {
+  const known = pool.map(get).filter((v): v is number => v != null && Number.isFinite(v));
+  const mean = avg(known);
+  return (item) => {
+    const v = get(item);
+    return v != null && Number.isFinite(v) ? v : mean;
+  };
 }
 
 /** 値の大きい順の順位（playerId → 1 始まり） */
@@ -472,19 +492,41 @@ export function buildNbaLeagueHub(input: BuildNbaLeagueHubInput): NbaLeagueHubDo
   const logsOf = (playerId: string) =>
     (input.gameLogs.get(playerId)?.logs ?? []).filter((g) => g.min > 0);
 
-  // MVP: 65 試合ルール（20 分以上の出場）にまだ届く選手だけ。
-  // 貢献度 PIE 5 割・効率込み得点 2 割・チーム勝率 3 割（資格者内の z）
-  const mvpPool = [...metrics.entries()]
+  // MVP / DPOY / シックスマン / MIP 共通: 65 試合ルール（20 分以上の出場）にまだ届く選手だけ
+  const awardEligible = [...metrics.entries()]
     .map(([id, e]) => {
       const teamGames = teamGamesOf(e.teamId);
       const st = e.teamId ? standingsById.get(e.teamId) : undefined;
-      const pie = e.values.pie;
-      const ts = e.values.ts_pct;
-      if (!st || teamGames === 0 || pie == null || ts == null) return null;
-      const g20 = logsOf(id).filter((g) => g.min >= AWARD_GAME_MIN).length;
+      if (!st || teamGames === 0) return null;
+      const logs = logsOf(id);
+      const g20 = logs.filter((g) => g.min >= AWARD_GAME_MIN).length;
       if (g20 + (SEASON_GAMES - teamGames) < AWARD_MIN_GAMES) return null;
       if (g20 < teamGames * 0.6) return null;
-      return { id, e, pie, ts, pts: e.values.pts ?? 0, winPct: st.wins / teamGames };
+      return { id, e, logs, winPct: st.wins / teamGames };
+    })
+    .filter((x): x is NonNullable<typeof x> => x != null);
+  const topLadder = <P extends { id: string; e: LeagueHubMetricsEntry }>(
+    pool: P[],
+    scores: number[],
+    extra: (p: P) => Partial<LeagueHubLadderRow>
+  ): LeagueHubLadderRow[] =>
+    pool
+      .map((p, i) => ({ p, score: scores[i]! }))
+      .sort((a, b) => b.score - a.score)
+      .slice(0, LADDER_LIMIT)
+      .map(({ p }) => {
+        const row = ladderRow(p.id, p.e);
+        return row ? { ...row, ...extra(p) } : null;
+      })
+      .filter((r): r is LeagueHubLadderRow => r != null);
+
+  // MVP: 貢献度 PIE 5 割・効率込み得点 2 割・チーム勝率 3 割（資格者内の z）
+  const mvpPool = awardEligible
+    .map((a) => {
+      const pie = a.e.values.pie;
+      const ts = a.e.values.ts_pct;
+      if (pie == null || ts == null) return null;
+      return { ...a, pie, ts, pts: a.e.values.pts ?? 0 };
     })
     .filter((x): x is NonNullable<typeof x> => x != null);
   const leagueTs = avg(mvpPool.map((p) => p.ts)) || 1;
@@ -494,15 +536,103 @@ export function buildNbaLeagueHub(input: BuildNbaLeagueHubInput): NbaLeagueHubDo
     [(p) => p.winPct, 0.3],
   ]);
   const pieRankOf = rankMap(mvpPool, (p) => p.pie);
-  const mvp = mvpPool
-    .map((p, i) => ({ p, score: mvpScores[i]! }))
-    .sort((a, b) => b.score - a.score)
-    .slice(0, LADDER_LIMIT)
-    .map(({ p }): LeagueHubLadderRow | null => {
-      const row = ladderRow(p.id, p.e);
-      return row ? { ...row, pieRank: pieRankOf.get(p.id)! } : null;
-    })
-    .filter((r): r is LeagueHubLadderRow => r != null);
+  const mvp = topLadder(mvpPool, mvpScores, (p) => ({ pieRank: pieRankOf.get(p.id)! }));
+
+  // DPOY: 出場時の DRtg 3 割・STL+BLK 2.5 割・ディフレクション+コンテスト 2 割・
+  // マークした相手の FG% 1.5 割・DREB 1 割（低いほど良い指標は符号を反転）
+  const dpoyPool = awardEligible.filter((a) => a.e.values.drtg != null);
+  const dpoyScores = blendZ(dpoyPool, [
+    [(p) => -p.e.values.drtg!, 0.3],
+    [(p) => (p.e.values.stl ?? 0) + (p.e.values.blk ?? 0), 0.25],
+    [
+      fillMean(dpoyPool, (p) =>
+        p.e.values.deflections != null && p.e.values.contested_shots != null
+          ? p.e.values.deflections + p.e.values.contested_shots
+          : undefined
+      ),
+      0.2,
+    ],
+    [fillMean(dpoyPool, (p) => (p.e.values.matchup_fg_pct != null ? -p.e.values.matchup_fg_pct : undefined)), 0.15],
+    [(p) => p.e.values.dreb ?? 0, 0.1],
+  ]);
+  const dpoy = topLadder(dpoyPool, dpoyScores, (p) => ({
+    drtg: round(p.e.values.drtg!, 1),
+    stl: round(p.e.values.stl ?? 0, 1),
+    blk: round(p.e.values.blk ?? 0, 1),
+    ...(p.e.values.matchup_fg_pct != null ? { matchupFgPct: round(p.e.values.matchup_fg_pct, 3) } : null),
+  }));
+
+  // シックスマン: 先発がわかる試合でベンチ出場が先発より多い選手。
+  // ベンチ出場時の Game Score 平均 5 割・効率込み得点 3 割・PIE 2 割
+  const starters = input.starterIdsByGame;
+  const sixthPool = starters
+    ? awardEligible
+        .map((a) => {
+          const bench: NbaPlayerGameLog[] = [];
+          let starts = 0;
+          for (const g of a.logs) {
+            const set = starters.get(g.gameId);
+            if (!set) continue;
+            if (set.has(a.id)) starts += 1;
+            else bench.push(g);
+          }
+          if (bench.length === 0 || bench.length <= starts) return null;
+          return {
+            ...a,
+            bench,
+            starts,
+            benchGameScore: avg(bench.map(gameScore)),
+            pts: a.e.values.pts ?? 0,
+            ts: a.e.values.ts_pct ?? 0,
+          };
+        })
+        .filter((x): x is NonNullable<typeof x> => x != null)
+    : [];
+  const sixthTs = avg(sixthPool.map((p) => p.ts)) || 1;
+  const sixthScores = blendZ(sixthPool, [
+    [(p) => p.benchGameScore, 0.5],
+    [(p) => (p.pts * p.ts) / sixthTs, 0.3],
+    [(p) => p.e.values.pie ?? 0, 0.2],
+  ]);
+  const sixth = topLadder(sixthPool, sixthScores, (p) => ({
+    benchGames: p.bench.length,
+    startGames: p.starts,
+    gameScore: round(p.benchGameScore, 1),
+  }));
+
+  // MIP: 前季 20 試合以上・前季平均 25 点未満の選手の伸び。
+  // 得点の増分 3 割・得点の伸び率 2 割・PIE の増分 3 割・出場時間の増分 2 割
+  const prior = input.priorSeasonMetrics;
+  const mipPool = prior
+    ? awardEligible
+        .map((a) => {
+          const before = prior.get(a.id);
+          if (!before || before.gp < MIP_PRIOR_MIN_GP) return null;
+          const pts = a.e.values.pts ?? 0;
+          const prevPts = before.values.pts ?? 0;
+          if (prevPts >= MIP_ESTABLISHED_PTS) return null;
+          return {
+            ...a,
+            pts,
+            prevPts,
+            dPts: pts - prevPts,
+            relPts: (pts - prevPts) / Math.max(prevPts, MIP_REL_FLOOR_PTS),
+            dPie: (a.e.values.pie ?? 0) - (before.values.pie ?? 0),
+            dMin: (a.e.values.min ?? 0) - (before.values.min ?? 0),
+          };
+        })
+        .filter((x): x is NonNullable<typeof x> => x != null)
+    : [];
+  const mipScores = blendZ(mipPool, [
+    [(p) => p.dPts, 0.3],
+    [(p) => p.relPts, 0.2],
+    [(p) => p.dPie, 0.3],
+    [(p) => p.dMin, 0.2],
+  ]);
+  const mip = topLadder(mipPool, mipScores, (p) => ({
+    prevPts: round(p.prevPts, 1),
+    pieDelta: round(p.dPie, 3),
+  }));
 
   // 新人: 前季までに NBA 出場が無い（ドラフト外・指名後に出なかった選手も含む）。
   // チーム試合の 5 割以上・平均 12 分以上。Game Score 6 割・PIE 2 割・総出場時間 2 割
@@ -567,6 +697,9 @@ export function buildNbaLeagueHub(input: BuildNbaLeagueHubInput): NbaLeagueHubDo
     weekStartMs: thisMonday,
     mvp: Object.fromEntries(mvp.map((r, i) => [r.playerId, i + 1])),
     rookies: Object.fromEntries(rookies.map((r, i) => [r.playerId, i + 1])),
+    dpoy: Object.fromEntries(dpoy.map((r, i) => [r.playerId, i + 1])),
+    sixth: Object.fromEntries(sixth.map((r, i) => [r.playerId, i + 1])),
+    mip: Object.fromEntries(mip.map((r, i) => [r.playerId, i + 1])),
   };
 
   // ── チーム ──
@@ -605,6 +738,9 @@ export function buildNbaLeagueHub(input: BuildNbaLeagueHubInput): NbaLeagueHubDo
     week,
     rookies: withPrev(rookies, ladderPrev?.rookies),
     mvp: withPrev(mvp, ladderPrev?.mvp),
+    dpoy: withPrev(dpoy, ladderPrev?.dpoy),
+    sixth: withPrev(sixth, ladderPrev?.sixth),
+    mip: withPrev(mip, ladderPrev?.mip),
     teams,
     ladderWeek,
     ladderPrev,
