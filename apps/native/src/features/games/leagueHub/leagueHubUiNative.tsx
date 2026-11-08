@@ -5,8 +5,6 @@ import { getTeamAbbrBadgeColor } from "../../../../../../lib/team-colors";
 import type { LeagueHubAxisFormat } from "../../../../../../lib/nba/leagueHub/leagueHubScatterPresets";
 import { CYBER_TAB_CYAN } from "../../rankings/CyberSlantedTabNative";
 import { METRIC_FONT, RANK_DISPLAY_FONT } from "../../rankings/rankingsUiTheme";
-import TeamAbbrBadgeNative from "../TeamAbbrBadgeNative";
-
 export type HubLang = "ja" | "en";
 
 export function teamAbbr(teamId: string | null | undefined): string {
@@ -163,18 +161,20 @@ export function HubRow({
       {rank != null ? <Text style={styles.rowRank}>{rank}</Text> : null}
       {kind === "team" ? (
         <View style={[styles.rowSquare, { backgroundColor: ink }]} />
-      ) : (
-        <View style={styles.rowBadge}>
-          <TeamAbbrBadgeNative teamId={teamId} />
-        </View>
-      )}
+      ) : null}
       <View style={styles.rowNameCol}>
-        <Text
-          style={[styles.rowName, kind === "team" ? teamNameStyle : playerNameStyle]}
-          numberOfLines={1}
-        >
-          {name}
-        </Text>
+        <View style={styles.rowNameLine}>
+          <Text
+            style={[
+              styles.rowName,
+              kind === "team" ? teamNameStyle : playerNameStyle,
+            ]}
+            numberOfLines={1}
+          >
+            {name}
+          </Text>
+          {kind === "player" ? <HubTeamTag teamId={teamId} /> : null}
+        </View>
         {kind === "team" ? (
           <Text style={styles.rowSub} numberOfLines={1}>
             {sub ? `${teamAbbr(teamId)} · ${sub}` : teamAbbr(teamId)}
@@ -190,6 +190,24 @@ export function HubRow({
         {valueSub ? <Text style={styles.rowValueSub}>{valueSub}</Text> : null}
       </View>
     </Pressable>
+  );
+}
+
+/** 名前の右に置く小さいチームタグ（`TeamAbbrBadgeNative` の縮小版） */
+export function HubTeamTag({ teamId }: { teamId: string | null | undefined }) {
+  if (!teamId) return null;
+  const fill = teamInk(teamId);
+  return (
+    <View style={[styles.tag, { borderColor: fill, shadowColor: fill }]}>
+      {[0, 1, 2, 3].map((i) => (
+        <View
+          key={i}
+          pointerEvents="none"
+          style={[styles.tagScanLine, { top: 1 + i * 3, backgroundColor: `${fill}33` }]}
+        />
+      ))}
+      <Text style={[styles.tagText, { color: fill }]}>{teamAbbr(teamId)}</Text>
+    </View>
   );
 }
 
@@ -345,14 +363,43 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
   },
-  rowBadge: {
-    paddingHorizontal: 2,
-  },
   rowNameCol: {
     flex: 1,
     minWidth: 0,
   },
+  rowNameLine: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+    minWidth: 0,
+  },
+  tag: {
+    width: 28,
+    height: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+    borderWidth: 1,
+    transform: [{ skewX: "-14deg" }],
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.7,
+    shadowRadius: 4,
+  },
+  tagScanLine: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    height: 1,
+  },
+  tagText: {
+    fontFamily: "Oxanium_800ExtraBold",
+    fontSize: 7.5,
+    letterSpacing: 0.6,
+    includeFontPadding: false,
+    transform: [{ skewX: "8deg" }],
+  },
   rowName: {
+    flexShrink: 1,
     color: "#fff",
     fontSize: 13,
     fontWeight: "700",
