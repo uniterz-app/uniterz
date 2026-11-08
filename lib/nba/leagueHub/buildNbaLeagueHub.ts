@@ -20,6 +20,8 @@ import {
   type LeagueHubPositionDefense,
   type LeagueHubRecord,
   type LeagueHubTeamRow,
+  type LeagueHubTopGame,
+  type LeagueHubTopGames,
   type LeagueHubTrendRow,
   type LeagueHubWeek,
   type LeagueHubWeekRow,
@@ -88,6 +90,7 @@ const SCATTER_PLAYER_LIMIT = 220;
 const LIST_LIMIT = 5;
 /** エリア別・シーズンハイ・好調 / 不調 */
 const LONG_LIST_LIMIT = 10;
+const TOP_GAMES_DAYS = 7;
 const LADDER_LIMIT = 10;
 const SEASON_GAMES = 82;
 /** MVP など主要賞の出場条件（2023-24〜） */
@@ -376,6 +379,9 @@ export function buildNbaLeagueHub(input: BuildNbaLeagueHubInput): NbaLeagueHubDo
     last: new Map<string, NbaPlayerGameLog[]>(),
     current: new Map<string, NbaPlayerGameLog[]>(),
   };
+  // 18:00 JST の日次は米国東部の当日の試合前に走るため、窓は「最新の試合日から 7 日」で決める
+  const topGamesFrom = todayMs - TOP_GAMES_DAYS * DAY_MS;
+  const topGameCands: Array<{ day: number; game: LeagueHubTopGame }> = [];
 
   for (const [playerId, { teamId, logs }] of input.gameLogs) {
     const ref = refOf(playerId, teamId);
@@ -441,6 +447,29 @@ export function buildNbaLeagueHub(input: BuildNbaLeagueHubInput): NbaLeagueHubDo
     }
 
     for (const { g, day } of dated) {
+      if (day < topGamesFrom) break;
+      if (day > todayMs || !(g.min > 0)) continue;
+      topGameCands.push({
+        day,
+        game: {
+          ...ref,
+          gameId: g.gameId,
+          oppAbbr: g.oppAbbr,
+          home: g.home,
+          result: g.result,
+          dateLabel: g.dateLabel,
+          pts: g.pts,
+          reb: g.reb,
+          ast: g.ast,
+          stl: g.stl,
+          blk: g.blk,
+          fg3m: g.fg3m,
+          gameScore: round(gameScore(g), 1),
+        },
+      });
+    }
+
+    for (const { g, day } of dated) {
       const bucket =
         day >= thisMonday && day <= todayMs
           ? weekAcc.current
@@ -468,6 +497,22 @@ export function buildNbaLeagueHub(input: BuildNbaLeagueHubInput): NbaLeagueHubDo
     todayMs,
     refOf: (id) => refOf(id, input.gameLogs.get(id)?.teamId),
   });
+
+  const topGamesEnd = Math.max(...topGameCands.map((c) => c.day), -Infinity);
+  const topGamesStart = topGamesEnd - (TOP_GAMES_DAYS - 1) * DAY_MS;
+  const topGames: LeagueHubTopGames | null =
+    topGameCands.length === 0
+      ? null
+      : {
+          startLabel: mdLabel(topGamesStart),
+          endLabel: mdLabel(topGamesEnd),
+          games: topGameCands
+            .filter((c) => c.day >= topGamesStart)
+            .map((c) => c.game)
+            .sort((a, b) => b.gameScore - a.gameScore || b.pts - a.pts)
+            .filter((g, i, arr) => arr.findIndex((x) => x.playerId === g.playerId) === i)
+            .slice(0, LIST_LIMIT),
+        };
 
   // ── ラダー ──
   const standingsById = new Map(input.standings.map((s) => [s.teamId, s]));
@@ -736,6 +781,7 @@ export function buildNbaLeagueHub(input: BuildNbaLeagueHubInput): NbaLeagueHubDo
     hot: [...trends].filter((t) => t.diff > 0).sort((a, b) => b.diff - a.diff).slice(0, LONG_LIST_LIMIT),
     cold: [...trends].filter((t) => t.diff < 0).sort((a, b) => a.diff - b.diff).slice(0, LONG_LIST_LIMIT),
     week,
+    topGames,
     rookies: withPrev(rookies, ladderPrev?.rookies),
     mvp: withPrev(mvp, ladderPrev?.mvp),
     dpoy: withPrev(dpoy, ladderPrev?.dpoy),

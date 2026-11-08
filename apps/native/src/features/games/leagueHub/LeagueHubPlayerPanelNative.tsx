@@ -17,7 +17,7 @@ import type {
   LeagueHubLadderRow,
   LeagueHubPlayer,
   LeagueHubPlayerMetric,
-  LeagueHubWeekRow,
+  LeagueHubTopGame,
   NbaLeagueHubDoc,
 } from "../../../../../../lib/nba/leagueHub/leagueHubTypes";
 import { CYBER_TAB_CYAN } from "../../rankings/CyberSlantedTabNative";
@@ -391,39 +391,16 @@ function StyleMap({
   );
 }
 
-function WeekCard({
-  conf,
-  row,
-  onSelectPlayer,
-}: {
-  conf: string;
-  row: LeagueHubWeekRow | null;
-  onSelectPlayer: (playerId: string) => void;
-}) {
-  if (!row) {
-    return (
-      <View style={[hubStyles.card, styles.weekCard]}>
-        <Text style={styles.weekConf}>{conf}</Text>
-        <Text style={styles.weekName}>—</Text>
-      </View>
-    );
-  }
-  return (
-    <Pressable
-      style={[hubStyles.card, styles.weekCard, { borderColor: teamInk(row.teamId) }]}
-      onPress={() => onSelectPlayer(row.playerId)}
-    >
-      <Text style={styles.weekConf}>{conf}</Text>
-      <Text style={[styles.weekName, playerNameStyle]} numberOfLines={1}>
-        {row.name}
-      </Text>
-      <Text style={styles.weekTeam}>
-        {teamAbbr(row.teamId)} · {row.wins}-{row.games - row.wins}
-      </Text>
-      <Text style={styles.weekLine}>
-        {row.pts.toFixed(1)} PTS · {row.reb.toFixed(1)} REB · {row.ast.toFixed(1)} AST
-      </Text>
-    </Pressable>
+const TOP_GAME_EXTRA_MIN = 5;
+
+function topGameSub(g: LeagueHubTopGame): string {
+  const extras = [
+    g.fg3m >= TOP_GAME_EXTRA_MIN ? `${g.fg3m} 3PM` : null,
+    g.stl >= TOP_GAME_EXTRA_MIN ? `${g.stl} STL` : null,
+    g.blk >= TOP_GAME_EXTRA_MIN ? `${g.blk} BLK` : null,
+  ].filter(Boolean);
+  return [`${g.home ? "vs" : "@"} ${g.oppAbbr} · ${g.dateLabel} · ${g.result}`, ...extras].join(
+    " · "
   );
 }
 
@@ -636,31 +613,28 @@ export default function LeagueHubPlayerPanelNative({ hub, lang, section, onSelec
 
       <View style={shown("trend")}>
         <HubSection
-          title="PLAYERS OF THE WEEK"
+          title="TOP PERFORMANCES"
           hint={
-            hub.week
-              ? `${hub.week.startLabel} – ${hub.week.endLabel}${
-                  hub.week.inProgress ? (ja ? "（今週・途中）" : " (in progress)") : ""
-                } · ${ja ? "Game Score の平均" : "avg Game Score"}`
+            hub.topGames
+              ? `${hub.topGames.startLabel} – ${hub.topGames.endLabel} · ${
+                  ja ? "1 試合の Game Score 順" : "single games by Game Score"
+                }`
               : undefined
           }
         >
-          {hub.week ? (
+          {hub.topGames && hub.topGames.games.length > 0 ? (
             <View>
-              <View style={styles.weekRow}>
-                <WeekCard conf="EAST" row={hub.week.east} onSelectPlayer={onSelectPlayer} />
-                <WeekCard conf="WEST" row={hub.week.west} onSelectPlayer={onSelectPlayer} />
-              </View>
-              {hub.week.top.slice(0, 5).map((r, i) => (
+              <HubCellHeader labels={["PTS", "REB", "AST"]} />
+              {hub.topGames.games.map((g, i) => (
                 <HubRow
-                  key={r.playerId}
+                  key={`${g.playerId}-${g.gameId}`}
                   rank={i + 1}
-                  teamId={r.teamId}
-                  name={r.name}
-                  sub={`${r.games} G`}
-                  value={r.gameScore.toFixed(1)}
-                  valueSub={`${r.pts.toFixed(1)} / ${r.reb.toFixed(1)} / ${r.ast.toFixed(1)}`}
-                  onPress={() => onSelectPlayer(r.playerId)}
+                  teamId={g.teamId}
+                  name={g.name}
+                  sub={topGameSub(g)}
+                  cells={[String(g.pts), String(g.reb), String(g.ast)]}
+                  valueSub={`Game Score ${g.gameScore.toFixed(1)}`}
+                  onPress={() => onSelectPlayer(g.playerId)}
                 />
               ))}
             </View>
@@ -966,39 +940,5 @@ const styles = StyleSheet.create({
     fontSize: 10,
     textAlign: "center",
     marginTop: 6,
-  },
-  weekRow: {
-    flexDirection: "row",
-    gap: 8,
-    marginBottom: 6,
-  },
-  weekCard: {
-    flex: 1,
-    minWidth: 0,
-  },
-  weekConf: {
-    fontFamily: METRIC_FONT,
-    color: CYBER_TAB_CYAN,
-    fontSize: 10,
-    fontWeight: "800",
-    letterSpacing: 1.6,
-  },
-  weekName: {
-    color: "#fff",
-    fontSize: 15,
-    fontWeight: "800",
-    marginTop: 2,
-  },
-  weekTeam: {
-    fontFamily: METRIC_FONT,
-    color: "rgba(255,255,255,0.5)",
-    fontSize: 10,
-    marginTop: 1,
-  },
-  weekLine: {
-    fontFamily: METRIC_FONT,
-    color: "rgba(255,255,255,0.85)",
-    fontSize: 10,
-    marginTop: 4,
   },
 });

@@ -134,6 +134,29 @@ export type LeagueHubWeekRow = LeagueHubPlayerRef & {
   gameScore: number;
 };
 
+/** 直近 7 日間の 1 試合（Game Score 順・1 人 1 試合） */
+export type LeagueHubTopGame = LeagueHubPlayerRef & {
+  gameId: string;
+  oppAbbr: string;
+  home: boolean;
+  result: "W" | "L";
+  dateLabel: string;
+  pts: number;
+  reb: number;
+  ast: number;
+  stl: number;
+  blk: number;
+  fg3m: number;
+  gameScore: number;
+};
+
+export type LeagueHubTopGames = {
+  /** M/D（米国東部） */
+  startLabel: string;
+  endLabel: string;
+  games: LeagueHubTopGame[];
+};
+
 export type LeagueHubWeek = {
   /** M/D（米国東部） */
   startLabel: string;
@@ -223,6 +246,7 @@ export type NbaLeagueHubDoc = {
   hot: LeagueHubTrendRow[];
   cold: LeagueHubTrendRow[];
   week: LeagueHubWeek | null;
+  topGames?: LeagueHubTopGames | null;
   rookies: LeagueHubLadderRow[];
   mvp: LeagueHubLadderRow[];
   dpoy?: LeagueHubLadderRow[];
