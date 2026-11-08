@@ -8,7 +8,7 @@ import type {
 import JerseyMarkSvg from "../JerseyMarkSvg";
 import { CYBER_TAB_CYAN } from "../../rankings/CyberSlantedTabNative";
 import { METRIC_FONT } from "../../rankings/rankingsUiTheme";
-import { formatHubValue, type HubLang } from "./leagueHubUiNative";
+import { NAME_SVG_FONT, formatHubValue, type HubLang } from "./leagueHubUiNative";
 
 export type HubScatterPoint = {
   id: string;
@@ -107,7 +107,7 @@ export default function LeagueHubScatterNative({
       [];
     for (const { i, sel } of order) {
       const m = placed[i]!;
-      const w = m.p.label.length * fontSize * 0.6 + 2;
+      const w = m.p.label.length * fontSize * 0.68 + 2;
       const h = fontSize + 2;
       const half = m.size / 2;
       const cands: Array<{ box: Box; x: number; y: number; anchor: "start" | "middle" | "end" }> =
@@ -290,11 +290,12 @@ export default function LeagueHubScatterNative({
                     y={y}
                     textAnchor={anchor}
                     fontSize={layout.fontSize}
-                    fontWeight="700"
+                    fontFamily={NAME_SVG_FONT}
+                    fontWeight="600"
                     fill={sel ? CYBER_TAB_CYAN : "rgba(255,255,255,0.82)"}
                     opacity={hasSelection && !sel ? 0.45 : 1}
                   >
-                    {m.p.label}
+                    {m.p.label.toUpperCase()}
                   </SvgText>
                 );
               })}

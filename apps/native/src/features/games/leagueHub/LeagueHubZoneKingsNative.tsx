@@ -27,6 +27,7 @@ import {
   HubEmpty,
   HubRow,
   HubToggle,
+  NAME_SVG_FONT,
   formatHubValue,
   teamInk,
   type HubLang,
@@ -152,7 +153,7 @@ export default function LeagueHubZoneKingsNative({ zones, lang, onSelectPlayer }
               const active = id === zoneId;
               const nameSize =
                 id === "restricted" || id === "left_corner_3" || id === "right_corner_3" ? 17 : 19;
-              const boxW = Math.max(king.name.length * nameSize * 0.6, 60) + 14;
+              const boxW = Math.max(king.name.length * nameSize * 0.68, 60) + 14;
               return (
                 <G key={`k-${id}`}>
                   <Rect
@@ -168,10 +169,11 @@ export default function LeagueHubZoneKingsNative({ zones, lang, onSelectPlayer }
                     y={pos.y - 4}
                     textAnchor="middle"
                     fontSize={nameSize}
-                    fontWeight="800"
+                    fontFamily={NAME_SVG_FONT}
+                    fontWeight="600"
                     fill={active ? CYBER_TAB_CYAN : teamInk(king.teamId)}
                   >
-                    {king.name}
+                    {king.name.toUpperCase()}
                   </SvgText>
                   <SvgText
                     x={pos.x}
