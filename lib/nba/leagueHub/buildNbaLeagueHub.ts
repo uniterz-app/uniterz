@@ -112,18 +112,18 @@ const ZONE_DEFS: ZoneDef[] = [
   { id: "restricted", short: "RA", minFga: 4 },
   { id: "paint", short: "PAINT", minFga: 3 },
   { id: "mid", short: "MID", minFga: 3 },
-  { id: "left_corner_3", short: "LC3", minFga: 1.2 },
-  { id: "right_corner_3", short: "RC3", minFga: 1.2 },
+  { id: "left_corner_3", short: "LC3", minFga: 0.8 },
+  { id: "right_corner_3", short: "RC3", minFga: 0.8 },
   { id: "above_break_3", short: "AB3", minFga: 4 },
 ];
 
-/** shot_charts 由来。アーク上の 3P を左 45 度・トップ・右 45 度に分ける */
+/** shot_charts 由来。アーク上の 3P を左 45 度・トップ・右 45 度に分ける。コーナーは片側を打つ選手が少ないので基準を低く */
 const AREA_ZONE_DEFS: ZoneDef[] = [
   { id: "restricted", short: "RA", minFga: 4 },
   { id: "paint", short: "PAINT", minFga: 3 },
   { id: "mid", short: "MID", minFga: 3 },
-  { id: "left_corner_3", short: "LC3", minFga: 1.2 },
-  { id: "right_corner_3", short: "RC3", minFga: 1.2 },
+  { id: "left_corner_3", short: "LC3", minFga: 0.8 },
+  { id: "right_corner_3", short: "RC3", minFga: 0.8 },
   { id: "left_wing_3", short: "LW3", minFga: 1.5 },
   { id: "top_3", short: "TOP3", minFga: 1.5 },
   { id: "right_wing_3", short: "RW3", minFga: 1.5 },
