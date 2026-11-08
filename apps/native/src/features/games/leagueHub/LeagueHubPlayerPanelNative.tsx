@@ -2,7 +2,9 @@ import { useMemo, useState } from "react";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Keyboard, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import {
+  LEAGUE_HUB_PLAYER_SCATTER_GROUPS,
   LEAGUE_HUB_PLAYER_SCATTER_PRESETS,
+  type LeagueHubPlayerScatterGroupId,
   type LeagueHubPlayerScatterPreset,
 } from "../../../../../../lib/nba/leagueHub/leagueHubScatterPresets";
 import {
@@ -105,7 +107,17 @@ function StyleMap({
   lang: HubLang;
   onSelectPlayer: (playerId: string) => void;
 }) {
-  const [presetId, setPresetId] = useState(LEAGUE_HUB_PLAYER_SCATTER_PRESETS[0]!.id);
+  const [groupId, setGroupId] = useState<LeagueHubPlayerScatterGroupId>("scoring");
+  /** グループを行き来しても、それぞれ最後に見たマップに戻る */
+  const [presetByGroup, setPresetByGroup] = useState<Record<LeagueHubPlayerScatterGroupId, string>>(
+    () =>
+      Object.fromEntries(
+        LEAGUE_HUB_PLAYER_SCATTER_GROUPS.map((g) => [g.id, g.presetIds[0]])
+      ) as Record<LeagueHubPlayerScatterGroupId, string>
+  );
+  const presetId = presetByGroup[groupId];
+  const group =
+    LEAGUE_HUB_PLAYER_SCATTER_GROUPS.find((g) => g.id === groupId) ?? LEAGUE_HUB_PLAYER_SCATTER_GROUPS[0];
   const [topN, setTopN] = useState<"30" | "50">("30");
   const [pos, setPos] = useState<HubPosFilter>("all");
   const [selected, setSelected] = useState<string | null>(null);
@@ -190,14 +202,27 @@ function StyleMap({
 
   return (
     <View>
+      <HubToggle
+        items={LEAGUE_HUB_PLAYER_SCATTER_GROUPS.map((g) => ({ id: g.id, label: g.label }))}
+        value={groupId}
+        onChange={(id) => {
+          setGroupId(id);
+          setSelected(null);
+        }}
+        fill
+      />
       <HubChips
-        items={LEAGUE_HUB_PLAYER_SCATTER_PRESETS.map((p) => ({ id: p.id, label: p.label.en }))}
+        items={group.presetIds.flatMap((id) => {
+          const p = LEAGUE_HUB_PLAYER_SCATTER_PRESETS.find((x) => x.id === id);
+          return p ? [{ id: p.id, label: p.label.en }] : [];
+        })}
         value={presetId}
         onChange={(id) => {
-          setPresetId(id);
+          setPresetByGroup((prev) => ({ ...prev, [groupId]: id }));
           setSelected(null);
         }}
         wrap
+        columns={4}
       />
       <Text style={styles.mapHint}>{preset.hint[lang]}</Text>
       <View style={styles.mapControls}>

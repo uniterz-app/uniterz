@@ -63,12 +63,14 @@ export function HubChips<T extends string>({
   value,
   onChange,
   wrap = false,
+  columns = 3,
 }: {
   items: readonly { id: T; label: string }[];
   value: T;
   onChange: (id: T) => void;
-  /** 横スクロールではなく 3 列で折り返す */
+  /** 横スクロールではなく columns 列で折り返す */
   wrap?: boolean;
+  columns?: 3 | 4;
 }) {
   if (wrap) {
     return (
@@ -79,7 +81,12 @@ export function HubChips<T extends string>({
             <Pressable
               key={it.id}
               onPress={() => onChange(it.id)}
-              style={[styles.chip, styles.chipCell, active ? styles.chipActive : null]}
+              style={[
+                styles.chip,
+                styles.chipCell,
+                columns === 4 ? styles.chipCell4 : null,
+                active ? styles.chipActive : null,
+              ]}
             >
               <Text
                 style={[styles.chipText, active ? styles.chipTextActive : null]}
@@ -122,24 +129,32 @@ export function HubToggle<T extends string>({
   items,
   value,
   onChange,
+  fill = false,
 }: {
   items: readonly { id: T; label: string }[];
   value: T;
   onChange: (id: T) => void;
+  /** 横幅いっぱいに等分する */
+  fill?: boolean;
 }) {
   return (
-    <View style={styles.toggle}>
+    <View style={[styles.toggle, fill ? styles.toggleFill : null]}>
       {items.map((it) => {
         const active = it.id === value;
         return (
           <Pressable
             key={it.id}
             onPress={() => onChange(it.id)}
-            style={[styles.toggleItem, active ? { backgroundColor: CYBER_TAB_CYAN } : null]}
+            style={[
+              styles.toggleItem,
+              fill ? styles.toggleItemFill : null,
+              active ? { backgroundColor: CYBER_TAB_CYAN } : null,
+            ]}
           >
             <Text
               style={[
                 styles.toggleText,
+                fill ? styles.toggleTextFill : null,
                 { color: active ? "#050508" : "rgba(255,255,255,0.55)" },
               ]}
             >
@@ -464,6 +479,10 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     alignItems: "center",
   },
+  chipCell4: {
+    flexBasis: "22%",
+    paddingHorizontal: 4,
+  },
   chipActive: {
     backgroundColor: CYBER_TAB_CYAN,
     borderColor: CYBER_TAB_CYAN,
@@ -517,6 +536,19 @@ const styles = StyleSheet.create({
   toggleItem: {
     paddingHorizontal: 8,
     paddingVertical: 3,
+  },
+  toggleFill: {
+    alignSelf: "stretch",
+    marginBottom: 6,
+  },
+  toggleItemFill: {
+    flex: 1,
+    alignItems: "center",
+    paddingVertical: 5,
+  },
+  toggleTextFill: {
+    fontSize: 11,
+    letterSpacing: 1.4,
   },
   toggleText: {
     fontFamily: METRIC_FONT,

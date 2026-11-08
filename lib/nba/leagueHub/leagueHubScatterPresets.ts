@@ -38,6 +38,15 @@ export type LeagueHubPlayerScatterPreset = LeagueHubScatterPreset<LeagueHubPlaye
   volumeLabel: Copy;
 };
 
+/** スタイルマップの 3 グループ（各 4 種。先頭が既定） */
+export const LEAGUE_HUB_PLAYER_SCATTER_GROUPS = [
+  { id: "scoring", label: "SCORING", presetIds: ["three", "ace", "shotType", "source"] },
+  { id: "attack", label: "ATTACK", presetIds: ["paint", "drive", "foul", "playmaking"] },
+  { id: "defense", label: "DEFENSE", presetIds: ["defense", "hustle", "onCourt", "clutch"] },
+] as const;
+
+export type LeagueHubPlayerScatterGroupId = (typeof LEAGUE_HUB_PLAYER_SCATTER_GROUPS)[number]["id"];
+
 export const LEAGUE_HUB_PLAYER_SCATTER_PRESETS: readonly LeagueHubPlayerScatterPreset[] = [
   {
     id: "three",
@@ -172,7 +181,7 @@ export const LEAGUE_HUB_PLAYER_SCATTER_PRESETS: readonly LeagueHubPlayerScatterP
   },
   {
     id: "source",
-    label: { ja: "得点の出どころ", en: "SCORING SOURCE" },
+    label: { ja: "得点の出どころ", en: "PTS MIX" },
     hint: {
       ja: "得点のうち右ほど 3P、上ほどペイントの割合が高い。四隅は得点の取り方のタイプ。",
       en: "Share of points: right = from 3s, up = from the paint. Corners are scoring types.",
@@ -190,7 +199,7 @@ export const LEAGUE_HUB_PLAYER_SCATTER_PRESETS: readonly LeagueHubPlayerScatterP
   },
   {
     id: "defense",
-    label: { ja: "守備", en: "DEFENSE" },
+    label: { ja: "守備", en: "STL+BLK" },
     hint: {
       ja: "右ほどスティール＋ブロックが多く、上ほどマークした相手の FG% が低い。",
       en: "Right = more steals + blocks, up = lower FG% for the players he guards.",
