@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Keyboard, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import {
   LEAGUE_HUB_PLAYER_SCATTER_PRESETS,
@@ -206,18 +207,26 @@ function StyleMap({
           onChange={setTopN}
         />
       </View>
-      <TextInput
-        value={query}
-        onChangeText={setQuery}
-        placeholder={
-          lang === "ja" ? "選手を探してマップに追加（例: curry / GSW）" : "Add a player (e.g. curry / GSW)"
-        }
-        placeholderTextColor="rgba(255,255,255,0.3)"
-        autoCorrect={false}
-        autoCapitalize="none"
-        returnKeyType="search"
-        style={styles.searchInput}
-      />
+      <View style={styles.searchBox}>
+        <MaterialCommunityIcons name="magnify" size={18} color={CYBER_TAB_CYAN} />
+        <TextInput
+          value={query}
+          onChangeText={setQuery}
+          placeholder={
+            lang === "ja" ? "選手を探してマップに追加（例: curry / GSW）" : "Add a player (e.g. curry / GSW)"
+          }
+          placeholderTextColor="rgba(0,245,255,0.5)"
+          autoCorrect={false}
+          autoCapitalize="none"
+          returnKeyType="search"
+          style={styles.searchInput}
+        />
+        {query ? (
+          <Pressable onPress={() => setQuery("")} hitSlop={8}>
+            <MaterialCommunityIcons name="close" size={16} color="rgba(255,255,255,0.6)" />
+          </Pressable>
+        ) : null}
+      </View>
       {query.trim() ? (
         <View style={styles.searchList}>
           {hits.length === 0 ? (
@@ -647,21 +656,27 @@ const styles = StyleSheet.create({
     fontSize: 10,
     marginBottom: 4,
   },
+  searchBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    borderWidth: 1.5,
+    borderColor: CYBER_TAB_CYAN,
+    backgroundColor: "rgba(0,245,255,0.08)",
+    paddingHorizontal: 10,
+    marginBottom: 6,
+  },
   searchInput: {
-    borderWidth: 1,
-    borderColor: "rgba(0,245,255,0.28)",
-    backgroundColor: "rgba(0,0,0,0.5)",
+    flex: 1,
     color: "#fff",
     fontFamily: METRIC_FONT,
     fontSize: 12,
     fontWeight: "700",
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    marginBottom: 6,
+    paddingVertical: 9,
   },
   searchList: {
-    borderWidth: 1,
-    borderColor: "rgba(0,245,255,0.28)",
+    borderWidth: 1.5,
+    borderColor: CYBER_TAB_CYAN,
     backgroundColor: "#050808",
     marginTop: -6,
     marginBottom: 6,
