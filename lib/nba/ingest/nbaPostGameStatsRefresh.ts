@@ -21,6 +21,7 @@ import {
 } from "@/lib/nba/bdl/fetchBdlPlayerGameLogs";
 import { rememberBdlTeamId } from "@/lib/nba/bdl/bdlNbaTeamIdMap";
 import {
+  runNbaLeagueHubStep,
   runNbaRecentPlayerGameLogsStep,
   runNbaStatsSnapshotSteps,
   type NbaStatsDailyIngestStepResult,
@@ -293,6 +294,7 @@ export async function runNbaPostGameStatsRefresh(
     for (const seasonKey of seasonKeys) {
       steps.push(...(await runNbaStatsSnapshotSteps(db, seasonKey)));
       steps.push(await runNbaRecentPlayerGameLogsStep(db, seasonKey));
+      steps.push(await runNbaLeagueHubStep(db, seasonKey));
     }
     refreshedOk = steps
       .filter((s) => CORE_STEP_IDS.has(s.id))

@@ -20,6 +20,7 @@ import { loadOrBuildTeamSeasonRecords } from "@/lib/nba/insights/loadPriorSeason
 import { ingestNbaTeamShapesFromGames } from "@/lib/nba/ingest/nbaTeamShapesIngest";
 import { ingestNbaTeamOffseasonMoves } from "@/lib/nba/ingest/nbaTeamOffseasonMovesIngest";
 import { ingestNbaDisciplineFromBdl } from "@/lib/nba/ingest/nbaDisciplineIngest";
+import { ingestNbaLeagueHub } from "@/lib/nba/leagueHub/nbaLeagueHubIngest";
 import {
   loadNbaSeasonGameRows,
   type NbaSeasonGameRow,
@@ -121,6 +122,14 @@ export async function runNbaStatsSnapshotSteps(
   return steps;
 }
 
+/** 順位ページ LEAGUE タブ。試合ログ更新の後に回す（Firestore のみ） */
+export function runNbaLeagueHubStep(
+  db: Firestore,
+  seasonKey: string
+): Promise<NbaStatsDailyIngestStepResult> {
+  return runStep("league-hub", () => ingestNbaLeagueHub(db, { seasonKey }));
+}
+
 /** 直近 box 出場者だけプレイヤー試合ログを取り直す */
 export function runNbaRecentPlayerGameLogsStep(
   db: Firestore,
@@ -186,6 +195,7 @@ export async function runNbaStatsDailyIngest(
   } else {
     steps.push(await runNbaRecentPlayerGameLogsStep(db, seasonKey));
   }
+  steps.push(await runNbaLeagueHubStep(db, seasonKey));
 
   // Pro Insight フル生成は前日 19:00 JST の runNbaProBriefFullCron に分離
 
