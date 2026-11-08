@@ -53,8 +53,8 @@ export const LEAGUE_HUB_PLAYER_SCATTER_PRESETS: readonly LeagueHubPlayerScatterP
     id: "three",
     label: { ja: "3P の量と質", en: "3PT" },
     hint: {
-      ja: "右ほど 3P をたくさん打ち、上ほどよく入る。右上がエリートシューター。",
-      en: "Right = more 3PA, up = better 3P%. Top right are elite shooters.",
+      ja: "右ほど 3P を多く打ち、上ほどよく入る。",
+      en: "Right = more 3PA, up = better 3P%.",
     },
     x: { metric: "fg3a", label: { ja: "3PA / 試合", en: "3PA / G" }, format: "one" },
     y: { metric: "fg3_pct", label: { ja: "3P%", en: "3P%" }, format: "pct" },
@@ -71,7 +71,7 @@ export const LEAGUE_HUB_PLAYER_SCATTER_PRESETS: readonly LeagueHubPlayerScatterP
     id: "ace",
     label: { ja: "得点の負担", en: "USAGE" },
     hint: {
-      ja: "右ほど攻撃をボールで終える割合（USG%）が高く、上ほど効率よく点を取る（TS%）。",
+      ja: "右ほど攻撃を任され（USG%）、上ほど効率よく取る（TS%）。",
       en: "Right = higher usage, up = more efficient scoring (TS%).",
     },
     x: { metric: "usg", label: { ja: "USG%", en: "USG%" }, format: "pct" },
@@ -107,7 +107,7 @@ export const LEAGUE_HUB_PLAYER_SCATTER_PRESETS: readonly LeagueHubPlayerScatterP
     id: "playmaking",
     label: { ja: "ゲームメイク", en: "PLAYMAKING" },
     hint: {
-      ja: "右ほど味方のシュートをアシストし（AST%）、上ほどターンオーバーが少ない（TOV%）。",
+      ja: "右ほどアシストが多く（AST%）、上ほどミスが少ない（TOV%）。",
       en: "Right = higher AST%, up = lower TOV%.",
     },
     x: { metric: "ast_pct", label: { ja: "AST%", en: "AST%" }, format: "pct" },
@@ -130,7 +130,7 @@ export const LEAGUE_HUB_PLAYER_SCATTER_PRESETS: readonly LeagueHubPlayerScatterP
     id: "drive",
     label: { ja: "ドライブ", en: "DRIVES" },
     hint: {
-      ja: "右ほどドライブで仕掛け、上ほどドライブ 1 回あたりの得点が高い。",
+      ja: "右ほどドライブが多く、上ほど 1 回あたりの得点が高い。",
       en: "Right = more drives, up = more points per drive.",
     },
     x: { metric: "drives", label: { ja: "ドライブ / 試合", en: "DRIVES / G" }, format: "one" },
@@ -148,7 +148,7 @@ export const LEAGUE_HUB_PLAYER_SCATTER_PRESETS: readonly LeagueHubPlayerScatterP
     id: "shotType",
     label: { ja: "シュートの型", en: "SHOT TYPE" },
     hint: {
-      ja: "右ほどキャッチ＆シュート（パスを受けてすぐ打つ）が入り、上ほどプルアップ（ドリブルから打つ）が入る。",
+      ja: "右ほどパスからのシュート、上ほどドリブルからのシュートが入る。",
       en: "Right = better catch-and-shoot FG%, up = better pull-up FG%.",
     },
     x: { metric: "cns_fg_pct", label: { ja: "C&S FG%", en: "C&S FG%" }, format: "pct" },
@@ -166,7 +166,7 @@ export const LEAGUE_HUB_PLAYER_SCATTER_PRESETS: readonly LeagueHubPlayerScatterP
     id: "foul",
     label: { ja: "ファウル獲得", en: "FT DRAW" },
     hint: {
-      ja: "右ほどファウルをもらってフリースローを得て（FTA ÷ FGA）、上ほどフリースローが入る。",
+      ja: "右ほどフリースローを多くもらい、上ほどよく決める。",
       en: "Right = more free throws per shot (FTA / FGA), up = better FT%.",
     },
     x: { metric: "fta_rate", label: { ja: "FT 獲得率", en: "FT RATE" }, format: "pct" },
@@ -184,8 +184,8 @@ export const LEAGUE_HUB_PLAYER_SCATTER_PRESETS: readonly LeagueHubPlayerScatterP
     id: "source",
     label: { ja: "得点の出どころ", en: "PTS MIX" },
     hint: {
-      ja: "得点のうち右ほど 3P、上ほどペイントの割合が高い。四隅は得点の取り方のタイプ。",
-      en: "Share of points: right = from 3s, up = from the paint. Corners are scoring types.",
+      ja: "得点のうち右ほど 3P、上ほどペイントの割合が高い。",
+      en: "Share of points: right = from 3s, up = from the paint.",
     },
     x: { metric: "pct_pts_3", label: { ja: "3P の割合", en: "% PTS 3P" }, format: "pct" },
     y: { metric: "pct_pts_paint", label: { ja: "ペイントの割合", en: "% PTS PAINT" }, format: "pct" },
@@ -202,8 +202,8 @@ export const LEAGUE_HUB_PLAYER_SCATTER_PRESETS: readonly LeagueHubPlayerScatterP
     id: "defense",
     label: { ja: "守備", en: "STL+BLK" },
     hint: {
-      ja: "右ほどスティール＋ブロックが多く、上ほどマークした相手の FG% が低い。",
-      en: "Right = more steals + blocks, up = lower FG% for the players he guards.",
+      ja: "右ほど STL＋BLK が多く、上ほどマーク相手の FG% が低い。",
+      en: "Right = more STL + BLK, up = lower opponent FG%.",
     },
     x: { metric: "stocks", label: { ja: "STL+BLK", en: "STL+BLK" }, format: "one" },
     y: {
@@ -225,7 +225,7 @@ export const LEAGUE_HUB_PLAYER_SCATTER_PRESETS: readonly LeagueHubPlayerScatterP
     id: "hustle",
     label: { ja: "ハッスル", en: "HUSTLE" },
     hint: {
-      ja: "右ほどパスやドリブルに手を出し（ディフレクション）、上ほどシュートにチェックへ行く（コンテスト）。",
+      ja: "右ほどパスに手を出し、上ほどシュートにチェックへ行く。",
       en: "Right = more deflections, up = more contested shots.",
     },
     x: { metric: "deflections", label: { ja: "ディフレクション", en: "DEFLECTIONS" }, format: "one" },
@@ -243,8 +243,8 @@ export const LEAGUE_HUB_PLAYER_SCATTER_PRESETS: readonly LeagueHubPlayerScatterP
     id: "onCourt",
     label: { ja: "出場時の強さ", en: "ON-COURT RTG" },
     hint: {
-      ja: "その選手がコートにいる間のチームの攻撃効率（右）と守備効率（上ほど失点が少ない）。チームの強さにも左右される。",
-      en: "Team offense (right) and defense (up = fewer allowed) while he's on the floor. Depends on the team too.",
+      ja: "出場中のチームの攻撃（右）と守備（上）。チーム力も影響する。",
+      en: "Team offense (right) and defense (up) while on the floor.",
     },
     x: { metric: "ortg", label: { ja: "出場時 ORtg", en: "ON ORtg" }, format: "one" },
     y: {
@@ -266,8 +266,8 @@ export const LEAGUE_HUB_PLAYER_SCATTER_PRESETS: readonly LeagueHubPlayerScatterP
     id: "clutch",
     label: { ja: "勝負どころ", en: "CLUTCH" },
     hint: {
-      ja: "残り 5 分・5 点差以内。右ほどボールを託され（クラッチ USG%）、上ほど決める（クラッチ FG%）。",
-      en: "Last 5 min, within 5. Right = trusted with the ball, up = makes the shots.",
+      ja: "残り 5 分・5 点差以内。右ほどボールを託され、上ほど決める。",
+      en: "Last 5 min within 5. Right = gets the ball, up = makes shots.",
     },
     x: { metric: "clutch_usg", label: { ja: "クラッチ USG%", en: "CLUTCH USG%" }, format: "pct" },
     y: { metric: "clutch_fg_pct", label: { ja: "クラッチ FG%", en: "CLUTCH FG%" }, format: "pct" },
