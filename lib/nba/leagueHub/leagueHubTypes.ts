@@ -54,6 +54,9 @@ export type LeagueHubZoneRow = LeagueHubPlayerRef & {
   fgPct: number;
   /** 1 試合平均の試投 */
   fga: number;
+  /** 今季合計の試投 / 成功 */
+  fgaTotal: number;
+  fgm: number;
 };
 
 export type LeagueHubZoneBoard = {

@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { StyleSheet, View } from "react-native";
-import Svg, { Circle, G, Path, Rect, Text as SvgText } from "react-native-svg";
+import { StyleSheet, Text, View } from "react-native";
+import Svg, { Circle, G, Path, Rect } from "react-native-svg";
 import {
   SHOT_ZONE_BASKET,
   SHOT_ZONE_LABEL_POS,
@@ -22,16 +22,19 @@ import {
 import type { LeagueHubZoneBoard } from "../../../../../../lib/nba/leagueHub/leagueHubTypes";
 import type { NbaPlayerShotZoneId } from "../../../../../../lib/predict/nbaPlayerDetailPreviewMocks";
 import { CYBER_TAB_CYAN } from "../../rankings/CyberSlantedTabNative";
+import { METRIC_FONT } from "../../rankings/rankingsUiTheme";
 import {
   HubChips,
   HubEmpty,
   HubRow,
   HubToggle,
-  NAME_SVG_FONT,
   formatHubValue,
+  playerNameStyle,
   teamInk,
   type HubLang,
 } from "./leagueHubUiNative";
+
+const KING_WRAP_W = 150;
 
 const ZONE_ORDER: readonly NbaPlayerShotZoneId[] = [
   "restricted",
@@ -77,6 +80,7 @@ type Props = {
 export default function LeagueHubZoneKingsNative({ zones, lang, onSelectPlayer }: Props) {
   const [zoneId, setZoneId] = useState<NbaPlayerShotZoneId>("above_break_3");
   const [mode, setMode] = useState<"pct" | "fga">("pct");
+  const [courtW, setCourtW] = useState(0);
   const byId = new Map(zones.map((z) => [z.id, z]));
   const board = byId.get(zoneId);
   const rows = board ? (mode === "pct" ? board.byPct : board.byFga) : [];
@@ -86,7 +90,10 @@ export default function LeagueHubZoneKingsNative({ zones, lang, onSelectPlayer }
 
   return (
     <View>
-      <View style={styles.court}>
+      <View
+        style={styles.court}
+        onLayout={(e) => setCourtW(e.nativeEvent.layout.width)}
+      >
         <Svg
           width="100%"
           height="100%"
@@ -146,50 +153,60 @@ export default function LeagueHubZoneKingsNative({ zones, lang, onSelectPlayer }
               strokeWidth={1.1}
             />
             <Path d={shotZoneThreePointLine()} fill="none" stroke={line} strokeWidth={1.5} />
-            {ZONE_ORDER.map((id) => {
+          </G>
+        </Svg>
+        {courtW > 0
+          ? ZONE_ORDER.map((id) => {
               const king = byId.get(id)?.byPct[0];
               if (!king) return null;
               const pos = NAME_POS[id];
               const active = id === zoneId;
-              const nameSize =
-                id === "restricted" || id === "left_corner_3" || id === "right_corner_3" ? 17 : 19;
-              const boxW = Math.max(king.name.length * nameSize * 0.68, 60) + 14;
+              const scale = courtW / SHOT_ZONE_VB_W;
+              const small =
+                id === "restricted" || id === "left_corner_3" || id === "right_corner_3";
+              const nameSize = (small ? 17 : 19) * scale;
               return (
-                <G key={`k-${id}`}>
-                  <Rect
-                    x={pos.x - boxW / 2}
-                    y={pos.y - 4 - nameSize}
-                    width={boxW}
-                    height={nameSize + 26}
-                    rx={4}
-                    fill="rgba(4,4,10,0.78)"
-                  />
-                  <SvgText
-                    x={pos.x}
-                    y={pos.y - 4}
-                    textAnchor="middle"
-                    fontSize={nameSize}
-                    fontFamily={NAME_SVG_FONT}
-                    fontWeight="600"
-                    fill={active ? CYBER_TAB_CYAN : teamInk(king.teamId)}
-                  >
-                    {king.name.toUpperCase()}
-                  </SvgText>
-                  <SvgText
-                    x={pos.x}
-                    y={pos.y + 16}
-                    textAnchor="middle"
-                    fontSize={17}
-                    fontWeight="700"
-                    fill={active ? CYBER_TAB_CYAN : "rgba(255,255,255,0.75)"}
-                  >
-                    {formatHubValue(king.fgPct, "pct")}
-                  </SvgText>
-                </G>
+                <View
+                  key={`k-${id}`}
+                  pointerEvents="none"
+                  style={[
+                    styles.kingWrap,
+                    {
+                      left: pos.x * scale - KING_WRAP_W / 2,
+                      top: (pos.y - SHOT_ZONE_VB_MIN_Y - 6 - nameSize / scale) * scale,
+                    },
+                  ]}
+                >
+                  <View style={styles.kingBox}>
+                    <Text
+                      numberOfLines={1}
+                      style={[
+                        styles.kingName,
+                        playerNameStyle,
+                        {
+                          fontSize: nameSize,
+                          color: active ? CYBER_TAB_CYAN : teamInk(king.teamId),
+                        },
+                      ]}
+                    >
+                      {king.name}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.kingPct,
+                        {
+                          fontSize: 17 * scale,
+                          color: active ? CYBER_TAB_CYAN : "rgba(255,255,255,0.75)",
+                        },
+                      ]}
+                    >
+                      {formatHubValue(king.fgPct, "pct")}
+                    </Text>
+                  </View>
+                </View>
               );
-            })}
-          </G>
-        </Svg>
+            })
+          : null}
       </View>
       <View style={styles.controls}>
         <View style={styles.chipsWrap}>
@@ -219,8 +236,16 @@ export default function LeagueHubZoneKingsNative({ zones, lang, onSelectPlayer }
             rank={i + 1}
             teamId={r.teamId}
             name={r.name}
-            value={mode === "pct" ? formatHubValue(r.fgPct, "pct") : r.fga.toFixed(1)}
-            valueSub={`${formatShotZoneMakesPerGame(r)} / G`}
+            value={
+              mode === "pct"
+                ? formatHubValue(r.fgPct, "pct")
+                : String(r.fgaTotal ?? r.fga.toFixed(1))
+            }
+            valueSub={
+              r.fgaTotal != null
+                ? `${r.fgm} / ${r.fgaTotal}`
+                : `${formatShotZoneMakesPerGame(r)} / G`
+            }
             onPress={() => onSelectPlayer(r.playerId)}
           />
         ))
@@ -235,6 +260,26 @@ const styles = StyleSheet.create({
     aspectRatio: SHOT_ZONE_VB_W / SHOT_ZONE_VB_H,
     borderWidth: 1,
     borderColor: "rgba(0,245,255,0.3)",
+  },
+  kingWrap: {
+    position: "absolute",
+    width: KING_WRAP_W,
+    alignItems: "center",
+  },
+  kingBox: {
+    backgroundColor: "rgba(4,4,10,0.78)",
+    borderRadius: 3,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    alignItems: "center",
+  },
+  kingName: {
+    includeFontPadding: false,
+  },
+  kingPct: {
+    fontFamily: METRIC_FONT,
+    fontWeight: "700",
+    includeFontPadding: false,
   },
   controls: {
     marginTop: 8,

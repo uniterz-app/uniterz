@@ -198,13 +198,22 @@ export function buildNbaLeagueHub(input: BuildNbaLeagueHubInput): NbaLeagueHubDo
       const z = list.find((x) => x.id === def.id);
       const ref = refOf(playerId, metrics.get(playerId)?.teamId);
       if (!z || !ref || z.fga <= 0) continue;
-      rows.push({ ...ref, fgPct: round(z.fgPct, 3), fga: round(z.fga, 1) });
+      const fgaTotal = Math.round(z.fga * gp);
+      rows.push({
+        ...ref,
+        fgPct: round(z.fgPct, 3),
+        fga: round(z.fga, 1),
+        fgaTotal,
+        fgm: Math.round(z.fgPct * fgaTotal),
+      });
     }
     const byPct = rows
       .filter((r) => r.fga >= def.minFga)
-      .sort((a, b) => b.fgPct - a.fgPct || b.fga - a.fga)
+      .sort((a, b) => b.fgPct - a.fgPct || b.fgaTotal - a.fgaTotal)
       .slice(0, LIST_LIMIT);
-    const byFga = [...rows].sort((a, b) => b.fga - a.fga || b.fgPct - a.fgPct).slice(0, LIST_LIMIT);
+    const byFga = [...rows]
+      .sort((a, b) => b.fgaTotal - a.fgaTotal || b.fgPct - a.fgPct)
+      .slice(0, LIST_LIMIT);
     return { id: def.id, short: def.short, minFga: def.minFga, byPct, byFga };
   });
 

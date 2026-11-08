@@ -21,7 +21,7 @@ import {
 } from "../../../../../../lib/jersey/jerseyThinTripleStripes";
 import { CYBER_TAB_CYAN } from "../../rankings/CyberSlantedTabNative";
 import { METRIC_FONT } from "../../rankings/rankingsUiTheme";
-import { NAME_SVG_FONT, formatHubValue, type HubLang } from "./leagueHubUiNative";
+import { formatHubValue, playerNameStyle, type HubLang } from "./leagueHubUiNative";
 
 export type HubScatterPoint = {
   id: string;
@@ -48,6 +48,7 @@ type Props = {
 
 const PAD = { l: 6, r: 6, t: 8, b: 20 } as const;
 const DOT_R = 4.2;
+const LABEL_W = 160;
 const TAP_RADIUS = 24;
 
 type Box = { x0: number; y0: number; x1: number; y1: number };
@@ -334,26 +335,32 @@ export default function LeagueHubScatterNative({
                     strokeWidth={1.6}
                   />
                 ))}
-              {layout.labels.map(({ i, x, y, anchor }) => {
-                const m = layout.placed[i]!;
-                const sel = m.p.id === selectedId;
-                return (
-                  <SvgText
-                    key={`l-${m.p.id}`}
-                    x={x}
-                    y={y}
-                    textAnchor={anchor}
-                    fontSize={layout.fontSize}
-                    fontFamily={NAME_SVG_FONT}
-                    fontWeight="600"
-                    fill={sel ? CYBER_TAB_CYAN : "rgba(255,255,255,0.82)"}
-                    opacity={hasSelection && !sel ? 0.45 : 1}
-                  >
-                    {m.p.label.toUpperCase()}
-                  </SvgText>
-                );
-              })}
             </Svg>
+            {layout.labels.map(({ i, x, y, anchor }) => {
+              const m = layout.placed[i]!;
+              const sel = m.p.id === selectedId;
+              return (
+                <Text
+                  key={`l-${m.p.id}`}
+                  numberOfLines={1}
+                  style={[
+                    styles.label,
+                    playerNameStyle,
+                    {
+                      left: anchor === "start" ? x : anchor === "end" ? x - LABEL_W : x - LABEL_W / 2,
+                      top: y - layout.fontSize,
+                      fontSize: layout.fontSize,
+                      lineHeight: layout.fontSize + 2,
+                      textAlign: anchor === "start" ? "left" : anchor === "end" ? "right" : "center",
+                      color: sel ? CYBER_TAB_CYAN : "rgba(255,255,255,0.82)",
+                      opacity: hasSelection && !sel ? 0.45 : 1,
+                    },
+                  ]}
+                >
+                  {m.p.label}
+                </Text>
+              );
+            })}
           </View>
         ) : null}
       </Pressable>
@@ -369,6 +376,11 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: "700",
     marginBottom: 2,
+  },
+  label: {
+    position: "absolute",
+    width: LABEL_W,
+    includeFontPadding: false,
   },
   xTitle: {
     fontFamily: METRIC_FONT,
