@@ -56,6 +56,8 @@ type Props = {
   onTap?: (id: string | null) => void;
   /** 各軸の両端に実データの最小・最大値を出す */
   showRange?: boolean;
+  /** 選択中、選ばれていない点と名前を薄くする */
+  dimOthers?: boolean;
 };
 
 type RangeTick = { v: number; at: number };
@@ -113,6 +115,7 @@ export default function LeagueHubScatterNative({
   onSelect,
   onTap,
   showRange = false,
+  dimOthers = true,
 }: Props) {
   const isSel = (id: string) => id === selectedId || (secondId != null && id === secondId);
   const [width, setWidth] = useState(0);
@@ -270,7 +273,8 @@ export default function LeagueHubScatterNative({
     lang,
   ]);
 
-  const hasSelection = selectedId != null && points.some((p) => p.id === selectedId);
+  const hasSelection =
+    dimOthers && selectedId != null && points.some((p) => p.id === selectedId);
 
   const onPress = (lx: number, ly: number) => {
     if (!layout) return;
@@ -498,7 +502,7 @@ export default function LeagueHubScatterNative({
                 .filter((m) => isSel(m.p.id))
                 .map((m) => (
                   <Circle
-                    key="ring"
+                    key={`ring-${m.p.id}`}
                     cx={m.cx}
                     cy={m.cy}
                     r={m.size / 2 + 5}

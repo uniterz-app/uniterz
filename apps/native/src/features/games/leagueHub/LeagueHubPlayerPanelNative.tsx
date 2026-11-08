@@ -307,6 +307,7 @@ function StyleMap({
           onSelect={setSelected}
           onTap={tapMap}
           showRange
+          dimOthers={false}
         />
       )}
       {capturing ? null : cmpA && cmpB ? (
