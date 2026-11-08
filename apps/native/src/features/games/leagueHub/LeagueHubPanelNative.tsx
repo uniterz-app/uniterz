@@ -57,6 +57,8 @@ export default function LeagueHubPanelNative({ lang, onSelectTeam, onSelectPlaye
         style={styles.scroll}
         contentContainerStyle={[styles.content, { paddingBottom: bottomContentReserveY + 24 }]}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
       >
         {hub ? (
           <Text style={styles.season}>

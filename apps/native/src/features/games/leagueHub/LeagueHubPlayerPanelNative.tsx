@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Keyboard, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import {
   LEAGUE_HUB_PLAYER_SCATTER_PRESETS,
   type LeagueHubPlayerScatterPreset,
@@ -46,6 +46,40 @@ type Props = {
   onSelectPlayer: (playerId: string) => void;
 };
 
+const MAX_ADDED = 5;
+const SEARCH_LIMIT = 6;
+const TEAM_SEARCH_LIMIT = 15;
+
+function normalizeSearch(s: string): string {
+  return s
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[.\s'-]/g, "");
+}
+
+/** 名前（"S.Curry" → "scurry"）の部分一致か、チーム略称の完全一致 */
+function searchHubPlayers(players: readonly LeagueHubPlayer[], query: string): LeagueHubPlayer[] {
+  const q = normalizeSearch(query);
+  if (!q) return [];
+  const scored: Array<{ p: LeagueHubPlayer; s: number }> = [];
+  for (const p of players) {
+    const name = normalizeSearch(p.name);
+    const last = normalizeSearch(p.name.split(".").pop() ?? "");
+    let s = 0;
+    if (teamAbbr(p.teamId).toLowerCase() === q) s = 90;
+    else if (last.startsWith(q)) s = 80;
+    else if (name.startsWith(q)) s = 70;
+    else if (name.includes(q)) s = 40;
+    if (s > 0) scored.push({ p, s });
+  }
+  const teamHit = scored.some((x) => x.s === 90);
+  return scored
+    .sort((a, b) => b.s - a.s || b.p.gp * b.p.min - a.p.gp * a.p.min)
+    .slice(0, teamHit ? TEAM_SEARCH_LIMIT : SEARCH_LIMIT)
+    .map((x) => x.p);
+}
+
 function noData(lang: HubLang) {
   return <HubEmpty text={lang === "ja" ? "まだデータがありません" : "No data yet"} />;
 }
@@ -63,6 +97,8 @@ function StyleMap({
   const [topN, setTopN] = useState<"30" | "50">("30");
   const [pos, setPos] = useState<HubPosFilter>("all");
   const [selected, setSelected] = useState<string | null>(null);
+  const [added, setAdded] = useState<string[]>([]);
+  const [query, setQuery] = useState("");
   const preset: LeagueHubPlayerScatterPreset =
     LEAGUE_HUB_PLAYER_SCATTER_PRESETS.find((p) => p.id === presetId) ??
     LEAGUE_HUB_PLAYER_SCATTER_PRESETS[0]!;
@@ -91,10 +127,22 @@ function StyleMap({
       (p) =>
         !shown.has(p.playerId) &&
         plottable(p) &&
-        (p.playerId === selected || (favIds.has(p.playerId) && inPos(p)))
+        (p.playerId === selected ||
+          added.includes(p.playerId) ||
+          (favIds.has(p.playerId) && inPos(p)))
     );
     return { top, pinned };
-  }, [players, preset, topN, pos, favIds, selected]);
+  }, [players, preset, topN, pos, favIds, selected, added]);
+  const hits = useMemo(() => searchHubPlayers(players, query), [players, query]);
+  const addPlayer = (id: string) => {
+    setAdded((prev) => [id, ...prev.filter((x) => x !== id)].slice(0, MAX_ADDED));
+    setSelected(id);
+    setQuery("");
+    Keyboard.dismiss();
+  };
+  const addedPlayers = added
+    .map((id) => players.find((p) => p.playerId === id))
+    .filter((p): p is LeagueHubPlayer => p != null);
   const points: HubScatterPoint[] = [...pool.top, ...pool.pinned].map((p, i) => ({
     id: p.playerId,
     x: p.m[preset.x.metric]!,
@@ -103,6 +151,7 @@ function StyleMap({
     color: teamInk(p.teamId),
     star: favIds.has(p.playerId),
     pinned: i >= pool.top.length,
+    highlight: added.includes(p.playerId),
   }));
   const hasStar = points.some((p) => p.star);
   const sel = selected
@@ -157,6 +206,63 @@ function StyleMap({
           onChange={setTopN}
         />
       </View>
+      <TextInput
+        value={query}
+        onChangeText={setQuery}
+        placeholder={
+          lang === "ja" ? "選手を探してマップに追加（例: curry / GSW）" : "Add a player (e.g. curry / GSW)"
+        }
+        placeholderTextColor="rgba(255,255,255,0.3)"
+        autoCorrect={false}
+        autoCapitalize="none"
+        returnKeyType="search"
+        style={styles.searchInput}
+      />
+      {query.trim() ? (
+        <View style={styles.searchList}>
+          {hits.length === 0 ? (
+            <Text style={styles.searchEmpty}>
+              {lang === "ja"
+                ? "見つかりません（出場が少ない選手は載っていません）"
+                : "No match (players with few minutes aren't listed)"}
+            </Text>
+          ) : (
+            hits.map((p) => (
+              <Pressable
+                key={p.playerId}
+                style={({ pressed }) => [styles.searchRow, pressed ? { opacity: 0.7 } : null]}
+                onPress={() => addPlayer(p.playerId)}
+              >
+                <Text style={[styles.searchName, playerNameStyle]} numberOfLines={1}>
+                  {p.name}
+                </Text>
+                <HubTeamTag teamId={p.teamId} />
+                <Text style={styles.searchAdd}>＋</Text>
+              </Pressable>
+            ))
+          )}
+        </View>
+      ) : null}
+      {addedPlayers.length > 0 ? (
+        <View style={styles.addedRow}>
+          {addedPlayers.map((p) => (
+            <View key={p.playerId} style={styles.addedChip}>
+              <Pressable onPress={() => setSelected(p.playerId)} hitSlop={4}>
+                <Text style={[styles.addedName, playerNameStyle]}>{p.name}</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  setAdded((prev) => prev.filter((x) => x !== p.playerId));
+                  if (selected === p.playerId) setSelected(null);
+                }}
+                hitSlop={8}
+              >
+                <Text style={styles.addedRemove}>×</Text>
+              </Pressable>
+            </View>
+          ))}
+        </View>
+      ) : null}
       <Text style={styles.mapPool}>
         {lang === "ja"
           ? `${pos === "all" ? "" : `${pos} の`}${preset.volumeLabel.ja}の上位 ${topN} 人`
@@ -540,6 +646,76 @@ const styles = StyleSheet.create({
     color: "rgba(0,245,255,0.55)",
     fontSize: 10,
     marginBottom: 4,
+  },
+  searchInput: {
+    borderWidth: 1,
+    borderColor: "rgba(0,245,255,0.28)",
+    backgroundColor: "rgba(0,0,0,0.5)",
+    color: "#fff",
+    fontFamily: METRIC_FONT,
+    fontSize: 12,
+    fontWeight: "700",
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    marginBottom: 6,
+  },
+  searchList: {
+    borderWidth: 1,
+    borderColor: "rgba(0,245,255,0.28)",
+    backgroundColor: "#050808",
+    marginTop: -6,
+    marginBottom: 6,
+  },
+  searchEmpty: {
+    color: "rgba(255,255,255,0.4)",
+    fontSize: 11,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+  },
+  searchRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 9,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "rgba(255,255,255,0.08)",
+  },
+  searchName: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  searchAdd: {
+    marginLeft: "auto",
+    color: CYBER_TAB_CYAN,
+    fontSize: 14,
+    fontWeight: "800",
+  },
+  addedRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+    marginBottom: 6,
+  },
+  addedChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.5)",
+  },
+  addedName: {
+    color: "#fff",
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  addedRemove: {
+    color: "rgba(255,255,255,0.6)",
+    fontSize: 13,
+    fontWeight: "800",
   },
   selCard: {
     marginTop: 6,

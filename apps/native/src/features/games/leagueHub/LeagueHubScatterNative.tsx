@@ -37,6 +37,8 @@ export type HubScatterPoint = {
   star?: boolean;
   /** 母集団の外から足した点。軸の範囲に含めず、はみ出たら枠の端に置く */
   pinned?: boolean;
+  /** 検索で足した選手。白縁で名前を優先 */
+  highlight?: boolean;
 };
 
 type Props = {
@@ -142,7 +144,7 @@ export default function LeagueHubScatterNative({
         i,
         d: ((m.cx - avgX) / plotW) ** 2 + ((m.cy - avgY) / plotH) ** 2,
         sel: m.p.id === selectedId,
-        star: !!m.p.star,
+        star: !!m.p.star || !!m.p.highlight,
       }))
       .sort(
         (a, b) => Number(b.sel) - Number(a.sel) || Number(b.star) - Number(a.star) || b.d - a.d
@@ -215,19 +217,21 @@ export default function LeagueHubScatterNative({
           },
         ];
       if (marker === "jersey") cands.unshift(cands.splice(1, 1)[0]!);
-      for (const c of cands) {
-        const inside =
-          c.box.x0 >= PAD.l - 2 &&
-          c.box.x1 <= width - 2 &&
-          c.box.y0 >= 0 &&
-          c.box.y1 <= PAD.t + plotH + 2;
-        if (!inside && !sel) continue;
-        if (!sel && labelBoxes.some((b) => overlaps(b, c.box))) continue;
-        if (!sel && markerBoxes.some((b, j) => j !== i && overlaps(b, c.box))) continue;
-        labelBoxes.push(c.box);
-        labels.push({ i, x: c.x, y: c.y, anchor: c.anchor });
-        break;
-      }
+      const isInside = (c: (typeof cands)[number]) =>
+        c.box.x0 >= PAD.l - 2 &&
+        c.box.x1 <= width - 2 &&
+        c.box.y0 >= 0 &&
+        c.box.y1 <= PAD.t + plotH + 2;
+      const free = (c: (typeof cands)[number]) =>
+        isInside(c) &&
+        !labelBoxes.some((b) => overlaps(b, c.box)) &&
+        !markerBoxes.some((b, j) => j !== i && overlaps(b, c.box));
+      const force = sel || !!m.p.highlight;
+      const pick =
+        cands.find(free) ?? (force ? (cands.find(isInside) ?? cands[0]) : undefined);
+      if (!pick) continue;
+      labelBoxes.push(pick.box);
+      labels.push({ i, x: pick.x, y: pick.y, anchor: pick.anchor });
     }
 
     return { dx, dy, px, py, placed, avgX, avgY, labels, fontSize, xTicks, yTicks };
@@ -394,10 +398,10 @@ export default function LeagueHubScatterNative({
                           key={m.p.id}
                           cx={m.cx}
                           cy={m.cy}
-                          r={sel ? DOT_R + 1.5 : DOT_R}
+                          r={sel || m.p.highlight ? DOT_R + 1.5 : DOT_R}
                           fill={m.p.color}
-                          stroke="#050508"
-                          strokeWidth={1}
+                          stroke={m.p.highlight ? "#fff" : "#050508"}
+                          strokeWidth={m.p.highlight ? 1.5 : 1}
                           opacity={hasSelection && !sel ? 0.4 : 1}
                         />
                       );
