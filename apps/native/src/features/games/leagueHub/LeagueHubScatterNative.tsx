@@ -1,11 +1,24 @@
 import { useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import Svg, { Circle, Line, Rect, Text as SvgText } from "react-native-svg";
+import Svg, {
+  Circle,
+  Defs,
+  G,
+  Line,
+  Path,
+  Pattern,
+  Rect,
+  Text as SvgText,
+} from "react-native-svg";
 import type {
   LeagueHubAxis,
   LeagueHubQuadrants,
 } from "../../../../../../lib/nba/leagueHub/leagueHubScatterPresets";
-import JerseyMarkSvg from "../JerseyMarkSvg";
+import { JERSEY_PATH_D, VIEWBOX_H, VIEWBOX_W } from "../jerseyHalftoneModel";
+import {
+  JERSEY_FRAME_WHITE,
+  isBlackBodyPrimary,
+} from "../../../../../../lib/jersey/jerseyThinTripleStripes";
 import { CYBER_TAB_CYAN } from "../../rankings/CyberSlantedTabNative";
 import { METRIC_FONT } from "../../rankings/rankingsUiTheme";
 import { NAME_SVG_FONT, formatHubValue, type HubLang } from "./leagueHubUiNative";
@@ -267,6 +280,45 @@ export default function LeagueHubScatterNative({
                     );
                   })
                 : null}
+              {marker === "jersey" ? (
+                <Defs>
+                  <Pattern
+                    id="hubJerseyMesh"
+                    patternUnits="userSpaceOnUse"
+                    width={12}
+                    height={12}
+                  >
+                    <Circle cx={6} cy={6} r={3.2} fill="rgba(0,0,0,0.38)" />
+                  </Pattern>
+                </Defs>
+              ) : null}
+              {marker === "jersey"
+                ? layout.placed.map((m) => {
+                    const sel = m.p.id === selectedId;
+                    const k = m.size / VIEWBOX_H;
+                    const tx = m.cx - (VIEWBOX_W * k) / 2;
+                    const ty = m.cy - m.size / 2;
+                    const black = isBlackBodyPrimary(m.p.color);
+                    return (
+                      <G
+                        key={m.p.id}
+                        transform={`translate(${tx} ${ty}) scale(${k})`}
+                        opacity={hasSelection && !sel ? 0.45 : 1}
+                      >
+                        <Path d={JERSEY_PATH_D} fill={m.p.color} />
+                        <Path d={JERSEY_PATH_D} fill="url(#hubJerseyMesh)" />
+                        <Path
+                          d={JERSEY_PATH_D}
+                          fill="none"
+                          stroke={black ? JERSEY_FRAME_WHITE : m.p.secondary ?? m.p.color}
+                          strokeOpacity={black ? 0.65 : 0.9}
+                          strokeWidth={1.4 / k}
+                          strokeLinejoin="round"
+                        />
+                      </G>
+                    );
+                  })
+                : null}
               {layout.placed
                 .filter((m) => m.p.id === selectedId)
                 .map((m) => (
@@ -300,33 +352,6 @@ export default function LeagueHubScatterNative({
                 );
               })}
             </Svg>
-            {marker === "jersey"
-              ? layout.placed.map((m) => {
-                  const sel = m.p.id === selectedId;
-                  return (
-                    <View
-                      key={m.p.id}
-                      style={[
-                        styles.jersey,
-                        {
-                          left: m.cx - m.size / 2,
-                          top: m.cy - m.size / 2,
-                          width: m.size,
-                          height: m.size,
-                          opacity: hasSelection && !sel ? 0.45 : 1,
-                        },
-                      ]}
-                    >
-                      <JerseyMarkSvg
-                        accent={m.p.color}
-                        accentEnd={m.p.secondary}
-                        size={m.size}
-                        density="coarse"
-                      />
-                    </View>
-                  );
-                })
-              : null}
           </View>
         ) : null}
       </Pressable>
@@ -350,10 +375,5 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     textAlign: "right",
     marginTop: 2,
-  },
-  jersey: {
-    position: "absolute",
-    alignItems: "center",
-    justifyContent: "center",
   },
 });
