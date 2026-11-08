@@ -53,8 +53,8 @@ export const LEAGUE_HUB_PLAYER_SCATTER_PRESETS: readonly LeagueHubPlayerScatterP
     quadrants: {
       tr: { ja: "エリートシューター", en: "ELITE SHOOTER" },
       tl: { ja: "セレクティブシューター", en: "SELECTIVE SHOOTER" },
-      br: { ja: "ハイボリューム", en: "HIGH VOLUME" },
-      bl: { ja: "ノンシューター", en: "NON-SHOOTER" },
+      br: { ja: "ボリュームシューター", en: "VOLUME SHOOTER" },
+      bl: { ja: "不調", en: "COLD" },
     },
   },
   {
