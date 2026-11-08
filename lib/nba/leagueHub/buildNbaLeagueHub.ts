@@ -30,7 +30,9 @@ import {
 export type LeagueHubRosterEntry = {
   name: string;
   teamId: string;
-  pos: "G" | "F" | "C" | null;
+  pos: LeagueHubPosition | null;
+  /** G-F なら [G, F] */
+  positions: LeagueHubPosition[];
   draftYear: number | null;
   draftRound: number | null;
   draftNumber: number | null;
@@ -118,6 +120,10 @@ function metricDigits(id: string): number {
 
 function playerMetricValue(id: LeagueHubPlayerMetric, values: Record<string, number>): number | undefined {
   if (id === "stocks") return (values.stl ?? 0) + (values.blk ?? 0);
+  if (id === "def_activity") {
+    if (values.deflections == null || values.contested_shots == null) return undefined;
+    return (values.stl ?? 0) + (values.blk ?? 0) + values.deflections + values.contested_shots;
+  }
   if (id === "drive_ppd") {
     const drives = values.drives ?? 0;
     return drives > 0 && values.drive_pts != null ? values.drive_pts / drives : undefined;
@@ -233,6 +239,7 @@ export function buildNbaLeagueHub(input: BuildNbaLeagueHubInput): NbaLeagueHubDo
       name: r.name,
       teamId: entry.teamId || r.teamId,
       pos: r.pos,
+      positions: r.positions,
       gp: entry.gp,
       min: round(min, 1),
       m,
@@ -244,7 +251,7 @@ export function buildNbaLeagueHub(input: BuildNbaLeagueHubInput): NbaLeagueHubDo
   // ── エリア別ランキング ──
   const zoneMinGp = Math.max(2, Math.round(maxGp * 0.4));
   const zones: LeagueHubZoneBoard[] = ZONE_DEFS.map((def) => {
-    const rows: Array<LeagueHubZoneRow & { pos: LeagueHubPosition | null }> = [];
+    const rows: Array<LeagueHubZoneRow & { positions: LeagueHubPosition[] }> = [];
     for (const [playerId, list] of input.shotZones) {
       const gp = metrics.get(playerId)?.gp ?? 0;
       if (gp < zoneMinGp) continue;
@@ -258,11 +265,11 @@ export function buildNbaLeagueHub(input: BuildNbaLeagueHubInput): NbaLeagueHubDo
         fga: round(z.fga, 1),
         fgaTotal,
         fgm: Math.round(z.fgPct * fgaTotal),
-        pos: roster.get(playerId)?.pos ?? null,
+        positions: roster.get(playerId)?.positions ?? [],
       });
     }
     const boards = (pool: typeof rows) => {
-      const strip = ({ pos: _pos, ...r }: (typeof rows)[number]): LeagueHubZoneRow => r;
+      const strip = ({ positions: _p, ...r }: (typeof rows)[number]): LeagueHubZoneRow => r;
       return {
         byPct: pool
           .filter((r) => r.fga >= def.minFga)
@@ -276,7 +283,7 @@ export function buildNbaLeagueHub(input: BuildNbaLeagueHubInput): NbaLeagueHubDo
       };
     };
     const byPos = Object.fromEntries(
-      LEAGUE_HUB_POSITIONS.map((p) => [p, boards(rows.filter((r) => r.pos === p))])
+      LEAGUE_HUB_POSITIONS.map((p) => [p, boards(rows.filter((r) => r.positions.includes(p)))])
     ) as NonNullable<LeagueHubZoneBoard["byPos"]>;
     return { id: def.id, short: def.short, minFga: def.minFga, ...boards(rows), byPos };
   });

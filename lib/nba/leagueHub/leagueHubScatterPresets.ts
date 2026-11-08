@@ -202,8 +202,8 @@ export const LEAGUE_HUB_PLAYER_SCATTER_PRESETS: readonly LeagueHubPlayerScatterP
       format: "pct",
       invert: true,
     },
-    volume: "min",
-    volumeLabel: { ja: "出場時間", en: "MIN" },
+    volume: "def_activity",
+    volumeLabel: { ja: "守備の手数", en: "DEFENSIVE ACTIVITY" },
     quadrants: {
       tr: { ja: "ディフェンスアンカー", en: "ANCHOR" },
       tl: { ja: "ロックダウン", en: "LOCKDOWN" },
@@ -220,8 +220,8 @@ export const LEAGUE_HUB_PLAYER_SCATTER_PRESETS: readonly LeagueHubPlayerScatterP
     },
     x: { metric: "deflections", label: { ja: "ディフレクション", en: "DEFLECTIONS" }, format: "one" },
     y: { metric: "contested_shots", label: { ja: "コンテスト", en: "CONTESTS" }, format: "one" },
-    volume: "min",
-    volumeLabel: { ja: "出場時間", en: "MIN" },
+    volume: "def_activity",
+    volumeLabel: { ja: "守備の手数", en: "DEFENSIVE ACTIVITY" },
     quadrants: {
       tr: { ja: "エナジープレーヤー", en: "ENERGY" },
       tl: { ja: "コンテスター", en: "CONTESTER" },

@@ -47,6 +47,8 @@ export const LEAGUE_HUB_PLAYER_METRICS = [
   "drtg",
   "pct_pts_3",
   "pct_pts_paint",
+  /** STL + BLK + ディフレクション + コンテスト（守備系マップの上位選び） */
+  "def_activity",
 ] as const;
 
 export const LEAGUE_HUB_POSITIONS = ["G", "F", "C"] as const;
@@ -62,7 +64,10 @@ export type LeagueHubPlayerRef = {
 };
 
 export type LeagueHubPlayer = LeagueHubPlayerRef & {
+  /** 先頭のポジション */
   pos: LeagueHubPosition | null;
+  /** G-F なら [G, F]。絞り込みは両方に出す */
+  positions?: LeagueHubPosition[];
   gp: number;
   min: number;
   /** 1 試合平均。率は 0–1 */

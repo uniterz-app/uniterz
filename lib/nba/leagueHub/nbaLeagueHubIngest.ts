@@ -46,9 +46,14 @@ function record(v: unknown): LeagueHubRecord | null {
   return w != null && l != null ? { wins: w, losses: l } : null;
 }
 
-function posGroup(position: unknown): LeagueHubRosterEntry["pos"] {
-  const c = String(position ?? "").trim().charAt(0).toUpperCase();
-  return c === "G" || c === "F" || c === "C" ? c : null;
+/** "G-F" → [G, F]、"SG" → [G]。並びは元の順 */
+function posGroups(position: unknown): LeagueHubRosterEntry["positions"] {
+  const out: LeagueHubRosterEntry["positions"] = [];
+  for (const token of String(position ?? "").toUpperCase().split(/[-/\s]+/)) {
+    const c = token.endsWith("G") ? "G" : token.endsWith("F") ? "F" : token === "C" ? "C" : null;
+    if (c && !out.includes(c)) out.push(c);
+  }
+  return out;
 }
 
 async function loadRoster(db: Firestore, seasonKey: string) {
@@ -64,7 +69,8 @@ async function loadRoster(db: Firestore, seasonKey: string) {
       out.set(id, {
         name: formatNbaPlayerListName(full, id),
         teamId,
-        pos: posGroup(p.position),
+        pos: posGroups(p.position)[0] ?? null,
+        positions: posGroups(p.position),
         draftYear: num(p.draftYear),
         draftRound: num(p.draftRound),
         draftNumber: num(p.draftNumber),

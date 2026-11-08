@@ -66,7 +66,7 @@ function StyleMap({
       players
         .filter(
           (p) =>
-            (pos === "all" || p.pos === pos) &&
+            (pos === "all" || (p.positions ?? (p.pos ? [p.pos] : [])).includes(pos)) &&
             p.m[preset.volume] != null &&
             p.m[preset.x.metric] != null &&
             p.m[preset.y.metric] != null
