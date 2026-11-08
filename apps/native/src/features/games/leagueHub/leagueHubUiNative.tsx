@@ -163,7 +163,7 @@ export function HubRow({
       <View style={[styles.rowDot, { backgroundColor: ink }]} />
       <View style={styles.rowNameCol}>
         <Text
-          style={[styles.rowName, kind === "team" ? teamNameStyle : null]}
+          style={[styles.rowName, kind === "team" ? teamNameStyle : playerNameStyle]}
           numberOfLines={1}
         >
           {name}
@@ -219,6 +219,12 @@ export const teamNameStyle = {
   includeFontPadding: false,
   transform: [{ skewX: "-6deg" }],
 };
+
+/** 選手リーダー表 `tdPlayer` と同じ */
+export const playerNameStyle = { ...teamNameStyle, letterSpacing: 0.4 };
+
+/** SVG ラベル用（散布図・コート） */
+export const NAME_SVG_FONT = "Oxanium_600SemiBold";
 
 export const hubStyles = StyleSheet.create({
   card: {

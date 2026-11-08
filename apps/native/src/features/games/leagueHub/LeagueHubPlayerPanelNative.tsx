@@ -24,6 +24,7 @@ import {
   HubTwoCol,
   formatHubValue,
   hubStyles,
+  playerNameStyle,
   teamAbbr,
   teamInk,
   type HubLang,
@@ -119,7 +120,7 @@ function StyleMap({
         <Pressable style={styles.selRow} onPress={() => onSelectPlayer(sel.playerId)}>
           <View style={[styles.selDot, { backgroundColor: teamInk(sel.teamId) }]} />
           <View style={styles.selNameCol}>
-            <Text style={styles.selName}>{sel.name}</Text>
+            <Text style={[styles.selName, playerNameStyle]}>{sel.name}</Text>
             <Text style={styles.selSub}>
               {teamAbbr(sel.teamId)} · {sel.gp} GP · {sel.min.toFixed(1)} MIN
             </Text>
@@ -168,7 +169,7 @@ function WeekCard({
       onPress={() => onSelectPlayer(row.playerId)}
     >
       <Text style={styles.weekConf}>{conf}</Text>
-      <Text style={styles.weekName} numberOfLines={1}>
+      <Text style={[styles.weekName, playerNameStyle]} numberOfLines={1}>
         {row.name}
       </Text>
       <Text style={styles.weekTeam}>
