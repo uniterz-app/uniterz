@@ -209,6 +209,23 @@ export function formatShotZoneMakes(zone: {
   return `${shotZoneFgm(zone)} \u2215 ${zone.fga}`;
 }
 
+/** 1 試合平均。成功数も小数 1 桁（整数に丸めると 0.5 本で 50% が「0 / 0.5」になる） */
+export function formatShotZoneMakesPerGame(zone: {
+  fgPct: number;
+  fga: number;
+}): string {
+  return `${(Math.round(zone.fgPct * zone.fga * 10) / 10).toFixed(1)} \u2215 ${zone.fga.toFixed(1)}`;
+}
+
+/** 1 試合平均 × 出場試合数。BDL の平均が丸め済みなのでシーズンで数本ずれ得る */
+export function formatShotZoneMakesTotal(
+  zone: { fgPct: number; fga: number },
+  gamesPlayed: number
+): string {
+  const fga = Math.round(zone.fga * gamesPlayed);
+  return `${Math.round(zone.fgPct * fga)} \u2215 ${fga}`;
+}
+
 export const SHOT_ZONE_GLOW_R: Record<keyof typeof SHOT_ZONE_LABEL_POS, number> =
   {
     above_break_3: 58,
