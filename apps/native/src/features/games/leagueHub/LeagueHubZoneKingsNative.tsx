@@ -216,7 +216,7 @@ export default function LeagueHubZoneKingsNative({ zones, lang, onSelectPlayer }
       <View style={styles.controls}>
         <View style={styles.chipsWrap}>
           <HubChips
-            items={ZONE_ORDER.map((id) => ({ id, label: ZONE_LABEL[id][lang] }))}
+            items={ZONE_ORDER.map((id) => ({ id, label: ZONE_LABEL[id].en }))}
             value={zoneId}
             onChange={setZoneId}
           />
@@ -227,7 +227,7 @@ export default function LeagueHubZoneKingsNative({ zones, lang, onSelectPlayer }
         <HubToggle
           items={[
             { id: "pct", label: "FG%" },
-            { id: "fga", label: lang === "ja" ? "試投数" : "VOLUME" },
+            { id: "fga", label: "FGA" },
           ]}
           value={mode}
           onChange={setMode}

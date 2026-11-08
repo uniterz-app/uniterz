@@ -49,7 +49,7 @@ export default function LeagueHubPanelNative({ lang, onSelectTeam, onSelectPlaye
       >
         {hub ? (
           <Text style={styles.season}>
-            {hub.seasonKey} {lang === "ja" ? "シーズン" : "SEASON"}
+            {hub.seasonKey} SEASON
           </Text>
         ) : null}
         {tab === "team" ? (

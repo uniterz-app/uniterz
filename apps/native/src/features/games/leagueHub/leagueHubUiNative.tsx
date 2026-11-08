@@ -167,7 +167,7 @@ export function HubPosToggle({
   return (
     <HubToggle
       items={[
-        { id: "all", label: lang === "ja" ? "全員" : "ALL" },
+        { id: "all", label: "ALL" },
         { id: "G", label: "G" },
         { id: "F", label: "F" },
         { id: "C", label: "C" },

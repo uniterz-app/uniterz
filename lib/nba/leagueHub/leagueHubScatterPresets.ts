@@ -154,7 +154,7 @@ export const LEAGUE_HUB_PLAYER_SCATTER_PRESETS: readonly LeagueHubPlayerScatterP
   },
   {
     id: "foul",
-    label: { ja: "ファウル獲得", en: "FREE THROWS" },
+    label: { ja: "ファウル獲得", en: "FT DRAW" },
     hint: {
       ja: "右ほどファウルをもらってフリースローを得て（FTA ÷ FGA）、上ほどフリースローが入る。",
       en: "Right = more free throws per shot (FTA / FGA), up = better FT%.",
@@ -172,7 +172,7 @@ export const LEAGUE_HUB_PLAYER_SCATTER_PRESETS: readonly LeagueHubPlayerScatterP
   },
   {
     id: "source",
-    label: { ja: "得点の出どころ", en: "SCORING MIX" },
+    label: { ja: "得点の出どころ", en: "SCORING SOURCE" },
     hint: {
       ja: "得点のうち右ほど 3P、上ほどペイントの割合が高い。四隅は得点の取り方のタイプ。",
       en: "Share of points: right = from 3s, up = from the paint. Corners are scoring types.",
@@ -231,7 +231,7 @@ export const LEAGUE_HUB_PLAYER_SCATTER_PRESETS: readonly LeagueHubPlayerScatterP
   },
   {
     id: "onCourt",
-    label: { ja: "出場時の強さ", en: "ON COURT" },
+    label: { ja: "出場時の強さ", en: "ON-COURT RTG" },
     hint: {
       ja: "その選手がコートにいる間のチームの攻撃効率（右）と守備効率（上ほど失点が少ない）。チームの強さにも左右される。",
       en: "Team offense (right) and defense (up = fewer allowed) while he's on the floor. Depends on the team too.",

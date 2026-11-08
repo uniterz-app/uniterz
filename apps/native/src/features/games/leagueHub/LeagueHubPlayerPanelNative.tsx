@@ -89,7 +89,7 @@ function StyleMap({
   return (
     <View>
       <HubChips
-        items={LEAGUE_HUB_PLAYER_SCATTER_PRESETS.map((p) => ({ id: p.id, label: p.label[lang] }))}
+        items={LEAGUE_HUB_PLAYER_SCATTER_PRESETS.map((p) => ({ id: p.id, label: p.label.en }))}
         value={presetId}
         onChange={(id) => {
           setPresetId(id);
@@ -244,12 +244,12 @@ export default function LeagueHubPlayerPanelNative({ hub, lang, onSelectPlayer }
 
   return (
     <View>
-      <HubSection title={ja ? "スタイルマップ" : "STYLE MAP"}>
+      <HubSection title="STYLE MAP">
         <StyleMap players={hub.players} lang={lang} onSelectPlayer={onSelectPlayer} />
       </HubSection>
 
       <HubSection
-        title={ja ? "エリア別ランキング" : "BY ZONE"}
+        title="BY ZONE"
         hint={
           ja
             ? "エリアごとの成功率トップ。コートかチップでエリアを切り替え。一定の試投数がある選手だけ。"
@@ -263,7 +263,7 @@ export default function LeagueHubPlayerPanelNative({ hub, lang, onSelectPlayer }
         )}
       </HubSection>
 
-      <HubSection title={ja ? "MVP ラダー" : "MVP LADDER"}>
+      <HubSection title="MVP LADDER">
         {hub.mvp.length === 0
           ? noData(lang)
           : hub.mvp.map((r, i) => (
@@ -290,7 +290,7 @@ export default function LeagueHubPlayerPanelNative({ hub, lang, onSelectPlayer }
         </Text>
       </HubSection>
 
-      <HubSection title={ja ? "新人ラダー" : "ROOKIE LADDER"}>
+      <HubSection title="ROOKIE LADDER">
         {hub.rookies.length === 0
           ? noData(lang)
           : hub.rookies.map((r, i) => (
@@ -314,7 +314,7 @@ export default function LeagueHubPlayerPanelNative({ hub, lang, onSelectPlayer }
       </HubSection>
 
       <HubSection
-        title={ja ? "週間ベスト" : "PLAYERS OF THE WEEK"}
+        title="PLAYERS OF THE WEEK"
         hint={
           hub.week
             ? `${hub.week.startLabel} – ${hub.week.endLabel}${
@@ -348,7 +348,7 @@ export default function LeagueHubPlayerPanelNative({ hub, lang, onSelectPlayer }
       </HubSection>
 
       <HubSection
-        title={ja ? "好調 / 不調" : "HOT / COLD"}
+        title="HOT / COLD"
         hint={ja ? "直近 5 試合の平均得点とそれより前の比較。" : "Last 5 games vs earlier, points per game."}
       >
         <HubTwoCol
@@ -385,7 +385,7 @@ export default function LeagueHubPlayerPanelNative({ hub, lang, onSelectPlayer }
         />
       </HubSection>
 
-      <HubSection title={ja ? "シーズンハイ" : "SEASON HIGHS"}>
+      <HubSection title="SEASON HIGHS">
         <HubChips
           items={(Object.keys(HIGH_LABEL) as LeagueHubHighStat[]).map((id) => ({
             id,
@@ -411,7 +411,7 @@ export default function LeagueHubPlayerPanelNative({ hub, lang, onSelectPlayer }
       </HubSection>
 
       <HubSection
-        title={ja ? "連続記録と回数" : "STREAKS & COUNTS"}
+        title="STREAKS & COUNTS"
         hint={
           isStreak
             ? ja
@@ -422,11 +422,11 @@ export default function LeagueHubPlayerPanelNative({ hub, lang, onSelectPlayer }
       >
         <HubChips
           items={[
-            { id: "pts20", label: ja ? "20点+ 連続" : "20+ PTS STREAK" },
-            { id: "ddStreak", label: ja ? "ダブルダブル連続" : "DD STREAK" },
-            { id: "pts30", label: ja ? "30点+ 回数" : "30+ PTS GAMES" },
-            { id: "dd", label: ja ? "ダブルダブル回数" : "DOUBLE-DOUBLES" },
-            { id: "td", label: ja ? "トリプルダブル回数" : "TRIPLE-DOUBLES" },
+            { id: "pts20", label: "20+ PTS STREAK" },
+            { id: "ddStreak", label: "DD STREAK" },
+            { id: "pts30", label: "30+ PTS GAMES" },
+            { id: "dd", label: "DOUBLE-DOUBLES" },
+            { id: "td", label: "TRIPLE-DOUBLES" },
           ]}
           value={countId}
           onChange={setCountId}
