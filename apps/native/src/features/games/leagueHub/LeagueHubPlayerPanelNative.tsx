@@ -67,11 +67,13 @@ function StyleMap({
         .filter(
           (p) =>
             (pos === "all" || (p.positions ?? (p.pos ? [p.pos] : [])).includes(pos)) &&
-            p.m[preset.volume] != null &&
             p.m[preset.x.metric] != null &&
             p.m[preset.y.metric] != null
         )
-        .sort((a, b) => (b.m[preset.volume] ?? 0) - (a.m[preset.volume] ?? 0))
+        .sort(
+          (a, b) =>
+            (b.m[preset.volume] ?? -1) - (a.m[preset.volume] ?? -1) || b.gp * b.min - a.gp * a.min
+        )
         .slice(0, Number(topN)),
     [players, preset, topN, pos]
   );
