@@ -218,6 +218,7 @@ export function HubRow({
   name,
   sub,
   value,
+  cells,
   valueSub,
   onPress,
   highlight,
@@ -232,7 +233,9 @@ export function HubRow({
   /** team = 順位表と同じチーム名書体 */
   kind?: "player" | "team";
   sub?: string;
-  value: string;
+  value?: string;
+  /** `HubCellHeader` の見出しと揃う等幅の数値列（value の代わり） */
+  cells?: readonly string[];
   valueSub?: string;
   onPress?: () => void;
   highlight?: boolean;
@@ -295,10 +298,43 @@ export function HubRow({
         ) : null}
       </View>
       <View style={styles.rowValueCol}>
-        <Text style={styles.rowValue}>{value}</Text>
+        {cells ? (
+          <View style={styles.cells}>
+            {cells.map((c, i) => (
+              <Text key={i} style={[styles.rowValue, styles.cell]} numberOfLines={1}>
+                {c}
+              </Text>
+            ))}
+          </View>
+        ) : (
+          <Text style={styles.rowValue}>{value}</Text>
+        )}
         {valueSub ? <Text style={styles.rowValueSub}>{valueSub}</Text> : null}
       </View>
     </Pressable>
+  );
+}
+
+/** `HubRow` の `cells` の上に置く列見出し */
+export function HubCellHeader({
+  labels,
+  caption,
+}: {
+  labels: readonly string[];
+  /** 列全体の単位（例: 平均得点） */
+  caption?: string;
+}) {
+  return (
+    <View style={styles.cellHeader}>
+      {caption ? <Text style={styles.cellCaption}>{caption}</Text> : null}
+      <View style={styles.cells}>
+        {labels.map((l, i) => (
+          <Text key={i} style={[styles.cellLabel, styles.cell]} numberOfLines={1}>
+            {l}
+          </Text>
+        ))}
+      </View>
+    </View>
   );
 }
 
@@ -585,6 +621,34 @@ const styles = StyleSheet.create({
     color: "rgba(255,255,255,0.45)",
     fontSize: 10,
     marginTop: 1,
+  },
+  cells: {
+    flexDirection: "row",
+  },
+  cell: {
+    width: 44,
+    textAlign: "right",
+  },
+  cellHeader: {
+    alignItems: "flex-end",
+    paddingHorizontal: 4,
+    paddingTop: 6,
+    paddingBottom: 2,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "rgba(0,245,255,0.22)",
+  },
+  cellCaption: {
+    fontFamily: METRIC_FONT,
+    color: "rgba(255,255,255,0.45)",
+    fontSize: 9,
+    marginBottom: 1,
+  },
+  cellLabel: {
+    fontFamily: METRIC_FONT,
+    color: "rgba(0,245,255,0.7)",
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 0.6,
   },
   empty: {
     color: "rgba(255,255,255,0.4)",
