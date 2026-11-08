@@ -61,11 +61,18 @@ const DOT_R = 4.2;
 const STAR_R = 7.5;
 const LABEL_W = 160;
 const TAP_RADIUS = 24;
+const LABEL_TAP_SLOP = 8;
 
 type Box = { x0: number; y0: number; x1: number; y1: number };
 
 function overlaps(a: Box, b: Box): boolean {
   return a.x0 < b.x1 && a.x1 > b.x0 && a.y0 < b.y1 && a.y1 > b.y0;
+}
+
+function distToBox(b: Box, x: number, y: number): number {
+  const dx = Math.max(b.x0 - x, 0, x - b.x1);
+  const dy = Math.max(b.y0 - y, 0, y - b.y1);
+  return Math.hypot(dx, dy);
 }
 
 function domain(values: number[]): { min: number; max: number; avg: number } {
@@ -182,8 +189,13 @@ export default function LeagueHubScatterNative({
         labelBoxes.push({ x0: PAD.l, y0: at - 6, x1: PAD.l + 40, y1: at + 6 });
       }
     }
-    const labels: Array<{ i: number; x: number; y: number; anchor: "start" | "middle" | "end" }> =
-      [];
+    const labels: Array<{
+      i: number;
+      x: number;
+      y: number;
+      anchor: "start" | "middle" | "end";
+      box: Box;
+    }> = [];
     for (const { i, sel } of order) {
       const m = placed[i]!;
       const w = m.p.label.length * fontSize * 0.68 + 2;
@@ -231,7 +243,7 @@ export default function LeagueHubScatterNative({
         cands.find(free) ?? (force ? (cands.find(isInside) ?? cands[0]) : undefined);
       if (!pick) continue;
       labelBoxes.push(pick.box);
-      labels.push({ i, x: pick.x, y: pick.y, anchor: pick.anchor });
+      labels.push({ i, x: pick.x, y: pick.y, anchor: pick.anchor, box: pick.box });
     }
 
     return { dx, dy, px, py, placed, avgX, avgY, labels, fontSize, xTicks, yTicks };
@@ -259,6 +271,12 @@ export default function LeagueHubScatterNative({
       const d = Math.hypot(m.cx - lx, m.cy - ly);
       if (d <= Math.max(TAP_RADIUS, m.size / 2 + 6) && (!best || d < best.d)) {
         best = { id: m.p.id, d };
+      }
+    }
+    for (const l of layout.labels) {
+      const d = distToBox(l.box, lx, ly);
+      if (d <= LABEL_TAP_SLOP && (!best || d < best.d)) {
+        best = { id: layout.placed[l.i]!.p.id, d };
       }
     }
     onSelect(best && best.id !== selectedId ? best.id : null);
