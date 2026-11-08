@@ -33,6 +33,10 @@ export type HubScatterPoint = {
   secondary?: string;
   /** 0–1。ジャージの大きさ */
   scale?: number;
+  /** お気に入り。点の代わりに ★ */
+  star?: boolean;
+  /** 母集団の外から足した点。軸の範囲に含めず、はみ出たら枠の端に置く */
+  pinned?: boolean;
 };
 
 type Props = {
@@ -52,6 +56,7 @@ type RangeTick = { v: number; at: number };
 
 const PAD = { l: 6, r: 6, t: 8, b: 20 } as const;
 const DOT_R = 4.2;
+const STAR_R = 7.5;
 const LABEL_W = 160;
 const TAP_RADIUS = 24;
 
@@ -73,6 +78,16 @@ function domain(values: number[]): { min: number; max: number; avg: number } {
   return { min: min - pad, max: max + pad, avg };
 }
 
+function starPath(cx: number, cy: number, r: number): string {
+  const pts: string[] = [];
+  for (let i = 0; i < 10; i++) {
+    const rad = i % 2 === 0 ? r : r * 0.45;
+    const a = -Math.PI / 2 + (i * Math.PI) / 5;
+    pts.push(`${(cx + rad * Math.cos(a)).toFixed(2)},${(cy + rad * Math.sin(a)).toFixed(2)}`);
+  }
+  return `M${pts.join("L")}Z`;
+}
+
 export default function LeagueHubScatterNative({
   points,
   xAxis,
@@ -91,16 +106,25 @@ export default function LeagueHubScatterNative({
 
   const layout = useMemo(() => {
     if (width <= 0 || points.length === 0) return null;
-    const dx = domain(points.map((p) => p.x));
-    const dy = domain(points.map((p) => p.y));
+    const base = points.some((p) => !p.pinned) ? points.filter((p) => !p.pinned) : points;
+    const dx = domain(base.map((p) => p.x));
+    const dy = domain(base.map((p) => p.y));
     const px = (v: number) =>
       PAD.l + ((xAxis.invert ? dx.max - v : v - dx.min) / (dx.max - dx.min)) * plotW;
     const py = (v: number) =>
       PAD.t + ((yAxis.invert ? v - dy.min : dy.max - v) / (dy.max - dy.min)) * plotH;
+    const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 
     const placed = points.map((p) => {
-      const size = marker === "jersey" ? 20 + (p.scale ?? 0.5) * 12 : DOT_R * 2;
-      return { p, cx: px(p.x), cy: py(p.y), size };
+      const size =
+        marker === "jersey" ? 20 + (p.scale ?? 0.5) * 12 : p.star ? STAR_R * 2 : DOT_R * 2;
+      const half = size / 2;
+      return {
+        p,
+        cx: clamp(px(p.x), PAD.l + half, PAD.l + plotW - half),
+        cy: clamp(py(p.y), PAD.t + half, PAD.t + plotH - half),
+        size,
+      };
     });
     const avgX = px(dx.avg);
     const avgY = py(dy.avg);
@@ -118,18 +142,31 @@ export default function LeagueHubScatterNative({
         i,
         d: ((m.cx - avgX) / plotW) ** 2 + ((m.cy - avgY) / plotH) ** 2,
         sel: m.p.id === selectedId,
+        star: !!m.p.star,
       }))
-      .sort((a, b) => Number(b.sel) - Number(a.sel) || b.d - a.d);
+      .sort(
+        (a, b) => Number(b.sel) - Number(a.sel) || Number(b.star) - Number(a.star) || b.d - a.d
+      );
 
     const labelBoxes: Box[] = [
       { x0: PAD.l, y0: avgY - 14, x1: PAD.l + 46, y1: avgY - 1 },
     ];
+    const cornerW = (k: keyof LeagueHubQuadrants) =>
+      quadrants[k][lang].length * (lang === "ja" ? 10.5 : 7) + 8;
+    const top0 = PAD.t + 2;
+    const bot1 = PAD.t + plotH - 2;
+    labelBoxes.push(
+      { x0: PAD.l, y0: top0, x1: PAD.l + cornerW("tl"), y1: top0 + 14 },
+      { x0: PAD.l + plotW - cornerW("tr"), y0: top0, x1: PAD.l + plotW, y1: top0 + 14 },
+      { x0: PAD.l, y0: bot1 - 14, x1: PAD.l + cornerW("bl"), y1: bot1 },
+      { x0: PAD.l + plotW - cornerW("br"), y0: bot1 - 14, x1: PAD.l + plotW, y1: bot1 }
+    );
 
     const xTicks: RangeTick[] = [];
     const yTicks: RangeTick[] = [];
     if (showRange) {
-      const xs = points.map((p) => p.x);
-      const ys = points.map((p) => p.y);
+      const xs = base.map((p) => p.x);
+      const ys = base.map((p) => p.y);
       const avgLabelW = (`AVG ${formatHubValue(dx.avg, xAxis.format)}`.length * 9 * 0.62) / 2 + 4;
       for (const v of [Math.min(...xs), Math.max(...xs)]) {
         const at = px(v);
@@ -205,6 +242,8 @@ export default function LeagueHubScatterNative({
     marker,
     selectedId,
     showRange,
+    quadrants,
+    lang,
   ]);
 
   const hasSelection = selectedId != null && points.some((p) => p.id === selectedId);
@@ -346,21 +385,41 @@ export default function LeagueHubScatterNative({
                 </G>
               ))}
               {marker === "dot"
-                ? layout.placed.map((m) => {
-                    const sel = m.p.id === selectedId;
-                    return (
-                      <Circle
-                        key={m.p.id}
-                        cx={m.cx}
-                        cy={m.cy}
-                        r={sel ? DOT_R + 1.5 : DOT_R}
-                        fill={m.p.color}
-                        stroke="#050508"
-                        strokeWidth={1}
-                        opacity={hasSelection && !sel ? 0.4 : 1}
-                      />
-                    );
-                  })
+                ? layout.placed
+                    .filter((m) => !m.p.star)
+                    .map((m) => {
+                      const sel = m.p.id === selectedId;
+                      return (
+                        <Circle
+                          key={m.p.id}
+                          cx={m.cx}
+                          cy={m.cy}
+                          r={sel ? DOT_R + 1.5 : DOT_R}
+                          fill={m.p.color}
+                          stroke="#050508"
+                          strokeWidth={1}
+                          opacity={hasSelection && !sel ? 0.4 : 1}
+                        />
+                      );
+                    })
+                : null}
+              {marker === "dot"
+                ? layout.placed
+                    .filter((m) => m.p.star)
+                    .map((m) => {
+                      const sel = m.p.id === selectedId;
+                      return (
+                        <Path
+                          key={`s-${m.p.id}`}
+                          d={starPath(m.cx, m.cy, sel ? STAR_R + 1.5 : STAR_R)}
+                          fill={m.p.color}
+                          stroke="#fff"
+                          strokeWidth={1}
+                          strokeLinejoin="round"
+                          opacity={hasSelection && !sel ? 0.5 : 1}
+                        />
+                      );
+                    })
                 : null}
               {marker === "jersey" ? (
                 <Defs>

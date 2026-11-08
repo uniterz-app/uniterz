@@ -52,7 +52,7 @@ export const LEAGUE_HUB_PLAYER_SCATTER_PRESETS: readonly LeagueHubPlayerScatterP
     volumeLabel: { ja: "3P 試投", en: "3PA" },
     quadrants: {
       tr: { ja: "ボリュームシューター", en: "VOLUME SHOOTER" },
-      tl: { ja: "スポットシューター", en: "SPOT SHOOTER" },
+      tl: { ja: "エリートシューター", en: "ELITE SHOOTER" },
       br: { ja: "ハイボリューム", en: "HIGH VOLUME" },
       bl: { ja: "ノンシューター", en: "NON-SHOOTER" },
     },

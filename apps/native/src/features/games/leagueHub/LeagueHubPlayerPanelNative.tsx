@@ -4,16 +4,22 @@ import {
   LEAGUE_HUB_PLAYER_SCATTER_PRESETS,
   type LeagueHubPlayerScatterPreset,
 } from "../../../../../../lib/nba/leagueHub/leagueHubScatterPresets";
+import {
+  buildLeagueHubStyleIndex,
+  similarLeagueHubPlayers,
+} from "../../../../../../lib/nba/leagueHub/leagueHubStyleSimilarity";
 import type {
   LeagueHubCountRow,
   LeagueHubHighStat,
   LeagueHubLadderRow,
   LeagueHubPlayer,
+  LeagueHubPlayerMetric,
   LeagueHubWeekRow,
   NbaLeagueHubDoc,
 } from "../../../../../../lib/nba/leagueHub/leagueHubTypes";
 import { CYBER_TAB_CYAN } from "../../rankings/CyberSlantedTabNative";
 import { METRIC_FONT } from "../../rankings/rankingsUiTheme";
+import { useMyNbaFavoritesNative } from "../../profile/useMyNbaFavoritesNative";
 import LeagueHubScatterNative, { type HubScatterPoint } from "./LeagueHubScatterNative";
 import LeagueHubZoneKingsNative from "./LeagueHubZoneKingsNative";
 import {
@@ -61,30 +67,65 @@ function StyleMap({
     LEAGUE_HUB_PLAYER_SCATTER_PRESETS.find((p) => p.id === presetId) ??
     LEAGUE_HUB_PLAYER_SCATTER_PRESETS[0]!;
 
-  const pool = useMemo(
-    () =>
-      players
-        .filter(
-          (p) =>
-            (pos === "all" || (p.positions ?? (p.pos ? [p.pos] : [])).includes(pos)) &&
-            p.m[preset.x.metric] != null &&
-            p.m[preset.y.metric] != null
-        )
-        .sort(
-          (a, b) =>
-            (b.m[preset.volume] ?? -1) - (a.m[preset.volume] ?? -1) || b.gp * b.min - a.gp * a.min
-        )
-        .slice(0, Number(topN)),
-    [players, preset, topN, pos]
+  const { favorites } = useMyNbaFavoritesNative();
+  const favIds = useMemo(
+    () => new Set(favorites.favoriteNbaPlayers.map((p) => p.playerId)),
+    [favorites.favoriteNbaPlayers]
   );
-  const points: HubScatterPoint[] = pool.map((p) => ({
+  const styleIndex = useMemo(() => buildLeagueHubStyleIndex(players), [players]);
+
+  const pool = useMemo(() => {
+    const plottable = (p: LeagueHubPlayer) =>
+      p.m[preset.x.metric] != null && p.m[preset.y.metric] != null;
+    const inPos = (p: LeagueHubPlayer) =>
+      pos === "all" || (p.positions ?? (p.pos ? [p.pos] : [])).includes(pos);
+    const top = players
+      .filter((p) => inPos(p) && plottable(p))
+      .sort(
+        (a, b) =>
+          (b.m[preset.volume] ?? -1) - (a.m[preset.volume] ?? -1) || b.gp * b.min - a.gp * a.min
+      )
+      .slice(0, Number(topN));
+    const shown = new Set(top.map((p) => p.playerId));
+    const pinned = players.filter(
+      (p) =>
+        !shown.has(p.playerId) &&
+        plottable(p) &&
+        (p.playerId === selected || (favIds.has(p.playerId) && inPos(p)))
+    );
+    return { top, pinned };
+  }, [players, preset, topN, pos, favIds, selected]);
+  const points: HubScatterPoint[] = [...pool.top, ...pool.pinned].map((p, i) => ({
     id: p.playerId,
     x: p.m[preset.x.metric]!,
     y: p.m[preset.y.metric]!,
     label: p.name,
     color: teamInk(p.teamId),
+    star: favIds.has(p.playerId),
+    pinned: i >= pool.top.length,
   }));
-  const sel = selected ? pool.find((p) => p.playerId === selected) : null;
+  const hasStar = points.some((p) => p.star);
+  const sel = selected
+    ? (pool.top.find((p) => p.playerId === selected) ??
+      pool.pinned.find((p) => p.playerId === selected))
+    : null;
+
+  const rankOf = (metric: LeagueHubPlayerMetric, invert: boolean | undefined, v: number) => {
+    const vals = players.map((p) => p.m[metric]).filter((x): x is number => x != null);
+    return {
+      rank: vals.filter((x) => (invert ? x < v : x > v)).length + 1,
+      of: vals.length,
+    };
+  };
+  const similar = useMemo(
+    () =>
+      sel
+        ? similarLeagueHubPlayers(styleIndex, sel.playerId)
+            .map((id) => players.find((p) => p.playerId === id))
+            .filter((p): p is LeagueHubPlayer => p != null)
+        : [],
+    [sel, styleIndex, players]
+  );
 
   return (
     <View>
@@ -120,6 +161,7 @@ function StyleMap({
         {lang === "ja"
           ? `${pos === "all" ? "" : `${pos} の`}${preset.volumeLabel.ja}の上位 ${topN} 人`
           : `Top ${topN}${pos === "all" ? "" : ` ${pos}s`} by ${preset.volumeLabel.en}`}
+        {hasStar ? (lang === "ja" ? " · ★ お気に入り選手" : " · ★ favorites") : ""}
       </Text>
       {points.length < 3 ? (
         noData(lang)
@@ -137,28 +179,58 @@ function StyleMap({
         />
       )}
       {sel ? (
-        <Pressable style={styles.selRow} onPress={() => onSelectPlayer(sel.playerId)}>
-          <View style={styles.selNameCol}>
-            <View style={styles.selNameLine}>
-              <Text style={[styles.selName, playerNameStyle]}>{sel.name}</Text>
-              <HubTeamTag teamId={sel.teamId} />
-            </View>
-            <Text style={styles.selSub}>
-              {sel.gp} GP · {sel.min.toFixed(1)} MIN
-            </Text>
-          </View>
-          <View style={styles.selStats}>
-            {[preset.x, preset.y].map((ax) => (
-              <Text key={ax.metric} style={styles.selStat}>
-                {ax.label[lang].replace(/（.*）|\(.*\)/, "").trim()}{" "}
-                <Text style={styles.selStatValue}>
-                  {formatHubValue(sel.m[ax.metric], ax.format)}
-                </Text>
+        <View style={styles.selCard}>
+          <Pressable style={styles.selRow} onPress={() => onSelectPlayer(sel.playerId)}>
+            <View style={styles.selNameCol}>
+              <View style={styles.selNameLine}>
+                {favIds.has(sel.playerId) ? <Text style={styles.selStar}>★</Text> : null}
+                <Text style={[styles.selName, playerNameStyle]}>{sel.name}</Text>
+                <HubTeamTag teamId={sel.teamId} />
+              </View>
+              <Text style={styles.selSub}>
+                {sel.gp} GP · {sel.min.toFixed(1)} MIN
               </Text>
-            ))}
-          </View>
-          <Text style={styles.selGo}>›</Text>
-        </Pressable>
+            </View>
+            <View style={styles.selStats}>
+              {[preset.x, preset.y].map((ax) => {
+                const v = sel.m[ax.metric];
+                const r = v == null ? null : rankOf(ax.metric, ax.invert, v);
+                return (
+                  <Text key={ax.metric} style={styles.selStat}>
+                    {ax.label[lang].replace(/（.*）|\(.*\)/, "").trim()}{" "}
+                    <Text style={styles.selStatValue}>{formatHubValue(v, ax.format)}</Text>
+                    {r ? (
+                      <Text style={styles.selStatRank}>
+                        {lang === "ja" ? `  ${r.rank}位/${r.of}` : `  #${r.rank}/${r.of}`}
+                      </Text>
+                    ) : null}
+                  </Text>
+                );
+              })}
+            </View>
+            <Text style={styles.selGo}>›</Text>
+          </Pressable>
+          {similar.length > 0 ? (
+            <View style={styles.simRow}>
+              <Text style={styles.simLabel}>{lang === "ja" ? "似たスタイル" : "SIMILAR"}</Text>
+              <View style={styles.simList}>
+                {similar.map((p) => (
+                  <Pressable
+                    key={p.playerId}
+                    style={styles.simItem}
+                    onPress={() => setSelected(p.playerId)}
+                    hitSlop={4}
+                  >
+                    <Text style={[styles.simName, playerNameStyle]} numberOfLines={1}>
+                      {p.name}
+                    </Text>
+                    <HubTeamTag teamId={p.teamId} />
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+          ) : null}
+        </View>
       ) : (
         <Text style={styles.tapHint}>
           {lang === "ja" ? "点をタップで選手を表示" : "Tap a dot to see the player"}
@@ -469,16 +541,59 @@ const styles = StyleSheet.create({
     fontSize: 10,
     marginBottom: 4,
   },
+  selCard: {
+    marginTop: 6,
+    borderWidth: 1,
+    borderColor: "rgba(0,245,255,0.4)",
+    backgroundColor: "rgba(0,245,255,0.06)",
+  },
   selRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    marginTop: 6,
     paddingVertical: 8,
     paddingHorizontal: 10,
-    borderWidth: 1,
-    borderColor: "rgba(0,245,255,0.4)",
-    backgroundColor: "rgba(0,245,255,0.06)",
+  },
+  selStar: {
+    color: "#fff",
+    fontSize: 12,
+    marginRight: -3,
+  },
+  selStatRank: {
+    color: "rgba(0,245,255,0.75)",
+    fontSize: 10,
+    fontWeight: "700",
+  },
+  simRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(0,245,255,0.18)",
+  },
+  simLabel: {
+    fontFamily: METRIC_FONT,
+    color: "rgba(255,255,255,0.45)",
+    fontSize: 10,
+    fontWeight: "700",
+  },
+  simList: {
+    flex: 1,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+  },
+  simItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  simName: {
+    color: "rgba(255,255,255,0.85)",
+    fontSize: 11,
+    fontWeight: "700",
   },
   selNameCol: {
     minWidth: 0,
