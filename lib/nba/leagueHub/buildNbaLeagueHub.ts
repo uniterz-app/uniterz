@@ -91,6 +91,9 @@ const LIST_LIMIT = 5;
 /** エリア別・シーズンハイ・好調 / 不調 */
 const LONG_LIST_LIMIT = 10;
 const TOP_GAMES_DAYS = 7;
+/** ワーストはその試合で長く出た、今季の主力だけ（短時間の出場や控えの不発は並べない） */
+const WORST_GAME_MIN_MIN = 28;
+const WORST_GAME_MIN_SEASON_PTS = 12;
 const LADDER_LIMIT = 10;
 const SEASON_GAMES = 82;
 /** MVP など主要賞の出場条件（2023-24〜） */
@@ -464,6 +467,10 @@ export function buildNbaLeagueHub(input: BuildNbaLeagueHubInput): NbaLeagueHubDo
           stl: g.stl,
           blk: g.blk,
           fg3m: g.fg3m,
+          min: round(g.min, 0),
+          fgm: g.fgm,
+          fga: g.fga,
+          tov: g.tov,
           gameScore: round(gameScore(g), 1),
         },
       });
@@ -500,19 +507,30 @@ export function buildNbaLeagueHub(input: BuildNbaLeagueHubInput): NbaLeagueHubDo
 
   const topGamesEnd = Math.max(...topGameCands.map((c) => c.day), -Infinity);
   const topGamesStart = topGamesEnd - (TOP_GAMES_DAYS - 1) * DAY_MS;
-  const topGames: LeagueHubTopGames | null =
+  const windowGames = topGameCands.filter((c) => c.day >= topGamesStart).map((c) => c.game);
+  const onePerPlayer = (g: LeagueHubTopGame, i: number, arr: LeagueHubTopGame[]) =>
+    arr.findIndex((x) => x.playerId === g.playerId) === i;
+  const gamesBlock = (games: LeagueHubTopGame[]): LeagueHubTopGames | null =>
     topGameCands.length === 0
       ? null
-      : {
-          startLabel: mdLabel(topGamesStart),
-          endLabel: mdLabel(topGamesEnd),
-          games: topGameCands
-            .filter((c) => c.day >= topGamesStart)
-            .map((c) => c.game)
-            .sort((a, b) => b.gameScore - a.gameScore || b.pts - a.pts)
-            .filter((g, i, arr) => arr.findIndex((x) => x.playerId === g.playerId) === i)
-            .slice(0, LIST_LIMIT),
-        };
+      : { startLabel: mdLabel(topGamesStart), endLabel: mdLabel(topGamesEnd), games };
+  const topGames = gamesBlock(
+    [...windowGames]
+      .sort((a, b) => b.gameScore - a.gameScore || b.pts - a.pts)
+      .filter(onePerPlayer)
+      .slice(0, LIST_LIMIT)
+  );
+  const worstGames = gamesBlock(
+    windowGames
+      .filter(
+        (g) =>
+          (g.min ?? 0) >= WORST_GAME_MIN_MIN &&
+          (metrics.get(g.playerId)?.values.pts ?? 0) >= WORST_GAME_MIN_SEASON_PTS
+      )
+      .sort((a, b) => a.gameScore - b.gameScore || a.pts - b.pts)
+      .filter(onePerPlayer)
+      .slice(0, LIST_LIMIT)
+  );
 
   // ── ラダー ──
   const standingsById = new Map(input.standings.map((s) => [s.teamId, s]));
@@ -782,6 +800,7 @@ export function buildNbaLeagueHub(input: BuildNbaLeagueHubInput): NbaLeagueHubDo
     cold: [...trends].filter((t) => t.diff < 0).sort((a, b) => a.diff - b.diff).slice(0, LONG_LIST_LIMIT),
     week,
     topGames,
+    worstGames,
     rookies: withPrev(rookies, ladderPrev?.rookies),
     mvp: withPrev(mvp, ladderPrev?.mvp),
     dpoy: withPrev(dpoy, ladderPrev?.dpoy),

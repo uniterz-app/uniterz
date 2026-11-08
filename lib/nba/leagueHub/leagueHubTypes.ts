@@ -147,6 +147,10 @@ export type LeagueHubTopGame = LeagueHubPlayerRef & {
   stl: number;
   blk: number;
   fg3m: number;
+  min?: number;
+  fgm?: number;
+  fga?: number;
+  tov?: number;
   gameScore: number;
 };
 
@@ -247,6 +251,8 @@ export type NbaLeagueHubDoc = {
   cold: LeagueHubTrendRow[];
   week: LeagueHubWeek | null;
   topGames?: LeagueHubTopGames | null;
+  /** 同じ 7 日間で、長く出た今季の主力の Game Score 下位（1 人 1 試合） */
+  worstGames?: LeagueHubTopGames | null;
   rookies: LeagueHubLadderRow[];
   mvp: LeagueHubLadderRow[];
   dpoy?: LeagueHubLadderRow[];

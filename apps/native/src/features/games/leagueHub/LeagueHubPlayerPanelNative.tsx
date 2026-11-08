@@ -25,6 +25,7 @@ import { METRIC_FONT } from "../../rankings/rankingsUiTheme";
 import { useMyNbaFavoritesNative } from "../../profile/useMyNbaFavoritesNative";
 import LeagueHubScatterNative, { type HubScatterPoint } from "./LeagueHubScatterNative";
 import LeagueHubZoneKingsNative from "./LeagueHubZoneKingsNative";
+import HubShareSectionNative, { useHubCapturing } from "./HubShareSectionNative";
 import {
   HubCellHeader,
   HubChips,
@@ -107,6 +108,7 @@ function StyleMap({
   lang: HubLang;
   onSelectPlayer: (playerId: string) => void;
 }) {
+  const capturing = useHubCapturing();
   const [groupId, setGroupId] = useState<LeagueHubPlayerScatterGroupId>("scoring");
   /** グループを行き来しても、それぞれ最後に見たマップに戻る */
   const [presetByGroup, setPresetByGroup] = useState<Record<LeagueHubPlayerScatterGroupId, string>>(
@@ -202,47 +204,57 @@ function StyleMap({
 
   return (
     <View>
-      <HubToggle
-        items={LEAGUE_HUB_PLAYER_SCATTER_GROUPS.map((g) => ({ id: g.id, label: g.label }))}
-        value={groupId}
-        onChange={(id) => {
-          setGroupId(id);
-          setSelected(null);
-        }}
-        fill
-      />
-      <HubChips
-        items={group.presetIds.flatMap((id) => {
-          const p = LEAGUE_HUB_PLAYER_SCATTER_PRESETS.find((x) => x.id === id);
-          return p ? [{ id: p.id, label: p.label.en }] : [];
-        })}
-        value={presetId}
-        onChange={(id) => {
-          setPresetByGroup((prev) => ({ ...prev, [groupId]: id }));
-          setSelected(null);
-        }}
-        wrap
-        columns={4}
-      />
+      {capturing ? (
+        <Text style={styles.captureMapTitle}>
+          {group.label} · {preset.label.en}
+        </Text>
+      ) : (
+        <>
+          <HubToggle
+            items={LEAGUE_HUB_PLAYER_SCATTER_GROUPS.map((g) => ({ id: g.id, label: g.label }))}
+            value={groupId}
+            onChange={(id) => {
+              setGroupId(id);
+              setSelected(null);
+            }}
+            fill
+          />
+          <HubChips
+            items={group.presetIds.flatMap((id) => {
+              const p = LEAGUE_HUB_PLAYER_SCATTER_PRESETS.find((x) => x.id === id);
+              return p ? [{ id: p.id, label: p.label.en }] : [];
+            })}
+            value={presetId}
+            onChange={(id) => {
+              setPresetByGroup((prev) => ({ ...prev, [groupId]: id }));
+              setSelected(null);
+            }}
+            wrap
+            columns={4}
+          />
+        </>
+      )}
       <Text style={styles.mapHint}>{preset.hint[lang]}</Text>
-      <View style={styles.mapControls}>
-        <HubPosToggle
-          value={pos}
-          onChange={(v) => {
-            setPos(v);
-            setSelected(null);
-          }}
-          lang={lang}
-        />
-        <HubToggle
-          items={[
-            { id: "30", label: "TOP 30" },
-            { id: "50", label: "TOP 50" },
-          ]}
-          value={topN}
-          onChange={setTopN}
-        />
-      </View>
+      {capturing ? null : (
+        <View style={styles.mapControls}>
+          <HubPosToggle
+            value={pos}
+            onChange={(v) => {
+              setPos(v);
+              setSelected(null);
+            }}
+            lang={lang}
+          />
+          <HubToggle
+            items={[
+              { id: "30", label: "TOP 30" },
+              { id: "50", label: "TOP 50" },
+            ]}
+            value={topN}
+            onChange={setTopN}
+          />
+        </View>
+      )}
       <Text style={styles.mapPool}>
         {lang === "ja"
           ? `${pos === "all" ? "" : `${pos} の`}${preset.volumeLabel.ja}の上位 ${topN} 人`
@@ -264,7 +276,7 @@ function StyleMap({
           showRange
         />
       )}
-      {sel ? (
+      {capturing ? null : sel ? (
         <View style={styles.selCard}>
           <Pressable style={styles.selRow} onPress={() => onSelectPlayer(sel.playerId)}>
             <View style={styles.selNameCol}>
@@ -287,7 +299,13 @@ function StyleMap({
                     <Text style={styles.selStatValue}>{formatHubValue(v, ax.format)}</Text>
                     {r ? (
                       <Text style={styles.selStatRank}>
-                        {lang === "ja" ? `  ${r.rank}位/${r.of}` : `  #${r.rank}/${r.of}`}
+                        {preset.risk
+                          ? lang === "ja"
+                            ? `  ${ax.invert ? "低い" : "高い"}順 ${r.rank}位/${r.of}`
+                            : `  #${r.rank}/${r.of} ${ax.invert ? "lowest" : "highest"}`
+                          : lang === "ja"
+                            ? `  ${r.rank}位/${r.of}`
+                            : `  #${r.rank}/${r.of}`}
                       </Text>
                     ) : null}
                   </Text>
@@ -322,71 +340,75 @@ function StyleMap({
           {lang === "ja" ? "点をタップで選手を表示" : "Tap a dot to see the player"}
         </Text>
       )}
-      <View style={styles.searchBox}>
-        <MaterialCommunityIcons name="magnify" size={18} color={CYBER_TAB_CYAN} />
-        <TextInput
-          value={query}
-          onChangeText={setQuery}
-          placeholder={
-            lang === "ja" ? "選手を探してマップに追加（例: curry / GSW）" : "Add a player (e.g. curry / GSW)"
-          }
-          placeholderTextColor="rgba(0,245,255,0.5)"
-          autoCorrect={false}
-          autoCapitalize="none"
-          returnKeyType="search"
-          style={styles.searchInput}
-        />
-        {query ? (
-          <Pressable onPress={() => setQuery("")} hitSlop={8}>
-            <MaterialCommunityIcons name="close" size={16} color="rgba(255,255,255,0.6)" />
-          </Pressable>
-        ) : null}
-      </View>
-      {query.trim() ? (
-        <View style={styles.searchList}>
-          {hits.length === 0 ? (
-            <Text style={styles.searchEmpty}>
-              {lang === "ja"
-                ? "見つかりません（出場が少ない選手は載っていません）"
-                : "No match (players with few minutes aren't listed)"}
-            </Text>
-          ) : (
-            hits.map((p) => (
-              <Pressable
-                key={p.playerId}
-                style={({ pressed }) => [styles.searchRow, pressed ? { opacity: 0.7 } : null]}
-                onPress={() => addPlayer(p.playerId)}
-              >
-                <Text style={[styles.searchName, playerNameStyle]} numberOfLines={1}>
-                  {p.name}
+      {capturing ? null : (
+        <>
+          <View style={styles.searchBox}>
+            <MaterialCommunityIcons name="magnify" size={18} color={CYBER_TAB_CYAN} />
+            <TextInput
+              value={query}
+              onChangeText={setQuery}
+              placeholder={
+                lang === "ja" ? "選手を探してマップに追加（例: curry / GSW）" : "Add a player (e.g. curry / GSW)"
+              }
+              placeholderTextColor="rgba(0,245,255,0.5)"
+              autoCorrect={false}
+              autoCapitalize="none"
+              returnKeyType="search"
+              style={styles.searchInput}
+            />
+            {query ? (
+              <Pressable onPress={() => setQuery("")} hitSlop={8}>
+                <MaterialCommunityIcons name="close" size={16} color="rgba(255,255,255,0.6)" />
+              </Pressable>
+            ) : null}
+          </View>
+          {query.trim() ? (
+            <View style={styles.searchList}>
+              {hits.length === 0 ? (
+                <Text style={styles.searchEmpty}>
+                  {lang === "ja"
+                    ? "見つかりません（出場が少ない選手は載っていません）"
+                    : "No match (players with few minutes aren't listed)"}
                 </Text>
-                <HubTeamTag teamId={p.teamId} />
-                <Text style={styles.searchAdd}>＋</Text>
-              </Pressable>
-            ))
-          )}
-        </View>
-      ) : null}
-      {addedPlayers.length > 0 ? (
-        <View style={styles.addedRow}>
-          {addedPlayers.map((p) => (
-            <View key={p.playerId} style={styles.addedChip}>
-              <Pressable onPress={() => setSelected(p.playerId)} hitSlop={4}>
-                <Text style={[styles.addedName, playerNameStyle]}>{p.name}</Text>
-              </Pressable>
-              <Pressable
-                onPress={() => {
-                  setAdded((prev) => prev.filter((x) => x !== p.playerId));
-                  if (selected === p.playerId) setSelected(null);
-                }}
-                hitSlop={8}
-              >
-                <Text style={styles.addedRemove}>×</Text>
-              </Pressable>
+              ) : (
+                hits.map((p) => (
+                  <Pressable
+                    key={p.playerId}
+                    style={({ pressed }) => [styles.searchRow, pressed ? { opacity: 0.7 } : null]}
+                    onPress={() => addPlayer(p.playerId)}
+                  >
+                    <Text style={[styles.searchName, playerNameStyle]} numberOfLines={1}>
+                      {p.name}
+                    </Text>
+                    <HubTeamTag teamId={p.teamId} />
+                    <Text style={styles.searchAdd}>＋</Text>
+                  </Pressable>
+                ))
+              )}
             </View>
-          ))}
-        </View>
-      ) : null}
+          ) : null}
+          {addedPlayers.length > 0 ? (
+            <View style={styles.addedRow}>
+              {addedPlayers.map((p) => (
+                <View key={p.playerId} style={styles.addedChip}>
+                  <Pressable onPress={() => setSelected(p.playerId)} hitSlop={4}>
+                    <Text style={[styles.addedName, playerNameStyle]}>{p.name}</Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => {
+                      setAdded((prev) => prev.filter((x) => x !== p.playerId));
+                      if (selected === p.playerId) setSelected(null);
+                    }}
+                    hitSlop={8}
+                  >
+                    <Text style={styles.addedRemove}>×</Text>
+                  </Pressable>
+                </View>
+              ))}
+            </View>
+          ) : null}
+        </>
+      )}
     </View>
   );
 }
@@ -552,15 +574,17 @@ export default function LeagueHubPlayerPanelNative({ hub, lang, section, onSelec
   const isStreak = countId === "pts20" || countId === "ddStreak";
   const ladderRows = (award: AwardId) =>
     (award === "rookies" ? hub.rookies : award === "mvp" ? hub.mvp : hub[award]) ?? [];
+  const built = new Date(hub.builtAtMs);
+  const stamp = `NBA ${hub.seasonKey} · ${built.getMonth() + 1}/${built.getDate()}`;
   /** 切り替えてもマップの追加選手などを残すため、隠すだけでアンマウントしない */
   const shown = (id: LeagueHubPlayerSection) => (section === id ? null : styles.hidden);
 
   return (
     <View>
       <View style={shown("style")}>
-        <HubSection title="STYLE MAP">
+        <HubShareSectionNative title="STYLE MAP" stamp={stamp} lang={lang}>
           <StyleMap players={hub.players} lang={lang} onSelectPlayer={onSelectPlayer} />
-        </HubSection>
+        </HubShareSectionNative>
       </View>
 
       <View style={shown("zone")}>
@@ -585,7 +609,7 @@ export default function LeagueHubPlayerPanelNative({ hub, lang, section, onSelec
           const rows = ladderRows(award);
           const hasPrev = hub.ladderPrev?.[award] != null;
           return (
-            <HubSection key={award} title={title}>
+            <HubShareSectionNative key={award} title={title} stamp={stamp} lang={lang}>
               {rows.length > 0 ? (
                 <HubCellHeader
                   labels={awardCellLabels(award, ja)}
@@ -606,14 +630,16 @@ export default function LeagueHubPlayerPanelNative({ hub, lang, section, onSelec
                     />
                   ))}
               <Text style={hubStyles.footnote}>{AWARD_FOOTNOTE[award][ja ? "ja" : "en"]}</Text>
-            </HubSection>
+            </HubShareSectionNative>
           );
         })}
       </View>
 
       <View style={shown("trend")}>
-        <HubSection
+        <HubShareSectionNative
           title="TOP PERFORMANCES"
+          stamp={stamp}
+          lang={lang}
           hint={
             hub.topGames
               ? `${hub.topGames.startLabel} – ${hub.topGames.endLabel} · ${
@@ -641,7 +667,42 @@ export default function LeagueHubPlayerPanelNative({ hub, lang, section, onSelec
           ) : (
             noData(lang)
           )}
-        </HubSection>
+        </HubShareSectionNative>
+
+        <HubShareSectionNative
+          title="WORST PERFORMANCES"
+          stamp={stamp}
+          lang={lang}
+          hint={
+            hub.worstGames
+              ? `${hub.worstGames.startLabel} – ${hub.worstGames.endLabel} · ${
+                  ja
+                    ? "28 分以上出た今季平均 12 点以上の選手"
+                    : "28+ min, players averaging 12+ PTS"
+                }`
+              : undefined
+          }
+        >
+          {hub.worstGames && hub.worstGames.games.length > 0 ? (
+            <View>
+              <HubCellHeader labels={["PTS", "FG", "TOV"]} />
+              {hub.worstGames.games.map((g, i) => (
+                <HubRow
+                  key={`${g.playerId}-${g.gameId}`}
+                  rank={i + 1}
+                  teamId={g.teamId}
+                  name={g.name}
+                  sub={`${g.home ? "vs" : "@"} ${g.oppAbbr} · ${g.dateLabel} · ${g.result} · ${g.min ?? "—"} MIN`}
+                  cells={[String(g.pts), `${g.fgm ?? "—"}/${g.fga ?? "—"}`, String(g.tov ?? "—")]}
+                  valueSub={`Game Score ${g.gameScore.toFixed(1)}`}
+                  onPress={() => onSelectPlayer(g.playerId)}
+                />
+              ))}
+            </View>
+          ) : (
+            noData(lang)
+          )}
+        </HubShareSectionNative>
 
         <HubSection
           title="HOT / COLD"
@@ -748,6 +809,14 @@ export default function LeagueHubPlayerPanelNative({ hub, lang, section, onSelec
 
 const styles = StyleSheet.create({
   hidden: { display: "none" },
+  captureMapTitle: {
+    fontFamily: METRIC_FONT,
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "800",
+    letterSpacing: 1.6,
+    marginBottom: 4,
+  },
   mapHint: {
     color: "rgba(255,255,255,0.55)",
     fontSize: 11,
