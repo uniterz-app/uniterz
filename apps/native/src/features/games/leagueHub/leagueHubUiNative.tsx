@@ -70,7 +70,7 @@ export function HubChips<T extends string>({
   onChange: (id: T) => void;
   /** 横スクロールではなく columns 列で折り返す */
   wrap?: boolean;
-  columns?: 3 | 4;
+  columns?: 3 | 4 | 5;
 }) {
   if (wrap) {
     return (
@@ -84,7 +84,7 @@ export function HubChips<T extends string>({
               style={[
                 styles.chip,
                 styles.chipCell,
-                columns === 4 ? styles.chipCell4 : null,
+                columns === 4 ? styles.chipCell4 : columns === 5 ? styles.chipCell5 : null,
                 active ? styles.chipActive : null,
               ]}
             >
@@ -482,6 +482,10 @@ const styles = StyleSheet.create({
   chipCell4: {
     flexBasis: "22%",
     paddingHorizontal: 4,
+  },
+  chipCell5: {
+    flexBasis: "17%",
+    paddingHorizontal: 3,
   },
   chipActive: {
     backgroundColor: CYBER_TAB_CYAN,

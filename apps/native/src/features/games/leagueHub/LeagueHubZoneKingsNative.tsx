@@ -42,11 +42,9 @@ import {
 
 const KING_WRAP_W = 150;
 
-/** チップの並び（3 列で折り返す）。データにあるエリアだけ出す */
-const ZONE_ORDER: readonly LeagueHubZoneId[] = [
-  "restricted",
-  "paint",
-  "mid",
+/** チップは 2 段: 中（3 つ）と 3P（コートと同じ左→右）。データにあるエリアだけ出す */
+const INSIDE_ZONES: readonly LeagueHubZoneId[] = ["restricted", "paint", "mid"];
+const THREE_ZONES: readonly LeagueHubZoneId[] = [
   "left_corner_3",
   "left_wing_3",
   "top_3",
@@ -54,17 +52,19 @@ const ZONE_ORDER: readonly LeagueHubZoneId[] = [
   "right_wing_3",
   "right_corner_3",
 ];
+const ZONE_ORDER: readonly LeagueHubZoneId[] = [...INSIDE_ZONES, ...THREE_ZONES];
 
-const ZONE_LABEL: Record<LeagueHubZoneId, { ja: string; en: string }> = {
-  restricted: { ja: "リング下", en: "RIM" },
-  paint: { ja: "ペイント", en: "PAINT" },
-  mid: { ja: "ミドル", en: "MID" },
-  left_corner_3: { ja: "左コーナー3", en: "L CORNER 3" },
-  right_corner_3: { ja: "右コーナー3", en: "R CORNER 3" },
-  above_break_3: { ja: "トップ3", en: "ABOVE BREAK 3" },
-  left_wing_3: { ja: "左45度3", en: "L WING 3" },
-  top_3: { ja: "トップ3", en: "TOP 3" },
-  right_wing_3: { ja: "右45度3", en: "R WING 3" },
+/** 3P の段は全部 3P なので「3」を付けない */
+const ZONE_LABEL: Record<LeagueHubZoneId, string> = {
+  restricted: "RIM",
+  paint: "PAINT",
+  mid: "MID",
+  left_corner_3: "L CORNER",
+  left_wing_3: "L WING",
+  top_3: "TOP",
+  above_break_3: "ABOVE BREAK",
+  right_wing_3: "R WING",
+  right_corner_3: "R CORNER",
 };
 
 function zonePath(id: LeagueHubZoneId): string | null {
@@ -252,12 +252,19 @@ export default function LeagueHubZoneKingsNative({ zones, lang, onSelectPlayer }
           : null}
       </View>
       <View style={styles.controls}>
-        <HubChips
-          items={order.map((id) => ({ id, label: ZONE_LABEL[id].en }))}
-          value={zoneId}
-          onChange={setZoneId}
-          wrap
-        />
+        {[INSIDE_ZONES, THREE_ZONES].map((row, i) => {
+          const ids = row.filter((id) => order.includes(id));
+          return ids.length > 0 ? (
+            <HubChips
+              key={i}
+              items={ids.map((id) => ({ id, label: ZONE_LABEL[id] }))}
+              value={zoneId}
+              onChange={setZoneId}
+              wrap
+              columns={ids.length > 3 ? 5 : 3}
+            />
+          ) : null;
+        })}
       </View>
       <View style={styles.listHead}>
         <HubPosToggle value={pos} onChange={setPos} lang={lang} />
