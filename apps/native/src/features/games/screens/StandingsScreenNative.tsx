@@ -13,6 +13,11 @@ import {
   CyberSlantedTabBarNative,
   CyberSlantedTabNative,
 } from "../../rankings/CyberSlantedTabNative";
+import {
+  LeagueStatsCollapseProvider,
+  LeagueStatsCollapsibleNative,
+  useLeagueStatsCollapseState,
+} from "../stats/LeagueStatsCollapseNative";
 
 export default function StandingsScreenNative() {
   const navigation =
@@ -21,6 +26,7 @@ export default function StandingsScreenNative() {
   const { language } = useNativeUserLanguage(fUser?.uid);
   const lang = language === "ja" ? "ja" : "en";
   const [tab, setTab] = useState<"standings" | "league">("standings");
+  const collapse = useLeagueStatsCollapseState(tab);
   const onSelectTeam = (teamId: string) =>
     navigation.navigate("TeamDetailPreview", { teamId });
 
@@ -32,6 +38,8 @@ export default function StandingsScreenNative() {
       scroll={false}
       contentStyle={styles.shell}
     >
+      <LeagueStatsCollapseProvider value={collapse}>
+      <LeagueStatsCollapsibleNative>
       <View style={styles.tabs}>
         <CyberSlantedTabBarNative fill>
           <CyberSlantedTabNative
@@ -48,6 +56,7 @@ export default function StandingsScreenNative() {
           />
         </CyberSlantedTabBarNative>
       </View>
+      </LeagueStatsCollapsibleNative>
       <View style={styles.body}>
         {tab === "standings" ? (
           <View style={styles.standings}>
@@ -63,6 +72,7 @@ export default function StandingsScreenNative() {
           />
         )}
       </View>
+      </LeagueStatsCollapseProvider>
     </GamesNbaSubpageShellNative>
   );
 }

@@ -8,6 +8,11 @@ import {
 } from "../../rankings/CyberSlantedTabNative";
 import { METRIC_FONT } from "../../rankings/rankingsUiTheme";
 import { useBottomTabBarInsets } from "../../../navigation/useBottomTabBarInsets";
+import {
+  LeagueStatsCollapsedSummaryNative,
+  LeagueStatsCollapsibleNative,
+  useLeagueStatsCollapse,
+} from "../stats/LeagueStatsCollapseNative";
 import LeagueHubPlayerPanelNative from "./LeagueHubPlayerPanelNative";
 import LeagueHubTeamPanelNative from "./LeagueHubTeamPanelNative";
 import { HubEmpty, type HubLang } from "./leagueHubUiNative";
@@ -23,9 +28,11 @@ export default function LeagueHubPanelNative({ lang, onSelectTeam, onSelectPlaye
   const [tab, setTab] = useState<"team" | "player">("team");
   const { hub, loading } = useNbaLeagueHubNative();
   const { bottomContentReserveY } = useBottomTabBarInsets();
+  const { onTableScroll } = useLeagueStatsCollapse();
 
   return (
     <View style={styles.root}>
+      <LeagueStatsCollapsibleNative>
       <View style={styles.tabs}>
         <CyberSlantedTabBarNative fill>
           <CyberSlantedTabNative
@@ -42,7 +49,11 @@ export default function LeagueHubPanelNative({ lang, onSelectTeam, onSelectPlaye
           />
         </CyberSlantedTabBarNative>
       </View>
+      </LeagueStatsCollapsibleNative>
+      <LeagueStatsCollapsedSummaryNative text={`LEAGUE · ${tab.toUpperCase()}`} />
       <ScrollView
+        onScroll={onTableScroll}
+        scrollEventThrottle={16}
         style={styles.scroll}
         contentContainerStyle={[styles.content, { paddingBottom: bottomContentReserveY + 24 }]}
         showsVerticalScrollIndicator={false}
