@@ -26,6 +26,7 @@ import { useMyNbaFavoritesNative } from "../../profile/useMyNbaFavoritesNative";
 import LeagueHubScatterNative, { type HubScatterPoint } from "./LeagueHubScatterNative";
 import LeagueHubZoneKingsNative from "./LeagueHubZoneKingsNative";
 import HubShareSectionNative, { useHubCapturing } from "./HubShareSectionNative";
+import LeagueHubCompareNative from "./LeagueHubCompareNative";
 import {
   HubCellHeader,
   HubChips,
@@ -102,10 +103,12 @@ function noData(lang: HubLang) {
 function StyleMap({
   players,
   lang,
+  stamp,
   onSelectPlayer,
 }: {
   players: LeagueHubPlayer[];
   lang: HubLang;
+  stamp: string;
   onSelectPlayer: (playerId: string) => void;
 }) {
   const capturing = useHubCapturing();
@@ -125,6 +128,10 @@ function StyleMap({
   const [selected, setSelected] = useState<string | null>(null);
   const [added, setAdded] = useState<string[]>([]);
   const [query, setQuery] = useState("");
+  /** 比較: A を選んで「比べる」→ 次に選んだ選手が B */
+  const [compareA, setCompareA] = useState<string | null>(null);
+  const [compareB, setCompareB] = useState<string | null>(null);
+  const picking = compareA != null && compareB == null;
   const preset: LeagueHubPlayerScatterPreset =
     LEAGUE_HUB_PLAYER_SCATTER_PRESETS.find((p) => p.id === presetId) ??
     LEAGUE_HUB_PLAYER_SCATTER_PRESETS[0]!;
@@ -154,18 +161,32 @@ function StyleMap({
         !shown.has(p.playerId) &&
         plottable(p) &&
         (p.playerId === selected ||
+          p.playerId === compareA ||
+          p.playerId === compareB ||
           added.includes(p.playerId) ||
           (favIds.has(p.playerId) && inPos(p)))
     );
     return { top, pinned };
-  }, [players, preset, topN, pos, favIds, selected, added]);
+  }, [players, preset, topN, pos, favIds, selected, added, compareA, compareB]);
   const hits = useMemo(() => searchHubPlayers(players, query), [players, query]);
+  const choose = (id: string | null) => {
+    setSelected(id);
+    if (id && compareA && id !== compareA) setCompareB(id);
+  };
   const addPlayer = (id: string) => {
     setAdded((prev) => [id, ...prev.filter((x) => x !== id)].slice(0, MAX_ADDED));
-    setSelected(id);
+    choose(id);
     setQuery("");
     Keyboard.dismiss();
   };
+  const closeCompare = () => {
+    setCompareA(null);
+    setCompareB(null);
+  };
+  const findPlayer = (id: string | null) =>
+    id ? (players.find((p) => p.playerId === id) ?? null) : null;
+  const cmpA = findPlayer(compareA);
+  const cmpB = findPlayer(compareB);
   const addedPlayers = added
     .map((id) => players.find((p) => p.playerId === id))
     .filter((p): p is LeagueHubPlayer => p != null);
@@ -177,7 +198,8 @@ function StyleMap({
     color: teamInk(p.teamId),
     star: favIds.has(p.playerId),
     pinned: i >= pool.top.length,
-    highlight: added.includes(p.playerId),
+    highlight:
+      added.includes(p.playerId) || p.playerId === compareA || p.playerId === compareB,
   }));
   const hasStar = points.some((p) => p.star);
   const sel = selected
@@ -272,11 +294,33 @@ function StyleMap({
           lang={lang}
           marker="dot"
           selectedId={selected}
-          onSelect={setSelected}
+          onSelect={choose}
           showRange
         />
       )}
-      {capturing ? null : sel ? (
+      {capturing ? null : cmpA && cmpB ? (
+        <View style={styles.compareWrap}>
+          <LeagueHubCompareNative
+            a={cmpA}
+            b={cmpB}
+            players={players}
+            lang={lang}
+            stamp={stamp}
+            onClose={closeCompare}
+          />
+        </View>
+      ) : picking && cmpA ? (
+        <View style={styles.pickBanner}>
+          <Text style={styles.pickText}>
+            {lang === "ja"
+              ? `${cmpA.name} と比べる選手を、点か検索で選ぶ`
+              : `Pick a player to compare with ${cmpA.name}`}
+          </Text>
+          <Pressable onPress={closeCompare} hitSlop={8}>
+            <Text style={styles.pickCancel}>{lang === "ja" ? "やめる" : "Cancel"}</Text>
+          </Pressable>
+        </View>
+      ) : sel ? (
         <View style={styles.selCard}>
           <Pressable style={styles.selRow} onPress={() => onSelectPlayer(sel.playerId)}>
             <View style={styles.selNameCol}>
@@ -316,7 +360,7 @@ function StyleMap({
                   <Pressable
                     key={p.playerId}
                     style={styles.simItem}
-                    onPress={() => setSelected(p.playerId)}
+                    onPress={() => choose(p.playerId)}
                     hitSlop={4}
                   >
                     <Text style={[styles.simName, playerNameStyle]} numberOfLines={1}>
@@ -328,6 +372,17 @@ function StyleMap({
               </View>
             </View>
           ) : null}
+          <Pressable
+            style={({ pressed }) => [styles.compareBtn, pressed ? { opacity: 0.7 } : null]}
+            onPress={() => {
+              setCompareA(sel.playerId);
+              setCompareB(null);
+            }}
+          >
+            <Text style={styles.compareBtnText}>
+              {lang === "ja" ? "VS  ほかの選手と比べる" : "VS  Compare with another player"}
+            </Text>
+          </Pressable>
         </View>
       ) : (
         <Text style={styles.tapHint}>
@@ -342,7 +397,13 @@ function StyleMap({
               value={query}
               onChangeText={setQuery}
               placeholder={
-                lang === "ja" ? "選手を探してマップに追加（例: curry / GSW）" : "Add a player (e.g. curry / GSW)"
+                picking
+              ? lang === "ja"
+                ? "比べる選手を探す（例: curry / GSW）"
+                : "Find a player to compare (e.g. curry / GSW)"
+              : lang === "ja"
+                ? "選手を探してマップに追加（例: curry / GSW）"
+                : "Add a player (e.g. curry / GSW)"
               }
               placeholderTextColor="rgba(0,245,255,0.5)"
               autoCorrect={false}
@@ -385,7 +446,7 @@ function StyleMap({
             <View style={styles.addedRow}>
               {addedPlayers.map((p) => (
                 <View key={p.playerId} style={styles.addedChip}>
-                  <Pressable onPress={() => setSelected(p.playerId)} hitSlop={4}>
+                  <Pressable onPress={() => choose(p.playerId)} hitSlop={4}>
                     <Text style={[styles.addedName, playerNameStyle]}>{p.name}</Text>
                   </Pressable>
                   <Pressable
@@ -577,7 +638,12 @@ export default function LeagueHubPlayerPanelNative({ hub, lang, section, onSelec
     <View>
       <View style={shown("style")}>
         <HubShareSectionNative title="STYLE MAP" stamp={stamp} lang={lang}>
-          <StyleMap players={hub.players} lang={lang} onSelectPlayer={onSelectPlayer} />
+          <StyleMap
+            players={hub.players}
+            lang={lang}
+            stamp={stamp}
+            onSelectPlayer={onSelectPlayer}
+          />
         </HubShareSectionNative>
       </View>
 
@@ -870,6 +936,45 @@ const styles = StyleSheet.create({
     color: "rgba(255,255,255,0.6)",
     fontSize: 13,
     fontWeight: "800",
+  },
+  compareWrap: {
+    marginTop: 4,
+  },
+  pickBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginTop: 6,
+    paddingVertical: 9,
+    paddingHorizontal: 10,
+    borderWidth: 1,
+    borderStyle: "dashed",
+    borderColor: CYBER_TAB_CYAN,
+  },
+  pickText: {
+    flex: 1,
+    color: "#fff",
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  pickCancel: {
+    fontFamily: METRIC_FONT,
+    color: "rgba(255,255,255,0.6)",
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  compareBtn: {
+    alignItems: "center",
+    paddingVertical: 8,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(0,245,255,0.18)",
+  },
+  compareBtnText: {
+    fontFamily: METRIC_FONT,
+    color: CYBER_TAB_CYAN,
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 0.8,
   },
   selCard: {
     marginTop: 6,
