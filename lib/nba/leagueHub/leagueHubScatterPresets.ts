@@ -38,11 +38,12 @@ export type LeagueHubPlayerScatterPreset = LeagueHubScatterPreset<LeagueHubPlaye
   volumeLabel: Copy;
 };
 
-/** スタイルマップの 3 グループ（各 4 種。先頭が既定） */
+/** スタイルマップのグループ（先頭が既定）。IMPACT = 攻守まとめた出場時の影響と勝負どころ */
 export const LEAGUE_HUB_PLAYER_SCATTER_GROUPS = [
   { id: "scoring", label: "SCORING", presetIds: ["three", "ace", "shotType", "source"] },
   { id: "attack", label: "ATTACK", presetIds: ["paint", "drive", "foul", "playmaking"] },
-  { id: "defense", label: "DEFENSE", presetIds: ["defense", "hustle", "onCourt", "clutch"] },
+  { id: "defense", label: "DEFENSE", presetIds: ["defense", "hustle"] },
+  { id: "impact", label: "IMPACT", presetIds: ["onCourt", "clutch"] },
 ] as const;
 
 export type LeagueHubPlayerScatterGroupId = (typeof LEAGUE_HUB_PLAYER_SCATTER_GROUPS)[number]["id"];
