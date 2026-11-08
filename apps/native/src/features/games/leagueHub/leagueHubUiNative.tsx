@@ -135,10 +135,13 @@ export function HubRow({
   valueSub,
   onPress,
   highlight,
+  kind = "player",
 }: {
   rank?: number;
   teamId: string | null;
   name: string;
+  /** team = 順位表と同じチーム名書体 */
+  kind?: "player" | "team";
   sub?: string;
   value: string;
   valueSub?: string;
@@ -159,7 +162,10 @@ export function HubRow({
       {rank != null ? <Text style={styles.rowRank}>{rank}</Text> : null}
       <View style={[styles.rowDot, { backgroundColor: ink }]} />
       <View style={styles.rowNameCol}>
-        <Text style={styles.rowName} numberOfLines={1}>
+        <Text
+          style={[styles.rowName, kind === "team" ? teamNameStyle : null]}
+          numberOfLines={1}
+        >
           {name}
         </Text>
         <Text style={styles.rowSub} numberOfLines={1}>
@@ -203,6 +209,16 @@ export function HubTwoCol({
     </View>
   );
 }
+
+/** 順位表 `tdTeam` と同じ */
+export const teamNameStyle = {
+  fontFamily: "Oxanium_600SemiBold",
+  fontWeight: "600" as const,
+  letterSpacing: 0.6,
+  textTransform: "uppercase" as const,
+  includeFontPadding: false,
+  transform: [{ skewX: "-6deg" }],
+};
 
 export const hubStyles = StyleSheet.create({
   card: {
