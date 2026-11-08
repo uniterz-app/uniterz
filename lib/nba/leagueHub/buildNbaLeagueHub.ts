@@ -66,6 +66,8 @@ export type BuildNbaLeagueHubInput = {
 
 const SCATTER_PLAYER_LIMIT = 220;
 const LIST_LIMIT = 5;
+/** エリア別・シーズンハイ・好調 / 不調 */
+const LONG_LIST_LIMIT = 10;
 const LADDER_LIMIT = 10;
 const DAY_MS = 86_400_000;
 /** 「いま続いている」とみなす最終出場からの日数 */
@@ -188,7 +190,7 @@ export function buildNbaLeagueHub(input: BuildNbaLeagueHubInput): NbaLeagueHubDo
   players.sort((a, b) => b.gp * b.min - a.gp * a.min);
   players.splice(SCATTER_PLAYER_LIMIT);
 
-  // ── エリアの王 ──
+  // ── エリア別ランキング ──
   const zoneMinGp = Math.max(2, Math.round(maxGp * 0.4));
   const zones: LeagueHubZoneBoard[] = ZONE_DEFS.map((def) => {
     const rows: LeagueHubZoneBoard["byPct"] = [];
@@ -210,10 +212,10 @@ export function buildNbaLeagueHub(input: BuildNbaLeagueHubInput): NbaLeagueHubDo
     const byPct = rows
       .filter((r) => r.fga >= def.minFga)
       .sort((a, b) => b.fgPct - a.fgPct || b.fgaTotal - a.fgaTotal)
-      .slice(0, LIST_LIMIT);
+      .slice(0, LONG_LIST_LIMIT);
     const byFga = [...rows]
       .sort((a, b) => b.fgaTotal - a.fgaTotal || b.fgPct - a.fgPct)
-      .slice(0, LIST_LIMIT);
+      .slice(0, LONG_LIST_LIMIT);
     return { id: def.id, short: def.short, minFga: def.minFga, byPct, byFga };
   });
 
@@ -317,7 +319,7 @@ export function buildNbaLeagueHub(input: BuildNbaLeagueHubInput): NbaLeagueHubDo
   for (const stat of LEAGUE_HUB_HIGH_STATS) {
     highs[stat] = highs[stat]
       .sort((a, b) => b.value - a.value || b.pts - a.pts)
-      .slice(0, LIST_LIMIT);
+      .slice(0, LONG_LIST_LIMIT);
   }
   const topCount = (rows: LeagueHubCountRow[]) =>
     rows.sort((a, b) => b.count - a.count).slice(0, LIST_LIMIT);
@@ -401,8 +403,8 @@ export function buildNbaLeagueHub(input: BuildNbaLeagueHubInput): NbaLeagueHubDo
       doubleDouble: topCount(ddCount),
       tripleDouble: topCount(tdCount),
     },
-    hot: [...trends].filter((t) => t.diff > 0).sort((a, b) => b.diff - a.diff).slice(0, LIST_LIMIT),
-    cold: [...trends].filter((t) => t.diff < 0).sort((a, b) => a.diff - b.diff).slice(0, LIST_LIMIT),
+    hot: [...trends].filter((t) => t.diff > 0).sort((a, b) => b.diff - a.diff).slice(0, LONG_LIST_LIMIT),
+    cold: [...trends].filter((t) => t.diff < 0).sort((a, b) => a.diff - b.diff).slice(0, LONG_LIST_LIMIT),
     week,
     rookies,
     mvp,

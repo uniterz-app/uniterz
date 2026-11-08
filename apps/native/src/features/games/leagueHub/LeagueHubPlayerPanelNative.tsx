@@ -220,7 +220,7 @@ export default function LeagueHubPlayerPanelNative({ hub, lang, onSelectPlayer }
       </HubSection>
 
       <HubSection
-        title={ja ? "エリアの王" : "ZONE KINGS"}
+        title={ja ? "エリア別ランキング" : "BY ZONE"}
         hint={
           ja
             ? "エリアごとの成功率トップ。コートかチップでエリアを切り替え。一定の試投数がある選手だけ。"
