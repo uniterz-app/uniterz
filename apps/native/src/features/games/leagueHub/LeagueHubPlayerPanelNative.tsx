@@ -315,7 +315,6 @@ function StyleMap({
           <LeagueHubCompareNative
             a={cmpA}
             b={cmpB}
-            players={players}
             lang={lang}
             stamp={stamp}
             onClose={() => setCompareB(null)}

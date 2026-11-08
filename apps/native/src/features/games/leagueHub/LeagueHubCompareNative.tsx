@@ -1,105 +1,67 @@
-/** スタイルマップの 2 人比較。指標ごとに左右へ伸びる棒（リーグ内の位置） */
-import { useMemo } from "react";
+/** スタイルマップの 2 人比較。今季スタッツを左右に並べ、上回った側のセルに色を付ける */
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import type { LeagueHubAxisFormat } from "../../../../../../lib/nba/leagueHub/leagueHubScatterPresets";
-import type {
-  LeagueHubPlayer,
-  LeagueHubPlayerMetric,
-} from "../../../../../../lib/nba/leagueHub/leagueHubTypes";
+import type { LeagueHubPlayer } from "../../../../../../lib/nba/leagueHub/leagueHubTypes";
 import { CYBER_TAB_CYAN } from "../../rankings/CyberSlantedTabNative";
 import { METRIC_FONT } from "../../rankings/rankingsUiTheme";
 import HubShareSectionNative, { useHubCapturing } from "./HubShareSectionNative";
-import {
-  HubTeamTag,
-  formatHubValue,
-  playerNameStyle,
-  teamInk,
-  type HubLang,
-} from "./leagueHubUiNative";
+import { HubTeamTag, playerNameStyle, type HubLang } from "./leagueHubUiNative";
 
 type CompareRow = {
-  metric: LeagueHubPlayerMetric;
+  key: string;
   label: string;
-  format: LeagueHubAxisFormat;
+  get: (p: LeagueHubPlayer) => number | null | undefined;
+  format: "int" | "one" | "pct";
   /** 低いほど良い */
   invert?: boolean;
 };
 
 const COMPARE_ROWS: readonly CompareRow[] = [
-  { metric: "pts", label: "PTS", format: "one" },
-  { metric: "reb", label: "REB", format: "one" },
-  { metric: "ast", label: "AST", format: "one" },
-  { metric: "stocks", label: "STL+BLK", format: "one" },
-  { metric: "ts_pct", label: "TS%", format: "pct" },
-  { metric: "fg3_pct", label: "3P%", format: "pct" },
-  { metric: "usg", label: "USG%", format: "pct" },
-  { metric: "tov_pct", label: "TOV%", format: "pct", invert: true },
-  { metric: "drtg", label: "DRtg", format: "one", invert: true },
-  { metric: "pie", label: "PIE", format: "pct" },
+  { key: "gp", label: "G", get: (p) => p.gp, format: "int" },
+  { key: "min", label: "MIN", get: (p) => p.min, format: "one" },
+  { key: "pts", label: "PTS", get: (p) => p.m.pts, format: "one" },
+  { key: "reb", label: "REB", get: (p) => p.m.reb, format: "one" },
+  { key: "ast", label: "AST", get: (p) => p.m.ast, format: "one" },
+  { key: "stl", label: "STL", get: (p) => p.m.stl, format: "one" },
+  { key: "blk", label: "BLK", get: (p) => p.m.blk, format: "one" },
+  { key: "tov", label: "TOV", get: (p) => p.m.tov, format: "one", invert: true },
+  { key: "fg3_pct", label: "3P%", get: (p) => p.m.fg3_pct, format: "pct" },
+  { key: "ft_pct", label: "FT%", get: (p) => p.m.ft_pct, format: "pct" },
+  { key: "ts_pct", label: "TS%", get: (p) => p.m.ts_pct, format: "pct" },
+  { key: "drtg", label: "DRtg", get: (p) => p.m.drtg, format: "one", invert: true },
+  { key: "pie", label: "PIE", get: (p) => p.m.pie, format: "pct" },
 ];
 
-/** 0（リーグ最下位）〜 1（最上位）。invert は低いほど 1 に近い */
-function leaguePosition(
-  players: readonly LeagueHubPlayer[],
-  metric: LeagueHubPlayerMetric,
-  v: number,
-  invert?: boolean
-): number {
-  const vals = players.map((p) => p.m[metric]).filter((x): x is number => x != null);
-  if (vals.length < 2) return 0.5;
-  const below = vals.filter((x) => (invert ? x > v : x < v)).length;
-  return below / (vals.length - 1);
+function fmt(v: number | null | undefined, format: CompareRow["format"]): string {
+  if (v == null || !Number.isFinite(v)) return "—";
+  if (format === "int") return String(Math.round(v));
+  if (format === "pct") return `${(v * 100).toFixed(1)}%`;
+  return v.toFixed(1);
+}
+
+/** 表示上同じ数字は引き分け。-1 = 左、1 = 右、0 = なし */
+function winner(row: CompareRow, a: LeagueHubPlayer, b: LeagueHubPlayer): -1 | 0 | 1 {
+  const va = row.get(a);
+  const vb = row.get(b);
+  if (va == null || vb == null || fmt(va, row.format) === fmt(vb, row.format)) return 0;
+  return (row.invert ? va < vb : va > vb) ? -1 : 1;
 }
 
 export default function LeagueHubCompareNative({
   a,
   b,
-  players,
   lang,
   stamp,
   onClose,
 }: {
   a: LeagueHubPlayer;
   b: LeagueHubPlayer;
-  players: readonly LeagueHubPlayer[];
   lang: HubLang;
   stamp: string;
   onClose: () => void;
 }) {
-  const ja = lang === "ja";
-  const rows = useMemo(
-    () =>
-      COMPARE_ROWS.map((r) => {
-        const va = a.m[r.metric];
-        const vb = b.m[r.metric];
-        const win =
-          va == null || vb == null || va === vb
-            ? 0
-            : (r.invert ? va < vb : va > vb)
-              ? -1
-              : 1;
-        return {
-          ...r,
-          va,
-          vb,
-          win,
-          pa: va == null ? 0 : leaguePosition(players, r.metric, va, r.invert),
-          pb: vb == null ? 0 : leaguePosition(players, r.metric, vb, r.invert),
-        };
-      }),
-    [a, b, players]
-  );
-
   return (
     <HubShareSectionNative title="VS" stamp={stamp} lang={lang}>
-      <CompareBody
-        a={a}
-        b={b}
-        rows={rows}
-        ja={ja}
-        playersCount={players.length}
-        onClose={onClose}
-      />
+      <CompareBody a={a} b={b} ja={lang === "ja"} onClose={onClose} />
     </HubShareSectionNative>
   );
 }
@@ -107,59 +69,48 @@ export default function LeagueHubCompareNative({
 function CompareBody({
   a,
   b,
-  rows,
   ja,
-  playersCount,
   onClose,
 }: {
   a: LeagueHubPlayer;
   b: LeagueHubPlayer;
-  rows: Array<CompareRow & { va?: number; vb?: number; win: number; pa: number; pb: number }>;
   ja: boolean;
-  playersCount: number;
   onClose: () => void;
 }) {
   const capturing = useHubCapturing();
   return (
     <View>
-      <View style={styles.head}>
-        <PlayerHead p={a} />
-        <View style={styles.headGap} />
-        <PlayerHead p={b} />
-      </View>
-      {rows.map((r) => (
-        <View key={r.metric} style={styles.row}>
-          <Text style={[styles.value, styles.valueLeft, r.win === -1 ? styles.valueWin : null]}>
-            {formatHubValue(r.va, r.format)}
-          </Text>
-          <View style={[styles.barSide, styles.barSideLeft]}>
-            <View
-              style={[
-                styles.bar,
-                { width: `${Math.max(4, r.pa * 100)}%`, backgroundColor: teamInk(a.teamId) },
-                r.win === -1 ? null : styles.barLose,
-              ]}
-            />
-          </View>
-          <Text style={styles.label}>{r.label}</Text>
-          <View style={styles.barSide}>
-            <View
-              style={[
-                styles.bar,
-                { width: `${Math.max(4, r.pb * 100)}%`, backgroundColor: teamInk(b.teamId) },
-                r.win === 1 ? null : styles.barLose,
-              ]}
-            />
-          </View>
-          <Text style={[styles.value, styles.valueRight, r.win === 1 ? styles.valueWin : null]}>
-            {formatHubValue(r.vb, r.format)}
-          </Text>
+      <View style={styles.table}>
+        <View style={[styles.row, styles.headRow]}>
+          <PlayerHead p={a} />
+          <View style={styles.labelCell} />
+          <PlayerHead p={b} />
         </View>
-      ))}
+        {COMPARE_ROWS.map((r) => {
+          const w = winner(r, a, b);
+          return (
+            <View key={r.key} style={styles.row}>
+              <View style={[styles.cell, w === -1 ? styles.cellWin : null]}>
+                <Text style={[styles.value, w === -1 ? styles.valueWin : null]}>
+                  {fmt(r.get(a), r.format)}
+                </Text>
+              </View>
+              <View style={styles.labelCell}>
+                <Text style={styles.label}>{r.label}</Text>
+              </View>
+              <View style={[styles.cell, w === 1 ? styles.cellWin : null]}>
+                <Text style={[styles.value, w === 1 ? styles.valueWin : null]}>
+                  {fmt(r.get(b), r.format)}
+                </Text>
+              </View>
+            </View>
+          );
+        })}
+      </View>
       <Text style={styles.foot}>
         {ja
-          ? `棒はリーグ ${playersCount} 人の中の位置。長いほど上位（端まで伸びたら 1 位）。TOV% と DRtg は低いほど上位。`
-          : `Bars = rank among ${playersCount} players. Longer is better (full = #1). Lower TOV% and DRtg rank higher.`}
+          ? "今季の 1 試合平均。TOV と DRtg は低い方が上。"
+          : "Season per-game. Lower TOV and DRtg are better."}
       </Text>
       {capturing ? null : (
         <Pressable onPress={onClose} hitSlop={8} style={styles.close}>
@@ -173,95 +124,75 @@ function CompareBody({
 function PlayerHead({ p }: { p: LeagueHubPlayer }) {
   return (
     <View style={styles.player}>
-      <View style={styles.playerLine}>
-        <Text style={[styles.playerName, playerNameStyle]} numberOfLines={1}>
-          {p.name}
-        </Text>
-        <HubTeamTag teamId={p.teamId} />
-      </View>
-      <Text style={styles.playerSub}>
-        {p.gp} GP · {p.min.toFixed(1)} MIN
+      <Text style={[styles.playerName, playerNameStyle]} numberOfLines={1}>
+        {p.name}
       </Text>
+      <HubTeamTag teamId={p.teamId} />
     </View>
   );
 }
 
+const LINE = "rgba(0,245,255,0.16)";
+
 const styles = StyleSheet.create({
-  head: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 8,
+  table: {
+    borderWidth: 1,
+    borderColor: LINE,
   },
-  headGap: {
-    width: 58,
+  row: {
+    flexDirection: "row",
+    alignItems: "stretch",
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: LINE,
+  },
+  headRow: {
+    borderTopWidth: 0,
   },
   player: {
     flex: 1,
     minWidth: 0,
     alignItems: "center",
-  },
-  playerLine: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    maxWidth: "100%",
+    gap: 5,
+    paddingVertical: 10,
+    paddingHorizontal: 6,
   },
   playerName: {
     color: "#fff",
     fontSize: 14,
     fontWeight: "800",
-    flexShrink: 1,
+    maxWidth: "100%",
   },
-  playerSub: {
-    fontFamily: METRIC_FONT,
-    color: "rgba(255,255,255,0.45)",
-    fontSize: 10,
-    marginTop: 2,
-  },
-  row: {
-    flexDirection: "row",
+  cell: {
+    flex: 1,
     alignItems: "center",
-    paddingVertical: 5,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: "rgba(255,255,255,0.08)",
+    justifyContent: "center",
+    paddingVertical: 6,
+  },
+  cellWin: {
+    backgroundColor: "rgba(0,245,255,0.12)",
   },
   value: {
-    width: 48,
     fontFamily: METRIC_FONT,
     color: "rgba(255,255,255,0.6)",
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: "700",
-  },
-  valueLeft: {
-    textAlign: "left",
-  },
-  valueRight: {
-    textAlign: "right",
   },
   valueWin: {
     color: "#fff",
     fontWeight: "800",
   },
-  barSide: {
-    flex: 1,
-    height: 8,
+  labelCell: {
+    width: 64,
+    alignItems: "center",
     justifyContent: "center",
-  },
-  barSideLeft: {
-    alignItems: "flex-end",
-  },
-  bar: {
-    height: 8,
-  },
-  barLose: {
-    opacity: 0.35,
+    borderLeftWidth: StyleSheet.hairlineWidth,
+    borderRightWidth: StyleSheet.hairlineWidth,
+    borderColor: LINE,
   },
   label: {
-    width: 58,
-    textAlign: "center",
     fontFamily: METRIC_FONT,
     color: CYBER_TAB_CYAN,
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: "800",
     letterSpacing: 0.6,
   },
