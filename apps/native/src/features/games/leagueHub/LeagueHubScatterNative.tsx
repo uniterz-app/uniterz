@@ -49,7 +49,11 @@ type Props = {
   lang: HubLang;
   marker: "jersey" | "dot";
   selectedId: string | null;
+  /** 比較の 2 人目。1 人目と同じ見た目で選択扱い */
+  secondId?: string | null;
   onSelect: (id: string | null) => void;
+  /** 渡すと選択の切り替えをせず、タップした点（なければ null）をそのまま返す */
+  onTap?: (id: string | null) => void;
   /** 各軸の両端に実データの最小・最大値を出す */
   showRange?: boolean;
 };
@@ -105,9 +109,12 @@ export default function LeagueHubScatterNative({
   lang,
   marker,
   selectedId,
+  secondId = null,
   onSelect,
+  onTap,
   showRange = false,
 }: Props) {
+  const isSel = (id: string) => id === selectedId || (secondId != null && id === secondId);
   const [width, setWidth] = useState(0);
   const height = Math.round(width * (marker === "jersey" ? 0.95 : 1.05));
   const plotW = Math.max(0, width - PAD.l - PAD.r);
@@ -150,7 +157,7 @@ export default function LeagueHubScatterNative({
       .map((m, i) => ({
         i,
         d: ((m.cx - avgX) / plotW) ** 2 + ((m.cy - avgY) / plotH) ** 2,
-        sel: m.p.id === selectedId,
+        sel: isSel(m.p.id),
         star: !!m.p.star || !!m.p.highlight,
       }))
       .sort(
@@ -257,6 +264,7 @@ export default function LeagueHubScatterNative({
     plotH,
     marker,
     selectedId,
+    secondId,
     showRange,
     quadrants,
     lang,
@@ -278,6 +286,10 @@ export default function LeagueHubScatterNative({
       if (d <= LABEL_TAP_SLOP && (!best || d < best.d)) {
         best = { id: layout.placed[l.i]!.p.id, d };
       }
+    }
+    if (onTap) {
+      onTap(best?.id ?? null);
+      return;
     }
     onSelect(best && best.id !== selectedId ? best.id : null);
   };
@@ -410,7 +422,7 @@ export default function LeagueHubScatterNative({
                 ? layout.placed
                     .filter((m) => !m.p.star)
                     .map((m) => {
-                      const sel = m.p.id === selectedId;
+                      const sel = isSel(m.p.id);
                       return (
                         <Circle
                           key={m.p.id}
@@ -429,7 +441,7 @@ export default function LeagueHubScatterNative({
                 ? layout.placed
                     .filter((m) => m.p.star)
                     .map((m) => {
-                      const sel = m.p.id === selectedId;
+                      const sel = isSel(m.p.id);
                       return (
                         <Path
                           key={`s-${m.p.id}`}
@@ -457,7 +469,7 @@ export default function LeagueHubScatterNative({
               ) : null}
               {marker === "jersey"
                 ? layout.placed.map((m) => {
-                    const sel = m.p.id === selectedId;
+                    const sel = isSel(m.p.id);
                     const k = m.size / VIEWBOX_H;
                     const tx = m.cx - (VIEWBOX_W * k) / 2;
                     const ty = m.cy - m.size / 2;
@@ -483,7 +495,7 @@ export default function LeagueHubScatterNative({
                   })
                 : null}
               {layout.placed
-                .filter((m) => m.p.id === selectedId)
+                .filter((m) => isSel(m.p.id))
                 .map((m) => (
                   <Circle
                     key="ring"
@@ -498,7 +510,7 @@ export default function LeagueHubScatterNative({
             </Svg>
             {layout.labels.map(({ i, x, y, anchor }) => {
               const m = layout.placed[i]!;
-              const sel = m.p.id === selectedId;
+              const sel = isSel(m.p.id);
               return (
                 <Text
                   key={`l-${m.p.id}`}

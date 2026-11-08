@@ -128,10 +128,8 @@ function StyleMap({
   const [selected, setSelected] = useState<string | null>(null);
   const [added, setAdded] = useState<string[]>([]);
   const [query, setQuery] = useState("");
-  /** 比較: A を選んで「比べる」→ 次に選んだ選手が B */
-  const [compareA, setCompareA] = useState<string | null>(null);
+  /** 比較の 2 人目。1 人目（selected）を選んだ状態で別の選手を選ぶと入る */
   const [compareB, setCompareB] = useState<string | null>(null);
-  const picking = compareA != null && compareB == null;
   const preset: LeagueHubPlayerScatterPreset =
     LEAGUE_HUB_PLAYER_SCATTER_PRESETS.find((p) => p.id === presetId) ??
     LEAGUE_HUB_PLAYER_SCATTER_PRESETS[0]!;
@@ -161,17 +159,33 @@ function StyleMap({
         !shown.has(p.playerId) &&
         plottable(p) &&
         (p.playerId === selected ||
-          p.playerId === compareA ||
           p.playerId === compareB ||
           added.includes(p.playerId) ||
           (favIds.has(p.playerId) && inPos(p)))
     );
     return { top, pinned };
-  }, [players, preset, topN, pos, favIds, selected, added, compareA, compareB]);
+  }, [players, preset, topN, pos, favIds, selected, added, compareB]);
   const hits = useMemo(() => searchHubPlayers(players, query), [players, query]);
-  const choose = (id: string | null) => {
-    setSelected(id);
-    if (id && compareA && id !== compareA) setCompareB(id);
+  const clearSel = () => {
+    setSelected(null);
+    setCompareB(null);
+  };
+  const unselect = (id: string) => {
+    if (id === selected) {
+      setSelected(compareB);
+      setCompareB(null);
+    } else if (id === compareB) {
+      setCompareB(null);
+    }
+  };
+  const choose = (id: string) => {
+    if (selected == null) setSelected(id);
+    else if (id !== selected) setCompareB(id);
+  };
+  const tapMap = (id: string | null) => {
+    if (id == null) clearSel();
+    else if (id === selected || id === compareB) unselect(id);
+    else choose(id);
   };
   const addPlayer = (id: string) => {
     setAdded((prev) => [id, ...prev.filter((x) => x !== id)].slice(0, MAX_ADDED));
@@ -179,13 +193,9 @@ function StyleMap({
     setQuery("");
     Keyboard.dismiss();
   };
-  const closeCompare = () => {
-    setCompareA(null);
-    setCompareB(null);
-  };
   const findPlayer = (id: string | null) =>
     id ? (players.find((p) => p.playerId === id) ?? null) : null;
-  const cmpA = findPlayer(compareA);
+  const cmpA = compareB ? findPlayer(selected) : null;
   const cmpB = findPlayer(compareB);
   const addedPlayers = added
     .map((id) => players.find((p) => p.playerId === id))
@@ -198,8 +208,7 @@ function StyleMap({
     color: teamInk(p.teamId),
     star: favIds.has(p.playerId),
     pinned: i >= pool.top.length,
-    highlight:
-      added.includes(p.playerId) || p.playerId === compareA || p.playerId === compareB,
+    highlight: added.includes(p.playerId),
   }));
   const hasStar = points.some((p) => p.star);
   const sel = selected
@@ -237,7 +246,7 @@ function StyleMap({
             value={groupId}
             onChange={(id) => {
               setGroupId(id);
-              setSelected(null);
+              clearSel();
             }}
             fill
           />
@@ -249,7 +258,7 @@ function StyleMap({
             value={presetId}
             onChange={(id) => {
               setPresetByGroup((prev) => ({ ...prev, [groupId]: id }));
-              setSelected(null);
+              clearSel();
             }}
             wrap
             columns={4}
@@ -263,7 +272,7 @@ function StyleMap({
             value={pos}
             onChange={(v) => {
               setPos(v);
-              setSelected(null);
+              clearSel();
             }}
             lang={lang}
           />
@@ -294,7 +303,9 @@ function StyleMap({
           lang={lang}
           marker="dot"
           selectedId={selected}
-          onSelect={choose}
+          secondId={compareB}
+          onSelect={setSelected}
+          onTap={tapMap}
           showRange
         />
       )}
@@ -306,19 +317,8 @@ function StyleMap({
             players={players}
             lang={lang}
             stamp={stamp}
-            onClose={closeCompare}
+            onClose={() => setCompareB(null)}
           />
-        </View>
-      ) : picking && cmpA ? (
-        <View style={styles.pickBanner}>
-          <Text style={styles.pickText}>
-            {lang === "ja"
-              ? `${cmpA.name} と比べる選手を、点か検索で選ぶ`
-              : `Pick a player to compare with ${cmpA.name}`}
-          </Text>
-          <Pressable onPress={closeCompare} hitSlop={8}>
-            <Text style={styles.pickCancel}>{lang === "ja" ? "やめる" : "Cancel"}</Text>
-          </Pressable>
         </View>
       ) : sel ? (
         <View style={styles.selCard}>
@@ -372,17 +372,9 @@ function StyleMap({
               </View>
             </View>
           ) : null}
-          <Pressable
-            style={({ pressed }) => [styles.compareBtn, pressed ? { opacity: 0.7 } : null]}
-            onPress={() => {
-              setCompareA(sel.playerId);
-              setCompareB(null);
-            }}
-          >
-            <Text style={styles.compareBtnText}>
-              {lang === "ja" ? "VS  ほかの選手と比べる" : "VS  Compare with another player"}
-            </Text>
-          </Pressable>
+          <Text style={styles.compareHint}>
+            {lang === "ja" ? "もう 1 人タップで比較" : "Tap another player to compare"}
+          </Text>
         </View>
       ) : (
         <Text style={styles.tapHint}>
@@ -397,13 +389,9 @@ function StyleMap({
               value={query}
               onChangeText={setQuery}
               placeholder={
-                picking
-              ? lang === "ja"
-                ? "比べる選手を探す（例: curry / GSW）"
-                : "Find a player to compare (e.g. curry / GSW)"
-              : lang === "ja"
-                ? "選手を探してマップに追加（例: curry / GSW）"
-                : "Add a player (e.g. curry / GSW)"
+                lang === "ja"
+                  ? "選手を探してマップに追加（例: curry / GSW）"
+                  : "Add a player (e.g. curry / GSW)"
               }
               placeholderTextColor="rgba(0,245,255,0.5)"
               autoCorrect={false}
@@ -452,7 +440,7 @@ function StyleMap({
                   <Pressable
                     onPress={() => {
                       setAdded((prev) => prev.filter((x) => x !== p.playerId));
-                      if (selected === p.playerId) setSelected(null);
+                      unselect(p.playerId);
                     }}
                     hitSlop={8}
                   >
@@ -940,41 +928,14 @@ const styles = StyleSheet.create({
   compareWrap: {
     marginTop: 4,
   },
-  pickBanner: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    marginTop: 6,
-    paddingVertical: 9,
-    paddingHorizontal: 10,
-    borderWidth: 1,
-    borderStyle: "dashed",
-    borderColor: CYBER_TAB_CYAN,
-  },
-  pickText: {
-    flex: 1,
-    color: "#fff",
-    fontSize: 11,
-    fontWeight: "700",
-  },
-  pickCancel: {
-    fontFamily: METRIC_FONT,
-    color: "rgba(255,255,255,0.6)",
-    fontSize: 11,
-    fontWeight: "700",
-  },
-  compareBtn: {
-    alignItems: "center",
-    paddingVertical: 8,
+  compareHint: {
+    textAlign: "center",
+    paddingVertical: 7,
     borderTopWidth: 1,
     borderTopColor: "rgba(0,245,255,0.18)",
-  },
-  compareBtnText: {
-    fontFamily: METRIC_FONT,
-    color: CYBER_TAB_CYAN,
-    fontSize: 11,
-    fontWeight: "800",
-    letterSpacing: 0.8,
+    color: "rgba(0,245,255,0.6)",
+    fontSize: 10,
+    fontWeight: "700",
   },
   selCard: {
     marginTop: 6,
