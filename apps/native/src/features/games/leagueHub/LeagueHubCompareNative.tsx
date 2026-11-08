@@ -49,10 +49,6 @@ function winner(row: CompareRow, a: LeagueHubPlayer, b: LeagueHubPlayer): -1 | 0
 type CompareProps = {
   a: LeagueHubPlayer;
   b: LeagueHubPlayer;
-  /** いま見ているスタイルマップでの区画名 */
-  styleA: string | null;
-  styleB: string | null;
-  mapLabel: string;
   lang: HubLang;
   stamp: string;
   onClose: () => void;
@@ -69,9 +65,6 @@ export default function LeagueHubCompareNative({ lang, stamp, ...rest }: Compare
 function CompareBody({
   a,
   b,
-  styleA,
-  styleB,
-  mapLabel,
   ja,
   onClose,
 }: Omit<CompareProps, "lang" | "stamp"> & { ja: boolean }) {
@@ -82,9 +75,9 @@ function CompareBody({
     <View>
       <View style={styles.table}>
         <View style={styles.row}>
-          <PlayerHead p={a} style={styleA} />
+          <PlayerHead p={a} />
           <View style={styles.spine} />
-          <PlayerHead p={b} style={styleB} />
+          <PlayerHead p={b} />
         </View>
         {COMPARE_ROWS.map((r) => {
           const w = winner(r, a, b);
@@ -101,8 +94,8 @@ function CompareBody({
       </View>
       <Text style={styles.foot}>
         {ja
-          ? `今季の 1 試合平均。TOV と DRtg は低い方が上。型は「${mapLabel}」マップでの位置。`
-          : `Season per-game. Lower TOV and DRtg are better. Style = quadrant on the ${mapLabel} map.`}
+          ? "今季の 1 試合平均。TOV と DRtg は低い方が上。"
+          : "Season per-game. Lower TOV and DRtg are better."}
       </Text>
       {capturing ? null : (
         <Pressable onPress={onClose} hitSlop={8} style={styles.close}>
@@ -130,20 +123,13 @@ function ValueCell({ text, win, ink }: { text: string; win: boolean; ink: string
   );
 }
 
-function PlayerHead({ p, style }: { p: LeagueHubPlayer; style: string | null }) {
+function PlayerHead({ p }: { p: LeagueHubPlayer }) {
   return (
     <View style={styles.player}>
       <Text style={[styles.playerName, playerNameStyle]} numberOfLines={1}>
         {p.name}
       </Text>
       <HubTeamTag teamId={p.teamId} />
-      {style ? (
-        <View style={styles.styleChip}>
-          <Text style={styles.styleText} numberOfLines={1}>
-            {style}
-          </Text>
-        </View>
-      ) : null}
     </View>
   );
 }
@@ -174,22 +160,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "800",
     maxWidth: "100%",
-  },
-  styleChip: {
-    maxWidth: "100%",
-    marginTop: 1,
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    borderWidth: 1,
-    borderColor: "rgba(0,245,255,0.55)",
-    backgroundColor: "rgba(0,245,255,0.08)",
-    transform: [{ skewX: "-14deg" }],
-  },
-  styleText: {
-    color: CYBER_TAB_CYAN,
-    fontSize: 10,
-    fontWeight: "800",
-    transform: [{ skewX: "14deg" }],
   },
   cell: {
     flex: 1,

@@ -197,23 +197,6 @@ function StyleMap({
     id ? (players.find((p) => p.playerId === id) ?? null) : null;
   const cmpA = compareB ? findPlayer(selected) : null;
   const cmpB = findPlayer(compareB);
-  const mapAvg = useMemo(() => {
-    const base = pool.top.length > 0 ? pool.top : pool.pinned;
-    if (base.length === 0) return null;
-    const mean = (vals: number[]) => vals.reduce((s, v) => s + v, 0) / vals.length;
-    return {
-      x: mean(base.map((p) => p.m[preset.x.metric]!)),
-      y: mean(base.map((p) => p.m[preset.y.metric]!)),
-    };
-  }, [pool, preset]);
-  const styleOf = (p: LeagueHubPlayer | null): string | null => {
-    const x = p?.m[preset.x.metric];
-    const y = p?.m[preset.y.metric];
-    if (x == null || y == null || !mapAvg) return null;
-    const xGood = preset.x.invert ? x < mapAvg.x : x > mapAvg.x;
-    const yGood = preset.y.invert ? y < mapAvg.y : y > mapAvg.y;
-    return preset.quadrants[xGood ? (yGood ? "tr" : "br") : yGood ? "tl" : "bl"][lang];
-  };
   const addedPlayers = added
     .map((id) => players.find((p) => p.playerId === id))
     .filter((p): p is LeagueHubPlayer => p != null);
@@ -332,9 +315,6 @@ function StyleMap({
           <LeagueHubCompareNative
             a={cmpA}
             b={cmpB}
-            styleA={styleOf(cmpA)}
-            styleB={styleOf(cmpB)}
-            mapLabel={preset.label[lang]}
             lang={lang}
             stamp={stamp}
             onClose={() => setCompareB(null)}
