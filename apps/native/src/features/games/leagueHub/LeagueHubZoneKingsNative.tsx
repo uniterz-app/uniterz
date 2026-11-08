@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import Svg, { Circle, G, Path, Rect } from "react-native-svg";
 import {
   SHOT_ZONE_BASKET,
@@ -211,7 +211,7 @@ export default function LeagueHubZoneKingsNative({ zones, lang, onSelectPlayer }
               return (
                 <View
                   key={`k-${id}`}
-                  pointerEvents="none"
+                  pointerEvents="box-none"
                   style={[
                     styles.kingWrap,
                     {
@@ -220,7 +220,11 @@ export default function LeagueHubZoneKingsNative({ zones, lang, onSelectPlayer }
                     },
                   ]}
                 >
-                  <View style={styles.kingBox}>
+                  <Pressable
+                    style={({ pressed }) => [styles.kingBox, pressed ? { opacity: 0.6 } : null]}
+                    onPress={() => onSelectPlayer(king.playerId)}
+                    hitSlop={4}
+                  >
                     <Text
                       numberOfLines={1}
                       style={[
@@ -245,7 +249,7 @@ export default function LeagueHubZoneKingsNative({ zones, lang, onSelectPlayer }
                     >
                       {formatHubValue(king.fgPct, "pct")}
                     </Text>
-                  </View>
+                  </Pressable>
                 </View>
               );
             })

@@ -640,8 +640,8 @@ export default function LeagueHubPlayerPanelNative({ hub, lang, section, onSelec
           title="BY ZONE"
           hint={
             ja
-              ? "エリアごとの成功率トップ。コートをタップしても切り替えられる。"
-              : "Best FG% in each zone. Tap the court to switch zones too."
+              ? "エリアごとの成功率トップ。名前で選手詳細、コートでエリア切り替え。"
+              : "Best FG% in each zone. Tap a name for the player, the court to switch zones."
           }
         >
           {hub.zones.length > 0 ? (
