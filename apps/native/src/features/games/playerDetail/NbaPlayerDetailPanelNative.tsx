@@ -77,7 +77,8 @@ import {
   SHOT_ZONE_VB_H,
   SHOT_ZONE_VB_MIN_Y,
   SHOT_ZONE_VB_W,
-  formatShotZoneMakes,
+  formatShotZoneMakesPerGame,
+  formatShotZoneMakesTotal,
   shotCourtFreeThrowCirclePath,
   shotCourtTop,
   shotZonePathAboveBreak3Fill,
@@ -378,14 +379,20 @@ function ZoneGlowDefs({
 function ZoneStatLabel({
   zone,
   id,
+  totalGames,
 }: {
   zone?: NbaPlayerShotZone;
   id: NbaPlayerShotZone["id"];
+  /** 指定時は合計（平均 × 試合数）で出す */
+  totalGames: number | null;
 }) {
   const pos = SHOT_ZONE_LABEL_POS[id];
   if (!zone) return null;
   const pct = `${Math.round(zone.fgPct * 100)}%`;
-  const makes = formatShotZoneMakes(zone);
+  const makes =
+    totalGames != null
+      ? formatShotZoneMakesTotal(zone, totalGames)
+      : formatShotZoneMakesPerGame(zone);
   return (
     <>
       <SvgText
@@ -430,11 +437,14 @@ function ShotZoneHeatmap({
   zones,
   accent,
   seasonLabel,
+  gamesPlayed,
 }: {
   zones: NbaPlayerShotZone[];
   accent: string;
   seasonLabel: string;
+  gamesPlayed: number;
 }) {
+  const [mode, setMode] = useState<"perGame" | "total">("perGame");
   if (zones.length === 0) {
     return (
       <View style={styles.heatWrap}>
@@ -486,6 +496,9 @@ function ShotZoneHeatmap({
     return shotZonePathPaint();
   };
 
+  const canTotal = gamesPlayed > 0;
+  const totalGames = canTotal && mode === "total" ? gamesPlayed : null;
+
   return (
     <View style={styles.heatWrap}>
       <View style={styles.advTitleRow}>
@@ -493,6 +506,39 @@ function ShotZoneHeatmap({
           SHOT CHART
         </Text>
         <View style={styles.advTitleLine} />
+        {canTotal ? (
+          <View
+            style={[styles.careerTabs, { borderColor: hexToRgba(accent, 0.35) }]}
+          >
+            {(
+              [
+                ["perGame", "Per Game"],
+                ["total", "Total"],
+              ] as const
+            ).map(([id, label]) => {
+              const active = mode === id;
+              return (
+                <Pressable
+                  key={id}
+                  onPress={() => setMode(id)}
+                  style={[
+                    styles.careerTab,
+                    active ? { backgroundColor: accent } : null,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.careerTabText,
+                      { color: active ? "#050508" : "rgba(255,255,255,0.55)" },
+                    ]}
+                  >
+                    {label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        ) : null}
       </View>
       <Text style={styles.heatSeason}>{seasonLabel}</Text>
       <View
@@ -617,7 +663,7 @@ function ShotZoneHeatmap({
           />
 
           {entries.map(([id, z]) => (
-            <ZoneStatLabel key={id} id={id} zone={z} />
+            <ZoneStatLabel key={id} id={id} zone={z} totalGames={totalGames} />
           ))}
         </Svg>
       </View>
@@ -1637,6 +1683,7 @@ export default function NbaPlayerDetailPanelNative({
         <ShotZoneHeatmap
           zones={detail.shotZones}
           accent={accent}
+          gamesPlayed={detail.season.gamesPlayed}
           seasonLabel={
             detail.asOfLabel.match(/(\d{4}-\d{2})/)?.[1]
               ? `${detail.asOfLabel.match(/(\d{4}-\d{2})/)![1]} SEASON`
