@@ -669,41 +669,6 @@ export default function LeagueHubPlayerPanelNative({ hub, lang, section, onSelec
           )}
         </HubShareSectionNative>
 
-        <HubShareSectionNative
-          title="WORST PERFORMANCES"
-          stamp={stamp}
-          lang={lang}
-          hint={
-            hub.worstGames
-              ? `${hub.worstGames.startLabel} – ${hub.worstGames.endLabel} · ${
-                  ja
-                    ? "28 分以上出た今季平均 12 点以上の選手"
-                    : "28+ min, players averaging 12+ PTS"
-                }`
-              : undefined
-          }
-        >
-          {hub.worstGames && hub.worstGames.games.length > 0 ? (
-            <View>
-              <HubCellHeader labels={["PTS", "FG", "TOV"]} />
-              {hub.worstGames.games.map((g, i) => (
-                <HubRow
-                  key={`${g.playerId}-${g.gameId}`}
-                  rank={i + 1}
-                  teamId={g.teamId}
-                  name={g.name}
-                  sub={`${g.home ? "vs" : "@"} ${g.oppAbbr} · ${g.dateLabel} · ${g.result} · ${g.min ?? "—"} MIN`}
-                  cells={[String(g.pts), `${g.fgm ?? "—"}/${g.fga ?? "—"}`, String(g.tov ?? "—")]}
-                  valueSub={`Game Score ${g.gameScore.toFixed(1)}`}
-                  onPress={() => onSelectPlayer(g.playerId)}
-                />
-              ))}
-            </View>
-          ) : (
-            noData(lang)
-          )}
-        </HubShareSectionNative>
-
         <HubSection
           title="HOT / COLD"
           hint={ja ? "直近 5 試合の平均得点とそれより前の比較。" : "Last 5 games vs earlier, points per game."}
