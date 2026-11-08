@@ -26,8 +26,10 @@ import { METRIC_FONT } from "../../rankings/rankingsUiTheme";
 import {
   HubChips,
   HubEmpty,
+  HubPosToggle,
   HubRow,
   HubToggle,
+  type HubPosFilter,
   formatHubValue,
   playerNameStyle,
   teamInk,
@@ -81,7 +83,10 @@ export default function LeagueHubZoneKingsNative({ zones, lang, onSelectPlayer }
   const [zoneId, setZoneId] = useState<NbaPlayerShotZoneId>("above_break_3");
   const [mode, setMode] = useState<"pct" | "fga">("pct");
   const [courtW, setCourtW] = useState(0);
-  const byId = new Map(zones.map((z) => [z.id, z]));
+  const [pos, setPos] = useState<HubPosFilter>("all");
+  const byId = new Map(
+    zones.map((z) => [z.id, pos === "all" || !z.byPos ? z : z.byPos[pos]] as const)
+  );
   const board = byId.get(zoneId);
   const rows = board ? (mode === "pct" ? board.byPct : board.byFga) : [];
   const line = "rgba(255,255,255,0.28)";
@@ -218,6 +223,7 @@ export default function LeagueHubZoneKingsNative({ zones, lang, onSelectPlayer }
         </View>
       </View>
       <View style={styles.listHead}>
+        <HubPosToggle value={pos} onChange={setPos} lang={lang} />
         <HubToggle
           items={[
             { id: "pct", label: "FG%" },
@@ -287,7 +293,7 @@ const styles = StyleSheet.create({
   chipsWrap: {},
   listHead: {
     flexDirection: "row",
-    justifyContent: "flex-end",
+    justifyContent: "space-between",
     marginBottom: 4,
   },
 });

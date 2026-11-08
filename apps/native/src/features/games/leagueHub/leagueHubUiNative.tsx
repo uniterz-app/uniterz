@@ -3,6 +3,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { TEAM_SHORT } from "../../../../../../lib/team-short";
 import { getTeamAbbrBadgeColor } from "../../../../../../lib/team-colors";
 import type { LeagueHubAxisFormat } from "../../../../../../lib/nba/leagueHub/leagueHubScatterPresets";
+import type { LeagueHubPosition } from "../../../../../../lib/nba/leagueHub/leagueHubTypes";
 import { CYBER_TAB_CYAN } from "../../rankings/CyberSlantedTabNative";
 import { METRIC_FONT, RANK_DISPLAY_FONT } from "../../rankings/rankingsUiTheme";
 export type HubLang = "ja" | "en";
@@ -61,11 +62,38 @@ export function HubChips<T extends string>({
   items,
   value,
   onChange,
+  wrap = false,
 }: {
   items: readonly { id: T; label: string }[];
   value: T;
   onChange: (id: T) => void;
+  /** 横スクロールではなく 3 列で折り返す */
+  wrap?: boolean;
 }) {
+  if (wrap) {
+    return (
+      <View style={styles.chipGrid}>
+        {items.map((it) => {
+          const active = it.id === value;
+          return (
+            <Pressable
+              key={it.id}
+              onPress={() => onChange(it.id)}
+              style={[styles.chip, styles.chipCell, active ? styles.chipActive : null]}
+            >
+              <Text
+                style={[styles.chipText, active ? styles.chipTextActive : null]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+              >
+                {it.label}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+    );
+  }
   return (
     <ScrollView
       horizontal
@@ -124,6 +152,32 @@ export function HubToggle<T extends string>({
   );
 }
 
+export type HubPosFilter = "all" | LeagueHubPosition;
+
+/** 全員 / G / F / C */
+export function HubPosToggle({
+  value,
+  onChange,
+  lang,
+}: {
+  value: HubPosFilter;
+  onChange: (v: HubPosFilter) => void;
+  lang: HubLang;
+}) {
+  return (
+    <HubToggle
+      items={[
+        { id: "all", label: lang === "ja" ? "全員" : "ALL" },
+        { id: "G", label: "G" },
+        { id: "F", label: "F" },
+        { id: "C", label: "C" },
+      ]}
+      value={value}
+      onChange={onChange}
+    />
+  );
+}
+
 /** 選手 / チームの 1 行（順位・色点・名前・値） */
 export function HubRow({
   rank,
@@ -135,8 +189,11 @@ export function HubRow({
   onPress,
   highlight,
   kind = "player",
+  rankMove,
 }: {
   rank?: number;
+  /** 先週からの順位変動（+ = 上昇）。"new" = 新しく圏内 */
+  rankMove?: number | "new" | null;
   teamId: string | null;
   name: string;
   /** team = 順位表と同じチーム名書体 */
@@ -158,7 +215,26 @@ export function HubRow({
         pressed ? styles.rowPressed : null,
       ]}
     >
-      {rank != null ? <Text style={styles.rowRank}>{rank}</Text> : null}
+      {rank != null ? (
+        <View style={styles.rowRankCol}>
+          <Text style={styles.rowRank}>{rank}</Text>
+          {rankMove != null && rankMove !== 0 ? (
+            <Text
+              style={[
+                styles.rowMove,
+                {
+                  color:
+                    rankMove === "new" || rankMove > 0
+                      ? "rgba(110,231,183,0.95)"
+                      : "rgba(252,165,165,0.9)",
+                },
+              ]}
+            >
+              {rankMove === "new" ? "NEW" : rankMove > 0 ? `▲${rankMove}` : `▼${-rankMove}`}
+            </Text>
+          ) : null}
+        </View>
+      ) : null}
       {kind === "team" ? (
         <View style={[styles.rowSquare, { backgroundColor: ink }]} />
       ) : null}
@@ -308,6 +384,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 5,
   },
+  chipGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+    paddingBottom: 8,
+  },
+  chipCell: {
+    flexBasis: "30%",
+    flexGrow: 1,
+    alignItems: "center",
+  },
   chipActive: {
     backgroundColor: CYBER_TAB_CYAN,
     borderColor: CYBER_TAB_CYAN,
@@ -351,6 +438,16 @@ const styles = StyleSheet.create({
   },
   rowPressed: {
     backgroundColor: "rgba(0,245,255,0.12)",
+  },
+  rowRankCol: {
+    width: 22,
+    alignItems: "center",
+  },
+  rowMove: {
+    fontFamily: METRIC_FONT,
+    fontSize: 8,
+    fontWeight: "800",
+    marginTop: 1,
   },
   rowRank: {
     fontFamily: RANK_DISPLAY_FONT,

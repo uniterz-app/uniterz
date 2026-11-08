@@ -7,6 +7,7 @@ import {
 import type {
   LeagueHubCountRow,
   LeagueHubHighStat,
+  LeagueHubLadderRow,
   LeagueHubPlayer,
   LeagueHubWeekRow,
   NbaLeagueHubDoc,
@@ -21,8 +22,10 @@ import {
   HubRow,
   HubSection,
   HubTeamTag,
+  HubPosToggle,
   HubToggle,
   HubTwoCol,
+  type HubPosFilter,
   formatHubValue,
   hubStyles,
   playerNameStyle,
@@ -52,6 +55,7 @@ function StyleMap({
 }) {
   const [presetId, setPresetId] = useState(LEAGUE_HUB_PLAYER_SCATTER_PRESETS[0]!.id);
   const [topN, setTopN] = useState<"30" | "50">("30");
+  const [pos, setPos] = useState<HubPosFilter>("all");
   const [selected, setSelected] = useState<string | null>(null);
   const preset: LeagueHubPlayerScatterPreset =
     LEAGUE_HUB_PLAYER_SCATTER_PRESETS.find((p) => p.id === presetId) ??
@@ -62,11 +66,14 @@ function StyleMap({
       players
         .filter(
           (p) =>
-            p.m[preset.volume] != null && p.m[preset.x.metric] != null && p.m[preset.y.metric] != null
+            (pos === "all" || p.pos === pos) &&
+            p.m[preset.volume] != null &&
+            p.m[preset.x.metric] != null &&
+            p.m[preset.y.metric] != null
         )
         .sort((a, b) => (b.m[preset.volume] ?? 0) - (a.m[preset.volume] ?? 0))
         .slice(0, Number(topN)),
-    [players, preset, topN]
+    [players, preset, topN, pos]
   );
   const points: HubScatterPoint[] = pool.map((p) => ({
     id: p.playerId,
@@ -86,9 +93,18 @@ function StyleMap({
           setPresetId(id);
           setSelected(null);
         }}
+        wrap
       />
-      <View style={styles.mapHead}>
-        <Text style={styles.mapHint}>{preset.hint[lang]}</Text>
+      <Text style={styles.mapHint}>{preset.hint[lang]}</Text>
+      <View style={styles.mapControls}>
+        <HubPosToggle
+          value={pos}
+          onChange={(v) => {
+            setPos(v);
+            setSelected(null);
+          }}
+          lang={lang}
+        />
         <HubToggle
           items={[
             { id: "30", label: "TOP 30" },
@@ -100,8 +116,8 @@ function StyleMap({
       </View>
       <Text style={styles.mapPool}>
         {lang === "ja"
-          ? `${preset.volumeLabel.ja}の上位 ${topN} 人`
-          : `Top ${topN} by ${preset.volumeLabel.en}`}
+          ? `${pos === "all" ? "" : `${pos} の`}${preset.volumeLabel.ja}の上位 ${topN} 人`
+          : `Top ${topN}${pos === "all" ? "" : ` ${pos}s`} by ${preset.volumeLabel.en}`}
       </Text>
       {points.length < 3 ? (
         noData(lang)
@@ -196,6 +212,16 @@ const HIGH_LABEL: Record<LeagueHubHighStat, string> = {
 
 type CountId = "pts20" | "ddStreak" | "pts30" | "dd" | "td";
 
+function ladderMove(r: LeagueHubLadderRow, index: number, hasPrev: boolean): number | "new" | null {
+  if (!hasPrev) return null;
+  return r.prevRank == null ? "new" : r.prevRank - (index + 1);
+}
+
+function draftLabel(r: LeagueHubLadderRow, ja: boolean): string {
+  if (r.draftRound == null || r.draftNumber == null) return ja ? "ドラフト外" : "Undrafted";
+  return ja ? `${r.draftRound} 巡 ${r.draftNumber} 位` : `R${r.draftRound} #${r.draftNumber}`;
+}
+
 export default function LeagueHubPlayerPanelNative({ hub, lang, onSelectPlayer }: Props) {
   const [high, setHigh] = useState<LeagueHubHighStat>("pts");
   const [countId, setCountId] = useState<CountId>("pts20");
@@ -212,6 +238,7 @@ export default function LeagueHubPlayerPanelNative({ hub, lang, onSelectPlayer }
             ? hub.counts.doubleDouble
             : hub.counts.tripleDouble;
   const isStreak = countId === "pts20" || countId === "ddStreak";
+  const hasPrev = hub.ladderPrev != null;
 
   return (
     <View>
@@ -241,8 +268,10 @@ export default function LeagueHubPlayerPanelNative({ hub, lang, onSelectPlayer }
               <HubRow
                 key={r.playerId}
                 rank={i + 1}
+                rankMove={ladderMove(r, i, hasPrev)}
                 teamId={r.teamId}
                 name={r.name}
+                sub={r.pieRank != null ? (ja ? `貢献度 ${r.pieRank} 位` : `PIE #${r.pieRank}`) : undefined}
                 value={`${r.pts.toFixed(1)} / ${r.reb.toFixed(1)} / ${r.ast.toFixed(1)}`}
                 valueSub={
                   r.teamWins != null
@@ -254,8 +283,8 @@ export default function LeagueHubPlayerPanelNative({ hub, lang, onSelectPlayer }
             ))}
         <Text style={hubStyles.footnote}>
           {ja
-            ? "UNITERZ の試算（個人の貢献度 PIE × チームの勝率）。公式の投票とは別物です。PTS / REB / AST。"
-            : "UNITERZ estimate (PIE × team win %). Not the official vote. PTS / REB / AST."}
+            ? "UNITERZ の試算。65 試合ルール（20 分以上の出場）にまだ届く選手だけを、個人の貢献度（PIE）5 割・効率込みの得点 2 割・チームの勝率 3 割で順位付け。公式の投票とは別物です。PTS / REB / AST。"
+            : "UNITERZ estimate. Players still on track for 65 games (20+ min), ranked by PIE (50%), efficiency-adjusted scoring (20%) and team win % (30%). Not the official vote. PTS / REB / AST."}
         </Text>
       </HubSection>
 
@@ -266,14 +295,20 @@ export default function LeagueHubPlayerPanelNative({ hub, lang, onSelectPlayer }
               <HubRow
                 key={r.playerId}
                 rank={i + 1}
+                rankMove={ladderMove(r, i, hasPrev)}
                 teamId={r.teamId}
                 name={r.name}
-                sub={`${r.gp} GP`}
-                value={`${r.pts.toFixed(1)}`}
-                valueSub={`${r.reb.toFixed(1)} REB · ${r.ast.toFixed(1)} AST`}
+                sub={`${draftLabel(r, ja)} · ${r.gp} GP`}
+                value={`${r.pts.toFixed(1)} / ${r.reb.toFixed(1)} / ${r.ast.toFixed(1)}`}
+                valueSub={r.gameScore != null ? `GmSc ${r.gameScore.toFixed(1)}` : undefined}
                 onPress={() => onSelectPlayer(r.playerId)}
               />
             ))}
+        <Text style={hubStyles.footnote}>
+          {ja
+            ? "UNITERZ の試算。前季までに NBA の試合に出ていない選手（ドラフト外も含む）を、Game Score（効率も含めた 1 試合の総合値）の平均 6 割・個人の貢献度（PIE）2 割・総出場時間 2 割で順位付け。チーム試合の半分以上・平均 12 分以上が対象。"
+            : "UNITERZ estimate. Players with no prior NBA games (undrafted included), ranked by average Game Score (60%), PIE (20%) and total minutes (20%). Half of team games and 12+ MPG required."}
+        </Text>
       </HubSection>
 
       <HubSection
@@ -413,17 +448,17 @@ export default function LeagueHubPlayerPanelNative({ hub, lang, onSelectPlayer }
 }
 
 const styles = StyleSheet.create({
-  mapHead: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 8,
-    marginBottom: 4,
-  },
   mapHint: {
-    flex: 1,
     color: "rgba(255,255,255,0.55)",
     fontSize: 11,
     lineHeight: 16,
+    marginBottom: 6,
+  },
+  mapControls: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 6,
   },
   mapPool: {
     fontFamily: METRIC_FONT,

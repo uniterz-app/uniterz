@@ -31,7 +31,26 @@ export const LEAGUE_HUB_PLAYER_METRICS = [
   "clutch_pts",
   "pie",
   "eff",
+  "min",
+  "fta",
+  "fta_rate",
+  "ft_pct",
+  "drives",
+  "drive_pts",
+  /** drive_pts ÷ drives（ingest で計算） */
+  "drive_ppd",
+  "cns_fg_pct",
+  "pullup_fg_pct",
+  "deflections",
+  "contested_shots",
+  "ortg",
+  "drtg",
+  "pct_pts_3",
+  "pct_pts_paint",
 ] as const;
+
+export const LEAGUE_HUB_POSITIONS = ["G", "F", "C"] as const;
+export type LeagueHubPosition = (typeof LEAGUE_HUB_POSITIONS)[number];
 
 export type LeagueHubPlayerMetric = (typeof LEAGUE_HUB_PLAYER_METRICS)[number];
 
@@ -43,7 +62,7 @@ export type LeagueHubPlayerRef = {
 };
 
 export type LeagueHubPlayer = LeagueHubPlayerRef & {
-  pos: "G" | "F" | "C" | null;
+  pos: LeagueHubPosition | null;
   gp: number;
   min: number;
   /** 1 試合平均。率は 0–1 */
@@ -66,6 +85,8 @@ export type LeagueHubZoneBoard = {
   minFga: number;
   byPct: LeagueHubZoneRow[];
   byFga: LeagueHubZoneRow[];
+  /** ポジション別の同じ 2 つのランキング */
+  byPos?: Record<LeagueHubPosition, { byPct: LeagueHubZoneRow[]; byFga: LeagueHubZoneRow[] }>;
 };
 
 export const LEAGUE_HUB_HIGH_STATS = ["pts", "reb", "ast", "fg3m", "stl", "blk"] as const;
@@ -119,6 +140,23 @@ export type LeagueHubLadderRow = LeagueHubPlayerRef & {
   ast: number;
   teamWins: number | null;
   teamLosses: number | null;
+  /** MVP: 資格者の中での PIE 順位 */
+  pieRank?: number;
+  /** 新人: 資格者の中での Game Score 順位と平均 */
+  gameScore?: number;
+  gameScoreRank?: number;
+  /** 新人: 指名（巡・順位）。ドラフト外は null */
+  draftRound?: number | null;
+  draftNumber?: number | null;
+  /** 先週の同じラダーの順位（圏外 / 初週は null） */
+  prevRank?: number | null;
+};
+
+/** ラダー順位の週次スナップショット（playerId → 順位） */
+export type LeagueHubLadderWeek = {
+  weekStartMs: number;
+  mvp: Record<string, number>;
+  rookies: Record<string, number>;
 };
 
 export type LeagueHubRecord = { wins: number; losses: number };
@@ -162,6 +200,9 @@ export type NbaLeagueHubDoc = {
   rookies: LeagueHubLadderRow[];
   mvp: LeagueHubLadderRow[];
   teams: LeagueHubTeamRow[];
+  /** 今週の順位（週が変わったら ladderPrev へ回す） */
+  ladderWeek?: LeagueHubLadderWeek | null;
+  ladderPrev?: LeagueHubLadderWeek | null;
 };
 
 export type NbaLeagueHubApiPayload = {

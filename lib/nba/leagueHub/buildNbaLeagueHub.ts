@@ -6,10 +6,14 @@ import { nbaConferenceForTeam } from "@/lib/nba/nbaConferenceTeams";
 import {
   LEAGUE_HUB_HIGH_STATS,
   LEAGUE_HUB_PLAYER_METRICS,
+  LEAGUE_HUB_POSITIONS,
+  type LeagueHubPosition,
+  type LeagueHubZoneRow,
   type LeagueHubCountRow,
   type LeagueHubGameHigh,
   type LeagueHubHighStat,
   type LeagueHubLadderRow,
+  type LeagueHubLadderWeek,
   type LeagueHubPlayer,
   type LeagueHubPlayerMetric,
   type LeagueHubPlayerRef,
@@ -28,6 +32,8 @@ export type LeagueHubRosterEntry = {
   teamId: string;
   pos: "G" | "F" | "C" | null;
   draftYear: number | null;
+  draftRound: number | null;
+  draftNumber: number | null;
 };
 
 export type LeagueHubMetricsEntry = {
@@ -62,6 +68,10 @@ export type BuildNbaLeagueHubInput = {
   standings: LeagueHubStandingsEntry[];
   teamLogs: Map<string, LeagueHubTeamLogEntry>;
   closeRecords: Map<string, LeagueHubRecord>;
+  /** 前季までに NBA 出場がある選手。無いときは draftYear で新人判定 */
+  priorPlayerIds?: Set<string> | null;
+  /** 既存 hub doc のラダー週次スナップショット */
+  previousLadders?: Pick<NbaLeagueHubDoc, "ladderWeek" | "ladderPrev"> | null;
 };
 
 const SCATTER_PLAYER_LIMIT = 220;
@@ -69,6 +79,12 @@ const LIST_LIMIT = 5;
 /** エリア別・シーズンハイ・好調 / 不調 */
 const LONG_LIST_LIMIT = 10;
 const LADDER_LIMIT = 10;
+const SEASON_GAMES = 82;
+/** MVP など主要賞の出場条件（2023-24〜） */
+const AWARD_MIN_GAMES = 65;
+const AWARD_GAME_MIN = 20;
+/** 前季 ID は 2020-21 からしか無いので、それより前の指名は新人扱いしない */
+const ROOKIE_OLDEST_DRAFT_YEAR = 2020;
 const DAY_MS = 86_400_000;
 /** 「いま続いている」とみなす最終出場からの日数 */
 const ACTIVE_WITHIN_DAYS = 10;
@@ -87,8 +103,26 @@ function round(v: number, digits: number): number {
   return Math.round(v * p) / p;
 }
 
-function isPctMetric(id: string): boolean {
-  return id.endsWith("_pct") || id === "usg" || id === "pie";
+function metricDigits(id: string): number {
+  if (
+    id.endsWith("_pct") ||
+    id.startsWith("pct_") ||
+    id === "usg" ||
+    id === "pie" ||
+    id === "fta_rate"
+  ) {
+    return 3;
+  }
+  return id === "drive_ppd" ? 2 : 1;
+}
+
+function playerMetricValue(id: LeagueHubPlayerMetric, values: Record<string, number>): number | undefined {
+  if (id === "stocks") return (values.stl ?? 0) + (values.blk ?? 0);
+  if (id === "drive_ppd") {
+    const drives = values.drives ?? 0;
+    return drives > 0 && values.drive_pts != null ? values.drive_pts / drives : undefined;
+  }
+  return values[id];
 }
 
 function seasonStartYear(seasonKey: string): number {
@@ -150,6 +184,26 @@ function avg(values: number[]): number {
   return values.length ? values.reduce((a, b) => a + b, 0) / values.length : 0;
 }
 
+/** 各指標を母集団内の z にして重み付きで足す（ばらつき 0 の指標は 0 扱い） */
+function blendZ<T>(pool: T[], parts: Array<[(item: T) => number, number]>): number[] {
+  const out = pool.map(() => 0);
+  for (const [get, weight] of parts) {
+    const values = pool.map(get);
+    const mean = avg(values);
+    const sd = Math.sqrt(avg(values.map((v) => (v - mean) ** 2)));
+    if (!(sd > 0)) continue;
+    values.forEach((v, i) => {
+      out[i]! += (weight * (v - mean)) / sd;
+    });
+  }
+  return out;
+}
+
+/** 値の大きい順の順位（playerId → 1 始まり） */
+function rankMap<T extends { id: string }>(pool: T[], get: (item: T) => number): Map<string, number> {
+  return new Map([...pool].sort((a, b) => get(b) - get(a)).map((p, i) => [p.id, i + 1]));
+}
+
 export function buildNbaLeagueHub(input: BuildNbaLeagueHubInput): NbaLeagueHubDoc {
   const { seasonKey, roster, metrics } = input;
 
@@ -171,11 +225,8 @@ export function buildNbaLeagueHub(input: BuildNbaLeagueHubInput): NbaLeagueHubDo
     if (entry.gp < minGp || min < 12) continue;
     const m: Partial<Record<LeagueHubPlayerMetric, number>> = {};
     for (const id of LEAGUE_HUB_PLAYER_METRICS) {
-      const v =
-        id === "stocks"
-          ? (entry.values.stl ?? 0) + (entry.values.blk ?? 0)
-          : entry.values[id];
-      if (typeof v === "number" && Number.isFinite(v)) m[id] = round(v, isPctMetric(id) ? 3 : 1);
+      const v = playerMetricValue(id, entry.values);
+      if (typeof v === "number" && Number.isFinite(v)) m[id] = round(v, metricDigits(id));
     }
     players.push({
       playerId,
@@ -193,7 +244,7 @@ export function buildNbaLeagueHub(input: BuildNbaLeagueHubInput): NbaLeagueHubDo
   // ── エリア別ランキング ──
   const zoneMinGp = Math.max(2, Math.round(maxGp * 0.4));
   const zones: LeagueHubZoneBoard[] = ZONE_DEFS.map((def) => {
-    const rows: LeagueHubZoneBoard["byPct"] = [];
+    const rows: Array<LeagueHubZoneRow & { pos: LeagueHubPosition | null }> = [];
     for (const [playerId, list] of input.shotZones) {
       const gp = metrics.get(playerId)?.gp ?? 0;
       if (gp < zoneMinGp) continue;
@@ -207,16 +258,27 @@ export function buildNbaLeagueHub(input: BuildNbaLeagueHubInput): NbaLeagueHubDo
         fga: round(z.fga, 1),
         fgaTotal,
         fgm: Math.round(z.fgPct * fgaTotal),
+        pos: roster.get(playerId)?.pos ?? null,
       });
     }
-    const byPct = rows
-      .filter((r) => r.fga >= def.minFga)
-      .sort((a, b) => b.fgPct - a.fgPct || b.fgaTotal - a.fgaTotal)
-      .slice(0, LONG_LIST_LIMIT);
-    const byFga = [...rows]
-      .sort((a, b) => b.fgaTotal - a.fgaTotal || b.fgPct - a.fgPct)
-      .slice(0, LONG_LIST_LIMIT);
-    return { id: def.id, short: def.short, minFga: def.minFga, byPct, byFga };
+    const boards = (pool: typeof rows) => {
+      const strip = ({ pos: _pos, ...r }: (typeof rows)[number]): LeagueHubZoneRow => r;
+      return {
+        byPct: pool
+          .filter((r) => r.fga >= def.minFga)
+          .sort((a, b) => b.fgPct - a.fgPct || b.fgaTotal - a.fgaTotal)
+          .slice(0, LONG_LIST_LIMIT)
+          .map(strip),
+        byFga: [...pool]
+          .sort((a, b) => b.fgaTotal - a.fgaTotal || b.fgPct - a.fgPct)
+          .slice(0, LONG_LIST_LIMIT)
+          .map(strip),
+      };
+    };
+    const byPos = Object.fromEntries(
+      LEAGUE_HUB_POSITIONS.map((p) => [p, boards(rows.filter((r) => r.pos === p))])
+    ) as NonNullable<LeagueHubZoneBoard["byPos"]>;
+    return { id: def.id, short: def.short, minFga: def.minFga, ...boards(rows), byPos };
   });
 
   // ── 試合ログ由来（シーズンハイ・連続・回数・ホット / コールド・週間） ──
@@ -333,6 +395,10 @@ export function buildNbaLeagueHub(input: BuildNbaLeagueHubInput): NbaLeagueHubDo
 
   // ── ラダー ──
   const standingsById = new Map(input.standings.map((s) => [s.teamId, s]));
+  const teamGamesOf = (teamId: string | null | undefined) => {
+    const st = teamId ? standingsById.get(teamId) : undefined;
+    return st ? st.wins + st.losses : 0;
+  };
   const ladderRow = (playerId: string, entry: LeagueHubMetricsEntry): LeagueHubLadderRow | null => {
     const ref = refOf(playerId, entry.teamId);
     if (!ref) return null;
@@ -347,30 +413,105 @@ export function buildNbaLeagueHub(input: BuildNbaLeagueHubInput): NbaLeagueHubDo
       teamLosses: st?.losses ?? null,
     };
   };
+  const logsOf = (playerId: string) =>
+    (input.gameLogs.get(playerId)?.logs ?? []).filter((g) => g.min > 0);
 
-  const startYear = seasonStartYear(seasonKey);
-  const rookies = [...metrics.entries()]
-    .filter(([id, e]) => roster.get(id)?.draftYear === startYear && e.gp >= Math.max(2, Math.round(maxGp * 0.4)))
-    .sort(([, a], [, b]) => (b.values.eff ?? 0) - (a.values.eff ?? 0))
-    .slice(0, LADDER_LIMIT)
-    .map(([id, e]) => ladderRow(id, e))
-    .filter((r): r is LeagueHubLadderRow => r != null);
-
-  // MVP（試作）: PIE × チーム勝率。チーム試合の 6 割以上・25 分以上
-  const mvp = [...metrics.entries()]
+  // MVP: 65 試合ルール（20 分以上の出場）にまだ届く選手だけ。
+  // 貢献度 PIE 5 割・効率込み得点 2 割・チーム勝率 3 割（資格者内の z）
+  const mvpPool = [...metrics.entries()]
     .map(([id, e]) => {
+      const teamGames = teamGamesOf(e.teamId);
       const st = e.teamId ? standingsById.get(e.teamId) : undefined;
-      const teamGames = st ? st.wins + st.losses : 0;
-      if (!st || teamGames === 0) return null;
-      if (e.gp < teamGames * 0.6 || (e.values.min ?? 0) < 25) return null;
-      const score = (e.values.pie ?? 0) * (0.5 + st.wins / teamGames);
-      return { id, e, score };
+      const pie = e.values.pie;
+      const ts = e.values.ts_pct;
+      if (!st || teamGames === 0 || pie == null || ts == null) return null;
+      const g20 = logsOf(id).filter((g) => g.min >= AWARD_GAME_MIN).length;
+      if (g20 + (SEASON_GAMES - teamGames) < AWARD_MIN_GAMES) return null;
+      if (g20 < teamGames * 0.6) return null;
+      return { id, e, pie, ts, pts: e.values.pts ?? 0, winPct: st.wins / teamGames };
     })
-    .filter((x): x is { id: string; e: LeagueHubMetricsEntry; score: number } => x != null)
+    .filter((x): x is NonNullable<typeof x> => x != null);
+  const leagueTs = avg(mvpPool.map((p) => p.ts)) || 1;
+  const mvpScores = blendZ(mvpPool, [
+    [(p) => p.pie, 0.5],
+    [(p) => (p.pts * p.ts) / leagueTs, 0.2],
+    [(p) => p.winPct, 0.3],
+  ]);
+  const pieRankOf = rankMap(mvpPool, (p) => p.pie);
+  const mvp = mvpPool
+    .map((p, i) => ({ p, score: mvpScores[i]! }))
     .sort((a, b) => b.score - a.score)
     .slice(0, LADDER_LIMIT)
-    .map(({ id, e }) => ladderRow(id, e))
+    .map(({ p }): LeagueHubLadderRow | null => {
+      const row = ladderRow(p.id, p.e);
+      return row ? { ...row, pieRank: pieRankOf.get(p.id)! } : null;
+    })
     .filter((r): r is LeagueHubLadderRow => r != null);
+
+  // 新人: 前季までに NBA 出場が無い（ドラフト外・指名後に出なかった選手も含む）。
+  // チーム試合の 5 割以上・平均 12 分以上。Game Score 6 割・PIE 2 割・総出場時間 2 割
+  const startYear = seasonStartYear(seasonKey);
+  const priorIds = input.priorPlayerIds;
+  const isRookie = (id: string) => {
+    const draftYear = roster.get(id)?.draftYear ?? null;
+    if (!priorIds) return draftYear === startYear;
+    if (priorIds.has(id)) return false;
+    return draftYear == null || draftYear >= ROOKIE_OLDEST_DRAFT_YEAR;
+  };
+  const rookiePool = [...metrics.entries()]
+    .map(([id, e]) => {
+      if (!isRookie(id)) return null;
+      const teamGames = teamGamesOf(e.teamId) || maxGp;
+      const min = e.values.min ?? 0;
+      if (e.gp < Math.max(2, teamGames * 0.5) || min < 12) return null;
+      const logs = logsOf(id);
+      if (logs.length === 0) return null;
+      return {
+        id,
+        e,
+        gameScore: avg(logs.map(gameScore)),
+        pie: e.values.pie ?? 0,
+        totalMin: min * e.gp,
+      };
+    })
+    .filter((x): x is NonNullable<typeof x> => x != null);
+  const rookieScores = blendZ(rookiePool, [
+    [(p) => p.gameScore, 0.6],
+    [(p) => p.pie, 0.2],
+    [(p) => p.totalMin, 0.2],
+  ]);
+  const gsRankOf = rankMap(rookiePool, (p) => p.gameScore);
+  const rookies = rookiePool
+    .map((p, i) => ({ p, score: rookieScores[i]! }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, LADDER_LIMIT)
+    .map(({ p }): LeagueHubLadderRow | null => {
+      const row = ladderRow(p.id, p.e);
+      if (!row) return null;
+      const r = roster.get(p.id);
+      return {
+        ...row,
+        gameScore: round(p.gameScore, 1),
+        gameScoreRank: gsRankOf.get(p.id)!,
+        draftRound: r?.draftRound ?? null,
+        draftNumber: r?.draftNumber ?? null,
+      };
+    })
+    .filter((r): r is LeagueHubLadderRow => r != null);
+
+  // 先週からの順位変動: 週が変わったら前の週の最終順位を ladderPrev へ
+  const prevLadders = input.previousLadders ?? null;
+  const ladderPrev =
+    prevLadders?.ladderWeek && prevLadders.ladderWeek.weekStartMs < thisMonday
+      ? prevLadders.ladderWeek
+      : (prevLadders?.ladderPrev ?? null);
+  const withPrev = (rows: LeagueHubLadderRow[], prev: Record<string, number> | undefined) =>
+    rows.map((r) => ({ ...r, prevRank: prev?.[r.playerId] ?? null }));
+  const ladderWeek: LeagueHubLadderWeek = {
+    weekStartMs: thisMonday,
+    mvp: Object.fromEntries(mvp.map((r, i) => [r.playerId, i + 1])),
+    rookies: Object.fromEntries(rookies.map((r, i) => [r.playerId, i + 1])),
+  };
 
   // ── チーム ──
   const teams: LeagueHubTeamRow[] = input.standings.map((s) => {
@@ -406,9 +547,11 @@ export function buildNbaLeagueHub(input: BuildNbaLeagueHubInput): NbaLeagueHubDo
     hot: [...trends].filter((t) => t.diff > 0).sort((a, b) => b.diff - a.diff).slice(0, LONG_LIST_LIMIT),
     cold: [...trends].filter((t) => t.diff < 0).sort((a, b) => a.diff - b.diff).slice(0, LONG_LIST_LIMIT),
     week,
-    rookies,
-    mvp,
+    rookies: withPrev(rookies, ladderPrev?.rookies),
+    mvp: withPrev(mvp, ladderPrev?.mvp),
     teams,
+    ladderWeek,
+    ladderPrev,
   };
 }
 

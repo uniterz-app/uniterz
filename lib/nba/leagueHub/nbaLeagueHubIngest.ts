@@ -13,6 +13,8 @@ import { NBA_TEAM_SHAPE_RECORDS_COLLECTION } from "@/lib/nba/teamShapes/teamShap
 import { NBA_PLAYER_SHOT_ZONES_COLLECTION } from "@/lib/nba/playerShotZones/playerShotZonesTypes";
 import { NBA_PLAYER_SEASON_METRICS_COLLECTION } from "@/lib/nba/playerSeasonMetrics/playerSeasonMetricsTypes";
 import { NBA_PLAYER_GAME_LOGS_COLLECTION } from "@/lib/nba/playerGameLogs/playerGameLogsTypes";
+import { NBA_PLAYER_CAREER_SEASONS_COLLECTION } from "@/lib/nba/playerCareerSeasons/playerCareerSeasonsTypes";
+import { nbaLeagueStatsSeasonKeys } from "@/lib/rankings/nbaSeason";
 import {
   buildNbaLeagueHub,
   type LeagueHubMetricsEntry,
@@ -22,6 +24,7 @@ import {
 } from "@/lib/nba/leagueHub/buildNbaLeagueHub";
 import {
   NBA_LEAGUE_HUB_COLLECTION,
+  type LeagueHubLadderWeek,
   type LeagueHubPositionDefense,
   type LeagueHubRecord,
 } from "@/lib/nba/leagueHub/leagueHubTypes";
@@ -63,6 +66,8 @@ async function loadRoster(db: Firestore, seasonKey: string) {
         teamId,
         pos: posGroup(p.position),
         draftYear: num(p.draftYear),
+        draftRound: num(p.draftRound),
+        draftNumber: num(p.draftNumber),
       });
     }
   }
@@ -191,6 +196,43 @@ async function loadCloseRecords(db: Firestore, seasonKey: string) {
   return out;
 }
 
+/**
+ * 前季までに NBA 出場がある選手 ID。
+ * 2020-21〜前季の `nbaPlayerSeasonMetrics`（ID だけ）+ 候補に残った選手だけキャリア doc を確認。
+ */
+async function loadPriorPlayerIds(
+  db: Firestore,
+  seasonKey: string,
+  currentIds: Iterable<string>
+): Promise<Set<string>> {
+  const prior = nbaLeagueStatsSeasonKeys(seasonKey).filter((k) => k !== seasonKey);
+  const snaps = await Promise.all(
+    prior.map((k) =>
+      db.collection(NBA_PLAYER_SEASON_METRICS_COLLECTION).doc(k).collection("players").select().get()
+    )
+  );
+  const out = new Set<string>();
+  for (const snap of snaps) for (const d of snap.docs) out.add(d.id);
+
+  const startYear = Number.parseInt(seasonKey.slice(0, 4), 10);
+  const candidates = [...currentIds].filter((id) => !out.has(id));
+  const refs = candidates.map((id) => db.collection(NBA_PLAYER_CAREER_SEASONS_COLLECTION).doc(id));
+  for (let i = 0; i < refs.length; i += 200) {
+    const docs = await db.getAll(...refs.slice(i, i + 200), { fieldMask: ["regular"] });
+    for (const d of docs) {
+      const regular = d.exists ? d.get("regular") : null;
+      if (!Array.isArray(regular)) continue;
+      const played = regular.some((row: unknown) => {
+        const r = asObj(row);
+        const start = num(r?.seasonStart);
+        return start != null && start < startYear && (num(r?.games) ?? 0) > 0;
+      });
+      if (played) out.add(d.id);
+    }
+  }
+  return out;
+}
+
 export async function ingestNbaLeagueHub(
   db: Firestore,
   input: { seasonKey: string; nowMs?: number }
@@ -206,6 +248,11 @@ export async function ingestNbaLeagueHub(
       loadTeamLogs(db, seasonKey),
       loadCloseRecords(db, seasonKey),
     ]);
+  const [priorPlayerIds, prevSnap] = await Promise.all([
+    loadPriorPlayerIds(db, seasonKey, metrics.keys()),
+    db.collection(NBA_LEAGUE_HUB_COLLECTION).doc(seasonKey).get(),
+  ]);
+  const prevData = prevSnap.data();
 
   const hub = buildNbaLeagueHub({
     seasonKey,
@@ -217,6 +264,13 @@ export async function ingestNbaLeagueHub(
     standings,
     teamLogs,
     closeRecords,
+    priorPlayerIds,
+    previousLadders: prevData
+      ? {
+          ladderWeek: (prevData.ladderWeek as LeagueHubLadderWeek | undefined) ?? null,
+          ladderPrev: (prevData.ladderPrev as LeagueHubLadderWeek | undefined) ?? null,
+        }
+      : null,
   });
 
   await db
