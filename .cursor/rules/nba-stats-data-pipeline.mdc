@@ -43,6 +43,7 @@ BDL（サーバーのみ）
 | **キャリア Season/Playoffs** | `nbaPlayerCareerSeasons/{playerId}` | `nba-player-career-seasons-ingest` | `/api/nba/player-career-seasons` |
 | **試合ログ（今季最大 82）** | `nbaPlayerGameLogs/{season}/players/{playerId}` | `nba-player-game-logs-ingest`（UI 表は直近 20、Home/Away・vs Opp はフル） | `/api/nba/player-game-logs` |
 | **ショットゾーン** | `nbaPlayerShotZones/{season}/players/{playerId}` | `nba-player-shot-zones-ingest`（リーグ by_zone 一括） | `/api/nba/player-shot-zones` |
+| **シュート 1 本ごと（shot charts）・エリア別合計** | `nbaGameShotCharts/{bdlGameId}`（1 本ずつ: 選手・成否・2/3・座標 ft・距離・エリア + 選手別エリア合計 `agg`）→ `nbaPlayerShotAreas/{season}`（レギュラー〔カップ戦グループ含む〕の選手 × 8 エリア [成功, 試投]。アーク上の 3P は NBA の shot_zone_area で左 45 度〔LC〕・トップ〔C〕・右 45 度〔RC〕に分ける） | `nba-shot-charts-ingest`（BDL `/nba/v1/shot_charts?game_ids[]=`・試合終了後のみ・プレシーズンなし。未処理の終了試合だけ。BDL が空なら次回再取得、3 日空なら empty で確定）。日次 / 試合後監視の `shot-charts` ステップ（1 回最大 40 試合） | —（LEAGUE BY ZONE が `nbaPlayerShotAreas` を読む。無いときはシーズン平均 by_zone の 6 エリアに戻る） |
 | **今季メトリクス（全順位）** | `nbaPlayerSeasonMetrics/{season}/players/{playerId}` | `nba-league-stats-ingest`（leaders と同梱。Top30 ボードとは別） | `/api/nba/player-detail`（個別 GET なし） |
 | **詳細寄せ** | （上の合成） | — | `/api/nba/player-detail`（roster+injury+contract+career+logs+zones+metrics） |
 | injury | `nbaTeamInjuries/{season}` | **専用** `nba-injury-ingest`（16:00 / 23:00 / 試合前窓） | `/api/nba/team-injuries` |
@@ -91,7 +92,7 @@ BDL（サーバーのみ）
 
 - Firebase cron `runNbaStatsDailyIngestCron` — **毎日 18:00 JST**
 - Next `POST /api/admin/nba-stats-daily-ingest`（`mode: "daily"`）
-- 中身: rosters → **team-offseason-moves** → games → league-stats → **team-game-logs** → **standings** → **team-season-records** → **team-shape-records** → **discipline** → shot-zones → **player-game-logs-incremental**（直近 box 出場者）→ **league-hub**
+- 中身: rosters → **team-offseason-moves** → games → league-stats → **team-game-logs** → **standings** → **team-season-records** → **team-shape-records** → **discipline** → shot-zones → **shot-charts** → **player-game-logs-incremental**（直近 box 出場者）→ **league-hub**
 - 今季 `games` は `runNbaStatsSnapshotSteps` で **1 回だけ** `loadNbaSeasonGameRows`（`lib/nba/ingest/nbaSeasonGameRows.ts`・必要フィールドだけ `.select`。`pointsSummary` 等は読まない）→ team-game-logs / standings / team-season-records / team-shape-records に `seasonGames` で渡す。games を読む新しい集計はここに足し、フィールドが要るなら `NBA_SEASON_GAME_ROW_FIELDS` に追加
 - **試合後監視（18:00 を待たない）**: ライブ cron `runNbaLiveGamesIngestCron` が 10 分ごとに相乗り → 直近 10h に final になったレギュラー / プレーオフで未完了のものがあれば `POST /api/admin/nba-post-game-stats-refresh`（`lib/nba/ingest/nbaPostGameStatsRefresh.ts`）。BDL の順位 + チーム平均の試合数が Firestore の終了試合数に追いついたら（team）、両チーム最長出場選手のシーズン平均がその試合を含んだら（player）、日次と同じ `runNbaStatsSnapshotSteps` + 直近試合ログを回す。進捗 `nbaPostGameStatsRefresh/{bdlGameId}`（games doc には書かない）。final から 6h で諦め、18:00 日次が保険
 - **injury** は日次から分離 → Firebase `runNbaInjuryBaseline16Cron`（16:00 · 試合日）/ `runNbaInjuryBaseline23Cron`（23:00）/ `runNbaInjuryPregameCron`（10分毎 · T-3h/1h/30m 窓）→ `POST /api/admin/nba-injury-ingest`

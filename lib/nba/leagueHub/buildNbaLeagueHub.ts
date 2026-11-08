@@ -24,8 +24,10 @@ import {
   type LeagueHubWeek,
   type LeagueHubWeekRow,
   type LeagueHubZoneBoard,
+  type LeagueHubZoneId,
   type NbaLeagueHubDoc,
 } from "@/lib/nba/leagueHub/leagueHubTypes";
+import type { NbaShotAreaCounts, NbaShotAreaId } from "@/lib/nba/shotCharts/shotChartTypes";
 
 export type LeagueHubRosterEntry = {
   name: string;
@@ -66,6 +68,8 @@ export type BuildNbaLeagueHubInput = {
   roster: Map<string, LeagueHubRosterEntry>;
   metrics: Map<string, LeagueHubMetricsEntry>;
   shotZones: Map<string, NbaPlayerShotZone[]>;
+  /** shot_charts のシーズン合計。あればエリア別はこちら（45 度あり） */
+  shotAreas?: Record<string, NbaShotAreaCounts> | null;
   gameLogs: Map<string, { teamId: string | null; logs: NbaPlayerGameLog[] }>;
   standings: LeagueHubStandingsEntry[];
   teamLogs: Map<string, LeagueHubTeamLogEntry>;
@@ -91,13 +95,28 @@ const DAY_MS = 86_400_000;
 /** 「いま続いている」とみなす最終出場からの日数 */
 const ACTIVE_WITHIN_DAYS = 10;
 
-const ZONE_DEFS: Array<{ id: LeagueHubZoneBoard["id"]; short: string; minFga: number }> = [
+type ZoneDef = { id: LeagueHubZoneId; short: string; minFga: number };
+
+/** シーズン平均 by_zone（shot_charts が無いときのフォールバック） */
+const ZONE_DEFS: ZoneDef[] = [
   { id: "restricted", short: "RA", minFga: 4 },
   { id: "paint", short: "PAINT", minFga: 3 },
   { id: "mid", short: "MID", minFga: 3 },
   { id: "left_corner_3", short: "LC3", minFga: 1.2 },
   { id: "right_corner_3", short: "RC3", minFga: 1.2 },
   { id: "above_break_3", short: "AB3", minFga: 4 },
+];
+
+/** shot_charts 由来。アーク上の 3P を左 45 度・トップ・右 45 度に分ける */
+const AREA_ZONE_DEFS: ZoneDef[] = [
+  { id: "restricted", short: "RA", minFga: 4 },
+  { id: "paint", short: "PAINT", minFga: 3 },
+  { id: "mid", short: "MID", minFga: 3 },
+  { id: "left_corner_3", short: "LC3", minFga: 1.2 },
+  { id: "right_corner_3", short: "RC3", minFga: 1.2 },
+  { id: "left_wing_3", short: "LW3", minFga: 1.5 },
+  { id: "top_3", short: "TOP3", minFga: 1.5 },
+  { id: "right_wing_3", short: "RW3", minFga: 1.5 },
 ];
 
 function round(v: number, digits: number): number {
@@ -251,28 +270,42 @@ export function buildNbaLeagueHub(input: BuildNbaLeagueHubInput): NbaLeagueHubDo
 
   // ── エリア別ランキング ──
   const zoneMinGp = Math.max(2, Math.round(maxGp * 0.4));
-  const zones: LeagueHubZoneBoard[] = ZONE_DEFS.map((def) => {
+  const shotAreas =
+    input.shotAreas && Object.keys(input.shotAreas).length > 0 ? input.shotAreas : null;
+  /** 選手のそのエリアのシーズン合計 [成功, 試投] */
+  const zoneTotals = (zoneId: LeagueHubZoneId): Array<[string, number, number]> => {
+    if (shotAreas) {
+      return Object.entries(shotAreas).flatMap(([playerId, counts]) => {
+        const c = counts[zoneId as NbaShotAreaId];
+        return c && c[1] > 0 ? [[playerId, c[0], c[1]] as [string, number, number]] : [];
+      });
+    }
+    return [...input.shotZones].flatMap(([playerId, list]) => {
+      const gp = metrics.get(playerId)?.gp ?? 0;
+      const z = list.find((x) => x.id === zoneId);
+      if (!z || z.fga <= 0 || gp <= 0) return [];
+      const fga = Math.round(z.fga * gp);
+      return [[playerId, Math.round(z.fgPct * fga), fga] as [string, number, number]];
+    });
+  };
+  const zones: LeagueHubZoneBoard[] = (shotAreas ? AREA_ZONE_DEFS : ZONE_DEFS).map((def) => {
     const rows: Array<LeagueHubZoneRow & { positions: LeagueHubPosition[] }> = [];
     const minTotal = Math.max(1, Math.round(def.minFga * maxGp));
     let leagueFgm = 0;
     let leagueFga = 0;
-    for (const [playerId, list] of input.shotZones) {
+    for (const [playerId, fgm, fgaTotal] of zoneTotals(def.id)) {
+      leagueFga += fgaTotal;
+      leagueFgm += fgm;
       const gp = metrics.get(playerId)?.gp ?? 0;
-      const z = list.find((x) => x.id === def.id);
-      if (z && z.fga > 0 && gp > 0) {
-        leagueFga += z.fga * gp;
-        leagueFgm += z.fgPct * z.fga * gp;
-      }
       if (gp < zoneMinGp) continue;
       const ref = refOf(playerId, metrics.get(playerId)?.teamId);
-      if (!z || !ref || z.fga <= 0) continue;
-      const fgaTotal = Math.round(z.fga * gp);
+      if (!ref) continue;
       rows.push({
         ...ref,
-        fgPct: round(z.fgPct, 3),
-        fga: round(z.fga, 1),
+        fgPct: round(fgm / fgaTotal, 3),
+        fga: round(fgaTotal / gp, 1),
         fgaTotal,
-        fgm: Math.round(z.fgPct * fgaTotal),
+        fgm,
         positions: roster.get(playerId)?.positions ?? [],
       });
     }

@@ -12,15 +12,19 @@ import {
   formatShotZoneMakesPerGame,
   shotCourtFreeThrowCirclePath,
   shotCourtTop,
+  shotZoneAboveBreak3Dividers,
   shotZonePathAboveBreak3Fill,
+  shotZonePathAboveBreak3Sector,
   shotZonePathLeftCorner3,
   shotZonePathMidRange,
   shotZonePathPaint,
   shotZonePathRightCorner3,
   shotZoneThreePointLine,
 } from "../../../../../../lib/predict/nbaShotZoneCourtGeometry";
-import type { LeagueHubZoneBoard } from "../../../../../../lib/nba/leagueHub/leagueHubTypes";
-import type { NbaPlayerShotZoneId } from "../../../../../../lib/predict/nbaPlayerDetailPreviewMocks";
+import type {
+  LeagueHubZoneBoard,
+  LeagueHubZoneId,
+} from "../../../../../../lib/nba/leagueHub/leagueHubTypes";
 import { CYBER_TAB_CYAN } from "../../rankings/CyberSlantedTabNative";
 import { METRIC_FONT } from "../../rankings/rankingsUiTheme";
 import {
@@ -38,26 +42,36 @@ import {
 
 const KING_WRAP_W = 150;
 
-const ZONE_ORDER: readonly NbaPlayerShotZoneId[] = [
+/** チップの並び（3 列で折り返す）。データにあるエリアだけ出す */
+const ZONE_ORDER: readonly LeagueHubZoneId[] = [
   "restricted",
   "paint",
   "mid",
   "left_corner_3",
-  "right_corner_3",
+  "left_wing_3",
+  "top_3",
   "above_break_3",
+  "right_wing_3",
+  "right_corner_3",
 ];
 
-const ZONE_LABEL: Record<NbaPlayerShotZoneId, { ja: string; en: string }> = {
+const ZONE_LABEL: Record<LeagueHubZoneId, { ja: string; en: string }> = {
   restricted: { ja: "リング下", en: "RIM" },
   paint: { ja: "ペイント", en: "PAINT" },
   mid: { ja: "ミドル", en: "MID" },
   left_corner_3: { ja: "左コーナー3", en: "L CORNER 3" },
   right_corner_3: { ja: "右コーナー3", en: "R CORNER 3" },
   above_break_3: { ja: "トップ3", en: "ABOVE BREAK 3" },
+  left_wing_3: { ja: "左45度3", en: "L WING 3" },
+  top_3: { ja: "トップ3", en: "TOP 3" },
+  right_wing_3: { ja: "右45度3", en: "R WING 3" },
 };
 
-function zonePath(id: NbaPlayerShotZoneId): string | null {
+function zonePath(id: LeagueHubZoneId): string | null {
   if (id === "above_break_3") return shotZonePathAboveBreak3Fill();
+  if (id === "left_wing_3") return shotZonePathAboveBreak3Sector("left");
+  if (id === "top_3") return shotZonePathAboveBreak3Sector("center");
+  if (id === "right_wing_3") return shotZonePathAboveBreak3Sector("right");
   if (id === "mid") return shotZonePathMidRange();
   if (id === "left_corner_3") return shotZonePathLeftCorner3();
   if (id === "right_corner_3") return shotZonePathRightCorner3();
@@ -65,13 +79,24 @@ function zonePath(id: NbaPlayerShotZoneId): string | null {
   return null;
 }
 
-/** コーナーは細いので名前を中に寄せる */
-const NAME_POS: Record<NbaPlayerShotZoneId, { x: number; y: number }> = {
+/** コーナーと 45 度は細いので名前を中に寄せる */
+const NAME_POS: Record<LeagueHubZoneId, { x: number; y: number }> = {
   ...SHOT_ZONE_LABEL_POS,
   left_corner_3: { x: 80, y: SHOT_ZONE_LABEL_POS.left_corner_3.y },
   right_corner_3: { x: SHOT_ZONE_VB_W - 80, y: SHOT_ZONE_LABEL_POS.right_corner_3.y },
   restricted: { x: SHOT_ZONE_BASKET.x, y: SHOT_ZONE_BASKET.y + 2 },
+  left_wing_3: { x: 80, y: 200 },
+  top_3: SHOT_ZONE_LABEL_POS.above_break_3,
+  right_wing_3: { x: SHOT_ZONE_VB_W - 80, y: 200 },
 };
+
+const SMALL_NAME_ZONES = new Set<LeagueHubZoneId>([
+  "restricted",
+  "left_corner_3",
+  "right_corner_3",
+  "left_wing_3",
+  "right_wing_3",
+]);
 
 type Props = {
   zones: LeagueHubZoneBoard[];
@@ -80,7 +105,11 @@ type Props = {
 };
 
 export default function LeagueHubZoneKingsNative({ zones, lang, onSelectPlayer }: Props) {
-  const [zoneId, setZoneId] = useState<NbaPlayerShotZoneId>("above_break_3");
+  const order = ZONE_ORDER.filter((id) => zones.some((z) => z.id === id));
+  const [pickedZone, setZoneId] = useState<LeagueHubZoneId>(
+    order.includes("top_3") ? "top_3" : "above_break_3"
+  );
+  const zoneId = order.includes(pickedZone) ? pickedZone : (order[0] ?? pickedZone);
   const [mode, setMode] = useState<"pct" | "fga">("pct");
   const [courtW, setCourtW] = useState(0);
   const [pos, setPos] = useState<HubPosFilter>("all");
@@ -113,7 +142,7 @@ export default function LeagueHubZoneKingsNative({ zones, lang, onSelectPlayer }
             height={SHOT_ZONE_VB_H}
             fill="#04040a"
           />
-          {ZONE_ORDER.map((id) => {
+          {order.map((id) => {
             const active = id === zoneId;
             const fill = active ? "rgba(0,245,255,0.22)" : "rgba(255,255,255,0.03)";
             const d = zonePath(id);
@@ -159,17 +188,25 @@ export default function LeagueHubZoneKingsNative({ zones, lang, onSelectPlayer }
               strokeWidth={1.1}
             />
             <Path d={shotZoneThreePointLine()} fill="none" stroke={line} strokeWidth={1.5} />
+            {order.includes("top_3") ? (
+              <Path
+                d={shotZoneAboveBreak3Dividers()}
+                fill="none"
+                stroke={line}
+                strokeWidth={1}
+                strokeDasharray="5 5"
+              />
+            ) : null}
           </G>
         </Svg>
         {courtW > 0
-          ? ZONE_ORDER.map((id) => {
+          ? order.map((id) => {
               const king = byId.get(id)?.byPct[0];
               if (!king) return null;
               const pos = NAME_POS[id];
               const active = id === zoneId;
               const scale = courtW / SHOT_ZONE_VB_W;
-              const small =
-                id === "restricted" || id === "left_corner_3" || id === "right_corner_3";
+              const small = SMALL_NAME_ZONES.has(id);
               const nameSize = (small ? 17 : 19) * scale;
               return (
                 <View
@@ -216,7 +253,7 @@ export default function LeagueHubZoneKingsNative({ zones, lang, onSelectPlayer }
       </View>
       <View style={styles.controls}>
         <HubChips
-          items={ZONE_ORDER.map((id) => ({ id, label: ZONE_LABEL[id].en }))}
+          items={order.map((id) => ({ id, label: ZONE_LABEL[id].en }))}
           value={zoneId}
           onChange={setZoneId}
           wrap

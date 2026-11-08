@@ -15,6 +15,7 @@ import { NBA_PLAYER_SEASON_METRICS_COLLECTION } from "@/lib/nba/playerSeasonMetr
 import { NBA_PLAYER_GAME_LOGS_COLLECTION } from "@/lib/nba/playerGameLogs/playerGameLogsTypes";
 import { NBA_PLAYER_CAREER_SEASONS_COLLECTION } from "@/lib/nba/playerCareerSeasons/playerCareerSeasonsTypes";
 import { nbaLeagueStatsSeasonKeys } from "@/lib/rankings/nbaSeason";
+import { loadNbaPlayerShotAreas } from "@/lib/nba/shotCharts/loadNbaPlayerShotAreas";
 import {
   buildNbaLeagueHub,
   type LeagueHubMetricsEntry,
@@ -254,9 +255,10 @@ export async function ingestNbaLeagueHub(
       loadTeamLogs(db, seasonKey),
       loadCloseRecords(db, seasonKey),
     ]);
-  const [priorPlayerIds, prevSnap] = await Promise.all([
+  const [priorPlayerIds, prevSnap, shotAreasDoc] = await Promise.all([
     loadPriorPlayerIds(db, seasonKey, metrics.keys()),
     db.collection(NBA_LEAGUE_HUB_COLLECTION).doc(seasonKey).get(),
+    loadNbaPlayerShotAreas(db, seasonKey),
   ]);
   const prevData = prevSnap.data();
 
@@ -266,6 +268,7 @@ export async function ingestNbaLeagueHub(
     roster,
     metrics,
     shotZones,
+    shotAreas: shotAreasDoc?.players ?? null,
     gameLogs,
     standings,
     teamLogs,

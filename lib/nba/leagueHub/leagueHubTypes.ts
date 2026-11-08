@@ -83,8 +83,11 @@ export type LeagueHubZoneRow = LeagueHubPlayerRef & {
   fgm: number;
 };
 
+/** shot_charts があるときはアーク上の 3P を 45 度・トップに分ける（above_break_3 は出ない） */
+export type LeagueHubZoneId = NbaPlayerShotZoneId | "left_wing_3" | "top_3" | "right_wing_3";
+
 export type LeagueHubZoneBoard = {
-  id: NbaPlayerShotZoneId;
+  id: LeagueHubZoneId;
   short: string;
   /** 成功率ランキングの最低試投（1 試合平均） */
   minFga: number;
