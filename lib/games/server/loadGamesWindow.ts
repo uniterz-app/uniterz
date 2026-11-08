@@ -36,6 +36,78 @@ const GAMES_WINDOW_OMIT_FIELDS = [
   "predictorUids",
 ] as const;
 
+/**
+ * NBA の窓クエリで Firestore から受け取る項目。
+ * liveStats（約 6KB）・pointsSummary（約 11KB、n だけ取る）・pointsDistribution・predictorUids は
+ * 一覧で使わないのに 1 件の 9 割を占め、読むたびにインターネット転送量として課金される。
+ * 一覧のカードで新しい games 項目を使うときはここに足す（足さないとレスポンスに載らない）。
+ */
+const NBA_GAMES_WINDOW_FIELDS = [
+  "league",
+  "season",
+  "seasonPhase",
+  "source",
+  "bdlGameId",
+  "bdlSeasonYear",
+  "startAt",
+  "startAtJst",
+  "startAtJstIso",
+  "status",
+  "final",
+  "finalAt",
+  "finalMeta",
+  "liveMeta",
+  "postponed",
+  "periodLabel",
+  "clock",
+  "score",
+  "homeScore",
+  "awayScore",
+  "home",
+  "away",
+  "homeTeamId",
+  "awayTeamId",
+  "homeTeamName",
+  "awayTeamName",
+  "venue",
+  "roundLabel",
+  "playoffRound",
+  "istStage",
+  "pickupWeekKey",
+  "countsForRanking",
+  "upsetMeta",
+  "leadingScorers",
+  "liveStarterIds",
+  "market",
+  "marketBias",
+  "marketPickCounts",
+  "topScorerMarket",
+  "predictorCount",
+  "pointsSummary.n",
+  "injuryReport",
+  "injuryReportSyncedAt",
+  "liveSyncedAt",
+  "pushPregame",
+  "pushNotifiedFinalAt",
+  "pushNotifiedDeadline10At",
+  "pushNotifiedDeadline30At",
+  "pushNotifiedDeadline60At",
+  "resultComputedAt",
+  "resultComputedAtV2",
+  "ingestedAt",
+  "updatedAt",
+] as const;
+
+/** 一覧が使うのは参加人数 n だけ（上位 50 人などは結果詳細が games を直接読む） */
+function slimWindowRow(data: Record<string, unknown>): void {
+  for (const key of GAMES_WINDOW_OMIT_FIELDS) delete data[key];
+  const summary = data.pointsSummary;
+  if (summary && typeof summary === "object") {
+    const n = (summary as { n?: unknown }).n;
+    data.pointsSummary = typeof n === "number" ? { n } : {};
+  }
+}
+
 function isLiveGameRow(raw: Record<string, unknown>): boolean {
   if (raw.final === true || raw.final === 1) return false;
   const t = String(raw.status ?? "").toLowerCase();
@@ -120,19 +192,22 @@ export async function loadGamesWindow(
     anchorDateKey = anchorKey;
   }
 
-  const snap = await db
+  const windowQuery = db
     .collection("games")
     .where("league", "==", league)
     .where("season", "==", season)
     .where("startAtJst", ">=", Timestamp.fromDate(start))
     .where("startAtJst", "<", Timestamp.fromDate(end))
     .orderBy("startAtJst", "asc")
-    .limit(limitN)
-    .get();
+    .limit(limitN);
+  const snap = await (league === "nba"
+    ? windowQuery.select(...NBA_GAMES_WINDOW_FIELDS)
+    : windowQuery
+  ).get();
 
   const windowRows = snap.docs.map((d) => {
     const data = { ...(d.data() as Record<string, unknown>) };
-    for (const key of GAMES_WINDOW_OMIT_FIELDS) delete data[key];
+    slimWindowRow(data);
     return { id: d.id, ...data };
   });
 
@@ -150,7 +225,7 @@ export async function loadGamesWindow(
       ? []
       : peerRaw.map((r) => {
           const data = { ...(r as Record<string, unknown>) };
-          for (const key of GAMES_WINDOW_OMIT_FIELDS) delete data[key];
+          slimWindowRow(data);
           return serializeGameDoc(String(r.id ?? ""), data);
         });
 

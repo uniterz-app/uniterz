@@ -3,10 +3,12 @@
  * injury / rosters / daily ingest の書き込み後に捨てる（Route Handler 内から呼ぶ）。
  */
 import { revalidateTag } from "next/cache";
+import { revalidateNbaDocCache } from "@/lib/nba/nbaPublicReadDb";
 
 export const NBA_INJURY_API_CACHE_TAG = "nba-injury-api";
 export const NBA_INJURY_API_CACHE_REVALIDATE_SEC = 300;
 
 export function revalidateNbaInjuryApiCache(): void {
+  revalidateNbaDocCache(["nbaTeamInjuries", "nbaTeamRosters"]);
   revalidateTag(NBA_INJURY_API_CACHE_TAG, {});
 }

@@ -1,7 +1,7 @@
 export const runtime = "nodejs";
 
 import { NextResponse } from "next/server";
-import { getAdminDb } from "@/lib/firebaseAdmin";
+import { getNbaPublicReadDb } from "@/lib/nba/nbaPublicReadDb";
 import { nbaStatsSnapshotCacheControl } from "@/lib/nba/nbaStatsSnapshotCacheControl";
 import { loadPlayerShotZones } from "@/lib/nba/playerDetail/loadPlayerShotZones";
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
@@ -27,7 +27,7 @@ export async function GET(req: Request) {
       );
     }
 
-    const payload = await loadPlayerShotZones(getAdminDb(), {
+    const payload = await loadPlayerShotZones(getNbaPublicReadDb(), {
       playerId,
       seasonKey: season,
     });

@@ -27,6 +27,15 @@ export async function loadDailyLeadersAdmin(
     .where("startAtJst", "<", Timestamp.fromDate(end))
     .orderBy("startAtJst", "asc")
     .limit(40)
+    .select(
+      "seasonPhase",
+      "postponed",
+      "liveStats",
+      "home",
+      "away",
+      "homeTeamId",
+      "awayTeamId"
+    )
     .get();
 
   return buildDailyLeaders(

@@ -21,6 +21,7 @@ import { ingestNbaTeamShapesFromGames } from "@/lib/nba/ingest/nbaTeamShapesInge
 import { ingestNbaTeamOffseasonMoves } from "@/lib/nba/ingest/nbaTeamOffseasonMovesIngest";
 import { ingestNbaDisciplineFromBdl } from "@/lib/nba/ingest/nbaDisciplineIngest";
 import { ingestNbaLeagueHub } from "@/lib/nba/leagueHub/nbaLeagueHubIngest";
+import { ingestNbaShotChartsFromBdl } from "@/lib/nba/ingest/nbaShotChartsIngest";
 import {
   loadNbaSeasonGameRows,
   type NbaSeasonGameRow,
@@ -117,6 +118,11 @@ export async function runNbaStatsSnapshotSteps(
   steps.push(
     await runStep("player-shot-zones", () =>
       ingestNbaPlayerShotZonesFromBdl(db, { seasonKey })
+    )
+  );
+  steps.push(
+    await runStep("shot-charts", () =>
+      ingestNbaShotChartsFromBdl(db, { seasonKey, maxGames: 40 })
     )
   );
   return steps;

@@ -41,11 +41,12 @@ export async function loadUnclaimedPendingUnitEarns(
   opts?: { limit?: number }
 ): Promise<PendingUnitEarnDoc[]> {
   const limit = Math.min(40, Math.max(1, opts?.limit ?? 20));
+  // 受け取り済みは読まない（全 writer が claimedAt: null で作成する）
   const snap = await db
     .collection("users")
     .doc(uid)
     .collection(PENDING_UNIT_EARNS_SUBCOLLECTION)
-    .orderBy("createdAt", "asc")
+    .where("claimedAt", "==", null)
     .limit(Math.min(80, limit * 3))
     .get();
 

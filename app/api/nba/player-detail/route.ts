@@ -1,7 +1,7 @@
 export const runtime = "nodejs";
 
 import { NextResponse } from "next/server";
-import { getAdminDb } from "@/lib/firebaseAdmin";
+import { getNbaPublicReadDb } from "@/lib/nba/nbaPublicReadDb";
 import { nbaStatsSnapshotCacheControl } from "@/lib/nba/nbaStatsSnapshotCacheControl";
 import { loadPlayerDetailBundle } from "@/lib/nba/playerDetail/loadPlayerDetailBundle";
 import { NBA_DISCIPLINE_CDN_TAG_HEADER } from "@/lib/nba/discipline/nbaDisciplineApiCache";
@@ -28,7 +28,7 @@ export async function GET(req: Request) {
       );
     }
 
-    const payload = await loadPlayerDetailBundle(getAdminDb(), {
+    const payload = await loadPlayerDetailBundle(getNbaPublicReadDb(), {
       playerId,
       seasonKey: season,
     });

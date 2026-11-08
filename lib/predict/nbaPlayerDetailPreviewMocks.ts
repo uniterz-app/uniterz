@@ -298,6 +298,8 @@ export type NbaPlayerDetailPreview = {
   /** ゾーン別 FG%（簡易ヒート） */
   shotZones: NbaPlayerShotZone[];
   gameLogs: NbaPlayerGameLog[];
+  /** 今季の出場試合すべて（新しい順・上限 82）。GAMES スプリットの集計用 */
+  seasonGameLogs?: NbaPlayerGameLog[];
   contract: NbaPlayerContractSummary | null;
   /** キャリアアワード（回数付き） */
   awards: NbaPlayerAward[];
@@ -321,7 +323,24 @@ export type NbaPlayerDetailPreview = {
   asOfLabel: string;
 };
 
-export type NbaPlayerVenueSplit = {
+/** 試合ログ集計で付く追加スタッツ。% はプール（成功合計 / 試投合計）。null = 試投 0 / ログに無い */
+export type NbaPlayerSplitExtras = {
+  wins?: number;
+  losses?: number;
+  stl?: number;
+  blk?: number;
+  tov?: number;
+  oreb?: number | null;
+  dreb?: number | null;
+  pf?: number | null;
+  fgPct?: number | null;
+  fg3m?: number;
+  fg3Pct?: number | null;
+  fta?: number;
+  ftPct?: number | null;
+};
+
+export type NbaPlayerVenueSplit = NbaPlayerSplitExtras & {
   venue: "home" | "away";
   games: number;
   min: number;
@@ -331,10 +350,11 @@ export type NbaPlayerVenueSplit = {
   plusMinus: number;
 };
 
-export type NbaPlayerVsOpponentSample = {
+export type NbaPlayerVsOpponentSample = NbaPlayerSplitExtras & {
   oppTeamId: string;
   oppAbbr: string;
   games: number;
+  min?: number;
   pts: number;
   reb: number;
   ast: number;

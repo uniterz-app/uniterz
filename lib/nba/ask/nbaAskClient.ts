@@ -1,5 +1,11 @@
 /** `/api/nba/ask` のクライアント（Web / Native 共通）。OpenAI キーはサーバーだけが持つ */
-import { parseNbaAskBoard, type NbaAskBoard } from "./nbaAskBoard";
+import {
+  nbaAskCardTeamName,
+  nbaAskGameCardId,
+  parseNbaAskBoard,
+  type NbaAskBoard,
+  type NbaAskGameCard,
+} from "./nbaAskBoard";
 import { isNbaAskDestinationId, type NbaAskDestinationId } from "./nbaAskDestinations";
 
 export type { NbaAskBoard };
@@ -11,6 +17,8 @@ export type NbaAskTurnClient = {
   opens?: NbaAskDestinationId[];
   /** スタッツの表。数字はサーバーの道具からだけ */
   board?: NbaAskBoard;
+  /** 試合は一覧のカード */
+  games?: NbaAskGameCard[];
 };
 
 export type NbaAskStatus = {
@@ -30,6 +38,7 @@ export type NbaAskReply =
       statsFreeRemaining: number | null;
       opens: NbaAskDestinationId[];
       board?: NbaAskBoard;
+      games?: NbaAskGameCard[];
     }
   | { ok: false; error: NbaAskError };
 
@@ -44,6 +53,39 @@ function opensOf(raw: unknown): NbaAskDestinationId[] {
 
 function url(apiBaseUrl: string | null | undefined): string {
   return `${(apiBaseUrl ?? "").replace(/\/$/, "")}/api/nba/ask`;
+}
+
+function gamesOf(raw: unknown): NbaAskGameCard[] | undefined {
+  if (!Array.isArray(raw)) return undefined;
+  const games: NbaAskGameCard[] = [];
+  for (const item of raw) {
+    if (!item || typeof item !== "object") continue;
+    const row = item as Record<string, unknown>;
+    const away = String(row.away ?? "").trim();
+    const home = String(row.home ?? "").trim();
+    if (!away || !home) continue;
+    const awayTeamId = String(row.awayTeamId ?? "");
+    const homeTeamId = String(row.homeTeamId ?? "");
+    games.push({
+      id: nbaAskGameCardId(row.id),
+      away,
+      home,
+      awayTeamId,
+      homeTeamId,
+      awayName: nbaAskCardTeamName(awayTeamId, away, String(row.awayName ?? "")),
+      homeName: nbaAskCardTeamName(homeTeamId, home, String(row.homeName ?? "")),
+      awayRecord: String(row.awayRecord ?? "").trim() || "(0-0)",
+      homeRecord: String(row.homeRecord ?? "").trim() || "(0-0)",
+      start: String(row.start ?? "").trim(),
+      pickup: row.pickup === true,
+      score: row.score == null || row.score === "" ? null : String(row.score),
+      scoreHome: typeof row.scoreHome === "number" ? row.scoreHome : null,
+      scoreAway: typeof row.scoreAway === "number" ? row.scoreAway : null,
+      status: String(row.status ?? "scheduled"),
+      round: String(row.round ?? "").trim(),
+    });
+  }
+  return games.length > 0 ? games.slice(0, 8) : undefined;
 }
 
 function numOrNull(v: unknown): number | null {
@@ -104,6 +146,7 @@ export async function postNbaAsk(input: {
         statsFreeRemaining: numOrNull(json.statsFreeRemaining),
         opens: opensOf(json.opens),
         board: parseNbaAskBoard(json.board),
+        games: gamesOf(json.games),
       };
     }
     const error: NbaAskError =

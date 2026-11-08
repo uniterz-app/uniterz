@@ -35,8 +35,9 @@ async function loadUserBits(
 }
 
 /**
- * 既存 snapshot に国が無いとき users.countryCode を足す（得点は触らない）。
- * Pro 行は users.planProBgVariant も足す（行背景の Pro Skin）。
+ * Pro 行に users.planProBgVariant を足す（行背景の Pro Skin。snapshot には書かない）。
+ * 国は確定時に Functions が snapshot に書くので、国の無い行のためには読まない
+ * （国未設定のユーザーを開くたびに読み直していた）。
  */
 export async function enrichTopEntriesCountryFromUsers(
   firestore: Firestore,
@@ -45,7 +46,7 @@ export async function enrichTopEntriesCountryFromUsers(
   const targets = [
     ...new Set(
       top
-        .filter((row) => !row.countryCode || row.isPro)
+        .filter((row) => row.isPro)
         .map((row) => row.uid?.trim() || "")
         .filter(Boolean)
     ),

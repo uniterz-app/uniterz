@@ -1,7 +1,7 @@
 export const runtime = "nodejs";
 
 import { NextResponse } from "next/server";
-import { getAdminDb } from "@/lib/firebaseAdmin";
+import { getNbaPublicReadDb } from "@/lib/nba/nbaPublicReadDb";
 import { playerStatLeadersCacheControl } from "@/lib/nba/playerStatLeaders/playerStatLeadersCacheControl";
 import {
   loadPlayerStatLeadersSnapshot,
@@ -18,12 +18,12 @@ import { NBA_DISCIPLINE_CDN_TAG_HEADER } from "@/lib/nba/discipline/nbaDisciplin
  *
  * - `season` 明示時: そのキーだけ読む（空なら empty。前期へ落とさない）
  * - `season` 未指定: 今季データ無ければ前期へフォールバック
- * HTTP Cache-Control のみ（unstable_cache は薄い doc を掴み続けるため使わない）。
+ * レスポンスは HTTP Cache-Control のみ。doc は `getNbaPublicReadDb` の共有キャッシュ（ingest 後に tag で捨てる）。
  */
 export async function GET(req: Request) {
   try {
     const url = new URL(req.url);
-    const db = getAdminDb();
+    const db = getNbaPublicReadDb();
     const rawSeason = url.searchParams.get("season");
     const hasExplicitSeason = rawSeason != null && rawSeason.trim() !== "";
     const season = hasExplicitSeason

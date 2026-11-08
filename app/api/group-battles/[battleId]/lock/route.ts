@@ -10,6 +10,7 @@ import {
   lockEligibleSquads,
 } from "@/lib/groupBattles/server/firestore";
 import { jsonErr, jsonOk } from "@/lib/groupBattles/server/http";
+import { revalidateGroupBattleSharedCache } from "@/lib/groupBattles/server/sharedViewCache";
 import { checkJobSecret } from "@/lib/security/assertJobSecret";
 
 export const runtime = "nodejs";
@@ -36,5 +37,6 @@ export async function POST(req: Request, ctx: Ctx) {
   });
 
   const result = await lockEligibleSquads(adminDb, battleId);
+  revalidateGroupBattleSharedCache();
   return jsonOk(result);
 }

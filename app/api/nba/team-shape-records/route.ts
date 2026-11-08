@@ -3,7 +3,7 @@ export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
 import { clientErrorResponse } from "@/lib/security/clientErrorResponse";
-import { getAdminDb } from "@/lib/firebaseAdmin";
+import { getNbaPublicReadDb } from "@/lib/nba/nbaPublicReadDb";
 import { loadTeamShapeRecordsApiPayload } from "@/lib/nba/teamShapes/loadTeamShapeRecordsApi";
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
 
@@ -19,7 +19,7 @@ export async function GET(req: Request) {
     const team = (searchParams.get("team") ?? "").trim() || null;
 
     const payload = await loadTeamShapeRecordsApiPayload(
-      getAdminDb(),
+      getNbaPublicReadDb(),
       season,
       team
     );

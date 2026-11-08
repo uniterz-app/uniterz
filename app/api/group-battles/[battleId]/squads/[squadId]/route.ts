@@ -9,6 +9,7 @@ import {
   squadsCol,
 } from "@/lib/groupBattles/server/firestore";
 import { jsonErr, jsonOk, mapAuthError } from "@/lib/groupBattles/server/http";
+import { revalidateGroupBattleSharedCache } from "@/lib/groupBattles/server/sharedViewCache";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -38,6 +39,7 @@ export async function PATCH(req: Request, ctx: Ctx) {
       updatedAt: FieldValue.serverTimestamp(),
     });
 
+    revalidateGroupBattleSharedCache();
     return jsonOk({ squadId, name });
   } catch (e) {
     return mapAuthError(e);

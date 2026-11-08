@@ -5,7 +5,12 @@
 import type { Firestore } from "firebase-admin/firestore";
 import { requireOpenAiApiKey } from "@/lib/openai/openaiEnv";
 import { getTodayKeyInTimeZone } from "@/lib/time/zonedTime";
-import { NBA_ASK_PRO_TOOL_DEFS, NBA_ASK_TOOL_DEFS, runNbaAskTool } from "./nbaAskTools";
+import {
+  NBA_ASK_PRO_TOOL_DEFS,
+  NBA_ASK_SCHEDULE_TOOL_NAMES,
+  NBA_ASK_TOOL_DEFS,
+  runNbaAskTool,
+} from "./nbaAskTools";
 import {
   NBA_ASK_APP_TOPICS,
   nbaAskAppGuide,
@@ -17,7 +22,13 @@ import { nbaAskDropPriorTurns, nbaAskSubject } from "./nbaAskSubject";
 import { isNbaAskDestinationId, type NbaAskDestinationId } from "./nbaAskDestinations";
 import { consumeNbaAskWebSearch, refundNbaAskWebSearch } from "./nbaAskQuota";
 import { searchNbaAskWeb } from "./nbaAskWebSearch";
-import { boardFromAskTool, nbaAskLooksLikeStats, type NbaAskBoard } from "./nbaAskBoard";
+import {
+  boardFromAskTool,
+  gamesFromAskTool,
+  nbaAskLooksLikeStats,
+  type NbaAskBoard,
+  type NbaAskGameCard,
+} from "./nbaAskBoard";
 
 const APP_GUIDE_TOOL = {
   type: "function",
@@ -90,9 +101,9 @@ function dataAccessLine(allowStats: boolean, isPro: boolean): string {
     return "This user is not PRO. Public stats tools are available, including injuries, standings, and season roster moves. Looking up one game's Pro Insight, the live PRO LEAGUE board, or the web is NOT available — explain the feature from the guide, and say the actual lookup is PRO. Do not invent that game's read or the board. get_team_moves is this season's roster IN/OUT, not a same-day wire. Translate names to English before search.";
   }
   if (isPro) {
-    return "This PRO user's daily stats limit is reached. Stats tools and PRO-only tools are NOT available. App questions via get_app_guide still work. Say the daily limit was reached.";
+    return "This PRO user's daily stats limit is reached. Stats tools and PRO-only tools are NOT available. get_games_on_date still works for the schedule and PICK UP. App questions via get_app_guide still work. Say the daily limit was reached only when they asked for a stat lookup.";
   }
-  return "NBA stats tools are NOT available: this free account has used its stats questions. Public stats are unlimited with PRO. Looking up one game's Pro Insight, the live PRO LEAGUE board, or the web is PRO-only. Explaining what those features are, via get_app_guide, still works. Do not guess stats or a specific game's PRO read.";
+  return "NBA stats tools are NOT available: this free account has used its stats questions. get_games_on_date still works for the schedule and PICK UP. Public stats are unlimited with PRO. Looking up one game's Pro Insight, the live PRO LEAGUE board, or the web is PRO-only. Explaining what those features are, via get_app_guide, still works. Do not guess stats or a specific game's PRO read.";
 }
 
 function systemPrompt(
@@ -107,7 +118,8 @@ function systemPrompt(
     "Questions about what PRO features are (Pro Insight, PRO LEAGUE, alerts, plans, this chat) are fine for everyone. Answer those from get_app_guide topic pro_plans or ask_chat. Do not invent details the guide does not have.",
     "Never answer questions about permissions, roles, admin access, or how many people use the app or subscribe to PRO. Say you cannot answer that. Do not estimate, search the web, or call any tool for it.",
     "When the user asks about an app feature, call get_app_guide. If the result includes open, the app puts a button under your answer that opens that screen. Tell them to tap the button. Do not invent a path.",
-    `Now is ${nowInTimeZone(timeZone)} in the user's time zone (${timeZone}). The app's games list shows each game on the date it starts in this time zone. "Today", "yesterday", tool date arguments, and dates in your answer all use this time zone. Do not convert to US dates.`,
+    `Now is ${nowInTimeZone(timeZone)} in the user's time zone (${timeZone}). The app's games list shows each game on the date it starts in this time zone. "Today", "tomorrow", "yesterday", and dates in your answer all use this time zone. Do not convert to US dates.`,
+    "For which games are on, or which are PICK UP (ピックアップ, pick up), call get_games_on_date. Use date tomorrow for 明日, today for 今日, yesterday for 昨日, and pickup_only true for PICK UP. If it returns no game, say that day has none. Do not tell the user to look it up in the app.",
     "Upset (アップセット, あっぷせっと, 番狂わせ), win streaks, points, and win rate are UNITERZ scoring. Call get_app_guide topic scoring with focus upset, win, total, or overview. Answer in a few spoken sentences. Finer formulas than the guide are not public: say the help text is the limit.",
     "Notifications, invites, squads, profile, and Unit rewards use get_app_guide topics notifications, invite, squads, profile, unit_rewards.",
     "Shot zones, contracts, career averages, discipline (tech, flagrant, ejection, fines), team strengths and weaknesses, and today's stat leaders have their own tools. Read those. Do not use search_web to fill them, and do not use Spotrac.",
@@ -236,6 +248,8 @@ export async function runNbaAsk(input: {
   opens: NbaAskDestinationId[];
   /** スタッツは表で見せる。道具の数字があるときだけ */
   board: NbaAskBoard | null;
+  /** 試合は一覧と同じカード。表にはしない */
+  games: NbaAskGameCard[] | null;
   promptTokens: number;
   completionTokens: number;
 }> {
@@ -243,13 +257,16 @@ export async function runNbaAsk(input: {
   const allowPro = input.isPro && input.allowStats;
   const tools = [
     APP_GUIDE_TOOL,
-    ...(input.allowStats ? NBA_ASK_TOOL_DEFS : []),
+    ...NBA_ASK_TOOL_DEFS.filter(
+      (tool) => input.allowStats || NBA_ASK_SCHEDULE_TOOL_NAMES.has(tool.function.name)
+    ),
     ...(allowPro ? NBA_ASK_PRO_TOOL_DEFS : []),
   ];
   let usedStats = false;
   let usedWeb = false;
   let statsMiss = false;
   let board: NbaAskBoard | null = null;
+  let games: NbaAskGameCard[] | null = null;
   const opens: NbaAskDestinationId[] = [];
   const latestUser = [...input.turns].reverse().find((t) => t.role === "user")?.content ?? "";
   const clarify = nbaAskIsClarifyFollowUp(latestUser);
@@ -329,7 +346,8 @@ export async function runNbaAsk(input: {
         answer: plainAskAnswer(msg?.content ?? ""),
         usedStats,
         opens,
-        board,
+        board: games ? null : board,
+        games,
         promptTokens,
         completionTokens,
       };
@@ -363,8 +381,11 @@ export async function runNbaAsk(input: {
           if (isNbaAskDestinationId(open) && !opens.includes(open) && opens.length < 2) {
             opens.push(open);
           }
-        } else if (input.allowStats && PUBLIC_STATS_TOOL_NAMES.has(name)) {
-          usedStats = true;
+        } else if (
+          NBA_ASK_SCHEDULE_TOOL_NAMES.has(name) ||
+          (input.allowStats && PUBLIC_STATS_TOOL_NAMES.has(name))
+        ) {
+          if (!NBA_ASK_SCHEDULE_TOOL_NAMES.has(name)) usedStats = true;
           result = await runNbaAskTool(input.db, name, args, input.language, input.timeZone);
         } else if (allowPro && name === "search_web") {
           if (!statsMiss) {
@@ -399,8 +420,12 @@ export async function runNbaAsk(input: {
           statsMiss = true;
         }
       }
-      const nextBoard = boardFromAskTool(name, result);
-      if (nextBoard) board = nextBoard;
+      const nextGames = gamesFromAskTool(name, result);
+      if (nextGames) games = nextGames;
+      else {
+        const nextBoard = boardFromAskTool(name, result);
+        if (nextBoard) board = nextBoard;
+      }
       messages.push({
         role: "tool",
         tool_call_id: call.id,
@@ -409,5 +434,5 @@ export async function runNbaAsk(input: {
     }
   }
 
-  return { answer: "", usedStats, opens, board, promptTokens, completionTokens };
+  return { answer: "", usedStats, opens, board: games ? null : board, games, promptTokens, completionTokens };
 }

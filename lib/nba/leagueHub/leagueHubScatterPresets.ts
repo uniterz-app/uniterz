@@ -38,48 +38,58 @@ export type LeagueHubPlayerScatterPreset = LeagueHubScatterPreset<LeagueHubPlaye
   volumeLabel: Copy;
 };
 
+/** スタイルマップのグループ（先頭が既定）。IMPACT = 攻守まとめた出場時の影響と勝負どころ */
+export const LEAGUE_HUB_PLAYER_SCATTER_GROUPS = [
+  { id: "scoring", label: "SCORING", presetIds: ["three", "ace", "shotType", "source"] },
+  { id: "attack", label: "ATTACK", presetIds: ["paint", "drive", "foul", "playmaking"] },
+  { id: "defense", label: "DEFENSE", presetIds: ["defense", "hustle", "fouls"] },
+  { id: "impact", label: "IMPACT", presetIds: ["onCourt", "clutch", "consistency"] },
+] as const;
+
+export type LeagueHubPlayerScatterGroupId = (typeof LEAGUE_HUB_PLAYER_SCATTER_GROUPS)[number]["id"];
+
 export const LEAGUE_HUB_PLAYER_SCATTER_PRESETS: readonly LeagueHubPlayerScatterPreset[] = [
   {
     id: "three",
-    label: { ja: "3P の量と質", en: "3PT VOLUME × ACCURACY" },
+    label: { ja: "3P の量と質", en: "3PT" },
     hint: {
-      ja: "右ほどたくさん打ち、上ほどよく入る。右上が本物のシューター。",
-      en: "Right = more attempts, up = better accuracy. Top right are the real shooters.",
+      ja: "右ほど 3P を多く打ち、上ほどよく入る。",
+      en: "Right = more 3PA, up = better 3P%.",
     },
     x: { metric: "fg3a", label: { ja: "3PA / 試合", en: "3PA / G" }, format: "one" },
     y: { metric: "fg3_pct", label: { ja: "3P%", en: "3P%" }, format: "pct" },
     volume: "fg3a",
     volumeLabel: { ja: "3P 試投", en: "3PA" },
     quadrants: {
-      tr: { ja: "量も質も", en: "VOLUME + TOUCH" },
-      tl: { ja: "少数精鋭", en: "SELECTIVE" },
-      br: { ja: "量で勝負", en: "VOLUME" },
-      bl: { ja: "控えめ", en: "QUIET" },
+      tr: { ja: "エリートシューター", en: "ELITE SHOOTER" },
+      tl: { ja: "セレクティブシューター", en: "SELECTIVE SHOOTER" },
+      br: { ja: "ボリュームシューター", en: "VOLUME SHOOTER" },
+      bl: { ja: "不調", en: "COLD" },
     },
   },
   {
     id: "ace",
-    label: { ja: "エースの効率", en: "USAGE × EFFICIENCY" },
+    label: { ja: "得点の負担", en: "USAGE" },
     hint: {
-      ja: "右ほどボールを持ち、上ほど効率よく点を取る。右上が本物のエース。",
-      en: "Right = bigger offensive load, up = more efficient scoring. Top right are true aces.",
+      ja: "右ほど攻撃を任され（USG%）、上ほど効率よく取る（TS%）。",
+      en: "Right = higher usage, up = more efficient scoring (TS%).",
     },
     x: { metric: "usg", label: { ja: "USG%", en: "USG%" }, format: "pct" },
     y: { metric: "ts_pct", label: { ja: "TS%", en: "TS%" }, format: "pct" },
     volume: "pts",
     volumeLabel: { ja: "得点", en: "PTS" },
     quadrants: {
-      tr: { ja: "本物のエース", en: "TRUE ACE" },
-      tl: { ja: "効率の脇役", en: "EFFICIENT ROLE" },
-      br: { ja: "量で背負う", en: "HEAVY LOAD" },
-      bl: { ja: "控え", en: "SUPPORT" },
+      tr: { ja: "ファーストオプション", en: "FIRST OPTION" },
+      tl: { ja: "効率型スコアラー", en: "EFFICIENT SCORER" },
+      br: { ja: "ボリュームスコアラー", en: "VOLUME SCORER" },
+      bl: { ja: "セカンドオプション", en: "SECOND OPTION" },
     },
   },
   {
     id: "paint",
-    label: { ja: "ゴール下の強さ", en: "PAINT POWER" },
+    label: { ja: "ゴール下", en: "PAINT" },
     hint: {
-      ja: "右ほどペイントで点を取り、上ほどリング下で確実に決める。",
+      ja: "右ほどペイントで点を取り、上ほどリング下でよく決める。",
       en: "Right = more paint points, up = better finishing at the rim.",
     },
     x: { metric: "pts_paint", label: { ja: "ペイント得点", en: "PAINT PTS" }, format: "one" },
@@ -87,18 +97,18 @@ export const LEAGUE_HUB_PLAYER_SCATTER_PRESETS: readonly LeagueHubPlayerScatterP
     volume: "pts_paint",
     volumeLabel: { ja: "ペイント得点", en: "PAINT PTS" },
     quadrants: {
-      tr: { ja: "ゴール下の支配者", en: "PAINT BOSS" },
-      tl: { ja: "確実な仕上げ", en: "SURE FINISHER" },
-      br: { ja: "量で押し込む", en: "GRINDER" },
-      bl: { ja: "外寄り", en: "PERIMETER" },
+      tr: { ja: "ペイントビースト", en: "PAINT BEAST" },
+      tl: { ja: "フィニッシャー", en: "FINISHER" },
+      br: { ja: "インサイドスコアラー", en: "INSIDE SCORER" },
+      bl: { ja: "ペイント控えめ", en: "LIGHT PAINT" },
     },
   },
   {
     id: "playmaking",
     label: { ja: "ゲームメイク", en: "PLAYMAKING" },
     hint: {
-      ja: "右ほどアシストを作り、上ほどターンオーバーが少ない。右上が安全な司令塔。",
-      en: "Right = more assists created, up = fewer turnovers. Top right are safe playmakers.",
+      ja: "右ほどアシストが多く（AST%）、上ほどミスが少ない（TOV%）。",
+      en: "Right = higher AST%, up = lower TOV%.",
     },
     x: { metric: "ast_pct", label: { ja: "AST%", en: "AST%" }, format: "pct" },
     y: {
@@ -110,18 +120,90 @@ export const LEAGUE_HUB_PLAYER_SCATTER_PRESETS: readonly LeagueHubPlayerScatterP
     volume: "ast",
     volumeLabel: { ja: "アシスト", en: "AST" },
     quadrants: {
-      tr: { ja: "安全な司令塔", en: "SAFE ENGINE" },
-      tl: { ja: "ミスしない", en: "LOW RISK" },
-      br: { ja: "攻める司令塔", en: "HIGH RISK" },
-      bl: { ja: "フィニッシャー", en: "FINISHER" },
+      tr: { ja: "フロアジェネラル", en: "FLOOR GENERAL" },
+      tl: { ja: "コネクター", en: "CONNECTOR" },
+      br: { ja: "アグレッシブパサー", en: "AGGRESSIVE PASSER" },
+      bl: { ja: "スコアラー型", en: "SCORER" },
+    },
+  },
+  {
+    id: "drive",
+    label: { ja: "ドライブ", en: "DRIVES" },
+    hint: {
+      ja: "右ほどドライブが多く、上ほど 1 回あたりの得点が高い。",
+      en: "Right = more drives, up = more points per drive.",
+    },
+    x: { metric: "drives", label: { ja: "ドライブ / 試合", en: "DRIVES / G" }, format: "one" },
+    y: { metric: "drive_ppd", label: { ja: "1 回の得点", en: "PTS / DRIVE" }, format: "ppp" },
+    volume: "drives",
+    volumeLabel: { ja: "ドライブ", en: "DRIVES" },
+    quadrants: {
+      tr: { ja: "スラッシャー", en: "SLASHER" },
+      tl: { ja: "セレクティブドライバー", en: "SELECTIVE DRIVER" },
+      br: { ja: "ボリュームドライバー", en: "VOLUME DRIVER" },
+      bl: { ja: "ドライブ控えめ", en: "LIGHT DRIVER" },
+    },
+  },
+  {
+    id: "shotType",
+    label: { ja: "シュートの型", en: "SHOT TYPE" },
+    hint: {
+      ja: "右ほどキャッチ＆シュート、上ほどプルアップが入る。",
+      en: "Right = better catch-and-shoot FG%, up = better pull-up FG%.",
+    },
+    x: { metric: "cns_fg_pct", label: { ja: "C&S FG%", en: "C&S FG%" }, format: "pct" },
+    y: { metric: "pullup_fg_pct", label: { ja: "プルアップ FG%", en: "PULL-UP FG%" }, format: "pct" },
+    volume: "fga",
+    volumeLabel: { ja: "FG 試投", en: "FGA" },
+    quadrants: {
+      tr: { ja: "オールラウンドシューター", en: "ALL-AROUND SHOOTER" },
+      tl: { ja: "ショットクリエイター", en: "SHOT CREATOR" },
+      br: { ja: "キャッチ＆シューター", en: "CATCH & SHOOT" },
+      bl: { ja: "インサイド型", en: "INSIDE" },
+    },
+  },
+  {
+    id: "foul",
+    label: { ja: "ファウル獲得", en: "FT DRAW" },
+    hint: {
+      ja: "右ほどフリースローを多くもらい、上ほどよく決める。",
+      en: "Right = more free throws per shot (FTA / FGA), up = better FT%.",
+    },
+    x: { metric: "fta_rate", label: { ja: "FT 獲得率", en: "FT RATE" }, format: "pct" },
+    y: { metric: "ft_pct", label: { ja: "FT%", en: "FT%" }, format: "pct" },
+    volume: "fta",
+    volumeLabel: { ja: "FT 試投", en: "FTA" },
+    quadrants: {
+      tr: { ja: "ファウルドローワー", en: "FOUL DRAWER" },
+      tl: { ja: "ピュアシューター", en: "PURE SHOOTER" },
+      br: { ja: "アタッカー", en: "ATTACKER" },
+      bl: { ja: "FT に課題", en: "FT WOES" },
+    },
+  },
+  {
+    id: "source",
+    label: { ja: "得点の出どころ", en: "PTS MIX" },
+    hint: {
+      ja: "得点のうち右ほど 3P、上ほどペイントの割合が高い。",
+      en: "Share of points: right = from 3s, up = from the paint.",
+    },
+    x: { metric: "pct_pts_3", label: { ja: "3P の割合", en: "% PTS 3P" }, format: "pct" },
+    y: { metric: "pct_pts_paint", label: { ja: "ペイントの割合", en: "% PTS PAINT" }, format: "pct" },
+    volume: "pts",
+    volumeLabel: { ja: "得点", en: "PTS" },
+    quadrants: {
+      tr: { ja: "モダン型", en: "MODERN" },
+      tl: { ja: "インサイド型", en: "INSIDE" },
+      br: { ja: "アウトサイド型", en: "OUTSIDE" },
+      bl: { ja: "ミッドレンジ型", en: "MIDRANGE" },
     },
   },
   {
     id: "defense",
-    label: { ja: "守備", en: "DEFENSE" },
+    label: { ja: "守備", en: "STL+BLK" },
     hint: {
-      ja: "右ほどスティール＋ブロックが多く、上ほどマークした相手の FG% が低い。",
-      en: "Right = more steals + blocks, up = lower FG% for the players he guards.",
+      ja: "右ほど STL＋BLK が多く、上ほどマーク相手の FG% が低い。",
+      en: "Right = more STL + BLK, up = lower opponent FG%.",
     },
     x: { metric: "stocks", label: { ja: "STL+BLK", en: "STL+BLK" }, format: "one" },
     y: {
@@ -130,13 +212,54 @@ export const LEAGUE_HUB_PLAYER_SCATTER_PRESETS: readonly LeagueHubPlayerScatterP
       format: "pct",
       invert: true,
     },
-    volume: "pts",
-    volumeLabel: { ja: "得点", en: "PTS" },
+    volume: "def_activity",
+    volumeLabel: { ja: "守備の手数", en: "DEFENSIVE ACTIVITY" },
     quadrants: {
-      tr: { ja: "守備の要", en: "ANCHOR" },
-      tl: { ja: "堅実なマーク", en: "LOCKDOWN" },
-      br: { ja: "ボールを狙う", en: "GAMBLER" },
-      bl: { ja: "守備は課題", en: "TARGET" },
+      tr: { ja: "ディフェンスアンカー", en: "ANCHOR" },
+      tl: { ja: "ロックダウン", en: "LOCKDOWN" },
+      br: { ja: "ギャンブラー", en: "GAMBLER" },
+      bl: { ja: "ハッスル型", en: "HUSTLER" },
+    },
+  },
+  {
+    id: "hustle",
+    label: { ja: "ハッスル", en: "HUSTLE" },
+    hint: {
+      ja: "右ほどパスに手を出し、上ほどシュートにチェックへ行く。",
+      en: "Right = more deflections, up = more contested shots.",
+    },
+    x: { metric: "deflections", label: { ja: "ディフレクション", en: "DEFLECTIONS" }, format: "one" },
+    y: { metric: "contested_shots", label: { ja: "コンテスト", en: "CONTESTS" }, format: "one" },
+    volume: "def_activity",
+    volumeLabel: { ja: "守備の手数", en: "DEFENSIVE ACTIVITY" },
+    quadrants: {
+      tr: { ja: "エナジープレーヤー", en: "ENERGY" },
+      tl: { ja: "コンテスター", en: "CONTESTER" },
+      br: { ja: "ボールハンター", en: "BALL HAWK" },
+      bl: { ja: "ポジショニング型", en: "POSITIONAL" },
+    },
+  },
+  {
+    id: "onCourt",
+    label: { ja: "出場時の強さ", en: "ON-COURT RTG" },
+    hint: {
+      ja: "出場中のチームの攻撃（右）と守備（上）。チーム力も影響する。",
+      en: "Team offense (right) and defense (up) while on the floor.",
+    },
+    x: { metric: "ortg", label: { ja: "出場時 ORtg", en: "ON ORtg" }, format: "one" },
+    y: {
+      metric: "drtg",
+      label: { ja: "出場時 DRtg（上ほど少ない）", en: "ON DRtg (lower = up)" },
+      format: "one",
+      invert: true,
+    },
+    volume: "min",
+    volumeLabel: { ja: "出場時間", en: "MIN" },
+    quadrants: {
+      tr: { ja: "ツーウェイ", en: "TWO-WAY" },
+      tl: { ja: "ディフェンス型", en: "DEFENSE FIRST" },
+      br: { ja: "オフェンス型", en: "OFFENSE FIRST" },
+      bl: { ja: "苦戦中", en: "STRUGGLING" },
     },
   },
   {
@@ -144,17 +267,63 @@ export const LEAGUE_HUB_PLAYER_SCATTER_PRESETS: readonly LeagueHubPlayerScatterP
     label: { ja: "勝負どころ", en: "CLUTCH" },
     hint: {
       ja: "残り 5 分・5 点差以内。右ほどボールを託され、上ほど決める。",
-      en: "Last 5 min, within 5. Right = trusted with the ball, up = makes the shots.",
+      en: "Last 5 min within 5. Right = gets the ball, up = makes shots.",
     },
     x: { metric: "clutch_usg", label: { ja: "クラッチ USG%", en: "CLUTCH USG%" }, format: "pct" },
     y: { metric: "clutch_fg_pct", label: { ja: "クラッチ FG%", en: "CLUTCH FG%" }, format: "pct" },
     volume: "clutch_pts",
     volumeLabel: { ja: "クラッチ得点", en: "CLUTCH PTS" },
     quadrants: {
-      tr: { ja: "勝負師", en: "CLOSER" },
-      tl: { ja: "隠れた決め手", en: "SNEAKY" },
-      br: { ja: "託されるが苦戦", en: "FORCED" },
-      bl: { ja: "脇役", en: "SUPPORT" },
+      tr: { ja: "クローザー", en: "CLOSER" },
+      tl: { ja: "X ファクター", en: "X-FACTOR" },
+      br: { ja: "ボリュームスコアラー", en: "VOLUME SCORER" },
+      bl: { ja: "サポート", en: "SUPPORT" },
+    },
+  },
+  {
+    id: "consistency",
+    label: { ja: "得点の安定感", en: "CONSISTENCY" },
+    hint: {
+      ja: "右ほど平均得点が高く、上ほど毎試合の得点がぶれない。",
+      en: "Right = more points, up = steadier game to game.",
+    },
+    x: { metric: "pts", label: { ja: "平均得点", en: "PTS" }, format: "one" },
+    y: {
+      metric: "pts_sd",
+      label: { ja: "得点の振れ幅（上ほど小さい）", en: "PTS SWING (smaller = up)" },
+      format: "one",
+      invert: true,
+    },
+    volume: "pts",
+    volumeLabel: { ja: "得点", en: "PTS" },
+    quadrants: {
+      tr: { ja: "計算できるエース", en: "STEADY STAR" },
+      tl: { ja: "堅実", en: "RELIABLE" },
+      br: { ja: "当たり外れ型", en: "BOOM OR BUST" },
+      bl: { ja: "波がある", en: "STREAKY" },
+    },
+  },
+  {
+    id: "fouls",
+    label: { ja: "ファウル", en: "FOULS" },
+    hint: {
+      ja: "右ほど長く出て、上ほどファウルが少ない（36 分あたり）。",
+      en: "Right = more minutes, up = fewer fouls per 36.",
+    },
+    x: { metric: "min", label: { ja: "出場時間", en: "MIN" }, format: "one" },
+    y: {
+      metric: "pf36",
+      label: { ja: "36 分あたりファウル（上ほど少ない）", en: "PF / 36 (fewer = up)" },
+      format: "one",
+      invert: true,
+    },
+    volume: "min",
+    volumeLabel: { ja: "出場時間", en: "MIN" },
+    quadrants: {
+      tr: { ja: "クリーンな主力", en: "CLEAN STARTER" },
+      tl: { ja: "クリーン", en: "CLEAN" },
+      br: { ja: "ファウルトラブル型", en: "FOUL TROUBLE" },
+      bl: { ja: "ファウル多め", en: "HACKER" },
     },
   },
 ];
@@ -215,10 +384,10 @@ export const LEAGUE_HUB_TEAM_HUSTLE: LeagueHubScatterPreset<LeagueHubTeamMetric>
   x: { metric: "deflections", label: { ja: "ディフレクション", en: "DEFLECTIONS" }, format: "one" },
   y: { metric: "contestedShots", label: { ja: "コンテスト", en: "CONTESTS" }, format: "one" },
   quadrants: {
-    tr: { ja: "手間を惜しまない", en: "RELENTLESS" },
-    tl: { ja: "シュートに寄せる", en: "CONTEST" },
-    br: { ja: "ボールを狙う", en: "HANDSY" },
-    bl: { ja: "淡白", en: "PASSIVE" },
+    tr: { ja: "エナジー", en: "ENERGY" },
+    tl: { ja: "コンテスト型", en: "CONTEST" },
+    br: { ja: "ボールハンター", en: "BALL HAWK" },
+    bl: { ja: "ポジショニング型", en: "POSITIONAL" },
   },
 };
 
@@ -240,7 +409,7 @@ export const LEAGUE_HUB_TEAM_CLUTCH: LeagueHubScatterPreset<LeagueHubTeamMetric>
     tr: { ja: "接戦に強い", en: "CLOSERS" },
     tl: { ja: "守って逃げ切る", en: "LOCK IT UP" },
     br: { ja: "撃ち合いで勝つ", en: "SHOOTOUT" },
-    bl: { ja: "終盤に弱い", en: "FADES" },
+    bl: { ja: "接戦で苦戦中", en: "STRUGGLING LATE" },
   },
 };
 
@@ -284,7 +453,7 @@ export function leagueHubPlayTypePreset(
     quadrants: {
       tr: { ja: "武器", en: "WEAPON" },
       tl: { ja: "隠れた得意", en: "UNDERUSED" },
-      br: { ja: "多用するが平凡", en: "OVERUSED" },
+      br: { ja: "よく使う", en: "HEAVY USE" },
       bl: { ja: "使わない", en: "RARE" },
     },
   };

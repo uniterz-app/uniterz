@@ -2,6 +2,7 @@ export const runtime = "nodejs";
 
 import { NextResponse } from "next/server";
 import { getAdminAuth, getAdminDb } from "@/lib/firebaseAdmin";
+import { getNbaPublicReadDb } from "@/lib/nba/nbaPublicReadDb";
 import { assertProUser } from "@/lib/pro/assertProUser";
 import { getOpenAiApiKey } from "@/lib/openai/openaiEnv";
 import {
@@ -108,7 +109,7 @@ export async function POST(req: Request) {
     let result: Awaited<ReturnType<typeof runNbaAsk>> | null = null;
     try {
       result = await runNbaAsk({
-        db,
+        db: getNbaPublicReadDb(),
         turns,
         language,
         timeZone,
@@ -148,6 +149,7 @@ export async function POST(req: Request) {
       statsFreeRemaining,
       opens: leaked ? [] : result.opens,
       board: leaked ? null : result.board,
+      games: leaked ? null : result.games,
     });
   } catch (e: unknown) {
     console.error("[POST /api/nba/ask]", e);

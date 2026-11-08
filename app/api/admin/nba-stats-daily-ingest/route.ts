@@ -16,6 +16,7 @@ import {
 } from "@/lib/games/server/revalidateGamesCaches";
 import { revalidateNbaInjuryApiCache } from "@/lib/nba/teamInjuries/nbaInjuryApiCache";
 import { revalidateNbaDisciplineApiCache } from "@/lib/nba/discipline/nbaDisciplineApiCache";
+import { revalidateNbaDocCache } from "@/lib/nba/nbaPublicReadDb";
 
 /**
  * POST /api/admin/nba-stats-daily-ingest
@@ -55,6 +56,7 @@ export async function POST(req: Request) {
     revalidateGameDayIndexCache("nba", seasonKey);
     revalidateNbaInjuryApiCache();
     revalidateNbaDisciplineApiCache();
+    revalidateNbaDocCache();
 
     return NextResponse.json(result, { status: result.ok ? 200 : 207 });
   } catch (e: unknown) {

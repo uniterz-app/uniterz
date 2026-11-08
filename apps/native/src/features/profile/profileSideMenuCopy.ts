@@ -26,6 +26,7 @@ export type ProfileSideMenuLabels = {
   password: string;
   notifications: string;
   displaySettings: string;
+  themeSettings: string;
   featureRequest: string;
   electronicNotice: string;
   deleteAccount: string;
@@ -233,6 +234,15 @@ export function profileSideMenuLabels(
       es: "Visualización",
       pt: "Exibição",
       fr: "Affichage",
+    }),
+    themeSettings: L(lang, {
+      ja: "テーマ（黒地 / 白地）",
+      en: "Theme (Dark / Light)",
+      ko: "테마 (다크 / 라이트)",
+      zh: "主题（深色 / 浅色）",
+      es: "Tema (oscuro / claro)",
+      pt: "Tema (escuro / claro)",
+      fr: "Thème (sombre / clair)",
     }),
     featureRequest: L(lang, {
       ja: "機能リクエスト",

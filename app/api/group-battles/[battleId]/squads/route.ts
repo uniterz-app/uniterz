@@ -21,6 +21,7 @@ import {
 } from "@/lib/groupBattles/server/firestore";
 import { squadInviteCodeWriteFields } from "@/lib/groupBattles/server/inviteCodeWrite";
 import { jsonErr, jsonOk, mapAuthError } from "@/lib/groupBattles/server/http";
+import { revalidateGroupBattleSharedCache } from "@/lib/groupBattles/server/sharedViewCache";
 import { consumeRateLimit, RATE_LIMIT_RULES } from "@/lib/security/rateLimit";
 
 export const runtime = "nodejs";
@@ -109,6 +110,7 @@ export async function POST(req: Request, ctx: Ctx) {
       cancelPendingJoinRequestsTx(tx, pendingSnap);
     });
 
+    revalidateGroupBattleSharedCache();
     return jsonOk({
       squadId: squadRef.id,
       inviteCode: invitePlain,

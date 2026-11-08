@@ -16,6 +16,7 @@ import {
 } from "@/lib/nba/insights/proInsightLlm/ingestProInsightNarrativeBatch";
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
 import { revalidateMatchupInsightCache } from "@/lib/nba/predict/matchupInsightCache";
+import { revalidateNbaDocCache } from "@/lib/nba/nbaPublicReadDb";
 
 type RouteMode =
   | NbaProBriefIngestMode
@@ -79,6 +80,11 @@ export async function POST(req: Request) {
     const db = getAdminDb();
     const respond = (result: { ok: boolean }) => {
       revalidateMatchupInsightCache();
+      revalidateNbaDocCache([
+        "nbaTeamSeasonRecords",
+        "nbaTeamInsightExtras",
+        "nbaTeamAceOutRecords",
+      ]);
       return NextResponse.json(result, { status: result.ok ? 200 : 207 });
     };
 

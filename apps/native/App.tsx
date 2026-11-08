@@ -37,6 +37,7 @@ import { APP_MESH_BG_FALLBACK } from "../../lib/app/appMeshBackground";
 import { ensureNativeSplashHeld } from "./src/bootstrap/nativeBootSplash";
 import { initNativeObservability } from "./src/observability/initNativeObservability";
 import { useOtaAutoApplyNative } from "./src/bootstrap/useOtaAutoApplyNative";
+import { isLightAppTheme } from "./src/theme/themeColorRuntime";
 
 ensureNativeSplashHeld();
 initNativeObservability();
@@ -99,7 +100,7 @@ export default function App() {
               ref={navigationRef}
               onReady={flushPendingShareDeepLink}
               theme={{
-                dark: true,
+                dark: !isLightAppTheme(),
                 colors: {
                   primary: colors.accent,
                   background: "transparent",
@@ -117,7 +118,11 @@ export default function App() {
               }}
             >
               <RootNavigator />
-              <StatusBar style="light" translucent backgroundColor="transparent" />
+              <StatusBar
+                style={isLightAppTheme() ? "dark" : "light"}
+                translucent
+                backgroundColor="transparent"
+              />
               <TutorialRestartCoverNative />
             </NavigationContainer>
           </AppShellNative>

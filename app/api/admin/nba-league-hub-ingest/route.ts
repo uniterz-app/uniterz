@@ -1,6 +1,7 @@
 export const runtime = "nodejs";
 
 import { NextResponse } from "next/server";
+import { revalidateNbaDocCache } from "@/lib/nba/nbaPublicReadDb";
 import { getAdminDb } from "@/lib/firebaseAdmin";
 import { requireAdminUid } from "@/lib/admin/requireAdminUid";
 import { checkJobSecret } from "@/lib/security/assertJobSecret";
@@ -26,7 +27,9 @@ export async function POST(req: Request) {
         ? body.seasonKey.trim()
         : CURRENT_NBA_SEASON_KEY;
 
-    return NextResponse.json(await ingestNbaLeagueHub(getAdminDb(), { seasonKey }));
+    const result = await ingestNbaLeagueHub(getAdminDb(), { seasonKey });
+    revalidateNbaDocCache(["nbaLeagueHub"]);
+    return NextResponse.json(result);
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : String(e);
     if (msg === "unauthorized" || msg === "forbidden") {

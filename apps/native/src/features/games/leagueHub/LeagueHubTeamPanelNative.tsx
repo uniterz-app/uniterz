@@ -146,7 +146,7 @@ function TeamScatterBlock({
               </Text>
             ) : null}
           </View>
-          <Text style={styles.selGo}>{lang === "ja" ? "詳細 ›" : "DETAIL ›"}</Text>
+          <Text style={styles.selGo}>DETAIL ›</Text>
         </Pressable>
       ) : (
         <Text style={styles.tapHint}>
@@ -198,7 +198,7 @@ function ScoringMix({
       <HubChips
         items={MIX_SEGMENTS.map((s) => ({
           id: s.id,
-          label: lang === "ja" ? `${s.label} 順` : `BY ${s.label}`,
+          label: `BY ${s.label}`,
         }))}
         value={sortBy}
         onChange={setSortBy}
@@ -293,8 +293,8 @@ function TeamForm({
     );
   return (
     <HubTwoCol
-      leftTitle={lang === "ja" ? "連勝中" : "WIN STREAKS"}
-      rightTitle={lang === "ja" ? "連敗中" : "SKIDS"}
+      leftTitle="WIN STREAKS"
+      rightTitle="LOSING STREAKS"
       left={list(by("W"))}
       right={list(by("L"))}
     />
@@ -334,16 +334,16 @@ function PositionDefense({
     <View>
       <HubChips
         items={[
-          { id: "G", label: lang === "ja" ? "ガード" : "GUARDS" },
-          { id: "F", label: lang === "ja" ? "フォワード" : "FORWARDS" },
-          { id: "C", label: lang === "ja" ? "センター" : "CENTERS" },
+          { id: "G", label: "GUARDS" },
+          { id: "F", label: "FORWARDS" },
+          { id: "C", label: "CENTERS" },
         ]}
         value={pos}
         onChange={setPos}
       />
       <HubTwoCol
-        leftTitle={lang === "ja" ? "抑えている" : "STINGIEST"}
-        rightTitle={lang === "ja" ? "やられている" : "LEAKIEST"}
+        leftTitle="STINGIEST"
+        rightTitle="LEAKIEST"
         left={list(rows.slice(0, 5))}
         right={list(rows.slice(-5).reverse())}
       />
@@ -396,8 +396,8 @@ function Conditions({
     <View>
       <ConditionChips cond={cond} setCond={setCond} lang={lang} />
       <HubTwoCol
-        leftTitle={lang === "ja" ? "強い" : "BEST"}
-        rightTitle={lang === "ja" ? "弱い" : "WORST"}
+        leftTitle="BEST"
+        rightTitle="WORST"
         left={list(best)}
         right={list(worst)}
       />
@@ -417,11 +417,11 @@ function ConditionChips({
   return (
     <HubChips
       items={[
-        { id: "close", label: lang === "ja" ? "5点差以内" : "CLOSE ≤5" },
-        { id: "b2b", label: lang === "ja" ? "連戦2日目" : "B2B" },
-        { id: "vsOver500", label: lang === "ja" ? "勝ち越し相手" : "VS .500+" },
-        { id: "home", label: lang === "ja" ? "ホーム" : "HOME" },
-        { id: "away", label: lang === "ja" ? "アウェー" : "AWAY" },
+        { id: "close", label: "CLOSE ≤5" },
+        { id: "b2b", label: "B2B" },
+        { id: "vsOver500", label: "VS .500+" },
+        { id: "home", label: "HOME" },
+        { id: "away", label: "AWAY" },
       ]}
       value={cond}
       onChange={setCond}
@@ -447,7 +447,7 @@ export default function LeagueHubTeamPanelNative({ hub, lang, onSelectTeam }: Pr
 
   return (
     <View>
-      <HubSection title={LEAGUE_HUB_TEAM_STRENGTH.label[lang]} hint={LEAGUE_HUB_TEAM_STRENGTH.hint[lang]}>
+      <HubSection title={LEAGUE_HUB_TEAM_STRENGTH.label.en} hint={LEAGUE_HUB_TEAM_STRENGTH.hint[lang]}>
         <TeamScatterBlock
           rows={rows}
           preset={LEAGUE_HUB_TEAM_STRENGTH}
@@ -458,7 +458,7 @@ export default function LeagueHubTeamPanelNative({ hub, lang, onSelectTeam }: Pr
       </HubSection>
 
       <HubSection
-        title={lang === "ja" ? "得点の内訳" : "SCORING MIX"}
+        title="SCORING MIX"
         hint={
           lang === "ja"
             ? "得点のうち 3P・ペイント・ミドル・フリースローが占める割合。"
@@ -468,24 +468,24 @@ export default function LeagueHubTeamPanelNative({ hub, lang, onSelectTeam }: Pr
         <ScoringMix rows={rows} lang={lang} onSelectTeam={onSelectTeam} />
       </HubSection>
 
-      <HubSection title={lang === "ja" ? "得意なプレー" : "PLAY TYPES"}>
+      <HubSection title="PLAY TYPES">
         <PlayTypes rows={rows} lang={lang} onSelectTeam={onSelectTeam} />
       </HubSection>
 
-      <HubSection title={LEAGUE_HUB_TEAM_HUSTLE.label[lang]} hint={LEAGUE_HUB_TEAM_HUSTLE.hint[lang]}>
+      <HubSection title={LEAGUE_HUB_TEAM_HUSTLE.label.en} hint={LEAGUE_HUB_TEAM_HUSTLE.hint[lang]}>
         <TeamScatterBlock rows={rows} preset={LEAGUE_HUB_TEAM_HUSTLE} lang={lang} onSelectTeam={onSelectTeam} />
       </HubSection>
 
-      <HubSection title={LEAGUE_HUB_TEAM_CLUTCH.label[lang]} hint={LEAGUE_HUB_TEAM_CLUTCH.hint[lang]}>
+      <HubSection title={LEAGUE_HUB_TEAM_CLUTCH.label.en} hint={LEAGUE_HUB_TEAM_CLUTCH.hint[lang]}>
         <TeamScatterBlock rows={rows} preset={LEAGUE_HUB_TEAM_CLUTCH} lang={lang} onSelectTeam={onSelectTeam} />
       </HubSection>
 
-      <HubSection title={lang === "ja" ? "勢い" : "FORM"}>
+      <HubSection title="FORM">
         <TeamForm teams={teams} lang={lang} onSelectTeam={onSelectTeam} />
       </HubSection>
 
       <HubSection
-        title={lang === "ja" ? "ポジション別の失点" : "POINTS ALLOWED BY POSITION"}
+        title="POINTS ALLOWED BY POSITION"
         hint={
           lang === "ja"
             ? "相手のガード・フォワード・センターに 1 試合で取られた得点。"
@@ -496,7 +496,7 @@ export default function LeagueHubTeamPanelNative({ hub, lang, onSelectTeam }: Pr
       </HubSection>
 
       <HubSection
-        title={lang === "ja" ? "状況別の勝敗" : "RECORD BY SITUATION"}
+        title="RECORD BY SITUATION"
         hint={lang === "ja" ? "2 試合以上あるチームだけ。" : "Teams with 2+ games only."}
       >
         <Conditions teams={teams} lang={lang} onSelectTeam={onSelectTeam} />

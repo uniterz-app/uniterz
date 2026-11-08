@@ -2,6 +2,7 @@ import { adminDb } from "@/lib/firebaseAdmin";
 import { dateKeyJST } from "@/lib/rankings/rankSnapshotDate";
 import { buildAllActiveGroupBattleSnapshots } from "@/lib/groupBattles/server/buildPeriodSnapshot";
 import { jsonErr, jsonOk } from "@/lib/groupBattles/server/http";
+import { revalidateGroupBattleSharedCache } from "@/lib/groupBattles/server/sharedViewCache";
 import { checkJobSecret } from "@/lib/security/assertJobSecret";
 
 export const runtime = "nodejs";
@@ -18,5 +19,6 @@ export async function POST(req: Request) {
 
   const todayKey = dateKeyJST(new Date());
   const built = await buildAllActiveGroupBattleSnapshots(adminDb, todayKey);
+  revalidateGroupBattleSharedCache();
   return jsonOk({ built, todayKey });
 }

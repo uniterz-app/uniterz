@@ -28,7 +28,6 @@ import {
 } from "../../../../../../lib/nba/teamInjuries/injuryReasonDisplay";
 import {
   averageRecentGameLogs,
-  formatFgLine,
   formatMetricDisplay,
   formatPhysique,
   formatSalaryUsd,
@@ -120,6 +119,19 @@ import { formatNbaPlayerDisplayName } from "@/lib/nba/formatNbaPlayerListName";
 import { nbaSeasonStatsReady } from "@/lib/predict/nbaSeasonStatsReady";
 import { getUniterzApiBaseUrl } from "../submitPredictionApi";
 import { nbaPlayerDetailChrome } from "./nbaPlayerDetailChromeCopy";
+import { NbaPlayerSplitStatTableNative } from "./NbaPlayerSplitStatTableNative";
+import { NbaPlayerGameLogTableNative } from "./NbaPlayerGameLogTableNative";
+import {
+  NbaPlayerHighsAndHitRatesNative,
+  NbaPlayerNextGameNative,
+  NbaPlayerTrendChartNative,
+} from "./NbaPlayerGameInsightsNative";
+import {
+  buildPlayerGameSplits,
+  nbaPlayerGameSplitLabel,
+} from "../../../../../../lib/nba/playerDetail/buildPlayerSplitsFromGameLogs";
+import { useNbaConferenceStandings } from "../../../../../../lib/nba/useNbaConferenceStandings";
+import { nbaConferenceForTeam } from "../../../../../../lib/nba/nbaConferenceTeams";
 
 type Props = {
   language: "ja" | "en";
@@ -128,8 +140,6 @@ type Props = {
   useDevMock?: boolean;
 };
 
-const FORM_WIN = "#00F5FF";
-const FORM_LOSS = "#FF2D78";
 const OXANIUM = "Oxanium_800ExtraBold";
 
 function hexToRgba(hex: string, alpha: number): string {
@@ -676,50 +686,6 @@ function ShotZoneHeatmap({
   );
 }
 
-function fmtSplitNumNative(n: number): string {
-  return Number.isInteger(n) ? String(n) : n.toFixed(1);
-}
-
-function SplitTableRow({
-  cols,
-  borderColor,
-  bottomBorder,
-  header,
-}: {
-  cols: string[];
-  borderColor?: string;
-  bottomBorder?: boolean;
-  header?: boolean;
-}) {
-  return (
-    <View
-      style={[
-        styles.splitRow,
-        bottomBorder
-          ? {
-              borderBottomWidth: StyleSheet.hairlineWidth,
-              borderBottomColor: borderColor,
-            }
-          : null,
-      ]}
-    >
-      {cols.map((text, i) => (
-        <Text
-          key={`${text}-${i}`}
-          style={[
-            i === 0 ? styles.splitCellLabel : styles.splitCell,
-            i === cols.length - 1 && !header ? styles.splitCellLast : null,
-            header ? styles.splitCellHeader : null,
-          ]}
-          numberOfLines={1}
-        >
-          {text}
-        </Text>
-      ))}
-    </View>
-  );
-}
-
 function PlayerVenueSplitsSectionNative({
   splits,
   accent,
@@ -730,8 +696,6 @@ function PlayerVenueSplitsSectionNative({
   language: string;
 }) {
   const chrome = nbaPlayerDetailChrome(language);
-  const line = hexToRgba(accent, 0.18);
-  const frame = hexToRgba(accent, 0.4);
   return (
     <View style={styles.advWrap}>
       <View style={styles.advTitleRow}>
@@ -747,29 +711,14 @@ function PlayerVenueSplitsSectionNative({
       ) : (
         <>
           <Text style={styles.splitHint}>{chrome.seasonAvgHint}</Text>
-          <View style={[styles.splitTable, { borderColor: frame }]}>
-            <SplitTableRow
-              cols={["", "GP", "PTS", "REB", "AST", "+/-"]}
-              borderColor={line}
-              bottomBorder
-              header
-            />
-            {splits.map((row, i) => (
-              <SplitTableRow
-                key={row.venue}
-                cols={[
-                  row.venue === "home" ? "HOME" : "AWAY",
-                  String(row.games),
-                  fmtSplitNumNative(row.pts),
-                  fmtSplitNumNative(row.reb),
-                  fmtSplitNumNative(row.ast),
-                  `${row.plusMinus > 0 ? "+" : ""}${fmtSplitNumNative(row.plusMinus)}`,
-                ]}
-                borderColor={line}
-                bottomBorder={i < splits.length - 1}
-              />
-            ))}
-          </View>
+          <NbaPlayerSplitStatTableNative
+            accent={accent}
+            rows={splits.map((row) => ({
+              key: row.venue,
+              label: row.venue === "home" ? "HOME" : "AWAY",
+              row,
+            }))}
+          />
         </>
       )}
     </View>
@@ -786,8 +735,6 @@ function PlayerVsOpponentSectionNative({
   language: string;
 }) {
   const chrome = nbaPlayerDetailChrome(language);
-  const line = hexToRgba(accent, 0.18);
-  const frame = hexToRgba(accent, 0.4);
   return (
     <View style={styles.advWrap}>
       <View style={styles.advTitleRow}>
@@ -803,29 +750,15 @@ function PlayerVsOpponentSectionNative({
       ) : (
         <>
           <Text style={styles.splitHint}>{chrome.seasonAvgHint}</Text>
-          <View style={[styles.splitTable, { borderColor: frame }]}>
-            <SplitTableRow
-              cols={[chrome.oppCol, "GP", "PTS", "REB", "AST", "+/-"]}
-              borderColor={line}
-              bottomBorder
-              header
-            />
-            {samples.map((row, i) => (
-              <SplitTableRow
-                key={row.oppTeamId}
-                cols={[
-                  `vs ${row.oppAbbr}`,
-                  String(row.games),
-                  fmtSplitNumNative(row.pts),
-                  fmtSplitNumNative(row.reb),
-                  fmtSplitNumNative(row.ast),
-                  `${row.plusMinus > 0 ? "+" : ""}${fmtSplitNumNative(row.plusMinus)}`,
-                ]}
-                borderColor={line}
-                bottomBorder={i < samples.length - 1}
-              />
-            ))}
-          </View>
+          <NbaPlayerSplitStatTableNative
+            accent={accent}
+            labelHeader={chrome.oppCol}
+            rows={samples.map((row) => ({
+              key: row.oppTeamId || row.oppAbbr,
+              label: `vs ${row.oppAbbr}`,
+              row,
+            }))}
+          />
         </>
       )}
     </View>
@@ -1335,69 +1268,50 @@ function SeasonHistorySection({
   );
 }
 
-function GameLogHeader({ borderColor }: { borderColor: string }) {
-  return (
-    <View
-      style={[
-        styles.gameRow,
-        {
-          borderBottomWidth: StyleSheet.hairlineWidth,
-          borderBottomColor: borderColor,
-          paddingVertical: 8,
-        },
-      ]}
-    >
-      <Text style={[styles.gameDate, styles.gameHead]}>DATE</Text>
-      <Text style={[styles.gameVs, styles.gameHead]}>GAME</Text>
-      <Text style={[styles.gameResult, styles.gameHead]}> </Text>
-      <Text style={[styles.gameLine, styles.gameHead]}>MIN</Text>
-      <Text style={[styles.gamePts, styles.gameHead]}>PTS</Text>
-      <Text style={[styles.gameLine, styles.gameHead]}>R/A</Text>
-      <Text style={[styles.gameFg, styles.gameHead]}>FG</Text>
-    </View>
-  );
-}
-
-function GameLogRow({
-  log,
-  border,
-  borderColor,
+function PlayerGameSplitsSectionNative({
+  logs,
+  seasonKey,
+  accent,
+  language,
 }: {
-  log: NbaPlayerGameLog;
-  border: boolean;
-  borderColor: string;
+  logs: NbaPlayerGameLog[];
+  seasonKey: string;
+  accent: string;
+  language: string;
 }) {
-  const vs = `${log.home ? "vs" : "@"} ${log.oppAbbr}`;
+  const chrome = nbaPlayerDetailChrome(language);
+  const { board } = useNbaConferenceStandings({
+    apiBaseUrl: getUniterzApiBaseUrl(),
+    season: seasonKey,
+  });
+  const splits = useMemo(() => {
+    const oppWinPctByTeam = new Map<string, number>();
+    for (const row of [...board.east, ...board.west]) {
+      const gp = row.wins + row.losses;
+      if (gp > 0) oppWinPctByTeam.set(row.teamId, row.wins / gp);
+    }
+    return buildPlayerGameSplits(logs, {
+      seasonStartYear: Number(seasonKey.slice(0, 4)),
+      conferenceOf: nbaConferenceForTeam,
+      oppWinPctByTeam: oppWinPctByTeam.size > 0 ? oppWinPctByTeam : undefined,
+    });
+  }, [logs, seasonKey, board]);
+  if (splits.length === 0) return null;
   return (
-    <View
-      style={[
-        styles.gameRow,
-        border
-          ? {
-              borderBottomWidth: StyleSheet.hairlineWidth,
-              borderBottomColor: borderColor,
-            }
-          : null,
-      ]}
-    >
-      <Text style={styles.gameDate}>{log.dateLabel}</Text>
-      <Text style={styles.gameVs} numberOfLines={1}>
-        {vs}
-      </Text>
-      <Text
-        style={[
-          styles.gameResult,
-          log.result === "W" ? styles.win : styles.loss,
-        ]}
-      >
-        {log.result}
-      </Text>
-      <Text style={styles.gameLine}>{Math.round(log.min)}m</Text>
-      <Text style={styles.gamePts}>{log.pts}</Text>
-      <Text style={styles.gameLine}>
-        {log.reb}/{log.ast}
-      </Text>
-      <Text style={styles.gameFg}>{formatFgLine(log.fgm, log.fga)}</Text>
+    <View style={styles.advWrap}>
+      <View style={styles.advTitleRow}>
+        <Text style={styles.advTitle}>SPLITS</Text>
+        <View style={styles.advTitleLine} />
+      </View>
+      <Text style={styles.splitHint}>{chrome.gameSplitsHint}</Text>
+      <NbaPlayerSplitStatTableNative
+        accent={accent}
+        rows={splits.map((s) => ({
+          key: s.key,
+          label: nbaPlayerGameSplitLabel(s.key),
+          row: s.stats,
+        }))}
+      />
     </View>
   );
 }
@@ -1412,7 +1326,6 @@ function GameLogsSection({
   const [open, setOpen] = useState(true);
   const wins = logs.filter((g) => g.result === "W").length;
   const losses = logs.length - wins;
-  const line = hexToRgba(accent, 0.14);
 
   if (logs.length === 0) {
     return (
@@ -1442,19 +1355,7 @@ function GameLogsSection({
       </Pressable>
 
       {open ? (
-        <View
-          style={[styles.gameList, { borderColor: hexToRgba(accent, 0.3) }]}
-        >
-          <GameLogHeader borderColor={line} />
-          {logs.map((log, i) => (
-            <GameLogRow
-              key={log.gameId}
-              log={log}
-              border={i < logs.length - 1}
-              borderColor={line}
-            />
-          ))}
-        </View>
+        <NbaPlayerGameLogTableNative logs={logs} accent={accent} />
       ) : null}
     </View>
   );
@@ -1709,6 +1610,19 @@ export default function NbaPlayerDetailPanelNative({
           language={language}
         />
 
+        {detail.teamId ? (
+          <View style={{ marginTop: 16 }}>
+            <NbaPlayerNextGameNative
+              teamId={detail.teamId}
+              seasonLogs={detail.seasonGameLogs ?? detail.gameLogs}
+              teamStatRows={teamStats?.season ?? []}
+              apiBaseUrl={apiBaseUrl}
+              accent={accent}
+              language={language}
+            />
+          </View>
+        ) : null}
+
         <View
           style={[
             styles.divider,
@@ -1796,7 +1710,30 @@ export default function NbaPlayerDetailPanelNative({
         ) : null}
 
         {tab === "games" && !isRetired ? (
-          <GameLogsSection logs={detail.gameLogs} accent={accent} />
+          <>
+            <NbaPlayerTrendChartNative
+              seasonLogs={detail.seasonGameLogs ?? detail.gameLogs}
+              accent={accent}
+              language={language}
+              trailingDivider={[styles.divider, { backgroundColor: dividerColor }]}
+            />
+            <GameLogsSection logs={detail.gameLogs} accent={accent} />
+            <View style={[styles.divider, { backgroundColor: dividerColor }]} />
+            <PlayerGameSplitsSectionNative
+              logs={detail.seasonGameLogs ?? detail.gameLogs}
+              seasonKey={
+                detail.asOfLabel.match(/(\d{4}-\d{2})/)?.[1] ?? CURRENT_NBA_SEASON_KEY
+              }
+              accent={accent}
+              language={language}
+            />
+            <View style={[styles.divider, { backgroundColor: dividerColor }]} />
+            <NbaPlayerHighsAndHitRatesNative
+              seasonLogs={detail.seasonGameLogs ?? detail.gameLogs}
+              accent={accent}
+              language={language}
+            />
+          </>
         ) : null}
 
         {showCareer ? (
@@ -2351,76 +2288,6 @@ const styles = StyleSheet.create({
     fontVariant: ["tabular-nums"],
     transform: [{ skewX: "-8deg" }],
   },
-  gameList: {
-    borderWidth: 1,
-    backgroundColor: "rgba(8,8,12,0.55)",
-    overflow: "hidden",
-  },
-  gameRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 8,
-    paddingVertical: 10,
-    gap: 4,
-  },
-  gameHead: {
-    color: "rgba(255,255,255,0.35)",
-    fontSize: 11,
-    fontWeight: "700",
-    letterSpacing: 0.8,
-    transform: [],
-  },
-  gameDate: {
-    width: 44,
-    fontFamily: METRIC_FONT,
-    color: "rgba(255,255,255,0.4)",
-    fontSize: 14,
-  },
-  gameVs: {
-    flex: 1,
-    fontFamily: METRIC_FONT,
-    color: "rgba(255,255,255,0.88)",
-    fontSize: 14,
-    fontWeight: "700",
-    minWidth: 52,
-  },
-  gameResult: {
-    width: 18,
-    fontFamily: METRIC_FONT,
-    fontSize: 14,
-    fontWeight: "800",
-    textAlign: "center",
-    transform: [{ skewX: "-8deg" }],
-  },
-  gameLine: {
-    width: 46,
-    textAlign: "right",
-    fontFamily: METRIC_FONT,
-    color: "rgba(255,255,255,0.7)",
-    fontSize: 14,
-    fontVariant: ["tabular-nums"],
-    transform: [{ skewX: "-8deg" }],
-  },
-  gamePts: {
-    width: 32,
-    textAlign: "right",
-    fontFamily: METRIC_FONT,
-    color: "#FFFFFF",
-    fontSize: 14,
-    fontWeight: "800",
-    fontVariant: ["tabular-nums"],
-    transform: [{ skewX: "-8deg" }],
-  },
-  gameFg: {
-    width: 52,
-    textAlign: "right",
-    fontFamily: METRIC_FONT,
-    color: "rgba(255,255,255,0.55)",
-    fontSize: 14,
-    fontVariant: ["tabular-nums"],
-  },
-  win: { color: FORM_WIN },
-  loss: { color: FORM_LOSS },
   advWrap: { gap: 10 },
   advTitleRow: {
     flexDirection: "row",
@@ -2446,45 +2313,6 @@ const styles = StyleSheet.create({
     fontSize: 10,
     lineHeight: 14,
     marginBottom: 8,
-  },
-  splitTable: {
-    borderWidth: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    overflow: "hidden",
-  },
-  splitRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 8,
-    paddingVertical: 8,
-  },
-  splitCellLabel: {
-    flex: 1.1,
-    fontFamily: METRIC_FONT,
-    color: "#FFFFFF",
-    fontSize: 14,
-    fontWeight: "800",
-    textTransform: "uppercase",
-    transform: [{ skewX: "-6deg" }],
-  },
-  splitCell: {
-    flex: 0.75,
-    fontFamily: METRIC_FONT,
-    color: "rgba(255,255,255,0.85)",
-    fontSize: 14,
-    fontWeight: "600",
-    textAlign: "right",
-    fontVariant: ["tabular-nums"],
-    transform: [{ skewX: "-6deg" }],
-  },
-  splitCellHeader: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: "rgba(255,255,255,0.4)",
-    transform: [{ skewX: "-6deg" }],
-  },
-  splitCellLast: {
-    fontWeight: "800",
   },
   advGrid: {
     flexDirection: "row",

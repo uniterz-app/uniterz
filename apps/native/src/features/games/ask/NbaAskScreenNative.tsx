@@ -28,7 +28,8 @@ import { openProSubscribeNative } from "../../../navigation/navigationRef";
 import { CYBER_TAB_CYAN } from "../../../ui/cyberSideMenuNative";
 import { METRIC_FONT } from "../../rankings/rankingsUiTheme";
 import { nbaAskCopy } from "../../../../../../lib/nba/ask/nbaAskCopy";
-import { nbaAskLooksLikeStats, type NbaAskBoard } from "../../../../../../lib/nba/ask/nbaAskBoard";
+import { type NbaAskBoard } from "../../../../../../lib/nba/ask/nbaAskBoard";
+import AskGameCardNative from "./AskGameCardNative";
 import {
   nbaAskDestinationLabel,
   type NbaAskDestinationId,
@@ -147,7 +148,13 @@ export default function NbaAskScreenNative() {
     if (result.ok) {
       setTurns((prev) => [
         ...prev,
-        { role: "assistant", content: result.answer, opens: result.opens, board: result.board },
+        {
+          role: "assistant",
+          content: result.answer,
+          opens: result.opens,
+          board: result.board,
+          games: result.games,
+        },
       ]);
       setStatus((prev) =>
         prev ? { ...prev, statsFreeRemaining: result.statsFreeRemaining } : prev
@@ -225,7 +232,37 @@ export default function NbaAskScreenNative() {
 
           {turns.map((t, i) => {
             const mine = t.role === "user";
-            const statsQuestion = mine && nbaAskLooksLikeStats(t.content);
+            if (t.games && t.games.length > 0) {
+              return (
+                <View key={i} style={styles.boardWrap}>
+                  {t.games.map((game, index) => (
+                    <AskGameCardNative
+                      key={`${game.id || game.away}-${game.home}-${index}`}
+                      game={game}
+                      language={lang}
+                      onPress={
+                        game.id
+                          ? () =>
+                              navigation.navigate("GamesHome", {
+                                openPredictGameId: game.id,
+                              })
+                          : undefined
+                      }
+                    />
+                  ))}
+                  {t.opens?.map((id) => (
+                    <Pressable
+                      key={id}
+                      onPress={() => openNbaAskDestination(navigation, id)}
+                      accessibilityRole="button"
+                      style={({ pressed }) => [styles.openBtn, pressed && styles.chipPressed]}
+                    >
+                      <Text style={styles.openBtnText}>{nbaAskDestinationLabel(id, lang)}</Text>
+                    </Pressable>
+                  ))}
+                </View>
+              );
+            }
             if (t.board) {
               return (
                 <View key={i} style={styles.boardWrap}>
@@ -244,14 +281,9 @@ export default function NbaAskScreenNative() {
               );
             }
             return (
-              <View key={i} style={[styles.turn, statsQuestion ? styles.turnBot : mine ? styles.turnUser : styles.turnBot]}>
-                <View
-                  style={[
-                    styles.bubble,
-                    statsQuestion ? styles.bubbleStats : mine ? styles.bubbleUser : styles.bubbleBot,
-                  ]}
-                >
-                  <Text style={[styles.bubbleText, mine && !statsQuestion && styles.bubbleTextMine]} selectable>
+              <View key={i} style={[styles.turn, mine ? styles.turnUser : styles.turnBot]}>
+                <View style={[styles.bubble, mine ? styles.bubbleUser : styles.bubbleBot]}>
+                  <Text style={[styles.bubbleText, mine && styles.bubbleTextMine]} selectable>
                     {splitNbaAskLinks(t.content).map((part, j) =>
                       part.kind === "link" ? (
                         <Text
@@ -406,14 +438,9 @@ const styles = StyleSheet.create({
   bubbleUser: {
     backgroundColor: CYBER_TAB_CYAN,
   },
-  bubbleStats: {
-    alignSelf: "flex-start",
-    backgroundColor: "transparent",
-    borderWidth: 1,
-    borderColor: CYBER_TAB_CYAN,
-  },
   boardWrap: {
     alignSelf: "stretch",
+    gap: 12,
   },
   preparing: {
     color: CYBER_TAB_CYAN,

@@ -101,22 +101,44 @@ function parsePartsParam(raw: string | null): Set<StatsPart> | null {
   return out.size > 0 ? out : null;
 }
 
-async function buildUserStatsResponse(req: Request) {
-  const adminDb = getAdminDb();
+/** 公開レスポンス全体の共有キャッシュ（同じプロフィールを複数人・複数回開いても読まない） */
+const PROFILE_USER_STATS_CACHE_REVALIDATE_SEC = 60;
+
+class RateLimitedError extends Error {
+  constructor(readonly retryAfterSec: number) {
+    super("rate_limited");
+  }
+}
+
+class UncacheableResponseError extends Error {
+  constructor(readonly response: Response) {
+    super("uncacheable");
+  }
+}
+
+/** 現行以外の week/month は呼び出し元の Pro 判定が要るので共有キャッシュに載せない */
+function needsCallerAuth(searchParams: URLSearchParams): boolean {
+  const period = searchParams.get("period")?.trim() ?? "";
+  if (period !== "weekly" && period !== "monthly") return false;
+  const label =
+    searchParams.get(period === "weekly" ? "week" : "month")?.trim() ?? "";
+  return Boolean(label) && label !== currentRankingPeriodLabel(period);
+}
+
+async function consumeProfileReadLimit(
+  adminDb: ReturnType<typeof getAdminDb>,
+  req: Request
+): Promise<void> {
   const limit = await consumeRateLimit(
     adminDb,
     RATE_LIMIT_RULES.profilePublicRead,
     rateLimitSubjectFromRequest(req)
   );
-  if (!limit.allowed) {
-    return NextResponse.json(
-      { ok: false, error: "rate_limited" },
-      {
-        status: 429,
-        headers: { "Retry-After": String(limit.retryAfterSec) },
-      }
-    );
-  }
+  if (!limit.allowed) throw new RateLimitedError(limit.retryAfterSec);
+}
+
+async function buildUserStatsResponse(req: Request) {
+  const adminDb = getAdminDb();
   const { searchParams } = new URL(req.url);
   const uidParam = searchParams.get("uid")?.trim() ?? "";
   const handleParam = searchParams.get("handle")?.trim() ?? "";
@@ -425,8 +447,43 @@ async function buildUserStatsResponse(req: Request) {
 
 export async function GET(req: Request) {
   try {
-    return await withFirestoreTransientRetry(() => buildUserStatsResponse(req));
+    const adminDb = getAdminDb();
+    const { searchParams } = new URL(req.url);
+    if (needsCallerAuth(searchParams)) {
+      await consumeProfileReadLimit(adminDb, req);
+      return await withFirestoreTransientRetry(() =>
+        buildUserStatsResponse(req)
+      );
+    }
+
+    const cacheKey = [...searchParams.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([k, v]) => `${k}=${v}`)
+      .join("&");
+    const body = await unstable_cache(
+      async () => {
+        await consumeProfileReadLimit(adminDb, req);
+        const res = await withFirestoreTransientRetry(() =>
+          buildUserStatsResponse(req)
+        );
+        if (res.status !== 200) throw new UncacheableResponseError(res);
+        return (await res.json()) as Record<string, unknown>;
+      },
+      ["profile-user-stats", cacheKey],
+      { revalidate: PROFILE_USER_STATS_CACHE_REVALIDATE_SEC }
+    )();
+    return NextResponse.json(body);
   } catch (e: unknown) {
+    if (e instanceof RateLimitedError) {
+      return NextResponse.json(
+        { ok: false, error: "rate_limited" },
+        {
+          status: 429,
+          headers: { "Retry-After": String(e.retryAfterSec) },
+        }
+      );
+    }
+    if (e instanceof UncacheableResponseError) return e.response;
     console.error("[api/profile/user-stats]", e);
     return NextResponse.json(
       { ok: false, error: "internal" },

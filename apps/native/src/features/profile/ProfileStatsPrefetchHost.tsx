@@ -13,6 +13,7 @@ import {
   peekProfileUserDocNative,
 } from "./profileUserDocCacheNative";
 import { listMarksNative } from "./marksFirestoreNative";
+import { rememberMarksLoadedNative } from "./useProfileMarksNative";
 import { replaceMarksMemory } from "../../../../../lib/marks/marksMemoryStore";
 import { prefetchNativeProfileBadges } from "./useNativeProfileBadges";
 import {
@@ -49,6 +50,7 @@ export default function ProfileStatsPrefetchHost() {
 
       void listMarksNative(uid).then((rows) => {
         replaceMarksMemory(uid, rows);
+        rememberMarksLoadedNative(uid);
         prefetchMarksWeeklyBoard(
           rows.map((m) => m.targetUid),
           getUniterzApiBaseUrl() || undefined

@@ -2,6 +2,7 @@
  * 過去スクワッド履歴（再招集用）。既存 squads / squad_members から導出。
  */
 
+import { unstable_cache } from "next/cache";
 import type { Firestore } from "firebase-admin/firestore";
 import {
   GROUP_BATTLE_COLLECTION,
@@ -81,11 +82,9 @@ export async function isInviteeEligible(
   return { ok: true };
 }
 
-/** 新しい大会から最大 PAST_SQUAD_LIMIT 件の locked/disbanded 履歴 */
-export async function listPastLockedSquadsForUser(
-  db: Firestore,
-  uid: string
-): Promise<GroupBattlePastSquadItem[]> {
+async function loadRecentBattlesUncached(
+  db: Firestore
+): Promise<Array<ReturnType<typeof parseBattleDoc>>> {
   let battleSnaps;
   try {
     battleSnaps = await db
@@ -96,10 +95,26 @@ export async function listPastLockedSquadsForUser(
   } catch {
     battleSnaps = await db.collection(GROUP_BATTLE_COLLECTION).limit(40).get();
   }
-
-  const battles = battleSnaps.docs
+  return battleSnaps.docs
     .map((d) => parseBattleDoc(d.id, d.data() as Record<string, unknown>))
     .sort((a, b) => b.battleStartAtMs - a.battleStartAtMs);
+}
+
+/** 大会一覧は全員共通（増えるのは大会作成時だけ） */
+function loadRecentBattles(db: Firestore) {
+  return unstable_cache(
+    () => loadRecentBattlesUncached(db),
+    ["group-battles-recent-battles"],
+    { revalidate: 600 }
+  )();
+}
+
+/** 新しい大会から最大 PAST_SQUAD_LIMIT 件の locked/disbanded 履歴 */
+export async function listPastLockedSquadsForUser(
+  db: Firestore,
+  uid: string
+): Promise<GroupBattlePastSquadItem[]> {
+  const battles = await loadRecentBattles(db);
 
   const items: GroupBattlePastSquadItem[] = [];
 

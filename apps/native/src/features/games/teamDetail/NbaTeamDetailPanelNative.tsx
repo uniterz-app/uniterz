@@ -65,6 +65,7 @@ import { NbaTeamDisciplineSectionNative } from "../NbaDisciplineSectionNative";
 import { NbaTeamRosterCardNative } from "../predict/NbaRosterPanelNative";
 import NbaTeamHowTheyPlayNative from "./NbaTeamHowTheyPlayNative";
 import { NbaTeamOffseasonMovesNative } from "./NbaTeamOffseasonMovesNative";
+import { NbaTeamPositionDefenseNative } from "./NbaTeamPositionDefenseNative";
 import {
   NbaTeamStatSplitTableNative,
   type NbaTeamStatSplitTableRow,
@@ -104,6 +105,7 @@ import { DetailScheduleSectionNative } from "../detailInsights/DetailScheduleSec
 import type { DetailTrendDelta } from "../../../../../../lib/nba/detailInsights/detailInsightTypes";
 import { playerCardName, type NbaRosterTeamBlock } from "../../../../../../lib/predict/nbaRoster";
 import { getUniterzApiBaseUrl } from "../submitPredictionApi";
+import NbaGameBoxScoreModalNative from "../live/NbaGameBoxScoreModalNative";
 import { getNbaTeamDraftCapital } from "../../../../../../lib/nba/draftPicks/nbaDraftCapitalData";
 import { resolveDraftPickOrigin } from "../../../../../../lib/nba/draftPicks/nbaDraftPickViaTrade";
 import type {
@@ -396,13 +398,21 @@ function GameLogsSection({
   games,
   accent,
   ui,
+  language,
+  onSelectPlayer,
+  onSelectTeam,
 }: {
   /** 新しい順 */
   games: NbaTeamGameLogDetailGame[];
   accent: string;
   ui: NbaTeamDetailUiCopy;
+  language: string;
+  onSelectPlayer?: (playerId: string) => void;
+  onSelectTeam?: (teamId: string) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
+  const [boxGameId, setBoxGameId] = useState<string | null>(null);
+  const anyOpenable = games.some((g) => Boolean(g.gameId));
   const canExpand = games.length > GAME_LOGS_COLLAPSED;
   const list =
     expanded || !canExpand ? games : games.slice(0, GAME_LOGS_COLLAPSED);
@@ -421,6 +431,9 @@ function GameLogsSection({
         }
         accent={accent}
       />
+      {anyOpenable ? (
+        <Text style={styles.splitStatsHint}>{ui.gameLogsTapHint}</Text>
+      ) : null}
       <View style={[styles.gameList, { borderColor: frame }]}>
         {list.length === 0 ? (
           <View style={styles.gameRow}>
@@ -443,9 +456,13 @@ function GameLogsSection({
               <Text style={[styles.gameResult, styles.gameHead]}> </Text>
             </View>
             {list.map((g, i) => (
-              <View
+              <Pressable
                 key={`${g.dateLabel}-${g.oppAbbr}-${i}`}
-                style={[
+                disabled={!g.gameId}
+                onPress={() => g.gameId && setBoxGameId(g.gameId)}
+                accessibilityRole={g.gameId ? "button" : undefined}
+                accessibilityLabel={g.gameId ? `Box score ${g.oppAbbr} ${g.dateLabel}` : undefined}
+                style={({ pressed }) => [
                   styles.gameRow,
                   i < list.length - 1
                     ? {
@@ -453,6 +470,7 @@ function GameLogsSection({
                         borderBottomColor: line,
                       }
                     : null,
+                  pressed ? { backgroundColor: hexToRgba(accent, 0.1) } : null,
                 ]}
               >
                 <Text style={styles.gameDate}>{g.dateLabel}</Text>
@@ -472,7 +490,7 @@ function GameLogsSection({
                 >
                   {g.result}
                 </Text>
-              </View>
+              </Pressable>
             ))}
           </>
         )}
@@ -491,6 +509,29 @@ function GameLogsSection({
             {expanded ? ui.showFewerGames : ui.showAllGames(games.length)}
           </Text>
         </Pressable>
+      ) : null}
+      {boxGameId ? (
+        <NbaGameBoxScoreModalNative
+          gameId={boxGameId}
+          language={language}
+          onClose={() => setBoxGameId(null)}
+          onOpenTeamDetail={
+            onSelectTeam
+              ? (teamId) => {
+                  setBoxGameId(null);
+                  onSelectTeam(teamId);
+                }
+              : undefined
+          }
+          onOpenPlayerDetail={
+            onSelectPlayer
+              ? (playerId) => {
+                  setBoxGameId(null);
+                  onSelectPlayer(playerId);
+                }
+              : undefined
+          }
+        />
       ) : null}
     </View>
   );
@@ -652,7 +693,7 @@ function winPctLabel(wins: number, losses: number): string {
 }
 
 function teamSplitTableRows(
-  detail: NbaTeamGameLogDetail
+  detail: Pick<NbaTeamGameLogDetail, "splits">
 ): NbaTeamStatSplitTableRow[] {
   const s = detail.splits;
   return [
@@ -1847,6 +1888,7 @@ export default function NbaTeamDetailPanelNative({
     aceOut,
     shapeEdges,
     gameLogDetail,
+    positionDefense,
     offseasonMoves,
     discipline,
     hasFetchError,
@@ -2051,6 +2093,18 @@ export default function NbaTeamDetailPanelNative({
           ) : null}
         </View>
 
+        {positionDefense ? (
+          <>
+            <View style={[styles.divider, { backgroundColor: dividerColor }]} />
+            <NbaTeamPositionDefenseNative
+              teamId={detail.teamId}
+              defense={positionDefense}
+              accent={accent}
+              ui={ui}
+            />
+          </>
+        ) : null}
+
         <View style={[styles.divider, { backgroundColor: dividerColor }]} />
 
         <NbaTeamHowTheyPlayNative
@@ -2164,6 +2218,9 @@ export default function NbaTeamDetailPanelNative({
           games={gameLogDetail?.games.length ? gameLogDetail.games : detail.recentGames}
           accent={accent}
           ui={ui}
+          language={language}
+          onSelectPlayer={onSelectPlayer}
+          onSelectTeam={onSelectTeam}
         />
 
         <View style={[styles.divider, { backgroundColor: dividerColor }]} />

@@ -1,6 +1,7 @@
 export const runtime = "nodejs";
 
 import { NextResponse } from "next/server";
+import { revalidateNbaDocCache } from "@/lib/nba/nbaPublicReadDb";
 import { getAdminDb } from "@/lib/firebaseAdmin";
 import { requireAdminUid } from "@/lib/admin/requireAdminUid";
 import { checkJobSecret } from "@/lib/security/assertJobSecret";
@@ -34,6 +35,7 @@ export async function POST(req: Request) {
       force: body.force === true,
     });
 
+    revalidateNbaDocCache(["nbaTeamInjuries"]);
     return NextResponse.json(result);
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : String(e);
