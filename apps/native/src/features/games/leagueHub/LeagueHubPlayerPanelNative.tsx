@@ -41,9 +41,19 @@ import {
   type HubLang,
 } from "./leagueHubUiNative";
 
+export type LeagueHubPlayerSection = "style" | "zone" | "ladder" | "trend";
+
+export const LEAGUE_HUB_PLAYER_SECTIONS: readonly { id: LeagueHubPlayerSection; label: string }[] = [
+  { id: "style", label: "STYLE" },
+  { id: "zone", label: "ZONE" },
+  { id: "ladder", label: "LADDER" },
+  { id: "trend", label: "TREND" },
+];
+
 type Props = {
   hub: NbaLeagueHubDoc;
   lang: HubLang;
+  section: LeagueHubPlayerSection;
   onSelectPlayer: (playerId: string) => void;
 };
 
@@ -495,7 +505,7 @@ function awardRowText(
   }
 }
 
-export default function LeagueHubPlayerPanelNative({ hub, lang, onSelectPlayer }: Props) {
+export default function LeagueHubPlayerPanelNative({ hub, lang, section, onSelectPlayer }: Props) {
   const [high, setHigh] = useState<LeagueHubHighStat>("pts");
   const [countId, setCountId] = useState<CountId>("pts20");
   const ja = lang === "ja";
@@ -514,183 +524,194 @@ export default function LeagueHubPlayerPanelNative({ hub, lang, onSelectPlayer }
   const [award, setAward] = useState<AwardId>("mvp");
   const awardRows = (award === "rookies" ? hub.rookies : award === "mvp" ? hub.mvp : hub[award]) ?? [];
   const awardPrev = hub.ladderPrev?.[award];
+  /** 切り替えてもマップの追加選手などを残すため、隠すだけでアンマウントしない */
+  const shown = (id: LeagueHubPlayerSection) => (section === id ? null : styles.hidden);
 
   return (
     <View>
-      <HubSection title="STYLE MAP">
-        <StyleMap players={hub.players} lang={lang} onSelectPlayer={onSelectPlayer} />
-      </HubSection>
+      <View style={shown("style")}>
+        <HubSection title="STYLE MAP">
+          <StyleMap players={hub.players} lang={lang} onSelectPlayer={onSelectPlayer} />
+        </HubSection>
+      </View>
 
-      <HubSection
-        title="BY ZONE"
-        hint={
-          ja
-            ? "エリアごとの成功率トップ。コートかチップでエリアを切り替え。試投数の基準は試合が進むほど上がる。"
-            : "Best FG% in each zone. Tap the court or a chip to switch zones. The attempt minimum rises as the season goes on."
-        }
-      >
-        {hub.zones.length > 0 ? (
-          <LeagueHubZoneKingsNative zones={hub.zones} lang={lang} onSelectPlayer={onSelectPlayer} />
-        ) : (
-          noData(lang)
-        )}
-      </HubSection>
+      <View style={shown("zone")}>
+        <HubSection
+          title="BY ZONE"
+          hint={
+            ja
+              ? "エリアごとの成功率トップ。コートかチップでエリアを切り替え。試投数の基準は試合が進むほど上がる。"
+              : "Best FG% in each zone. Tap the court or a chip to switch zones. The attempt minimum rises as the season goes on."
+          }
+        >
+          {hub.zones.length > 0 ? (
+            <LeagueHubZoneKingsNative zones={hub.zones} lang={lang} onSelectPlayer={onSelectPlayer} />
+          ) : (
+            noData(lang)
+          )}
+        </HubSection>
+      </View>
 
-      <HubSection title="AWARD LADDERS">
-        <HubChips items={AWARD_CHIPS} value={award} onChange={setAward} />
-        {awardRows.length === 0
-          ? noData(lang)
-          : awardRows.map((r, i) => (
-              <HubRow
-                key={r.playerId}
-                rank={i + 1}
-                rankMove={ladderMove(r, i, awardPrev != null)}
-                teamId={r.teamId}
-                name={r.name}
-                {...awardRowText(award, r, ja)}
-                onPress={() => onSelectPlayer(r.playerId)}
-              />
-            ))}
-        <Text style={hubStyles.footnote}>{AWARD_FOOTNOTE[award][ja ? "ja" : "en"]}</Text>
-      </HubSection>
+      <View style={shown("ladder")}>
+        <HubSection title="AWARD LADDERS">
+          <HubChips items={AWARD_CHIPS} value={award} onChange={setAward} />
+          {awardRows.length === 0
+            ? noData(lang)
+            : awardRows.map((r, i) => (
+                <HubRow
+                  key={r.playerId}
+                  rank={i + 1}
+                  rankMove={ladderMove(r, i, awardPrev != null)}
+                  teamId={r.teamId}
+                  name={r.name}
+                  {...awardRowText(award, r, ja)}
+                  onPress={() => onSelectPlayer(r.playerId)}
+                />
+              ))}
+          <Text style={hubStyles.footnote}>{AWARD_FOOTNOTE[award][ja ? "ja" : "en"]}</Text>
+        </HubSection>
+      </View>
 
-      <HubSection
-        title="PLAYERS OF THE WEEK"
-        hint={
-          hub.week
-            ? `${hub.week.startLabel} – ${hub.week.endLabel}${
-                hub.week.inProgress ? (ja ? "（今週・途中）" : " (in progress)") : ""
-              } · ${ja ? "Game Score の平均" : "avg Game Score"}`
-            : undefined
-        }
-      >
-        {hub.week ? (
-          <View>
-            <View style={styles.weekRow}>
-              <WeekCard conf="EAST" row={hub.week.east} onSelectPlayer={onSelectPlayer} />
-              <WeekCard conf="WEST" row={hub.week.west} onSelectPlayer={onSelectPlayer} />
+      <View style={shown("trend")}>
+        <HubSection
+          title="PLAYERS OF THE WEEK"
+          hint={
+            hub.week
+              ? `${hub.week.startLabel} – ${hub.week.endLabel}${
+                  hub.week.inProgress ? (ja ? "（今週・途中）" : " (in progress)") : ""
+                } · ${ja ? "Game Score の平均" : "avg Game Score"}`
+              : undefined
+          }
+        >
+          {hub.week ? (
+            <View>
+              <View style={styles.weekRow}>
+                <WeekCard conf="EAST" row={hub.week.east} onSelectPlayer={onSelectPlayer} />
+                <WeekCard conf="WEST" row={hub.week.west} onSelectPlayer={onSelectPlayer} />
+              </View>
+              {hub.week.top.slice(0, 5).map((r, i) => (
+                <HubRow
+                  key={r.playerId}
+                  rank={i + 1}
+                  teamId={r.teamId}
+                  name={r.name}
+                  sub={`${r.games} G`}
+                  value={r.gameScore.toFixed(1)}
+                  valueSub={`${r.pts.toFixed(1)} / ${r.reb.toFixed(1)} / ${r.ast.toFixed(1)}`}
+                  onPress={() => onSelectPlayer(r.playerId)}
+                />
+              ))}
             </View>
-            {hub.week.top.slice(0, 5).map((r, i) => (
-              <HubRow
-                key={r.playerId}
-                rank={i + 1}
-                teamId={r.teamId}
-                name={r.name}
-                sub={`${r.games} G`}
-                value={r.gameScore.toFixed(1)}
-                valueSub={`${r.pts.toFixed(1)} / ${r.reb.toFixed(1)} / ${r.ast.toFixed(1)}`}
-                onPress={() => onSelectPlayer(r.playerId)}
-              />
-            ))}
-          </View>
-        ) : (
-          noData(lang)
-        )}
-      </HubSection>
+          ) : (
+            noData(lang)
+          )}
+        </HubSection>
 
-      <HubSection
-        title="HOT / COLD"
-        hint={ja ? "直近 5 試合の平均得点とそれより前の比較。" : "Last 5 games vs earlier, points per game."}
-      >
-        <HubTwoCol
-          leftTitle="HOT"
-          rightTitle="COLD"
-          left={
-            hub.hot.length === 0
-              ? noData(lang)
-              : hub.hot.map((r) => (
-                  <HubRow
-                    key={r.playerId}
-                    teamId={r.teamId}
-                    name={r.name}
-                    value={r.recent.toFixed(1)}
-                    valueSub={`${ja ? "前" : "was"} ${r.before.toFixed(1)}`}
-                    onPress={() => onSelectPlayer(r.playerId)}
-                  />
-                ))
+        <HubSection
+          title="HOT / COLD"
+          hint={ja ? "直近 5 試合の平均得点とそれより前の比較。" : "Last 5 games vs earlier, points per game."}
+        >
+          <HubTwoCol
+            leftTitle="HOT"
+            rightTitle="COLD"
+            left={
+              hub.hot.length === 0
+                ? noData(lang)
+                : hub.hot.map((r) => (
+                    <HubRow
+                      key={r.playerId}
+                      teamId={r.teamId}
+                      name={r.name}
+                      value={r.recent.toFixed(1)}
+                      valueSub={`${ja ? "前" : "was"} ${r.before.toFixed(1)}`}
+                      onPress={() => onSelectPlayer(r.playerId)}
+                    />
+                  ))
+            }
+            right={
+              hub.cold.length === 0
+                ? noData(lang)
+                : hub.cold.map((r) => (
+                    <HubRow
+                      key={r.playerId}
+                      teamId={r.teamId}
+                      name={r.name}
+                      value={r.recent.toFixed(1)}
+                      valueSub={`${ja ? "前" : "was"} ${r.before.toFixed(1)}`}
+                      onPress={() => onSelectPlayer(r.playerId)}
+                    />
+                  ))
+            }
+          />
+        </HubSection>
+
+        <HubSection title="SEASON HIGHS">
+          <HubChips
+            items={(Object.keys(HIGH_LABEL) as LeagueHubHighStat[]).map((id) => ({
+              id,
+              label: HIGH_LABEL[id],
+            }))}
+            value={high}
+            onChange={setHigh}
+          />
+          {(hub.highs[high] ?? []).length === 0
+            ? noData(lang)
+            : hub.highs[high].map((r, i) => (
+                <HubRow
+                  key={`${r.playerId}-${r.gameId}`}
+                  rank={i + 1}
+                  teamId={r.teamId}
+                  name={r.name}
+                  sub={`vs ${r.oppAbbr} · ${r.dateLabel}`}
+                  value={String(r.value)}
+                  valueSub={`${r.pts} / ${r.reb} / ${r.ast}`}
+                  onPress={() => onSelectPlayer(r.playerId)}
+                />
+              ))}
+        </HubSection>
+
+        <HubSection
+          title="STREAKS & COUNTS"
+          hint={
+            isStreak
+              ? ja
+                ? "継続中の連続試合（3 試合以上）。"
+                : "Active streaks (3+ games)."
+              : undefined
           }
-          right={
-            hub.cold.length === 0
-              ? noData(lang)
-              : hub.cold.map((r) => (
-                  <HubRow
-                    key={r.playerId}
-                    teamId={r.teamId}
-                    name={r.name}
-                    value={r.recent.toFixed(1)}
-                    valueSub={`${ja ? "前" : "was"} ${r.before.toFixed(1)}`}
-                    onPress={() => onSelectPlayer(r.playerId)}
-                  />
-                ))
-          }
-        />
-      </HubSection>
-
-      <HubSection title="SEASON HIGHS">
-        <HubChips
-          items={(Object.keys(HIGH_LABEL) as LeagueHubHighStat[]).map((id) => ({
-            id,
-            label: HIGH_LABEL[id],
-          }))}
-          value={high}
-          onChange={setHigh}
-        />
-        {(hub.highs[high] ?? []).length === 0
-          ? noData(lang)
-          : hub.highs[high].map((r, i) => (
-              <HubRow
-                key={`${r.playerId}-${r.gameId}`}
-                rank={i + 1}
-                teamId={r.teamId}
-                name={r.name}
-                sub={`vs ${r.oppAbbr} · ${r.dateLabel}`}
-                value={String(r.value)}
-                valueSub={`${r.pts} / ${r.reb} / ${r.ast}`}
-                onPress={() => onSelectPlayer(r.playerId)}
-              />
-            ))}
-      </HubSection>
-
-      <HubSection
-        title="STREAKS & COUNTS"
-        hint={
-          isStreak
-            ? ja
-              ? "継続中の連続試合（3 試合以上）。"
-              : "Active streaks (3+ games)."
-            : undefined
-        }
-      >
-        <HubChips
-          items={[
-            { id: "pts20", label: "20+ PTS STREAK" },
-            { id: "ddStreak", label: "DD STREAK" },
-            { id: "pts30", label: "30+ PTS GAMES" },
-            { id: "dd", label: "DOUBLE-DOUBLES" },
-            { id: "td", label: "TRIPLE-DOUBLES" },
-          ]}
-          value={countId}
-          onChange={setCountId}
-        />
-        {countRows.length === 0
-          ? noData(lang)
-          : countRows.map((r, i) => (
-              <HubRow
-                key={r.playerId}
-                rank={i + 1}
-                teamId={r.teamId}
-                name={r.name}
-                value={String(r.count)}
-                valueSub={isStreak ? (ja ? "試合連続" : "straight") : ja ? "回" : "games"}
-                onPress={() => onSelectPlayer(r.playerId)}
-              />
-            ))}
-      </HubSection>
+        >
+          <HubChips
+            items={[
+              { id: "pts20", label: "20+ PTS STREAK" },
+              { id: "ddStreak", label: "DD STREAK" },
+              { id: "pts30", label: "30+ PTS GAMES" },
+              { id: "dd", label: "DOUBLE-DOUBLES" },
+              { id: "td", label: "TRIPLE-DOUBLES" },
+            ]}
+            value={countId}
+            onChange={setCountId}
+          />
+          {countRows.length === 0
+            ? noData(lang)
+            : countRows.map((r, i) => (
+                <HubRow
+                  key={r.playerId}
+                  rank={i + 1}
+                  teamId={r.teamId}
+                  name={r.name}
+                  value={String(r.count)}
+                  valueSub={isStreak ? (ja ? "試合連続" : "straight") : ja ? "回" : "games"}
+                  onPress={() => onSelectPlayer(r.playerId)}
+                />
+              ))}
+        </HubSection>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  hidden: { display: "none" },
   mapHint: {
     color: "rgba(255,255,255,0.55)",
     fontSize: 11,

@@ -1,5 +1,5 @@
 /** 順位ページ LEAGUE タブ — 今季の NBA を図で見る（TEAM / PLAYER） */
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from "react-native";
 import {
   CyberSlantedTabBarNative,
@@ -13,9 +13,12 @@ import {
   LeagueStatsCollapsibleNative,
   useLeagueStatsCollapse,
 } from "../stats/LeagueStatsCollapseNative";
-import LeagueHubPlayerPanelNative from "./LeagueHubPlayerPanelNative";
+import LeagueHubPlayerPanelNative, {
+  LEAGUE_HUB_PLAYER_SECTIONS,
+  type LeagueHubPlayerSection,
+} from "./LeagueHubPlayerPanelNative";
 import LeagueHubTeamPanelNative from "./LeagueHubTeamPanelNative";
-import { HubEmpty, type HubLang } from "./leagueHubUiNative";
+import { HubEmpty, HubSubTabs, type HubLang } from "./leagueHubUiNative";
 import { useNbaLeagueHubNative } from "./useNbaLeagueHubNative";
 
 type Props = {
@@ -26,9 +29,18 @@ type Props = {
 
 export default function LeagueHubPanelNative({ lang, onSelectTeam, onSelectPlayer }: Props) {
   const [tab, setTab] = useState<"team" | "player">("team");
+  const [playerSection, setPlayerSection] = useState<LeagueHubPlayerSection>("style");
   const { hub, loading } = useNbaLeagueHubNative();
   const { bottomContentReserveY } = useBottomTabBarInsets();
   const { onTableScroll } = useLeagueStatsCollapse();
+  const scrollRef = useRef<ScrollView>(null);
+  const sectionLabel = LEAGUE_HUB_PLAYER_SECTIONS.find((s) => s.id === playerSection)?.label;
+
+  const changePlayerSection = (id: LeagueHubPlayerSection) => {
+    if (id === playerSection) return;
+    setPlayerSection(id);
+    scrollRef.current?.scrollTo({ y: 0, animated: false });
+  };
 
   return (
     <View style={styles.root}>
@@ -50,8 +62,20 @@ export default function LeagueHubPanelNative({ lang, onSelectTeam, onSelectPlaye
         </CyberSlantedTabBarNative>
       </View>
       </LeagueStatsCollapsibleNative>
-      <LeagueStatsCollapsedSummaryNative text={`LEAGUE · ${tab.toUpperCase()}`} />
+      <LeagueStatsCollapsedSummaryNative
+        text={`LEAGUE · ${tab.toUpperCase()}${tab === "player" && sectionLabel ? ` · ${sectionLabel}` : ""}`}
+      />
+      {tab === "player" ? (
+        <View style={styles.subTabs}>
+          <HubSubTabs
+            items={LEAGUE_HUB_PLAYER_SECTIONS}
+            value={playerSection}
+            onChange={changePlayerSection}
+          />
+        </View>
+      ) : null}
       <ScrollView
+        ref={scrollRef}
         onScroll={onTableScroll}
         scrollEventThrottle={16}
         style={styles.scroll}
@@ -72,7 +96,12 @@ export default function LeagueHubPanelNative({ lang, onSelectTeam, onSelectPlaye
             <ActivityIndicator color={CYBER_TAB_CYAN} />
           </View>
         ) : hub ? (
-          <LeagueHubPlayerPanelNative hub={hub} lang={lang} onSelectPlayer={onSelectPlayer} />
+          <LeagueHubPlayerPanelNative
+            hub={hub}
+            lang={lang}
+            section={playerSection}
+            onSelectPlayer={onSelectPlayer}
+          />
         ) : (
           <HubEmpty text={lang === "ja" ? "まだデータがありません" : "No data yet"} />
         )}
@@ -86,6 +115,10 @@ const styles = StyleSheet.create({
   tabs: {
     paddingHorizontal: 12,
     paddingBottom: 6,
+  },
+  subTabs: {
+    paddingHorizontal: 12,
+    marginBottom: 4,
   },
   scroll: { flex: 1 },
   content: {

@@ -152,6 +152,39 @@ export function HubToggle<T extends string>({
   );
 }
 
+/** TEAM / PLAYER の下の区分タブ（下線で選択を示す・等幅） */
+export function HubSubTabs<T extends string>({
+  items,
+  value,
+  onChange,
+}: {
+  items: readonly { id: T; label: string }[];
+  value: T;
+  onChange: (id: T) => void;
+}) {
+  return (
+    <View style={styles.subTabs}>
+      {items.map((it) => {
+        const active = it.id === value;
+        return (
+          <Pressable
+            key={it.id}
+            onPress={() => onChange(it.id)}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: active }}
+            style={({ pressed }) => [styles.subTab, pressed ? styles.subTabPressed : null]}
+          >
+            <Text style={[styles.subTabText, active ? styles.subTabTextActive : null]}>
+              {it.label}
+            </Text>
+            {active ? <View style={styles.subTabBar} /> : null}
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
 export type HubPosFilter = "all" | LeagueHubPosition;
 
 /** 全員 / G / F / C */
@@ -413,6 +446,37 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     borderWidth: 1,
     borderColor: "rgba(0,245,255,0.35)",
+  },
+  subTabs: {
+    flexDirection: "row",
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(0,245,255,0.22)",
+  },
+  subTab: {
+    flex: 1,
+    alignItems: "center",
+    paddingVertical: 9,
+  },
+  subTabPressed: {
+    backgroundColor: "rgba(0,245,255,0.08)",
+  },
+  subTabText: {
+    fontFamily: METRIC_FONT,
+    color: "rgba(255,255,255,0.5)",
+    fontSize: 12,
+    fontWeight: "800",
+    letterSpacing: 1.6,
+  },
+  subTabTextActive: {
+    color: CYBER_TAB_CYAN,
+  },
+  subTabBar: {
+    position: "absolute",
+    left: 6,
+    right: 6,
+    bottom: -1,
+    height: 2,
+    backgroundColor: CYBER_TAB_CYAN,
   },
   toggleItem: {
     paddingHorizontal: 8,
