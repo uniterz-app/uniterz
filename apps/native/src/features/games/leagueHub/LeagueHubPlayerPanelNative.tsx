@@ -299,13 +299,7 @@ function StyleMap({
                     <Text style={styles.selStatValue}>{formatHubValue(v, ax.format)}</Text>
                     {r ? (
                       <Text style={styles.selStatRank}>
-                        {preset.risk
-                          ? lang === "ja"
-                            ? `  ${ax.invert ? "低い" : "高い"}順 ${r.rank}位/${r.of}`
-                            : `  #${r.rank}/${r.of} ${ax.invert ? "lowest" : "highest"}`
-                          : lang === "ja"
-                            ? `  ${r.rank}位/${r.of}`
-                            : `  #${r.rank}/${r.of}`}
+                        {lang === "ja" ? `  ${r.rank}位/${r.of}` : `  #${r.rank}/${r.of}`}
                       </Text>
                     ) : null}
                   </Text>

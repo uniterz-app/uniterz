@@ -49,6 +49,10 @@ export const LEAGUE_HUB_PLAYER_METRICS = [
   "pct_pts_paint",
   /** STL + BLK + ディフレクション + コンテスト（守備系マップの上位選び） */
   "def_activity",
+  /** 試合ごとの得点の標準偏差（試合ログから） */
+  "pts_sd",
+  /** 36 分あたりのファウル（試合ログから） */
+  "pf36",
 ] as const;
 
 export const LEAGUE_HUB_POSITIONS = ["G", "F", "C"] as const;

@@ -1,11 +1,11 @@
 /**
  * スタイルマップの軸（出場時の強さ・勝負どころを除く）で選手同士の近さを測る。
- * チーム次第の ORtg / DRtg と試行数の少ないクラッチは「スタイル」から外す。
+ * チーム次第の ORtg / DRtg、試行数の少ないクラッチ、得点の振れ幅（得点量に比例しやすい）は「スタイル」から外す。
  */
 import type { LeagueHubPlayer, LeagueHubPlayerMetric } from "@/lib/nba/leagueHub/leagueHubTypes";
 import { LEAGUE_HUB_PLAYER_SCATTER_PRESETS } from "@/lib/nba/leagueHub/leagueHubScatterPresets";
 
-const EXCLUDED_PRESETS = new Set(["onCourt", "clutch"]);
+const EXCLUDED_PRESETS = new Set(["onCourt", "clutch", "consistency"]);
 const MIN_SHARED = 12;
 
 export const LEAGUE_HUB_STYLE_METRICS: readonly LeagueHubPlayerMetric[] = [

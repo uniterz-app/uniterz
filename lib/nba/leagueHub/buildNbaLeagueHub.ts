@@ -91,6 +91,8 @@ const LIST_LIMIT = 5;
 /** エリア別・シーズンハイ・好調 / 不調 */
 const LONG_LIST_LIMIT = 10;
 const TOP_GAMES_DAYS = 7;
+/** 試合ログから作る指標（得点の振れ幅・36 分あたりファウル）の最低出場試合 */
+const LOG_METRIC_MIN_GAMES = 5;
 const LADDER_LIMIT = 10;
 const SEASON_GAMES = 82;
 /** MVP など主要賞の出場条件（2023-24〜） */
@@ -276,6 +278,14 @@ export function buildNbaLeagueHub(input: BuildNbaLeagueHubInput): NbaLeagueHubDo
     for (const id of LEAGUE_HUB_PLAYER_METRICS) {
       const v = playerMetricValue(id, entry.values);
       if (typeof v === "number" && Number.isFinite(v)) m[id] = round(v, metricDigits(id));
+    }
+    const played = (input.gameLogs.get(playerId)?.logs ?? []).filter((g) => g.min > 0);
+    if (played.length >= LOG_METRIC_MIN_GAMES) {
+      const mean = avg(played.map((g) => g.pts));
+      m.pts_sd = round(Math.sqrt(avg(played.map((g) => (g.pts - mean) ** 2))), 1);
+      const withPf = played.filter((g) => g.pf != null);
+      const pfMin = withPf.reduce((s, g) => s + g.min, 0);
+      if (pfMin > 0) m.pf36 = round((withPf.reduce((s, g) => s + g.pf!, 0) / pfMin) * 36, 1);
     }
     players.push({
       playerId,

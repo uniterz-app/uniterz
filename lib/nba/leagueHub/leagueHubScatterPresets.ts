@@ -1,6 +1,6 @@
 /**
  * LEAGUE タブの散布図（軸の組み合わせ）。
- * invert = 軸を反転し、低い値を右 / 上に置く。通常は良い側を右上、`risk` のマップは悪い側を右上に寄せる。
+ * invert = 低いほど良い指標。図では良い側を右 / 上に寄せる。
  */
 import type { LeagueHubPlayerMetric } from "@/lib/nba/leagueHub/leagueHubTypes";
 
@@ -36,17 +36,14 @@ export type LeagueHubPlayerScatterPreset = LeagueHubScatterPreset<LeagueHubPlaye
   /** TOP N をこの指標の上位で選ぶ */
   volume: LeagueHubPlayerMetric;
   volumeLabel: Copy;
-  /** 負の側を見るマップ。右上ほど危ない（良い側を右上に寄せない） */
-  risk?: boolean;
 };
 
 /** スタイルマップのグループ（先頭が既定）。IMPACT = 攻守まとめた出場時の影響と勝負どころ */
 export const LEAGUE_HUB_PLAYER_SCATTER_GROUPS = [
   { id: "scoring", label: "SCORING", presetIds: ["three", "ace", "shotType", "source"] },
   { id: "attack", label: "ATTACK", presetIds: ["paint", "drive", "foul", "playmaking"] },
-  { id: "defense", label: "DEFENSE", presetIds: ["defense", "hustle"] },
-  { id: "impact", label: "IMPACT", presetIds: ["onCourt", "clutch"] },
-  { id: "risk", label: "RISK", presetIds: ["riskTov", "riskBrick", "riskDef", "riskFt"] },
+  { id: "defense", label: "DEFENSE", presetIds: ["defense", "hustle", "fouls"] },
+  { id: "impact", label: "IMPACT", presetIds: ["onCourt", "clutch", "consistency"] },
 ] as const;
 
 export type LeagueHubPlayerScatterGroupId = (typeof LEAGUE_HUB_PLAYER_SCATTER_GROUPS)[number]["id"];
@@ -284,89 +281,49 @@ export const LEAGUE_HUB_PLAYER_SCATTER_PRESETS: readonly LeagueHubPlayerScatterP
     },
   },
   {
-    id: "riskTov",
-    risk: true,
-    label: { ja: "ミスの多さ", en: "TURNOVERS" },
+    id: "consistency",
+    label: { ja: "得点の安定感", en: "CONSISTENCY" },
     hint: {
-      ja: "右ほど攻撃を任され（USG%）、上ほどミスが多い（TOV%）。",
-      en: "Right = higher usage, up = more turnovers (TOV%).",
+      ja: "右ほど平均得点が高く、上ほど毎試合の得点がぶれない。",
+      en: "Right = more points, up = steadier game to game.",
     },
-    x: { metric: "usg", label: { ja: "USG%", en: "USG%" }, format: "pct" },
-    y: { metric: "tov_pct", label: { ja: "TOV%（上ほど多い）", en: "TOV% (higher = up)" }, format: "pct" },
+    x: { metric: "pts", label: { ja: "平均得点", en: "PTS" }, format: "one" },
+    y: {
+      metric: "pts_sd",
+      label: { ja: "得点の振れ幅（上ほど小さい）", en: "PTS SWING (smaller = up)" },
+      format: "one",
+      invert: true,
+    },
     volume: "pts",
     volumeLabel: { ja: "得点", en: "PTS" },
     quadrants: {
-      tr: { ja: "ハイリスク", en: "HIGH RISK" },
-      tl: { ja: "ミス多め", en: "LOOSE" },
-      br: { ja: "安全運転", en: "SAFE HANDS" },
-      bl: { ja: "ミス少なめ", en: "TIDY" },
+      tr: { ja: "計算できるエース", en: "STEADY STAR" },
+      tl: { ja: "堅実", en: "RELIABLE" },
+      br: { ja: "当たり外れ型", en: "BOOM OR BUST" },
+      bl: { ja: "波がある", en: "STREAKY" },
     },
   },
   {
-    id: "riskBrick",
-    risk: true,
-    label: { ja: "打ち続ける", en: "BRICKS" },
+    id: "fouls",
+    label: { ja: "ファウル", en: "FOULS" },
     hint: {
-      ja: "右ほど多く打ち、上ほど効率が低い（TS%）。",
-      en: "Right = more shots, up = less efficient (TS%).",
+      ja: "右ほど長く出て、上ほどファウルが少ない（36 分あたり）。",
+      en: "Right = more minutes, up = fewer fouls per 36.",
     },
-    x: { metric: "fga", label: { ja: "FGA / 試合", en: "FGA / G" }, format: "one" },
+    x: { metric: "min", label: { ja: "出場時間", en: "MIN" }, format: "one" },
     y: {
-      metric: "ts_pct",
-      label: { ja: "TS%（上ほど低い）", en: "TS% (lower = up)" },
-      format: "pct",
+      metric: "pf36",
+      label: { ja: "36 分あたりファウル（上ほど少ない）", en: "PF / 36 (fewer = up)" },
+      format: "one",
       invert: true,
     },
-    volume: "fga",
-    volumeLabel: { ja: "FG 試投", en: "FGA" },
-    quadrants: {
-      tr: { ja: "レンガ職人", en: "BRICKLAYER" },
-      tl: { ja: "効率に課題", en: "INEFFICIENT" },
-      br: { ja: "効率よく量産", en: "EFFICIENT VOLUME" },
-      bl: { ja: "控えめ", en: "LOW VOLUME" },
-    },
-  },
-  {
-    id: "riskDef",
-    risk: true,
-    label: { ja: "守備の穴", en: "DEF HOLE" },
-    hint: {
-      ja: "右ほど出場中の失点が多く、上ほどマーク相手に決められる。",
-      en: "Right = team allows more on court, up = man scores more on him.",
-    },
-    x: { metric: "drtg", label: { ja: "出場時 DRtg（右ほど多い）", en: "ON DRtg (higher = right)" }, format: "one" },
-    y: { metric: "matchup_fg_pct", label: { ja: "相手 FG%（上ほど高い）", en: "OPP FG% (higher = up)" }, format: "pct" },
     volume: "min",
     volumeLabel: { ja: "出場時間", en: "MIN" },
     quadrants: {
-      tr: { ja: "狙われ役", en: "TARGETED" },
-      tl: { ja: "1on1 で苦戦", en: "BEATEN 1ON1" },
-      br: { ja: "チーム守備に苦戦", en: "TEAM D WOES" },
-      bl: { ja: "守備は安定", en: "SOLID" },
-    },
-  },
-  {
-    id: "riskFt",
-    risk: true,
-    label: { ja: "FT の取りこぼし", en: "FT MISSES" },
-    hint: {
-      ja: "右ほどフリースローを多く打ち、上ほど外す（FT%）。",
-      en: "Right = more free throws, up = misses more (FT%).",
-    },
-    x: { metric: "fta", label: { ja: "FTA / 試合", en: "FTA / G" }, format: "one" },
-    y: {
-      metric: "ft_pct",
-      label: { ja: "FT%（上ほど低い）", en: "FT% (lower = up)" },
-      format: "pct",
-      invert: true,
-    },
-    volume: "fta",
-    volumeLabel: { ja: "FT 試投", en: "FTA" },
-    quadrants: {
-      tr: { ja: "ハック候補", en: "HACK TARGET" },
-      tl: { ja: "FT に課題", en: "FT WOES" },
-      br: { ja: "確実に決める", en: "AUTOMATIC" },
-      bl: { ja: "控えめ", en: "LOW VOLUME" },
+      tr: { ja: "クリーンな主力", en: "CLEAN STARTER" },
+      tl: { ja: "クリーン", en: "CLEAN" },
+      br: { ja: "ファウルトラブル型", en: "FOUL TROUBLE" },
+      bl: { ja: "ファウル多め", en: "HACKER" },
     },
   },
 ];
