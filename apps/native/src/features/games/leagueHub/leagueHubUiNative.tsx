@@ -5,6 +5,7 @@ import { getTeamAbbrBadgeColor } from "../../../../../../lib/team-colors";
 import type { LeagueHubAxisFormat } from "../../../../../../lib/nba/leagueHub/leagueHubScatterPresets";
 import { CYBER_TAB_CYAN } from "../../rankings/CyberSlantedTabNative";
 import { METRIC_FONT, RANK_DISPLAY_FONT } from "../../rankings/rankingsUiTheme";
+import TeamAbbrBadgeNative from "../TeamAbbrBadgeNative";
 
 export type HubLang = "ja" | "en";
 
@@ -160,7 +161,13 @@ export function HubRow({
       ]}
     >
       {rank != null ? <Text style={styles.rowRank}>{rank}</Text> : null}
-      <View style={[styles.rowDot, { backgroundColor: ink }]} />
+      {kind === "team" ? (
+        <View style={[styles.rowSquare, { backgroundColor: ink }]} />
+      ) : (
+        <View style={styles.rowBadge}>
+          <TeamAbbrBadgeNative teamId={teamId} />
+        </View>
+      )}
       <View style={styles.rowNameCol}>
         <Text
           style={[styles.rowName, kind === "team" ? teamNameStyle : playerNameStyle]}
@@ -168,9 +175,15 @@ export function HubRow({
         >
           {name}
         </Text>
-        <Text style={styles.rowSub} numberOfLines={1}>
-          {sub ? `${teamAbbr(teamId)} · ${sub}` : teamAbbr(teamId)}
-        </Text>
+        {kind === "team" ? (
+          <Text style={styles.rowSub} numberOfLines={1}>
+            {sub ? `${teamAbbr(teamId)} · ${sub}` : teamAbbr(teamId)}
+          </Text>
+        ) : sub ? (
+          <Text style={styles.rowSub} numberOfLines={1}>
+            {sub}
+          </Text>
+        ) : null}
       </View>
       <View style={styles.rowValueCol}>
         <Text style={styles.rowValue}>{value}</Text>
@@ -222,9 +235,6 @@ export const teamNameStyle = {
 
 /** 選手リーダー表 `tdPlayer` と同じ */
 export const playerNameStyle = { ...teamNameStyle, letterSpacing: 0.4 };
-
-/** SVG ラベル用（散布図・コート） */
-export const NAME_SVG_FONT = "Oxanium_600SemiBold";
 
 export const hubStyles = StyleSheet.create({
   card: {
@@ -331,10 +341,12 @@ const styles = StyleSheet.create({
     width: 18,
     textAlign: "center",
   },
-  rowDot: {
+  rowSquare: {
     width: 8,
     height: 8,
-    borderRadius: 4,
+  },
+  rowBadge: {
+    paddingHorizontal: 2,
   },
   rowNameCol: {
     flex: 1,
