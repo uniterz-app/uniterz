@@ -90,7 +90,7 @@ export const LEAGUE_HUB_PLAYER_SCATTER_PRESETS: readonly LeagueHubPlayerScatterP
       tr: { ja: "ペイントビースト", en: "PAINT BEAST" },
       tl: { ja: "フィニッシャー", en: "FINISHER" },
       br: { ja: "インサイドスコアラー", en: "INSIDE SCORER" },
-      bl: { ja: "ペリメーター", en: "PERIMETER" },
+      bl: { ja: "ペイント控えめ", en: "LIGHT PAINT" },
     },
   },
   {
@@ -131,7 +131,7 @@ export const LEAGUE_HUB_PLAYER_SCATTER_PRESETS: readonly LeagueHubPlayerScatterP
       tr: { ja: "スラッシャー", en: "SLASHER" },
       tl: { ja: "セレクティブドライバー", en: "SELECTIVE DRIVER" },
       br: { ja: "ボリュームドライバー", en: "VOLUME DRIVER" },
-      bl: { ja: "ノンドライバー", en: "NON-DRIVER" },
+      bl: { ja: "ドライブ控えめ", en: "LIGHT DRIVER" },
     },
   },
   {
@@ -167,7 +167,7 @@ export const LEAGUE_HUB_PLAYER_SCATTER_PRESETS: readonly LeagueHubPlayerScatterP
       tr: { ja: "ファウルドローワー", en: "FOUL DRAWER" },
       tl: { ja: "ピュアシューター", en: "PURE SHOOTER" },
       br: { ja: "アタッカー", en: "ATTACKER" },
-      bl: { ja: "ノンアタッカー", en: "NON-ATTACKER" },
+      bl: { ja: "FT に課題", en: "FT WOES" },
     },
   },
   {
@@ -207,8 +207,8 @@ export const LEAGUE_HUB_PLAYER_SCATTER_PRESETS: readonly LeagueHubPlayerScatterP
     quadrants: {
       tr: { ja: "ディフェンスアンカー", en: "ANCHOR" },
       tl: { ja: "ロックダウン", en: "LOCKDOWN" },
-      br: { ja: "ボールハンター", en: "BALL HAWK" },
-      bl: { ja: "オフェンス型", en: "OFFENSE FIRST" },
+      br: { ja: "ギャンブラー", en: "GAMBLER" },
+      bl: { ja: "ハッスル型", en: "HUSTLER" },
     },
   },
   {
@@ -249,7 +249,7 @@ export const LEAGUE_HUB_PLAYER_SCATTER_PRESETS: readonly LeagueHubPlayerScatterP
       tr: { ja: "ツーウェイ", en: "TWO-WAY" },
       tl: { ja: "ディフェンス型", en: "DEFENSE FIRST" },
       br: { ja: "オフェンス型", en: "OFFENSE FIRST" },
-      bl: { ja: "苦しい時間帯", en: "TOUGH MINUTES" },
+      bl: { ja: "苦戦中", en: "STRUGGLING" },
     },
   },
   {
@@ -266,7 +266,7 @@ export const LEAGUE_HUB_PLAYER_SCATTER_PRESETS: readonly LeagueHubPlayerScatterP
     quadrants: {
       tr: { ja: "クローザー", en: "CLOSER" },
       tl: { ja: "X ファクター", en: "X-FACTOR" },
-      br: { ja: "ハイユーセージ", en: "HIGH USAGE" },
+      br: { ja: "ボリュームスコアラー", en: "VOLUME SCORER" },
       bl: { ja: "サポート", en: "SUPPORT" },
     },
   },
