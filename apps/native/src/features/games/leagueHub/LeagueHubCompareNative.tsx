@@ -1,4 +1,4 @@
-/** スタイルマップの 2 人比較。指標ごとに左右へ伸びる棒（リーグ内の位置）と勝ち数 */
+/** スタイルマップの 2 人比較。指標ごとに左右へ伸びる棒（リーグ内の位置） */
 import { useMemo } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import type { LeagueHubAxisFormat } from "../../../../../../lib/nba/leagueHub/leagueHubScatterPresets";
@@ -89,8 +89,6 @@ export default function LeagueHubCompareNative({
       }),
     [a, b, players]
   );
-  const winsA = rows.filter((r) => r.win === -1).length;
-  const winsB = rows.filter((r) => r.win === 1).length;
 
   return (
     <HubShareSectionNative title="VS" stamp={stamp} lang={lang}>
@@ -98,8 +96,6 @@ export default function LeagueHubCompareNative({
         a={a}
         b={b}
         rows={rows}
-        winsA={winsA}
-        winsB={winsB}
         ja={ja}
         playersCount={players.length}
         onClose={onClose}
@@ -112,8 +108,6 @@ function CompareBody({
   a,
   b,
   rows,
-  winsA,
-  winsB,
   ja,
   playersCount,
   onClose,
@@ -121,8 +115,6 @@ function CompareBody({
   a: LeagueHubPlayer;
   b: LeagueHubPlayer;
   rows: Array<CompareRow & { va?: number; vb?: number; win: number; pa: number; pb: number }>;
-  winsA: number;
-  winsB: number;
   ja: boolean;
   playersCount: number;
   onClose: () => void;
@@ -131,13 +123,9 @@ function CompareBody({
   return (
     <View>
       <View style={styles.head}>
-        <PlayerHead p={a} align="left" />
-        <View style={styles.score}>
-          <Text style={[styles.scoreNum, winsA > winsB ? styles.scoreWin : null]}>{winsA}</Text>
-          <Text style={styles.scoreDash}>–</Text>
-          <Text style={[styles.scoreNum, winsB > winsA ? styles.scoreWin : null]}>{winsB}</Text>
-        </View>
-        <PlayerHead p={b} align="right" />
+        <PlayerHead p={a} />
+        <View style={styles.headGap} />
+        <PlayerHead p={b} />
       </View>
       {rows.map((r) => (
         <View key={r.metric} style={styles.row}>
@@ -170,8 +158,8 @@ function CompareBody({
       ))}
       <Text style={styles.foot}>
         {ja
-          ? `棒の長さはリーグ ${playersCount} 人の中の位置。TOV% と DRtg は低いほど良い。`
-          : `Bars = position among ${playersCount} players. Lower TOV% and DRtg are better.`}
+          ? `棒はリーグ ${playersCount} 人の中の位置。長いほど上位（端まで伸びたら 1 位）。TOV% と DRtg は低いほど上位。`
+          : `Bars = rank among ${playersCount} players. Longer is better (full = #1). Lower TOV% and DRtg rank higher.`}
       </Text>
       {capturing ? null : (
         <Pressable onPress={onClose} hitSlop={8} style={styles.close}>
@@ -182,11 +170,10 @@ function CompareBody({
   );
 }
 
-function PlayerHead({ p, align }: { p: LeagueHubPlayer; align: "left" | "right" }) {
-  const right = align === "right";
+function PlayerHead({ p }: { p: LeagueHubPlayer }) {
   return (
-    <View style={[styles.player, right ? styles.playerRight : null]}>
-      <View style={[styles.playerLine, right ? styles.playerLineRight : null]}>
+    <View style={styles.player}>
+      <View style={styles.playerLine}>
         <Text style={[styles.playerName, playerNameStyle]} numberOfLines={1}>
           {p.name}
         </Text>
@@ -205,20 +192,19 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 8,
   },
+  headGap: {
+    width: 58,
+  },
   player: {
     flex: 1,
     minWidth: 0,
-  },
-  playerRight: {
-    alignItems: "flex-end",
+    alignItems: "center",
   },
   playerLine: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-  },
-  playerLineRight: {
-    flexDirection: "row-reverse",
+    maxWidth: "100%",
   },
   playerName: {
     color: "#fff",
@@ -231,25 +217,6 @@ const styles = StyleSheet.create({
     color: "rgba(255,255,255,0.45)",
     fontSize: 10,
     marginTop: 2,
-  },
-  score: {
-    flexDirection: "row",
-    alignItems: "baseline",
-    gap: 6,
-    paddingHorizontal: 10,
-  },
-  scoreNum: {
-    fontFamily: METRIC_FONT,
-    color: "rgba(255,255,255,0.5)",
-    fontSize: 22,
-    fontWeight: "800",
-  },
-  scoreWin: {
-    color: CYBER_TAB_CYAN,
-  },
-  scoreDash: {
-    color: "rgba(255,255,255,0.35)",
-    fontSize: 16,
   },
   row: {
     flexDirection: "row",
