@@ -450,12 +450,13 @@ function draftLabel(r: LeagueHubLadderRow, ja: boolean): string {
 
 type AwardId = "mvp" | "rookies" | "dpoy" | "sixth" | "mip";
 
-const AWARD_CHIPS: readonly { id: AwardId; label: string }[] = [
-  { id: "mvp", label: "MVP" },
-  { id: "rookies", label: "ROY" },
-  { id: "dpoy", label: "DPOY" },
-  { id: "sixth", label: "6MOY" },
-  { id: "mip", label: "MIP" },
+/** LADDER タブに上から並べる順 */
+const AWARD_SECTIONS: readonly { id: AwardId; title: string }[] = [
+  { id: "mvp", title: "MVP LADDER" },
+  { id: "rookies", title: "ROOKIE LADDER" },
+  { id: "dpoy", title: "DPOY LADDER" },
+  { id: "sixth", title: "SIXTH MAN LADDER" },
+  { id: "mip", title: "MIP LADDER" },
 ];
 
 const AWARD_FOOTNOTE: Record<AwardId, { ja: string; en: string }> = {
@@ -572,9 +573,8 @@ export default function LeagueHubPlayerPanelNative({ hub, lang, section, onSelec
             ? hub.counts.doubleDouble
             : hub.counts.tripleDouble;
   const isStreak = countId === "pts20" || countId === "ddStreak";
-  const [award, setAward] = useState<AwardId>("mvp");
-  const awardRows = (award === "rookies" ? hub.rookies : award === "mvp" ? hub.mvp : hub[award]) ?? [];
-  const awardPrev = hub.ladderPrev?.[award];
+  const ladderRows = (award: AwardId) =>
+    (award === "rookies" ? hub.rookies : award === "mvp" ? hub.mvp : hub[award]) ?? [];
   /** 切り替えてもマップの追加選手などを残すため、隠すだけでアンマウントしない */
   const shown = (id: LeagueHubPlayerSection) => (section === id ? null : styles.hidden);
 
@@ -604,26 +604,34 @@ export default function LeagueHubPlayerPanelNative({ hub, lang, section, onSelec
       </View>
 
       <View style={shown("ladder")}>
-        <HubSection title="AWARD LADDERS">
-          <HubChips items={AWARD_CHIPS} value={award} onChange={setAward} />
-          {awardRows.length > 0 ? (
-            <HubCellHeader labels={awardCellLabels(award, ja)} caption={awardCellCaption(award, ja)} />
-          ) : null}
-          {awardRows.length === 0
-            ? noData(lang)
-            : awardRows.map((r, i) => (
-                <HubRow
-                  key={r.playerId}
-                  rank={i + 1}
-                  rankMove={ladderMove(r, i, awardPrev != null)}
-                  teamId={r.teamId}
-                  name={r.name}
-                  {...awardRowText(award, r, ja)}
-                  onPress={() => onSelectPlayer(r.playerId)}
+        {AWARD_SECTIONS.map(({ id: award, title }) => {
+          const rows = ladderRows(award);
+          const hasPrev = hub.ladderPrev?.[award] != null;
+          return (
+            <HubSection key={award} title={title}>
+              {rows.length > 0 ? (
+                <HubCellHeader
+                  labels={awardCellLabels(award, ja)}
+                  caption={awardCellCaption(award, ja)}
                 />
-              ))}
-          <Text style={hubStyles.footnote}>{AWARD_FOOTNOTE[award][ja ? "ja" : "en"]}</Text>
-        </HubSection>
+              ) : null}
+              {rows.length === 0
+                ? noData(lang)
+                : rows.map((r, i) => (
+                    <HubRow
+                      key={r.playerId}
+                      rank={i + 1}
+                      rankMove={ladderMove(r, i, hasPrev)}
+                      teamId={r.teamId}
+                      name={r.name}
+                      {...awardRowText(award, r, ja)}
+                      onPress={() => onSelectPlayer(r.playerId)}
+                    />
+                  ))}
+              <Text style={hubStyles.footnote}>{AWARD_FOOTNOTE[award][ja ? "ja" : "en"]}</Text>
+            </HubSection>
+          );
+        })}
       </View>
 
       <View style={shown("trend")}>
