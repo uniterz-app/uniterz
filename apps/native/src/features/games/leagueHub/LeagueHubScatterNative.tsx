@@ -44,7 +44,11 @@ type Props = {
   marker: "jersey" | "dot";
   selectedId: string | null;
   onSelect: (id: string | null) => void;
+  /** 各軸の両端に実データの最小・最大値を出す */
+  showRange?: boolean;
 };
+
+type RangeTick = { v: number; at: number };
 
 const PAD = { l: 6, r: 6, t: 8, b: 20 } as const;
 const DOT_R = 4.2;
@@ -78,6 +82,7 @@ export default function LeagueHubScatterNative({
   marker,
   selectedId,
   onSelect,
+  showRange = false,
 }: Props) {
   const [width, setWidth] = useState(0);
   const height = Math.round(width * (marker === "jersey" ? 0.95 : 1.05));
@@ -119,6 +124,25 @@ export default function LeagueHubScatterNative({
     const labelBoxes: Box[] = [
       { x0: PAD.l, y0: avgY - 14, x1: PAD.l + 46, y1: avgY - 1 },
     ];
+
+    const xTicks: RangeTick[] = [];
+    const yTicks: RangeTick[] = [];
+    if (showRange) {
+      const xs = points.map((p) => p.x);
+      const ys = points.map((p) => p.y);
+      const avgLabelW = (`AVG ${formatHubValue(dx.avg, xAxis.format)}`.length * 9 * 0.62) / 2 + 4;
+      for (const v of [Math.min(...xs), Math.max(...xs)]) {
+        const at = px(v);
+        const w = (formatHubValue(v, xAxis.format).length * 9 * 0.62) / 2;
+        if (Math.abs(at - avgX) > avgLabelW + w) xTicks.push({ v, at });
+      }
+      for (const v of [Math.min(...ys), Math.max(...ys)]) {
+        const at = py(v);
+        if (Math.abs(at - avgY) < 16) continue;
+        yTicks.push({ v, at });
+        labelBoxes.push({ x0: PAD.l, y0: at - 6, x1: PAD.l + 40, y1: at + 6 });
+      }
+    }
     const labels: Array<{ i: number; x: number; y: number; anchor: "start" | "middle" | "end" }> =
       [];
     for (const { i, sel } of order) {
@@ -169,8 +193,19 @@ export default function LeagueHubScatterNative({
       }
     }
 
-    return { dx, dy, px, py, placed, avgX, avgY, labels, fontSize };
-  }, [width, points, xAxis.invert, yAxis.invert, plotW, plotH, marker, selectedId]);
+    return { dx, dy, px, py, placed, avgX, avgY, labels, fontSize, xTicks, yTicks };
+  }, [
+    width,
+    points,
+    xAxis.invert,
+    xAxis.format,
+    yAxis.invert,
+    plotW,
+    plotH,
+    marker,
+    selectedId,
+    showRange,
+  ]);
 
   const hasSelection = selectedId != null && points.some((p) => p.id === selectedId);
 
@@ -266,6 +301,50 @@ export default function LeagueHubScatterNative({
               >
                 {formatHubValue(layout.dy.avg, yAxis.format)}
               </SvgText>
+              {layout.xTicks.map((t, i) => (
+                <G key={`xt-${i}`}>
+                  <Line
+                    x1={t.at}
+                    x2={t.at}
+                    y1={PAD.t + plotH}
+                    y2={PAD.t + plotH + 3}
+                    stroke="rgba(255,255,255,0.35)"
+                    strokeWidth={1}
+                  />
+                  <SvgText
+                    x={t.at}
+                    y={PAD.t + plotH + 14}
+                    textAnchor="middle"
+                    fontSize={9}
+                    fill="rgba(255,255,255,0.4)"
+                    fontFamily={METRIC_FONT}
+                  >
+                    {formatHubValue(t.v, xAxis.format)}
+                  </SvgText>
+                </G>
+              ))}
+              {layout.yTicks.map((t, i) => (
+                <G key={`yt-${i}`}>
+                  <Line
+                    x1={PAD.l}
+                    x2={PAD.l + 3}
+                    y1={t.at}
+                    y2={t.at}
+                    stroke="rgba(255,255,255,0.35)"
+                    strokeWidth={1}
+                  />
+                  <SvgText
+                    x={PAD.l + 5}
+                    y={t.at + 3}
+                    textAnchor="start"
+                    fontSize={9}
+                    fill="rgba(255,255,255,0.4)"
+                    fontFamily={METRIC_FONT}
+                  >
+                    {formatHubValue(t.v, yAxis.format)}
+                  </SvgText>
+                </G>
+              ))}
               {marker === "dot"
                 ? layout.placed.map((m) => {
                     const sel = m.p.id === selectedId;

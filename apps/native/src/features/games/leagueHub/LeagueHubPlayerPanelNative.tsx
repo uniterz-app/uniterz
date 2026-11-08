@@ -133,6 +133,7 @@ function StyleMap({
           marker="dot"
           selectedId={selected}
           onSelect={setSelected}
+          showRange
         />
       )}
       {sel ? (
