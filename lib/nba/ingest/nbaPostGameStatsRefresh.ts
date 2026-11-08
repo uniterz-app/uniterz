@@ -5,7 +5,8 @@
  * 2 段階:
  *   team   … 順位（レギュラーのみ）とチーム平均の試合数が Firestore の終了試合数に追いついた
  *   player … 両チームの最長出場選手のシーズン平均がその試合を含んだ（`/stats` の出場数と一致）
- * どちらかが新しく揃ったら `runNbaStatsSnapshotSteps` + 直近試合ログを 1 回だけ回す。
+ * どちらかが新しく揃ったら `runNbaStatsSnapshotSteps` + 直近試合ログを 1 回だけ回す
+ * （全ステップは 30 分に 1 回まで。league hub は player が揃ったときだけ）。
  * 進捗は `nbaPostGameStatsRefresh/{bdlGameId}`（games doc には書かない — onGameFinalV2 を起こさない）。
  * final から 6 時間で諦める（日次 18:00 が拾う）。
  */
@@ -35,6 +36,10 @@ const GIVE_UP_AFTER_FINAL_MS = 6 * 60 * 60 * 1000;
 const ASSUMED_GAME_LENGTH_MS = 2.5 * 60 * 60 * 1000;
 /** これが通れば反映済みとみなす（ショットゾーン等の失敗で 10 分ごとに全ステップを回し続けない） */
 const CORE_STEP_IDS = new Set(["league-stats", "standings", "team-game-logs"]);
+/** 全ステップは 1 回で数千 doc 読む。試合ごと・失敗のたびに回さず、この間隔でまとめる */
+const MIN_RUN_INTERVAL_MS = 30 * 60 * 1000;
+/** 前回の全ステップ実行時刻（`{ lastRunAtMs }`） */
+const META_DOC_ID = "_meta";
 
 type Phase = "regular" | "playoffs";
 
@@ -280,21 +285,31 @@ export async function runNbaPostGameStatsRefresh(
     evaluated.push({ c, prev, teamReady, playerReady });
   }
 
-  const needRun = evaluated.some(
-    (e) =>
-      (e.teamReady && !e.prev?.teamRefreshedAtMs) ||
-      (e.playerReady && !e.prev?.playerRefreshedAtMs)
+  const playerNewlyReady = evaluated.some(
+    (e) => e.playerReady && !e.prev?.playerRefreshedAtMs
   );
+  const wantRun =
+    playerNewlyReady ||
+    evaluated.some((e) => e.teamReady && !e.prev?.teamRefreshedAtMs);
+
+  const metaRef = col.doc(META_DOC_ID);
+  const lastRunAtMs = wantRun
+    ? num((await metaRef.get()).get("lastRunAtMs"))
+    : 0;
+  const needRun = wantRun && nowMs - lastRunAtMs >= MIN_RUN_INTERVAL_MS;
 
   let steps: NbaStatsDailyIngestStepResult[] | undefined;
   let refreshedOk = false;
   if (needRun) {
+    await metaRef.set({ lastRunAtMs: nowMs });
     const seasonKeys = [...new Set(evaluated.map((e) => e.c.seasonKey))];
     steps = [];
     for (const seasonKey of seasonKeys) {
       steps.push(...(await runNbaStatsSnapshotSteps(db, seasonKey)));
       steps.push(await runNbaRecentPlayerGameLogsStep(db, seasonKey));
-      steps.push(await runNbaLeagueHubStep(db, seasonKey));
+      if (playerNewlyReady) {
+        steps.push(await runNbaLeagueHubStep(db, seasonKey));
+      }
     }
     refreshedOk = steps
       .filter((s) => CORE_STEP_IDS.has(s.id))

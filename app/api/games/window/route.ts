@@ -31,8 +31,9 @@ export async function GET(req: Request) {
     const toDateKey = (url.searchParams.get("to") ?? "").trim();
     const rawAnchorDateKey = (url.searchParams.get("anchor") ?? "").trim();
     const pmRaw = url.searchParams.get("pm");
-    const plusMinus = pmRaw
-      ? Math.max(0, Math.min(31, Number(pmRaw) || GAMES_WINDOW_PLUS_MINUS_DEFAULT))
+    const pmNum = pmRaw ? Number(pmRaw) : NaN;
+    const plusMinus = Number.isFinite(pmNum)
+      ? Math.max(0, Math.min(31, Math.trunc(pmNum)))
       : GAMES_WINDOW_PLUS_MINUS_DEFAULT;
     const anchorDateKey =
       plusMinus >= 3
@@ -113,8 +114,9 @@ export async function GET(req: Request) {
         ),
       cacheKey,
       {
-        // スコアの毎分更新では捨てない。日程の取り込みと試合終了のときだけ tag を捨てる
-        revalidate: 300,
+        // スコアの毎分更新では捨てない。日程の取り込みと試合終了のときだけ tag を捨てる。
+        // 時間切れはカードの予想比率（market）の鮮度だけ。キーごとに最大 200 件読むので短くしない
+        revalidate: 600,
         tags: [
           "games-window",
           `games-window:${league}`,

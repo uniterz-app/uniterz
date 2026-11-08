@@ -6,6 +6,7 @@
  * - `nba-discipline`: league-team/player-stats・team/player-detail の CDN（`Vercel-Cache-Tag`）
  */
 import { revalidateTag } from "next/cache";
+import { revalidateNbaDocCache } from "@/lib/nba/nbaPublicReadDb";
 
 export const NBA_DISCIPLINE_CDN_TAG = "nba-discipline";
 
@@ -15,6 +16,7 @@ export const NBA_DISCIPLINE_CDN_TAG_HEADER = {
 } as const;
 
 export function revalidateNbaDisciplineApiCache(): void {
+  revalidateNbaDocCache(["nbaDiscipline"]);
   try {
     revalidateTag("nba-league-team-stats", {});
     revalidateTag(NBA_DISCIPLINE_CDN_TAG, "max");

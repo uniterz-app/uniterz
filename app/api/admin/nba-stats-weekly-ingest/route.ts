@@ -2,6 +2,7 @@ export const runtime = "nodejs";
 export const maxDuration = 300;
 
 import { NextResponse } from "next/server";
+import { revalidateNbaDocCache } from "@/lib/nba/nbaPublicReadDb";
 import { getAdminDb } from "@/lib/firebaseAdmin";
 import { requireAdminUid } from "@/lib/admin/requireAdminUid";
 import { checkJobSecret } from "@/lib/security/assertJobSecret";
@@ -36,6 +37,7 @@ export async function POST(req: Request) {
       contractMaxPlayers: body.contractMaxPlayers,
     });
 
+    revalidateNbaDocCache();
     return NextResponse.json(result, { status: result.ok ? 200 : 207 });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : String(e);

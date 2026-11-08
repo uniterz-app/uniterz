@@ -6,6 +6,7 @@ import {
 } from "@/lib/groupBattles/server/firestore";
 import { acceptSquadInvite } from "@/lib/groupBattles/server/invites";
 import { jsonErr, jsonOk, mapAuthError } from "@/lib/groupBattles/server/http";
+import { revalidateGroupBattleSharedCache } from "@/lib/groupBattles/server/sharedViewCache";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -21,6 +22,7 @@ export async function POST(req: Request, ctx: Ctx) {
     assertRecruitingOrThrow(battle.phase);
 
     await acceptSquadInvite({ db: adminDb, battleId, inviteId, uid });
+    revalidateGroupBattleSharedCache();
     return jsonOk({ decision: "accepted" as const });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);

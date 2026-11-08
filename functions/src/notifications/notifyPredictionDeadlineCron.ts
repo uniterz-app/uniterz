@@ -47,6 +47,7 @@ const BUCKETS: DeadlineBucket[] = [
 type GameRow = {
   id: string;
   startMs: number;
+  data: FirebaseFirestore.DocumentData;
   predictorUids: Set<string>;
   matchup: ReturnType<typeof resolveGameMatchupCopy>;
 };
@@ -78,30 +79,42 @@ export async function runNotifyPredictionDeadlineCron(): Promise<void> {
   const deadlineUntil = new Date(now + 70 * 60 * 1000);
   const slateUntil = new Date(now + ACTIVE_SLATE_MS);
 
-  const [deadlineSnaps, slateSnaps] = await Promise.all([
-    Promise.all(
-      PUSH_LEAGUES.map((league) =>
-        firestore
-          .collection("games")
-          .where("league", "==", league)
-          .where("startAtJst", ">=", Timestamp.fromMillis(now))
-          .where("startAtJst", "<=", Timestamp.fromDate(deadlineUntil))
-          .limit(LOOKAHEAD_LIMIT)
-          .get()
-      )
-    ),
-    Promise.all(
-      PUSH_LEAGUES.map((league) =>
-        firestore
-          .collection("games")
-          .where("league", "==", league)
-          .where("startAtJst", ">=", Timestamp.fromMillis(now))
-          .where("startAtJst", "<=", Timestamp.fromDate(slateUntil))
-          .limit(ACTIVE_SLATE_LIMIT)
-          .get()
-      )
-    ),
-  ]);
+  const deadlineSnaps = await Promise.all(
+    PUSH_LEAGUES.map((league) =>
+      firestore
+        .collection("games")
+        .where("league", "==", league)
+        .where("startAtJst", ">=", Timestamp.fromMillis(now))
+        .where("startAtJst", "<=", Timestamp.fromDate(deadlineUntil))
+        .limit(LOOKAHEAD_LIMIT)
+        .get()
+    )
+  );
+
+  const hasDueBucket = deadlineSnaps
+    .flatMap((snap) => snap.docs)
+    .some((doc) => {
+      const data = doc.data();
+      if (data.final === true) return false;
+      const remaining = startMsFromGame(data) - now;
+      return BUCKETS.some(
+        (b) =>
+          remaining >= b.minMs && remaining <= b.maxMs && !data[b.field]
+      );
+    });
+  if (!hasDueBucket) return;
+
+  const slateSnaps = await Promise.all(
+    PUSH_LEAGUES.map((league) =>
+      firestore
+        .collection("games")
+        .where("league", "==", league)
+        .where("startAtJst", ">=", Timestamp.fromMillis(now))
+        .where("startAtJst", "<=", Timestamp.fromDate(slateUntil))
+        .limit(ACTIVE_SLATE_LIMIT)
+        .get()
+    )
+  );
 
   const slateGames = slateSnaps
     .flat()
@@ -138,6 +151,7 @@ export async function runNotifyPredictionDeadlineCron(): Promise<void> {
       deadlineGames.push({
         id: doc.id,
         startMs,
+        data,
         predictorUids:
           predictorsByGame.get(doc.id) ?? uidSetFromPredictorUids(data.predictorUids),
         matchup: resolveGameMatchupCopy(data),
@@ -154,14 +168,8 @@ export async function runNotifyPredictionDeadlineCron(): Promise<void> {
     });
     if (gamesInBucket.length === 0) continue;
 
-    // 既にこのバケツで通知済みの試合は除外（doc 再読）
-    const pendingGames: GameRow[] = [];
-    for (const game of gamesInBucket) {
-      const fresh = await firestore.doc(`games/${game.id}`).get();
-      const data = fresh.data();
-      if (!data || data[bucket.field]) continue;
-      pendingGames.push(game);
-    }
+    // 既にこのバケツで通知済みの試合は除外（直前のクエリ結果で判定）
+    const pendingGames = gamesInBucket.filter((g) => !g.data[bucket.field]);
     if (pendingGames.length === 0) continue;
 
     type Pending = { games: GameRow[] };

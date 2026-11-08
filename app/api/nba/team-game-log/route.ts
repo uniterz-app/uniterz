@@ -1,7 +1,7 @@
 export const runtime = "nodejs";
 
 import { NextResponse } from "next/server";
-import { getAdminDb } from "@/lib/firebaseAdmin";
+import { getNbaPublicReadDb } from "@/lib/nba/nbaPublicReadDb";
 import { nbaStatsSnapshotCacheControl } from "@/lib/nba/nbaStatsSnapshotCacheControl";
 import {
   loadTeamGameLog,
@@ -28,7 +28,7 @@ export async function GET(req: Request) {
       );
     }
 
-    const payload = await loadTeamGameLog(getAdminDb(), season, team);
+    const payload = await loadTeamGameLog(getNbaPublicReadDb(), season, team);
     return NextResponse.json(payload, {
       headers: {
         "Cache-Control": nbaStatsSnapshotCacheControl({

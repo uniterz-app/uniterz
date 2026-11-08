@@ -18,7 +18,9 @@ export async function loadLiveGameCardPatches(
     MAX_IDS
   );
   if (unique.length === 0) return [];
-  const snaps = await db.getAll(...unique.map((id) => db.collection("games").doc(id)));
+  const snaps = await db.getAll(...unique.map((id) => db.collection("games").doc(id)), {
+    fieldMask: ["homeScore", "awayScore", "score", "status", "periodLabel", "clock", "final"],
+  });
   const patches: LiveGameCardPatch[] = [];
   snaps.forEach((snap, index) => {
     if (!snap.exists) return;

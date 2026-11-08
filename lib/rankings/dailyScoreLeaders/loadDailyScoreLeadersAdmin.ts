@@ -51,6 +51,7 @@ export async function loadDailyScoreLeadersAdmin(
     .where("startAtJst", "<", Timestamp.fromDate(end))
     .orderBy("startAtJst", "asc")
     .limit(40)
+    .select("postponed", "resultComputedAtV2", "seasonPhase", "startAtJst")
     .get();
 
   const games = gamesSnap.docs

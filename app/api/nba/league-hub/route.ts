@@ -3,7 +3,7 @@ export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
 import { clientErrorResponse } from "@/lib/security/clientErrorResponse";
-import { getAdminDb } from "@/lib/firebaseAdmin";
+import { getNbaPublicReadDb } from "@/lib/nba/nbaPublicReadDb";
 import { loadNbaLeagueHubSnapshot } from "@/lib/nba/leagueHub/loadNbaLeagueHubSnapshot";
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
 
@@ -13,7 +13,7 @@ import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
  */
 export async function GET() {
   try {
-    const payload = await loadNbaLeagueHubSnapshot(getAdminDb(), CURRENT_NBA_SEASON_KEY);
+    const payload = await loadNbaLeagueHubSnapshot(getNbaPublicReadDb(), CURRENT_NBA_SEASON_KEY);
     return NextResponse.json(payload, {
       headers: {
         "Cache-Control": "public, s-maxage=300, stale-while-revalidate=1800",

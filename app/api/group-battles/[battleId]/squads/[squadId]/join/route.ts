@@ -21,6 +21,7 @@ import {
   getPendingJoinRequestsTx,
 } from "@/lib/groupBattles/server/firestore";
 import { jsonErr, jsonOk, mapAuthError } from "@/lib/groupBattles/server/http";
+import { revalidateGroupBattleSharedCache } from "@/lib/groupBattles/server/sharedViewCache";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -89,6 +90,7 @@ export async function POST(req: Request, ctx: Ctx) {
       cancelPendingJoinRequestsTx(tx, pendingSnap);
     });
 
+    revalidateGroupBattleSharedCache();
     return jsonOk({
       squadId,
       minMembers: GROUP_BATTLE_MIN_MEMBERS,

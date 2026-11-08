@@ -121,7 +121,8 @@ async function gameDateKeysByBdlId(
   const out = new Map<string, string>();
   if (bdlGameIds.length === 0) return out;
   const snaps = await db.getAll(
-    ...bdlGameIds.map((id) => db.collection("games").doc(nbaGameDocIdFromBdlId(Number(id))))
+    ...bdlGameIds.map((id) => db.collection("games").doc(nbaGameDocIdFromBdlId(Number(id)))),
+    { fieldMask: ["startAtJst"] }
   );
   snaps.forEach((snap, i) => {
     const start = snap.exists ? startOf(snap.data() as Record<string, unknown>) : null;

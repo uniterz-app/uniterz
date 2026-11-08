@@ -7,7 +7,6 @@ import {
   isActiveWinStreakRankingEligible,
   loadAuthorUidsSettledToday,
 } from "./activeWinStreakRanking";
-import { loadUidsWhoPredictedOnDateFromDaily } from "../notifications/loadUidsWhoPredictedOnDateFromDaily";
 import {
   cumulativeStatsDocsToMap,
   loadCumulativeStatsForRankingSnapshot,
@@ -448,21 +447,34 @@ function computeMetricValueDelta(
  * For each uid, use the first existing rankSnapshotHistory doc when walking back
  * from startKey (usually yesterday) up to maxLookbackDays days.
  */
-async function fetchLatestPriorRankMapsForUids(
+/**
+ * 1 回の遡りで「最初に存在する順位 doc」と「最初に metricValues を持つ doc」を同時に拾う。
+ * 同じ履歴 doc を 2 回 getAll しない。
+ */
+async function fetchLatestPriorHistoryForUids(
   uids: string[],
   startKey: string,
   maxLookbackDays: number
-): Promise<Map<string, PriorRankBlock | null>> {
-  const out = new Map<string, PriorRankBlock | null>();
-  if (uids.length === 0) return out;
+): Promise<{
+  prevByUid: Map<string, PriorRankBlock | null>;
+  priorMetricByUid: Map<string, HistoryMetricValuesBlock | null>;
+}> {
+  const prevByUid = new Map<string, PriorRankBlock | null>();
+  const priorMetricByUid = new Map<string, HistoryMetricValuesBlock | null>();
+  if (uids.length === 0) return { prevByUid, priorMetricByUid };
 
-  const pending = new Set(uids);
+  const pendingRank = new Set(uids);
+  const pendingMetric = new Set(uids);
   let key = startKey;
   const firestore = db();
   const CHUNK = 200;
 
-  for (let day = 0; day < maxLookbackDays && pending.size > 0; day++) {
-    const chunkList = [...pending];
+  for (
+    let day = 0;
+    day < maxLookbackDays && (pendingRank.size > 0 || pendingMetric.size > 0);
+    day++
+  ) {
+    const chunkList = [...new Set([...pendingRank, ...pendingMetric])];
     for (let i = 0; i < chunkList.length; i += CHUNK) {
       const chunk = chunkList.slice(i, i + CHUNK);
       const refs = chunk.map((uid) =>
@@ -475,73 +487,31 @@ async function fetchLatestPriorRankMapsForUids(
       const snaps = await firestore.getAll(...refs);
       snaps.forEach((s, j) => {
         const uid = chunk[j]!;
-        if (!pending.has(uid)) return;
-        if (s.exists) {
-          const d = s.data() as {
-            seasons?: Partial<Record<string, PhaseRankMap>>;
-          };
-          out.set(uid, {
+        if (!s.exists) return;
+        const d = s.data() as {
+          seasons?: Partial<Record<string, PhaseRankMap>>;
+          metricValues?: HistoryMetricValuesBlock;
+        };
+        if (pendingRank.has(uid)) {
+          prevByUid.set(uid, {
             seasons: (d?.seasons ?? {}) as Partial<
               Record<string, PhaseRankMap>
             >,
           });
-          pending.delete(uid);
+          pendingRank.delete(uid);
+        }
+        if (pendingMetric.has(uid) && d?.metricValues) {
+          priorMetricByUid.set(uid, d.metricValues);
+          pendingMetric.delete(uid);
         }
       });
     }
     key = subtractOneDayFromDateKeyJST(key);
   }
 
-  for (const uid of pending) {
-    out.set(uid, null);
-  }
-  return out;
-}
-
-async function fetchLatestPriorMetricValuesForUids(
-  uids: string[],
-  startKey: string,
-  maxLookbackDays: number
-): Promise<Map<string, HistoryMetricValuesBlock | null>> {
-  const out = new Map<string, HistoryMetricValuesBlock | null>();
-  if (uids.length === 0) return out;
-
-  const pending = new Set(uids);
-  let key = startKey;
-  const firestore = db();
-  const CHUNK = 200;
-
-  for (let day = 0; day < maxLookbackDays && pending.size > 0; day++) {
-    const chunkList = [...pending];
-    for (let i = 0; i < chunkList.length; i += CHUNK) {
-      const chunk = chunkList.slice(i, i + CHUNK);
-      const refs = chunk.map((uid) =>
-        firestore
-          .collection("cumulative_stats")
-          .doc(uid)
-          .collection(RANK_SNAPSHOT_HISTORY_SUBCOL)
-          .doc(key)
-      );
-      const snaps = await firestore.getAll(...refs);
-      snaps.forEach((s, j) => {
-        const uid = chunk[j]!;
-        if (!pending.has(uid)) return;
-        if (s.exists) {
-          const d = s.data() as { metricValues?: HistoryMetricValuesBlock };
-          if (d?.metricValues) {
-            out.set(uid, d.metricValues);
-            pending.delete(uid);
-          }
-        }
-      });
-    }
-    key = subtractOneDayFromDateKeyJST(key);
-  }
-
-  for (const uid of pending) {
-    out.set(uid, null);
-  }
-  return out;
+  for (const uid of pendingRank) prevByUid.set(uid, null);
+  for (const uid of pendingMetric) priorMetricByUid.set(uid, null);
+  return { prevByUid, priorMetricByUid };
 }
 
 /**
@@ -624,7 +594,10 @@ export async function buildCumulativeRankingSnapshot(
   const snap = await loadCumulativeStatsForRankingSnapshot(db());
   const statsByUid = cumulativeStatsDocsToMap(snap);
 
-  const nbaSettledTodayUids = await loadAuthorUidsSettledToday("nba");
+  const nbaSettledTodayUids =
+    METRICS.includes("activeWinStreak") && !streakAllEligible
+      ? await loadAuthorUidsSettledToday("nba")
+      : undefined;
   const livePlans = await loadActiveUserPlans(snap.docs.map((d) => d.id));
 
   /** uid → 現行シーズンの指標別順位 */
@@ -731,18 +704,11 @@ export async function buildCumulativeRankingSnapshot(
 
   const yesterdayKey = getYesterdayDateKeyJST();
   const topUids = [...topUidSet];
-  const [prevByUid, priorMetricByUid] = await Promise.all([
-    fetchLatestPriorRankMapsForUids(
-      topUids,
-      yesterdayKey,
-      RANK_DELTA_PRIOR_MAX_LOOKBACK_DAYS
-    ),
-    fetchLatestPriorMetricValuesForUids(
-      topUids,
-      yesterdayKey,
-      RANK_DELTA_PRIOR_MAX_LOOKBACK_DAYS
-    ),
-  ]);
+  const { prevByUid, priorMetricByUid } = await fetchLatestPriorHistoryForUids(
+    topUids,
+    yesterdayKey,
+    RANK_DELTA_PRIOR_MAX_LOOKBACK_DAYS
+  );
 
   for (const { metric, rows, totalCount } of seasonTop20Jobs) {
       const enriched: SnapshotRow[] = rows.map((row) => {
@@ -992,8 +958,6 @@ export async function buildCumulativeRankingSnapshot(
       { merge: true }
     );
 
-  const todayPredictorUids = await loadUidsWhoPredictedOnDateFromDaily(dateKey);
-
   return {
     ok: true,
     seasonKey,
@@ -1002,6 +966,5 @@ export async function buildCumulativeRankingSnapshot(
     historyDateKey: dateKey,
     rankDeltaBasisDateKey: yesterdayKey,
     snapshotGenerationMs: generationMs,
-    notifiedUids: todayPredictorUids,
   };
 }

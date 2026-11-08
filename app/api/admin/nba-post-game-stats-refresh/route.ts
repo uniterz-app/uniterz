@@ -7,6 +7,7 @@ import { requireAdminUid } from "@/lib/admin/requireAdminUid";
 import { checkJobSecret } from "@/lib/security/assertJobSecret";
 import { runNbaPostGameStatsRefresh } from "@/lib/nba/ingest/nbaPostGameStatsRefresh";
 import { revalidateNbaDisciplineApiCache } from "@/lib/nba/discipline/nbaDisciplineApiCache";
+import { revalidateNbaDocCache } from "@/lib/nba/nbaPublicReadDb";
 
 /**
  * POST /api/admin/nba-post-game-stats-refresh
@@ -21,7 +22,10 @@ export async function POST(req: Request) {
       await requireAdminUid(req);
     }
     const result = await runNbaPostGameStatsRefresh(getAdminDb());
-    if (result.ran) revalidateNbaDisciplineApiCache();
+    if (result.ran) {
+      revalidateNbaDisciplineApiCache();
+      revalidateNbaDocCache();
+    }
     return NextResponse.json(result, { status: result.ok ? 200 : 207 });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : String(e);

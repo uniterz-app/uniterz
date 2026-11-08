@@ -147,11 +147,25 @@ export async function sendExpoPushToUids(input: {
   }
 
   const uids = input.targets.map((t) => t.uid);
-  const [tokens, userContexts] = await Promise.all([
-    loadTokensForUids(uids),
-    loadUserPushContexts(uids),
-  ]);
+  const userContexts = await loadUserPushContexts(uids);
 
+  // 設定・プランで送らない人の pushTokens は読まない
+  const eligibleUids = uids.filter((uid) => {
+    const ctx = userContexts.get(uid);
+    if (!ctx || !isPushTypeEnabledForPrefs(ctx.prefs, input.type)) {
+      return false;
+    }
+    if (isPushTypeProOnly(input.type) && !ctx.isPro) return false;
+    if (input.predictionDeadlineMinutes != null) {
+      const deadlineMinutes = ctx.isPro
+        ? ctx.prefs.predictionDeadlineMinutes
+        : 30;
+      if (deadlineMinutes !== input.predictionDeadlineMinutes) return false;
+    }
+    return true;
+  });
+
+  const tokens = await loadTokensForUids(eligibleUids);
   if (tokens.length === 0) {
     return { sent: 0, skipped: input.targets.length };
   }
@@ -163,24 +177,7 @@ export async function sendExpoPushToUids(input: {
   const messageTokens: TokenRecord[] = [];
   for (const rec of tokens) {
     const ctx = userContexts.get(rec.uid);
-    if (
-      !ctx ||
-      !isPushTypeEnabledForPrefs(ctx.prefs, input.type)
-    ) {
-      continue;
-    }
-    if (isPushTypeProOnly(input.type) && !ctx.isPro) {
-      continue;
-    }
-    const deadlineMinutes = ctx.isPro
-      ? ctx.prefs.predictionDeadlineMinutes
-      : 30;
-    if (
-      input.predictionDeadlineMinutes != null &&
-      deadlineMinutes !== input.predictionDeadlineMinutes
-    ) {
-      continue;
-    }
+    if (!ctx) continue;
     const data = dataByUid.get(rec.uid) ?? { type: input.type };
     const matchupForCopy =
       input.type === "unit_reward" &&

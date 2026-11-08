@@ -2,7 +2,7 @@ export const runtime = "nodejs";
 
 import { NextResponse } from "next/server";
 import { unstable_cache } from "next/cache";
-import { getAdminDb } from "@/lib/firebaseAdmin";
+import { getNbaPublicReadDb } from "@/lib/nba/nbaPublicReadDb";
 import { nbaInjurySnapshotCacheControl } from "@/lib/nba/nbaStatsSnapshotCacheControl";
 import {
   NBA_INJURY_API_CACHE_REVALIDATE_SEC,
@@ -34,7 +34,7 @@ export async function GET(req: Request) {
 
     if (team) {
       const payload = await unstable_cache(
-        () => loadTeamInjury(getAdminDb(), season, team),
+        () => loadTeamInjury(getNbaPublicReadDb(), season, team),
         ["nba-team-injuries", season, team],
         cacheOpts
       )();
@@ -46,7 +46,7 @@ export async function GET(req: Request) {
     }
 
     const payload = await unstable_cache(
-      () => loadTeamInjuriesSnapshot(getAdminDb(), season),
+      () => loadTeamInjuriesSnapshot(getNbaPublicReadDb(), season),
       ["nba-team-injuries", season],
       cacheOpts
     )();
