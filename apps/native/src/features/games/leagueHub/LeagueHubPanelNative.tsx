@@ -83,6 +83,7 @@ export default function LeagueHubPanelNative({ lang, onSelectTeam, onSelectPlaye
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
+        automaticallyAdjustKeyboardInsets
       >
         {hub ? (
           <Text style={styles.season}>

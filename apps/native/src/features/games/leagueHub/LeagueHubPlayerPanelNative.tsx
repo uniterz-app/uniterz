@@ -243,71 +243,6 @@ function StyleMap({
           onChange={setTopN}
         />
       </View>
-      <View style={styles.searchBox}>
-        <MaterialCommunityIcons name="magnify" size={18} color={CYBER_TAB_CYAN} />
-        <TextInput
-          value={query}
-          onChangeText={setQuery}
-          placeholder={
-            lang === "ja" ? "選手を探してマップに追加（例: curry / GSW）" : "Add a player (e.g. curry / GSW)"
-          }
-          placeholderTextColor="rgba(0,245,255,0.5)"
-          autoCorrect={false}
-          autoCapitalize="none"
-          returnKeyType="search"
-          style={styles.searchInput}
-        />
-        {query ? (
-          <Pressable onPress={() => setQuery("")} hitSlop={8}>
-            <MaterialCommunityIcons name="close" size={16} color="rgba(255,255,255,0.6)" />
-          </Pressable>
-        ) : null}
-      </View>
-      {query.trim() ? (
-        <View style={styles.searchList}>
-          {hits.length === 0 ? (
-            <Text style={styles.searchEmpty}>
-              {lang === "ja"
-                ? "見つかりません（出場が少ない選手は載っていません）"
-                : "No match (players with few minutes aren't listed)"}
-            </Text>
-          ) : (
-            hits.map((p) => (
-              <Pressable
-                key={p.playerId}
-                style={({ pressed }) => [styles.searchRow, pressed ? { opacity: 0.7 } : null]}
-                onPress={() => addPlayer(p.playerId)}
-              >
-                <Text style={[styles.searchName, playerNameStyle]} numberOfLines={1}>
-                  {p.name}
-                </Text>
-                <HubTeamTag teamId={p.teamId} />
-                <Text style={styles.searchAdd}>＋</Text>
-              </Pressable>
-            ))
-          )}
-        </View>
-      ) : null}
-      {addedPlayers.length > 0 ? (
-        <View style={styles.addedRow}>
-          {addedPlayers.map((p) => (
-            <View key={p.playerId} style={styles.addedChip}>
-              <Pressable onPress={() => setSelected(p.playerId)} hitSlop={4}>
-                <Text style={[styles.addedName, playerNameStyle]}>{p.name}</Text>
-              </Pressable>
-              <Pressable
-                onPress={() => {
-                  setAdded((prev) => prev.filter((x) => x !== p.playerId));
-                  if (selected === p.playerId) setSelected(null);
-                }}
-                hitSlop={8}
-              >
-                <Text style={styles.addedRemove}>×</Text>
-              </Pressable>
-            </View>
-          ))}
-        </View>
-      ) : null}
       <Text style={styles.mapPool}>
         {lang === "ja"
           ? `${pos === "all" ? "" : `${pos} の`}${preset.volumeLabel.ja}の上位 ${topN} 人`
@@ -387,6 +322,71 @@ function StyleMap({
           {lang === "ja" ? "点をタップで選手を表示" : "Tap a dot to see the player"}
         </Text>
       )}
+      <View style={styles.searchBox}>
+        <MaterialCommunityIcons name="magnify" size={18} color={CYBER_TAB_CYAN} />
+        <TextInput
+          value={query}
+          onChangeText={setQuery}
+          placeholder={
+            lang === "ja" ? "選手を探してマップに追加（例: curry / GSW）" : "Add a player (e.g. curry / GSW)"
+          }
+          placeholderTextColor="rgba(0,245,255,0.5)"
+          autoCorrect={false}
+          autoCapitalize="none"
+          returnKeyType="search"
+          style={styles.searchInput}
+        />
+        {query ? (
+          <Pressable onPress={() => setQuery("")} hitSlop={8}>
+            <MaterialCommunityIcons name="close" size={16} color="rgba(255,255,255,0.6)" />
+          </Pressable>
+        ) : null}
+      </View>
+      {query.trim() ? (
+        <View style={styles.searchList}>
+          {hits.length === 0 ? (
+            <Text style={styles.searchEmpty}>
+              {lang === "ja"
+                ? "見つかりません（出場が少ない選手は載っていません）"
+                : "No match (players with few minutes aren't listed)"}
+            </Text>
+          ) : (
+            hits.map((p) => (
+              <Pressable
+                key={p.playerId}
+                style={({ pressed }) => [styles.searchRow, pressed ? { opacity: 0.7 } : null]}
+                onPress={() => addPlayer(p.playerId)}
+              >
+                <Text style={[styles.searchName, playerNameStyle]} numberOfLines={1}>
+                  {p.name}
+                </Text>
+                <HubTeamTag teamId={p.teamId} />
+                <Text style={styles.searchAdd}>＋</Text>
+              </Pressable>
+            ))
+          )}
+        </View>
+      ) : null}
+      {addedPlayers.length > 0 ? (
+        <View style={styles.addedRow}>
+          {addedPlayers.map((p) => (
+            <View key={p.playerId} style={styles.addedChip}>
+              <Pressable onPress={() => setSelected(p.playerId)} hitSlop={4}>
+                <Text style={[styles.addedName, playerNameStyle]}>{p.name}</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  setAdded((prev) => prev.filter((x) => x !== p.playerId));
+                  if (selected === p.playerId) setSelected(null);
+                }}
+                hitSlop={8}
+              >
+                <Text style={styles.addedRemove}>×</Text>
+              </Pressable>
+            </View>
+          ))}
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -792,6 +792,7 @@ const styles = StyleSheet.create({
     borderColor: CYBER_TAB_CYAN,
     backgroundColor: "rgba(0,245,255,0.08)",
     paddingHorizontal: 10,
+    marginTop: 12,
     marginBottom: 6,
   },
   searchInput: {
