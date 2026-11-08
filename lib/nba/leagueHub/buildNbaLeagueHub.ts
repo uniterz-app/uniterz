@@ -253,10 +253,17 @@ export function buildNbaLeagueHub(input: BuildNbaLeagueHubInput): NbaLeagueHubDo
   const zoneMinGp = Math.max(2, Math.round(maxGp * 0.4));
   const zones: LeagueHubZoneBoard[] = ZONE_DEFS.map((def) => {
     const rows: Array<LeagueHubZoneRow & { positions: LeagueHubPosition[] }> = [];
+    const minTotal = Math.max(1, Math.round(def.minFga * maxGp));
+    let leagueFgm = 0;
+    let leagueFga = 0;
     for (const [playerId, list] of input.shotZones) {
       const gp = metrics.get(playerId)?.gp ?? 0;
-      if (gp < zoneMinGp) continue;
       const z = list.find((x) => x.id === def.id);
+      if (z && z.fga > 0 && gp > 0) {
+        leagueFga += z.fga * gp;
+        leagueFgm += z.fgPct * z.fga * gp;
+      }
+      if (gp < zoneMinGp) continue;
       const ref = refOf(playerId, metrics.get(playerId)?.teamId);
       if (!z || !ref || z.fga <= 0) continue;
       const fgaTotal = Math.round(z.fga * gp);
@@ -273,7 +280,7 @@ export function buildNbaLeagueHub(input: BuildNbaLeagueHubInput): NbaLeagueHubDo
       const strip = ({ positions: _p, ...r }: (typeof rows)[number]): LeagueHubZoneRow => r;
       return {
         byPct: pool
-          .filter((r) => r.fga >= def.minFga)
+          .filter((r) => r.fga >= def.minFga && r.fgaTotal >= minTotal)
           .sort((a, b) => b.fgPct - a.fgPct || b.fgaTotal - a.fgaTotal)
           .slice(0, LONG_LIST_LIMIT)
           .map(strip),
@@ -286,7 +293,15 @@ export function buildNbaLeagueHub(input: BuildNbaLeagueHubInput): NbaLeagueHubDo
     const byPos = Object.fromEntries(
       LEAGUE_HUB_POSITIONS.map((p) => [p, boards(rows.filter((r) => r.positions.includes(p)))])
     ) as NonNullable<LeagueHubZoneBoard["byPos"]>;
-    return { id: def.id, short: def.short, minFga: def.minFga, ...boards(rows), byPos };
+    return {
+      id: def.id,
+      short: def.short,
+      minFga: def.minFga,
+      minTotal,
+      leagueFgPct: leagueFga > 0 ? round(leagueFgm / leagueFga, 3) : null,
+      ...boards(rows),
+      byPos,
+    };
   });
 
   // ── 試合ログ由来（シーズンハイ・連続・回数・ホット / コールド・週間） ──

@@ -88,6 +88,10 @@ export type LeagueHubZoneBoard = {
   short: string;
   /** 成功率ランキングの最低試投（1 試合平均） */
   minFga: number;
+  /** 成功率ランキングの最低試投（シーズン合計 = minFga × リーグ最多試合数） */
+  minTotal?: number;
+  /** 全選手のこのエリアの成功数 ÷ 試投数 */
+  leagueFgPct?: number | null;
   byPct: LeagueHubZoneRow[];
   byFga: LeagueHubZoneRow[];
   /** ポジション別の同じ 2 つのランキング */

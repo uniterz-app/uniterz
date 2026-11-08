@@ -440,8 +440,8 @@ export default function LeagueHubPlayerPanelNative({ hub, lang, onSelectPlayer }
         title="BY ZONE"
         hint={
           ja
-            ? "エリアごとの成功率トップ。コートかチップでエリアを切り替え。一定の試投数がある選手だけ。"
-            : "Best FG% in each zone (minimum attempts). Tap the court or a chip to switch zones."
+            ? "エリアごとの成功率トップ。コートかチップでエリアを切り替え。試投数の基準は試合が進むほど上がる。"
+            : "Best FG% in each zone. Tap the court or a chip to switch zones. The attempt minimum rises as the season goes on."
         }
       >
         {hub.zones.length > 0 ? (

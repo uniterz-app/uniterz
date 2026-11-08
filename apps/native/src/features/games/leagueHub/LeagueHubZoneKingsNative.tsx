@@ -88,6 +88,7 @@ export default function LeagueHubZoneKingsNative({ zones, lang, onSelectPlayer }
     zones.map((z) => [z.id, pos === "all" || !z.byPos ? z : z.byPos[pos]] as const)
   );
   const board = byId.get(zoneId);
+  const zone = zones.find((z) => z.id === zoneId);
   const rows = board ? (mode === "pct" ? board.byPct : board.byFga) : [];
   const line = "rgba(255,255,255,0.28)";
   const baselineY = SHOT_ZONE_PAINT.y + SHOT_ZONE_PAINT.h;
@@ -214,13 +215,12 @@ export default function LeagueHubZoneKingsNative({ zones, lang, onSelectPlayer }
           : null}
       </View>
       <View style={styles.controls}>
-        <View style={styles.chipsWrap}>
-          <HubChips
-            items={ZONE_ORDER.map((id) => ({ id, label: ZONE_LABEL[id].en }))}
-            value={zoneId}
-            onChange={setZoneId}
-          />
-        </View>
+        <HubChips
+          items={ZONE_ORDER.map((id) => ({ id, label: ZONE_LABEL[id].en }))}
+          value={zoneId}
+          onChange={setZoneId}
+          wrap
+        />
       </View>
       <View style={styles.listHead}>
         <HubPosToggle value={pos} onChange={setPos} lang={lang} />
@@ -233,6 +233,25 @@ export default function LeagueHubZoneKingsNative({ zones, lang, onSelectPlayer }
           onChange={setMode}
         />
       </View>
+      {zone ? (
+        <View style={styles.zoneMeta}>
+          {zone.leagueFgPct != null ? (
+            <Text style={styles.zoneAvg}>
+              {lang === "ja" ? "リーグ平均 " : "LEAGUE AVG "}
+              <Text style={styles.zoneAvgValue}>{formatHubValue(zone.leagueFgPct, "pct")}</Text>
+            </Text>
+          ) : (
+            <View />
+          )}
+          {mode === "pct" ? (
+            <Text style={styles.zoneMin}>
+              {lang === "ja"
+                ? `1 試合 ${zone.minFga} 本以上${zone.minTotal ? `・合計 ${zone.minTotal} 本以上` : ""}`
+                : `Min ${zone.minFga} FGA/G${zone.minTotal ? `, ${zone.minTotal} total` : ""}`}
+            </Text>
+          ) : null}
+        </View>
+      ) : null}
       {rows.length === 0 ? (
         <HubEmpty text={lang === "ja" ? "まだデータがありません" : "No data yet"} />
       ) : (
@@ -290,10 +309,31 @@ const styles = StyleSheet.create({
   controls: {
     marginTop: 8,
   },
-  chipsWrap: {},
   listHead: {
     flexDirection: "row",
     justifyContent: "space-between",
+    marginBottom: 6,
+  },
+  zoneMeta: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "baseline",
     marginBottom: 4,
+  },
+  zoneAvg: {
+    fontFamily: METRIC_FONT,
+    color: "rgba(255,255,255,0.5)",
+    fontSize: 10,
+    fontWeight: "700",
+  },
+  zoneAvgValue: {
+    color: CYBER_TAB_CYAN,
+    fontSize: 12,
+    fontWeight: "800",
+  },
+  zoneMin: {
+    fontFamily: METRIC_FONT,
+    color: "rgba(255,255,255,0.4)",
+    fontSize: 10,
   },
 });
