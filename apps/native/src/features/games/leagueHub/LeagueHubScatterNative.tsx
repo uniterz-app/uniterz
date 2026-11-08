@@ -46,7 +46,7 @@ type Props = {
   onSelect: (id: string | null) => void;
 };
 
-const PAD = { l: 38, r: 10, t: 8, b: 20 } as const;
+const PAD = { l: 6, r: 6, t: 8, b: 20 } as const;
 const DOT_R = 4.2;
 const TAP_RADIUS = 24;
 
@@ -115,7 +115,9 @@ export default function LeagueHubScatterNative({
       }))
       .sort((a, b) => Number(b.sel) - Number(a.sel) || b.d - a.d);
 
-    const labelBoxes: Box[] = [];
+    const labelBoxes: Box[] = [
+      { x0: PAD.l, y0: avgY - 14, x1: PAD.l + 46, y1: avgY - 1 },
+    ];
     const labels: Array<{ i: number; x: number; y: number; anchor: "start" | "middle" | "end" }> =
       [];
     for (const { i, sel } of order) {
@@ -254,9 +256,9 @@ export default function LeagueHubScatterNative({
                 {`AVG ${formatHubValue(layout.dx.avg, xAxis.format)}`}
               </SvgText>
               <SvgText
-                x={PAD.l - 3}
-                y={layout.avgY + 3}
-                textAnchor="end"
+                x={PAD.l + 4}
+                y={layout.avgY - 4}
+                textAnchor="start"
                 fontSize={9}
                 fill="rgba(0,245,255,0.6)"
                 fontFamily={METRIC_FONT}
