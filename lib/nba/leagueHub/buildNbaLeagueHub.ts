@@ -110,6 +110,7 @@ function metricDigits(id: string): number {
     id.endsWith("_pct") ||
     id.startsWith("pct_") ||
     id === "usg" ||
+    id.endsWith("_usg") ||
     id === "pie" ||
     id === "fta_rate"
   ) {
