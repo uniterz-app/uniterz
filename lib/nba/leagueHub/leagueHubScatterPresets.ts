@@ -61,18 +61,18 @@ export const LEAGUE_HUB_PLAYER_SCATTER_PRESETS: readonly LeagueHubPlayerScatterP
     id: "ace",
     label: { ja: "エースの効率", en: "USAGE × EFFICIENCY" },
     hint: {
-      ja: "右ほどボールを持ち、上ほど効率よく点を取る。右上が本物のエース。",
-      en: "Right = bigger offensive load, up = more efficient scoring. Top right are true aces.",
+      ja: "右ほどボールを持ち、上ほど効率よく点を取る。右上はボールを持っても効率が落ちない選手。",
+      en: "Right = bigger offensive load, up = more efficient scoring. Top right carry a big load without losing efficiency.",
     },
     x: { metric: "usg", label: { ja: "USG%", en: "USG%" }, format: "pct" },
     y: { metric: "ts_pct", label: { ja: "TS%", en: "TS%" }, format: "pct" },
     volume: "pts",
     volumeLabel: { ja: "得点", en: "PTS" },
     quadrants: {
-      tr: { ja: "本物のエース", en: "TRUE ACE" },
-      tl: { ja: "効率の脇役", en: "EFFICIENT ROLE" },
-      br: { ja: "量で背負う", en: "HEAVY LOAD" },
-      bl: { ja: "控え", en: "SUPPORT" },
+      tr: { ja: "背負って決める", en: "LOAD + EFFICIENT" },
+      tl: { ja: "効率よく決める", en: "EFFICIENT" },
+      br: { ja: "量で背負う", en: "VOLUME" },
+      bl: { ja: "負担も効率も控えめ", en: "LOW LOAD" },
     },
   },
   {
@@ -136,7 +136,7 @@ export const LEAGUE_HUB_PLAYER_SCATTER_PRESETS: readonly LeagueHubPlayerScatterP
       tr: { ja: "守備の要", en: "ANCHOR" },
       tl: { ja: "堅実なマーク", en: "LOCKDOWN" },
       br: { ja: "ボールを狙う", en: "GAMBLER" },
-      bl: { ja: "守備は課題", en: "TARGET" },
+      bl: { ja: "守備の数字は控えめ", en: "QUIET D" },
     },
   },
   {
@@ -218,7 +218,7 @@ export const LEAGUE_HUB_TEAM_HUSTLE: LeagueHubScatterPreset<LeagueHubTeamMetric>
     tr: { ja: "手間を惜しまない", en: "RELENTLESS" },
     tl: { ja: "シュートに寄せる", en: "CONTEST" },
     br: { ja: "ボールを狙う", en: "HANDSY" },
-    bl: { ja: "淡白", en: "PASSIVE" },
+    bl: { ja: "手数は少なめ", en: "LOW ACTIVITY" },
   },
 };
 
@@ -240,7 +240,7 @@ export const LEAGUE_HUB_TEAM_CLUTCH: LeagueHubScatterPreset<LeagueHubTeamMetric>
     tr: { ja: "接戦に強い", en: "CLOSERS" },
     tl: { ja: "守って逃げ切る", en: "LOCK IT UP" },
     br: { ja: "撃ち合いで勝つ", en: "SHOOTOUT" },
-    bl: { ja: "終盤に弱い", en: "FADES" },
+    bl: { ja: "接戦で苦戦中", en: "STRUGGLING LATE" },
   },
 };
 
