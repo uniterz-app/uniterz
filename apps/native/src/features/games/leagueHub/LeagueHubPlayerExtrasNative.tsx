@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { StyleSheet, Text } from "react-native";
 import type {
   LeagueHubMilestoneStat,
   NbaLeagueHubDoc,
@@ -146,14 +147,7 @@ export function ValueSection({ hub, lang, onSelectPlayer }: Props) {
   const rows = v ? v[mode] : [];
   const of = rows[0]?.of;
   return (
-    <HubSection
-      title="VALUE"
-      hint={
-        ja
-          ? `今季の年俸の順位と、Game Score（効率も含めた 1 試合の働き）の順位の差。平均 15 分以上の選手${of ? ` ${of} 人` : ""}で比べています。`
-          : `Salary rank vs Game Score rank this season, among ${of ?? ""} players averaging 15+ minutes.`
-      }
-    >
+    <HubSection title="VALUE">
       <HubSlantedTabs
         items={[
           { id: "best", label: "BARGAINS" },
@@ -162,6 +156,15 @@ export function ValueSection({ hub, lang, onSelectPlayer }: Props) {
         value={mode}
         onChange={setMode}
       />
+      <Text style={styles.hint}>
+        {ja
+          ? `今季の年俸の順位と、Game Score（効率も含めた 1 試合の働き）の順位の差。${
+              mode === "best" ? "年俸のわりに働いている（割安な）" : "年俸のわりに働けていない（割高な）"
+            }選手。平均 15 分以上の選手${of ? ` ${of} 人` : ""}で比べています。`
+          : `Salary rank vs Game Score rank this season — ${
+              mode === "best" ? "players outplaying their pay" : "players underplaying their pay"
+            }, among ${of ?? ""} players averaging 15+ minutes.`}
+      </Text>
       {rows.length > 0 ? (
         <HubCellHeader
           labels={["GS"]}
@@ -195,3 +198,13 @@ export function ValueSection({ hub, lang, onSelectPlayer }: Props) {
     </HubSection>
   );
 }
+
+const styles = StyleSheet.create({
+  hint: {
+    color: "rgba(255,255,255,0.55)",
+    fontSize: 11,
+    lineHeight: 16,
+    marginTop: 6,
+    marginBottom: 6,
+  },
+});
