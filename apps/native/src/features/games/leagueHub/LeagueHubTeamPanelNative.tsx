@@ -6,10 +6,14 @@ import { CURRENT_NBA_SEASON_KEY } from "../../../../../../lib/rankings/nbaSeason
 import type { NbaLeagueTeamStatRow } from "../../../../../../lib/predict/nbaLeagueTeamStatsMocks";
 import {
   LEAGUE_HUB_PLAY_TYPES,
+  LEAGUE_HUB_TEAM_ATTACK,
   LEAGUE_HUB_TEAM_CLUTCH,
   LEAGUE_HUB_TEAM_HUSTLE,
+  LEAGUE_HUB_TEAM_REBOUND,
   LEAGUE_HUB_TEAM_STRENGTH,
+  LEAGUE_HUB_TEAM_TEMPO,
   LEAGUE_HUB_TEAM_THREE,
+  LEAGUE_HUB_TEAM_TURNOVER,
   leagueHubPlayTypePreset,
   type LeagueHubPlayTypeId,
   type LeagueHubScatterPreset,
@@ -434,17 +438,44 @@ function ScoringMix({
 }
 
 
-type StyleMode = "strength" | "play" | "three" | "hustle" | "clutch";
+type StyleMode =
+  | "strength"
+  | "play"
+  | "three"
+  | "attack"
+  | "tempo"
+  | "rebound"
+  | "turnover"
+  | "hustle"
+  | "clutch";
 
 const STYLE_MODES: readonly { id: StyleMode; label: string }[] = [
   { id: "strength", label: "OVERALL" },
   { id: "play", label: "PLAY" },
   { id: "three", label: "3PT" },
+  { id: "attack", label: "ATTACK" },
+  { id: "tempo", label: "TEMPO" },
+  { id: "rebound", label: "REB" },
+  { id: "turnover", label: "TOV" },
   { id: "hustle", label: "HUSTLE" },
   { id: "clutch", label: "CLUTCH" },
 ];
 
-/** 攻守の強さ・プレータイプ・ハッスル・クラッチは同じ散布図なので 1 枚で切り替える（背景は消さない） */
+const STYLE_PRESETS: Record<
+  Exclude<StyleMode, "play">,
+  LeagueHubScatterPreset<LeagueHubTeamMetric>
+> = {
+  strength: LEAGUE_HUB_TEAM_STRENGTH,
+  three: LEAGUE_HUB_TEAM_THREE,
+  attack: LEAGUE_HUB_TEAM_ATTACK,
+  tempo: LEAGUE_HUB_TEAM_TEMPO,
+  rebound: LEAGUE_HUB_TEAM_REBOUND,
+  turnover: LEAGUE_HUB_TEAM_TURNOVER,
+  hustle: LEAGUE_HUB_TEAM_HUSTLE,
+  clutch: LEAGUE_HUB_TEAM_CLUTCH,
+};
+
+/** チームの散布図はすべて同じ形なので 1 枚で切り替える（背景は消さない） */
 function StyleMaps({
   rows,
   lang,
@@ -456,17 +487,14 @@ function StyleMaps({
 }) {
   const [mode, setMode] = useState<StyleMode>("strength");
   const [pt, setPt] = useState<LeagueHubPlayTypeId>("pnrBh");
-  const preset = useMemo(() => {
-    if (mode === "strength") return LEAGUE_HUB_TEAM_STRENGTH;
-    if (mode === "three") return LEAGUE_HUB_TEAM_THREE;
-    if (mode === "hustle") return LEAGUE_HUB_TEAM_HUSTLE;
-    if (mode === "clutch") return LEAGUE_HUB_TEAM_CLUTCH;
-    return leagueHubPlayTypePreset(pt);
-  }, [mode, pt]);
+  const preset = useMemo(
+    () => (mode === "play" ? leagueHubPlayTypePreset(pt) : STYLE_PRESETS[mode]),
+    [mode, pt]
+  );
   const strength = mode === "strength";
   return (
     <HubSection title="PLAY STYLE">
-      <SlantedTabs items={STYLE_MODES} value={mode} onChange={setMode} />
+      <ScrollSlantedTabs items={STYLE_MODES} value={mode} onChange={setMode} />
       {mode === "play" ? (
         <ScrollSlantedTabs
           items={LEAGUE_HUB_PLAY_TYPES.map((p) => ({ id: p.id, label: p.short }))}
