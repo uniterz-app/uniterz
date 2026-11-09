@@ -69,8 +69,8 @@ export type LeagueHubTeamLogEntry = {
   vsOver500: LeagueHubRecord | null;
   b2b: LeagueHubRecord | null;
   posDef: LeagueHubPositionDefense | null;
-  /** 自チームの得点（試合ごと） */
-  scores?: number[];
+  /** 1 試合平均得点（splits のホーム / アウェーから） */
+  ppg?: number | null;
 };
 
 export type BuildNbaLeagueHubInput = {
@@ -792,7 +792,7 @@ export function buildNbaLeagueHub(input: BuildNbaLeagueHubInput): NbaLeagueHubDo
         teamId: s.teamId,
         wins: s.wins,
         losses: s.losses,
-        scores: log?.scores ?? [],
+        teamPpg: log?.ppg ?? null,
         roster: rosterTeams.get(s.teamId) ?? [],
         payrollUsd: input.payrollUsd?.get(s.teamId) ?? null,
         benchPts: bench?.bench ?? 0,

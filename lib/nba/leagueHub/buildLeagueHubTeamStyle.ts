@@ -1,12 +1,10 @@
 /**
  * チームのスタイルマップ（ROSTER）用の数字（純関数）。
- * 選手のシーズン平均・選手試合ログ × 先発・チーム試合の得点・ペイロールから。BDL なし。
+ * 選手のシーズン平均・選手試合ログ × 先発・チームの平均得点・ペイロールから。BDL なし。
+ * 勝率はリーグ表の行（`winPct`）にあるのでここでは持たない。
  */
 import type { NbaPlayerGameLog } from "@/lib/predict/nbaPlayerDetailPreviewMocks";
-import type {
-  LeagueHubRecord,
-  LeagueHubTeamStyleMetric,
-} from "@/lib/nba/leagueHub/leagueHubTypes";
+import type { LeagueHubTeamStyleMetric } from "@/lib/nba/leagueHub/leagueHubTypes";
 
 export type LeagueHubRosterTeamPlayer = {
   gp: number;
@@ -21,8 +19,8 @@ export type LeagueHubTeamStyleInput = {
   teamId: string;
   wins: number;
   losses: number;
-  /** 自チームの得点（試合ごと） */
-  scores: number[];
+  /** 1 試合平均得点 */
+  teamPpg: number | null;
   roster: LeagueHubRosterTeamPlayer[];
   payrollUsd: number | null;
   /** 先発がわかる試合の得点（ベンチ / 先発） */
@@ -40,16 +38,6 @@ export function parseHeightInches(v: unknown): number | null {
   if (!m) return null;
   const inches = Number(m[1]) * 12 + Number(m[2]);
   return inches > 60 && inches < 100 ? inches : null;
-}
-
-function pct(r: LeagueHubRecord | null): number | null {
-  if (!r) return null;
-  const g = r.wins + r.losses;
-  return g > 0 ? r.wins / g : null;
-}
-
-function mean(values: number[]): number {
-  return values.reduce((a, b) => a + b, 0) / values.length;
 }
 
 function weighted(rows: { v: number; w: number }[]): number | null {
@@ -89,14 +77,13 @@ export function buildLeagueHubTeamStyle(
     m[k] = Math.round(v * p) / p;
   };
 
-  set("winPct", pct({ wins: input.wins, losses: input.losses }), 3);
 
   const played = input.roster.filter((p) => p.gp > 0);
   const teamGames = input.wins + input.losses;
   const rotation = played.filter(
     (p) => p.gp >= teamGames * ROTATION_GAME_SHARE && p.mpg >= ROTATION_MIN_MPG
   );
-  const teamPpg = input.scores.length > 0 ? mean(input.scores) : 0;
+  const teamPpg = input.teamPpg ?? 0;
   if (rotation.length > 0 && teamPpg > 0) {
     set("aceShare", Math.max(...rotation.map((p) => p.ppg)) / teamPpg, 3);
     const rotationPts = rotation.reduce((a, p) => a + p.ppg, 0);
