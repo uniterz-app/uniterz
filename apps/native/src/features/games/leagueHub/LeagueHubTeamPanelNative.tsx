@@ -36,9 +36,11 @@ import { slantedTabWidth } from "./LeagueHubBranchTabsNative";
 import { CyberSlantedSegBarNative } from "../../rankings/CyberSlantedSegBarNative";
 import LeagueHubScatterNative, { type HubScatterPoint } from "./LeagueHubScatterNative";
 import {
+  HubChips,
   HubEmpty,
   HubRow,
   HubSection,
+  HubToggle,
   HubTwoCol,
   formatHubValue,
   inkAlpha,
@@ -438,42 +440,77 @@ function ScoringMix({
 }
 
 
-type StyleMode =
+type StylePresetId =
   | "strength"
-  | "play"
+  | "clutch"
   | "three"
   | "attack"
   | "tempo"
-  | "rebound"
-  | "turnover"
   | "hustle"
-  | "clutch";
+  | "rebound"
+  | "turnover";
+type StyleMapId = StylePresetId | `pt-${LeagueHubPlayTypeId}`;
+type StyleGroupId = "overall" | "offense" | "playType" | "defense";
 
-const STYLE_MODES: readonly { id: StyleMode; label: string }[] = [
-  { id: "strength", label: "OVERALL" },
-  { id: "play", label: "PLAY" },
-  { id: "three", label: "3PT" },
-  { id: "attack", label: "ATTACK" },
-  { id: "tempo", label: "TEMPO" },
-  { id: "rebound", label: "REB" },
-  { id: "turnover", label: "TOV" },
-  { id: "hustle", label: "HUSTLE" },
-  { id: "clutch", label: "CLUTCH" },
-];
-
-const STYLE_PRESETS: Record<
-  Exclude<StyleMode, "play">,
-  LeagueHubScatterPreset<LeagueHubTeamMetric>
-> = {
+const STYLE_PRESETS: Record<StylePresetId, LeagueHubScatterPreset<LeagueHubTeamMetric>> = {
   strength: LEAGUE_HUB_TEAM_STRENGTH,
+  clutch: LEAGUE_HUB_TEAM_CLUTCH,
   three: LEAGUE_HUB_TEAM_THREE,
   attack: LEAGUE_HUB_TEAM_ATTACK,
   tempo: LEAGUE_HUB_TEAM_TEMPO,
+  hustle: LEAGUE_HUB_TEAM_HUSTLE,
   rebound: LEAGUE_HUB_TEAM_REBOUND,
   turnover: LEAGUE_HUB_TEAM_TURNOVER,
-  hustle: LEAGUE_HUB_TEAM_HUSTLE,
-  clutch: LEAGUE_HUB_TEAM_CLUTCH,
 };
+
+const STYLE_GROUPS: readonly {
+  id: StyleGroupId;
+  label: string;
+  maps: readonly { id: StyleMapId; label: string }[];
+  columns: 3 | 4;
+}[] = [
+  {
+    id: "overall",
+    label: "OVERALL",
+    maps: [
+      { id: "strength", label: "OFF × DEF" },
+      { id: "clutch", label: "CLUTCH" },
+    ],
+    columns: 3,
+  },
+  {
+    id: "offense",
+    label: "OFFENSE",
+    maps: [
+      { id: "three", label: "3PT" },
+      { id: "attack", label: "PASS × DRIVE" },
+      { id: "tempo", label: "TEMPO" },
+    ],
+    columns: 3,
+  },
+  {
+    id: "playType",
+    label: "PLAY TYPE",
+    maps: LEAGUE_HUB_PLAY_TYPES.map((p) => ({ id: `pt-${p.id}` as const, label: p.short })),
+    columns: 4,
+  },
+  {
+    id: "defense",
+    label: "DEFENSE",
+    maps: [
+      { id: "hustle", label: "HUSTLE" },
+      { id: "rebound", label: "REB" },
+      { id: "turnover", label: "TOV" },
+    ],
+    columns: 3,
+  },
+];
+
+function stylePreset(id: StyleMapId): LeagueHubScatterPreset<LeagueHubTeamMetric> {
+  return id.startsWith("pt-")
+    ? leagueHubPlayTypePreset(id.slice(3) as LeagueHubPlayTypeId)
+    : STYLE_PRESETS[id as StylePresetId];
+}
 
 /** チームの散布図はすべて同じ形なので 1 枚で切り替える（背景は消さない） */
 function StyleMaps({
@@ -485,23 +522,33 @@ function StyleMaps({
   lang: HubLang;
   onSelectTeam: (teamId: string) => void;
 }) {
-  const [mode, setMode] = useState<StyleMode>("strength");
-  const [pt, setPt] = useState<LeagueHubPlayTypeId>("pnrBh");
-  const preset = useMemo(
-    () => (mode === "play" ? leagueHubPlayTypePreset(pt) : STYLE_PRESETS[mode]),
-    [mode, pt]
-  );
-  const strength = mode === "strength";
+  const [groupId, setGroupId] = useState<StyleGroupId>("overall");
+  /** グループを行き来しても、それぞれ最後に見たマップに戻る */
+  const [mapByGroup, setMapByGroup] = useState<Record<StyleGroupId, StyleMapId>>({
+    overall: "strength",
+    offense: "three",
+    playType: "pt-pnrBh",
+    defense: "hustle",
+  });
+  const group = STYLE_GROUPS.find((g) => g.id === groupId) ?? STYLE_GROUPS[0]!;
+  const mapId = mapByGroup[groupId];
+  const preset = useMemo(() => stylePreset(mapId), [mapId]);
+  const strength = mapId === "strength";
   return (
     <HubSection title="PLAY STYLE">
-      <ScrollSlantedTabs items={STYLE_MODES} value={mode} onChange={setMode} />
-      {mode === "play" ? (
-        <ScrollSlantedTabs
-          items={LEAGUE_HUB_PLAY_TYPES.map((p) => ({ id: p.id, label: p.short }))}
-          value={pt}
-          onChange={setPt}
-        />
-      ) : null}
+      <HubToggle
+        items={STYLE_GROUPS.map((g) => ({ id: g.id, label: g.label }))}
+        value={groupId}
+        onChange={setGroupId}
+        fill
+      />
+      <HubChips
+        items={group.maps}
+        value={mapId}
+        onChange={(id) => setMapByGroup((prev) => ({ ...prev, [groupId]: id }))}
+        wrap
+        columns={group.columns}
+      />
       <Text style={styles.mapHint}>{preset.hint[lang]}</Text>
       <TeamScatterBlock
         rows={rows}
