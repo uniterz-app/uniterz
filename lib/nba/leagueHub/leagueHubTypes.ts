@@ -319,18 +319,23 @@ export type LeagueHubValueRow = LeagueHubPlayerRef & {
 export const LEAGUE_HUB_MILESTONE_STATS = ["pts", "reb", "ast", "fg3m"] as const;
 export type LeagueHubMilestoneStat = (typeof LEAGUE_HUB_MILESTONE_STATS)[number];
 
-/** 通算の節目まで（前季までは平均 × 試合数の概算 + 今季は試合ログの合計） */
+/** 通算の節目まで（前季までのキャリア合計 + 今季は試合ログの合計） */
 export type LeagueHubMilestoneRow = LeagueHubPlayerRef & {
   stat: LeagueHubMilestoneStat;
   target: number;
   remaining: number;
   /** 今季の 1 試合平均で割った残り試合数 */
   gamesAway: number;
+  /** 前季までに平均 × 試合数の概算が混じる（数本ずれ得る） */
+  approx?: boolean;
 };
 
 /** 前季までの通算（キャリア doc から一度だけ作る） */
 export const NBA_LEAGUE_HUB_CAREER_BASE_COLLECTION = "nbaLeagueHubCareerBase";
-export type LeagueHubCareerBase = Record<LeagueHubMilestoneStat | "games", number>;
+export type LeagueHubCareerBase = Record<LeagueHubMilestoneStat | "games", number> & {
+  /** 正確な合計が無く平均 × 試合数で足した試合数（未設定の古いキャッシュは全部概算） */
+  approxGames?: number;
+};
 
 export type NbaLeagueHubDoc = {
   seasonKey: string;

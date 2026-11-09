@@ -118,13 +118,14 @@ export function MilestonesSection({ hub, lang, onSelectPlayer }: Props) {
   const rows = hub.milestones;
   if (rows == null) return null;
   const ja = lang === "ja";
+  const anyApprox = rows.some((r) => r.approx);
   return (
     <HubSection
       title="MILESTONE WATCH"
       hint={
         ja
-          ? "通算（レギュラーシーズン）の節目まであと少しの選手。今季のペースで早く届きそうな順。前季までの通算は平均 × 試合数の概算なので、数本ずれることがあります。"
-          : "Players closing in on a career (regular season) milestone, soonest at this season's pace first. Prior seasons are estimated from averages, so totals can be off by a few."
+          ? `通算（レギュラーシーズン）の節目まであと少しの選手。今季のペースで早く届きそうな順。${anyApprox ? "「約」は記録が一部欠けた試合を平均で埋めた選手で、数本ずれることがあります。" : ""}`
+          : `Players closing in on a career (regular season) milestone, soonest at this season's pace first.${anyApprox ? " \"~\" marks players with a few games filled in from averages, so the count can be off by a few." : ""}`
       }
     >
       {rows.length === 0
@@ -140,8 +141,8 @@ export function MilestonesSection({ hub, lang, onSelectPlayer }: Props) {
                 sub={text.target(r.target.toLocaleString())[lang2]}
                 value={
                   ja
-                    ? `あと ${r.remaining.toLocaleString()} ${text.unit.ja}`
-                    : `${r.remaining.toLocaleString()} ${text.unit.en} to go`
+                    ? `あと${r.approx ? "約" : ""} ${r.remaining.toLocaleString()} ${text.unit.ja}`
+                    : `${r.approx ? "~" : ""}${r.remaining.toLocaleString()} ${text.unit.en} to go`
                 }
                 onPress={() => onSelectPlayer(r.playerId)}
                 framed

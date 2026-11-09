@@ -12,11 +12,17 @@ import {
   fetchBdlPlayerCareerAverageForSeason,
 } from "@/lib/nba/bdl/fetchBdlPlayerCareerAverages";
 import { fetchBdlPlayerSeasonGameMeta } from "@/lib/nba/bdl/fetchBdlPlayerSeasonGameMeta";
-import { mapBdlCareerAverageToRow } from "@/lib/nba/playerDetail/mapBdlToPlayerCareerSeasons";
+import {
+  careerSeasonTotalsFromLogs,
+  mapBdlCareerAverageToRow,
+} from "@/lib/nba/playerDetail/mapBdlToPlayerCareerSeasons";
 import { writePlayerCareerSeasonsSnapshot } from "@/lib/nba/playerCareerSeasons/loadPlayerCareerSeasonsSnapshot";
 import { listActiveRosterPlayerRefs } from "@/lib/nba/ingest/listActiveRosterPlayerRefs";
 import { forEachWithConcurrency } from "@/lib/async/forEachWithConcurrency";
-import type { NbaPlayerCareerSeasonRow } from "@/lib/predict/nbaPlayerDetailPreviewMocks";
+import type {
+  NbaPlayerCareerSeasonRow,
+  NbaPlayerCareerSeasonTotals,
+} from "@/lib/predict/nbaPlayerDetailPreviewMocks";
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
 import { TEAM_SHORT } from "@/lib/team-short";
 
@@ -71,6 +77,8 @@ async function buildBoard(input: {
         let metaTeamId: string | null = null;
         let metaTeamAbbr: string | null = null;
         let metaGs: number | null = null;
+        let metaTotals: NbaPlayerCareerSeasonTotals | null = null;
+        let metaGames = 0;
         try {
           const meta = await fetchBdlPlayerSeasonGameMeta({
             bdlPlayerId: input.bdlId,
@@ -81,6 +89,8 @@ async function buildBoard(input: {
           metaTeamId = meta.teamId;
           metaTeamAbbr = meta.teamAbbr;
           metaGs = meta.gamesStarted;
+          metaTotals = meta.totals;
+          metaGames = meta.gamesLogged;
         } catch {
           // 試合ログ取得失敗時は fallback チームのまま
         }
@@ -92,7 +102,13 @@ async function buildBoard(input: {
           teamAbbr: metaTeamAbbr,
           gamesStarted: metaGs,
         });
-        if (mapped) out.push(mapped);
+        if (mapped) {
+          const totals = metaTotals
+            ? careerSeasonTotalsFromLogs(mapped, metaTotals, metaGames)
+            : null;
+          if (totals) mapped.totals = totals;
+          out.push(mapped);
+        }
       }
     } catch {
       // 年によっては空

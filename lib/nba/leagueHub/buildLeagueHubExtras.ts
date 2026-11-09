@@ -182,12 +182,20 @@ export function careerBaseFromRows(
     const cur = bySeason.get(r.seasonStart);
     if (!cur || r.games > cur.games) bySeason.set(r.seasonStart, r);
   }
-  const out: LeagueHubCareerBase = { games: 0, pts: 0, reb: 0, ast: 0, fg3m: 0 };
+  const out: LeagueHubCareerBase = { games: 0, pts: 0, reb: 0, ast: 0, fg3m: 0, approxGames: 0 };
+  let approx = 0;
   for (const r of bySeason.values()) {
     out.games += r.games;
-    for (const s of LEAGUE_HUB_MILESTONE_STATS) out[s] += r.games * (r[s] ?? 0);
+    if (r.totals) {
+      approx += r.totals.estGames ?? 0;
+      for (const s of LEAGUE_HUB_MILESTONE_STATS) out[s] += r.totals[s] ?? 0;
+    } else {
+      approx += r.games;
+      for (const s of LEAGUE_HUB_MILESTONE_STATS) out[s] += r.games * (r[s] ?? 0);
+    }
   }
-  for (const k of Object.keys(out) as Array<keyof LeagueHubCareerBase>) out[k] = Math.round(out[k]);
+  for (const s of LEAGUE_HUB_MILESTONE_STATS) out[s] = Math.round(out[s]);
+  out.approxGames = approx;
   return out;
 }
 
@@ -217,7 +225,8 @@ export function buildLeagueHubMilestones(
       const remaining = target - current;
       const gamesAway = Math.ceil(remaining / perGame);
       if (gamesAway > MILESTONE_MAX_GAMES) continue;
-      rows.push({ ...ref, stat, target, remaining, gamesAway });
+      const approx = (base.approxGames ?? base.games) > 0;
+      rows.push({ ...ref, stat, target, remaining, gamesAway, ...(approx ? { approx } : {}) });
     }
   }
   return rows
