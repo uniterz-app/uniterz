@@ -76,7 +76,7 @@ function rankOf(
 }
 
 function withTapHint(hint: string, lang: HubLang): string {
-  return `${hint}\n${lang === "ja" ? "ユニフォームをタップで数字を表示。" : "Tap a jersey for numbers."}`;
+  return `${hint}\n${lang === "ja" ? "四角をタップで数字を表示。" : "Tap a square for numbers."}`;
 }
 
 /** 攻撃と守備の 4 要素。invert = 低いほど良い */
