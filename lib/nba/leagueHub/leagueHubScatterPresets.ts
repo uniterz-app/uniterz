@@ -456,10 +456,17 @@ export const LEAGUE_HUB_TEAM_STRENGTH: LeagueHubScatterPreset<LeagueHubTeamMetri
     ja: "右ほど攻撃効率が高く、上ほど失点が少ない。四角が大きいほど試合のペースが速い。",
     en: "Right = better offense, up = better defense. Bigger square = faster pace.",
   },
-  x: { metric: "ortg", label: { ja: "ORtg", en: "ORtg" }, format: "one" },
+  x: {
+    metric: "ortg",
+    label: { ja: "ORtg（100 回の攻撃で取る点）", en: "ORtg (pts per 100 poss)" },
+    format: "one",
+  },
   y: {
     metric: "drtg",
-    label: { ja: "DRtg（上ほど少ない）", en: "DRtg (lower = up)" },
+    label: {
+      ja: "DRtg（100 回の守備で取られる点・上ほど少ない）",
+      en: "DRtg (pts allowed per 100 poss, lower = up)",
+    },
     format: "one",
     invert: true,
   },
@@ -560,12 +567,12 @@ export function leagueHubPlayTypePreset(
     },
     x: {
       metric: `${id}Freq` as LeagueHubTeamMetric,
-      label: { ja: "頻度", en: "FREQ" },
+      label: { ja: "頻度（攻撃のうちこのプレーの割合）", en: "FREQ (share of possessions)" },
       format: "pct",
     },
     y: {
       metric: `${id}Ppp` as LeagueHubTeamMetric,
-      label: { ja: "PPP", en: "PPP" },
+      label: { ja: "PPP（1 回あたりの得点）", en: "PPP (pts per possession)" },
       format: "ppp",
     },
     marks: { tl: pt.short },

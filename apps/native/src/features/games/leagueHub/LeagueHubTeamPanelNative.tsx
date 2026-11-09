@@ -319,6 +319,7 @@ function TeamScatterBlock({
         quadrants={preset.quadrants}
         lang={lang}
         marker="square"
+        showRange
         selectedId={selected}
         onSelect={setSelected}
         watermarks={watermarks ?? preset.marks}
