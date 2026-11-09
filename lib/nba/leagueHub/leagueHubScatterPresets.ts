@@ -450,7 +450,11 @@ export type LeagueHubTeamMetric =
   | "oppFtaRate"
   | "pctPtsFb"
   | "passes"
-  | "drives";
+  | "drives"
+  | "fgPctAllowed"
+  | "fg3PctAllowed"
+  | "cnsPts"
+  | "pullupPts";
 
 export const LEAGUE_HUB_TEAM_STRENGTH: LeagueHubScatterPreset<LeagueHubTeamMetric> = {
   id: "strength",
@@ -642,6 +646,60 @@ export const LEAGUE_HUB_TEAM_ATTACK: LeagueHubScatterPreset<LeagueHubTeamMetric>
     tl: { ja: "個人で切り込む", en: "DRIVE FIRST" },
     br: { ja: "パスで崩す", en: "BALL MOVEMENT" },
     bl: { ja: "外で組み立てる", en: "PERIMETER SET" },
+  },
+};
+
+export const LEAGUE_HUB_TEAM_SHOT_DEFENSE: LeagueHubScatterPreset<LeagueHubTeamMetric> = {
+  id: "shotDefense",
+  label: { ja: "守備の質", en: "OPP FG%" },
+  hint: {
+    ja: "右ほど相手のシュート全体を落とさせ、上ほど相手の 3P を落とさせる。",
+    en: "Right = lower opponent FG%, up = lower opponent 3P%.",
+  },
+  x: {
+    metric: "fgPctAllowed",
+    label: { ja: "相手 FG%（右ほど低い）", en: "OPP FG% (lower = right)" },
+    format: "pct",
+    invert: true,
+  },
+  y: {
+    metric: "fg3PctAllowed",
+    label: { ja: "相手 3P%（上ほど低い）", en: "OPP 3P% (lower = up)" },
+    format: "pct",
+    invert: true,
+  },
+  marks: { tl: "DEF" },
+  quadrants: {
+    tr: { ja: "内も外も守れる", en: "LOCKDOWN" },
+    tl: { ja: "外は守れる", en: "PERIMETER D" },
+    br: { ja: "中は守れる", en: "INTERIOR D" },
+    bl: { ja: "どちらも苦しい", en: "LEAKY" },
+  },
+};
+
+export const LEAGUE_HUB_TEAM_SHOT_CREATION: LeagueHubScatterPreset<LeagueHubTeamMetric> = {
+  id: "shotCreation",
+  label: { ja: "シュートの作り方", en: "C&S × PULLUP" },
+  hint: {
+    ja: "右ほどパスを受けてそのまま打つシュートの得点が多く、上ほどドリブルから打つシュートの得点が多い。良し悪しではなく作り方の違い。",
+    en: "Right = more catch-and-shoot points, up = more pull-up points. A style, not a grade.",
+  },
+  x: {
+    metric: "cnsPts",
+    label: { ja: "キャッチ&シュート得点 / 試合", en: "CATCH & SHOOT PTS / G" },
+    format: "one",
+  },
+  y: {
+    metric: "pullupPts",
+    label: { ja: "プルアップ得点 / 試合", en: "PULL-UP PTS / G" },
+    format: "one",
+  },
+  marks: { tl: "SHOT" },
+  quadrants: {
+    tr: { ja: "どちらでも取る", en: "BOTH WAYS" },
+    tl: { ja: "個人で作る", en: "SELF-CREATED" },
+    br: { ja: "パスから打つ", en: "CATCH AND SHOOT" },
+    bl: { ja: "ゴール下で取る", en: "INSIDE SCORING" },
   },
 };
 
