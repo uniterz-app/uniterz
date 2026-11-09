@@ -40,7 +40,7 @@ export default function StandingsScreenNative() {
     >
       <LeagueStatsCollapseProvider value={collapse}>
       <LeagueStatsCollapsibleNative>
-      <View style={styles.tabs}>
+      <View style={[styles.tabs, tab === "league" ? styles.tabsLeague : null]}>
         <CyberSlantedTabBarNative fill>
           <CyberSlantedTabNative
             label="STANDINGS"
@@ -83,6 +83,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingTop: 4,
     paddingBottom: 8,
+  },
+  /** 線が LEAGUE の下端からすぐ下の段へ届くよう、間の余白だけ詰める */
+  tabsLeague: {
+    paddingBottom: 0,
   },
   body: { flex: 1 },
   standings: { flex: 1, paddingHorizontal: 12 },
