@@ -44,7 +44,7 @@ export const LEAGUE_HUB_PLAYER_SCATTER_GROUPS = [
   { id: "attack", label: "ATTACK", presetIds: ["paint", "drive", "foul", "playmaking"] },
   { id: "defense", label: "DEFENSE", presetIds: ["defense", "hustle", "fouls"] },
   { id: "impact", label: "IMPACT", presetIds: ["onCourt", "clutch", "consistency"] },
-  { id: "rebound", label: "REBOUND", presetIds: ["glass", "rebContest", "boxOut", "rebChance"] },
+  { id: "rebound", label: "REB", presetIds: ["glass", "rebContest", "boxOut", "rebChance"] },
 ] as const;
 
 export type LeagueHubPlayerScatterGroupId = (typeof LEAGUE_HUB_PLAYER_SCATTER_GROUPS)[number]["id"];
