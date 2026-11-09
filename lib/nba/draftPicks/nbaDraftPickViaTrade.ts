@@ -963,8 +963,8 @@ export const NBA_DRAFT_PICK_VIA_TRADE: Record<string, DraftPickViaTrade> = {
     viaTradeEn: "Acquired via 2024 MEM–MIN trade",
   },
   "min-2030-2-own-out": {
-    viaTradeJa: "2026年 Isaiah Joe のトレードで放出",
-    viaTradeEn: "Sent out via 2026 Isaiah Joe trade",
+    viaTradeJa: "2026年 Isaiah Joe のトレードで OKC へ放出後、2026年11月 OKC–SAC で SAC へ移動",
+    viaTradeEn: "Sent to OKC via 2026 Isaiah Joe trade; conveyed to SAC via Nov 2026 OKC–SAC trade",
   },
   "min-2031-1-own-out": {
     viaTradeJa: "2024年 MIN–SAS 取引で放出",
@@ -1122,9 +1122,9 @@ export const NBA_DRAFT_PICK_VIA_TRADE: Record<string, DraftPickViaTrade> = {
     viaTradeJa: "2024年 DAL–OKC スワップ取引で取得",
     viaTradeEn: "via 2024 DAL–OKC swap",
   },
-  "okc-2028-2-uta": {
-    viaTradeJa: "2022年 OKC–UTA 取引で獲得",
-    viaTradeEn: "Acquired via 2022 OKC–UTA trade",
+  "okc-2028-2-uta-out": {
+    viaTradeJa: "2026年11月 Nique Clifford 取引で SAC へ放出（元は2022年 OKC–UTA で獲得）",
+    viaTradeEn: "Sent out via Nov 2026 Nique Clifford trade (originally acquired via 2022 OKC–UTA)",
   },
   "okc-2029-1-den-cond": {
     viaTradeJa: "2023年 DEN–OKC ドラフト当日取引で獲得",
@@ -1158,9 +1158,9 @@ export const NBA_DRAFT_PICK_VIA_TRADE: Record<string, DraftPickViaTrade> = {
     viaTradeJa: "2026年 複合トレードで獲得",
     viaTradeEn: "Acquired via 2026 multi-team trade",
   },
-  "okc-2030-2-min": {
-    viaTradeJa: "2026年 Isaiah Joe のトレードで獲得",
-    viaTradeEn: "Acquired via 2026 Isaiah Joe trade",
+  "okc-2030-2-min-out": {
+    viaTradeJa: "2026年11月 Nique Clifford 取引で SAC へ放出（元は2026年 Isaiah Joe のトレードで獲得）",
+    viaTradeEn: "Sent out via Nov 2026 Nique Clifford trade (originally acquired via 2026 Isaiah Joe trade)",
   },
   "okc-2031-2-atl-hou-more": {
     viaTradeJa: "2026年 Luguentz Dort のトレードで獲得",
@@ -1376,6 +1376,14 @@ export const NBA_DRAFT_PICK_VIA_TRADE: Record<string, DraftPickViaTrade> = {
     viaTradeJa: "2024年 POR–WAS 取引で放出",
     viaTradeEn: "Sent out via 2024 POR–WAS trade",
   },
+  "sac-2028-2-uta": {
+    viaTradeJa: "2026年11月 Nique Clifford 取引で OKC から獲得（UTA由来）",
+    viaTradeEn: "Acquired from OKC via Nov 2026 Nique Clifford trade (UTA origin)",
+  },
+  "sac-2030-2-min": {
+    viaTradeJa: "2026年11月 Nique Clifford 取引で OKC から獲得（MIN由来）",
+    viaTradeEn: "Acquired from OKC via Nov 2026 Nique Clifford trade (MIN origin)",
+  },
   "sas-2027-1-atl": {
     viaTradeJa: "2022年 Dejounte Murray のトレードで獲得",
     viaTradeEn: "Acquired via 2022 Dejounte Murray trade",
@@ -1485,8 +1493,8 @@ export const NBA_DRAFT_PICK_VIA_TRADE: Record<string, DraftPickViaTrade> = {
     viaTradeEn: "Acquired via 2026 UTA–CLE trade",
   },
   "uta-2028-2-own-out": {
-    viaTradeJa: "2022年 OKC–UTA 取引で放出",
-    viaTradeEn: "Sent out via 2022 OKC–UTA trade",
+    viaTradeJa: "2022年 OKC–UTA 取引で放出後、2026年11月 OKC–SAC で SAC へ移動",
+    viaTradeEn: "Sent to OKC via 2022 OKC–UTA trade; conveyed to SAC via Nov 2026 OKC–SAC trade",
   },
   "uta-2029-1-more-of-uta-cle-min": {
     viaTradeJa: "2025年 UTA–PHX スワップ取引で取得",

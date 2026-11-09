@@ -159,16 +159,24 @@ const TEAM_CUSTOM_PICKS: Record<string, NbaDraftPickEntry[]> = {
       ],
     },
     {
-      id: "okc-2028-2-uta",
+      id: "okc-2028-2-uta-out",
       year: 2028,
       round: 2,
-      kind: "incoming",
-      badgeType: "from",
+      kind: "outgoing",
+      badgeType: "outgoing",
+      isOutgoing: true,
+      toTeamId: "SAC",
       fromTeamId: "UTA",
-      shortLabelJa: "UTA",
-      shortLabelEn: "UTA",
-      detailsJa: "UTA 2巡目",
-      detailsEn: "via UTA 2nd",
+      shortLabelJa: "UTA (SACへ放出)",
+      shortLabelEn: "UTA (to SAC)",
+      detailsJa: "UTA 2巡目 (SACへ放出済み)",
+      detailsEn: "via UTA 2nd (Traded to SAC)",
+      conditionsJa: [
+        "元は UTA→OKC（2022）。2026年11月 Nique Clifford 取引でサクラメント・キングス（SAC）へ放出",
+      ],
+      conditionsEn: [
+        "Originally UTA→OKC (2022); sent to Sacramento in the Nov 2026 Nique Clifford trade",
+      ],
     },
 
     // 2029
@@ -318,16 +326,24 @@ const TEAM_CUSTOM_PICKS: Record<string, NbaDraftPickEntry[]> = {
       detailsEn: "via ATL 2nd (Aaron Wiggins trade)",
     },
     {
-      id: "okc-2030-2-min",
+      id: "okc-2030-2-min-out",
       year: 2030,
       round: 2,
-      kind: "incoming",
-      badgeType: "from",
+      kind: "outgoing",
+      badgeType: "outgoing",
+      isOutgoing: true,
+      toTeamId: "SAC",
       fromTeamId: "MIN",
-      shortLabelJa: "MIN",
-      shortLabelEn: "MIN",
-      detailsJa: "MIN 2巡目",
-      detailsEn: "via MIN 2nd",
+      shortLabelJa: "MIN (SACへ放出)",
+      shortLabelEn: "MIN (to SAC)",
+      detailsJa: "MIN 2巡目 (SACへ放出済み)",
+      detailsEn: "via MIN 2nd (Traded to SAC)",
+      conditionsJa: [
+        "元は Isaiah Joe 取引で MIN から獲得。2026年11月 Nique Clifford 取引でサクラメント・キングス（SAC）へ放出",
+      ],
+      conditionsEn: [
+        "Originally acquired from MIN (Isaiah Joe trade); sent to Sacramento in the Nov 2026 Nique Clifford trade",
+      ],
     },
     {
       id: "okc-2030-2-den-hou-mia-1",
@@ -1874,13 +1890,17 @@ const TEAM_CUSTOM_PICKS: Record<string, NbaDraftPickEntry[]> = {
       kind: "outgoing",
       badgeType: "outgoing",
       isOutgoing: true,
-      toTeamId: "OKC",
-      shortLabelJa: "自前 (OKCへ放出)",
-      shortLabelEn: "Own (to OKC)",
-      detailsJa: "UTA 自前 2巡目 (OKCへ放出済み)",
-      detailsEn: "Own 2nd (Traded to OKC)",
-      conditionsJa: ["オクラホマシティ・サンダー（OKC）へトレード放出済み"],
-      conditionsEn: ["Traded away to Oklahoma City Thunder"],
+      toTeamId: "SAC",
+      shortLabelJa: "自前 (SACへ放出)",
+      shortLabelEn: "Own (to SAC)",
+      detailsJa: "UTA 自前 2巡目 (SACへ放出済み / 経由 OKC)",
+      detailsEn: "Own 2nd (Traded to SAC / via OKC)",
+      conditionsJa: [
+        "2022年に OKC へ放出後、2026年11月 OKC–SAC 取引でサクラメント・キングス（SAC）へ移動",
+      ],
+      conditionsEn: [
+        "Originally to OKC (2022); conveyed to Sacramento via the Nov 2026 OKC–SAC trade",
+      ],
     },
     {
       id: "uta-2028-2-cle",
@@ -3662,13 +3682,17 @@ const TEAM_CUSTOM_PICKS: Record<string, NbaDraftPickEntry[]> = {
       kind: "outgoing",
       badgeType: "outgoing",
       isOutgoing: true,
-      toTeamId: "OKC",
-      shortLabelJa: "自前 (OKCへ放出)",
-      shortLabelEn: "Own (to OKC)",
-      detailsJa: "MIN 自前 2巡目 (OKCへ放出済み)",
-      detailsEn: "Own 2nd (Traded to OKC)",
-      conditionsJa: ["オクラホマシティ・サンダー（OKC）へトレード放出済み"],
-      conditionsEn: ["Traded to OKC"],
+      toTeamId: "SAC",
+      shortLabelJa: "自前 (SACへ放出)",
+      shortLabelEn: "Own (to SAC)",
+      detailsJa: "MIN 自前 2巡目 (SACへ放出済み / 経由 OKC)",
+      detailsEn: "Own 2nd (Traded to SAC / via OKC)",
+      conditionsJa: [
+        "Isaiah Joe 取引で OKC へ放出後、2026年11月 OKC–SAC 取引でサクラメント・キングス（SAC）へ移動",
+      ],
+      conditionsEn: [
+        "Originally to OKC (Isaiah Joe trade); conveyed to Sacramento via the Nov 2026 OKC–SAC trade",
+      ],
     },
 
     // 2031
@@ -9189,6 +9213,24 @@ const TEAM_CUSTOM_PICKS: Record<string, NbaDraftPickEntry[]> = {
       conditionsJa: ["ポートランド・トレイルブレイザーズ（POR）へトレード放出済み（via CHI→SAC→MEM）"],
       conditionsEn: ["Traded to Portland Trail Blazers (via CHI to SAC to MEM)"],
     },
+    {
+      id: "sac-2028-2-uta",
+      year: 2028,
+      round: 2,
+      kind: "incoming",
+      badgeType: "from",
+      fromTeamId: "UTA",
+      shortLabelJa: "UTA (via OKC)",
+      shortLabelEn: "UTA (via OKC)",
+      detailsJa: "UTA 2巡目 (OKC経由)",
+      detailsEn: "via UTA 2nd (via OKC)",
+      conditionsJa: [
+        "ユタ・ジャズ（UTA）の2巡目（元 OKC 保有・プロテクトなし）。2026年11月 Nique Clifford 取引で獲得",
+      ],
+      conditionsEn: [
+        "Utah 2028 2nd previously held by OKC (unprotected); acquired in the Nov 2026 Nique Clifford trade",
+      ],
+    },
 
     // 2029
     {
@@ -9248,6 +9290,24 @@ const TEAM_CUSTOM_PICKS: Record<string, NbaDraftPickEntry[]> = {
       detailsEn: "Own 2nd (Traded to SAS)",
       conditionsJa: ["サンアントニオ・スパーズ（SAS）へトレード放出済み（via IND）"],
       conditionsEn: ["Traded to San Antonio Spurs (via Indiana)"],
+    },
+    {
+      id: "sac-2030-2-min",
+      year: 2030,
+      round: 2,
+      kind: "incoming",
+      badgeType: "from",
+      fromTeamId: "MIN",
+      shortLabelJa: "MIN (via OKC)",
+      shortLabelEn: "MIN (via OKC)",
+      detailsJa: "MIN 2巡目 (OKC経由)",
+      detailsEn: "via MIN 2nd (via OKC)",
+      conditionsJa: [
+        "ミネソタ・ティンバーウルブズ（MIN）の2巡目（元 OKC 保有・プロテクトなし）。2026年11月 Nique Clifford 取引で獲得",
+      ],
+      conditionsEn: [
+        "Minnesota 2030 2nd previously held by OKC (unprotected); acquired in the Nov 2026 Nique Clifford trade",
+      ],
     },
 
     // 2031 — Own/SAS swap + MIN 1st; own 2nd to DEN
