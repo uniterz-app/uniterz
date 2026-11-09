@@ -318,7 +318,7 @@ function TeamScatterBlock({
         yAxis={preset.y}
         quadrants={preset.quadrants}
         lang={lang}
-        marker="jersey"
+        marker="square"
         selectedId={selected}
         onSelect={setSelected}
         watermarks={watermarks ?? preset.marks}
