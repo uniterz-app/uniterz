@@ -10,6 +10,8 @@ import {
   LEAGUE_HUB_TEAM_CLUTCH,
   LEAGUE_HUB_TEAM_HUSTLE,
   LEAGUE_HUB_TEAM_REBOUND,
+  LEAGUE_HUB_TEAM_SHOT_CREATION,
+  LEAGUE_HUB_TEAM_SHOT_DEFENSE,
   LEAGUE_HUB_TEAM_STRENGTH,
   LEAGUE_HUB_TEAM_TEMPO,
   LEAGUE_HUB_TEAM_THREE,
@@ -443,7 +445,9 @@ type StylePresetId =
   | "clutch"
   | "three"
   | "attack"
+  | "shotCreation"
   | "tempo"
+  | "shotDefense"
   | "hustle"
   | "rebound"
   | "turnover";
@@ -455,7 +459,9 @@ const STYLE_PRESETS: Record<StylePresetId, LeagueHubScatterPreset<LeagueHubTeamM
   clutch: LEAGUE_HUB_TEAM_CLUTCH,
   three: LEAGUE_HUB_TEAM_THREE,
   attack: LEAGUE_HUB_TEAM_ATTACK,
+  shotCreation: LEAGUE_HUB_TEAM_SHOT_CREATION,
   tempo: LEAGUE_HUB_TEAM_TEMPO,
+  shotDefense: LEAGUE_HUB_TEAM_SHOT_DEFENSE,
   hustle: LEAGUE_HUB_TEAM_HUSTLE,
   rebound: LEAGUE_HUB_TEAM_REBOUND,
   turnover: LEAGUE_HUB_TEAM_TURNOVER,
@@ -480,6 +486,7 @@ const STYLE_GROUPS: readonly {
     maps: [
       { id: "three", label: "3PT" },
       { id: "attack", label: "PASS × DRIVE" },
+      { id: "shotCreation", label: "C&S × PULLUP" },
       { id: "tempo", label: "TEMPO" },
     ],
   },
@@ -492,6 +499,7 @@ const STYLE_GROUPS: readonly {
     id: "defense",
     label: "DEFENSE",
     maps: [
+      { id: "shotDefense", label: "OPP FG%" },
       { id: "hustle", label: "HUSTLE" },
       { id: "rebound", label: "REB" },
       { id: "turnover", label: "TOV" },
@@ -521,7 +529,7 @@ function StyleMaps({
     overall: "strength",
     offense: "three",
     playType: "pt-pnrBh",
-    defense: "hustle",
+    defense: "shotDefense",
   });
   const group = STYLE_GROUPS.find((g) => g.id === groupId) ?? STYLE_GROUPS[0]!;
   const mapId = mapByGroup[groupId];
