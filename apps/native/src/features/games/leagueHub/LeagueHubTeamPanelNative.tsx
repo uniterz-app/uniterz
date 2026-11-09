@@ -360,11 +360,18 @@ const MIX_SEGMENTS = [
   { id: "ft", label: "FT", color: "rgba(255,255,255,0.55)" },
 ] as const;
 type MixId = (typeof MIX_SEGMENTS)[number]["id"];
+type MixSide = "scored" | "allowed";
 
-function scoringMix(r: NbaLeagueTeamStatRow): Record<MixId, number> {
-  const three = r.pctPts3 || 0;
-  const paint = r.pctPtsPaint || 0;
-  const ft = r.pctPtsFt || 0;
+const MIX_SIDES: readonly { id: MixSide; label: string }[] = [
+  { id: "scored", label: "SCORED" },
+  { id: "allowed", label: "ALLOWED" },
+];
+
+function scoringMix(r: NbaLeagueTeamStatRow, side: MixSide): Record<MixId, number> {
+  const allowed = side === "allowed";
+  const three = (allowed ? r.oppPctPts3 : r.pctPts3) || 0;
+  const paint = (allowed ? r.oppPctPtsPaint : r.pctPtsPaint) || 0;
+  const ft = (allowed ? r.oppPctPtsFt : r.pctPtsFt) || 0;
   return { three, paint, ft, mid: Math.max(0, 1 - three - paint - ft) };
 }
 
@@ -377,14 +384,15 @@ function ScoringMix({
   lang: HubLang;
   onSelectTeam: (teamId: string) => void;
 }) {
+  const [side, setSide] = useState<MixSide>("scored");
   const [sortBy, setSortBy] = useState<MixId>("three");
   const sorted = useMemo(
     () =>
       rows
-        .filter((r) => (r.pctPts3 || 0) + (r.pctPtsPaint || 0) > 0)
-        .map((r) => ({ r, mix: scoringMix(r) }))
+        .map((r) => ({ r, mix: scoringMix(r, side) }))
+        .filter(({ mix }) => mix.three + mix.paint > 0)
         .sort((a, b) => b.mix[sortBy] - a.mix[sortBy]),
-    [rows, sortBy]
+    [rows, sortBy, side]
   );
   /** 選んだ項目を左端に置いて、どのタブでも長さで比べられるようにする */
   const segments = useMemo(
@@ -394,11 +402,18 @@ function ScoringMix({
   const avg =
     sorted.length > 0 ? sorted.reduce((a, x) => a + x.mix[sortBy], 0) / sorted.length : 0;
   const sortColor = MIX_SEGMENTS.find((s) => s.id === sortBy)!.color;
+  const sideTabs = <HubSlantedTabs items={MIX_SIDES} value={side} onChange={setSide} />;
   if (sorted.length === 0) {
-    return <HubEmpty text={lang === "ja" ? "まだデータがありません" : "No data yet"} />;
+    return (
+      <View>
+        {sideTabs}
+        <HubEmpty text={lang === "ja" ? "まだデータがありません" : "No data yet"} />
+      </View>
+    );
   }
   return (
     <View>
+      {sideTabs}
       <CyberSlantedTabBarNative fill>
         {MIX_SEGMENTS.map((s) => {
           const label = `BY ${s.label}`;
@@ -424,9 +439,13 @@ function ScoringMix({
         })}
       </CyberSlantedTabBarNative>
       <Text style={styles.mapHint}>
-        {lang === "ja"
-          ? "得点のうち 3P・ペイント・ミドル・フリースローが占める割合。タブで並べ替え、縦線はリーグ平均。"
-          : "Share of points from 3s, the paint, mid-range and free throws. Tap a tab to sort; the line is the league average."}
+        {side === "allowed"
+          ? lang === "ja"
+            ? "取られた点のうち 3P・ペイント・ミドル・フリースローが占める割合。上ほどそこから多く取られている。縦線はリーグ平均。"
+            : "Share of points allowed from 3s, the paint, mid-range and free throws. Higher = gives up more from there. The line is the league average."
+          : lang === "ja"
+            ? "得点のうち 3P・ペイント・ミドル・フリースローが占める割合。タブで並べ替え、縦線はリーグ平均。"
+            : "Share of points from 3s, the paint, mid-range and free throws. Tap a tab to sort; the line is the league average."}
       </Text>
       <View style={styles.legend}>
         {MIX_SEGMENTS.map((s) => (
