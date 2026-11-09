@@ -18,7 +18,10 @@ import LeagueHubPlayerPanelNative, {
   type LeagueHubPlayerSection,
 } from "./LeagueHubPlayerPanelNative";
 import { SUB_TAB_THEME } from "./LeagueHubBranchTabsNative";
-import LeagueHubTeamPanelNative from "./LeagueHubTeamPanelNative";
+import LeagueHubTeamPanelNative, {
+  LEAGUE_HUB_TEAM_SECTIONS,
+  type LeagueHubTeamSection,
+} from "./LeagueHubTeamPanelNative";
 import { HubEmpty, HubSubTabs, type HubLang } from "./leagueHubUiNative";
 import { useNbaLeagueHubNative } from "./useNbaLeagueHubNative";
 
@@ -81,16 +84,26 @@ function ElbowLine({ width, parent }: { width: number; parent: ParentSide }) {
 export default function LeagueHubPanelNative({ lang, onSelectTeam, onSelectPlayer }: Props) {
   const [tab, setTab] = useState<"team" | "player">("team");
   const [playerSection, setPlayerSection] = useState<LeagueHubPlayerSection>("style");
+  const [teamSection, setTeamSection] = useState<LeagueHubTeamSection>("style");
   const [barW, setBarW] = useState(0);
   const { hub, loading } = useNbaLeagueHubNative();
   const { bottomContentReserveY } = useBottomTabBarInsets();
   const { onTableScroll } = useLeagueStatsCollapse();
   const scrollRef = useRef<ScrollView>(null);
-  const sectionLabel = LEAGUE_HUB_PLAYER_SECTIONS.find((s) => s.id === playerSection)?.label;
+  const sectionLabel =
+    tab === "player"
+      ? LEAGUE_HUB_PLAYER_SECTIONS.find((s) => s.id === playerSection)?.label
+      : LEAGUE_HUB_TEAM_SECTIONS.find((s) => s.id === teamSection)?.label;
 
   const changePlayerSection = (id: LeagueHubPlayerSection) => {
     if (id === playerSection) return;
     setPlayerSection(id);
+    scrollRef.current?.scrollTo({ y: 0, animated: false });
+  };
+
+  const changeTeamSection = (id: LeagueHubTeamSection) => {
+    if (id === teamSection) return;
+    setTeamSection(id);
     scrollRef.current?.scrollTo({ y: 0, animated: false });
   };
 
@@ -134,7 +147,7 @@ export default function LeagueHubPanelNative({ lang, onSelectTeam, onSelectPlaye
       </View>
       </LeagueStatsCollapsibleNative>
       <LeagueStatsCollapsedSummaryNative
-        text={`LEAGUE · ${tab.toUpperCase()}${tab === "player" && sectionLabel ? ` · ${sectionLabel}` : ""}`}
+        text={`LEAGUE · ${tab.toUpperCase()}${sectionLabel ? ` · ${sectionLabel}` : ""}`}
       />
       {tab === "player" ? (
         <View style={styles.subTabs}>
@@ -144,7 +157,15 @@ export default function LeagueHubPanelNative({ lang, onSelectTeam, onSelectPlaye
             onChange={changePlayerSection}
           />
         </View>
-      ) : null}
+      ) : (
+        <View style={styles.subTabs}>
+          <HubSubTabs
+            items={LEAGUE_HUB_TEAM_SECTIONS}
+            value={teamSection}
+            onChange={changeTeamSection}
+          />
+        </View>
+      )}
       <ScrollView
         ref={scrollRef}
         onScroll={onTableScroll}
@@ -162,7 +183,12 @@ export default function LeagueHubPanelNative({ lang, onSelectTeam, onSelectPlaye
           </Text>
         ) : null}
         {tab === "team" ? (
-          <LeagueHubTeamPanelNative hub={hub} lang={lang} onSelectTeam={onSelectTeam} />
+          <LeagueHubTeamPanelNative
+            hub={hub}
+            lang={lang}
+            section={teamSection}
+            onSelectTeam={onSelectTeam}
+          />
         ) : loading && !hub ? (
           <View style={styles.loading}>
             <ActivityIndicator color={CYBER_TAB_CYAN} />

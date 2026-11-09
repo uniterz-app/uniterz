@@ -58,9 +58,19 @@ import {
   type HubLang,
 } from "./leagueHubUiNative";
 
+export type LeagueHubTeamSection = "style" | "scoring" | "form" | "defense";
+
+export const LEAGUE_HUB_TEAM_SECTIONS: readonly { id: LeagueHubTeamSection; label: string }[] = [
+  { id: "style", label: "STYLE" },
+  { id: "scoring", label: "SCORING" },
+  { id: "form", label: "FORM" },
+  { id: "defense", label: "DEFENSE" },
+];
+
 type Props = {
   hub: NbaLeagueHubDoc | null;
   lang: HubLang;
+  section: LeagueHubTeamSection;
   onSelectTeam: (teamId: string) => void;
 };
 
@@ -686,6 +696,8 @@ function TeamRecords({
   onSelectTeam: (teamId: string) => void;
 }) {
   const [mode, setMode] = useState<RecordMode>("streak");
+  const [showAll, setShowAll] = useState(false);
+  const ja = lang === "ja";
   return (
     <HubSection title="FORM & SPLITS">
       <HubScrollSlantedTabs items={RECORD_MODES} value={mode} onChange={setMode} />
@@ -695,7 +707,101 @@ function TeamRecords({
       ) : (
         <Conditions cond={mode} teams={teams} lang={lang} onSelectTeam={onSelectTeam} />
       )}
+      {teams.length > 0 ? (
+        <Pressable
+          onPress={() => setShowAll((v) => !v)}
+          style={({ pressed }) => [styles.allBtn, pressed ? styles.cardPressed : null]}
+          accessibilityRole="button"
+          accessibilityState={{ expanded: showAll }}
+        >
+          <Text style={styles.allBtnText}>
+            {showAll
+              ? ja
+                ? "閉じる ▲"
+                : "CLOSE ▲"
+              : ja
+                ? `全 ${teams.length} チームを見る ▼`
+                : `ALL ${teams.length} TEAMS ▼`}
+          </Text>
+        </Pressable>
+      ) : null}
+      {showAll ? (
+        <AllTeamRecords mode={mode} teams={teams} onSelectTeam={onSelectTeam} />
+      ) : null}
     </HubSection>
+  );
+}
+
+function recordGames(rec: LeagueHubRecord | null): number {
+  return rec ? rec.wins + rec.losses : 0;
+}
+
+/** 勝率が同じなら試合数が多いほうを上（全勝なら多く勝ったほう・全敗なら多く負けたほうが端） */
+function compareRecords(a: LeagueHubRecord, b: LeagueHubRecord, dir: "best" | "worst"): number {
+  const pa = recordPct(a) ?? 0;
+  const pb = recordPct(b) ?? 0;
+  return (dir === "best" ? pb - pa : pa - pb) || recordGames(b) - recordGames(a);
+}
+
+/** 連勝は長い順 → 連勝・連敗なし → 連敗は短い順。同じなら L10 の良い順 */
+function streakScore(t: LeagueHubTeamRow): number {
+  if (!t.streak) return 0;
+  return t.streak.kind === "W" ? t.streak.count : -t.streak.count;
+}
+
+/** 30 チームを 1 列で上から良い順に */
+function AllTeamRecords({
+  mode,
+  teams,
+  onSelectTeam,
+}: {
+  mode: RecordMode;
+  teams: LeagueHubTeamRow[];
+  onSelectTeam: (teamId: string) => void;
+}) {
+  const rows = useMemo(() => {
+    if (mode === "streak") {
+      return [...teams]
+        .sort(
+          (a, b) =>
+            streakScore(b) - streakScore(a) ||
+            (recordPct(b.last10) ?? 0) - (recordPct(a.last10) ?? 0)
+        )
+        .map((t) => ({
+          t,
+          value: t.streak ? `${t.streak.kind}${t.streak.count}` : "—",
+          sub: `L10 ${formatRecord(t.last10)}`,
+        }));
+    }
+    const played = teams.filter((t) => recordGames(t[mode]) > 0);
+    const none = teams.filter((t) => recordGames(t[mode]) === 0);
+    return [
+      ...played
+        .sort((a, b) => compareRecords(a[mode]!, b[mode]!, "best"))
+        .map((t) => ({
+          t,
+          value: formatRecord(t[mode]),
+          sub: (recordPct(t[mode]) ?? 0).toFixed(3).replace(/^0/, ""),
+        })),
+      ...none.map((t) => ({ t, value: "—", sub: "" })),
+    ];
+  }, [mode, teams]);
+  return (
+    <View style={styles.allList}>
+      {rows.map(({ t, value, sub }, i) => (
+        <HubRow
+          key={t.teamId}
+          rank={i + 1}
+          teamId={t.teamId}
+          name={nick(t.teamId)}
+          kind="team"
+          value={value}
+          valueSub={sub || undefined}
+          onPress={() => onSelectTeam(t.teamId)}
+          framed
+        />
+      ))}
+    </View>
   );
 }
 
@@ -818,8 +924,8 @@ function Conditions({
   if (rows.length === 0) {
     return <HubEmpty text={lang === "ja" ? "まだ試合が少ないです" : "Not enough games yet"} />;
   }
-  const best = [...rows].sort((a, b) => b.pct - a.pct || b.rec.wins - a.rec.wins).slice(0, 5);
-  const worst = [...rows].sort((a, b) => a.pct - b.pct || b.rec.losses - a.rec.losses).slice(0, 5);
+  const best = [...rows].sort((a, b) => compareRecords(a.rec, b.rec, "best")).slice(0, 5);
+  const worst = [...rows].sort((a, b) => compareRecords(a.rec, b.rec, "worst")).slice(0, 5);
   const list = (xs: typeof rows) =>
     xs.map(({ t, rec, pct }) => (
       <HubRow
@@ -844,7 +950,7 @@ function Conditions({
 }
 
 /** 他の切り替えと同じ斜めタブを横いっぱいに並べる */
-export default function LeagueHubTeamPanelNative({ hub, lang, onSelectTeam }: Props) {
+export default function LeagueHubTeamPanelNative({ hub, lang, section, onSelectTeam }: Props) {
   const { bundle, loading } = useLeagueTeamStatsBundle({
     apiBaseUrl: getUniterzApiBaseUrl(),
     season: CURRENT_NBA_SEASON_KEY,
@@ -857,48 +963,64 @@ export default function LeagueHubTeamPanelNative({ hub, lang, onSelectTeam }: Pr
     return rows.map((r) => ({ ...r, ...byTeam.get(r.teamId) }));
   }, [rows, teams]);
 
-  if (loading && rows.length === 0) {
-    return (
-      <View style={styles.loading}>
-        <ActivityIndicator color={CYBER_TAB_CYAN} />
-      </View>
-    );
-  }
+  /** 切り替えてもマップの選択などを残すため、隠すだけでアンマウントしない */
+  const shown = (id: LeagueHubTeamSection) => (section === id ? null : styles.hidden);
+  const rowsLoading = loading && rows.length === 0;
+  const spinner = (
+    <View style={styles.loading}>
+      <ActivityIndicator color={CYBER_TAB_CYAN} />
+    </View>
+  );
 
   return (
     <View>
-      <StyleMaps
-        title="PLAY STYLE"
-        groups={PLAY_STYLE_GROUPS}
-        rows={rows}
-        lang={lang}
-        onSelectTeam={onSelectTeam}
-      />
+      <View style={shown("style")}>
+        {rowsLoading ? (
+          spinner
+        ) : (
+          <>
+            <StyleMaps
+              title="PLAY STYLE"
+              groups={PLAY_STYLE_GROUPS}
+              rows={rows}
+              lang={lang}
+              onSelectTeam={onSelectTeam}
+            />
+            <StyleMaps
+              title="ROSTER"
+              groups={ROSTER_GROUPS}
+              rows={rosterRows}
+              lang={lang}
+              onSelectTeam={onSelectTeam}
+            />
+          </>
+        )}
+      </View>
 
-      <StyleMaps
-        title="ROSTER"
-        groups={ROSTER_GROUPS}
-        rows={rosterRows}
-        lang={lang}
-        onSelectTeam={onSelectTeam}
-      />
+      <View style={shown("scoring")}>
+        {rowsLoading ? (
+          spinner
+        ) : (
+          <HubSection title="SCORING MIX">
+            <ScoringMix rows={rows} lang={lang} onSelectTeam={onSelectTeam} />
+          </HubSection>
+        )}
+      </View>
 
-      <HubSection title="SCORING MIX">
-        <ScoringMix rows={rows} lang={lang} onSelectTeam={onSelectTeam} />
-      </HubSection>
+      <View style={shown("form")}>
+        <TeamRecords teams={teams} lang={lang} onSelectTeam={onSelectTeam} />
+      </View>
 
-      <TeamRecords teams={teams} lang={lang} onSelectTeam={onSelectTeam} />
-
-      <HubSection
-        title="POINTS ALLOWED BY POSITION"
-        hint={
-          lang === "ja"
-            ? "相手のガード・フォワード・センターに 1 試合で取られた得点。"
-            : "Points per game allowed to opposing guards, forwards and centers."
-        }
-      >
-        <PositionDefense teams={teams} lang={lang} onSelectTeam={onSelectTeam} />
-      </HubSection>
+      <View style={shown("defense")}>
+        <HubSection title="POINTS ALLOWED BY POSITION">
+          <Text style={styles.mapHint}>
+            {lang === "ja"
+              ? "相手のガード・フォワード・センターに 1 試合で取られた得点。"
+              : "Points per game allowed to opposing guards, forwards and centers."}
+          </Text>
+          <PositionDefense teams={teams} lang={lang} onSelectTeam={onSelectTeam} />
+        </HubSection>
+      </View>
     </View>
   );
 }
@@ -907,6 +1029,24 @@ const styles = StyleSheet.create({
   loading: {
     paddingVertical: 40,
     alignItems: "center",
+  },
+  hidden: { display: "none" },
+  allBtn: {
+    marginTop: 10,
+    paddingVertical: 9,
+    borderWidth: 1,
+    borderColor: "rgba(0,245,255,0.45)",
+    alignItems: "center",
+  },
+  allBtnText: {
+    fontFamily: METRIC_FONT,
+    color: CYBER_TAB_CYAN,
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 1,
+  },
+  allList: {
+    marginTop: 10,
   },
   mapHint: {
     color: "rgba(255,255,255,0.55)",
