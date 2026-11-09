@@ -45,6 +45,7 @@ import {
   teamInk,
   type HubLang,
 } from "./leagueHubUiNative";
+import { HubScrollSlantedTabs, HubSlantedTabs } from "./LeagueHubSlantedTabsNative";
 
 export type LeagueHubPlayerSection = "style" | "zone" | "ladder" | "trend";
 
@@ -253,16 +254,15 @@ function StyleMap({
         </Text>
       ) : (
         <>
-          <HubToggle
+          <HubSlantedTabs
             items={LEAGUE_HUB_PLAYER_SCATTER_GROUPS.map((g) => ({ id: g.id, label: g.label }))}
             value={groupId}
             onChange={(id) => {
               setGroupId(id);
               clearSel();
             }}
-            fill
           />
-          <HubChips
+          <HubScrollSlantedTabs
             items={group.presetIds.flatMap((id) => {
               const p = LEAGUE_HUB_PLAYER_SCATTER_PRESETS.find((x) => x.id === id);
               return p ? [{ id: p.id, label: p.label.en }] : [];
@@ -272,8 +272,6 @@ function StyleMap({
               setPresetByGroup((prev) => ({ ...prev, [groupId]: id }));
               clearSel();
             }}
-            wrap
-            columns={4}
           />
         </>
       )}
