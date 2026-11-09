@@ -24,6 +24,8 @@ export const PRO_FUNNEL_EVENTS = [
   "purchase_done",
   /** 予想フォームで INSIGHT タブを開いた（Pro / Free とも。`gameId` 付き） */
   "insight_open",
+  /** OS 標準のストアレビュー依頼を出した（実際に表示されたかは OS 次第） */
+  "review_prompt",
 ] as const;
 
 export type ProFunnelEvent = (typeof PRO_FUNNEL_EVENTS)[number];
