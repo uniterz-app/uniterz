@@ -27,6 +27,7 @@ import LeagueHubScatterNative, { type HubScatterPoint } from "./LeagueHubScatter
 import LeagueHubZoneKingsNative from "./LeagueHubZoneKingsNative";
 import HubShareSectionNative, { useHubCapturing } from "./HubShareSectionNative";
 import LeagueHubCompareNative from "./LeagueHubCompareNative";
+import { MilestonesSection, PlayerSplitsSection, ValueSection } from "./LeagueHubPlayerExtrasNative";
 import {
   HubCellHeader,
   HubChips,
@@ -694,6 +695,7 @@ export default function LeagueHubPlayerPanelNative({ hub, lang, section, onSelec
             </HubShareSectionNative>
           );
         })}
+        <ValueSection hub={hub} lang={lang} onSelectPlayer={onSelectPlayer} />
       </View>
 
       <View style={shown("trend")}>
@@ -771,6 +773,8 @@ export default function LeagueHubPlayerPanelNative({ hub, lang, section, onSelec
           />
         </HubSection>
 
+        <PlayerSplitsSection hub={hub} lang={lang} onSelectPlayer={onSelectPlayer} />
+
         <HubSection title="SEASON HIGHS">
           <HubChips
             items={(Object.keys(HIGH_LABEL) as LeagueHubHighStat[]).map((id) => ({
@@ -833,6 +837,8 @@ export default function LeagueHubPlayerPanelNative({ hub, lang, section, onSelec
                 />
               ))}
         </HubSection>
+
+        <MilestonesSection hub={hub} lang={lang} onSelectPlayer={onSelectPlayer} />
       </View>
     </View>
   );

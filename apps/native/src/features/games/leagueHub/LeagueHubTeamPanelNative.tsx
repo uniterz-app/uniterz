@@ -28,6 +28,7 @@ import {
   type LeagueHubTeamMetric,
 } from "../../../../../../lib/nba/leagueHub/leagueHubScatterPresets";
 import type {
+  LeagueHubPosDefStat,
   LeagueHubRecord,
   LeagueHubTeamRow,
   NbaLeagueHubDoc,
@@ -656,9 +657,12 @@ const RECORD_MODES: readonly { id: RecordMode; label: string }[] = [
   { id: "streak", label: "STREAK" },
   { id: "close", label: "CLOSE ≤5" },
   { id: "b2b", label: "B2B" },
+  { id: "threeInFour", label: "3IN4" },
   { id: "vsOver500", label: "VS .500+" },
   { id: "home", label: "HOME" },
   { id: "away", label: "AWAY" },
+  { id: "vsEast", label: "VS EAST" },
+  { id: "vsWest", label: "VS WEST" },
 ];
 
 const RECORD_HINTS: Record<RecordMode, Record<HubLang, string>> = {
@@ -673,6 +677,18 @@ const RECORD_HINTS: Record<RecordMode, Record<HubLang, string>> = {
   b2b: {
     ja: "連戦 2 日目（前日も試合）の勝敗。疲れに強いチームと弱いチーム。2 試合以上のチームだけ。",
     en: "Record on the second night of back-to-backs. Teams with 2+ such games.",
+  },
+  threeInFour: {
+    ja: "4 日で 3 試合目の勝敗（B2B と重なる試合もある）。B2B よりきつい日程。2 試合以上のチームだけ。",
+    en: "Record in the third game in four nights (can overlap B2B). Teams with 2+ such games.",
+  },
+  vsEast: {
+    ja: "東カンファレンスの相手との勝敗。2 試合以上のチームだけ。",
+    en: "Record against Eastern Conference teams. Teams with 2+ such games.",
+  },
+  vsWest: {
+    ja: "西カンファレンスの相手との勝敗。2 試合以上のチームだけ。",
+    en: "Record against Western Conference teams. Teams with 2+ such games.",
   },
   vsOver500: {
     ja: "勝率 5 割以上の相手との勝敗（相手の勝率は試合前の時点）。2 試合以上のチームだけ。",
@@ -773,7 +789,7 @@ function formatPct(pct: number): string {
   return pct.toFixed(3).replace(/^0/, "");
 }
 
-function recordGames(rec: LeagueHubRecord | null): number {
+function recordGames(rec: LeagueHubRecord | null | undefined): number {
   return rec ? rec.wins + rec.losses : 0;
 }
 
@@ -902,6 +918,13 @@ function TeamForm({
   );
 }
 
+const POS_DEF_UNIT: Record<LeagueHubPosDefStat, { ja: string; en: string }> = {
+  pts: { ja: "点", en: "PTS" },
+  reb: { ja: "リバウンド", en: "REB" },
+  ast: { ja: "アシスト", en: "AST" },
+  fg3m: { ja: "本（3P 成功）", en: "3PM" },
+};
+
 function PositionDefense({
   teams,
   lang,
@@ -912,20 +935,27 @@ function PositionDefense({
   onSelectTeam: (teamId: string) => void;
 }) {
   const [pos, setPos] = useState<"G" | "F" | "C">("G");
-  /** asc = 失点が少ない順（1 位から） */
+  const [stat, setStat] = useState<LeagueHubPosDefStat>("pts");
+  /** asc = 取られた数が少ない順（1 位から） */
   const [order, setOrder] = useState<"asc" | "desc">("asc");
   const ja = lang === "ja";
+  const hasMore = teams.some((t) => t.posDef?.[pos]?.stats != null);
   const rows = teams
-    .map((t) => ({ t, cell: t.posDef?.[pos] ?? null }))
-    .filter((x): x is { t: LeagueHubTeamRow; cell: { pts: number; rank: number } } => x.cell != null)
+    .map((t) => {
+      const c = t.posDef?.[pos];
+      const cell = !c ? null : stat === "pts" ? { value: c.pts, rank: c.rank } : (c.stats?.[stat] ?? null);
+      return { t, cell };
+    })
+    .filter((x): x is { t: LeagueHubTeamRow; cell: { value: number; rank: number } } => x.cell != null)
     .sort((a, b) => (order === "asc" ? a.cell.rank - b.cell.rank : b.cell.rank - a.cell.rank));
   /** チーム試合ログ側の leagueAvg と同じく 30 チームの単純平均 */
-  const avg = rows.length > 0 ? rows.reduce((sum, x) => sum + x.cell.pts, 0) / rows.length : null;
+  const avg = rows.length > 0 ? rows.reduce((sum, x) => sum + x.cell.value, 0) / rows.length : null;
   const avgLabel = avg == null ? "" : `${ja ? "リーグ平均" : "LEAGUE AVG"} ${avg.toFixed(1)}`;
   const splitAt =
     avg == null
       ? -1
-      : rows.findIndex(({ cell }) => (order === "asc" ? cell.pts > avg : cell.pts < avg));
+      : rows.findIndex(({ cell }) => (order === "asc" ? cell.value > avg : cell.value < avg));
+  const unit = POS_DEF_UNIT[stat][ja ? "ja" : "en"];
   return (
     <View>
       <HubSlantedTabs
@@ -937,6 +967,18 @@ function PositionDefense({
         value={pos}
         onChange={setPos}
       />
+      {hasMore ? (
+        <HubSlantedTabs
+          items={[
+            { id: "pts", label: "PTS" },
+            { id: "reb", label: "REB" },
+            { id: "ast", label: "AST" },
+            { id: "fg3m", label: "3PM" },
+          ]}
+          value={stat}
+          onChange={setStat}
+        />
+      ) : null}
       {rows.length === 0 ? (
         <HubEmpty text={ja ? "まだデータがありません" : "No data yet"} />
       ) : (
@@ -946,8 +988,8 @@ function PositionDefense({
               {avgLabel}
               <Text style={styles.avgNoteSub}>
                 {ja
-                  ? "  点 · 右下は平均との差（緑 = 平均より少ない）"
-                  : "  PTS · below = vs average (green = fewer)"}
+                  ? `  ${unit} · 右下は平均との差（緑 = 平均より少ない）`
+                  : `  ${unit} · below = vs average (green = fewer)`}
               </Text>
             </Text>
           ) : null}
@@ -959,16 +1001,16 @@ function PositionDefense({
             <Text style={styles.allBtnText}>
               {order === "asc"
                 ? ja
-                  ? "失点が少ない順 ▲（押すと多い順）"
+                  ? "取られた数が少ない順 ▲（押すと多い順）"
                   : "FEWEST ALLOWED FIRST ▲"
                 : ja
-                  ? "失点が多い順 ▼（押すと少ない順）"
+                  ? "取られた数が多い順 ▼（押すと少ない順）"
                   : "MOST ALLOWED FIRST ▼"}
             </Text>
           </Pressable>
           <View style={styles.allList}>
             {rows.map(({ t, cell }, i) => {
-              const diff = avg == null ? 0 : cell.pts - avg;
+              const diff = avg == null ? 0 : cell.value - avg;
               const even = Math.abs(diff) < 0.05;
               return (
                 <Fragment key={t.teamId}>
@@ -978,7 +1020,7 @@ function PositionDefense({
                     teamId={t.teamId}
                     name={nick(t.teamId)}
                     kind="team"
-                    value={cell.pts.toFixed(1)}
+                    value={cell.value.toFixed(1)}
                     valueSub={even ? "±0.0" : `${diff > 0 ? "+" : "−"}${Math.abs(diff).toFixed(1)}`}
                     valueSubColor={even ? undefined : diff < 0 ? HUB_GOOD_COLOR : HUB_BAD_COLOR}
                     onPress={() => onSelectTeam(t.teamId)}
@@ -994,7 +1036,199 @@ function PositionDefense({
   );
 }
 
-type ConditionId = "b2b" | "close" | "vsOver500" | "home" | "away";
+function signed(v: number): string {
+  return `${v > 0 ? "+" : v < 0 ? "−" : "±"}${Math.abs(v).toFixed(1)}`;
+}
+
+/** 対戦相手の今の勝率の平均（終わった試合 / 残り日程） */
+function ScheduleStrength({
+  teams,
+  lang,
+  onSelectTeam,
+}: {
+  teams: LeagueHubTeamRow[];
+  lang: HubLang;
+  onSelectTeam: (teamId: string) => void;
+}) {
+  const [mode, setMode] = useState<"played" | "remaining">("played");
+  const [showAll, setShowAll] = useState(false);
+  const ja = lang === "ja";
+  if (!teams.some((t) => t.schedule != null)) return null;
+  const played = mode === "played";
+  const rows = teams
+    .flatMap((t) => {
+      const s = t.schedule;
+      const v = s ? (played ? s.played : s.remaining) : null;
+      return s && v != null ? [{ t, v, games: played ? s.playedGames : s.remainingGames }] : [];
+    })
+    .sort((a, b) => b.v - a.v);
+  const avg = rows.length > 0 ? rows.reduce((sum, r) => sum + r.v, 0) / rows.length : null;
+  const avgLabel = avg == null ? "" : `${ja ? "リーグ平均" : "LEAGUE AVG"} ${formatPct(avg)}`;
+  const row = ({ t, v, games }: (typeof rows)[number], rank?: number) => (
+    <HubRow
+      key={t.teamId}
+      rank={rank}
+      teamId={t.teamId}
+      name={nick(t.teamId)}
+      kind="team"
+      value={formatPct(v)}
+      valueSub={played ? `${t.wins}-${t.losses}` : ja ? `残り ${games}` : `${games} left`}
+      onPress={() => onSelectTeam(t.teamId)}
+      framed
+    />
+  );
+  const splitAt = avg == null ? -1 : rows.findIndex((r) => r.v < avg);
+  return (
+    <HubSection title="SCHEDULE">
+      <HubSlantedTabs
+        items={[
+          { id: "played", label: "PLAYED" },
+          { id: "remaining", label: "REMAINING" },
+        ]}
+        value={mode}
+        onChange={setMode}
+      />
+      <Text style={styles.mapHint}>
+        {played
+          ? ja
+            ? "これまで当たった相手の、今の勝率の平均。高いほど強い相手と戦ってきた（同じ成績でも価値が違う）。"
+            : "Average current win % of opponents faced so far. Higher = tougher schedule."
+          : ja
+            ? "残り日程の相手の、今の勝率の平均。高いほどこの先がきつい。"
+            : "Average current win % of remaining opponents. Higher = tougher road ahead."}
+      </Text>
+      {rows.length === 0 ? (
+        <HubEmpty text={ja ? "まだデータがありません" : "No data yet"} />
+      ) : (
+        <>
+          <HubTwoCol
+            leftTitle={ja ? "楽" : "EASIEST"}
+            rightTitle={ja ? "厳しい" : "HARDEST"}
+            left={[...rows].reverse().slice(0, 5).map((r) => row(r))}
+            right={rows.slice(0, 5).map((r) => row(r))}
+          />
+          <Pressable
+            onPress={() => setShowAll((v) => !v)}
+            style={({ pressed }) => [styles.allBtn, pressed ? styles.cardPressed : null]}
+            accessibilityRole="button"
+            accessibilityState={{ expanded: showAll }}
+          >
+            <Text style={styles.allBtnText}>
+              {showAll
+                ? ja
+                  ? "閉じる ▲"
+                  : "CLOSE ▲"
+                : ja
+                  ? `全 ${rows.length} チームを見る（厳しい順）▼`
+                  : `ALL ${rows.length} TEAMS (HARDEST FIRST) ▼`}
+            </Text>
+          </Pressable>
+          {showAll ? (
+            <View style={styles.allList}>
+              {rows.map((r, i) => (
+                <Fragment key={r.t.teamId}>
+                  {i === splitAt && i > 0 ? <HubAvgDivider label={avgLabel} /> : null}
+                  {row(r, i + 1)}
+                </Fragment>
+              ))}
+            </View>
+          ) : null}
+        </>
+      )}
+    </HubSection>
+  );
+}
+
+/** UNITERZ ユーザーの勝敗予想（選んだ割合の合計）と実際の勝ち数 */
+function UniterzPicks({
+  teams,
+  lang,
+  onSelectTeam,
+}: {
+  teams: LeagueHubTeamRow[];
+  lang: HubLang;
+  onSelectTeam: (teamId: string) => void;
+}) {
+  const ja = lang === "ja";
+  if (!teams.some((t) => t.picks !== undefined)) return null;
+  const rows = teams.flatMap((t) =>
+    t.picks && t.picks.games >= 3 ? [{ t, p: t.picks, diff: t.picks.wins - t.picks.expectedWins }] : []
+  );
+  // 1 試合は両チームに 1 回ずつ数えている
+  const games = rows.reduce((s, r) => s + r.p.games, 0) / 2;
+  const hits = rows.reduce((s, r) => s + r.p.majorityHits, 0) / 2;
+  const list = (xs: typeof rows) =>
+    xs.length === 0 ? (
+      <HubEmpty text="—" />
+    ) : (
+      xs.map(({ t, p, diff }) => (
+        <HubRow
+          key={t.teamId}
+          teamId={t.teamId}
+          name={nick(t.teamId)}
+          kind="team"
+          value={signed(diff)}
+          valueSub={
+            ja
+              ? `予想 ${p.expectedWins.toFixed(1)} → ${p.wins} 勝`
+              : `exp ${p.expectedWins.toFixed(1)} → ${p.wins} W`
+          }
+          valueSubColor={diff > 0 ? HUB_GOOD_COLOR : HUB_BAD_COLOR}
+          onPress={() => onSelectTeam(t.teamId)}
+          framed
+        />
+      ))
+    );
+  return (
+    <HubSection title="UNITERZ PICKS">
+      <Text style={styles.mapHint}>
+        {ja
+          ? "UNITERZ のみんなの勝敗予想で、そのチームを選んだ人の割合を試合ごとに足したものが「予想の勝ち数」。実際の勝ち数との差で、みんなが低く見ている・高く見ているチームがわかります。3 試合以上のチームだけ。"
+          : "Share of UNITERZ users picking the team, summed over games = expected wins. Compared with actual wins to find under- and overrated teams. Teams with 3+ games."}
+      </Text>
+      {rows.length === 0 ? (
+        <HubEmpty text={ja ? "まだ試合が少ないです" : "Not enough games yet"} />
+      ) : (
+        <>
+          {games > 0 ? (
+            <Text style={styles.avgNote}>
+              {ja ? "多数派の的中率" : "MAJORITY PICK HIT RATE"} {Math.round((hits / games) * 100)}%
+              <Text style={styles.avgNoteSub}>
+                {ja ? `  ${games} 試合` : `  ${games} games`}
+              </Text>
+            </Text>
+          ) : null}
+          <HubTwoCol
+            leftTitle={ja ? "予想より勝つ" : "UNDERRATED"}
+            rightTitle={ja ? "予想より負ける" : "OVERRATED"}
+            left={list(
+              rows
+                .filter((r) => r.diff > 0)
+                .sort((a, b) => b.diff - a.diff)
+                .slice(0, 5)
+            )}
+            right={list(
+              rows
+                .filter((r) => r.diff < 0)
+                .sort((a, b) => a.diff - b.diff)
+                .slice(0, 5)
+            )}
+          />
+        </>
+      )}
+    </HubSection>
+  );
+}
+
+type ConditionId =
+  | "b2b"
+  | "threeInFour"
+  | "close"
+  | "vsOver500"
+  | "home"
+  | "away"
+  | "vsEast"
+  | "vsWest";
 
 function Conditions({
   cond,
@@ -1102,14 +1336,16 @@ export default function LeagueHubTeamPanelNative({ hub, lang, section, onSelectT
 
       <View style={shown("form")}>
         <TeamRecords teams={teams} lang={lang} onSelectTeam={onSelectTeam} />
+        <ScheduleStrength teams={teams} lang={lang} onSelectTeam={onSelectTeam} />
+        <UniterzPicks teams={teams} lang={lang} onSelectTeam={onSelectTeam} />
       </View>
 
       <View style={shown("defense")}>
-        <HubSection title="POINTS ALLOWED BY POSITION">
+        <HubSection title="ALLOWED BY POSITION">
           <Text style={styles.mapHint}>
             {lang === "ja"
-              ? "相手のガード・フォワード・センターに 1 試合で取られた得点。順位は少ないほど上。"
-              : "Points per game allowed to opposing guards, forwards and centers. Rank 1 = fewest."}
+              ? "相手のガード・フォワード・センターに 1 試合で取られた得点・リバウンド・アシスト・3P。順位は少ないほど上。"
+              : "Per game allowed to opposing guards, forwards and centers. Rank 1 = fewest."}
           </Text>
           <PositionDefense teams={teams} lang={lang} onSelectTeam={onSelectTeam} />
         </HubSection>
