@@ -447,7 +447,10 @@ export type LeagueHubTeamMetric =
   | "oppEfgPct"
   | "oppTovPct"
   | "oppOrebPct"
-  | "oppFtaRate";
+  | "oppFtaRate"
+  | "pctPtsFb"
+  | "passes"
+  | "drives";
 
 export const LEAGUE_HUB_TEAM_STRENGTH: LeagueHubScatterPreset<LeagueHubTeamMetric> = {
   id: "strength",
@@ -535,6 +538,110 @@ export const LEAGUE_HUB_TEAM_CLUTCH: LeagueHubScatterPreset<LeagueHubTeamMetric>
     tl: { ja: "守って逃げ切る", en: "LOCK IT UP" },
     br: { ja: "撃ち合いで勝つ", en: "SHOOTOUT" },
     bl: { ja: "接戦で苦戦中", en: "STRUGGLING LATE" },
+  },
+};
+
+export const LEAGUE_HUB_TEAM_REBOUND: LeagueHubScatterPreset<LeagueHubTeamMetric> = {
+  id: "rebound",
+  label: { ja: "リバウンド", en: "REB" },
+  hint: {
+    ja: "右ほど自分のシュートの外れを取り返し、上ほど相手に取り返させない。",
+    en: "Right = grab more of own misses, up = give opponents fewer second chances.",
+  },
+  x: {
+    metric: "orebPct",
+    label: { ja: "OREB%（攻撃リバウンドを取った割合）", en: "OREB% (own misses rebounded)" },
+    format: "pct",
+  },
+  y: {
+    metric: "oppOrebPct",
+    label: {
+      ja: "相手 OREB%（相手に取られた割合・上ほど少ない）",
+      en: "OPP OREB% (lower = up)",
+    },
+    format: "pct",
+    invert: true,
+  },
+  marks: { tl: "REB" },
+  quadrants: {
+    tr: { ja: "ゴール下を支配", en: "OWN THE GLASS" },
+    tl: { ja: "守りで固める", en: "CLEAN DEF GLASS" },
+    br: { ja: "攻めで取りに行く", en: "CRASH THE GLASS" },
+    bl: { ja: "リバウンドに弱い", en: "OUTREBOUNDED" },
+  },
+};
+
+export const LEAGUE_HUB_TEAM_TEMPO: LeagueHubScatterPreset<LeagueHubTeamMetric> = {
+  id: "tempo",
+  label: { ja: "速攻とテンポ", en: "TEMPO" },
+  hint: {
+    ja: "右ほど試合のペースが速く、上ほど得点のうち速攻の割合が高い。",
+    en: "Right = faster pace, up = bigger share of points from fast breaks.",
+  },
+  x: {
+    metric: "pace",
+    label: { ja: "Pace（48 分あたりの攻撃回数）", en: "PACE (poss per 48 min)" },
+    format: "one",
+  },
+  y: {
+    metric: "pctPtsFb",
+    label: { ja: "速攻得点%（得点のうち速攻の割合）", en: "FAST BREAK % of points" },
+    format: "pct",
+  },
+  marks: { tl: "TEMPO" },
+  quadrants: {
+    tr: { ja: "走って取る", en: "RUN AND GUN" },
+    tl: { ja: "隙を突いて走る", en: "OPPORTUNISTIC" },
+    br: { ja: "早打ち", en: "QUICK TRIGGER" },
+    bl: { ja: "じっくり攻める", en: "GRIND IT OUT" },
+  },
+};
+
+export const LEAGUE_HUB_TEAM_TURNOVER: LeagueHubScatterPreset<LeagueHubTeamMetric> = {
+  id: "turnover",
+  label: { ja: "ミスの攻防", en: "TOV" },
+  hint: {
+    ja: "右ほど自分のミスが少なく、上ほど相手のミスを誘う。",
+    en: "Right = fewer own turnovers, up = force more turnovers.",
+  },
+  x: {
+    metric: "tovPct",
+    label: {
+      ja: "TOV%（攻撃がミスで終わる割合・右ほど少ない）",
+      en: "TOV% (lower = right)",
+    },
+    format: "pct",
+    invert: true,
+  },
+  y: {
+    metric: "oppTovPct",
+    label: { ja: "相手 TOV%（相手の攻撃をミスで終わらせた割合）", en: "OPP TOV% (forced)" },
+    format: "pct",
+  },
+  marks: { tl: "TOV" },
+  quadrants: {
+    tr: { ja: "ミスなく奪う", en: "WIN THE TOV BATTLE" },
+    tl: { ja: "奪うが失う", en: "CHAOS" },
+    br: { ja: "大事に運ぶ", en: "CAREFUL" },
+    bl: { ja: "ミス合戦で負け", en: "LOSE THE TOV BATTLE" },
+  },
+};
+
+export const LEAGUE_HUB_TEAM_ATTACK: LeagueHubScatterPreset<LeagueHubTeamMetric> = {
+  id: "attack",
+  label: { ja: "攻めの作り方", en: "ATTACK" },
+  hint: {
+    ja: "右ほどパスを回し、上ほどドライブで切り込む。良し悪しではなく攻め方の違い。",
+    en: "Right = more passes, up = more drives. A style, not a grade.",
+  },
+  x: { metric: "passes", label: { ja: "パス / 試合", en: "PASSES / G" }, format: "one" },
+  y: { metric: "drives", label: { ja: "ドライブ / 試合", en: "DRIVES / G" }, format: "one" },
+  marks: { tl: "ATTACK" },
+  quadrants: {
+    tr: { ja: "全方位で攻める", en: "ATTACK EVERYWHERE" },
+    tl: { ja: "個人で切り込む", en: "DRIVE FIRST" },
+    br: { ja: "パスで崩す", en: "BALL MOVEMENT" },
+    bl: { ja: "外で組み立てる", en: "PERIMETER SET" },
   },
 };
 
