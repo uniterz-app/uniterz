@@ -31,7 +31,7 @@ export type HubScatterPoint = {
   color: string;
   /** ジャージの 2 色目 */
   secondary?: string;
-  /** 0–1。ジャージの大きさ */
+  /** 0–1。ジャージ・四角の大きさ */
   scale?: number;
   /** お気に入り。点の代わりに ★ */
   star?: boolean;
@@ -47,7 +47,7 @@ type Props = {
   yAxis: LeagueHubAxis<string>;
   quadrants: LeagueHubQuadrants;
   lang: HubLang;
-  marker: "jersey" | "dot";
+  marker: "jersey" | "square" | "dot";
   selectedId: string | null;
   /** 比較の 2 人目。1 人目と同じ見た目で選択扱い */
   secondId?: string | null;
@@ -72,6 +72,8 @@ const BLEED_PAST_SCREEN = 24;
 const PAD = { l: 6, r: 6, t: 8, b: 20 } as const;
 const DOT_R = 4.2;
 const STAR_R = 7.5;
+const SQUARE_MIN = 8;
+const SQUARE_SPAN = 6;
 const LABEL_W = 160;
 const TAP_RADIUS = 24;
 const LABEL_TAP_SLOP = 8;
@@ -182,17 +184,18 @@ function outwardOf(
   return { x: ox, y: oy };
 }
 
-function jerseySlot(
+function markerSlot(
   cx: number,
   cy: number,
   size: number,
+  aspect: number,
   gap: number,
   side: Side,
   fontSize: number,
   w: number,
   h: number
 ): { box: Box; x: number; y: number; anchor: Anchor } {
-  const halfW = (size * JERSEY_ASPECT) / 2;
+  const halfW = (size * aspect) / 2;
   const halfH = size / 2;
   const anchor: Anchor = side.ax > 0 ? "start" : side.ax < 0 ? "end" : "middle";
   if (side.ax === 0) {
@@ -218,9 +221,10 @@ function leaderLine(
   cx: number,
   cy: number,
   size: number,
+  aspect: number,
   box: Box
 ): { x1: number; y1: number; x2: number; y2: number } | null {
-  const halfW = (size * JERSEY_ASPECT) / 2;
+  const halfW = (size * aspect) / 2;
   const halfH = size / 2;
   const lx = (box.x0 + box.x1) / 2;
   const ly = (box.y0 + box.y1) / 2;
@@ -420,7 +424,7 @@ export default function LeagueHubScatterNative({
   const offscreen = bleedPastScreen ? BLEED_PAST_SCREEN : 0;
   const bleed = offscreen > 0 ? gutter + offscreen : 0;
   const width = columnW + bleed * 2;
-  const height = Math.round(columnW * (marker === "jersey" ? 0.95 : 1.05));
+  const height = Math.round(columnW * (marker === "dot" ? 1.05 : 0.95));
   const plotW = Math.max(0, width - PAD.l - PAD.r);
   const plotH = Math.max(0, height - PAD.t - PAD.b);
   /** 横に伸ばしても、点の置き場所は伸ばす前の幅のまま */
@@ -457,7 +461,13 @@ export default function LeagueHubScatterNative({
 
     const placed = points.map((p) => {
       const size =
-        marker === "jersey" ? 20 + (p.scale ?? 0.5) * 12 : p.star ? STAR_R * 2 : DOT_R * 2;
+        marker === "jersey"
+          ? 20 + (p.scale ?? 0.5) * 12
+          : marker === "square"
+            ? SQUARE_MIN + (p.scale ?? 0.5) * SQUARE_SPAN
+            : p.star
+              ? STAR_R * 2
+              : DOT_R * 2;
       const half = size / 2;
       return {
         p,
@@ -469,8 +479,9 @@ export default function LeagueHubScatterNative({
     const avgX = px(dx.avg);
     const avgY = py(dy.avg);
 
+    const aspect = marker === "jersey" ? JERSEY_ASPECT : 1;
     const markerBoxes: Box[] = placed.map((m) => {
-      const halfW = marker === "jersey" ? (m.size * JERSEY_ASPECT) / 2 : m.size / 2;
+      const halfW = (m.size * aspect) / 2;
       const halfH = m.size / 2;
       return {
         x0: m.cx - halfW,
@@ -480,7 +491,7 @@ export default function LeagueHubScatterNative({
       };
     });
 
-    const fontSize = marker === "jersey" ? 9 : 10;
+    const fontSize = marker === "dot" ? 10 : 9;
     const order = placed
       .map((m, i) => ({
         i,
@@ -526,7 +537,7 @@ export default function LeagueHubScatterNative({
       const m = placed[i]!;
       const w = m.p.label.length * fontSize * 0.68 + 2;
       const h = fontSize + 2;
-      if (marker !== "jersey") {
+      if (marker === "dot") {
         const half = m.size / 2;
         const cands: Array<{ box: Box; x: number; y: number; anchor: Anchor }> = [
           {
@@ -583,9 +594,9 @@ export default function LeagueHubScatterNative({
         withLine: boolean
       ): LabelGeom | null => {
         for (const side of sides) {
-          const slot = jerseySlot(m.cx, m.cy, m.size, gap, side, fontSize, w, h);
+          const slot = markerSlot(m.cx, m.cy, m.size, aspect, gap, side, fontSize, w, h);
           if (!fits(slot.box, i, allowMarker, allowLabel)) continue;
-          const line = withLine ? leaderLine(m.cx, m.cy, m.size, slot.box) : null;
+          const line = withLine ? leaderLine(m.cx, m.cy, m.size, aspect, slot.box) : null;
           if (withLine && (!line || lineCrossesMarker(line, i, markerBoxes))) continue;
           return { i, ...slot, line };
         }
@@ -597,20 +608,20 @@ export default function LeagueHubScatterNative({
         take(CALLOUT_GAP, true, false, true) ??
         (() => {
           for (const side of sides) {
-            const slot = jerseySlot(m.cx, m.cy, m.size, CALLOUT_GAP, side, fontSize, w, h);
+            const slot = markerSlot(m.cx, m.cy, m.size, aspect, CALLOUT_GAP, side, fontSize, w, h);
             if (!insidePlot(slot.box, labelRight, plotH, labelLeft)) continue;
             return {
               i,
               ...slot,
-              line: leaderLine(m.cx, m.cy, m.size, slot.box),
+              line: leaderLine(m.cx, m.cy, m.size, aspect, slot.box),
             };
           }
           const side = sides[0]!;
-          const slot = jerseySlot(m.cx, m.cy, m.size, CALLOUT_GAP, side, fontSize, w, h);
+          const slot = markerSlot(m.cx, m.cy, m.size, aspect, CALLOUT_GAP, side, fontSize, w, h);
           return {
             i,
             ...slot,
-            line: leaderLine(m.cx, m.cy, m.size, slot.box),
+            line: leaderLine(m.cx, m.cy, m.size, aspect, slot.box),
           };
         })();
       labelBoxes.push(chosen.box);
@@ -855,6 +866,28 @@ export default function LeagueHubScatterNative({
                           strokeWidth={1}
                           strokeLinejoin="round"
                           opacity={hasSelection && !sel ? 0.5 : 1}
+                        />
+                      );
+                    })
+                : null}
+              {marker === "square"
+                ? [...layout.placed]
+                    .sort((a, b) => Number(isSel(a.p.id)) - Number(isSel(b.p.id)))
+                    .map((m) => {
+                      const sel = isSel(m.p.id);
+                      const black = isBlackBodyPrimary(m.p.color);
+                      return (
+                        <Rect
+                          key={`sq-${m.p.id}`}
+                          x={m.cx - m.size / 2}
+                          y={m.cy - m.size / 2}
+                          width={m.size}
+                          height={m.size}
+                          fill={m.p.color}
+                          stroke={black ? JERSEY_FRAME_WHITE : m.p.secondary ?? "#050508"}
+                          strokeOpacity={black ? 0.65 : 0.9}
+                          strokeWidth={1.2}
+                          opacity={hasSelection && !sel ? 0.4 : 1}
                         />
                       );
                     })
