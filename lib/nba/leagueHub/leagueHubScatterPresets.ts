@@ -30,6 +30,8 @@ export type LeagueHubScatterPreset<M extends string> = {
   x: LeagueHubAxis<M>;
   y: LeagueHubAxis<M>;
   quadrants: LeagueHubQuadrants;
+  /** 図の隅の大きな透かし。tl = 上へ行くほど良いもの（または図の名前）、br = 右へ行くほど良いもの */
+  marks?: { tl?: string; br?: string };
 };
 
 export type LeagueHubPlayerScatterPreset = LeagueHubScatterPreset<LeagueHubPlayerMetric> & {
@@ -435,7 +437,17 @@ export type LeagueHubTeamMetric =
   | "cutFreq"
   | "cutPpp"
   | "postFreq"
-  | "postPpp";
+  | "postPpp"
+  | "fg3a"
+  | "fg3Pct"
+  | "efgPct"
+  | "tovPct"
+  | "orebPct"
+  | "ftaRate"
+  | "oppEfgPct"
+  | "oppTovPct"
+  | "oppOrebPct"
+  | "oppFtaRate";
 
 export const LEAGUE_HUB_TEAM_STRENGTH: LeagueHubScatterPreset<LeagueHubTeamMetric> = {
   id: "strength",
@@ -451,11 +463,30 @@ export const LEAGUE_HUB_TEAM_STRENGTH: LeagueHubScatterPreset<LeagueHubTeamMetri
     format: "one",
     invert: true,
   },
+  marks: { tl: "DEF", br: "OFF" },
   quadrants: {
     tr: { ja: "攻守とも強い", en: "TWO-WAY" },
     tl: { ja: "守備で勝つ", en: "DEFENSE FIRST" },
     br: { ja: "攻撃で勝つ", en: "OFFENSE FIRST" },
     bl: { ja: "苦しい", en: "STRUGGLING" },
+  },
+};
+
+export const LEAGUE_HUB_TEAM_THREE: LeagueHubScatterPreset<LeagueHubTeamMetric> = {
+  id: "three",
+  label: { ja: "3P の量と質", en: "3PT" },
+  hint: {
+    ja: "右ほど 3P をよく打ち、上ほど決める。",
+    en: "Right = more 3PA, up = better 3P%.",
+  },
+  x: { metric: "fg3a", label: { ja: "3PA / 試合", en: "3PA / G" }, format: "one" },
+  y: { metric: "fg3Pct", label: { ja: "3P%", en: "3P%" }, format: "pct" },
+  marks: { tl: "3PT" },
+  quadrants: {
+    tr: { ja: "撃って決める", en: "BOMBERS" },
+    tl: { ja: "少なく確実", en: "SELECTIVE" },
+    br: { ja: "量で勝負", en: "VOLUME" },
+    bl: { ja: "3P が武器でない", en: "INSIDE TEAM" },
   },
 };
 
@@ -468,6 +499,7 @@ export const LEAGUE_HUB_TEAM_HUSTLE: LeagueHubScatterPreset<LeagueHubTeamMetric>
   },
   x: { metric: "deflections", label: { ja: "ディフレクション", en: "DEFLECTIONS" }, format: "one" },
   y: { metric: "contestedShots", label: { ja: "コンテスト", en: "CONTESTS" }, format: "one" },
+  marks: { tl: "HUSTLE" },
   quadrants: {
     tr: { ja: "エナジー", en: "ENERGY" },
     tl: { ja: "コンテスト型", en: "CONTEST" },
@@ -490,6 +522,7 @@ export const LEAGUE_HUB_TEAM_CLUTCH: LeagueHubScatterPreset<LeagueHubTeamMetric>
     format: "one",
     invert: true,
   },
+  marks: { tl: "CLUTCH" },
   quadrants: {
     tr: { ja: "接戦に強い", en: "CLOSERS" },
     tl: { ja: "守って逃げ切る", en: "LOCK IT UP" },
@@ -535,6 +568,7 @@ export function leagueHubPlayTypePreset(
       label: { ja: "PPP", en: "PPP" },
       format: "ppp",
     },
+    marks: { tl: pt.short },
     quadrants: {
       tr: { ja: "武器", en: "WEAPON" },
       tl: { ja: "隠れた得意", en: "UNDERUSED" },

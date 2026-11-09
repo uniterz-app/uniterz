@@ -35,7 +35,7 @@ import {
   type GameCardEntranceVariant,
 } from "./useGameCardListRowEntrance";
 import TutorialCardTapHintNative from "../tutorial/TutorialCardTapHintNative";
-import { MATCH_CARD_DISPLAY_FONT } from "./matchCardTypography";
+import { MATCH_CARD_DISPLAY_FONT, MATCH_CARD_SCORE_FONT } from "./matchCardTypography";
 import { displayNbaRoundLabel } from "../../../../../lib/games/displayNbaRoundLabel";
 import { matchLineFramePaint } from "../../../../../lib/games/matchListLineFrame";
 import type { NbaTopScorerPick } from "../../../../../lib/nba/topScorer";
@@ -567,6 +567,19 @@ export const GameCardListRow = memo(function GameCardListRow(props: GameCardList
                           ) : null}
                         </View>
                       ) : centerBlock.variant === "score" ? (
+                        <>
+                        {centerBlock.subLine ? (
+                          <Text
+                            style={[
+                              styles.centerSubline,
+                              styles.centerSublineAbove,
+                              isWcCard && styles.centerSublineWc,
+                            ]}
+                            numberOfLines={2}
+                          >
+                            {centerBlock.subLine}
+                          </Text>
+                        ) : null}
                         <View
                           style={[
                             styles.centerTextScoreRow,
@@ -587,7 +600,7 @@ export const GameCardListRow = memo(function GameCardListRow(props: GameCardList
                               isWcCard && styles.centerScoreDashWc,
                             ]}
                           >
-                            –
+                            —
                           </Text>
                           <Text
                             style={[
@@ -598,6 +611,7 @@ export const GameCardListRow = memo(function GameCardListRow(props: GameCardList
                             {centerBlock.away}
                           </Text>
                         </View>
+                        </>
                       ) : batchEditing ? (
                         <BatchCardScorePair
                           home={batchEdit?.scores[gameId]?.home ?? ""}
@@ -620,17 +634,6 @@ export const GameCardListRow = memo(function GameCardListRow(props: GameCardList
                           {centerBlock.time}
                         </Text>
                       )}
-                      {centerBlock.variant === "score" && centerBlock.subLine ? (
-                        <Text
-                          style={[
-                            styles.centerSubline,
-                            isWcCard && styles.centerSublineWc,
-                          ]}
-                          numberOfLines={2}
-                        >
-                          {centerBlock.subLine}
-                        </Text>
-                      ) : null}
                       {centerBlock.variant === "score" && centerBlock.pkScore ? (
                         <MatchPkResultLineNative
                           pkScore={centerBlock.pkScore}
@@ -656,9 +659,13 @@ export const GameCardListRow = memo(function GameCardListRow(props: GameCardList
                               : `My pick ${homeCompact} ${myPredictedScore.home}, ${awayCompact} ${myPredictedScore.away}`
                           }
                         >
-                          <Text style={rowStyles.myPickLabel}>MY</Text>
+                          <Text style={rowStyles.myPickLabel}>
+                            {language === "ja" ? "あなたの予想" : "YOUR PICK"}
+                          </Text>
                           <Text style={rowStyles.myPickScore}>
-                            {myPredictedScore.home}–{myPredictedScore.away}
+                            {myPredictedScore.home}
+                            <Text style={rowStyles.myPickDash}>{" — "}</Text>
+                            {myPredictedScore.away}
                           </Text>
                         </View>
                       ) : null}
@@ -810,6 +817,19 @@ export const GameCardListRow = memo(function GameCardListRow(props: GameCardList
                           ) : null}
                         </View>
                       ) : centerBlock.variant === "score" ? (
+                        <>
+                        {centerBlock.subLine ? (
+                          <Text
+                            style={[
+                              styles.centerSubline,
+                              styles.centerSublineAbove,
+                              isWcCard && styles.centerSublineWc,
+                            ]}
+                            numberOfLines={2}
+                          >
+                            {centerBlock.subLine}
+                          </Text>
+                        ) : null}
                         <View
                           style={[
                             styles.centerTextScoreRow,
@@ -830,7 +850,7 @@ export const GameCardListRow = memo(function GameCardListRow(props: GameCardList
                               isWcCard && styles.centerScoreDashWc,
                             ]}
                           >
-                            –
+                            —
                           </Text>
                           <Text
                             style={[
@@ -841,6 +861,7 @@ export const GameCardListRow = memo(function GameCardListRow(props: GameCardList
                             {centerBlock.away}
                           </Text>
                         </View>
+                        </>
                       ) : batchEditing ? (
                         <BatchCardScorePair
                           home={batchEdit?.scores[gameId]?.home ?? ""}
@@ -863,17 +884,6 @@ export const GameCardListRow = memo(function GameCardListRow(props: GameCardList
                           {centerBlock.time}
                         </Text>
                       )}
-                      {centerBlock.variant === "score" && centerBlock.subLine ? (
-                        <Text
-                          style={[
-                            styles.centerSubline,
-                            isWcCard && styles.centerSublineWc,
-                          ]}
-                          numberOfLines={2}
-                        >
-                          {centerBlock.subLine}
-                        </Text>
-                      ) : null}
                       {centerBlock.variant === "score" && centerBlock.pkScore ? (
                         <MatchPkResultLineNative
                           pkScore={centerBlock.pkScore}
@@ -1061,29 +1071,36 @@ const rowStyles = StyleSheet.create({
     width: "100%",
     overflow: "visible",
   },
+  /** リザルトカードと同じ: 「あなたの予想」の小見出し → 黄色の予想スコア */
   myPick: {
-    marginTop: 3,
-    flexDirection: "row",
-    alignItems: "baseline",
-    justifyContent: "center",
-    gap: 4,
+    marginTop: 4,
+    alignItems: "center",
+    gap: 1,
   },
   myPickLabel: {
-    color: "rgba(165,243,252,0.6)",
-    fontSize: 9,
-    fontWeight: "800",
-    letterSpacing: 1,
+    color: "rgba(226,232,240,0.45)",
+    fontSize: 10,
     includeFontPadding: false,
-    fontFamily: MATCH_CARD_DISPLAY_FONT,
   },
   myPickScore: {
-    color: "rgba(226,242,255,0.85)",
-    fontSize: 12,
-    fontWeight: "800",
-    letterSpacing: 0.3,
-    includeFontPadding: false,
+    fontFamily: MATCH_CARD_SCORE_FONT,
+    fontSize: 15,
+    lineHeight: 22,
+    fontWeight: "900",
+    color: "rgba(253,224,71,0.95)",
     fontVariant: ["tabular-nums"],
-    fontFamily: MATCH_CARD_DISPLAY_FONT,
+    letterSpacing: -0.4,
+    includeFontPadding: false,
+    paddingTop: 2,
+    textShadowColor: "rgba(251,191,36,0.32)",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 8,
+  },
+  myPickDash: {
+    fontFamily: MATCH_CARD_SCORE_FONT,
+    fontSize: 13,
+    fontWeight: "900",
+    color: "rgba(253,224,71,0.95)",
   },
 });
 

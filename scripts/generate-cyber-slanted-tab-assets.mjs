@@ -41,9 +41,26 @@ const VARIANTS = [
   { key: "cyan", fill: "#00F5FF", file: "active-stretch.png" },
   { key: "violet", fill: "#C084FC", file: "active-stretch-violet.png" },
   { key: "gold", fill: "#F6C344", file: "active-stretch-gold.png" },
+  /**
+   * 横スクロールで詰めて並べる列用（glow="tight"）。画像の外寸・本体位置は同じで、ぼかしだけ小さい。
+   * meta.json と他の素材は書き換えない: `node scripts/generate-cyber-slanted-tab-assets.mjs --only tight`
+   */
+  {
+    key: "tight",
+    fill: "#00F5FF",
+    file: "active-stretch-tight.png",
+    outerStd: 2.6,
+    innerStd: 1.4,
+    standalone: true,
+  },
 ];
 
-function buildSvg(fill) {
+const ONLY = (() => {
+  const i = process.argv.indexOf("--only");
+  return i >= 0 ? process.argv[i + 1] : null;
+})();
+
+function buildSvg(fill, outerStd = GLOW_OUTER_STD_1X, innerStd = GLOW_INNER_STD_1X) {
   const pad = GLOW_PAD_1X * SCALE;
   const bh = BODY_H_1X * SCALE;
   const bw = BODY_W_1X * SCALE;
@@ -73,10 +90,10 @@ function buildSvg(fill) {
 <svg xmlns="http://www.w3.org/2000/svg" width="${canvasW}" height="${canvasH}" viewBox="0 0 ${canvasW} ${canvasH}">
   <defs>
     <filter id="glowOuter" x="-60%" y="-60%" width="220%" height="220%" color-interpolation-filters="sRGB">
-      <feGaussianBlur in="SourceAlpha" stdDeviation="${GLOW_OUTER_STD_1X * SCALE}" result="b1"/>
+      <feGaussianBlur in="SourceAlpha" stdDeviation="${outerStd * SCALE}" result="b1"/>
       <feFlood flood-color="${fill}" flood-opacity="0.28" result="c1"/>
       <feComposite in="c1" in2="b1" operator="in" result="g1"/>
-      <feGaussianBlur in="SourceAlpha" stdDeviation="${GLOW_INNER_STD_1X * SCALE}" result="b2"/>
+      <feGaussianBlur in="SourceAlpha" stdDeviation="${innerStd * SCALE}" result="b2"/>
       <feFlood flood-color="${fill}" flood-opacity="0.55" result="c2"/>
       <feComposite in="c2" in2="b2" operator="in" result="g2"/>
       <feMerge>
@@ -99,8 +116,8 @@ function buildSvg(fill) {
   };
 }
 
-async function writeVariant(dir, fill, fileName, alsoSplit) {
-  const { canvasW, canvasH, pad, bw, svg } = buildSvg(fill);
+async function writeVariant(dir, fill, fileName, alsoSplit, outerStd, innerStd) {
+  const { canvasW, canvasH, pad, bw, svg } = buildSvg(fill, outerStd, innerStd);
   const full = await sharp(Buffer.from(svg)).png().toBuffer();
 
   fs.writeFileSync(path.join(dir, fileName), full);
@@ -151,6 +168,17 @@ async function writeVariant(dir, fill, fileName, alsoSplit) {
 async function main() {
   let geometry = null;
 
+  if (ONLY) {
+    const variant = VARIANTS.find((v) => v.key === ONLY);
+    if (!variant) throw new Error(`unknown variant: ${ONLY}`);
+    for (const dir of OUT_DIRS) {
+      fs.mkdirSync(dir, { recursive: true });
+      await writeVariant(dir, variant.fill, variant.file, false, variant.outerStd, variant.innerStd);
+    }
+    console.log("generated", { only: variant.file, outs: OUT_DIRS });
+    return;
+  }
+
   for (const dir of OUT_DIRS) {
     fs.mkdirSync(dir, { recursive: true });
     for (const variant of VARIANTS) {
@@ -158,7 +186,9 @@ async function main() {
         dir,
         variant.fill,
         variant.file,
-        variant.key === "cyan"
+        variant.key === "cyan",
+        variant.outerStd,
+        variant.innerStd
       );
       if (variant.key === "cyan") geometry = result;
     }
