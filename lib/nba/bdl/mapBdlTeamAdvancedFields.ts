@@ -236,6 +236,15 @@ export function mapBdlTeamAdvancedFields(input: {
   if (oppPtsOffTov != null) set(out, "oppPtsOffTov", round1(oppPtsOffTov));
   if (oppPts2nd != null) set(out, "oppPtsSecondChance", round1(oppPts2nd));
 
+  // 失点の内訳（得点側の pct_pts_* と同じ割合。ミドルは残り）
+  const oppPts = num(o, "opp_pts");
+  if (oppPts != null && oppPts > 0) {
+    const oppFtm = num(o, "opp_ftm");
+    if (oppFg3m != null) set(out, "oppPctPts3", round3((oppFg3m * 3) / oppPts));
+    if (oppPtsPaint != null) set(out, "oppPctPtsPaint", round3(oppPtsPaint / oppPts));
+    if (oppFtm != null) set(out, "oppPctPtsFt", round3(oppFtm / oppPts));
+  }
+
   // --- defense allowed ---
   set(out, "fgPctAllowed", rate(num(o, "opp_fg_pct", "fg_pct")));
   set(out, "fg3PctAllowed", rate(num(o, "opp_fg3_pct", "fg3_pct")));
