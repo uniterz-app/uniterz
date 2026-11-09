@@ -860,26 +860,13 @@ function PositionDefense({
   onSelectTeam: (teamId: string) => void;
 }) {
   const [pos, setPos] = useState<"G" | "F" | "C">("G");
+  /** asc = 失点が少ない順（1 位から） */
+  const [order, setOrder] = useState<"asc" | "desc">("asc");
+  const ja = lang === "ja";
   const rows = teams
     .map((t) => ({ t, cell: t.posDef?.[pos] ?? null }))
     .filter((x): x is { t: LeagueHubTeamRow; cell: { pts: number; rank: number } } => x.cell != null)
-    .sort((a, b) => a.cell.rank - b.cell.rank);
-  if (rows.length === 0) {
-    return <HubEmpty text={lang === "ja" ? "まだデータがありません" : "No data yet"} />;
-  }
-  const list = (xs: typeof rows) =>
-    xs.map(({ t, cell }) => (
-      <HubRow
-        key={t.teamId}
-        rank={cell.rank}
-        teamId={t.teamId}
-        name={nick(t.teamId)}
-        kind="team"
-        value={cell.pts.toFixed(1)}
-        onPress={() => onSelectTeam(t.teamId)}
-        framed
-      />
-    ));
+    .sort((a, b) => (order === "asc" ? a.cell.rank - b.cell.rank : b.cell.rank - a.cell.rank));
   return (
     <View>
       <HubSlantedTabs
@@ -891,12 +878,41 @@ function PositionDefense({
         value={pos}
         onChange={setPos}
       />
-      <HubTwoCol
-        leftTitle="STINGIEST"
-        rightTitle="LEAKIEST"
-        left={list(rows.slice(0, 5))}
-        right={list(rows.slice(-5).reverse())}
-      />
+      {rows.length === 0 ? (
+        <HubEmpty text={ja ? "まだデータがありません" : "No data yet"} />
+      ) : (
+        <>
+          <Pressable
+            onPress={() => setOrder((o) => (o === "asc" ? "desc" : "asc"))}
+            style={({ pressed }) => [styles.allBtn, pressed ? styles.cardPressed : null]}
+            accessibilityRole="button"
+          >
+            <Text style={styles.allBtnText}>
+              {order === "asc"
+                ? ja
+                  ? "失点が少ない順 ▲（押すと多い順）"
+                  : "FEWEST ALLOWED FIRST ▲"
+                : ja
+                  ? "失点が多い順 ▼（押すと少ない順）"
+                  : "MOST ALLOWED FIRST ▼"}
+            </Text>
+          </Pressable>
+          <View style={styles.allList}>
+            {rows.map(({ t, cell }) => (
+              <HubRow
+                key={t.teamId}
+                rank={cell.rank}
+                teamId={t.teamId}
+                name={nick(t.teamId)}
+                kind="team"
+                value={cell.pts.toFixed(1)}
+                onPress={() => onSelectTeam(t.teamId)}
+                framed
+              />
+            ))}
+          </View>
+        </>
+      )}
     </View>
   );
 }
@@ -1015,8 +1031,8 @@ export default function LeagueHubTeamPanelNative({ hub, lang, section, onSelectT
         <HubSection title="POINTS ALLOWED BY POSITION">
           <Text style={styles.mapHint}>
             {lang === "ja"
-              ? "相手のガード・フォワード・センターに 1 試合で取られた得点。"
-              : "Points per game allowed to opposing guards, forwards and centers."}
+              ? "相手のガード・フォワード・センターに 1 試合で取られた得点。順位は少ないほど上。"
+              : "Points per game allowed to opposing guards, forwards and centers. Rank 1 = fewest."}
           </Text>
           <PositionDefense teams={teams} lang={lang} onSelectTeam={onSelectTeam} />
         </HubSection>
