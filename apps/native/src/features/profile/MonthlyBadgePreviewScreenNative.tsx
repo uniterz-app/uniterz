@@ -20,7 +20,7 @@ import {
   type MonthlyBadgeRef,
 } from "../../../../../lib/badges/monthlyRankingBadge";
 
-const LABEL = "2026-10";
+const LABELS = ["2026-10", "2026-11"] as const;
 
 /** 2026-10 の dry-run 結果（刻印の見え方確認用） */
 const SAMPLE: Record<string, Omit<MonthlyBadgeRecord, "participantCount">> = {
@@ -70,7 +70,8 @@ export default function MonthlyBadgePreviewScreenNative({
   language: string;
   onClose: () => void;
 }) {
-  const refs = useMemo(() => monthlyBadgeRefsForLabel(LABEL), []);
+  const [label, setLabel] = useState<string>(LABELS[LABELS.length - 1]);
+  const refs = useMemo(() => monthlyBadgeRefsForLabel(label), [label]);
   const [selected, setSelected] = useState<ResolvedBadgeNative | null>(null);
   const [unlock, setUnlock] = useState<{ ref: MonthlyBadgeRef; key: number } | null>(null);
 
@@ -83,11 +84,22 @@ export default function MonthlyBadgePreviewScreenNative({
     <MobilePageShell
       title="月間バッジ プレビュー"
       eyebrow="DEV"
-      subtitle={`${LABEL}。一覧をタップ → 詳細（傾ける / タップで裏返す）。下のボタンで受け取り演出`}
+      subtitle="一覧をタップ → 詳細（傾ける / タップで裏返す）。下のボタンで受け取り演出"
       onClose={onClose}
       appBackground
     >
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        <View style={styles.buttons}>
+          {LABELS.map((l) => (
+            <Pressable
+              key={l}
+              onPress={() => setLabel(l)}
+              style={({ pressed }) => [styles.btn, l === label && styles.btnActive, pressed && styles.btnPressed]}
+            >
+              <Text style={[styles.btnText, l === label && styles.btnTextActive]}>{l}</Text>
+            </Pressable>
+          ))}
+        </View>
         {sections.map(({ division, title }) => {
           const list = refs.filter((r) => r.division === division);
           return (
@@ -171,6 +183,13 @@ const styles = StyleSheet.create({
   },
   btnPressed: {
     opacity: 0.6,
+  },
+  btnActive: {
+    backgroundColor: "rgba(201,162,39,0.9)",
+  },
+  btnTextActive: {
+    color: "#0a0a0c",
+    fontWeight: "700",
   },
   btnText: {
     color: "rgba(252,246,232,0.9)",
