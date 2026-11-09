@@ -1,6 +1,6 @@
 /**
- * チームのスタイルマップ（ROSTER / FORM）用の数字（純関数）。
- * ロスターのシーズン平均・選手試合ログ × 先発・チーム試合ログ・ペイロールから。BDL なし。
+ * チームのスタイルマップ（ROSTER）用の数字（純関数）。
+ * 選手のシーズン平均・選手試合ログ × 先発・チーム試合の得点・ペイロールから。BDL なし。
  */
 import type { NbaPlayerGameLog } from "@/lib/predict/nbaPlayerDetailPreviewMocks";
 import type {
@@ -21,14 +21,7 @@ export type LeagueHubTeamStyleInput = {
   teamId: string;
   wins: number;
   losses: number;
-  home: LeagueHubRecord | null;
-  away: LeagueHubRecord | null;
-  vsOver500: LeagueHubRecord | null;
-  vsUnder500: LeagueHubRecord | null;
-  b2b: LeagueHubRecord | null;
-  /** 得点差（自チーム − 相手）。新しい順 */
-  margins: number[];
-  /** 自チームの得点。新しい順 */
+  /** 自チームの得点（試合ごと） */
   scores: number[];
   roster: LeagueHubRosterTeamPlayer[];
   payrollUsd: number | null;
@@ -37,10 +30,6 @@ export type LeagueHubTeamStyleInput = {
   starterPts: number;
 };
 
-/** 直近フォームに使う試合数 */
-const RECENT_GAMES = 5;
-/** 得点差の平均・振れ幅を出す最低試合数 */
-const MIN_MARGIN_GAMES = 5;
 /** エース・得点源に数える選手: チーム試合の半分以上・平均 10 分以上 */
 const ROTATION_GAME_SHARE = 0.5;
 const ROTATION_MIN_MPG = 10;
@@ -101,29 +90,6 @@ export function buildLeagueHubTeamStyle(
   };
 
   set("winPct", pct({ wins: input.wins, losses: input.losses }), 3);
-  set("homePct", pct(input.home), 3);
-  set("awayPct", pct(input.away), 3);
-  set("vsOverPct", pct(input.vsOver500), 3);
-  set("vsUnderPct", pct(input.vsUnder500), 3);
-  set("b2bPct", pct(input.b2b), 3);
-  if (input.b2b) {
-    set(
-      "restPct",
-      pct({ wins: input.wins - input.b2b.wins, losses: input.losses - input.b2b.losses }),
-      3
-    );
-  }
-
-  if (input.margins.length >= MIN_MARGIN_GAMES) {
-    const all = mean(input.margins);
-    set("netAll", all, 1);
-    set("netL5", mean(input.margins.slice(0, RECENT_GAMES)), 1);
-    set(
-      "marginSd",
-      Math.sqrt(mean(input.margins.map((d) => (d - all) ** 2))),
-      1
-    );
-  }
 
   const played = input.roster.filter((p) => p.gp > 0);
   const teamGames = input.wins + input.losses;

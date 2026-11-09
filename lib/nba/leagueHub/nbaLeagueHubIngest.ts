@@ -198,19 +198,15 @@ async function loadTeamLogs(db: Firestore, seasonKey: string) {
       posDef = { G: cell("G"), F: cell("F"), C: cell("C") };
     }
     const games = Array.isArray(data.games) ? (data.games as unknown[]) : [];
-    const finals = games.flatMap((g) => {
-      const o = asObj(g);
-      const team = num(o?.teamScore);
-      const opp = num(o?.oppScore);
-      return team != null && opp != null ? [{ team, opp }] : [];
+    const scores = games.flatMap((g) => {
+      const team = num(asObj(g)?.teamScore);
+      return team != null ? [team] : [];
     });
     out.set(d.id, {
       vsOver500: record(splits?.vsOver500),
-      vsUnder500: record(splits?.vsUnder500),
       b2b: record(splits?.b2b),
       posDef,
-      margins: finals.map((g) => g.team - g.opp),
-      scores: finals.map((g) => g.team),
+      scores,
     });
   }
   return out;

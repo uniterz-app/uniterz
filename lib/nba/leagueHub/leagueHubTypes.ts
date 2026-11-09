@@ -233,15 +233,6 @@ export const LEAGUE_HUB_TEAM_STYLE_METRICS = [
   "payrollM",
   "experience",
   "heightCm",
-  "netAll",
-  "netL5",
-  "marginSd",
-  "homePct",
-  "awayPct",
-  "vsOverPct",
-  "vsUnderPct",
-  "restPct",
-  "b2bPct",
 ] as const;
 
 export type LeagueHubTeamStyleMetric = (typeof LEAGUE_HUB_TEAM_STYLE_METRICS)[number];
