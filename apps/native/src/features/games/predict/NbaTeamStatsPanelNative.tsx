@@ -7,7 +7,6 @@ import {
   View,
 } from "react-native";
 import type {
-  NbaTeamFormGame,
   NbaTeamStatsBundle,
   NbaTeamStatSide,
 } from "../../../../../../lib/predict/nbaTeamStatsPreviewMocks";
@@ -22,8 +21,6 @@ import { MATCH_CARD_DISPLAY_FONT, MATCH_CARD_TEAM_NAME_FONT } from "../matchCard
 import { RANK_DISPLAY_FONT } from "../../rankings/rankingsUiTheme";
 import type { GamesLanguage } from "../gamesI18n";
 import { getGamesTexts } from "../gamesI18n";
-import NbaGameBoxScoreModalNative from "../live/NbaGameBoxScoreModalNative";
-import { L, resolveLocalizedLang } from "../../../../../../lib/i18n/localize";
 
 type WindowId = "season" | "last10";
 
@@ -157,144 +154,6 @@ function MetricRow({ row }: { row: RowSpec }) {
   );
 }
 
-const FORM_WIN = "#F5C518";
-const FORM_LOSS = "#FF2D78";
-
-function FormGameLine({
-  game,
-  align,
-  onOpen,
-}: {
-  game: NbaTeamFormGame;
-  align: "left" | "right";
-  onOpen?: (gameId: string) => void;
-}) {
-  const venue = game.home ? "vs" : "@";
-  const win = game.result === "W";
-  const canOpen = Boolean(game.gameId && onOpen);
-  const row = (
-    <View
-      style={[
-        styles.formGameLine,
-        align === "right" ? styles.formGameLineRight : styles.formGameLineLeft,
-      ]}
-    >
-      <Text style={styles.formDate}>{game.dateLabel}</Text>
-      <Text style={styles.formVenue}>{venue}</Text>
-      <Text style={styles.formOpp} numberOfLines={1}>
-        {game.oppAbbr}
-      </Text>
-      <Text style={styles.formScore}>
-        {game.teamScore}-{game.oppScore}
-      </Text>
-      <Text style={[styles.formResult, { color: win ? FORM_WIN : FORM_LOSS }]}>
-        {game.result}
-      </Text>
-    </View>
-  );
-  if (canOpen && game.gameId && onOpen) {
-    return (
-      <Pressable
-        onPress={() => onOpen(game.gameId!)}
-        accessibilityRole="button"
-        accessibilityLabel={`Box score ${game.oppAbbr}`}
-      >
-        {row}
-      </Pressable>
-    );
-  }
-  return row;
-}
-
-function RecentFormGamesStrip({
-  left,
-  right,
-  language,
-  onOpenTeamDetail,
-}: {
-  left: NbaTeamFormGame[];
-  right: NbaTeamFormGame[];
-  language: GamesLanguage;
-  onOpenTeamDetail?: (teamId: string) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const [boxGameId, setBoxGameId] = useState<string | null>(null);
-  const rows = Math.max(left.length, right.length, 1);
-  const hint = L(resolveLocalizedLang(language), {
-    ja: "タップ→BOXスコア",
-    en: "tap→box score",
-    ko: "탭→박스스코어",
-    zh: "点按→技术统计",
-    es: "toca→box score",
-    pt: "toque→box score",
-    fr: "toucher→box score",
-  });
-  return (
-    <View style={styles.recentForm}>
-      <Pressable
-        onPress={() => setOpen((v) => !v)}
-        style={styles.recentFormHeader}
-        accessibilityRole="button"
-        accessibilityState={{ expanded: open }}
-        accessibilityLabel="LAST 5"
-      >
-        <View style={styles.recentFormTitleRow}>
-          <Text style={styles.recentFormTitle}>LAST 5</Text>
-          <Text
-            style={[
-              styles.recentFormChevron,
-              open && styles.recentFormChevronOpen,
-            ]}
-          >
-            ▼
-          </Text>
-        </View>
-        <Text style={styles.recentFormHint}>{hint}</Text>
-      </Pressable>
-      {open ? (
-        <View style={styles.recentFormGrid}>
-          <View style={styles.recentFormCol}>
-            {Array.from({ length: rows }, (_, i) =>
-              left[i] ? (
-                <FormGameLine
-                  key={`l-${i}`}
-                  game={left[i]}
-                  align="right"
-                  onOpen={setBoxGameId}
-                />
-              ) : (
-                <View key={`l-${i}`} style={styles.formGameSpacer} />
-              )
-            )}
-          </View>
-          <View style={styles.recentFormDivider} />
-          <View style={styles.recentFormCol}>
-            {Array.from({ length: rows }, (_, i) =>
-              right[i] ? (
-                <FormGameLine
-                  key={`r-${i}`}
-                  game={right[i]}
-                  align="left"
-                  onOpen={setBoxGameId}
-                />
-              ) : (
-                <View key={`r-${i}`} style={styles.formGameSpacer} />
-              )
-            )}
-          </View>
-        </View>
-      ) : null}
-      {boxGameId ? (
-        <NbaGameBoxScoreModalNative
-          gameId={boxGameId}
-          language={language}
-          onClose={() => setBoxGameId(null)}
-          onOpenTeamDetail={onOpenTeamDetail}
-        />
-      ) : null}
-    </View>
-  );
-}
 
 function sideProExtras(
   isPro: boolean,
@@ -544,15 +403,6 @@ export default function NbaTeamStatsPanelNative({
   const splitRows = windowId === "season" ? buildSiteRow(home, away) : [];
   const rows = [...coreRows, ...splitRows];
 
-  const formLeft =
-    data.season.home.recentFormGames ??
-    data.last10.home.recentFormGames ??
-    [];
-  const formRight =
-    data.season.away.recentFormGames ??
-    data.last10.away.recentFormGames ??
-    [];
-  const showRecentForm = formLeft.length > 0 || formRight.length > 0;
 
   return (
     <View style={styles.shell}>
@@ -613,14 +463,6 @@ export default function NbaTeamStatsPanelNative({
         {rows.map((row) => (
           <MetricRow key={`${windowId}-${row.key}`} row={row} />
         ))}
-        {showRecentForm ? (
-          <RecentFormGamesStrip
-            left={formLeft}
-            right={formRight}
-            language={language}
-            onOpenTeamDetail={onOpenTeamDetail}
-          />
-        ) : null}
       </View>
     </View>
   );

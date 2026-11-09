@@ -830,6 +830,7 @@ function Plan1Card({
   deferJerseys = false,
   topLabelAlign = "center",
   compact = false,
+  wrapMatch,
 }: {
   sample: Sample;
   badge: OutcomeBadge | null;
@@ -851,6 +852,8 @@ function Plan1Card({
   deferJerseys?: boolean;
   topLabelAlign?: "center" | "start";
   compact?: boolean;
+  /** チーム・スコアの段だけを包む（予想オーバーレイの横スライド） */
+  wrapMatch?: (node: ReactNode) => ReactNode;
 }) {
   const settled = sample.settled !== false;
   const paint = settled && badge
@@ -867,12 +870,17 @@ function Plan1Card({
         live={sample.live === true}
         motion={motion}
       />
-      <MatchBlock
-        sample={sample}
-        ja={ja}
-        motion={motion}
-        deferJerseys={deferJerseys}
-      />
+      {(() => {
+        const match = (
+          <MatchBlock
+            sample={sample}
+            ja={ja}
+            motion={motion}
+            deferJerseys={deferJerseys}
+          />
+        );
+        return wrapMatch ? wrapMatch(match) : match;
+      })()}
       <Animated.View
         style={[
           styles.layerDivider,
@@ -965,6 +973,7 @@ export function ResultCardDesignFaceNative({
   topLabelAlign = "center",
   compact = false,
   othersCall = false,
+  wrapMatch,
 }: {
   language: import("../../../../../lib/i18n/language").Language;
   badge?: OutcomeBadge | null;
@@ -1019,6 +1028,8 @@ export function ResultCardDesignFaceNative({
   compact?: boolean;
   /** 他ユーザーの投稿（「あなたの予想」ではなく「予想」） */
   othersCall?: boolean;
+  /** チーム・スコアの段だけを包む（予想オーバーレイの横スライド） */
+  wrapMatch?: (node: ReactNode) => ReactNode;
 }) {
   const settledFromFace =
     face != null
@@ -1108,6 +1119,7 @@ export function ResultCardDesignFaceNative({
       deferJerseys={deferJerseys}
       topLabelAlign={topLabelAlign}
       compact={compact}
+      wrapMatch={wrapMatch}
     />
   );
 }

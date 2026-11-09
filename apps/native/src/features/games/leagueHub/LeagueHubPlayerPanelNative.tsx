@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Keyboard, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import {
@@ -100,16 +100,25 @@ function noData(lang: HubLang) {
   return <HubEmpty text={lang === "ja" ? "まだデータがありません" : "No data yet"} />;
 }
 
+/** 画面では見出しの「?」に入れ、共有画像にだけ注記を焼き込む */
+function CaptureFootnote({ text }: { text: string }) {
+  const capturing = useHubCapturing();
+  return capturing ? <Text style={hubStyles.footnote}>{text}</Text> : null;
+}
+
 function StyleMap({
   players,
   lang,
   stamp,
   onSelectPlayer,
+  onHint,
 }: {
   players: LeagueHubPlayer[];
   lang: HubLang;
   stamp: string;
   onSelectPlayer: (playerId: string) => void;
+  /** 薄い説明は見出しの「?」へ出す */
+  onHint: (hint: string) => void;
 }) {
   const capturing = useHubCapturing();
   const [groupId, setGroupId] = useState<LeagueHubPlayerScatterGroupId>("scoring");
@@ -233,6 +242,22 @@ function StyleMap({
     [sel, styleIndex, players]
   );
 
+  const poolText =
+    (lang === "ja"
+      ? `${pos === "all" ? "" : `${pos} の`}${preset.volumeLabel.ja}の上位 ${topN} 人`
+      : `Top ${topN}${pos === "all" ? "" : ` ${pos}s`} by ${preset.volumeLabel.en}`) +
+    (hasStar ? (lang === "ja" ? " · ★ お気に入り選手" : " · ★ favorites") : "");
+  const hint = [
+    preset.hint[lang],
+    `${poolText}${lang === "ja" ? "。" : "."}`,
+    lang === "ja"
+      ? "点か名前をタップで選手を表示。もう 1 人タップで比較。"
+      : "Tap a dot or name to see the player. Tap another to compare.",
+  ].join("\n");
+  useEffect(() => {
+    onHint(hint);
+  }, [hint, onHint]);
+
   return (
     <View>
       {capturing ? (
@@ -265,7 +290,7 @@ function StyleMap({
           />
         </>
       )}
-      <Text style={styles.mapHint}>{preset.hint[lang]}</Text>
+      {capturing ? <Text style={styles.mapHint}>{preset.hint[lang]}</Text> : null}
       {capturing ? null : (
         <View style={styles.mapControls}>
           <HubPosToggle
@@ -286,12 +311,7 @@ function StyleMap({
           />
         </View>
       )}
-      <Text style={styles.mapPool}>
-        {lang === "ja"
-          ? `${pos === "all" ? "" : `${pos} の`}${preset.volumeLabel.ja}の上位 ${topN} 人`
-          : `Top ${topN}${pos === "all" ? "" : ` ${pos}s`} by ${preset.volumeLabel.en}`}
-        {hasStar ? (lang === "ja" ? " · ★ お気に入り選手" : " · ★ favorites") : ""}
-      </Text>
+      {capturing ? <Text style={styles.mapPool}>{poolText}</Text> : null}
       {points.length < 3 ? (
         noData(lang)
       ) : (
@@ -308,6 +328,7 @@ function StyleMap({
           onTap={tapMap}
           showRange
           dimOthers={false}
+          bleedPastScreen
         />
       )}
       {capturing ? null : cmpA && cmpB ? (
@@ -372,15 +393,8 @@ function StyleMap({
               </View>
             </View>
           ) : null}
-          <Text style={styles.compareHint}>
-            {lang === "ja" ? "もう 1 人タップで比較" : "Tap another player to compare"}
-          </Text>
         </View>
-      ) : (
-        <Text style={styles.tapHint}>
-          {lang === "ja" ? "点をタップで選手を表示" : "Tap a dot to see the player"}
-        </Text>
-      )}
+      ) : null}
       {capturing ? null : (
         <>
           <View style={styles.searchBox}>
@@ -621,16 +635,18 @@ export default function LeagueHubPlayerPanelNative({ hub, lang, section, onSelec
   const stamp = `NBA ${hub.seasonKey} · ${built.getMonth() + 1}/${built.getDate()}`;
   /** 切り替えてもマップの追加選手などを残すため、隠すだけでアンマウントしない */
   const shown = (id: LeagueHubPlayerSection) => (section === id ? null : styles.hidden);
+  const [styleHint, setStyleHint] = useState<string>();
 
   return (
     <View>
       <View style={shown("style")}>
-        <HubShareSectionNative title="STYLE MAP" stamp={stamp} lang={lang}>
+        <HubShareSectionNative title="STYLE MAP" hint={styleHint} stamp={stamp} lang={lang}>
           <StyleMap
             players={hub.players}
             lang={lang}
             stamp={stamp}
             onSelectPlayer={onSelectPlayer}
+            onHint={setStyleHint}
           />
         </HubShareSectionNative>
       </View>
@@ -657,7 +673,13 @@ export default function LeagueHubPlayerPanelNative({ hub, lang, section, onSelec
           const rows = ladderRows(award);
           const hasPrev = hub.ladderPrev?.[award] != null;
           return (
-            <HubShareSectionNative key={award} title={title} stamp={stamp} lang={lang}>
+            <HubShareSectionNative
+              key={award}
+              title={title}
+              hint={AWARD_FOOTNOTE[award][ja ? "ja" : "en"]}
+              stamp={stamp}
+              lang={lang}
+            >
               {rows.length > 0 ? (
                 <HubCellHeader
                   labels={awardCellLabels(award, ja)}
@@ -677,7 +699,7 @@ export default function LeagueHubPlayerPanelNative({ hub, lang, section, onSelec
                       onPress={() => onSelectPlayer(r.playerId)}
                     />
                   ))}
-              <Text style={hubStyles.footnote}>{AWARD_FOOTNOTE[award][ja ? "ja" : "en"]}</Text>
+              <CaptureFootnote text={AWARD_FOOTNOTE[award][ja ? "ja" : "en"]} />
             </HubShareSectionNative>
           );
         })}
@@ -928,15 +950,6 @@ const styles = StyleSheet.create({
   compareWrap: {
     marginTop: 4,
   },
-  compareHint: {
-    textAlign: "center",
-    paddingVertical: 7,
-    borderTopWidth: 1,
-    borderTopColor: "rgba(0,245,255,0.18)",
-    color: "rgba(0,245,255,0.6)",
-    fontSize: 10,
-    fontWeight: "700",
-  },
   selCard: {
     marginTop: 6,
     borderWidth: 1,
@@ -1028,11 +1041,5 @@ const styles = StyleSheet.create({
     color: CYBER_TAB_CYAN,
     fontSize: 18,
     fontWeight: "800",
-  },
-  tapHint: {
-    color: "rgba(255,255,255,0.35)",
-    fontSize: 10,
-    textAlign: "center",
-    marginTop: 6,
   },
 });

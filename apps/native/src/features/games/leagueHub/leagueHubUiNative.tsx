@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { TEAM_SHORT } from "../../../../../../lib/team-short";
 import { getTeamAbbrBadgeColor } from "../../../../../../lib/team-colors";
@@ -15,6 +15,14 @@ export function teamAbbr(teamId: string | null | undefined): string {
 
 export function teamInk(teamId: string | null | undefined): string {
   return teamId ? getTeamAbbrBadgeColor(teamId) : "rgba(255,255,255,0.6)";
+}
+
+/** #RRGGBB に透明度を足す。それ以外の形式はそのまま */
+export function inkAlpha(color: string, alpha: number): string {
+  const m = /^#([0-9a-f]{6})$/i.exec(color);
+  if (!m) return color;
+  const n = parseInt(m[1]!, 16);
+  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${alpha})`;
 }
 
 export function formatHubValue(v: number | null | undefined, format: LeagueHubAxisFormat): string {
@@ -34,6 +42,7 @@ export function recordPct(r: { wins: number; losses: number } | null | undefined
   return g > 0 ? r.wins / g : null;
 }
 
+/** 説明は隠しておき、見出し横の「?」で吹き出しとして出す */
 export function HubSection({
   title,
   hint,
@@ -45,15 +54,43 @@ export function HubSection({
   right?: ReactNode;
   children: ReactNode;
 }) {
+  const [hintOpen, setHintOpen] = useState(false);
+  const [tailCenter, setTailCenter] = useState(28);
+  const showHint = Boolean(hint) && hintOpen;
   return (
     <View style={styles.section}>
       <View style={styles.sectionHead}>
         <Text style={styles.sectionTitle}>{title}</Text>
+        {hint ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityState={{ expanded: hintOpen }}
+            onPress={() => setHintOpen((open) => !open)}
+            hitSlop={8}
+            onLayout={(e) => {
+              const { x, width } = e.nativeEvent.layout;
+              const next = Math.round(x + width / 2);
+              setTailCenter((prev) => (prev === next ? prev : next));
+            }}
+            style={[styles.hintToggle, hintOpen ? styles.hintToggleOn : null]}
+          >
+            <Text style={[styles.hintToggleText, hintOpen ? styles.hintToggleTextOn : null]}>
+              ?
+            </Text>
+          </Pressable>
+        ) : null}
         <View style={styles.sectionLine} />
         {right}
       </View>
-      {hint ? <Text style={styles.sectionHint}>{hint}</Text> : null}
-      {children}
+      <View>
+        {children}
+        {showHint ? (
+          <View pointerEvents="none" style={styles.hintBubble}>
+            <View style={[styles.hintTail, { left: tailCenter - 5 }]} />
+            <Text style={styles.hintBubbleText}>{hint}</Text>
+          </View>
+        ) : null}
+      </View>
     </View>
   );
 }
@@ -239,6 +276,7 @@ export function HubRow({
   highlight,
   kind = "player",
   rankMove,
+  framed,
 }: {
   rank?: number;
   /** 先週からの順位変動（+ = 上昇）。"new" = 新しく圏内 */
@@ -254,6 +292,8 @@ export function HubRow({
   valueSub?: string;
   onPress?: () => void;
   highlight?: boolean;
+  /** チーム色の薄い枠で 1 行ずつ囲む */
+  framed?: boolean;
 }) {
   const ink = teamInk(teamId);
   return (
@@ -262,6 +302,12 @@ export function HubRow({
       disabled={!onPress}
       style={({ pressed }) => [
         styles.row,
+        framed
+          ? [
+              styles.rowFramed,
+              { borderColor: inkAlpha(ink, 0.75), backgroundColor: inkAlpha(ink, 0.1) },
+            ]
+          : null,
         highlight ? styles.rowHighlight : null,
         pressed ? styles.rowPressed : null,
       ]}
@@ -452,11 +498,59 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: "rgba(0,245,255,0.22)",
   },
-  sectionHint: {
-    color: "rgba(255,255,255,0.55)",
+  hintToggle: {
+    width: 18,
+    height: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "rgba(0,245,255,0.45)",
+  },
+  hintToggleOn: {
+    backgroundColor: CYBER_TAB_CYAN,
+    borderColor: CYBER_TAB_CYAN,
+  },
+  hintToggleText: {
+    fontFamily: METRIC_FONT,
+    color: CYBER_TAB_CYAN,
+    fontSize: 12,
+    fontWeight: "800",
+    lineHeight: 14,
+  },
+  hintToggleTextOn: {
+    color: "#050508",
+  },
+  hintBubble: {
+    position: "absolute",
+    top: 2,
+    left: 0,
+    right: 0,
+    zIndex: 2,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: CYBER_TAB_CYAN,
+    backgroundColor: CYBER_TAB_CYAN,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  hintTail: {
+    position: "absolute",
+    top: -5,
+    width: 10,
+    height: 10,
+    backgroundColor: CYBER_TAB_CYAN,
+    borderLeftWidth: 1,
+    borderTopWidth: 1,
+    borderColor: CYBER_TAB_CYAN,
+    transform: [{ rotate: "45deg" }],
+  },
+  hintBubbleText: {
+    fontFamily: METRIC_FONT,
+    color: "#050508",
     fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 0.6,
     lineHeight: 16,
-    marginBottom: 8,
   },
   chips: {
     gap: 6,
@@ -568,6 +662,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: "rgba(255,255,255,0.08)",
+  },
+  rowFramed: {
+    borderWidth: 1,
+    borderBottomWidth: 1,
+    paddingHorizontal: 8,
+    marginBottom: 6,
   },
   rowHighlight: {
     backgroundColor: "rgba(0,245,255,0.08)",

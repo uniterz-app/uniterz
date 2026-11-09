@@ -120,6 +120,7 @@ export default function NbaTeamHowTheyPlayNative({
   const [factorId, setFactorId] = useState("efg");
   const [hustleId, setHustleId] = useState("deflections");
   const [trackId, setTrackId] = useState("drives");
+  const [rebId, setRebId] = useState("boxOuts");
   if (!board) return null;
 
   const tabMeta = TEAM_HOW_THEY_PLAY_TABS.find((t) => t.id === tab)!;
@@ -129,6 +130,16 @@ export default function NbaTeamHowTheyPlayNative({
     board.hustle.find((r) => r.id === hustleId) ?? board.hustle[0]!;
   const tracking =
     board.tracking.find((r) => r.id === trackId) ?? board.tracking[0]!;
+  const rebound =
+    board.rebounding.find((r) => r.id === rebId) ?? board.rebounding[0]!;
+  const list =
+    tab === "hustle"
+      ? { rows: board.hustle, selected: hustle, select: setHustleId }
+      : tab === "rebounding"
+        ? { rows: board.rebounding, selected: rebound, select: setRebId }
+        : tab === "tracking"
+          ? { rows: board.tracking, selected: tracking, select: setTrackId }
+          : null;
   const frame = hexToRgba(accent, 0.4);
   const line = hexToRgba(accent, 0.15);
 
@@ -311,18 +322,15 @@ export default function NbaTeamHowTheyPlayNative({
         </View>
       ) : null}
 
-      {tab === "hustle" || tab === "tracking" ? (
+      {list ? (
         <>
           <View style={[styles.card, { borderColor: frame }]}>
-            {(tab === "hustle" ? board.hustle : board.tracking).map((row, i) => {
-              const selected = tab === "hustle" ? hustle : tracking;
-              const active = row.id === selected.id;
+            {list.rows.map((row, i) => {
+              const active = row.id === list.selected.id;
               return (
                 <Pressable
                   key={row.id}
-                  onPress={() =>
-                    tab === "hustle" ? setHustleId(row.id) : setTrackId(row.id)
-                  }
+                  onPress={() => list.select(row.id)}
                   style={[
                     styles.hintRow,
                     i > 0
@@ -343,9 +351,7 @@ export default function NbaTeamHowTheyPlayNative({
             })}
           </View>
           <Text style={styles.detailHint}>
-            {tab === "hustle"
-              ? nbaLocalizedText(lang, hustle.hint)
-              : nbaLocalizedText(lang, tracking.hint)}
+            {nbaLocalizedText(lang, list.selected.hint)}
           </Text>
         </>
       ) : null}

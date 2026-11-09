@@ -93,6 +93,13 @@ export type NbaPlayerAdvancedLeaderMetric =
   | "loose_balls"
   | "screen_ast"
   | "contested_shots"
+  | "box_outs"
+  | "reb_chances"
+  | "reb_chance_pct"
+  | "reb_contest"
+  | "reb_contest_pct"
+  | "oreb_chance_pct"
+  | "dreb_chance_pct"
   | "technical_fouls"
   | "flagrant_fouls"
   | "ejections"
@@ -1080,6 +1087,69 @@ export const NBA_PLAYER_ADVANCED_LEADER_METRICS: readonly NbaPlayerAdvancedLeade
         fr: "Tirs contestés par match.",
       }
     ),
+    def("box_outs", "BOXOUT", "Box outs / G", "rebounding", true, "perGame", {
+      ja: "ボックスアウト。相手をリバウンドから締め出した回数（1 試合平均）。",
+      en: "Box outs per game — times sealing an opponent off the glass.",
+      ko: "경기당 박스아웃. 상대를 리바운드 경합에서 밀어낸 횟수.",
+      zh: "场均卡位次数。把对手挡在篮板争抢之外的次数。",
+      es: "Bloqueos de rebote por partido: veces que aparta a un rival del rebote.",
+      pt: "Box outs por jogo: vezes que afasta o adversário do rebote.",
+      fr: "Box-outs par match : fois où il écarte un adversaire du rebond.",
+    }),
+    def("reb_chances", "REB CH", "Rebound chances / G", "rebounding", true, "perGame", {
+      ja: "リバウンドのチャンス。ボールの近く（約 3.5 フィート以内）にいた回数（1 試合平均）。",
+      en: "Rebound chances per game — times within about 3.5 ft of the ball.",
+      ko: "경기당 리바운드 찬스. 공 근처(약 3.5피트 이내)에 있던 횟수.",
+      zh: "场均篮板机会。球落下时人在约 3.5 英尺内的次数。",
+      es: "Oportunidades de rebote por partido: veces a unos 3,5 pies del balón.",
+      pt: "Chances de rebote por jogo: vezes a cerca de 3,5 pés da bola.",
+      fr: "Occasions de rebond par match : fois à environ 3,5 pieds du ballon.",
+    }),
+    def("reb_chance_pct", "REB CH%", "Rebound chance %", "rebounding", true, "pct", {
+      ja: "リバウンドのチャンスのうち、実際に取った割合。",
+      en: "Share of rebound chances converted.",
+      ko: "리바운드 찬스 중 실제로 잡은 비율.",
+      zh: "篮板机会中实际抢到的比例。",
+      es: "Porcentaje de oportunidades de rebote convertidas.",
+      pt: "Porcentagem das chances de rebote convertidas.",
+      fr: "Part des occasions de rebond converties.",
+    }),
+    def("reb_contest", "C-REB", "Contested rebounds / G", "rebounding", true, "perGame", {
+      ja: "競り合いリバウンド。相手がすぐ近くにいる中で取った本数（1 試合平均）。",
+      en: "Contested rebounds per game — grabbed with an opponent nearby.",
+      ko: "경기당 경합 리바운드. 상대가 가까이 있는 상황에서 잡은 수.",
+      zh: "场均对抗篮板。在对手身旁抢下的篮板。",
+      es: "Rebotes disputados por partido: capturados con un rival cerca.",
+      pt: "Rebotes contestados por jogo: pegos com um adversário por perto.",
+      fr: "Rebonds disputés par match : pris avec un adversaire à proximité.",
+    }),
+    def("reb_contest_pct", "C-REB%", "Contested rebound %", "rebounding", true, "pct", {
+      ja: "取ったリバウンドのうち競り合いだった割合。高いほど体を張って取っている。",
+      en: "Share of rebounds that were contested. Higher = more physical.",
+      ko: "잡은 리바운드 중 경합이었던 비율. 높을수록 몸싸움으로 잡음.",
+      zh: "所抢篮板中对抗篮板的占比。越高越靠身体对抗。",
+      es: "Porcentaje de rebotes disputados. Más alto = más físico.",
+      pt: "Porcentagem dos rebotes contestados. Maior = mais físico.",
+      fr: "Part des rebonds disputés. Plus haut = plus physique.",
+    }),
+    def("oreb_chance_pct", "OREB CH%", "Offensive rebound chance %", "rebounding", true, "pct", {
+      ja: "オフェンスリバウンドのチャンスのうち、実際に取った割合。",
+      en: "Share of offensive rebound chances converted.",
+      ko: "공격 리바운드 찬스 중 실제로 잡은 비율.",
+      zh: "进攻篮板机会中实际抢到的比例。",
+      es: "Porcentaje de oportunidades de rebote ofensivo convertidas.",
+      pt: "Porcentagem das chances de rebote ofensivo convertidas.",
+      fr: "Part des occasions de rebond offensif converties.",
+    }),
+    def("dreb_chance_pct", "DREB CH%", "Defensive rebound chance %", "rebounding", true, "pct", {
+      ja: "ディフェンスリバウンドのチャンスのうち、実際に取った割合。",
+      en: "Share of defensive rebound chances converted.",
+      ko: "수비 리바운드 찬스 중 실제로 잡은 비율.",
+      zh: "防守篮板机会中实际抢到的比例。",
+      es: "Porcentaje de oportunidades de rebote defensivo convertidas.",
+      pt: "Porcentagem das chances de rebote defensivo convertidas.",
+      fr: "Part des occasions de rebond défensif converties.",
+    }),
     def("technical_fouls", "TECH", "Technical fouls", "discipline", true, "count", {
       ja: "テクニカルファウル数（シーズン累計）。",
       en: "Technical fouls (season total).",
@@ -1313,6 +1383,18 @@ export function buildPlayerAdvancedMetricValue(
       return round1(0.2 + rnd() * 4);
     case "contested_shots":
       return round1(2 + rnd() * 10);
+    case "box_outs":
+      return round1(rnd() * 3);
+    case "reb_chances":
+      return round1(3 + rnd() * 18);
+    case "reb_contest":
+      return round1(0.5 + rnd() * 6);
+    case "reb_chance_pct":
+    case "oreb_chance_pct":
+    case "dreb_chance_pct":
+      return pct(0.4 + rnd() * 0.3);
+    case "reb_contest_pct":
+      return pct(0.15 + rnd() * 0.4);
     default:
       return rnd();
   }

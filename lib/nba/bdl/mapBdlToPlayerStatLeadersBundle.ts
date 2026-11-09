@@ -59,6 +59,7 @@ type MergedPlayer = {
   paintTouch: Record<string, number>;
   speed: Record<string, number>;
   passing: Record<string, number>;
+  rebounding: Record<string, number>;
   playtype: Record<string, Record<string, number>>;
   clutchBase: Record<string, number>;
   clutchAdvanced: Record<string, number>;
@@ -312,6 +313,8 @@ export async function buildPlayerStatLeadersBundleFromBdl(input: {
   await sleep(120);
   const passingRows = await avg({ category: "tracking", type: "Passing" });
   await sleep(120);
+  const reboundingRows = await avg({ category: "tracking", type: "Rebounding" });
+  await sleep(120);
   const clutchBaseRows = await avg({ category: "clutch", type: "base" });
   await sleep(120);
   const clutchAdvRows = await avg({ category: "clutch", type: "advanced" });
@@ -363,6 +366,7 @@ export async function buildPlayerStatLeadersBundleFromBdl(input: {
   const paintBy = indexRows(paintRows);
   const speedBy = indexRows(speedRows);
   const passingBy = indexRows(passingRows);
+  const reboundingBy = indexRows(reboundingRows);
   const clutchBaseBy = indexRows(clutchBaseRows);
   const clutchAdvBy = indexRows(clutchAdvRows);
   const shootingZoneBy = indexRows(shootingZoneRows);
@@ -418,6 +422,7 @@ export async function buildPlayerStatLeadersBundleFromBdl(input: {
       paintTouch: toStats(paintBy.get(playerId)),
       speed: toStats(speedBy.get(playerId)),
       passing: toStats(passingBy.get(playerId)),
+      rebounding: toStats(reboundingBy.get(playerId)),
       playtype,
       clutchBase: toStats(clutchBaseBy.get(playerId)),
       clutchAdvanced: toStats(clutchAdvBy.get(playerId)),
@@ -722,6 +727,26 @@ export async function buildPlayerStatLeadersBundleFromBdl(input: {
   hustlePg("loose_balls", "loose_balls_recovered", "loose_balls");
   hustlePg("screen_ast", "screen_assists", "screen_ast");
   hustlePg("contested_shots", "contested_shots");
+  hustlePg("box_outs", "box_outs");
+
+  /** 率は母数が少ない選手が 100% で上に来ないよう、1 試合の母数で足切り */
+  const rebRate = (
+    metric: NbaPlayerAdvancedLeaderMetric,
+    key: string,
+    baseKey: string,
+    minBase: number
+  ) => {
+    fillAdv(metric, true, (p) => rate(n(p.rebounding, key)), {
+      qualifies: (p) =>
+        nonPctQualifies(p) && (n(p.rebounding, baseKey) ?? 0) >= minBase,
+    });
+  };
+  fillAdv("reb_chances", true, (p) => n(p.rebounding, "reb_chances"));
+  fillAdv("reb_contest", true, (p) => n(p.rebounding, "reb_contest"));
+  rebRate("reb_chance_pct", "reb_chance_pct", "reb_chances", 6);
+  rebRate("reb_contest_pct", "reb_contest_pct", "reb", 4);
+  rebRate("oreb_chance_pct", "oreb_chance_pct", "oreb_chances", 2.5);
+  rebRate("dreb_chance_pct", "dreb_chance_pct", "dreb_chances", 4);
 
   fillAdv("drives", true, (p) => n(p.drives, "drives"));
   fillAdv("drive_pts", true, (p) => n(p.drives, "drive_pts"));

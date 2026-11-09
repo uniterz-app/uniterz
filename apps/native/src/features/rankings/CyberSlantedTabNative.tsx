@@ -40,6 +40,8 @@ export type CyberSlantedTabThemeNative = {
 const ACTIVE_STRETCH = require("../../../assets/cyber-slanted-tab/active-stretch.png") as ImageSourcePropType;
 const ACTIVE_STRETCH_VIOLET = require("../../../assets/cyber-slanted-tab/active-stretch-violet.png") as ImageSourcePropType;
 const ACTIVE_STRETCH_GOLD = require("../../../assets/cyber-slanted-tab/active-stretch-gold.png") as ImageSourcePropType;
+/** シアンのぼかしだけ小さい版（外寸・本体位置は同じ）。横スクロールで詰めて並べる列用 */
+const ACTIVE_STRETCH_TIGHT = require("../../../assets/cyber-slanted-tab/active-stretch-tight.png") as ImageSourcePropType;
 
 const GLOW_PAD = tabMeta.glowPadPx1x;
 /**
@@ -71,6 +73,8 @@ type TabProps = {
    * シアン / PRO 紫 / 金は焼き込み。それ以外は runtime 塗り。
    */
   theme?: CyberSlantedTabThemeNative;
+  /** tight = 光を小さく（シアンの焼き込みのみ）。隣のタブと光が重なる詰めた列用 */
+  glow?: "default" | "tight";
   accessibilityRole?: "tab";
   accessibilityState?: { selected?: boolean };
 };
@@ -243,6 +247,7 @@ export function CyberSlantedTabNative({
   fill: fillProp,
   fontWeight = "700",
   theme,
+  glow = "default",
   accessibilityRole,
   accessibilityState,
 }: TabProps) {
@@ -285,7 +290,11 @@ export function CyberSlantedTabNative({
             >
               <ActiveTabChrome
                 bodyH={bodyH}
-                source={resolved.bakedActiveSource}
+                source={
+                  glow === "tight" && resolved.bakedActiveSource === ACTIVE_STRETCH
+                    ? ACTIVE_STRETCH_TIGHT
+                    : resolved.bakedActiveSource
+                }
               />
             </View>
           ) : (

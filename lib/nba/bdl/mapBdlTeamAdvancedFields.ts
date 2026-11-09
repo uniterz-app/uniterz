@@ -98,6 +98,7 @@ export const BDL_TEAM_TRACKING_TYPES = [
   "PaintTouch",
   "SpeedDistance",
   "Passing",
+  "Rebounding",
 ] as const;
 
 export type BdlTeamTrackingType = (typeof BDL_TEAM_TRACKING_TYPES)[number];
@@ -292,6 +293,8 @@ export function mapBdlTeamAdvancedFields(input: {
   if (loose != null) set(out, "looseBalls", round1(loose));
   if (screenAst != null) set(out, "screenAst", round1(screenAst));
   if (contested != null) set(out, "contestedShots", round1(contested));
+  const boxOuts = num(h, "box_outs");
+  if (boxOuts != null) set(out, "boxOuts", round1(boxOuts));
 
   // --- tracking ---
   const drives = tr.Drives?.stats ?? {};
@@ -331,6 +334,16 @@ export function mapBdlTeamAdvancedFields(input: {
   const passing = tr.Passing?.stats ?? {};
   const passes = num(passing, "passes_made", "passes");
   if (passes != null) set(out, "passes", round1(passes));
+
+  const reb = tr.Rebounding?.stats ?? {};
+  const rebChances = num(reb, "reb_chances");
+  const rebContest = num(reb, "reb_contest");
+  if (rebChances != null) set(out, "rebChances", round1(rebChances));
+  if (rebContest != null) set(out, "rebContest", round1(rebContest));
+  set(out, "rebChancePct", rate(num(reb, "reb_chance_pct")));
+  set(out, "rebContestPct", rate(num(reb, "reb_contest_pct")));
+  set(out, "orebChancePct", rate(num(reb, "oreb_chance_pct")));
+  set(out, "drebChancePct", rate(num(reb, "dreb_chance_pct")));
 
   return out;
 }

@@ -252,6 +252,15 @@ export const gameCardListStyles = StyleSheet.create({
     includeFontPadding: false,
     fontFamily: MATCH_CARD_DISPLAY_FONT,
   },
+  /** 試合終了などをスコアの上に置くとき（リザルトカードの FINAL と同じ小さい見出し） */
+  centerSublineAbove: {
+    marginBottom: 3,
+    fontFamily: MATCH_CARD_METRIC_FONT,
+    fontSize: 10,
+    lineHeight: 12,
+    letterSpacing: 0.6,
+    color: "rgba(226,232,240,0.55)",
+  },
   centerSublineWc: {
     fontSize: 11,
     opacity: 0.8,

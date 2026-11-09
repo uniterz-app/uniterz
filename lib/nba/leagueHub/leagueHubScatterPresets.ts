@@ -30,6 +30,8 @@ export type LeagueHubScatterPreset<M extends string> = {
   x: LeagueHubAxis<M>;
   y: LeagueHubAxis<M>;
   quadrants: LeagueHubQuadrants;
+  /** 図の隅の大きな透かし。tl = 上へ行くほど良いもの（または図の名前）、br = 右へ行くほど良いもの */
+  marks?: { tl?: string; br?: string };
 };
 
 export type LeagueHubPlayerScatterPreset = LeagueHubScatterPreset<LeagueHubPlayerMetric> & {
@@ -44,6 +46,7 @@ export const LEAGUE_HUB_PLAYER_SCATTER_GROUPS = [
   { id: "attack", label: "ATTACK", presetIds: ["paint", "drive", "foul", "playmaking"] },
   { id: "defense", label: "DEFENSE", presetIds: ["defense", "hustle", "fouls"] },
   { id: "impact", label: "IMPACT", presetIds: ["onCourt", "clutch", "consistency"] },
+  { id: "rebound", label: "REB", presetIds: ["glass", "rebContest", "boxOut", "rebChance"] },
 ] as const;
 
 export type LeagueHubPlayerScatterGroupId = (typeof LEAGUE_HUB_PLAYER_SCATTER_GROUPS)[number]["id"];
@@ -240,6 +243,90 @@ export const LEAGUE_HUB_PLAYER_SCATTER_PRESETS: readonly LeagueHubPlayerScatterP
     },
   },
   {
+    id: "glass",
+    label: { ja: "リバウンドの量と割合", en: "GLASS" },
+    hint: {
+      ja: "右ほど 1 試合の本数が多く、上ほど出ている間に拾える分をよく取る（REB%）。",
+      en: "Right = more rebounds per game, up = higher share of available rebounds (REB%).",
+    },
+    x: { metric: "reb", label: { ja: "REB / 試合", en: "REB / G" }, format: "one" },
+    y: { metric: "reb_pct", label: { ja: "REB%", en: "REB%" }, format: "pct" },
+    volume: "reb",
+    volumeLabel: { ja: "リバウンド", en: "REB" },
+    quadrants: {
+      tr: { ja: "支配的リバウンダー", en: "GLASS CLEANER" },
+      tl: { ja: "短い時間でよく拾う", en: "EFFICIENT BOARDER" },
+      br: { ja: "長く出て数を稼ぐ", en: "VOLUME BOARDER" },
+      bl: { ja: "リバウンド控えめ", en: "LIGHT GLASS" },
+    },
+  },
+  {
+    id: "rebContest",
+    label: { ja: "競り合い", en: "CONTESTED" },
+    hint: {
+      ja: "右ほどリバウンドが多く、上ほど相手と競り合って取った割合が高い。",
+      en: "Right = more rebounds, up = more of them contested.",
+    },
+    x: { metric: "reb", label: { ja: "REB / 試合", en: "REB / G" }, format: "one" },
+    y: {
+      metric: "reb_contest_pct",
+      label: { ja: "競り合いの割合", en: "CONTESTED %" },
+      format: "pct",
+    },
+    volume: "reb",
+    volumeLabel: { ja: "リバウンド", en: "REB" },
+    quadrants: {
+      tr: { ja: "混戦の主", en: "TRAFFIC KING" },
+      tl: { ja: "体を張る", en: "PHYSICAL" },
+      br: { ja: "フリーで拾う", en: "CLEANUP" },
+      bl: { ja: "リバウンド控えめ", en: "LIGHT GLASS" },
+    },
+  },
+  {
+    id: "boxOut",
+    label: { ja: "ボックスアウト", en: "BOX OUT" },
+    hint: {
+      ja: "右ほど相手を締め出し、上ほど自分でリバウンドを取る。",
+      en: "Right = more box outs, up = more rebounds of his own.",
+    },
+    x: { metric: "box_outs", label: { ja: "ボックスアウト", en: "BOX OUTS" }, format: "one" },
+    y: { metric: "reb", label: { ja: "REB / 試合", en: "REB / G" }, format: "one" },
+    volume: "reb",
+    volumeLabel: { ja: "リバウンド", en: "REB" },
+    quadrants: {
+      tr: { ja: "締めて取る", en: "SEAL & GRAB" },
+      tl: { ja: "ボールに飛び込む", en: "CHASER" },
+      br: { ja: "味方に取らせる", en: "ENABLER" },
+      bl: { ja: "リバウンド控えめ", en: "LIGHT GLASS" },
+    },
+  },
+  {
+    id: "rebChance",
+    label: { ja: "チャンスを取り切る", en: "CHANCES" },
+    hint: {
+      ja: "右ほどボールの近くにいる回数が多く、上ほどそのチャンスを自分で取る。",
+      en: "Right = more rebound chances, up = more of them converted.",
+    },
+    x: {
+      metric: "reb_chances",
+      label: { ja: "チャンス / 試合", en: "CHANCES / G" },
+      format: "one",
+    },
+    y: {
+      metric: "reb_chance_pct",
+      label: { ja: "取った割合", en: "CHANCE %" },
+      format: "pct",
+    },
+    volume: "reb",
+    volumeLabel: { ja: "リバウンド", en: "REB" },
+    quadrants: {
+      tr: { ja: "支配的リバウンダー", en: "DOMINANT" },
+      tl: { ja: "確実に取る", en: "SURE HANDS" },
+      br: { ja: "位置取りで勝つ", en: "POSITIONER" },
+      bl: { ja: "リバウンド控えめ", en: "LIGHT GLASS" },
+    },
+  },
+  {
     id: "onCourt",
     label: { ja: "出場時の強さ", en: "ON-COURT RTG" },
     hint: {
@@ -350,7 +437,17 @@ export type LeagueHubTeamMetric =
   | "cutFreq"
   | "cutPpp"
   | "postFreq"
-  | "postPpp";
+  | "postPpp"
+  | "fg3a"
+  | "fg3Pct"
+  | "efgPct"
+  | "tovPct"
+  | "orebPct"
+  | "ftaRate"
+  | "oppEfgPct"
+  | "oppTovPct"
+  | "oppOrebPct"
+  | "oppFtaRate";
 
 export const LEAGUE_HUB_TEAM_STRENGTH: LeagueHubScatterPreset<LeagueHubTeamMetric> = {
   id: "strength",
@@ -366,11 +463,30 @@ export const LEAGUE_HUB_TEAM_STRENGTH: LeagueHubScatterPreset<LeagueHubTeamMetri
     format: "one",
     invert: true,
   },
+  marks: { tl: "DEF", br: "OFF" },
   quadrants: {
     tr: { ja: "攻守とも強い", en: "TWO-WAY" },
     tl: { ja: "守備で勝つ", en: "DEFENSE FIRST" },
     br: { ja: "攻撃で勝つ", en: "OFFENSE FIRST" },
     bl: { ja: "苦しい", en: "STRUGGLING" },
+  },
+};
+
+export const LEAGUE_HUB_TEAM_THREE: LeagueHubScatterPreset<LeagueHubTeamMetric> = {
+  id: "three",
+  label: { ja: "3P の量と質", en: "3PT" },
+  hint: {
+    ja: "右ほど 3P をよく打ち、上ほど決める。",
+    en: "Right = more 3PA, up = better 3P%.",
+  },
+  x: { metric: "fg3a", label: { ja: "3PA / 試合", en: "3PA / G" }, format: "one" },
+  y: { metric: "fg3Pct", label: { ja: "3P%", en: "3P%" }, format: "pct" },
+  marks: { tl: "3PT" },
+  quadrants: {
+    tr: { ja: "撃って決める", en: "BOMBERS" },
+    tl: { ja: "少なく確実", en: "SELECTIVE" },
+    br: { ja: "量で勝負", en: "VOLUME" },
+    bl: { ja: "3P が武器でない", en: "INSIDE TEAM" },
   },
 };
 
@@ -383,6 +499,7 @@ export const LEAGUE_HUB_TEAM_HUSTLE: LeagueHubScatterPreset<LeagueHubTeamMetric>
   },
   x: { metric: "deflections", label: { ja: "ディフレクション", en: "DEFLECTIONS" }, format: "one" },
   y: { metric: "contestedShots", label: { ja: "コンテスト", en: "CONTESTS" }, format: "one" },
+  marks: { tl: "HUSTLE" },
   quadrants: {
     tr: { ja: "エナジー", en: "ENERGY" },
     tl: { ja: "コンテスト型", en: "CONTEST" },
@@ -405,6 +522,7 @@ export const LEAGUE_HUB_TEAM_CLUTCH: LeagueHubScatterPreset<LeagueHubTeamMetric>
     format: "one",
     invert: true,
   },
+  marks: { tl: "CLUTCH" },
   quadrants: {
     tr: { ja: "接戦に強い", en: "CLOSERS" },
     tl: { ja: "守って逃げ切る", en: "LOCK IT UP" },
@@ -450,6 +568,7 @@ export function leagueHubPlayTypePreset(
       label: { ja: "PPP", en: "PPP" },
       format: "ppp",
     },
+    marks: { tl: pt.short },
     quadrants: {
       tr: { ja: "武器", en: "WEAPON" },
       tl: { ja: "隠れた得意", en: "UNDERUSED" },
