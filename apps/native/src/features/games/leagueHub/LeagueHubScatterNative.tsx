@@ -62,6 +62,8 @@ type Props = {
   watermarks?: { tl?: string; br?: string };
   /** 縦は欄の幅のまま、横だけ画面の外まではみ出させる */
   bleedPastScreen?: boolean;
+  /** 暗い面と控えめな四隅の分類名（右上だけ緑）。選手のスタイルマップ */
+  plainTone?: boolean;
 };
 
 type RangeTick = { v: number; at: number };
@@ -95,6 +97,13 @@ const QUAD_INK: Record<keyof LeagueHubQuadrants, string> = {
   tl: "rgba(0,245,255,0.7)",
   br: "rgba(0,245,255,0.7)",
   bl: "rgba(255,176,120,0.7)",
+};
+const PLAIN_PLOT_FILL = "rgba(4,10,16,0.6)";
+const PLAIN_QUAD_INK: Record<keyof LeagueHubQuadrants, string> = {
+  tr: "rgba(110,231,183,0.55)",
+  tl: "rgba(255,255,255,0.28)",
+  br: "rgba(255,255,255,0.28)",
+  bl: "rgba(255,255,255,0.28)",
 };
 
 type Box = { x0: number; y0: number; x1: number; y1: number };
@@ -416,6 +425,7 @@ export default function LeagueHubScatterNative({
   dimOthers = true,
   watermarks,
   bleedPastScreen,
+  plainTone = false,
 }: Props) {
   const isSel = (id: string) => id === selectedId || (secondId != null && id === secondId);
   const screenW = useWindowDimensions().width;
@@ -705,7 +715,7 @@ export default function LeagueHubScatterNative({
                 y={PAD.t}
                 width={plotW}
                 height={plotH}
-                fill={PLOT_FILL}
+                fill={plainTone ? PLAIN_PLOT_FILL : PLOT_FILL}
                 stroke="rgba(0,245,255,0.18)"
                 strokeWidth={1}
               />
@@ -800,7 +810,7 @@ export default function LeagueHubScatterNative({
                   textAnchor={anchor}
                   fontSize={10}
                   fontWeight="800"
-                  fill={QUAD_INK[k]}
+                  fill={(plainTone ? PLAIN_QUAD_INK : QUAD_INK)[k]}
                 >
                   {q(quadrants[k])}
                 </SvgText>
