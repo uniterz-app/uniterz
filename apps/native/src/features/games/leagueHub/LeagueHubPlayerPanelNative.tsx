@@ -711,7 +711,7 @@ export default function LeagueHubPlayerPanelNative({ hub, lang, section, onSelec
         >
           {hub.topGames && hub.topGames.games.length > 0 ? (
             <View>
-              <HubCellHeader labels={["PTS", "REB", "AST"]} />
+              <HubCellHeader labels={["PTS", "REB", "AST"]} framed />
               {hub.topGames.games.map((g, i) => (
                 <HubRow
                   key={`${g.playerId}-${g.gameId}`}
@@ -722,6 +722,7 @@ export default function LeagueHubPlayerPanelNative({ hub, lang, section, onSelec
                   cells={[String(g.pts), String(g.reb), String(g.ast)]}
                   valueSub={`Game Score ${g.gameScore.toFixed(1)}`}
                   onPress={() => onSelectPlayer(g.playerId)}
+                  framed
                 />
               ))}
             </View>
@@ -748,6 +749,7 @@ export default function LeagueHubPlayerPanelNative({ hub, lang, section, onSelec
                       value={r.recent.toFixed(1)}
                       valueSub={`${ja ? "前" : "was"} ${r.before.toFixed(1)}`}
                       onPress={() => onSelectPlayer(r.playerId)}
+                      framed
                     />
                   ))
             }
@@ -762,6 +764,7 @@ export default function LeagueHubPlayerPanelNative({ hub, lang, section, onSelec
                       value={r.recent.toFixed(1)}
                       valueSub={`${ja ? "前" : "was"} ${r.before.toFixed(1)}`}
                       onPress={() => onSelectPlayer(r.playerId)}
+                      framed
                     />
                   ))
             }
@@ -789,6 +792,7 @@ export default function LeagueHubPlayerPanelNative({ hub, lang, section, onSelec
                   value={String(r.value)}
                   valueSub={`${r.pts} / ${r.reb} / ${r.ast}`}
                   onPress={() => onSelectPlayer(r.playerId)}
+                  framed
                 />
               ))}
         </HubSection>
@@ -825,6 +829,7 @@ export default function LeagueHubPlayerPanelNative({ hub, lang, section, onSelec
                   value={String(r.count)}
                   valueSub={isStreak ? (ja ? "試合連続" : "straight") : ja ? "回" : "games"}
                   onPress={() => onSelectPlayer(r.playerId)}
+                  framed
                 />
               ))}
         </HubSection>

@@ -320,6 +320,7 @@ export default function LeagueHubZoneKingsNative({ zones, lang, onSelectPlayer }
                 : `${formatShotZoneMakesPerGame(r)} / G`
             }
             onPress={() => onSelectPlayer(r.playerId)}
+            framed
           />
         ))
       )}
