@@ -5,7 +5,10 @@ import {
   bdlCareerStatNum,
   type BdlPlayerCareerAverageRow,
 } from "@/lib/nba/bdl/fetchBdlPlayerCareerAverages";
-import type { NbaPlayerCareerSeasonRow } from "@/lib/predict/nbaPlayerDetailPreviewMocks";
+import type {
+  NbaPlayerCareerSeasonRow,
+  NbaPlayerCareerSeasonTotals,
+} from "@/lib/predict/nbaPlayerDetailPreviewMocks";
 import { TEAM_SHORT } from "@/lib/team-short";
 
 function round1(n: number): number {
@@ -52,6 +55,26 @@ function careerPf(
     if (Number.isFinite(n)) return { pf: round1(n) };
   }
   return {};
+}
+
+/** 試合ログが多すぎる・大きく欠けるときは null（行の平均 × 試合数のまま） */
+const CAREER_TOTALS_MAX_MISSING_GAMES = 3;
+
+export function careerSeasonTotalsFromLogs(
+  row: Pick<NbaPlayerCareerSeasonRow, "games" | "pts" | "reb" | "ast" | "fg3m">,
+  logTotals: NbaPlayerCareerSeasonTotals,
+  logGames: number
+): NbaPlayerCareerSeasonTotals | null {
+  const missing = row.games - logGames;
+  if (logGames <= 0 || missing < 0 || missing > CAREER_TOTALS_MAX_MISSING_GAMES) return null;
+  if (missing === 0) return { pts: logTotals.pts, reb: logTotals.reb, ast: logTotals.ast, fg3m: logTotals.fg3m };
+  return {
+    pts: Math.round(logTotals.pts + missing * row.pts),
+    reb: Math.round(logTotals.reb + missing * row.reb),
+    ast: Math.round(logTotals.ast + missing * row.ast),
+    fg3m: Math.round(logTotals.fg3m + missing * row.fg3m),
+    estGames: missing,
+  };
 }
 
 export function mapBdlCareerAverageToRow(

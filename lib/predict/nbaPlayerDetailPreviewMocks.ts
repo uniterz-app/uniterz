@@ -129,6 +129,20 @@ export type NbaPlayerCareerSeasonRow = {
   /** 未取り込みの過去スナップショットは未設定 */
   pf?: number;
   pts: number;
+  /**
+   * 試合ログを足した正確な合計（BDL の平均は小数 1 桁に丸め済みで、平均 × 試合数だと数本ずれる）。
+   * 試合ログが数試合欠けているときは欠けた分だけ平均で埋める（`estGames`）
+   */
+  totals?: NbaPlayerCareerSeasonTotals;
+};
+
+export type NbaPlayerCareerSeasonTotals = {
+  pts: number;
+  reb: number;
+  ast: number;
+  fg3m: number;
+  /** BDL の試合ログに無かった試合数（その分だけ平均で埋めた） */
+  estGames?: number;
 };
 
 export type NbaPlayerCareerSeasonBoard = "regular" | "playoffs";
