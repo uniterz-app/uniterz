@@ -1,0 +1,197 @@
+import { useState } from "react";
+import type {
+  LeagueHubMilestoneStat,
+  NbaLeagueHubDoc,
+} from "../../../../../../lib/nba/leagueHub/leagueHubTypes";
+import {
+  HUB_BAD_COLOR,
+  HUB_GOOD_COLOR,
+  HubCellHeader,
+  HubEmpty,
+  HubRow,
+  HubSection,
+  HubTwoCol,
+  type HubLang,
+} from "./leagueHubUiNative";
+import { HubSlantedTabs } from "./LeagueHubSlantedTabsNative";
+
+type Props = {
+  hub: NbaLeagueHubDoc;
+  lang: HubLang;
+  onSelectPlayer: (playerId: string) => void;
+};
+
+function signed(v: number): string {
+  return `${v > 0 ? "+" : v < 0 ? "−" : "±"}${Math.abs(v).toFixed(1)}`;
+}
+
+function empty(lang: HubLang) {
+  return <HubEmpty text={lang === "ja" ? "まだ試合が少ないです" : "Not enough games yet"} />;
+}
+
+type SplitMode = "homeAway" | "b2b";
+
+const SPLIT_HINTS: Record<SplitMode, Record<HubLang, string>> = {
+  homeAway: {
+    ja: "ホームとアウェーの 1 試合平均得点の差。平均 12 点以上で、ホーム・アウェーとも数試合ある選手だけ。",
+    en: "Points per game at home minus on the road. 12+ PPG with several games each.",
+  },
+  b2b: {
+    ja: "連戦 2 日目（自分も前日に出た試合）の平均得点と、それ以外の試合の差。2 日目が 2 試合以上ある選手だけ。",
+    en: "Points on the second night of back-to-backs (played the night before too) vs other games. 2+ such games.",
+  },
+};
+
+/** ホーム / アウェー・B2B 2 日目の得点差 */
+export function PlayerSplitsSection({ hub, lang, onSelectPlayer }: Props) {
+  const [mode, setMode] = useState<SplitMode>("homeAway");
+  const ja = lang === "ja";
+  const s = hub.playerSplits;
+  if (!s) return null;
+  const home = mode === "homeAway";
+  const left = home ? s.home : s.b2bUp;
+  const right = home ? s.away : s.b2bDrop;
+  const list = (rows: typeof left) =>
+    rows.length === 0
+      ? empty(lang)
+      : rows.slice(0, 5).map((r) => (
+          <HubRow
+            key={r.playerId}
+            teamId={r.teamId}
+            name={r.name}
+            sub={
+              home
+                ? `H ${r.a.toFixed(1)} · A ${r.b.toFixed(1)}`
+                : `B2B ${r.a.toFixed(1)} · ${ja ? "他" : "else"} ${r.b.toFixed(1)}`
+            }
+            value={signed(r.diff)}
+            onPress={() => onSelectPlayer(r.playerId)}
+            framed
+          />
+        ));
+  return (
+    <HubSection title="HOME / AWAY · B2B" hint={SPLIT_HINTS[mode][lang]}>
+      <HubSlantedTabs
+        items={[
+          { id: "homeAway", label: "HOME / AWAY" },
+          { id: "b2b", label: "B2B" },
+        ]}
+        value={mode}
+        onChange={setMode}
+      />
+      <HubTwoCol
+        leftTitle={home ? (ja ? "ホームで取る" : "HOME") : ja ? "2 日目も強い" : "B2B UP"}
+        rightTitle={home ? (ja ? "アウェーで取る" : "AWAY") : ja ? "2 日目に落ちる" : "B2B DROP"}
+        left={list(left)}
+        right={list(right)}
+      />
+    </HubSection>
+  );
+}
+
+const MILESTONE_UNIT: Record<LeagueHubMilestoneStat, { ja: string; en: string }> = {
+  pts: { ja: "点", en: "PTS" },
+  reb: { ja: "リバウンド", en: "REB" },
+  ast: { ja: "アシスト", en: "AST" },
+  fg3m: { ja: "本の 3P", en: "3PM" },
+};
+
+/** 通算の節目まであと少しの選手 */
+export function MilestonesSection({ hub, lang, onSelectPlayer }: Props) {
+  const rows = hub.milestones;
+  if (rows == null) return null;
+  const ja = lang === "ja";
+  return (
+    <HubSection
+      title="MILESTONE WATCH"
+      hint={
+        ja
+          ? "通算（レギュラーシーズン）の節目まであと少しの選手。今季のペースで何試合かかるか。前季までの通算は平均 × 試合数の概算なので、数本ずれることがあります。"
+          : "Players closing in on a career (regular season) milestone, with games needed at this season's pace. Prior seasons are estimated from averages, so totals can be off by a few."
+      }
+    >
+      {rows.length === 0
+        ? empty(lang)
+        : rows.map((r) => {
+            const unit = MILESTONE_UNIT[r.stat][ja ? "ja" : "en"];
+            return (
+              <HubRow
+                key={`${r.playerId}-${r.stat}`}
+                teamId={r.teamId}
+                name={r.name}
+                sub={
+                  ja
+                    ? `通算 ${r.target.toLocaleString()} ${unit}まで`
+                    : `${r.target.toLocaleString()} career ${unit}`
+                }
+                value={ja ? `あと ${r.remaining}` : `${r.remaining} to go`}
+                valueSub={ja ? `約 ${r.gamesAway} 試合` : `~${r.gamesAway} games`}
+                onPress={() => onSelectPlayer(r.playerId)}
+                framed
+              />
+            );
+          })}
+    </HubSection>
+  );
+}
+
+type ValueMode = "best" | "worst";
+
+/** 年俸の順位と働き（Game Score）の順位の差 */
+export function ValueSection({ hub, lang, onSelectPlayer }: Props) {
+  const [mode, setMode] = useState<ValueMode>("best");
+  const ja = lang === "ja";
+  const v = hub.value;
+  if (v === undefined) return null;
+  const rows = v ? v[mode] : [];
+  const of = rows[0]?.of;
+  return (
+    <HubSection
+      title="VALUE"
+      hint={
+        ja
+          ? `今季の年俸の順位と、Game Score（効率も含めた 1 試合の働き）の順位の差。平均 15 分以上の選手${of ? ` ${of} 人` : ""}で比べています。`
+          : `Salary rank vs Game Score rank this season, among ${of ?? ""} players averaging 15+ minutes.`
+      }
+    >
+      <HubSlantedTabs
+        items={[
+          { id: "best", label: "BARGAINS" },
+          { id: "worst", label: "OVERPAID" },
+        ]}
+        value={mode}
+        onChange={setMode}
+      />
+      {rows.length > 0 ? (
+        <HubCellHeader
+          labels={["GS"]}
+          caption={ja ? "Game Score 平均 · 下は順位の差" : "Avg Game Score · rank gap below"}
+          framed
+        />
+      ) : null}
+      {rows.length === 0
+        ? empty(lang)
+        : rows.map((r, i) => {
+            const gap = r.salaryRank - r.gameScoreRank;
+            return (
+              <HubRow
+                key={r.playerId}
+                rank={i + 1}
+                teamId={r.teamId}
+                name={r.name}
+                sub={
+                  ja
+                    ? `$${r.salaryM.toFixed(1)}M · 年俸 ${r.salaryRank} 位 → 働き ${r.gameScoreRank} 位`
+                    : `$${r.salaryM.toFixed(1)}M · pay #${r.salaryRank} → play #${r.gameScoreRank}`
+                }
+                cells={[r.gameScore.toFixed(1)]}
+                valueSub={`${gap > 0 ? "+" : "−"}${Math.abs(gap)}`}
+                valueSubColor={gap > 0 ? HUB_GOOD_COLOR : HUB_BAD_COLOR}
+                onPress={() => onSelectPlayer(r.playerId)}
+                framed
+              />
+            );
+          })}
+    </HubSection>
+  );
+}
