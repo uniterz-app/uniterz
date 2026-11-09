@@ -23,6 +23,7 @@ export type PushNotificationType =
   | "weekly_report"
   | "monthly_report"
   | "unit_reward"
+  | "badge_reward"
   /** お気に入り選手のテクニカル / フレグラント / 退場 */
   | "discipline_alert";
 
@@ -36,6 +37,7 @@ export type PushNotificationData = {
   period?: string;
   label?: string;
   playerId?: string;
+  badgeId?: string;
 };
 
 /** お気に入り選手の 1 試合分の規律イベント */
@@ -469,6 +471,30 @@ export function buildPushNotificationCopy(
             es: "Se añadieron recompensas de ranking",
             pt: "Recompensas de ranking foram adicionadas",
             fr: "Des récompenses de classement ont été ajoutées",
+          }),
+      };
+
+    case "badge_reward":
+      return {
+        title: L(lang, {
+          ja: "バッジを獲得しました",
+          en: "You earned a badge",
+          ko: "배지를 획득했습니다",
+          zh: "已获得徽章",
+          es: "Has ganado una insignia",
+          pt: "Você ganhou um emblema",
+          fr: "Vous avez gagné un badge",
+        }),
+        body:
+          detail ||
+          L(lang, {
+            ja: "月間ランキングの記念バッジが届きました",
+            en: "Your monthly ranking badge has arrived",
+            ko: "월간 랭킹 기념 배지가 도착했습니다",
+            zh: "月度排名纪念徽章已送达",
+            es: "Llegó tu insignia del ranking mensual",
+            pt: "Seu emblema do ranking mensal chegou",
+            fr: "Votre badge du classement mensuel est arrivé",
           }),
       };
 

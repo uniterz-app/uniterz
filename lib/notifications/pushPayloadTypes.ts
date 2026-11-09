@@ -21,6 +21,8 @@ export type PushNotificationType =
   | "monthly_report"
   /** 期間ランキング等の Unit 付与 */
   | "unit_reward"
+  /** 月間ランキングバッジの付与 */
+  | "badge_reward"
   /** お気に入り選手のテクニカル / フレグラント / 退場 */
   | "discipline_alert";
 
@@ -34,6 +36,7 @@ export type PushNotificationData = {
   period?: string;
   label?: string;
   playerId?: string;
+  badgeId?: string;
 };
 
 const PUSH_TYPES = new Set<PushNotificationType>([
@@ -50,6 +53,7 @@ const PUSH_TYPES = new Set<PushNotificationType>([
   "weekly_report",
   "monthly_report",
   "unit_reward",
+  "badge_reward",
   "discipline_alert",
 ]);
 
@@ -93,9 +97,14 @@ export function parsePushNotificationData(
     typeof raw.playerId === "string" && raw.playerId.trim() !== ""
       ? raw.playerId.trim()
       : undefined;
+  const badgeId =
+    typeof raw.badgeId === "string" && raw.badgeId.trim() !== ""
+      ? raw.badgeId.trim()
+      : undefined;
   return {
     type: type as PushNotificationType,
     playerId,
+    badgeId,
     gameId,
     postId,
     weekLabel,
