@@ -12,21 +12,16 @@ import {
   LEAGUE_HUB_TEAM_BENCH,
   LEAGUE_HUB_TEAM_CLUTCH,
   LEAGUE_HUB_TEAM_DEPTH,
-  LEAGUE_HUB_TEAM_HOME_AWAY,
   LEAGUE_HUB_TEAM_HUSTLE,
   LEAGUE_HUB_TEAM_PAYROLL,
   LEAGUE_HUB_TEAM_REBOUND,
-  LEAGUE_HUB_TEAM_REST,
   LEAGUE_HUB_TEAM_SHOT_CREATION,
   LEAGUE_HUB_TEAM_SHOT_DEFENSE,
   LEAGUE_HUB_TEAM_SIZE,
-  LEAGUE_HUB_TEAM_STEADY,
   LEAGUE_HUB_TEAM_STRENGTH,
   LEAGUE_HUB_TEAM_TEMPO,
   LEAGUE_HUB_TEAM_THREE,
-  LEAGUE_HUB_TEAM_TREND,
   LEAGUE_HUB_TEAM_TURNOVER,
-  LEAGUE_HUB_TEAM_VS_STRONG,
   leagueHubPlayTypePreset,
   type LeagueHubPlayTypeId,
   type LeagueHubScatterPreset,
@@ -467,12 +462,7 @@ type StylePresetId =
   | "bench"
   | "payroll"
   | "age"
-  | "size"
-  | "trend"
-  | "homeAway"
-  | "vsStrong"
-  | "rest"
-  | "steady";
+  | "size";
 type StyleMapId = StylePresetId | `pt-${LeagueHubPlayTypeId}`;
 type StyleGroup = {
   id: string;
@@ -499,11 +489,6 @@ const STYLE_PRESETS: Record<StylePresetId, LeagueHubScatterPreset<LeagueHubTeamM
   payroll: LEAGUE_HUB_TEAM_PAYROLL,
   age: LEAGUE_HUB_TEAM_AGE,
   size: LEAGUE_HUB_TEAM_SIZE,
-  trend: LEAGUE_HUB_TEAM_TREND,
-  homeAway: LEAGUE_HUB_TEAM_HOME_AWAY,
-  vsStrong: LEAGUE_HUB_TEAM_VS_STRONG,
-  rest: LEAGUE_HUB_TEAM_REST,
-  steady: LEAGUE_HUB_TEAM_STEADY,
 };
 
 const PLAY_STYLE_GROUPS: readonly StyleGroup[] = [
@@ -543,7 +528,7 @@ const PLAY_STYLE_GROUPS: readonly StyleGroup[] = [
   },
 ];
 
-const ROSTER_FORM_GROUPS: readonly StyleGroup[] = [
+const ROSTER_GROUPS: readonly StyleGroup[] = [
   {
     id: "roster",
     label: "ROSTER",
@@ -554,17 +539,6 @@ const ROSTER_FORM_GROUPS: readonly StyleGroup[] = [
       { id: "payroll", label: "PAYROLL" },
       { id: "age", label: "AGE" },
       { id: "size", label: "SIZE" },
-    ],
-  },
-  {
-    id: "form",
-    label: "FORM",
-    maps: [
-      { id: "trend", label: "TREND" },
-      { id: "homeAway", label: "HOME / AWAY" },
-      { id: "vsStrong", label: "VS .500+" },
-      { id: "rest", label: "B2B" },
-      { id: "steady", label: "STEADY" },
     ],
   },
 ];
@@ -600,11 +574,13 @@ function StyleMaps({
   const strength = mapId === "strength";
   return (
     <HubSection title={title}>
-      <HubSlantedTabs
-        items={groups.map((g) => ({ id: g.id, label: g.label }))}
-        value={groupId}
-        onChange={setGroupId}
-      />
+      {groups.length > 1 ? (
+        <HubSlantedTabs
+          items={groups.map((g) => ({ id: g.id, label: g.label }))}
+          value={groupId}
+          onChange={setGroupId}
+        />
+      ) : null}
       <HubScrollSlantedTabs
         items={group.maps}
         value={mapId}
@@ -818,8 +794,8 @@ export default function LeagueHubTeamPanelNative({ hub, lang, onSelectTeam }: Pr
   });
   const rows = bundle.season;
   const teams = hub?.teams ?? [];
-  /** ロスター・勝ち方の指標は hub 側にあるのでリーグ表の行に重ねる */
-  const rosterFormRows = useMemo(() => {
+  /** ロスターの指標は hub 側にあるのでリーグ表の行に重ねる */
+  const rosterRows = useMemo(() => {
     const byTeam = new Map(teams.map((t) => [t.teamId, t.m]));
     return rows.map((r) => ({ ...r, ...byTeam.get(r.teamId) }));
   }, [rows, teams]);
@@ -843,9 +819,9 @@ export default function LeagueHubTeamPanelNative({ hub, lang, onSelectTeam }: Pr
       />
 
       <StyleMaps
-        title="ROSTER & FORM"
-        groups={ROSTER_FORM_GROUPS}
-        rows={rosterFormRows}
+        title="ROSTER"
+        groups={ROSTER_GROUPS}
+        rows={rosterRows}
         lang={lang}
         onSelectTeam={onSelectTeam}
       />
