@@ -224,6 +224,28 @@ export type LeagueHubPositionDefense = Record<
   { pts: number; rank: number } | null
 >;
 
+/** チームのスタイルマップ（ROSTER / FORM）用。勝率・割合は 0–1 */
+export const LEAGUE_HUB_TEAM_STYLE_METRICS = [
+  "winPct",
+  "aceShare",
+  "scorerCount",
+  "benchShare",
+  "payrollM",
+  "experience",
+  "heightCm",
+  "netAll",
+  "netL5",
+  "marginSd",
+  "homePct",
+  "awayPct",
+  "vsOverPct",
+  "vsUnderPct",
+  "restPct",
+  "b2bPct",
+] as const;
+
+export type LeagueHubTeamStyleMetric = (typeof LEAGUE_HUB_TEAM_STYLE_METRICS)[number];
+
 export type LeagueHubTeamRow = {
   teamId: string;
   conference: NbaConferenceId | null;
@@ -238,6 +260,8 @@ export type LeagueHubTeamRow = {
   /** 5 点差以内で決着 */
   close: LeagueHubRecord | null;
   posDef: LeagueHubPositionDefense | null;
+  /** 古い doc には無い */
+  m?: Partial<Record<LeagueHubTeamStyleMetric, number>>;
 };
 
 export type NbaLeagueHubDoc = {

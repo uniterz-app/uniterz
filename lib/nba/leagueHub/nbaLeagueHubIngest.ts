@@ -16,6 +16,8 @@ import { NBA_PLAYER_GAME_LOGS_COLLECTION } from "@/lib/nba/playerGameLogs/player
 import { NBA_PLAYER_CAREER_SEASONS_COLLECTION } from "@/lib/nba/playerCareerSeasons/playerCareerSeasonsTypes";
 import { nbaLeagueStatsSeasonKeys, previousNbaSeasonKey } from "@/lib/rankings/nbaSeason";
 import { loadNbaPlayerShotAreas } from "@/lib/nba/shotCharts/loadNbaPlayerShotAreas";
+import { NBA_TEAM_PAYROLLS_COLLECTION } from "@/lib/nba/teamPayroll/loadTeamPayrollSnapshot";
+import { parseHeightInches } from "@/lib/nba/leagueHub/buildLeagueHubTeamStyle";
 import {
   buildNbaLeagueHub,
   type LeagueHubMetricsEntry,
@@ -75,8 +77,19 @@ async function loadRoster(db: Firestore, seasonKey: string) {
         draftYear: num(p.draftYear),
         draftRound: num(p.draftRound),
         draftNumber: num(p.draftNumber),
+        heightIn: parseHeightInches(p.height),
       });
     }
+  }
+  return out;
+}
+
+async function loadPayrolls(db: Firestore, seasonKey: string) {
+  const out = new Map<string, number>();
+  const snap = await db.collection(NBA_TEAM_PAYROLLS_COLLECTION).doc(seasonKey).get();
+  for (const [teamId, raw] of Object.entries(asObj(snap.data()?.teams) ?? {})) {
+    const total = num(asObj(raw)?.totalSalary);
+    if (total != null && total > 0) out.set(teamId, total);
   }
   return out;
 }
@@ -168,7 +181,7 @@ async function loadTeamLogs(db: Firestore, seasonKey: string) {
     .collection(NBA_TEAM_GAME_LOGS_COLLECTION)
     .doc(seasonKey)
     .collection("teams")
-    .select("splits", "positionDefense")
+    .select("splits", "positionDefense", "games")
     .get();
   for (const d of snap.docs) {
     const data = d.data();
@@ -184,10 +197,20 @@ async function loadTeamLogs(db: Firestore, seasonKey: string) {
       };
       posDef = { G: cell("G"), F: cell("F"), C: cell("C") };
     }
+    const games = Array.isArray(data.games) ? (data.games as unknown[]) : [];
+    const finals = games.flatMap((g) => {
+      const o = asObj(g);
+      const team = num(o?.teamScore);
+      const opp = num(o?.oppScore);
+      return team != null && opp != null ? [{ team, opp }] : [];
+    });
     out.set(d.id, {
       vsOver500: record(splits?.vsOver500),
+      vsUnder500: record(splits?.vsUnder500),
       b2b: record(splits?.b2b),
       posDef,
+      margins: finals.map((g) => g.team - g.opp),
+      scores: finals.map((g) => g.team),
     });
   }
   return out;
@@ -261,7 +284,8 @@ async function loadStarterIdsByGame(db: Firestore, seasonKey: string) {
   return out;
 }
 
-export async function ingestNbaLeagueHub(
+/** Firestore を読んで hub を組むだけ（書き込まない） */
+export async function loadAndBuildNbaLeagueHub(
   db: Firestore,
   input: { seasonKey: string; nowMs?: number }
 ) {
@@ -277,6 +301,7 @@ export async function ingestNbaLeagueHub(
     teamLogs,
     closeRecords,
     starterIdsByGame,
+    payrollUsd,
   ] = await Promise.all([
     loadRoster(db, seasonKey),
     loadMetrics(db, seasonKey),
@@ -287,6 +312,7 @@ export async function ingestNbaLeagueHub(
     loadTeamLogs(db, seasonKey),
     loadCloseRecords(db, seasonKey),
     loadStarterIdsByGame(db, seasonKey),
+    loadPayrolls(db, seasonKey),
   ]);
   const [priorPlayerIds, prevSnap, shotAreasDoc] = await Promise.all([
     loadPriorPlayerIds(db, seasonKey, metrics.keys(), {
@@ -298,10 +324,11 @@ export async function ingestNbaLeagueHub(
   ]);
   const prevData = prevSnap.data();
 
-  const hub = buildNbaLeagueHub({
+  return buildNbaLeagueHub({
     seasonKey,
     nowMs: input.nowMs ?? Date.now(),
     roster,
+    payrollUsd,
     metrics,
     shotZones,
     shotAreas: shotAreasDoc?.players ?? null,
@@ -319,7 +346,14 @@ export async function ingestNbaLeagueHub(
         }
       : null,
   });
+}
 
+export async function ingestNbaLeagueHub(
+  db: Firestore,
+  input: { seasonKey: string; nowMs?: number }
+) {
+  const { seasonKey } = input;
+  const hub = await loadAndBuildNbaLeagueHub(db, input);
   await db
     .collection(NBA_LEAGUE_HUB_COLLECTION)
     .doc(seasonKey)

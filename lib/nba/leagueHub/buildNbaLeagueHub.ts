@@ -30,6 +30,11 @@ import {
   type NbaLeagueHubDoc,
 } from "@/lib/nba/leagueHub/leagueHubTypes";
 import type { NbaShotAreaCounts, NbaShotAreaId } from "@/lib/nba/shotCharts/shotChartTypes";
+import {
+  buildLeagueHubTeamStyle,
+  sumBenchPoints,
+  type LeagueHubRosterTeamPlayer,
+} from "@/lib/nba/leagueHub/buildLeagueHubTeamStyle";
 
 export type LeagueHubRosterEntry = {
   name: string;
@@ -40,6 +45,8 @@ export type LeagueHubRosterEntry = {
   draftYear: number | null;
   draftRound: number | null;
   draftNumber: number | null;
+  /** インチ。古い呼び出し元は渡さない */
+  heightIn?: number | null;
 };
 
 export type LeagueHubMetricsEntry = {
@@ -60,8 +67,13 @@ export type LeagueHubStandingsEntry = {
 
 export type LeagueHubTeamLogEntry = {
   vsOver500: LeagueHubRecord | null;
+  vsUnder500?: LeagueHubRecord | null;
   b2b: LeagueHubRecord | null;
   posDef: LeagueHubPositionDefense | null;
+  /** 得点差（自チーム − 相手）。新しい順 */
+  margins?: number[];
+  /** 自チームの得点。新しい順 */
+  scores?: number[];
 };
 
 export type BuildNbaLeagueHubInput = {
@@ -82,6 +94,8 @@ export type BuildNbaLeagueHubInput = {
   priorSeasonMetrics?: Map<string, LeagueHubMetricsEntry> | null;
   /** BDL game id → 先発 5 人 × 2 の playerId（シックスマンの判定用） */
   starterIdsByGame?: Map<string, Set<string>> | null;
+  /** チームのキャップ総額（USD） */
+  payrollUsd?: Map<string, number> | null;
   /** 既存 hub doc のラダー週次スナップショット */
   previousLadders?: Pick<NbaLeagueHubDoc, "ladderWeek" | "ladderPrev"> | null;
 };
@@ -758,8 +772,43 @@ export function buildNbaLeagueHub(input: BuildNbaLeagueHubInput): NbaLeagueHubDo
   };
 
   // ── チーム ──
+  const benchPts = sumBenchPoints(input.gameLogs, input.starterIdsByGame);
+  const rosterTeams = new Map<string, LeagueHubRosterTeamPlayer[]>();
+  for (const [id, e] of input.metrics) {
+    if (!e.teamId || e.gp <= 0) continue;
+    const r = input.roster.get(id);
+    const list = rosterTeams.get(e.teamId) ?? [];
+    list.push({
+      gp: e.gp,
+      mpg: e.values.min ?? 0,
+      ppg: e.values.pts ?? 0,
+      heightIn: r?.heightIn ?? null,
+      draftYear: r?.draftYear ?? null,
+    });
+    rosterTeams.set(e.teamId, list);
+  }
   const teams: LeagueHubTeamRow[] = input.standings.map((s) => {
     const log = input.teamLogs.get(s.teamId);
+    const bench = benchPts.get(s.teamId);
+    const m = buildLeagueHubTeamStyle(
+      {
+        teamId: s.teamId,
+        wins: s.wins,
+        losses: s.losses,
+        home: s.home,
+        away: s.away,
+        vsOver500: log?.vsOver500 ?? null,
+        vsUnder500: log?.vsUnder500 ?? null,
+        b2b: log?.b2b ?? null,
+        margins: log?.margins ?? [],
+        scores: log?.scores ?? [],
+        roster: rosterTeams.get(s.teamId) ?? [],
+        payrollUsd: input.payrollUsd?.get(s.teamId) ?? null,
+        benchPts: bench?.bench ?? 0,
+        starterPts: bench?.starter ?? 0,
+      },
+      startYear
+    );
     return {
       teamId: s.teamId,
       conference: nbaConferenceForTeam(s.teamId),
@@ -773,6 +822,7 @@ export function buildNbaLeagueHub(input: BuildNbaLeagueHubInput): NbaLeagueHubDo
       b2b: log?.b2b ?? null,
       close: input.closeRecords.get(s.teamId) ?? null,
       posDef: log?.posDef ?? null,
+      m,
     };
   });
 

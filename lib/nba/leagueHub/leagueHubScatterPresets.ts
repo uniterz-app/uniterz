@@ -2,7 +2,10 @@
  * LEAGUE タブの散布図（軸の組み合わせ）。
  * invert = 低いほど良い指標。図では良い側を右 / 上に寄せる。
  */
-import type { LeagueHubPlayerMetric } from "@/lib/nba/leagueHub/leagueHubTypes";
+import type {
+  LeagueHubPlayerMetric,
+  LeagueHubTeamStyleMetric,
+} from "@/lib/nba/leagueHub/leagueHubTypes";
 
 type Copy = { ja: string; en: string };
 
@@ -415,8 +418,9 @@ export const LEAGUE_HUB_PLAYER_SCATTER_PRESETS: readonly LeagueHubPlayerScatterP
   },
 ];
 
-/** チーム散布図で使う `NbaLeagueTeamStatsRow` のキー */
+/** チーム散布図で使う `NbaLeagueTeamStatsRow` のキー + hub の `teams[].m` */
 export type LeagueHubTeamMetric =
+  | LeagueHubTeamStyleMetric
   | "ortg"
   | "drtg"
   | "pace"
@@ -700,6 +704,271 @@ export const LEAGUE_HUB_TEAM_SHOT_CREATION: LeagueHubScatterPreset<LeagueHubTeam
     tl: { ja: "個人で作る", en: "SELF-CREATED" },
     br: { ja: "パスから打つ", en: "CATCH AND SHOOT" },
     bl: { ja: "ゴール下で取る", en: "INSIDE SCORING" },
+  },
+};
+
+const WIN_PCT_AXIS: LeagueHubAxis<LeagueHubTeamMetric> = {
+  metric: "winPct",
+  label: { ja: "勝率", en: "WIN%" },
+  format: "pct",
+};
+
+export const LEAGUE_HUB_TEAM_ACE: LeagueHubScatterPreset<LeagueHubTeamMetric> = {
+  id: "ace",
+  label: { ja: "エース依存度", en: "ACE" },
+  hint: {
+    ja: "右ほどチームの得点をエース 1 人が背負い、上ほど勝っている。エースはチーム試合の半分以上・平均 10 分以上出ている選手の最多得点者。",
+    en: "Right = one scorer carries more of the offense, up = more wins. Ace = top scorer among players in half the games at 10+ min.",
+  },
+  x: {
+    metric: "aceShare",
+    label: { ja: "エースの得点割合（チーム得点のうち）", en: "ACE SHARE of team points" },
+    format: "pct",
+  },
+  y: WIN_PCT_AXIS,
+  marks: { tl: "ACE" },
+  quadrants: {
+    tr: { ja: "エースで勝つ", en: "STAR POWERED" },
+    tl: { ja: "全員で勝つ", en: "BY COMMITTEE" },
+    br: { ja: "エース頼みで苦戦", en: "ONE-MAN SHOW" },
+    bl: { ja: "決め手がない", en: "NO GO-TO" },
+  },
+};
+
+export const LEAGUE_HUB_TEAM_DEPTH: LeagueHubScatterPreset<LeagueHubTeamMetric> = {
+  id: "depth",
+  label: { ja: "得点源の数", en: "DEPTH" },
+  hint: {
+    ja: "右ほど得点を取る選手が多く散らばり、上ほど勝っている。数字は「同じだけ点を取る選手が何人いるのと同じか」。",
+    en: "Right = scoring spread across more players, up = more wins. Value = equivalent number of equal scorers.",
+  },
+  x: {
+    metric: "scorerCount",
+    label: { ja: "得点源の数（人）", en: "SCORERS (effective)" },
+    format: "one",
+  },
+  y: WIN_PCT_AXIS,
+  marks: { tl: "DEPTH" },
+  quadrants: {
+    tr: { ja: "層の厚さで勝つ", en: "DEEP AND WINNING" },
+    tl: { ja: "少数精鋭", en: "TOP-HEAVY" },
+    br: { ja: "層は厚いが勝てない", en: "DEEP, NOT WINNING" },
+    bl: { ja: "頼れる人が少ない", en: "THIN" },
+  },
+};
+
+export const LEAGUE_HUB_TEAM_BENCH: LeagueHubScatterPreset<LeagueHubTeamMetric> = {
+  id: "bench",
+  label: { ja: "ベンチ力", en: "BENCH" },
+  hint: {
+    ja: "右ほど控え選手の得点が多く、上ほど勝っている。",
+    en: "Right = more points from the bench, up = more wins.",
+  },
+  x: {
+    metric: "benchShare",
+    label: { ja: "ベンチ得点の割合（チーム得点のうち）", en: "BENCH SHARE of team points" },
+    format: "pct",
+  },
+  y: WIN_PCT_AXIS,
+  marks: { tl: "BENCH" },
+  quadrants: {
+    tr: { ja: "控えも強い", en: "DEEP BENCH" },
+    tl: { ja: "先発で勝つ", en: "STARTERS CARRY" },
+    br: { ja: "控え頼み", en: "BENCH RELIANT" },
+    bl: { ja: "控えが弱い", en: "THIN BENCH" },
+  },
+};
+
+export const LEAGUE_HUB_TEAM_PAYROLL: LeagueHubScatterPreset<LeagueHubTeamMetric> = {
+  id: "payroll",
+  label: { ja: "コスパ", en: "PAYROLL" },
+  hint: {
+    ja: "右ほど選手の年俸総額が高く、上ほど勝っている。左上ほど安く勝っている。",
+    en: "Right = bigger payroll, up = more wins. Top left = winning on a budget.",
+  },
+  x: {
+    metric: "payrollM",
+    label: { ja: "年俸総額（百万ドル）", en: "PAYROLL ($M)" },
+    format: "one",
+  },
+  y: WIN_PCT_AXIS,
+  marks: { tl: "$" },
+  quadrants: {
+    tr: { ja: "お金をかけて勝つ", en: "PAID AND WINNING" },
+    tl: { ja: "安く勝つ", en: "BARGAIN" },
+    br: { ja: "高いのに勝てない", en: "OVERPAID" },
+    bl: { ja: "再建中", en: "REBUILDING" },
+  },
+};
+
+export const LEAGUE_HUB_TEAM_AGE: LeagueHubScatterPreset<LeagueHubTeamMetric> = {
+  id: "age",
+  label: { ja: "若さと強さ", en: "AGE" },
+  hint: {
+    ja: "右ほどベテランが多く（ドラフトからの年数を出場時間で平均。ドラフト外は除く）、上ほど勝っている。",
+    en: "Right = more experienced (years since draft, minutes-weighted; undrafted excluded), up = more wins.",
+  },
+  x: {
+    metric: "experience",
+    label: { ja: "経験年数（出場時間で平均）", en: "EXPERIENCE (yrs, min-weighted)" },
+    format: "one",
+  },
+  y: WIN_PCT_AXIS,
+  marks: { tl: "AGE" },
+  quadrants: {
+    tr: { ja: "経験で勝つ", en: "VETERAN CONTENDER" },
+    tl: { ja: "若くて強い", en: "YOUNG RISERS" },
+    br: { ja: "ベテランが苦戦", en: "AGING" },
+    bl: { ja: "若手を育成中", en: "DEVELOPING" },
+  },
+};
+
+export const LEAGUE_HUB_TEAM_SIZE: LeagueHubScatterPreset<LeagueHubTeamMetric> = {
+  id: "size",
+  label: { ja: "サイズ", en: "SIZE" },
+  hint: {
+    ja: "右ほど背の高い選手が長く出ていて（出場時間で平均）、上ほど試合のペースが速い。良し悪しではなく戦い方の違い。",
+    en: "Right = taller lineup (minutes-weighted height), up = faster pace. A style, not a grade.",
+  },
+  x: {
+    metric: "heightCm",
+    label: { ja: "平均身長 cm（出場時間で平均）", en: "HEIGHT cm (min-weighted)" },
+    format: "one",
+  },
+  y: {
+    metric: "pace",
+    label: { ja: "Pace（48 分あたりの攻撃回数）", en: "PACE (poss per 48 min)" },
+    format: "one",
+  },
+  marks: { tl: "SIZE" },
+  quadrants: {
+    tr: { ja: "大きくて走る", en: "BIG AND FAST" },
+    tl: { ja: "スモールボール", en: "SMALL BALL" },
+    br: { ja: "大きくてじっくり", en: "BIG AND SLOW" },
+    bl: { ja: "小さくてじっくり", en: "SMALL HALF-COURT" },
+  },
+};
+
+export const LEAGUE_HUB_TEAM_TREND: LeagueHubScatterPreset<LeagueHubTeamMetric> = {
+  id: "trend",
+  label: { ja: "上り調子・下り坂", en: "TREND" },
+  hint: {
+    ja: "右ほどシーズン全体の得失点差が大きく、上ほど直近 5 試合の得失点差が大きい。左上は上り調子、右下は下り坂。",
+    en: "Right = better season point margin, up = better margin over the last 5. Top left = rising, bottom right = cooling.",
+  },
+  x: {
+    metric: "netAll",
+    label: { ja: "シーズンの平均得失点差", en: "SEASON MARGIN" },
+    format: "one",
+  },
+  y: {
+    metric: "netL5",
+    label: { ja: "直近 5 試合の平均得失点差", en: "LAST 5 MARGIN" },
+    format: "one",
+  },
+  marks: { tl: "HOT" },
+  quadrants: {
+    tr: { ja: "好調を維持", en: "STAYING HOT" },
+    tl: { ja: "上り調子", en: "RISING" },
+    br: { ja: "下り坂", en: "COOLING" },
+    bl: { ja: "不調が続く", en: "SLUMPING" },
+  },
+};
+
+export const LEAGUE_HUB_TEAM_HOME_AWAY: LeagueHubScatterPreset<LeagueHubTeamMetric> = {
+  id: "homeAway",
+  label: { ja: "内弁慶", en: "HOME / AWAY" },
+  hint: {
+    ja: "右ほどホームで勝ち、上ほどアウェーで勝つ。右下は内弁慶。",
+    en: "Right = wins more at home, up = wins more on the road. Bottom right = home-court only.",
+  },
+  x: { metric: "homePct", label: { ja: "ホーム勝率", en: "HOME WIN%" }, format: "pct" },
+  y: { metric: "awayPct", label: { ja: "アウェー勝率", en: "AWAY WIN%" }, format: "pct" },
+  marks: { tl: "AWAY", br: "HOME" },
+  quadrants: {
+    tr: { ja: "どこでも強い", en: "ANYWHERE" },
+    tl: { ja: "敵地に強い", en: "ROAD WARRIORS" },
+    br: { ja: "内弁慶", en: "HOME ONLY" },
+    bl: { ja: "どこでも苦しい", en: "NOWHERE" },
+  },
+};
+
+export const LEAGUE_HUB_TEAM_VS_STRONG: LeagueHubScatterPreset<LeagueHubTeamMetric> = {
+  id: "vsStrong",
+  label: { ja: "強い相手に強いか", en: "VS .500+" },
+  hint: {
+    ja: "右ほど勝率 5 割未満の相手に勝ち、上ほど 5 割以上の相手に勝つ。相手の勝率は試合前の時点。",
+    en: "Right = beats sub-.500 teams, up = beats .500+ teams (record before the game).",
+  },
+  x: {
+    metric: "vsUnderPct",
+    label: { ja: "5 割未満の相手への勝率", en: "VS SUB-.500 WIN%" },
+    format: "pct",
+  },
+  y: {
+    metric: "vsOverPct",
+    label: { ja: "5 割以上の相手への勝率", en: "VS .500+ WIN%" },
+    format: "pct",
+  },
+  marks: { tl: "VS" },
+  quadrants: {
+    tr: { ja: "相手を選ばない", en: "BEATS EVERYONE" },
+    tl: { ja: "強い相手に燃える", en: "GIANT KILLERS" },
+    br: { ja: "格下には勝つ", en: "FLAT-TRACK BULLIES" },
+    bl: { ja: "相手を選ばず苦戦", en: "STRUGGLING" },
+  },
+};
+
+export const LEAGUE_HUB_TEAM_REST: LeagueHubScatterPreset<LeagueHubTeamMetric> = {
+  id: "rest",
+  label: { ja: "連戦への強さ", en: "B2B" },
+  hint: {
+    ja: "右ほど休み明け（連戦 2 日目以外）で勝ち、上ほど連戦 2 日目でも勝つ。",
+    en: "Right = wins with rest (not the 2nd night of a back-to-back), up = wins on the 2nd night.",
+  },
+  x: {
+    metric: "restPct",
+    label: { ja: "連戦以外の勝率", en: "RESTED WIN%" },
+    format: "pct",
+  },
+  y: {
+    metric: "b2bPct",
+    label: { ja: "連戦 2 日目の勝率", en: "B2B WIN%" },
+    format: "pct",
+  },
+  marks: { tl: "B2B" },
+  quadrants: {
+    tr: { ja: "連戦も平気", en: "IRON LEGS" },
+    tl: { ja: "連戦で粘る", en: "GRINDERS" },
+    br: { ja: "連戦に弱い", en: "NEEDS REST" },
+    bl: { ja: "いつも苦しい", en: "STRUGGLING" },
+  },
+};
+
+export const LEAGUE_HUB_TEAM_STEADY: LeagueHubScatterPreset<LeagueHubTeamMetric> = {
+  id: "steady",
+  label: { ja: "安定度", en: "STEADY" },
+  hint: {
+    ja: "右ほど平均得失点差が大きく、上ほど試合ごとの点差がぶれない。右下は大勝も大敗もある。",
+    en: "Right = better average margin, up = steadier margin game to game. Bottom right = boom or bust.",
+  },
+  x: {
+    metric: "netAll",
+    label: { ja: "平均得失点差", en: "AVG MARGIN" },
+    format: "one",
+  },
+  y: {
+    metric: "marginSd",
+    label: { ja: "点差の振れ幅（上ほど小さい）", en: "MARGIN SWING (smaller = up)" },
+    format: "one",
+    invert: true,
+  },
+  marks: { tl: "STEADY" },
+  quadrants: {
+    tr: { ja: "安定して強い", en: "RELIABLE" },
+    tl: { ja: "いつも接戦", en: "ALWAYS CLOSE" },
+    br: { ja: "波がある強さ", en: "BOOM OR BUST" },
+    bl: { ja: "波があって苦しい", en: "VOLATILE" },
   },
 };
 

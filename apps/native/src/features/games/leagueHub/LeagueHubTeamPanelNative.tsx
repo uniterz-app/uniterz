@@ -6,16 +6,27 @@ import { CURRENT_NBA_SEASON_KEY } from "../../../../../../lib/rankings/nbaSeason
 import type { NbaLeagueTeamStatRow } from "../../../../../../lib/predict/nbaLeagueTeamStatsMocks";
 import {
   LEAGUE_HUB_PLAY_TYPES,
+  LEAGUE_HUB_TEAM_ACE,
+  LEAGUE_HUB_TEAM_AGE,
   LEAGUE_HUB_TEAM_ATTACK,
+  LEAGUE_HUB_TEAM_BENCH,
   LEAGUE_HUB_TEAM_CLUTCH,
+  LEAGUE_HUB_TEAM_DEPTH,
+  LEAGUE_HUB_TEAM_HOME_AWAY,
   LEAGUE_HUB_TEAM_HUSTLE,
+  LEAGUE_HUB_TEAM_PAYROLL,
   LEAGUE_HUB_TEAM_REBOUND,
+  LEAGUE_HUB_TEAM_REST,
   LEAGUE_HUB_TEAM_SHOT_CREATION,
   LEAGUE_HUB_TEAM_SHOT_DEFENSE,
+  LEAGUE_HUB_TEAM_SIZE,
+  LEAGUE_HUB_TEAM_STEADY,
   LEAGUE_HUB_TEAM_STRENGTH,
   LEAGUE_HUB_TEAM_TEMPO,
   LEAGUE_HUB_TEAM_THREE,
+  LEAGUE_HUB_TEAM_TREND,
   LEAGUE_HUB_TEAM_TURNOVER,
+  LEAGUE_HUB_TEAM_VS_STRONG,
   leagueHubPlayTypePreset,
   type LeagueHubPlayTypeId,
   type LeagueHubScatterPreset,
@@ -450,9 +461,26 @@ type StylePresetId =
   | "shotDefense"
   | "hustle"
   | "rebound"
-  | "turnover";
+  | "turnover"
+  | "ace"
+  | "depth"
+  | "bench"
+  | "payroll"
+  | "age"
+  | "size"
+  | "trend"
+  | "homeAway"
+  | "vsStrong"
+  | "rest"
+  | "steady";
 type StyleMapId = StylePresetId | `pt-${LeagueHubPlayTypeId}`;
-type StyleGroupId = "overall" | "offense" | "playType" | "defense";
+type StyleGroup = {
+  id: string;
+  label: string;
+  maps: readonly { id: StyleMapId; label: string }[];
+  /** 最初に開くマップ（無ければ先頭） */
+  initial?: StyleMapId;
+};
 
 const STYLE_PRESETS: Record<StylePresetId, LeagueHubScatterPreset<LeagueHubTeamMetric>> = {
   strength: LEAGUE_HUB_TEAM_STRENGTH,
@@ -465,13 +493,20 @@ const STYLE_PRESETS: Record<StylePresetId, LeagueHubScatterPreset<LeagueHubTeamM
   hustle: LEAGUE_HUB_TEAM_HUSTLE,
   rebound: LEAGUE_HUB_TEAM_REBOUND,
   turnover: LEAGUE_HUB_TEAM_TURNOVER,
+  ace: LEAGUE_HUB_TEAM_ACE,
+  depth: LEAGUE_HUB_TEAM_DEPTH,
+  bench: LEAGUE_HUB_TEAM_BENCH,
+  payroll: LEAGUE_HUB_TEAM_PAYROLL,
+  age: LEAGUE_HUB_TEAM_AGE,
+  size: LEAGUE_HUB_TEAM_SIZE,
+  trend: LEAGUE_HUB_TEAM_TREND,
+  homeAway: LEAGUE_HUB_TEAM_HOME_AWAY,
+  vsStrong: LEAGUE_HUB_TEAM_VS_STRONG,
+  rest: LEAGUE_HUB_TEAM_REST,
+  steady: LEAGUE_HUB_TEAM_STEADY,
 };
 
-const STYLE_GROUPS: readonly {
-  id: StyleGroupId;
-  label: string;
-  maps: readonly { id: StyleMapId; label: string }[];
-}[] = [
+const PLAY_STYLE_GROUPS: readonly StyleGroup[] = [
   {
     id: "overall",
     label: "OVERALL",
@@ -494,6 +529,7 @@ const STYLE_GROUPS: readonly {
     id: "playType",
     label: "PLAY TYPE",
     maps: LEAGUE_HUB_PLAY_TYPES.map((p) => ({ id: `pt-${p.id}` as const, label: p.short })),
+    initial: "pt-pnrBh",
   },
   {
     id: "defense",
@@ -507,6 +543,32 @@ const STYLE_GROUPS: readonly {
   },
 ];
 
+const ROSTER_FORM_GROUPS: readonly StyleGroup[] = [
+  {
+    id: "roster",
+    label: "ROSTER",
+    maps: [
+      { id: "ace", label: "ACE" },
+      { id: "depth", label: "DEPTH" },
+      { id: "bench", label: "BENCH" },
+      { id: "payroll", label: "PAYROLL" },
+      { id: "age", label: "AGE" },
+      { id: "size", label: "SIZE" },
+    ],
+  },
+  {
+    id: "form",
+    label: "FORM",
+    maps: [
+      { id: "trend", label: "TREND" },
+      { id: "homeAway", label: "HOME / AWAY" },
+      { id: "vsStrong", label: "VS .500+" },
+      { id: "rest", label: "B2B" },
+      { id: "steady", label: "STEADY" },
+    ],
+  },
+];
+
 function stylePreset(id: StyleMapId): LeagueHubScatterPreset<LeagueHubTeamMetric> {
   return id.startsWith("pt-")
     ? leagueHubPlayTypePreset(id.slice(3) as LeagueHubPlayTypeId)
@@ -515,30 +577,31 @@ function stylePreset(id: StyleMapId): LeagueHubScatterPreset<LeagueHubTeamMetric
 
 /** チームの散布図はすべて同じ形なので 1 枚で切り替える（背景は消さない） */
 function StyleMaps({
+  title,
+  groups,
   rows,
   lang,
   onSelectTeam,
 }: {
+  title: string;
+  groups: readonly StyleGroup[];
   rows: NbaLeagueTeamStatRow[];
   lang: HubLang;
   onSelectTeam: (teamId: string) => void;
 }) {
-  const [groupId, setGroupId] = useState<StyleGroupId>("overall");
+  const [groupId, setGroupId] = useState(groups[0]!.id);
   /** グループを行き来しても、それぞれ最後に見たマップに戻る */
-  const [mapByGroup, setMapByGroup] = useState<Record<StyleGroupId, StyleMapId>>({
-    overall: "strength",
-    offense: "three",
-    playType: "pt-pnrBh",
-    defense: "shotDefense",
-  });
-  const group = STYLE_GROUPS.find((g) => g.id === groupId) ?? STYLE_GROUPS[0]!;
-  const mapId = mapByGroup[groupId];
+  const [mapByGroup, setMapByGroup] = useState<Record<string, StyleMapId>>(() =>
+    Object.fromEntries(groups.map((g) => [g.id, g.initial ?? g.maps[0]!.id]))
+  );
+  const group = groups.find((g) => g.id === groupId) ?? groups[0]!;
+  const mapId = mapByGroup[groupId] ?? group.maps[0]!.id;
   const preset = useMemo(() => stylePreset(mapId), [mapId]);
   const strength = mapId === "strength";
   return (
-    <HubSection title="PLAY STYLE">
+    <HubSection title={title}>
       <HubSlantedTabs
-        items={STYLE_GROUPS.map((g) => ({ id: g.id, label: g.label }))}
+        items={groups.map((g) => ({ id: g.id, label: g.label }))}
         value={groupId}
         onChange={setGroupId}
       />
@@ -755,6 +818,11 @@ export default function LeagueHubTeamPanelNative({ hub, lang, onSelectTeam }: Pr
   });
   const rows = bundle.season;
   const teams = hub?.teams ?? [];
+  /** ロスター・勝ち方の指標は hub 側にあるのでリーグ表の行に重ねる */
+  const rosterFormRows = useMemo(() => {
+    const byTeam = new Map(teams.map((t) => [t.teamId, t.m]));
+    return rows.map((r) => ({ ...r, ...byTeam.get(r.teamId) }));
+  }, [rows, teams]);
 
   if (loading && rows.length === 0) {
     return (
@@ -766,7 +834,21 @@ export default function LeagueHubTeamPanelNative({ hub, lang, onSelectTeam }: Pr
 
   return (
     <View>
-      <StyleMaps rows={rows} lang={lang} onSelectTeam={onSelectTeam} />
+      <StyleMaps
+        title="PLAY STYLE"
+        groups={PLAY_STYLE_GROUPS}
+        rows={rows}
+        lang={lang}
+        onSelectTeam={onSelectTeam}
+      />
+
+      <StyleMaps
+        title="ROSTER & FORM"
+        groups={ROSTER_FORM_GROUPS}
+        rows={rosterFormRows}
+        lang={lang}
+        onSelectTeam={onSelectTeam}
+      />
 
       <HubSection
         title="SCORING MIX"
