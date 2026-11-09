@@ -16,6 +16,7 @@ export type NbaLeagueAdvancedCategory =
   | "defense"
   | "tracking"
   | "hustle"
+  | "rebounding"
   | "discipline";
 
 export type NbaLeagueAdvancedCategoryDef = {
@@ -151,6 +152,20 @@ export const NBA_LEAGUE_ADVANCED_CATEGORIES: readonly NbaLeagueAdvancedCategoryD
         es: "Desvíos, cargas provocadas, balones sueltos.",
         pt: "Desvios, faltas de ataque provocadas, bolas soltas.",
         fr: "Déviations, fautes offensives provoquées, ballons perdus.",
+      },
+    },
+    {
+      id: "rebounding",
+      short: "REBOUND",
+      label: "Rebounding",
+      hint: {
+        ja: "ボックスアウト、リバウンドのチャンスと成功率、競り合いリバウンド。",
+        en: "Box outs, rebound chances and conversion, contested rebounds.",
+        ko: "박스아웃, 리바운드 찬스와 성공률, 경합 리바운드.",
+        zh: "卡位、篮板机会与转化率、对抗篮板。",
+        es: "Bloqueos de rebote, oportunidades y acierto en el rebote, rebotes disputados.",
+        pt: "Box outs, chances e aproveitamento de rebote, rebotes contestados.",
+        fr: "Box-outs, occasions de rebond et conversion, rebonds disputés.",
       },
     },
     {

@@ -13,6 +13,7 @@ import {
   ptsFromShare,
   type HowPts,
 } from "@/lib/predict/nbaHowTheyPlayPts";
+import { NBA_LEAGUE_TEAM_ADVANCED_METRIC_DEFS } from "@/lib/predict/nbaLeagueTeamStatsAdvanced";
 import {
   formatMetricValue,
   metricValue,
@@ -27,6 +28,7 @@ export type TeamHowTheyPlayTab =
   | "playtype"
   | "clutch"
   | "hustle"
+  | "rebounding"
   | "tracking";
 
 export const TEAM_HOW_THEY_PLAY_TABS: readonly {
@@ -100,6 +102,19 @@ export const TEAM_HOW_THEY_PLAY_TABS: readonly {
     },
   },
   {
+    id: "rebounding",
+    short: "REBOUND",
+    hint: {
+      ja: "ボックスアウト・リバウンドのチャンスと成功率・競り合いリバウンド。",
+      en: "Box outs, rebound chances and conversion, contested rebounds.",
+      ko: "박스아웃·리바운드 찬스와 성공률·경합 리바운드.",
+      zh: "卡位、篮板机会与转化率、对抗篮板。",
+      es: "Bloqueos de rebote, oportunidades y acierto, rebotes disputados.",
+      pt: "Box outs, chances e aproveitamento de rebote, rebotes contestados.",
+      fr: "Box-outs, occasions de rebond et conversion, rebonds disputés.",
+    },
+  },
+  {
     id: "tracking",
     short: "TRACK",
     hint: {
@@ -166,6 +181,7 @@ export type TeamHowTheyPlay = {
   playtype: TeamPlaytypeRow[];
   clutch: TeamClutchRow[];
   hustle: TeamHustleRow[];
+  rebounding: TeamHustleRow[];
   tracking: TeamHustleRow[];
 };
 
@@ -359,6 +375,10 @@ const HUSTLE_ROWS: readonly {
   },
 ];
 
+const REBOUNDING_ROWS = NBA_LEAGUE_TEAM_ADVANCED_METRIC_DEFS.filter(
+  (d) => d.category === "rebounding"
+);
+
 const TRACKING_ROWS: readonly {
   id: string;
   short: string;
@@ -484,6 +504,12 @@ export function emptyTeamHowTheyPlay(): TeamHowTheyPlay {
       hint: row.hint,
       cell: zeroHowCell(row.metric),
     })),
+    rebounding: REBOUNDING_ROWS.map((d) => ({
+      id: d.id,
+      short: d.short,
+      hint: d.hint,
+      cell: zeroHowCell(d.id),
+    })),
     tracking: TRACKING_ROWS.map((row) => ({
       id: row.id,
       short: row.short,
@@ -547,6 +573,13 @@ export function getTeamHowTheyPlay(
     cell: cell(rows, team, row.metric, true),
   }));
 
+  const rebounding: TeamHustleRow[] = REBOUNDING_ROWS.map((d) => ({
+    id: d.id,
+    short: d.short,
+    hint: d.hint,
+    cell: cell(rows, team, d.id, d.higherIsBetter),
+  }));
+
   const trackingPts: Record<string, HowPts | undefined> = {
     drives: howPtsCell(team.drives * (0.4 + team.pctPtsPaint * 0.28)),
     cnsFgPct: howPtsCell(ptsFromShare(team.ppg, team.spotupFreq * 0.85)),
@@ -567,5 +600,5 @@ export function getTeamHowTheyPlay(
     };
   });
 
-  return { fourFactors, scoring, playtype, clutch, hustle, tracking };
+  return { fourFactors, scoring, playtype, clutch, hustle, rebounding, tracking };
 }

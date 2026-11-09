@@ -205,6 +205,7 @@ export default function NbaPlayerHowTheyPlayNative({
   const [factorId, setFactorId] = useState("efg_pct");
   const [defenseId, setDefenseId] = useState("matchup_fg_pct");
   const [hustleId, setHustleId] = useState("deflections");
+  const [rebId, setRebId] = useState("reb_pct");
   const [trackId, setTrackId] = useState("drives");
   const tabMeta = PLAYER_HOW_THEY_PLAY_TABS.find((t) => t.id === tab)!;
   const frame = hexToRgba(accent, 0.4);
@@ -413,6 +414,19 @@ export default function NbaPlayerHowTheyPlayNative({
           rows={board.hustle}
           selectedId={hustleId}
           onSelect={setHustleId}
+          accent={accent}
+          lang={lang}
+          noData={chrome.noData}
+          line={line}
+          frame={frame}
+        />
+      ) : null}
+
+      {tab === "rebounding" ? (
+        <HintList
+          rows={board.rebounding}
+          selectedId={rebId}
+          onSelect={setRebId}
           accent={accent}
           lang={lang}
           noData={chrome.noData}

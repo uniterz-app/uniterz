@@ -44,6 +44,7 @@ export const LEAGUE_HUB_PLAYER_SCATTER_GROUPS = [
   { id: "attack", label: "ATTACK", presetIds: ["paint", "drive", "foul", "playmaking"] },
   { id: "defense", label: "DEFENSE", presetIds: ["defense", "hustle", "fouls"] },
   { id: "impact", label: "IMPACT", presetIds: ["onCourt", "clutch", "consistency"] },
+  { id: "rebound", label: "REBOUND", presetIds: ["glass", "rebContest", "boxOut", "rebChance"] },
 ] as const;
 
 export type LeagueHubPlayerScatterGroupId = (typeof LEAGUE_HUB_PLAYER_SCATTER_GROUPS)[number]["id"];
@@ -237,6 +238,90 @@ export const LEAGUE_HUB_PLAYER_SCATTER_PRESETS: readonly LeagueHubPlayerScatterP
       tl: { ja: "コンテスター", en: "CONTESTER" },
       br: { ja: "ボールハンター", en: "BALL HAWK" },
       bl: { ja: "ポジショニング型", en: "POSITIONAL" },
+    },
+  },
+  {
+    id: "glass",
+    label: { ja: "リバウンドの量と割合", en: "GLASS" },
+    hint: {
+      ja: "右ほど 1 試合の本数が多く、上ほど出ている間に拾える分をよく取る（REB%）。",
+      en: "Right = more rebounds per game, up = higher share of available rebounds (REB%).",
+    },
+    x: { metric: "reb", label: { ja: "REB / 試合", en: "REB / G" }, format: "one" },
+    y: { metric: "reb_pct", label: { ja: "REB%", en: "REB%" }, format: "pct" },
+    volume: "reb",
+    volumeLabel: { ja: "リバウンド", en: "REB" },
+    quadrants: {
+      tr: { ja: "支配的リバウンダー", en: "GLASS CLEANER" },
+      tl: { ja: "短い時間でよく拾う", en: "EFFICIENT BOARDER" },
+      br: { ja: "長く出て数を稼ぐ", en: "VOLUME BOARDER" },
+      bl: { ja: "リバウンド控えめ", en: "LIGHT GLASS" },
+    },
+  },
+  {
+    id: "rebContest",
+    label: { ja: "競り合い", en: "CONTESTED" },
+    hint: {
+      ja: "右ほどリバウンドが多く、上ほど相手と競り合って取った割合が高い。",
+      en: "Right = more rebounds, up = more of them contested.",
+    },
+    x: { metric: "reb", label: { ja: "REB / 試合", en: "REB / G" }, format: "one" },
+    y: {
+      metric: "reb_contest_pct",
+      label: { ja: "競り合いの割合", en: "CONTESTED %" },
+      format: "pct",
+    },
+    volume: "reb",
+    volumeLabel: { ja: "リバウンド", en: "REB" },
+    quadrants: {
+      tr: { ja: "混戦の主", en: "TRAFFIC KING" },
+      tl: { ja: "体を張る", en: "PHYSICAL" },
+      br: { ja: "フリーで拾う", en: "CLEANUP" },
+      bl: { ja: "リバウンド控えめ", en: "LIGHT GLASS" },
+    },
+  },
+  {
+    id: "boxOut",
+    label: { ja: "ボックスアウト", en: "BOX OUT" },
+    hint: {
+      ja: "右ほど相手を締め出し、上ほど自分でリバウンドを取る。",
+      en: "Right = more box outs, up = more rebounds of his own.",
+    },
+    x: { metric: "box_outs", label: { ja: "ボックスアウト", en: "BOX OUTS" }, format: "one" },
+    y: { metric: "reb", label: { ja: "REB / 試合", en: "REB / G" }, format: "one" },
+    volume: "reb",
+    volumeLabel: { ja: "リバウンド", en: "REB" },
+    quadrants: {
+      tr: { ja: "締めて取る", en: "SEAL & GRAB" },
+      tl: { ja: "ボールに飛び込む", en: "CHASER" },
+      br: { ja: "味方に取らせる", en: "ENABLER" },
+      bl: { ja: "リバウンド控えめ", en: "LIGHT GLASS" },
+    },
+  },
+  {
+    id: "rebChance",
+    label: { ja: "チャンスを取り切る", en: "CHANCES" },
+    hint: {
+      ja: "右ほどボールの近くにいる回数が多く、上ほどそのチャンスを自分で取る。",
+      en: "Right = more rebound chances, up = more of them converted.",
+    },
+    x: {
+      metric: "reb_chances",
+      label: { ja: "チャンス / 試合", en: "CHANCES / G" },
+      format: "one",
+    },
+    y: {
+      metric: "reb_chance_pct",
+      label: { ja: "取った割合", en: "CHANCE %" },
+      format: "pct",
+    },
+    volume: "reb",
+    volumeLabel: { ja: "リバウンド", en: "REB" },
+    quadrants: {
+      tr: { ja: "支配的リバウンダー", en: "DOMINANT" },
+      tl: { ja: "確実に取る", en: "SURE HANDS" },
+      br: { ja: "位置取りで勝つ", en: "POSITIONER" },
+      bl: { ja: "リバウンド控えめ", en: "LIGHT GLASS" },
     },
   },
   {

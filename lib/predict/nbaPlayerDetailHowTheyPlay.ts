@@ -68,6 +68,7 @@ export type PlayerHowTheyPlayTab =
   | "clutch"
   | "defense"
   | "hustle"
+  | "rebounding"
   | "tracking";
 
 export const PLAYER_HOW_THEY_PLAY_TABS: readonly {
@@ -180,6 +181,19 @@ export const PLAYER_HOW_THEY_PLAY_TABS: readonly {
     },
   },
   {
+    id: "rebounding",
+    short: "REBOUND",
+    hint: {
+      ja: "REB%・ボックスアウト・リバウンドのチャンスと成功率・競り合いリバウンド。",
+      en: "REB%, box outs, rebound chances and conversion, contested rebounds.",
+      ko: "REB%·박스아웃·리바운드 찬스와 성공률·경합 리바운드.",
+      zh: "篮板率、卡位、篮板机会与转化率、对抗篮板。",
+      es: "REB%, bloqueos de rebote, oportunidades y acierto, rebotes disputados.",
+      pt: "REB%, box outs, chances e aproveitamento de rebote, rebotes contestados.",
+      fr: "REB%, box-outs, occasions de rebond et conversion, rebonds disputés.",
+    },
+  },
+  {
     id: "tracking",
     short: "TRACK",
     hint: {
@@ -241,6 +255,7 @@ export type PlayerHowTheyPlay = {
   clutch: PlayerHowRow[];
   defense: PlayerHowRow[];
   hustle: PlayerHowRow[];
+  rebounding: PlayerHowRow[];
   tracking: PlayerHowRow[];
 };
 
@@ -405,6 +420,7 @@ export function emptyPlayerHowTheyPlay(): PlayerHowTheyPlay {
     clutch: [],
     defense: [],
     hustle: [],
+    rebounding: [],
     tracking: [],
   };
 }
@@ -612,6 +628,17 @@ export function getPlayerHowTheyPlay(
     },
   ];
 
+  const rebounding: PlayerHowRow[] = [
+    m("reb_pct"),
+    m("box_outs"),
+    m("reb_chances"),
+    m("reb_chance_pct"),
+    m("reb_contest"),
+    m("reb_contest_pct"),
+    m("oreb_chance_pct"),
+    m("dreb_chance_pct"),
+  ];
+
   const drives = c("drives");
   const paintTouches = c("paint_touches");
   const tracking: PlayerHowRow[] = [
@@ -652,6 +679,7 @@ export function getPlayerHowTheyPlay(
     clutch,
     defense,
     hustle,
+    rebounding,
     tracking,
   };
 }
