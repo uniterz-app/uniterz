@@ -648,6 +648,33 @@ const RECORD_MODES: readonly { id: RecordMode; label: string }[] = [
   { id: "away", label: "AWAY" },
 ];
 
+const RECORD_HINTS: Record<RecordMode, Record<HubLang, string>> = {
+  streak: {
+    ja: "いま続いている連勝・連敗。L10 は直近 10 試合の成績。",
+    en: "Current win and losing streaks. L10 = last 10 games.",
+  },
+  close: {
+    ja: "5 点差以内で決着した試合の勝敗。接戦に強いチームと弱いチーム。2 試合以上のチームだけ。",
+    en: "Record in games decided by 5 or fewer points. Teams with 2+ such games.",
+  },
+  b2b: {
+    ja: "連戦 2 日目（前日も試合）の勝敗。疲れに強いチームと弱いチーム。2 試合以上のチームだけ。",
+    en: "Record on the second night of back-to-backs. Teams with 2+ such games.",
+  },
+  vsOver500: {
+    ja: "勝率 5 割以上の相手との勝敗（相手の勝率は試合前の時点）。2 試合以上のチームだけ。",
+    en: "Record against .500+ teams (record before the game). Teams with 2+ such games.",
+  },
+  home: {
+    ja: "ホームでの勝敗。2 試合以上のチームだけ。",
+    en: "Home record. Teams with 2+ home games.",
+  },
+  away: {
+    ja: "アウェーでの勝敗。2 試合以上のチームだけ。",
+    en: "Road record. Teams with 2+ road games.",
+  },
+};
+
 /** 連勝・連敗と状況別の勝敗は同じ「上位 5 / 下位 5」の 2 列なので 1 つの欄で切り替える */
 function TeamRecords({
   teams,
@@ -659,18 +686,10 @@ function TeamRecords({
   onSelectTeam: (teamId: string) => void;
 }) {
   const [mode, setMode] = useState<RecordMode>("streak");
-  const ja = lang === "ja";
-  const hint =
-    mode === "streak"
-      ? ja
-        ? "いま続いている連勝・連敗。L10 は直近 10 試合の成績。"
-        : "Current win and losing streaks. L10 = last 10 games."
-      : ja
-        ? "2 試合以上あるチームだけ。"
-        : "Teams with 2+ games only.";
   return (
-    <HubSection title="FORM & SPLITS" hint={hint}>
+    <HubSection title="FORM & SPLITS">
       <HubScrollSlantedTabs items={RECORD_MODES} value={mode} onChange={setMode} />
+      <Text style={styles.mapHint}>{RECORD_HINTS[mode][lang]}</Text>
       {mode === "streak" ? (
         <TeamForm teams={teams} lang={lang} onSelectTeam={onSelectTeam} />
       ) : (
