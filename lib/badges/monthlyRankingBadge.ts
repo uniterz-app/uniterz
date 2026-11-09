@@ -89,7 +89,7 @@ export const MONTHLY_BADGE_ART_ROOT = "/badges/monthly";
 export type MonthlyBadgeArt = {
   /** 表（768px）。一覧・詳細・受け取り演出で共通。master_badges.icon */
   full: string;
-  /** 裏面（768px）。刻印は `MONTHLY_BADGE_BACK_PANEL` の範囲にアプリが重ねる */
+  /** 裏面（768px）。刻印は `monthlyBadgeBackPanel` の範囲にアプリが重ねる */
   back: string;
 };
 
@@ -102,14 +102,25 @@ export function monthlyBadgeArt(ref: MonthlyBadgeRef): MonthlyBadgeArt {
   };
 }
 
-/** 裏面の刻印パネル（画像の幅・高さに対する割合） */
-export const MONTHLY_BADGE_BACK_PANEL: Record<
-  MonthlyBadgeDivision,
-  { x: number; y: number; w: number; h: number }
-> = {
+export type MonthlyBadgeBackPanel = { x: number; y: number; w: number; h: number };
+
+/** 裏面の刻印パネル（画像の幅・高さに対する割合）。2026-10 の形 */
+export const MONTHLY_BADGE_BACK_PANEL: Record<MonthlyBadgeDivision, MonthlyBadgeBackPanel> = {
   pickup: { x: 0.19, y: 0.21, w: 0.62, h: 0.49 },
   pro: { x: 0.23, y: 0.236, w: 0.54, h: 0.484 },
 };
+
+/** 月ごとに形を変えた月の刻印パネル。無い月は `MONTHLY_BADGE_BACK_PANEL` */
+const MONTHLY_BADGE_BACK_PANEL_BY_LABEL: Record<string, Record<MonthlyBadgeDivision, MonthlyBadgeBackPanel>> = {
+  "2026-11": {
+    pickup: { x: 0.23, y: 0.262, w: 0.54, h: 0.456 },
+    pro: { x: 0.22, y: 0.268, w: 0.56, h: 0.464 },
+  },
+};
+
+export function monthlyBadgeBackPanel(ref: MonthlyBadgeRef): MonthlyBadgeBackPanel {
+  return MONTHLY_BADGE_BACK_PANEL_BY_LABEL[ref.label]?.[ref.division] ?? MONTHLY_BADGE_BACK_PANEL[ref.division];
+}
 
 /** 裏面の文字色（黒いプレートの上に順位の金属の明るい色） */
 export const MONTHLY_BADGE_ENGRAVE_INK: Record<number, string> = {

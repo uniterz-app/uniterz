@@ -25,10 +25,10 @@ import Animated, {
 import { resolveUniterzAssetUrl } from "../../lib/resolveUniterzAssetUrl";
 import { hapticSelection } from "../../lib/hapticsNative";
 import {
-  MONTHLY_BADGE_BACK_PANEL,
   MONTHLY_BADGE_ENGRAVE_INK,
   formatMonthlyBadgeValue,
   monthlyBadgeArt,
+  monthlyBadgeBackPanel,
   monthlyBadgeKindLabelArt,
   monthlyBadgeMonthArt,
   monthlyBadgeRankOrdinal,
@@ -71,7 +71,7 @@ function EngravedBack({
   record?: MonthlyBadgeRecord | null;
   size: number;
 }) {
-  const panel = MONTHLY_BADGE_BACK_PANEL[badgeRef.division];
+  const panel = monthlyBadgeBackPanel(badgeRef);
   const ink = MONTHLY_BADGE_ENGRAVE_INK[Math.min(badgeRef.rank, 3)] ?? MONTHLY_BADGE_ENGRAVE_INK[1];
   const k = size / DESIGN_SIZE;
   const shadow = {
