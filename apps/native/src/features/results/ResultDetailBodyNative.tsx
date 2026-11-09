@@ -9,6 +9,8 @@ import { db } from "../../lib/firebase";
 import { ResultCardDesignFaceNative } from "./ResultCardDesignPreviewScreenNative";
 import { useLiveGameStats } from "../../../../../lib/games/useLiveGameStats";
 import { getUniterzApiBaseUrl } from "../games/submitPredictionApi";
+import PredictMatchLast5PagerNative from "../games/predict/PredictMatchLast5PagerNative";
+import { resolveMatchupUiAccents } from "../games/teamColors";
 import { useScreenActiveNative } from "../../hooks/useScreenActiveNative";
 import LiveGameStatsPanelNative from "../games/live/LiveGameStatsPanelNative";
 import LiveGameStatsPlaceholderNative from "../games/live/LiveGameStatsPlaceholderNative";
@@ -607,6 +609,11 @@ export default function ResultDetailBodyNative({
     if (!hit?.name) return view.card;
     return { ...view.card, topScorer: hit.name };
   }, [topScorerCandidates, view.card]);
+  const matchAccents = resolveMatchupUiAccents(
+    "nba",
+    cardFace.homeTeamId,
+    cardFace.awayTeamId
+  );
   const screenActive = useScreenActiveNative();
   const { report: liveStatsReport, loading: liveStatsLoading } = useLiveGameStats(
     nbaGameId,
@@ -696,6 +703,24 @@ export default function ResultDetailBodyNative({
                 : null
             }
             tutorialMetricsTargetId="result-detail-metrics"
+            wrapMatch={
+              /** 試合カードから開いたときだけ横スライド（リザルト一覧からは出さない） */
+              cardAndLiveStats && nbaGameId && cardFace.homeTeamId && cardFace.awayTeamId
+                ? (match) => (
+                    <PredictMatchLast5PagerNative
+                      homeTeamId={cardFace.homeTeamId!}
+                      awayTeamId={cardFace.awayTeamId!}
+                      homeAccent={matchAccents.homeAccent}
+                      awayAccent={matchAccents.awayAccent}
+                      apiBaseUrl={getUniterzApiBaseUrl()}
+                      homeName={cardFace.homeName}
+                      awayName={cardFace.awayName}
+                    >
+                      {match}
+                    </PredictMatchLast5PagerNative>
+                  )
+                : undefined
+            }
           />
         </WeeklyReportCardShell>
       </View>
