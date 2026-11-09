@@ -695,7 +695,6 @@ export default function LeagueHubPlayerPanelNative({ hub, lang, section, onSelec
             </HubShareSectionNative>
           );
         })}
-        <ValueSection hub={hub} lang={lang} onSelectPlayer={onSelectPlayer} />
       </View>
 
       <View style={shown("trend")}>
@@ -837,6 +836,8 @@ export default function LeagueHubPlayerPanelNative({ hub, lang, section, onSelec
                 />
               ))}
         </HubSection>
+
+        <ValueSection hub={hub} lang={lang} onSelectPlayer={onSelectPlayer} />
 
         <MilestonesSection hub={hub} lang={lang} onSelectPlayer={onSelectPlayer} />
       </View>
