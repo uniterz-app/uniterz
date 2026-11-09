@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 import { getNbaTeamNicknameById } from "../../../../../../lib/nba-team-names";
 import { useLeagueTeamStatsBundle } from "../../../../../../lib/nba/useLeagueTeamStatsBundle";
@@ -44,6 +44,9 @@ import { CyberSlantedSegBarNative } from "../../rankings/CyberSlantedSegBarNativ
 import LeagueHubScatterNative, { type HubScatterPoint } from "./LeagueHubScatterNative";
 import { HubScrollSlantedTabs, HubSlantedTabs } from "./LeagueHubSlantedTabsNative";
 import {
+  HUB_BAD_COLOR,
+  HUB_GOOD_COLOR,
+  HubAvgDivider,
   HubEmpty,
   HubRow,
   HubSection,
@@ -698,10 +701,24 @@ function TeamRecords({
   const [mode, setMode] = useState<RecordMode>("streak");
   const [showAll, setShowAll] = useState(false);
   const ja = lang === "ja";
+  const league = mode === "streak" ? null : leagueRecord(teams, mode);
+  const leaguePct = recordPct(league);
+  const leagueLabel =
+    leaguePct == null ? "" : `${ja ? "リーグ全体" : "LEAGUE"} ${formatPct(leaguePct)}`;
   return (
     <HubSection title="FORM & SPLITS">
       <HubScrollSlantedTabs items={RECORD_MODES} value={mode} onChange={setMode} />
       <Text style={styles.mapHint}>{RECORD_HINTS[mode][lang]}</Text>
+      {league && leaguePct != null ? (
+        <Text style={styles.avgNote}>
+          {leagueLabel}
+          <Text style={styles.avgNoteSub}>
+            {"  "}
+            {formatRecord(league)}
+            {ja ? "（全チームの合計）" : " (all teams combined)"}
+          </Text>
+        </Text>
+      ) : null}
       {mode === "streak" ? (
         <TeamForm teams={teams} lang={lang} onSelectTeam={onSelectTeam} />
       ) : (
@@ -726,10 +743,34 @@ function TeamRecords({
         </Pressable>
       ) : null}
       {showAll ? (
-        <AllTeamRecords mode={mode} teams={teams} onSelectTeam={onSelectTeam} />
+        <AllTeamRecords
+          mode={mode}
+          teams={teams}
+          leaguePct={leaguePct}
+          leagueLabel={leagueLabel}
+          onSelectTeam={onSelectTeam}
+        />
       ) : null}
     </HubSection>
   );
+}
+
+/** 全チームの合計。接戦は両チーム分を足すと必ず 5 割になるので出さない */
+function leagueRecord(teams: LeagueHubTeamRow[], cond: ConditionId): LeagueHubRecord | null {
+  if (cond === "close") return null;
+  let wins = 0;
+  let losses = 0;
+  for (const t of teams) {
+    const r = t[cond];
+    if (!r) continue;
+    wins += r.wins;
+    losses += r.losses;
+  }
+  return wins + losses > 0 ? { wins, losses } : null;
+}
+
+function formatPct(pct: number): string {
+  return pct.toFixed(3).replace(/^0/, "");
 }
 
 function recordGames(rec: LeagueHubRecord | null): number {
@@ -753,10 +794,14 @@ function streakScore(t: LeagueHubTeamRow): number {
 function AllTeamRecords({
   mode,
   teams,
+  leaguePct,
+  leagueLabel,
   onSelectTeam,
 }: {
   mode: RecordMode;
   teams: LeagueHubTeamRow[];
+  leaguePct: number | null;
+  leagueLabel: string;
   onSelectTeam: (teamId: string) => void;
 }) {
   const rows = useMemo(() => {
@@ -771,6 +816,7 @@ function AllTeamRecords({
           t,
           value: t.streak ? `${t.streak.kind}${t.streak.count}` : "—",
           sub: `L10 ${formatRecord(t.last10)}`,
+          pct: null as number | null,
         }));
     }
     const played = teams.filter((t) => recordGames(t[mode]) > 0);
@@ -781,25 +827,31 @@ function AllTeamRecords({
         .map((t) => ({
           t,
           value: formatRecord(t[mode]),
-          sub: (recordPct(t[mode]) ?? 0).toFixed(3).replace(/^0/, ""),
+          sub: formatPct(recordPct(t[mode]) ?? 0),
+          pct: recordPct(t[mode]),
         })),
-      ...none.map((t) => ({ t, value: "—", sub: "" })),
+      ...none.map((t) => ({ t, value: "—", sub: "", pct: null })),
     ];
   }, [mode, teams]);
+  /** 勝率がリーグ全体を下回る最初の行の上に線を引く */
+  const splitAt =
+    leaguePct == null ? -1 : rows.findIndex((r) => r.pct == null || r.pct < leaguePct);
   return (
     <View style={styles.allList}>
       {rows.map(({ t, value, sub }, i) => (
-        <HubRow
-          key={t.teamId}
-          rank={i + 1}
-          teamId={t.teamId}
-          name={nick(t.teamId)}
-          kind="team"
-          value={value}
-          valueSub={sub || undefined}
-          onPress={() => onSelectTeam(t.teamId)}
-          framed
-        />
+        <Fragment key={t.teamId}>
+          {i === splitAt && i > 0 ? <HubAvgDivider label={leagueLabel} /> : null}
+          <HubRow
+            rank={i + 1}
+            teamId={t.teamId}
+            name={nick(t.teamId)}
+            kind="team"
+            value={value}
+            valueSub={sub || undefined}
+            onPress={() => onSelectTeam(t.teamId)}
+            framed
+          />
+        </Fragment>
       ))}
     </View>
   );
@@ -867,6 +919,13 @@ function PositionDefense({
     .map((t) => ({ t, cell: t.posDef?.[pos] ?? null }))
     .filter((x): x is { t: LeagueHubTeamRow; cell: { pts: number; rank: number } } => x.cell != null)
     .sort((a, b) => (order === "asc" ? a.cell.rank - b.cell.rank : b.cell.rank - a.cell.rank));
+  /** チーム試合ログ側の leagueAvg と同じく 30 チームの単純平均 */
+  const avg = rows.length > 0 ? rows.reduce((sum, x) => sum + x.cell.pts, 0) / rows.length : null;
+  const avgLabel = avg == null ? "" : `${ja ? "リーグ平均" : "LEAGUE AVG"} ${avg.toFixed(1)}`;
+  const splitAt =
+    avg == null
+      ? -1
+      : rows.findIndex(({ cell }) => (order === "asc" ? cell.pts > avg : cell.pts < avg));
   return (
     <View>
       <HubSlantedTabs
@@ -882,6 +941,16 @@ function PositionDefense({
         <HubEmpty text={ja ? "まだデータがありません" : "No data yet"} />
       ) : (
         <>
+          {avg != null ? (
+            <Text style={styles.avgNote}>
+              {avgLabel}
+              <Text style={styles.avgNoteSub}>
+                {ja
+                  ? "  点 · 右下は平均との差（緑 = 平均より少ない）"
+                  : "  PTS · below = vs average (green = fewer)"}
+              </Text>
+            </Text>
+          ) : null}
           <Pressable
             onPress={() => setOrder((o) => (o === "asc" ? "desc" : "asc"))}
             style={({ pressed }) => [styles.allBtn, pressed ? styles.cardPressed : null]}
@@ -898,18 +967,26 @@ function PositionDefense({
             </Text>
           </Pressable>
           <View style={styles.allList}>
-            {rows.map(({ t, cell }) => (
-              <HubRow
-                key={t.teamId}
-                rank={cell.rank}
-                teamId={t.teamId}
-                name={nick(t.teamId)}
-                kind="team"
-                value={cell.pts.toFixed(1)}
-                onPress={() => onSelectTeam(t.teamId)}
-                framed
-              />
-            ))}
+            {rows.map(({ t, cell }, i) => {
+              const diff = avg == null ? 0 : cell.pts - avg;
+              const even = Math.abs(diff) < 0.05;
+              return (
+                <Fragment key={t.teamId}>
+                  {i === splitAt && i > 0 ? <HubAvgDivider label={avgLabel} /> : null}
+                  <HubRow
+                    rank={cell.rank}
+                    teamId={t.teamId}
+                    name={nick(t.teamId)}
+                    kind="team"
+                    value={cell.pts.toFixed(1)}
+                    valueSub={even ? "±0.0" : `${diff > 0 ? "+" : "−"}${Math.abs(diff).toFixed(1)}`}
+                    valueSubColor={even ? undefined : diff < 0 ? HUB_GOOD_COLOR : HUB_BAD_COLOR}
+                    onPress={() => onSelectTeam(t.teamId)}
+                    framed
+                  />
+                </Fragment>
+              );
+            })}
           </View>
         </>
       )}
@@ -1063,6 +1140,20 @@ const styles = StyleSheet.create({
   },
   allList: {
     marginTop: 10,
+  },
+  avgNote: {
+    fontFamily: METRIC_FONT,
+    color: CYBER_TAB_CYAN,
+    fontSize: 12,
+    fontWeight: "800",
+    letterSpacing: 0.6,
+    marginBottom: 4,
+  },
+  avgNoteSub: {
+    color: "rgba(255,255,255,0.5)",
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 0,
   },
   mapHint: {
     color: "rgba(255,255,255,0.55)",

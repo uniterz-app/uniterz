@@ -282,6 +282,7 @@ export function HubRow({
   value,
   cells,
   valueSub,
+  valueSubColor,
   onPress,
   highlight,
   kind = "player",
@@ -300,6 +301,7 @@ export function HubRow({
   /** `HubCellHeader` の見出しと揃う等幅の数値列（value の代わり） */
   cells?: readonly string[];
   valueSub?: string;
+  valueSubColor?: string;
   onPress?: () => void;
   highlight?: boolean;
   /** チーム色の薄い枠で 1 行ずつ囲む */
@@ -332,8 +334,8 @@ export function HubRow({
                 {
                   color:
                     rankMove === "new" || rankMove > 0
-                      ? "rgba(110,231,183,0.95)"
-                      : "rgba(252,165,165,0.9)",
+                      ? HUB_GOOD_COLOR
+                      : HUB_BAD_COLOR,
                 },
               ]}
             >
@@ -380,7 +382,11 @@ export function HubRow({
         ) : (
           <Text style={styles.rowValue}>{value}</Text>
         )}
-        {valueSub ? <Text style={styles.rowValueSub}>{valueSub}</Text> : null}
+        {valueSub ? (
+          <Text style={[styles.rowValueSub, valueSubColor ? { color: valueSubColor } : null]}>
+            {valueSub}
+          </Text>
+        ) : null}
       </View>
     </Pressable>
   );
@@ -430,6 +436,20 @@ export function HubTeamTag({ teamId }: { teamId: string | null | undefined }) {
   );
 }
 
+/** 並んだ行のあいだに挟むリーグ平均の線 */
+export function HubAvgDivider({ label }: { label: string }) {
+  return (
+    <View style={styles.avgDivider}>
+      <View style={styles.avgLine} />
+      <Text style={styles.avgText}>{label}</Text>
+      <View style={styles.avgLine} />
+    </View>
+  );
+}
+
+export const HUB_GOOD_COLOR = "rgba(110,231,183,0.95)";
+export const HUB_BAD_COLOR = "rgba(252,165,165,0.9)";
+
 export function HubEmpty({ text }: { text: string }) {
   return <Text style={styles.empty}>{text}</Text>;
 }
@@ -449,11 +469,11 @@ export function HubTwoCol({
   return (
     <View style={styles.twoCol}>
       <View style={styles.col}>
-        <Text style={[styles.colTitle, { color: "rgba(110,231,183,0.95)" }]}>{leftTitle}</Text>
+        <Text style={[styles.colTitle, { color: HUB_GOOD_COLOR }]}>{leftTitle}</Text>
         {left}
       </View>
       <View style={styles.col}>
-        <Text style={[styles.colTitle, { color: "rgba(252,165,165,0.9)" }]}>{rightTitle}</Text>
+        <Text style={[styles.colTitle, { color: HUB_BAD_COLOR }]}>{rightTitle}</Text>
         {right}
       </View>
     </View>
@@ -803,6 +823,24 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: "800",
     letterSpacing: 0.6,
+  },
+  avgDivider: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 6,
+  },
+  avgLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: "rgba(0,245,255,0.5)",
+  },
+  avgText: {
+    fontFamily: METRIC_FONT,
+    color: CYBER_TAB_CYAN,
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 1,
   },
   empty: {
     color: "rgba(255,255,255,0.4)",
