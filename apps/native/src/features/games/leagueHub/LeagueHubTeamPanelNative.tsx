@@ -474,14 +474,7 @@ function StyleMaps({
           onChange={setPt}
         />
       ) : null}
-      <Text style={styles.mapHint}>
-        {preset.hint[lang]}
-        {strength
-          ? lang === "ja"
-            ? "選ぶと攻守の 4 要素（シュート効率 eFG%・ミスの少なさ TOV%・オフェンスリバウンド OREB%・フリースロー獲得 FTr）の順位も出る。"
-            : " Pick a team to see its four factors on both ends (eFG%, TOV%, OREB%, FTr)."
-          : null}
-      </Text>
+      <Text style={styles.mapHint}>{preset.hint[lang]}</Text>
       <TeamScatterBlock
         rows={rows}
         preset={preset}
