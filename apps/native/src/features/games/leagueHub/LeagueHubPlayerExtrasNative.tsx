@@ -52,7 +52,8 @@ export function PlayerSplitsSection({ hub, lang, onSelectPlayer }: Props) {
   const home = mode === "homeAway";
   const left = home ? s.home : s.b2bUp;
   const right = home ? s.away : s.b2bDrop;
-  const list = (rows: typeof left) =>
+  /** アウェー列はアウェーから見た差（+ = アウェーのほうが多い） */
+  const list = (rows: typeof left, flip = false) =>
     rows.length === 0
       ? empty(lang)
       : rows.slice(0, 5).map((r) => (
@@ -65,7 +66,7 @@ export function PlayerSplitsSection({ hub, lang, onSelectPlayer }: Props) {
                 ? `H ${r.a.toFixed(1)} · A ${r.b.toFixed(1)}`
                 : `B2B ${r.a.toFixed(1)} · ${ja ? "他" : "else"} ${r.b.toFixed(1)}`
             }
-            value={signed(r.diff)}
+            value={signed(flip ? -r.diff : r.diff)}
             onPress={() => onSelectPlayer(r.playerId)}
             framed
           />
@@ -81,20 +82,35 @@ export function PlayerSplitsSection({ hub, lang, onSelectPlayer }: Props) {
         onChange={setMode}
       />
       <HubTwoCol
-        leftTitle={home ? (ja ? "ホームで取る" : "HOME") : ja ? "2 日目も強い" : "B2B UP"}
-        rightTitle={home ? (ja ? "アウェーで取る" : "AWAY") : ja ? "2 日目に落ちる" : "B2B DROP"}
+        leftTitle={home ? (ja ? "ホームで得点アップ" : "BETTER AT HOME") : ja ? "2 日目に得点アップ" : "B2B UP"}
+        rightTitle={
+          home ? (ja ? "アウェーで得点アップ" : "BETTER ON ROAD") : ja ? "2 日目に得点ダウン" : "B2B DROP"
+        }
         left={list(left)}
-        right={list(right)}
+        right={list(right, home)}
       />
     </HubSection>
   );
 }
 
-const MILESTONE_UNIT: Record<LeagueHubMilestoneStat, { ja: string; en: string }> = {
-  pts: { ja: "点", en: "PTS" },
-  reb: { ja: "リバウンド", en: "REB" },
-  ast: { ja: "アシスト", en: "AST" },
-  fg3m: { ja: "本の 3P", en: "3PM" },
+/** 節目の言い方と、残りの数の単位 */
+const MILESTONE_TEXT: Record<
+  LeagueHubMilestoneStat,
+  { target: (n: string) => { ja: string; en: string }; unit: { ja: string; en: string } }
+> = {
+  pts: { target: (n) => ({ ja: `通算 ${n} 点まで`, en: `${n} career PTS` }), unit: { ja: "点", en: "PTS" } },
+  reb: {
+    target: (n) => ({ ja: `通算 ${n} リバウンドまで`, en: `${n} career REB` }),
+    unit: { ja: "本", en: "REB" },
+  },
+  ast: {
+    target: (n) => ({ ja: `通算 ${n} アシストまで`, en: `${n} career AST` }),
+    unit: { ja: "本", en: "AST" },
+  },
+  fg3m: {
+    target: (n) => ({ ja: `通算 3P ${n} 本まで`, en: `${n} career 3PM` }),
+    unit: { ja: "本", en: "3PM" },
+  },
 };
 
 /** 通算の節目まであと少しの選手 */
@@ -107,26 +123,26 @@ export function MilestonesSection({ hub, lang, onSelectPlayer }: Props) {
       title="MILESTONE WATCH"
       hint={
         ja
-          ? "通算（レギュラーシーズン）の節目まであと少しの選手。今季のペースで何試合かかるか。前季までの通算は平均 × 試合数の概算なので、数本ずれることがあります。"
-          : "Players closing in on a career (regular season) milestone, with games needed at this season's pace. Prior seasons are estimated from averages, so totals can be off by a few."
+          ? "通算（レギュラーシーズン）の節目まであと少しの選手。今季のペースで早く届きそうな順。前季までの通算は平均 × 試合数の概算なので、数本ずれることがあります。"
+          : "Players closing in on a career (regular season) milestone, soonest at this season's pace first. Prior seasons are estimated from averages, so totals can be off by a few."
       }
     >
       {rows.length === 0
         ? empty(lang)
         : rows.map((r) => {
-            const unit = MILESTONE_UNIT[r.stat][ja ? "ja" : "en"];
+            const text = MILESTONE_TEXT[r.stat];
+            const lang2 = ja ? "ja" : "en";
             return (
               <HubRow
                 key={`${r.playerId}-${r.stat}`}
                 teamId={r.teamId}
                 name={r.name}
-                sub={
+                sub={text.target(r.target.toLocaleString())[lang2]}
+                value={
                   ja
-                    ? `通算 ${r.target.toLocaleString()} ${unit}まで`
-                    : `${r.target.toLocaleString()} career ${unit}`
+                    ? `あと ${r.remaining.toLocaleString()} ${text.unit.ja}`
+                    : `${r.remaining.toLocaleString()} ${text.unit.en} to go`
                 }
-                value={ja ? `あと ${r.remaining}` : `${r.remaining} to go`}
-                valueSub={ja ? `約 ${r.gamesAway} 試合` : `~${r.gamesAway} games`}
                 onPress={() => onSelectPlayer(r.playerId)}
                 framed
               />
