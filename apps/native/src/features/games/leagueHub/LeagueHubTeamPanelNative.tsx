@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 import { getNbaTeamNicknameById } from "../../../../../../lib/nba-team-names";
 import { useLeagueTeamStatsBundle } from "../../../../../../lib/nba/useLeagueTeamStatsBundle";
 import { CURRENT_NBA_SEASON_KEY } from "../../../../../../lib/rankings/nbaSeason";
@@ -32,15 +32,13 @@ import {
   CyberSlantedTabNative,
 } from "../../rankings/CyberSlantedTabNative";
 import { METRIC_FONT } from "../../rankings/rankingsUiTheme";
-import { slantedTabWidth } from "./LeagueHubBranchTabsNative";
 import { CyberSlantedSegBarNative } from "../../rankings/CyberSlantedSegBarNative";
 import LeagueHubScatterNative, { type HubScatterPoint } from "./LeagueHubScatterNative";
+import { HubScrollSlantedTabs, HubSlantedTabs } from "./LeagueHubSlantedTabsNative";
 import {
-  HubChips,
   HubEmpty,
   HubRow,
   HubSection,
-  HubToggle,
   HubTwoCol,
   formatHubValue,
   inkAlpha,
@@ -467,7 +465,6 @@ const STYLE_GROUPS: readonly {
   id: StyleGroupId;
   label: string;
   maps: readonly { id: StyleMapId; label: string }[];
-  columns: 3 | 4;
 }[] = [
   {
     id: "overall",
@@ -476,7 +473,6 @@ const STYLE_GROUPS: readonly {
       { id: "strength", label: "OFF × DEF" },
       { id: "clutch", label: "CLUTCH" },
     ],
-    columns: 3,
   },
   {
     id: "offense",
@@ -486,13 +482,11 @@ const STYLE_GROUPS: readonly {
       { id: "attack", label: "PASS × DRIVE" },
       { id: "tempo", label: "TEMPO" },
     ],
-    columns: 3,
   },
   {
     id: "playType",
     label: "PLAY TYPE",
     maps: LEAGUE_HUB_PLAY_TYPES.map((p) => ({ id: `pt-${p.id}` as const, label: p.short })),
-    columns: 4,
   },
   {
     id: "defense",
@@ -502,7 +496,6 @@ const STYLE_GROUPS: readonly {
       { id: "rebound", label: "REB" },
       { id: "turnover", label: "TOV" },
     ],
-    columns: 3,
   },
 ];
 
@@ -536,18 +529,15 @@ function StyleMaps({
   const strength = mapId === "strength";
   return (
     <HubSection title="PLAY STYLE">
-      <HubToggle
+      <HubSlantedTabs
         items={STYLE_GROUPS.map((g) => ({ id: g.id, label: g.label }))}
         value={groupId}
         onChange={setGroupId}
-        fill
       />
-      <HubChips
+      <HubScrollSlantedTabs
         items={group.maps}
         value={mapId}
         onChange={(id) => setMapByGroup((prev) => ({ ...prev, [groupId]: id }))}
-        wrap
-        columns={group.columns}
       />
       <Text style={styles.mapHint}>{preset.hint[lang]}</Text>
       <TeamScatterBlock
@@ -559,46 +549,6 @@ function StyleMaps({
         onSelectTeam={onSelectTeam}
       />
     </HubSection>
-  );
-}
-
-/** 斜めタブを横スクロールで並べる（1 行に収まらない数のとき） */
-function ScrollSlantedTabs<T extends string>({
-  items,
-  value,
-  onChange,
-}: {
-  items: readonly { id: T; label: string }[];
-  value: T;
-  onChange: (id: T) => void;
-}) {
-  return (
-    <ScrollView
-      horizontal
-      nestedScrollEnabled
-      showsHorizontalScrollIndicator={false}
-      style={styles.playTypeScroll}
-      contentContainerStyle={styles.playTypeScrollContent}
-    >
-      {items.map((it) => {
-        const active = value === it.id;
-        return (
-          <View key={it.id} style={[styles.playTypeSlot, { width: slantedTabWidth(it.label) }]}>
-            <CyberSlantedTabNative
-              label={it.label}
-              active={active}
-              onPress={() => onChange(it.id)}
-              compact
-              fill
-              fontWeight="700"
-              glow="tight"
-              accessibilityRole="tab"
-              accessibilityState={{ selected: active }}
-            />
-          </View>
-        );
-      })}
-    </ScrollView>
   );
 }
 
@@ -635,7 +585,7 @@ function TeamRecords({
         : "Teams with 2+ games only.";
   return (
     <HubSection title="FORM & SPLITS" hint={hint}>
-      <ScrollSlantedTabs items={RECORD_MODES} value={mode} onChange={setMode} />
+      <HubScrollSlantedTabs items={RECORD_MODES} value={mode} onChange={setMode} />
       {mode === "streak" ? (
         <TeamForm teams={teams} lang={lang} onSelectTeam={onSelectTeam} />
       ) : (
@@ -722,7 +672,7 @@ function PositionDefense({
     ));
   return (
     <View>
-      <SlantedTabs
+      <HubSlantedTabs
         items={[
           { id: "G", label: "GUARDS" },
           { id: "F", label: "FORWARDS" },
@@ -790,36 +740,6 @@ function Conditions({
 }
 
 /** 他の切り替えと同じ斜めタブを横いっぱいに並べる */
-function SlantedTabs<T extends string>({
-  items,
-  value,
-  onChange,
-}: {
-  items: readonly { id: T; label: string }[];
-  value: T;
-  onChange: (id: T) => void;
-}) {
-  return (
-    <CyberSlantedTabBarNative fill>
-      {items.map((it) => {
-        const active = it.id === value;
-        return (
-          <CyberSlantedTabNative
-            key={it.id}
-            label={it.label}
-            active={active}
-            onPress={() => onChange(it.id)}
-            compact
-            fontWeight="700"
-            accessibilityRole="tab"
-            accessibilityState={{ selected: active }}
-          />
-        );
-      })}
-    </CyberSlantedTabBarNative>
-  );
-}
-
 export default function LeagueHubTeamPanelNative({ hub, lang, onSelectTeam }: Props) {
   const { bundle, loading } = useLeagueTeamStatsBundle({
     apiBaseUrl: getUniterzApiBaseUrl(),
@@ -1038,19 +958,6 @@ const styles = StyleSheet.create({
     fontFamily: METRIC_FONT,
     fontSize: 9,
     fontWeight: "800",
-  },
-  playTypeScroll: {
-    height: 54,
-    marginHorizontal: -12,
-  },
-  playTypeScrollContent: {
-    gap: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    alignItems: "center",
-  },
-  playTypeSlot: {
-    height: 30,
   },
   legend: {
     flexDirection: "row",
