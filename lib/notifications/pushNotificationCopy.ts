@@ -352,6 +352,30 @@ export function buildPushNotificationCopy(
           }),
       };
 
+    case "badge_reward":
+      return {
+        title: L(lang, {
+          ja: "バッジを獲得しました",
+          en: "You earned a badge",
+          ko: "배지를 획득했습니다",
+          zh: "已获得徽章",
+          es: "Has ganado una insignia",
+          pt: "Você ganhou um emblema",
+          fr: "Vous avez gagné un badge",
+        }),
+        body:
+          detail ||
+          L(lang, {
+            ja: "月間ランキングの記念バッジが届きました",
+            en: "Your monthly ranking badge has arrived",
+            ko: "월간 랭킹 기념 배지가 도착했습니다",
+            zh: "月度排名纪念徽章已送达",
+            es: "Llegó tu insignia del ranking mensual",
+            pt: "Seu emblema do ranking mensal chegou",
+            fr: "Votre badge du classement mensuel est arrivé",
+          }),
+      };
+
     // --- 外す予定（送信停止まで型互換のため残す） ---
     case "game_start":
       return {

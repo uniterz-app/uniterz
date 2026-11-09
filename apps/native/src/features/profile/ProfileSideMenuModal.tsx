@@ -114,6 +114,7 @@ type Props = {
     | "proInsightNarrativePreview"
     | "matchupTeamStatsPreview"
     | "rankingCommentDesignPreview"
+    | "monthlyBadgePreview"
     | "adminFeatureInbox"
     | "adminContactInbox"
     | "adminRedemptions"
@@ -298,6 +299,7 @@ export default function ProfileSideMenuModal({
       | "proInsightNarrativePreview"
       | "matchupTeamStatsPreview"
       | "rankingCommentDesignPreview"
+      | "monthlyBadgePreview"
       | "adminFeatureInbox"
       | "adminContactInbox"
       | "adminRedemptions"
@@ -834,6 +836,14 @@ export default function ProfileSideMenuModal({
                           }
                         >
                           ひとこと デザイン案
+                        </SideMenuItemButtonNative>
+                        <SideMenuItemButtonNative
+                          icon="medal-outline"
+                          dense
+                          labelStyle={labelStyle}
+                          onPress={() => openUserPage("monthlyBadgePreview")}
+                        >
+                          月間バッジ プレビュー
                         </SideMenuItemButtonNative>
                       </View>
                     </>

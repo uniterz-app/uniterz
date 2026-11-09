@@ -20,6 +20,11 @@ export type BadgeGrantMeta = {
   round?: string;
   source?: string;
   yearMonth?: string;
+  /** 月間ランキングバッジ: 付与時点の記録と名前（裏面の刻印） */
+  value?: number;
+  engravedName?: string;
+  handle?: string;
+  posts?: number;
 };
 
 export function normalizeParticipantCount(v: unknown): number | null {

@@ -87,6 +87,7 @@ export function prefKeyForPushType(
     case "game_final":
       return "gameFinal";
     case "unit_reward":
+    case "badge_reward":
       return "unitReward";
     case "injury_status":
       return "injuryStatus";

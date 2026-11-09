@@ -16,6 +16,10 @@ import {
   pickBadgeParticipantCount,
   readGrantParticipantCount,
 } from "../../../../../lib/badges/badgeGrant";
+import {
+  readMonthlyBadgeRecord,
+  type MonthlyBadgeRecord,
+} from "../../../../../lib/badges/monthlyRankingBadge";
 
 export type MasterBadgeNative = {
   id: string;
@@ -29,12 +33,15 @@ export type MasterBadgeNative = {
 
 export type ResolvedBadgeNative = MasterBadgeNative & {
   grantedAt: Date | null;
+  /** 月間ランキングバッジの刻印（付与時点の名前・記録） */
+  monthlyRecord?: MonthlyBadgeRecord;
 };
 
 export type UserGrantedBadgeNative = {
   badgeId: string;
   grantedAt: Date | null;
   participantCount: number | null;
+  monthlyRecord: MonthlyBadgeRecord | null;
 };
 
 const MASTER_BADGES_TTL_MS = 30 * 60 * 1000;
@@ -161,6 +168,7 @@ async function fetchUserBadgesOnce(
           badgeId: (typeof data.badgeId === "string" ? data.badgeId : d.id) as string,
           grantedAt: ga instanceof Timestamp ? ga.toDate() : null,
           participantCount: readGrantParticipantCount(data),
+          monthlyRecord: readMonthlyBadgeRecord(data.meta),
         };
       });
       userBadgesMemoryCache.set(safeUid, { at: Date.now(), badges: list });
@@ -273,6 +281,7 @@ export function useNativeProfileBadges(targetUid: string | undefined) {
           ...(icon ? { icon } : {}),
           grantedAt: ub.grantedAt,
           ...(participantCount != null ? { participantCount } : {}),
+          ...(ub.monthlyRecord ? { monthlyRecord: ub.monthlyRecord } : {}),
         } satisfies ResolvedBadgeNative;
       })
       .filter((b): b is ResolvedBadgeNative => b !== null);

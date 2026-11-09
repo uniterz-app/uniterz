@@ -28,6 +28,7 @@ import ProInsightGatePreviewScreenNative from "../../games/predict/ProInsightGat
 import ProInsightNarrativePreviewScreenNative from "../../games/predict/ProInsightNarrativePreviewScreenNative";
 import MatchupTeamStatsPreviewScreenNative from "../../games/predict/MatchupTeamStatsPreviewScreenNative";
 import RankingCommentDesignPreviewScreenNative from "../../rankings/RankingCommentDesignPreviewScreenNative";
+import MonthlyBadgePreviewScreenNative from "../MonthlyBadgePreviewScreenNative";
 import ResultDetailPreviewScreenNative from "../../results/ResultDetailPreviewScreenNative";
 import ResultPickupPreviewScreenNative from "../../results/ResultPickupPreviewScreenNative";
 import { View } from "react-native";
@@ -408,6 +409,19 @@ export function RankingCommentDesignPreviewScreenWrapper() {
   const { language } = useNativeUserLanguage(fUser?.uid);
   return (
     <RankingCommentDesignPreviewScreenNative
+      language={resolveLocalizedLang(language)}
+      onClose={() => navigation.goBack()}
+    />
+  );
+}
+
+export function MonthlyBadgePreviewScreenWrapper() {
+  const navigation =
+    useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
+  const { fUser } = useFirebaseUser();
+  const { language } = useNativeUserLanguage(fUser?.uid);
+  return (
+    <MonthlyBadgePreviewScreenNative
       language={resolveLocalizedLang(language)}
       onClose={() => navigation.goBack()}
     />

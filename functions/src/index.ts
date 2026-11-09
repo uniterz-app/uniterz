@@ -227,6 +227,7 @@ export const buildCumulativeRankingSnapshotCron = onSchedule(
 /**
  * 期間ランキング Unit 付与 — スナップショット cron（16:00 JST）の 10 分後。18:10 は取りこぼし再試行（付与済みはロックで skip）。
  * 実付与は Eastern 月曜（週次）・毎月1日（月次）のみ。他日は即 skip。
+ * 月間ランキングバッジは毎日見る（前月の画像がサイトに出た日に付与）。
  */
 export const grantPeriodRankingUnitsCron = onSchedule(
   {
@@ -240,6 +241,14 @@ export const grantPeriodRankingUnitsCron = onSchedule(
       "./units/grantPeriodRankingUnits"
     );
     await grantPeriodRankingUnitsAfterPeriodSnapshots();
+    try {
+      const { grantMonthlyRankingBadgesForPreviousMonth } = await import(
+        "./badges/grantMonthlyRankingBadges"
+      );
+      await grantMonthlyRankingBadgesForPreviousMonth();
+    } catch (err) {
+      console.error("[grantPeriodRankingUnitsCron] monthly badges failed", err);
+    }
   }
 );
 
