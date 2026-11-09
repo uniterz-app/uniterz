@@ -3,7 +3,8 @@
  * 日次 / 試合後監視の最後（試合ログ更新後）に回す。
  */
 import type { Firestore } from "firebase-admin/firestore";
-import { FieldValue } from "firebase-admin/firestore";
+import { FieldPath, FieldValue } from "firebase-admin/firestore";
+import { NBA_TEAM_NAME_BY_ID } from "@/lib/nba-team-names";
 import type { NbaPlayerGameLog, NbaPlayerShotZone } from "@/lib/predict/nbaPlayerDetailPreviewMocks";
 import { formatNbaPlayerListName } from "@/lib/nba/formatNbaPlayerListName";
 import { NBA_TEAM_ROSTERS_COLLECTION } from "@/lib/nba/teamRosters/loadTeamRostersSnapshot";
@@ -84,10 +85,17 @@ async function loadRoster(db: Firestore, seasonKey: string) {
   return out;
 }
 
+/** ペイロール doc は選手の契約込みで大きいので、チームの年俸総額だけ読む */
 async function loadPayrolls(db: Firestore, seasonKey: string) {
   const out = new Map<string, number>();
-  const snap = await db.collection(NBA_TEAM_PAYROLLS_COLLECTION).doc(seasonKey).get();
-  for (const [teamId, raw] of Object.entries(asObj(snap.data()?.teams) ?? {})) {
+  const snap = await db
+    .collection(NBA_TEAM_PAYROLLS_COLLECTION)
+    .where(FieldPath.documentId(), "==", seasonKey)
+    .select(
+      ...Object.keys(NBA_TEAM_NAME_BY_ID).map((id) => new FieldPath("teams", id, "totalSalary"))
+    )
+    .get();
+  for (const [teamId, raw] of Object.entries(asObj(snap.docs[0]?.data().teams) ?? {})) {
     const total = num(asObj(raw)?.totalSalary);
     if (total != null && total > 0) out.set(teamId, total);
   }
@@ -181,7 +189,7 @@ async function loadTeamLogs(db: Firestore, seasonKey: string) {
     .collection(NBA_TEAM_GAME_LOGS_COLLECTION)
     .doc(seasonKey)
     .collection("teams")
-    .select("splits", "positionDefense", "games")
+    .select("splits", "positionDefense")
     .get();
   for (const d of snap.docs) {
     const data = d.data();
@@ -197,16 +205,22 @@ async function loadTeamLogs(db: Firestore, seasonKey: string) {
       };
       posDef = { G: cell("G"), F: cell("F"), C: cell("C") };
     }
-    const games = Array.isArray(data.games) ? (data.games as unknown[]) : [];
-    const scores = games.flatMap((g) => {
-      const team = num(asObj(g)?.teamScore);
-      return team != null ? [team] : [];
-    });
+    let ptsTotal = 0;
+    let games = 0;
+    for (const side of ["home", "away"] as const) {
+      const row = asObj(splits?.[side]);
+      const g = (num(row?.wins) ?? 0) + (num(row?.losses) ?? 0);
+      const pts = num(asObj(row?.avg)?.pts);
+      if (g > 0 && pts != null) {
+        ptsTotal += pts * g;
+        games += g;
+      }
+    }
     out.set(d.id, {
       vsOver500: record(splits?.vsOver500),
       b2b: record(splits?.b2b),
       posDef,
-      scores,
+      ppg: games > 0 ? ptsTotal / games : null,
     });
   }
   return out;

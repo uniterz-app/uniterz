@@ -226,7 +226,6 @@ export type LeagueHubPositionDefense = Record<
 
 /** チームのスタイルマップ（ROSTER / FORM）用。勝率・割合は 0–1 */
 export const LEAGUE_HUB_TEAM_STYLE_METRICS = [
-  "winPct",
   "aceShare",
   "scorerCount",
   "benchShare",

@@ -421,6 +421,7 @@ export const LEAGUE_HUB_PLAYER_SCATTER_PRESETS: readonly LeagueHubPlayerScatterP
 /** チーム散布図で使う `NbaLeagueTeamStatsRow` のキー + hub の `teams[].m` */
 export type LeagueHubTeamMetric =
   | LeagueHubTeamStyleMetric
+  | "winPct"
   | "ortg"
   | "drtg"
   | "pace"
