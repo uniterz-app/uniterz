@@ -62,8 +62,6 @@ type Props = {
   watermarks?: { tl?: string; br?: string };
   /** 縦は欄の幅のまま、横だけ画面の外まではみ出させる */
   bleedPastScreen?: boolean;
-  /** 暗い面と控えめな四隅の分類名（右上だけ緑）。選手のスタイルマップ */
-  plainTone?: boolean;
 };
 
 type RangeTick = { v: number; at: number };
@@ -83,23 +81,12 @@ const CALLOUT_GAP = 12;
 const TIGHT_GAP = 2;
 const DIM_JERSEY = 0.32;
 const LEADER_STROKE = "rgba(0,245,255,0.35)";
-/** 分布図の面。シアン寄りの紺を透かし、ページのリング格子を見せる */
-const PLOT_FILL = "rgba(20,50,76,0.62)";
-/** 平均より良い側（上・右）の点線 */
-const DASH_GOOD = "rgba(0,245,255,0.72)";
-/** 平均より悪い側（下・左）の点線 */
-const DASH_WEAK = "rgba(255,176,120,0.72)";
+const PLOT_FILL = "rgba(4,10,16,0.6)";
+const AVG_DASH = "rgba(0,245,255,0.35)";
 /** 大きな透かし（白）。分類名より一段奥に沈める */
 const MARK_OPACITY = 0.09;
-/** 四隅の分類名。白い透かしと見分けられるよう色を付ける（右上 = 両方良い / 左下 = 両方悪い） */
+/** 四隅の分類名。右上（両方良い）だけ緑 */
 const QUAD_INK: Record<keyof LeagueHubQuadrants, string> = {
-  tr: "rgba(110,231,183,0.85)",
-  tl: "rgba(0,245,255,0.7)",
-  br: "rgba(0,245,255,0.7)",
-  bl: "rgba(255,176,120,0.7)",
-};
-const PLAIN_PLOT_FILL = "rgba(4,10,16,0.6)";
-const PLAIN_QUAD_INK: Record<keyof LeagueHubQuadrants, string> = {
   tr: "rgba(110,231,183,0.55)",
   tl: "rgba(255,255,255,0.28)",
   br: "rgba(255,255,255,0.28)",
@@ -425,7 +412,6 @@ export default function LeagueHubScatterNative({
   dimOthers = true,
   watermarks,
   bleedPastScreen,
-  plainTone = false,
 }: Props) {
   const isSel = (id: string) => id === selectedId || (secondId != null && id === secondId);
   const screenW = useWindowDimensions().width;
@@ -715,71 +701,28 @@ export default function LeagueHubScatterNative({
                 y={PAD.t}
                 width={plotW}
                 height={plotH}
-                fill={plainTone ? PLAIN_PLOT_FILL : PLOT_FILL}
+                fill={PLOT_FILL}
                 stroke="rgba(0,245,255,0.18)"
                 strokeWidth={1}
               />
-              {tlMark || brMark ? (
-                <>
-                  <Line
-                    x1={layout.avgX}
-                    x2={layout.avgX}
-                    y1={PAD.t}
-                    y2={layout.avgY}
-                    stroke={DASH_GOOD}
-                    strokeDasharray="4 4"
-                    strokeWidth={1}
-                  />
-                  <Line
-                    x1={layout.avgX}
-                    x2={layout.avgX}
-                    y1={layout.avgY}
-                    y2={PAD.t + plotH}
-                    stroke={DASH_WEAK}
-                    strokeDasharray="4 4"
-                    strokeWidth={1}
-                  />
-                  <Line
-                    x1={PAD.l}
-                    x2={layout.avgX}
-                    y1={layout.avgY}
-                    y2={layout.avgY}
-                    stroke={DASH_WEAK}
-                    strokeDasharray="4 4"
-                    strokeWidth={1}
-                  />
-                  <Line
-                    x1={layout.avgX}
-                    x2={PAD.l + plotW}
-                    y1={layout.avgY}
-                    y2={layout.avgY}
-                    stroke={DASH_GOOD}
-                    strokeDasharray="4 4"
-                    strokeWidth={1}
-                  />
-                </>
-              ) : (
-                <>
-                  <Line
-                    x1={layout.avgX}
-                    x2={layout.avgX}
-                    y1={PAD.t}
-                    y2={PAD.t + plotH}
-                    stroke="rgba(0,245,255,0.35)"
-                    strokeDasharray="4 4"
-                    strokeWidth={1}
-                  />
-                  <Line
-                    x1={PAD.l}
-                    x2={PAD.l + plotW}
-                    y1={layout.avgY}
-                    y2={layout.avgY}
-                    stroke="rgba(0,245,255,0.35)"
-                    strokeDasharray="4 4"
-                    strokeWidth={1}
-                  />
-                </>
-              )}
+              <Line
+                x1={layout.avgX}
+                x2={layout.avgX}
+                y1={PAD.t}
+                y2={PAD.t + plotH}
+                stroke={AVG_DASH}
+                strokeDasharray="4 4"
+                strokeWidth={1}
+              />
+              <Line
+                x1={PAD.l}
+                x2={PAD.l + plotW}
+                y1={layout.avgY}
+                y2={layout.avgY}
+                stroke={AVG_DASH}
+                strokeDasharray="4 4"
+                strokeWidth={1}
+              />
               {tlMark || brMark ? (
                 <G opacity={MARK_OPACITY}>
                   {tlMark ? (
@@ -810,7 +753,7 @@ export default function LeagueHubScatterNative({
                   textAnchor={anchor}
                   fontSize={10}
                   fontWeight="800"
-                  fill={(plainTone ? PLAIN_QUAD_INK : QUAD_INK)[k]}
+                  fill={QUAD_INK[k]}
                 >
                   {q(quadrants[k])}
                 </SvgText>
