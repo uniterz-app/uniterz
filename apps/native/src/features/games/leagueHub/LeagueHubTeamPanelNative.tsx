@@ -432,16 +432,17 @@ function ScoringMix({
 }
 
 
-type StyleMode = "play" | "three" | "hustle" | "clutch";
+type StyleMode = "strength" | "play" | "three" | "hustle" | "clutch";
 
 const STYLE_MODES: readonly { id: StyleMode; label: string }[] = [
-  { id: "play", label: "PLAY TYPE" },
+  { id: "strength", label: "OVERALL" },
+  { id: "play", label: "PLAY" },
   { id: "three", label: "3PT" },
   { id: "hustle", label: "HUSTLE" },
   { id: "clutch", label: "CLUTCH" },
 ];
 
-/** プレータイプ・ハッスル・クラッチは同じジャージの散布図なので 1 枚で切り替える（背景は消さない） */
+/** 攻守の強さ・プレータイプ・ハッスル・クラッチは同じ散布図なので 1 枚で切り替える（背景は消さない） */
 function StyleMaps({
   rows,
   lang,
@@ -451,16 +452,30 @@ function StyleMaps({
   lang: HubLang;
   onSelectTeam: (teamId: string) => void;
 }) {
-  const [mode, setMode] = useState<StyleMode>("play");
+  const [mode, setMode] = useState<StyleMode>("strength");
   const [pt, setPt] = useState<LeagueHubPlayTypeId>("pnrBh");
   const preset = useMemo(() => {
+    if (mode === "strength") return LEAGUE_HUB_TEAM_STRENGTH;
     if (mode === "three") return LEAGUE_HUB_TEAM_THREE;
     if (mode === "hustle") return LEAGUE_HUB_TEAM_HUSTLE;
     if (mode === "clutch") return LEAGUE_HUB_TEAM_CLUTCH;
     return leagueHubPlayTypePreset(pt);
   }, [mode, pt]);
+  const strength = mode === "strength";
+  const hint = withTapHint(preset.hint[lang], lang);
   return (
-    <HubSection title="PLAY STYLE" hint={withTapHint(preset.hint[lang], lang)}>
+    <HubSection
+      title="PLAY STYLE"
+      hint={
+        strength
+          ? `${hint}\n${
+              lang === "ja"
+                ? "選ぶと攻守の 4 要素（シュート効率 eFG%・ミスの少なさ TOV%・オフェンスリバウンド OREB%・フリースロー獲得 FTr）の順位も出る。"
+                : "Pick a team to see its four factors on both ends (eFG%, TOV%, OREB%, FTr)."
+            }`
+          : hint
+      }
+    >
       <SlantedTabs items={STYLE_MODES} value={mode} onChange={setMode} />
       {mode === "play" ? (
         <ScrollSlantedTabs
@@ -469,7 +484,14 @@ function StyleMaps({
           onChange={setPt}
         />
       ) : null}
-      <TeamScatterBlock rows={rows} preset={preset} lang={lang} onSelectTeam={onSelectTeam} />
+      <TeamScatterBlock
+        rows={rows}
+        preset={preset}
+        lang={lang}
+        sizeBy={strength ? "pace" : undefined}
+        fourFactors={strength}
+        onSelectTeam={onSelectTeam}
+      />
     </HubSection>
   );
 }
@@ -750,24 +772,7 @@ export default function LeagueHubTeamPanelNative({ hub, lang, onSelectTeam }: Pr
 
   return (
     <View>
-      <HubSection
-        title={LEAGUE_HUB_TEAM_STRENGTH.label.en}
-        hint={`${withTapHint(LEAGUE_HUB_TEAM_STRENGTH.hint[lang], lang)}\n${
-          lang === "ja"
-            ? "選ぶと攻守の 4 要素（シュート効率 eFG%・ミスの少なさ TOV%・オフェンスリバウンド OREB%・フリースロー獲得 FTr）の順位も出る。"
-            : "Pick a team to see its four factors on both ends (eFG%, TOV%, OREB%, FTr)."
-        }`}
-      >
-        <TeamScatterBlock
-          rows={rows}
-          preset={LEAGUE_HUB_TEAM_STRENGTH}
-          lang={lang}
-          sizeBy="pace"
-          onSelectTeam={onSelectTeam}
-          bleedPastScreen
-          fourFactors
-        />
-      </HubSection>
+      <StyleMaps rows={rows} lang={lang} onSelectTeam={onSelectTeam} />
 
       <HubSection
         title="SCORING MIX"
@@ -779,8 +784,6 @@ export default function LeagueHubTeamPanelNative({ hub, lang, onSelectTeam }: Pr
       >
         <ScoringMix rows={rows} lang={lang} onSelectTeam={onSelectTeam} />
       </HubSection>
-
-      <StyleMaps rows={rows} lang={lang} onSelectTeam={onSelectTeam} />
 
       <TeamRecords teams={teams} lang={lang} onSelectTeam={onSelectTeam} />
 
