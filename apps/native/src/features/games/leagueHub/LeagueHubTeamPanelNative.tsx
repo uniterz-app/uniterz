@@ -75,9 +75,6 @@ function rankOf(
   return i >= 0 ? i + 1 : null;
 }
 
-function withTapHint(hint: string, lang: HubLang): string {
-  return `${hint}\n${lang === "ja" ? "四角をタップで数字を表示。" : "Tap a square for numbers."}`;
-}
 
 /** 攻撃と守備の 4 要素。invert = 低いほど良い */
 const FOUR_FACTORS: readonly {
@@ -335,7 +332,11 @@ function TeamScatterBlock({
           fourFactors={fourFactors}
           onDetail={() => onSelectTeam(sel.teamId)}
         />
-      ) : null}
+      ) : (
+        <Text style={styles.tapHint}>
+          {lang === "ja" ? "四角をタップでチームの数字を表示" : "Tap a square to see the team"}
+        </Text>
+      )}
     </View>
   );
 }
@@ -463,20 +464,8 @@ function StyleMaps({
     return leagueHubPlayTypePreset(pt);
   }, [mode, pt]);
   const strength = mode === "strength";
-  const hint = withTapHint(preset.hint[lang], lang);
   return (
-    <HubSection
-      title="PLAY STYLE"
-      hint={
-        strength
-          ? `${hint}\n${
-              lang === "ja"
-                ? "選ぶと攻守の 4 要素（シュート効率 eFG%・ミスの少なさ TOV%・オフェンスリバウンド OREB%・フリースロー獲得 FTr）の順位も出る。"
-                : "Pick a team to see its four factors on both ends (eFG%, TOV%, OREB%, FTr)."
-            }`
-          : hint
-      }
-    >
+    <HubSection title="PLAY STYLE">
       <SlantedTabs items={STYLE_MODES} value={mode} onChange={setMode} />
       {mode === "play" ? (
         <ScrollSlantedTabs
@@ -485,6 +474,14 @@ function StyleMaps({
           onChange={setPt}
         />
       ) : null}
+      <Text style={styles.mapHint}>
+        {preset.hint[lang]}
+        {strength
+          ? lang === "ja"
+            ? "選ぶと攻守の 4 要素（シュート効率 eFG%・ミスの少なさ TOV%・オフェンスリバウンド OREB%・フリースロー獲得 FTr）の順位も出る。"
+            : " Pick a team to see its four factors on both ends (eFG%, TOV%, OREB%, FTr)."
+          : null}
+      </Text>
       <TeamScatterBlock
         rows={rows}
         preset={preset}
@@ -806,6 +803,19 @@ const styles = StyleSheet.create({
   loading: {
     paddingVertical: 40,
     alignItems: "center",
+  },
+  mapHint: {
+    color: "rgba(255,255,255,0.55)",
+    fontSize: 11,
+    lineHeight: 16,
+    marginTop: 6,
+    marginBottom: 6,
+  },
+  tapHint: {
+    color: "rgba(255,255,255,0.35)",
+    fontSize: 10,
+    textAlign: "center",
+    marginTop: 6,
   },
   card: {
     marginTop: 8,
