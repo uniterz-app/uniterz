@@ -386,6 +386,14 @@ function ScoringMix({
         .sort((a, b) => b.mix[sortBy] - a.mix[sortBy]),
     [rows, sortBy]
   );
+  /** 選んだ項目を左端に置いて、どのタブでも長さで比べられるようにする */
+  const segments = useMemo(
+    () => [...MIX_SEGMENTS].sort((a, b) => Number(b.id === sortBy) - Number(a.id === sortBy)),
+    [sortBy]
+  );
+  const avg =
+    sorted.length > 0 ? sorted.reduce((a, x) => a + x.mix[sortBy], 0) / sorted.length : 0;
+  const sortColor = MIX_SEGMENTS.find((s) => s.id === sortBy)!.color;
   if (sorted.length === 0) {
     return <HubEmpty text={lang === "ja" ? "まだデータがありません" : "No data yet"} />;
   }
@@ -417,8 +425,8 @@ function ScoringMix({
       </CyberSlantedTabBarNative>
       <Text style={styles.mapHint}>
         {lang === "ja"
-          ? "得点のうち 3P・ペイント・ミドル・フリースローが占める割合。タブで並べ替え。"
-          : "Share of points from 3s, the paint, mid-range and free throws. Tap a tab to sort."}
+          ? "得点のうち 3P・ペイント・ミドル・フリースローが占める割合。タブで並べ替え、縦線はリーグ平均。"
+          : "Share of points from 3s, the paint, mid-range and free throws. Tap a tab to sort; the line is the league average."}
       </Text>
       <View style={styles.legend}>
         {MIX_SEGMENTS.map((s) => (
@@ -427,12 +435,17 @@ function ScoringMix({
             <Text style={styles.legendText}>{s.label}</Text>
           </View>
         ))}
+        <View style={styles.legendSpacer} />
+        <Text style={[styles.legendText, { color: sortColor }]}>
+          AVG {formatHubValue(avg, "pct")}
+        </Text>
       </View>
-      {sorted.map(({ r, mix }) => (
+      {sorted.map(({ r, mix }, i) => (
         <Pressable key={r.teamId} style={styles.mixRow} onPress={() => onSelectTeam(r.teamId)}>
+          <Text style={styles.mixRank}>{i + 1}</Text>
           <Text style={styles.mixAbbr}>{teamAbbr(r.teamId)}</Text>
           <View style={styles.mixBar}>
-            {MIX_SEGMENTS.map((s) => (
+            {segments.map((s) => (
               <View
                 key={s.id}
                 style={{
@@ -442,6 +455,7 @@ function ScoringMix({
                 }}
               />
             ))}
+            <View style={[styles.mixAvg, { left: `${avg * 100}%` }]} />
           </View>
           <Text style={styles.mixValue}>{formatHubValue(mix[sortBy], "pct")}</Text>
         </Pressable>
@@ -1023,6 +1037,9 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: "800",
   },
+  legendSpacer: {
+    flex: 1,
+  },
   legend: {
     flexDirection: "row",
     gap: 12,
@@ -1049,6 +1066,22 @@ const styles = StyleSheet.create({
     gap: 8,
     height: 18,
     marginBottom: 3,
+  },
+  mixRank: {
+    fontFamily: METRIC_FONT,
+    color: "rgba(255,255,255,0.4)",
+    fontSize: 9,
+    fontWeight: "700",
+    width: 16,
+    textAlign: "right",
+  },
+  mixAvg: {
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    width: 2,
+    marginLeft: -1,
+    backgroundColor: "#fff",
   },
   mixAbbr: {
     fontFamily: METRIC_FONT,
