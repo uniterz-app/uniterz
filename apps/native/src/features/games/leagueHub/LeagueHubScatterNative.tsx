@@ -691,7 +691,7 @@ export default function LeagueHubScatterNative({
         setColumnW((prev) => (prev === next ? prev : next));
       }}
     >
-      {tlMark || brMark ? null : <Text style={styles.yTitle}>↑ {q(yAxis.label)}</Text>}
+      <Text style={styles.yTitle}>↑ {q(yAxis.label)}</Text>
       <View style={{ height: height || 260, overflow: "visible" }}>
       <Pressable
         onPress={(e) => onPress(e.nativeEvent.locationX, e.nativeEvent.locationY)}
@@ -1000,7 +1000,7 @@ export default function LeagueHubScatterNative({
         ) : null}
       </Pressable>
       </View>
-      {tlMark || brMark ? null : <Text style={styles.xTitle}>{q(xAxis.label)} →</Text>}
+      <Text style={styles.xTitle}>{q(xAxis.label)} →</Text>
     </View>
   );
 }
