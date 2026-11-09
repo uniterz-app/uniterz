@@ -1,5 +1,5 @@
 /**
- * Pro 導線の集計（`proFunnelUsers` / `proFunnelDaily` + users の plan）。
+ * Pro 導線の集計（`proFunnelUsers` / `proFunnelDaily` / `proInsightOpens` + users の plan）。
  *
  *   npx tsx --tsconfig tsconfig.json scripts/pro-funnel-stats.ts [--days 14]
  */
@@ -7,6 +7,7 @@ import "./_loadAdminEnv";
 import { getAdminDb } from "../lib/firebaseAdmin";
 import {
   PRO_FUNNEL_EVENTS,
+  PRO_INSIGHT_OPENS_COLLECTION,
   proFunnelDayKey,
   type ProFunnelEvent,
 } from "../lib/billing/proFunnelEvents";
@@ -87,6 +88,35 @@ async function main() {
   console.log("funnel");
   funnel("skin_modal_shown", "skin_modal_tap");
   funnel("insight_teaser_shown", "insight_teaser_tap");
+
+  console.log(`INSIGHT opens by game (last opened within ${days} days)`);
+  const opensSnap = await db
+    .collection(PRO_INSIGHT_OPENS_COLLECTION)
+    .where("lastAtMs", ">=", now - days * DAY_MS)
+    .get();
+  const opens = opensSnap.docs
+    .map((d) => ({ id: d.id, ...(d.data() as Record<string, number>) }))
+    .sort((a, b) => (b.opens ?? 0) - (a.opens ?? 0));
+  if (opens.length > 0) {
+    const games = await db.getAll(
+      ...opens.map((o) => db.doc(`games/${o.id}`)),
+      { fieldMask: ["homeTeamId", "awayTeamId", "startAtJst"] }
+    );
+    const label = new Map(
+      games.map((g) => {
+        const start = g.get("startAtJst")?.toMillis?.();
+        const day = start ? proFunnelDayKey(start) : "?";
+        return [g.id, `${day} ${g.get("awayTeamId") ?? "?"} @ ${g.get("homeTeamId") ?? "?"}`];
+      })
+    );
+    console.log("  game                                   opens (pro/free)   users (pro/free)");
+    for (const o of opens) {
+      const name = `${o.id} ${label.get(o.id) ?? ""}`.padEnd(38);
+      const op = `${o.opens ?? 0} (${o.proOpens ?? 0}/${o.freeOpens ?? 0})`.padEnd(18);
+      const us = `${o.users ?? 0} (${o.proUsers ?? 0}/${o.freeUsers ?? 0})`;
+      console.log(`  ${name} ${op} ${us}`);
+    }
+  }
 
   console.log(`daily (last ${days} days, JST)`);
   const keys = Array.from({ length: days }, (_, i) => proFunnelDayKey(now - (days - 1 - i) * DAY_MS));
