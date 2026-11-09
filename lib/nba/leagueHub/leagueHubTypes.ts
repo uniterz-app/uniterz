@@ -219,10 +219,38 @@ export type LeagueHubLadderWeek = {
 
 export type LeagueHubRecord = { wins: number; losses: number };
 
+export const LEAGUE_HUB_POS_DEF_STATS = ["pts", "reb", "ast", "fg3m"] as const;
+export type LeagueHubPosDefStat = (typeof LEAGUE_HUB_POS_DEF_STATS)[number];
+
 export type LeagueHubPositionDefense = Record<
   "G" | "F" | "C",
-  { pts: number; rank: number } | null
+  {
+    pts: number;
+    rank: number;
+    /** REB / AST / 3PM（古い doc には無い。順位 1 = 最少） */
+    stats?: Partial<Record<LeagueHubPosDefStat, { value: number; rank: number }>>;
+  } | null
 >;
+
+/** 対戦相手の平均勝率（今の順位表で計算） */
+export type LeagueHubTeamSchedule = {
+  /** 終わった試合の相手 */
+  played: number | null;
+  playedGames: number;
+  /** 残り試合の相手 */
+  remaining: number | null;
+  remainingGames: number;
+};
+
+/** UNITERZ ユーザーの勝敗予想と結果（終了したレギュラーの試合だけ） */
+export type LeagueHubTeamPicks = {
+  games: number;
+  /** 各試合でこのチームを選んだ割合の合計 = 予想の勝ち数 */
+  expectedWins: number;
+  wins: number;
+  /** 多数派の予想が当たった試合 */
+  majorityHits: number;
+};
 
 /** チームのスタイルマップ（ROSTER / FORM）用。勝率・割合は 0–1 */
 export const LEAGUE_HUB_TEAM_STYLE_METRICS = [
@@ -249,10 +277,60 @@ export type LeagueHubTeamRow = {
   b2b: LeagueHubRecord | null;
   /** 5 点差以内で決着 */
   close: LeagueHubRecord | null;
+  /** 4 日で 3 試合目 / 東・西カンファレンスの相手（古い doc には無い） */
+  threeInFour?: LeagueHubRecord | null;
+  vsEast?: LeagueHubRecord | null;
+  vsWest?: LeagueHubRecord | null;
   posDef: LeagueHubPositionDefense | null;
+  schedule?: LeagueHubTeamSchedule | null;
+  picks?: LeagueHubTeamPicks | null;
   /** 古い doc には無い */
   m?: Partial<Record<LeagueHubTeamStyleMetric, number>>;
 };
+
+/** 条件 A / B の 1 試合平均得点（ホーム / アウェー、B2B 2 日目 / それ以外） */
+export type LeagueHubPlayerSplitRow = LeagueHubPlayerRef & {
+  a: number;
+  b: number;
+  diff: number;
+  aGames: number;
+  bGames: number;
+};
+
+export type LeagueHubPlayerSplits = {
+  /** ホームのほうが取る / アウェーのほうが取る */
+  home: LeagueHubPlayerSplitRow[];
+  away: LeagueHubPlayerSplitRow[];
+  /** B2B 2 日目に落ちる / 落ちない */
+  b2bDrop: LeagueHubPlayerSplitRow[];
+  b2bUp: LeagueHubPlayerSplitRow[];
+};
+
+/** 年俸と働き（Game Score 平均）の順位の差 */
+export type LeagueHubValueRow = LeagueHubPlayerRef & {
+  salaryM: number;
+  gameScore: number;
+  salaryRank: number;
+  gameScoreRank: number;
+  /** 比べた選手の数 */
+  of: number;
+};
+
+export const LEAGUE_HUB_MILESTONE_STATS = ["pts", "reb", "ast", "fg3m"] as const;
+export type LeagueHubMilestoneStat = (typeof LEAGUE_HUB_MILESTONE_STATS)[number];
+
+/** 通算の節目まで（前季までは平均 × 試合数の概算 + 今季は試合ログの合計） */
+export type LeagueHubMilestoneRow = LeagueHubPlayerRef & {
+  stat: LeagueHubMilestoneStat;
+  target: number;
+  remaining: number;
+  /** 今季の 1 試合平均で割った残り試合数 */
+  gamesAway: number;
+};
+
+/** 前季までの通算（キャリア doc から一度だけ作る） */
+export const NBA_LEAGUE_HUB_CAREER_BASE_COLLECTION = "nbaLeagueHubCareerBase";
+export type LeagueHubCareerBase = Record<LeagueHubMilestoneStat | "games", number>;
 
 export type NbaLeagueHubDoc = {
   seasonKey: string;
@@ -276,6 +354,10 @@ export type NbaLeagueHubDoc = {
   sixth?: LeagueHubLadderRow[];
   mip?: LeagueHubLadderRow[];
   teams: LeagueHubTeamRow[];
+  /** 以下は古い doc には無い */
+  playerSplits?: LeagueHubPlayerSplits | null;
+  value?: { best: LeagueHubValueRow[]; worst: LeagueHubValueRow[] } | null;
+  milestones?: LeagueHubMilestoneRow[] | null;
   /** 今週の順位（週が変わったら ladderPrev へ回す） */
   ladderWeek?: LeagueHubLadderWeek | null;
   ladderPrev?: LeagueHubLadderWeek | null;
