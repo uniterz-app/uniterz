@@ -5,7 +5,9 @@ import { FieldValue } from "firebase-admin/firestore";
 import { getAdminAuth, getAdminDb } from "@/lib/firebaseAdmin";
 import {
   isProFunnelEvent,
+  isProFunnelGameId,
   isProFunnelSource,
+  PRO_INSIGHT_OPENS_COLLECTION,
   proFunnelDayKey,
 } from "@/lib/billing/proFunnelEvents";
 import { consumeUidActionRateLimit } from "@/lib/security/consumeUidRateLimit";
@@ -19,7 +21,7 @@ async function requireUid(req: Request): Promise<string> {
   return decoded.uid;
 }
 
-/** Pro 導線の計測（表示・タップ・購入）。body: { event, source?, plan?, trial? } */
+/** Pro 導線の計測（表示・タップ・購入・INSIGHT を開いた）。body: { event, source?, plan?, trial?, gameId?, pro? } */
 export async function POST(req: Request) {
   try {
     const uid = await requireUid(req);
@@ -37,6 +39,10 @@ export async function POST(req: Request) {
         ? body.plan
         : null;
     const trial = body?.trial === true;
+    const gameId = isProFunnelGameId(body?.gameId) ? body.gameId : null;
+    if (event === "insight_open" && !gameId) {
+      return NextResponse.json({ error: "invalid gameId" }, { status: 400 });
+    }
 
     const db = getAdminDb();
     const rate = await consumeUidActionRateLimit(db, uid, "pro_funnel_event", 200);
@@ -70,6 +76,31 @@ export async function POST(req: Request) {
     batch.set(db.doc(`proFunnelDaily/${proFunnelDayKey(now)}`), daily, {
       merge: true,
     });
+    if (event === "insight_open" && gameId) {
+      const kind = body?.pro === true ? "pro" : "free";
+      const gameRef = db.doc(`${PRO_INSIGHT_OPENS_COLLECTION}/${gameId}`);
+      const firstForUser = await gameRef
+        .collection("users")
+        .doc(uid)
+        .create({ firstAtMs: now, kind })
+        .then(() => true)
+        .catch((e: { code?: unknown }) => {
+          if (e?.code === 6 || e?.code === "already-exists") return false;
+          throw e;
+        });
+      batch.set(
+        gameRef,
+        {
+          opens: FieldValue.increment(1),
+          [`${kind}Opens`]: FieldValue.increment(1),
+          ...(firstForUser
+            ? { users: FieldValue.increment(1), [`${kind}Users`]: FieldValue.increment(1) }
+            : {}),
+          lastAtMs: now,
+        },
+        { merge: true }
+      );
+    }
     await batch.commit();
 
     return NextResponse.json({ ok: true });

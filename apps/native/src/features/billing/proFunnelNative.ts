@@ -14,6 +14,8 @@ type Extra = {
   source?: ProFunnelSource;
   plan?: string;
   trial?: boolean;
+  gameId?: string;
+  pro?: boolean;
 };
 
 const ONCE_PER_DAY_PREFIX = "uniterz.proFunnel.v1";

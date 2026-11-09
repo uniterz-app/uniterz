@@ -3,6 +3,8 @@
  *
  * - `proFunnelUsers/{uid}`: イベントごとの初回・最終・回数（何人に出たか）
  * - `proFunnelDaily/{YYYY-MM-DD JST}`: イベントごとの日次件数（`*_shown` は端末で 1 日 1 回に絞る）
+ * - `proInsightOpens/{gameId}`: 試合ごとの INSIGHT を開いた回数・人数（Pro / Free 別）。
+ *   人数は `proInsightOpens/{gameId}/users/{uid}` の初回作成で数える
  */
 
 export const PRO_FUNNEL_EVENTS = [
@@ -20,6 +22,8 @@ export const PRO_FUNNEL_EVENTS = [
   "purchase_tap",
   /** ストアの購入が完了した */
   "purchase_done",
+  /** 予想フォームで INSIGHT タブを開いた（Pro / Free とも。`gameId` 付き） */
+  "insight_open",
 ] as const;
 
 export type ProFunnelEvent = (typeof PRO_FUNNEL_EVENTS)[number];
@@ -44,6 +48,12 @@ export function isProFunnelEvent(v: unknown): v is ProFunnelEvent {
 
 export function isProFunnelSource(v: unknown): v is ProFunnelSource {
   return typeof v === "string" && (PRO_FUNNEL_SOURCES as readonly string[]).includes(v);
+}
+
+export const PRO_INSIGHT_OPENS_COLLECTION = "proInsightOpens";
+
+export function isProFunnelGameId(v: unknown): v is string {
+  return typeof v === "string" && /^[A-Za-z0-9_-]{1,80}$/.test(v);
 }
 
 /** 日本時間の日付キー（YYYY-MM-DD） */

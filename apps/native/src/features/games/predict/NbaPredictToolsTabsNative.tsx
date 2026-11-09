@@ -129,6 +129,9 @@ export default function NbaPredictToolsTabsNative({
     () => new Set<NbaPredictToolsTab>(["injuries", "stats", "roster"])
   );
   const selectTab = (next: NbaPredictToolsTab) => {
+    if (next === "insight" && tab !== "insight" && gameId) {
+      trackProFunnelNative("insight_open", { gameId, pro: isPro });
+    }
     setTab((cur) => (cur === next ? null : next));
     setVisited((cur) => (cur.has(next) ? cur : new Set(cur).add(next)));
   };
