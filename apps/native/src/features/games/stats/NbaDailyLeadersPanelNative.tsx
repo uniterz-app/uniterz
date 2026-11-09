@@ -17,6 +17,7 @@ import { METRIC_FONT, RANK_DISPLAY_FONT } from "../../rankings/rankingsUiTheme";
 import TeamAbbrBadgeNative from "../TeamAbbrBadgeNative";
 import { getUniterzApiBaseUrl } from "../submitPredictionApi";
 import RankingsListEntranceRowNative from "../../rankings/RankingsListEntranceRowNative";
+import { inkAlpha, teamInk } from "../leagueHub/leagueHubUiNative";
 import { useBottomTabBarInsets } from "../../../navigation/useBottomTabBarInsets";
 import { formatNbaPlayerListName } from "../../../../../../lib/nba/formatNbaPlayerListName";
 import { resolveLocalizedLang } from "../../../../../../lib/i18n/localize";
@@ -185,6 +186,7 @@ export default function NbaDailyLeadersPanelNative({
           ]}
         >
           {rows.map((r, i) => {
+            const ink = teamInk(r.teamId);
             return (
               <RankingsListEntranceRowNative
                 key={`${r.playerId}-${r.gameId}`}
@@ -198,7 +200,7 @@ export default function NbaDailyLeadersPanelNative({
                   accessibilityRole="button"
                   style={({ pressed }) => [
                     styles.card,
-                    i === 0 && styles.cardTop,
+                    { borderColor: inkAlpha(ink, 0.75), backgroundColor: inkAlpha(ink, 0.1) },
                     pressed && styles.cardPressed,
                   ]}
                 >
@@ -301,12 +303,8 @@ const styles = StyleSheet.create({
     paddingRight: 14,
     paddingVertical: 8,
     overflow: "hidden",
-    borderRadius: 4,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.08)",
-    backgroundColor: "rgba(255,255,255,0.03)",
   },
-  cardTop: { borderColor: "rgba(252,211,77,0.35)" },
   cardPressed: { opacity: 0.75 },
   rank: {
     width: 26,
