@@ -453,8 +453,8 @@ export const LEAGUE_HUB_TEAM_STRENGTH: LeagueHubScatterPreset<LeagueHubTeamMetri
   id: "strength",
   label: { ja: "強さの地図", en: "OFFENSE × DEFENSE" },
   hint: {
-    ja: "右ほど攻撃効率が高く、上ほど失点が少ない。ユニフォームが大きいほど試合のペースが速い。",
-    en: "Right = better offense, up = better defense. Bigger jersey = faster pace.",
+    ja: "右ほど攻撃効率が高く、上ほど失点が少ない。四角が大きいほど試合のペースが速い。",
+    en: "Right = better offense, up = better defense. Bigger square = faster pace.",
   },
   x: { metric: "ortg", label: { ja: "ORtg", en: "ORtg" }, format: "one" },
   y: {
