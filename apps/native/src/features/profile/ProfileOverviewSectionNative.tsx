@@ -162,7 +162,7 @@ export default function ProfileOverviewSectionNative({
             </Text>
             <Text style={styles.lockBody}>{divisionCopy.lockBody}</Text>
             <Pressable
-              onPress={openProSubscribeNative}
+              onPress={() => openProSubscribeNative()}
               accessibilityRole="button"
               style={({ pressed }) => [styles.lockCta, pressed && styles.lockCtaPressed]}
             >
