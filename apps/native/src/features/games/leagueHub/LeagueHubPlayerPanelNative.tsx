@@ -328,7 +328,7 @@ function StyleMap({
           onTap={tapMap}
           showRange
           dimOthers={false}
-          bleedPastScreen
+          plainTone
         />
       )}
       {capturing ? null : cmpA && cmpB ? (
