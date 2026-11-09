@@ -415,6 +415,11 @@ function ScoringMix({
           );
         })}
       </CyberSlantedTabBarNative>
+      <Text style={styles.mapHint}>
+        {lang === "ja"
+          ? "得点のうち 3P・ペイント・ミドル・フリースローが占める割合。タブで並べ替え。"
+          : "Share of points from 3s, the paint, mid-range and free throws. Tap a tab to sort."}
+      </Text>
       <View style={styles.legend}>
         {MIX_SEGMENTS.map((s) => (
           <View key={s.id} style={styles.legendItem}>
@@ -826,14 +831,7 @@ export default function LeagueHubTeamPanelNative({ hub, lang, onSelectTeam }: Pr
         onSelectTeam={onSelectTeam}
       />
 
-      <HubSection
-        title="SCORING MIX"
-        hint={
-          lang === "ja"
-            ? "得点のうち 3P・ペイント・ミドル・フリースローが占める割合。"
-            : "Share of points from 3s, the paint, mid-range and free throws."
-        }
-      >
+      <HubSection title="SCORING MIX">
         <ScoringMix rows={rows} lang={lang} onSelectTeam={onSelectTeam} />
       </HubSection>
 
