@@ -390,13 +390,16 @@ export function HubRow({
 export function HubCellHeader({
   labels,
   caption,
+  framed,
 }: {
   labels: readonly string[];
   /** 列全体の単位（例: 平均得点） */
   caption?: string;
+  /** 下の行が `framed` のとき、枠の内側の数値列に揃える */
+  framed?: boolean;
 }) {
   return (
-    <View style={styles.cellHeader}>
+    <View style={[styles.cellHeader, framed ? styles.cellHeaderFramed : null]}>
       {caption ? <Text style={styles.cellCaption}>{caption}</Text> : null}
       <View style={styles.cells}>
         {labels.map((l, i) => (
@@ -782,6 +785,11 @@ const styles = StyleSheet.create({
     paddingBottom: 2,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: "rgba(0,245,255,0.22)",
+  },
+  cellHeaderFramed: {
+    paddingHorizontal: 9,
+    borderBottomWidth: 0,
+    marginBottom: 4,
   },
   cellCaption: {
     fontFamily: METRIC_FONT,

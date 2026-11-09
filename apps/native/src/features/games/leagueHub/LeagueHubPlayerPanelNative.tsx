@@ -673,6 +673,7 @@ export default function LeagueHubPlayerPanelNative({ hub, lang, section, onSelec
                 <HubCellHeader
                   labels={awardCellLabels(award, ja)}
                   caption={awardCellCaption(award, ja)}
+                  framed
                 />
               ) : null}
               {rows.length === 0
@@ -686,6 +687,7 @@ export default function LeagueHubPlayerPanelNative({ hub, lang, section, onSelec
                       name={r.name}
                       {...awardRowText(award, r, ja)}
                       onPress={() => onSelectPlayer(r.playerId)}
+                      framed
                     />
                   ))}
               <CaptureFootnote text={AWARD_FOOTNOTE[award][ja ? "ja" : "en"]} />
