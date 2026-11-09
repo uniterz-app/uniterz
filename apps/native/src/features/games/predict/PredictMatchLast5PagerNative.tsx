@@ -152,6 +152,8 @@ export default function PredictMatchLast5PagerNative({
   awayAccent,
   apiBaseUrl,
   h2hSource,
+  homeName,
+  awayName,
   children,
 }: {
   homeTeamId: string;
@@ -161,6 +163,9 @@ export default function PredictMatchLast5PagerNative({
   apiBaseUrl: string | null;
   /** H2H タブと同じ元データ（この試合と読み込み済みの試合） */
   h2hSource?: { subject: NativeGameRow; peers: ReadonlyArray<NativeGameRow> } | null;
+  /** h2hSource が無いとき（試合一覧から開くリザルト詳細）に静的 H2H pack を引く名前 */
+  homeName?: string;
+  awayName?: string;
   /** 1 ページ目（今の両チーム表示） */
   children: ReactNode;
 }) {
@@ -175,8 +180,8 @@ export default function PredictMatchLast5PagerNative({
     const fromPack = resolveStaticNbaH2hRows(
       homeTeamId,
       awayTeamId,
-      sideName(subject?.home),
-      sideName(subject?.away)
+      sideName(subject?.home) ?? homeName,
+      sideName(subject?.away) ?? awayName
     );
     const rows =
       fromPack.length > 0 || !h2hSource
@@ -187,7 +192,7 @@ export default function PredictMatchLast5PagerNative({
             12
           );
     return [...rows].sort((x, y) => y.startMs - x.startMs);
-  }, [homeTeamId, awayTeamId, h2hSource]);
+  }, [homeTeamId, awayTeamId, h2hSource, homeName, awayName]);
 
   return (
     <View onLayout={(e) => setW(e.nativeEvent.layout.width)}>
