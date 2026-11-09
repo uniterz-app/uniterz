@@ -413,7 +413,7 @@ export default function ProSkinScreenNative() {
           : copy.applied;
 
   const goGetPro = useCallback(() => {
-    openProSubscribeNative();
+    openProSubscribeNative("pro_skin");
   }, [navigation]);
 
   const closeOverlay = useCallback(() => {

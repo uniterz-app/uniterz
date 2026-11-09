@@ -61,7 +61,7 @@ function openNbaAskDestination(navigation: AskNav, id: NbaAskDestinationId) {
       navigation.navigate("RankingsTab", { screen: "RankingsHome" });
       return;
     case "pro":
-      openProSubscribeNative();
+      openProSubscribeNative("ask");
       return;
     case "notifications":
       navigation.navigate("ProfileTab", { screen: "NotificationSettings" });
@@ -337,7 +337,7 @@ export default function NbaAskScreenNative() {
               <View style={styles.proNudge}>
                 <Text style={styles.proNudgeText}>{copy.statsUsedUp}</Text>
                 <Pressable
-                  onPress={openProSubscribeNative}
+                  onPress={() => openProSubscribeNative("ask")}
                   accessibilityRole="button"
                   style={({ pressed }) => [styles.proBtn, pressed && styles.chipPressed]}
                 >

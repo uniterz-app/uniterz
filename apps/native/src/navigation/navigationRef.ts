@@ -1,10 +1,16 @@
 import { createNavigationContainerRef } from "@react-navigation/native";
 import type { RootStackParamList } from "./types";
+import { setProSubscribeSourceNative } from "../features/billing/proFunnelNative";
+import {
+  isProFunnelSource,
+  type ProFunnelSource,
+} from "../../../../lib/billing/proFunnelEvents";
 
 export const navigationRef = createNavigationContainerRef<RootStackParamList>();
 
 /** Web `/mobile/pro/subscribe` 相当。タブを切り替えずモーダルで開く */
-export function openProSubscribeNative(): void {
+export function openProSubscribeNative(source?: ProFunnelSource): void {
+  if (isProFunnelSource(source)) setProSubscribeSourceNative(source);
   runWhenNavigationReady(() => navigationRef.navigate("ProSubscribeModal"));
 }
 

@@ -240,7 +240,7 @@ export default function UniterzDailyScoreLeadersPanelNative({
         >
           <RankingsProLeagueTeaserNative
             language={lang}
-            onPressSubscribe={openProSubscribeNative}
+            onPressSubscribe={() => openProSubscribeNative("pro_league")}
             onBackToPickUp={() => {
               setDivision("standard");
               expand();
