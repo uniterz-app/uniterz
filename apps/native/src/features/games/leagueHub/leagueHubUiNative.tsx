@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { TEAM_SHORT } from "../../../../../../lib/team-short";
 import { getTeamAbbrBadgeColor } from "../../../../../../lib/team-colors";
 import type { LeagueHubAxisFormat } from "../../../../../../lib/nba/leagueHub/leagueHubScatterPresets";
@@ -91,6 +91,16 @@ export function HubSection({
           </View>
         ) : null}
       </View>
+      {showHint ? (
+        <Modal
+          transparent
+          animationType="none"
+          statusBarTranslucent
+          onRequestClose={() => setHintOpen(false)}
+        >
+          <View style={StyleSheet.absoluteFill} onTouchStart={() => setHintOpen(false)} />
+        </Modal>
+      ) : null}
     </View>
   );
 }
