@@ -13,6 +13,7 @@ import {
   runAfterTabTransition,
 } from "../../../navigation/tabTransitionLockNative";
 import { openProSubscribeNative } from "../../../navigation/navigationRef";
+import { trackProFunnelNative } from "../../billing/proFunnelNative";
 import ProfileProSkinUnlockOverlayNative from "./ProfileProSkinUnlockOverlayNative";
 import {
   dismissMeProSkinNoticesNative,
@@ -103,6 +104,7 @@ export default function ProSkinUnlockLaunchHostNative() {
     waitingRef.current = null;
     shownRef.current = true;
     setActive(next);
+    if (next.locked) trackProFunnelNative("skin_modal_shown");
   }, []);
 
   const check = useCallback(async () => {
@@ -204,8 +206,9 @@ export default function ProSkinUnlockLaunchHostNative() {
       ownerCounts={active.ownerCounts}
       onDismiss={dismiss}
       onUpgrade={() => {
+        trackProFunnelNative("skin_modal_tap");
         // モーダルが閉じ切る前に次の画面を重ねると iOS で表示されない
-        setTimeout(() => openProSubscribeNative(), 400);
+        setTimeout(() => openProSubscribeNative("skin_modal"), 400);
       }}
     />
   );

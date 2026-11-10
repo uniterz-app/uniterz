@@ -11,6 +11,8 @@ import Animated, {
 } from "react-native-reanimated";
 import type { ResolvedBadgeNative } from "./useNativeProfileBadges";
 import VelvetTuftFieldNative from "./VelvetTuftFieldNative";
+import MonthlyBadgeShowcaseNative from "./MonthlyBadgeShowcaseNative";
+import { parseMonthlyRankingBadgeId } from "../../../../../lib/badges/monthlyRankingBadge";
 import {
   badgeParticipantLabel,
   formatBadgeParticipantCount,
@@ -84,6 +86,7 @@ export default function ProfileBadgeDetailModal({
 
   const copy = resolveBadgeCopy(badge, lang);
   const participantCount = readBadgeParticipantCount(badge);
+  const monthlyRef = parseMonthlyRankingBadgeId(badge.id);
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -95,7 +98,19 @@ export default function ProfileBadgeDetailModal({
 
           <View style={styles.heroStage}>
             <VelvetTuftFieldNative contained />
-            {badge.icon ? <BadgeHeroNative icon={badge.icon} /> : null}
+            {monthlyRef ? (
+              <>
+                <MonthlyBadgeShowcaseNative
+                  badgeRef={monthlyRef}
+                  record={badge.monthlyRecord}
+                  size={260}
+                  active={visible}
+                />
+                <Text style={styles.flipHint}>{ui.flipHint}</Text>
+              </>
+            ) : badge.icon ? (
+              <BadgeHeroNative icon={badge.icon} />
+            ) : null}
           </View>
 
           <View style={styles.copy}>
@@ -200,6 +215,15 @@ const styles = StyleSheet.create({
   icon: {
     width: 140,
     height: 140,
+  },
+  flipHint: {
+    marginTop: 4,
+    fontFamily: MONO,
+    fontSize: 8,
+    letterSpacing: 1.4,
+    textTransform: "uppercase",
+    color: "rgba(244,224,176,0.4)",
+    zIndex: 1,
   },
   kicker: {
     fontFamily: MONO,

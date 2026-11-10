@@ -46,7 +46,7 @@ export default function ProLeagueUpsellModalNative({
   const handleSeePro = useCallback(() => {
     onClose();
     // モーダルが閉じ切る前に次の画面を重ねると iOS で表示されない
-    setTimeout(() => openProSubscribeNative(), 400);
+    setTimeout(() => openProSubscribeNative("pro_league"), 400);
   }, [onClose]);
 
   return (

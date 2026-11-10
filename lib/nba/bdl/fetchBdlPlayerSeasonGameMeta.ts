@@ -13,6 +13,7 @@ import {
   appTeamIdFromBdlAbbreviation,
   rememberBdlTeamId,
 } from "@/lib/nba/bdl/bdlNbaTeamIdMap";
+import type { NbaPlayerCareerSeasonTotals } from "@/lib/predict/nbaPlayerDetailPreviewMocks";
 
 export type BdlPlayerSeasonGameMeta = {
   teamId: string | null;
@@ -20,10 +21,16 @@ export type BdlPlayerSeasonGameMeta = {
   /** null = 推定不能（UI は "—"） */
   gamesStarted: number | null;
   gamesLogged: number;
+  /** 出場試合の合計（season_type=regular は NBA カップ決勝・プレーインを含まない） */
+  totals: NbaPlayerCareerSeasonTotals;
 };
 
 type BdlStatRow = {
   min?: string | number | null;
+  pts?: number | null;
+  reb?: number | null;
+  ast?: number | null;
+  fg3m?: number | null;
   player?: { id?: number } | null;
   team?: {
     id?: number;
@@ -45,6 +52,19 @@ function parseMinutes(raw: string | number | null | undefined): number {
   }
   const n = Number(s);
   return Number.isFinite(n) ? n : 0;
+}
+
+export function sumBdlStatTotals(
+  playedRows: ReadonlyArray<Pick<BdlStatRow, "pts" | "reb" | "ast" | "fg3m">>
+): NbaPlayerCareerSeasonTotals {
+  const t: NbaPlayerCareerSeasonTotals = { pts: 0, reb: 0, ast: 0, fg3m: 0 };
+  for (const r of playedRows) {
+    t.pts += r.pts ?? 0;
+    t.reb += r.reb ?? 0;
+    t.ast += r.ast ?? 0;
+    t.fg3m += r.fg3m ?? 0;
+  }
+  return t;
 }
 
 async function fetchPlayerSeasonStatRows(input: {
@@ -202,5 +222,6 @@ export async function fetchBdlPlayerSeasonGameMeta(input: {
     teamAbbr,
     gamesStarted,
     gamesLogged: played.length,
+    totals: sumBdlStatTotals(played),
   };
 }

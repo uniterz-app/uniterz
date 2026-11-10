@@ -1,6 +1,7 @@
 /**
  * Free 向け INSIGHT — ピックアップ試合の PREVIEW 第 1 段落だけ見せ、続きは Pro（無料トライアル）へ。
  */
+import { useEffect } from "react";
 import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { L, resolveLocalizedLang } from "../../../../../../lib/i18n/localize";
@@ -14,6 +15,7 @@ import { OXANIUM_600, OXANIUM_800, JP_600 } from "../../profile/reports/reportTh
 import { CYBER_TAB_CYAN } from "../../../ui/cyberSideMenuNative";
 import { MATCH_CARD_TEAM_NAME_FONT } from "../matchCardTypography";
 import type { GamesLanguage } from "../gamesI18n";
+import { trackProFunnelNative } from "../../billing/proFunnelNative";
 
 const PREVIEW_ACCENT = "rgba(232,197,110,0.95)";
 /** 続きがあることだけを見せるダミー行（本文はサーバーから来ない） */
@@ -46,6 +48,10 @@ export default function PredictProInsightTeaserPanelNative({
   const homeNick = teamNick(teaser.homeTeamId, homeTeamName).toUpperCase();
   const awayNick = teamNick(teaser.awayTeamId, awayTeamName).toUpperCase();
   const androidLayer = Platform.OS === "android" ? { opacity: 0.999 } : null;
+
+  useEffect(() => {
+    trackProFunnelNative("insight_teaser_shown", undefined, { oncePerDay: true });
+  }, []);
 
   return (
     <View style={styles.shell}>

@@ -28,6 +28,7 @@ import {
 } from "./iapProductIds";
 import { auth } from "../../lib/firebase";
 import { invalidateProfileUserDocNative } from "../profile/profileUserDocCacheNative";
+import { trackProPurchaseNative } from "./proFunnelNative";
 
 const API_BASE = process.env.EXPO_PUBLIC_UNITERZ_API_BASE_URL?.replace(/\/$/, "") ?? "";
 
@@ -225,6 +226,8 @@ export function useNativeIap() {
         return false;
       }
       setPurchasing(true);
+      const trialTap = isSubscriptionPlan(plan) && opts?.trial === true;
+      trackProPurchaseNative("purchase_tap", plan, trialTap);
       try {
         const sku = productIdForPlan(plan);
         let offerToken: string | null = null;
@@ -242,7 +245,7 @@ export function useNativeIap() {
             return false;
           }
         }
-        return await new Promise<boolean>((resolve) => {
+        const ok = await new Promise<boolean>((resolve) => {
           pendingResolveRef.current = resolve;
           const req =
             Platform.OS === "android"
@@ -266,6 +269,8 @@ export function useNativeIap() {
               resolve(false);
             });
         });
+        if (ok) trackProPurchaseNative("purchase_done", plan, trialTap);
+        return ok;
       } catch {
         setPurchasing(false);
         cyberAlert("購入エラー", "購入処理に失敗しました。");

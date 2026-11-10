@@ -26,6 +26,11 @@ import { useNbaMatchupTeamStats } from "../../../../../../lib/nba/predict/useNba
 import { useNbaMatchupProBrief } from "../../../../../../lib/nba/predict/useNbaMatchupProBrief";
 import { useNbaMatchupInsightTeaser } from "../../../../../../lib/nba/predict/useNbaMatchupInsightTeaser";
 import PredictProInsightTeaserPanelNative from "./PredictProInsightTeaserPanelNative";
+import {
+  setProSubscribeSourceNative,
+  trackProFunnelNative,
+} from "../../billing/proFunnelNative";
+import type { ProFunnelSource } from "../../../../../../lib/billing/proFunnelEvents";
 import { injuryStatusByPlayerId } from "../../../../../../lib/predict/nbaInjuryReport";
 import type { GamesLanguage } from "../gamesI18n";
 import { getGamesTexts } from "../gamesI18n";
@@ -124,6 +129,9 @@ export default function NbaPredictToolsTabsNative({
     () => new Set<NbaPredictToolsTab>(["injuries", "stats", "roster"])
   );
   const selectTab = (next: NbaPredictToolsTab) => {
+    if (next === "insight" && tab !== "insight" && gameId) {
+      trackProFunnelNative("insight_open", { gameId, pro: isPro });
+    }
     setTab((cur) => (cur === next ? null : next));
     setVisited((cur) => (cur.has(next) ? cur : new Set(cur).add(next)));
   };
@@ -198,12 +206,18 @@ export default function NbaPredictToolsTabsNative({
     []
   );
 
-  const openProSubscribe = () => {
+  const openProSubscribe = (source: ProFunnelSource = "insight") => {
+    setProSubscribeSourceNative(source);
     if (onOpenProSubscribe) {
       onOpenProSubscribe();
       return;
     }
     openProSubscribeNative();
+  };
+
+  const openProSubscribeFromTeaser = () => {
+    trackProFunnelNative("insight_teaser_tap");
+    openProSubscribe("insight_teaser");
   };
 
   return (
@@ -281,7 +295,7 @@ export default function NbaPredictToolsTabsNative({
                   language={language}
                   homeTeamName={homeTeamName}
                   awayTeamName={awayTeamName}
-                  onPressUpgrade={openProSubscribe}
+                  onPressUpgrade={openProSubscribeFromTeaser}
                 />
               ) : !isPro && teaserLoading ? (
                 <LoadingPanel label={loadingLabel} />
@@ -294,7 +308,7 @@ export default function NbaPredictToolsTabsNative({
                   homeTeamName={homeTeamName}
                   awayTeamName={awayTeamName}
                   locked
-                  onPressUpgrade={openProSubscribe}
+                  onPressUpgrade={() => openProSubscribe()}
                 />
               ) : liveNarrative ? (
                 <PredictProInsightNarrativePanelNative

@@ -679,6 +679,15 @@ function ProfileStackScreen() {
             }
           />
         ) : null}
+        {__DEV__ ? (
+          <ProfileStack.Screen
+            name="MonthlyBadgePreview"
+            getComponent={() =>
+              require("../features/profile/screens/ProfileStackWrappers")
+                .MonthlyBadgePreviewScreenWrapper
+            }
+          />
+        ) : null}
         <ProfileStack.Screen
           name="ProSuccess"
           getComponent={() =>

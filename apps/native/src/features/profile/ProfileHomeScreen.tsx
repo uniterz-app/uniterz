@@ -2020,6 +2020,8 @@ export default function ProfileHomeScreen({
           navigation.navigate("MatchupTeamStatsPreview");
         else if (page === "rankingCommentDesignPreview" && __DEV__)
           navigation.navigate("RankingCommentDesignPreview");
+        else if (page === "monthlyBadgePreview" && __DEV__)
+          navigation.navigate("MonthlyBadgePreview");
       }}
     />
     <ProfileBadgeDetailModal

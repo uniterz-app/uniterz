@@ -295,7 +295,7 @@ export default function NbaFavoriteStarButtonNative(
           onReplace={(id) => void onReplace(id)}
           onUpgrade={() => {
             setLimitOpen(false);
-            setTimeout(() => openProSubscribeNative(), MODAL_HANDOFF_MS);
+            setTimeout(() => openProSubscribeNative("favorite"), MODAL_HANDOFF_MS);
           }}
         />
       ) : null}

@@ -3,6 +3,7 @@
  * Firestore に titleEn / descriptionEn があれば優先。無ければ JA 文言をパターン翻訳。
  */
 import { normalizeLanguage } from "@/lib/i18n/language";
+import { monthlyBadgeCopy, parseMonthlyRankingBadgeId } from "./monthlyRankingBadge";
 import {
   translateBadgeDescriptionJaToLang,
   translateBadgeTitleJaToLang,
@@ -58,6 +59,9 @@ export function resolveBadgeCopy(
   language: BadgeCopyLang | string = "ja"
 ): ResolvedBadgeCopy {
   const lang = resolveBadgeLang(language);
+  const monthly = badge.id ? parseMonthlyRankingBadgeId(badge.id) : null;
+  if (monthly) return monthlyBadgeCopy(monthly, lang);
+
   const titleJa = String(badge.title ?? "").trim();
   const descJa = String(badge.description ?? "").trim();
   const fallbackTitle = titleJa || String(badge.id ?? "Badge");

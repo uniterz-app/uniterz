@@ -30,6 +30,20 @@ import {
   type NbaLeagueHubDoc,
 } from "@/lib/nba/leagueHub/leagueHubTypes";
 import type { NbaShotAreaCounts, NbaShotAreaId } from "@/lib/nba/shotCharts/shotChartTypes";
+import {
+  buildLeagueHubTeamStyle,
+  sumBenchPoints,
+  type LeagueHubRosterTeamPlayer,
+} from "@/lib/nba/leagueHub/buildLeagueHubTeamStyle";
+import {
+  buildLeagueHubMilestones,
+  buildLeagueHubPlayerSplits,
+  buildLeagueHubSchedules,
+  buildLeagueHubTeamPicks,
+  buildLeagueHubValue,
+  type LeagueHubSeasonGame,
+} from "@/lib/nba/leagueHub/buildLeagueHubExtras";
+import type { LeagueHubCareerBase } from "@/lib/nba/leagueHub/leagueHubTypes";
 
 export type LeagueHubRosterEntry = {
   name: string;
@@ -40,6 +54,8 @@ export type LeagueHubRosterEntry = {
   draftYear: number | null;
   draftRound: number | null;
   draftNumber: number | null;
+  /** インチ。古い呼び出し元は渡さない */
+  heightIn?: number | null;
 };
 
 export type LeagueHubMetricsEntry = {
@@ -61,7 +77,12 @@ export type LeagueHubStandingsEntry = {
 export type LeagueHubTeamLogEntry = {
   vsOver500: LeagueHubRecord | null;
   b2b: LeagueHubRecord | null;
+  threeInFour?: LeagueHubRecord | null;
+  vsEast?: LeagueHubRecord | null;
+  vsWest?: LeagueHubRecord | null;
   posDef: LeagueHubPositionDefense | null;
+  /** 1 試合平均得点（splits のホーム / アウェーから） */
+  ppg?: number | null;
 };
 
 export type BuildNbaLeagueHubInput = {
@@ -82,6 +103,14 @@ export type BuildNbaLeagueHubInput = {
   priorSeasonMetrics?: Map<string, LeagueHubMetricsEntry> | null;
   /** BDL game id → 先発 5 人 × 2 の playerId（シックスマンの判定用） */
   starterIdsByGame?: Map<string, Set<string>> | null;
+  /** チームのキャップ総額（USD） */
+  payrollUsd?: Map<string, number> | null;
+  /** 今季のレギュラーの試合（日程の厳しさ・UNITERZ の予想） */
+  seasonGames?: LeagueHubSeasonGame[] | null;
+  /** 選手の今季年俸（USD） */
+  salaryUsd?: Map<string, number> | null;
+  /** 前季までの通算（通算の節目用） */
+  careerBase?: Map<string, LeagueHubCareerBase> | null;
   /** 既存 hub doc のラダー週次スナップショット */
   previousLadders?: Pick<NbaLeagueHubDoc, "ladderWeek" | "ladderPrev"> | null;
 };
@@ -392,6 +421,7 @@ export function buildNbaLeagueHub(input: BuildNbaLeagueHubInput): NbaLeagueHubDo
   // 18:00 JST の日次は米国東部の当日の試合前に走るため、窓は「最新の試合日から 7 日」で決める
   const topGamesFrom = todayMs - TOP_GAMES_DAYS * DAY_MS;
   const topGameCands: Array<{ day: number; game: LeagueHubTopGame }> = [];
+  const splitPlayers: Array<{ ref: LeagueHubPlayerRef; days: Array<{ g: NbaPlayerGameLog; day: number }> }> = [];
 
   for (const [playerId, { teamId, logs }] of input.gameLogs) {
     const ref = refOf(playerId, teamId);
@@ -403,6 +433,7 @@ export function buildNbaLeagueHub(input: BuildNbaLeagueHubInput): NbaLeagueHubDo
     if (dated.length === 0) continue;
     const newest = dated.map((x) => x.g);
     const active = todayMs - dated[0]!.day <= ACTIVE_WITHIN_DAYS * DAY_MS;
+    splitPlayers.push({ ref, days: dated });
 
     for (const { g } of dated) {
       for (const stat of LEAGUE_HUB_HIGH_STATS) {
@@ -757,9 +788,75 @@ export function buildNbaLeagueHub(input: BuildNbaLeagueHubInput): NbaLeagueHubDo
     mip: Object.fromEntries(mip.map((r, i) => [r.playerId, i + 1])),
   };
 
+  // ── 選手の条件別・年俸と働き・通算の節目 ──
+  const playerSplits = buildLeagueHubPlayerSplits(
+    splitPlayers,
+    Math.max(4, Math.round(maxGp * 0.4))
+  );
+  const salaries = input.salaryUsd;
+  const valueMinGp = Math.max(3, Math.round(maxGp * 0.4));
+  const value = salaries
+    ? buildLeagueHubValue(
+        [...metrics.entries()].flatMap(([id, e]) => {
+          const salaryUsd = salaries.get(id);
+          const logs = logsOf(id);
+          if (!salaryUsd || e.gp < valueMinGp || (e.values.min ?? 0) < 15 || logs.length < 3) return [];
+          const ref = refOf(id, e.teamId);
+          return ref ? [{ ref, salaryUsd, gameScore: avg(logs.map(gameScore)) }] : [];
+        })
+      )
+    : null;
+  const careerBase = input.careerBase;
+  const milestones = careerBase
+    ? buildLeagueHubMilestones(
+        [...careerBase].flatMap(([id, base]) => {
+          const entry = input.gameLogs.get(id);
+          const ref = entry ? refOf(id, entry.teamId) : null;
+          return ref && entry ? [{ ref, base, logs: entry.logs }] : [];
+        })
+      )
+    : null;
+
   // ── チーム ──
+  const winPctByTeam = new Map(
+    input.standings
+      .filter((s) => s.wins + s.losses > 0)
+      .map((s) => [s.teamId, s.wins / (s.wins + s.losses)])
+  );
+  const seasonGames = input.seasonGames ?? null;
+  const schedules = seasonGames ? buildLeagueHubSchedules(seasonGames, winPctByTeam) : null;
+  const picks = seasonGames ? buildLeagueHubTeamPicks(seasonGames) : null;
+  const benchPts = sumBenchPoints(input.gameLogs, input.starterIdsByGame);
+  const rosterTeams = new Map<string, LeagueHubRosterTeamPlayer[]>();
+  for (const [id, e] of input.metrics) {
+    if (!e.teamId || e.gp <= 0) continue;
+    const r = input.roster.get(id);
+    const list = rosterTeams.get(e.teamId) ?? [];
+    list.push({
+      gp: e.gp,
+      mpg: e.values.min ?? 0,
+      ppg: e.values.pts ?? 0,
+      heightIn: r?.heightIn ?? null,
+      draftYear: r?.draftYear ?? null,
+    });
+    rosterTeams.set(e.teamId, list);
+  }
   const teams: LeagueHubTeamRow[] = input.standings.map((s) => {
     const log = input.teamLogs.get(s.teamId);
+    const bench = benchPts.get(s.teamId);
+    const m = buildLeagueHubTeamStyle(
+      {
+        teamId: s.teamId,
+        wins: s.wins,
+        losses: s.losses,
+        teamPpg: log?.ppg ?? null,
+        roster: rosterTeams.get(s.teamId) ?? [],
+        payrollUsd: input.payrollUsd?.get(s.teamId) ?? null,
+        benchPts: bench?.bench ?? 0,
+        starterPts: bench?.starter ?? 0,
+      },
+      startYear
+    );
     return {
       teamId: s.teamId,
       conference: nbaConferenceForTeam(s.teamId),
@@ -772,7 +869,13 @@ export function buildNbaLeagueHub(input: BuildNbaLeagueHubInput): NbaLeagueHubDo
       vsOver500: log?.vsOver500 ?? null,
       b2b: log?.b2b ?? null,
       close: input.closeRecords.get(s.teamId) ?? null,
+      threeInFour: log?.threeInFour ?? null,
+      vsEast: log?.vsEast ?? null,
+      vsWest: log?.vsWest ?? null,
       posDef: log?.posDef ?? null,
+      schedule: schedules?.get(s.teamId) ?? null,
+      picks: picks?.get(s.teamId) ?? null,
+      m,
     };
   });
 
@@ -798,6 +901,9 @@ export function buildNbaLeagueHub(input: BuildNbaLeagueHubInput): NbaLeagueHubDo
     sixth: withPrev(sixth, ladderPrev?.sixth),
     mip: withPrev(mip, ladderPrev?.mip),
     teams,
+    playerSplits,
+    value,
+    milestones,
     ladderWeek,
     ladderPrev,
   };

@@ -31,6 +31,7 @@ import ProCyberBadgeNative from "../kinetik/ProCyberBadgeNative";
 import ProfileBackEdgeHandleNative from "../ProfileBackEdgeHandleNative";
 import UniterzLogoNative from "../UniterzLogoNative";
 import { useNativeIap } from "../../billing/useNativeIap";
+import { trackProSubscribeViewNative } from "../../billing/proFunnelNative";
 import { useBottomTabBarInsets } from "../../../navigation/useBottomTabBarInsets";
 import {
   PRO_SUBSCRIBE_PREVIEW_PLANS,
@@ -221,6 +222,7 @@ export default function ProSubscribePreviewNative({
   );
 
   useEffect(() => {
+    trackProSubscribeViewNative();
     return () => {
       setAppBrandShelfHidden(false);
     };

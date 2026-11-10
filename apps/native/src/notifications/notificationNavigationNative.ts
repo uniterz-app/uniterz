@@ -66,6 +66,7 @@ export function navigateFromPushNotificationData(data: PushNotificationData) {
         });
         return;
       case "unit_reward":
+      case "badge_reward":
         navigationRef.navigate("Main", {
           screen: "ProfileTab",
           params: { screen: "ProfileHome", pop: true },

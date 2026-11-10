@@ -3,7 +3,7 @@
     "name": "UNITERZ",
     "slug": "uniterz",
     "scheme": "uniterz",
-    "version": "1.0.5",
+    "version": "1.0.6",
     "runtimeVersion": {
       "policy": "appVersion"
     },
@@ -47,7 +47,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#0a1418"
+        "backgroundColor": "#031022"
       },
       "edgeToEdgeEnabled": true,
       "softwareKeyboardLayoutMode": "resize",

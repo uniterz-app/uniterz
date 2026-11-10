@@ -1,21 +1,34 @@
-import { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Fragment, useEffect, useMemo, useState } from "react";
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 import { getNbaTeamNicknameById } from "../../../../../../lib/nba-team-names";
 import { useLeagueTeamStatsBundle } from "../../../../../../lib/nba/useLeagueTeamStatsBundle";
 import { CURRENT_NBA_SEASON_KEY } from "../../../../../../lib/rankings/nbaSeason";
 import type { NbaLeagueTeamStatRow } from "../../../../../../lib/predict/nbaLeagueTeamStatsMocks";
 import {
   LEAGUE_HUB_PLAY_TYPES,
+  LEAGUE_HUB_TEAM_ACE,
+  LEAGUE_HUB_TEAM_AGE,
+  LEAGUE_HUB_TEAM_ATTACK,
+  LEAGUE_HUB_TEAM_BENCH,
   LEAGUE_HUB_TEAM_CLUTCH,
+  LEAGUE_HUB_TEAM_DEPTH,
   LEAGUE_HUB_TEAM_HUSTLE,
+  LEAGUE_HUB_TEAM_PAYROLL,
+  LEAGUE_HUB_TEAM_REBOUND,
+  LEAGUE_HUB_TEAM_SHOT_CREATION,
+  LEAGUE_HUB_TEAM_SHOT_DEFENSE,
+  LEAGUE_HUB_TEAM_SIZE,
   LEAGUE_HUB_TEAM_STRENGTH,
+  LEAGUE_HUB_TEAM_TEMPO,
   LEAGUE_HUB_TEAM_THREE,
+  LEAGUE_HUB_TEAM_TURNOVER,
   leagueHubPlayTypePreset,
   type LeagueHubPlayTypeId,
   type LeagueHubScatterPreset,
   type LeagueHubTeamMetric,
 } from "../../../../../../lib/nba/leagueHub/leagueHubScatterPresets";
 import type {
+  LeagueHubPosDefStat,
   LeagueHubRecord,
   LeagueHubTeamRow,
   NbaLeagueHubDoc,
@@ -28,10 +41,13 @@ import {
   CyberSlantedTabNative,
 } from "../../rankings/CyberSlantedTabNative";
 import { METRIC_FONT } from "../../rankings/rankingsUiTheme";
-import { slantedTabWidth } from "./LeagueHubBranchTabsNative";
 import { CyberSlantedSegBarNative } from "../../rankings/CyberSlantedSegBarNative";
 import LeagueHubScatterNative, { type HubScatterPoint } from "./LeagueHubScatterNative";
+import { HubScrollSlantedTabs, HubSlantedTabs } from "./LeagueHubSlantedTabsNative";
 import {
+  HUB_BAD_COLOR,
+  HUB_GOOD_COLOR,
+  HubAvgDivider,
   HubEmpty,
   HubRow,
   HubSection,
@@ -46,9 +62,19 @@ import {
   type HubLang,
 } from "./leagueHubUiNative";
 
+export type LeagueHubTeamSection = "style" | "scoring" | "form" | "defense";
+
+export const LEAGUE_HUB_TEAM_SECTIONS: readonly { id: LeagueHubTeamSection; label: string }[] = [
+  { id: "style", label: "STYLE" },
+  { id: "scoring", label: "SCORING" },
+  { id: "form", label: "FORM" },
+  { id: "defense", label: "DEFENSE" },
+];
+
 type Props = {
   hub: NbaLeagueHubDoc | null;
   lang: HubLang;
+  section: LeagueHubTeamSection;
   onSelectTeam: (teamId: string) => void;
 };
 
@@ -75,9 +101,6 @@ function rankOf(
   return i >= 0 ? i + 1 : null;
 }
 
-function withTapHint(hint: string, lang: HubLang): string {
-  return `${hint}\n${lang === "ja" ? "ユニフォームをタップで数字を表示。" : "Tap a jersey for numbers."}`;
-}
 
 /** 攻撃と守備の 4 要素。invert = 低いほど良い */
 const FOUR_FACTORS: readonly {
@@ -318,7 +341,8 @@ function TeamScatterBlock({
         yAxis={preset.y}
         quadrants={preset.quadrants}
         lang={lang}
-        marker="jersey"
+        marker="square"
+        showRange
         selectedId={selected}
         onSelect={setSelected}
         watermarks={watermarks ?? preset.marks}
@@ -334,7 +358,11 @@ function TeamScatterBlock({
           fourFactors={fourFactors}
           onDetail={() => onSelectTeam(sel.teamId)}
         />
-      ) : null}
+      ) : (
+        <Text style={styles.tapHint}>
+          {lang === "ja" ? "四角をタップでチームの数字を表示" : "Tap a square to see the team"}
+        </Text>
+      )}
     </View>
   );
 }
@@ -346,11 +374,18 @@ const MIX_SEGMENTS = [
   { id: "ft", label: "FT", color: "rgba(255,255,255,0.55)" },
 ] as const;
 type MixId = (typeof MIX_SEGMENTS)[number]["id"];
+type MixSide = "scored" | "allowed";
 
-function scoringMix(r: NbaLeagueTeamStatRow): Record<MixId, number> {
-  const three = r.pctPts3 || 0;
-  const paint = r.pctPtsPaint || 0;
-  const ft = r.pctPtsFt || 0;
+const MIX_SIDES: readonly { id: MixSide; label: string }[] = [
+  { id: "scored", label: "SCORED" },
+  { id: "allowed", label: "ALLOWED" },
+];
+
+function scoringMix(r: NbaLeagueTeamStatRow, side: MixSide): Record<MixId, number> {
+  const allowed = side === "allowed";
+  const three = (allowed ? r.oppPctPts3 : r.pctPts3) || 0;
+  const paint = (allowed ? r.oppPctPtsPaint : r.pctPtsPaint) || 0;
+  const ft = (allowed ? r.oppPctPtsFt : r.pctPtsFt) || 0;
   return { three, paint, ft, mid: Math.max(0, 1 - three - paint - ft) };
 }
 
@@ -363,20 +398,36 @@ function ScoringMix({
   lang: HubLang;
   onSelectTeam: (teamId: string) => void;
 }) {
+  const [side, setSide] = useState<MixSide>("scored");
   const [sortBy, setSortBy] = useState<MixId>("three");
   const sorted = useMemo(
     () =>
       rows
-        .filter((r) => (r.pctPts3 || 0) + (r.pctPtsPaint || 0) > 0)
-        .map((r) => ({ r, mix: scoringMix(r) }))
+        .map((r) => ({ r, mix: scoringMix(r, side) }))
+        .filter(({ mix }) => mix.three + mix.paint > 0)
         .sort((a, b) => b.mix[sortBy] - a.mix[sortBy]),
-    [rows, sortBy]
+    [rows, sortBy, side]
   );
+  /** 選んだ項目を左端に置いて、どのタブでも長さで比べられるようにする */
+  const segments = useMemo(
+    () => [...MIX_SEGMENTS].sort((a, b) => Number(b.id === sortBy) - Number(a.id === sortBy)),
+    [sortBy]
+  );
+  const avg =
+    sorted.length > 0 ? sorted.reduce((a, x) => a + x.mix[sortBy], 0) / sorted.length : 0;
+  const sortColor = MIX_SEGMENTS.find((s) => s.id === sortBy)!.color;
+  const sideTabs = <HubSlantedTabs items={MIX_SIDES} value={side} onChange={setSide} />;
   if (sorted.length === 0) {
-    return <HubEmpty text={lang === "ja" ? "まだデータがありません" : "No data yet"} />;
+    return (
+      <View>
+        {sideTabs}
+        <HubEmpty text={lang === "ja" ? "まだデータがありません" : "No data yet"} />
+      </View>
+    );
   }
   return (
     <View>
+      {sideTabs}
       <CyberSlantedTabBarNative fill>
         {MIX_SEGMENTS.map((s) => {
           const label = `BY ${s.label}`;
@@ -401,6 +452,15 @@ function ScoringMix({
           );
         })}
       </CyberSlantedTabBarNative>
+      <Text style={styles.mapHint}>
+        {side === "allowed"
+          ? lang === "ja"
+            ? "取られた点のうち 3P・ペイント・ミドル・フリースローが占める割合。上ほどそこから多く取られている。縦線はリーグ平均。"
+            : "Share of points allowed from 3s, the paint, mid-range and free throws. Higher = gives up more from there. The line is the league average."
+          : lang === "ja"
+            ? "得点のうち 3P・ペイント・ミドル・フリースローが占める割合。タブで並べ替え、縦線はリーグ平均。"
+            : "Share of points from 3s, the paint, mid-range and free throws. Tap a tab to sort; the line is the league average."}
+      </Text>
       <View style={styles.legend}>
         {MIX_SEGMENTS.map((s) => (
           <View key={s.id} style={styles.legendItem}>
@@ -408,12 +468,17 @@ function ScoringMix({
             <Text style={styles.legendText}>{s.label}</Text>
           </View>
         ))}
+        <View style={styles.legendSpacer} />
+        <Text style={[styles.legendText, { color: sortColor }]}>
+          AVG {formatHubValue(avg, "pct")}
+        </Text>
       </View>
-      {sorted.map(({ r, mix }) => (
+      {sorted.map(({ r, mix }, i) => (
         <Pressable key={r.teamId} style={styles.mixRow} onPress={() => onSelectTeam(r.teamId)}>
+          <Text style={styles.mixRank}>{i + 1}</Text>
           <Text style={styles.mixAbbr}>{teamAbbr(r.teamId)}</Text>
           <View style={styles.mixBar}>
-            {MIX_SEGMENTS.map((s) => (
+            {segments.map((s) => (
               <View
                 key={s.id}
                 style={{
@@ -423,6 +488,7 @@ function ScoringMix({
                 }}
               />
             ))}
+            <View style={[styles.mixAvg, { left: `${avg * 100}%` }]} />
           </View>
           <Text style={styles.mixValue}>{formatHubValue(mix[sortBy], "pct")}</Text>
         </Pressable>
@@ -432,85 +498,156 @@ function ScoringMix({
 }
 
 
-type StyleMode = "play" | "three" | "hustle" | "clutch";
+type StylePresetId =
+  | "strength"
+  | "clutch"
+  | "three"
+  | "attack"
+  | "shotCreation"
+  | "tempo"
+  | "shotDefense"
+  | "hustle"
+  | "rebound"
+  | "turnover"
+  | "ace"
+  | "depth"
+  | "bench"
+  | "payroll"
+  | "age"
+  | "size";
+type StyleMapId = StylePresetId | `pt-${LeagueHubPlayTypeId}`;
+type StyleGroup = {
+  id: string;
+  label: string;
+  maps: readonly { id: StyleMapId; label: string }[];
+  /** 最初に開くマップ（無ければ先頭） */
+  initial?: StyleMapId;
+};
 
-const STYLE_MODES: readonly { id: StyleMode; label: string }[] = [
-  { id: "play", label: "PLAY TYPE" },
-  { id: "three", label: "3PT" },
-  { id: "hustle", label: "HUSTLE" },
-  { id: "clutch", label: "CLUTCH" },
+const STYLE_PRESETS: Record<StylePresetId, LeagueHubScatterPreset<LeagueHubTeamMetric>> = {
+  strength: LEAGUE_HUB_TEAM_STRENGTH,
+  clutch: LEAGUE_HUB_TEAM_CLUTCH,
+  three: LEAGUE_HUB_TEAM_THREE,
+  attack: LEAGUE_HUB_TEAM_ATTACK,
+  shotCreation: LEAGUE_HUB_TEAM_SHOT_CREATION,
+  tempo: LEAGUE_HUB_TEAM_TEMPO,
+  shotDefense: LEAGUE_HUB_TEAM_SHOT_DEFENSE,
+  hustle: LEAGUE_HUB_TEAM_HUSTLE,
+  rebound: LEAGUE_HUB_TEAM_REBOUND,
+  turnover: LEAGUE_HUB_TEAM_TURNOVER,
+  ace: LEAGUE_HUB_TEAM_ACE,
+  depth: LEAGUE_HUB_TEAM_DEPTH,
+  bench: LEAGUE_HUB_TEAM_BENCH,
+  payroll: LEAGUE_HUB_TEAM_PAYROLL,
+  age: LEAGUE_HUB_TEAM_AGE,
+  size: LEAGUE_HUB_TEAM_SIZE,
+};
+
+const PLAY_STYLE_GROUPS: readonly StyleGroup[] = [
+  {
+    id: "overall",
+    label: "OVERALL",
+    maps: [
+      { id: "strength", label: "OFF × DEF" },
+      { id: "clutch", label: "CLUTCH" },
+    ],
+  },
+  {
+    id: "offense",
+    label: "OFFENSE",
+    maps: [
+      { id: "three", label: "3PT" },
+      { id: "attack", label: "PASS × DRIVE" },
+      { id: "shotCreation", label: "C&S × PULLUP" },
+      { id: "tempo", label: "TEMPO" },
+    ],
+  },
+  {
+    id: "playType",
+    label: "PLAY TYPE",
+    maps: LEAGUE_HUB_PLAY_TYPES.map((p) => ({ id: `pt-${p.id}` as const, label: p.short })),
+    initial: "pt-pnrBh",
+  },
+  {
+    id: "defense",
+    label: "DEFENSE",
+    maps: [
+      { id: "shotDefense", label: "OPP FG%" },
+      { id: "hustle", label: "HUSTLE" },
+      { id: "rebound", label: "REB" },
+      { id: "turnover", label: "TOV" },
+    ],
+  },
 ];
 
-/** プレータイプ・ハッスル・クラッチは同じジャージの散布図なので 1 枚で切り替える（背景は消さない） */
+const ROSTER_GROUPS: readonly StyleGroup[] = [
+  {
+    id: "roster",
+    label: "ROSTER",
+    maps: [
+      { id: "ace", label: "ACE" },
+      { id: "depth", label: "DEPTH" },
+      { id: "bench", label: "BENCH" },
+      { id: "payroll", label: "PAYROLL" },
+      { id: "age", label: "AGE" },
+      { id: "size", label: "SIZE" },
+    ],
+  },
+];
+
+function stylePreset(id: StyleMapId): LeagueHubScatterPreset<LeagueHubTeamMetric> {
+  return id.startsWith("pt-")
+    ? leagueHubPlayTypePreset(id.slice(3) as LeagueHubPlayTypeId)
+    : STYLE_PRESETS[id as StylePresetId];
+}
+
+/** チームの散布図はすべて同じ形なので 1 枚で切り替える（背景は消さない） */
 function StyleMaps({
+  title,
+  groups,
   rows,
   lang,
   onSelectTeam,
 }: {
+  title: string;
+  groups: readonly StyleGroup[];
   rows: NbaLeagueTeamStatRow[];
   lang: HubLang;
   onSelectTeam: (teamId: string) => void;
 }) {
-  const [mode, setMode] = useState<StyleMode>("play");
-  const [pt, setPt] = useState<LeagueHubPlayTypeId>("pnrBh");
-  const preset = useMemo(() => {
-    if (mode === "three") return LEAGUE_HUB_TEAM_THREE;
-    if (mode === "hustle") return LEAGUE_HUB_TEAM_HUSTLE;
-    if (mode === "clutch") return LEAGUE_HUB_TEAM_CLUTCH;
-    return leagueHubPlayTypePreset(pt);
-  }, [mode, pt]);
+  const [groupId, setGroupId] = useState(groups[0]!.id);
+  /** グループを行き来しても、それぞれ最後に見たマップに戻る */
+  const [mapByGroup, setMapByGroup] = useState<Record<string, StyleMapId>>(() =>
+    Object.fromEntries(groups.map((g) => [g.id, g.initial ?? g.maps[0]!.id]))
+  );
+  const group = groups.find((g) => g.id === groupId) ?? groups[0]!;
+  const mapId = mapByGroup[groupId] ?? group.maps[0]!.id;
+  const preset = useMemo(() => stylePreset(mapId), [mapId]);
+  const strength = mapId === "strength";
   return (
-    <HubSection title="PLAY STYLE" hint={withTapHint(preset.hint[lang], lang)}>
-      <SlantedTabs items={STYLE_MODES} value={mode} onChange={setMode} />
-      {mode === "play" ? (
-        <ScrollSlantedTabs
-          items={LEAGUE_HUB_PLAY_TYPES.map((p) => ({ id: p.id, label: p.short }))}
-          value={pt}
-          onChange={setPt}
+    <HubSection title={title}>
+      {groups.length > 1 ? (
+        <HubSlantedTabs
+          items={groups.map((g) => ({ id: g.id, label: g.label }))}
+          value={groupId}
+          onChange={setGroupId}
         />
       ) : null}
-      <TeamScatterBlock rows={rows} preset={preset} lang={lang} onSelectTeam={onSelectTeam} />
+      <HubScrollSlantedTabs
+        items={group.maps}
+        value={mapId}
+        onChange={(id) => setMapByGroup((prev) => ({ ...prev, [groupId]: id }))}
+      />
+      <Text style={styles.mapHint}>{preset.hint[lang]}</Text>
+      <TeamScatterBlock
+        rows={rows}
+        preset={preset}
+        lang={lang}
+        sizeBy={strength ? "pace" : undefined}
+        fourFactors={strength}
+        onSelectTeam={onSelectTeam}
+      />
     </HubSection>
-  );
-}
-
-/** 斜めタブを横スクロールで並べる（1 行に収まらない数のとき） */
-function ScrollSlantedTabs<T extends string>({
-  items,
-  value,
-  onChange,
-}: {
-  items: readonly { id: T; label: string }[];
-  value: T;
-  onChange: (id: T) => void;
-}) {
-  return (
-    <ScrollView
-      horizontal
-      nestedScrollEnabled
-      showsHorizontalScrollIndicator={false}
-      style={styles.playTypeScroll}
-      contentContainerStyle={styles.playTypeScrollContent}
-    >
-      {items.map((it) => {
-        const active = value === it.id;
-        return (
-          <View key={it.id} style={[styles.playTypeSlot, { width: slantedTabWidth(it.label) }]}>
-            <CyberSlantedTabNative
-              label={it.label}
-              active={active}
-              onPress={() => onChange(it.id)}
-              compact
-              fill
-              fontWeight="700"
-              glow="tight"
-              accessibilityRole="tab"
-              accessibilityState={{ selected: active }}
-            />
-          </View>
-        );
-      })}
-    </ScrollView>
   );
 }
 
@@ -520,10 +657,52 @@ const RECORD_MODES: readonly { id: RecordMode; label: string }[] = [
   { id: "streak", label: "STREAK" },
   { id: "close", label: "CLOSE ≤5" },
   { id: "b2b", label: "B2B" },
+  { id: "threeInFour", label: "3IN4" },
   { id: "vsOver500", label: "VS .500+" },
   { id: "home", label: "HOME" },
   { id: "away", label: "AWAY" },
+  { id: "vsEast", label: "VS EAST" },
+  { id: "vsWest", label: "VS WEST" },
 ];
+
+const RECORD_HINTS: Record<RecordMode, Record<HubLang, string>> = {
+  streak: {
+    ja: "いま続いている連勝・連敗。L10 は直近 10 試合の成績。",
+    en: "Current win and losing streaks. L10 = last 10 games.",
+  },
+  close: {
+    ja: "5 点差以内で決着した試合の勝敗。接戦に強いチームと弱いチーム。2 試合以上のチームだけ。",
+    en: "Record in games decided by 5 or fewer points. Teams with 2+ such games.",
+  },
+  b2b: {
+    ja: "連戦 2 日目（前日も試合）の勝敗。疲れに強いチームと弱いチーム。2 試合以上のチームだけ。",
+    en: "Record on the second night of back-to-backs. Teams with 2+ such games.",
+  },
+  threeInFour: {
+    ja: "4 日で 3 試合目の勝敗（B2B と重なる試合もある）。B2B よりきつい日程。2 試合以上のチームだけ。",
+    en: "Record in the third game in four nights (can overlap B2B). Teams with 2+ such games.",
+  },
+  vsEast: {
+    ja: "東カンファレンスの相手との勝敗。2 試合以上のチームだけ。",
+    en: "Record against Eastern Conference teams. Teams with 2+ such games.",
+  },
+  vsWest: {
+    ja: "西カンファレンスの相手との勝敗。2 試合以上のチームだけ。",
+    en: "Record against Western Conference teams. Teams with 2+ such games.",
+  },
+  vsOver500: {
+    ja: "勝率 5 割以上の相手との勝敗（相手の勝率は試合前の時点）。2 試合以上のチームだけ。",
+    en: "Record against .500+ teams (record before the game). Teams with 2+ such games.",
+  },
+  home: {
+    ja: "ホームでの勝敗。2 試合以上のチームだけ。",
+    en: "Home record. Teams with 2+ home games.",
+  },
+  away: {
+    ja: "アウェーでの勝敗。2 試合以上のチームだけ。",
+    en: "Road record. Teams with 2+ road games.",
+  },
+};
 
 /** 連勝・連敗と状況別の勝敗は同じ「上位 5 / 下位 5」の 2 列なので 1 つの欄で切り替える */
 function TeamRecords({
@@ -536,24 +715,161 @@ function TeamRecords({
   onSelectTeam: (teamId: string) => void;
 }) {
   const [mode, setMode] = useState<RecordMode>("streak");
+  const [showAll, setShowAll] = useState(false);
   const ja = lang === "ja";
-  const hint =
-    mode === "streak"
-      ? ja
-        ? "いま続いている連勝・連敗。L10 は直近 10 試合の成績。"
-        : "Current win and losing streaks. L10 = last 10 games."
-      : ja
-        ? "2 試合以上あるチームだけ。"
-        : "Teams with 2+ games only.";
+  const league = mode === "streak" ? null : leagueRecord(teams, mode);
+  const leaguePct = recordPct(league);
+  const leagueLabel =
+    leaguePct == null ? "" : `${ja ? "リーグ全体" : "LEAGUE"} ${formatPct(leaguePct)}`;
   return (
-    <HubSection title="FORM & SPLITS" hint={hint}>
-      <ScrollSlantedTabs items={RECORD_MODES} value={mode} onChange={setMode} />
+    <HubSection title="FORM & SPLITS">
+      <HubScrollSlantedTabs items={RECORD_MODES} value={mode} onChange={setMode} />
+      <Text style={styles.mapHint}>{RECORD_HINTS[mode][lang]}</Text>
+      {league && leaguePct != null ? (
+        <Text style={styles.avgNote}>
+          {leagueLabel}
+          <Text style={styles.avgNoteSub}>
+            {"  "}
+            {formatRecord(league)}
+            {ja ? "（全チームの合計）" : " (all teams combined)"}
+          </Text>
+        </Text>
+      ) : null}
       {mode === "streak" ? (
         <TeamForm teams={teams} lang={lang} onSelectTeam={onSelectTeam} />
       ) : (
         <Conditions cond={mode} teams={teams} lang={lang} onSelectTeam={onSelectTeam} />
       )}
+      {teams.length > 0 ? (
+        <Pressable
+          onPress={() => setShowAll((v) => !v)}
+          style={({ pressed }) => [styles.allBtn, pressed ? styles.cardPressed : null]}
+          accessibilityRole="button"
+          accessibilityState={{ expanded: showAll }}
+        >
+          <Text style={styles.allBtnText}>
+            {showAll
+              ? ja
+                ? "閉じる ▲"
+                : "CLOSE ▲"
+              : ja
+                ? `全 ${teams.length} チームを見る ▼`
+                : `ALL ${teams.length} TEAMS ▼`}
+          </Text>
+        </Pressable>
+      ) : null}
+      {showAll ? (
+        <AllTeamRecords
+          mode={mode}
+          teams={teams}
+          leaguePct={leaguePct}
+          leagueLabel={leagueLabel}
+          onSelectTeam={onSelectTeam}
+        />
+      ) : null}
     </HubSection>
+  );
+}
+
+/** 全チームの合計。接戦は両チーム分を足すと必ず 5 割になるので出さない */
+function leagueRecord(teams: LeagueHubTeamRow[], cond: ConditionId): LeagueHubRecord | null {
+  if (cond === "close") return null;
+  let wins = 0;
+  let losses = 0;
+  for (const t of teams) {
+    const r = t[cond];
+    if (!r) continue;
+    wins += r.wins;
+    losses += r.losses;
+  }
+  return wins + losses > 0 ? { wins, losses } : null;
+}
+
+function formatPct(pct: number): string {
+  return pct.toFixed(3).replace(/^0/, "");
+}
+
+function recordGames(rec: LeagueHubRecord | null | undefined): number {
+  return rec ? rec.wins + rec.losses : 0;
+}
+
+/** 勝率が同じなら試合数が多いほうを上（全勝なら多く勝ったほう・全敗なら多く負けたほうが端） */
+function compareRecords(a: LeagueHubRecord, b: LeagueHubRecord, dir: "best" | "worst"): number {
+  const pa = recordPct(a) ?? 0;
+  const pb = recordPct(b) ?? 0;
+  return (dir === "best" ? pb - pa : pa - pb) || recordGames(b) - recordGames(a);
+}
+
+/** 連勝は長い順 → 連勝・連敗なし → 連敗は短い順。同じなら L10 の良い順 */
+function streakScore(t: LeagueHubTeamRow): number {
+  if (!t.streak) return 0;
+  return t.streak.kind === "W" ? t.streak.count : -t.streak.count;
+}
+
+/** 30 チームを 1 列で上から良い順に */
+function AllTeamRecords({
+  mode,
+  teams,
+  leaguePct,
+  leagueLabel,
+  onSelectTeam,
+}: {
+  mode: RecordMode;
+  teams: LeagueHubTeamRow[];
+  leaguePct: number | null;
+  leagueLabel: string;
+  onSelectTeam: (teamId: string) => void;
+}) {
+  const rows = useMemo(() => {
+    if (mode === "streak") {
+      return [...teams]
+        .sort(
+          (a, b) =>
+            streakScore(b) - streakScore(a) ||
+            (recordPct(b.last10) ?? 0) - (recordPct(a.last10) ?? 0)
+        )
+        .map((t) => ({
+          t,
+          value: t.streak ? `${t.streak.kind}${t.streak.count}` : "—",
+          sub: `L10 ${formatRecord(t.last10)}`,
+          pct: null as number | null,
+        }));
+    }
+    const played = teams.filter((t) => recordGames(t[mode]) > 0);
+    const none = teams.filter((t) => recordGames(t[mode]) === 0);
+    return [
+      ...played
+        .sort((a, b) => compareRecords(a[mode]!, b[mode]!, "best"))
+        .map((t) => ({
+          t,
+          value: formatRecord(t[mode]),
+          sub: formatPct(recordPct(t[mode]) ?? 0),
+          pct: recordPct(t[mode]),
+        })),
+      ...none.map((t) => ({ t, value: "—", sub: "", pct: null })),
+    ];
+  }, [mode, teams]);
+  /** 勝率がリーグ全体を下回る最初の行の上に線を引く */
+  const splitAt =
+    leaguePct == null ? -1 : rows.findIndex((r) => r.pct == null || r.pct < leaguePct);
+  return (
+    <View style={styles.allList}>
+      {rows.map(({ t, value, sub }, i) => (
+        <Fragment key={t.teamId}>
+          {i === splitAt && i > 0 ? <HubAvgDivider label={leagueLabel} /> : null}
+          <HubRow
+            rank={i + 1}
+            teamId={t.teamId}
+            name={nick(t.teamId)}
+            kind="team"
+            value={value}
+            valueSub={sub || undefined}
+            onPress={() => onSelectTeam(t.teamId)}
+            framed
+          />
+        </Fragment>
+      ))}
+    </View>
   );
 }
 
@@ -602,6 +918,13 @@ function TeamForm({
   );
 }
 
+const POS_DEF_UNIT: Record<LeagueHubPosDefStat, { ja: string; en: string }> = {
+  pts: { ja: "点", en: "PTS" },
+  reb: { ja: "リバウンド", en: "REB" },
+  ast: { ja: "アシスト", en: "AST" },
+  fg3m: { ja: "本（3P 成功）", en: "3PM" },
+};
+
 function PositionDefense({
   teams,
   lang,
@@ -612,29 +935,30 @@ function PositionDefense({
   onSelectTeam: (teamId: string) => void;
 }) {
   const [pos, setPos] = useState<"G" | "F" | "C">("G");
+  const [stat, setStat] = useState<LeagueHubPosDefStat>("pts");
+  /** asc = 取られた数が少ない順（1 位から） */
+  const [order, setOrder] = useState<"asc" | "desc">("asc");
+  const ja = lang === "ja";
+  const hasMore = teams.some((t) => t.posDef?.[pos]?.stats != null);
   const rows = teams
-    .map((t) => ({ t, cell: t.posDef?.[pos] ?? null }))
-    .filter((x): x is { t: LeagueHubTeamRow; cell: { pts: number; rank: number } } => x.cell != null)
-    .sort((a, b) => a.cell.rank - b.cell.rank);
-  if (rows.length === 0) {
-    return <HubEmpty text={lang === "ja" ? "まだデータがありません" : "No data yet"} />;
-  }
-  const list = (xs: typeof rows) =>
-    xs.map(({ t, cell }) => (
-      <HubRow
-        key={t.teamId}
-        rank={cell.rank}
-        teamId={t.teamId}
-        name={nick(t.teamId)}
-        kind="team"
-        value={cell.pts.toFixed(1)}
-        onPress={() => onSelectTeam(t.teamId)}
-        framed
-      />
-    ));
+    .map((t) => {
+      const c = t.posDef?.[pos];
+      const cell = !c ? null : stat === "pts" ? { value: c.pts, rank: c.rank } : (c.stats?.[stat] ?? null);
+      return { t, cell };
+    })
+    .filter((x): x is { t: LeagueHubTeamRow; cell: { value: number; rank: number } } => x.cell != null)
+    .sort((a, b) => (order === "asc" ? a.cell.rank - b.cell.rank : b.cell.rank - a.cell.rank));
+  /** チーム試合ログ側の leagueAvg と同じく 30 チームの単純平均 */
+  const avg = rows.length > 0 ? rows.reduce((sum, x) => sum + x.cell.value, 0) / rows.length : null;
+  const avgLabel = avg == null ? "" : `${ja ? "リーグ平均" : "LEAGUE AVG"} ${avg.toFixed(1)}`;
+  const splitAt =
+    avg == null
+      ? -1
+      : rows.findIndex(({ cell }) => (order === "asc" ? cell.value > avg : cell.value < avg));
+  const unit = POS_DEF_UNIT[stat][ja ? "ja" : "en"];
   return (
     <View>
-      <SlantedTabs
+      <HubSlantedTabs
         items={[
           { id: "G", label: "GUARDS" },
           { id: "F", label: "FORWARDS" },
@@ -643,17 +967,268 @@ function PositionDefense({
         value={pos}
         onChange={setPos}
       />
-      <HubTwoCol
-        leftTitle="STINGIEST"
-        rightTitle="LEAKIEST"
-        left={list(rows.slice(0, 5))}
-        right={list(rows.slice(-5).reverse())}
-      />
+      {hasMore ? (
+        <HubSlantedTabs
+          items={[
+            { id: "pts", label: "PTS" },
+            { id: "reb", label: "REB" },
+            { id: "ast", label: "AST" },
+            { id: "fg3m", label: "3PM" },
+          ]}
+          value={stat}
+          onChange={setStat}
+        />
+      ) : null}
+      {rows.length === 0 ? (
+        <HubEmpty text={ja ? "まだデータがありません" : "No data yet"} />
+      ) : (
+        <>
+          {avg != null ? (
+            <Text style={styles.avgNote}>
+              {avgLabel}
+              <Text style={styles.avgNoteSub}>
+                {ja
+                  ? `  ${unit} · 右下は平均との差（緑 = 平均より少ない）`
+                  : `  ${unit} · below = vs average (green = fewer)`}
+              </Text>
+            </Text>
+          ) : null}
+          <Pressable
+            onPress={() => setOrder((o) => (o === "asc" ? "desc" : "asc"))}
+            style={({ pressed }) => [styles.allBtn, pressed ? styles.cardPressed : null]}
+            accessibilityRole="button"
+          >
+            <Text style={styles.allBtnText}>
+              {order === "asc"
+                ? ja
+                  ? "取られた数が少ない順 ▲（押すと多い順）"
+                  : "FEWEST ALLOWED FIRST ▲"
+                : ja
+                  ? "取られた数が多い順 ▼（押すと少ない順）"
+                  : "MOST ALLOWED FIRST ▼"}
+            </Text>
+          </Pressable>
+          <View style={styles.allList}>
+            {rows.map(({ t, cell }, i) => {
+              const diff = avg == null ? 0 : cell.value - avg;
+              const even = Math.abs(diff) < 0.05;
+              return (
+                <Fragment key={t.teamId}>
+                  {i === splitAt && i > 0 ? <HubAvgDivider label={avgLabel} /> : null}
+                  <HubRow
+                    rank={cell.rank}
+                    teamId={t.teamId}
+                    name={nick(t.teamId)}
+                    kind="team"
+                    value={cell.value.toFixed(1)}
+                    valueSub={even ? "±0.0" : `${diff > 0 ? "+" : "−"}${Math.abs(diff).toFixed(1)}`}
+                    valueSubColor={even ? undefined : diff < 0 ? HUB_GOOD_COLOR : HUB_BAD_COLOR}
+                    onPress={() => onSelectTeam(t.teamId)}
+                    framed
+                  />
+                </Fragment>
+              );
+            })}
+          </View>
+        </>
+      )}
     </View>
   );
 }
 
-type ConditionId = "b2b" | "close" | "vsOver500" | "home" | "away";
+function signed(v: number): string {
+  return `${v > 0 ? "+" : v < 0 ? "−" : "±"}${Math.abs(v).toFixed(1)}`;
+}
+
+/** 対戦相手の今の勝率の平均（終わった試合 / 残り日程） */
+function ScheduleStrength({
+  teams,
+  lang,
+  onSelectTeam,
+}: {
+  teams: LeagueHubTeamRow[];
+  lang: HubLang;
+  onSelectTeam: (teamId: string) => void;
+}) {
+  const [mode, setMode] = useState<"played" | "remaining">("played");
+  const [showAll, setShowAll] = useState(false);
+  const ja = lang === "ja";
+  if (!teams.some((t) => t.schedule != null)) return null;
+  const played = mode === "played";
+  const rows = teams
+    .flatMap((t) => {
+      const s = t.schedule;
+      const v = s ? (played ? s.played : s.remaining) : null;
+      return s && v != null ? [{ t, v, games: played ? s.playedGames : s.remainingGames }] : [];
+    })
+    .sort((a, b) => b.v - a.v);
+  const avg = rows.length > 0 ? rows.reduce((sum, r) => sum + r.v, 0) / rows.length : null;
+  const avgLabel = avg == null ? "" : `${ja ? "リーグ平均" : "LEAGUE AVG"} ${formatPct(avg)}`;
+  const row = ({ t, v, games }: (typeof rows)[number], rank?: number) => (
+    <HubRow
+      key={t.teamId}
+      rank={rank}
+      teamId={t.teamId}
+      name={nick(t.teamId)}
+      kind="team"
+      value={formatPct(v)}
+      valueSub={played ? `${t.wins}-${t.losses}` : ja ? `残り ${games}` : `${games} left`}
+      onPress={() => onSelectTeam(t.teamId)}
+      framed
+    />
+  );
+  const splitAt = avg == null ? -1 : rows.findIndex((r) => r.v < avg);
+  return (
+    <HubSection title="SCHEDULE">
+      <HubSlantedTabs
+        items={[
+          { id: "played", label: "PLAYED" },
+          { id: "remaining", label: "REMAINING" },
+        ]}
+        value={mode}
+        onChange={setMode}
+      />
+      <Text style={styles.mapHint}>
+        {played
+          ? ja
+            ? "これまで当たった相手の、今の勝率の平均。高いほど強い相手と戦ってきた（同じ成績でも価値が違う）。"
+            : "Average current win % of opponents faced so far. Higher = tougher schedule."
+          : ja
+            ? "残り日程の相手の、今の勝率の平均。高いほどこの先がきつい。"
+            : "Average current win % of remaining opponents. Higher = tougher road ahead."}
+      </Text>
+      {rows.length === 0 ? (
+        <HubEmpty text={ja ? "まだデータがありません" : "No data yet"} />
+      ) : (
+        <>
+          <HubTwoCol
+            leftTitle={ja ? "楽" : "EASIEST"}
+            rightTitle={ja ? "厳しい" : "HARDEST"}
+            left={[...rows].reverse().slice(0, 5).map((r) => row(r))}
+            right={rows.slice(0, 5).map((r) => row(r))}
+          />
+          <Pressable
+            onPress={() => setShowAll((v) => !v)}
+            style={({ pressed }) => [styles.allBtn, pressed ? styles.cardPressed : null]}
+            accessibilityRole="button"
+            accessibilityState={{ expanded: showAll }}
+          >
+            <Text style={styles.allBtnText}>
+              {showAll
+                ? ja
+                  ? "閉じる ▲"
+                  : "CLOSE ▲"
+                : ja
+                  ? `全 ${rows.length} チームを見る（厳しい順）▼`
+                  : `ALL ${rows.length} TEAMS (HARDEST FIRST) ▼`}
+            </Text>
+          </Pressable>
+          {showAll ? (
+            <View style={styles.allList}>
+              {rows.map((r, i) => (
+                <Fragment key={r.t.teamId}>
+                  {i === splitAt && i > 0 ? <HubAvgDivider label={avgLabel} /> : null}
+                  {row(r, i + 1)}
+                </Fragment>
+              ))}
+            </View>
+          ) : null}
+        </>
+      )}
+    </HubSection>
+  );
+}
+
+/** UNITERZ ユーザーの勝敗予想（選んだ割合の合計）と実際の勝ち数 */
+function UniterzPicks({
+  teams,
+  lang,
+  onSelectTeam,
+}: {
+  teams: LeagueHubTeamRow[];
+  lang: HubLang;
+  onSelectTeam: (teamId: string) => void;
+}) {
+  const ja = lang === "ja";
+  if (!teams.some((t) => t.picks !== undefined)) return null;
+  const rows = teams.flatMap((t) =>
+    t.picks && t.picks.games >= 3 ? [{ t, p: t.picks, diff: t.picks.wins - t.picks.expectedWins }] : []
+  );
+  // 1 試合は両チームに 1 回ずつ数えている
+  const games = rows.reduce((s, r) => s + r.p.games, 0) / 2;
+  const hits = rows.reduce((s, r) => s + r.p.majorityHits, 0) / 2;
+  const list = (xs: typeof rows) =>
+    xs.length === 0 ? (
+      <HubEmpty text="—" />
+    ) : (
+      xs.map(({ t, p, diff }) => (
+        <HubRow
+          key={t.teamId}
+          teamId={t.teamId}
+          name={nick(t.teamId)}
+          kind="team"
+          value={signed(diff)}
+          valueSub={
+            ja
+              ? `予想 ${p.expectedWins.toFixed(1)} → ${p.wins} 勝`
+              : `exp ${p.expectedWins.toFixed(1)} → ${p.wins} W`
+          }
+          valueSubColor={diff > 0 ? HUB_GOOD_COLOR : HUB_BAD_COLOR}
+          onPress={() => onSelectTeam(t.teamId)}
+          framed
+        />
+      ))
+    );
+  return (
+    <HubSection title="UNITERZ PICKS">
+      <Text style={styles.mapHint}>
+        {ja
+          ? "UNITERZ のみんなの勝敗予想で、そのチームを選んだ人の割合を試合ごとに足したものが「予想の勝ち数」。実際の勝ち数との差で、みんなが低く見ている・高く見ているチームがわかります。3 試合以上のチームだけ。"
+          : "Share of UNITERZ users picking the team, summed over games = expected wins. Compared with actual wins to find under- and overrated teams. Teams with 3+ games."}
+      </Text>
+      {rows.length === 0 ? (
+        <HubEmpty text={ja ? "まだ試合が少ないです" : "Not enough games yet"} />
+      ) : (
+        <>
+          {games > 0 ? (
+            <Text style={styles.avgNote}>
+              {ja ? "多数派の的中率" : "MAJORITY PICK HIT RATE"} {Math.round((hits / games) * 100)}%
+              <Text style={styles.avgNoteSub}>
+                {ja ? `  ${games} 試合` : `  ${games} games`}
+              </Text>
+            </Text>
+          ) : null}
+          <HubTwoCol
+            leftTitle={ja ? "予想より勝つ" : "UNDERRATED"}
+            rightTitle={ja ? "予想より負ける" : "OVERRATED"}
+            left={list(
+              rows
+                .filter((r) => r.diff > 0)
+                .sort((a, b) => b.diff - a.diff)
+                .slice(0, 5)
+            )}
+            right={list(
+              rows
+                .filter((r) => r.diff < 0)
+                .sort((a, b) => a.diff - b.diff)
+                .slice(0, 5)
+            )}
+          />
+        </>
+      )}
+    </HubSection>
+  );
+}
+
+type ConditionId =
+  | "b2b"
+  | "threeInFour"
+  | "close"
+  | "vsOver500"
+  | "home"
+  | "away"
+  | "vsEast"
+  | "vsWest";
 
 function Conditions({
   cond,
@@ -676,8 +1251,8 @@ function Conditions({
   if (rows.length === 0) {
     return <HubEmpty text={lang === "ja" ? "まだ試合が少ないです" : "Not enough games yet"} />;
   }
-  const best = [...rows].sort((a, b) => b.pct - a.pct || b.rec.wins - a.rec.wins).slice(0, 5);
-  const worst = [...rows].sort((a, b) => a.pct - b.pct || b.rec.losses - a.rec.losses).slice(0, 5);
+  const best = [...rows].sort((a, b) => compareRecords(a.rec, b.rec, "best")).slice(0, 5);
+  const worst = [...rows].sort((a, b) => compareRecords(a.rec, b.rec, "worst")).slice(0, 5);
   const list = (xs: typeof rows) =>
     xs.map(({ t, rec, pct }) => (
       <HubRow
@@ -702,98 +1277,79 @@ function Conditions({
 }
 
 /** 他の切り替えと同じ斜めタブを横いっぱいに並べる */
-function SlantedTabs<T extends string>({
-  items,
-  value,
-  onChange,
-}: {
-  items: readonly { id: T; label: string }[];
-  value: T;
-  onChange: (id: T) => void;
-}) {
-  return (
-    <CyberSlantedTabBarNative fill>
-      {items.map((it) => {
-        const active = it.id === value;
-        return (
-          <CyberSlantedTabNative
-            key={it.id}
-            label={it.label}
-            active={active}
-            onPress={() => onChange(it.id)}
-            compact
-            fontWeight="700"
-            accessibilityRole="tab"
-            accessibilityState={{ selected: active }}
-          />
-        );
-      })}
-    </CyberSlantedTabBarNative>
-  );
-}
-
-export default function LeagueHubTeamPanelNative({ hub, lang, onSelectTeam }: Props) {
+export default function LeagueHubTeamPanelNative({ hub, lang, section, onSelectTeam }: Props) {
   const { bundle, loading } = useLeagueTeamStatsBundle({
     apiBaseUrl: getUniterzApiBaseUrl(),
     season: CURRENT_NBA_SEASON_KEY,
   });
   const rows = bundle.season;
   const teams = hub?.teams ?? [];
+  /** ロスターの指標は hub 側にあるのでリーグ表の行に重ねる */
+  const rosterRows = useMemo(() => {
+    const byTeam = new Map(teams.map((t) => [t.teamId, t.m]));
+    return rows.map((r) => ({ ...r, ...byTeam.get(r.teamId) }));
+  }, [rows, teams]);
 
-  if (loading && rows.length === 0) {
-    return (
-      <View style={styles.loading}>
-        <ActivityIndicator color={CYBER_TAB_CYAN} />
-      </View>
-    );
-  }
+  /** 切り替えてもマップの選択などを残すため、隠すだけでアンマウントしない */
+  const shown = (id: LeagueHubTeamSection) => (section === id ? null : styles.hidden);
+  const rowsLoading = loading && rows.length === 0;
+  const spinner = (
+    <View style={styles.loading}>
+      <ActivityIndicator color={CYBER_TAB_CYAN} />
+    </View>
+  );
 
   return (
     <View>
-      <HubSection
-        title={LEAGUE_HUB_TEAM_STRENGTH.label.en}
-        hint={`${withTapHint(LEAGUE_HUB_TEAM_STRENGTH.hint[lang], lang)}\n${
-          lang === "ja"
-            ? "選ぶと攻守の 4 要素（シュート効率 eFG%・ミスの少なさ TOV%・オフェンスリバウンド OREB%・フリースロー獲得 FTr）の順位も出る。"
-            : "Pick a team to see its four factors on both ends (eFG%, TOV%, OREB%, FTr)."
-        }`}
-      >
-        <TeamScatterBlock
-          rows={rows}
-          preset={LEAGUE_HUB_TEAM_STRENGTH}
-          lang={lang}
-          sizeBy="pace"
-          onSelectTeam={onSelectTeam}
-          bleedPastScreen
-          fourFactors
-        />
-      </HubSection>
+      <View style={shown("style")}>
+        {rowsLoading ? (
+          spinner
+        ) : (
+          <>
+            <StyleMaps
+              title="PLAY STYLE"
+              groups={PLAY_STYLE_GROUPS}
+              rows={rows}
+              lang={lang}
+              onSelectTeam={onSelectTeam}
+            />
+            <StyleMaps
+              title="ROSTER"
+              groups={ROSTER_GROUPS}
+              rows={rosterRows}
+              lang={lang}
+              onSelectTeam={onSelectTeam}
+            />
+          </>
+        )}
+      </View>
 
-      <HubSection
-        title="SCORING MIX"
-        hint={
-          lang === "ja"
-            ? "得点のうち 3P・ペイント・ミドル・フリースローが占める割合。"
-            : "Share of points from 3s, the paint, mid-range and free throws."
-        }
-      >
-        <ScoringMix rows={rows} lang={lang} onSelectTeam={onSelectTeam} />
-      </HubSection>
+      <View style={shown("scoring")}>
+        {rowsLoading ? (
+          spinner
+        ) : (
+          <HubSection title="SCORING MIX">
+            <ScoringMix rows={rows} lang={lang} onSelectTeam={onSelectTeam} />
+          </HubSection>
+        )}
+      </View>
 
-      <StyleMaps rows={rows} lang={lang} onSelectTeam={onSelectTeam} />
+      <View style={shown("form")}>
+        <TeamRecords teams={teams} lang={lang} onSelectTeam={onSelectTeam} />
+        <ScheduleStrength teams={teams} lang={lang} onSelectTeam={onSelectTeam} />
+        <UniterzPicks teams={teams} lang={lang} onSelectTeam={onSelectTeam} />
+      </View>
 
-      <TeamRecords teams={teams} lang={lang} onSelectTeam={onSelectTeam} />
-
-      <HubSection
-        title="POINTS ALLOWED BY POSITION"
-        hint={
-          lang === "ja"
-            ? "相手のガード・フォワード・センターに 1 試合で取られた得点。"
-            : "Points per game allowed to opposing guards, forwards and centers."
-        }
-      >
-        <PositionDefense teams={teams} lang={lang} onSelectTeam={onSelectTeam} />
-      </HubSection>
+      <View style={shown("defense")}>
+        <HubSection title="ALLOWED BY POSITION">
+          <Text style={styles.mapHint}>
+            {lang === "ja"
+              ? "相手のガード・フォワード・センターに 1 試合で取られた得点・リバウンド・アシスト・3P。順位は少ないほど上。"
+              : "Per game allowed to opposing guards, forwards and centers. Rank 1 = fewest."}
+          </Text>
+          <PositionDefense teams={teams} lang={lang} onSelectTeam={onSelectTeam} />
+        </HubSection>
+      </View>
     </View>
   );
 }
@@ -802,6 +1358,51 @@ const styles = StyleSheet.create({
   loading: {
     paddingVertical: 40,
     alignItems: "center",
+  },
+  hidden: { display: "none" },
+  allBtn: {
+    marginTop: 10,
+    paddingVertical: 9,
+    borderWidth: 1,
+    borderColor: "rgba(0,245,255,0.45)",
+    alignItems: "center",
+  },
+  allBtnText: {
+    fontFamily: METRIC_FONT,
+    color: CYBER_TAB_CYAN,
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 1,
+  },
+  allList: {
+    marginTop: 10,
+  },
+  avgNote: {
+    fontFamily: METRIC_FONT,
+    color: CYBER_TAB_CYAN,
+    fontSize: 12,
+    fontWeight: "800",
+    letterSpacing: 0.6,
+    marginBottom: 4,
+  },
+  avgNoteSub: {
+    color: "rgba(255,255,255,0.5)",
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 0,
+  },
+  mapHint: {
+    color: "rgba(255,255,255,0.55)",
+    fontSize: 11,
+    lineHeight: 16,
+    marginTop: 6,
+    marginBottom: 6,
+  },
+  tapHint: {
+    color: "rgba(255,255,255,0.35)",
+    fontSize: 10,
+    textAlign: "center",
+    marginTop: 6,
   },
   card: {
     marginTop: 8,
@@ -957,18 +1558,8 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: "800",
   },
-  playTypeScroll: {
-    height: 54,
-    marginHorizontal: -12,
-  },
-  playTypeScrollContent: {
-    gap: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    alignItems: "center",
-  },
-  playTypeSlot: {
-    height: 30,
+  legendSpacer: {
+    flex: 1,
   },
   legend: {
     flexDirection: "row",
@@ -996,6 +1587,22 @@ const styles = StyleSheet.create({
     gap: 8,
     height: 18,
     marginBottom: 3,
+  },
+  mixRank: {
+    fontFamily: METRIC_FONT,
+    color: "rgba(255,255,255,0.4)",
+    fontSize: 9,
+    fontWeight: "700",
+    width: 16,
+    textAlign: "right",
+  },
+  mixAvg: {
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    width: 2,
+    marginLeft: -1,
+    backgroundColor: "#fff",
   },
   mixAbbr: {
     fontFamily: METRIC_FONT,

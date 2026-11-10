@@ -24,6 +24,9 @@ export type NbaLeagueTeamAdvancedMetric =
   | "pctPtsFt"
   | "pctPtsFb"
   | "pctPtsTov"
+  | "oppPctPts3"
+  | "oppPctPtsPaint"
+  | "oppPctPtsFt"
   | "pts3"
   | "ptsPaint"
   | "ptsFt"
@@ -267,6 +270,60 @@ export const NBA_LEAGUE_TEAM_ADVANCED_METRIC_DEFS: readonly NbaLeagueTeamAdvance
         es: "Porcentaje de puntos desde la línea.",
         pt: "Percentual de pontos em lances livres.",
         fr: "Part des points venant des lancers francs.",
+      },
+      false
+    ),
+    def(
+      "oppPctPts3",
+      "o3PT%",
+      "Opp % PTS from 3",
+      "scoring",
+      false,
+      "pct",
+      {
+        ja: "失点のうち 3P の割合。",
+        en: "Share of points allowed from threes.",
+        ko: "실점 중 3점 비중.",
+        zh: "失分中三分占比。",
+        es: "Porcentaje de puntos permitidos desde el triple.",
+        pt: "Percentual de pontos sofridos do 3.",
+        fr: "Part des points encaissés à 3 pts.",
+      },
+      false
+    ),
+    def(
+      "oppPctPtsPaint",
+      "oPAINT%",
+      "Opp % PTS in paint",
+      "scoring",
+      false,
+      "pct",
+      {
+        ja: "失点のうちペイントの割合。",
+        en: "Share of points allowed in the paint.",
+        ko: "실점 중 페인트존 비중.",
+        zh: "失分中禁区占比。",
+        es: "Porcentaje de puntos permitidos en la zona.",
+        pt: "Percentual de pontos sofridos no garrafão.",
+        fr: "Part des points encaissés dans la raquette.",
+      },
+      false
+    ),
+    def(
+      "oppPctPtsFt",
+      "oFT%",
+      "Opp % PTS from FT",
+      "scoring",
+      false,
+      "pct",
+      {
+        ja: "失点のうちフリースローの割合。",
+        en: "Share of points allowed from free throws.",
+        ko: "실점 중 자유투 비중.",
+        zh: "失分中罚球占比。",
+        es: "Porcentaje de puntos permitidos desde la línea.",
+        pt: "Percentual de pontos sofridos em lances livres.",
+        fr: "Part des points encaissés aux lancers francs.",
       },
       false
     ),
@@ -1233,6 +1290,9 @@ export function buildLeagueTeamAdvancedFields(
   const pctPtsFt = pct3(0.12 + rnd() * 0.1);
   const pctPtsFb = pct3(0.08 + rnd() * 0.08);
   const pctPtsTov = pct3(Math.max(0.08, 1 - pctPts3 - pctPtsPaint - pctPtsFt - pctPtsFb));
+  const oppPctPts3 = pct3(0.3 + rnd() * 0.14);
+  const oppPctPtsPaint = pct3(0.34 + rnd() * 0.14);
+  const oppPctPtsFt = pct3(0.13 + rnd() * 0.08);
 
   const clutchShift = (rnd() - 0.45) * 6;
   const clutchNet = round1(core.netrtg * 0.7 + clutchShift);
@@ -1325,6 +1385,9 @@ export function buildLeagueTeamAdvancedFields(
     pctPtsFt,
     pctPtsFb,
     pctPtsTov,
+    oppPctPts3,
+    oppPctPtsPaint,
+    oppPctPtsFt,
     pts3,
     ptsPaint,
     ptsFt,

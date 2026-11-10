@@ -210,6 +210,7 @@ export type ProfileStackParamList = {
   MatchupTeamStatsPreview: undefined;
   /** __DEV__ PRO LEAGUE ひとことの見せ方案 */
   RankingCommentDesignPreview: undefined;
+  MonthlyBadgePreview: undefined;
   ProSuccess: { plan?: "weekly" | "monthly" | "season" } | undefined;
   PlanChange: undefined;
   PlanChangeComplete: undefined;
