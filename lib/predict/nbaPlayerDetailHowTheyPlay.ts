@@ -626,6 +626,8 @@ export function getPlayerHowTheyPlay(
       ...m("contested_shots"),
       hint: HOW_THEY_PLAY_HUSTLE_HINTS.contestedShots,
     },
+    m("contested_2pt"),
+    m("contested_3pt"),
   ];
 
   const rebounding: PlayerHowRow[] = [
@@ -660,6 +662,13 @@ export function getPlayerHowTheyPlay(
       ),
     },
     { ...m("passes"), hint: HOW_THEY_PLAY_TRACKING_HINTS.passes },
+    m("potential_ast"),
+    m("ast_pts_created"),
+    m("secondary_ast"),
+    m("ft_ast"),
+    m("drive_fg_pct"),
+    m("drive_passes"),
+    m("drive_tov"),
     { ...m("speed"), hint: HOW_THEY_PLAY_TRACKING_HINTS.speed },
     {
       ...m("paint_touches"),

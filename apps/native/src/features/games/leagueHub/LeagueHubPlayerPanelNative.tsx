@@ -46,7 +46,7 @@ import {
   teamInk,
   type HubLang,
 } from "./leagueHubUiNative";
-import { HubScrollSlantedTabs, HubSlantedTabs } from "./LeagueHubSlantedTabsNative";
+import { HubScrollSlantedTabs } from "./LeagueHubSlantedTabsNative";
 
 export type LeagueHubPlayerSection = "style" | "zone" | "ladder" | "trend";
 
@@ -255,7 +255,7 @@ function StyleMap({
         </Text>
       ) : (
         <>
-          <HubSlantedTabs
+          <HubScrollSlantedTabs
             items={LEAGUE_HUB_PLAYER_SCATTER_GROUPS.map((g) => ({ id: g.id, label: g.label }))}
             value={groupId}
             onChange={(id) => {

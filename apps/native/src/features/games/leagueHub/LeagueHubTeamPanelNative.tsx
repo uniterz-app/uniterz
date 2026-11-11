@@ -11,6 +11,11 @@ import {
   LEAGUE_HUB_TEAM_ATTACK,
   LEAGUE_HUB_TEAM_BENCH,
   LEAGUE_HUB_TEAM_CLUTCH,
+  LEAGUE_HUB_TEAM_CONTEST,
+  LEAGUE_HUB_TEAM_PASS_VALUE,
+  LEAGUE_HUB_TEAM_DRIVE_FINISH,
+  LEAGUE_HUB_TEAM_SCREEN,
+  LEAGUE_HUB_TEAM_SHOT_ALLOW,
   LEAGUE_HUB_TEAM_DEPTH,
   LEAGUE_HUB_TEAM_HUSTLE,
   LEAGUE_HUB_TEAM_PAYROLL,
@@ -507,6 +512,11 @@ type StylePresetId =
   | "tempo"
   | "shotDefense"
   | "hustle"
+  | "contestSplit"
+  | "passValue"
+  | "driveFinish"
+  | "screen"
+  | "shotAllow"
   | "rebound"
   | "turnover"
   | "ace"
@@ -533,6 +543,11 @@ const STYLE_PRESETS: Record<StylePresetId, LeagueHubScatterPreset<LeagueHubTeamM
   tempo: LEAGUE_HUB_TEAM_TEMPO,
   shotDefense: LEAGUE_HUB_TEAM_SHOT_DEFENSE,
   hustle: LEAGUE_HUB_TEAM_HUSTLE,
+  contestSplit: LEAGUE_HUB_TEAM_CONTEST,
+  passValue: LEAGUE_HUB_TEAM_PASS_VALUE,
+  driveFinish: LEAGUE_HUB_TEAM_DRIVE_FINISH,
+  screen: LEAGUE_HUB_TEAM_SCREEN,
+  shotAllow: LEAGUE_HUB_TEAM_SHOT_ALLOW,
   rebound: LEAGUE_HUB_TEAM_REBOUND,
   turnover: LEAGUE_HUB_TEAM_TURNOVER,
   ace: LEAGUE_HUB_TEAM_ACE,
@@ -559,6 +574,9 @@ const PLAY_STYLE_GROUPS: readonly StyleGroup[] = [
       { id: "three", label: "3PT" },
       { id: "attack", label: "PASS × DRIVE" },
       { id: "shotCreation", label: "C&S × PULLUP" },
+      { id: "passValue", label: "PASS VALUE" },
+      { id: "driveFinish", label: "DRIVE FG%" },
+      { id: "screen", label: "SCREEN" },
       { id: "tempo", label: "TEMPO" },
     ],
   },
@@ -574,6 +592,8 @@ const PLAY_STYLE_GROUPS: readonly StyleGroup[] = [
     maps: [
       { id: "shotDefense", label: "OPP FG%" },
       { id: "hustle", label: "HUSTLE" },
+      { id: "contestSplit", label: "CONTEST" },
+      { id: "shotAllow", label: "DISTANCE" },
       { id: "rebound", label: "REB" },
       { id: "turnover", label: "TOV" },
     ],

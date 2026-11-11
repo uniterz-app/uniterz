@@ -71,11 +71,20 @@ export type NbaLeagueTeamAdvancedMetric =
   | "tovForced"
   | "drives"
   | "drivePts"
+  | "driveFgPct"
+  | "touches"
+  | "secPerTouch"
+  | "distMiles"
+  | "oppLt6Pct"
+  | "oppLt10Pct"
+  | "oppGt15Pct"
   | "cnsFgPct"
   | "cnsPts"
   | "pullupFgPct"
   | "pullupPts"
   | "passes"
+  | "potentialAst"
+  | "astPtsCreated"
   | "speed"
   | "paintTouches"
   | "paintTouchPts"
@@ -83,7 +92,10 @@ export type NbaLeagueTeamAdvancedMetric =
   | "charges"
   | "looseBalls"
   | "screenAst"
+  | "screenAstPts"
   | "contestedShots"
+  | "contestedShots2"
+  | "contestedShots3"
   | "boxOuts"
   | "rebChances"
   | "rebChancePct"
@@ -959,6 +971,15 @@ export const NBA_LEAGUE_TEAM_ADVANCED_METRIC_DEFS: readonly NbaLeagueTeamAdvance
       pt: "Pontos por jogo em drives.",
       fr: "Points par match sur pénétrations.",
     }),
+    def("driveFgPct", "D-FG", "Drive FG%", "tracking", true, "pct", {
+      ja: "ドライブからの FG%。",
+      en: "FG% on drives.",
+      ko: "드라이브 야투 성공률.",
+      zh: "突破投篮命中率。",
+      es: "FG% en penetraciones.",
+      pt: "FG% em drives.",
+      fr: "FG% sur pénétrations.",
+    }),
     def("cnsFgPct", "C&S", "Catch & Shoot FG%", "tracking", true, "pct", {
       ja: "キャッチ&シュートの FG%。",
       en: "Catch-and-shoot FG%.",
@@ -1030,6 +1051,24 @@ export const NBA_LEAGUE_TEAM_ADVANCED_METRIC_DEFS: readonly NbaLeagueTeamAdvance
       pt: "Passes por jogo.",
       fr: "Passes par match.",
     }),
+    def("potentialAst", "POT AST", "Potential assists / G", "tracking", true, "one", {
+      ja: "ポテンシャルアシスト。パスが味方のシュート試投につながった回数。",
+      en: "Passes that led to a teammate shot attempt, per game.",
+      ko: "잠재 어시스트. 패스가 팀 동료의 슛 시도로 이어진 횟수.",
+      zh: "潜在助攻。传球转化为队友出手的次数。",
+      es: "Pases que acaban en un tiro de un compañero, por partido.",
+      pt: "Passes que viram arremesso de um companheiro, por jogo.",
+      fr: "Passes menant à un tir d’un coéquipier, par match.",
+    }),
+    def("astPtsCreated", "AST PTS", "Assist points created / G", "tracking", true, "one", {
+      ja: "アシストで生んだ得点。",
+      en: "Points created by assists, per game.",
+      ko: "어시스트로 만든 득점.",
+      zh: "助攻制造的得分。",
+      es: "Puntos creados por asistencia, por partido.",
+      pt: "Pontos criados por assistência, por jogo.",
+      fr: "Points créés par une passe décisive, par match.",
+    }),
     def("speed", "SPD", "Avg speed", "tracking", true, "one", {
       ja: "平均スピード。",
       en: "Average speed.",
@@ -1066,6 +1105,34 @@ export const NBA_LEAGUE_TEAM_ADVANCED_METRIC_DEFS: readonly NbaLeagueTeamAdvance
       pt: "Bolas soltas recuperadas por jogo.",
       fr: "Ballons perdus récupérés par match.",
     }),
+    def("screenAstPts", "SCR PTS", "Screen assist PTS / G", "hustle", true, "one", {
+      ja: "スクリーンアシストで生んだ得点。",
+      en: "Points created by screen assists, per game.",
+    }),
+    def("touches", "TOUCH", "Touches / G", "tracking", true, "one", {
+      ja: "ボールに触った回数。",
+      en: "Touches per game.",
+    }),
+    def("secPerTouch", "SEC", "Seconds / touch", "tracking", true, "one", {
+      ja: "1回のタッチでボールを持っている秒数。",
+      en: "Seconds of possession per touch.",
+    }),
+    def("distMiles", "MILES", "Miles / G", "tracking", true, "one", {
+      ja: "1試合で走った距離（マイル）。",
+      en: "Miles run per game.",
+    }),
+    def("oppLt6Pct", "D-6ft", "Opp FG% < 6ft", "defense", false, "pct", {
+      ja: "6ft 以内の相手 FG%。低いほど守れている。",
+      en: "Opponent FG% inside 6 feet. Lower is better.",
+    }),
+    def("oppLt10Pct", "D-10ft", "Opp FG% < 10ft", "defense", false, "pct", {
+      ja: "10ft 以内の相手 FG%。低いほど守れている。",
+      en: "Opponent FG% inside 10 feet. Lower is better.",
+    }),
+    def("oppGt15Pct", "D-15ft", "Opp FG% > 15ft", "defense", false, "pct", {
+      ja: "15ft より外の相手 FG%。低いほど守れている。",
+      en: "Opponent FG% outside 15 feet. Lower is better.",
+    }),
     def("screenAst", "SCRN", "Screen assists / G", "hustle", true, "one", {
       ja: "スクリーンアシスト。",
       en: "Screen assists per game.",
@@ -1092,6 +1159,24 @@ export const NBA_LEAGUE_TEAM_ADVANCED_METRIC_DEFS: readonly NbaLeagueTeamAdvance
         fr: "Tirs contestés par match.",
       }
     ),
+    def("contestedShots2", "C-2P", "Contested 2P / G", "hustle", true, "one", {
+      ja: "コンテストした 2P。",
+      en: "Contested two-point shots per game.",
+      ko: "경기당 컨테스트한 2점슛.",
+      zh: "场均干扰两分出手。",
+      es: "Tiros de 2 disputados por partido.",
+      pt: "Arremessos de 2 contestados por jogo.",
+      fr: "Tirs à 2 pts contestés par match.",
+    }),
+    def("contestedShots3", "C-3P", "Contested 3P / G", "hustle", true, "one", {
+      ja: "コンテストした 3P。",
+      en: "Contested three-point shots per game.",
+      ko: "경기당 컨테스트한 3점슛.",
+      zh: "场均干扰三分出手。",
+      es: "Triples disputados por partido.",
+      pt: "Triplos contestados por jogo.",
+      fr: "Tirs à 3 pts contestés par match.",
+    }),
     def("boxOuts", "BOXOUT", "Box outs / G", "rebounding", true, "one", {
       ja: "ボックスアウト。相手をリバウンドから締め出した回数（1 試合平均）。",
       en: "Box outs per game — times sealing an opponent off the glass.",
@@ -1432,11 +1517,14 @@ export function buildLeagueTeamAdvancedFields(
     tovForced,
     drives,
     drivePts,
+    driveFgPct: pct3(0.42 + rnd() * 0.12),
     cnsFgPct,
     cnsPts,
     pullupFgPct,
     pullupPts,
     passes,
+    potentialAst: round1(18 + rnd() * 14),
+    astPtsCreated: round1(22 + rnd() * 16),
     speed,
     paintTouches,
     paintTouchPts,
@@ -1444,7 +1532,16 @@ export function buildLeagueTeamAdvancedFields(
     charges,
     looseBalls,
     screenAst,
+    screenAstPts: round1(screenAst * 1.4),
+    touches: round1(70 + rnd() * 20),
+    secPerTouch: round1(1.6 + rnd() * 0.8),
+    distMiles: round1(17 + rnd() * 3),
+    oppLt6Pct: pct3(0.58 + (1 - tier) * 0.06),
+    oppLt10Pct: pct3(0.52 + (1 - tier) * 0.06),
+    oppGt15Pct: pct3(0.36 + (1 - tier) * 0.04),
     contestedShots,
+    contestedShots2: round1(contestedShots * 0.65),
+    contestedShots3: round1(contestedShots * 0.35),
     boxOuts,
     rebChances,
     rebChancePct: pct3(0.48 + rnd() * 0.08),

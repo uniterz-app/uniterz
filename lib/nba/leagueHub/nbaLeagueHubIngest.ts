@@ -17,6 +17,7 @@ import { NBA_PLAYER_GAME_LOGS_COLLECTION } from "@/lib/nba/playerGameLogs/player
 import { NBA_PLAYER_CAREER_SEASONS_COLLECTION } from "@/lib/nba/playerCareerSeasons/playerCareerSeasonsTypes";
 import { nbaLeagueStatsSeasonKeys, previousNbaSeasonKey } from "@/lib/rankings/nbaSeason";
 import { loadNbaPlayerShotAreas } from "@/lib/nba/shotCharts/loadNbaPlayerShotAreas";
+import { NBA_ACE_GUARD_COLLECTION } from "@/lib/nba/ingest/nbaMatchupIngest";
 import { NBA_TEAM_PAYROLLS_COLLECTION } from "@/lib/nba/teamPayroll/loadTeamPayrollSnapshot";
 import { parseHeightInches } from "@/lib/nba/leagueHub/buildLeagueHubTeamStyle";
 import {
@@ -475,6 +476,17 @@ export async function loadAndBuildNbaLeagueHub(
   );
   const prevData = prevSnap.data();
 
+  const aceSnap = await db.collection(NBA_ACE_GUARD_COLLECTION).doc(seasonKey).get();
+  const aceRaw = aceSnap.data()?.players as
+    | Record<string, { minutes?: number; suppress?: number }>
+    | undefined;
+  const aceGuard = new Map<string, { minutes: number; suppress: number }>();
+  for (const [id, row] of Object.entries(aceRaw ?? {})) {
+    if (typeof row?.minutes === "number" && typeof row.suppress === "number") {
+      aceGuard.set(id, { minutes: row.minutes, suppress: row.suppress });
+    }
+  }
+
   return buildNbaLeagueHub({
     seasonKey,
     nowMs: input.nowMs ?? Date.now(),
@@ -493,6 +505,7 @@ export async function loadAndBuildNbaLeagueHub(
     seasonGames,
     salaryUsd,
     careerBase,
+    aceGuard,
     previousLadders: prevData
       ? {
           ladderWeek: (prevData.ladderWeek as LeagueHubLadderWeek | undefined) ?? null,
