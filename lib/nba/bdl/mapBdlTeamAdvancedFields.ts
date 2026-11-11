@@ -300,7 +300,7 @@ export function mapBdlTeamAdvancedFields(input: {
   const charges = num(h, "charges_drawn", "charges");
   const loose = num(h, "loose_balls_recovered", "loose_balls");
   const screenAst = num(h, "screen_assists", "screen_ast");
-  const screenAstPts = num(h, "screen_assist_points");
+  const screenAstPts = num(h, "screen_ast_pts", "screen_assist_points");
   const contested = num(h, "contested_shots");
   if (deflections != null) set(out, "deflections", round1(deflections));
   if (charges != null) set(out, "charges", round1(charges));
@@ -357,7 +357,7 @@ export function mapBdlTeamAdvancedFields(input: {
   const passes = num(passing, "passes_made", "passes");
   if (passes != null) set(out, "passes", round1(passes));
   const potentialAst = num(passing, "potential_ast");
-  const astPtsCreated = num(passing, "ast_pts_created");
+  const astPtsCreated = num(passing, "ast_points_created", "ast_pts_created");
   if (potentialAst != null) set(out, "potentialAst", round1(potentialAst));
   if (astPtsCreated != null) set(out, "astPtsCreated", round1(astPtsCreated));
 

@@ -593,7 +593,6 @@ const PLAY_STYLE_GROUPS: readonly StyleGroup[] = [
       { id: "shotDefense", label: "OPP FG%" },
       { id: "hustle", label: "HUSTLE" },
       { id: "contestSplit", label: "CONTEST" },
-      { id: "shotAllow", label: "DISTANCE" },
       { id: "rebound", label: "REB" },
       { id: "turnover", label: "TOV" },
     ],
