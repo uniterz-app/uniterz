@@ -113,6 +113,8 @@ export type BuildNbaLeagueHubInput = {
   careerBase?: Map<string, LeagueHubCareerBase> | null;
   /** 既存 hub doc のラダー週次スナップショット */
   previousLadders?: Pick<NbaLeagueHubDoc, "ladderWeek" | "ladderPrev"> | null;
+  /** 相手の得点源を守った時間と、抑えた FG% */
+  aceGuard?: Map<string, { minutes: number; suppress: number }> | null;
 };
 
 const SCATTER_PLAYER_LIMIT = 220;
@@ -179,6 +181,7 @@ function metricDigits(id: string): number {
   ) {
     return 3;
   }
+  if (id === "ace_suppress") return 3;
   return id === "drive_ppd" ? 2 : 1;
 }
 
@@ -315,6 +318,11 @@ export function buildNbaLeagueHub(input: BuildNbaLeagueHubInput): NbaLeagueHubDo
       const withPf = played.filter((g) => g.pf != null);
       const pfMin = withPf.reduce((s, g) => s + g.min, 0);
       if (pfMin > 0) m.pf36 = round((withPf.reduce((s, g) => s + g.pf!, 0) / pfMin) * 36, 1);
+    }
+    const ace = input.aceGuard?.get(playerId);
+    if (ace && ace.minutes > 0) {
+      m.ace_guard_min = round(ace.minutes, 1);
+      m.ace_suppress = round(ace.suppress, 3);
     }
     players.push({
       playerId,

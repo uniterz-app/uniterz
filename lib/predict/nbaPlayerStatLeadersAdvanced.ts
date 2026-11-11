@@ -80,6 +80,21 @@ export type NbaPlayerAdvancedLeaderMetric =
   | "corner3_pts"
   | "drives"
   | "drive_pts"
+  | "drive_fg_pct"
+  | "drive_passes"
+  | "drive_tov"
+  | "potential_ast"
+  | "ast_pts_created"
+  | "secondary_ast"
+  | "ft_ast"
+  | "pct_assisted_2pt"
+  | "pct_assisted_3pt"
+  | "screen_ast_pts"
+  | "touches"
+  | "sec_per_touch"
+  | "dist_miles"
+  | "opp_lt10_pct"
+  | "opp_gt15_pct"
   | "cns_fg_pct"
   | "cns_pts"
   | "pullup_fg_pct"
@@ -93,6 +108,8 @@ export type NbaPlayerAdvancedLeaderMetric =
   | "loose_balls"
   | "screen_ast"
   | "contested_shots"
+  | "contested_2pt"
+  | "contested_3pt"
   | "box_outs"
   | "reb_chances"
   | "reb_chance_pct"
@@ -922,6 +939,101 @@ export const NBA_PLAYER_ADVANCED_LEADER_METRICS: readonly NbaPlayerAdvancedLeade
       pt: "Pontos por jogo em drives.",
       fr: "Points par match sur pénétrations.",
     }),
+    def("drive_fg_pct", "D-FG", "Drive FG%", "tracking", true, "pct", {
+      ja: "ドライブからの FG%。",
+      en: "FG% on drives.",
+      ko: "드라이브 야투 성공률.",
+      zh: "突破投篮命中率。",
+      es: "FG% en penetraciones.",
+      pt: "FG% em drives.",
+      fr: "FG% sur pénétrations.",
+    }),
+    def("drive_passes", "D-PASS", "Drive passes / G", "tracking", true, "perGame", {
+      ja: "ドライブから出したパス。",
+      en: "Passes out of drives per game.",
+      ko: "경기당 드라이브에서 내준 패스.",
+      zh: "场均突破分球。",
+      es: "Pases desde penetración por partido.",
+      pt: "Passes a partir de drives por jogo.",
+      fr: "Passes issues de pénétration par match.",
+    }),
+    def("drive_tov", "D-TOV", "Drive turnovers / G", "tracking", true, "perGame", {
+      ja: "ドライブでのターンオーバー。",
+      en: "Turnovers on drives per game.",
+      ko: "경기당 드라이브 턴오버.",
+      zh: "场均突破失误。",
+      es: "Pérdidas en penetración por partido.",
+      pt: "Turnovers em drives por jogo.",
+      fr: "Balles perdues en pénétration par match.",
+    }),
+    def("potential_ast", "POT AST", "Potential assists / G", "tracking", true, "perGame", {
+      ja: "ポテンシャルアシスト。パスが味方のシュート試投につながった回数。",
+      en: "Passes that led to a teammate shot attempt, per game.",
+      ko: "잠재 어시스트. 패스가 팀 동료의 슛 시도로 이어진 횟수.",
+      zh: "潜在助攻。传球转化为队友出手的次数。",
+      es: "Pases que acaban en un tiro de un compañero, por partido.",
+      pt: "Passes que viram arremesso de um companheiro, por jogo.",
+      fr: "Passes menant à un tir d’un coéquipier, par match.",
+    }),
+    def("ast_pts_created", "AST PTS", "Assist points created / G", "tracking", true, "perGame", {
+      ja: "アシストで生んだ得点。",
+      en: "Points created by assists, per game.",
+      ko: "어시스트로 만든 득점.",
+      zh: "助攻制造的得分。",
+      es: "Puntos creados por asistencia, por partido.",
+      pt: "Pontos criados por assistência, por jogo.",
+      fr: "Points créés par une passe décisive, par match.",
+    }),
+    def("secondary_ast", "2ND AST", "Secondary assists / G", "tracking", true, "perGame", {
+      ja: "セカンダリアシスト。アシストを生んだパスの前のパス。",
+      en: "Passes that set up a teammate’s assist, per game.",
+      ko: "세컨더리 어시스트. 팀 동료의 어시스트를 만든 패스.",
+      zh: "二次助攻。助攻之前的那次传球。",
+      es: "Pases que preparan la asistencia de un compañero, por partido.",
+      pt: "Passes que preparam a assistência de um companheiro, por jogo.",
+      fr: "Passes qui préparent la passe décisive d’un coéquipier, par match.",
+    }),
+    def("ft_ast", "FT AST", "Free-throw assists / G", "tracking", true, "perGame", {
+      ja: "フリースローにつながったパス。",
+      en: "Passes that led to made free throws, per game.",
+      ko: "자유투로 이어진 패스.",
+      zh: "转化为罚球的传球。",
+      es: "Pases que acaban en tiros libres anotados, por partido.",
+      pt: "Passes que viram lances livres convertidos, por jogo.",
+      fr: "Passes menant à des lancers francs marqués, par match.",
+    }),
+    def("pct_assisted_2pt", "AST 2P", "Assisted 2P share", "scoring", true, "pct", {
+      ja: "自分の 2P のうち、アシストでもらった割合。",
+      en: "Share of this player's made twos that were assisted.",
+    }),
+    def("pct_assisted_3pt", "AST 3P", "Assisted 3P share", "scoring", true, "pct", {
+      ja: "自分の 3P のうち、アシストでもらった割合。",
+      en: "Share of this player's made threes that were assisted.",
+    }),
+    def("screen_ast_pts", "SCR PTS", "Screen assist PTS / G", "hustle", true, "perGame", {
+      ja: "スクリーンアシストで生んだ得点。",
+      en: "Points created by screen assists, per game.",
+    }),
+    def("touches", "TOUCH", "Touches / G", "tracking", true, "perGame", {
+      ja: "ボールに触った回数。",
+      en: "Touches per game.",
+    }),
+    def("sec_per_touch", "SEC", "Seconds / touch", "tracking", true, "perGame", {
+      ja: "1回のタッチでボールを持っている秒数。",
+      en: "Seconds of possession per touch.",
+    }),
+    def("dist_miles", "MILES", "Miles / G", "tracking", true, "perGame", {
+      ja: "1試合で走った距離（マイル）。",
+      en: "Miles run per game.",
+    }),
+    def("opp_lt10_pct", "D-10ft", "Opp FG% < 10ft", "defense", false, "pct", {
+      ja: "10ft 以内の相手 FG%。低いほど守れている。",
+      en: "Opponent FG% inside 10 feet. Lower is better.",
+    }),
+    def("opp_gt15_pct", "D-15ft", "Opp FG% > 15ft", "defense", false, "pct", {
+      ja: "15ft より外の相手 FG%。低いほど守れている。",
+      en: "Opponent FG% outside 15 feet. Lower is better.",
+    }),
     def("cns_fg_pct", "C&S", "Catch & Shoot FG%", "tracking", true, "pct", {
       ja: "キャッチ&シュート FG%。",
       en: "Catch-and-shoot FG%.",
@@ -1087,6 +1199,24 @@ export const NBA_PLAYER_ADVANCED_LEADER_METRICS: readonly NbaPlayerAdvancedLeade
         fr: "Tirs contestés par match.",
       }
     ),
+    def("contested_2pt", "C-2P", "Contested 2P / G", "hustle", true, "perGame", {
+      ja: "コンテストした 2P。",
+      en: "Contested two-point shots per game.",
+      ko: "경기당 컨테스트한 2점슛.",
+      zh: "场均干扰两分出手。",
+      es: "Tiros de 2 disputados por partido.",
+      pt: "Arremessos de 2 contestados por jogo.",
+      fr: "Tirs à 2 pts contestés par match.",
+    }),
+    def("contested_3pt", "C-3P", "Contested 3P / G", "hustle", true, "perGame", {
+      ja: "コンテストした 3P。",
+      en: "Contested three-point shots per game.",
+      ko: "경기당 컨테스트한 3점슛.",
+      zh: "场均干扰三分出手。",
+      es: "Triples disputados por partido.",
+      pt: "Triplos contestados por jogo.",
+      fr: "Tirs à 3 pts contestés par match.",
+    }),
     def("box_outs", "BOXOUT", "Box outs / G", "rebounding", true, "perGame", {
       ja: "ボックスアウト。相手をリバウンドから締め出した回数（1 試合平均）。",
       en: "Box outs per game — times sealing an opponent off the glass.",
@@ -1357,6 +1487,35 @@ export function buildPlayerAdvancedMetricValue(
       return round1(1 + rnd() * 14);
     case "drive_pts":
       return round1(0.5 + rnd() * 8);
+    case "drive_fg_pct":
+      return pct(0.38 + rnd() * 0.2);
+    case "drive_passes":
+      return round1(0.4 + rnd() * 4);
+    case "drive_tov":
+      return round1(0.2 + rnd() * 2);
+    case "potential_ast":
+      return round1(1 + rnd() * 12);
+    case "ast_pts_created":
+      return round1(1 + rnd() * 18);
+    case "secondary_ast":
+      return round1(rnd() * 2);
+    case "ft_ast":
+      return round1(rnd() * 1.5);
+    case "pct_assisted_2pt":
+    case "pct_assisted_3pt":
+      return pct(0.2 + rnd() * 0.6);
+    case "screen_ast_pts":
+      return round1(rnd() * 8);
+    case "touches":
+      return round1(20 + rnd() * 60);
+    case "sec_per_touch":
+      return round1(1 + rnd() * 4);
+    case "dist_miles":
+      return round1(1.5 + rnd() * 1.5);
+    case "opp_lt10_pct":
+      return pct(0.48 + rnd() * 0.16);
+    case "opp_gt15_pct":
+      return pct(0.32 + rnd() * 0.12);
     case "cns_fg_pct":
       return pct(0.32 + rnd() * 0.16);
     case "cns_pts":
@@ -1383,6 +1542,10 @@ export function buildPlayerAdvancedMetricValue(
       return round1(0.2 + rnd() * 4);
     case "contested_shots":
       return round1(2 + rnd() * 10);
+    case "contested_2pt":
+      return round1(1 + rnd() * 7);
+    case "contested_3pt":
+      return round1(0.4 + rnd() * 4);
     case "box_outs":
       return round1(rnd() * 3);
     case "reb_chances":

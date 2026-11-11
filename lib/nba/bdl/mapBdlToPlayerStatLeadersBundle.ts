@@ -68,6 +68,9 @@ type MergedPlayer = {
   def2p: Record<string, number>;
   def3p: Record<string, number>;
   defLt6: Record<string, number>;
+  defLt10: Record<string, number>;
+  defGt15: Record<string, number>;
+  possessions: Record<string, number>;
 };
 
 function emptyBoard(): Record<NbaPlayerLeaderMetricId, NbaPlayerStatLeaderRow[]> {
@@ -328,6 +331,12 @@ export async function buildPlayerStatLeadersBundleFromBdl(input: {
   const def3pRows = await avg({ category: "defense", type: "3_pointers" });
   await sleep(120);
   const defLt6Rows = await avg({ category: "defense", type: "less_than_6ft" });
+  await sleep(120);
+  const defLt10Rows = await avg({ category: "defense", type: "less_than_10ft" });
+  await sleep(120);
+  const defGt15Rows = await avg({ category: "defense", type: "greater_than_15ft" });
+  await sleep(120);
+  const possRows = await avg({ category: "tracking", type: "Possessions" });
 
   const playtypeTypes = [
     "Isolation",
@@ -374,6 +383,9 @@ export async function buildPlayerStatLeadersBundleFromBdl(input: {
   const def2pBy = indexRows(def2pRows);
   const def3pBy = indexRows(def3pRows);
   const defLt6By = indexRows(defLt6Rows);
+  const defLt10By = indexRows(defLt10Rows);
+  const defGt15By = indexRows(defGt15Rows);
+  const possBy = indexRows(possRows);
 
   const playerIds = new Set<string>([...baseBy.keys(), ...advBy.keys()]);
   const merged: MergedPlayer[] = [];
@@ -431,6 +443,9 @@ export async function buildPlayerStatLeadersBundleFromBdl(input: {
       def2p: toStats(def2pBy.get(playerId)),
       def3p: toStats(def3pBy.get(playerId)),
       defLt6: toStats(defLt6By.get(playerId)),
+      defLt10: toStats(defLt10By.get(playerId)),
+      defGt15: toStats(defGt15By.get(playerId)),
+      possessions: toStats(possBy.get(playerId)),
     });
   }
 
@@ -727,6 +742,9 @@ export async function buildPlayerStatLeadersBundleFromBdl(input: {
   hustlePg("loose_balls", "loose_balls_recovered", "loose_balls");
   hustlePg("screen_ast", "screen_assists", "screen_ast");
   hustlePg("contested_shots", "contested_shots");
+  hustlePg("screen_ast_pts", "screen_assist_points");
+  hustlePg("contested_2pt", "contested_shots_2pt");
+  hustlePg("contested_3pt", "contested_shots_3pt");
   hustlePg("box_outs", "box_outs");
 
   /** 率は母数が少ない選手が 100% で上に来ないよう、1 試合の母数で足切り */
@@ -750,6 +768,26 @@ export async function buildPlayerStatLeadersBundleFromBdl(input: {
 
   fillAdv("drives", true, (p) => n(p.drives, "drives"));
   fillAdv("drive_pts", true, (p) => n(p.drives, "drive_pts"));
+  fillAdv("drive_fg_pct", true, (p) => rate(n(p.drives, "drive_fg_pct")), {
+    shootingPct: true,
+  });
+  fillAdv("drive_passes", true, (p) => n(p.drives, "drive_passes", "passes"));
+  fillAdv("drive_tov", true, (p) => n(p.drives, "drive_tov", "tov"));
+  fillAdv("potential_ast", true, (p) => n(p.passing, "potential_ast"));
+  fillAdv("ast_pts_created", true, (p) => n(p.passing, "ast_pts_created"));
+  fillAdv("secondary_ast", true, (p) => n(p.passing, "secondary_ast"));
+  fillAdv("ft_ast", true, (p) => n(p.passing, "ft_ast"));
+  fillAdv("pct_assisted_2pt", true, (p) => rate(n(p.scoring, "pct_ast_2pm", "pct_assisted_2pt")), {
+    shootingPct: true,
+  });
+  fillAdv("pct_assisted_3pt", true, (p) => rate(n(p.scoring, "pct_ast_3pm", "pct_assisted_3pt")), {
+    shootingPct: true,
+  });
+  fillAdv("touches", true, (p) => n(p.possessions, "touches"));
+  fillAdv("sec_per_touch", true, (p) =>
+    n(p.possessions, "avg_sec_per_touch", "sec_per_touch")
+  );
+  fillAdv("dist_miles", true, (p) => n(p.speed, "dist_miles", "distance"));
   fillAdv(
     "cns_fg_pct",
     true,
@@ -951,6 +989,12 @@ export async function buildPlayerStatLeadersBundleFromBdl(input: {
   );
   fillAdv("opp_lt6_pct", false, (p) =>
     rate(n(p.defLt6, "lt_06_pct", "lt_6_pct", "fg_pct", "d_fg_pct"))
+  );
+  fillAdv("opp_lt10_pct", false, (p) =>
+    rate(n(p.defLt10, "lt_10_pct", "fg_pct", "d_fg_pct"))
+  );
+  fillAdv("opp_gt15_pct", false, (p) =>
+    rate(n(p.defGt15, "gt_15_pct", "fg_pct", "d_fg_pct"))
   );
 
   const playerMetrics: NbaPlayerSeasonMetricsWrite[] = [];
