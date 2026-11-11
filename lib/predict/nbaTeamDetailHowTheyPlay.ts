@@ -373,6 +373,18 @@ const HUSTLE_ROWS: readonly {
     hint: HOW_THEY_PLAY_HUSTLE_HINTS.contestedShots,
     metric: "contestedShots",
   },
+  {
+    id: "contestedShots2",
+    short: "C-2P",
+    hint: NBA_LEAGUE_TEAM_ADVANCED_METRIC_DEFS.find((d) => d.id === "contestedShots2")!.hint,
+    metric: "contestedShots2",
+  },
+  {
+    id: "contestedShots3",
+    short: "C-3P",
+    hint: NBA_LEAGUE_TEAM_ADVANCED_METRIC_DEFS.find((d) => d.id === "contestedShots3")!.hint,
+    metric: "contestedShots3",
+  },
 ];
 
 const REBOUNDING_ROWS = NBA_LEAGUE_TEAM_ADVANCED_METRIC_DEFS.filter(
@@ -412,6 +424,27 @@ const TRACKING_ROWS: readonly {
     short: "PASS",
     hint: HOW_THEY_PLAY_TRACKING_HINTS.passes,
     metric: "passes",
+    hasPts: false,
+  },
+  {
+    id: "potentialAst",
+    short: "POT",
+    hint: NBA_LEAGUE_TEAM_ADVANCED_METRIC_DEFS.find((d) => d.id === "potentialAst")!.hint,
+    metric: "potentialAst",
+    hasPts: false,
+  },
+  {
+    id: "astPtsCreated",
+    short: "APT",
+    hint: NBA_LEAGUE_TEAM_ADVANCED_METRIC_DEFS.find((d) => d.id === "astPtsCreated")!.hint,
+    metric: "astPtsCreated",
+    hasPts: false,
+  },
+  {
+    id: "driveFgPct",
+    short: "D-FG",
+    hint: NBA_LEAGUE_TEAM_ADVANCED_METRIC_DEFS.find((d) => d.id === "driveFgPct")!.hint,
+    metric: "driveFgPct",
     hasPts: false,
   },
   {

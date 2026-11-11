@@ -46,8 +46,9 @@ export type LeagueHubPlayerScatterPreset = LeagueHubScatterPreset<LeagueHubPlaye
 /** スタイルマップのグループ（先頭が既定）。IMPACT = 攻守まとめた出場時の影響と勝負どころ */
 export const LEAGUE_HUB_PLAYER_SCATTER_GROUPS = [
   { id: "scoring", label: "SCORING", presetIds: ["three", "ace", "shotType", "source"] },
-  { id: "attack", label: "ATTACK", presetIds: ["paint", "drive", "foul", "playmaking"] },
-  { id: "defense", label: "DEFENSE", presetIds: ["defense", "hustle", "fouls"] },
+  { id: "attack", label: "ATTACK", presetIds: ["paint", "drive", "driveFinish", "driveDish", "foul", "playmaking", "passCreate", "creation"] },
+  { id: "defense", label: "DEFENSE", presetIds: ["defense", "hustle", "contestSplit", "shotAllow", "aceStop", "fouls"] },
+  { id: "ball", label: "BALL", presetIds: ["touch", "mileage"] },
   { id: "impact", label: "IMPACT", presetIds: ["onCourt", "clutch", "consistency"] },
   { id: "rebound", label: "REB", presetIds: ["glass", "rebContest", "boxOut", "rebChance"] },
 ] as const;
@@ -130,6 +131,173 @@ export const LEAGUE_HUB_PLAYER_SCATTER_PRESETS: readonly LeagueHubPlayerScatterP
       tl: { ja: "コネクター", en: "CONNECTOR" },
       br: { ja: "アグレッシブパサー", en: "AGGRESSIVE PASSER" },
       bl: { ja: "スコアラー型", en: "SCORER" },
+    },
+  },
+  {
+    id: "driveFinish",
+    label: { ja: "ドライブの決定力", en: "DRIVE FG%" },
+    hint: {
+      ja: "右ほどドライブが多く、上ほどドライブのシュートが入る。",
+      en: "Right = more drives, up = better FG% on drives.",
+    },
+    x: { metric: "drives", label: { ja: "ドライブ / 試合", en: "DRIVES / G" }, format: "one" },
+    y: { metric: "drive_fg_pct", label: { ja: "ドライブ FG%", en: "DRIVE FG%" }, format: "pct" },
+    volume: "drives",
+    volumeLabel: { ja: "ドライブ", en: "DRIVES" },
+    quadrants: {
+      tr: { ja: "決めるスラッシャー", en: "FINISHING SLASHER" },
+      tl: { ja: "選んで決める", en: "SELECTIVE FINISHER" },
+      br: { ja: "量で切る", en: "VOLUME DRIVER" },
+      bl: { ja: "ドライブが武器でない", en: "NOT A DRIVER" },
+    },
+  },
+  {
+    id: "passCreate",
+    label: { ja: "パスの価値", en: "PASS VALUE" },
+    hint: {
+      ja: "右ほどパスがシュート試投につながり、上ほどアシストで生んだ得点が多い。",
+      en: "Right = more potential assists, up = more points created by assists.",
+    },
+    x: { metric: "potential_ast", label: { ja: "ポテンシャル AST", en: "POTENTIAL AST" }, format: "one" },
+    y: { metric: "ast_pts_created", label: { ja: "アシストで生んだ得点", en: "AST PTS CREATED" }, format: "one" },
+    volume: "potential_ast",
+    volumeLabel: { ja: "ポテンシャル AST", en: "POTENTIAL AST" },
+    quadrants: {
+      tr: { ja: "得点を作るパサー", en: "CREATOR" },
+      tl: { ja: "1本の価値が高い", en: "HIGH VALUE" },
+      br: { ja: "たくさん打たせる", en: "CHANCE MAKER" },
+      bl: { ja: "パスが主武器でない", en: "NOT A CREATOR" },
+    },
+  },
+  {
+    id: "driveDish",
+    label: { ja: "ドライブのさばき", en: "DRIVE PASS" },
+    hint: {
+      ja: "右ほどドライブからパスを出し、上ほどドライブでボールを失う。",
+      en: "Right = more passes out of drives, up = more turnovers on drives.",
+    },
+    x: { metric: "drive_passes", label: { ja: "ドライブパス", en: "DRIVE PASSES" }, format: "one" },
+    y: { metric: "drive_tov", label: { ja: "ドライブ TOV", en: "DRIVE TOV" }, format: "one" },
+    volume: "drives",
+    volumeLabel: { ja: "ドライブ", en: "DRIVES" },
+    quadrants: {
+      tr: { ja: "出して失う", en: "LOOSE CREATOR" },
+      tl: { ja: "ドライブで失う", en: "LOOSE DRIVER" },
+      br: { ja: "ドライブでさばく", en: "DISH DRIVER" },
+      bl: { ja: "ドライブが少ない", en: "NOT A DRIVER" },
+    },
+  },
+  {
+    id: "creation",
+    label: { ja: "もらいシュート", en: "ASSISTED SHOTS" },
+    hint: {
+      ja: "右ほど 2P をアシストでもらい、上ほど 3P をアシストでもらう。",
+      en: "Right = more assisted twos, up = more assisted threes.",
+    },
+    x: { metric: "pct_assisted_2pt", label: { ja: "2P のアシスト割合", en: "ASSISTED 2P" }, format: "pct" },
+    y: { metric: "pct_assisted_3pt", label: { ja: "3P のアシスト割合", en: "ASSISTED 3P" }, format: "pct" },
+    volume: "fga",
+    volumeLabel: { ja: "FG 試投", en: "FGA" },
+    quadrants: {
+      tr: { ja: "パスをもらって打つ", en: "OFF-BALL" },
+      tl: { ja: "3P はもらう", en: "SPOT-UP" },
+      br: { ja: "2P はもらう", en: "CUTTER" },
+      bl: { ja: "自分で作る", en: "SELF CREATED" },
+    },
+  },
+  {
+    id: "touch",
+    label: { ja: "ボールの持ち方", en: "TOUCH" },
+    hint: {
+      ja: "右ほどボールに触る回数が多く、上ほど 1 回のタッチが長い。",
+      en: "Right = more touches, up = longer possession per touch.",
+    },
+    x: { metric: "touches", label: { ja: "タッチ", en: "TOUCHES" }, format: "one" },
+    y: { metric: "sec_per_touch", label: { ja: "秒 / タッチ", en: "SEC / TOUCH" }, format: "one" },
+    volume: "touches",
+    volumeLabel: { ja: "タッチ", en: "TOUCHES" },
+    quadrants: {
+      tr: { ja: "長く多く持つ", en: "PRIMARY" },
+      tl: { ja: "少なく長く持つ", en: "POST" },
+      br: { ja: "短くつなぐ", en: "CONNECTOR" },
+      bl: { ja: "ボールを持たない", en: "OFF BALL" },
+    },
+  },
+  {
+    id: "mileage",
+    label: { ja: "走行", en: "MILEAGE" },
+    hint: {
+      ja: "右ほど走った距離が長く、上ほど平均速度が速い。",
+      en: "Right = more miles, up = higher average speed.",
+    },
+    x: { metric: "dist_miles", label: { ja: "マイル", en: "MILES" }, format: "one" },
+    y: { metric: "speed", label: { ja: "平均速度", en: "SPEED" }, format: "one" },
+    volume: "min",
+    volumeLabel: { ja: "出場時間", en: "MIN" },
+    quadrants: {
+      tr: { ja: "よく走って速い", en: "ENGINE" },
+      tl: { ja: "短い距離を速い", en: "SPRINTER" },
+      br: { ja: "長く走る", en: "HIGH MILEAGE" },
+      bl: { ja: "動かない", en: "STATIONARY" },
+    },
+  },
+  {
+    id: "shotAllow",
+    label: { ja: "守る距離", en: "SHOT DISTANCE" },
+    hint: {
+      ja: "右ほど 10ft 以内を打たせ、上ほど 15ft より外を打たせる。どちらも低いほど守れている。軸は上が低い。",
+      en: "Right = opponent FG% inside 10 ft, up = lower opponent FG% outside 15 ft.",
+    },
+    x: { metric: "opp_lt10_pct", label: { ja: "10ft 以内 FG%", en: "FG% < 10FT" }, format: "pct" },
+    y: {
+      metric: "opp_gt15_pct",
+      label: { ja: "15ft より外（上ほど低い）", en: "FG% > 15FT (lower = up)" },
+      format: "pct",
+      invert: true,
+    },
+    volume: "min",
+    volumeLabel: { ja: "出場時間", en: "MIN" },
+    quadrants: {
+      tr: { ja: "外は守る", en: "RIM LEAK" },
+      tl: { ja: "距離を問わず守る", en: "WALL" },
+      br: { ja: "どこも打たせる", en: "OPEN" },
+      bl: { ja: "中は守る", en: "RIM PROTECTOR" },
+    },
+  },
+  {
+    id: "aceStop",
+    label: { ja: "エースストッパー", en: "ACE STOPPER" },
+    hint: {
+      ja: "右ほど相手の得点源を長く守り、上ほどその選手の普段の eFG% よりシュートを落とす。",
+      en: "Right = more minutes on the other team's top scorer, up = FG% below that scorer's usual eFG%.",
+    },
+    x: { metric: "ace_guard_min", label: { ja: "エースを守った時間", en: "MIN ON ACE" }, format: "one" },
+    y: { metric: "ace_suppress", label: { ja: "抑えた FG%", en: "FG% SUPPRESSED" }, format: "pct" },
+    volume: "ace_guard_min",
+    volumeLabel: { ja: "エースを守った時間", en: "MIN ON ACE" },
+    quadrants: {
+      tr: { ja: "エースを抑える", en: "ACE STOPPER" },
+      tl: { ja: "短時間で抑える", en: "SPOT STOPPER" },
+      br: { ja: "付いているが抑えない", en: "ASSIGNED" },
+      bl: { ja: "エースは守らない", en: "NOT THE STOPPER" },
+    },
+  },
+  {
+    id: "contestSplit",
+    label: { ja: "コンテストの場所", en: "CONTEST" },
+    hint: {
+      ja: "右ほど 2P に手を出し、上ほど 3P に手を出す。",
+      en: "Right = more contested 2s, up = more contested 3s.",
+    },
+    x: { metric: "contested_2pt", label: { ja: "2P コンテスト", en: "CONTESTED 2P" }, format: "one" },
+    y: { metric: "contested_3pt", label: { ja: "3P コンテスト", en: "CONTESTED 3P" }, format: "one" },
+    volume: "contested_shots",
+    volumeLabel: { ja: "コンテスト", en: "CONTESTS" },
+    quadrants: {
+      tr: { ja: "どこでも手が出る", en: "EVERYWHERE" },
+      tl: { ja: "外で飛ばす", en: "PERIMETER" },
+      br: { ja: "中で手を出す", en: "INTERIOR" },
+      bl: { ja: "コンテストが少ない", en: "HANDS DOWN" },
     },
   },
   {
@@ -455,7 +623,19 @@ export type LeagueHubTeamMetric =
   | "oppFtaRate"
   | "pctPtsFb"
   | "passes"
+  | "potentialAst"
+  | "astPtsCreated"
   | "drives"
+  | "driveFgPct"
+  | "screenAst"
+  | "screenAstPts"
+  | "touches"
+  | "secPerTouch"
+  | "distMiles"
+  | "oppLt10Pct"
+  | "oppGt15Pct"
+  | "contestedShots2"
+  | "contestedShots3"
   | "fgPctAllowed"
   | "fg3PctAllowed"
   | "cnsPts"
@@ -506,6 +686,101 @@ export const LEAGUE_HUB_TEAM_THREE: LeagueHubScatterPreset<LeagueHubTeamMetric> 
     tl: { ja: "少なく確実", en: "SELECTIVE" },
     br: { ja: "量で勝負", en: "VOLUME" },
     bl: { ja: "3P が武器でない", en: "INSIDE TEAM" },
+  },
+};
+
+export const LEAGUE_HUB_TEAM_DRIVE_FINISH: LeagueHubScatterPreset<LeagueHubTeamMetric> = {
+  id: "driveFinish",
+  label: { ja: "ドライブの決定力", en: "DRIVE FG%" },
+  hint: {
+    ja: "右ほどドライブが多く、上ほどドライブのシュートが入る。",
+    en: "Right = more drives, up = better FG% on drives.",
+  },
+  x: { metric: "drives", label: { ja: "ドライブ", en: "DRIVES" }, format: "one" },
+  y: { metric: "driveFgPct", label: { ja: "ドライブ FG%", en: "DRIVE FG%" }, format: "pct" },
+  marks: { tl: "DRIVE" },
+  quadrants: {
+    tr: { ja: "切って決める", en: "FINISHING" },
+    tl: { ja: "少なく決める", en: "SELECTIVE" },
+    br: { ja: "量で切る", en: "VOLUME" },
+    bl: { ja: "ドライブが武器でない", en: "NOT A DRIVE TEAM" },
+  },
+};
+
+export const LEAGUE_HUB_TEAM_SCREEN: LeagueHubScatterPreset<LeagueHubTeamMetric> = {
+  id: "screen",
+  label: { ja: "スクリーン", en: "SCREENS" },
+  hint: {
+    ja: "右ほどスクリーンアシストが多く、上ほどそれで生んだ得点が多い。",
+    en: "Right = more screen assists, up = more points from those screens.",
+  },
+  x: { metric: "screenAst", label: { ja: "スクリーン AST", en: "SCREEN AST" }, format: "one" },
+  y: { metric: "screenAstPts", label: { ja: "スクリーンの得点", en: "SCREEN PTS" }, format: "one" },
+  marks: { tl: "SCREEN" },
+  quadrants: {
+    tr: { ja: "スクリーンで点を作る", en: "SCREEN GAME" },
+    tl: { ja: "1本の価値が高い", en: "HIGH VALUE" },
+    br: { ja: "回数は多い", en: "VOLUME SCREENS" },
+    bl: { ja: "スクリーンが少ない", en: "LITTLE SCREENING" },
+  },
+};
+
+export const LEAGUE_HUB_TEAM_SHOT_ALLOW: LeagueHubScatterPreset<LeagueHubTeamMetric> = {
+  id: "shotAllow",
+  label: { ja: "打たせる距離", en: "SHOT DISTANCE" },
+  hint: {
+    ja: "右ほど 10ft 以内を打たせ、上ほど 15ft より外の成功率が低い。",
+    en: "Right = opponent FG% inside 10 ft, up = lower opponent FG% outside 15 ft.",
+  },
+  x: { metric: "oppLt10Pct", label: { ja: "10ft 以内 FG%", en: "FG% < 10FT" }, format: "pct" },
+  y: {
+    metric: "oppGt15Pct",
+    label: { ja: "15ft より外（上ほど低い）", en: "FG% > 15FT (lower = up)" },
+    format: "pct",
+    invert: true,
+  },
+  marks: { tl: "ALLOW" },
+  quadrants: {
+    tr: { ja: "外は守る", en: "RIM LEAK" },
+    tl: { ja: "距離を問わず守る", en: "WALL" },
+    br: { ja: "どこも打たせる", en: "OPEN" },
+    bl: { ja: "中は守る", en: "RIM PROTECTION" },
+  },
+};
+
+export const LEAGUE_HUB_TEAM_PASS_VALUE: LeagueHubScatterPreset<LeagueHubTeamMetric> = {
+  id: "passValue",
+  label: { ja: "パスの価値", en: "PASS VALUE" },
+  hint: {
+    ja: "右ほどパスがシュート試投につながり、上ほどアシストで生んだ得点が多い。",
+    en: "Right = more potential assists, up = more points created by assists.",
+  },
+  x: { metric: "potentialAst", label: { ja: "ポテンシャル AST", en: "POTENTIAL AST" }, format: "one" },
+  y: { metric: "astPtsCreated", label: { ja: "アシストで生んだ得点", en: "AST PTS CREATED" }, format: "one" },
+  marks: { tl: "PASS" },
+  quadrants: {
+    tr: { ja: "得点を作る", en: "CREATORS" },
+    tl: { ja: "1本の価値が高い", en: "HIGH VALUE" },
+    br: { ja: "たくさん打たせる", en: "CHANCE MAKERS" },
+    bl: { ja: "パスが主武器でない", en: "NOT A PASSING TEAM" },
+  },
+};
+
+export const LEAGUE_HUB_TEAM_CONTEST: LeagueHubScatterPreset<LeagueHubTeamMetric> = {
+  id: "contestSplit",
+  label: { ja: "コンテストの場所", en: "CONTEST" },
+  hint: {
+    ja: "右ほど 2P に手を出し、上ほど 3P に手を出す。",
+    en: "Right = more contested 2s, up = more contested 3s.",
+  },
+  x: { metric: "contestedShots2", label: { ja: "2P コンテスト", en: "CONTESTED 2P" }, format: "one" },
+  y: { metric: "contestedShots3", label: { ja: "3P コンテスト", en: "CONTESTED 3P" }, format: "one" },
+  marks: { tl: "CONTEST" },
+  quadrants: {
+    tr: { ja: "どこでも手が出る", en: "EVERYWHERE" },
+    tl: { ja: "外で飛ばす", en: "PERIMETER" },
+    br: { ja: "中で手を出す", en: "INTERIOR" },
+    bl: { ja: "コンテストが少ない", en: "HANDS DOWN" },
   },
 };
 

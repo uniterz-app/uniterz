@@ -27,6 +27,8 @@ import {
   NBA_PLAYER_SEASON_METRICS_PLAYERS_SUB,
 } from "@/lib/nba/playerSeasonMetrics/playerSeasonMetricsTypes";
 import { scheduledDisciplineFines } from "@/lib/nba/discipline/nbaDisciplineFineSchedule";
+import { bdlSeasonYearFromSeasonKey } from "@/lib/nba/bdl/bdlNbaEnv";
+import { fetchBdlGames } from "@/lib/nba/bdl/fetchBdlGames";
 import {
   ensureNbaPlayerSeasonSalaries,
   suspensionLostSalaryUsd,
@@ -207,6 +209,7 @@ export async function rebuildNbaDisciplineSnapshot(
       ...(f.totalGames && f.totalGames > 0 ? { totalGames: f.totalGames } : {}),
     }));
   let lostById = new Map<string, number>();
+  const regularSeasonDays = await regularSeasonDayCount(seasonKey, scheduled.regularSeasonDays);
   if (suspensions.length > 0) {
     const salaries = await ensureNbaPlayerSeasonSalaries(
       db,
@@ -217,7 +220,7 @@ export async function rebuildNbaDisciplineSnapshot(
       seasonKey,
       suspensions,
       salaries,
-      scheduled.regularSeasonDays
+      regularSeasonDays
     );
   }
   const amountUpdates: Array<{ id: string; amountUsd: number }> = [];
@@ -282,6 +285,34 @@ export async function rebuildNbaDisciplineSnapshot(
   };
   await db.collection(NBA_DISCIPLINE_COLLECTION).doc(seasonKey).set(snapshot);
   return snapshot;
+}
+
+/**
+ * 日割り年俸の分母。終了済みの試合だけだと今季の経過日数になり、1 試合停止が過大になる。
+ * レギュラーの日程（未実施含む）の初日から最終日。取れなければ集計側の日数。
+ */
+async function regularSeasonDayCount(seasonKey: string, fallback: number): Promise<number> {
+  try {
+    const games = await fetchBdlGames({
+      seasonYears: [bdlSeasonYearFromSeasonKey(seasonKey)],
+      seasonType: "regular",
+    });
+    const dates = games
+      .map((g) => String(g.date ?? "").slice(0, 10))
+      .filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d))
+      .sort();
+    const first = dates[0];
+    const last = dates.at(-1);
+    if (!first || !last) return fallback;
+    const days =
+      Math.round(
+        (Date.parse(`${last}T00:00:00Z`) - Date.parse(`${first}T00:00:00Z`)) / 86_400_000
+      ) + 1;
+    return days > 0 ? days : fallback;
+  } catch (e) {
+    console.error("[nba-discipline] regular season days", e);
+    return fallback;
+  }
 }
 
 export async function loadNbaDisciplineSnapshot(

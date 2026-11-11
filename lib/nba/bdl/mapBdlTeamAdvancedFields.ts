@@ -99,6 +99,7 @@ export const BDL_TEAM_TRACKING_TYPES = [
   "SpeedDistance",
   "Passing",
   "Rebounding",
+  "Possessions",
 ] as const;
 
 export type BdlTeamTrackingType = (typeof BDL_TEAM_TRACKING_TYPES)[number];
@@ -122,6 +123,9 @@ export function mapBdlTeamAdvancedFields(input: {
   clutchBase?: BdlTeamSeasonAverageRow;
   clutchAdvanced?: BdlTeamSeasonAverageRow;
   playtypeByType: Record<string, BdlTeamSeasonAverageRow | undefined>;
+  defenseByType?: Partial<
+    Record<"lt6" | "lt10" | "gt15", BdlTeamSeasonAverageRow | undefined>
+  >;
   pace: number;
   ppg?: number;
 }): NbaLeagueTeamAdvancedFields {
@@ -296,12 +300,18 @@ export function mapBdlTeamAdvancedFields(input: {
   const charges = num(h, "charges_drawn", "charges");
   const loose = num(h, "loose_balls_recovered", "loose_balls");
   const screenAst = num(h, "screen_assists", "screen_ast");
+  const screenAstPts = num(h, "screen_assist_points");
   const contested = num(h, "contested_shots");
   if (deflections != null) set(out, "deflections", round1(deflections));
   if (charges != null) set(out, "charges", round1(charges));
   if (loose != null) set(out, "looseBalls", round1(loose));
   if (screenAst != null) set(out, "screenAst", round1(screenAst));
+  if (screenAstPts != null) set(out, "screenAstPts", round1(screenAstPts));
   if (contested != null) set(out, "contestedShots", round1(contested));
+  const contested2 = num(h, "contested_shots_2pt");
+  const contested3 = num(h, "contested_shots_3pt");
+  if (contested2 != null) set(out, "contestedShots2", round1(contested2));
+  if (contested3 != null) set(out, "contestedShots3", round1(contested3));
   const boxOuts = num(h, "box_outs");
   if (boxOuts != null) set(out, "boxOuts", round1(boxOuts));
 
@@ -311,6 +321,7 @@ export function mapBdlTeamAdvancedFields(input: {
   const drivePts = num(drives, "drive_pts");
   if (drivesN != null) set(out, "drives", round1(drivesN));
   if (drivePts != null) set(out, "drivePts", round1(drivePts));
+  set(out, "driveFgPct", rate(num(drives, "drive_fg_pct")));
 
   const cns = tr.CatchShoot?.stats ?? {};
   set(
@@ -339,10 +350,22 @@ export function mapBdlTeamAdvancedFields(input: {
   const speed = tr.SpeedDistance?.stats ?? {};
   const avgSpeed = num(speed, "avg_speed", "avg_speed_off");
   if (avgSpeed != null) set(out, "speed", round1(avgSpeed));
+  const distMiles = num(speed, "dist_miles", "distance");
+  if (distMiles != null) set(out, "distMiles", round1(distMiles));
 
   const passing = tr.Passing?.stats ?? {};
   const passes = num(passing, "passes_made", "passes");
   if (passes != null) set(out, "passes", round1(passes));
+  const potentialAst = num(passing, "potential_ast");
+  const astPtsCreated = num(passing, "ast_pts_created");
+  if (potentialAst != null) set(out, "potentialAst", round1(potentialAst));
+  if (astPtsCreated != null) set(out, "astPtsCreated", round1(astPtsCreated));
+
+  const poss = tr.Possessions?.stats ?? {};
+  const touches = num(poss, "touches");
+  const secPerTouch = num(poss, "avg_sec_per_touch", "sec_per_touch");
+  if (touches != null) set(out, "touches", round1(touches));
+  if (secPerTouch != null) set(out, "secPerTouch", round1(secPerTouch));
 
   const reb = tr.Rebounding?.stats ?? {};
   const rebChances = num(reb, "reb_chances");
@@ -353,6 +376,11 @@ export function mapBdlTeamAdvancedFields(input: {
   set(out, "rebContestPct", rate(num(reb, "reb_contest_pct")));
   set(out, "orebChancePct", rate(num(reb, "oreb_chance_pct")));
   set(out, "drebChancePct", rate(num(reb, "dreb_chance_pct")));
+
+  const def = input.defenseByType ?? {};
+  set(out, "oppLt6Pct", rate(num(def.lt6?.stats, "lt_06_pct", "lt_6_pct", "fg_pct")));
+  set(out, "oppLt10Pct", rate(num(def.lt10?.stats, "lt_10_pct", "fg_pct")));
+  set(out, "oppGt15Pct", rate(num(def.gt15?.stats, "gt_15_pct", "fg_pct")));
 
   return out;
 }

@@ -65,7 +65,10 @@ function buildRow(
   >,
   clutchBase: BdlTeamSeasonAverageRow | undefined,
   clutchAdvanced: BdlTeamSeasonAverageRow | undefined,
-  playtypeByType: Record<string, BdlTeamSeasonAverageRow | undefined>
+  playtypeByType: Record<string, BdlTeamSeasonAverageRow | undefined>,
+  defenseByType?: Partial<
+    Record<"lt6" | "lt10" | "gt15", BdlTeamSeasonAverageRow | undefined>
+  >
 ): NbaLeagueTeamStatRow | null {
   if (!base?.stats) return null;
   const s = base.stats;
@@ -165,6 +168,7 @@ function buildRow(
     clutchBase,
     clutchAdvanced,
     playtypeByType,
+    defenseByType,
     pace,
     ppg,
   });
