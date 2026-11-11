@@ -29,7 +29,7 @@ import { NBA_TEAM_ROSTERS_COLLECTION } from "@/lib/nba/teamRosters/loadTeamRoste
 import { NBA_TEAM_INJURIES_COLLECTION } from "@/lib/nba/teamInjuries/loadTeamInjuriesSnapshot";
 
 /** 有無だけ（数バイト）をキャッシュし、判定のために 4 本の大きな doc を毎回開かない */
-const DISPLAY_CHECK_TTL_SEC = 600;
+const DISPLAY_CHECK_TTL_SEC = 86400;
 
 export type NbaStatsDisplaySeason = {
   seasonKey: string;

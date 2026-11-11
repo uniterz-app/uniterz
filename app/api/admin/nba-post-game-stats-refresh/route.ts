@@ -24,7 +24,20 @@ export async function POST(req: Request) {
     const result = await runNbaPostGameStatsRefresh(getAdminDb());
     if (result.ran) {
       revalidateNbaDisciplineApiCache();
-      revalidateNbaDocCache();
+      revalidateNbaDocCache([
+        "nbaLeagueTeamStats",
+        "nbaLeaguePlayerStats",
+        "nbaPlayerSeasonMetrics",
+        "nbaTeamGameLogs",
+        "nbaStandings",
+        "nbaTeamSeasonRecords",
+        "nbaTeamShapeRecords",
+        "nbaDiscipline",
+        "nbaPlayerShotZones",
+        "nbaPlayerShotAreas",
+        "nbaPlayerGameLogs",
+        "nbaLeagueHub",
+      ]);
     }
     return NextResponse.json(result, { status: result.ok ? 200 : 207 });
   } catch (e: unknown) {
