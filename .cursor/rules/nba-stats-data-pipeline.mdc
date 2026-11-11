@@ -93,9 +93,9 @@ BDL（サーバーのみ）
 
 Vercel（hnd1）が Firestore から受け取るバイトはすべてインターネット転送として課金される（2026-11 実測で Firestore 費用の 79%）。シーズン丸ごとの doc（ペイロール 270KB・league-hub 250KB・リーグ選手表 440KB 等）を選手 1 人・チーム 1 つ開くたびに読み直さない。
 
-- 公開 `/api/nba/*` は `getNbaPublicReadDb()` 経由で読む。ホワイトリストのコレクションの **doc 単体 get** だけ `unstable_cache`（既定 30 分・injury 5 分・タグ `nba-doc` / `nba-doc:<collection>`）で全員共有。クエリ・`getAll`・トランザクションは素通し
+- 公開 `/api/nba/*` は `getNbaPublicReadDb()` 経由で読む。ホワイトリストのコレクションの **doc 単体 get** だけ `unstable_cache`（既定 24 時間・injury 1 時間・タグ `nba-doc` / `nba-doc:<collection>`）で全員共有。期限は保険で、入れ替えは ingest 後の tag 破棄が担う。クエリ・`getAll`・トランザクションは素通し
 - 新しいスナップショットのコレクションを公開 API で読むなら `NBA_PUBLIC_DOC_CACHE_TTL` に足す（1 doc 2MB 超はキャッシュされない）
-- ingest（`/api/admin/nba-*`）は本物の `getAdminDb()` で読み書きし、成功後に `revalidateNbaDocCache()`（全部）か `revalidateNbaDocCache(["コレクション"])` を呼ぶ。書いたのに呼ばないと最大 30 分古いまま
+- ingest（`/api/admin/nba-*`）は本物の `getAdminDb()` で読み書きし、成功後に `revalidateNbaDocCache()`（全部）か `revalidateNbaDocCache(["コレクション"])` を呼ぶ。書いたのに呼ばないと最大 24 時間古いまま（`scripts/` から書いたときも同じ。必要なら管理 API を叩くかデプロイで捨てる）
 - ASK のクォータ・favorite-counts・daily-leaders など書き込みやクエリ中心のものは素の db のまま
 - `games` を読むときは必要な項目だけ（Admin は `.select()` / `getAll(..., { fieldMask })`）。`liveStats`（約 6KB）・`pointsSummary`（約 11KB）・`pointsDistribution`・`predictorUids` が 1 件の 9 割。試合一覧（`loadGamesWindow`）は `NBA_GAMES_WINDOW_FIELDS` にある項目しか返さないので、カードで新しい games 項目を使うならそこに足す
 - アプリ（Native）から `games` を Firestore クライアントで一覧クエリしない（select が無く全項目を受け取る）。`/api/games/window` を使う

@@ -1,8 +1,11 @@
+import { createHash } from "crypto";
+import { unstable_cache } from "next/cache";
 import { getAdminDb } from "@/lib/firebaseAdmin";
 import { parseEquippedProSkinFromUserDoc } from "@/lib/profile/profilePlanProBgVariantField";
 import type { ProfilePlanProBgVariant } from "@/lib/profile/profilePlanProBgVariants";
 import { userDataPlan } from "@/lib/pro/userPlanActive";
 import { rankingCommentFromUserDoc } from "@/lib/rankings/rankingComment";
+import { RANKING_USER_FIELDS_TAG } from "@/lib/rankings/rankingCommentCache";
 
 type RowLike = Record<string, unknown> & { uid?: string };
 
@@ -90,14 +93,36 @@ function applyMergeFieldsToRow(
   return next;
 }
 
-/** Firestore users をバッチ取得して uid → plan / countryCode（1 回の getAll で両方） */
+/**
+ * ランキング表の行は全員同じなので、users の重ね合わせを全リクエストで共有する。
+ * プラン・スキン・ひとこと・プロフィールの保存時は revalidateRankingUserFields で捨てる。
+ */
+/** 03:00 の Pro 期限切れ（Functions）は tag を捨てないので、そのぶんだけ Pro 表示が残る */
+const RANKING_USER_FIELDS_TTL_SEC = 86_400;
+
 async function loadUserMergeFieldsByUid(
   uids: string[]
 ): Promise<Map<string, UserMergeFields>> {
-  const out = new Map<string, UserMergeFields>();
-  const unique = [...new Set(uids.filter(Boolean))];
-  if (unique.length === 0) return out;
+  const unique = [...new Set(uids.filter(Boolean))].sort();
+  if (unique.length === 0) return new Map();
+  const key = createHash("sha1").update(unique.join(",")).digest("hex");
+  try {
+    const entries = await unstable_cache(
+      async () => [...(await readUserMergeFieldsByUid(unique)).entries()],
+      ["ranking-user-fields", key],
+      { revalidate: RANKING_USER_FIELDS_TTL_SEC, tags: [RANKING_USER_FIELDS_TAG] }
+    )();
+    return new Map(entries);
+  } catch {
+    return readUserMergeFieldsByUid(unique);
+  }
+}
 
+/** Firestore users をバッチ取得して uid → plan / countryCode（1 回の getAll で両方） */
+async function readUserMergeFieldsByUid(
+  unique: string[]
+): Promise<Map<string, UserMergeFields>> {
+  const out = new Map<string, UserMergeFields>();
   const db = getAdminDb();
   const BATCH = 100;
   for (let i = 0; i < unique.length; i += BATCH) {

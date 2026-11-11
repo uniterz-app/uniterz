@@ -3,6 +3,7 @@ export const runtime = "nodejs";
 import { NextResponse } from "next/server";
 import { FieldValue } from "firebase-admin/firestore";
 import { getAdminAuth, getAdminDb } from "@/lib/firebaseAdmin";
+import { revalidateRankingUserFields } from "@/lib/rankings/rankingCommentCache";
 import { isAdoptedProBgVariant } from "@/lib/profile/profilePlanProAdoptedBgVariants";
 import { parseUserPlanProBgVariant } from "@/lib/profile/profilePlanProBgVariantField";
 import {
@@ -186,6 +187,7 @@ export async function POST(req: Request) {
     revalidateTag("cumulative-ranking", {});
     revalidateTag("period-ranking", {});
     revalidateTag("ranking-ui", {});
+    revalidateRankingUserFields();
 
     return NextResponse.json({ ok: true, planProBgVariant: variant });
   } catch (e: unknown) {
