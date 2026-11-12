@@ -943,6 +943,9 @@ export async function buildCumulativeRankingSnapshot(
   }
   await flush();
 
+  const rankedUidSet = new Set<string>(rankByUidSeason.keys());
+  for (const uid of openRankByUid.keys()) rankedUidSet.add(uid);
+
   const generationMs = Date.now();
   await db()
     .collection("cumulative_ranking_snapshots")
@@ -963,6 +966,7 @@ export async function buildCumulativeRankingSnapshot(
     seasonKey,
     metrics: METRICS.length,
     ranksWritten: rankByUidSeason.size,
+    rankedUids: [...rankedUidSet],
     historyDateKey: dateKey,
     rankDeltaBasisDateKey: yesterdayKey,
     snapshotGenerationMs: generationMs,

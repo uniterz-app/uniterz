@@ -220,6 +220,17 @@ npx tsx scripts/ingest-nba-team-ace-out-records.ts 2025-26 --force
 
 ---
 
+## 6.7. 先週 TOP 5%（上位ユーザーの予想分布・INSIGHT の一番下）
+
+先週の Pick Up 週間ランキング（`totalPoints`）で `rank / count × 100 ≤ 5`（0 点の同順位は除く）の人だけが付けた勝者の分布と人数。LLM の本文には混ぜない（試合直前まで動くため）。推奨文は書かない。
+
+- コホート: `nbaSmartMoneyCohort/{先週月曜}`（`uids`・`count`・`cutoffRank`）+ `members/{uid}`（投稿時の判定用）。Functions `buildNbaSmartMoneyMarkets`（日次 16:00 JST の期間スナップショットの後）。Eastern 月曜に書き直し、それ以外の日は無いときだけ作る
+- 市場: `nbaSmartMoneyMarkets/{gameId}`（`weekLabel`・`pickCounts`・`predictorCount`・`cohortSize`）。同じ日次で先 7 日の NBA 試合を `gamePredictors` × `posts/v2_{uid}_{gameId}` からトランザクションで数え直す。その間の投稿の作成・勝者変更・削除は Next の公開市場と同じトランザクションで ±1（`lib/predict/smartMoneyMarketServer.ts`。`onPostDeleted` には入れない）。週が違う doc は触らない
+- 読み: `/api/nba/matchup-insight` が Pro のときだけ `smartMarket` を返す（ナラティブのキャッシュ外で 1 doc。週が先週と違えば null）。Free の teaser には出さない
+- 表示: ナラティブ末尾のブロック。ナラティブ未生成の試合でも単体で出す。予想 0 人は「まだ予想がありません」、コホート 0 人の週は出さない
+
+---
+
 ## 7. 選び方・更新タイミング
 
 種類ごとに点数（衝突の大きさ **または** 欠場インパクト）を付け、各サイド上位 2 本。言い回しをランダムに回さない。同じ試合は同じ行。穴埋め（`{rank}` `{player}` `{km}`）。

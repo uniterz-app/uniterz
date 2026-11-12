@@ -16,6 +16,7 @@ import { hasRankingAggregationScheduledJstToday } from "./schedule/hasRankingAgg
 import { runNotifyPredictionDeadlineCron } from "./notifications/notifyPredictionDeadlineCron";
 import { runNotifyEveningPredictNudgesCron } from "./notifications/notifyEveningPredictNudgesCron";
 import { runNotifyPregameAlertCron } from "./notifications/notifyPregameAlertCron";
+import { notifyDailyRankingUpdatedPush } from "./notifications/notifyPushEvents";
 
 // ===============================
 // V2 Core
@@ -121,6 +122,7 @@ export const buildCumulativeStatsCron = onSchedule(
 /* ============================================================================
  * Cumulative Ranking Snapshot (16:00) — JST 当日に NBA 試合がある日
  * 連勝はこの時点の「今日確定投稿者 × 連勝>0」でスナップショット化
+ * 更新後、今季順位が付いたユーザーへ ranking_updated を 1 日 1 回送る
  * ==========================================================================*/
 
 export const buildCumulativeRankingSnapshotCron = onSchedule(
@@ -135,7 +137,17 @@ export const buildCumulativeRankingSnapshotCron = onSchedule(
 
     if (hasGamesToday) {
       const snapshotResult = await buildCumulativeRankingSnapshot();
-      void snapshotResult;
+      try {
+        await notifyDailyRankingUpdatedPush({
+          uids: snapshotResult.rankedUids,
+          dateKey: snapshotResult.historyDateKey,
+        });
+      } catch (err) {
+        console.error(
+          "[buildCumulativeRankingSnapshotCron] ranking push failed",
+          err
+        );
+      }
     } else {
       console.log(
         "[buildCumulativeRankingSnapshotCron] skip cumulative: no NBA games scheduled this JST date"

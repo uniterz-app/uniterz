@@ -1,4 +1,5 @@
-import type { QuerySnapshot } from "firebase-admin/firestore";
+import { FieldValue, type QuerySnapshot } from "firebase-admin/firestore";
+import { db } from "../firebase";
 import {
   markGamePushNotified,
   sendExpoPushToUids,
@@ -6,6 +7,9 @@ import {
 } from "./sendExpoPush";
 import { resolveGameMatchupCopy } from "./pushNotificationCopy";
 import { userDataPlan } from "../shared/userPlanActive";
+
+/** 同じ日本時間の日付では 1 回だけ送る */
+const NBA_DAILY_RANKING_PUSH_DOC = "notificationDispatch/nbaDailyRanking";
 
 export async function notifyGameFinalPush(input: {
   gameId: string;
@@ -61,6 +65,70 @@ export async function notifyRankingUpdatedPush(uids: string[]): Promise<void> {
   console.log(
     `[notifyRankingUpdatedPush] sent=${result.sent} targets=${targets.length}`
   );
+}
+
+/**
+ * 累積ランキングの日次更新後。順位が付いたユーザーへ 1 日 1 回。
+ * 設定がオフの人は sendExpoPush 側で落とす。
+ */
+export async function notifyDailyRankingUpdatedPush(input: {
+  uids: string[];
+  dateKey: string;
+}): Promise<void> {
+  const unique = [...new Set(input.uids.filter(Boolean))];
+  const dateKey = input.dateKey.trim();
+  if (unique.length === 0 || !dateKey) return;
+
+  const ref = db.doc(NBA_DAILY_RANKING_PUSH_DOC);
+  const claimed = await db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    const prev = snap.data();
+    if (
+      prev?.dateKey === dateKey &&
+      (prev.status === "sent" || prev.status === "sending")
+    ) {
+      return false;
+    }
+    tx.set(
+      ref,
+      {
+        dateKey,
+        status: "sending",
+        targets: unique.length,
+        claimedAt: FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+    return true;
+  });
+  if (!claimed) {
+    console.log(
+      `[notifyDailyRankingUpdatedPush] skip date=${dateKey} already claimed`
+    );
+    return;
+  }
+
+  try {
+    await notifyRankingUpdatedPush(unique);
+    await ref.set(
+      {
+        dateKey,
+        status: "sent",
+        sentAt: FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+  } catch (err) {
+    await ref.set(
+      {
+        dateKey,
+        status: "error",
+        errorAt: FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+    throw err;
+  }
 }
 
 /** 週次レポート確定後 — Pro ユーザーへ（prefs.weeklyReport） */

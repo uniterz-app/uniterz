@@ -17,6 +17,12 @@ import {
 } from "@/lib/nba/predict/matchupInsightCache";
 import { loadGameProInsight } from "@/lib/nba/insights/gameProInsightStore";
 import { buildProInsightPreviewTeaser } from "@/lib/predict/proInsightPreviewTeaser";
+import {
+  SMART_MONEY_MARKETS_COLLECTION,
+  sanitizeSmartMoneyMarket,
+  type SmartMoneyMarket,
+} from "@/lib/predict/smartMoneyMarket";
+import { smartMoneyCohortWeekLabel } from "@/lib/predict/smartMoneyMarketServer";
 
 async function loadMatchupInsightPayload(gameId: string) {
   const db = getAdminDb();
@@ -71,8 +77,37 @@ async function loadMatchupInsightPayload(gameId: string) {
   };
 }
 
+/** 先週 TOP 5% の予想分布。投稿で毎回動くのでナラティブのキャッシュには入れない */
+async function loadSmartMoneyMarket(gameId: string): Promise<SmartMoneyMarket | null> {
+  try {
+    const snap = await getAdminDb()
+      .collection(SMART_MONEY_MARKETS_COLLECTION)
+      .doc(gameId)
+      .get();
+    if (!snap.exists) return null;
+    const d = snap.data() ?? {};
+    if (d.weekLabel !== smartMoneyCohortWeekLabel()) return null;
+    const pick =
+      d.pickCounts && typeof d.pickCounts === "object"
+        ? (d.pickCounts as Record<string, unknown>)
+        : {};
+    return sanitizeSmartMoneyMarket({
+      weekLabel: d.weekLabel,
+      home: pick.home,
+      away: pick.away,
+      draw: pick.draw,
+      cohortSize: d.cohortSize,
+    });
+  } catch (e) {
+    console.error("[matchup-insight] smart money market", e);
+    return null;
+  }
+}
+
 /**
  * GET /api/nba/matchup-insight?gameId=
+ *
+ * Pro のみ `smartMarket`: `nbaSmartMoneyMarkets/{gameId}`（先週 Pick Up 週間 TOP 5% の予想分布）。
  *
  * Firestore gameProInsights/{id}（クライアント読み取り不可）:
  *   - proInsightNarrative … 新 UI（試合共通スナップショット · Pro 限定）
@@ -139,7 +174,9 @@ export async function GET(req: Request) {
       );
     }
 
-    return NextResponse.json(result.body, {
+    const smartMarket = await loadSmartMoneyMarket(gameId);
+
+    return NextResponse.json({ ...result.body, smartMarket }, {
       headers: {
         "Cache-Control": "private, no-store",
       },

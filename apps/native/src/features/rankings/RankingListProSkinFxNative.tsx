@@ -58,10 +58,12 @@ import {
   PROFILE_PLAN_PRO_WAVE_CANVAS,
 } from "../../../../../lib/profile/profilePlanProWavePattern";
 import { isProfilePlanProWaveBgVariant } from "../../../../../lib/profile/profilePlanProWaveBgVariants";
-import { UNITERZ_LOGO_ASSET } from "../../../../../lib/units/uniterzLogoAsset";
+import { UNITERZ_LOGO_FLAT_ASSET } from "../../../../../lib/units/uniterzLogoFlat";
 import { RANKING_UNITERZ_LOGO_SCATTER } from "../../../../../lib/profile/profilePlanProUniterzLogoScatter";
 
-const UNITERZ_LOGO_PNG = require("../../../assets/brand/uniterz-logo.png");
+const UNITERZ_LOGO_PNG = require("../../../assets/brand/uniterz-logo-flat.png");
+const UNITERZ_LOGO_ASPECT =
+  UNITERZ_LOGO_FLAT_ASSET.width / UNITERZ_LOGO_FLAT_ASSET.height;
 
 export type RankingListProSkinIntensity = "subtle" | "medium";
 
@@ -371,7 +373,7 @@ export default function RankingListProSkinFxNative({
             >
               {RANKING_UNITERZ_LOGO_SCATTER.map((mark) => {
                 const markW = w * mark.widthPct;
-                const markH = markW / UNITERZ_LOGO_ASSET.aspectRatio;
+                const markH = markW / UNITERZ_LOGO_ASPECT;
                 return (
                   <Image
                     key={mark.id}

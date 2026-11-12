@@ -6,6 +6,7 @@ import type { PushNotificationPrefKey } from "@/lib/notifications/pushNotificati
 export const FREE_NOTIFICATION_PREF_KEYS_FOR_SETUP: readonly PushNotificationPrefKey[] = [
   "gameFinal",
   "predictionDeadline",
+  "rankingUpdated",
   "unitReward",
 ];
 
