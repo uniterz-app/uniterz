@@ -33,6 +33,7 @@ export async function POST(req: Request) {
         "nbaTeamSeasonRecords",
         "nbaTeamShapeRecords",
         "nbaDiscipline",
+        "nbaTeamCleanRatings",
         "nbaPlayerShotZones",
         "nbaPlayerShotAreas",
         "nbaPlayerGameLogs",

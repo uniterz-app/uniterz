@@ -12,6 +12,10 @@ import { resolveNbaStatsDisplaySeasonKey } from "@/lib/nba/resolveNbaStatsDispla
 import { loadNbaDisciplineSnapshot } from "@/lib/nba/discipline/nbaDisciplineSnapshot";
 import { applyDisciplineToLeagueTeamBundle } from "@/lib/nba/discipline/applyDisciplineToLeagueBundles";
 import { NBA_DISCIPLINE_CDN_TAG_HEADER } from "@/lib/nba/discipline/nbaDisciplineApiCache";
+import {
+  applyCleanRatingsToLeagueTeamBundle,
+  loadNbaTeamCleanRatings,
+} from "@/lib/nba/cleanRatings/applyCleanRatingsToLeagueTeamBundle";
 
 /**
  * GET /api/nba/league-team-stats?season=2025-26
@@ -33,13 +37,17 @@ export async function GET(req: Request) {
     const cached = unstable_cache(
       async () => {
         const adminDb = getNbaPublicReadDb();
-        const [base, discipline] = await Promise.all([
+        const [base, discipline, cleanRatings] = await Promise.all([
           loadLeagueTeamStatsSnapshot(adminDb, season),
           loadNbaDisciplineSnapshot(adminDb, season),
+          loadNbaTeamCleanRatings(adminDb, season),
         ]);
         return {
           ...base,
-          bundle: applyDisciplineToLeagueTeamBundle(base.bundle, discipline),
+          bundle: applyCleanRatingsToLeagueTeamBundle(
+            applyDisciplineToLeagueTeamBundle(base.bundle, discipline),
+            cleanRatings
+          ),
         };
       },
       ["nba-league-team-stats", season],

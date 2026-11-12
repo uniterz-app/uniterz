@@ -163,6 +163,7 @@ export function CyberRankingListRowNative({
   bare = false,
   rankDisplayValue,
   rankMuted = false,
+  rankTotal = null,
   nameExtra = null,
   compact = false,
   scoreInline = false,
@@ -204,6 +205,8 @@ export function CyberRankingListRowNative({
   bare?: boolean;
   rankDisplayValue?: string;
   rankMuted?: boolean;
+  /** My Rank カード — 順位の下に「/ 1,234」（その一覧の参加人数） */
+  rankTotal?: number | null;
   /** Web `nameExtra` — 指定時は isPro バッジの代わりにこれを出す */
   nameExtra?: ReactNode;
   /** リザルト詳細の得点上位など — 行高を少し低く */
@@ -253,6 +256,13 @@ export function CyberRankingListRowNative({
           : compact
             ? 28
             : 34;
+  const rankTotalLabel =
+    typeof rankTotal === "number" && rankTotal > 0
+      ? `/ ${rankTotal.toLocaleString("en-US")}`
+      : null;
+  const rankColWidthWithTotal = rankTotalLabel
+    ? Math.max(rankColWidth, rankTotalLabel.length * 6 + 4)
+    : rankColWidth;
 
   const body = (
     <View
@@ -299,7 +309,7 @@ export function CyberRankingListRowNative({
         <View
           style={[
             styles.rankCol,
-            { width: rankColWidth },
+            { width: rankColWidthWithTotal },
             compact ? styles.rankColCompact : null,
             rankOverline ? styles.rankColWithOverline : null,
             rankFlushLeft ? styles.rankColFlushLeft : null,
@@ -321,6 +331,11 @@ export function CyberRankingListRowNative({
             flushLeft={rankFlushLeft}
             quiet
           />
+          {rankTotalLabel ? (
+            <Text style={styles.rankTotal} numberOfLines={1}>
+              {rankTotalLabel}
+            </Text>
+          ) : null}
           <RankDeltaBadgeNative delta={rankDeltaPlaces} />
         </View>
 
@@ -567,6 +582,15 @@ const styles = StyleSheet.create({
   rankOverlineFlush: {
     textAlign: "left",
     alignSelf: "flex-start",
+  },
+  rankTotal: {
+    color: "rgba(255,255,255,0.5)",
+    fontSize: 9,
+    fontWeight: "700",
+    letterSpacing: 0.4,
+    fontFamily: METRIC_FONT,
+    fontVariant: ["tabular-nums"],
+    marginTop: -2,
   },
   avatarCol: {
     width: 44,

@@ -17,6 +17,7 @@ export default function MatchScoreDisplaySettingsNative() {
   const rows: Array<{ key: MatchScoreDisplayPrefKey; title: string; desc: string }> = [
     { key: "showLiveScore", title: copy.liveTitle, desc: copy.liveDesc },
     { key: "showFinalScore", title: copy.finalTitle, desc: copy.finalDesc },
+    { key: "showTeamRecord", title: copy.recordTitle, desc: copy.recordDesc },
   ];
 
   return (

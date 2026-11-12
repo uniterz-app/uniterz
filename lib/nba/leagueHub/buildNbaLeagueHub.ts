@@ -115,6 +115,23 @@ export type BuildNbaLeagueHubInput = {
   previousLadders?: Pick<NbaLeagueHubDoc, "ladderWeek" | "ladderPrev"> | null;
   /** 相手の得点源を守った時間と、抑えた FG% */
   aceGuard?: Map<string, { minutes: number; suppress: number }> | null;
+  /** 相手の得点上位3人。minutes / suppress はエースと同じ単位 */
+  toughGuard?: Map<string, { minutes: number; suppress: number }> | null;
+  /** 守備側 → マークした相手 */
+  matchups?: Map<string, { playerId: string; seconds: number; fgm: number; fga: number }[]> | null;
+  /** 攻撃側 → 自分をマークした相手 */
+  guardedBy?: Map<string, { playerId: string; seconds: number; fgm: number; fga: number }[]> | null;
+  onOff?: Map<string, { onNet: number; offNet: number; onMin: number; offMin: number }> | null;
+  lineups?: Map<string, { ids: string[]; min: number; net: number; pm?: number; off?: number; def?: number; games?: number }[]> | null;
+  lineupBoards?: Map<
+    string,
+    {
+      size: 2 | 3 | 4 | 5;
+      most: { ids: string[]; min: number; net: number; pm: number; off?: number; def?: number; games?: number }[];
+      best: { ids: string[]; min: number; net: number; pm: number; off?: number; def?: number; games?: number }[];
+      worst: { ids: string[]; min: number; net: number; pm: number; off?: number; def?: number; games?: number }[];
+    }[]
+  > | null;
 };
 
 const SCATTER_PLAYER_LIMIT = 220;
@@ -181,7 +198,7 @@ function metricDigits(id: string): number {
   ) {
     return 3;
   }
-  if (id === "ace_suppress") return 3;
+  if (id === "ace_suppress" || id === "tough_suppress") return 3;
   return id === "drive_ppd" ? 2 : 1;
 }
 
@@ -287,6 +304,25 @@ function rankMap<T extends { id: string }>(pool: T[], get: (item: T) => number):
   return new Map([...pool].sort((a, b) => get(b) - get(a)).map((p, i) => [p.id, i + 1]));
 }
 
+function lineupNames(ids: string[], roster: BuildNbaLeagueHubInput["roster"]): string[] {
+  return ids.flatMap((id) => {
+    const name = roster.get(id)?.name;
+    return name ? [name] : [];
+  });
+}
+
+function namedLineups(
+  units: { ids: string[]; min: number; net: number; pm: number; off?: number; def?: number; games?: number }[],
+  size: number,
+  roster: BuildNbaLeagueHubInput["roster"]
+): { names: string[]; min: number; net: number; pm: number; off?: number; def?: number; games?: number }[] {
+  return units.flatMap((unit) => {
+    const names = lineupNames(unit.ids, roster);
+    if (names.length !== size) return [];
+    return [{ names, min: unit.min, net: unit.net, pm: unit.pm, off: unit.off, def: unit.def, games: unit.games }];
+  });
+}
+
 export function buildNbaLeagueHub(input: BuildNbaLeagueHubInput): NbaLeagueHubDoc {
   const { seasonKey, roster, metrics } = input;
 
@@ -324,6 +360,40 @@ export function buildNbaLeagueHub(input: BuildNbaLeagueHubInput): NbaLeagueHubDo
       m.ace_guard_min = round(ace.minutes, 1);
       m.ace_suppress = round(ace.suppress, 3);
     }
+    const tough = input.toughGuard?.get(playerId);
+    if (tough && tough.minutes > 0) {
+      m.tough_guard_min = round(tough.minutes, 1);
+      m.tough_suppress = round(tough.suppress, 3);
+    }
+    const seasonFg = (id: string) => {
+      const v = input.metrics.get(id)?.values.fg_pct;
+      if (v == null || !Number.isFinite(v) || v <= 0) return undefined;
+      return round(v > 1 ? v / 100 : v, 3);
+    };
+    const toMatchups = (
+      rows: { playerId: string; seconds: number; fgm: number; fga: number }[] | undefined,
+      /** このシュートを打った選手。DF は相手、OF は本人 */
+      shooterId?: string
+    ) =>
+      (rows ?? []).flatMap((row) => {
+        const opp = input.roster.get(row.playerId);
+        if (!opp) return [];
+        const usualFgPct = seasonFg(shooterId ?? row.playerId);
+        return [
+          {
+            playerId: row.playerId,
+            name: opp.name,
+            teamId: opp.teamId,
+            minutes: round(row.seconds / 60, 1),
+            fgPct: row.fga > 0 ? round(row.fgm / row.fga, 3) : 0,
+            fgm: row.fgm,
+            fga: row.fga,
+            ...(usualFgPct != null ? { usualFgPct } : {}),
+          },
+        ];
+      });
+    const matchups = toMatchups(input.matchups?.get(playerId));
+    const guardedBy = toMatchups(input.guardedBy?.get(playerId), playerId);
     players.push({
       playerId,
       name: r.name,
@@ -333,6 +403,9 @@ export function buildNbaLeagueHub(input: BuildNbaLeagueHubInput): NbaLeagueHubDo
       gp: entry.gp,
       min: round(min, 1),
       m,
+      ...(matchups.length > 0 ? { matchups } : {}),
+      ...(guardedBy.length > 0 ? { guardedBy } : {}),
+      ...(input.onOff?.get(playerId) ? { onOff: input.onOff.get(playerId) } : {}),
     });
   }
   players.sort((a, b) => b.gp * b.min - a.gp * a.min);
@@ -884,6 +957,18 @@ export function buildNbaLeagueHub(input: BuildNbaLeagueHubInput): NbaLeagueHubDo
       schedule: schedules?.get(s.teamId) ?? null,
       picks: picks?.get(s.teamId) ?? null,
       m,
+      lineups: (input.lineups?.get(s.teamId) ?? []).flatMap((unit) => {
+        const names = lineupNames(unit.ids, input.roster);
+        if (names.length < 5) return [];
+        return [{ names, min: unit.min, net: unit.net, pm: unit.pm, off: unit.off, def: unit.def }];
+      }),
+      lineupBoards: (input.lineupBoards?.get(s.teamId) ?? []).flatMap((board) => {
+        const most = namedLineups(board.most, board.size, input.roster);
+        const best = namedLineups(board.best, board.size, input.roster);
+        const worst = namedLineups(board.worst, board.size, input.roster);
+        if (most.length === 0 && best.length === 0 && worst.length === 0) return [];
+        return [{ size: board.size, most, best, worst }];
+      }),
     };
   });
 

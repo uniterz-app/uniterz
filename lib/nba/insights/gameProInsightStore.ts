@@ -13,6 +13,7 @@ export const GAME_PRO_INSIGHT_FIELDS = [
   "proInsightFacts",
   "proBrief",
   "proBriefUpdatedAt",
+  "predictKit",
 ] as const;
 
 export type GameProInsightField = (typeof GAME_PRO_INSIGHT_FIELDS)[number];

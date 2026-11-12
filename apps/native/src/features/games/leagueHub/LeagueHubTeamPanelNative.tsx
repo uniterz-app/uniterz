@@ -4,12 +4,15 @@ import { getNbaTeamNicknameById } from "../../../../../../lib/nba-team-names";
 import { useLeagueTeamStatsBundle } from "../../../../../../lib/nba/useLeagueTeamStatsBundle";
 import { CURRENT_NBA_SEASON_KEY } from "../../../../../../lib/rankings/nbaSeason";
 import type { NbaLeagueTeamStatRow } from "../../../../../../lib/predict/nbaLeagueTeamStatsMocks";
+import { leagueTeamRowsHaveCleanRatings } from "../../../../../../lib/nba/cleanRatings/leagueTeamCleanRatings";
 import {
   LEAGUE_HUB_PLAY_TYPES,
   LEAGUE_HUB_TEAM_ACE,
+  LEAGUE_HUB_TEAM_ADJ_STRENGTH,
   LEAGUE_HUB_TEAM_AGE,
   LEAGUE_HUB_TEAM_ATTACK,
   LEAGUE_HUB_TEAM_BENCH,
+  LEAGUE_HUB_TEAM_CLEAN_STRENGTH,
   LEAGUE_HUB_TEAM_CLUTCH,
   LEAGUE_HUB_TEAM_CONTEST,
   LEAGUE_HUB_TEAM_PASS_VALUE,
@@ -66,14 +69,16 @@ import {
   teamNameStyle,
   type HubLang,
 } from "./leagueHubUiNative";
+import { LeagueHubLineupBestNative } from "./LeagueHubBestNative";
 
-export type LeagueHubTeamSection = "style" | "scoring" | "form" | "defense";
+export type LeagueHubTeamSection = "style" | "scoring" | "form" | "defense" | "lineup";
 
 export const LEAGUE_HUB_TEAM_SECTIONS: readonly { id: LeagueHubTeamSection; label: string }[] = [
   { id: "style", label: "STYLE" },
   { id: "scoring", label: "SCORING" },
   { id: "form", label: "FORM" },
   { id: "defense", label: "DEFENSE" },
+  { id: "lineup", label: "LINEUP" },
 ];
 
 type Props = {
@@ -505,6 +510,8 @@ function ScoringMix({
 
 type StylePresetId =
   | "strength"
+  | "cleanStrength"
+  | "adjStrength"
   | "clutch"
   | "three"
   | "attack"
@@ -536,6 +543,8 @@ type StyleGroup = {
 
 const STYLE_PRESETS: Record<StylePresetId, LeagueHubScatterPreset<LeagueHubTeamMetric>> = {
   strength: LEAGUE_HUB_TEAM_STRENGTH,
+  cleanStrength: LEAGUE_HUB_TEAM_CLEAN_STRENGTH,
+  adjStrength: LEAGUE_HUB_TEAM_ADJ_STRENGTH,
   clutch: LEAGUE_HUB_TEAM_CLUTCH,
   three: LEAGUE_HUB_TEAM_THREE,
   attack: LEAGUE_HUB_TEAM_ATTACK,
@@ -564,6 +573,8 @@ const PLAY_STYLE_GROUPS: readonly StyleGroup[] = [
     label: "OVERALL",
     maps: [
       { id: "strength", label: "OFF × DEF" },
+      { id: "cleanStrength", label: "OFF × DEF (CLN)" },
+      { id: "adjStrength", label: "OFF × DEF (ADJ)" },
       { id: "clutch", label: "CLUTCH" },
     ],
   },
@@ -639,10 +650,20 @@ function StyleMaps({
   const [mapByGroup, setMapByGroup] = useState<Record<string, StyleMapId>>(() =>
     Object.fromEntries(groups.map((g) => [g.id, g.initial ?? g.maps[0]!.id]))
   );
-  const group = groups.find((g) => g.id === groupId) ?? groups[0]!;
-  const mapId = mapByGroup[groupId] ?? group.maps[0]!.id;
+  const hasCleanRatings = leagueTeamRowsHaveCleanRatings(rows);
+  const hasAdjRatings = rows.some((r) => r.cleanAdjOrtg > 0);
+  const baseGroup = groups.find((g) => g.id === groupId) ?? groups[0]!;
+  const group = {
+    ...baseGroup,
+    maps: baseGroup.maps.filter(
+      (m) =>
+        (m.id !== "cleanStrength" || hasCleanRatings) && (m.id !== "adjStrength" || hasAdjRatings)
+    ),
+  };
+  const pickedMapId = mapByGroup[groupId] ?? group.maps[0]!.id;
+  const mapId = group.maps.some((m) => m.id === pickedMapId) ? pickedMapId : group.maps[0]!.id;
   const preset = useMemo(() => stylePreset(mapId), [mapId]);
-  const strength = mapId === "strength";
+  const strength = mapId === "strength" || mapId === "cleanStrength" || mapId === "adjStrength";
   return (
     <HubSection title={title}>
       {groups.length > 1 ? (
@@ -1367,6 +1388,23 @@ export default function LeagueHubTeamPanelNative({ hub, lang, section, onSelectT
               : "Per game allowed to opposing guards, forwards and centers. Rank 1 = fewest."}
           </Text>
           <PositionDefense teams={teams} lang={lang} onSelectTeam={onSelectTeam} />
+        </HubSection>
+      </View>
+
+      <View style={shown("lineup")}>
+        <HubSection
+          title="LINEUPS"
+          hint={
+            lang === "ja"
+              ? "5 人組のネットレーティング。各チームの上位から、30 分以上をリーグで並べた上位 10。"
+              : "Five-man net rating. The best of each team, at least 30 minutes, league top 10."
+          }
+        >
+          {hub ? (
+            <LeagueHubLineupBestNative hub={hub} lang={lang} onSelectTeam={onSelectTeam} />
+          ) : (
+            spinner
+          )}
         </HubSection>
       </View>
     </View>

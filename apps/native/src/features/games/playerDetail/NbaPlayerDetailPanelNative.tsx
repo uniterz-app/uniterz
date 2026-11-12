@@ -104,6 +104,10 @@ import NbaFavoriteStarButtonNative from "../NbaFavoriteStarButtonNative";
 import { NbaPlayerDisciplineSectionNative } from "../NbaDisciplineSectionNative";
 import { resolveLocalizedLang } from "../../../../../../lib/i18n/localize";
 import NbaPlayerHowTheyPlayNative from "./NbaPlayerHowTheyPlayNative";
+import NbaPlayerMatchupsNative from "./NbaPlayerMatchupsNative";
+import NbaPlayerOnOffNative from "./NbaPlayerOnOffNative";
+import { useNbaLeagueHubNative } from "../leagueHub/useNbaLeagueHubNative";
+import type { LeagueHubZoneBoard } from "../../../../../../lib/nba/leagueHub/leagueHubTypes";
 import { useLeagueTeamStatsBundle } from "../../../../../../lib/nba/useLeagueTeamStatsBundle";
 import { usePlayerStatLeadersBundle } from "../../../../../../lib/nba/usePlayerStatLeadersBundle";
 import { useNbaPlayerDetailLiveOverlay } from "../../../../../../lib/nba/playerDetail/useNbaPlayerDetailLiveOverlay";
@@ -376,15 +380,39 @@ function ZoneGlowDefs({
   );
 }
 
+/** 試投が少ないゾーンは、リーグ平均との差を弱める */
+function zoneVsLeagueColor(fgPct: number, league: number, attempts: number): string {
+  const trust = attempts / (attempts + 8);
+  const gap = (fgPct - league) * trust;
+  const t = Math.max(0, Math.min(1, (gap + 0.12) / 0.24));
+  return zoneEfficiencyColor(t);
+}
+
+function leagueZonePct(
+  boards: LeagueHubZoneBoard[] | undefined,
+  id: NbaPlayerShotZone["id"]
+): number | null {
+  const direct = boards?.find((z) => z.id === id)?.leagueFgPct;
+  if (direct != null) return direct;
+  if (id !== "above_break_3" || !boards) return null;
+  const wings = ["left_wing_3", "top_3", "right_wing_3"]
+    .map((wing) => boards.find((z) => z.id === wing)?.leagueFgPct)
+    .filter((v): v is number => v != null);
+  if (wings.length === 0) return null;
+  return wings.reduce((s, v) => s + v, 0) / wings.length;
+}
+
 function ZoneStatLabel({
   zone,
   id,
   totalGames,
+  leaguePct,
 }: {
   zone?: NbaPlayerShotZone;
   id: NbaPlayerShotZone["id"];
   /** 指定時は合計（平均 × 試合数）で出す */
   totalGames: number | null;
+  leaguePct: number | null;
 }) {
   const pos = SHOT_ZONE_LABEL_POS[id];
   if (!zone) return null;
@@ -420,15 +448,28 @@ function ZoneStatLabel({
       </SvgText>
       <SvgText
         x={pos.x}
-        y={pos.y + 27}
+        y={pos.y + 24}
         fill="rgba(255,255,255,0.55)"
-        fontSize={14}
+        fontSize={13}
         fontWeight="600"
         fontFamily={METRIC_FONT}
         textAnchor="middle"
       >
         {makes}
       </SvgText>
+      {leaguePct != null ? (
+        <SvgText
+          x={pos.x}
+          y={pos.y + 38}
+          fill="rgba(0,245,255,0.78)"
+          fontSize={10}
+          fontWeight="700"
+          fontFamily={METRIC_FONT}
+          textAnchor="middle"
+        >
+          {`LG ${Math.round(leaguePct * 100)}%`}
+        </SvgText>
+      ) : null}
     </>
   );
 }
@@ -444,6 +485,7 @@ function ShotZoneHeatmap({
   seasonLabel: string;
   gamesPlayed: number;
 }) {
+  const { hub } = useNbaLeagueHubNative();
   const [mode, setMode] = useState<"perGame" | "total">("perGame");
   if (zones.length === 0) {
     return (
@@ -465,8 +507,12 @@ function ShotZoneHeatmap({
   const baselineY = SHOT_ZONE_PAINT.y + SHOT_ZONE_PAINT.h;
   const top = shotCourtTop();
   const line = "rgba(255,255,255,0.28)";
-  const colorOf = (z?: NbaPlayerShotZone) =>
-    zoneFgPctColor(z?.fgPct ?? 0.35);
+  const colorOf = (z?: NbaPlayerShotZone) => {
+    const league = z ? leagueZonePct(hub?.zones, z.id) : null;
+    if (!z || league == null) return zoneFgPctColor(z?.fgPct ?? 0.35);
+    const attempts = z.fga * Math.max(gamesPlayed, 1);
+    return zoneVsLeagueColor(z.fgPct, league, attempts);
+  };
 
   const glowZones = (
     [
@@ -663,12 +709,18 @@ function ShotZoneHeatmap({
           />
 
           {entries.map(([id, z]) => (
-            <ZoneStatLabel key={id} id={id} zone={z} totalGames={totalGames} />
+            <ZoneStatLabel
+              key={id}
+              id={id}
+              zone={z}
+              totalGames={totalGames}
+              leaguePct={leagueZonePct(hub?.zones, id)}
+            />
           ))}
         </Svg>
       </View>
       <View style={styles.heatLegend}>
-        <Text style={styles.heatLegendText}>20%</Text>
+        <Text style={styles.heatLegendText}>{hub?.zones?.length ? "−LG" : "20%"}</Text>
         <View style={styles.magmaBar}>
           {[0, 0.25, 0.5, 0.75, 1].map((t) => (
             <View
@@ -680,7 +732,7 @@ function ShotZoneHeatmap({
             />
           ))}
         </View>
-        <Text style={styles.heatLegendText}>80%</Text>
+        <Text style={styles.heatLegendText}>{hub?.zones?.length ? "+LG" : "80%"}</Text>
       </View>
     </View>
   );
@@ -1657,6 +1709,9 @@ export default function NbaPlayerDetailPanelNative({
           teamStats={teamStats}
           detail={detail}
         />
+
+        <NbaPlayerMatchupsNative playerId={detail.playerId} isJa={isJa} />
+        <NbaPlayerOnOffNative playerId={detail.playerId} isJa={isJa} />
 
         {(detail.venueSplits?.length ?? 0) > 0 ? (
           <>

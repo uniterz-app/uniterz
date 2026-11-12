@@ -14,6 +14,7 @@ import {
   pollProInsightNarrativeBatches,
   submitProInsightNarrativeBatch,
 } from "@/lib/nba/insights/proInsightLlm/ingestProInsightNarrativeBatch";
+import { refreshPredictKits } from "@/lib/nba/insights/predictKit/refreshPredictKits";
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
 import { revalidateMatchupInsightCache } from "@/lib/nba/predict/matchupInsightCache";
 import { revalidateNbaDocCache } from "@/lib/nba/nbaPublicReadDb";
@@ -42,6 +43,8 @@ type RouteMode =
  *   includePreseason + syncChat … admin スモーク（通常 cron では使わない）
  * batch_poll … Batch 完了ポーリング
  * narrative_patch … tip 1h 前 · injury 指紋が変わった試合だけ Chat 再生成
+ * batch_submit / narrative_patch のあと「予想の材料」+ 裏のシミュレーションを計算し直す（変わった試合だけ書く。
+ *   batch_submit = 20:00 に翌日 24h 分を作る。narrative_patch = もうある予想を欠場が変わったときだけ直す）
  */
 export async function POST(req: Request) {
   try {
@@ -78,7 +81,7 @@ export async function POST(req: Request) {
                 : "full";
 
     const db = getAdminDb();
-    const respond = (result: { ok: boolean }) => {
+    const respond = <T extends { ok: boolean }>(result: T) => {
       revalidateMatchupInsightCache();
       revalidateNbaDocCache([
         "nbaTeamSeasonRecords",
@@ -93,6 +96,14 @@ export async function POST(req: Request) {
       return respond(result);
     }
 
+    const refreshKits = async (kitMode: "daily" | "hourly") => {
+      try {
+        return await refreshPredictKits(db, { seasonKey, mode: kitMode });
+      } catch (e) {
+        return { error: e instanceof Error ? e.message : String(e) };
+      }
+    };
+
     if (mode === "batch_submit") {
       const result = await submitProInsightNarrativeBatch(db, {
         seasonKey,
@@ -106,7 +117,7 @@ export async function POST(req: Request) {
         includePreseason: body.includePreseason === true,
         syncChat: body.syncChat === true,
       });
-      return respond(result);
+      return respond({ ...result, predictKits: await refreshKits("daily") });
     }
 
     if (mode === "narrative_patch") {
@@ -116,7 +127,7 @@ export async function POST(req: Request) {
           ? body.gameIds.filter((x) => typeof x === "string" && x.trim())
           : undefined,
       });
-      return respond(result);
+      return respond({ ...result, predictKits: await refreshKits("hourly") });
     }
 
     const result = await ingestNbaProBriefs(db, {

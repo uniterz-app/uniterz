@@ -252,6 +252,7 @@ export function MyRankCardNative({
               plainWhiteScore
               rankDisplayValue={hasRank ? undefined : "--"}
               rankMuted={!hasRank}
+              rankTotal={hasRank ? totalEntries : null}
             />
           </View>
         </MyRankCardFrameNative>
@@ -325,6 +326,7 @@ export function MyRankCardNative({
                   rankDisplayValue={hasRank ? undefined : "--"}
                   rankMuted={!hasRank}
                   plainWhiteScore={!hasRank}
+                  rankTotal={hasRank ? totalEntries : null}
                 />
 
               {showRankingProgress ? (

@@ -13,6 +13,7 @@ import { registerTutorialPredictToolsListener } from "../../tutorial/tutorialPre
 import PredictProBriefPanelNative from "./PredictProBriefPanelNative";
 import PredictProInsightNarrativePanelNative from "./PredictProInsightNarrativePanelNative";
 import PredictProInsightSmartMarketNative from "./PredictProInsightSmartMarketNative";
+import PredictProInsightKitNative from "./PredictProInsightKitNative";
 import NbaInjuryReportPanelNative from "./NbaInjuryReportPanelNative";
 import NbaTeamStatsPanelNative from "./NbaTeamStatsPanelNative";
 import NbaRosterPanelNative from "./NbaRosterPanelNative";
@@ -71,6 +72,8 @@ type Props = {
   onOpenProSubscribe?: () => void;
   /** プレシーズン: INSIGHT は Free / Pro とも対象外表示（Pro 勧誘なし） */
   preseason?: boolean;
+  /** UNITERZ のみんなの予想（ホームを選んだ割合 % と人数）。予想の材料に並べる */
+  crowd?: { homePct: number; total: number } | null;
 };
 
 function PendingPanel({ text }: { text: string }) {
@@ -110,6 +113,7 @@ export default function NbaPredictToolsTabsNative({
   onOpenPlayerDetail,
   onOpenProSubscribe,
   preseason = false,
+  crowd = null,
 }: Props) {
   const t = getGamesTexts(language);
   const loadingLabel = t.predictToolLoading;
@@ -146,6 +150,7 @@ export default function NbaPredictToolsTabsNative({
   const insightAvailable = isPro && !preseason;
   const {
     narrative: liveNarrative,
+    predictKit,
     loading: briefLoading,
     updatedAt: insightUpdatedAt,
     smartMarket,
@@ -155,7 +160,12 @@ export default function NbaPredictToolsTabsNative({
     apiBaseUrl,
     enabled: insightAvailable,
   });
-  const { teaser, loading: teaserLoading } = useNbaMatchupInsightTeaser({
+  const {
+    teaser,
+    hasKit: teaserHasKit,
+    kitRecord,
+    loading: teaserLoading,
+  } = useNbaMatchupInsightTeaser({
     gameId,
     apiBaseUrl,
     enabled: !isPro && !preseason && visited.has("insight"),
@@ -230,7 +240,7 @@ export default function NbaPredictToolsTabsNative({
             {tab === "insight" ? (
               preseason ? (
                 <PendingPanel text={proInsightPreseasonNotice(language)} />
-              ) : !isPro && teaser ? (
+              ) : !isPro && teaser && !teaserHasKit ? (
                 <PredictProInsightTeaserPanelNative
                   teaser={teaser}
                   language={language}
@@ -250,7 +260,30 @@ export default function NbaPredictToolsTabsNative({
                   awayTeamName={awayTeamName}
                   locked
                   onPressUpgrade={() => openProSubscribe()}
+                  kitRecord={kitRecord}
+                  crowd={crowd}
                 />
+              ) : predictKit && homeTeamId && awayTeamId ? (
+                <View>
+                  <PredictProInsightKitNative
+                    kit={predictKit}
+                    homeTeamId={homeTeamId}
+                    awayTeamId={awayTeamId}
+                    language={language}
+                    crowd={crowd}
+                  />
+                  {smartMarket ? (
+                    <PredictProInsightSmartMarketNative
+                      market={smartMarket}
+                      language={language}
+                      homeTeamId={homeTeamId}
+                      awayTeamId={awayTeamId}
+                      homeTeamName={homeTeamName}
+                      awayTeamName={awayTeamName}
+                      standalone
+                    />
+                  ) : null}
+                </View>
               ) : liveNarrative ? (
                 <PredictProInsightNarrativePanelNative
                   brief={liveNarrative}

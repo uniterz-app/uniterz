@@ -91,6 +91,7 @@ import {
   predictPanelRevealEnter,
 } from "./predictMotion";
 import ProfileBackEdgeHandleNative from "../profile/ProfileBackEdgeHandleNative";
+import { notifyBackEdgeScroll } from "../profile/backEdgeScrollNative";
 import { t as i18nT } from "../../../../../lib/i18n/t";
 import {
   normalizeLanguage,
@@ -1996,6 +1997,7 @@ export default function PredictModal({
                 bounces={tutorialUserScrollEnabled}
                 nestedScrollEnabled={tutorialUserScrollEnabled}
                 onScroll={(e) => {
+                  notifyBackEdgeScroll();
                   predictScrollYRef.current = e.nativeEvent.contentOffset.y;
                 }}
               >
@@ -2113,6 +2115,15 @@ export default function PredictModal({
                       preseason={isProInsightPreseasonPhase(
                         predictData?.subjectGame?.seasonPhase
                       )}
+                      crowd={
+                        overlayMarketBar?.fallbackMarketBias &&
+                        overlayMarketBar.predictionCount != null
+                          ? {
+                              homePct: overlayMarketBar.fallbackMarketBias.homePct,
+                              total: overlayMarketBar.predictionCount,
+                            }
+                          : null
+                      }
                     />
                   ) : (
               <View>

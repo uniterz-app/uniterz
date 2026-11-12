@@ -59,6 +59,10 @@ export const LEAGUE_HUB_PLAYER_METRICS = [
   "ace_guard_min",
   /** エースの普段の FG% − 守ったときの FG%。正なら抑えている */
   "ace_suppress",
+  /** 相手の得点上位3人を守った時間（分） */
+  "tough_guard_min",
+  /** その相手たちの普段の eFG% − 守ったときの FG% */
+  "tough_suppress",
   "cns_fg_pct",
   "pullup_fg_pct",
   "deflections",
@@ -94,6 +98,17 @@ export type LeagueHubPlayerRef = {
   teamId: string;
 };
 
+/** 守備側が付いた相手。時間の長い順 */
+export type LeagueHubPlayerMatchup = LeagueHubPlayerRef & {
+  minutes: number;
+  /** 守ったときの FG%。0–1 */
+  fgPct: number;
+  fgm: number;
+  fga: number;
+  /** そのシュートを打った選手の今季 FG%。0–1 */
+  usualFgPct?: number;
+};
+
 export type LeagueHubPlayer = LeagueHubPlayerRef & {
   /** 先頭のポジション */
   pos: LeagueHubPosition | null;
@@ -103,6 +118,40 @@ export type LeagueHubPlayer = LeagueHubPlayerRef & {
   min: number;
   /** 1 試合平均。率は 0–1 */
   m: Partial<Record<LeagueHubPlayerMetric, number>>;
+  /** DF。今季、誰をマークしたか。時間の長い 8 人 */
+  matchups?: LeagueHubPlayerMatchup[];
+  /** OF。今季、誰にマークされたか。時間の長い 8 人。fgPct は自分のシュート */
+  guardedBy?: LeagueHubPlayerMatchup[];
+  /** コートにいるとき / いないときの得失点（100 ポゼッションあたり） */
+  onOff?: LeagueHubOnOff;
+};
+
+export type LeagueHubOnOff = {
+  onNet: number;
+  offNet: number;
+  onMin: number;
+  offMin: number;
+};
+
+export type LeagueHubLineup = {
+  names: string[];
+  min: number;
+  net: number;
+  /** 100 ポゼッションあたりの得点 / 失点 */
+  off?: number;
+  def?: number;
+  /** 一緒に出ていたあいだの得失点 */
+  pm?: number;
+  /** この組が出た試合数 */
+  games?: number;
+};
+
+export type LeagueHubLineupBoard = {
+  size: 2 | 3 | 4 | 5;
+  /** 一緒に出た時間が長い順 */
+  most: LeagueHubLineup[];
+  best: LeagueHubLineup[];
+  worst: LeagueHubLineup[];
 };
 
 export type LeagueHubZoneRow = LeagueHubPlayerRef & {
@@ -308,6 +357,10 @@ export type LeagueHubTeamRow = {
   picks?: LeagueHubTeamPicks | null;
   /** 古い doc には無い */
   m?: Partial<Record<LeagueHubTeamStyleMetric, number>>;
+  /** 同時に出た 5 人。時間の長い順 */
+  lineups?: LeagueHubLineup[];
+  /** 2〜5 人。ベストとワーストはネットレーティング */
+  lineupBoards?: LeagueHubLineupBoard[];
 };
 
 /** 条件 A / B の 1 試合平均得点（ホーム / アウェー、B2B 2 日目 / それ以外） */

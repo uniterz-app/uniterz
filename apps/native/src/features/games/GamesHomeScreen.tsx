@@ -1378,8 +1378,12 @@ export default function GamesHomeScreen({
     const awayName = resolveGameTeamName(g.away, g.awayTeamName, "AWAY");
     const homeCompact = toCompactTeamName(g.league, homeName);
     const awayCompact = toCompactTeamName(g.league, awayName);
-    const homeRecord = formatSideRecord(g.home, g.league, g.seasonPhase);
-    const awayRecord = formatSideRecord(g.away, g.league, g.seasonPhase);
+    const homeRecord = scorePrefs.showTeamRecord
+      ? formatSideRecord(g.home, g.league, g.seasonPhase)
+      : null;
+    const awayRecord = scorePrefs.showTeamRecord
+      ? formatSideRecord(g.away, g.league, g.seasonPhase)
+      : null;
     const centerBlock = getGameCardCenterBlock(g, language, dayTimeZone, scorePrefs);
     const seriesLabel = resolveNativeSeriesLabel(g, peerGamesForSeries);
     const seriesPair = resolveNativeSeriesPair(g, peerGamesForSeries);
@@ -1638,13 +1642,17 @@ export default function GamesHomeScreen({
       kickoff: formatKickoffTime(resolveGameStartAt(g), dayTimeZone),
       homePalette: resolveTeamJerseyPalette(g.league, g.home, "#ff6b8a"),
       awayPalette: resolveTeamJerseyPalette(g.league, g.away, "#5aa4ff"),
-      homeRecordLine: formatSideRecord(g.home, g.league, g.seasonPhase),
-      awayRecordLine: formatSideRecord(g.away, g.league, g.seasonPhase),
+      homeRecordLine: scorePrefs.showTeamRecord
+        ? formatSideRecord(g.home, g.league, g.seasonPhase)
+        : null,
+      awayRecordLine: scorePrefs.showTeamRecord
+        ? formatSideRecord(g.away, g.league, g.seasonPhase)
+        : null,
       showSeriesRow,
       seriesHomeWins: showSeriesRow && seriesStanding ? seriesStanding.homeWins : null,
       seriesAwayWins: showSeriesRow && seriesStanding ? seriesStanding.awayWins : null,
     };
-  }, [nextGameAfterPost, language, formatSideRecord]);
+  }, [nextGameAfterPost, language, formatSideRecord, scorePrefs.showTeamRecord]);
 
   useEffect(() => {
     if (!isPredictModalOpen) return;
@@ -3015,6 +3023,7 @@ export default function GamesHomeScreen({
       resolveSeriesLabel: resolveSeriesLabelForList,
       resolveSeriesPair: resolveSeriesPairForList,
       getTeamRecordLabel: formatSideRecord,
+      hideTeamRecord: !scorePrefs.showTeamRecord,
       teamRecordById,
       resolveTeamJerseyPalette,
       tutorialRegisterMatchCard: tutorialPhase === "games",
@@ -3050,6 +3059,7 @@ export default function GamesHomeScreen({
       resolveSeriesLabelForList,
       resolveSeriesPairForList,
       formatSideRecord,
+      scorePrefs.showTeamRecord,
       teamRecordById,
       tutorialPhase,
       tutorialRegisterPickupLabel,

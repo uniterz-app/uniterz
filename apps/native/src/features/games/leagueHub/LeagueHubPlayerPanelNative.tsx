@@ -47,14 +47,16 @@ import {
   type HubLang,
 } from "./leagueHubUiNative";
 import { HubScrollSlantedTabs } from "./LeagueHubSlantedTabsNative";
+import { LeagueHubOnOffBestNative } from "./LeagueHubBestNative";
 
-export type LeagueHubPlayerSection = "style" | "zone" | "ladder" | "trend";
+export type LeagueHubPlayerSection = "style" | "zone" | "ladder" | "trend" | "onoff";
 
 export const LEAGUE_HUB_PLAYER_SECTIONS: readonly { id: LeagueHubPlayerSection; label: string }[] = [
   { id: "style", label: "STYLE" },
   { id: "zone", label: "ZONE" },
   { id: "ladder", label: "LADDER" },
   { id: "trend", label: "TREND" },
+  { id: "onoff", label: "ON/OFF" },
 ];
 
 type Props = {
@@ -136,6 +138,11 @@ function StyleMap({
   const [selected, setSelected] = useState<string | null>(null);
   const [added, setAdded] = useState<string[]>([]);
   const [query, setQuery] = useState("");
+  const [listSort, setListSort] = useState<{
+    id: string;
+    key: "x" | "y";
+    dir: "asc" | "desc";
+  }>({ id: "", key: "y", dir: "desc" });
   /** 比較の 2 人目。1 人目（selected）を選んだ状態で別の選手を選ぶと入る */
   const [compareB, setCompareB] = useState<string | null>(null);
   const preset: LeagueHubPlayerScatterPreset =
@@ -173,6 +180,21 @@ function StyleMap({
     );
     return { top, pinned };
   }, [players, preset, topN, pos, favIds, selected, added, compareB]);
+  const sort =
+    listSort.id === presetId ? listSort : { id: presetId, key: "y" as const, dir: "desc" as const };
+  const toggleSort = (key: "x" | "y") => {
+    setListSort({
+      id: presetId,
+      key,
+      dir: sort.key === key && sort.dir === "desc" ? "asc" : "desc",
+    });
+  };
+  const listed = [...pool.top].sort((a, b) => {
+    const metric = preset[sort.key].metric;
+    const av = a.m[metric] ?? 0;
+    const bv = b.m[metric] ?? 0;
+    return sort.dir === "desc" ? bv - av : av - bv;
+  });
   const hits = useMemo(() => searchHubPlayers(players, query), [players, query]);
   const clearSel = () => {
     setSelected(null);
@@ -456,6 +478,68 @@ function StyleMap({
               ))}
             </View>
           ) : null}
+          {pool.top.length > 0 ? (
+            <View style={styles.mapListBlock}>
+              <Text style={styles.mapListExplain}>
+                {lang === "ja"
+                  ? `マップに出ている ${pool.top.length} 人です。${preset[sort.key].label.ja.replace(/（.*）/, "").trim()} の${sort.dir === "desc" ? "降順" : "昇順"}。見出しをタップすると、その列の降順と昇順が切り替わります。`
+                  : `The ${pool.top.length} players on the map, by ${preset[sort.key].label.en.replace(/\(.*\)/, "").trim()} ${sort.dir === "desc" ? "descending" : "ascending"}. Tap a heading to switch that column.`}
+              </Text>
+              <View style={styles.mapList}>
+              <View style={styles.mapListHead}>
+                <Text style={styles.mapListRank}>#</Text>
+                <Text style={styles.mapListHeadName}>
+                  {lang === "ja" ? "選手" : "PLAYER"}
+                </Text>
+                {(["x", "y"] as const).map((key) => {
+                  const axis = preset[key];
+                  const on = sort.key === key;
+                  return (
+                    <Pressable
+                      key={key}
+                      style={styles.mapListStatHit}
+                      onPress={() => toggleSort(key)}
+                    >
+                      <Text style={styles.mapListStatHead} numberOfLines={2}>
+                        {axis.label[lang].replace(/（.*）|\(.*\)/, "").trim()}
+                        {on ? (sort.dir === "desc" ? " ▼" : " ▲") : ""}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+              {listed.map((p, i) => {
+                const on = p.playerId === selected || p.playerId === compareB;
+                return (
+                  <Pressable
+                    key={p.playerId}
+                    style={({ pressed }) => [
+                      styles.mapListRow,
+                      on ? styles.mapListRowOn : null,
+                      pressed ? { opacity: 0.7 } : null,
+                    ]}
+                    onPress={() => tapMap(p.playerId)}
+                  >
+                    <Text style={styles.mapListRank}>{i + 1}</Text>
+                    <View style={styles.mapListNameCol}>
+                      <Text style={[styles.mapListName, playerNameStyle]} numberOfLines={1}>
+                        {favIds.has(p.playerId) ? "★ " : ""}
+                        {p.name}
+                      </Text>
+                      <HubTeamTag teamId={p.teamId} />
+                    </View>
+                    <Text style={styles.mapListStat}>
+                      {formatHubValue(p.m[preset.x.metric], preset.x.format)}
+                    </Text>
+                    <Text style={styles.mapListStat}>
+                      {formatHubValue(p.m[preset.y.metric], preset.y.format)}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+              </View>
+            </View>
+          ) : null}
         </>
       )}
     </View>
@@ -695,6 +779,19 @@ export default function LeagueHubPlayerPanelNative({ hub, lang, section, onSelec
             </HubShareSectionNative>
           );
         })}
+      </View>
+
+      <View style={shown("onoff")}>
+        <HubSection
+          title="ON / OFF"
+          hint={
+            ja
+              ? "コートにいるときといないときの得失点の差。オン 100 分、オフ 50 分以上。上位 10 人。"
+              : "Biggest gap between on-court and off-court net rating. At least 100 on minutes and 50 off. Top 10."
+          }
+        >
+          <LeagueHubOnOffBestNative hub={hub} lang={lang} onSelectPlayer={onSelectPlayer} />
+        </HubSection>
       </View>
 
       <View style={shown("trend")}>
@@ -944,6 +1041,82 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 11,
     fontWeight: "700",
+  },
+  mapListBlock: {
+    marginTop: 8,
+  },
+  mapListExplain: {
+    color: "rgba(255,255,255,0.72)",
+    fontSize: 11,
+    lineHeight: 16,
+    marginBottom: 8,
+  },
+  mapList: {
+    borderWidth: 1,
+    borderColor: "rgba(0,245,255,0.35)",
+  },
+  mapListHead: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    backgroundColor: "rgba(0,245,255,0.08)",
+  },
+  mapListHeadName: {
+    flex: 1,
+    fontFamily: METRIC_FONT,
+    color: "rgba(0,245,255,0.7)",
+    fontSize: 9,
+  },
+  mapListRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: "rgba(255,255,255,0.08)",
+  },
+  mapListRowOn: {
+    backgroundColor: "rgba(0,245,255,0.12)",
+  },
+  mapListRank: {
+    width: 18,
+    fontFamily: METRIC_FONT,
+    color: "rgba(0,245,255,0.7)",
+    fontSize: 10,
+  },
+  mapListNameCol: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    minWidth: 0,
+  },
+  mapListName: {
+    flexShrink: 1,
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  mapListStatHit: {
+    width: 72,
+  },
+  mapListStatHead: {
+    width: 72,
+    textAlign: "right",
+    fontFamily: METRIC_FONT,
+    color: "rgba(0,245,255,0.7)",
+    fontSize: 9,
+    lineHeight: 12,
+  },
+  mapListStat: {
+    width: 72,
+    textAlign: "right",
+    fontFamily: METRIC_FONT,
+    color: "#fff",
+    fontSize: 11,
   },
   addedRemove: {
     color: "rgba(255,255,255,0.6)",

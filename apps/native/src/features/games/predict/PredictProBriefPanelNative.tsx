@@ -1,10 +1,9 @@
 /**
  * Web `PredictProBriefPanel` 相当 — HOME | AWAY 2カラム · Free ゲート CTA
  */
-import type { ComponentProps, ReactNode } from "react";
+import type { ReactNode } from "react";
 import { useMemo } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
 import {
   briefEdgeDetail,
   briefLineText,
@@ -18,12 +17,15 @@ import {
   type ProBriefTeamCard,
 } from "../../../../../../lib/predict/predictProBrief";
 import { sanitizeProBriefForDisplay } from "../../../../../../lib/predict/validateProBrief";
-import {
-  proInsightGateCopy,
-  type ProInsightGateBulletIcon,
-} from "../../../../../../lib/predict/proInsightGateCopy";
-import { PRO_INSIGHT_GATE_SAMPLE_BRIEF } from "../../../../../../lib/predict/proInsightGateSampleBrief";
-import PredictProInsightNarrativePanelNative from "./PredictProInsightNarrativePanelNative";
+import { proInsightGateCopy } from "../../../../../../lib/predict/proInsightGateCopy";
+import { PRO_INSIGHT_PREDICT_KIT_SAMPLES } from "../../../../../../lib/predict/proInsightPredictKitSample";
+import PredictProInsightKitNative, {
+  PredictKitAccuracyHeroNative,
+  PredictProInsightKitMaskedNative,
+} from "./PredictProInsightKitNative";
+import type { ProInsightPredictKitRecord } from "../../../../../../lib/nba/insights/predictKit/predictKitTypes";
+
+const GATE_KIT_SAMPLE = PRO_INSIGHT_PREDICT_KIT_SAMPLES[0]!;
 import { resolveLocalizedLang } from "../../../../../../lib/i18n/localize";
 import { getMobileTeamName } from "../../../../../../lib/team-name-split-mobile";
 import { NBA_TEAM_NAME_BY_ID } from "../../../../../../lib/nba-team-names";
@@ -47,9 +49,13 @@ type Props = {
   awayTeamId: string;
   homeTeamName: string;
   awayTeamName: string;
-  /** Free: 説明 + CTA + 下に実画面サンプル */
+  /** Free: タイトル + 精度（無ければ説明 1 文）+ CTA + この試合の伏せ字カード */
   locked?: boolean;
   onPressUpgrade?: () => void;
+  /** Free に出す今季の的中率（20 試合未満は null） */
+  kitRecord?: ProInsightPredictKitRecord | null;
+  /** みんなの予想（伏せ字カードに出す公開情報） */
+  crowd?: { homePct: number; total: number } | null;
 };
 
 type SectionTone = "matchup" | "schedule" | "context" | "players";
@@ -59,16 +65,6 @@ const EMPTY_CARD: ProBriefTeamCard = {
   schedule: [],
   context: [],
   players: [],
-};
-
-const BULLET_ICONS: Record<
-  ProInsightGateBulletIcon,
-  ComponentProps<typeof MaterialCommunityIcons>["name"]
-> = {
-  matchup: "sword-cross",
-  schedule: "calendar-range",
-  context: "chart-timeline-variant",
-  injury: "heart-pulse",
 };
 
 function hexToRgba(hex: string, alpha: number): string {
@@ -400,6 +396,8 @@ export default function PredictProBriefPanelNative({
   awayTeamName,
   locked = false,
   onPressUpgrade,
+  kitRecord = null,
+  crowd = null,
 }: Props) {
   const gate = proInsightGateCopy(language);
   const homeNick = teamNick(homeTeamId, homeTeamName).toUpperCase();
@@ -548,7 +546,11 @@ export default function PredictProBriefPanelNative({
                   </View>
                 </View>
                 <TitleWithBrandFontsNative title={gate.title} />
-                <Text style={styles.gateBody}>{gate.body}</Text>
+                {kitRecord ? (
+                  <PredictKitAccuracyHeroNative record={kitRecord} language={language} />
+                ) : (
+                  <Text style={styles.gateBody}>{gate.body}</Text>
+                )}
                 {onPressUpgrade ? (
                   <Pressable
                     onPress={onPressUpgrade}
@@ -572,35 +574,32 @@ export default function PredictProBriefPanelNative({
                   </Pressable>
                 ) : null}
               </View>
-              <View style={styles.bulletPanel}>
-                {gate.bullets.map((item) => (
-                  <View key={item.title} style={styles.bulletRow}>
-                    <View style={styles.bulletIcon}>
-                      <MaterialCommunityIcons
-                        name={BULLET_ICONS[item.icon]}
-                        size={12}
-                        color="#fdba74"
-                      />
-                    </View>
-                    <View style={styles.bulletCopy}>
-                      <Text style={styles.bulletTitle}>{item.title}</Text>
-                      <Text style={styles.bulletDetail}>{item.detail}</Text>
-                    </View>
-                  </View>
-                ))}
-              </View>
             </View>
           </View>
 
-          {/* ゲート下に実際の PRO INSIGHT 画面例（新 UI） */}
           <View style={styles.exampleBlock} pointerEvents="none">
-            <Text style={styles.exampleLabel}>{gate.exampleLabel}</Text>
-            <PredictProInsightNarrativePanelNative
-              brief={PRO_INSIGHT_GATE_SAMPLE_BRIEF}
-              language={language}
-              homeTeamName={homeTeamName}
-              awayTeamName={awayTeamName}
-            />
+            {homeTeamId.startsWith("nba-") && awayTeamId.startsWith("nba-") ? (
+              <>
+                <Text style={styles.exampleLabel}>{gate.lockedCardLabel}</Text>
+                <PredictProInsightKitMaskedNative
+                  homeTeamId={homeTeamId}
+                  awayTeamId={awayTeamId}
+                  language={language}
+                  crowd={crowd}
+                />
+              </>
+            ) : (
+              <>
+                <Text style={styles.exampleLabel}>{gate.exampleLabel}</Text>
+                <PredictProInsightKitNative
+                  kit={GATE_KIT_SAMPLE.kit}
+                  homeTeamId={GATE_KIT_SAMPLE.homeTeamId}
+                  awayTeamId={GATE_KIT_SAMPLE.awayTeamId}
+                  language={language}
+                  crowd={GATE_KIT_SAMPLE.crowd ?? null}
+                />
+              </>
+            )}
           </View>
         </View>
       ) : (
@@ -861,46 +860,5 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.55)",
     paddingHorizontal: 8,
     paddingVertical: 10,
-  },
-  bulletPanel: {
-    borderWidth: 1,
-    borderColor: "rgba(251,146,60,0.55)",
-    backgroundColor: "rgba(249,115,22,0.07)",
-    borderRadius: 0,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    gap: 8,
-  },
-  bulletRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 10,
-  },
-  bulletIcon: {
-    marginTop: 2,
-    width: 20,
-    height: 20,
-    borderRadius: 0,
-    borderWidth: 1,
-    borderColor: "rgba(251,146,60,0.45)",
-    backgroundColor: "rgba(249,115,22,0.15)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  bulletCopy: {
-    flex: 1,
-    minWidth: 0,
-  },
-  bulletTitle: {
-    fontFamily: OXANIUM_800,
-    fontSize: 11,
-    letterSpacing: 0.4,
-    color: "#ffedd5",
-  },
-  bulletDetail: {
-    marginTop: 2,
-    fontSize: 11,
-    lineHeight: 15,
-    color: "rgba(255,255,255,0.7)",
   },
 });

@@ -22,7 +22,9 @@ import { ingestNbaTeamOffseasonMoves } from "@/lib/nba/ingest/nbaTeamOffseasonMo
 import { ingestNbaDisciplineFromBdl } from "@/lib/nba/ingest/nbaDisciplineIngest";
 import { ingestNbaLeagueHub } from "@/lib/nba/leagueHub/nbaLeagueHubIngest";
 import { ingestNbaShotChartsFromBdl } from "@/lib/nba/ingest/nbaShotChartsIngest";
+import { ingestNbaCleanRatingsFromBdl } from "@/lib/nba/ingest/nbaCleanRatingsIngest";
 import { ingestNbaMatchupsFromBdl } from "@/lib/nba/ingest/nbaMatchupIngest";
+import { runPredictAudits } from "@/lib/nba/insights/predictKit/runPredictAudits";
 import {
   loadNbaSeasonGameRows,
   type NbaSeasonGameRow,
@@ -127,6 +129,11 @@ export async function runNbaStatsSnapshotSteps(
     )
   );
   steps.push(
+    await runStep("clean-ratings", () =>
+      ingestNbaCleanRatingsFromBdl(db, { seasonKey, maxGames: 40 })
+    )
+  );
+  steps.push(
     await runStep("matchups", () =>
       ingestNbaMatchupsFromBdl(db, { seasonKey, maxGames: 20 })
     )
@@ -208,6 +215,7 @@ export async function runNbaStatsDailyIngest(
     steps.push(await runNbaRecentPlayerGameLogsStep(db, seasonKey));
   }
   steps.push(await runNbaLeagueHubStep(db, seasonKey));
+  steps.push(await runStep("predict-audit", () => runPredictAudits(db, { seasonKey })));
 
   // Pro Insight フル生成は前日 19:00 JST の runNbaProBriefFullCron に分離
 

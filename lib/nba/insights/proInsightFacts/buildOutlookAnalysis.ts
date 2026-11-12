@@ -9,6 +9,7 @@ import type { NbaTeamInjuryEntry } from "@/lib/predict/nbaTeamDetailPreviewMocks
 import type { NbaTeamRosterDocTeam } from "@/lib/nba/teamRosters/teamRosterTypes";
 import { proInsightTeamAbbr } from "@/lib/nba/insights/proInsightFacts/teamAbbr";
 import { previewShortName } from "@/lib/nba/insights/proInsightFacts/buildPreviewFacts";
+import { projectPlayerPoints } from "@/lib/nba/insights/proInsightFacts/playerPointsProjection";
 
 export type OutlookPos = "G" | "F" | "C";
 
@@ -28,7 +29,11 @@ export type OutlookAnalysisInput = {
   injuries: Record<string, NbaTeamInjuryEntry[]>;
 };
 
+export type OutlookPointsRange = { mean: number; low: number; high: number; games: number };
+
 export type OutlookKeyPlayer = {
+  /** 選手 ID（試合後の採点で box と照合する） */
+  playerId?: string;
   name: string;
   pos: OutlookPos;
   gp: number;
@@ -38,6 +43,11 @@ export type OutlookKeyPlayer = {
   mpg: number;
   fg3Pct: string | null;
   last5Ppg: number | null;
+  /** 直近 5 試合が平均から大きく離れたとき。好調・不調は次の試合で平均へ戻る（2026-11 検証） */
+  formNote?: string;
+  /** 今夜の得点の目安（今季平均が中心・約 6 割がこの幅に入る） */
+  pointsRange?: OutlookPointsRange;
+  pointsOutlook?: string;
   seasonHigh: string | null;
   strengths: string[];
   vsOpponentThisSeason?: string;
@@ -85,6 +95,16 @@ export function primaryPos(raw: string | null | undefined): OutlookPos | null {
 }
 
 const round1 = (n: number) => Math.round(n * 10) / 10;
+
+/**
+ * ポジション別失点を「狙い目 / 厳しい相手」の根拠にしてよい最少試合数。
+ * 2026-11 の検証（各チーム約 10 試合）では選手の得点をまったく予測しなかった（r=+0.03）。
+ * それ未満の時期はシートに載せない。シーズン中に scripts/backtest-pro-insight-projection.ts と試合後採点で取り直す。
+ */
+export const OUTLOOK_POSITION_DEFENSE_MIN_GAMES = 20;
+
+/** 直近 5 試合と今季平均の差がこれ以上なら formNote を付ける */
+const FORM_GAP_PTS = 4;
 
 /** 順位の段階（#1 = その指標で最良）。LLM が中位を強み・弱みと書かないよう語で渡す */
 export function rankTier(rank: number, of: number): string {
@@ -235,7 +255,7 @@ export function buildOutlookAnalysis(input: OutlookAnalysisInput): ProInsightOut
   const allowedLine = (teamId: string, pos: OutlookPos): string | null => {
     const a = allowed.get(teamId);
     const r = allowedRank[pos].get(teamId);
-    if (!a || !r) return null;
+    if (!a || !r || a.games < OUTLOOK_POSITION_DEFENSE_MIN_GAMES) return null;
     if (r > 10 && r <= allowedTeams - 10) return null;
     return `${round1(a.pts[pos])} pts per game to ${POS_WORD[pos]} (#${r} of ${allowedTeams}, #1 = allows the least: ${allowedTier(r, allowedTeams)})`;
   };
@@ -286,7 +306,16 @@ export function buildOutlookAnalysis(input: OutlookAnalysisInput): ProInsightOut
         const last5 = logs.slice(-5);
         const high = logs.reduce<NbaPlayerGameLog | null>((best, g) => (!best || g.pts > best.pts ? g : best), null);
         const vsOpp = logs.filter((g) => g.oppTeamId === oppId);
+        const last5Ppg = last5.length >= 3 ? avgPts(last5) : null;
+        const formGap = last5Ppg != null ? last5Ppg - p.ppg : 0;
+        const proj = projectPlayerPoints({
+          logs,
+          missingTeammatePpg: 0,
+          shareOfRemaining: 0,
+          oppAllowedRatio: null,
+        });
         return {
+          playerId: id,
           name: previewShortName(p.firstName, p.lastName),
           pos,
           gp: p.gp,
@@ -298,7 +327,24 @@ export function buildOutlookAnalysis(input: OutlookAnalysisInput): ProInsightOut
             typeof p.fg3Pct === "number" && (p.fg3a ?? 0) >= 2
               ? pct1(p.fg3Pct > 1 ? p.fg3Pct / 100 : p.fg3Pct)
               : null,
-          last5Ppg: last5.length >= 3 ? avgPts(last5) : null,
+          last5Ppg,
+          ...(formGap >= FORM_GAP_PTS
+            ? {
+                formNote:
+                  "hot last 5 games — such runs usually cool back toward the season average next game; not a reason by itself for a big night",
+              }
+            : formGap <= -FORM_GAP_PTS
+              ? {
+                  formNote:
+                    "cold last 5 games — such dips usually bounce back toward the season average; not a reason by itself for a quiet night",
+                }
+              : {}),
+          ...(proj
+            ? {
+                pointsRange: { mean: proj.mean, low: proj.low, high: proj.high, games: proj.games },
+                pointsOutlook: `tonight's points: centered on his season average; about 6 nights in 10 land between ${proj.low} and ${proj.high}`,
+              }
+            : {}),
           seasonHigh: high ? `${high.pts} pts vs ${high.oppAbbr} (${high.dateLabel})` : null,
           strengths: strengthsOf(input.metricsByPlayer[id]),
           ...(vsOpp.length ? { vsOpponentThisSeason: `${avgPts(vsOpp)} ppg in ${vsOpp.length} game(s) vs ${opp}` } : {}),
@@ -320,7 +366,11 @@ export function buildOutlookAnalysis(input: OutlookAnalysisInput): ProInsightOut
         continue;
       }
       const name = p ? previewShortName(p.firstName, p.lastName) : i.name;
-      absences.push(`${name} ${i.status === "out" ? "OUT" : i.status}, ${round1(ppg)} ppg in ${p!.gp} games`);
+      absences.push(
+        `${name} ${i.status === "out" ? "OUT" : i.status}, ${round1(ppg)} ppg in ${p!.gp} games${
+          i.status === "questionable" ? " (questionable players usually play — uncertain, not missing)" : ""
+        }`
+      );
     }
     if (minorAbsences) absences.push(`plus ${minorAbsences} other player(s) out with under 5 ppg or no games this season`);
 
@@ -362,7 +412,7 @@ export function buildOutlookAnalysis(input: OutlookAnalysisInput): ProInsightOut
     const defensiveReads: string[] = [];
     for (const pos of ["G", "F", "C"] as const) {
       const r = allowedRank[pos].get(teamId);
-      if (!r || r > 5) continue;
+      if (!r || r > 5 || (allowed.get(teamId)?.games ?? 0) < OUTLOOK_POSITION_DEFENSE_MIN_GAMES) continue;
       const anchor = anchors
         .filter(({ p, def }) => def.positions.includes(pos) && primaryPos(p.position) === pos)
         .sort((a, b) => a.m.rank - b.m.rank)[0];

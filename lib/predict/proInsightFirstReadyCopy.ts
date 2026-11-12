@@ -1,6 +1,6 @@
 /**
  * Pro Insight 未生成時の案内文。
- * 初回は試合前日 21:00 JST 頃 → ユーザー国のタイムゾーンで表示。
+ * 初回は試合前日 20:00 JST 頃 → ユーザー国のタイムゾーンで表示。
  * 文言は Pro Insight 正の 7 言語 + アプリ追加言語 (de/ar)。
  */
 import type { Language } from "@/lib/i18n/language";
@@ -11,8 +11,8 @@ import {
   zonedTimeToUtcMs,
 } from "@/lib/time/zonedTime";
 
-/** 運用: 毎日 20:00 JST Batch → 21:00 JST までに初版 */
-export const PRO_INSIGHT_FIRST_READY_HOUR_JST = 21;
+/** 運用: 毎日 20:00 JST に予想の材料（翌日 24h 分）。文章（PREVIEW）は Batch で 21:00 頃 */
+export const PRO_INSIGHT_FIRST_READY_HOUR_JST = 20;
 
 const LOCALE_BY_LANG: Record<Language, string> = {
   ja: "ja-JP",
@@ -39,7 +39,7 @@ function addCalendarDays(
   };
 }
 
-/** tip の JST 暦日前日 21:00 JST。tip 不明時は任意日の 21:00 JST（時刻換算用） */
+/** tip の JST 暦日前日 20:00 JST。tip 不明時は任意日の 20:00 JST（時刻換算用） */
 export function proInsightFirstReadyAtMs(tipAtMs?: number | null): number {
   if (typeof tipAtMs === "number" && Number.isFinite(tipAtMs) && tipAtMs > 0) {
     const tipYmd = getZonedYMD(new Date(tipAtMs), TIMEZONE_JST);

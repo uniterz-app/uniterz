@@ -4,6 +4,7 @@
  */
 import { Pressable, StyleSheet, Text } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { useBackEdgeScrolling } from "./backEdgeScrollNative";
 
 type Props = {
   onPress: () => void;
@@ -18,12 +19,15 @@ export default function ProfileBackEdgeHandleNative({
   onPress,
   accessibilityLabel = "Back",
 }: Props) {
+  const scrolling = useBackEdgeScrolling();
   return (
     <Pressable
       style={({ pressed }) => [
         styles.handle,
-        pressed ? styles.handlePressed : null,
+        pressed && !scrolling ? styles.handlePressed : null,
+        scrolling ? styles.handleHidden : null,
       ]}
+      pointerEvents={scrolling ? "none" : "auto"}
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
@@ -47,8 +51,8 @@ const styles = StyleSheet.create({
   handle: {
     position: "absolute",
     right: 0,
-    /** 中央付近だと誤タップしやすい → 画面下から約 1/3（上から ~67%・中心合わせ） */
-    top: "67%",
+    /** 中央付近だと誤タップしやすい。下寄り（上から約 80%・中心合わせ） */
+    top: "80%",
     transform: [{ translateY: -42 }],
     zIndex: 20,
     width: 28,
@@ -64,6 +68,9 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 0 },
     elevation: 8,
+  },
+  handleHidden: {
+    opacity: 0,
   },
   handlePressed: {
     backgroundColor: "rgba(28,32,40,0.98)",

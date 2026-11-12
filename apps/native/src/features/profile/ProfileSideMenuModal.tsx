@@ -815,7 +815,7 @@ export default function ProfileSideMenuModal({
                             openUserPage("proInsightNarrativePreview")
                           }
                         >
-                          PRO INSIGHT 新UI
+                          PRO INSIGHT 予想の材料
                         </SideMenuItemButtonNative>
                         <SideMenuItemButtonNative
                           icon="chart-timeline-variant"

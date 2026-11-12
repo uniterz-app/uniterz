@@ -5,6 +5,7 @@ import { CyberSlantedSegBarNative } from "../../rankings/CyberSlantedSegBarNativ
 import { METRIC_FONT } from "../../rankings/rankingsUiTheme";
 import {
   PLAYER_HOW_THEY_PLAY_TABS,
+  PLAYER_TRACK_GROUPS,
   getPlayerHowTheyPlay,
   isPlayerDetailRankShown,
   type PlayerHowRow,
@@ -207,6 +208,7 @@ export default function NbaPlayerHowTheyPlayNative({
   const [hustleId, setHustleId] = useState("deflections");
   const [rebId, setRebId] = useState("reb_pct");
   const [trackId, setTrackId] = useState("drives");
+  const [trackGroup, setTrackGroup] = useState<(typeof PLAYER_TRACK_GROUPS)[number]["id"]>("drive");
   const tabMeta = PLAYER_HOW_THEY_PLAY_TABS.find((t) => t.id === tab)!;
   const frame = hexToRgba(accent, 0.4);
   const line = hexToRgba(accent, 0.15);
@@ -436,16 +438,39 @@ export default function NbaPlayerHowTheyPlayNative({
       ) : null}
 
       {tab === "tracking" ? (
-        <HintList
-          rows={board.tracking}
-          selectedId={trackId}
-          onSelect={setTrackId}
-          accent={accent}
-          lang={lang}
-          noData={chrome.noData}
-          line={line}
-          frame={frame}
-        />
+        <>
+          <View style={styles.chipRow}>
+            {PLAYER_TRACK_GROUPS.map((g) => {
+              const active = trackGroup === g.id;
+              return (
+                <Pressable
+                  key={g.id}
+                  onPress={() => {
+                    setTrackGroup(g.id);
+                    const first = board.tracking.find((r) => g.ids.includes(r.id));
+                    if (first) setTrackId(first.id);
+                  }}
+                  style={[styles.chip, styles.trackChip, active && styles.chipActive]}
+                >
+                  {active ? <ChipScan /> : null}
+                  <Text style={[styles.chipLabel, active && styles.chipLabelActive]}>{g.short}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+          <HintList
+            rows={board.tracking.filter((r) =>
+              PLAYER_TRACK_GROUPS.find((g) => g.id === trackGroup)?.ids.includes(r.id)
+            )}
+            selectedId={trackId}
+            onSelect={setTrackId}
+            accent={accent}
+            lang={lang}
+            noData={chrome.noData}
+            line={line}
+            frame={frame}
+          />
+        </>
       ) : null}
     </View>
   );
@@ -464,6 +489,7 @@ const styles = StyleSheet.create({
   titleLine: { flex: 1, height: StyleSheet.hairlineWidth },
   sectionRule: { height: StyleSheet.hairlineWidth, marginVertical: 2 },
   chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 4 },
+  trackChip: { width: "23.5%", maxWidth: "23.5%" },
   chip: {
     width: "32%",
     maxWidth: "32%",

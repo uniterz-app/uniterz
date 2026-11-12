@@ -34,6 +34,7 @@ const NBA_PUBLIC_DOC_CACHE_TTL: Readonly<Record<string, number>> = {
   nbaLeaguePlayerStats: DEFAULT_TTL_SEC,
   nbaLeagueTeamStats: DEFAULT_TTL_SEC,
   nbaDiscipline: DEFAULT_TTL_SEC,
+  nbaTeamCleanRatings: DEFAULT_TTL_SEC,
   nbaTeamOffseasonMoves: DEFAULT_TTL_SEC,
   nbaTeamShapeRecords: DEFAULT_TTL_SEC,
   nbaTeamSeasonRecords: DEFAULT_TTL_SEC,

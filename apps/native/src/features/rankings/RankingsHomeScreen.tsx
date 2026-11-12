@@ -578,6 +578,7 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
       rank,
       valueText: `${formatMetricDecimals(n, d)}${unit}`,
       deltaPlaces: listRow?.rankDeltaPlaces ?? myRankDeltaPlaces ?? null,
+      total: rankingListCount > 0 ? rankingListCount : null,
     };
   }, [
     rankingHasNoEntries,
@@ -587,6 +588,7 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
     metric,
     myValue,
     myRankDeltaPlaces,
+    rankingListCount,
   ]);
 
   const scrollToTop = useCallback(() => {

@@ -9,6 +9,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { notifyBackEdgeScroll } from "../../profile/backEdgeScrollNative";
 import {
   Animated,
   Pressable,
@@ -65,6 +66,7 @@ export function useLeagueStatsCollapseState(resetKey?: unknown) {
 
   const onTableScroll = useCallback(
     (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+      notifyBackEdgeScroll();
       const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
       const y = contentOffset.y;
       const dy = y - lastY.current;

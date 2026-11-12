@@ -8,6 +8,8 @@ export type RankingsStickyMe = {
   rank: number;
   valueText: string;
   deltaPlaces: number | null;
+  /** その一覧の参加人数（「#12 / 1,234」） */
+  total?: number | null;
 };
 
 const ACCENT = "#00F5FF";
@@ -88,7 +90,12 @@ export function RankingsStickyStatusBarNative({
             ]}
           >
             <Text style={styles.youLabel}>YOU</Text>
-            <Text style={styles.rank}>#{me.rank}</Text>
+            <Text style={styles.rank}>
+              #{me.rank}
+              {me.total != null && me.total > 0 ? (
+                <Text style={styles.rankTotal}> / {me.total.toLocaleString("en-US")}</Text>
+              ) : null}
+            </Text>
             <Text style={styles.value} numberOfLines={1}>
               {me.valueText}
             </Text>
@@ -162,6 +169,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "900",
     color: "#FFFFFF",
+  },
+  rankTotal: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "rgba(255,255,255,0.5)",
   },
   value: {
     flexShrink: 1,

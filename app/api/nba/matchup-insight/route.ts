@@ -23,6 +23,7 @@ import {
   type SmartMoneyMarket,
 } from "@/lib/predict/smartMoneyMarket";
 import { smartMoneyCohortWeekLabel } from "@/lib/predict/smartMoneyMarketServer";
+import { sanitizeProInsightPredictKit } from "@/lib/nba/insights/predictKit/predictKitTypes";
 
 async function loadMatchupInsightPayload(gameId: string) {
   const db = getAdminDb();
@@ -50,6 +51,7 @@ async function loadMatchupInsightPayload(gameId: string) {
   const brief = sanitizeProBriefForDisplay(
     data.proBrief as PredictProBrief | null | undefined
   );
+  const predictKit = sanitizeProInsightPredictKit(data.predictKit);
 
   const updatedAtMs =
     (typeof narrativeMeta.generatedAtMs === "number"
@@ -69,6 +71,8 @@ async function loadMatchupInsightPayload(gameId: string) {
       status,
       narrative,
       narrativeMeta,
+      /** 予想の材料（新しいアプリはこれがあればナラティブの代わりに出す） */
+      predictKit,
       /** @deprecated 旧 HOME/AWAY。新 UI は narrative を使う */
       brief,
       updatedAt:
@@ -112,9 +116,11 @@ async function loadSmartMoneyMarket(gameId: string): Promise<SmartMoneyMarket | 
  * Firestore gameProInsights/{id}（クライアント読み取り不可）:
  *   - proInsightNarrative … 新 UI（試合共通スナップショット · Pro 限定）
  *   - proBrief … 旧 HOME/AWAY テンプレ（互換のため残す）
+ *   - predictKit … 予想の材料（Pro 限定。無料のティーザーには載せない）
  *
  * クライアントは narrative を優先。未生成は status: "empty" | "pending"。
- * Free + `teaser=1`: PREVIEW の第 1 段落だけ `{ locked: true, teaser }`。PREVIEW の無い試合は 403。
+ * Free + `teaser=1`: PREVIEW の第 1 段落と、予想の材料があるか・今季の的中率だけ `{ locked: true, teaser, hasKit, kitRecord }`。
+ *   予想の中身（確率・スコア・得点王）は返さない。どちらも無い試合は 403。
  * Pro 判定は毎回。試合共通部分は unstable_cache（書き込み側 ingest で tag を捨てる）。
  */
 export async function GET(req: Request) {
@@ -162,14 +168,22 @@ export async function GET(req: Request) {
 
     if (!isPro) {
       const teaser = buildProInsightPreviewTeaser(result.body.narrative);
-      if (!teaser) {
+      const hasKit = result.body.predictKit != null;
+      if (!teaser && !hasKit) {
         return NextResponse.json(
           { ok: false, error: "pro_required", locked: true },
           { status: 403 }
         );
       }
       return NextResponse.json(
-        { ok: true, gameId, locked: true, teaser },
+        {
+          ok: true,
+          gameId,
+          locked: true,
+          teaser,
+          hasKit,
+          kitRecord: result.body.predictKit?.record ?? null,
+        },
         { headers: { "Cache-Control": "private, no-store" } }
       );
     }

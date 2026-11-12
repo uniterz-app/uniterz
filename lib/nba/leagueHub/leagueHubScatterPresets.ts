@@ -47,7 +47,7 @@ export type LeagueHubPlayerScatterPreset = LeagueHubScatterPreset<LeagueHubPlaye
 export const LEAGUE_HUB_PLAYER_SCATTER_GROUPS = [
   { id: "scoring", label: "SCORING", presetIds: ["three", "ace", "shotType", "source"] },
   { id: "attack", label: "ATTACK", presetIds: ["paint", "drive", "driveFinish", "driveDish", "foul", "playmaking", "passCreate", "creation"] },
-  { id: "defense", label: "DEFENSE", presetIds: ["defense", "hustle", "contestSplit", "shotAllow", "aceStop", "fouls"] },
+  { id: "defense", label: "DEFENSE", presetIds: ["defense", "hustle", "contestSplit", "shotAllow", "aceStop", "toughStop", "fouls"] },
   { id: "ball", label: "BALL", presetIds: ["touch", "mileage"] },
   { id: "impact", label: "IMPACT", presetIds: ["onCourt", "clutch", "consistency"] },
   { id: "rebound", label: "REB", presetIds: ["glass", "rebContest", "boxOut", "rebChance"] },
@@ -280,6 +280,24 @@ export const LEAGUE_HUB_PLAYER_SCATTER_PRESETS: readonly LeagueHubPlayerScatterP
       tl: { ja: "短時間で抑える", en: "SPOT STOPPER" },
       br: { ja: "付いているが抑えない", en: "ASSIGNED" },
       bl: { ja: "エースは守らない", en: "NOT THE STOPPER" },
+    },
+  },
+  {
+    id: "toughStop",
+    label: { ja: "タフなマッチアップ", en: "TOUGH MATCHUPS" },
+    hint: {
+      ja: "右ほど相手の得点上位3人を長く守り、上ほどその選手たちの普段の eFG% よりシュートを落とす。",
+      en: "Right = more minutes on the other team's top 3 scorers, up = FG% below their usual eFG%.",
+    },
+    x: { metric: "tough_guard_min", label: { ja: "上位3人を守った時間", en: "MIN ON TOP 3" }, format: "one" },
+    y: { metric: "tough_suppress", label: { ja: "抑えた幅", en: "SUPPRESSED" }, format: "pct" },
+    volume: "tough_guard_min",
+    volumeLabel: { ja: "上位3人を守った時間", en: "MIN ON TOP 3" },
+    quadrants: {
+      tr: { ja: "得点源を抑える", en: "STOPS SCORERS" },
+      tl: { ja: "短時間で抑える", en: "SPOT STOPPER" },
+      br: { ja: "付いているが抑えない", en: "TOUGH DUTY" },
+      bl: { ja: "得点源は守らない", en: "NOT ASSIGNED" },
     },
   },
   {
@@ -592,6 +610,10 @@ export type LeagueHubTeamMetric =
   | "winPct"
   | "ortg"
   | "drtg"
+  | "cleanOrtg"
+  | "cleanDrtg"
+  | "cleanAdjOrtg"
+  | "cleanAdjDrtg"
   | "pace"
   | "deflections"
   | "contestedShots"
@@ -669,6 +691,50 @@ export const LEAGUE_HUB_TEAM_STRENGTH: LeagueHubScatterPreset<LeagueHubTeamMetri
     br: { ja: "攻撃で勝つ", en: "OFFENSE FIRST" },
     bl: { ja: "苦しい", en: "STRUGGLING" },
   },
+};
+
+export const LEAGUE_HUB_TEAM_CLEAN_STRENGTH: LeagueHubScatterPreset<LeagueHubTeamMetric> = {
+  id: "cleanStrength",
+  label: { ja: "強さの地図（ガベージ抜き）", en: "OFFENSE × DEFENSE (GARBAGE OUT)" },
+  hint: {
+    ja: "ガベージタイム抜きの攻守。",
+    en: "Offense × defense, garbage time out.",
+  },
+  x: {
+    metric: "cleanOrtg",
+    label: { ja: "CLN ORtg", en: "CLN ORtg" },
+    format: "one",
+  },
+  y: {
+    metric: "cleanDrtg",
+    label: { ja: "CLN DRtg（上ほど少ない）", en: "CLN DRtg (lower = up)" },
+    format: "one",
+    invert: true,
+  },
+  marks: { tl: "DEF", br: "OFF" },
+  quadrants: LEAGUE_HUB_TEAM_STRENGTH.quadrants,
+};
+
+export const LEAGUE_HUB_TEAM_ADJ_STRENGTH: LeagueHubScatterPreset<LeagueHubTeamMetric> = {
+  id: "adjStrength",
+  label: { ja: "強さの地図（相手補正）", en: "OFFENSE × DEFENSE (OPP ADJ)" },
+  hint: {
+    ja: "相手の強さで補正した攻守（ガベージ抜き）。",
+    en: "Offense × defense, adjusted for opponents (garbage out).",
+  },
+  x: {
+    metric: "cleanAdjOrtg",
+    label: { ja: "ADJ ORtg", en: "ADJ ORtg" },
+    format: "one",
+  },
+  y: {
+    metric: "cleanAdjDrtg",
+    label: { ja: "ADJ DRtg（上ほど少ない）", en: "ADJ DRtg (lower = up)" },
+    format: "one",
+    invert: true,
+  },
+  marks: { tl: "DEF", br: "OFF" },
+  quadrants: LEAGUE_HUB_TEAM_STRENGTH.quadrants,
 };
 
 export const LEAGUE_HUB_TEAM_THREE: LeagueHubScatterPreset<LeagueHubTeamMetric> = {

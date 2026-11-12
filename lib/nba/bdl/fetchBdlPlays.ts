@@ -16,6 +16,13 @@ export type BdlPlay = {
   text?: string | null;
   period?: number | null;
   clock?: string | null;
+  /** そのプレー直後の累計スコア */
+  home_score?: number | null;
+  away_score?: number | null;
+  /** FG・FT の試投（成否問わず） */
+  shooting_play?: boolean | null;
+  scoring_play?: boolean | null;
+  score_value?: number | null;
   team?: { id?: number; abbreviation?: string | null } | null;
   participants?: number[] | null;
 };

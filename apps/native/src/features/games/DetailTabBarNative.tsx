@@ -10,19 +10,19 @@ import {
   type NbaTeamDetailTab,
 } from "../../../../../lib/nba/detailTabs";
 
-export default function DetailTabBarNative<
-  T extends NbaTeamDetailTab | NbaPlayerDetailTab,
->({
+export default function DetailTabBarNative<T extends string>({
   tabs,
   active,
   onChange,
   accent,
+  labelOf,
 }: {
   tabs: readonly T[];
   active: T;
   onChange: (tab: T) => void;
   /** チームカラー（タブの塗り・枠） */
   accent: string;
+  labelOf?: (tab: T) => string;
 }) {
   const theme = useMemo(() => ({ accent }), [accent]);
   return (
@@ -30,7 +30,7 @@ export default function DetailTabBarNative<
       {tabs.map((tab) => (
         <CyberSlantedTabNative
           key={tab}
-          label={nbaDetailTabLabel(tab)}
+          label={labelOf ? labelOf(tab) : nbaDetailTabLabel(tab as NbaTeamDetailTab | NbaPlayerDetailTab)}
           active={tab === active}
           onPress={() => {
             if (tab !== active) onChange(tab);
