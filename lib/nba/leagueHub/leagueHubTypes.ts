@@ -6,6 +6,11 @@ import type { NbaPlayerShotZoneId } from "@/lib/predict/nbaPlayerDetailPreviewMo
 import type { NbaConferenceId } from "@/lib/nba/nbaConferenceTeams";
 
 export const NBA_LEAGUE_HUB_COLLECTION = "nbaLeagueHub";
+/**
+ * 1 doc 1MiB に収まらない分を別 doc に置く。`{season}_matchups`（選手の matchups / guardedBy）と
+ * `{season}_lineups`（チームの lineups / lineupBoards）。読みは loadNbaLeagueHubSnapshot が本体に戻す。
+ */
+export const NBA_LEAGUE_HUB_DETAIL_COLLECTION = "nbaLeagueHubDetail";
 
 export const LEAGUE_HUB_PLAYER_METRICS = [
   "pts",

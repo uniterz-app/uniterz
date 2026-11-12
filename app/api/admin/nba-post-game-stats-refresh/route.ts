@@ -38,6 +38,7 @@ export async function POST(req: Request) {
         "nbaPlayerShotAreas",
         "nbaPlayerGameLogs",
         "nbaLeagueHub",
+        "nbaLeagueHubDetail",
       ]);
     }
     return NextResponse.json(result, { status: result.ok ? 200 : 207 });

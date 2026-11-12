@@ -13,7 +13,6 @@ import TutorialTargetNative from "../../tutorial/TutorialTargetNative";
 import { registerTutorialPredictToolsListener } from "../../tutorial/tutorialPredictToolsBridgeNative";
 import PredictProBriefPanelNative from "./PredictProBriefPanelNative";
 import PredictProInsightNarrativePanelNative from "./PredictProInsightNarrativePanelNative";
-import PredictProInsightSmartMarketNative from "./PredictProInsightSmartMarketNative";
 import PredictProInsightKitNative from "./PredictProInsightKitNative";
 import NbaInjuryReportPanelNative from "./NbaInjuryReportPanelNative";
 import NbaTeamStatsPanelNative from "./NbaTeamStatsPanelNative";
@@ -164,7 +163,6 @@ export default function NbaPredictToolsTabsNative({
     predictKit,
     loading: briefLoading,
     updatedAt: insightUpdatedAt,
-    smartMarket,
   } = useNbaMatchupProBrief({
     gameId,
     override: brief,
@@ -280,52 +278,25 @@ export default function NbaPredictToolsTabsNative({
                   crowd={crowd}
                 />
               ) : predictKit && homeTeamId && awayTeamId ? (
-                <View>
-                  <PredictProInsightKitNative
-                    kit={predictKit}
-                    homeTeamId={homeTeamId}
-                    awayTeamId={awayTeamId}
-                    language={language}
-                    crowd={crowd}
-                    showHeader={false}
-                  />
-                  {smartMarket ? (
-                    <PredictProInsightSmartMarketNative
-                      market={smartMarket}
-                      language={language}
-                      homeTeamId={homeTeamId}
-                      awayTeamId={awayTeamId}
-                      homeTeamName={homeTeamName}
-                      awayTeamName={awayTeamName}
-                      standalone
-                    />
-                  ) : null}
-                </View>
+                <PredictProInsightKitNative
+                  kit={predictKit}
+                  homeTeamId={homeTeamId}
+                  awayTeamId={awayTeamId}
+                  language={language}
+                  crowd={crowd}
+                  showHeader={false}
+                />
               ) : liveNarrative ? (
                 <PredictProInsightNarrativePanelNative
                   brief={liveNarrative}
                   language={language}
                   homeTeamName={homeTeamName}
                   awayTeamName={awayTeamName}
-                  smartMarket={smartMarket}
                 />
               ) : briefLoading ? (
                 <LoadingPanel label={loadingLabel} />
               ) : (
-                <View>
-                  <PendingPanel text={insightPendingText} />
-                  {smartMarket && homeTeamId && awayTeamId ? (
-                    <PredictProInsightSmartMarketNative
-                      market={smartMarket}
-                      language={language}
-                      homeTeamId={homeTeamId}
-                      awayTeamId={awayTeamId}
-                      homeTeamName={homeTeamName}
-                      awayTeamName={awayTeamName}
-                      standalone
-                    />
-                  ) : null}
-                </View>
+                <PendingPanel text={insightPendingText} />
               )
             ) : tab === "info" ? (
               <View style={styles.infoFrame}>

@@ -319,8 +319,23 @@ function namedLineups(
   return units.flatMap((unit) => {
     const names = lineupNames(unit.ids, roster);
     if (names.length !== size) return [];
-    return [{ names, min: unit.min, net: unit.net, pm: unit.pm, off: unit.off, def: unit.def, games: unit.games }];
+    return [{ names, min: unit.min, net: unit.net, pm: unit.pm, ...lineupOptionalFields(unit) }];
   });
+}
+
+/** Firestore は undefined を書けないので、値のある項目だけ載せる */
+function lineupOptionalFields(unit: { pm?: number; off?: number; def?: number; games?: number }): {
+  pm?: number;
+  off?: number;
+  def?: number;
+  games?: number;
+} {
+  return {
+    ...(typeof unit.pm === "number" ? { pm: unit.pm } : {}),
+    ...(typeof unit.off === "number" ? { off: unit.off } : {}),
+    ...(typeof unit.def === "number" ? { def: unit.def } : {}),
+    ...(typeof unit.games === "number" ? { games: unit.games } : {}),
+  };
 }
 
 export function buildNbaLeagueHub(input: BuildNbaLeagueHubInput): NbaLeagueHubDoc {
@@ -960,7 +975,7 @@ export function buildNbaLeagueHub(input: BuildNbaLeagueHubInput): NbaLeagueHubDo
       lineups: (input.lineups?.get(s.teamId) ?? []).flatMap((unit) => {
         const names = lineupNames(unit.ids, input.roster);
         if (names.length < 5) return [];
-        return [{ names, min: unit.min, net: unit.net, pm: unit.pm, off: unit.off, def: unit.def }];
+        return [{ names, min: unit.min, net: unit.net, ...lineupOptionalFields(unit) }];
       }),
       lineupBoards: (input.lineupBoards?.get(s.teamId) ?? []).flatMap((board) => {
         const most = namedLineups(board.most, board.size, input.roster);
