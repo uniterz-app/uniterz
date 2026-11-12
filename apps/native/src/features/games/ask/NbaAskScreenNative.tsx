@@ -72,6 +72,39 @@ function openNbaAskDestination(navigation: AskNav, id: NbaAskDestinationId) {
     case "squads":
       navigation.navigate("RankingsTab", { screen: "SquadBattle" });
       return;
+    case "standings":
+      navigation.navigate("Standings");
+      return;
+    case "today":
+      navigation.navigate("DailyLeaders");
+      return;
+    case "unit_ledger":
+      navigation.navigate("ProfileTab", { screen: "UnitLedger" });
+      return;
+    case "redeem":
+      navigation.navigate("ProfileTab", { screen: "Redeem" });
+      return;
+    case "plan_status":
+      navigation.navigate("ProfileTab", { screen: "PlanStatus" });
+      return;
+    case "profile":
+      navigation.navigate("ProfileTab", { screen: "ProfileHome" });
+      return;
+    case "display":
+      navigation.navigate("ProfileTab", { screen: "DisplaySettings" });
+      return;
+    case "help":
+      navigation.navigate("ProfileTab", { screen: "Help" });
+      return;
+    case "badges":
+      navigation.navigate("ProfileTab", { screen: "Badges" });
+      return;
+    case "groups":
+      navigation.navigate("LeaderboardsTab", { screen: "LeaderboardsHome" });
+      return;
+    case "results":
+      navigation.navigate("ResultTab", { screen: "ResultHome" });
+      return;
   }
 }
 
@@ -235,6 +268,7 @@ export default function NbaAskScreenNative() {
             if (t.games && t.games.length > 0) {
               return (
                 <View key={i} style={styles.boardWrap}>
+                  {t.content ? <Text style={styles.boardTitle}>{t.content}</Text> : null}
                   {t.games.map((game, index) => (
                     <AskGameCardNative
                       key={`${game.id || game.away}-${game.home}-${index}`}
@@ -266,6 +300,7 @@ export default function NbaAskScreenNative() {
             if (t.board) {
               return (
                 <View key={i} style={styles.boardWrap}>
+                  {t.content ? <Text style={styles.boardTitle}>{t.content}</Text> : null}
                   <StatsBoardNative board={t.board} />
                   {t.opens?.map((id) => (
                     <Pressable
@@ -441,6 +476,12 @@ const styles = StyleSheet.create({
   boardWrap: {
     alignSelf: "stretch",
     gap: 12,
+  },
+  boardTitle: {
+    color: "rgba(255,255,255,0.88)",
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: "600",
   },
   preparing: {
     color: CYBER_TAB_CYAN,

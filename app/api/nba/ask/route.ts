@@ -127,7 +127,7 @@ export async function POST(req: Request) {
 
     let statsFreeRemaining = stats.freeRemaining;
     if (result.usedStats) {
-      await recordNbaAskStatsUse(db, uid, isPro);
+      await recordNbaAskStatsUse(db, uid);
       if (statsFreeRemaining != null) statsFreeRemaining = Math.max(0, statsFreeRemaining - 1);
     }
     const leaked = nbaAskAnswerLeaksInternal(result.answer);

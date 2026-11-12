@@ -1,6 +1,6 @@
 /**
- * NBA スタッツ質問チャットの「道具」。すべて Firestore スナップショットだけを読む（BDL は叩かない）。
- * AI に返す JSON は 1 回あたり数百トークンに収まるよう、必要な列だけに絞る。
+ * ASK のデータ読み取り。すべて Firestore スナップショットだけを読む（BDL は叩かない）。
+ * 答えの組み立ては `nbaAskNbaAnswer`。ここは必要な列だけに絞った値を返す。
  */
 import type { Firestore } from "firebase-admin/firestore";
 import { Timestamp } from "firebase-admin/firestore";
@@ -52,8 +52,8 @@ import {
   metricValue,
   type NbaLeagueTeamStatMetric,
 } from "@/lib/predict/nbaLeagueTeamStatsMocks";
-import type { NbaPlayerLeaderBdlStatType } from "@/lib/predict/nbaPlayerStatLeadersMocks";
-import { loadGameProInsight } from "@/lib/nba/insights/gameProInsightStore";
+import type { NbaPlayerLeaderMetricId } from "@/lib/predict/nbaPlayerStatLeadersMocks";
+import { GAME_PRO_INSIGHT_FIELDS, loadGameProInsight } from "@/lib/nba/insights/gameProInsightStore";
 import { sanitizeProInsightNarrativeForDisplay } from "@/lib/predict/validateProInsightNarrative";
 import type { ProInsightNarrativeBrief } from "@/lib/predict/proInsightNarrativeTypes";
 import { L, resolveLocalizedLang } from "@/lib/i18n/localize";
@@ -77,14 +77,14 @@ type RosterTeams = Record<string, NbaTeamRosterDocTeam>;
 let rosterCache: { at: number; teams: RosterTeams } | null = null;
 const ROSTER_CACHE_MS = 10 * 60 * 1000;
 
-async function loadRosters(db: Firestore): Promise<RosterTeams> {
+export async function loadRosters(db: Firestore): Promise<RosterTeams> {
   if (rosterCache && Date.now() - rosterCache.at < ROSTER_CACHE_MS) return rosterCache.teams;
   const payload = await loadTeamRostersSnapshot(db, CURRENT_NBA_SEASON_KEY);
   rosterCache = { at: Date.now(), teams: payload.bundle.teams ?? {} };
   return rosterCache.teams;
 }
 
-function abbr(teamId: string): string {
+export function abbr(teamId: string): string {
   return (TEAM_SHORT[teamId] ?? teamId.replace(/^nba-/i, "")).toUpperCase();
 }
 
@@ -124,11 +124,8 @@ function startOf(data: Record<string, unknown>): Date | null {
   return t?.toDate?.() ?? null;
 }
 
-/** スタッツ回数を使い切っていても渡す。試合一覧そのもの */
-export const NBA_ASK_SCHEDULE_TOOL_NAMES: ReadonlySet<string> = new Set(["get_games_on_date"]);
-
 /** today / tomorrow / yesterday を、ユーザーの暦日に直す */
-function resolveAskDate(raw: string, timeZone: string): string | null {
+export function resolveAskDate(raw: string, timeZone: string): string | null {
   const q = raw.trim().toLowerCase();
   const today = getTodayKeyInTimeZone(timeZone);
   if (!q || q === "today") return today;
@@ -148,13 +145,44 @@ function kickoffLabel(data: Record<string, unknown>, timeZone: string): string {
   }).format(start);
 }
 
+/** 試合一覧カード・スコアに要る項目。liveStats は phase だけ（box は 1 試合 6KB あるので要るときだけ） */
+const GAME_LIST_FIELDS = [
+  "startAtJst",
+  "home",
+  "away",
+  "homeTeamId",
+  "awayTeamId",
+  "score",
+  "homeScore",
+  "awayScore",
+  "finalScore",
+  "result",
+  "final",
+  "postponed",
+  "seasonPhase",
+  "roundLabel",
+  "isPickup",
+  "pickupWeekKey",
+  "liveStats.phase",
+] as const;
+
 /** 表示タイムゾーンの暦日に始まる試合（試合一覧の日付と同じ切り方） */
-async function loadGamesOnDate(db: Firestore, dateKey: string, timeZone: string) {
+export async function loadGamesOnDate(
+  db: Firestore,
+  dateKey: string,
+  timeZone: string,
+  opts: { box?: boolean; proInsight?: boolean } = {}
+) {
   const m = DATE_RE.exec(dateKey);
   if (!m) return null;
   // どのタイムゾーンの 1 日も UTC 当日 0 時の前後 14 時間以内に収まる。広めに取り、暦日で絞る
   const utcMidnight = Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
   const hour = 3600 * 1000;
+  const fields: string[] = [
+    ...GAME_LIST_FIELDS.filter((f) => !(opts.box && f === "liveStats.phase")),
+    ...(opts.box ? ["liveStats"] : []),
+    ...(opts.proInsight ? GAME_PRO_INSIGHT_FIELDS : []),
+  ];
   const snap = await db
     .collection("games")
     .where("league", "==", "nba")
@@ -163,6 +191,7 @@ async function loadGamesOnDate(db: Firestore, dateKey: string, timeZone: string)
     .where("startAtJst", "<", Timestamp.fromMillis(utcMidnight + 39 * hour))
     .orderBy("startAtJst", "asc")
     .limit(60)
+    .select(...fields)
     .get();
   return snap.docs
     .map((d) => ({ id: d.id, data: d.data() as Record<string, unknown> }))
@@ -173,7 +202,7 @@ async function loadGamesOnDate(db: Firestore, dateKey: string, timeZone: string)
 }
 
 /** 選手の試合ログ（BDL 試合 ID）→ 表示タイムゾーンの日付 */
-async function gameDateKeysByBdlId(
+export async function gameDateKeysByBdlId(
   db: Firestore,
   bdlGameIds: string[],
   timeZone: string
@@ -214,303 +243,6 @@ function gameStatus(data: Record<string, unknown>, phase: string | null): string
   if (phase === "live") return "live";
   return "scheduled";
 }
-
-/** OpenAI tools 定義（説明文も毎回送るので短く保つ） */
-export const NBA_ASK_TOOL_DEFS = [
-  {
-    type: "function",
-    function: {
-      name: "search_players",
-      description: "Find NBA players by English name, last name, or team name. Returns player ids.",
-      parameters: {
-        type: "object",
-        properties: { name: { type: "string" } },
-        required: ["name"],
-      },
-    },
-  },
-  {
-    type: "function",
-    function: {
-      name: "get_games_on_date",
-      description:
-        "Games that start on a date in the user's time zone, including which ones are PICK UP. date may be today, tomorrow, yesterday, or YYYY-MM-DD. Set pickup_only for ピックアップ / pick up. Available even when other stats tools are off. Empty means that day has no such game.",
-      parameters: {
-        type: "object",
-        properties: {
-          date: { type: "string", description: "today, tomorrow, yesterday, or YYYY-MM-DD" },
-          pickup_only: { type: "boolean" },
-        },
-        required: ["date"],
-      },
-    },
-  },
-  {
-    type: "function",
-    function: {
-      name: "get_player_game",
-      description: "One player's full box score line for the game on a date (the user's time zone).",
-      parameters: {
-        type: "object",
-        properties: {
-          player_id: { type: "string" },
-          date: { type: "string", description: "YYYY-MM-DD (user's time zone)" },
-        },
-        required: ["player_id", "date"],
-      },
-    },
-  },
-  {
-    type: "function",
-    function: {
-      name: "get_player_recent_games",
-      description: "A player's most recent games this season (newest first). Dates are in the user's time zone.",
-      parameters: {
-        type: "object",
-        properties: {
-          player_id: { type: "string" },
-          last_n: { type: "integer", minimum: 1, maximum: 10 },
-          season: { type: "string", description: "Optional, like 2024-25. Default is the current season." },
-        },
-        required: ["player_id"],
-      },
-    },
-  },
-  {
-    type: "function",
-    function: {
-      name: "get_player_season_averages",
-      description: "A player's current-season per-game averages, including steals, blocks, and turnovers.",
-      parameters: {
-        type: "object",
-        properties: { player_id: { type: "string" } },
-        required: ["player_id"],
-      },
-    },
-  },
-  {
-    type: "function",
-    function: {
-      name: "get_team_moves",
-      description:
-        "This season's roster IN/OUT versus last season for one team. Not a same-day transaction wire. Trade and free agency are not fully separated.",
-      parameters: {
-        type: "object",
-        properties: { team: { type: "string", description: "Team abbr or name" } },
-        required: ["team"],
-      },
-    },
-  },
-  {
-    type: "function",
-    function: {
-      name: "get_team_injuries",
-      description: "Current injury report for one team (out, doubtful, questionable).",
-      parameters: {
-        type: "object",
-        properties: {
-          team: { type: "string", description: "Team abbr or name" },
-          season: { type: "string", description: "Optional, like 2024-25. Default is the current season." },
-        },
-        required: ["team"],
-      },
-    },
-  },
-  {
-    type: "function",
-    function: {
-      name: "get_standings",
-      description: "Conference W-L standings. Pass conference, one team, or a past season like 2024-25.",
-      parameters: {
-        type: "object",
-        properties: {
-          conference: { type: "string", enum: ["east", "west"] },
-          team: { type: "string", description: "Team abbr or name, for one row" },
-          season: { type: "string", description: "Optional, like 2024-25. Default is the current season." },
-        },
-      },
-    },
-  },
-  {
-    type: "function",
-    function: {
-      name: "get_player_leaders",
-      description:
-        "League player leaders for one stat. Returns the leader and a short list, not the whole board. Use season 2024-25 and season_type playoffs when asked.",
-      parameters: {
-        type: "object",
-        properties: {
-          metric: { type: "string", enum: ["pts", "reb", "ast", "stl", "blk", "tov"] },
-          season: { type: "string", description: "Optional, like 2024-25" },
-          season_type: { type: "string", enum: ["season", "playoffs"] },
-          team: { type: "string", description: "Team abbr, to include that team's player on the list" },
-        },
-        required: ["metric"],
-      },
-    },
-  },
-  {
-    type: "function",
-    function: {
-      name: "get_team_stat",
-      description:
-        "One team-stat leaderboard. Returns the leader and, if team is set, that team's rank. Not all 30 teams.",
-      parameters: {
-        type: "object",
-        properties: {
-          metric: { type: "string", enum: ["ppg", "papg", "pace", "netrtg", "ortg", "drtg", "diff"] },
-          season: { type: "string", description: "Optional, like 2024-25" },
-          season_type: { type: "string", enum: ["season", "playoffs"] },
-          team: { type: "string", description: "Team abbr or name" },
-        },
-        required: ["metric"],
-      },
-    },
-  },
-  {
-    type: "function",
-    function: {
-      name: "get_player_shot_zones",
-      description: "A player's shot zone field goal percentage and attempts. Not a web lookup.",
-      parameters: {
-        type: "object",
-        properties: {
-          player_id: { type: "string" },
-          season: { type: "string", description: "Optional, like 2024-25" },
-        },
-        required: ["player_id"],
-      },
-    },
-  },
-  {
-    type: "function",
-    function: {
-      name: "get_player_contract",
-      description:
-        "A player's contract years and salaries stored in the app. Not Spotrac. Do not search the web for a contract.",
-      parameters: {
-        type: "object",
-        properties: {
-          player_id: { type: "string" },
-          season: { type: "string", description: "Optional, like 2024-25" },
-        },
-        required: ["player_id"],
-      },
-    },
-  },
-  {
-    type: "function",
-    function: {
-      name: "get_player_career",
-      description: "Career season averages (per game), regular season or playoffs. Most recent seasons.",
-      parameters: {
-        type: "object",
-        properties: {
-          player_id: { type: "string" },
-          season_type: { type: "string", enum: ["season", "playoffs"] },
-          season: { type: "string", description: "Optional single season, like 2023-24" },
-        },
-        required: ["player_id"],
-      },
-    },
-  },
-  {
-    type: "function",
-    function: {
-      name: "get_team_shapes",
-      description:
-        "A team's stronger and weaker game shapes (conditional W-L) shown on the team screen. Not all shapes.",
-      parameters: {
-        type: "object",
-        properties: {
-          team: { type: "string", description: "Team abbr or name" },
-          season: { type: "string", description: "Optional, like 2024-25" },
-        },
-        required: ["team"],
-      },
-    },
-  },
-  {
-    type: "function",
-    function: {
-      name: "get_discipline",
-      description:
-        "Season technicals, flagrants, ejections, and fine totals for one player or one team. Pass player_id or team.",
-      parameters: {
-        type: "object",
-        properties: {
-          player_id: { type: "string" },
-          team: { type: "string", description: "Team abbr or name" },
-          season: { type: "string", description: "Optional, like 2024-25" },
-          season_type: { type: "string", enum: ["season", "playoffs"] },
-        },
-      },
-    },
-  },
-  {
-    type: "function",
-    function: {
-      name: "get_daily_leaders",
-      description:
-        "Today's NBA stat leaders from games already stored (PTS, REB, AST, STL, BLK, 3PM). Top of the list only.",
-      parameters: {
-        type: "object",
-        properties: {
-          metric: { type: "string", enum: ["pts", "reb", "ast", "stl", "blk", "fg3m"] },
-          date: { type: "string", description: "Optional US Eastern YYYY-MM-DD. Default is the latest slate." },
-        },
-      },
-    },
-  },
-] as const;
-
-/**
- * Pro だけがアプリで見られるデータ。無料のスタッツ枠では渡さない。
- * Pro Insight（試合前の読み）と PRO LEAGUE（今日の得点板）。
- */
-export const NBA_ASK_PRO_TOOL_DEFS = [
-  {
-    type: "function",
-    function: {
-      name: "get_pro_insight",
-      description:
-        "PRO-only pregame read (Pro Insight) for one NBA game on a date (the user's time zone). Matchup, schedule, context, injuries.",
-      parameters: {
-        type: "object",
-        properties: {
-          date: { type: "string", description: "YYYY-MM-DD (user's time zone)" },
-          team: {
-            type: "string",
-            description: "Team abbr or name, when that date has several games",
-          },
-        },
-        required: ["date"],
-      },
-    },
-  },
-  {
-    type: "function",
-    function: {
-      name: "get_pro_league_leaders",
-      description:
-        "PRO-only. Today's UNITERZ PRO LEAGUE board (top scores). Not the public PICK UP board.",
-      parameters: { type: "object", properties: {} },
-    },
-  },
-  {
-    type: "function",
-    function: {
-      name: "search_web",
-      description:
-        "PRO-only. Call only after a stats tool returns found:false, for news the app does not store. Do not use it to replace an app number. Not for contracts or Spotrac.",
-      parameters: {
-        type: "object",
-        properties: { query: { type: "string" } },
-        required: ["query"],
-      },
-    },
-  },
-] as const;
 
 const PRO_LEAGUE_TOP_N = 8;
 
@@ -568,7 +300,6 @@ async function loadInjuryTeams(
 }
 
 /** チャットが聞いてよい選手リーダー指標。ショットゾーンや契約は含めない */
-const PLAYER_LEADER_METRICS = ["pts", "reb", "ast", "stl", "blk", "tov"] as const;
 const DAILY_LEADER_METRICS = ["pts", "reb", "ast", "stl", "blk", "fg3m"] as const;
 /** チームは1指標だけ。失点と DEF は低い方が上位 */
 const TEAM_STAT_METRICS = ["ppg", "papg", "pace", "netrtg", "ortg", "drtg", "diff"] as const;
@@ -605,7 +336,7 @@ function compactMove(move: NbaOffseasonMove) {
   };
 }
 
-function readStandingsBoard(
+export function readStandingsBoard(
   raw: unknown
 ): { east: NbaConferenceStandingsRow[]; west: NbaConferenceStandingsRow[] } | null {
   if (!raw || typeof raw !== "object") return null;
@@ -703,7 +434,7 @@ export async function runNbaAskTool(
       webOk: false,
       date,
       pickupOnly,
-      games: listed.slice(0, 12).map(({ id, data }) => {
+      games: listed.slice(0, 15).map(({ id, data }) => {
         const ctx = gameDocTeamContext(data);
         const live = normalizeLiveGameStatsDoc(data.liveStats);
         const score = getResolvedGameScore(data);
@@ -732,7 +463,7 @@ export async function runNbaAskTool(
     const playerId = str(args.player_id);
     const date = str(args.date);
     if (!playerId || !DATE_RE.test(date)) return { error: "player_id and date required" };
-    const games = await loadGamesOnDate(db, date, timeZone);
+    const games = await loadGamesOnDate(db, date, timeZone, { box: true });
     if (!games) return { error: "invalid date" };
     for (const { id, data } of games) {
       const live = normalizeLiveGameStatsDoc(data.liveStats);
@@ -885,7 +616,7 @@ export async function runNbaAskTool(
     const date = str(args.date);
     const team = str(args.team);
     if (!DATE_RE.test(date)) return { error: "date must be YYYY-MM-DD" };
-    const games = await loadGamesOnDate(db, date, timeZone);
+    const games = await loadGamesOnDate(db, date, timeZone, { proInsight: true });
     if (!games) return { error: "invalid date" };
     const listed = games.map(({ id, data }) => {
       const ctx = gameDocTeamContext(data);
@@ -953,10 +684,8 @@ export async function runNbaAskTool(
   }
 
   if (name === "get_player_leaders") {
-    const metric = str(args.metric) as NbaPlayerLeaderBdlStatType;
-    if (!PLAYER_LEADER_METRICS.includes(metric as (typeof PLAYER_LEADER_METRICS)[number])) {
-      return { error: "metric required" };
-    }
+    const metric = str(args.metric) as NbaPlayerLeaderMetricId;
+    if (!/^[a-z0-9_]{2,24}$/.test(metric)) return { error: "metric required" };
     const season = askSeason(args.season);
     if (typeof season !== "string") return season;
     const windowName = str(args.season_type) === "playoffs" ? "playoffs" : "season";
@@ -1007,6 +736,7 @@ export async function runNbaAskTool(
     const windowName = str(args.season_type) === "playoffs" ? "playoffs" : "season";
     const payload = await loadLeagueTeamStatsSnapshot(db, season);
     const higherFirst = leagueMetricDef(metric).higherIsBetter;
+    const worstFirst = str(args.order) === "worst";
     const rows = [...(payload.bundle[windowName] ?? [])].sort((a, b) => {
       const delta = metricValue(b, metric) - metricValue(a, metric);
       return higherFirst ? delta : -delta;
@@ -1033,7 +763,11 @@ export async function runNbaAskTool(
       metric,
       seasonType: windowName,
       leader,
-      ...(teamRow ? { team: teamRow } : { top: rows.slice(0, 5).map((row, index) => pack(row, index + 1)) }),
+      ...(teamRow
+        ? { team: teamRow }
+        : worstFirst
+          ? { worst: rows.slice(-5).reverse().map((row, index) => pack(row, rows.length - index)) }
+          : { top: rows.slice(0, 5).map((row, index) => pack(row, index + 1)) }),
     };
   }
 
