@@ -65,6 +65,8 @@ type TabProps = {
   active: boolean;
   onPress: () => void;
   compact?: boolean;
+  /** 本体の高さ（px）。省略時は compact 30 / 通常 34 */
+  bodyHeight?: number;
   /** 省略時は親 `CyberSlantedTabBarNative` の fill を使う */
   fill?: boolean;
   fontWeight?: "500" | "600" | "700";
@@ -244,6 +246,7 @@ export function CyberSlantedTabNative({
   active,
   onPress,
   compact = false,
+  bodyHeight,
   fill: fillProp,
   fontWeight = "700",
   theme,
@@ -253,7 +256,7 @@ export function CyberSlantedTabNative({
 }: TabProps) {
   const fillFromBar = useContext(CyberSlantedTabFillContext);
   const fill = fillProp ?? fillFromBar;
-  const bodyH = tabBodyHeight(compact);
+  const bodyH = bodyHeight ?? tabBodyHeight(compact);
   const imageH = chromeImageHeight(bodyH);
   const jaLabel = hasJaScript(label);
   const fontSize = rankingFontSizePx(compact ? 9 : 10, label);

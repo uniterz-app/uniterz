@@ -637,7 +637,7 @@ export async function runNbaAskTool(
           away: abbr(g.ctx.awayTeamId),
           home: abbr(g.ctx.homeTeamId),
         })),
-        note: "Specify team to load one game's Pro Insight",
+        note: "Specify team to load one game's Pro Pick",
       };
     }
     const game = matched[0]!;
@@ -649,7 +649,7 @@ export async function runNbaAskTool(
         date,
         away: abbr(game.ctx.awayTeamId),
         home: abbr(game.ctx.homeTeamId),
-        note: "Pro Insight is not ready for this game",
+        note: "Pro Pick is not ready for this game",
       };
     }
     return { found: true, date, ...compactProInsight(brief, language) };

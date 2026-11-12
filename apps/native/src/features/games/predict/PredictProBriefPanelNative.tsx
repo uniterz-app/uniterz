@@ -87,9 +87,9 @@ function teamNick(teamId: string, fallback: string): string {
 function TitleWithBrandFontsNative({ title }: { title: string }) {
   return (
     <View style={styles.gateTitleRow}>
-      {title.split(/(PRO INSIGHT|Pro)/).map((part, i) => {
+      {title.split(/(PRO PICK|Pro)/).map((part, i) => {
         if (!part) return null;
-        if (part === "PRO INSIGHT" || part === "Pro") {
+        if (part === "PRO PICK" || part === "Pro") {
           return (
             <Text key={i} style={[styles.gateTitle, styles.gateTitlePro]}>
               {part}

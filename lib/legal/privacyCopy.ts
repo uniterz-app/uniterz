@@ -349,11 +349,11 @@ export const PRIVACY_SECTIONS: readonly LegalSection[] = [
     title: { ja: "（参考）AI の利用", en: "(Note) Use of AI" },
     paragraphs: {
       ja: [
-        "PRO INSIGHT その他の分析機能では、試合データや公開スタッツ等を用いて文章や要約を生成することがあります。氏名、住所、電話番号などの配送情報は、外部の生成 AI へ送信しません。入力データを AI 事業者の学習に使用させないよう、契約または設定で対応します。",
+        "PRO PICK その他の分析機能では、試合データや公開スタッツ等を用いて文章や要約を生成することがあります。氏名、住所、電話番号などの配送情報は、外部の生成 AI へ送信しません。入力データを AI 事業者の学習に使用させないよう、契約または設定で対応します。",
         "アカウント停止、Unit の取消しその他の重大な措置は、AI の判定だけで自動確定しません。",
       ],
       en: [
-        "PRO INSIGHT and similar features may generate text from match data and public stats. We do not send shipping details to external generative AI. We use contracts or settings so submitted data is not used to train the provider's models.",
+        "PRO PICK and similar features may generate text from match data and public stats. We do not send shipping details to external generative AI. We use contracts or settings so submitted data is not used to train the provider's models.",
         "Serious measures such as account suspension or Unit reversal are not decided by AI alone.",
       ],
     },

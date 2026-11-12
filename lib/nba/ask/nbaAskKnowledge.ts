@@ -145,14 +145,14 @@ const ENTRIES: Entry[] = [
           "・勝つチームを選ぶ",
           "・両チームの得点を入れる（必須）",
           `・最多得点者を選ぶ（任意・当たると +${NBA_TOP_SCORER_BONUS_POINTS}）`,
-          "1試合に予想は1つ。試合開始までは何度でも直せます。予想画面の INSIGHT / INJURY / STATS / ROSTER タブで材料も見られます。",
+          "1試合に予想は1つ。試合開始までは何度でも直せます。予想画面の PRO PICK / INFORMATION / TREND タブで材料も見られます。",
         ].join("\n"),
         [
           "Tap a game card in the games list (leftmost tab) to open the pick screen.",
           "- Choose the winner",
           "- Enter both teams' scores (required)",
           `- Optionally pick the top scorer (+${NBA_TOP_SCORER_BONUS_POINTS} if right)`,
-          "One pick per game, editable until tip-off. The INSIGHT / INJURY / STATS / ROSTER tabs help you decide.",
+          "One pick per game, editable until tip-off. The PRO PICK / INFORMATION / TREND tabs help you decide.",
         ].join("\n")
       ),
   },
@@ -469,8 +469,8 @@ const ENTRIES: Entry[] = [
   // ---------------------------------------------------------------- PRO
   {
     id: "pro_plans",
-    hint: "PRO price, plans, free trial, what PRO includes, PRO features like Pro Insight",
-    fast: /(?:pro|プロ).{0,8}(?:料金|値段|いくら|価格|プラン|トライアル|無料期間|特典|でできる|って何|とは|のメリット)|(?:料金|月額|年額|サブスク)|pro insight(?:って|とは)|how much is pro|pro (?:price|plans?)/i,
+    hint: "PRO price, plans, free trial, what PRO includes, PRO features like Pro Pick (formerly Pro Insight)",
+    fast: /(?:pro|プロ).{0,8}(?:料金|値段|いくら|価格|プラン|トライアル|無料期間|特典|でできる|って何|とは|のメリット)|(?:料金|月額|年額|サブスク)|pro ?(?:insight|pick)(?:って|とは)|how much is pro|pro (?:price|plans?)/i,
     open: ["pro"],
     answer: (lang) =>
       T(
@@ -511,8 +511,8 @@ const ENTRIES: Entry[] = [
     answer: (lang) =>
       T(
         lang,
-        "プロフィールのメニュー →「通知設定」で切り替えられます。試合結果の確定、予想締切（未予想の試合だけ・30分前）、Unit 付与、お気に入り選手のテクニカル・退場は無料。締切の60分前・10分前、出場ステータスの変更、PRO INSIGHT の更新、週次・月次レポートは PRO です。",
-        "Open Profile → MENU → Notifications. Free: game final, pick deadline (unpicked games, 30 min before), Unit rewards, favorite players' techs and ejections. PRO: 60 / 10 min deadline reminders, player status changes, PRO INSIGHT updates, weekly and monthly reports."
+        "プロフィールのメニュー →「通知設定」で切り替えられます。試合結果の確定、予想締切（未予想の試合だけ・30分前）、Unit 付与、お気に入り選手のテクニカル・退場は無料。締切の60分前・10分前、出場ステータスの変更、PRO PICK の更新、週次・月次レポートは PRO です。",
+        "Open Profile → MENU → Notifications. Free: game final, pick deadline (unpicked games, 30 min before), Unit rewards, favorite players' techs and ejections. PRO: 60 / 10 min deadline reminders, player status changes, PRO PICK updates, weekly and monthly reports."
       ),
   },
   {

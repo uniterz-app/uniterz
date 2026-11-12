@@ -194,7 +194,7 @@ const QUERY_GUIDE = [
   "player_leaders: league leaders for any stat incl. advanced (得点王, 3P, TS%, PER, ダブルダブル…; metric pts reb ast stl blk tov fg3m when it fits). Leave player null. A named player's own number is player_season.",
   "daily_leaders: today's / latest slate stat leaders (metric pts reb ast stl blk fg3m).",
   "award_ladder: MVP / rookie / DPOY / sixth man / MIP race (award).",
-  "pro_insight: show the content of UNITERZ PRO Insight (pregame read) for a date or game. This is nba even though it says PRO.",
+  "pro_insight: show the content of UNITERZ PRO PICK (formerly Pro Insight; pregame read) for a date or game. This is nba even though it says PRO.",
   "pro_league: show today's UNITERZ PRO LEAGUE leaderboard of users (content, not how it works).",
   "news: trades, rumors, signings, coach news, anything that needs outside news (the app cannot look these up).",
   "unsupported: NBA question the list above cannot answer (history before 2020-21, champions / Finals winners / 優勝チーム, rules of basketball).",
@@ -218,7 +218,7 @@ function systemPrompt(now: string, timeZone: string): string {
     "Fields: player = full English name (エンビード → Joel Embiid, シャイ / SGA → Shai Gilgeous-Alexander, レブロン / キング → LeBron James, アント / アントマン → Anthony Edwards, AD → Anthony Davis, KD → Kevin Durant, ヤニス / ギリシャの怪人 → Giannis Antetokounmpo, ルカ → Luka Doncic, ウェンビー / ウェンバン → Victor Wembanyama, ジョキッチ / ヨキッチ → Nikola Jokic, ステフ → Stephen Curry, ザイオン → Zion Williamson, ジミー / バトラー → Jimmy Butler, ブッカー → Devin Booker, テイタム → Jayson Tatum, CP3 → Chris Paul, ハリバートン → Tyrese Haliburton, ブランソン → Jalen Brunson, PG / ポールジョージ → Paul George, カワイ → Kawhi Leonard). If you do not know the player, put the written name's English spelling in player too — never swap in a different player. player_written = the player name exactly as the user wrote it, romanized in A-Z letters only (never katakana) without guessing who it is (フラッグ → Flagg, ジャ → Ja, 八村 → Hachimura, ウェンバンヤマ → Wembanyama); null if no player. team / opponent = 3-letter NBA abbreviation (LAL, GSW, PHI, NYK, BKN, PHX, NOP, SAS, UTA, WAS). season = like 2024-25 only when the user names a past season (year or 去年 / 前季), else null. 今季 / 今シーズン = null. playoffs only when asked. count = number of games asked for.",
     "A player question sets team only when the user wrote the team. Never fill team from what you remember about where a player plays (rosters change every season). A team-only question leaves player null.",
     "Follow-ups: earlier turns are the same conversation. 'じゃあ', 'その選手', 'リバウンドは?', '昨日のは?' keep the previous player / team and change only what the user changed. A correction or a bare name ('XじゃなくてY', 'Yは?', 'Yだと?', just 'Y') swaps only the player / team and keeps the previous query and its fields. A new full question with its own topic starts fresh. Example: 'カリーの直近5試合' then 'ドンチッチは？' = player_recent_games, Luka Doncic, count 5.",
-    "Unit, ランキング報酬, 招待, 言語, 通知, ログアウト, 退会, PRO の解約, PRO price / features are app questions, never nba. Asking to SEE today's PRO Insight or PRO LEAGUE board is nba.",
+    "Unit, ランキング報酬, 招待, 言語, 通知, ログアウト, 退会, PRO の解約, PRO price / features are app questions, never nba. Asking to SEE today's PRO PICK or PRO LEAGUE board is nba.",
     "Use null for fields that do not apply. pickup_only and playoffs default to false.",
   ].join("\n");
 }

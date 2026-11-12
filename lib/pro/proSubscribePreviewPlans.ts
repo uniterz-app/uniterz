@@ -45,13 +45,13 @@ const CORE_FEATURES: readonly ProSubscribePreviewFeature[] = [
   {
     icon: "insight",
     title: {
-      ja: "Pro Insight（試合前の読み）",
-      en: "Pro Insight",
-      ko: "Pro Insight(경기 전 분석)",
-      zh: "Pro Insight（赛前解读）",
-      es: "Pro Insight (lectura previa)",
-      pt: "Pro Insight (leitura pré-jogo)",
-      fr: "Pro Insight (lecture d’avant-match)",
+      ja: "Pro Pick（試合前の読み）",
+      en: "Pro Pick",
+      ko: "Pro Pick(경기 전 분석)",
+      zh: "Pro Pick（赛前解读）",
+      es: "Pro Pick (lectura previa)",
+      pt: "Pro Pick (leitura pré-jogo)",
+      fr: "Pro Pick (lecture d’avant-match)",
     },
     detail: {
       ja: "この試合で見るべきポイントが分かる。マッチアップ・日程・状況を短く整理",

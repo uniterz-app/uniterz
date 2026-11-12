@@ -75,21 +75,21 @@ function formatLocalClock(
 }
 
 const COPY: Record<Language, (time: string) => string> = {
-  ja: (time) => `試合前日の ${time} 頃に初回の Pro Insight が出ます`,
+  ja: (time) => `試合前日の ${time} 頃に初回の Pro Pick が出ます`,
   en: (time) =>
-    `First Pro Insight arrives around ${time} the day before tip-off`,
-  ko: (time) => `경기 전날 ${time}경 첫 Pro Insight가 올라옵니다`,
-  zh: (time) => `首份 Pro Insight 约在开赛前一天 ${time} 发布`,
+    `First Pro Pick arrives around ${time} the day before tip-off`,
+  ko: (time) => `경기 전날 ${time}경 첫 Pro Pick가 올라옵니다`,
+  zh: (time) => `首份 Pro Pick 约在开赛前一天 ${time} 发布`,
   es: (time) =>
-    `El primer Pro Insight sale hacia las ${time} el día antes del tip-off`,
+    `El primer Pro Pick sale hacia las ${time} el día antes del tip-off`,
   pt: (time) =>
-    `O primeiro Pro Insight sai por volta de ${time} no dia anterior ao tip-off`,
+    `O primeiro Pro Pick sai por volta de ${time} no dia anterior ao tip-off`,
   fr: (time) =>
-    `Le premier Pro Insight arrive vers ${time} la veille du tip-off`,
+    `Le premier Pro Pick arrive vers ${time} la veille du tip-off`,
   de: (time) =>
-    `Das erste Pro Insight erscheint gegen ${time} am Tag vor dem Tip-off`,
+    `Das erste Pro Pick erscheint gegen ${time} am Tag vor dem Tip-off`,
   ar: (time) =>
-    `يظهر أول Pro Insight حوالي ${time} في اليوم السابق لانطلاق المباراة`,
+    `يظهر أول Pro Pick حوالي ${time} في اليوم السابق لانطلاق المباراة`,
 };
 
 export function formatProInsightFirstReadyPending(input: {

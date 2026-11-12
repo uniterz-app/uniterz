@@ -108,7 +108,7 @@ async function answerIntent(input: {
     if (NBA_ASK_PRO_QUERIES.has(q) && !input.isPro) {
       return plain(
         q === "pro_insight"
-            ? T(lang, "試合ごとの Pro Insight の中身は PRO だけが見られます。どんな機能かは「Pro Insight とは」で聞けます。", "A game's Pro Insight is PRO-only. Ask \"what is Pro Insight\" to hear what it is.")
+            ? T(lang, "試合ごとの Pro Pick の中身は PRO だけが見られます。どんな機能かは「Pro Pick とは」で聞けます。", "A game's Pro Pick is PRO-only. Ask \"what is Pro Pick\" to hear what it is.")
             : T(lang, "PRO LEAGUE の順位は PRO だけが見られます。", "The PRO LEAGUE board is PRO-only."),
         ["pro"]
       );

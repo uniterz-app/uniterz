@@ -44,15 +44,15 @@ export function isProInsightPreseasonPhase(seasonPhase: unknown): boolean {
 export function proInsightPreseasonNotice(language: string | null | undefined): string {
   const lang = resolveLocalizedLang(language);
   return L(lang, {
-    ja: "プレシーズンは PRO INSIGHT の対象外です。\nレギュラーシーズン開幕から各試合の PRO INSIGHT をお届けします。",
-    en: "PRO INSIGHT isn't available for preseason games.\nIt starts with the regular season.",
-    ko: "프리시즌은 PRO INSIGHT 대상이 아닙니다.\n정규시즌 개막부터 경기별 PRO INSIGHT를 제공합니다.",
-    zh: "季前赛不提供 PRO INSIGHT。\n常规赛开幕后每场比赛都会提供。",
-    es: "PRO INSIGHT no está disponible en pretemporada.\nComienza con la temporada regular.",
-    pt: "O PRO INSIGHT não está disponível na pré-temporada.\nComeça com a temporada regular.",
-    fr: "PRO INSIGHT n’est pas disponible en présaison.\nIl démarre avec la saison régulière.",
-    de: "PRO INSIGHT ist in der Preseason nicht verfügbar.\nEs startet mit der regulären Saison.",
-    ar: "PRO INSIGHT غير متاح لمباريات ما قبل الموسم.\nيبدأ مع انطلاق الموسم العادي.",
+    ja: "プレシーズンは PRO PICK の対象外です。\nレギュラーシーズン開幕から各試合の PRO PICK をお届けします。",
+    en: "PRO PICK isn't available for preseason games.\nIt starts with the regular season.",
+    ko: "프리시즌은 PRO PICK 대상이 아닙니다.\n정규시즌 개막부터 경기별 PRO PICK를 제공합니다.",
+    zh: "季前赛不提供 PRO PICK。\n常规赛开幕后每场比赛都会提供。",
+    es: "PRO PICK no está disponible en pretemporada.\nComienza con la temporada regular.",
+    pt: "O PRO PICK não está disponível na pré-temporada.\nComeça com a temporada regular.",
+    fr: "PRO PICK n’est pas disponible en présaison.\nIl démarre avec la saison régulière.",
+    de: "PRO PICK ist in der Preseason nicht verfügbar.\nEs startet mit der regulären Saison.",
+    ar: "PRO PICK غير متاح لمباريات ما قبل الموسم.\nيبدأ مع انطلاق الموسم العادي.",
   });
 }
 
@@ -61,15 +61,15 @@ export function proInsightGateCopy(
 ): ProInsightGateCopy {
   const lang = resolveLocalizedLang(language);
   return {
-    eyebrow: "PRO INSIGHT",
+    eyebrow: "PRO PICK",
     title: L(lang, {
-      ja: "この試合の勝つ確率・予想スコア・得点王は PRO INSIGHT で見られます",
-      en: "See this game's win chance, projected score and top scorer with PRO INSIGHT",
-      ko: "이 경기의 승리 확률·예상 스코어·득점왕은 PRO INSIGHT에서 볼 수 있습니다",
-      zh: "本场的胜率、预测比分与得分王，在 PRO INSIGHT 中查看",
-      es: "La probabilidad de victoria, el marcador previsto y el máximo anotador de este partido, en PRO INSIGHT",
-      pt: "A chance de vitória, o placar previsto e o cestinha deste jogo no PRO INSIGHT",
-      fr: "Probabilité de victoire, score projeté et meilleur marqueur de ce match dans PRO INSIGHT",
+      ja: "この試合の勝つ確率・予想スコア・得点王は PRO PICK で見られます",
+      en: "See this game's win chance, projected score and top scorer with PRO PICK",
+      ko: "이 경기의 승리 확률·예상 스코어·득점왕은 PRO PICK에서 볼 수 있습니다",
+      zh: "本场的胜率、预测比分与得分王，在 PRO PICK 中查看",
+      es: "La probabilidad de victoria, el marcador previsto y el máximo anotador de este partido, en PRO PICK",
+      pt: "A chance de vitória, o placar previsto e o cestinha deste jogo no PRO PICK",
+      fr: "Probabilité de victoire, score projeté et meilleur marqueur de ce match dans PRO PICK",
     }),
     body: L(lang, {
       ja: "全試合ぶんを、試合前日の 20:00 ごろに出します。",
@@ -186,13 +186,13 @@ export function proInsightGateCopy(
       fr: "À quoi ça ressemble (exemple)",
     }),
     lockedCardLabel: L(lang, {
-      ja: "この試合の PRO INSIGHT",
-      en: "PRO INSIGHT for this game",
-      ko: "이 경기의 PRO INSIGHT",
-      zh: "本场 PRO INSIGHT",
-      es: "PRO INSIGHT de este partido",
-      pt: "PRO INSIGHT deste jogo",
-      fr: "PRO INSIGHT de ce match",
+      ja: "この試合の PRO PICK",
+      en: "PRO PICK for this game",
+      ko: "이 경기의 PRO PICK",
+      zh: "本场 PRO PICK",
+      es: "PRO PICK de este partido",
+      pt: "PRO PICK deste jogo",
+      fr: "PRO PICK de ce match",
     }),
     proMemberAria: L(lang, {
       ja: "Pro会員",

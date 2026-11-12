@@ -374,7 +374,7 @@ export function PredictKitRecordNative({
   return (
     <View style={styles.recordBlock}>
       <Text style={styles.recordTitle}>
-        {L(lang, { ja: "PRO INSIGHT の精度（今季）", en: "PRO INSIGHT accuracy (this season)" })}
+        {L(lang, { ja: "PRO PICK の精度（今季）", en: "PRO PICK accuracy (this season)" })}
       </Text>
       <Text style={styles.recordCaption}>
         {record.basis === "backtest"
@@ -490,12 +490,12 @@ export function PredictKitAccuracyHeroNative({
         <Text style={styles.chipNote}>
           {record.basis === "backtest"
             ? L(lang, {
-                ja: `PRO INSIGHT の精度・今季 ${record.games} 試合で検証`,
-                en: `PRO INSIGHT · tested on ${record.games} games this season`,
+                ja: `PRO PICK の精度・今季 ${record.games} 試合で検証`,
+                en: `PRO PICK · tested on ${record.games} games this season`,
               })
             : L(lang, {
-                ja: `PRO INSIGHT の精度・今季 ${record.games} 試合`,
-                en: `PRO INSIGHT · ${record.games} games this season`,
+                ja: `PRO PICK の精度・今季 ${record.games} 試合`,
+                en: `PRO PICK · ${record.games} games this season`,
               })}
         </Text>
       </View>

@@ -1603,7 +1603,7 @@ async function proInsight(ctx: NbaAskNbaContext, intent: NbaAskIntent): Promise<
   if (!date) return text(T(lang, "日付が読み取れませんでした。", "Couldn't read the date."), false);
   const teamId = resolveNbaAskTeamId(intent.team);
   const r = asObj(await runNbaAskTool(ctx.db, "get_pro_insight", { date, ...(teamId ? { team: abbr(teamId) } : {}) }, lang, ctx.timeZone));
-  if (!r) return text(T(lang, "Pro Insight を読み込めませんでした。", "Couldn't load Pro Insight."));
+  if (!r) return text(T(lang, "Pro Pick を読み込めませんでした。", "Couldn't load Pro Pick."));
   if (Array.isArray(r.games)) {
     const list = asRows(r.games).map((g) => `${String(g.away)} @ ${String(g.home)}`).join("、");
     return text(
@@ -1613,9 +1613,9 @@ async function proInsight(ctx: NbaAskNbaContext, intent: NbaAskIntent): Promise<
       false
     );
   }
-  if (r.found !== true) return text(T(lang, `${String(r.away ?? "")} @ ${String(r.home ?? "")} の Pro Insight はまだできていません。`, `Pro Insight for ${String(r.away ?? "")} @ ${String(r.home ?? "")} is not ready yet.`));
+  if (r.found !== true) return text(T(lang, `${String(r.away ?? "")} @ ${String(r.home ?? "")} の Pro Pick はまだできていません。`, `Pro Pick for ${String(r.away ?? "")} @ ${String(r.home ?? "")} is not ready yet.`));
   const lines = asRows(r.sections).flatMap((s) => (Array.isArray(s.lines) ? s.lines.map((l) => `・${String(l)}`) : []));
-  return text([`Pro Insight — ${String(r.away)} @ ${String(r.home)}（${dateLabel(date, lang)}）`, ...lines.slice(0, 8)].join("\n"));
+  return text([`Pro Pick — ${String(r.away)} @ ${String(r.home)}（${dateLabel(date, lang)}）`, ...lines.slice(0, 8)].join("\n"));
 }
 
 async function proLeague(ctx: NbaAskNbaContext): Promise<NbaAskAnswer> {
@@ -1700,8 +1700,8 @@ export async function answerNbaAskQuery(ctx: NbaAskNbaContext, intent: NbaAskInt
       ...text(
         T(
           lang,
-          "どちらが勝つかの予想はこのチャットでは出していません。試合カードの予想画面にあるスタッツ・ケガ人・直近の調子が参考になります。PRO の人は Pro Insight で勝つ確率と予想スコアも見られます。",
-          "This chat doesn't pick winners. The pick screen on each game card shows stats, injuries, and recent form; PRO members also get win probability and a projected score in Pro Insight."
+          "どちらが勝つかの予想はこのチャットでは出していません。試合カードの予想画面にあるスタッツ・ケガ人・直近の調子が参考になります。PRO の人は Pro Pick で勝つ確率と予想スコアも見られます。",
+          "This chat doesn't pick winners. The pick screen on each game card shows stats, injuries, and recent form; PRO members also get win probability and a projected score in Pro Pick."
         ),
         false
       ),

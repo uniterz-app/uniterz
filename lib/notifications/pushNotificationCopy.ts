@@ -255,13 +255,13 @@ export function buildPushNotificationCopy(
     case "pro_insight_update":
       return {
         title: L(lang, {
-          ja: "PRO INSIGHT が更新されました",
-          en: "PRO INSIGHT updated",
-          ko: "PRO INSIGHT가 업데이트되었습니다",
-          zh: "PRO INSIGHT 已更新",
-          es: "PRO INSIGHT actualizado",
-          pt: "PRO INSIGHT atualizado",
-          fr: "PRO INSIGHT mis à jour",
+          ja: "PRO PICK が更新されました",
+          en: "PRO PICK updated",
+          ko: "PRO PICK가 업데이트되었습니다",
+          zh: "PRO PICK 已更新",
+          es: "PRO PICK actualizado",
+          pt: "PRO PICK atualizado",
+          fr: "PRO PICK mis à jour",
         }),
         body: matchup
           ? L(lang, {
