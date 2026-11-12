@@ -12,6 +12,7 @@ import TutorialTargetNative from "../../tutorial/TutorialTargetNative";
 import { registerTutorialPredictToolsListener } from "../../tutorial/tutorialPredictToolsBridgeNative";
 import PredictProBriefPanelNative from "./PredictProBriefPanelNative";
 import PredictProInsightNarrativePanelNative from "./PredictProInsightNarrativePanelNative";
+import PredictProInsightSmartMarketNative from "./PredictProInsightSmartMarketNative";
 import NbaInjuryReportPanelNative from "./NbaInjuryReportPanelNative";
 import NbaTeamStatsPanelNative from "./NbaTeamStatsPanelNative";
 import NbaRosterPanelNative from "./NbaRosterPanelNative";
@@ -43,7 +44,7 @@ import type { Language } from "../../../../../../lib/i18n/language";
 import { TODAY_UNITERZ_DOT_COLOR } from "../../../../../../lib/rankings/dailyScoreLeaders/todayUniterzUnread";
 import { useProInsightUnreadNative } from "./useProInsightUnreadNative";
 
-export type NbaPredictToolsTab = "insight" | "injuries" | "stats" | "roster";
+export type NbaPredictToolsTab = "insight" | "info" | "roster";
 
 type Props = {
   language: GamesLanguage;
@@ -90,7 +91,7 @@ function LoadingPanel({ label }: { label: string }) {
 
 /**
  * NBA 予想フォームの情報タブ（本番相当）。
- * Injury / Stats / Roster は対戦チームの公開 API（モックフォールバックなし）。
+ * INFORMATION（怪我 + スタッツ）/ Roster は対戦チームの公開 API。
  */
 export default function NbaPredictToolsTabsNative({
   language,
@@ -119,14 +120,14 @@ export default function NbaPredictToolsTabsNative({
     timeZone,
     tipAtMs,
   });
-  const [tab, setTab] = useState<NbaPredictToolsTab | null>("injuries");
+  const [tab, setTab] = useState<NbaPredictToolsTab | null>("info");
   const navigation = useNavigation<NavigationProp<MainTabParamList>>();
   /**
-   * Injury / Stats / Roster はオーバーレイ表示と同時に取りに行く。
+   * INFORMATION / Roster はオーバーレイ表示と同時に取りに行く。
    * タブ切替の一瞬だけ「データ準備中」と出さない（キャッシュがあれば即表示）。
    */
   const [visited, setVisited] = useState<Set<NbaPredictToolsTab>>(
-    () => new Set<NbaPredictToolsTab>(["injuries", "stats", "roster"])
+    () => new Set<NbaPredictToolsTab>(["info", "roster"])
   );
   const selectTab = (next: NbaPredictToolsTab) => {
     if (next === "insight" && tab !== "insight" && gameId) {
@@ -147,6 +148,7 @@ export default function NbaPredictToolsTabsNative({
     narrative: liveNarrative,
     loading: briefLoading,
     updatedAt: insightUpdatedAt,
+    smartMarket,
   } = useNbaMatchupProBrief({
     gameId,
     override: brief,
@@ -170,7 +172,7 @@ export default function NbaPredictToolsTabsNative({
       awayTeamId,
       override: injuryReport,
       apiBaseUrl,
-      enabled: visited.has("injuries"),
+      enabled: visited.has("info"),
       language: language === "ja" ? "ja" : "en",
       tipAtMs,
     });
@@ -179,7 +181,7 @@ export default function NbaPredictToolsTabsNative({
     awayTeamId,
     override: teamStats,
     apiBaseUrl,
-    enabled: visited.has("stats"),
+    enabled: visited.has("info"),
   });
   const { roster: liveRoster, loading: rosterLoading } = useNbaMatchupRoster({
     homeTeamId,
@@ -223,67 +225,6 @@ export default function NbaPredictToolsTabsNative({
   return (
     <TutorialTargetNative id="predict-tools">
       <View style={styles.root}>
-        <TutorialTargetNative id="predict-tools-tabs">
-          <View style={styles.tabShell}>
-            <CyberSlantedTabBarNative fill>
-              <CyberSlantedTabNative
-                label="INSIGHT"
-                active={tab === "insight"}
-                onPress={() => selectTab("insight")}
-                compact
-                fontWeight="700"
-                accessibilityRole="tab"
-                accessibilityState={{ selected: tab === "insight" }}
-              />
-              <CyberSlantedTabNative
-                label="INJURY"
-                active={tab === "injuries"}
-                onPress={() => selectTab("injuries")}
-                compact
-                fontWeight="700"
-                accessibilityRole="tab"
-                accessibilityState={{ selected: tab === "injuries" }}
-              />
-              <CyberSlantedTabNative
-                label="STATS"
-                active={tab === "stats"}
-                onPress={() => selectTab("stats")}
-                compact
-                fontWeight="700"
-                accessibilityRole="tab"
-                accessibilityState={{ selected: tab === "stats" }}
-              />
-              <CyberSlantedTabNative
-                label="ROSTER"
-                active={tab === "roster"}
-                onPress={() => selectTab("roster")}
-                compact
-                fontWeight="700"
-                accessibilityRole="tab"
-                accessibilityState={{ selected: tab === "roster" }}
-              />
-            </CyberSlantedTabBarNative>
-            {insightUnread ? (
-              <View pointerEvents="none" style={styles.dotRow}>
-                <View style={styles.dotCell}>
-                  <View
-                    style={[
-                      styles.dot,
-                      {
-                        backgroundColor: TODAY_UNITERZ_DOT_COLOR,
-                        shadowColor: TODAY_UNITERZ_DOT_COLOR,
-                      },
-                    ]}
-                  />
-                </View>
-                <View style={styles.dotCell} />
-                <View style={styles.dotCell} />
-                <View style={styles.dotCell} />
-              </View>
-            ) : null}
-          </View>
-        </TutorialTargetNative>
-
         {tab ? (
           <View style={styles.panel}>
             {tab === "insight" ? (
@@ -316,41 +257,60 @@ export default function NbaPredictToolsTabsNative({
                   language={language}
                   homeTeamName={homeTeamName}
                   awayTeamName={awayTeamName}
+                  smartMarket={smartMarket}
                 />
               ) : briefLoading ? (
                 <LoadingPanel label={loadingLabel} />
               ) : (
-                <PendingPanel text={insightPendingText} />
+                <View>
+                  <PendingPanel text={insightPendingText} />
+                  {smartMarket && homeTeamId && awayTeamId ? (
+                    <PredictProInsightSmartMarketNative
+                      market={smartMarket}
+                      language={language}
+                      homeTeamId={homeTeamId}
+                      awayTeamId={awayTeamId}
+                      homeTeamName={homeTeamName}
+                      awayTeamName={awayTeamName}
+                      standalone
+                    />
+                  ) : null}
+                </View>
               )
-            ) : tab === "injuries" ? (
-              resolvedInjury ? (
-                <NbaInjuryReportPanelNative
-                  report={resolvedInjury}
-                  language={language}
-                  onPlayerPress={
-                    onOpenPlayerDetail
-                      ? (playerId) => onOpenPlayerDetail(playerId, "injuries")
-                      : undefined
-                  }
-                />
-              ) : injuryLoading ? (
-                <LoadingPanel label={loadingLabel} />
-              ) : (
-                <PendingPanel text={t.panelDataPending} />
-              )
-            ) : tab === "stats" ? (
-              resolvedStats ? (
-                <NbaTeamStatsPanelNative
-                  data={resolvedStats}
-                  isPro={isPro}
-                  language={language}
-                  onOpenTeamDetail={onOpenTeamDetail}
-                />
-              ) : statsLoading ? (
-                <LoadingPanel label={loadingLabel} />
-              ) : (
-                <PendingPanel text={t.panelDataPending} />
-              )
+            ) : tab === "info" ? (
+              <View style={styles.infoFrame}>
+                <Text style={styles.infoHeading}>INJURY</Text>
+                {resolvedInjury ? (
+                  <NbaInjuryReportPanelNative
+                    report={resolvedInjury}
+                    roster={resolvedRoster}
+                    language={language}
+                    onPlayerPress={
+                      onOpenPlayerDetail
+                        ? (playerId) => onOpenPlayerDetail(playerId, "injuries")
+                        : undefined
+                    }
+                  />
+                ) : injuryLoading ? (
+                  <LoadingPanel label={loadingLabel} />
+                ) : (
+                  <PendingPanel text={t.panelDataPending} />
+                )}
+                <Text style={styles.infoHeading}>STATS</Text>
+                {resolvedStats ? (
+                  <NbaTeamStatsPanelNative
+                    data={resolvedStats}
+                    isPro={isPro}
+                    language={language}
+                    onOpenTeamDetail={onOpenTeamDetail}
+                    bare
+                  />
+                ) : statsLoading ? (
+                  <LoadingPanel label={loadingLabel} />
+                ) : (
+                  <PendingPanel text={t.panelDataPending} />
+                )}
+              </View>
             ) : resolvedRoster ? (
               <NbaRosterPanelNative
                 report={resolvedRoster}
@@ -368,6 +328,56 @@ export default function NbaPredictToolsTabsNative({
             )}
           </View>
         ) : null}
+        <TutorialTargetNative id="predict-tools-tabs">
+          <View style={styles.tabShell}>
+            <CyberSlantedTabBarNative fill>
+              <CyberSlantedTabNative
+                label="INSIGHT"
+                active={tab === "insight"}
+                onPress={() => selectTab("insight")}
+                compact
+                fontWeight="700"
+                accessibilityRole="tab"
+                accessibilityState={{ selected: tab === "insight" }}
+              />
+              <CyberSlantedTabNative
+                label="INFORMATION"
+                active={tab === "info"}
+                onPress={() => selectTab("info")}
+                compact
+                fontWeight="700"
+                accessibilityRole="tab"
+                accessibilityState={{ selected: tab === "info" }}
+              />
+              <CyberSlantedTabNative
+                label="ROSTER"
+                active={tab === "roster"}
+                onPress={() => selectTab("roster")}
+                compact
+                fontWeight="700"
+                accessibilityRole="tab"
+                accessibilityState={{ selected: tab === "roster" }}
+              />
+            </CyberSlantedTabBarNative>
+            {insightUnread ? (
+              <View pointerEvents="none" style={styles.dotRow}>
+                <View style={styles.dotCell}>
+                  <View
+                    style={[
+                      styles.dot,
+                      {
+                        backgroundColor: TODAY_UNITERZ_DOT_COLOR,
+                        shadowColor: TODAY_UNITERZ_DOT_COLOR,
+                      },
+                    ]}
+                  />
+                </View>
+                <View style={styles.dotCell} />
+                <View style={styles.dotCell} />
+              </View>
+            ) : null}
+          </View>
+        </TutorialTargetNative>
       </View>
     </TutorialTargetNative>
   );
@@ -387,7 +397,24 @@ const styles = StyleSheet.create({
     paddingTop: 0,
     paddingBottom: 6,
   },
-  /** INSIGHT 未読の点。タブバーと同じ 4 等分（左右 12 · gap 8）で INSIGHT の右上に重ねる */
+  /** INJURY から STATS までを一つの枠にする */
+  infoFrame: {
+    gap: 14,
+    paddingHorizontal: 10,
+    paddingTop: 12,
+    paddingBottom: 10,
+    backgroundColor: "rgba(0,14,20,0.55)",
+    borderWidth: 1,
+    borderColor: "rgba(0,245,255,0.32)",
+  },
+  infoHeading: {
+    color: "rgba(0,245,255,0.7)",
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 1.6,
+    textAlign: "center",
+  },
+  /** INSIGHT 未読の点。タブバーと同じ 3 等分（左右 12 · gap 8）で INSIGHT の右上に重ねる */
   dotRow: {
     position: "absolute",
     left: 12,

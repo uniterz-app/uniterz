@@ -1,10 +1,12 @@
 /** Web `NbaInjuryReportPanel` 相当（HOME/AWAY 2カラム・ステータス + EXP） */
+import { useState } from "react";
 import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import {
   injuryDetailLabel,
   injuryStatusShortLabel,
   injuryStatusTone,
   playerCardName,
+  injuryStatusRank,
   sortInjuryEntries,
   type NbaInjuryEntry,
   type NbaInjuryReport,
@@ -15,14 +17,24 @@ import {
   injuryReportUiCopy,
   resolveInjuryReportUiLang,
 } from "../../../../../../lib/predict/injuryReportUiCopy";
+import {
+  sortRosterPlayers,
+  type NbaRosterPlayer,
+  type NbaRosterReport,
+} from "../../../../../../lib/predict/nbaRoster";
 import { NBA_TEAM_NAME_BY_ID } from "../../../../../../lib/nba-team-names";
 import { getMobileTeamName } from "../../../../../../lib/team-name-split-mobile";
 import type { GamesLanguage } from "../gamesI18n";
 import { MATCH_CARD_TEAM_NAME_FONT } from "../matchCardTypography";
 
+/** 折りたたみ時に出す人数。ローテーション上位から */
+const PREVIEW_COUNT = 3;
+
 type Props = {
   report: NbaInjuryReport;
   language: GamesLanguage;
+  /** スターター → MPG の順。怪我人をこの順の上から出す */
+  roster?: NbaRosterReport | null;
   onPlayerPress?: (playerId: string) => void;
 };
 
@@ -119,6 +131,27 @@ function InjuryCard({
   );
 }
 
+function orderByRotation(
+  entries: NbaInjuryEntry[],
+  players: NbaRosterPlayer[] | undefined
+): NbaInjuryEntry[] {
+  const rank = new Map(
+    sortRosterPlayers(players ?? []).map((player, index) => [
+      String(player.id),
+      index,
+    ])
+  );
+  if (rank.size === 0) return sortInjuryEntries(entries);
+  return [...entries].sort((a, b) => {
+    const ai = rank.get(String(a.player.id)) ?? 10_000;
+    const bi = rank.get(String(b.player.id)) ?? 10_000;
+    if (ai !== bi) return ai - bi;
+    return (
+      injuryStatusRank(a.status) - injuryStatusRank(b.status)
+    );
+  });
+}
+
 function columnTeamLabel(team: NbaInjuryTeamReport): string {
   const full = NBA_TEAM_NAME_BY_ID[team.teamId];
   if (full) return getMobileTeamName("nba", full).toUpperCase();
@@ -127,16 +160,19 @@ function columnTeamLabel(team: NbaInjuryTeamReport): string {
 
 function TeamColumn({
   team,
+  rows,
+  totalCount,
   language,
   onPlayerPress,
 }: {
   team: NbaInjuryTeamReport;
+  rows: NbaInjuryEntry[];
+  totalCount: number;
   language: GamesLanguage;
   onPlayerPress?: (playerId: string) => void;
 }) {
-  const rows = sortInjuryEntries(team.entries);
   const ui = injuryReportUiCopy(resolveInjuryReportUiLang(language));
-  const countLabel = injuryReportCountLabel(rows.length, language);
+  const countLabel = injuryReportCountLabel(totalCount, language);
 
   return (
     <View style={styles.column}>
@@ -168,27 +204,65 @@ function TeamColumn({
 export default function NbaInjuryReportPanelNative({
   report,
   language,
+  roster = null,
   onPlayerPress,
 }: Props) {
   const ui = injuryReportUiCopy(resolveInjuryReportUiLang(language));
+  const [open, setOpen] = useState(false);
+  const homeRows = orderByRotation(report.home.entries, roster?.home.players);
+  const awayRows = orderByRotation(report.away.entries, roster?.away.players);
+  const canExpand =
+    homeRows.length > PREVIEW_COUNT || awayRows.length > PREVIEW_COUNT;
+  const homeShown = open ? homeRows : homeRows.slice(0, PREVIEW_COUNT);
+  const awayShown = open ? awayRows : awayRows.slice(0, PREVIEW_COUNT);
+  const hidden =
+    Math.max(0, homeRows.length - PREVIEW_COUNT) +
+    Math.max(0, awayRows.length - PREVIEW_COUNT);
+  const moreLabel =
+    language === "ja" ? `ほか ${hidden}名` : `+${hidden}`;
+  const lessLabel = language === "ja" ? "閉じる" : "CLOSE";
   return (
     <View>
       <View style={styles.grid}>
         <TeamColumn
           team={report.home}
+          rows={homeShown}
+          totalCount={homeRows.length}
           language={language}
           onPlayerPress={onPlayerPress}
         />
         <TeamColumn
           team={report.away}
+          rows={awayShown}
+          totalCount={awayRows.length}
           language={language}
           onPlayerPress={onPlayerPress}
         />
       </View>
-      {report.asOfLabel ? (
-        <Text style={styles.asOf}>
-          {ui.updated} · {report.asOfLabel}
-        </Text>
+      {canExpand || report.asOfLabel ? (
+        <View style={styles.footer}>
+          {report.asOfLabel ? (
+            <View style={styles.asOfWrap} pointerEvents="none">
+              <Text style={styles.asOf} numberOfLines={1}>
+                {ui.updated} · {report.asOfLabel}
+              </Text>
+            </View>
+          ) : null}
+          {canExpand ? (
+            <Pressable
+              onPress={() => setOpen((value) => !value)}
+              accessibilityRole="button"
+              accessibilityLabel={open ? lessLabel : moreLabel}
+              hitSlop={8}
+              style={styles.expandBtn}
+            >
+              <Text style={styles.expandText}>
+                {open ? lessLabel : moreLabel}
+              </Text>
+              <View style={[styles.tri, open ? styles.triUp : styles.triDown]} />
+            </Pressable>
+          ) : null}
+        </View>
       ) : null}
     </View>
   );
@@ -225,6 +299,50 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "rgba(255,255,255,0.4)",
     textTransform: "uppercase",
+  },
+  footer: {
+    marginTop: 8,
+    paddingTop: 6,
+    minHeight: 22,
+    alignItems: "center",
+    justifyContent: "center",
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: "rgba(255,255,255,0.14)",
+  },
+  expandBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 2,
+  },
+  expandText: {
+    fontFamily: OXANIUM,
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 0.6,
+    color: "#00f5ff",
+  },
+  /** 試合カードの切替矢印と同じ塗り三角 */
+  tri: {
+    width: 0,
+    height: 0,
+    borderLeftWidth: 6,
+    borderRightWidth: 6,
+    borderLeftColor: "transparent",
+    borderRightColor: "transparent",
+    shadowColor: "#00f5ff",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.75,
+    shadowRadius: 6,
+  },
+  triDown: {
+    borderTopWidth: 8,
+    borderTopColor: "#00f5ff",
+  },
+  triUp: {
+    borderBottomWidth: 8,
+    borderBottomColor: "#00f5ff",
   },
   empty: {
     borderWidth: 1,
@@ -292,14 +410,19 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
     textTransform: "uppercase",
   },
+  asOfWrap: {
+    position: "absolute",
+    left: 0,
+    top: 0,
+    bottom: 0,
+    justifyContent: "center",
+  },
   asOf: {
-    marginTop: 8,
     fontFamily: OXANIUM,
     fontSize: 9,
     fontWeight: "700",
     letterSpacing: 0.4,
     color: "rgba(255,255,255,0.35)",
-    textAlign: "center",
     textTransform: "uppercase",
   },
 });
