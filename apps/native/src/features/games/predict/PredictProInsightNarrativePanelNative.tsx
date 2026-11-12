@@ -31,16 +31,11 @@ import {
 import { MATCH_CARD_TEAM_NAME_FONT } from "../matchCardTypography";
 import type { GamesLanguage } from "../gamesI18n";
 import PredictProInsightMatchupTableNative from "./PredictProInsightMatchupTableNative";
-import PredictProInsightSmartMarketNative from "./PredictProInsightSmartMarketNative";
-import type { SmartMoneyMarket } from "../../../../../../lib/predict/smartMoneyMarket";
-
 type Props = {
   brief: ProInsightNarrativeBrief;
   language: GamesLanguage;
   homeTeamName?: string;
   awayTeamName?: string;
-  /** 先週 TOP 5% の予想分布（末尾に出す） */
-  smartMarket?: SmartMoneyMarket | null;
 };
 
 /** セクション見出しの文字色・枠色（既存 ProBrief トーンに合わせる） */
@@ -148,7 +143,6 @@ export default function PredictProInsightNarrativePanelNative({
   language,
   homeTeamName = "",
   awayTeamName = "",
-  smartMarket = null,
 }: Props) {
   const homeNick = teamNick(brief.homeTeamId, homeTeamName).toUpperCase();
   const awayNick = teamNick(brief.awayTeamId, awayTeamName).toUpperCase();
@@ -381,19 +375,6 @@ export default function PredictProInsightNarrativePanelNative({
           );
         })}
       </View>
-
-      {smartMarket ? (
-        <View style={brief.sections.length > 0 || preview ? styles.smartMarketBorder : null}>
-          <PredictProInsightSmartMarketNative
-            market={smartMarket}
-            language={language}
-            homeTeamId={brief.homeTeamId}
-            awayTeamId={brief.awayTeamId}
-            homeTeamName={homeTeamName}
-            awayTeamName={awayTeamName}
-          />
-        </View>
-      ) : null}
     </View>
   );
 }
@@ -459,10 +440,6 @@ const styles = StyleSheet.create({
   sectionBorder: {
     borderBottomWidth: 1,
     borderBottomColor: "rgba(255,255,255,0.08)",
-  },
-  smartMarketBorder: {
-    borderTopWidth: 1,
-    borderTopColor: "rgba(255,255,255,0.08)",
   },
   kindRow: {
     flexDirection: "row",

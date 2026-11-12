@@ -41,6 +41,7 @@ const NBA_PUBLIC_DOC_CACHE_TTL: Readonly<Record<string, number>> = {
   nbaStandings: DEFAULT_TTL_SEC,
   nbaTeamAceOutRecords: DEFAULT_TTL_SEC,
   nbaLeagueHub: DEFAULT_TTL_SEC,
+  nbaLeagueHubDetail: DEFAULT_TTL_SEC,
   nbaTeamGameLogs: DEFAULT_TTL_SEC,
   nbaTeamInsightExtras: DEFAULT_TTL_SEC,
   nbaPlayerShotAreas: DEFAULT_TTL_SEC,

@@ -28,7 +28,6 @@ import {
   readLiveMarketCounts,
   swapLiveMarketSide,
 } from "@/lib/predict/liveGameMarket";
-import { prepareSmartMoneyDelta } from "@/lib/predict/smartMoneyMarketServer";
 import { recomputeReferralActivePredictDays } from "@/lib/referral/recomputeReferralActivePredictDays";
 
 /* ========= 認証 ========= */
@@ -300,11 +299,6 @@ export async function PATCH(req: NextRequest, ctx: any) {
               prevSide,
               nextSide
             );
-            const writeSmartMoney =
-              String(data.league ?? "").toLowerCase() === "nba"
-                ? await prepareSmartMoneyDelta(tx, getAdminDb(), { uid, gameId })
-                : null;
-            writeSmartMoney?.({ from: prevSide, to: nextSide });
             tx.set(
               gameRef,
               {
@@ -370,11 +364,6 @@ export async function DELETE(req: NextRequest, ctx: any) {
           const patch = side
             ? applyLiveMarketDelta(readLiveMarketCounts(gameData), side, -1)
             : null;
-          const writeSmartMoney =
-            side && String(data.league ?? "").toLowerCase() === "nba"
-              ? await prepareSmartMoneyDelta(tx, getAdminDb(), { uid, gameId })
-              : null;
-          writeSmartMoney?.({ from: side });
           tx.set(
             predictorsRef,
             { uids: FieldValue.arrayRemove(uid) },

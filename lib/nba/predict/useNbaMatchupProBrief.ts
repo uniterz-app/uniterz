@@ -18,11 +18,6 @@ import {
   sanitizeProInsightNarrativeForDisplay,
   type ProInsightNarrativeStatus,
 } from "@/lib/predict/validateProInsightNarrative";
-import {
-  sanitizeSmartMoneyMarket,
-  type SmartMoneyMarket,
-} from "@/lib/predict/smartMoneyMarket";
-
 export function useNbaMatchupProBrief(opts: {
   gameId?: string | null;
   /** @deprecated 旧 HOME/AWAY。プレビュー用 */
@@ -41,8 +36,6 @@ export function useNbaMatchupProBrief(opts: {
   loading: boolean;
   /** 生成時刻（ISO）。INSIGHT 未読マークの更新番号 */
   updatedAt: string | null;
-  /** 先週 TOP 5% の予想分布（無い週・試合は null） */
-  smartMarket: SmartMoneyMarket | null;
 } {
   const enabled = opts.enabled !== false;
   const override = opts.override;
@@ -69,7 +62,6 @@ export function useNbaMatchupProBrief(opts: {
   );
   const [predictKit, setPredictKit] = useState<ProInsightPredictKit | null>(null);
   const [updatedAt, setUpdatedAt] = useState<string | null>(null);
-  const [smartMarket, setSmartMarket] = useState<SmartMoneyMarket | null>(null);
   const [readyScope, setReadyScope] = useState<string | null>(() =>
     hasNarrativeOverride || hasBriefOverride ? fetchScope : null
   );
@@ -104,7 +96,6 @@ export function useNbaMatchupProBrief(opts: {
             setNarrative(null);
             setPredictKit(null);
             setUpdatedAt(null);
-            setSmartMarket(null);
             setStatus("empty");
           }
           return;
@@ -122,7 +113,6 @@ export function useNbaMatchupProBrief(opts: {
             setNarrative(null);
             setPredictKit(null);
             setUpdatedAt(null);
-            setSmartMarket(null);
             setStatus("empty");
           }
           return;
@@ -134,7 +124,6 @@ export function useNbaMatchupProBrief(opts: {
           predictKit?: unknown;
           status?: ProInsightNarrativeStatus;
           updatedAt?: unknown;
-          smartMarket?: unknown;
         };
         if (cancelled) return;
         const nextNarrative = sanitizeProInsightNarrativeForDisplay(
@@ -143,7 +132,6 @@ export function useNbaMatchupProBrief(opts: {
         const nextKit = sanitizeProInsightPredictKit(json.predictKit);
         setNarrative(nextNarrative);
         setPredictKit(nextKit);
-        setSmartMarket(sanitizeSmartMoneyMarket(json.smartMarket));
         setUpdatedAt(
           (nextNarrative || nextKit) && typeof json.updatedAt === "string"
             ? json.updatedAt
@@ -165,7 +153,6 @@ export function useNbaMatchupProBrief(opts: {
           setNarrative(null);
           setPredictKit(null);
           setUpdatedAt(null);
-          setSmartMarket(null);
           setStatus("empty");
         }
       } finally {
@@ -205,6 +192,5 @@ export function useNbaMatchupProBrief(opts: {
     status: resolvedStatus,
     loading,
     updatedAt: hasNarrativeOverride || hasBriefOverride ? null : updatedAt,
-    smartMarket: hasNarrativeOverride || hasBriefOverride ? null : smartMarket,
   };
 }

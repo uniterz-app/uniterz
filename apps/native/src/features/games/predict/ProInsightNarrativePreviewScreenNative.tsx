@@ -9,28 +9,6 @@ import PredictProBriefPanelNative from "./PredictProBriefPanelNative";
 import { PRO_INSIGHT_PREDICT_KIT_SAMPLES } from "../../../../../../lib/predict/proInsightPredictKitSample";
 import { useBottomTabBarInsets } from "../../../navigation/useBottomTabBarInsets";
 import { L, resolveLocalizedLang } from "../../../../../../lib/i18n/localize";
-import PredictProInsightSmartMarketNative from "./PredictProInsightSmartMarketNative";
-import {
-  sanitizeSmartMoneyMarket,
-  type SmartMoneyMarket,
-} from "../../../../../../lib/predict/smartMoneyMarket";
-
-const SMART_MARKET_SAMPLE = sanitizeSmartMoneyMarket({
-  weekLabel: "2026-11-02",
-  home: 23,
-  away: 11,
-  draw: 0,
-  cohortSize: 48,
-}) as SmartMoneyMarket;
-
-const SMART_MARKET_EMPTY_SAMPLE = sanitizeSmartMoneyMarket({
-  weekLabel: "2026-11-02",
-  home: 0,
-  away: 0,
-  draw: 0,
-  cohortSize: 48,
-}) as SmartMoneyMarket;
-
 type Props = {
   language: string;
   onClose: () => void;
@@ -102,32 +80,6 @@ export default function ProInsightNarrativePreviewScreenNative({
             />
           </View>
         ))}
-        {FREE_SAMPLE ? (
-          <>
-            <View style={styles.card}>
-              <PredictProInsightSmartMarketNative
-                market={SMART_MARKET_SAMPLE}
-                language={gamesLang}
-                homeTeamId={FREE_SAMPLE.homeTeamId}
-                awayTeamId={FREE_SAMPLE.awayTeamId}
-                homeTeamName=""
-                awayTeamName=""
-                standalone
-              />
-            </View>
-            <View style={styles.card}>
-              <PredictProInsightSmartMarketNative
-                market={SMART_MARKET_EMPTY_SAMPLE}
-                language={gamesLang}
-                homeTeamId={FREE_SAMPLE.homeTeamId}
-                awayTeamId={FREE_SAMPLE.awayTeamId}
-                homeTeamName=""
-                awayTeamName=""
-                standalone
-              />
-            </View>
-          </>
-        ) : null}
       </ScrollView>
     </MobilePageShell>
   );

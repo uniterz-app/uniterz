@@ -37,12 +37,17 @@ import {
   LEAGUE_HUB_POS_DEF_STATS,
   NBA_LEAGUE_HUB_CAREER_BASE_COLLECTION,
   NBA_LEAGUE_HUB_COLLECTION,
+  NBA_LEAGUE_HUB_DETAIL_COLLECTION,
   type LeagueHubCareerBase,
   type LeagueHubLadderWeek,
   type LeagueHubPosDefStat,
   type LeagueHubPositionDefense,
   type LeagueHubRecord,
 } from "@/lib/nba/leagueHub/leagueHubTypes";
+import {
+  leagueHubDetailDocIds,
+  splitLeagueHubDetail,
+} from "@/lib/nba/leagueHub/leagueHubDetailSplit";
 
 type Obj = Record<string, unknown>;
 
@@ -539,14 +544,14 @@ export async function loadAndBuildNbaLeagueHub(
     (lineupSnap.data()?.teams ?? {}) as Record<
       string,
       {
-        lineups?: { ids?: string[]; min?: number; net?: number; pm?: number }[];
+        lineups?: { ids?: string[]; min?: number; net?: number; pm?: number; off?: number; def?: number }[];
         boards?: { size?: number; most?: { ids?: string[]; min?: number; net?: number; pm?: number; off?: number; def?: number; games?: number }[]; best?: { ids?: string[]; min?: number; net?: number; pm?: number; off?: number; def?: number; games?: number }[]; worst?: { ids?: string[]; min?: number; net?: number; pm?: number; off?: number; def?: number; games?: number }[] }[];
       }
     >
   )) {
     const list = (row?.lineups ?? []).flatMap((unit) =>
       Array.isArray(unit.ids) && typeof unit.min === "number" && typeof unit.net === "number"
-        ? [{ ids: unit.ids.map(String), min: unit.min, net: unit.net, pm: unit.pm }]
+        ? [{ ids: unit.ids.map(String), min: unit.min, net: unit.net, pm: unit.pm, off: unit.off, def: unit.def }]
         : []
     );
     if (list.length > 0) lineups.set(teamId, list);
@@ -605,10 +610,16 @@ export async function ingestNbaLeagueHub(
 ) {
   const { seasonKey } = input;
   const hub = await loadAndBuildNbaLeagueHub(db, { ...input, persistCareerBase: true });
-  await db
-    .collection(NBA_LEAGUE_HUB_COLLECTION)
-    .doc(seasonKey)
-    .set({ ...hub, updatedAt: FieldValue.serverTimestamp() });
+  const { main, matchups, lineups } = splitLeagueHubDetail(hub);
+  const detailIds = leagueHubDetailDocIds(seasonKey);
+  const batch = db.batch();
+  batch.set(db.collection(NBA_LEAGUE_HUB_DETAIL_COLLECTION).doc(detailIds.matchups), matchups);
+  batch.set(db.collection(NBA_LEAGUE_HUB_DETAIL_COLLECTION).doc(detailIds.lineups), lineups);
+  batch.set(db.collection(NBA_LEAGUE_HUB_COLLECTION).doc(seasonKey), {
+    ...main,
+    updatedAt: FieldValue.serverTimestamp(),
+  });
+  await batch.commit();
 
   return {
     ok: true,
