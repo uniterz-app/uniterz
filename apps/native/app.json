@@ -3,7 +3,7 @@
     "name": "UNITERZ",
     "slug": "uniterz",
     "scheme": "uniterz",
-    "version": "1.0.6",
+    "version": "1.0.7",
     "runtimeVersion": {
       "policy": "appVersion"
     },
