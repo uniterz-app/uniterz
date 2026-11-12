@@ -11,6 +11,7 @@ import {
 } from "firebase/firestore";
 import { db } from "../../lib/firebase";
 import {
+  formatResultDateLabel,
   groupPostsByResultDay,
   mapDocToPostWithMillis,
   RESULT_INITIAL_PAGE_SIZE,
@@ -28,6 +29,35 @@ import {
   setResultPostsListInflight,
   type ResultPostsListCacheEntry,
 } from "@/lib/result/resultPostsListCache";
+
+/** リザルトを開いたとき、日付帯がこの日数そろうまで取る */
+const RESULT_OPEN_DAY_COUNT = 2;
+/** 2日分を探す上限（1ページ10件） */
+const RESULT_OPEN_MAX_PAGES = 8;
+
+function resultPostDayLabel(
+  post: PostWithMillis,
+  language: import("../../../../../lib/i18n/language").Language
+): string {
+  const start = post.startAtMillis;
+  const created = post.createdAtMillis;
+  const ms =
+    typeof start === "number" && Number.isFinite(start) && start > 0
+      ? start
+      : typeof created === "number" && Number.isFinite(created)
+        ? created
+        : 0;
+  return formatResultDateLabel(ms, language);
+}
+
+function resultPostDayCount(
+  posts: readonly PostWithMillis[],
+  language: import("../../../../../lib/i18n/language").Language
+): number {
+  const labels = new Set<string>();
+  for (const post of posts) labels.add(resultPostDayLabel(post, language));
+  return labels.size;
+}
 
 export function useNativeResultPosts(
   uid: string | null | undefined,
@@ -53,9 +83,11 @@ export function useNativeResultPosts(
   const lastDocRef = useRef<DocumentSnapshot | null>(null);
   const hasMoreRef = useRef(true);
   const postsLenRef = useRef(0);
+  const languageRef = useRef(language);
   lastDocRef.current = lastDoc;
   hasMoreRef.current = hasMore;
   postsLenRef.current = posts.length;
+  languageRef.current = language;
 
   const capPosts = useCallback((list: PostWithMillis[]) => {
     return list.length > RESULT_POSTS_MAX_CACHED
@@ -95,9 +127,14 @@ export function useNativeResultPosts(
       if (reset && !force) {
         const cached = peekResultPostsListCache(uid, league);
         if (cached) {
-          applyListEntry(cached);
-          setLoading(false);
-          return;
+          const enough =
+            resultPostDayCount(cached.posts, languageRef.current) >=
+              RESULT_OPEN_DAY_COUNT || !cached.hasMore;
+          if (enough) {
+            applyListEntry(cached);
+            setLoading(false);
+            return;
+          }
         }
         const pending = getResultPostsListInflight(uid, league);
         if (pending) {
@@ -133,23 +170,57 @@ export function useNativeResultPosts(
           const isStale = () => gen !== resetGenRef.current;
 
           const fetchPromise = (async (): Promise<ResultPostsListCacheEntry | null> => {
-            const snap = await getDocs(query(collection(db, "posts"), ...base));
-            if (isStale()) return null;
-            const list = snap.docs.map((d) =>
-              mapDocToPostWithMillis(d.id, d.data())
-            );
-            const newLast = snap.docs.length
-              ? snap.docs[snap.docs.length - 1]
-              : null;
-            const fullPage = snap.docs.length === pageLimit;
-            const next = capPosts(list);
-            const nextHasMore =
-              fullPage && next.length < RESULT_POSTS_MAX_CACHED;
+            const lang = languageRef.current;
+            const labels = new Set<string>();
+            const merged: PostWithMillis[] = [];
+            const seen = new Set<string>();
+            let cursor: DocumentSnapshot | null = null;
+            let hasMore = false;
+            let pages = 0;
+
+            while (pages < RESULT_OPEN_MAX_PAGES && merged.length < RESULT_POSTS_MAX_CACHED) {
+              const pageLimit =
+                pages === 0 ? RESULT_INITIAL_PAGE_SIZE : RESULT_NEXT_PAGE_SIZE;
+              const pageQuery = cursor
+                ? query(
+                    collection(db, "posts"),
+                    ...base.slice(0, 3),
+                    startAfter(cursor),
+                    limit(pageLimit)
+                  )
+                : query(collection(db, "posts"), ...base.slice(0, 3), limit(pageLimit));
+              const snap = await getDocs(pageQuery);
+              if (isStale()) return null;
+              pages += 1;
+              let crossedDay = false;
+              for (const doc of snap.docs) {
+                const post = mapDocToPostWithMillis(doc.id, doc.data());
+                const label = resultPostDayLabel(post, lang);
+                if (!labels.has(label) && labels.size >= RESULT_OPEN_DAY_COUNT) {
+                  crossedDay = true;
+                  break;
+                }
+                if (!seen.has(post.id)) {
+                  seen.add(post.id);
+                  labels.add(label);
+                  merged.push(post);
+                }
+                cursor = doc;
+              }
+              const fullPage = snap.docs.length === pageLimit;
+              hasMore =
+                (crossedDay || fullPage) && merged.length < RESULT_POSTS_MAX_CACHED;
+              if (crossedDay || !fullPage || snap.docs.length === 0) break;
+              if (labels.size < RESULT_OPEN_DAY_COUNT) continue;
+            }
+
+            const next = capPosts(merged);
+            if (next.length < merged.length) hasMore = false;
             const entry: ResultPostsListCacheEntry = {
               at: Date.now(),
               posts: next,
-              hasMore: nextHasMore,
-              lastDoc: newLast,
+              hasMore,
+              lastDoc: cursor,
             };
             setResultPostsListCache(uid, league, entry);
             return entry;
@@ -224,7 +295,14 @@ export function useNativeResultPosts(
     const cached = peekResultPostsListCache(uid, league);
     if (cached) {
       applyListEntry(cached);
-      setLoading(false);
+      const enough =
+        resultPostDayCount(cached.posts, languageRef.current) >=
+          RESULT_OPEN_DAY_COUNT || !cached.hasMore;
+      if (enough) {
+        setLoading(false);
+        return;
+      }
+      void loadPage({ reset: true });
       return;
     }
     setHasFetchedOnce(false);
