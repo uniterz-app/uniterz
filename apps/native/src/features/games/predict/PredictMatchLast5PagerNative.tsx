@@ -1,10 +1,12 @@
 /**
- * 予想カード上段（両チーム）を横スライドで LAST 5 → H2H に切り替える。
+ * 予想カード上段（両チーム）を矢印と横スクロールで LAST 5 / H2H に切り替える。
  * LAST 5 は STATS タブと同じ `/api/nba/matchup-detail`（共有キャッシュ）、
  * H2H は H2H タブと同じ（NBA 静的 pack → 無ければ読み込み済みの試合）。
+ * 横スクロールしても縦幅は 3 ページの最大で固定する。
+ * 矢印はユニフォームのすぐ横（ページの外）に置く。
  */
-import { useMemo, useState, type ReactNode } from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useNbaMatchupTeamStats } from "../../../../../../lib/nba/predict/useNbaMatchupTeamStats";
 import type { NbaTeamFormGame } from "../../../../../../lib/predict/nbaTeamStatsPreviewMocks";
 import { TEAM_SHORT } from "../../../../../../lib/team-short";
@@ -22,7 +24,13 @@ const ROWS = 5;
 function FormLine({ game, align }: { game: NbaTeamFormGame; align: "left" | "right" }) {
   const win = game.result === "W";
   return (
-    <View style={[styles.line, align === "right" ? styles.lineRight : null]}>
+    <View
+      style={[
+        styles.line,
+        styles.packInner,
+        align === "right" ? styles.lineRight : null,
+      ]}
+    >
       <Text style={[styles.result, { color: win ? FORM_WIN : FORM_LOSS }]}>{game.result}</Text>
       <Text style={styles.score}>
         {game.teamScore}-{game.oppScore}
@@ -50,7 +58,13 @@ function FormColumn({
   const ordered = [...games].slice(0, ROWS).reverse();
   return (
     <View style={styles.col}>
-      <View style={[styles.colHead, align === "right" ? styles.lineRight : null]}>
+      <View
+        style={[
+          styles.colHead,
+          styles.packInner,
+          align === "right" ? styles.lineRight : null,
+        ]}
+      >
         <View style={[styles.colMark, { backgroundColor: accent }]} />
         <Text style={styles.colRecord}>
           {wins}-{games.length - wins}
@@ -145,6 +159,19 @@ function H2hPage({
   );
 }
 
+/** ユニフォームのすぐ横に矢印を置くための位置 */
+export type MatchPagerJerseyAnchor = {
+  /** ページ上端からユニフォーム上端まで */
+  top: number;
+  size: number;
+  gap?: number;
+  sideWidth?: number;
+  inset?: number;
+};
+
+/** 予想カードの HOME / ユニフォーム 48 */
+const PREDICT_JERSEY: MatchPagerJerseyAnchor = { top: 27, size: 48, gap: 6 };
+
 export default function PredictMatchLast5PagerNative({
   homeTeamId,
   awayTeamId,
@@ -154,6 +181,7 @@ export default function PredictMatchLast5PagerNative({
   h2hSource,
   homeName,
   awayName,
+  jerseyAnchor = PREDICT_JERSEY,
   children,
 }: {
   homeTeamId: string;
@@ -166,11 +194,13 @@ export default function PredictMatchLast5PagerNative({
   /** h2hSource が無いとき（試合一覧から開くリザルト詳細）に静的 H2H pack を引く名前 */
   homeName?: string;
   awayName?: string;
+  /** 省略時は予想カードのユニフォーム位置 */
+  jerseyAnchor?: MatchPagerJerseyAnchor;
   /** 1 ページ目（今の両チーム表示） */
   children: ReactNode;
 }) {
-  const [w, setW] = useState(0);
-  const [h, setH] = useState(0);
+  const scrollRef = useRef<ScrollView>(null);
+  const pageRef = useRef(0);
   const [page, setPage] = useState(0);
   const { stats } = useNbaMatchupTeamStats({ homeTeamId, awayTeamId, apiBaseUrl });
   const home = stats?.season.home.recentFormGames ?? stats?.last10.home.recentFormGames ?? [];
@@ -194,59 +224,193 @@ export default function PredictMatchLast5PagerNative({
     return [...rows].sort((x, y) => y.startMs - x.startMs);
   }, [homeTeamId, awayTeamId, h2hSource, homeName, awayName]);
 
+  const pageCount = 3;
+  const [pageWidth, setPageWidth] = useState(0);
+  const [pageHeights, setPageHeights] = useState([0, 0, 0]);
+  const stageH = Math.max(pageHeights[0] ?? 0, pageHeights[1] ?? 0, pageHeights[2] ?? 0);
+
+  useEffect(() => {
+    if (pageWidth <= 0) return;
+    scrollRef.current?.scrollTo({ x: pageRef.current * pageWidth, animated: false });
+  }, [pageWidth]);
+
+  function onPageLayout(index: number, height: number) {
+    const next = Math.ceil(height);
+    if (next < 1) return;
+    setPageHeights((prev) => {
+      if (Math.abs((prev[index] ?? 0) - next) < 1) return prev;
+      const copy = [...prev];
+      copy[index] = next;
+      return copy;
+    });
+  }
+
+  function goTo(next: number) {
+    const clamped = Math.max(0, Math.min(pageCount - 1, next));
+    pageRef.current = clamped;
+    setPage(clamped);
+    if (pageWidth <= 0) return;
+    scrollRef.current?.scrollTo({ x: clamped * pageWidth, animated: true });
+  }
+
+  const pages = [
+    children,
+    <View key="last5" style={[styles.page, styles.pageInset]}>
+      <Text style={styles.title}>LAST 5</Text>
+      {home.length === 0 && away.length === 0 ? (
+        <Text style={styles.empty}>—</Text>
+      ) : (
+        <View style={styles.grid}>
+          <FormColumn games={home} align="left" accent={homeAccent} />
+          <View style={styles.divider} />
+          <FormColumn games={away} align="right" accent={awayAccent} />
+        </View>
+      )}
+    </View>,
+    <View key="h2h" style={[styles.page, styles.pageInset]}>
+      <Text style={styles.title}>H2H</Text>
+      <H2hPage
+        rows={h2hRows}
+        homeTeamId={homeTeamId}
+        awayTeamId={awayTeamId}
+        homeAccent={homeAccent}
+        awayAccent={awayAccent}
+      />
+    </View>,
+  ];
+
   return (
-    <View onLayout={(e) => setW(e.nativeEvent.layout.width)}>
+    <View
+      style={styles.stage}
+      onLayout={(e) => {
+        const next = Math.round(e.nativeEvent.layout.width);
+        if (next > 0 && next !== pageWidth) setPageWidth(next);
+      }}
+    >
       <ScrollView
+        ref={scrollRef}
         horizontal
         pagingEnabled
         nestedScrollEnabled
+        directionalLockEnabled
         showsHorizontalScrollIndicator={false}
-        scrollEventThrottle={32}
-        onScroll={(e) => {
-          if (w <= 0) return;
-          const next = Math.round(e.nativeEvent.contentOffset.x / w);
-          setPage((prev) => (prev === next ? prev : next));
+        scrollEventThrottle={16}
+        style={stageH > 0 ? { height: stageH } : undefined}
+        onMomentumScrollEnd={(e) => {
+          if (pageWidth <= 0) return;
+          const next = Math.round(e.nativeEvent.contentOffset.x / pageWidth);
+          const clamped = Math.max(0, Math.min(pageCount - 1, next));
+          pageRef.current = clamped;
+          setPage(clamped);
         }}
       >
-        <View style={{ width: w || undefined }} onLayout={(e) => setH(e.nativeEvent.layout.height)}>
-          {children}
-        </View>
-        <View style={[styles.page, { width: w || undefined, minHeight: h || undefined }]}>
-          <Text style={styles.title}>LAST 5</Text>
-          {home.length === 0 && away.length === 0 ? (
-            <Text style={styles.empty}>—</Text>
-          ) : (
-            <View style={styles.grid}>
-              <FormColumn games={home} align="left" accent={homeAccent} />
-              <View style={styles.divider} />
-              <FormColumn games={away} align="right" accent={awayAccent} />
-            </View>
-          )}
-        </View>
-        <View style={[styles.page, { width: w || undefined, minHeight: h || undefined }]}>
-          <Text style={styles.title}>H2H</Text>
-          <H2hPage
-            rows={h2hRows}
-            homeTeamId={homeTeamId}
-            awayTeamId={awayTeamId}
-            homeAccent={homeAccent}
-            awayAccent={awayAccent}
-          />
-        </View>
-      </ScrollView>
-      <View style={styles.dots} pointerEvents="none">
-        {[0, 1, 2].map((i) => (
-          <View key={i} style={[styles.dot, page === i ? styles.dotOn : null]} />
+        {pages.map((node, index) => (
+          <View
+            key={index}
+            onLayout={(e) => onPageLayout(index, e.nativeEvent.layout.height)}
+            style={{
+              width: pageWidth > 0 ? pageWidth : undefined,
+              alignSelf: "flex-start",
+            }}
+          >
+            {node}
+          </View>
         ))}
+      </ScrollView>
+      <View
+        pointerEvents="box-none"
+        style={[
+          styles.arrowLayer,
+          {
+            paddingHorizontal: jerseyAnchor.inset ?? 0,
+            gap: jerseyAnchor.sideWidth ? 0 : (jerseyAnchor.gap ?? 6),
+          },
+        ]}
+      >
+        <View
+          pointerEvents="box-none"
+          style={[
+            styles.arrowSide,
+            jerseyAnchor.sideWidth
+              ? { width: jerseyAnchor.sideWidth }
+              : styles.arrowSideFlex,
+          ]}
+        >
+          <View
+            pointerEvents="box-none"
+            style={[
+              styles.jerseySlot,
+              {
+                marginTop: jerseyAnchor.top,
+                width: jerseyAnchor.size,
+                height: jerseyAnchor.size,
+              },
+            ]}
+          >
+            {page > 0 ? (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="前へ"
+                onPress={() => goTo(page - 1)}
+                hitSlop={8}
+                style={[styles.arrowHit, styles.arrowHitLeft]}
+              >
+                <View style={[styles.tri, styles.triLeft]} />
+              </Pressable>
+            ) : null}
+          </View>
+        </View>
+        <View pointerEvents="none" style={styles.arrowCenter} />
+        <View
+          pointerEvents="box-none"
+          style={[
+            styles.arrowSide,
+            jerseyAnchor.sideWidth
+              ? { width: jerseyAnchor.sideWidth }
+              : styles.arrowSideFlex,
+          ]}
+        >
+          <View
+            pointerEvents="box-none"
+            style={[
+              styles.jerseySlot,
+              {
+                marginTop: jerseyAnchor.top,
+                width: jerseyAnchor.size,
+                height: jerseyAnchor.size,
+              },
+            ]}
+          >
+            {page < pageCount - 1 ? (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="次へ"
+                onPress={() => goTo(page + 1)}
+                hitSlop={8}
+                style={[styles.arrowHit, styles.arrowHitRight]}
+              >
+                <View style={[styles.tri, styles.triRight]} />
+              </Pressable>
+            ) : null}
+          </View>
+        </View>
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  stage: {
+    position: "relative",
+    width: "100%",
+  },
   page: {
     justifyContent: "center",
     paddingHorizontal: 4,
+  },
+  /** 矢印が端の得点に乗らないよう、LAST 5 / H2H だけ内側に寄せる */
+  pageInset: {
+    paddingHorizontal: 28,
   },
   title: {
     fontFamily: MATCH_CARD_METRIC_FONT,
@@ -255,7 +419,7 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     letterSpacing: 2,
     textAlign: "center",
-    marginBottom: 6,
+    marginBottom: 2,
   },
   empty: {
     color: "rgba(255,255,255,0.4)",
@@ -263,18 +427,22 @@ const styles = StyleSheet.create({
   },
   grid: {
     flexDirection: "row",
-    gap: 10,
+    justifyContent: "center",
+    gap: 6,
+  },
+  packInner: {
+    justifyContent: "flex-end",
   },
   col: {
     flex: 1,
     minWidth: 0,
-    gap: 3,
+    gap: 1,
   },
   colHead: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    marginBottom: 2,
+    marginBottom: 0,
   },
   colMark: {
     width: 8,
@@ -295,14 +463,14 @@ const styles = StyleSheet.create({
   line: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 5,
-    height: 16,
+    gap: 4,
+    height: 14,
   },
   lineRight: {
     flexDirection: "row-reverse",
   },
   lineSpacer: {
-    height: 16,
+    height: 14,
   },
   result: {
     width: 12,
@@ -339,7 +507,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 7,
-    marginBottom: 4,
+    marginBottom: 2,
   },
   h2hAbbr: {
     fontFamily: MATCH_CARD_METRIC_FONT,
@@ -358,7 +526,7 @@ const styles = StyleSheet.create({
   h2hRow: {
     flexDirection: "row",
     alignItems: "center",
-    height: 16,
+    height: 14,
   },
   h2hDate: {
     flex: 1,
@@ -396,20 +564,62 @@ const styles = StyleSheet.create({
     color: "rgba(255,255,255,0.5)",
     fontSize: 9,
   },
-  dots: {
+  arrowLayer: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: 0,
     flexDirection: "row",
+    alignItems: "flex-start",
+    zIndex: 3,
+  },
+  arrowSide: {
+    alignItems: "center",
+  },
+  arrowSideFlex: {
+    flex: 1,
+  },
+  arrowCenter: {
+    flex: 1,
+  },
+  jerseySlot: {
+    position: "relative",
+  },
+  arrowHit: {
+    position: "absolute",
+    top: 0,
+    height: "100%",
+    width: 22,
+    alignItems: "center",
     justifyContent: "center",
-    gap: 5,
-    marginTop: 4,
   },
-  dot: {
-    width: 5,
-    height: 5,
-    backgroundColor: "rgba(255,255,255,0.22)",
-    transform: [{ skewX: "-14deg" }],
+  arrowHitLeft: {
+    right: "100%",
+    marginRight: 2,
   },
-  dotOn: {
-    width: 12,
-    backgroundColor: CYBER_TAB_CYAN,
+  arrowHitRight: {
+    left: "100%",
+    marginLeft: 2,
+  },
+  /** キャリアのシーズン切替と同じ塗り三角 */
+  tri: {
+    width: 0,
+    height: 0,
+    borderTopWidth: 6,
+    borderBottomWidth: 6,
+    borderTopColor: "transparent",
+    borderBottomColor: "transparent",
+    shadowColor: "#00f5ff",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.75,
+    shadowRadius: 6,
+  },
+  triLeft: {
+    borderRightWidth: 8,
+    borderRightColor: "#00f5ff",
+  },
+  triRight: {
+    borderLeftWidth: 8,
+    borderLeftColor: "#00f5ff",
   },
 });
