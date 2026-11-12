@@ -120,15 +120,15 @@ export function nbaAskPrivateRefusal(
   }
   if (HEADCOUNT.test(latest) || PERMISSION.test(latest)) {
     return L(lang, {
-      ja: "権限や、PRO の加入人数には答えられません。",
-      en: "I can't answer about permissions or how many people are on PRO.",
-      ko: "권한이나 PRO 가입자 수에는 답할 수 없습니다.",
-      zh: "无法回答权限或 PRO 的加入人数。",
-      es: "No puedo responder sobre permisos ni cuántas personas tienen PRO.",
-      de: "Zu Rechten oder der Anzahl der PRO-Nutzer kann ich nichts sagen.",
-      fr: "Je ne peux pas répondre sur les droits ni sur le nombre d'abonnés PRO.",
-      ar: "لا أستطيع الإجابة عن الصلاحيات أو عدد مشتركي PRO.",
-      pt: "Não posso responder sobre permissões nem quantas pessoas têm PRO.",
+      ja: "ユーザー数や PRO の加入人数、権限のことには答えられません。",
+      en: "I can't answer about user counts, how many people are on PRO, or permissions.",
+      ko: "사용자 수, PRO 가입자 수, 권한에는 답할 수 없습니다.",
+      zh: "无法回答用户数、PRO 的加入人数或权限。",
+      es: "No puedo responder sobre el número de usuarios, cuántas personas tienen PRO ni permisos.",
+      de: "Zur Nutzerzahl, der Anzahl der PRO-Nutzer oder zu Rechten kann ich nichts sagen.",
+      fr: "Je ne peux pas répondre sur le nombre d'utilisateurs, d'abonnés PRO ni sur les droits.",
+      ar: "لا أستطيع الإجابة عن عدد المستخدمين أو عدد مشتركي PRO أو الصلاحيات.",
+      pt: "Não posso responder sobre o número de usuários, quantas pessoas têm PRO nem permissões.",
     });
   }
   return nbaAskRedactedRefusal(language);

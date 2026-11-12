@@ -1,6 +1,6 @@
 /**
  * アプリの機能を聞かれたとき、答えの下に出す「その画面を開く」ボタン。
- * Web のパスと表示名。Native の遷移は画面側が id を見て行う。
+ * Web のパス（凍結画面の旧導線）と表示名。Native の遷移は画面側が id を見て行う。
  */
 import { L, resolveLocalizedLang } from "@/lib/i18n/localize";
 
@@ -12,6 +12,17 @@ export const NBA_ASK_DESTINATION_IDS = [
   "notifications",
   "invite",
   "squads",
+  "standings",
+  "today",
+  "unit_ledger",
+  "redeem",
+  "plan_status",
+  "profile",
+  "display",
+  "help",
+  "badges",
+  "groups",
+  "results",
 ] as const;
 export type NbaAskDestinationId = (typeof NBA_ASK_DESTINATION_IDS)[number];
 
@@ -23,25 +34,18 @@ const WEB_PATH: Record<NbaAskDestinationId, string> = {
   notifications: "/mobile/settings/notifications",
   invite: "/mobile/invite",
   squads: "/mobile/squad-battle",
+  standings: "/mobile/standings",
+  today: "/mobile/today-leaders",
+  unit_ledger: "/mobile/units",
+  redeem: "/mobile/redeem",
+  plan_status: "/mobile/plan-status",
+  profile: "/mobile/settings",
+  display: "/mobile/settings",
+  help: "/mobile/help",
+  badges: "/mobile/badges",
+  groups: "/mobile/leaderboards",
+  results: "/mobile/result",
 };
-
-/** ガイドのトピック → 開く画面。このチャット自身（ask_chat）はボタンを出さない */
-const TOPIC_OPEN: Record<string, NbaAskDestinationId | undefined> = {
-  prediction_form: "games",
-  stats: "stats",
-  scoring: "rankings",
-  ranking: "rankings",
-  unit_rewards: "rankings",
-  pro_plans: "pro",
-  notifications: "notifications",
-  invite: "invite",
-  squads: "squads",
-};
-
-export function nbaAskDestinationForTopic(topic: string): NbaAskDestinationId | null {
-  const id = TOPIC_OPEN[topic];
-  return id ?? null;
-}
 
 export function isNbaAskDestinationId(value: unknown): value is NbaAskDestinationId {
   return NBA_ASK_DESTINATION_IDS.some((id) => id === value);
@@ -124,5 +128,27 @@ export function nbaAskDestinationLabel(id: NbaAskDestinationId, language: string
         pt: "Abrir squads",
         fr: "Ouvrir les squads",
       });
+    case "standings":
+      return L(lang, { ja: "順位表を開く", en: "Open standings", ko: "순위표 열기", zh: "打开排名表", es: "Abrir clasificación", pt: "Abrir classificação", fr: "Ouvrir le classement" });
+    case "today":
+      return L(lang, { ja: "TODAY を開く", en: "Open TODAY" });
+    case "unit_ledger":
+      return L(lang, { ja: "Unit 履歴を開く", en: "Open Unit history" });
+    case "redeem":
+      return L(lang, { ja: "商品交換を開く", en: "Open Redeem" });
+    case "plan_status":
+      return L(lang, { ja: "プランの確認を開く", en: "Open plan status" });
+    case "profile":
+      return L(lang, { ja: "プロフィールを開く", en: "Open profile" });
+    case "display":
+      return L(lang, { ja: "表示設定を開く", en: "Open display settings" });
+    case "help":
+      return L(lang, { ja: "ヘルプを開く", en: "Open help" });
+    case "badges":
+      return L(lang, { ja: "バッジパレットを開く", en: "Open badges" });
+    case "groups":
+      return L(lang, { ja: "グループを開く", en: "Open groups" });
+    case "results":
+      return L(lang, { ja: "リザルトを開く", en: "Open results" });
   }
 }

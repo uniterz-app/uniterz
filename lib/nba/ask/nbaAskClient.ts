@@ -1,5 +1,6 @@
 /** `/api/nba/ask` のクライアント（Web / Native 共通）。OpenAI キーはサーバーだけが持つ */
 import {
+  NBA_ASK_MAX_GAME_CARDS,
   nbaAskCardTeamName,
   nbaAskGameCardId,
   parseNbaAskBoard,
@@ -85,7 +86,7 @@ function gamesOf(raw: unknown): NbaAskGameCard[] | undefined {
       round: String(row.round ?? "").trim(),
     });
   }
-  return games.length > 0 ? games.slice(0, 8) : undefined;
+  return games.length > 0 ? games.slice(0, NBA_ASK_MAX_GAME_CARDS) : undefined;
 }
 
 function numOrNull(v: unknown): number | null {
